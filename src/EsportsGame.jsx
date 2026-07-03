@@ -4,6 +4,7 @@ import { GAME_TYPE, ROUTER_EVENT, toEngineProps } from "./platform/index.js"; //
 import { useGameRouter } from "./platform/useGameRouter.js";                  // React 轉接層（路徑若不同請依專案結構調整）
 // Phase 4：3D CS 對戰引擎已抽離至 ./battle/fps/EsportsFPS3D.jsx（原封搬移，介面不變；THREE import 隨引擎移出）
 import EsportsFPS3D from "./battle/fps/EsportsFPS3D.jsx";
+import MobaBattleAdapter from "./battle/moba/MobaBattleAdapter.jsx"; // Phase 8：R3F MOBA Battle（包裝 App.jsx，符合 Battle Contract）
 
 
 // ═══════════════════════════════════════════════════════════════
@@ -7570,33 +7571,38 @@ function EsportsGameInner(){
   const game=useGame();
   const[view,setView]=useState("menu");
   const[viewHistory,setViewHistory]=useState([]);
-  const[mobaStage,setMobaStage]=useState("prep");
-  // Phase 3：FPS 流程改由 Game Router 接管（stage 字串值與原 fpsStage 完全相同；MOBA 暫不動）
-  // 原 csMap/csSeed 併入 router.battleConfig（mapKey/seed），戰術確認時一次組裝
   const{router:fpsRouter,stage:fpsStage}=useGameRouter(GAME_TYPE.FPS);
+  // Phase 8：MOBA 流程亦由 Game Router 接管（stage 字串值與原 mobaStage 完全相同）
+  const{router:mobaRouter,stage:mobaStage}=useGameRouter(GAME_TYPE.MOBA);
   // BattleResult → recordMatch 回寫管線：result 物件「原樣透傳」（identity 不變，欄位零改動）
   useEffect(()=>fpsRouter.subscribe(e=>{if(e.type===ROUTER_EVENT.BATTLE_COMPLETE&&game.recordMatch)game.recordMatch(e.payload);}),[fpsRouter,game]);
+  useEffect(()=>mobaRouter.subscribe(e=>{if(e.type===ROUTER_EVENT.BATTLE_COMPLETE&&game.recordMatch)game.recordMatch(e.payload);}),[mobaRouter,game]);
   const goTo=(id)=>{setView(v=>{if(v!==id)setViewHistory(h=>[...h,v]);return id;});};
   const goBack=()=>{setViewHistory(h=>{if(h.length>0){const prev=h[h.length-1];setView(prev);return h.slice(0,-1);}else{setView("menu");return h;}});};
-  const startMoba=()=>{setMobaStage("prep");goTo("moba");};
+  const startMoba=()=>{mobaRouter.reset();goTo("moba");}; // Router 重置＝回 prep
   const startFps=()=>{fpsRouter.reset();goTo("fps");}; // Router 重置＝回 prep（原 setFpsStage("prep")）
   const handleSelect=(id)=>{if(id==="moba")return startMoba();if(id==="fps")return startFps();goTo(id);};
   if(view==="menu")return <MainMenu onSelect={handleSelect}/>;
   // MOBA 流程：配對→選角→對戰
   if(view==="moba"){
     const mobaBack=()=>{
-      const order=["prep","matching","draft","tactic","battle"];
-      const ci=order.indexOf(mobaStage);
-      if(ci>0){setMobaStage(order[ci-1]);}else{goBack();}
+      if(mobaStage==="result"){setView("menu");return;}  // 賽後返回＝回主選單
+      const r=mobaRouter.back();                          // Router 接管：battle→tactic→draft→matching→prep
+      if(r.exited)goBack();                               // prep 再退＝回上一頁
     };
-    const Draft=ALL_MODULES.DraftModule, Battle=ALL_MODULES.MobaModule;
+    const Draft=ALL_MODULES.DraftModule; // Battle 改用 R3F MobaBattleAdapter（見下方 battle 階段）
     return(
       <div style={{minHeight:"100vh",background:GC.bg}}>
         <div style={{position:"sticky",top:0,zIndex:9999,display:"flex",alignItems:"center",gap:10,background:"rgba(10,11,15,0.96)",backdropFilter:"blur(8px)",borderBottom:"1px solid #a78bfa33",padding:"9px 14px"}}>
           <div style={{display:"flex",gap:5}}><button onClick={mobaBack} style={{display:"flex",alignItems:"center",gap:3,background:"rgba(255,255,255,0.06)",border:"none",borderRadius:8,padding:"6px 10px",cursor:"pointer",color:"white",fontSize:11,fontWeight:700}}><ChevronLeft size={13}/>返回</button><button onClick={()=>setView("menu")} style={{display:"flex",alignItems:"center",gap:3,background:"rgba(255,255,255,0.06)",border:"none",borderRadius:8,padding:"6px 10px",cursor:"pointer",color:"white",fontSize:11,fontWeight:700}}><Home size={13}/>主選單</button></div>
-          <span style={{color:"#a78bfa",fontSize:13,fontWeight:800}}>⚔️ MOBA {mobaStage==="prep"?"· 賽前準備":mobaStage==="matching"?"· 配對中":mobaStage==="draft"?"· 選角階段":mobaStage==="tactic"?"· 戰術部署":"· 對戰中"}</span>
+          <span style={{color:"#a78bfa",fontSize:13,fontWeight:800}}>⚔️ MOBA {mobaStage==="prep"?"· 賽前準備":mobaStage==="matching"?"· 配對中":mobaStage==="draft"?"· 選角階段":mobaStage==="tactic"?"· 戰術部署":mobaStage==="battle"?"· 對戰中":"· 賽後"}</span>
         </div>
-        {mobaStage==="prep"?<MatchPrep mode="moba" onMatch={(t)=>{game.findMatch&&game.findMatch("moba");setMobaStage("matching");}} onBack={()=>setView("menu")}/>:mobaStage==="matching"?<MatchmakingScreen mode="moba" onReady={()=>setMobaStage("draft")}/>:mobaStage==="draft"?<Draft onComplete={(d)=>{game.setDraft&&game.setDraft(d);setMobaStage("tactic");}}/>:mobaStage==="tactic"?<TacticSelect mode="moba" onConfirm={(t)=>{game.setActiveTactic&&game.setActiveTactic(t.team);setMobaStage("battle");}}/>:<Battle/>}
+        {mobaStage==="prep"?<MatchPrep mode="moba" onMatch={(t)=>{game.findMatch&&game.findMatch("moba");mobaRouter.next();}} onBack={()=>setView("menu")}/>
+        :mobaStage==="matching"?<MatchmakingScreen mode="moba" onReady={()=>mobaRouter.next()}/>
+        :mobaStage==="draft"?<Draft onComplete={(d)=>{game.setDraft&&game.setDraft(d);mobaRouter.next();}}/>
+        :mobaStage==="tactic"?<TacticSelect mode="moba" onConfirm={(t)=>{game.setActiveTactic&&game.setActiveTactic(t.team);mobaRouter.setBattleConfig({roster:[1,2,3,4,5],opponent:[1,2,3,4,5],tactic:t.team,teamName:"德國海豹",oppName:"赤焰軍團",seed:Math.floor(Math.random()*100000),embedded:true});mobaRouter.next();}}/>
+        :(mobaStage==="battle"||mobaStage==="result")?<MobaBattleAdapter {...toEngineProps(mobaRouter.battleConfig,(r)=>mobaRouter.completeBattle(r))}/>
+        :null}
       </div>
     );
   }
