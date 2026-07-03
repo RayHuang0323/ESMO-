@@ -6,26 +6,14 @@
 //  ⚠ 完全不修改 App.jsx 內部邏輯——用「外層包裝 + 訂閱」補上它缺的出口。
 //
 //  ──────────────────────────────────────────────────────────────────────
-//  ⚠⚠ 已知阻擋點（本 Phase 如實回報，未自行修改 App.jsx）⚠⚠
-//  App.jsx 目前 `export default function App()`，其內部 `store`（持有
-//  hud.over / winner）為模組私有、未對外匯出。因此本 Adapter 無法在
-//  「零修改 App.jsx」前提下觀測戰鬥結束。
-//
-//  解法有二（皆屬下一 Phase、需你核准，本 Phase 一律不做）：
-//    (A) App.jsx 新增一行 `export { store };`（不改任何戰鬥/渲染邏輯，
-//        僅暴露既有 store）→ 本 Adapter 取消下方 import 註解即可運作。
-//    (B) App.jsx 改為接收 onComplete prop 並於 over 時自呼叫（較侵入）。
-//
-//  為使 Adapter 現在即可獨立測試、且不造成編譯期 import 失敗，本檔採
-//  「依賴注入」：對局狀態源（battleStore）由外部傳入或注入；未注入時
-//  安全 no-op 並提示。真實接線留待上述 (A)/(B) 決議後進行。
+//  Phase 7（方案 A）已接通：App.jsx 於檔尾新增 `export { store }`（僅暴露
+//  既有 store，零邏輯改動）。本 Adapter 直接 import 該 store 監聽 over。
+//  battleStore 仍保留為可注入參數，供 Node 單元測試傳入 fake store。
 //  ──────────────────────────────────────────────────────────────────────
 // ============================================================================
 
 import React, { useEffect, useRef } from "react";
-import App from "../../App.jsx"; // R3F MOBA 原型（零修改）
-// 待 App.jsx 核准新增 `export { store }` 後，改用下行直接取得真實 store：
-// import { store as appStore } from "../../App.jsx";
+import App, { store as appStore } from "../../App.jsx"; // R3F MOBA 原型 + 其既有 battle store（Phase 7 方案 A）
 import { snapshotToBattleResult, isBattleOver } from "./snapshotToBattleResult.js";
 
 /**
@@ -40,18 +28,14 @@ import { snapshotToBattleResult, isBattleOver } from "./snapshotToBattleResult.j
  */
 export default function MobaBattleAdapter({
   seed, mapKey, teamName, oppName, onComplete,
-  battleStore, // ← 依賴注入口；接線時傳入 App.jsx 的 store（需先 export）
+  battleStore = appStore, // 預設＝App.jsx 既有 store；仍保留注入口供 Node 測試
 }) {
   const firedRef = useRef(false); // 保證 onComplete 只觸發一次
 
   useEffect(() => {
-    // battleStore 未注入 → 無法觀測 over（即上述阻擋點）。安全 no-op + 提示，不硬繞。
     if (!battleStore || typeof battleStore.subscribe !== "function") {
       if (typeof console !== "undefined") {
-        console.warn(
-          "[MobaBattleAdapter] 未取得 App.jsx store，無法偵測對局結束。" +
-          "請於下一 Phase 讓 App.jsx `export { store }` 後注入 battleStore。"
-        );
+        console.warn("[MobaBattleAdapter] battleStore 無效，無法偵測對局結束。");
       }
       return;
     }
