@@ -5,6 +5,7 @@ import { useGameRouter } from "./platform/useGameRouter.js";                  //
 // Phase 4：3D CS 對戰引擎已抽離至 ./battle/fps/EsportsFPS3D.jsx（原封搬移，介面不變；THREE import 隨引擎移出）
 import EsportsFPS3D from "./battle/fps/EsportsFPS3D.jsx";
 import MobaBattleAdapter from "./battle/moba/MobaBattleAdapter.jsx"; // Phase 8：R3F MOBA Battle（包裝 App.jsx，符合 Battle Contract）
+import { platformToMobaConfig } from "./battle/moba/platformToMobaConfig.js"; // Phase 9：平台資料 → MOBA BattleConfig
 
 
 // ═══════════════════════════════════════════════════════════════
@@ -7600,8 +7601,8 @@ function EsportsGameInner(){
         {mobaStage==="prep"?<MatchPrep mode="moba" onMatch={(t)=>{game.findMatch&&game.findMatch("moba");mobaRouter.next();}} onBack={()=>setView("menu")}/>
         :mobaStage==="matching"?<MatchmakingScreen mode="moba" onReady={()=>mobaRouter.next()}/>
         :mobaStage==="draft"?<Draft onComplete={(d)=>{game.setDraft&&game.setDraft(d);mobaRouter.next();}}/>
-        :mobaStage==="tactic"?<TacticSelect mode="moba" onConfirm={(t)=>{game.setActiveTactic&&game.setActiveTactic(t.team);mobaRouter.setBattleConfig({roster:[1,2,3,4,5],opponent:[1,2,3,4,5],tactic:t.team,teamName:"德國海豹",oppName:"赤焰軍團",seed:Math.floor(Math.random()*100000),embedded:true});mobaRouter.next();}}/>
-        :(mobaStage==="battle"||mobaStage==="result")?<MobaBattleAdapter {...toEngineProps(mobaRouter.battleConfig,(r)=>mobaRouter.completeBattle(r))}/>
+        :mobaStage==="tactic"?<TacticSelect mode="moba" onConfirm={(t)=>{game.setActiveTactic&&game.setActiveTactic(t.team);const starters=(game.roster||[]).filter(p=>p.status==="主力").slice(0,5);mobaRouter.setBattleConfig(platformToMobaConfig({starters,draftResult:game.draftResult,tactic:t.team,teamName:"德國海豹",oppName:"赤焰軍團",seed:Math.floor(Math.random()*100000)}));mobaRouter.next();}}/>
+        :(mobaStage==="battle"||mobaStage==="result")?<MobaBattleAdapter {...toEngineProps(mobaRouter.battleConfig,(r)=>mobaRouter.completeBattle(r))} battleConfig={mobaRouter.battleConfig}/>
         :null}
       </div>
     );

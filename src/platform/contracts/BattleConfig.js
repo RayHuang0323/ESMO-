@@ -22,6 +22,7 @@ import { GAME_TYPE } from "../router/stages.js";
  * @property {Array<Object>} opponent   對手選手（引擎原生格式）
  * @property {string|Object|null} tactic     我方戰術（id 或物件；沿用現行）
  * @property {string|null}   tacticType 戰術類型（execute/rush/default…）
+ * @property {Object|null}   draft      Ban/Pick 結果（MOBA；{picks:{blue,red},bans}）
  * @property {string|null}   oppTactic  對手戰術（可選；未給則引擎 AI 預設）
  * @property {string}        teamName   我方隊名（顯示用）
  * @property {string}        oppName    對手隊名（顯示用）
@@ -44,6 +45,11 @@ export function createBattleConfig(input = {}) {
     tactic: input.tactic ?? null,
     tacticType: input.tacticType ?? null,
     oppTactic: input.oppTactic ?? null,
+    // Phase 9：正式攜帶 Draft（Ban/Pick）結果。結構＝DraftModule 輸出：
+    //   { picks: { blue: Champion[], red: Champion[] }, bans: { blue, red } }
+    //   Champion 為 CHAMPIONS_100 元素（含 id/zh/arch/lane/diff/color）。
+    //   MOBA 以外的 gameType 此欄位為 null。
+    draft: input.draft && typeof input.draft === "object" ? input.draft : null,
     teamName: input.teamName ?? "德國海豹",
     oppName: input.oppName ?? "對手隊伍",
     embedded: input.embedded ?? true,

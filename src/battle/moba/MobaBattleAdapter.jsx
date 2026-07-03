@@ -28,6 +28,7 @@ import { snapshotToBattleResult, isBattleOver } from "./snapshotToBattleResult.j
  */
 export default function MobaBattleAdapter({
   seed, mapKey, teamName, oppName, onComplete,
+  battleConfig, // Phase 9：完整 BattleConfig（含 roster/draft），透傳給 App.jsx 資料流
   battleStore = appStore, // 預設＝App.jsx 既有 store；仍保留注入口供 Node 測試
 }) {
   const firedRef = useRef(false); // 保證 onComplete 只觸發一次
@@ -59,7 +60,7 @@ export default function MobaBattleAdapter({
   // App.jsx 為全頁 absolute inset:0 佈局；用 relative 容器承載，不改 App 內部。
   return (
     <div style={{ position: "relative", width: "100%", height: "100%", minHeight: "100vh" }}>
-      <App />
+      <App battleConfig={battleConfig} />
     </div>
   );
 }
