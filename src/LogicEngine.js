@@ -48,6 +48,31 @@ export class LogicEngine {
     this._mid = 1;
   }
 
+  // ── Phase 10：平台 roster 正式注入口（不影響 tick / AI / Battle Flow）──
+  //   將 buildEngineSlots 產出的 slots 覆蓋到「我方（blue）」玩家物件。
+  //   slot.power / slot.tough 為 null 時保持 constructor 預設值（向下相容）；
+  //   身份欄位 champion / playerName 供 UI 與結算讀取，tick/AI 完全不讀取，
+  //   故不影響任何模擬行為。slots 為空 → 直接返回，等同未呼叫。
+  applyRoster(slots) {
+    if (!Array.isArray(slots) || slots.length === 0) return this;
+    const byRole = {};
+    for (const s of slots) if (s && s.role) byRole[s.role] = s;
+    for (const p of this.players) {
+      if (p.side !== "blue") continue;          // 僅覆蓋我方
+      const s = byRole[p.role];
+      if (!s) continue;
+      if (s.champion) p.champion = s.champion;   // 身份（tick/AI 不讀，不影響模擬）
+      if (s.playerName != null) p.playerName = s.playerName;
+      if (s.power != null) p.power = s.power;     // null＝保持預設（向下相容）
+      if (s.tough != null) {                      // 覆蓋體質時，沿用 constructor 同一公式重算血量
+        p.tough = s.tough;
+        p.maxHp = 600 * s.tough;
+        p.hp = p.maxHp;                           // 開戰前滿血（與 constructor 一致）
+      }
+    }
+    return this;
+  }
+
   frontTower(attacker, lane) {
     const def = attacker === "blue" ? "red" : "blue";
     const arr = [0, 1, 2].map((tier) => this.towers[`${def}_${lane}_${tier}`]).filter(Boolean);

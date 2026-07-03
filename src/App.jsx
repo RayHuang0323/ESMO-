@@ -164,6 +164,25 @@ class LogicEngine {
     this._mid = 1;
   }
 
+  // ── Phase 10：平台 roster 正式注入口（不影響 tick / AI / Battle Flow）──
+  //   slot.power / slot.tough 為 null 時保持預設（向下相容）；champion / playerName
+  //   為身份欄位，tick/AI 不讀取，不影響模擬。slots 為空 → 等同未呼叫。
+  applyRoster(slots) {
+    if (!Array.isArray(slots) || slots.length === 0) return this;
+    const byRole = {};
+    for (const s of slots) if (s && s.role) byRole[s.role] = s;
+    for (const p of this.players) {
+      if (p.side !== "blue") continue;
+      const s = byRole[p.role];
+      if (!s) continue;
+      if (s.champion) p.champion = s.champion;
+      if (s.playerName != null) p.playerName = s.playerName;
+      if (s.power != null) p.power = s.power;
+      if (s.tough != null) { p.tough = s.tough; p.maxHp = 600 * s.tough; p.hp = p.maxHp; }
+    }
+    return this;
+  }
+
   frontTower(attacker, lane) {
     // attacker 為進攻方 side；回傳該線最前線、且仍存活的敵方塔
     const def = attacker === "blue" ? "red" : "blue";
