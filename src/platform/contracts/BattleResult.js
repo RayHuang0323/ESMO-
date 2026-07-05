@@ -85,6 +85,9 @@ export function createBattleResult(input = {}) {
     fanGain: input.fanGain ?? 0,
     prizeGain: input.prizeGain ?? 0,
     xpGain: input.xpGain ?? 0,
+    // Sprint 02：我方出戰陣容（選手×英雄）。MOBA 由 BattleConfig 組出，供 Hero
+    // Progress 累計與 Match History 顯示；CS 不填。純平台資料，非引擎輸出。
+    lineup: input.lineup,
     // 透傳
     raw: input.raw ?? null,
   };

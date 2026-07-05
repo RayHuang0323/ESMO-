@@ -16,6 +16,29 @@ import React, { useEffect, useRef } from "react";
 import App, { store as appStore } from "../../App.jsx"; // R3F MOBA 原型 + 其既有 battle store（Phase 7 方案 A）
 import { snapshotToBattleResult, isBattleOver } from "./snapshotToBattleResult.js";
 
+/** 中文 lane → 英文 role，用於選手/英雄依路對位 */
+const _LANE_ROLE = { "上路": "top", "打野": "jungle", "中路": "mid", "下路": "adc", "輔助": "sup" };
+
+/**
+ * 由 BattleConfig 組「我方出戰陣容」：每筆 = { role, playerName, heroId, heroZh }。
+ * 選手依中文 role、英雄依 lane 各自歸位到 role 後對位；僅讀既有平台資料。
+ */
+function buildLineup(cfg) {
+  if (!cfg) return [];
+  const picks = (cfg.draft && cfg.draft.picks && Array.isArray(cfg.draft.picks.blue)) ? cfg.draft.picks.blue : [];
+  const roster = Array.isArray(cfg.roster) ? cfg.roster : [];
+  const heroByRole = {}, playerByRole = {};
+  for (const ch of picks) { const r = ch && _LANE_ROLE[ch.lane]; if (r && !heroByRole[r]) heroByRole[r] = ch; }
+  for (const p of roster) { const r = p && _LANE_ROLE[p.role]; if (r && !playerByRole[r]) playerByRole[r] = p; }
+  const out = [];
+  for (const role of ["top", "jungle", "mid", "adc", "sup"]) {
+    const h = heroByRole[role], pl = playerByRole[role];
+    if (!h && !pl) continue;
+    out.push({ role, playerName: pl ? (pl.name || null) : null, heroId: h ? h.id : null, heroZh: h ? h.zh : null });
+  }
+  return out;
+}
+
 /**
  * @param {Object}   props
  * @param {number}   [props.seed]        BattleConfig.seed（本 Phase 尚未注入 App，僅寫入 result meta）
@@ -47,7 +70,10 @@ export default function MobaBattleAdapter({
       const snap = state.snapshot || state.hud; // 兩者皆含 winner/over/bK/rK
       if (isBattleOver(snap)) {
         firedRef.current = true;
-        const result = snapshotToBattleResult(snap, { seed, mapKey, teamName, oppName });
+        // Sprint 02：從 BattleConfig 組「我方出戰陣容」（選手×英雄），依 lane 對位。
+        // 僅平台既有資料（roster + draft.picks.blue），不觸碰引擎/快照/公式。
+        const lineup = buildLineup(battleConfig);
+        const result = snapshotToBattleResult(snap, { seed, mapKey, teamName, oppName, lineup });
         onComplete && onComplete(result);
       }
     };

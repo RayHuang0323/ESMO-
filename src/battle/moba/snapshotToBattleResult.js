@@ -42,7 +42,10 @@ export function snapshotToBattleResult(snap = {}, meta = {}) {
     scoreCT: Number.isFinite(snap.rK) ? snap.rK : undefined, // 紅方擊殺
     tName: meta.teamName ?? "德國海豹",
     ctName: meta.oppName ?? "赤焰軍團",
-    // MOBA 現況無逐選手數據 → players/ourPlayers 不填（合約允許）
+    // MOBA 現況無逐選手擊殺 → players/ourPlayers 不填（合約允許）。
+    // Sprint 02：帶「我方出戰陣容」（選手×英雄，來自 BattleConfig，非引擎），
+    // 供 Hero Progress 累計與 Match History 顯示。純平台資料，不動引擎/快照。
+    lineup: Array.isArray(meta.lineup) ? meta.lineup : undefined,
     // 透傳原始快照，供除錯 / 未來重播 / 未來擴充
     raw: {
       winner: snap.winner ?? null,
