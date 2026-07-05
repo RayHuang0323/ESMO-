@@ -87,6 +87,8 @@ export class GameRouter {
     }
 
     this.stageIndex = nextIndex;
+    // Sprint 01：battle 完成後續走收尾階段（result→update），抵達最後一站時標記 finished
+    if (this.battleResult && nextIndex === this.flow.stages.length - 1) this.finished = true;
     this._emit(ROUTER_EVENT.STAGE_CHANGE);
     if (nextStage === STAGE.BATTLE) this._emit(ROUTER_EVENT.BATTLE_START, this.battleConfig);
     return { ok: true, stage: this.stage };
@@ -124,7 +126,10 @@ export class GameRouter {
     this.battleResult = result;
     const resultIndex = this.flow.stages.indexOf(STAGE.RESULT);
     if (resultIndex >= 0) this.stageIndex = resultIndex;
-    this.finished = true;
+    // Sprint 01：result 之後可有 update 等收尾階段——僅當 result 為流程最後
+    // 一站時才標記 finished（FPS 現況＝最後一站，行為不變）；否則保留
+    // next() 續走能力，於 next() 抵達最後一站時補設 finished。
+    this.finished = (resultIndex === this.flow.stages.length - 1);
     this._emit(ROUTER_EVENT.BATTLE_COMPLETE, result);
     this._emit(ROUTER_EVENT.STAGE_CHANGE);
     return { ok: true, warnings: v.warnings };

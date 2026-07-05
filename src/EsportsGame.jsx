@@ -5,7 +5,10 @@ import { useGameRouter } from "./platform/useGameRouter.js";                  //
 // Phase 4：3D CS 對戰引擎已抽離至 ./battle/fps/EsportsFPS3D.jsx（原封搬移，介面不變；THREE import 隨引擎移出）
 import EsportsFPS3D from "./battle/fps/EsportsFPS3D.jsx";
 import MobaBattleAdapter from "./battle/moba/MobaBattleAdapter.jsx"; // Phase 8：R3F MOBA Battle（包裝 App.jsx，符合 Battle Contract）
+import { MobaLoadingScreen, MobaMatchReport, PlatformUpdateScreen } from "./platform/ui/MobaFlowScreens.jsx"; // Sprint 01：MOBA 完整流程畫面
 import { platformToMobaConfig } from "./battle/moba/platformToMobaConfig.js"; // Phase 9：平台資料 → MOBA BattleConfig
+import { deriveMatchContext, updateEconomy, updateSeason, updatePlayerProgress, updateHeroProgress, updateMatchHistory, buildMatchNotification } from "./platform/data/matchRecorder.js"; // Data Layer：recordMatch 拆分
+import { getDashboardData, getHeroAnalytics, getMatchAnalytics } from "./platform/data/analytics.js"; // Data Layer：衍生查詢
 
 
 // ═══════════════════════════════════════════════════════════════
@@ -414,6 +417,9 @@ function GameProvider({children}){
   const[draftResult,setDraftResult]=React.useState(null);
   const[record,setRecord]=React.useState({wins:17,losses:1,streak:3});
   const[matchHistory,setMatchHistory]=React.useState([]);
+  // Sprint 02：Hero Progress 正式資料模型。key=英雄 id，值={games,wins,losses}。
+  // 由 recordMatch 依每場 result.lineup（真實出戰英雄）+ 勝負累計，非展示假資料。
+  const[heroStats,setHeroStats]=React.useState({});
   const[fanCount,setFanCount]=React.useState(2041);
   const[xp,setXp]=React.useState({lv:1,cur:0,max:100});
   const[notifications,setNotifications]=React.useState([]);
@@ -464,63 +470,27 @@ function GameProvider({children}){
     setNotifications(n=>[{id:Date.now(),type:"recruit",text:`簽下新秀 ${player.name}（${player.role}）· 綁定英雄：${avail.zh}`,time:"剛剛"},...n]);
     return true;
   };
+  // ── Match System：Battle 結束後的平台資料回寫（協調器）──
+  //   實作已拆分至 platform/data/matchRecorder.js 的六個純函式，本函式只做流程協調。
   const recordMatch=(result)=>{
-    const win=result.win;
-    const isCS=result.mode==="CS"&&Array.isArray(result.players);
-    // 比分差距 → 影響聲望/獎金/士氣幅度
-    const margin=isCS?Math.abs((result.scoreT??0)-(result.scoreCT??0)):(win?3:0);
-    const marginF=Math.min(margin/8,1); // 0~1
-    setRecord(r=>({wins:r.wins+(win?1:0),losses:r.losses+(win?0:1),streak:win?r.streak+1:0}));
-    setSeasonWins(sw=>sw+(win?1:0)); // 賽季目標進度
-    // 確定性聲望增長：勝 120~260（含比分差與連勝），敗 15~45（比分越接近扣越少）
-    const fanGain=win?Math.round(120+marginF*140+record.streak*25):Math.round(15+(1-marginF)*30);
-    setFanCount(f=>f+fanGain);
-    const prizeGain=win?Math.round(25+marginF*20):8;
-    setBudget(b=>b+prizeGain);
-    // 戰隊經驗：勝50/敗20，升級給天賦點
-    const xpGain=win?50:20;
-    setXp(x=>{
-      let cur=x.cur+xpGain,lv=x.lv,max=x.max,levelsGained=0;
-      while(cur>=max){cur-=max;lv++;levelsGained++;max=Math.round(max*1.25);}
-      if(levelsGained>0)setTalentPoints(tp=>tp+levelsGained);
-      return{lv,cur,max,levelsGained};
-    });
-    // ── 賽後寫回：累計 KDA + 成長 + 士氣/體力（MOBA 與 CS 共用管線）──
-    setRoster(rs=>rs.map(p=>{
-      const ps=isCS?result.ourPlayers.find(x=>x.name===p.name):null;
-      let next={...p};
-      // 累計生涯 KDA（CS 用本場 k/d/a；MOBA 維持原樣）
-      if(ps){const[ck,cd,ca]=(p.kda||"0/0/0").split("/").map(n=>parseInt(n)||0);
-        next.kda=`${ck+ps.k}/${cd+ps.d}/${ca+ps.a}`;
-        next.lastMatch={k:ps.k,d:ps.d,a:ps.a,adr:ps.adr,rating:ps.rating,kast:ps.kast,mvpRounds:ps.mvpRounds,clutches:ps.clutches};
-      }
-      // 個人表現評分（rating）→ 成長動力；MOBA 以勝負近似
-      const rating=ps?ps.rating:(win?1.05:0.9);
-      const avg=Object.values(p.stats||{}).reduce((s,v)=>s+v,0)/Math.max(1,Object.keys(p.stats||{}).length);
-      const potRoom=Math.max(0,Math.min(1,((p.potential||85)-avg)/30));      // 距潛力空間
-      const ageF=Math.max(0.2,Math.min(1.4,(26-(p.age||23))/8+0.2));          // 越年輕成長越快
-      const perfF=Math.max(0,rating-1.0);                                     // 打出超水準才成長
-      const growPower=perfF*ageF*potRoom;
-      // 成長：挑該選手個性 boost 的素質（有方向性），達門檻 +1（不超過潛力）
-      if(growPower>0.12){
-        const pers=PERSONALITY.find(x=>x.id===p.personality);
-        const cand=(pers?.boost||[]).concat(Object.keys(p.stats||{})).filter(Boolean);
-        const grown={...p.stats};let bumps=growPower>0.45?2:1;
-        for(const k of cand){if(bumps<=0)break;const cur=grown[k]??50;if(cur<(p.potential||99)){grown[k]=Math.min(p.potential||99,cur+1);bumps--;}}
-        next.stats=grown;
-      }
-      // 士氣：勝 +（含比分差/MVP），敗 −；體力小幅消耗
-      let dM=win?(4+Math.round(marginF*4)):-(4+Math.round(marginF*4));
-      if(ps&&result.ourMvp&&result.ourMvp.name===p.name)dM+=3;
-      if(ps&&ps.rating<0.85)dM-=2;
-      next.morale=Math.max(0,Math.min(100,(p.morale??75)+dM));
-      next.energy=Math.max(0,Math.min(100,(p.energy??90)-(6+Math.round(marginF*4))));
-      if(next.energy<35&&next.condition!=="低潮")next.condition="疲勞";
-      return next;
-    }));
-    setMatchHistory(h=>[{id:Date.now(),win,fanGain,prizeGain,xpGain,...result},...h].slice(0,20));
-    const scoreStr=isCS?` ${result.scoreT}:${result.scoreCT}`:"";
-    setNotifications(n=>[{id:Date.now(),type:"match",text:(win?"比賽勝利":"比賽失利")+scoreStr+`　聲望 +${fanGain}、獎金 +$${prizeGain}萬`,time:"剛剛"},...n]);
+    const ctx=deriveMatchContext(result,{record});
+    // 1) Economy：財務 / 人氣 / 戰隊經驗（升級給天賦點）
+    const eco=updateEconomy({record,fanCount,budget,xp},ctx);
+    setFanCount(eco.fanCount);
+    setBudget(eco.budget);
+    setXp({lv:eco.xp.lv,cur:eco.xp.cur,max:eco.xp.max,levelsGained:eco.xp.levelsGained});
+    if(eco.talentPointsAdd>0)setTalentPoints(tp=>tp+eco.talentPointsAdd);
+    // 2) Season：總戰績 + 賽季勝場
+    setRecord(r=>updateSeason({record:r,seasonWins:0},ctx).record);
+    setSeasonWins(sw=>sw+(ctx.win?1:0));
+    // 3) Player Progress：KDA/成長/士氣/體力 + Player Career
+    setRoster(rs=>updatePlayerProgress(rs,result,ctx,{PERSONALITY}));
+    // 4) Hero Progress：正式 Schema 累計
+    setHeroStats(hs=>updateHeroProgress(hs,result,ctx));
+    // 5) Match History
+    setMatchHistory(h=>updateMatchHistory(h,result,eco));
+    // 6) Notifications
+    setNotifications(n=>[buildMatchNotification(result,eco,ctx),...n]);
   };
   const setDraft=(d)=>setDraftResult(d);
   // 指派訓練（選手進入訓練中狀態，需推進日數完成）
@@ -622,7 +592,7 @@ function GameProvider({children}){
     setRoster(r=>[...r,{id:"r"+Date.now(),name:player.name,role:player.role,champId:avail?.id,lv:1,potential:player.potential,stats:player.stats,personality:player.personality,energy:100,morale:75,condition:"正常",status:"預備隊",salary:player.salary||0,years:player.years||1,contract:(player.years||1)*84}]);
   };
   const setPlayerRole=(playerId,role)=>{setRoster(r=>r.map(p=>p.id===playerId?{...p,role}:p));};
-  const value={budget,setBudget,roster,setRoster,draftResult,setDraft,record,setRecord,matchHistory,recordMatch,fanCount,xp,notifications,setNotifications,signPlayer,trainPlayer,restPlayer,activeSponsor,signSponsor,endSponsor,week,talentPoints,talents,allocateTalent,pendingMatch,setPendingMatch,findMatch,myTeamPower,renamePlayer,setPlayerRole,assignTraining,advanceTrainingDay,cancelTraining,gameDay,setGameDay,advanceDay,schedule,setSchedule,activeTactic,setActiveTactic,transferOffers,makeTransferOffer,completeTransfer,cancelOffer,season,seasonWins,seasonGoalIdx,SEASON_GOALS};
+  const value={budget,setBudget,roster,setRoster,draftResult,setDraft,record,setRecord,matchHistory,heroStats,recordMatch,fanCount,xp,notifications,setNotifications,signPlayer,trainPlayer,restPlayer,activeSponsor,signSponsor,endSponsor,week,talentPoints,talents,allocateTalent,pendingMatch,setPendingMatch,findMatch,myTeamPower,renamePlayer,setPlayerRole,assignTraining,advanceTrainingDay,cancelTraining,gameDay,setGameDay,advanceDay,schedule,setSchedule,activeTactic,setActiveTactic,transferOffers,makeTransferOffer,completeTransfer,cancelOffer,season,seasonWins,seasonGoalIdx,SEASON_GOALS};
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }
 
@@ -5599,6 +5569,7 @@ function __CodexModuleInner(){
   const[q,setQ]=React.useState("");
   const lanes=["全部","上路","打野","中路","下路","輔助"];
   const ARCH_COLOR={坦克:"#60a5fa",戰士:"#f97316",刺客:"#ef4444",法師:"#a855f7",射手:"#22c55e",輔助:"#14b8a6"};
+  const heroStats=(useGame()||{}).heroStats||{}; // Sprint 02：Hero Progress（真實出戰統計）
   const list=CHAMPIONS_100.filter(c=>(lane==="全部"||c.lane===lane)&&(!q||c.zh.includes(q)||c.en.toLowerCase().includes(q.toLowerCase())));
   const GC2={bg:"#0a0b0f",card:"#13151c",card2:"#1a1d26",gray:"#71717a",gold:"#fbbf24"};
   return(
@@ -5624,6 +5595,7 @@ function __CodexModuleInner(){
               <ChampFace champ={c} size={42}/>
               <span style={{color:"white",fontSize:9,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"}}>{c.zh}</span>
               <span style={{color:ARCH_COLOR[c.arch]||GC2.gray,fontSize:7.5,fontWeight:600}}>{c.arch}</span>
+              {(()=>{const st=heroStats[c.id];if(!st||!st.games)return null;const wr=Math.round(st.wins/st.games*100);return <span style={{color:wr>=50?"#34d399":"#f87171",fontSize:7,fontWeight:700}}>{st.games}場 {wr}%</span>;})()}
             </button>
           ))}
         </div>
@@ -6923,6 +6895,9 @@ function __DashModuleInner(){
   const avgF=starters.length?Math.round(starters.reduce((s,p)=>s+calcPower(p,"fps"),0)/starters.length):0;
   const avgEnergy=roster.length?Math.round(roster.reduce((s,p)=>s+(p.energy||100),0)/roster.length):0;
   const avgMorale=roster.length?Math.round(roster.reduce((s,p)=>s+(p.morale||70),0)/roster.length):0;
+  // Data Layer：儀表板衍生資料全部來自正式 state（record/matchHistory/heroStats/roster）
+  const dash=getDashboardData(game||{});
+  const heroAnalytics=getHeroAnalytics(game?.heroStats,roster);
   return(
     <div style={{minHeight:"100vh",background:GC2.bg,fontFamily:"system-ui",padding:"12px 12px 30px"}}>
       <div style={{maxWidth:460,margin:"0 auto"}}>
@@ -6944,6 +6919,22 @@ function __DashModuleInner(){
           {starters.length===0&&<div style={{color:GC2.gray,fontSize:10,textAlign:"center",padding:"10px 0"}}>尚無主力陣容</div>}
           <div style={{display:"flex",gap:12,marginTop:8,paddingTop:8,borderTop:"1px solid rgba(255,255,255,0.06)"}}><span style={{color:GC2.purp,fontSize:12,fontWeight:800}}>隊伍 MOBA {avgM}</span><span style={{color:"#fb923c",fontSize:12,fontWeight:800}}>FPS {avgF}</span></div>
         </div>
+
+        {/* 近況：近十場 + 連勝連敗（Data Layer getDashboardData，正式資料）*/}
+        <div style={{background:GC2.card,borderRadius:14,padding:"14px",marginBottom:12,border:"1px solid rgba(255,255,255,0.06)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{color:GC2.gray,fontSize:10,fontWeight:700}}>近況</span>{dash.winStreak>=2&&<span style={{color:GC2.green,fontSize:10,fontWeight:700}}>🔥 {dash.winStreak} 連勝</span>}{dash.loseStreak>=2&&<span style={{color:GC2.red,fontSize:10,fontWeight:700}}>❄️ {dash.loseStreak} 連敗</span>}<span style={{marginLeft:"auto",color:GC2.gray,fontSize:10}}>近十場 {dash.last10WinRate}%</span></div>
+          {dash.last10.length>0?(
+            <div style={{display:"flex",gap:4}}>{dash.last10.map((m,i)=>(<div key={i} title={m.mode} style={{width:22,height:22,borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,color:"white",background:m.win?GC2.green:GC2.red}}>{m.win?"勝":"敗"}</div>))}</div>
+          ):<div style={{color:GC2.gray,fontSize:10,textAlign:"center",padding:"8px 0"}}>尚無比賽紀錄</div>}
+        </div>
+
+        {/* 英雄使用率（Data Layer：正式 Hero Progress）*/}
+        {heroAnalytics.length>0&&(
+          <div style={{background:GC2.card,borderRadius:14,padding:"14px",marginBottom:12,border:"1px solid rgba(255,255,255,0.06)"}}>
+            <div style={{color:GC2.gray,fontSize:10,fontWeight:700,marginBottom:10}}>英雄使用率 · 熟練</div>
+            {heroAnalytics.slice(0,5).map(h=>{const champ=CHAMPIONS_100.find(c=>c.id===h.heroId);return(<div key={h.heroId} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>{champ&&<ChampFace champ={champ} size={22}/>}<span style={{color:"white",fontSize:11,fontWeight:700,flex:1}}>{champ?champ.zh:h.heroId}</span><span style={{color:GC2.gray,fontSize:9}}>Lv.{h.masteryLevel}</span><span style={{color:GC2.gray,fontSize:10}}>{h.games}場</span><span style={{color:h.winRate>=50?GC2.green:GC2.red,fontSize:10,fontWeight:700,width:34,textAlign:"right"}}>{h.winRate}%</span></div>);})}
+          </div>
+        )}
 
         {/* 戰隊狀態 */}
         <div style={{background:GC2.card,borderRadius:14,padding:"14px",marginBottom:12,border:"1px solid rgba(255,255,255,0.06)"}}>
@@ -7211,7 +7202,13 @@ function MatchmakingScreen({mode,onReady}){
 }
 
 function MainMenu({onSelect}){
-  const TEAM={name:"德國海豹",lv:93,xp:7.27,xpMax:12.1,gold:"$40.1萬",players:14,days:8,inbox:9,mail:10,talent:1};
+  // Sprint 01：Home 同步真實平台狀態（原為寫死假資料）。全部來自 GameProvider 回寫。
+  const game=useGame()||{};
+  const rec=game.record||{wins:0,losses:0,streak:0};
+  const _games=rec.wins+rec.losses+8;
+  const _standings=[{isMe:true,w:rec.wins},...AI_TEAMS.map(t=>({w:Math.round(_games*(t.power/160))}))].map(t=>({...t,pts:t.w*3})).sort((a,b)=>b.pts-a.pts);
+  const myRank=_standings.findIndex(t=>t.isMe)+1;
+  const TEAM={name:"德國海豹",lv:game.xp?.lv??1,xp:game.xp?.cur??0,xpMax:game.xp?.max??100,gold:`$${game.budget??0}萬`,players:(game.roster||[]).length,days:game.gameDay??1,inbox:(game.notifications||[]).length,mail:(game.notifications||[]).length,talent:game.talentPoints??0};
   const Tile=({icon:Ic,label,onClick,badge,right,big,color,children})=>(
     <button onClick={onClick} style={{position:"relative",display:"flex",flexDirection:big?"column":"row",alignItems:big?"stretch":"center",gap:big?8:10,background:GC.card,border:`1px solid ${GC.line}`,borderRadius:14,padding:big?"14px 16px":"15px 16px",cursor:"pointer",textAlign:"left",width:"100%",transition:"all 0.18s",minHeight:big?140:56}}
       onMouseEnter={e=>{e.currentTarget.style.borderColor=(color||GC.purp)+"88";e.currentTarget.style.background=GC.card2;}}
@@ -7227,7 +7224,7 @@ function MainMenu({onSelect}){
   // 財務小柱狀圖
   const finBars=[6,4,5,3,2,9,5,6,4];
   const modes=[
-    {id:"moba",name:"MOBA",icon:Swords,fans:"2041",color:"#a78bfa",badge:"3 小時內"},
+    {id:"moba",name:"MOBA",icon:Swords,fans:String(game.fanCount??0),color:"#a78bfa",badge:"3 小時內"},
     {id:"fps",name:"CS",icon:Crosshair,fans:"0",color:"#fb923c",badge:"🌙"},
     {id:"bracket",name:"賽事",icon:Trophy,fans:"0",color:"#34d399",badge:"🌙"},
   ];
@@ -7242,11 +7239,12 @@ function MainMenu({onSelect}){
           </div>
           <div style={{width:72,height:72,margin:"0 auto 8px",borderRadius:18,background:`linear-gradient(135deg,#4a4d5e,#2a2d3e)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:38,border:`2px solid ${GC.purp}66`}}>🦭</div>
           <h1 style={{color:"white",fontSize:24,fontWeight:900,margin:0}}>{TEAM.name}</h1>
+          <div style={{display:"flex",justifyContent:"center",gap:12,marginTop:6}}><span style={{color:"#d4d4d8",fontSize:11,fontWeight:700}}>⚔️ {rec.wins}勝{rec.losses}敗</span><span style={{color:GC.gold,fontSize:11,fontWeight:700}}>🏆 排名 {myRank}/{AI_TEAMS.length+1}</span>{rec.streak>=2&&<span style={{color:"#34d399",fontSize:11,fontWeight:700}}>🔥 {rec.streak}連勝</span>}</div>
         </div>
         {/* 等級 XP 條 */}
         <div style={{padding:"0 16px",marginTop:4,marginBottom:14}}>
           <div style={{height:3,background:"rgba(255,255,255,0.08)",borderRadius:99,overflow:"hidden",marginBottom:6}}><div style={{height:"100%",width:`${TEAM.xp/TEAM.xpMax*100}%`,background:`linear-gradient(90deg,${GC.green},${GC.gold})`}}/></div>
-          <div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:"white",fontSize:13,fontWeight:800}}>Lv. {TEAM.lv}</span><span style={{color:GC.gray,fontSize:12}}>{TEAM.xp}萬/{TEAM.xpMax}萬 XP</span></div>
+          <div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:"white",fontSize:13,fontWeight:800}}>Lv. {TEAM.lv}</span><span style={{color:GC.gray,fontSize:12}}>{TEAM.xp}/{TEAM.xpMax} XP</span></div>
         </div>
         {/* 主功能磚 */}
         <div style={{padding:"0 14px",display:"flex",flexDirection:"column",gap:10}}>
@@ -7587,7 +7585,7 @@ function EsportsGameInner(){
   // MOBA 流程：配對→選角→對戰
   if(view==="moba"){
     const mobaBack=()=>{
-      if(mobaStage==="result"){setView("menu");return;}  // 賽後返回＝回主選單
+      if(mobaStage==="result"||mobaStage==="update"){setView("menu");return;}  // 賽後階段返回＝回主選單
       const r=mobaRouter.back();                          // Router 接管：battle→tactic→draft→matching→prep
       if(r.exited)goBack();                               // prep 再退＝回上一頁
     };
@@ -7596,13 +7594,16 @@ function EsportsGameInner(){
       <div style={{minHeight:"100vh",background:GC.bg}}>
         <div style={{position:"sticky",top:0,zIndex:9999,display:"flex",alignItems:"center",gap:10,background:"rgba(10,11,15,0.96)",backdropFilter:"blur(8px)",borderBottom:"1px solid #a78bfa33",padding:"9px 14px"}}>
           <div style={{display:"flex",gap:5}}><button onClick={mobaBack} style={{display:"flex",alignItems:"center",gap:3,background:"rgba(255,255,255,0.06)",border:"none",borderRadius:8,padding:"6px 10px",cursor:"pointer",color:"white",fontSize:11,fontWeight:700}}><ChevronLeft size={13}/>返回</button><button onClick={()=>setView("menu")} style={{display:"flex",alignItems:"center",gap:3,background:"rgba(255,255,255,0.06)",border:"none",borderRadius:8,padding:"6px 10px",cursor:"pointer",color:"white",fontSize:11,fontWeight:700}}><Home size={13}/>主選單</button></div>
-          <span style={{color:"#a78bfa",fontSize:13,fontWeight:800}}>⚔️ MOBA {mobaStage==="prep"?"· 賽前準備":mobaStage==="matching"?"· 配對中":mobaStage==="draft"?"· 選角階段":mobaStage==="tactic"?"· 戰術部署":mobaStage==="battle"?"· 對戰中":"· 賽後"}</span>
+          <span style={{color:"#a78bfa",fontSize:13,fontWeight:800}}>⚔️ MOBA {mobaStage==="prep"?"· 賽前準備":mobaStage==="matching"?"· 配對中":mobaStage==="draft"?"· 選角階段":mobaStage==="tactic"?"· 戰術部署":mobaStage==="loading"?"· 載入中":mobaStage==="battle"?"· 對戰中":mobaStage==="result"?"· 賽後戰報":mobaStage==="update"?"· 平台更新":"· 賽後"}</span>
         </div>
         {mobaStage==="prep"?<MatchPrep mode="moba" onMatch={(t)=>{game.findMatch&&game.findMatch("moba");mobaRouter.next();}} onBack={()=>setView("menu")}/>
         :mobaStage==="matching"?<MatchmakingScreen mode="moba" onReady={()=>mobaRouter.next()}/>
         :mobaStage==="draft"?<Draft onComplete={(d)=>{game.setDraft&&game.setDraft(d);mobaRouter.next();}}/>
         :mobaStage==="tactic"?<TacticSelect mode="moba" onConfirm={(t)=>{game.setActiveTactic&&game.setActiveTactic(t.team);const starters=(game.roster||[]).filter(p=>p.status==="主力").slice(0,5);mobaRouter.setBattleConfig(platformToMobaConfig({starters,draftResult:game.draftResult,tactic:t.team,teamName:"德國海豹",oppName:"赤焰軍團",seed:Math.floor(Math.random()*100000)}));mobaRouter.next();}}/>
-        :(mobaStage==="battle"||mobaStage==="result")?<MobaBattleAdapter {...toEngineProps(mobaRouter.battleConfig,(r)=>mobaRouter.completeBattle(r))} battleConfig={mobaRouter.battleConfig}/>
+        :mobaStage==="loading"?<MobaLoadingScreen battleConfig={mobaRouter.battleConfig} heroImg={HERO_IMG} onDone={()=>mobaRouter.next()}/>
+        :mobaStage==="battle"?<MobaBattleAdapter {...toEngineProps(mobaRouter.battleConfig,(r)=>mobaRouter.completeBattle(r))} battleConfig={mobaRouter.battleConfig}/>
+        :mobaStage==="result"?<MobaMatchReport result={(game.matchHistory||[])[0]||mobaRouter.battleResult} battleConfig={mobaRouter.battleConfig} heroImg={HERO_IMG} onNext={()=>mobaRouter.next()} onRematch={()=>mobaRouter.rematch({seed:Math.floor(Math.random()*100000)})} onHome={()=>setView("menu")}/>
+        :mobaStage==="update"?(()=>{const rec=game.record||{wins:0,losses:0,streak:0};const games=rec.wins+rec.losses+8;const standings=[{isMe:true,w:rec.wins},...AI_TEAMS.map(t=>({w:Math.round(games*(t.power/160))}))].map(t=>({...t,pts:t.w*3})).sort((a,b)=>b.pts-a.pts);const rank=standings.findIndex(t=>t.isMe)+1;const goal=(game.SEASON_GOALS||[])[game.seasonGoalIdx]||null;return <PlatformUpdateScreen record={rec} fanCount={game.fanCount} budget={game.budget} xp={game.xp} seasonWins={game.seasonWins} seasonGoal={goal?{wins:goal.targetWins,name:goal.tier}:null} rank={rank} totalTeams={AI_TEAMS.length+1} lastMatch={(game.matchHistory||[])[0]} onDone={()=>setView("menu")}/>;})()
         :null}
       </div>
     );

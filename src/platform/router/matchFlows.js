@@ -26,8 +26,10 @@ export const MATCH_FLOWS = Object.freeze({
   [GAME_TYPE.MOBA]: Object.freeze({
     gameType: GAME_TYPE.MOBA,
     label: "MOBA",
-    stages: Object.freeze([STAGE.PREP, STAGE.MATCHING, STAGE.DRAFT, STAGE.TACTIC, STAGE.BATTLE, STAGE.RESULT]),
-    resultOptional: true, // 現行結算在 MobaModule 內，暫不強制獨立 result 畫面
+    // Sprint 01：完整流程 prep→matching→draft→tactic→loading→battle→result→update
+    // loading＝進 Battle 前的對戰卡過場；update＝賽後平台更新（戰績/財務/人氣/排名）。
+    stages: Object.freeze([STAGE.PREP, STAGE.MATCHING, STAGE.DRAFT, STAGE.TACTIC, STAGE.LOADING, STAGE.BATTLE, STAGE.RESULT, STAGE.UPDATE]),
+    resultOptional: false, // Sprint 01 起有正式 MobaMatchReport，不再由 MobaModule 內部代顯
     placeholder: false,
   }),
   [GAME_TYPE.FPS]: Object.freeze({

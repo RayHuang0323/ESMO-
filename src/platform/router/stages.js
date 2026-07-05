@@ -11,8 +11,10 @@ export const STAGE = Object.freeze({
   MATCHING: "matching", // 配對中（MatchmakingScreen）
   DRAFT: "draft",       // Ban/Pick 選角（僅 MOBA 使用；DraftModule）
   TACTIC: "tactic",     // 戰術部署（TacticSelect）
+  LOADING: "loading",   // 載入 / 對戰卡（Sprint 01：進入 Battle 前的過場）
   BATTLE: "battle",     // 對戰（Battle Engine 掛載點）
-  RESULT: "result",     // 賽後結算（CSMatchReport / 未來 MOBA 戰報）
+  RESULT: "result",     // 賽後結算（CSMatchReport / MobaMatchReport）
+  UPDATE: "update",     // 平台更新（Sprint 01：戰績/財務/人氣/排名 回寫展示）
 });
 
 export const GAME_TYPE = Object.freeze({
