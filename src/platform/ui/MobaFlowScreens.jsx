@@ -136,8 +136,36 @@ export function MobaMatchReport({ result, battleConfig, heroImg, onNext, onRemat
             <span style={{ color: C.red, fontSize: 30, fontWeight: 900 }}>{r.scoreCT ?? "–"}</span>
           </div>
           {dur && <div style={{ textAlign: "center", color: C.gray, fontSize: 11, marginBottom: 12 }}>比賽時長 {dur}</div>}
-          {/* 我方陣容 */}
-          {blue.length > 0 && (
+          {/* MVP 卡片（BattleResult.ourMvp，真實統計）*/}
+          {r.ourMvp && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "linear-gradient(90deg,#3b2f0a,#13151c)", border: `1px solid ${C.gold}55`, borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
+              <span style={{ fontSize: 22 }}>⭐</span>
+              {r.ourMvp.champion && <ChampBadge champ={r.ourMvp.champion} heroImg={heroImg} side="blue" />}
+              <div style={{ flex: 1 }}>
+                <div style={{ color: C.gold, fontSize: 9, fontWeight: 800, letterSpacing: 1 }}>MVP</div>
+                <div style={{ color: "white", fontSize: 13, fontWeight: 800 }}>{r.ourMvp.champion ? r.ourMvp.champion.zh : r.ourMvp.name}{r.ourMvp.name && r.ourMvp.champion ? <span style={{ color: C.gray, fontSize: 10, fontWeight: 600, marginLeft: 6 }}>{r.ourMvp.name}</span> : null}</div>
+                <div style={{ color: "#d4d4d8", fontSize: 11 }}>{r.ourMvp.kda} · 參團 {r.ourMvp.participation}%</div>
+              </div>
+              <div style={{ textAlign: "right" }}><div style={{ color: C.gold, fontSize: 17, fontWeight: 900 }}>{r.ourMvp.rating}</div><div style={{ color: C.gray, fontSize: 8 }}>評分</div></div>
+            </div>
+          )}
+          {/* 逐英雄 scoreboard（BattleResult.ourPlayers）*/}
+          {Array.isArray(r.ourPlayers) && r.ourPlayers.length > 0 ? (
+            <div style={{ background: C.card2, borderRadius: 12, padding: "8px 8px", marginBottom: 12 }}>
+              <div style={{ display: "flex", color: C.gray, fontSize: 8, fontWeight: 800, padding: "0 4px 5px", borderBottom: `1px solid ${C.line}` }}>
+                <span style={{ flex: 1 }}>英雄</span><span style={{ width: 54, textAlign: "center" }}>KDA</span><span style={{ width: 42, textAlign: "right" }}>傷害</span><span style={{ width: 34, textAlign: "right" }}>參團</span><span style={{ width: 30, textAlign: "right" }}>評分</span>
+              </div>
+              {r.ourPlayers.map((p, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", fontSize: 10, padding: "5px 4px", borderBottom: i < r.ourPlayers.length - 1 ? `1px solid ${C.line}55` : "none" }}>
+                  <span style={{ flex: 1, color: "white", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.champion ? p.champion.zh : p.name}</span>
+                  <span style={{ width: 54, textAlign: "center", color: "#d4d4d8" }}>{p.kda}</span>
+                  <span style={{ width: 42, textAlign: "right", color: "#fb923c" }}>{(p.damage / 1000).toFixed(1)}k</span>
+                  <span style={{ width: 34, textAlign: "right", color: C.purp }}>{p.participation}%</span>
+                  <span style={{ width: 30, textAlign: "right", color: p.rating >= 2 ? C.green : p.rating >= 1 ? C.gold : C.gray, fontWeight: 800 }}>{p.rating}</span>
+                </div>
+              ))}
+            </div>
+          ) : blue.length > 0 && (
             <div style={{ background: C.card2, borderRadius: 12, padding: "10px 8px", marginBottom: 12 }}>
               <div style={{ color: C.gray, fontSize: 10, fontWeight: 800, marginBottom: 6, textAlign: "center" }}>我方出戰陣容</div>
               <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
