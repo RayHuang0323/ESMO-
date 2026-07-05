@@ -169,11 +169,11 @@ class LogicEngine {
   //   為身份欄位，tick/AI 不讀取，不影響模擬。slots 為空 → 等同未呼叫。
   applyRoster(slots) {
     if (!Array.isArray(slots) || slots.length === 0) return this;
-    const byRole = {};
-    for (const s of slots) if (s && s.role) byRole[s.role] = s;
+    // (side|role) 對位，Blue / Red 對稱；slot 未帶 side → 預設 "blue"（向下相容）。
+    const byKey = {};
+    for (const s of slots) if (s && s.role) byKey[(s.side || "blue") + "|" + s.role] = s;
     for (const p of this.players) {
-      if (p.side !== "blue") continue;
-      const s = byRole[p.role];
+      const s = byKey[p.side + "|" + p.role];
       if (!s) continue;
       if (s.champion) p.champion = s.champion;
       if (s.playerName != null) p.playerName = s.playerName;

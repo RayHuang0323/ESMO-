@@ -55,11 +55,12 @@ export class LogicEngine {
   //   故不影響任何模擬行為。slots 為空 → 直接返回，等同未呼叫。
   applyRoster(slots) {
     if (!Array.isArray(slots) || slots.length === 0) return this;
-    const byRole = {};
-    for (const s of slots) if (s && s.role) byRole[s.role] = s;
+    // 依 (side|role) 對位，Blue / Red 完全對稱；slot 未帶 side 時預設 "blue"
+    // （＝ Phase 10/13 的 blue-only slots 行為不變，向下相容）。
+    const byKey = {};
+    for (const s of slots) if (s && s.role) byKey[(s.side || "blue") + "|" + s.role] = s;
     for (const p of this.players) {
-      if (p.side !== "blue") continue;          // 僅覆蓋我方
-      const s = byRole[p.role];
+      const s = byKey[p.side + "|" + p.role];
       if (!s) continue;
       if (s.champion) p.champion = s.champion;   // 身份（tick/AI 不讀，不影響模擬）
       if (s.playerName != null) p.playerName = s.playerName;

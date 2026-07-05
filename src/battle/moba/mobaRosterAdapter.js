@@ -76,12 +76,16 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 /**
  * 忠實重現 EsportsGame.jsx 的 calcPower(player,"moba")：16 維 × 權重 × 性格 × 士氣 × 狀態。
- * 選手資料缺失時退化為中性值（stats 缺→50、morale→70、condition→正常），
+ * 退化規則：整個 player 或其 stats 不存在 → 直接回 ANCHOR(70)＝中性（對稱前提）；
+ * 有 stats 但個別欄位缺 → 該欄 50、morale 缺→70、condition 缺→正常，
  * 使公式在資料不全時仍安全收斂，不致 NaN。
  * @returns {number} 綜合戰力（約 1–99 帶修正）
  */
 export function calcPlayerMobaPower(player) {
-  const stats = (player && player.stats) || {};
+  // 無選手物件或無 stats（例：AI 對手只有英雄、沒有 16 維資料）→ 回中性錨 ANCHOR，
+  // 使該側 playerScale=1.0：不因缺資料被懲罰、也不憑空得利（Blue/Red 對稱前提）。
+  if (!player || !player.stats) return ANCHOR;
+  const stats = player.stats;
   const bn = (player && PERS_BN[player.personality]) || null;
   let total = 0, wsum = 0;
   for (const k of STAT_KEYS) {
@@ -131,22 +135,27 @@ export function calcMobaTough(role, arch, player) {
 }
 
 /**
- * 由 BattleConfig（roster + draft）建構「對齊 LogicEngine 的 5 個 slot」。
- * 純函式，不依賴 React / 不依賴引擎；輸出即未來 engine.applyRoster 的入參。
+ * 由 BattleConfig（roster + draft）建構「對齊 LogicEngine 的 slots」。
+ * Phase 14 起：Blue / Red 走完全相同的 buildSideSlots，輸出 10 個 slot
+ *（前 5 blue、後 5 red，各依 ROLE_ORDER），注入端依 (side|role) 對位。
+ * 純函式，不依賴 React / 不依賴引擎；輸出即 engine.applyRoster 的入參。
  *
  * @param {import("../../platform/contracts/BattleConfig.js").BattleConfig|null} cfg
  * @returns {Array<{
- *   slot:number, role:string, lane:string,
+ *   slot:number, side:string, role:string, lane:string,
  *   champion: (Object|null), playerName: (string|null),
  *   power: (number|null), tough: (number|null)
- * }>} 固定長度 5，依 ROLE_ORDER 排列
+ * }>} 固定長度 10（5 blue ＋ 5 red）
  */
-export function buildEngineSlots(cfg) {
-  const picks = (cfg && cfg.draft && cfg.draft.picks && Array.isArray(cfg.draft.picks.blue))
-    ? cfg.draft.picks.blue : [];
-  const roster = (cfg && Array.isArray(cfg.roster)) ? cfg.roster : [];
-
-  // 先把 picks 依其 lane 歸位到 role；同 lane 溢位者順延填補空缺 slot。
+/**
+ * 單邊 slots 建構（Phase 14：Blue / Red 共用此同一段程式碼，保證對稱）。
+ * 英雄依 lane 歸位到 role、選手依中文 role 歸位；溢位者順延填補。
+ * 有英雄 → calcMobaPower/Tough；無英雄 → null（沿用引擎預設，向下相容）。
+ * @param {Array}  picks   該側 draft picks（CHAMPIONS_100 元素）
+ * @param {Array}  roster  該側選手（可為空：AI 對手無 16 維資料 → playerScale 中性）
+ * @param {string} side    "blue" | "red"
+ */
+function buildSideSlots(picks, roster, side) {
   const byRole = { top: null, jungle: null, mid: null, adc: null, sup: null };
   const overflow = [];
   for (const champ of picks) {
@@ -158,8 +167,6 @@ export function buildEngineSlots(cfg) {
     if (!byRole[role] && overflow.length) byRole[role] = overflow.shift();
   }
 
-  // 選手同樣依「中文 role → LogicEngine role」歸位，確保「該路選手 × 該路英雄」正確配對
-  // 計算戰力（而非依陣列索引）。無 role 或對不上者順延填補（向下相容既有索引行為）。
   const byRoleStarter = { top: null, jungle: null, mid: null, adc: null, sup: null };
   const starterOverflow = [];
   for (const p of roster) {
@@ -174,16 +181,13 @@ export function buildEngineSlots(cfg) {
   return ROLE_ORDER.map((role, i) => {
     const champ = byRole[role] || null;
     const player = byRoleStarter[role] || null;
-
-    // ── Phase 13：戰力正式套入 ──
-    // 僅當該 slot 有英雄（arch/diff 才有意義）時計算 power/tough；
-    // 無英雄 → null＝不覆蓋 LogicEngine 預設（＝ Phase 10 行為，向下相容）。
     const hasChamp = !!champ;
     const power = hasChamp ? calcMobaPower(role, champ.arch, champ.diff, player) : null;
     const tough = hasChamp ? calcMobaTough(role, champ.arch, player) : null;
 
     return {
       slot: i,
+      side,               // Phase 14：注入端依 (side|role) 對位
       role,
       lane: ROLE_LANE[role],
       champion: champ ? {
@@ -193,10 +197,29 @@ export function buildEngineSlots(cfg) {
       playerName: (player && typeof player === "object")
         ? (player.name ?? player.zh ?? null)
         : (typeof player === "string" ? player : null),
-      power, // 有英雄→calcMobaPower；無英雄→null（沿用引擎預設）
-      tough, // 有英雄→calcMobaTough；無英雄→null（沿用引擎預設）
+      power,
+      tough,
     };
   });
+}
+
+export function buildEngineSlots(cfg) {
+  const picksBlue = (cfg && cfg.draft && cfg.draft.picks && Array.isArray(cfg.draft.picks.blue))
+    ? cfg.draft.picks.blue : [];
+  const picksRed = (cfg && cfg.draft && cfg.draft.picks && Array.isArray(cfg.draft.picks.red))
+    ? cfg.draft.picks.red : [];
+  const rosterBlue = (cfg && Array.isArray(cfg.roster)) ? cfg.roster : [];
+  // 紅方選手：只有「看起來是選手」（含 stats）的 opponent 才算 roster；
+  // 若 opponent 是英雄陣列（platformToMobaConfig 的 fallback），紅方無選手資料
+  // → calcPlayerMobaPower 回中性錨，playerScale=1.0（不懲罰、不加成）。
+  const rosterRed = (cfg && Array.isArray(cfg.opponent) && cfg.opponent.some((p) => p && p.stats))
+    ? cfg.opponent : [];
+
+  // Blue / Red 走「完全相同」的 buildSideSlots；差別僅在資料來源。
+  return [
+    ...buildSideSlots(picksBlue, rosterBlue, "blue"),
+    ...buildSideSlots(picksRed, rosterRed, "red"),
+  ];
 }
 
 /**
