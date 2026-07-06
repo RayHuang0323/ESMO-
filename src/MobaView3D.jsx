@@ -21,6 +21,7 @@ import {
   lerp, clamp, ease, LANES, posOnLane, WATER, WALLS, PITS, BUSHES,
   BASE, ROLE_NAME, SIDE, GLOW,
 } from "./gameData.js";
+import BattleCameraController from "./battle/ui/BattleCameraController.jsx";
 
 // ── 世界尺度（放大；只影響渲染，不影響邏輯）──────────────────────────────────
 const S = 1.7;
@@ -62,16 +63,23 @@ function makeLabelSprite(text, hex, sx = 3, sy = 1.5) {
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
   sp.scale.set(sx * S, sy * S, 1); return sp;
 }
-// M01：以較寬畫布重繪標籤文字（英雄名 2~6 字）；供 roster 到位後更新用
-function setLabelText(sp, text, hex, sx = 6.0, sy = 1.2) {
-  const c = document.createElement("canvas"); c.width = 320; c.height = 64; const g = c.getContext("2d");
-  g.font = "bold 40px system-ui,sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
-  g.lineWidth = 7; g.strokeStyle = "rgba(0,0,0,0.85)"; g.strokeText(text, 160, 34);
-  g.fillStyle = "#" + hex.toString(16).padStart(6, "0"); g.fillText(text, 160, 34);
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-  const old = sp.material.map; sp.material.map = tex; sp.material.needsUpdate = true; old?.dispose?.();
-  sp.scale.set(sx * S, sy * S, 1); sp.userData.txt = text;
+// ── Sprint06 Hero Overlay：可重繪文字 sprite（玩家名+KDA / 復活倒數）──────────
+function drawOverlayTexture(line1, line2, hex) {
+  const c = document.createElement("canvas"); c.width = 320; c.height = 96;
+  const g = c.getContext("2d"); g.textAlign = "center"; g.textBaseline = "middle";
+  g.font = "bold 34px system-ui,sans-serif";
+  g.lineWidth = 7; g.strokeStyle = "rgba(0,0,0,0.85)"; g.strokeText(line1, 160, 26);
+  g.fillStyle = "#" + hex.toString(16).padStart(6, "0"); g.fillText(line1, 160, 26);
+  g.font = "bold 30px monospace";
+  g.lineWidth = 6; g.strokeText(line2, 160, 66);
+  g.fillStyle = "#ffffff"; g.fillText(line2, 160, 66);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; return tex;
 }
+function makeOverlaySprite(hex) {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: drawOverlayTexture(" ", " ", hex), transparent: true, depthTest: false }));
+  sp.scale.set(5.6 * S, 1.7 * S, 1); return sp;
+}
+
 function makeTopper(role, color) {
   const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.85, roughness: 0.2, metalness: 0.85 });
   let g, flat = false;
@@ -86,7 +94,7 @@ function makeTopper(role, color) {
 // ════════════════════════════════════════════════════════════════════════════
 //  場景內容（命令式建立 + 單一 useFrame 更新）
 // ════════════════════════════════════════════════════════════════════════════
-function MobaScene({ mapTexture }) {
+function MobaScene({ mapTexture, roster }) {
   const { scene, camera } = useThree();
   const R = useRef({});
 
@@ -180,9 +188,10 @@ function MobaScene({ mapTexture }) {
       const fg = new THREE.Mesh(new THREE.PlaneGeometry(2.5 * S, 0.3 * S), fgMat);
       hpGrp.add(bg, fg); root.add(hpGrp);
       const topper = makeTopper(p.role, glow); topper.position.y = 3.4 * S; root.add(topper);
-      const label = makeLabelSprite(ROLE_NAME[p.role][0], p.side === "blue" ? 0x93c5fd : 0xfca5a5, 2.4, 1.2); label.position.y = 4.9 * S; root.add(label);
+      const overlayHex = p.side === "blue" ? 0x93c5fd : 0xfca5a5;
+      const overlay = makeOverlaySprite(overlayHex); overlay.position.y = 5.2 * S; root.add(overlay);
       world.add(root);
-      heroObjs[p.id] = { root, cap, mat, ring, ringMat, hpGrp, fg, fgMat, topper, label, side: p.side, seed: Math.random() * 7 };
+      heroObjs[p.id] = { root, cap, mat, ring, ringMat, hpGrp, fg, fgMat, topper, overlay, overlayHex, lastOverlay: "", seed: Math.random() * 7 };
     });
 
     const minionMeshes = new Map();
@@ -201,13 +210,7 @@ function MobaScene({ mapTexture }) {
   useFrame((state, dt) => {
     const r = R.current; if (!r.heroObjs) return;
     const now = state.clock.getElapsedTime() * 1000;
-    const { prev, snapshot, subTRef, roster } = useGameStore.getState();
-    // M01：roster（開局指派）到位後，把頭頂標籤由職業字換成英雄名；每人只重繪一次
-    if (roster) for (const pid in r.heroObjs) {
-      const o = r.heroObjs[pid], h = roster[pid];
-      if (h && o.label && o.label.userData.txt !== h.zh)
-        setLabelText(o.label, h.zh, o.side === "blue" ? 0x93c5fd : 0xfca5a5);
-    }
+    const { prev, snapshot, subTRef } = useGameStore.getState();
     const a = ease(clamp(subTRef.current, 0, 1));
     const nextHero = {}; snapshot.players.forEach((p) => (nextHero[p.id] = p));
     // 戰爭迷霧（藍方視角）
@@ -233,6 +236,18 @@ function MobaScene({ mapTexture }) {
       o.fgMat.color.setHex(hp > 0.55 ? 0x34d399 : hp > 0.28 ? 0xfbbf24 : 0xf87171);
       o.topper.visible = !dead; o.topper.rotation.y += dt * 1.2; o.topper.position.y = 3.4 * S + Math.sin(now / 1000 * 3 + o.seed) * 0.07 * S;
       o.root.visible = p.side === "blue" ? true : vis(np.pos);
+      // Sprint06 Hero Overlay：玩家名 + K/D/A（全讀 snapshot）；死亡改顯示復活倒數
+      const dispName = (roster?.[p.id]?.player ?? p.id.toUpperCase());
+      const line1 = `${dispName} · ${ROLE_NAME[np.role]}`;
+      const line2 = dead ? `復活 ${Math.max(0, np.respawn).toFixed(0)}s` : `${np.k}/${np.d}/${np.a ?? 0}`;
+      const key = line1 + "|" + line2;
+      if (key !== o.lastOverlay) {
+        o.lastOverlay = key;
+        o.overlay.material.map.dispose();
+        o.overlay.material.map = drawOverlayTexture(line1, line2, dead ? 0x9ca3af : o.overlayHex);
+        o.overlay.material.needsUpdate = true;
+      }
+      o.overlay.visible = o.root.visible;
     });
 
     // 小兵
@@ -306,7 +321,7 @@ function MobaScene({ mapTexture }) {
   return null;
 }
 
-export default function MobaView3D({ mapTexture = null, autoRotate = true, debug = false }) {
+export default function MobaView3D({ mapTexture = null, autoRotate = true, battleFollow = false, roster = null, debug = false }) {
   return (
     <Canvas
       shadows dpr={[1, 2]} gl={{ antialias: true, powerPreference: "high-performance" }}
@@ -317,7 +332,7 @@ export default function MobaView3D({ mapTexture = null, autoRotate = true, debug
 
       {/* 正交神之視角（斜對角）；用滾輪縮放或調 zoom 對齊畫面 */}
       <OrthographicCamera makeDefault position={[55 * S, 78 * S, 78 * S]} zoom={3.4} near={0.1} far={2000} />
-      <OrbitControls target={[0, 0, 0]} autoRotate={autoRotate} autoRotateSpeed={0.6} enablePan={debug} minZoom={1.6} maxZoom={9} />
+      <OrbitControls makeDefault target={[0, 0, 0]} autoRotate={autoRotate && !battleFollow} autoRotateSpeed={0.6} enablePan={debug} minZoom={1.6} maxZoom={9} />
 
       {/* 明亮光影 */}
       <ambientLight intensity={1.15} />
@@ -327,7 +342,8 @@ export default function MobaView3D({ mapTexture = null, autoRotate = true, debug
       </directionalLight>
       <directionalLight position={[-50 * S, 60 * S, -40 * S]} intensity={0.6} color={0x9ec8ff} />
 
-      <MobaScene mapTexture={mapTexture} />
+      <MobaScene mapTexture={mapTexture} roster={roster} />
+      <BattleCameraController follow={battleFollow} />
 
       {/* 後製濾鏡。若 SSAO 在你的版本報錯：移除 enableNormalPass 或把 SSAO 整段拿掉 */}
       <EffectComposer enableNormalPass multisampling={4}>

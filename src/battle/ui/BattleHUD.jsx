@@ -25,7 +25,7 @@ export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭
   const { derived, mvp } = useBattleStore();
   const goldDiff = (hud.bGold - hud.rGold);
   const blueLead = goldDiff >= 0;
-  const mvpLabel = mvp ? `${(roster?.[mvp.id]?.player ?? mvp.id.toUpperCase())} ${mvp.k}/${mvp.d}` : "—";
+  const mvpLabel = mvp ? `${(roster?.[mvp.id]?.player ?? mvp.id.toUpperCase())} ${mvp.k}/${mvp.d}/${mvp.a ?? 0}` : "—";
   const mvpBlue = mvp?.side === "blue";
 
   return (

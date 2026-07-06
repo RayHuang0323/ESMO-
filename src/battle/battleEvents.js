@@ -40,11 +40,12 @@ export class BattleEventTracker {
     for (const f of [...snap.feed].reverse()) {           // feed 是 unshift，反轉成時間序
       if (this.seenFeed.has(f.id)) continue;
       this.seenFeed.add(f.id);
+      const ast = f.assists?.length ? `（助攻 ${f.assists.map((x) => x.toUpperCase()).join(",")}）` : "";
       if (!this.firstBlood) {
         this.firstBlood = true;
-        push("FIRST_BLOOD", f.side, `FIRST BLOOD! ${f.killer.toUpperCase()} 擊殺 ${f.victim.toUpperCase()}`, f.vpos);
+        push("FIRST_BLOOD", f.side, `FIRST BLOOD! ${f.killer.toUpperCase()} 擊殺 ${f.victim.toUpperCase()}${ast}`, f.vpos);
       } else {
-        push("KILL", f.side, `${f.killer.toUpperCase()} 擊殺 ${f.victim.toUpperCase()}`, f.vpos);
+        push("KILL", f.side, `${f.killer.toUpperCase()} 擊殺 ${f.victim.toUpperCase()}${ast}`, f.vpos);
       }
       const w = (this.killWindows.get(f.killer) || []).filter((t) => snap.ts - t <= MULTI_WINDOW);
       w.push(snap.ts);
@@ -60,7 +61,7 @@ export class BattleEventTracker {
         const before = prev.towers[key];
         if (before && before.hp > 0 && tw.hp <= 0) {
           const destroyer = tw.side === "blue" ? "red" : "blue";
-          const label = tw.lane === "nexus" ? "主堡" : `${LANE_NAME[tw.lane]} ${tw.tier + 1} 塔`;
+          const label = tw.lane === "nexus" ? "主堡" : `${LANE_NAME[tw.lane]} ${3 - tw.tier} 塔`;
           push("TOWER_DESTROYED", destroyer, `${tw.side === "blue" ? "藍方" : "紅方"}${label} 被摧毀`, tw.pos);
         }
       }
@@ -94,14 +95,22 @@ export class BattleEventTracker {
   }
 }
 
-// ── 即時 MVP 候選（呈現層暫定公式；輸入全為 snapshot 真實資料）────────────
-//  score = k*3 − d*2 + gold/300。Sprint03 的正規化評分公式重新同步後應取代此處。
+// ── Rating / 即時 MVP（呈現層暫定公式；輸入全為 snapshot 真實欄位）──────────
+//  rating = k*3 + a*1.5 − d*2 + dmg/800 + heal/1600 + gold/400
+//  Sprint03 的正規化評分公式重新同步後應取代此處。
+export function playerRating(p) {
+  return p.k * 3 + (p.a || 0) * 1.5 - p.d * 2 + (p.dmg || 0) / 800 + (p.heal || 0) / 1600 + (p.gold || 0) / 400;
+}
+export function participation(p, snap) {
+  const teamK = p.side === "blue" ? snap.bK : snap.rK;
+  return teamK > 0 ? Math.min(1, (p.k + (p.a || 0)) / teamK) : 0;
+}
 export function mvpCandidate(snap) {
   let best = null;
   for (const p of snap.players) {
-    const score = p.k * 3 - p.d * 2 + (p.gold || 0) / 300;
+    const score = playerRating(p);
     if (!best || score > best.score + 1e-9 || (Math.abs(score - best.score) < 1e-9 && (p.gold || 0) > (best.gold || 0))) {
-      best = { id: p.id, side: p.side, role: p.role, k: p.k, d: p.d, gold: p.gold || 0, score };
+      best = { id: p.id, side: p.side, role: p.role, k: p.k, d: p.d, a: p.a || 0, gold: p.gold || 0, dmg: p.dmg || 0, heal: p.heal || 0, score };
     }
   }
   return best;

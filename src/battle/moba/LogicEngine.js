@@ -29,6 +29,7 @@ export class LogicEngine {
           maxHp: 600 * tough, hp: 600 * tough, power, tough,
           dead: false, respawn: 0, state: "對線", atkCd: 0, gold: 0,
           k: 0, d: 0, // Sprint04：個人擊殺/死亡累計（純附加儀器化，供呈現層讀取）
+          a: 0, dmg: 0, heal: 0, hitBy: new Map(), // Sprint06：助攻/傷害/治療儀器化（純附加）
         });
       });
     });
@@ -40,8 +41,8 @@ export class LogicEngine {
           this.towers[`${side}_${lane}_${tier}`] = { side, lane, tier, t, pos: posOnLane(lane, t), hp: TOWER_HP, atkCd: 0 };
         }));
     }
-    this.towers["blue_nexus"] = { side: "blue", lane: "nexus", tier: 9, pos: BASE.blue, hp: NEXUS_HP, atkCd: 0 };
-    this.towers["red_nexus"] = { side: "red", lane: "nexus", tier: 9, pos: BASE.red, hp: NEXUS_HP, atkCd: 0 };
+    this.towers["blue_nexus"] = { side: "blue", lane: "nexus", tier: 9, t: 0.02, pos: BASE.blue, hp: NEXUS_HP, atkCd: 0 };
+    this.towers["red_nexus"] = { side: "red", lane: "nexus", tier: 9, t: 0.98, pos: BASE.red, hp: NEXUS_HP, atkCd: 0 };
 
     this.lanes = { top: { bm: [], rm: [] }, mid: { bm: [], rm: [] }, bot: { bm: [], rm: [] } };
     this.dragon = { alive: false, hp: 100, respawn: 90, contested: false };
@@ -64,7 +65,7 @@ export class LogicEngine {
   tick(dt) {
     if (this.over) return;
     this.t += dt;
-    const lateFactor = 1 + Math.max(0, this.t - 240) / 240;
+    const lateFactor = 1 + Math.max(0, this.t - 360) / 600;
 
     this.waveTimer -= dt;
     if (this.waveTimer <= 0) {
@@ -123,35 +124,52 @@ export class LogicEngine {
     }
 
     for (const p of this.players) {
-      if (p.dead) { p.respawn -= dt; if (p.respawn <= 0) { p.dead = false; p.hp = p.maxHp; const f = FOUNTAIN[p.side]; p.pos = { x: f.x, y: f.y }; p.state = "回防"; } continue; }
+      if (p.dead) { p.respawn -= dt; if (p.respawn <= 0) { p.dead = false; p.hp = p.maxHp; p.retreating = false; p.hitBy.clear(); const f = FOUNTAIN[p.side]; p.pos = { x: f.x, y: f.y }; p.state = "回防"; } continue; }
       p.atkCd -= dt;
+      // 撤退遲滯：<25% 進入撤退，回到 60% 才重返戰場（避免在門檻抖動→全隊永久卡撤退）
+      if (p.hp < p.maxHp * 0.25) p.retreating = true;
+      else if (p.hp >= p.maxHp * 0.60) p.retreating = false;
       let tgt, st;
-      if (p.hp < p.maxHp * 0.25) { tgt = FOUNTAIN[p.side]; st = "撤退"; }
+      if (p.retreating) { tgt = FOUNTAIN[p.side]; st = "撤退"; }
       else if (hot && (p.role === "jungle" || p.role === "sup" || this.rng() < 0.6)) { tgt = hot; st = "團戰!"; }
       else {
-        const lane = p.lane;
-        const adv = p.side === "blue" ? clamp(0.35 + this.t / 900, 0.3, 0.7) : clamp(0.65 - this.t / 900, 0.3, 0.7);
-        tgt = posOnLane(lane, adv); st = p.role === "jungle" ? "游走" : "對線";
+        const ftw = this.frontTower(p.side, p.lane);
+        if (!ftw) { tgt = BASE[p.side === "blue" ? "red" : "blue"]; st = "圍攻"; }   // 該路已清 → 圍攻主堡
+        else {
+          // 壓向該路敵方前線塔（塔破 frontTower 前移 → 自然逐塔推進）
+          const base = p.side === "blue" ? 0.30 + this.t / 600 : 0.70 - this.t / 600;
+          const adv = p.side === "blue" ? clamp(Math.min(base, ftw.t + 0.02), 0.3, 0.98) : clamp(Math.max(base, ftw.t - 0.02), 0.02, 0.7);
+          tgt = posOnLane(p.lane, adv); st = p.role === "jungle" ? "游走" : "對線";
+        }
       }
       const d = dist(p.pos, tgt), spd = (st === "團戰!" ? 16 : 13) * dt;
       if (d > 0.6) { p.pos.x += ((tgt.x - p.pos.x) / d) * Math.min(spd, d); p.pos.y += ((tgt.y - p.pos.y) / d) * Math.min(spd, d); }
       for (const o of WALLS) { const dd = dist(p.pos, o); if (dd < o.r + 1.4) { p.pos.x += ((p.pos.x - o.x) / (dd || 1)) * (o.r + 1.4 - dd); p.pos.y += ((p.pos.y - o.y) / (dd || 1)) * (o.r + 1.4 - dd); } }
       p.pos.x = clamp(p.pos.x, 3, 97); p.pos.y = clamp(p.pos.y, 3, 97);
       p.state = st;
+      // 回血：靠泉水快速回、脫離戰鬥緩慢回（下方交戰若成立會覆寫 inCombat）
+      const nearFountain = dist(p.pos, FOUNTAIN[p.side]) < 10;
       const foe = alive.find((q) => q.side !== p.side && !q.dead && dist(p.pos, q.pos) < 8);
+      if (nearFountain) { const h = Math.min(p.maxHp, p.hp + p.maxHp * 0.20 * dt) - p.hp; p.hp += h; p.heal += h; }
+      else if (!foe) { const h = Math.min(p.maxHp, p.hp + p.maxHp * 0.02 * dt) - p.hp; p.hp += h; p.heal += h; }
       if (foe) {
-        foe.hp -= p.power * dt * 1.1 * lateFactor;
+        const dmgAmt = p.power * dt * 0.92 * lateFactor;
+        foe.hp -= dmgAmt; p.dmg += dmgAmt; foe.hitBy.set(p.id, this.t); // Sprint06：傷害/助攻追蹤（附加）
         if (p.atkCd <= 0) { this.pushFx({ type: this.rng() < 0.2 ? "ult" : "line", pos: { ...p.pos }, target: { ...foe.pos }, color: SIDE[p.side] }); p.atkCd = 0.5; }
         if (foe.hp <= 0 && !foe.dead) {
           foe.dead = true; foe.respawn = 6 + Math.min(this.t / 30, 20); foe.hp = 0;
           if (p.side === "blue") this.bK++; else this.rK++;
           p.k += 1; foe.d += 1; // Sprint04：個人統計（附加）
+          const assists = []; // Sprint06：助攻結算（8 秒窗，附加）
+          for (const [aid, at] of foe.hitBy) { if (aid !== p.id && this.t - at <= 8) { const q = this.players.find((x) => x.id === aid && x.side === p.side); if (q) { q.a += 1; assists.push(aid); } } }
+          foe.hitBy.clear();
           this._dmgGold(p.side, 300); p.gold += 300;
-          this.feed.unshift({ id: this._mid++, killer: p.id, victim: foe.id, side: p.side, vpos: { x: foe.pos.x, y: foe.pos.y } }); this.feed = this.feed.slice(0, 5);
+          this.feed.unshift({ id: this._mid++, killer: p.id, victim: foe.id, side: p.side, assists, vpos: { x: foe.pos.x, y: foe.pos.y } }); this.feed = this.feed.slice(0, 5);
           this.pushFx({ type: "ult", pos: { ...foe.pos }, color: 0xfbbf24, exp: 0.6 });
         }
       }
-      const tw = this.frontTower(p.side, p.lane);
+      let tw = this.frontTower(p.side, p.lane);
+      if (!tw && this.laneCleared(p.side)) tw = this.towers[(p.side === "blue" ? "red" : "blue") + "_nexus"];
       if (tw && dist(p.pos, tw.pos) < 6 && !alive.some((q) => q.side !== p.side && dist(q.pos, tw.pos) < 9)) tw.hp -= 40 * dt * lateFactor;
     }
 
@@ -182,7 +200,7 @@ export class LogicEngine {
     const winProb = clamp(0.5 + gd / 14000 + (tw("red") - tw("blue")) * 0.05, 0.05, 0.95);
     return {
       ts: this.t,
-      players: this.players.map((p) => ({ id: p.id, side: p.side, role: p.role, pos: { ...p.pos }, hp: clamp(p.hp / p.maxHp, 0, 1), dead: p.dead, respawn: p.respawn, state: p.state, k: p.k, d: p.d, gold: Math.round(p.gold) })),
+      players: this.players.map((p) => ({ id: p.id, side: p.side, role: p.role, pos: { ...p.pos }, hp: clamp(p.hp / p.maxHp, 0, 1), dead: p.dead, respawn: p.respawn, state: p.state, k: p.k, d: p.d, a: p.a, gold: Math.round(p.gold), dmg: Math.round(p.dmg), heal: Math.round(p.heal) })),
       towers: Object.fromEntries(Object.entries(this.towers).map(([k, t]) => [k, { side: t.side, lane: t.lane, tier: t.tier, pos: t.pos, hp: clamp(t.hp / (t.lane === "nexus" ? NEXUS_HP : TOWER_HP), 0, 1) }])),
       lanes: { top: this._snapLane("top"), mid: this._snapLane("mid"), bot: this._snapLane("bot") },
       dragon: { ...this.dragon }, baron: { ...this.baron },

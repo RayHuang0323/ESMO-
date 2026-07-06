@@ -1,42 +1,47 @@
 // ============================================================================
 //  battle/ui/BattlePresentationLayer.jsx — DOM 呈現層總成（單一掛載點）
-//  - 掛 useBattleFeed（接核心快照流）→ 疊放 BattleHUD / BattleTimeline /
-//    BattleFloatingText；over 時彈出 BattleScoreboard 結算。
-//  - 放在 GameView 的 3D Canvas 之上（絕對定位、pointerEvents 依元件各自控制）。
-//  注意：相機跟隨（BattleCameraController）屬 R3F，需掛在 MobaView3D 的 Canvas 內，
-//        不在此 DOM 層。
+//  Sprint06：正式掛入 Battle。useBattleFeed（核心快照流 → battleStore）+
+//  BattleHUD / BattleTimeline / BattleFloatingText / TAB 記分板 / BattleEndScreen。
+//  相機跟隨屬 R3F，掛在 MobaView3D 的 Canvas 內（BattleCameraController）。
 // ============================================================================
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useBattleFeed } from "../useBattleFeed.js";
 import { useGameStore } from "../../useGameStore.js";
 import BattleHUD from "./BattleHUD.jsx";
 import BattleTimeline from "./BattleTimeline.jsx";
 import BattleFloatingText from "./BattleFloatingText.jsx";
 import BattleScoreboard from "./BattleScoreboard.jsx";
+import BattleEndScreen from "./BattleEndScreen.jsx";
 
-export default function BattlePresentationLayer({ roster = null, showTimeline = true }) {
-  useBattleFeed();                       // 唯一接線：核心快照 → battleStore
+export default function BattlePresentationLayer({ roster = null, showTimeline = true, onContinue = null }) {
+  useBattleFeed();                       // 唯一接線：核心快照 → battleStore（單向）
   const over = useGameStore((s) => s.hud.over);
-  const winner = useGameStore((s) => s.hud.winner);
+  const [showBoard, setShowBoard] = useState(false);
+
+  // TAB 按住顯示記分板（比照 MOBA 慣例）
+  useEffect(() => {
+    const down = (e) => { if (e.key === "Tab") { e.preventDefault(); setShowBoard(true); } };
+    const up = (e) => { if (e.key === "Tab") setShowBoard(false); };
+    window.addEventListener("keydown", down); window.addEventListener("keyup", up);
+    return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); };
+  }, []);
 
   return (
     <>
       <BattleHUD roster={roster} />
-      {showTimeline && <BattleTimeline open />}
+      {showTimeline && !over && <BattleTimeline open />}
       <BattleFloatingText />
 
-      {over && (
-        <div style={{ position: "absolute", inset: 0, zIndex: 13, display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "center", background: "rgba(4,8,16,0.62)", backdropFilter: "blur(3px)" }}>
-          <div style={{ fontSize: 30, marginBottom: 4 }}>{winner === "blue" ? "🦭" : "🔥"}</div>
-          <div style={{ fontSize: 24, fontWeight: 900, color: winner === "blue" ? "#93c5fd" : "#fca5a5", marginBottom: 12,
-            textShadow: "0 2px 12px rgba(0,0,0,0.8)" }}>
-            {winner === "blue" ? "德國海豹" : "赤焰軍團"} 勝利
-          </div>
+      {/* 戰中 TAB 記分板 */}
+      {showBoard && !over && (
+        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 12, pointerEvents: "none" }}>
           <BattleScoreboard roster={roster} />
         </div>
       )}
+
+      {/* 終局：Victory/Defeat 動畫 + MVP + 最佳數據 + Timeline 摘要 → Result */}
+      {over && <BattleEndScreen roster={roster} onContinue={onContinue} />}
     </>
   );
 }
