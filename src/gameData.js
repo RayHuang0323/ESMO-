@@ -54,7 +54,7 @@ export const BUSHES = [
 export const ROLES = ["top", "jungle", "mid", "adc", "sup"];
 export const ROLE_LANE = { top: "top", jungle: "mid", mid: "mid", adc: "bot", sup: "bot" };
 export const ROLE_NAME = { top: "上路", jungle: "打野", mid: "中路", adc: "射手", sup: "輔助" };
-export const TOWER_HP = 1100, NEXUS_HP = 2600;
+export const TOWER_HP = 2100, NEXUS_HP = 7200;
 
 // 隊色（十六進位；fx 與渲染共用）
 export const SIDE = { blue: 0x3b82f6, red: 0xef4444 };
