@@ -43,3 +43,22 @@ export function computeFocus(snap) {
   }
   return { x: 50, y: 50, intensity: 0 };
 }
+
+// ── Sprint07 導播焦點：事件優先 → 資源/交戰 → 重心（純函數，Node 可驗）─────────
+//  events：battleStore.events；nowTs：目前快照時間
+//  優先序：VICTORY(鎖主堡) > ACE/MULTI_KILL(4s) > TOWER_DESTROYED(3s) > computeFocus
+const EVENT_HOLD = { VICTORY: 9999, ACE: 4, MULTI_KILL: 4, TOWER_DESTROYED: 3, DRAGON_SLAIN: 3, BARON_SLAIN: 3 };
+export function computeSpectatorFocus(snap, events = []) {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const ev = events[i];
+    const hold = EVENT_HOLD[ev.type];
+    if (!hold) continue;
+    if (snap.ts - ev.t > hold) break;          // 事件已過期（events 時間序，往前只會更舊）
+    if (ev.type === "VICTORY") {
+      const nexus = Object.values(snap.towers).find((t) => t.lane === "nexus" && t.hp <= 0) || Object.values(snap.towers).find((t) => t.lane === "nexus");
+      if (nexus) return { x: nexus.pos.x, y: nexus.pos.y, intensity: 1 };
+    }
+    if (ev.pos) return { x: ev.pos.x, y: ev.pos.y, intensity: ev.type === "ACE" || ev.type === "MULTI_KILL" ? 1 : 0.75 };
+  }
+  return computeFocus(snap);
+}

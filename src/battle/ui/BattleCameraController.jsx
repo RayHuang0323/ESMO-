@@ -9,7 +9,8 @@
 
 import { useThree, useFrame } from "@react-three/fiber";
 import { useGameStore } from "../../useGameStore.js";
-import { computeFocus } from "../battleFocus.js";
+import { computeSpectatorFocus } from "../battleFocus.js";
+import { useBattleStore } from "../battleStore.js";
 
 const S = 1.7;                              // 與 MobaView3D 世界尺度一致
 const wx = (x) => (x - 50) * S, wz = (y) => (y - 50) * S;
@@ -29,7 +30,8 @@ export default function BattleCameraController({
     if (!follow || !controls) return;
     const snap = useGameStore.getState().snapshot;
     if (!snap?.players?.length) return;
-    const f = computeFocus(snap);
+    // Sprint07 導播：VICTORY鎖主堡 > ACE/連殺 > 推塔/龍/巴龍事件 > 交戰聚類 > 重心
+    const f = computeSpectatorFocus(snap, useBattleStore.getState().events);
     const tx = wx(f.x), tz = wz(f.y);
 
     controls.target.x = lerp(controls.target.x, tx, posLerp);

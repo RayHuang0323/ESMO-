@@ -5,7 +5,7 @@
 //  缺口（引擎無此概念，不造假）：Lv、Mana → 見技術債。
 // ============================================================================
 
-import React from "react";
+import React, { useState } from "react";
 import { useGameStore } from "../../useGameStore.js";
 import { useBattleStore } from "../battleStore.js";
 import { playerRating, participation } from "../battleEvents.js";
@@ -13,7 +13,11 @@ import { ROLE_NAME } from "../../gameData.js";
 
 const ROLE_ICON = { top: "🛡️", jungle: "🌲", mid: "🔮", adc: "🏹", sup: "✨" };
 const num = (v) => (v >= 1000 ? (v / 1000).toFixed(1) + "k" : String(Math.round(v)));
-const H = ({ children, w }) => <div style={{ width: w, textAlign: "right", fontSize: 9, color: "rgba(255,255,255,0.45)", fontWeight: 800 }}>{children}</div>;
+const H = ({ children, w, onClick, active }) => (
+  <div onClick={onClick} style={{ width: w, textAlign: "right", fontSize: 9, color: active ? "#93c5fd" : "rgba(255,255,255,0.45)", fontWeight: 800, cursor: onClick ? "pointer" : "default", pointerEvents: "auto", userSelect: "none" }}>
+    {children}{active ? "▾" : ""}
+  </div>
+);
 const C = ({ children, w, color = "#e5e7eb", mono = true }) => <div style={{ width: w, textAlign: "right", fontSize: 11, color, fontWeight: 700, fontFamily: mono ? "monospace" : "inherit" }}>{children}</div>;
 
 function Row({ p, snap, isMvp, roster }) {
@@ -29,26 +33,40 @@ function Row({ p, snap, isMvp, roster }) {
         </div>
         <div style={{ fontSize: 9, color: "rgba(255,255,255,0.42)" }}>{hero}</div>
       </div>
-      <C w={52}>{p.k}/{p.d}/{p.a ?? 0}</C>
-      <C w={38} color="#fcd34d">{num(p.gold || 0)}</C>
-      <C w={40} color="#fda4af">{num(p.dmg || 0)}</C>
-      <C w={40} color="#86efac">{num(p.heal || 0)}</C>
-      <C w={34} color="#c4b5fd">{Math.round(participation(p, snap) * 100)}%</C>
-      <C w={36} color="#93c5fd">{playerRating(p).toFixed(0)}</C>
+      <C w={50}>{p.k}/{p.d}/{p.a ?? 0}</C>
+      <C w={36} color="#fcd34d">{num(p.gold || 0)}</C>
+      <C w={38} color="#fda4af">{num(p.dmg || 0)}</C>
+      <C w={38} color="#86efac">{num(p.heal || 0)}</C>
+      <C w={36} color="#a5b4fc">{num(p.twrDmg || 0)}</C>
+      <C w={32} color="#c4b5fd">{Math.round(participation(p, snap) * 100)}%</C>
+      <C w={34} color="#93c5fd">{playerRating(p).toFixed(0)}</C>
     </div>
   );
 }
 
+const SORTS = {
+  rtg: (p, snap) => playerRating(p), kda: (p) => p.k * 2 + (p.a || 0) - p.d, gold: (p) => p.gold || 0,
+  dmg: (p) => p.dmg || 0, heal: (p) => p.heal || 0, td: (p) => p.twrDmg || 0, part: (p, snap) => participation(p, snap),
+};
+
 export default function BattleScoreboard({ roster = null, blueName = "德國海豹", blueEmoji = "🦭", redName = "赤焰軍團", redEmoji = "🔥" }) {
   const snap = useGameStore((s) => s.snapshot);
   const mvp = useBattleStore((s) => s.mvp);
-  const side = (s) => snap.players.filter((p) => p.side === s);
+  const [sortKey, setSortKey] = useState("rtg");
+  const bySort = (arr) => [...arr].sort((a, b) => SORTS[sortKey](b, snap) - SORTS[sortKey](a, snap));
+  const side = (s) => bySort(snap.players.filter((p) => p.side === s));
   const sum = (arr, k) => arr.reduce((a, p) => a + (p[k] || 0), 0);
 
   const Head = () => (
     <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 8px 2px" }}>
       <span style={{ width: 16 }} /><div style={{ flex: 1 }} />
-      <H w={52}>K/D/A</H><H w={38}>GOLD</H><H w={40}>DMG</H><H w={40}>HEAL</H><H w={34}>參與</H><H w={36}>RTG</H>
+      <H w={50} onClick={() => setSortKey("kda")} active={sortKey === "kda"}>K/D/A</H>
+      <H w={36} onClick={() => setSortKey("gold")} active={sortKey === "gold"}>GOLD</H>
+      <H w={38} onClick={() => setSortKey("dmg")} active={sortKey === "dmg"}>DMG</H>
+      <H w={38} onClick={() => setSortKey("heal")} active={sortKey === "heal"}>HEAL</H>
+      <H w={36} onClick={() => setSortKey("td")} active={sortKey === "td"}>拆塔</H>
+      <H w={32} onClick={() => setSortKey("part")} active={sortKey === "part"}>參與</H>
+      <H w={34} onClick={() => setSortKey("rtg")} active={sortKey === "rtg"}>RTG</H>
     </div>
   );
   const Team = ({ players, color, label, emoji }) => (
@@ -64,7 +82,7 @@ export default function BattleScoreboard({ roster = null, blueName = "德國海�
   );
 
   return (
-    <div style={{ background: "rgba(8,14,24,0.92)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: "10px 4px 4px", width: 430, fontFamily: "system-ui,sans-serif" }}>
+    <div style={{ background: "rgba(8,14,24,0.92)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: "10px 4px 4px", width: 452, fontFamily: "system-ui,sans-serif" }}>
       <Head />
       <Team players={side("blue")} color="#93c5fd" label={blueName} emoji={blueEmoji} />
       <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "2px 8px 8px" }} />

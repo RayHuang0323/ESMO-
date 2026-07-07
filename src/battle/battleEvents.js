@@ -33,25 +33,26 @@ export class BattleEventTracker {
     if (this.prev && snap.ts < this.prev.ts) this.reset();
     const prev = this.prev;
     const out = [];
-    const push = (type, side, text, pos = null) =>
-      out.push({ id: this._eid++, t: snap.ts, type, side, text, pos });
+    const push = (type, side, text, pos = null, data = null) =>
+      out.push({ id: this._eid++, t: snap.ts, type, side, text, pos, data });
 
     // ── 擊殺 / First Blood / 連殺（讀真實 feed，附上快照時間）────────────
     for (const f of [...snap.feed].reverse()) {           // feed 是 unshift，反轉成時間序
       if (this.seenFeed.has(f.id)) continue;
       this.seenFeed.add(f.id);
       const ast = f.assists?.length ? `（助攻 ${f.assists.map((x) => x.toUpperCase()).join(",")}）` : "";
+      const kd = { killer: f.killer, victim: f.victim, assists: f.assists || [] };
       if (!this.firstBlood) {
         this.firstBlood = true;
-        push("FIRST_BLOOD", f.side, `FIRST BLOOD! ${f.killer.toUpperCase()} 擊殺 ${f.victim.toUpperCase()}${ast}`, f.vpos);
+        push("FIRST_BLOOD", f.side, `FIRST BLOOD! ${f.killer.toUpperCase()} 擊殺 ${f.victim.toUpperCase()}${ast}`, f.vpos, kd);
       } else {
-        push("KILL", f.side, `${f.killer.toUpperCase()} 擊殺 ${f.victim.toUpperCase()}${ast}`, f.vpos);
+        push("KILL", f.side, `${f.killer.toUpperCase()} 擊殺 ${f.victim.toUpperCase()}${ast}`, f.vpos, kd);
       }
       const w = (this.killWindows.get(f.killer) || []).filter((t) => snap.ts - t <= MULTI_WINDOW);
       w.push(snap.ts);
       this.killWindows.set(f.killer, w);
       if (w.length >= 2 && MULTI_NAME[Math.min(w.length, 5)]) {
-        push("MULTI_KILL", f.side, `${MULTI_NAME[Math.min(w.length, 5)]}! ${f.killer.toUpperCase()}`, f.vpos);
+        push("MULTI_KILL", f.side, `${MULTI_NAME[Math.min(w.length, 5)]}! ${f.killer.toUpperCase()}`, f.vpos, { killer: f.killer, streak: Math.min(w.length, 5) });
       }
     }
 
@@ -62,7 +63,7 @@ export class BattleEventTracker {
         if (before && before.hp > 0 && tw.hp <= 0) {
           const destroyer = tw.side === "blue" ? "red" : "blue";
           const label = tw.lane === "nexus" ? "主堡" : `${LANE_NAME[tw.lane]} ${3 - tw.tier} 塔`;
-          push("TOWER_DESTROYED", destroyer, `${tw.side === "blue" ? "藍方" : "紅方"}${label} 被摧毀`, tw.pos);
+          push("TOWER_DESTROYED", destroyer, `${tw.side === "blue" ? "藍方" : "紅方"}${label} 被摧毀`, tw.pos, { lane: tw.lane, tier: tw.tier, victimSide: tw.side, isNexus: tw.lane === "nexus" });
         }
       }
       // ── 龍 / 巴龍（alive 由 true → false；歸屬方以引擎同規則重演：坑邊人數多者）──

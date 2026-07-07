@@ -64,20 +64,33 @@ function makeLabelSprite(text, hex, sx = 3, sy = 1.5) {
   sp.scale.set(sx * S, sy * S, 1); return sp;
 }
 // ── Sprint06 Hero Overlay：可重繪文字 sprite（玩家名+KDA / 復活倒數）──────────
-function drawOverlayTexture(line1, line2, hex) {
-  const c = document.createElement("canvas"); c.width = 320; c.height = 96;
+function drawOverlayTexture(hero, player, line3, hex, badge) {
+  const c = document.createElement("canvas"); c.width = 340; c.height = 132;
   const g = c.getContext("2d"); g.textAlign = "center"; g.textBaseline = "middle";
-  g.font = "bold 34px system-ui,sans-serif";
-  g.lineWidth = 7; g.strokeStyle = "rgba(0,0,0,0.85)"; g.strokeText(line1, 160, 26);
-  g.fillStyle = "#" + hex.toString(16).padStart(6, "0"); g.fillText(line1, 160, 26);
-  g.font = "bold 30px monospace";
-  g.lineWidth = 6; g.strokeText(line2, 160, 66);
-  g.fillStyle = "#ffffff"; g.fillText(line2, 160, 66);
+  // 第 1 行：英雄名
+  g.font = "bold 32px system-ui,sans-serif";
+  g.lineWidth = 7; g.strokeStyle = "rgba(0,0,0,0.85)"; g.strokeText(hero, 170, 22);
+  g.fillStyle = "#" + hex.toString(16).padStart(6, "0"); g.fillText(hero, 170, 22);
+  // 第 2 行：玩家名 · Lv
+  g.font = "bold 24px system-ui,sans-serif";
+  g.lineWidth = 6; g.strokeText(player, 170, 60);
+  g.fillStyle = "rgba(255,255,255,0.85)"; g.fillText(player, 170, 60);
+  // 第 3 行：KDA / 復活倒數 + 狀態徽章
+  g.font = "bold 28px monospace";
+  g.lineWidth = 6; g.strokeText(line3, 170, 102);
+  g.fillStyle = "#ffffff"; g.fillText(line3, 170, 102);
+  if (badge) {
+    g.font = "bold 22px system-ui,sans-serif";
+    const bw = g.measureText(badge.text).width + 16;
+    g.fillStyle = badge.bg; const bx = 170 - bw / 2, by = 116;
+    g.beginPath(); g.roundRect(bx, by - 12, bw, 24, 8); g.fill();
+    g.fillStyle = "#0d1420"; g.fillText(badge.text, 170, by);
+  }
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; return tex;
 }
 function makeOverlaySprite(hex) {
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: drawOverlayTexture(" ", " ", hex), transparent: true, depthTest: false }));
-  sp.scale.set(5.6 * S, 1.7 * S, 1); return sp;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: drawOverlayTexture(" ", " ", " ", hex, null), transparent: true, depthTest: false }));
+  sp.scale.set(6.0 * S, 2.35 * S, 1); return sp;
 }
 
 function makeTopper(role, color) {
@@ -189,7 +202,7 @@ function MobaScene({ mapTexture, roster }) {
       hpGrp.add(bg, fg); root.add(hpGrp);
       const topper = makeTopper(p.role, glow); topper.position.y = 3.4 * S; root.add(topper);
       const overlayHex = p.side === "blue" ? 0x93c5fd : 0xfca5a5;
-      const overlay = makeOverlaySprite(overlayHex); overlay.position.y = 5.2 * S; root.add(overlay);
+      const overlay = makeOverlaySprite(overlayHex); overlay.position.y = 5.6 * S; root.add(overlay);
       world.add(root);
       heroObjs[p.id] = { root, cap, mat, ring, ringMat, hpGrp, fg, fgMat, topper, overlay, overlayHex, lastOverlay: "", seed: Math.random() * 7 };
     });
@@ -236,15 +249,19 @@ function MobaScene({ mapTexture, roster }) {
       o.fgMat.color.setHex(hp > 0.55 ? 0x34d399 : hp > 0.28 ? 0xfbbf24 : 0xf87171);
       o.topper.visible = !dead; o.topper.rotation.y += dt * 1.2; o.topper.position.y = 3.4 * S + Math.sin(now / 1000 * 3 + o.seed) * 0.07 * S;
       o.root.visible = p.side === "blue" ? true : vis(np.pos);
-      // Sprint06 Hero Overlay：玩家名 + K/D/A（全讀 snapshot）；死亡改顯示復活倒數
-      const dispName = (roster?.[p.id]?.player ?? p.id.toUpperCase());
-      const line1 = `${dispName} · ${ROLE_NAME[np.role]}`;
-      const line2 = dead ? `復活 ${Math.max(0, np.respawn).toFixed(0)}s` : `${np.k}/${np.d}/${np.a ?? 0}`;
-      const key = line1 + "|" + line2;
+      // Sprint07 Hero Overlay v2：英雄名 / 玩家名·Lv(佔位) / KDA或復活倒數 + 狀態徽章
+      const heroName = roster?.[p.id]?.hero ?? ROLE_NAME[np.role];
+      const playerName = `${roster?.[p.id]?.player ?? p.id.toUpperCase()} · Lv—`;  // Lv：引擎尚無等級資料，佔位不造假
+      const line3 = dead ? `☠ ${Math.max(0, np.respawn).toFixed(0)}s` : `${np.k}/${np.d}/${np.a ?? 0}`;
+      const badge = dead ? null
+        : np.state === "撤退" ? { text: "⛊ 撤退", bg: "#fbbf24" }
+        : np.state === "團戰!" ? { text: "⚔ 團戰", bg: "#f87171" }
+        : np.state === "圍攻" ? { text: "⚑ 圍攻", bg: "#a78bfa" } : null;
+      const key = heroName + "|" + playerName + "|" + line3 + "|" + (badge?.text ?? "");
       if (key !== o.lastOverlay) {
         o.lastOverlay = key;
         o.overlay.material.map.dispose();
-        o.overlay.material.map = drawOverlayTexture(line1, line2, dead ? 0x9ca3af : o.overlayHex);
+        o.overlay.material.map = drawOverlayTexture(heroName, playerName, line3, dead ? 0x9ca3af : o.overlayHex, badge);
         o.overlay.material.needsUpdate = true;
       }
       o.overlay.visible = o.root.visible;
