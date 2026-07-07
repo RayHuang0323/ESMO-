@@ -8,6 +8,7 @@
 import { useEffect } from "react";
 import { useGameStore } from "../useGameStore.js";
 import { useBattleStore } from "./battleStore.js";
+import { useHeroProgressStore } from "../hero/heroProgressStore.js";
 
 export function useBattleFeed() {
   useEffect(() => {
@@ -21,6 +22,8 @@ export function useBattleFeed() {
       if (!prev || snap === prev.snapshot) return;
       if (prev.snapshot && snap.ts < prev.snapshot.ts) reset();  // 新對局：先重置
       ingest(snap);
+      // Sprint08：終局 → Hero Progress 入帳（store 內防重複，一場一次）
+      if (snap.over) useHeroProgressStore.getState().recordBattleResult(snap);
     });
     return () => unsub();
   }, []);

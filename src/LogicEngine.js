@@ -11,7 +11,7 @@ import {
 } from "./gameData.js";
 
 export class LogicEngine {
-  constructor(seed = 1) {
+  constructor(seed = 1, loadout = null) {
     let x = seed | 0; this.rng = () => ((x = (x * 1664525 + 1013904223) & 0xffffffff) >>> 0) / 0xffffffff;
     this.t = 0; this.over = false; this.winner = null;
     this.bK = 0; this.rK = 0; this.bGold = 500; this.rGold = 500;
@@ -20,8 +20,13 @@ export class LogicEngine {
     this.players = [];
     ["blue", "red"].forEach((side) => {
       ROLES.forEach((role, i) => {
-        const tough = [1.6, 1.15, 0.9, 0.8, 1.25][i];
-        const power = [30, 34, 36, 42, 18][i];
+        const baseTough = [1.6, 1.15, 0.9, 0.8, 1.25][i];
+        const basePower = [30, 34, 36, 42, 18][i];
+        // Sprint08：Hero Progress loadout（等級屬性；無 loadout 時 = 原基準值）
+        const lo = loadout?.[side[0] + (i + 1)] ?? null;
+        const tough = lo ? baseTough * lo.toughMult : baseTough;
+        const power = lo ? basePower * lo.powerMult : basePower;
+        const lv = lo?.level ?? 1;
         const f = FOUNTAIN[side];
         this.players.push({
           id: side[0] + (i + 1), side, role, lane: ROLE_LANE[role],
@@ -31,6 +36,7 @@ export class LogicEngine {
           k: 0, d: 0, // Sprint04：個人擊殺/死亡累計（純附加儀器化，供呈現層讀取）
           a: 0, dmg: 0, heal: 0, hitBy: new Map(), // Sprint06：助攻/傷害/治療儀器化（純附加）
           twrDmg: 0, // Sprint07：個人推塔傷害（純附加）
+          lv, // Sprint08：英雄等級（來自 Hero Progress loadout）
         });
       });
     });
@@ -201,7 +207,7 @@ export class LogicEngine {
     const winProb = clamp(0.5 + gd / 14000 + (tw("red") - tw("blue")) * 0.05, 0.05, 0.95);
     return {
       ts: this.t,
-      players: this.players.map((p) => ({ id: p.id, side: p.side, role: p.role, pos: { ...p.pos }, hp: clamp(p.hp / p.maxHp, 0, 1), dead: p.dead, respawn: p.respawn, state: p.state, k: p.k, d: p.d, a: p.a, gold: Math.round(p.gold), dmg: Math.round(p.dmg), heal: Math.round(p.heal), twrDmg: Math.round(p.twrDmg) })),
+      players: this.players.map((p) => ({ id: p.id, side: p.side, role: p.role, pos: { ...p.pos }, hp: clamp(p.hp / p.maxHp, 0, 1), dead: p.dead, respawn: p.respawn, state: p.state, k: p.k, d: p.d, a: p.a, gold: Math.round(p.gold), dmg: Math.round(p.dmg), heal: Math.round(p.heal), twrDmg: Math.round(p.twrDmg), lv: p.lv })),
       towers: Object.fromEntries(Object.entries(this.towers).map(([k, t]) => [k, { side: t.side, lane: t.lane, tier: t.tier, pos: t.pos, hp: clamp(t.hp / (t.lane === "nexus" ? NEXUS_HP : TOWER_HP), 0, 1) }])),
       lanes: { top: this._snapLane("top"), mid: this._snapLane("mid"), bot: this._snapLane("bot") },
       dragon: { ...this.dragon }, baron: { ...this.baron },

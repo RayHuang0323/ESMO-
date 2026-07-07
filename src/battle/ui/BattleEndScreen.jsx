@@ -11,6 +11,8 @@ import { useBattleStore } from "../battleStore.js";
 import { playerRating, participation } from "../battleEvents.js";
 import { fmtT, ROLE_NAME } from "../../gameData.js";
 import BattleScoreboard from "./BattleScoreboard.jsx";
+import HeroDetailPanel from "./HeroDetailPanel.jsx";
+import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
 
 const KEYFRAMES = `
 @keyframes esmoEndPop { 0%{transform:scale(0.55);opacity:0} 60%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
@@ -77,6 +79,9 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
   const snap = useGameStore((s) => s.snapshot);
   const { mvp, events, derived, series } = useBattleStore();
   const [phase, setPhase] = useState(0);
+  const [heroPage, setHeroPage] = useState(null);   // {heroId,heroName,playerName,side}
+  const lastDetail = useHeroProgressStore((s) => s.lastDetail);
+  const progress = useHeroProgressStore((s) => s.progress);
   useEffect(() => { const t = setTimeout(() => setPhase(1), 900); return () => clearTimeout(t); }, []);
 
   const win = snap.winner;
@@ -133,6 +138,37 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
           {/* 中欄：完整記分板 */}
           <BattleScoreboard roster={roster} blueName={blueName} redName={redName} />
 
+          {/* 成長欄：本場 EXP / 升級 / 能力提升 / Mastery（Sprint08【F】）*/}
+          {lastDetail && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 9, width: 250 }}>
+              <Panel title="英雄成長（點擊看 Hero Page）">
+                {lastDetail.filter((d) => d.playerId.startsWith(homeSide === "blue" ? "b" : "r")).map((d) => {
+                  const r = roster?.[d.playerId];
+                  const h = progress[d.heroId];
+                  const up = d.levelsGained > 0;
+                  const dTough = (d.attrsAfter.toughMult / d.attrsBefore.toughMult - 1) * 100;
+                  const dPower = (d.attrsAfter.powerMult / d.attrsBefore.powerMult - 1) * 100;
+                  return (
+                    <div key={d.playerId} onClick={() => setHeroPage({ heroId: d.heroId, heroName: r?.hero ?? d.heroId, playerName: r?.player ?? d.playerId.toUpperCase(), side: homeSide })}
+                      style={{ cursor: "pointer", pointerEvents: "auto", padding: "4px 6px", borderRadius: 7, marginBottom: 2, background: up ? "rgba(250,204,21,0.1)" : "rgba(255,255,255,0.03)", border: up ? "1px solid rgba(250,204,21,0.35)" : "1px solid transparent" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5 }}>
+                        <span style={{ fontWeight: 800, color: "#e5e7eb" }}>{r?.hero ?? d.heroId} <span style={{ color: "rgba(255,255,255,0.45)", fontWeight: 600 }}>{r?.player}</span></span>
+                        <span style={{ fontFamily: "ui-monospace,monospace", color: "#fde047", fontWeight: 900 }}>+{d.xpGain} XP</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginTop: 1 }}>
+                        <span style={{ color: up ? "#fde047" : "rgba(255,255,255,0.4)", fontWeight: 800 }}>
+                          {up ? `⬆ Lv${d.levelBefore}→${d.levelAfter}` : `Lv${d.levelAfter}`}
+                          {up && <span style={{ color: "#86efac" }}> 生存+{dTough.toFixed(1)}% 輸出+{dPower.toFixed(1)}%</span>}
+                        </span>
+                        <span style={{ color: "rgba(255,255,255,0.45)", fontFamily: "ui-monospace,monospace" }}>{h ? `${h.mastery.wins}勝/${h.mastery.games}場` : ""}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </Panel>
+            </div>
+          )}
+
           {/* 右欄：金錢圖 / 推塔圖 / 戰報摘要 */}
           <div style={{ display: "flex", flexDirection: "column", gap: 9, width: 240 }}>
             <Panel title="金錢差走勢（🔵領先在上）"><GoldGraph series={series} /></Panel>
@@ -149,6 +185,8 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
           </div>
         </div>
       )}
+
+      {heroPage && <HeroDetailPanel {...heroPage} onClose={() => setHeroPage(null)} />}
 
       {phase >= 1 && onContinue && (
         <button onClick={onContinue} style={{ animation: "esmoEndRise 0.5s 0.15s ease both", background: "linear-gradient(135deg,#3b82f6,#1d4ed8)", border: "1px solid #93c5fd", borderRadius: 10, padding: "10px 30px", color: "#fff", fontWeight: 900, fontSize: 14, cursor: "pointer" }}>

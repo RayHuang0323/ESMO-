@@ -10,7 +10,7 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { LogicEngine } from "./LogicEngine.js";
 import { useGameStore } from "./useGameStore.js";
-import { assignRoster } from "./data/heroMapping.js";
+import { useHeroProgressStore } from "./hero/heroProgressStore.js";
 
 const TICK_MS = 130;   // 每 130ms 一個模擬步
 const DT_SIM = 0.5;    // 每步推進 0.5 模擬秒（約 3.8x 速度；要即時就設成 TICK_MS/1000）
@@ -29,12 +29,11 @@ export function useLocalServer() {
 
   const start = useCallback(() => {
     stop();
-    const { pushFrame, subTRef, setRoster } = useGameStore.getState();
-    const seed = (Date.now() & 0xffff) | 1;
-    const eng = new LogicEngine(seed);
+    const { pushFrame, subTRef } = useGameStore.getState();
+    const loadout = useHeroProgressStore.getState().getLoadout();   // Sprint08：下場沿用
+    const eng = new LogicEngine((Date.now() & 0xffff) | 1, loadout);
     engineRef.current = eng;
     const boot = eng.snapshot(); pushFrame(boot); pushFrame(boot); // prev == snapshot
-    setRoster(assignRoster(boot.players, seed)); // Hero Mapping：開局僅此一次，與引擎同種子
     lastTick.current = performance.now();
 
     intervalRef.current = setInterval(() => {

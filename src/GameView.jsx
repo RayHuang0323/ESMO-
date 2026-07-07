@@ -14,6 +14,7 @@ import BattlePresentationLayer from "./battle/ui/BattlePresentationLayer.jsx";
 import { useGameStore } from "./useGameStore.js";
 import { useLocalServer } from "./useLocalServer.js";
 import { LANES, PITS } from "./gameData.js";
+import { ROSTER } from "./data/roster.js";
 
 // 你的彩色地圖：Vite 可 `import mapUrl from "./assets/rift.png"` 後設給 MOBA_MAP；null 用程序化底圖。
 const MOBA_MAP = null;
@@ -54,7 +55,7 @@ function Minimap() {
   return <canvas ref={ref} width={150} height={150} style={{ position: "absolute", bottom: 10, right: 10, width: 150, height: 150, borderRadius: 10, border: "1px solid rgba(255,255,255,0.25)", boxShadow: "0 4px 20px rgba(0,0,0,0.5)", pointerEvents: "none", zIndex: 9 }} />;
 }
 
-export default function GameView({ roster = null, onContinue = null }) {
+export default function GameView({ roster = ROSTER, onContinue = null }) {
   const { playing, start, stop } = useLocalServer();
   const [follow, setFollow] = useState(true);        // 戰鬥鏡頭跟隨（BattleCameraController）
   const hud = useGameStore((s) => s.hud);

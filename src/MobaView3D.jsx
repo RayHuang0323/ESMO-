@@ -251,7 +251,7 @@ function MobaScene({ mapTexture, roster }) {
       o.root.visible = p.side === "blue" ? true : vis(np.pos);
       // Sprint07 Hero Overlay v2：英雄名 / 玩家名·Lv(佔位) / KDA或復活倒數 + 狀態徽章
       const heroName = roster?.[p.id]?.hero ?? ROLE_NAME[np.role];
-      const playerName = `${roster?.[p.id]?.player ?? p.id.toUpperCase()} · Lv—`;  // Lv：引擎尚無等級資料，佔位不造假
+      const playerName = `${roster?.[p.id]?.player ?? p.id.toUpperCase()} · Lv${np.lv ?? 1}`;  // Sprint08：真等級（Hero Progress loadout）
       const line3 = dead ? `☠ ${Math.max(0, np.respawn).toFixed(0)}s` : `${np.k}/${np.d}/${np.a ?? 0}`;
       const badge = dead ? null
         : np.state === "撤退" ? { text: "⛊ 撤退", bg: "#fbbf24" }
