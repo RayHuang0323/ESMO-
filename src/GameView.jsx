@@ -83,6 +83,8 @@ export default function GameView({ roster = null, onContinue = null }) {
       <div style={{ position: "absolute", bottom: 10, left: 10, color: "rgba(255,255,255,0.6)", fontSize: 10, background: "rgba(0,0,0,0.45)", padding: "4px 8px", borderRadius: 6, pointerEvents: "none" }}>
         按住 TAB 記分板 · 拖曳旋轉 · 滾輪縮放
       </div>
+      {/* 掛載信標：看得到這個 tag = 渲染的是主幹 GameView（非 Legacy App.jsx）*/}
+      <div style={{ position: "absolute", bottom: 166, right: 12, color: "rgba(147,197,253,0.55)", fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", pointerEvents: "none", zIndex: 9 }}>ESMO 主幹 · S06</div>
       <Minimap />
     </div>
   );
