@@ -6,9 +6,7 @@
 // ============================================================================
 
 import React, { useEffect, useState } from "react";
-import { useGameStore } from "../../useGameStore.js";
 import { useBattleStore } from "../battleStore.js";
-import { playerRating, participation } from "../battleEvents.js";
 import { fmtT, ROLE_NAME } from "../../gameData.js";
 import BattleScoreboard from "./BattleScoreboard.jsx";
 import HeroDetailPanel from "./HeroDetailPanel.jsx";
@@ -59,38 +57,41 @@ function TowerGraph({ series }) {
   );
 }
 
-function bestStats(snap) {
+// Sprint09：只讀 BattleResult.players 既有欄位（挑最大值屬呈現排序，非重新統計）
+function bestStats(players) {
   const top = (fn, label, icon, fmt) => {
-    const p = [...snap.players].sort((a, b) => fn(b) - fn(a))[0];
+    const p = [...players].sort((a, b) => fn(b) - fn(a))[0];
     return { icon, label, id: p.id, side: p.side, val: fmt(fn(p)) };
   };
   const k = (v) => Math.round(v), kk = (v) => (v / 1000).toFixed(1) + "k";
   return [
     top((p) => p.k, "最多擊殺", "⚔️", k),
-    top((p) => p.dmg || 0, "最高傷害", "💥", kk),
-    top((p) => p.heal || 0, "最高治療", "💚", kk),
-    top((p) => participation(p, snap), "最高參團", "🤝", (v) => Math.round(v * 100) + "%"),
-    top((p) => p.twrDmg || 0, "最佳推塔", "🗼", kk),
-    top((p) => p.gold || 0, "最富有", "💰", kk),
+    top((p) => p.dmg, "最高傷害", "💥", kk),
+    top((p) => p.heal, "最高治療", "💚", kk),
+    top((p) => p.participation, "最高參團", "🤝", (v) => Math.round(v * 100) + "%"),
+    top((p) => p.twrDmg, "最佳推塔", "🗼", kk),
+    top((p) => p.gold, "最富有", "💰", kk),
   ];
 }
 
 export default function BattleEndScreen({ roster = null, homeSide = "blue", onContinue = null, blueName = "德國海豹", redName = "赤焰軍團" }) {
-  const snap = useGameStore((s) => s.snapshot);
-  const { mvp, events, derived, series } = useBattleStore();
+  const result = useBattleStore((s) => s.result);        // Sprint09：唯一結算來源
+  const series = useBattleStore((s) => s.series);         // 快照取樣曲線（衍生呈現資料）
   const [phase, setPhase] = useState(0);
   const [heroPage, setHeroPage] = useState(null);   // {heroId,heroName,playerName,side}
   const lastDetail = useHeroProgressStore((s) => s.lastDetail);
   const progress = useHeroProgressStore((s) => s.progress);
   useEffect(() => { const t = setTimeout(() => setPhase(1), 900); return () => clearTimeout(t); }, []);
 
-  const win = snap.winner;
+  if (!result) return null;                               // 終局 result 由 useBattleFeed 先行寫入
+  const win = result.winner;
+  const mvp = result.players.find((p) => p.mvp) ?? null;
   const homeWin = win === homeSide;
   const title = homeWin ? "VICTORY" : "DEFEAT";
   const titleColor = homeWin ? "#fde047" : "#94a3b8";
   const mvpName = mvp ? (roster?.[mvp.id]?.player ?? mvp.id.toUpperCase()) : "—";
-  const highlights = events.filter((e) => ["FIRST_BLOOD", "ACE", "BARON_SLAIN", "MULTI_KILL", "VICTORY"].includes(e.type)).slice(-6);
-  const stats = bestStats(snap);
+  const highlights = result.timeline.filter((e) => ["FIRST_BLOOD", "ACE", "BARON_SLAIN", "MULTI_KILL", "VICTORY"].includes(e.type)).slice(-6);
+  const stats = bestStats(result.players);
   const Panel = ({ title: tt, children, w }) => (
     <div style={{ background: "rgba(8,14,24,0.9)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "9px 12px", width: w }}>
       <div style={{ fontSize: 9.5, letterSpacing: "0.2em", color: "rgba(255,255,255,0.5)", fontWeight: 900, marginBottom: 5 }}>{tt}</div>
@@ -108,7 +109,7 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
         <div style={{ fontSize: 56, fontWeight: 900, letterSpacing: "0.14em", color: titleColor, animation: "esmoGlow 2.2s infinite" }}>{title}</div>
         <div style={{ position: "absolute", top: 0, left: 0, width: "30%", height: "100%", background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent)", animation: "esmoSweep 1.6s 0.4s ease both" }} />
         <div style={{ fontSize: 13.5, fontWeight: 800, color: sideC(win), marginTop: 1, fontFamily: MONO }}>
-          {win === "blue" ? blueName : redName} 獲勝 · {fmtT(snap.ts)} · {snap.bK}:{snap.rK} · 🐉{win === "blue" ? derived.dragonB : derived.dragonR} 👑{win === "blue" ? derived.baronB : derived.baronR}
+          {result.teams[win].name} 獲勝 · {fmtT(result.duration)} · {result.score.blue}:{result.score.red} · 🐉{result.dragon[win]} 👑{result.baron[win]}
         </div>
       </div>
 
@@ -122,7 +123,7 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
                 <div style={{ fontSize: 19, fontWeight: 900, color: sideC(mvp.side), marginTop: 2 }}>{mvpName}</div>
                 <div style={{ fontSize: 10.5, color: "rgba(255,255,255,0.55)" }}>{roster?.[mvp.id]?.hero ?? ROLE_NAME[mvp.role]}</div>
                 <div style={{ fontFamily: MONO, fontSize: 16, fontWeight: 900, color: "#fff", marginTop: 3 }}>{mvp.k}/{mvp.d}/{mvp.a}</div>
-                <div style={{ fontSize: 10, color: "#fde047", marginTop: 2, fontFamily: MONO }}>RTG {playerRating(mvp).toFixed(0)} · {(mvp.dmg / 1000).toFixed(1)}k DMG</div>
+                <div style={{ fontSize: 10, color: "#fde047", marginTop: 2, fontFamily: MONO }}>RTG {mvp.rating.toFixed(0)} · {(mvp.dmg / 1000).toFixed(1)}k DMG</div>
               </div>
             )}
             <Panel title="最佳數據">

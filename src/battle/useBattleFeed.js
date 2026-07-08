@@ -9,6 +9,8 @@ import { useEffect } from "react";
 import { useGameStore } from "../useGameStore.js";
 import { useBattleStore } from "./battleStore.js";
 import { useHeroProgressStore } from "../hero/heroProgressStore.js";
+import { useSeasonStore } from "../platform/seasonStore.js";
+import { snapshotToBattleResult } from "./battleResult.js";
 
 export function useBattleFeed() {
   useEffect(() => {
@@ -22,8 +24,14 @@ export function useBattleFeed() {
       if (!prev || snap === prev.snapshot) return;
       if (prev.snapshot && snap.ts < prev.snapshot.ts) reset();  // 新對局：先重置
       ingest(snap);
-      // Sprint08：終局 → Hero Progress 入帳（store 內防重複，一場一次）
-      if (snap.over) useHeroProgressStore.getState().recordBattleResult(snap);
+      // Sprint09：唯一計算點 — 終局只在此產出一份 BattleResult，分送所有消費者
+      const bs = useBattleStore.getState();
+      if (snap.over && !bs.result) {
+        const result = snapshotToBattleResult(snap, bs.log);
+        bs.setResult(result);                                        // → EndScreen（禁止重新統計）
+        useHeroProgressStore.getState().recordBattleResult(result);  // → Hero Progress
+        useSeasonStore.getState().recordResult(result);              // → Season / History / Analytics
+      }
     });
     return () => unsub();
   }, []);

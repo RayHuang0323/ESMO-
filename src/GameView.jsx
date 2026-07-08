@@ -55,8 +55,10 @@ function Minimap() {
   return <canvas ref={ref} width={150} height={150} style={{ position: "absolute", bottom: 10, right: 10, width: 150, height: 150, borderRadius: 10, border: "1px solid rgba(255,255,255,0.25)", boxShadow: "0 4px 20px rgba(0,0,0,0.5)", pointerEvents: "none", zIndex: 9 }} />;
 }
 
-export default function GameView({ roster = ROSTER, onContinue = null }) {
+export default function GameView({ roster = ROSTER, onContinue = null, autoStart = false }) {
   const { playing, start, stop } = useLocalServer();
+  // Sprint09：賽前準備銜接 — autoStart 掛載即開局（預設 false = 現行為不變）
+  useEffect(() => { if (autoStart && !playing) start(); }, []);  // eslint-disable-line
   const [follow, setFollow] = useState(true);        // 戰鬥鏡頭跟隨（BattleCameraController）
   const hud = useGameStore((s) => s.hud);
 
@@ -85,7 +87,7 @@ export default function GameView({ roster = ROSTER, onContinue = null }) {
         按住 TAB 記分板 · 拖曳旋轉 · 滾輪縮放
       </div>
       {/* 掛載信標：看得到這個 tag = 渲染的是主幹 GameView（非 Legacy App.jsx）*/}
-      <div style={{ position: "absolute", bottom: 166, right: 12, color: "rgba(147,197,253,0.55)", fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", pointerEvents: "none", zIndex: 9 }}>ESMO 主幹 · S06</div>
+      <div style={{ position: "absolute", bottom: 166, right: 12, color: "rgba(147,197,253,0.55)", fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", pointerEvents: "none", zIndex: 9 }}>ESMO 主幹 · S09</div>
       <Minimap />
     </div>
   );

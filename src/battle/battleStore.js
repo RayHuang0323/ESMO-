@@ -12,6 +12,7 @@ export const useBattleStore = create((set) => {
   const tracker = new BattleEventTracker();
   return {
     ...emptyBattleState(),
+    result: null,   // Sprint09：終局 BattleResult（唯一計算點產出；EndScreen 消費）
     _tracker: tracker,
 
     /** 呈現層唯一入口：餵最新 snapshot（由 useBattleFeed 呼叫） */
@@ -25,9 +26,11 @@ export const useBattleStore = create((set) => {
       set((s) => ({ floating: s.floating.filter((f) => f.id !== id) }));
     },
 
+    setResult(result) { set({ result }); },
+
     reset() {
       tracker.reset();
-      set(emptyBattleState());
+      set({ ...emptyBattleState(), result: null });
     },
   };
 });

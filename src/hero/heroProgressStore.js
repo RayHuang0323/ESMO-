@@ -5,11 +5,10 @@
 //  觸發：useBattleFeed 偵測終局 → recordBattleResult(finalSnap)（單向，一場一次）。
 // ============================================================================
 import { create } from "zustand";
-import { snapshotToBattleResult } from "../battle/battleResult.js";
 import { applyMatchResult, buildLoadout, createInitialProgress } from "./heroProgress.js";
 import { HERO_ASSIGN, ALL_HERO_IDS } from "../data/roster.js";
 
-const KEY = "esmo.heroProgress.v1";
+const KEY = "esmo.heroProgress.v2";   // Sprint09：heroId 對接 CHAMPIONS_100，鍵空間更換
 const canLS = typeof localStorage !== "undefined";
 const persist = {
   load() { if (!canLS) return null; try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } },
@@ -21,12 +20,13 @@ export const useHeroProgressStore = create((set, get) => ({
   lastDetail: null,          // 本場 EXP/升級明細（BattleEndScreen 用）
   lastRecordedKey: null,     // 防同場重複入帳
 
-  /** 終局 snapshot → BattleResult → 唯一模型入帳 → 持久化 */
-  recordBattleResult(finalSnap) {
-    const key = `${finalSnap.winner}|${finalSnap.ts}|${finalSnap.bK}:${finalSnap.rK}`;
-    if (!finalSnap.over || get().lastRecordedKey === key) return null;
-    const br = snapshotToBattleResult(finalSnap);
-    const { progress, detail } = applyMatchResult(get().progress, br, HERO_ASSIGN);
+  /** Sprint09：只消費 BattleResult（唯一來源），不再自行從 snapshot 演算 */
+  recordBattleResult(br) {
+    if (!br || br.schema !== "BattleResult.v2") return null;
+    const key = `${br.winner}|${br.duration}|${br.score.blue}:${br.score.red}`;
+    if (get().lastRecordedKey === key) return null;
+    const assign = Object.fromEntries(br.players.map((p) => [p.id, p.heroId]));  // 由 result 推導
+    const { progress, detail } = applyMatchResult(get().progress, br, assign);
     persist.save(progress);
     set({ progress, lastDetail: detail, lastRecordedKey: key });
     return detail;

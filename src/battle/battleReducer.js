@@ -13,6 +13,7 @@ export const FLOATING_TYPES = new Set([
 export const SERIES_INTERVAL = 15;   // 每 15 模擬秒取樣一點（20 分局 ≈ 80 點）
 export const emptyBattleState = () => ({
   events: [],
+  log: [],      // Sprint09：完整事件記錄（不截斷）— BattleResult.timeline 的來源
   floating: [],
   mvp: null,
   derived: { blueTowers: 0, redTowers: 0, dragonB: 0, dragonR: 0, baronB: 0, baronR: 0 },
@@ -21,9 +22,10 @@ export const emptyBattleState = () => ({
 
 /** 純函數：目前呈現狀態 + 本幀新事件 + 最新 snapshot → 新呈現狀態 */
 export function ingestReducer(state, newEvents, snap) {
-  let { events, floating, derived } = state;
+  let { events, log, floating, derived } = state;
   if (newEvents.length) {
     events = [...events, ...newEvents].slice(-EVENT_CAP);
+    log = [...log, ...newEvents];
     const fl = newEvents.filter((e) => FLOATING_TYPES.has(e.type));
     if (fl.length) floating = [...floating, ...fl];
     const d = { ...derived };
@@ -41,5 +43,5 @@ export function ingestReducer(state, newEvents, snap) {
   if (!last || snap.ts - last.t >= SERIES_INTERVAL || (snap.over && last.t < snap.ts)) {
     series = [...series, { t: snap.ts, bGold: snap.bGold, rGold: snap.rGold, bTw: derived.blueTowers, rTw: derived.redTowers }];
   }
-  return { events, floating, mvp: mvpCandidate(snap), derived, series };
+  return { events, log, floating, mvp: mvpCandidate(snap), derived, series };
 }
