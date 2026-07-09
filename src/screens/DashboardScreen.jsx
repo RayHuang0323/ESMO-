@@ -48,7 +48,7 @@ export default function DashboardScreen({ onMoba, onSeason }) {
   const st = standings(history);
   const blueRow = st.find((t) => t.side === "blue") || { wins: 0, losses: 0, winRate: 0 };
   const rank = playerRanking(history).slice(0, 3);
-  const unread = profile.inbox.filter((m) => m.unread).length;
+  const unread = (profile.inbox ?? []).filter((m) => m.unread).length;
 
   const click = (f) => f.kind === "flow" ? (f.id === "moba" ? onMoba() : onSeason())
     : f.kind === "legacy" ? setModal({ type: "legacy", name: f.name }) : setModal({ type: f.id });
@@ -92,28 +92,28 @@ export default function DashboardScreen({ onMoba, onSeason }) {
         </Panel>
         {/* 中：收件匣 + 通知（profileStore）*/}
         <Panel title={`收件匣 ${unread ? `· ${unread} 未讀` : ""}`}>
-          {profile.inbox.slice(0, 3).map((m, i) => (
+          {(profile.inbox ?? []).slice(0, 3).map((m, i) => (
             <div key={i} style={{ fontSize: 10.5, padding: "2px 0", display: "flex", gap: 5 }}>
               <span style={{ color: m.unread ? "#fde047" : "rgba(255,255,255,0.3)" }}>{m.unread ? "●" : "○"}</span>
               <span style={{ color: "rgba(255,255,255,0.75)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.subject}</span>
             </div>
           ))}
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", margin: "5px 0" }} />
-          {profile.notifications.map((n, i) => (
+          {(profile.notifications ?? []).map((n, i) => (
             <div key={i} style={{ fontSize: 10, color: "rgba(255,255,255,0.6)", padding: "1px 0" }}>{n.icon} {n.text}</div>
           ))}
         </Panel>
         {/* 右：世界消息 + 活動 + 贊助（profileStore）*/}
         <Panel title="世界消息 · 活動">
-          {profile.worldNews.slice(0, 2).map((n, i) => <div key={i} style={{ fontSize: 10, color: "rgba(255,255,255,0.65)", padding: "1px 0" }}>{n.icon} {n.text}</div>)}
+          {(profile.worldNews ?? []).slice(0, 2).map((n, i) => <div key={i} style={{ fontSize: 10, color: "rgba(255,255,255,0.65)", padding: "1px 0" }}>{n.icon} {n.text}</div>)}
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", margin: "5px 0" }} />
-          {profile.events.map((e, i) => (
+          {(profile.events ?? []).map((e, i) => (
             <div key={i} style={{ fontSize: 10, padding: "1px 0", display: "flex", justifyContent: "space-between" }}>
               <span style={{ color: "rgba(255,255,255,0.7)" }}>{e.icon} {e.text}</span><span style={{ color: "rgba(255,255,255,0.4)" }}>{e.when}</span>
             </div>
           ))}
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", margin: "5px 0" }} />
-          <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.4)" }}>贊助：{profile.sponsors.map((s) => s.name.split(" ")[0]).join("、")}</div>
+          <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.4)" }}>贊助：{(profile.sponsors ?? []).map((s) => s.name.split(" ")[0]).join("、")}</div>
         </Panel>
       </div>
 
@@ -136,7 +136,7 @@ export default function DashboardScreen({ onMoba, onSeason }) {
 function Modal({ modal, profile, history, progress, onClose }) {
   const body = () => {
     if (modal.type === "legacy") return <div style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", lineHeight: 1.7 }}><b style={{ color: "#fbbf24" }}>{modal.name}</b> 為 Legacy 模組，尚未整合至主幹唯一資料流。待接入 Store 後於此顯示真資料，目前不以假資料佔位。</div>;
-    if (modal.type === "finance") return <div><Row l="資金" v={money(profile.finance.funds)} c="#fde047" /><Row l="週收入" v={money(profile.finance.weeklyIncome)} c="#86efac" /><Row l="週支出" v={money(profile.finance.weeklyCost)} c="#fca5a5" /><Row l="週結餘" v={money(profile.finance.weeklyIncome - profile.finance.weeklyCost)} c="#93c5fd" /><div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.4)", marginTop: 8, letterSpacing: "0.15em" }}>贊助</div>{profile.sponsors.map((s, i) => <Row key={i} l={`${s.name}（${s.tier}）`} v={money(s.weekly) + "/週"} />)}</div>;
+    if (modal.type === "finance") return <div><Row l="資金" v={money(profile.finance.funds)} c="#fde047" /><Row l="週收入" v={money(profile.finance.weeklyIncome)} c="#86efac" /><Row l="週支出" v={money(profile.finance.weeklyCost)} c="#fca5a5" /><Row l="週結餘" v={money(profile.finance.weeklyIncome - profile.finance.weeklyCost)} c="#93c5fd" /><div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.4)", marginTop: 8, letterSpacing: "0.15em" }}>贊助</div>{(profile.sponsors ?? []).map((s, i) => <Row key={i} l={`${s.name}（${s.tier}）`} v={money(s.weekly) + "/週"} />)}</div>;
     if (modal.type === "team") { const s = standings(history).find((t) => t.side === "blue") || {}; return <div><Row l="戰隊" v={`${TEAMS.blue.emoji} ${TEAMS.blue.name}`} /><Row l="戰績" v={`${s.wins ?? 0}勝 ${s.losses ?? 0}敗`} c="#86efac" /><Row l="勝率" v={`${Math.round((s.winRate ?? 0) * 100)}%`} /><Row l="場均擊殺" v={(s.avgKills ?? 0).toFixed(1)} /><div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.4)", marginTop: 8, letterSpacing: "0.15em" }}>先發陣容</div>{Object.keys(ROSTER).filter((p) => p[0] === "b").map((pid) => { const r = ROSTER[pid]; return <Row key={pid} l={`${r.player} · ${r.hero}`} v={"Lv " + (progress[r.heroId]?.level ?? 1)} />; })}</div>; }
     if (modal.type === "roster") { const rank = playerRanking(history); return <div>{Object.entries(ROSTER).map(([pid, r]) => { const h = heroById(r.heroId) || {}, hp = progress[r.heroId] || { level: 1 }, pr = rank.find((x) => x.id === pid); return <div key={pid} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "3px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}><span style={{ color: pid[0] === "b" ? "#93c5fd" : "#fca5a5", fontWeight: 700 }}>{r.player} <span style={{ color: "rgba(255,255,255,0.55)" }}>{h.zh}·{h.lane}</span></span><span style={{ fontFamily: MONO, color: "rgba(255,255,255,0.7)" }}>Lv{hp.level}{pr ? ` · ${pr.avgRating.toFixed(0)}RTG` : ""}</span></div>; })}<div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", marginTop: 6 }}>等級/評分來自 Hero Progress 與 Season（唯一來源）</div></div>; }
   };
