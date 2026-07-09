@@ -8,7 +8,7 @@
 import React, { useState } from "react";
 import DashboardScreen from "./screens/DashboardScreen.jsx";
 import SeasonScreen from "./screens/SeasonScreen.jsx";
-import LineupScreen from "./screens/moba/LineupScreen.jsx";
+import RoleSelectScreen from "./screens/moba/RoleSelectScreen.jsx";
 import MatchmakingScreen from "./screens/moba/MatchmakingScreen.jsx";
 import BanPickScreen from "./screens/moba/BanPickScreen.jsx";
 import TacticScreen from "./screens/moba/TacticScreen.jsx";
@@ -24,7 +24,7 @@ export default function AppShell() {
       {screen === "season" && <SeasonScreen onBack={go("dashboard")} />}
 
       {/* ── MOBA 賽前流程 ── */}
-      {screen === "lineup" && <LineupScreen onNext={go("matchmaking")} onBack={go("dashboard")} />}
+      {screen === "lineup" && <RoleSelectScreen onNext={go("matchmaking")} onBack={go("dashboard")} />}
       {screen === "matchmaking" && <MatchmakingScreen onDone={go("banpick")} onBack={go("lineup")} />}
       {screen === "banpick" && <BanPickScreen onNext={go("tactic")} onBack={go("matchmaking")} />}
       {screen === "tactic" && <TacticScreen onNext={go("loading")} onBack={go("banpick")} />}
