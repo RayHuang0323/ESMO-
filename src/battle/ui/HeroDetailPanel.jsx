@@ -6,6 +6,7 @@
 import React from "react";
 import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
 import { attrs, xpNeed, LEVEL_CAP } from "../../hero/heroProgress.js";
+import { heroById } from "../../data/heroDatabase.js";
 
 const MONO = "ui-monospace,Menlo,monospace";
 const pct = (v) => ((v - 1) * 100).toFixed(1) + "%";
@@ -47,6 +48,19 @@ export default function HeroDetailPanel({ heroId, heroName, playerName, side = "
         <RowS l="🛡️ Armor" v={"+" + pct(a.armor)} c="#93c5fd" />
         <RowS l="⚡ AttackSpeed" v={"+" + pct(a.atkSpd)} c="#fde68a" />
         <RowS l="→ 引擎 tough / power" v={`×${a.toughMult.toFixed(3)} / ×${a.powerMult.toFixed(3)}`} c="#c4b5fd" />
+
+        {(() => { const h = heroById(heroId); return h ? (
+          <>
+            <div style={{ fontSize: 9.5, letterSpacing: "0.2em", color: "rgba(255,255,255,0.5)", fontWeight: 900, margin: "10px 0 3px" }}>技能（SKILL · CHAMPIONS_100）</div>
+            {[["P", h.P], ["Q", h.Q], ["W", h.W], ["E", h.E], ["R", h.R]].map(([k, v]) => (
+              <div key={k} style={{ display: "flex", gap: 7, alignItems: "center", fontSize: 11, padding: "1.5px 0" }}>
+                <span style={{ width: 16, height: 16, borderRadius: 4, background: k === "R" ? "rgba(250,204,21,0.25)" : "rgba(255,255,255,0.1)", color: k === "R" ? "#fde047" : "#cbd5e1", fontWeight: 900, fontSize: 9, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{k}</span>
+                <span style={{ color: "#e5e7eb" }}>{v}</span>
+              </div>
+            ))}
+            <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{h.title} · {h.arch} · {h.lane}</div>
+          </>
+        ) : null; })()}
 
         <div style={{ fontSize: 9.5, letterSpacing: "0.2em", color: "rgba(255,255,255,0.5)", fontWeight: 900, margin: "10px 0 3px" }}>MASTERY</div>
         <RowS l="使用場次" v={m.games} />

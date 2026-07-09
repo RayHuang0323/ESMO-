@@ -4,16 +4,17 @@
 //  純顯示，不重新統計。無資料源的欄位（Mana/技能CD/Buff/裝備）依規範保留位置。
 //  英雄靜態資料（頭像色/技能名）來自 CHAMPIONS_100（heroDatabase）。
 // ============================================================================
-import React from "react";
+import React, { useState } from "react";
 import { useGameStore } from "../../useGameStore.js";
 import { ROSTER } from "../../data/roster.js";
 import { heroById } from "../../data/heroDatabase.js";
+import HeroDetailPanel from "./HeroDetailPanel.jsx";
 
 const MONO = "ui-monospace,Menlo,monospace";
 const stColor = (s) => s === "團戰!" ? "#f87171" : s === "撤退" ? "#fbbf24" : s === "圍攻" ? "#a78bfa" : s === "回防" ? "#93c5fd" : "#9ca3af";
 const stShort = (s, dead) => dead ? "死亡" : s === "團戰!" ? "團戰" : s;
 
-function HeroCard({ p, side }) {
+function HeroCard({ p, side, onOpen }) {
   const r = ROSTER[p.id] || {};
   const h = heroById(r.heroId) || {};
   const c = side === "blue" ? "#3b82f6" : "#ef4444";
@@ -23,7 +24,7 @@ function HeroCard({ p, side }) {
   const initial = (h.zh || r.hero || "?").slice(0, 1);
 
   return (
-    <div style={{ width: 92, background: "rgba(8,12,22,0.92)", border: `1px solid ${edge}44`, borderRadius: 8, padding: "4px 5px", opacity: dead ? 0.55 : 1, position: "relative" }}>
+    <div onClick={onOpen} style={{ width: 92, background: "rgba(8,12,22,0.92)", border: `1px solid ${edge}44`, borderRadius: 8, padding: "4px 5px", opacity: dead ? 0.55 : 1, position: "relative", cursor: "pointer" }}>
       {/* 頭像色塊（佔位：無真實頭像圖）+ Lv */}
       <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
         <div style={{ width: 26, height: 26, borderRadius: 6, background: h.color || c, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 13, color: "#0b1220", flexShrink: 0 }}>{initial}</div>
@@ -72,14 +73,19 @@ function HeroCard({ p, side }) {
 
 export default function BattleHeroStrip() {
   const snap = useGameStore((s) => s.snapshot);
+  const [open, setOpen] = useState(null);   // 點擊英雄卡 → Hero Detail（含 Skill Panel）
   if (!snap?.players) return null;
   const blue = snap.players.filter((p) => p.side === "blue");
   const red = snap.players.filter((p) => p.side === "red");
+  const mk = (p) => { const r = ROSTER[p.id] || {}; return { heroId: r.heroId, heroName: heroById(r.heroId)?.zh ?? p.id, playerName: r.player ?? p.id.toUpperCase(), side: p.side }; };
   return (
-    <div style={{ position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", zIndex: 11, display: "flex", gap: 10, pointerEvents: "auto" }}>
-      <div style={{ display: "flex", gap: 4 }}>{blue.map((p) => <HeroCard key={p.id} p={p} side="blue" />)}</div>
-      <div style={{ width: 1, background: "rgba(255,255,255,0.15)" }} />
-      <div style={{ display: "flex", gap: 4 }}>{red.map((p) => <HeroCard key={p.id} p={p} side="red" />)}</div>
-    </div>
+    <>
+      <div style={{ position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", zIndex: 11, display: "flex", gap: 10, pointerEvents: "auto" }}>
+        <div style={{ display: "flex", gap: 4 }}>{blue.map((p) => <HeroCard key={p.id} p={p} side="blue" onOpen={() => setOpen(mk(p))} />)}</div>
+        <div style={{ width: 1, background: "rgba(255,255,255,0.15)" }} />
+        <div style={{ display: "flex", gap: 4 }}>{red.map((p) => <HeroCard key={p.id} p={p} side="red" onOpen={() => setOpen(mk(p))} />)}</div>
+      </div>
+      {open && <HeroDetailPanel {...open} onClose={() => setOpen(null)} />}
+    </>
   );
 }
