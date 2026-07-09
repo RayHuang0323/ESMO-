@@ -9,17 +9,18 @@ import { useGameStore } from "../../useGameStore.js";
 import { ROSTER } from "../../data/roster.js";
 import { heroById } from "../../data/heroDatabase.js";
 import HeroDetailPanel from "./HeroDetailPanel.jsx";
+import { GC } from "../../ui/theme.js";
 
 const MONO = "ui-monospace,Menlo,monospace";
-const stColor = (s) => s === "團戰!" ? "#f87171" : s === "撤退" ? "#fbbf24" : s === "圍攻" ? "#a78bfa" : s === "回防" ? "#93c5fd" : "#9ca3af";
+const stColor = (s) => s === "團戰!" ? "#f87171" : s === "撤退" ? GC.gold : s === "圍攻" ? GC.purp : s === "回防" ? GC.blueL : "#9ca3af";
 const stShort = (s, dead) => dead ? "死亡" : s === "團戰!" ? "團戰" : s;
 
 function HeroCard({ p, side, onOpen }) {
   const r = ROSTER[p.id] || {};
   const h = heroById(r.heroId) || {};
-  const c = side === "blue" ? "#3b82f6" : "#ef4444";
-  const edge = side === "blue" ? "#93c5fd" : "#fca5a5";
-  const hpC = p.hp > 0.55 ? "#34d399" : p.hp > 0.28 ? "#fbbf24" : "#f87171";
+  const c = side === "blue" ? GC.blue : GC.red;
+  const edge = side === "blue" ? GC.blueL : GC.redL;
+  const hpC = p.hp > 0.55 ? GC.green : p.hp > 0.28 ? GC.gold : "#f87171";
   const dead = p.dead;
   const initial = (h.zh || r.hero || "?").slice(0, 1);
 
@@ -41,7 +42,7 @@ function HeroCard({ p, side, onOpen }) {
       </div>
       {/* Mana 條（保留位置：目前無資料）*/}
       <div style={{ marginTop: 2, height: 3, borderRadius: 99, background: "rgba(59,130,246,0.15)", overflow: "hidden" }} title="Mana：目前無資料，保留位置">
-        <div style={{ width: "0%", height: "100%", background: "#3b82f6" }} />
+        <div style={{ width: "0%", height: "100%", background: GC.blue }} />
       </div>
 
       {/* 技能 QWER CD（保留位置：格顯示技能名首字，CD 尚無資料）*/}
@@ -54,7 +55,7 @@ function HeroCard({ p, side, onOpen }) {
       {/* KDA / 金錢（真資料）*/}
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3, fontSize: 8.5, fontFamily: MONO }}>
         <span style={{ color: "#e5e7eb", fontWeight: 800 }}>{p.k}/{p.d}/{p.a ?? 0}</span>
-        <span style={{ color: "#fbbf24" }}>{((p.gold ?? 0) / 1000).toFixed(1)}k</span>
+        <span style={{ color: GC.gold }}>{((p.gold ?? 0) / 1000).toFixed(1)}k</span>
       </div>
 
       {/* 裝備數（保留位置 0/6）+ Buff/Debuff（保留位置）+ 狀態（真資料）*/}

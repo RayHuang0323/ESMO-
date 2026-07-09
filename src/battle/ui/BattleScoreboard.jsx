@@ -10,11 +10,12 @@ import { useGameStore } from "../../useGameStore.js";
 import { useBattleStore } from "../battleStore.js";
 import { playerRating, participation } from "../battleEvents.js";
 import { ROLE_NAME } from "../../gameData.js";
+import { GC } from "../../ui/theme.js";
 
 const ROLE_ICON = { top: "🛡️", jungle: "🌲", mid: "🔮", adc: "🏹", sup: "✨" };
 const num = (v) => (v >= 1000 ? (v / 1000).toFixed(1) + "k" : String(Math.round(v)));
 const H = ({ children, w, onClick, active }) => (
-  <div onClick={onClick} style={{ width: w, textAlign: "right", fontSize: 9, color: active ? "#93c5fd" : "rgba(255,255,255,0.45)", fontWeight: 800, cursor: onClick ? "pointer" : "default", pointerEvents: "auto", userSelect: "none" }}>
+  <div onClick={onClick} style={{ width: w, textAlign: "right", fontSize: 9, color: active ? GC.blueL : "rgba(255,255,255,0.45)", fontWeight: 800, cursor: onClick ? "pointer" : "default", pointerEvents: "auto", userSelect: "none" }}>
     {children}{active ? "▾" : ""}
   </div>
 );
@@ -39,7 +40,7 @@ function Row({ p, snap, isMvp, roster }) {
       <C w={38} color="#86efac">{num(p.heal || 0)}</C>
       <C w={36} color="#a5b4fc">{num(p.twrDmg || 0)}</C>
       <C w={32} color="#c4b5fd">{Math.round(participation(p, snap) * 100)}%</C>
-      <C w={34} color="#93c5fd">{playerRating(p).toFixed(0)}</C>
+      <C w={34} color={GC.blueL}>{playerRating(p).toFixed(0)}</C>
     </div>
   );
 }
@@ -84,9 +85,9 @@ export default function BattleScoreboard({ roster = null, blueName = "德國海�
   return (
     <div style={{ background: "rgba(8,14,24,0.92)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: "10px 4px 4px", width: 452, fontFamily: "system-ui,sans-serif" }}>
       <Head />
-      <Team players={side("blue")} color="#93c5fd" label={blueName} emoji={blueEmoji} />
+      <Team players={side("blue")} color={GC.blueL} label={blueName} emoji={blueEmoji} />
       <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "2px 8px 8px" }} />
-      <Team players={side("red")} color="#fca5a5" label={redName} emoji={redEmoji} />
+      <Team players={side("red")} color={GC.redL} label={redName} emoji={redEmoji} />
     </div>
   );
 }

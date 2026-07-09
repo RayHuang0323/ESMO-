@@ -5,6 +5,7 @@
 import React, { useEffect, useState } from "react";
 import { TEAMS, ROSTER } from "../../data/roster.js";
 import { heroById } from "../../data/heroDatabase.js";
+import { GC } from "../../ui/theme.js";
 
 export default function LoadingScreen({ onDone }) {
   const [pct, setPct] = useState(0);
@@ -18,7 +19,7 @@ export default function LoadingScreen({ onDone }) {
       <div style={{ display: "flex", justifyContent: "space-between", gap: 20 }}>
         {["blue", "red"].map((side) => (
           <div key={side} style={{ flex: 1 }}>
-            <div style={{ fontWeight: 900, color: side === "blue" ? "#93c5fd" : "#fca5a5", marginBottom: 8, textAlign: side === "blue" ? "left" : "right" }}>{TEAMS[side].emoji} {TEAMS[side].name}</div>
+            <div style={{ fontWeight: 900, color: side === "blue" ? GC.blueL : GC.redL, marginBottom: 8, textAlign: side === "blue" ? "left" : "right" }}>{TEAMS[side].emoji} {TEAMS[side].name}</div>
             {col(side[0]).map(([pid, r]) => { const h = heroById(r.heroId) || {}; return (
               <div key={pid} style={{ display: "flex", flexDirection: side === "blue" ? "row" : "row-reverse", alignItems: "center", gap: 8, marginBottom: 5 }}>
                 <div style={{ width: 26, height: 26, borderRadius: 6, background: h.color || "#334155", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#0b1220", fontSize: 11 }}>{(h.zh || "?").slice(0, 1)}</div>

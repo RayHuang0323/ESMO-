@@ -11,6 +11,7 @@ import { fmtT, ROLE_NAME } from "../../gameData.js";
 import BattleScoreboard from "./BattleScoreboard.jsx";
 import HeroDetailPanel from "./HeroDetailPanel.jsx";
 import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
+import { GC } from "../../ui/theme.js";
 
 const KEYFRAMES = `
 @keyframes esmoEndPop { 0%{transform:scale(0.55);opacity:0} 60%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
@@ -20,7 +21,7 @@ const KEYFRAMES = `
 @keyframes esmoMvpIn { 0%{transform:rotateY(70deg);opacity:0} 100%{transform:rotateY(0);opacity:1} }`;
 
 const ICON = { FIRST_BLOOD: "🩸", KILL: "⚔️", MULTI_KILL: "🔥", ACE: "💥", TOWER_DESTROYED: "🗼", DRAGON_SLAIN: "🐉", BARON_SLAIN: "👑", VICTORY: "🏆" };
-const sideC = (s) => (s === "blue" ? "#93c5fd" : "#fca5a5");
+const sideC = (s) => (s === "blue" ? GC.blueL : GC.redL);
 const MONO = "ui-monospace,Menlo,monospace";
 
 // ── 金錢差曲線（SVG，series 真資料）─────────────────────────────────────────

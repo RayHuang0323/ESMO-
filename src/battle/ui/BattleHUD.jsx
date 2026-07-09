@@ -9,6 +9,7 @@ import React from "react";
 import { useGameStore } from "../../useGameStore.js";
 import { useBattleStore } from "../battleStore.js";
 import { fmtT } from "../../gameData.js";
+import { GC } from "../../ui/theme.js";
 
 const MONO = "ui-monospace,Menlo,monospace";
 const Obj = ({ icon, val, color }) => (
@@ -50,9 +51,9 @@ export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭
         borderRadius: 12, padding: "6px 12px", minWidth: 236, backdropFilter: "blur(5px)" }}>
         <span style={{ fontSize: 17 }}>{b ? blueEmoji : redEmoji}</span>
         <div style={{ textAlign: b ? "left" : "right" }}>
-          <div style={{ color: b ? "#93c5fd" : "#fca5a5", fontWeight: 900, fontSize: 12.5, letterSpacing: "0.02em" }}>{b ? blueName : redName}</div>
+          <div style={{ color: b ? GC.blueL : GC.redL, fontWeight: 900, fontSize: 12.5, letterSpacing: "0.02em" }}>{b ? blueName : redName}</div>
           <div style={{ display: "flex", gap: 8, flexDirection: b ? "row" : "row-reverse" }}>
-            <Obj icon="🗼" val={b ? derived.blueTowers : derived.redTowers} color={b ? "#93c5fd" : "#fca5a5"} />
+            <Obj icon="🗼" val={b ? derived.blueTowers : derived.redTowers} color={b ? GC.blueL : GC.redL} />
             <Obj icon="🐉" val={b ? derived.dragonB : derived.dragonR} color="#c4b5fd" />
             <Obj icon="👑" val={b ? derived.baronB : derived.baronR} color="#fcd34d" />
             <Obj icon="💰" val={((b ? hud.bGold : hud.rGold) / 1000).toFixed(1) + "k"} color="#fde68a" />
@@ -73,7 +74,7 @@ export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭
         {/* 中央：計時 / 金錢差 / 資源倒數 */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
           <div style={{ color: "#fff", fontSize: 17, fontWeight: 900, fontFamily: MONO, background: "rgba(8,14,24,0.85)", padding: "3px 16px", borderRadius: 9, border: "1px solid rgba(255,255,255,0.14)" }}>{fmtT(hud.ts)}</div>
-          <div style={{ color: blueLead ? "#93c5fd" : "#fca5a5", fontSize: 10.5, fontWeight: 900, fontFamily: MONO }}>
+          <div style={{ color: blueLead ? GC.blueL : GC.redL, fontSize: 10.5, fontWeight: 900, fontFamily: MONO }}>
             {blueLead ? "◀" : ""} 金差 {(Math.abs(goldDiff) / 1000).toFixed(1)}k {blueLead ? "" : "▶"}
           </div>
           <div style={{ display: "flex", gap: 5 }}>
@@ -90,11 +91,11 @@ export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭
         <div style={{ flex: 1, background: "linear-gradient(90deg,#f87171,#b91c1c)" }} />
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2, fontSize: 9.5, fontWeight: 800, fontFamily: MONO }}>
-        <span style={{ color: "#93c5fd" }}>{(hud.winProb * 100).toFixed(0)}%</span>
-        <span style={{ color: mvp?.side === "blue" ? "#93c5fd" : "#fca5a5" }}>
+        <span style={{ color: GC.blueL }}>{(hud.winProb * 100).toFixed(0)}%</span>
+        <span style={{ color: mvp?.side === "blue" ? GC.blueL : GC.redL }}>
           ★ MVP {mvpName} {mvp ? `${mvp.k}/${mvp.d}/${mvp.a ?? 0} · RTG ${mvp.score.toFixed(0)}` : ""}
         </span>
-        <span style={{ color: "#fca5a5" }}>{((1 - hud.winProb) * 100).toFixed(0)}%</span>
+        <span style={{ color: GC.redL }}>{((1 - hud.winProb) * 100).toFixed(0)}%</span>
       </div>
     </div>
   );

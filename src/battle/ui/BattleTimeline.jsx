@@ -7,10 +7,11 @@
 import React, { useState } from "react";
 import { useBattleStore } from "../battleStore.js";
 import { fmtT } from "../../gameData.js";
+import { GC } from "../../ui/theme.js";
 
 const ICON = { FIRST_BLOOD: "🩸", KILL: "⚔️", MULTI_KILL: "🔥", ACE: "💥", TOWER_DESTROYED: "🗼", DRAGON_SLAIN: "🐉", BARON_SLAIN: "👑", VICTORY: "🏆" };
 const LANE = { top: "上", mid: "中", bot: "下", nexus: "堡" };
-const sideC = (s) => (s === "blue" ? "#93c5fd" : s === "red" ? "#fca5a5" : "#cbd5e1");
+const sideC = (s) => (s === "blue" ? GC.blueL : s === "red" ? GC.redL : "#cbd5e1");
 const MONO = "ui-monospace,Menlo,monospace";
 
 function Name({ id, side, roster }) {
@@ -32,7 +33,7 @@ function Row({ ev, roster }) {
       </span>
     );
   } else if (ev.type === "MULTI_KILL" && d) {
-    body = <span style={{ color: "#fbbf24", fontWeight: 900 }}>{["","","雙殺","三殺","四殺","五殺"][d.streak]}！<Name id={d.killer} side={ev.side} roster={roster} /></span>;
+    body = <span style={{ color: GC.gold, fontWeight: 900 }}>{["","","雙殺","三殺","四殺","五殺"][d.streak]}！<Name id={d.killer} side={ev.side} roster={roster} /></span>;
   } else if (ev.type === "TOWER_DESTROYED" && d) {
     body = (
       <span>
@@ -52,7 +53,7 @@ function Row({ ev, roster }) {
   );
 }
 
-export default function BattleTimeline({ open = true, max = 11 }) {
+export default function BattleTimeline({ open = true, max = 11, roster = null }) {
   const events = useBattleStore((s) => s.events);
   const [fold, setFold] = useState(false);
   if (!open) return null;
@@ -68,7 +69,7 @@ export default function BattleTimeline({ open = true, max = 11 }) {
       {!fold && (
         <div style={{ maxHeight: "40vh", overflow: "hidden", background: "rgba(8,14,24,0.6)", border: "1px solid rgba(255,255,255,0.12)", borderTop: "none", borderRadius: "0 0 9px 9px", backdropFilter: "blur(4px)", padding: "5px 4px", pointerEvents: "none" }}>
           {rows.length === 0 && <div style={{ fontSize: 10.5, color: "rgba(255,255,255,0.35)", padding: 4 }}>尚無事件…</div>}
-          {rows.map((ev) => <Row key={ev.id} ev={ev} roster={null} />)}
+          {rows.map((ev) => <Row key={ev.id} ev={ev} roster={roster} />)}
         </div>
       )}
     </div>

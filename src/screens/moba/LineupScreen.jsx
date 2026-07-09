@@ -6,6 +6,7 @@ import React from "react";
 import { TEAMS, ROSTER } from "../../data/roster.js";
 import { heroById } from "../../data/heroDatabase.js";
 import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
+import { GC } from "../../ui/theme.js";
 
 const LANE_ORDER = ["上路", "打野", "中路", "下路", "輔助"];
 
@@ -16,12 +17,12 @@ export default function LineupScreen({ onNext, onBack }) {
   return (
     <Frame title="選手配置" sub="確認先發陣容 · LINEUP" onBack={onBack} onNext={onNext} nextLabel="配對對手 →">
       <div style={{ width: 360 }}>
-        <div style={{ fontWeight: 900, color: "#93c5fd", marginBottom: 8 }}>{TEAMS.blue.emoji} {TEAMS.blue.name} 先發</div>
+        <div style={{ fontWeight: 900, color: GC.blueL, marginBottom: 8 }}>{TEAMS.blue.emoji} {TEAMS.blue.name} 先發</div>
         {blue.map(([pid, r]) => {
           const h = heroById(r.heroId) || {}; const lv = progress[r.heroId]?.level ?? 1;
           return (
             <div key={pid} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(8,14,24,0.85)", border: "1px solid rgba(147,197,253,0.25)", borderRadius: 10, padding: "8px 11px", marginBottom: 6 }}>
-              <div style={{ width: 30, height: 30, borderRadius: 7, background: h.color || "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#0b1220" }}>{(h.zh || "?").slice(0, 1)}</div>
+              <div style={{ width: 30, height: 30, borderRadius: 7, background: h.color || GC.blue, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#0b1220" }}>{(h.zh || "?").slice(0, 1)}</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: "#e5e7eb" }}>{r.player} <span style={{ color: "rgba(255,255,255,0.5)", fontWeight: 600 }}>· {h.zh}</span></div>
                 <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)" }}>{h.lane} · {h.arch} · {h.title}</div>
