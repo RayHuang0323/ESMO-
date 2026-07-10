@@ -11,9 +11,9 @@ const KEY = "esmo.profile.v1";
 const canLS = typeof localStorage !== "undefined";
 const DEFAULT = {
   manager: { name: "總監", level: 1 },
-  team: { name: TEAMS.blue.name, emoji: TEAMS.blue.emoji, tag: "GSEAL" },
-  finance: { funds: 1_200_000, weeklyIncome: 85_000, weeklyCost: 62_000 },
-  meta: { fans: 128_000, reputation: 47, season: 1 },
+  team: { name: TEAMS.blue.name, emoji: TEAMS.blue.emoji, tag: "GSEAL", lv: 93, xp: 7.27, xpMax: 12.1 },
+  finance: { funds: 1_200_000, weeklyIncome: 85_000, weeklyCost: 62_000, weekly9: [6, 4, 5, 3, 2, 9, 5, 6, 4] },
+  meta: { fans: 128_000, reputation: 47, season: 1, players: 14, days: 8, achievement: 48, talentPending: 1 },
   sponsors: [
     { name: "HyperVolt 能量飲", tier: "白金", weekly: 45_000 },
     { name: "NovaGear 外設", tier: "黃金", weekly: 28_000 },
@@ -44,7 +44,7 @@ const load = () => {
     return {
       manager:  { ...DEFAULT.manager,  ...saved.manager },
       team:     { ...DEFAULT.team,     ...saved.team },
-      finance:  { ...DEFAULT.finance,  ...saved.finance },
+      finance:  { ...DEFAULT.finance,  ...saved.finance, weekly9: Array.isArray(saved.finance?.weekly9) ? saved.finance.weekly9 : DEFAULT.finance.weekly9 },
       meta:     { ...DEFAULT.meta,     ...saved.meta },
       sponsors:      Array.isArray(saved.sponsors)      ? saved.sponsors      : DEFAULT.sponsors,
       inbox:         Array.isArray(saved.inbox)          ? saved.inbox         : DEFAULT.inbox,

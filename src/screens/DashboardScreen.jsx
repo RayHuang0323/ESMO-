@@ -1,8 +1,12 @@
 // ============================================================================
-//  screens/DashboardScreen.jsx — Main Dashboard（Sprint12：對齊 Legacy 版面）
-//  UI 標準：Legacy Prototype 經營儀表板（三大分類卡片 + 資訊密度側欄）。
-//  資料來源：profileStore（經營 meta）+ seasonStore/heroProgressStore（戰績唯一來源）。
-//  只讀主幹 Store，不重新統計，不接 Legacy Store。所有功能自此進入，不得直接跳 Battle。
+//  screens/DashboardScreen.jsx — Legacy MainMenu 首頁 Component 化（Sprint16）
+//  Presentation：完整對齊 Legacy EsportsGame.jsx MainMenu（截圖9/12）——
+//    頂部隊伍識別(成就徽章/頭像/隊名) → Lv/XP條 → 收件匣大磚 →
+//    天賦+商店 → 財務(9柱圖)+贊助 → 選手+招募 → MOBA/CS/賽事 → 更多功能。
+//    卡片順序/間距/UX 一律保留 Legacy，不重新設計。
+//  Architecture（Adapter）：資料改吃新 Store —
+//    profileStore（隊伍/Lv/XP/財務/贊助/收件匣/選手）+ seasonStore（戰績）。
+//  差異（誠實）：icon 以 emoji 替代 lucide（主幹無 lucide-react，技術限制）。
 // ============================================================================
 import React, { useState } from "react";
 import { useProfileStore } from "../platform/profileStore.js";
@@ -10,31 +14,28 @@ import { useSeasonStore } from "../platform/seasonStore.js";
 import { useHeroProgressStore } from "../hero/heroProgressStore.js";
 import { standings, playerRanking } from "../platform/seasonData.js";
 import { TEAMS, ROSTER } from "../data/roster.js";
-import { heroById, CHAMPIONS_100 } from "../data/heroDatabase.js";
-import { GC, MONO, FONT, card, label } from "../ui/theme.js";
+import { heroById } from "../data/heroDatabase.js";
+import { GC, FONT, MONO } from "../ui/theme.js";
 
-const money = (n) => "$" + n.toLocaleString();
+const money = (n) => "$" + (n / 10000).toFixed(1) + "萬";
 const fmtT = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
-// Legacy NAV 三大分類（比賽中心 / 戰隊管理 / 資料庫）
-const NAV = [
-  { group: "比賽中心", icon: "🎮", color: GC.purp, items: [
-    { id: "moba", name: "MOBA 對戰", desc: "5v5 戰術轉播", kind: "flow" },
-    { id: "cs", name: "CS 戰術", desc: "攻防模擬", kind: "legacy" },
-    { id: "season", name: "賽事賽程", desc: "戰績/排行", kind: "flow" },
-  ]},
-  { group: "戰隊管理", icon: "🏟️", color: GC.gold, items: [
-    { id: "roster", name: "選手名單", desc: "陣容管理", kind: "panel" },
-    { id: "team", name: "戰隊詳情", desc: "戰隊資訊", kind: "panel" },
-    { id: "finance", name: "財務管理", desc: "收支/贊助", kind: "panel" },
-    { id: "recruit", name: "球探招募", desc: "潛力簽約", kind: "legacy" },
-    { id: "training", name: "訓練排程", desc: "練習計畫", kind: "legacy" },
-  ]},
-  { group: "資料庫", icon: "📚", color: GC.green, items: [
-    { id: "codex", name: "英雄圖鑑", desc: "100 位英雄", kind: "panel" },
-    { id: "talent", name: "天賦樹", desc: "技能加點", kind: "legacy" },
-  ]},
-];
+// Legacy Tile（icon 以 emoji 字串替代 lucide 元件）
+function Tile({ emoji, label, onClick, badge, right, color = GC.purp, children }) {
+  return (
+    <button onClick={onClick} onMouseEnter={(e) => { e.currentTarget.style.borderColor = color + "88"; e.currentTarget.style.background = GC.card2; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = GC.line; e.currentTarget.style.background = GC.card; }}
+      style={{ position: "relative", display: "flex", flexDirection: "row", alignItems: "center", gap: 10, background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 14, padding: "15px 16px", cursor: "pointer", textAlign: "left", width: "100%", transition: "all 0.18s", minHeight: 56 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, width: "100%" }}>
+        <div style={{ position: "relative", fontSize: 20, color: color }}>{emoji}
+          {badge > 0 && <span style={{ position: "absolute", top: -7, right: -8, background: GC.red, color: "white", fontSize: 8, fontWeight: 800, borderRadius: 99, minWidth: 14, height: 14, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>{badge}</span>}
+        </div>
+        <span style={{ color: "white", fontSize: 15, fontWeight: 700, flex: 1 }}>{label}</span>
+        {right}
+      </div>
+      {children}
+    </button>
+  );
+}
 
 export default function DashboardScreen({ onMoba, onSeason }) {
   const profile = useProfileStore();
@@ -44,137 +45,112 @@ export default function DashboardScreen({ onMoba, onSeason }) {
 
   const st = standings(history);
   const blueRow = st.find((t) => t.side === "blue") || { wins: 0, losses: 0, winRate: 0 };
-  const rank = playerRanking(history).slice(0, 3);
-  const unread = (profile.inbox ?? []).filter((m) => m.unread).length;
+  const T = { ...profile.team, ...profile.meta, gold: money(profile.finance.funds), mail: (profile.inbox ?? []).length, inbox: (profile.inbox ?? []).filter((m) => m.unread).length };
+  const finBars = profile.finance.weekly9 ?? [6, 4, 5, 3, 2, 9, 5, 6, 4];
+  const sponsor = (profile.sponsors ?? [])[0];
+  const modes = [
+    { id: "moba", name: "MOBA", emoji: "⚔️", fans: "2041", color: GC.purp, badge: "3 小時內", on: true },
+    { id: "cs", name: "CS", emoji: "🎯", fans: "0", color: "#fb923c", badge: "🌙", on: false },
+    { id: "bracket", name: "賽事", emoji: "🏆", fans: "0", color: GC.green, badge: "🌙", on: true },
+  ];
+  const more = [{ id: "team", n: "戰隊詳情", i: "🛡" }, { id: "training", n: "訓練中心", i: "📅" }, { id: "dash", n: "儀表板", i: "📊" }, { id: "sponsor", n: "贊助商", i: "🤝" }];
 
-  const click = (f) => f.kind === "flow" ? (f.id === "moba" ? onMoba() : onSeason())
-    : f.kind === "legacy" ? setModal({ type: "legacy", name: f.name }) : setModal({ type: f.id });
+  const sel = (id) => {
+    if (id === "moba") return onMoba();
+    if (id === "bracket") return onSeason();
+    if (["notify", "sponsor", "finance", "roster", "team", "dash"].includes(id)) return setModal({ type: id });
+    setModal({ type: "legacy", name: { talent: "天賦", equip: "商店", recruit: "招募", cs: "CS", training: "訓練中心" }[id] || id });
+  };
 
   return (
-    <div style={{ height: "100%", overflow: "auto", padding: "14px 16px", fontFamily: FONT, background: GC.bg }}>
-      {/* 頂部：戰隊識別 + 經營指標（真資料）*/}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 10, ...card(GC.blue), padding: "12px 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ fontSize: 30 }}>{profile.team.emoji}</div>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 900, color: GC.blueL }}>{profile.team.name} <span style={{ fontSize: 10, color: GC.gray }}>[{profile.team.tag}]</span></div>
-            <div style={{ fontSize: 10, color: GC.gray }}>{profile.manager.name} · Season {profile.meta.season} · 聲望 {profile.meta.reputation}</div>
+    <div style={{ minHeight: "100%", background: GC.bg, fontFamily: FONT, overflow: "auto", height: "100%" }}>
+      <div style={{ maxWidth: 460, margin: "0 auto" }}>
+        {/* 頂部隊伍識別 */}
+        <div style={{ position: "relative", background: `linear-gradient(180deg,#2a2d3e,${GC.bg})`, padding: "18px 16px 14px", textAlign: "center" }}>
+          <div style={{ position: "absolute", top: 14, right: 16 }}>
+            <div style={{ width: 38, height: 38, borderRadius: "50%", background: `linear-gradient(135deg,${GC.gold},#d97706)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, border: `2px solid ${GC.gold}` }}>🐱</div>
+            <span style={{ position: "absolute", bottom: -4, right: -4, background: GC.bg, color: GC.gold, fontSize: 8, fontWeight: 800, borderRadius: 99, padding: "1px 4px", border: `1px solid ${GC.gold}` }}>{T.achievement}</span>
           </div>
+          <div style={{ width: 72, height: 72, margin: "0 auto 8px", borderRadius: 18, background: "linear-gradient(135deg,#4a4d5e,#2a2d3e)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 38, border: `2px solid ${GC.purp}66` }}>{T.emoji}</div>
+          <h1 style={{ color: "white", fontSize: 24, fontWeight: 900, margin: 0 }}>{T.name}</h1>
         </div>
-        <div style={{ display: "flex", gap: 18 }}>
-          <Metric label="資金" value={money(profile.finance.funds)} c={GC.gold} />
-          <Metric label="戰績" value={`${blueRow.wins}勝${blueRow.losses}敗`} c={GC.green} />
-          <Metric label="勝率" value={`${Math.round(blueRow.winRate * 100)}%`} />
-          <Metric label="粉絲" value={(profile.meta.fans / 1000).toFixed(0) + "k"} c="#f9a8d4" />
+        {/* 等級 XP 條 */}
+        <div style={{ padding: "0 16px", marginTop: 4, marginBottom: 14 }}>
+          <div style={{ height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden", marginBottom: 6 }}><div style={{ height: "100%", width: `${T.xp / T.xpMax * 100}%`, background: `linear-gradient(90deg,${GC.green},${GC.gold})` }} /></div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "white", fontSize: 13, fontWeight: 800 }}>Lv. {T.lv}</span><span style={{ color: GC.gray, fontSize: 12 }}>{T.xp}萬/{T.xpMax}萬 XP</span></div>
         </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 12 }}>
-        {/* 左：Legacy 三大分類功能卡 */}
-        <div>
-          {NAV.map((sec) => (
-            <div key={sec.group} style={{ marginBottom: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 7 }}>
-                <span style={{ fontSize: 15 }}>{sec.icon}</span>
-                <span style={{ fontSize: 12, fontWeight: 900, color: sec.color, letterSpacing: "0.1em" }}>{sec.group}</span>
-                <div style={{ flex: 1, height: 1, background: GC.line }} />
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(140px,1fr))", gap: 8 }}>
-                {sec.items.map((f) => (
-                  <button key={f.id} onClick={() => click(f)} onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-2px)")} onMouseLeave={(e) => (e.currentTarget.style.transform = "none")}
-                    style={{ textAlign: "left", ...card(f.kind === "flow" ? sec.color : null), background: f.kind === "flow" ? GC.card2 : GC.card, cursor: "pointer", transition: "transform 0.1s", padding: "11px 13px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 13.5, fontWeight: 900, color: "#fff" }}>{f.name}</span>
-                      {f.kind === "legacy" && <span style={{ fontSize: 7, color: GC.gray, border: `1px solid ${GC.line}`, borderRadius: 4, padding: "1px 4px" }}>未整合</span>}
-                    </div>
-                    <div style={{ fontSize: 9.5, color: GC.gray, marginTop: 3 }}>{f.desc}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
+        {/* 主功能磚 */}
+        <div style={{ padding: "0 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+          <Tile emoji="💬" label="收件匣" badge={T.inbox} color={GC.blue} onClick={() => sel("notify")} right={<span style={{ display: "flex", alignItems: "center", gap: 4, color: GC.gray, fontSize: 12 }}>✉️ {T.mail}</span>} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <Tile emoji="🌿" label="天賦" badge={T.talentPending} color={GC.purp} onClick={() => sel("talent")} />
+            <Tile emoji="🛒" label="商店" color={GC.gold} onClick={() => sel("equip")} />
+          </div>
+          {/* 財務 + 贊助 */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <button onClick={() => sel("finance")} style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 14, padding: "13px 14px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}><span style={{ fontSize: 17, color: GC.green }}>💲</span><span style={{ color: "white", fontSize: 14, fontWeight: 700 }}>財務</span><span style={{ marginLeft: "auto", background: "rgba(52,211,153,0.15)", color: GC.green, fontSize: 10, fontWeight: 700, borderRadius: 6, padding: "2px 6px" }}>{T.gold}</span></div>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 48 }}>{finBars.map((v, i) => (<div key={i} style={{ flex: 1, height: `${v * 10}%`, background: i % 2 ? GC.red : GC.green, borderRadius: 2, opacity: 0.85 }} />))}</div>
+              <div style={{ color: GC.gray, fontSize: 8, textAlign: "center", marginTop: 3 }}>近 9 週收支</div>
+            </button>
+            <button onClick={() => sel("sponsor")} style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 14, padding: "13px 14px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}><span style={{ fontSize: 17, color: GC.gold }}>🤝</span><span style={{ color: "white", fontSize: 14, fontWeight: 700 }}>贊助</span></div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 60 }}><div style={{ width: 60, height: 60, borderRadius: "50%", background: "radial-gradient(circle,#1a2a3a,#0a0b0f)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, border: "2px solid #2a4a5a" }}>🐘</div></div>
+              <div style={{ color: GC.gray, fontSize: 8, textAlign: "center", marginTop: 3 }}>{sponsor?.name ?? "無贊助商"}</div>
+            </button>
+          </div>
+          {/* 選手 + 招募 */}
+          <Tile emoji="👥" label="選手" color={GC.blue} onClick={() => sel("roster")} right={<div style={{ display: "flex", gap: 6 }}><span style={{ display: "flex", alignItems: "center", gap: 3, background: GC.card2, color: "white", fontSize: 11, fontWeight: 700, borderRadius: 7, padding: "3px 8px" }}>👥 {T.players}</span><span style={{ display: "flex", alignItems: "center", gap: 3, background: GC.card2, color: GC.gold, fontSize: 11, fontWeight: 700, borderRadius: 7, padding: "3px 8px" }}>🕐 {T.days}天</span></div>} />
+          <Tile emoji="➕" label="招募" color={GC.green} onClick={() => sel("recruit")} />
+        </div>
+        {/* 底部遊戲模式卡片 */}
+        <div style={{ padding: "16px 14px 24px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+          {modes.map((m) => (
+            <button key={m.id} onClick={() => sel(m.id)} onMouseEnter={(e) => (e.currentTarget.style.borderColor = m.color)} onMouseLeave={(e) => (e.currentTarget.style.borderColor = m.color + "33")}
+              style={{ background: `linear-gradient(180deg,${m.color}11,${GC.card})`, border: `1px solid ${m.color}33`, borderRadius: 12, padding: "14px 8px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, transition: "all 0.18s" }}>
+              <span style={{ fontSize: 22, color: m.color }}>{m.emoji}</span>
+              <span style={{ color: "white", fontSize: 13, fontWeight: 800 }}>{m.name}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(0,0,0,0.3)", color: GC.gray, fontSize: 9, borderRadius: 6, padding: "2px 7px" }}>👁 {m.fans}</span>
+              <span style={{ color: m.color, fontSize: 8.5, fontWeight: 600 }}>{m.badge}</span>
+            </button>
           ))}
         </div>
-
-        {/* 右：資訊密度側欄（近期戰績/排名/收件匣/通知/世界消息/活動）*/}
-        <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-          <div style={card()}>
-            <div style={{ ...label, marginBottom: 7 }}>近期戰績 · 排名</div>
-            {history.length ? history.slice(-3).reverse().map((r, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "1.5px 0" }}>
-                <span style={{ fontWeight: 800, color: r.winner === "blue" ? GC.blueL : GC.redL }}>{r.teams[r.winner].name.slice(0, 4)} 勝</span>
-                <span style={{ fontFamily: MONO, color: GC.gray }}>{r.score.blue}:{r.score.red} · {fmtT(r.duration)}</span>
-              </div>
-            )) : <div style={{ fontSize: 10.5, color: GC.gray }}>尚無戰績 · 從 MOBA 開始</div>}
-            {rank.length > 0 && <div style={{ borderTop: `1px solid ${GC.line}`, margin: "5px 0" }} />}
-            {rank.map((p, i) => (
-              <div key={p.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, padding: "1px 0" }}>
-                <span style={{ color: "rgba(255,255,255,0.7)" }}>{i + 1}. {ROSTER[p.id]?.player ?? p.id}</span>
-                <span style={{ fontFamily: MONO, color: GC.gold }}>{p.avgRating.toFixed(0)} RTG</span>
-              </div>
-            ))}
-          </div>
-          <div style={card()}>
-            <div style={{ ...label, marginBottom: 7 }}>收件匣 {unread ? `· ${unread} 未讀` : ""}</div>
-            {(profile.inbox ?? []).slice(0, 3).map((m, i) => (
-              <div key={i} style={{ fontSize: 10.5, padding: "2px 0", display: "flex", gap: 5 }}>
-                <span style={{ color: m.unread ? GC.gold : "rgba(255,255,255,0.3)" }}>{m.unread ? "●" : "○"}</span>
-                <span style={{ color: "rgba(255,255,255,0.75)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.subject}</span>
-              </div>
-            ))}
-            <div style={{ borderTop: `1px solid ${GC.line}`, margin: "5px 0" }} />
-            {(profile.notifications ?? []).map((n, i) => <div key={i} style={{ fontSize: 10, color: "rgba(255,255,255,0.6)", padding: "1px 0" }}>{n.icon} {n.text}</div>)}
-          </div>
-          <div style={card()}>
-            <div style={{ ...label, marginBottom: 7 }}>世界消息 · 活動</div>
-            {(profile.worldNews ?? []).slice(0, 2).map((n, i) => <div key={i} style={{ fontSize: 10, color: "rgba(255,255,255,0.65)", padding: "1px 0" }}>{n.icon} {n.text}</div>)}
-            <div style={{ borderTop: `1px solid ${GC.line}`, margin: "5px 0" }} />
-            {(profile.events ?? []).map((e, i) => (
-              <div key={i} style={{ fontSize: 10, padding: "1px 0", display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "rgba(255,255,255,0.7)" }}>{e.icon} {e.text}</span><span style={{ color: GC.gray }}>{e.when}</span>
-              </div>
+        {/* 更多功能入口 */}
+        <div style={{ padding: "0 14px 28px" }}>
+          <div style={{ color: GC.gray, fontSize: 10, fontWeight: 700, marginBottom: 8, letterSpacing: "0.05em" }}>更多功能</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            {more.map((x) => (
+              <button key={x.id} onClick={() => sel(x.id)} onMouseEnter={(e) => (e.currentTarget.style.borderColor = GC.purp + "66")} onMouseLeave={(e) => (e.currentTarget.style.borderColor = GC.line)}
+                style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 10, padding: "11px 6px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                <span style={{ fontSize: 16, color: GC.gray }}>{x.i}</span><span style={{ color: "#d4d4d8", fontSize: 9.5, fontWeight: 600 }}>{x.n}</span>
+              </button>
             ))}
           </div>
         </div>
       </div>
-
-      {modal && <Modal modal={modal} profile={profile} history={history} progress={progress} onClose={() => setModal(null)} />}
+      {modal && <Modal modal={modal} profile={profile} history={history} progress={progress} blueRow={blueRow} onClose={() => setModal(null)} />}
     </div>
   );
 }
 
-const Metric = ({ label: l, value, c = "#e5e7eb" }) => (
-  <div><div style={{ fontSize: 9, color: GC.gray, letterSpacing: "0.1em" }}>{l}</div><div style={{ fontSize: 15, fontWeight: 900, color: c, fontFamily: MONO }}>{value}</div></div>
-);
-
-function Modal({ modal, profile, history, progress, onClose }) {
+// ── 子面板（真資料 / 誠實佔位）──────────────────────────────────────────
+function Modal({ modal, profile, history, progress, blueRow, onClose }) {
   const body = () => {
-    if (modal.type === "legacy") return <div style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", lineHeight: 1.7 }}><b style={{ color: GC.gold }}>{modal.name}</b> 為 Legacy 模組，尚未整合至主幹唯一資料流。待接入 Store 後於此顯示真資料，目前不以假資料佔位。</div>;
-    if (modal.type === "finance") return <div><Row l="資金" v={money(profile.finance.funds)} c={GC.gold} /><Row l="週收入" v={money(profile.finance.weeklyIncome)} c={GC.green} /><Row l="週支出" v={money(profile.finance.weeklyCost)} c={GC.redL} /><Row l="週結餘" v={money(profile.finance.weeklyIncome - profile.finance.weeklyCost)} c={GC.blueL} /><div style={{ ...label, marginTop: 8, marginBottom: 3 }}>贊助</div>{(profile.sponsors ?? []).map((s, i) => <Row key={i} l={`${s.name}（${s.tier}）`} v={money(s.weekly) + "/週"} />)}</div>;
-    if (modal.type === "team") { const s = standings(history).find((t) => t.side === "blue") || {}; return <div><Row l="戰隊" v={`${TEAMS.blue.emoji} ${TEAMS.blue.name}`} /><Row l="戰績" v={`${s.wins ?? 0}勝 ${s.losses ?? 0}敗`} c={GC.green} /><Row l="勝率" v={`${Math.round((s.winRate ?? 0) * 100)}%`} /><Row l="場均擊殺" v={(s.avgKills ?? 0).toFixed(1)} /><div style={{ ...label, marginTop: 8, marginBottom: 3 }}>先發陣容</div>{Object.keys(ROSTER).filter((p) => p[0] === "b").map((pid) => { const r = ROSTER[pid]; return <Row key={pid} l={`${r.player} · ${r.hero}`} v={"Lv " + (progress[r.heroId]?.level ?? 1)} />; })}</div>; }
-    if (modal.type === "roster") { const rk = playerRanking(history); return <div>{Object.entries(ROSTER).map(([pid, r]) => { const h = heroById(r.heroId) || {}, hp = progress[r.heroId] || { level: 1 }, pr = rk.find((x) => x.id === pid); return <div key={pid} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "3px 0", borderBottom: `1px solid ${GC.line}` }}><span style={{ color: pid[0] === "b" ? GC.blueL : GC.redL, fontWeight: 700 }}>{r.player} <span style={{ color: "rgba(255,255,255,0.55)" }}>{h.zh}·{h.lane}</span></span><span style={{ fontFamily: MONO, color: "rgba(255,255,255,0.7)" }}>Lv{hp.level}{pr ? ` · ${pr.avgRating.toFixed(0)}RTG` : ""}</span></div>; })}<div style={{ fontSize: 9, color: GC.gray, marginTop: 6 }}>等級/評分來自 Hero Progress 與 Season（唯一來源）</div></div>; }
-    if (modal.type === "codex") return <CodexBody />;
+    if (modal.type === "legacy") return <div style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", lineHeight: 1.7 }}><b style={{ color: GC.gold }}>{modal.name}</b> 為 Legacy 模組，尚未 Component 化至主幹。待其 Adapter 接入 Store 後於此顯示真資料，目前不以假資料佔位。</div>;
+    if (modal.type === "notify") return <div>{(profile.inbox ?? []).map((m, i) => <div key={i} style={{ display: "flex", gap: 7, padding: "5px 0", borderBottom: `1px solid ${GC.line}` }}><span style={{ color: m.unread ? GC.gold : "rgba(255,255,255,0.3)" }}>{m.unread ? "●" : "○"}</span><div><div style={{ fontSize: 12, color: "#e5e7eb", fontWeight: 700 }}>{m.subject}</div><div style={{ fontSize: 9.5, color: GC.gray }}>{m.from}</div></div></div>)}</div>;
+    if (modal.type === "sponsor") return <div>{(profile.sponsors ?? []).map((s, i) => <Row key={i} l={`${s.name}（${s.tier}）`} v={money(s.weekly) + "/週"} c={GC.gold} />)}<div style={{ fontSize: 9.5, color: GC.gray, marginTop: 8 }}>粉絲 {profile.meta.fans.toLocaleString()} · 聲望 {profile.meta.reputation}</div></div>;
+    if (modal.type === "finance") return <div><Row l="資金" v={money(profile.finance.funds)} c={GC.gold} /><Row l="週收入" v={money(profile.finance.weeklyIncome)} c={GC.green} /><Row l="週支出" v={money(profile.finance.weeklyCost)} c={GC.redL} /><Row l="週結餘" v={money(profile.finance.weeklyIncome - profile.finance.weeklyCost)} c={GC.blueL} /></div>;
+    if (modal.type === "team" || modal.type === "dash") return <div><Row l="戰隊" v={`${TEAMS.blue.emoji} ${TEAMS.blue.name}`} /><Row l="戰績" v={`${blueRow.wins}勝 ${blueRow.losses}敗`} c={GC.green} /><Row l="勝率" v={`${Math.round(blueRow.winRate * 100)}%`} /><Row l="選手數" v={`${profile.meta.players}/15`} c={GC.blueL} /><div style={{ ...({ fontSize: 9, letterSpacing: "0.2em", color: GC.gray, fontWeight: 900 }), marginTop: 8, marginBottom: 3 }}>主力陣容</div>{Object.keys(ROSTER).filter((p) => p[0] === "b").map((pid) => { const r = ROSTER[pid]; return <Row key={pid} l={`${r.player} · ${r.hero}`} v={"Lv " + (progress[r.heroId]?.level ?? 1)} />; })}</div>;
+    if (modal.type === "roster") { const rk = playerRanking(history); return <div>{Object.entries(ROSTER).map(([pid, r]) => { const h = heroById(r.heroId) || {}, hp = progress[r.heroId] || { level: 1 }, pr = rk.find((x) => x.id === pid); return <div key={pid} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "3px 0", borderBottom: `1px solid ${GC.line}` }}><span style={{ color: pid[0] === "b" ? GC.blueL : GC.redL, fontWeight: 700 }}>{r.player} <span style={{ color: "rgba(255,255,255,0.55)" }}>{h.zh}·{h.lane}</span></span><span style={{ fontFamily: MONO, color: "rgba(255,255,255,0.7)" }}>Lv{hp.level}{pr ? ` · ${pr.avgRating.toFixed(0)}RTG` : ""}</span></div>; })}</div>; }
   };
-  const title = { legacy: modal.name, finance: "財務管理", team: "戰隊詳情", roster: "選手名單", codex: "英雄圖鑑" }[modal.type];
+  const title = { legacy: modal.name, notify: "收件匣", sponsor: "贊助商", finance: "財務管理", team: "戰隊詳情", dash: "經營儀表板", roster: "選手名單" }[modal.type];
   return (
     <div onClick={onClose} style={{ position: "absolute", inset: 0, zIndex: 30, background: "rgba(4,8,16,0.72)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 360, maxHeight: "82%", overflow: "auto", ...card(GC.blue), background: "rgba(15,20,32,0.99)", padding: "16px 18px" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 340, maxHeight: "80%", overflow: "auto", background: GC.card, border: `1px solid ${GC.blue}59`, borderRadius: 14, padding: "16px 18px" }}>
         <div style={{ fontSize: 16, fontWeight: 900, color: "#e5e7eb", marginBottom: 10 }}>{title}</div>
         {body()}
         <button onClick={onClose} style={{ marginTop: 14, width: "100%", background: "rgba(255,255,255,0.08)", border: `1px solid ${GC.line}`, borderRadius: 8, padding: "8px", color: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer" }}>關閉</button>
       </div>
-    </div>
-  );
-}
-// 英雄圖鑑（讀 CHAMPIONS_100，僅前 30 呈現避免過長）
-function CodexBody() {
-  return (
-    <div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 5 }}>
-        {CHAMPIONS_100.slice(0, 30).map((c) => (
-          <div key={c.id} title={`${c.zh}｜${c.title}｜${c.lane}｜Q:${c.Q} W:${c.W} E:${c.E} R:${c.R}`} style={{ aspectRatio: "1", borderRadius: 6, background: c.color || "#334155", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, color: "#0b1220", cursor: "default" }}>{c.zh.slice(0, 2)}</div>
-        ))}
-      </div>
-      <div style={{ fontSize: 9, color: GC.gray, marginTop: 6 }}>共 {CHAMPIONS_100.length} 位英雄（顯示前 30）· 滑鼠停留看技能 · 來源 CHAMPIONS_100</div>
     </div>
   );
 }
