@@ -11,6 +11,7 @@ import SeasonScreen from "./screens/SeasonScreen.jsx";
 import RoleSelectScreen from "./screens/moba/RoleSelectScreen.jsx";
 import MatchmakingScreen from "./screens/moba/MatchmakingScreen.jsx";
 import BanPickScreen from "./screens/moba/BanPickScreen.jsx";
+import CodexScreen from "./screens/moba/CodexScreen.jsx";
 import TacticScreen from "./screens/moba/TacticScreen.jsx";
 import LoadingScreen from "./screens/moba/LoadingScreen.jsx";
 import GameView from "./GameView.jsx";
@@ -26,7 +27,8 @@ export default function AppShell() {
       {/* ── MOBA 賽前流程 ── */}
       {screen === "lineup" && <RoleSelectScreen onNext={go("matchmaking")} onBack={go("dashboard")} />}
       {screen === "matchmaking" && <MatchmakingScreen onDone={go("banpick")} onBack={go("lineup")} />}
-      {screen === "banpick" && <BanPickScreen onNext={go("tactic")} onBack={go("matchmaking")} />}
+      {screen === "banpick" && <BanPickScreen onNext={go("tactic")} onBack={go("matchmaking")} onCodex={go("codex")} />}
+      {screen === "codex" && <CodexScreen onBack={go("banpick")} />}
       {screen === "tactic" && <TacticScreen onNext={go("loading")} onBack={go("banpick")} />}
       {screen === "loading" && <LoadingScreen onDone={go("battle")} />}
       {screen === "battle" && <GameView autoStart onContinue={go("dashboard")} />}

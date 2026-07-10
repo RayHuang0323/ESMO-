@@ -9,20 +9,24 @@ import { Frame } from "./LineupScreen.jsx";
 import { CHAMPIONS_100, heroById } from "../../data/heroDatabase.js";
 import { ROSTER } from "../../data/roster.js";
 import { GC } from "../../ui/theme.js";
+import HeroCodexDetail from "./HeroCodexDetail.jsx";
 
 const DIFF = ["", "★", "★★", "★★★"];
 const pickIds = (side) => Object.entries(ROSTER).filter(([p]) => p[0] === side).map(([, r]) => r.heroId);
 
-export default function BanPickScreen({ onNext, onBack }) {
+export default function BanPickScreen({ onNext, onBack, onCodex }) {
   const [bans, setBans] = useState([]);
   const [hover, setHover] = useState(null);
+  const [detailId, setDetailId] = useState(null);
   const bluePicks = pickIds("b"), redPicks = pickIds("r");
   const locked = new Set([...bluePicks, ...redPicks, ...bans]);
   const pool = CHAMPIONS_100.filter((c) => !locked.has(c.id)).slice(0, 30);
   const detail = hover ? heroById(hover) : heroById(bluePicks[0]);
+  const openDetail = (id) => setDetailId(id);
 
   return (
-    <Frame title="BAN / PICK" sub="英雄池來自 CHAMPIONS_100" onBack={onBack} onNext={onNext} nextLabel="進入戰術 →">
+    <Frame title="BAN / PICK" sub="英雄池來自 CHAMPIONS_100" onBack={onBack} onNext={onNext} nextLabel="進入戰術 →"
+      extra={onCodex && <button onClick={onCodex} style={{ padding: "9px 16px", borderRadius: 10, border: `1px solid ${GC.line}`, background: GC.card2, color: "#e5e7eb", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>📖 圖鑑</button>}>
       <div style={{ display: "flex", gap: 12, width: 620 }}>
         {/* 左：雙方 Pick + 英雄池 */}
         <div style={{ flex: 1 }}>
@@ -54,9 +58,11 @@ export default function BanPickScreen({ onNext, onBack }) {
                 <span style={{ color: "#e5e7eb" }}>{v}</span>
               </div>
             ))}
+            <button onClick={() => openDetail(detail.id)} style={{ width: "100%", marginTop: 9, padding: "8px", borderRadius: 8, border: `1px solid ${detail.color || GC.blue}55`, background: (detail.color || GC.blue) + "1a", color: "#e5e7eb", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>📋 查看完整資訊（數據·技能·戰術）</button>
           </div>
         )}
       </div>
+      {detailId && <HeroCodexDetail heroId={detailId} onClose={() => setDetailId(null)} />}
     </Frame>
   );
 }
