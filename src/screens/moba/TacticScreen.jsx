@@ -24,7 +24,7 @@ export default function TacticScreen({ onNext, onBack }) {
   const [sel, setSel] = useState("m1");
   const cur = TACTICS.find((t) => t.id === sel);
   return (
-    <Frame title="戰術" sub="TEAM STRATEGY · 8 套戰術" onBack={onBack} onNext={onNext} nextLabel="開始載入 →">
+    <Frame title="戰術" sub="TEAM STRATEGY · 8 套戰術" onBack={onBack} onNext={() => onNext && onNext(cur)} nextLabel="開始載入 →">
       <div style={{ display: "flex", gap: 12, width: 560 }}>
         {/* 左：戰術網格 */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, flex: 1 }}>

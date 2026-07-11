@@ -77,13 +77,26 @@ function SideCell({ p, hero, roster, side, onOpen }) {
   );
 }
 
-export default function BattleHeroStrip() {
+export default function BattleHeroStrip({ roster = ROSTER, draft = null }) {
   const snap = useGameStore((s) => s.snapshot);
   const [open, setOpen] = useState(null);
   if (!snap?.players) return null;
   const blue = snap.players.filter((p) => p.side === "blue");
   const red = snap.players.filter((p) => p.side === "red");
-  const mk = (p) => { const r = ROSTER[p.id] || {}; return { heroId: r.heroId, heroName: heroById(r.heroId)?.zh ?? p.id, playerName: r.player ?? p.id.toUpperCase(), side: p.side }; };
+
+  // Sprint19【C】Draft Adapter：Ban/Pick 實際選角優先（picks[side][i] 為 heroDatabase 完整物件），
+  //   無 draft 時回退 ROSTER 預設英雄。對位序 i 與 LANES 一致 → Loading 顯示誰、Strip 就顯示誰。
+  const heroOf = (side, i, pid) => {
+    const pk = draft?.picks?.[side]?.[i];
+    if (pk?.id) return pk;
+    return heroById((roster[pid] || {}).heroId) || null;
+  };
+  // 【F】點擊 → HeroDetailPanel（戰中表現：KDA/Gold/Lv/HeroProgress），英雄身分同樣取自 draft
+  const mk = (p, side, i) => {
+    const r = roster[p.id] || {};
+    const h = heroOf(side, i, p.id);
+    return { heroId: h?.id ?? r.heroId, heroName: h?.zh ?? p.id, playerName: r.player ?? p.id.toUpperCase(), side: p.side };
+  };
 
   return (
     <>
@@ -91,14 +104,15 @@ export default function BattleHeroStrip() {
         {LANES.map((lane, i) => {
           const b = blue[i], r = red[i];
           if (!b || !r) return null;
-          const rb = ROSTER[b.id] || {}, rr = ROSTER[r.id] || {};
+          const rb = roster[b.id] || {}, rr = roster[r.id] || {};
+          const hb = heroOf("blue", i, b.id), hr = heroOf("red", i, r.id);
           const diff = Math.round((b.gold ?? 0) - (r.gold ?? 0));
           const favor = diff > 0 ? "blue" : diff < 0 ? "red" : "none";
           const abs = Math.abs(diff);
           return (
             <div key={lane} style={{ display: "flex", alignItems: "center", padding: "4px 8px", borderBottom: i < 4 ? "1px solid rgba(255,255,255,0.04)" : "none", gap: 4 }}>
               <span style={{ color: "#3f3f46", fontSize: 8, fontWeight: 700, width: 20, textAlign: "center", letterSpacing: "0.06em", flexShrink: 0 }}>{lane}</span>
-              <SideCell p={b} hero={heroById(rb.heroId)} roster={rb} side="blue" onOpen={() => setOpen(mk(b))} />
+              <SideCell p={b} hero={hb} roster={rb} side="blue" onOpen={() => setOpen(mk(b, "blue", i))} />
               {/* 金幣差 = 對位選手 gold 相減（真資料衍生）*/}
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0, width: 36 }}>
                 {abs > 0 ? (
@@ -114,7 +128,7 @@ export default function BattleHeroStrip() {
                   <span style={{ color: "#3f3f46", fontSize: 8 }}>—</span>
                 )}
               </div>
-              <SideCell p={r} hero={heroById(rr.heroId)} roster={rr} side="red" onOpen={() => setOpen(mk(r))} />
+              <SideCell p={r} hero={hr} roster={rr} side="red" onOpen={() => setOpen(mk(r, "red", i))} />
             </div>
           );
         })}

@@ -35,7 +35,7 @@ function TowerDots({ towers, side }) {
   );
 }
 
-export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭", redName = "赤焰軍團", redEmoji = "🔥", roster = null }) {
+export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭", redName = "赤焰軍團", redEmoji = "🔥", roster = null, tactic = null }) {
   const hud = useGameStore((s) => s.hud);
   const snap = useGameStore((s) => s.snapshot);
   const { mvp } = useBattleStore();
@@ -59,6 +59,15 @@ export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭
         </span>
         <span style={{ color: RED, fontSize: 9.5, fontWeight: 900, letterSpacing: "0.04em" }}>{redName}</span>
       </div>
+
+      {/* Sprint19【D】目前戰術（TacticScreen 選擇 → 展示用；不影響引擎數值）*/}
+      {tactic && (
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 3 }}>
+          <span title={tactic.detail || ""} style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(124,58,237,0.16)", border: "1px solid rgba(167,139,250,0.32)", borderRadius: 6, padding: "1px 8px", fontSize: 8.5, fontWeight: 800, color: "#c4b5fd", letterSpacing: "0.04em" }}>
+            <span style={{ fontSize: 9 }}>{tactic.emoji}</span>戰術 · {tactic.name}
+          </span>
+        </div>
+      )}
 
       {/* 列2：隊徽 34px + 比分 22px + 中央計時器 Courier「比賽時間」（Legacy）*/}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 3 }}>

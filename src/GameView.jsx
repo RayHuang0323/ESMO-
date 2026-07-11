@@ -55,7 +55,9 @@ function Minimap() {
   return <canvas ref={ref} width={150} height={150} style={{ position: "absolute", bottom: 10, right: 10, width: 150, height: 150, borderRadius: 10, border: "1px solid rgba(255,255,255,0.25)", boxShadow: "0 4px 20px rgba(0,0,0,0.5)", pointerEvents: "none", zIndex: 9 }} />;
 }
 
-export default function GameView({ roster = ROSTER, onContinue = null, autoStart = false }) {
+export default function GameView({ roster = ROSTER, onContinue = null, autoStart = false, draft = null, tactic = null }) {
+  // Sprint19【C】【D】：draft（Ban/Pick 結果）與 tactic（戰術）僅作 Presentation 傳遞，
+  //   不進入 LogicEngine、不影響戰鬥勝負（引擎契約凍結）。
   const { playing, start, stop } = useLocalServer();
   // Sprint09：賽前準備銜接 — autoStart 掛載即開局（預設 false = 現行為不變）
   useEffect(() => { if (autoStart && !playing) start(); }, []);  // eslint-disable-line
@@ -68,7 +70,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
       <MobaView3D mapTexture={MOBA_MAP} autoRotate={!playing} battleFollow={follow && playing} roster={roster} />
 
       {/* Battle Presentation Layer：HUD / Timeline / 浮動大字 / TAB 記分板 / 終局畫面 */}
-      <BattlePresentationLayer roster={roster} onContinue={onContinue} />
+      <BattlePresentationLayer roster={roster} draft={draft} tactic={tactic} onContinue={onContinue} />
 
       {/* Start / Stop / 鏡頭切換 */}
       {!playing && !hud.over && (
@@ -87,7 +89,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
         按住 TAB 記分板 · 拖曳旋轉 · 滾輪縮放
       </div>
       {/* 掛載信標：看得到這個 tag = 渲染的是主幹 GameView（非 Legacy App.jsx）*/}
-      <div style={{ position: "absolute", bottom: 166, right: 12, color: "rgba(147,197,253,0.55)", fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", pointerEvents: "none", zIndex: 9 }}>ESMO 主幹 · S15</div>
+      <div style={{ position: "absolute", bottom: 166, right: 12, color: "rgba(147,197,253,0.55)", fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", pointerEvents: "none", zIndex: 9 }}>ESMO 主幹 · S16</div>
       <Minimap />
     </div>
   );

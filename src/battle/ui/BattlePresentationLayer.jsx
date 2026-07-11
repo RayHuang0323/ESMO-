@@ -13,8 +13,9 @@ import BattleTimeline from "./BattleTimeline.jsx";
 import BattleFloatingText from "./BattleFloatingText.jsx";
 import BattleScoreboard from "./BattleScoreboard.jsx";
 import BattleEndScreen from "./BattleEndScreen.jsx";
+import BattleHeroStrip from "./BattleHeroStrip.jsx";
 
-export default function BattlePresentationLayer({ roster = null, showTimeline = true, onContinue = null }) {
+export default function BattlePresentationLayer({ roster = null, showTimeline = true, onContinue = null, draft = null, tactic = null }) {
   useBattleFeed();                       // 唯一接線：核心快照 → battleStore（單向）
   const over = useGameStore((s) => s.hud.over);
   const [showBoard, setShowBoard] = useState(false);
@@ -29,9 +30,10 @@ export default function BattlePresentationLayer({ roster = null, showTimeline = 
 
   return (
     <>
-      <BattleHUD roster={roster} />
-      {showTimeline && !over && <BattleTimeline open />}
+      <BattleHUD roster={roster} tactic={tactic} />
+      {showTimeline && !over && <BattleTimeline open roster={roster} />}
       <BattleFloatingText />
+      {!over && <BattleHeroStrip roster={roster} draft={draft} />}
 
       {/* 戰中 TAB 記分板 */}
       {showBoard && !over && (

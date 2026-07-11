@@ -29,7 +29,7 @@ function HeroCard({ hero, player, side }) {
   );
 }
 
-export default function LoadingScreen({ draft, onDone }) {
+export default function LoadingScreen({ draft, tactic = null, onDone }) {
   const [pct, setPct] = useState(0);
   const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
   useEffect(() => {
@@ -72,6 +72,19 @@ export default function LoadingScreen({ draft, onDone }) {
           </div>
         ))}
       </div>
+
+      {/* Sprint19【D】本場戰術（TacticScreen 選擇 → 展示；不影響引擎數值）*/}
+      {tactic && (
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "linear-gradient(135deg,rgba(124,58,237,0.18),rgba(167,139,250,0.08))", border: "1px solid rgba(167,139,250,0.3)", borderRadius: 12, padding: "7px 16px" }}>
+            <span style={{ fontSize: 16 }}>{tactic.emoji}</span>
+            <div>
+              <div style={{ fontSize: 8, color: "#52525b", letterSpacing: "0.12em" }}>本場戰術 · TACTIC</div>
+              <div style={{ fontSize: 12.5, fontWeight: 900, color: "#c4b5fd" }}>{tactic.name}<span style={{ color: "#71717a", fontWeight: 600, fontSize: 10 }}> · {tactic.desc}</span></div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Loading Bar + 進場文案（Legacy 紫漸層主題）*/}
       <div style={{ marginTop: 16 }}>
