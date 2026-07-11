@@ -1,90 +1,123 @@
 // ============================================================================
-//  battle/ui/BattleHeroStrip.jsx — MOBA 底部 5v5 Hero Strip（Sprint10）
-//  唯一資料來源：useGameStore.snapshot（battleStore 消費的同一份快照）。
-//  純顯示，不重新統計。無資料源的欄位（Mana/技能CD/Buff/裝備）依規範保留位置。
-//  英雄靜態資料（頭像色/技能名）來自 CHAMPIONS_100（heroDatabase）。
+//  battle/ui/BattleHeroStrip.jsx — Legacy TenManPanel 版型恢復（Sprint18【D】）
+//  Presentation：逐字對齊 Legacy LiveModule MatchupRow（line 8479–8560）——
+//    五路對位行：路名(8px灰20px) ｜ 藍側[StatBars垂直HP/MP + HeroAvatar28(Lv badge)
+//    + SpellSquare×2直排 + ID 8.5px + KDA 8px Courier + CS金9px] ｜ 中央金幣差
+//    (箭頭+數字+「金幣差」) ｜ 紅側鏡像。
+//  資料（不造假）：
+//    · 真資料：hp/lv/k/d/a/gold/dead/respawn（引擎 snapshot）；金幣差 = 對位
+//      兩選手 gold 直接相減（衍生非統計）。
+//    · 待接（保留位置）：MP（引擎無 mana）、CS（引擎無補兵數）、召喚師技能
+//      （SpellSquare 顯示佔位，無 CD 資料）。
+//  互動：點英雄開 HeroDetailPanel（Legacy 無此互動，為既有產品升級保留）。
+//  契約：唯一資料源 useGameStore.snapshot；不重新統計。
 // ============================================================================
 import React, { useState } from "react";
 import { useGameStore } from "../../useGameStore.js";
 import { ROSTER } from "../../data/roster.js";
 import { heroById } from "../../data/heroDatabase.js";
 import HeroDetailPanel from "./HeroDetailPanel.jsx";
-import { GC } from "../../ui/theme.js";
 
-const MONO = "ui-monospace,Menlo,monospace";
-const stColor = (s) => s === "團戰!" ? "#f87171" : s === "撤退" ? GC.gold : s === "圍攻" ? GC.purp : s === "回防" ? GC.blueL : "#9ca3af";
-const stShort = (s, dead) => dead ? "死亡" : s === "團戰!" ? "團戰" : s;
+const BLUE = "#60a5fa", RED = "#fb923c", GOLD = "#fbbf24";
+const MONO = "'Courier New',monospace";
+const LANES = ["上路", "打野", "中路", "下路", "輔助"];
 
-function HeroCard({ p, side, onOpen }) {
-  const r = ROSTER[p.id] || {};
-  const h = heroById(r.heroId) || {};
-  const c = side === "blue" ? GC.blue : GC.red;
-  const edge = side === "blue" ? GC.blueL : GC.redL;
-  const hpC = p.hp > 0.55 ? GC.green : p.hp > 0.28 ? GC.gold : "#f87171";
-  const dead = p.dead;
-  const initial = (h.zh || r.hero || "?").slice(0, 1);
-
+// Legacy HeroAvatar：色塊縮寫 + 右下 Lv 圓 badge 14px
+function HeroAvatar({ hero, level, dead, respawn }) {
+  const h = hero || {};
+  let hh = 0; for (let i = 0; i < (h.id || "?").length; i++) hh = (hh * 31 + (h.id || "?").charCodeAt(i)) & 0xffffff;
+  const hue = hh % 360;
   return (
-    <div onClick={onOpen} style={{ width: 92, background: "rgba(8,12,22,0.92)", border: `1px solid ${edge}44`, borderRadius: 8, padding: "4px 5px", opacity: dead ? 0.55 : 1, position: "relative", cursor: "pointer" }}>
-      {/* 頭像色塊（佔位：無真實頭像圖）+ Lv */}
-      <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-        <div style={{ width: 26, height: 26, borderRadius: 6, background: h.color || c, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 13, color: "#0b1220", flexShrink: 0 }}>{initial}</div>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 10.5, fontWeight: 900, color: "#e5e7eb", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{h.zh || r.hero || p.id}</div>
-          <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.5)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.player || p.id.toUpperCase()}</div>
-        </div>
-        <div style={{ fontSize: 10, fontWeight: 900, color: "#fde047", fontFamily: MONO }}>{p.lv ?? 1}</div>
-      </div>
+    <div style={{ position: "relative", flexShrink: 0 }}>
+      <div style={{ width: 28, height: 28, borderRadius: 6, background: `linear-gradient(135deg, hsl(${hue},45%,32%), #0a0a10)`, border: "1.5px solid rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, color: "rgba(255,255,255,0.9)", opacity: dead ? 0.45 : 1, filter: dead ? "grayscale(1)" : "none" }}>{(h.zh || "?").slice(0, 1)}</div>
+      <div style={{ position: "absolute", bottom: -3, right: -3, minWidth: 14, height: 14, borderRadius: 99, padding: "0 3px", background: "#1a1820", border: "1.5px solid rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, fontWeight: 900, color: dead ? "#f87171" : "white", lineHeight: 1, fontFamily: MONO }}>{dead ? `${Math.max(0, respawn).toFixed(0)}` : level}</div>
+    </div>
+  );
+}
 
-      {/* HP 條（真資料）*/}
-      <div style={{ marginTop: 3, height: 5, borderRadius: 99, background: "rgba(255,255,255,0.12)", overflow: "hidden" }}>
-        <div style={{ width: `${Math.max(0, p.hp) * 100}%`, height: "100%", background: hpC }} />
+// Legacy StatBars：垂直 HP(綠漸層) + MP(靛漸層，待接=空) 寬3px
+function StatBars({ hp }) {
+  const hpPct = Math.max(0, Math.min(100, hp * 100));
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 1, width: 3 }}>
+      <div style={{ flex: 1, borderRadius: 99, background: "rgba(255,255,255,0.08)", overflow: "hidden", minHeight: 20, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+        <div style={{ height: `${hpPct}%`, width: "100%", borderRadius: 99, background: "linear-gradient(180deg,#4ade80,#16a34a)", boxShadow: "0 0 4px rgba(74,222,128,0.5)" }} />
       </div>
-      {/* Mana 條（保留位置：目前無資料）*/}
-      <div style={{ marginTop: 2, height: 3, borderRadius: 99, background: "rgba(59,130,246,0.15)", overflow: "hidden" }} title="Mana：目前無資料，保留位置">
-        <div style={{ width: "0%", height: "100%", background: GC.blue }} />
-      </div>
+      <div title="MP：引擎目前無 mana 資料，保留位置（待接）" style={{ flex: 1, borderRadius: 99, background: "rgba(129,140,248,0.12)", minHeight: 12 }} />
+    </div>
+  );
+}
 
-      {/* 技能 QWER CD（保留位置：格顯示技能名首字，CD 尚無資料）*/}
-      <div style={{ display: "flex", gap: 2, marginTop: 3 }}>
-        {["Q", "W", "E", "R"].map((k) => (
-          <div key={k} title={`${k}：${h[k] || "—"}（CD 目前無資料）`} style={{ flex: 1, height: 11, borderRadius: 3, background: k === "R" ? "rgba(250,204,21,0.18)" : "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", fontSize: 7.5, fontWeight: 800, color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", justifyContent: "center" }}>{k}</div>
-        ))}
-      </div>
+// Legacy SpellSquare：14px 方格（召喚師技能位置，待接）
+function SpellSquare({ label }) {
+  return (
+    <div title="召喚師技能：目前無資料，保留位置（待接）" style={{ width: 14, height: 14, borderRadius: 3, background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, fontWeight: 900, color: "#52525b" }}>{label}</div>
+  );
+}
 
-      {/* KDA / 金錢（真資料）*/}
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3, fontSize: 8.5, fontFamily: MONO }}>
-        <span style={{ color: "#e5e7eb", fontWeight: 800 }}>{p.k}/{p.d}/{p.a ?? 0}</span>
-        <span style={{ color: GC.gold }}>{((p.gold ?? 0) / 1000).toFixed(1)}k</span>
+function SideCell({ p, hero, roster, side, onOpen }) {
+  const idColor = side === "blue" ? BLUE : RED;
+  const rev = side === "red";
+  return (
+    <div onClick={onOpen} style={{ flex: 1, display: "flex", flexDirection: rev ? "row-reverse" : "row", alignItems: "center", gap: 3, minWidth: 0, cursor: "pointer" }}>
+      <div style={{ display: "flex", flexDirection: rev ? "row-reverse" : "row", alignItems: "center", gap: 1.5, flexShrink: 0 }}>
+        <StatBars hp={p.hp ?? 0} />
+        <HeroAvatar hero={hero} level={p.lv ?? 1} dead={p.dead} respawn={p.respawn ?? 0} />
       </div>
-
-      {/* 裝備數（保留位置 0/6）+ Buff/Debuff（保留位置）+ 狀態（真資料）*/}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 2 }}>
-        <span title="裝備：目前無資料，保留位置" style={{ fontSize: 8, color: "rgba(255,255,255,0.4)", fontFamily: MONO }}>🎒0/6</span>
-        <span style={{ fontSize: 8.5, fontWeight: 800, color: stColor(p.state) }}>{dead ? `☠${Math.max(0, p.respawn).toFixed(0)}s` : stShort(p.state, dead)}</span>
+      <div style={{ display: "flex", flexDirection: "column", gap: 1, flexShrink: 0 }}>
+        <SpellSquare label="F" /><SpellSquare label="D" />
       </div>
-      {/* Buff/Debuff 佔位列 */}
-      <div title="Buff/Debuff：目前無資料，保留位置" style={{ display: "flex", gap: 2, marginTop: 2, height: 4 }}>
-        <div style={{ flex: 1, borderRadius: 99, background: "rgba(52,211,153,0.12)" }} />
-        <div style={{ flex: 1, borderRadius: 99, background: "rgba(248,113,113,0.12)" }} />
+      <div style={{ minWidth: 0, textAlign: rev ? "right" : "left" }}>
+        <div style={{ color: idColor, fontSize: 8.5, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 52 }}>{roster.player || p.id}</div>
+        <div style={{ color: "#71717a", fontSize: 8, fontFamily: MONO }}>{p.k}/{p.d}/{p.a ?? 0}</div>
       </div>
+      {/* CS：引擎無補兵數，保留位置顯示「—」（Legacy 位置為金色數字）*/}
+      <span title="CS：引擎目前無補兵資料，保留位置（待接）" style={{ color: GOLD, fontSize: 9, fontWeight: 800, [rev ? "marginRight" : "marginLeft"]: "auto", flexShrink: 0, opacity: 0.4 }}>—</span>
     </div>
   );
 }
 
 export default function BattleHeroStrip() {
   const snap = useGameStore((s) => s.snapshot);
-  const [open, setOpen] = useState(null);   // 點擊英雄卡 → Hero Detail（含 Skill Panel）
+  const [open, setOpen] = useState(null);
   if (!snap?.players) return null;
   const blue = snap.players.filter((p) => p.side === "blue");
   const red = snap.players.filter((p) => p.side === "red");
   const mk = (p) => { const r = ROSTER[p.id] || {}; return { heroId: r.heroId, heroName: heroById(r.heroId)?.zh ?? p.id, playerName: r.player ?? p.id.toUpperCase(), side: p.side }; };
+
   return (
     <>
-      <div style={{ position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", zIndex: 11, display: "flex", gap: 10, pointerEvents: "auto" }}>
-        <div style={{ display: "flex", gap: 4 }}>{blue.map((p) => <HeroCard key={p.id} p={p} side="blue" onOpen={() => setOpen(mk(p))} />)}</div>
-        <div style={{ width: 1, background: "rgba(255,255,255,0.15)" }} />
-        <div style={{ display: "flex", gap: 4 }}>{red.map((p) => <HeroCard key={p.id} p={p} side="red" onOpen={() => setOpen(mk(p))} />)}</div>
+      <div style={{ position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", zIndex: 11, width: "min(96%, 560px)", background: "rgba(13,11,18,0.94)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, overflow: "hidden", pointerEvents: "auto", boxShadow: "0 -4px 24px rgba(0,0,0,0.5)" }}>
+        {LANES.map((lane, i) => {
+          const b = blue[i], r = red[i];
+          if (!b || !r) return null;
+          const rb = ROSTER[b.id] || {}, rr = ROSTER[r.id] || {};
+          const diff = Math.round((b.gold ?? 0) - (r.gold ?? 0));
+          const favor = diff > 0 ? "blue" : diff < 0 ? "red" : "none";
+          const abs = Math.abs(diff);
+          return (
+            <div key={lane} style={{ display: "flex", alignItems: "center", padding: "4px 8px", borderBottom: i < 4 ? "1px solid rgba(255,255,255,0.04)" : "none", gap: 4 }}>
+              <span style={{ color: "#3f3f46", fontSize: 8, fontWeight: 700, width: 20, textAlign: "center", letterSpacing: "0.06em", flexShrink: 0 }}>{lane}</span>
+              <SideCell p={b} hero={heroById(rb.heroId)} roster={rb} side="blue" onOpen={() => setOpen(mk(b))} />
+              {/* 金幣差 = 對位選手 gold 相減（真資料衍生）*/}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0, width: 36 }}>
+                {abs > 0 ? (
+                  <>
+                    <div style={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      {favor === "blue" && <span style={{ color: BLUE, fontSize: 8 }}>◀</span>}
+                      <span style={{ color: favor === "blue" ? BLUE : RED, fontSize: 8, fontWeight: 800, fontFamily: MONO }}>{abs}</span>
+                      {favor === "red" && <span style={{ color: RED, fontSize: 8 }}>▶</span>}
+                    </div>
+                    <span style={{ color: "#3f3f46", fontSize: 7, letterSpacing: "0.04em" }}>金幣差</span>
+                  </>
+                ) : (
+                  <span style={{ color: "#3f3f46", fontSize: 8 }}>—</span>
+                )}
+              </div>
+              <SideCell p={r} hero={heroById(rr.heroId)} roster={rr} side="red" onOpen={() => setOpen(mk(r))} />
+            </div>
+          );
+        })}
       </div>
       {open && <HeroDetailPanel {...open} onClose={() => setOpen(null)} />}
     </>

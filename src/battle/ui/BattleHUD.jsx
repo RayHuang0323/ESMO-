@@ -1,35 +1,36 @@
 // ============================================================================
-//  battle/ui/BattleHUD.jsx — 專業轉播 HUD v3（Sprint07【A】）
-//  版式比照 LoL/Wild Rift/Dota2 轉播：上緣隊伍膠囊（大比分/推塔/龍/巴龍）、
-//  中央計時 + 金錢差、資源重生倒數（真 respawn 資料）、勝率條、即時 MVP。
-//  全部讀 snapshot/battleStore；無假資料、無第二套 state。
+//  battle/ui/BattleHUD.jsx — Legacy MatchHeader 版型恢復（Sprint18【E】）
+//  Presentation：逐字對齊 Legacy LiveModule MatchHeader（line 8140–8280）——
+//    列1：隊名（左藍右紅）+ 中央 LIVE badge（紅底 pulse）
+//    列2：隊徽 34px + 比分 22px + 中央計時器 28px Courier +「比賽時間」
+//    列3：塔存活點陣（6px 格）+ 龍/巴龍狀態（中央倒數）
+//    列4：勝率條 5px 藍紅漸層 + 兩端 %
+//  資料（不造假）：
+//    · 真資料：比分 hud.bK/rK、計時 hud.ts、塔點陣 snapshot.towers（每隊
+//      9 外塔存活狀態，格數依真資料非 Legacy 固定 6 格——資料誠實優先）、
+//      龍/巴龍 snap.dragon/baron（alive/respawn）、勝率 hud.winProb。
+//    · MVP 行：Legacy MatchHeader 無此元素，為既有產品升級保留（不退化）。
+//    · Legacy 金差顯示位於 TenManPanel（已由 BattleHeroStrip 五路呈現）。
+//  契約：全讀 useGameStore/battleStore；不重新統計。
 // ============================================================================
-
 import React from "react";
 import { useGameStore } from "../../useGameStore.js";
 import { useBattleStore } from "../battleStore.js";
 import { fmtT } from "../../gameData.js";
-import { GC } from "../../ui/theme.js";
 
-const MONO = "ui-monospace,Menlo,monospace";
-const Obj = ({ icon, val, color }) => (
-  <span style={{ display: "inline-flex", alignItems: "center", gap: 2, color, fontWeight: 800, fontSize: 11.5, fontFamily: MONO }}>
-    <span style={{ fontSize: 12.5 }}>{icon}</span>{val}
-  </span>
-);
+const BLUE = "#60a5fa", RED = "#fb923c", MONO = "'Courier New',monospace";
 
-// 資源狀態徽章：存活=脈動點；死亡=重生倒數（真 respawn）
-function Pit({ label, icon, data }) {
-  const alive = data.alive;
+// 塔點陣：一隊一排，每格 6px（Legacy 版型），存活亮 / 摧毀暗 — 真資料
+function TowerDots({ towers, side }) {
+  const arr = Object.values(towers).filter((t) => t.side === side && t.lane !== "nexus")
+    .sort((a, b) => a.lane.localeCompare(b.lane) || a.tier - b.tier);
+  const c = side === "blue" ? BLUE : RED;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 800,
-      color: alive ? "#fde68a" : "rgba(255,255,255,0.5)", background: "rgba(8,14,24,0.72)",
-      border: `1px solid ${alive ? "rgba(250,204,21,0.55)" : "rgba(255,255,255,0.14)"}`, borderRadius: 8, padding: "2px 8px" }}>
-      <span style={{ fontSize: 12 }}>{icon}</span>
-      <span>{label}</span>
-      {alive
-        ? <span style={{ width: 6, height: 6, borderRadius: 99, background: "#fde047", boxShadow: "0 0 8px #fde047", animation: "esmoPulse 1.2s infinite" }} />
-        : <span style={{ fontFamily: MONO }}>{Math.max(0, data.respawn).toFixed(0)}s</span>}
+    <div style={{ display: "flex", gap: 2 }}>
+      {arr.map((t, i) => (
+        <div key={i} title={`${t.lane} T${t.tier + 1}：${t.hp > 0 ? `HP ${(t.hp * 100).toFixed(0)}%` : "已摧毀"}`}
+          style={{ width: 6, height: 6, borderRadius: 2, background: t.hp > 0 ? c : "rgba(255,255,255,0.1)", boxShadow: t.hp > 0 ? `0 0 3px ${c}88` : "none" }} />
+      ))}
     </div>
   );
 }
@@ -37,65 +38,64 @@ function Pit({ label, icon, data }) {
 export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭", redName = "赤焰軍團", redEmoji = "🔥", roster = null }) {
   const hud = useGameStore((s) => s.hud);
   const snap = useGameStore((s) => s.snapshot);
-  const { derived, mvp } = useBattleStore();
-  const goldDiff = hud.bGold - hud.rGold;
-  const blueLead = goldDiff >= 0;
+  const { mvp } = useBattleStore();
   const mvpName = mvp ? (roster?.[mvp.id]?.player ?? mvp.id.toUpperCase()) : "—";
-
-  const TeamPod = ({ side }) => {
-    const b = side === "blue";
-    return (
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexDirection: b ? "row" : "row-reverse",
-        background: `linear-gradient(${b ? "90deg" : "270deg"}, rgba(8,14,24,0.88), rgba(8,14,24,0.55))`,
-        border: `1px solid ${b ? "rgba(59,130,246,0.55)" : "rgba(239,68,68,0.55)"}`,
-        borderRadius: 12, padding: "6px 12px", minWidth: 236, backdropFilter: "blur(5px)" }}>
-        <span style={{ fontSize: 17 }}>{b ? blueEmoji : redEmoji}</span>
-        <div style={{ textAlign: b ? "left" : "right" }}>
-          <div style={{ color: b ? GC.blueL : GC.redL, fontWeight: 900, fontSize: 12.5, letterSpacing: "0.02em" }}>{b ? blueName : redName}</div>
-          <div style={{ display: "flex", gap: 8, flexDirection: b ? "row" : "row-reverse" }}>
-            <Obj icon="🗼" val={b ? derived.blueTowers : derived.redTowers} color={b ? GC.blueL : GC.redL} />
-            <Obj icon="🐉" val={b ? derived.dragonB : derived.dragonR} color="#c4b5fd" />
-            <Obj icon="👑" val={b ? derived.baronB : derived.baronR} color="#fcd34d" />
-            <Obj icon="💰" val={((b ? hud.bGold : hud.rGold) / 1000).toFixed(1) + "k"} color="#fde68a" />
-          </div>
-        </div>
-        <div style={{ color: "#fff", fontWeight: 900, fontSize: 26, fontFamily: MONO, marginLeft: b ? "auto" : 0, marginRight: b ? 0 : "auto", textShadow: "0 2px 8px rgba(0,0,0,0.6)" }}>
-          {b ? hud.bK : hud.rK}
-        </div>
-      </div>
-    );
-  };
+  const pit = (d, label, icon) => (
+    <span title={`${label}：${d.alive ? "已刷新" : `${Math.max(0, d.respawn).toFixed(0)}s 後刷新`}`}
+      style={{ display: "inline-flex", alignItems: "center", gap: 2, fontSize: 9, fontWeight: 800, fontFamily: MONO, color: d.alive ? "#fde047" : "#52525b" }}>
+      <span style={{ fontSize: 10 }}>{icon}</span>{d.alive ? "●" : `${Math.max(0, d.respawn).toFixed(0)}s`}
+    </span>
+  );
 
   return (
-    <div style={{ position: "absolute", top: 8, left: 10, right: 10, pointerEvents: "none", fontFamily: "system-ui,-apple-system,sans-serif", zIndex: 8 }}>
-      <style>{`@keyframes esmoPulse{0%,100%{opacity:1}50%{opacity:0.3}} @keyframes esmoHudIn{0%{transform:translateY(-14px);opacity:0}100%{transform:translateY(0);opacity:1}}`}</style>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "stretch", gap: 8, animation: "esmoHudIn 0.45s ease both" }}>
-        <TeamPod side="blue" />
-        {/* 中央：計時 / 金錢差 / 資源倒數 */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-          <div style={{ color: "#fff", fontSize: 17, fontWeight: 900, fontFamily: MONO, background: "rgba(8,14,24,0.85)", padding: "3px 16px", borderRadius: 9, border: "1px solid rgba(255,255,255,0.14)" }}>{fmtT(hud.ts)}</div>
-          <div style={{ color: blueLead ? GC.blueL : GC.redL, fontSize: 10.5, fontWeight: 900, fontFamily: MONO }}>
-            {blueLead ? "◀" : ""} 金差 {(Math.abs(goldDiff) / 1000).toFixed(1)}k {blueLead ? "" : "▶"}
-          </div>
-          <div style={{ display: "flex", gap: 5 }}>
-            <Pit label="小龍" icon="🐉" data={snap.dragon} />
-            <Pit label="巴龍" icon="👑" data={snap.baron} />
-          </div>
-        </div>
-        <TeamPod side="red" />
+    <div style={{ position: "absolute", top: 6, left: "50%", transform: "translateX(-50%)", width: "min(96%, 560px)", pointerEvents: "none", fontFamily: "system-ui,-apple-system,sans-serif", zIndex: 8, background: "rgba(13,11,18,0.92)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "6px 12px 7px", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
+      <style>{`@keyframes esmoPulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
+
+      {/* 列1：隊名 + LIVE badge（Legacy）*/}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ color: BLUE, fontSize: 9.5, fontWeight: 900, letterSpacing: "0.04em" }}>{blueName}</span>
+        <span style={{ background: "#dc2626", color: "white", fontSize: 8, fontWeight: 900, borderRadius: 4, padding: "1px 6px", letterSpacing: "0.1em", display: "inline-flex", alignItems: "center", gap: 3 }}>
+          <span style={{ width: 5, height: 5, borderRadius: 99, background: "white", animation: "esmoPulse 1.2s infinite" }} />LIVE
+        </span>
+        <span style={{ color: RED, fontSize: 9.5, fontWeight: 900, letterSpacing: "0.04em" }}>{redName}</span>
       </div>
 
-      {/* 勝率條 + MVP */}
-      <div style={{ marginTop: 6, height: 7, borderRadius: 99, overflow: "hidden", background: "rgba(0,0,0,0.55)", display: "flex", border: "1px solid rgba(255,255,255,0.1)" }}>
+      {/* 列2：隊徽 34px + 比分 22px + 中央計時器 Courier「比賽時間」（Legacy）*/}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 3 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 24, width: 34, textAlign: "center" }}>{blueEmoji}</span>
+          <span style={{ color: "white", fontSize: 22, fontWeight: 900, fontFamily: MONO }}>{hud.bK}</span>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ color: "white", fontSize: 22, fontWeight: 900, fontFamily: MONO, lineHeight: 1 }}>{fmtT(hud.ts)}</div>
+          <div style={{ color: "#52525b", fontSize: 7.5, letterSpacing: "0.12em", marginTop: 1 }}>比賽時間</div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ color: "white", fontSize: 22, fontWeight: 900, fontFamily: MONO }}>{hud.rK}</span>
+          <span style={{ fontSize: 24, width: 34, textAlign: "center" }}>{redEmoji}</span>
+        </div>
+      </div>
+
+      {/* 列3：塔點陣（真資料，每隊 9 外塔）+ 中央龍/巴龍倒數（Legacy 版型）*/}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+        <TowerDots towers={snap.towers || {}} side="blue" />
+        <div style={{ display: "flex", gap: 8 }}>
+          {pit(snap.dragon || { alive: false, respawn: 0 }, "小龍", "🐉")}
+          {pit(snap.baron || { alive: false, respawn: 0 }, "巴龍", "👑")}
+        </div>
+        <TowerDots towers={snap.towers || {}} side="red" />
+      </div>
+
+      {/* 列4：勝率條 5px 藍紅漸層 + 兩端 %（Legacy）*/}
+      <div style={{ marginTop: 5, height: 5, borderRadius: 99, overflow: "hidden", background: "rgba(0,0,0,0.55)", display: "flex" }}>
         <div style={{ width: `${hud.winProb * 100}%`, background: "linear-gradient(90deg,#1d4ed8,#60a5fa)", transition: "width 0.4s ease" }} />
         <div style={{ flex: 1, background: "linear-gradient(90deg,#f87171,#b91c1c)" }} />
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2, fontSize: 9.5, fontWeight: 800, fontFamily: MONO }}>
-        <span style={{ color: GC.blueL }}>{(hud.winProb * 100).toFixed(0)}%</span>
-        <span style={{ color: mvp?.side === "blue" ? GC.blueL : GC.redL }}>
-          ★ MVP {mvpName} {mvp ? `${mvp.k}/${mvp.d}/${mvp.a ?? 0} · RTG ${mvp.score.toFixed(0)}` : ""}
-        </span>
-        <span style={{ color: GC.redL }}>{((1 - hud.winProb) * 100).toFixed(0)}%</span>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2, fontSize: 8.5, fontWeight: 800, fontFamily: MONO }}>
+        <span style={{ color: BLUE }}>{(hud.winProb * 100).toFixed(0)}%</span>
+        {/* MVP：Legacy MatchHeader 無此元素，既有產品升級保留 */}
+        <span style={{ color: mvp?.side === "blue" ? BLUE : RED }}>★ MVP {mvpName} {mvp ? `${mvp.k}/${mvp.d}/${mvp.a ?? 0}` : ""}</span>
+        <span style={{ color: RED }}>{((1 - hud.winProb) * 100).toFixed(0)}%</span>
       </div>
     </div>
   );

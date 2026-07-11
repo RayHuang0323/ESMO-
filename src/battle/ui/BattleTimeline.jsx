@@ -1,7 +1,10 @@
 // ============================================================================
-//  battle/ui/BattleTimeline.jsx — 圖形化戰報 v2（Sprint07【D】）
+//  battle/ui/BattleTimeline.jsx — 圖形化戰報 v2（Sprint07【D】/ Sprint18【E】對齊）
+//  版型：Legacy PlayByPlayFeed（時間戳 9px Courier 32px 固定欄＋垂直線 1.5px）。
 //  結構化列：Icon｜時間｜擊殺者 ⚔ 被擊殺者（陣營色、助攻數）｜塔(路/幾塔)｜龍/巴龍/ACE
-//  資料：battleStore.events（含 Sprint07 結構化 data）。可收合。
+//  資料：battleStore.events（真事件）。可收合。
+//  待接（不造假）：Legacy chat 型（🔊隊伍語音）與 caster 型（📺賽評）事件——
+//    引擎事件流目前無此兩類資料，恢復留待資料層擴充。
 // ============================================================================
 
 import React, { useState } from "react";
@@ -45,9 +48,9 @@ function Row({ ev, roster }) {
     body = <span style={{ color: sideC(ev.side) }}>{ev.text}</span>;
   }
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 5, padding: "3px 5px", fontSize: 11, lineHeight: 1.35, borderLeft: `2px solid ${sideC(ev.side)}`, marginBottom: 1, background: "rgba(255,255,255,0.025)", borderRadius: "0 5px 5px 0" }}>
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 5, padding: "3px 5px", fontSize: 11, lineHeight: 1.35, borderLeft: `1.5px solid ${sideC(ev.side)}`, marginBottom: 1, background: "rgba(255,255,255,0.025)", borderRadius: "0 5px 5px 0" }}>
       <span style={{ fontSize: 12, flexShrink: 0 }}>{ICON[ev.type] || "•"}</span>
-      <span style={{ color: "rgba(255,255,255,0.42)", fontFamily: MONO, fontSize: 9.5, flexShrink: 0, marginTop: 1.5 }}>{fmtT(ev.t)}</span>
+      <span style={{ color: "rgba(255,255,255,0.42)", fontFamily: MONO, fontSize: 9, width: 32, flexShrink: 0, marginTop: 1.5 }}>{fmtT(ev.t)}</span>
       {body}
     </div>
   );

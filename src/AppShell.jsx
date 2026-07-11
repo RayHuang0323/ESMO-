@@ -18,6 +18,7 @@ import GameView from "./GameView.jsx";
 
 export default function AppShell() {
   const [screen, setScreen] = useState("dashboard");
+  const [draft, setDraft] = useState(null); // S18：BanPick 結果（{picks,bans}），UI 層傳遞、不建第二 Store
   const go = (s) => () => setScreen(s);
   return (
     <div style={{ width: "100%", height: "min(88vh, 760px)", background: "linear-gradient(180deg,#0b1220,#0d1420)", borderRadius: 14, overflow: "hidden", position: "relative", fontFamily: "system-ui,-apple-system,sans-serif" }}>
@@ -27,10 +28,10 @@ export default function AppShell() {
       {/* ── MOBA 賽前流程 ── */}
       {screen === "lineup" && <RoleSelectScreen onNext={go("matchmaking")} onBack={go("dashboard")} />}
       {screen === "matchmaking" && <MatchmakingScreen onDone={go("banpick")} onBack={go("lineup")} />}
-      {screen === "banpick" && <BanPickScreen onNext={go("tactic")} onBack={go("matchmaking")} onCodex={go("codex")} />}
+      {screen === "banpick" && <BanPickScreen onNext={(d) => { setDraft(d); setScreen("tactic"); }} onBack={go("matchmaking")} onCodex={go("codex")} />}
       {screen === "codex" && <CodexScreen onBack={go("banpick")} />}
       {screen === "tactic" && <TacticScreen onNext={go("loading")} onBack={go("banpick")} />}
-      {screen === "loading" && <LoadingScreen onDone={go("battle")} />}
+      {screen === "loading" && <LoadingScreen draft={draft} onDone={go("battle")} />}
       {screen === "battle" && <GameView autoStart onContinue={go("dashboard")} />}
 
       <div style={{ position: "absolute", bottom: 6, right: 12, color: "rgba(147,197,253,0.45)", fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", pointerEvents: "none", zIndex: 20 }}>ESMO 主幹 · S11 SHELL</div>
