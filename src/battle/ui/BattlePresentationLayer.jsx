@@ -16,7 +16,10 @@ import BattleEndScreen from "./BattleEndScreen.jsx";
 import BattleHeroStrip from "./BattleHeroStrip.jsx";
 
 export default function BattlePresentationLayer({ roster = null, showTimeline = true, onContinue = null, draft = null, tactic = null }) {
-  useBattleFeed();                       // 唯一接線：核心快照 → battleStore（單向）
+  // Sprint20【E】draft 交給 useBattleFeed：終局產出的 BattleResult.players[].heroId
+  //   = Ban/Pick 實際選到的英雄（沿用 snapshotToBattleResult 既有的 heroAssign 選項，
+  //   BattleResult 結構不變、不重新統計）→ Result 顯示的英雄與 Draft/Battle 一致。
+  useBattleFeed(draft);                  // 唯一接線：核心快照 → battleStore（單向）
   const over = useGameStore((s) => s.hud.over);
   const [showBoard, setShowBoard] = useState(false);
 

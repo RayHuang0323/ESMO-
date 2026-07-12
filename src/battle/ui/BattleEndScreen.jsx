@@ -3,6 +3,12 @@
 //  Victory/Defeat Banner 掃光動畫、MVP 動畫卡、六榜（擊殺/傷害/治療/參團/推塔/金）、
 //  金錢差曲線圖 + 推塔進度圖（battleStore.series 真快照取樣）、龍巴龍統計、
 //  Timeline 摘要、onContinue 進 Result。全部真資料推導。
+//  Sprint20【C/D/E】：
+//    · 唯一結算來源仍是 battleStore.result（BattleResult v2）——本檔不重新統計、
+//      無 genMatch / 無假 KDA / 無假 MVP / 無假經濟（主幹從無此類假資料）。
+//    · 英雄身分改讀 BattleResult.players[].heroId（= Ban/Pick 實際選角），
+//      名稱與圖片由 heroDatabase 推導 → Draft / Loading / Battle / Result 一致。
+//    · BattleResult 缺的欄位（mana / CS / 裝備）維持不顯示，不造假。
 // ============================================================================
 
 import React, { useEffect, useState } from "react";
@@ -11,6 +17,8 @@ import { fmtT, ROLE_NAME } from "../../gameData.js";
 import BattleScoreboard from "./BattleScoreboard.jsx";
 import HeroDetailPanel from "./HeroDetailPanel.jsx";
 import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
+import { heroById } from "../../data/heroDatabase.js";
+import HeroPortrait from "../../ui/HeroPortrait.jsx";
 import { GC } from "../../ui/theme.js";
 
 const KEYFRAMES = `
@@ -91,6 +99,10 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
   const title = homeWin ? "VICTORY" : "DEFEAT";
   const titleColor = homeWin ? "#fde047" : "#94a3b8";
   const mvpName = mvp ? (roster?.[mvp.id]?.player ?? mvp.id.toUpperCase()) : "—";
+  // Sprint20【D/E】英雄身分只讀 BattleResult.players[].heroId（Ban/Pick 實際選角，
+  //   由 useBattleFeed 寫入），名稱/圖片再由 heroDatabase 推導 → 與 Loading / Battle 一致。
+  const mvpHeroId = mvp?.heroId ?? roster?.[mvp?.id]?.heroId ?? null;
+  const mvpHeroName = heroById(mvpHeroId)?.zh ?? roster?.[mvp?.id]?.hero ?? (mvp ? ROLE_NAME[mvp.role] : "—");
   const highlights = result.timeline.filter((e) => ["FIRST_BLOOD", "ACE", "BARON_SLAIN", "MULTI_KILL", "VICTORY"].includes(e.type)).slice(-6);
   const stats = bestStats(result.players);
   const Panel = ({ title: tt, children, w }) => (
@@ -121,8 +133,12 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
             {mvp && (
               <div style={{ background: "linear-gradient(160deg,rgba(250,204,21,0.18),rgba(8,14,24,0.92))", border: "1px solid rgba(250,204,21,0.55)", borderRadius: 12, padding: "11px 14px", textAlign: "center", animation: "esmoMvpIn 0.6s 0.2s ease both", transformOrigin: "left" }}>
                 <div style={{ fontSize: 10, letterSpacing: "0.3em", color: "#fde047", fontWeight: 900 }}>★ MVP</div>
+                {/* Sprint20：MVP 英雄圖（Legacy HERO_IMG，經 heroDatabase）；缺圖 → 不顯示圖，版面不破 */}
+                <div style={{ display: "flex", justifyContent: "center", margin: "6px 0 4px" }}>
+                  <HeroPortrait heroId={mvpHeroId} size={52} radius={12} border="2px solid rgba(250,204,21,0.7)" alt={mvpHeroName} fallback={null} />
+                </div>
                 <div style={{ fontSize: 19, fontWeight: 900, color: sideC(mvp.side), marginTop: 2 }}>{mvpName}</div>
-                <div style={{ fontSize: 10.5, color: "rgba(255,255,255,0.55)" }}>{roster?.[mvp.id]?.hero ?? ROLE_NAME[mvp.role]}</div>
+                <div style={{ fontSize: 10.5, color: "rgba(255,255,255,0.55)" }}>{mvpHeroName}</div>
                 <div style={{ fontFamily: MONO, fontSize: 16, fontWeight: 900, color: "#fff", marginTop: 3 }}>{mvp.k}/{mvp.d}/{mvp.a}</div>
                 <div style={{ fontSize: 10, color: "#fde047", marginTop: 2, fontFamily: MONO }}>RTG {mvp.rating.toFixed(0)} · {(mvp.dmg / 1000).toFixed(1)}k DMG</div>
               </div>
@@ -151,11 +167,15 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
                   const dTough = (d.attrsAfter.toughMult / d.attrsBefore.toughMult - 1) * 100;
                   const dPower = (d.attrsAfter.powerMult / d.attrsBefore.powerMult - 1) * 100;
                   return (
-                    <div key={d.playerId} onClick={() => setHeroPage({ heroId: d.heroId, heroName: r?.hero ?? d.heroId, playerName: r?.player ?? d.playerId.toUpperCase(), side: homeSide })}
+                    <div key={d.playerId} onClick={() => setHeroPage({ heroId: d.heroId, heroName: heroById(d.heroId)?.zh ?? r?.hero ?? d.heroId, playerName: r?.player ?? d.playerId.toUpperCase(), side: homeSide })}
                       style={{ cursor: "pointer", pointerEvents: "auto", padding: "4px 6px", borderRadius: 7, marginBottom: 2, background: up ? "rgba(250,204,21,0.1)" : "rgba(255,255,255,0.03)", border: up ? "1px solid rgba(250,204,21,0.35)" : "1px solid transparent" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5 }}>
-                        <span style={{ fontWeight: 800, color: "#e5e7eb" }}>{r?.hero ?? d.heroId} <span style={{ color: "rgba(255,255,255,0.45)", fontWeight: 600 }}>{r?.player}</span></span>
-                        <span style={{ fontFamily: "ui-monospace,monospace", color: "#fde047", fontWeight: 900 }}>+{d.xpGain} XP</span>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11.5, gap: 6 }}>
+                        <span style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0, fontWeight: 800, color: "#e5e7eb" }}>
+                          {/* Sprint20：成長欄英雄圖（heroId 來自 BattleResult → Ban/Pick 選角）*/}
+                          <HeroPortrait heroId={d.heroId} size={22} radius={5} border="1px solid rgba(255,255,255,0.15)" alt="" fallback={null} />
+                          {heroById(d.heroId)?.zh ?? r?.hero ?? d.heroId} <span style={{ color: "rgba(255,255,255,0.45)", fontWeight: 600 }}>{r?.player}</span>
+                        </span>
+                        <span style={{ fontFamily: "ui-monospace,monospace", color: "#fde047", fontWeight: 900, flexShrink: 0 }}>+{d.xpGain} XP</span>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginTop: 1 }}>
                         <span style={{ color: up ? "#fde047" : "rgba(255,255,255,0.4)", fontWeight: 800 }}>

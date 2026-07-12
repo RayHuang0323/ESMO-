@@ -33,22 +33,20 @@ Dashboard
 - HeroCodexDetail 與 HeroDetailPanel 分工。
 - 英雄圖片 Audit。
 
-### Sprint 20：PostMatch / Result / Season Recovery
+### Sprint 20：Hero Images + PostMatch Result Recovery（已完成）
 
 目標：
+- 抽取 Legacy HERO_IMG。
+- 接到 Codex / HeroDetail / BanPick / Loading / BattleHeroStrip。
+- Result / PostMatch 改讀 BattleResult。
+- 隔離 genMatch 假資料。
 
-BattleResult  
-→ Result 畫面  
-→ HeroProgress  
-→ SeasonStore  
-→ Dashboard / History
-
-重點：
-
-- 移除或隔離 genMatch 假資料。
-- Result 只吃 BattleResult。
-- 賽後成長、MVP、KDA、戰績都走唯一資料流。
-- Legacy PostMatch UI Recovery。
+結果：
+- HERO_IMG 100 張全數抽出（heroImages.js 資源表 + heroDatabase.heroImage() 唯一入口）。
+- 上述 5 個 UI 加上 BattleEndScreen（MVP 卡 / 成長欄）皆已接圖，缺圖有 fallback。
+- genMatch / PostMatchDashboard 主幹本來就沒有；BattleEndScreen 早已只讀 BattleResult。
+- 補上真正缺口：draftRoster Adapter → BattleResult.players[].heroId = Ban/Pick 選角，
+  Draft / Loading / Battle / Result 英雄一致。引擎與 Balance 未動。
 
 ### Sprint 21：Management Modules Recovery
 

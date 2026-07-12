@@ -9,6 +9,7 @@
 import React, { useState, useMemo } from "react";
 import { CHAMPIONS_100, heroesByArch, ARCHETYPES } from "../../data/heroDatabase.js";
 import HeroCodexDetail from "./HeroCodexDetail.jsx";
+import HeroPortrait from "../../ui/HeroPortrait.jsx";
 import { GC, FONT } from "../../ui/theme.js";
 import { Frame } from "./LineupScreen.jsx";
 
@@ -42,7 +43,9 @@ export default function CodexScreen({ onBack }) {
           {list.map((c) => (
             <button key={c.id} onClick={() => setDetail(c.id)} style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 12, padding: "10px 4px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 5, transition: "border 0.15s" }}
               onMouseEnter={(e) => (e.currentTarget.style.borderColor = c.color)} onMouseLeave={(e) => (e.currentTarget.style.borderColor = GC.line)}>
-              <div style={{ width: 44, height: 44, borderRadius: "50%", background: `radial-gradient(circle,${c.color}44,${GC.bg})`, border: `2px solid ${c.color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🦸</div>
+              {/* Sprint20：Legacy HERO_IMG 英雄圖；缺圖/載入失敗 → 原程序化色塊 */}
+              <HeroPortrait heroId={c.id} size={44} radius="50%" border={`2px solid ${c.color}`} alt={c.zh}
+                fallback={<div style={{ width: 44, height: 44, borderRadius: "50%", background: `radial-gradient(circle,${c.color}44,${GC.bg})`, border: `2px solid ${c.color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🦸</div>} />
               <span style={{ color: "white", fontSize: 11, fontWeight: 700, textAlign: "center", lineHeight: 1.1 }}>{c.zh}</span>
               <span style={{ color: ARCH_COLOR[c.arch] || GC.gray, fontSize: 9, fontWeight: 700 }}>{c.arch}</span>
             </button>

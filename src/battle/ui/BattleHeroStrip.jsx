@@ -17,19 +17,23 @@ import { useGameStore } from "../../useGameStore.js";
 import { ROSTER } from "../../data/roster.js";
 import { heroById } from "../../data/heroDatabase.js";
 import HeroDetailPanel from "./HeroDetailPanel.jsx";
+import HeroPortrait from "../../ui/HeroPortrait.jsx";
 
 const BLUE = "#60a5fa", RED = "#fb923c", GOLD = "#fbbf24";
 const MONO = "'Courier New',monospace";
 const LANES = ["上路", "打野", "中路", "下路", "輔助"];
 
-// Legacy HeroAvatar：色塊縮寫 + 右下 Lv 圓 badge 14px
+// Legacy HeroAvatar：英雄圖（Sprint20 接回 HERO_IMG）+ 右下 Lv 圓 badge 14px
+//   陣亡 → grayscale + 半透明（沿用 Sprint18 表現）；缺圖 → 程序化色塊縮寫。
 function HeroAvatar({ hero, level, dead, respawn }) {
   const h = hero || {};
   let hh = 0; for (let i = 0; i < (h.id || "?").length; i++) hh = (hh * 31 + (h.id || "?").charCodeAt(i)) & 0xffffff;
   const hue = hh % 360;
+  const deadFx = { opacity: dead ? 0.45 : 1, filter: dead ? "grayscale(1)" : "none" };
   return (
     <div style={{ position: "relative", flexShrink: 0 }}>
-      <div style={{ width: 28, height: 28, borderRadius: 6, background: `linear-gradient(135deg, hsl(${hue},45%,32%), #0a0a10)`, border: "1.5px solid rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, color: "rgba(255,255,255,0.9)", opacity: dead ? 0.45 : 1, filter: dead ? "grayscale(1)" : "none" }}>{(h.zh || "?").slice(0, 1)}</div>
+      <HeroPortrait heroId={h.id} size={28} radius={6} border="1.5px solid rgba(255,255,255,0.12)" alt={h.zh || ""} style={deadFx}
+        fallback={<div style={{ width: 28, height: 28, borderRadius: 6, background: `linear-gradient(135deg, hsl(${hue},45%,32%), #0a0a10)`, border: "1.5px solid rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, color: "rgba(255,255,255,0.9)", ...deadFx }}>{(h.zh || "?").slice(0, 1)}</div>} />
       <div style={{ position: "absolute", bottom: -3, right: -3, minWidth: 14, height: 14, borderRadius: 99, padding: "0 3px", background: "#1a1820", border: "1.5px solid rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, fontWeight: 900, color: dead ? "#f87171" : "white", lineHeight: 1, fontFamily: MONO }}>{dead ? `${Math.max(0, respawn).toFixed(0)}` : level}</div>
     </div>
   );

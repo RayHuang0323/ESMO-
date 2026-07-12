@@ -13,6 +13,7 @@ import React, { useState } from "react";
 import { heroById } from "../../data/heroDatabase.js";
 import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
 import { GC, FONT, MONO } from "../../ui/theme.js";
+import HeroPortrait from "../../ui/HeroPortrait.jsx";
 
 const TABS = [["overview", "概覽"], ["stats", "數據"], ["skills", "技能"], ["tactics", "戰術"]];
 const stars = (d) => "★".repeat(d) + "☆".repeat(3 - d);
@@ -160,7 +161,9 @@ export default function HeroCodexDetail({ heroId, onClose }) {
       <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 460, maxHeight: "88%", overflow: "auto", background: `linear-gradient(180deg,${h.color}18,${GC.card} 22%)`, border: `1px solid ${h.color}55`, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: "18px 18px 26px" }}>
         {/* 標題 */}
         <div style={{ display: "flex", alignItems: "center", gap: 13, marginBottom: 16 }}>
-          <div style={{ width: 60, height: 60, borderRadius: 14, background: `radial-gradient(circle,${h.color}33,${GC.bg})`, border: `2px solid ${h.color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0 }}>🦸</div>
+          {/* Sprint20：標題區 Legacy HERO_IMG 英雄圖；缺圖 → 原程序化色塊 */}
+          <HeroPortrait heroId={h.id} size={60} radius={14} border={`2px solid ${h.color}`} alt={h.zh}
+            fallback={<div style={{ width: 60, height: 60, borderRadius: 14, background: `radial-gradient(circle,${h.color}33,${GC.bg})`, border: `2px solid ${h.color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0 }}>🦸</div>} />
           <div style={{ flex: 1 }}>
             <div style={{ color: "white", fontSize: 21, fontWeight: 900 }}>{h.zh}</div>
             <div style={{ color: h.color, fontSize: 11.5, marginBottom: 5 }}>{h.en} · {h.title}</div>

@@ -8,13 +8,14 @@
 //  props.roster：{ [playerId]: { player, hero } }，缺省退回 id/職業名。
 // ============================================================================
 
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useMemo } from "react";
 import MobaView3D from "./MobaView3D.jsx";
 import BattlePresentationLayer from "./battle/ui/BattlePresentationLayer.jsx";
 import { useGameStore } from "./useGameStore.js";
 import { useLocalServer } from "./useLocalServer.js";
 import { LANES, PITS } from "./gameData.js";
 import { ROSTER } from "./data/roster.js";
+import { draftRoster } from "./battle/moba/draftRoster.js";
 
 // 你的彩色地圖：Vite 可 `import mapUrl from "./assets/rift.png"` 後設給 MOBA_MAP；null 用程序化底圖。
 const MOBA_MAP = null;
@@ -63,14 +64,17 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   useEffect(() => { if (autoStart && !playing) start(); }, []);  // eslint-disable-line
   const [follow, setFollow] = useState(true);        // 戰鬥鏡頭跟隨（BattleCameraController）
   const hud = useGameStore((s) => s.hud);
+  // Sprint20【E】生效名單：Ban/Pick 選到的英雄取代 ROSTER 預設英雄（無 draft → 原 ROSTER）。
+  //   3D 名牌 / HUD / 記分板 / 終局畫面全部吃這一份 → Loading、Battle、Result 顯示同一批英雄。
+  const liveRoster = useMemo(() => draftRoster(roster, draft), [roster, draft]);
 
   return (
     <div style={{ position: "relative", width: "100%", height: "min(82vh, 720px)", background: "#0d1420", borderRadius: 14, overflow: "hidden", fontFamily: "system-ui,-apple-system,sans-serif" }}>
       {/* 3D：跟隨開啟且對局進行中 → 相機聚焦交戰/推塔/龍/巴龍/主堡（computeFocus）*/}
-      <MobaView3D mapTexture={MOBA_MAP} autoRotate={!playing} battleFollow={follow && playing} roster={roster} />
+      <MobaView3D mapTexture={MOBA_MAP} autoRotate={!playing} battleFollow={follow && playing} roster={liveRoster} />
 
       {/* Battle Presentation Layer：HUD / Timeline / 浮動大字 / TAB 記分板 / 終局畫面 */}
-      <BattlePresentationLayer roster={roster} draft={draft} tactic={tactic} onContinue={onContinue} />
+      <BattlePresentationLayer roster={liveRoster} draft={draft} tactic={tactic} onContinue={onContinue} />
 
       {/* Start / Stop / 鏡頭切換 */}
       {!playing && !hud.over && (

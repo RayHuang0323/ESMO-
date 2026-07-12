@@ -10,6 +10,7 @@
 import React, { useEffect, useState } from "react";
 import { TEAMS, ROSTER } from "../../data/roster.js";
 import { heroById } from "../../data/heroDatabase.js";
+import HeroPortrait from "../../ui/HeroPortrait.jsx";
 
 const ARCH_COLOR = { 坦克: "#60a5fa", 戰士: "#f97316", 刺客: "#ef4444", 法師: "#a855f7", 射手: "#22c55e", 輔助: "#14b8a6" };
 const TIPS = ["提示：控制型英雄可反制高機動陣容", "提示：真傷是對付肉盾的最佳解", "提示：射手需要發育時間，前期注意保護", "提示：觀察對手動向，掌握開團時機"];
@@ -20,7 +21,9 @@ function HeroCard({ hero, player, side }) {
   const hue = hh % 360;
   return (
     <div style={{ display: "flex", flexDirection: side === "blue" ? "row" : "row-reverse", alignItems: "center", gap: 8, marginBottom: 7 }}>
-      <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, border: `2px solid ${ARCH_COLOR[h.arch] || "#334155"}`, background: `linear-gradient(135deg, hsl(${hue},45%,32%), #0a0a10)`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "rgba(255,255,255,0.9)", fontSize: 15 }}>{(h.zh || "?").slice(0, 1)}</div>
+      {/* Sprint20：draft 選到的英雄 → Legacy HERO_IMG 真圖；缺圖 → 原色塊 */}
+      <HeroPortrait heroId={h.id} size={38} radius={10} border={`2px solid ${ARCH_COLOR[h.arch] || "#334155"}`} alt={h.zh || ""}
+        fallback={<div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, border: `2px solid ${ARCH_COLOR[h.arch] || "#334155"}`, background: `linear-gradient(135deg, hsl(${hue},45%,32%), #0a0a10)`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "rgba(255,255,255,0.9)", fontSize: 15 }}>{(h.zh || "?").slice(0, 1)}</div>} />
       <div style={{ minWidth: 0, textAlign: side === "blue" ? "left" : "right" }}>
         <div style={{ fontSize: 11, fontWeight: 800, color: "#e5e7eb", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{player}</div>
         <div style={{ fontSize: 10, color: ARCH_COLOR[h.arch] || "#71717a" }}>{h.zh || "—"} · {h.arch || "—"}</div>

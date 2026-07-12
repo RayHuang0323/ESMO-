@@ -6,11 +6,13 @@
 //    選擇器（定位tab/5列網格/ⓘ鈕）、選角動態 log、✓ 完成 1200ms 後 onComplete。
 //  AI：Legacy analyzeChamp + archCounterScore 逐字移植；ban 60%、pick 50% counter。
 //  Adapter：英雄唯一來源 heroDatabase；onComplete({picks,bans}) 交 AppShell（不建 Store）；
-//    ⓘ 開 HeroCodexDetail。誠實差異：HERO_IMG 未抽取，ChampFace 程序化佔位。
+//    ⓘ 開 HeroCodexDetail。Sprint20：ChampFace 已接回 Legacy HERO_IMG 真實英雄圖
+//    （經 heroDatabase.heroImage()），缺圖才退回程序化色塊。
 // ============================================================================
 import React, { useState, useRef, useEffect } from "react";
 import { CHAMPIONS_100 } from "../../data/heroDatabase.js";
 import HeroCodexDetail from "./HeroCodexDetail.jsx";
+import HeroPortrait from "../../ui/HeroPortrait.jsx";
 
 const GC2 = { bg: "#0a0b0f", card: "#13151c", card2: "#1a1d26", gray: "#71717a", gold: "#fbbf24", green: "#34d399", red: "#ef4444", blue: "#3b82f6", purp: "#a78bfa" };
 const ARCH_COLOR = { 坦克: "#60a5fa", 戰士: "#f97316", 刺客: "#ef4444", 法師: "#a855f7", 射手: "#22c55e", 輔助: "#14b8a6" };
@@ -59,18 +61,21 @@ const SEQ = [
   { team: "blue", act: "pick" }, { team: "red", act: "pick" },
 ];
 
-// ════ ChampFace — Legacy 程序化頭像佔位（HERO_IMG base64 未抽取）════
+// ════ ChampFace — Legacy HERO_IMG 英雄圖（Sprint20 B 接回）════
+//  圖片一律經 heroDatabase.heroImage()（HeroPortrait 內部呼叫）；
+//  缺圖 / 載入失敗 → 退回 Sprint18 的程序化色塊頭像（不得破圖）。
 export function ChampFace({ champ, size = 44 }) {
   const c = champ;
   const accent = c.color || "#8aa0b8";
   let h = 0;
   for (let i = 0; i < c.id.length; i++) h = (h * 31 + c.id.charCodeAt(i)) & 0xffffff;
   const hue = h % 360;
-  return (
+  const swatch = (
     <div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: `1.5px solid ${accent}`, background: `linear-gradient(135deg, hsl(${hue},45%,32%), #0a0a10)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <span style={{ fontSize: size * 0.42, fontWeight: 900, color: "rgba(255,255,255,0.88)" }}>{c.zh.slice(0, 1)}</span>
     </div>
   );
+  return <HeroPortrait heroId={c.id} size={size} radius="50%" border={`1.5px solid ${accent}`} alt={c.zh} fallback={swatch} />;
 }
 
 export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
