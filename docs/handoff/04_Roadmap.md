@@ -69,21 +69,18 @@ Dashboard
 轉會市場/我的報價（Negotiation 領域）、逐項潛力（需 Contract 擴充）、
 CS 分部名單（Sprint22）、賽後獎金回寫財務。
 
-### Sprint 22：CS / FPS Recovery Audit
+### Sprint 22：CS / FPS Recovery Audit + Minimal Integration（已完成）
 
-目標：
+目標：確認 `EsportsFPS3D.jsx` 是否仍被主幹使用，並完成可安全完成的最小接線。
 
-確認 `EsportsFPS3D.jsx` 是否仍被主幹使用。
+結果：
 
-需要確認：
-
-- 是否只是 Presentation。
-- 是否已接 BattleResult。
-- 是否已接 SeasonStore。
-- 是否已接 Player Stats。
-- 是否已接 CS 選手 16 項能力。
-
-本 Sprint 前，不主動修改 FPS。
+- Audit：孤立 Legacy Presentation（只被 Legacy EsportsGame.jsx import，主幹不可達）；
+  BattleResult / SeasonStore / Player Stats / 16 項能力全部未接。
+- 接線：Dashboard CS 磚 → CsMatchScreen；名單接 profileStore 真實選手
+  （fpsRoster Adapter，Legacy STAT_L2S 逐字）；引擎 Presentation 原封。
+- 刻意未接：CS 結果入史（無 CS BattleResult 契約，不偽造 → Sprint 23 提案）。
+- 詳見 05_Sprint紀錄 Sprint 22 節。
 
 ### Sprint 23：Battle Data Extension Proposal
 
@@ -93,6 +90,7 @@ CS 分部名單（Sprint22）、賽後獎金回寫財務。
 
 可能項目：
 
+- **CS MatchResult → 統一結果流程**（S22 遺留：獎金 / 粉絲 / XP / Match History 回寫）
 - mana
 - CS
 - 召喚師技能

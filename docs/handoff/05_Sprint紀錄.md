@@ -259,3 +259,89 @@ UI 層：
 - 新秀簽進來 `heroId = null`（未綁定英雄），UI 顯示「未綁定英雄」，不亂塞英雄。
 - `meta.fans` 種子值 128,000 遠高於 Legacy 贊助門檻（最高 3,000 粉絲），
   因此粉絲條件實際上恆真，門檻主要由**勝場**把關。
+
+## Sprint 22：CS / FPS Recovery Audit + Minimal Integration
+
+### A. FPS 主幹 Audit（結論：孤立的 Legacy Presentation，本 Sprint 前不可達）
+
+- `EsportsFPS3D.jsx` 實際位置 `src/battle/fps/`（1,769 行，145KB）；任務單寫的
+  `src/EsportsFPS3D.jsx` 不存在（Phase 4 已搬移）。
+- 唯一 import 它的是 Legacy `EsportsGame.jsx`（`main.jsx` 明言不掛載）→
+  **主幹 bundle 原本不含 FPS 引擎**。無重複 FPS 元件。
+- Dashboard CS 入口原本落到「Legacy 尚未恢復」誠實佔位 Modal，FPS 不可進入。
+- 引擎零依賴（只 import React + THREE），介面 = props in（BattleConfig 形狀）→
+  `onComplete(MatchResult)` out，且已被 `platform/contracts/BattleConfig.js` 契約化。
+
+### B. FPS Data Flow Audit（接線前 → 接線後）
+
+| 資料域 | 接線前 | 接線後（S22） |
+|---|---|---|
+| profileStore.players | 完全未接（內建靜態示範陣容） | **已接**（經 fpsRoster Adapter） |
+| playerModel 16 項能力 | 完全未接 | **已接**（長鍵→引擎短鍵逐字對照） |
+| personality / morale / condition | 完全未接 | **已接**（引擎 persStat / formMul 原生消費） |
+| roster / team（隊名） | Legacy 靜態字串 | **已接**（profileStore.team.name） |
+| BattleResult | 完全未接 | **未接（刻意）**：MatchResult 是 CS 自有格式，非 BattleResult.v2；不偽造、不套 MOBA 契約 |
+| SeasonStore / Match History | 完全未接 | **未接（刻意）**：同上，待 CS 結果契約（Sprint 23 提案） |
+| Dashboard | 不可達 | **已接**（CS 磚 → CsMatchScreen） |
+| 對手隊 Compulsary | 引擎內建 | 沿用引擎內建（不複製第二份資料，props 不傳 opponent） |
+
+### C. 16 項能力對 FPS 的使用
+
+- 對照表 = Legacy `EsportsGame.jsx:147` `STAT_L2S` 逐字：reflex→rxn、accuracy→acc、
+  apm→apm、positioning→pos、mapAware→vis、tacticalIQ→tac、decision→dec、
+  adaptability→adp、courage→cou、clutch→str、focus→foc、resilience→res、
+  comms→com、leadership→led、synergy→coo、learning→lrn。
+- 路線對位 = Legacy `MOBA2FPS`：上路→突破手、打野→游走手、中路→步槍手、
+  下路→狙擊手、輔助→指揮。
+- **Balance 未動**：Adapter 只做鍵名轉換與 FPS 綜合戰力展示值（fpsOvr），
+  引擎 simulateFps 與權重原封不動。
+
+### D/E. 最小安全接線（新增 2 檔、修改 2 檔）
+
+- 新增 `src/battle/fps/fpsRoster.js`：純函數 Adapter（Legacy 轉接層 line145-167 逐字
+  抽取）。不是第二套資料：輸入 profileStore.players、輸出引擎原生格式、不落地、
+  不 import heroDatabase、不帶 heroId（MOBA/CS 分離）。主力優先湊 5 人，不足則
+  回 null → 引擎用內建陣容且 UI 誠實標示。
+- 新增 `src/screens/fps/CsMatchScreen.jsx`：薄殼畫面。3D Presentation / HUD /
+  記分板全部是引擎內建（不重畫 FPS UI）；終局戰報讀 onComplete 的真實
+  MatchResult（勝敗 / 比分 / 隊內 MVP / 逐人 KDA+Rating），標示「訓練賽，
+  未寫入賽季紀錄」。seed 掛載時決定一次（同 seed ⇒ 同賽果）。
+- `AppShell.jsx`：+2 行接 `screen === "cs"`；信標更新 S22。
+- `DashboardScreen.jsx`：CS 磚從佔位 Modal 改導真頁（NAV + modes badge「訓練賽」）。
+- 修復 `tools/regress.mjs` / `regress2.mjs` import 路徑（`./src/` → `../src/`），
+  從此可直接 `node tools/regress.mjs` 執行，不再需要「複製到根目錄」的舊流程。
+  零邏輯變更。
+
+### 驗證
+
+- `npm run build` 通過（2,503 modules，bundle 1,878KB / gzip 704KB；
+  比 S21 +108KB = FPS 引擎首次進主 bundle，屬預期）。
+- 回歸：`regress.mjs` **15 seed / 15 成功**（平均 18.3 分、擊殺 55.8、破塔 17.4/12，
+  與 S21 基準逐字一致）；`regress2.mjs` **20 seed / 20 成功**（藍 9 紅 11、
+  平衡度 0.05、ACE 17/20、逆轉 18/20，與基準一致）。
+- 禁改清單 git diff 零改變：`LogicEngine`、Battle Balance、`battleResult`、
+  `HeroProgress`、`heroDatabase`、MOBA Draft/Tactic 流程、Sprint20 圖片資料流、
+  Sprint21 Store 行為全部未觸碰（diff 僅 AppShell +7 / DashboardScreen +10-4 /
+  regress×2 路徑修復）。
+- 不存在第二套 Player Database / 能力模型；CS 路徑零 heroId。
+- **未經瀏覽器實測項（誠實）**：CS 磚點擊→進場→播放→終局戰報→回 Dashboard 的
+  實際渲染；MOBA / 經營模組的迴歸僅有結構性證據（相關檔零改動）。
+
+### Legacy Diff Checklist（CS/FPS）
+
+| 項目 | 狀態 |
+|---|---|
+| 3D 對戰畫面 / 轉播運鏡 / 擊殺列 / 無線電 / 比分列 | ✅ 引擎原封（逐位元組未改） |
+| 我方名單 = 真實選手（16 項能力 × 個性 × 士氣 × 體力） | ✅ 已接（Legacy 轉接層規格逐字） |
+| 賽前選圖 / 選戰術面板 | ⚠ embedded 模式隱藏（Legacy fpsRouter 的賽前流程未恢復）→ 未來 CS 賽前流程 Sprint |
+| CS 賽後戰報（Legacy 完整版） | ⚠ 目前為終局摘要卡（真實 MatchResult）；完整戰報屬 Legacy PostMatch 模組領域 |
+| 結果入史（recordMatch / 獎金 / 粉絲 / XP） | ❌ 刻意未接：無 CS BattleResult 契約，不偽造（Sprint 23 提案） |
+| CS 專屬選手池 | ❌ 主幹只有一批選手（Team 頁 CS 分部同批人 FPS 權重），CS 分部名單屬未來領域 |
+
+### 已知限制 / Sprint 23 建議
+
+- CS 結果流缺正式契約：建議 Sprint 23 於 `platform/contracts/` 提
+  「CsMatchResult → 統一結果流程」提案（獎金/粉絲/XP 回寫需 Ray 核准）。
+- CS 賽前流程（選圖/選戰術/BO 賽制）未恢復；目前進場即開打（訓練賽定位）。
+- bundle 已 1.88MB：FPS 引擎 + 英雄圖 base64 都內嵌，建議未來以動態 import
+  切分 CS 路徑（`import()` CsMatchScreen）＋英雄圖改 public/ 靜態檔。

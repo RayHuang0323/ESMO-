@@ -34,6 +34,8 @@ import RosterScreen from "./screens/manage/RosterScreen.jsx";
 import TrainingScreen from "./screens/manage/TrainingScreen.jsx";
 import RecruitScreen from "./screens/manage/RecruitScreen.jsx";
 import PlayerDetailScreen from "./screens/manage/PlayerDetailScreen.jsx";
+// ── Sprint22：CS 對戰（EsportsFPS3D 引擎 + fpsRoster Adapter）──
+import CsMatchScreen from "./screens/fps/CsMatchScreen.jsx";
 
 export default function AppShell() {
   const [screen, setScreen] = useState("dashboard");
@@ -67,7 +69,10 @@ export default function AppShell() {
       {screen === "recruit" && <RecruitScreen onBack={home} />}
       {screen === "playerDetail" && <PlayerDetailScreen playerId={playerId} onBack={go("roster")} />}
 
-      <div style={{ position: "absolute", bottom: 6, right: 12, color: "rgba(147,197,253,0.45)", fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", pointerEvents: "none", zIndex: 20 }}>ESMO 主幹 · S21 SHELL</div>
+      {/* ── Sprint22：CS 對戰（訓練賽；結果不入賽季，見 CsMatchScreen 檔頭）── */}
+      {screen === "cs" && <CsMatchScreen onBack={home} />}
+
+      <div style={{ position: "absolute", bottom: 6, right: 12, color: "rgba(147,197,253,0.45)", fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", pointerEvents: "none", zIndex: 20 }}>ESMO 主幹 · S22 SHELL</div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 // 進階回歸：加 ACE 統計 + 逆轉偵測（勝率曾落後 40% 後翻盤）+ 時長分布
-import { NEXUS_HP, PITS, dist, clamp } from "./src/gameData.js";
-const { LogicEngine } = await import("./src/LogicEngine.js");
+// S22：import 改為相對 tools/ 的正確路徑，可從任意 cwd 直接執行（原需複製到根目錄）。
+import { NEXUS_HP, PITS, dist, clamp } from "../src/gameData.js";
+const { LogicEngine } = await import("../src/LogicEngine.js");
 const DT = 0.5, SEEDS = [1,2,3,7,42,99,123,777,2024,5555,314,271,1618,8080,4242,11,88,256,1000,9999];
 let ends=0, blueW=0, aceGames=0, comebacks=0, totK=0, totMin=0, fbSum=0, fbN=0, baronGames=0;
 const durs=[];

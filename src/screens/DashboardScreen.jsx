@@ -45,18 +45,19 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
   const sponsor = profile.activeSponsor ? sponsorById(profile.activeSponsor.id) : null;
   const modes = [
     { id: "moba", name: "MOBA", emoji: "⚔️", fans: "2041", color: GC.purp, badge: "3 小時內", on: true },
-    { id: "cs", name: "CS", emoji: "🎯", fans: "0", color: "#fb923c", badge: "🌙", on: false },
+    { id: "cs", name: "CS", emoji: "🎯", fans: "0", color: "#fb923c", badge: "訓練賽", on: true }, // S22：接 CsMatchScreen
+
     { id: "bracket", name: "賽事", emoji: "🏆", fans: "0", color: GC.green, badge: "🌙", on: true },
   ];
   const more = [{ id: "team", n: "戰隊詳情", i: "🛡" }, { id: "training", n: "訓練中心", i: "📅" }, { id: "dash", n: "儀表板", i: "📊" }, { id: "sponsor", n: "贊助商", i: "🤝" }];
 
   // Sprint21：八個經營模組已 Component 化 → 直接導頁；其餘 Legacy 模組維持誠實佔位。
-  const NAV = { notify: "inbox", finance: "finance", sponsor: "sponsor", roster: "roster", team: "team", training: "training", recruit: "recruit" };
+  const NAV = { notify: "inbox", finance: "finance", sponsor: "sponsor", roster: "roster", team: "team", training: "training", recruit: "recruit", cs: "cs" };
   const sel = (id) => {
     if (id === "moba") return onMoba();
     if (id === "bracket") return onSeason();
     if (NAV[id] && onNav) return onNav(NAV[id]);
-    setModal({ type: "legacy", name: { talent: "天賦", equip: "商店", cs: "CS", dash: "經營儀表板" }[id] || id });
+    setModal({ type: "legacy", name: { talent: "天賦", equip: "商店", dash: "經營儀表板" }[id] || id });
   };
 
   return (
@@ -132,7 +133,8 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
 
 // ── 尚未 Component 化的 Legacy 模組：誠實佔位，不以假資料充數 ──────────
 //   Sprint21 已恢復：收件匣 / 財務 / 贊助 / 戰隊 / 名單 / 訓練 / 招募 / 選手檔案
-//   仍待恢復：天賦(TalentModule) / 商店(EquipModule) / 經營儀表板(DashModule) / CS
+//   Sprint22 已接：CS（CsMatchScreen + EsportsFPS3D）
+//   仍待恢復：天賦(TalentModule) / 商店(EquipModule) / 經營儀表板(DashModule)
 function Modal({ modal, onClose }) {
   return (
     <div onClick={onClose} style={{ position: "absolute", inset: 0, zIndex: 30, background: "rgba(4,8,16,0.72)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT }}>

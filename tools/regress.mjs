@@ -1,6 +1,7 @@
-// 標準回歸 driver：每階段重跑，輸出核心指標。用法：node regress.mjs [engineFile]
-import { NEXUS_HP, PITS, dist } from "./src/gameData.js";
-const file = process.argv[2] || "./src/LogicEngine.js";
+// 標準回歸 driver：每階段重跑，輸出核心指標。用法：node tools/regress.mjs [engineFile]
+// S22：import 改為相對 tools/ 的正確路徑，可從任意 cwd 直接執行（原需複製到根目錄）。
+import { NEXUS_HP, PITS, dist } from "../src/gameData.js";
+const file = process.argv[2] || "../src/LogicEngine.js";
 const { LogicEngine } = await import(file);
 const DT = 0.5, SEEDS = [1,2,3,7,42,99,123,777,2024,5555,314,271,1618,8080,4242];
 const rows = [];
