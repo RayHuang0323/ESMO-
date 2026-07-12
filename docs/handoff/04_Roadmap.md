@@ -82,21 +82,30 @@ CS 分部名單（Sprint22）、賽後獎金回寫財務。
 - 刻意未接：CS 結果入史（無 CS BattleResult 契約，不偽造 → Sprint 23 提案）。
 - 詳見 05_Sprint紀錄 Sprint 22 節。
 
-### Sprint 23：Battle Data Extension Proposal
+### Sprint 23：CS Full Match Loop Recovery（已完成）
 
-目標：
+目標：CS 從「可進入的訓練賽」推進成完整流程
+Dashboard → Prep → 選圖 → 戰術 → Loading → 3D FPS → CS Result → 回寫 → Dashboard。
 
-提出契約擴充，不一定立即實作。
+結果：
 
-可能項目：
+- CS 賽前流程六段畫面接進 AppShell（Prep / MapSelect / Tactic / Loading / Match / Result）。
+- 新契約 `platform/contracts/CsMatchResult.js`（CsMatchResult.v1）：CS 專屬結果格式，
+  與 MOBA BattleResult.v2 平行、互不相通；缺值（duration）誠實為 null。
+- 回寫：`profileStore.recordCsMatch`（冪等唯一入史口）→ csHistory / finance.funds /
+  transactions / meta.fans / 收件匣；公式重用 matchRecorder.updateEconomy（Legacy 逐字）。
+- XP 只記錄不回寫 team.lv/xp（刻度不符）；SeasonStore 不接（MOBA 專用，避免污染戰績）。
+- 引擎 EsportsFPS3D 零修改（只傳既有 tactic/tacticType props）；MOBA 全域零改變。
 
-- **CS MatchResult → 統一結果流程**（S22 遺留：獎金 / 粉絲 / XP / Match History 回寫）
-- mana
-- CS
-- 召喚師技能
-- 技能 CD
-- buff
-- item
-- chat / caster event
+### Sprint 24 候選（依優先序建議）
 
-需要 Ray 核准後才能改 Contract。
+1. **CS 賽制與聯賽化**：BO3、對手多樣化（目前只有引擎內建 Compulsary）、
+   CS 賽程／AI_TEAMS 領域（Prep 的「賽程」分頁因此未恢復）。
+2. **XP / 等級刻度統一**：team.lv/xp（萬 XP 展示刻度）與 Legacy xpGain（50/20）對齊後，
+   讓 CS/MOBA 賽後 XP 真正回寫等級（含升級給天賦點）。
+3. **MOBA 賽後回寫對齊 CS**：MOBA Result 目前只入 seasonStore，
+   獎金/粉絲仍未回寫 finance（matchRecorder 已有公式，缺接線）。
+4. Battle Data Extension Proposal 其餘項目（mana / 召喚師技能 / 技能 CD / buff / item /
+   chat / caster event）——需 Ray 核准後才能改 Contract。
+5. 轉會市場 / 合約談判（NegotiationModule）、天賦 / 商店 / 經營儀表板。
+6. bundle 瘦身：動態 import 切分 CS 路徑 + 英雄圖改 public/ 靜態檔（已 1.9MB）。

@@ -35,13 +35,21 @@ import TrainingScreen from "./screens/manage/TrainingScreen.jsx";
 import RecruitScreen from "./screens/manage/RecruitScreen.jsx";
 import PlayerDetailScreen from "./screens/manage/PlayerDetailScreen.jsx";
 // ── Sprint22：CS 對戰（EsportsFPS3D 引擎 + fpsRoster Adapter）──
+// ── Sprint23：CS 完整流程 Prep → Map → Tactic → Loading → Match → Result ──
 import CsMatchScreen from "./screens/fps/CsMatchScreen.jsx";
+import CsPrepScreen from "./screens/fps/CsPrepScreen.jsx";
+import CsMapSelectScreen from "./screens/fps/CsMapSelectScreen.jsx";
+import CsTacticScreen from "./screens/fps/CsTacticScreen.jsx";
+import CsLoadingScreen from "./screens/fps/CsLoadingScreen.jsx";
+import CsResultScreen from "./screens/fps/CsResultScreen.jsx";
 
 export default function AppShell() {
   const [screen, setScreen] = useState("dashboard");
   const [draft, setDraft] = useState(null);     // S18/S19：BanPick 結果 {picks,bans}
   const [tactic, setTactic] = useState(null);   // S19：TacticScreen 選定戰術（純展示，不影響引擎）
   const [playerId, setPlayerId] = useState(null); // S21：PlayerDetail 目標選手
+  const [csConfig, setCsConfig] = useState(null); // S23：CS 賽前選擇 {mapKey,mapName,tacticId,tacticName,tacticType,tacticEmoji,seed}
+  const [csResult, setCsResult] = useState(null); // S23：CsMatchResult.v1（Match → Result 傳遞）
   const go = (s) => () => setScreen(s);
   const home = go("dashboard");
 
@@ -69,10 +77,16 @@ export default function AppShell() {
       {screen === "recruit" && <RecruitScreen onBack={home} />}
       {screen === "playerDetail" && <PlayerDetailScreen playerId={playerId} onBack={go("roster")} />}
 
-      {/* ── Sprint22：CS 對戰（訓練賽；結果不入賽季，見 CsMatchScreen 檔頭）── */}
-      {screen === "cs" && <CsMatchScreen onBack={home} />}
+      {/* ── Sprint23：CS 完整流程（結果入 profileStore.csHistory，不入 seasonStore）──
+            Dashboard → csPrep → csMap → csTactic → csLoading → cs(Match) → csResult → Dashboard */}
+      {screen === "csPrep" && <CsPrepScreen onNext={go("csMap")} onBack={home} />}
+      {screen === "csMap" && <CsMapSelectScreen onNext={(m) => { setCsConfig({ mapKey: m.key, mapName: m.name }); setScreen("csTactic"); }} onBack={go("csPrep")} />}
+      {screen === "csTactic" && <CsTacticScreen mapName={csConfig?.mapName} onNext={(t) => { setCsConfig((c) => ({ ...c, tacticId: t.id, tacticName: t.name, tacticType: t.type, tacticEmoji: t.emoji, seed: Math.floor(Math.random() * 100000) })); setScreen("csLoading"); }} onBack={go("csMap")} />}
+      {screen === "csLoading" && <CsLoadingScreen config={csConfig} onDone={go("cs")} />}
+      {screen === "cs" && <CsMatchScreen config={csConfig} onFinish={(r) => { setCsResult(r); setScreen("csResult"); }} onBack={home} />}
+      {screen === "csResult" && <CsResultScreen result={csResult} onDone={() => { setCsResult(null); setCsConfig(null); setScreen("dashboard"); }} />}
 
-      <div style={{ position: "absolute", bottom: 6, right: 12, color: "rgba(147,197,253,0.45)", fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", pointerEvents: "none", zIndex: 20 }}>ESMO 主幹 · S22 SHELL</div>
+      <div style={{ position: "absolute", bottom: 6, right: 12, color: "rgba(147,197,253,0.45)", fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", pointerEvents: "none", zIndex: 20 }}>ESMO 主幹 · S23 SHELL</div>
     </div>
   );
 }

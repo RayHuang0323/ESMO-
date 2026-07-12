@@ -345,3 +345,115 @@ UI 層：
 - CS 賽前流程（選圖/選戰術/BO 賽制）未恢復；目前進場即開打（訓練賽定位）。
 - bundle 已 1.88MB：FPS 引擎 + 英雄圖 base64 都內嵌，建議未來以動態 import
   切分 CS 路徑（`import()` CsMatchScreen）＋英雄圖改 public/ 靜態檔。
+
+## Sprint 23：CS Full Match Loop Recovery
+
+目標：CS 從「可進入的訓練賽」→ 完整可回寫的比賽循環：
+Dashboard → CS Prep → 選圖 → 戰術 → Loading → 3D FPS Match → CS Result →
+Match History / 經營回寫 → Dashboard。不重寫 FPS 3D。
+
+### A. 賽前流程 Audit（修改前）
+
+- Dashboard CS 磚直接進 CsMatchScreen（掛載即開打，seed/map 隨機）。
+- 無選圖（Legacy 也沒有選圖 UI——fpsRouter 於戰術確認時隨機挑圖）、
+  無戰術畫面（Legacy 有 TacticSelect fps 模式）、無 Loading（Legacy FPS 流程亦無）、
+  無獨立 Result（Legacy 有 CSMatchReport）、無 CS 歷史（S22 刻意不入史）。
+- 關鍵發現：主幹 `platform/data/matchRecorder.js` 已含 Legacy 逐字 CS 獎勵公式
+  （deriveMatchContext isCS 分支 + updateEconomy）→ 回寫直接重用，不發明第二套。
+
+### 新增檔案
+
+- `src/platform/contracts/CsMatchResult.js` — **CsMatchResult.v1** 契約：
+  mode:"cs" / matchId / seed / mapId·mapName / tacticId·tacticName·tacticType /
+  engineTactic（引擎實際執行的地圖戰術）/ winner / ourScore·enemyScore /
+  duration(**null**，引擎未提供，不編造) / roundCount / players[]（playerId 經
+  fpsRoster `_gid` 對回真實選手、K/D/A/rating/adr/hsPct/kast/clutches…）/
+  opponents[] / mvp / summaryEvents（逐回合勝方+結束方式）/ rewards / recordedAt。
+  含 `toCsMatchResult`（引擎 MatchResult→契約）與 `validateCsMatchResult`。
+- `src/battle/fps/csPrepData.js` — 賽前資料：`CS_TEAM_TACTICS`（Legacy
+  TACTICS_LIB.fps f1–f8 逐字）+ `FPS_TACTIC_TYPE`（Legacy line153 逐字，引擎吃法
+  = Legacy fpsRouter：tactic id + type → 引擎在該圖 TACTICS_DB 挑同 type 執行）+
+  `CS_MAPS`（⚠ 最小 flavor 常數：key/name 來自引擎 MAPS，類型/風格/難度/對手風險
+  為新增展示資料，Legacy 無選圖資料，不進引擎）+ `mapFit`（我方適性，真實 16 項
+  能力計算，純展示）。
+- `src/screens/fps/CsPrepScreen.jsx` — Legacy MatchPrep(fps) 版面：出戰/歷史分頁、
+  主力 5 人卡（頭像+狀態邊框+個性+FPS 定位+適配+CS 戰力）、隊伍戰力、配對大鈕。
+- `src/screens/fps/CsMapSelectScreen.jsx` — 選圖：三圖卡（名稱/類型/風格/難度/
+  我方適性/對手風險/選中狀態）→ 確認進戰術。
+- `src/screens/fps/CsTacticScreen.jsx` — Legacy TacticSelect(fps)「① 團隊戰術」
+  8 卡逐字（emoji/風險/desc/核心/能力吃重/detail）→ 確認進 Loading。
+- `src/screens/fps/CsLoadingScreen.jsx` — 我方 5 人（PlayerFace+FPS 定位+關鍵能力）
+  / VS / Compulsary（引擎內建陣容，誠實標示）/ 地圖 / 戰術 / Loading Bar+進場文案。
+- `src/screens/fps/CsResultScreen.jsx` — Legacy CSMatchReport 版面逐節：比分頭欄
+  （含部署戰術 vs 引擎執行戰術）、獎勵三格（粉絲/獎金/XP=真實入帳值）、MVP 卡、
+  本隊數據表（K/D/A·ADR·爆頭·KAST·評分）、回合走勢、寫入狀態標示、返回 Dashboard。
+- `tools/check_cs23.mjs` — 27 項驗證（結構 8 + 契約/回寫行為 19）。
+
+### 修改檔案
+
+- `src/platform/profileStore.js` — 擴充（非第二套 Store）：`csHistory[]`（上限 30，
+  向下相容 localStorage）+ `recordCsMatch()`（**冪等唯一入史口**：同 matchId 不重複
+  入帳）。回寫：funds+獎金(元)、transactions、meta.fans、收件匣通知；公式 =
+  `matchRecorder.updateEconomy`（Legacy 逐字；CS 連勝 streak 取自 csHistory，
+  不讀 MOBA 戰績）。**XP 只記錄不回寫 team.lv/xp**（「萬 XP」展示刻度與 xpGain
+  50/20 不符——不做假回寫，待刻度統一）。
+- `src/screens/fps/CsMatchScreen.jsx` — 接 config（map/tactic/seed）→ 引擎既有
+  tactic/tacticType props（引擎零修改）；Match Header 顯示地圖+戰術；終局改
+  「查看賽後戰報」→ toCsMatchResult → AppShell 導 CsResultScreen。無 config 時
+  退回 S22 行為（相容）。
+- `src/AppShell.jsx` — 六段 CS 流程接線 + csConfig/csResult 狀態；seed 於戰術確認
+  時決定（Legacy 同款）；信標 S23。MOBA 主流程零改動。
+- `src/screens/DashboardScreen.jsx` — CS 磚 → csPrep（2 行）。
+- `.gitignore` — 忽略 `docs/handoff/_archive/` 與 `_backup_*`（制度備份不進版本庫）。
+
+### SeasonStore 判定（I 節）
+
+不接入。`seasonStore.recordResult` 只收 `BattleResult.v2`（有 schema 檢查），
+Dashboard/Season 頁把 history 全視為 MOBA 戰績——寫入 CS 會污染 MOBA 勝場與
+贊助門檻計算。**CS 訓練賽紀錄 = profileStore.csHistory；CS 聯賽/SeasonStore
+多模式賽季留待未來 Sprint。**
+
+### 驗證
+
+- `npm run build` 通過（2,511 modules，bundle 1,906KB / gzip 712KB；
+  比 S22 +28KB = 六段 CS 畫面+契約，屬預期）。
+- `node tools/regress.mjs`：**15 seed / 15 成功**（平均 18.3 分、擊殺 55.8、
+  破塔 17.4/12）——與 S22 基準一致。
+- `node tools/regress2.mjs`：**20 seed / 20 成功**（藍 9 紅 11、平衡度 0.05、
+  ACE 17/20、Baron 20/20、逆轉 18/20）——與基準一致。
+- `node tools/check_cs23.mjs`：**27/27 通過**——流程接線、MOBA/CS import 隔離、
+  契約轉換（playerId 對回、缺值 null、summaryEvents）、回寫（獎勵=Legacy 公式、
+  財務/粉絲/交易/收件匣、冪等、csHistory streak、敗場公式、拒收非 CS 結果）。
+- 禁改清單 git diff 零改變：LogicEngine、battle/moba、battleResult、battleStore、
+  useBattleFeed、contracts/BattleResult、seasonStore、matchRecorder、roster、
+  heroDatabase、heroImages、playerModel、players、recruitPool、EsportsFPS3D、
+  fpsRoster、screens/moba、screens/manage、GameView 全部未觸碰。
+- **未經瀏覽器實測項（誠實）**：六段流程的實際點擊走通、3D 開打與 onComplete
+  真實回傳（引擎含 JSX 無法在 node 直跑，行為測試用 buildMatchResult 形狀的
+  代表性 fixture）、Result 畫面實際渲染。結構與資料流有 27 項腳本證據。
+
+### Legacy Diff Checklist（S23）
+
+| 項目 | 狀態 |
+|---|---|
+| CS 賽前準備（出戰陣容/戰力/適配/狀態） | ✅ Legacy MatchPrep(fps) 版面對位 |
+| 賽前「📅 賽程」分頁 | ❌ 需 AI_TEAMS 對手聯賽領域（主幹無）→ Sprint 24 候選 |
+| 賽前「📜 歷史」分頁 | ✅ 改讀 csHistory 真實紀錄（Legacy 為 matchHistory 假 demo 項） |
+| 選圖畫面 | ⚠ Legacy 無選圖 UI（隨機圖）→ 本 Sprint 新建，資料為標明來源的最小常數 |
+| 戰術部署「① 團隊戰術」8 卡 | ✅ TACTICS_LIB.fps 逐字 + 引擎吃法同 Legacy fpsRouter |
+| 戰術部署「② 隊員分工 / ③ 局數節奏」 | ❌ 引擎無對應輸入（Legacy 亦純展示）→ 不做假部署 |
+| Loading | ⚠ Legacy FPS 流程無 Loading → 依任務單新建（沿主幹 MOBA Loading 骨架） |
+| 3D 對戰 / HUD / 擊殺列 / 無線電 / 記分板 | ✅ 引擎原封（逐位元組未改） |
+| CS 賽後戰報 | ✅ Legacy CSMatchReport 版面逐節（比分/獎勵/MVP/數據表/回合走勢） |
+| 「🔁 再戰一場」 | ❌ rematch 需重置流程 seed → 未做（可回 Prep 重打） |
+| 結果入史 + 獎金/粉絲/XP 回寫 | ✅ csHistory/finance/fans/inbox；XP 記錄不回寫等級（刻度不符，誠實） |
+| matchHistory 統一（MOBA+CS 同表） | ⚠ 主幹刻意分離：MOBA=seasonStore、CS=csHistory（不建互相衝突的第二套） |
+
+### 已知限制
+
+- 對手固定引擎內建 Compulsary；BO1 訓練賽定位（BO3/聯賽 → Sprint 24 候選）。
+- 戰術影響勝負的部分 = 引擎原生 tacticEdge（Legacy 既有行為），本 Sprint 未調 Balance。
+- duration 無來源（引擎 MatchResult 不含時長）→ 契約欄位保留 null。
+- 舊的 `tools/check_flow09 / check_dash10` import 路徑仍是搬移前的 `./src/`
+  （S22 只修了 regress×2）、`check_mount09` 檢查 Sprint09 時代畫面——三支在本
+  Sprint 前即失效，屬非現役腳本，建議下次清理或修復（未動，避免超出範圍）。

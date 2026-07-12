@@ -16,6 +16,14 @@
 //    · scouted{}       球探偵查進度 {prospectId: level}
 //  Sprint21 規則：經營行為（簽約/訓練/招募）只改本 Store，
 //    不碰 LogicEngine / BattleResult / Balance / HeroProgress / SeasonStore。
+//
+//  Sprint23 新增（CS 訓練賽結果回寫；MOBA 戰績仍由 seasonStore 唯一提供）：
+//    · csHistory[]      CS 訓練賽紀錄（CsMatchResult.v1；與 MOBA history 分離，
+//                       不是第二套 Match History——兩者記的是不同 mode 的比賽）
+//    · recordCsMatch()  唯一入史口（冪等）：獎金→finance、粉絲→meta.fans、
+//                       收件匣通知；公式重用 matchRecorder.updateEconomy（Legacy 逐字）。
+//                       XP 只計算與記錄，不回寫 team.lv/xp（該欄位為「萬 XP」
+//                       展示刻度，與 Legacy xpGain 刻度不符 → 待刻度統一 Sprint）。
 // ============================================================================
 import { create } from "zustand";
 import { TEAMS } from "../data/roster.js";
@@ -23,6 +31,8 @@ import { INITIAL_PLAYERS } from "../data/players.js";
 import {
   ROSTER_CAP, sponsorById, courseById, applyCourse, conditionFor,
 } from "../data/playerModel.js";
+import { updateEconomy } from "./data/matchRecorder.js";
+import { CS_RESULT_SCHEMA } from "./contracts/CsMatchResult.js";
 
 const KEY = "esmo.profile.v1";
 const canLS = typeof localStorage !== "undefined";
@@ -80,6 +90,7 @@ const DEFAULT = {
   players: INITIAL_PLAYERS,
   activeSponsor: null,           // {id, weeksLeft, signedWeek} — Legacy：一次只能有一家
   scouted: {},                   // {prospectId: 偵查等級 0–2}
+  csHistory: [],                 // S23：CS 訓練賽紀錄（CsMatchResult.v1，最新在前，上限 30）
   inbox: [
     { id: 1, type: "match",   from: "聯賽官方",         subject: "第 1 週賽程已公布",   text: "第 1 週賽程已公布，請確認出賽名單。", time: "剛剛", unread: true },
     { id: 2, type: "recruit", from: "球探部",           subject: "3 名新星進入觀察名單", text: "球探回報：3 名新星進入觀察名單，可前往招募查看。", time: "1 小時前", unread: true },
@@ -123,6 +134,7 @@ const load = () => {
       // Sprint10 的 sponsors[] 假名單已退場；舊存檔沒有 activeSponsor → null（尚未簽約）
       activeSponsor: saved.activeSponsor ?? DEFAULT.activeSponsor,
       scouted: saved.scouted && typeof saved.scouted === "object" ? saved.scouted : {},
+      csHistory: arr(saved.csHistory, []),   // S23：舊存檔沒有 → 空（向下相容）
       inbox:         arr(saved.inbox,         DEFAULT.inbox).map(normalizeMsg),
       notifications: arr(saved.notifications, DEFAULT.notifications),
       worldNews:     arr(saved.worldNews,     DEFAULT.worldNews),
@@ -235,6 +247,52 @@ export const useProfileStore = create((set, get) => ({
     set({ scouted: { ...(get().scouted ?? {}), [prospectId]: level } });
     get().save();
   },
+  // ── CS 訓練賽入史（Sprint23）────────────────────────────────────────
+  /**
+   * CS 訓練賽結果唯一入史口（冪等：同 matchId 重複呼叫回傳既有 entry，不重複入帳）。
+   * 獎勵公式 = matchRecorder.updateEconomy（Legacy 逐字：fanGain/prizeGain/xpGain）；
+   * 連勝 streak 取自 csHistory（CS 自己的連勝，不讀 MOBA 戰績）。
+   * 回寫：finance.funds(+獎金,元)、finance.transactions、meta.fans、收件匣。
+   * XP 只記錄在 rewards.xp / csHistory，不動 team.lv/xp（刻度不符，見檔頭）。
+   */
+  recordCsMatch(result) {
+    if (!result || result.schema !== CS_RESULT_SCHEMA || !result.matchId) return null;
+    const hist = get().csHistory ?? [];
+    const dup = hist.find((h) => h.matchId === result.matchId);
+    if (dup) return dup;
+    const win = result.winner === "us";
+    const margin = Math.abs((result.ourScore ?? 0) - (result.enemyScore ?? 0));
+    const marginF = Math.min(margin / 8, 1);
+    let streak = 0;
+    for (const h of hist) { if (h.winner === "us") streak++; else break; }
+    // xp 給哨兵值：只取 fanGain/prizeGain/xpGain，不觸發升級迴圈（team.xp 刻度不符）
+    const eco = updateEconomy(
+      { record: { streak }, fanCount: get().meta.fans ?? 0, budget: 0, xp: { lv: 0, cur: 0, max: Number.MAX_SAFE_INTEGER } },
+      { win, marginF }
+    );
+    const prize = eco.prizeGain * WAN; // updateEconomy 以「萬」計 → 本 Store 以元存放
+    const entry = { ...result, rewards: { money: prize, fans: eco.fanGain, xp: eco.xpGain }, recordedAt: Date.now() };
+    const fin = get().finance;
+    const tx = {
+      id: "cs" + uid(),
+      date: new Date().toLocaleDateString("zh-TW", { month: "2-digit", day: "2-digit" }),
+      type: "income", cat: "prize",
+      label: `CS 訓練賽${win ? "勝利" : "參賽"}獎金（${result.mapName ?? result.mapId}）`,
+      amount: prize, color: "#34d399",
+    };
+    set({
+      csHistory: [entry, ...hist].slice(0, 30),
+      finance: { ...fin, funds: fin.funds + prize, transactions: [tx, ...(fin.transactions ?? [])].slice(0, 30) },
+      meta: { ...get().meta, fans: (get().meta.fans ?? 0) + eco.fanGain },
+    });
+    get().pushInbox({
+      type: "match", from: "賽事中心",
+      subject: `CS 訓練賽${win ? "勝利" : "失利"} ${result.ourScore}:${result.enemyScore}`,
+      text: `${result.mapName ?? result.mapId} · ${result.tacticName ?? "未部署戰術"}｜獎金 +$${eco.prizeGain}萬、粉絲 +${eco.fanGain}、XP +${eco.xpGain}（XP 暫不回寫戰隊等級）`,
+    });
+    return entry;
+  },
+
   /** 簽下新秀：扣款（cost 單位為萬）→ 進 players[] → 發收件匣。回傳 false = 預算不足 / 名額滿。 */
   signProspect(prospect) {
     const players = get().players ?? [];
