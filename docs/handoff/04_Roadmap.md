@@ -48,24 +48,26 @@ Dashboard
 - 補上真正缺口：draftRoster Adapter → BattleResult.players[].heroId = Ban/Pick 選角，
   Draft / Loading / Battle / Result 英雄一致。引擎與 Balance 未動。
 
-### Sprint 21：Management Modules Recovery
+### Sprint 21：Management Modules Recovery（已完成）
 
-目標恢復：
+目標恢復：Recruit / Finance / Inbox / Sponsor / Training / Player Detail / Team / Roster。
 
-- Recruit
-- Finance
-- Inbox
-- Sponsor
-- Training
-- Player Detail
-- Team
-- Roster
+原則：先 Component 化 Legacy UI → 再接 Adapter → 不重畫 UI。
 
-原則：
+結果：
 
-- 先 Component 化 Legacy UI。
-- 再接 Adapter。
-- 不重畫 UI。
+- 八個模組全數 Component 化，接進 `src/screens/manage/`，Dashboard 不再開假 Modal。
+- 補上主幹缺的「選手領域模型」（本 Sprint 的真正缺口）：
+  `data/playerModel.js`（16 項能力 × 個性 × 士氣 × 位置適配 × 訓練課程 × 贊助商，
+  Legacy 逐字）+ `data/players.js`（身分仍讀 ROSTER）+ `data/recruitPool.js`（決定性新秀池）。
+- `profileStore` 擴充（非第二套 Store）：players / activeSponsor / scouted /
+  finance 四張表 / 收件匣正規化 + 11 個經營行為，全部向下相容 localStorage。
+- 引擎、Balance、BattleResult、HeroProgress、SeasonStore、roster、heroDatabase
+  git diff 零改變；20 seed 回歸不變。
+
+仍不一致（見 05_Sprint紀錄 Legacy Diff Checklist）：
+轉會市場/我的報價（Negotiation 領域）、逐項潛力（需 Contract 擴充）、
+CS 分部名單（Sprint22）、賽後獎金回寫財務。
 
 ### Sprint 22：CS / FPS Recovery Audit
 

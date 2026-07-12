@@ -4,21 +4,18 @@
 //    頂部隊伍識別(成就徽章/頭像/隊名) → Lv/XP條 → 收件匣大磚 →
 //    天賦+商店 → 財務(9柱圖)+贊助 → 選手+招募 → MOBA/CS/賽事 → 更多功能。
 //    卡片順序/間距/UX 一律保留 Legacy，不重新設計。
-//  Architecture（Adapter）：資料改吃新 Store —
-//    profileStore（隊伍/Lv/XP/財務/贊助/收件匣/選手）+ seasonStore（戰績）。
-//  差異（誠實）：icon 以 emoji 替代 lucide（主幹無 lucide-react，技術限制）。
+//  Architecture（Adapter）：資料改吃新 Store — profileStore
+//    （隊伍/Lv/XP/財務/贊助/收件匣/選手）。
+//  Sprint21：八個經營磚（收件匣/財務/贊助/選手/招募/戰隊/訓練）不再開假 Modal，
+//    改導向已 Component 化的 Legacy 模組頁（onNav）。贊助改讀 activeSponsor。
+//  差異（誠實）：icon 以 emoji 替代 lucide。
 // ============================================================================
 import React, { useState } from "react";
 import { useProfileStore } from "../platform/profileStore.js";
-import { useSeasonStore } from "../platform/seasonStore.js";
-import { useHeroProgressStore } from "../hero/heroProgressStore.js";
-import { standings, playerRanking } from "../platform/seasonData.js";
-import { TEAMS, ROSTER } from "../data/roster.js";
-import { heroById } from "../data/heroDatabase.js";
-import { GC, FONT, MONO } from "../ui/theme.js";
+import { sponsorById } from "../data/playerModel.js";
+import { GC, FONT } from "../ui/theme.js";
 
 const money = (n) => "$" + (n / 10000).toFixed(1) + "萬";
-const fmtT = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 // Legacy Tile（icon 以 emoji 字串替代 lucide 元件）
 function Tile({ emoji, label, onClick, badge, right, color = GC.purp, children }) {
@@ -37,17 +34,15 @@ function Tile({ emoji, label, onClick, badge, right, color = GC.purp, children }
   );
 }
 
-export default function DashboardScreen({ onMoba, onSeason }) {
+export default function DashboardScreen({ onMoba, onSeason, onNav }) {
   const profile = useProfileStore();
-  const history = useSeasonStore((s) => s.history);
-  const progress = useHeroProgressStore((s) => s.progress);
   const [modal, setModal] = useState(null);
 
-  const st = standings(history);
-  const blueRow = st.find((t) => t.side === "blue") || { wins: 0, losses: 0, winRate: 0 };
-  const T = { ...profile.team, ...profile.meta, gold: money(profile.finance.funds), mail: (profile.inbox ?? []).length, inbox: (profile.inbox ?? []).filter((m) => m.unread).length };
+  const players = profile.players ?? [];
+  const inbox = profile.inbox ?? [];
+  const T = { ...profile.team, ...profile.meta, gold: money(profile.finance.funds), players: players.length, mail: inbox.length, inbox: inbox.filter((m) => m.unread).length };
   const finBars = profile.finance.weekly9 ?? [6, 4, 5, 3, 2, 9, 5, 6, 4];
-  const sponsor = (profile.sponsors ?? [])[0];
+  const sponsor = profile.activeSponsor ? sponsorById(profile.activeSponsor.id) : null;
   const modes = [
     { id: "moba", name: "MOBA", emoji: "⚔️", fans: "2041", color: GC.purp, badge: "3 小時內", on: true },
     { id: "cs", name: "CS", emoji: "🎯", fans: "0", color: "#fb923c", badge: "🌙", on: false },
@@ -55,11 +50,13 @@ export default function DashboardScreen({ onMoba, onSeason }) {
   ];
   const more = [{ id: "team", n: "戰隊詳情", i: "🛡" }, { id: "training", n: "訓練中心", i: "📅" }, { id: "dash", n: "儀表板", i: "📊" }, { id: "sponsor", n: "贊助商", i: "🤝" }];
 
+  // Sprint21：八個經營模組已 Component 化 → 直接導頁；其餘 Legacy 模組維持誠實佔位。
+  const NAV = { notify: "inbox", finance: "finance", sponsor: "sponsor", roster: "roster", team: "team", training: "training", recruit: "recruit" };
   const sel = (id) => {
     if (id === "moba") return onMoba();
     if (id === "bracket") return onSeason();
-    if (["notify", "sponsor", "finance", "roster", "team", "dash"].includes(id)) return setModal({ type: id });
-    setModal({ type: "legacy", name: { talent: "天賦", equip: "商店", recruit: "招募", cs: "CS", training: "訓練中心" }[id] || id });
+    if (NAV[id] && onNav) return onNav(NAV[id]);
+    setModal({ type: "legacy", name: { talent: "天賦", equip: "商店", cs: "CS", dash: "經營儀表板" }[id] || id });
   };
 
   return (
@@ -95,7 +92,7 @@ export default function DashboardScreen({ onMoba, onSeason }) {
             </button>
             <button onClick={() => sel("sponsor")} style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 14, padding: "13px 14px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}><span style={{ fontSize: 17, color: GC.gold }}>🤝</span><span style={{ color: "white", fontSize: 14, fontWeight: 700 }}>贊助</span></div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 60 }}><div style={{ width: 60, height: 60, borderRadius: "50%", background: "radial-gradient(circle,#1a2a3a,#0a0b0f)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, border: "2px solid #2a4a5a" }}>🐘</div></div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 60 }}><div style={{ width: 60, height: 60, borderRadius: "50%", background: `radial-gradient(circle,${sponsor ? sponsor.color + "44" : "#1a2a3a"},#0a0b0f)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, border: `2px solid ${sponsor ? sponsor.color : "#2a4a5a"}` }}>{sponsor?.emoji ?? "🤝"}</div></div>
               <div style={{ color: GC.gray, fontSize: 8, textAlign: "center", marginTop: 3 }}>{sponsor?.name ?? "無贊助商"}</div>
             </button>
           </div>
@@ -128,32 +125,24 @@ export default function DashboardScreen({ onMoba, onSeason }) {
           </div>
         </div>
       </div>
-      {modal && <Modal modal={modal} profile={profile} history={history} progress={progress} blueRow={blueRow} onClose={() => setModal(null)} />}
+      {modal && <Modal modal={modal} onClose={() => setModal(null)} />}
     </div>
   );
 }
 
-// ── 子面板（真資料 / 誠實佔位）──────────────────────────────────────────
-function Modal({ modal, profile, history, progress, blueRow, onClose }) {
-  const body = () => {
-    if (modal.type === "legacy") return <div style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", lineHeight: 1.7 }}><b style={{ color: GC.gold }}>{modal.name}</b> 為 Legacy 模組，尚未 Component 化至主幹。待其 Adapter 接入 Store 後於此顯示真資料，目前不以假資料佔位。</div>;
-    if (modal.type === "notify") return <div>{(profile.inbox ?? []).map((m, i) => <div key={i} style={{ display: "flex", gap: 7, padding: "5px 0", borderBottom: `1px solid ${GC.line}` }}><span style={{ color: m.unread ? GC.gold : "rgba(255,255,255,0.3)" }}>{m.unread ? "●" : "○"}</span><div><div style={{ fontSize: 12, color: "#e5e7eb", fontWeight: 700 }}>{m.subject}</div><div style={{ fontSize: 9.5, color: GC.gray }}>{m.from}</div></div></div>)}</div>;
-    if (modal.type === "sponsor") return <div>{(profile.sponsors ?? []).map((s, i) => <Row key={i} l={`${s.name}（${s.tier}）`} v={money(s.weekly) + "/週"} c={GC.gold} />)}<div style={{ fontSize: 9.5, color: GC.gray, marginTop: 8 }}>粉絲 {profile.meta.fans.toLocaleString()} · 聲望 {profile.meta.reputation}</div></div>;
-    if (modal.type === "finance") return <div><Row l="資金" v={money(profile.finance.funds)} c={GC.gold} /><Row l="週收入" v={money(profile.finance.weeklyIncome)} c={GC.green} /><Row l="週支出" v={money(profile.finance.weeklyCost)} c={GC.redL} /><Row l="週結餘" v={money(profile.finance.weeklyIncome - profile.finance.weeklyCost)} c={GC.blueL} /></div>;
-    if (modal.type === "team" || modal.type === "dash") return <div><Row l="戰隊" v={`${TEAMS.blue.emoji} ${TEAMS.blue.name}`} /><Row l="戰績" v={`${blueRow.wins}勝 ${blueRow.losses}敗`} c={GC.green} /><Row l="勝率" v={`${Math.round(blueRow.winRate * 100)}%`} /><Row l="選手數" v={`${profile.meta.players}/15`} c={GC.blueL} /><div style={{ ...({ fontSize: 9, letterSpacing: "0.2em", color: GC.gray, fontWeight: 900 }), marginTop: 8, marginBottom: 3 }}>主力陣容</div>{Object.keys(ROSTER).filter((p) => p[0] === "b").map((pid) => { const r = ROSTER[pid]; return <Row key={pid} l={`${r.player} · ${r.hero}`} v={"Lv " + (progress[r.heroId]?.level ?? 1)} />; })}</div>;
-    if (modal.type === "roster") { const rk = playerRanking(history); return <div>{Object.entries(ROSTER).map(([pid, r]) => { const h = heroById(r.heroId) || {}, hp = progress[r.heroId] || { level: 1 }, pr = rk.find((x) => x.id === pid); return <div key={pid} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "3px 0", borderBottom: `1px solid ${GC.line}` }}><span style={{ color: pid[0] === "b" ? GC.blueL : GC.redL, fontWeight: 700 }}>{r.player} <span style={{ color: "rgba(255,255,255,0.55)" }}>{h.zh}·{h.lane}</span></span><span style={{ fontFamily: MONO, color: "rgba(255,255,255,0.7)" }}>Lv{hp.level}{pr ? ` · ${pr.avgRating.toFixed(0)}RTG` : ""}</span></div>; })}</div>; }
-  };
-  const title = { legacy: modal.name, notify: "收件匣", sponsor: "贊助商", finance: "財務管理", team: "戰隊詳情", dash: "經營儀表板", roster: "選手名單" }[modal.type];
+// ── 尚未 Component 化的 Legacy 模組：誠實佔位，不以假資料充數 ──────────
+//   Sprint21 已恢復：收件匣 / 財務 / 贊助 / 戰隊 / 名單 / 訓練 / 招募 / 選手檔案
+//   仍待恢復：天賦(TalentModule) / 商店(EquipModule) / 經營儀表板(DashModule) / CS
+function Modal({ modal, onClose }) {
   return (
     <div onClick={onClose} style={{ position: "absolute", inset: 0, zIndex: 30, background: "rgba(4,8,16,0.72)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT }}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: 340, maxHeight: "80%", overflow: "auto", background: GC.card, border: `1px solid ${GC.blue}59`, borderRadius: 14, padding: "16px 18px" }}>
-        <div style={{ fontSize: 16, fontWeight: 900, color: "#e5e7eb", marginBottom: 10 }}>{title}</div>
-        {body()}
+        <div style={{ fontSize: 16, fontWeight: 900, color: "#e5e7eb", marginBottom: 10 }}>{modal.name}</div>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", lineHeight: 1.7 }}>
+          <b style={{ color: GC.gold }}>{modal.name}</b> 為 Legacy 模組，尚未 Component 化至主幹。待其 Adapter 接入 Store 後於此顯示真資料，目前不以假資料佔位。
+        </div>
         <button onClick={onClose} style={{ marginTop: 14, width: "100%", background: "rgba(255,255,255,0.08)", border: `1px solid ${GC.line}`, borderRadius: 8, padding: "8px", color: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer" }}>關閉</button>
       </div>
     </div>
   );
 }
-const Row = ({ l, v, c = "#e5e7eb" }) => (
-  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0" }}><span style={{ color: "rgba(255,255,255,0.6)" }}>{l}</span><span style={{ fontFamily: MONO, fontWeight: 800, color: c }}>{v}</span></div>
-);
