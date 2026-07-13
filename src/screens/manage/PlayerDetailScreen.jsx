@@ -18,7 +18,7 @@ import { ChevronDown, Target, Smile, Battery, Star, Zap } from "lucide-react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { STAT_DEF, calcPower, bestPositions, personalityById } from "../../data/playerModel.js";
 import { TIERS } from "../../data/recruitPool.js";
-import { heroById } from "../../data/heroDatabase.js";
+import { calculateLevelProgress } from "../../platform/progress/playerLevel.js";
 import ManageFrame from "./ManageFrame.jsx";
 
 const HIGH = 74;
@@ -85,7 +85,8 @@ export default function PlayerDetailScreen({ playerId, onBack }) {
   const bp = bestPositions(p);
   const pow = calcPower(p, "moba");
   const potential = p.potential ?? 80;
-  const hero = p.heroId ? heroById(p.heroId) : null;
+  // S26【A】：XP / 等級一律由持久化 xp 推導（與 Result receipt 同一把尺）
+  const lp = calculateLevelProgress(p.xp ?? 0, 0);
   const morale = p.morale ?? 70;
   const energy = p.energy ?? 100;
   const tier = TIERS.find((t) => potential >= t.min) ?? TIERS[TIERS.length - 1];
@@ -122,7 +123,7 @@ export default function PlayerDetailScreen({ playerId, onBack }) {
               <AvatarRing size={96} stroke={4} pct={pow} ringColor="#a78bfa">
                 <div style={{ width: "100%", height: "100%", background: "linear-gradient(145deg,#4c1d95,#1e1b4b)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 900, color: "white", fontFamily: "'Courier New',monospace", letterSpacing: "-0.03em" }}>{initials}</div>
               </AvatarRing>
-              <div style={{ position: "absolute", bottom: -4, left: "50%", transform: "translateX(-50%)", background: "linear-gradient(135deg,#7c3aed,#a78bfa)", borderRadius: 99, padding: "2px 9px", fontSize: 9, fontWeight: 900, color: "white", border: "2px solid #121113", whiteSpace: "nowrap", letterSpacing: "0.04em", boxShadow: "0 3px 10px rgba(124,58,237,0.5)" }}>Lv. {p.lv ?? 1}</div>
+              <div style={{ position: "absolute", bottom: -4, left: "50%", transform: "translateX(-50%)", background: "linear-gradient(135deg,#7c3aed,#a78bfa)", borderRadius: 99, padding: "2px 9px", fontSize: 9, fontWeight: 900, color: "white", border: "2px solid #121113", whiteSpace: "nowrap", letterSpacing: "0.04em", boxShadow: "0 3px 10px rgba(124,58,237,0.5)" }}>Lv. {lp.newLevel}</div>
               <div style={{ position: "absolute", top: 4, right: 2, width: 12, height: 12, borderRadius: "50%", background: energyColor, border: "2.5px solid #121113", boxShadow: `0 0 6px ${energyColor}` }} />
             </div>
 
@@ -134,7 +135,8 @@ export default function PlayerDetailScreen({ playerId, onBack }) {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 <span style={{ color: "#71717a", fontSize: 11, fontWeight: 600 }}>{p.age ?? "--"} 歲</span>
                 <div style={{ width: 3, height: 3, borderRadius: "50%", background: "#3f3f46" }} />
-                <span style={{ color: "#71717a", fontSize: 11, fontWeight: 600 }}>{hero ? hero.zh : "未綁定英雄"}</span>
+                {/* S26【C】：移除靜態英雄綁定；【A】改顯示持久化 XP（與 Result receipt 同源） */}
+                <span style={{ color: "#71717a", fontSize: 11, fontWeight: 600 }}>XP {lp.xpIntoLevel}/{lp.xpForNextLevel}</span>
                 <div style={{ width: 3, height: 3, borderRadius: "50%", background: "#3f3f46" }} />
                 <span style={{ color: "#a78bfa", fontSize: 11, fontWeight: 600 }}>ID {p.id}</span>
               </div>

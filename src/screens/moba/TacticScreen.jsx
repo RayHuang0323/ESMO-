@@ -67,7 +67,7 @@ export default function TacticScreen({ onNext, onBack }) {
     <Frame title="戰術" sub="TEAM STRATEGY · 8 套戰術 · 實際影響對戰" onBack={onBack} onNext={() => onNext && onNext(cur)} nextLabel="開始載入 →">
       <div style={{ width: "100%", maxWidth: 940, padding: "0 14px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
         {/* 戰術卡：auto-fill 響應式（手機 1 欄 / 平板 2-3 欄 / 桌機 4 欄），高度隨內容 */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(190px,1fr))", gap: 8 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(min(190px,100%),1fr))", gap: 8 }}>
           {MOBA_TACTICS.map((t) => {
             const isSel = sel === t.tacticId;
             const fg = fitGrade(fitScore(t, starters));

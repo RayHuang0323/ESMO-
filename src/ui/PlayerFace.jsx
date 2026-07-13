@@ -3,10 +3,9 @@
 //  來源：Legacy EsportsGame.jsx PlayerFace(line87) 逐字。
 //  性質：程序化 SVG（依名字 hash 決定膚色/髮色/底色）。Legacy 本來就沒有選手照片，
 //    所以這是正式版型而不是 fallback——不造假、不破圖。
-//  英雄小角標走 ui/HeroPortrait.jsx（英雄圖唯一入口，缺圖自動 fallback）。
+//  Sprint26【C】：英雄小角標已移除（靜態 heroId 綁定被誤讀成選手身分，見 PlayerAvatar 註解）。
 // ============================================================================
 import React from "react";
-import HeroPortrait from "./HeroPortrait.jsx";
 
 export default function PlayerFace({ player, size = 40 }) {
   const name = player?.name || "?";
@@ -36,24 +35,23 @@ export default function PlayerFace({ player, size = 40 }) {
 }
 
 /**
- * 選手頭像 + 英雄小角標（Legacy Roster / Team / Training 三處共用的組合版型）。
- * player.heroId 為 null（新秀尚未綁定英雄）→ 只顯示選手頭像，不亂塞英雄。
+ * 選手頭像（Roster / Team / Training 共用）。
+ *
+ * Sprint26【C】：移除右下角英雄小角標。
+ *   原因：players[].heroId 是 Legacy 種子的**靜態綁定**（不是最近一場、也不是
+ *   Draft 選角），把它疊在跨遊戲的經營畫面上會讓「MOBA 英雄」被誤讀成選手身分
+ *   （CS 選手也被貼上 MOBA 英雄）。英雄只在 MOBA 情境顯示：Draft / Loading /
+ *   Battle / Result / 對戰紀錄（那些畫面用 ChampFace / HeroPortrait，資料來自
+ *   當場 Draft，不經過本元件）。若未來要顯示「最近使用英雄」，必須帶明確標示
+ *   且資料來自真實對戰紀錄，不得回退到靜態 heroId。
+ * 舊參數 badge / showHero 仍接受但不再渲染英雄（呼叫端零改動、零破圖）。
  */
-export function PlayerAvatar({ player, size = 46, badge = 18, ring = "transparent", radius = "50%" }) {
+export function PlayerAvatar({ player, size = 46, ring = "transparent", radius = "50%" }) {
   return (
     <div style={{ width: size, height: size, borderRadius: radius, border: `2px solid ${ring}`, position: "relative", flexShrink: 0, boxSizing: "border-box" }}>
       <div style={{ width: "100%", height: "100%", borderRadius: radius, overflow: "hidden" }}>
         <PlayerFace player={player} size={size - 4} />
       </div>
-      {player?.heroId && (
-        <div style={{ position: "absolute", bottom: -3, right: -3, borderRadius: "50%", border: "1.5px solid #0a0b0f", overflow: "hidden", lineHeight: 0 }}>
-          <HeroPortrait
-            heroId={player.heroId}
-            size={badge}
-            fallback={<div style={{ width: badge, height: badge, borderRadius: "50%", background: "#1a1d26" }} />}
-          />
-        </div>
-      )}
     </div>
   );
 }

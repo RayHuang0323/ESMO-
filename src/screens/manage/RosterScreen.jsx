@@ -14,7 +14,7 @@ import {
   STAT_DEF, STAT_CATS, MOBA_ROLES, ROSTER_CAP,
   calcPower, posFit, bestPositions, personalityById,
 } from "../../data/playerModel.js";
-import { heroById } from "../../data/heroDatabase.js";
+import { calculateLevelProgress } from "../../platform/progress/playerLevel.js";
 import { PlayerAvatar } from "../../ui/PlayerFace.jsx";
 import { GC } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
@@ -69,10 +69,12 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
           return (
             <button key={p.id} onClick={() => { setSelId(p.id); setEditName(false); }}
               style={{ display: "flex", alignItems: "center", gap: 11, background: GC.card, border: `1px solid ${p.id === selId ? GC.purp : "rgba(255,255,255,0.06)"}`, borderRadius: 13, padding: "11px 13px", cursor: "pointer", textAlign: "left", width: "100%" }}>
-              <PlayerAvatar player={p} size={46} badge={18} ring={c} />
+              <PlayerAvatar player={p} size={46} ring={c} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <span style={{ color: "white", fontSize: 13, fontWeight: 800 }}>{p.name}</span>
+                  {/* S26【A】：選手等級直接讀 profileStore 持久化值（賽後升級即時反映） */}
+                  <span style={{ color: GC.gold, fontSize: 9, fontWeight: 800, background: "rgba(251,191,36,0.12)", borderRadius: 5, padding: "1px 5px" }}>Lv.{p.lv ?? 1}</span>
                   <span style={{ color: GC.gray, fontSize: 9 }}>{p.role}</span>
                   {personalityById(p.personality) && <span style={{ fontSize: 10 }}>{personalityById(p.personality).emoji}</span>}
                   {String(p.id).startsWith("r") && <span style={{ color: GC.green, fontSize: 7, fontWeight: 700 }}>🆕</span>}
@@ -110,15 +112,20 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
         const mp = calcPower(sel, "moba"), fp = calcPower(sel, "fps");
         const cond = sel.condition || "正常";
         const condColor = cond === "精神飽滿" ? GC.green : cond === "正常" ? "#d4d4d8" : cond === "疲勞" ? GC.gold : GC.red;
-        const hero = sel.heroId ? heroById(sel.heroId) : null;
+        // S26【A】：XP 進度由持久化 xp 推導（playerLevel 唯一刻度），與 Result receipt 同源
+        const lp = calculateLevelProgress(sel.xp ?? 0, 0);
         return (
           <div onClick={() => setSelId(null)} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.82)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(4px)" }}>
             <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: 380, width: "100%", background: GC.card2, borderRadius: 16, padding: 18, border: `1px solid ${GC.purp}`, maxHeight: "88vh", overflowY: "auto" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-                <PlayerAvatar player={sel} size={60} badge={24} ring={condColor} radius={14} />
+                <PlayerAvatar player={sel} size={60} ring={condColor} radius={14} />
                 <div style={{ flex: 1 }}>
                   <div style={{ color: "white", fontSize: 17, fontWeight: 900 }}>{sel.name}</div>
-                  <div style={{ color: GC.gray, fontSize: 10 }}>{sel.role} · Lv.{sel.lv ?? 1} · {hero ? hero.zh : "未綁定英雄"}</div>
+                  {/* S26【C】：移除靜態英雄綁定（英雄只在 MOBA 流程顯示）；【A】改顯示持久化 XP */}
+                  <div style={{ color: GC.gray, fontSize: 10 }}>{sel.role} · Lv.{lp.newLevel} · XP {lp.xpIntoLevel}/{lp.xpForNextLevel}</div>
+                  <div style={{ marginTop: 3, height: 3, width: 140, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${Math.min(100, Math.round((lp.xpIntoLevel / lp.xpForNextLevel) * 100))}%`, background: `linear-gradient(90deg,${GC.blue},${GC.blueL})` }} />
+                  </div>
                   {pers && <div style={{ marginTop: 3, fontSize: 10 }}>{pers.emoji} <span style={{ color: GC.purp, fontWeight: 700 }}>{pers.zh}</span></div>}
                 </div>
                 <button onClick={() => setSelId(null)} style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "none", cursor: "pointer", color: "#a1a1aa", fontSize: 14 }}>✕</button>

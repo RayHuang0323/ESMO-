@@ -75,7 +75,7 @@ export default function TeamScreen({ onBack }) {
           return (
             <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 11, background: GC.card, borderRadius: 12, padding: "10px 13px", border: `1px solid ${accent}33` }}>
               <span style={{ color: accent, fontSize: 11, fontWeight: 900, width: 16 }}>{i + 1}</span>
-              <PlayerAvatar player={p} size={40} badge={16} ring={accent} />
+              <PlayerAvatar player={p} size={40} ring={accent} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                   <span style={{ color: "white", fontSize: 13, fontWeight: 800 }}>{p.name}</span>
@@ -100,7 +100,7 @@ export default function TeamScreen({ onBack }) {
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {subs.map((p) => (
               <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 6, background: GC.card, borderRadius: 10, padding: "7px 10px" }}>
-                <PlayerAvatar player={p} size={26} badge={12} />
+                <PlayerAvatar player={p} size={26} />
                 <span style={{ color: "#d4d4d8", fontSize: 10 }}>{p.name}</span>
                 <span style={{ color: accent, fontSize: 10, fontWeight: 700 }}>{p.pow}</span>
               </div>

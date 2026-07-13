@@ -131,10 +131,26 @@ jungleResourceShare / vision.*。對手戰術無來源 → 固定中性 standard
 
 資料流與公式：`docs/design/賽後結算與選手成長系統.md`
 
-### Sprint 26 候選（依優先序建議）
+### Sprint 26：MOBA Match Experience Recovery（已完成）
+
+修復四個線上實際發現的問題（既有流程修復，非新功能）：
+
+1. Progress 單一真實來源——所有畫面選手 Lv/XP 讀 profileStore；
+   英雄熟練等級分軸標示（根因：LineupScreen 把英雄等級標成「Lv」+ 靜態 ROSTER 名字）。
+2. 手機戰術頁——共用 Frame 寬度防護 + sticky footer（確認鈕永遠可點）+
+   Lineup/Codex 拔除固定 380px + grid min() 護欄。
+3. Player/Hero 語意分離——PlayerAvatar 靜態英雄徽章移除；
+   英雄只在 MOBA 情境顯示。
+4. MOBA Replay MVP——MobaReplay.v1 + session 擷取緩衝 + 2D 播放器
+   （播放/暫停/±10s/事件/0.5–4×/slider）；播已存 frames，零引擎、零 Store。
+
+驗證 35/35；同 seed 擷取前後 BattleResult 位元一致。
+設計文件：docs/design/MOBA重播系統.md
+
+### Sprint 27 候選（依優先序建議）
 
 1. **天賦系統（TalentModule）**：天賦點目前**只進不出**——S25 已把點數發到選手身上，
-   但花費介面還是 Legacy 佔位。這是 S25 留下最直接的缺口。
+   但花費介面還是 Legacy 佔位。這是最直接的缺口。
 2. **CS 賽制與聯賽化**：BO3、對手多樣化（目前只有引擎內建 Compulsary）、
    CS 賽程／AI_TEAMS 領域（Prep 的「賽程」分頁因此未恢復）。
 2. **XP / 等級刻度統一**：team.lv/xp（萬 XP 展示刻度）與 Legacy xpGain（50/20）對齊後，

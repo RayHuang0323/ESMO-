@@ -12,6 +12,7 @@ import { LogicEngine } from "./LogicEngine.js";
 import { useGameStore } from "./useGameStore.js";
 import { useHeroProgressStore } from "./hero/heroProgressStore.js";
 import { toEngineTactic, STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION } from "./platform/contracts/MobaTacticConfig.js";
+import { beginReplayCapture } from "./battle/moba/replay/replayBuffer.js";
 
 const TICK_MS = 130;   // 每 130ms 一個模擬步
 const DT_SIM = 0.5;    // 每步推進 0.5 模擬秒（約 3.8x 速度；要即時就設成 TICK_MS/1000）
@@ -32,7 +33,10 @@ export function useLocalServer() {
     stop();
     const { pushFrame, subTRef } = useGameStore.getState();
     const loadout = useHeroProgressStore.getState().getLoadout();   // Sprint08：下場沿用
-    const eng = new LogicEngine((Date.now() & 0xffff) | 1, loadout);
+    const seed = (Date.now() & 0xffff) | 1;
+    const eng = new LogicEngine(seed, loadout);
+    // Sprint26：開始重播擷取（seed / 戰術只有這裡拿得到；frames 由 useBattleFeed 取樣）
+    beginReplayCapture({ seed, config: opts.tactic?.tacticId ? { tacticId: opts.tactic.tacticId, tacticName: opts.tactic.name ?? null } : {} });
     // Sprint24：戰術進引擎（TacticScreen 的 MobaTacticConfig → 行為權重 knobs）。
     //   對手戰術目前固定 STANDARD_OPP_TACTIC（無對手戰術來源，不虛構 AI）。
     //   無 opts.tactic ⇒ 不呼叫 configureMatch，引擎行為與舊版位元一致。

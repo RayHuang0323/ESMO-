@@ -28,7 +28,7 @@ export default function CodexScreen({ onBack }) {
 
   return (
     <Frame title="英雄圖鑑" sub={`CODEX · ${CHAMPIONS_100.length} 位英雄 · 點擊查看技能與強度`} onBack={onBack}>
-      <div style={{ width: 380, fontFamily: FONT }}>
+      <div style={{ width: "100%", maxWidth: 420, padding: "0 12px", boxSizing: "border-box", fontFamily: FONT }}>
         {/* 搜尋 */}
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍 搜尋英雄名稱 / 稱號"
           style={{ width: "100%", boxSizing: "border-box", background: GC.card2, border: `1px solid ${GC.line}`, borderRadius: 10, padding: "10px 13px", color: "white", fontSize: 13, marginBottom: 10, outline: "none" }} />

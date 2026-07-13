@@ -75,7 +75,7 @@ export default function TrainingScreen({ onBack }) {
               const prog = (p.training.totalDays - p.training.daysLeft) / p.training.totalDays * 100;
               return (
                 <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, background: GC.card, borderRadius: 11, padding: "10px 12px", border: `1px solid ${GC.purp}44` }}>
-                  <PlayerAvatar player={p} size={36} badge={15} ring={GC.purp} />
+                  <PlayerAvatar player={p} size={36} ring={GC.purp} />
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                       <span style={{ color: "white", fontSize: 12, fontWeight: 700 }}>{p.name}</span>
@@ -108,7 +108,7 @@ export default function TrainingScreen({ onBack }) {
           return (
             <button key={p.id} onClick={() => setSelId(p.id)}
               style={{ flexShrink: 0, width: 72, background: isActive ? GC.card2 : GC.card, border: `1.5px solid ${isActive ? GC.purp : "rgba(255,255,255,0.06)"}`, borderRadius: 11, padding: "8px 4px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-              <PlayerAvatar player={p} size={36} badge={15} ring={cc} />
+              <PlayerAvatar player={p} size={36} ring={cc} />
               <span style={{ color: "white", fontSize: 9, fontWeight: 700 }}>{p.name}</span>
               <span style={{ color: cc, fontSize: 7.5 }}>{cond}</span>
               <div style={{ width: "100%", height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden" }}>

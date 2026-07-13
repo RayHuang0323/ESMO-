@@ -13,7 +13,8 @@ import { useSeasonStore } from "../platform/seasonStore.js";
 import { useProfileStore } from "../platform/profileStore.js";
 import { snapshotToBattleResult } from "./battleResult.js";
 import { draftHeroAssign } from "./moba/draftRoster.js";
-import { mobaResultToTransaction } from "../platform/progress/adapters/mobaProgressAdapter.js";
+import { mobaResultToTransaction, mobaMatchId } from "../platform/progress/adapters/mobaProgressAdapter.js";
+import { captureReplayFrame, finalizeReplay } from "./moba/replay/replayBuffer.js";
 
 /**
  * @param {object|null} draft  Ban/Pick 結果 {picks,bans}（AppShell → GameView → 本 hook）。
@@ -35,6 +36,7 @@ export function useBattleFeed(draft = null) {
       if (!prev || snap === prev.snapshot) return;
       if (prev.snapshot && snap.ts < prev.snapshot.ts) reset();  // 新對局：先重置
       ingest(snap);
+      captureReplayFrame(snap);   // S26：重播取樣（純讀 snapshot；未 begin / 達上限 = no-op）
       // Sprint09：唯一計算點 — 終局只在此產出一份 BattleResult，分送所有消費者
       const bs = useBattleStore.getState();
       if (snap.over && !bs.result) {
@@ -54,6 +56,15 @@ export function useBattleFeed(draft = null) {
           fansNow: profile.meta?.fans ?? 0,
         });
         if (tx) profile.applyMatchProgress(tx);
+
+        // S26：重播定稿（matchId 與結算同源 → Result 可比對「這場」的重播；
+        //      只組裝已擷取的 frames，不觸發任何發獎 / 入史）
+        finalizeReplay({
+          matchId: mobaMatchId(result),
+          events: bs.log,
+          resultSummary: { winner: result.winner, score: { ...result.score }, duration: result.duration, mvpId: result.mvpId },
+          tacticMeta: result.tactic ?? null,
+        });
 
         useSeasonStore.getState().recordResult(result);              // → Season / History / Analytics
       }

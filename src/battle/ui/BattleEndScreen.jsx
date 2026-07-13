@@ -25,6 +25,8 @@ import { useProfileStore } from "../../platform/profileStore.js";
 import { makeTransactionId } from "../../platform/contracts/matchProgressTransaction.js";
 import { mobaMatchId } from "../../platform/progress/adapters/mobaProgressAdapter.js";
 import RewardReceiptPanel from "../../ui/RewardReceiptPanel.jsx";
+import { getCurrentReplay } from "../moba/replay/replayBuffer.js";
+import MobaReplayScreen from "../../screens/moba/MobaReplayScreen.jsx";
 
 const KEYFRAMES = `
 @keyframes esmoEndPop { 0%{transform:scale(0.55);opacity:0} 60%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
@@ -99,6 +101,10 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
   //   → 沒有發獎 useEffect；重進 Result / StrictMode 雙掛載都不會重複發放。
   const txId = result ? makeTransactionId("moba", mobaMatchId(result)) : null;
   const receipt = useProfileStore((s) => (txId ? (s.processedMatchTransactions ?? {})[txId] : null));
+  // S26：重播入口 —— 只認「這一場」（matchId 與結算同源比對），不播錯場
+  const [showReplay, setShowReplay] = useState(false);
+  const replay = getCurrentReplay();
+  const canReplay = Boolean(result && replay && replay.matchId === mobaMatchId(result) && replay.frames?.length > 0);
   useEffect(() => { const t = setTimeout(() => setPhase(1), 900); return () => clearTimeout(t); }, []);
 
   if (!result) return null;                               // 終局 result 由 useBattleFeed 先行寫入
@@ -248,11 +254,29 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
 
       {heroPage && <HeroDetailPanel {...heroPage} onClose={() => setHeroPage(null)} />}
 
-      {phase >= 1 && onContinue && (
-        <button onClick={onContinue} style={{ animation: "esmoEndRise 0.5s 0.15s ease both", background: "linear-gradient(135deg,#3b82f6,#1d4ed8)", border: "1px solid #93c5fd", borderRadius: 10, padding: "10px 30px", color: "#fff", fontWeight: 900, fontSize: 14, cursor: "pointer" }}>
-          查看賽後結算 →
-        </button>
+      {phase >= 1 && (
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", animation: "esmoEndRise 0.5s 0.15s ease both" }}>
+          {/* S26：觀看重播 —— 只有「這一場」的重播存在才可點；不存在 → 明確標示不可用，
+              不白畫面、不重新模擬另一場。以 overlay 開啟（不走 AppShell 路由：
+              離開 battle 畫面會使 GameView 重掛載 → autoStart 直接開新的一場）。 */}
+          {canReplay ? (
+            <button onClick={() => setShowReplay(true)} style={{ background: "rgba(167,139,250,0.16)", border: "1px solid rgba(167,139,250,0.5)", borderRadius: 10, padding: "10px 22px", color: "#c4b5fd", fontWeight: 900, fontSize: 14, cursor: "pointer" }}>
+              ▶ 觀看重播
+            </button>
+          ) : (
+            <span title="重播僅保留本次遊戲階段的最近一場" style={{ display: "inline-flex", alignItems: "center", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "10px 22px", color: "rgba(255,255,255,0.3)", fontWeight: 800, fontSize: 13, cursor: "not-allowed" }}>
+              無法重播
+            </span>
+          )}
+          {onContinue && (
+            <button onClick={onContinue} style={{ background: "linear-gradient(135deg,#3b82f6,#1d4ed8)", border: "1px solid #93c5fd", borderRadius: 10, padding: "10px 30px", color: "#fff", fontWeight: 900, fontSize: 14, cursor: "pointer" }}>
+              查看賽後結算 →
+            </button>
+          )}
+        </div>
       )}
+
+      {showReplay && <MobaReplayScreen replay={replay} onClose={() => setShowReplay(false)} />}
     </div>
   );
 }
