@@ -1,11 +1,11 @@
-import { LogicEngine } from "./src/LogicEngine.js";
-import { BattleEventTracker, towersDestroyedBy } from "./src/battle/battleEvents.js";
-import { emptyBattleState, ingestReducer } from "./src/battle/battleReducer.js";
-import { snapshotToBattleResult } from "./src/battle/battleResult.js";
-import { applyMatchResult, createInitialProgress, buildLoadout } from "./src/hero/heroProgress.js";
-import { standings, playerRanking, analytics } from "./src/platform/seasonData.js";
-import { HERO_ASSIGN, ALL_HERO_IDS, ROSTER } from "./src/data/roster.js";
-import { heroById } from "./src/data/heroDatabase.js";
+import { LogicEngine } from "../src/LogicEngine.js";
+import { BattleEventTracker, towersDestroyedBy } from "../src/battle/battleEvents.js";
+import { emptyBattleState, ingestReducer } from "../src/battle/battleReducer.js";
+import { snapshotToBattleResult } from "../src/battle/battleResult.js";
+import { applyMatchResult, createInitialProgress, buildLoadout } from "../src/hero/heroProgress.js";
+import { standings, playerRanking, analytics } from "../src/platform/seasonData.js";
+import { HERO_ASSIGN, ALL_HERO_IDS, ROSTER } from "../src/data/roster.js";
+import { heroById } from "../src/data/heroDatabase.js";
 
 // 模擬 useBattleFeed 管線（Node 版）：每幀 tracker+reducer，終局產出 result
 function playMatch(seed, loadout) {

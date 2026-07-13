@@ -40,7 +40,10 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
 
   const players = profile.players ?? [];
   const inbox = profile.inbox ?? [];
-  const T = { ...profile.team, ...profile.meta, gold: money(profile.finance.funds), players: players.length, mail: inbox.length, inbox: inbox.filter((m) => m.unread).length };
+  // S25：天賦點徽章＝選手實際未花費天賦點總和（升級時由 applyMatchProgress 發放），
+  //   不再是 meta.talentPending 的靜態種子值 → 天賦點閉環在首頁看得見。
+  const talentTotal = players.reduce((s, p) => s + (Number.isFinite(p.talentPoints) ? p.talentPoints : 0), 0);
+  const T = { ...profile.team, ...profile.meta, gold: money(profile.finance.funds), players: players.length, mail: inbox.length, inbox: inbox.filter((m) => m.unread).length, talentPending: talentTotal };
   const finBars = profile.finance.weekly9 ?? [6, 4, 5, 3, 2, 9, 5, 6, 4];
   const sponsor = profile.activeSponsor ? sponsorById(profile.activeSponsor.id) : null;
   const modes = [

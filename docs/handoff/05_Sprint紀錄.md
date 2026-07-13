@@ -531,3 +531,105 @@ Dashboard/Season 頁把 history 全視為 MOBA 戰績——寫入 CS 會污染 M
 - 戰術「執行度」與勝負無關（刻意）：執行成功 ≠ 贏。
 - 舊腳本 `check_flow09` / `check_dash10` / `check_mount09` 仍失效（S23 已記錄，
   非現役，本 Sprint 未動）。
+
+## Sprint 25 — Unified Match Rewards & Player Progress
+
+目標：統一 MOBA / CS 的賽後獎勵、選手 XP、等級與天賦點回寫流程。
+**不合併** BattleResult.v2 與 CsMatchResult.v1，**不合併** MOBA history 與 csHistory。
+新增的是共用的「回寫交易層」。
+
+### Audit（修改前的真實現況）
+
+| 面向 | MOBA | CS |
+|---|---|---|
+| 結果契約 | BattleResult.v2（**無 matchId、無時間戳**） | CsMatchResult.v1（有 matchId） |
+| 入史 | seasonStore（dedupe by `winner\|duration\|score` 內容雜湊） | csHistory（dedupe by matchId） |
+| 結算觸發點 | useBattleFeed（引擎終局）✅ | **CsResultScreen 掛載時 useEffect** ⚠ |
+| 獎金 | ❌ **完全沒有** | ✅ updateEconomy |
+| 粉絲 | ❌ **完全沒有** | ✅ updateEconomy |
+| 戰隊 XP/等級 | ❌ 沒有 | ⚠ 只記在 rewards.xp，不回寫（刻度不符） |
+| 天賦點 | ❌ 沒有（updateEconomy 算了 talentPointsAdd，**無人消費**） | ❌ 沒有 |
+| 選手 XP/等級 | ❌ **根本不存在**（players[] 有 lv 但**無 xp 欄位**，lv 是 Legacy 靜態種子，比賽永不改變） | ❌ 同左 |
+
+也就是說：**MOBA 打一百場，錢、粉絲、選手 XP 全部不動**；CS 只有錢和粉絲會動。
+天賦點閉環從來不存在。
+
+另外抓到兩個既有缺陷：
+1. CS 結算掛在 Result Screen 掛載 → 玩家沒進 Result 就**永久漏發獎**。
+2. seasonStore 用內容雜湊當去重鍵 → 兩場「完全相同」的比賽第二場會被靜默丟棄。
+
+### 新增檔案
+
+- `src/platform/contracts/matchProgressTransaction.js` — 回寫交易契約 v1 + validate
+  （所有數值必須有限；不適用欄位一律 0；playerId 必須是字串 id，禁用 index / 名字）。
+- `src/platform/progress/playerLevel.js` — 平台唯一等級刻度（純函式）。
+- `src/platform/progress/rewardFormulas.js` — 唯一的獎勵公式所在地 + 版本常數。
+- `src/platform/progress/applyMatchProgress.js` — 單一結算服務（純 reducer + receipt）。
+- `src/platform/progress/adapters/mobaProgressAdapter.js`
+- `src/platform/progress/adapters/csProgressAdapter.js`
+- `src/platform/progress/settleCsMatch.js` — CS 比賽完成邊界。
+- `src/ui/RewardReceiptPanel.jsx` — MOBA / CS 共用的 receipt 顯示元件。
+- `tools/check_progress25.mjs` — 34 項驗證。
+- `docs/design/賽後結算與選手成長系統.md` — 完整設計文件。
+
+### 修改
+
+- `profileStore` — 新增 `players[].xp`（累積總 XP）/ `players[].talentPoints` /
+  `processedMatchTransactions`（冪等帳本）/ `schemaVersion: 2` + `migratePlayer()`。
+  新增 `applyMatchProgress(tx)`（**MOBA / CS 唯一發獎點**）。
+  **`recordCsMatch` 降級為只入史**——S23 時它同時發錢，若不拆會與新流程雙倍入帳。
+- `useBattleFeed` — MOBA 在引擎終局結算（不靠 Result Screen）。
+- `AppShell` — CS 在 `onFinish`（比賽完成邊界）結算。
+- `BattleEndScreen` / `CsResultScreen` — **不再結算**，只讀 receipt 顯示。
+- `DashboardScreen` — 天賦徽章改為全隊未花費天賦點總和（閉環可見）。
+- `tools/check_cs23.mjs` — 改驅動新入口 `settleCsMatch`；**原 27 項保證全數保留**
+  （獎金/粉絲/冪等/連勝/敗場公式）+ 新增 1 項選手 XP 保證 → 28/28。
+- `tools/check_flow09.mjs` / `check_dash10.mjs` — 修好 `./src/` → `../src/` 的
+  失效 import 路徑（S23 記錄的技術債，順手清掉）→ 兩支復活且全綠。
+
+### 本 Sprint 抓到並修正的真實缺陷
+
+**MOBA 輔助永遠吃虧。** 第一版 XP 公式讓 `playerRating` 佔一半權重。但 MOBA 的
+`playerRating` 是未正規化原始分（重金錢與擊殺），實測 carry 62 分 vs 輔助 10 分。
+結果輔助被壓在係數下限，XP 只有隊均 **70%** —— 正是 §9 明文禁止的情形。
+改為以 **participation**（助攻同權）為主、rating 只當 ±15% 修正後 → 輔助達隊均 **91%**。
+
+### 驗證（全部檢查 exit code，杜絕假通過）
+
+| 腳本 | 結果 |
+|---|---|
+| `check_progress25` | ✅ 34/34（exit 0） |
+| `check_cs23` | ✅ 28/28（exit 0） |
+| `check_moba_tactic24` | ✅ 27/27（exit 0） |
+| `check_flow09` / `check_dash10` | ✅ exit 0（本 Sprint 修復後復活） |
+| `regress` / `regress2` | ✅ exit 0（15/15、19/20 達標） |
+| `npm run build` | ✅ |
+
+禁改清單 git diff 零改變：LogicEngine、battleResult、BattleResult 契約、
+CsMatchResult 契約、EsportsFPS3D、MobaTacticConfig、seasonStore、roster。
+
+### 獎勵比較（固定 fixture）
+
+| 情境 | team$（元） | 粉絲 | 均 XP |
+|---|---|---|---|
+| MOBA 勝利 | 330,000 | 173 | 55.2 |
+| MOBA 失敗 | 80,000 | 45 | 23.2 |
+| CS 勝利 | 430,000 | 243 | 55.0 |
+| CS 失敗 | 80,000 | 19 | 23.4 |
+
+MOBA carry 71 / support 50（隊均 55.2）；CS AWP 71 / IGL 45（隊均 55.0）。
+輸一定比贏少；MVP 不異常高；比賽拖長不放大獎勵。
+
+### 已知限制 / 技術債
+
+- **MOBA matchId 是內容雜湊**（BattleResult.v2 無 matchId 且契約凍結）。
+  兩場「完全相同」的比賽會被視為同一場 → 第二場不發獎。機率極低，
+  且比 seasonStore 現有的 4 欄位 resultKey **更安全**。真正的解法是讓
+  BattleResult 帶 matchId（需 Ray 核准改契約）。
+- **CS 團隊獎金略高於 MOBA**（43 萬 vs 33 萬，1.3×）：因 CS 的 marginF 用回合差、
+  MOBA 固定 3/8。在容忍範圍內，Legacy 公式凍結，**未重新平衡**，列為觀察項。
+- **聲望永遠 0**（無經驗證公式，不編造）。
+- **天賦點只進不出**（Legacy TalentModule 尚未恢復）。
+- **team.lv/xp 刻度仍未統一**（「萬 XP」展示刻度）：S25 刻意不碰，
+  等級閉環做在「選手」層（契約的 teamRewards 本來就只有 money/fans/reputation）。
+- `check_mount09` 仍失效（檢查 Sprint09 時代畫面，非現役）。

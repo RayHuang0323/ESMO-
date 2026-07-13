@@ -21,6 +21,10 @@ import { heroById } from "../../data/heroDatabase.js";
 import HeroPortrait from "../../ui/HeroPortrait.jsx";
 import { GC } from "../../ui/theme.js";
 import { mobaTacticById } from "../../platform/contracts/MobaTacticConfig.js";
+import { useProfileStore } from "../../platform/profileStore.js";
+import { makeTransactionId } from "../../platform/contracts/matchProgressTransaction.js";
+import { mobaMatchId } from "../../platform/progress/adapters/mobaProgressAdapter.js";
+import RewardReceiptPanel from "../../ui/RewardReceiptPanel.jsx";
 
 const KEYFRAMES = `
 @keyframes esmoEndPop { 0%{transform:scale(0.55);opacity:0} 60%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
@@ -91,6 +95,10 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
   const [heroPage, setHeroPage] = useState(null);   // {heroId,heroName,playerName,side}
   const lastDetail = useHeroProgressStore((s) => s.lastDetail);
   const progress = useHeroProgressStore((s) => s.progress);
+  // S25：本畫面**不結算**（結算已在 useBattleFeed 的引擎終局做掉），只讀 receipt 顯示。
+  //   → 沒有發獎 useEffect；重進 Result / StrictMode 雙掛載都不會重複發放。
+  const txId = result ? makeTransactionId("moba", mobaMatchId(result)) : null;
+  const receipt = useProfileStore((s) => (txId ? (s.processedMatchTransactions ?? {})[txId] : null));
   useEffect(() => { const t = setTimeout(() => setPhase(1), 900); return () => clearTimeout(t); }, []);
 
   if (!result) return null;                               // 終局 result 由 useBattleFeed 先行寫入
@@ -192,8 +200,12 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
             </div>
           )}
 
-          {/* 右欄：戰術執行 / 金錢圖 / 推塔圖 / 戰報摘要 */}
+          {/* 右欄：賽後結算 / 戰術執行 / 金錢圖 / 推塔圖 / 戰報摘要 */}
           <div style={{ display: "flex", flexDirection: "column", gap: 9, width: 240 }}>
+            {/* Sprint25：賽後結算收據（= applyMatchProgress 實際入帳值；UI 不重算、不發獎）。
+                與 CS Result 共用同一個元件 → 兩款遊戲的結算呈現一致。 */}
+            <RewardReceiptPanel receipt={receipt} accent={GC.gold} />
+
             {/* Sprint24：戰術執行證據（result.tactic + result.tacticExecution = 引擎真實計數）。
                 「執行度」= 觀察指標達標數，與勝負無關（戰術執行成功 ≠ 贏）。 */}
             {result.tactic && result.tacticExecution && (() => {

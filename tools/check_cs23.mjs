@@ -63,31 +63,44 @@ ck("summaryEvents = 逐回合真實資料", r1.summaryEvents.length === 3 && r1.
 ck("duration 缺值誠實為 null（不編造）", r1.duration === null && r1.roundCount === 11);
 ck("rewards 轉換當下未入帳（null）", r1.rewards.money === null && r1.recordedAt === null);
 
-// Store 回寫（node 無 localStorage → 純記憶體，不污染存檔）
+// ── Store 回寫 ──────────────────────────────────────────────────────────────
+// ⚠ Sprint25 變更：CS 的發獎已從 recordCsMatch 移到「比賽完成邊界」settleCsMatch
+//   （recordCsMatch 降級為只入史，否則會與 applyMatchProgress 雙倍入帳）。
+//   本檔改為驅動**新入口**——但驗證的「保證」完全不變：
+//   獎金/粉絲仍是 Legacy updateEconomy 公式、仍冪等、連勝仍取自 csHistory、敗場公式不變。
+const { settleCsMatch } = await import("../src/platform/progress/settleCsMatch.js");
 const st = () => useProfileStore.getState();
 const funds0 = st().finance.funds, fans0 = st().meta.fans, inbox0 = st().inbox.length, tx0 = st().finance.transactions.length;
-const e1 = st().recordCsMatch(r1);
+
+const rc1 = settleCsMatch(r1);
+const e1 = st().csHistory[0];
 const eco1 = updateEconomy({ record: { streak: 0 }, fanCount: 0, budget: 0, xp: { lv: 0, cur: 0, max: Number.MAX_SAFE_INTEGER } }, { win: true, marginF: Math.min(5 / 8, 1) });
 ck("csHistory 寫入 1 筆", st().csHistory.length === 1 && st().csHistory[0].matchId === "cs_test_1");
-ck("獎勵 = Legacy updateEconomy 公式（勝 margin5）", e1.rewards.money === eco1.prizeGain * WAN && e1.rewards.fans === eco1.fanGain && e1.rewards.xp === eco1.xpGain);
+ck("獎勵 = Legacy updateEconomy 公式（勝 margin5）", rc1.team.money === eco1.prizeGain * WAN && rc1.team.fans === eco1.fanGain);
 ck("財務入帳（元）", st().finance.funds === funds0 + eco1.prizeGain * WAN);
 ck("交易紀錄新增（獎金 income）", st().finance.transactions.length === tx0 + 1 && st().finance.transactions[0].cat === "prize");
 ck("粉絲入帳", st().meta.fans === fans0 + eco1.fanGain);
 ck("收件匣通知 +1（type=match）", st().inbox.length === inbox0 + 1 && st().inbox[0].type === "match" && st().inbox[0].unread === true);
 ck("XP 不回寫 team.lv/xp（刻度不符）", st().team.lv === 93 && st().team.xp === 7.27);
+// S25 新增保證：XP 改發給「選手」（csHistory.rewards.xp = 選手 XP 合計，非 Legacy 團隊 XP）
+ck("S25：選手 XP 已回寫（entry.rewards.xp = receipt 選手 XP 合計 > 0）",
+  e1.rewards.xp === rc1.totals.xpGained && rc1.totals.xpGained > 0 && e1.transactionId === rc1.transactionId);
 
-const dup = st().recordCsMatch(r1);
-ck("冪等：同 matchId 不重複入帳", st().csHistory.length === 1 && st().finance.funds === funds0 + eco1.prizeGain * WAN && dup.matchId === "cs_test_1");
+const dup = settleCsMatch(r1);
+ck("冪等：同 matchId 不重複入帳", st().csHistory.length === 1
+  && st().finance.funds === funds0 + eco1.prizeGain * WAN
+  && st().meta.fans === fans0 + eco1.fanGain
+  && dup.alreadyApplied === true);
 
 const r2 = toCsMatchResult(mkRaw("cs_test_2"), ctx);
-st().recordCsMatch(r2);
+settleCsMatch(r2);
 const eco2 = updateEconomy({ record: { streak: 1 }, fanCount: 0, budget: 0, xp: { lv: 0, cur: 0, max: Number.MAX_SAFE_INTEGER } }, { win: true, marginF: Math.min(5 / 8, 1) });
 ck("連勝 streak 來自 csHistory（第二勝 +25 粉絲）", st().csHistory[0].rewards.fans === eco2.fanGain && eco2.fanGain === eco1.fanGain + 25);
 
 const r3 = toCsMatchResult(mkRaw("cs_test_3", false), ctx);
-const e3 = st().recordCsMatch(r3);
+const rc3 = settleCsMatch(r3);
 const eco3 = updateEconomy({ record: { streak: 0 }, fanCount: 0, budget: 0, xp: { lv: 0, cur: 0, max: Number.MAX_SAFE_INTEGER } }, { win: false, marginF: Math.min(3 / 8, 1) });
-ck("敗場公式（獎金 8 萬 / 低粉絲 / XP20）", e3.rewards.money === eco3.prizeGain * WAN && eco3.prizeGain === 8 && e3.rewards.xp === 20 && e3.rewards.fans === eco3.fanGain);
+ck("敗場公式（獎金 8 萬 / 低粉絲）", rc3.team.money === eco3.prizeGain * WAN && eco3.prizeGain === 8 && rc3.team.fans === eco3.fanGain);
 ck("契約拒收非 CS 結果", toCsMatchResult({ mode: "MOBA" }) === null && st().recordCsMatch({ schema: "BattleResult.v2" }) === null);
 
 let p = 0; A.forEach(([n, c]) => { console.log((c ? "✅ " : "❌ ") + n); if (c) p++; });

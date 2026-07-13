@@ -1,11 +1,11 @@
-import { LogicEngine } from "./src/LogicEngine.js";
-import { BattleEventTracker } from "./src/battle/battleEvents.js";
-import { emptyBattleState, ingestReducer } from "./src/battle/battleReducer.js";
-import { snapshotToBattleResult } from "./src/battle/battleResult.js";
-import { standings, playerRanking, analytics } from "./src/platform/seasonData.js";
-import { applyMatchResult, createInitialProgress, buildLoadout } from "./src/hero/heroProgress.js";
-import { HERO_ASSIGN, ALL_HERO_IDS, ROSTER, TEAMS } from "./src/data/roster.js";
-import { heroById, CHAMPIONS_100 } from "./src/data/heroDatabase.js";
+import { LogicEngine } from "../src/LogicEngine.js";
+import { BattleEventTracker } from "../src/battle/battleEvents.js";
+import { emptyBattleState, ingestReducer } from "../src/battle/battleReducer.js";
+import { snapshotToBattleResult } from "../src/battle/battleResult.js";
+import { standings, playerRanking, analytics } from "../src/platform/seasonData.js";
+import { applyMatchResult, createInitialProgress, buildLoadout } from "../src/hero/heroProgress.js";
+import { HERO_ASSIGN, ALL_HERO_IDS, ROSTER, TEAMS } from "../src/data/roster.js";
+import { heroById, CHAMPIONS_100 } from "../src/data/heroDatabase.js";
 
 function playMatch(seed, lo) {
   const e = new LogicEngine(seed, lo); const tr = new BattleEventTracker(); let st = emptyBattleState(), snap;

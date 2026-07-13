@@ -20,10 +20,19 @@
 //  Sprint23 新增（CS 訓練賽結果回寫；MOBA 戰績仍由 seasonStore 唯一提供）：
 //    · csHistory[]      CS 訓練賽紀錄（CsMatchResult.v1；與 MOBA history 分離，
 //                       不是第二套 Match History——兩者記的是不同 mode 的比賽）
-//    · recordCsMatch()  唯一入史口（冪等）：獎金→finance、粉絲→meta.fans、
-//                       收件匣通知；公式重用 matchRecorder.updateEconomy（Legacy 逐字）。
-//                       XP 只計算與記錄，不回寫 team.lv/xp（該欄位為「萬 XP」
-//                       展示刻度，與 Legacy xpGain 刻度不符 → 待刻度統一 Sprint）。
+//    · recordCsMatch()  CS 入史口（冪等）。
+//
+//  Sprint25 改版（賽後結算統一）：
+//    · applyMatchProgress(tx)  ← **MOBA / CS 唯一的發獎入口**（錢/粉絲/聲望/
+//      選手 XP/等級/天賦點）。冪等鍵 = tx.transactionId，帳本存在
+//      processedMatchTransactions。純邏輯在 progress/applyMatchProgress.js。
+//    · recordCsMatch() 降級為「只入史」——S23 時它同時發錢，若不拆會與
+//      applyMatchProgress 雙倍入帳。
+//    · players[] 新增 xp（**累積總 XP**）與 talentPoints；lv 一律由 xp 導出。
+//      舊存檔（有 lv 無 xp）由 migratePlayer 安全回填，等級不倒退。
+//    · team.lv/xp（「萬 XP」展示刻度）**刻意不碰**：與 xpGain 50/20 刻度不符，
+//      S23 已標記為技術債，S25 的等級閉環做在「選手」層（見 teamRewards 契約
+//      只有 money/fans/reputation，沒有 xp）。
 // ============================================================================
 import { create } from "zustand";
 import { TEAMS } from "../data/roster.js";
@@ -31,10 +40,13 @@ import { INITIAL_PLAYERS } from "../data/players.js";
 import {
   ROSTER_CAP, sponsorById, courseById, applyCourse, conditionFor,
 } from "../data/playerModel.js";
-import { updateEconomy } from "./data/matchRecorder.js";
 import { CS_RESULT_SCHEMA } from "./contracts/CsMatchResult.js";
+import { applyProgressToState, findReceipt } from "./progress/applyMatchProgress.js";
+import { totalXpForLevel, levelFromTotalXp } from "./progress/playerLevel.js";
 
 const KEY = "esmo.profile.v1";
+/** Sprint25：persistence schema 版本（migration 用；沿用同一個 localStorage key，不清資料）。 */
+export const PROFILE_SCHEMA_VERSION = 2;
 const canLS = typeof localStorage !== "undefined";
 export const WAN = 10_000;                    // 1 萬（Legacy 以「萬」計價，本 Store 以元存放）
 const uid = () => Date.now() + Math.floor(Math.random() * 1000);
@@ -87,10 +99,12 @@ const DEFAULT = {
     ],
   },
   meta: { fans: 128_000, reputation: 47, season: 1, players: INITIAL_PLAYERS.length, days: 8, week: 1, achievement: 48, talentPending: 1 },
-  players: INITIAL_PLAYERS,
+  players: INITIAL_PLAYERS.map(migratePlayer),   // S25：種子名單也要有 xp/talentPoints
   activeSponsor: null,           // {id, weeksLeft, signedWeek} — Legacy：一次只能有一家
   scouted: {},                   // {prospectId: 偵查等級 0–2}
   csHistory: [],                 // S23：CS 訓練賽紀錄（CsMatchResult.v1，最新在前，上限 30）
+  schemaVersion: PROFILE_SCHEMA_VERSION,
+  processedMatchTransactions: {},// S25：冪等帳本 {transactionId: receipt}（防重複發獎）
   inbox: [
     { id: 1, type: "match",   from: "聯賽官方",         subject: "第 1 週賽程已公布",   text: "第 1 週賽程已公布，請確認出賽名單。", time: "剛剛", unread: true },
     { id: 2, type: "recruit", from: "球探部",           subject: "3 名新星進入觀察名單", text: "球探回報：3 名新星進入觀察名單，可前往招募查看。", time: "1 小時前", unread: true },
@@ -130,7 +144,13 @@ const load = () => {
         budget:       arr(f.budget,       DEFAULT.finance.budget),
       },
       meta:    { ...DEFAULT.meta, ...saved.meta },
-      players: arr(saved.players, DEFAULT.players),
+      // S25 migration：舊存檔的 players[] 沒有 xp/talentPoints → 安全補齊（見 migratePlayer）
+      players: arr(saved.players, DEFAULT.players).map(migratePlayer),
+      schemaVersion: PROFILE_SCHEMA_VERSION,
+      processedMatchTransactions:
+        saved.processedMatchTransactions && typeof saved.processedMatchTransactions === "object"
+          ? saved.processedMatchTransactions
+          : {},
       // Sprint10 的 sponsors[] 假名單已退場；舊存檔沒有 activeSponsor → null（尚未簽約）
       activeSponsor: saved.activeSponsor ?? DEFAULT.activeSponsor,
       scouted: saved.scouted && typeof saved.scouted === "object" ? saved.scouted : {},
@@ -142,6 +162,31 @@ const load = () => {
     };
   } catch { return DEFAULT; }
 };
+
+/**
+ * S25 migration：選手 XP / 等級 / 天賦點（安全降級，絕不清資料、絕不讓等級倒退）。
+ *
+ * Sprint25 之前 players[] 沒有 xp 欄位，lv 是 Legacy 種子的靜態值（38/35/42…）。
+ * 規則：
+ *   · 舊資料（有 lv 無 xp）→ xp = totalXpForLevel(lv)，保留原等級（**不倒退**）。
+ *     這是「相容層」，不是偷偷把當級 XP 當成總 XP —— 因為根本沒有舊 XP 可轉換。
+ *   · 已有 xp（S25 之後）→ lv 一律由 xp 重新導出，保證 lv 與 xp 永遠一致。
+ *   · 損壞資料（xp/lv 為 NaN / Infinity / 字串 / 負數）→ 降級為安全值，不讓 App 白畫面。
+ */
+function migratePlayer(p) {
+  if (!p || typeof p !== "object") return p;
+  const safeLv = clampLevel(p.lv);
+  const hasXp = Number.isFinite(p.xp) && p.xp >= 0;
+  const xp = hasXp ? Math.round(p.xp) : totalXpForLevel(safeLv);
+  const lv = levelFromTotalXp(xp);
+  const talentPoints = Number.isFinite(p.talentPoints) && p.talentPoints >= 0 ? Math.floor(p.talentPoints) : 0;
+  return { ...p, xp, lv, talentPoints };
+}
+function clampLevel(v) {
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.min(99, Math.floor(n));
+}
 
 /** 舊存檔的收件匣是 {from,subject,unread} → 補齊 Legacy NotifyModule 需要的欄位 */
 function normalizeMsg(m, i) {
@@ -242,6 +287,29 @@ export const useProfileStore = create((set, get) => ({
     get().save();
   },
 
+  // ── S25：賽後結算（MOBA / CS 共用的唯一寫入點）──────────────────────
+  /**
+   * 套用一張 MatchProgressTransaction.v1。
+   *   · 冪等：同 transactionId 再次呼叫 → 不重複發獎，回傳既有 receipt（alreadyApplied: true）。
+   *     ⇒ React StrictMode 雙掛載、重整後重進 Result、返回再進入，都不會重複發獎。
+   *   · 單一 synchronous set()：錢 / 粉絲 / 聲望 / 選手 XP / 等級 / 天賦點 / 冪等帳本
+   *     一次寫完 → 不會出現「history 寫了但錢沒寫」的半套狀態。
+   *   · 驗證失敗 → 完全不寫入，回傳 { ok:false, errors }。
+   * @returns {object} receipt（實際套用後的真實差額；Result Screen 直接顯示它，不自己重算）
+   */
+  applyMatchProgress(tx) {
+    const { nextState, receipt } = applyProgressToState(get(), tx);
+    if (!nextState) return receipt;          // 已套用過 或 驗證失敗 → 不動 Store
+    set(nextState);
+    get().save();
+    return receipt;
+  },
+
+  /** 查詢某場是否已結算（Result Screen 用來判斷「本場已結算」）。 */
+  getReceipt(transactionId) {
+    return findReceipt(get(), transactionId);
+  },
+
   // ── 球探招募（Legacy RecruitModule）─────────────────────────────────
   setScouted(prospectId, level) {
     set({ scouted: { ...(get().scouted ?? {}), [prospectId]: level } });
@@ -255,40 +323,38 @@ export const useProfileStore = create((set, get) => ({
    * 回寫：finance.funds(+獎金,元)、finance.transactions、meta.fans、收件匣。
    * XP 只記錄在 rewards.xp / csHistory，不動 team.lv/xp（刻度不符，見檔頭）。
    */
-  recordCsMatch(result) {
+  /**
+   * S25 改版：本函式**只負責入史**，不再自己發獎。
+   *
+   * 為什麼改：Sprint23 時 recordCsMatch 同時做「入史 + 發錢 + 加粉絲」，
+   * Sprint25 把發獎統一到 applyMatchProgress。若這裡還發一次，CS 就會**雙倍入帳**。
+   * 現在的分工（§10 的順序）：
+   *   applyMatchProgress(tx) → receipt   ← 唯一發獎點（錢/粉絲/XP/等級/天賦點）
+   *   recordCsMatch(result, receipt)     ← 只寫 csHistory + 收件匣，附上 transactionId
+   *
+   * 冪等：同 matchId 重複呼叫 → 回傳既有 entry，不重複入史、不重複發通知。
+   */
+  recordCsMatch(result, receipt = null) {
     if (!result || result.schema !== CS_RESULT_SCHEMA || !result.matchId) return null;
     const hist = get().csHistory ?? [];
     const dup = hist.find((h) => h.matchId === result.matchId);
     if (dup) return dup;
+
     const win = result.winner === "us";
-    const margin = Math.abs((result.ourScore ?? 0) - (result.enemyScore ?? 0));
-    const marginF = Math.min(margin / 8, 1);
-    let streak = 0;
-    for (const h of hist) { if (h.winner === "us") streak++; else break; }
-    // xp 給哨兵值：只取 fanGain/prizeGain/xpGain，不觸發升級迴圈（team.xp 刻度不符）
-    const eco = updateEconomy(
-      { record: { streak }, fanCount: get().meta.fans ?? 0, budget: 0, xp: { lv: 0, cur: 0, max: Number.MAX_SAFE_INTEGER } },
-      { win, marginF }
-    );
-    const prize = eco.prizeGain * WAN; // updateEconomy 以「萬」計 → 本 Store 以元存放
-    const entry = { ...result, rewards: { money: prize, fans: eco.fanGain, xp: eco.xpGain }, recordedAt: Date.now() };
-    const fin = get().finance;
-    const tx = {
-      id: "cs" + uid(),
-      date: new Date().toLocaleDateString("zh-TW", { month: "2-digit", day: "2-digit" }),
-      type: "income", cat: "prize",
-      label: `CS 訓練賽${win ? "勝利" : "參賽"}獎金（${result.mapName ?? result.mapId}）`,
-      amount: prize, color: "#34d399",
+    const money = receipt?.team?.money ?? 0;
+    const fans = receipt?.team?.fans ?? 0;
+    const xpTotal = receipt?.totals?.xpGained ?? 0;
+    const entry = {
+      ...result,
+      rewards: { money, fans, xp: xpTotal },   // = receipt 的真實入帳值（不另算一套）
+      transactionId: receipt?.transactionId ?? null,
+      recordedAt: Date.now(),
     };
-    set({
-      csHistory: [entry, ...hist].slice(0, 30),
-      finance: { ...fin, funds: fin.funds + prize, transactions: [tx, ...(fin.transactions ?? [])].slice(0, 30) },
-      meta: { ...get().meta, fans: (get().meta.fans ?? 0) + eco.fanGain },
-    });
+    set({ csHistory: [entry, ...hist].slice(0, 30) });
     get().pushInbox({
       type: "match", from: "賽事中心",
       subject: `CS 訓練賽${win ? "勝利" : "失利"} ${result.ourScore}:${result.enemyScore}`,
-      text: `${result.mapName ?? result.mapId} · ${result.tacticName ?? "未部署戰術"}｜獎金 +$${eco.prizeGain}萬、粉絲 +${eco.fanGain}、XP +${eco.xpGain}（XP 暫不回寫戰隊等級）`,
+      text: `${result.mapName ?? result.mapId} · ${result.tacticName ?? "未部署戰術"}｜獎金 +$${Math.round(money / WAN)}萬、粉絲 +${fans}、選手 XP 共 +${xpTotal}`,
     });
     return entry;
   },
@@ -308,6 +374,8 @@ export const useProfileStore = create((set, get) => ({
       status: "預備隊",
       training: null,
       lv: 1,
+      xp: 0,                  // S25：新秀從 0 累積總 XP（lv 由 xp 導出）
+      talentPoints: 0,
       potential: prospect.potential,
       age: prospect.age,
       personality: prospect.personality,

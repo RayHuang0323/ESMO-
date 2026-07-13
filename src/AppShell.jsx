@@ -42,6 +42,8 @@ import CsMapSelectScreen from "./screens/fps/CsMapSelectScreen.jsx";
 import CsTacticScreen from "./screens/fps/CsTacticScreen.jsx";
 import CsLoadingScreen from "./screens/fps/CsLoadingScreen.jsx";
 import CsResultScreen from "./screens/fps/CsResultScreen.jsx";
+// ── Sprint25：賽後結算（MOBA 在 useBattleFeed 終局；CS 在此處的比賽完成邊界）──
+import { settleCsMatch } from "./platform/progress/settleCsMatch.js";
 
 export default function AppShell() {
   const [screen, setScreen] = useState("dashboard");
@@ -83,7 +85,8 @@ export default function AppShell() {
       {screen === "csMap" && <CsMapSelectScreen onNext={(m) => { setCsConfig({ mapKey: m.key, mapName: m.name }); setScreen("csTactic"); }} onBack={go("csPrep")} />}
       {screen === "csTactic" && <CsTacticScreen mapName={csConfig?.mapName} onNext={(t) => { setCsConfig((c) => ({ ...c, tacticId: t.id, tacticName: t.name, tacticType: t.type, tacticEmoji: t.emoji, seed: Math.floor(Math.random() * 100000) })); setScreen("csLoading"); }} onBack={go("csMap")} />}
       {screen === "csLoading" && <CsLoadingScreen config={csConfig} onDone={go("cs")} />}
-      {screen === "cs" && <CsMatchScreen config={csConfig} onFinish={(r) => { setCsResult(r); setScreen("csResult"); }} onBack={home} />}
+      {/* S25：CS 結算在「比賽完成邊界」做掉（不是 Result 掛載時）→ 跳過 Result 也不會漏發獎 */}
+      {screen === "cs" && <CsMatchScreen config={csConfig} onFinish={(r) => { settleCsMatch(r); setCsResult(r); setScreen("csResult"); }} onBack={home} />}
       {screen === "csResult" && <CsResultScreen result={csResult} onDone={() => { setCsResult(null); setCsConfig(null); setScreen("dashboard"); }} />}
 
       <div style={{ position: "absolute", bottom: 6, right: 12, color: "rgba(147,197,253,0.45)", fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", pointerEvents: "none", zIndex: 20 }}>ESMO 主幹 · S23 SHELL</div>

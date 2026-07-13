@@ -10,8 +10,10 @@ import { useGameStore } from "../useGameStore.js";
 import { useBattleStore } from "./battleStore.js";
 import { useHeroProgressStore } from "../hero/heroProgressStore.js";
 import { useSeasonStore } from "../platform/seasonStore.js";
+import { useProfileStore } from "../platform/profileStore.js";
 import { snapshotToBattleResult } from "./battleResult.js";
 import { draftHeroAssign } from "./moba/draftRoster.js";
+import { mobaResultToTransaction } from "../platform/progress/adapters/mobaProgressAdapter.js";
 
 /**
  * @param {object|null} draft  Ban/Pick 結果 {picks,bans}（AppShell → GameView → 本 hook）。
@@ -39,9 +41,33 @@ export function useBattleFeed(draft = null) {
         const result = snapshotToBattleResult(snap, bs.log, { heroAssign: draftHeroAssign(draftRef.current) });
         bs.setResult(result);                                        // → EndScreen（禁止重新統計）
         useHeroProgressStore.getState().recordBattleResult(result);  // → Hero Progress
+
+        // ── Sprint25：賽後結算（此處＝比賽完成邊界，不是 Result Screen 掛載）──
+        //    刻意放在引擎終局而不是 BattleEndScreen：玩家就算直接離開 Result 畫面，
+        //    獎勵也不會漏發。冪等由 transactionId 保證，重進 Result 不會重複發。
+        //    §10 順序：Result → 建 Transaction → Apply → receipt → 才寫 history。
+        const profile = useProfileStore.getState();
+        const season = useSeasonStore.getState();
+        const tx = mobaResultToTransaction(result, {
+          players: profile.players ?? [],
+          streak: blueWinStreak(season.history ?? []),   // MOBA 自己的連勝（不讀 CS）
+          fansNow: profile.meta?.fans ?? 0,
+        });
+        if (tx) profile.applyMatchProgress(tx);
+
         useSeasonStore.getState().recordResult(result);              // → Season / History / Analytics
       }
     });
     return () => unsub();
   }, []);
+}
+
+/** 我方（藍隊）MOBA 連勝數：從最近一場往回數（history 為時間順序，最新在尾端）。 */
+function blueWinStreak(history) {
+  let n = 0;
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i]?.winner === "blue") n++;
+    else break;
+  }
+  return n;
 }

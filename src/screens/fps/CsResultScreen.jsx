@@ -6,21 +6,26 @@
 //    → 本隊 MVP 卡 → 本隊數據表（K/D/A · ADR · 爆頭 · KAST · 評分）→ 回合走勢。
 //  Architecture：
 //    · 只讀 CsMatchResult.v1（不碰 MOBA BattleResult；無 Hero/Dragon/Baron/Tower/QWER）。
-//    · 入史唯一口 = profileStore.recordCsMatch（冪等）：本畫面掛載時呼叫一次，
-//      畫面顯示的是入史後的 entry（含真實 rewards），並標示寫入狀態。
+//    · Sprint25：本畫面**不再結算**。S23 時是「掛載時 useEffect 發獎」，
+//      玩家若沒進 Result 就永久漏獎；現在結算已移到比賽完成邊界
+//      （AppShell → settleCsMatch）。本畫面只讀 receipt 顯示，UI 不重算獎勵。
 //    · 「再戰一場」屬 rematch 領域（需重置 seed/流程）→ 本 Sprint 不做，只回 Dashboard。
 // ============================================================================
-import React, { useEffect } from "react";
+import React from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
+import { makeTransactionId } from "../../platform/contracts/matchProgressTransaction.js";
 import { GC, FONT, MONO } from "../../ui/theme.js";
+import RewardReceiptPanel from "../../ui/RewardReceiptPanel.jsx";
 
 const K = { t: "#fb923c", tL: "#fed7aa", ct: "#38bdf8", ctL: "#a7e0ff" };
 const ratingCol = (r) => (r >= 1.2 ? GC.gold : r >= 1.0 ? GC.green : r >= 0.85 ? K.tL : GC.gray);
 
 export default function CsResultScreen({ result, onDone }) {
-  const recordCsMatch = useProfileStore((s) => s.recordCsMatch);
+  // S25：本畫面**不結算**（結算已在 AppShell 的比賽完成邊界做掉），只讀 receipt。
+  //   → 沒有 useEffect 發獎、沒有重算獎勵；重整 / 返回再進來都不會重複發放。
+  const txId = result?.matchId ? makeTransactionId("cs", result.matchId) : null;
+  const receipt = useProfileStore((s) => (txId ? (s.processedMatchTransactions ?? {})[txId] : null));
   const recorded = useProfileStore((s) => (s.csHistory ?? []).find((h) => h.matchId === result?.matchId));
-  useEffect(() => { if (result) recordCsMatch(result); }, [result, recordCsMatch]);
   const r = recorded ?? result;
 
   if (!r || r.mode !== "cs") {
@@ -36,7 +41,7 @@ export default function CsResultScreen({ result, onDone }) {
   const sorted = [...(r.players ?? [])].sort((a, b) => b.rating - a.rating || b.kills - a.kills);
   const mvp = r.mvp;
   const rounds = r.summaryEvents ?? [];
-  const rw = r.rewards ?? {};
+
 
   return (
     <div style={{ height: "100%", overflow: "auto", background: GC.bg, fontFamily: FONT }}>
@@ -67,21 +72,10 @@ export default function CsResultScreen({ result, onDone }) {
           </div>
         </div>
 
-        {/* 獎勵三格（Legacy：聲望/獎金/戰隊經驗）＝ recordCsMatch 真實入帳值 */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-          {[
-            ["粉絲", rw.fans != null ? `+${rw.fans}` : "入帳中…", K.t],
-            ["獎金", rw.money != null ? `+$${Math.round(rw.money / 10000)}萬` : "入帳中…", GC.green],
-            ["戰隊經驗", rw.xp != null ? `+${rw.xp}` : "入帳中…", K.ctL],
-          ].map((x, i) => (
-            <div key={i} style={{ background: GC.card, borderRadius: 11, padding: "9px 6px", border: `1px solid ${GC.line}`, textAlign: "center" }}>
-              <div style={{ color: GC.gray, fontSize: 8, fontWeight: 700, marginBottom: 3 }}>{x[0]}</div>
-              <div style={{ color: x[2], fontSize: 13, fontWeight: 900, fontFamily: MONO }}>{x[1]}</div>
-            </div>
-          ))}
-        </div>
+        {/* S25：賽後結算收據（= applyMatchProgress 實際入帳值，MOBA/CS 共用元件，UI 不重算） */}
+        <RewardReceiptPanel receipt={receipt} accent={K.t} />
         <div style={{ textAlign: "center", color: "#5a606e", fontSize: 8 }}>
-          {recorded ? "✅ 已寫入 CS 對戰紀錄 · 獎金/粉絲已入帳 · 已發收件匣通知" : "⏳ 寫入中…"}　XP 僅累計於紀錄，暫不回寫戰隊等級（刻度待統一）
+          {recorded ? "✅ 已寫入 CS 對戰紀錄（csHistory）· 已發收件匣通知" : "⏳ 寫入中…"}
         </div>
 
         {/* 本隊 MVP（Legacy） */}
