@@ -57,11 +57,12 @@ function Minimap() {
 }
 
 export default function GameView({ roster = ROSTER, onContinue = null, autoStart = false, draft = null, tactic = null }) {
-  // Sprint19【C】【D】：draft（Ban/Pick 結果）與 tactic（戰術）僅作 Presentation 傳遞，
-  //   不進入 LogicEngine、不影響戰鬥勝負（引擎契約凍結）。
+  // Sprint19【C】：draft（Ban/Pick 結果）仍僅作 Presentation 傳遞。
+  // Sprint24【D 升級】：tactic = MobaTacticConfig.v1 → start({tactic}) → engine.configureMatch
+  //   （行為權重層；戰術現在「真的」進 LogicEngine，證據寫入 BattleResult.tacticExecution）。
   const { playing, start, stop } = useLocalServer();
   // Sprint09：賽前準備銜接 — autoStart 掛載即開局（預設 false = 現行為不變）
-  useEffect(() => { if (autoStart && !playing) start(); }, []);  // eslint-disable-line
+  useEffect(() => { if (autoStart && !playing) start({ tactic }); }, []);  // eslint-disable-line
   const [follow, setFollow] = useState(true);        // 戰鬥鏡頭跟隨（BattleCameraController）
   const hud = useGameStore((s) => s.hud);
   // Sprint20【E】生效名單：Ban/Pick 選到的英雄取代 ROSTER 預設英雄（無 draft → 原 ROSTER）。
@@ -78,7 +79,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
 
       {/* Start / Stop / 鏡頭切換 */}
       {!playing && !hud.over && (
-        <button onClick={start} style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 10, background: "linear-gradient(135deg,#3b82f6,#1d4ed8)", border: "2px solid #93c5fd", borderRadius: 14, padding: "16px 40px", color: "#fff", fontSize: 20, fontWeight: 900, letterSpacing: "0.08em", cursor: "pointer", boxShadow: "0 8px 40px rgba(59,130,246,0.6)" }}>
+        <button onClick={() => start({ tactic })} style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 10, background: "linear-gradient(135deg,#3b82f6,#1d4ed8)", border: "2px solid #93c5fd", borderRadius: 14, padding: "16px 40px", color: "#fff", fontSize: 20, fontWeight: 900, letterSpacing: "0.08em", cursor: "pointer", boxShadow: "0 8px 40px rgba(59,130,246,0.6)" }}>
           ▶ 開始遊戲 / START
         </button>
       )}

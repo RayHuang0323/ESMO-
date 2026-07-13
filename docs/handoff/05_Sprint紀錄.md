@@ -457,3 +457,77 @@ Dashboard/Season 頁把 history 全視為 MOBA 戰績——寫入 CS 會污染 M
 - 舊的 `tools/check_flow09 / check_dash10` import 路徑仍是搬移前的 `./src/`
   （S22 只修了 regress×2）、`check_mount09` 檢查 Sprint09 時代畫面——三支在本
   Sprint 前即失效，屬非現役腳本，建議下次清理或修復（未動，避免超出範圍）。
+
+## Sprint 24 — MOBA 戰術系統（戰術真正進引擎）
+
+目標：把 Sprint19 以來一直是 Presentation 級的 MOBA 戰術，正式接進 LogicEngine，
+並留下可查核的執行證據——**但不得動 Battle Balance**。
+
+### 紅線
+
+> 戰術只改「行為權重 / 傾向 / 時機 / 路線 / 風險」，
+> 不加傷害、不加勝率、不加金錢係數、不寫死勝負。
+
+勝負仍由陣容 loadout、比分、經濟、地圖事件與 seed 決定。
+
+### 新增
+
+- `src/platform/contracts/MobaTacticConfig.js` — **MOBA 戰術正式契約 v1**。
+  八張卡 m1–m8 的 UI 欄位（emoji/risk/focus/desc/detail/boost）= Legacy
+  `TACTICS_LIB.moba` 逐字；新增數值欄位（lanePlan / macro / objectives /
+  economy / vision）+ `validateMobaTacticConfig()` + `toEngineTactic()`。
+- `docs/design/MOBA戰術系統.md` — 完整映射表與誠實邊界（契約註解指向本檔）。
+- `tools/check_moba_tactic24.mjs` — 27 項驗證（契約 / 接線 / 引擎行為 / CS 隔離）。
+
+### 修改
+
+- `src/LogicEngine.js`（**禁改清單檔案，本 Sprint 任務明確允許**）——嚴格附加：
+  `configureMatch({blue,red,meta})` 啟用戰術層；不呼叫 ⇒ `tacticOn=false` ⇒
+  全部新分支短路，走與 S23 完全相同的路徑與**同一條 rng 序列**。
+  戰術層用獨立 `rng2`（`seed ^ 0x9e3779b9` 派生）**不污染主 rng**——
+  這是「未啟用時位元一致」的關鍵。
+  行為點：團戰/龍/巴龍參與率、撤退門檻、推線深度、打野 Gank 節奏與挑路、
+  開局野區入侵、輔助遊走、帶線分推。
+- `src/useLocalServer.js` — `start({tactic})` → `toEngineTactic` → `configureMatch`；
+  對手固定 `STANDARD_OPP_TACTIC`（中性，不虛構對手 AI）。
+- `src/GameView.jsx` — `start({tactic})`（autoStart 與手動 START 兩處）。
+- `src/battle/battleResult.js` — 附加 `tactic` / `tacticExecution`（無戰術 = null，
+  BattleResult.v2 結構未變）。
+- `src/battle/ui/BattleEndScreen.jsx` — 「戰術執行」面板：每張卡的 evidence 指標
+  對引擎真實計數，顯示**執行度（明確標示非勝負）**。
+- `src/screens/moba/TacticScreen.jsx` — 三件事：
+  ① **跑版根因修復**：舊版根節點固定 `width:560` + 固定 200px 詳解欄
+  → 360px 手機溢出、桌機永遠窄條。改 `width:100%` + maxWidth + grid auto-fill。
+  ② 資料源改契約（不再散落 component）。
+  ③ 適性改用真實資料（`fit` 對 profileStore.players 的 16 項能力取平均，
+  無硬編碼百分比）；引擎效果由 knobs 與中性值自動比較生成，不會與引擎漂移。
+
+### Legacy Diff Checklist
+
+| 項目 | 狀態 |
+|---|---|
+| Legacy m1–m8 八張卡名稱 / 文案 / emoji / risk / focus | ✅ 逐字保留（腳本檢查） |
+| 戰術影響比賽 | ✅ 本 Sprint 首次成立（Legacy 原型亦僅展示，這是產品升級） |
+| 戰術執行證據 | ✅ 引擎真實計數 → BattleResult → 賽後面板（Legacy 無此層） |
+| TacticScreen 響應式 | ✅ 修好固定寬度跑版（Legacy 為固定寬 demo） |
+| 對手戰術 | ❌ 無來源 → 固定中性 standard，不虛構 AI |
+| heraldPriority / carryPriority / vision.* | ❌ 引擎無對應系統 → 契約保留但**未映射**，不假裝有效果 |
+
+### 驗證
+
+- `node tools/check_moba_tactic24.mjs` → **27/27 通過**。
+  含關鍵反例：m3 / m8 跨 16 seeds 勝負皆有出現（**證明沒寫死 winner**）；
+  knobs 欄位白名單（證明沒偷渡傷害/勝率係數）。
+- **Balance 凍結實測**：20 seeds，每 20 tick 抓「全體選手座標/HP/KDA + 全部塔血
+  + 雙方金錢」指紋，與 S23 基準**逐位元一致** → 未呼叫 configureMatch 時
+  引擎行為完全沒變。
+- `npm run build` 通過。
+
+### 已知限制
+
+- 對手戰術固定中性；對手戰術系統尚未存在。
+- `heraldPriority` / `economy.carryPriority` / `jungleResourceShare` / `vision.*`
+  在引擎中無對應系統 → 只用於適性與展示，未進 knobs。
+- 戰術「執行度」與勝負無關（刻意）：執行成功 ≠ 贏。
+- 舊腳本 `check_flow09` / `check_dash10` / `check_mount09` 仍失效（S23 已記錄，
+  非現役，本 Sprint 未動）。

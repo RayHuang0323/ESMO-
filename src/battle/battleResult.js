@@ -32,6 +32,11 @@ export function snapshotToBattleResult(snap, events = [], { heroAssign = HERO_AS
     towers: { blue: towersDestroyedBy(snap, "blue"), red: towersDestroyedBy(snap, "red") },
     dragon: countBy(events, "DRAGON_SLAIN"),
     baron:  countBy(events, "BARON_SLAIN"),
+    // S24（附加欄位，無戰術 = null，結構向下相容）：
+    //   tactic = { tacticId, tacticName, version, opponentTacticId }（引擎 configureMatch meta）
+    //   tacticExecution = { blue, red } 引擎真實執行統計（Gank/入侵/會戰/分推/龍巴龍/推塔波次）
+    tactic: snap.tacticMeta ?? null,
+    tacticExecution: snap.tacticExec ?? null,
     timeline: events.map((e) => ({ t: e.t, type: e.type, side: e.side, text: e.text, data: e.data ?? null })),
     mvpId: mvp?.id ?? null,
     players: snap.players.map((p) => ({

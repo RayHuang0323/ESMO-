@@ -20,6 +20,7 @@ import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
 import { heroById } from "../../data/heroDatabase.js";
 import HeroPortrait from "../../ui/HeroPortrait.jsx";
 import { GC } from "../../ui/theme.js";
+import { mobaTacticById } from "../../platform/contracts/MobaTacticConfig.js";
 
 const KEYFRAMES = `
 @keyframes esmoEndPop { 0%{transform:scale(0.55);opacity:0} 60%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
@@ -191,8 +192,33 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
             </div>
           )}
 
-          {/* 右欄：金錢圖 / 推塔圖 / 戰報摘要 */}
+          {/* 右欄：戰術執行 / 金錢圖 / 推塔圖 / 戰報摘要 */}
           <div style={{ display: "flex", flexDirection: "column", gap: 9, width: 240 }}>
+            {/* Sprint24：戰術執行證據（result.tactic + result.tacticExecution = 引擎真實計數）。
+                「執行度」= 觀察指標達標數，與勝負無關（戰術執行成功 ≠ 贏）。 */}
+            {result.tactic && result.tacticExecution && (() => {
+              const def = mobaTacticById(result.tactic.tacticId);
+              const ex = result.tacticExecution[homeSide] ?? {};
+              const rows = (def?.evidence ?? []).map((e) => ({ ...e, val: ex[e.key] ?? 0, hit: (ex[e.key] ?? 0) >= e.goal }));
+              const hits = rows.filter((r) => r.hit).length;
+              return (
+                <Panel title={`戰術執行 · ${result.tactic.tacticName}`}>
+                  {rows.map((r) => (
+                    <div key={r.key} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "2px 0" }}>
+                      <span style={{ color: "rgba(255,255,255,0.7)" }}>{r.hit ? "✅" : "▫️"} {r.label}</span>
+                      <span style={{ fontFamily: MONO, fontWeight: 800, color: r.hit ? "#86efac" : "rgba(255,255,255,0.55)" }}>{r.val}<span style={{ color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>/{r.goal}</span></span>
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginTop: 4, paddingTop: 4, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+                    <span style={{ color: "rgba(255,255,255,0.5)" }}>執行度（非勝負）</span>
+                    <span style={{ fontFamily: MONO, fontWeight: 900, color: hits >= rows.length ? "#86efac" : hits > 0 ? "#fde047" : "rgba(255,255,255,0.5)" }}>{hits}/{rows.length}</span>
+                  </div>
+                  <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
+                    Gank 上/中/下 {ex.topGanks ?? 0}/{ex.midGanks ?? 0}/{ex.botGanks ?? 0} · 入侵 {ex.invadeAttempts ?? 0} · 會戰 {ex.groupedFights ?? 0} · 對手戰術：標準（預設）
+                  </div>
+                </Panel>
+              );
+            })()}
             <Panel title="金錢差走勢（🔵領先在上）"><GoldGraph series={series} /></Panel>
             <Panel title="推塔進度"><TowerGraph series={series} /></Panel>
             <Panel title="戰報摘要">
