@@ -16,6 +16,7 @@ import {
 } from "../../data/playerModel.js";
 import { calculateLevelProgress } from "../../platform/progress/playerLevel.js";
 import { PlayerAvatar } from "../../ui/PlayerFace.jsx";
+import { withDerivedStats } from "../../platform/talents/playerDerivedStats.js";
 import { GC } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
 
@@ -64,8 +65,8 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
         {filtered.map((p) => {
           const st = statusOf(p);
           const c = statusColor(st);
-          const a = aggr(p);
-          const mp = calcPower(p, "moba"), fp = calcPower(p, "fps");
+          const a = aggr(withDerivedStats(p));   // S27：顯示 derived（含天賦）
+          const dp = withDerivedStats(p); const mp = calcPower(dp, "moba"), fp = calcPower(dp, "fps");
           return (
             <button key={p.id} onClick={() => { setSelId(p.id); setEditName(false); }}
               style={{ display: "flex", alignItems: "center", gap: 11, background: GC.card, border: `1px solid ${p.id === selId ? GC.purp : "rgba(255,255,255,0.06)"}`, borderRadius: 13, padding: "11px 13px", cursor: "pointer", textAlign: "left", width: "100%" }}>
@@ -108,8 +109,8 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
 
       {sel && (() => {
         const pers = personalityById(sel.personality);
-        const bp = bestPositions(sel);
-        const mp = calcPower(sel, "moba"), fp = calcPower(sel, "fps");
+        const dsel = withDerivedStats(sel); const bp = bestPositions(dsel);
+        const mp = calcPower(dsel, "moba"), fp = calcPower(dsel, "fps");
         const cond = sel.condition || "正常";
         const condColor = cond === "精神飽滿" ? GC.green : cond === "正常" ? "#d4d4d8" : cond === "疲勞" ? GC.gold : GC.red;
         // S26【A】：XP 進度由持久化 xp 推導（playerLevel 唯一刻度），與 Result receipt 同源
@@ -185,7 +186,7 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
                 <div style={{ color: GC.gray, fontSize: 9, marginBottom: 5 }}>角色定位（切換看適配性）</div>
                 <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
                   {MOBA_ROLES.map((rl) => {
-                    const fit = posFit(sel, "MOBA" + rl);
+                    const fit = posFit(dsel, "MOBA" + rl);
                     const isCur = sel.role === rl;
                     return (
                       <button key={rl} onClick={() => setPlayerRole(sel.id, rl)}
@@ -214,7 +215,7 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
                 <div key={cat} style={{ marginBottom: 7 }}>
                   <div style={{ color: GC.gray, fontSize: 9, fontWeight: 700, marginBottom: 3 }}>{cat}</div>
                   {STAT_DEF.filter((s) => s.cat === cat).map((s) => {
-                    const v = sel.stats?.[s.key] ?? 50;
+                    const v = dsel.stats?.[s.key] ?? 50;   // S27：derived（含天賦）
                     const b = pers?.boost?.includes(s.key);
                     const n = pers?.nerf?.includes(s.key);
                     return (

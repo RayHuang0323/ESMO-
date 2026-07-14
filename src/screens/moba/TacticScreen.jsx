@@ -20,19 +20,11 @@ import { Frame } from "./LineupScreen.jsx";
 import { MOBA_TACTICS, toEngineTactic, STANDARD_OPP_TACTIC } from "../../platform/contracts/MobaTacticConfig.js";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { statZh } from "../../data/playerModel.js";
+import { fitScore, fitGrade } from "./tacticFit.js";
 import { GC } from "../../ui/theme.js";
 
 const riskC = (r) => (r === "高" ? GC.red : r === "中" ? GC.gold : GC.green);
-
-/** 適性：fit.roles 的主力選手在 fit.stats 上的平均（profileStore 真實 16 項能力） */
-function fitScore(t, players) {
-  const pool = players.filter((p) => t.fit.roles.includes(p.role));
-  const vals = [];
-  for (const p of pool) for (const k of t.fit.stats) { const v = p?.stats?.[k]; if (v != null) vals.push(v); }
-  if (!vals.length) return null;
-  return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
-}
-const fitGrade = (s) => (s == null ? { g: "—", c: GC.gray } : s >= 80 ? { g: "高", c: GC.green } : s >= 70 ? { g: "中", c: GC.gold } : { g: "低", c: GC.red });
+// S27：適性抽至 tacticFit.js（純函式、Node 可測），並改讀 derived stats（含天賦）。
 
 /** 引擎效果摘要：knobs 與中性（對手 standard）比較，自動生成（與引擎輸入同源） */
 function engineEffects(t) {

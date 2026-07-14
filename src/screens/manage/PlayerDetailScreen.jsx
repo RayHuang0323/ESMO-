@@ -19,6 +19,8 @@ import { useProfileStore } from "../../platform/profileStore.js";
 import { STAT_DEF, calcPower, bestPositions, personalityById } from "../../data/playerModel.js";
 import { TIERS } from "../../data/recruitPool.js";
 import { calculateLevelProgress } from "../../platform/progress/playerLevel.js";
+import { getStatLayers } from "../../platform/talents/playerDerivedStats.js";
+import { getPlayerTalentState } from "../../platform/contracts/playerTalentState.js";
 import ManageFrame from "./ManageFrame.jsx";
 
 const HIGH = 74;
@@ -72,7 +74,7 @@ function ProgressBarFull({ value }) {
   );
 }
 
-export default function PlayerDetailScreen({ playerId, onBack }) {
+export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
   const players = useProfileStore((s) => s.players) ?? [];
   const team = useProfileStore((s) => s.team);
   const [mode, setMode] = useState("ability");     // "ability" | "potential"
@@ -92,10 +94,14 @@ export default function PlayerDetailScreen({ playerId, onBack }) {
   const tier = TIERS.find((t) => potential >= t.min) ?? TIERS[TIERS.length - 1];
   const stars = Math.max(1, Math.min(5, Math.round(potential / 20)));
 
-  // 能力模式＝目前值；潛力模式＝成長上限（單一天花板，見檔頭誠實差異）
+  // S27：能力顯示 = derived stats（base + 天賦，clamp 1–99）；base 不被寫入。
+  //   有天賦加成的項目在標籤標 +N（綠），潛力模式維持單一天花板。
+  const layers = getStatLayers(p);
+  const talentState = getPlayerTalentState(p);
   const data = STAT_DEF.map((s) => ({
     label: s.zh,
-    value: mode === "ability" ? Math.round(p.stats?.[s.key] ?? 50) : potential,
+    bonus: layers.talentBonus[s.key] ?? 0,
+    value: mode === "ability" ? Math.round(layers.derived[s.key] ?? 50) : potential,
   }));
   const left = data.filter((_, i) => i % 2 === 0);
   const right = data.filter((_, i) => i % 2 === 1);
@@ -147,6 +153,14 @@ export default function PlayerDetailScreen({ playerId, onBack }) {
                 <span key={i} style={{ fontSize: 10, fontWeight: 700, color: t.color, background: t.bg, border: `1px solid ${t.border}`, borderRadius: 99, padding: "3px 10px", letterSpacing: "0.04em" }}>{t.label}</span>
               ))}
             </div>
+
+            {/* S27：天賦入口（可用點數 > 0 時亮起提醒） */}
+            {onTalent && (
+              <button onClick={() => onTalent(p.id)}
+                style={{ marginTop: 4, width: "100%", maxWidth: 320, background: talentState.availablePoints > 0 ? "linear-gradient(135deg,rgba(124,58,237,0.35),rgba(124,58,237,0.15))" : "rgba(255,255,255,0.05)", border: `1px solid ${talentState.availablePoints > 0 ? "#a78bfa" : "rgba(255,255,255,0.12)"}`, borderRadius: 10, padding: "9px 14px", color: talentState.availablePoints > 0 ? "#c4b5fd" : "#71717a", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+                🌿 天賦　可用 {talentState.availablePoints} 點 · 已投入 {talentState.spentPoints} 點
+              </button>
+            )}
           </div>
 
           <div style={{ height: 1, background: "rgba(255,255,255,0.05)", margin: "14px 0" }} />
@@ -215,7 +229,7 @@ export default function PlayerDetailScreen({ playerId, onBack }) {
               <div key={ci} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <div style={{ color: "#3f3f46", fontSize: 8.5, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", paddingLeft: 10, marginBottom: 3 }}>{ci === 0 ? "屬性" : "數值"}</div>
                 {col.map((row, i) => (
-                  <StatRow key={row.label} label={row.label} value={row.value} isHigh={row.value >= HIGH} isEven={i % 2 === 0} />
+                  <StatRow key={row.label} label={row.bonus > 0 ? `${row.label} +${row.bonus}` : row.label} value={row.value} isHigh={row.value >= HIGH} isEven={i % 2 === 0} />
                 ))}
               </div>
             ))}

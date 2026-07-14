@@ -20,6 +20,8 @@
 //    slot 無英雄時 power/tough 仍為 null（＝沿用引擎預設，向下相容 Phase 10）。
 // ============================================================================
 
+import { withDerivedStats } from "../../platform/talents/playerDerivedStats.js";
+
 /** 對齊 LogicEngine 的角色順序（5 個 slot）。⚠ 必須與 LogicEngine ROLES 一致。 */
 export const ROLE_ORDER = ["top", "jungle", "mid", "adc", "sup"];
 
@@ -208,12 +210,17 @@ export function buildEngineSlots(cfg) {
     ? cfg.draft.picks.blue : [];
   const picksRed = (cfg && cfg.draft && cfg.draft.picks && Array.isArray(cfg.draft.picks.red))
     ? cfg.draft.picks.red : [];
-  const rosterBlue = (cfg && Array.isArray(cfg.roster)) ? cfg.roster : [];
+  // S27：MOBA adapter 邊界注入 derived stats（base + 天賦）——
+  //   power/tough 推導（calcPlayerMobaPower）從此吃到天賦加成。
+  //   無天賦時 derived === base → slots 與 S26 位元一致。
+  //   ⚠ LogicEngine 尚未開放注入口（applyRosterToEngine 能力偵測 applied:false），
+  //   故現行對戰輸出不受影響——這是 adapter-ready，不是引擎層生效。
+  const rosterBlue = ((cfg && Array.isArray(cfg.roster)) ? cfg.roster : []).map(withDerivedStats);
   // 紅方選手：只有「看起來是選手」（含 stats）的 opponent 才算 roster；
   // 若 opponent 是英雄陣列（platformToMobaConfig 的 fallback），紅方無選手資料
   // → calcPlayerMobaPower 回中性錨，playerScale=1.0（不懲罰、不加成）。
-  const rosterRed = (cfg && Array.isArray(cfg.opponent) && cfg.opponent.some((p) => p && p.stats))
-    ? cfg.opponent : [];
+  const rosterRed = ((cfg && Array.isArray(cfg.opponent) && cfg.opponent.some((p) => p && p.stats))
+    ? cfg.opponent : []).map(withDerivedStats);
 
   // Blue / Red 走「完全相同」的 buildSideSlots；差別僅在資料來源。
   return [

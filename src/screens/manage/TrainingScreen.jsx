@@ -15,6 +15,7 @@ import {
   STAT_DEF, TRAINING_COURSES, courseById, calcPower, bestPositions, personalityById, statZh,
 } from "../../data/playerModel.js";
 import { PlayerAvatar } from "../../ui/PlayerFace.jsx";
+import { withDerivedStats } from "../../platform/talents/playerDerivedStats.js";
 import { GC } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
 
@@ -122,7 +123,7 @@ export default function TrainingScreen({ onBack }) {
 
       {sel && (() => {
         const pers = personalityById(sel.personality);
-        const bp = bestPositions(sel);
+        const dsel = withDerivedStats(sel); const bp = bestPositions(dsel);
         return (
           <div>
             <div style={{ background: GC.card, borderRadius: 12, padding: "12px 14px", marginBottom: 12, border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -132,8 +133,8 @@ export default function TrainingScreen({ onBack }) {
                 {pers && <span style={{ marginLeft: 6, fontSize: 10 }}>{pers.emoji}{pers.zh}</span>}
               </div>
               <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
-                <span style={{ background: "rgba(167,139,250,0.15)", color: GC.purp, fontSize: 9, fontWeight: 700, borderRadius: 6, padding: "2px 6px" }}>MOBA {calcPower(sel, "moba")} · 適{bp.moba.pos.replace("MOBA", "")}</span>
-                <span style={{ background: "rgba(251,146,60,0.15)", color: "#fb923c", fontSize: 9, fontWeight: 700, borderRadius: 6, padding: "2px 6px" }}>FPS {calcPower(sel, "fps")} · 適{bp.fps.pos.replace("FPS", "")}</span>
+                <span style={{ background: "rgba(167,139,250,0.15)", color: GC.purp, fontSize: 9, fontWeight: 700, borderRadius: 6, padding: "2px 6px" }}>MOBA {calcPower(dsel, "moba")} · 適{bp.moba.pos.replace("MOBA", "")}</span>
+                <span style={{ background: "rgba(251,146,60,0.15)", color: "#fb923c", fontSize: 9, fontWeight: 700, borderRadius: 6, padding: "2px 6px" }}>FPS {calcPower(dsel, "fps")} · 適{bp.fps.pos.replace("FPS", "")}</span>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 12px" }}>
                 {STAT_DEF.map((s) => {

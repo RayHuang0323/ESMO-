@@ -15,6 +15,7 @@ import { useSeasonStore } from "../../platform/seasonStore.js";
 import { standings } from "../../platform/seasonData.js";
 import { calcPower, bestPositions, personalityById } from "../../data/playerModel.js";
 import { PlayerAvatar } from "../../ui/PlayerFace.jsx";
+import { withDerivedStats } from "../../platform/talents/playerDerivedStats.js";
 import { GC } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
 
@@ -34,7 +35,7 @@ export default function TeamScreen({ onBack }) {
   const accent = div === "moba" ? GC.purp : "#fb923c";
 
   // Legacy：依分部戰力排序，主力前 5 為先發
-  const ranked = players.map((p) => ({ ...p, pow: calcPower(p, div) })).sort((a, b) => b.pow - a.pow);
+  const ranked = players.map((p) => ({ ...p, pow: calcPower(withDerivedStats(p), div) })).sort((a, b) => b.pow - a.pow);
   const starters = ranked.filter((p) => p.status === "主力").slice(0, 5);
   const subs = ranked.filter((p) => !starters.some((s) => s.id === p.id));
   const teamPow = starters.length ? Math.round(starters.reduce((s, p) => s + p.pow, 0) / starters.length) : 0;
@@ -69,7 +70,7 @@ export default function TeamScreen({ onBack }) {
       <div style={{ color: GC.gray, fontSize: 11, fontWeight: 700, marginBottom: 8 }}>先發陣容</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
         {starters.map((p, i) => {
-          const bp = bestPositions(p);
+          const bp = bestPositions(withDerivedStats(p));   // S27：適配含天賦
           const fitPos = div === "moba" ? bp.moba : bp.fps;
           const pers = personalityById(p.personality);
           return (

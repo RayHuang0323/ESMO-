@@ -43,10 +43,13 @@ import {
 import { CS_RESULT_SCHEMA } from "./contracts/CsMatchResult.js";
 import { applyProgressToState, findReceipt } from "./progress/applyMatchProgress.js";
 import { totalXpForLevel, levelFromTotalXp } from "./progress/playerLevel.js";
+import { sanitizeTalents } from "./contracts/playerTalentState.js";
+import { applyTalentPurchase } from "./talents/purchasePlayerTalent.js";
 
 const KEY = "esmo.profile.v1";
-/** Sprint25：persistence schema 版本（migration 用；沿用同一個 localStorage key，不清資料）。 */
-export const PROFILE_SCHEMA_VERSION = 2;
+/** persistence schema 版本（migration 用；沿用同一個 localStorage key，不清資料）。
+ *  v2 = S25（xp/talentPoints）；v3 = S27（players[].talents 天賦狀態）。 */
+export const PROFILE_SCHEMA_VERSION = 3;
 const canLS = typeof localStorage !== "undefined";
 export const WAN = 10_000;                    // 1 萬（Legacy 以「萬」計價，本 Store 以元存放）
 const uid = () => Date.now() + Math.floor(Math.random() * 1000);
@@ -180,7 +183,9 @@ function migratePlayer(p) {
   const xp = hasXp ? Math.round(p.xp) : totalXpForLevel(safeLv);
   const lv = levelFromTotalXp(xp);
   const talentPoints = Number.isFinite(p.talentPoints) && p.talentPoints >= 0 ? Math.floor(p.talentPoints) : 0;
-  return { ...p, xp, lv, talentPoints };
+  // S27：talents 清洗（缺 → 空狀態；未知 talentId 忽略；rank 修正；spentPoints 由
+  // definitions 重算——不信任持久層）。不重置 talentPoints / lv / xp。
+  return { ...p, xp, lv, talentPoints, talents: sanitizeTalents(p.talents) };
 }
 function clampLevel(v) {
   const n = typeof v === "number" ? v : Number(v);
@@ -308,6 +313,22 @@ export const useProfileStore = create((set, get) => ({
   /** 查詢某場是否已結算（Result Screen 用來判斷「本場已結算」）。 */
   getReceipt(transactionId) {
     return findReceipt(get(), transactionId);
+  },
+
+  // ── S27：天賦購買（唯一入口；純邏輯在 talents/purchasePlayerTalent.js）──
+  /**
+   * 檢查（player/talent 存在、rank 上限、前置、點數）→ 扣點 + 升 rank +
+   * 重算 spentPoints → **單一 set()** → 回傳 receipt。
+   * 失敗 → 完全不動 Store，receipt.failureReason 說明原因。
+   * ⚠ 投入不可重置（正式 UI 無重置；__debugResetTalents 僅供測試腳本）。
+   */
+  purchasePlayerTalent({ playerId, talentId }) {
+    const player = (get().players ?? []).find((p) => p.id === playerId);
+    const { nextPlayer, receipt } = applyTalentPurchase(player, talentId);
+    if (!nextPlayer) return receipt;
+    set({ players: get().players.map((p) => (p.id === playerId ? nextPlayer : p)) });
+    get().save();
+    return receipt;
   },
 
   // ── 球探招募（Legacy RecruitModule）─────────────────────────────────

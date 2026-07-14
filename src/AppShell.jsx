@@ -34,6 +34,8 @@ import RosterScreen from "./screens/manage/RosterScreen.jsx";
 import TrainingScreen from "./screens/manage/TrainingScreen.jsx";
 import RecruitScreen from "./screens/manage/RecruitScreen.jsx";
 import PlayerDetailScreen from "./screens/manage/PlayerDetailScreen.jsx";
+// ── Sprint27：選手天賦（入口在 PlayerDetail）──
+import PlayerTalentScreen from "./screens/manage/PlayerTalentScreen.jsx";
 // ── Sprint22：CS 對戰（EsportsFPS3D 引擎 + fpsRoster Adapter）──
 // ── Sprint23：CS 完整流程 Prep → Map → Tactic → Loading → Match → Result ──
 import CsMatchScreen from "./screens/fps/CsMatchScreen.jsx";
@@ -77,7 +79,9 @@ export default function AppShell() {
       {screen === "roster" && <RosterScreen onBack={home} onRecruit={go("recruit")} onPlayer={(id) => { setPlayerId(id); setScreen("playerDetail"); }} />}
       {screen === "training" && <TrainingScreen onBack={home} />}
       {screen === "recruit" && <RecruitScreen onBack={home} />}
-      {screen === "playerDetail" && <PlayerDetailScreen playerId={playerId} onBack={go("roster")} />}
+      {screen === "playerDetail" && <PlayerDetailScreen playerId={playerId} onBack={go("roster")} onTalent={(id) => { setPlayerId(id); setScreen("playerTalent"); }} />}
+      {/* S27：選手天賦（唯一寫入口 = profileStore.purchasePlayerTalent；UI 只顯示 receipt） */}
+      {screen === "playerTalent" && <PlayerTalentScreen playerId={playerId} onBack={go("playerDetail")} />}
 
       {/* ── Sprint23：CS 完整流程（結果入 profileStore.csHistory，不入 seasonStore）──
             Dashboard → csPrep → csMap → csTactic → csLoading → cs(Match) → csResult → Dashboard */}

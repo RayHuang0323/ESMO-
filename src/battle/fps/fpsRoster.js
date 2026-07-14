@@ -14,6 +14,8 @@
 //      即用內建同一陣容，避免複製第二份資料。
 // ============================================================================
 
+import { getPlayerDerivedStats } from "../../platform/talents/playerDerivedStats.js";
+
 /** 長鍵(playerModel STAT_DEF) → 短鍵(3D 引擎)；Legacy STAT_L2S 逐字 */
 export const STAT_L2S = { reflex: "rxn", accuracy: "acc", apm: "apm", positioning: "pos", mapAware: "vis", tacticalIQ: "tac", decision: "dec", adaptability: "adp", courage: "cou", clutch: "str", focus: "foc", resilience: "res", comms: "com", leadership: "led", synergy: "coo", learning: "lrn" };
 export const toShortStats = (stats = {}) => { const o = {}; for (const k in STAT_L2S) o[STAT_L2S[k]] = stats[k] ?? 50; return o; };
@@ -38,7 +40,10 @@ export function toFpsRoster(players = []) {
   const pool = [...players.filter((p) => p.status === "主力"), ...players.filter((p) => p.status !== "主力")];
   if (pool.length < 5) return null;
   return pool.slice(0, 5).map((p, i) => {
-    const short = toShortStats(p.stats);
+    // S27：CS 引擎吃 **derived stats**（base + 天賦，clamp 1–99）。
+    //   引擎 sim 的 persStat 直讀 stats[key] → 天賦真的影響 CS 對戰輸入。
+    //   無天賦時 derived === base（逐鍵相等）→ baseline 與 S26 一致。
+    const short = toShortStats(getPlayerDerivedStats(p));
     const role = MOBA2FPS[p.role] || ["entry", "rifler", "awp", "lurker", "igl"][i] || "rifler";
     const ovr = fpsOvr(short);
     return {

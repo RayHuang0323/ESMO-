@@ -55,12 +55,13 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
   const more = [{ id: "team", n: "戰隊詳情", i: "🛡" }, { id: "training", n: "訓練中心", i: "📅" }, { id: "dash", n: "儀表板", i: "📊" }, { id: "sponsor", n: "贊助商", i: "🤝" }];
 
   // Sprint21：八個經營模組已 Component 化 → 直接導頁；其餘 Legacy 模組維持誠實佔位。
-  const NAV = { notify: "inbox", finance: "finance", sponsor: "sponsor", roster: "roster", team: "team", training: "training", recruit: "recruit", cs: "csPrep" };
+  // S27：天賦已恢復（每位選手獨立）→「天賦」磚導向選手名單（點選手 → 詳情 → 天賦）。
+  const NAV = { notify: "inbox", finance: "finance", sponsor: "sponsor", roster: "roster", team: "team", training: "training", recruit: "recruit", cs: "csPrep", talent: "roster" };
   const sel = (id) => {
     if (id === "moba") return onMoba();
     if (id === "bracket") return onSeason();
     if (NAV[id] && onNav) return onNav(NAV[id]);
-    setModal({ type: "legacy", name: { talent: "天賦", equip: "商店", dash: "經營儀表板" }[id] || id });
+    setModal({ type: "legacy", name: { equip: "商店", dash: "經營儀表板" }[id] || id });
   };
 
   return (
