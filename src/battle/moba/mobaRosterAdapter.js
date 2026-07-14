@@ -20,7 +20,7 @@
 //    slot 無英雄時 power/tough 仍為 null（＝沿用引擎預設，向下相容 Phase 10）。
 // ============================================================================
 
-import { withDerivedStats } from "../../platform/talents/playerDerivedStats.js";
+import { withDerivedStats, getPlayerDerivedStats } from "../../platform/talents/playerDerivedStats.js";
 
 /** 對齊 LogicEngine 的角色順序（5 個 slot）。⚠ 必須與 LogicEngine ROLES 一致。 */
 export const ROLE_ORDER = ["top", "jungle", "mid", "adc", "sup"];
@@ -32,6 +32,50 @@ export const ROLE_LANE = { top: "top", jungle: "mid", mid: "mid", adc: "bot", su
 export const LANE_ZH_TO_ROLE = {
   "上路": "top", "打野": "jungle", "中路": "mid", "下路": "adc", "輔助": "sup",
 };
+
+// ============================================================================
+//  S28：選手能力 slots（engine.configurePlayers 的資料來源）
+//
+//  對位靠 **playerId**，不靠名字、不靠陣列索引：
+//    profileStore.players 的 id 就是 b1–b5（data/players.js 由 ROSTER 鍵派生），
+//    而 LogicEngine 的 player.id 也是 b1–b5（gameData.ROLES 順序）——同一組 id。
+//    mobaProgressAdapter 的 XP 發放、LineupScreen 的顯示，用的都是這組 id。
+//  非引擎 slot 的選手（招募新秀 id = "r"+timestamp、預備隊）不注入：引擎席位
+//  固定 b1–b5，目前沒有「先發配置 → 席位」的指派系統（Sprint29 候選）。
+// ============================================================================
+
+/** 引擎席位 id（ROLE_ORDER 順序；與 LogicEngine constructor 的 side[0]+(i+1) 一致）。 */
+export const ENGINE_SLOT_IDS = {
+  blue: ["b1", "b2", "b3", "b4", "b5"],
+  red: ["r1", "r2", "r3", "r4", "r5"],
+};
+
+/**
+ * profileStore.players → 該側的能力 slots（**derived stats**：base + 天賦）。
+ *
+ * · 純函式：不改傳入 player、不讀 Store、不碰引擎。
+ * · 無天賦 ⇒ derived === base（getPlayerDerivedStats 保證逐鍵相等）⇒ mods 與
+ *   S27 baseline 相同。
+ * · 缺 player / players 非陣列 / id 不是引擎席位 ⇒ 安全略過（回 []，全隊中性）。
+ * · 同 id 重複 ⇒ 第一筆勝出（不讓損壞存檔產生兩份同席位資料）。
+ *
+ * @param {Array} players  profileStore.players（唯一選手來源）
+ * @param {"blue"|"red"} side
+ * @returns {Array<{id:string, playerId:string, stats:Object}>}
+ */
+export function buildPlayerStatSlots(players, side = "blue") {
+  const order = ENGINE_SLOT_IDS[side] ?? [];
+  if (!Array.isArray(players) || !order.length) return [];
+  const byId = new Map();
+  for (const p of players) {
+    // 只認引擎席位 id；同 id 重複 ⇒ 第一筆勝出（損壞存檔不產生兩份同席位資料）
+    if (!p || typeof p !== "object" || !order.includes(p.id) || byId.has(p.id)) continue;
+    byId.set(p.id, p);
+  }
+  // 依**席位順序**輸出（非 profileStore 的陣列順序）⇒ 打亂名單順序不改變任何輸出
+  return order.filter((id) => byId.has(id))
+    .map((id) => ({ id, playerId: id, stats: getPlayerDerivedStats(byId.get(id)) }));
+}
 
 // ============================================================================
 //  Phase 13：MOBA 戰力公式（calcMobaPower / calcMobaTough）正式套入
@@ -213,8 +257,13 @@ export function buildEngineSlots(cfg) {
   // S27：MOBA adapter 邊界注入 derived stats（base + 天賦）——
   //   power/tough 推導（calcPlayerMobaPower）從此吃到天賦加成。
   //   無天賦時 derived === base → slots 與 S26 位元一致。
-  //   ⚠ LogicEngine 尚未開放注入口（applyRosterToEngine 能力偵測 applied:false），
-  //   故現行對戰輸出不受影響——這是 adapter-ready，不是引擎層生效。
+  //
+  // ⚠ S28 更正（S27 的註解在此處已過時）：本函式輸出的 power / tough **不進引擎**。
+  //   引擎的 p.power 直接乘進傷害式（dmgAmt = p.power * dt * 0.92），注入它
+  //   ＝ damage multiplier ＝ 違反 S28 §2 紅線。天賦改為只透過**行為層**生效：
+  //     buildPlayerStatSlots → mobaPlayerStats.toEnginePlayerMods → engine.configurePlayers
+  //   本函式（buildEngineSlots / applyRosterToEngine）現況只服務 Legacy App.jsx
+  //   沙盒（其內聯引擎有 applyRoster）；主幹 AppShell 走上面那條行為層路徑。
   const rosterBlue = ((cfg && Array.isArray(cfg.roster)) ? cfg.roster : []).map(withDerivedStats);
   // 紅方選手：只有「看起來是選手」（含 stats）的 opponent 才算 roster；
   // 若 opponent 是英雄陣列（platformToMobaConfig 的 fallback），紅方無選手資料

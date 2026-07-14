@@ -26,6 +26,7 @@ export class LogicEngine {
     let x = seed | 0; this.rng = () => ((x = (x * 1664525 + 1013904223) & 0xffffffff) >>> 0) / 0xffffffff;
     this.seed = seed | 0;          // S24：保留 seed 供戰術層 rng2 派生
     this.tacticOn = false;         // S24：未 configureMatch ⇒ 全部戰術程式碼不生效
+    this.playerStatsOn = false;    // S28：未 configurePlayers ⇒ 全部能力程式碼不生效
     this.t = 0; this.over = false; this.winner = null;
     this.bK = 0; this.rK = 0; this.bGold = 500; this.rGold = 500;
     this.mid = 0; this.fx = []; this.waveTimer = 0; this.feed = [];
@@ -98,16 +99,59 @@ export class LogicEngine {
       const st = { gankLane: null, gankUntil: 0, gankNext: 25 + this.rng2() * 15, invadeUntil: 0,
         splitEvalT: -1, splitGo: false, splitTick: -99, pushTick: -99,
         roamUntil: 0, roamNext: 35 + this.rng2() * 15, inFight: false, dragonSeen: false, baronSeen: false };
-      if (this.rng2() < K.invadeChance) { st.invadeUntil = 50; this.exec[side].invadeAttempts++; }  // 開局入侵決策
+      // 開局入侵決策。S28：入侵率吃該側**打野**（席位 b2/r2）的 invadeAdj；
+      //   無能力層 ⇒ 原值。無論如何 rng2 都抽一次 ⇒ 序列不變。
+      const jg = this._modById(side[0] + "2");
+      const invadeChance = jg ? clamp(K.invadeChance + jg.invadeAdj, 0, 1) : K.invadeChance;
+      if (this.rng2() < invadeChance) { st.invadeUntil = 50; this.exec[side].invadeAttempts++; }
       this._tac[side] = st;
     }
   }
-  /** 團戰參與率：依 hot 是否為龍/巴龍坑取對應 knob（原固定 0.6） */
-  _joinChance(K, hot) {
-    if (hot === PITS.dragon) return K.dragonJoin;
-    if (hot === PITS.baron) return K.baronJoin;
-    return K.joinFight;
+  /**
+   * 團戰參與率：依 hot 是否為龍/巴龍坑取對應 knob（原固定 0.6）。
+   * S28：M（選手能力 mods）存在時再疊加 joinAdj / objAdj。
+   * ⚠ M 為 null ⇒ **原封不動回傳原值**（不 clamp）：確保無論戰術 knob 落在什麼
+   *   範圍，S24 baseline 都逐位元不變。
+   */
+  _joinChance(K, hot, M = null) {
+    const pit = hot === PITS.dragon ? "dragonJoin" : hot === PITS.baron ? "baronJoin" : null;
+    const base = K ? (pit ? K[pit] : K.joinFight) : 0.6;
+    if (!M) return base;
+    return clamp(base + (pit ? M.objAdj : M.joinAdj), 0.05, 0.98);
   }
+
+  // ── S28 選手能力層（configurePlayers）───────────────────────────────────
+  /**
+   * 啟用選手能力（最小改動入口；不呼叫 = 舊行為位元不變）。
+   *
+   * 與 S24 戰術層同構：**mods 形狀由呼叫端準備**（battle/moba/mobaPlayerStats
+   * .toEnginePlayerMods），本檔不 import 契約、不認得 16 項能力的鍵名，只吃
+   * 算好的行為偏移量。能力只改「門檻 / 機率 / 節奏 / 深度」——
+   * **沒有任何傷害、勝率、金錢係數**（power / tough 一律不受能力影響）。
+   *
+   * rng 保證：本層**不新增任何 rng 抽樣**，只把既有抽樣要比對的門檻平移。
+   *   ⇒ rng / rng2 序列完全不變，中性能力（mods 全 0 / 倍率 1）⇒ 逐位元 baseline。
+   *
+   * 呼叫順序：configurePlayers **應在 configureMatch 之前**呼叫——開局野區入侵
+   *   在 configureMatch 當下擲骰，需要打野的 invadeAdj。順序反了不會壞，只是
+   *   該場入侵率不吃能力（其餘作用點仍生效）。
+   *
+   * @param {object} blue/red  { [engineId]: mods }（engineId = b1–b5 / r1–r5）
+   * @param {object} meta      { version, neutralStat, blueIds, redIds } → snapshot
+   */
+  configurePlayers({ blue = null, red = null, meta = null } = {}) {
+    if (!blue && !red) return;
+    this.playerStatsOn = true;
+    this.playerStatsMeta = meta;
+    this.pmod = { ...(blue ?? {}), ...(red ?? {}) };   // 以 engineId 為鍵（兩側 id 不重疊）
+    // 每位選手的真實行為計數（純儀器化；只在啟用能力層時出現在 snapshot）
+    this.pexec = {};
+    for (const p of this.players) this.pexec[p.id] = { retreats: 0, fights: 0, objTicks: 0 };
+  }
+  /** 依 engineId 取 mods；未啟用 / 該席位無資料 ⇒ null（＝走原始路徑）。 */
+  _modById(id) { return this.playerStatsOn ? (this.pmod[id] ?? null) : null; }
+  /** 該選手的能力 mods；未啟用 / 該席位無資料 ⇒ null（＝走原始路徑）。 */
+  _mod(p) { return this._modById(p.id); }
 
   frontTower(attacker, lane) {
     const def = attacker === "blue" ? "red" : "blue";
@@ -188,15 +232,24 @@ export class LogicEngine {
       // S24：K/S 只在啟用戰術時存在；未啟用 ⇒ 下方全部走原始路徑（含原 rng 序列）
       const K = this.tacticOn ? this.tk[p.side] : null;
       const S = this.tacticOn ? this._tac[p.side] : null;
+      // S28：M＝該選手能力 mods（未啟用/該席位無資料 ⇒ null ⇒ 下方全部走原始路徑）
+      const M = this._mod(p);
       // 撤退遲滯：<25% 進入撤退，回到 60% 才重返戰場（避免在門檻抖動→全隊永久卡撤退）
       // S24：撤退門檻改由 riskTolerance 派生（K.retreatAt ∈ 0.15–0.34；預設 0.25 不變）
-      if (p.hp < p.maxHp * (K ? K.retreatAt : 0.25)) p.retreating = true;
-      else if (p.hp >= p.maxHp * 0.60) p.retreating = false;
+      // S28：能力再疊加——走位/決策/專注 → 早撤；勇氣/抗壓/韌性 → 硬撐；韌性/反應 → 更快回場
+      const retreatAt0 = K ? K.retreatAt : 0.25;
+      const retreatAt = M ? clamp(retreatAt0 + M.retreatAdj, 0.10, 0.45) : retreatAt0;
+      const returnAt = M ? clamp(0.60 + M.returnAdj, 0.45, 0.80) : 0.60;
+      if (p.hp < p.maxHp * retreatAt) {
+        if (this.playerStatsOn && !p.retreating) this.pexec[p.id].retreats++;   // 真實計數
+        p.retreating = true;
+      } else if (p.hp >= p.maxHp * returnAt) p.retreating = false;
       let tgt, st, effLane = p.lane, stOv = null;
       // S24：帶線分推 —— 指定分推路的選手在會戰熱點出現時仍留線推進（黏性決策，6 秒重評一次）
       let skipFight = false;
       if (K && hot && K.splitLane === p.lane && p.role !== "jungle" && p.role !== "sup") {
-        if (this.t > S.splitEvalT) { S.splitEvalT = this.t + 6; S.splitGo = this.rng2() < K.splitPush; }
+        // S28：分推承諾度 += splitAdj（應變/決策/勇氣/專注）
+        if (this.t > S.splitEvalT) { S.splitEvalT = this.t + 6; S.splitGo = this.rng2() < (M ? clamp(K.splitPush + M.splitAdj, 0, 1) : K.splitPush); }
         if (S.splitGo) {
           skipFight = true; stOv = "帶線";
           if (this.t - S.splitTick > 8) { S.splitTick = this.t; this.exec[p.side].splitPushActions++; }
@@ -213,19 +266,25 @@ export class LogicEngine {
           const w = K.gankWeights, tot = w.top + w.mid + w.bot;
           const r = this.rng2() * tot;
           S.gankLane = r < w.top ? "top" : r < w.top + w.mid ? "mid" : "bot";
-          S.gankUntil = this.t + 9; S.gankNext = this.t + K.gankInterval + this.rng2() * 12;
+          // S28：Gank 節奏吃打野能力——視野/手速/決策 → 週期變短（更常抓）、停留窗變長
+          S.gankUntil = this.t + 9 * (M ? M.gankWindowScale : 1);
+          S.gankNext = this.t + K.gankInterval * (M ? M.gankIntervalScale : 1) + this.rng2() * 12;
           this.exec[p.side][S.gankLane + "Ganks"]++;
         }
         if (this.t < S.gankUntil) { effLane = S.gankLane; stOv = "抓人"; }
       }
       // S24：輔助遊走（無會戰時依 roamRate 週期性走中路製造人數差）
       if (K && !tacTgt && p.role === "sup" && !p.retreating && !hot) {
-        if (this.t >= S.roamNext) { S.roamNext = this.t + 40 + this.rng2() * 15; if (this.rng2() < K.roamRate) { S.roamUntil = this.t + 8; this.exec[p.side].supportRoams++; } }
+        // S28：遊走率 += roamAdj（視野/溝通/手速/領導）——輔助的主要作用點
+        if (this.t >= S.roamNext) { S.roamNext = this.t + 40 + this.rng2() * 15; if (this.rng2() < (M ? clamp(K.roamRate + M.roamAdj, 0, 1) : K.roamRate)) { S.roamUntil = this.t + 8; this.exec[p.side].supportRoams++; } }
         if (this.t < S.roamUntil) { effLane = "mid"; stOv = "遊走"; }
       }
       if (p.retreating) { tgt = FOUNTAIN[p.side]; st = "撤退"; }
       else if (tacTgt) { tgt = tacTgt; st = stOv; }
-      else if (!skipFight && hot && (p.role === "jungle" || p.role === "sup" || (K ? this.rng2() < this._joinChance(K, hot) : this.rng() < 0.6))) { tgt = hot; st = "團戰!"; }
+      // S28：團戰/目標集結門檻 += joinAdj（勇氣/戰術/配合/溝通/反應＋隊伍領導平均）
+      //   或 objAdj（龍/巴龍坑：視野/戰術/專注/溝通＋隊伍領導平均）。
+      //   ⚠ 抽樣次數與來源流不變（K ⇒ rng2、無 K ⇒ rng）；只平移門檻。
+      else if (!skipFight && hot && (p.role === "jungle" || p.role === "sup" || (K ? this.rng2() < this._joinChance(K, hot, M) : this.rng() < this._joinChance(null, hot, M)))) { tgt = hot; st = "團戰!"; }
       else {
         const ftw = this.frontTower(p.side, effLane);
         if (!ftw) { tgt = BASE[p.side === "blue" ? "red" : "blue"]; st = "圍攻"; }   // 該路已清 → 圍攻主堡
@@ -234,6 +293,8 @@ export class LogicEngine {
           // S24：推線深度偏移（lanePlan/aggression/towerPriority 派生，±0.09；未啟用 = 0）
           let base = p.side === "blue" ? 0.30 + this.t / 600 : 0.70 - this.t / 600;
           if (K) base += (p.side === "blue" ? 1 : -1) * (K.laneOffset[effLane] || 0);
+          // S28：推線深度 += laneAdj（勇氣/手速/抗壓 → 壓得更深；走位/決策 → 站得更安全）
+          if (M) base += (p.side === "blue" ? 1 : -1) * M.laneAdj;
           const adv = p.side === "blue" ? clamp(Math.min(base, ftw.t + 0.02), 0.3, 0.98) : clamp(Math.max(base, ftw.t - 0.02), 0.02, 0.7);
           tgt = posOnLane(effLane, adv); st = stOv ?? (p.role === "jungle" ? "游走" : "對線");
         }
@@ -242,6 +303,13 @@ export class LogicEngine {
       if (d > 0.6) { p.pos.x += ((tgt.x - p.pos.x) / d) * Math.min(spd, d); p.pos.y += ((tgt.y - p.pos.y) / d) * Math.min(spd, d); }
       for (const o of WALLS) { const dd = dist(p.pos, o); if (dd < o.r + 1.4) { p.pos.x += ((p.pos.x - o.x) / (dd || 1)) * (o.r + 1.4 - dd); p.pos.y += ((p.pos.y - o.y) / (dd || 1)) * (o.r + 1.4 - dd); } }
       p.pos.x = clamp(p.pos.x, 3, 97); p.pos.y = clamp(p.pos.y, 3, 97);
+      // S28：個人行為計數（真實觀測，非編造）——進入團戰的次數、貼在存活目標坑的 tick 數。
+      //   紅方（無能力資料）同樣計數 ⇒ 天然對照組：藍方隨天賦變、紅方不變。
+      if (this.playerStatsOn) {
+        if (st === "團戰!" && p.state !== "團戰!") this.pexec[p.id].fights++;
+        if (this.dragon.alive && dist(p.pos, PITS.dragon) < 9) this.pexec[p.id].objTicks++;
+        if (this.baron.alive && dist(p.pos, PITS.baron) < 9) this.pexec[p.id].objTicks++;
+      }
       p.state = st;
       // 回血：靠泉水快速回、脫離戰鬥緩慢回（下方交戰若成立會覆寫 inCombat）
       const nearFountain = dist(p.pos, FOUNTAIN[p.side]) < 10;
@@ -332,6 +400,12 @@ export class LogicEngine {
       ...(this.tacticOn ? {
         tacticMeta: this.tacticMeta ? { ...this.tacticMeta } : null,
         tacticExec: { blue: { ...this.exec.blue }, red: { ...this.exec.red } },
+      } : {}),
+      // S28：能力層中繼資料與個人行為統計（同樣只在啟用時出現 → 舊快照形狀不變；
+      //   BattleResult.v2 逐欄挑選、不 spread snapshot ⇒ 契約不受影響）
+      ...(this.playerStatsOn ? {
+        playerStatsMeta: this.playerStatsMeta ? { ...this.playerStatsMeta } : null,
+        playerStatsExec: Object.fromEntries(Object.entries(this.pexec).map(([id, e]) => [id, { ...e }])),
       } : {}),
     };
   }

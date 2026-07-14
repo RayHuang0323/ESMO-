@@ -11,8 +11,11 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import { LogicEngine } from "./LogicEngine.js";
 import { useGameStore } from "./useGameStore.js";
 import { useHeroProgressStore } from "./hero/heroProgressStore.js";
+import { useProfileStore } from "./platform/profileStore.js";
 import { toEngineTactic, STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION } from "./platform/contracts/MobaTacticConfig.js";
 import { beginReplayCapture } from "./battle/moba/replay/replayBuffer.js";
+import { buildPlayerStatSlots } from "./battle/moba/mobaRosterAdapter.js";
+import { toEnginePlayerMods } from "./battle/moba/mobaPlayerStats.js";
 
 const TICK_MS = 130;   // 每 130ms 一個模擬步
 const DT_SIM = 0.5;    // 每步推進 0.5 模擬秒（約 3.8x 速度；要即時就設成 TICK_MS/1000）
@@ -37,6 +40,19 @@ export function useLocalServer() {
     const eng = new LogicEngine(seed, loadout);
     // Sprint26：開始重播擷取（seed / 戰術只有這裡拿得到；frames 由 useBattleFeed 取樣）
     beginReplayCapture({ seed, config: opts.tactic?.tacticId ? { tacticId: opts.tactic.tacticId, tacticName: opts.tactic.name ?? null } : {} });
+
+    // ── Sprint28：選手能力進引擎（唯一計算點）────────────────────────────
+    //   profileStore.players（最新，含天賦）→ getPlayerDerivedStats → 能力 slots
+    //   → toEnginePlayerMods → engine.configurePlayers。
+    //   對位靠 playerId（b1–b5），不靠名字、不靠索引；TacticScreen / Battle 不各算一份。
+    //   ⚠ 必須在 configureMatch **之前**：開局野區入侵在 configureMatch 當下擲骰，
+    //     需要打野的 invadeAdj。
+    //   紅方＝ AI 對手，無 profileStore 選手 ⇒ 不注入 ⇒ 全隊中性（baseline 行為，
+    //     天然對照組）。無先發選手 / 空名單 ⇒ mods 為 null ⇒ 完全不呼叫 ⇒ S27 baseline。
+    const players = useProfileStore.getState().players ?? [];
+    const playerMods = toEnginePlayerMods({ blue: buildPlayerStatSlots(players, "blue"), red: [] });
+    if (playerMods) eng.configurePlayers(playerMods);
+
     // Sprint24：戰術進引擎（TacticScreen 的 MobaTacticConfig → 行為權重 knobs）。
     //   對手戰術目前固定 STANDARD_OPP_TACTIC（無對手戰術來源，不虛構 AI）。
     //   無 opts.tactic ⇒ 不呼叫 configureMatch，引擎行為與舊版位元一致。
