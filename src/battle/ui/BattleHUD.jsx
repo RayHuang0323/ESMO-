@@ -38,7 +38,11 @@ function TowerDots({ towers, side }) {
 export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭", redName = "赤焰軍團", redEmoji = "🔥", roster = null, tactic = null }) {
   const hud = useGameStore((s) => s.hud);
   const snap = useGameStore((s) => s.snapshot);
-  const { mvp } = useBattleStore();
+  // S29 效能：舊碼 `useBattleStore()` **沒有 selector** ⇒ 訂閱整個 battleStore
+  //   （events / log / floating / series / derived 任一變動都重繪 HUD）。
+  //   本元件只用到 MVP 的 id ⇒ 只訂閱字串（identity 穩定；mvp 物件每幀都是新的）。
+  const mvpId = useBattleStore((s) => s.mvp?.id ?? null);
+  const mvp = mvpId ? { id: mvpId } : null;
   const mvpName = mvp ? (roster?.[mvp.id]?.player ?? mvp.id.toUpperCase()) : "—";
   const pit = (d, label, icon) => (
     <span title={`${label}：${d.alive ? "已刷新" : `${Math.max(0, d.respawn).toFixed(0)}s 後刷新`}`}

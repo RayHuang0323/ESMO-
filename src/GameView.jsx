@@ -16,6 +16,7 @@ import { useLocalServer } from "./useLocalServer.js";
 import { LANES, PITS } from "./gameData.js";
 import { ROSTER } from "./data/roster.js";
 import { draftRoster } from "./battle/moba/draftRoster.js";
+import { loadQuality, saveQuality, presetFor, QUALITY_IDS, QUALITY_PRESETS } from "./battle/quality.js";
 
 // 你的彩色地圖：Vite 可 `import mapUrl from "./assets/rift.png"` 後設給 MOBA_MAP；null 用程序化底圖。
 const MOBA_MAP = null;
@@ -24,10 +25,14 @@ const MOBA_MAP = null;
 function Minimap() {
   const ref = useRef(null);
   useEffect(() => {
-    let raf;
-    const draw = () => {
+    let raf, last = 0;
+    // S29 效能：小地圖原本用**無節流的 rAF**（每秒 60 次重繪整張 canvas）。
+    //   引擎每秒只推 2–8 幀，60fps 重繪是純浪費 ⇒ 節流到 12fps（肉眼無差）。
+    const MIN_MS = 1000 / 12;
+    const draw = (now = 0) => {
       const cv = ref.current;
-      if (cv) {
+      if (cv && now - last >= MIN_MS) {
+        last = now;
         const snap = useGameStore.getState().snapshot;
         const g = cv.getContext("2d"), D = cv.width, P = (v) => (v / 100) * D;
         const VIS = [];
@@ -60,10 +65,16 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   // Sprint19【C】：draft（Ban/Pick 結果）仍僅作 Presentation 傳遞。
   // Sprint24【D 升級】：tactic = MobaTacticConfig.v1 → start({tactic}) → engine.configureMatch
   //   （行為權重層；戰術現在「真的」進 LogicEngine，證據寫入 BattleResult.tacticExecution）。
-  const { playing, start, stop } = useLocalServer();
+  // Sprint29：playbackRate（1×/2×/4×）+ quality preset（low/medium/high）。
+  //   ⚠ 兩者都**只影響呈現**：rate 只改 tick 的真實間隔（dt 恆定）、quality 只改怎麼畫。
+  const { playing, start, stop, rate, setRate, rates } = useLocalServer();
   // Sprint09：賽前準備銜接 — autoStart 掛載即開局（預設 false = 現行為不變）
   useEffect(() => { if (autoStart && !playing) start({ tactic }); }, []);  // eslint-disable-line
   const [follow, setFollow] = useState(true);        // 戰鬥鏡頭跟隨（BattleCameraController）
+  // S29：畫質——首次依裝置自動判斷，玩家手動選擇後存 localStorage 並優先
+  const [qualityId, setQualityId] = useState(() => loadQuality());
+  const quality = useMemo(() => presetFor(qualityId), [qualityId]);
+  const pickQuality = (id) => { setQualityId(id); saveQuality(id); };
   const hud = useGameStore((s) => s.hud);
   // Sprint20【E】生效名單：Ban/Pick 選到的英雄取代 ROSTER 預設英雄（無 draft → 原 ROSTER）。
   //   3D 名牌 / HUD / 記分板 / 終局畫面全部吃這一份 → Loading、Battle、Result 顯示同一批英雄。
@@ -72,7 +83,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   return (
     <div style={{ position: "relative", width: "100%", height: "min(82vh, 720px)", background: "#0d1420", borderRadius: 14, overflow: "hidden", fontFamily: "system-ui,-apple-system,sans-serif" }}>
       {/* 3D：跟隨開啟且對局進行中 → 相機聚焦交戰/推塔/龍/巴龍/主堡（computeFocus）*/}
-      <MobaView3D mapTexture={MOBA_MAP} autoRotate={!playing} battleFollow={follow && playing} roster={liveRoster} />
+      <MobaView3D mapTexture={MOBA_MAP} autoRotate={!playing} battleFollow={follow && playing} roster={liveRoster} quality={quality} />
 
       {/* Battle Presentation Layer：HUD / Timeline / 浮動大字 / TAB 記分板 / 終局畫面 */}
       <BattlePresentationLayer roster={liveRoster} draft={draft} tactic={tactic} onContinue={onContinue} />
@@ -89,6 +100,26 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
       <button onClick={() => setFollow((v) => !v)} style={{ position: "absolute", top: 92, right: 12, zIndex: 10, background: follow ? "rgba(96,165,250,0.9)" : "rgba(8,14,24,0.7)", border: `1px solid ${follow ? "#60a5fa" : "rgba(255,255,255,0.3)"}`, borderRadius: 8, padding: "5px 10px", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
         {follow ? "🎥 導播鏡頭" : "🖱 自由鏡頭"}
       </button>
+
+      {/* S29：播放倍率（只改 tick 的真實間隔，dt 恆定 ⇒ 不影響模擬結果）*/}
+      <div style={{ position: "absolute", top: 124, right: 12, zIndex: 10, display: "flex", gap: 4 }}>
+        {rates.map((r) => (
+          <button key={r} onClick={() => setRate(r)} title="播放倍率（不影響模擬結果）"
+            style={{ background: rate === r ? "rgba(96,165,250,0.9)" : "rgba(8,14,24,0.7)", border: `1px solid ${rate === r ? "#60a5fa" : "rgba(255,255,255,0.25)"}`, borderRadius: 6, padding: "4px 8px", color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer", minWidth: 32 }}>
+            {r}×
+          </button>
+        ))}
+      </div>
+
+      {/* S29：畫質切換（自動判斷 + 手動覆寫；只影響怎麼畫，不影響模擬結果）*/}
+      <div style={{ position: "absolute", top: 156, right: 12, zIndex: 10, display: "flex", gap: 4 }}>
+        {QUALITY_IDS.map((id) => (
+          <button key={id} onClick={() => pickQuality(id)} title={`畫質：${QUALITY_PRESETS[id].zh}（不影響模擬結果）`}
+            style={{ background: qualityId === id ? "rgba(52,211,153,0.9)" : "rgba(8,14,24,0.7)", border: `1px solid ${qualityId === id ? "#34d399" : "rgba(255,255,255,0.25)"}`, borderRadius: 6, padding: "4px 8px", color: "#fff", fontSize: 10, fontWeight: 800, cursor: "pointer", textTransform: "uppercase" }}>
+            {id === "low" ? "低" : id === "medium" ? "中" : "高"}
+          </button>
+        ))}
+      </div>
 
       <div style={{ position: "absolute", bottom: 10, left: 10, color: "rgba(255,255,255,0.6)", fontSize: 10, background: "rgba(0,0,0,0.45)", padding: "4px 8px", borderRadius: 6, pointerEvents: "none" }}>
         按住 TAB 記分板 · 拖曳旋轉 · 滾輪縮放

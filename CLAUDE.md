@@ -33,11 +33,16 @@ npm run build           # 必跑，看到 "built in" 才算過
 node tools/regress.mjs  # 一律跑（若存在）
 node tools/regress2.mjs # 一律跑（若存在）
 ```
-`tools/check_*.mjs` 現役清單（2026-07-14 於 S28 逐支實跑確認，含 HEAD~1 對照）：
+`tools/check_*.mjs` 現役清單（2026-07-14 於 S29A 逐支實跑確認）：
 
-- **現役（必跑，全綠）**：`check_moba_stats28` `check_talent27` `check_moba_experience26`
-  `check_progress25` `check_moba_tactic24` `check_cs23` `check_flow09` `check_dash10`
-  （`check_moba_stats28` 已內含前六支＋regress＋regress2＋build 的子行程驗證）
+- **現役（必跑，全綠）**：`check_moba_runtime29` `check_moba_stats28` `check_talent27`
+  `check_moba_experience26` `check_progress25` `check_moba_tactic24` `check_cs23`
+  `check_flow09` `check_dash10`
+  （`check_moba_runtime29` 已內含前六支＋regress＋regress2＋build 的子行程驗證 ⇒
+  **跑它一支就等於跑完全部**，44/44。⚠ 巢狀 fan-out 很深，單跑約 10–15 分鐘。）
+- **各支的檢查數**（改動 verifier 時，這些數字被彼此的輸出形狀正則硬編碼，會連動）：
+  `runtime29` 44、`stats28` 29、`talent27` 44、`experience26` 35、`progress25` 34、
+  `tactic24` 29、`cs23` 28、`regress2` 節奏門檻 8/8。
 - **已失效（S27 起即紅，非本次改動所致，勿當回歸訊號）**：`check_equiv06/07/08`
   （import 不存在的 `tools/src/LogicEngine.s05.js` fixture）、`check_hero08`、
   `check_mount09`（斷言 S09 時代的 AppShell 畫面清單）、`check_loop08`、`check_ux07`、

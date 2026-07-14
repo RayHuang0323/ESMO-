@@ -19,7 +19,8 @@ export default function BattlePresentationLayer({ roster = null, showTimeline = 
   // Sprint20【E】draft 交給 useBattleFeed：終局產出的 BattleResult.players[].heroId
   //   = Ban/Pick 實際選到的英雄（沿用 snapshotToBattleResult 既有的 heroAssign 選項，
   //   BattleResult 結構不變、不重新統計）→ Result 顯示的英雄與 Draft/Battle 一致。
-  useBattleFeed(draft);                  // 唯一接線：核心快照 → battleStore（單向）
+  // S29：roster / tacticId 傳給播報引擎（決定「誰在講、語氣」；不決定「是否觸發」）
+  useBattleFeed(draft, { roster, tacticId: tactic?.tacticId ?? null });
   const over = useGameStore((s) => s.hud.over);
   const [showBoard, setShowBoard] = useState(false);
 

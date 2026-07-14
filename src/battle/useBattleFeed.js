@@ -22,12 +22,14 @@ import { captureReplayFrame, finalizeReplay } from "./moba/replay/replayBuffer.j
  *   走 snapshotToBattleResult 既有的 heroAssign 選項；統計/結算規則完全不變。
  *   無 draft → heroAssign 退回 roster.js 的 HERO_ASSIGN（行為與 Sprint19 相同）。
  */
-export function useBattleFeed(draft = null) {
+export function useBattleFeed(draft = null, { roster = null, tacticId = null } = {}) {
   const draftRef = useRef(draft);
   draftRef.current = draft;              // 終局那一幀讀最新 draft（訂閱只掛一次）
   useEffect(() => {
     const ingest = useBattleStore.getState().ingest;
     const reset = useBattleStore.getState().reset;
+    // S29：開局初始化戰術播報（我方＝藍隊；roster 提供名字/個性 ⇒ 誰在講話）
+    useBattleStore.getState().initComms({ roster, tacticId, side: "blue" });
     // 首幀先灌一次現況
     ingest(useGameStore.getState().snapshot);
     // 只在 snapshot 參照改變時 ingest（pushFrame 每幀換新物件）
@@ -62,6 +64,8 @@ export function useBattleFeed(draft = null) {
         finalizeReplay({
           matchId: mobaMatchId(result),
           events: bs.log,
+          // S29：把**本場實際產生的**播報原封存進 Replay（Replay 不重新生成對話）
+          comms: useBattleStore.getState().comms,
           resultSummary: { winner: result.winner, score: { ...result.score }, duration: result.duration, mvpId: result.mvpId },
           tacticMeta: result.tactic ?? null,
         });

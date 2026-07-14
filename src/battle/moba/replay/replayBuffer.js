@@ -41,7 +41,7 @@ export function captureReplayFrame(snap) {
 }
 
 /** 終局：組裝正式 MobaReplay.v1 並成為「當前可重播的一場」。回傳 replay 或 null。 */
-export function finalizeReplay({ matchId, events = [], resultSummary = null, tacticMeta = null }) {
+export function finalizeReplay({ matchId, events = [], comms = [], resultSummary = null, tacticMeta = null }) {
   if (!cap || cap.frames.length === 0 || !matchId) { cap = null; return null; }
   const replay = createMobaReplay({
     matchId,
@@ -59,6 +59,12 @@ export function finalizeReplay({ matchId, events = [], resultSummary = null, tac
     resultSummary,
     truncated: cap.truncated,
   });
+  // S29：播報＝**本場實際產生的原始訊息**，原封存入 Replay。
+  //   Replay 播放時只讀這份，**不重新生成對話**（S29 §八紅線）。
+  replay.comms = comms.map((c) => ({
+    id: c.id, t: c.t, ruleId: c.ruleId, side: c.side,
+    speakerId: c.speakerId, speaker: c.speaker, text: c.text, evidence: c.evidence ?? null,
+  }));
   current = replay;   // 只留最近一場（session 記憶體上限）
   cap = null;
   return replay;

@@ -280,7 +280,7 @@ function runNode(script) {
 }
 const t24 = runNode("tools/check_moba_tactic24.mjs");
 ck("16) check_moba_tactic24 仍全綠（exit code 0；MOBA balance baseline 未變）",
-  t24.code === 0 && /27\/27 通過/.test(t24.out));
+  t24.code === 0 && /29\/29 通過/.test(t24.out));   // S29：C4 重導（飽和的 dragonContests → objRate）+2 條
 
 // ── 報告 ───────────────────────────────────────────────────────────────────
 let pass = 0;

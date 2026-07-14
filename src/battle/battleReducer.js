@@ -36,7 +36,12 @@ export function ingestReducer(state, newEvents, snap) {
     derived = d;
   }
   // 推塔數每幀由 snapshot 直接重算（真實來源，避免事件累加漂移）
-  derived = { ...derived, blueTowers: towersDestroyedBy(snap, "blue"), redTowers: towersDestroyedBy(snap, "red") };
+  // S29 效能：舊碼**每幀都 new 一個 derived 物件**（即使推塔數完全沒變）⇒ 訂閱 derived
+  //   的元件每幀都重繪。改為「內容真的變了才換參照」（zustand 用 Object.is 比較）。
+  const bT = towersDestroyedBy(snap, "blue"), rT = towersDestroyedBy(snap, "red");
+  if (derived.blueTowers !== bT || derived.redTowers !== rT) {
+    derived = { ...derived, blueTowers: bT, redTowers: rT };
+  }
   // 時間序取樣（金錢/推塔）：間隔取樣 + 終局補點
   let series = state.series;
   const last = series[series.length - 1];

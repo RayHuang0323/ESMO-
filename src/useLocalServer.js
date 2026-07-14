@@ -17,20 +17,54 @@ import { beginReplayCapture } from "./battle/moba/replay/replayBuffer.js";
 import { buildPlayerStatSlots } from "./battle/moba/mobaRosterAdapter.js";
 import { toEnginePlayerMods } from "./battle/moba/mobaPlayerStats.js";
 
-const TICK_MS = 130;   // 每 130ms 一個模擬步
-const DT_SIM = 0.5;    // 每步推進 0.5 模擬秒（約 3.8x 速度；要即時就設成 TICK_MS/1000）
+// ============================================================================
+//  S29：simTime / presentationTime / playbackRate 明確分離
+//
+//    simTime          引擎世界時間。**每 tick 固定推進 DT_SIM 模擬秒**，與真實時間、
+//                     與瀏覽器 FPS、與 playbackRate 全部無關 ⇒ 同 seed 必得同結果。
+//    playbackRate     只改「兩次 tick 之間的真實毫秒數」，不改 dt ⇒ 1×/2×/4×
+//                     **不可能**改變模擬結果（S29 §九測試 9、10）。
+//    presentationTime 真實牆鐘時間；rAF 只用它算子幀進度 subT（0→1）做內插。
+//                     渲染幀率高低只影響「內插得多平滑」，不影響英雄的世界移動速度
+//                     （S29 §11 紅線：禁止用 FPS 綁定遊戲速度）。
+//
+//  tickMs(rate) = DT_SIM × 1000 / rate ⇒ 1× 500ms、2× 250ms、4× 125ms。
+//  舊版寫死 TICK_MS=130 + DT_SIM=0.5 ⇒ 固定 3.85 倍速且無法調整。
+// ============================================================================
+const DT_SIM = 0.5;              // 每個模擬步固定推進 0.5 模擬秒（**永遠不隨倍速改變**）
+export const PLAYBACK_RATES = [1, 2, 4];
+export const DEFAULT_RATE = 2;   // 22.5 模擬分 ⇒ 約 11 真實分；觀感移速 9 單位/真實秒
+export const tickMsFor = (rate) => (DT_SIM * 1000) / rate;
 
 export function useLocalServer() {
   const engineRef = useRef(null);
   const intervalRef = useRef(null);
   const rafRef = useRef(null);
   const lastTick = useRef(0);
+  const rateRef = useRef(DEFAULT_RATE);
   const [playing, setPlaying] = useState(false);
+  const [rate, setRateState] = useState(DEFAULT_RATE);
 
   const stop = useCallback(() => {
     clearInterval(intervalRef.current); cancelAnimationFrame(rafRef.current);
     intervalRef.current = null; rafRef.current = null; setPlaying(false);
   }, []);
+
+  /** 切換播放倍率：只重排 setInterval 的間隔，**不碰引擎、不碰 dt** ⇒ 結果不變。 */
+  const setRate = useCallback((next) => {
+    const r = PLAYBACK_RATES.includes(next) ? next : DEFAULT_RATE;
+    rateRef.current = r; setRateState(r);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      const eng = engineRef.current;
+      intervalRef.current = setInterval(() => {
+        eng.tick(DT_SIM);                       // ⚠ dt 恆為 DT_SIM
+        useGameStore.getState().pushFrame(eng.snapshot());
+        lastTick.current = performance.now();
+        if (eng.over) stop();
+      }, tickMsFor(r));
+    }
+  }, [stop]);
 
   const start = useCallback((opts = {}) => {
     stop();
@@ -68,14 +102,16 @@ export function useLocalServer() {
     lastTick.current = performance.now();
 
     intervalRef.current = setInterval(() => {
-      eng.tick(DT_SIM);
+      eng.tick(DT_SIM);                    // ⚠ dt 恆為 DT_SIM，與 playbackRate 無關
       useGameStore.getState().pushFrame(eng.snapshot());
       lastTick.current = performance.now();
       if (eng.over) stop();
-    }, TICK_MS);
+    }, tickMsFor(rateRef.current));
 
+    // presentationTime：只用來算子幀進度（0→1）供渲染內插。
+    //   渲染 FPS 高低 ⇒ 只影響內插取樣密度，**不影響英雄的世界移動速度**。
     const loop = () => {
-      subTRef.current = Math.min(1, (performance.now() - lastTick.current) / TICK_MS);
+      subTRef.current = Math.min(1, (performance.now() - lastTick.current) / tickMsFor(rateRef.current));
       rafRef.current = requestAnimationFrame(loop);
     };
     rafRef.current = requestAnimationFrame(loop);
@@ -83,7 +119,7 @@ export function useLocalServer() {
   }, [stop]);
 
   useEffect(() => () => stop(), [stop]);
-  return { playing, start, stop, engineRef };
+  return { playing, start, stop, engineRef, rate, setRate, rates: PLAYBACK_RATES };
 }
 
 // ── 多人版（示意）──────────────────────────────────────────────────────────

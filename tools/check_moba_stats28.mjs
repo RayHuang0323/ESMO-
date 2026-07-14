@@ -31,6 +31,8 @@ const { STAT_DEF } = await import(u("src/data/playerModel.js"));
 const { toEngineTactic, STANDARD_OPP_TACTIC, MOBA_TACTICS, MOBA_TACTIC_VERSION } =
   await import(u("src/platform/contracts/MobaTacticConfig.js"));
 const { snapshotToBattleResult } = await import(u("src/battle/battleResult.js"));
+// S29：等級 → 戰鬥數值的**引擎規則**（雙方對稱）。13b 用它逐點驗證天賦沒有繞過公式。
+const { powerMultFor, hpMultFor, MAX_MATCH_LEVEL } = await import(u("src/battle/moba/matchProgression.js"));
 const { mobaResultToTransaction } = await import(u("src/platform/progress/adapters/mobaProgressAdapter.js"));
 const { applyProgressToState } = await import(u("src/platform/progress/applyMatchProgress.js"));
 const { toFpsRoster } = await import(u("src/battle/fps/fpsRoster.js"));
@@ -192,13 +194,67 @@ const ALLOWED = ["retreatAdj", "returnAdj", "joinAdj", "objAdj", "laneAdj",
 const modKeysOk = Object.values(modsB.blue).every(
   (m) => Object.keys(m).length === ALLOWED.length && Object.keys(m).every((k) => ALLOWED.includes(k)));
 const rA = run(4242, { mods: modsA, tactic: M1 }), rD = run(4242, { mods: modsD, tactic: M1 });
-const powerOf = (e) => JSON.stringify(e.players.map((p) => [p.id, p.power, p.tough, p.maxHp]));
-ck("13) 無 winRate/damageMultiplier 偷渡欄位（mods 只有 10 個行為鍵；power/tough/maxHp 不受天賦影響）",
+
+// ═══ 13 / 13b：天賦不得直接改戰鬥數值 ── S29 重寫 ═════════════════════════════
+//  【被移除的舊斷言】終局 power / maxHp 逐值相同。
+//  【為什麼它必須被移除】S29 引擎加入「本場英雄等級」mlv（1–18，由小兵/擊殺/目標 XP
+//    推進，**雙方對稱的引擎規則**）：
+//        power = basePower × powerMultFor(mlv)、maxHp = baseMaxHp × hpMultFor(mlv)
+//    天賦改變的是**行為**（撤退門檻、參戰率、推線深度…）→ 吃線與擊殺效率不同 →
+//    升級速度不同 ⇒ **終局** power 本來就會不同。那是「打得好所以升得快」的合法因果。
+//    繼續斷言「終局相同」＝ 等於禁止等級系統存在，而等級系統正是 S29 §3 的規格。
+//  【紅線改以兩個錨點表述】兩者都與本場表現無關 ⇒ 天賦無論如何都碰不到：
+//    (a) Lv1 錨點     ：basePower / tough / baseMaxHp（建構時決定）整場不被天賦寫入。
+//    (b) 同等級錨點   ：同一席位在**同一 mlv** 時，有無天賦的 power / maxHp 必須逐值相同。
+//                      ⇒ 天賦唯一能影響的是「多快升到那一級」，不是「到了那級有多強」。
+const anchorOf = (e) => JSON.stringify(e.players.map((p) => [p.id, p.basePower, p.tough, p.baseMaxHp]));
+ck("13) 無 winRate/damageMultiplier 偷渡欄位（mods 只有 10 個行為鍵；Lv1 錨點 basePower/tough/baseMaxHp 不受天賦影響）",
   modKeysOk &&
   !/(winRate|winProbBonus|damageMult|dmgMult|goldMult|powerMult|toughMult)/.test(MPS_SRC) &&
-  powerOf(rA.eng) === powerOf(rD.eng) &&
-  powerOf(rA.eng) === powerOf(run(4242, { tactic: M1 }).eng) &&
+  anchorOf(rA.eng) === anchorOf(rD.eng) &&
+  anchorOf(rA.eng) === anchorOf(run(4242, { tactic: M1 }).eng) &&
+  // 等級成長是**雙方對稱的引擎規則**，不是天賦欄位：mods 裡不得出現任何 power/hp 鍵
+  !ALLOWED.some((k) => /power|hp|dmg|damage/i.test(k)) &&
   Object.keys(STAT_MAP).every((k) => ALLOWED.includes(k)));
+
+// 13b) 同等級錨點（實證，非宣稱）：4 種天賦配置（無 / 操作 / 戰術 / 團隊）各跑一場，
+//   每 20 模擬秒把每位選手的 (id, mlv) → (power, maxHp) 記進表裡。
+//     · 任何在不同配置下重複出現的 (id, mlv)，power / maxHp 必須逐值相同 ⇒ 同等級同強度。
+//     · 同時逐點驗證引擎沒被繞過：power === basePower × powerMultFor(mlv)（maxHp 同理）。
+//   終局 mlv 因天賦而不同 ⇒ **合法**，並在下方輸出實際的等級分歧作為佐證。
+const lvTable = new Map();                       // "id|mlv" → [power, maxHp]
+let lvConflicts = 0, formulaBad = 0, lvSamples = 0;
+const mlvSeen = new Set();
+const endMlv = [];
+for (const mods of [null, modsA, modsB, modsD]) {
+  const e = new LogicEngine(4242);
+  if (mods) e.configurePlayers(mods);
+  e.configureMatch({ blue: toEngineTactic(M1), red: toEngineTactic(STANDARD_OPP_TACTIC), meta: null });
+  for (let t = DT; t <= 1800 && !e.over; t += DT) {
+    e.tick(DT);
+    if (r2(e.t) % 20 !== 0) continue;            // 每 20 模擬秒取樣一次
+    for (const p of e.players) {
+      lvSamples++; mlvSeen.add(p.mlv);
+      if (Math.abs(p.power - p.basePower * powerMultFor(p.mlv)) > 1e-9) formulaBad++;
+      if (Math.abs(p.maxHp - p.baseMaxHp * hpMultFor(p.mlv)) > 1e-9) formulaBad++;
+      const key = `${p.id}|${p.mlv}`;
+      const prev = lvTable.get(key);
+      if (prev) {
+        if (Math.abs(prev[0] - p.power) > 1e-9 || Math.abs(prev[1] - p.maxHp) > 1e-9) lvConflicts++;
+      } else lvTable.set(key, [p.power, p.maxHp]);
+    }
+  }
+  endMlv.push(e.players.filter((p) => p.side === "blue").map((p) => p.mlv).join("/"));
+}
+const lvSpread = `${Math.min(...mlvSeen)}–${Math.max(...mlvSeen)}`;
+ck(`13b) 同等級錨點：同席位同 mlv ⇒ power/maxHp 逐值相同（4 配置 × ${lvSamples} 取樣、涵蓋 Lv ${lvSpread}、` +
+   `${lvTable.size} 組 (id,mlv)；衝突 ${lvConflicts} 筆、偏離等級公式 ${formulaBad} 筆）`,
+  lvConflicts === 0 && formulaBad === 0 &&
+  mlvSeen.size >= 8 && lvTable.size >= 50 &&           // 取樣要真的涵蓋多個等級，否則等於沒測
+  Math.max(...mlvSeen) <= MAX_MATCH_LEVEL);
+// 佐證：天賦確實讓終局等級分歧（若這裡完全相同，代表 13b 是空測）
+console.log(`   [13b] 藍隊終局 mlv（無/操作/戰術/團隊天賦）：${endMlv.join("  |  ")}`);
+console.log(`   [13b] ⇒ 終局 power 因等級不同而不同 = 合法；同等級下 power 相同 = 已逐點驗證`);
 
 // ═══ 14–15：角色公平性（Support / Jungle 必須有可觀察作用）════════════════
 const supBehav = (m, s) => { const x = run(s, { mods: m, tactic: M1 }).snap;
@@ -284,10 +340,13 @@ for (const [name, script, shape] of [
   ["20) Sprint27 verifier 44/44", "tools/check_talent27.mjs", /44\/44 通過/],
   ["21) Sprint26 verifier 35/35", "tools/check_moba_experience26.mjs", /35\/35 通過/],
   ["22) Sprint25 verifier 34/34", "tools/check_progress25.mjs", /34\/34 通過/],
-  ["23) Sprint24 verifier 27/27", "tools/check_moba_tactic24.mjs", /27\/27 通過/],
+  ["23) Sprint24 verifier 29/29", "tools/check_moba_tactic24.mjs", /29\/29 通過/],   // S29：C4 重導 +2 條
   ["24) Sprint23 verifier 28/28", "tools/check_cs23.mjs", /28\/28 通過/],
   ["25) regress（結束率 15/15）", "tools/regress.mjs", /結束率 15\/15/],
-  ["26) regress2（達標 19/20）", "tools/regress2.mjs", /達標 19\/20/],
+  // S29：原斷言「15-25分達標 19/20」是舊節奏快照；改斷言穩固門檻「20/20 場都收得掉」。
+  // S29：regress2 已是有門檻的斷言（8 條節奏門檻，失敗即 exit 1）⇒ 直接驗門檻行。
+  //   舊斷言 /達標 19\/20/ 是舊節奏的數值快照，且對 v1 病灶零檢定力（見設計文件 §7）。
+  ["26) regress2（節奏門檻 8/8）", "tools/regress2.mjs", /節奏門檻 8\/8 通過/],
 ]) {
   const r = runNode(script, shape);
   ck(`${name}（exit=${r.code}）`, r.ok && r.code === 0);

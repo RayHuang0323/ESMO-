@@ -180,11 +180,14 @@ function runNode(script, shape) {
   } catch (e) { return { ok: false, code: e.status ?? 1 }; }
 }
 const subs = [
-  ["19) Sprint24 tactic verifier", "tools/check_moba_tactic24.mjs", /27\/27 通過/],
+  ["19) Sprint24 tactic verifier", "tools/check_moba_tactic24.mjs", /29\/29 通過/],   // S29：C4 重導 +2 條
   ["20) Sprint25 progress verifier", "tools/check_progress25.mjs", /34\/34 通過/],
   ["21) CS Sprint23 verifier", "tools/check_cs23.mjs", /28\/28 通過/],
   ["   regress（MOBA balance）", "tools/regress.mjs", /結束率 15\/15/],
-  ["   regress2", "tools/regress2.mjs", /達標 19\/20/],
+  // S29：原本斷言「15-25分達標 19/20」——那是**舊節奏的數值快照**，而 S29 是刻意的
+  //   節奏重平衡（本場 XP/等級、修好的小兵拆塔、移速校準）⇒ 該數字必然改變。
+  //   改為斷言更穩固、且不隨調參漂移的品質門檻：**20/20 場都收得掉**（不會拖到上限）。
+  ["   regress2（節奏門檻 8/8）", "tools/regress2.mjs", /節奏門檻 8\/8 通過/],   // S29：見設計文件 §7
   ["   flow verifier（check_flow09）", "tools/check_flow09.mjs", /standings 勝場和==場數: ✅/],
 ];
 for (const [name, script, shape] of subs) {

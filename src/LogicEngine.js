@@ -20,16 +20,30 @@ import {
   clamp, dist, posOnLane, WALLS, PITS, BASE, FOUNTAIN, TOWER_T,
   ROLES, ROLE_LANE, TOWER_HP, NEXUS_HP, SIDE,
 } from "./gameData.js";
+// S29：本場英雄等級/XP 與模擬節奏常數（純資料 + 純函式；引擎不自己定義曲線）
+import {
+  rulesFor, XP, addMatchXp, powerMultFor, hpMultFor, xpToNext,
+} from "./battle/moba/matchProgression.js";
 
 export class LogicEngine {
-  constructor(seed = 1, loadout = null) {
+  /**
+   * @param {number} seed
+   * @param {object|null} loadout   Hero Progress（英雄熟練 → power/tough 倍率）
+   * @param {object} [opts]
+   * @param {"v1"|"v2"} [opts.rules="v2"]  模擬規則集。
+   *   v2（預設）= S29 校準後：本場 XP/等級、真實移速、修好的小兵拆塔。
+   *   v1        = S28 之前的舊節奏（**壞的**），只保留供 baseline 對照與回歸比較。
+   */
+  constructor(seed = 1, loadout = null, opts = {}) {
     let x = seed | 0; this.rng = () => ((x = (x * 1664525 + 1013904223) & 0xffffffff) >>> 0) / 0xffffffff;
     this.seed = seed | 0;          // S24：保留 seed 供戰術層 rng2 派生
     this.tacticOn = false;         // S24：未 configureMatch ⇒ 全部戰術程式碼不生效
     this.playerStatsOn = false;    // S28：未 configurePlayers ⇒ 全部能力程式碼不生效
+    this.rules = rulesFor(opts.rules);   // S29：模擬規則集（v2 預設）
+    const R = this.rules;
     this.t = 0; this.over = false; this.winner = null;
     this.bK = 0; this.rK = 0; this.bGold = 500; this.rGold = 500;
-    this.mid = 0; this.fx = []; this.waveTimer = 0; this.feed = [];
+    this.mid = 0; this.fx = []; this.waveTimer = R.waveFirst; this.feed = [];
 
     this.players = [];
     ["blue", "red"].forEach((side) => {
@@ -50,7 +64,12 @@ export class LogicEngine {
           k: 0, d: 0, // Sprint04：個人擊殺/死亡累計（純附加儀器化，供呈現層讀取）
           a: 0, dmg: 0, heal: 0, hitBy: new Map(), // Sprint06：助攻/傷害/治療儀器化（純附加）
           twrDmg: 0, // Sprint07：個人推塔傷害（純附加）
-          lv, // Sprint08：英雄等級（來自 Hero Progress loadout）
+          lv, // Sprint08：**英雄熟練等級**（跨場，來自 Hero Progress loadout）— 不是本場等級
+          // ── S29：本場英雄等級（單場，終局丟棄）──────────────────────────
+          //   與上面的 lv 是**兩套資料**，刻意不同名以防混用（見 matchProgression.js 檔頭）。
+          mlv: 1, mxp: 0,
+          basePower: power,        // Lv1 基準（等級成長以此為錨，不會累乘漂移）
+          baseMaxHp: 600 * tough,
         });
       });
     });
@@ -153,6 +172,117 @@ export class LogicEngine {
   /** 該選手的能力 mods；未啟用 / 該席位無資料 ⇒ null（＝走原始路徑）。 */
   _mod(p) { return this._modById(p.id); }
 
+  // ── S29 本場英雄 XP／等級 ─────────────────────────────────────────────────
+  /** 加本場 XP；升級即重算 power/maxHp（雙方對稱，不是勝率係數）。rules v1 ⇒ 完全短路。 */
+  _addXp(p, amt) {
+    if (!this.rules.matchXp || !(amt > 0) || p.dead) return;
+    const r = addMatchXp(p.mlv, p.mxp, amt);
+    p.mxp = r.mxp;
+    if (r.levelsGained > 0) { p.mlv = r.mlv; this._applyMatchLevel(p); }
+  }
+  /** 等級 → 本場 power / maxHp（以 Lv1 基準錨定；升級補上「新增的那段血」，不是全補）。 */
+  _applyMatchLevel(p) {
+    p.power = p.basePower * powerMultFor(p.mlv);
+    const newMax = p.baseMaxHp * hpMultFor(p.mlv);
+    const gain = newMax - p.maxHp;
+    p.maxHp = newMax;
+    p.hp = Math.min(newMax, p.hp + Math.max(0, gain));
+  }
+  /** 小兵陣亡 XP：引擎無「補刀」概念 ⇒ 以距離歸屬給敵方英雄（輔助同樣分得到）。 */
+  _awardMinionXp(side, pos) {
+    const near = this.players.filter((q) => q.side === side && !q.dead && dist(q.pos, pos) < XP.MINION_RADIUS);
+    if (!near.length) return;                              // 沒人在線 ⇒ XP 流失（合理：無人吃線）
+    const each = near.length === 1 ? XP.MINION : XP.MINION * XP.MINION_SHARE;
+    for (const q of near) this._addXp(q, each);
+  }
+  /** 團隊目標 XP：擊殺方**全隊存活者**皆得 ⇒ 輔助/打野不因低擊殺而卡等級（S29 §3）。 */
+  _awardObjectiveXp(side, key) {
+    const amt = key === "baron" ? XP.BARON : XP.DRAGON;
+    for (const q of this.players) if (q.side === side && !q.dead) this._addXp(q, amt);
+  }
+
+  /**
+   * 交戰步驟（自 tick 內聯區塊抽出，行為逐字保留）：回血 / 選敵 / 造成傷害 / 推塔。
+   * v1：在移動迴圈內就地呼叫（舊行為）。
+   * v2：全員移動完後才統一呼叫 ⇒ 所有人看到的是彼此的**最終位置**，與迭代順序無關。
+   */
+  _combatStep(p, effLane, alive, dt, lateFactor, pendingHits) {
+    const R = this.rules;
+    const K = this.tacticOn ? this.tk[p.side] : null;
+    const S = this.tacticOn ? this._tac[p.side] : null;
+    // 回血：靠泉水快速回、脫離戰鬥緩慢回
+    const nearFountain = dist(p.pos, FOUNTAIN[p.side]) < 10;
+    // S29（順序偏差修正 ③）：舊碼 alive.find ⇒ 一律打「陣列索引最小」的敵人
+    //   （藍方永遠先集火 r1、紅方永遠先集火 b1）。改為打**最近的**敵人 ⇒ 順序無關。
+    let foe = null;
+    if (R.nearestTarget) {
+      let bd = 8;
+      for (const q of alive) {
+        if (q.side === p.side || q.dead) continue;
+        const dd = dist(p.pos, q.pos);
+        if (dd < bd) { bd = dd; foe = q; }
+      }
+    } else {
+      foe = alive.find((q) => q.side !== p.side && !q.dead && dist(p.pos, q.pos) < 8) ?? null;
+    }
+    if (nearFountain) { const h = Math.min(p.maxHp, p.hp + p.maxHp * 0.20 * dt) - p.hp; p.hp += h; p.heal += h; }
+    else if (!foe) { const h = Math.min(p.maxHp, p.hp + p.maxHp * 0.02 * dt) - p.hp; p.hp += h; p.heal += h; }
+    if (foe) {
+      // S29：dmgK 由規則集決定（v1 0.92 ⇒ TTK 20–30 秒、前 5 分鐘幾乎零擊殺）
+      const dmgAmt = p.power * dt * R.dmgK * lateFactor;
+      p.dmg += dmgAmt; foe.hitBy.set(p.id, this.t); // Sprint06：傷害/助攻追蹤（附加）
+      if (p.atkCd <= 0) { this.pushFx({ type: this.rng() < 0.2 ? "ult" : "line", pos: { ...p.pos }, target: { ...foe.pos }, color: SIDE[p.side] }); p.atkCd = 0.5; }
+      if (R.simultaneousCombat) pendingHits.push([p, foe, dmgAmt]);
+      else { foe.hp -= dmgAmt; if (foe.hp <= 0 && !foe.dead) this._resolveKill(p, foe); }
+    }
+    let tw = this.frontTower(p.side, effLane);
+    if (!tw && this.laneCleared(p.side)) tw = this.towers[(p.side === "blue" ? "red" : "blue") + "_nexus"];
+    if (tw && dist(p.pos, tw.pos) < 6 && !alive.some((q) => q.side !== p.side && dist(q.pos, tw.pos) < 9)) {
+      const td = R.heroTowerDmg * dt * lateFactor; tw.hp -= td; p.twrDmg += td;
+      // S24：推塔波次（同隊 10 秒節流一次的真實計數）
+      if (K && this.t - S.pushTick > 10) { S.pushTick = this.t; this.exec[p.side].towerPushes++; }
+    }
+  }
+
+  /**
+   * 擊殺結算（自原本 tick 內聯區塊抽出，行為逐字保留）：
+   * 死亡/復活、bK/rK、個人 K/D、助攻（8 秒窗）、擊殺與助攻 XP、賞金、擊殺 feed、
+   * 擊殺特效、S24 Gank/入侵歸因。v1 立即呼叫；v2 由 tick 尾端同時結算後呼叫。
+   */
+  _resolveKill(p, foe) {
+    const R = this.rules;
+    foe.dead = true; foe.respawn = 6 + Math.min(this.t / 30, 20); foe.hp = 0;
+    if (p.side === "blue") this.bK++; else this.rK++;
+    p.k += 1; foe.d += 1; // Sprint04：個人統計（附加）
+    const assists = []; // Sprint06：助攻結算（8 秒窗，附加）
+    for (const [aid, at] of foe.hitBy) {
+      if (aid !== p.id && this.t - at <= 8) {
+        const q = this.players.find((x) => x.id === aid && x.side === p.side);
+        if (q) { q.a += 1; assists.push(aid); }
+      }
+    }
+    // S29：擊殺/助攻 XP（受害者等級越高，賞金越高）。必須在 hitBy.clear() 之前用 assists。
+    if (R.matchXp) {
+      const kx = XP.KILL_BASE + XP.KILL_PER_VICTIM_LV * foe.mlv;
+      this._addXp(p, kx);
+      for (const aid of assists) {
+        const q = this.players.find((x) => x.id === aid);
+        if (q) this._addXp(q, kx * XP.ASSIST_SHARE);
+      }
+    }
+    foe.hitBy.clear();
+    this._dmgGold(p.side, 300); p.gold += 300;
+    this.feed.unshift({ id: this._mid++, killer: p.id, victim: foe.id, side: p.side, assists, vpos: { x: foe.pos.x, y: foe.pos.y } });
+    this.feed = this.feed.slice(0, 5);
+    this.pushFx({ type: "ult", pos: { ...foe.pos }, color: 0xfbbf24, exp: 0.6 });
+    // S24：擊殺歸因（真實計數，非編造）——Gank 窗內打野擊殺 / 入侵窗內中野擊殺
+    if (this.tacticOn) {
+      const S2 = this._tac[p.side];
+      if (p.role === "jungle" && this.t < S2.gankUntil) this.exec[p.side].gankKills++;
+      if (this.t < (S2.invadeUntil || 0) && (p.role === "jungle" || p.role === "mid")) this.exec[p.side].invadeKills++;
+    }
+  }
+
   frontTower(attacker, lane) {
     const def = attacker === "blue" ? "red" : "blue";
     const arr = [0, 1, 2].map((tier) => this.towers[`${def}_${lane}_${tier}`]).filter(Boolean);
@@ -167,12 +297,13 @@ export class LogicEngine {
 
   tick(dt) {
     if (this.over) return;
+    const R = this.rules;                       // S29：模擬規則集（移速/傷害/兵線/攻塔）
     this.t += dt;
     const lateFactor = 1 + Math.max(0, this.t - 360) / 600;
 
     this.waveTimer -= dt;
     if (this.waveTimer <= 0) {
-      this.waveTimer = 16;
+      this.waveTimer = R.wavePeriod;
       for (const ln of ["top", "mid", "bot"]) {
         for (let i = 0; i < 4; i++) {
           if (this.lanes[ln].bm.length < 16) this.lanes[ln].bm.push({ id: "b" + this._mid++, t: 0.06, hp: 130 });
@@ -183,18 +314,41 @@ export class LogicEngine {
     for (const ln of ["top", "mid", "bot"]) {
       this.lanes[ln].bm.forEach((m) => (m.t = Math.min(1, m.t + 0.018 * dt)));
       this.lanes[ln].rm.forEach((m) => (m.t = Math.max(0, m.t - 0.018 * dt)));
-      this.lanes[ln].bm.forEach((b) => {
-        const foe = this.lanes[ln].rm.find((r) => Math.abs(r.t - b.t) < 0.035);
-        if (foe) { b.hp -= 70 * dt; foe.hp -= 70 * dt; }
-      });
+      if (R.symmetricMinionCombat) {
+        // S29 修正（公平性 bug）：舊碼只迭代**藍方**小兵——多隻藍兵會挑到同一隻紅兵、
+        //   把傷害集中在牠身上（死得快），藍兵受到的傷害卻是分散的 ⇒ 紅兵系統性先死。
+        //   舊版塔會被瞬間融化，掩蓋了這個偏差；一旦小兵存活與否開始決定推塔，
+        //   偏差就放大成「藍方 20/20 全勝」。改成雙方各自出手、傷害同時結算。
+        const dmg = new Map();
+        const strike = (atk, def) => atk.forEach((a) => {
+          const foe = def.find((b) => Math.abs(b.t - a.t) < 0.035);
+          if (foe) dmg.set(foe, (dmg.get(foe) ?? 0) + 70 * dt);
+        });
+        strike(this.lanes[ln].bm, this.lanes[ln].rm);
+        strike(this.lanes[ln].rm, this.lanes[ln].bm);
+        for (const [m, v] of dmg) m.hp -= v;
+      } else {
+        this.lanes[ln].bm.forEach((b) => {
+          const foe = this.lanes[ln].rm.find((r) => Math.abs(r.t - b.t) < 0.035);
+          if (foe) { b.hp -= 70 * dt; foe.hp -= 70 * dt; }
+        });
+      }
       [["blue", "bm"], ["red", "rm"]].forEach(([side, key]) => {
         const arr = this.lanes[ln][key]; if (!arr.length) return;
-        const lead = side === "blue" ? Math.max(...arr.map((m) => m.t)) : Math.min(...arr.map((m) => m.t));
         let tw = this.frontTower(side, ln);
         if (!tw && this.laneCleared(side)) tw = this.towers[(side === "blue" ? "red" : "blue") + "_nexus"];
-        if (tw) {
+        if (!tw) return;
+        if (R.minionSiegeBand === Infinity) {
+          // v1（舊）：只看「最前方小兵」是否到位，傷害卻乘上**整路小兵數**（最多 16）
+          //   ⇒ 416 dmg/秒、塔 5 秒就倒。這是 S29 問題 5 的根因，保留供 baseline 對照。
+          const lead = side === "blue" ? Math.max(...arr.map((m) => m.t)) : Math.min(...arr.map((m) => m.t));
           const reach = side === "blue" ? lead >= tw.t - 0.04 : lead <= tw.t + 0.04;
-          if (reach) { tw.hp -= 26 * arr.length * dt * lateFactor; this._dmgGold(side, 0); }
+          if (reach) { tw.hp -= R.minionTowerDmg * arr.length * dt * lateFactor; this._dmgGold(side, 0); }
+        } else {
+          // v2（S29）：只有**實際貼在塔附近**的小兵能打塔，且同時計入上限 minionSiegeCap
+          //   ⇒ 兵線堆疊不再瞬間拆塔；塔必須被持續圍攻才會倒。
+          const n = Math.min(arr.filter((m) => Math.abs(m.t - tw.t) <= R.minionSiegeBand).length, R.minionSiegeCap);
+          if (n > 0) { tw.hp -= R.minionTowerDmg * n * dt * lateFactor; this._dmgGold(side, 0); }
         }
       });
       ["blue", "red"].forEach((side) => {
@@ -206,8 +360,13 @@ export class LogicEngine {
         }
       });
       ["bm", "rm"].forEach((key) => {
-        const dead = this.lanes[ln][key].filter((m) => m.hp <= 0).length;
-        if (dead) this._dmgGold(key === "bm" ? "red" : "blue", dead * 20);
+        const deadMs = this.lanes[ln][key].filter((m) => m.hp <= 0);
+        if (deadMs.length) {
+          const foe = key === "bm" ? "red" : "blue";
+          this._dmgGold(foe, deadMs.length * 20);
+          // S29：小兵陣亡 → 敵方在場英雄分 XP（真實事件驅動，非時間流逝自動加）
+          if (R.matchXp) for (const m of deadMs) this._awardMinionXp(foe, posOnLane(ln, m.t));
+        }
         this.lanes[ln][key] = this.lanes[ln][key].filter((m) => m.hp > 0);
       });
     }
@@ -217,15 +376,36 @@ export class LogicEngine {
     if (this.dragon.alive) hot = PITS.dragon;
     if (this.baron.alive) hot = PITS.baron;
     if (!hot) {
-      for (const a of alive) {
-        const near = alive.filter((b) => dist(a.pos, b.pos) < 14);
-        if (near.filter((b) => b.side !== a.side).length >= 1 && near.length >= 3) {
-          hot = { x: near.reduce((s, p) => s + p.pos.x, 0) / near.length, y: near.reduce((s, p) => s + p.pos.y, 0) / near.length };
-          break;
+      if (R.symmetricHot) {
+        // S29（決定性公平性 bug 修正）：舊碼取「**陣列順序第一個**符合條件的玩家」的鄰域
+        //   當中心。players 是 b1–b5 在前 ⇒ 熱點永遠繞著**藍方**隊形長，紅方只能一個一個
+        //   走進藍方陣中被集火。實測把 players 反轉即可讓勝負完全翻轉（藍 20/20 → 0/20）。
+        //   改為：取「最密集」的交戰鄰域；並列時合併取 centroid ⇒ 與陣列順序完全無關。
+        let bestN = 0, cands = [];
+        for (const a of alive) {
+          const near = alive.filter((b) => dist(a.pos, b.pos) < 14);
+          if (near.filter((b) => b.side !== a.side).length >= 1 && near.length >= 3) {
+            if (near.length > bestN) { bestN = near.length; cands = [near]; }
+            else if (near.length === bestN) cands.push(near);
+          }
+        }
+        if (cands.length) {
+          const all = [...new Set(cands.flat())];
+          hot = { x: all.reduce((s, p) => s + p.pos.x, 0) / all.length, y: all.reduce((s, p) => s + p.pos.y, 0) / all.length };
+        }
+      } else {
+        for (const a of alive) {
+          const near = alive.filter((b) => dist(a.pos, b.pos) < 14);
+          if (near.filter((b) => b.side !== a.side).length >= 1 && near.length >= 3) {
+            hot = { x: near.reduce((s, p) => s + p.pos.x, 0) / near.length, y: near.reduce((s, p) => s + p.pos.y, 0) / near.length };
+            break;
+          }
         }
       }
     }
 
+    const pendingHits = [];       // S29：本 tick 的英雄傷害（同時結算，見下方 flush）
+    const effLanes = new Map();   // S29：loop1 決定的 effLane → loop2 的推塔判定沿用
     for (const p of this.players) {
       if (p.dead) { p.respawn -= dt; if (p.respawn <= 0) { p.dead = false; p.hp = p.maxHp; p.retreating = false; p.hitBy.clear(); const f = FOUNTAIN[p.side]; p.pos = { x: f.x, y: f.y }; p.state = "回防"; } continue; }
       p.atkCd -= dt;
@@ -299,7 +479,9 @@ export class LogicEngine {
           tgt = posOnLane(effLane, adv); st = stOv ?? (p.role === "jungle" ? "游走" : "對線");
         }
       }
-      const d = dist(p.pos, tgt), spd = (st === "團戰!" ? 16 : 13) * dt;
+      // S29：移速校準——舊值 13/16 單位/模擬秒 ＝ 小兵的 7.3×（真實 MOBA ≈ 1.3×）
+      //   ⇒「英雄移動看起來過快」。v2 = 2.5/3.0（約小兵 1.4×/1.7×）。
+      const d = dist(p.pos, tgt), spd = (st === "團戰!" ? R.fightSpeed : R.moveSpeed) * dt;
       if (d > 0.6) { p.pos.x += ((tgt.x - p.pos.x) / d) * Math.min(spd, d); p.pos.y += ((tgt.y - p.pos.y) / d) * Math.min(spd, d); }
       for (const o of WALLS) { const dd = dist(p.pos, o); if (dd < o.r + 1.4) { p.pos.x += ((p.pos.x - o.x) / (dd || 1)) * (o.r + 1.4 - dd); p.pos.y += ((p.pos.y - o.y) / (dd || 1)) * (o.r + 1.4 - dd); } }
       p.pos.x = clamp(p.pos.x, 3, 97); p.pos.y = clamp(p.pos.y, 3, 97);
@@ -311,41 +493,32 @@ export class LogicEngine {
         if (this.baron.alive && dist(p.pos, PITS.baron) < 9) this.pexec[p.id].objTicks++;
       }
       p.state = st;
-      // 回血：靠泉水快速回、脫離戰鬥緩慢回（下方交戰若成立會覆寫 inCombat）
-      const nearFountain = dist(p.pos, FOUNTAIN[p.side]) < 10;
-      const foe = alive.find((q) => q.side !== p.side && !q.dead && dist(p.pos, q.pos) < 8);
-      if (nearFountain) { const h = Math.min(p.maxHp, p.hp + p.maxHp * 0.20 * dt) - p.hp; p.hp += h; p.heal += h; }
-      else if (!foe) { const h = Math.min(p.maxHp, p.hp + p.maxHp * 0.02 * dt) - p.hp; p.hp += h; p.heal += h; }
-      if (foe) {
-        const dmgAmt = p.power * dt * 0.92 * lateFactor;
-        foe.hp -= dmgAmt; p.dmg += dmgAmt; foe.hitBy.set(p.id, this.t); // Sprint06：傷害/助攻追蹤（附加）
-        if (p.atkCd <= 0) { this.pushFx({ type: this.rng() < 0.2 ? "ult" : "line", pos: { ...p.pos }, target: { ...foe.pos }, color: SIDE[p.side] }); p.atkCd = 0.5; }
-        if (foe.hp <= 0 && !foe.dead) {
-          foe.dead = true; foe.respawn = 6 + Math.min(this.t / 30, 20); foe.hp = 0;
-          if (p.side === "blue") this.bK++; else this.rK++;
-          p.k += 1; foe.d += 1; // Sprint04：個人統計（附加）
-          const assists = []; // Sprint06：助攻結算（8 秒窗，附加）
-          for (const [aid, at] of foe.hitBy) { if (aid !== p.id && this.t - at <= 8) { const q = this.players.find((x) => x.id === aid && x.side === p.side); if (q) { q.a += 1; assists.push(aid); } } }
-          foe.hitBy.clear();
-          this._dmgGold(p.side, 300); p.gold += 300;
-          this.feed.unshift({ id: this._mid++, killer: p.id, victim: foe.id, side: p.side, assists, vpos: { x: foe.pos.x, y: foe.pos.y } }); this.feed = this.feed.slice(0, 5);
-          this.pushFx({ type: "ult", pos: { ...foe.pos }, color: 0xfbbf24, exp: 0.6 });
-          // S24：擊殺歸因（真實計數，非編造）——Gank 窗內打野擊殺 / 入侵窗內中野擊殺
-          if (this.tacticOn) {
-            const S2 = this._tac[p.side];
-            if (p.role === "jungle" && this.t < S2.gankUntil) this.exec[p.side].gankKills++;
-            if (this.t < (S2.invadeUntil || 0) && (p.role === "jungle" || p.role === "mid")) this.exec[p.side].invadeKills++;
-          }
-        }
-      }
-      let tw = this.frontTower(p.side, effLane);
-      if (!tw && this.laneCleared(p.side)) tw = this.towers[(p.side === "blue" ? "red" : "blue") + "_nexus"];
-      if (tw && dist(p.pos, tw.pos) < 6 && !alive.some((q) => q.side !== p.side && dist(q.pos, tw.pos) < 9)) {
-        const td = 40 * dt * lateFactor; tw.hp -= td; p.twrDmg += td;
-        // S24：推塔波次（同隊 10 秒節流一次的真實計數）
-        if (K && this.t - S.pushTick > 10) { S.pushTick = this.t; this.exec[p.side].towerPushes++; }
+      effLanes.set(p, effLane);
+      // v1：交戰緊接著移動、在同一迴圈內處理（＝舊行為，含「用敵方舊位置判定接戰」）。
+      if (!R.twoPhaseTick) this._combatStep(p, effLane, alive, dt, lateFactor, pendingHits);
+    }
+
+    // S29（順序偏差修正 ②）：兩相 tick —— 先讓**全員**移動完，再讓全員交戰。
+    //   舊碼把移動與交戰混在同一迴圈：藍方先移動，且用紅方的**舊位置**判定接戰；
+    //   紅方則用藍方的**新位置**。這與 ①（先手扣血）、③（熱點取陣列第一人）疊加後，
+    //   造成「先被迭代的一方 100% 獲勝」——實測反轉 players 陣列即可讓勝負完全翻轉。
+    //   兩相之後，交戰判定看到的是所有人的最終位置 ⇒ 與迭代順序無關。
+    if (R.twoPhaseTick) {
+      for (const p of this.players) {
+        if (p.dead) continue;
+        this._combatStep(p, effLanes.get(p) ?? p.lane, alive, dt, lateFactor, pendingHits);
       }
     }
+
+    // S29（順序偏差修正 ①）：同時結算 —— 本 tick 所有傷害一起套用，再判定死亡。
+    //   ⇒ 兩名英雄可在同一 tick 互相擊殺（真實換命），沒有任何一方享有「先手」。
+    if (R.simultaneousCombat && pendingHits.length) {
+      for (const [, foe, amt] of pendingHits) foe.hp -= amt;
+      for (const [atk, foe] of pendingHits) {
+        if (foe.hp <= 0 && !foe.dead) this._resolveKill(atk, foe);
+      }
+    }
+
     // S24：會戰/目標戰觀測（真實狀態計數；only when tacticOn）
     if (this.tacticOn) {
       for (const side of ["blue", "red"]) {
@@ -363,15 +536,29 @@ export class LogicEngine {
       }
     }
 
-    for (const k in this.towers) { const tw = this.towers[k]; if (tw.hp <= 0 && !tw._dead) { tw._dead = true; this._dmgGold(tw.side === "blue" ? "red" : "blue", tw.lane === "nexus" ? 0 : 250); } }
+    for (const k in this.towers) {
+      const tw = this.towers[k];
+      if (tw.hp <= 0 && !tw._dead) {
+        tw._dead = true;
+        const atk = tw.side === "blue" ? "red" : "blue";
+        this._dmgGold(atk, tw.lane === "nexus" ? 0 : 250);
+        // S29：拆塔 XP（拆塔方在場英雄；主堡不給，因為那就結束了）
+        if (R.matchXp && tw.lane !== "nexus") {
+          for (const q of this.players) {
+            if (q.side === atk && !q.dead && dist(q.pos, tw.pos) < XP.TOWER_RADIUS) this._addXp(q, XP.TOWER);
+          }
+        }
+      }
+    }
 
     const upd = (o, key, gold) => {
       if (!o.alive) { o.respawn -= dt; if (o.respawn <= 0) { o.alive = true; o.hp = 100; } return; }
       const pit = PITS[key]; const b = alive.filter((p) => p.side === "blue" && dist(p.pos, pit) < 9).length;
       const r = alive.filter((p) => p.side === "red" && dist(p.pos, pit) < 9).length;
       o.contested = b > 0 && r > 0;
-      if (b > r) { o.hp -= 28 * dt; if (o.hp <= 0) { o.alive = false; o.respawn = 150; this._dmgGold("blue", gold); } }
-      else if (r > b) { o.hp -= 28 * dt; if (o.hp <= 0) { o.alive = false; o.respawn = 150; this._dmgGold("red", gold); } }
+      // S29：目標擊殺 → 全隊存活者分 XP（輔助/打野不因低擊殺卡等級）
+      if (b > r) { o.hp -= 28 * dt; if (o.hp <= 0) { o.alive = false; o.respawn = 150; this._dmgGold("blue", gold); if (R.matchXp) this._awardObjectiveXp("blue", key); } }
+      else if (r > b) { o.hp -= 28 * dt; if (o.hp <= 0) { o.alive = false; o.respawn = 150; this._dmgGold("red", gold); if (R.matchXp) this._awardObjectiveXp("red", key); } }
     };
     if (this.t > 90) upd(this.dragon, "dragon", 200);
     if (this.t > 300) upd(this.baron, "baron", 400);
@@ -390,7 +577,9 @@ export class LogicEngine {
     const winProb = clamp(0.5 + gd / 14000 + (tw("red") - tw("blue")) * 0.05, 0.05, 0.95);
     return {
       ts: this.t,
-      players: this.players.map((p) => ({ id: p.id, side: p.side, role: p.role, pos: { ...p.pos }, hp: clamp(p.hp / p.maxHp, 0, 1), dead: p.dead, respawn: p.respawn, state: p.state, k: p.k, d: p.d, a: p.a, gold: Math.round(p.gold), dmg: Math.round(p.dmg), heal: Math.round(p.heal), twrDmg: Math.round(p.twrDmg), lv: p.lv })),
+      // S29：mlv/mxp = **本場**英雄等級（1–18，終局丟棄）；lv = 英雄熟練等級（跨場，
+      //   來自 Hero Progress loadout）。兩者並存且不同名 ⇒ 消費端不可能混用。
+      players: this.players.map((p) => ({ id: p.id, side: p.side, role: p.role, pos: { ...p.pos }, hp: clamp(p.hp / p.maxHp, 0, 1), dead: p.dead, respawn: p.respawn, state: p.state, k: p.k, d: p.d, a: p.a, gold: Math.round(p.gold), dmg: Math.round(p.dmg), heal: Math.round(p.heal), twrDmg: Math.round(p.twrDmg), lv: p.lv, mlv: p.mlv, mxp: Math.round(p.mxp), mxpNext: xpToNext(p.mlv) })),
       towers: Object.fromEntries(Object.entries(this.towers).map(([k, t]) => [k, { side: t.side, lane: t.lane, tier: t.tier, pos: t.pos, hp: clamp(t.hp / (t.lane === "nexus" ? NEXUS_HP : TOWER_HP), 0, 1) }])),
       lanes: { top: this._snapLane("top"), mid: this._snapLane("mid"), bot: this._snapLane("bot") },
       dragon: { ...this.dragon }, baron: { ...this.baron },

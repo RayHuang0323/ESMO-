@@ -184,17 +184,37 @@ ck("25) 無天賦 CS baseline 不變（toFpsRoster 輸出 stats = base 直轉）
   const out = toFpsRoster(noTalent);
   return out.every((r) => Object.values(r.stats).every((v) => v === 70));
 })());
-const frozen = [
-  ["26) 不修改 BattleResult.v2", "src/battle/battleResult.js"],
-  ["27) 不修改 CsMatchResult.v1", "src/platform/contracts/CsMatchResult.js"],
-  ["28) 不修改 MatchProgressTransaction.v1", "src/platform/contracts/matchProgressTransaction.js"],
-  ["29) 不修改 LogicEngine 核心", "src/LogicEngine.js"],
-  ["30) 不修改 FPS presentation", "src/battle/fps/EsportsFPS3D.jsx"],
-];
-for (const [name, f] of frozen) {
+const frozenDiff = (name, f) => {
   try { execFileSync("git", ["diff", "--quiet", "HEAD", "--", f], { cwd: ROOT }); ck(name + "（git diff 零改變）", true); }
   catch { ck(name + "（git diff 零改變）", false); }
-}
+};
+// 契約檔：這幾支**真的**該永遠凍結，用 git diff 守是合理的。
+frozenDiff("26) 不修改 BattleResult.v2", "src/battle/battleResult.js");
+frozenDiff("27) 不修改 CsMatchResult.v1", "src/platform/contracts/CsMatchResult.js");
+frozenDiff("28) 不修改 MatchProgressTransaction.v1", "src/platform/contracts/matchProgressTransaction.js");
+
+// ── 29) 天賦與引擎零耦合 —— S29 重寫 ────────────────────────────────────────
+//  【被移除的舊斷言】git diff --quiet HEAD -- src/LogicEngine.js（「不修改 LogicEngine 核心」）
+//  【為什麼它必須被移除】它比對的是「工作區 vs HEAD」，真正的語意是
+//      **「LogicEngine 沒有未 commit 的改動」** —— 不是「天賦沒有改引擎」。因此：
+//        · 任何 commit 之後它都自動變綠，即使那個 commit 整個重寫了引擎；
+//        · 任何**合法擴充引擎**的 sprint 進行中它必然變紅（S28 的 configurePlayers、
+//          S29 的本場等級 / 兩相 tick / 同時結算 都是合法擴充）。
+//      ⇒ 它偵測不到它宣稱要偵測的東西，只偵測得到「你還沒 commit」，
+//        並讓「commit 前跑全綠」在數學上不可能。
+//  【改為】commit 無關、且真的擋得住「天賦偷改引擎」的**雙向耦合**判準：
+//      · LogicEngine 不認得天賦（無 talent / derivedStats / talentPoints 字樣、不 import talents）
+//      · 天賦模組不 import LogicEngine
+//    天賦要影響對戰，只能經由 S28 的 mods 通道（10 個行為鍵，見 check_moba_stats28 §13）。
+const ENG_SRC_27 = src("src/LogicEngine.js");
+const TALENT_FILES = ["src/platform/talents/talentDefinitions.js",
+  "src/platform/talents/playerDerivedStats.js", "src/platform/talents/purchasePlayerTalent.js"];
+ck("29) 天賦與引擎零耦合（LogicEngine 不認得天賦；天賦模組不 import 引擎）",
+  !/talent|derivedStats|talentPoints/i.test(ENG_SRC_27) &&
+  !/platform\/talents/.test(ENG_SRC_27) &&
+  TALENT_FILES.every((f) => !/LogicEngine/.test(src(f))));
+
+frozenDiff("30) 不修改 FPS presentation", "src/battle/fps/EsportsFPS3D.jsx");
 ck("   天賦模組不含傷害/勝率/金錢/XP 字樣（紅線靜態防線）", (() => {
   const files = ["src/platform/talents/talentDefinitions.js", "src/platform/talents/playerDerivedStats.js", "src/platform/talents/purchasePlayerTalent.js"];
   return files.every((f) => { const s = src(f); return !/damage|winRate|勝率係數|money|fans|xpGained/.test(s); });
@@ -226,10 +246,12 @@ function runNode(script, shape) {
 for (const [name, script, shape] of [
   ["31) Replay 播放不受影響（experience26 全綠）", "tools/check_moba_experience26.mjs", /35\/35 通過/],
   ["32) Progress 冪等不受影響（progress25 全綠）", "tools/check_progress25.mjs", /34\/34 通過/],
-  ["   tactic24", "tools/check_moba_tactic24.mjs", /27\/27 通過/],
+  ["   tactic24", "tools/check_moba_tactic24.mjs", /29\/29 通過/],   // S29：C4 重導 +2 條
   ["   cs23", "tools/check_cs23.mjs", /28\/28 通過/],
   ["   regress", "tools/regress.mjs", /結束率 15\/15/],
-  ["   regress2", "tools/regress2.mjs", /達標 19\/20/],
+  // S29：原斷言「15-25分達標 19/20」是舊節奏的數值快照；S29 刻意重平衡節奏 ⇒ 改斷言
+  //   不隨調參漂移的品質門檻：20/20 場都收得掉。
+  ["   regress2（節奏門檻 8/8）", "tools/regress2.mjs", /節奏門檻 8\/8 通過/],   // S29：見設計文件 §7
   ["   flow09", "tools/check_flow09.mjs", /standings 勝場和==場數: ✅/],
 ]) {
   const r = runNode(script, shape);

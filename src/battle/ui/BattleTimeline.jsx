@@ -56,11 +56,30 @@ function Row({ ev, roster }) {
   );
 }
 
+/** S29：隊伍溝通列（與系統事件視覺上明確區分：對話氣泡樣式 + 說話者） */
+function CommsRow({ msg }) {
+  const m = Math.floor(msg.t / 60), s = Math.floor(msg.t % 60);
+  return (
+    <div style={{ display: "flex", gap: 5, alignItems: "flex-start", padding: "2.5px 5px", fontSize: 10.5, lineHeight: 1.35 }}>
+      <span style={{ fontFamily: "ui-monospace,monospace", color: "rgba(255,255,255,0.3)", fontSize: 9, minWidth: 26 }}>
+        {m}:{String(s).padStart(2, "0")}
+      </span>
+      <span style={{ fontSize: 10 }}>💬</span>
+      <span style={{ color: "rgba(147,197,253,0.95)", fontWeight: 800, whiteSpace: "nowrap" }}>{msg.speaker}</span>
+      <span style={{ color: "rgba(255,255,255,0.72)", fontStyle: "italic" }}>「{msg.text}」</span>
+    </div>
+  );
+}
+
 export default function BattleTimeline({ open = true, max = 11, roster = null }) {
   const events = useBattleStore((s) => s.events);
+  // S29：隊伍溝通（規則式播報）與系統事件/擊殺**分開存**，在此合併顯示但可區分：
+  //   系統事件走 Row（原樣式）；COMMS 走 CommsRow（引號 + 說話者，明顯不同）。
+  const comms = useBattleStore((s) => s.comms);
   const [fold, setFold] = useState(false);
   if (!open) return null;
-  const rows = [...events].reverse().slice(0, max);
+  const merged = [...events, ...comms].sort((a, b) => (a.t ?? 0) - (b.t ?? 0));
+  const rows = merged.reverse().slice(0, max);
 
   return (
     <div style={{ position: "absolute", top: 96, left: 10, width: 226, zIndex: 8, fontFamily: "system-ui,sans-serif" }}>
@@ -72,7 +91,9 @@ export default function BattleTimeline({ open = true, max = 11, roster = null })
       {!fold && (
         <div style={{ maxHeight: "40vh", overflow: "hidden", background: "rgba(8,14,24,0.6)", border: "1px solid rgba(255,255,255,0.12)", borderTop: "none", borderRadius: "0 0 9px 9px", backdropFilter: "blur(4px)", padding: "5px 4px", pointerEvents: "none" }}>
           {rows.length === 0 && <div style={{ fontSize: 10.5, color: "rgba(255,255,255,0.35)", padding: 4 }}>尚無事件…</div>}
-          {rows.map((ev) => <Row key={ev.id} ev={ev} roster={roster} />)}
+          {rows.map((ev) => (ev.type === "COMMS"
+            ? <CommsRow key={ev.id} msg={ev} />
+            : <Row key={ev.id} ev={ev} roster={roster} />))}
         </div>
       )}
     </div>
