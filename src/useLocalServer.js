@@ -40,6 +40,7 @@ export function useLocalServer() {
   const engineRef = useRef(null);
   const intervalRef = useRef(null);
   const rafRef = useRef(null);
+  const ffRef = useRef(null);          // S29B3：fastForward 的分塊排程
   const lastTick = useRef(0);
   const rateRef = useRef(DEFAULT_RATE);
   const [playing, setPlaying] = useState(false);
@@ -47,8 +48,37 @@ export function useLocalServer() {
 
   const stop = useCallback(() => {
     clearInterval(intervalRef.current); cancelAnimationFrame(rafRef.current);
-    intervalRef.current = null; rafRef.current = null; setPlaying(false);
+    clearTimeout(ffRef.current);
+    intervalRef.current = null; rafRef.current = null; ffRef.current = null; setPlaying(false);
   }, []);
+
+  /**
+   * S29B3：Debug「快速完成比賽」——把**同一顆引擎**安全推進到終局。
+   *  - 分塊（每個 macrotask 20 模擬秒）+ 每 2 模擬秒 push 一幀
+   *    ⇒ Replay 取樣（FRAME_INTERVAL_S=2）與 Timeline 事件流完整，不是跳幀作弊。
+   *  - 終局幀走既有 useBattleFeed 流程 ⇒ BattleResult / 發獎（transactionId 冪等）/
+   *    Replay 定稿與正常對局**同一條路** ⇒ 不可能重複發獎、不像重新開始。
+   *  - 不 new 引擎、不改 dt、不碰 rng ⇒ 結果與讓它自然跑完逐位元相同。
+   *  僅供單機測試（UI 由 isDebugMode() 閘門控制；本函式自身不做 UI 判斷）。
+   */
+  const fastForward = useCallback(() => {
+    const eng = engineRef.current;
+    if (!eng || eng.over || ffRef.current) return;
+    clearInterval(intervalRef.current); intervalRef.current = null;   // 停正常節拍
+    const step = () => {
+      let sincePush = 0;
+      for (let i = 0; i < 40 && !eng.over; i++) {          // 40 tick = 20 模擬秒/塊
+        eng.tick(DT_SIM);
+        sincePush += DT_SIM;
+        if (sincePush >= 2 && !eng.over) { useGameStore.getState().pushFrame(eng.snapshot()); sincePush = 0; }
+      }
+      useGameStore.getState().pushFrame(eng.snapshot());
+      lastTick.current = performance.now();
+      if (eng.over || eng.t > 5400) { ffRef.current = null; stop(); return; }   // 5400s = 安全上限
+      ffRef.current = setTimeout(step, 0);
+    };
+    step();
+  }, [stop]);
 
   /** 切換播放倍率：只重排 setInterval 的間隔，**不碰引擎、不碰 dt** ⇒ 結果不變。 */
   const setRate = useCallback((next) => {
@@ -119,7 +149,7 @@ export function useLocalServer() {
   }, [stop]);
 
   useEffect(() => () => stop(), [stop]);
-  return { playing, start, stop, engineRef, rate, setRate, rates: PLAYBACK_RATES };
+  return { playing, start, stop, fastForward, engineRef, rate, setRate, rates: PLAYBACK_RATES };
 }
 
 // ── 多人版（示意）──────────────────────────────────────────────────────────

@@ -18,10 +18,11 @@ import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
 import { useGameStore } from "./useGameStore.js";
 import {
-  lerp, clamp, ease, LANES, posOnLane, WATER, WALLS, PITS, BUSHES,
-  BASE, ROLE_NAME, SIDE, GLOW, CAMPS,
+  lerp, clamp, ease, dist, LANES, posOnLane, WATER, WALLS, PITS, BUSHES,
+  BASE, FOUNTAIN, ROLE_NAME, SIDE, GLOW, CAMPS,
 } from "./gameData.js";
 import BattleCameraController, { fitZoomFor } from "./battle/ui/BattleCameraController.jsx";
+import { useCameraStore } from "./battle/cameraStore.js";
 import { presetFor } from "./battle/quality.js";
 import { useIsMobile } from "./ui/useViewport.js";
 
@@ -105,9 +106,35 @@ function makeRiftTexture() {
     g.beginPath(); g.ellipse(px(b.x), px(b.y), px(b.r), px(b.r * 0.82), 0, 0, 7); g.stroke();
     g.setLineDash([]);
   });
+  // 基地：色暈 + 平台方界（與泉水區分）
   const baseGlow = (b, c1, c2) => { const gr = g.createRadialGradient(px(b.x), px(b.y), px(2), px(b.x), px(b.y), px(11)); gr.addColorStop(0, c1); gr.addColorStop(1, c2); g.fillStyle = gr; g.beginPath(); g.arc(px(b.x), px(b.y), px(11), 0, 7); g.fill(); };
   baseGlow(BASE.blue, "rgba(120,180,255,0.85)", "rgba(40,90,200,0.05)");
   baseGlow(BASE.red, "rgba(255,150,150,0.85)", "rgba(200,50,50,0.05)");
+  for (const [b, col] of [[BASE.blue, "96,165,250"], [BASE.red, "248,113,113"]]) {
+    g.strokeStyle = `rgba(${col},0.55)`; g.lineWidth = px(0.6);
+    g.strokeRect(px(b.x - 7), px(b.y - 7), px(14), px(14));
+  }
+  // S29B3：泉水區——明確圓形平台 + 十字治療符號（與基地方界區分）
+  for (const [f, col] of [[FOUNTAIN.blue, "96,165,250"], [FOUNTAIN.red, "248,113,113"]]) {
+    g.fillStyle = `rgba(${col},0.35)`;
+    g.beginPath(); g.arc(px(f.x), px(f.y), px(4.2), 0, 7); g.fill();
+    g.strokeStyle = `rgba(${col},0.9)`; g.lineWidth = px(0.55);
+    g.beginPath(); g.arc(px(f.x), px(f.y), px(4.2), 0, 7); g.stroke();
+    g.strokeStyle = "rgba(255,255,255,0.9)"; g.lineWidth = px(0.8);
+    g.beginPath(); g.moveTo(px(f.x - 1.6), px(f.y)); g.lineTo(px(f.x + 1.6), px(f.y));
+    g.moveTo(px(f.x), px(f.y - 1.6)); g.lineTo(px(f.x), px(f.y + 1.6)); g.stroke();
+  }
+  // S29B3：地面文字標籤（玩家看不懂色塊 ⇒ 直接寫字；billboard 標籤另見 3D sprite）
+  const label = (x, y, text, col, size = 2.6) => {
+    g.font = `900 ${px(size)}px system-ui,sans-serif`; g.textAlign = "center"; g.textBaseline = "middle";
+    g.lineWidth = px(0.5); g.strokeStyle = "rgba(0,0,0,0.8)"; g.strokeText(text, px(x), px(y));
+    g.fillStyle = col; g.fillText(text, px(x), px(y));
+  };
+  label(PITS.dragon.x, PITS.dragon.y + 8.6, "魔龍 DRAGON", "rgba(200,170,255,0.95)");
+  label(PITS.baron.x, PITS.baron.y - 8.4, "凱撒 BARON", "rgba(253,224,71,0.95)");
+  label(FOUNTAIN.blue.x + 6, FOUNTAIN.blue.y - 4.5, "泉水", "rgba(147,197,253,0.95)", 2.2);
+  label(FOUNTAIN.red.x - 6, FOUNTAIN.red.y + 4.5, "泉水", "rgba(252,165,165,0.95)", 2.2);
+  for (const c of CAMPS) label(c.x, c.y + 3.1, c.type === "buff" ? "BUFF" : "野怪", c.type === "buff" ? "rgba(244,114,182,0.95)" : "rgba(163,230,53,0.95)", 1.8);
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; return tex;
 }
 function makeCapsule(r, len, mat) {
@@ -179,7 +206,7 @@ function makeTopper(role, color) {
 //  場景內容（命令式建立 + 單一 useFrame 更新）
 // ════════════════════════════════════════════════════════════════════════════
 function MobaScene({ mapTexture, roster, Q }) {
-  const { scene, camera } = useThree();
+  const { scene, camera, gl } = useThree();
   const R = useRef({});
 
   useEffect(() => {
@@ -239,15 +266,15 @@ function MobaScene({ mapTexture, roster, Q }) {
         const m = new THREE.Mesh(new THREE.CylinderGeometry(ti.r * sc * S, (ti.r + 0.4) * sc * S, ti.h * sc * S, 8), new THREE.MeshStandardMaterial({ color: ti.c, emissive: ti.c === col ? col : 0x000000, emissiveIntensity: ti.c === col ? 0.32 : 0, roughness: 0.5, metalness: 0.55 }));
         m.position.y = ti.y * sc * S; m.castShadow = true; m.receiveShadow = true; grp.add(m);
       });
-      // S29B2：降過曝——水晶 emissive 1.9/1.3 → 1.1/0.8（配 Bloom 仍發光但不再白成一團）
-      const crystal = new THREE.Mesh(new THREE.OctahedronGeometry((isNexus ? 4.6 : 1.4) * S, 0), new THREE.MeshStandardMaterial({ color: glow, emissive: glow, emissiveIntensity: isNexus ? 1.1 : 0.8, roughness: 0.1, metalness: 0.35 }));
+      // S29B2 降過曝 1.9/1.3 → 1.1/0.8；S29B3 再降常態 → 0.75/0.55（被攻擊/摧毀時才短暫增亮）
+      const crystal = new THREE.Mesh(new THREE.OctahedronGeometry((isNexus ? 4.6 : 1.4) * S, 0), new THREE.MeshStandardMaterial({ color: glow, emissive: glow, emissiveIntensity: isNexus ? 0.75 : 0.55, roughness: 0.1, metalness: 0.35 }));
       crystal.position.y = (isNexus ? 16 : 13.5) * sc * S; crystal.castShadow = Q.shadows; grp.add(crystal);
       // S29 效能修復（最大單一元凶之一）：舊碼**每座塔都掛一盞 PointLight**（18 塔 + 2 主堡
       //   = 20 盞，再加龍/巴龍共 22 盞）。Three.js 的 MeshStandardMaterial 會把每一盞燈
       //   都編進 per-fragment 迴圈 ⇒ 手機直接崩。
       //   改為：**只有主堡**有燈（2 盞），一般塔靠 emissive + Bloom 發光（視覺幾乎不變）。
       //   high 檔可選擇性開回塔燈（Q.towerLights）。
-      if (isNexus || Q.towerLights) grp.add(new THREE.PointLight(glow, isNexus ? 5 : 2.2, (isNexus ? 52 : 26) * S));
+      if (isNexus || Q.towerLights) grp.add(new THREE.PointLight(glow, isNexus ? 3.5 : 2.0, (isNexus ? 46 : 26) * S));
       const stump = new THREE.Mesh(new THREE.CylinderGeometry(2.4 * sc * S, 3.0 * sc * S, 2.0 * sc * S, 7), new THREE.MeshStandardMaterial({ color: 0x33363d, roughness: 1, metalness: 0.1, flatShading: true }));
       stump.position.y = 1.0 * sc * S; stump.visible = false; stump.castShadow = true; grp.add(stump);
       const hpBar = new THREE.Group(); hpBar.position.y = (isNexus ? 22 : 15) * sc * S;
@@ -291,6 +318,21 @@ function MobaScene({ mapTexture, roster, Q }) {
       campObjs.set(o.id, { grp, body, hpGrp, fg, w: 3.3 * S, lastHp: 1, flashT: 0, shownHp: 1, wasAlive: false, deathT: 0, baseY: 1.4 * S });
     });
 
+    // ── S29B3：常駐 billboard 標籤——龍/凱撒/泉水/營地不再只是色塊 ─────────────
+    //  一次性建立（makeLabelSprite 重用）；與地面文字標籤（makeRiftTexture）互補：
+    //  地面字給俯視語意、billboard 給任何角度的即時辨識。
+    const mkTag = (text, hex, x, y, h, sx = 4.6, sy = 2.1) => {
+      const sp = makeLabelSprite(text, hex, sx, sy);
+      sp.position.set(wx(x), h, wz(y));
+      world.add(sp);
+    };
+    mkTag("魔龍", 0xc8aaff, PITS.dragon.x, PITS.dragon.y, 10.5 * S);
+    mkTag("凱撒", 0xfde047, PITS.baron.x, PITS.baron.y, 10.5 * S);
+    mkTag("泉水", 0x93c5fd, FOUNTAIN.blue.x, FOUNTAIN.blue.y, 5 * S, 3.6, 1.7);
+    mkTag("泉水", 0xfca5a5, FOUNTAIN.red.x, FOUNTAIN.red.y, 5 * S, 3.6, 1.7);
+    CAMPS.forEach((c) => mkTag(c.type === "buff" ? "BUFF" : "野怪",
+      c.type === "buff" ? 0xf472b6 : 0xa3e635, c.x, c.y, 4.8 * S, 3.0, 1.4));
+
     // 英雄（S29B2：模型 ×HK 放大可讀性；lastHp/flashT 供受擊閃光）
     const heroObjs = {};
     snap0.players.forEach((p) => {
@@ -308,8 +350,12 @@ function MobaScene({ mapTexture, roster, Q }) {
       const topper = makeTopper(p.role, glow); topper.position.y = HERO_TOP_Y; root.add(topper);
       const overlayHex = p.side === "blue" ? 0x93c5fd : 0xfca5a5;
       const overlay = makeOverlaySprite(overlayHex); overlay.position.y = OVERLAY_Y; root.add(overlay);
+      // S29B3：回城引導 / 泉水回血 aura ring（藍=回城 channel、綠=泉水治療）
+      const auraMat = new THREE.MeshBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false });
+      const aura = new THREE.Mesh(new THREE.RingGeometry(2.2 * HK * S, 2.8 * HK * S, 32), auraMat);
+      aura.rotation.x = -Math.PI / 2; aura.position.y = 0.14; aura.visible = false; root.add(aura);
       world.add(root);
-      heroObjs[p.id] = { root, cap, mat, ring, ringMat, hpGrp, fg, fgMat, topper, overlay, overlayHex, lastOverlay: "", seed: Math.random() * 7, lastHp: 1, flashT: 0 };
+      heroObjs[p.id] = { root, cap, mat, ring, ringMat, hpGrp, fg, fgMat, topper, overlay, overlayHex, aura, auraMat, lastOverlay: "", seed: Math.random() * 7, lastHp: 1, flashT: 0 };
     });
 
     // ── 小兵：共享 geometry + 2 個共享材質 + 物件池 ───────────────────────────
@@ -370,9 +416,54 @@ function MobaScene({ mapTexture, roster, Q }) {
       minionMeshes, minionPool, minionGeo, minionMat,
       fxGroup, fxPool, killGroup, killSprites: [], seenFeed: new Set(), Q,
       viewFx, spawnViewFx, sparkNext: { top: 0, mid: 0, bot: 0 },   // S29B2
+      camera,                                                       // S29B3：raycast 用（useFrame 每幀更新）
+      seenRecalls: new Set(),                                       // S29B3：回城事件已播記錄
     };
 
+    // ── S29B3：導播 UX 點擊互動（純呈現層；不讀寫引擎 ⇒ 不可能改變模擬結果）──
+    //  tap 英雄 ⇒ heroFocus 4s；tap 空白或拖曳 >8px 或滾輪 ⇒ free；雙擊空白 ⇒ 回導播。
+    const el = gl.domElement;
+    const ray = new THREE.Raycaster();
+    const ndc = new THREE.Vector2();
+    let downPt = null;
+    const camStore = () => useCameraStore.getState();
+    const onPtrDown = (e) => { downPt = { x: e.clientX, y: e.clientY }; };
+    const onPtrMove = (e) => {
+      if (!downPt) return;
+      if (Math.hypot(e.clientX - downPt.x, e.clientY - downPt.y) > 8) camStore().setMode("free");   // 拖曳 ⇒ 自由
+    };
+    const onPtrUp = (e) => {
+      if (!downPt) return;
+      const moved = Math.hypot(e.clientX - downPt.x, e.clientY - downPt.y);
+      downPt = null;
+      if (moved > 8) return;                       // 拖曳（已切 free）
+      const rect = el.getBoundingClientRect();
+      ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+      ray.setFromCamera(ndc, R.current.camera ?? camera);
+      const meshes = [];
+      for (const id in R.current.heroObjs) {
+        const o = R.current.heroObjs[id];
+        if (!o.root.visible) continue;
+        o.cap.traverse((m) => { if (m.isMesh) { m.userData.heroId = id; meshes.push(m); } });
+      }
+      const hit = ray.intersectObjects(meshes, false)[0];
+      if (hit) camStore().focusHero(hit.object.userData.heroId);   // 點英雄 ⇒ zoom-in 聚焦
+      else camStore().setMode("free");                             // 點空白 ⇒ 自由鏡頭
+    };
+    const onDbl = () => camStore().backToDirector();               // 雙擊空白 ⇒ 回導播
+    const onWheel = () => camStore().setMode("free");              // 手動縮放 ⇒ 自由
+    el.addEventListener("pointerdown", onPtrDown);
+    el.addEventListener("pointermove", onPtrMove);
+    el.addEventListener("pointerup", onPtrUp);
+    el.addEventListener("dblclick", onDbl);
+    el.addEventListener("wheel", onWheel, { passive: true });
+
     return () => {
+      el.removeEventListener("pointerdown", onPtrDown);
+      el.removeEventListener("pointermove", onPtrMove);
+      el.removeEventListener("pointerup", onPtrUp);
+      el.removeEventListener("dblclick", onDbl);
+      el.removeEventListener("wheel", onWheel);
       scene.remove(world);
       // 共享 geometry/material 會被多個 mesh 參照 → 用 Set 去重，避免重複 dispose
       const geos = new Set(), mats = new Set();
@@ -389,6 +480,7 @@ function MobaScene({ mapTexture, roster, Q }) {
   // 單一 useFrame：讀 store → 命令式更新（不觸發 React 重繪）
   useFrame((state, dt) => {
     const r = R.current; if (!r.heroObjs) return;
+    r.camera = camera;   // S29B3：raycast 永遠用當前生效相機（makeDefault 可能晚掛）
     const now = state.clock.getElapsedTime() * 1000;
     const { prev, snapshot, subTRef } = useGameStore.getState();
     const a = ease(clamp(subTRef.current, 0, 1));
@@ -410,7 +502,8 @@ function MobaScene({ mapTexture, roster, Q }) {
       const dead = p.dead;
       o.cap.scale.y = dead ? 0.25 : 1; o.cap.position.y = dead ? 0.4 * S : HERO_CAP_Y + Math.sin(now / 1000 * 3 + o.seed) * 0.07 * S;
       // S29B2：受擊閃光——hp 由真實 snapshot 差分（prev→next 下降 ⇒ emissive 短暫拉高）
-      if ((o.lastHp ?? 1) - (np.hp ?? 1) > 0.004 && !dead) o.flashT = 0.25;
+      const hpDelta = (np.hp ?? 1) - (o.lastHp ?? 1);   // S29B3：也供泉水回血 aura 判定
+      if (hpDelta < -0.004 && !dead) o.flashT = 0.25;
       o.lastHp = np.hp ?? 1;
       if (o.flashT > 0) o.flashT = Math.max(0, o.flashT - dt);
       o.mat.color.setHex(dead ? 0x3a3a3a : SIDE[p.side]);
@@ -427,6 +520,9 @@ function MobaScene({ mapTexture, roster, Q }) {
       const line3 = dead ? `☠ ${Math.max(0, np.respawn).toFixed(0)}s` : `${np.k}/${np.d}/${np.a ?? 0}`;
       const badge = dead ? null
         : np.state === "撤退" ? { text: "⛊ 撤退", bg: "#fbbf24" }
+        : np.state === "回城中" ? { text: "🌀 回城中", bg: "#60a5fa" }   // S29B3：引導中
+        : np.state === "回城" ? { text: "⛲ 泉水", bg: "#34d399" }        // S29B3：泉水補血
+        : np.state === "追擊" ? { text: "🏃 追擊", bg: "#f9a8d4" }
         : np.state === "團戰!" ? { text: "⚔ 團戰", bg: "#f87171" }
         : np.state === "圍攻" ? { text: "⚑ 圍攻", bg: "#a78bfa" } : null;
       const key = heroName + "|" + playerName + "|" + line3 + "|" + (badge?.text ?? "");
@@ -437,6 +533,23 @@ function MobaScene({ mapTexture, roster, Q }) {
         o.overlay.material.map.needsUpdate = true;
       }
       o.overlay.visible = o.root.visible;
+      // S29B3：回城引導（藍圈快轉）/ 泉水回血（綠圈慢轉）——真實狀態與 hp 上升差分
+      const recallCh = np.state === "回城中";
+      const healing = !dead && hpDelta > 0.004 && dist(np.pos, FOUNTAIN[p.side]) < 12;
+      if ((recallCh || healing) && o.root.visible) {
+        o.aura.visible = true;
+        o.auraMat.color.setHex(recallCh ? 0x60a5fa : 0x34d399);
+        o.auraMat.opacity = 0.45 + 0.3 * Math.sin(now / 130);
+        o.aura.rotation.z += dt * (recallCh ? 2.6 : 1.1);
+      } else o.aura.visible = false;
+    });
+
+    // S29B3：回城傳送閃光（引擎 recallEvents：done 帶傳送起點 ⇒ 起點爆點；
+    //   泉水端由引擎 fx ult 呈現）——「他是回城傳送」而不是「亂走後瞬移」
+    (snapshot.recallEvents ?? []).forEach((ev) => {
+      if (r.seenRecalls.has(ev.id)) return;
+      r.seenRecalls.add(ev.id);
+      if (ev.phase === "done" && ev.from) r.spawnViewFx(wx(ev.from.x), wz(ev.from.y), 0x60a5fa, 2.6, 0.5);
     });
 
     // 小兵（S29B2：hp 縮放 + 受擊脈衝 + 死亡爆點；hp 來自 snapshot 真資料）
@@ -506,7 +619,8 @@ function MobaScene({ mapTexture, roster, Q }) {
       if (!dead) {
         o.crystal.rotation.y += dt * (o.isNexus ? 0.5 : 1.0);
         if (o.isNexus) o.crystal.scale.setScalar(1 + Math.sin(now / 1000 * 2) * 0.06);
-        o.crystal.material.emissiveIntensity = (o.isNexus ? 1.1 : 0.8) + (o.flashT / 0.25) * 1.4;
+        // S29B3：常態光收斂（0.75/0.55），**被攻擊時**才短暫拉高（+1.6 峰值）
+        o.crystal.material.emissiveIntensity = (o.isNexus ? 0.75 : 0.55) + (o.flashT / 0.25) * 1.6;
       }
     });
 
@@ -705,7 +819,7 @@ export default function MobaView3D({ mapTexture = null, autoRotate = true, battl
       {/* 後製：Bloom 三檔都保留；SSAO（含 normalPass）只在 high 開啟 */}
       <EffectComposer enableNormalPass={Q.ssao} multisampling={Q.multisampling}>
         {Q.ssao ? <SSAO blendFunction={BlendFunction.MULTIPLY} samples={24} radius={4} intensity={22} luminanceInfluence={0.5} color="black" /> : <></>}
-        {Q.bloom ? <Bloom luminanceThreshold={0.35} luminanceSmoothing={0.5} intensity={1.1} mipmapBlur /> : <></>}
+        {Q.bloom ? <Bloom luminanceThreshold={0.35} luminanceSmoothing={0.5} intensity={Q.bloomIntensity ?? 1.05} mipmapBlur /> : <></>}
         {Q.vignette ? <Vignette eskil={false} offset={0.25} darkness={0.5} /> : <></>}
       </EffectComposer>
     </Canvas>

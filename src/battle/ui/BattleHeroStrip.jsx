@@ -12,7 +12,7 @@
 //  互動：點英雄開 HeroDetailPanel（Legacy 無此互動，為既有產品升級保留）。
 //  契約：唯一資料源 useGameStore.snapshot；不重新統計。
 // ============================================================================
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useGameStore } from "../../useGameStore.js";
 import { ROSTER } from "../../data/roster.js";
 import { heroById } from "../../data/heroDatabase.js";
@@ -115,6 +115,16 @@ export default function BattleHeroStrip({ roster = ROSTER, draft = null }) {
   //   桌機預設展開但可收合；地圖不再被十人面板長期遮住。
   const isMobile = useIsMobile();
   const [expand, setExpand] = useState(() => !isMobileViewport());
+  // S29B3：CS 式手勢——把手上滑展開完整 5v5、下滑收合（觸控閾值 24px）
+  const touchY = useRef(null);
+  const onTouchStart = (e) => { touchY.current = e.touches[0].clientY; };
+  const onTouchMove = (e) => {
+    if (touchY.current == null) return;
+    const dy = e.touches[0].clientY - touchY.current;
+    if (dy < -24 && !expand) { setExpand(true); touchY.current = null; }
+    else if (dy > 24 && expand) { setExpand(false); touchY.current = null; }
+  };
+  const onTouchEnd = () => { touchY.current = null; };
   if (!snap?.players) return null;
   const blue = snap.players.filter((p) => p.side === "blue");
   const red = snap.players.filter((p) => p.side === "red");
@@ -179,10 +189,16 @@ export default function BattleHeroStrip({ roster = ROSTER, draft = null }) {
         <div onClick={() => setExpand(false)} style={{ position: "absolute", inset: 0, zIndex: 10, background: "rgba(0,0,0,0.35)" }} />
       )}
       <div style={{ position: "absolute", bottom: "max(8px, env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)", zIndex: 11, width: "min(96%, 560px)", background: "rgba(13,11,18,0.94)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, overflow: "hidden", pointerEvents: "auto", boxShadow: "0 -4px 24px rgba(0,0,0,0.5)" }}>
-        {/* 面板把手：焦點列標籤 + 展開/收合（手機收合 ⇒ 只留焦點對位列，不遮地圖） */}
-        <div onClick={() => setExpand((v) => !v)} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 10px", background: "rgba(255,255,255,0.04)", fontSize: 9, fontWeight: 900, color: "rgba(255,255,255,0.55)", letterSpacing: "0.12em" }}>
-          <span>👥 隊伍面板{expand ? "" : `（焦點：${LANES[focusIdx]}）`}</span>
-          <span>{expand ? "▾ 收合" : "▴ 展開"}</span>
+        {/* 面板把手：點擊或上/下滑手勢（CS 式）展開/收合完整 5v5；
+            手機收合 ⇒ 只留焦點對位列，不遮地圖。觸控區加大（padding 8px + 拖曳杆）。 */}
+        <div onClick={() => setExpand((v) => !v)}
+          onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+          style={{ cursor: "pointer", touchAction: "none", padding: isMobile ? "8px 12px" : "3px 10px", background: "rgba(255,255,255,0.04)", fontSize: 9, fontWeight: 900, color: "rgba(255,255,255,0.55)", letterSpacing: "0.12em" }}>
+          {isMobile && <div style={{ width: 36, height: 4, borderRadius: 99, background: "rgba(255,255,255,0.25)", margin: "0 auto 5px" }} />}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>👥 隊伍面板{expand ? "" : `（焦點：${LANES[focusIdx]}）`}</span>
+            <span>{expand ? (isMobile ? "▾ 下滑收合" : "▾ 收合") : (isMobile ? "▴ 上滑展開" : "▴ 展開")}</span>
+          </div>
         </div>
         <div style={{ maxHeight: expand ? (isMobile ? "46vh" : "none") : "none", overflowY: expand && isMobile ? "auto" : "visible" }}>
           {expand ? LANES.map((_, i) => laneRow(i)) : laneRow(focusIdx)}

@@ -13,11 +13,13 @@ import MobaView3D from "./MobaView3D.jsx";
 import BattlePresentationLayer from "./battle/ui/BattlePresentationLayer.jsx";
 import { useGameStore } from "./useGameStore.js";
 import { useLocalServer } from "./useLocalServer.js";
-import { LANES, PITS } from "./gameData.js";
+import { LANES, PITS, FOUNTAIN } from "./gameData.js";
 import { ROSTER } from "./data/roster.js";
 import { draftRoster } from "./battle/moba/draftRoster.js";
 import { loadQuality, saveQuality, presetFor, QUALITY_IDS, QUALITY_PRESETS } from "./battle/quality.js";
 import { useIsMobile } from "./ui/useViewport.js";
+import { useCameraStore } from "./battle/cameraStore.js";
+import { isDebugMode } from "./ui/debugMode.js";
 
 // 你的彩色地圖：Vite 可 `import mapUrl from "./assets/rift.png"` 後設給 MOBA_MAP；null 用程序化底圖。
 const MOBA_MAP = null;
@@ -46,7 +48,20 @@ function Minimap({ mobile = false }) {
         g.strokeStyle = "rgba(190,170,120,0.4)"; g.lineWidth = 2;
         for (const ln of ["top", "mid", "bot"]) { g.beginPath(); LANES[ln].forEach((p, i) => (i ? g.lineTo(P(p.x), P(p.y)) : g.moveTo(P(p.x), P(p.y)))); g.stroke(); }
         Object.values(snap.towers).forEach((t) => { if (t.hp <= 0) return; g.fillStyle = t.side === "blue" ? "#3b82f6" : "#ef4444"; const s = t.lane === "nexus" ? 6 : 3.4; g.fillRect(P(t.pos.x) - s / 2, P(t.pos.y) - s / 2, s, s); });
-        [["dragon", PITS.dragon, "#b794f6"], ["baron", PITS.baron, "#fbbf24"]].forEach(([k, pit, c]) => { if (!snap[k].alive) return; g.fillStyle = c; g.beginPath(); g.arc(P(pit.x), P(pit.y), 3, 0, 7); g.fill(); });
+        // S29B3：坑位環（恆顯示，與主場景 pit 色環一致）+ 存活時實心點
+        [["dragon", PITS.dragon, "#b794f6"], ["baron", PITS.baron, "#fbbf24"]].forEach(([k, pit, c]) => {
+          g.strokeStyle = c; g.lineWidth = 1;
+          g.beginPath(); g.arc(P(pit.x), P(pit.y), 4.4, 0, 7); g.stroke();
+          if (!snap[k].alive) return;
+          g.fillStyle = c; g.beginPath(); g.arc(P(pit.x), P(pit.y), 3, 0, 7); g.fill();
+        });
+        // S29B3：泉水標記（與主場景泉水平台同語意/同座標源）
+        [[FOUNTAIN.blue, "#60a5fa"], [FOUNTAIN.red, "#f87171"]].forEach(([f, c]) => {
+          g.strokeStyle = c; g.lineWidth = 1.2;
+          g.beginPath(); g.arc(P(f.x), P(f.y), 3.2, 0, 7); g.stroke();
+          g.beginPath(); g.moveTo(P(f.x) - 2, P(f.y)); g.lineTo(P(f.x) + 2, P(f.y));
+          g.moveTo(P(f.x), P(f.y) - 2); g.lineTo(P(f.x), P(f.y) + 2); g.stroke();
+        });
         // S29B1：野怪營地（座標與世界同源：snapshot.objectives ← gameData.CAMPS）
         (snap.objectives ?? []).forEach((o) => {
           if (o.type !== "camp" && o.type !== "buff") return;
@@ -77,10 +92,12 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   //   （行為權重層；戰術現在「真的」進 LogicEngine，證據寫入 BattleResult.tacticExecution）。
   // Sprint29：playbackRate（1×/2×/4×）+ quality preset（low/medium/high）。
   //   ⚠ 兩者都**只影響呈現**：rate 只改 tick 的真實間隔（dt 恆定）、quality 只改怎麼畫。
-  const { playing, start, stop, rate, setRate, rates } = useLocalServer();
+  const { playing, start, fastForward, rate, setRate, rates } = useLocalServer();
+  // S29B3：開局重置相機為導播（預設 ON）；點英雄/拖曳的模式切換由 cameraStore 管理
+  const begin = () => { useCameraStore.getState().backToDirector(); start({ tactic }); };
   // Sprint09：賽前準備銜接 — autoStart 掛載即開局（預設 false = 現行為不變）
-  useEffect(() => { if (autoStart && !playing) start({ tactic }); }, []);  // eslint-disable-line
-  const [follow, setFollow] = useState(true);        // 戰鬥鏡頭跟隨（BattleCameraController）
+  useEffect(() => { if (autoStart && !playing) begin(); }, []);  // eslint-disable-line
+  const camMode = useCameraStore((s) => s.mode);
   // S29：畫質——首次依裝置自動判斷，玩家手動選擇後存 localStorage 並優先
   const [qualityId, setQualityId] = useState(() => loadQuality());
   const quality = useMemo(() => presetFor(qualityId), [qualityId]);
@@ -95,16 +112,24 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
 
   return (
     <div style={{ position: "relative", width: "100%", height: "min(82vh, 720px)", background: "#0d1420", borderRadius: 14, overflow: "hidden", fontFamily: "system-ui,-apple-system,sans-serif" }}>
-      {/* 3D：跟隨開啟且對局進行中 → 相機聚焦交戰/推塔/龍/巴龍/主堡（computeFocus）*/}
-      <MobaView3D mapTexture={MOBA_MAP} autoRotate={!playing} battleFollow={follow && playing} roster={liveRoster} quality={quality} />
+      {/* 3D：對局進行中相機由 cameraStore 管理（director/objectiveFocus/heroFocus/free）*/}
+      <MobaView3D mapTexture={MOBA_MAP} autoRotate={!playing} battleFollow={playing} roster={liveRoster} quality={quality} />
 
       {/* Battle Presentation Layer：HUD / Timeline / 浮動大字 / TAB 記分板 / 終局畫面 */}
       <BattlePresentationLayer roster={liveRoster} draft={draft} tactic={tactic} onContinue={onContinue} />
 
       {/* Start / Stop / 鏡頭切換 */}
       {!playing && !hud.over && (
-        <button onClick={() => start({ tactic })} style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 10, background: "linear-gradient(135deg,#3b82f6,#1d4ed8)", border: "2px solid #93c5fd", borderRadius: 14, padding: "16px 40px", color: "#fff", fontSize: 20, fontWeight: 900, letterSpacing: "0.08em", cursor: "pointer", boxShadow: "0 8px 40px rgba(59,130,246,0.6)" }}>
+        <button onClick={begin} style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 10, background: "linear-gradient(135deg,#3b82f6,#1d4ed8)", border: "2px solid #93c5fd", borderRadius: 14, padding: "16px 40px", color: "#fff", fontSize: 20, fontWeight: 900, letterSpacing: "0.08em", cursor: "pointer", boxShadow: "0 8px 40px rgba(59,130,246,0.6)" }}>
           ▶ 開始遊戲 / START
+        </button>
+      )}
+
+      {/* S29B3：回到導播（自由鏡頭時才出現的單一小按鈕；雙擊空白也可回導播） */}
+      {playing && camMode === "free" && (
+        <button onClick={() => useCameraStore.getState().backToDirector()}
+          style={{ position: "absolute", bottom: isMobile ? "calc(56px + env(safe-area-inset-bottom))" : 46, left: "50%", transform: "translateX(-50%)", zIndex: 10, background: "rgba(96,165,250,0.92)", border: "1px solid #93c5fd", borderRadius: 999, padding: "6px 16px", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.45)" }}>
+          🎥 回到導播
         </button>
       )}
       {/* S29B2：控制鈕收納——手機收進 ⚙ 面板（不常駐佔畫面）；桌機維持原樣 */}
@@ -113,15 +138,15 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
       )}
       {(!isMobile || showCtl) && (
         <>
-          {playing && (
-            <button onClick={stop} style={{ position: "absolute", top: 92, left: isMobile ? 8 : 12, zIndex: 10, background: "rgba(239,68,68,0.85)", border: "1px solid #fca5a5", borderRadius: 8, padding: "5px 12px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>⏹ 結束</button>
+          {/* S29B3：正式版沒有「結束」——單機測試模式才有「快速完成比賽」
+              （fastForward：同一顆引擎安全推進到終局 → 走既有 Result/發獎/Replay 流程）*/}
+          {playing && isDebugMode() && (
+            <button onClick={fastForward} title="Debug：把模擬推進到終局並進入戰報（結果與自然跑完相同）"
+              style={{ position: "absolute", top: 92, left: isMobile ? 8 : 12, zIndex: 10, background: "rgba(168,85,247,0.85)", border: "1px solid #d8b4fe", borderRadius: 8, padding: "5px 12px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>⏩ 快速完成比賽</button>
           )}
-          <button onClick={() => setFollow((v) => !v)} style={{ position: "absolute", top: isMobile ? 128 : 92, right: isMobile ? 8 : 12, zIndex: 10, background: follow ? "rgba(96,165,250,0.9)" : "rgba(8,14,24,0.7)", border: `1px solid ${follow ? "#60a5fa" : "rgba(255,255,255,0.3)"}`, borderRadius: 8, padding: "5px 10px", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-            {follow ? "🎥 導播鏡頭" : "🖱 自由鏡頭"}
-          </button>
 
           {/* S29：播放倍率（只改 tick 的真實間隔，dt 恆定 ⇒ 不影響模擬結果）*/}
-          <div style={{ position: "absolute", top: isMobile ? 160 : 124, right: isMobile ? 8 : 12, zIndex: 10, display: "flex", gap: 4 }}>
+          <div style={{ position: "absolute", top: isMobile ? 128 : 92, right: isMobile ? 8 : 12, zIndex: 10, display: "flex", gap: 4 }}>
             {rates.map((r) => (
               <button key={r} onClick={() => setRate(r)} title="播放倍率（不影響模擬結果）"
                 style={{ background: rate === r ? "rgba(96,165,250,0.9)" : "rgba(8,14,24,0.7)", border: `1px solid ${rate === r ? "#60a5fa" : "rgba(255,255,255,0.25)"}`, borderRadius: 6, padding: "4px 8px", color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer", minWidth: 32 }}>
@@ -131,7 +156,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
           </div>
 
           {/* S29：畫質切換（自動判斷 + 手動覆寫；只影響怎麼畫，不影響模擬結果）*/}
-          <div style={{ position: "absolute", top: isMobile ? 192 : 156, right: isMobile ? 8 : 12, zIndex: 10, display: "flex", gap: 4 }}>
+          <div style={{ position: "absolute", top: isMobile ? 160 : 124, right: isMobile ? 8 : 12, zIndex: 10, display: "flex", gap: 4 }}>
             {QUALITY_IDS.map((id) => (
               <button key={id} onClick={() => pickQuality(id)} title={`畫質：${QUALITY_PRESETS[id].zh}（不影響模擬結果）`}
                 style={{ background: qualityId === id ? "rgba(52,211,153,0.9)" : "rgba(8,14,24,0.7)", border: `1px solid ${qualityId === id ? "#34d399" : "rgba(255,255,255,0.25)"}`, borderRadius: 6, padding: "4px 8px", color: "#fff", fontSize: 10, fontWeight: 800, cursor: "pointer", textTransform: "uppercase" }}>

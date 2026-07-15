@@ -215,6 +215,14 @@ SIM_RULES.v3 = {
   // 巴龍 buff（v3 收尾機制之二）：擊殺方 baronBuffT 秒內小兵拆塔 ×baronMinionK
   //  ⇒ 拿下巴龍 = 真實的推進窗，比賽不再拖尾（實測 p99 時長 34 分 → 需 ≤32）
   baronBuffT: 70, baronMinionK: 2.2, baronMinionFightK: 1.7,
+  // ── 回城 channel（S29B3）────────────────────────────────────────────────
+  //  29B2 實機回報「低血量回血看起來像走一下就回血」——根因：引擎沒有回城，
+  //  只有「走路回家 + 泉水秒補」。v3 補上真實回城：撤退中、安全（recallSafeDist 內
+  //  無敵人）且離泉水夠遠（recallMinDist）⇒ 原地引導 recallChannelT 秒 → 傳送回泉水；
+  //  引導中受擊或敵人接近 ⇒ 中斷（recallCd 秒內不重試）。
+  //  節奏影響已實測（見 MOBA交戰節奏與擊殺模型.md §S29B3）：pacing 門檻仍全綠。
+  recallChannel: true,
+  recallChannelT: 6, recallSafeDist: 12, recallMinDist: 35, recallCd: 4,
   // ── 召喚師技能 ───────────────────────────────────────────────────────────
   summonerSpells: true,
   flashCd: 210, flashDist: 7,

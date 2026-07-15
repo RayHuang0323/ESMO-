@@ -85,6 +85,10 @@ export class LogicEngine {
               ? { id: "smite", readyAt: 0, lastUsedAt: null, lastReason: null, uses: 0 }
               : { id: null, status: "reserved" },   // 無可靠引擎作用點 ⇒ 明確 reserved，不虛構
           },
+          // ── S29B3：回城 channel ─────────────────────────────────────────
+          recallT: 0,          // 引導剩餘秒數（>0 = 回城中，原地不動）
+          recallHpLast: 0,     // 上一 tick 血量（受擊中斷判定）
+          recallCdAt: 0,       // 中斷後的重試冷卻
         });
       });
     });
@@ -109,6 +113,8 @@ export class LogicEngine {
     this.killContexts = [];   // [{ id, t, type, location, participants, startedAt, duration }]
     this.spellLog = [];       // [{ id, t, playerId, side, spell, reason, from, to }]
     this._spellSeq = 1;
+    this.recallLog = [];      // S29B3：回城事件 [{ id, t, playerId, side, phase, from? }]
+    this._recallSeq = 1;
     if (R.neutralObjectives) {
       const mk = (id, type, side, pos, maxHp, spawnAt, respawn) => ({
         id, type, side, pos: { ...pos }, alive: false, hp: 0, maxHp,
@@ -325,6 +331,17 @@ export class LogicEngine {
     }
     return best;
   }
+  /** S29B3：回城事件（唯一出口；phase = start / done / cancel；done 帶傳送起點）。 */
+  _recallEventV3(p, phase, from = null) {
+    this.recallLog.push({
+      id: "r" + this._recallSeq++, t: Math.round(this.t * 10) / 10,
+      playerId: p.id, side: p.side, phase,
+      ...(from ? { from: { x: from.x, y: from.y } } : {}),
+    });
+    if (this.recallLog.length > 200) this.recallLog.shift();
+    if (phase === "done") this.pushFx({ type: "ult", pos: FOUNTAIN[p.side], color: 0x60a5fa, exp: 0.5 });
+  }
+
   /** 召喚師技能事件（唯一出口；Replay 由 battleStore.log 原封保存，不重判定）。 */
   _spellEventV3(p, spell, reason, from, to) {
     const slot = spell === "flash" ? p.sp.f : p.sp.d;
@@ -625,6 +642,7 @@ export class LogicEngine {
       if (this.killContexts.length > 400) this.killContexts.shift();
       foe.deathsT.push(this.t);
       if (foe.deathsT.length > 8) foe.deathsT.shift();
+      foe.recallT = 0;   // S29B3：死亡中斷回城引導
       for (const q of this.players) if (q.chaseId === foe.id) q.chaseId = null;   // 目標已死 ⇒ 停止追擊
     }
     this.feed.unshift({ id: this._mid++, killer: p.id, victim: foe.id, side: p.side, assists, vpos: { x: foe.pos.x, y: foe.pos.y }, ...(ctx ? { ctx } : {}) });
@@ -886,7 +904,7 @@ export class LogicEngine {
           p.dead = false; p.hp = p.maxHp; p.retreating = false; p.hitBy.clear();
           const f = FOUNTAIN[p.side]; p.pos = { x: f.x, y: f.y }; p.state = "回防";
           // S29B1（v3）：復活鎖——RETURN 期間不得參團/追擊，必須先走回戰線
-          if (R.engagementFsm) { p.fsm = "RETURN"; p.reengageAt = this.t + R.respawnLock; p.chaseId = null; p.joinGo = false; p.objGo = false; p.contactSince = null; }
+          if (R.engagementFsm) { p.fsm = "RETURN"; p.reengageAt = this.t + R.respawnLock; p.chaseId = null; p.joinGo = false; p.objGo = false; p.contactSince = null; p.recallT = 0; }
         } else if (R.engagementFsm) p.fsm = "RESPAWN";
         continue;
       }
@@ -965,6 +983,39 @@ export class LogicEngine {
         tgt = FOUNTAIN[p.side];
         st = R.engagementFsm && dist(p.pos, FOUNTAIN[p.side]) < 10 ? "回城" : "撤退";
         if (R.engagementFsm) p.fsm = st === "回城" ? "RECALL" : "RETREAT";
+        // ── S29B3：回城 channel——撤退中、安全且離泉水遠 ⇒ 原地引導 → 傳送。
+        //    「走路回泉水回血」與「回城傳送回血」從此是兩件可分辨的事。
+        if (R.recallChannel) {
+          const fdist = dist(p.pos, FOUNTAIN[p.side]);
+          const danger = alive.some((q) => q.side !== p.side && dist(q.pos, p.pos) < R.recallSafeDist);
+          if (p.recallT > 0) {
+            if (danger || p.hp + 1e-9 < p.recallHpLast) {
+              // 受擊或敵人接近 ⇒ 中斷，恢復走路撤退（recallCd 內不重試）
+              p.recallT = 0; p.recallCdAt = this.t + R.recallCd;
+              this._recallEventV3(p, "cancel");
+            } else {
+              p.recallT -= dt;
+              if (p.recallT <= 0) {
+                const from = { x: p.pos.x, y: p.pos.y }, f = FOUNTAIN[p.side];
+                p.pos.x = f.x; p.pos.y = f.y;
+                p.contactSince = null;
+                this._recallEventV3(p, "done", from);
+                st = "回城"; p.fsm = "RECALL";
+              } else {
+                tgt = { x: p.pos.x, y: p.pos.y };   // 原地引導（不移動）
+                st = "回城中"; p.fsm = "RECALL";
+              }
+            }
+          } else if (fdist > R.recallMinDist && this.t >= p.recallCdAt &&
+                     // 啟動遲滯：開始引導需要更大的淨空（1.4×），中斷判定維持 recallSafeDist
+                     !alive.some((q) => q.side !== p.side && dist(q.pos, p.pos) < R.recallSafeDist * 1.4)) {
+            p.recallT = R.recallChannelT;
+            this._recallEventV3(p, "start");
+            tgt = { x: p.pos.x, y: p.pos.y };
+            st = "回城中"; p.fsm = "RECALL";
+          }
+          p.recallHpLast = p.hp;
+        }
       }
       else if (tacTgt) { tgt = tacTgt; st = stOv; if (R.engagementFsm) p.fsm = "ROAM"; }
       else if (chaseFoe) { tgt = { x: chaseFoe.pos.x, y: chaseFoe.pos.y }; st = "追擊"; p.fsm = "CHASE"; }
@@ -1157,7 +1208,7 @@ export class LogicEngine {
       ts: this.t,
       // S29：mlv/mxp = **本場**英雄等級（1–18，終局丟棄）；lv = 英雄熟練等級（跨場，
       //   來自 Hero Progress loadout）。兩者並存且不同名 ⇒ 消費端不可能混用。
-      players: this.players.map((p) => ({ id: p.id, side: p.side, role: p.role, pos: { ...p.pos }, hp: clamp(p.hp / p.maxHp, 0, 1), dead: p.dead, respawn: p.respawn, state: p.state, k: p.k, d: p.d, a: p.a, gold: Math.round(p.gold), dmg: Math.round(p.dmg), heal: Math.round(p.heal), twrDmg: Math.round(p.twrDmg), lv: p.lv, mlv: p.mlv, mxp: Math.round(p.mxp), mxpNext: xpToNext(p.mlv), ...(R.summonerSpells ? { sp: spOf(p) } : {}) })),
+      players: this.players.map((p) => ({ id: p.id, side: p.side, role: p.role, pos: { ...p.pos }, hp: clamp(p.hp / p.maxHp, 0, 1), dead: p.dead, respawn: p.respawn, state: p.state, k: p.k, d: p.d, a: p.a, gold: Math.round(p.gold), dmg: Math.round(p.dmg), heal: Math.round(p.heal), twrDmg: Math.round(p.twrDmg), lv: p.lv, mlv: p.mlv, mxp: Math.round(p.mxp), mxpNext: xpToNext(p.mlv), ...(R.summonerSpells ? { sp: spOf(p) } : {}), ...(R.recallChannel ? { rc: p.recallT > 0 ? Math.round(p.recallT * 10) / 10 : 0 } : {}) })),
       towers: Object.fromEntries(Object.entries(this.towers).map(([k, t]) => [k, { side: t.side, lane: t.lane, tier: t.tier, pos: t.pos, hp: clamp(t.hp / (t.lane === "nexus" ? NEXUS_HP : TOWER_HP), 0, 1) }])),
       lanes: { top: this._snapLane("top"), mid: this._snapLane("mid"), bot: this._snapLane("bot") },
       dragon: { ...this.dragon }, baron: { ...this.baron },
@@ -1184,6 +1235,8 @@ export class LogicEngine {
         })),
       } : {}),
       ...(R.summonerSpells ? { spellEvents: this.spellLog.slice(-8).map((e) => ({ ...e })) } : {}),
+      // S29B3：回城事件（最近 8 筆；view 的傳送/引導特效 + Timeline 事件來源）
+      ...(R.recallChannel ? { recallEvents: this.recallLog.slice(-8).map((e) => ({ ...e })) } : {}),
     };
   }
   _snapLane(ln) {

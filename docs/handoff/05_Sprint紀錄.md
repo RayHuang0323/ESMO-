@@ -1100,3 +1100,64 @@ flow09、dash10）。
 - Replay 不含小兵（frame 預算取捨，既有）⇒ Replay 的小兵互打畫面不存在；
   目標掉血/英雄 hp/事件已一致。
 - viewFx 池 14 格：大團戰死亡爆點可能被搶格（刻意上限）。
+
+---
+
+## Sprint 29B3 — MOBA Match Controls, Camera UX and Map Readability
+
+**範圍**：29B2 部署後實機觀察——結束按鈕語意錯誤、隊伍面板不夠 CS、地圖結構仍難懂、
+黃/粉框無語意、缺點英雄 zoom、雙鏡頭按鈕不直覺、塔過亮、回血像亂走。
+**紅線遵守**：不改 29B1 節奏參數/XP/Progress/Reward/MatchProgressTransaction；
+不重播模擬；不寫死勝負；不加 PointLight；不刪 29B1/29B2 verifier。
+
+### Audit 結論
+
+- 「結束」= `stop()` 中斷（不進 Result）——與「跑到終局看戰報」的測試需求相反。
+- 引擎**沒有回城**：只有走路回家＋泉水秒補 ⇒「走一下就回血」觀感的根因。
+- 相機：雙大按鈕切換 follow on/off；無點擊互動、無英雄聚焦。
+- 黃框=pit 色環、粉框=buff 營地菱形（29B2）——有位置無語意。
+
+### 做了什麼
+
+1. **Debug complete match**：`ui/debugMode.js`（DEV/?debug=1/localStorage 閘門）＋
+   `useLocalServer.fastForward()`（同引擎分塊推進、每 2 模擬秒 push ⇒ Replay 取樣
+   完整覆蓋、終局走既有 useBattleFeed 結算路——冪等發獎、Replay 定稿、EndScreen）。
+   正式版無任何結束控制。verifier §2 實測「分塊+途中 snapshot 與自然跑完逐位元同結果」。
+2. **相機模式**：`battle/cameraStore.js`（zustand：director/free/heroFocus/objectiveFocus）；
+   MobaView3D pointer 互動（tap 英雄 raycast ⇒ heroFocus 4s、tap 空白/拖曳>8px/滾輪 ⇒
+   free、雙擊 ⇒ 回導播）；BattleCameraController 分模式驅動（heroFocus 快跟+近 zoom、
+   objectiveFocus=焦點鎖坑自動標記、free 完全不介入）；GameView 移除雙大按鈕、
+   free 時單一「回到導播」。開局重置 director。
+3. **回城 channel（v3 新機制）**：`recallChannel`（引導 6s/安全 12/遠 35/中斷冷卻 4s、
+   啟動 1.4× 淨空遲滯）；recallLog→snapshot.recallEvents＋players[].rc；
+   死亡/復活清空。**pacing29b1 引擎層 25/25 全綠、40-seed 正反序 0pp**（節奏未破壞）。
+   連帶修 pacing29b1 §13 的斷言競態（終局 killerTeam 會被營地重生 reset 清掉 ⇒
+   改為過程中累計 alive→dead 轉場——40 場合計 1809 次）。
+4. **地圖可讀性**：makeRiftTexture 地面字（魔龍 DRAGON/凱撒 BARON/泉水/野怪/BUFF）＋
+   泉水圓平台白十字＋基地方界；常駐 billboard 標籤 ×7（makeLabelSprite 重用）；
+   Minimap 恆顯坑環＋泉水標記。**未改任何 gameData 座標**。
+5. **塔光效**：常態 0.55/0.75（受擊 +1.6 峰值 0.25s、摧毀爆點）；主堡燈 3.5；
+   Bloom 依畫質 0.7/0.9/1.05（quality.js bloomIntensity）。
+6. **回城/泉水視覺**：藍圈快轉（引導，接 state「回城中」+rc）/綠圈慢轉（泉水治療，
+   hp 上升差分+距泉水<12）/傳送起點爆點（recallEvents done）/「🌀 回城中」「⛲ 泉水」badge。
+7. **隊伍面板手勢**：把手上滑展開/下滑收合（閾值 24px、touchAction none、拖曳杆、
+   手機 padding 8px）；重用 29B2 bottom sheet，未建第二套。
+
+### 驗證
+
+`tools/check_moba_controls29b3.mjs` 26 項（引擎層 18 ＋巢狀 8：29B2 引擎層 12/12、
+29B1 引擎層 25/25、runtime29 44/44＝S23–S28+regress+regress2+build、flow09、dash10）。
+
+### 已知限制 / 技術債
+
+- **全部互動/視覺未經真機實測**（觸控手勢、?debug=1 流程、標籤可讀性、FPS）。
+- timeline 進度條拖曳/快轉到指定時間點：未做（需引擎快照回放緩衝設計，列候選）。
+- 回城完成率 ~50%（實戰被追擊自然中斷）——是機制不是 bug；體感待 Ray 驗收。
+- billboard 標籤恆顯（未做距離淡出）；若視覺過載列 29B4 調整。
+
+### ⚠ 本次改動的既有 verifier 斷言（2 條，均為斷言跟不上合法重構/機制，非「擋住了 29B3」）
+
+| verifier | 舊斷言 | 為什麼改 | 新斷言 |
+|---|---|---|---|
+| `check_moba_tactic24`（B 接線） | GameView 內 `start({ tactic })` 字面出現 ≥2 次 | 29B3 把兩個觸發點（START 鈕/autoStart）統一走 `begin()`（先重置相機再 start）——意圖（開局帶 tactic 進引擎）不變，字面計數失效 | 唯一入口含 `start({ tactic })` ＋ `begin` 出現 ≥3（定義+兩個引用） |
+| `check_moba_pacing29b1` §13 | 終局時至少一座營地帶 `killerTeam` | **斷言本身有競態**：營地重生 reset 會清 killerTeam ⇒ 取決於終局落在誰的生命週期；29B1/29B2 通過是運氣（回城 channel 改變時序後曝露） | 模擬過程中累計「alive→dead 轉場」≥1/場（40 場合計 1809 次；真觀測、無競態） |

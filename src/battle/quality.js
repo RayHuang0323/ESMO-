@@ -22,6 +22,7 @@ export const QUALITY_PRESETS = {
     maxFx: 18,               // fx 物件池上限
     grassBlades: 0.35,       // 草葉數量比例
     towerLights: false,      // 每座塔的 PointLight（22 盞 → 關）
+    bloomIntensity: 0.7,     // S29B3：發光密度分級（低檔更收斂，防過曝）
     targetFps: 30,
   },
   medium: {
@@ -33,6 +34,7 @@ export const QUALITY_PRESETS = {
     maxFx: 34,
     grassBlades: 0.7,
     towerLights: false,
+    bloomIntensity: 0.9,     // S29B3
     targetFps: 60,
   },
   high: {
@@ -44,6 +46,7 @@ export const QUALITY_PRESETS = {
     maxFx: 60,
     grassBlades: 1,
     towerLights: true,       // 只有 high 才開；且已改為只有主堡有燈（見 MobaView3D）
+    bloomIntensity: 1.05,    // S29B3
     targetFps: 60,
   },
 };

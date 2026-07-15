@@ -116,3 +116,17 @@
 
 ⚠ **全部未經瀏覽器實測**：FPS/draw calls/外觀體感需 Ray 依 29B2 人工驗收清單實測。
 正式美術資產（模型/貼圖）仍未導入——本版是「看得懂地圖」的 MVP，不是 AAA。
+
+---
+
+## S29B3 增補：可讀性標籤 / 塔光收斂 / 回城視覺
+
+- **標籤系統**：地面字（魔龍 DRAGON／凱撒 BARON／泉水／野怪／BUFF）＋常駐 billboard
+  標籤（makeLabelSprite ×7）＋泉水圓形平台十字＋基地方界。詳見 `MOBA地圖可讀性規範.md`。
+- **塔光效**：常態 emissive 再降（塔 0.55／主堡 0.75、主堡燈 3.5），受擊 +1.6 峰值
+  0.25s 衰減、摧毀 viewFx 爆點；Bloom 依畫質 0.7/0.9/1.05。
+- **回城/泉水視覺**：引導=藍圈快轉＋「🌀 回城中」badge＋players[].rc；完成=起點爆點
+  （recallEvents）＋泉水端引擎 fx；泉水治療=綠圈慢轉（hp 上升差分＋距泉水 <12 才亮，
+  真資料非假動畫）；「⛲ 泉水」badge。
+- **相機**：模式化（director/objectiveFocus/heroFocus/free），點英雄 zoom-in 4s，
+  詳見 `MOBA導播鏡頭與測試控制.md`。
