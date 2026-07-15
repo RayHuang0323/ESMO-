@@ -44,6 +44,9 @@ export function snapshotToFrame(snap) {
     s: [snap.bK, snap.rK],
     g: [Math.round(snap.bGold), Math.round(snap.rGold)],
     wp: round3(snap.winProb ?? 0.5),
+    // S29B1（純附加，舊 replay 沒有此欄 ⇒ 消費端須容忍 undefined）：
+    //   中立目標存活位元（順序 = objectivesMeta；位置只在 meta 存一次）
+    ...(snap.objectives ? { ob: snap.objectives.map((o) => (o.alive ? 1 : 0)) } : {}),
   };
 }
 

@@ -88,6 +88,19 @@ export const BUSHES = [
   {x:46,y:20,r:3},{x:54,y:80,r:3},
 ];
 
+// ── S29B1：野怪營地座標（單一真實來源：主畫面 / Minimap / Replay / 引擎共用）──
+//  選點規則（以腳本掃格驗證，非手感）：兩側 180° 鏡像（100-x,100-y）、距任一障礙
+//  ≥ r+1.8（英雄避讓半徑 r+1.4 + 互動餘裕）、距三路路線 ≥5.5、距龍/巴龍坑 ≥8、
+//  距草叢 ≥ r+1.5。side 表示「屬於哪一方野區」（該側打野的預設農怪路線）。
+export const CAMPS = [
+  { id: "camp_blue_buff", side: "blue", type: "buff", x: 47, y: 63 },
+  { id: "camp_blue_a",    side: "blue", type: "camp", x: 41, y: 78 },
+  { id: "camp_blue_b",    side: "blue", type: "camp", x: 52, y: 74 },
+  { id: "camp_red_buff",  side: "red",  type: "buff", x: 53, y: 37 },
+  { id: "camp_red_a",     side: "red",  type: "camp", x: 59, y: 22 },
+  { id: "camp_red_b",     side: "red",  type: "camp", x: 48, y: 26 },
+];
+
 export const ROLES = ["top", "jungle", "mid", "adc", "sup"];
 export const ROLE_LANE = { top: "top", jungle: "mid", mid: "mid", adc: "bot", sup: "bot" };
 export const ROLE_NAME = { top: "上路", jungle: "打野", mid: "中路", adc: "射手", sup: "輔助" };

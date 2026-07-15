@@ -20,6 +20,7 @@ export class BattleEventTracker {
   reset() {
     this.prev = null;
     this.seenFeed = new Set();
+    this.seenSpells = new Set();    // S29B1：已轉為事件的召喚師技能（spellLog id）
     this.killWindows = new Map();   // killerId -> [ts, ...]
     this.firstBlood = false;
     this.aceState = { blue: false, red: false };
@@ -37,11 +38,14 @@ export class BattleEventTracker {
       out.push({ id: this._eid++, t: snap.ts, type, side, text, pos, data });
 
     // ── 擊殺 / First Blood / 連殺（讀真實 feed，附上快照時間）────────────
+    const CTX_ZH = { gank: "Gank", ambush: "埋伏", pick: "抓單", teamfight: "團戰", objective: "目標戰", towerDive: "越塔", chase: "追擊" };
     for (const f of [...snap.feed].reverse()) {           // feed 是 unshift，反轉成時間序
       if (this.seenFeed.has(f.id)) continue;
       this.seenFeed.add(f.id);
-      const ast = f.assists?.length ? `（助攻 ${f.assists.map((x) => x.toUpperCase()).join(",")}）` : "";
-      const kd = { killer: f.killer, victim: f.victim, assists: f.assists || [] };
+      const ctxTag = f.ctx?.type && CTX_ZH[f.ctx.type] ? `【${CTX_ZH[f.ctx.type]}】` : "";
+      const ast = (f.assists?.length ? `（助攻 ${f.assists.map((x) => x.toUpperCase()).join(",")}）` : "") + ctxTag;
+      // S29B1：ctx = 引擎的 killContext（v3 才有；原封傳遞，不重新分類）
+      const kd = { killer: f.killer, victim: f.victim, assists: f.assists || [], ...(f.ctx ? { ctx: f.ctx } : {}) };
       if (!this.firstBlood) {
         this.firstBlood = true;
         push("FIRST_BLOOD", f.side, `FIRST BLOOD! ${f.killer.toUpperCase()} 擊殺 ${f.victim.toUpperCase()}${ast}`, f.vpos, kd);
@@ -66,14 +70,35 @@ export class BattleEventTracker {
           push("TOWER_DESTROYED", destroyer, `${tw.side === "blue" ? "藍方" : "紅方"}${label} 被摧毀`, tw.pos, { lane: tw.lane, tier: tw.tier, victimSide: tw.side, isNexus: tw.lane === "nexus" });
         }
       }
-      // ── 龍 / 巴龍（alive 由 true → false；歸屬方以引擎同規則重演：坑邊人數多者）──
+      // ── 龍 / 巴龍（alive 由 true → false）。歸屬：S29B1 起 snapshot.objectives
+      //    帶引擎真實 killerTeam（含 Smite 搶奪）⇒ 優先使用；舊快照（無 objectives）
+      //    退回「坑邊人數多者」重演。
+      const objOf = (id) => (snap.objectives ?? []).find((o) => o.id === id) ?? null;
       for (const [key, name] of [["dragon", "Dragon"], ["baron", "Baron"]]) {
         if (prev[key].alive && !snap[key].alive && snap[key].respawn > 0) {
           const pit = PITS[key];
-          const near = (side) => prev.players.filter((p) => p.side === side && !p.dead && dist(p.pos, pit) < 9).length;
-          const b = near("blue"), r = near("red");
-          const side = b > r ? "blue" : r > b ? "red" : null;
-          push(key === "dragon" ? "DRAGON_SLAIN" : "BARON_SLAIN", side, `${name} 被${side === "blue" ? "藍方" : side === "red" ? "紅方" : ""}擊殺`, pit);
+          let side = objOf(key)?.killerTeam ?? null;
+          if (!side && !objOf(key)) {
+            const near = (s) => prev.players.filter((p) => p.side === s && !p.dead && dist(p.pos, pit) < 9).length;
+            const b = near("blue"), r = near("red");
+            side = b > r ? "blue" : r > b ? "red" : null;
+          }
+          push(key === "dragon" ? "DRAGON_SLAIN" : "BARON_SLAIN", side, `${name} 被${side === "blue" ? "藍方" : side === "red" ? "紅方" : ""}擊殺`, pit,
+            objOf(key) ? { killerTeam: side, participants: objOf(key).participants } : null);
+        }
+        // S29B1：目標出生事件（出生 → 集結 → 擊殺 → 重生的完整生命週期可回放）
+        if (!prev[key].alive && snap[key].alive) {
+          push("OBJECTIVE_SPAWN", null, `${name} 已刷新`, PITS[key], { objective: key });
+        }
+      }
+      // ── S29B1：召喚師技能事件（引擎 spellLog 尾端；原封轉為 Timeline 事件）──
+      if (snap.spellEvents) {
+        for (const se of snap.spellEvents) {
+          if (this.seenSpells.has(se.id)) continue;
+          this.seenSpells.add(se.id);
+          const zh = se.spell === "flash" ? "閃現" : "懲戒";
+          const rz = { escape: "逃生", chase: "追擊", engage: "切入" }[se.reason] ?? se.reason;
+          push("SPELL_USED", se.side, `${se.playerId.toUpperCase()} 使用${zh}（${rz}）`, se.from, { playerId: se.playerId, spell: se.spell, reason: se.reason });
         }
       }
       // ── ACE（一方 5 人全滅的「進入瞬間」）──────────────────────────────

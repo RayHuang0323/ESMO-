@@ -46,6 +46,13 @@ function Minimap() {
         for (const ln of ["top", "mid", "bot"]) { g.beginPath(); LANES[ln].forEach((p, i) => (i ? g.lineTo(P(p.x), P(p.y)) : g.moveTo(P(p.x), P(p.y)))); g.stroke(); }
         Object.values(snap.towers).forEach((t) => { if (t.hp <= 0) return; g.fillStyle = t.side === "blue" ? "#3b82f6" : "#ef4444"; const s = t.lane === "nexus" ? 6 : 3.4; g.fillRect(P(t.pos.x) - s / 2, P(t.pos.y) - s / 2, s, s); });
         [["dragon", PITS.dragon, "#b794f6"], ["baron", PITS.baron, "#fbbf24"]].forEach(([k, pit, c]) => { if (!snap[k].alive) return; g.fillStyle = c; g.beginPath(); g.arc(P(pit.x), P(pit.y), 3, 0, 7); g.fill(); });
+        // S29B1：野怪營地（座標與世界同源：snapshot.objectives ← gameData.CAMPS）
+        (snap.objectives ?? []).forEach((o) => {
+          if (o.type !== "camp" && o.type !== "buff") return;
+          if (!o.alive) return;
+          g.fillStyle = o.type === "buff" ? "#f472b6" : "#a3e635";
+          g.beginPath(); g.arc(P(o.pos.x), P(o.pos.y), 2, 0, 7); g.fill();
+        });
         snap.players.forEach((p) => {
           if (p.dead) return; if (p.side === "red" && !vis(p.pos)) return;
           g.fillStyle = p.side === "blue" ? "#93c5fd" : "#fca5a5";

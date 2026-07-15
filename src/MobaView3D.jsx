@@ -199,13 +199,37 @@ function MobaScene({ mapTexture, roster, Q }) {
       world.add(grp); towerObjs[key] = { grp, crystal, stump, isNexus, hpBar, hfg, hfgW };
     });
 
-    // 龍/巴龍
+    // 龍/巴龍（S29B1：加 HP 條——目標被攻擊時看得到真實血量下降）
     const obj3d = {};
     [["dragon", PITS.dragon, 0xb794f6], ["baron", PITS.baron, 0xfbbf24]].forEach(([k, pit, col]) => {
       const m = new THREE.Mesh(new THREE.IcosahedronGeometry(2.6 * S, 0), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 1.4, roughness: 0.3, metalness: 0.6 }));
       m.position.set(wx(pit.x), 2.0 * S, wz(pit.y)); m.castShadow = true; m.visible = false; world.add(m);
       const pl = new THREE.PointLight(col, 3, 24 * S); pl.position.copy(m.position); pl.visible = false; world.add(pl);
-      obj3d[k] = { mesh: m, light: pl };
+      const hpGrp = new THREE.Group(); hpGrp.position.set(wx(pit.x), 6.2 * S, wz(pit.y)); hpGrp.visible = false;
+      const hbg = new THREE.Mesh(new THREE.PlaneGeometry(4.2 * S, 0.4 * S), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.7, depthTest: false })); hbg.position.z = -0.01;
+      const hfg = new THREE.Mesh(new THREE.PlaneGeometry(4.0 * S, 0.3 * S), new THREE.MeshBasicMaterial({ color: col, depthTest: false }));
+      hpGrp.add(hbg, hfg); world.add(hpGrp);
+      obj3d[k] = { mesh: m, light: pl, hpGrp, hfg, hfgW: 4.0 * S };
+    });
+
+    // S29B1：野怪營地低模 placeholder（正式美術留 29B2）。
+    //   資料/座標唯一來源 = snapshot.objectives（← 引擎 ← gameData.CAMPS）；
+    //   Minimap / Replay 用同一組座標 ⇒ 三處必然一致。
+    const campObjs = new Map();
+    (snap0.objectives ?? []).forEach((o) => {
+      if (o.type !== "camp" && o.type !== "buff") return;
+      const col = o.type === "buff" ? 0xf472b6 : 0xa3e635;
+      const grp = new THREE.Group(); grp.position.set(wx(o.pos.x), 0, wz(o.pos.y));
+      const body = new THREE.Mesh(
+        new THREE.DodecahedronGeometry((o.type === "buff" ? 1.5 : 1.1) * S, 0),
+        new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.7, roughness: 0.5, metalness: 0.3, flatShading: true }));
+      body.position.y = 1.1 * S; body.castShadow = Q.shadows; grp.add(body);
+      const hpGrp = new THREE.Group(); hpGrp.position.y = 3.0 * S;
+      const bg = new THREE.Mesh(new THREE.PlaneGeometry(2.4 * S, 0.3 * S), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.7, depthTest: false })); bg.position.z = -0.01;
+      const fg = new THREE.Mesh(new THREE.PlaneGeometry(2.3 * S, 0.22 * S), new THREE.MeshBasicMaterial({ color: col, depthTest: false }));
+      hpGrp.add(bg, fg); grp.add(hpGrp);
+      grp.visible = false; world.add(grp);
+      campObjs.set(o.id, { grp, body, hpGrp, fg, w: 2.3 * S });
     });
 
     // 英雄
@@ -264,7 +288,7 @@ function MobaScene({ mapTexture, roster, Q }) {
     const killGroup = new THREE.Group(); world.add(killGroup);
 
     R.current = {
-      world, floorMat, blades, towerObjs, obj3d, heroObjs,
+      world, floorMat, blades, towerObjs, obj3d, heroObjs, campObjs,
       minionMeshes, minionPool, minionGeo, minionMat,
       fxGroup, fxPool, killGroup, killSprites: [], seenFeed: new Set(), Q,
     };
@@ -366,8 +390,35 @@ function MobaScene({ mapTexture, roster, Q }) {
       if (!dead) { o.crystal.rotation.y += dt * (o.isNexus ? 0.5 : 1.0); if (o.isNexus) o.crystal.scale.setScalar(1 + Math.sin(now / 1000 * 2) * 0.06); }
     });
 
-    // 龍/巴龍
-    ["dragon", "baron"].forEach((k) => { const d = snapshot[k], o = r.obj3d[k]; o.mesh.visible = d.alive; o.light.visible = d.alive; if (d.alive) { o.mesh.rotation.y += dt * 0.7; o.mesh.material.emissiveIntensity = d.contested ? 2.6 : 1.4; } });
+    // 龍/巴龍（S29B1：HP 條讀 snapshot.objectives——被攻擊時真實下降）
+    const objMap = {};
+    (snapshot.objectives ?? []).forEach((o) => (objMap[o.id] = o));
+    ["dragon", "baron"].forEach((k) => {
+      const d = snapshot[k], o = r.obj3d[k];
+      o.mesh.visible = d.alive; o.light.visible = d.alive;
+      if (d.alive) { o.mesh.rotation.y += dt * 0.7; o.mesh.material.emissiveIntensity = d.contested ? 2.6 : 1.4; }
+      if (o.hpGrp) {
+        const ob = objMap[k];
+        o.hpGrp.visible = !!(d.alive && ob);
+        if (d.alive && ob) {
+          const hp = clamp(ob.hp, 0.001, 1);
+          o.hfg.scale.x = hp; o.hfg.position.x = -(o.hfgW * (1 - hp)) / 2;
+          o.hpGrp.quaternion.copy(camera.quaternion);
+        }
+      }
+    });
+    // 野怪營地（S29B1：alive/HP 全來自 snapshot.objectives；死亡 ⇒ 模型消失）
+    r.campObjs?.forEach((co, id) => {
+      const ob = objMap[id];
+      const show = !!ob?.alive;
+      co.grp.visible = show;
+      if (show) {
+        co.body.rotation.y += dt * 0.8;
+        const hp = clamp(ob.hp, 0.001, 1);
+        co.fg.scale.x = hp; co.fg.position.x = -(co.w * (1 - hp)) / 2;
+        co.hpGrp.quaternion.copy(camera.quaternion);
+      }
+    });
 
     // ── FX：從物件池取用（S29；舊碼每幀 dispose 全部再 new ⇒ 每秒最多 3600 次配置）──
     //  穩態零配置：只更新 transform / color / opacity / visible。超過池容量的 fx 直接略過

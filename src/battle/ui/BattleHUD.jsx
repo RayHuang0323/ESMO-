@@ -38,12 +38,17 @@ function TowerDots({ towers, side }) {
 export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭", redName = "赤焰軍團", redEmoji = "🔥", roster = null, tactic = null }) {
   const hud = useGameStore((s) => s.hud);
   const snap = useGameStore((s) => s.snapshot);
-  // S29 效能：舊碼 `useBattleStore()` **沒有 selector** ⇒ 訂閱整個 battleStore
-  //   （events / log / floating / series / derived 任一變動都重繪 HUD）。
-  //   本元件只用到 MVP 的 id ⇒ 只訂閱字串（identity 穩定；mvp 物件每幀都是新的）。
+  // S29 效能：舊碼 `useBattleStore()` **沒有 selector** ⇒ 訂閱整個 battleStore。
+  // S29B1 修 undefined 根因：S29A 只訂閱了 mvp.id，卻重建 `{id}` 物件去讀 k/d/a
+  //   ⇒ 畫面出現「MVP Kaiser undefined/undefined/0」。正解：k/d/a/side 各自以
+  //   **原始值 selector** 訂閱（primitive identity 穩定 ⇒ 不會每幀重繪；
+  //   mvp 物件本身每幀都是新參照，不能整顆訂閱）。
   const mvpId = useBattleStore((s) => s.mvp?.id ?? null);
-  const mvp = mvpId ? { id: mvpId } : null;
-  const mvpName = mvp ? (roster?.[mvp.id]?.player ?? mvp.id.toUpperCase()) : "—";
+  const mvpSide = useBattleStore((s) => s.mvp?.side ?? null);
+  const mvpK = useBattleStore((s) => s.mvp?.k ?? 0);
+  const mvpD = useBattleStore((s) => s.mvp?.d ?? 0);
+  const mvpA = useBattleStore((s) => s.mvp?.a ?? 0);
+  const mvpName = mvpId ? (roster?.[mvpId]?.player ?? mvpId.toUpperCase()) : null;
   const pit = (d, label, icon) => (
     <span title={`${label}：${d.alive ? "已刷新" : `${Math.max(0, d.respawn).toFixed(0)}s 後刷新`}`}
       style={{ display: "inline-flex", alignItems: "center", gap: 2, fontSize: 9, fontWeight: 800, fontFamily: MONO, color: d.alive ? "#fde047" : "#52525b" }}>
@@ -106,8 +111,11 @@ export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2, fontSize: 8.5, fontWeight: 800, fontFamily: MONO }}>
         <span style={{ color: BLUE }}>{(hud.winProb * 100).toFixed(0)}%</span>
-        {/* MVP：Legacy MatchHeader 無此元素，既有產品升級保留 */}
-        <span style={{ color: mvp?.side === "blue" ? BLUE : RED }}>★ MVP {mvpName} {mvp ? `${mvp.k}/${mvp.d}/${mvp.a ?? 0}` : ""}</span>
+        {/* MVP：Legacy MatchHeader 無此元素，既有產品升級保留。
+            S29B1：尚無 MVP（開局未有數據）⇒ 顯示「計算中」；有 ⇒ 正式欄位（不再 undefined） */}
+        <span style={{ color: mvpSide === "blue" ? BLUE : RED }}>
+          {mvpName ? `★ MVP ${mvpName} ${mvpK}/${mvpD}/${mvpA}` : "★ MVP 計算中"}
+        </span>
         <span style={{ color: RED }}>{((1 - hud.winProb) * 100).toFixed(0)}%</span>
       </div>
     </div>

@@ -105,6 +105,13 @@ export default function MobaReplayScreen({ replay, onClose }) {
           {/* 龍 / 巴龍 */}
           {a.dr === 1 && <text x={PITS.dragon.x} y={PITS.dragon.y + 1.5} fontSize="4.5" textAnchor="middle">🐉</text>}
           {a.br === 1 && <text x={PITS.baron.x} y={PITS.baron.y + 1.5} fontSize="4.5" textAnchor="middle">👑</text>}
+          {/* S29B1：野怪營地（位置存於 objectivesMeta；alive 位元逐 frame 於 frame.ob；
+              舊 replay 無此欄 ⇒ 不渲染，不炸畫面） */}
+          {(replay.objectivesMeta ?? []).map((om, i) => {
+            if (om.type !== "camp" && om.type !== "buff") return null;
+            if (!a.ob || a.ob[i] !== 1) return null;
+            return <circle key={om.id} cx={om.pos.x} cy={om.pos.y} r="1.2" fill={om.type === "buff" ? "#f472b6" : "#a3e635"} opacity="0.85" />;
+          })}
           {/* 選手（位置插值；死亡 → 灰空心） */}
           {replay.playersMeta.map((pm, i) => {
             const pa = a.p[i], pb = b.p[i];

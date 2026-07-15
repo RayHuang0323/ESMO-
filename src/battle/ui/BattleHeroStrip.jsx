@@ -52,10 +52,33 @@ function StatBars({ hp }) {
   );
 }
 
-// Legacy SpellSquare：14px 方格（召喚師技能位置，待接）
-function SpellSquare({ label }) {
+// Legacy SpellSquare：14px 方格。S29B1 接上引擎真實資料（snapshot.players[].sp）：
+//   F = Flash（⚡；全員）、D = Smite（🎯；只有打野）或 reserved（其他位置尚無
+//   可靠引擎作用點 ⇒ 顯示明確的保留狀態，不虛構技能）。
+//   冷卻中 ⇒ 顯示剩餘秒數 + 暗化；可用 ⇒ 亮色。無 sp 資料（舊 replay/舊規則）⇒ 原佔位。
+const SPELL_META = {
+  flash: { icon: "⚡", zh: "閃現", color: "#fde047" },
+  smite: { icon: "🎯", zh: "懲戒", color: "#4ade80" },
+};
+function SpellSquare({ label, spell }) {
+  if (!spell) {
+    return <div title="召喚師技能：目前無資料，保留位置（待接）" style={{ width: 14, height: 14, borderRadius: 3, background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, fontWeight: 900, color: "#52525b" }}>{label}</div>;
+  }
+  if (!spell.id) {
+    return <div title="此位置尚未配置第二召喚師技能（reserved）" style={{ width: 14, height: 14, borderRadius: 3, background: "rgba(0,0,0,0.35)", border: "1px dashed rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, fontWeight: 900, color: "#3f3f46" }}>—</div>;
+  }
+  const meta = SPELL_META[spell.id] ?? { icon: "?", zh: spell.id, color: "#a1a1aa" };
+  const onCd = !spell.ready;
+  const title = `${meta.zh}${onCd ? `：冷卻中 ${Math.ceil(spell.cd)}s` : "：可使用"}${spell.reason ? `（上次：${spell.reason}）` : ""}`;
   return (
-    <div title="召喚師技能：目前無資料，保留位置（待接）" style={{ width: 14, height: 14, borderRadius: 3, background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, fontWeight: 900, color: "#52525b" }}>{label}</div>
+    <div title={title} style={{ position: "relative", width: 14, height: 14, borderRadius: 3, background: onCd ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.08)", border: `1px solid ${onCd ? "rgba(255,255,255,0.1)" : meta.color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, lineHeight: 1, filter: onCd ? "grayscale(0.9)" : "none", opacity: onCd ? 0.75 : 1 }}>
+      <span>{meta.icon}</span>
+      {onCd && (
+        <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.55)", borderRadius: 2, fontSize: 6.5, fontWeight: 900, color: "#e4e4e7", fontFamily: MONO }}>
+          {Math.ceil(spell.cd)}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -69,7 +92,9 @@ function SideCell({ p, hero, roster, side, onOpen }) {
         <HeroAvatar hero={hero} level={p.lv ?? 1} dead={p.dead} respawn={p.respawn ?? 0} />
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 1, flexShrink: 0 }}>
-        <SpellSquare label="F" /><SpellSquare label="D" />
+        {/* S29B1：F/D 讀 snapshot.players[].sp（引擎唯一資料源；無資料 ⇒ 舊佔位） */}
+        <SpellSquare label="F" spell={p.sp?.[0] ?? null} />
+        <SpellSquare label="D" spell={p.sp?.[1] ?? null} />
       </div>
       <div style={{ minWidth: 0, textAlign: rev ? "right" : "left" }}>
         <div style={{ color: idColor, fontSize: 8.5, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 52 }}>{roster.player || p.id}</div>

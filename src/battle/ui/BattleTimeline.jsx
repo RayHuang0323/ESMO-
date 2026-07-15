@@ -12,7 +12,7 @@ import { useBattleStore } from "../battleStore.js";
 import { fmtT } from "../../gameData.js";
 import { GC } from "../../ui/theme.js";
 
-const ICON = { FIRST_BLOOD: "🩸", KILL: "⚔️", MULTI_KILL: "🔥", ACE: "💥", TOWER_DESTROYED: "🗼", DRAGON_SLAIN: "🐉", BARON_SLAIN: "👑", VICTORY: "🏆" };
+const ICON = { FIRST_BLOOD: "🩸", KILL: "⚔️", MULTI_KILL: "🔥", ACE: "💥", TOWER_DESTROYED: "🗼", DRAGON_SLAIN: "🐉", BARON_SLAIN: "👑", VICTORY: "🏆", SPELL_USED: "✨", OBJECTIVE_SPAWN: "🌀" };
 const LANE = { top: "上", mid: "中", bot: "下", nexus: "堡" };
 const sideC = (s) => (s === "blue" ? GC.blueL : s === "red" ? GC.redL : "#cbd5e1");
 const MONO = "ui-monospace,Menlo,monospace";
