@@ -19,34 +19,92 @@ import * as THREE from "three";
 import { useGameStore } from "./useGameStore.js";
 import {
   lerp, clamp, ease, LANES, posOnLane, WATER, WALLS, PITS, BUSHES,
-  BASE, ROLE_NAME, SIDE, GLOW,
+  BASE, ROLE_NAME, SIDE, GLOW, CAMPS,
 } from "./gameData.js";
-import BattleCameraController from "./battle/ui/BattleCameraController.jsx";
+import BattleCameraController, { fitZoomFor } from "./battle/ui/BattleCameraController.jsx";
 import { presetFor } from "./battle/quality.js";
+import { useIsMobile } from "./ui/useViewport.js";
 
 // ── 世界尺度（放大；只影響渲染，不影響邏輯）──────────────────────────────────
 const S = 1.7;
 const wx = (x) => (x - 50) * S, wz = (y) => (y - 50) * S;
+// S29B2：英雄可讀性放大係數（實機回報「英雄太小」；只放大視覺模型，不碰座標/邏輯）
+const HK = 1.3;
+const HERO_CAP_Y = 1.7 * HK * S;     // 建立與 useFrame 更新共用，避免兩處不一致
+const HERO_TOP_Y = 3.4 * HK * S;
+const HERO_HP_Y = 4.1 * HK * S;
+const HERO_HPW = 2.5 * HK * S;
+const OVERLAY_Y = 5.6 * HK * S;
 
 // S29：可重用的暫存向量（避免在 useFrame 內每幀 new THREE.Vector3）
 const _up = new THREE.Vector3(0, 1, 0);
 const _v1 = new THREE.Vector3();
 
 // ── 程序化彩色底圖（無上傳圖時的後備）────────────────────────────────────────
+//  S29B2 地圖語意升級（一次性繪製，零 runtime 成本）：河道成帶狀水域、三路材質
+//  與野地明確區分、Dragon/Baron pit 有坑面+色環、營地有標記、草叢像可進入區、
+//  野徑把營地與路連起來 ⇒ 玩家看得懂「哪裡是路、哪裡是野區、目標在哪」。
 function makeRiftTexture() {
   const s = 1024, cv = document.createElement("canvas"); cv.width = cv.height = s;
   const g = cv.getContext("2d"), px = (p) => (p / 100) * s;
   const grad = g.createLinearGradient(0, s, s, 0);
-  grad.addColorStop(0, "#2f7d4f"); grad.addColorStop(0.5, "#347a46"); grad.addColorStop(1, "#5a7a36");
+  grad.addColorStop(0, "#295f41"); grad.addColorStop(0.5, "#2c6340"); grad.addColorStop(1, "#4a6b30");
   g.fillStyle = grad; g.fillRect(0, 0, s, s);
-  for (let i = 0; i < 320; i++) { g.fillStyle = `rgba(${20+Math.random()*40},${90+Math.random()*70},${40+Math.random()*40},0.18)`; g.beginPath(); g.arc(Math.random()*s, Math.random()*s, 8+Math.random()*26, 0, 7); g.fill(); }
-  g.strokeStyle = "rgba(70,160,200,0.55)"; g.lineWidth = px(11); g.lineCap = "round"; g.beginPath(); g.moveTo(px(20), px(20)); g.lineTo(px(80), px(80)); g.stroke();
-  g.strokeStyle = "rgba(150,220,245,0.45)"; g.lineWidth = px(4); g.beginPath(); g.moveTo(px(20), px(20)); g.lineTo(px(80), px(80)); g.stroke();
+  // 野地雜訊（深色 ⇒ 與路面的亮沙色對比更強）
+  for (let i = 0; i < 340; i++) { g.fillStyle = `rgba(${12+Math.random()*30},${66+Math.random()*54},${30+Math.random()*32},0.20)`; g.beginPath(); g.arc(Math.random()*s, Math.random()*s, 8+Math.random()*26, 0, 7); g.fill(); }
+  // 野徑：營地 → 最近路點的淡色小徑（地圖語意：野區入口）
+  const lanePts = [];
+  for (const ln of ["top", "mid", "bot"]) for (let t = 0; t <= 1.001; t += 0.04) lanePts.push(posOnLane(ln, t));
+  g.strokeStyle = "rgba(180,160,110,0.28)"; g.lineWidth = px(2.2); g.lineCap = "round";
+  for (const c of CAMPS) {
+    let best = lanePts[0], bd = Infinity;
+    for (const p of lanePts) { const dd = (p.x - c.x) ** 2 + (p.y - c.y) ** 2; if (dd < bd) { bd = dd; best = p; } }
+    g.beginPath(); g.moveTo(px(c.x), px(c.y)); g.lineTo(px(best.x), px(best.y)); g.stroke();
+  }
+  // 河道：寬水帶 + 淺灘邊線 + 波光
+  g.strokeStyle = "rgba(38,110,160,0.75)"; g.lineWidth = px(13); g.lineCap = "round";
+  g.beginPath(); g.moveTo(px(20), px(20)); g.lineTo(px(80), px(80)); g.stroke();
+  g.strokeStyle = "rgba(70,160,200,0.6)"; g.lineWidth = px(9);
+  g.beginPath(); g.moveTo(px(20), px(20)); g.lineTo(px(80), px(80)); g.stroke();
+  g.strokeStyle = "rgba(160,225,248,0.5)"; g.lineWidth = px(1.4);
+  for (const off of [-2.4, 0, 2.6]) {
+    g.beginPath(); g.moveTo(px(22 - off * 0.7), px(22 + off)); g.lineTo(px(78 - off * 0.7), px(78 + off)); g.stroke();
+  }
+  // 三路：亮沙色路面 + 深色路緣（兵線行進路徑一眼可辨）
   for (const lane of ["top", "mid", "bot"]) {
-    g.strokeStyle = "rgba(196,170,120,0.85)"; g.lineWidth = px(6.2); g.lineJoin = "round";
+    g.strokeStyle = "rgba(60,48,30,0.55)"; g.lineWidth = px(7.6); g.lineJoin = "round";
+    g.beginPath(); LANES[lane].forEach((p, i) => (i ? g.lineTo(px(p.x), px(p.y)) : g.moveTo(px(p.x), px(p.y)))); g.stroke();
+    g.strokeStyle = "rgba(214,190,140,0.9)"; g.lineWidth = px(5.8);
     g.beginPath(); LANES[lane].forEach((p, i) => (i ? g.lineTo(px(p.x), px(p.y)) : g.moveTo(px(p.x), px(p.y)))); g.stroke();
   }
-  BUSHES.forEach((b) => { g.fillStyle = "rgba(18,70,34,0.6)"; g.beginPath(); g.ellipse(px(b.x), px(b.y), px(b.r), px(b.r * 0.8), 0, 0, 7); g.fill(); });
+  // Dragon / Baron pit：坑面 + 色環（紫=龍、金=巴龍）
+  for (const [key, col] of [["dragon", "183,148,246"], ["baron", "251,191,36"]]) {
+    const pit = PITS[key];
+    g.fillStyle = "rgba(10,16,20,0.72)";
+    g.beginPath(); g.arc(px(pit.x), px(pit.y), px(6.2), 0, 7); g.fill();
+    g.strokeStyle = `rgba(${col},0.85)`; g.lineWidth = px(0.9);
+    g.beginPath(); g.arc(px(pit.x), px(pit.y), px(6.2), 0, 7); g.stroke();
+    g.strokeStyle = `rgba(${col},0.35)`; g.lineWidth = px(0.5);
+    g.beginPath(); g.arc(px(pit.x), px(pit.y), px(7.6), 0, 7); g.stroke();
+  }
+  // 營地標記：菱形 + 色暈（粉=buff、萊姆=一般；與 3D 低模/Minimap 同色系）
+  for (const c of CAMPS) {
+    const col = c.type === "buff" ? "244,114,182" : "163,230,53";
+    const gr = g.createRadialGradient(px(c.x), px(c.y), px(0.4), px(c.x), px(c.y), px(3.4));
+    gr.addColorStop(0, `rgba(${col},0.5)`); gr.addColorStop(1, `rgba(${col},0)`);
+    g.fillStyle = gr; g.beginPath(); g.arc(px(c.x), px(c.y), px(3.4), 0, 7); g.fill();
+    g.save(); g.translate(px(c.x), px(c.y)); g.rotate(Math.PI / 4);
+    g.fillStyle = `rgba(${col},0.9)`; g.fillRect(-px(0.8), -px(0.8), px(1.6), px(1.6)); g.restore();
+  }
+  // 草叢：亮綠可進入區 + 邊界描邊（不再只是深色裝飾）
+  BUSHES.forEach((b) => {
+    g.fillStyle = "rgba(52,150,74,0.55)";
+    g.beginPath(); g.ellipse(px(b.x), px(b.y), px(b.r), px(b.r * 0.82), 0, 0, 7); g.fill();
+    g.strokeStyle = "rgba(120,220,140,0.5)"; g.lineWidth = px(0.45);
+    g.setLineDash([px(0.9), px(0.7)]);
+    g.beginPath(); g.ellipse(px(b.x), px(b.y), px(b.r), px(b.r * 0.82), 0, 0, 7); g.stroke();
+    g.setLineDash([]);
+  });
   const baseGlow = (b, c1, c2) => { const gr = g.createRadialGradient(px(b.x), px(b.y), px(2), px(b.x), px(b.y), px(11)); gr.addColorStop(0, c1); gr.addColorStop(1, c2); g.fillStyle = gr; g.beginPath(); g.arc(px(b.x), px(b.y), px(11), 0, 7); g.fill(); };
   baseGlow(BASE.blue, "rgba(120,180,255,0.85)", "rgba(40,90,200,0.05)");
   baseGlow(BASE.red, "rgba(255,150,150,0.85)", "rgba(200,50,50,0.05)");
@@ -178,17 +236,18 @@ function MobaScene({ mapTexture, roster, Q }) {
       const isNexus = t.lane === "nexus", col = SIDE[t.side], glow = GLOW[t.side], sc = isNexus ? 1 : 0.62;
       const grp = new THREE.Group(); grp.position.set(wx(t.pos.x), 0, wz(t.pos.y));
       [{ r: 3.0, h: 4.0, y: 2.0, c: 0x7d8696 }, { r: 2.2, h: 4.6, y: 6.3, c: col }, { r: 1.6, h: 3.0, y: 10.3, c: 0x9aa6ba }].forEach((ti) => {
-        const m = new THREE.Mesh(new THREE.CylinderGeometry(ti.r * sc * S, (ti.r + 0.4) * sc * S, ti.h * sc * S, 8), new THREE.MeshStandardMaterial({ color: ti.c, emissive: ti.c === col ? col : 0x000000, emissiveIntensity: ti.c === col ? 0.45 : 0, roughness: 0.5, metalness: 0.55 }));
+        const m = new THREE.Mesh(new THREE.CylinderGeometry(ti.r * sc * S, (ti.r + 0.4) * sc * S, ti.h * sc * S, 8), new THREE.MeshStandardMaterial({ color: ti.c, emissive: ti.c === col ? col : 0x000000, emissiveIntensity: ti.c === col ? 0.32 : 0, roughness: 0.5, metalness: 0.55 }));
         m.position.y = ti.y * sc * S; m.castShadow = true; m.receiveShadow = true; grp.add(m);
       });
-      const crystal = new THREE.Mesh(new THREE.OctahedronGeometry((isNexus ? 4.6 : 1.4) * S, 0), new THREE.MeshStandardMaterial({ color: glow, emissive: glow, emissiveIntensity: isNexus ? 1.9 : 1.3, roughness: 0.1, metalness: 0.35 }));
+      // S29B2：降過曝——水晶 emissive 1.9/1.3 → 1.1/0.8（配 Bloom 仍發光但不再白成一團）
+      const crystal = new THREE.Mesh(new THREE.OctahedronGeometry((isNexus ? 4.6 : 1.4) * S, 0), new THREE.MeshStandardMaterial({ color: glow, emissive: glow, emissiveIntensity: isNexus ? 1.1 : 0.8, roughness: 0.1, metalness: 0.35 }));
       crystal.position.y = (isNexus ? 16 : 13.5) * sc * S; crystal.castShadow = Q.shadows; grp.add(crystal);
       // S29 效能修復（最大單一元凶之一）：舊碼**每座塔都掛一盞 PointLight**（18 塔 + 2 主堡
       //   = 20 盞，再加龍/巴龍共 22 盞）。Three.js 的 MeshStandardMaterial 會把每一盞燈
       //   都編進 per-fragment 迴圈 ⇒ 手機直接崩。
       //   改為：**只有主堡**有燈（2 盞），一般塔靠 emissive + Bloom 發光（視覺幾乎不變）。
       //   high 檔可選擇性開回塔燈（Q.towerLights）。
-      if (isNexus || Q.towerLights) grp.add(new THREE.PointLight(glow, isNexus ? 9 : 2.2, (isNexus ? 60 : 26) * S));
+      if (isNexus || Q.towerLights) grp.add(new THREE.PointLight(glow, isNexus ? 5 : 2.2, (isNexus ? 52 : 26) * S));
       const stump = new THREE.Mesh(new THREE.CylinderGeometry(2.4 * sc * S, 3.0 * sc * S, 2.0 * sc * S, 7), new THREE.MeshStandardMaterial({ color: 0x33363d, roughness: 1, metalness: 0.1, flatShading: true }));
       stump.position.y = 1.0 * sc * S; stump.visible = false; stump.castShadow = true; grp.add(stump);
       const hpBar = new THREE.Group(); hpBar.position.y = (isNexus ? 22 : 15) * sc * S;
@@ -196,20 +255,20 @@ function MobaScene({ mapTexture, roster, Q }) {
       const hfgW = (isNexus ? 5.8 : 3.0) * S;
       const hfg = new THREE.Mesh(new THREE.PlaneGeometry(hfgW, 0.38 * S), new THREE.MeshBasicMaterial({ color: t.side === "blue" ? 0x60a5fa : 0xf87171, depthTest: false }));
       hpBar.add(hbg, hfg); grp.add(hpBar);
-      world.add(grp); towerObjs[key] = { grp, crystal, stump, isNexus, hpBar, hfg, hfgW };
+      world.add(grp); towerObjs[key] = { grp, crystal, stump, isNexus, hpBar, hfg, hfgW, lastHp: 1, flashT: 0 };
     });
 
-    // 龍/巴龍（S29B1：加 HP 條——目標被攻擊時看得到真實血量下降）
+    // 龍/巴龍（S29B1 HP 條；S29B2：放大 + 受擊閃光 + 死亡淡出 + HP 平滑插值）
     const obj3d = {};
     [["dragon", PITS.dragon, 0xb794f6], ["baron", PITS.baron, 0xfbbf24]].forEach(([k, pit, col]) => {
-      const m = new THREE.Mesh(new THREE.IcosahedronGeometry(2.6 * S, 0), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 1.4, roughness: 0.3, metalness: 0.6 }));
-      m.position.set(wx(pit.x), 2.0 * S, wz(pit.y)); m.castShadow = true; m.visible = false; world.add(m);
+      const m = new THREE.Mesh(new THREE.IcosahedronGeometry(3.3 * S, 0), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 1.1, roughness: 0.3, metalness: 0.6 }));
+      m.position.set(wx(pit.x), 2.4 * S, wz(pit.y)); m.castShadow = true; m.visible = false; world.add(m);
       const pl = new THREE.PointLight(col, 3, 24 * S); pl.position.copy(m.position); pl.visible = false; world.add(pl);
-      const hpGrp = new THREE.Group(); hpGrp.position.set(wx(pit.x), 6.2 * S, wz(pit.y)); hpGrp.visible = false;
-      const hbg = new THREE.Mesh(new THREE.PlaneGeometry(4.2 * S, 0.4 * S), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.7, depthTest: false })); hbg.position.z = -0.01;
-      const hfg = new THREE.Mesh(new THREE.PlaneGeometry(4.0 * S, 0.3 * S), new THREE.MeshBasicMaterial({ color: col, depthTest: false }));
+      const hpGrp = new THREE.Group(); hpGrp.position.set(wx(pit.x), 7.6 * S, wz(pit.y)); hpGrp.visible = false;
+      const hbg = new THREE.Mesh(new THREE.PlaneGeometry(6.4 * S, 0.62 * S), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.7, depthTest: false })); hbg.position.z = -0.01;
+      const hfg = new THREE.Mesh(new THREE.PlaneGeometry(6.2 * S, 0.48 * S), new THREE.MeshBasicMaterial({ color: col, depthTest: false }));
       hpGrp.add(hbg, hfg); world.add(hpGrp);
-      obj3d[k] = { mesh: m, light: pl, hpGrp, hfg, hfgW: 4.0 * S };
+      obj3d[k] = { mesh: m, light: pl, hpGrp, hfg, hfgW: 6.2 * S, lastHp: 1, flashT: 0, shownHp: 1, wasAlive: false, deathT: 0, baseY: 2.4 * S, baseScale: 1 };
     });
 
     // S29B1：野怪營地低模 placeholder（正式美術留 29B2）。
@@ -221,42 +280,42 @@ function MobaScene({ mapTexture, roster, Q }) {
       const col = o.type === "buff" ? 0xf472b6 : 0xa3e635;
       const grp = new THREE.Group(); grp.position.set(wx(o.pos.x), 0, wz(o.pos.y));
       const body = new THREE.Mesh(
-        new THREE.DodecahedronGeometry((o.type === "buff" ? 1.5 : 1.1) * S, 0),
+        new THREE.DodecahedronGeometry((o.type === "buff" ? 1.9 : 1.45) * S, 0),
         new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.7, roughness: 0.5, metalness: 0.3, flatShading: true }));
-      body.position.y = 1.1 * S; body.castShadow = Q.shadows; grp.add(body);
-      const hpGrp = new THREE.Group(); hpGrp.position.y = 3.0 * S;
-      const bg = new THREE.Mesh(new THREE.PlaneGeometry(2.4 * S, 0.3 * S), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.7, depthTest: false })); bg.position.z = -0.01;
-      const fg = new THREE.Mesh(new THREE.PlaneGeometry(2.3 * S, 0.22 * S), new THREE.MeshBasicMaterial({ color: col, depthTest: false }));
+      body.position.y = 1.4 * S; body.castShadow = Q.shadows; grp.add(body);
+      const hpGrp = new THREE.Group(); hpGrp.position.y = 3.8 * S;
+      const bg = new THREE.Mesh(new THREE.PlaneGeometry(3.4 * S, 0.42 * S), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.7, depthTest: false })); bg.position.z = -0.01;
+      const fg = new THREE.Mesh(new THREE.PlaneGeometry(3.3 * S, 0.32 * S), new THREE.MeshBasicMaterial({ color: col, depthTest: false }));
       hpGrp.add(bg, fg); grp.add(hpGrp);
       grp.visible = false; world.add(grp);
-      campObjs.set(o.id, { grp, body, hpGrp, fg, w: 2.3 * S });
+      campObjs.set(o.id, { grp, body, hpGrp, fg, w: 3.3 * S, lastHp: 1, flashT: 0, shownHp: 1, wasAlive: false, deathT: 0, baseY: 1.4 * S });
     });
 
-    // 英雄
+    // 英雄（S29B2：模型 ×HK 放大可讀性；lastHp/flashT 供受擊閃光）
     const heroObjs = {};
     snap0.players.forEach((p) => {
       const col = SIDE[p.side], glow = GLOW[p.side];
       const root = new THREE.Group(); root.position.set(wx(p.pos.x), 0, wz(p.pos.y));
       const mat = new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.65, roughness: 0.3, metalness: 0.7 });
-      const cap = makeCapsule(1.0 * S, 2.0 * S, mat); cap.position.y = 1.7 * S; root.add(cap);
+      const cap = makeCapsule(1.0 * HK * S, 2.0 * HK * S, mat); cap.position.y = HERO_CAP_Y; root.add(cap);
       const ringMat = new THREE.MeshBasicMaterial({ color: glow, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
-      const ring = new THREE.Mesh(new THREE.RingGeometry(1.5 * S, 2.0 * S, 32), ringMat); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.08; root.add(ring);
-      const hpGrp = new THREE.Group(); hpGrp.position.y = 4.0 * S;
-      const bg = new THREE.Mesh(new THREE.PlaneGeometry(2.6 * S, 0.4 * S), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.75 })); bg.position.z = -0.01;
+      const ring = new THREE.Mesh(new THREE.RingGeometry(1.5 * HK * S, 2.0 * HK * S, 32), ringMat); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.08; root.add(ring);
+      const hpGrp = new THREE.Group(); hpGrp.position.y = HERO_HP_Y;
+      const bg = new THREE.Mesh(new THREE.PlaneGeometry(HERO_HPW + 0.14 * S, 0.5 * S), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.75 })); bg.position.z = -0.01;
       const fgMat = new THREE.MeshBasicMaterial({ color: 0x34d399 });
-      const fg = new THREE.Mesh(new THREE.PlaneGeometry(2.5 * S, 0.3 * S), fgMat);
+      const fg = new THREE.Mesh(new THREE.PlaneGeometry(HERO_HPW, 0.38 * S), fgMat);
       hpGrp.add(bg, fg); root.add(hpGrp);
-      const topper = makeTopper(p.role, glow); topper.position.y = 3.4 * S; root.add(topper);
+      const topper = makeTopper(p.role, glow); topper.position.y = HERO_TOP_Y; root.add(topper);
       const overlayHex = p.side === "blue" ? 0x93c5fd : 0xfca5a5;
-      const overlay = makeOverlaySprite(overlayHex); overlay.position.y = 5.6 * S; root.add(overlay);
+      const overlay = makeOverlaySprite(overlayHex); overlay.position.y = OVERLAY_Y; root.add(overlay);
       world.add(root);
-      heroObjs[p.id] = { root, cap, mat, ring, ringMat, hpGrp, fg, fgMat, topper, overlay, overlayHex, lastOverlay: "", seed: Math.random() * 7 };
+      heroObjs[p.id] = { root, cap, mat, ring, ringMat, hpGrp, fg, fgMat, topper, overlay, overlayHex, lastOverlay: "", seed: Math.random() * 7, lastHp: 1, flashT: 0 };
     });
 
     // ── 小兵：共享 geometry + 2 個共享材質 + 物件池 ───────────────────────────
     //  S29 效能修復：舊碼**每隻小兵各 new 一份 geometry 與 MeshStandardMaterial**
     //   （場上最多 96 隻），且每次生成/陣亡就 new/dispose 一輪。
-    const minionGeo = new THREE.CylinderGeometry(0.4 * S, 0.52 * S, 1.3 * S, 6);
+    const minionGeo = new THREE.CylinderGeometry(0.5 * S, 0.65 * S, 1.65 * S, 6);   // S29B2：×1.25 可讀性
     const minionMat = {
       blue: new THREE.MeshStandardMaterial({ color: SIDE.blue, emissive: SIDE.blue, emissiveIntensity: 0.4, roughness: 0.4, metalness: 0.6 }),
       red: new THREE.MeshStandardMaterial({ color: SIDE.red, emissive: SIDE.red, emissiveIntensity: 0.4, roughness: 0.4, metalness: 0.6 }),
@@ -285,12 +344,32 @@ function MobaScene({ mapTexture, roster, Q }) {
     };
     for (const m of fxPool.ring) m.rotation.x = -Math.PI / 2;
 
+    // ── S29B2：呈現層事件 FX 池（死亡淡出圈 / 小兵交戰火花）────────────────────
+    //  與 fxPool（引擎 snapshot.fx 驅動）分開：這池由 view 端「事件轉場」觸發
+    //  （小兵消失=死亡、目標 alive→dead、塔倒）。固定容量、重用、穩態零配置
+    //  （S29A 教訓：禁止每幀 new/dispose）。滿了就搶最舊的一格（刻意上限，非 bug）。
+    const VIEWFX_N = 14;
+    const viewFx = Array.from({ length: VIEWFX_N }, () => {
+      const ring = new THREE.Mesh(unitRing, new THREE.MeshBasicMaterial({ transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+      ring.rotation.x = -Math.PI / 2; ring.visible = false; fxGroup.add(ring);
+      return { ring, life: 0, maxLife: 0.5, size: 1 };
+    });
+    const spawnViewFx = (x, z, color, size = 2, life = 0.5) => {
+      let slot = viewFx[0];
+      for (const v of viewFx) { if (v.life <= 0) { slot = v; break; } if (v.life < slot.life) slot = v; }
+      slot.life = life; slot.maxLife = life; slot.size = size;
+      slot.ring.position.set(x, 0.35, z);
+      slot.ring.material.color.setHex(color);
+      slot.ring.material.opacity = 0.85; slot.ring.visible = true;
+    };
+
     const killGroup = new THREE.Group(); world.add(killGroup);
 
     R.current = {
       world, floorMat, blades, towerObjs, obj3d, heroObjs, campObjs,
       minionMeshes, minionPool, minionGeo, minionMat,
       fxGroup, fxPool, killGroup, killSprites: [], seenFeed: new Set(), Q,
+      viewFx, spawnViewFx, sparkNext: { top: 0, mid: 0, bot: 0 },   // S29B2
     };
 
     return () => {
@@ -329,13 +408,18 @@ function MobaScene({ mapTexture, roster, Q }) {
       const dx = wx(np.pos.x) - wx(p.pos.x), dz = wz(np.pos.y) - wz(p.pos.y);
       if (dx * dx + dz * dz > 1e-4) o.root.rotation.y = Math.atan2(dx, dz);
       const dead = p.dead;
-      o.cap.scale.y = dead ? 0.25 : 1; o.cap.position.y = dead ? 0.4 * S : 1.7 * S + Math.sin(now / 1000 * 3 + o.seed) * 0.07 * S;
-      o.mat.color.setHex(dead ? 0x3a3a3a : SIDE[p.side]); o.mat.emissiveIntensity = dead ? 0 : 0.65;
+      o.cap.scale.y = dead ? 0.25 : 1; o.cap.position.y = dead ? 0.4 * S : HERO_CAP_Y + Math.sin(now / 1000 * 3 + o.seed) * 0.07 * S;
+      // S29B2：受擊閃光——hp 由真實 snapshot 差分（prev→next 下降 ⇒ emissive 短暫拉高）
+      if ((o.lastHp ?? 1) - (np.hp ?? 1) > 0.004 && !dead) o.flashT = 0.25;
+      o.lastHp = np.hp ?? 1;
+      if (o.flashT > 0) o.flashT = Math.max(0, o.flashT - dt);
+      o.mat.color.setHex(dead ? 0x3a3a3a : SIDE[p.side]);
+      o.mat.emissiveIntensity = dead ? 0 : 0.65 + (o.flashT / 0.25) * 1.5;
       o.ringMat.opacity = dead ? 0.12 : 0.6;
       o.hpGrp.visible = !dead; o.hpGrp.quaternion.copy(camera.quaternion);
-      const hp = clamp(p.hp, 0.001, 1); o.fg.scale.x = hp; o.fg.position.x = -(2.5 * S * (1 - hp)) / 2;
+      const hp = clamp(p.hp, 0.001, 1); o.fg.scale.x = hp; o.fg.position.x = -(HERO_HPW * (1 - hp)) / 2;
       o.fgMat.color.setHex(hp > 0.55 ? 0x34d399 : hp > 0.28 ? 0xfbbf24 : 0xf87171);
-      o.topper.visible = !dead; o.topper.rotation.y += dt * 1.2; o.topper.position.y = 3.4 * S + Math.sin(now / 1000 * 3 + o.seed) * 0.07 * S;
+      o.topper.visible = !dead; o.topper.rotation.y += dt * 1.2; o.topper.position.y = HERO_TOP_Y + Math.sin(now / 1000 * 3 + o.seed) * 0.07 * S;
       o.root.visible = p.side === "blue" ? true : vis(np.pos);
       // Sprint07 Hero Overlay v2：英雄名 / 玩家名·Lv(佔位) / KDA或復活倒數 + 狀態徽章
       const heroName = roster?.[p.id]?.hero ?? ROLE_NAME[np.role];
@@ -355,9 +439,9 @@ function MobaScene({ mapTexture, roster, Q }) {
       o.overlay.visible = o.root.visible;
     });
 
-    // 小兵
+    // 小兵（S29B2：hp 縮放 + 受擊脈衝 + 死亡爆點；hp 來自 snapshot 真資料）
     const seen = new Set(), nextMin = {};
-    ["top", "mid", "bot"].forEach((ln) => { ["bm", "rm"].forEach((k) => snapshot.lanes[ln][k].forEach((m) => (nextMin[k[0] + ":" + ln + ":" + m.id] = m.t))); });
+    ["top", "mid", "bot"].forEach((ln) => { ["bm", "rm"].forEach((k) => snapshot.lanes[ln][k].forEach((m) => (nextMin[k[0] + ":" + ln + ":" + m.id] = m))); });
     ["top", "mid", "bot"].forEach((ln) => {
       [["bm", "blue"], ["rm", "red"]].forEach(([k, side]) => {
         prev.lanes[ln][k].forEach((m) => {
@@ -368,57 +452,129 @@ function MobaScene({ mapTexture, roster, Q }) {
             mesh = r.minionPool.pop() ?? new THREE.Mesh(r.minionGeo, r.minionMat[side]);
             mesh.material = r.minionMat[side];
             mesh.castShadow = r.Q.shadows;
+            mesh.userData.lastHp = 1; mesh.userData.flashT = 0;
             r.minionMeshes.set(key, mesh); r.world.add(mesh);
           }
-          const tt = lerp(m.t, nextMin[key] ?? m.t, a), p = posOnLane(ln, tt);
-          mesh.position.set(wx(p.x), 0.65 * S, wz(p.y)); mesh.visible = side === "blue" ? true : vis(p, 14);
+          const nm = nextMin[key];
+          const tt = lerp(m.t, nm?.t ?? m.t, a), p = posOnLane(ln, tt);
+          mesh.position.set(wx(p.x), 0.82 * S, wz(p.y)); mesh.visible = side === "blue" ? true : vis(p, 14);
+          // 受擊脈衝＋瀕死縮小：真實 hp 差分（共享材質不可改色 ⇒ 用 per-mesh scale）
+          const hpm = nm?.hp ?? m.hp ?? 1;
+          if ((mesh.userData.lastHp ?? 1) - hpm > 0.01) mesh.userData.flashT = 0.2;
+          mesh.userData.lastHp = hpm;
+          if (mesh.userData.flashT > 0) mesh.userData.flashT = Math.max(0, mesh.userData.flashT - dt);
+          const fl = (mesh.userData.flashT ?? 0) / 0.2;
+          mesh.scale.set(1 + fl * 0.35, 0.55 + 0.45 * hpm + fl * 0.15, 1 + fl * 0.35);
         });
       });
     });
-    // S29：回收進池，**不 dispose**（geometry/material 是共享的，dispose 會炸掉其他小兵）
+    // S29：回收進池，**不 dispose**。S29B2：小兵只會因 hp≤0 離場 ⇒ 消失 = 死亡，
+    //   在回收點補死亡爆點（fog 內的紅方小兵不噴，避免洩漏視野外資訊）。
     r.minionMeshes.forEach((mesh, key) => {
-      if (!seen.has(key)) { r.world.remove(mesh); r.minionPool.push(mesh); r.minionMeshes.delete(key); }
+      if (!seen.has(key)) {
+        if (mesh.visible) {
+          r.spawnViewFx(mesh.position.x, mesh.position.z, key.startsWith("b") ? 0x93c5fd : 0xfca5a5, 1.5, 0.4);
+        }
+        mesh.scale.set(1, 1, 1); mesh.userData.lastHp = 1; mesh.userData.flashT = 0;
+        r.world.remove(mesh); r.minionPool.push(mesh); r.minionMeshes.delete(key);
+      }
     });
+    // S29B2：小兵交戰火花——雙方前鋒接觸（與引擎交戰判定同尺度 0.035）⇒ 接觸點火花
+    for (const ln of ["top", "mid", "bot"]) {
+      const bm = snapshot.lanes[ln].bm, rm = snapshot.lanes[ln].rm;
+      if (!bm.length || !rm.length) continue;
+      const lead = Math.max(...bm.map((m) => m.t)), rlead = Math.min(...rm.map((m) => m.t));
+      if (lead >= rlead - 0.035 && now > r.sparkNext[ln]) {
+        r.sparkNext[ln] = now + 380;
+        const mid = posOnLane(ln, (lead + rlead) / 2);
+        if (vis(mid, 20)) r.spawnViewFx(wx(mid.x), wz(mid.y), 0xffe9a3, 1.7, 0.35);
+      }
+    }
 
-    // 塔
+    // 塔（S29B2：受擊閃光 + 倒塔爆點——hp 差分，真資料）
     Object.entries(snapshot.towers).forEach(([key, t]) => {
       const o = r.towerObjs[key]; if (!o) return;
       const dead = t.hp <= 0;
+      if ((o.lastHp ?? 1) - t.hp > 0.002 && !dead) o.flashT = 0.25;
+      if (!dead) o.wasAlive = true;
+      if (dead && o.wasAlive) { o.wasAlive = false; r.spawnViewFx(o.grp.position.x, o.grp.position.z, SIDE[t.side], o.isNexus ? 7 : 4.5, 0.7); }
+      o.lastHp = t.hp;
+      if (o.flashT > 0) o.flashT = Math.max(0, o.flashT - dt);
       o.crystal.visible = !dead; o.grp.children.forEach((c) => { if (c !== o.stump && c !== o.hpBar) c.visible = !dead; }); o.stump.visible = dead;
       o.hpBar.visible = !dead; o.hpBar.quaternion.copy(camera.quaternion);
       o.hfg.scale.x = clamp(t.hp, 0.001, 1); o.hfg.position.x = -(o.hfgW * (1 - clamp(t.hp, 0, 1))) / 2;
-      if (!dead) { o.crystal.rotation.y += dt * (o.isNexus ? 0.5 : 1.0); if (o.isNexus) o.crystal.scale.setScalar(1 + Math.sin(now / 1000 * 2) * 0.06); }
+      if (!dead) {
+        o.crystal.rotation.y += dt * (o.isNexus ? 0.5 : 1.0);
+        if (o.isNexus) o.crystal.scale.setScalar(1 + Math.sin(now / 1000 * 2) * 0.06);
+        o.crystal.material.emissiveIntensity = (o.isNexus ? 1.1 : 0.8) + (o.flashT / 0.25) * 1.4;
+      }
     });
 
-    // 龍/巴龍（S29B1：HP 條讀 snapshot.objectives——被攻擊時真實下降）
+    // 龍/巴龍（S29B1 HP 條；S29B2：HP 平滑插值 + 受擊閃光 + 死亡淡出，全部真資料差分）
     const objMap = {};
     (snapshot.objectives ?? []).forEach((o) => (objMap[o.id] = o));
+    const updNeutral = (o, ob, alive, baseEmissive, sizeFx) => {
+      // 受擊：hp 下降 ⇒ 閃光
+      const hpNow = alive && ob ? clamp(ob.hp, 0, 1) : 0;
+      if (alive && (o.lastHp ?? 1) - hpNow > 0.002) o.flashT = 0.25;
+      o.lastHp = hpNow;
+      if (o.flashT > 0) o.flashT = Math.max(0, o.flashT - dt);
+      // 死亡轉場：alive → dead ⇒ 爆點 + 0.5s 縮小下沉淡出（不是瞬間消失）
+      if (o.wasAlive && !alive) { o.deathT = 0.5; o.spawnDeath?.(); }
+      o.wasAlive = alive;
+      if (o.deathT > 0) o.deathT = Math.max(0, o.deathT - dt);
+      // HP 條平滑：顯示值向真值插值（每 tick 0.5s 的階梯 → 連續下降）
+      o.shownHp = alive ? lerp(o.shownHp ?? hpNow, hpNow, Math.min(1, dt * 6)) : 0;
+      return { hpNow, flash: (o.flashT / 0.25), dying: o.deathT > 0, dieK: o.deathT / 0.5, emissive: baseEmissive + (o.flashT / 0.25) * sizeFx };
+    };
     ["dragon", "baron"].forEach((k) => {
       const d = snapshot[k], o = r.obj3d[k];
-      o.mesh.visible = d.alive; o.light.visible = d.alive;
-      if (d.alive) { o.mesh.rotation.y += dt * 0.7; o.mesh.material.emissiveIntensity = d.contested ? 2.6 : 1.4; }
+      o.spawnDeath = () => r.spawnViewFx(o.mesh.position.x, o.mesh.position.z, o.mesh.material.color.getHex(), 6, 0.7);
+      const st = updNeutral(o, objMap[k], d.alive, d.contested ? 2.0 : 1.1, 1.2);
+      o.mesh.visible = d.alive || st.dying;
+      o.light.visible = d.alive;
+      if (d.alive) { o.mesh.rotation.y += dt * 0.7; o.mesh.material.emissiveIntensity = st.emissive; o.mesh.scale.setScalar(1); o.mesh.position.y = o.baseY; }
+      else if (st.dying) { const s2 = 0.3 + 0.7 * st.dieK; o.mesh.scale.setScalar(s2); o.mesh.position.y = o.baseY * st.dieK; }
       if (o.hpGrp) {
-        const ob = objMap[k];
-        o.hpGrp.visible = !!(d.alive && ob);
-        if (d.alive && ob) {
-          const hp = clamp(ob.hp, 0.001, 1);
+        o.hpGrp.visible = d.alive && !!objMap[k];
+        if (o.hpGrp.visible) {
+          const hp = clamp(o.shownHp, 0.001, 1);
           o.hfg.scale.x = hp; o.hfg.position.x = -(o.hfgW * (1 - hp)) / 2;
           o.hpGrp.quaternion.copy(camera.quaternion);
         }
       }
     });
-    // 野怪營地（S29B1：alive/HP 全來自 snapshot.objectives；死亡 ⇒ 模型消失）
+    // 野怪營地（S29B2：同一套受擊/死亡/插值管線）
     r.campObjs?.forEach((co, id) => {
       const ob = objMap[id];
-      const show = !!ob?.alive;
-      co.grp.visible = show;
-      if (show) {
+      const alive = !!ob?.alive;
+      co.spawnDeath = () => r.spawnViewFx(co.grp.position.x, co.grp.position.z, co.body.material.color.getHex(), 3.2, 0.55);
+      const st = updNeutral(co, ob, alive, 0.7, 1.3);
+      co.grp.visible = alive || st.dying;
+      if (alive) {
         co.body.rotation.y += dt * 0.8;
-        const hp = clamp(ob.hp, 0.001, 1);
+        co.body.material.emissiveIntensity = st.emissive;
+        co.body.scale.setScalar(1); co.body.position.y = co.baseY;
+        co.hpGrp.visible = true;
+        const hp = clamp(co.shownHp, 0.001, 1);
         co.fg.scale.x = hp; co.fg.position.x = -(co.w * (1 - hp)) / 2;
         co.hpGrp.quaternion.copy(camera.quaternion);
+      } else if (st.dying) {
+        co.hpGrp.visible = false;
+        const s2 = 0.25 + 0.75 * st.dieK;
+        co.body.scale.setScalar(s2); co.body.position.y = co.baseY * st.dieK;
       }
     });
+    // S29B2：呈現層事件 FX 池更新（死亡圈/火花：擴散 + 淡出；穩態零配置）
+    for (const v of r.viewFx) {
+      if (v.life <= 0) { if (v.ring.visible) v.ring.visible = false; continue; }
+      v.life = Math.max(0, v.life - dt);
+      const k2 = 1 - v.life / v.maxLife;
+      const rr = (0.6 + k2 * v.size) * S;
+      v.ring.scale.set(rr, rr, 1);
+      v.ring.material.opacity = 0.85 * (1 - k2);
+      if (v.life <= 0) v.ring.visible = false;
+    }
 
     // ── FX：從物件池取用（S29；舊碼每幀 dispose 全部再 new ⇒ 每秒最多 3600 次配置）──
     //  穩態零配置：只更新 transform / color / opacity / visible。超過池容量的 fx 直接略過
@@ -491,6 +647,21 @@ function MobaScene({ mapTexture, roster, Q }) {
 }
 
 /**
+ * S29B2：預設取景（非跟隨模式）——依視窗尺寸把地圖框滿主要可視區。
+ * 真正的相機 zoom（正交投影），不是 CSS scale；跟隨模式時交給 BattleCameraController。
+ */
+function CameraRig({ mobile, follow }) {
+  const camera = useThree((s) => s.camera);
+  const size = useThree((s) => s.size);
+  useEffect(() => {
+    if (!camera.isOrthographicCamera || follow) return;
+    camera.zoom = fitZoomFor(size.width, size.height, mobile);
+    camera.updateProjectionMatrix();
+  }, [camera, size, mobile, follow]);
+  return null;
+}
+
+/**
  * S29：畫質分級（quality preset）。
  *   · dpr 上限：舊碼 [1,2] ⇒ 手機 retina 直接 2× 像素量（配上 SSAO 幾乎必卡）。
  *   · 後製：**不砍光**（S29 §11 禁止用「移除全部視覺效果」掩蓋效能問題）——
@@ -500,6 +671,7 @@ function MobaScene({ mapTexture, roster, Q }) {
  */
 export default function MobaView3D({ mapTexture = null, autoRotate = true, battleFollow = false, roster = null, debug = false, quality = null }) {
   const Q = quality ?? presetFor("medium");
+  const mobile = useIsMobile();   // S29B2：取景分歧（桌機全圖 / 手機聚焦戰場）
   return (
     <Canvas
       shadows={Q.shadows}
@@ -527,7 +699,8 @@ export default function MobaView3D({ mapTexture = null, autoRotate = true, battl
       <directionalLight position={[-50 * S, 60 * S, -40 * S]} intensity={0.6} color={0x9ec8ff} />
 
       <MobaScene mapTexture={mapTexture} roster={roster} Q={Q} />
-      <BattleCameraController follow={battleFollow} />
+      <CameraRig mobile={mobile} follow={battleFollow} />
+      <BattleCameraController follow={battleFollow} mobile={mobile} />
 
       {/* 後製：Bloom 三檔都保留；SSAO（含 normalPass）只在 high 開啟 */}
       <EffectComposer enableNormalPass={Q.ssao} multisampling={Q.multisampling}>

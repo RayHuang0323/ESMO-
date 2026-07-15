@@ -426,6 +426,8 @@ export class LogicEngine {
    */
   _updateNeutralsV3(alive, dt) {
     const R = this.rules, N = this.neutrals;
+    // S29B2：攻擊中立目標的可視化 fx（每整數秒最多一輪、零 rng ⇒ 不影響模擬與決定性）
+    const fxTick = Math.floor(this.t) !== Math.floor(this.t - dt);
     const reset = (o) => { o.alive = true; o.hp = o.maxHp; o.killerTeam = null; o.participants.clear(); o.dmgBy.blue = 0; o.dmgBy.red = 0; };
     const trySmite = (o) => {
       // 兩側打野同時評估、同時結算 ⇒ 無迭代順序偏差；只在「能斬殺」時施放（secure）
@@ -449,6 +451,10 @@ export class LogicEngine {
           const dmg = members.reduce((s, p) => s + p.power, 0) * R.objDmgK * dt;
           o.hp -= dmg; o.dmgBy[side] += dmg;
           for (const p of members) o.participants.add(p.id);
+          // S29B2：打龍/巴龍的可視化彈道（每秒最多 2 條；純呈現，零 rng）
+          if (fxTick) for (const p of members.slice(0, 2)) {
+            this.pushFx({ type: "line", pos: { x: p.pos.x, y: p.pos.y }, target: { ...o.pos }, color: SIDE[side] });
+          }
         }
         trySmite(o);
         if (o.hp <= 0) {
@@ -472,10 +478,14 @@ export class LogicEngine {
         if (p.role !== "jungle" || dist(p.pos, c.pos) > 3.5) continue;
         const dmg = p.power * R.campDmgK * dt;
         c.hp -= dmg; c.dmgBy[p.side] += dmg; c.participants.add(p.id);
+        // S29B2：打野清怪的可視化彈道（每秒一條；純呈現，零 rng）
+        if (fxTick) this.pushFx({ type: "line", pos: { x: p.pos.x, y: p.pos.y }, target: { ...c.pos }, color: SIDE[p.side] });
       }
       trySmite(c);
       if (c.hp <= 0) {
         c.alive = false; c.respawnAt = this.t + c.respawn;
+        // S29B2：營地死亡爆點（模型淡出由 view 處理；fx 讓 minimap 外也看得到）
+        this.pushFx({ type: "ult", pos: { ...c.pos }, color: c.type === "buff" ? 0xf472b6 : 0xa3e635, exp: 0.6 });
         const kt = c.dmgBy.blue > c.dmgBy.red ? "blue" : c.dmgBy.red > c.dmgBy.blue ? "red" : null;
         c.killerTeam = kt;
         if (kt) {
@@ -1177,6 +1187,10 @@ export class LogicEngine {
     };
   }
   _snapLane(ln) {
-    return { bm: this.lanes[ln].bm.map((m) => ({ id: m.id, t: m.t })), rm: this.lanes[ln].rm.map((m) => ({ id: m.id, t: m.t })) };
+    // S29B2：小兵 hp（0–1）進 snapshot——受擊/瀕死可視化的真實資料來源
+    //   （引擎一直都有 m.hp，只是沒輸出；純觀測欄位，不影響任何模擬行為）。
+    //   小兵死亡事件 = 消費端以「id 從陣列消失」推導（小兵只會因 hp≤0 離場）。
+    const mm = (m) => ({ id: m.id, t: m.t, hp: clamp(m.hp / 130, 0, 1) });
+    return { bm: this.lanes[ln].bm.map(mm), rm: this.lanes[ln].rm.map(mm) };
   }
 }

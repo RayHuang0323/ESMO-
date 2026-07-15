@@ -105,12 +105,26 @@ export default function MobaReplayScreen({ replay, onClose }) {
           {/* 龍 / 巴龍 */}
           {a.dr === 1 && <text x={PITS.dragon.x} y={PITS.dragon.y + 1.5} fontSize="4.5" textAnchor="middle">🐉</text>}
           {a.br === 1 && <text x={PITS.baron.x} y={PITS.baron.y + 1.5} fontSize="4.5" textAnchor="middle">👑</text>}
-          {/* S29B1：野怪營地（位置存於 objectivesMeta；alive 位元逐 frame 於 frame.ob；
-              舊 replay 無此欄 ⇒ 不渲染，不炸畫面） */}
+          {/* S29B1/S29B2：中立目標（位置存於 objectivesMeta；frame.ob = hp 0–1，0=死亡；
+              a→b 插值 ⇒ 與現場一致的逐步掉血。舊 replay 無此欄 ⇒ 不渲染，不炸畫面） */}
           {(replay.objectivesMeta ?? []).map((om, i) => {
-            if (om.type !== "camp" && om.type !== "buff") return null;
-            if (!a.ob || a.ob[i] !== 1) return null;
-            return <circle key={om.id} cx={om.pos.x} cy={om.pos.y} r="1.2" fill={om.type === "buff" ? "#f472b6" : "#a3e635"} opacity="0.85" />;
+            const hpA = a.ob?.[i] ?? 0, hpB = b.ob?.[i] ?? hpA;
+            const hp = hpA > 0 ? lerp(hpA, hpB > 0 ? hpB : hpA, f) : 0;
+            if (!(hp > 0)) return null;
+            const isCamp = om.type === "camp" || om.type === "buff";
+            const c = om.type === "buff" ? "#f472b6" : om.type === "camp" ? "#a3e635" : om.type === "dragon" ? "#b794f6" : "#fbbf24";
+            return (
+              <g key={om.id}>
+                {isCamp && <circle cx={om.pos.x} cy={om.pos.y} r="1.2" fill={c} opacity="0.85" />}
+                {/* HP 條：真實 hp（非估計）；受擊期間逐 frame 縮短 */}
+                {hp < 0.999 && (
+                  <g>
+                    <rect x={om.pos.x - 2.2} y={om.pos.y - (isCamp ? 2.6 : 4.2)} width="4.4" height="0.7" rx="0.3" fill="rgba(0,0,0,0.65)" />
+                    <rect x={om.pos.x - 2.1} y={om.pos.y - (isCamp ? 2.5 : 4.1)} width={4.2 * hp} height="0.5" rx="0.2" fill={c} />
+                  </g>
+                )}
+              </g>
+            );
           })}
           {/* 選手（位置插值；死亡 → 灰空心） */}
           {replay.playersMeta.map((pm, i) => {

@@ -11,6 +11,7 @@ import React, { useState } from "react";
 import { useBattleStore } from "../battleStore.js";
 import { fmtT } from "../../gameData.js";
 import { GC } from "../../ui/theme.js";
+import { useIsMobile } from "../../ui/useViewport.js";
 
 const ICON = { FIRST_BLOOD: "🩸", KILL: "⚔️", MULTI_KILL: "🔥", ACE: "💥", TOWER_DESTROYED: "🗼", DRAGON_SLAIN: "🐉", BARON_SLAIN: "👑", VICTORY: "🏆", SPELL_USED: "✨", OBJECTIVE_SPAWN: "🌀" };
 const LANE = { top: "上", mid: "中", bot: "下", nexus: "堡" };
@@ -76,20 +77,29 @@ export default function BattleTimeline({ open = true, max = 11, roster = null })
   // S29：隊伍溝通（規則式播報）與系統事件/擊殺**分開存**，在此合併顯示但可區分：
   //   系統事件走 Row（原樣式）；COMMS 走 CommsRow（引號 + 說話者，明顯不同）。
   const comms = useBattleStore((s) => s.comms);
-  const [fold, setFold] = useState(false);
+  // S29B2：手機**預設收合**（抽屜化）——戰報不再長期遮住地圖；桌機維持展開。
+  const isMobile = useIsMobile();
+  const [fold, setFold] = useState(() => isMobile);
   if (!open) return null;
   const merged = [...events, ...comms].sort((a, b) => (a.t ?? 0) - (b.t ?? 0));
-  const rows = merged.reverse().slice(0, max);
+  const rows = merged.reverse().slice(0, isMobile ? 7 : max);
+  const latest = rows[0];
 
   return (
-    <div style={{ position: "absolute", top: 96, left: 10, width: 226, zIndex: 8, fontFamily: "system-ui,sans-serif" }}>
-      <div onClick={() => setFold((v) => !v)} style={{ cursor: "pointer", pointerEvents: "auto", display: "flex", justifyContent: "space-between",
+    <div style={{ position: "absolute", top: 96, left: 10, width: "min(226px, 62vw)", zIndex: 8, fontFamily: "system-ui,sans-serif" }}>
+      <div onClick={() => setFold((v) => !v)} style={{ cursor: "pointer", pointerEvents: "auto", display: "flex", justifyContent: "space-between", gap: 6, alignItems: "center",
         background: "rgba(8,14,24,0.78)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: fold ? 9 : "9px 9px 0 0",
-        padding: "4px 9px", fontSize: 10, fontWeight: 900, color: "rgba(255,255,255,0.6)", letterSpacing: "0.16em" }}>
-        <span>⚡ 戰報 TIMELINE</span><span>{fold ? "▸" : "▾"}</span>
+        padding: "4px 9px", fontSize: 10, fontWeight: 900, color: "rgba(255,255,255,0.6)", letterSpacing: fold ? 0 : "0.16em" }}>
+        {/* 收合時顯示最新一則（toast 語意）：不佔地圖也不失去資訊 */}
+        {fold && latest
+          ? <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: 0, fontWeight: 700 }}>
+              {ICON[latest.type] || "💬"} {latest.type === "COMMS" ? `${latest.speaker}：${latest.text}` : latest.text}
+            </span>
+          : <span>⚡ 戰報 TIMELINE</span>}
+        <span style={{ flexShrink: 0 }}>{fold ? "▸" : "▾"}</span>
       </div>
       {!fold && (
-        <div style={{ maxHeight: "40vh", overflow: "hidden", background: "rgba(8,14,24,0.6)", border: "1px solid rgba(255,255,255,0.12)", borderTop: "none", borderRadius: "0 0 9px 9px", backdropFilter: "blur(4px)", padding: "5px 4px", pointerEvents: "none" }}>
+        <div style={{ maxHeight: isMobile ? "30vh" : "40vh", overflow: "hidden", background: "rgba(8,14,24,0.6)", border: "1px solid rgba(255,255,255,0.12)", borderTop: "none", borderRadius: "0 0 9px 9px", backdropFilter: "blur(4px)", padding: "5px 4px", pointerEvents: "none" }}>
           {rows.length === 0 && <div style={{ fontSize: 10.5, color: "rgba(255,255,255,0.35)", padding: 4 }}>尚無事件…</div>}
           {rows.map((ev) => (ev.type === "COMMS"
             ? <CommsRow key={ev.id} msg={ev} />

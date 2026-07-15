@@ -45,8 +45,10 @@ export function snapshotToFrame(snap) {
     g: [Math.round(snap.bGold), Math.round(snap.rGold)],
     wp: round3(snap.winProb ?? 0.5),
     // S29B1（純附加，舊 replay 沒有此欄 ⇒ 消費端須容忍 undefined）：
-    //   中立目標存活位元（順序 = objectivesMeta；位置只在 meta 存一次）
-    ...(snap.objectives ? { ob: snap.objectives.map((o) => (o.alive ? 1 : 0)) } : {}),
+    //   中立目標（順序 = objectivesMeta；位置只在 meta 存一次）。
+    // S29B2：由「存活位元」升級為 **hp 值**（0–1，0 = 死亡）⇒ Replay 能顯示
+    //   與現場一致的逐步掉血（frame 2s 取樣 + 播放端插值），不重新模擬。
+    ...(snap.objectives ? { ob: snap.objectives.map((o) => (o.alive ? round3(o.hp) : 0)) } : {}),
   };
 }
 

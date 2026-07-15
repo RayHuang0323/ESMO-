@@ -18,6 +18,8 @@ import { ROSTER } from "../../data/roster.js";
 import { heroById } from "../../data/heroDatabase.js";
 import HeroDetailPanel from "./HeroDetailPanel.jsx";
 import HeroPortrait from "../../ui/HeroPortrait.jsx";
+import { computeFocus } from "../battleFocus.js";
+import { useIsMobile, isMobileViewport } from "../../ui/useViewport.js";
 
 const BLUE = "#60a5fa", RED = "#fb923c", GOLD = "#fbbf24";
 const MONO = "'Courier New',monospace";
@@ -109,9 +111,20 @@ function SideCell({ p, hero, roster, side, onOpen }) {
 export default function BattleHeroStrip({ roster = ROSTER, draft = null }) {
   const snap = useGameStore((s) => s.snapshot);
   const [open, setOpen] = useState(null);
+  // S29B2：十人全表改可收合面板——手機預設**收合成焦點對位列**（bottom sheet 展開），
+  //   桌機預設展開但可收合；地圖不再被十人面板長期遮住。
+  const isMobile = useIsMobile();
+  const [expand, setExpand] = useState(() => !isMobileViewport());
   if (!snap?.players) return null;
   const blue = snap.players.filter((p) => p.side === "blue");
   const red = snap.players.filter((p) => p.side === "red");
+  // 焦點對位列 = 距觀戰焦點最近的藍方英雄所在的 lane 列（純呈現層推導，battleFocus 共用）
+  let focusIdx = 2;
+  {
+    const f = computeFocus(snap);
+    let bd = Infinity;
+    blue.forEach((p, i) => { const dd = (p.pos.x - f.x) ** 2 + (p.pos.y - f.y) ** 2; if (dd < bd) { bd = dd; focusIdx = i; } });
+  }
 
   // Sprint19【C】Draft Adapter：Ban/Pick 實際選角優先（picks[side][i] 為 heroDatabase 完整物件），
   //   無 draft 時回退 ROSTER 預設英雄。對位序 i 與 LANES 一致 → Loading 顯示誰、Strip 就顯示誰。
@@ -127,40 +140,53 @@ export default function BattleHeroStrip({ roster = ROSTER, draft = null }) {
     return { heroId: h?.id ?? r.heroId, heroName: h?.zh ?? p.id, playerName: r.player ?? p.id.toUpperCase(), side: p.side };
   };
 
+  const laneRow = (i) => {
+    const lane = LANES[i], b = blue[i], r = red[i];
+    if (!b || !r) return null;
+    const rb = roster[b.id] || {}, rr = roster[r.id] || {};
+    const hb = heroOf("blue", i, b.id), hr = heroOf("red", i, r.id);
+    const diff = Math.round((b.gold ?? 0) - (r.gold ?? 0));
+    const favor = diff > 0 ? "blue" : diff < 0 ? "red" : "none";
+    const abs = Math.abs(diff);
+    return (
+      <div key={lane} style={{ display: "flex", alignItems: "center", padding: "4px 8px", borderBottom: "1px solid rgba(255,255,255,0.04)", gap: 4 }}>
+        <span style={{ color: i === focusIdx ? "#fbbf24" : "#3f3f46", fontSize: 8, fontWeight: 700, width: 20, textAlign: "center", letterSpacing: "0.06em", flexShrink: 0 }}>{lane}</span>
+        <SideCell p={b} hero={hb} roster={rb} side="blue" onOpen={() => setOpen(mk(b, "blue", i))} />
+        {/* 金幣差 = 對位選手 gold 相減（真資料衍生）*/}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0, width: 36 }}>
+          {abs > 0 ? (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 1 }}>
+                {favor === "blue" && <span style={{ color: BLUE, fontSize: 8 }}>◀</span>}
+                <span style={{ color: favor === "blue" ? BLUE : RED, fontSize: 8, fontWeight: 800, fontFamily: MONO }}>{abs}</span>
+                {favor === "red" && <span style={{ color: RED, fontSize: 8 }}>▶</span>}
+              </div>
+              <span style={{ color: "#3f3f46", fontSize: 7, letterSpacing: "0.04em" }}>金幣差</span>
+            </>
+          ) : (
+            <span style={{ color: "#3f3f46", fontSize: 8 }}>—</span>
+          )}
+        </div>
+        <SideCell p={r} hero={hr} roster={rr} side="red" onOpen={() => setOpen(mk(r, "red", i))} />
+      </div>
+    );
+  };
+
   return (
     <>
-      <div style={{ position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", zIndex: 11, width: "min(96%, 560px)", background: "rgba(13,11,18,0.94)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, overflow: "hidden", pointerEvents: "auto", boxShadow: "0 -4px 24px rgba(0,0,0,0.5)" }}>
-        {LANES.map((lane, i) => {
-          const b = blue[i], r = red[i];
-          if (!b || !r) return null;
-          const rb = roster[b.id] || {}, rr = roster[r.id] || {};
-          const hb = heroOf("blue", i, b.id), hr = heroOf("red", i, r.id);
-          const diff = Math.round((b.gold ?? 0) - (r.gold ?? 0));
-          const favor = diff > 0 ? "blue" : diff < 0 ? "red" : "none";
-          const abs = Math.abs(diff);
-          return (
-            <div key={lane} style={{ display: "flex", alignItems: "center", padding: "4px 8px", borderBottom: i < 4 ? "1px solid rgba(255,255,255,0.04)" : "none", gap: 4 }}>
-              <span style={{ color: "#3f3f46", fontSize: 8, fontWeight: 700, width: 20, textAlign: "center", letterSpacing: "0.06em", flexShrink: 0 }}>{lane}</span>
-              <SideCell p={b} hero={hb} roster={rb} side="blue" onOpen={() => setOpen(mk(b, "blue", i))} />
-              {/* 金幣差 = 對位選手 gold 相減（真資料衍生）*/}
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0, width: 36 }}>
-                {abs > 0 ? (
-                  <>
-                    <div style={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      {favor === "blue" && <span style={{ color: BLUE, fontSize: 8 }}>◀</span>}
-                      <span style={{ color: favor === "blue" ? BLUE : RED, fontSize: 8, fontWeight: 800, fontFamily: MONO }}>{abs}</span>
-                      {favor === "red" && <span style={{ color: RED, fontSize: 8 }}>▶</span>}
-                    </div>
-                    <span style={{ color: "#3f3f46", fontSize: 7, letterSpacing: "0.04em" }}>金幣差</span>
-                  </>
-                ) : (
-                  <span style={{ color: "#3f3f46", fontSize: 8 }}>—</span>
-                )}
-              </div>
-              <SideCell p={r} hero={hr} roster={rr} side="red" onOpen={() => setOpen(mk(r, "red", i))} />
-            </div>
-          );
-        })}
+      {/* 手機展開 = bottom sheet（點背幕收合）；桌機 = 原底部面板 + 可收合 */}
+      {isMobile && expand && (
+        <div onClick={() => setExpand(false)} style={{ position: "absolute", inset: 0, zIndex: 10, background: "rgba(0,0,0,0.35)" }} />
+      )}
+      <div style={{ position: "absolute", bottom: "max(8px, env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)", zIndex: 11, width: "min(96%, 560px)", background: "rgba(13,11,18,0.94)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, overflow: "hidden", pointerEvents: "auto", boxShadow: "0 -4px 24px rgba(0,0,0,0.5)" }}>
+        {/* 面板把手：焦點列標籤 + 展開/收合（手機收合 ⇒ 只留焦點對位列，不遮地圖） */}
+        <div onClick={() => setExpand((v) => !v)} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 10px", background: "rgba(255,255,255,0.04)", fontSize: 9, fontWeight: 900, color: "rgba(255,255,255,0.55)", letterSpacing: "0.12em" }}>
+          <span>👥 隊伍面板{expand ? "" : `（焦點：${LANES[focusIdx]}）`}</span>
+          <span>{expand ? "▾ 收合" : "▴ 展開"}</span>
+        </div>
+        <div style={{ maxHeight: expand ? (isMobile ? "46vh" : "none") : "none", overflowY: expand && isMobile ? "auto" : "visible" }}>
+          {expand ? LANES.map((_, i) => laneRow(i)) : laneRow(focusIdx)}
+        </div>
       </div>
       {open && <HeroDetailPanel {...open} onClose={() => setOpen(null)} />}
     </>

@@ -8,12 +8,16 @@ import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
 import { attrs, xpNeed, LEVEL_CAP } from "../../hero/heroProgress.js";
 import { heroById } from "../../data/heroDatabase.js";
 import { GC } from "../../ui/theme.js";
+import { useIsMobile } from "../../ui/useViewport.js";
 
 const MONO = "ui-monospace,Menlo,monospace";
 const pct = (v) => ((v - 1) * 100).toFixed(1) + "%";
 
 export default function HeroDetailPanel({ heroId, heroName, playerName, side = "blue", onClose }) {
   const hero = useHeroProgressStore((s) => s.progress[heroId]);
+  // S29B2：手機 → 全螢幕 sheet；桌機 → 置中卡片但限高可捲動。
+  //   兩者關閉鈕都固定在**頂部**（原本在長內容最下方，手機要捲到底才關得掉）。
+  const isMobile = useIsMobile();
   if (!hero) return null;
   const a = attrs(hero.level);
   const need = hero.level >= LEVEL_CAP ? null : xpNeed(hero.level);
@@ -32,8 +36,20 @@ export default function HeroDetailPanel({ heroId, heroName, playerName, side = "
   );
 
   return (
-    <div style={{ position: "absolute", inset: 0, zIndex: 16, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(4,8,16,0.7)", backdropFilter: "blur(4px)" }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 320, background: "rgba(10,16,28,0.97)", border: `1px solid ${sideC}55`, borderRadius: 14, padding: "16px 18px", fontFamily: "system-ui,sans-serif" }}>
+    <div style={{ position: "absolute", inset: 0, zIndex: 16, display: "flex", alignItems: isMobile ? "stretch" : "center", justifyContent: "center", background: "rgba(4,8,16,0.7)", backdropFilter: "blur(4px)" }} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        width: isMobile ? "100%" : 340, maxWidth: "100%",
+        maxHeight: isMobile ? "100%" : "84%",
+        display: "flex", flexDirection: "column",
+        background: "rgba(10,16,28,0.97)", border: isMobile ? "none" : `1px solid ${sideC}55`,
+        borderRadius: isMobile ? 0 : 14, fontFamily: "system-ui,sans-serif", overflow: "hidden",
+      }}>
+        {/* S29B2：固定頂部列——標題 + 關閉（不放在長內容最下方） */}
+        <div style={{ flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px 8px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+          <span style={{ fontSize: 12, fontWeight: 900, color: "rgba(255,255,255,0.75)", letterSpacing: "0.1em" }}>英雄詳情</span>
+          <button onClick={onClose} aria-label="關閉" style={{ width: 30, height: 30, borderRadius: 8, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", fontWeight: 900, fontSize: 14, cursor: "pointer", lineHeight: 1 }}>✕</button>
+        </div>
+        <div style={{ overflowY: "auto", padding: "12px 18px 16px", paddingBottom: isMobile ? "calc(16px + env(safe-area-inset-bottom))" : 16 }}>
         {/* 英雄大圖橫幅（Sprint12：Legacy Hero Detail 感）*/}
         <div style={{ position: "relative", height: 78, borderRadius: 10, background: `linear-gradient(135deg,${db.color || sideC},#0b1220)`, display: "flex", alignItems: "center", padding: "0 14px", marginBottom: 9, overflow: "hidden" }}>
           <div style={{ fontSize: 48, fontWeight: 900, color: "rgba(255,255,255,0.9)" }}>{(db.zh || heroName || "?").slice(0, 1)}</div>
@@ -92,6 +108,7 @@ export default function HeroDetailPanel({ heroId, heroName, playerName, side = "
         <RowS l="總推塔" v={(m.twrDmg / 1000).toFixed(1) + "k"} c="#a5b4fc" />
 
         <button onClick={onClose} style={{ marginTop: 12, width: "100%", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "7px", color: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer" }}>關閉</button>
+        </div>
       </div>
     </div>
   );

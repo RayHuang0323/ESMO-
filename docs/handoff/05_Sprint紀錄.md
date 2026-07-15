@@ -1041,3 +1041,62 @@ percentile 化且以 v2 對照證明檢定力；v3 正反序 invariant）。
 - **未經瀏覽器/手機實測**：3D 低模外觀、HUD 版面、實機 FPS、節奏體感。
   需 Ray 真機打一場：確認 15 分擊殺體感、F/D 顯示、龍/巴龍/營地模型與 HP 條、
   MVP 列不再 undefined。
+
+---
+
+## Sprint 29B2 — MOBA Map Scale, Combat Visibility and Mobile HUD
+
+**範圍**：29B1 部署後實機觀察——地圖太小、野怪/龍/巴龍「像直接消失」、小兵互打
+無畫面、HUD 遮地圖。**紅線遵守**：不改 29B1 節奏參數/XP/Progress/Reward/
+MatchProgressTransaction；不重寫 LogicEngine；Replay 不重新模擬；不用 CSS scale
+假裝放大；不導入未授權素材。
+
+### Audit 結論（資料可得性，動工前）
+
+- objective/camp hp/maxHp/alive：✅ `snapshot.objectives`（29B1 已有，且 3D HP 條已存在
+  ——「看起來直接消失」的實際原因是**條太小 + 相機太遠 + 無受擊/死亡轉場**）。
+- 小兵 hp：❌ 引擎有 `m.hp` 但 `_snapLane` 未輸出；小兵死亡：❌ 無事件（id 消失可靠推導）。
+- hit/damage 事件：❌ 無結構化事件；✅ 可由 prev/snapshot **hp 差分**導出（真資料非假動畫）。
+- 英雄攻擊彈道：✅ 英雄互打有 fx；❌ 打野清怪/打龍**完全沒有** fx。
+- Replay：❌ `ob` 只有存活位元，無 hp。
+- mobile breakpoints：**整個 battle UI 一個都沒有**；HeroDetailPanel 關閉鈕在長內容最下方。
+
+### 做了什麼
+
+1. **資料補源（引擎，零行為改動）**：`_snapLane` 輸出小兵 `hp`（0–1）；
+   `_updateNeutralsV3` 對打龍/巴龍（每秒最多 2 條）與打野清怪（每秒 1 條）推
+   **零 rng** 節流彈道 fx + 營地死亡爆點；Replay `frame.ob` 升級為 hp 值。
+   rng 序列與 29B1 逐位元相同 ⇒ 節奏不可能改變（pacing29b1 引擎層 25 項全綠佐證）。
+2. **Combat Visibility**（MobaView3D，全部 prev/snapshot 差分）：英雄/塔/龍/巴龍/營地
+   受擊 emissive 脈衝 0.25s；小兵 per-mesh scale 脈衝＋高度隨 hp（共享材質不可改色）；
+   死亡：viewFx 擴散圈（**固定 14 格池**，滿了搶最舊）＋目標 0.5s 縮小下沉淡出＋
+   小兵消失點爆點（fog 內紅方不噴）；小兵前鋒接觸火花（380ms/路節流）；
+   HP 條 shownHp 插值（0.5s tick 階梯 → 連續下降）。
+3. **Map Scale / Camera**：`fitZoomFor(w,h,mobile)` 視窗感知取景（真 ortho zoom）；
+   跟隨 base/fight = fit×1 / ×1.5（手機 ×1.8）；焦點死區 6 單位（防抖）；
+   非跟隨 `CameraRig` 預設取景；英雄 ×1.3（HK）、小兵 ×1.25、龍巴龍 3.3、營地 1.45/1.9；
+   塔 crystal emissive 1.9/1.3→1.1/0.8、主堡燈 9→5（過曝修正）。
+4. **Mobile HUD**（`src/ui/useViewport.js` 唯一分歧來源）：Timeline 手機預設收合＋
+   收合列顯示最新事件；BattleHeroStrip 手機收合成**焦點對位列**（computeFocus 最近
+   藍方英雄的 lane）＋bottom sheet 展開（46vh 捲動＋背幕關閉）；HeroDetailPanel 手機
+   全螢幕 sheet＋**頂部固定 ✕**（桌機限高 84% 捲動）；Minimap 手機 106px＋safe area；
+   控制鈕手機 ⚙ 收納；桌機底列可收合。
+5. **Presentation MVP**：makeRiftTexture 重繪（河道帶狀水域＋波光、亮沙路面＋路緣、
+   pit 坑面＋紫/金色環、營地菱形標記＋色暈、草叢亮綠＋虛線邊界、營地→路的野徑）。
+
+### 驗證
+
+`tools/check_moba_presentation29b2.mjs`：引擎層 12 項（objective/camp/minion hp 逐步
+下降、序列化、replay 資料、FX 上限、真 hp、HUD 源碼斷言、無 undefined/NaN）＋
+巢狀 13–19（pacing29b1 引擎層、runtime29 44/44＝S23–S28+regress+regress2+build、
+flow09、dash10）。
+
+### 已知限制 / 技術債
+
+- **全部視覺未經瀏覽器/真機實測**（FPS/draw calls/外觀/互動）——需 Ray 依人工驗收
+  清單實測（桌機 1366/1920、手機 320/360/390/430）。
+- z-index 常數表、BattleHeroStrip per-player selector、手機 Scoreboard 入口、
+  倍率/畫質併入設定面板 → 未做（列 29B3+）。
+- Replay 不含小兵（frame 預算取捨，既有）⇒ Replay 的小兵互打畫面不存在；
+  目標掉血/英雄 hp/事件已一致。
+- viewFx 池 14 格：大團戰死亡爆點可能被搶格（刻意上限）。

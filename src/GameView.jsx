@@ -17,12 +17,13 @@ import { LANES, PITS } from "./gameData.js";
 import { ROSTER } from "./data/roster.js";
 import { draftRoster } from "./battle/moba/draftRoster.js";
 import { loadQuality, saveQuality, presetFor, QUALITY_IDS, QUALITY_PRESETS } from "./battle/quality.js";
+import { useIsMobile } from "./ui/useViewport.js";
 
 // 你的彩色地圖：Vite 可 `import mapUrl from "./assets/rift.png"` 後設給 MOBA_MAP；null 用程序化底圖。
 const MOBA_MAP = null;
 
 // ── 小地圖（沿用；自有 rAF、讀 store、含戰爭迷霧）────────────────────────────
-function Minimap() {
+function Minimap({ mobile = false }) {
   const ref = useRef(null);
   useEffect(() => {
     let raf, last = 0;
@@ -65,7 +66,9 @@ function Minimap() {
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
   }, []);
-  return <canvas ref={ref} width={150} height={150} style={{ position: "absolute", bottom: 10, right: 10, width: 150, height: 150, borderRadius: 10, border: "1px solid rgba(255,255,255,0.25)", boxShadow: "0 4px 20px rgba(0,0,0,0.5)", pointerEvents: "none", zIndex: 9 }} />;
+  // S29B2：手機縮小並抬離底部收合面板（safe area）；不擋十人面板也不被遮
+  const px2 = mobile ? 106 : 150;
+  return <canvas ref={ref} width={150} height={150} style={{ position: "absolute", bottom: mobile ? "calc(50px + env(safe-area-inset-bottom))" : 10, right: mobile ? 6 : 10, width: px2, height: px2, borderRadius: 10, border: "1px solid rgba(255,255,255,0.25)", boxShadow: "0 4px 20px rgba(0,0,0,0.5)", pointerEvents: "none", zIndex: 9 }} />;
 }
 
 export default function GameView({ roster = ROSTER, onContinue = null, autoStart = false, draft = null, tactic = null }) {
@@ -83,6 +86,9 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   const quality = useMemo(() => presetFor(qualityId), [qualityId]);
   const pickQuality = (id) => { setQualityId(id); saveQuality(id); };
   const hud = useGameStore((s) => s.hud);
+  // S29B2：手機控制鈕收納（⚙ 展開）；地圖不被常駐按鈕群遮擋
+  const isMobile = useIsMobile();
+  const [showCtl, setShowCtl] = useState(false);
   // Sprint20【E】生效名單：Ban/Pick 選到的英雄取代 ROSTER 預設英雄（無 draft → 原 ROSTER）。
   //   3D 名牌 / HUD / 記分板 / 終局畫面全部吃這一份 → Loading、Battle、Result 顯示同一批英雄。
   const liveRoster = useMemo(() => draftRoster(roster, draft), [roster, draft]);
@@ -101,39 +107,49 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
           ▶ 開始遊戲 / START
         </button>
       )}
-      {playing && (
-        <button onClick={stop} style={{ position: "absolute", top: 92, left: 12, zIndex: 10, background: "rgba(239,68,68,0.85)", border: "1px solid #fca5a5", borderRadius: 8, padding: "5px 12px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>⏹ 結束</button>
+      {/* S29B2：控制鈕收納——手機收進 ⚙ 面板（不常駐佔畫面）；桌機維持原樣 */}
+      {isMobile && (
+        <button onClick={() => setShowCtl((v) => !v)} style={{ position: "absolute", top: 92, right: 8, zIndex: 10, background: showCtl ? "rgba(96,165,250,0.9)" : "rgba(8,14,24,0.75)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, padding: "5px 10px", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>⚙</button>
       )}
-      <button onClick={() => setFollow((v) => !v)} style={{ position: "absolute", top: 92, right: 12, zIndex: 10, background: follow ? "rgba(96,165,250,0.9)" : "rgba(8,14,24,0.7)", border: `1px solid ${follow ? "#60a5fa" : "rgba(255,255,255,0.3)"}`, borderRadius: 8, padding: "5px 10px", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-        {follow ? "🎥 導播鏡頭" : "🖱 自由鏡頭"}
-      </button>
-
-      {/* S29：播放倍率（只改 tick 的真實間隔，dt 恆定 ⇒ 不影響模擬結果）*/}
-      <div style={{ position: "absolute", top: 124, right: 12, zIndex: 10, display: "flex", gap: 4 }}>
-        {rates.map((r) => (
-          <button key={r} onClick={() => setRate(r)} title="播放倍率（不影響模擬結果）"
-            style={{ background: rate === r ? "rgba(96,165,250,0.9)" : "rgba(8,14,24,0.7)", border: `1px solid ${rate === r ? "#60a5fa" : "rgba(255,255,255,0.25)"}`, borderRadius: 6, padding: "4px 8px", color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer", minWidth: 32 }}>
-            {r}×
+      {(!isMobile || showCtl) && (
+        <>
+          {playing && (
+            <button onClick={stop} style={{ position: "absolute", top: 92, left: isMobile ? 8 : 12, zIndex: 10, background: "rgba(239,68,68,0.85)", border: "1px solid #fca5a5", borderRadius: 8, padding: "5px 12px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>⏹ 結束</button>
+          )}
+          <button onClick={() => setFollow((v) => !v)} style={{ position: "absolute", top: isMobile ? 128 : 92, right: isMobile ? 8 : 12, zIndex: 10, background: follow ? "rgba(96,165,250,0.9)" : "rgba(8,14,24,0.7)", border: `1px solid ${follow ? "#60a5fa" : "rgba(255,255,255,0.3)"}`, borderRadius: 8, padding: "5px 10px", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+            {follow ? "🎥 導播鏡頭" : "🖱 自由鏡頭"}
           </button>
-        ))}
-      </div>
 
-      {/* S29：畫質切換（自動判斷 + 手動覆寫；只影響怎麼畫，不影響模擬結果）*/}
-      <div style={{ position: "absolute", top: 156, right: 12, zIndex: 10, display: "flex", gap: 4 }}>
-        {QUALITY_IDS.map((id) => (
-          <button key={id} onClick={() => pickQuality(id)} title={`畫質：${QUALITY_PRESETS[id].zh}（不影響模擬結果）`}
-            style={{ background: qualityId === id ? "rgba(52,211,153,0.9)" : "rgba(8,14,24,0.7)", border: `1px solid ${qualityId === id ? "#34d399" : "rgba(255,255,255,0.25)"}`, borderRadius: 6, padding: "4px 8px", color: "#fff", fontSize: 10, fontWeight: 800, cursor: "pointer", textTransform: "uppercase" }}>
-            {id === "low" ? "低" : id === "medium" ? "中" : "高"}
-          </button>
-        ))}
-      </div>
+          {/* S29：播放倍率（只改 tick 的真實間隔，dt 恆定 ⇒ 不影響模擬結果）*/}
+          <div style={{ position: "absolute", top: isMobile ? 160 : 124, right: isMobile ? 8 : 12, zIndex: 10, display: "flex", gap: 4 }}>
+            {rates.map((r) => (
+              <button key={r} onClick={() => setRate(r)} title="播放倍率（不影響模擬結果）"
+                style={{ background: rate === r ? "rgba(96,165,250,0.9)" : "rgba(8,14,24,0.7)", border: `1px solid ${rate === r ? "#60a5fa" : "rgba(255,255,255,0.25)"}`, borderRadius: 6, padding: "4px 8px", color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer", minWidth: 32 }}>
+                {r}×
+              </button>
+            ))}
+          </div>
 
-      <div style={{ position: "absolute", bottom: 10, left: 10, color: "rgba(255,255,255,0.6)", fontSize: 10, background: "rgba(0,0,0,0.45)", padding: "4px 8px", borderRadius: 6, pointerEvents: "none" }}>
-        按住 TAB 記分板 · 拖曳旋轉 · 滾輪縮放
-      </div>
+          {/* S29：畫質切換（自動判斷 + 手動覆寫；只影響怎麼畫，不影響模擬結果）*/}
+          <div style={{ position: "absolute", top: isMobile ? 192 : 156, right: isMobile ? 8 : 12, zIndex: 10, display: "flex", gap: 4 }}>
+            {QUALITY_IDS.map((id) => (
+              <button key={id} onClick={() => pickQuality(id)} title={`畫質：${QUALITY_PRESETS[id].zh}（不影響模擬結果）`}
+                style={{ background: qualityId === id ? "rgba(52,211,153,0.9)" : "rgba(8,14,24,0.7)", border: `1px solid ${qualityId === id ? "#34d399" : "rgba(255,255,255,0.25)"}`, borderRadius: 6, padding: "4px 8px", color: "#fff", fontSize: 10, fontWeight: 800, cursor: "pointer", textTransform: "uppercase" }}>
+                {id === "low" ? "低" : id === "medium" ? "中" : "高"}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {!isMobile && (
+        <div style={{ position: "absolute", bottom: 10, left: 10, color: "rgba(255,255,255,0.6)", fontSize: 10, background: "rgba(0,0,0,0.45)", padding: "4px 8px", borderRadius: 6, pointerEvents: "none" }}>
+          按住 TAB 記分板 · 拖曳旋轉 · 滾輪縮放
+        </div>
+      )}
       {/* 掛載信標：看得到這個 tag = 渲染的是主幹 GameView（非 Legacy App.jsx）*/}
       <div style={{ position: "absolute", bottom: 166, right: 12, color: "rgba(147,197,253,0.55)", fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", pointerEvents: "none", zIndex: 9 }}>ESMO 主幹 · S16</div>
-      <Minimap />
+      <Minimap mobile={isMobile} />
     </div>
   );
 }

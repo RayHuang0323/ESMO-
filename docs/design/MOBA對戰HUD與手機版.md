@@ -89,3 +89,33 @@
   預設由 `detectQuality()` 依裝置判斷，手動選擇存 localStorage。
 
 兩者在 29B 應併入正式設定面板（手機版尤其不該佔用戰場右上角）。
+
+---
+
+## 6. Sprint 29B2 實作紀錄（本文件 §2–3 的落地）
+
+> 狀態更新：**手機 HUD 第一版已實作**（29B2）。以下為實際落地內容與 §2 規格的對照。
+
+| 規格 | 落地 |
+|---|---|
+| Timeline 預設收合（手機） | `BattleTimeline`：`useState(() => isMobile)`；收合時 header 顯示**最新一則事件**（toast 語意），寬度 `min(226px, 62vw)` |
+| 十人列 → bottom sheet | `BattleHeroStrip`：手機預設收合成**焦點對位列**（焦點 = 距 `computeFocus` 最近的藍方英雄所在 lane）；展開 = bottom sheet（46vh 捲動 + 背幕點擊收合）；桌機預設展開、可收合 |
+| 英雄詳情 → 全螢幕 sheet | `HeroDetailPanel`：手機 inset 0 全螢幕；**關閉 ✕ 固定頂部列**（原本在長內容最下方）；桌機限高 84% 可捲動 |
+| 小地圖 safe area | `GameView Minimap`：手機 106px、`bottom: calc(50px + env(safe-area-inset-bottom))`（抬離收合面板） |
+| 控制鈕收納 | 手機：⚙ 展開（結束/鏡頭/倍率/畫質）；桌機原樣 |
+| 響應式判斷 | 唯一來源 `src/ui/useViewport.js`（`useIsMobile`：寬 ≤700 或 touch-first ≤900） |
+
+**尚未做**（列 29B3+）：z-index 統一常數表（現況沿用各元件既有值，無新增衝突）、
+`BattleHeroStrip` per-player selector 拆分、Scoreboard 手機入口（TAB 鍵仍桌機限定）、
+倍率/畫質併入正式設定面板。
+
+### 相機/地圖比例（同屬 29B2，詳見 MOBA場景視覺規範.md §S29B2）
+
+- `fitZoomFor(w, h, mobile)`（`BattleCameraController` 匯出）：以視窗尺寸推導正交 zoom，
+  桌機全圖框滿、手機聚焦有效戰場（**真相機取景，非 CSS scale**）。
+- 跟隨模式 base/fight zoom 改由 fitZoom 派生（手機 fight = ×1.8）；
+  **焦點死區 6 邏輯單位**：聚類逐幀漂移不再造成高頻抖動。
+- 非跟隨模式由 `CameraRig` 依視窗設定預設取景；滾輪/雙指縮放仍可手動調整。
+- 英雄模型 ×1.3（`HK`）、小兵 ×1.25——可讀性放大，只動視覺不動座標。
+
+⚠ **全部未經瀏覽器/手機實測**（§4 的尺寸矩陣仍需 Ray 人工驗收）。
