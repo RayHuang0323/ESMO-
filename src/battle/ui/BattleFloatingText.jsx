@@ -12,8 +12,8 @@ const STYLE = {
   MULTI_KILL:      { color: "#fbbf24", size: 42, glow: "#f59e0b", life: 2400, sub: "連殺" },
   ACE:             { color: "#a78bfa", size: 50, glow: "#7c3aed", life: 2800, sub: "團滅" },
   TOWER_DESTROYED: { color: "#93c5fd", size: 26, glow: "#3b82f6", life: 1800, sub: "推塔" },
-  DRAGON_SLAIN:    { color: "#c4b5fd", size: 30, glow: "#8b5cf6", life: 2000, sub: "小龍" },
-  BARON_SLAIN:     { color: "#fcd34d", size: 34, glow: "#f59e0b", life: 2400, sub: "巴龍" },
+  DRAGON_SLAIN:    { color: "#c4b5fd", size: 30, glow: "#8b5cf6", life: 2000, sub: "Dragon" },
+  BARON_SLAIN:     { color: "#fcd34d", size: 34, glow: "#f59e0b", life: 2400, sub: "Baron" },
   VICTORY:         { color: "#fde047", size: 64, glow: "#facc15", life: 5000, sub: "勝利" },
 };
 

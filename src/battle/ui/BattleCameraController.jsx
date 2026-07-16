@@ -16,20 +16,20 @@ import { useGameStore } from "../../useGameStore.js";
 import { computeSpectatorFocus } from "../battleFocus.js";
 import { useBattleStore } from "../battleStore.js";
 import { useCameraStore } from "../cameraStore.js";
-import { PITS } from "../../gameData.js";
+import { PITS, WORLD_BOUNDS, WORLD_SCALE, worldX, worldZ } from "../../gameData.js";
 
-const S = 1.7;                              // 與 MobaView3D 世界尺度一致
-const wx = (x) => (x - 50) * S, wz = (y) => (y - 50) * S;
+const wx = worldX, wz = worldZ;
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 /** 依視窗尺寸推導「看到 span 個世界單位寬」所需的正交 zoom（0.62 = 俯角投影係數）。 */
 export function fitZoomFor(width, height, mobile) {
-  const span = mobile ? 132 : 235;          // 手機聚焦有效戰場、桌機容納全圖
+  const renderedSpan = Math.max(WORLD_BOUNDS.width, WORLD_BOUNDS.height) * WORLD_SCALE;
+  const span = renderedSpan * (mobile ? 0.78 : 1.38); // 手機聚焦有效戰場、桌機容納全圖
   return clamp(Math.min(width / span, height / (span * 0.62)), 2.0, 9);
 }
 
-const FOCUS_DEADBAND = 6;                   // 邏輯座標單位；小於此距離的焦點漂移不追
+const FOCUS_DEADBAND = WORLD_BOUNDS.width * 0.027; // 約 6 邏輯單位，由 world metadata 派生
 
 export default function BattleCameraController({
   follow = true,

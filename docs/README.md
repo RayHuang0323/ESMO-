@@ -27,7 +27,8 @@
   `design/MOBA對戰執行與時間系統.md`、`design/MOBA交戰節奏與擊殺模型.md`
 - **MOBA HUD／手機**：`design/MOBA對戰HUD與手機版.md`
 - **MOBA 地圖／場景**：
-  `design/MOBA場景視覺規範.md`、`design/MOBA地圖可讀性規範.md`、`design/MOBA中立目標與野區系統.md`
+  `design/MOBA世界尺度與路線幾何.md`、`design/MOBA場景視覺規範.md`、
+  `design/MOBA地圖可讀性規範.md`、`design/MOBA中立目標與野區系統.md`
 - **MOBA 導播／測試控制**：`design/MOBA導播鏡頭與測試控制.md`
 - **MOBA 召喚師技能**：`design/MOBA召喚師技能系統.md`
 - **MOBA 戰術**：`design/MOBA戰術系統.md`、`design/MOBA戰術播報系統.md`

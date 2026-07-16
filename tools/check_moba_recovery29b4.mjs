@@ -150,13 +150,11 @@ ck("   hitbox：整個 SideCell 可點（onClick 掛整列 cell div、cursor poi
 
 // ═══ D. 塔常駐光移除 ══════════════════════════════════════════════════════════
 // 17) 塔沒有常駐 idle glow；且未新增 PointLight
-//   ⚠ MobaView3D 全檔僅 2 處 new PointLight（皆為既有、非 29B4 新增）：
-//     ① 塔/主堡（gate: isNexus || Q.towerLights）② 龍/巴龍（pl.visible=false 直到目標存活）。
-//   29B4 不得讓這個數字增加。
+//   S29B5 已移除 Dragon / Baron 的 PointLight；僅保留塔/主堡的畫質 gate。
 const idleLow = /IDLE_EMISS = isNexus \? 0\.14 : 0\.06/.test(V3D) && /emissiveIntensity: IDLE_EMISS/.test(V3D);
 const plCount = (V3D.match(/new THREE\.PointLight/g) || []).length;
-const noExtraLight = plCount === 2 && /if \(isNexus \|\| Q\.towerLights\)/.test(V3D);
-ck(`17) 塔沒有常駐 idle glow / 不新增 PointLight（crystal 常態 emissive 主堡0.14/塔0.06 低於 Bloom 門檻；new PointLight 仍為既有 ${plCount} 處=塔/主堡+龍/巴龍）`,
+const noExtraLight = plCount <= 1 && /if \(isNexus \|\| Q\.towerLights\)/.test(V3D);
+ck(`17) 塔沒有常駐 idle glow / 不新增 PointLight（crystal 常態 emissive 主堡0.14/塔0.06 低於 Bloom 門檻；PointLight 僅剩畫質 gate ${plCount} 處）`,
   idleLow && noExtraLight);
 // 18) 受擊與摧毀短暫反應仍存在
 ck("18) 受擊/摧毀短暫反應仍在（受擊 flashT 脈衝 +1.6 峰值；摧毀 spawnViewFx 爆點）",

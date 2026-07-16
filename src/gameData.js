@@ -1,7 +1,7 @@
 // ============================================================================
 //  gameData.js  —  全專案共用的地圖常數、座標工具、職業/顏色定義
 //  （LogicEngine 與所有渲染層都從這裡 import，單一真實來源，避免重複定義）
-//  座標系：0–100 百分比；x 右、y 下。世界座標映射在 view 層（wx/wz）處理。
+//  座標系：WORLD_BOUNDS 內的邏輯世界單位；x 右、y 下。
 // ============================================================================
 
 export const lerp = (a, b, t) => a + (b - a) * t;
@@ -10,10 +10,23 @@ export const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 
 export const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 export const fmtT = (s) => `${Math.floor(s / 60)}:${(Math.floor(s) % 60).toString().padStart(2, "0")}`;
 
+// Sprint 29B5：3D / Minimap / Camera / Replay 共用的正式世界 metadata。
+export const WORLD_BOUNDS = Object.freeze({
+  minX: 0, minY: 0, maxX: 220, maxY: 220,
+  width: 220, height: 220, centerX: 110, centerY: 110,
+});
+export const MAP_BOUNDS = WORLD_BOUNDS;
+export const WORLD_SIZE = WORLD_BOUNDS.width;
+export const WORLD_SCALE = 1.7;
+export const mapNormX = (x, bounds = WORLD_BOUNDS) => (x - bounds.minX) / bounds.width;
+export const mapNormY = (y, bounds = WORLD_BOUNDS) => (y - bounds.minY) / bounds.height;
+export const worldX = (x) => (x - WORLD_BOUNDS.centerX) * WORLD_SCALE;
+export const worldZ = (y) => (y - WORLD_BOUNDS.centerY) * WORLD_SCALE;
+
 export const LANES = {
-  top: [{x:11,y:82},{x:9,y:68},{x:8,y:52},{x:9,y:38},{x:12,y:26},{x:17,y:18},{x:26,y:13},{x:38,y:11},{x:52,y:10},{x:64,y:11},{x:75,y:13},{x:83,y:15}],
-  mid: [{x:15,y:85},{x:24,y:76},{x:33,y:67},{x:42,y:58},{x:50,y:50},{x:58,y:42},{x:66,y:34},{x:74,y:26},{x:81,y:19},{x:86,y:15}],
-  bot: [{x:15,y:88},{x:30,y:88},{x:45,y:87},{x:60,y:85},{x:73,y:82},{x:82,y:76},{x:87,y:64},{x:89,y:50},{x:89,y:36},{x:88,y:24},{x:86,y:17}],
+  top: [{x:26,y:192},{x:18,y:170},{x:15,y:140},{x:17,y:108},{x:24,y:80},{x:38,y:57},{x:58,y:40},{x:82,y:30},{x:110,y:25},{x:138,y:27},{x:162,y:33},{x:184,y:40},{x:194,y:30}],
+  mid: [{x:30,y:190},{x:48,y:172},{x:68,y:152},{x:88,y:132},{x:110,y:110},{x:132,y:88},{x:152,y:68},{x:172,y:48},{x:190,y:30}],
+  bot: [{x:30,y:194},{x:40,y:184},{x:58,y:187},{x:82,y:193},{x:110,y:195},{x:138,y:190},{x:162,y:180},{x:180,y:162},{x:196,y:140},{x:203,y:112},{x:205,y:80},{x:202,y:50},{x:194,y:28}],
 };
 // ── S29：弧長參數化（公平性修正）─────────────────────────────────────────────
 //  舊版 posOnLane 以「線段索引」內插：t 均分到 (pts.length−1) 段，而各段長度不等
@@ -46,24 +59,29 @@ export function posOnLane(lane, t) {
 /** 路線總長（單位）——供校準與驗證使用。 */
 export const laneLength = (lane) => LANE_ARC[lane].total;
 
-export const OBSTACLES = [
-  {x:33,y:34,r:6},{x:74,y:73,r:6},   // ⚠ [0]=baron 坑、[1]=dragon 坑：座標須與 PITS 一致
-  {x:40,y:40,r:3.5},{x:46,y:46,r:3},{x:52,y:52,r:3},{x:58,y:58,r:3},{x:65,y:66,r:3.5},
-  {x:18,y:18,r:3.5},{x:25,y:16,r:3},{x:30,y:20,r:3},{x:22,y:25,r:3},
-  {x:14,y:30,r:3},{x:20,y:35,r:3},{x:26,y:30,r:2.8},
-  {x:58,y:16,r:3},{x:65,y:18,r:3},{x:72,y:20,r:3},{x:66,y:25,r:3},
-  {x:60,y:28,r:2.8},{x:54,y:24,r:2.8},{x:48,y:20,r:2.8},
-  {x:18,y:62,r:3},{x:24,y:66,r:3},{x:30,y:70,r:3},{x:22,y:74,r:3},
-  {x:16,y:70,r:2.8},{x:34,y:64,r:2.8},{x:38,y:74,r:3},
-  {x:68,y:72,r:3},{x:62,y:66,r:3},{x:78,y:68,r:3},{x:82,y:62,r:3},
-  {x:70,y:60,r:2.8},{x:64,y:78,r:2.8},{x:58,y:74,r:2.8},
-  {x:16,y:46,r:3.5},{x:84,y:54,r:3.5},
-  {x:44,y:30,r:2.5},{x:56,y:70,r:2.5},
-  {x:42,y:54,r:2.5},{x:58,y:46,r:2.5},
-  {x:36,y:48,r:2.5},{x:64,y:52,r:2.5},
+export const RIVER = Object.freeze({
+  width: 22,
+  points: [{x:42,y:38},{x:66,y:62},{x:88,y:84},{x:110,y:110},{x:132,y:136},{x:154,y:158},{x:178,y:182}],
+});
+
+// 坑位在雙方基地中垂線上，並互為 180° 鏡射。
+export const PITS = {
+  dragon: { x:160, y:157.8260869565 },
+  baron: { x:60, y:62.1739130435 },
+};
+export const WATER = [
+  { ...PITS.baron, r: 12 }, { ...PITS.dragon, r: 12 },
+  {x:82,y:80,r:7.5},{x:110,y:110,r:8},{x:138,y:140,r:7.5},
 ];
-export const WATER = OBSTACLES.slice(0, 7);   // 河道 + 龍/巴龍坑（不拉伸成牆）
-export const WALLS = OBSTACLES.slice(7);      // 樹林/石牆（垂直拉伸 + 用於英雄避讓）
+const BLUE_WALLS = [
+  {x:34,y:154,r:7},{x:52,y:168,r:6},{x:70,y:176,r:7},{x:88,y:162,r:6},
+  {x:42,y:130,r:6},{x:62,y:138,r:7},{x:82,y:146,r:6},{x:98,y:158,r:5},
+  {x:52,y:106,r:7},{x:74,y:116,r:6},{x:94,y:128,r:5.5},
+  {x:112,y:170,r:6},{x:126,y:184,r:6},{x:100,y:190,r:5},
+];
+const RED_WALLS = BLUE_WALLS.map((o) => ({ x: WORLD_SIZE - o.x, y: WORLD_SIZE - o.y, r: o.r }));
+export const WALLS = [...BLUE_WALLS, ...RED_WALLS];
+export const OBSTACLES = [...WATER, ...WALLS];
 
 // S29（公平性修正 2/2）：baron 坑原為 {33,32}，**不在** 兩基地連線的中垂線上
 //   ⇒ 藍→baron 61.7、紅→baron 59.2（紅方近 2.4 單位）。引擎的目標爭奪規則是
@@ -71,35 +89,50 @@ export const WALLS = OBSTACLES.slice(7);      // 樹林/石牆（垂直拉伸 + 
 //   系統性優勢。移到中垂線上的 {33,34} ⇒ 藍 59.8 / 紅 60.0（差 0.2）。
 //   ⚠ 對稱判準採「**每個坑對雙方基地等距**」，不是「兩坑互為 180° 鏡像」：
 //     引擎中雙方爭奪的是**同一個坑**，等距才是公平性的充要條件。
-export const PITS = { dragon: { x:74, y:73 }, baron: { x:33, y:34 } };
 // S29（公平性修正 1/2）：紅方基地/泉水原本不是藍方的 180° 鏡像——
 //   BASE.red 原為 {87,16}（鏡像應為 {88,10}）、FOUNTAIN.red 原為 {91,12}（應為 {91,7}）。
-//   紅方基地因此比藍方**離地圖中心近約 6 單位** ⇒ 紅方到小龍/巴龍各近 6 單位、
+//   紅方基地因此比藍方**離地圖中心近約 6 單位** ⇒ 紅方到 Dragon/Baron 各近 6 單位、
 //   死亡後回線更快。實測（修掉「藍方先手」偏差後）紅方勝率因此被推到 ~75%。
 //   改為精確鏡像 ⇒ 兩軍到雙目標的距離差 <0.5 單位。
 //   ⚠ 這條性質由 check_moba_runtime29 的「地圖對稱」invariant **以規則判定**（比距離，
 //     不比座標）——改動 BASE / FOUNTAIN / PITS 若破壞對稱，該測試會直接紅。
-export const BASE = { blue: { x:12, y:90 }, red: { x:88, y:10 } };
-export const FOUNTAIN = { blue: { x:9, y:93 }, red: { x:91, y:7 } };
+export const BASE = { blue: { x:22, y:202 }, red: { x:198, y:18 } };
+export const FOUNTAIN = { blue: { x:14, y:210 }, red: { x:206, y:10 } };
 export const TOWER_T = { blue: [0.15, 0.33, 0.48], red: [0.85, 0.67, 0.52] };
 export const BUSHES = [
-  {x:30,y:42,r:4},{x:70,y:58,r:4},{x:42,y:62,r:3.5},{x:58,y:38,r:3.5},
-  {x:20,y:50,r:3},{x:80,y:50,r:3},{x:24,y:80,r:3.5},{x:76,y:20,r:3.5},
-  {x:46,y:20,r:3},{x:54,y:80,r:3},
+  {x:50,y:92,r:7},{x:170,y:128,r:7},{x:88,y:148,r:6},{x:132,y:72,r:6},
+  {x:38,y:118,r:6},{x:182,y:102,r:6},{x:48,y:178,r:6},{x:172,y:42,r:6},
+  {x:96,y:58,r:5},{x:124,y:162,r:5},{x:78,y:96,r:5},{x:142,y:124,r:5},
 ];
 
-// ── S29B1：野怪營地座標（單一真實來源：主畫面 / Minimap / Replay / 引擎共用）──
+// ── S29B1：Jungle Camp 座標（單一真實來源：主畫面 / Minimap / Replay / 引擎共用）──
 //  選點規則（以腳本掃格驗證，非手感）：兩側 180° 鏡像（100-x,100-y）、距任一障礙
 //  ≥ r+1.8（英雄避讓半徑 r+1.4 + 互動餘裕）、距三路路線 ≥5.5、距龍/巴龍坑 ≥8、
 //  距草叢 ≥ r+1.5。side 表示「屬於哪一方野區」（該側打野的預設農怪路線）。
 export const CAMPS = [
-  { id: "camp_blue_buff", side: "blue", type: "buff", x: 47, y: 63 },
-  { id: "camp_blue_a",    side: "blue", type: "camp", x: 41, y: 78 },
-  { id: "camp_blue_b",    side: "blue", type: "camp", x: 52, y: 74 },
-  { id: "camp_red_buff",  side: "red",  type: "buff", x: 53, y: 37 },
-  { id: "camp_red_a",     side: "red",  type: "camp", x: 59, y: 22 },
-  { id: "camp_red_b",     side: "red",  type: "camp", x: 48, y: 26 },
+  { id: "camp_blue_buff", side: "blue", type: "buff", presentationKey: "blueBuff", x: 74, y: 154 },
+  { id: "camp_blue_a",    side: "blue", type: "camp", presentationKey: "jungleCamp", x: 48, y: 142 },
+  { id: "camp_blue_b",    side: "blue", type: "camp", presentationKey: "jungleCamp", x: 96, y: 174 },
+  { id: "camp_red_buff",  side: "red",  type: "buff", presentationKey: "redBuff", x: 146, y: 66 },
+  { id: "camp_red_a",     side: "red",  type: "camp", presentationKey: "jungleCamp", x: 172, y: 78 },
+  { id: "camp_red_b",     side: "red",  type: "camp", presentationKey: "jungleCamp", x: 124, y: 46 },
 ];
+
+export const OBJECTIVE_PRESENTATION = Object.freeze({
+  dragon: Object.freeze({ key: "dragon", label: "Dragon", displayName: "Dragon（巨龍）", color: 0xc084fc, accent: 0x67e8f9, icon: "winged-drake", silhouette: "wide-winged" }),
+  baron: Object.freeze({ key: "baron", label: "Baron", displayName: "Baron（巴龍）", color: 0xf59e0b, accent: 0xa78bfa, icon: "crowned-serpent", silhouette: "tall-serpent" }),
+  blueBuff: Object.freeze({ key: "blueBuff", label: "Blue Buff", displayName: "Blue Buff", color: 0x38bdf8, accent: 0xdbeafe, icon: "twin-crystal", silhouette: "broad-golem" }),
+  redBuff: Object.freeze({ key: "redBuff", label: "Red Buff", displayName: "Red Buff", color: 0xf97316, accent: 0xfef3c7, icon: "horned-flame", silhouette: "horned-beast" }),
+  jungleCamp: Object.freeze({ key: "jungleCamp", label: "Jungle Camp", displayName: "Jungle Camp", color: 0x84cc16, accent: 0xecfccb, icon: "pack-claw", silhouette: "creature-pack" }),
+});
+export const presentationForObjective = (objective) => {
+  const key = objective?.presentationKey ?? objective?.id ?? objective?.type;
+  if (OBJECTIVE_PRESENTATION[key]) return OBJECTIVE_PRESENTATION[key];
+  if (objective?.type === "buff") return OBJECTIVE_PRESENTATION[objective?.side === "red" ? "redBuff" : "blueBuff"];
+  return OBJECTIVE_PRESENTATION.jungleCamp;
+};
+
+export const INVASION_POINT = { blue: { x:142, y:72 }, red: { x:78, y:148 } };
 
 export const ROLES = ["top", "jungle", "mid", "adc", "sup"];
 export const ROLE_LANE = { top: "top", jungle: "mid", mid: "mid", adc: "bot", sup: "bot" };

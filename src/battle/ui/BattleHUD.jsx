@@ -98,8 +98,8 @@ export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
         <TowerDots towers={snap.towers || {}} side="blue" />
         <div style={{ display: "flex", gap: 8 }}>
-          {pit(snap.dragon || { alive: false, respawn: 0 }, "小龍", "🐉")}
-          {pit(snap.baron || { alive: false, respawn: 0 }, "巴龍", "👑")}
+          {pit(snap.dragon || { alive: false, respawn: 0 }, "Dragon", "D")}
+          {pit(snap.baron || { alive: false, respawn: 0 }, "Baron", "B")}
         </div>
         <TowerDots towers={snap.towers || {}} side="red" />
       </div>

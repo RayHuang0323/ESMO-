@@ -22,7 +22,7 @@ const ck = (n, c) => A.push([n, !!c]);
 
 const { LogicEngine } = await import(u("src/LogicEngine.js"));
 const { SIM_RULES, rulesFor, XP } = await import(u("src/battle/moba/matchProgression.js"));
-const { CAMPS, PITS, BASE, FOUNTAIN, dist } = await import(u("src/gameData.js"));
+const { CAMPS, PITS, BASE, FOUNTAIN, WORLD_BOUNDS, dist } = await import(u("src/gameData.js"));
 const { BattleEventTracker } = await import(u("src/battle/battleEvents.js"));
 const { toEngineTactic, STANDARD_OPP_TACTIC, MOBA_TACTICS } = await import(u("src/platform/contracts/MobaTacticConfig.js"));
 const { beginReplayCapture, captureReplayFrame, finalizeReplay, clearReplay } = await import(u("src/battle/moba/replay/replayBuffer.js"));
@@ -153,7 +153,7 @@ ck(`3) 首殺時間分布合理（p10=${pct(fks, 10).toFixed(0)}s、p50=${pct(fk
 {
   const e = new LogicEngine(1, null, { rules: "v3" });
   const p = e.players.find((x) => x.id === "b1");
-  p.pos = { x: 50, y: 50 }; p.hp = p.maxHp * 0.10;
+  p.pos = { x: WORLD_BOUNDS.centerX, y: WORLD_BOUNDS.centerY }; p.hp = p.maxHp * 0.10;
   const d0 = dist(p.pos, FOUNTAIN.blue);
   e.tick(DT); e.tick(DT);
   ck(`5) 低血量會撤退（10% HP ⇒ retreating=true 且向泉水移動：${d0.toFixed(1)} → ${dist(p.pos, FOUNTAIN.blue).toFixed(1)}）`,
@@ -239,7 +239,10 @@ ck(`12) Baron 真實出生（出生於 ${V3.baronSpawn}s；maxHp=${V3.baronHp}�
   runsV3.every((r) => r.baronSpawnT === null ? r.eng.t < V3.baronSpawn : Math.abs(r.baronSpawnT - V3.baronSpawn) <= DT + 1e-9) &&
   runsV3.filter((r) => r.baronSpawnT !== null).length >= runsV3.length * 0.9);
 {
-  const mirror = (p) => ({ x: 100 - p.x, y: 100 - p.y });
+  const mirror = (p) => ({
+    x: WORLD_BOUNDS.minX + WORLD_BOUNDS.maxX - p.x,
+    y: WORLD_BOUNDS.minY + WORLD_BOUNDS.maxY - p.y,
+  });
   const mirrored = CAMPS.filter((c) => c.side === "blue").every((c) => {
     const m = CAMPS.find((d) => d.side === "red" && d.type === c.type && dist(mirror(c), d) < 1e-9);
     return !!m;

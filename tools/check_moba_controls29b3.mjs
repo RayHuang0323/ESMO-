@@ -145,14 +145,14 @@ ck(`8) camera mode 集合 = director/free/heroFocus/objectiveFocus（現值 ${CA
 // ── 12–14) 地圖可讀性 / 塔光效 ───────────────────────────────────────────────
 {
   const V3D = src("src/MobaView3D.jsx");
-  ck("12) Dragon/Baron/fountain/camps 有可辨識 presentation（billboard 標籤：魔龍/凱撒/泉水/野怪/BUFF；地面文字：DRAGON/BARON；泉水平台+十字；基地方界）",
-    /mkTag\("魔龍"/.test(V3D) && /mkTag\("凱撒"/.test(V3D) && /mkTag\("泉水"/.test(V3D) &&
-    /"野怪"/.test(V3D) && /"BUFF"/.test(V3D) &&
-    /魔龍 DRAGON/.test(V3D) && /凱撒 BARON/.test(V3D) &&
+  ck("12) Dragon/Baron/fountain/camps 有可辨識 presentation（同源 metadata、程序化輪廓、地面文字、泉水平台與基地方界）",
+    /mkTag\("Dragon"/.test(V3D) && /mkTag\("Baron"/.test(V3D) && /mkTag\("泉水"/.test(V3D) &&
+    /makeNeutralVisual/.test(V3D) && /OBJECTIVE_PRESENTATION/.test(V3D) &&
+    /DRAGON 巨龍/.test(V3D) && /BARON 巴龍/.test(V3D) &&
     /FOUNTAIN\.blue/.test(V3D) && /strokeRect/.test(V3D));
-  ck("13) 中央黃框/粉紅框不再是唯一語意（每個色塊標記都伴隨文字標籤：pit 環+「魔龍/凱撒」、camp 菱形+「野怪/BUFF」）",
+  ck("13) 色框不再是唯一語意（Dragon/Baron 地面字；Buff/Jungle Camp 由同源 label 標示）",
     /label\(PITS\.dragon/.test(V3D) && /label\(PITS\.baron/.test(V3D) &&
-    /label\(c\.x, c\.y \+ 3\.1/.test(V3D));
+    /presentationForObjective\(c\)/.test(V3D) && /mkTag\(p\.label/.test(V3D));
   const cV3D = code(V3D);
   // S29B4：常態 idle emissive 再降（0.75/0.55 → idleEmiss 0.14/0.06）——斷言隨之更新
   //   （值改小＝常態光更低，仍「常態 < 受擊/摧毀」，本檢查語意不變、非弱化）。

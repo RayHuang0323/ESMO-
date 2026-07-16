@@ -13,7 +13,7 @@
 // ============================================================================
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { REPLAY_SPEEDS, SIM_PER_REAL } from "../../platform/contracts/mobaReplay.js";
-import { PITS, fmtT } from "../../gameData.js";
+import { PITS, fmtT, WORLD_BOUNDS, LANES, RIVER, presentationForObjective } from "../../gameData.js";
 import { GC, MONO } from "../../ui/theme.js";
 
 const SIDE_C = { blue: "#3b82f6", red: "#ef4444" };
@@ -61,6 +61,13 @@ export default function MobaReplayScreen({ replay, onClose }) {
   const playersMeta = replay?.playersMeta ?? [];
   const sA = a?.s ?? [0, 0], gA = a?.g ?? [0, 0], gB = b?.g ?? gA;
   const twA = a?.tw ?? {}, wpA = a?.wp ?? 0.5, wpB = b?.wp ?? wpA;
+  // S29B5：新 replay 帶當局 mapMeta；舊 replay 無欄位時保留 0–100 相容。
+  const legacyBounds = { minX: 0, minY: 0, maxX: 100, maxY: 100, width: 100, height: 100 };
+  const mapBounds = replay?.mapMeta?.bounds ?? legacyBounds;
+  const mapLanes = replay?.mapMeta?.lanes ?? (mapBounds.width === WORLD_BOUNDS.width ? LANES : null);
+  const mapRiver = replay?.mapMeta?.river ?? (mapBounds.width === WORLD_BOUNDS.width ? RIVER : null);
+  const viewBox = `${mapBounds.minX} ${mapBounds.minY} ${mapBounds.width} ${mapBounds.height}`;
+  const pathD = (pts = []) => pts.map((p, i) => `${i ? "L" : "M"}${p.x},${p.y}`).join(" ");
 
   if (!replay || frames.length === 0) {
     return (
@@ -94,12 +101,15 @@ export default function MobaReplayScreen({ replay, onClose }) {
 
       {/* 2D 戰場（100×100 引擎座標；y 向下為正 → 直接映射） */}
       <div style={{ flex: 1, minHeight: 0, width: "100%", display: "flex", justifyContent: "center" }}>
-        <svg viewBox="0 0 100 100" style={{ height: "100%", maxWidth: "100%", aspectRatio: "1", background: "linear-gradient(135deg,#0e1a14,#0b1220)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
+        <svg viewBox={viewBox} style={{ height: "100%", maxWidth: "100%", aspectRatio: "1", background: "linear-gradient(135deg,#0e1a14,#0b1220)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
           {/* 河道對角線 + 三路示意 */}
-          <line x1="100" y1="0" x2="0" y2="100" stroke="rgba(56,189,248,0.14)" strokeWidth="6" />
-          <path d="M8,92 L8,8 L92,8" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
-          <path d="M8,92 L92,8" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
-          <path d="M8,92 L92,92 L92,8" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
+          {mapRiver ? <path d={pathD(mapRiver.points)} fill="none" stroke="rgba(56,189,248,0.18)" strokeWidth={mapRiver.width} strokeLinecap="round" />
+            : <line x1="100" y1="0" x2="0" y2="100" stroke="rgba(56,189,248,0.14)" strokeWidth="6" />}
+          {mapLanes ? Object.entries(mapLanes).map(([lane, pts]) => <path key={lane} d={pathD(pts)} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5" strokeLinejoin="round" />) : <>
+            <path d="M8,92 L8,8 L92,8" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
+            <path d="M8,92 L92,8" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
+            <path d="M8,92 L92,92 L92,8" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
+          </>}
           {/* 塔（位置只存於 towersMeta；血量逐 frame） */}
           {Object.entries(towersMeta).map(([id, tw]) => {
             const hp = twA[id] ?? 0;
@@ -111,9 +121,6 @@ export default function MobaReplayScreen({ replay, onClose }) {
               </g>
             );
           })}
-          {/* 龍 / 巴龍 */}
-          {a?.dr === 1 && <text x={PITS.dragon.x} y={PITS.dragon.y + 1.5} fontSize="4.5" textAnchor="middle">🐉</text>}
-          {a?.br === 1 && <text x={PITS.baron.x} y={PITS.baron.y + 1.5} fontSize="4.5" textAnchor="middle">👑</text>}
           {/* S29B1/S29B2：中立目標（位置存於 objectivesMeta；frame.ob = hp 0–1，0=死亡；
               a→b 插值 ⇒ 與現場一致的逐步掉血。舊 replay 無此欄 ⇒ 不渲染，不炸畫面） */}
           {(replay.objectivesMeta ?? []).map((om, i) => {
@@ -121,10 +128,15 @@ export default function MobaReplayScreen({ replay, onClose }) {
             const hp = hpA > 0 ? lerp(hpA, hpB > 0 ? hpB : hpA, f) : 0;
             if (!(hp > 0)) return null;
             const isCamp = om.type === "camp" || om.type === "buff";
-            const c = om.type === "buff" ? "#f472b6" : om.type === "camp" ? "#a3e635" : om.type === "dragon" ? "#b794f6" : "#fbbf24";
+            const meta = presentationForObjective(om);
+            const c = `#${meta.color.toString(16).padStart(6, "0")}`;
+            const r = isCamp ? 2.4 : om.type === "dragon" ? 5.2 : 4.6;
             return (
               <g key={om.id}>
-                {isCamp && <circle cx={om.pos.x} cy={om.pos.y} r="1.2" fill={c} opacity="0.85" />}
+                {om.type === "dragon" && <path d={`M${om.pos.x-r*1.6},${om.pos.y} L${om.pos.x},${om.pos.y-r} L${om.pos.x+r*1.6},${om.pos.y} L${om.pos.x},${om.pos.y+r} Z`} fill={c} opacity="0.9" />}
+                {om.type === "baron" && <path d={`M${om.pos.x-r},${om.pos.y+r} L${om.pos.x-r*.55},${om.pos.y-r} L${om.pos.x},${om.pos.y-r*1.5} L${om.pos.x+r*.55},${om.pos.y-r} L${om.pos.x+r},${om.pos.y+r} Z`} fill={c} opacity="0.9" />}
+                {om.type === "buff" && <rect x={om.pos.x-r} y={om.pos.y-r} width={r*2} height={r*2} rx={r*.35} fill={c} opacity="0.9" />}
+                {om.type === "camp" && <path d={`M${om.pos.x},${om.pos.y-r} L${om.pos.x+r},${om.pos.y+r} L${om.pos.x-r},${om.pos.y+r} Z`} fill={c} opacity="0.85" />}
                 {/* HP 條：真實 hp（非估計）；受擊期間逐 frame 縮短 */}
                 {hp < 0.999 && (
                   <g>

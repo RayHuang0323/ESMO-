@@ -16,13 +16,21 @@
 import {
   createMobaReplay, snapshotToFrame, FRAME_INTERVAL_S, MAX_FRAMES,
 } from "../../../platform/contracts/mobaReplay.js";
+import { WORLD_BOUNDS, LANES, RIVER } from "../../../gameData.js";
 
 let cap = null;        // 進行中的擷取 { seed, config, startedAt, frames, playersMeta, towersMeta, lastT, truncated }
 let current = null;    // 最近一場完成的 MobaReplay.v1（session 記憶體，最多 1 場）
 
 /** 開始擷取新一場（覆蓋上一場的進行中擷取；已完成的 current 保留到下一次 finalize）。 */
 export function beginReplayCapture({ seed = null, config = {} } = {}) {
-  cap = { seed, config, startedAt: Date.now(), frames: [], playersMeta: [], towersMeta: {}, objectivesMeta: [], lastT: -Infinity, truncated: false };
+  cap = {
+    seed, config, startedAt: Date.now(), frames: [], playersMeta: [], towersMeta: {}, objectivesMeta: [], lastT: -Infinity, truncated: false,
+    mapMeta: {
+      bounds: { ...WORLD_BOUNDS },
+      lanes: Object.fromEntries(Object.entries(LANES).map(([k, pts]) => [k, pts.map((p) => ({ ...p }))])),
+      river: { width: RIVER.width, points: RIVER.points.map((p) => ({ ...p })) },
+    },
+  };
 }
 
 /** 每幀呼叫：依間隔取樣；終局幀一定收。未 begin / 已達上限 → no-op。 */
@@ -36,7 +44,7 @@ export function captureReplayFrame(snap) {
     cap.playersMeta = snap.players.map((p) => ({ id: p.id, side: p.side, role: p.role }));
     cap.towersMeta = Object.fromEntries(Object.entries(snap.towers).map(([id, t]) => [id, { side: t.side, lane: t.lane, pos: { x: t.pos.x, y: t.pos.y } }]));
     // S29B1：中立目標 meta（位置只存一次；frame.ob 依此順序存 alive 位元）
-    cap.objectivesMeta = (snap.objectives ?? []).map((o) => ({ id: o.id, type: o.type, side: o.side, pos: { x: o.pos.x, y: o.pos.y } }));
+    cap.objectivesMeta = (snap.objectives ?? []).map((o) => ({ id: o.id, type: o.type, side: o.side, presentationKey: o.presentationKey ?? o.id, pos: { x: o.pos.x, y: o.pos.y } }));
   }
   cap.frames.push(snapshotToFrame(snap));
   cap.lastT = snap.ts;
@@ -63,6 +71,7 @@ export function finalizeReplay({ matchId, events = [], comms = [], resultSummary
     truncated: cap.truncated,
   });
   replay.objectivesMeta = cap.objectivesMeta ?? [];   // S29B1：位置只存一次（同座標來源）
+  replay.mapMeta = cap.mapMeta;                       // S29B5：新世界邊界/路線/河道；舊 replay 可無此欄
   // S29：播報＝**本場實際產生的原始訊息**，原封存入 Replay。
   //   Replay 播放時只讀這份，**不重新生成對話**（S29 §八紅線）。
   replay.comms = comms.map((c) => ({

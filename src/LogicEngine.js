@@ -17,13 +17,18 @@
 // ============================================================================
 
 import {
-  clamp, dist, posOnLane, WALLS, PITS, BASE, FOUNTAIN, TOWER_T,
+  clamp, dist, posOnLane, laneLength, WALLS, PITS, BASE, FOUNTAIN, TOWER_T,
   ROLES, ROLE_LANE, TOWER_HP, NEXUS_HP, SIDE, BUSHES, CAMPS,
+  WORLD_BOUNDS, INVASION_POINT,
 } from "./gameData.js";
 // S29：本場英雄等級/XP 與模擬節奏常數（純資料 + 純函式；引擎不自己定義曲線）
 import {
   rulesFor, XP, addMatchXp, powerMultFor, hpMultFor, xpToNext,
 } from "./battle/moba/matchProgression.js";
+
+const MAP_EDGE_PAD = 3;
+const clampMapX = (x) => clamp(x, WORLD_BOUNDS.minX + MAP_EDGE_PAD, WORLD_BOUNDS.maxX - MAP_EDGE_PAD);
+const clampMapY = (y) => clamp(y, WORLD_BOUNDS.minY + MAP_EDGE_PAD, WORLD_BOUNDS.maxY - MAP_EDGE_PAD);
 
 export class LogicEngine {
   /**
@@ -116,8 +121,8 @@ export class LogicEngine {
     this.recallLog = [];      // S29B3：回城事件 [{ id, t, playerId, side, phase, from? }]
     this._recallSeq = 1;
     if (R.neutralObjectives) {
-      const mk = (id, type, side, pos, maxHp, spawnAt, respawn) => ({
-        id, type, side, pos: { ...pos }, alive: false, hp: 0, maxHp,
+      const mk = (id, type, side, pos, maxHp, spawnAt, respawn, presentationKey = id) => ({
+        id, type, side, presentationKey, pos: { ...pos }, alive: false, hp: 0, maxHp,
         spawnAt, respawnAt: spawnAt, respawn, killerTeam: null,
         participants: new Set(), dmgBy: { blue: 0, red: 0 },
       });
@@ -125,7 +130,7 @@ export class LogicEngine {
         mk("dragon", "dragon", null, PITS.dragon, R.dragonHp, R.dragonSpawn, R.objRespawn),
         mk("baron", "baron", null, PITS.baron, R.baronHp, R.baronSpawn, R.objRespawn),
         ...CAMPS.map((c) => mk(c.id, c.type, c.side, { x: c.x, y: c.y },
-          c.type === "buff" ? R.buffCampHp : R.campHp, R.campFirstSpawn, R.campRespawn)),
+          c.type === "buff" ? R.buffCampHp : R.campHp, R.campFirstSpawn, R.campRespawn, c.presentationKey)),
       ];
       this.neutrals = { list, dragon: list[0], baron: list[1], camps: list.slice(2) };
     } else this.neutrals = null;
@@ -168,7 +173,7 @@ export class LogicEngine {
       //   無能力層 ⇒ 原值。無論如何 rng2 都抽一次 ⇒ 序列不變。
       const jg = this._modById(side[0] + "2");
       const invadeChance = jg ? clamp(K.invadeChance + jg.invadeAdj, 0, 1) : K.invadeChance;
-      if (this.rng2() < invadeChance) { st.invadeUntil = 50; this.exec[side].invadeAttempts++; }
+      if (this.rng2() < invadeChance) { st.invadeUntil = this.rules.invasionWindow ?? 50; this.exec[side].invadeAttempts++; }
       this._tac[side] = st;
     }
   }
@@ -406,8 +411,8 @@ export class LogicEngine {
           const dd = dist(p.pos, foe.pos);
           if (dd > R.contactKeep && dd <= 8 && foe.hp < foe.maxHp * R.flashChaseHp) {
             casts.push([p, "chase", {
-              x: clamp(foe.pos.x + ((p.pos.x - foe.pos.x) / dd) * 1.5, 3, 97),
-              y: clamp(foe.pos.y + ((p.pos.y - foe.pos.y) / dd) * 1.5, 3, 97),
+              x: clampMapX(foe.pos.x + ((p.pos.x - foe.pos.x) / dd) * 1.5),
+              y: clampMapY(foe.pos.y + ((p.pos.y - foe.pos.y) / dd) * 1.5),
             }]);
           }
         }
@@ -419,8 +424,8 @@ export class LogicEngine {
           const alliesH = alive.filter((q) => !q.dead && q.side === p.side && dist(q.pos, hot) < 20).length;
           if (alliesH >= foesH) {
             casts.push([p, "engage", {
-              x: clamp(p.pos.x + ((hot.x - p.pos.x) / dh) * 6, 3, 97),
-              y: clamp(p.pos.y + ((hot.y - p.pos.y) / dh) * 6, 3, 97),
+              x: clampMapX(p.pos.x + ((hot.x - p.pos.x) / dh) * 6),
+              y: clampMapY(p.pos.y + ((hot.y - p.pos.y) / dh) * 6),
             }]);
           }
         }
@@ -594,7 +599,8 @@ export class LogicEngine {
         const hasWave = myMinions.some((m) => Math.abs(m.t - tw.t) < 0.06);
         if (!hasWave) soloK = R.heroTowerSoloK;
       }
-      const td = R.heroTowerDmg * soloK * dt * lateFactor; tw.hp -= td; p.twrDmg += td;
+      const structureFactor = R.structureAccelT ? 1 + Math.max(0, this.t - R.structureAccelT) / R.structureAccelDiv : 1;
+      const td = R.heroTowerDmg * soloK * dt * lateFactor * structureFactor; tw.hp -= td; p.twrDmg += td;
       // S24：推塔波次（同隊 10 秒節流一次的真實計數）
       if (K && this.t - S.pushTick > 10) { S.pushTick = this.t; this.exec[p.side].towerPushes++; }
     }
@@ -688,8 +694,13 @@ export class LogicEngine {
       }
     }
     for (const ln of ["top", "mid", "bot"]) {
-      this.lanes[ln].bm.forEach((m) => (m.t = Math.min(1, m.t + 0.018 * dt)));
-      this.lanes[ln].rm.forEach((m) => (m.t = Math.max(0, m.t - 0.018 * dt)));
+      // S29B5：v2/v3 以世界單位/秒推進，地圖變長就真實增加 travel time。
+      // v1 保留舊 progress/秒作為檢定力對照，不因新世界回寫歷史規則。
+      const minionStep = R.minionWorldSpeed
+        ? (R.minionWorldSpeed / laneLength(ln)) * dt
+        : (R.minionProgressSpeed ?? 0.018) * dt;
+      this.lanes[ln].bm.forEach((m) => (m.t = Math.min(1, m.t + minionStep)));
+      this.lanes[ln].rm.forEach((m) => (m.t = Math.max(0, m.t - minionStep)));
       if (R.symmetricMinionCombat) {
         // S29 修正（公平性 bug）：舊碼只迭代**藍方**小兵——多隻藍兵會挑到同一隻紅兵、
         //   把傷害集中在牠身上（死得快），藍兵受到的傷害卻是分散的 ⇒ 紅兵系統性先死。
@@ -730,7 +741,8 @@ export class LogicEngine {
           const n = Math.min(arr.filter((m) => Math.abs(m.t - tw.t) <= R.minionSiegeBand).length, R.minionSiegeCap);
           // S29B1（v3）：巴龍 buff——擊殺方限時兵線攻城強化（收尾機制）
           const bk = R.engagementFsm && this.fsm3 && this.t < (this.fsm3[side].baronBuffUntil ?? 0) ? R.baronMinionK : 1;
-          if (n > 0) { tw.hp -= R.minionTowerDmg * n * bk * dt * lateFactor; this._dmgGold(side, 0); }
+          const structureFactor = R.structureAccelT ? 1 + Math.max(0, this.t - R.structureAccelT) / R.structureAccelDiv : 1;
+          if (n > 0) { tw.hp -= R.minionTowerDmg * n * bk * dt * lateFactor * structureFactor; this._dmgGold(side, 0); }
         }
       });
       ["blue", "red"].forEach((side) => {
@@ -792,8 +804,8 @@ export class LogicEngine {
         if (nf) {
           const f = FOUNTAIN[p.side], dd = dist(p.pos, f) || 1;
           casts.push([p, {
-            x: clamp(p.pos.x + ((f.x - p.pos.x) / dd) * R.flashDist, 3, 97),
-            y: clamp(p.pos.y + ((f.y - p.pos.y) / dd) * R.flashDist, 3, 97),
+            x: clampMapX(p.pos.x + ((f.x - p.pos.x) / dd) * R.flashDist),
+            y: clampMapY(p.pos.y + ((f.y - p.pos.y) / dd) * R.flashDist),
           }]);
         }
       }
@@ -951,7 +963,7 @@ export class LogicEngine {
       // S24：開局野區入侵（configureMatch 時擲骰；打野＋跟進中路在前 50 秒壓入敵方野區）
       let tacTgt = null;
       if (K && !p.retreating && this.t < (S.invadeUntil || 0) && (p.role === "jungle" || (K.invadeWithMid && p.role === "mid"))) {
-        tacTgt = p.side === "blue" ? { x: 62, y: 30 } : { x: 38, y: 70 }; stOv = "入侵";
+        tacTgt = INVASION_POINT[p.side]; stOv = "入侵";
       }
       // S24：打野 Gank 節奏機（依 tempo 週期、依權重挑路；到點後 9 秒壓該路前線）
       if (K && !tacTgt && p.role === "jungle" && !p.retreating) {
@@ -1076,7 +1088,10 @@ export class LogicEngine {
           else {
             // 壓向該路敵方前線塔（塔破 frontTower 前移 → 自然逐塔推進）
             // S24：推線深度偏移（lanePlan/aggression/towerPriority 派生，±0.09；未啟用 = 0）
-            let base = p.side === "blue" ? 0.30 + this.t / 600 : 0.70 - this.t / 600;
+            const laneAdvance = R.laneAdvanceWorldSpeed
+              ? (this.t * R.laneAdvanceWorldSpeed) / laneLength(effLane)
+              : this.t / 600;
+            let base = p.side === "blue" ? 0.30 + laneAdvance : 0.70 - laneAdvance;
             if (K) base += (p.side === "blue" ? 1 : -1) * (K.laneOffset[effLane] || 0);
             // S28：推線深度 += laneAdj（勇氣/手速/抗壓 → 壓得更深；走位/決策 → 站得更安全）
             if (M) base += (p.side === "blue" ? 1 : -1) * M.laneAdj;
@@ -1095,7 +1110,7 @@ export class LogicEngine {
           (R.engagementFsm && p.retreating ? R.retreatSpeedMult : 1) * dt;
       if (d > 0.6) { p.pos.x += ((tgt.x - p.pos.x) / d) * Math.min(spd, d); p.pos.y += ((tgt.y - p.pos.y) / d) * Math.min(spd, d); }
       for (const o of WALLS) { const dd = dist(p.pos, o); if (dd < o.r + 1.4) { p.pos.x += ((p.pos.x - o.x) / (dd || 1)) * (o.r + 1.4 - dd); p.pos.y += ((p.pos.y - o.y) / (dd || 1)) * (o.r + 1.4 - dd); } }
-      p.pos.x = clamp(p.pos.x, 3, 97); p.pos.y = clamp(p.pos.y, 3, 97);
+      p.pos.x = clampMapX(p.pos.x); p.pos.y = clampMapY(p.pos.y);
       // S28：個人行為計數（真實觀測，非編造）——進入團戰的次數、貼在存活目標坑的 tick 數。
       //   紅方（無能力資料）同樣計數 ⇒ 天然對照組：藍方隨天賦變、紅方不變。
       if (this.playerStatsOn) {
@@ -1228,7 +1243,7 @@ export class LogicEngine {
       // S29B1（v3 才出現 → 舊快照形狀不變）：中立目標 / 召喚師技能事件
       ...(R.neutralObjectives ? {
         objectives: this.neutrals.list.map((o) => ({
-          id: o.id, type: o.type, side: o.side, pos: { ...o.pos },
+          id: o.id, type: o.type, side: o.side, presentationKey: o.presentationKey, pos: { ...o.pos },
           alive: o.alive, hp: o.alive ? clamp(o.hp / o.maxHp, 0, 1) : 0, maxHp: o.maxHp,
           respawn: o.alive ? 0 : Math.max(0, Math.round((o.respawnAt - this.t) * 10) / 10),
           killerTeam: o.killerTeam, participants: [...o.participants],

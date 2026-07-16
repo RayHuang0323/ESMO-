@@ -143,3 +143,20 @@
   （維持 S29A ≤2 盞上限，避免手機效能回退）。
 - **Replay 白畫面防護**（`MobaReplayScreen`）：frame/meta 缺欄位一律安全預設，舊格式/
   部分擷取的 replay 不再崩畫面。
+
+---
+
+## S29B5 增補：大世界與中立目標自有輪廓
+
+- 場景 floor 改由 `WORLD_BOUNDS 220×220` 生成，`WORLD_SCALE=1.7` 只負責邏輯→3D 映射，
+  不代表遊戲距離；相機、Minimap、Replay 不得自行複製尺度。
+- Dragon：寬翼低模；Baron：高直蛇身、環節與冠角；Blue Buff：寬體石像＋雙晶；
+  Red Buff：角獸＋背焰；Jungle Camp：三隻小型 creature pack。全部由 Three.js 幾何程序化
+  組合，沒有使用第三方官方模型、icon、紋理或截圖。
+- 光圈不再是中立目標主模型；Dragon / Baron 的 PointLight 已移除。HP bar 仍讀
+  `snapshot.objectives[].hp`，受擊／死亡／重生沿用 29B1/29B2 真實生命週期。
+- 塔／主堡常態仍為 0.06/0.14 idle emissive；被攻擊 +1.6 pulse、摧毀 viewFx。
+  PointLight 原始碼只剩塔／主堡的畫質 gate（≤1 處），未新增大量動態光。
+- 正式可見名稱：Dragon（巨龍）／Baron（巴龍）／Blue Buff／Red Buff／Jungle Camp。
+
+⚠ 程序化輪廓的美術品質、手機辨識度、draw calls/FPS 未經真機驗收。

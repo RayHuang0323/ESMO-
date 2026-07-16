@@ -13,7 +13,7 @@ import MobaView3D from "./MobaView3D.jsx";
 import BattlePresentationLayer from "./battle/ui/BattlePresentationLayer.jsx";
 import { useGameStore } from "./useGameStore.js";
 import { useLocalServer } from "./useLocalServer.js";
-import { LANES, PITS, FOUNTAIN } from "./gameData.js";
+import { LANES, PITS, FOUNTAIN, RIVER, WORLD_BOUNDS, mapNormX, presentationForObjective } from "./gameData.js";
 import { ROSTER } from "./data/roster.js";
 import { draftRoster } from "./battle/moba/draftRoster.js";
 import { loadQuality, saveQuality, presetFor, QUALITY_IDS, QUALITY_PRESETS } from "./battle/quality.js";
@@ -37,19 +37,22 @@ function Minimap({ mobile = false }) {
       if (cv && now - last >= MIN_MS) {
         last = now;
         const snap = useGameStore.getState().snapshot;
-        const g = cv.getContext("2d"), D = cv.width, P = (v) => (v / 100) * D;
+        const g = cv.getContext("2d"), D = cv.width, P = (v) => mapNormX(v, WORLD_BOUNDS) * D;
         const VIS = [];
         snap.players.forEach((p) => { if (p.side === "blue" && !p.dead) VIS.push(p.pos); });
         Object.values(snap.towers).forEach((t) => { if (t.side === "blue" && t.hp > 0) VIS.push(t.pos); });
         const vis = (pos) => VIS.some((v) => (v.x - pos.x) ** 2 + (v.y - pos.y) ** 2 < 289);
         g.clearRect(0, 0, D, D);
         g.fillStyle = "rgba(10,18,28,0.82)"; g.fillRect(0, 0, D, D);
-        g.strokeStyle = "rgba(70,150,200,0.5)"; g.lineWidth = D * 0.05; g.beginPath(); g.moveTo(P(20), P(20)); g.lineTo(P(80), P(80)); g.stroke();
+        g.strokeStyle = "rgba(70,150,200,0.5)"; g.lineWidth = D * 0.05; g.beginPath();
+        RIVER.points.forEach((p, i) => (i ? g.lineTo(P(p.x), P(p.y)) : g.moveTo(P(p.x), P(p.y)))); g.stroke();
         g.strokeStyle = "rgba(190,170,120,0.4)"; g.lineWidth = 2;
         for (const ln of ["top", "mid", "bot"]) { g.beginPath(); LANES[ln].forEach((p, i) => (i ? g.lineTo(P(p.x), P(p.y)) : g.moveTo(P(p.x), P(p.y)))); g.stroke(); }
         Object.values(snap.towers).forEach((t) => { if (t.hp <= 0) return; g.fillStyle = t.side === "blue" ? "#3b82f6" : "#ef4444"; const s = t.lane === "nexus" ? 6 : 3.4; g.fillRect(P(t.pos.x) - s / 2, P(t.pos.y) - s / 2, s, s); });
         // S29B3：坑位環（恆顯示，與主場景 pit 色環一致）+ 存活時實心點
-        [["dragon", PITS.dragon, "#b794f6"], ["baron", PITS.baron, "#fbbf24"]].forEach(([k, pit, c]) => {
+        [["dragon", PITS.dragon], ["baron", PITS.baron]].forEach(([k, pit]) => {
+          const meta = presentationForObjective({ id: k, type: k });
+          const c = `#${meta.color.toString(16).padStart(6, "0")}`;
           g.strokeStyle = c; g.lineWidth = 1;
           g.beginPath(); g.arc(P(pit.x), P(pit.y), 4.4, 0, 7); g.stroke();
           if (!snap[k].alive) return;
@@ -66,8 +69,13 @@ function Minimap({ mobile = false }) {
         (snap.objectives ?? []).forEach((o) => {
           if (o.type !== "camp" && o.type !== "buff") return;
           if (!o.alive) return;
-          g.fillStyle = o.type === "buff" ? "#f472b6" : "#a3e635";
-          g.beginPath(); g.arc(P(o.pos.x), P(o.pos.y), 2, 0, 7); g.fill();
+          const meta = presentationForObjective(o);
+          g.fillStyle = `#${meta.color.toString(16).padStart(6, "0")}`;
+          if (o.presentationKey === "blueBuff" || o.presentationKey === "redBuff") {
+            g.fillRect(P(o.pos.x) - 2.2, P(o.pos.y) - 2.2, 4.4, 4.4);
+          } else {
+            g.beginPath(); g.moveTo(P(o.pos.x), P(o.pos.y) - 2.8); g.lineTo(P(o.pos.x) + 2.8, P(o.pos.y) + 2.2); g.lineTo(P(o.pos.x) - 2.8, P(o.pos.y) + 2.2); g.closePath(); g.fill();
+          }
         });
         snap.players.forEach((p) => {
           if (p.dead) return; if (p.side === "red" && !vis(p.pos)) return;

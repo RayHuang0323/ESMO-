@@ -8,7 +8,7 @@
 //    { t,                          // 模擬秒
 //      p:  [[x,y,hp,dead,k,d,a,gold,lv] ×10],  // 依 playersMeta 固定順序
 //      tw: { towerId: hpRatio },   // 塔血（位置在 towersMeta，只存一次）
-//      dr: 0|1, br: 0|1,           // 小龍 / 巴龍存活
+//      dr: 0|1, br: 0|1,           // Dragon / Baron 存活
 //      s:  [bK, rK],               // 比分
 //      g:  [bGold, rGold],         // 經濟
 //      wp: winProb }               // 勝率條

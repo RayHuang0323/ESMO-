@@ -48,3 +48,18 @@ Bloom 依畫質分級：low 0.7／medium 0.9／high 1.05（`quality.js bloomInte
 
 地圖體感（「看得懂」與否）、文字在各解析度的可讀性、pit/營地在手機上的辨識度
 ——需 Ray 依人工驗收清單實測。
+
+## 5. S29B5 大世界可讀性
+
+- 邏輯地圖 100×100 → 220×220；大型基地位於對角角落，三路沿外圈／對角中路展開，
+  河道以資料化折線分隔兩側野區，Dragon / Baron 各有獨立坑位。
+- Minimap 的座標 transform 使用 `mapNormX/mapNormY(WORLD_BOUNDS)`；主場景、Camera、
+  Replay 使用同一 bounds。舊 Replay 才使用 legacy 100×100 fallback。
+- pit/camp 不再靠黃框／粉紅框或單一色環辨識：五類 presentation metadata 具有不同
+  silhouette、尺寸、主色、標誌與簡化 icon；標籤主名稱同步為 Dragon / Baron / Buff /
+  Jungle Camp。
+- 兩側基地／泉水精確 180° 鏡像，兩個 pit 各自到雙方泉水等距；三路與野區結構可由
+  `LANES/RIVER/WALLS/BUSHES/PITS/CAMPS` 資料辨識。
+
+Ray 真機驗收：320/360/390/430px 小地圖 safe area、基地／三路／河道／野區一眼可辨、
+英雄尺寸與鏡頭 framing、點擊／拖曳／縮放手感，以及是否接近 reference 圖片的結構比例。

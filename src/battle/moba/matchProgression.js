@@ -103,6 +103,7 @@ export const SIM_RULES = {
     id: "v1",
     matchXp: false,              // 舊版：完全沒有本場 XP ⇒ 全場 Lv1
     moveSpeed: 13, fightSpeed: 16,
+    minionProgressSpeed: 0.018, // 歷史規則集：保留 lane progress/秒作對照
     dmgK: 0.92,
     waveFirst: 0, wavePeriod: 16,
     minionTowerDmg: 26,          // × 全路小兵數（不看距離）
@@ -124,6 +125,9 @@ export const SIM_RULES = {
     //   新 4.5 × 2 倍速 = 9 單位/真實秒 ⇒ 跨中路約 11 真實秒。
     //   ⚠ 更慢（2.5）會讓英雄黏在一起打不完的團戰、沒人推塔，比賽拖到 30–40 分（實測）。
     moveSpeed: 4.5, fightSpeed: 5.4,
+    laneAdvanceWorldSpeed: 0.20, // S29B5：v2 歷史規則也改為固定世界前沿速度
+    // S29B5：小兵改用真實世界單位/秒；路線變長不會暗中提高移速抵銷。
+    minionWorldSpeed: 1.8,
     dmgK: 0.65,                  // 實測校準：5 分 ≈ 4 殺（「少量交戰」）、首塔 6.9 分
     waveFirst: 60, wavePeriod: 30,   // 首波 1:00 出兵、30 秒一波（兩軍約 1:25 接線）
     minionTowerDmg: 9,           // 每隻小兵每模擬秒對塔 9（原 26 × 全路小兵數）
@@ -154,6 +158,8 @@ export const SIM_RULES = {
 SIM_RULES.v3 = {
   ...SIM_RULES.v2,
   id: "v3",
+  laneAdvanceWorldSpeed: 0.25,
+  structureAccelT: 1200, structureAccelDiv: 180, // 20 分後只加速拆建築，不改擊殺或移速
   // ── 交戰狀態機（LogicEngine._decideV3）─────────────────────────────────
   engagementFsm: true,
   baseRetreatBonus: 0.06,  // v3 全體基礎撤退餘裕（疊在戰術 retreatAt 之上；撤退要撤得活）
@@ -178,6 +184,7 @@ SIM_RULES.v3 = {
   defenseTowerDeficit: 3,
   defaultGankInterval: 55, // 無戰術時打野的預設 Gank 週期（失敗即進下一輪冷卻）
   defaultGankWindow: 9,
+  invasionWindow: 35,     // S29B5：大地圖入侵只走前段偵察，不在開局直接穿越到敵方腹地
   // ── 塔的攻防（v3）─────────────────────────────────────────────────────────
   //  v2 遺留問題在 v3 被放大：交戰減少後「守方離場 40 秒、攻方 70 DPS 融塔」
   //  成為勝負主導（實測 6.2 分鐘就推掉主堡）。修法**不是加塔血**：
@@ -195,8 +202,9 @@ SIM_RULES.v3 = {
   //  無戰術對局的長尾（120 seeds 實測 p99 34.5 分、max 39.2 分）會超過
   //  regress2 的 32 分上限，也會讓用 cap=1800 跑整場的既有 verifier
   //  （experience26/progress25/stats28…）拿不到終局 snapshot 而 throw。
-  //  20 分鐘起 lateFactor 額外增陡（雙方對稱、傷害與拆塔同倍率）⇒ 平局必然收斂。
-  lateAccelT: 1200, lateAccelDiv: 240,   // 30 分時 ≈ +2.5（疊在既有 1+(t-360)/600 上）
+  //  S29B5 世界距離拉長後，9 分鐘起才讓 lateFactor 額外增陡；前期 travel time 不被抵銷，
+  //  中後期則維持 29B1 的擊殺分布與可收尾性（雙方對稱、傷害與拆塔同倍率）。
+  lateAccelT: 540, lateAccelDiv: 82,
   // ── 死亡計時器成長（v3 的收尾機制）────────────────────────────────────────
   //  v2 公式 6 + min(t/30, 20)：後期上限 20 秒，而守方泉水離主堡只有 10 單位
   //  ⇒ 守方近乎永生、比賽收不掉（v3 初版實測中位 41.6 分、44/120 場打滿上限）。

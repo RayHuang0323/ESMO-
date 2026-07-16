@@ -32,8 +32,8 @@ function engineEffects(t) {
   const out = [];
   const d = (a, b) => a - b;
   if (Math.abs(d(k.joinFight, n.joinFight)) >= 0.03) out.push(`團戰參與 ${k.joinFight > n.joinFight ? "↑" : "↓"}`);
-  if (Math.abs(d(k.dragonJoin, n.dragonJoin)) >= 0.04) out.push(`小龍集結 ${k.dragonJoin > n.dragonJoin ? "↑" : "↓"}`);
-  if (Math.abs(d(k.baronJoin, n.baronJoin)) >= 0.04) out.push(`巴龍集結 ${k.baronJoin > n.baronJoin ? "↑" : "↓"}`);
+  if (Math.abs(d(k.dragonJoin, n.dragonJoin)) >= 0.04) out.push(`Dragon 集結 ${k.dragonJoin > n.dragonJoin ? "↑" : "↓"}`);
+  if (Math.abs(d(k.baronJoin, n.baronJoin)) >= 0.04) out.push(`Baron 集結 ${k.baronJoin > n.baronJoin ? "↑" : "↓"}`);
   if (Math.abs(d(k.retreatAt, n.retreatAt)) >= 0.02) out.push(k.retreatAt < n.retreatAt ? "撤退更晚（高風險）" : "撤退更早（保守）");
   const off = Object.entries(k.laneOffset).filter(([, v]) => Math.abs(v) >= 0.03);
   if (off.length) out.push(`推線深度 ${off.map(([l, v]) => `${{ top: "上", mid: "中", bot: "下" }[l]}${v > 0 ? "↑" : "↓"}`).join("")}`);

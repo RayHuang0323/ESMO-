@@ -79,7 +79,7 @@ const LINES = {
 };
 
 const LANE_ZH = { top: "上路", mid: "中路", bot: "下路" };
-const OBJ_ZH = { dragon: "小龍", baron: "巴龍" };
+const OBJ_ZH = { dragon: "Dragon（巨龍）", baron: "Baron（巴龍）" };
 
 /** 依個性挑句子變體；無對應變體 ⇒ default（決定性：用 idx 而非亂數）。 */
 function pickLine(ruleId, personality, idx) {

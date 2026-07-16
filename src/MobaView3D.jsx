@@ -18,8 +18,10 @@ import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
 import { useGameStore } from "./useGameStore.js";
 import {
-  lerp, clamp, ease, dist, LANES, posOnLane, WATER, WALLS, PITS, BUSHES,
+  lerp, clamp, ease, dist, LANES, posOnLane, WATER, WALLS, PITS, BUSHES, RIVER,
   BASE, FOUNTAIN, ROLE_NAME, SIDE, GLOW, CAMPS,
+  WORLD_BOUNDS, WORLD_SCALE, worldX, worldZ, mapNormX,
+  OBJECTIVE_PRESENTATION, presentationForObjective,
 } from "./gameData.js";
 import BattleCameraController, { fitZoomFor } from "./battle/ui/BattleCameraController.jsx";
 import { useCameraStore } from "./battle/cameraStore.js";
@@ -27,8 +29,8 @@ import { presetFor } from "./battle/quality.js";
 import { useIsMobile } from "./ui/useViewport.js";
 
 // ── 世界尺度（放大；只影響渲染，不影響邏輯）──────────────────────────────────
-const S = 1.7;
-const wx = (x) => (x - 50) * S, wz = (y) => (y - 50) * S;
+const S = WORLD_SCALE;
+const wx = worldX, wz = worldZ;
 // S29B2：英雄可讀性放大係數（實機回報「英雄太小」；只放大視覺模型，不碰座標/邏輯）
 const HK = 1.3;
 const HERO_CAP_Y = 1.7 * HK * S;     // 建立與 useFrame 更新共用，避免兩處不一致
@@ -47,7 +49,7 @@ const _v1 = new THREE.Vector3();
 //  野徑把營地與路連起來 ⇒ 玩家看得懂「哪裡是路、哪裡是野區、目標在哪」。
 function makeRiftTexture() {
   const s = 1024, cv = document.createElement("canvas"); cv.width = cv.height = s;
-  const g = cv.getContext("2d"), px = (p) => (p / 100) * s;
+  const g = cv.getContext("2d"), px = (p) => mapNormX(p) * s;
   const grad = g.createLinearGradient(0, s, s, 0);
   grad.addColorStop(0, "#295f41"); grad.addColorStop(0.5, "#2c6340"); grad.addColorStop(1, "#4a6b30");
   g.fillStyle = grad; g.fillRect(0, 0, s, s);
@@ -63,14 +65,13 @@ function makeRiftTexture() {
     g.beginPath(); g.moveTo(px(c.x), px(c.y)); g.lineTo(px(best.x), px(best.y)); g.stroke();
   }
   // 河道：寬水帶 + 淺灘邊線 + 波光
-  g.strokeStyle = "rgba(38,110,160,0.75)"; g.lineWidth = px(13); g.lineCap = "round";
-  g.beginPath(); g.moveTo(px(20), px(20)); g.lineTo(px(80), px(80)); g.stroke();
-  g.strokeStyle = "rgba(70,160,200,0.6)"; g.lineWidth = px(9);
-  g.beginPath(); g.moveTo(px(20), px(20)); g.lineTo(px(80), px(80)); g.stroke();
+  const riverPath = () => RIVER.points.forEach((p, i) => (i ? g.lineTo(px(p.x), px(p.y)) : g.moveTo(px(p.x), px(p.y))));
+  g.strokeStyle = "rgba(38,110,160,0.75)"; g.lineWidth = px(RIVER.width); g.lineCap = "round";
+  g.beginPath(); riverPath(); g.stroke();
+  g.strokeStyle = "rgba(70,160,200,0.6)"; g.lineWidth = px(RIVER.width * 0.68);
+  g.beginPath(); riverPath(); g.stroke();
   g.strokeStyle = "rgba(160,225,248,0.5)"; g.lineWidth = px(1.4);
-  for (const off of [-2.4, 0, 2.6]) {
-    g.beginPath(); g.moveTo(px(22 - off * 0.7), px(22 + off)); g.lineTo(px(78 - off * 0.7), px(78 + off)); g.stroke();
-  }
+  g.beginPath(); riverPath(); g.stroke();
   // 三路：亮沙色路面 + 深色路緣（兵線行進路徑一眼可辨）
   for (const lane of ["top", "mid", "bot"]) {
     g.strokeStyle = "rgba(60,48,30,0.55)"; g.lineWidth = px(7.6); g.lineJoin = "round";
@@ -79,8 +80,9 @@ function makeRiftTexture() {
     g.beginPath(); LANES[lane].forEach((p, i) => (i ? g.lineTo(px(p.x), px(p.y)) : g.moveTo(px(p.x), px(p.y)))); g.stroke();
   }
   // Dragon / Baron pit：坑面 + 色環（紫=龍、金=巴龍）
-  for (const [key, col] of [["dragon", "183,148,246"], ["baron", "251,191,36"]]) {
+  for (const key of ["dragon", "baron"]) {
     const pit = PITS[key];
+    const hex = OBJECTIVE_PRESENTATION[key].color, col = `${(hex >> 16) & 255},${(hex >> 8) & 255},${hex & 255}`;
     g.fillStyle = "rgba(10,16,20,0.72)";
     g.beginPath(); g.arc(px(pit.x), px(pit.y), px(6.2), 0, 7); g.fill();
     g.strokeStyle = `rgba(${col},0.85)`; g.lineWidth = px(0.9);
@@ -90,7 +92,7 @@ function makeRiftTexture() {
   }
   // 營地標記：菱形 + 色暈（粉=buff、萊姆=一般；與 3D 低模/Minimap 同色系）
   for (const c of CAMPS) {
-    const col = c.type === "buff" ? "244,114,182" : "163,230,53";
+    const hex = presentationForObjective(c).color, col = `${(hex >> 16) & 255},${(hex >> 8) & 255},${hex & 255}`;
     const gr = g.createRadialGradient(px(c.x), px(c.y), px(0.4), px(c.x), px(c.y), px(3.4));
     gr.addColorStop(0, `rgba(${col},0.5)`); gr.addColorStop(1, `rgba(${col},0)`);
     g.fillStyle = gr; g.beginPath(); g.arc(px(c.x), px(c.y), px(3.4), 0, 7); g.fill();
@@ -130,11 +132,14 @@ function makeRiftTexture() {
     g.lineWidth = px(0.5); g.strokeStyle = "rgba(0,0,0,0.8)"; g.strokeText(text, px(x), px(y));
     g.fillStyle = col; g.fillText(text, px(x), px(y));
   };
-  label(PITS.dragon.x, PITS.dragon.y + 8.6, "魔龍 DRAGON", "rgba(200,170,255,0.95)");
-  label(PITS.baron.x, PITS.baron.y - 8.4, "凱撒 BARON", "rgba(253,224,71,0.95)");
+  label(PITS.dragon.x, PITS.dragon.y + 14, "DRAGON 巨龍", "rgba(200,170,255,0.95)");
+  label(PITS.baron.x, PITS.baron.y - 14, "BARON 巴龍", "rgba(253,224,71,0.95)");
   label(FOUNTAIN.blue.x + 6, FOUNTAIN.blue.y - 4.5, "泉水", "rgba(147,197,253,0.95)", 2.2);
   label(FOUNTAIN.red.x - 6, FOUNTAIN.red.y + 4.5, "泉水", "rgba(252,165,165,0.95)", 2.2);
-  for (const c of CAMPS) label(c.x, c.y + 3.1, c.type === "buff" ? "BUFF" : "野怪", c.type === "buff" ? "rgba(244,114,182,0.95)" : "rgba(163,230,53,0.95)", 1.8);
+  for (const c of CAMPS) {
+    const p = presentationForObjective(c);
+    label(c.x, c.y + 5, p.label.toUpperCase(), c.presentationKey === "blueBuff" ? "rgba(56,189,248,0.95)" : c.presentationKey === "redBuff" ? "rgba(249,115,22,0.95)" : "rgba(163,230,53,0.95)", 1.8);
+  }
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; return tex;
 }
 function makeCapsule(r, len, mat) {
@@ -202,6 +207,44 @@ function makeTopper(role, color) {
   const m = new THREE.Mesh(g, mat); if (flat) m.rotation.x = Math.PI / 2; m.castShadow = true; return m;
 }
 
+// S29B5：ESMO 程序化中立目標輪廓。全部由 Three.js 基本幾何組成，
+// 不讀取、不複製任何第三方模型、圖示或紋理。
+function makeNeutralVisual(key, shadows) {
+  const meta = OBJECTIVE_PRESENTATION[key] ?? OBJECTIVE_PRESENTATION.jungleCamp;
+  const root = new THREE.Group(), materials = [];
+  const mat = (color = meta.color, emissive = 0.16) => {
+    const m = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: emissive, roughness: 0.55, metalness: 0.22, flatShading: true });
+    materials.push(m); return m;
+  };
+  const add = (geo, material, x, y, z, rx = 0, ry = 0, rz = 0) => {
+    const mesh = new THREE.Mesh(geo, material); mesh.position.set(x * S, y * S, z * S); mesh.rotation.set(rx, ry, rz); mesh.castShadow = shadows; root.add(mesh); return mesh;
+  };
+  if (key === "dragon") {
+    const body = add(new THREE.IcosahedronGeometry(2.2 * S, 0), mat(), 0, 2.2, 0); body.scale.set(1.65, 0.78, 0.9);
+    add(new THREE.ConeGeometry(1.9 * S, 4.6 * S, 3), mat(meta.accent, 0.1), -3.2, 2.8, 0, 0, 0, -1.18);
+    add(new THREE.ConeGeometry(1.9 * S, 4.6 * S, 3), mat(meta.accent, 0.1), 3.2, 2.8, 0, 0, 0, 1.18);
+    add(new THREE.ConeGeometry(1.0 * S, 2.8 * S, 5), mat(), 0, 2.4, -3.1, Math.PI / 2, 0, 0);
+  } else if (key === "baron") {
+    add(new THREE.CylinderGeometry(2.5 * S, 3.6 * S, 6.8 * S, 7), mat(), 0, 3.4, 0);
+    add(new THREE.TorusGeometry(3.0 * S, 0.7 * S, 6, 10), mat(meta.accent, 0.12), 0, 5.5, 0, Math.PI / 2);
+    for (const x of [-2.2, 0, 2.2]) add(new THREE.ConeGeometry(0.65 * S, 2.7 * S, 5), mat(meta.accent, 0.08), x, 8.0 - Math.abs(x) * 0.25, 0);
+  } else if (key === "blueBuff") {
+    add(new THREE.BoxGeometry(4.6 * S, 4.0 * S, 3.2 * S), mat(), 0, 2.2, 0);
+    add(new THREE.OctahedronGeometry(1.65 * S, 0), mat(meta.accent, 0.08), -3.0, 3.2, 0, 0, 0, -0.25);
+    add(new THREE.OctahedronGeometry(1.65 * S, 0), mat(meta.accent, 0.08), 3.0, 3.2, 0, 0, 0, 0.25);
+  } else if (key === "redBuff") {
+    add(new THREE.DodecahedronGeometry(2.6 * S, 0), mat(), 0, 2.4, 0);
+    add(new THREE.ConeGeometry(0.75 * S, 3.4 * S, 5), mat(meta.accent, 0.08), -1.7, 5.0, 0, 0, 0, -0.35);
+    add(new THREE.ConeGeometry(0.75 * S, 3.4 * S, 5), mat(meta.accent, 0.08), 1.7, 5.0, 0, 0, 0, 0.35);
+    add(new THREE.TetrahedronGeometry(1.1 * S), mat(meta.accent, 0.08), 0, 2.4, -2.7, 0.25, 0, 0);
+  } else {
+    for (const [x, z, s] of [[-1.8,0,1.35],[1.6,-0.4,1.1],[0.3,1.7,0.9]]) {
+      add(new THREE.TetrahedronGeometry(s * S), mat(), x, 1.15 * s, z, 0.2, 0.3, 0);
+    }
+  }
+  return { root, materials, color: meta.color, meta };
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 //  場景內容（命令式建立 + 單一 useFrame 更新）
 // ════════════════════════════════════════════════════════════════════════════
@@ -215,7 +258,7 @@ function MobaScene({ mapTexture, roster, Q }) {
 
     // 地板
     const floorMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1.0, metalness: 0.0 });
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(100 * S, 100 * S), floorMat);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(WORLD_BOUNDS.width * S, WORLD_BOUNDS.height * S), floorMat);
     floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; world.add(floor);
     if (mapTexture) new THREE.TextureLoader().load(mapTexture, (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; floorMat.map = t; floorMat.needsUpdate = true; });
     else { floorMat.map = makeRiftTexture(); floorMat.needsUpdate = true; }
@@ -229,9 +272,10 @@ function MobaScene({ mapTexture, roster, Q }) {
     const rng = (() => { let x = 7; return () => ((x = (x * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff); })();
     const rockMat = new THREE.MeshStandardMaterial({ color: 0x6d7689, roughness: 0.85, metalness: 0.15, flatShading: true });
     for (let i = 0; i < 46; i++) {
-      const ang = rng() * 7, rad = 18 + rng() * 30, cx = 50 + Math.cos(ang) * rad, cy = 50 + Math.sin(ang) * rad, h = (1.2 + rng() * 3) * S;
+      const ang = rng() * 7, rad = WORLD_BOUNDS.width * (0.18 + rng() * 0.28),
+        cx = WORLD_BOUNDS.centerX + Math.cos(ang) * rad, cy = WORLD_BOUNDS.centerY + Math.sin(ang) * rad, h = (1.2 + rng() * 3) * S;
       const m = new THREE.Mesh(new THREE.DodecahedronGeometry((0.8 + rng() * 1.8) * S, 0), rockMat);
-      m.position.set(wx(clamp(cx, 5, 95)), h * 0.3, wz(clamp(cy, 5, 95))); m.rotation.set(rng() * 3, rng() * 3, rng() * 3); m.scale.y = 0.6 + rng(); m.castShadow = true; m.receiveShadow = true; world.add(m);
+      m.position.set(wx(clamp(cx, WORLD_BOUNDS.minX + 8, WORLD_BOUNDS.maxX - 8)), h * 0.3, wz(clamp(cy, WORLD_BOUNDS.minY + 8, WORLD_BOUNDS.maxY - 8))); m.rotation.set(rng() * 3, rng() * 3, rng() * 3); m.scale.y = 0.6 + rng(); m.castShadow = true; m.receiveShadow = true; world.add(m);
     }
     // 立體石牆
     const wallMat = new THREE.MeshStandardMaterial({ color: 0x5a6478, roughness: 0.8, metalness: 0.18, flatShading: true });
@@ -263,7 +307,7 @@ function MobaScene({ mapTexture, roster, Q }) {
       const isNexus = t.lane === "nexus", col = SIDE[t.side], glow = GLOW[t.side], sc = isNexus ? 1 : 0.62;
       const grp = new THREE.Group(); grp.position.set(wx(t.pos.x), 0, wz(t.pos.y));
       [{ r: 3.0, h: 4.0, y: 2.0, c: 0x7d8696 }, { r: 2.2, h: 4.6, y: 6.3, c: col }, { r: 1.6, h: 3.0, y: 10.3, c: 0x9aa6ba }].forEach((ti) => {
-        const m = new THREE.Mesh(new THREE.CylinderGeometry(ti.r * sc * S, (ti.r + 0.4) * sc * S, ti.h * sc * S, 8), new THREE.MeshStandardMaterial({ color: ti.c, emissive: ti.c === col ? col : 0x000000, emissiveIntensity: ti.c === col ? 0.32 : 0, roughness: 0.5, metalness: 0.55 }));
+        const m = new THREE.Mesh(new THREE.CylinderGeometry(ti.r * sc * S, (ti.r + 0.4) * sc * S, ti.h * sc * S, 8), new THREE.MeshStandardMaterial({ color: ti.c, emissive: ti.c === col ? col : 0x000000, emissiveIntensity: ti.c === col ? 0.04 : 0, roughness: 0.5, metalness: 0.55 }));
         m.position.y = ti.y * sc * S; m.castShadow = true; m.receiveShadow = true; grp.add(m);
       });
       // S29B4：移除常駐 idle glow——平時幾乎不自發光（靠場景光呈現正常材質、
@@ -290,40 +334,37 @@ function MobaScene({ mapTexture, roster, Q }) {
       world.add(grp); towerObjs[key] = { grp, crystal, stump, isNexus, hpBar, hfg, hfgW, lastHp: 1, flashT: 0, idleEmiss: IDLE_EMISS };
     });
 
-    // 龍/巴龍（S29B1 HP 條；S29B2：放大 + 受擊閃光 + 死亡淡出 + HP 平滑插值）
+    // Dragon / Baron：S29B5 ESMO 自有程序化輪廓（寬翼巨龍 / 高耸冠角蛇體）。
     const obj3d = {};
-    [["dragon", PITS.dragon, 0xb794f6], ["baron", PITS.baron, 0xfbbf24]].forEach(([k, pit, col]) => {
-      const m = new THREE.Mesh(new THREE.IcosahedronGeometry(3.3 * S, 0), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 1.1, roughness: 0.3, metalness: 0.6 }));
-      m.position.set(wx(pit.x), 2.4 * S, wz(pit.y)); m.castShadow = true; m.visible = false; world.add(m);
-      const pl = new THREE.PointLight(col, 3, 24 * S); pl.position.copy(m.position); pl.visible = false; world.add(pl);
+    [["dragon", PITS.dragon], ["baron", PITS.baron]].forEach(([k, pit]) => {
+      const visual = makeNeutralVisual(k, Q.shadows), col = visual.color, m = visual.root;
+      m.position.set(wx(pit.x), 0, wz(pit.y)); m.visible = false; world.add(m);
       const hpGrp = new THREE.Group(); hpGrp.position.set(wx(pit.x), 7.6 * S, wz(pit.y)); hpGrp.visible = false;
       const hbg = new THREE.Mesh(new THREE.PlaneGeometry(6.4 * S, 0.62 * S), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.7, depthTest: false })); hbg.position.z = -0.01;
       const hfg = new THREE.Mesh(new THREE.PlaneGeometry(6.2 * S, 0.48 * S), new THREE.MeshBasicMaterial({ color: col, depthTest: false }));
       hpGrp.add(hbg, hfg); world.add(hpGrp);
-      obj3d[k] = { mesh: m, light: pl, hpGrp, hfg, hfgW: 6.2 * S, lastHp: 1, flashT: 0, shownHp: 1, wasAlive: false, deathT: 0, baseY: 2.4 * S, baseScale: 1 };
+      obj3d[k] = { mesh: m, materials: visual.materials, color: col, hpGrp, hfg, hfgW: 6.2 * S, lastHp: 1, flashT: 0, shownHp: 1, wasAlive: false, deathT: 0, baseY: 0, baseScale: 1 };
     });
 
-    // S29B1：野怪營地低模 placeholder（正式美術留 29B2）。
+    // Blue Buff / Red Buff / Jungle Camp：各自獨立 silhouette，不以光圈當模型。
     //   資料/座標唯一來源 = snapshot.objectives（← 引擎 ← gameData.CAMPS）；
     //   Minimap / Replay 用同一組座標 ⇒ 三處必然一致。
     const campObjs = new Map();
     (snap0.objectives ?? []).forEach((o) => {
       if (o.type !== "camp" && o.type !== "buff") return;
-      const col = o.type === "buff" ? 0xf472b6 : 0xa3e635;
+      const key = o.presentationKey ?? (o.type === "buff" ? (o.side === "red" ? "redBuff" : "blueBuff") : "jungleCamp");
+      const visual = makeNeutralVisual(key, Q.shadows), col = visual.color;
       const grp = new THREE.Group(); grp.position.set(wx(o.pos.x), 0, wz(o.pos.y));
-      const body = new THREE.Mesh(
-        new THREE.DodecahedronGeometry((o.type === "buff" ? 1.9 : 1.45) * S, 0),
-        new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.7, roughness: 0.5, metalness: 0.3, flatShading: true }));
-      body.position.y = 1.4 * S; body.castShadow = Q.shadows; grp.add(body);
-      const hpGrp = new THREE.Group(); hpGrp.position.y = 3.8 * S;
+      const body = visual.root; grp.add(body);
+      const hpGrp = new THREE.Group(); hpGrp.position.y = (o.type === "buff" ? 7.0 : 4.4) * S;
       const bg = new THREE.Mesh(new THREE.PlaneGeometry(3.4 * S, 0.42 * S), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.7, depthTest: false })); bg.position.z = -0.01;
       const fg = new THREE.Mesh(new THREE.PlaneGeometry(3.3 * S, 0.32 * S), new THREE.MeshBasicMaterial({ color: col, depthTest: false }));
       hpGrp.add(bg, fg); grp.add(hpGrp);
       grp.visible = false; world.add(grp);
-      campObjs.set(o.id, { grp, body, hpGrp, fg, w: 3.3 * S, lastHp: 1, flashT: 0, shownHp: 1, wasAlive: false, deathT: 0, baseY: 1.4 * S });
+      campObjs.set(o.id, { grp, body, materials: visual.materials, color: col, presentationKey: key, hpGrp, fg, w: 3.3 * S, lastHp: 1, flashT: 0, shownHp: 1, wasAlive: false, deathT: 0, baseY: 0 });
     });
 
-    // ── S29B3：常駐 billboard 標籤——龍/凱撒/泉水/營地不再只是色塊 ─────────────
+    // ── S29B3/S29B5：常駐 billboard 標籤——Dragon/Baron/泉水/營地不再只是色塊 ──
     //  一次性建立（makeLabelSprite 重用）；與地面文字標籤（makeRiftTexture）互補：
     //  地面字給俯視語意、billboard 給任何角度的即時辨識。
     const mkTag = (text, hex, x, y, h, sx = 4.6, sy = 2.1) => {
@@ -331,12 +372,14 @@ function MobaScene({ mapTexture, roster, Q }) {
       sp.position.set(wx(x), h, wz(y));
       world.add(sp);
     };
-    mkTag("魔龍", 0xc8aaff, PITS.dragon.x, PITS.dragon.y, 10.5 * S);
-    mkTag("凱撒", 0xfde047, PITS.baron.x, PITS.baron.y, 10.5 * S);
+    mkTag("Dragon", 0xc8aaff, PITS.dragon.x, PITS.dragon.y, 10.5 * S, 6.2, 2.1);
+    mkTag("Baron", 0xfde047, PITS.baron.x, PITS.baron.y, 10.5 * S, 5.4, 2.1);
     mkTag("泉水", 0x93c5fd, FOUNTAIN.blue.x, FOUNTAIN.blue.y, 5 * S, 3.6, 1.7);
     mkTag("泉水", 0xfca5a5, FOUNTAIN.red.x, FOUNTAIN.red.y, 5 * S, 3.6, 1.7);
-    CAMPS.forEach((c) => mkTag(c.type === "buff" ? "BUFF" : "野怪",
-      c.type === "buff" ? 0xf472b6 : 0xa3e635, c.x, c.y, 4.8 * S, 3.0, 1.4));
+    CAMPS.forEach((c) => {
+      const p = presentationForObjective(c);
+      mkTag(p.label, p.color, c.x, c.y, 4.8 * S, c.type === "buff" ? 5.4 : 6.2, 1.4);
+    });
 
     // 英雄（S29B2：模型 ×HK 放大可讀性；lastHp/flashT 供受擊閃光）
     const heroObjs = {};
@@ -648,11 +691,10 @@ function MobaScene({ mapTexture, roster, Q }) {
     };
     ["dragon", "baron"].forEach((k) => {
       const d = snapshot[k], o = r.obj3d[k];
-      o.spawnDeath = () => r.spawnViewFx(o.mesh.position.x, o.mesh.position.z, o.mesh.material.color.getHex(), 6, 0.7);
-      const st = updNeutral(o, objMap[k], d.alive, d.contested ? 2.0 : 1.1, 1.2);
+      o.spawnDeath = () => r.spawnViewFx(o.mesh.position.x, o.mesh.position.z, o.color, 6, 0.7);
+      const st = updNeutral(o, objMap[k], d.alive, d.contested ? 0.75 : 0.16, 1.2);
       o.mesh.visible = d.alive || st.dying;
-      o.light.visible = d.alive;
-      if (d.alive) { o.mesh.rotation.y += dt * 0.7; o.mesh.material.emissiveIntensity = st.emissive; o.mesh.scale.setScalar(1); o.mesh.position.y = o.baseY; }
+      if (d.alive) { o.mesh.rotation.y += dt * 0.35; o.materials.forEach((m) => { m.emissiveIntensity = st.emissive; }); o.mesh.scale.setScalar(1); o.mesh.position.y = o.baseY; }
       else if (st.dying) { const s2 = 0.3 + 0.7 * st.dieK; o.mesh.scale.setScalar(s2); o.mesh.position.y = o.baseY * st.dieK; }
       if (o.hpGrp) {
         o.hpGrp.visible = d.alive && !!objMap[k];
@@ -667,12 +709,12 @@ function MobaScene({ mapTexture, roster, Q }) {
     r.campObjs?.forEach((co, id) => {
       const ob = objMap[id];
       const alive = !!ob?.alive;
-      co.spawnDeath = () => r.spawnViewFx(co.grp.position.x, co.grp.position.z, co.body.material.color.getHex(), 3.2, 0.55);
-      const st = updNeutral(co, ob, alive, 0.7, 1.3);
+      co.spawnDeath = () => r.spawnViewFx(co.grp.position.x, co.grp.position.z, co.color, 3.2, 0.55);
+      const st = updNeutral(co, ob, alive, 0.14, 1.3);
       co.grp.visible = alive || st.dying;
       if (alive) {
         co.body.rotation.y += dt * 0.8;
-        co.body.material.emissiveIntensity = st.emissive;
+        co.materials.forEach((m) => { m.emissiveIntensity = st.emissive; });
         co.body.scale.setScalar(1); co.body.position.y = co.baseY;
         co.hpGrp.visible = true;
         const hp = clamp(co.shownHp, 0.001, 1);

@@ -56,7 +56,7 @@ export const MOBA_TACTICS = [
   T({
     tacticId: "m1", name: "速推流", emoji: "🏰", risk: "中", focus: "中路", archetype: "高風險快攻",
     desc: "集中兵線快速推塔，建立經濟優勢", detail: "中路法師快速清線游走，打野協助推進，10-15分鐘滾大優勢", boost: ["tacticalIQ", "decision"],
-    cons: "壓線深、撤退晚，容易被反打；小龍讓渡給對手",
+    cons: "壓線深、撤退晚，容易被反打；Dragon 讓渡給對手",
     lanePlan: { mid: "aggressive", jungle: "gank" },
     macro: { earlyGame: "aggressive", tempo: "fast", aggression: 0.65, riskTolerance: 0.6, grouping: 0.55, splitPush: 0.15 },
     objectives: { towerPriority: 0.9, dragonPriority: 0.35, baronPriority: 0.45, invadePriority: 0.15 },
@@ -69,7 +69,7 @@ export const MOBA_TACTICS = [
   }),
   T({
     tacticId: "m2", name: "四一分推", emoji: "🗺️", risk: "中", focus: "上路", archetype: "上路分推",
-    desc: "一人帶線牽制，四人抱團控圖", detail: "上路強單帶英雄牽制，其餘四人控小龍與視野，逼對手二選一", boost: ["mapAware", "positioning"],
+    desc: "一人帶線牽制，四人抱團控圖", detail: "上路強單帶英雄牽制，其餘四人控 Dragon 與視野，逼對手二選一", boost: ["mapAware", "positioning"],
     cons: "上路缺席會戰，4v5 打團吃虧；帶線人易被抓死",
     lanePlan: { top: "split", jungle: "gank", support: "protect" },
     macro: { midGame: "standard", aggression: 0.45, riskTolerance: 0.5, grouping: 0.65, splitPush: 0.85 },
@@ -78,7 +78,7 @@ export const MOBA_TACTICS = [
     fit: { roles: ["上路"], stats: ["positioning", "resilience", "decision", "mapAware"] },
     evidence: [
       { key: "splitPushActions", label: "分推波次", goal: 6 },
-      { key: "dragonContests", label: "小龍參戰", goal: 2 },
+      { key: "dragonContests", label: "Dragon 參戰", goal: 2 },
       { key: "towerPushes", label: "推塔波次", goal: 6 },
     ],
   }),
@@ -99,14 +99,14 @@ export const MOBA_TACTICS = [
   }),
   T({
     tacticId: "m4", name: "龍堆運營", emoji: "🐉", risk: "低", focus: "打野", archetype: "控圖資源",
-    desc: "圍繞大小龍資源穩健運營", detail: "打野控龍節奏，穩健運營靠後期裝備碾壓", boost: ["decision", "tacticalIQ"],
+    desc: "圍繞 Dragon / Baron 資源穩健運營", detail: "打野控制 Dragon / Baron 節奏，穩健運營靠後期裝備碾壓", boost: ["decision", "tacticalIQ"],
     cons: "推塔慢、前期被壓也不還手；節奏被快攻隊帶走就難翻",
     lanePlan: { jungle: "farm", adc: "defensive" },
     macro: { earlyGame: "defensive", lateGame: "scaling", tempo: "slow", aggression: 0.4, riskTolerance: 0.3, grouping: 0.7, splitPush: 0.1 },
     objectives: { dragonPriority: 0.95, baronPriority: 0.85, towerPriority: 0.4, invadePriority: 0.05 },
     fit: { roles: ["打野"], stats: ["decision", "tacticalIQ", "mapAware"] },
     evidence: [
-      { key: "dragonContests", label: "小龍參戰", goal: 3 },
+      { key: "dragonContests", label: "Dragon 參戰", goal: 3 },
       { key: "baronContests", label: "巴龍參戰", goal: 1 },
       { key: "groupedFights", label: "集結會戰", goal: 4 },
     ],
@@ -123,7 +123,7 @@ export const MOBA_TACTICS = [
     evidence: [
       { key: "botGanks", label: "下路 Gank", goal: 3 },
       { key: "gankKills", label: "Gank 擊殺", goal: 2 },
-      { key: "dragonContests", label: "小龍參戰", goal: 2 },
+      { key: "dragonContests", label: "Dragon 參戰", goal: 2 },
     ],
   }),
   T({
@@ -167,7 +167,7 @@ export const MOBA_TACTICS = [
     evidence: [
       { key: "groupedFights", label: "集結會戰", goal: 4 },
       { key: "baronContests", label: "巴龍參戰", goal: 1 },
-      { key: "dragonContests", label: "小龍參戰", goal: 2 },
+      { key: "dragonContests", label: "Dragon 參戰", goal: 2 },
     ],
   }),
 ];
@@ -226,7 +226,7 @@ export function toEngineTactic(t) {
   return {
     tacticId: t.tacticId,
     joinFight: clamp01(0.6 + (m.grouping - 0.5) * 0.3, 0.35, 0.85),      // 團戰參與率（原 0.6）
-    dragonJoin: clamp01(0.45 + o.dragonPriority * 0.4, 0.35, 0.88),      // 小龍參戰率
+    dragonJoin: clamp01(0.45 + o.dragonPriority * 0.4, 0.35, 0.88),      // Dragon 參戰率
     baronJoin: clamp01(0.45 + o.baronPriority * 0.4, 0.35, 0.88),        // 巴龍參戰率
     retreatAt: clamp01(0.25 - (m.riskTolerance - 0.5) * 0.12, 0.15, 0.34), // 撤退門檻（原 0.25）
     laneOffset,                                                            // 推線深度偏移（原 base 公式加項）
