@@ -1161,3 +1161,62 @@ flow09、dash10）。
 |---|---|---|---|
 | `check_moba_tactic24`（B 接線） | GameView 內 `start({ tactic })` 字面出現 ≥2 次 | 29B3 把兩個觸發點（START 鈕/autoStart）統一走 `begin()`（先重置相機再 start）——意圖（開局帶 tactic 進引擎）不變，字面計數失效 | 唯一入口含 `start({ tactic })` ＋ `begin` 出現 ≥3（定義+兩個引用） |
 | `check_moba_pacing29b1` §13 | 終局時至少一座營地帶 `killerTeam` | **斷言本身有競態**：營地重生 reset 會清 killerTeam ⇒ 取決於終局落在誰的生命週期；29B1/29B2 通過是運氣（回城 channel 改變時序後曝露） | 模擬過程中累計「alive→dead 轉場」≥1/場（40 場合計 1809 次；真觀測、無競態） |
+
+---
+
+## Sprint 29B4 — MOBA Debug Recovery, Replay Fix and Clickability
+
+**範圍**：29B3 部署後實測四修。**紅線遵守**：不改 29B1 節奏/XP/Progress/Reward/
+MatchProgressTransaction；不動 gameData 世界座標；不重寫 LogicEngine；Replay 不重新模擬；
+不新增 PointLight；不刪弱化舊 verifier；不開始 29B5。
+
+### Audit → 根因
+
+- **A 快速完成比賽（?debug=1 看不到）**：兩個疊加根因——(1) 按鈕巢狀在手機 ⚙ 收合面板
+  `{(!isMobile||showCtl) && ...}` 內，手機預設收合 ⇒ 看不到；(2) `isDebugMode` 只讀
+  `window.location.search`，Pages 上帶 hash 的網址（`.../#/x?debug=1`）search 為空 ⇒ 讀不到。
+- **B 10 英雄部分可點**：`HeroDetailPanel` `if (!hero) return null`——`progress[heroId]`
+  對「無 HeroProgress 紀錄」的英雄（對手方；或 heroId 不在既存 progress 集合，例如舊
+  localStorage 建於英雄擴充前）為 undefined ⇒ 面板回傳 null ⇒ 點了沒反應。
+- **C Replay 無法觀看**：以 Node 實測 buffer→finalize 路徑（自然每 tick / 快速完成每 2s
+  兩種取樣）**本就健康**（461/660 frames、validateMobaReplay ok、matchId 同源、
+  current===rep）。真正缺的是 `MobaReplayScreen` 對缺欄位無防護 ⇒ 潛在白畫面。
+- **D 塔常駐光**：crystal idle emissive 0.55/0.75（29B3）＋主堡 PointLight 3.5 = 常駐光暈。
+
+### 做了什麼
+
+1. **debugMode.js**：`parseDebug` 同時解析 search 與 hash（Pages hash route）；URL 認定
+   debug=1 後寫入 `localStorage.esmo_debug` 持久化（in-memory 換畫面不掉）；debug=0 可清除。
+   導出 `parseDebug` 供 verifier 單元測試。
+2. **GameView.jsx**：「⏩ 快速完成比賽」移出 ⚙ 收合區塊 ⇒ 測試模式**常駐可見**（zIndex 12）。
+3. **HeroDetailPanel.jsx**：`const hero = storeHero ?? emptyHero()`（不再 return null）＋
+   「尚無成長紀錄」註記 ⇒ 10/10 一致可開、可讀、可關（頂部 ✕ 沿用 29B2）。
+4. **MobaReplayScreen.jsx**：白畫面防護——`towersMeta/playersMeta/s/g/tw/p/wp` 全套安全
+   預設，`frame.p` 缺列跳過不崩（滿足「舊 Replay 缺新欄位不得白畫面」）。
+5. **MobaView3D.jsx**：crystal idle emissive → 主堡 0.14 / 塔 0.06（低於 Bloom 門檻）；
+   受擊 +1.6 脈衝、摧毀 viewFx 爆點保留；主堡 PointLight 3.5→2.0；**未新增 PointLight**。
+
+### 驗證
+
+`tools/check_moba_recovery29b4.mjs` 27 項（引擎層 21 ＋巢狀 6：controls29b3/
+presentation29b2/pacing29b1 引擎層、runtime29 44/44＝S23–S28+regress+regress2+build、
+flow09/dash10）。quick complete 分塊推進與自然跑完**逐位元同結果**；replay 自然+快速
+兩路皆 canReplay=true。
+
+### 已知限制 / 技術債
+
+- **全部視覺/互動未經真機實測**（?debug=1 UI、觸控、塔光體感、Replay 播放外觀）。
+- Replay 不含小兵（frame 預算既有取捨）。
+- C 的根因偏「防護性」：Node 證不出白畫面的確切觸發（replay 資料本身健康），
+  硬化 ReplayScreen 是對「舊格式/部分擷取」的防禦——若真機仍有 Replay 問題，
+  下一步查 BattlePresentationLayer 的 over→EndScreen 掛載時序與 zIndex 60 疊層。
+- 29B5 世界地圖放大（真實座標 + travel time）留待下一 Sprint（見 08）。
+
+### ⚠ 本次同步的既有 verifier 斷言（2 條，均為「值/字串隨合法改動更新」，非弱化）
+
+| verifier | 舊斷言 | 為什麼改 | 新斷言 |
+|---|---|---|---|
+| `controls29b3` §14 | 塔 crystal 常態 emissive `isNexus ? 0.75 : 0.55` | 29B4 移除常駐 idle glow ⇒ 常態值降到 `IDLE_EMISS 0.14/0.06`。檢查語意（常態 < 受擊/摧毀）不變 | 改比對 `o.idleEmiss + flashT*1.6` 與 `IDLE_EMISS = isNexus ? 0.14 : 0.06` |
+| `presentation29b2` §8 | ReplayScreen `a.ob?.[i]` | 29B4 白畫面防護把存取加一層 optional chaining `a?.ob?.[i]`。仍是「讀 frame.ob 真實 hp」 | 放寬為 `a\??\.ob\?\.\[i\]` |
+
+兩條都是**值/字串隨合法改動更新**，非刪除或弱化；底層行為（塔常態 < 受擊光、Replay 讀真實 hp）保持不變並經 verifier 重新驗證通過。

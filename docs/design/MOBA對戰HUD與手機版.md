@@ -129,3 +129,14 @@
 - **控制鈕再收斂**：移除「導播/自由」雙大按鈕（相機模式由點擊互動切換，free 時才出現
   單一「🎥 回到導播」）；移除正式版「⏹ 結束」——測試模式（?debug=1）才有
   「⏩ 快速完成比賽」（見 `MOBA導播鏡頭與測試控制.md`）。
+
+---
+
+## 8. Sprint 29B4 增補
+
+- **10 英雄一致可點根因修**：`HeroDetailPanel` 舊碼 `if (!hero) return null`——對無
+  HeroProgress 紀錄的英雄（對手方；或 heroId 不在既存 progress）回傳 null＝點了沒反應。
+  改為 `storeHero ?? emptyHero()` 佔位＋「尚無成長紀錄」註記 ⇒ 藍紅 10/10 一致可開。
+  點擊路徑（laneRow → SideCell onClick → mk → setOpen）藍紅同構，hitbox = 整列 cell。
+- **「快速完成比賽」脫離 ⚙ 收合**：測試模式常駐可見（見 `MOBA導播鏡頭與測試控制.md`）。
+- 面板收合手勢（上/下滑）、bottom sheet、頂部固定 ✕ 均沿用 29B2/29B3，未改。

@@ -44,3 +44,17 @@
 ## 3. 未經真機實測
 
 點英雄/雙擊/拖曳手勢、`?debug=1` 的 UI 流程、heroFocus 觀感——需 Ray 實測。
+
+---
+
+## S29B4 增補：測試控制可見性與 debug gate 強化
+
+- **?debug=1 根因修**：`isDebugMode`（`src/ui/debugMode.js`）舊版只讀
+  `window.location.search`；GitHub Pages 上帶 hash 的網址（`.../ESMO-/#/x?debug=1`）
+  search 為空 ⇒ 讀不到 debug。修法：`parseDebug` **同時解析 search 與 hash**，且 URL
+  認定 debug=1 後**寫入 `localStorage.esmo_debug`** 持久化（本專案用 useState 換畫面、
+  URL 不變，持久化確保後續畫面仍為測試模式）。`?debug=0` 可清除。
+- **按鈕可見性根因修**：「⏩ 快速完成比賽」原本巢狀在手機 ⚙ 收合面板（`showCtl`）內，
+  手機預設收合 ⇒ 看不到。改為**測試模式常駐可見**（脫離 ⚙，zIndex 12），桌機/手機皆然。
+- 行為不變：`useLocalServer.fastForward` 同引擎分塊推進到終局、走既有 Result/發獎
+  （冪等）/Replay 定稿流程；與自然跑完逐位元相同（verifier §6 實測）。

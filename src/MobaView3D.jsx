@@ -266,15 +266,20 @@ function MobaScene({ mapTexture, roster, Q }) {
         const m = new THREE.Mesh(new THREE.CylinderGeometry(ti.r * sc * S, (ti.r + 0.4) * sc * S, ti.h * sc * S, 8), new THREE.MeshStandardMaterial({ color: ti.c, emissive: ti.c === col ? col : 0x000000, emissiveIntensity: ti.c === col ? 0.32 : 0, roughness: 0.5, metalness: 0.55 }));
         m.position.y = ti.y * sc * S; m.castShadow = true; m.receiveShadow = true; grp.add(m);
       });
-      // S29B2 降過曝 1.9/1.3 → 1.1/0.8；S29B3 再降常態 → 0.75/0.55（被攻擊/摧毀時才短暫增亮）
-      const crystal = new THREE.Mesh(new THREE.OctahedronGeometry((isNexus ? 4.6 : 1.4) * S, 0), new THREE.MeshStandardMaterial({ color: glow, emissive: glow, emissiveIntensity: isNexus ? 0.75 : 0.55, roughness: 0.1, metalness: 0.35 }));
+      // S29B4：移除常駐 idle glow——平時幾乎不自發光（靠場景光呈現正常材質、
+      //   仍可辨識塔位），只有**被攻擊/摧毀**時才短暫增亮（見 useFrame）。
+      //   常態 emissive 主堡 0.14 / 塔 0.06（低於 Bloom 門檻 ⇒ 不再有常駐光暈）。
+      const IDLE_EMISS = isNexus ? 0.14 : 0.06;
+      const crystal = new THREE.Mesh(new THREE.OctahedronGeometry((isNexus ? 4.6 : 1.4) * S, 0), new THREE.MeshStandardMaterial({ color: glow, emissive: glow, emissiveIntensity: IDLE_EMISS, roughness: 0.1, metalness: 0.35 }));
       crystal.position.y = (isNexus ? 16 : 13.5) * sc * S; crystal.castShadow = Q.shadows; grp.add(crystal);
       // S29 效能修復（最大單一元凶之一）：舊碼**每座塔都掛一盞 PointLight**（18 塔 + 2 主堡
       //   = 20 盞，再加龍/巴龍共 22 盞）。Three.js 的 MeshStandardMaterial 會把每一盞燈
       //   都編進 per-fragment 迴圈 ⇒ 手機直接崩。
       //   改為：**只有主堡**有燈（2 盞），一般塔靠 emissive + Bloom 發光（視覺幾乎不變）。
       //   high 檔可選擇性開回塔燈（Q.towerLights）。
-      if (isNexus || Q.towerLights) grp.add(new THREE.PointLight(glow, isNexus ? 3.5 : 2.0, (isNexus ? 46 : 26) * S));
+      // S29B4：主堡常駐 PointLight 再降（3.5 → 2.0）；一般塔僅 high 檔開（既有）。
+      //   ⚠ 不新增任何 PointLight（維持 S29A 的 ≤2 盞上限，避免手機效能回退）。
+      if (isNexus || Q.towerLights) grp.add(new THREE.PointLight(glow, isNexus ? 2.0 : 1.6, (isNexus ? 40 : 26) * S));
       const stump = new THREE.Mesh(new THREE.CylinderGeometry(2.4 * sc * S, 3.0 * sc * S, 2.0 * sc * S, 7), new THREE.MeshStandardMaterial({ color: 0x33363d, roughness: 1, metalness: 0.1, flatShading: true }));
       stump.position.y = 1.0 * sc * S; stump.visible = false; stump.castShadow = true; grp.add(stump);
       const hpBar = new THREE.Group(); hpBar.position.y = (isNexus ? 22 : 15) * sc * S;
@@ -282,7 +287,7 @@ function MobaScene({ mapTexture, roster, Q }) {
       const hfgW = (isNexus ? 5.8 : 3.0) * S;
       const hfg = new THREE.Mesh(new THREE.PlaneGeometry(hfgW, 0.38 * S), new THREE.MeshBasicMaterial({ color: t.side === "blue" ? 0x60a5fa : 0xf87171, depthTest: false }));
       hpBar.add(hbg, hfg); grp.add(hpBar);
-      world.add(grp); towerObjs[key] = { grp, crystal, stump, isNexus, hpBar, hfg, hfgW, lastHp: 1, flashT: 0 };
+      world.add(grp); towerObjs[key] = { grp, crystal, stump, isNexus, hpBar, hfg, hfgW, lastHp: 1, flashT: 0, idleEmiss: IDLE_EMISS };
     });
 
     // 龍/巴龍（S29B1 HP 條；S29B2：放大 + 受擊閃光 + 死亡淡出 + HP 平滑插值）
@@ -619,8 +624,8 @@ function MobaScene({ mapTexture, roster, Q }) {
       if (!dead) {
         o.crystal.rotation.y += dt * (o.isNexus ? 0.5 : 1.0);
         if (o.isNexus) o.crystal.scale.setScalar(1 + Math.sin(now / 1000 * 2) * 0.06);
-        // S29B3：常態光收斂（0.75/0.55），**被攻擊時**才短暫拉高（+1.6 峰值）
-        o.crystal.material.emissiveIntensity = (o.isNexus ? 0.75 : 0.55) + (o.flashT / 0.25) * 1.6;
+        // S29B4：常態近乎不發光（idleEmiss），**被攻擊時**才短暫拉高（+1.6 峰值）
+        o.crystal.material.emissiveIntensity = o.idleEmiss + (o.flashT / 0.25) * 1.6;
       }
     });
 

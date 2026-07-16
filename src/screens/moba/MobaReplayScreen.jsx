@@ -53,6 +53,15 @@ export default function MobaReplayScreen({ replay, onClose }) {
   const { a, b, f } = useMemo(() => frameAt(frames, t), [frames, t]);
   const recentEvents = useMemo(() => events.filter((e) => e.t <= t).slice(-3), [events, t]);
 
+  // ── S29B4：白畫面防護 ────────────────────────────────────────────────────
+  //  任何 frame / meta 欄位缺漏（舊格式重播、部分擷取、未來欄位漂移）都不得讓
+  //  整個畫面崩掉。以下把 render 會存取的欄位全部套上安全預設（座標存 meta、
+  //  數值存 frame；缺就給中性值）。這是「不重新模擬、只播已存資料」前提下的純呈現保護。
+  const towersMeta = replay?.towersMeta ?? {};
+  const playersMeta = replay?.playersMeta ?? [];
+  const sA = a?.s ?? [0, 0], gA = a?.g ?? [0, 0], gB = b?.g ?? gA;
+  const twA = a?.tw ?? {}, wpA = a?.wp ?? 0.5, wpB = b?.wp ?? wpA;
+
   if (!replay || frames.length === 0) {
     return (
       <div style={wrap}>
@@ -72,13 +81,13 @@ export default function MobaReplayScreen({ replay, onClose }) {
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
         <span style={{ fontSize: 10, letterSpacing: "0.2em", color: GC.gray, fontWeight: 900 }}>REPLAY</span>
         <span style={{ fontFamily: MONO, fontWeight: 900, fontSize: 17 }}>
-          <span style={{ color: SIDE_C.blue }}>{a.s[0]}</span>
+          <span style={{ color: SIDE_C.blue }}>{sA[0]}</span>
           <span style={{ color: GC.gray }}> : </span>
-          <span style={{ color: SIDE_C.red }}>{a.s[1]}</span>
+          <span style={{ color: SIDE_C.red }}>{sA[1]}</span>
         </span>
-        <span style={{ fontFamily: MONO, fontSize: 10, color: GC.gray }}>💰 {Math.round(lerp(a.g[0], b.g[0], f)).toLocaleString()} / {Math.round(lerp(a.g[1], b.g[1], f)).toLocaleString()}</span>
+        <span style={{ fontFamily: MONO, fontSize: 10, color: GC.gray }}>💰 {Math.round(lerp(gA[0], gB[0], f)).toLocaleString()} / {Math.round(lerp(gA[1], gB[1], f)).toLocaleString()}</span>
         <div style={{ width: 110, height: 5, borderRadius: 99, background: SIDE_C.red, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${lerp(a.wp, b.wp, f) * 100}%`, background: SIDE_C.blue }} />
+          <div style={{ height: "100%", width: `${lerp(wpA, wpB, f) * 100}%`, background: SIDE_C.blue }} />
         </div>
         {replay.config?.tacticName && <span style={{ fontSize: 9, color: GC.purp }}>戰術 {replay.config.tacticName}</span>}
       </div>
@@ -92,8 +101,8 @@ export default function MobaReplayScreen({ replay, onClose }) {
           <path d="M8,92 L92,8" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
           <path d="M8,92 L92,92 L92,8" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
           {/* 塔（位置只存於 towersMeta；血量逐 frame） */}
-          {Object.entries(replay.towersMeta).map(([id, tw]) => {
-            const hp = a.tw[id] ?? 0;
+          {Object.entries(towersMeta).map(([id, tw]) => {
+            const hp = twA[id] ?? 0;
             return (
               <g key={id}>
                 <rect x={tw.pos.x - 1.6} y={tw.pos.y - 1.6} width="3.2" height="3.2" rx="0.7"
@@ -103,12 +112,12 @@ export default function MobaReplayScreen({ replay, onClose }) {
             );
           })}
           {/* 龍 / 巴龍 */}
-          {a.dr === 1 && <text x={PITS.dragon.x} y={PITS.dragon.y + 1.5} fontSize="4.5" textAnchor="middle">🐉</text>}
-          {a.br === 1 && <text x={PITS.baron.x} y={PITS.baron.y + 1.5} fontSize="4.5" textAnchor="middle">👑</text>}
+          {a?.dr === 1 && <text x={PITS.dragon.x} y={PITS.dragon.y + 1.5} fontSize="4.5" textAnchor="middle">🐉</text>}
+          {a?.br === 1 && <text x={PITS.baron.x} y={PITS.baron.y + 1.5} fontSize="4.5" textAnchor="middle">👑</text>}
           {/* S29B1/S29B2：中立目標（位置存於 objectivesMeta；frame.ob = hp 0–1，0=死亡；
               a→b 插值 ⇒ 與現場一致的逐步掉血。舊 replay 無此欄 ⇒ 不渲染，不炸畫面） */}
           {(replay.objectivesMeta ?? []).map((om, i) => {
-            const hpA = a.ob?.[i] ?? 0, hpB = b.ob?.[i] ?? hpA;
+            const hpA = a?.ob?.[i] ?? 0, hpB = b?.ob?.[i] ?? hpA;
             const hp = hpA > 0 ? lerp(hpA, hpB > 0 ? hpB : hpA, f) : 0;
             if (!(hp > 0)) return null;
             const isCamp = om.type === "camp" || om.type === "buff";
@@ -126,9 +135,10 @@ export default function MobaReplayScreen({ replay, onClose }) {
               </g>
             );
           })}
-          {/* 選手（位置插值；死亡 → 灰空心） */}
-          {replay.playersMeta.map((pm, i) => {
-            const pa = a.p[i], pb = b.p[i];
+          {/* 選手（位置插值；死亡 → 灰空心）。S29B4：frame.p 缺該列 ⇒ 跳過不崩 */}
+          {playersMeta.map((pm, i) => {
+            const pa = a?.p?.[i], pb = b?.p?.[i] ?? pa;
+            if (!pa) return null;
             const dead = pa[3] === 1;
             const x = dead ? pa[0] : lerp(pa[0], pb[0], f);
             const y = dead ? pa[1] : lerp(pa[1], pb[1], f);

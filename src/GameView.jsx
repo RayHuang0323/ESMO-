@@ -132,19 +132,20 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
           🎥 回到導播
         </button>
       )}
+      {/* S29B4：Debug「快速完成比賽」——**不再藏在 ⚙ 收納面板裡**（S29B4 根因：
+          手機上它原本被 showCtl 收合，Pages 加 ?debug=1 也看不到）。改為測試模式時
+          **常駐可見**（桌機/手機皆然），與 ⚙ 收納無關。fastForward：同一顆引擎安全
+          推進到終局 → 走既有 Result/發獎/Replay 流程，不重新開局、不重複發獎。 */}
+      {playing && isDebugMode() && (
+        <button onClick={fastForward} title="Debug：把模擬推進到終局並進入戰報（結果與自然跑完相同）"
+          style={{ position: "absolute", top: 92, left: isMobile ? 8 : 12, zIndex: 12, background: "rgba(168,85,247,0.92)", border: "1px solid #d8b4fe", borderRadius: 8, padding: "6px 12px", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: "0 2px 12px rgba(0,0,0,0.4)" }}>⏩ 快速完成比賽</button>
+      )}
       {/* S29B2：控制鈕收納——手機收進 ⚙ 面板（不常駐佔畫面）；桌機維持原樣 */}
       {isMobile && (
         <button onClick={() => setShowCtl((v) => !v)} style={{ position: "absolute", top: 92, right: 8, zIndex: 10, background: showCtl ? "rgba(96,165,250,0.9)" : "rgba(8,14,24,0.75)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, padding: "5px 10px", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>⚙</button>
       )}
       {(!isMobile || showCtl) && (
         <>
-          {/* S29B3：正式版沒有「結束」——單機測試模式才有「快速完成比賽」
-              （fastForward：同一顆引擎安全推進到終局 → 走既有 Result/發獎/Replay 流程）*/}
-          {playing && isDebugMode() && (
-            <button onClick={fastForward} title="Debug：把模擬推進到終局並進入戰報（結果與自然跑完相同）"
-              style={{ position: "absolute", top: 92, left: isMobile ? 8 : 12, zIndex: 10, background: "rgba(168,85,247,0.85)", border: "1px solid #d8b4fe", borderRadius: 8, padding: "5px 12px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>⏩ 快速完成比賽</button>
-          )}
-
           {/* S29：播放倍率（只改 tick 的真實間隔，dt 恆定 ⇒ 不影響模擬結果）*/}
           <div style={{ position: "absolute", top: isMobile ? 128 : 92, right: isMobile ? 8 : 12, zIndex: 10, display: "flex", gap: 4 }}>
             {rates.map((r) => (

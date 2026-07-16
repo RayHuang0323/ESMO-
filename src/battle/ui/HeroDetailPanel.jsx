@@ -5,7 +5,7 @@
 // ============================================================================
 import React from "react";
 import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
-import { attrs, xpNeed, LEVEL_CAP } from "../../hero/heroProgress.js";
+import { attrs, xpNeed, LEVEL_CAP, emptyHero } from "../../hero/heroProgress.js";
 import { heroById } from "../../data/heroDatabase.js";
 import { GC } from "../../ui/theme.js";
 import { useIsMobile } from "../../ui/useViewport.js";
@@ -14,11 +14,18 @@ const MONO = "ui-monospace,Menlo,monospace";
 const pct = (v) => ((v - 1) * 100).toFixed(1) + "%";
 
 export default function HeroDetailPanel({ heroId, heroName, playerName, side = "blue", onClose }) {
-  const hero = useHeroProgressStore((s) => s.progress[heroId]);
+  const storeHero = useHeroProgressStore((s) => s.progress[heroId]);
   // S29B2：手機 → 全螢幕 sheet；桌機 → 置中卡片但限高可捲動。
   //   兩者關閉鈕都固定在**頂部**（原本在長內容最下方，手機要捲到底才關得掉）。
   const isMobile = useIsMobile();
-  if (!hero) return null;
+  // ── S29B4 根因修：**不再 `if (!hero) return null`** ──────────────────────
+  //  舊行為：該英雄在 HeroProgress 無紀錄（對手方英雄、或 heroId 不在已存的
+  //  progress 集合中——例如舊 localStorage 建立於英雄擴充前）⇒ 面板回傳 null ⇒
+  //  「點了沒反應」。這正是「部分英雄可點、部分不能」的根因。
+  //  改為：無紀錄時用 emptyHero() 佔位（Lv1、0 場），面板照常開啟並顯示英雄靜態
+  //  資料（heroDatabase）＋「尚無本英雄成長紀錄」註記 ⇒ 10/10 一致可開、可讀、可關。
+  const noRecord = !storeHero;
+  const hero = storeHero ?? emptyHero();
   const a = attrs(hero.level);
   const need = hero.level >= LEVEL_CAP ? null : xpNeed(hero.level);
   const m = hero.mastery;
@@ -98,6 +105,11 @@ export default function HeroDetailPanel({ heroId, heroName, playerName, side = "
           </>
         ) : null; })()}
 
+        {noRecord && (
+          <div style={{ margin: "8px 0 2px", padding: "6px 9px", borderRadius: 8, background: "rgba(148,163,184,0.1)", border: "1px solid rgba(148,163,184,0.25)", fontSize: 10, color: "rgba(203,213,225,0.85)", lineHeight: 1.5 }}>
+            尚無本英雄的成長紀錄（等級／Mastery 顯示為初始值）。仍可查看英雄靜態資料與技能。
+          </div>
+        )}
         <div style={{ fontSize: 9.5, letterSpacing: "0.2em", color: "rgba(255,255,255,0.5)", fontWeight: 900, margin: "10px 0 3px" }}>MASTERY</div>
         <RowS l="使用場次" v={m.games} />
         <RowS l="勝率" v={`${wr}%（${m.wins}勝）`} c={wr >= 50 ? "#86efac" : "#fda4af"} />

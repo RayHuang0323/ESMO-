@@ -154,8 +154,10 @@ ck(`8) camera mode 集合 = director/free/heroFocus/objectiveFocus（現值 ${CA
     /label\(PITS\.dragon/.test(V3D) && /label\(PITS\.baron/.test(V3D) &&
     /label\(c\.x, c\.y \+ 3\.1/.test(V3D));
   const cV3D = code(V3D);
-  ck("14) 塔常態光效低於受擊/摧毀（常態 0.75/0.55 + 受擊峰值 +1.6；摧毀爆點 viewFx；bloomIntensity 依畫質分級 0.7/0.9/1.05）",
-    /isNexus \? 0\.75 : 0\.55/.test(cV3D) && /\(o\.flashT \/ 0\.25\) \* 1\.6/.test(cV3D) &&
+  // S29B4：常態 idle emissive 再降（0.75/0.55 → idleEmiss 0.14/0.06）——斷言隨之更新
+  //   （值改小＝常態光更低，仍「常態 < 受擊/摧毀」，本檢查語意不變、非弱化）。
+  ck("14) 塔常態光效低於受擊/摧毀（常態 idleEmiss 主堡0.14/塔0.06 + 受擊峰值 +1.6；摧毀爆點 viewFx；bloomIntensity 依畫質分級 0.7/0.9/1.05）",
+    /o\.idleEmiss \+ \(o\.flashT \/ 0\.25\) \* 1\.6/.test(cV3D) && /IDLE_EMISS = isNexus \? 0\.14 : 0\.06/.test(cV3D) &&
     /spawnViewFx\(o\.grp\.position\.x/.test(cV3D) &&
     /Q\.bloomIntensity/.test(cV3D) &&
     (await import(u("src/battle/quality.js"))).QUALITY_PRESETS.low.bloomIntensity < 1);

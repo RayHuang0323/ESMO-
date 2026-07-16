@@ -130,3 +130,16 @@
   真資料非假動畫）；「⛲ 泉水」badge。
 - **相機**：模式化（director/objectiveFocus/heroFocus/free），點英雄 zoom-in 4s，
   詳見 `MOBA導播鏡頭與測試控制.md`。
+
+---
+
+## S29B4 增補：移除塔常駐光
+
+- **crystal 常態 idle glow 移除**：emissiveIntensity 常態降到**主堡 0.14 / 塔 0.06**
+  （29A 1.9/1.3 → 29B2 1.1/0.8 → 29B3 0.75/0.55 → **29B4 0.14/0.06**，低於 Bloom
+  luminanceThreshold 0.35 ⇒ 平時無常駐光暈，靠場景光呈現正常材質、仍可辨識塔位）。
+- **只有被攻擊時**才短暫 +1.6 脈衝（hp 差分觸發、0.25s 衰減）；**摧毀時** viewFx 爆點。
+- 主堡 PointLight 3.5 → 2.0（一般塔仍僅 high 檔 towerLights 開）；**未新增任何 PointLight**
+  （維持 S29A ≤2 盞上限，避免手機效能回退）。
+- **Replay 白畫面防護**（`MobaReplayScreen`）：frame/meta 缺欄位一律安全預設，舊格式/
+  部分擷取的 replay 不再崩畫面。
