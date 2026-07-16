@@ -47,6 +47,53 @@
 
 ---
 
+## S29B6 增補：地圖不能移動的根因、單一控制來源、2.5D 手勢
+
+> 視角方向的政策見 `MOBA_2.5D視角與資產策略.md`（29B6 新增）。本節只記相機實作。
+
+### 根因：`enablePan` 被寫死成 debug
+
+Ray 29B5 部署後手機實測「地圖無法自由拖曳或雙指縮放，只能單一視角觀看」。
+根因在 `MobaView3D` 的一行：
+
+```jsx
+<OrbitControls makeDefault ... enablePan={debug} minZoom={1.6} maxZoom={9} />
+```
+
+`debug` 是 `MobaView3D` 的 prop，預設 `false`，而 **`GameView` 從來沒有傳過它**
+⇒ 正式版 `enablePan` **恆為 false**。OrbitControls 的預設是「左鍵/單指 = 旋轉、
+雙指 = dolly+pan」，於是：
+
+- 單指拖曳 → 去**旋轉**一個本來就不該旋轉的 2.5D 正交戰場；
+- 雙指 → pan 被關掉，只剩 dolly；
+- 真正要的「平移地圖」**根本沒有實作**。
+
+29B3 的 pointer handler 也只是「切 camera mode」，不做位移——位移一直是
+OrbitControls 的職責，而它被關著。
+
+### 修法：移除 OrbitControls，cameraStore 成為單一來源
+
+| 層 | 職責 |
+|---|---|
+| `battle/cameraStore.js` | **唯一狀態源**：`mode` ＋ `pan`（邏輯世界座標）＋ `zoom`（正交）。`userPanTo` / `userZoomTo` **一律先切 free**；`setAutoTarget` 只寫值不改 mode。pan 一律 `clampPan` 於 `WORLD_BOUNDS`、zoom clamp 於 `ZOOM_MIN..ZOOM_MAX` |
+| `MobaView3D` 手勢層 | 單指拖曳 → pan（**地面 y=0 平面 raycast**：抓住的地面點跟著手指走）；雙指 → pinch zoom ＋ 中點 pan；滾輪 → 中心 zoom；tap 英雄 → `focusHero`；tap 空白 → free；雙擊 → 回導播。`touchAction="none"`（原本由 OrbitControls 設，移除後自己設） |
+| `BattleCameraController` | **唯一控制點**：把 cameraStore 的 pan/zoom 套到相機（固定俯角 `CAM_OFFSET`，零旋轉）。自動模式先平滑再把**螢幕上實際看到的**視野寫回 store ⇒ 玩家一伸手指切 free，視野無縫接續、不跳回導播目標點 |
+
+- `CameraRig`（29B2 的非跟隨取景）**併入控制器**——相機只能有一個驅動點。
+- 滾輪縮放以**畫面中心**為錨：單次離散事件無法像捏合那樣逐幀收斂到指標錨點
+  （相機那一幀還是舊 zoom），硬做會漂移 ⇒ 維持中心縮放，行為可預期。
+- **模擬結果不受影響**：cameraStore / 控制器零引擎 import、零 Store 寫入；
+  verifier 29B6 §5 實測「模擬中每秒 pan+zoom+翻模式共 1500 次 ⇒ 結果逐位元相同」。
+
+### 對 29B3 §1 表格的更新
+
+`free` 列的「控制器完全不介入（OrbitControls 手動）」**已不成立**：free 的 pan/zoom
+現在由 cameraStore 持有、由控制器套用。free 真正的語意是
+**「控制器不跑導播、不與玩家搶鏡頭」**（不呼叫 `computeSpectatorFocus`，直接套用玩家視野）。
+`check_moba_controls29b3` §10 的斷言已隨之更新（理由見 `05_Sprint紀錄.md` 29B6 節）。
+
+---
+
 ## S29B4 增補：測試控制可見性與 debug gate 強化
 
 - **?debug=1 根因修**：`isDebugMode`（`src/ui/debugMode.js`）舊版只讀

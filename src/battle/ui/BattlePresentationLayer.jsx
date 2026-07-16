@@ -14,6 +14,7 @@ import BattleFloatingText from "./BattleFloatingText.jsx";
 import BattleScoreboard from "./BattleScoreboard.jsx";
 import BattleEndScreen from "./BattleEndScreen.jsx";
 import BattleHeroStrip from "./BattleHeroStrip.jsx";
+import { Z } from "./battleLayout.js";
 
 export default function BattlePresentationLayer({ roster = null, showTimeline = true, onContinue = null, draft = null, tactic = null }) {
   // Sprint20【E】draft 交給 useBattleFeed：終局產出的 BattleResult.players[].heroId
@@ -41,7 +42,7 @@ export default function BattlePresentationLayer({ roster = null, showTimeline = 
 
       {/* 戰中 TAB 記分板 */}
       {showBoard && !over && (
-        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 12, pointerEvents: "none" }}>
+        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: Z.overlay, pointerEvents: "none" }}>
           <BattleScoreboard roster={roster} />
         </div>
       )}

@@ -160,3 +160,47 @@
 - 正式可見名稱：Dragon（巨龍）／Baron（巴龍）／Blue Buff／Red Buff／Jungle Camp。
 
 ⚠ 程序化輪廓的美術品質、手機辨識度、draw calls/FPS 未經真機驗收。
+
+---
+
+## S29B6 增補：中立目標死亡／淡出／absent 與 2.5D 視角政策
+
+> 視角方向與資產授權的正式政策已獨立成 `MOBA_2.5D視角與資產策略.md`（29B6 新增）。
+> 本檔 §4「相機（29B）」的待辦由該文件與 `MOBA導播鏡頭與測試控制.md` §S29B6 接手。
+
+### 根因：目標的時間軸和英雄不是同一條
+
+Ray 實測回報「Dragon / Baron / jungle objective 打完後疑似延遲或突然消失，
+英雄走兩步後才不見」。查下去是**兩個獨立缺陷疊加**：
+
+1. **相位差**：英雄與小兵畫在 `lerp(prev → snapshot, ease(subT))` 上——也就是視覺上
+   **落後 `snapshot` 最多一整個 tick**（1× 500ms、2× 250ms）。但中立目標舊碼
+   **直接讀 `snapshot` 且完全不插值** ⇒ 目標的死亡比「英雄視覺上打完最後一下」
+   早一個 tick 發生。兩者不在同一條時間軸上，看起來就是「不同步、突然」。
+2. **血條追值殘留**：舊碼 `shownHp = lerp(shownHp, hpNow, dt*6)` 是**追值**
+   （顯示值一路追真值，永遠落後約 0.2s）。團隊爆發把最後三成血在一秒內打光時，
+   血條還顯示兩三成、模型就已經死了；死亡瞬間又 `shownHp = 0` 強制歸零。
+3. fade 只有 **0.5s**（規格要 0.8–1.5s），且死後坑位空無一物、重生直接彈出，
+   沒有任何 absent／respawn 的視覺線索。
+
+### 修法（全部是既有真實資料的插值／差分，不改 reward / Progress / 節奏）
+
+- **同一條時間軸**：目標的 hp 與存活改由 `prev.objectives → snapshot.objectives`
+  插值，用**和英雄同一個 `a`**：
+  - hp：`nAlive ? (pAlive ? lerp(pv.hp, nx.hp, a) : nx.hp) : (pAlive ? lerp(pv.hp, 0, a) : 0)`
+    ⇒ 死亡 tick 血條平滑走到 0（重生則直接滿血，不從 0 長回來）。
+  - 存活：`alive = nAlive || (pAlive && a < 1)` ⇒ next 已死時**撐到 a=1**
+    （＝英雄視覺上抵達／打完最後一下）才轉死 ⇒ **血條歸零與模型死亡同幀發生**。
+- **fade**：`OBJ_FADE_S = 1.1`（規格 0.8–1.5s），縮小＋下沉＋爆點；
+  淡出期間 **不顯示 HP 條**（不再讓已死目標看起來還能打）。
+- **absent 環**：目標死亡後坑位留一圈低亮度脈動環（重生即隱藏）⇒ 「它死了、會回來」
+  一眼可辨。加在 `world` 而非目標自己的 group（group 死亡後會被隱藏）；
+  共享 geometry、**未新增任何 PointLight**（維持 S29A ≤2 盞上限）。
+  Dragon / Baron 的 respawn 倒數秒數本來就在 HUD（`BattleHUD` 的 D/B 欄，真實引擎資料）。
+- **Replay 一致**：重播改用**同一個 `MobaView3D`**（見 `MOBA重播系統.md` §S29B6），
+  死亡/fade 走**同一段 `updNeutral`**⇒ live 與 replay 不可能再各畫各的。
+
+引擎層未改：`hp<=0` 的**同一 tick** 就 `alive=false`、`snapshot.objectives[].hp=0`
+並帶 `respawn` 倒數（verifier 29B6 §12 實測），本 Sprint 只修呈現層的相位與插值。
+
+⚠ **未經真機實測**：fade 體感、absent 環辨識度、新增環之後的 draw calls / FPS。

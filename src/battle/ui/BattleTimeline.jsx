@@ -12,6 +12,7 @@ import { useBattleStore } from "../battleStore.js";
 import { fmtT } from "../../gameData.js";
 import { GC } from "../../ui/theme.js";
 import { useIsMobile } from "../../ui/useViewport.js";
+import { SAFE_TOP, FEED_LEFT, FEED_MAX_W, FEED_RIGHT_RESERVE, Z } from "./battleLayout.js";
 
 const ICON = { FIRST_BLOOD: "🩸", KILL: "⚔️", MULTI_KILL: "🔥", ACE: "💥", TOWER_DESTROYED: "🗼", DRAGON_SLAIN: "🐉", BARON_SLAIN: "👑", VICTORY: "🏆", SPELL_USED: "✨", OBJECTIVE_SPAWN: "🌀" };
 const LANE = { top: "上", mid: "中", bot: "下", nexus: "堡" };
@@ -86,7 +87,11 @@ export default function BattleTimeline({ open = true, max = 11, roster = null })
   const latest = rows[0];
 
   return (
-    <div style={{ position: "absolute", top: 96, left: 10, width: "min(226px, 62vw)", zIndex: 8, fontFamily: "system-ui,sans-serif" }}>
+    // S29B6 版面根因修：舊碼寫死 `top: 96`，而 BattleHUD（score header）從 top 6 起
+    //   高約 106–122px ⇒ 戰報**壓在藍紅勝率條與 MVP 列上**（兩者 zIndex 都是 8，
+    //   戰報在 DOM 較晚 ⇒ 贏）。改用共用常數 SAFE_TOP（= HUD 底緣 + 6）。
+    //   根層 pointerEvents: none ⇒ 戰報不吃掉地圖 pan/zoom；只有可點的標題列開啟。
+    <div style={{ position: "absolute", top: SAFE_TOP, left: FEED_LEFT, width: `min(${FEED_MAX_W}px, 62vw)`, maxWidth: `calc(100% - ${FEED_LEFT + FEED_RIGHT_RESERVE}px)`, zIndex: Z.feed, fontFamily: "system-ui,sans-serif", pointerEvents: "none" }}>
       <div onClick={() => setFold((v) => !v)} style={{ cursor: "pointer", pointerEvents: "auto", display: "flex", justifyContent: "space-between", gap: 6, alignItems: "center",
         background: "rgba(8,14,24,0.78)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: fold ? 9 : "9px 9px 0 0",
         padding: "4px 9px", fontSize: 10, fontWeight: 900, color: "rgba(255,255,255,0.6)", letterSpacing: fold ? 0 : "0.16em" }}>

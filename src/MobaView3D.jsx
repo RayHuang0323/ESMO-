@@ -1,8 +1,10 @@
 // ============================================================================
 //  MobaView3D.jsx  —  正式 3D 渲染殼（React Three Fiber + Bloom/SSAO）
-//  - 只讀 useGameStore（prev/snapshot/subTRef），不改任何邏輯/數值
+//  - 只讀呈現資料源的 prev/snapshot/subTRef，不改任何邏輯/數值
+//    （S29B6：資料源可注入 —— 預設 useGameStore；Replay 傳唯讀 adapter ⇒ 現場與重播共用本檔）
 //  - 場景內容用一條 useFrame 命令式更新（沿用已驗證的更新邏輯，效能/正確性高）
-//  - Canvas / 正交神之視角 / OrbitControls / 燈光 / 後製濾鏡 皆為 R3F 宣告式
+//  - Canvas / 正交神之視角 / 燈光 / 後製濾鏡 皆為 R3F 宣告式
+//    （S29B6：相機改由 cameraStore + BattleCameraController 單一驅動，已移除 OrbitControls）
 //
 //  安裝：npm install three @react-three/fiber @react-three/drei \
 //                    @react-three/postprocessing postprocessing zustand
@@ -12,7 +14,10 @@
 
 import React, { useRef, useEffect } from "react";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
-import { OrthographicCamera, OrbitControls } from "@react-three/drei";
+// S29B6：不再使用 drei `OrbitControls`——它同時持有 pan/zoom/rotate，與 cameraStore
+//   形成雙頭控制；且它的 `enablePan` 舊碼寫死成 debug ⇒ 地圖不能平移、只能旋轉。
+//   2.5D 戰術視角不要旋轉，改由 cameraStore + BattleCameraController 單一驅動。
+import { OrthographicCamera } from "@react-three/drei";
 import { EffectComposer, Bloom, SSAO, Vignette } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
@@ -23,14 +28,18 @@ import {
   WORLD_BOUNDS, WORLD_SCALE, worldX, worldZ, mapNormX,
   OBJECTIVE_PRESENTATION, presentationForObjective,
 } from "./gameData.js";
-import BattleCameraController, { fitZoomFor } from "./battle/ui/BattleCameraController.jsx";
-import { useCameraStore } from "./battle/cameraStore.js";
+import BattleCameraController from "./battle/ui/BattleCameraController.jsx";
+import { useCameraStore, ZOOM_MIN, ZOOM_MAX } from "./battle/cameraStore.js";
 import { presetFor } from "./battle/quality.js";
 import { useIsMobile } from "./ui/useViewport.js";
 
 // ── 世界尺度（放大；只影響渲染，不影響邏輯）──────────────────────────────────
 const S = WORLD_SCALE;
 const wx = worldX, wz = worldZ;
+// S29B6：中立目標死亡淡出時長（秒，真實時間）。任務單規格 0.8–1.5s；
+//   舊值 0.5s 太短，配上「血條追值殘留」讓死亡看起來像瞬間消失。
+//   live 與 Replay 共用同一段程式碼 ⇒ 兩邊的 fade 必然一致。
+export const OBJ_FADE_S = 1.1;
 // S29B2：英雄可讀性放大係數（實機回報「英雄太小」；只放大視覺模型，不碰座標/邏輯）
 const HK = 1.3;
 const HERO_CAP_Y = 1.7 * HK * S;     // 建立與 useFrame 更新共用，避免兩處不一致
@@ -248,13 +257,15 @@ function makeNeutralVisual(key, shadows) {
 // ════════════════════════════════════════════════════════════════════════════
 //  場景內容（命令式建立 + 單一 useFrame 更新）
 // ════════════════════════════════════════════════════════════════════════════
-function MobaScene({ mapTexture, roster, Q }) {
+function MobaScene({ mapTexture, roster, Q, source = null }) {
   const { scene, camera, gl } = useThree();
   const R = useRef({});
+  // S29B6：呈現資料源（live useGameStore / Replay 唯讀 adapter）——只讀，不寫。
+  const src = source ?? useGameStore;
 
   useEffect(() => {
     const world = new THREE.Group(); scene.add(world);
-    const snap0 = useGameStore.getState().snapshot;
+    const snap0 = src.getState().snapshot;
 
     // 地板
     const floorMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1.0, metalness: 0.0 });
@@ -334,6 +345,20 @@ function MobaScene({ mapTexture, roster, Q }) {
       world.add(grp); towerObjs[key] = { grp, crystal, stump, isNexus, hpBar, hfg, hfgW, lastHp: 1, flashT: 0, idleEmiss: IDLE_EMISS };
     });
 
+    // S29B6：absent 環——目標死亡後坑位不再空無一物（重生即隱藏）。
+    //   加在 `world` 而非目標自己的 group：group 在死亡後會被隱藏，環必須留著。
+    //   共享 geometry / 每個各自一份材質（opacity 要各自脈動）；不新增任何燈光。
+    const absentGeo = new THREE.RingGeometry(0.62, 1, 28);
+    const mkAbsent = (x, y, col, rad) => {
+      const mat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.2, depthWrite: false, side: THREE.DoubleSide });
+      const ring = new THREE.Mesh(absentGeo, mat);
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.set(wx(x), 0.12, wz(y));
+      ring.scale.setScalar(rad * S);
+      ring.visible = false; world.add(ring);
+      return ring;
+    };
+
     // Dragon / Baron：S29B5 ESMO 自有程序化輪廓（寬翼巨龍 / 高耸冠角蛇體）。
     const obj3d = {};
     [["dragon", PITS.dragon], ["baron", PITS.baron]].forEach(([k, pit]) => {
@@ -343,7 +368,7 @@ function MobaScene({ mapTexture, roster, Q }) {
       const hbg = new THREE.Mesh(new THREE.PlaneGeometry(6.4 * S, 0.62 * S), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.7, depthTest: false })); hbg.position.z = -0.01;
       const hfg = new THREE.Mesh(new THREE.PlaneGeometry(6.2 * S, 0.48 * S), new THREE.MeshBasicMaterial({ color: col, depthTest: false }));
       hpGrp.add(hbg, hfg); world.add(hpGrp);
-      obj3d[k] = { mesh: m, materials: visual.materials, color: col, hpGrp, hfg, hfgW: 6.2 * S, lastHp: 1, flashT: 0, shownHp: 1, wasAlive: false, deathT: 0, baseY: 0, baseScale: 1 };
+      obj3d[k] = { mesh: m, materials: visual.materials, color: col, hpGrp, hfg, hfgW: 6.2 * S, lastHp: 1, flashT: 0, shownHp: 1, wasAlive: false, deathT: 0, baseY: 0, baseScale: 1, absent: mkAbsent(pit.x, pit.y, col, 4.6) };
     });
 
     // Blue Buff / Red Buff / Jungle Camp：各自獨立 silhouette，不以光圈當模型。
@@ -361,7 +386,7 @@ function MobaScene({ mapTexture, roster, Q }) {
       const fg = new THREE.Mesh(new THREE.PlaneGeometry(3.3 * S, 0.32 * S), new THREE.MeshBasicMaterial({ color: col, depthTest: false }));
       hpGrp.add(bg, fg); grp.add(hpGrp);
       grp.visible = false; world.add(grp);
-      campObjs.set(o.id, { grp, body, materials: visual.materials, color: col, presentationKey: key, hpGrp, fg, w: 3.3 * S, lastHp: 1, flashT: 0, shownHp: 1, wasAlive: false, deathT: 0, baseY: 0 });
+      campObjs.set(o.id, { grp, body, materials: visual.materials, color: col, presentationKey: key, hpGrp, fg, w: 3.3 * S, lastHp: 1, flashT: 0, shownHp: 1, wasAlive: false, deathT: 0, baseY: 0, absent: mkAbsent(o.pos.x, o.pos.y, col, o.type === "buff" ? 2.4 : 2.0) });
     });
 
     // ── S29B3/S29B5：常駐 billboard 標籤——Dragon/Baron/泉水/營地不再只是色塊 ──
@@ -468,25 +493,97 @@ function MobaScene({ mapTexture, roster, Q }) {
       seenRecalls: new Set(),                                       // S29B3：回城事件已播記錄
     };
 
-    // ── S29B3：導播 UX 點擊互動（純呈現層；不讀寫引擎 ⇒ 不可能改變模擬結果）──
-    //  tap 英雄 ⇒ heroFocus 4s；tap 空白或拖曳 >8px 或滾輪 ⇒ free；雙擊空白 ⇒ 回導播。
+    // ── S29B3/S29B6：地圖操作手勢（純呈現層；不讀寫引擎 ⇒ 不可能改變模擬結果）──
+    //  S29B6 根因：舊碼只會「切換相機模式」，真正的平移/縮放交給 drei OrbitControls，
+    //    而它的 `enablePan` 被寫死成 `debug`（GameView 從未傳 ⇒ 永遠 false）
+    //    ⇒ 拖曳只會旋轉 2.5D 正交視角、雙指只剩 dolly，地圖等於不能移動。
+    //  現在手勢直接寫 cameraStore（單一狀態源），BattleCameraController 單一套用：
+    //    · 單指/滑鼠拖曳 ⇒ pan（抓住的地面點跟著手指走）⇒ free
+    //    · 雙指捏合 ⇒ pinch zoom（+ 中點位移一併 pan）⇒ free
+    //    · 滾輪 ⇒ zoom ⇒ free
+    //    · tap 英雄 ⇒ heroFocus 4s；tap 空白 ⇒ free；雙擊 ⇒ 回導播
+    //  pan 由 cameraStore clamp 在 WORLD_BOUNDS 內 ⇒ 不會拖出地圖黑區。
     const el = gl.domElement;
+    el.style.touchAction = "none";   // 舊版由 OrbitControls 設定；移除它後必須自己設
     const ray = new THREE.Raycaster();
     const ndc = new THREE.Vector2();
-    let downPt = null;
+    const GROUND = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const hitA = new THREE.Vector3(), hitB = new THREE.Vector3();
     const camStore = () => useCameraStore.getState();
-    const onPtrDown = (e) => { downPt = { x: e.clientX, y: e.clientY }; };
-    const onPtrMove = (e) => {
-      if (!downPt) return;
-      if (Math.hypot(e.clientX - downPt.x, e.clientY - downPt.y) > 8) camStore().setMode("free");   // 拖曳 ⇒ 自由
-    };
-    const onPtrUp = (e) => {
-      if (!downPt) return;
-      const moved = Math.hypot(e.clientX - downPt.x, e.clientY - downPt.y);
-      downPt = null;
-      if (moved > 8) return;                       // 拖曳（已切 free）
+    const pointers = new Map();      // pointerId → { x, y }（多點觸控追蹤）
+    let downPt = null;               // 單指按下點（tap 判定）
+    let dragAnchor = null;           // 按下當下抓住的**地面 3D 座標**（pan 用）
+    let pinchDist = 0, pinchZoom = 0;
+    let moved = 0;
+
+    /** 螢幕座標 → 地面（y=0）3D 交點；正交相機必定有解（除非平行，實務上不會）。 */
+    const groundAt = (clientX, clientY, out) => {
       const rect = el.getBoundingClientRect();
-      ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+      if (!rect.width || !rect.height) return null;
+      ndc.set(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
+      ray.setFromCamera(ndc, R.current.camera ?? camera);
+      return ray.ray.intersectPlane(GROUND, out);
+    };
+    const mid = () => {
+      const pts = [...pointers.values()];
+      return { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+    };
+    const spread = () => {
+      const pts = [...pointers.values()];
+      return Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+    };
+    /** 把「抓住的地面點」拉回手指下：正交投影下 screen→ground 是仿射映射，
+     *  pan += (anchor − 目前手指下的地面點) 一步收斂。 */
+    const panToAnchor = (clientX, clientY) => {
+      if (!dragAnchor) return;
+      const cur = groundAt(clientX, clientY, hitB);
+      if (!cur) return;
+      const st = camStore();
+      st.userPanTo(st.pan.x + (dragAnchor.x - cur.x) / S, st.pan.y + (dragAnchor.z - cur.z) / S);
+    };
+
+    const onPtrDown = (e) => {
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      el.setPointerCapture?.(e.pointerId);
+      if (pointers.size === 1) {
+        downPt = { x: e.clientX, y: e.clientY }; moved = 0;
+        const g = groundAt(e.clientX, e.clientY, hitA);
+        dragAnchor = g ? g.clone() : null;
+      } else if (pointers.size === 2) {
+        downPt = null;                      // 兩指 ⇒ 不再是 tap
+        pinchDist = spread(); pinchZoom = camStore().zoom;
+        const m = mid();
+        const g = groundAt(m.x, m.y, hitA);
+        dragAnchor = g ? g.clone() : null;
+      }
+    };
+
+    const onPtrMove = (e) => {
+      if (!pointers.has(e.pointerId)) return;
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointers.size >= 2) {
+        // 雙指：先套 zoom（改變投影 ⇒ 影響地面映射），再把中點的地面錨點拉回中點
+        const d = spread();
+        if (pinchDist > 4 && d > 4) camStore().userZoomTo(clamp(pinchZoom * (d / pinchDist), ZOOM_MIN, ZOOM_MAX));
+        const m = mid();
+        panToAnchor(m.x, m.y);
+        return;
+      }
+      if (!downPt) return;
+      moved = Math.max(moved, Math.hypot(e.clientX - downPt.x, e.clientY - downPt.y));
+      if (moved > 8) panToAnchor(e.clientX, e.clientY);   // 拖曳 ⇒ pan（userPanTo 內含切 free）
+    };
+
+    const onPtrUp = (e) => {
+      pointers.delete(e.pointerId);
+      el.releasePointerCapture?.(e.pointerId);
+      if (pointers.size >= 1) { dragAnchor = null; return; }   // 還有手指在 ⇒ 不判定 tap
+      const wasTap = downPt && moved <= 8;
+      const pt = downPt; downPt = null; dragAnchor = null;
+      if (!wasTap) return;
+      const rect = el.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      ndc.set(((pt.x - rect.left) / rect.width) * 2 - 1, -((pt.y - rect.top) / rect.height) * 2 + 1);
       ray.setFromCamera(ndc, R.current.camera ?? camera);
       const meshes = [];
       for (const id in R.current.heroObjs) {
@@ -498,18 +595,30 @@ function MobaScene({ mapTexture, roster, Q }) {
       if (hit) camStore().focusHero(hit.object.userData.heroId);   // 點英雄 ⇒ zoom-in 聚焦
       else camStore().setMode("free");                             // 點空白 ⇒ 自由鏡頭
     };
+    const onPtrCancel = (e) => { pointers.delete(e.pointerId); downPt = null; dragAnchor = null; };
     const onDbl = () => camStore().backToDirector();               // 雙擊空白 ⇒ 回導播
-    const onWheel = () => camStore().setMode("free");              // 手動縮放 ⇒ 自由
+    // 滾輪 zoom：以**畫面中心**為錨（單次離散事件無法像捏合那樣逐幀收斂到指標錨點，
+    //   硬做會因為「相機這一幀還是舊 zoom」而漂移 ⇒ 維持中心縮放，行為可預期）。
+    //   ⚠ 必須 passive:false + preventDefault：戰場只有 min(82vh,720px) 高、外層頁面可捲，
+    //   passive 監聽器不能擋預設行為 ⇒ 會變成「一邊縮放一邊捲動整頁」
+    //   （任務單 A-10：不得用瀏覽器頁面捲動代替地圖操作）。舊版是 OrbitControls 擋掉的。
+    const onWheel = (e) => {
+      e.preventDefault();
+      const st = camStore();
+      st.userZoomTo(clamp(st.zoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12), ZOOM_MIN, ZOOM_MAX));
+    };
     el.addEventListener("pointerdown", onPtrDown);
     el.addEventListener("pointermove", onPtrMove);
     el.addEventListener("pointerup", onPtrUp);
+    el.addEventListener("pointercancel", onPtrCancel);
     el.addEventListener("dblclick", onDbl);
-    el.addEventListener("wheel", onWheel, { passive: true });
+    el.addEventListener("wheel", onWheel, { passive: false });
 
     return () => {
       el.removeEventListener("pointerdown", onPtrDown);
       el.removeEventListener("pointermove", onPtrMove);
       el.removeEventListener("pointerup", onPtrUp);
+      el.removeEventListener("pointercancel", onPtrCancel);
       el.removeEventListener("dblclick", onDbl);
       el.removeEventListener("wheel", onWheel);
       scene.remove(world);
@@ -523,14 +632,14 @@ function MobaScene({ mapTexture, roster, Q }) {
       geos.forEach((g) => g.dispose());
       mats.forEach((m) => { m.map?.dispose?.(); m.dispose(); });
     };
-  }, [mapTexture, scene, Q]);
+  }, [mapTexture, scene, Q, src]);
 
   // 單一 useFrame：讀 store → 命令式更新（不觸發 React 重繪）
   useFrame((state, dt) => {
     const r = R.current; if (!r.heroObjs) return;
     r.camera = camera;   // S29B3：raycast 永遠用當前生效相機（makeDefault 可能晚掛）
     const now = state.clock.getElapsedTime() * 1000;
-    const { prev, snapshot, subTRef } = useGameStore.getState();
+    const { prev, snapshot, subTRef } = src.getState();
     const a = ease(clamp(subTRef.current, 0, 1));
     const nextHero = {}; snapshot.players.forEach((p) => (nextHero[p.id] = p));
     // 戰爭迷霧（藍方視角）
@@ -565,7 +674,10 @@ function MobaScene({ mapTexture, roster, Q }) {
       // Sprint07 Hero Overlay v2：英雄名 / 玩家名·Lv(佔位) / KDA或復活倒數 + 狀態徽章
       const heroName = roster?.[p.id]?.hero ?? ROLE_NAME[np.role];
       const playerName = `${roster?.[p.id]?.player ?? p.id.toUpperCase()} · Lv${np.lv ?? 1}`;  // Sprint08：真等級（Hero Progress loadout）
-      const line3 = dead ? `☠ ${Math.max(0, np.respawn).toFixed(0)}s` : `${np.k}/${np.d}/${np.a ?? 0}`;
+      // S29B6：Replay 的 frame 沒有擷取 respawn 秒數 ⇒ 顯示「陣亡」而不是假的「0s」倒數
+      const line3 = dead
+        ? (Number.isFinite(np.respawn) ? `☠ ${Math.max(0, np.respawn).toFixed(0)}s` : "☠ 陣亡")
+        : `${np.k}/${np.d}/${np.a ?? 0}`;
       const badge = dead ? null
         : np.state === "撤退" ? { text: "⛊ 撤退", bg: "#fbbf24" }
         : np.state === "回城中" ? { text: "🌀 回城中", bg: "#60a5fa" }   // S29B3：引導中
@@ -672,32 +784,57 @@ function MobaScene({ mapTexture, roster, Q }) {
       }
     });
 
-    // 龍/巴龍（S29B1 HP 條；S29B2：HP 平滑插值 + 受擊閃光 + 死亡淡出，全部真資料差分）
-    const objMap = {};
+    // ── 中立目標：龍 / 巴龍 / Buff / 野怪營地 ────────────────────────────────
+    //  S29B6 根因（Ray 實測「打完後疑似延遲或突然消失」）：
+    //    ① **相位差**：英雄/小兵畫在 `lerp(prev → snapshot, a)` 上，視覺上落後
+    //       snapshot 最多**一個 tick**（1× 500ms、2× 250ms）；但中立目標舊碼直接讀
+    //       `snapshot` 且**不插值** ⇒ 目標的死亡比「英雄視覺上打完最後一下」早一個 tick。
+    //    ② **血條追值殘留**：舊碼 `shownHp = lerp(shownHp, hpNow, dt*6)` 是追值（落後真值），
+    //       死亡瞬間又被強制歸零 ⇒ 血條還剩兩三成、模型就沒了＝「突然消失」。
+    //    ③ fade 只有 0.5s（規格要 0.8–1.5s），且死後坑位空無一物、重生直接彈出。
+    //  修法：目標的 hp / 存活改由 **prev→snapshot 插值（與英雄同一個 a）**——
+    //    next 死亡時撐到 a=1 才轉死，血條同時線性走到 0 ⇒ 歸零與死亡同幀發生；
+    //    fade = OBJ_FADE_S（1.1s）；死後坑位留 absent 環，重生時消失。
+    //  全部是既有真實資料的差分/插值：**不改 objective reward / Progress / 節奏**。
+    const objMap = {}, prevObjMap = {};
     (snapshot.objectives ?? []).forEach((o) => (objMap[o.id] = o));
-    const updNeutral = (o, ob, alive, baseEmissive, sizeFx) => {
-      // 受擊：hp 下降 ⇒ 閃光
-      const hpNow = alive && ob ? clamp(ob.hp, 0, 1) : 0;
-      if (alive && (o.lastHp ?? 1) - hpNow > 0.002) o.flashT = 0.25;
+    (prev.objectives ?? []).forEach((o) => (prevObjMap[o.id] = o));
+    const updNeutral = (o, id, nx, baseEmissive, sizeFx) => {
+      const pv = prevObjMap[id];
+      const nAlive = !!nx?.alive, pAlive = !!pv?.alive;
+      // 視覺存活：next 已死 ⇒ 撐到本 tick 結束（a=1）＝英雄視覺上打完最後一下才轉死
+      const alive = nAlive || (pAlive && a < 1);
+      // hp 與英雄同一條插值時間軸；死亡 tick 平滑走到 0（不再有殘留血條）
+      const hpNow = nAlive
+        ? (pAlive ? lerp(pv.hp, nx.hp, a) : nx.hp)      // 重生 ⇒ 直接滿血，不從 0 長回來
+        : (pAlive ? lerp(pv.hp, 0, a) : 0);
+      if (alive && (o.lastHp ?? 1) - hpNow > 0.002) o.flashT = 0.25;   // 受擊閃光
       o.lastHp = hpNow;
       if (o.flashT > 0) o.flashT = Math.max(0, o.flashT - dt);
-      // 死亡轉場：alive → dead ⇒ 爆點 + 0.5s 縮小下沉淡出（不是瞬間消失）
-      if (o.wasAlive && !alive) { o.deathT = 0.5; o.spawnDeath?.(); }
+      // 死亡轉場：alive → dead ⇒ 爆點 + OBJ_FADE_S 縮小下沉淡出（不是瞬間消失）
+      if (o.wasAlive && !alive) { o.deathT = OBJ_FADE_S; o.spawnDeath?.(); }
       o.wasAlive = alive;
       if (o.deathT > 0) o.deathT = Math.max(0, o.deathT - dt);
-      // HP 條平滑：顯示值向真值插值（每 tick 0.5s 的階梯 → 連續下降）
-      o.shownHp = alive ? lerp(o.shownHp ?? hpNow, hpNow, Math.min(1, dt * 6)) : 0;
-      return { hpNow, flash: (o.flashT / 0.25), dying: o.deathT > 0, dieK: o.deathT / 0.5, emissive: baseEmissive + (o.flashT / 0.25) * sizeFx };
+      o.shownHp = alive ? clamp(hpNow, 0, 1) : 0;
+      return { alive, hpNow, flash: (o.flashT / 0.25), dying: o.deathT > 0, dieK: o.deathT / OBJ_FADE_S, emissive: baseEmissive + (o.flashT / 0.25) * sizeFx };
+    };
+    // absent 環：死亡後坑位不是空無一物；重生（alive）即隱藏 ⇒ 狀態一眼可辨
+    const updAbsent = (ring, alive, dying) => {
+      if (!ring) return;
+      ring.visible = !alive && !dying;
+      if (ring.visible) ring.material.opacity = 0.16 + 0.1 * (0.5 + 0.5 * Math.sin(now / 420));
     };
     ["dragon", "baron"].forEach((k) => {
       const d = snapshot[k], o = r.obj3d[k];
       o.spawnDeath = () => r.spawnViewFx(o.mesh.position.x, o.mesh.position.z, o.color, 6, 0.7);
-      const st = updNeutral(o, objMap[k], d.alive, d.contested ? 0.75 : 0.16, 1.2);
-      o.mesh.visible = d.alive || st.dying;
-      if (d.alive) { o.mesh.rotation.y += dt * 0.35; o.materials.forEach((m) => { m.emissiveIntensity = st.emissive; }); o.mesh.scale.setScalar(1); o.mesh.position.y = o.baseY; }
+      const st = updNeutral(o, k, objMap[k], d.contested ? 0.75 : 0.16, 1.2);
+      o.mesh.visible = st.alive || st.dying;
+      if (st.alive) { o.mesh.rotation.y += dt * 0.35; o.materials.forEach((m) => { m.emissiveIntensity = st.emissive; }); o.mesh.scale.setScalar(1); o.mesh.position.y = o.baseY; }
       else if (st.dying) { const s2 = 0.3 + 0.7 * st.dieK; o.mesh.scale.setScalar(s2); o.mesh.position.y = o.baseY * st.dieK; }
+      updAbsent(o.absent, st.alive, st.dying);
       if (o.hpGrp) {
-        o.hpGrp.visible = d.alive && !!objMap[k];
+        // 死亡/淡出中 ⇒ 不顯示 HP 條（不再讓已死目標看起來還能打）
+        o.hpGrp.visible = st.alive && !!objMap[k];
         if (o.hpGrp.visible) {
           const hp = clamp(o.shownHp, 0.001, 1);
           o.hfg.scale.x = hp; o.hfg.position.x = -(o.hfgW * (1 - hp)) / 2;
@@ -705,14 +842,13 @@ function MobaScene({ mapTexture, roster, Q }) {
         }
       }
     });
-    // 野怪營地（S29B2：同一套受擊/死亡/插值管線）
+    // 野怪營地（S29B2 起同一套受擊/死亡管線；S29B6 一併吃到插值同步 + absent 環）
     r.campObjs?.forEach((co, id) => {
-      const ob = objMap[id];
-      const alive = !!ob?.alive;
       co.spawnDeath = () => r.spawnViewFx(co.grp.position.x, co.grp.position.z, co.color, 3.2, 0.55);
-      const st = updNeutral(co, ob, alive, 0.14, 1.3);
-      co.grp.visible = alive || st.dying;
-      if (alive) {
+      const st = updNeutral(co, id, objMap[id], 0.14, 1.3);
+      co.grp.visible = st.alive || st.dying;
+      updAbsent(co.absent, st.alive, st.dying);
+      if (st.alive) {
         co.body.rotation.y += dt * 0.8;
         co.materials.forEach((m) => { m.emissiveIntensity = st.emissive; });
         co.body.scale.setScalar(1); co.body.position.y = co.baseY;
@@ -807,20 +943,9 @@ function MobaScene({ mapTexture, roster, Q }) {
   return null;
 }
 
-/**
- * S29B2：預設取景（非跟隨模式）——依視窗尺寸把地圖框滿主要可視區。
- * 真正的相機 zoom（正交投影），不是 CSS scale；跟隨模式時交給 BattleCameraController。
- */
-function CameraRig({ mobile, follow }) {
-  const camera = useThree((s) => s.camera);
-  const size = useThree((s) => s.size);
-  useEffect(() => {
-    if (!camera.isOrthographicCamera || follow) return;
-    camera.zoom = fitZoomFor(size.width, size.height, mobile);
-    camera.updateProjectionMatrix();
-  }, [camera, size, mobile, follow]);
-  return null;
-}
+// S29B2 的 `CameraRig`（非跟隨模式的預設取景）已於 S29B6 併入 BattleCameraController：
+//   相機只能有**一個**驅動點，否則 rig / controller / OrbitControls 會互相覆寫。
+//   非跟隨（賽前待機）取景 = controller 的 `!follow` 分支（世界中心 + fitZoomFor）。
 
 /**
  * S29：畫質分級（quality preset）。
@@ -830,7 +955,13 @@ function CameraRig({ mobile, follow }) {
  *     只有最貴的 SSAO + normalPass 降到 high 才開。
  *   · quality 由呼叫端傳入（GameView 依 battle/quality.js 自動判斷 + 玩家手動覆寫）。
  */
-export default function MobaView3D({ mapTexture = null, autoRotate = true, battleFollow = false, roster = null, debug = false, quality = null }) {
+/**
+ * @param source S29B6：呈現資料源。預設 `null` ⇒ live `useGameStore`。
+ *   Replay 傳入 `createReplaySource(replay)`（唯讀 adapter：replay frame → snapshot），
+ *   讓**重播與現場共用同一套 3D 戰場**，而不是各自維護一張地圖。
+ *   本檔只呼叫 `source.getState()`，永遠不寫入 ⇒ 重播不可能觸發終局結算 / 發獎。
+ */
+export default function MobaView3D({ mapTexture = null, autoRotate = true, battleFollow = false, roster = null, debug = false, quality = null, source = null }) {
   const Q = quality ?? presetFor("medium");
   const mobile = useIsMobile();   // S29B2：取景分歧（桌機全圖 / 手機聚焦戰場）
   return (
@@ -843,9 +974,9 @@ export default function MobaView3D({ mapTexture = null, autoRotate = true, battl
       <color attach="background" args={["#0d1420"]} />
       <fog attach="fog" args={["#0d1420", 260 * S, 460 * S]} />
 
-      {/* 正交神之視角（斜對角）；用滾輪縮放或調 zoom 對齊畫面 */}
+      {/* 2.5D 正交戰術視角（固定斜俯角，不旋轉）。position/zoom 只是初值——
+          之後由 BattleCameraController 依 cameraStore 的 pan/zoom 單一驅動。 */}
       <OrthographicCamera makeDefault position={[55 * S, 78 * S, 78 * S]} zoom={3.4} near={0.1} far={2000} />
-      <OrbitControls makeDefault target={[0, 0, 0]} autoRotate={autoRotate && !battleFollow} autoRotateSpeed={0.6} enablePan={debug} minZoom={1.6} maxZoom={9} />
 
       {/* 明亮光影。⚠ 場上的動態 PointLight 已從 22 盞降到 2 盞（只剩主堡），見 MobaScene。 */}
       <ambientLight intensity={1.15} />
@@ -859,9 +990,8 @@ export default function MobaView3D({ mapTexture = null, autoRotate = true, battl
       )}
       <directionalLight position={[-50 * S, 60 * S, -40 * S]} intensity={0.6} color={0x9ec8ff} />
 
-      <MobaScene mapTexture={mapTexture} roster={roster} Q={Q} />
-      <CameraRig mobile={mobile} follow={battleFollow} />
-      <BattleCameraController follow={battleFollow} mobile={mobile} />
+      <MobaScene mapTexture={mapTexture} roster={roster} Q={Q} source={source} />
+      <BattleCameraController follow={battleFollow} mobile={mobile} source={source} />
 
       {/* 後製：Bloom 三檔都保留；SSAO（含 normalPass）只在 high 開啟 */}
       <EffectComposer enableNormalPass={Q.ssao} multisampling={Q.multisampling}>

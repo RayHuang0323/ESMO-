@@ -17,6 +17,7 @@ import React from "react";
 import { useGameStore } from "../../useGameStore.js";
 import { useBattleStore } from "../battleStore.js";
 import { fmtT } from "../../gameData.js";
+import { HUD_TOP, HUD_H, PANEL_MAX_W, Z } from "./battleLayout.js";
 
 const BLUE = "#60a5fa", RED = "#fb923c", MONO = "'Courier New',monospace";
 
@@ -57,7 +58,11 @@ export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭
   );
 
   return (
-    <div style={{ position: "absolute", top: 6, left: "50%", transform: "translateX(-50%)", width: "min(96%, 560px)", pointerEvents: "none", fontFamily: "system-ui,-apple-system,sans-serif", zIndex: 8, background: "rgba(13,11,18,0.92)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "6px 12px 7px", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
+    // S29B6：top / 寬度 / z-index 改讀 `battleLayout` 共用常數——戰報與控制鈕
+    //   的安全區（SAFE_TOP）由 HUD_TOP + HUD_H 推導，兩邊必須同一個來源，
+    //   否則版型一改就又會有東西壓到藍紅條上（29B6 修的正是這個）。
+    //   `maxHeight: HUD_H` 讓「HUD 實際高度 ≤ 常數」這件事在執行期也成立。
+    <div style={{ position: "absolute", top: HUD_TOP, left: "50%", transform: "translateX(-50%)", width: `min(96%, ${PANEL_MAX_W}px)`, maxHeight: HUD_H, boxSizing: "border-box", overflow: "hidden", pointerEvents: "none", fontFamily: "system-ui,-apple-system,sans-serif", zIndex: Z.hud, background: "rgba(13,11,18,0.92)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "6px 12px 7px", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
       <style>{`@keyframes esmoPulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
 
       {/* 列1：隊名 + LIVE badge（Legacy）*/}

@@ -120,11 +120,21 @@ ck(`8) camera mode 集合 = director/free/heroFocus/objectiveFocus（現值 ${CA
     /intersectObjects/.test(V3D) && /focusHero\(hit\.object\.userData\.heroId\)/.test(V3D));
   useCameraStore.getState().setMode("free");
   const s2 = useCameraStore.getState();
-  ck(`10) 點空白或拖曳退出導播（store：setMode("free") ⇒ mode=${s2.mode}；view：拖曳>8px 與點空白都 setMode("free")、雙擊 backToDirector、free 時控制器不介入）`,
+  // ⚠ S29B6 更新本條斷言：舊斷言的最後一項是 `/if \(cam\.mode === "free"\) return/`，
+  //   語意是「free 時控制器**完全不介入**」——那是舊架構的事實：free 鏡頭由 drei
+  //   `OrbitControls` 自己持有，控制器只需讓開。29B6 依任務單「整理成單一控制來源」
+  //   移除 OrbitControls（它的 `enablePan` 寫死 debug ⇒ 地圖根本不能平移，見 29B6 A 項），
+  //   free 的 pan/zoom 改由 cameraStore 持有、**由控制器套用** ⇒ 「不介入」已不成立。
+  //   新斷言保留這條規則真正要守的東西：**free 時控制器不跑導播、不與玩家搶鏡頭**
+  //   （不呼叫 computeSpectatorFocus，直接套用玩家的 pan/zoom 後結束該幀）。
+  const freeBranch = /cam\.mode === "free"[\s\S]{0,320}?cam\.pan\.x[\s\S]{0,200}?return;/.test(BCC);
+  const freeBeforeDirector = BCC.indexOf('cam.mode === "free"') < BCC.indexOf("computeSpectatorFocus(snap");
+  ck(`10) 點空白或拖曳退出導播（store：setMode("free") ⇒ mode=${s2.mode}；view：拖曳>8px 走 userPanTo(free)、點空白 setMode("free")、雙擊 backToDirector；free 時控制器只套用玩家 pan/zoom，不跑導播）`,
     s2.mode === "free" &&
     /Math\.hypot\(e\.clientX - downPt\.x/.test(V3D) && /camStore\(\)\.setMode\("free"\)/.test(V3D) &&
+    /userPanTo/.test(V3D) &&
     /backToDirector/.test(V3D) &&
-    /if \(cam\.mode === "free"\) return/.test(BCC));
+    freeBranch && freeBeforeDirector);
   useCameraStore.getState().backToDirector();
   // 11) 相機模式不改模擬：cameraStore/控制器不 import 引擎；模擬中翻轉模式 ⇒ 結果逐位元相同
   const CS2 = code(src("src/battle/cameraStore.js"));

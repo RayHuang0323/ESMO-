@@ -26,6 +26,9 @@
 - **MOBA 對戰執行／時間／節奏**：
   `design/MOBA對戰執行與時間系統.md`、`design/MOBA交戰節奏與擊殺模型.md`
 - **MOBA HUD／手機**：`design/MOBA對戰HUD與手機版.md`
+- **MOBA 視角方向／美術資產策略**：`design/MOBA_2.5D視角與資產策略.md`
+  —— 2.5D 正交戰術視角的**政策文件**（不做自由旋轉 3D、pan/zoom 規則、
+  單一相機控制來源、正式資產授權條件）。**動相機或導入美術資產前必讀。**
 - **MOBA 地圖／場景**：
   `design/MOBA世界尺度與路線幾何.md`、`design/MOBA場景視覺規範.md`、
   `design/MOBA地圖可讀性規範.md`、`design/MOBA中立目標與野區系統.md`

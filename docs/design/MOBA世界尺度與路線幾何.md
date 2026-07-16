@@ -49,3 +49,20 @@ winner、擊殺數或時長。基地／泉水精確鏡像，每個 pit 到雙方
 
 Node 無法證明地圖視覺真的放大 2–3 倍、手機 FPS/draw calls、觸控鏡頭手感、objective
 美術品質或影片相似度；這些必須由 Ray 真機驗收。
+
+## 7. S29B6 增補：世界邊界成為相機 pan 的 clamp 來源
+
+29B5 建立的 `WORLD_BOUNDS` 在 29B6 多了一個消費者：**相機平移邊界**。
+
+- `battle/cameraStore.js` 的 `clampPan(x, y)` 一律把鏡頭注視點夾在
+  `WORLD_BOUNDS.minX..maxX / minY..maxY` 內 ⇒ 玩家再怎麼拖也**滑不出地圖黑區**。
+- `pan` 存的是**邏輯世界座標**（0–220），不是 3D 座標；3D 換算仍走
+  `worldX/worldZ`（`WORLD_SCALE = 1.7`）⇒ 尺度知識沒有第二份。
+- `BattleCameraController.fitZoomFor` 與焦點死區（`WORLD_BOUNDS.width * 0.027`）
+  同樣由 bounds 推導，未新增魔術數字。
+- 29B5 的規則不變：**禁止再在視圖散落 `100`、`50` 或自行複製座標**。
+  29B6 移除 OrbitControls 時，連同它寫死的 `minZoom/maxZoom` 一併收進
+  `cameraStore.ZOOM_MIN/ZOOM_MAX`（值不變：1.6 / 9）。
+
+verifier `check_moba_camera_replay29b6.mjs` §4 實測：`clampPan(+∞, −∞) = (220, 0)`、
+`clampPan(−∞, +∞) = (0, 220)`、store 實際 pan 也被夾住。

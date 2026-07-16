@@ -20,6 +20,7 @@ import HeroDetailPanel from "./HeroDetailPanel.jsx";
 import HeroPortrait from "../../ui/HeroPortrait.jsx";
 import { computeFocus } from "../battleFocus.js";
 import { useIsMobile, isMobileViewport } from "../../ui/useViewport.js";
+import { PANEL_MAX_W, Z } from "./battleLayout.js";
 
 const BLUE = "#60a5fa", RED = "#fb923c", GOLD = "#fbbf24";
 const MONO = "'Courier New',monospace";
@@ -185,10 +186,11 @@ export default function BattleHeroStrip({ roster = ROSTER, draft = null }) {
   return (
     <>
       {/* 手機展開 = bottom sheet（點背幕收合）；桌機 = 原底部面板 + 可收合 */}
+      {/* 背幕只在 bottom sheet 展開時存在（＝使用者正在操作面板）⇒ 平時不吃地圖手勢 */}
       {isMobile && expand && (
-        <div onClick={() => setExpand(false)} style={{ position: "absolute", inset: 0, zIndex: 10, background: "rgba(0,0,0,0.35)" }} />
+        <div onClick={() => setExpand(false)} style={{ position: "absolute", inset: 0, zIndex: Z.controls, background: "rgba(0,0,0,0.35)" }} />
       )}
-      <div style={{ position: "absolute", bottom: "max(8px, env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)", zIndex: 11, width: "min(96%, 560px)", background: "rgba(13,11,18,0.94)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, overflow: "hidden", pointerEvents: "auto", boxShadow: "0 -4px 24px rgba(0,0,0,0.5)" }}>
+      <div style={{ position: "absolute", bottom: "max(8px, env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)", zIndex: Z.strip, width: `min(96%, ${PANEL_MAX_W}px)`, background: "rgba(13,11,18,0.94)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, overflow: "hidden", pointerEvents: "auto", boxShadow: "0 -4px 24px rgba(0,0,0,0.5)" }}>
         {/* 面板把手：點擊或上/下滑手勢（CS 式）展開/收合完整 5v5；
             手機收合 ⇒ 只留焦點對位列，不遮地圖。觸控區加大（padding 8px + 拖曳杆）。 */}
         <div onClick={() => setExpand((v) => !v)}

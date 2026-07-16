@@ -132,6 +132,52 @@
 
 ---
 
+## 9. Sprint 29B6 增補：戰報 safe area 與 z-index 常數表
+
+### 根因：兩個浮層各自寫死 top，撞在一起
+
+Ray 29B5 部署後手機實測「左上角戰報擋到藍紅條與上方資訊列」。量一下就很清楚：
+
+| 元件 | 舊值 | 實際佔用 |
+|---|---|---|
+| `BattleHUD`（score header） | `top: 6`、`zIndex 8` | 內容高約 106–122px ⇒ 佔到 y≈128（含**藍紅勝率條**與 MVP 列） |
+| `BattleTimeline`（戰報） | `top: **96**`、`zIndex 8` | 從 y=96 起 ⇒ **壓在勝率條與 MVP 列上**；兩者 z 相同、戰報在 DOM 較晚 ⇒ 戰報贏 |
+| `GameView` ⏩ / ⚙ / 倍率 / 畫質 | `top: **92** / 128 / 160`、`zIndex 10–12` | 同樣壓在塔點陣與勝率條上（手機 HUD 寬 96% ⇒ 幾乎滿版） |
+
+也就是說這不是「戰報太大」，是**沒有人定義過 score header 的安全區**，各元件各憑
+記憶挑數字。
+
+### 修法：`battle/ui/battleLayout.js` 成為版面單一來源
+
+新增純常數模組（不 import 引擎/Store/React ⇒ Node verifier 可直接讀）：
+
+- `HUD_TOP = 6`、`HUD_H = 126`（逐列上界推導；`BattleHUD` 同時加 `maxHeight: HUD_H`
+  讓「實際高度 ≤ 常數」在執行期也成立）
+- **`SAFE_TOP = HUD_TOP + HUD_H + 6 = 138`** —— 任何頂部浮層的頂部下限
+- `FEED_LEFT = 10`、`FEED_MAX_W = 226`、`FEED_RIGHT_RESERVE = 132`
+  （右上控制鈕欄同樣從 `SAFE_TOP` 起 ⇒ 戰報必須讓出右側這段，否則 320px 下相撞）
+- **`Z` 表**（29B2 起列為待辦，29B6 落地）：canvas 0 / hud 8 / feed 8 / minimap 9 /
+  controls 10 / strip 11 / overlay 12 / end 20 / replay 60
+  —— 數值沿用各元件既有值，只是收斂到一處，**未改變既有疊放次序**。
+
+落地：
+
+- `BattleTimeline`：`top: SAFE_TOP`、寬 `min(226px, 62vw)` 且
+  `maxWidth: calc(100% - (FEED_LEFT + FEED_RIGHT_RESERVE))` ⇒ 320/360/390/430 右緣
+  分別 188/228/236/236，皆 ≤ 視寬 − 保留區。**根層 `pointerEvents: none`**（只有可點的
+  標題列 `auto`）⇒ 戰報不吃掉地圖 pan/zoom。
+- 手機預設仍是**單行 toast**（`fold = isMobile`，收合列顯示最新一則），完整戰報靠
+  drawer 展開；展開後起點仍在 `SAFE_TOP` 之下 ⇒ **不會蓋回 score header**。
+- `GameView`：⏩/⚙/倍率/畫質改成**單一 flex 直欄**（`top: SAFE_TOP`、`right`、`gap: 6`），
+  不再每顆鈕各寫死 top。手機 ⏩ 文案縮為「快速完成」以留出 320px 的寬度。
+
+⚠ **改 `BattleHUD` 版型（加列／放大字級）時必須同步 `HUD_H`**，否則戰報會再次爬回去。
+verifier 29B6 §15 斷言 `SAFE_TOP >= HUD_TOP + HUD_H` 且舊的 `top:96`/`top:92` 不得復活。
+
+⚠ **未經真機實測**：320/360/390/430 的實際位置、瀏海/圓角 safe area、drawer 手感。
+
+---
+
 ## 8. Sprint 29B4 增補
 
 - **10 英雄一致可點根因修**：`HeroDetailPanel` 舊碼 `if (!hero) return null`——對無
