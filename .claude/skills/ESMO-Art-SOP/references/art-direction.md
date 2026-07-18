@@ -413,6 +413,9 @@ bring the user genuine judgment calls, not obvious style misses.
 - [ ] **Performance**: within the §17 tri budget for its class; modular where it should
       be; instanceable.
 - [ ] **Pack**: if a new type, it's a 3–5 variant pack that intercuts consistently (§18).
+- [ ] **Language**: any user-facing doc (Concept / Blueprint / Review / report) is written
+      in Traditional Chinese per SKILL.md 〈語言規範（Language Rules）〉 — code/API/filenames
+      stay English, terms use 中文（English）.
 - [ ] **Cohesion**: looks like the same game as the existing ESMO assets.
 - [ ] **Negative check**: none of §20 is true.
 - [ ] **Not verified in-engine** is stated honestly (Blender export ≠ R3F-loaded).

@@ -20,6 +20,41 @@ This skill is the **one standard** for every 3D map asset in ESMO, shared by all
 > official model, texture, UV, material, layout, building, or shape. Re-design from
 > principles. The full reasoning lives in the Visual Bible — read it.
 
+## 語言規範（Language Rules）
+
+**永久規則，所有 AI（Claude、Codex、GPT 及其他）一律遵守。** 這是 ESMO 專案的通用文件
+語言規範，適用範圍不限於美術。
+
+**核心原則：給「人」看的文件一律繁體中文（zh-TW）；給「程式」看的內容維持英文。**
+
+### 兩類文件的分界
+
+**【AI 內部執行文件】維持英文**（避免增加維護成本）：
+- `SKILL.md`（本檔）
+- Visual Bible（`references/art-direction.md`）
+- SOP、Prompt Template（提示詞範本）
+- 其他純供 AI 讀取執行、不交付使用者審核的工程文件
+
+**【交付給使用者審核的文件】一律繁體中文（zh-TW）**：
+- 概念（Concept）、藍圖（Blueprint）、設計（Design）、審查（Review）、
+  衝刺報告（Sprint Report）、分析（Analysis）、檢查清單（Checklist）、
+  提案（Proposal）、路線圖（Roadmap），以及任何交付使用者閱讀或審核的 Markdown 文件。
+
+### 撰寫規則
+
+- **禁止產生以英文為主的交付文件。**
+- **保留英文者**：程式碼、API 名稱、函式名稱（Function）、類別名稱（Class）、檔名、資料夾
+  名稱，以及技術術語（例如 Blender、GLB、UV、PBR、LOD）。
+- **術語首次出現用「中文（English）」格式**，之後可直接使用中文。例如：世界比例
+  （World Scale）、河道（River）、岩壁（Cliff）、草叢（Bush）、模組化資產（Modular Asset）、
+  資產包（Asset Pack）。
+- **圖例（Legend）也全部繁體中文**：Blueprint、ASCII 圖、流程圖的圖例一律中文，例如：
+  `▲ 高地`、`█ 岩壁`、`≈ 河道`、`● 石頭`、`🌲 松樹`、`🌿 草叢`。
+- **以產品規格書的方式撰寫**：所有交付審查的內容都要讓沒有 Blender、Three.js 或遊戲美術
+  背景的人也看得懂。避免大量工程術語；若必須使用專業術語，附上一句中文說明。
+
+> 一句話總結：文件給人看 → 繁體中文；內容給程式看（程式碼／函式／API／檔名）→ 英文。
+
 ## The hard rules (never break these)
 
 1. **Never import into the live project or edit game code during generation.** Output
@@ -32,6 +67,9 @@ This skill is the **one standard** for every 3D map asset in ESMO, shared by all
    (§19), **regenerate/fix it yourself — do not bring off-style work to the user.**
 5. **Never overwrite the reference images** in `docs/reference/moba-map/`.
 6. Follow the project's big-file and destructive-command rules in `CLAUDE.md`.
+7. **Write every user-facing deliverable in Traditional Chinese** per 〈語言規範（Language
+   Rules）〉 above — Concept / Blueprint / Review / analysis / reports are zh-TW; only
+   code / function / API / filenames stay English.
 
 ## Prerequisites (check once per session)
 
