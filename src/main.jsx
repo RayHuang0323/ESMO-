@@ -14,6 +14,10 @@ const root = createRoot(document.getElementById("root"));
 if (debugMode === "terrain-sandbox") {
   const Sandbox = React.lazy(() => import("./debug/TerrainSandbox/TerrainSandbox.jsx"));
   root.render(<React.Suspense fallback={null}><Sandbox /></React.Suspense>);
+} else if (debugMode === "environment-runtime") {
+  // Milestone A：Environment Runtime Foundation 測試場（正式流程不受影響）。
+  const EnvRuntime = React.lazy(() => import("./debug/EnvironmentRuntime/EnvironmentRuntime.jsx"));
+  root.render(<React.Suspense fallback={null}><EnvRuntime /></React.Suspense>);
 } else {
   root.render(<AppShell />);
 }
