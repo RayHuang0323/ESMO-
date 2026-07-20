@@ -27,7 +27,7 @@ const _camPrev = new THREE.Vector3(Infinity, Infinity, Infinity);
  * @param statsRef  可選：寫入 {lod0, lod1, culled} 供 Debug Panel 讀
  * @param castShadow 預設 false（環境資產預設不投影，見 PERFORMANCE_BIBLE §10）
  */
-export function InstancedLODGroup({ asset, transforms, ring, statsRef, castShadow = false }) {
+export function InstancedLODGroup({ asset, transforms, ring, statsRef, castShadow = false, forceLod = null }) {
   const { camera } = useThree();
   const lod0Ref = useRef();
   const lod1Ref = useRef();
@@ -53,10 +53,13 @@ export function InstancedLODGroup({ asset, transforms, ring, statsRef, castShado
       const it = prepared[i];
       const dist = camera.position.distanceTo(it.pos);
       let bucket;
-      if (asset.cullOnly) bucket = dist <= cull ? 0 : -1;
+      // forceLod（僅供 Debug 對照，預設 null=正常距離環）：強制全部落 LOD0 或 LOD1
+      if (dist > cull) bucket = -1;
+      else if (forceLod === 0) bucket = 0;
+      else if (forceLod === 1) bucket = hasLod1 ? 1 : 0;
+      else if (asset.cullOnly) bucket = 0;
       else if (dist <= lod0Dist) bucket = 0;
-      else if (dist <= cull) bucket = hasLod1 ? 1 : 0;
-      else bucket = -1;
+      else bucket = hasLod1 ? 1 : 0;
       if (bucket === -1) continue;
       _p.copy(it.pos);
       _e.set(0, it.rotY, 0); _q.setFromEuler(_e);

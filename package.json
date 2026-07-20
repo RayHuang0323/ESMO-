@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check:env": "node tools/check_env_runtime.mjs"
+    "check:env": "node tools/check_env_runtime.mjs",
+    "check:rock": "node tools/check_rock_pack.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^9.105.0",

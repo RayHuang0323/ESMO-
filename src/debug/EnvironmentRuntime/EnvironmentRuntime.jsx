@@ -13,8 +13,21 @@ import { loadWithBench } from "../TerrainSandbox/LoadBench.js";
 import { LOD_PRESETS, LOD_ORDER, presetForLod } from "../../environment/placement/lodRings.js";
 import { generate } from "../../environment/placement/PlacementGenerator.js";
 import { InstancedLODGroup } from "../../environment/placement/InstancedLODGroup.jsx";
-import { FAKE_ASSETS, assetTris } from "../../environment/fakeAssets.js";
+import { FAKE_ASSETS } from "../../environment/fakeAssets.js";
 import { TEST_CASES, TEST_ORDER, TEST_AREA, ASSET_PLACEMENT } from "./testCases.js";
+import { getRock } from "../../environment/assets/rocks/index.js";
+import { ROCK_TEST_CASES, ROCK_TEST_ORDER, ROCK_PLACEMENT, showcaseTransforms } from "./rockTestCases.js";
+
+// 統一情境 / 擺放 / 資產解析：假資產 ＋ 正式 Rock Pack 共用同一 runtime（不另建第二套）
+const ALL_TESTS = { ...TEST_CASES, ...ROCK_TEST_CASES };
+const ALL_ORDER = [...TEST_ORDER, ...ROCK_TEST_ORDER];
+const ALL_PLACEMENT = { ...ASSET_PLACEMENT, ...ROCK_PLACEMENT };
+const isRock = (name) => name.startsWith("Rock_");
+const resolveAsset = (name) => (isRock(name) ? getRock(name) : FAKE_ASSETS[name]);
+const resolveTris = (name, lod) => {
+  const a = resolveAsset(name);
+  return (lod === 1 ? a.lod1 : a.lod0)?.userData?.tris ?? 0;
+};
 
 const GLB_URL = `${import.meta.env.BASE_URL}debug/terrain_style.glb`;
 const CENTER = [0, 0, 0];
@@ -37,45 +50,52 @@ function TerrainGLB({ stats, show }) {
 }
 
 // 建立某情境的所有 InstancedLODGroup（seed 決定落點；每資產一組 LOD 桶統計）
-function Environment({ testId, seed, ring, lodStatsRef }) {
+function Environment({ testId, seed, ring, lodStatsRef, forceLod }) {
   const groups = useMemo(() => {
-    const cs = TEST_CASES[testId].counts;
+    const tc = ALL_TESTS[testId];
+    if (tc.showcase) {
+      // 展示模式：8 件各一顆固定排開，供單獨檢視 / 近距離 / LOD 對照
+      return showcaseTransforms().map((g) => ({ name: g.name, asset: resolveAsset(g.name), transforms: g.transforms }));
+    }
+    const cs = tc.counts || {};
     const out = [];
     for (const name of Object.keys(cs)) {
-      const p = ASSET_PLACEMENT[name];
+      const p = ALL_PLACEMENT[name];
       const { transforms } = generate({
         seed: `${seed}:${name}`, count: cs[name], area: TEST_AREA,
         minDist: p.minDist, scale: p.scale, rotate: true, color: p.color,
       });
-      out.push({ name, asset: FAKE_ASSETS[name], transforms });
+      out.push({ name, asset: resolveAsset(name), transforms });
     }
     return out;
   }, [testId, seed]);
 
-  // 聚合各組的 LOD 統計到 lodStatsRef（給 Debug Panel）
-  // ⚠ perGroup.current[name] 的形狀是 { current: {lod0,lod1,culled} }（InstancedLODGroup
-  //   內以 statsRef.current = {...} 寫入），故必須讀 st.current.*，不能讀 st.*。
+  // 聚合 LOD 統計 + 每資產明細到 lodStatsRef（給 Debug Panel）
+  // ⚠ perGroup.current[name] 形狀為 { current: {lod0,lod1,culled} }，故讀 st.current.*。
   const perGroup = useRef({});
   useFrame(() => {
     let lod0 = 0, lod1 = 0, culled = 0, instances = 0, estTris = 0;
+    const perAsset = {};
     for (const g of groups) {
       const holder = perGroup.current[g.name];
-      instances += g.transforms.length;
       const st = holder && holder.current;
+      const a = { instances: g.transforms.length, lod0: 0, lod1: 0, culled: 0 };
+      instances += g.transforms.length;
       if (st) {
-        lod0 += st.lod0 || 0; lod1 += st.lod1 || 0; culled += st.culled || 0;
-        estTris += (st.lod0 || 0) * assetTris(g.asset, 0) + (st.lod1 || 0) * assetTris(g.asset, 1);
+        a.lod0 = st.lod0 || 0; a.lod1 = st.lod1 || 0; a.culled = st.culled || 0;
+        lod0 += a.lod0; lod1 += a.lod1; culled += a.culled;
+        estTris += a.lod0 * resolveTris(g.name, 0) + a.lod1 * resolveTris(g.name, 1);
       }
+      perAsset[g.name] = a;
     }
-    // 加寫 testId：讓 benchmark 能確認「新案例已掛上」才取樣（防止沿用上一案例）
-    lodStatsRef.current = { testId, instances, lod0, lod1, culled, estTris, groups: groups.length };
+    lodStatsRef.current = { testId, instances, lod0, lod1, culled, estTris, groups: groups.length, perAsset };
   });
 
   return groups.map((g) => {
     if (!perGroup.current[g.name]) perGroup.current[g.name] = { current: { lod0: 0, lod1: 0, culled: 0 } };
     return (
       <InstancedLODGroup key={g.name + testId + seed} asset={g.asset}
-        transforms={g.transforms} ring={ring} statsRef={perGroup.current[g.name]} />
+        transforms={g.transforms} ring={ring} statsRef={perGroup.current[g.name]} forceLod={forceLod} />
     );
   });
 }
@@ -87,9 +107,10 @@ export default function EnvironmentRuntime() {
   const stats = useRef(makeStats());
   const lodStats = useRef({ instances: 0, lod0: 0, lod1: 0, culled: 0, estTris: 0, groups: 0 });
   const [presetId, setPresetId] = useState("desktop");
-  const [testId, setTestId] = useState("D");
+  const [testId, setTestId] = useState("rockMix8");
   const [seed, setSeed] = useState("esmo-001");
   const [showTerrain, setShowTerrain] = useState(true);
+  const [forceLod, setForceLod] = useState(null);   // null=距離環；0/1=強制對照
   const [results, setResults] = useState([]);
   const [running, setRunning] = useState(false);
   const [, force] = useState(0);
@@ -139,13 +160,15 @@ export default function EnvironmentRuntime() {
     setResults((r) => { const next = [...r, row]; stats.current.bench.results = next; return next; });
     return row;
   };
-  const runAll = async () => {
+  const runSet = async (ids) => {
     if (running) return; setRunning(true); setResults([]);
-    for (const tid of ["A", "B", "C", "D", "E"]) await runOne(tid);
+    for (const tid of ids) await runOne(tid);
     setRunning(false);
   };
+  const runAll = () => runSet(["A", "B", "C", "D", "E"]);                       // 假資產 A–E
+  const runRocks = () => runSet(["rockSingle", "rockMix8", "rockStress2600"]);  // Rock Pack 壓測
 
-  const exportJSON = () => {
+  const exportJSON = (fname = "benchmark_environment_runtime.json") => {
     const payload = {
       exportedAt: new Date().toISOString(), ua: navigator.userAgent,
       dpr: window.devicePixelRatio, results,
@@ -155,9 +178,10 @@ export default function EnvironmentRuntime() {
     const blob = new Blob([text], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "benchmark_environment_runtime.json"; a.click();
+    a.download = fname; a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
+  const rockActive = testId.startsWith("rock");
 
   const L = lodStats.current, S = stats.current;
   return (
@@ -171,7 +195,7 @@ export default function EnvironmentRuntime() {
         <Suspense fallback={null}>
           <TerrainGLB stats={stats} show={showTerrain} />
         </Suspense>
-        <Environment testId={testId} seed={seed} ring={ring} lodStatsRef={lodStats} />
+        <Environment testId={testId} seed={seed} ring={ring} lodStatsRef={lodStats} forceLod={forceLod} />
         <StatsCollector stats={stats} />
         <OrbitControls makeDefault target={CENTER} maxPolarAngle={Math.PI * 0.49} />
       </Canvas>
@@ -193,14 +217,21 @@ export default function EnvironmentRuntime() {
             style={{ width: 100, marginLeft: 4, background: "#0e1622", color: "#d7e0ea", border: "1px solid #2a3542", borderRadius: 4 }} />
         </div>
         <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
-          {TEST_ORDER.map((id) => (
-            <button key={id} style={{ ...BTN, outline: testId === id ? "2px solid #f29e38" : "none" }}
-              onClick={() => setTestId(id)}>{TEST_CASES[id].zh}</button>))}
+          {ALL_ORDER.map((id) => (
+            <button key={id} style={{ ...BTN, outline: testId === id ? "2px solid #f29e38" : "none",
+              background: id.startsWith("rock") ? "#2a2033" : "#1a2430" }}
+              onClick={() => setTestId(id)}>{ALL_TESTS[id].zh}</button>))}
+        </div>
+        <div style={{ marginTop: 6 }}>LOD 對照：
+          {[["自動", null], ["全 LOD0", 0], ["全 LOD1", 1]].map(([lbl, v]) => (
+            <button key={lbl} style={{ ...BTN, marginRight: 4, outline: forceLod === v ? "2px solid #33c0d9" : "none" }}
+              onClick={() => setForceLod(v)}>{lbl}</button>))}
         </div>
         <label style={{ display: "block", marginTop: 6 }}>
           <input type="checkbox" checked={showTerrain} onChange={(e) => setShowTerrain(e.target.checked)} /> 顯示地形
         </label>
         <div style={{ borderTop: "1px solid #2a3542", margin: "8px 0 4px" }} />
+        <Row k="Test / Preset" v={`${testId} / ${presetId}`} />
         <Row k="Instances" v={L.instances.toLocaleString()} />
         <Row k="LOD0 / LOD1" v={`${L.lod0} / ${L.lod1}`} />
         <Row k="Culled" v={L.culled} />
@@ -210,10 +241,20 @@ export default function EnvironmentRuntime() {
         <Row k="Materials" v={S.info.materials} />
         <Row k="Textures" v={S.info.textures} />
         <Row k="FPS / ms" v={`${S.fps.toFixed(0)} / ${S.frameMs.toFixed(1)}`} />
-        <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+        {rockActive && L.perAsset && (
+          <div style={{ marginTop: 6, borderTop: "1px dashed #2a3542", paddingTop: 4 }}>
+            <div style={{ opacity: 0.7 }}>各 Rock 資產（inst｜L0/L1/cull）：</div>
+            {Object.keys(L.perAsset).map((n) => {
+              const a = L.perAsset[n];
+              return <div key={n} style={{ fontSize: 11 }}>{n.replace("Rock_", "")}：{a.instances}｜{a.lod0}/{a.lod1}/{a.culled}</div>;
+            })}
+          </div>
+        )}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
           <button style={BTN} onClick={() => runOne()} disabled={running}>跑本情境</button>
-          <button style={BTN} onClick={runAll} disabled={running}>{running ? "壓測中…" : "跑 A–E"}</button>
-          <button style={BTN} onClick={exportJSON} disabled={!results.length}>匯出 JSON</button>
+          <button style={BTN} onClick={runAll} disabled={running}>{running ? "…" : "跑假資產 A–E"}</button>
+          <button style={BTN} onClick={runRocks} disabled={running}>{running ? "…" : "跑石壓測"}</button>
+          <button style={BTN} onClick={() => exportJSON(rockActive ? "rock_pack_benchmark.json" : "benchmark_environment_runtime.json")} disabled={!results.length}>匯出 JSON</button>
         </div>
         {results.length > 0 && (
           <div style={{ marginTop: 6, maxHeight: 160, overflow: "auto" }}>
