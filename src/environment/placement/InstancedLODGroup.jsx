@@ -18,7 +18,6 @@ const _p = new THREE.Vector3();
 const _s = new THREE.Vector3();
 const _e = new THREE.Euler();
 const _c = new THREE.Color();
-const _camPrev = new THREE.Vector3(Infinity, Infinity, Infinity);
 
 /**
  * @param asset     FAKE_ASSETS 之一 { name, mat, lod0, lod1, cullOnly?, cullScale? }
@@ -32,6 +31,10 @@ export function InstancedLODGroup({ asset, transforms, ring, statsRef, castShado
   const lod0Ref = useRef();
   const lod1Ref = useRef();
   const acc = useRef(0);
+  const camPrev = useRef(new THREE.Vector3(Infinity, Infinity, Infinity)); // 每組獨立，確保首幀即 repack
+  // callback ref：掛載時把 count 設 0，避免「首次 repack 前所有實例以 identity 矩陣疊在原點」造成黑塊
+  const initLod0 = (r) => { lod0Ref.current = r; if (r) r.count = 0; };
+  const initLod1 = (r) => { lod1Ref.current = r; if (r) r.count = 0; };
 
   const cap = transforms.length;
   const hasLod1 = !!asset.lod1;
@@ -51,6 +54,8 @@ export function InstancedLODGroup({ asset, transforms, ring, statsRef, castShado
     let n0 = 0, n1 = 0;
     for (let i = 0; i < prepared.length; i++) {
       const it = prepared[i];
+      // NaN 防護：座標壞掉（例如取樣失敗）就跳過，不畫到原點/相機前
+      if (!Number.isFinite(it.pos.x) || !Number.isFinite(it.pos.y) || !Number.isFinite(it.pos.z)) continue;
       const dist = camera.position.distanceTo(it.pos);
       let bucket;
       // forceLod（僅供 Debug 對照，預設 null=正常距離環）：強制全部落 LOD0 或 LOD1
@@ -89,9 +94,9 @@ export function InstancedLODGroup({ asset, transforms, ring, statsRef, castShado
 
   useFrame((_, delta) => {
     acc.current += delta;
-    const moved = camera.position.distanceTo(_camPrev) > 1.0;
+    const moved = camera.position.distanceTo(camPrev.current) > 1.0;
     if (acc.current >= 0.2 || moved) {          // 節流 5Hz，或鏡頭移動 >1m 立即更新
-      acc.current = 0; _camPrev.copy(camera.position);
+      acc.current = 0; camPrev.current.copy(camera.position);
       repack();
     }
   });
@@ -100,13 +105,13 @@ export function InstancedLODGroup({ asset, transforms, ring, statsRef, castShado
   return (
     <group>
       <instancedMesh
-        ref={lod0Ref} args={[asset.lod0, asset.mat, Math.max(cap, 1)]}
+        ref={initLod0} args={[asset.lod0, asset.mat, Math.max(cap, 1)]}
         castShadow={castShadow} receiveShadow={false} frustumCulled={false}
         onUpdate={(m) => { if (hasColor && !m.instanceColor) m.setColorAt(0, _c.set(1, 1, 1)); }}
       />
       {hasLod1 && (
         <instancedMesh
-          ref={lod1Ref} args={[asset.lod1, asset.mat, Math.max(cap, 1)]}
+          ref={initLod1} args={[asset.lod1, asset.mat, Math.max(cap, 1)]}
           castShadow={false} frustumCulled={false}
           onUpdate={(m) => { if (hasColor && !m.instanceColor) m.setColorAt(0, _c.set(1, 1, 1)); }}
         />

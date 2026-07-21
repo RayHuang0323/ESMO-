@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "check:env": "node tools/check_env_runtime.mjs",
-    "check:rock": "node tools/check_rock_pack.mjs"
+    "check:rock": "node tools/check_rock_pack.mjs",
+    "check:map": "node tools/check_map_decor.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^9.105.0",
