@@ -18,6 +18,10 @@ if (debugMode === "terrain-sandbox") {
   // Milestone A：Environment Runtime Foundation 測試場（正式流程不受影響）。
   const EnvRuntime = React.lazy(() => import("./debug/EnvironmentRuntime/EnvironmentRuntime.jsx"));
   root.render(<React.Suspense fallback={null}><EnvRuntime /></React.Suspense>);
+} else if (debugMode === "moba-map-blockout") {
+  // Milestone D：正式 MOBA 地圖 Blockout v1 預覽（正式流程不受影響）。
+  const MobaMap = React.lazy(() => import("./debug/MobaMapBlockout/MobaMapPreview.jsx"));
+  root.render(<React.Suspense fallback={null}><MobaMap /></React.Suspense>);
 } else {
   root.render(<AppShell />);
 }

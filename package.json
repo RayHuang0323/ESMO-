@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "check:env": "node tools/check_env_runtime.mjs",
     "check:rock": "node tools/check_rock_pack.mjs",
-    "check:map": "node tools/check_map_decor.mjs"
+    "check:map": "node tools/check_map_decor.mjs",
+    "check:mobamap": "node tools/check_moba_map.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^9.105.0",
