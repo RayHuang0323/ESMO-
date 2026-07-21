@@ -24,7 +24,10 @@ const CAM = {
 
 export default function MobaMapPreview() {
   const controls = useRef(null);
-  const [show, setShow] = useState({ lane: true, jungle: true, towers: true, pits: true, coords: false, decor: true });
+  const [show, setShow] = useState({
+    lane: true, jungle: true, towers: true, pits: true, coords: false, decor: true,
+    landmark: true, labels: true,
+  });
   const [camId, setCamId] = useState("full");
   const toggle = (k) => setShow((s) => ({ ...s, [k]: !s[k] }));
 
@@ -69,6 +72,7 @@ export default function MobaMapPreview() {
         <span>｜圖層</span>
         <LayerBtn k="lane" label="兵線" /><LayerBtn k="jungle" label="野區" />
         <LayerBtn k="towers" label="塔" /><LayerBtn k="pits" label="龍/巴龍" />
+        <LayerBtn k="landmark" label="地標" /><LayerBtn k="labels" label="標籤" />
         <LayerBtn k="decor" label="河岸石" /><LayerBtn k="coords" label="座標" />
       </div>
     </div>

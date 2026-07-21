@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { buildMobaLayout } from "../src/battle/moba/map/mobaMapLayout.js";
+import { buildLandmarks } from "../src/battle/moba/map/mapLandmarks.js";
 import { worldX, worldZ } from "../src/battle/moba/map/coordinateMapping.js";
 import { TOWER_T, FOUNTAIN, WORLD_BOUNDS } from "../src/gameData.js";
 
@@ -62,10 +63,27 @@ for (const [name, pit] of [["dragon", L.pits.dragon], ["baron", L.pits.baron]]) 
   ok(diff < 1.0, `${name} 對雙方泉水應近似等距（差 ${diff.toFixed(2)}）`);
 }
 
-// 8) 無 Math.random；renderer 不含模擬邏輯（不 import LogicEngine/store）
+// 8) 地標（Milestone E）：keys 唯一、界內、無 NaN
+const LM = buildLandmarks(L);
+const allLm = [
+  ...LM.labels, ...LM.buffs, ...LM.pitEntrances, ...LM.baseEntrances, ...LM.jungleEntrances,
+];
+const keys = allLm.map((m) => m.key);
+ok(new Set(keys).size === keys.length, `地標 key 不應重複（${keys.length} 個）`);
+ok(LM.buffs.length === 2, "應有 2 個 Buff 地標");
+ok(LM.pitEntrances.length >= 2, "龍/巴龍坑應有入口地標");
+for (const m of allLm) {
+  ok(inBounds(m), `地標 ${m.key} (${m.x?.toFixed?.(1)},${m.y?.toFixed?.(1)}) 應在界內`);
+  ok(Number.isFinite(m.x) && Number.isFinite(m.y), `地標 ${m.key} 不應含 NaN`);
+}
+for (const w of [...LM.pitWalls.dragon, ...LM.pitWalls.baron]) {
+  ok(Number.isFinite(w.x) && Number.isFinite(w.y), "坑牆座標不應含 NaN");
+}
+
+// 9) 無 Math.random；renderer 不含模擬邏輯（不 import LogicEngine/store）
 const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
 const mapDir = resolve(__dir, "../src/battle/moba/map/");
-for (const f of ["mobaMapLayout.js", "mapZones.js", "coordinateMapping.js", "MobaMapBlockout.jsx"]) {
+for (const f of ["mobaMapLayout.js", "mapZones.js", "coordinateMapping.js", "mapLandmarks.js", "MobaMapBlockout.jsx"]) {
   const src = strip(readFileSync(resolve(mapDir, f), "utf8"));
   ok(!/Math\.random\s*\(/.test(src), `${f} 不應使用 Math.random()`);
 }

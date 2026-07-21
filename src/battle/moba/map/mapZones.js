@@ -17,10 +17,13 @@ export const ZONE = Object.freeze({
 
 // 顏色（Visual Bible §3 地表語言）
 export const ZONE_COLOR = Object.freeze({
-  ground: 0x3a5a2a,       // 底草地（暗綠）
-  lane: 0x6b5638,         // 泥土路
-  jungle: 0x2f4a24,       // 野區草地（較深）
-  river: 0x2a6b73,        // 河道青綠
+  ground: 0x2c3f1c,       // 底草地（較暗，讓路/河/牆更跳）
+  lane: 0xc79a5a,         // 泥土路（亮沙色，一眼可見）
+  lane_edge: 0x2a1d0e,    // 路緣深色輪廓
+  jungle: 0x33502a,       // 野區草地
+  jungle_edge: 0x20331a,  // 野區邊界
+  river: 0x2f88a0,        // 河道青綠（較亮）
+  river_edge: 0x22483a,   // 河岸輪廓
   highground_blue: 0x2b4a7a,
   highground_red: 0x7a2b2b,
   wall: 0x6f6e69,         // 岩壁灰
