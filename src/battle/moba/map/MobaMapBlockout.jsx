@@ -1,10 +1,15 @@
 // ============================================================================
-//  battle/moba/map/MobaMapBlockout.jsx — 正式 MOBA 地圖 Blockout（渲染層）
+//  battle/moba/map/MobaMapBlockout.jsx — MOBA 地圖視覺原型 v1（渲染層）
 //
-//  依 mobaMapLayout / mapLandmarks（座標取自 gameData.js 唯一真相來源）渲染 2.5D MOBA
-//  骨架。**只渲染、不含任何模擬邏輯**（不 import LogicEngine / store）。
-//  Milestone E 修正：三路做成明顯路面帶、野區牆體通道、坑有壁有入口連河、基地平台＋三路
-//  出口；形狀本身即可讀出位置，不靠標籤。
+//  Milestone F。本檔**只做「形狀資料 → three.js 幾何」的轉換**：
+//    座標真相 src/gameData.js → mobaMapLayout → mapTerrainShapes（形狀構成）
+//                                            → 本檔（three.js）
+//                                            → tools/preview_moba_map.mjs（俯視 PNG）
+//                                            → tools/check_moba_map.mjs（驗證）
+//  ⇒ renderer 與驗證/自檢工具吃同一份形狀，不會出現「畫面跟驗證講的是兩張地圖」。
+//
+//  **不含任何模擬邏輯**（不 import LogicEngine / store），也不改動任何模擬常數。
+//  所有「自然化」都用決定性偽亂數（見 mapShapePrimitives），不用 Math.random()。
 // ============================================================================
 import React, { useMemo, useRef, useEffect } from "react";
 import * as THREE from "three";
@@ -12,180 +17,191 @@ import { Html } from "@react-three/drei";
 import { worldX, worldZ, WORLD_SCALE, toWorld } from "./coordinateMapping.js";
 import { buildMobaLayout } from "./mobaMapLayout.js";
 import { buildLandmarks } from "./mapLandmarks.js";
-import { ZONE_COLOR } from "./mapZones.js";
+import { buildTerrainShapes } from "./mapTerrainShapes.js";
+import { PALETTE, VOLUME_COLOR, HEIGHT } from "./mapVisualStyle.js";
 import { getRock } from "../../../environment/assets/rocks/index.js";
 import { InstancedLODGroup } from "../../../environment/placement/InstancedLODGroup.jsx";
 import { presetForLod } from "../../../environment/placement/lodRings.js";
 
-// 沿模擬折線建立一條「帶狀」地面幾何（世界座標，平躺）。
-function ribbonGeometry(pts, widthSim, y) {
-  const w = pts.map((p) => new THREE.Vector2(worldX(p.x), worldZ(p.y)));
-  const half = (widthSim * WORLD_SCALE) / 2;
-  const pos = [];
-  const left = [], right = [];
-  for (let i = 0; i < w.length; i++) {
-    const a = w[Math.max(0, i - 1)], b = w[Math.min(w.length - 1, i + 1)];
-    const dir = new THREE.Vector2().subVectors(b, a);
-    if (dir.lengthSq() < 1e-6) dir.set(1, 0);
-    dir.normalize();
-    const perp = new THREE.Vector2(-dir.y, dir.x).multiplyScalar(half);
-    left.push(new THREE.Vector2(w[i].x + perp.x, w[i].y + perp.y));
-    right.push(new THREE.Vector2(w[i].x - perp.x, w[i].y - perp.y));
-  }
-  for (let i = 0; i < w.length - 1; i++) {
-    const l0 = left[i], r0 = right[i], l1 = left[i + 1], r1 = right[i + 1];
-    pos.push(l0.x, y, l0.y, r0.x, y, r0.y, l1.x, y, l1.y);
-    pos.push(r0.x, y, r0.y, r1.x, y, r1.y, l1.x, y, l1.y);
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-  g.computeVertexNormals();
-  return g;
+// 地面色塊的 kind → 圖層開關（未列出者恆顯示，例如 bedrock / arena / river）
+const LAYER_TOGGLE = {
+  lane: "lane", ramp: "lane",
+  jungle: "jungle", clearing: "jungle",
+  pit: "pits", tower_pad: "towers",
+};
+
+/**
+ * 模擬座標多邊形 → 平躺的 ShapeGeometry。
+ * mesh 會套 rotation=[-π/2,0,0]，該旋轉把 local (x,y) 映到世界 (x,0,-y)，
+ * 因此這裡的 local y 要取 -worldZ(simY)，最終才會落在 (worldX, 0, worldZ)。
+ */
+function polyGeometry(poly) {
+  const shape = new THREE.Shape(poly.map((p) => new THREE.Vector2(worldX(p.x), -worldZ(p.y))));
+  return new THREE.ShapeGeometry(shape);
 }
 
-// 靜態 InstancedMesh（牆體用；一次設定矩陣，不每幀）。
-function StaticInstances({ items, geometry, material }) {
+/** 多邊形 → 有厚度的量體（基地高地平台用）。 */
+function extrudePoly(poly, depth) {
+  const shape = new THREE.Shape(poly.map((p) => new THREE.Vector2(worldX(p.x), -worldZ(p.y))));
+  return new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 2 });
+}
+
+/** 靜態 InstancedMesh：一次設定矩陣（支援 rotY）。所有牆段共用。 */
+function StaticInstances({ items, geometry, material, capOffset = 0, capScale = null }) {
   const ref = useRef();
   useEffect(() => {
     const m = ref.current; if (!m) return;
-    const mat = new THREE.Matrix4(); const q = new THREE.Quaternion();
-    const s = new THREE.Vector3(); const p = new THREE.Vector3();
+    const mat = new THREE.Matrix4(), q = new THREE.Quaternion();
+    const up = new THREE.Vector3(0, 1, 0), s = new THREE.Vector3(), p = new THREE.Vector3();
     items.forEach((it, i) => {
-      p.set(it.pos[0], it.pos[1], it.pos[2]); s.set(it.scale[0], it.scale[1], it.scale[2]);
+      const S = WORLD_SCALE;
+      const len = (it.len + it.thick * 0.55) * S, th = it.thick * S;
+      if (capScale) {
+        p.set(worldX(it.x), it.h + capOffset, worldZ(it.y));
+        s.set(th * capScale[0], capScale[1], len * capScale[2]);
+      } else {
+        p.set(worldX(it.x), it.h / 2, worldZ(it.y));
+        s.set(th, it.h, len);
+      }
+      q.setFromAxisAngle(up, it.angle);
       mat.compose(p, q, s); m.setMatrixAt(i, mat);
     });
     m.count = items.length; m.instanceMatrix.needsUpdate = true; m.computeBoundingSphere();
-  }, [items]);
-  return <instancedMesh ref={ref} args={[geometry, material, Math.max(items.length, 1)]} frustumCulled={false} />;
+  }, [items, capOffset, capScale]);
+  return <instancedMesh ref={ref} args={[geometry, material, Math.max(items.length, 1)]}
+    frustumCulled={false} castShadow={false} receiveShadow />;
 }
 
 export default function MobaMapBlockout({ show = {}, ring = "desktop" }) {
   const L = useMemo(() => buildMobaLayout(), []);
   const LM = useMemo(() => buildLandmarks(L), [L]);
+  const T = useMemo(() => buildTerrainShapes(L), [L]);
+
   const showLane = show.lane ?? true, showJungle = show.jungle ?? true;
   const showTowers = show.towers ?? true, showPits = show.pits ?? true;
   const showCoords = show.coords ?? false, showDecor = show.decor ?? true;
   const showLandmark = show.landmark ?? true, showLabels = show.labels ?? true;
+  const flags = { lane: showLane, jungle: showJungle, towers: showTowers, pits: showPits };
   const lodRing = presetForLod(ring);
 
-  // 三路：明顯路面帶（寬）＋深色路緣輪廓；河道：主河道＋河岸輪廓。
-  const riverGeo = useMemo(() => ribbonGeometry(L.river.points, L.river.width, 0.18), [L]);
-  const riverEdgeGeo = useMemo(() => ribbonGeometry(L.river.points, L.river.width + 8, 0.08), [L]);
-  const laneGeos = useMemo(() => ({
-    top: ribbonGeometry(L.lanes.top, 17, 0.3), mid: ribbonGeometry(L.lanes.mid, 17, 0.3), bot: ribbonGeometry(L.lanes.bot, 17, 0.3),
-  }), [L]);
-  const laneEdgeGeos = useMemo(() => ({
-    top: ribbonGeometry(L.lanes.top, 24, 0.16), mid: ribbonGeometry(L.lanes.mid, 24, 0.16), bot: ribbonGeometry(L.lanes.bot, 24, 0.16),
-  }), [L]);
+  // ── 地面色塊（已依 y 排序；一個多邊形一個 mesh，數量 ~60，可接受）────────────
+  const groundMeshes = useMemo(() => T.groundLayers.map((layer) => ({
+    ...layer, geo: polyGeometry(layer.poly),
+    toggle: LAYER_TOGGLE[layer.kind] ?? null,
+  })), [T]);
 
-  // 牆體（野區通道）：較高、深灰岩，依 gameData r。坑牆同材質。
-  const wallGeo = useMemo(() => new THREE.CylinderGeometry(1, 1.2, 1, 7), []);
-  const wallMat = useMemo(() => new THREE.MeshStandardMaterial({ color: 0x595852, roughness: 1, flatShading: true }), []);
-  const wallItems = useMemo(() => L.walls.map((w) => ({
-    pos: toWorld(w.x, w.y, 3), scale: [w.r * WORLD_SCALE * 0.95, 6, w.r * WORLD_SCALE * 0.95],
-  })), [L]);
-  const pitWallItems = useMemo(() => (
-    showPits ? [...LM.pitWalls.dragon, ...LM.pitWalls.baron].map((w) => ({
-      pos: toWorld(w.x, w.y, 3), scale: [2.4 * WORLD_SCALE, 7, 2.4 * WORLD_SCALE],
-    })) : []
-  ), [LM, showPits]);
+  // ── 量體：依 kind 分組做 InstancedMesh（~6 個 draw call）─────────────────
+  const boxGeo = useMemo(() => new THREE.BoxGeometry(1, 1, 1), []);
+  const volGroups = useMemo(() => {
+    const by = {};
+    for (const it of T.wallItems) (by[it.kind] || (by[it.kind] = [])).push(it);
+    return Object.entries(by).map(([kind, items]) => ({
+      kind, items,
+      faceMat: new THREE.MeshStandardMaterial({
+        color: (VOLUME_COLOR[kind] ?? VOLUME_COLOR.wall).face, roughness: 1, flatShading: true,
+      }),
+      capMat: new THREE.MeshStandardMaterial({
+        color: (VOLUME_COLOR[kind] ?? VOLUME_COLOR.wall).top, roughness: 1, flatShading: true,
+      }),
+      hasCap: kind !== "river_stone",
+      toggle: kind === "wall" ? "jungle" : kind === "pit_wall" ? "pits" : null,
+    }));
+  }, [T]);
 
-  // 石頭：改為附在牆體上（不再散佈河面），讓牆讀成「岩壁邊界」。決定性、不用 Math.random。
+  // ── 基地高地平台（三葉形 extrude 量體）──────────────────────────────────
+  const baseVolumes = useMemo(() => T.meta.nexus.map((n) => ({
+    ...n, geo: extrudePoly(n.poly, HEIGHT.base_platform),
+  })), [T]);
+
+  // ── 裝飾岩 ────────────────────────────────────────────────────────────
   const rockGroups = useMemo(() => {
     if (!showDecor) return [];
-    const names = ["Rock_Large_A", "Rock_Cliff_A", "Rock_Large_B", "Rock_Medium_A"];
+    const names = ["Rock_Large_A", "Rock_Cliff_A", "Rock_Large_B"];
     const byAsset = {};
-    L.walls.forEach((w, i) => {
+    T.rocks.forEach((r, i) => {
       const name = names[i % names.length];
-      const rotY = (i % 8) * (Math.PI / 4);
       (byAsset[name] || (byAsset[name] = [])).push({
-        pos: toWorld(w.x, w.y, 0), rotY, scale: Math.min(2.6, Math.max(1.3, w.r * 0.32)),
-        color: [0.92, 0.9, 0.86],
+        pos: toWorld(r.x, r.y, 4.5), rotY: r.rot, scale: r.scale, color: [0.86, 0.84, 0.8],
       });
     });
     return Object.keys(byAsset).map((name) => ({ name, transforms: byAsset[name] }));
-  }, [L, showDecor]);
+  }, [T, showDecor]);
 
   return (
     <group>
-      {/* 底草地（較暗，讓路/河/牆更跳） */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[L.bounds.width * WORLD_SCALE, L.bounds.height * WORLD_SCALE]} />
-        <meshStandardMaterial color={ZONE_COLOR.ground} roughness={1} />
-      </mesh>
-
-      {/* 四野區象限（可行走空間）＋邊界環 */}
-      {showJungle && L.quadrants.map((q) => (
-        <group key={q.id}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={toWorld(q.x, q.y, 0.05)}>
-            <circleGeometry args={[q.r * WORLD_SCALE, 40]} />
-            <meshStandardMaterial color={ZONE_COLOR.jungle} roughness={1} transparent opacity={0.8} />
+      {/* ── 地面：bedrock / 競技場 / 野區 / 河 / 三路 / 空地 / 坑底 / 塔基 / 基地 ── */}
+      {groundMeshes.map((m) => (
+        (m.toggle && !flags[m.toggle]) ? null : (
+          <mesh key={m.id} geometry={m.geo} rotation={[-Math.PI / 2, 0, 0]} position={[0, m.y, 0]} receiveShadow>
+            <meshStandardMaterial color={m.color} roughness={1}
+              emissive={m.kind === "river" ? 0x0d2b36 : 0x000000}
+              emissiveIntensity={m.kind === "river" ? 0.28 : 0} />
           </mesh>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={toWorld(q.x, q.y, 0.06)}>
-            <ringGeometry args={[q.r * WORLD_SCALE - 1.5, q.r * WORLD_SCALE, 40]} />
-            <meshStandardMaterial color={ZONE_COLOR.jungle_edge} transparent opacity={0.7} side={THREE.DoubleSide} />
+        )
+      ))}
+
+      {/* ── 量體：崖 / 野區岩壁 / 坑壁 / 基地 rim / 河岸石（側面 + 頂蓋）── */}
+      {volGroups.map((g) => (
+        (g.toggle && !flags[g.toggle]) ? null : (
+          <group key={g.kind}>
+            <StaticInstances items={g.items} geometry={boxGeo} material={g.faceMat} />
+            {g.hasCap && (
+              <StaticInstances items={g.items} geometry={boxGeo} material={g.capMat}
+                capOffset={0.55} capScale={[1.06, 1.1, 1.0]} />
+            )}
+          </group>
+        )
+      ))}
+
+      {/* ── 基地：高地平台量體 + 主堡 + 泉水 ── */}
+      {baseVolumes.map((n) => (
+        <group key={n.side}>
+          <mesh geometry={n.geo} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+            <meshStandardMaterial color={n.platformColor} roughness={0.9} flatShading />
+          </mesh>
+          {/* 主堡（Nexus）：石座 + 隊色晶體 */}
+          <mesh position={toWorld(n.x, n.y, HEIGHT.base_platform + 3.4)}>
+            <cylinderGeometry args={[5.4, 7.6, 6.8, 6]} />
+            <meshStandardMaterial color={n.platformTop} roughness={0.6} flatShading />
+          </mesh>
+          <mesh position={toWorld(n.x, n.y, HEIGHT.base_platform + 10.4)}>
+            <octahedronGeometry args={[5.6, 0]} />
+            <meshStandardMaterial color={n.color} emissive={n.color} emissiveIntensity={0.7} roughness={0.2} />
+          </mesh>
+          {/* 泉水（平台面上的發光圓台）*/}
+          <mesh position={toWorld(n.fountain.x, n.fountain.y, HEIGHT.base_platform + 0.5)}>
+            <cylinderGeometry args={[6 * WORLD_SCALE, 6.6 * WORLD_SCALE, 1.0, 20]} />
+            <meshStandardMaterial color={n.color} emissive={n.color} emissiveIntensity={0.5} roughness={0.4} />
           </mesh>
         </group>
       ))}
 
-      {/* 河道（河岸輪廓 + 主河道） */}
-      <mesh geometry={riverEdgeGeo}><meshStandardMaterial color={ZONE_COLOR.river_edge} roughness={1} /></mesh>
-      <mesh geometry={riverGeo}><meshStandardMaterial color={ZONE_COLOR.river} emissive={0x0e3a48} emissiveIntensity={0.28} roughness={0.35} /></mesh>
+      {/* ── 塔：外/二/高地以底座大小、疊層數、總高區分 ── */}
+      {showTowers && T.towers.map((t) => <Tower key={t.id} t={t} />)}
 
-      {/* 三路（深色路緣 + 亮沙路面，寬） */}
-      {showLane && ["top", "mid", "bot"].map((ln) => (
-        <group key={ln}>
-          <mesh geometry={laneEdgeGeos[ln]}><meshStandardMaterial color={ZONE_COLOR.lane_edge} roughness={1} /></mesh>
-          <mesh geometry={laneGeos[ln]}><meshStandardMaterial color={ZONE_COLOR.lane} roughness={1} /></mesh>
-        </group>
-      ))}
-
-      {/* 龍坑 / 巴龍坑（有壁、有入口、連河；造型不同） */}
-      {showPits && (
-        <>
-          <Pit p={L.pits.dragon} kind="dragon" />
-          <Pit p={L.pits.baron} kind="baron" />
-        </>
-      )}
-
-      {/* 基地：平台 + 主堡 + 三路出口 */}
-      {["blue", "red"].map((side) => (
-        <Base key={side} side={side} base={L.bases[side]} fountain={L.fountains[side]} lanes={L.lanes} />
-      ))}
-
-      {/* 防禦塔 */}
-      {showTowers && L.towers.filter((t) => t.kind !== "nexus").map((t) => <Tower key={t.id} t={t} />)}
-
-      {/* 野區營地 */}
-      {showJungle && L.camps.map((c) => (
-        <mesh key={c.id} position={toWorld(c.x, c.y, 1.4)}>
-          <coneGeometry args={[2.4, 3.6, 6]} />
-          <meshStandardMaterial color={c.type === "buff" ? (c.side === "red" ? 0xf97316 : 0x38bdf8) : ZONE_COLOR.camp} roughness={0.7} flatShading />
+      {/* ── 野怪 / Buff 標記（空地已在地面層畫出）── */}
+      {showJungle && T.meta.camps.map((c) => (
+        <mesh key={c.id} position={toWorld(c.x, c.y, 2.0)}>
+          <coneGeometry args={[c.type === "buff" ? 3.0 : 2.4, c.type === "buff" ? 5.2 : 4.0, c.type === "buff" ? 8 : 6]} />
+          <meshStandardMaterial
+            color={c.type === "buff" ? (c.side === "red" ? 0xf97316 : 0x38bdf8) : PALETTE.camp_marker}
+            emissive={c.type === "buff" ? (c.side === "red" ? 0x7a2f0a : 0x0a3f5a) : 0x000000}
+            emissiveIntensity={c.type === "buff" ? 0.5 : 0} roughness={0.7} flatShading />
         </mesh>
       ))}
 
-      {/* 牆體（不可行走）＋ 坑牆 */}
-      <StaticInstances items={wallItems} geometry={wallGeo} material={wallMat} />
-      {showPits && <StaticInstances items={pitWallItems} geometry={wallGeo} material={wallMat} />}
-
-      {/* 牆上石頭（Rock Pack 重用；讓牆讀成岩壁邊界） */}
+      {/* ── 裝飾岩（只在牆鏈端點與崖腳）── */}
       {rockGroups.map((g) => (
         <InstancedLODGroup key={"rk-" + g.name} asset={getRock(g.name)} transforms={g.transforms} ring={lodRing} />
       ))}
 
-      {/* 地標：坑入口 / 基地出口 / 野區入口（形狀輔助，不靠文字） */}
-      {showLandmark && (
-        <group>
-          {showPits && LM.pitEntrances.map((e) => (
-            <Entrance key={e.key} x={e.x} y={e.y} angle={e.angle} color={e.pit === "dragon" ? ZONE_COLOR.pit_dragon : ZONE_COLOR.pit_baron} />
-          ))}
-          {showJungle && LM.jungleEntrances.map((e) => (
-            <Entrance key={e.key} x={e.x} y={e.y} angle={e.angle} color={0xcbe58a} small />
-          ))}
-        </group>
-      )}
+      {/* ── 入口門柱（基地出口 / 坑口 / 野區口；形狀輔助，不靠文字）── */}
+      {showLandmark && T.gates.map((g) => (
+        (g.kind === "pit" && !showPits) || (g.kind === "jungle" && !showJungle) ? null
+          : <Gate key={g.key} g={g} />
+      ))}
 
-      {/* 區域名稱標籤（次要輔助） */}
+      {/* ── 區域名稱標籤（Debug 標記模式才開；關閉後地圖仍須可讀）── */}
       {showLabels && LM.labels.map((l) => (
         <CoordLabel key={l.key} p={l} text={l.text}
           color={l.kind === "pit" ? "#e9d5ff" : l.kind === "base" ? "#cfe3ff" : l.kind === "buff" ? "#fde68a" : l.kind === "lane" ? "#f5deb3" : "#cbe58a"} />
@@ -195,114 +211,52 @@ export default function MobaMapBlockout({ show = {}, ring = "desktop" }) {
           <CoordLabel p={L.bases.blue} text="22,202" color="#7ab8ff" />
           <CoordLabel p={L.bases.red} text="198,18" color="#ff9a9a" />
           {L.camps.map((c) => <CoordLabel key={c.id} p={c} text={`${c.x},${c.y}`} color="#c7f39a" />)}
+          {T.towers.map((t) => <CoordLabel key={"c" + t.id} p={t} text={t.kind[0].toUpperCase()} color="#dbe7f5" />)}
         </>
       )}
     </group>
   );
 }
 
+/** 塔：石基座 + 逐層收窄的八角塔身 + 隊色冠。tiers 來自 mapTerrainShapes。 */
 function Tower({ t }) {
-  const h = t.kind === "highground" ? 10 : t.kind === "inner" ? 8 : 6.5;
-  const r = t.kind === "highground" ? 2.6 : 2.1;
-  const c = t.side === "blue" ? ZONE_COLOR.tower_blue : ZONE_COLOR.tower_red;
+  const crownC = t.side === "blue" ? PALETTE.nexus_blue : PALETTE.nexus_red;
+  let h = 0;
   return (
     <group>
-      <mesh position={toWorld(t.x, t.y, h / 2)}>
-        <cylinderGeometry args={[r * 0.75, r, h, 8]} />
-        <meshStandardMaterial color={c} emissive={t.side === "blue" ? 0x1b3a6a : 0x6a1b1b} emissiveIntensity={0.3} roughness={0.5} flatShading />
+      <mesh position={toWorld(t.x, t.y, 0.9)}>
+        <cylinderGeometry args={[t.padR * WORLD_SCALE * 0.72, t.padR * WORLD_SCALE * 0.82, 1.8, 8]} />
+        <meshStandardMaterial color={PALETTE.tower_plinth} roughness={1} flatShading />
       </mesh>
-      <mesh position={toWorld(t.x, t.y, h + 1)}>
-        <octahedronGeometry args={[r * 0.7, 0]} />
-        <meshStandardMaterial color={c} emissive={c} emissiveIntensity={0.6} />
-      </mesh>
-    </group>
-  );
-}
-
-// 基地：六角平台 + 主堡 + 泉水 + 三路出口門
-function Base({ side, base, fountain, lanes }) {
-  const c = side === "blue" ? ZONE_COLOR.highground_blue : ZONE_COLOR.highground_red;
-  const nexusC = side === "blue" ? 0x3b82f6 : 0xef4444;
-  const R = 22;
-  const laneEnd = (ln) => (side === "blue" ? lanes[ln][0] : lanes[ln][lanes[ln].length - 1]);
-  return (
-    <group>
-      {/* 高地平台（六角柱，抬高） */}
-      <mesh position={toWorld(base.x, base.y, 2)}>
-        <cylinderGeometry args={[R * WORLD_SCALE, R * WORLD_SCALE * 1.06, 4, 6]} />
-        <meshStandardMaterial color={c} roughness={0.85} flatShading />
-      </mesh>
-      {/* 高地邊界環 */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={toWorld(base.x, base.y, 4.1)}>
-        <ringGeometry args={[R * WORLD_SCALE * 0.98, R * WORLD_SCALE * 1.1, 6]} />
-        <meshStandardMaterial color={nexusC} emissive={nexusC} emissiveIntensity={0.4} side={THREE.DoubleSide} />
-      </mesh>
-      {/* 主堡（Nexus 疊構） */}
-      <mesh position={toWorld(base.x, base.y, 6)}>
-        <cylinderGeometry args={[6, 8, 8, 6]} />
-        <meshStandardMaterial color={c} roughness={0.6} flatShading />
-      </mesh>
-      <mesh position={toWorld(base.x, base.y, 13)}>
-        <octahedronGeometry args={[6.5, 0]} />
-        <meshStandardMaterial color={nexusC} emissive={nexusC} emissiveIntensity={0.6} roughness={0.2} />
-      </mesh>
-      {/* 泉水 */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={toWorld(fountain.x, fountain.y, 0.6)}>
-        <ringGeometry args={[6 * WORLD_SCALE, 9 * WORLD_SCALE, 28]} />
-        <meshStandardMaterial color={nexusC} emissive={nexusC} emissiveIntensity={0.55} side={THREE.DoubleSide} />
-      </mesh>
-      {/* 三路出口門（往各路方向） */}
-      {["top", "mid", "bot"].map((ln) => {
-        const e = laneEnd(ln); const a = Math.atan2(e.y - base.y, e.x - base.x);
-        const gx = base.x + Math.cos(a) * (R + 4), gy = base.y + Math.sin(a) * (R + 4);
-        return <Entrance key={ln} x={gx} y={gy} angle={a} color={nexusC} small />;
+      {t.tiers.map((tier, i) => {
+        const y = 1.8 + h + tier.h / 2; h += tier.h;
+        const next = t.tiers[i + 1];
+        return (
+          <mesh key={i} position={toWorld(t.x, t.y, y)}>
+            <cylinderGeometry args={[(next ? next.r : tier.r * 0.8) * WORLD_SCALE, tier.r * WORLD_SCALE, tier.h, 8]} />
+            <meshStandardMaterial color={PALETTE.tower_stone} roughness={0.75} flatShading />
+          </mesh>
+        );
       })}
+      <mesh position={toWorld(t.x, t.y, 1.8 + h + t.crown * 0.9)}>
+        <octahedronGeometry args={[t.crown * WORLD_SCALE * 0.8, 0]} />
+        <meshStandardMaterial color={crownC} emissive={crownC} emissiveIntensity={0.75} roughness={0.25} />
+      </mesh>
     </group>
   );
 }
 
-// 坑：下凹坑底 + 高坑壁環(來自 pitWalls) + 入口 + 中央造型（龍寬/巴龍高）+ 連河
-function Pit({ p, kind }) {
-  const color = kind === "dragon" ? ZONE_COLOR.pit_dragon : ZONE_COLOR.pit_baron;
-  const R = kind === "dragon" ? 15 : 13;
+/** 入口門柱：兩根對稱柱子夾出通道方向。 */
+function Gate({ g }) {
+  const s = g.scale ?? 1;
+  const h = 7.5 * s, r = 1.6 * s, gap = 6 * s;
+  const px = Math.cos(g.angle + Math.PI / 2), py = Math.sin(g.angle + Math.PI / 2);
   return (
     <group>
-      {/* 坑底（下凹） */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={toWorld(p.x, p.y, -1.2)}>
-        <circleGeometry args={[R * WORLD_SCALE, 44]} />
-        <meshStandardMaterial color={0x1a1420} roughness={0.7} />
-      </mesh>
-      {/* 坑內光環 */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={toWorld(p.x, p.y, 0.2)}>
-        <ringGeometry args={[R * WORLD_SCALE * 0.55, R * WORLD_SCALE * 0.85, 40]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.55} side={THREE.DoubleSide} />
-      </mesh>
-      {/* 中央造型：龍=寬扁六角、巴龍=高尖 */}
-      {kind === "dragon" ? (
-        <mesh position={toWorld(p.x, p.y, 2)}>
-          <cylinderGeometry args={[7, 9, 4, 6]} />
-          <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.4} flatShading />
-        </mesh>
-      ) : (
-        <mesh position={toWorld(p.x, p.y, 6)}>
-          <coneGeometry args={[5, 12, 6]} />
-          <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.4} flatShading />
-        </mesh>
-      )}
-    </group>
-  );
-}
-
-function Entrance({ x, y, angle, color, small }) {
-  const h = small ? 5 : 7, r = small ? 1.2 : 1.6, gap = small ? 4 : 5;
-  const px = Math.cos(angle + Math.PI / 2), py = Math.sin(angle + Math.PI / 2);
-  const posts = [1, -1].map((s) => toWorld(x + px * gap * s, y + py * gap * s, h / 2));
-  return (
-    <group>
-      {posts.map((pp, i) => (
-        <mesh key={i} position={pp}>
-          <cylinderGeometry args={[r, r * 1.15, h, 6]} />
-          <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.5} roughness={0.5} flatShading />
+      {[1, -1].map((sgn, i) => (
+        <mesh key={i} position={toWorld(g.x + px * gap * sgn, g.y + py * gap * sgn, h / 2)}>
+          <cylinderGeometry args={[r, r * 1.25, h, 6]} />
+          <meshStandardMaterial color={g.color} emissive={g.color} emissiveIntensity={0.45} roughness={0.5} flatShading />
         </mesh>
       ))}
     </group>
@@ -311,7 +265,7 @@ function Entrance({ x, y, angle, color, small }) {
 
 function CoordLabel({ p, text, color }) {
   return (
-    <Html position={toWorld(p.x, p.y, 10)} center distanceFactor={240}
+    <Html position={toWorld(p.x, p.y, 14)} center distanceFactor={240}
       style={{ font: "700 12px ui-monospace,monospace", color, whiteSpace: "nowrap", textShadow: "0 1px 3px #000", pointerEvents: "none" }}>
       {text}
     </Html>
