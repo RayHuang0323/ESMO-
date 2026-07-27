@@ -1,0 +1,5434 @@
+{
+  "generatedAt": "2026-07-27T12:38:06.588Z",
+  "tool": "tools/shot_moba_runtime.mjs",
+  "browser": "chrome（有視窗、真實 GPU）",
+  "note": "所有截圖與統計皆來自正式 GameView（?debug=moba-runtime-battle）的同一套 LogicEngine / useGameStore。",
+  "shots": [
+    {
+      "filename": "02_runtime_early_lane.png",
+      "screenshotSuccess": true,
+      "error": null,
+      "phase": "early",
+      "capturedAt": "2026-07-27T12:38:06.585Z",
+      "snapshotTs": 81,
+      "viewport": {
+        "w": 1920,
+        "h": 1200
+      },
+      "presentationMode": "runtime-v2",
+      "isRuntimeV2": true,
+      "isFormalGameView": true,
+      "debugUiFound": [],
+      "hudPanelCount": 3,
+      "heroesCoveredByHud": [],
+      "canvasRect": {
+        "x": 1758,
+        "y": 1038,
+        "w": 152,
+        "h": 152
+      },
+      "canvasCount": 2,
+      "activePreset": "desktop",
+      "heroCount": 10,
+      "blueHeroCount": 5,
+      "redHeroCount": 5,
+      "visibleHeroIds": [
+        "b1",
+        "b2",
+        "b3",
+        "b4",
+        "b5",
+        "r1",
+        "r2",
+        "r3",
+        "r4",
+        "r5"
+      ],
+      "deadHeroCount": 0,
+      "towerAliveCount": 18,
+      "towerDestroyedCount": 0,
+      "nexusCount": 2,
+      "objectiveState": [
+        {
+          "id": "dragon",
+          "type": "dragon",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": 85,
+            "z": 81.3
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "baron",
+          "type": "baron",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": -85,
+            "z": -81.3
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_buff",
+          "type": "buff",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": -61.2,
+            "z": 74.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_a",
+          "type": "camp",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": -105.4,
+            "z": 54.4
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_b",
+          "type": "camp",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": -23.8,
+            "z": 108.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_buff",
+          "type": "buff",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": 61.2,
+            "z": -74.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_a",
+          "type": "camp",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": 105.4,
+            "z": -54.4
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_b",
+          "type": "camp",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": 23.8,
+            "z": -108.8
+          },
+          "fallbackPosition": false
+        }
+      ],
+      "cameraDistance": 377.1,
+      "camera": {
+        "position": {
+          "x": 0,
+          "y": 297.158,
+          "z": 232.165
+        },
+        "fov": 45,
+        "near": 1,
+        "far": 4000
+      },
+      "adapterWarnings": [],
+      "heroRenderDiagnostics": [
+        {
+          "id": "b1",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 25.08,
+            "y": 78.23
+          },
+          "position": {
+            "x": -144.369,
+            "y": 0.64,
+            "z": -54.009
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 23.219,
+            "yPct": 36.52
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.595
+        },
+        {
+          "id": "b2",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 2,
+          "simPosition": {
+            "x": 53.29,
+            "y": 145.85
+          },
+          "position": {
+            "x": -96.264,
+            "y": 0.64,
+            "z": 61.052
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 28.376,
+            "yPct": 66.265
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -2.2
+        },
+        {
+          "id": "b3",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 87.85,
+            "y": 124.87
+          },
+          "position": {
+            "x": -37.666,
+            "y": 0.64,
+            "z": 25.308
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 42.059,
+            "yPct": 55.763
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.699
+        },
+        {
+          "id": "b4",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 135.29,
+            "y": 190.48
+          },
+          "position": {
+            "x": 42.989,
+            "y": 0.64,
+            "z": 136.823
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 61.214,
+            "yPct": 93.81
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 1.748
+        },
+        {
+          "id": "b5",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 134.42,
+            "y": 190.64
+          },
+          "position": {
+            "x": 41.465,
+            "y": 0.64,
+            "z": 137.096
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 60.823,
+            "yPct": 93.925
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 1.748
+        },
+        {
+          "id": "r1",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 86.89,
+            "y": 29.13
+          },
+          "position": {
+            "x": -39.291,
+            "y": 0.64,
+            "z": -137.484
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 43.529,
+            "yPct": 20.699
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -1.394
+        },
+        {
+          "id": "r2",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 2,
+          "simPosition": {
+            "x": 124.03,
+            "y": 46.02
+          },
+          "position": {
+            "x": 23.857,
+            "y": 0.64,
+            "z": -108.773
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 54.087,
+            "yPct": 25.724
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -2.022
+        },
+        {
+          "id": "r3",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 132.9,
+            "y": 92
+          },
+          "position": {
+            "x": 38.929,
+            "y": 0.64,
+            "z": -30.613
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 57.487,
+            "yPct": 41.698
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 0.015
+        },
+        {
+          "id": "r4",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 196.62,
+            "y": 137.5
+          },
+          "position": {
+            "x": 147.261,
+            "y": 0.64,
+            "z": 46.757
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 82.235,
+            "yPct": 61.904
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -0.245
+        },
+        {
+          "id": "r5",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 196.62,
+            "y": 137.5
+          },
+          "position": {
+            "x": 147.261,
+            "y": 0.64,
+            "z": 46.757
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 82.235,
+            "yPct": 61.904
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -0.245
+        }
+      ],
+      "performance": {
+        "fps": 60,
+        "frameTimeMs": 16.67,
+        "drawCalls": 220,
+        "triangles": 86887,
+        "geometries": 58,
+        "textures": 0,
+        "programs": 9,
+        "renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001638) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "vendor": "Google Inc. (AMD)",
+        "pixelRatio": 1,
+        "drawingBuffer": {
+          "width": 1920,
+          "height": 1200
+        }
+      },
+      "nexusWorld": [
+        {
+          "id": "blue_nexus",
+          "team": "blue",
+          "alive": true,
+          "world": {
+            "x": -149.6,
+            "z": 156.4
+          },
+          "screen": {
+            "xPct": 9.119,
+            "yPct": 102.271,
+            "onScreen": false
+          }
+        },
+        {
+          "id": "red_nexus",
+          "team": "red",
+          "alive": true,
+          "world": {
+            "x": 149.6,
+            "z": -156.4
+          },
+          "screen": {
+            "xPct": 74.082,
+            "yPct": 17.305,
+            "onScreen": true
+          }
+        }
+      ]
+    },
+    {
+      "filename": "01_runtime_full_battle.png",
+      "screenshotSuccess": true,
+      "error": null,
+      "phase": "full",
+      "capturedAt": "2026-07-27T12:38:06.588Z",
+      "snapshotTs": 248,
+      "viewport": {
+        "w": 1920,
+        "h": 1200
+      },
+      "presentationMode": "runtime-v2",
+      "isRuntimeV2": true,
+      "isFormalGameView": true,
+      "debugUiFound": [],
+      "hudPanelCount": 3,
+      "heroesCoveredByHud": [],
+      "canvasRect": {
+        "x": 1758,
+        "y": 1038,
+        "w": 152,
+        "h": 152
+      },
+      "canvasCount": 2,
+      "activePreset": "desktop",
+      "heroCount": 10,
+      "blueHeroCount": 5,
+      "redHeroCount": 5,
+      "visibleHeroIds": [
+        "b1",
+        "b2",
+        "b3",
+        "b4",
+        "b5",
+        "r1",
+        "r2",
+        "r3",
+        "r4",
+        "r5"
+      ],
+      "deadHeroCount": 0,
+      "towerAliveCount": 18,
+      "towerDestroyedCount": 0,
+      "nexusCount": 2,
+      "objectiveState": [
+        {
+          "id": "dragon",
+          "type": "dragon",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": 85,
+            "z": 81.3
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "baron",
+          "type": "baron",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": -85,
+            "z": -81.3
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_buff",
+          "type": "buff",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": -61.2,
+            "z": 74.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_a",
+          "type": "camp",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": -105.4,
+            "z": 54.4
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_b",
+          "type": "camp",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": -23.8,
+            "z": 108.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_buff",
+          "type": "buff",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": 61.2,
+            "z": -74.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_a",
+          "type": "camp",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": 105.4,
+            "z": -54.4
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_b",
+          "type": "camp",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": 23.8,
+            "z": -108.8
+          },
+          "fallbackPosition": false
+        }
+      ],
+      "cameraDistance": 377.1,
+      "camera": {
+        "position": {
+          "x": 0,
+          "y": 297.158,
+          "z": 232.165
+        },
+        "fov": 45,
+        "near": 1,
+        "far": 4000
+      },
+      "adapterWarnings": [],
+      "heroRenderDiagnostics": [
+        {
+          "id": "b1",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 0.558,
+          "level": 3,
+          "simPosition": {
+            "x": 50.97,
+            "y": 45.98
+          },
+          "position": {
+            "x": -100.353,
+            "y": 0.64,
+            "z": -108.84
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 32.811,
+            "yPct": 25.712
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.275
+        },
+        {
+          "id": "b2",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 3,
+          "simPosition": {
+            "x": 76.83,
+            "y": 140.71
+          },
+          "position": {
+            "x": -56.308,
+            "y": 0.64,
+            "z": 52.147
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 37.555,
+            "yPct": 63.522
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -0.928
+        },
+        {
+          "id": "b3",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 0.702,
+          "level": 4,
+          "simPosition": {
+            "x": 112.7,
+            "y": 107.19
+          },
+          "position": {
+            "x": 4.511,
+            "y": 0.64,
+            "z": -4.693
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 50.904,
+            "yPct": 47.898
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.342
+        },
+        {
+          "id": "b4",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 0.479,
+          "level": 2,
+          "simPosition": {
+            "x": 153.52,
+            "y": 175.27
+          },
+          "position": {
+            "x": 73.99,
+            "y": 0.64,
+            "z": 110.967
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 68.294,
+            "yPct": 83.463
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -1.327
+        },
+        {
+          "id": "b5",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 0.93,
+          "level": 2,
+          "simPosition": {
+            "x": 170.5,
+            "y": 171.5
+          },
+          "position": {
+            "x": 102.846,
+            "y": 0.64,
+            "z": 104.554
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 75.105,
+            "yPct": 81.062
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.356
+        },
+        {
+          "id": "r1",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 0.896,
+          "level": 3,
+          "simPosition": {
+            "x": 83.28,
+            "y": 75.11
+          },
+          "position": {
+            "x": -45.518,
+            "y": 0.64,
+            "z": -59.416
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 41.625,
+            "yPct": 35.375
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 0.748
+        },
+        {
+          "id": "r2",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 4,
+          "simPosition": {
+            "x": 153.92,
+            "y": 107.96
+          },
+          "position": {
+            "x": 74.652,
+            "y": 0.64,
+            "z": -3.599
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 64.993,
+            "yPct": 48.171
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 0.121
+        },
+        {
+          "id": "r3",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 0.194,
+          "level": 4,
+          "simPosition": {
+            "x": 121.21,
+            "y": 98.16
+          },
+          "position": {
+            "x": 18.963,
+            "y": 0.64,
+            "z": -20.025
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 53.709,
+            "yPct": 44.168
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.376
+        },
+        {
+          "id": "r4",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 0.432,
+          "level": 2,
+          "simPosition": {
+            "x": 168.55,
+            "y": 154.59
+          },
+          "position": {
+            "x": 99.54,
+            "y": 0.64,
+            "z": 75.805
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 72.982,
+            "yPct": 71.011
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.888
+        },
+        {
+          "id": "r5",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 0.975,
+          "level": 2,
+          "simPosition": {
+            "x": 176.06,
+            "y": 165.94
+          },
+          "position": {
+            "x": 112.303,
+            "y": 0.64,
+            "z": 95.097
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 76.906,
+            "yPct": 77.631
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.356
+        }
+      ],
+      "performance": {
+        "fps": 60,
+        "frameTimeMs": 16.66,
+        "drawCalls": 220,
+        "triangles": 86887,
+        "geometries": 58,
+        "textures": 0,
+        "programs": 9,
+        "renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001638) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "vendor": "Google Inc. (AMD)",
+        "pixelRatio": 1,
+        "drawingBuffer": {
+          "width": 1920,
+          "height": 1200
+        }
+      },
+      "heroSeparation": {
+        "onScreen": 10,
+        "minGapPct": 4.08,
+        "ideal": true
+      },
+      "nexusWorld": [
+        {
+          "id": "blue_nexus",
+          "team": "blue",
+          "alive": true,
+          "world": {
+            "x": -149.6,
+            "z": 156.4
+          },
+          "screen": {
+            "xPct": 9.119,
+            "yPct": 102.271,
+            "onScreen": false
+          }
+        },
+        {
+          "id": "red_nexus",
+          "team": "red",
+          "alive": true,
+          "world": {
+            "x": 149.6,
+            "z": -156.4
+          },
+          "screen": {
+            "xPct": 74.082,
+            "yPct": 17.305,
+            "onScreen": true
+          }
+        }
+      ]
+    },
+    {
+      "filename": "04_runtime_objective.png",
+      "screenshotSuccess": true,
+      "error": null,
+      "phase": "objective",
+      "capturedAt": "2026-07-27T12:38:06.588Z",
+      "snapshotTs": 250,
+      "viewport": {
+        "w": 1920,
+        "h": 1200
+      },
+      "presentationMode": "runtime-v2",
+      "isRuntimeV2": true,
+      "isFormalGameView": true,
+      "debugUiFound": [],
+      "hudPanelCount": 3,
+      "heroesCoveredByHud": [],
+      "canvasRect": {
+        "x": 1758,
+        "y": 1038,
+        "w": 152,
+        "h": 152
+      },
+      "canvasCount": 2,
+      "activePreset": "desktop",
+      "heroCount": 10,
+      "blueHeroCount": 5,
+      "redHeroCount": 5,
+      "visibleHeroIds": [
+        "b3",
+        "b5",
+        "r2",
+        "r3",
+        "r4",
+        "r5"
+      ],
+      "deadHeroCount": 0,
+      "towerAliveCount": 18,
+      "towerDestroyedCount": 0,
+      "nexusCount": 2,
+      "objectiveState": [
+        {
+          "id": "dragon",
+          "type": "dragon",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": 85,
+            "z": 81.3
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "baron",
+          "type": "baron",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": -85,
+            "z": -81.3
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_buff",
+          "type": "buff",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": -61.2,
+            "z": 74.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_a",
+          "type": "camp",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": -105.4,
+            "z": 54.4
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_b",
+          "type": "camp",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": -23.8,
+            "z": 108.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_buff",
+          "type": "buff",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": 61.2,
+            "z": -74.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_a",
+          "type": "camp",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": 105.4,
+            "z": -54.4
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_b",
+          "type": "camp",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": 23.8,
+            "z": -108.8
+          },
+          "fallbackPosition": false
+        }
+      ],
+      "cameraDistance": 150,
+      "camera": {
+        "position": {
+          "x": 85,
+          "y": 118.202,
+          "z": 173.649
+        },
+        "fov": 45,
+        "near": 1,
+        "far": 4000
+      },
+      "adapterWarnings": [],
+      "heroRenderDiagnostics": [
+        {
+          "id": "b1",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 0.475,
+          "level": 3,
+          "simPosition": {
+            "x": 51,
+            "y": 45.95
+          },
+          "position": {
+            "x": -100.332,
+            "y": 0.64,
+            "z": -108.858
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": -3.08,
+            "yPct": -19.976
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.275
+        },
+        {
+          "id": "b2",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 3,
+          "simPosition": {
+            "x": 74.55,
+            "y": 146.99
+          },
+          "position": {
+            "x": -60.261,
+            "y": 0.64,
+            "z": 62.746
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": -19.464,
+            "yPct": 36.628
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -0.078
+        },
+        {
+          "id": "b3",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 0.535,
+          "level": 4,
+          "simPosition": {
+            "x": 116.4,
+            "y": 103.6
+          },
+          "position": {
+            "x": 10.88,
+            "y": 0.64,
+            "z": -10.88
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 22.467,
+            "yPct": 5.129
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.342
+        },
+        {
+          "id": "b4",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 0.699,
+          "level": 2,
+          "simPosition": {
+            "x": 14,
+            "y": 210
+          },
+          "position": {
+            "x": -163.2,
+            "y": 0.64,
+            "z": 170
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": -154.124,
+            "yPct": 138.216
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -1.327
+        },
+        {
+          "id": "b5",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 0.898,
+          "level": 2,
+          "simPosition": {
+            "x": 170.53,
+            "y": 171.47
+          },
+          "position": {
+            "x": 102.865,
+            "y": 0.64,
+            "z": 104.535
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 60.208,
+            "yPct": 64.127
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.356
+        },
+        {
+          "id": "r1",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 0.936,
+          "level": 3,
+          "simPosition": {
+            "x": 88.93,
+            "y": 81.2
+          },
+          "position": {
+            "x": -35.939,
+            "y": 0.64,
+            "z": -49.088
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 9.738,
+            "yPct": -6.251
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 0.748
+        },
+        {
+          "id": "r2",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 4,
+          "simPosition": {
+            "x": 154.93,
+            "y": 116.21
+          },
+          "position": {
+            "x": 76.356,
+            "y": 0.64,
+            "z": 10.385
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 46.568,
+            "yPct": 12.683
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 0.121
+        },
+        {
+          "id": "r3",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 0.234,
+          "level": 4,
+          "simPosition": {
+            "x": 123.56,
+            "y": 98.45
+          },
+          "position": {
+            "x": 22.968,
+            "y": 0.64,
+            "z": -19.667
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 27.555,
+            "yPct": 2.284
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 1.3
+        },
+        {
+          "id": "r4",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 0.562,
+          "level": 2,
+          "simPosition": {
+            "x": 170.92,
+            "y": 145.47
+          },
+          "position": {
+            "x": 101.16,
+            "y": 0.64,
+            "z": 69.55
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 57.939,
+            "yPct": 40.477
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.888
+        },
+        {
+          "id": "r5",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 0.943,
+          "level": 2,
+          "simPosition": {
+            "x": 176.06,
+            "y": 165.94
+          },
+          "position": {
+            "x": 112.303,
+            "y": 0.64,
+            "z": 95.097
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 64.943,
+            "yPct": 57.019
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.356
+        }
+      ],
+      "performance": {
+        "fps": 60,
+        "frameTimeMs": 16.67,
+        "drawCalls": 90,
+        "triangles": 56793,
+        "geometries": 51,
+        "textures": 0,
+        "programs": 8,
+        "renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001638) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "vendor": "Google Inc. (AMD)",
+        "pixelRatio": 1,
+        "drawingBuffer": {
+          "width": 1920,
+          "height": 1200
+        }
+      },
+      "heroesNearObjective": 5,
+      "objective": "dragon",
+      "nexusWorld": [
+        {
+          "id": "blue_nexus",
+          "team": "blue",
+          "alive": true,
+          "world": {
+            "x": -149.6,
+            "z": 156.4
+          },
+          "screen": {
+            "xPct": -128.715,
+            "yPct": 117.629,
+            "onScreen": false
+          }
+        },
+        {
+          "id": "red_nexus",
+          "team": "red",
+          "alive": true,
+          "world": {
+            "x": 149.6,
+            "z": -156.4
+          },
+          "screen": {
+            "xPct": 66.713,
+            "yPct": -29.064,
+            "onScreen": false
+          }
+        }
+      ]
+    },
+    {
+      "filename": "05_runtime_hero_closeup.png",
+      "screenshotSuccess": true,
+      "error": null,
+      "phase": "closeup",
+      "capturedAt": "2026-07-27T12:38:06.588Z",
+      "snapshotTs": 251.5,
+      "viewport": {
+        "w": 1920,
+        "h": 1200
+      },
+      "presentationMode": "runtime-v2",
+      "isRuntimeV2": true,
+      "isFormalGameView": true,
+      "debugUiFound": [],
+      "hudPanelCount": 3,
+      "heroesCoveredByHud": [],
+      "canvasRect": {
+        "x": 1758,
+        "y": 1038,
+        "w": 152,
+        "h": 152
+      },
+      "canvasCount": 2,
+      "activePreset": "desktop",
+      "heroCount": 10,
+      "blueHeroCount": 5,
+      "redHeroCount": 5,
+      "visibleHeroIds": [
+        "b5",
+        "r5"
+      ],
+      "deadHeroCount": 0,
+      "towerAliveCount": 18,
+      "towerDestroyedCount": 0,
+      "nexusCount": 2,
+      "objectiveState": [
+        {
+          "id": "dragon",
+          "type": "dragon",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": 85,
+            "z": 81.3
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "baron",
+          "type": "baron",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": -85,
+            "z": -81.3
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_buff",
+          "type": "buff",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": -61.2,
+            "z": 74.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_a",
+          "type": "camp",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": -105.4,
+            "z": 54.4
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_b",
+          "type": "camp",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": -23.8,
+            "z": 108.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_buff",
+          "type": "buff",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": 61.2,
+            "z": -74.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_a",
+          "type": "camp",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": 105.4,
+            "z": -54.4
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_b",
+          "type": "camp",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": 23.8,
+            "z": -108.8
+          },
+          "fallbackPosition": false
+        }
+      ],
+      "cameraDistance": 95,
+      "camera": {
+        "position": {
+          "x": 107.95,
+          "y": 74.861,
+          "z": 157.938
+        },
+        "fov": 45,
+        "near": 1,
+        "far": 4000
+      },
+      "adapterWarnings": [],
+      "heroRenderDiagnostics": [
+        {
+          "id": "b1",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 0.474,
+          "level": 3,
+          "simPosition": {
+            "x": 51.45,
+            "y": 45.57
+          },
+          "position": {
+            "x": -99.543,
+            "y": 0.64,
+            "z": -109.528
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": -21.154,
+            "yPct": -41.922
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.275
+        },
+        {
+          "id": "b2",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 3,
+          "simPosition": {
+            "x": 74.03,
+            "y": 153.58
+          },
+          "position": {
+            "x": -61.145,
+            "y": 0.64,
+            "z": 74.09
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": -69.274,
+            "yPct": 24.222
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -0.078
+        },
+        {
+          "id": "b3",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 0.41,
+          "level": 4,
+          "simPosition": {
+            "x": 116.4,
+            "y": 103.6
+          },
+          "position": {
+            "x": 10.88,
+            "y": 0.64,
+            "z": -10.88
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 4.019,
+            "yPct": -18.058
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.342
+        },
+        {
+          "id": "b4",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 0.999,
+          "level": 2,
+          "simPosition": {
+            "x": 15.19,
+            "y": 209.7
+          },
+          "position": {
+            "x": -161.655,
+            "y": 0.64,
+            "z": 169.608
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": -372.435,
+            "yPct": 181.438
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 1.819
+        },
+        {
+          "id": "b5",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 0.873,
+          "level": 2,
+          "simPosition": {
+            "x": 170.94,
+            "y": 171.06
+          },
+          "position": {
+            "x": 103.597,
+            "y": 0.64,
+            "z": 103.803
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 46.296,
+            "yPct": 50.78
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.356
+        },
+        {
+          "id": "r1",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 0.966,
+          "level": 3,
+          "simPosition": {
+            "x": 95.33,
+            "y": 88.1
+          },
+          "position": {
+            "x": -25.354,
+            "y": 0.64,
+            "z": -37.676
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": -7.218,
+            "yPct": -26.172
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 0.748
+        },
+        {
+          "id": "r2",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 4,
+          "simPosition": {
+            "x": 156.07,
+            "y": 125.55
+          },
+          "position": {
+            "x": 78.239,
+            "y": 0.64,
+            "z": 25.836
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 33.599,
+            "yPct": -3.76
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 0.121
+        },
+        {
+          "id": "r3",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 0.264,
+          "level": 4,
+          "simPosition": {
+            "x": 130.32,
+            "y": 97.22
+          },
+          "position": {
+            "x": 34.089,
+            "y": 0.64,
+            "z": -21.366
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 16.376,
+            "yPct": -21.426
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.244
+        },
+        {
+          "id": "r4",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 0.862,
+          "level": 2,
+          "simPosition": {
+            "x": 206,
+            "y": 10
+          },
+          "position": {
+            "x": 163.2,
+            "y": 0.64,
+            "z": -170
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 66.204,
+            "yPct": -50.979
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.888
+        },
+        {
+          "id": "r5",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 0.918,
+          "level": 2,
+          "simPosition": {
+            "x": 176.06,
+            "y": 165.94
+          },
+          "position": {
+            "x": 112.303,
+            "y": 0.64,
+            "z": 95.097
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 53.493,
+            "yPct": 41.928
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.356
+        }
+      ],
+      "performance": {
+        "fps": 58,
+        "frameTimeMs": 17.24,
+        "drawCalls": 45,
+        "triangles": 46703,
+        "geometries": 51,
+        "textures": 0,
+        "programs": 8,
+        "renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001638) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "vendor": "Google Inc. (AMD)",
+        "pixelRatio": 1,
+        "drawingBuffer": {
+          "width": 1920,
+          "height": 1200
+        }
+      },
+      "blueRedGap": 12.3,
+      "nexusWorld": [
+        {
+          "id": "blue_nexus",
+          "team": "blue",
+          "alive": true,
+          "world": {
+            "x": -149.6,
+            "z": 156.4
+          },
+          "screen": {
+            "xPct": -301.941,
+            "yPct": 140.043,
+            "onScreen": false
+          }
+        },
+        {
+          "id": "red_nexus",
+          "team": "red",
+          "alive": true,
+          "world": {
+            "x": 149.6,
+            "z": -156.4
+          },
+          "screen": {
+            "xPct": 62.681,
+            "yPct": -50.015,
+            "onScreen": false
+          }
+        }
+      ]
+    },
+    {
+      "filename": "03_runtime_midgame.png",
+      "screenshotSuccess": true,
+      "error": null,
+      "phase": "mid",
+      "capturedAt": "2026-07-27T12:38:06.588Z",
+      "snapshotTs": 421.5,
+      "viewport": {
+        "w": 1920,
+        "h": 1200
+      },
+      "presentationMode": "runtime-v2",
+      "isRuntimeV2": true,
+      "isFormalGameView": true,
+      "debugUiFound": [],
+      "hudPanelCount": 3,
+      "heroesCoveredByHud": [],
+      "canvasRect": {
+        "x": 1758,
+        "y": 1038,
+        "w": 152,
+        "h": 152
+      },
+      "canvasCount": 2,
+      "capturedTowerChange": true,
+      "capturedDeadHero": true,
+      "deadHeroRender": {
+        "id": "b3",
+        "team": "blue",
+        "onScreen": true,
+        "screen": {
+          "xPct": 48.564,
+          "yPct": 49.718
+        },
+        "deathMarkVisible": true,
+        "bodyLyingDown": true,
+        "materialOpacity": 0.55
+      },
+      "activePreset": "desktop",
+      "heroCount": 10,
+      "blueHeroCount": 5,
+      "redHeroCount": 5,
+      "visibleHeroIds": [
+        "b1",
+        "b2",
+        "b3",
+        "r1",
+        "r2",
+        "r3",
+        "r4"
+      ],
+      "deadHeroCount": 1,
+      "towerAliveCount": 15,
+      "towerDestroyedCount": 3,
+      "nexusCount": 2,
+      "objectiveState": [
+        {
+          "id": "dragon",
+          "type": "dragon",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": 85,
+            "z": 81.3
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "baron",
+          "type": "baron",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": -85,
+            "z": -81.3
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_buff",
+          "type": "buff",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": -61.2,
+            "z": 74.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_a",
+          "type": "camp",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": -105.4,
+            "z": 54.4
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_b",
+          "type": "camp",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": -23.8,
+            "z": 108.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_buff",
+          "type": "buff",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": 61.2,
+            "z": -74.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_a",
+          "type": "camp",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": 105.4,
+            "z": -54.4
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_b",
+          "type": "camp",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": 23.8,
+            "z": -108.8
+          },
+          "fallbackPosition": false
+        }
+      ],
+      "cameraDistance": 165,
+      "camera": {
+        "position": {
+          "x": 1.713,
+          "y": 130.022,
+          "z": 100.229
+        },
+        "fov": 45,
+        "near": 1,
+        "far": 4000
+      },
+      "adapterWarnings": [],
+      "heroRenderDiagnostics": [
+        {
+          "id": "b1",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 0.614,
+          "level": 9,
+          "simPosition": {
+            "x": 44.41,
+            "y": 51.55
+          },
+          "position": {
+            "x": -111.496,
+            "y": 0.64,
+            "z": -99.368
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 11.473,
+            "yPct": 6.389
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -1.057
+        },
+        {
+          "id": "b2",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 4,
+          "simPosition": {
+            "x": 59.74,
+            "y": 118.08
+          },
+          "position": {
+            "x": -85.516,
+            "y": 0.64,
+            "z": 13.936
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 6.684,
+            "yPct": 57.304
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.818
+        },
+        {
+          "id": "b3",
+          "team": "blue",
+          "alive": false,
+          "hpRatio": 0,
+          "level": 5,
+          "simPosition": {
+            "x": 109.22,
+            "y": 111.06
+          },
+          "position": {
+            "x": -1.321,
+            "y": 0.64,
+            "z": 1.798
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 1.857,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 48.564,
+            "yPct": 49.718
+          },
+          "bodyVisible": true,
+          "ringVisible": false,
+          "deathMarkVisible": true,
+          "bodyLyingDown": true,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 0.55,
+          "rotationY": -0.766
+        },
+        {
+          "id": "b4",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 3,
+          "simPosition": {
+            "x": 156.21,
+            "y": 168.12
+          },
+          "position": {
+            "x": 78.338,
+            "y": 0.64,
+            "z": 98.869
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 108.018,
+            "yPct": 142.218
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 1.837
+        },
+        {
+          "id": "b5",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 0.691,
+          "level": 4,
+          "simPosition": {
+            "x": 14,
+            "y": 210
+          },
+          "position": {
+            "x": -163.2,
+            "y": 0.64,
+            "z": 170
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": -172.783,
+            "yPct": 335.686
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -1.287
+        },
+        {
+          "id": "r1",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 0.307,
+          "level": 4,
+          "simPosition": {
+            "x": 39.96,
+            "y": 55.51
+          },
+          "position": {
+            "x": -119.303,
+            "y": 0.64,
+            "z": -92.572
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 8.024,
+            "yPct": 8.522
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 1.838
+        },
+        {
+          "id": "r2",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 0.961,
+          "level": 7,
+          "simPosition": {
+            "x": 115.78,
+            "y": 103.31
+          },
+          "position": {
+            "x": 9.688,
+            "y": 0.64,
+            "z": -11.199
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 53.594,
+            "yPct": 42.347
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.461
+        },
+        {
+          "id": "r3",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 0.957,
+          "level": 5,
+          "simPosition": {
+            "x": 106.38,
+            "y": 113.73
+          },
+          "position": {
+            "x": -6.003,
+            "y": 0.64,
+            "z": 6.19
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 46.285,
+            "yPct": 52.379
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -0.787
+        },
+        {
+          "id": "r4",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 3,
+          "simPosition": {
+            "x": 154,
+            "y": 130.09
+          },
+          "position": {
+            "x": 74.871,
+            "y": 0.64,
+            "z": 33.942
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 89.533,
+            "yPct": 71.579
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -0.321
+        },
+        {
+          "id": "r5",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 5,
+          "simPosition": {
+            "x": 134.17,
+            "y": 190.68
+          },
+          "position": {
+            "x": 41.084,
+            "y": 0.64,
+            "z": 137.164
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 89.051,
+            "yPct": 218.692
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -1.394
+        }
+      ],
+      "performance": {
+        "fps": 53.6,
+        "frameTimeMs": 18.67,
+        "drawCalls": 110,
+        "triangles": 66211,
+        "geometries": 52,
+        "textures": 0,
+        "programs": 9,
+        "renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001638) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "vendor": "Google Inc. (AMD)",
+        "pixelRatio": 1,
+        "drawingBuffer": {
+          "width": 1920,
+          "height": 1200
+        }
+      },
+      "nexusWorld": [
+        {
+          "id": "blue_nexus",
+          "team": "blue",
+          "alive": true,
+          "world": {
+            "x": -149.6,
+            "z": 156.4
+          },
+          "screen": {
+            "xPct": -130.776,
+            "yPct": 280.568,
+            "onScreen": false
+          }
+        },
+        {
+          "id": "red_nexus",
+          "team": "red",
+          "alive": true,
+          "world": {
+            "x": 149.6,
+            "z": -156.4
+          },
+          "screen": {
+            "xPct": 93.629,
+            "yPct": -9.415,
+            "onScreen": false
+          }
+        }
+      ]
+    },
+    {
+      "filename": "06_legacy_compare.png",
+      "screenshotSuccess": true,
+      "error": null,
+      "phase": "legacy",
+      "capturedAt": "2026-07-27T12:38:06.588Z",
+      "snapshotTs": 424,
+      "viewport": {
+        "w": 1920,
+        "h": 1200
+      },
+      "presentationMode": "legacy",
+      "isRuntimeV2": false,
+      "isFormalGameView": true,
+      "debugUiFound": [],
+      "hudPanelCount": null,
+      "heroesCoveredByHud": null,
+      "canvasRect": null,
+      "canvasCount": null,
+      "activePreset": "desktop",
+      "heroCount": 10,
+      "blueHeroCount": 5,
+      "redHeroCount": 5,
+      "visibleHeroIds": null,
+      "deadHeroCount": 1,
+      "towerAliveCount": null,
+      "towerDestroyedCount": 3,
+      "nexusCount": null,
+      "objectiveState": null,
+      "cameraDistance": null,
+      "camera": null,
+      "adapterWarnings": null,
+      "heroRenderDiagnostics": null,
+      "performance": null,
+      "sameMatchToggle": true,
+      "switchedToLegacy": true,
+      "continuityBefore": {
+        "ts": 422,
+        "over": false,
+        "heroes": 10,
+        "blue": 5,
+        "red": 5,
+        "dead": 1,
+        "towersDown": 3,
+        "bK": 1,
+        "rK": 1
+      },
+      "continuityAfter": {
+        "ts": 424,
+        "over": false,
+        "heroes": 10,
+        "blue": 5,
+        "red": 5,
+        "dead": 1,
+        "towersDown": 3,
+        "bK": 1,
+        "rK": 1
+      },
+      "nexusWorld": null
+    },
+    {
+      "filename": "09_runtime_replay.png",
+      "screenshotSuccess": true,
+      "error": null,
+      "phase": "replay",
+      "capturedAt": "2026-07-27T12:38:06.588Z",
+      "snapshotTs": 522,
+      "viewport": {
+        "w": 1920,
+        "h": 1200
+      },
+      "presentationMode": "runtime-v2",
+      "isRuntimeV2": true,
+      "isFormalGameView": true,
+      "debugUiFound": [],
+      "hudPanelCount": 8,
+      "heroesCoveredByHud": [],
+      "canvasRect": {
+        "x": 1758,
+        "y": 1038,
+        "w": 152,
+        "h": 152
+      },
+      "canvasCount": 3,
+      "activePreset": "desktop",
+      "heroCount": 10,
+      "blueHeroCount": 5,
+      "redHeroCount": 5,
+      "visibleHeroIds": [
+        "b1",
+        "b2",
+        "b3",
+        "b4",
+        "b5",
+        "r1",
+        "r2",
+        "r3",
+        "r4",
+        "r5"
+      ],
+      "deadHeroCount": 0,
+      "towerAliveCount": 13,
+      "towerDestroyedCount": 5,
+      "nexusCount": 2,
+      "objectiveState": [
+        {
+          "id": "dragon",
+          "type": "dragon",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": 85,
+            "z": 81.3
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "baron",
+          "type": "baron",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": -85,
+            "z": -81.3
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_buff",
+          "type": "buff",
+          "alive": false,
+          "respawnState": "dead",
+          "world": {
+            "x": -61.2,
+            "z": 74.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_a",
+          "type": "camp",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": -105.4,
+            "z": 54.4
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_b",
+          "type": "camp",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": -23.8,
+            "z": 108.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_buff",
+          "type": "buff",
+          "alive": false,
+          "respawnState": "dead",
+          "world": {
+            "x": 61.2,
+            "z": -74.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_a",
+          "type": "camp",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": 105.4,
+            "z": -54.4
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_b",
+          "type": "camp",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": 23.8,
+            "z": -108.8
+          },
+          "fallbackPosition": false
+        }
+      ],
+      "cameraDistance": 377.1,
+      "camera": {
+        "position": {
+          "x": 0,
+          "y": 297.158,
+          "z": 232.165
+        },
+        "fov": 45,
+        "near": 1,
+        "far": 4000
+      },
+      "adapterWarnings": [],
+      "heroRenderDiagnostics": [
+        {
+          "id": "b1",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 103.38,
+            "y": 26.18
+          },
+          "position": {
+            "x": -11.254,
+            "y": 0.64,
+            "z": -142.494
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 48.433,
+            "yPct": 19.861
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 3.082
+        },
+        {
+          "id": "b2",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 91.66,
+            "y": 157.66
+          },
+          "position": {
+            "x": -31.178,
+            "y": 0.64,
+            "z": 81.022
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 43.811,
+            "yPct": 72.753
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -2.784
+        },
+        {
+          "id": "b3",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 24.96,
+            "y": 198.69
+          },
+          "position": {
+            "x": -144.568,
+            "y": 0.64,
+            "z": 150.773
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 16.91,
+            "yPct": 99.879
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.372
+        },
+        {
+          "id": "b4",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 0.376,
+          "level": 1,
+          "simPosition": {
+            "x": 181.75,
+            "y": 130.53
+          },
+          "position": {
+            "x": 121.975,
+            "y": 0.64,
+            "z": 34.901
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 72.26,
+            "yPct": 58.453
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 1.736
+        },
+        {
+          "id": "b5",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 0.777,
+          "level": 1,
+          "simPosition": {
+            "x": 200.46,
+            "y": 121.67
+          },
+          "position": {
+            "x": 153.782,
+            "y": 0.64,
+            "z": 19.839
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 77.344,
+            "yPct": 54.27
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 1.729
+        },
+        {
+          "id": "r1",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 60,
+            "y": 62.17
+          },
+          "position": {
+            "x": -85,
+            "y": 0.64,
+            "z": -81.311
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 37.108,
+            "yPct": 30.923
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -1.445
+        },
+        {
+          "id": "r2",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 105.83,
+            "y": 66.78
+          },
+          "position": {
+            "x": -7.097,
+            "y": 0.64,
+            "z": -73.474
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 48.911,
+            "yPct": 32.483
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -1.671
+        },
+        {
+          "id": "r3",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 0.483,
+          "level": 1,
+          "simPosition": {
+            "x": 79.08,
+            "y": 139.2
+          },
+          "position": {
+            "x": -52.564,
+            "y": 0.64,
+            "z": 49.64
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 40.153,
+            "yPct": 62.765
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -0.755
+        },
+        {
+          "id": "r4",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 0.319,
+          "level": 1,
+          "simPosition": {
+            "x": 200.19,
+            "y": 107.56
+          },
+          "position": {
+            "x": 153.315,
+            "y": 0.64,
+            "z": -4.156
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 76.19,
+            "yPct": 48.031
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 3.081
+        },
+        {
+          "id": "r5",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 108.34,
+            "y": 78.7
+          },
+          "position": {
+            "x": -2.822,
+            "y": 0.64,
+            "z": -53.21
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 49.554,
+            "yPct": 36.691
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -1.901
+        }
+      ],
+      "performance": {
+        "fps": 59.9,
+        "frameTimeMs": 16.69,
+        "drawCalls": 215,
+        "triangles": 86847,
+        "geometries": 58,
+        "textures": 0,
+        "programs": 9,
+        "renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001638) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "vendor": "Google Inc. (AMD)",
+        "pixelRatio": 1,
+        "drawingBuffer": {
+          "width": 1900,
+          "height": 1011
+        }
+      },
+      "nexusWorld": [
+        {
+          "id": "blue_nexus",
+          "team": "blue",
+          "alive": true,
+          "world": {
+            "x": -149.6,
+            "z": 156.4
+          },
+          "screen": {
+            "xPct": 15.195,
+            "yPct": 102.271,
+            "onScreen": false
+          }
+        },
+        {
+          "id": "red_nexus",
+          "team": "red",
+          "alive": true,
+          "world": {
+            "x": 149.6,
+            "z": -156.4
+          },
+          "screen": {
+            "xPct": 70.503,
+            "yPct": 17.305,
+            "onScreen": true
+          }
+        }
+      ],
+      "replayPauseStable": true,
+      "replaySeekSupported": true,
+      "replaySeekChangedPositions": true,
+      "replayLayerCheck": {
+        "canvasCount": 3,
+        "heroLabelCount": 63
+      }
+    },
+    {
+      "filename": "07_runtime_mobile.png",
+      "screenshotSuccess": true,
+      "error": null,
+      "phase": "mobile",
+      "capturedAt": "2026-07-27T12:38:06.588Z",
+      "snapshotTs": 170,
+      "viewport": {
+        "w": 430,
+        "h": 900
+      },
+      "presentationMode": "runtime-v2",
+      "isRuntimeV2": true,
+      "isFormalGameView": true,
+      "debugUiFound": [],
+      "hudPanelCount": 2,
+      "heroesCoveredByHud": [],
+      "canvasRect": {
+        "x": 316,
+        "y": 696,
+        "w": 108,
+        "h": 108
+      },
+      "canvasCount": 2,
+      "activePreset": "mobile",
+      "heroCount": 10,
+      "blueHeroCount": 5,
+      "redHeroCount": 5,
+      "visibleHeroIds": [
+        "b1",
+        "b2",
+        "r1"
+      ],
+      "deadHeroCount": 0,
+      "towerAliveCount": 18,
+      "towerDestroyedCount": 0,
+      "nexusCount": 2,
+      "objectiveState": [
+        {
+          "id": "dragon",
+          "type": "dragon",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": 85,
+            "z": 81.3
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "baron",
+          "type": "baron",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": -85,
+            "z": -81.3
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_buff",
+          "type": "buff",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": -61.2,
+            "z": 74.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_a",
+          "type": "camp",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": -105.4,
+            "z": 54.4
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_b",
+          "type": "camp",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": -23.8,
+            "z": 108.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_buff",
+          "type": "buff",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": 61.2,
+            "z": -74.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_a",
+          "type": "camp",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": 105.4,
+            "z": -54.4
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_b",
+          "type": "camp",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": 23.8,
+            "z": -108.8
+          },
+          "fallbackPosition": false
+        }
+      ],
+      "cameraDistance": 320,
+      "camera": {
+        "position": {
+          "x": -97.4,
+          "y": 252.163,
+          "z": 294.412
+        },
+        "fov": 45,
+        "near": 1,
+        "far": 4000
+      },
+      "adapterWarnings": [],
+      "heroRenderDiagnostics": [
+        {
+          "id": "b1",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 36.71,
+            "y": 59.12
+          },
+          "position": {
+            "x": -124.591,
+            "y": 0.64,
+            "z": -86.5
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 34.007,
+            "yPct": 8.475
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.595
+        },
+        {
+          "id": "b2",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 3,
+          "simPosition": {
+            "x": 63.26,
+            "y": 129.7
+          },
+          "position": {
+            "x": -79.5,
+            "y": 0.64,
+            "z": 33.481
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 62.714,
+            "yPct": 31.937
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 1.548
+        },
+        {
+          "id": "b3",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 0.718,
+          "level": 3,
+          "simPosition": {
+            "x": 108.82,
+            "y": 111.18
+          },
+          "position": {
+            "x": -2.011,
+            "y": 0.64,
+            "z": 2.011
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 114.255,
+            "yPct": 24.889
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.356
+        },
+        {
+          "id": "b4",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 156.23,
+            "y": 182.41
+          },
+          "position": {
+            "x": 78.584,
+            "y": 0.64,
+            "z": 123.09
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 197.948,
+            "yPct": 56.984
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 1.966
+        },
+        {
+          "id": "b5",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 154.86,
+            "y": 182.97
+          },
+          "position": {
+            "x": 76.266,
+            "y": 0.64,
+            "z": 124.056
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 196.289,
+            "yPct": 57.304
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 1.966
+        },
+        {
+          "id": "r1",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 65.93,
+            "y": 36.7
+          },
+          "position": {
+            "x": -74.92,
+            "y": 0.64,
+            "z": -124.616
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 62.537,
+            "yPct": 2.623
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -1.176
+        },
+        {
+          "id": "r2",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 3,
+          "simPosition": {
+            "x": 131.93,
+            "y": 99.81
+          },
+          "position": {
+            "x": 37.316,
+            "y": 0.64,
+            "z": -17.342
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 137.952,
+            "yPct": 20.905
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -1.213
+        },
+        {
+          "id": "r3",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 0.718,
+          "level": 3,
+          "simPosition": {
+            "x": 113.36,
+            "y": 106.64
+          },
+          "position": {
+            "x": 5.716,
+            "y": 0.64,
+            "z": -5.716
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 118.589,
+            "yPct": 23.269
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -0.785
+        },
+        {
+          "id": "r4",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 184.35,
+            "y": 156.01
+          },
+          "position": {
+            "x": 126.4,
+            "y": 0.64,
+            "z": 78.225
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 222.309,
+            "yPct": 43.391
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -0.629
+        },
+        {
+          "id": "r5",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 184.5,
+            "y": 155.81
+          },
+          "position": {
+            "x": 126.65,
+            "y": 0.64,
+            "z": 77.882
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 222.391,
+            "yPct": 43.296
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -0.629
+        }
+      ],
+      "performance": {
+        "fps": 60.1,
+        "frameTimeMs": 16.65,
+        "drawCalls": 87,
+        "triangles": 59091,
+        "geometries": 42,
+        "textures": 0,
+        "programs": 8,
+        "renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001638) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "vendor": "Google Inc. (AMD)",
+        "pixelRatio": 1,
+        "drawingBuffer": {
+          "width": 430,
+          "height": 900
+        }
+      },
+      "framing": {
+        "dist": 320,
+        "panX": -106.72169999999998,
+        "panZ": 122.057075,
+        "nexusOnScreen": 1,
+        "heroesOnScreen": 3
+      },
+      "nexusOnScreen": 1,
+      "safeArea": {
+        "measured": true,
+        "minimap": {
+          "top": 696,
+          "bottom": 804,
+          "right": 424
+        },
+        "teamPanel": {
+          "top": 812,
+          "bottom": 849
+        },
+        "overlapPx": 0,
+        "minimapOverlapsTeamPanel": false,
+        "minimapInsideViewport": true
+      },
+      "nexusWorld": [
+        {
+          "id": "blue_nexus",
+          "team": "blue",
+          "alive": true,
+          "world": {
+            "x": -149.6,
+            "z": 156.4
+          },
+          "screen": {
+            "xPct": 2.721,
+            "yPct": 68.521,
+            "onScreen": true
+          }
+        },
+        {
+          "id": "red_nexus",
+          "team": "red",
+          "alive": true,
+          "world": {
+            "x": 149.6,
+            "z": -156.4
+          },
+          "screen": {
+            "xPct": 182.346,
+            "yPct": -2.145,
+            "onScreen": false
+          }
+        }
+      ]
+    },
+    {
+      "filename": "08_runtime_mobile_low.png",
+      "screenshotSuccess": true,
+      "error": null,
+      "phase": "mobile-low",
+      "capturedAt": "2026-07-27T12:38:06.588Z",
+      "snapshotTs": 170.5,
+      "viewport": {
+        "w": 430,
+        "h": 900
+      },
+      "presentationMode": "runtime-v2",
+      "isRuntimeV2": true,
+      "isFormalGameView": true,
+      "debugUiFound": [],
+      "hudPanelCount": 2,
+      "heroesCoveredByHud": [],
+      "canvasRect": {
+        "x": 316,
+        "y": 696,
+        "w": 108,
+        "h": 108
+      },
+      "canvasCount": 2,
+      "activePreset": "mobile-low",
+      "heroCount": 10,
+      "blueHeroCount": 5,
+      "redHeroCount": 5,
+      "visibleHeroIds": [
+        "b1",
+        "b2",
+        "r1"
+      ],
+      "deadHeroCount": 0,
+      "towerAliveCount": 18,
+      "towerDestroyedCount": 0,
+      "nexusCount": 2,
+      "objectiveState": [
+        {
+          "id": "dragon",
+          "type": "dragon",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": 85,
+            "z": 81.3
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "baron",
+          "type": "baron",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": -85,
+            "z": -81.3
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_buff",
+          "type": "buff",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": -61.2,
+            "z": 74.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_a",
+          "type": "camp",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": -105.4,
+            "z": 54.4
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_blue_b",
+          "type": "camp",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": -23.8,
+            "z": 108.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_buff",
+          "type": "buff",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": 61.2,
+            "z": -74.8
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_a",
+          "type": "camp",
+          "alive": false,
+          "respawnState": "respawning",
+          "world": {
+            "x": 105.4,
+            "z": -54.4
+          },
+          "fallbackPosition": false
+        },
+        {
+          "id": "camp_red_b",
+          "type": "camp",
+          "alive": true,
+          "respawnState": "alive",
+          "world": {
+            "x": 23.8,
+            "z": -108.8
+          },
+          "fallbackPosition": false
+        }
+      ],
+      "cameraDistance": 320,
+      "camera": {
+        "position": {
+          "x": -97.4,
+          "y": 252.163,
+          "z": 294.412
+        },
+        "fov": 45,
+        "near": 1,
+        "far": 4000
+      },
+      "adapterWarnings": [],
+      "heroRenderDiagnostics": [
+        {
+          "id": "b1",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 36.65,
+            "y": 59.22
+          },
+          "position": {
+            "x": -124.702,
+            "y": 0.64,
+            "z": -86.319
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 33.938,
+            "yPct": 8.504
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.595
+        },
+        {
+          "id": "b2",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 3,
+          "simPosition": {
+            "x": 54.32,
+            "y": 134.23
+          },
+          "position": {
+            "x": -94.391,
+            "y": 0.64,
+            "z": 40.859
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 52.165,
+            "yPct": 33.702
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -0.683
+        },
+        {
+          "id": "b3",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 0.627,
+          "level": 3,
+          "simPosition": {
+            "x": 108.82,
+            "y": 111.18
+          },
+          "position": {
+            "x": -2.011,
+            "y": 0.64,
+            "z": 2.011
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 114.255,
+            "yPct": 24.889
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 2.356
+        },
+        {
+          "id": "b4",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 156.11,
+            "y": 182.45
+          },
+          "position": {
+            "x": 78.388,
+            "y": 0.64,
+            "z": 123.172
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 197.808,
+            "yPct": 57.011
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 1.966
+        },
+        {
+          "id": "b5",
+          "team": "blue",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 154.86,
+            "y": 182.97
+          },
+          "position": {
+            "x": 76.266,
+            "y": 0.64,
+            "z": 124.056
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 196.289,
+            "yPct": 57.304
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": 1.966
+        },
+        {
+          "id": "r1",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 65.81,
+            "y": 36.74
+          },
+          "position": {
+            "x": -75.117,
+            "y": 0.64,
+            "z": -124.535
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": true,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": true,
+          "screen": {
+            "xPct": 62.429,
+            "yPct": 2.635
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -1.176
+        },
+        {
+          "id": "r2",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 0.964,
+          "level": 3,
+          "simPosition": {
+            "x": 113.2,
+            "y": 106.8
+          },
+          "position": {
+            "x": 5.44,
+            "y": 0.64,
+            "z": -5.44
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 118.437,
+            "yPct": 23.326
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -0.194
+        },
+        {
+          "id": "r3",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 0.742,
+          "level": 3,
+          "simPosition": {
+            "x": 113.36,
+            "y": 106.64
+          },
+          "position": {
+            "x": 5.716,
+            "y": 0.64,
+            "z": -5.716
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 118.589,
+            "yPct": 23.269
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -0.785
+        },
+        {
+          "id": "r4",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 184.35,
+            "y": 156.02
+          },
+          "position": {
+            "x": 126.465,
+            "y": 0.64,
+            "z": 78.135
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 222.331,
+            "yPct": 43.366
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -0.629
+        },
+        {
+          "id": "r5",
+          "team": "red",
+          "alive": true,
+          "hpRatio": 1,
+          "level": 1,
+          "simPosition": {
+            "x": 184.28,
+            "y": 156.12
+          },
+          "position": {
+            "x": 126.275,
+            "y": 0.64,
+            "z": 78.397
+          },
+          "rootScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bodyPosition": {
+            "x": 0,
+            "y": 4.165,
+            "z": 0
+          },
+          "visible": false,
+          "sceneVisibleFlag": true,
+          "positionFinite": true,
+          "onScreen": false,
+          "screen": {
+            "xPct": 222.269,
+            "yPct": 43.439
+          },
+          "bodyVisible": true,
+          "ringVisible": true,
+          "deathMarkVisible": false,
+          "bodyLyingDown": false,
+          "geometryType": "CapsuleGeometry",
+          "materialType": "MeshStandardMaterial",
+          "materialOpacity": 1,
+          "rotationY": -0.629
+        }
+      ],
+      "performance": {
+        "fps": 60,
+        "frameTimeMs": 16.67,
+        "drawCalls": 87,
+        "triangles": 59091,
+        "geometries": 44,
+        "textures": 0,
+        "programs": 9,
+        "renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001638) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "vendor": "Google Inc. (AMD)",
+        "pixelRatio": 1,
+        "drawingBuffer": {
+          "width": 430,
+          "height": 900
+        }
+      },
+      "framing": {
+        "dist": 320,
+        "panX": -108.042375,
+        "panZ": 121.77762500000001,
+        "nexusOnScreen": 1,
+        "heroesOnScreen": 3
+      },
+      "nexusOnScreen": 1,
+      "safeArea": {
+        "measured": true,
+        "minimap": {
+          "top": 696,
+          "bottom": 804,
+          "right": 424
+        },
+        "teamPanel": {
+          "top": 812,
+          "bottom": 849
+        },
+        "overlapPx": 0,
+        "minimapOverlapsTeamPanel": false,
+        "minimapInsideViewport": true
+      },
+      "nexusWorld": [
+        {
+          "id": "blue_nexus",
+          "team": "blue",
+          "alive": true,
+          "world": {
+            "x": -149.6,
+            "z": 156.4
+          },
+          "screen": {
+            "xPct": 2.721,
+            "yPct": 68.521,
+            "onScreen": true
+          }
+        },
+        {
+          "id": "red_nexus",
+          "team": "red",
+          "alive": true,
+          "world": {
+            "x": 149.6,
+            "z": -156.4
+          },
+          "screen": {
+            "xPct": 182.346,
+            "yPct": -2.145,
+            "onScreen": false
+          }
+        }
+      ]
+    }
+  ]
+}

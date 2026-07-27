@@ -81,11 +81,33 @@ export function wobblePath(pts, amp, seed, { closed = false } = {}) {
 }
 
 /**
+ * 沿折線的「寬度曲線」：keyframes = [[t, k], ...]（t 0..1 由頭到尾，k = 寬度倍率），
+ * 線性內插。用來做「河灣 → 窄河道 → 河口」這種寬窄變化，而不是等寬的長方帶。
+ */
+export function widthProfile(keys) {
+  const K = [...keys].sort((a, b) => a[0] - b[0]);
+  return (t) => {
+    if (t <= K[0][0]) return K[0][1];
+    if (t >= K[K.length - 1][0]) return K[K.length - 1][1];
+    for (let i = 1; i < K.length; i++) {
+      if (t <= K[i][0]) {
+        const [t0, k0] = K[i - 1], [t1, k1] = K[i];
+        const f = t1 === t0 ? 0 : (t - t0) / (t1 - t0);
+        // smoothstep ⇒ 寬窄轉折是圓滑的河灣，不是折角
+        return lerp(k0, k1, f * f * (3 - 2 * f));
+      }
+    }
+    return K[K.length - 1][1];
+  };
+}
+
+/**
  * 折線的左右外框（帶狀地形）。
  * vary：寬度沿路 ±vary 比例的低頻變化 ⇒ 邊界非等寬硬邊。
  * taper：兩端收窄到 taper 倍寬（0.35 ≈ 河口自然收束，避免帶子被硬切一刀）。
+ * profile：(t)=>倍率，沿路的寬度曲線（見 widthProfile）；與 taper/vary 相乘。
  */
-export function ribbonOutline(pts, width, { vary = 0, seed = 0, taper = 1 } = {}) {
+export function ribbonOutline(pts, width, { vary = 0, seed = 0, taper = 1, profile = null } = {}) {
   const left = [], right = [];
   const n = pts.length;
   for (let i = 0; i < n; i++) {
@@ -94,7 +116,8 @@ export function ribbonOutline(pts, width, { vary = 0, seed = 0, taper = 1 } = {}
     const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
     const endT = Math.min(1, Math.min(i, n - 1 - i) / Math.max(1, n * 0.14));
     const tp = taper + (1 - taper) * endT;
-    const half = (width * tp * (1 + vary * swobble(i, seed, 0.27))) / 2;
+    const pf = profile ? profile(n > 1 ? i / (n - 1) : 0) : 1;
+    const half = (width * tp * pf * (1 + vary * swobble(i, seed, 0.27))) / 2;
     left.push({ x: pts[i].x - dy * half, y: pts[i].y + dx * half });
     right.push({ x: pts[i].x + dy * half, y: pts[i].y - dx * half });
   }

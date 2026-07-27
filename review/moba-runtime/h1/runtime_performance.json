@@ -1,0 +1,53 @@
+{
+  "generatedAt": "2026-07-27T12:38:06.593Z",
+  "method": "有視窗的真實 Chrome；FPS 由 rAF 計數、draw calls / triangles / geometries / textures / programs 直接讀 three.js renderer.info（非估算、非人工抄錄）",
+  "manualVisualRead": false,
+  "desktop": {
+    "fps": 60,
+    "frameTimeMs": 16.66,
+    "drawCalls": 220,
+    "triangles": 86887,
+    "geometries": 58,
+    "textures": 0,
+    "programs": 9,
+    "renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001638) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "vendor": "Google Inc. (AMD)",
+    "pixelRatio": 1,
+    "drawingBuffer": {
+      "width": 1920,
+      "height": 1200
+    }
+  },
+  "mobile": {
+    "fps": 60.1,
+    "frameTimeMs": 16.65,
+    "drawCalls": 87,
+    "triangles": 59091,
+    "geometries": 42,
+    "textures": 0,
+    "programs": 8,
+    "renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001638) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "vendor": "Google Inc. (AMD)",
+    "pixelRatio": 1,
+    "drawingBuffer": {
+      "width": 430,
+      "height": 900
+    }
+  },
+  "mobile-low": {
+    "fps": 60,
+    "frameTimeMs": 16.67,
+    "drawCalls": 87,
+    "triangles": 59091,
+    "geometries": 44,
+    "textures": 0,
+    "programs": 9,
+    "renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001638) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "vendor": "Google Inc. (AMD)",
+    "pixelRatio": 1,
+    "drawingBuffer": {
+      "width": 430,
+      "height": 900
+    }
+  }
+}

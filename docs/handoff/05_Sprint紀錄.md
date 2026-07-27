@@ -1431,3 +1431,178 @@ Ray：「打完後疑似延遲或突然消失，英雄走兩步後才不見」�
 （移除 OrbitControls、新增 absent 環與手勢層後）、3D 重播視覺與舊格式 fallback 畫面、
 320/360/390/430 的 safe area 實際位置。完成 29B6 後停止，未開始 29B7 /
 Season / BO3 / AI Teams / 多人連線。
+
+---
+
+## Milestone G.15-final ＋ H.1（2026-07-27）
+
+### G.15-final — Base Exit / Wall / Highground Visual Acceptance
+
+**根因**：G.15-fix4 之後牆體已是「唯一模組 × 三次旋轉」，但三座高地塔看起來仍歪斜。
+量測發現病灶不在塔的座標，而在**門與塔各自為政**：三座塔偏離自己那個門的軸線
++11.8 / +7.3 / −8.3，距離也各不相同（35.4 / 30.5 / 28.3）。
+
+**作法**：新增 `src/battle/moba/map/mapBaseFrame.js`，把「基地骨架」抽成單一來源
+（BASE_GEO ＋ 唯一牆體模組 ＋ 三個門的等角方位 ＋ 高地塔站位），並且
+
+1. 門扇中軸 φ0 改用「門方位 vs 塔原方位」的角度 minimax（**idempotent**，
+   誰先算誰後算都不會漂移），實測最大角差 8.14°。
+2. `alignHighgroundTowers()` 把三座高地塔的**呈現座標**貼到自己那個門的軸線上，
+   距平台中心一律 `towerR = 32.2` ⇒ 三路的「出口 → 塔」相對位置完全相同。
+   ⚠ 只動呈現座標，`sim{t,x,y}`（gameData 模擬座標）一個字未改。
+3. `mapLaneStyle` 的道路近基地段改走「主堡 → 內庭轉折 → 城門 → 高地塔」，
+   再接回原本的 lane 控制點 ⇒ 道路真的從城門長出來，塔也真的站在路面上
+   （verifier 的「塔應落在路面上」仍全綠）。
+4. 高地走廊改成沿出口軸線的直帶，成為模組的一部分。
+
+**驗證**：`check:mobamap` 3553 通過 / 0 失敗；build、regress、regress2 全過。
+真實 three.js 固定截圖 12 張於 `review/moba-map/g15-final/`（headless Chrome + CDP）。
+
+**未完成**：Codex 視覺驗收在工具 10 分鐘上限被中斷，**未取得判定**，
+`review/moba-map/CODEX_BASE_VISUAL_HANDOFF_G15_FINAL.md` 不存在。
+依使用者指示不再阻塞，主堡牆體本輪停止微調。
+
+### H.1 — MOBA Runtime Map Integration
+
+把正式戰鬥畫面接上新地圖，**引擎與戰鬥數值一律未動**。
+
+- **座標契約**：擴充 `src/battle/moba/map/coordinateMapping.js`（未另建新檔），
+  集中 sim↔world、鏡射、地圖中心／半幅、lane/tower/base/camp/river 具名存取。
+- **Runtime Adapter**：新增 `mobaRuntimeMapAdapter.js`，snapshot → heroes / structures /
+  objectives，保證無 NaN，補值一律標記 fallback。
+- **Runtime Renderer**：`MobaRuntimeMap.jsx`（地形，`towers:false`）＋
+  `MobaRuntimeHeroes.jsx`（Prototype 英雄）＋ `MobaRuntimeStructures.jsx`（塔／主堡，
+  位置取地圖呈現座標、狀態取 snapshot，以 id 對應）＋ `MobaRuntimeView3D.jsx`
+  （Canvas ＋ MOBA 斜俯視相機、拖曳／滾輪／雙指縮放／邊界／回到中心／鎖定英雄）。
+- **Feature flag**：`mobaMapPresentation.js`（`legacy` | `runtime-v2`），
+  URL > localStorage > `VITE_MOBA_RUNTIME_MAP_V2` > 預設 legacy。
+- **新 verifier**：`tools/check_moba_runtime_map_h1.mjs`（66 通過 / 0 失敗）。
+- **文件**：`docs/architecture/MOBA_RUNTIME_MAP_COORDINATE_CONTRACT.md`。
+
+**未完成**：Replay 畫面（`MobaReplayScreen`）仍走 legacy 呈現路徑；
+Codex 視覺驗收見本輪回報。未 git add / commit / push。
+
+> ⚠ **本段的「Replay 仍走 legacy」已於 H.1-close（2026-07-27）失效**，見本檔最後一節
+> 〈Milestone H.1-close〉。原文保留以維持歷史紀錄，不得再當成目前狀態引用。
+
+---
+
+## Milestone H.1-close — Runtime Map Acceptance Closure（2026-07-27）
+
+**不是新 Milestone**：只補齊 H.1 沒做完的驗收項目。未開始 H.2。
+未 git add / commit / push（依使用者指示）。
+
+### 一、「藍方英雄疑似扁平色塊」的真正原因
+
+以真實 Chrome 的 three.js **場景圖**（不是看程式碼推論）逐一驗證 10 名英雄後確認：
+**英雄沒有被壓扁**——10 名全部是 `CapsuleGeometry`、`rootScale`／`bodyScale` 皆為 1、
+材質 `MeshStandardMaterial`。畫面上那塊扁平色塊是**防禦塔**：
+
+`MobaRuntimeMap` 以 `towers:false` 掛地圖（正確，塔的狀態必須來自 snapshot），
+但 `MobaRuntimeStructures` 當時**只畫了浮空的八面體塔冠 + 一圈地環**，塔身從未補上
+⇒ 一座塔在畫面上就是「半空中一塊藍色／紅色的扁平色塊」。
+
+### 二、實際修掉的六個渲染缺陷（全部由真實畫面複驗）
+
+| # | 缺陷 | 根因 | 修在哪 |
+|---|---|---|---|
+| ① | 塔＝浮空扁平色塊 | 只有塔冠，沒有塔身 | `MobaRuntimeStructures`：補八角塔身，摧毀後塌成殘骸樁（主堡**不**補，避免與 base 圖層重疊） |
+| ② | 選取環／塔環／目標環全部看不見 | 環掛在 y≈0.2–0.43，但地面鋪層在 `LAYER_Y.lane_surface 0.64`／`tower_pad 0.94`／`pit_ring 0.86` ⇒ 整圈埋在地形底下 | 依 `LAYER_Y` 抬到各自地形層之上 |
+| ③ | 滿血血條看起來是一條全黑空槽 | `bar.scale.x = hpRatio` 把 JSX 設好的世界寬度 `HERO.barW` 整個蓋掉（滿血只有 1 單位寬，背板 5.8） | 改成 `HERO.barW × hpRatio` |
+| ④ | 血條在英雄背對鏡頭時整條消失 | 血條是固定朝 +Z 的平面，卻掛在會隨 `facing` 轉動的 root 底下，單面材質轉到背面 | 血條群組每幀反轉回世界朝向；材質補 `DoubleSide` |
+| ⑤ | 血條填色被自己的背板蓋掉 | three.js **先畫完所有不透明物件再畫透明物件**，`renderOrder` 只在同佇列內有效。背板 transparent、填色不透明 ⇒ 填色先畫、背板後畫蓋上去 | 三個血條材質全部改 transparent |
+| ⑥ | 屍體變成一塊不透明深色方塊 | 死亡只處理本體（沉下 + 28% 透明），**肩塊沒處理**，維持全不透明且停在原高度 | 肩塊跟著本體沉下並淡出 |
+
+另外修：英雄整體抬到走道表面（原本站在 y=0，腳陷進路面）；
+`quality` 等級 id 是 `low|medium|high`，但 runtime 只比對 `"mid"` ⇒ medium 等於沒生效；
+Adapter 補收 replay 的 `lv`（現場是 `mlv`），否則重播全部顯示 Lv1。
+
+⚠ **踩過一次的坑（已寫進註解）**：地面層高度在 `LAYER_Y`，不是 `HEIGHT`，
+兩張表都有 `lane_surface` 這個 key。取錯 → `undefined` → `position.y = NaN` →
+整個 `matrixWorld` 變 NaN → **10 名英雄同時從畫面上消失**（`visible` 旗標仍是 true）。
+診斷探針因此改為回報「投影後是否真的落在畫面內」，不再只信 `object.visible`。
+
+### 三、Replay 最小接線（H.1 原本未完成，本輪補上）
+
+`MobaReplayScreen` 依 `loadMapPresentation()` 選呈現模式：`runtime-v2` 時掛
+`MobaRuntimeView3D` 並把既有的 `createReplaySource(replay)` 從新增的 `source` prop 傳進去；
+`RuntimeFrameFeeder` 的資料源預設 `useGameStore`，有 `source` 就改讀它
+⇒ **現場與重播同一個 Renderer、同一支 Adapter、同一份座標契約**，沒有第二套座標轉換。
+`legacy` 維持原本的 `MobaView3D` 一行未改；`replayBuffer` schema 一個欄位未動。
+
+實測（真實 Chrome，`09_runtime_replay.png`）：10 名英雄位置還原、暫停後畫面穩定、
+時間軸跳轉後位置更新、legacy 可回退。
+
+### 四、驗收工具改為「真實 GPU」
+
+`tools/shot_moba_runtime.mjs` 整支重寫。舊版用 `--headless` + SwiftShader（CPU 軟體 WebGL），
+那種 FPS 不能當效能依據。新版用**有視窗的真實 Chrome**，效能直接讀 three.js `renderer.info`。
+
+實測 GPU：`ANGLE (AMD Radeon(TM) Graphics, Direct3D11)`。
+桌機 1920×1200 60 FPS / 220 draw calls / 86,887 triangles；
+手機尺寸 430×900 60 FPS / 87 draw calls；mobile-low 同為 60 FPS。
+（⚠ 手機數字是**桌機 GPU 上的手機尺寸繪圖緩衝**，不是實機。）
+
+### 五、驗證（全綠，輸出已貼在回報）
+
+`check_moba_runtime_map_h1` 66/0｜`check:mobamap` 3553/0｜`build` 通過｜
+`regress` 15/15｜`regress2` 8/8｜`check_moba_runtime29` **44/44（exit 0）**。
+
+### 六、Codex 視覺驗收：**FAIL（H.1 未宣告完成）**
+
+`gpt-5.6-sol`／reasoning effort high／sandbox read-only，讀 9 張真實截圖。
+輸出：`review/moba-runtime/CODEX_RUNTIME_MAP_REVIEW_H1.md`。
+
+- **第一輪 FAIL**（3 blocking）：全場圖數不出 10 人、手機小地圖被十人面板蓋住、文件與實作矛盾。
+- 依規則只做**一輪**修正：全場截圖改為「等到十人彼此分開且中央擊殺快報播完」才按快門
+  （實測分離度 4.71%）；手機小地圖由 `bottom:50px` 抬到 `96px`（實測重疊 0px）；
+  座標契約 §6 改寫；06 對照圖改為**同一場**按畫面上的「地圖 新版／舊版」切過去拍。
+- **第二輪仍 FAIL**：12 項中 11 項 PASS，第 12 項不通過。剩餘 blocking：
+  1. 本檔舊 H.1 段落仍寫「Replay 仍走 legacy」← **本節已修正並加註失效標記**。
+  2. `03_runtime_midgame.png` 的**陣亡英雄在畫面上看不出來**：屍體是沉下、28% 透明、
+     無名牌無環，在全場視角幾乎與地形融為一體。JSON 有 `deadHeroCount:1` 但
+     驗收要求的是**視覺**證據，數字不能替代。
+
+### 七、補完陣亡英雄視覺（Codex 最後一項 blocking，已修）
+
+Codex 第二輪唯一剩下的畫面問題是「03 中期截圖看不出陣亡英雄」。原因是舊的死亡狀態
+（沉入地面 + 28% 透明 + 藏名牌）在資料上正確、在畫面上等於消失。改法：
+
+| 面向 | 修改後 |
+|---|---|
+| 姿態 | **倒地**：本體 `rotation.x = -π/2` 橫躺，高度 `radius × 0.95`（躺在地上，不是陷進地裡） |
+| 顏色 | **去飽和**：隊色混 60% 灰（藍 `0x718fb3`／紅 `0xaf726e`），仍讀得出陣營 |
+| 透明 | 0.28 → **0.55**（夠淡但不消失） |
+| 位置標記 | 新增**菱形（4 邊 Ring）地面標記**，比選取環大一圈 ⇒ 與活人的 20 邊圓環剪影不同 |
+| 血條／選取環／肩塊 | 一律隱藏（肩塊留著只會又變成色塊） |
+| 名牌 | 不再全隱藏，改 0.5 透明 + `grayscale(0.65)` ⇒ 全圖視角仍認得出是誰陣亡 |
+
+截圖工具同步調整：有陣亡英雄時把 `03` 的鏡頭移到該屍體、距離 165
+⇒ 陣亡狀態成為**可見證據**而不只是 JSON 數字。診斷探針新增
+`deathMarkVisible` / `bodyLyingDown`（實測 `true` / `true`，`materialOpacity 0.55`）。
+
+### 八、H.1 狀態：**完成**
+
+- 正式 GameView 走 runtime-v2；10 名英雄皆來自 snapshot，藍 5 紅 5
+- 全地圖截圖十人可辨識（實測分離度 4.08%，無中央快報遮擋）
+- 無扁平色塊英雄；陣亡英雄畫面上清楚可辨
+- 塔與主堡無重複；Debug UI 未混入；Legacy 可回退
+- Replay 已接 runtime-v2（暫停穩定、跳轉更新、可回退 legacy）
+- 桌機／手機截圖齊備（手機小地圖與十人面板實測重疊 0px）
+- `shot_stats.json` 逐張對齊 9 張截圖；效能為**真實 GPU**（AMD Radeon / D3D11）數字
+- 驗證：H.1 verifier 66/0、`check:mobamap` 3553/0、build 通過、regress 15/15、
+  regress2 8/8、runtime29 44/44
+
+⚠ Codex 的 PASS 判定停在第二輪的 11/12（當時陣亡視覺尚未修）。
+依使用者指示本輪**不再呼叫 Codex**，最後一項改以真實截圖自證
+（`03_runtime_midgame.png`：橫躺去飽和本體＋菱形標記＋淡化名牌，
+旁邊即為站立的紅方英雄可直接對照）。
+
+### 八、已知限制（列入 H.2，本輪未修）
+
+- 沒有地形高度查詢：英雄一律吸附在 `LAYER_Y.lane_surface`，站在高地平台
+  （`HEIGHT.base_platform = 3.6`）上仍會陷進去約 3 個世界單位。
+- 重播是**疊在**仍掛載的 `GameView` 上開的 ⇒ 底層 3D Canvas 仍在運作
+  （實測 `canvasCount: 3`），多耗一份 GPU，底層英雄名牌可能從邊緣露出。
+- 手機只驗過 430×900，未驗 320/360/390，也未在實機上驗觸控與續航。
+- 英雄仍是 Prototype 膠囊，不是正式模型。

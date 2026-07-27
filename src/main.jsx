@@ -22,6 +22,12 @@ if (debugMode === "terrain-sandbox") {
   // Milestone D：正式 MOBA 地圖 Blockout v1 預覽（正式流程不受影響）。
   const MobaMap = React.lazy(() => import("./debug/MobaMapBlockout/MobaMapPreview.jsx"));
   root.render(<React.Suspense fallback={null}><MobaMap /></React.Suspense>);
+} else if (debugMode === "moba-runtime-battle") {
+  // Milestone H.1：**正式戰鬥畫面**的直接入口（給截圖與現場除錯用）。
+  //  ⚠ 掛的是正式的 GameView（同一個元件、同一個 LogicEngine、同一份 useGameStore），
+  //    只是跳過首頁與賽前流程直接開局 ⇒ 截到的畫面就是正式對戰畫面，不是 Debug 地圖。
+  const Battle = React.lazy(() => import("./debug/MobaRuntimeBattle/MobaRuntimeBattleHarness.jsx"));
+  root.render(<React.Suspense fallback={null}><Battle /></React.Suspense>);
 } else {
   root.render(<AppShell />);
 }

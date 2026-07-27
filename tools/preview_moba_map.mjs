@@ -22,13 +22,19 @@ import { buildTerrainShapes } from "../src/battle/moba/map/mapTerrainShapes.js";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = resolve(__dir, "../review/moba-map");
-const PX = 5;                       // 每模擬單位的像素數
 const DEBUG = process.argv.includes("--labels");
+// --zoom x,y,size：只畫地圖的一塊（模擬座標），用來近距離檢查基地/河口等局部構圖。
+const zoomArg = process.argv.find((a) => a.startsWith("--zoom="));
+const ZOOM = zoomArg ? zoomArg.slice(7).split(",").map(Number) : null;
+const VIEW = ZOOM
+  ? { x: ZOOM[0], y: ZOOM[1], size: ZOOM[2] ?? 70 }
+  : { x: 0, y: 0, size: 220 };
+const PX = Math.round(1100 / VIEW.size);   // 產物固定約 1100px 寬
 
 // ── 極簡光柵器 ────────────────────────────────────────────────────────────
-const W = 220 * PX, H = 220 * PX;
+const W = VIEW.size * PX, H = VIEW.size * PX;
 const buf = Buffer.alloc(W * H * 3);
-const sx = (x) => x * PX, sy = (y) => y * PX;
+const sx = (x) => (x - VIEW.x) * PX, sy = (y) => (y - VIEW.y) * PX;
 
 function setPx(x, y, r, g, b) {
   if (x < 0 || y < 0 || x >= W || y >= H) return;
@@ -105,10 +111,23 @@ const S = buildTerrainShapes(L);
 // 1) 地面色塊（已依 y 排序，照順序畫）
 for (const layer of S.groundLayers) fillPoly(toPx(layer.poly), rgb(layer.color));
 
+// 1b) 草叢 / cover（低模灌木團塊：投影 + 暗叢 + 亮叢，讀成可藏人的遮蔽）
+for (const c of S.bushClusters) {
+  for (const b of c.blobs) {
+    const disc = (r) => Array.from({ length: 12 }, (_, k) => ({
+      x: c.x + b.dx + Math.cos((k / 12) * Math.PI * 2) * r,
+      y: c.y + b.dy + Math.sin((k / 12) * Math.PI * 2) * r,
+    }));
+    fillPoly(toPx(disc(b.r * 1.02).map((p) => ({ x: p.x + b.h * 0.09, y: p.y + b.h * 0.09 }))), [10, 15, 8]);
+    fillPoly(toPx(disc(b.r)), rgb(b.lit ? 0x37481f : 0x2b3a1b));
+  }
+}
+
 // 2) 量體：先畫投影（往 +x/+y 偏移，模擬 renderer 的方向光），再畫頂面
 const VOL_COLOR = {
   cliff: 0x6a6257, cliff_mass: 0x6a6257, wall: 0x5f584e,
-  pit_wall: 0x554d45, base_rim: 0x5a544b, river_stone: 0x555044,
+  pit_wall: 0x554d45, base_rim: 0x6e6659, base_keep: 0x7b7263, base_gate: 0x847a68,
+  entrance_taper: 0x635b50, fountain_rim: 0x7a756a, river_stone: 0x555044,
 };
 for (const it of S.wallItems) {
   const off = it.h * 0.11;
@@ -132,37 +151,82 @@ for (const t of S.towers) {
   fillPoly(toPx(octa(t.x, t.y, topR * 0.62)), rgb(t.side === "blue" ? 0x4d95f0 : 0xf0574d));
 }
 
-// 4) 主堡 / 泉水 / 野怪
+// 3b) 門牙塔（畫法同兵線塔）
+for (const t of S.nexusTurrets) {
+  const topR = t.tiers[t.tiers.length - 1].r;
+  const octa = (cx0, cy0, r) => Array.from({ length: 8 }, (_, k) => ({
+    x: cx0 + Math.cos((k / 8) * Math.PI * 2 + 0.39) * r, y: cy0 + Math.sin((k / 8) * Math.PI * 2 + 0.39) * r,
+  }));
+  fillPoly(toPx(octa(t.x, t.y, t.tiers[0].r)), shade(0x5c564d, 0.9));
+  fillPoly(toPx(octa(t.x, t.y, topR)), shade(0x5c564d, 1.3));
+  fillPoly(toPx(octa(t.x, t.y, topR * 0.6)), rgb(t.side === "blue" ? 0x4d95f0 : 0xf0574d));
+}
+
+// 3c) 野怪剪影：把每個組件的俯視 footprint 依高度由低到高畫上去
+//     （這只是自檢用的近似投影，真正的形體以 three.js 畫面為準）
+function monsterFootprints(m) {
+  const out = [];
+  for (const mem of m.members) {
+    const ca = Math.cos(m.facing), sa = Math.sin(m.facing);
+    const mx = m.x + mem.dx * ca - mem.dy * sa;
+    const my = m.y + mem.dx * sa + mem.dy * ca;
+    const ra = m.facing + (mem.rot ?? 0);
+    const cb = Math.cos(ra), sb = Math.sin(ra);
+    for (const p of mem.parts) {
+      const px = mx + p.dx * cb - p.dy * sb;
+      const py = my + p.dx * sb + p.dy * cb;
+      const top = (p.z ?? 0) + (p.h ?? 1);
+      let poly;
+      if (p.shape === "box") {
+        const a = ra + (p.rot ?? 0), c = Math.cos(a), s = Math.sin(a);
+        const hw = p.w / 2, hd = p.d / 2;
+        poly = [[hw, hd], [hw, -hd], [-hw, -hd], [-hw, hd]]
+          .map(([u, v]) => ({ x: px + u * c - v * s, y: py + u * s + v * c }));
+      } else {
+        const r = p.r ?? p.rBot ?? 1;
+        poly = Array.from({ length: 10 }, (_, k) => ({
+          x: px + Math.cos((k / 10) * Math.PI * 2) * r,
+          y: py + Math.sin((k / 10) * Math.PI * 2) * r,
+        }));
+      }
+      out.push({ poly, top, color: p.color });
+    }
+  }
+  return out.sort((a, b) => a.top - b.top);
+}
+for (const m of S.monsters) {
+  const fps = monsterFootprints(m);
+  for (const f of fps) fillPoly(toPx(f.poly.map((p) => ({ x: p.x + f.top * 0.1, y: p.y + f.top * 0.1 }))), [10, 11, 9]);
+  for (const f of fps) fillPoly(toPx(f.poly), shade(f.color, 0.7 + Math.min(1, f.top / 14) * 0.55));
+}
+
+// 4) 主堡 / 泉水
 for (const n of S.meta.nexus) {
   const dia = (r) => [{ x: n.x, y: n.y - r }, { x: n.x + r, y: n.y }, { x: n.x, y: n.y + r }, { x: n.x - r, y: n.y }];
   fillPoly(toPx(dia(9)), shade(n.platformTop, 1.0));
   fillPoly(toPx(dia(6)), rgb(n.color));
+  // 溫泉：平台 / 台階 / 水面都已經是地面圖層，這裡只補中央水柱與頂端光體
   const f = n.fountain;
-  fillPoly(toPx(Array.from({ length: 16 }, (_, k) => ({
-    x: f.x + Math.cos((k / 16) * Math.PI * 2) * 6, y: f.y + Math.sin((k / 16) * Math.PI * 2) * 6,
-  }))), shade(n.color, 0.72));
-}
-for (const c of S.meta.camps) {
-  const col = c.type === "buff" ? (c.side === "red" ? 0xf97316 : 0x38bdf8) : 0x8ec63f;
-  fillPoly(toPx([{ x: c.x, y: c.y - 3.4 }, { x: c.x + 3, y: c.y + 2.4 }, { x: c.x - 3, y: c.y + 2.4 }]), rgb(col));
+  const disc = (r) => Array.from({ length: 14 }, (_, k) => ({
+    x: f.x + Math.cos((k / 14) * Math.PI * 2) * r, y: f.y + Math.sin((k / 14) * Math.PI * 2) * r,
+  }));
+  fillPoly(toPx(disc(2.1)), shade(n.platformTop, 1.1));
+  fillPoly(toPx(disc(1.3)), shade(n.color, 1.15));
 }
 
-// 5) Debug 模式才畫的節點標記（門柱等）
+// 5) Debug 模式才畫的節點標記（入口位置；正式畫面上沒有任何造型物件）
 if (DEBUG) {
-  for (const g of S.gates) {
-    const r = 2.2 * (g.scale ?? 1);
-    const px = Math.cos(g.angle + Math.PI / 2), py = Math.sin(g.angle + Math.PI / 2);
-    for (const s of [1, -1]) {
-      const gx = g.x + px * 6 * s, gy = g.y + py * 6 * s;
-      fillPoly(toPx(Array.from({ length: 10 }, (_, k) => ({
-        x: gx + Math.cos((k / 10) * Math.PI * 2) * r, y: gy + Math.sin((k / 10) * Math.PI * 2) * r,
-      }))), rgb(g.color));
-    }
+  for (const g of S.entrances) {
+    fillPoly(toPx(Array.from({ length: 10 }, (_, k) => ({
+      x: g.x + Math.cos((k / 10) * Math.PI * 2) * 1.6,
+      y: g.y + Math.sin((k / 10) * Math.PI * 2) * 1.6,
+    }))), rgb(g.color ?? 0xffffff));
   }
 }
 
 mkdirSync(OUT_DIR, { recursive: true });
-const file = resolve(OUT_DIR, DEBUG ? "preview_topdown_debug.png" : "preview_topdown.png");
+const file = resolve(OUT_DIR, ZOOM ? `preview_zoom_${VIEW.x}_${VIEW.y}.png`
+  : DEBUG ? "preview_topdown_debug.png" : "preview_topdown.png");
 writeFileSync(file, encodePNG(W, H, buf));
 console.log(`俯視圖已輸出：${file}  (${W}×${H}, ${PX}px/unit)`);
-console.log(`— 地面色塊 ${S.groundLayers.length} 層｜量體 ${S.wallItems.length} 段｜塔 ${S.towers.length}｜門 ${S.gates.length}｜裝飾岩 ${S.rocks.length}`);
+console.log(`— 地面色塊 ${S.groundLayers.length} 層｜量體 ${S.wallItems.length} 段｜塔 ${S.towers.length}｜入口 ${S.entrances.length}｜裝飾岩 ${S.rocks.length}｜草叢 ${S.bushClusters.length} 叢`);

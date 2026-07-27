@@ -30,6 +30,11 @@ import { REPLAY_SPEEDS, SIM_PER_REAL } from "../../platform/contracts/mobaReplay
 import { fmtT, WORLD_BOUNDS, LANES, RIVER, presentationForObjective } from "../../gameData.js";
 import { GC, MONO } from "../../ui/theme.js";
 import MobaView3D from "../../MobaView3D.jsx";
+// H.1-close：重播支援 presentation mode。runtime-v2 時走**與現場對戰同一個**
+//   MobaRuntimeView3D + mobaRuntimeMapAdapter；legacy 維持原本的 MobaView3D 不變。
+//   資料源仍是 createReplaySource（唯讀），replayBuffer schema 一個欄位都沒動。
+import MobaRuntimeView3D from "../../battle/moba/render/MobaRuntimeView3D.jsx";
+import { loadMapPresentation, isRuntimeV2 } from "../../battle/moba/mobaMapPresentation.js";
 import { createReplaySource, canUse3DPresentation, frameAt } from "../../battle/moba/replay/replayPresentationSource.js";
 import { loadQuality, presetFor } from "../../battle/quality.js";
 import { useIsMobile } from "../../ui/useViewport.js";
@@ -114,7 +119,12 @@ export default function MobaReplayScreen({ replay, onClose }) {
   const [speed, setSpeed] = useState(1);
   const tRef = useRef(0);
   const isMobile = useIsMobile();
-  const quality = useMemo(() => presetFor(loadQuality()), []);
+  //  qualityId 是字串等級（runtime-v2 吃這個）；quality 是既有的 preset 物件（legacy 吃這個）
+  const qualityId = useMemo(() => loadQuality(), []);
+  const quality = useMemo(() => presetFor(qualityId), [qualityId]);
+  //  呈現模式與現場對戰共用同一個開關（URL / localStorage / build flag）
+  const mapMode = useMemo(() => loadMapPresentation(), []);
+  const runtimeMap = isRuntimeV2(mapMode);
 
   // 唯讀資料源：replay frames → { prev, snapshot, subTRef }（不模擬、不碰 Store）
   const use3D = useMemo(() => canUse3DPresentation(replay), [replay]);
@@ -194,8 +204,10 @@ export default function MobaReplayScreen({ replay, onClose }) {
                 battleFollow ⇒ 導播鏡頭同樣可用；拖曳/捏合仍可自由觀看（cameraStore）。
                 ⚠ 外層是 flex 容器，而 R3F `<Canvas>` 是靠父層尺寸決定畫布大小
                 （flex item 的 auto 寬度可能塌成 0）⇒ 用 inset:0 的絕對定位層明確給尺寸。 */}
-            <div style={{ position: "absolute", inset: 0 }}>
-              <MobaView3D battleFollow autoRotate={false} quality={quality} source={source} roster={null} />
+            <div style={{ position: "absolute", inset: 0 }} data-replay-presentation={runtimeMap ? "runtime-v2" : "legacy"}>
+              {runtimeMap
+                ? <MobaRuntimeView3D quality={qualityId} source={source} />
+                : <MobaView3D battleFollow autoRotate={false} quality={quality} source={source} roster={null} />}
             </div>
             {/* 輔助 inset 小地圖（桌機才放；手機空間留給戰場，避免遮擋） */}
             {!isMobile && (

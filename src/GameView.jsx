@@ -10,6 +10,10 @@
 
 import React, { useRef, useEffect, useState, useMemo } from "react";
 import MobaView3D from "./MobaView3D.jsx";
+// H.1：正式戰鬥的新地圖畫面（runtime-v2）。legacy 的 MobaView3D 一行未改，
+//      兩個模式讀同一份 useGameStore ⇒ 切換不影響比賽結果與 replay schema。
+import MobaRuntimeView3D from "./battle/moba/render/MobaRuntimeView3D.jsx";
+import { loadMapPresentation, saveMapPresentation, isRuntimeV2, MAP_PRESENTATION } from "./battle/moba/mobaMapPresentation.js";
 import BattlePresentationLayer from "./battle/ui/BattlePresentationLayer.jsx";
 import { useGameStore } from "./useGameStore.js";
 import { useLocalServer } from "./useLocalServer.js";
@@ -91,8 +95,11 @@ function Minimap({ mobile = false }) {
     return () => cancelAnimationFrame(raf);
   }, []);
   // S29B2：手機縮小並抬離底部收合面板（safe area）；不擋十人面板也不被遮
+  //  H.1-close：原本抬 50px **不夠**——BattleHeroStrip 收合後（把手 + 一列對位列）
+  //  約 80px 高、自身又從 bottom 8px 起算 ⇒ 小地圖下緣被十人面板蓋掉一截
+  //  （Codex H.1 視覺驗收把它列為 blocking）。抬到 96px 讓兩者不再重疊。
   const px2 = mobile ? 106 : 150;
-  return <canvas ref={ref} width={150} height={150} style={{ position: "absolute", bottom: mobile ? "calc(50px + env(safe-area-inset-bottom))" : 10, right: mobile ? 6 : 10, width: px2, height: px2, borderRadius: 10, border: "1px solid rgba(255,255,255,0.25)", boxShadow: "0 4px 20px rgba(0,0,0,0.5)", pointerEvents: "none", zIndex: Z.minimap }} />;
+  return <canvas ref={ref} width={150} height={150} style={{ position: "absolute", bottom: mobile ? "calc(96px + env(safe-area-inset-bottom))" : 10, right: mobile ? 6 : 10, width: px2, height: px2, borderRadius: 10, border: "1px solid rgba(255,255,255,0.25)", boxShadow: "0 4px 20px rgba(0,0,0,0.5)", pointerEvents: "none", zIndex: Z.minimap }} />;
 }
 
 export default function GameView({ roster = ROSTER, onContinue = null, autoStart = false, draft = null, tactic = null }) {
@@ -119,12 +126,37 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   // Sprint20【E】生效名單：Ban/Pick 選到的英雄取代 ROSTER 預設英雄（無 draft → 原 ROSTER）。
   //   3D 名牌 / HUD / 記分板 / 終局畫面全部吃這一份 → Loading、Battle、Result 顯示同一批英雄。
   const liveRoster = useMemo(() => draftRoster(roster, draft), [roster, draft]);
+  // H.1：地圖呈現模式（legacy | runtime-v2）。預設 legacy ⇒ 沒設定時行為完全不變。
+  const [mapMode, setMapMode] = useState(() => loadMapPresentation());
+  const pickMapMode = (id) => { setMapMode(id); saveMapPresentation(id); };
+  const runtimeRecenter = useRef(null);
 
   return (
     <div style={{ position: "relative", width: "100%", height: "min(82vh, 720px)", background: "#0d1420", borderRadius: 14, overflow: "hidden", fontFamily: "system-ui,-apple-system,sans-serif" }}>
       {/* 3D：對局進行中相機由 cameraStore 管理（director/objectiveFocus/heroFocus/free）*/}
-      <MobaView3D mapTexture={MOBA_MAP} autoRotate={!playing} battleFollow={playing} roster={liveRoster} quality={quality} />
+      {isRuntimeV2(mapMode)
+        ? <MobaRuntimeView3D quality={qualityId} onRecenterRef={runtimeRecenter} />
+        : <MobaView3D mapTexture={MOBA_MAP} autoRotate={!playing} battleFollow={playing} roster={liveRoster} quality={quality} />}
 
+      {/* H.1：地圖呈現模式切換（legacy ⇄ runtime-v2）＋ runtime 專用「回到中心」。
+          放在左上角、只有兩顆小鈕，不遮擋主要戰鬥區域。*/}
+      <div style={{ position: "absolute", left: 8, top: SAFE_TOP, zIndex: Z.controls, display: "flex", gap: 6 }}>
+        <button
+          onClick={() => pickMapMode(isRuntimeV2(mapMode) ? MAP_PRESENTATION.LEGACY : MAP_PRESENTATION.RUNTIME_V2)}
+          title="切換戰鬥地圖呈現（不影響比賽資料）"
+          style={{ font: "11px ui-monospace,monospace", color: "#e7edf5", cursor: "pointer",
+            background: isRuntimeV2(mapMode) ? "#22406b" : "#1a2430", border: "1px solid #2a3542",
+            borderRadius: 6, padding: "4px 8px" }}>
+          地圖 {isRuntimeV2(mapMode) ? "新版" : "舊版"}
+        </button>
+        {isRuntimeV2(mapMode) && (
+          <button onClick={() => runtimeRecenter.current && runtimeRecenter.current()}
+            style={{ font: "11px ui-monospace,monospace", color: "#e7edf5", cursor: "pointer",
+              background: "#1a2430", border: "1px solid #2a3542", borderRadius: 6, padding: "4px 8px" }}>
+            回到中心
+          </button>
+        )}
+      </div>
       {/* Battle Presentation Layer：HUD / Timeline / 浮動大字 / TAB 記分板 / 終局畫面 */}
       <BattlePresentationLayer roster={liveRoster} draft={draft} tactic={tactic} onContinue={onContinue} />
 
