@@ -20,8 +20,9 @@
 //  ── 誠實的資料缺口（不用假資料填補）────────────────────────────────────
 //    · H.3 起新 frame 可選擇帶緊湊 `mn` 小兵欄位；舊 Replay 沒有 `mn`
 //      ⇒ 仍回退成空兵線，不從目前引擎重建。
-//    · `state`（撤退/回城/團戰徽章）、`respawn` 秒數、`contested`、fx / feed /
-//      recallEvents 同樣未擷取 ⇒ 一律給 null / 空陣列，讓 view 顯示「無」而不是猜。
+//    · H.3 起 `fx` 以取樣窗事件保存；舊 Replay 沒有就顯示空特效。
+//    · `state`（撤退/回城/團戰徽章）、`respawn` 秒數、`contested`、feed /
+//      recallEvents 仍未擷取 ⇒ 一律給 null / 空陣列，讓 view 顯示「無」而不是猜。
 //    · 舊 replay（無 `mapMeta` / 無 `objectivesMeta`）由呼叫端判斷是否可用 3D，
 //      不可用時退回 2D SVG（見 `canUse3DPresentation`）。
 // ============================================================================
@@ -54,6 +55,22 @@ function lanesFromFrame(f) {
     }));
   });
   return lanes;
+}
+
+const FX_TYPES = Object.freeze(["line", "ult", "tower", "orb"]);
+function effectsFromFrame(f) {
+  if (!Array.isArray(f?.fx)) return [];
+  return f.fx.map((row, i) => ({
+    id: `rfx:${f.t ?? 0}:${i}`,
+    type: FX_TYPES[row?.[0]] ?? "orb",
+    pos: { x: row?.[1] ?? 0, y: row?.[2] ?? 0 },
+    target: { x: row?.[3] ?? 0, y: row?.[4] ?? 0 },
+    color: row?.[5] ?? 0xffffff,
+    at: row?.[6] ?? f.t ?? 0,
+    life: row?.[7] ?? 0.35,
+    exp: row?.[7] ?? 0.35,
+    ability: typeof row?.[8] === "string" && row[8] ? row[8] : null,
+  }));
 }
 
 /**
@@ -145,7 +162,7 @@ export function createReplaySource(replay) {
       dragon: legacyMirror("dragon", f.dr),
       baron: legacyMirror("baron", f.br),
       objectives,
-      feed: [], fx: [], recallEvents: [],
+      feed: [], fx: effectsFromFrame(f), recallEvents: [],
       bK: f.s?.[0] ?? 0, rK: f.s?.[1] ?? 0,
       bGold: f.g?.[0] ?? 0, rGold: f.g?.[1] ?? 0,
       winProb: Number.isFinite(f.wp) ? f.wp : 0.5,

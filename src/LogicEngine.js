@@ -65,6 +65,7 @@ export class LogicEngine {
     this.bK = 0; this.rK = 0; this.bGold = 500; this.rGold = 500;
     this.mid = 0; this.fx = []; this.waveTimer = R.waveFirst; this.feed = [];
     this.waveNo = 0;             // H.3：兵線波次序號（只供 snapshot / Replay / 呈現）
+    this._fxSeq = 0;             // H.3：技能事件序號（Replay 跨取樣窗去重）
 
     this.players = [];
     ["blue", "red"].forEach((side) => {
@@ -610,7 +611,17 @@ export class LogicEngine {
       // S29：dmgK 由規則集決定（v1 0.92 ⇒ TTK 20–30 秒、前 5 分鐘幾乎零擊殺）
       const dmgAmt = p.power * dt * R.dmgK * lateFactor;
       p.dmg += dmgAmt; foe.hitBy.set(p.id, this.t); // Sprint06：傷害/助攻追蹤（附加）
-      if (p.atkCd <= 0) { this.pushFx({ type: this.rng() < 0.2 ? "ult" : "line", pos: { ...p.pos }, target: { ...foe.pos }, color: SIDE[p.side] }); p.atkCd = 0.5; }
+      if (p.atkCd <= 0) {
+        // H.3：沿用既有傷害 tick，只附加可辨識的職業技能事件；不改傷害/CD/rng 次數。
+        const power = this.rng() < 0.2;
+        this.pushFx({
+          type: power ? "ult" : "line",
+          pos: { ...p.pos }, target: { ...foe.pos }, color: SIDE[p.side],
+          sourceId: p.id, targetId: foe.id,
+          ability: `${p.role}:${power ? "power" : "basic"}`,
+        });
+        p.atkCd = 0.5;
+      }
       if (R.simultaneousCombat) pendingHits.push([p, foe, dmgAmt]);
       else { foe.hp -= dmgAmt; if (foe.hp <= 0 && !foe.dead) this._resolveKill(p, foe); }
     }
@@ -816,7 +827,16 @@ export class LogicEngine {
     if (p._nav) { p._nav.path = null; p._nav.goal = null; p._nav.stuck = 0; }
   }
 
-  pushFx(f) { this.fx.push({ ...f, exp: f.exp ?? 0.35 }); if (this.fx.length > 60) this.fx.shift(); }
+  pushFx(f) {
+    // DT_SIM=0.5；小於一個 tick 的舊 0.35s 事件會在 snapshot 前就被清掉。
+    // 至少保留 0.65s，讓 live 與 Replay 都能觀察到一次；只改呈現生命期。
+    const life = Math.max(f.exp ?? (f.type === "ult" ? 0.9 : 0.65), 0.65);
+    this.fx.push({
+      ...f, id: f.id ?? `fx${this._fxSeq++}`, at: f.at ?? this.t,
+      exp: life, life: f.life ?? life,
+    });
+    if (this.fx.length > 60) this.fx.shift();
+  }
 
   tick(dt) {
     if (this.over) return;

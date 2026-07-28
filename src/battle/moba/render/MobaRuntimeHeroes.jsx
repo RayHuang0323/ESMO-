@@ -5,13 +5,13 @@
 //   位置、血量、存活、等級全部來自 LogicEngine snapshot（經 mobaRuntimeMapAdapter）。
 //   本檔不 import LogicEngine、不寫任何 store、不決定英雄要往哪走。
 //
-//  【H.1 的 Prototype Hero】刻意做「看得懂、跑得動」的低成本角色，不是最終模型：
-//    · 膠囊本體 + 肩部方塊（低面數，遠看仍讀得出是角色而不是圓點）
+//  【H.3 Prototype Hero】刻意做「看得懂、跑得動」的低成本角色，不是最終模型：
+//    · 共用膠囊本體 + 四種 role 原型配件（守衛/游擊/術士/射手）
 //    · 陣營色（藍 / 紅）＋ 腳底選取環
 //    · 頭頂血條（依 hpRatio 縮放）＋ 等級數字 ＋ 簡短名稱
 //    · 死亡：本體降下、變半透明、血條隱藏
 //    · 朝向：由 Adapter 依上一幀位移推出（snapshot 沒有 facing 欄位）
-//  正式角色模型留給後續 Hero Asset Pipeline（H.3+）替換本檔的 body geometry。
+//  正式角色模型留給後續 Hero Asset Pipeline 逐步替換 body geometry。
 //
 //  【效能】
 //    · geometry / material 只建立一次（useMemo），10 名英雄共用
@@ -25,6 +25,7 @@ import * as THREE from "three";
 import { WORLD_SCALE } from "../map/coordinateMapping.js";
 import { LAYER_Y } from "../map/mapVisualStyle.js";
 import { countMount, countUnmount } from "./runtimeDiagnostics.js";
+import { archetypeData } from "../presentation/heroArchetypes.js";
 
 const S = WORLD_SCALE;
 const TEAM_COLOR = { blue: 0x4d95f0, red: 0xf0574d };
@@ -102,6 +103,11 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
     //  半徑也比選取環大一圈，全場視角才讀得到。
     deathMark: new THREE.RingGeometry(HERO.ringR * 1.12, HERO.ringR * 1.5, 4),
     bar: new THREE.PlaneGeometry(1, 1),
+    shield: new THREE.CylinderGeometry(HERO.radius * 0.78, HERO.radius * 0.78, HERO.radius * 0.3, 8),
+    blade: new THREE.BoxGeometry(HERO.radius * 0.22, HERO.height * 0.92, HERO.radius * 0.18),
+    staff: new THREE.CylinderGeometry(HERO.radius * 0.12, HERO.radius * 0.12, HERO.height * 1.25, 6),
+    focus: new THREE.OctahedronGeometry(HERO.radius * 0.48, 0),
+    launcher: new THREE.BoxGeometry(HERO.radius * 0.42, HERO.radius * 0.42, HERO.height * 0.95),
   }), []);
 
   const mats = useMemo(() => {
@@ -111,6 +117,7 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
     return {
       blue: mk(TEAM_COLOR.blue), red: mk(TEAM_COLOR.red),
       blueDark: mk(TEAM_DARK.blue), redDark: mk(TEAM_DARK.red),
+      accent: mk(0xe8d7a4, { emissive: 0x5b4b25, emissiveIntensity: 0.35, metalness: 0.18 }),
       //  陣亡本體：**去飽和的隊色** + 0.55 透明（0.28 太淡，全場視角等於消失）
       blueDead: mk(TEAM_DEAD.blue, { transparent: true, opacity: DEAD.bodyOpacity }),
       redDead: mk(TEAM_DEAD.red, { transparent: true, opacity: DEAD.bodyOpacity }),
@@ -158,7 +165,7 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
     for (const h of live) {
       const node = groupRefs.current.get(h.id);
       if (!node) continue;
-      const { root, body, shoulder, bar, ring, deathMark, label } = node;
+      const { root, body, shoulder, accessory, bar, ring, deathMark, label } = node;
       //  ⚠ 地面不在 y = 0（見檔頭 GROUND_Y 註解）⇒ 英雄整體抬到走道表面。
       root.position.set(h.world.x, GROUND_Y, h.world.z);
       if (h.facing !== null && h.facing !== undefined) root.rotation.y = h.facing;
@@ -172,6 +179,7 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
         : (h.team === "blue" ? mats.blueDead : mats.redDead);
       //  肩塊只在活著時出現：屍體是一具橫躺的膠囊，多一塊方塊只會變回「色塊」
       if (shoulder) shoulder.visible = h.alive;
+      if (accessory) accessory.visible = h.alive;
       ring.visible = h.alive;
       //  地面陣亡標記：只有死亡時出現，是「還認得出這裡有人陣亡」的主要線索
       if (deathMark) {
@@ -225,11 +233,13 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
   const barRef = useRef();
   const ringRef = useRef();
   const deathMarkRef = useRef();
+  const accessoryRef = useRef();
   const labelRef = useRef();
 
   useLayoutEffect(() => {
     register(hero.id, {
       root: rootRef.current, body: bodyRef.current, shoulder: shoulderRef.current,
+      accessory: accessoryRef.current,
       bar: barRef.current, ring: ringRef.current, deathMark: deathMarkRef.current,
       label: labelRef.current,
     });
@@ -237,6 +247,7 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
   }, [hero.id, register]);
 
   const team = hero.team === "blue" ? "blue" : "red";
+  const archetype = archetypeData(hero.archetype);
   //  ⚠ 手機版問題標記 #3「畫面偶發閃爍/破圖感」：本檔所有 mesh 每幀都用 ref 直接改
   //  position/scale/visible（見下面 useFrame），但 geometry 的 boundingSphere 是照
   //  「建立當下」的局部座標算的、不會跟著位置更新重算。加上運鏡（RTS 大範圍平移/縮放）
@@ -259,13 +270,17 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
         visible={false} frustumCulled={false} userData={{ part: "hero-death-mark" }} />
       {/* 本體（膠囊） */}
       <mesh ref={bodyRef} geometry={geo.body} material={team === "blue" ? mats.blue : mats.red}
+        scale={archetype.bodyScale}
         position={[0, HERO.height / 2 + HERO.radius, 0]} castShadow={false}
         frustumCulled={false} userData={{ part: "hero-body" }} />
       {/* 肩塊：讓剪影不只是膠囊，遠看能分辨正面 */}
       <mesh ref={shoulderRef} geometry={geo.shoulder}
         material={team === "blue" ? mats.blueDark : mats.redDark}
+        scale={archetype.shoulderScale}
         position={[0, HERO.height * 0.86, HERO.radius * 0.45]}
         frustumCulled={false} userData={{ part: "hero-shoulder" }} />
+      <HeroAccessory ref={accessoryRef} type={archetype.accessory} geo={geo}
+        material={mats.accent} teamMaterial={team === "blue" ? mats.blueDark : mats.redDark} />
       {/* 頭頂血條（背板 + 前景） */}
       <group position={[0, HERO.barY, 0]}>
         <mesh geometry={geo.bar} material={mats.barBg}
@@ -290,3 +305,48 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
     </group>
   );
 }
+
+const HeroAccessory = React.forwardRef(function HeroAccessory(
+  { type, geo, material, teamMaterial }, ref,
+) {
+  if (type === "shield") {
+    return (
+      <group ref={ref} name="hero-archetype-guardian">
+        <mesh geometry={geo.shield} material={teamMaterial}
+          position={[HERO.radius * 1.05, HERO.height * 0.68, HERO.radius * 0.64]}
+          rotation={[Math.PI / 2, 0, 0]} frustumCulled={false} />
+      </group>
+    );
+  }
+  if (type === "focus") {
+    return (
+      <group ref={ref} name="hero-archetype-arcanist">
+        <mesh geometry={geo.staff} material={material}
+          position={[HERO.radius * 1.12, HERO.height * 0.64, 0]}
+          rotation={[0, 0, -0.08]} frustumCulled={false} />
+        <mesh geometry={geo.focus} material={teamMaterial}
+          position={[HERO.radius * 1.2, HERO.height * 1.32, 0]}
+          frustumCulled={false} />
+      </group>
+    );
+  }
+  if (type === "launcher") {
+    return (
+      <group ref={ref} name="hero-archetype-marksman">
+        <mesh geometry={geo.launcher} material={material}
+          position={[0, HERO.height * 0.72, HERO.radius * 1.05]}
+          rotation={[Math.PI / 2, 0, 0]} frustumCulled={false} />
+      </group>
+    );
+  }
+  return (
+    <group ref={ref} name="hero-archetype-skirmisher">
+      <mesh geometry={geo.blade} material={material}
+        position={[-HERO.radius * 0.9, HERO.height * 0.58, HERO.radius * 0.36]}
+        rotation={[0.28, 0, -0.38]} frustumCulled={false} />
+      <mesh geometry={geo.blade} material={material}
+        position={[HERO.radius * 0.9, HERO.height * 0.58, HERO.radius * 0.36]}
+        rotation={[-0.28, 0, 0.38]} frustumCulled={false} />
+    </group>
+  );
+});

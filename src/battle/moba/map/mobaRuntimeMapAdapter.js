@@ -26,6 +26,7 @@ import { TOWER_HP, NEXUS_HP, ROLE_NAME, posOnLane } from "../../../gameData.js";
 import { buildMobaLayout } from "./mobaMapLayout.js";
 import { buildCampPlan } from "./mapCampLayout.js";
 import { isWalkable, projectToWalkable } from "../nav/mobaNavigation.js";
+import { archetypeForRole, archetypeData } from "../presentation/heroArchetypes.js";
 
 /** 呈現用高度（世界單位）：英雄站在地面上，結構的血條掛在頭頂。 */
 export const RUNTIME_Y = Object.freeze({ hero: 0, structure: 0 });
@@ -81,6 +82,7 @@ export function adaptHeroes(snapshot, opts = {}) {
       id: String(p.id),
       team,
       role: p.role ?? null,
+      archetype: archetypeForRole(p.role),
       playerId: String(p.id),
       championId: entry?.hero?.id ?? null,
       displayName: entry?.player?.name ?? entry?.hero?.zh ?? ROLE_NAME[p.role] ?? String(p.id),
@@ -292,6 +294,38 @@ export function adaptMinions(snapshot, opts = {}, structures = adaptStructures(s
   return out;
 }
 
+/** snapshot.fx → runtime-v2 固定池特效資料。未到事件時間或已過期的一律不畫。 */
+export function adaptEffects(snapshot, effectTime = snapshot?.ts) {
+  const now = num(effectTime, num(snapshot?.ts, 0));
+  const out = [];
+  for (const f of snapshot?.fx ?? []) {
+    if (!f?.pos || !Number.isFinite(f.pos.x) || !Number.isFinite(f.pos.y)) continue;
+    const life = Math.max(0.05, num(f.life, f.type === "ult" ? 0.6 : 0.35));
+    const age = Number.isFinite(f.at) ? now - f.at : life - num(f.exp, 0);
+    if (age < 0 || age >= life) continue;
+    const start = simToWorld(clampSim(f.pos), 0);
+    const target = f.target && Number.isFinite(f.target.x) && Number.isFinite(f.target.y)
+      ? simToWorld(clampSim(f.target), 0)
+      : null;
+    const splitAt = typeof f.ability === "string" ? f.ability.indexOf(":") : -1;
+    const role = splitAt >= 0 ? f.ability.slice(0, splitAt) : null;
+    const archetype = archetypeForRole(role);
+    out.push({
+      id: String(f.id ?? `${f.at ?? now}:${f.type ?? "orb"}`),
+      type: f.type ?? "orb",
+      ability: f.ability ?? null,
+      variant: splitAt >= 0 ? f.ability.slice(splitAt + 1) : null,
+      archetype,
+      width: archetypeData(archetype).effectWidth,
+      color: Number.isFinite(f.color) ? f.color : 0xffffff,
+      world: start,
+      targetWorld: target,
+      lifeRatio: ratio01(1 - age / life),
+    });
+  }
+  return out;
+}
+
 /**
  * 一次把整份 snapshot 轉成 Renderer 需要的資料。
  * @returns {{ ts, over, winner, heroes, structures, objectives, teams, warnings }}
@@ -301,6 +335,7 @@ export function adaptRuntimeMapFrame(snapshot, opts = {}) {
   const structures = adaptStructures(snapshot);
   const objectives = adaptObjectives(snapshot);
   const minions = adaptMinions(snapshot, opts, structures);
+  const effects = adaptEffects(snapshot, opts.effectTime);
   const warnings = [];
   const blue = heroes.filter((h) => h.team === "blue").length;
   const red = heroes.filter((h) => h.team === "red").length;
@@ -316,6 +351,7 @@ export function adaptRuntimeMapFrame(snapshot, opts = {}) {
     structures,
     objectives,
     minions,
+    effects,
     teams: { blue, red },
     lanes: LANE_IDS,
     warnings,

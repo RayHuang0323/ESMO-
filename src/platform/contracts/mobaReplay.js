@@ -13,7 +13,8 @@
 //      g:  [bGold, rGold],         // 經濟
 //      wp: winProb }               // 勝率條
 //
-//  容量（實測估算）：每 frame ≈ 0.8KB；2 秒取樣 × 20 分鐘 ≈ 600 frames ≈ 0.5MB。
+//  容量（H.3 seed42 實測）：小兵 mn + 技能 fx 後平均 frame ≈ 2.1KB；
+//    26.3 分鐘 / 791 frames ≈ 1.69MB，40 分鐘上限約 2.6MB。
 //    localStorage（5MB，已存 profile/season/heroProgress）放不下完整 frames
 //    → **只保存當前 session 的最近一場（記憶體）**，不寫 localStorage。
 //    上限 MAX_FRAMES 到頂即停止擷取並標記 truncated（不無限成長）。
@@ -39,6 +40,8 @@ const compactMinionId = (id) => {
   const n = Number.parseInt(String(id).slice(1), 10);
   return Number.isFinite(n) ? n : 0;
 };
+
+const FX_KIND = Object.freeze({ line: 0, ult: 1, tower: 2, orb: 3 });
 
 /** 終局 snapshot → 緊湊 frame（唯一轉換點；欄位齊全、全部可序列化）。 */
 export function snapshotToFrame(snap) {
@@ -67,6 +70,19 @@ export function snapshotToFrame(snap) {
         compactMinionId(m.id), round4(m.t), round3(m.hp),
         m.kind === "caster" ? 1 : 0, m.slot ?? 0, m.wave ?? 0,
       ])),
+    } : {}),
+    // H.3：取樣窗內的技能/命中特效事件；每列
+    // [kind,x,y,targetX,targetY,color,at,life,ability]。ability 是附加字串，
+    // 傷害與命中結果仍只來自已保存的英雄 hp，不在 Replay 重算。
+    ...(snap.fx ? {
+      fx: snap.fx.map((f) => [
+        FX_KIND[f.type] ?? FX_KIND.orb,
+        round2(f.pos?.x), round2(f.pos?.y),
+        round2(f.target?.x), round2(f.target?.y),
+        Number.isFinite(f.color) ? f.color : 0xffffff,
+        round2(f.at ?? snap.ts), round3(f.life ?? f.exp ?? 0.35),
+        typeof f.ability === "string" ? f.ability : "",
+      ]),
     } : {}),
   };
 }
@@ -116,6 +132,11 @@ export function validateMobaReplay(r) {
         f.mn.some((group) => !Array.isArray(group) ||
           group.some((row) => !Array.isArray(row) || row.length < 3 || row.some((v) => !Number.isFinite(v)))))) {
         errors.push(`frame[${i}].mn 形狀錯誤或含非有限數值`); break;
+      }
+      if (f.fx !== undefined && (!Array.isArray(f.fx) || f.fx.some((row) =>
+        !Array.isArray(row) || row.length < 8 || row.slice(0, 8).some((v) => !Number.isFinite(v)) ||
+        (row[8] !== undefined && typeof row[8] !== "string")))) {
+        errors.push(`frame[${i}].fx 形狀錯誤或含非有限數值`); break;
       }
     }
   }

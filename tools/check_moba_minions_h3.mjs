@@ -1,7 +1,8 @@
 // ============================================================================
-//  tools/check_moba_minions_h3.mjs — H.3 三路兵線 / runtime-v2 / Replay 驗證
+//  tools/check_moba_minions_h3.mjs — H.3 Runtime 對戰呈現驗證
 //
-//  只驗真資料路徑與決定性規則；手機辨識度、FPS、死亡動畫仍需瀏覽器/真機驗收。
+//  三路兵線、職業原型、技能事件、runtime-v2、Replay 共用資料路徑。
+//  手機辨識度、FPS、動畫體感仍需瀏覽器/真機驗收。
 // ============================================================================
 import fs from "fs";
 import path from "path";
@@ -18,7 +19,8 @@ const laneCount = (lanes) => ["top", "mid", "bot"].reduce(
 
 const { LogicEngine } = await import(u("src/LogicEngine.js"));
 const { SIM_RULES } = await import(u("src/battle/moba/matchProgression.js"));
-const { adaptRuntimeMapFrame } = await import(u("src/battle/moba/map/mobaRuntimeMapAdapter.js"));
+const { adaptRuntimeMapFrame, adaptEffects } =
+  await import(u("src/battle/moba/map/mobaRuntimeMapAdapter.js"));
 const { isWalkable } = await import(u("src/battle/moba/nav/mobaNavigation.js"));
 const {
   beginReplayCapture, captureReplayFrame, finalizeReplay, clearReplay,
@@ -137,7 +139,66 @@ ck("14) 小兵用固定容量 InstancedMesh（單位 4 batch×48、血條 2×96�
   /const CAP = 48/.test(minionCode) && /const TOTAL_CAP = CAP \* 2/.test(minionCode) &&
   /<instancedMesh/.test(minionCode) && !/minions\.map\(/.test(minionCode));
 
-console.log("\n── H.3：三路兵線 / runtime-v2 / Replay ──");
+// F. 職業原型與技能事件：沿用既有 combat tick，只增加呈現 metadata
+const archetypes = new Set(frame.heroes.map((h) => h.archetype));
+ck("15) 五個既有 role 映射到四種可重用職業原型",
+  archetypes.size === 4 &&
+  ["guardian", "skirmisher", "arcanist", "marksman"].every((id) => archetypes.has(id)));
+
+clearReplay();
+const skillEng = new LogicEngine(30305, null, { rules: "v3" });
+beginReplayCapture({ seed: 30305, config: { phase: "H.3-skills" } });
+captureReplayFrame(skillEng.snapshot());
+let skillEvent = null;
+let skillSnapshot = null;
+while (skillEng.t < 300 && !skillEvent) {
+  skillEng.tick(0.5);
+  const snap = skillEng.snapshot();
+  captureReplayFrame(snap);
+  skillEvent = snap.fx.find((f) => f.ability);
+  if (skillEvent) skillSnapshot = snap;
+}
+const eventAt = skillEvent?.at ?? skillEng.t;
+while (skillEng.t < eventAt + 2.5) {
+  skillEng.tick(0.5);
+  captureReplayFrame(skillEng.snapshot());
+}
+const skillReplay = finalizeReplay({ matchId: "h3-skills" });
+const liveSkillFx = adaptEffects(skillSnapshot, eventAt + 0.1);
+ck("16) 真實英雄交戰產生帶 source/target/role variant 的技能事件，未另建傷害系統",
+  skillEvent && /^fx\d+$/.test(skillEvent.id) &&
+  /^[a-z]+:(basic|power)$/.test(skillEvent.ability) &&
+  skillEvent.sourceId && skillEvent.targetId && liveSkillFx.some((f) => f.ability === skillEvent.ability));
+
+const skillRows = skillReplay.frames.flatMap((f) => f.fx ?? []);
+const skillContract = validateMobaReplay(skillReplay);
+const replaySkillRow = skillRows.find((row) => typeof row[8] === "string" && row[8]);
+const skillSource = createReplaySource(skillReplay);
+skillSource.seek(eventAt + 0.1);
+const replaySkillFx = adaptEffects(skillSource.getState().snapshot, eventAt + 0.1);
+ck("17) 2 秒 Replay 取樣窗不漏掉 0.65s 技能事件，契約可驗證且播放端按 at 顯示",
+  skillContract.ok && replaySkillRow &&
+  replaySkillFx.some((f) => f.ability === replaySkillRow[8]), skillContract.errors.join("; "));
+
+const oldSkillReplay = structuredClone(skillReplay);
+for (const f of oldSkillReplay.frames) delete f.fx;
+const oldSkillSource = createReplaySource(oldSkillReplay);
+oldSkillSource.seek(eventAt + 0.1);
+ck("18) 舊 Replay 無 fx 時顯示空特效，不重新生成技能",
+  (oldSkillSource.getState().snapshot.fx ?? []).length === 0);
+
+const effectsCode = src("src/battle/moba/render/MobaRuntimeEffects.jsx");
+const heroCode = src("src/battle/moba/render/MobaRuntimeHeroes.jsx");
+ck("19) 技能特效為固定三池 InstancedMesh，live / Replay 共用正式 runtime-v2",
+  /const LINE_CAP = 32/.test(effectsCode) && /const BURST_CAP = 16/.test(effectsCode) &&
+  (effectsCode.match(/<instancedMesh/g) ?? []).length === 3 &&
+  /<MobaRuntimeEffects frameRef=\{frameRef\}/.test(viewCode));
+ck("20) 英雄剪影只使用四種通用職業配件，沒有逐英雄模型或受保護素材",
+  ["hero-archetype-guardian", "hero-archetype-skirmisher",
+    "hero-archetype-arcanist", "hero-archetype-marksman"].every((name) => heroCode.includes(name)) &&
+  !/gltf|fbx|useGLTF|textureLoader/i.test(heroCode));
+
+console.log("\n── H.3：三路兵線 / 職業原型 / 技能事件 / runtime-v2 / Replay ──");
 for (const [name, ok, detail] of A) {
   console.log(`${ok ? "✅" : "❌"} ${name}${detail ? ` — ${detail}` : ""}`);
 }

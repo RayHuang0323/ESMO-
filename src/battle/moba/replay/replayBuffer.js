@@ -24,7 +24,9 @@ let current = null;    // 最近一場完成的 MobaReplay.v1（session 記憶�
 /** 開始擷取新一場（覆蓋上一場的進行中擷取；已完成的 current 保留到下一次 finalize）。 */
 export function beginReplayCapture({ seed = null, config = {} } = {}) {
   cap = {
-    seed, config, startedAt: Date.now(), frames: [], playersMeta: [], towersMeta: {}, objectivesMeta: [], lastT: -Infinity, truncated: false,
+    seed, config, startedAt: Date.now(), frames: [], playersMeta: [], towersMeta: {}, objectivesMeta: [],
+    pendingFx: new Map(), seenFx: new Set(),
+    lastT: -Infinity, truncated: false,
     mapMeta: {
       bounds: { ...WORLD_BOUNDS },
       lanes: Object.fromEntries(Object.entries(LANES).map(([k, pts]) => [k, pts.map((p) => ({ ...p }))])),
@@ -37,6 +39,14 @@ export function beginReplayCapture({ seed = null, config = {} } = {}) {
 export function captureReplayFrame(snap) {
   if (!cap || !snap) return;
   if (cap.truncated) return;
+  // H.3：Replay 每 2 秒存一個 frame，但技能事件只有 0.35–0.8 秒。每個 runtime
+  // snapshot 先收進目前取樣窗，否則絕大多數技能會剛好落在兩幀之間而永久遺失。
+  for (const f of snap.fx ?? []) {
+    const id = f?.id;
+    if (!id || cap.seenFx.has(id)) continue;
+    cap.seenFx.add(id);
+    cap.pendingFx.set(id, { ...f });
+  }
   const due = snap.ts - cap.lastT >= FRAME_INTERVAL_S || snap.over;
   if (!due || snap.ts === cap.lastT) return;
   if (cap.frames.length >= MAX_FRAMES) { cap.truncated = true; return; }
@@ -46,7 +56,8 @@ export function captureReplayFrame(snap) {
     // S29B1：中立目標 meta（位置只存一次；frame.ob 依此順序存 alive 位元）
     cap.objectivesMeta = (snap.objectives ?? []).map((o) => ({ id: o.id, type: o.type, side: o.side, presentationKey: o.presentationKey ?? o.id, pos: { x: o.pos.x, y: o.pos.y } }));
   }
-  cap.frames.push(snapshotToFrame(snap));
+  cap.frames.push(snapshotToFrame({ ...snap, fx: [...cap.pendingFx.values()] }));
+  cap.pendingFx.clear();
   cap.lastT = snap.ts;
 }
 

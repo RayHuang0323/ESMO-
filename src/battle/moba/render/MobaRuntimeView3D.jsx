@@ -22,6 +22,7 @@ import MobaRuntimeMap, { useRuntimeMapData } from "../map/MobaRuntimeMap.jsx";
 import MobaRuntimeHeroes from "./MobaRuntimeHeroes.jsx";
 import MobaRuntimeStructures from "./MobaRuntimeStructures.jsx";
 import MobaRuntimeMinions from "./MobaRuntimeMinions.jsx";
+import MobaRuntimeEffects from "./MobaRuntimeEffects.jsx";
 import RuntimeDeviceDiagnosticsPanel from "./RuntimeDeviceDiagnosticsPanel.jsx";
 import { adaptRuntimeMapFrame } from "../map/mobaRuntimeMapAdapter.js";
 //  H.2-close：內插點的可走性檢查（純資料查表，不改模擬；見 RuntimeFrameFeeder 內註解）
@@ -304,7 +305,12 @@ function RuntimeFrameFeeder({ frameRef, onShapeChange, lockHeroId, lockTarget, s
         return { ...p, pos, rawPos: { x: p.pos.x, y: p.pos.y } };
       }),
     };
-    const frame = adaptRuntimeMapFrame(blended, { prev, roster: s.roster, interpolation: a });
+    const frame = adaptRuntimeMapFrame(blended, {
+      prev, roster: s.roster, interpolation: a,
+      // live 的 fx 已在最新 snapshot 發生，立即顯示；Replay 的下一 frame 包含
+      // 整個 2s 取樣窗事件，必須跟插值時間走，不能提早洩漏。
+      effectTime: source ? blended.ts : snap.ts,
+    });
     //  ⚠ 位置每幀都會變，但**掛載結構**（有哪些英雄／塔、誰死了、幾級）很少變。
     //    位置走 frameRef（不觸發 React），只有結構變了才 setState 重掛
     //    ⇒ 10 名英雄移動不會每幀重建整張地圖。
@@ -369,6 +375,7 @@ export default function MobaRuntimeView3D({ quality = "high", lockHeroId = null,
         frameRef={frameRef}
       />
       <MobaRuntimeMinions frameRef={frameRef} />
+      <MobaRuntimeEffects frameRef={frameRef} />
       <MobaRuntimeHeroes heroes={frame.heroes} frameRef={frameRef} showLabels={quality !== "low"} />
 
       <RuntimeFrameFeeder frameRef={frameRef} onShapeChange={onShapeChange} lockHeroId={lockHeroId} lockTarget={lockTarget} source={source} />
