@@ -23,6 +23,8 @@ import {
   simToWorld, inBoundsSim, clampSim, baseSim, pitSim, LANE_IDS,
 } from "./coordinateMapping.js";
 import { TOWER_HP, NEXUS_HP, ROLE_NAME } from "../../../gameData.js";
+import { buildMobaLayout } from "./mobaMapLayout.js";
+import { buildCampPlan } from "./mapCampLayout.js";
 
 /** 呈現用高度（世界單位）：英雄站在地面上，結構的血條掛在頭頂。 */
 export const RUNTIME_Y = Object.freeze({ hero: 0, structure: 0 });
@@ -81,6 +83,9 @@ export function adaptHeroes(snapshot, opts = {}) {
       championId: entry?.hero?.id ?? null,
       displayName: entry?.player?.name ?? entry?.hero?.zh ?? ROLE_NAME[p.role] ?? String(p.id),
       position: sim,
+      //  ⚠ 驗收用：呼叫端若有把未內插的引擎座標帶進來（見 MobaRuntimeView3D 的
+      //  RuntimeFrameFeeder），原樣傳出去。H.2-close 靠它分辨「碰撞算錯」與「內插切牆角」。
+      rawPosition: p.rawPos ? { x: p.rawPos.x, y: p.rawPos.y } : null,
       world: simToWorld(sim, RUNTIME_Y.hero),
       facing: facingOf(sim, prevById.get(p.id)?.pos ?? null),
       //  ⚠ snapshot 不含絕對血量。maxHp 用 1 表示「以比例為單位」，
@@ -134,17 +139,45 @@ export function adaptStructures(snapshot) {
 }
 
 /**
+ * 野區營地的**呈現座標**（bug 修正：見下方 adaptObjectives 說明）。
+ * 只計算一次並快取：`buildCampPlan` 是靜態地圖幾何的純函式（與對局無關），
+ * 若每次 adaptObjectives 都重建整份 mobaLayout 會很浪費（這支在 60fps 內插下會被頻繁呼叫）。
+ */
+let _campDisplayById = null;
+function campDisplayPos(id) {
+  if (!_campDisplayById) {
+    const plan = buildCampPlan(buildMobaLayout());
+    _campDisplayById = new Map(plan.filter((c) => !c.isPresentation).map((c) => [c.id, { x: c.x, y: c.y }]));
+  }
+  return _campDisplayById.get(id) ?? null;
+}
+
+/**
  * 大型目標與野區營地。
  *   · dragon / baron：snapshot 的獨立欄位；**位置** snapshot 沒有給
  *     ⇒ 用 gameData.PITS 補（presentation fallback，明確標記）。
  *   · objectives[]：v3 規則才有，含營地與大型目標的完整位置與血量。
+ *
+ *   ⚠ 兩個 Buff 營地（camp_blue_buff / camp_red_buff）的**模擬座標**與**呈現座標**
+ *   本來就不同——`mapCampLayout.js`（Milestone G.4）把它們在畫面上位移了 17.1 單位，
+ *   理由是原始模擬座標離中路太近，視覺上會變成「怪站在路上」。這個位移**只在呈現層**
+ *   生效，LogicEngine 完全不知道（`gameData.js` 與模擬常數都沒有動，Buff 判定距離
+ *   仍用原始座標）。
+ *   本檔原本直接拿 `o.pos`（模擬座標）當畫面位置，於是「存活狀態環」
+ *   （MobaRuntimeStructures 的 objRing）畫在模擬座標，而地圖的野怪剪影（G.4）畫在
+ *   位移後的呈現座標 ⇒ 兩者相差 17 個單位，畫面上就是一個孤立的黃圈、旁邊沒有怪
+ *   （2026-07-28 手機版問題標記 #1 回報的正是這個）。
+ *   修法：野區營地一律改用 `campDisplayPos()` 的呈現座標；沒有位移的營地
+ *   （`disp = null`）本來就與模擬座標相同，這裡不會改變它們的畫面位置。
+ *   dragon/baron 不受影響（它們不經過 mapCampLayout，維持 PITS 座標）。
  */
 export function adaptObjectives(snapshot) {
   const out = [];
   const seen = new Set();
 
   for (const o of snapshot?.objectives ?? []) {
-    const { sim, clamped } = safePos(o.pos, { x: 110, y: 110 });
+    const display = campDisplayPos(o.id);
+    const { sim, clamped } = safePos(display ?? o.pos, { x: 110, y: 110 });
     seen.add(o.type);
     out.push({
       id: String(o.id),

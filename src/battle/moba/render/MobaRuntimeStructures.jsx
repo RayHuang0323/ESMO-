@@ -151,9 +151,13 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
                 geometry={geo.shaft}
                 material={s.team === "blue" ? mats.shaftBlue : mats.shaftRed}
                 position={[0, TOWER.padY + TOWER.shaftH / 2, 0]}
+                frustumCulled={false}
                 userData={{ part: "tower-shaft" }}
               />
             )}
+            {/*  ⚠ 手機版問題標記 #3：crown/ring 的 visible 與 material 每幀由 useFrame
+                直接改（見上方），不是走 React re-render。跟 MobaRuntimeHeroes 同一個
+                「動態 mesh 沒關 frustumCulled」病灶，地圖靜態量體已關、這裡漏了。 */}
             <mesh
               ref={(m) => {
                 if (!m) { nodes.current.delete(s.id); return; }
@@ -163,6 +167,7 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
               geometry={isNexus ? geo.nexusCrown : geo.crown}
               material={s.team === "blue" ? mats.crownBlue : mats.crownRed}
               position={[0, baseY, 0]}
+              frustumCulled={false}
             />
             <mesh
               ref={(m) => {
@@ -175,6 +180,7 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
               position={[0, RING_Y.structure, 0]}
               rotation={[-Math.PI / 2, 0, 0]}
               scale={isNexus ? 1.7 : 1}
+              frustumCulled={false}
             />
           </group>
         );
@@ -193,6 +199,7 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
           position={[o.world.x, RING_Y.objective, o.world.z]}
           rotation={[-Math.PI / 2, 0, 0]}
           scale={o.type === "dragon" || o.type === "baron" ? 1.6 : 1}
+          frustumCulled={false}
         />
       ))}
     </group>

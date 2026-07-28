@@ -76,9 +76,19 @@ export class LogicEngine {
         const power = lo ? basePower * lo.powerMult : basePower;
         const lv = lo?.level ?? 1;
         const f = FOUNTAIN[side];
+        //  ⚠ 生成點必須落在可走區。泉水池只有 ±3 的散佈範圍，但泉水外圈牆
+        //  （fountain_rim）就貼在旁邊 ⇒ 直接用亂數散佈時實測 10 人裡會有 2 人
+        //  一出生就站在牆裡（淨距 1.00 < 英雄半徑 2.4，H.2-close 真實 Chrome 驗收抓到）。
+        //  一旦站進牆裡，`moveTowards` 的起點自救只在「投影找得到落點」時有效，
+        //  找不到就整場黏在牆裡不動 ⇒ 必須在生成當下就投影。
+        //  ⚠ v1/v2 不走這條（它們是歷史基準，維持原本的亂數座標）。
+        const spawnRaw = { x: f.x + (this.rng() - 0.5) * 6, y: f.y + (this.rng() - 0.5) * 6 };
+        const spawn = R.navCollision
+          ? projectToWalkable(spawnRaw.x, spawnRaw.y, HERO_RADIUS, null)
+          : spawnRaw;
         this.players.push({
           id: side[0] + (i + 1), side, role, lane: ROLE_LANE[role],
-          pos: { x: f.x + (this.rng() - 0.5) * 6, y: f.y + (this.rng() - 0.5) * 6 },
+          pos: { x: spawn.x, y: spawn.y },
           maxHp: 600 * tough, hp: 600 * tough, power, tough,
           dead: false, respawn: 0, state: "對線", atkCd: 0, gold: 0,
           k: 0, d: 0, // Sprint04：個人擊殺/死亡累計（純附加儀器化，供呈現層讀取）

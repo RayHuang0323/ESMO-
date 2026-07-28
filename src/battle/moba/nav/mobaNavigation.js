@@ -229,8 +229,15 @@ export function structureAt(x, y, radius = HERO_RADIUS, alive = null) {
 /**
  * 這個點站得下一個半徑 radius 的英雄嗎？
  *
- * 結構阻擋走**快取遮罩**（見 maskFor）：這支被 moveTowards / lineWalkable 每 tick
- * 呼叫上百次，逐次算 20 個圓太貴。
+ * 兩段式：
+ *   ① 靜態牆體：查距離場（格點取樣）
+ *   ② 結構（塔／主堡）：先查**快取遮罩**快速排除，落在結構附近時再算**精確圓**
+ *
+ * ⚠ 為什麼第 ② 段不能只查遮罩：遮罩是以**格心**是否落在碰撞圓內來蓋章的，
+ * 而英雄的座標是連續的 ⇒ 格心在圓外、英雄實際在圓內的情況最多會差半個格對角
+ * （0.71 單位）。H.2-close 的真實 Chrome 驗收就抓到這個：英雄侵入塔的碰撞圓 0.48
+ * 單位、`isWalkable` 卻回 true（畫面上就是英雄的膠囊啃進塔基）。
+ * 精確圓只在「遮罩的鄰域」內才算 ⇒ 絕大多數查詢仍是 O(1) 查表，效能沒有回到優化前。
  */
 export function isWalkable(x, y, radius = HERO_RADIUS, alive = null) {
   const { F } = nav();
@@ -239,7 +246,10 @@ export function isWalkable(x, y, radius = HERO_RADIUS, alive = null) {
   if (ix < 0 || iy < 0 || ix >= F.nx || iy >= F.ny) return false;
   const id = F.idx(ix, iy);
   if (F.dist[id] * F.cellToSim < radius) return false;
-  return !maskFor(radius, alive)[id];
+  const m = maskFor(radius, alive);
+  if (m[id]) return false;                          // 格心就在圓內 ⇒ 一定不可走
+  if (!m.near[id]) return true;                     // 離所有結構都夠遠 ⇒ 一定可走
+  return !structureAt(x, y, radius, alive);         // 邊界帶：用精確圓判定
 }
 
 /**
@@ -504,39 +514,59 @@ function mirrorAlive(alive) {
  * 半徑固定 ⇒ 佔用格固定；比賽中變的只有「哪些結構還活著」。
  */
 const _cellsByRadius = new Map();
+/**
+ * @returns Map(id → { inside, near })
+ *   inside 格心落在碰撞圓內的格（一定不可走）
+ *   near   格心落在「圓 + 一個格對角」內的格（**邊界帶**：格點判定不可信，
+ *          必須改用精確圓；見 isWalkable 的說明）
+ */
 function structureCells(radius) {
   let m = _cellsByRadius.get(radius);
   if (m) return m;
   const { F, structures } = nav();
+  //  一個格心與格內任一點的最大距離 = 半個格對角。邊界帶取這個寬度就足以涵蓋
+  //  「格心在圓外、但格內某點在圓內」的所有情況。
+  const HALF_DIAG = F.cellToSim * Math.SQRT1_2;
   m = new Map();
   for (const s of structures.values()) {
     const rr = s.r + radius;
-    const ids = [];
-    const i0 = F.gx(s.x - rr), i1 = F.gx(s.x + rr), j0 = F.gy(s.y - rr), j1 = F.gy(s.y + rr);
+    const rn = rr + HALF_DIAG;
+    const inside = [], near = [];
+    const i0 = F.gx(s.x - rn), i1 = F.gx(s.x + rn), j0 = F.gy(s.y - rn), j1 = F.gy(s.y + rn);
     for (let iy = Math.max(0, j0); iy <= Math.min(F.ny - 1, j1); iy++) {
       for (let ix = Math.max(0, i0); ix <= Math.min(F.nx - 1, i1); ix++) {
         const wx = F.B.minX + ix * F.cellToSim, wy = F.B.minY + iy * F.cellToSim;
-        const dx = wx - s.x, dy = wy - s.y;
-        if (dx * dx + dy * dy < rr * rr) ids.push(F.idx(ix, iy));
+        const d2 = (wx - s.x) ** 2 + (wy - s.y) ** 2;
+        const id = F.idx(ix, iy);
+        if (d2 < rr * rr) inside.push(id);
+        if (d2 < rn * rn) near.push(id);
       }
     }
-    m.set(s.id, ids);
+    m.set(s.id, { inside, near });
   }
   _cellsByRadius.set(radius, m);
   return m;
 }
 
-/** 把「還活著且會擋人」的結構蓋章到一張遮罩上。 */
+/**
+ * 把「還活著且會擋人」的結構蓋章到一張遮罩上。
+ * `mask[id]`：格心在圓內 ⇒ 直接不可走。
+ * `mask.near[id]`：格心在圓的一個格對角以內 ⇒ 邊界帶，呼叫端必須改用精確圓判定。
+ */
 function stampStructures(radius, alive) {
   const { F, structures } = nav();
   const cells = structureCells(radius);
   const mask = new Uint8Array(F.nx * F.ny);
+  const near = new Uint8Array(F.nx * F.ny);
   const has = alive == null ? null : (alive instanceof Set ? alive : new Set(alive));
   for (const s of structures.values()) {
     if (s.blocks === false) continue;
     if (has && !has.has(s.id)) continue;
-    for (const id of cells.get(s.id)) mask[id] = 1;
+    const c = cells.get(s.id);
+    for (const id of c.inside) mask[id] = 1;
+    for (const id of c.near) near[id] = 1;
   }
+  mask.near = near;
   return mask;
 }
 

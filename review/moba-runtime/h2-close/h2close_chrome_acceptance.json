@@ -1,0 +1,209 @@
+{
+  "generatedAt": "2026-07-28T15:37:26.018Z",
+  "url": "http://localhost:5173/ESMO-",
+  "sampleCount": 1363,
+  "sampleIntervalMs": 600,
+  "matchOver": false,
+  "finalTs": 1387,
+  "towerDestroyed": 13,
+  "heroIds": [
+    "b1",
+    "b2",
+    "b3",
+    "b4",
+    "b5",
+    "r1",
+    "r2",
+    "r3",
+    "r4",
+    "r5"
+  ],
+  "thresholds": {
+    "wall": 0.75,
+    "struct": 0.6,
+    "stuckSamples": 25,
+    "stuckMove": 1.5,
+    "jitterWindow": 20,
+    "jitterPathMin": 18,
+    "jitterNetMax": 3,
+    "heroRadius": 2.4
+  },
+  "results": {
+    "wallHits": [],
+    "wallHitCount": 0,
+    "engineWallHits": [],
+    "engineWallHitCount": 0,
+    "pitHitCount": 0,
+    "structHits": [],
+    "structHitCount": 0,
+    "stuck": [],
+    "stuckCount": 0,
+    "jitter": [],
+    "jitterCount": 0,
+    "leftBase": [
+      "b1",
+      "b2",
+      "b3",
+      "b4",
+      "b5",
+      "r1",
+      "r2",
+      "r3",
+      "r4",
+      "r5"
+    ],
+    "reachedLane": [
+      "b1",
+      "b2",
+      "b3",
+      "b4",
+      "b5",
+      "r1",
+      "r2",
+      "r3",
+      "r4",
+      "r5"
+    ],
+    "enteredJungle": [
+      "b1",
+      "b2",
+      "b3",
+      "b4",
+      "b5",
+      "r1",
+      "r2",
+      "r3",
+      "r4",
+      "r5"
+    ],
+    "flickerCount": 0
+  },
+  "minClearanceByHero": {
+    "b1": {
+      "minClearance": 2.41,
+      "at": {
+        "ts": 4,
+        "sim": {
+          "x": 19.673781470524013,
+          "y": 187.32776383937878
+        }
+      }
+    },
+    "b2": {
+      "minClearance": 2.41,
+      "at": {
+        "ts": 6.5,
+        "sim": {
+          "x": 39.644560214988296,
+          "y": 181.58044197156235
+        }
+      }
+    },
+    "b3": {
+      "minClearance": 2.41,
+      "at": {
+        "ts": 199.5,
+        "sim": {
+          "x": 46.06102210174052,
+          "y": 172.61581491521625
+        }
+      }
+    },
+    "b4": {
+      "minClearance": 2.41,
+      "at": {
+        "ts": 208,
+        "sim": {
+          "x": 163.11677485993198,
+          "y": 178.97139157637844
+        }
+      }
+    },
+    "b5": {
+      "minClearance": 2.41,
+      "at": {
+        "ts": 213,
+        "sim": {
+          "x": 163.21793707643738,
+          "y": 178.87821585064978
+        }
+      }
+    },
+    "r1": {
+      "minClearance": 2.41,
+      "at": {
+        "ts": 203,
+        "sim": {
+          "x": 56.95227898182364,
+          "y": 40.96500620095192
+        }
+      }
+    },
+    "r2": {
+      "minClearance": 2.41,
+      "at": {
+        "ts": 164,
+        "sim": {
+          "x": 118.53691274081709,
+          "y": 60.46354924313057
+        }
+      }
+    },
+    "r3": {
+      "minClearance": 2.41,
+      "at": {
+        "ts": 249,
+        "sim": {
+          "x": 179.6634959631597,
+          "y": 49.808819849635235
+        }
+      }
+    },
+    "r4": {
+      "minClearance": 2.41,
+      "at": {
+        "ts": 4,
+        "sim": {
+          "x": 200.35693348192612,
+          "y": 32.64140446647757
+        }
+      }
+    },
+    "r5": {
+      "minClearance": 2.41,
+      "at": {
+        "ts": 1.5,
+        "sim": {
+          "x": 202.81612091949592,
+          "y": 15.054104504148103
+        }
+      }
+    }
+  },
+  "performance": {
+    "fps": 60,
+    "frameTimeMs": 16.66,
+    "drawCalls": 197,
+    "triangles": 86805,
+    "geometries": 52,
+    "textures": 0,
+    "programs": 9,
+    "renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001638) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "vendor": "Google Inc. (AMD)",
+    "pixelRatio": 1,
+    "drawingBuffer": {
+      "width": 1920,
+      "height": 1200
+    }
+  },
+  "screenshots": [
+    "01_desktop_full_battle.png",
+    "02_desktop_hero_near_jungle_wall.png",
+    "03_desktop_hero_near_tower.png",
+    "04_mobile_full_battle.png",
+    "05_mobile_closeup.png"
+  ],
+  "pass": 15,
+  "fail": 0,
+  "fails": []
+}

@@ -99,7 +99,18 @@ export function installRuntimeDiagnostics({ gl, scene, camera, frameRef }) {
         alive: data?.alive ?? null,
         hpRatio: data ? +data.hpRatio.toFixed(3) : null,
         level: data?.level ?? null,
-        simPosition: data ? { x: +data.position.x.toFixed(2), y: +data.position.y.toFixed(2) } : null,
+        //  ⚠ H.2-close：行為狀態。「站著不動」在交戰／回城時是**正常**的，
+        //  卡死判定必須排除那些狀態，否則會把團戰站樁誤報成卡在牆裡。
+        actionState: data?.actionState ?? null,
+        respawnIn: data?.respawnIn ?? null,
+        //  ⚠ 這兩個欄位**不四捨五入**。碰撞驗收是拿座標去查 1.0 格點的距離場，
+        //  格點取樣用的是 Math.round ⇒ 小數第 2 位的進位就足以讓取樣格整個換一格：
+        //  實測 x=87.4999（淨距 2.41、可走）被 toFixed(2) 寫成 87.50 之後，
+        //  查到的是隔壁的牆邊格（淨距 1.41）⇒ 驗收誤報成「英雄站在牆裡」。
+        //  可讀性讓給正確性：驗收欄位一律給全精度。
+        simPosition: data ? { x: data.position.x, y: data.position.y } : null,
+        //  未內插的引擎座標（H.2-close 歸因用；見 mobaRuntimeMapAdapter 的 rawPosition）
+        rawSimPosition: data?.rawPosition ? { x: data.rawPosition.x, y: data.rawPosition.y } : null,
         //  root 的世界座標（含地面吸附後的 y）
         position: vec3(world),
         rootScale: vec3(root.scale),
@@ -188,6 +199,10 @@ export function installRuntimeDiagnostics({ gl, scene, camera, frameRef }) {
       towerAliveCount: structures.filter((s) => s.type === "tower" && s.alive).length,
       towerDestroyedCount: structures.filter((s) => s.type === "tower" && !s.alive).length,
       nexusCount: structures.filter((s) => s.type === "nexus").length,
+      //  ⚠ H.2-close：**逐座**結構的存活狀態。碰撞驗收必須知道「這一刻哪些塔還擋人」——
+      //  已摧毀的塔在 H.2 是明確放行的（見 mobaNavigation 檔頭），只給總數的話，
+      //  驗收腳本會把「站在已拆掉的塔原地」誤判成穿塔（第一次跑就誤報 135 次）。
+      structureState: structures.map((s) => ({ id: s.id, type: s.type, alive: !!s.alive })),
       //  主堡世界座標（**snapshot 模擬座標換算**，不是 Renderer 用的呈現錨點；
       //  只拿來當「把相機大致對到主堡」的瞄準點，不可當呈現位置的真值）
       nexusWorld: structures.filter((s) => s.type === "nexus").map((s) => ({

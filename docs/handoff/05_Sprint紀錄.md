@@ -1717,3 +1717,68 @@ A* 的鏡像映射把 `blue_top_0` 對到 `red_top_0`（正確是 `red_bot_0`）
 2. 補跑 `node tools/check_moba_runtime29.mjs`（預留 2–3 小時），確認 44/44。
 
 ⚠ 上面兩項都完成之前，**H.2 不算完成**。
+
+---
+
+## Milestone H.2-close — 碰撞與尋路的真實 Chrome 驗收（2026-07-28）
+
+完整技術報告：`review/moba-runtime/h2/H2_COLLISION_NAV_REPORT.md` §4.6–4.8
+驗收產物：`review/moba-runtime/h2-close/`（5 張截圖 + `h2close_chrome_acceptance.json`）
+
+### 一、結論：**通過（15 PASS / 0 FAIL）**
+
+`node tools/check_moba_nav_chrome_h2close.mjs --url http://localhost:5173/ESMO-`
+有視窗的真實 Chrome、真實 AMD GPU（非 headless、非 SwiftShader），
+在**正式 GameView 的對戰**裡跑完整一場（1,363 筆取樣 ≈ 13,600 個英雄-幀）。
+
+不靠目視：整場每 0.6 秒讀 `window.__ESMO_RUNTIME_DIAG()` 取 10 名英雄座標，
+回 Node 用 `mobaNavigation` 對每個取樣點實際判定穿牆／穿結構／卡死／抖動／閃爍。
+
+- 不穿牆（引擎座標 **與** 畫面座標兩本帳分開驗）、不穿塔與主堡、不穿龍坑巴龍坑
+- 不卡死、不原地抖動；10 人都走得出基地、走得到三路中段、進得了野區
+- 沒有英雄無故從畫面消失（閃爍已消失）
+- 效能：60 FPS｜197 draw calls
+
+引擎端另有 Node 佐證：10 個 seed 逐 tick 全檢 **271,824 個英雄-tick，穿牆 0、穿結構 0**。
+
+### 二、抓到並修掉的 5 個真問題
+
+| # | 問題 | 修法 |
+|---|---|---|
+| 1 | 開局 10 人裡有 2 人直接生成在泉水牆裡（淨距 1.00 < 半徑 2.4） | 生成點投影到可走區（僅 v3） |
+| 2 | 結構遮罩以格心蓋章（H.2 效能優化引入）⇒ 英雄啃進塔基 0.48 單位 | 遮罩加邊界帶，帶內改用精確圓判定 |
+| 3 | 畫面內插 prev→snapshot 拉直線會**切過牆角** | 內插點不可走時退回引擎驗證過的座標 |
+| 4 | 截圖在取樣結束後才拍，全被終局結算畫面蓋住 | 截圖排進取樣迴圈，於比賽進行中拍 |
+| 5 | 驗收探針 `toFixed(2)` 讓 87.4999 進位成 87.50 ⇒ 查到隔壁牆邊格 | 驗收欄位改全精度 |
+
+另有兩項是**驗收腳本自己的判定缺陷**（非程式問題）：把已摧毀的塔仍當障礙（誤報穿塔
+135 次）、把「對線站樁」當成卡死（誤報 23 次）。兩者都已收斂。
+
+### 三、順帶修掉的手機版問題標記（`review/bug/`）
+
+- **黃色圈圈孤立無怪**：`mapCampLayout` 把 Buff 營地的呈現座標位移 17.1 單位，
+  但存活狀態環讀的是模擬座標 ⇒ 圈與怪差 17 個單位。改用呈現座標。
+- **畫面偶發閃爍**：Runtime 英雄／結構的 mesh 每幀用 ref 改 transform，卻沒關
+  frustum culling（`docs/09_技術債務清單.md` 早有此教訓，地圖量體已照做、H.1 新增的漏了）。
+  全部補上 `frustumCulled={false}`，本輪 Chrome 驗收「閃爍」項全綠。
+
+### 四、節奏重新對標
+
+生成點修正讓開局座標位移 ⇒ 軌跡改變、長尾冒出來。用既有收尾機制調整
+（`lateAccelDiv` 74 → 58，雙方對稱、不加塔血、不改擊殺與移速）
+⇒ **regress 15/15（平均 24.0 分）、regress2 8/8**，時長回到 H.1 基準的 24.0 分。
+
+### 五、驗證（全部實跑）
+
+- `npm run build` ✅
+- `npm run check:mobamap` **3553 通過 / 0 失敗**
+- `node tools/check_moba_nav_h2.mjs` **14 PASS / 0 FAIL**
+- `node tools/regress.mjs` **15/15**
+- `node tools/regress2.mjs` **節奏門檻 8/8**
+- `node tools/check_moba_nav_chrome_h2close.mjs` **15 PASS / 0 FAIL**
+- ⚠ 依使用者指示**未執行** `check_moba_runtime29` 完整巢狀驗證（見 H.2 §六，仍是待辦）
+
+### 六、H.2 狀態：**碰撞與尋路已在真實戰鬥畫面驗收通過**
+
+唯一未補齊的是 `check_moba_runtime29` 完整重跑（預留 2–3 小時）。
+本輪未開始小兵、技能特效、正式英雄模型（H.3+）。

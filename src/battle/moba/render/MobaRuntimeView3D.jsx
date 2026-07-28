@@ -22,6 +22,8 @@ import MobaRuntimeMap, { useRuntimeMapData } from "../map/MobaRuntimeMap.jsx";
 import MobaRuntimeHeroes from "./MobaRuntimeHeroes.jsx";
 import MobaRuntimeStructures from "./MobaRuntimeStructures.jsx";
 import { adaptRuntimeMapFrame } from "../map/mobaRuntimeMapAdapter.js";
+//  H.2-close：內插點的可走性檢查（純資料查表，不改模擬；見 RuntimeFrameFeeder 內註解）
+import { isWalkable, HERO_RADIUS } from "../nav/mobaNavigation.js";
 import {
   MAP_HALF_WORLD, MAP_CENTER_WORLD, WORLD_SCALE,
 } from "../map/coordinateMapping.js";
@@ -223,13 +225,38 @@ function RuntimeFrameFeeder({ frameRef, onShapeChange, lockHeroId, lockTarget, s
     const prev = s.prev, snap = s.snapshot;
     if (!snap) return;
     //  以最新 snapshot 為主體，位置用 prev→snap 內插
+    //
+    //  ⚠ H.2-close：內插點必須落在**可走區**。引擎的每一個 tick 位置都是合法的
+    //  （H.2 的碰撞保證），但 prev→snap 之間拉直線會**切過牆角**——實測真實 Chrome
+    //  抓到 20 次內插點的淨距 < 英雄半徑（最壞 0，也就是整個人在牆體裡），
+    //  畫面上就是英雄轉彎時身體啃進岩壁。這是**呈現層**的缺陷，不是碰撞算錯：
+    //  同一場在 Node 端逐 tick 掃描引擎座標是 0 違規。
+    //  修法：內插點不可走時，沿 prev→snap 往回退（0.75/0.5/0.25/0），取第一個可走的。
+    //  a=0 就是 prev，本身一定合法 ⇒ 一定收斂，且永遠不會退到 prev 之前（不倒退走）。
     const prevById = new Map((prev?.players ?? []).map((p) => [p.id, p]));
     const blended = {
       ...snap,
       players: (snap.players ?? []).map((p) => {
         const q = prevById.get(p.id);
         if (!q) return p;
-        return { ...p, pos: { x: q.pos.x + (p.pos.x - q.pos.x) * a, y: q.pos.y + (p.pos.y - q.pos.y) * a } };
+        const lerpAt = (t) => ({ x: q.pos.x + (p.pos.x - q.pos.x) * t, y: q.pos.y + (p.pos.y - q.pos.y) * t });
+        let pos = lerpAt(a);
+        if (!isWalkable(pos.x, pos.y, HERO_RADIUS, null)) {
+          let okPos = null;
+          for (const k of [0.75, 0.5, 0.25, 0]) {
+            const c = lerpAt(a * k);
+            if (isWalkable(c.x, c.y, HERO_RADIUS, null)) { okPos = c; break; }
+          }
+          //  ⚠ 最後退路用**最新 snapshot 的位置**，不是 prev：snap 是引擎這一 tick 剛算出來的
+          //  合法座標；prev 是上一 tick 的，若當時貼著某個「後來被拆掉的塔」，
+          //  用 alive=null（全部結構都當活著）去驗會判成不可走，於是退到 prev 反而留在
+          //  一個看起來不合法的點上。退到 snap 保證畫面上的位置永遠是引擎驗證過的位置。
+          pos = okPos ?? { x: p.pos.x, y: p.pos.y };
+        }
+        //  ⚠ 驗收用：把**未內插的引擎座標**一併帶著（只有開診斷時才會被讀）。
+        //  H.2-close 需要分辨「碰撞算錯」與「內插切到牆角」——兩者在畫面上長得一樣，
+        //  但修的地方完全不同。沒有這個欄位就只能猜。
+        return { ...p, pos, rawPos: { x: p.pos.x, y: p.pos.y } };
       }),
     };
     const frame = adaptRuntimeMapFrame(blended, { prev, roster: s.roster });

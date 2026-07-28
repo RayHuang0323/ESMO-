@@ -223,35 +223,43 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
   }, [hero.id, register]);
 
   const team = hero.team === "blue" ? "blue" : "red";
+  //  ⚠ 手機版問題標記 #3「畫面偶發閃爍/破圖感」：本檔所有 mesh 每幀都用 ref 直接改
+  //  position/scale/visible（見下面 useFrame），但 geometry 的 boundingSphere 是照
+  //  「建立當下」的局部座標算的、不會跟著位置更新重算。加上運鏡（RTS 大範圍平移/縮放）
+  //  常讓角色貼近畫面邊緣，Three 預設的 frustum culling 在這種「物件常在視錐邊界」的
+  //  情境下很容易誤判剔除，一幀不畫就是閃爍。這正是 `docs/09_技術債務清單.md` §附錄
+  //  記載過的既有教訓（「玩家 mesh 一律 frustumCulled=false，否則會閃爍/消失」）——
+  //  地圖的靜態量體（MobaMapBlockout.jsx）已經照做，H.1 新增的 Runtime 英雄卻漏了。
+  //  英雄只有 10 個、幾何很小，全部關掉 culling 的效能代價可忽略。
   return (
     <group ref={rootRef} position={[hero.world.x, GROUND_Y, hero.world.z]}
       userData={{ heroId: hero.id, team }}>
       {/* 腳底選取環（抬到地形表面之上，否則整圈埋在路面／塔基底下看不見）*/}
       <mesh ref={ringRef} geometry={geo.ring} material={team === "blue" ? mats.ringBlue : mats.ringRed}
         position={[0, RING_LIFT, 0]} rotation={[-Math.PI / 2, 0, 0]}
-        userData={{ part: "hero-ring" }} />
+        frustumCulled={false} userData={{ part: "hero-ring" }} />
       {/* 陣亡地面標記（四邊形外框；只有死亡時 visible，見 useFrame）*/}
       <mesh ref={deathMarkRef} geometry={geo.deathMark}
         material={team === "blue" ? mats.markBlue : mats.markRed}
         position={[0, RING_LIFT, 0]} rotation={[-Math.PI / 2, 0, Math.PI / 4]}
-        visible={false} userData={{ part: "hero-death-mark" }} />
+        visible={false} frustumCulled={false} userData={{ part: "hero-death-mark" }} />
       {/* 本體（膠囊） */}
       <mesh ref={bodyRef} geometry={geo.body} material={team === "blue" ? mats.blue : mats.red}
         position={[0, HERO.height / 2 + HERO.radius, 0]} castShadow={false}
-        userData={{ part: "hero-body" }} />
+        frustumCulled={false} userData={{ part: "hero-body" }} />
       {/* 肩塊：讓剪影不只是膠囊，遠看能分辨正面 */}
       <mesh ref={shoulderRef} geometry={geo.shoulder}
         material={team === "blue" ? mats.blueDark : mats.redDark}
         position={[0, HERO.height * 0.86, HERO.radius * 0.45]}
-        userData={{ part: "hero-shoulder" }} />
+        frustumCulled={false} userData={{ part: "hero-shoulder" }} />
       {/* 頭頂血條（背板 + 前景） */}
       <group position={[0, HERO.barY, 0]}>
         <mesh geometry={geo.bar} material={mats.barBg}
-          scale={[HERO.barW * 1.08, HERO.barH * 1.5, 1]} renderOrder={20} />
+          scale={[HERO.barW * 1.08, HERO.barH * 1.5, 1]} renderOrder={20} frustumCulled={false} />
         <mesh ref={barRef} geometry={geo.bar}
           material={team === "blue" ? mats.barBlue : mats.barRed}
           scale={[HERO.barW, HERO.barH, 1]} position={[0, 0, 0.01]} renderOrder={21}
-          userData={{ part: "hero-hpbar" }} />
+          frustumCulled={false} userData={{ part: "hero-hpbar" }} />
       </group>
       {showLabel && (
         <Html position={[0, HERO.barY + 1.5 * S, 0]} center distanceFactor={190}
