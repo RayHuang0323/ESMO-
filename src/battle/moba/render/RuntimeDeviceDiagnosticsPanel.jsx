@@ -28,6 +28,21 @@ function buildDeviceReport() {
     },
     drawingBuffer: perf.drawingBuffer ?? null,
     cssCanvas: perf.cssCanvas ?? null,
+    performance: {
+      fps: perf.fps ?? null,
+      frameTimeMs: perf.frameTimeMs ?? null,
+      drawCalls: perf.drawCalls ?? null,
+      triangles: perf.triangles ?? null,
+      geometries: perf.geometries ?? null,
+      textures: perf.textures ?? null,
+      programs: perf.programs ?? null,
+    },
+    runtimeObjects: {
+      heroes: diag.heroCount ?? null,
+      minions: diag.minionCount ?? null,
+      activeEffects: diag.activeEffectCount ?? null,
+      effectEventsSeen: diag.effectEventsSeen ?? null,
+    },
     contextLost: window.__ESMO_FLICKER?.().contextLost ?? 0,
   };
 }
@@ -87,6 +102,8 @@ export default function RuntimeDeviceDiagnosticsPanel() {
       `camera      near ${p.camera?.near} / far ${p.camera?.far}`,
       `pixel ratio device ${p.pixelRatio?.device} / renderer ${p.pixelRatio?.renderer}`,
       `buffer      ${p.drawingBuffer?.width}×${p.drawingBuffer?.height}`,
+      `performance ${p.performance?.fps} fps / ${p.performance?.frameTimeMs} ms / ${p.performance?.drawCalls} calls / ${p.performance?.triangles} tris`,
+      `objects     ${p.runtimeObjects?.heroes} heroes / ${p.runtimeObjects?.minions} minions / ${p.runtimeObjects?.activeEffects} active fx / ${p.runtimeObjects?.effectEventsSeen} fx seen`,
       `context     ${JSON.stringify(p.contextAttributes)}`,
     ].join("\n")
     : "等待 WebGL context…";

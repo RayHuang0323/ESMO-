@@ -327,6 +327,19 @@ function RuntimeFrameFeeder({ frameRef, onShapeChange, lockHeroId, lockTarget, s
   return null;
 }
 
+function RuntimeDiagnosticsBridge({ frameRef }) {
+  const { gl, scene, camera } = useThree();
+  useEffect(() => {
+    if (!diagnosticsEnabled()) return undefined;
+    // Canvas.onCreated 只保證建立時呼叫一次；React StrictMode 會額外跑一次
+    // effect cleanup。把 install/remove 放在同一個 effect，第二次掛載才會重裝，
+    // 避免面板還在但 __ESMO_RUNTIME_DIAG 已被第一次 cleanup 刪除。
+    installRuntimeDiagnostics({ gl, scene, camera, frameRef });
+    return () => removeRuntimeDiagnostics();
+  }, [gl, scene, camera, frameRef]);
+  return null;
+}
+
 /**
  * 正式 Runtime 3D 畫面。
  * @param quality "high" | "mid" | "low"
@@ -344,9 +357,6 @@ export default function MobaRuntimeView3D({ quality = "high", lockHeroId = null,
   useEffect(() => { if (onRecenterRef) onRecenterRef.current = () => ctrl.current?.recenter(); }, [onRecenterRef]);
   //  H.2-flicker：整個 Runtime 畫面的掛載計數（純觀測）
   useEffect(() => { countMount("view3d"); return () => countUnmount("view3d"); }, []);
-  //  驗收探針只在截圖 / 除錯網址掛載；卸載時一併清乾淨（HMR 不留失效閉包）。
-  useEffect(() => () => { if (diagnosticsEnabled()) removeRuntimeDiagnostics(); }, []);
-
   //  ⚠ battle/quality.js 的等級 id 是 low | medium | high（不是 "mid"）。
   //    原本只比對 "mid" ⇒ medium 會掉進 high 分支，手機中階畫質等於沒生效。
   const dpr = quality === "low" ? [1, 1] : (quality === "mid" || quality === "medium") ? [1, 1.5] : [1, 2];
@@ -356,9 +366,8 @@ export default function MobaRuntimeView3D({ quality = "high", lockHeroId = null,
       dpr={dpr}
       gl={{ antialias: quality !== "low", powerPreference: "high-performance" }}
       camera={{ position: [0, 260, 200], fov: CAM.fov, near: CAM.near, far: CAM.far }}
-      onCreated={({ gl, scene, camera }) => {
+      onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = 1.1;
-        if (diagnosticsEnabled()) installRuntimeDiagnostics({ gl, scene, camera, frameRef });
       }}
     >
       <color attach="background" args={[0x0e141c]} />
@@ -380,6 +389,7 @@ export default function MobaRuntimeView3D({ quality = "high", lockHeroId = null,
 
       <RuntimeFrameFeeder frameRef={frameRef} onShapeChange={onShapeChange} lockHeroId={lockHeroId} lockTarget={lockTarget} source={source} />
       <RuntimeCamera ctrl={ctrl} lockTarget={lockHeroId ? lockTarget : null} />
+      <RuntimeDiagnosticsBridge frameRef={frameRef} />
     </Canvas>
     <RuntimeDeviceDiagnosticsPanel />
     </>

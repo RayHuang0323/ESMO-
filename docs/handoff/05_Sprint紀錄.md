@@ -2011,3 +2011,88 @@ shadow decal、FPS、觸控與桌面外觀。未完成前不得宣稱真機通�
 推送 `main`；只回退本次工作時的安全基準是 `dfa900f`，回退整個 H.2-flicker 則是
 `9faa319`。正式站部署完成後，
 仍須完成 Android 真機確認。
+
+---
+
+## H.3 Runtime 對戰呈現（2026-07-29）
+
+狀態：**本機實作與分段驗證完成；待 Android 真機／完整 Replay 人工驗收，未 push、未部署**。
+完整架構、參數、檔案、證據與限制見
+`review/moba-runtime/h3-runtime-presentation/H3_RUNTIME_PRESENTATION_REPORT.md`。
+
+### 一、起點與範圍
+
+- 起點 `09ce36c`（H.2-flicker 已在 main）；開始前工作區已有大量地圖／terrain／影片
+  舊產物，本輪全部排除 staging。
+- 正式路徑確認為
+  `GameView → MobaRuntimeView3D → adaptRuntimeMapFrame`；
+  live 只讀 `useGameStore`，Replay 用唯讀 presentation source 走同一 renderer。
+- 沿用 `LogicEngine.lanes`、snapshot、H.2 navigation/map geometry、Replay buffer；
+  沒有 legacy fallback、第二套兵線或第二套戰鬥判定。
+
+### 二、兵線與開局節奏
+
+- v3 首波 `60s → 25s`，週期維持 30s；每路每方四隻為三近戰＋一遠程，
+  snapshot 附加 `wave/slot/kind`。
+- 小兵以同 tick 位置同時計算雙方 next：接敵停止、存活塔／主堡前停止，
+  塔前距離 `0.046` 保證仍在既有 `<0.05` 反擊帶內；v1/v2 歷史行為不變。
+- runtime 隊形位置先用 lane tangent/lateral 展開，再通過 H.2
+  `isWalkable/projectToWalkable` 與存活結構集合。
+- 英雄 v3 一般／交戰移速 `5.90/7.07 → 5.60/6.71`（約慢 5%）。
+- 240-seed：226/240 結束、藍 47.9%／紅 46.3%、順序偏差 1.7pp、
+  平均／中位 24.67／24.60 分。H.2 為 231/240、48.8%／47.5%、2.1pp、
+  25.05／24.85 分；本輪不對勝率追加調參。
+
+### 三、技能事件、英雄原型與效能
+
+- 既有英雄交戰傷害 tick 只附加 `sourceId/targetId/role:basic|power` FX metadata；
+  傷害、CD 與 RNG 次數不變。`DT_SIM=0.5` 下 FX 最短生命期改 0.65s，
+  避免 snapshot 前被清掉。
+- runtime-v2 固定三池：32 line、16 ring、16 orb instances；小兵固定四個
+  48-cap unit batches 與兩個 96-cap 血條 batches，useFrame 不建立 geometry/material。
+- 五個 role 映射四種可重用低面數原型：
+  guardian/skirmisher/arcanist/marksman；沒有受保護名稱或外部角色資產。
+- Android 診斷面板新增 FPS/frame time/draw calls/triangles 與
+  heroes/minions/active FX/累積 FX 計數；診斷 install/remove 改在 Canvas 內成對管理。
+
+### 四、Replay
+
+- `MobaReplay.v1` 版本不變，新增 optional `mn`（小兵）與 `fx`（技能事件）。
+- Replay buffer 在 2 秒主 frame 間累積短命 FX，播放端依事件 `at` 顯示；
+  舊 Replay 無欄位時顯示空兵線／空特效，不重跑引擎。
+- seed 42 完整 26.3 分鐘：791 frames、1,687,797 bytes、平均 2,127 bytes/frame、
+  3,317 FX events，`validateMobaReplay` 通過。
+
+### 五、驗證與正式 GameView
+
+- 新功能 verifier `check_moba_minions_h3` **22/22**。
+- `check_moba_nav_h2` **14/0**；presentation **12/12**；controls **18/18**；
+  camera/replay **16/16**（後三支 `SKIP_NESTED=1`）。
+- `regress` **15/15**；`regress2` **8/8**；240-seed bench exit 0；
+  production build 與 `git diff --check` exit 0。
+- 正式 GameView 截圖：桌機 1440×900、手機 390×844、診斷 430×844。
+  320/360/390/430px 均無水平溢出。
+- WebGL2、DEPTH_BITS 24、camera 35/1000；約 210–228 calls、59k–77k tris；
+  診斷曾同時看到 10 heroes、64 minions、4 active FX／累積 21 FX。
+- 自動化分頁 rAF 被背景節流到 1–4 FPS，**不列產品 FPS 通過**；Android 真機 FPS、
+  觸控、safe area、技能辨識與完整 Replay 視覺仍待人工驗收。
+
+### 六、`runtime29` 完整執行的既有紅燈
+
+完整執行 51 分 8 秒後為 **42/44**。S23–S27、regress、regress2、build 全部 exit 0；
+唯一根因是 Sprint28 §29 的 v2 40-seed 全場順序抽樣：正序藍勝 55%、反序 35%，
+位移 20pp > 15pp，§30 因巢狀同一失敗連帶紅燈。
+
+這不是 H.3 v3 回歸：把 `pushFx` 動態還原成 `09ce36c` 舊實作後，同組正反序
+160 場逐 seed winner **0 場改變**，仍是 55%／35%。H.2 已把 v2 per-player RNG
+取樣跟 players 迭代順序走列為 P1，且當時完整 runtime29 未完成。本輪不改歷史 v2、
+不放寬 verifier；另開專項處理。
+
+### 七、本機 commits／回退
+
+- `759bae7` — 小兵、節奏、runtime-v2 與 Replay `mn`
+- `a87e379` — 職業原型、池化技能與 Replay `fx`
+- 文件／診斷 commit：見本輪最終回報
+
+整階段回退由新到舊逐一 `git revert`，禁止 `reset --hard`。本輪依使用者指示停在
+本機 commit，未 push、未部署，也未自動開始下一階段。

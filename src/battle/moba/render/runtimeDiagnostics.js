@@ -66,6 +66,7 @@ export function installRuntimeDiagnostics({ gl, scene, camera, frameRef }) {
 
   //  FPS：用 renderer 的實際 render 次數估算，取最近 ~1 秒的滑動窗。
   const fps = { frames: 0, last: 0, value: 0, frameMs: 0 };
+  const seenEffectIds = new Set();
 
   // ══ H.2-flicker：逐幀閃爍記錄器 ═══════════════════════════════════════════
   //
@@ -160,6 +161,7 @@ export function installRuntimeDiagnostics({ gl, scene, camera, frameRef }) {
   };
 
   window.__ESMO_RUNTIME_TICK = () => {
+    for (const fx of frameRef?.current?.effects ?? []) seenEffectIds.add(fx.id);
     const now = performance.now();
     fps.frames++;
     if (!fps.last) fps.last = now;
@@ -431,6 +433,9 @@ export function installRuntimeDiagnostics({ gl, scene, camera, frameRef }) {
       blueHeroCount: heroes.filter((h) => h.team === "blue").length,
       redHeroCount: heroes.filter((h) => h.team === "red").length,
       deadHeroCount: heroes.filter((h) => h.alive === false).length,
+      minionCount: (f.minions ?? []).length,
+      activeEffectCount: (f.effects ?? []).length,
+      effectEventsSeen: seenEffectIds.size,
       visibleHeroIds: heroes.filter((h) => h.visible).map((h) => h.id),
       towerAliveCount: structures.filter((s) => s.type === "tower" && s.alive).length,
       towerDestroyedCount: structures.filter((s) => s.type === "tower" && !s.alive).length,

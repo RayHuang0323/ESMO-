@@ -198,6 +198,17 @@ ck("20) 英雄剪影只使用四種通用職業配件，沒有逐英雄模型或
     "hero-archetype-arcanist", "hero-archetype-marksman"].every((name) => heroCode.includes(name)) &&
   !/gltf|fbx|useGLTF|textureLoader/i.test(heroCode));
 
+const diagCode = src("src/battle/moba/render/runtimeDiagnostics.js");
+const devicePanelCode = src("src/battle/moba/render/RuntimeDeviceDiagnosticsPanel.jsx");
+ck("21) 診斷 lifecycle 在 Canvas 內成對 install/remove，StrictMode/HMR 不留下失效閉包",
+  /function RuntimeDiagnosticsBridge/.test(viewCode) &&
+  /installRuntimeDiagnostics\(\{ gl, scene, camera, frameRef \}\)/.test(viewCode) &&
+  /return \(\) => removeRuntimeDiagnostics\(\)/.test(viewCode));
+ck("22) Android 診斷同時回報 context、FPS/draw calls/triangles 與 heroes/minions/fx 計數",
+  /effectEventsSeen/.test(diagCode) && /minionCount/.test(diagCode) &&
+  /depthBits/.test(devicePanelCode) && /drawCalls/.test(devicePanelCode) &&
+  /runtimeObjects/.test(devicePanelCode));
+
 console.log("\n── H.3：三路兵線 / 職業原型 / 技能事件 / runtime-v2 / Replay ──");
 for (const [name, ok, detail] of A) {
   console.log(`${ok ? "✅" : "❌"} ${name}${detail ? ` — ${detail}` : ""}`);
