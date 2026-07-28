@@ -56,7 +56,7 @@ export function useRuntimeMapData() {
 /**
  * @param quality "high" | "mid" | "low"（沿用 battle/quality 的等級語彙）
  */
-export default function MobaRuntimeMap({ quality = "high" }) {
+function MobaRuntimeMap({ quality = "high" }) {
   //  ⚠ 等級 id 是 low | medium | high（battle/quality.js）；"mid" 是舊寫法，兩個都收。
   const ring = quality === "low" ? "mobile-low"
     : (quality === "mid" || quality === "medium") ? "mobile" : "desktop";
@@ -65,3 +65,8 @@ export default function MobaRuntimeMap({ quality = "high" }) {
     <MobaMapBlockout show={show} ring={ring} castTowerShadow={quality === "high"} />
   );
 }
+
+// H.2-flicker Android：正式地形完全由 quality 決定，是靜態 presentation。
+// 英雄等級／生死改變會讓 MobaRuntimeView3D 更新動態 frame，但不應連帶重 render
+// MobaMapBlockout。memo 讓靜態地圖與動態 snapshot 更新邊界保持分離。
+export default React.memo(MobaRuntimeMap);

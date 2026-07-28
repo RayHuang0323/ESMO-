@@ -1782,3 +1782,232 @@ A* 的鏡像映射把 `blue_top_0` 對到 `red_top_0`（正確是 `red_bot_0`）
 
 唯一未補齊的是 `check_moba_runtime29` 完整重跑（預留 2–3 小時）。
 本輪未開始小兵、技能特效、正式英雄模型（H.3+）。
+
+---
+
+## Milestone H.2-flicker — 手機 Runtime 閃爍的根因與修正（2026-07-29）
+
+完整分析：`review/moba-runtime/h2-flicker/H2_FLICKER_ROOT_CAUSE.md`
+狀態：**已找到根因並修正，但尚未取得真實 Android 裝置的肉眼確認**
+⇒ 依指示不宣稱已修復、**未 push、未部署**。
+
+### 零、先更正 H.2-close 的錯誤結論
+
+H.2-close 回報「閃爍已修」**不成立**。當時的判準是每 600ms 取樣一次 `visible`，
+而閃爍是單幀／數幀的消失重現——取樣頻率比事件本身慢一個數量級，抓不到。
+本輪一律改成**逐幀**統計（頁面自己在每個 rAF 累計，工具只讀彙總）。
+
+### 一、根因：深度緩衝精度不足 ⇒ 共面貼花 z-fighting
+
+`Δz ≈ z²(far−near)/(far·near·2^bits)`。舊值 near=1 / far=4000：
+- 桌機 **24-bit** ⇒ Δz 0.0018（分得開）
+- Android 常見的 **16-bit** ⇒ Δz **0.467**，比場景裡**所有**高度差都大
+  （地面鋪層間距 0.02–0.04、選取環 0.35、塔環 0.11、目標環 0.09）
+
+⇒ 地面鋪層、岩塊投影、選取環全部塌進同一個深度桶，逐幀互相搶贏 ⇒ 一閃一閃。
+這解釋了「桌機正常、真機在閃」，也解釋為何 visible / key / mount 全正常仍會閃：
+**它是每像素的深度比較在跳，不是邏輯狀態在跳。**
+
+**可控重現**：把 near 暫時降到 0.01（在 24-bit 桌機上模擬精度崩潰）⇒
+scene graph 仍全 0，但畫面像素振盪從 0.036% 跳到 **4.59%**（128×）。
+
+### 二、修正
+
+1. 相機 `near 1→35`、`far 4000→1000` ⇒ 16-bit 下 Δz 0.467 → **0.0129**（< 最小層距 0.02）
+2. **移除 `RuntimeCamera` 每幀硬寫 `camera.near=1/far=4000` 的覆蓋**
+   （不修這行，改 CAM 完全不會生效——探針讀回來仍是 1/4000）
+3. 地面貼花（選取環／陣亡標記／塔環／目標環）改用 **polygonOffset**（與位元深度無關），
+   ⚠ 刻意不關 depthTest
+4. 內插退路改為「維持上一幀已驗證位置」，不再跳到 snapshot ——
+   **這是 H.2-close 自己引入的抖動**（跳到內插終點又退回，肉眼就是英雄在抖）
+
+### 三、新增診斷：`tools/check_moba_runtime_flicker_h2.mjs`
+
+逐幀統計（消失／重現、數量跳動、NaN、mount/unmount、context lost、
+geometry/texture/program 軌跡）＋ 連續影格錄製 ＋ 深度精度門檻 ＋ 近遠裁切檢查
+＋ 相機靜止驗證。手機與桌面各 60 秒：**23 PASS / 0 FAIL**。
+
+⚠ 像素級指標**只當診斷、不當通過門檻**：它無法乾淨區分缺陷與「塔冠旋轉浮動、
+英雄移動、HUD 更新、JPEG 量化」。理由與嘗試過的手段都寫在報告 §5。
+
+### 四、驗證
+
+- `npm run build` ✅｜`check:mobamap` **3553/0**｜`check_moba_nav_h2` **14/0**
+- `regress` **15/15**（平均 24.0 分）｜`regress2` **節奏門檻 8/8**
+- flicker verifier：手機 **23/0**、桌面 **23/0**
+- 依指示未執行 `check_moba_runtime29`
+
+### 五、尚未完成
+
+**真實 Android 連續觀看 ≥60 秒**。本輪全部是桌機 Chrome 以 Android 尺寸模擬，
+GPU 仍是桌機的 24-bit 深度，無法在本機重現 16-bit 行為。
+若真機仍閃，下一步要量該裝置的 `gl.getParameter(gl.DEPTH_BITS)` 與
+`getContextAttributes()`（報告 JSON 的 `depthProbe` 已有對應欄位可直接比對）。
+在此之前不宣稱修復、不 push、不部署，也不開始小兵 / 技能特效 / 英雄模型。
+
+---
+
+## H.2-flicker 交接紀錄（2026-07-29）— **未驗收通過**
+
+精簡交接：`review/moba-runtime/h2-flicker/H2_FLICKER_HANDOFF.md`
+完整分析：`review/moba-runtime/h2-flicker/H2_FLICKER_ROOT_CAUSE.md`
+
+### 一、現況
+
+**桌面版閃爍幾乎排除，但 Android 真機仍可見閃爍 ⇒ H.2-flicker 尚未驗收通過。**
+不得宣稱修復、不得 push、不得部署。
+
+| 環境 | 結果 |
+|---|---|
+| 桌面 Chrome 1600×1000 | 逐幀診斷 23/0；肉眼幾乎無閃爍 |
+| 桌面 Chrome 模擬 Android 412×915 @2.625x | 逐幀診斷 23/0 |
+| **真實 Android 裝置** | **仍可見閃爍** ⇒ 本輪根因假設不足以解釋全部現象 |
+
+### 二、根因假設與已完成修正
+
+假設：深度緩衝精度不足 ⇒ 共面貼花 z-fighting。
+`Δz ≈ z²(far−near)/(far·near·2^bits)`；舊值 near=1/far=4000 在 24-bit 是 0.0018（分得開），
+在 Android 常見的 16-bit 是 **0.467**，比場景所有高度差都大（層距 0.02–0.04、環 0.09–0.35）。
+可控重現：near 暫降 0.01 ⇒ scene graph 仍全 0，像素振盪 0.036%→4.59%（128×）。
+⚠ **但真機修正後仍在閃**，所以這只是其中一個成因，或真機另有主因。
+
+已完成 4 項修正：
+1. 相機 `near 1→35`、`far 4000→1000`（16-bit Δz 0.467→0.0129）
+2. 移除 `RuntimeCamera` 每幀硬寫 `camera.near=1/far=4000` 的覆蓋（不修這行改 CAM 不生效）
+3. 地面貼花（選取環/陣亡標記/塔環/目標環）改用 polygonOffset，**未關 depthTest**
+4. 內插退路改為維持上一幀已驗證位置（修掉 H.2-close 自己引入的英雄抖動）
+
+修改檔案：`MobaRuntimeView3D.jsx`、`MobaRuntimeHeroes.jsx`、`MobaRuntimeStructures.jsx`、
+`runtimeDiagnostics.js`、新增 `tools/check_moba_runtime_flicker_h2.mjs`。
+**commit：`dfa900f`（WIP，本機，未 push）**
+
+### 三、已執行的驗證與限制
+
+已跑：flicker verifier 手機 23/0、桌面 23/0（各 60 秒、3,600+ 幀逐幀）；
+`build` ✅｜`check:mobamap` 3553/0｜`check_moba_nav_h2` 14/0｜`regress` 15/15｜`regress2` 8/8。
+依指示未執行 `check_moba_runtime29`。
+
+⚠ **限制（最重要）**：桌面 Chrome 的「手機尺寸模擬」**不等於真實手機**。
+`setDeviceMetricsOverride` 只改尺寸與 DPR，GPU／驅動／depth buffer 位元數完全沒變
+（本機實測 `DEPTH_BITS = 24`，假設中的問題發生在 16-bit）。
+⇒ 逐幀 23/0 只證明「邏輯層與桌機渲染沒問題」，**不能證明真機不閃**。
+像素級指標只當診斷、未列入通過條件（無法區分缺陷與塔冠動畫/英雄移動/HUD/JPEG 量化）。
+
+### 四、交給 Codex
+
+優先序：① 先在真機讀 `DEPTH_BITS` / `getContextAttributes()` / renderer 字串，不要再從桌機推論；
+② 試 `antialias: false` 對照；③ 查 DPR 2.625 的填色與記憶體壓力；
+④ **地圖 `MobaMapBlockout` 的合併地面層**（層距 0.02–0.04，本輪未動）；
+⑤ drei `Html` 名牌（DOM 疊層，不在 scene graph 統計內）。
+
+**禁止**：只加 `frustumCulled={false}` 當解法（已加過、真機照樣閃）；用固定間隔取樣 visible 當驗收
+（H.2-close 的假結論來源）；關 `depthTest` 或把物件改常駐來遮蓋；回復 `camera.near=1/far=4000` 硬寫；
+改 `LAYER_Y` 絕對值（`GROUND_Y`/`RING_Y`/塔基由它推導）；重寫 flicker verifier 的逐幀統計。
+⚠ 第 4 項（內插退路）是真缺陷修正，與深度無關，請保留。
+
+### 五、真機證據
+
+**`10976.mp4`**（使用者提供的 Android 螢幕錄影）。撰寫時尚未放入 repo，
+建議路徑 `review/bug/10976.mp4`。另見 `review/bug/` 既有的手機版問題標記與 triage。
+
+### 六、git 狀態與回退點
+
+- 分支 `main`｜HEAD `dfa900f`｜**尚未 push 的 commit：`dfa900f` 一個**（`origin/main` 停在 `9faa319`）
+- `src/`、`tools/`、`docs/` 乾淨；工作區只剩本次工作前就存在的舊未追蹤產物
+- 回退點：`9faa319`（H.2-close，**線上正式站就是這版**，不含本輪修正）／
+  `1950b00`（碰撞收斂 v3）／`15b5abb`（H.1）
+
+### 七、本次交接未做的動作
+
+未 `git add`、未 commit、未 push、未部署；未開始小兵 / 技能特效 / 英雄模型。
+
+---
+
+## H.2-flicker Codex 續修 — Android 坑壁批次單幀消失（2026-07-29）
+
+狀態：**根因修正與桌面自動驗證完成；待正式站 Android 真機驗收**。
+本輪以單一 commit 推送 `main` 並觸發 GitHub Pages；未開始小兵、技能特效或英雄模型。
+完整證據與真機驗收入口見
+`review/moba-runtime/h2-flicker/H2_FLICKER_HANDOFF.md` §8。
+
+### 一、影片逐幀定位
+
+分析 `review/bug/20260729_022915地圖閃爍bug.mp4`
+（27.460 秒、720×1600、約 59.60 fps），以瀏覽器原生 decoder +
+`requestVideoFrameCallback` 取得 1,611 次 presented-frame callback 並做相鄰幀比對。
+
+反覆消失的是**左上主要物件坑的整圈立體坑壁**，不是英雄、塔、selection ring 或
+shadow decal。代表事件出現在 14.383、14.886、15.641、16.129、16.883、
+19.384、19.636、19.887、20.139、21.397、21.884、22.136、26.868 秒；
+每次單幀消失、約 16.7ms 後整批恢復，影響縮小分析影格約 1.57–1.64%。
+6.162 秒的全 viewport／Android UI 重排則另判為 browser compositor／錄影事件。
+
+影片播放的是 GitHub Pages 正式站（當時為 `origin/main@9faa319`），不含本機 `dfa900f`，
+所以可用來定位舊版病灶，但不能當作 `dfa900f` 已在真機失敗的證據。
+
+### 二、根因與修正
+
+`MobaMapBlockout.jsx` 的 `BpWrap` 原本定義在 component render 內。英雄等級／生死等
+動態簽章使上層 `setFrame` 時，React 每次都看到新的 component type，因而卸載／重掛
+整個靜態地圖 subtree。坑壁 face/cap 是 `InstancedMesh`，matrix 又在 paint 後的
+`useEffect` 才填入；Android 因此顯示一幀空批次，下一幀才恢復。
+
+修正：
+
+1. wrapper 移至 module scope，固定 React type identity。
+2. `MobaRuntimeMap` 加 `React.memo`，隔開靜態地圖與動態 snapshot 的 render 邊界。
+3. 坑壁 instance matrices 改由 `useLayoutEffect` 在 paint 前完成。
+4. 診斷／verifier 新增 `mapWall` render-ready 與 UUID 逐幀檢查。
+5. 新增只在 `?diag=1`／`?shot` 出現的真機面板，可記錄／下載 `DEPTH_BITS`、
+   WebGL renderer/vendor、context attributes、camera near/far、DPR、buffer 尺寸與
+   context lost。
+
+修正前 35 秒直接探針：坑壁消失／恢復各 **148** 次、四批坑壁 UUID 共更換
+**596** 次；其他物件消失 0、NaN 0、context lost 0。修正後 60 秒：
+坑壁消失／恢復 **0/0**、UUID 更換 **0**。
+
+沒有關閉 `depthTest`、隱藏物件、拉高幾何，也沒有改碰撞、尋路、正式地圖資料、
+snapshot、Replay、Store 或發獎契約。前輪 near/far、polygonOffset 與內插退路修正
+保留，但深度精度不是影片中「整批不透明坑壁 on/off」的主因。
+
+### 三、修改檔案
+
+- `src/battle/moba/map/MobaMapBlockout.jsx`
+- `src/battle/moba/map/MobaRuntimeMap.jsx`
+- `src/battle/moba/render/MobaRuntimeView3D.jsx`
+- `src/battle/moba/render/RuntimeDeviceDiagnosticsPanel.jsx`（新增）
+- `src/battle/moba/render/runtimeDiagnostics.js`
+- `tools/check_moba_runtime_flicker_h2.mjs`
+- `review/moba-runtime/h2-flicker/H2_FLICKER_HANDOFF.md`
+- `docs/handoff/05_Sprint紀錄.md`
+
+### 四、驗證
+
+- flicker verifier：手機尺寸 60 秒 **31/31**（3,624 幀）；桌面 60 秒 **31/31**
+  （2,881 幀）。兩者坑壁 4→4、所有 disappear/reappear 0、UUID 更換 0、
+  NaN/context lost 0。
+- `npm run build` exit 0；`check:mobamap` **3553/3553**；
+  `check_moba_nav_h2` **14/14**。
+- `regress` **15/15**；`regress2` 節奏門檻 **8/8**。
+- `presentation29b2`（`SKIP_NESTED=1`）**12/12**；
+  `controls29b3`（`SKIP_NESTED=1`）**18/18**；
+  `camera/replay29b6`（`SKIP_NESTED=1`）**16/16**。
+- `git diff --check` exit 0。
+- 完整 `check_moba_runtime29` 有實際啟動，但外層 20 分鐘 timeout（exit 124）、
+  無最終輸出形狀，**未列為通過**。現行腳本 child timeout 為 5,400 秒，並註明
+  單一 `stats28` 可達約 87 分鐘；timeout 後沒有殘留 verifier 子行程。
+
+### 五、正式站 Android 真機待驗收與回退
+
+正式站驗收入口：
+
+`https://rayhuang0323.github.io/ESMO-/?debug=moba-runtime-battle&diag=1&waitTs=1&mapPresentation=runtime-v2`
+
+須在 Android 連續觀看／錄影至少 60 秒，覆蓋英雄升級、死亡與結構摧毀前後，
+並下載診斷 JSON；另確認 hero、tower、structure、ground overlay、selection ring、
+shadow decal、FPS、觸控與桌面外觀。未完成前不得宣稱真機通過。
+
+前一個未推送的 H.2 基準是 `dfa900f`，本次修正與既有 H.2 變更合併成單一 commit
+推送 `main`；只回退本次工作時的安全基準是 `dfa900f`，回退整個 H.2-flicker 則是
+`9faa319`。正式站部署完成後，
+仍須完成 Android 真機確認。

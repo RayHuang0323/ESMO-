@@ -21,6 +21,7 @@ import * as THREE from "three";
 import MobaRuntimeMap, { useRuntimeMapData } from "../map/MobaRuntimeMap.jsx";
 import MobaRuntimeHeroes from "./MobaRuntimeHeroes.jsx";
 import MobaRuntimeStructures from "./MobaRuntimeStructures.jsx";
+import RuntimeDeviceDiagnosticsPanel from "./RuntimeDeviceDiagnosticsPanel.jsx";
 import { adaptRuntimeMapFrame } from "../map/mobaRuntimeMapAdapter.js";
 //  H.2-close：內插點的可走性檢查（純資料查表，不改模擬；見 RuntimeFrameFeeder 內註解）
 import { isWalkable, HERO_RADIUS } from "../nav/mobaNavigation.js";
@@ -29,7 +30,7 @@ import {
 } from "../map/coordinateMapping.js";
 import { useGameStore } from "../../../useGameStore.js";
 import { ease } from "../../../gameData.js";
-import { diagnosticsEnabled, installRuntimeDiagnostics, removeRuntimeDiagnostics } from "./runtimeDiagnostics.js";
+import { diagnosticsEnabled, installRuntimeDiagnostics, removeRuntimeDiagnostics, countMount, countUnmount } from "./runtimeDiagnostics.js";
 
 const S = WORLD_SCALE;
 
@@ -44,6 +45,29 @@ const CAM = Object.freeze({
   distMax: 560,
   distDefault: 175,
   fov: 45,
+  // ── H.2-flicker：深度緩衝精度 ─────────────────────────────────────────────
+  //
+  //  【為什麼要改】透視深度的解析度是 Δz ≈ z²(far−near) / (far·near·2^bits)。
+  //  舊值 near=1 / far=4000 在**桌機的 24-bit 深度**下 Δz≈0.0018 世界單位，
+  //  分得開地面鋪層（層距 0.02–0.04）；但 Android 的 WebGL context 很常只給
+  //  **16-bit 深度**，同樣設定下 Δz≈0.467 —— 比場景裡**所有**圖層間距都大
+  //  ⇒ 地面鋪層、岩塊投影、選取環全部塌進同一個深度桶，逐幀在彼此之間跳
+  //  ⇒ 畫面上就是「一閃一閃、瞬間消失再出現」。
+  //  這也解釋了為什麼桌機怎麼看都正常、真機卻在閃：**它是精度問題，不是邏輯問題**，
+  //  scene graph 的 visible / key / mount 全部正常也照樣會閃。
+  //
+  //  【新值怎麼來】
+  //   near：最近可見幾何的距離。最小縮放 distMin=90、俯角 52°、fov 45°
+  //     ⇒ 視錐下緣與地面的交點距離 ≈ 90·sin52° / sin(52°+22.5°) ≈ 73；
+  //       再扣掉塔冠那類高物件（世界高度約 20）仍有 ≈55 ⇒ 取 35 留 1.5× 餘裕。
+  //   far：最大縮放 distMax=560 + 地圖半對角 ≈264 ⇒ ≈824 ⇒ 取 1000 留餘裕。
+  //   ⇒ far/near 從 4000 降到 28.6，**16-bit 下的 Δz 從 0.467 降到 0.013**
+  //     （比最小層距 0.02 小 1.5 倍以上），24-bit 下更是 5e-5。
+  //
+  //  ⚠ 改 distMin / distMax / pitch / fov 時要一起重算這兩個值，
+  //    並用 tools/check_moba_runtime_flicker_h2.mjs 複驗（它會檢查像素振盪）。
+  near: 35,
+  far: 1000,
 });
 
 /**
@@ -202,7 +226,11 @@ function RuntimeCamera({ ctrl, lockTarget }) {
     camera.position.set(st.pan.x - Math.sin(yaw) * back, h, st.pan.z + Math.cos(yaw) * back);
     camera.lookAt(st.pan.x, 0, st.pan.z);
     camera.fov = CAM.fov;
-    camera.near = 1; camera.far = 4000;
+    //  ⚠ H.2-flicker：near/far 必須讀 CAM，不能寫死。
+    //  這裡原本每幀硬塞 near=1 / far=4000，把 Canvas 的 camera 設定整個蓋掉
+    //  ⇒ 就算改了 CAM.near/far 也**完全不會生效**（診斷探針讀回來仍是 1/4000）。
+    //  深度精度就是靠這兩個值買的（見 CAM 的說明），寫死等於把手機的閃爍鎖死。
+    camera.near = CAM.near; camera.far = CAM.far;
     camera.updateProjectionMatrix();
   });
   return null;
@@ -218,6 +246,9 @@ function RuntimeFrameFeeder({ frameRef, onShapeChange, lockHeroId, lockTarget, s
   //  不會出現第二套座標轉換。
   const store = source ?? useGameStore;
   const sigRef = useRef("");
+  //  H.2-flicker：每名英雄「上一幀實際畫出來的位置」。內插點落在不可走區時退回它，
+  //  才不會在畫面上前後跳（見下方 lerpAt 的說明）。
+  const lastRendered = useRef(new Map());
   useFrame(() => {
     window.__ESMO_RUNTIME_TICK?.();
     const s = store.getState();
@@ -243,16 +274,23 @@ function RuntimeFrameFeeder({ frameRef, onShapeChange, lockHeroId, lockTarget, s
         let pos = lerpAt(a);
         if (!isWalkable(pos.x, pos.y, HERO_RADIUS, null)) {
           let okPos = null;
-          for (const k of [0.75, 0.5, 0.25, 0]) {
+          //  往回退找一個仍在可走區、且**不超過**目前進度的點。
+          for (const k of [0.75, 0.5, 0.25]) {
             const c = lerpAt(a * k);
             if (isWalkable(c.x, c.y, HERO_RADIUS, null)) { okPos = c; break; }
           }
-          //  ⚠ 最後退路用**最新 snapshot 的位置**，不是 prev：snap 是引擎這一 tick 剛算出來的
-          //  合法座標；prev 是上一 tick 的，若當時貼著某個「後來被拆掉的塔」，
-          //  用 alive=null（全部結構都當活著）去驗會判成不可走，於是退到 prev 反而留在
-          //  一個看起來不合法的點上。退到 snap 保證畫面上的位置永遠是引擎驗證過的位置。
-          pos = okPos ?? { x: p.pos.x, y: p.pos.y };
+          //  ── H.2-flicker：退路是「**維持上一幀畫過的位置**」，不是跳到 snap ──
+          //  ⚠ 這裡原本退到最新 snapshot 的位置，也就是這段內插的**終點**。
+          //  a 逐幀由 0 增到 1，只要中段有一小截落在不可走區，那幾幀就會被丟到終點、
+          //  下一幀又回到中途 ⇒ 位置序列變成「前進 → 跳到終點 → 退回」的來回跳，
+          //  肉眼看起來就是英雄在抖／閃。實測（靜止相機逐幀像素比對）殘留的振盪像素
+          //  幾乎全部集中在移動中的英雄身上，正是這個。
+          //  改成維持上一幀之後位置保持單調；而且上一幀本來就通過過可走判定
+          //  ⇒ 仍然不會穿牆。
+          const held = lastRendered.current.get(p.id);
+          pos = okPos ?? held ?? { x: p.pos.x, y: p.pos.y };
         }
+        lastRendered.current.set(p.id, { x: pos.x, y: pos.y });
         //  ⚠ 驗收用：把**未內插的引擎座標**一併帶著（只有開診斷時才會被讀）。
         //  H.2-close 需要分辨「碰撞算錯」與「內插切到牆角」——兩者在畫面上長得一樣，
         //  但修的地方完全不同。沒有這個欄位就只能猜。
@@ -291,6 +329,8 @@ export default function MobaRuntimeView3D({ quality = "high", lockHeroId = null,
   const onShapeChange = useCallback((f) => setFrame({ ...f }), []);
 
   useEffect(() => { if (onRecenterRef) onRecenterRef.current = () => ctrl.current?.recenter(); }, [onRecenterRef]);
+  //  H.2-flicker：整個 Runtime 畫面的掛載計數（純觀測）
+  useEffect(() => { countMount("view3d"); return () => countUnmount("view3d"); }, []);
   //  驗收探針只在截圖 / 除錯網址掛載；卸載時一併清乾淨（HMR 不留失效閉包）。
   useEffect(() => () => { if (diagnosticsEnabled()) removeRuntimeDiagnostics(); }, []);
 
@@ -298,10 +338,11 @@ export default function MobaRuntimeView3D({ quality = "high", lockHeroId = null,
   //    原本只比對 "mid" ⇒ medium 會掉進 high 分支，手機中階畫質等於沒生效。
   const dpr = quality === "low" ? [1, 1] : (quality === "mid" || quality === "medium") ? [1, 1.5] : [1, 2];
   return (
+    <>
     <Canvas
       dpr={dpr}
       gl={{ antialias: quality !== "low", powerPreference: "high-performance" }}
-      camera={{ position: [0, 260, 200], fov: CAM.fov, near: 1, far: 4000 }}
+      camera={{ position: [0, 260, 200], fov: CAM.fov, near: CAM.near, far: CAM.far }}
       onCreated={({ gl, scene, camera }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = 1.1;
         if (diagnosticsEnabled()) installRuntimeDiagnostics({ gl, scene, camera, frameRef });
@@ -325,5 +366,7 @@ export default function MobaRuntimeView3D({ quality = "high", lockHeroId = null,
       <RuntimeFrameFeeder frameRef={frameRef} onShapeChange={onShapeChange} lockHeroId={lockHeroId} lockTarget={lockTarget} source={source} />
       <RuntimeCamera ctrl={ctrl} lockTarget={lockHeroId ? lockTarget : null} />
     </Canvas>
+    <RuntimeDeviceDiagnosticsPanel />
+    </>
   );
 }

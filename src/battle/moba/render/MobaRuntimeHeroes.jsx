@@ -24,6 +24,7 @@ import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { WORLD_SCALE } from "../map/coordinateMapping.js";
 import { LAYER_Y } from "../map/mapVisualStyle.js";
+import { countMount, countUnmount } from "./runtimeDiagnostics.js";
 
 const S = WORLD_SCALE;
 const TEAM_COLOR = { blue: 0x4d95f0, red: 0xf0574d };
@@ -114,10 +115,17 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
       blueDead: mk(TEAM_DEAD.blue, { transparent: true, opacity: DEAD.bodyOpacity }),
       redDead: mk(TEAM_DEAD.red, { transparent: true, opacity: DEAD.bodyOpacity }),
       //  陣亡地面標記（四邊形外框，不受光，遠近都讀得到）
-      markBlue: new THREE.MeshBasicMaterial({ color: TEAM_DEAD.blue, transparent: true, opacity: DEAD.markOpacity, side: THREE.DoubleSide, depthWrite: false }),
-      markRed: new THREE.MeshBasicMaterial({ color: TEAM_DEAD.red, transparent: true, opacity: DEAD.markOpacity, side: THREE.DoubleSide, depthWrite: false }),
-      ringBlue: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.blue, transparent: true, opacity: 0.75, side: THREE.DoubleSide, depthWrite: false }),
-      ringRed: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.red, transparent: true, opacity: 0.75, side: THREE.DoubleSide, depthWrite: false }),
+      //  ── H.2-flicker：貼在地面上的環與標記一律加 polygonOffset ────────────────
+      //  這些東西和地形**幾乎共面**（選取環只抬 0.35 世界單位、塔環 0.11、目標環 0.09）。
+      //  只靠這點高度差要在深度緩衝裡分開，在 16-bit 的手機 context 上是不可能的
+      //  （Δz 比高度差還大 ⇒ 逐幀在地形與環之間跳 ⇒ 肉眼看到閃爍）。
+      //  polygonOffset 的單位是**深度緩衝的最小可解析差**，不是世界單位
+      //  ⇒ 不管 16-bit 還是 24-bit 都會被推到地形前面，這是貼花的標準解法。
+      //  ⚠ 刻意**不**關 depthTest：關掉的話環會穿透牆與塔畫在最上層，那是遮蔽錯誤。
+      markBlue: new THREE.MeshBasicMaterial({ color: TEAM_DEAD.blue, transparent: true, opacity: DEAD.markOpacity, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
+      markRed: new THREE.MeshBasicMaterial({ color: TEAM_DEAD.red, transparent: true, opacity: DEAD.markOpacity, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
+      ringBlue: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.blue, transparent: true, opacity: 0.75, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
+      ringRed: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.red, transparent: true, opacity: 0.75, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
       //  ⚠ side: DoubleSide 是保險——血條群組已經每幀反轉回世界朝向（見 useFrame），
       //    但只要有人日後改動 facing 的套用方式，單面材質會讓血條**整條消失**而不是畫錯。
       //
@@ -136,6 +144,12 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
     Object.values(geo).forEach((g) => g.dispose());
     Object.values(mats).forEach((m) => m.dispose());
   }, [geo, mats]);
+
+  //  H.2-flicker：掛載計數（純觀測；見 MobaRuntimeStructures 內同樣的註解）
+  useLayoutEffect(() => {
+    countMount("heroes");
+    return () => countUnmount("heroes");
+  }, []);
 
   //  每幀把 Adapter 的最新位置寫進 ref（不經過 React state ⇒ 不重繪）
   useFrame(() => {

@@ -16,6 +16,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { WORLD_SCALE, simToWorld } from "../map/coordinateMapping.js";
 import { LAYER_Y } from "../map/mapVisualStyle.js";
+import { countMount, countUnmount } from "./runtimeDiagnostics.js";
 
 /** ⚠ 地面鋪層高度在 LAYER_Y（不是 HEIGHT）；取不到就退回安全值，不讓它變成 NaN。 */
 const layer = (key, fallback) => (Number.isFinite(LAYER_Y[key]) ? LAYER_Y[key] : fallback);
@@ -61,6 +62,13 @@ const RING_Y = Object.freeze({
  */
 export default function MobaRuntimeStructures({ structures = [], objectives = [], towerAnchors, frameRef = null }) {
   const nodes = useRef(new Map());
+  //  H.2-flicker：掛載計數。閃爍的其中一個可能根因是「元件在對戰途中被反覆卸載重掛」
+  //  （每次重掛都會有幾幀沒有東西可畫）。這裡如實記錄，讓 verifier 用數字判斷，
+  //  而不是靠猜。⚠ 純觀測，不影響任何呈現。
+  useLayoutEffect(() => {
+    countMount("structures");
+    return () => countUnmount("structures");
+  }, []);
 
   const geo = useMemo(() => ({
     crown: new THREE.OctahedronGeometry(1.5 * S, 0),
@@ -78,10 +86,12 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
     crownBlue: new THREE.MeshStandardMaterial({ color: TEAM_COLOR.blue, emissive: TEAM_COLOR.blue, emissiveIntensity: 0.8, roughness: 0.3, flatShading: true }),
     crownRed: new THREE.MeshStandardMaterial({ color: TEAM_COLOR.red, emissive: TEAM_COLOR.red, emissiveIntensity: 0.8, roughness: 0.3, flatShading: true }),
     dead: new THREE.MeshStandardMaterial({ color: 0x3b3f45, roughness: 1, flatShading: true, transparent: true, opacity: 0.5 }),
-    ringBlue: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.blue, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false }),
-    ringRed: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.red, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false }),
-    objAlive: new THREE.MeshBasicMaterial({ color: 0xd8b45a, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false }),
-    objDead: new THREE.MeshBasicMaterial({ color: 0x555a60, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false }),
+    //  H.2-flicker：塔環（抬 0.11）與大型目標環（抬 0.09）幾乎與地形共面
+    //  ⇒ 一律用 polygonOffset 推到地形前面（理由見 MobaRuntimeHeroes 的同段註解）。
+    ringBlue: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.blue, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
+    ringRed: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.red, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
+    objAlive: new THREE.MeshBasicMaterial({ color: 0xd8b45a, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
+    objDead: new THREE.MeshBasicMaterial({ color: 0x555a60, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
   }), []);
 
   useLayoutEffect(() => () => {
@@ -200,6 +210,7 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
           rotation={[-Math.PI / 2, 0, 0]}
           scale={o.type === "dragon" || o.type === "baron" ? 1.6 : 1}
           frustumCulled={false}
+          userData={{ part: "objective-ring", objectiveId: o.id }}
         />
       ))}
     </group>

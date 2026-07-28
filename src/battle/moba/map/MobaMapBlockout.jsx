@@ -16,7 +16,7 @@
 //    · Debug Html 標籤只在 Debug 模式建立。
 //    詳細效能數字以預覽頁的即時 HUD（gl.info）為準。
 // ============================================================================
-import React, { useMemo, useRef, useEffect } from "react";
+import React, { useMemo, useRef, useEffect, useLayoutEffect } from "react";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { Html } from "@react-three/drei";
@@ -32,6 +32,7 @@ import { InstancedLODGroup } from "../../../environment/placement/InstancedLODGr
 import { presetForLod } from "../../../environment/placement/lodRings.js";
 
 const S = WORLD_SCALE;
+const WALL_CAP_SCALE = Object.freeze([1.06, 1.1, 1.0]);
 
 // 地面色塊的 kind → 圖層開關群組
 const LAYER_TOGGLE = {
@@ -92,9 +93,14 @@ const sideOfId = (id) => (id.includes("_blue") || id.includes("blue_") ? "blue"
   : id.includes("_red") || id.includes("red_") ? "red" : null);
 
 /** 靜態 InstancedMesh：一次設定矩陣 + per-instance 顏色（所有牆段共用材質）。 */
-function WallInstances({ items, geometry, material, capOffset = 0, capScale = null, colorOf }) {
+function WallInstances({
+  items, geometry, material, capOffset = 0, capScale = null, colorOf, diagnosticKey,
+}) {
   const ref = useRef();
-  useEffect(() => {
+  // H.2-flicker Android：instance matrices 必須在瀏覽器 paint 前就緒。
+  // useEffect 會晚到 paint 之後；只要 subtree 因父層更新而重掛，手機就會真的顯示
+  // 一幀尚未填入 instance matrices 的空白。layout effect 在 commit 後、paint 前完成。
+  useLayoutEffect(() => {
     const m = ref.current; if (!m) return;
     const mat = new THREE.Matrix4(), q = new THREE.Quaternion();
     const up = new THREE.Vector3(0, 1, 0), s = new THREE.Vector3(), p = new THREE.Vector3();
@@ -116,8 +122,23 @@ function WallInstances({ items, geometry, material, capOffset = 0, capScale = nu
     if (m.instanceColor) m.instanceColor.needsUpdate = true;
     m.computeBoundingSphere();
   }, [items, capOffset, capScale, colorOf]);
-  return <instancedMesh ref={ref} args={[geometry, material, Math.max(items.length, 1)]}
+  return <instancedMesh ref={ref} name={`moba-map-wall-${diagnosticKey}`}
+    args={[geometry, material, Math.max(items.length, 1)]}
     frustumCulled={false} castShadow={false} receiveShadow />;
+}
+
+/**
+ * G.15 blueprint 疊圖 wrapper。
+ *
+ * ⚠ H.2-flicker Android 根因：這個 component 原本定義在 MobaMapBlockout render 內。
+ * 每次英雄等級／生死更新讓上層 setFrame 重繪，函式 identity 都會變，React 因而把
+ * wrapper 下的坑壁 InstancedMesh 全部卸載重掛。放在 module scope 後 type identity
+ * 穩定，普通 re-render 只更新 props，不再重建靜態地圖。
+ */
+function BlueprintWrap({ overlayRed, side, children }) {
+  return overlayRed && side === "red"
+    ? <group rotation={[0, Math.PI, 0]}>{children}</group>
+    : <>{children}</>;
 }
 
 /**
@@ -391,22 +412,16 @@ export default function MobaMapBlockout({ show = {}, ring = "desktop", castTower
   //  G.15 overlay：紅方整組**繞世界原點轉 180°**（worldX(110)=worldZ(110)=0 ⇒ 世界原點
   //  就是地圖中心）疊回藍方身上。重合＝兩邊一模一樣；錯開＝畫面上直接看到洋紅色殘影。
   const bpOverlayRed = bpMode === "bp_overlay";
-  const BpWrap = ({ side, children }) => (
-    bpOverlayRed && side === "red"
-      ? <group rotation={[0, Math.PI, 0]}>{children}</group>
-      : <>{children}</>
-  );
-
   return (
     <group>
       {/* ── 地面（合併大 mesh）── */}
       {groundGroups.map((g) => (
         (g.toggle && !flags[g.toggle]) ? null : (
-          <BpWrap key={g.key} side={g.side}>
+          <BlueprintWrap key={g.key} overlayRed={bpOverlayRed} side={g.side}>
             <mesh geometry={g.geo} receiveShadow
               material={bpOverlayRed && g.side === "red" ? mats.groundTint
                 : g.river ? mats.groundRiver : mats.ground} />
-          </BpWrap>
+          </BlueprintWrap>
         )
       ))}
 
@@ -415,14 +430,16 @@ export default function MobaMapBlockout({ show = {}, ring = "desktop", castTower
         if (g.toggle && !flags[g.toggle]) return null;
         const red = bpOverlayRed && g.key === "bp_red";
         return (
-          <BpWrap key={g.key} side={g.key === "bp_red" ? "red" : "blue"}>
+          <BlueprintWrap key={g.key} overlayRed={bpOverlayRed}
+            side={g.key === "bp_red" ? "red" : "blue"}>
             <group>
               <WallInstances items={g.items} geometry={boxGeo}
-                material={red ? mats.wallTint : mats.wallFace} colorOf={wallFaceColor} />
+                material={red ? mats.wallTint : mats.wallFace} colorOf={wallFaceColor}
+                diagnosticKey={`${g.key}-face`} />
               {!red && <WallInstances items={g.items} geometry={boxGeo} material={mats.wallCap} colorOf={wallCapColor}
-                capOffset={0.55} capScale={[1.06, 1.1, 1.0]} />}
+                capOffset={0.55} capScale={WALL_CAP_SCALE} diagnosticKey={`${g.key}-cap`} />}
             </group>
-          </BpWrap>
+          </BlueprintWrap>
         );
       })}
 
@@ -433,7 +450,7 @@ export default function MobaMapBlockout({ show = {}, ring = "desktop", castTower
 
       {/* ── 基地：高地平台 + 主堡 + 泉水 ── */}
       {showBase && baseVolumes.map((n) => (
-        <BpWrap key={n.side} side={n.side}>
+        <BlueprintWrap key={n.side} overlayRed={bpOverlayRed} side={n.side}>
         <group>
           <mesh geometry={n.geo} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
             <meshStandardMaterial color={n.platformColor} roughness={0.9} flatShading />
@@ -461,18 +478,18 @@ export default function MobaMapBlockout({ show = {}, ring = "desktop", castTower
           <pointLight position={toWorld(n.fountain.x, n.fountain.y, HEIGHT.base_platform + 5)}
             color={n.color} intensity={18} distance={44} decay={2} />
         </group>
-        </BpWrap>
+        </BlueprintWrap>
       ))}
 
       {/* ── 塔（塔身合併 + 塔冠）── */}
       {showTowers && towerData.map(({ t, yBase, body, crownY }) => (
-        <BpWrap key={t.id} side={t.side}>
+        <BlueprintWrap key={t.id} overlayRed={bpOverlayRed} side={t.side}>
         <group>
           <mesh geometry={body} material={mats.towerBody} position={toWorld(t.x, t.y, 0)} castShadow={castTowerShadow} />
           <mesh geometry={crownGeo(t)} material={t.side === "blue" ? mats.crownBlue : mats.crownRed}
             position={toWorld(t.x, t.y, crownY)} />
         </group>
-        </BpWrap>
+        </BlueprintWrap>
       ))}
 
       {/* ── 草叢 / cover（可穿越視野遮蔽，非障礙）── */}
