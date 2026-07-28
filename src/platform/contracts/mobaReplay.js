@@ -30,6 +30,16 @@ export const REPLAY_SPEEDS = [0.5, 1, 2, 4];
 /** 1× 播放的「模擬秒/真實秒」——與現場對戰節奏一致（0.5 sim-s / 130ms tick）。 */
 export const SIM_PER_REAL = 0.5 / 0.13;
 
+const MINION_LANE_GROUPS = Object.freeze([
+  ["top", "bm"], ["top", "rm"], ["mid", "bm"],
+  ["mid", "rm"], ["bot", "bm"], ["bot", "rm"],
+]);
+
+const compactMinionId = (id) => {
+  const n = Number.parseInt(String(id).slice(1), 10);
+  return Number.isFinite(n) ? n : 0;
+};
+
 /** 終局 snapshot → 緊湊 frame（唯一轉換點；欄位齊全、全部可序列化）。 */
 export function snapshotToFrame(snap) {
   return {
@@ -49,6 +59,15 @@ export function snapshotToFrame(snap) {
     // S29B2：由「存活位元」升級為 **hp 值**（0–1，0 = 死亡）⇒ Replay 能顯示
     //   與現場一致的逐步掉血（frame 2s 取樣 + 播放端插值），不重新模擬。
     ...(snap.objectives ? { ob: snap.objectives.map((o) => (o.alive ? round3(o.hp) : 0)) } : {}),
+    // H.3：小兵緊湊 frame。六個固定群組依序 top/mid/bot × blue/red，
+    // 每列 [數字id, lane t, hp, kind(0 melee/1 caster), slot, wave]。
+    // lane/side 不逐列重複；舊 Replay 沒有 mn 時仍由播放端回退成空兵線。
+    ...(snap.lanes ? {
+      mn: MINION_LANE_GROUPS.map(([lane, key]) => (snap.lanes?.[lane]?.[key] ?? []).map((m) => [
+        compactMinionId(m.id), round4(m.t), round3(m.hp),
+        m.kind === "caster" ? 1 : 0, m.slot ?? 0, m.wave ?? 0,
+      ])),
+    } : {}),
   };
 }
 
@@ -93,6 +112,11 @@ export function validateMobaReplay(r) {
       if (!Array.isArray(f.p) || f.p.some((row) => !Array.isArray(row) || row.some((v) => !Number.isFinite(v)))) {
         errors.push(`frame[${i}].p 含非有限數值`); break;
       }
+      if (f.mn !== undefined && (!Array.isArray(f.mn) || f.mn.length !== 6 ||
+        f.mn.some((group) => !Array.isArray(group) ||
+          group.some((row) => !Array.isArray(row) || row.length < 3 || row.some((v) => !Number.isFinite(v)))))) {
+        errors.push(`frame[${i}].mn 形狀錯誤或含非有限數值`); break;
+      }
     }
   }
   if (!Array.isArray(r.events)) errors.push("events 必須為陣列");
@@ -111,3 +135,4 @@ export function estimateReplaySize(r) {
 
 const round2 = (v) => Math.round((Number.isFinite(v) ? v : 0) * 100) / 100;
 const round3 = (v) => Math.round((Number.isFinite(v) ? v : 0) * 1000) / 1000;
+const round4 = (v) => Math.round((Number.isFinite(v) ? v : 0) * 10000) / 10000;

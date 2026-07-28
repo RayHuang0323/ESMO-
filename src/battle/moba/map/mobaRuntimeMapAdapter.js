@@ -22,12 +22,14 @@
 import {
   simToWorld, inBoundsSim, clampSim, baseSim, pitSim, LANE_IDS,
 } from "./coordinateMapping.js";
-import { TOWER_HP, NEXUS_HP, ROLE_NAME } from "../../../gameData.js";
+import { TOWER_HP, NEXUS_HP, ROLE_NAME, posOnLane } from "../../../gameData.js";
 import { buildMobaLayout } from "./mobaMapLayout.js";
 import { buildCampPlan } from "./mapCampLayout.js";
+import { isWalkable, projectToWalkable } from "../nav/mobaNavigation.js";
 
 /** 呈現用高度（世界單位）：英雄站在地面上，結構的血條掛在頭頂。 */
 export const RUNTIME_Y = Object.freeze({ hero: 0, structure: 0 });
+export const MINION_RADIUS = 0.68;
 
 /** snapshot 的 hp 欄位是 0–1 比例；還原絕對值時用的每種結構最大血量。 */
 const STRUCT_MAX_HP = (lane) => (lane === "nexus" ? NEXUS_HP : TOWER_HP);
@@ -223,6 +225,73 @@ export function adaptObjectives(snapshot) {
   return out;
 }
 
+const MINION_GROUPS = Object.freeze([
+  ["top", "bm", "blue"], ["top", "rm", "red"],
+  ["mid", "bm", "blue"], ["mid", "rm", "red"],
+  ["bot", "bm", "blue"], ["bot", "rm", "red"],
+]);
+const FORMATION_LATERAL = Object.freeze([-1.05, 0, 1.05, 0]);
+
+function minionById(lanes) {
+  const out = new Map();
+  for (const [lane, key, team] of MINION_GROUPS) {
+    for (const m of lanes?.[lane]?.[key] ?? []) out.set(m.id, { ...m, lane, key, team });
+  }
+  return out;
+}
+
+function minionPosition(lane, team, t, slot, aliveStructures) {
+  const center = posOnLane(lane, t);
+  const d = 0.002;
+  const a = posOnLane(lane, Math.max(0, t - d));
+  const b = posOnLane(lane, Math.min(1, t + d));
+  const len = Math.max(1e-6, Math.hypot(b.x - a.x, b.y - a.y));
+  const tx = (b.x - a.x) / len, ty = (b.y - a.y) / len;
+  const nx = -ty, ny = tx;
+  const lateral = FORMATION_LATERAL[slot % FORMATION_LATERAL.length] ?? 0;
+  const trail = slot === 3 ? (team === "blue" ? -1.45 : 1.45) : 0;
+  const candidate = {
+    x: center.x + nx * lateral + tx * trail,
+    y: center.y + ny * lateral + ty * trail,
+  };
+  const sim = isWalkable(candidate.x, candidate.y, MINION_RADIUS, aliveStructures)
+    ? candidate
+    : projectToWalkable(center.x, center.y, MINION_RADIUS, aliveStructures, 7);
+  return { sim, facing: Math.atan2(tx * (team === "blue" ? 1 : -1), ty * (team === "blue" ? 1 : -1)) };
+}
+
+/**
+ * 三路小兵呈現資料。真值是 snapshot.lanes；隊形只是同一個 lane t 周圍的小幅視覺展開。
+ * 候選位置必須通過 H.2 同一份 map geometry + 存活結構碰撞，否則投影回可走區。
+ */
+export function adaptMinions(snapshot, opts = {}, structures = adaptStructures(snapshot)) {
+  const alpha = ratio01(opts.interpolation ?? 1);
+  const cur = minionById(snapshot?.lanes);
+  const prev = minionById(opts.prev?.lanes);
+  const aliveStructures = new Set(structures.filter((s) => s.alive).map((s) => s.id));
+  const out = [];
+  const add = (m, dying = false) => {
+    const q = prev.get(m.id);
+    const t = q && !dying ? num(q.t) + (num(m.t) - num(q.t)) * alpha : num(m.t);
+    const { sim, facing } = minionPosition(m.lane, m.team, t, m.slot ?? 0, aliveStructures);
+    out.push({
+      id: String(m.id), team: m.team, lane: m.lane,
+      kind: m.kind === "caster" ? "caster" : "melee",
+      slot: num(m.slot, 0), wave: num(m.wave, 0),
+      position: sim, world: simToWorld(sim, 0), facing,
+      hpRatio: dying ? 0 : ratio01(m.hp),
+      alive: !dying,
+      spawnProgress: q ? 1 : alpha,
+      deathProgress: dying ? alpha : 0,
+    });
+  };
+  for (const m of cur.values()) add(m, false);
+  if (alpha < 0.999) {
+    for (const m of prev.values()) if (!cur.has(m.id)) add(m, true);
+  }
+  return out;
+}
+
 /**
  * 一次把整份 snapshot 轉成 Renderer 需要的資料。
  * @returns {{ ts, over, winner, heroes, structures, objectives, teams, warnings }}
@@ -231,6 +300,7 @@ export function adaptRuntimeMapFrame(snapshot, opts = {}) {
   const heroes = adaptHeroes(snapshot, opts);
   const structures = adaptStructures(snapshot);
   const objectives = adaptObjectives(snapshot);
+  const minions = adaptMinions(snapshot, opts, structures);
   const warnings = [];
   const blue = heroes.filter((h) => h.team === "blue").length;
   const red = heroes.filter((h) => h.team === "red").length;
@@ -245,6 +315,7 @@ export function adaptRuntimeMapFrame(snapshot, opts = {}) {
     heroes,
     structures,
     objectives,
+    minions,
     teams: { blue, red },
     lanes: LANE_IDS,
     warnings,

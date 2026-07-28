@@ -18,8 +18,8 @@
 //  ⇒ 兩邊的視覺必然一致（29B6 D 項的 objective 死亡同步同時涵蓋重播）。
 //
 //  ── 誠實的資料缺口（不用假資料填補）────────────────────────────────────
-//    · **小兵**：`MobaReplay.v1` 的 frame 不含小兵（每幀 96 隻會讓容量翻倍）
-//      ⇒ 重播不畫小兵。這是擷取層的限制，不在畫面上編造。
+//    · H.3 起新 frame 可選擇帶緊湊 `mn` 小兵欄位；舊 Replay 沒有 `mn`
+//      ⇒ 仍回退成空兵線，不從目前引擎重建。
 //    · `state`（撤退/回城/團戰徽章）、`respawn` 秒數、`contested`、fx / feed /
 //      recallEvents 同樣未擷取 ⇒ 一律給 null / 空陣列，讓 view 顯示「無」而不是猜。
 //    · 舊 replay（無 `mapMeta` / 無 `objectivesMeta`）由呼叫端判斷是否可用 3D，
@@ -32,6 +32,29 @@ const clamp01 = (v) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0);
 const EMPTY_LANES = Object.freeze({
   top: { bm: [], rm: [] }, mid: { bm: [], rm: [] }, bot: { bm: [], rm: [] },
 });
+const MINION_LANE_GROUPS = Object.freeze([
+  ["top", "bm"], ["top", "rm"], ["mid", "bm"],
+  ["mid", "rm"], ["bot", "bm"], ["bot", "rm"],
+]);
+
+function lanesFromFrame(f) {
+  if (!Array.isArray(f?.mn) || f.mn.length !== 6) return EMPTY_LANES;
+  const lanes = {
+    top: { bm: [], rm: [] }, mid: { bm: [], rm: [] }, bot: { bm: [], rm: [] },
+  };
+  MINION_LANE_GROUPS.forEach(([lane, key], groupIndex) => {
+    const prefix = key === "bm" ? "b" : "r";
+    lanes[lane][key] = (f.mn[groupIndex] ?? []).map((row) => ({
+      id: `${prefix}${row?.[0] ?? 0}`,
+      t: Number.isFinite(row?.[1]) ? row[1] : 0,
+      hp: clamp01(row?.[2]),
+      kind: row?.[3] === 1 ? "caster" : "melee",
+      slot: Number.isFinite(row?.[4]) ? row[4] : 0,
+      wave: Number.isFinite(row?.[5]) ? row[5] : 0,
+    }));
+  });
+  return lanes;
+}
 
 /**
  * 這份 replay 能不能用 3D 戰場重播？
@@ -118,7 +141,7 @@ export function createReplaySource(replay) {
         side: tw.side, lane: tw.lane, tier: tw.tier ?? 0,
         pos: { ...tw.pos }, hp: clamp01(f.tw?.[id] ?? 0),
       }])),
-      lanes: EMPTY_LANES,         // 未擷取小兵（見檔頭「誠實的資料缺口」）
+      lanes: lanesFromFrame(f),   // H.3 新 frame 真值；舊 replay = EMPTY_LANES
       dragon: legacyMirror("dragon", f.dr),
       baron: legacyMirror("baron", f.br),
       objectives,

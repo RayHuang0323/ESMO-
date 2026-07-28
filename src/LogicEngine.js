@@ -64,6 +64,7 @@ export class LogicEngine {
     this.t = 0; this.over = false; this.winner = null;
     this.bK = 0; this.rK = 0; this.bGold = 500; this.rGold = 500;
     this.mid = 0; this.fx = []; this.waveTimer = R.waveFirst; this.feed = [];
+    this.waveNo = 0;             // H.3：兵線波次序號（只供 snapshot / Replay / 呈現）
 
     this.players = [];
     ["blue", "red"].forEach((side) => {
@@ -836,10 +837,16 @@ export class LogicEngine {
     this.waveTimer -= dt;
     if (this.waveTimer <= 0) {
       this.waveTimer = R.wavePeriod;
+      const wave = this.waveNo++;
       for (const ln of ["top", "mid", "bot"]) {
         for (let i = 0; i < 4; i++) {
-          if (this.lanes[ln].bm.length < 16) this.lanes[ln].bm.push({ id: "b" + this._mid++, t: 0.06, hp: 130 });
-          if (this.lanes[ln].rm.length < 16) this.lanes[ln].rm.push({ id: "r" + this._mid++, t: 0.94, hp: 130 });
+          const meta = { wave, slot: i, kind: i === 3 ? "caster" : "melee" };
+          if (this.lanes[ln].bm.length < 16) {
+            this.lanes[ln].bm.push({ id: "b" + this._mid++, t: 0.06, hp: 130, ...meta });
+          }
+          if (this.lanes[ln].rm.length < 16) {
+            this.lanes[ln].rm.push({ id: "r" + this._mid++, t: 0.94, hp: 130, ...meta });
+          }
         }
       }
     }
@@ -849,8 +856,53 @@ export class LogicEngine {
       const minionStep = R.minionWorldSpeed
         ? (R.minionWorldSpeed / laneLength(ln)) * dt
         : (R.minionProgressSpeed ?? 0.018) * dt;
-      this.lanes[ln].bm.forEach((m) => (m.t = Math.min(1, m.t + minionStep)));
-      this.lanes[ln].rm.forEach((m) => (m.t = Math.max(0, m.t - minionStep)));
+      if (R.minionCollision) {
+        // H.3：既有小兵原本「每 tick 無條件前進」，即使正在兵對兵交戰或存活塔仍在，
+        // t 也照樣穿過去。以下只修 v3：用 tick 開始時的位置同時計算雙方 next，
+        // 接敵就停在接觸距離、遇存活塔/主堡就停在攻擊帶外緣；不改傷害、金錢或波次數量。
+        const contact = 0.035;
+        // Keep the center inside the existing 0.05 tower targeting band. A
+        // larger offset let minions damage a tower from just outside retaliation.
+        const stopAtStructure = 0.046;
+        const advance = (arr, foes, side) => {
+          const dir = side === "blue" ? 1 : -1;
+          let blocker = this.frontTower(side, ln);
+          if (!blocker && this.laneCleared(side)) {
+            blocker = this.towers[side === "blue" ? "red_nexus" : "blue_nexus"];
+          }
+          return arr.map((m) => {
+            let next = clamp(m.t + dir * minionStep, 0, 1);
+            let nearest = null;
+            let nearestGap = Infinity;
+            for (const foe of foes) {
+              const gap = (foe.t - m.t) * dir;
+              if (gap >= -contact * 0.25 && gap < nearestGap) {
+                nearest = foe;
+                nearestGap = gap;
+              }
+            }
+            if (nearest && nearestGap <= contact + minionStep * 2) {
+              const meet = (m.t + nearest.t) * 0.5;
+              next = side === "blue"
+                ? Math.min(next, meet - contact * 0.25)
+                : Math.max(next, meet + contact * 0.25);
+            }
+            if (blocker) {
+              const stopT = blocker.t - dir * stopAtStructure;
+              next = side === "blue" ? Math.min(next, stopT) : Math.max(next, stopT);
+            }
+            return clamp(next, 0, 1);
+          });
+        };
+        const bNext = advance(this.lanes[ln].bm, this.lanes[ln].rm, "blue");
+        const rNext = advance(this.lanes[ln].rm, this.lanes[ln].bm, "red");
+        this.lanes[ln].bm.forEach((m, i) => { m.t = bNext[i]; });
+        this.lanes[ln].rm.forEach((m, i) => { m.t = rNext[i]; });
+      } else {
+        // v1/v2 歷史基準保持逐位元相同行為。
+        this.lanes[ln].bm.forEach((m) => (m.t = Math.min(1, m.t + minionStep)));
+        this.lanes[ln].rm.forEach((m) => (m.t = Math.max(0, m.t - minionStep)));
+      }
       if (R.symmetricMinionCombat) {
         // S29 修正（公平性 bug）：舊碼只迭代**藍方**小兵——多隻藍兵會挑到同一隻紅兵、
         //   把傷害集中在牠身上（死得快），藍兵受到的傷害卻是分散的 ⇒ 紅兵系統性先死。
@@ -1417,7 +1469,11 @@ export class LogicEngine {
     // S29B2：小兵 hp（0–1）進 snapshot——受擊/瀕死可視化的真實資料來源
     //   （引擎一直都有 m.hp，只是沒輸出；純觀測欄位，不影響任何模擬行為）。
     //   小兵死亡事件 = 消費端以「id 從陣列消失」推導（小兵只會因 hp≤0 離場）。
-    const mm = (m) => ({ id: m.id, t: m.t, hp: clamp(m.hp / 130, 0, 1) });
+    const mm = (m) => ({
+      id: m.id, t: m.t, hp: clamp(m.hp / 130, 0, 1),
+      // H.3：純附加呈現欄位。舊 consumer 只讀 id/t/hp，不受影響。
+      wave: m.wave ?? 0, slot: m.slot ?? 0, kind: m.kind ?? "melee",
+    });
     return { bm: this.lanes[ln].bm.map(mm), rm: this.lanes[ln].rm.map(mm) };
   }
 }

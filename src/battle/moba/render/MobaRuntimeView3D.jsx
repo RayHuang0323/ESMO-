@@ -21,6 +21,7 @@ import * as THREE from "three";
 import MobaRuntimeMap, { useRuntimeMapData } from "../map/MobaRuntimeMap.jsx";
 import MobaRuntimeHeroes from "./MobaRuntimeHeroes.jsx";
 import MobaRuntimeStructures from "./MobaRuntimeStructures.jsx";
+import MobaRuntimeMinions from "./MobaRuntimeMinions.jsx";
 import RuntimeDeviceDiagnosticsPanel from "./RuntimeDeviceDiagnosticsPanel.jsx";
 import { adaptRuntimeMapFrame } from "../map/mobaRuntimeMapAdapter.js";
 //  H.2-close：內插點的可走性檢查（純資料查表，不改模擬；見 RuntimeFrameFeeder 內註解）
@@ -33,6 +34,11 @@ import { ease } from "../../../gameData.js";
 import { diagnosticsEnabled, installRuntimeDiagnostics, removeRuntimeDiagnostics, countMount, countUnmount } from "./runtimeDiagnostics.js";
 
 const S = WORLD_SCALE;
+const numLerp = (a, b, t) => {
+  const av = Number.isFinite(a) ? a : (Number.isFinite(b) ? b : 0);
+  const bv = Number.isFinite(b) ? b : av;
+  return av + (bv - av) * t;
+};
 
 //  MOBA 標準斜俯視：相機在目標的後上方，俯角固定，縮放改變距離。
 const CAM = Object.freeze({
@@ -267,6 +273,7 @@ function RuntimeFrameFeeder({ frameRef, onShapeChange, lockHeroId, lockTarget, s
     const prevById = new Map((prev?.players ?? []).map((p) => [p.id, p]));
     const blended = {
       ...snap,
+      ts: numLerp(prev?.ts, snap.ts, a),
       players: (snap.players ?? []).map((p) => {
         const q = prevById.get(p.id);
         if (!q) return p;
@@ -297,7 +304,7 @@ function RuntimeFrameFeeder({ frameRef, onShapeChange, lockHeroId, lockTarget, s
         return { ...p, pos, rawPos: { x: p.pos.x, y: p.pos.y } };
       }),
     };
-    const frame = adaptRuntimeMapFrame(blended, { prev, roster: s.roster });
+    const frame = adaptRuntimeMapFrame(blended, { prev, roster: s.roster, interpolation: a });
     //  ⚠ 位置每幀都會變，但**掛載結構**（有哪些英雄／塔、誰死了、幾級）很少變。
     //    位置走 frameRef（不觸發 React），只有結構變了才 setState 重掛
     //    ⇒ 10 名英雄移動不會每幀重建整張地圖。
@@ -361,6 +368,7 @@ export default function MobaRuntimeView3D({ quality = "high", lockHeroId = null,
         towerAnchors={towerAnchors}
         frameRef={frameRef}
       />
+      <MobaRuntimeMinions frameRef={frameRef} />
       <MobaRuntimeHeroes heroes={frame.heroes} frameRef={frameRef} showLabels={quality !== "low"} />
 
       <RuntimeFrameFeeder frameRef={frameRef} onShapeChange={onShapeChange} lockHeroId={lockHeroId} lockTarget={lockTarget} source={source} />
