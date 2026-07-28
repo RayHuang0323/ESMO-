@@ -1,0 +1,477 @@
+{
+  "generatedAt": "2026-07-27T12:52:20.452Z",
+  "engine": "../src/LogicEngine.js",
+  "seeds": 40,
+  "dt": 0.5,
+  "finishRate": "40/40",
+  "finishedCount": 40,
+  "winRate": {
+    "bluePct": 52.5,
+    "redPct": 47.5,
+    "blue": 21,
+    "red": 19,
+    "draw": 0
+  },
+  "durationMin": {
+    "mean": 24.43,
+    "median": 24.35,
+    "min": 21.15,
+    "max": 28.32
+  },
+  "kills": {
+    "mean": 21.25,
+    "median": 20,
+    "zeroKillGames": 0
+  },
+  "towersBroke": {
+    "mean": 15.55,
+    "median": 16
+  },
+  "fairness": {
+    "blueWinPct": 52.5,
+    "blueWinPctReversed": 50,
+    "orderBiasPp": 2.5
+  },
+  "rows": [
+    {
+      "seed": 1,
+      "over": true,
+      "winner": "red",
+      "minutes": 24.408333333333335,
+      "kills": 16,
+      "blueKills": 7,
+      "redKills": 9,
+      "towersBroke": 15,
+      "minNexus": -1159.7524950316172
+    },
+    {
+      "seed": 2,
+      "over": true,
+      "winner": "blue",
+      "minutes": 27.025,
+      "kills": 28,
+      "blueKills": 17,
+      "redKills": 11,
+      "towersBroke": 17,
+      "minNexus": -509.9096461156282
+    },
+    {
+      "seed": 3,
+      "over": true,
+      "winner": "blue",
+      "minutes": 24.958333333333332,
+      "kills": 17,
+      "blueKills": 7,
+      "redKills": 10,
+      "towersBroke": 16,
+      "minNexus": -1278.8923001355015
+    },
+    {
+      "seed": 7,
+      "over": true,
+      "winner": "red",
+      "minutes": 22.825,
+      "kills": 15,
+      "blueKills": 5,
+      "redKills": 10,
+      "towersBroke": 14,
+      "minNexus": -1066.8566901535676
+    },
+    {
+      "seed": 42,
+      "over": true,
+      "winner": "blue",
+      "minutes": 27.341666666666665,
+      "kills": 21,
+      "blueKills": 17,
+      "redKills": 4,
+      "towersBroke": 17,
+      "minNexus": -942.4512683943087
+    },
+    {
+      "seed": 99,
+      "over": true,
+      "winner": "red",
+      "minutes": 24.95,
+      "kills": 19,
+      "blueKills": 8,
+      "redKills": 11,
+      "towersBroke": 16,
+      "minNexus": -825.0151070460704
+    },
+    {
+      "seed": 123,
+      "over": true,
+      "winner": "red",
+      "minutes": 21.15,
+      "kills": 12,
+      "blueKills": 1,
+      "redKills": 11,
+      "towersBroke": 13,
+      "minNexus": -336.64619670280024
+    },
+    {
+      "seed": 777,
+      "over": true,
+      "winner": "red",
+      "minutes": 23.958333333333332,
+      "kills": 15,
+      "blueKills": 4,
+      "redKills": 11,
+      "towersBroke": 16,
+      "minNexus": -921.0923985998193
+    },
+    {
+      "seed": 2024,
+      "over": true,
+      "winner": "blue",
+      "minutes": 24.35,
+      "kills": 31,
+      "blueKills": 21,
+      "redKills": 10,
+      "towersBroke": 15,
+      "minNexus": -593.1923844286367
+    },
+    {
+      "seed": 5555,
+      "over": true,
+      "winner": "blue",
+      "minutes": 26.508333333333333,
+      "kills": 30,
+      "blueKills": 23,
+      "redKills": 7,
+      "towersBroke": 16,
+      "minNexus": -2113.1228303974704
+    },
+    {
+      "seed": 314,
+      "over": true,
+      "winner": "red",
+      "minutes": 23.966666666666665,
+      "kills": 25,
+      "blueKills": 9,
+      "redKills": 16,
+      "towersBroke": 15,
+      "minNexus": -967.8203886630524
+    },
+    {
+      "seed": 271,
+      "over": true,
+      "winner": "red",
+      "minutes": 24.108333333333334,
+      "kills": 20,
+      "blueKills": 7,
+      "redKills": 13,
+      "towersBroke": 16,
+      "minNexus": -3.7398069105690865
+    },
+    {
+      "seed": 1618,
+      "over": true,
+      "winner": "blue",
+      "minutes": 26.741666666666667,
+      "kills": 24,
+      "blueKills": 17,
+      "redKills": 7,
+      "towersBroke": 17,
+      "minNexus": -4520.222866079493
+    },
+    {
+      "seed": 8080,
+      "over": true,
+      "winner": "red",
+      "minutes": 27.3,
+      "kills": 28,
+      "blueKills": 9,
+      "redKills": 19,
+      "towersBroke": 17,
+      "minNexus": -1391.5592784552841
+    },
+    {
+      "seed": 4242,
+      "over": true,
+      "winner": "red",
+      "minutes": 28.325,
+      "kills": 31,
+      "blueKills": 9,
+      "redKills": 22,
+      "towersBroke": 16,
+      "minNexus": -959.9481782972
+    },
+    {
+      "seed": 60755,
+      "over": true,
+      "winner": "blue",
+      "minutes": 22.016666666666666,
+      "kills": 21,
+      "blueKills": 12,
+      "redKills": 9,
+      "towersBroke": 13,
+      "minNexus": -316.5177393857251
+    },
+    {
+      "seed": 34624,
+      "over": true,
+      "winner": "red",
+      "minutes": 22.583333333333332,
+      "kills": 18,
+      "blueKills": 7,
+      "redKills": 11,
+      "towersBroke": 15,
+      "minNexus": -254.83262601626006
+    },
+    {
+      "seed": 61600,
+      "over": true,
+      "winner": "red",
+      "minutes": 22.341666666666665,
+      "kills": 15,
+      "blueKills": 4,
+      "redKills": 11,
+      "towersBroke": 15,
+      "minNexus": -511.9801924119238
+    },
+    {
+      "seed": 71608,
+      "over": true,
+      "winner": "blue",
+      "minutes": 22.616666666666667,
+      "kills": 17,
+      "blueKills": 15,
+      "redKills": 2,
+      "towersBroke": 16,
+      "minNexus": -35.865719286359536
+    },
+    {
+      "seed": 21664,
+      "over": true,
+      "winner": "red",
+      "minutes": 21.275,
+      "kills": 13,
+      "blueKills": 6,
+      "redKills": 7,
+      "towersBroke": 14,
+      "minNexus": -97.04913775971158
+    },
+    {
+      "seed": 73632,
+      "over": true,
+      "winner": "blue",
+      "minutes": 22.708333333333332,
+      "kills": 17,
+      "blueKills": 13,
+      "redKills": 4,
+      "towersBroke": 14,
+      "minNexus": -895.9293620144529
+    },
+    {
+      "seed": 5920,
+      "over": true,
+      "winner": "blue",
+      "minutes": 23.375,
+      "kills": 21,
+      "blueKills": 16,
+      "redKills": 5,
+      "towersBroke": 15,
+      "minNexus": -1030.2424299909658
+    },
+    {
+      "seed": 10240,
+      "over": true,
+      "winner": "blue",
+      "minutes": 25.983333333333334,
+      "kills": 14,
+      "blueKills": 10,
+      "redKills": 4,
+      "towersBroke": 17,
+      "minNexus": -938.6670896567302
+    },
+    {
+      "seed": 30688,
+      "over": true,
+      "winner": "red",
+      "minutes": 25.383333333333333,
+      "kills": 22,
+      "blueKills": 9,
+      "redKills": 13,
+      "towersBroke": 17,
+      "minNexus": -1014.882750903341
+    },
+    {
+      "seed": 60576,
+      "over": true,
+      "winner": "blue",
+      "minutes": 22.741666666666667,
+      "kills": 16,
+      "blueKills": 11,
+      "redKills": 5,
+      "towersBroke": 16,
+      "minNexus": -97.35769670280092
+    },
+    {
+      "seed": 32288,
+      "over": true,
+      "winner": "red",
+      "minutes": 22.725,
+      "kills": 19,
+      "blueKills": 4,
+      "redKills": 15,
+      "towersBroke": 16,
+      "minNexus": -439.43141147244796
+    },
+    {
+      "seed": 37600,
+      "over": true,
+      "winner": "red",
+      "minutes": 25.208333333333332,
+      "kills": 35,
+      "blueKills": 19,
+      "redKills": 16,
+      "towersBroke": 16,
+      "minNexus": -1670.709915311653
+    },
+    {
+      "seed": 72096,
+      "over": true,
+      "winner": "blue",
+      "minutes": 27.3,
+      "kills": 29,
+      "blueKills": 25,
+      "redKills": 4,
+      "towersBroke": 16,
+      "minNexus": -960.649678455284
+    },
+    {
+      "seed": 43200,
+      "over": true,
+      "winner": "blue",
+      "minutes": 25.008333333333333,
+      "kills": 19,
+      "blueKills": 11,
+      "redKills": 8,
+      "towersBroke": 15,
+      "minNexus": -1356.6459044715452
+    },
+    {
+      "seed": 13696,
+      "over": true,
+      "winner": "blue",
+      "minutes": 23.166666666666668,
+      "kills": 20,
+      "blueKills": 7,
+      "redKills": 13,
+      "towersBroke": 16,
+      "minNexus": -1036.0235187443545
+    },
+    {
+      "seed": 21248,
+      "over": true,
+      "winner": "blue",
+      "minutes": 23.033333333333335,
+      "kills": 16,
+      "blueKills": 13,
+      "redKills": 3,
+      "towersBroke": 14,
+      "minNexus": -128.44273035230503
+    },
+    {
+      "seed": 13152,
+      "over": true,
+      "winner": "red",
+      "minutes": 24.341666666666665,
+      "kills": 24,
+      "blueKills": 8,
+      "redKills": 16,
+      "towersBroke": 17,
+      "minNexus": -233.6471053410121
+    },
+    {
+      "seed": 26240,
+      "over": true,
+      "winner": "red",
+      "minutes": 21.416666666666668,
+      "kills": 16,
+      "blueKills": 7,
+      "redKills": 9,
+      "towersBroke": 15,
+      "minNexus": -247.82247854561933
+    },
+    {
+      "seed": 34656,
+      "over": true,
+      "winner": "blue",
+      "minutes": 25.3,
+      "kills": 24,
+      "blueKills": 17,
+      "redKills": 7,
+      "towersBroke": 15,
+      "minNexus": -18.33992457091199
+    },
+    {
+      "seed": 70176,
+      "over": true,
+      "winner": "red",
+      "minutes": 24.6,
+      "kills": 20,
+      "blueKills": 7,
+      "redKills": 13,
+      "towersBroke": 16,
+      "minNexus": -525.9863473351404
+    },
+    {
+      "seed": 99712,
+      "over": true,
+      "winner": "blue",
+      "minutes": 24.141666666666666,
+      "kills": 22,
+      "blueKills": 16,
+      "redKills": 6,
+      "towersBroke": 16,
+      "minNexus": -1111.9301142728093
+    },
+    {
+      "seed": 46080,
+      "over": true,
+      "winner": "blue",
+      "minutes": 24.075,
+      "kills": 19,
+      "blueKills": 16,
+      "redKills": 3,
+      "towersBroke": 15,
+      "minNexus": -1225.7439916440828
+    },
+    {
+      "seed": 42688,
+      "over": true,
+      "winner": "red",
+      "minutes": 25.741666666666667,
+      "kills": 26,
+      "blueKills": 14,
+      "redKills": 12,
+      "towersBroke": 15,
+      "minNexus": -591.1450609756107
+    },
+    {
+      "seed": 63232,
+      "over": true,
+      "winner": "blue",
+      "minutes": 25.691666666666666,
+      "kills": 26,
+      "blueKills": 20,
+      "redKills": 6,
+      "towersBroke": 16,
+      "minNexus": -284.4388353658537
+    },
+    {
+      "seed": 34752,
+      "over": true,
+      "winner": "blue",
+      "minutes": 26.691666666666666,
+      "kills": 29,
+      "blueKills": 15,
+      "redKills": 14,
+      "towersBroke": 16,
+      "minNexus": -1325.83632791328
+    }
+  ]
+}

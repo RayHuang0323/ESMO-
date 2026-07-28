@@ -21,12 +21,27 @@ import {
   ROLES, ROLE_LANE, TOWER_HP, NEXUS_HP, SIDE, BUSHES, CAMPS,
   WORLD_BOUNDS, INVASION_POINT,
 } from "./gameData.js";
+//  H.2：英雄碰撞與尋路的**唯一真實來源**。
+//  ⚠ 這裡刻意**不再** import gameData.WALLS：那是 28 個手寫圓，和畫面上的真實牆體
+//    對不起來（英雄會穿基地牆、穿岩壁、穿塔、穿主堡、穿坑壁）。H.2 起碰撞一律走
+//    mobaNavigation（由地圖 wallItems 柵格化的距離場 + 動態結構圓）。
+//    `gameData.WALLS` 只剩 legacy 畫面在用，不再是碰撞來源。
+import {
+  HERO_RADIUS, moveTowards, projectToWalkable, findPath, recenterToCorridor, lineWalkable,
+} from "./battle/moba/nav/mobaNavigation.js";
+//  H.2：塔位的單一真實來源（由地圖呈現座標推回 lane t），取代 posOnLane(lane, TOWER_T)。
+import { towerPlacementById } from "./battle/moba/map/mobaTowerPlacement.js";
 // S29：本場英雄等級/XP 與模擬節奏常數（純資料 + 純函式；引擎不自己定義曲線）
 import {
   rulesFor, XP, addMatchXp, powerMultFor, hpMultFor, xpToNext,
 } from "./battle/moba/matchProgression.js";
 
 const MAP_EDGE_PAD = 3;
+//  H.2 導航調參：近場預判距離與重算路徑的冷卻（tick）。
+//  ⚠ 冷卻不能太長：20 tick（10 模擬秒）時英雄會抱著過期路徑繼續磨牆；8 tick 實測
+//  把「泉水→中線」的行軍時間從 193s 拉回接近舊引擎的 146s，而 A* 只要 1.3ms。
+const NAV_LOOKAHEAD = 25;
+const NAV_REPATH_CD = 8;
 const clampMapX = (x) => clamp(x, WORLD_BOUNDS.minX + MAP_EDGE_PAD, WORLD_BOUNDS.maxX - MAP_EDGE_PAD);
 const clampMapY = (y) => clamp(y, WORLD_BOUNDS.minY + MAP_EDGE_PAD, WORLD_BOUNDS.maxY - MAP_EDGE_PAD);
 
@@ -102,7 +117,17 @@ export class LogicEngine {
     for (const lane of ["top", "mid", "bot"]) {
       ["blue", "red"].forEach((side) =>
         TOWER_T[side].forEach((t, tier) => {
-          this.towers[`${side}_${lane}_${tier}`] = { side, lane, tier, t, pos: posOnLane(lane, t), hp: TOWER_HP, atkCd: 0 };
+          const id = `${side}_${lane}_${tier}`;
+          //  H.2：塔位改採**單一真實來源**（地圖呈現座標）。
+          //  舊寫法用 posOnLane(lane, TOWER_T) 算出來的位置，和畫面上畫的塔平均差 15.4
+          //  單位（最大 25.7），而推塔判定距離只有 9 ⇒ 18 座塔有 12 座推不到。
+          //  取不到 placement 時退回舊算法（不靜默變成 undefined）。
+          //  ⚠ 只有 `navCollision` 規則集（v3）採用；v1/v2 是**歷史基準**，
+          //  runtime29 §12/§23 會拿它們重現舊節奏，換了塔位就不再是同一個基準。
+          const pl = R.navCollision ? towerPlacementById(id) : null;
+          this.towers[id] = pl
+            ? { side, lane, tier, t: pl.t, pos: { x: pl.x, y: pl.y }, hp: TOWER_HP, atkCd: 0 }
+            : { side, lane, tier, t, pos: posOnLane(lane, t), hp: TOWER_HP, atkCd: 0 };
         }));
     }
     this.towers["blue_nexus"] = { side: "blue", lane: "nexus", tier: 9, t: 0.02, pos: BASE.blue, hp: NEXUS_HP, atkCd: 0 };
@@ -434,7 +459,7 @@ export class LogicEngine {
     // 3) 一起套用
     for (const [p, reason, to] of casts) {
       const from = { x: p.pos.x, y: p.pos.y };
-      p.pos.x = to.x; p.pos.y = to.y;
+      this._navTeleport(p, to);            // H.2：閃現落點必須是可走區（不得閃進牆裡）
       this._spellEventV3(p, "flash", reason, from, p.pos);
     }
   }
@@ -672,12 +697,127 @@ export class LogicEngine {
     const def = side === "blue" ? "red" : "blue";
     return ["top", "mid", "bot"].some((ln) => [0, 1, 2].every((tr) => this.towers[`${def}_${ln}_${tr}`].hp <= 0));
   }
+  /**
+   * H.2：把一個英雄朝 tgt 推進 spd（模擬單位），全程遵守 mobaNavigation 的可走區。
+   *
+   * 三段式，成本由低到高：
+   *   ① 目標處理：tgt 先推回通道中心（`recenterToCorridor`；落在牆裡時等同投影到可走區）
+   *   ② 子步進直走：每步 ≤ 0.8 單位，撞牆沿牆**切線**滑動 ⇒ 不會高速穿透、也不會黏死在牆角
+   *   ③ 尋路：前方 `NAV_LOOKAHEAD`(25) 單位內有障礙就叫 A*（近場預判），
+   *      或雖然看起來通、實際幾乎走不動兩次時叫 A*；每名英雄有 `NAV_REPATH_CD`(8) tick 冷卻。
+   *      A* 實測 1.3ms（結構阻擋先蓋章成遮罩 + 加權啟發），一場約 1,000 次。
+   *
+   * ⚠ 決定性：投影是固定角度的螺旋搜尋、A* 是固定鄰居順序，皆無 Math.random
+   *   ⇒ 同 seed 仍得到同一場比賽。
+   * ⚠ `p._nav` 是純內部狀態，snapshot() 逐欄挑欄位，不會外洩到重播或存檔。
+   */
+  _navMove(p, tgt, spd) {
+    const alive = this._aliveStructs;
+    const nav = p._nav ?? (p._nav = { path: null, goal: null, stuck: 0, cd: 0 });
+    if (nav.cd > 0) nav.cd--;
+    //  H.2 診斷：「想走多少 / 真的走了多少」。移速補償係數是否夠，不能憑感覺，要看這個。
+    //  純觀測欄位（不進 snapshot、不影響模擬），verifier 與 bench 會讀。
+    //  ⚠ requestedIdeal 是「扣掉『快走到目標就只能走剩下那一點』之後」該走的距離。
+    //  舊引擎（穿牆直線）也有這一項損耗，所以**只有 moved / requestedIdeal 才是碰撞造成的損失**，
+    //  moveSpeed 的補償係數要用它算，用 moved/requested 會過度補償。
+    const ns = this.navStats ?? (this.navStats = {
+      requested: 0, requestedIdeal: 0, moved: 0, blockedTicks: 0, pathCalls: 0, pathNull: 0, ticks: 0,
+    });
+    const x0 = p.pos.x, y0 = p.pos.y;
+    ns.requested += spd; ns.ticks++;
+    ns.requestedIdeal += Math.min(spd, Math.hypot(tgt.x - p.pos.x, tgt.y - p.pos.y));
+
+    //  目標點先推回通道中心（見 recenterToCorridor）：手繪 lane 折線有兩成落在牆邊，
+    //  直接拿來當目標的話英雄會整場貼牆磨，移速被系統性吃掉。
+    const goal = recenterToCorridor(tgt.x, tgt.y, HERO_RADIUS, alive);
+    //  目標明顯換位置 ⇒ 舊路徑作廢
+    if (!nav.goal || Math.hypot(nav.goal.x - goal.x, nav.goal.y - goal.y) > 6) {
+      nav.goal = goal; nav.path = null;
+    }
+
+    let remain = spd;
+    //  ② 先跟著既有路徑走
+    while (remain > 1e-6 && nav.path && nav.path.length) {
+      const wp = nav.path[0];
+      const r = moveTowards(p.pos, wp, remain, HERO_RADIUS, alive);
+      p.pos.x = r.x; p.pos.y = r.y;
+      remain -= Math.max(0, r.moved);
+      if (Math.hypot(wp.x - p.pos.x, wp.y - p.pos.y) < 1.2) { nav.path.shift(); continue; }
+      if (r.moved < 1e-3) { nav.path = null; }     // 路徑失效（例如中途蓋了塔）
+      break;
+    }
+    if (nav.path && nav.path.length === 0) nav.path = null;
+
+    //  ③ 沒路徑（或路徑走完）就直接朝目標推進
+    if (remain > 1e-6) {
+      //  ⚠ 先做**近場預判**再走：只在「撞牆兩次」之後才尋路的話，英雄會先沿著牆磨很久
+      //  （實測從泉水走到中線要 193 秒，舊引擎穿牆只要 146 秒 ⇒ 前 5 分等級從 4.12 掉到 3.62）。
+      //  只檢查前方 NAV_LOOKAHEAD 單位（不是整段）：整段 lineWalkable 每 tick 要取樣近 300 點，
+      //  近場 25 單位只要約 35 點，10 名英雄 × 每秒 2 tick 的成本可以接受。
+      if (!nav.path && nav.cd === 0) {
+        const dx = goal.x - p.pos.x, dy = goal.y - p.pos.y;
+        const dd = Math.hypot(dx, dy) || 1;
+        const look = Math.min(NAV_LOOKAHEAD, dd);
+        const ahead = { x: p.pos.x + (dx / dd) * look, y: p.pos.y + (dy / dd) * look };
+        if (!lineWalkable(p.pos, ahead, HERO_RADIUS, alive)) {
+          nav.path = findPath(p.pos, goal, HERO_RADIUS, alive);
+          ns.pathCalls++; if (!nav.path) ns.pathNull++;
+          nav.cd = NAV_REPATH_CD;
+          if (nav.path && nav.path.length) {
+            const wp = nav.path[0];
+            const r0 = moveTowards(p.pos, wp, remain, HERO_RADIUS, alive);
+            p.pos.x = r0.x; p.pos.y = r0.y;
+            remain -= Math.max(0, r0.moved);
+            if (Math.hypot(wp.x - p.pos.x, wp.y - p.pos.y) < 1.2) nav.path.shift();
+          }
+        }
+      }
+    }
+    if (remain > 1e-6) {
+      const r = moveTowards(p.pos, goal, remain, HERO_RADIUS, alive);
+      p.pos.x = r.x; p.pos.y = r.y;
+      if (r.blocked && r.moved < spd * 0.25) {
+        ns.blockedTicks++;
+        //  仍然走不動（例如近場看起來通、實際被塔或人堵住）⇒ 退回原本的「卡住才尋路」
+        if (++nav.stuck >= 2 && nav.cd === 0) {
+          nav.path = findPath(p.pos, goal, HERO_RADIUS, alive);
+          ns.pathCalls++; if (!nav.path) ns.pathNull++;
+          nav.stuck = 0;
+          nav.cd = NAV_REPATH_CD;
+        }
+      } else nav.stuck = 0;
+    }
+    ns.moved += Math.hypot(p.pos.x - x0, p.pos.y - y0);
+    p.pos.x = clampMapX(p.pos.x); p.pos.y = clampMapY(p.pos.y);
+  }
+
+  /**
+   * H.2：瞬移（閃現 / 回城 / 重生）也必須落在可走區，
+   * 否則英雄會被塞進牆裡，然後每 tick 被推來推去。
+   */
+  _navTeleport(p, to) {
+    if (!this.rules.navCollision) {          // v1/v2：維持舊行為（直接瞬移）
+      p.pos.x = to.x; p.pos.y = to.y;
+      return;
+    }
+    const q = projectToWalkable(to.x, to.y, HERO_RADIUS, this._aliveStructs);
+    p.pos.x = clampMapX(q.x); p.pos.y = clampMapY(q.y);
+    if (p._nav) { p._nav.path = null; p._nav.goal = null; p._nav.stuck = 0; }
+  }
+
   pushFx(f) { this.fx.push({ ...f, exp: f.exp ?? 0.35 }); if (this.fx.length > 60) this.fx.shift(); }
 
   tick(dt) {
     if (this.over) return;
     const R = this.rules;                       // S29：模擬規則集（移速/傷害/兵線/攻塔）
     this.t += dt;
+    //  H.2：本 tick 還活著的結構（塔 hp>0 才擋人）。**已摧毀的塔碰撞完全解除**
+    //  ⇒ 推掉的塔不再擋路，和畫面上塌成殘骸樁一致。每 tick 只算一次，
+    //    傳 Set 進 nav 層（傳陣列的話 nav 每次查詢都要重建 Set，會很慢）。
+    this._aliveStructs = new Set();
+    for (const [id, tw] of Object.entries(this.towers)) {
+      if (tw.hp > 0) this._aliveStructs.add(id);
+    }
     // S29B1（v3）：lateAccelT 之後額外增陡（sudden death，雙方對稱）⇒ 無戰術平局
     //   不再拖出 30 分鐘長尾。v1/v2 無此欄位 ⇒ 第二項恆為 0，行為不變。
     const lateFactor = 1 + Math.max(0, this.t - 360) / 600 +
@@ -811,7 +951,7 @@ export class LogicEngine {
       }
       for (const [p, to] of casts) {
         const from = { x: p.pos.x, y: p.pos.y };
-        p.pos.x = to.x; p.pos.y = to.y;
+        this._navTeleport(p, to);          // H.2：逃生閃現同樣要落在可走區
         this._spellEventV3(p, "flash", "escape", from, p.pos);
       }
     }
@@ -914,7 +1054,7 @@ export class LogicEngine {
         p.respawn -= dt;
         if (p.respawn <= 0) {
           p.dead = false; p.hp = p.maxHp; p.retreating = false; p.hitBy.clear();
-          const f = FOUNTAIN[p.side]; p.pos = { x: f.x, y: f.y }; p.state = "回防";
+          const f = FOUNTAIN[p.side]; this._navTeleport(p, f); p.state = "回防";   // H.2：重生點投影到可走區
           // S29B1（v3）：復活鎖——RETURN 期間不得參團/追擊，必須先走回戰線
           if (R.engagementFsm) { p.fsm = "RETURN"; p.reengageAt = this.t + R.respawnLock; p.chaseId = null; p.joinGo = false; p.objGo = false; p.contactSince = null; p.recallT = 0; }
         } else if (R.engagementFsm) p.fsm = "RESPAWN";
@@ -1009,7 +1149,7 @@ export class LogicEngine {
               p.recallT -= dt;
               if (p.recallT <= 0) {
                 const from = { x: p.pos.x, y: p.pos.y }, f = FOUNTAIN[p.side];
-                p.pos.x = f.x; p.pos.y = f.y;
+                this._navTeleport(p, f);     // H.2：回城落點投影到可走區
                 p.contactSince = null;
                 this._recallEventV3(p, "done", from);
                 st = "回城"; p.fsm = "RECALL";
@@ -1108,9 +1248,18 @@ export class LogicEngine {
       const d = dist(p.pos, tgt),
         spd = ((st === "團戰!" || st === "追擊") ? R.fightSpeed : R.moveSpeed) *
           (R.engagementFsm && p.retreating ? R.retreatSpeedMult : 1) * dt;
-      if (d > 0.6) { p.pos.x += ((tgt.x - p.pos.x) / d) * Math.min(spd, d); p.pos.y += ((tgt.y - p.pos.y) / d) * Math.min(spd, d); }
-      for (const o of WALLS) { const dd = dist(p.pos, o); if (dd < o.r + 1.4) { p.pos.x += ((p.pos.x - o.x) / (dd || 1)) * (o.r + 1.4 - dd); p.pos.y += ((p.pos.y - o.y) / (dd || 1)) * (o.r + 1.4 - dd); } }
-      p.pos.x = clampMapX(p.pos.x); p.pos.y = clampMapY(p.pos.y);
+      //  ── H.2：真正的碰撞與導航 ────────────────────────────────────────────
+      //  舊版是「直線位移 + 對 28 個手寫圓做推開」，那和畫面上的牆體無關 ⇒ 會穿牆。
+      //  現在：目標點先推回通道中心 → 子步進前進（沿牆切線滑動）→ 需要時尋路。
+      //  ⚠ 只在 `navCollision`（v3）啟用。v1/v2 保留舊路徑：它們是 runtime29 用來
+      //  重現「修改前病灶」的歷史基準，一旦也吃到碰撞就不再可比（實測 §12/§23/§29 會紅）。
+      if (R.navCollision) {
+        if (d > 0.6) this._navMove(p, tgt, spd);
+      } else {
+        if (d > 0.6) { p.pos.x += ((tgt.x - p.pos.x) / d) * Math.min(spd, d); p.pos.y += ((tgt.y - p.pos.y) / d) * Math.min(spd, d); }
+        for (const o of WALLS) { const dd = dist(p.pos, o); if (dd < o.r + 1.4) { p.pos.x += ((p.pos.x - o.x) / (dd || 1)) * (o.r + 1.4 - dd); p.pos.y += ((p.pos.y - o.y) / (dd || 1)) * (o.r + 1.4 - dd); } }
+        p.pos.x = clampMapX(p.pos.x); p.pos.y = clampMapY(p.pos.y);
+      }
       // S28：個人行為計數（真實觀測，非編造）——進入團戰的次數、貼在存活目標坑的 tick 數。
       //   紅方（無能力資料）同樣計數 ⇒ 天然對照組：藍方隨天賦變、紅方不變。
       if (this.playerStatsOn) {

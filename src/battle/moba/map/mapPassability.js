@@ -35,7 +35,22 @@ const CELL = 1.0;   // 格點解析度（模擬單位）；1.0 對 220×220 = 48
  * 把地圖柵格化，算出「離最近牆的淨距場」D（模擬單位）。
  * 障礙 = 所有 wallItems（草叢除外）＋ 競技場外。
  */
-function buildField(T) {
+/**
+ * @param opts.mirrorSymmetric
+ *   把障礙遮罩做 **180° 旋轉對稱化**（(x,y) 與 (maxX−x, maxY−y) 只要有一邊是牆，兩邊都算牆）
+ *   之後才算距離場。
+ *
+ *   ⚠ 為什麼需要：地圖的**裝飾性**岩石與崖體（rock 161 / cliff_mass 200 段）並不是嚴格鏡像的。
+ *   它們只當視覺時無所謂，但 H.2 把地圖幾何升級成**碰撞真實來源**之後，
+ *   不對稱就直接變成藍紅不公平——實測未對稱化時距離場有 39% 的格點左右不一致，
+ *   最壞的一格一邊是牆、鏡像位置卻完全開放，藍方勝率因此掉到 20%。
+ *
+ *   取「聯集」（任一邊是牆 ⇒ 兩邊都是牆）而不是「交集」，是因為**寧可多擋、不可漏擋**：
+ *   漏擋會讓英雄穿過畫面上明明存在的牆。
+ *
+ *   ⚠ 預設 false ⇒ 既有的地圖 verifier（check:mobamap 3553 條）行為完全不變。
+ */
+export function buildField(T, opts = {}) {
   const B = T.meta.bounds;
   const nx = Math.ceil((B.maxX - B.minX) / CELL) + 1;
   const ny = Math.ceil((B.maxY - B.minY) / CELL) + 1;
@@ -71,6 +86,17 @@ function buildField(T) {
     }
   });
 
+  //  180° 旋轉對稱化（在算距離場**之前**做，否則距離場本身不會是對稱的）
+  if (opts.mirrorSymmetric) {
+    for (let iy = 0; iy < ny; iy++) for (let ix = 0; ix < nx; ix++) {
+      const a = idx(ix, iy), b = idx(nx - 1 - ix, ny - 1 - iy);
+      if (wall[a] || wall[b]) {
+        if (!wall[a]) { wall[a] = 1; dist[a] = 0; wallId[a] = wallId[b]; }
+        if (!wall[b]) { wall[b] = 1; dist[b] = 0; wallId[b] = wallId[a]; }
+      }
+    }
+  }
+
   // Chamfer 距離變換（兩趟；a=1, b=√2 近似歐氏），並傳播 wallId
   const A = 1, Bd = Math.SQRT2;
   const relax = (id, nid, cost) => {
@@ -89,6 +115,18 @@ function buildField(T) {
     if (iy < ny - 1) relax(id, idx(ix, iy + 1), A);
     if (ix < nx - 1 && iy < ny - 1) relax(id, idx(ix + 1, iy + 1), Bd);
     if (ix > 0 && iy < ny - 1) relax(id, idx(ix - 1, iy + 1), Bd);
+  }
+  //  Chamfer 是**逐趟掃描**的近似，掃描方向本身有偏好：即使牆體遮罩已經是精確鏡像，
+  //  距離場仍會殘留約 4% 的格點左右不等（實測最壞 4.4e-4）。量很小，但英雄的可走判定
+  //  是 `clearance >= HERO_RADIUS` 的**硬門檻**，只要有一格剛好跨在門檻上，鏡像兩側
+  //  就會一邊能走一邊不能走。取兩側的**較小值**（寧可多擋、不可漏擋）抹平。
+  if (opts.mirrorSymmetric) {
+    for (let iy = 0; iy < ny; iy++) for (let ix = 0; ix < nx; ix++) {
+      const a = idx(ix, iy), b = idx(nx - 1 - ix, ny - 1 - iy);
+      if (a >= b) continue;                         // 每組只處理一次（中心格 a===b 跳過）
+      const m = Math.min(dist[a], dist[b]);
+      dist[a] = m; dist[b] = m;
+    }
   }
   return { B, nx, ny, gx, gy, idx, dist, wall, wallId, cellToSim: CELL };
 }
