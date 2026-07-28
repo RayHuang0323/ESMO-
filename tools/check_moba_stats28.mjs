@@ -327,10 +327,17 @@ ck("19) CS derived stats 不受影響（fpsRoster 仍走 getPlayerDerivedStats�
   fpsT.find((x) => x._gid === "b1").stats.rxn === fpsA.find((x) => x._gid === "b1").stats.rxn);
 
 // ═══ 20–27：既有 verifier / regress / build 全綠 ══════════════════════════
+//  ⚠ 子行程逾時（H.2 之後放寬）：H.2 把英雄碰撞接上真實地圖幾何，模擬成本從
+//  0.100 ms/tick 漲到約 0.32 ms/tick（3.2×，主因是每場約 900 次 A*）。
+//  舊的逾時值會把**還在正常跑**的子驗證器砍掉，回報成 `exit=-1` + 空 stdout，
+//  看起來像斷言失敗（實測 check_moba_stats28 單跑要 87 分鐘就是這樣被誤判的）。
+//  ⇒ 統一放寬到 90 分鐘。改動模擬成本時請一併回頭檢視這個值。
+const CHILD_TIMEOUT = 5400000;
+
 function runNode(script, shape, args = []) {
   try {
     const out = execFileSync(process.execPath, [path.join(ROOT, script), ...args],
-      { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 300000 });
+      { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: CHILD_TIMEOUT });
     return { ok: shape.test(out), code: 0, out };
   } catch (e) {
     return { ok: shape.test(String(e.stdout ?? "")), code: e.status ?? -1, out: String(e.stdout ?? "") };

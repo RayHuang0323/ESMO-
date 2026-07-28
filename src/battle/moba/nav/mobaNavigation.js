@@ -576,6 +576,22 @@ function maskFor(radius, alive) {
   return mask;
 }
 
+/**
+ * A* 的重用暫存表（世代戳記制）。
+ * `stamp[i] !== gen` 就代表 g/prev/closed[i] 是上一次搜尋留下的垃圾、視同未訪問
+ * ⇒ 不必每次清空 48,841 格。
+ */
+let _scratch = null;
+function scratch(n) {
+  if (!_scratch || _scratch.g.length !== n) {
+    _scratch = {
+      g: new Float32Array(n), prev: new Int32Array(n),
+      closed: new Uint8Array(n), stamp: new Int32Array(n), gen: 0,
+    };
+  }
+  return _scratch;
+}
+
 function findPathCanonical(from, to, radius, alive) {
   const { F } = nav();
   const need = radius;
@@ -633,17 +649,21 @@ function findPathCanonical(from, to, radius, alive) {
     return F.dist[id] * F.cellToSim >= need && !blockedCells[id];
   };
 
-  const g = new Float32Array(F.nx * F.ny).fill(Infinity);
-  const prev = new Int32Array(F.nx * F.ny).fill(-1);
-  const closed = new Uint8Array(F.nx * F.ny);
+  //  ⚠ 這三張表**重用**（見 scratch）：每次搜尋重新配置 3 × 48,841 格
+  //  （Float32 + Int32 + Uint8，約 0.4 MB）並填初值，光這一項一場就要配置 900 次。
+  //  改用「世代戳記」判斷資料是否屬於本次搜尋 ⇒ 免配置、免清空。
+  const S = scratch(F.nx * F.ny);
+  const gen = ++S.gen;
+  const { g, prev, closed, stamp } = S;
   const h = (ix, iy) => HEURISTIC_WEIGHT * Math.hypot(ix - tx, iy - ty);
   const open = new Heap();
-  g[sId] = 0; open.push(sId, h(sx, sy));
+  g[sId] = 0; stamp[sId] = gen; prev[sId] = -1; closed[sId] = 0;
+  open.push(sId, h(sx, sy));
 
   let expanded = 0, found = false;
   while (open.size) {
     const id = open.pop();
-    if (closed[id]) continue;
+    if (stamp[id] === gen && closed[id]) continue;
     closed[id] = 1;
     if (id === tId) { found = true; break; }
     if (++expanded > NODE_BUDGET) break;
@@ -652,17 +672,22 @@ function findPathCanonical(from, to, radius, alive) {
       const jx = ix + dx, jy = iy + dy;
       if (jx < 0 || jy < 0 || jx >= F.nx || jy >= F.ny) continue;
       const jid = F.idx(jx, jy);
-      if (closed[jid] || !cellOk(jx, jy)) continue;
+      const fresh = stamp[jid] !== gen;
+      if (!fresh && closed[jid]) continue;
+      if (!cellOk(jx, jy)) continue;
       const cost = (dx && dy) ? Math.SQRT2 : 1;
       const ng = g[id] + cost;
-      if (ng < g[jid]) { g[jid] = ng; prev[jid] = id; open.push(jid, ng + h(jx, jy)); }
+      if (fresh || ng < g[jid]) {
+        if (fresh) { stamp[jid] = gen; closed[jid] = 0; }
+        g[jid] = ng; prev[jid] = id; open.push(jid, ng + h(jx, jy));
+      }
     }
   }
   if (!found) return null;
 
   //  回溯 → 折線；再做一次「看得到就直走」的簡化，避免走成鋸齒
   const cells = [];
-  for (let cur = tId; cur !== -1; cur = prev[cur]) cells.push(cur);
+  for (let cur = tId; cur !== -1; cur = prev[cur]) cells.push(cur);   // prev 只在 stamp === gen 的格上寫過
   cells.reverse();
   const pts = cells.map((id) => ({
     x: F.B.minX + (id % F.nx) * F.cellToSim,
@@ -671,13 +696,22 @@ function findPathCanonical(from, to, radius, alive) {
   return simplify(pts, radius, alive).slice(1);
 }
 
-/** 視線可達就跳過中間點（減少折線點數，走起來自然）。 */
+/**
+ * 視線可達就跳過中間點（減少折線點數，走起來自然）。
+ *
+ * ⚠ 回掃**限制在 SIMPLIFY_WINDOW 格以內**：原本每次都從路徑最末端往回試，
+ * 一條 200 格的路徑最壞要做 2 萬次 `lineWalkable`（每次又取樣數十點）
+ * ⇒ 長途尋路的成本大半花在這裡，而不是 A* 本身。
+ * 視窗化之後折線點會多一點（走起來完全一樣，因為子步進本來就沿著折線走），
+ * 但成本從 O(n²) 降成 O(n × 視窗)。
+ */
+const SIMPLIFY_WINDOW = 24;
 function simplify(pts, radius, alive) {
   if (pts.length <= 2) return pts;
   const out = [pts[0]];
   let i = 0;
   while (i < pts.length - 1) {
-    let j = pts.length - 1;
+    let j = Math.min(pts.length - 1, i + SIMPLIFY_WINDOW);
     for (; j > i + 1; j--) if (lineWalkable(pts[i], pts[j], radius, alive)) break;
     out.push(pts[j]); i = j;
   }

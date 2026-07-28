@@ -1684,11 +1684,20 @@ A* 的鏡像映射把 `blue_top_0` 對到 `red_top_0`（正確是 `red_bot_0`）
 全部收斂到 v3；v1/v2 走回舊的「直線位移 + `gameData.WALLS` 圓形推開 + 直接瞬移」。
 改完後已重跑 `check_moba_nav_h2` 14/0 與 `regress2` 8/8（皆通過）。
 
-**還沒做完的**：
-1. 單跑 `node tools/check_moba_stats28.mjs` 與 `node tools/check_talent27.mjs`
-   確認 30/31 是逾時而非真失敗（本輪已啟動但未取得結果）。
-2. 若確認是逾時 ⇒ runtime29 的子行程 timeout（目前 900000ms）需要放寬，
-   因為 H.2 讓模擬成本變成 5.6×（0.100 → 0.556 ms/tick）。
-3. 重跑 `node tools/check_moba_runtime29.mjs`（單跑約 65 分鐘）確認回到 44/44。
+**逾時假說已證實**（單跑，計時）：
+- `node tools/check_talent27.mjs` → **44/44 通過**，耗時 **94 分 34 秒**
+- `node tools/check_moba_stats28.mjs` → 25/29，耗時 **87 分 42 秒**；
+  它自己的 4 項紅也全是巢狀子驗證器 `exit=-1`（同樣是逾時）
+⇒ 30/31 是**子行程被逾時砍掉**，不是斷言失敗。
+
+**已做的兩件補救**：
+1. `CHILD_TIMEOUT = 5400000`（90 分）取代 runtime29 900s / stats28 300s /
+   camera_replay29b6 600s 三處硬編碼逾時。
+2. 壓模擬成本（不改行為）：結構遮罩 bitmask 快取、A* 三張表改世代戳記重用、
+   折線簡化回掃限制 24 格視窗 ⇒ **0.683 → 0.321 ms/tick**（單場 2.05s → 0.93s）。
+   單次 A* 從 25–56ms 降到 0.44ms。
+
+**還沒做完的**：重跑 `node tools/check_moba_runtime29.mjs` 確認回到 44/44（執行中，
+預估 2–3 小時；它會巢狀跑 stats28 + talent27 + 其餘六支）。
 
 ⚠ 在 runtime29 回到 44/44 之前，**H.2 不算完成**。
