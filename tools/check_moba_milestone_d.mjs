@@ -12,7 +12,8 @@ import { useCameraStore } from "../src/battle/cameraStore.js";
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const R = rulesFor("v3");
 
-// 1) 塔／技能事件最低可讀窗：顯式短 life 也不可繞過正式 pushFx 正規化。
+// 1) D-fix2：exp 是 Replay 取樣保留窗；life 是實際繪製時間。
+// 兩者不可再綁成 3.4/4.2 秒，否則 0.5 秒一次的攻擊會重疊成白圈／白塊。
 const fxEngine = new LogicEngine(4101, null, { rules: "v3" });
 fxEngine.pushFx({
   type: "tower", pos: { x: 20, y: 20 }, target: { x: 21, y: 21 },
@@ -20,12 +21,12 @@ fxEngine.pushFx({
   feedback: "attack", exp: 1.1, life: 1.1,
 });
 const towerFx = fxEngine.fx.at(-1);
-assert.ok(towerFx.life >= 3.4 && towerFx.exp >= 3.4);
+assert.ok(towerFx.life >= 1.45 && towerFx.life < towerFx.exp && towerFx.exp >= 3.4);
 fxEngine.pushFx({
   type: "ult", pos: { x: 20, y: 20 }, target: { x: 21, y: 21 },
   sourceId: "b3", targetId: "r3", ability: "mid:power", feedback: "skill",
 });
-assert.ok(fxEngine.fx.at(-1).life >= 4.2);
+assert.ok(fxEngine.fx.at(-1).life >= 1.6 && fxEngine.fx.at(-1).life < fxEngine.fx.at(-1).exp);
 
 // 2) 本場等級：世界、面板、Replay frame 都必須取 mlv，不可退回跨場 lv。
 fxEngine.players[0].lv = 12;
@@ -148,7 +149,9 @@ assert.doesNotMatch(replayExecutable, /import\s+.*LogicEngine|\.tick\(/);
 
 console.log("Milestone D verifier: PASS", JSON.stringify({
   towerLife: towerFx.life,
+  towerRetention: towerFx.exp,
   skillLife: fxEngine.fx.at(-1).life,
+  skillRetention: fxEngine.fx.at(-1).exp,
   matchLevel: levelFrame.p[0][8],
   bossDamage: R.dragonAttackDamage,
   buffReplaySeconds: replayBlueJg.buffs.find((b) => b.id === "blue").remaining,

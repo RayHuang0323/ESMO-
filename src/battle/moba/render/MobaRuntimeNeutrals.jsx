@@ -6,6 +6,7 @@
 // ============================================================================
 import React, { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
+import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { WORLD_SCALE } from "../map/coordinateMapping.js";
@@ -126,15 +127,16 @@ export default function MobaRuntimeNeutrals({ objectives = [], frameRef = null }
   const geo = useMemo(() => ({
     bar: new THREE.PlaneGeometry(1, 1),
     leash: new THREE.RingGeometry(1.15 * S, 1.32 * S, 18),
+    blueBuffRune: new THREE.RingGeometry(2.8 * S, 3.35 * S, 4),
+    redBuffRune: new THREE.RingGeometry(2.8 * S, 3.35 * S, 3),
   }), []);
   const mats = useMemo(() => ({
     body: new THREE.MeshStandardMaterial({
       vertexColors: true, roughness: 0.95, flatShading: true,
     }),
-    accent: new THREE.MeshStandardMaterial({
-      vertexColors: true, emissive: 0xffffff, emissiveIntensity: 0.28,
-      roughness: 0.58, metalness: 0.15, flatShading: true,
-    }),
+    // D-fix2：白色 emissive 會把 vertex color 洗成同一種灰白；accent 改為直接保留
+    // mapMonsterShapes 的 blue_crystal／red_ember 顏色。
+    accent: new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }),
     hit: new THREE.MeshBasicMaterial({ color: 0xfff1b8, toneMapped: false }),
     barBg: new THREE.MeshBasicMaterial({
       color: 0x05080c, transparent: true, opacity: 0.96,
@@ -147,6 +149,16 @@ export default function MobaRuntimeNeutrals({ objectives = [], frameRef = null }
     leash: new THREE.MeshBasicMaterial({
       color: 0xfbbf24, transparent: true, opacity: 0.7, side: THREE.DoubleSide,
       depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8,
+    }),
+    blueBuffRune: new THREE.MeshBasicMaterial({
+      color: MONSTER_COLOR.blue_crystal, transparent: true, opacity: 0.62,
+      side: THREE.DoubleSide, depthWrite: false, polygonOffset: true,
+      polygonOffsetFactor: -5, polygonOffsetUnits: -10, toneMapped: false,
+    }),
+    redBuffRune: new THREE.MeshBasicMaterial({
+      color: MONSTER_COLOR.red_ember, transparent: true, opacity: 0.62,
+      side: THREE.DoubleSide, depthWrite: false, polygonOffset: true,
+      polygonOffsetFactor: -5, polygonOffsetUnits: -10, toneMapped: false,
     }),
   }), []);
 
@@ -327,6 +339,11 @@ function CampUnit({ objective, asset, geo, mats, register }) {
   }, [objective.id, register]);
 
   if (!asset) return null;
+  const buffKind = objective.presentationKey === "blueBuff" ? "blue"
+    : objective.presentationKey === "redBuff" ? "red" : null;
+  const buffLabel = buffKind === "blue" ? "BLUE BUFF · 藍"
+    : buffKind === "red" ? "RED BUFF · 紅" : null;
+  const top = Math.max(...asset.members.map((member) => member.top), 4);
   return (
     <group ref={root} position={[objective.world.x, GROUND_Y, objective.world.z]}
       visible={objective.alive} userData={{ objectiveId: objective.id, part: "dynamic-neutral" }}>
@@ -335,6 +352,26 @@ function CampUnit({ objective, asset, geo, mats, register }) {
           buff={objective.type === "buff"} geo={geo} mats={mats}
           register={(node) => { members.current[index] = node; }} />
       ))}
+      {buffKind && (
+        <>
+          <mesh geometry={buffKind === "blue" ? geo.blueBuffRune : geo.redBuffRune}
+            material={buffKind === "blue" ? mats.blueBuffRune : mats.redBuffRune}
+            position={[0, 0.3, 0]} rotation={[-Math.PI / 2, 0, buffKind === "blue" ? Math.PI / 4 : 0]}
+            renderOrder={46} frustumCulled={false}
+            userData={{ part: "buff-ground-rune", buff: buffKind }} />
+          <Html position={[0, top + 1.9 * S, 0]} center distanceFactor={190}
+            style={{ pointerEvents: "none" }}>
+            <span style={{
+              display: "inline-block", whiteSpace: "nowrap",
+              font: "800 8px ui-monospace,monospace",
+              color: buffKind === "blue" ? "#69c6ff" : "#ff846e",
+              background: "rgba(4,8,14,.72)", padding: "2px 4px", borderRadius: 3,
+              border: `1px solid ${buffKind === "blue" ? "#38bdf8" : "#f97316"}99`,
+              textShadow: "0 1px 2px #000",
+            }}>{buffLabel}</span>
+          </Html>
+        </>
+      )}
       <mesh ref={leash} geometry={geo.leash} material={mats.leash}
         position={[0, 0.24, 0]} rotation={[-Math.PI / 2, 0, 0]}
         visible={false} renderOrder={48} frustumCulled={false} />

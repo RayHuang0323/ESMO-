@@ -34,7 +34,8 @@ export default function MobaRuntimeEffects({ frameRef }) {
   const mats = useMemo(() => ({
     line: new THREE.MeshBasicMaterial({ ...readable, opacity: 0.9 }),
     ring: new THREE.MeshBasicMaterial({
-      ...readable, opacity: 0.76, side: THREE.DoubleSide,
+      // D-fix2：地環只作短暫提示。透明度低於彈體／爆點，避免遠景只剩白色大圈。
+      ...readable, opacity: 0.42, side: THREE.DoubleSide,
       polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8,
     }),
     orb: new THREE.MeshBasicMaterial({ ...readable, opacity: 1 }),
@@ -58,6 +59,8 @@ export default function MobaRuntimeEffects({ frameRef }) {
     slashQuat: new THREE.Quaternion(),
     euler: new THREE.Euler(),
     color: new THREE.Color(),
+    coreColor: new THREE.Color(0xffffff),
+    white: new THREE.Color(0xffffff),
   }), []);
 
   useLayoutEffect(() => {
@@ -93,7 +96,10 @@ export default function MobaRuntimeEffects({ frameRef }) {
     const lockMesh = refs.current.lock;
     if (!lineMesh || !ringMesh || !orbMesh || !slashMesh || !lockMesh) return;
     let lines = 0, rings = 0, orbs = 0, slashes = 0, locks = 0;
-    const { matrix, pos, scale, quat, dir, up, flat, lockQuat, slashQuat, euler, color } = q;
+    const {
+      matrix, pos, scale, quat, dir, up, flat, lockQuat, slashQuat, euler,
+      color, coreColor, white,
+    } = q;
     const elapsed = clock.getElapsedTime();
 
     const addRing = (world, radius, tint, y = GROUND_Y + 0.15) => {
@@ -153,9 +159,25 @@ export default function MobaRuntimeEffects({ frameRef }) {
       lines++;
     };
 
-    for (const fx of effects) {
+    // D-fix2 root cause：
+    // 長生命期讓一個團戰同時保留很多事件，而每個事件會吃 2–4 個 instance。
+    // 舊碼按最舊→最新填固定 pool，容量滿時最新的塔彈／技能 travel 反而被丟掉。
+    // 排序只改繪製優先級，不改事件、傷害或 Replay：塔 > 技能 > 普攻，
+    // travel > impact > cast，同級先畫較新的事件。
+    const phaseRank = { travel: 3, impact: 2, cast: 1 };
+    const drawPriority = (fx) => {
+      const fxStyle = fx.style ?? fx.skillVisual?.style ?? "bolt";
+      const tower = fxStyle === "tower" ? 100 : 0;
+      const skill = fx.feedback === "skill" || fx.variant === "power" || fx.type === "ult"
+        ? 40 : 0;
+      return tower + skill + (phaseRank[fx.phase] ?? 0) * 5 - (fx.progress ?? 0);
+    };
+    const orderedEffects = effects.slice().sort((a, b) => drawPriority(b) - drawPriority(a));
+
+    for (const fx of orderedEffects) {
       const life = Math.max(0.02, fx.lifeRatio ?? 0);
       color.setHex(fx.color ?? 0xffffff);
+      coreColor.copy(color).lerp(white, 0.42);
       const phase = fx.phase ?? (life > 0.72 ? "cast" : (life > 0.22 ? "travel" : "impact"));
       const phaseProgress = Math.max(0, Math.min(1, fx.phaseProgress ?? 0));
       const origin = currentWorld.get(String(fx.sourceId ?? "")) ?? fx.world;
@@ -212,7 +234,10 @@ export default function MobaRuntimeEffects({ frameRef }) {
           // MOBA 塔彈：從高塔冠飛向目標，保留明確飛行時間；不畫全長光束或震波。
           const projectileY = GROUND_Y + (1.35 + (1 - phaseProgress) * 3.2
             + Math.sin(Math.PI * phaseProgress) * 0.75) * S;
-          addOrb(moving, 0.58 * S * visualWidth, color, projectileY, 1.55);
+          // 雙層彈體：隊色外殼 + 白色實心核心。單層 additive 在遠景會融進路面／Bloom，
+          // 這層核心讓「單顆正在飛的東西」保持 6–10px 輪廓。
+          addOrb(moving, 0.74 * S * visualWidth, color, projectileY, 1.62);
+          addOrb(moving, 0.34 * S * visualWidth, coreColor, projectileY + 0.04 * S, 1.45);
           const tailP = Math.max(0, phaseProgress - 0.08);
           addOrb({
             x: ax + (bx - ax) * tailP,
@@ -223,7 +248,7 @@ export default function MobaRuntimeEffects({ frameRef }) {
             x: ax + (bx - ax) * Math.max(0, phaseProgress - 0.14),
             z: az + (bz - az) * Math.max(0, phaseProgress - 0.14),
           };
-          addLine(tail, moving, 0.2 * S * visualWidth, color, projectileY);
+          addLine(tail, moving, 0.26 * S * visualWidth, color, projectileY);
         } else if (["twinSlash", "fist", "dash", "minionSlash", "monsterClaw"].includes(style)) {
           addSlash(moving, (isMinion ? 0.62 : 1.15) * S * visualWidth, color, -0.9 + phaseProgress * 1.8);
           if (style === "twinSlash") addSlash(moving, 0.92 * S * visualWidth, color, 2.1 - phaseProgress * 1.4);
@@ -238,6 +263,10 @@ export default function MobaRuntimeEffects({ frameRef }) {
             (isMinion ? 0.16 : 0.28) * S * visualWidth * beamK, color, GROUND_Y + 1.35 * S);
           addOrb(moving, (isMinion ? 0.46 : (style === "flameOrb" ? 1.05 : 0.75)) * S * visualWidth,
             color, GROUND_Y + 1.55 * S, style === "shard" ? 1.8 : 1);
+          if (!isMinion && (isSkill || combatClass === "marksman")) {
+            addOrb(moving, 0.28 * S * visualWidth, coreColor, GROUND_Y + 1.58 * S,
+              style === "shard" ? 1.55 : 1);
+          }
           if (style === "wingBolt") {
             addOrb({ x: moving.x + 0.55 * S, z: moving.z }, 0.46 * S * visualWidth, color);
           }
@@ -249,14 +278,15 @@ export default function MobaRuntimeEffects({ frameRef }) {
         if (isTower) {
           // 小型點狀爆光 + 十字感斬弧；塔彈命中不再產生大面積同心圓。
           const strength = Math.max(0.45, 1 - phaseProgress * 0.5);
-          addOrb(impact, 0.92 * S * visualWidth * strength, color, GROUND_Y + 1.25 * S);
+          addOrb(impact, 1.08 * S * visualWidth * strength, color, GROUND_Y + 1.25 * S);
+          addOrb(impact, 0.46 * S * visualWidth * strength, coreColor, GROUND_Y + 1.28 * S);
           addSlash(impact, 0.72 * S * visualWidth, color, phaseProgress * 1.6);
           addSlash(impact, 0.56 * S * visualWidth, color, Math.PI / 2 + phaseProgress * 1.6);
         } else {
           const strength = Math.max(0.55, 1 - phaseProgress * 0.35);
           addOrb(impact, (isSkill ? 1.7 : (isMinion ? 0.7 : 1.05)) * S * visualWidth * strength,
             color, GROUND_Y + 1.35 * S);
-          addRing(impact, (1.05 + phaseProgress * (isSkill ? 3.2 : 1.8)) * S * visualWidth, color);
+          addRing(impact, (1.05 + phaseProgress * (isSkill ? 2.2 : 1.35)) * S * visualWidth, color);
           addSlash(impact, (isSkill ? 1.65 : 0.95) * S * visualWidth, color, phaseProgress * 1.8);
           if (isSkill || style === "siege") {
             addRing(impact, (0.72 + phaseProgress * 2.2) * S * visualWidth, color, GROUND_Y + 0.22);
@@ -295,10 +325,10 @@ export default function MobaRuntimeEffects({ frameRef }) {
   return (
     <group name="moba-runtime-effects">
       {pool("line", geo.line, mats.line, LINE_CAP, 40)}
-      {pool("ring", geo.ring, mats.ring, BURST_CAP, 41)}
-      {pool("orb", geo.orb, mats.orb, BURST_CAP, 42)}
-      {pool("slash", geo.slash, mats.slash, SLASH_CAP, 43)}
-      {pool("lock", geo.lock, mats.lock, LOCK_CAP, 44)}
+      {pool("ring", geo.ring, mats.ring, BURST_CAP, 39)}
+      {pool("orb", geo.orb, mats.orb, BURST_CAP, 52)}
+      {pool("slash", geo.slash, mats.slash, SLASH_CAP, 53)}
+      {pool("lock", geo.lock, mats.lock, LOCK_CAP, 51)}
     </group>
   );
 }

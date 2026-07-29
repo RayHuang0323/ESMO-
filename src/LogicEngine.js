@@ -1052,19 +1052,21 @@ export class LogicEngine {
   }
 
   pushFx(f) {
-    // Milestone B.2：正式 GameView 預設加速播放時，H.3 的 0.65 sim-s 只亮不到
-    // 一次人眼可辨識的瞬間。延長「事件呈現窗」而非攻擊 CD / 傷害，讓 live 與
-    // Replay 都能由同一事件完整顯示 cast → travel → impact。
-    const minLife = f.type === "tower" ? 3.4
+    // D-fix2：`exp` 是事件在 snapshot 裡的保留窗（Replay 每 2 秒取樣仍要拿得到），
+    // `life` 才是 renderer 的實際 cast→travel→impact 時長。D 曾把兩者都拉到
+    // 3.4/4.2 秒；英雄每 0.5 秒攻擊會同時疊 6–8 顆 additive FX，最後只剩白圈／白塊。
+    // 現在保留窗不變，但視覺時長控制在 1× 肉眼可讀且不長期遮場的範圍。
+    const minRetention = f.type === "tower" ? 3.4
       : (f.feedback === "skill" || f.type === "ult" ? 4.2
         : (f.feedback === "attack" || f.type === "line" ? 2.8 : 0.9));
-    const life = Math.max(f.exp ?? minLife, minLife);
+    const minVisualLife = f.type === "tower" ? 1.45
+      : (f.feedback === "skill" || f.type === "ult" ? 1.6
+        : (f.feedback === "attack" || f.type === "line" ? 1.1 : 0.9));
+    const retention = Math.max(f.exp ?? minRetention, minRetention);
+    const visualLife = Math.max(f.life ?? minVisualLife, minVisualLife);
     this.fx.push({
       ...f, id: f.id ?? `fx${this._fxSeq++}`, at: f.at ?? this.t,
-      // Milestone D：舊事件可顯式帶較短 life（塔彈原本是 1.1s），但 exp 已被
-      // 拉長；renderer 實際讀 life，造成「事件還在、彈體卻只亮約 0.29 真實秒」。
-      // 兩欄都套同一個最低呈現窗，只改視覺時序，不改 CD／傷害。
-      exp: life, life: Math.max(f.life ?? life, minLife),
+      exp: retention, life: visualLife,
     });
     if (this.fx.length > 60) this.fx.shift();
   }
