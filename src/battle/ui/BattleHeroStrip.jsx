@@ -103,6 +103,17 @@ function SideCell({ p, hero, roster, side, onOpen }) {
       <div style={{ minWidth: 0, textAlign: rev ? "right" : "left" }}>
         <div style={{ color: idColor, fontSize: 8.5, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 52 }}>{roster.player || p.id}</div>
         <div style={{ color: "#71717a", fontSize: 8, fontFamily: MONO }}>{p.k}/{p.d}/{p.a ?? 0}</div>
+        {!!p.buffs?.length && (
+          <div style={{ display: "flex", justifyContent: rev ? "flex-end" : "flex-start", gap: 2, marginTop: 1 }}>
+            {p.buffs.map((buff) => (
+              <span key={buff.id} title={`${buff.id} Buff：${Math.ceil(buff.remaining)}s`} style={{
+                font: "800 6px ui-monospace,monospace", borderRadius: 2, padding: "0 2px",
+                color: buff.id === "red" ? "#ff735e" : buff.id === "blue" ? "#68b5ff" : "#d8a8ff",
+                border: "1px solid currentColor", background: "rgba(0,0,0,.45)",
+              }}>{buff.id === "red" ? "R" : buff.id === "blue" ? "B" : "V"} {Math.ceil(buff.remaining)}</span>
+            ))}
+          </div>
+        )}
       </div>
       {/* CS：引擎無補兵數，保留位置顯示「—」（Legacy 位置為金色數字）*/}
       <span title="CS：引擎目前無補兵資料，保留位置（待接）" style={{ color: GOLD, fontSize: 9, fontWeight: 800, [rev ? "marginRight" : "marginLeft"]: "auto", flexShrink: 0, opacity: 0.4 }}>—</span>

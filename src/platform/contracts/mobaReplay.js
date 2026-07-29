@@ -64,6 +64,14 @@ export function snapshotToFrame(snap) {
     // S29B2：由「存活位元」升級為 **hp 值**（0–1，0 = 死亡）⇒ Replay 能顯示
     //   與現場一致的逐步掉血（frame 2s 取樣 + 播放端插值），不重新模擬。
     ...(snap.objectives ? { ob: snap.objectives.map((o) => (o.alive ? round3(o.hp) : 0)) } : {}),
+    // Milestone D：每名英雄的限時 Buff／狀態，依 frame.p 同順序。
+    // [red, blue, baron, slow] = 剩餘模擬秒；純附加 optional 欄，舊 Replay 相容。
+    ...(snap.players?.some((p) => p.buffs?.length || p.statusEffects?.length) ? {
+      bf: snap.players.map((p) => {
+        const remaining = (id, list = p.buffs) => round2(list?.find((b) => b.id === id)?.remaining ?? 0);
+        return [remaining("red"), remaining("blue"), remaining("baron"), remaining("slow", p.statusEffects)];
+      }),
+    } : {}),
     // H.3：小兵緊湊 frame。六個固定群組依序 top/mid/bot × blue/red，
     // 每列 [數字id, lane t, hp, kind(0 melee/1 caster), slot, wave]。
     // lane/side 不逐列重複；舊 Replay 沒有 mn 時仍由播放端回退成空兵線。

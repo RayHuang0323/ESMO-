@@ -110,6 +110,12 @@ export function adaptHeroes(snapshot, opts = {}) {
       targetId: p.target ?? null,
       actionState: p.state ?? null,
       respawnIn: num(p.respawn, 0),
+      buffs: Array.isArray(p.buffs) ? p.buffs.map((b) => ({
+        id: String(b.id), remaining: Math.max(0, num(b.remaining, 0)),
+      })) : [],
+      statusEffects: Array.isArray(p.statusEffects) ? p.statusEffects.map((b) => ({
+        id: String(b.id), remaining: Math.max(0, num(b.remaining, 0)),
+      })) : [],
       clamped,
     };
   });

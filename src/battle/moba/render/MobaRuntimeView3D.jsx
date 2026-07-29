@@ -322,7 +322,11 @@ function RuntimeFrameFeeder({ frameRef, onShapeChange, lockHeroId, lockTarget, s
     //    位置走 frameRef（不觸發 React），只有結構變了才 setState 重掛
     //    ⇒ 10 名英雄移動不會每幀重建整張地圖。
     frameRef.current = frame;
-    const sig = `${frame.heroes.map((h) => `${h.id}${h.alive ? 1 : 0}${h.level}`).join("|")}#`
+    const sig = `${frame.heroes.map((h) => {
+      const timed = [...(h.buffs ?? []), ...(h.statusEffects ?? [])]
+        .map((b) => `${b.id}:${Math.ceil(b.remaining ?? 0)}`).join(",");
+      return `${h.id}${h.alive ? 1 : 0}${h.level}[${timed}]`;
+    }).join("|")}#`
       + `${frame.structures.map((t) => `${t.id}${t.alive ? 1 : 0}`).join("|")}#`
       + `${frame.objectives.map((o) => `${o.id}${o.alive ? 1 : 0}`).join("|")}`;
     if (sig !== sigRef.current) { sigRef.current = sig; onShapeChange(frame); }

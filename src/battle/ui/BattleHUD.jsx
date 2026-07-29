@@ -36,6 +36,33 @@ function TowerDots({ towers, side }) {
   );
 }
 
+function BossStatusBar({ objectives = [] }) {
+  const active = objectives
+    .filter((o) => (o.type === "dragon" || o.type === "baron") && o.alive)
+    .sort((a, b) => (a.type === "baron" ? -1 : 1) - (b.type === "baron" ? -1 : 1))[0];
+  if (!active) return null;
+  const isBaron = active.type === "baron";
+  const color = isBaron ? "#f7b84b" : "#c28cff";
+  const hp = Math.max(0, Math.min(1, active.hp ?? 0));
+  return (
+    <div data-testid="boss-hud" style={{
+      position: "absolute", top: HUD_TOP + HUD_H + 6, left: "50%", transform: "translateX(-50%)",
+      width: "min(72vw, 330px)", zIndex: Z.hud, pointerEvents: "none",
+      borderRadius: 7, padding: "4px 7px", background: "rgba(7,10,16,.86)",
+      border: `1px solid ${color}88`, boxShadow: `0 2px 12px ${color}22`,
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", color, font: "800 8px ui-monospace,monospace", marginBottom: 3 }}>
+        <span>{isBaron ? "BARON · 巴龍" : "DRAGON · 巨龍"}</span>
+        <span>{Math.round(hp * (active.maxHp ?? 1))} / {Math.round(active.maxHp ?? 1)}</span>
+      </div>
+      <div style={{ height: 6, borderRadius: 99, overflow: "hidden", background: "rgba(255,255,255,.1)" }}>
+        <div style={{ height: "100%", width: `${hp * 100}%`, transition: "width .18s linear",
+          background: `linear-gradient(90deg,${color},#fff1ba)` }} />
+      </div>
+    </div>
+  );
+}
+
 export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭", redName = "赤焰軍團", redEmoji = "🔥", roster = null, tactic = null }) {
   const hud = useGameStore((s) => s.hud);
   const snap = useGameStore((s) => s.snapshot);
@@ -58,6 +85,7 @@ export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭
   );
 
   return (
+    <>
     // S29B6：top / 寬度 / z-index 改讀 `battleLayout` 共用常數——戰報與控制鈕
     //   的安全區（SAFE_TOP）由 HUD_TOP + HUD_H 推導，兩邊必須同一個來源，
     //   否則版型一改就又會有東西壓到藍紅條上（29B6 修的正是這個）。
@@ -124,5 +152,7 @@ export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭
         <span style={{ color: RED }}>{((1 - hud.winProb) * 100).toFixed(0)}%</span>
       </div>
     </div>
+    <BossStatusBar objectives={snap.objectives ?? []} />
+    </>
   );
 }

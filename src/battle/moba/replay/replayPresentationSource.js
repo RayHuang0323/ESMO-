@@ -145,6 +145,8 @@ export function createReplaySource(replay) {
       ts: f.t ?? 0,
       players: playersMeta.map((pm, i) => {
         const row = f.p?.[i];
+        const buffRow = f.bf?.[i] ?? [];
+        const timed = (id, value) => Number.isFinite(value) && value > 0 ? { id, remaining: value } : null;
         return {
           id: pm.id, side: pm.side, role: pm.role,
           pos: { x: row?.[0] ?? 0, y: row?.[1] ?? 0 },
@@ -158,6 +160,10 @@ export function createReplaySource(replay) {
           respawn: null,          // 未擷取：view 顯示「陣亡」而不是假的 0s 倒數
           state: null,            // 未擷取：不顯示撤退/回城/團戰徽章
           sp: null,
+          buffs: [
+            timed("red", buffRow[0]), timed("blue", buffRow[1]), timed("baron", buffRow[2]),
+          ].filter(Boolean),
+          statusEffects: [timed("slow", buffRow[3])].filter(Boolean),
         };
       }),
       towers: Object.fromEntries(Object.entries(towersMeta).map(([id, tw]) => [id, {

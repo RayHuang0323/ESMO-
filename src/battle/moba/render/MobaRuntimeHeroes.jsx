@@ -323,6 +323,13 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
   const bodyMaterial = mats.bodyByHero?.[visual?.id] ?? mats.accent;
   const secondaryMaterial = mats.secondaryByHero?.[visual?.id]
     ?? (hero.team === "blue" ? mats.blueDark : mats.redDark);
+  const timedStates = [...(hero.buffs ?? []), ...(hero.statusEffects ?? [])];
+  const stateMeta = {
+    red: { icon: "R", color: "#ff6b55", title: "紅 Buff" },
+    blue: { icon: "B", color: "#55aaff", title: "藍 Buff" },
+    baron: { icon: "V", color: "#d8a8ff", title: "Baron Buff" },
+    slow: { icon: "↓", color: "#a5b4c8", title: "減速" },
+  };
 
   useLayoutEffect(() => {
     register(hero.id, {
@@ -426,6 +433,29 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
             }} aria-hidden="true" />
             <span>{hero.displayName}</span>
             <span style={{ opacity: 0.72 }}>Lv{hero.level}</span>
+          </div>
+        </Html>
+      )}
+      {/* Milestone D：層級固定為 名稱/等級 → 血條 → Buff/狀態。低畫質可隱藏
+          次要名稱，但限時狀態仍保留小圖示與秒數。 */}
+      {!!timedStates.length && (
+        <Html position={[0, HERO.barY - 0.72 * S, 0]} center distanceFactor={152}
+          style={{ pointerEvents: "none" }}>
+          <div style={{ display: "flex", gap: 2, whiteSpace: "nowrap" }}>
+            {timedStates.map((state) => {
+              const meta = stateMeta[state.id] ?? { icon: "•", color: "#e5e7eb", title: state.id };
+              return (
+                <span key={state.id} title={meta.title} style={{
+                  minWidth: 15, height: 12, padding: "0 2px", borderRadius: 3,
+                  display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 1,
+                  font: "800 7px ui-monospace,monospace", color: meta.color,
+                  border: `1px solid ${meta.color}99`, background: "rgba(4,8,14,.72)",
+                  boxShadow: `0 0 4px ${meta.color}44`,
+                }}>
+                  {meta.icon}<small style={{ fontSize: 6, opacity: 0.82 }}>{Math.ceil(state.remaining ?? 0)}</small>
+                </span>
+              );
+            })}
           </div>
         </Html>
       )}

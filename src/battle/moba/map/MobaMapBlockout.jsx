@@ -388,10 +388,12 @@ export default function MobaMapBlockout({ show = {}, ring = "desktop", castTower
 
   // ── 野怪：每隻合併主體 + 發光重點 ────────────────────────────────────────────
   const monsterData = useMemo(() => T.monsters
-    // 正式 Runtime 的 6 個可互動營地由 MobaRuntimeNeutrals 畫動態實體；
+    // 正式 Runtime 的 6 個營地與 Dragon／Baron 都由 MobaRuntimeNeutrals
+    // 擁有動態實體；否則靜態 Boss 不會跟 snapshot 的死亡／重生同步。
     // Debug 地圖與四個 presentation-only 營地仍保留原本靜態剪影。
     .filter((m) => !dynamicCamps || !(
-      m.id.startsWith("mon_camp_") && !m.id.startsWith("mon_pcamp_")))
+      (m.id.startsWith("mon_camp_") && !m.id.startsWith("mon_pcamp_")) ||
+      m.id === "mon_dragon" || m.id === "mon_baron"))
     .map((m) => ({ m, ...buildMonsterGeo(m) })), [T, dynamicCamps]);
 
   // ── 基地高地平台 ────────────────────────────────────────────────────────────

@@ -121,6 +121,9 @@ export class LogicEngine {
           recallT: 0,          // 引導剩餘秒數（>0 = 回城中，原地不動）
           recallHpLast: 0,     // 上一 tick 血量（受擊中斷判定）
           recallCdAt: 0,       // 中斷後的重試冷卻
+          // Milestone D：有限時戰鬥 Buff／Debuff。until 是模擬秒絕對時間；
+          // v1/v2 永遠不讀，snapshot 只輸出剩餘秒數。
+          redBuffUntil: 0, blueBuffUntil: 0, redSlowUntil: 0,
         });
       });
     });
@@ -583,11 +586,37 @@ export class LogicEngine {
         if (side) {
           const members = side === "blue" ? b : r;
           const dmg = members.reduce((s, p) => s + p.power, 0) * R.objDmgK * dt;
-          o.hp -= dmg; o.dmgBy[side] += dmg;
+          o.hp -= dmg; o.dmgBy[side] += dmg; o.hitAt = this.t;
           for (const p of members) o.participants.add(p.id);
           // S29B2：打龍/巴龍的可視化彈道（每秒最多 2 條；純呈現，零 rng）
           if (fxTick) for (const p of members.slice(0, 2)) {
-            this.pushFx({ type: "line", pos: { x: p.pos.x, y: p.pos.y }, target: { ...o.pos }, color: SIDE[side] });
+            this.pushFx({
+              type: "line", pos: { x: p.pos.x, y: p.pos.y }, target: { ...o.pos }, color: SIDE[side],
+              sourceId: p.id, targetId: o.id, ability: `${p.role}:basic`, feedback: "attack",
+            });
+          }
+        }
+        // Boss 會黏著坑內最近的真實英雄反擊；不執行最後一擊，以免破壞
+        // Σk == Σd 的既有公平性／結果契約。attackAt/targetId 同步給地圖與 HUD。
+        o.atkCd = Math.max(0, (o.atkCd ?? 0) - dt);
+        const bossTargets = [...b, ...r].sort((a, z) =>
+          dist(a.pos, o.pos) - dist(z.pos, o.pos) || String(a.id).localeCompare(String(z.id)));
+        const bossTarget = bossTargets[0] ?? null;
+        o.targetId = bossTarget?.id ?? null;
+        if (bossTarget && o.atkCd <= 0) {
+          const interval = key === "baron" ? R.baronAttackInterval : R.dragonAttackInterval;
+          const raw = key === "baron" ? R.baronAttackDamage : R.dragonAttackDamage;
+          const amount = Math.min(raw, Math.max(0, bossTarget.hp - 1));
+          if (amount > 0) {
+            bossTarget.hp -= amount;
+            o.atkCd = interval; o.attackAt = this.t;
+            this.pushFx({
+              type: "neutral", pos: { ...o.pos }, target: { ...bossTarget.pos },
+              color: key === "dragon" ? 0xb794f6 : 0xfbbf24,
+              sourceId: o.id, targetId: bossTarget.id, ability: `boss:${key}`,
+              feedback: "attack", style: key === "dragon" ? "wingBolt" : "monsterClaw",
+              width: key === "dragon" ? 1.65 : 1.9,
+            });
           }
         }
         trySmite(o);
@@ -720,6 +749,21 @@ export class LogicEngine {
             q.gold += gold;
             if (R.matchXp) this._addXp(q, xpAmt);
           }
+          if (c.type === "buff") {
+            const receiver = alive.filter((q) => q.side === kt && c.participants.has(q.id))
+              .sort((a, b) => dist(a.pos, c.pos) - dist(b.pos, c.pos) ||
+                String(a.id).localeCompare(String(b.id)))[0] ?? null;
+            if (receiver) {
+              if (c.presentationKey === "redBuff") receiver.redBuffUntil = this.t + R.combatBuffT;
+              if (c.presentationKey === "blueBuff") receiver.blueBuffUntil = this.t + R.combatBuffT;
+              this.pushFx({
+                type: "ult", pos: { ...receiver.pos },
+                color: c.presentationKey === "redBuff" ? 0xff563d : 0x4ca8ff,
+                sourceId: c.id, targetId: receiver.id,
+                ability: `buff:${c.presentationKey}`, feedback: "skill", style: "buffAcquire",
+              });
+            }
+          }
         }
       }
     }
@@ -773,8 +817,10 @@ export class LogicEngine {
     else if (!foe) { const h = Math.min(p.maxHp, p.hp + p.maxHp * 0.02 * dt) - p.hp; p.hp += h; p.heal += h; }
     if (foe) {
       // S29：dmgK 由規則集決定（v1 0.92 ⇒ TTK 20–30 秒、前 5 分鐘幾乎零擊殺）
-      const dmgAmt = p.power * dt * R.dmgK * lateFactor;
+      const hasRedBuff = R.neutralObjectives && this.t < (p.redBuffUntil ?? 0);
+      const dmgAmt = p.power * dt * R.dmgK * lateFactor * (hasRedBuff ? R.redBuffDamageK : 1);
       p.dmg += dmgAmt; foe.hitBy.set(p.id, this.t); // Sprint06：傷害/助攻追蹤（附加）
+      if (hasRedBuff) foe.redSlowUntil = Math.max(foe.redSlowUntil ?? 0, this.t + R.redBuffSlowT);
       if (R.towerAttackInterval) {
         // Milestone C：英雄在敵方塔下攻擊該塔隊友時，短時間成為優先仇恨目標。
         // 只記錄事實，不改英雄傷害；塔端仍會檢查射程與存活。
@@ -794,7 +840,8 @@ export class LogicEngine {
           ability: `${p.role}:${power ? "power" : "basic"}`,
           feedback: power ? "skill" : "attack",
         });
-        p.atkCd = 0.5;
+        const hasBlueBuff = R.neutralObjectives && this.t < (p.blueBuffUntil ?? 0);
+        p.atkCd = 0.5 * (hasBlueBuff ? R.blueBuffCooldownK : 1);
       }
       if (R.simultaneousCombat) pendingHits.push([p, foe, dmgAmt]);
       else { foe.hp -= dmgAmt; if (foe.hp <= 0 && !foe.dead) this._resolveKill(p, foe); }
@@ -1609,7 +1656,8 @@ export class LogicEngine {
       //   「撤退＝死亡行軍」的結構性問題從機制面解掉，不是調傷害。
       const d = dist(p.pos, tgt),
         spd = ((st === "團戰!" || st === "追擊") ? R.fightSpeed : R.moveSpeed) *
-          (R.engagementFsm && p.retreating ? R.retreatSpeedMult : 1) * dt;
+          (R.engagementFsm && p.retreating ? R.retreatSpeedMult : 1) *
+          (R.neutralObjectives && this.t < (p.redSlowUntil ?? 0) ? R.redBuffSlowK : 1) * dt;
       //  ── H.2：真正的碰撞與導航 ────────────────────────────────────────────
       //  舊版是「直線位移 + 對 28 個手寫圓做推開」，那和畫面上的牆體無關 ⇒ 會穿牆。
       //  現在：目標點先推回通道中心 → 子步進前進（沿牆切線滑動）→ 需要時尋路。
@@ -1738,7 +1786,15 @@ export class LogicEngine {
       ts: this.t,
       // S29：mlv/mxp = **本場**英雄等級（1–18，終局丟棄）；lv = 英雄熟練等級（跨場，
       //   來自 Hero Progress loadout）。兩者並存且不同名 ⇒ 消費端不可能混用。
-      players: this.players.map((p) => ({ id: p.id, side: p.side, role: p.role, pos: { ...p.pos }, hp: clamp(p.hp / p.maxHp, 0, 1), dead: p.dead, respawn: p.respawn, state: p.state, k: p.k, d: p.d, a: p.a, gold: Math.round(p.gold), dmg: Math.round(p.dmg), heal: Math.round(p.heal), twrDmg: Math.round(p.twrDmg), lv: p.lv, mlv: p.mlv, mxp: Math.round(p.mxp), mxpNext: xpNextOf(p), ...(R.summonerSpells ? { sp: spOf(p) } : {}), ...(R.recallChannel ? { rc: p.recallT > 0 ? Math.round(p.recallT * 10) / 10 : 0 } : {}) })),
+      players: this.players.map((p) => ({ id: p.id, side: p.side, role: p.role, pos: { ...p.pos }, hp: clamp(p.hp / p.maxHp, 0, 1), dead: p.dead, respawn: p.respawn, state: p.state, k: p.k, d: p.d, a: p.a, gold: Math.round(p.gold), dmg: Math.round(p.dmg), heal: Math.round(p.heal), twrDmg: Math.round(p.twrDmg), lv: p.lv, mlv: p.mlv, mxp: Math.round(p.mxp), mxpNext: xpNextOf(p), ...(R.summonerSpells ? { sp: spOf(p) } : {}), ...(R.recallChannel ? { rc: p.recallT > 0 ? Math.round(p.recallT * 10) / 10 : 0 } : {}), ...(R.neutralObjectives ? {
+        buffs: [
+          ...(this.t < (p.redBuffUntil ?? 0) ? [{ id: "red", remaining: Math.round((p.redBuffUntil - this.t) * 10) / 10 }] : []),
+          ...(this.t < (p.blueBuffUntil ?? 0) ? [{ id: "blue", remaining: Math.round((p.blueBuffUntil - this.t) * 10) / 10 }] : []),
+          ...(this.fsm3 && this.t < (this.fsm3[p.side].baronBuffUntil ?? 0) ? [{ id: "baron", remaining: Math.round((this.fsm3[p.side].baronBuffUntil - this.t) * 10) / 10 }] : []),
+        ],
+        statusEffects: this.t < (p.redSlowUntil ?? 0)
+          ? [{ id: "slow", remaining: Math.round((p.redSlowUntil - this.t) * 10) / 10 }] : [],
+      } : {}) })),
       towers: Object.fromEntries(Object.entries(this.towers).map(([k, t]) => [k, { side: t.side, lane: t.lane, tier: t.tier, pos: t.pos, hp: clamp(t.hp / (t.lane === "nexus" ? NEXUS_HP : TOWER_HP), 0, 1) }])),
       lanes: { top: this._snapLane("top"), mid: this._snapLane("mid"), bot: this._snapLane("bot") },
       dragon: { ...this.dragon }, baron: { ...this.baron },
