@@ -2114,3 +2114,27 @@ shadow decal、FPS、觸控與桌面外觀。未完成前不得宣稱真機通�
 - GitHub Actions run `30414201468` 的 build／deploy 均成功，Pages deployment `5650235527` 回報 `success`。
 - 正式網址：<https://rayhuang0323.github.io/ESMO-/>。
 - Android 真機 FPS、熱降頻、觸控、閃爍與完整 Replay 視覺仍需人工確認；不開始下一階段。
+
+---
+
+## H.4 英雄視覺與技能表現整合（2026-07-29）
+
+狀態：**待人工驗收；已建立本機 commit，未 push、未部署。**
+
+### 本階段完成
+
+- `hero-visual.v1` 純呈現資料契約：10 名現役英雄（`ironclad`、`cinderfist`、`duskblade`、`chichuan`、`bingshuang`、`lieyan`、`leiting`、`yanfeng`、`dadi`、`stoneguard`）各有獨立 silhouette、accent、trim、badge recipe。
+- `heroVisualFor()` 以 stable hero id + deterministic hash 提供可擴充至 100 名以上的 fallback；沒有新增完整模型或外部資產。
+- Runtime adapter 從既有 roster 取 `heroId`，輸出 `visual`；未改 LogicEngine、snapshot/replay contract、碰撞、尋路、經濟、天賦或地圖結構。
+- 技能 FX 仍走固定 InstancedMesh 三池，依既有 ability/target/time 推導 cast、travel、impact，補足施法、飛行、命中回饋。
+
+### 驗證與畫面
+
+- build、H.4 verifier、H.3 minion/replay、H.2 navigation、presentation、controls、camera/replay、regress、regress2 全部通過；細節見 `review/moba-runtime/h4-hero-visual/H4_HERO_VISUAL_PRESENTATION_REPORT.md`。
+- 已做桌機 `1440×900` 與手機 `390×844` viewport 截圖：`review/moba-runtime/h4-hero-visual/H4_DESKTOP_1440x900.png`、`H4_MOBILE_390x844.png`、`H4_MOBILE_390x844_SCENE.png`。
+- 診斷觀測 WebGL2、`DEPTH_BITS=24`、`depth=true`、camera `near=35/far=1000`；桌面／手機 viewport 無水平溢出。Chrome extension 的 1–2 FPS 觀測不代表 Android 真機效能，仍須真機確認。
+
+### 待人工確認與回退
+
+- 正式 GameView 需人工確認 10 名英雄近景辨識、技能 cast→travel→命中回饋、手機 320/360/390/430px 跑版、真機閃爍／掉幀／過熱，以及 Replay 長時間播放。
+- H.4 回退基線：`082371b`。不得把既有未追蹤舊產物納入 commit。

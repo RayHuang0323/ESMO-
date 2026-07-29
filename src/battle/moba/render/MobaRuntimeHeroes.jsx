@@ -25,7 +25,7 @@ import * as THREE from "three";
 import { WORLD_SCALE } from "../map/coordinateMapping.js";
 import { LAYER_Y } from "../map/mapVisualStyle.js";
 import { countMount, countUnmount } from "./runtimeDiagnostics.js";
-import { archetypeData } from "../presentation/heroArchetypes.js";
+import { archetypeData, HERO_VISUALS } from "../presentation/heroArchetypes.js";
 
 const S = WORLD_SCALE;
 const TEAM_COLOR = { blue: 0x4d95f0, red: 0xf0574d };
@@ -108,16 +108,20 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
     staff: new THREE.CylinderGeometry(HERO.radius * 0.12, HERO.radius * 0.12, HERO.height * 1.25, 6),
     focus: new THREE.OctahedronGeometry(HERO.radius * 0.48, 0),
     launcher: new THREE.BoxGeometry(HERO.radius * 0.42, HERO.radius * 0.42, HERO.height * 0.95),
+    crest: new THREE.ConeGeometry(HERO.radius * 0.42, HERO.radius * 0.72, 5),
+    badge: new THREE.OctahedronGeometry(HERO.radius * 0.34, 0),
   }), []);
 
   const mats = useMemo(() => {
     const mk = (color, opts = {}) => new THREE.MeshStandardMaterial({
       color, roughness: 0.55, metalness: 0.05, flatShading: true, ...opts,
     });
+    const accentByHero = Object.fromEntries(Object.entries(HERO_VISUALS).map(([id, spec]) => [id, mk(spec.accent, { emissive: spec.accent, emissiveIntensity: 0.22, metalness: 0.2 })]));
     return {
       blue: mk(TEAM_COLOR.blue), red: mk(TEAM_COLOR.red),
       blueDark: mk(TEAM_DARK.blue), redDark: mk(TEAM_DARK.red),
       accent: mk(0xe8d7a4, { emissive: 0x5b4b25, emissiveIntensity: 0.35, metalness: 0.18 }),
+      accentByHero,
       //  陣亡本體：**去飽和的隊色** + 0.55 透明（0.28 太淡，全場視角等於消失）
       blueDead: mk(TEAM_DEAD.blue, { transparent: true, opacity: DEAD.bodyOpacity }),
       redDead: mk(TEAM_DEAD.red, { transparent: true, opacity: DEAD.bodyOpacity }),
@@ -149,7 +153,7 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
 
   useLayoutEffect(() => () => {
     Object.values(geo).forEach((g) => g.dispose());
-    Object.values(mats).forEach((m) => m.dispose());
+    Object.values(mats).forEach((m) => (m && typeof m.dispose === "function" ? m.dispose() : Object.values(m ?? {}).forEach((child) => child?.dispose?.())));
   }, [geo, mats]);
 
   //  H.2-flicker：掛載計數（純觀測；見 MobaRuntimeStructures 內同樣的註解）
@@ -165,7 +169,7 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
     for (const h of live) {
       const node = groupRefs.current.get(h.id);
       if (!node) continue;
-      const { root, body, shoulder, accessory, bar, ring, deathMark, label } = node;
+      const { root, body, shoulder, accessory, badge, crest, bar, ring, deathMark, label } = node;
       //  ⚠ 地面不在 y = 0（見檔頭 GROUND_Y 註解）⇒ 英雄整體抬到走道表面。
       root.position.set(h.world.x, GROUND_Y, h.world.z);
       if (h.facing !== null && h.facing !== undefined) root.rotation.y = h.facing;
@@ -180,6 +184,8 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
       //  肩塊只在活著時出現：屍體是一具橫躺的膠囊，多一塊方塊只會變回「色塊」
       if (shoulder) shoulder.visible = h.alive;
       if (accessory) accessory.visible = h.alive;
+      if (badge) badge.visible = h.alive;
+      if (crest) crest.visible = h.alive;
       ring.visible = h.alive;
       //  地面陣亡標記：只有死亡時出現，是「還認得出這裡有人陣亡」的主要線索
       if (deathMark) {
@@ -234,12 +240,15 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
   const ringRef = useRef();
   const deathMarkRef = useRef();
   const accessoryRef = useRef();
+  const badgeRef = useRef();
+  const crestRef = useRef();
   const labelRef = useRef();
 
   useLayoutEffect(() => {
     register(hero.id, {
       root: rootRef.current, body: bodyRef.current, shoulder: shoulderRef.current,
       accessory: accessoryRef.current,
+      badge: badgeRef.current, crest: crestRef.current,
       bar: barRef.current, ring: ringRef.current, deathMark: deathMarkRef.current,
       label: labelRef.current,
     });
@@ -248,6 +257,8 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
 
   const team = hero.team === "blue" ? "blue" : "red";
   const archetype = archetypeData(hero.archetype);
+  const visual = hero.visual ?? HERO_VISUALS[hero.heroId] ?? { badge: archetype.accessory, scale: archetype.bodyScale };
+  const accentMaterial = mats.accentByHero?.[visual.id] ?? mats.accent;
   //  ⚠ 手機版問題標記 #3「畫面偶發閃爍/破圖感」：本檔所有 mesh 每幀都用 ref 直接改
   //  position/scale/visible（見下面 useFrame），但 geometry 的 boundingSphere 是照
   //  「建立當下」的局部座標算的、不會跟著位置更新重算。加上運鏡（RTS 大範圍平移/縮放）
@@ -270,7 +281,7 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
         visible={false} frustumCulled={false} userData={{ part: "hero-death-mark" }} />
       {/* 本體（膠囊） */}
       <mesh ref={bodyRef} geometry={geo.body} material={team === "blue" ? mats.blue : mats.red}
-        scale={archetype.bodyScale}
+        scale={visual.scale ?? archetype.bodyScale}
         position={[0, HERO.height / 2 + HERO.radius, 0]} castShadow={false}
         frustumCulled={false} userData={{ part: "hero-body" }} />
       {/* 肩塊：讓剪影不只是膠囊，遠看能分辨正面 */}
@@ -280,7 +291,14 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
         position={[0, HERO.height * 0.86, HERO.radius * 0.45]}
         frustumCulled={false} userData={{ part: "hero-shoulder" }} />
       <HeroAccessory ref={accessoryRef} type={archetype.accessory} geo={geo}
-        material={mats.accent} teamMaterial={team === "blue" ? mats.blueDark : mats.redDark} />
+        material={accentMaterial} teamMaterial={team === "blue" ? mats.blueDark : mats.redDark} />
+      <mesh ref={crestRef} geometry={geo.crest} material={accentMaterial}
+        position={[0, HERO.height * 1.42, 0]} rotation={[0, 0, Math.PI]}
+        scale={[visual.silhouette === "obelisk" ? 1.25 : 0.82, 1, 0.82]}
+        frustumCulled={false} userData={{ part: "hero-crest", visual: visual.silhouette }} />
+      <mesh ref={badgeRef} geometry={geo.badge} material={accentMaterial}
+        position={[0, HERO.height * 0.72, HERO.radius * 0.96]} scale={0.72}
+        frustumCulled={false} userData={{ part: "hero-badge", visual: visual.badge }} />
       {/* 頭頂血條（背板 + 前景） */}
       <group position={[0, HERO.barY, 0]}>
         <mesh geometry={geo.bar} material={mats.barBg}

@@ -26,7 +26,7 @@ import { TOWER_HP, NEXUS_HP, ROLE_NAME, posOnLane } from "../../../gameData.js";
 import { buildMobaLayout } from "./mobaMapLayout.js";
 import { buildCampPlan } from "./mapCampLayout.js";
 import { isWalkable, projectToWalkable } from "../nav/mobaNavigation.js";
-import { archetypeForRole, archetypeData } from "../presentation/heroArchetypes.js";
+import { archetypeForRole, archetypeData, heroVisualFor, skillVisualFor } from "../presentation/heroArchetypes.js";
 
 /** 呈現用高度（世界單位）：英雄站在地面上，結構的血條掛在頭頂。 */
 export const RUNTIME_Y = Object.freeze({ hero: 0, structure: 0 });
@@ -77,15 +77,19 @@ export function adaptHeroes(snapshot, opts = {}) {
     const team = p.side === "red" ? "red" : "blue";
     const { sim, clamped } = safePos(p.pos, baseSim(team));
     const entry = roster[p.id] ?? null;
+    const championId = entry?.hero?.id ?? entry?.heroId ?? entry?.id ?? null;
+    const visual = heroVisualFor(championId, p.role, entry?.hero?.id ? entry.hero : null);
     const hpRatio = ratio01(p.hp);          // snapshot 的 hp 已是 0–1
     return {
       id: String(p.id),
       team,
       role: p.role ?? null,
-      archetype: archetypeForRole(p.role),
+      archetype: visual.family ?? archetypeForRole(p.role),
       playerId: String(p.id),
-      championId: entry?.hero?.id ?? null,
-      displayName: entry?.player?.name ?? entry?.hero?.zh ?? ROLE_NAME[p.role] ?? String(p.id),
+      championId,
+      heroId: championId,
+      visual,
+      displayName: entry?.player?.name ?? (typeof entry?.player === "string" ? entry.player : null) ?? entry?.hero?.zh ?? entry?.hero ?? ROLE_NAME[p.role] ?? String(p.id),
       position: sim,
       //  ⚠ 驗收用：呼叫端若有把未內插的引擎座標帶進來（見 MobaRuntimeView3D 的
       //  RuntimeFrameFeeder），原樣傳出去。H.2-close 靠它分辨「碰撞算錯」與「內插切牆角」。
@@ -310,6 +314,7 @@ export function adaptEffects(snapshot, effectTime = snapshot?.ts) {
     const splitAt = typeof f.ability === "string" ? f.ability.indexOf(":") : -1;
     const role = splitAt >= 0 ? f.ability.slice(0, splitAt) : null;
     const archetype = archetypeForRole(role);
+    const skillVisual = skillVisualFor({ ability: splitAt >= 0 ? f.ability.slice(splitAt + 1) : "basic", family: archetype, color: Number.isFinite(f.color) ? f.color : null });
     out.push({
       id: String(f.id ?? `${f.at ?? now}:${f.type ?? "orb"}`),
       type: f.type ?? "orb",
@@ -317,7 +322,9 @@ export function adaptEffects(snapshot, effectTime = snapshot?.ts) {
       variant: splitAt >= 0 ? f.ability.slice(splitAt + 1) : null,
       archetype,
       width: archetypeData(archetype).effectWidth,
-      color: Number.isFinite(f.color) ? f.color : 0xffffff,
+      color: skillVisual.color,
+      skillVisual,
+      phase: (1 - age / life) > 0.72 ? "cast" : ((1 - age / life) > 0.22 ? "travel" : "impact"),
       world: start,
       targetWorld: target,
       lifeRatio: ratio01(1 - age / life),

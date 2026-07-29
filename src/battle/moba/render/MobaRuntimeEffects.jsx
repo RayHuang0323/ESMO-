@@ -70,7 +70,17 @@ export default function MobaRuntimeEffects({ frameRef }) {
     for (const fx of effects) {
       const life = Math.max(0.02, fx.lifeRatio ?? 0);
       color.setHex(fx.color ?? 0xffffff);
-      if ((fx.type === "line" || fx.type === "tower") && fx.targetWorld && lines < LINE_CAP) {
+      const phase = fx.phase ?? (life > 0.72 ? "cast" : (life > 0.22 ? "travel" : "impact"));
+      const impact = fx.targetWorld ?? fx.world;
+      if (phase === "cast" && rings < BURST_CAP) {
+        const spread = (0.55 + (1 - life) * 0.65) * S * (fx.width ?? 1);
+        pos.set(fx.world.x, GROUND_Y + 0.12, fx.world.z);
+        scale.set(spread, spread, 1);
+        matrix.compose(pos, flat, scale);
+        ringMesh.setMatrixAt(rings, matrix);
+        ringMesh.setColorAt(rings, color);
+        rings++;
+      } else if ((fx.type === "line" || fx.type === "tower") && fx.targetWorld && lines < LINE_CAP) {
         const ax = fx.world.x, az = fx.world.z;
         const bx = fx.targetWorld.x, bz = fx.targetWorld.z;
         const len = Math.hypot(bx - ax, bz - az);
@@ -103,13 +113,22 @@ export default function MobaRuntimeEffects({ frameRef }) {
         orbMesh.setColorAt(orbs, color);
         orbs++;
       } else if (orbs < BURST_CAP) {
-        pos.set(fx.world.x, GROUND_Y + 1.35 * S, fx.world.z);
+        pos.set(impact.x, GROUND_Y + 1.35 * S, impact.z);
         quat.identity();
-        scale.setScalar((0.35 + life) * S);
+        scale.setScalar((0.35 + (phase === "impact" ? 1.25 : life)) * S * (fx.skillVisual?.width ?? 1));
         matrix.compose(pos, quat, scale);
         orbMesh.setMatrixAt(orbs, matrix);
         orbMesh.setColorAt(orbs, color);
         orbs++;
+        if (phase === "impact" && rings < BURST_CAP) {
+          const spread = (0.8 + (1 - life) * 1.8) * S * (fx.width ?? 1);
+          pos.set(impact.x, GROUND_Y + 0.12, impact.z);
+          scale.set(spread, spread, 1);
+          matrix.compose(pos, flat, scale);
+          ringMesh.setMatrixAt(rings, matrix);
+          ringMesh.setColorAt(rings, color);
+          rings++;
+        }
       }
     }
 
