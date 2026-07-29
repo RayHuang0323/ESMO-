@@ -436,6 +436,19 @@ export function installRuntimeDiagnostics({ gl, scene, camera, frameRef }) {
       minionCount: (f.minions ?? []).length,
       activeEffectCount: (f.effects ?? []).length,
       effectEventsSeen: seenEffectIds.size,
+      // Milestone D：正式 GameView 驗收要能在單幀內鎖定塔彈／技能的
+      // cast → travel → impact。僅在 ?diag=1 暴露唯讀摘要，不改 frame。
+      activeEffects: (f.effects ?? []).map((fx) => ({
+        id: fx.id,
+        type: fx.type,
+        style: fx.style,
+        phase: fx.phase,
+        phaseProgress: Number.isFinite(fx.phaseProgress) ? +fx.phaseProgress.toFixed(3) : null,
+        sourceId: fx.sourceId ?? null,
+        targetId: fx.targetId ?? null,
+        feedback: fx.feedback ?? null,
+        combatClass: fx.combatClass ?? null,
+      })),
       visibleHeroIds: heroes.filter((h) => h.visible).map((h) => h.id),
       towerAliveCount: structures.filter((s) => s.type === "tower" && s.alive).length,
       towerDestroyedCount: structures.filter((s) => s.type === "tower" && !s.alive).length,

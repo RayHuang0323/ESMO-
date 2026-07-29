@@ -22,7 +22,12 @@ import { loadQuality, saveQuality, QUALITY_IDS, QUALITY_PRESETS } from "./battle
 import { useIsMobile } from "./ui/useViewport.js";
 import { useCameraStore } from "./battle/cameraStore.js";
 import { isDebugMode } from "./ui/debugMode.js";
-import { SAFE_TOP, Z } from "./battle/ui/battleLayout.js";
+import {
+  DIRECTOR_BOTTOM_DESKTOP,
+  DIRECTOR_BOTTOM_MOBILE,
+  SAFE_TOP,
+  Z,
+} from "./battle/ui/battleLayout.js";
 
 // ── 小地圖（沿用；自有 rAF、讀 store、含戰爭迷霧）────────────────────────────
 function Minimap({ mobile = false }) {
@@ -140,7 +145,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
         <button data-testid="director-toggle" aria-pressed={directorOn}
           onClick={() => useCameraStore.getState().toggleDirector()}
           title={directorOn ? "關閉自動導播並回到原本自由視角" : "啟用自動導播"}
-          style={{ position: "absolute", bottom: isMobile ? "calc(56px + env(safe-area-inset-bottom))" : 46, left: "50%", transform: "translateX(-50%)", zIndex: Z.controls, background: directorOn ? "rgba(96,165,250,0.92)" : "rgba(8,14,24,0.82)", border: `1px solid ${directorOn ? "#93c5fd" : "rgba(255,255,255,.35)"}`, borderRadius: 999, padding: "6px 13px", color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.45)" }}>
+          style={{ position: "absolute", bottom: isMobile ? `calc(${DIRECTOR_BOTTOM_MOBILE}px + env(safe-area-inset-bottom))` : DIRECTOR_BOTTOM_DESKTOP, left: "50%", transform: "translateX(-50%)", zIndex: Z.controls, background: directorOn ? "rgba(96,165,250,0.92)" : "rgba(8,14,24,0.82)", border: `1px solid ${directorOn ? "#93c5fd" : "rgba(255,255,255,.35)"}`, borderRadius: 999, padding: "6px 13px", color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.45)" }}>
           🎥 自動導播 {directorOn ? "ON" : "OFF"}
         </button>
       )}

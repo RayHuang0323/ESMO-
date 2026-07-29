@@ -42,6 +42,7 @@ function buildDeviceReport() {
       minions: diag.minionCount ?? null,
       activeEffects: diag.activeEffectCount ?? null,
       effectEventsSeen: diag.effectEventsSeen ?? null,
+      effectRows: diag.activeEffects ?? [],
     },
     contextLost: window.__ESMO_FLICKER?.().contextLost ?? 0,
   };
@@ -83,7 +84,9 @@ export default function RuntimeDeviceDiagnosticsPanel() {
       setReport(next);
     };
     refresh();
-    const timer = window.setInterval(refresh, 1000);
+    // Milestone D：塔彈的 travel phase 在高倍率下不足一秒；診斷模式要能鎖到
+    // 單幀證據，因此以 120ms 取樣。此面板不會出現在一般玩家路徑。
+    const timer = window.setInterval(refresh, 120);
     return () => {
       window.clearInterval(timer);
       delete window.__ESMO_RUNTIME_DEVICE_REPORT;
@@ -104,6 +107,12 @@ export default function RuntimeDeviceDiagnosticsPanel() {
       `buffer      ${p.drawingBuffer?.width}×${p.drawingBuffer?.height}`,
       `performance ${p.performance?.fps} fps / ${p.performance?.frameTimeMs} ms / ${p.performance?.drawCalls} calls / ${p.performance?.triangles} tris`,
       `objects     ${p.runtimeObjects?.heroes} heroes / ${p.runtimeObjects?.minions} minions / ${p.runtimeObjects?.activeEffects} active fx / ${p.runtimeObjects?.effectEventsSeen} fx seen`,
+      `tower fx    ${(p.runtimeObjects?.effectRows ?? []).filter((fx) => fx.style === "tower").map((fx) =>
+        `${fx.phase}@${fx.phaseProgress ?? "?"}:${fx.sourceId ?? "?"}>${fx.targetId ?? "?"}`).join(" | ") || "none"}`,
+      `skill fx    ${(p.runtimeObjects?.effectRows ?? []).filter((fx) => fx.feedback === "skill").slice(0, 8).map((fx) =>
+        `${fx.combatClass ?? "?"}/${fx.style ?? fx.type}:${fx.phase}@${fx.phaseProgress ?? "?"}`).join(" | ") || "none"}`,
+      `fx phases   ${(p.runtimeObjects?.effectRows ?? []).map((fx) =>
+        `${fx.style ?? fx.type}:${fx.phase}@${fx.phaseProgress ?? "?"}:${fx.sourceId ?? "?"}>${fx.targetId ?? "?"}`).slice(0, 10).join(" | ") || "none"}`,
       `context     ${JSON.stringify(p.contextAttributes)}`,
     ].join("\n")
     : "等待 WebGL context…";
@@ -137,7 +146,8 @@ export default function RuntimeDeviceDiagnosticsPanel() {
       </div>
       {!collapsed && (
         <>
-          <pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", margin: "0 0 6px" }}>{summary}</pre>
+          <pre data-testid="runtime-diagnostic-summary"
+            style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", margin: "0 0 6px" }}>{summary}</pre>
           <div style={{ display: "flex", gap: 6 }}>
             <button type="button" onClick={async () => {
               const copied = await copyText(json);

@@ -42,6 +42,13 @@ export const FEED_LEFT = 10;
 export const FEED_RIGHT_RESERVE = 132;
 
 /**
+ * 自動導播切換鈕必須高於收合狀態的十人面板。面板本身用 Z.strip 疊在控制層上，
+ * 因此不能只靠 z-index；保留 10–14px 間距後，桌機／手機各自使用這個底距。
+ */
+export const DIRECTOR_BOTTOM_DESKTOP = 90;
+export const DIRECTOR_BOTTOM_MOBILE = 110;
+
+/**
  * z-index 統一表（29B2 起列為待辦，29B6 落地）。
  * 數值沿用各元件既有值 ⇒ 這次只是把它們收斂到一處，沒有改變既有疊放次序。
  */

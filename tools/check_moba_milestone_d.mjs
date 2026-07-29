@@ -110,10 +110,12 @@ assert.deepEqual(useCameraStore.getState().pan, { x: 42, y: 77 });
 assert.equal(useCameraStore.getState().zoom, 4.6);
 
 // 7) 正式 GameView／runtime-v2／Replay renderer 靜態接線（不得只改 debug harness）。
-const [gameView, runtimeView, effects, heroes, neutrals, hud, strip, controller, replayBuffer, replayScreen] =
+const [gameView, runtimeView, runtimeDiagnostics, deviceDiagnostics, effects, heroes, neutrals, hud, strip, controller, replayBuffer, replayScreen] =
   await Promise.all([
     read("../src/GameView.jsx"),
     read("../src/battle/moba/render/MobaRuntimeView3D.jsx"),
+    read("../src/battle/moba/render/runtimeDiagnostics.js"),
+    read("../src/battle/moba/render/RuntimeDeviceDiagnosticsPanel.jsx"),
     read("../src/battle/moba/render/MobaRuntimeEffects.jsx"),
     read("../src/battle/moba/render/MobaRuntimeHeroes.jsx"),
     read("../src/battle/moba/render/MobaRuntimeNeutrals.jsx"),
@@ -123,8 +125,16 @@ const [gameView, runtimeView, effects, heroes, neutrals, hud, strip, controller,
     read("../src/battle/moba/replay/replayBuffer.js"),
     read("../src/screens/moba/MobaReplayScreen.jsx"),
   ]);
-for (const token of ["<MobaRuntimeView3D", "director-toggle", "toggleDirector"]) assert.match(gameView, new RegExp(token));
+for (const token of [
+  "<MobaRuntimeView3D",
+  "director-toggle",
+  "toggleDirector",
+  "DIRECTOR_BOTTOM_DESKTOP",
+  "DIRECTOR_BOTTOM_MOBILE",
+]) assert.match(gameView, new RegExp(token));
 for (const token of ["<BattleCameraController", "perspective={RUNTIME_CAMERA}", "<RuntimeCameraInput"]) assert.match(runtimeView, new RegExp(token.replace(/[{}]/g, "\\$&")));
+for (const token of ["activeEffects", "phaseProgress", "sourceId", "targetId"]) assert.ok(runtimeDiagnostics.includes(token));
+for (const token of ["runtime-diagnostic-summary", "effectRows", "120"]) assert.ok(deviceDiagnostics.includes(token));
 for (const token of ["addLine(tail, moving", "style === \"tower\"", "phase === \"cast\"", "phase === \"travel\"", "phase === \"impact\""]) assert.match(effects, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 for (const token of ["Lv{hero.level}", "timedStates", "statusEffects"]) assert.ok(heroes.includes(token));
 for (const token of ["dynamic-boss", "objective.attackAt", "objective.hitAt"]) assert.ok(neutrals.includes(token));
