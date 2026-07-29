@@ -210,3 +210,10 @@ FPS**。本輪只把 draw calls／triangles／物件數當結構證據；真機 
 - Replay：`check_moba_minions_h3` 與 Replay verifier 已確認 frame 內含 `mn` 小兵與 `fx` 技能事件、seek 與舊格式 fallback；本次尚未人工完整播放終局 Replay，因此不把 Replay 視覺辨識列為完全通過。
 
 結論：桌機與 390px 手機 viewport 的 H.3 呈現驗收通過，沒有發現需要立即修正的 H.3 UI／碰撞問題；未宣稱 Android 真機 FPS、熱降頻、觸控或完整 Replay 視覺已通過。瀏覽器自動化 FPS 受背景 rAF 節流影響，不能替代 Android 真機量測。等待使用者確認是否進行 push／正式部署。
+
+## 12. H.3 push／Pages 部署（2026-07-29）
+
+- H.3 驗收 commit `9e754fe` 已推送 `main`。
+- GitHub Actions run `30414201468`：build、deploy jobs 均 `success`。
+- GitHub Pages deployment `5650235527`：`success`；正式網址：<https://rayhuang0323.github.io/ESMO-/>。
+- 本次只同步本文件與 Sprint 紀錄，未加入任何既有未追蹤舊產物；Android 真機項目仍見 §11。

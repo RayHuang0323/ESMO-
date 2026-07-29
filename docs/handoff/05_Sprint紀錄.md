@@ -2107,3 +2107,10 @@ shadow decal、FPS、觸控與桌面外觀。未完成前不得宣稱真機通�
 - guardian／skirmisher／arcanist／marksman 四種輪廓可辨；技能事件有進入 FX 池且未見 HUD 遮蔽。`DEPTH_BITS=24`、WebGL2、depth=true、near/far=35/1000，瀏覽器觀察未見 H.2 閃爍。
 - Replay 的 `mn`／`fx` frame 資料由 verifier 確認；完整終局 Replay 尚未人工播放，Android 真機 FPS、熱降頻、觸控與特效辨識仍不可由 Node／桌面瀏覽器宣稱完成。
 - 本次沒有發現需修正的 H.3 呈現問題，未修改公平性、經濟、天賦或地圖結構；未開始下一階段。
+
+### H.3 正式部署紀錄（2026-07-29）
+
+- H.3 驗收 commit `9e754fe` 已推送 `main`；未加入既有未追蹤舊產物。
+- GitHub Actions run `30414201468` 的 build／deploy 均成功，Pages deployment `5650235527` 回報 `success`。
+- 正式網址：<https://rayhuang0323.github.io/ESMO-/>。
+- Android 真機 FPS、熱降頻、觸控、閃爍與完整 Replay 視覺仍需人工確認；不開始下一階段。
