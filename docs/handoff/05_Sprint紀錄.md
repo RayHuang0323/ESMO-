@@ -2138,3 +2138,25 @@ shadow decal、FPS、觸控與桌面外觀。未完成前不得宣稱真機通�
 
 - 正式 GameView 需人工確認 10 名英雄近景辨識、技能 cast→travel→命中回饋、手機 320/360/390/430px 跑版、真機閃爍／掉幀／過熱，以及 Replay 長時間播放。
 - H.4 回退基線：`082371b`。不得把既有未追蹤舊產物納入 commit。
+
+---
+
+## Milestone B：MOBA 戰鬥呈現與基礎戰鬥單位整合（2026-07-29）
+
+起點：`dfdc826`。狀態：**進行中；各段只建立本機 commit，未 push、未部署。**
+
+### B.1 英雄辨識
+
+- 人工回報 H.4 在正式戰鬥看不出十名英雄差異。根因不是 recipe 缺少，而是
+  `GameView` 的 runtime-v2 分支沒有把 `liveRoster` 傳給 `MobaRuntimeView3D`；
+  adapter 因此只收到空的 store roster，十名英雄全部退回 role fallback。
+- 正式資料流已改為
+  `GameView.liveRoster → MobaRuntimeView3D → RuntimeFrameFeeder → adaptHeroes`，
+  draft／預設 roster 的 stable hero id 會真正進入 runtime renderer。
+- 十名現役英雄各加入不同的結構剪影，包含方／圓頭盔、巨盾、雙拳、雙刃、法杖、
+  晶核、火焰冠、長型發射器、雙翼、重甲與戰鎚；差異不只換色。
+- 保留 `hero-visual.v1` 與 deterministic fallback；幾何／材質仍為固定共用資源，
+  不在 `useFrame` 建立物件，並保留 H.2 `frustumCulled=false` 與地面層修正。
+- `check_moba_milestone_b1` 通過：10 roster、10 stable hero id、10 structural silhouettes。
+  H.4 verifier 通過，production build 通過。首次 build 因主機僅約 1.3 GB 可用記憶體失敗；
+  停止本輪既有 dev server 並以 3 GB Node heap 重跑後成功，並非程式編譯錯誤。

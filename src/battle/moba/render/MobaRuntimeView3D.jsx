@@ -247,7 +247,7 @@ function RuntimeCamera({ ctrl, lockTarget }) {
  * 每幀把 store 的 prev→snapshot 內插結果餵給 Adapter。
  * ⚠ 內插只做位置；hp / alive / 等級一律用最新 snapshot 的值（不內插狀態）。
  */
-function RuntimeFrameFeeder({ frameRef, onShapeChange, lockHeroId, lockTarget, source }) {
+function RuntimeFrameFeeder({ frameRef, onShapeChange, lockHeroId, lockTarget, source, roster }) {
   //  source 缺省 = 現場對戰的 useGameStore；Replay 傳入 replayPresentationSource，
   //  兩者都只需要 getState() → { prev, snapshot, subTRef } ⇒ **同一條 Adapter 路徑**，
   //  不會出現第二套座標轉換。
@@ -306,7 +306,7 @@ function RuntimeFrameFeeder({ frameRef, onShapeChange, lockHeroId, lockTarget, s
       }),
     };
     const frame = adaptRuntimeMapFrame(blended, {
-      prev, roster: s.roster, interpolation: a,
+      prev, roster: roster ?? s.roster, interpolation: a,
       // live 的 fx 已在最新 snapshot 發生，立即顯示；Replay 的下一 frame 包含
       // 整個 2s 取樣窗事件，必須跟插值時間走，不能提早洩漏。
       effectTime: source ? blended.ts : snap.ts,
@@ -345,7 +345,7 @@ function RuntimeDiagnosticsBridge({ frameRef }) {
  * @param quality "high" | "mid" | "low"
  * @param lockHeroId 鎖定的英雄 id（null = 自由相機）
  */
-export default function MobaRuntimeView3D({ quality = "high", lockHeroId = null, onRecenterRef, source = null }) {
+export default function MobaRuntimeView3D({ quality = "high", lockHeroId = null, onRecenterRef, source = null, roster = null }) {
   const { towerAnchors } = useRuntimeMapData();
   //  frameRef = 每幀更新的最新資料（不觸發 React）；frame = 掛載用的結構快照
   const frameRef = useRef({ heroes: [], structures: [], objectives: [], warnings: [] });
@@ -387,7 +387,7 @@ export default function MobaRuntimeView3D({ quality = "high", lockHeroId = null,
       <MobaRuntimeEffects frameRef={frameRef} />
       <MobaRuntimeHeroes heroes={frame.heroes} frameRef={frameRef} showLabels={quality !== "low"} />
 
-      <RuntimeFrameFeeder frameRef={frameRef} onShapeChange={onShapeChange} lockHeroId={lockHeroId} lockTarget={lockTarget} source={source} />
+      <RuntimeFrameFeeder frameRef={frameRef} onShapeChange={onShapeChange} lockHeroId={lockHeroId} lockTarget={lockTarget} source={source} roster={roster} />
       <RuntimeCamera ctrl={ctrl} lockTarget={lockHeroId ? lockTarget : null} />
       <RuntimeDiagnosticsBridge frameRef={frameRef} />
     </Canvas>

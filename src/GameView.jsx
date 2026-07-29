@@ -135,7 +135,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
     <div style={{ position: "relative", width: "100%", height: "min(82vh, 720px)", background: "#0d1420", borderRadius: 14, overflow: "hidden", fontFamily: "system-ui,-apple-system,sans-serif" }}>
       {/* 3D：對局進行中相機由 cameraStore 管理（director/objectiveFocus/heroFocus/free）*/}
       {isRuntimeV2(mapMode)
-        ? <MobaRuntimeView3D quality={qualityId} onRecenterRef={runtimeRecenter} />
+        ? <MobaRuntimeView3D quality={qualityId} onRecenterRef={runtimeRecenter} roster={liveRoster} />
         : <MobaView3D mapTexture={MOBA_MAP} autoRotate={!playing} battleFollow={playing} roster={liveRoster} quality={quality} />}
 
       {/* H.1：地圖呈現模式切換（legacy ⇄ runtime-v2）＋ runtime 專用「回到中心」。

@@ -110,6 +110,12 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
     launcher: new THREE.BoxGeometry(HERO.radius * 0.42, HERO.radius * 0.42, HERO.height * 0.95),
     crest: new THREE.ConeGeometry(HERO.radius * 0.42, HERO.radius * 0.72, 5),
     badge: new THREE.OctahedronGeometry(HERO.radius * 0.34, 0),
+    helmBox: new THREE.BoxGeometry(HERO.radius * 1.05, HERO.radius * 0.88, HERO.radius * 1.0),
+    helmRound: new THREE.DodecahedronGeometry(HERO.radius * 0.58, 0),
+    gauntlet: new THREE.DodecahedronGeometry(HERO.radius * 0.6, 0),
+    chest: new THREE.BoxGeometry(HERO.radius * 1.75, HERO.radius * 0.82, HERO.radius * 1.2),
+    wing: new THREE.ConeGeometry(HERO.radius * 0.62, HERO.height * 1.1, 3),
+    hammer: new THREE.BoxGeometry(HERO.radius * 1.3, HERO.radius * 0.72, HERO.radius * 0.72),
   }), []);
 
   const mats = useMemo(() => {
@@ -169,7 +175,7 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
     for (const h of live) {
       const node = groupRefs.current.get(h.id);
       if (!node) continue;
-      const { root, body, shoulder, accessory, badge, crest, bar, ring, deathMark, label } = node;
+      const { root, body, shoulder, accessory, signature, badge, crest, bar, ring, deathMark, label } = node;
       //  ⚠ 地面不在 y = 0（見檔頭 GROUND_Y 註解）⇒ 英雄整體抬到走道表面。
       root.position.set(h.world.x, GROUND_Y, h.world.z);
       if (h.facing !== null && h.facing !== undefined) root.rotation.y = h.facing;
@@ -184,6 +190,7 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
       //  肩塊只在活著時出現：屍體是一具橫躺的膠囊，多一塊方塊只會變回「色塊」
       if (shoulder) shoulder.visible = h.alive;
       if (accessory) accessory.visible = h.alive;
+      if (signature) signature.visible = h.alive;
       if (badge) badge.visible = h.alive;
       if (crest) crest.visible = h.alive;
       ring.visible = h.alive;
@@ -240,6 +247,7 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
   const ringRef = useRef();
   const deathMarkRef = useRef();
   const accessoryRef = useRef();
+  const signatureRef = useRef();
   const badgeRef = useRef();
   const crestRef = useRef();
   const labelRef = useRef();
@@ -248,6 +256,7 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
     register(hero.id, {
       root: rootRef.current, body: bodyRef.current, shoulder: shoulderRef.current,
       accessory: accessoryRef.current,
+      signature: signatureRef.current,
       badge: badgeRef.current, crest: crestRef.current,
       bar: barRef.current, ring: ringRef.current, deathMark: deathMarkRef.current,
       label: labelRef.current,
@@ -290,8 +299,10 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
         scale={archetype.shoulderScale}
         position={[0, HERO.height * 0.86, HERO.radius * 0.45]}
         frustumCulled={false} userData={{ part: "hero-shoulder" }} />
-      <HeroAccessory ref={accessoryRef} type={archetype.accessory} geo={geo}
+      <HeroAccessory ref={accessoryRef} type={visual.badge ?? archetype.accessory} geo={geo}
         material={accentMaterial} teamMaterial={team === "blue" ? mats.blueDark : mats.redDark} />
+      <HeroSignature ref={signatureRef} silhouette={visual.silhouette} geo={geo}
+        accent={accentMaterial} teamMaterial={team === "blue" ? mats.blueDark : mats.redDark} />
       <mesh ref={crestRef} geometry={geo.crest} material={accentMaterial}
         position={[0, HERO.height * 1.42, 0]} rotation={[0, 0, Math.PI]}
         scale={[visual.silhouette === "obelisk" ? 1.25 : 0.82, 1, 0.82]}
@@ -324,6 +335,72 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
   );
 }
 
+const HeroSignature = React.forwardRef(function HeroSignature(
+  { silhouette, geo, accent, teamMaterial }, ref,
+) {
+  const mesh = (geometry, material, position, scale = [1, 1, 1], rotation = [0, 0, 0], part = "signature") => (
+    <mesh geometry={geometry} material={material} position={position} scale={scale}
+      rotation={rotation} frustumCulled={false} userData={{ part, silhouette }} />
+  );
+  if (silhouette === "bulwark") return (
+    <group ref={ref} name="hero-signature-bulwark">
+      {mesh(geo.helmBox, teamMaterial, [0, HERO.height * 1.28, 0], [1.12, 0.92, 1])}
+      {mesh(geo.shield, accent, [-HERO.radius * 1.28, HERO.height * 0.72, HERO.radius * 0.38], [1.28, 1.28, 1.1], [Math.PI / 2, 0, 0])}
+    </group>
+  );
+  if (silhouette === "bruiser" || silhouette === "striker") return (
+    <group ref={ref} name={`hero-signature-${silhouette}`}>
+      {mesh(geo.helmRound, teamMaterial, [0, HERO.height * 1.3, 0], silhouette === "striker" ? [0.78, 1.15, 0.78] : [1, 0.86, 1])}
+      {mesh(geo.gauntlet, accent, [-HERO.radius * 1.15, HERO.height * 0.63, HERO.radius * 0.55], silhouette === "striker" ? [0.72, 1.25, 0.72] : [1.25, 1, 1])}
+      {mesh(geo.gauntlet, accent, [HERO.radius * 1.15, HERO.height * 0.63, HERO.radius * 0.55], silhouette === "striker" ? [0.72, 1.25, 0.72] : [1.25, 1, 1])}
+    </group>
+  );
+  if (silhouette === "rogue") return (
+    <group ref={ref} name="hero-signature-rogue">
+      {mesh(geo.helmRound, teamMaterial, [0, HERO.height * 1.28, 0], [0.7, 1.1, 0.7])}
+      {mesh(geo.blade, accent, [-HERO.radius * 0.72, HERO.height * 0.95, -HERO.radius * 0.46], [1.35, 1.28, 1.2], [0.1, 0, -0.72])}
+      {mesh(geo.blade, accent, [HERO.radius * 0.72, HERO.height * 0.95, -HERO.radius * 0.46], [1.35, 1.28, 1.2], [-0.1, 0, 0.72])}
+    </group>
+  );
+  if (silhouette === "crystal" || silhouette === "flame") return (
+    <group ref={ref} name={`hero-signature-${silhouette}`}>
+      {mesh(silhouette === "crystal" ? geo.focus : geo.crest, accent, [0, HERO.height * 1.42, 0],
+        silhouette === "crystal" ? [1.15, 1.35, 1.15] : [1.05, 1.55, 1.05], silhouette === "flame" ? [0, 0, Math.PI] : [0, 0, 0])}
+      {mesh(geo.staff, teamMaterial, [HERO.radius * 1.25, HERO.height * 0.73, 0], [1.2, 1.18, 1.2], [0, 0, silhouette === "flame" ? -0.18 : 0.12])}
+    </group>
+  );
+  if (silhouette === "ranger") return (
+    <group ref={ref} name="hero-signature-ranger">
+      {mesh(geo.helmBox, teamMaterial, [0, HERO.height * 1.28, 0], [0.92, 0.62, 1.2])}
+      {mesh(geo.launcher, accent, [HERO.radius * 1.15, HERO.height * 0.72, HERO.radius * 0.72], [0.82, 0.82, 1.42], [Math.PI / 2, 0, -0.18])}
+    </group>
+  );
+  if (silhouette === "wing") return (
+    <group ref={ref} name="hero-signature-wing">
+      {mesh(geo.helmRound, teamMaterial, [0, HERO.height * 1.28, 0], [0.76, 1, 0.76])}
+      {mesh(geo.wing, accent, [-HERO.radius * 0.92, HERO.height * 0.92, -HERO.radius * 0.55], [0.72, 1.25, 0.42], [0.18, 0, 0.58])}
+      {mesh(geo.wing, accent, [HERO.radius * 0.92, HERO.height * 0.92, -HERO.radius * 0.55], [0.72, 1.25, 0.42], [-0.18, 0, -0.58])}
+    </group>
+  );
+  if (silhouette === "sentinel") return (
+    <group ref={ref} name="hero-signature-sentinel">
+      {mesh(geo.helmRound, teamMaterial, [0, HERO.height * 1.28, 0], [1.08, 0.82, 1.08])}
+      {mesh(geo.shield, accent, [HERO.radius * 1.18, HERO.height * 0.72, HERO.radius * 0.5], [1.05, 1.3, 1], [Math.PI / 2, 0, 0])}
+      {mesh(geo.crest, accent, [0, HERO.height * 1.57, 0], [0.62, 0.9, 0.62], [0, 0, Math.PI])}
+    </group>
+  );
+  if (silhouette === "obelisk") return (
+    <group ref={ref} name="hero-signature-obelisk">
+      {mesh(geo.chest, teamMaterial, [0, HERO.height * 0.92, 0], [1.18, 1.22, 1.05])}
+      {mesh(geo.helmBox, accent, [0, HERO.height * 1.38, 0], [0.92, 1.22, 0.92])}
+      {mesh(geo.hammer, accent, [HERO.radius * 1.22, HERO.height * 0.9, HERO.radius * 0.45], [1.05, 1.05, 1.05], [0, 0, 0.18])}
+    </group>
+  );
+  return <group ref={ref} name="hero-signature-generated">
+    {mesh(geo.helmRound, accent, [0, HERO.height * 1.3, 0], [0.85, 1.05, 0.85])}
+  </group>;
+});
+
 const HeroAccessory = React.forwardRef(function HeroAccessory(
   { type, geo, material, teamMaterial }, ref,
 ) {
@@ -345,6 +422,30 @@ const HeroAccessory = React.forwardRef(function HeroAccessory(
         <mesh geometry={geo.focus} material={teamMaterial}
           position={[HERO.radius * 1.2, HERO.height * 1.32, 0]}
           frustumCulled={false} />
+      </group>
+    );
+  }
+  if (type === "fist") {
+    return (
+      <group ref={ref} name="hero-archetype-fist">
+        <mesh geometry={geo.gauntlet} material={material}
+          position={[-HERO.radius * 1.1, HERO.height * 0.58, HERO.radius * 0.5]}
+          scale={0.82} frustumCulled={false} />
+        <mesh geometry={geo.gauntlet} material={material}
+          position={[HERO.radius * 1.1, HERO.height * 0.58, HERO.radius * 0.5]}
+          scale={0.82} frustumCulled={false} />
+      </group>
+    );
+  }
+  if (type === "flame") {
+    return (
+      <group ref={ref} name="hero-archetype-flame">
+        <mesh geometry={geo.staff} material={teamMaterial}
+          position={[HERO.radius * 1.12, HERO.height * 0.68, 0]}
+          rotation={[0, 0, -0.12]} frustumCulled={false} />
+        <mesh geometry={geo.crest} material={material}
+          position={[HERO.radius * 1.15, HERO.height * 1.42, 0]}
+          rotation={[0, 0, Math.PI]} frustumCulled={false} />
       </group>
     );
   }
