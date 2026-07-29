@@ -110,6 +110,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   // Sprint09：賽前準備銜接 — autoStart 掛載即開局（預設 false = 現行為不變）
   useEffect(() => { if (autoStart && !playing) begin(); }, []);  // eslint-disable-line
   const camMode = useCameraStore((s) => s.mode);
+  const directorOn = camMode !== "free";
   // S29：畫質——首次依裝置自動判斷，玩家手動選擇後存 localStorage 並優先
   const [qualityId, setQualityId] = useState(() => loadQuality());
   const pickQuality = (id) => { setQualityId(id); saveQuality(id); };
@@ -134,11 +135,13 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
         </button>
       )}
 
-      {/* S29B3：回到導播（自由鏡頭時才出現的單一小按鈕；雙擊空白也可回導播） */}
-      {playing && camMode === "free" && (
-        <button onClick={() => useCameraStore.getState().backToDirector()}
-          style={{ position: "absolute", bottom: isMobile ? "calc(56px + env(safe-area-inset-bottom))" : 46, left: "50%", transform: "translateX(-50%)", zIndex: Z.controls, background: "rgba(96,165,250,0.92)", border: "1px solid #93c5fd", borderRadius: 999, padding: "6px 16px", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.45)" }}>
-          🎥 回到導播
+      {/* Milestone D：正式 GameView 的可開關自動導播。關閉會恢復啟用前的自由視角。 */}
+      {playing && (
+        <button data-testid="director-toggle" aria-pressed={directorOn}
+          onClick={() => useCameraStore.getState().toggleDirector()}
+          title={directorOn ? "關閉自動導播並回到原本自由視角" : "啟用自動導播"}
+          style={{ position: "absolute", bottom: isMobile ? "calc(56px + env(safe-area-inset-bottom))" : 46, left: "50%", transform: "translateX(-50%)", zIndex: Z.controls, background: directorOn ? "rgba(96,165,250,0.92)" : "rgba(8,14,24,0.82)", border: `1px solid ${directorOn ? "#93c5fd" : "rgba(255,255,255,.35)"}`, borderRadius: 999, padding: "6px 13px", color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.45)" }}>
+          🎥 自動導播 {directorOn ? "ON" : "OFF"}
         </button>
       )}
       {/* S29B6：右上控制鈕欄——改成從 SAFE_TOP 起算的**單一 flex 直欄**。

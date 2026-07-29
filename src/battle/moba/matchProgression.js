@@ -290,11 +290,13 @@ SIM_RULES.v3 = {
   campGold: 60, buffCampGold: 90,
   // Milestone D：中立首領與紅藍 Buff。全部只在 v3 啟用；Boss 不執行最後一擊，
   // 維持既有 KDA 不變量。Buff 由實際擊殺參與者取得，有限時且進 snapshot/Replay。
-  dragonAttackInterval: 1.35, dragonAttackDamage: 18,
-  baronAttackInterval: 1.05, baronAttackDamage: 26,
+  // 反擊用來提供真實受擊／動作回饋，不應把參與者長期壓到 1 HP 主導戰局。
+  dragonAttackInterval: 1.35, dragonAttackDamage: 1,
+  baronAttackInterval: 1.05, baronAttackDamage: 1,
   combatBuffT: 75,
-  redBuffDamageK: 1.08, redBuffSlowT: 1.6, redBuffSlowK: 0.9,
-  blueBuffCooldownK: 0.72,
+  combatBuffDamageK: 1.06,
+  redBuffSlowT: 1.6, redBuffSlowK: 0.92,
+  blueBuffMoveK: 1 / 0.92, blueBuffCooldownK: 0.72,
   // 巴龍 buff（v3 收尾機制之二）：擊殺方 baronBuffT 秒內小兵拆塔 ×baronMinionK
   //  ⇒ 拿下巴龍 = 真實的推進窗，比賽不再拖尾（實測 p99 時長 34 分 → 需 ≤32）
   baronBuffT: 70, baronMinionK: 2.2, baronMinionFightK: 1.7,

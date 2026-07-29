@@ -60,6 +60,7 @@ export const useCameraStore = create((set) => ({
   mode: "director",
   heroId: null,          // heroFocus 目標（引擎 id：b1–b5 / r1–r5）
   focusUntil: 0,         // heroFocus 到期（performance.now() 毫秒）
+  savedFreeView: null,   // 自動導播開啟前的自由視角；關閉時精確恢復
 
   // ── S29B6：pan/zoom 單一狀態源 ──────────────────────────────────────────
   pan: { ...CENTER },    // 鏡頭看向的**邏輯世界座標**（clamp 於 WORLD_BOUNDS）
@@ -68,7 +69,29 @@ export const useCameraStore = create((set) => ({
   setMode: (mode) => set((s) => (s.mode === mode ? s : { mode, ...(mode !== "heroFocus" ? { heroId: null } : {}) })),
   focusHero: (heroId, ms = HERO_FOCUS_MS) =>
     set({ mode: "heroFocus", heroId, focusUntil: performance.now() + ms }),
-  backToDirector: () => set({ mode: "director", heroId: null, focusUntil: 0 }),
+  backToDirector: () => set((s) => ({
+    mode: "director", heroId: null, focusUntil: 0,
+    savedFreeView: s.mode === "free" ? { pan: { ...s.pan }, zoom: s.zoom } : s.savedFreeView,
+  })),
+  disableDirector: () => set((s) => ({
+    mode: "free", heroId: null, focusUntil: 0,
+    pan: s.savedFreeView?.pan ? { ...s.savedFreeView.pan } : s.pan,
+    zoom: s.savedFreeView?.zoom ?? s.zoom,
+  })),
+  toggleDirector: () => set((s) => {
+    const auto = s.mode !== "free";
+    if (auto) {
+      return {
+        mode: "free", heroId: null, focusUntil: 0,
+        pan: s.savedFreeView?.pan ? { ...s.savedFreeView.pan } : s.pan,
+        zoom: s.savedFreeView?.zoom ?? s.zoom,
+      };
+    }
+    return {
+      mode: "director", heroId: null, focusUntil: 0,
+      savedFreeView: { pan: { ...s.pan }, zoom: s.zoom },
+    };
+  }),
 
   /** 導播 / heroFocus 的自動目標：只寫目標值，**不改 mode**（不會把自己踢進 free）。 */
   setAutoTarget: ({ x, y, zoom }) => set((s) => {
@@ -79,11 +102,20 @@ export const useCameraStore = create((set) => ({
   }),
 
   /** 使用者手動平移（拖曳）⇒ **一律進 free mode**（任務單 A-4）；pan 夾於 WORLD_BOUNDS。 */
-  userPanTo: (x, y) => set({ mode: "free", heroId: null, focusUntil: 0, pan: clampPan(x, y) }),
+  userPanTo: (x, y) => set(() => {
+    const pan = clampPan(x, y);
+    return { mode: "free", heroId: null, focusUntil: 0, pan, savedFreeView: { pan: { ...pan } } };
+  }),
 
   /** 使用者手動縮放（捏合 / 滾輪）⇒ **一律進 free mode**（任務單 A-4）。 */
-  userZoomTo: (z) => set({ mode: "free", heroId: null, focusUntil: 0, zoom: clampZoom(z) }),
+  userZoomTo: (z) => set((s) => {
+    const zoom = clampZoom(z);
+    return {
+      mode: "free", heroId: null, focusUntil: 0, zoom,
+      savedFreeView: { pan: { ...s.pan }, zoom },
+    };
+  }),
 
   /** 開局 / 回導播時的視野重置（pan 回世界中心；zoom 由控制器依視窗推導）。 */
-  resetView: () => set({ pan: { ...CENTER } }),
+  resetView: () => set({ pan: { ...CENTER }, savedFreeView: null }),
 }));

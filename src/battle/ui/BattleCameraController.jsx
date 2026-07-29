@@ -47,9 +47,19 @@ export function fitZoomFor(width, height, mobile) {
 }
 
 /** 把 cameraStore 的邏輯 pan + zoom 套到 three 正交相機（固定俯角、零旋轉）。 */
-function applyCamera(camera, panX, panY, zoom) {
+function applyCamera(camera, panX, panY, zoom, perspective = null) {
   const fx = wx(panX), fz = wz(panY);
-  camera.position.set(fx + CAM_OFFSET.x, CAM_OFFSET.y, fz + CAM_OFFSET.z);
+  if (perspective) {
+    const pitch = (perspective.pitchDeg * Math.PI) / 180;
+    const yaw = (perspective.yawDeg * Math.PI) / 180;
+    const distance = clamp(perspective.distDefault * (perspective.zoomDefault / zoom),
+      perspective.distMin, perspective.distMax);
+    const h = Math.sin(pitch) * distance;
+    const back = Math.cos(pitch) * distance;
+    camera.position.set(fx - Math.sin(yaw) * back, h, fz + Math.cos(yaw) * back);
+  } else {
+    camera.position.set(fx + CAM_OFFSET.x, CAM_OFFSET.y, fz + CAM_OFFSET.z);
+  }
   camera.lookAt(fx, 0, fz);
   if (camera.isOrthographicCamera) {
     camera.zoom = clamp(zoom, ZOOM_MIN, ZOOM_MAX);
@@ -65,6 +75,7 @@ export default function BattleCameraController({
   posLerp = 0.05,      // target 跟隨柔順度（越小越穩）
   zoomLerp = 0.04,
   source = null,       // S29B6：呈現資料源（預設 live useGameStore；Replay 傳唯讀 adapter）
+  perspective = null,  // Milestone D：runtime-v2 保留既有 perspective 構圖，由同一控制器驅動
 }) {
   const camera = useThree((s) => s.camera);
   const size = useThree((s) => s.size);
@@ -73,14 +84,16 @@ export default function BattleCameraController({
 
   useFrame(() => {
     const cam = useCameraStore.getState();
-    const base = fitZoomFor(size.width, size.height, mobile);
+    const isMobile = mobile || size.width <= 640;
+    const base = perspective ? (isMobile ? perspective.zoomMobile : perspective.zoomDefault)
+      : fitZoomFor(size.width, size.height, isMobile);
     if (!viewRef.current) viewRef.current = { x: cam.pan.x, y: cam.pan.y, zoom: base };
     const V = viewRef.current;
 
     // ── free：玩家手動 pan/zoom ⇒ 1:1 直接套用（不平滑，避免與手勢互相追尾）──
     if (cam.mode === "free") {
       V.x = cam.pan.x; V.y = cam.pan.y; V.zoom = cam.zoom;
-      applyCamera(camera, V.x, V.y, V.zoom);
+      applyCamera(camera, V.x, V.y, V.zoom, perspective);
       return;
     }
 
@@ -92,7 +105,7 @@ export default function BattleCameraController({
       V.y = lerp(V.y, tz, pl);
       V.zoom = lerp(V.zoom, wantZoom, zoomLerp);
       cam.setAutoTarget({ x: V.x, y: V.y, zoom: V.zoom });
-      applyCamera(camera, V.x, V.y, V.zoom);
+      applyCamera(camera, V.x, V.y, V.zoom, perspective);
     };
 
     // ── 非跟隨（賽前待機）：世界中心 + 視窗取景（原 CameraRig 的職責）───────
@@ -108,7 +121,7 @@ export default function BattleCameraController({
       if (performance.now() > cam.focusUntil) { cam.backToDirector(); return; }
       const hero = snap.players.find((p) => p.id === cam.heroId);
       if (!hero) { cam.backToDirector(); return; }
-      glide(hero.pos.x, hero.pos.y, base * (mobile ? 2.1 : 1.85), 0.09);
+      glide(hero.pos.x, hero.pos.y, base * (isMobile ? 1.45 : 1.32), 0.09);
       return;
     }
 
@@ -117,7 +130,10 @@ export default function BattleCameraController({
     // S29B6：注入 source（Replay）時**不讀 live battleStore**——重播的焦點必須完全由
     //   replay frame 推導（`computeFocus(snap)` 的交戰聚類/重心），否則會被上一場現場
     //   對戰殘留的 events 影響。replay.events 也沒有 `pos` 欄位，餵進去等於沒有作用。
-    const f = computeSpectatorFocus(snap, source ? [] : useBattleStore.getState().events);
+    const cameraEvents = source
+      ? (source.getCameraEvents?.() ?? snap.cameraEvents ?? [])
+      : useBattleStore.getState().events;
+    const f = computeSpectatorFocus(snap, cameraEvents);
     // S29B2 防抖：焦點只在「真的移動了」才更新鎖定點
     const lock = lockRef.current;
     if (!lock || Math.hypot(f.x - lock.x, f.y - lock.y) > FOCUS_DEADBAND) {
@@ -131,7 +147,7 @@ export default function BattleCameraController({
     const want = onPit ? "objectiveFocus" : "director";
     if (cam.mode !== want) cam.setMode(want);   // setMode 內建同值免重繪
 
-    const fight = base * (mobile ? 1.8 : 1.5);
+    const fight = base * (isMobile ? 1.34 : 1.24);
     glide(L.x, L.y, lerp(base, fight, L.intensity));
   });
 

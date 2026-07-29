@@ -75,7 +75,14 @@ export function finalizeReplay({ matchId, events = [], comms = [], resultSummary
     finishedAt: Date.now(),
     frames: cap.frames,
     // S29B1：data 純附加保存（killContext / 技能 / 目標歸屬）——Replay 只讀不重判定
-    events: events.map((e) => ({ t: e.t, type: e.type, side: e.side ?? null, text: e.text ?? "", ...(e.data ? { data: e.data } : {}) })),
+    events: events.map((e) => ({
+      t: e.t, type: e.type, side: e.side ?? null, text: e.text ?? "",
+      // Milestone D：呈現用事件座標讓 Replay 自動導播能重現推塔／擊殺／Boss 焦點。
+      // optional additive 欄；不改 frame、不重跑引擎、舊 Replay 沒有也可正常播放。
+      ...(e.pos && Number.isFinite(e.pos.x) && Number.isFinite(e.pos.y)
+        ? { pos: { x: e.pos.x, y: e.pos.y } } : {}),
+      ...(e.data ? { data: e.data } : {}),
+    })),
     playersMeta: cap.playersMeta,
     towersMeta: cap.towersMeta,
     resultSummary,

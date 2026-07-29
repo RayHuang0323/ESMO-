@@ -119,6 +119,8 @@ export default function MobaReplayScreen({ replay, onClose }) {
   const [speed, setSpeed] = useState(1);
   const tRef = useRef(0);
   const isMobile = useIsMobile();
+  const replayCamMode = useCameraStore((s) => s.mode);
+  const replayDirectorOn = replayCamMode !== "free";
   //  qualityId 是字串等級（runtime-v2 吃這個）；quality 是既有的 preset 物件（legacy 吃這個）
   const qualityId = useMemo(() => loadQuality(), []);
   const quality = useMemo(() => presetFor(qualityId), [qualityId]);
@@ -254,6 +256,14 @@ export default function MobaReplayScreen({ replay, onClose }) {
           <button key={s} onClick={() => setSpeed(s)}
             style={{ ...btn(false), padding: "7px 10px", ...(speed === s ? { border: "1px solid #93c5fd", color: "#93c5fd", background: "rgba(59,130,246,0.15)" } : {}) }}>{s}×</button>
         ))}
+        {use3D && (
+          <button data-testid="replay-director-toggle" aria-pressed={replayDirectorOn}
+            onClick={() => useCameraStore.getState().toggleDirector()}
+            style={{ ...btn(false), borderColor: replayDirectorOn ? "#93c5fd" : "rgba(255,255,255,.2)",
+              color: replayDirectorOn ? "#93c5fd" : "#d4d4d8" }}>
+            🎥 導播 {replayDirectorOn ? "ON" : "OFF"}
+          </button>
+        )}
         <span style={{ width: 8 }} />
         <button onClick={onClose} style={btn(false)}>返回 Result</button>
       </div>

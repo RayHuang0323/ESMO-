@@ -24,6 +24,8 @@ import MobaRuntimeStructures from "./MobaRuntimeStructures.jsx";
 import MobaRuntimeMinions from "./MobaRuntimeMinions.jsx";
 import MobaRuntimeEffects from "./MobaRuntimeEffects.jsx";
 import MobaRuntimeNeutrals from "./MobaRuntimeNeutrals.jsx";
+import BattleCameraController from "../../ui/BattleCameraController.jsx";
+import { useCameraStore } from "../../cameraStore.js";
 import { blendRuntimePosition } from "./runtimeMovementPolicy.js";
 import RuntimeDeviceDiagnosticsPanel from "./RuntimeDeviceDiagnosticsPanel.jsx";
 import { adaptRuntimeMapFrame } from "../map/mobaRuntimeMapAdapter.js";
@@ -33,7 +35,7 @@ import {
   MAP_HALF_WORLD, MAP_CENTER_WORLD, WORLD_SCALE,
 } from "../map/coordinateMapping.js";
 import { useGameStore } from "../../../useGameStore.js";
-import { ease } from "../../../gameData.js";
+import { ease, worldX, worldZ, WORLD_BOUNDS } from "../../../gameData.js";
 import { diagnosticsEnabled, installRuntimeDiagnostics, removeRuntimeDiagnostics, countMount, countUnmount } from "./runtimeDiagnostics.js";
 
 const S = WORLD_SCALE;
@@ -78,6 +80,11 @@ const CAM = Object.freeze({
   near: 35,
   far: 1000,
 });
+const RUNTIME_CAMERA = Object.freeze({
+  pitchDeg: CAM.pitchDeg, yawDeg: CAM.yawDeg,
+  distMin: CAM.distMin, distMax: CAM.distMax, distDefault: CAM.distDefault,
+  zoomDefault: 3.4, zoomMobile: 3.05,
+});
 
 /**
  * 要把整張地圖收進畫面所需的相機距離。
@@ -102,11 +109,9 @@ const panLimit = (dist) => ({
  * 相機控制：拖曳平移、滾輪縮放、手機單指拖曳 / 雙指縮放、邊界限制、
  * 回到中心、鎖定英雄。**不寫回 snapshot**，相機狀態只活在本元件。
  */
-function RuntimeCamera({ ctrl, lockTarget }) {
-  const { camera, gl } = useThree();
+function RuntimeCameraInput({ ctrl }) {
+  const { gl } = useThree();
   const state = useRef({
-    pan: { x: MAP_CENTER_WORLD.x, z: MAP_CENTER_WORLD.z },
-    dist: CAM.distDefault,
     drag: null,
     pinch: null,
   });
@@ -115,18 +120,17 @@ function RuntimeCamera({ ctrl, lockTarget }) {
   useEffect(() => {
     ctrl.current = {
       recenter() {
-        state.current.pan.x = MAP_CENTER_WORLD.x;
-        state.current.pan.z = MAP_CENTER_WORLD.z;
-        state.current.dist = CAM.distDefault;
+        useCameraStore.getState().resetView();
       },
       zoomBy(k) {
-        state.current.dist = Math.min(CAM.distMax, Math.max(CAM.distMin, state.current.dist * k));
+        const cam = useCameraStore.getState();
+        cam.userZoomTo(cam.zoom / k);
       },
       /** 拉到剛好看得見整張地圖（驗收全場截圖用；玩家的「回到中心」不走這條）。 */
       fitAll() {
-        state.current.pan.x = MAP_CENTER_WORLD.x;
-        state.current.pan.z = MAP_CENTER_WORLD.z;
-        state.current.dist = fitDistance(gl.domElement.clientWidth / Math.max(1, gl.domElement.clientHeight));
+        const distance = fitDistance(gl.domElement.clientWidth / Math.max(1, gl.domElement.clientHeight));
+        useCameraStore.getState().userZoomTo(
+          RUNTIME_CAMERA.zoomDefault * RUNTIME_CAMERA.distDefault / distance);
       },
     };
   }, [ctrl, gl]);
@@ -134,18 +138,24 @@ function RuntimeCamera({ ctrl, lockTarget }) {
   //  驗收探針：讓截圖工具讀得到真實相機距離、也能指定視角（只在 ?diag=1 / ?shot= 時掛）。
   useEffect(() => {
     if (!diagnosticsEnabled()) return undefined;
-    window.__ESMO_RUNTIME_CAM = () => ({ dist: state.current.dist, pan: { ...state.current.pan } });
+    window.__ESMO_RUNTIME_CAM = () => {
+      const cam = useCameraStore.getState();
+      return {
+        dist: RUNTIME_CAMERA.distDefault * RUNTIME_CAMERA.zoomDefault / cam.zoom,
+        pan: { x: worldX(cam.pan.x), z: worldZ(cam.pan.y) }, mode: cam.mode,
+      };
+    };
     window.__ESMO_RUNTIME_SETCAM = (o = {}) => {
-      const st = state.current;
-      if (Number.isFinite(o.dist)) st.dist = Math.min(CAM.distMax, Math.max(CAM.distMin, o.dist));
       if (o.fitAll) ctrl.current?.fitAll();
-      //  ⚠ 平移一律套用**和玩家拖曳完全相同**的邊界（panLimit）。
-      //  不套的話截圖工具可以把鏡頭推到地圖外，拍出「畫面一半是空的」而且
-      //  玩家自己根本到不了的構圖 ⇒ 那種截圖不能當驗收證據。
-      const lim = panLimit(st.dist);
-      if (Number.isFinite(o.panX)) st.pan.x = Math.min(lim.x, Math.max(-lim.x, o.panX));
-      if (Number.isFinite(o.panZ)) st.pan.z = Math.min(lim.z, Math.max(-lim.z, o.panZ));
-      return { dist: st.dist, pan: { ...st.pan }, panLimit: lim };
+      const cam = useCameraStore.getState();
+      if (Number.isFinite(o.dist)) cam.userZoomTo(
+        RUNTIME_CAMERA.zoomDefault * RUNTIME_CAMERA.distDefault / o.dist);
+      if (Number.isFinite(o.panX) || Number.isFinite(o.panZ)) {
+        cam.userPanTo(
+          Number.isFinite(o.panX) ? o.panX / S + WORLD_BOUNDS.centerX : cam.pan.x,
+          Number.isFinite(o.panZ) ? o.panZ / S + WORLD_BOUNDS.centerY : cam.pan.y);
+      }
+      return window.__ESMO_RUNTIME_CAM();
     };
     return () => { delete window.__ESMO_RUNTIME_CAM; delete window.__ESMO_RUNTIME_SETCAM; };
   }, [ctrl]);
@@ -154,20 +164,20 @@ function RuntimeCamera({ ctrl, lockTarget }) {
     const el = gl.domElement;
     const st = state.current;
     const pos = (e) => ({ x: e.clientX, y: e.clientY });
-    const onDown = (e) => {
+      const onDown = (e) => {
       if (e.pointerType === "touch" && e.isPrimary === false) return;
-      st.drag = { ...pos(e), panX: st.pan.x, panZ: st.pan.z, id: e.pointerId };
+      const cam = useCameraStore.getState();
+      st.drag = { ...pos(e), panX: cam.pan.x, panY: cam.pan.y, id: e.pointerId };
       el.setPointerCapture?.(e.pointerId);
     };
     const onMove = (e) => {
       if (!st.drag || e.pointerId !== st.drag.id) return;
       //  螢幕像素 → 世界位移：距離愈遠，同樣的拖曳距離要移動愈多世界單位
-      const k = (st.dist / el.clientHeight) * 1.6;
-      const nx = st.drag.panX - (e.clientX - st.drag.x) * k;
-      const nz = st.drag.panZ - (e.clientY - st.drag.y) * k;
-      const lim = panLimit(st.dist);
-      st.pan.x = Math.min(lim.x, Math.max(-lim.x, nx));
-      st.pan.z = Math.min(lim.z, Math.max(-lim.z, nz));
+      const cam = useCameraStore.getState();
+      const distance = RUNTIME_CAMERA.distDefault * RUNTIME_CAMERA.zoomDefault / cam.zoom;
+      const k = (distance / el.clientHeight) * 1.6 / S;
+      cam.userPanTo(st.drag.panX - (e.clientX - st.drag.x) * k,
+        st.drag.panY - (e.clientY - st.drag.y) * k);
     };
     const onUp = (e) => {
       if (st.drag && e.pointerId === st.drag.id) st.drag = null;
@@ -175,7 +185,8 @@ function RuntimeCamera({ ctrl, lockTarget }) {
     };
     const onWheel = (e) => {
       e.preventDefault();
-      st.dist = Math.min(CAM.distMax, Math.max(CAM.distMin, st.dist * (1 + Math.sign(e.deltaY) * 0.12)));
+      const cam = useCameraStore.getState();
+      cam.userZoomTo(cam.zoom / (1 + Math.sign(e.deltaY) * 0.12));
     };
     //  手機雙指縮放
     const touches = new Map();
@@ -183,7 +194,7 @@ function RuntimeCamera({ ctrl, lockTarget }) {
       for (const t of e.changedTouches) touches.set(t.identifier, { x: t.clientX, y: t.clientY });
       if (touches.size === 2) {
         const [a, b] = [...touches.values()];
-        st.pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: st.dist };
+        st.pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), zoom: useCameraStore.getState().zoom };
         st.drag = null;
       }
     };
@@ -193,7 +204,7 @@ function RuntimeCamera({ ctrl, lockTarget }) {
         e.preventDefault();
         const [a, b] = [...touches.values()];
         const d = Math.hypot(a.x - b.x, a.y - b.y);
-        st.dist = Math.min(CAM.distMax, Math.max(CAM.distMin, st.pinch.dist * (st.pinch.d / Math.max(1, d))));
+        useCameraStore.getState().userZoomTo(st.pinch.zoom * d / Math.max(1, st.pinch.d));
       }
     };
     const onTouchEnd = (e) => {
@@ -220,28 +231,6 @@ function RuntimeCamera({ ctrl, lockTarget }) {
     };
   }, [gl]);
 
-  useFrame(() => {
-    const st = state.current;
-    //  鎖定英雄：把 pan 平滑拉到該英雄身上（使用者一拖曳就會被 onMove 覆蓋）
-    if (lockTarget && lockTarget.current) {
-      const t = lockTarget.current;
-      st.pan.x += (t.x - st.pan.x) * 0.12;
-      st.pan.z += (t.z - st.pan.z) * 0.12;
-    }
-    const pitch = (CAM.pitchDeg * Math.PI) / 180;
-    const yaw = (CAM.yawDeg * Math.PI) / 180;
-    const h = Math.sin(pitch) * st.dist;
-    const back = Math.cos(pitch) * st.dist;
-    camera.position.set(st.pan.x - Math.sin(yaw) * back, h, st.pan.z + Math.cos(yaw) * back);
-    camera.lookAt(st.pan.x, 0, st.pan.z);
-    camera.fov = CAM.fov;
-    //  ⚠ H.2-flicker：near/far 必須讀 CAM，不能寫死。
-    //  這裡原本每幀硬塞 near=1 / far=4000，把 Canvas 的 camera 設定整個蓋掉
-    //  ⇒ 就算改了 CAM.near/far 也**完全不會生效**（診斷探針讀回來仍是 1/4000）。
-    //  深度精度就是靠這兩個值買的（見 CAM 的說明），寫死等於把手機的閃爍鎖死。
-    camera.near = CAM.near; camera.far = CAM.far;
-    camera.updateProjectionMatrix();
-  });
   return null;
 }
 
@@ -400,7 +389,8 @@ export default function MobaRuntimeView3D({ quality = "high", lockHeroId = null,
       <MobaRuntimeHeroes heroes={frame.heroes} frameRef={frameRef} showLabels={quality !== "low"} />
 
       <RuntimeFrameFeeder frameRef={frameRef} onShapeChange={onShapeChange} lockHeroId={lockHeroId} lockTarget={lockTarget} source={source} roster={roster} />
-      <RuntimeCamera ctrl={ctrl} lockTarget={lockHeroId ? lockTarget : null} />
+      <BattleCameraController source={source} perspective={RUNTIME_CAMERA} />
+      <RuntimeCameraInput ctrl={ctrl} />
       <RuntimeDiagnosticsBridge frameRef={frameRef} />
     </Canvas>
     <RuntimeDeviceDiagnosticsPanel />

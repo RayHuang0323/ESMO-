@@ -152,6 +152,11 @@ export function validateMobaReplay(r) {
         row.slice(8, 12).some((v) => v !== undefined && typeof v !== "string")))) {
         errors.push(`frame[${i}].fx 形狀錯誤或含非有限數值`); break;
       }
+      if (f.bf !== undefined && (!Array.isArray(f.bf) || f.bf.length !== f.p.length ||
+        f.bf.some((row) => !Array.isArray(row) || row.length !== 4 ||
+          row.some((v) => !Number.isFinite(v) || v < 0)))) {
+        errors.push(`frame[${i}].bf 形狀錯誤或含非法秒數`); break;
+      }
     }
   }
   if (!Array.isArray(r.events)) errors.push("events 必須為陣列");

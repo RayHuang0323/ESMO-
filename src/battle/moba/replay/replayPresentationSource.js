@@ -188,6 +188,7 @@ export function createReplaySource(replay) {
   return {
     /** MobaView3D / BattleCameraController 唯一會呼叫的介面（**只讀**）。 */
     getState: () => state,
+    getCameraEvents: () => replay?.events ?? [],
     /** 播放器把時間軸推到 t：換算前後 frame 與插值係數（不模擬、不寫 Store）。 */
     seek(t) {
       const { a, b, f } = frameAt(frames, t);

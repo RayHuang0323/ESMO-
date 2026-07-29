@@ -818,7 +818,11 @@ export class LogicEngine {
     if (foe) {
       // S29：dmgK 由規則集決定（v1 0.92 ⇒ TTK 20–30 秒、前 5 分鐘幾乎零擊殺）
       const hasRedBuff = R.neutralObjectives && this.t < (p.redBuffUntil ?? 0);
-      const dmgAmt = p.power * dt * R.dmgK * lateFactor * (hasRedBuff ? R.redBuffDamageK : 1);
+      const hasBlueBuff = R.neutralObjectives && this.t < (p.blueBuffUntil ?? 0);
+      // 兩座固定 Buff camp 在地圖上分屬不同側；共同傷害收益必須等值，否則會把
+      // presentation 類型變成陣營公平性。紅＝命中減速，藍＝移速＋技能循環。
+      const dmgAmt = p.power * dt * R.dmgK * lateFactor *
+        (hasRedBuff || hasBlueBuff ? R.combatBuffDamageK : 1);
       p.dmg += dmgAmt; foe.hitBy.set(p.id, this.t); // Sprint06：傷害/助攻追蹤（附加）
       if (hasRedBuff) foe.redSlowUntil = Math.max(foe.redSlowUntil ?? 0, this.t + R.redBuffSlowT);
       if (R.towerAttackInterval) {
@@ -840,7 +844,6 @@ export class LogicEngine {
           ability: `${p.role}:${power ? "power" : "basic"}`,
           feedback: power ? "skill" : "attack",
         });
-        const hasBlueBuff = R.neutralObjectives && this.t < (p.blueBuffUntil ?? 0);
         p.atkCd = 0.5 * (hasBlueBuff ? R.blueBuffCooldownK : 1);
       }
       if (R.simultaneousCombat) pendingHits.push([p, foe, dmgAmt]);
@@ -1657,7 +1660,8 @@ export class LogicEngine {
       const d = dist(p.pos, tgt),
         spd = ((st === "團戰!" || st === "追擊") ? R.fightSpeed : R.moveSpeed) *
           (R.engagementFsm && p.retreating ? R.retreatSpeedMult : 1) *
-          (R.neutralObjectives && this.t < (p.redSlowUntil ?? 0) ? R.redBuffSlowK : 1) * dt;
+          (R.neutralObjectives && this.t < (p.redSlowUntil ?? 0) ? R.redBuffSlowK : 1) *
+          (R.neutralObjectives && this.t < (p.blueBuffUntil ?? 0) ? R.blueBuffMoveK : 1) * dt;
       //  ── H.2：真正的碰撞與導航 ────────────────────────────────────────────
       //  舊版是「直線位移 + 對 28 個手寫圓做推開」，那和畫面上的牆體無關 ⇒ 會穿牆。
       //  現在：目標點先推回通道中心 → 子步進前進（沿牆切線滑動）→ 需要時尋路。
