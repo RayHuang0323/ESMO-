@@ -2279,3 +2279,55 @@ shadow decal、FPS、觸控與桌面外觀。未完成前不得宣稱真機通�
 - rollback baseline：`51d97e2`。本輪 commit 見最終回報；若需回退使用
   `git revert <commit>`，不可使用 `git reset --hard`。
 - 未開始下一階段，未納入工作區既有 terrain／bug／backup 舊產物。
+
+---
+
+## Milestone C：MOBA Runtime 戰鬥可讀性與單位行為（2026-07-29）
+
+狀態：**本機實作與桌機／手機 viewport 驗收完成；待人工／Android 真機確認；未 push、未部署。**
+
+### 英雄、技能與敵我辨識
+
+- 移除英雄頭頂大型「藍方／紅方」文字，改用隊伍色腳下環、腰帶、血條旁菱形與
+  小型名牌色邊；手機不再被大標籤遮住。
+- 保留 `hero-visual.v2` 十名英雄的主色、比例、頭部／背部／武器差異與 100+
+  deterministic fallback；cast/release 驅動武器／肩部動作，hit 驅動短暫抖動與亮光。
+- 技能、普攻、小兵、塔與野怪仍共用 live／Replay FX event；未另造命中結果。
+
+### 塔、小兵與野怪
+
+- v3 塔由連續扣血改成同 DPS 的離散單體射擊：每 0.5 秒對小兵 60 damage，
+  240 HP 依 `180→120→60→0` 四次下降；傷害與 `tower:basic` 弧線追蹤彈同源。
+- 塔固定鎖定有效目標，預設優先小兵；敵方英雄在塔區攻擊守方英雄時加入 3 秒 threat。
+  對英雄 1 HP clamp、KDA、勝負與 v1／v2 舊規則不變。
+- 小兵塔邊隊形以 `1/.65/.35/0` 逐級縮回並投影至可走區，不再失敗後直接跳回 lane
+  center；沿用 camera-facing 黑底連續 HP bar。
+- 六個正式 camp 統一權威座標；新增營區巡遊、索敵、追擊、離散攻擊、受擊回饋、
+  7.5 leash、回營補滿與低模動態 renderer。藍／紅 Buff 座標修正為鏡射的
+  `(76,171)`／`(144,49)`，移除約 17.1 單位 renderer-only offset。
+
+### 正式 GameView 與驗證
+
+- 正式 `GameView` 固定使用 `MobaRuntimeView3D`，移除「地圖 新版／舊版」按鈕、
+  legacy renderer 分支與會和 Timeline 重疊的常駐回中心鈕；底層 legacy 檔未刪。
+- 新增 `check_moba_milestone_c`：塔四段血量／同源彈體、camp
+  idle→aggro→attack→leash reset、小兵塔邊相鄰幀、隊標與 runtime-v2-only 全部 PASS。
+- build、mobamap 3553/0、navigation/collision 14/0、B.1–B.4、B-fix、
+  regress 15/15、regress2 8/8、pacing 25/25、presentation 12/12、
+  controls 18/18、camera/replay 16/16 均通過。
+- 完整 runtime29 自然結束為 **43/44、exit 1**；唯一紅燈是 H.3 已記錄的既有 v2
+  正／反序抽樣仍為 55%／35%（位移 20pp > 15pp）。Sprint23–28、regress、
+  regress2、build 全部 exit 0；本輪只改 v3 行為，未改 v2 或放寬門檻。
+- 正式 Draft → Tactic → GameView 已截取桌機 1440×900 與手機 390×844；
+  手機無水平溢出、Timeline／隊伍面板維持收合，畫面沒有舊地圖入口。
+- 報告與畫面：
+  `review/moba-runtime/milestone-c/MILESTONE_C_REPORT.md`、
+  `gameview-desktop-1440x900.png`、`gameview-mobile-390x844.png`。
+
+### Commit／回退／人工項目
+
+- rollback baseline：`f66cfb0db5a3feed118c18df51ec4f51b28c1491`。
+- 主要實作 commit：`df3e053`；正式 GameView 清理與文件 commit 見最終回報。
+- 仍需人工觀看 1× 的塔彈體完整弧線、野怪巡遊／攻擊／回營、十名英雄逐一近景、
+  Replay 動態，以及 Android 真機閃爍、FPS、熱降頻、觸控與 safe area。
+- 未納入既有 bug 影片、terrain／map preview、backup、blend／glb 或 logs。

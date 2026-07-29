@@ -1,6 +1,6 @@
 // ============================================================================
 //  GameView.jsx — 整合殼 v2（Sprint06：Battle Presentation 正式掛入）
-//  組合：MobaView3D（3D + Hero Overlay + 相機跟隨） + BattlePresentationLayer
+//  組合：MobaRuntimeView3D（3D + Runtime Adapter） + BattlePresentationLayer
 //       （HUD/Timeline/浮動大字/TAB 記分板/終局畫面） + 小地圖 + 控制鈕
 //  邏輯仍由 useLocalServer 驅動；資料單向：Engine → snapshot → useBattleFeed →
 //  BattlePresentation。此檔只讀 store，不回寫引擎。
@@ -9,25 +9,20 @@
 // ============================================================================
 
 import React, { useRef, useEffect, useState, useMemo } from "react";
-import MobaView3D from "./MobaView3D.jsx";
-// H.1：正式戰鬥的新地圖畫面（runtime-v2）。legacy 的 MobaView3D 一行未改，
-//      兩個模式讀同一份 useGameStore ⇒ 切換不影響比賽結果與 replay schema。
+// H.1：正式戰鬥使用 runtime-v2。Milestone C 起移除正式 GameView 的 legacy
+//      切換入口，避免驗收／玩家誤觸回到不再維護的舊呈現。
 import MobaRuntimeView3D from "./battle/moba/render/MobaRuntimeView3D.jsx";
-import { loadMapPresentation, saveMapPresentation, isRuntimeV2, MAP_PRESENTATION } from "./battle/moba/mobaMapPresentation.js";
 import BattlePresentationLayer from "./battle/ui/BattlePresentationLayer.jsx";
 import { useGameStore } from "./useGameStore.js";
 import { useLocalServer } from "./useLocalServer.js";
 import { LANES, PITS, FOUNTAIN, RIVER, WORLD_BOUNDS, mapNormX, presentationForObjective } from "./gameData.js";
 import { ROSTER } from "./data/roster.js";
 import { draftRoster } from "./battle/moba/draftRoster.js";
-import { loadQuality, saveQuality, presetFor, QUALITY_IDS, QUALITY_PRESETS } from "./battle/quality.js";
+import { loadQuality, saveQuality, QUALITY_IDS, QUALITY_PRESETS } from "./battle/quality.js";
 import { useIsMobile } from "./ui/useViewport.js";
 import { useCameraStore } from "./battle/cameraStore.js";
 import { isDebugMode } from "./ui/debugMode.js";
 import { SAFE_TOP, Z } from "./battle/ui/battleLayout.js";
-
-// 你的彩色地圖：Vite 可 `import mapUrl from "./assets/rift.png"` 後設給 MOBA_MAP；null 用程序化底圖。
-const MOBA_MAP = null;
 
 // ── 小地圖（沿用；自有 rAF、讀 store、含戰爭迷霧）────────────────────────────
 function Minimap({ mobile = false }) {
@@ -117,7 +112,6 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   const camMode = useCameraStore((s) => s.mode);
   // S29：畫質——首次依裝置自動判斷，玩家手動選擇後存 localStorage 並優先
   const [qualityId, setQualityId] = useState(() => loadQuality());
-  const quality = useMemo(() => presetFor(qualityId), [qualityId]);
   const pickQuality = (id) => { setQualityId(id); saveQuality(id); };
   const hud = useGameStore((s) => s.hud);
   // S29B2：手機控制鈕收納（⚙ 展開）；地圖不被常駐按鈕群遮擋
@@ -126,37 +120,10 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   // Sprint20【E】生效名單：Ban/Pick 選到的英雄取代 ROSTER 預設英雄（無 draft → 原 ROSTER）。
   //   3D 名牌 / HUD / 記分板 / 終局畫面全部吃這一份 → Loading、Battle、Result 顯示同一批英雄。
   const liveRoster = useMemo(() => draftRoster(roster, draft), [roster, draft]);
-  // H.1：地圖呈現模式（legacy | runtime-v2）。預設 legacy ⇒ 沒設定時行為完全不變。
-  const [mapMode, setMapMode] = useState(() => loadMapPresentation());
-  const pickMapMode = (id) => { setMapMode(id); saveMapPresentation(id); };
-  const runtimeRecenter = useRef(null);
-
   return (
     <div style={{ position: "relative", width: "100%", height: "min(82vh, 720px)", background: "#0d1420", borderRadius: 14, overflow: "hidden", fontFamily: "system-ui,-apple-system,sans-serif" }}>
       {/* 3D：對局進行中相機由 cameraStore 管理（director/objectiveFocus/heroFocus/free）*/}
-      {isRuntimeV2(mapMode)
-        ? <MobaRuntimeView3D quality={qualityId} onRecenterRef={runtimeRecenter} roster={liveRoster} />
-        : <MobaView3D mapTexture={MOBA_MAP} autoRotate={!playing} battleFollow={playing} roster={liveRoster} quality={quality} />}
-
-      {/* H.1：地圖呈現模式切換（legacy ⇄ runtime-v2）＋ runtime 專用「回到中心」。
-          放在左上角、只有兩顆小鈕，不遮擋主要戰鬥區域。*/}
-      <div style={{ position: "absolute", left: 8, top: SAFE_TOP, zIndex: Z.controls, display: "flex", gap: 6 }}>
-        <button
-          onClick={() => pickMapMode(isRuntimeV2(mapMode) ? MAP_PRESENTATION.LEGACY : MAP_PRESENTATION.RUNTIME_V2)}
-          title="切換戰鬥地圖呈現（不影響比賽資料）"
-          style={{ font: "11px ui-monospace,monospace", color: "#e7edf5", cursor: "pointer",
-            background: isRuntimeV2(mapMode) ? "#22406b" : "#1a2430", border: "1px solid #2a3542",
-            borderRadius: 6, padding: "4px 8px" }}>
-          地圖 {isRuntimeV2(mapMode) ? "新版" : "舊版"}
-        </button>
-        {isRuntimeV2(mapMode) && (
-          <button onClick={() => runtimeRecenter.current && runtimeRecenter.current()}
-            style={{ font: "11px ui-monospace,monospace", color: "#e7edf5", cursor: "pointer",
-              background: "#1a2430", border: "1px solid #2a3542", borderRadius: 6, padding: "4px 8px" }}>
-            回到中心
-          </button>
-        )}
-      </div>
+      <MobaRuntimeView3D quality={qualityId} roster={liveRoster} />
       {/* Battle Presentation Layer：HUD / Timeline / 浮動大字 / TAB 記分板 / 終局畫面 */}
       <BattlePresentationLayer roster={liveRoster} draft={draft} tactic={tactic} onContinue={onContinue} />
 

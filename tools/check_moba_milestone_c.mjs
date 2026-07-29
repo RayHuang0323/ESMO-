@@ -45,6 +45,27 @@ assert.equal(towerShots.length, 4);
 assert.equal(new Set(towerShots.map((fx) => fx.sourceId)).size, 1, "tower must keep one source/lock");
 assert.ok(towerShots.every((fx) => fx.ability === "tower:basic"));
 
+// 塔下有小兵時，具 champion threat 的英雄仍應成為下一發單體目標。
+const aggro = new LogicEngine(9303, null, { rules: "v3" });
+clearBattle(aggro);
+const aggroTower = aggro.towers.red_mid_0;
+const diver = aggro.players.find((p) => p.side === "blue");
+diver.dead = false; diver.respawn = 0; diver.hp = diver.maxHp;
+diver.pos = { x: aggroTower.pos.x + 1, y: aggroTower.pos.y };
+diver.towerThreatUntil = aggro.t + R.towerChampionThreatT;
+aggro.lanes.mid.bm = [{
+  id: "mc-aggro-minion", t: aggroTower.t - 0.01, hp: R.minionMaxHp,
+  atkCd: 99, wave: 0, slot: 0, kind: "melee",
+}];
+aggro.tick(0.1);
+const aggroShot = aggro.fx.find((fx) =>
+  fx.sourceId === "red_mid_0" && fx.targetId === diver.id && fx.ability === "tower:basic");
+assert.ok(aggroShot, "champion threat must override the minion for the tower's next shot");
+assert.equal(aggroTower.targetKind, "hero");
+assert.ok(!aggro.fx.some((fx) =>
+  fx.sourceId === "red_mid_0" && fx.targetId === "mc-aggro-minion"),
+  "the same tower must not also fire at its minion target");
+
 // 營地：idle 巡遊 → 索敵追擊 → 離散反擊 → leash 回營補滿。
 const jungle = new LogicEngine(9302, null, { rules: "v3" });
 const camp = jungle.neutrals.camps.find((o) => o.id === "camp_blue_buff");
@@ -100,10 +121,11 @@ const pa = a.minions[0].world, pb = b.minions[0].world;
 assert.ok(Math.hypot(pa.x - pb.x, pa.z - pb.z) < 2,
   "adjacent tower-contact samples must not visually jump across the structure");
 
-const [heroesCode, neutralCode, effectCode] = await Promise.all([
+const [heroesCode, neutralCode, effectCode, gameViewCode] = await Promise.all([
   readFile(new URL("../src/battle/moba/render/MobaRuntimeHeroes.jsx", import.meta.url), "utf8"),
   readFile(new URL("../src/battle/moba/render/MobaRuntimeNeutrals.jsx", import.meta.url), "utf8"),
   readFile(new URL("../src/battle/moba/render/MobaRuntimeEffects.jsx", import.meta.url), "utf8"),
+  readFile(new URL("../src/GameView.jsx", import.meta.url), "utf8"),
 ]);
 assert.doesNotMatch(heroesCode, />\{team === "blue" \? "藍方" : "紅方"\}<\//);
 for (const token of ["hero-team-band", "hero-team-side-marker", "borderLeft", "actionFx"]) {
@@ -113,13 +135,20 @@ for (const token of ["dynamic-neutral", "barFill", "state === \"return\"", "hitA
   assert.match(neutralCode, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 }
 assert.match(effectCode, /monsterClaw/);
+assert.match(gameViewCode, /<MobaRuntimeView3D/);
+assert.doesNotMatch(gameViewCode, /<MobaView3D|地圖 \{isRuntimeV2|MAP_PRESENTATION\.LEGACY/,
+  "formal GameView must not expose the legacy map renderer or toggle");
 
 console.log("Milestone C verifier: PASS", JSON.stringify({
-  tower: { interval: R.towerAttackInterval, hpSteps, projectileEvents: towerShots.length },
+  tower: {
+    interval: R.towerAttackInterval, hpSteps, projectileEvents: towerShots.length,
+    championThreatPriority: true,
+  },
   camps: {
     idleMove: true, aggro: true, attack: true, leashReset: true,
     blueBuff: [blueBuff.x, blueBuff.y], redBuff: [redBuff.x, redBuff.y],
   },
   minions: { towerContactVisualStep: Number(Math.hypot(pa.x - pb.x, pa.z - pb.z).toFixed(3)) },
   teamReadability: "compact color band/ring/bar marker; no large faction text",
+  formalGameView: "runtime-v2 only; legacy toggle removed",
 }));
