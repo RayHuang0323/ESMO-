@@ -23,6 +23,7 @@ import MobaRuntimeHeroes from "./MobaRuntimeHeroes.jsx";
 import MobaRuntimeStructures from "./MobaRuntimeStructures.jsx";
 import MobaRuntimeMinions from "./MobaRuntimeMinions.jsx";
 import MobaRuntimeEffects from "./MobaRuntimeEffects.jsx";
+import { blendRuntimePosition } from "./runtimeMovementPolicy.js";
 import RuntimeDeviceDiagnosticsPanel from "./RuntimeDeviceDiagnosticsPanel.jsx";
 import { adaptRuntimeMapFrame } from "../map/mobaRuntimeMapAdapter.js";
 //  H.2-close：內插點的可走性檢查（純資料查表，不改模擬；見 RuntimeFrameFeeder 內註解）
@@ -279,13 +280,18 @@ function RuntimeFrameFeeder({ frameRef, onShapeChange, lockHeroId, lockTarget, s
         const q = prevById.get(p.id);
         if (!q) return p;
         const lerpAt = (t) => ({ x: q.pos.x + (p.pos.x - q.pos.x) * t, y: q.pos.y + (p.pos.y - q.pos.y) * t });
-        let pos = lerpAt(a);
+        // Milestone B.3：復活／回城／Flash 是離散轉場，不能被 renderer 當作一般步行
+        // 線性掃過整段距離，否則視覺上會出現「某位英雄突然暴衝」的假性移速差。
+        const movement = blendRuntimePosition(q, p, a, prev?.ts, snap.ts);
+        let pos = movement.pos;
         if (!isWalkable(pos.x, pos.y, HERO_RADIUS, null)) {
           let okPos = null;
           //  往回退找一個仍在可走區、且**不超過**目前進度的點。
-          for (const k of [0.75, 0.5, 0.25]) {
-            const c = lerpAt(a * k);
-            if (isWalkable(c.x, c.y, HERO_RADIUS, null)) { okPos = c; break; }
+          if (!movement.transition.snap) {
+            for (const k of [0.75, 0.5, 0.25]) {
+              const c = lerpAt(a * k);
+              if (isWalkable(c.x, c.y, HERO_RADIUS, null)) { okPos = c; break; }
+            }
           }
           //  ── H.2-flicker：退路是「**維持上一幀畫過的位置**」，不是跳到 snap ──
           //  ⚠ 這裡原本退到最新 snapshot 的位置，也就是這段內插的**終點**。

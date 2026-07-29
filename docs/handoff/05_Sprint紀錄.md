@@ -2175,3 +2175,16 @@ shadow decal、FPS、觸控與桌面外觀。未完成前不得宣稱真機通�
   live snapshot → compact frame → Replay presentation 的語意一致性。
 - H.3 verifier 第 19 條原本把 32/16 容量硬編碼；B.2 仍維持相同三個固定池，
   但容量有意調為 48/32，故同步更新該形狀斷言，沒有刪除或放寬固定池要求。
+
+### B.3 英雄速度一致性
+
+- 稽核確認 v3 的十名英雄都只讀同一組 `moveSpeed=5.60`、`fightSpeed=6.71`；
+  role、英雄 visual、snapshot 與 adapter 都沒有個別移速倍率。撤退 1.15× 與 Flash
+  是全體共享且有明確狀態／事件的正式機制，不是英雄暗藏差異。
+- 人工所見「部分英雄異常偏快」的呈現根因是 renderer 對任何 prev→snapshot 都線性插值：
+  復活、回城與 Flash 的離散座標也會在數幀內掃過地圖，看起來像高速跑動。
+- 新增純呈現 `runtimeMovementPolicy`：例行步行依相同速度上限繼續平滑內插；
+  生死轉場、Flash uses 增加或超過合理 tick 位移的離散事件直接切到權威 snapshot，
+  不讓畫面虛構跨圖暴衝。沒有回寫引擎、改 A*、碰撞或速度參數。
+- `check_moba_milestone_b3` 以同一起點與同一目標比較五個 role 的上／中／下路及野區
+  A* 到達時間，並掃描正式 v3 逐 tick 位移、Flash／回城例外與 renderer interpolation。
