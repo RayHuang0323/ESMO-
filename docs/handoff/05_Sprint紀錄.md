@@ -2395,3 +2395,77 @@ shadow decal、FPS、觸控與桌面外觀。未完成前不得宣稱真機通�
   三路塔前站位與 Replay；Android 真機 FPS、熱降頻、觸控、safe area、
   WebGL driver 與 H.2 閃爍未實測，不宣稱真機通過。
 - 未納入工作區既有 bug 影片、terrain／map preview、backup、blend／glb 或 logs。
+
+---
+
+## Milestone D：Combat Presentation & Runtime Data Integration（2026-07-29）
+
+狀態：**本機分階段實作、正式 GameView 桌機／手機 viewport／Replay 驗收及直接安全網完成；
+完整 `runtime29` 為 43/44，唯一失敗已證明 rollback baseline 同樣重現；未 push、未部署，
+未開始下一個 Milestone。**
+
+### 根因與正式資料鏈修正
+
+- 正式 runtime 的短命 FX 事件曾被顯式 `life` 繞過最低可讀時間，塔攻擊雖有事件卻只剩
+  舊白圈容易被看見；現統一延長 tower／skill／attack 可讀窗口，塔改為
+  蓄能 → 單一追蹤彈體＋尾跡 → 緊湊命中爆點，舊範圍圈降級，不另造傷害。
+- `LogicEngine`、snapshot、adapter、runtime renderer 與 Replay 使用同一批
+  cast／travel／impact／damage／hit state；六職業保留不同武器、輪廓與施法語彙，
+  世界名牌、隊伍面板及 Replay 等級統一讀 `mlv ?? lv`，不再由初始 roster 另算。
+- runtime-v2 原先沒有掛上正式 `BattleCameraController`，camera store 與實際 R3F camera
+  斷線；現改為單一 camera writer。觀戰自動導播可平滑追蹤團戰、Boss、推塔與擊殺，
+  手動關閉立即恢復原自由視角，再次點擊可重啟，且不寫入戰鬥邏輯。
+- 導播按鈕原先與隊伍列 z-index／區域重疊而看得到、點不到，已調整桌機／手機底部安全
+  位置；`BattleHUD` 兩段誤用的 `//` JSX 文字也已修正。
+
+### Boss、Buff 與呈現
+
+- Dragon／Baron 改為正式 runtime 動態物件，不再和靜態地圖模型重複；各自具有獨立
+  HP、目標、攻擊／受擊、死亡與重生狀態，上方 Boss HUD 與地圖物件讀同一 snapshot。
+- 紅／藍 Buff 維持不同模型、色彩與圖示；實際擊殺者取得有限時間狀態。紅 Buff 提供
+  攻擊附加效果／減速，藍 Buff 提供技能冷卻、移動與資源型戰鬥增益；世界名牌、面板、
+  snapshot 與 Replay 共用剩餘時間。
+- Replay 僅 append optional `bf` 欄位，沒有升版或破壞既有 frame；舊 Replay 仍可讀。
+  Boss 攻擊最後採 1 HP 呈現型傷害，因較高傷害會改變 v3 節奏；模組注入二分驗證後，
+  本輪沒有修改公平性基線、地圖幾何、核心碰撞來源或勝負契約。
+- 頭頂資訊整理為「名稱／等級 → 血條 → Buff／狀態」，手機遠景縮小次要文字；
+  `?diag=1` 僅在正式 GameView 額外顯示短暫 FX 資料列，供驗收追溯，不改模擬。
+
+### 驗證與證據
+
+- 專屬 `check_moba_milestone_d` PASS：
+  tower life 3.4、skill life 4.2、match level 5、boss damage 1、
+  buff Replay 75 秒、導播自由視角 restore `(42,77)`、formal GameView 與 Replay
+  read-only 全部通過。
+- `check_moba_milestone_c_fix` PASS；production build 通過（2595 modules，只有既有
+  chunk size warning）；`git diff --check` 無 whitespace error。
+- `SKIP_NESTED=1 check_moba_pacing29b1` 為 25/25，v3 正／反序同為 20/40、位移 0pp。
+- 完整 `check_moba_runtime29` 自然結束為 **43/44、exit 1**；Sprint23–28、
+  regress、regress2 與 build 全部通過，唯一失敗為既有 v2 正／反序
+  22/40（55%）對 14/40（35%），位移 20pp > 15pp。以完全相同 40 seeds 分別跑
+  Milestone D source 與 `milestone-d-baseline`，兩者結果及變動 seeds 完全相同；
+  因此未改公平性基線或放寬 verifier。
+- 正式 Dashboard → MOBA → lineup → matchmaking → Ban/Pick → Tactic →
+  GameView 流程完成 1440×900 與 390×844 viewport；手機 `scrollWidth ==
+  clientWidth`。另完成正式 Result → Watch Replay。
+- 十張證據位於 `review/moba-runtime/milestone-d/evidence/`，涵蓋桌機、手機、塔彈
+  cast/travel/impact、技能 cast/travel/impact/hit、等級一致、Boss HUD／攻擊、
+  Buff、導播 ON/OFF 與 Replay；索引見同資料夾 `README.md`。
+
+### Commit、回退與人工驗收
+
+- rollback tag：`milestone-d-baseline`，指向
+  `cb0dad27233dfed053c3e58434090d96f84d23d5`。
+- 分階段 commits：
+  `7b84cbf`（戰鬥呈現資料鏈）、
+  `448cf6d`（Boss／Buff）、
+  `1afae71`（自動導播／專屬 verifier）、
+  `eb6f17c`（正式 GameView 驗收缺口）。
+- 完整報告：`review/moba-runtime/milestone-d/MILESTONE_D_REPORT.md`。
+- 仍需人工以正常 1× 長時間判斷塔彈與六職業特效手感、多人混戰遮擋、Boss／Buff
+  節奏及 Replay 動態；390×844 是桌面瀏覽器 viewport，不是 Android 真機。
+  Android FPS、熱降頻、觸控、safe area、WebGL driver 與 H.2 閃爍未實測。
+- 正式人工入口為 `http://127.0.0.1:5187/ESMO-/`；需要事件文字佐證時可用
+  `?diag=1&debug=1`，但仍須走正式 Draft／Tactic／GameView，不以
+  `?debug=moba-runtime-battle` debug harness 作驗收。
+- 未納入工作區既有 terrain、bug、影片、backup、blend／glb、map review 或 logs。
