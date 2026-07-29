@@ -28,7 +28,9 @@ import BattleCameraController from "../../ui/BattleCameraController.jsx";
 import { useCameraStore } from "../../cameraStore.js";
 import { blendRuntimePosition } from "./runtimeMovementPolicy.js";
 import RuntimeDeviceDiagnosticsPanel from "./RuntimeDeviceDiagnosticsPanel.jsx";
-import { adaptRuntimeMapFrame } from "../map/mobaRuntimeMapAdapter.js";
+import {
+  adaptRuntimeMapFrame, extrapolateLiveEffectTime,
+} from "../map/mobaRuntimeMapAdapter.js";
 //  H.2-close：內插點的可走性檢查（純資料查表，不改模擬；見 RuntimeFrameFeeder 內註解）
 import { isWalkable, HERO_RADIUS } from "../nav/mobaNavigation.js";
 import {
@@ -303,9 +305,12 @@ function RuntimeFrameFeeder({ frameRef, onShapeChange, lockHeroId, lockTarget, s
     };
     const frame = adaptRuntimeMapFrame(blended, {
       prev, roster: roster ?? s.roster, interpolation: a,
-      // live 的 fx 已在最新 snapshot 發生，立即顯示；Replay 的下一 frame 包含
-      // 整個 2s 取樣窗事件，必須跟插值時間走，不能提早洩漏。
-      effectTime: source ? blended.ts : snap.ts,
+      // Replay 只能在兩個已保存 frame 之間內插；live 則從最新 snapshot.ts
+      // 依 subT 往下一 tick 外推。舊碼把 live 固定在 snap.ts，導致 cast 凍結、
+      // travel 跨 snapshot 跳格，正式畫面肉眼只看到地環，看不到飛行彈。
+      effectTime: source
+        ? blended.ts
+        : extrapolateLiveEffectTime(prev?.ts, snap.ts, a),
     });
     //  ⚠ 位置每幀都會變，但**掛載結構**（有哪些英雄／塔、誰死了、幾級）很少變。
     //    位置走 frameRef（不觸發 React），只有結構變了才 setState 重掛
@@ -345,7 +350,14 @@ function RuntimeDiagnosticsBridge({ frameRef }) {
  * @param quality "high" | "mid" | "low"
  * @param lockHeroId 鎖定的英雄 id（null = 自由相機）
  */
-export default function MobaRuntimeView3D({ quality = "high", lockHeroId = null, onRecenterRef, source = null, roster = null }) {
+export default function MobaRuntimeView3D({
+  quality = "high",
+  lockHeroId = null,
+  onRecenterRef,
+  source = null,
+  roster = null,
+  compactLabels = false,
+}) {
   const { towerAnchors } = useRuntimeMapData();
   //  frameRef = 每幀更新的最新資料（不觸發 React）；frame = 掛載用的結構快照
   const frameRef = useRef({ heroes: [], structures: [], objectives: [], warnings: [] });
@@ -386,7 +398,12 @@ export default function MobaRuntimeView3D({ quality = "high", lockHeroId = null,
       <MobaRuntimeMinions frameRef={frameRef} />
       <MobaRuntimeNeutrals objectives={frame.objectives} frameRef={frameRef} />
       <MobaRuntimeEffects frameRef={frameRef} />
-      <MobaRuntimeHeroes heroes={frame.heroes} frameRef={frameRef} showLabels={quality !== "low"} />
+      <MobaRuntimeHeroes
+        heroes={frame.heroes}
+        frameRef={frameRef}
+        showLabels={quality !== "low"}
+        compactLabels={compactLabels}
+      />
 
       <RuntimeFrameFeeder frameRef={frameRef} onShapeChange={onShapeChange} lockHeroId={lockHeroId} lockTarget={lockTarget} source={source} roster={roster} />
       <BattleCameraController source={source} perspective={RUNTIME_CAMERA} />

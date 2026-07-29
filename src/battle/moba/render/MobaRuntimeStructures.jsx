@@ -79,7 +79,8 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
     //  八角塔身（低面數，與地圖的 low-poly 語彙一致）
     shaft: new THREE.CylinderGeometry(TOWER.rTop, TOWER.rBottom, TOWER.shaftH, 8, 1),
     bar: new THREE.PlaneGeometry(1, 1),
-    damageRing: new THREE.RingGeometry(2.25 * S, 2.75 * S, 18),
+    // D-fix3：塔受傷不能再畫成從塔底擴散的大圈；改為塔冠局部的實心受擊晶片。
+    damageCore: new THREE.OctahedronGeometry(0.82 * S, 0),
     debris: new THREE.TetrahedronGeometry(0.72 * S, 0),
   }), []);
 
@@ -92,8 +93,8 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
     dead: new THREE.MeshStandardMaterial({ color: 0x3b3f45, roughness: 1, flatShading: true, transparent: true, opacity: 0.5 }),
     //  H.2-flicker：塔環（抬 0.11）與大型目標環（抬 0.09）幾乎與地形共面
     //  ⇒ 一律用 polygonOffset 推到地形前面（理由見 MobaRuntimeHeroes 的同段註解）。
-    ringBlue: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.blue, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
-    ringRed: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.red, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
+    ringBlue: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.blue, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
+    ringRed: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.red, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
     objAlive: new THREE.MeshBasicMaterial({ color: 0xd8b45a, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
     objDead: new THREE.MeshBasicMaterial({ color: 0x555a60, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
     barBg: new THREE.MeshBasicMaterial({
@@ -109,12 +110,12 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
       depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
     }),
     damageBlue: new THREE.MeshBasicMaterial({
-      color: 0x8bd8ff, transparent: true, opacity: 0.95, side: THREE.DoubleSide,
-      depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
+      color: 0xc6efff, transparent: true, opacity: 1,
+      depthTest: false, depthWrite: false, blending: THREE.NormalBlending, toneMapped: false,
     }),
     damageRed: new THREE.MeshBasicMaterial({
-      color: 0xff9a7d, transparent: true, opacity: 0.95, side: THREE.DoubleSide,
-      depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
+      color: 0xffc0a8, transparent: true, opacity: 1,
+      depthTest: false, depthWrite: false, blending: THREE.NormalBlending, toneMapped: false,
     }),
     debris: new THREE.MeshBasicMaterial({
       color: 0xffcc75, transparent: true, opacity: 0.95, depthTest: false,
@@ -174,7 +175,10 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
         if (active) {
           const p = s.damageProgress ?? 0;
           n.damage.material = s.team === "blue" ? mats.damageBlue : mats.damageRed;
-          n.damage.scale.setScalar(0.9 + p * 2.6);
+          n.damage.position.y = n.baseY + 0.18 * S;
+          n.damage.scale.set(0.72 + p * 0.48, 0.72 + p * 0.78, 0.72 + p * 0.48);
+          n.damage.rotation.x = t * 3.3;
+          n.damage.rotation.y = t * 4.1;
           n.damage.rotation.z = t * 2.8;
         }
       }
@@ -275,16 +279,16 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
                 frustumCulled={false} userData={{ part: "structure-hp-fill" }}
               />
             </group>
-            {/* 扣血波紋與拆塔碎裂只反映 prev→snapshot 轉場，不改任何結構狀態。 */}
+            {/* 局部受擊晶片與拆塔碎裂只反映 prev→snapshot 轉場，不改任何結構狀態。 */}
             <mesh
               ref={(m) => {
                 if (!m) return;
                 const prev = nodes.current.get(s.id) ?? {};
                 nodes.current.set(s.id, { ...prev, damage: m, baseY, phase: (s.id.length % 7) * 0.9 });
               }}
-              geometry={geo.damageRing} material={s.team === "blue" ? mats.damageBlue : mats.damageRed}
-              position={[0, RING_Y.structure + 0.08, 0]} rotation={[-Math.PI / 2, 0, 0]}
-              visible={false} renderOrder={45} frustumCulled={false}
+              geometry={geo.damageCore} material={s.team === "blue" ? mats.damageBlue : mats.damageRed}
+              position={[0, baseY + 0.18 * S, 0]}
+              visible={false} renderOrder={64} frustumCulled={false}
               userData={{ part: "structure-damage-pulse" }}
             />
             <group

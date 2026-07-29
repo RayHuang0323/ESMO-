@@ -129,7 +129,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   return (
     <div style={{ position: "relative", width: "100%", height: "min(82vh, 720px)", background: "#0d1420", borderRadius: 14, overflow: "hidden", fontFamily: "system-ui,-apple-system,sans-serif" }}>
       {/* 3D：對局進行中相機由 cameraStore 管理（director/objectiveFocus/heroFocus/free）*/}
-      <MobaRuntimeView3D quality={qualityId} roster={liveRoster} />
+      <MobaRuntimeView3D quality={qualityId} roster={liveRoster} compactLabels={isMobile} />
       {/* Battle Presentation Layer：HUD / Timeline / 浮動大字 / TAB 記分板 / 終局畫面 */}
       <BattlePresentationLayer roster={liveRoster} draft={draft} tactic={tactic} onContinue={onContinue} />
 

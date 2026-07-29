@@ -144,7 +144,12 @@ for (const token of ["<BattleCameraController", "perspective={RUNTIME_CAMERA}", 
 for (const token of ["activeEffects", "phaseProgress", "sourceId", "targetId"]) assert.ok(runtimeDiagnostics.includes(token));
 for (const token of ["runtime-diagnostic-summary", "effectRows", "120"]) assert.ok(deviceDiagnostics.includes(token));
 for (const token of ["addLine(tail, moving", "style === \"tower\"", "phase === \"cast\"", "phase === \"travel\"", "phase === \"impact\""]) assert.match(effects, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-for (const token of ["Lv{hero.level}", "timedStates", "statusEffects"]) assert.ok(heroes.includes(token));
+for (const token of [
+  "makeHeroLabelTexture(hero.displayName, hero.level",
+  "hero-name-level", "hero-buff-ring", "buffRed", "buffBlue", "buffDragon", "buffBaron",
+]) assert.ok(heroes.includes(token));
+assert.ok(!heroes.includes("<Html"),
+  "hero overhead must not regress to DOM buff/name labels that cover the HP bar");
 for (const token of ["dynamic-boss", "objective.attackAt", "objective.hitAt"]) assert.ok(neutrals.includes(token));
 assert.ok(hud.includes("boss-hud") && strip.includes("p.mlv ?? p.lv"));
 assert.ok(controller.includes("computeSpectatorFocus") && controller.includes("source.getCameraEvents"));

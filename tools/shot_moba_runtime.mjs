@@ -24,6 +24,8 @@
 //    node tools/shot_moba_runtime.mjs --out review/moba-runtime/h1
 //    node tools/shot_moba_runtime.mjs --url http://localhost:5173/ESMO-
 //    node tools/shot_moba_runtime.mjs --headless        # 只想看畫面對不對，不取效能數字
+//    node tools/shot_moba_runtime.mjs --mobile-only --mobile-width 390 --mobile-height 844
+//                                            # 只拍指定手機 viewport（正式 GameView）
 //  無 npm 相依（CDP 走 Node 內建 WebSocket）。
 // ============================================================================
 import { spawn } from "node:child_process";
@@ -40,6 +42,8 @@ const arg = (k, d) => {
 const has = (k) => process.argv.includes(k);
 const OUT_DIR = resolve(ROOT, arg("--out", "review/moba-runtime/h1"));
 const HEADLESS = has("--headless");
+const MOBILE_ONLY = has("--mobile-only");
+const MOBILE_WAIT_TS = Math.max(1, Number(arg("--mobile-wait-ts", "160")) || 160);
 
 const CHROME_CANDIDATES = [
   "C:/Program Files/Google/Chrome/Application/chrome.exe",
@@ -50,7 +54,10 @@ const CHROME_CANDIDATES = [
 
 //  桌機拍大一點：全場截圖要看得出 10 個人，1600×1000 每個人只有 ~25px。
 const DESK = { w: 1920, h: 1200 };
-const MOB = { w: 430, h: 900 };
+const MOB = {
+  w: Math.max(320, Number(arg("--mobile-width", "430")) || 430),
+  h: Math.max(568, Number(arg("--mobile-height", "900")) || 900),
+};
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -141,6 +148,19 @@ async function collapseTeamPanel(cdp) {
     await sleep(400);
   }
   return !!(await evaluate(cdp, `(document.body.innerText || "").includes("▴ 展開")`));
+}
+
+/** 收合 DEV／診斷面板；它只提供文字探針，不應蓋住正式視覺證據。 */
+async function collapseRuntimeDiagnostics(cdp) {
+  const clicked = await evaluate(cdp, `(() => {
+    const button = [...document.querySelectorAll("button")]
+      .find((el) => (el.textContent || "").trim() === "收合");
+    if (!button) return false;
+    button.click();
+    return true;
+  })()`);
+  if (clicked) await sleep(300);
+  return clicked;
 }
 
 /**
@@ -375,11 +395,12 @@ async function waitTs(target, maxMin = 12) {
 const setCam = (o) => evaluate(tab, `window.__ESMO_RUNTIME_SETCAM ? JSON.stringify(window.__ESMO_RUNTIME_SETCAM(${JSON.stringify(o)})) : null`);
 
 // ── PASS 1：桌機 runtime-v2（01 / 02 / 03 / 04 / 05）────────────────────────
-{
+if (!MOBILE_ONLY) {
   const okOpen = await openBattle({ ...DESK, query: { mapPresentation: "runtime-v2" }, waitTs: 1, label: "runtime-desktop" });
   if (!okOpen) fail("01_runtime_full_battle.png", "GameView / runtime 探針未就緒");
   else {
     await collapseTeamPanel(tab);
+    await collapseRuntimeDiagnostics(tab);
 
     // ② 前期三路分布（拉到全場才看得出三路）
     let ts = await waitTs(80);
@@ -583,8 +604,9 @@ for (const [file, q, presetLabel] of [
 ]) {
   const okOpen = await openBattle({ ...MOB, query: q, waitTs: 1, label: presetLabel });
   if (!okOpen) { fail(file, "手機視窗的 runtime 探針未就緒"); continue; }
-  const ts = await waitTs(160);
+  const ts = await waitTs(MOBILE_WAIT_TS);
   await collapseTeamPanel(tab);
+  await collapseRuntimeDiagnostics(tab);
   //  手機不拍全場（430 寬拉到全場後英雄只剩幾個 px、什麼都認不出來）。
   //  驗收要求低階模式仍保留「英雄 / 塔 / 主堡 / 血條 / 關鍵 HUD」
   //  ⇒ 把鏡頭對到「藍方主堡 ↔ 英雄重心」的中點，讓這幾樣同時入鏡。
@@ -751,7 +773,8 @@ tab.close(); root.close(); browser.kill(); server?.kill();
 try { rmSync(profile, { recursive: true, force: true }); } catch { /* 清不掉不影響 */ }
 
 const okCount = stats.filter((s) => s.screenshotSuccess).length;
-console.log(`\n${okCount}/9 張正式戰鬥截圖已輸出：${OUT_DIR}`);
+const expectedCount = MOBILE_ONLY ? 2 : 9;
+console.log(`\n${okCount}/${expectedCount} 張正式戰鬥截圖已輸出：${OUT_DIR}`);
 console.log(`   shot_stats.json / runtime_performance.json 已重建`);
 if (perf.desktop?.renderer) console.log(`   GPU：${perf.desktop.renderer}`);
-process.exit(failed === 0 && okCount === 9 ? 0 : 1);
+process.exit(failed === 0 && okCount === expectedCount ? 0 : 1);

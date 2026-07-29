@@ -23,18 +23,36 @@ import {
   simToWorld, inBoundsSim, clampSim, baseSim, pitSim, LANE_IDS,
 } from "./coordinateMapping.js";
 import { TOWER_HP, NEXUS_HP, ROLE_NAME, posOnLane } from "../../../gameData.js";
-import { isWalkable, projectToWalkable } from "../nav/mobaNavigation.js";
+import {
+  findPath, isWalkable, projectToWalkable, structureList,
+} from "../nav/mobaNavigation.js";
 import { archetypeForRole, archetypeData, heroVisualFor, skillVisualFor } from "../presentation/heroArchetypes.js";
 
 /** 呈現用高度（世界單位）：英雄站在地面上，結構的血條掛在頭頂。 */
 export const RUNTIME_Y = Object.freeze({ hero: 0, structure: 0 });
 export const MINION_RADIUS = 0.68;
+export const MINION_TOWER_VISUAL_GAP = 0.8;
 
 /** snapshot 的 hp 欄位是 0–1 比例；還原絕對值時用的每種結構最大血量。 */
 const STRUCT_MAX_HP = (lane) => (lane === "nexus" ? NEXUS_HP : TOWER_HP);
 
 const num = (v, d = 0) => (Number.isFinite(v) ? v : d);
 const ratio01 = (v) => Math.min(1, Math.max(0, num(v, 0)));
+
+/**
+ * Live 正式 GameView 的 FX 呈現時鐘。
+ *
+ * snapshot.ts 每 0.5 模擬秒才更新一次；若兩個 snapshot 間固定使用 snap.ts，
+ * cast 會凍結半秒，下一幀直接跳到 travel/impact，肉眼只剩地環。位置仍採 prev→snap
+ * 內插，但 FX 從最新 snapshot.ts 往下一個 tick 外推，讓事件一收到就開始且逐幀前進。
+ * 只回傳呈現時間，不改 snapshot / LogicEngine / Replay frame。
+ */
+export function extrapolateLiveEffectTime(prevTs, snapshotTs, interpolation = 0) {
+  const current = num(snapshotTs, num(prevTs, 0));
+  const previous = num(prevTs, current);
+  const step = Math.max(0, current - previous);
+  return current + step * ratio01(interpolation);
+}
 
 /**
  * 位置正規化：壞座標一律夾回地圖內並標記，**不**默默丟掉物件
@@ -256,6 +274,105 @@ const MINION_GROUPS = Object.freeze([
   ["bot", "bm", "blue"], ["bot", "rm", "red"],
 ]);
 const FORMATION_LATERAL = Object.freeze([-1.05, 0, 1.05, 0]);
+let structureCollisionById = null;
+const towerRouteFrameById = new Map();
+const minionTowerRouteById = new Map();
+
+function collisionShapeFor(id) {
+  if (!structureCollisionById) {
+    structureCollisionById = new Map(structureList().map((item) => [item.id, item]));
+  }
+  return structureCollisionById.get(id) ?? null;
+}
+
+function routeFrameFor(structure, lane) {
+  const key = `${structure.id}:${lane}`;
+  const cached = towerRouteFrameById.get(key);
+  if (cached) return cached;
+  let bestT = 0, bestDistance = Infinity;
+  for (let index = 0; index <= 500; index++) {
+    const t = index / 500;
+    const point = posOnLane(lane, t);
+    const distance = Math.hypot(
+      point.x - structure.position.x, point.y - structure.position.y,
+    );
+    if (distance < bestDistance) { bestDistance = distance; bestT = t; }
+  }
+  const d = 0.002;
+  const a = posOnLane(lane, Math.max(0, bestT - d));
+  const b = posOnLane(lane, Math.min(1, bestT + d));
+  const length = Math.max(1e-6, Math.hypot(b.x - a.x, b.y - a.y));
+  const tangent = { x: (b.x - a.x) / length, y: (b.y - a.y) / length };
+  const frame = {
+    t: bestT,
+    tangent,
+    normal: { x: -tangent.y, y: tangent.x },
+  };
+  towerRouteFrameById.set(key, frame);
+  return frame;
+}
+
+function buildFriendlyTowerRoute(structure, lane) {
+  const key = `${structure.id}:${lane}`;
+  const cached = minionTowerRouteById.get(key);
+  if (cached) return cached;
+  const shape = collisionShapeFor(structure.id);
+  const routeFrame = routeFrameFor(structure, lane);
+  const extent = num(shape?.r, 2.5) + MINION_RADIUS + MINION_TOWER_VISUAL_GAP + 2.2;
+  let startT = routeFrame.t, endT = routeFrame.t;
+  while (startT > 0) {
+    const point = posOnLane(lane, startT);
+    if (Math.hypot(
+      point.x - structure.position.x, point.y - structure.position.y,
+    ) >= extent) break;
+    startT = Math.max(0, startT - 0.002);
+  }
+  while (endT < 1) {
+    const point = posOnLane(lane, endT);
+    if (Math.hypot(
+      point.x - structure.position.x, point.y - structure.position.y,
+    ) >= extent) break;
+    endT = Math.min(1, endT + 0.002);
+  }
+  const start = posOnLane(lane, startT);
+  const end = posOnLane(lane, endT);
+  // 只把正在繞的這座友軍塔當局部障礙。其它塔距離遠；靜態牆／崖仍由同一份
+  // Navigation field 約束。半徑額外包含 visual gap，折線本身不會擦塔基座。
+  const found = findPath(
+    start, end, MINION_RADIUS + MINION_TOWER_VISUAL_GAP,
+    new Set([structure.id]),
+  );
+  const points = [start, ...(found ?? [end])];
+  const lengths = [0];
+  for (let index = 1; index < points.length; index++) {
+    lengths.push(lengths[index - 1] + Math.hypot(
+      points[index].x - points[index - 1].x,
+      points[index].y - points[index - 1].y,
+    ));
+  }
+  const route = {
+    startT, endT, points, lengths, total: lengths.at(-1) || 1,
+  };
+  minionTowerRouteById.set(key, route);
+  return route;
+}
+
+function sampleFriendlyTowerRoute(route, t) {
+  const u = ratio01((t - route.startT) / Math.max(1e-6, route.endT - route.startT));
+  const wanted = route.total * u;
+  let index = 1;
+  while (index < route.lengths.length - 1 && route.lengths[index] < wanted) index++;
+  const a = route.points[index - 1];
+  const b = route.points[index] ?? a;
+  const segment = Math.max(1e-6, route.lengths[index] - route.lengths[index - 1]);
+  const p = ratio01((wanted - route.lengths[index - 1]) / segment);
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const length = Math.max(1e-6, Math.hypot(dx, dy));
+  return {
+    center: { x: a.x + dx * p, y: a.y + dy * p },
+    tangent: { x: dx / length, y: dy / length },
+  };
+}
 
 function minionById(lanes) {
   const out = new Map();
@@ -265,13 +382,37 @@ function minionById(lanes) {
   return out;
 }
 
-function minionPosition(lane, team, t, slot, aliveStructures) {
-  const center = posOnLane(lane, t);
+/**
+ * 小兵的 authoritative lane progress 只有 t，沒有第二個橫向導航座標；3D 隊形因此由
+ * Adapter 展開。友軍塔不該阻止兵線前進，但 lane center 可能直接穿過塔心。舊版先把
+ * 每一幀投影到最近可走點，走到塔心另一側時最近點會瞬間翻面，畫面看起來就像穿塔。
+ *
+ * 這裡使用正式 Navigation field 預先求出塔前→塔後的局部折線，再用同一個 t
+ * 沿折線取樣；不再逐幀選最近投影點。它不改 t、不改抵達時間、攻擊距離或傷害；
+ * Live 與 Replay 都經同一 Adapter，因此只修正式 3D 路徑呈現。
+ */
+function friendlyTowerRouteAt(lane, team, t, structures) {
+  for (const structure of structures) {
+    if (!structure.alive || structure.team !== team || structure.lane !== lane ||
+        structure.type !== "tower") continue;
+    const route = buildFriendlyTowerRoute(structure, lane);
+    if (t >= route.startT && t <= route.endT) return sampleFriendlyTowerRoute(route, t);
+  }
+  return null;
+}
+
+function minionPosition(lane, team, t, slot, aliveStructures, structures) {
+  const localRoute = friendlyTowerRouteAt(lane, team, t, structures);
+  const center = localRoute?.center ?? posOnLane(lane, t);
+  const placementRadius = localRoute
+    ? MINION_RADIUS + MINION_TOWER_VISUAL_GAP
+    : MINION_RADIUS;
   const d = 0.002;
   const a = posOnLane(lane, Math.max(0, t - d));
   const b = posOnLane(lane, Math.min(1, t + d));
-  const len = Math.max(1e-6, Math.hypot(b.x - a.x, b.y - a.y));
-  const tx = (b.x - a.x) / len, ty = (b.y - a.y) / len;
+  const laneLength = Math.max(1e-6, Math.hypot(b.x - a.x, b.y - a.y));
+  const tx = localRoute?.tangent.x ?? (b.x - a.x) / laneLength;
+  const ty = localRoute?.tangent.y ?? (b.y - a.y) / laneLength;
   const nx = -ty, ny = tx;
   const lateral = FORMATION_LATERAL[slot % FORMATION_LATERAL.length] ?? 0;
   const trail = slot === 3 ? (team === "blue" ? -1.45 : 1.45) : 0;
@@ -280,16 +421,16 @@ function minionPosition(lane, team, t, slot, aliveStructures) {
   // 仍不行才投影「最後候選點」，確保位移連續且沿原本側向。
   let candidate = center;
   for (const k of [1, 0.65, 0.35, 0]) {
-    const q = {
+    const formed = {
       x: center.x + (nx * lateral + tx * trail) * k,
       y: center.y + (ny * lateral + ty * trail) * k,
     };
-    candidate = q;
-    if (isWalkable(q.x, q.y, MINION_RADIUS, aliveStructures)) break;
+    candidate = formed;
+    if (isWalkable(formed.x, formed.y, placementRadius, aliveStructures)) break;
   }
-  const sim = isWalkable(candidate.x, candidate.y, MINION_RADIUS, aliveStructures)
+  const sim = isWalkable(candidate.x, candidate.y, placementRadius, aliveStructures)
     ? candidate
-    : projectToWalkable(candidate.x, candidate.y, MINION_RADIUS, aliveStructures, 7);
+    : projectToWalkable(candidate.x, candidate.y, placementRadius, aliveStructures, 7);
   return { sim, facing: Math.atan2(tx * (team === "blue" ? 1 : -1), ty * (team === "blue" ? 1 : -1)) };
 }
 
@@ -306,7 +447,9 @@ export function adaptMinions(snapshot, opts = {}, structures = adaptStructures(s
   const add = (m, dying = false) => {
     const q = prev.get(m.id);
     const t = q && !dying ? num(q.t) + (num(m.t) - num(q.t)) * alpha : num(m.t);
-    const { sim, facing } = minionPosition(m.lane, m.team, t, m.slot ?? 0, aliveStructures);
+    const { sim, facing } = minionPosition(
+      m.lane, m.team, t, m.slot ?? 0, aliveStructures, structures,
+    );
     const previousHpRatio = ratio01(q?.hp ?? m.hp);
     const hpRatio = dying ? 0 : ratio01(m.hp);
     out.push({

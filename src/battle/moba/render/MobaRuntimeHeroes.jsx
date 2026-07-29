@@ -16,11 +16,10 @@
 //  【效能】
 //    · geometry / material 只建立一次（useMemo），10 名英雄共用
 //    · 每幀更新走 ref.position / ref.scale，不觸發 React re-render
-//    · 名稱與等級用 drei <Html>，只在英雄數量變動時重掛
+//    · 名稱與等級使用 WebGL Plane，與血條共用 renderOrder；不會再由 DOM 疊在血條上
 // ============================================================================
 import React, { useMemo, useRef, useLayoutEffect } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { WORLD_SCALE } from "../map/coordinateMapping.js";
 import { LAYER_Y } from "../map/mapVisualStyle.js";
@@ -86,12 +85,24 @@ const HERO = {
   barH: 0.42 * S,
   barY: 5.0 * S,
 };
+const NAMEPLATE = Object.freeze({
+  width: HERO.barW * 0.84,
+  height: 0.68 * S,
+  compactWidth: HERO.barW * 0.64,
+  compactHeight: 0.58 * S,
+  y: HERO.barY + 1.18 * S,
+});
 
 /**
  * @param heroes  mobaRuntimeMapAdapter.adaptHeroes() 的輸出（長度應為 10）
  * @param showLabels 是否顯示名稱／等級（手機低階可關）
  */
-export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLabels = true }) {
+export default function MobaRuntimeHeroes({
+  heroes = [],
+  frameRef = null,
+  showLabels = true,
+  compactLabels = false,
+}) {
   const groupRefs = useRef(new Map());
 
   //  共用資源：本體 / 肩塊 / 選取環 / 血條（10 名英雄共用同一組 geometry）
@@ -178,6 +189,11 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
       barRed: new THREE.MeshBasicMaterial({ color: 0xe2604f, transparent: true, opacity: 1, depthTest: false, depthWrite: false, side: THREE.DoubleSide }),
       markerBlue: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.blue, transparent: true, opacity: 0.96, depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }),
       markerRed: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.red, transparent: true, opacity: 0.96, depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }),
+      // D-fix3：實心命中標記不受場景光源／Bloom 洗淡，和血條下降同幀出現。
+      hitBurst: new THREE.MeshBasicMaterial({
+        color: 0xfff2c4, transparent: true, opacity: 1,
+        depthTest: false, depthWrite: false, blending: THREE.NormalBlending, toneMapped: false,
+      }),
     };
   }, []);
 
@@ -205,7 +221,7 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
         root, body, shoulder, accessory, signature, headFeature, classLanguage,
         badge, crest, teamBand, redBuffRing, blueBuffRing,
         dragonBuffRing, baronBuffRing,
-        bar, ring, deathMark, label, bodyAliveMaterial, secondaryAliveMaterial,
+        bar, ring, deathMark, hitMarker, label, bodyAliveMaterial, secondaryAliveMaterial,
       } = node;
       const hitFx = effects.find((fx) => String(fx.targetId ?? "") === h.id && fx.phase === "impact");
       const actionFx = effects.find((fx) => String(fx.sourceId ?? "") === h.id);
@@ -213,21 +229,25 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
       const action = actionFx ? Math.sin(Math.PI * Math.max(0, Math.min(1, actionFx.phaseProgress ?? 0))) : 0;
       const cast = actionFx?.phase === "cast" ? action : 0;
       const release = actionFx?.phase === "travel" ? action : 0;
-      const shake = hit > 0 ? Math.sin(now * 58 + h.id.length) * 0.24 * S * hit : 0;
+      const shake = hit > 0 ? Math.sin(now * 58 + h.id.length) * 0.44 * S * hit : 0;
       //  ⚠ 地面不在 y = 0（見檔頭 GROUND_Y 註解）⇒ 英雄整體抬到走道表面。
-      root.position.set(h.world.x + shake, GROUND_Y + hit * 0.08 * S + cast * 0.14 * S, h.world.z - shake * 0.35);
+      root.position.set(
+        h.world.x + shake,
+        GROUND_Y + hit * 0.17 * S + cast * 0.2 * S,
+        h.world.z - shake * 0.52 - hit * 0.12 * S,
+      );
       if (h.facing !== null && h.facing !== undefined) root.rotation.y = h.facing;
       // Milestone C：事件驅動的簡單前搖 / 揮擊 / 後座。只動既有低模零件，
       // 不新增動畫狀態機，Live 與 Replay 都直接讀同一份 effects。
       if (signature) {
-        signature.rotation.x = -release * 0.42;
-        signature.rotation.z = cast * 0.16;
+        signature.rotation.x = -release * 0.68;
+        signature.rotation.z = cast * 0.28;
       }
       if (accessory) {
-        accessory.rotation.x = -release * 0.55;
-        accessory.rotation.z = cast * 0.2;
+        accessory.rotation.x = -release * 0.82;
+        accessory.rotation.z = cast * 0.32;
       }
-      if (shoulder) shoulder.rotation.z = release * 0.12 - hit * 0.08;
+      if (shoulder) shoulder.rotation.z = release * 0.2 - hit * 0.18;
       if (crest) crest.rotation.y = now * 0.35 + cast * 0.9;
       if (classLanguage) {
         // 六職業的武器／施法群組保留不同動作語彙：法師／輔助環繞施法，
@@ -240,8 +260,18 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
             : cls === "tank" ? cast * 0.22 : cast * 0.12;
         classLanguage.position.z = cls === "marksman" ? -release * 0.42 * S
           : cls === "tank" ? cast * 0.28 * S : 0;
-        classLanguage.scale.setScalar(1 + cast * 0.12 + release * 0.08);
+        classLanguage.scale.setScalar(1 + cast * 0.2 + release * 0.14);
         classLanguage.visible = h.alive;
+      }
+      if (hitMarker) {
+        hitMarker.visible = h.alive && hit > 0.02;
+        if (hitMarker.visible) {
+          hitMarker.position.y = HERO.height * 0.92 + Math.sin(now * 45) * 0.08 * S;
+          hitMarker.position.z = HERO.radius * 1.18;
+          hitMarker.scale.set(0.62 + hit * 1.3, 0.62 + hit * 1.8, 0.62 + hit * 1.3);
+          hitMarker.rotation.x = now * 7.2;
+          hitMarker.rotation.y = now * 9.4;
+        }
       }
       //  ── 陣亡呈現（見檔頭 TEAM_DEAD / DEAD 註解）──────────────────────────
       //  倒地：本體由站姿轉成橫躺，高度降到「躺在地上」而不是「陷進地裡」
@@ -304,12 +334,13 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
       //  ⇒ 英雄背對鏡頭時血條轉成背面，MeshBasicMaterial 預設只畫正面 ⇒ **整條消失**。
       //  相機 yaw 固定為 0，所以把血條群組反轉回世界朝向就等於永遠面對鏡頭。
       bar.parent.rotation.y = -root.rotation.y;
-      //  label 是 <Html> 的 DOM 節點，用 style 控制顯示（不是 three 的 visible）。
-      //  ⚠ 陣亡時**不再整個隱藏**：全場視角下名牌是「認得出誰倒在這裡」的關鍵，
-      //    全隱藏會讓屍體徹底消失在地形裡。改為半透明 + 去飽和。
+      // D-fix3：名稱／等級已改為 WebGL Plane。它與血條在同一透明佇列，
+      // renderOrder 明確低於血條，所以即使多人重疊也不會由 DOM 蓋住血量。
+      // 陣亡仍保留低透明名牌，方便全場視角辨認倒地英雄。
       if (label) {
-        label.style.opacity = h.alive ? "1" : String(DEAD.labelOpacity);
-        label.style.filter = h.alive ? "none" : "grayscale(0.65)";
+        label.material.opacity = h.alive ? 0.96 : DEAD.labelOpacity;
+        label.material.color.setHex(h.alive ? 0xffffff : 0x9aa3ad);
+        label.parent.rotation.y = -root.rotation.y;
       }
     }
   });
@@ -323,6 +354,7 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
           geo={geo}
           mats={mats}
           showLabel={showLabels}
+          compactLabel={compactLabels}
           register={(id, node) => {
             if (node) groupRefs.current.set(id, node);
             else groupRefs.current.delete(id);
@@ -333,7 +365,7 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
   );
 }
 
-function HeroUnit({ hero, geo, mats, showLabel, register }) {
+function HeroUnit({ hero, geo, mats, showLabel, compactLabel, register }) {
   const rootRef = useRef();
   const bodyRef = useRef();
   const shoulderRef = useRef();
@@ -351,20 +383,32 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
   const blueBuffRingRef = useRef();
   const dragonBuffRingRef = useRef();
   const baronBuffRingRef = useRef();
+  const hitMarkerRef = useRef();
   const labelRef = useRef();
   const visual = hero.visual ?? HERO_VISUALS[hero.heroId] ?? null;
   const archetype = archetypeData(hero.archetype);
   const bodyMaterial = mats.bodyByHero?.[visual?.id] ?? mats.accent;
   const secondaryMaterial = mats.secondaryByHero?.[visual?.id]
     ?? (hero.team === "blue" ? mats.blueDark : mats.redDark);
-  const timedStates = [...(hero.buffs ?? []), ...(hero.statusEffects ?? [])];
-  const stateMeta = {
-    red: { icon: "R", color: "#ff6b55", title: "紅 Buff" },
-    blue: { icon: "B", color: "#55aaff", title: "藍 Buff" },
-    baron: { icon: "V", color: "#d8a8ff", title: "Baron Buff" },
-    dragon: { icon: "D", color: "#caa2ff", title: "Dragon 成長" },
-    slow: { icon: "↓", color: "#a5b4c8", title: "減速" },
-  };
+  const team = hero.team === "blue" ? "blue" : "red";
+  const labelTexture = useMemo(
+    () => makeHeroLabelTexture(hero.displayName, hero.level, team, compactLabel),
+    [hero.displayName, hero.level, team, compactLabel],
+  );
+  const labelMaterial = useMemo(() => new THREE.MeshBasicMaterial({
+    map: labelTexture,
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.96,
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: false,
+    sizeAttenuation: true,
+  }), [labelTexture]);
+  useLayoutEffect(() => () => {
+    labelMaterial.dispose();
+    labelTexture.dispose();
+  }, [labelMaterial, labelTexture]);
 
   useLayoutEffect(() => {
     register(hero.id, {
@@ -380,6 +424,7 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
       dragonBuffRing: dragonBuffRingRef.current,
       baronBuffRing: baronBuffRingRef.current,
       bar: barRef.current, ring: ringRef.current, deathMark: deathMarkRef.current,
+      hitMarker: hitMarkerRef.current,
       label: labelRef.current,
       bodyAliveMaterial: bodyMaterial,
       secondaryAliveMaterial: secondaryMaterial,
@@ -387,7 +432,6 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
     return () => register(hero.id, null);
   }, [hero.id, register, bodyMaterial, secondaryMaterial]);
 
-  const team = hero.team === "blue" ? "blue" : "red";
   const resolvedVisual = visual ?? { badge: archetype.accessory, scale: archetype.bodyScale };
   const accentMaterial = mats.accentByHero?.[resolvedVisual.id] ?? mats.accent;
   //  ⚠ 手機版問題標記 #3「畫面偶發閃爍/破圖感」：本檔所有 mesh 每幀都用 ref 直接改
@@ -432,6 +476,10 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
         scale={resolvedVisual.scale ?? archetype.bodyScale}
         position={[0, HERO.height / 2 + HERO.radius, 0]} castShadow={false}
         frustumCulled={false} userData={{ part: "hero-body" }} />
+      <mesh ref={hitMarkerRef} geometry={geo.focus} material={mats.hitBurst}
+        position={[0, HERO.height * 0.92, HERO.radius * 1.18]}
+        visible={false} renderOrder={65} frustumCulled={false}
+        userData={{ part: "hero-hit-reaction" }} />
       {/* 肩塊：讓剪影不只是膠囊，遠看能分辨正面 */}
       <mesh ref={shoulderRef} geometry={geo.shoulder}
         material={secondaryMaterial}
@@ -462,63 +510,74 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
       {/* 頭頂血條（背板 + 前景） */}
       <group position={[0, HERO.barY, 0]}>
         <mesh geometry={geo.bar} material={mats.barBg}
-          scale={[HERO.barW * 1.08, HERO.barH * 1.5, 1]} renderOrder={20} frustumCulled={false} />
+          scale={[HERO.barW * 1.08, HERO.barH * 1.5, 1]} renderOrder={70} frustumCulled={false} />
         <mesh ref={barRef} geometry={geo.bar}
           material={team === "blue" ? mats.barBlue : mats.barRed}
-          scale={[HERO.barW, HERO.barH, 1]} position={[0, 0, 0.01]} renderOrder={21}
+          scale={[HERO.barW, HERO.barH, 1]} position={[0, 0, 0.01]} renderOrder={71}
           frustumCulled={false} userData={{ part: "hero-hpbar" }} />
         <mesh geometry={geo.teamMarker} material={team === "blue" ? mats.markerBlue : mats.markerRed}
           position={[-HERO.barW * 0.66, 0, 0.03]} rotation={[0, 0, Math.PI / 4]}
-          renderOrder={22} frustumCulled={false}
+          renderOrder={72} frustumCulled={false}
           userData={{ part: "hero-team-side-marker", team }} />
       </group>
       {showLabel && (
-        <Html position={[0, HERO.barY + 1.3 * S, 0]} center distanceFactor={168}
-          style={{ pointerEvents: "none" }}>
-          <div ref={labelRef} style={{
-            display: "flex", alignItems: "center", gap: 2,
-            font: "700 6px ui-monospace,monospace", lineHeight: 1, whiteSpace: "nowrap",
-            color: "#f8fafc", padding: "1px 1.5px", borderRadius: 2,
-            borderLeft: `1px solid ${team === "blue" ? "#4d95f0" : "#f0574d"}`,
-            background: "rgba(5,10,18,.3)", textShadow: "0 1px 2px rgba(0,0,0,.9)",
-          }}>
-            <span style={{
-              width: 3, height: 3, borderRadius: 1,
-              background: team === "blue" ? "#4d95f0" : "#f0574d",
-              transform: "rotate(45deg)", boxShadow: "0 0 3px currentColor",
-            }} aria-hidden="true" />
-            <span>{hero.displayName}</span>
-            <span style={{ opacity: 0.72 }}>Lv{hero.level}</span>
-          </div>
-        </Html>
+        <group position={[0, NAMEPLATE.y, 0]}>
+          <mesh ref={labelRef} geometry={geo.bar} material={labelMaterial}
+            scale={[
+              compactLabel ? NAMEPLATE.compactWidth : NAMEPLATE.width,
+              compactLabel ? NAMEPLATE.compactHeight : NAMEPLATE.height,
+              1,
+            ]}
+            renderOrder={69} frustumCulled={false}
+            userData={{ part: "hero-name-level", compact: compactLabel }} />
+        </group>
       )}
-      {/* Milestone D：層級固定為 名稱/等級 → 血條 → Buff/狀態。低畫質可隱藏
-          次要名稱，但限時狀態仍保留小圖示與秒數。 */}
-      {!!timedStates.length && (
-        <Html position={[0, HERO.barY - 0.9 * S, 0]} center distanceFactor={170}
-          style={{ pointerEvents: "none" }}>
-          <div style={{ display: "flex", gap: 2, whiteSpace: "nowrap" }}>
-            {timedStates.map((state) => {
-              const meta = stateMeta[state.id] ?? { icon: "•", color: "#e5e7eb", title: state.id };
-              return (
-                <span key={state.id} title={meta.title} style={{
-                  minWidth: 13, height: 10, padding: "0 2px", borderRadius: 3,
-                  display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 1,
-                  font: "800 6px ui-monospace,monospace", color: meta.color,
-                  border: `1px solid ${meta.color}99`, background: "rgba(4,8,14,.72)",
-                  boxShadow: `0 0 4px ${meta.color}44`,
-                }}>
-                  {meta.icon}<small style={{ fontSize: 5.5, opacity: 0.82 }}>
-                    {Number.isFinite(state.stacks) ? `×${state.stacks}` : Math.ceil(state.remaining ?? 0)}
-                  </small>
-                </span>
-              );
-            })}
-          </div>
-        </Html>
-      )}
+      {/* Buff 文字、層數與剩餘時間只留在隊伍面板。英雄本體以紅／藍／龍／Baron
+          的低透明環繞光效表示，避免多人重疊時把名稱與完整血條再次遮住。 */}
     </group>
   );
+}
+
+/**
+ * 名稱／等級改成同一張 WebGL Plane 貼圖：
+ * - 名牌與血條共享 Three.js 透明佇列，血條 renderOrder 70–72 永遠最後畫。
+ * - Plane 使用世界尺寸，遠景會與英雄一起自然縮小，不再像 DOM Html 固定浮在 HUD 上。
+ * - 手機只保留較短名稱與 Lx，寬度縮到血條的 64%。
+ */
+function makeHeroLabelTexture(displayName, level, team, compact) {
+  const canvas = document.createElement("canvas");
+  canvas.width = compact ? 256 : 320;
+  canvas.height = 48;
+  const ctx = canvas.getContext("2d");
+  const accent = team === "blue" ? "#58a6ff" : "#ff6b5e";
+  const rawName = String(displayName ?? "Hero");
+  const name = compact && rawName.length > 6 ? `${rawName.slice(0, 5)}…` : rawName;
+  const levelText = `L${Math.max(1, Number(level) || 1)}`;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "rgba(4, 9, 16, 0.72)";
+  ctx.fillRect(3, 3, canvas.width - 6, 42);
+  ctx.fillStyle = accent;
+  ctx.fillRect(3, 3, 6, 42);
+  ctx.font = `${compact ? 700 : 750} ${compact ? 26 : 30}px ui-monospace, monospace`;
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#f8fafc";
+  ctx.shadowColor = "rgba(0,0,0,.9)";
+  ctx.shadowBlur = 3;
+  ctx.fillText(name, 18, 24, canvas.width - (compact ? 64 : 80));
+  ctx.shadowBlur = 0;
+  ctx.font = `800 ${compact ? 22 : 26}px ui-monospace, monospace`;
+  ctx.textAlign = "right";
+  ctx.fillStyle = accent;
+  ctx.fillText(levelText, canvas.width - 13, 24);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+  texture.needsUpdate = true;
+  return texture;
 }
 
 /**

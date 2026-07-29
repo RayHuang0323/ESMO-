@@ -5,8 +5,10 @@ import { LogicEngine } from "../src/LogicEngine.js";
 import { buildTowerPlacement } from "../src/battle/moba/map/mobaTowerPlacement.js";
 import { rulesFor } from "../src/battle/moba/matchProgression.js";
 import {
-  adaptEffects, adaptRuntimeMapFrame,
+  adaptEffects, adaptRuntimeMapFrame, extrapolateLiveEffectTime,
+  MINION_RADIUS, MINION_TOWER_VISUAL_GAP,
 } from "../src/battle/moba/map/mobaRuntimeMapAdapter.js";
+import { structureList } from "../src/battle/moba/nav/mobaNavigation.js";
 import {
   createMobaReplay, snapshotToFrame, validateMobaReplay,
 } from "../src/platform/contracts/mobaReplay.js";
@@ -33,6 +35,26 @@ assert.ok(towerFrames.every((fx) =>
   fx.style === "tower" && fx.sourceId === "blue_mid_0" && fx.targetId === "r3"));
 assert.ok(towerFrames[0].phaseProgress < towerFrames[1].phaseProgress &&
   towerFrames[1].phaseProgress < towerFrames[2].phaseProgress);
+
+// 正式 live snapshot 每 0.5s 一張；subT 必須讓 FX 時鐘逐幀外推。
+// 若固定使用 snapshot.ts，整個區間只會停在 cast，下一張再跳格，正是「只看到圈」的回歸。
+const liveTowerSnapshot = {
+  ...fxEngine.snapshot(),
+  ts: 10.5,
+  fx: [{ ...rawTower, at: 10.5 }],
+};
+const liveEffectTimes = [
+  extrapolateLiveEffectTime(10, 10.5, 0),
+  extrapolateLiveEffectTime(10, 10.5, 0.8),
+  extrapolateLiveEffectTime(10.5, 11, 0.9),
+  extrapolateLiveEffectTime(11, 11.5, 0.8),
+];
+assert.deepEqual(liveEffectTimes, [10.5, 10.9, 11.45, 11.9]);
+const liveTowerPhases = liveEffectTimes.map((time) =>
+  adaptEffects(liveTowerSnapshot, time)[0]);
+assert.deepEqual(liveTowerPhases.map((fx) => fx.phase),
+  ["cast", "travel", "travel", "impact"]);
+assert.ok(liveTowerPhases[1].phaseProgress < liveTowerPhases[2].phaseProgress);
 
 // 2) 四座門牙塔必須來自正式地圖錨點、藍紅鏡射，且兩座都倒下前主堡不可被選中。
 const placement = buildTowerPlacement();
@@ -158,13 +180,71 @@ assert.equal(replayState.players.find((p) => p.id === "b2")
 const legacyFrame = { ...replayFrame, bf: replayFrame.bf.map((row) => row.slice(0, 4)) };
 assert.deepEqual(validateMobaReplay({ ...replay, frames: [legacyFrame] }), { ok: true, errors: [] });
 
-// 6) 正式 GameView／runtime-v2 呈現路徑靜態守門：不可只改 verifier 或 debug harness。
-const [gameView, runtimeView, effectsCode, heroesCode, neutralsCode, hudCode, stripCode,
+// 6) 小兵的 lane t 會穿過友軍塔心；正式 Adapter 必須在塔外固定同側繞行，
+// 不可用「每幀最近投影」在前後兩側跳點。逐小步檢查端點與連續線段都不碰塔體。
+const routeEngine = new LogicEngine(7305, null, { rules: "v3" });
+for (const lane of ["top", "mid", "bot"]) {
+  routeEngine.lanes[lane].bm = [];
+  routeEngine.lanes[lane].rm = [];
+}
+const routeTowerId = "blue_top_0";
+const routeTower = routeEngine.towers[routeTowerId];
+const routeShape = structureList().find((item) => item.id === routeTowerId);
+assert.ok(routeTower && routeShape);
+const routeMinion = {
+  id: "friendly-route", t: routeTower.t - 0.075, hp: 1,
+  atkCd: 99, wave: 1, slot: 1, kind: "melee",
+};
+routeEngine.lanes.top.bm = [routeMinion];
+const pointSegmentDistance = (point, a, b) => {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const len2 = dx * dx + dy * dy;
+  const t = len2 > 1e-9
+    ? Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / len2))
+    : 0;
+  return Math.hypot(point.x - (a.x + dx * t), point.y - (a.y + dy * t));
+};
+let routePrev = null;
+let routeMinClearance = Infinity;
+let routeMinSegmentClearance = Infinity;
+let routeMaxStep = 0;
+let routeMaxStepAt = null;
+for (let t = routeTower.t - 0.075; t <= routeTower.t + 0.075; t += 0.001) {
+  routeMinion.t = t;
+  const snap = routeEngine.snapshot();
+  const frame = adaptRuntimeMapFrame(snap, { prev: snap, interpolation: 1 });
+  const visual = frame.minions.find((item) => item.id === routeMinion.id).position;
+  const clearance = Math.hypot(
+    visual.x - routeTower.pos.x, visual.y - routeTower.pos.y,
+  ) - routeShape.r - MINION_RADIUS;
+  routeMinClearance = Math.min(routeMinClearance, clearance);
+  if (routePrev) {
+    const step = Math.hypot(visual.x - routePrev.x, visual.y - routePrev.y);
+    if (step > routeMaxStep) {
+      routeMaxStep = step;
+      routeMaxStepAt = { t, from: { ...routePrev }, to: { ...visual } };
+    }
+    routeMinSegmentClearance = Math.min(routeMinSegmentClearance,
+      pointSegmentDistance(routeTower.pos, routePrev, visual) -
+      routeShape.r - MINION_RADIUS);
+  }
+  routePrev = visual;
+}
+assert.ok(routeMinClearance >= MINION_TOWER_VISUAL_GAP - 0.03,
+  `friendly minion endpoint clipped tower: ${routeMinClearance}`);
+assert.ok(routeMinSegmentClearance >= 0.15,
+  `friendly minion path crossed tower: ${routeMinSegmentClearance}`);
+assert.ok(routeMaxStep < 0.65,
+  `friendly minion route jumped sides: ${routeMaxStep} ${JSON.stringify(routeMaxStepAt)}`);
+
+// 7) 正式 GameView／runtime-v2 呈現路徑靜態守門：不可只改 verifier 或 debug harness。
+const [gameView, runtimeView, effectsCode, heroesCode, structuresCode, neutralsCode, hudCode, stripCode,
   adapterCode, replayCode] = await Promise.all([
   read("../src/GameView.jsx"),
   read("../src/battle/moba/render/MobaRuntimeView3D.jsx"),
   read("../src/battle/moba/render/MobaRuntimeEffects.jsx"),
   read("../src/battle/moba/render/MobaRuntimeHeroes.jsx"),
+  read("../src/battle/moba/render/MobaRuntimeStructures.jsx"),
   read("../src/battle/moba/render/MobaRuntimeNeutrals.jsx"),
   read("../src/battle/ui/BattleHUD.jsx"),
   read("../src/battle/ui/BattleHeroStrip.jsx"),
@@ -175,24 +255,44 @@ assert.ok(gameView.includes("<MobaRuntimeView3D"));
 assert.ok(runtimeView.includes("<MobaRuntimeEffects"));
 for (const token of [
   "style === \"tower\"", "phase === \"cast\"", "phase === \"travel\"",
-  "phase === \"impact\"", "addOrb(moving, 0.74", "addLine(tail, moving, 0.26",
+  "phase === \"impact\"", "addTowerShell(moving, impact, 0.72",
+  "addLine(tail, moving, 0.34", 'pool("projectile"', 'pool("core"',
+  'pool("towerBlue"', 'pool("towerRed"', "CLASS_FX_COLOR", "TOWER_FX_COLOR",
+  'tank: 0xffb347', 'fighter: 0xff5f52', 'assassin: 0xd778ff',
+  'mage: 0x45ddff', 'marksman: 0xffdf55', 'support: 0x69ffd0',
+  'pool("classTank"', 'pool("classFighter"', 'pool("classAssassin"',
+  'pool("classMage"', 'pool("classMarksman"', 'pool("classSupport"',
+  "addClassProjectile",
 ]) assert.ok(effectsCode.includes(token), `missing formal FX token: ${token}`);
 for (const token of [
-  'font: "700 6px', "hero-buff-ring", "buffDragon", "buffBaron",
-  "HERO.barY + 1.3 * S", "HERO.barY - 0.9 * S",
+  "map: labelTexture", "NAMEPLATE", "hero-name-level",
+  "renderOrder={69}", "renderOrder={70}", "compactLabel ? NAMEPLATE.compactWidth",
+  "hero-buff-ring", "buffDragon", "buffBaron",
+  "hero-hit-reaction",
 ]) assert.ok(heroesCode.includes(token), `missing compact hero HUD token: ${token}`);
+assert.ok(!heroesCode.includes("<Html"),
+  "hero overhead must stay on the WebGL plane/ring path");
+assert.ok(gameView.includes("compactLabels={isMobile}"));
+assert.ok(runtimeView.includes("compactLabels={compactLabels}"));
+assert.ok(structuresCode.includes("damageCore: new THREE.OctahedronGeometry"));
+assert.ok(!structuresCode.includes("damageRing: new THREE.RingGeometry"),
+  "tower hit feedback must not regress to an expanding ground ring");
 for (const token of [
   "ObjectiveRespawnLabel", "BLUE BUFF · 藍", "RED BUFF · 紅",
 ]) assert.ok(neutralsCode.includes(token), `missing neutral presentation token: ${token}`);
 for (const token of ["team-objective-buffs-${side}", "dragonStacks", "baronRemaining"]) {
   assert.ok(hudCode.includes(token), `missing objective HUD token: ${token}`);
 }
-assert.ok(stripCode.includes("buff.id === \"dragon\"") && stripCode.includes(": \"V\""));
+assert.ok(stripCode.includes("buff.id === \"dragon\"") &&
+  stripCode.includes('? "龍" : "巴"'));
 assert.ok(adapterCode.includes("travelEnd = isTower ? 0.82 : 0.72"));
 assert.ok(adapterCode.includes("respawnState: m.alive ? \"alive\""));
+assert.ok(adapterCode.includes("friendlyTowerRouteAt"));
+assert.ok(adapterCode.includes("findPath("));
+assert.ok(adapterCode.includes("MINION_TOWER_VISUAL_GAP = 0.8"));
 assert.ok(replayCode.includes("eventAt: row?.[6]") && replayCode.includes("at: f.t"));
 
-// 7) 完整正式 frame 不可產生 NaN，並實際帶出四門牙塔／三類團隊 Buff。
+// 8) 完整正式 frame 不可產生 NaN，並實際帶出四門牙塔／三類團隊 Buff。
 const formalFrame = adaptRuntimeMapFrame(replayState);
 assert.equal(formalFrame.structures.filter((structure) => structure.id.includes("_nexus_")).length, 4);
 assert.ok(formalFrame.heroes.some((hero) => hero.buffs.some((buff) => buff.id === "dragon")));
@@ -201,6 +301,10 @@ assert.ok(!JSON.stringify(formalFrame).includes("NaN"));
 
 console.log("Milestone D-fix3 verifier: PASS", JSON.stringify({
   towerTravel: towerFrames.map((fx) => fx.phaseProgress),
+  liveTowerClock: {
+    times: liveEffectTimes,
+    phases: liveTowerPhases.map((fx) => fx.phase),
+  },
   structures: {
     laneTowers: placement.list.length,
     nexusGuards: placement.nexusGuards.length,
@@ -223,6 +327,12 @@ console.log("Milestone D-fix3 verifier: PASS", JSON.stringify({
     memberRespawn: replayCamp.members[0].respawn,
     legacyBuffRowsAccepted: true,
     readOnlyPresentation: true,
+  },
+  minionRoute: {
+    tower: routeTowerId,
+    minClearance: routeMinClearance,
+    minSegmentClearance: routeMinSegmentClearance,
+    maxStep: routeMaxStep,
   },
   formalGameView: true,
 }));

@@ -77,15 +77,21 @@ const [effectsCode, heroesCode, neutralsCode, stripCode] = await Promise.all([
 ]);
 for (const token of [
   "orderedEffects", "drawPriority", "phaseRank", "coreColor",
-  "addOrb(moving, 0.74", "addLine(tail, moving, 0.26", "BURST_CAP, 39",
+  "addTowerShell(moving, impact, 0.72", "addLine(tail, moving, 0.34",
+  'pool("projectile"', 'pool("core"', 'pool("towerBlue"', 'pool("towerRed"',
+  'pool("classTank"', 'pool("classMage"', 'pool("classMarksman"',
+  "CLASS_FX_COLOR", "TOWER_FX_COLOR", "BURST_CAP, 39",
 ]) assert.ok(effectsCode.includes(token), `missing FX visibility guard: ${token}`);
-assert.match(effectsCode, /ring: new THREE\.MeshBasicMaterial\(\{\s*[\s\S]*?opacity: 0\.42/);
+// D-fix3 formal GameView feedback：0.42 的 additive 地環仍會壓過彈體；
+// 降到 0.14，並以 normal-blended 實心 projectile/core 承擔主要可讀性。
+assert.match(effectsCode, /ring: new THREE\.MeshBasicMaterial\(\{\s*[\s\S]*?opacity: 0\.14/);
 for (const token of [
-  "hero-buff-ring", "buffRed", "buffBlue", "HERO.barY + 1.3 * S",
-  // D-fix3 mobile-first 收尾把名稱由 7px 縮到 6px；上下層錨點仍沿用
-  // D-fix2 已驗證的不重疊位置，因此只更新被新需求取代的固定字級斷言。
-  'font: "700 6px', "HERO.barY - 0.9 * S",
+  "hero-buff-ring", "buffRed", "buffBlue", "map: labelTexture",
+  "hero-name-level", "renderOrder={69}", "renderOrder={70}",
+  "compactLabel ? NAMEPLATE.compactWidth", "buffDragon", "buffBaron",
 ]) assert.ok(heroesCode.includes(token), `missing hero HUD guard: ${token}`);
+assert.ok(!heroesCode.includes("<Html"),
+  "hero overhead text must stay out of the DOM layer");
 for (const token of [
   "blueBuffRune", "redBuffRune", "BLUE BUFF · 藍", "RED BUFF · 紅",
   "MONSTER_COLOR.blue_crystal", "MONSTER_COLOR.red_ember",
@@ -232,7 +238,8 @@ console.log("Milestone D-fix2 verifier: PASS", JSON.stringify({
   presentation: {
     prioritizedPools: true,
     projectileCore: true,
-    compactNameplatePx: 6,
+    nameplateMode: "webgl-plane",
+    hpRenderOrder: 71,
     distinctBuffRunes: true,
   },
   decisions: {

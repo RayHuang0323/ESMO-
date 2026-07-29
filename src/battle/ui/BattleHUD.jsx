@@ -45,9 +45,9 @@ function TeamObjectiveBuffs({ state, side }) {
     <div data-testid={`team-objective-buffs-${side}`}
       style={{ display: "flex", justifyContent: align, gap: 3, marginTop: 2 }}>
       {!!dragon && <span title={`Dragon 團隊成長 ${dragon} 層：本場永久、死亡保留`}
-        style={{ color: "#caa2ff", font: "800 7px ui-monospace,monospace" }}>D×{dragon}</span>}
+        style={{ color: "#caa2ff", font: "800 7px ui-monospace,monospace" }}>龍×{dragon}</span>}
       {!!baron && <span title={`Baron 團隊攻城：${Math.ceil(baron)}s`}
-        style={{ color: "#f4c16f", font: "800 7px ui-monospace,monospace" }}>V {Math.ceil(baron)}s</span>}
+        style={{ color: "#f4c16f", font: "800 7px ui-monospace,monospace" }}>巴 {Math.ceil(baron)}s</span>}
     </div>
   );
 }
