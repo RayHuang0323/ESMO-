@@ -190,3 +190,23 @@ FPS**。本輪只把 draw calls／triangles／物件數當結構證據；真機 
 2. 完整打一場並人工播放 Replay，確認技能事件時間感與小兵死亡轉場。
 3. 另開專項處理 H.2 已知 v2 per-player RNG／迭代順序 P1；不可混入 H.3 收尾。
 4. 驗收通過後再決定是否 push／部署；本輪依指示停在本機 commits。
+
+## 11. H.3 桌機／手機人工視覺驗收（2026-07-29）
+
+驗收基準：`HEAD f1f811b`。正式 GameView 測試網址：
+
+- 桌機（建議 1440×900）：`http://127.0.0.1:5173/ESMO-/?debug=moba-runtime-battle&mapPresentation=runtime-v2&diag=1`
+- 手機（同網址，以 390×844 viewport 開啟）：`http://127.0.0.1:5173/ESMO-/?debug=moba-runtime-battle&mapPresentation=runtime-v2&diag=1`
+
+本次以正式 `GameView → runtime-v2` 進行短段 4× 觀察，沒有使用桌面手機尺寸模擬來宣稱 Android 通過：
+
+- 桌機首波／交戰：診斷先看到 `48 minions`，10 秒後降至 `40 minions`，同時出現
+  `2 active fx / 115 fx seen`；畫面可見雙方小兵沿中路與下路接線、在塔前停住，未見穿越塔、河道牆或主堡，亦未見長時間卡死。隊形為前後錯列的近戰／遠程小兵，移動方向一致。
+- 手機首波／交戰：診斷由 `64 minions` 降至 `46 minions`，並看到
+  `2 active fx / 76 fx seen`；390×844 畫面沒有水平溢出，HUD、地圖、塔、小地圖與焦點隊伍面板仍可辨識。
+- 英雄原型：guardian 的盾、skirmisher 的雙刃、arcanist 的法杖／焦點、marksman 的發射器在中距離可由輪廓與標籤辨認；未看到原型互相錯配。
+- 技能特效：畫面取樣時 FX 池確實有活動事件，且診斷累積計數持續增加；特效只在交戰附近短暫出現，未覆蓋 HUD 或造成明顯視覺干擾。瀏覽器畫面未能穩定捕捉每一種 FX 的單幀細節，故辨識度仍列真機人工確認。
+- 閃爍／WebGL：桌機與手機 viewport 皆回報 `DEPTH_BITS=24`、`WebGL 2`、`depth=true`、camera `near/far=35/1000`；本次瀏覽器觀察未見 H.2 地面／牆體閃爍。
+- Replay：`check_moba_minions_h3` 與 Replay verifier 已確認 frame 內含 `mn` 小兵與 `fx` 技能事件、seek 與舊格式 fallback；本次尚未人工完整播放終局 Replay，因此不把 Replay 視覺辨識列為完全通過。
+
+結論：桌機與 390px 手機 viewport 的 H.3 呈現驗收通過，沒有發現需要立即修正的 H.3 UI／碰撞問題；未宣稱 Android 真機 FPS、熱降頻、觸控或完整 Replay 視覺已通過。瀏覽器自動化 FPS 受背景 rAF 節流影響，不能替代 Android 真機量測。等待使用者確認是否進行 push／正式部署。

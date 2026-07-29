@@ -2096,3 +2096,14 @@ shadow decal、FPS、觸控與桌面外觀。未完成前不得宣稱真機通�
 
 整階段回退由新到舊逐一 `git revert`，禁止 `reset --hard`。本輪依使用者指示停在
 本機 commit，未 push、未部署，也未自動開始下一階段。
+
+### H.3 人工視覺驗收（2026-07-29）
+
+狀態：**桌機與手機 viewport 驗收通過；待正式站 Android 真機 FPS／觸控／熱降頻與完整 Replay 視覺確認；未 push、未部署**。
+
+- 驗收基準為 `HEAD f1f811b`，正式 GameView 路徑與測試網址記錄於
+  `review/moba-runtime/h3-runtime-presentation/H3_RUNTIME_PRESENTATION_REPORT.md` §11。
+- 桌機 1440×900 觀察到小兵由 48 降至 40（交戰／死亡），診斷同時有 2 active FX、累積 115 FX；手機 390×844 由 64 降至 46，2 active FX、累積 76 FX。三路兵線的接線與塔前停止可見，未發現穿牆或長時間卡住。
+- guardian／skirmisher／arcanist／marksman 四種輪廓可辨；技能事件有進入 FX 池且未見 HUD 遮蔽。`DEPTH_BITS=24`、WebGL2、depth=true、near/far=35/1000，瀏覽器觀察未見 H.2 閃爍。
+- Replay 的 `mn`／`fx` frame 資料由 verifier 確認；完整終局 Replay 尚未人工播放，Android 真機 FPS、熱降頻、觸控與特效辨識仍不可由 Node／桌面瀏覽器宣稱完成。
+- 本次沒有發現需修正的 H.3 呈現問題，未修改公平性、經濟、天賦或地圖結構；未開始下一階段。
