@@ -121,14 +121,18 @@ export function adaptHeroes(snapshot, opts = {}) {
  * snapshot.towers 是 { id → {side,lane,tier,pos,hp} }，主堡是 lane === "nexus"。
  * ⚠ 這是**唯一**的塔／主堡來源：Runtime 地圖不得再從 gameData 生成第二套。
  */
-export function adaptStructures(snapshot) {
+export function adaptStructures(snapshot, opts = {}) {
   const towers = snapshot?.towers ?? {};
+  const previous = opts.prev?.towers ?? {};
+  const alpha = ratio01(opts.interpolation ?? 1);
   return Object.entries(towers).map(([id, t]) => {
     const team = t.side === "red" ? "red" : "blue";
     const type = t.lane === "nexus" ? "nexus" : "tower";
     const { sim, clamped } = safePos(t.pos, baseSim(team));
     const maxHp = STRUCT_MAX_HP(t.lane);
     const hpRatio = ratio01(t.hp);
+    const previousHpRatio = ratio01(previous[id]?.hp ?? hpRatio);
+    const wasAlive = previousHpRatio > 0;
     return {
       id: String(id),
       type,
@@ -140,7 +144,12 @@ export function adaptStructures(snapshot) {
       hp: hpRatio * maxHp,
       maxHp,
       hpRatio,
+      displayHpRatio: previousHpRatio + (hpRatio - previousHpRatio) * alpha,
       alive: hpRatio > 0,
+      previousHpRatio,
+      damageDelta: Math.max(0, previousHpRatio - hpRatio),
+      damageProgress: alpha,
+      destroyProgress: hpRatio <= 0 && wasAlive ? alpha : 0,
       clamped,
     };
   });
@@ -270,7 +279,7 @@ function minionPosition(lane, team, t, slot, aliveStructures) {
  * 三路小兵呈現資料。真值是 snapshot.lanes；隊形只是同一個 lane t 周圍的小幅視覺展開。
  * 候選位置必須通過 H.2 同一份 map geometry + 存活結構碰撞，否則投影回可走區。
  */
-export function adaptMinions(snapshot, opts = {}, structures = adaptStructures(snapshot)) {
+export function adaptMinions(snapshot, opts = {}, structures = adaptStructures(snapshot, opts)) {
   const alpha = ratio01(opts.interpolation ?? 1);
   const cur = minionById(snapshot?.lanes);
   const prev = minionById(opts.prev?.lanes);
@@ -280,12 +289,18 @@ export function adaptMinions(snapshot, opts = {}, structures = adaptStructures(s
     const q = prev.get(m.id);
     const t = q && !dying ? num(q.t) + (num(m.t) - num(q.t)) * alpha : num(m.t);
     const { sim, facing } = minionPosition(m.lane, m.team, t, m.slot ?? 0, aliveStructures);
+    const previousHpRatio = ratio01(q?.hp ?? m.hp);
+    const hpRatio = dying ? 0 : ratio01(m.hp);
     out.push({
       id: String(m.id), team: m.team, lane: m.lane,
       kind: m.kind === "caster" ? "caster" : "melee",
       slot: num(m.slot, 0), wave: num(m.wave, 0),
       position: sim, world: simToWorld(sim, 0), facing,
-      hpRatio: dying ? 0 : ratio01(m.hp),
+      hpRatio,
+      displayHpRatio: previousHpRatio + (hpRatio - previousHpRatio) * alpha,
+      previousHpRatio,
+      damageDelta: Math.max(0, previousHpRatio - hpRatio),
+      hitProgress: alpha,
       alive: !dying,
       spawnProgress: q ? 1 : alpha,
       deathProgress: dying ? alpha : 0,
@@ -298,8 +313,79 @@ export function adaptMinions(snapshot, opts = {}, structures = adaptStructures(s
   return out;
 }
 
+function phaseAt(progress) {
+  const p = ratio01(progress);
+  return {
+    phase: p < 0.3 ? "cast" : (p < 0.76 ? "travel" : "impact"),
+    phaseProgress: p < 0.3 ? p / 0.3 : (p < 0.76 ? (p - 0.3) / 0.46 : (p - 0.76) / 0.24),
+  };
+}
+
+/** 由相鄰 snapshot 的真實 HP 下降衍生小兵攻擊呈現；live / Replay 共用。 */
+export function adaptMinionCombatEffects(minions = [], structures = [], interpolation = 1) {
+  const out = [];
+  for (const target of minions) {
+    if ((target.damageDelta ?? 0) <= 1e-6) continue;
+    let towerSource = null, towerBest = 22;
+    for (const structure of structures) {
+      if (!structure.alive || structure.team === target.team || structure.lane !== target.lane) continue;
+      const d = Math.hypot(structure.world.x - target.world.x, structure.world.z - target.world.z);
+      if (d < towerBest) { towerBest = d; towerSource = structure; }
+    }
+    let source = null, best = Infinity;
+    if (!towerSource) {
+      for (const candidate of minions) {
+        if (!candidate.alive || candidate.team === target.team || candidate.lane !== target.lane) continue;
+        const d = Math.hypot(candidate.world.x - target.world.x, candidate.world.z - target.world.z);
+        if (d < best) { best = d; source = candidate; }
+      }
+    }
+    source = towerSource ?? source;
+    if (!source) continue;
+    const phase = phaseAt(interpolation);
+    const towerHit = !!towerSource;
+    out.push({
+      id: `minion-hit:${source.id}:${target.id}`,
+      type: towerHit ? "tower" : "minion",
+      ability: towerHit ? "tower:basic" : `minion:${source.kind}`,
+      variant: "basic", feedback: "attack",
+      sourceId: source.id, targetId: target.id, archetype: "minion",
+      style: towerHit ? "tower" : (source.kind === "caster" ? "minionBolt" : "minionSlash"),
+      width: towerHit ? 1.25 : (source.kind === "caster" ? 0.8 : 0.95),
+      color: source.team === "blue" ? 0x79c7ff : 0xff8b78,
+      ...phase, progress: ratio01(interpolation),
+      world: source.world, targetWorld: target.world, lifeRatio: 1 - ratio01(interpolation),
+    });
+  }
+  return out;
+}
+
+/** 結構 HP 的真實下降衍生攻城命中；不新增傷害，也不改 snapshot。 */
+export function adaptStructureDamageEffects(structures = [], heroes = [], minions = [], interpolation = 1) {
+  const out = [];
+  for (const target of structures) {
+    if ((target.damageDelta ?? 0) <= 1e-7) continue;
+    let source = null, best = Infinity;
+    for (const candidate of [...heroes, ...minions]) {
+      if (!candidate.alive || candidate.team === target.team) continue;
+      const d = Math.hypot(candidate.world.x - target.world.x, candidate.world.z - target.world.z);
+      if (d < best) { best = d; source = candidate; }
+    }
+    if (!source) continue;
+    out.push({
+      id: `structure-hit:${source.id}:${target.id}`,
+      type: "siege", ability: "siege:basic", variant: "basic", feedback: "attack",
+      sourceId: source.id, targetId: target.id, archetype: "siege", style: "siege",
+      width: 1.05, color: source.team === "blue" ? 0x72b7ff : 0xff7568,
+      ...phaseAt(interpolation), progress: ratio01(interpolation),
+      world: source.world, targetWorld: target.world, lifeRatio: 1 - ratio01(interpolation),
+    });
+  }
+  return out;
+}
+
 /** snapshot.fx → runtime-v2 固定池特效資料。未到事件時間或已過期的一律不畫。 */
-export function adaptEffects(snapshot, effectTime = snapshot?.ts) {
+export function adaptEffects(snapshot, effectTime = snapshot?.ts, opts = {}) {
   const now = num(effectTime, num(snapshot?.ts, 0));
   const out = [];
   for (const f of snapshot?.fx ?? []) {
@@ -315,8 +401,24 @@ export function adaptEffects(snapshot, effectTime = snapshot?.ts) {
     const role = splitAt >= 0 ? f.ability.slice(0, splitAt) : null;
     const archetype = archetypeForRole(role);
     const variant = splitAt >= 0 ? f.ability.slice(splitAt + 1) : "basic";
-    const skillVisual = skillVisualFor({ ability: variant, family: archetype, color: Number.isFinite(f.color) ? f.color : null });
+    const rosterEntry = opts.roster?.[f.sourceId] ?? null;
+    const heroId = rosterEntry?.hero?.id ?? rosterEntry?.heroId ?? rosterEntry?.id ?? null;
+    const heroVisual = heroId ? heroVisualFor(heroId, role, rosterEntry?.hero ?? null) : null;
+    const skillVisual = skillVisualFor({
+      ability: variant, family: archetype, heroId, visual: heroVisual,
+      color: heroVisual?.accent ?? (Number.isFinite(f.color) ? f.color : null),
+    });
     const progress = ratio01(age / life);
+    let targetId = f.targetId ?? null;
+    if (!targetId && f.type === "tower" && f.target) {
+      let nearest = null, best = 0.75;
+      for (const p of snapshot?.players ?? []) {
+        if (p.dead || !p.pos) continue;
+        const d = Math.hypot(p.pos.x - f.target.x, p.pos.y - f.target.y);
+        if (d < best) { best = d; nearest = p; }
+      }
+      targetId = nearest?.id ?? null;
+    }
     out.push({
       id: String(f.id ?? `${f.at ?? now}:${f.type ?? "orb"}`),
       type: f.type ?? "orb",
@@ -324,11 +426,12 @@ export function adaptEffects(snapshot, effectTime = snapshot?.ts) {
       variant,
       feedback: f.feedback ?? (variant === "basic" ? "attack" : "skill"),
       sourceId: f.sourceId ?? null,
-      targetId: f.targetId ?? null,
+      targetId,
       archetype,
       width: archetypeData(archetype).effectWidth,
       color: skillVisual.color,
       skillVisual,
+      style: f.type === "tower" ? "tower" : skillVisual.style,
       phase: progress < 0.24 ? "cast" : (progress < 0.72 ? "travel" : "impact"),
       phaseProgress: progress < 0.24 ? progress / 0.24
         : (progress < 0.72 ? (progress - 0.24) / 0.48 : (progress - 0.72) / 0.28),
@@ -347,10 +450,14 @@ export function adaptEffects(snapshot, effectTime = snapshot?.ts) {
  */
 export function adaptRuntimeMapFrame(snapshot, opts = {}) {
   const heroes = adaptHeroes(snapshot, opts);
-  const structures = adaptStructures(snapshot);
+  const structures = adaptStructures(snapshot, opts);
   const objectives = adaptObjectives(snapshot);
   const minions = adaptMinions(snapshot, opts, structures);
-  const effects = adaptEffects(snapshot, opts.effectTime);
+  const effects = [
+    ...adaptEffects(snapshot, opts.effectTime, opts),
+    ...adaptMinionCombatEffects(minions, structures, opts.interpolation ?? 1),
+    ...adaptStructureDamageEffects(structures, heroes, minions, opts.interpolation ?? 1),
+  ];
   const warnings = [];
   const blue = heroes.filter((h) => h.team === "blue").length;
   const red = heroes.filter((h) => h.team === "red").length;

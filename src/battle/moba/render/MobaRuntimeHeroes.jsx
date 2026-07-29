@@ -116,18 +116,35 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
     chest: new THREE.BoxGeometry(HERO.radius * 1.75, HERO.radius * 0.82, HERO.radius * 1.2),
     wing: new THREE.ConeGeometry(HERO.radius * 0.62, HERO.height * 1.1, 3),
     hammer: new THREE.BoxGeometry(HERO.radius * 1.3, HERO.radius * 0.72, HERO.radius * 0.72),
+    teamBand: new THREE.TorusGeometry(HERO.radius * 0.92, HERO.radius * 0.16, 5, 14),
+    teamMarker: new THREE.RingGeometry(HERO.radius * 0.34, HERO.radius * 0.62, 4),
+    horn: new THREE.ConeGeometry(HERO.radius * 0.25, HERO.radius * 0.82, 5),
+    hood: new THREE.ConeGeometry(HERO.radius * 0.78, HERO.radius * 1.08, 7, 1, true),
+    halo: new THREE.TorusGeometry(HERO.radius * 0.72, HERO.radius * 0.1, 5, 16),
   }), []);
 
   const mats = useMemo(() => {
     const mk = (color, opts = {}) => new THREE.MeshStandardMaterial({
       color, roughness: 0.55, metalness: 0.05, flatShading: true, ...opts,
     });
-    const accentByHero = Object.fromEntries(Object.entries(HERO_VISUALS).map(([id, spec]) => [id, mk(spec.accent, { emissive: spec.accent, emissiveIntensity: 0.22, metalness: 0.2 })]));
+    const accentByHero = Object.fromEntries(Object.entries(HERO_VISUALS).map(([id, spec]) => [
+      id, mk(spec.accent, { emissive: spec.accent, emissiveIntensity: 0.36, metalness: 0.2 }),
+    ]));
+    const bodyByHero = Object.fromEntries(Object.entries(HERO_VISUALS).map(([id, spec]) => [
+      id, mk(spec.primary ?? spec.accent, {
+        emissive: spec.primary ?? spec.accent, emissiveIntensity: 0.14, metalness: 0.12,
+      }),
+    ]));
+    const secondaryByHero = Object.fromEntries(Object.entries(HERO_VISUALS).map(([id, spec]) => [
+      id, mk(spec.secondary ?? spec.trim, {
+        emissive: spec.secondary ?? spec.trim, emissiveIntensity: 0.08, metalness: 0.16,
+      }),
+    ]));
     return {
       blue: mk(TEAM_COLOR.blue), red: mk(TEAM_COLOR.red),
       blueDark: mk(TEAM_DARK.blue), redDark: mk(TEAM_DARK.red),
       accent: mk(0xe8d7a4, { emissive: 0x5b4b25, emissiveIntensity: 0.35, metalness: 0.18 }),
-      accentByHero,
+      accentByHero, bodyByHero, secondaryByHero,
       //  陣亡本體：**去飽和的隊色** + 0.55 透明（0.28 太淡，全場視角等於消失）
       blueDead: mk(TEAM_DEAD.blue, { transparent: true, opacity: DEAD.bodyOpacity }),
       redDead: mk(TEAM_DEAD.red, { transparent: true, opacity: DEAD.bodyOpacity }),
@@ -154,6 +171,8 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
       barBg: new THREE.MeshBasicMaterial({ color: 0x0b1118, transparent: true, opacity: 0.82, depthTest: false, depthWrite: false, side: THREE.DoubleSide }),
       barBlue: new THREE.MeshBasicMaterial({ color: 0x59d97a, transparent: true, opacity: 1, depthTest: false, depthWrite: false, side: THREE.DoubleSide }),
       barRed: new THREE.MeshBasicMaterial({ color: 0xe2604f, transparent: true, opacity: 1, depthTest: false, depthWrite: false, side: THREE.DoubleSide }),
+      markerBlue: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.blue, transparent: true, opacity: 0.96, depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }),
+      markerRed: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.red, transparent: true, opacity: 0.96, depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }),
     };
   }, []);
 
@@ -169,15 +188,23 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
   }, []);
 
   //  每幀把 Adapter 的最新位置寫進 ref（不經過 React state ⇒ 不重繪）
-  useFrame(() => {
+  useFrame(({ clock }) => {
     //  ⚠ 每幀讀 frameRef（最新位置），props.heroes 只負責決定「掛了哪些英雄」
     const live = frameRef?.current?.heroes ?? heroes;
+    const effects = frameRef?.current?.effects ?? [];
+    const now = clock.getElapsedTime();
     for (const h of live) {
       const node = groupRefs.current.get(h.id);
       if (!node) continue;
-      const { root, body, shoulder, accessory, signature, badge, crest, bar, ring, deathMark, label } = node;
+      const {
+        root, body, shoulder, accessory, signature, headFeature, badge, crest, teamBand,
+        bar, ring, deathMark, label, bodyAliveMaterial, secondaryAliveMaterial,
+      } = node;
+      const hitFx = effects.find((fx) => String(fx.targetId ?? "") === h.id && fx.phase === "impact");
+      const hit = hitFx ? Math.max(0, 1 - (hitFx.phaseProgress ?? 0)) : 0;
+      const shake = hit > 0 ? Math.sin(now * 58 + h.id.length) * 0.24 * S * hit : 0;
       //  ⚠ 地面不在 y = 0（見檔頭 GROUND_Y 註解）⇒ 英雄整體抬到走道表面。
-      root.position.set(h.world.x, GROUND_Y, h.world.z);
+      root.position.set(h.world.x + shake, GROUND_Y + hit * 0.08 * S, h.world.z - shake * 0.35);
       if (h.facing !== null && h.facing !== undefined) root.rotation.y = h.facing;
       //  ── 陣亡呈現（見檔頭 TEAM_DEAD / DEAD 註解）──────────────────────────
       //  倒地：本體由站姿轉成橫躺，高度降到「躺在地上」而不是「陷進地裡」
@@ -185,14 +212,20 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
       body.rotation.x = h.alive ? 0 : -Math.PI / 2;
       body.position.y = h.alive ? HERO.height / 2 + HERO.radius : HERO.radius * 0.95;
       body.material = h.alive
-        ? (h.team === "blue" ? mats.blue : mats.red)
+        ? bodyAliveMaterial
         : (h.team === "blue" ? mats.blueDead : mats.redDead);
+      if (bodyAliveMaterial) bodyAliveMaterial.emissiveIntensity = 0.14 + hit * 1.65;
       //  肩塊只在活著時出現：屍體是一具橫躺的膠囊，多一塊方塊只會變回「色塊」
-      if (shoulder) shoulder.visible = h.alive;
+      if (shoulder) {
+        shoulder.visible = h.alive;
+        shoulder.material = secondaryAliveMaterial;
+      }
       if (accessory) accessory.visible = h.alive;
       if (signature) signature.visible = h.alive;
+      if (headFeature) headFeature.visible = h.alive;
       if (badge) badge.visible = h.alive;
       if (crest) crest.visible = h.alive;
+      if (teamBand) teamBand.visible = h.alive;
       ring.visible = h.alive;
       //  地面陣亡標記：只有死亡時出現，是「還認得出這裡有人陣亡」的主要線索
       if (deathMark) {
@@ -248,26 +281,36 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
   const deathMarkRef = useRef();
   const accessoryRef = useRef();
   const signatureRef = useRef();
+  const headFeatureRef = useRef();
   const badgeRef = useRef();
   const crestRef = useRef();
+  const teamBandRef = useRef();
   const labelRef = useRef();
+  const visual = hero.visual ?? HERO_VISUALS[hero.heroId] ?? null;
+  const archetype = archetypeData(hero.archetype);
+  const bodyMaterial = mats.bodyByHero?.[visual?.id] ?? mats.accent;
+  const secondaryMaterial = mats.secondaryByHero?.[visual?.id]
+    ?? (hero.team === "blue" ? mats.blueDark : mats.redDark);
 
   useLayoutEffect(() => {
     register(hero.id, {
       root: rootRef.current, body: bodyRef.current, shoulder: shoulderRef.current,
       accessory: accessoryRef.current,
       signature: signatureRef.current,
+      headFeature: headFeatureRef.current,
       badge: badgeRef.current, crest: crestRef.current,
+      teamBand: teamBandRef.current,
       bar: barRef.current, ring: ringRef.current, deathMark: deathMarkRef.current,
       label: labelRef.current,
+      bodyAliveMaterial: bodyMaterial,
+      secondaryAliveMaterial: secondaryMaterial,
     });
     return () => register(hero.id, null);
-  }, [hero.id, register]);
+  }, [hero.id, register, bodyMaterial, secondaryMaterial]);
 
   const team = hero.team === "blue" ? "blue" : "red";
-  const archetype = archetypeData(hero.archetype);
-  const visual = hero.visual ?? HERO_VISUALS[hero.heroId] ?? { badge: archetype.accessory, scale: archetype.bodyScale };
-  const accentMaterial = mats.accentByHero?.[visual.id] ?? mats.accent;
+  const resolvedVisual = visual ?? { badge: archetype.accessory, scale: archetype.bodyScale };
+  const accentMaterial = mats.accentByHero?.[resolvedVisual.id] ?? mats.accent;
   //  ⚠ 手機版問題標記 #3「畫面偶發閃爍/破圖感」：本檔所有 mesh 每幀都用 ref 直接改
   //  position/scale/visible（見下面 useFrame），但 geometry 的 boundingSphere 是照
   //  「建立當下」的局部座標算的、不會跟著位置更新重算。加上運鏡（RTS 大範圍平移/縮放）
@@ -289,27 +332,35 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
         position={[0, RING_LIFT, 0]} rotation={[-Math.PI / 2, 0, Math.PI / 4]}
         visible={false} frustumCulled={false} userData={{ part: "hero-death-mark" }} />
       {/* 本體（膠囊） */}
-      <mesh ref={bodyRef} geometry={geo.body} material={team === "blue" ? mats.blue : mats.red}
-        scale={visual.scale ?? archetype.bodyScale}
+      <mesh ref={bodyRef} geometry={geo.body} material={bodyMaterial}
+        scale={resolvedVisual.scale ?? archetype.bodyScale}
         position={[0, HERO.height / 2 + HERO.radius, 0]} castShadow={false}
         frustumCulled={false} userData={{ part: "hero-body" }} />
       {/* 肩塊：讓剪影不只是膠囊，遠看能分辨正面 */}
       <mesh ref={shoulderRef} geometry={geo.shoulder}
-        material={team === "blue" ? mats.blueDark : mats.redDark}
+        material={secondaryMaterial}
         scale={archetype.shoulderScale}
         position={[0, HERO.height * 0.86, HERO.radius * 0.45]}
         frustumCulled={false} userData={{ part: "hero-shoulder" }} />
-      <HeroAccessory ref={accessoryRef} type={visual.badge ?? archetype.accessory} geo={geo}
-        material={accentMaterial} teamMaterial={team === "blue" ? mats.blueDark : mats.redDark} />
-      <HeroSignature ref={signatureRef} silhouette={visual.silhouette} geo={geo}
-        accent={accentMaterial} teamMaterial={team === "blue" ? mats.blueDark : mats.redDark} />
+      <HeroAccessory ref={accessoryRef} type={resolvedVisual.badge ?? archetype.accessory} geo={geo}
+        material={accentMaterial} teamMaterial={secondaryMaterial} />
+      <HeroSignature ref={signatureRef} silhouette={resolvedVisual.silhouette} geo={geo}
+        accent={accentMaterial} teamMaterial={secondaryMaterial} />
+      <HeroHeadFeature ref={headFeatureRef} type={resolvedVisual.headFeature} geo={geo}
+        accent={accentMaterial} secondary={secondaryMaterial} />
       <mesh ref={crestRef} geometry={geo.crest} material={accentMaterial}
         position={[0, HERO.height * 1.42, 0]} rotation={[0, 0, Math.PI]}
-        scale={[visual.silhouette === "obelisk" ? 1.25 : 0.82, 1, 0.82]}
-        frustumCulled={false} userData={{ part: "hero-crest", visual: visual.silhouette }} />
+        scale={[resolvedVisual.silhouette === "obelisk" ? 1.25 : 0.82, 1, 0.82]}
+        frustumCulled={false} userData={{ part: "hero-crest", visual: resolvedVisual.silhouette }} />
       <mesh ref={badgeRef} geometry={geo.badge} material={accentMaterial}
         position={[0, HERO.height * 0.72, HERO.radius * 0.96]} scale={0.72}
-        frustumCulled={false} userData={{ part: "hero-badge", visual: visual.badge }} />
+        frustumCulled={false} userData={{ part: "hero-badge", visual: resolvedVisual.badge }} />
+      {/* 英雄本體保留個人主色；腰間粗環與腳底環專責藍／紅陣營辨識。 */}
+      <mesh ref={teamBandRef} geometry={geo.teamBand}
+        material={team === "blue" ? mats.blue : mats.red}
+        position={[0, HERO.height * 0.66, 0]} rotation={[Math.PI / 2, 0, 0]}
+        scale={[1.12, 1.12, 1.12]} frustumCulled={false}
+        userData={{ part: "hero-team-band", team }} />
       {/* 頭頂血條（背板 + 前景） */}
       <group position={[0, HERO.barY, 0]}>
         <mesh geometry={geo.bar} material={mats.barBg}
@@ -318,6 +369,10 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
           material={team === "blue" ? mats.barBlue : mats.barRed}
           scale={[HERO.barW, HERO.barH, 1]} position={[0, 0, 0.01]} renderOrder={21}
           frustumCulled={false} userData={{ part: "hero-hpbar" }} />
+        <mesh geometry={geo.teamMarker} material={team === "blue" ? mats.markerBlue : mats.markerRed}
+          position={[-HERO.barW * 0.66, 0, 0.03]} rotation={[0, 0, Math.PI / 4]}
+          renderOrder={22} frustumCulled={false}
+          userData={{ part: "hero-team-side-marker", team }} />
       </group>
       {showLabel && (
         <Html position={[0, HERO.barY + 1.5 * S, 0]} center distanceFactor={190}
@@ -327,6 +382,11 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
             color: team === "blue" ? "#bcdcff" : "#ffc9c2",
             textShadow: "0 1px 3px rgba(0,0,0,.9)",
           }}>
+            <span style={{
+              display: "inline-block", marginRight: 4, padding: "1px 4px", borderRadius: 3,
+              color: "#fff", background: team === "blue" ? "#2563eb" : "#dc2626",
+              boxShadow: "0 1px 3px rgba(0,0,0,.8)",
+            }}>{team === "blue" ? "藍方" : "紅方"}</span>
             <span style={{ opacity: 0.75 }}>Lv{hero.level}</span> {hero.displayName}
           </div>
         </Html>
@@ -334,6 +394,112 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
     </group>
   );
 }
+
+/**
+ * 把選角頭像最醒目的頭部語彙轉成 ESMO 自有低模零件。
+ * 這不是把 2D 圖貼到角色上；visual schema 只保存 recipe，之後可由正式 GLB
+ * 使用同一個 stable hero id 逐隻替換，不會碰 snapshot / Replay。
+ */
+const HeroHeadFeature = React.forwardRef(function HeroHeadFeature(
+  { type, geo, accent, secondary }, ref,
+) {
+  const mesh = (geometry, material, position, scale = [1, 1, 1], rotation = [0, 0, 0], part = type) => (
+    <mesh geometry={geometry} material={material} position={position} scale={scale}
+      rotation={rotation} frustumCulled={false}
+      userData={{ part: "hero-portrait-head-feature", motif: part }} />
+  );
+  const hornPair = (material, scale = [1, 1, 1], spread = 0.58, lean = 0.38) => (
+    <>
+      {mesh(geo.horn, material, [-HERO.radius * spread, HERO.height * 1.57, 0],
+        scale, [0, 0, lean], `${type}-left`)}
+      {mesh(geo.horn, material, [HERO.radius * spread, HERO.height * 1.57, 0],
+        scale, [0, 0, -lean], `${type}-right`)}
+    </>
+  );
+
+  if (type === "hornedHelm") return (
+    <group ref={ref} name="hero-head-horned-helm">
+      {hornPair(accent, [0.72, 1.08, 0.72], 0.62, 0.52)}
+      {mesh(geo.badge, accent, [0, HERO.height * 1.42, HERO.radius * 0.58], [0.36, 0.2, 0.22],
+        [0, 0, Math.PI / 4], "amber-visor")}
+    </group>
+  );
+  if (type === "flameHair") return (
+    <group ref={ref} name="hero-head-flame-hair">
+      {mesh(geo.crest, accent, [0, HERO.height * 1.62, -HERO.radius * 0.05], [0.82, 1.5, 0.82],
+        [0, 0, Math.PI], "flame-center")}
+      {mesh(geo.crest, accent, [-HERO.radius * 0.48, HERO.height * 1.52, 0], [0.5, 1.05, 0.5],
+        [0, 0, Math.PI + 0.35], "flame-left")}
+      {mesh(geo.crest, accent, [HERO.radius * 0.48, HERO.height * 1.52, 0], [0.5, 1.05, 0.5],
+        [0, 0, Math.PI - 0.35], "flame-right")}
+    </group>
+  );
+  if (type === "hood") return (
+    <group ref={ref} name="hero-head-hood">
+      {mesh(geo.hood, secondary, [0, HERO.height * 1.4, -HERO.radius * 0.12], [1.08, 1.18, 1.02],
+        [0, 0, Math.PI], "hood")}
+      {mesh(geo.badge, accent, [0, HERO.height * 1.34, HERO.radius * 0.64], [0.26, 0.16, 0.18],
+        [0, 0, Math.PI / 4], "hood-visor")}
+    </group>
+  );
+  if (type === "infernoHorns") return (
+    <group ref={ref} name="hero-head-inferno-horns">
+      {hornPair(accent, [0.88, 1.28, 0.88], 0.64, 0.64)}
+      {mesh(geo.crest, accent, [0, HERO.height * 1.61, 0], [0.66, 1.15, 0.66],
+        [0, 0, Math.PI], "inferno-core")}
+    </group>
+  );
+  if (type === "iceCrown") return (
+    <group ref={ref} name="hero-head-ice-crown">
+      {mesh(geo.focus, accent, [0, HERO.height * 1.6, 0], [0.52, 1.2, 0.52], [0, 0, 0], "ice-center")}
+      {mesh(geo.focus, accent, [-HERO.radius * 0.48, HERO.height * 1.5, 0], [0.38, 0.82, 0.38],
+        [0, 0, 0.42], "ice-left")}
+      {mesh(geo.focus, accent, [HERO.radius * 0.48, HERO.height * 1.5, 0], [0.38, 0.82, 0.38],
+        [0, 0, -0.42], "ice-right")}
+    </group>
+  );
+  if (type === "emberCrown") return (
+    <group ref={ref} name="hero-head-ember-crown">
+      {hornPair(secondary, [0.7, 1.18, 0.7], 0.58, 0.46)}
+      {mesh(geo.crest, accent, [0, HERO.height * 1.63, 0], [0.72, 1.35, 0.72],
+        [0, 0, Math.PI], "ember-plume")}
+    </group>
+  );
+  if (type === "lightningHalo") return (
+    <group ref={ref} name="hero-head-lightning-halo">
+      {mesh(geo.halo, accent, [0, HERO.height * 1.43, -HERO.radius * 0.52], [1, 1.18, 1],
+        [Math.PI / 2, 0, 0], "lightning-halo")}
+      {hornPair(accent, [0.38, 0.88, 0.38], 0.5, 0.72)}
+    </group>
+  );
+  if (type === "phoenixCrown") return (
+    <group ref={ref} name="hero-head-phoenix-crown">
+      {mesh(geo.crest, accent, [0, HERO.height * 1.65, 0], [0.74, 1.5, 0.74],
+        [0, 0, Math.PI], "phoenix-center")}
+      {mesh(geo.wing, accent, [-HERO.radius * 0.58, HERO.height * 1.48, 0], [0.38, 0.62, 0.24],
+        [0, 0, 0.75], "phoenix-left")}
+      {mesh(geo.wing, accent, [HERO.radius * 0.58, HERO.height * 1.48, 0], [0.38, 0.62, 0.24],
+        [0, 0, -0.75], "phoenix-right")}
+    </group>
+  );
+  if (type === "barkAntlers") return (
+    <group ref={ref} name="hero-head-bark-antlers">
+      {hornPair(secondary, [0.58, 1.3, 0.58], 0.72, 0.72)}
+      {mesh(geo.crest, accent, [0, HERO.height * 1.6, 0], [0.72, 1.05, 0.72],
+        [0, 0, Math.PI], "leaf-crown")}
+    </group>
+  );
+  if (type === "stoneHorns") return (
+    <group ref={ref} name="hero-head-stone-horns">
+      {hornPair(accent, [1.02, 1.14, 1.02], 0.72, 0.72)}
+      {mesh(geo.helmBox, secondary, [0, HERO.height * 1.38, 0], [0.84, 0.78, 0.86],
+        [0, 0, 0], "stone-brow")}
+    </group>
+  );
+  return <group ref={ref} name="hero-head-generated">
+    {mesh(geo.badge, accent, [0, HERO.height * 1.56, 0], [0.62, 0.9, 0.62], [0, 0, 0], "generated")}
+  </group>;
+});
 
 const HeroSignature = React.forwardRef(function HeroSignature(
   { silhouette, geo, accent, teamMaterial }, ref,

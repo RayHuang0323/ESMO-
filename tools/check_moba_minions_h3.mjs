@@ -189,13 +189,17 @@ ck("18) 舊 Replay 無 fx 時顯示空特效，不重新生成技能",
 
 const effectsCode = src("src/battle/moba/render/MobaRuntimeEffects.jsx");
 const heroCode = src("src/battle/moba/render/MobaRuntimeHeroes.jsx");
-ck("19) 技能特效為固定三池 InstancedMesh，live / Replay 共用正式 runtime-v2",
-  /const LINE_CAP = 48/.test(effectsCode) && /const BURST_CAP = 32/.test(effectsCode) &&
-  (effectsCode.match(/<instancedMesh/g) ?? []).length === 3 &&
+ck("19) 技能特效為固定五池 InstancedMesh，live / Replay 共用正式 runtime-v2",
+  /const LINE_CAP = 64/.test(effectsCode) && /const BURST_CAP = 72/.test(effectsCode) &&
+  /const SLASH_CAP = 72/.test(effectsCode) && /const LOCK_CAP = 48/.test(effectsCode) &&
+  ["line", "ring", "orb", "slash", "lock"].every((key) => effectsCode.includes(`pool("${key}"`)) &&
   /<MobaRuntimeEffects frameRef=\{frameRef\}/.test(viewCode));
-ck("20) 英雄剪影只使用四種通用職業配件，沒有逐英雄模型或受保護素材",
+ck("20) 英雄使用自有低模 recipe／十種頭部 motif，沒有逐英雄外部模型或受保護素材",
   ["hero-archetype-guardian", "hero-archetype-skirmisher",
     "hero-archetype-arcanist", "hero-archetype-marksman"].every((name) => heroCode.includes(name)) &&
+  ["hornedHelm", "flameHair", "hood", "infernoHorns", "iceCrown",
+    "emberCrown", "lightningHalo", "phoenixCrown", "barkAntlers", "stoneHorns"]
+    .every((name) => heroCode.includes(name)) &&
   !/gltf|fbx|useGLTF|textureLoader/i.test(heroCode));
 
 const diagCode = src("src/battle/moba/render/runtimeDiagnostics.js");

@@ -74,17 +74,19 @@ for (const [ratio, expected] of [[0.9, "cast"], [0.5, "travel"], [0.15, "impact"
 }
 
 const renderer = await readFile(new URL("../src/battle/moba/render/MobaRuntimeEffects.jsx", import.meta.url), "utf8");
-assert.match(renderer, /const LINE_CAP = 48/);
-assert.match(renderer, /const BURST_CAP = 32/);
+assert.match(renderer, /const LINE_CAP = 64/);
+assert.match(renderer, /const BURST_CAP = 72/);
 assert.match(renderer, /phase === "cast"/);
 assert.match(renderer, /phase === "travel"/);
 assert.match(renderer, /phase === "impact"/);
-assert.match(renderer, /fx\.targetWorld\.x - fx\.world\.x/);
+assert.match(renderer, /addLine\(fx\.world, fx\.targetWorld/);
+assert.match(renderer, /addSlash/);
+assert.match(renderer, /addLock/);
 assert.match(renderer, /feedback === "skill"/);
 
 console.log("Milestone B.2 verifier: PASS", JSON.stringify({
   eventWindows: { attack: engine.fx[0].life, skill: engine.fx[1].life },
   replayFields: frame.fx[0].length,
   phases: ["cast", "travel", "impact"],
-  pools: { lines: 48, bursts: 32 },
+  pools: { lines: 64, bursts: 72 },
 }));

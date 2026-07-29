@@ -17,11 +17,6 @@ const TOTAL_CAP = CAP * 2;
 const GROUND_Y = Number.isFinite(LAYER_Y.lane_surface) ? LAYER_Y.lane_surface : 0;
 const TEAM = { blue: 0x5aa7ff, red: 0xff6b5f };
 const TEAM_DARK = { blue: 0x183a66, red: 0x66221c };
-const TEAM_INSTANCE_COLOR = {
-  blue: new THREE.Color(TEAM.blue),
-  red: new THREE.Color(TEAM.red),
-};
-
 export default function MobaRuntimeMinions({ frameRef }) {
   const refs = useRef({});
   const geo = useMemo(() => ({
@@ -34,10 +29,13 @@ export default function MobaRuntimeMinions({ frameRef }) {
     red: new THREE.MeshStandardMaterial({ color: TEAM.red, roughness: 0.7, flatShading: true }),
     blueCaster: new THREE.MeshStandardMaterial({ color: TEAM.blue, emissive: TEAM_DARK.blue, emissiveIntensity: 0.45, roughness: 0.45, flatShading: true }),
     redCaster: new THREE.MeshStandardMaterial({ color: TEAM.red, emissive: TEAM_DARK.red, emissiveIntensity: 0.45, roughness: 0.45, flatShading: true }),
-    barBg: new THREE.MeshBasicMaterial({ color: 0x080d12, transparent: true, opacity: 0.78, depthTest: false, depthWrite: false }),
+    barBg: new THREE.MeshBasicMaterial({
+      color: 0x05080c, transparent: true, opacity: 0.96, depthTest: false,
+      depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
+    }),
     barFill: new THREE.MeshBasicMaterial({
-      color: 0xffffff, vertexColors: true, transparent: true, opacity: 0.98,
-      depthTest: false, depthWrite: false,
+      color: 0x49e06f, transparent: true, opacity: 1,
+      depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
     }),
   }), []);
   const scratch = useMemo(() => ({
@@ -47,6 +45,7 @@ export default function MobaRuntimeMinions({ frameRef }) {
     scale: new THREE.Vector3(),
     axis: new THREE.Vector3(0, 1, 0),
     right: new THREE.Vector3(1, 0, 0),
+    forward: new THREE.Vector3(0, 0, 1),
     buckets: { blueMelee: [], redMelee: [], blueCaster: [], redCaster: [] },
   }), []);
 
@@ -59,9 +58,11 @@ export default function MobaRuntimeMinions({ frameRef }) {
     };
   }, [geo, mats]);
 
-  useFrame(({ camera }) => {
+  useFrame(({ camera, clock }) => {
     const minions = frameRef?.current?.minions ?? [];
-    const { matrix, quat, pos, scale, axis, right, buckets } = scratch;
+    const effects = frameRef?.current?.effects ?? [];
+    const { matrix, quat, pos, scale, axis, right, forward, buckets } = scratch;
+    const now = clock.getElapsedTime();
     for (const list of Object.values(buckets)) list.length = 0;
     for (const m of minions) {
       const key = `${m.team}${m.kind === "caster" ? "Caster" : "Melee"}`;
@@ -75,9 +76,15 @@ export default function MobaRuntimeMinions({ frameRef }) {
       for (let i = 0; i < count; i++) {
         const m = list[i];
         const life = Math.max(0.08, Math.min(m.spawnProgress ?? 1, 1 - (m.deathProgress ?? 0)));
+        const hitFx = effects.find((fx) => String(fx.targetId ?? "") === m.id && fx.phase === "impact");
+        const hit = hitFx ? Math.max(0, 1 - (hitFx.phaseProgress ?? 0)) : 0;
         quat.setFromAxisAngle(axis, m.facing ?? 0);
-        pos.set(m.world.x, GROUND_Y + (m.kind === "caster" ? 0.78 : 0.62) * S * life, m.world.z);
-        scale.setScalar(life);
+        pos.set(
+          m.world.x + Math.sin(now * 62 + i) * hit * 0.13 * S,
+          GROUND_Y + (m.kind === "caster" ? 0.78 : 0.62) * S * life,
+          m.world.z,
+        );
+        scale.setScalar(life * (1 + hit * 0.24));
         matrix.compose(pos, quat, scale);
         mesh.setMatrixAt(i, matrix);
       }
@@ -91,25 +98,26 @@ export default function MobaRuntimeMinions({ frameRef }) {
       fill.count = visibleCount;
       for (let i = 0; i < visibleCount; i++) {
         const m = minions[i];
-        const hp = Math.max(0, Math.min(1, m.hpRatio ?? 0));
-        const y = GROUND_Y + 2.28 * S;
+        const hp = Math.max(0, Math.min(1, m.displayHpRatio ?? m.hpRatio ?? 0));
+        const y = GROUND_Y + 2.55 * S;
         pos.set(m.world.x, y, m.world.z);
         // Milestone B.4：血條每幀複製 camera quaternion，桌面／手機視角都正對鏡頭。
         // fill 的左對齊偏移也沿 camera-local right，不能再直接改 world x。
         quat.copy(camera.quaternion);
         right.set(1, 0, 0).applyQuaternion(quat);
-        scale.set(2.1 * S, 0.28 * S, 1);
+        forward.set(0, 0, 1).applyQuaternion(quat);
+        scale.set(2.5 * S, 0.44 * S, 1);
         matrix.compose(pos, quat, scale);
         bg.setMatrixAt(i, matrix);
-        pos.addScaledVector(right, -(1 - hp) * 1.05 * S);
-        scale.x *= hp;
+        // 填色往相機方向錯開，避免與黑底槽同面造成行動 GPU 透明排序不穩。
+        pos.addScaledVector(forward, 0.1 * S);
+        pos.addScaledVector(right, -(1 - hp) * 1.125 * S);
+        scale.set(2.25 * S * hp, 0.27 * S, 1);
         matrix.compose(pos, quat, scale);
         fill.setMatrixAt(i, matrix);
-        fill.setColorAt(i, TEAM_INSTANCE_COLOR[m.team]);
       }
       bg.instanceMatrix.needsUpdate = true;
       fill.instanceMatrix.needsUpdate = true;
-      if (fill.instanceColor) fill.instanceColor.needsUpdate = true;
     }
   });
 
@@ -127,10 +135,10 @@ export default function MobaRuntimeMinions({ frameRef }) {
       {unit("redCaster", geo.caster, mats.redCaster)}
       <instancedMesh ref={(node) => { refs.current.barBg = node; }}
         name="moba-minion-bars-bg" args={[geo.bar, mats.barBg, TOTAL_CAP]}
-        frustumCulled={false} renderOrder={30} />
+        frustumCulled={false} renderOrder={46} />
       <instancedMesh ref={(node) => { refs.current.barFill = node; }}
         name="moba-minion-bars-fill" args={[geo.bar, mats.barFill, TOTAL_CAP]}
-        frustumCulled={false} renderOrder={31} />
+        frustumCulled={false} renderOrder={47} />
     </group>
   );
 }

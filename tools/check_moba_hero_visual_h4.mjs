@@ -4,14 +4,16 @@ import assert from "node:assert/strict";
 import { HERO_VISUAL_SCHEMA_VERSION, HERO_VISUALS, heroVisualFor, skillVisualFor } from "../src/battle/moba/presentation/heroArchetypes.js";
 import { adaptRuntimeMapFrame } from "../src/battle/moba/map/mobaRuntimeMapAdapter.js";
 
-assert.equal(HERO_VISUAL_SCHEMA_VERSION, "hero-visual.v1");
+assert.equal(HERO_VISUAL_SCHEMA_VERSION, "hero-visual.v2");
 const deployed = ["ironclad", "cinderfist", "duskblade", "chichuan", "bingshuang", "lieyan", "leiting", "yanfeng", "dadi", "stoneguard"];
 assert.equal(deployed.filter((id) => HERO_VISUALS[id]).length, 10, "all deployed heroes need explicit visual recipes");
 const generated = new Set(deployed.map((id) => heroVisualFor(id).id));
 assert.equal(generated.size, 10);
+assert.equal(new Set(deployed.map((id) => heroVisualFor(id).combatStyle)).size, 10);
+assert.equal(new Set(deployed.map((id) => heroVisualFor(id).headFeature)).size, 10);
 assert.equal(heroVisualFor("future-hero-100", "mid").family, "arcanist");
 assert.notDeepEqual(heroVisualFor("future-hero-100", "mid"), heroVisualFor("future-hero-101", "mid"));
-assert.equal(skillVisualFor({ ability: "power", family: "arcanist" }).castShape, "ring");
+assert.equal(skillVisualFor({ ability: "power", family: "arcanist" }).castShape, "double-ring");
 
 const snapshot = {
   ts: 1,

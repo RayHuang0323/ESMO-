@@ -29,22 +29,62 @@ export const HERO_ARCHETYPES = Object.freeze({
 // changes or a new gameplay contract.  These are deliberately low-poly
 // recipes, not copyrighted character assets.
 const VISUALS = {
-  ironclad: { family: "guardian", silhouette: "bulwark", accent: 0xd8b46a, trim: 0x8f6b32, badge: "shield", scale: [1.18, 1.1, 1.18] },
-  cinderfist: { family: "guardian", silhouette: "bruiser", accent: 0xff7043, trim: 0x9b2c1d, badge: "fist", scale: [1.12, 1.08, 1.08] },
-  duskblade: { family: "skirmisher", silhouette: "rogue", accent: 0xa78bfa, trim: 0x4c1d95, badge: "blades", scale: [0.86, 1.12, 0.86] },
-  chichuan: { family: "skirmisher", silhouette: "striker", accent: 0xf59e0b, trim: 0x7c2d12, badge: "fist", scale: [0.98, 1.08, 0.94] },
-  bingshuang: { family: "arcanist", silhouette: "crystal", accent: 0x67e8f9, trim: 0x155e75, badge: "focus", scale: [0.9, 1.14, 0.9] },
-  lieyan: { family: "arcanist", silhouette: "flame", accent: 0xfb7185, trim: 0x9f1239, badge: "flame", scale: [0.95, 1.12, 0.95] },
-  leiting: { family: "marksman", silhouette: "ranger", accent: 0xfde68a, trim: 0x854d0e, badge: "launcher", scale: [0.82, 1.08, 0.82] },
-  yanfeng: { family: "marksman", silhouette: "wing", accent: 0xf97316, trim: 0x9a3412, badge: "launcher", scale: [0.88, 1.06, 0.9] },
-  dadi: { family: "guardian", silhouette: "sentinel", accent: 0x86efac, trim: 0x166534, badge: "shield", scale: [1.08, 1.06, 1.14] },
-  stoneguard: { family: "guardian", silhouette: "obelisk", accent: 0x94a3b8, trim: 0x334155, badge: "shield", scale: [1.22, 1.16, 1.1] },
+  ironclad: {
+    family: "guardian", silhouette: "bulwark", primary: 0x94a3b8, secondary: 0x1e293b,
+    accent: 0xffe09a, trim: 0x6b4f20, badge: "shield", scale: [1.3, 1.08, 1.22],
+    combatStyle: "shieldwave", headFeature: "hornedHelm",
+  },
+  cinderfist: {
+    family: "guardian", silhouette: "bruiser", primary: 0xc63f22, secondary: 0x4a1714,
+    accent: 0xff7a38, trim: 0x711d13, badge: "fist", scale: [1.2, 1.02, 1.14],
+    combatStyle: "fist", headFeature: "flameHair",
+  },
+  duskblade: {
+    family: "skirmisher", silhouette: "rogue", primary: 0x6257a6, secondary: 0x17142d,
+    accent: 0xc7a4ff, trim: 0x29154b, badge: "blades", scale: [0.76, 1.2, 0.72],
+    combatStyle: "twinSlash", headFeature: "hood",
+  },
+  chichuan: {
+    family: "skirmisher", silhouette: "striker", primary: 0xb91c1c, secondary: 0x24100d,
+    accent: 0xff6b21, trim: 0x7f1d1d, badge: "fist", scale: [0.94, 1.12, 0.88],
+    combatStyle: "dash", headFeature: "infernoHorns",
+  },
+  bingshuang: {
+    family: "arcanist", silhouette: "crystal", primary: 0x42c9e8, secondary: 0x123b64,
+    accent: 0xb8f7ff, trim: 0x155e75, badge: "focus", scale: [0.82, 1.22, 0.82],
+    combatStyle: "shard", headFeature: "iceCrown",
+  },
+  lieyan: {
+    family: "arcanist", silhouette: "flame", primary: 0x7f1d1d, secondary: 0x241014,
+    accent: 0xff5b32, trim: 0x5f1117, badge: "flame", scale: [0.98, 1.15, 0.92],
+    combatStyle: "flameOrb", headFeature: "emberCrown",
+  },
+  leiting: {
+    family: "marksman", silhouette: "ranger", primary: 0x30343b, secondary: 0x16191f,
+    accent: 0xffe45e, trim: 0x685c16, badge: "launcher", scale: [0.76, 1.08, 0.78],
+    combatStyle: "rail", headFeature: "lightningHalo",
+  },
+  yanfeng: {
+    family: "marksman", silhouette: "wing", primary: 0xc2410c, secondary: 0x3b130a,
+    accent: 0xffb12b, trim: 0x7c2d12, badge: "launcher", scale: [0.86, 1.1, 0.9],
+    combatStyle: "wingBolt", headFeature: "phoenixCrown",
+  },
+  dadi: {
+    family: "guardian", silhouette: "sentinel", primary: 0x4f6f3f, secondary: 0x493522,
+    accent: 0xa7d66f, trim: 0x285c2c, badge: "shield", scale: [1.14, 1.04, 1.25],
+    combatStyle: "quake", headFeature: "barkAntlers",
+  },
+  stoneguard: {
+    family: "guardian", silhouette: "obelisk", primary: 0x747c8c, secondary: 0x292d35,
+    accent: 0xdde4ef, trim: 0x414854, badge: "shield", scale: [1.36, 1.22, 1.18],
+    combatStyle: "hammer", headFeature: "stoneHorns",
+  },
 };
 
 const PALETTE = [0x67e8f9, 0xfbbf24, 0xc4b5fd, 0x86efac, 0xfb7185, 0xfda4af, 0x93c5fd, 0xfcd34d];
 const hash = (value) => String(value ?? "").split("").reduce((n, ch) => ((n * 33) ^ ch.charCodeAt(0)) >>> 0, 5381);
 
-export const HERO_VISUAL_SCHEMA_VERSION = "hero-visual.v1";
+export const HERO_VISUAL_SCHEMA_VERSION = "hero-visual.v2";
 export const HERO_VISUALS = Object.freeze(Object.fromEntries(
   Object.entries(VISUALS).map(([id, spec]) => [id, Object.freeze({ id, ...spec })]),
 ));
@@ -58,21 +98,39 @@ export function heroVisualFor(heroId, role = null, heroData = null) {
       : heroData?.arch === "坦克" || heroData?.arch === "戰士" ? "guardian" : archetypeForRole(role);
   const n = hash(id);
   const badges = ["shield", "blades", "focus", "launcher", "fist", "flame"];
+  const headFeatures = [
+    "hornedHelm", "flameHair", "hood", "infernoHorns", "iceCrown",
+    "emberCrown", "lightningHalo", "phoenixCrown", "barkAntlers", "stoneHorns",
+  ];
   return Object.freeze({
     id, family, silhouette: "generated", accent: PALETTE[n % PALETTE.length],
+    primary: PALETTE[n % PALETTE.length],
+    secondary: PALETTE[(n >>> 3) % PALETTE.length],
     trim: PALETTE[(n >>> 3) % PALETTE.length], badge: badges[n % badges.length],
     scale: family === "guardian" ? [1.08, 1.06, 1.08] : [0.92, 1.08, 0.92],
+    combatStyle: ["bolt", "slash", "nova", "beam"][n % 4],
+    headFeature: headFeatures[n % headFeatures.length],
   });
 }
 
-export function skillVisualFor({ ability = "basic", family = "skirmisher", color = null } = {}) {
+export function skillVisualFor({
+  ability = "basic", family = "skirmisher", color = null, heroId = null, visual = null,
+} = {}) {
   const power = ability === "power" || ability === "ult";
   const defaults = { guardian: 0xfbbf24, skirmisher: 0xc4b5fd, arcanist: 0x67e8f9, marksman: 0xfde68a };
+  const heroVisual = visual ?? (heroId ? heroVisualFor(heroId, null) : null);
+  const style = heroVisual?.combatStyle ?? {
+    guardian: "shieldwave", skirmisher: "twinSlash", arcanist: "flameOrb", marksman: "rail",
+  }[family] ?? "bolt";
   return Object.freeze({
-    id: `${family}:${power ? "power" : "basic"}`,
-    color: color ?? defaults[family] ?? 0xffffff,
-    castShape: power ? "ring" : "orb", impactShape: power ? "burst" : "spark",
-    width: power ? 1.35 : 1,
+    id: heroVisual ? `${heroVisual.id}:${power ? "power" : "basic"}` : `${family}:${power ? "power" : "basic"}`,
+    style,
+    color: color ?? heroVisual?.accent ?? defaults[family] ?? 0xffffff,
+    castShape: power ? "double-ring" : (style === "twinSlash" || style === "fist" ? "slash" : "orb"),
+    travelShape: ["twinSlash", "fist", "dash"].includes(style) ? "slash"
+      : (style === "quake" || style === "hammer" ? "ground-wave" : "projectile"),
+    impactShape: power ? "burst-ring" : (style === "hammer" || style === "quake" ? "shock" : "spark"),
+    width: (power ? 1.55 : 1.1) * (["hammer", "quake", "shieldwave"].includes(style) ? 1.18 : 1),
   });
 }
 

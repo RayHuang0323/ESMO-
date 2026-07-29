@@ -2226,3 +2226,56 @@ shadow decal、FPS、觸控與桌面外觀。未完成前不得宣稱真機通�
 - H.2 flicker CDP probe 連續停在專用 Chrome `Page.enable` 逾時，未改 verifier 掩蓋；
   Android 真機 FPS、觸控、過熱、閃爍、十名英雄逐一近景、動態技能與完整 Replay
   仍列人工驗收，不以桌面 Chrome 手機 viewport 宣稱通過。
+
+---
+
+## Milestone B-fix：MOBA 戰鬥視覺可讀性修正（2026-07-29）
+
+狀態：**實作完成，待人工／Android 真機驗收；未 push、未部署。**
+
+### 修正摘要
+
+- `hero-visual.v2` 讓十名出戰英雄各有獨立主色、次色、比例、輪廓、`combatStyle`
+  與 `headFeature`。十種頭部 motif 與主色依專案既有選角頭像重新對齊，轉成 ESMO
+  自有低模角盔／火冠／兜帽／冰晶／雷環／鳳翼／樹甲／石角 recipe，不直接貼圖或複製
+  外部模型；stable hero id deterministic fallback 保留，可擴充至 100+ 英雄。
+- 藍／紅陣營識別由腰帶、腳下環、血條旁菱形隊標與「藍方／紅方」名牌共同保留，
+  英雄本體不再整批只用隊伍色；關閉 DOM 名牌時仍有幾何隊標。
+- cast／travel／impact、普攻、小兵攻擊與命中改用 line／ring／orb／slash／lock
+  五個固定 instance pool；實際 HP drop 只在 adapter 衍生呈現事件，不回寫傷害，
+  live 與 Replay 使用同一來源。
+- 小兵與所有可攻擊建築改用 camera-facing 黑底槽＋連續 HP fill，明確處理透明排序、
+  camera-local 左對齊與前後分離；小兵 renderOrder 46／47、建築 48／49。
+- 塔具有鎖定、攻擊、命中、扣血與 1.4 秒拆除回饋。人工指出原塔攻擊像音波後，
+  最終改為「塔冠蓄能 → 單一弧線追蹤彈體＋短尾跡 → 小型命中爆點」；塔分支不再產生
+  全長光束或大面積同心圓。
+- 未修改 `LogicEngine`、地圖、導航／碰撞、公平性、經濟、天賦、snapshot 或
+  Replay contract。
+
+### 驗證與證據
+
+- `check_moba_milestone_b_fix`、H.4、B.1／B.2／B.3／B.4 全部通過。
+- H.3 minion／Replay **22/22**；presentation **12/12**、controls **18/18**、
+  camera/replay **16/16**（後三支 `SKIP_NESTED=1`，本體完整）。
+- `check:mobamap` **3553/0**；H.2 navigation／collision **14/0**。
+- `regress` exit 0（14/15 於 30 分鐘內結束，符合現役 script 門檻）；
+  `regress2` 20/20 結束、節奏門檻 **8/8**；production build 通過。
+- 完整 `runtime29` 曾啟動，但在 `stats28` 長模擬期間收到選角／陣營追加要求；為避免用
+  舊 source state 結果混充而停止。該 verifier 原始碼明記 `stats28` 單跑可能需 87 分鐘，
+  H.3 亦有 51 分鐘及既存 v2 順序抽樣紅燈紀錄；本輪未放寬門檻，改逐支跑完直接受影響
+  verifier、regress、regress2 與 build。
+- 正式 GameView 已截取桌機 1280×720 與手機 Chrome 390×844 八張證據，位於
+  `review/moba-runtime/milestone-b-fix/evidence/`；可見跨鏡頭英雄差異、技能、小兵
+  局部 HP、塔血條、拆除狀態與藍／紅隊標，390×844 未見水平溢出。
+- 當次診斷：WebGL2、`DEPTH_BITS=24`、camera `near=35/far=1000`、desktop DPR 1.5。
+
+### 人工驗收與回退
+
+- 最後的塔追蹤彈體修正晚於六張截圖，程式／verifier 已防止回到音波分支，但仍需人工
+  觀看 1× 動態正式 GameView 與 Replay 確認手感。
+- 390×844 是桌面 Chrome viewport，不是 Android 真機；Android FPS、熱降頻、觸控、
+  safe area、WebGL driver、H.2 閃爍仍未實測，不宣稱真機通過。
+- 獨立報告：`review/moba-runtime/milestone-b-fix/MILESTONE_B_FIX_REPORT.md`。
+- rollback baseline：`51d97e2`。本輪 commit 見最終回報；若需回退使用
+  `git revert <commit>`，不可使用 `git reset --hard`。
+- 未開始下一階段，未納入工作區既有 terrain／bug／backup 舊產物。

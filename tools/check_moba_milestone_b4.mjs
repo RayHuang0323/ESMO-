@@ -91,14 +91,16 @@ replaySource.seek(replayFrames.at(-1).t);
 assert.equal(replaySource.getState().snapshot.lanes.mid.bm.length, 0);
 
 const renderer = await readFile(new URL("../src/battle/moba/render/MobaRuntimeMinions.jsx", import.meta.url), "utf8");
-assert.match(renderer, /useFrame\(\(\{ camera \}\)/);
+assert.match(renderer, /useFrame\(\(\{ camera, clock \}\)/);
 assert.match(renderer, /quat\.copy\(camera\.quaternion\)/);
 assert.match(renderer, /right\.set\(1, 0, 0\)\.applyQuaternion\(quat\)/);
+assert.match(renderer, /forward\.set\(0, 0, 1\)\.applyQuaternion\(quat\)/);
+assert.match(renderer, /pos\.addScaledVector\(forward/);
 assert.match(renderer, /pos\.addScaledVector\(right/);
 assert.match(renderer, /barBg: new THREE\.MeshBasicMaterial\(\{[^}]*transparent: true/s);
 assert.match(renderer, /barFill: new THREE\.MeshBasicMaterial\(\{[^}]*transparent: true/s);
-assert.match(renderer, /renderOrder=\{30\}/);
-assert.match(renderer, /renderOrder=\{31\}/);
+assert.match(renderer, /renderOrder=\{46\}/);
+assert.match(renderer, /renderOrder=\{47\}/);
 
 console.log("Milestone B.4 verifier: PASS", JSON.stringify({
   combat: {

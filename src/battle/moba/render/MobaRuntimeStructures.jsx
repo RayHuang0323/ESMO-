@@ -45,6 +45,7 @@ const TOWER = Object.freeze({
   rBottom: 2.1 * S,
   padY: layer("tower_pad", 0.94),      // 塔基頂面
 });
+const BAR = Object.freeze({ w: 6.4 * S, h: 0.5 * S });
 
 /**
  * 地環原本掛在 y = 0.2×1.7 = 0.34，但塔基頂面在 0.94、坑環在 0.86
@@ -77,6 +78,9 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
     objRing: new THREE.RingGeometry(3.4 * S, 4.4 * S, 24),
     //  八角塔身（低面數，與地圖的 low-poly 語彙一致）
     shaft: new THREE.CylinderGeometry(TOWER.rTop, TOWER.rBottom, TOWER.shaftH, 8, 1),
+    bar: new THREE.PlaneGeometry(1, 1),
+    damageRing: new THREE.RingGeometry(2.25 * S, 2.75 * S, 18),
+    debris: new THREE.TetrahedronGeometry(0.72 * S, 0),
   }), []);
 
   const mats = useMemo(() => ({
@@ -92,6 +96,30 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
     ringRed: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.red, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
     objAlive: new THREE.MeshBasicMaterial({ color: 0xd8b45a, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
     objDead: new THREE.MeshBasicMaterial({ color: 0x555a60, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
+    barBg: new THREE.MeshBasicMaterial({
+      color: 0x05080c, transparent: true, opacity: 0.96, depthTest: false,
+      depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
+    }),
+    barBlue: new THREE.MeshBasicMaterial({
+      color: 0x4bc7ff, transparent: true, opacity: 1, depthTest: false,
+      depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
+    }),
+    barRed: new THREE.MeshBasicMaterial({
+      color: 0xff655b, transparent: true, opacity: 1, depthTest: false,
+      depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
+    }),
+    damageBlue: new THREE.MeshBasicMaterial({
+      color: 0x8bd8ff, transparent: true, opacity: 0.95, side: THREE.DoubleSide,
+      depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
+    }),
+    damageRed: new THREE.MeshBasicMaterial({
+      color: 0xff9a7d, transparent: true, opacity: 0.95, side: THREE.DoubleSide,
+      depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
+    }),
+    debris: new THREE.MeshBasicMaterial({
+      color: 0xffcc75, transparent: true, opacity: 0.95, depthTest: false,
+      depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
+    }),
   }), []);
 
   useLayoutEffect(() => () => {
@@ -100,7 +128,7 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
   }, [geo, mats]);
 
   //  塔冠：活著時發光並隨血量高低微微下沉；被摧毀後藏起冠、留下殘骸環
-  useFrame(({ clock }) => {
+  useFrame(({ clock, camera }) => {
     const t = clock.getElapsedTime();
     const live = frameRef?.current ?? null;
     for (const s of (live?.structures ?? structures)) {
@@ -121,11 +149,43 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
         n.shaft.position.y = TOWER.padY + (TOWER.shaftH * k) / 2;
       }
       if (s.alive) {
+        const damage = (s.damageDelta ?? 0) > 0 ? Math.max(0, 1 - (s.damageProgress ?? 0)) : 0;
+        n.crown.position.x = Math.sin(t * 55 + n.phase) * damage * 0.32 * S;
+        n.crown.position.z = Math.cos(t * 49 + n.phase) * damage * 0.22 * S;
         n.crown.position.y = n.baseY + Math.sin(t * 1.4 + n.phase) * 0.25 * S;
         n.crown.rotation.y = t * 0.5 + n.phase;
         //  血量低 ⇒ 冠變暗（不換材質，只調 emissiveIntensity 的共用值不行 ⇒ 用 scale 表達）
-        const k = 0.55 + 0.45 * s.hpRatio;
+        const k = 0.55 + 0.45 * (s.displayHpRatio ?? s.hpRatio);
         n.crown.scale.setScalar(k);
+      }
+      if (n.wasAlive === undefined) n.wasAlive = s.alive;
+      if (n.wasAlive && !s.alive) n.destroyAt = t;
+      n.wasAlive = s.alive;
+      if (n.barGroup && n.barFill) {
+        n.barGroup.visible = s.alive;
+        n.barGroup.quaternion.copy(camera.quaternion);
+        const hp = Math.max(0.001, Math.min(1, s.displayHpRatio ?? s.hpRatio ?? 0));
+        n.barFill.scale.set(BAR.w * hp, BAR.h, 1);
+        n.barFill.position.x = -(BAR.w / 2) * (1 - hp);
+      }
+      if (n.damage) {
+        const active = s.alive && (s.damageDelta ?? 0) > 0 && (s.damageProgress ?? 1) < 1;
+        n.damage.visible = active;
+        if (active) {
+          const p = s.damageProgress ?? 0;
+          n.damage.material = s.team === "blue" ? mats.damageBlue : mats.damageRed;
+          n.damage.scale.setScalar(0.9 + p * 2.6);
+          n.damage.rotation.z = t * 2.8;
+        }
+      }
+      if (n.destroy) {
+        const p = Number.isFinite(n.destroyAt) ? (t - n.destroyAt) / 1.4 : (s.destroyProgress ?? 0);
+        n.destroy.visible = !s.alive && p >= 0 && p < 1;
+        if (n.destroy.visible) {
+          n.destroy.position.y = TOWER.padY + p * 5.5 * S;
+          n.destroy.scale.setScalar(0.8 + p * 2.2);
+          n.destroy.rotation.y = t * 4.5;
+        }
       }
     }
     for (const o of (live?.objectives ?? objectives)) {
@@ -192,6 +252,57 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
               scale={isNexus ? 1.7 : 1}
               frustumCulled={false}
             />
+            {/* 所有可攻擊結構都使用與英雄相同的黑底／實際 HP 填色 billboard。 */}
+            <group
+              ref={(g) => {
+                if (!g) return;
+                const prev = nodes.current.get(s.id) ?? {};
+                nodes.current.set(s.id, { ...prev, barGroup: g, baseY, phase: (s.id.length % 7) * 0.9 });
+              }}
+              position={[0, baseY + 3.0 * S, 0]}
+            >
+              <mesh geometry={geo.bar} material={mats.barBg}
+                scale={[BAR.w * 1.08, BAR.h * 1.55, 1]} renderOrder={48}
+                frustumCulled={false} userData={{ part: "structure-hp-bg" }} />
+              <mesh
+                ref={(m) => {
+                  if (!m) return;
+                  const prev = nodes.current.get(s.id) ?? {};
+                  nodes.current.set(s.id, { ...prev, barFill: m, baseY, phase: (s.id.length % 7) * 0.9 });
+                }}
+                geometry={geo.bar} material={s.team === "blue" ? mats.barBlue : mats.barRed}
+                position={[0, 0, 0.06 * S]} scale={[BAR.w, BAR.h, 1]} renderOrder={49}
+                frustumCulled={false} userData={{ part: "structure-hp-fill" }}
+              />
+            </group>
+            {/* 扣血波紋與拆塔碎裂只反映 prev→snapshot 轉場，不改任何結構狀態。 */}
+            <mesh
+              ref={(m) => {
+                if (!m) return;
+                const prev = nodes.current.get(s.id) ?? {};
+                nodes.current.set(s.id, { ...prev, damage: m, baseY, phase: (s.id.length % 7) * 0.9 });
+              }}
+              geometry={geo.damageRing} material={s.team === "blue" ? mats.damageBlue : mats.damageRed}
+              position={[0, RING_Y.structure + 0.08, 0]} rotation={[-Math.PI / 2, 0, 0]}
+              visible={false} renderOrder={45} frustumCulled={false}
+              userData={{ part: "structure-damage-pulse" }}
+            />
+            <group
+              ref={(g) => {
+                if (!g) return;
+                const prev = nodes.current.get(s.id) ?? {};
+                nodes.current.set(s.id, { ...prev, destroy: g, baseY, phase: (s.id.length % 7) * 0.9 });
+              }}
+              visible={false} userData={{ part: "structure-destroy-burst" }}
+            >
+              {[
+                [-1.3, 0.2, -0.8], [1.2, 0.5, -0.6], [-0.8, 0.8, 1.1], [1.1, 0.1, 0.9],
+              ].map((p, i) => (
+                <mesh key={i} geometry={geo.debris} material={mats.debris}
+                  position={p.map((v) => v * S)} rotation={[i * 0.7, i * 0.5, i * 0.9]}
+                  frustumCulled={false} renderOrder={45} />
+              ))}
+            </group>
           </group>
         );
       })}

@@ -19,6 +19,8 @@ assert.equal(heroes.filter((h) => h.heroId && h.visual).length, 10);
 assert.equal(new Set(heroes.map((h) => h.heroId)).size, 10);
 assert.equal(new Set(heroes.map((h) => h.visual.silhouette)).size, 10,
   "deployed heroes need ten structural silhouettes, not palette-only variants");
+assert.equal(new Set(heroes.map((h) => h.visual.headFeature)).size, 10,
+  "deployed heroes need ten portrait-driven head motifs");
 
 for (const h of heroes) {
   assert.equal(h.visual, HERO_VISUALS[h.heroId]);
@@ -37,9 +39,18 @@ assert.match(renderer, /helmBox/);
 assert.match(renderer, /gauntlet/);
 assert.match(renderer, /wing/);
 assert.match(renderer, /hammer/);
+for (const motif of [
+  "hornedHelm", "flameHair", "hood", "infernoHorns", "iceCrown",
+  "emberCrown", "lightningHalo", "phoenixCrown", "barkAntlers", "stoneHorns",
+]) {
+  assert.match(renderer, new RegExp(motif), `missing portrait-driven head motif ${motif}`);
+}
+assert.match(renderer, /hero-team-side-marker/);
+assert.match(renderer, /"藍方" : "紅方"/);
 
 console.log("Milestone B.1 verifier: PASS", JSON.stringify({
   roster: heroes.length,
   uniqueHeroIds: new Set(heroes.map((h) => h.heroId)).size,
   structuralSilhouettes: new Set(heroes.map((h) => h.visual.silhouette)).size,
+  portraitHeadFeatures: new Set(heroes.map((h) => h.visual.headFeature)).size,
 }));
