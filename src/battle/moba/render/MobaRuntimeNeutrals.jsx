@@ -1,93 +1,226 @@
 // ============================================================================
-//  MobaRuntimeNeutrals.jsx — Milestone C 可互動野區營地
+//  MobaRuntimeNeutrals.jsx — Milestone C-fix 可互動野區營地
 //
-//  只畫 LogicEngine objective snapshot。移動、索敵、攻擊、回營與 HP 都不在此推演；
-//  Live / Replay 若有附加狀態欄位就共用，舊 Replay 則自然退回出生點 idle 呈現。
+//  模型直接重用 mapMonsterShapes 的正式 low-poly recipe；LogicEngine snapshot
+//  只提供個體位置／HP／仇恨／攻擊時間。Renderer 不推演戰鬥、不回寫 store。
 // ============================================================================
 import React, { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { WORLD_SCALE } from "../map/coordinateMapping.js";
 import { LAYER_Y } from "../map/mapVisualStyle.js";
+import { buildMobaLayout } from "../map/mobaMapLayout.js";
+import { buildCampPlan } from "../map/mapCampLayout.js";
+import { buildMonsters, MONSTER_COLOR } from "../map/mapMonsterShapes.js";
 import { countMount, countUnmount } from "./runtimeDiagnostics.js";
 
 const S = WORLD_SCALE;
 const GROUND_Y = Number.isFinite(LAYER_Y.jungle_ground)
   ? LAYER_Y.jungle_ground : (LAYER_Y.lane_surface ?? 0);
 const CAMP_TYPES = new Set(["camp", "buff"]);
+const ACCENT = new Set([
+  MONSTER_COLOR.blue_crystal,
+  MONSTER_COLOR.red_ember,
+  MONSTER_COLOR.camp_accent,
+]);
+
+function paintGeo(geo, hex) {
+  const color = new THREE.Color(hex);
+  const out = new Float32Array(geo.attributes.position.count * 3);
+  for (let i = 0; i < geo.attributes.position.count; i++) {
+    out[i * 3] = color.r; out[i * 3 + 1] = color.g; out[i * 3 + 2] = color.b;
+  }
+  geo.setAttribute("color", new THREE.BufferAttribute(out, 3));
+  return geo;
+}
+
+function partGeometry(part) {
+  if (part.shape === "box") return new THREE.BoxGeometry(part.d * S, part.h, part.w * S);
+  if (part.shape === "cyl") {
+    return new THREE.CylinderGeometry(part.rTop * S, part.rBot * S, part.h, part.seg ?? 9);
+  }
+  if (part.shape === "cone") return new THREE.ConeGeometry(part.r * S, part.h, part.seg ?? 8);
+  if (part.shape === "sph") {
+    return new THREE.SphereGeometry(1, 9, 6).scale(part.rx * S, part.ry, part.rz * S);
+  }
+  if (part.shape === "cap") return new THREE.CapsuleGeometry(part.r * S, part.len, 2, 8);
+  if (part.shape === "ico") return new THREE.IcosahedronGeometry(part.r * S, 0);
+  return new THREE.OctahedronGeometry(part.r * S, 0);
+}
+
+function partMatrix(part) {
+  const half = part.h / 2;
+  let local;
+  if (part.shape === "cone") {
+    const tiltF = part.tiltF ?? 0, tiltS = part.tiltS ?? 0;
+    local = new THREE.Matrix4()
+      .makeTranslation(-half * Math.sin(tiltS),
+        part.z + half * Math.cos(tiltF) * Math.cos(tiltS), half * Math.sin(tiltF))
+      .multiply(new THREE.Matrix4()
+        .makeRotationFromEuler(new THREE.Euler(tiltF, 0, tiltS, "XYZ")));
+  } else if (part.shape === "box") {
+    local = new THREE.Matrix4().makeTranslation(0, part.z + half, 0)
+      .multiply(new THREE.Matrix4().makeRotationFromEuler(
+        new THREE.Euler(part.tiltF ?? 0, -(part.rot ?? 0), part.tiltS ?? 0, "XYZ"),
+      ));
+  } else if (part.shape === "sph") {
+    local = new THREE.Matrix4().makeTranslation(0, part.z + part.ry, 0)
+      .multiply(new THREE.Matrix4().makeRotationY(-(part.rot ?? 0)));
+  } else if (part.shape === "cap") {
+    local = new THREE.Matrix4()
+      .makeTranslation(0, part.z + part.len / 2 + part.r * S, 0)
+      .multiply(new THREE.Matrix4().makeRotationFromEuler(
+        new THREE.Euler(part.tiltF ?? 0, 0, part.tiltS ?? 0, "XYZ"),
+      ));
+  } else if (part.shape === "octa") {
+    local = new THREE.Matrix4().makeTranslation(0, part.z + half, 0)
+      .multiply(new THREE.Matrix4().makeRotationY(-(part.rot ?? 0)));
+  } else {
+    local = new THREE.Matrix4().makeTranslation(0, part.z + half, 0);
+  }
+  return new THREE.Matrix4().makeTranslation(-part.dy * S, 0, part.dx * S).multiply(local);
+}
+
+function memberGeometry(member, sizeK) {
+  const body = [], accent = [];
+  for (const part of member.parts) {
+    let geo = partGeometry(part);
+    if (geo.index) geo = geo.toNonIndexed();
+    geo.applyMatrix4(partMatrix(part));
+    geo.scale(sizeK, sizeK, sizeK);
+    paintGeo(geo, part.color);
+    (ACCENT.has(part.color) ? accent : body).push(geo);
+  }
+  const merged = {
+    body: body.length ? mergeGeometries(body, false) : null,
+    accent: accent.length ? mergeGeometries(accent, false) : null,
+    top: Math.max(2.6, ...member.parts.map((part) => part.z + (part.h ?? 0))) * sizeK,
+    dx: member.dx,
+    dy: member.dy,
+    rot: member.rot ?? 0,
+  };
+  for (const geo of [...body, ...accent]) geo.dispose();
+  return merged;
+}
+
+function buildCampAssets() {
+  const layout = buildMobaLayout();
+  const monsters = buildMonsters(layout, buildCampPlan(layout));
+  return new Map(monsters
+    .filter((monster) => !monster.isPresentation && (monster.kind === "camp" || monster.kind === "buff"))
+    .map((monster) => [
+      monster.id.replace(/^mon_/, ""),
+      {
+        ...monster,
+        members: monster.members.map((member) => memberGeometry(member, monster.sizeK ?? 1)),
+      },
+    ]));
+}
 
 export default function MobaRuntimeNeutrals({ objectives = [], frameRef = null }) {
   const nodes = useRef(new Map());
+  const assets = useMemo(buildCampAssets, []);
   const geo = useMemo(() => ({
-    body: new THREE.DodecahedronGeometry(0.95 * S, 0),
-    pack: new THREE.DodecahedronGeometry(0.5 * S, 0),
-    horn: new THREE.ConeGeometry(0.23 * S, 0.9 * S, 5),
-    eye: new THREE.OctahedronGeometry(0.2 * S, 0),
     bar: new THREE.PlaneGeometry(1, 1),
     leash: new THREE.RingGeometry(1.15 * S, 1.32 * S, 18),
   }), []);
-  const mats = useMemo(() => {
-    const standard = (color, emissive = 0x000000) => new THREE.MeshStandardMaterial({
-      color, emissive, emissiveIntensity: 0.32, roughness: 0.62, flatShading: true,
-    });
-    return {
-      blue: standard(0x256d9b, 0x123d66),
-      red: standard(0xa93f24, 0x5e190d),
-      camp: standard(0x61733f, 0x263617),
-      accentBlue: standard(0x9ce8ff, 0x44bde8),
-      accentRed: standard(0xffb068, 0xff5a2b),
-      accentCamp: standard(0xc8ed83, 0x70a832),
-      hit: standard(0xfff3c4, 0xffb347),
-      barBg: new THREE.MeshBasicMaterial({
-        color: 0x05080c, transparent: true, opacity: 0.96,
-        depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
-      }),
-      barFill: new THREE.MeshBasicMaterial({
-        color: 0x55e078, transparent: true, opacity: 1,
-        depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
-      }),
-      leash: new THREE.MeshBasicMaterial({
-        color: 0xfbbf24, transparent: true, opacity: 0.7, side: THREE.DoubleSide,
-        depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8,
-      }),
-    };
-  }, []);
+  const mats = useMemo(() => ({
+    body: new THREE.MeshStandardMaterial({
+      vertexColors: true, roughness: 0.95, flatShading: true,
+    }),
+    accent: new THREE.MeshStandardMaterial({
+      vertexColors: true, emissive: 0xffffff, emissiveIntensity: 0.28,
+      roughness: 0.58, metalness: 0.15, flatShading: true,
+    }),
+    hit: new THREE.MeshBasicMaterial({ color: 0xfff1b8, toneMapped: false }),
+    barBg: new THREE.MeshBasicMaterial({
+      color: 0x05080c, transparent: true, opacity: 0.96,
+      depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
+    }),
+    barFill: new THREE.MeshBasicMaterial({
+      color: 0x55e078, transparent: true, opacity: 1,
+      depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
+    }),
+    leash: new THREE.MeshBasicMaterial({
+      color: 0xfbbf24, transparent: true, opacity: 0.7, side: THREE.DoubleSide,
+      depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8,
+    }),
+  }), []);
 
   useLayoutEffect(() => {
     countMount("neutrals");
     return () => {
       countUnmount("neutrals");
-      Object.values(geo).forEach((g) => g.dispose());
-      Object.values(mats).forEach((m) => m.dispose());
+      Object.values(geo).forEach((item) => item.dispose());
+      Object.values(mats).forEach((item) => item.dispose());
+      for (const asset of assets.values()) {
+        for (const member of asset.members) {
+          member.body?.dispose(); member.accent?.dispose();
+        }
+      }
     };
-  }, [geo, mats]);
+  }, [assets, geo, mats]);
 
   useFrame(({ clock }) => {
     const frame = frameRef?.current;
     const live = frame?.objectives ?? objectives;
     const ts = frame?.ts ?? 0;
     const now = clock.getElapsedTime();
-    for (const o of live) {
-      if (!CAMP_TYPES.has(o.type)) continue;
-      const n = nodes.current.get(o.id);
-      if (!n) continue;
-      n.root.visible = o.alive;
-      if (!o.alive) continue;
-      const hit = Math.max(0, 1 - (ts - (o.hitAt ?? -Infinity)) / 0.22);
-      const attack = Math.max(0, 1 - (ts - (o.attackAt ?? -Infinity)) / 0.4);
-      const dx = o.world.x - n.lastX, dz = o.world.z - n.lastZ;
-      if (Math.hypot(dx, dz) > 0.001) n.root.rotation.y = Math.atan2(dx, dz);
-      n.lastX = o.world.x; n.lastZ = o.world.z;
-      const shake = hit > 0 ? Math.sin(now * 66 + o.id.length) * 0.12 * S * hit : 0;
-      n.root.position.set(o.world.x + shake, GROUND_Y + Math.sin(now * 3 + o.id.length) * 0.05 * S, o.world.z);
-      n.root.scale.setScalar(1 + attack * 0.13 + hit * 0.08);
-      n.body.material = hit > 0 ? mats.hit : n.bodyMaterial;
-      n.barGroup.rotation.y = -n.root.rotation.y;
-      const hp = Math.max(0.001, Math.min(1, o.hpRatio ?? 0));
-      n.bar.scale.x = 3.15 * S * hp;
-      n.bar.position.x = -(3.15 * S / 2) * (1 - hp);
-      n.leash.visible = o.state === "return";
-      n.leash.rotation.z = now * 1.8;
+    for (const objective of live) {
+      if (!CAMP_TYPES.has(objective.type)) continue;
+      const node = nodes.current.get(objective.id);
+      if (!node) continue;
+      const members = Array.isArray(objective.members) && objective.members.length
+        ? objective.members
+        : node.members.map((member, index) => ({
+          alive: objective.alive,
+          hpRatio: objective.hpRatio,
+          hitAt: objective.hitAt,
+          attackAt: objective.attackAt,
+          world: {
+            x: objective.world.x + (member?.fallbackDx ?? 0) * S,
+            z: objective.world.z - (member?.fallbackDy ?? 0) * S,
+          },
+          index,
+        }));
+      const anyDying = members.some((member) =>
+        !member.alive && Number.isFinite(member.hitAt) && ts - member.hitAt < 0.48);
+      node.root.visible = objective.alive || anyDying;
+      if (!node.root.visible) continue;
+      node.root.position.set(objective.world.x, GROUND_Y, objective.world.z);
+      node.leash.visible = objective.alive && objective.state === "return";
+      node.leash.rotation.z = now * 1.8;
+
+      node.members.forEach((memberNode, index) => {
+        if (!memberNode) return;
+        const member = members[index];
+        if (!member) { memberNode.root.visible = false; return; }
+        const deathAge = member.alive ? Infinity : ts - (member.hitAt ?? -Infinity);
+        const dying = !member.alive && deathAge >= 0 && deathAge < 0.48;
+        memberNode.root.visible = objective.alive ? (member.alive || dying) : dying;
+        if (!memberNode.root.visible) return;
+        const wx = member.world?.x ?? objective.world.x;
+        const wz = member.world?.z ?? objective.world.z;
+        const dx = wx - memberNode.lastX, dz = wz - memberNode.lastZ;
+        if (Math.hypot(dx, dz) > 0.001) memberNode.root.rotation.y = Math.atan2(dx, dz);
+        memberNode.lastX = wx; memberNode.lastZ = wz;
+
+        const hit = Math.max(0, 1 - (ts - (member.hitAt ?? -Infinity)) / 0.24);
+        const attack = Math.max(0, 1 - (ts - (member.attackAt ?? -Infinity)) / 0.42);
+        const deathScale = dying ? Math.max(0.08, 1 - deathAge / 0.48) : 1;
+        const shake = hit > 0 ? Math.sin(now * 66 + index) * 0.15 * S * hit : 0;
+        memberNode.root.position.set(wx - objective.world.x + shake,
+          Math.sin(now * 2.8 + index) * 0.04 * S, wz - objective.world.z);
+        memberNode.root.scale.setScalar(deathScale * (1 + attack * 0.09 + hit * 0.12));
+        memberNode.body.material = hit > 0 ? mats.hit : mats.body;
+        if (memberNode.accent) memberNode.accent.material = hit > 0 ? mats.hit : mats.accent;
+        memberNode.barGroup.visible = !!member.alive;
+        memberNode.barGroup.rotation.y = -memberNode.root.rotation.y;
+        const hp = Math.max(0.001, Math.min(1, member.hpRatio ?? 0));
+        memberNode.bar.scale.x = memberNode.barWidth * hp;
+        memberNode.bar.position.x = -(memberNode.barWidth / 2) * (1 - hp);
+      });
     }
   });
 
@@ -97,65 +230,72 @@ export default function MobaRuntimeNeutrals({ objectives = [], frameRef = null }
   };
   return (
     <group name="moba-runtime-neutrals">
-      {objectives.filter((o) => CAMP_TYPES.has(o.type)).map((o) => (
-        <CampUnit key={o.id} objective={o} geo={geo} mats={mats} register={register} />
+      {objectives.filter((objective) => CAMP_TYPES.has(objective.type)).map((objective) => (
+        <CampUnit key={objective.id} objective={objective} asset={assets.get(objective.id)}
+          geo={geo} mats={mats} register={register} />
       ))}
     </group>
   );
 }
 
-function CampUnit({ objective: o, geo, mats, register }) {
+function CampUnit({ objective, asset, geo, mats, register }) {
   const root = useRef();
-  const body = useRef();
-  const bar = useRef();
-  const barGroup = useRef();
   const leash = useRef();
-  const buff = o.type === "buff";
-  const blue = o.presentationKey === "blueBuff";
-  const red = o.presentationKey === "redBuff";
-  const bodyMaterial = blue ? mats.blue : red ? mats.red : mats.camp;
-  const accent = blue ? mats.accentBlue : red ? mats.accentRed : mats.accentCamp;
+  const members = useRef([]);
 
   useLayoutEffect(() => {
-    register(o.id, {
-      root: root.current, body: body.current, bar: bar.current,
-      barGroup: barGroup.current, leash: leash.current, bodyMaterial,
-      lastX: o.world.x, lastZ: o.world.z,
+    register(objective.id, {
+      root: root.current, leash: leash.current, members: members.current,
     });
-    return () => register(o.id, null);
-  }, [o.id, o.world.x, o.world.z, bodyMaterial, register]);
+    return () => register(objective.id, null);
+  }, [objective.id, register]);
 
+  if (!asset) return null;
   return (
-    <group ref={root} position={[o.world.x, GROUND_Y, o.world.z]} visible={o.alive}
-      userData={{ objectiveId: o.id, part: "dynamic-neutral" }}>
-      <mesh ref={body} geometry={geo.body} material={bodyMaterial}
-        position={[0, (buff ? 1.25 : 0.9) * S, 0]} scale={buff ? [1.35, 1.45, 1.2] : [1, 1, 1]}
-        frustumCulled={false} />
-      {buff ? (
-        <>
-          <mesh geometry={geo.horn} material={accent} position={[-0.72 * S, 2.55 * S, 0]}
-            rotation={[0, 0, 0.48]} frustumCulled={false} />
-          <mesh geometry={geo.horn} material={accent} position={[0.72 * S, 2.55 * S, 0]}
-            rotation={[0, 0, -0.48]} frustumCulled={false} />
-          <mesh geometry={geo.eye} material={accent} position={[0, 1.55 * S, 1.05 * S]}
-            scale={1.3} frustumCulled={false} />
-        </>
-      ) : (
-        <>
-          <mesh geometry={geo.pack} material={accent} position={[-1.0 * S, 0.55 * S, -0.35 * S]}
-            frustumCulled={false} />
-          <mesh geometry={geo.pack} material={accent} position={[0.95 * S, 0.5 * S, -0.55 * S]}
-            scale={0.86} frustumCulled={false} />
-        </>
-      )}
+    <group ref={root} position={[objective.world.x, GROUND_Y, objective.world.z]}
+      visible={objective.alive} userData={{ objectiveId: objective.id, part: "dynamic-neutral" }}>
+      {asset.members.map((member, index) => (
+        <CampMember key={`${objective.id}:${index}`} member={member} index={index}
+          buff={objective.type === "buff"} geo={geo} mats={mats}
+          register={(node) => { members.current[index] = node; }} />
+      ))}
       <mesh ref={leash} geometry={geo.leash} material={mats.leash}
         position={[0, 0.24, 0]} rotation={[-Math.PI / 2, 0, 0]}
         visible={false} renderOrder={48} frustumCulled={false} />
-      <group ref={barGroup} position={[0, (buff ? 4.2 : 3.25) * S, 0]}>
+    </group>
+  );
+}
+
+function CampMember({ member, index, buff, geo, mats, register }) {
+  const root = useRef();
+  const body = useRef();
+  const accent = useRef();
+  const bar = useRef();
+  const barGroup = useRef();
+  const barWidth = (buff && index === 0 ? 4.4 : index === 0 ? 3.25 : 2.45) * S;
+
+  useLayoutEffect(() => {
+    register({
+      root: root.current, body: body.current, accent: accent.current,
+      bar: bar.current, barGroup: barGroup.current, barWidth,
+      fallbackDx: member.dx, fallbackDy: member.dy,
+      lastX: 0, lastZ: 0,
+    });
+    return () => register(null);
+  }, [barWidth, member.dx, member.dy, register]);
+
+  return (
+    <group ref={root} rotation={[0, -(member.rot ?? 0), 0]}
+      userData={{ part: "dynamic-neutral-member", memberIndex: index }}>
+      {member.body && <mesh ref={body} geometry={member.body} material={mats.body}
+        frustumCulled={false} />}
+      {member.accent && <mesh ref={accent} geometry={member.accent} material={mats.accent}
+        frustumCulled={false} />}
+      <group ref={barGroup} position={[0, member.top + 1.15, 0]}>
         <mesh geometry={geo.bar} material={mats.barBg}
-          scale={[3.55 * S, 0.5 * S, 1]} renderOrder={56} frustumCulled={false} />
+          scale={[barWidth * 1.08, 0.46 * S, 1]} renderOrder={56} frustumCulled={false} />
         <mesh ref={bar} geometry={geo.bar} material={mats.barFill}
-          scale={[3.15 * S, 0.28 * S, 1]} position={[0, 0, 0.02]}
+          scale={[barWidth, 0.26 * S, 1]} position={[0, 0, 0.02]}
           renderOrder={57} frustumCulled={false} />
       </group>
     </group>

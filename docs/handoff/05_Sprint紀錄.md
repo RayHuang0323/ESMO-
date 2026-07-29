@@ -2331,3 +2331,67 @@ shadow decal、FPS、觸控與桌面外觀。未完成前不得宣稱真機通�
 - 仍需人工觀看 1× 的塔彈體完整弧線、野怪巡遊／攻擊／回營、十名英雄逐一近景、
   Replay 動態，以及 Android 真機閃爍、FPS、熱降頻、觸控與 safe area。
 - 未納入既有 bug 影片、terrain／map preview、backup、blend／glb 或 logs。
+
+---
+
+## Milestone C-fix：MOBA Runtime 人工驗收修正（2026-07-29）
+
+狀態：**本機實作、直接驗證、回歸、build 與 viewport 檢查完成；待人工／Android
+真機驗收；未 push、未部署，未開始下一個 Milestone。**
+
+### 本輪修正
+
+- 塔 FX 改為每幀依 `sourceId/targetId` 解析目前座標的單一追蹤彈：
+  塔冠蓄能 → 球形彈體＋短尾跡 → 緊湊命中爆點；保留小兵優先、固定鎖定、
+  3 秒塔下反打 threat 與離散射擊／傷害同源。
+- runtime 野怪直接重用 G.3 `mapMonsterShapes` 的正式 sentinel／brambleback／
+  wolves／krug recipe，不再用過度簡化替代物；六 camp 各三名成員有獨立 HP、
+  alive、targetId、攻擊 CD、受擊、死亡、仇恨與回營。英雄攻擊與 Smite 都只打單體，
+  全員死亡才清營並發收益。
+- 十名英雄明確對應 tank／fighter／assassin／mage／marksman／support，
+  加入六套武器、施法輪廓與 cast/release 動作；cast/travel/impact/hit reaction
+  強化，近戰、遠程、rail、法術與輔助語彙可直接區分。
+- 英雄名牌縮為 9px、`L{level}` 與小型 padding／隊標，仍保留腳環、腰帶、
+  血條菱形與名牌色邊的藍紅辨識。
+- v3 小兵 XP 128→96、普通 camp 130→96、buff camp 195→144；
+  單吃首波由 512 降為 384 XP，只升到 Lv2。同一 engine tick 最多升一級，
+  超額 XP 留在 `mxpBank` 後續兌現，不吞收益；v1／v2 歷史基準不變。
+- 小兵塔前停位由 lane progress band 改為實際 tower／nexus 世界距離二分搜尋，
+  v3 停位半徑 4.6；保留 H.2 可走區投影與碰撞真實來源。
+- `BattleResult.v2`、progress/reward、profile persistence、公平性基線、
+  Replay contract 與 legacy 資產均未修改。
+
+### Verifier 與驗證
+
+- 新增 `check_moba_milestone_c_fix`：XP、camp 三成員個體化、小兵／英雄逐單位戰鬥、
+  塔前五次穩定停位、正式野怪 recipe、六職業、9px 名牌與追蹤塔彈全部 PASS。
+  取樣為首波 Lv2、最大單 tick 升級 1、5 分鐘平均 Lv3.20、10 分鐘 Lv5.63、
+  塔前停位 4.719 模擬單位。
+- `check_moba_milestone_c`、B-fix、B.1–B.4、H.4 均 exit 0；
+  H.3 22/22、H.2 navigation/collision 14/0。
+- pacing 25/25、presentation 12/12、controls 18/18、camera/replay 16/16；
+  四支以 `SKIP_NESTED=1` 執行直接本體，均檢查 exit code 與輸出形狀。
+- `regress` 15/15、平均 24.2 分；`regress2` 20/20、8/8，
+  5 分鐘英雄均等級 3.18、最低 2.6；mobamap 3553/0；production build 通過。
+- B.2 舊字串斷言硬編碼靜態 `fx.targetWorld`，已改驗每幀 `trackedTarget`
+  與短尾跡來源；安全網沒有刪除。
+- `regress2` 舊 XP 下限會強迫回到人工確認過快的 v2 曲線，故確實改為逐場均等級
+  ≥2.5、20-seed 平均 `[3,7]`；仍能攔下全場 Lv1 與異常封頂，其餘門檻未改。
+- 未重跑完整 `runtime29` 長鏈；依本輪「只跑直接相關」要求，改跑直接 verifier、
+  現役 runtime 安全網本體、兩支 regress、mobamap 與 build。Milestone C 已記錄
+  完整 runtime29 唯一既有紅燈為未碰觸的 v2 正／反序抽樣。
+
+### Viewport、回退與待驗收
+
+- 正式 `GameView → runtime-v2` 本機檢查 1440×900 與
+  320／360／390／430×844；各寬度 canvas 等於 viewport、
+  `scrollWidth == clientWidth`，console 0 error。
+- rollback baseline：
+  `073b42c10a6aa81ae27fbb72b094db4383f29978`；本輪 commit hash 見最終回報。
+  回退使用 `git revert <commit>`，不可 `git reset --hard`。
+- 完整技術／數值／檔案／驗證報告：
+  `review/moba-runtime/milestone-c-fix/MILESTONE_C_FIX_REPORT.md`。
+- 仍需人工以 1× 觀看塔彈、野怪逐體、十名英雄六職業、長局 XP／死亡時序、
+  三路塔前站位與 Replay；Android 真機 FPS、熱降頻、觸控、safe area、
+  WebGL driver 與 H.2 閃爍未實測，不宣稱真機通過。
+- 未納入工作區既有 bug 影片、terrain／map preview、backup、blend／glb 或 logs。

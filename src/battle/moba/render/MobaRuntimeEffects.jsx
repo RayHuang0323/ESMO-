@@ -70,7 +70,22 @@ export default function MobaRuntimeEffects({ frameRef }) {
   }, [geo, mats]);
 
   useFrame(({ camera, clock }) => {
-    const effects = frameRef?.current?.effects ?? [];
+    const frame = frameRef?.current ?? {};
+    const effects = frame.effects ?? [];
+    // 單體追蹤：事件保存 sourceId / targetId，render frame 每幀解析目前座標。
+    // 彈體因此會跟著移動中的英雄／小兵／野怪個體，而不是飛向發射瞬間的舊位置。
+    const currentWorld = new Map();
+    for (const item of [
+      ...(frame.heroes ?? []), ...(frame.minions ?? []), ...(frame.structures ?? []),
+    ]) {
+      if (item?.id && item.world) currentWorld.set(String(item.id), item.world);
+    }
+    for (const objective of frame.objectives ?? []) {
+      if (objective?.id && objective.world) currentWorld.set(String(objective.id), objective.world);
+      for (const member of objective?.members ?? []) {
+        if (member?.id && member.world) currentWorld.set(String(member.id), member.world);
+      }
+    }
     const lineMesh = refs.current.line;
     const ringMesh = refs.current.ring;
     const orbMesh = refs.current.orb;
@@ -143,36 +158,52 @@ export default function MobaRuntimeEffects({ frameRef }) {
       color.setHex(fx.color ?? 0xffffff);
       const phase = fx.phase ?? (life > 0.72 ? "cast" : (life > 0.22 ? "travel" : "impact"));
       const phaseProgress = Math.max(0, Math.min(1, fx.phaseProgress ?? 0));
-      const impact = fx.targetWorld ?? fx.world;
+      const origin = currentWorld.get(String(fx.sourceId ?? "")) ?? fx.world;
+      const trackedTarget = currentWorld.get(String(fx.targetId ?? ""));
+      const impact = trackedTarget ?? fx.targetWorld ?? fx.world;
+      const hasTarget = !!(trackedTarget || fx.targetWorld);
       const style = fx.style ?? fx.skillVisual?.style ?? "bolt";
       const isTower = style === "tower";
       const isMinion = style === "minionBolt" || style === "minionSlash";
       const isSkill = fx.feedback === "skill" || fx.variant === "power" || fx.type === "ult";
-      const visualWidth = (fx.width ?? 1) * (isSkill ? 1.25 : 1);
+      const combatClass = fx.combatClass ?? null;
+      const visualWidth = (fx.width ?? 1) * (isSkill ? 1.5 : 1.08);
 
       // cast：清楚前搖。技能雙圈、近戰弧、塔鎖定菱形各自有不同語彙。
       if (phase === "cast") {
-        if (isTower && fx.targetWorld) {
+        if (isTower && hasTarget) {
           // 塔攻擊不是範圍技：塔冠先亮、目標腳下只有小型鎖定菱形，不畫音波地環。
-          addOrb(fx.world, (0.5 + phaseProgress * 0.18) * S, color, GROUND_Y + 4.7 * S, 1.25);
-          addLock(fx.targetWorld, (0.95 + phaseProgress * 0.18) * S, color, elapsed * 2.6);
+          addOrb(origin, (0.5 + phaseProgress * 0.18) * S, color, GROUND_Y + 4.7 * S, 1.25);
+          addLock(impact, (0.95 + phaseProgress * 0.18) * S, color, elapsed * 2.6);
         } else {
           const spread = (0.85 + phaseProgress * (isSkill ? 1.5 : 0.7)) * S * visualWidth;
-          addRing(fx.world, spread, color);
-          if (isSkill) addRing(fx.world, spread * 0.58, color, GROUND_Y + 0.2);
+          addRing(origin, spread, color);
+          if (isSkill) addRing(origin, spread * 0.58, color, GROUND_Y + 0.2);
           if (["twinSlash", "fist", "dash", "minionSlash", "monsterClaw"].includes(style)) {
-            addSlash(fx.world, (0.8 + phaseProgress * 0.5) * S * visualWidth, color, -0.65);
+            addSlash(origin, (0.8 + phaseProgress * 0.5) * S * visualWidth, color, -0.65);
+            if (combatClass === "assassin" || (combatClass === "fighter" && isSkill)) {
+              addSlash(origin, (0.62 + phaseProgress * 0.42) * S * visualWidth, color, 0.72);
+            }
           } else {
-            addOrb(fx.world, (isSkill ? 0.82 : 0.48) * S * visualWidth, color,
+            addOrb(origin, (isSkill ? 0.82 : 0.48) * S * visualWidth, color,
               GROUND_Y + (isSkill ? 2.2 : 1.55) * S);
+          }
+          if (combatClass === "mage" && isSkill) {
+            addOrb(origin, 1.15 * S * visualWidth, color, GROUND_Y + 2.85 * S, 1.25);
+          } else if (combatClass === "support") {
+            addLock(origin, (0.92 + phaseProgress * 0.35) * S * visualWidth, color, -elapsed * 2.2);
+          } else if (combatClass === "tank") {
+            addLock(origin, 1.05 * S * visualWidth, color, Math.PI / 4);
+          } else if (combatClass === "marksman" && hasTarget) {
+            addLine(origin, impact, 0.09 * S * visualWidth, color, GROUND_Y + 1.5 * S);
           }
         }
       }
 
       // travel：每種角色不再共用同一條線。
-      if (phase === "travel" && fx.targetWorld) {
-        const ax = fx.world.x, az = fx.world.z;
-        const bx = fx.targetWorld.x, bz = fx.targetWorld.z;
+      if (phase === "travel" && hasTarget) {
+        const ax = origin.x, az = origin.z;
+        const bx = impact.x, bz = impact.z;
         const moving = {
           x: ax + (bx - ax) * phaseProgress,
           z: az + (bz - az) * phaseProgress,
@@ -187,17 +218,19 @@ export default function MobaRuntimeEffects({ frameRef }) {
             x: ax + (bx - ax) * tailP,
             z: az + (bz - az) * tailP,
           }, 0.3 * S * visualWidth, color, projectileY + 0.08 * S, 1.35);
-          addLock(fx.targetWorld, 1.05 * S, color, elapsed * 3.2);
+          addLock(impact, 1.05 * S, color, elapsed * 3.2);
         } else if (["twinSlash", "fist", "dash", "minionSlash", "monsterClaw"].includes(style)) {
           addSlash(moving, (isMinion ? 0.62 : 1.15) * S * visualWidth, color, -0.9 + phaseProgress * 1.8);
           if (style === "twinSlash") addSlash(moving, 0.92 * S * visualWidth, color, 2.1 - phaseProgress * 1.4);
         } else if (style === "quake" || style === "hammer") {
           addRing(moving, (0.9 + phaseProgress * 0.8) * S * visualWidth, color);
-          addLine(fx.world, moving, 0.18 * S * visualWidth, color, GROUND_Y + 0.45 * S);
+          addLine(origin, moving, 0.18 * S * visualWidth, color, GROUND_Y + 0.45 * S);
         } else {
           const beamK = style === "rail" ? 1.75 : 1;
-          addLine(fx.world, fx.targetWorld, (isMinion ? 0.16 : 0.28) * S * visualWidth * beamK, color,
-            GROUND_Y + 1.35 * S);
+          const trailP = Math.max(0, phaseProgress - (style === "rail" ? 1 : 0.16));
+          const trail = { x: ax + (bx - ax) * trailP, z: az + (bz - az) * trailP };
+          addLine(style === "rail" ? origin : trail, style === "rail" ? impact : moving,
+            (isMinion ? 0.16 : 0.28) * S * visualWidth * beamK, color, GROUND_Y + 1.35 * S);
           addOrb(moving, (isMinion ? 0.46 : (style === "flameOrb" ? 1.05 : 0.75)) * S * visualWidth,
             color, GROUND_Y + 1.55 * S, style === "shard" ? 1.8 : 1);
           if (style === "wingBolt") {
@@ -222,6 +255,16 @@ export default function MobaRuntimeEffects({ frameRef }) {
           addSlash(impact, (isSkill ? 1.65 : 0.95) * S * visualWidth, color, phaseProgress * 1.8);
           if (isSkill || style === "siege") {
             addRing(impact, (0.72 + phaseProgress * 2.2) * S * visualWidth, color, GROUND_Y + 0.22);
+          }
+          if (combatClass === "mage" && isSkill) {
+            addOrb(impact, 2.05 * S * visualWidth * strength, color, GROUND_Y + 2.25 * S, 1.35);
+          } else if (combatClass === "support") {
+            addLock(impact, (1.15 + phaseProgress * 0.8) * S * visualWidth, color, elapsed * 2.4);
+          } else if (combatClass === "tank" || combatClass === "fighter") {
+            addSlash(impact, (1.15 + (isSkill ? 0.8 : 0.25)) * S * visualWidth,
+              color, -phaseProgress * 2.1);
+          } else if (combatClass === "marksman") {
+            addOrb(impact, 0.82 * S * visualWidth, color, GROUND_Y + 1.45 * S, 1.8);
           }
         }
       }

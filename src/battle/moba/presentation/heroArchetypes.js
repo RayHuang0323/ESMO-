@@ -32,52 +32,52 @@ const VISUALS = {
   ironclad: {
     family: "guardian", silhouette: "bulwark", primary: 0x94a3b8, secondary: 0x1e293b,
     accent: 0xffe09a, trim: 0x6b4f20, badge: "shield", scale: [1.3, 1.08, 1.22],
-    combatStyle: "shieldwave", headFeature: "hornedHelm",
+    combatStyle: "shieldwave", headFeature: "hornedHelm", combatClass: "tank",
   },
   cinderfist: {
     family: "guardian", silhouette: "bruiser", primary: 0xc63f22, secondary: 0x4a1714,
     accent: 0xff7a38, trim: 0x711d13, badge: "fist", scale: [1.2, 1.02, 1.14],
-    combatStyle: "fist", headFeature: "flameHair",
+    combatStyle: "fist", headFeature: "flameHair", combatClass: "fighter",
   },
   duskblade: {
     family: "skirmisher", silhouette: "rogue", primary: 0x6257a6, secondary: 0x17142d,
     accent: 0xc7a4ff, trim: 0x29154b, badge: "blades", scale: [0.76, 1.2, 0.72],
-    combatStyle: "twinSlash", headFeature: "hood",
+    combatStyle: "twinSlash", headFeature: "hood", combatClass: "assassin",
   },
   chichuan: {
     family: "skirmisher", silhouette: "striker", primary: 0xb91c1c, secondary: 0x24100d,
     accent: 0xff6b21, trim: 0x7f1d1d, badge: "fist", scale: [0.94, 1.12, 0.88],
-    combatStyle: "dash", headFeature: "infernoHorns",
+    combatStyle: "dash", headFeature: "infernoHorns", combatClass: "fighter",
   },
   bingshuang: {
     family: "arcanist", silhouette: "crystal", primary: 0x42c9e8, secondary: 0x123b64,
     accent: 0xb8f7ff, trim: 0x155e75, badge: "focus", scale: [0.82, 1.22, 0.82],
-    combatStyle: "shard", headFeature: "iceCrown",
+    combatStyle: "shard", headFeature: "iceCrown", combatClass: "mage",
   },
   lieyan: {
     family: "arcanist", silhouette: "flame", primary: 0x7f1d1d, secondary: 0x241014,
     accent: 0xff5b32, trim: 0x5f1117, badge: "flame", scale: [0.98, 1.15, 0.92],
-    combatStyle: "flameOrb", headFeature: "emberCrown",
+    combatStyle: "flameOrb", headFeature: "emberCrown", combatClass: "mage",
   },
   leiting: {
     family: "marksman", silhouette: "ranger", primary: 0x30343b, secondary: 0x16191f,
     accent: 0xffe45e, trim: 0x685c16, badge: "launcher", scale: [0.76, 1.08, 0.78],
-    combatStyle: "rail", headFeature: "lightningHalo",
+    combatStyle: "rail", headFeature: "lightningHalo", combatClass: "marksman",
   },
   yanfeng: {
     family: "marksman", silhouette: "wing", primary: 0xc2410c, secondary: 0x3b130a,
     accent: 0xffb12b, trim: 0x7c2d12, badge: "launcher", scale: [0.86, 1.1, 0.9],
-    combatStyle: "wingBolt", headFeature: "phoenixCrown",
+    combatStyle: "wingBolt", headFeature: "phoenixCrown", combatClass: "marksman",
   },
   dadi: {
     family: "guardian", silhouette: "sentinel", primary: 0x4f6f3f, secondary: 0x493522,
     accent: 0xa7d66f, trim: 0x285c2c, badge: "shield", scale: [1.14, 1.04, 1.25],
-    combatStyle: "quake", headFeature: "barkAntlers",
+    combatStyle: "quake", headFeature: "barkAntlers", combatClass: "support",
   },
   stoneguard: {
     family: "guardian", silhouette: "obelisk", primary: 0x747c8c, secondary: 0x292d35,
     accent: 0xdde4ef, trim: 0x414854, badge: "shield", scale: [1.36, 1.22, 1.18],
-    combatStyle: "hammer", headFeature: "stoneHorns",
+    combatStyle: "hammer", headFeature: "stoneHorns", combatClass: "support",
   },
 };
 
@@ -97,6 +97,15 @@ export function heroVisualFor(heroId, role = null, heroData = null) {
     : heroData?.arch === "射手" ? "marksman"
       : heroData?.arch === "坦克" || heroData?.arch === "戰士" ? "guardian" : archetypeForRole(role);
   const n = hash(id);
+  const combatClass = heroData?.arch === "坦克" ? "tank"
+    : heroData?.arch === "戰士" ? "fighter"
+      : heroData?.arch === "刺客" ? "assassin"
+        : heroData?.arch === "法師" ? "mage"
+          : heroData?.arch === "射手" ? "marksman"
+            : heroData?.arch === "輔助" ? "support"
+              : family === "arcanist" ? "mage"
+                : family === "marksman" ? "marksman"
+                  : family === "guardian" ? "tank" : "assassin";
   const badges = ["shield", "blades", "focus", "launcher", "fist", "flame"];
   const headFeatures = [
     "hornedHelm", "flameHair", "hood", "infernoHorns", "iceCrown",
@@ -109,7 +118,7 @@ export function heroVisualFor(heroId, role = null, heroData = null) {
     trim: PALETTE[(n >>> 3) % PALETTE.length], badge: badges[n % badges.length],
     scale: family === "guardian" ? [1.08, 1.06, 1.08] : [0.92, 1.08, 0.92],
     combatStyle: ["bolt", "slash", "nova", "beam"][n % 4],
-    headFeature: headFeatures[n % headFeatures.length],
+    headFeature: headFeatures[n % headFeatures.length], combatClass,
   });
 }
 

@@ -70,6 +70,10 @@ assert.ok(!aggro.fx.some((fx) =>
 const jungle = new LogicEngine(9302, null, { rules: "v3" });
 const camp = jungle.neutrals.camps.find((o) => o.id === "camp_blue_buff");
 camp.alive = true; camp.hp = camp.maxHp;
+for (const member of camp.members ?? []) {
+  member.alive = true; member.hp = member.maxHp;
+  member.pos = { ...member.homePos };
+}
 const hunter = jungle.players.find((p) => p.role === "jungle");
 for (const p of jungle.players) p.dead = p !== hunter;
 hunter.dead = false; hunter.hp = hunter.maxHp;
@@ -87,7 +91,7 @@ const heroHp = hunter.hp;
 jungle._updateNeutralsV3([hunter], 0.1);
 assert.ok(hunter.hp < heroHp, "camp attack must cause a real readable HP step");
 assert.ok(jungle.fx.some((fx) =>
-  fx.sourceId === camp.id && fx.targetId === hunter.id && fx.style === "monsterClaw"));
+  fx.sourceId.startsWith(`${camp.id}:`) && fx.targetId === hunter.id && fx.style === "monsterClaw"));
 camp.pos = { x: camp.homePos.x + R.campLeashRange + 1, y: camp.homePos.y };
 camp.hp = camp.maxHp * 0.4; camp.state = "attack"; camp.targetId = hunter.id;
 hunter.pos = { x: camp.homePos.x + R.campLeashRange + 2, y: camp.homePos.y };

@@ -79,7 +79,11 @@ assert.match(renderer, /const BURST_CAP = 72/);
 assert.match(renderer, /phase === "cast"/);
 assert.match(renderer, /phase === "travel"/);
 assert.match(renderer, /phase === "impact"/);
-assert.match(renderer, /addLine\(fx\.world, fx\.targetWorld/);
+// Milestone C-fix：renderer 不再鎖死事件發生時的 fx.world/targetWorld；
+// 每幀由 sourceId/targetId 解析 origin/impact，才是真正的追蹤彈體。
+assert.match(renderer, /const currentWorld = new Map/);
+assert.match(renderer, /const trackedTarget = currentWorld\.get/);
+assert.match(renderer, /addLine\(style === "rail" \? origin : trail/);
 assert.match(renderer, /addSlash/);
 assert.match(renderer, /addLock/);
 assert.match(renderer, /feedback === "skill"/);

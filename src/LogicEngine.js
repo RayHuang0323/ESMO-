@@ -99,7 +99,7 @@ export class LogicEngine {
           lv, // Sprint08：**英雄熟練等級**（跨場，來自 Hero Progress loadout）— 不是本場等級
           // ── S29：本場英雄等級（單場，終局丟棄）──────────────────────────
           //   與上面的 lv 是**兩套資料**，刻意不同名以防混用（見 matchProgression.js 檔頭）。
-          mlv: 1, mxp: 0,
+          mlv: 1, mxp: 0, mxpBank: 0, xpLevelTick: -Infinity,
           basePower: power,        // Lv1 基準（等級成長以此為錨，不會累乘漂移）
           baseMaxHp: 600 * tough,
           // ── S29B1（v3）交戰狀態機 / 召喚師技能欄位 ─────────────────────
@@ -158,14 +158,29 @@ export class LogicEngine {
     this.recallLog = [];      // S29B3：回城事件 [{ id, t, playerId, side, phase, from? }]
     this._recallSeq = 1;
     if (R.neutralObjectives) {
-      const mk = (id, type, side, pos, maxHp, spawnAt, respawn, presentationKey = id) => ({
-        id, type, side, presentationKey, pos: { ...pos }, homePos: { ...pos }, alive: false, hp: 0, maxHp,
-        spawnAt, respawnAt: spawnAt, respawn, killerTeam: null,
-        participants: new Set(), dmgBy: { blue: 0, red: 0 },
-        state: "idle", targetId: null, atkCd: 0, hitAt: -Infinity,
-        attackAt: -Infinity,
-        idlePhase: String(id).split("").reduce((n, ch) => (n * 33 + ch.charCodeAt(0)) % 628, 0) / 100,
-      });
+      const mk = (id, type, side, pos, maxHp, spawnAt, respawn, presentationKey = id) => {
+        const isCamp = type === "camp" || type === "buff";
+        // Milestone C-fix：營地不再是一條群體 HP。三個成員各自保有生命、
+        // 受擊、攻擊 CD 與仇恨；offset 對齊既有 mapMonsterShapes 正式群體輪廓，
+        // 不在引擎複製模型資料，也不改營地總 HP。
+        const weights = type === "buff" ? [0.6, 0.2, 0.2] : [0.46, 0.29, 0.25];
+        const offsets = type === "buff"
+          ? [[0, 0], [-3.4, -3.5], [-3.4, 3.5]]
+          : [[2.2, 0], [-2.2, -2.7], [-2.2, 2.7]];
+        const members = isCamp ? offsets.map(([dx, dy], index) => ({
+          id: `${id}:${index}`, index, dx, dy, pos: { x: pos.x + dx, y: pos.y + dy },
+          homePos: { x: pos.x + dx, y: pos.y + dy }, hp: 0, maxHp: maxHp * weights[index],
+          alive: false, targetId: null, atkCd: 0, hitAt: -Infinity, attackAt: -Infinity,
+        })) : null;
+        return {
+          id, type, side, presentationKey, pos: { ...pos }, homePos: { ...pos }, alive: false, hp: 0, maxHp,
+          spawnAt, respawnAt: spawnAt, respawn, killerTeam: null,
+          participants: new Set(), dmgBy: { blue: 0, red: 0 }, members,
+          state: "idle", targetId: null, atkCd: 0, hitAt: -Infinity,
+          attackAt: -Infinity,
+          idlePhase: String(id).split("").reduce((n, ch) => (n * 33 + ch.charCodeAt(0)) % 628, 0) / 100,
+        };
+      };
       const list = [
         mk("dragon", "dragon", null, PITS.dragon, R.dragonHp, R.dragonSpawn, R.objRespawn),
         mk("baron", "baron", null, PITS.baron, R.baronHp, R.baronSpawn, R.objRespawn),
@@ -265,11 +280,31 @@ export class LogicEngine {
 
   // ── S29 本場英雄 XP／等級 ─────────────────────────────────────────────────
   /** 加本場 XP；升級即重算 power/maxHp（雙方對稱，不是勝率係數）。rules v1 ⇒ 完全短路。 */
-  _addXp(p, amt) {
-    if (!this.rules.matchXp || !(amt > 0) || p.dead) return;
+  _addXp(p, amt, drain = false) {
+    if (!this.rules.matchXp || p.dead) return;
+    if (this.rules.maxXpLevelsPerTick) {
+      if (amt > 0) p.mxpBank = (p.mxpBank ?? 0) + amt;
+      if (!(p.mxpBank > 0) || (!(amt > 0) && !drain)) return;
+      const alreadyLeveled = p.xpLevelTick === this.t;
+      // 同一 tick 最多跨一級；多出的真實 XP 留在 bank，後續 tick 繼續結算，
+      // 不丟棄、不偽造，也不會因同幀 7 隻兵死亡讓 UI 從 Lv2 瞬跳 Lv4。
+      const currentNeed = xpToNext(p.mlv);
+      const nextNeed = xpToNext(p.mlv + 1);
+      const room = alreadyLeveled
+        ? Math.max(0, currentNeed - p.mxp - 1e-6)
+        : Math.max(0, currentNeed - p.mxp) +
+          (Number.isFinite(nextNeed) ? Math.max(0, nextNeed - 1e-6) : 0);
+      amt = Math.min(p.mxpBank, room);
+      if (!(amt > 0)) return;
+      p.mxpBank -= amt;
+    } else if (!(amt > 0)) return;
     const r = addMatchXp(p.mlv, p.mxp, amt);
     p.mxp = r.mxp;
-    if (r.levelsGained > 0) { p.mlv = r.mlv; this._applyMatchLevel(p); }
+    if (r.levelsGained > 0) {
+      p.mlv = r.mlv;
+      if (this.rules.maxXpLevelsPerTick) p.xpLevelTick = this.t;
+      this._applyMatchLevel(p);
+    }
   }
   /** 等級 → 本場 power / maxHp（以 Lv1 基準錨定；升級補上「新增的那段血」，不是全補）。 */
   _applyMatchLevel(p) {
@@ -283,7 +318,9 @@ export class LogicEngine {
   _awardMinionXp(side, pos) {
     const near = this.players.filter((q) => q.side === side && !q.dead && dist(q.pos, pos) < XP.MINION_RADIUS);
     if (!near.length) return;                              // 沒人在線 ⇒ XP 流失（合理：無人吃線）
-    const each = near.length === 1 ? XP.MINION : XP.MINION * XP.MINION_SHARE;
+    const base = this.rules.minionXp ?? XP.MINION;
+    const share = this.rules.minionXpShare ?? XP.MINION_SHARE;
+    const each = near.length === 1 ? base : base * share;
     for (const q of near) this._addXp(q, each);
   }
   /** 團隊目標 XP：擊殺方**全隊存活者**皆得 ⇒ 輔助/打野不因低擊殺而卡等級（S29 §3）。 */
@@ -493,9 +530,22 @@ export class LogicEngine {
     const reset = (o) => {
       o.alive = true; o.hp = o.maxHp; o.killerTeam = null;
       o.participants.clear(); o.dmgBy.blue = 0; o.dmgBy.red = 0;
+      if (o.members) for (const m of o.members) {
+        m.alive = true; m.hp = m.maxHp; m.targetId = null; m.atkCd = 0;
+        m.hitAt = -Infinity; m.attackAt = -Infinity;
+        m.pos.x = m.homePos.x; m.pos.y = m.homePos.y;
+      }
       if (o.homePos) {
         o.pos.x = o.homePos.x; o.pos.y = o.homePos.y;
         o.state = "idle"; o.targetId = null; o.atkCd = 0;
+      }
+    };
+    const syncCamp = (o) => {
+      if (!o.members) return;
+      o.hp = o.members.reduce((sum, m) => sum + Math.max(0, m.hp), 0);
+      o.alive = o.members.some((m) => m.alive && m.hp > 0);
+      for (const m of o.members) {
+        m.pos.x = o.pos.x + m.dx; m.pos.y = o.pos.y + m.dy;
       }
     };
     const moveToward = (o, to, speed) => {
@@ -512,8 +562,15 @@ export class LogicEngine {
         p.role === "jungle" && p.sp.d.id === "smite" && this.t >= p.sp.d.readyAt &&
         dist(p.pos, o.pos) <= R.smiteRange && o.hp > 0 && o.hp <= R.smiteDmg);
       for (const p of casts) {
-        o.hp -= R.smiteDmg; o.dmgBy[p.side] += R.smiteDmg; o.participants.add(p.id);
-        this._spellEventV3(p, "smite", o.id, p.pos, o.pos);
+        const victim = o.members?.find((m) => m.alive && m.hp > 0) ?? o;
+        const applied = Math.min(R.smiteDmg, Math.max(0, victim.hp));
+        victim.hp = Math.max(0, victim.hp - applied);
+        if (o.members) {
+          victim.hitAt = this.t;
+          if (victim.hp <= 0) victim.alive = false;
+        }
+        o.dmgBy[p.side] += applied; o.participants.add(p.id); syncCamp(o);
+        this._spellEventV3(p, "smite", o.id, p.pos, victim.pos ?? o.pos);
       }
     };
     for (const key of ["dragon", "baron"]) {
@@ -551,7 +608,11 @@ export class LogicEngine {
     }
     for (const c of N.camps) {
       if (!c.alive) { if (this.t >= c.respawnAt) reset(c); continue; }
+      syncCamp(c);
       c.atkCd = Math.max(0, (c.atkCd ?? 0) - dt);
+      if (c.members) for (const m of c.members) {
+        m.atkCd = Math.max(0, (m.atkCd ?? 0) - dt);
+      }
 
       // Milestone C：營地使用黏著目標；目標死亡、離營或把怪拉出 leash 才回營。
       const eligible = alive.filter((p) =>
@@ -571,23 +632,16 @@ export class LogicEngine {
           // leash reset：回到出生點才回滿，清掉本次傷害歸屬，避免隔牆拖怪取利。
           c.pos.x = c.homePos.x; c.pos.y = c.homePos.y;
           c.hp = c.maxHp; c.participants.clear(); c.dmgBy.blue = 0; c.dmgBy.red = 0;
+          if (c.members) for (const m of c.members) {
+            m.alive = true; m.hp = m.maxHp; m.targetId = null; m.atkCd = 0;
+            m.hitAt = -Infinity; m.attackAt = -Infinity;
+          }
           c.state = "idle";
         }
       } else if (target) {
         const gap = dist(c.pos, target.pos);
         c.state = gap <= R.campAttackRange ? "attack" : "chase";
         if (gap > R.campAttackRange) moveToward(c, target.pos, R.campMoveSpeed);
-        else if (c.atkCd <= 0) {
-          const amount = Math.min(R.campAttackDamage, Math.max(0, target.hp - 1));
-          target.hp -= amount; c.atkCd = R.campAttackInterval; c.attackAt = this.t;
-          this.pushFx({
-            type: "neutral", pos: { ...c.pos }, target: { ...target.pos },
-            color: c.type === "buff" ? 0xfbbf24 : 0xa3e635,
-            sourceId: c.id, targetId: target.id, ability: "neutral:basic",
-            feedback: "attack", style: "monsterClaw", width: c.type === "buff" ? 1.25 : 0.95,
-            exp: 1.1,
-          });
-        }
       } else {
         c.state = "idle"; c.targetId = null;
         // 小幅決定性巡遊；半徑遠小於營地 clearR，不會穿進牆或路線。
@@ -598,16 +652,59 @@ export class LogicEngine {
         }, R.campMoveSpeed * 0.45);
       }
 
+      // 群體會一起追擊／回營，但每個存活成員各自選目標、計算距離與攻擊 CD。
+      // 因此兩位英雄進營時可各自拉到仇恨；一隻死亡不會讓同營其它成員同步死亡。
+      syncCamp(c);
+      if (c.state === "return") {
+        if (c.members) for (const m of c.members) m.targetId = null;
+      } else if (c.members) {
+        for (const m of c.members) {
+          if (!m.alive || m.hp <= 0) { m.targetId = null; continue; }
+          let memberTarget = m.targetId ? eligible.find((p) => p.id === m.targetId) : null;
+          if (!memberTarget) {
+            memberTarget = eligible.slice().sort((a, b) =>
+              dist(a.pos, m.pos) - dist(b.pos, m.pos) ||
+              String(a.id).localeCompare(String(b.id)))[0] ?? null;
+            m.targetId = memberTarget?.id ?? null;
+          }
+          if (!memberTarget || dist(m.pos, memberTarget.pos) > R.campAttackRange || m.atkCd > 0) continue;
+          const amount = Math.min(R.campAttackDamage, Math.max(0, memberTarget.hp - 1));
+          if (amount <= 0) continue;
+          memberTarget.hp -= amount;
+          m.atkCd = R.campAttackInterval; m.attackAt = this.t;
+          c.atkCd = Math.max(c.atkCd, R.campAttackInterval); c.attackAt = this.t;
+          this.pushFx({
+            type: "neutral", pos: { ...m.pos }, target: { ...memberTarget.pos },
+            color: c.type === "buff" ? 0xfbbf24 : 0xa3e635,
+            sourceId: m.id, targetId: memberTarget.id, ability: "neutral:basic",
+            feedback: "attack", style: "monsterClaw", width: m.index === 0 ? 1.25 : 0.78,
+            exp: 1.1, life: 1.1,
+          });
+        }
+      }
+
       for (const p of alive) {
-        if (p.role !== "jungle" || dist(p.pos, c.pos) > 3.5) continue;
+        if (p.role !== "jungle") continue;
+        const victim = c.members?.filter((m) => m.alive && m.hp > 0)
+          .sort((a, b) => dist(p.pos, a.pos) - dist(p.pos, b.pos) || a.index - b.index)[0] ?? c;
+        if (dist(p.pos, victim.pos ?? c.pos) > 3.5) continue;
         const dmg = p.power * R.campDmgK * dt;
-        c.hp -= dmg; c.dmgBy[p.side] += dmg; c.participants.add(p.id);
-        c.hitAt = this.t;
+        const applied = Math.min(dmg, Math.max(0, victim.hp));
+        victim.hp = Math.max(0, victim.hp - applied);
+        if (c.members && victim.hp <= 0) victim.alive = false;
+        if (c.members) victim.hitAt = this.t;
+        c.dmgBy[p.side] += applied; c.participants.add(p.id); c.hitAt = this.t; syncCamp(c);
         if (c.state !== "return" && !c.targetId) { c.targetId = p.id; c.state = "chase"; }
         // S29B2：打野清怪的可視化彈道（每秒一條；純呈現，零 rng）
-        if (fxTick) this.pushFx({ type: "line", pos: { x: p.pos.x, y: p.pos.y }, target: { ...c.pos }, color: SIDE[p.side] });
+        if (fxTick) this.pushFx({
+          type: "line", pos: { x: p.pos.x, y: p.pos.y },
+          target: { ...(victim.pos ?? c.pos) }, color: SIDE[p.side],
+          sourceId: p.id, targetId: victim.id, ability: `${p.role}:basic`,
+          feedback: "attack",
+        });
       }
       trySmite(c);
+      syncCamp(c);
       if (c.hp <= 0) {
         c.alive = false; c.respawnAt = this.t + c.respawn;
         // S29B2：營地死亡爆點（模型淡出由 view 處理；fx 讓 minimap 外也看得到）
@@ -616,7 +713,7 @@ export class LogicEngine {
         c.killerTeam = kt;
         if (kt) {
           const gold = c.type === "buff" ? R.buffCampGold : R.campGold;
-          const xpAmt = c.type === "buff" ? XP.BUFF_CAMP : XP.CAMP;
+          const xpAmt = c.type === "buff" ? (R.buffCampXp ?? XP.BUFF_CAMP) : (R.campXp ?? XP.CAMP);
           this._dmgGold(kt, gold);
           for (const q of alive) {
             if (q.side !== kt || dist(q.pos, c.pos) > XP.CAMP_RADIUS) continue;
@@ -922,6 +1019,9 @@ export class LogicEngine {
     if (this.over) return;
     const R = this.rules;                       // S29：模擬規則集（移速/傷害/兵線/攻塔）
     this.t += dt;
+    if (R.maxXpLevelsPerTick) {
+      for (const p of this.players) this._addXp(p, 0, true);
+    }
     if (R.towerAttackInterval) {
       for (const tw of Object.values(this.towers)) tw.atkCd = Math.max(0, (tw.atkCd ?? 0) - dt);
     }
@@ -968,12 +1068,28 @@ export class LogicEngine {
         const contact = R.minionAttackRangeProgress ?? 0.035;
         // Keep the center inside the existing 0.05 tower targeting band. A
         // larger offset let minions damage a tower from just outside retaliation.
-        const stopAtStructure = 0.046;
         const advance = (arr, foes, side) => {
           const dir = side === "blue" ? 1 : -1;
           let blocker = this.frontTower(side, ln);
           if (!blocker && this.laneCleared(side)) {
             blocker = this.towers[side === "blue" ? "red_nexus" : "blue_nexus"];
+          }
+          // 固定 progress 差在三條不同長度／曲率的路上不是固定世界距離，會讓一條路
+          // 貼塔、另一條路離塔很遠。以塔中心的實際距離反解停位，並保留在既有
+          // siege / tower targeting band 內；只改 v3 minionCollision 路徑。
+          let stopT = null;
+          if (blocker) {
+            const wanted = R.minionTowerStopRange ?? 4.6;
+            let lo = 0, hi = 0.08;
+            while (hi < 0.25 &&
+              dist(posOnLane(ln, clamp(blocker.t - dir * hi, 0, 1)), blocker.pos) < wanted) hi *= 1.5;
+            for (let i = 0; i < 14; i++) {
+              const mid = (lo + hi) * 0.5;
+              const p = posOnLane(ln, clamp(blocker.t - dir * mid, 0, 1));
+              if (dist(p, blocker.pos) < wanted) lo = mid;
+              else hi = mid;
+            }
+            stopT = clamp(blocker.t - dir * hi, 0, 1);
           }
           return arr.map((m) => {
             let next = clamp(m.t + dir * minionStep, 0, 1);
@@ -992,8 +1108,7 @@ export class LogicEngine {
                 ? Math.min(next, meet - contact * 0.25)
                 : Math.max(next, meet + contact * 0.25);
             }
-            if (blocker) {
-              const stopT = blocker.t - dir * stopAtStructure;
+            if (stopT != null) {
               next = side === "blue" ? Math.min(next, stopT) : Math.max(next, stopT);
             }
             return clamp(next, 0, 1);
@@ -1102,7 +1217,7 @@ export class LogicEngine {
               this.pushFx({
                 type: "tower", pos: { ...tw.pos }, target: posOnLane(ln, m.t),
                 color: SIDE[side], sourceId: `${side}_${ln}_${tr}`, targetId: m.id,
-                ability: "tower:basic", feedback: "attack", width: 1.2, exp: 1.05,
+                ability: "tower:basic", feedback: "attack", width: 1.2, exp: 1.15, life: 1.1,
                 lockShots: tw.lockShots,
               });
             }
@@ -1159,7 +1274,7 @@ export class LogicEngine {
               this.pushFx({
                 type: "tower", pos: { ...tw.pos }, target: { x: best.pos.x, y: best.pos.y },
                 color: SIDE[tw.side], sourceId: k, targetId: best.id,
-                ability: "tower:basic", feedback: "attack", width: 1.2, exp: 1.05,
+                ability: "tower:basic", feedback: "attack", width: 1.2, exp: 1.15, life: 1.1,
                 lockShots: tw.lockShots,
               });
             }
@@ -1648,6 +1763,13 @@ export class LogicEngine {
           alive: o.alive, hp: o.alive ? clamp(o.hp / o.maxHp, 0, 1) : 0, maxHp: o.maxHp,
           respawn: o.alive ? 0 : Math.max(0, Math.round((o.respawnAt - this.t) * 10) / 10),
           killerTeam: o.killerTeam, participants: [...o.participants],
+          ...(o.members ? { members: o.members.map((m) => ({
+            id: m.id, pos: { ...m.pos }, homePos: { ...m.homePos },
+            hp: m.alive ? clamp(m.hp / m.maxHp, 0, 1) : 0, maxHp: m.maxHp,
+            alive: !!m.alive, targetId: m.targetId ?? null,
+            hitAt: Number.isFinite(m.hitAt) ? m.hitAt : null,
+            attackAt: Number.isFinite(m.attackAt) ? m.attackAt : null,
+          })) } : {}),
         })),
       } : {}),
       ...(R.summonerSpells ? { spellEvents: this.spellLog.slice(-8).map((e) => ({ ...e })) } : {}),

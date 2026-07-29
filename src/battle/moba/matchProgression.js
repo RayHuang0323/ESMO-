@@ -240,6 +240,8 @@ SIM_RULES.v3 = {
   towerAttackInterval: 0.5,
   towerMinionDamage: 60,
   towerChampionThreatT: 3,
+  // C-fix：依實際世界距離停在塔外，不再用三路曲率不同的固定 progress 差。
+  minionTowerStopRange: 4.6,
   minionShieldRange: 5,
   // ── 後期加速（v3 收尾機制之三：sudden death）─────────────────────────────
   //  無戰術對局的長尾（120 seeds 實測 p99 34.5 分、max 39.2 分）會超過
@@ -268,6 +270,15 @@ SIM_RULES.v3 = {
   objRespawn: 150,                     // 與 v2 respawn 一致
   objDmgK: 0.5,                        // 坑內優勢方每人 power×objDmgK×dt
   campHp: 280, buffCampHp: 420,
+  // Milestone C-fix：原本首波 4 隻兵給 4×128=512 XP，而 Lv1→Lv3 只需 450，
+  // 因此同一波會連升兩級。v3 改為 96/隻：單吃首波共 384，只升一級；
+  // 雙人共享首波各 238，不會同步暴衝。v1/v2 歷史基準不變。
+  minionXp: 96,
+  minionXpShare: 0.62,
+  maxXpLevelsPerTick: 1,
+  // 單一營地不直接跨兩級；兩個營地才穩定取得第一級，保留打野成長但移除跳級感。
+  campXp: 96,
+  buffCampXp: 144,
   campFirstSpawn: 30, campRespawn: 90,
   campDmgK: 0.6,
   // Milestone C：營地的移動 / 索敵 / 反擊 / leash。只套 v3，v1/v2 歷史基準不變。

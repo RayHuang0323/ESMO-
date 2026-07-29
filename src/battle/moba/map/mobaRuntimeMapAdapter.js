@@ -83,6 +83,7 @@ export function adaptHeroes(snapshot, opts = {}) {
       team,
       role: p.role ?? null,
       archetype: visual.family ?? archetypeForRole(p.role),
+      combatClass: p.role === "sup" ? "support" : (visual.combatClass ?? "fighter"),
       playerId: String(p.id),
       championId,
       heroId: championId,
@@ -188,6 +189,19 @@ export function adaptObjectives(snapshot) {
       targetId: o.targetId ?? null,
       hitAt: num(o.hitAt, -Infinity),
       attackAt: num(o.attackAt, -Infinity),
+      members: Array.isArray(o.members) ? o.members.map((m) => {
+        const { sim: memberPos, clamped: memberClamped } = safePos(m.pos, sim);
+        return {
+          id: String(m.id), position: memberPos,
+          world: simToWorld(memberPos, RUNTIME_Y.structure),
+          homePosition: m.homePos ? safePos(m.homePos, memberPos).sim : memberPos,
+          hp: ratio01(m.hp) * num(m.maxHp, 1), maxHp: num(m.maxHp, 1),
+          hpRatio: ratio01(m.hp), alive: !!m.alive,
+          targetId: m.targetId ?? null,
+          hitAt: num(m.hitAt, -Infinity), attackAt: num(m.attackAt, -Infinity),
+          clamped: memberClamped,
+        };
+      }) : null,
       fallbackPosition: false,
       clamped,
     });
@@ -391,6 +405,10 @@ export function adaptEffects(snapshot, effectTime = snapshot?.ts, opts = {}) {
     const rosterEntry = opts.roster?.[f.sourceId] ?? null;
     const heroId = rosterEntry?.hero?.id ?? rosterEntry?.heroId ?? rosterEntry?.id ?? null;
     const heroVisual = heroId ? heroVisualFor(heroId, role, rosterEntry?.hero ?? null) : null;
+    const combatClass = role === "sup" ? "support" : (heroVisual?.combatClass ?? (
+      role === "top" ? "tank" : role === "jungle" ? "assassin"
+        : role === "mid" ? "mage" : role === "adc" ? "marksman" : "fighter"
+    ));
     const skillVisual = skillVisualFor({
       ability: variant, family: archetype, heroId, visual: heroVisual,
       color: heroVisual?.accent ?? (Number.isFinite(f.color) ? f.color : null),
@@ -415,6 +433,7 @@ export function adaptEffects(snapshot, effectTime = snapshot?.ts, opts = {}) {
       sourceId: f.sourceId ?? null,
       targetId,
       archetype,
+      combatClass,
       width: num(f.width, skillVisual.width ?? archetypeData(archetype).effectWidth),
       color: skillVisual.color,
       skillVisual,

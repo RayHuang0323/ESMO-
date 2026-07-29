@@ -197,7 +197,8 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
       const node = groupRefs.current.get(h.id);
       if (!node) continue;
       const {
-        root, body, shoulder, accessory, signature, headFeature, badge, crest, teamBand,
+        root, body, shoulder, accessory, signature, headFeature, classLanguage,
+        badge, crest, teamBand,
         bar, ring, deathMark, label, bodyAliveMaterial, secondaryAliveMaterial,
       } = node;
       const hitFx = effects.find((fx) => String(fx.targetId ?? "") === h.id && fx.phase === "impact");
@@ -222,6 +223,20 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
       }
       if (shoulder) shoulder.rotation.z = release * 0.12 - hit * 0.08;
       if (crest) crest.rotation.y = now * 0.35 + cast * 0.9;
+      if (classLanguage) {
+        // 六職業的武器／施法群組保留不同動作語彙：法師／輔助環繞施法，
+        // 刺客／戰士大幅前揮，射手有後座，坦克則以盾面前頂。
+        const cls = h.combatClass ?? "fighter";
+        classLanguage.rotation.y = (cls === "mage" || cls === "support")
+          ? now * (cls === "support" ? 0.8 : 1.25) : release * 0.22;
+        classLanguage.rotation.x = cls === "marksman" ? release * 0.28
+          : (cls === "assassin" || cls === "fighter") ? -release * 0.48
+            : cls === "tank" ? cast * 0.22 : cast * 0.12;
+        classLanguage.position.z = cls === "marksman" ? -release * 0.42 * S
+          : cls === "tank" ? cast * 0.28 * S : 0;
+        classLanguage.scale.setScalar(1 + cast * 0.12 + release * 0.08);
+        classLanguage.visible = h.alive;
+      }
       //  ── 陣亡呈現（見檔頭 TEAM_DEAD / DEAD 註解）──────────────────────────
       //  倒地：本體由站姿轉成橫躺，高度降到「躺在地上」而不是「陷進地裡」
       //  ⇒ 剪影與站立的英雄完全不同，遠看也分得出來。
@@ -298,6 +313,7 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
   const accessoryRef = useRef();
   const signatureRef = useRef();
   const headFeatureRef = useRef();
+  const classLanguageRef = useRef();
   const badgeRef = useRef();
   const crestRef = useRef();
   const teamBandRef = useRef();
@@ -314,6 +330,7 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
       accessory: accessoryRef.current,
       signature: signatureRef.current,
       headFeature: headFeatureRef.current,
+      classLanguage: classLanguageRef.current,
       badge: badgeRef.current, crest: crestRef.current,
       teamBand: teamBandRef.current,
       bar: barRef.current, ring: ringRef.current, deathMark: deathMarkRef.current,
@@ -364,6 +381,8 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
         accent={accentMaterial} teamMaterial={secondaryMaterial} />
       <HeroHeadFeature ref={headFeatureRef} type={resolvedVisual.headFeature} geo={geo}
         accent={accentMaterial} secondary={secondaryMaterial} />
+      <HeroClassLanguage ref={classLanguageRef} combatClass={hero.combatClass}
+        geo={geo} accent={accentMaterial} secondary={secondaryMaterial} />
       <mesh ref={crestRef} geometry={geo.crest} material={accentMaterial}
         position={[0, HERO.height * 1.42, 0]} rotation={[0, 0, Math.PI]}
         scale={[resolvedVisual.silhouette === "obelisk" ? 1.25 : 0.82, 1, 0.82]}
@@ -391,21 +410,21 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
           userData={{ part: "hero-team-side-marker", team }} />
       </group>
       {showLabel && (
-        <Html position={[0, HERO.barY + 1.5 * S, 0]} center distanceFactor={190}
+        <Html position={[0, HERO.barY + 0.9 * S, 0]} center distanceFactor={132}
           style={{ pointerEvents: "none" }}>
           <div ref={labelRef} style={{
-            display: "flex", alignItems: "center", gap: 4,
-            font: "700 12px ui-monospace,monospace", whiteSpace: "nowrap",
-            color: "#f8fafc", padding: "1px 5px 1px 3px", borderRadius: 4,
-            borderLeft: `3px solid ${team === "blue" ? "#4d95f0" : "#f0574d"}`,
-            background: "rgba(5,10,18,.62)", textShadow: "0 1px 3px rgba(0,0,0,.9)",
+            display: "flex", alignItems: "center", gap: 2,
+            font: "700 9px ui-monospace,monospace", whiteSpace: "nowrap",
+            color: "#f8fafc", padding: "0 3px 0 2px", borderRadius: 3,
+            borderLeft: `2px solid ${team === "blue" ? "#4d95f0" : "#f0574d"}`,
+            background: "rgba(5,10,18,.5)", textShadow: "0 1px 2px rgba(0,0,0,.9)",
           }}>
             <span style={{
-              width: 6, height: 6, borderRadius: 1,
+              width: 4, height: 4, borderRadius: 1,
               background: team === "blue" ? "#4d95f0" : "#f0574d",
-              transform: "rotate(45deg)", boxShadow: "0 0 5px currentColor",
+              transform: "rotate(45deg)", boxShadow: "0 0 3px currentColor",
             }} aria-hidden="true" />
-            <span style={{ opacity: 0.72 }}>Lv{hero.level}</span>
+            <span style={{ opacity: 0.66 }}>L{hero.level}</span>
             <span>{hero.displayName}</span>
           </div>
         </Html>
@@ -413,6 +432,73 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
     </group>
   );
 }
+
+/**
+ * 六職業固定輪廓／武器語彙。這是 presentation-only 低模配件，不改英雄數值；
+ * 所有動作仍由同一份 cast / travel / impact event 驅動。
+ */
+const HeroClassLanguage = React.forwardRef(function HeroClassLanguage(
+  { combatClass = "fighter", geo, accent, secondary }, ref,
+) {
+  const mesh = (geometry, material, position, scale, rotation = [0, 0, 0], part) => (
+    <mesh geometry={geometry} material={material} position={position} scale={scale}
+      rotation={rotation} frustumCulled={false}
+      userData={{ part: `hero-class-${part}`, combatClass }} />
+  );
+  return (
+    <group ref={ref} userData={{ part: "hero-class-language", combatClass }}>
+      {combatClass === "tank" && (
+        <>
+          {mesh(geo.shield, secondary, [-1.25 * HERO.radius, HERO.height * 0.75, 0.25 * HERO.radius],
+            [1.45, 1.25, 1.45], [0, 0, Math.PI / 2], "tank-shield")}
+          {mesh(geo.chest, accent, [0, HERO.height * 0.88, 0], [1.06, 0.72, 1.08], [0, 0, 0], "tank-plate")}
+        </>
+      )}
+      {combatClass === "fighter" && (
+        <>
+          {mesh(geo.gauntlet, accent, [-1.1 * HERO.radius, HERO.height * 0.72, 0.75 * HERO.radius],
+            [0.9, 0.9, 1.25], [0, 0, 0], "fighter-left")}
+          {mesh(geo.gauntlet, accent, [1.1 * HERO.radius, HERO.height * 0.72, 0.75 * HERO.radius],
+            [0.9, 0.9, 1.25], [0, 0, 0], "fighter-right")}
+        </>
+      )}
+      {combatClass === "assassin" && (
+        <>
+          {mesh(geo.blade, accent, [-0.8 * HERO.radius, HERO.height * 0.72, 0.55 * HERO.radius],
+            [0.82, 0.85, 0.82], [0.35, 0, -0.48], "assassin-left")}
+          {mesh(geo.blade, accent, [0.8 * HERO.radius, HERO.height * 0.72, 0.55 * HERO.radius],
+            [0.82, 0.85, 0.82], [-0.35, 0, 0.48], "assassin-right")}
+        </>
+      )}
+      {combatClass === "mage" && (
+        <>
+          {mesh(geo.staff, secondary, [-1.15 * HERO.radius, HERO.height * 0.75, 0],
+            [1, 1.15, 1], [0, 0, 0.18], "mage-staff")}
+          {mesh(geo.focus, accent, [0, HERO.height * 1.55, 0.35 * HERO.radius],
+            [1.05, 1.25, 1.05], [0, 0, 0], "mage-focus")}
+        </>
+      )}
+      {combatClass === "marksman" && (
+        <>
+          {mesh(geo.launcher, secondary, [0.9 * HERO.radius, HERO.height * 0.78, 0.92 * HERO.radius],
+            [0.72, 0.72, 1.28], [Math.PI / 2, 0, 0], "marksman-launcher")}
+          {mesh(geo.focus, accent, [0.9 * HERO.radius, HERO.height * 0.78, 1.75 * HERO.radius],
+            [0.55, 0.55, 0.85], [0, 0, 0], "marksman-muzzle")}
+        </>
+      )}
+      {combatClass === "support" && (
+        <>
+          {mesh(geo.halo, accent, [0, HERO.height * 1.12, -0.72 * HERO.radius],
+            [1.28, 1.28, 1.28], [Math.PI / 2, 0, 0], "support-halo")}
+          {mesh(geo.focus, accent, [-1.15 * HERO.radius, HERO.height * 1.02, 0.25 * HERO.radius],
+            [0.62, 0.62, 0.62], [0, 0, 0], "support-focus-left")}
+          {mesh(geo.focus, accent, [1.15 * HERO.radius, HERO.height * 1.02, 0.25 * HERO.radius],
+            [0.62, 0.62, 0.62], [0, 0, 0], "support-focus-right")}
+        </>
+      )}
+    </group>
+  );
+});
 
 /**
  * 把選角頭像最醒目的頭部語彙轉成 ESMO 自有低模零件。
