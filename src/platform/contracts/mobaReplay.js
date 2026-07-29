@@ -71,8 +71,9 @@ export function snapshotToFrame(snap) {
         m.kind === "caster" ? 1 : 0, m.slot ?? 0, m.wave ?? 0,
       ])),
     } : {}),
-    // H.3：取樣窗內的技能/命中特效事件；每列
-    // [kind,x,y,targetX,targetY,color,at,life,ability]。ability 是附加字串，
+    // H.3 / Milestone B.2：取樣窗內的技能/命中特效事件；每列
+    // [kind,x,y,targetX,targetY,color,at,life,ability,feedback,sourceId,targetId]。
+    // 最後四欄皆為向後相容的附加字串；舊 Replay 仍可讀，
     // 傷害與命中結果仍只來自已保存的英雄 hp，不在 Replay 重算。
     ...(snap.fx ? {
       fx: snap.fx.map((f) => [
@@ -82,6 +83,9 @@ export function snapshotToFrame(snap) {
         Number.isFinite(f.color) ? f.color : 0xffffff,
         round2(f.at ?? snap.ts), round3(f.life ?? f.exp ?? 0.35),
         typeof f.ability === "string" ? f.ability : "",
+        typeof f.feedback === "string" ? f.feedback : "",
+        typeof f.sourceId === "string" ? f.sourceId : "",
+        typeof f.targetId === "string" ? f.targetId : "",
       ]),
     } : {}),
   };
@@ -135,7 +139,7 @@ export function validateMobaReplay(r) {
       }
       if (f.fx !== undefined && (!Array.isArray(f.fx) || f.fx.some((row) =>
         !Array.isArray(row) || row.length < 8 || row.slice(0, 8).some((v) => !Number.isFinite(v)) ||
-        (row[8] !== undefined && typeof row[8] !== "string")))) {
+        row.slice(8, 12).some((v) => v !== undefined && typeof v !== "string")))) {
         errors.push(`frame[${i}].fx 形狀錯誤或含非有限數值`); break;
       }
     }

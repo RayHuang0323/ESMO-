@@ -12,8 +12,8 @@ import { LAYER_Y } from "../map/mapVisualStyle.js";
 import { countMount, countUnmount } from "./runtimeDiagnostics.js";
 
 const S = WORLD_SCALE;
-const LINE_CAP = 32;
-const BURST_CAP = 16;
+const LINE_CAP = 48;
+const BURST_CAP = 32;
 const GROUND_Y = Number.isFinite(LAYER_Y.lane_surface) ? LAYER_Y.lane_surface : 0;
 
 export default function MobaRuntimeEffects({ frameRef }) {
@@ -71,16 +71,33 @@ export default function MobaRuntimeEffects({ frameRef }) {
       const life = Math.max(0.02, fx.lifeRatio ?? 0);
       color.setHex(fx.color ?? 0xffffff);
       const phase = fx.phase ?? (life > 0.72 ? "cast" : (life > 0.22 ? "travel" : "impact"));
+      const phaseProgress = Math.max(0, Math.min(1, fx.phaseProgress ?? 0));
       const impact = fx.targetWorld ?? fx.world;
+      const isSkill = fx.feedback === "skill" || fx.variant === "power" || fx.type === "ult";
+      const visualWidth = (fx.width ?? 1) * (isSkill ? 1.18 : 1);
+
+      // cast：施法者腳下預備圈 + 頭頂核心。普通攻擊較小，技能較寬。
       if (phase === "cast" && rings < BURST_CAP) {
-        const spread = (0.55 + (1 - life) * 0.65) * S * (fx.width ?? 1);
+        const spread = (0.72 + phaseProgress * (isSkill ? 1.2 : 0.55)) * S * visualWidth;
         pos.set(fx.world.x, GROUND_Y + 0.12, fx.world.z);
         scale.set(spread, spread, 1);
         matrix.compose(pos, flat, scale);
         ringMesh.setMatrixAt(rings, matrix);
         ringMesh.setColorAt(rings, color);
         rings++;
-      } else if ((fx.type === "line" || fx.type === "tower") && fx.targetWorld && lines < LINE_CAP) {
+        if (orbs < BURST_CAP) {
+          pos.set(fx.world.x, GROUND_Y + (isSkill ? 2.05 : 1.55) * S, fx.world.z);
+          quat.identity();
+          scale.setScalar((isSkill ? 0.78 : 0.44) * S * (0.75 + phaseProgress * 0.45));
+          matrix.compose(pos, quat, scale);
+          orbMesh.setMatrixAt(orbs, matrix);
+          orbMesh.setColorAt(orbs, color);
+          orbs++;
+        }
+      }
+
+      // travel：射線交代攻擊方向，亮核由施法者移到命中點。技能用更寬的軌跡。
+      if (phase === "travel" && fx.targetWorld && lines < LINE_CAP) {
         const ax = fx.world.x, az = fx.world.z;
         const bx = fx.targetWorld.x, bz = fx.targetWorld.z;
         const len = Math.hypot(bx - ax, bz - az);
@@ -88,40 +105,39 @@ export default function MobaRuntimeEffects({ frameRef }) {
           dir.set(bx - ax, 0, bz - az).normalize();
           quat.setFromUnitVectors(up, dir);
           pos.set((ax + bx) / 2, GROUND_Y + 1.15 * S, (az + bz) / 2);
-          const width = (0.12 + 0.2 * life) * S * (fx.width ?? 1);
+          const width = (isSkill ? 0.36 : 0.2) * S * visualWidth;
           scale.set(width, len, width);
           matrix.compose(pos, quat, scale);
           lineMesh.setMatrixAt(lines, matrix);
           lineMesh.setColorAt(lines, color);
           lines++;
         }
-      } else if (fx.type === "ult" && rings < BURST_CAP && orbs < BURST_CAP) {
-        const spread = (0.9 + (1 - life) * 4.4) * S * (fx.width ?? 1);
-        pos.set(fx.world.x, GROUND_Y + 0.12, fx.world.z);
-        scale.set(spread, spread, 1);
-        matrix.compose(pos, flat, scale);
-        ringMesh.setMatrixAt(rings, matrix);
-        ringMesh.setColorAt(rings, color);
-        rings++;
+        if (orbs < BURST_CAP) {
+          pos.set(
+            fx.world.x + (fx.targetWorld.x - fx.world.x) * phaseProgress,
+            GROUND_Y + (isSkill ? 1.65 : 1.28) * S,
+            fx.world.z + (fx.targetWorld.z - fx.world.z) * phaseProgress,
+          );
+          quat.identity();
+          scale.setScalar((isSkill ? 0.82 : 0.5) * S * visualWidth);
+          matrix.compose(pos, quat, scale);
+          orbMesh.setMatrixAt(orbs, matrix);
+          orbMesh.setColorAt(orbs, color);
+          orbs++;
+        }
+      }
 
-        pos.y = GROUND_Y + 1.55 * S;
-        quat.identity();
-        const core = (0.3 + 1.45 * life) * S;
-        scale.setScalar(core);
-        matrix.compose(pos, quat, scale);
-        orbMesh.setMatrixAt(orbs, matrix);
-        orbMesh.setColorAt(orbs, color);
-        orbs++;
-      } else if (orbs < BURST_CAP) {
+      // impact：命中點保留清楚的受擊核心與擴散圈；這也是普通攻擊的命中回饋。
+      if (phase === "impact" && orbs < BURST_CAP) {
         pos.set(impact.x, GROUND_Y + 1.35 * S, impact.z);
         quat.identity();
-        scale.setScalar((0.35 + (phase === "impact" ? 1.25 : life)) * S * (fx.skillVisual?.width ?? 1));
+        scale.setScalar((isSkill ? 1.35 : 0.82) * S * visualWidth * (1 - phaseProgress * 0.28));
         matrix.compose(pos, quat, scale);
         orbMesh.setMatrixAt(orbs, matrix);
         orbMesh.setColorAt(orbs, color);
         orbs++;
-        if (phase === "impact" && rings < BURST_CAP) {
-          const spread = (0.8 + (1 - life) * 1.8) * S * (fx.width ?? 1);
+        if (rings < BURST_CAP) {
+          const spread = (0.85 + phaseProgress * (isSkill ? 3.1 : 1.45)) * S * visualWidth;
           pos.set(impact.x, GROUND_Y + 0.12, impact.z);
           scale.set(spread, spread, 1);
           matrix.compose(pos, flat, scale);

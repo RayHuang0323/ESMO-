@@ -314,17 +314,25 @@ export function adaptEffects(snapshot, effectTime = snapshot?.ts) {
     const splitAt = typeof f.ability === "string" ? f.ability.indexOf(":") : -1;
     const role = splitAt >= 0 ? f.ability.slice(0, splitAt) : null;
     const archetype = archetypeForRole(role);
-    const skillVisual = skillVisualFor({ ability: splitAt >= 0 ? f.ability.slice(splitAt + 1) : "basic", family: archetype, color: Number.isFinite(f.color) ? f.color : null });
+    const variant = splitAt >= 0 ? f.ability.slice(splitAt + 1) : "basic";
+    const skillVisual = skillVisualFor({ ability: variant, family: archetype, color: Number.isFinite(f.color) ? f.color : null });
+    const progress = ratio01(age / life);
     out.push({
       id: String(f.id ?? `${f.at ?? now}:${f.type ?? "orb"}`),
       type: f.type ?? "orb",
       ability: f.ability ?? null,
-      variant: splitAt >= 0 ? f.ability.slice(splitAt + 1) : null,
+      variant,
+      feedback: f.feedback ?? (variant === "basic" ? "attack" : "skill"),
+      sourceId: f.sourceId ?? null,
+      targetId: f.targetId ?? null,
       archetype,
       width: archetypeData(archetype).effectWidth,
       color: skillVisual.color,
       skillVisual,
-      phase: (1 - age / life) > 0.72 ? "cast" : ((1 - age / life) > 0.22 ? "travel" : "impact"),
+      phase: progress < 0.24 ? "cast" : (progress < 0.72 ? "travel" : "impact"),
+      phaseProgress: progress < 0.24 ? progress / 0.24
+        : (progress < 0.72 ? (progress - 0.24) / 0.48 : (progress - 0.72) / 0.28),
+      progress,
       world: start,
       targetWorld: target,
       lifeRatio: ratio01(1 - age / life),

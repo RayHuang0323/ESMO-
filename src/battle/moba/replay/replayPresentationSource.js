@@ -70,6 +70,9 @@ function effectsFromFrame(f) {
     life: row?.[7] ?? 0.35,
     exp: row?.[7] ?? 0.35,
     ability: typeof row?.[8] === "string" && row[8] ? row[8] : null,
+    feedback: typeof row?.[9] === "string" && row[9] ? row[9] : null,
+    sourceId: typeof row?.[10] === "string" && row[10] ? row[10] : null,
+    targetId: typeof row?.[11] === "string" && row[11] ? row[11] : null,
   }));
 }
 

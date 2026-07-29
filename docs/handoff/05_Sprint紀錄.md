@@ -2160,3 +2160,18 @@ shadow decal、FPS、觸控與桌面外觀。未完成前不得宣稱真機通�
 - `check_moba_milestone_b1` 通過：10 roster、10 stable hero id、10 structural silhouettes。
   H.4 verifier 通過，production build 通過。首次 build 因主機僅約 1.3 GB 可用記憶體失敗；
   停止本輪既有 dev server 並以 3 GB Node heap 重跑後成功，並非程式編譯錯誤。
+
+### B.2 技能與攻擊回饋
+
+- 根因是 H.3 的事件雖已存在，但呈現生命期只有 `0.65 sim-s`；正式 GameView 加速播放後
+  cast／impact 各只剩極短瞬間，且 renderer 每個 phase 只畫單一圖形，因此人工幾乎看不到。
+- 沿用 `LogicEngine` 既有攻擊 tick 與同一次 RNG，只附加 `attack`／`skill` 呈現語意；
+  普攻事件保留 2.2 sim-s、技能保留 3.2 sim-s。沒有修改傷害、攻速、目標選擇或 CD。
+- 固定 InstancedMesh 池強化為 cast 預備圈＋核心、travel 軌跡＋移動彈體、
+  impact 受擊核心＋擴散圈；技能與普攻尺寸分級，遠距與手機仍有明確輪廓。
+- `MobaReplay.v1` 版本不變，`fx` 列尾端向後相容地附加
+  `feedback/sourceId/targetId`；舊 Replay 仍可讀，Replay 不重算命中或傷害。
+- `check_moba_milestone_b2` 驗證事件生命期、三段 phase、固定池容量，以及
+  live snapshot → compact frame → Replay presentation 的語意一致性。
+- H.3 verifier 第 19 條原本把 32/16 容量硬編碼；B.2 仍維持相同三個固定池，
+  但容量有意調為 48/32，故同步更新該形狀斷言，沒有刪除或放寬固定池要求。

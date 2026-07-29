@@ -612,13 +612,14 @@ export class LogicEngine {
       const dmgAmt = p.power * dt * R.dmgK * lateFactor;
       p.dmg += dmgAmt; foe.hitBy.set(p.id, this.t); // Sprint06：傷害/助攻追蹤（附加）
       if (p.atkCd <= 0) {
-        // H.3：沿用既有傷害 tick，只附加可辨識的職業技能事件；不改傷害/CD/rng 次數。
+        // Milestone B.2：沿用既有傷害 tick，只附加呈現語意；不改傷害/CD/rng 次數。
         const power = this.rng() < 0.2;
         this.pushFx({
           type: power ? "ult" : "line",
           pos: { ...p.pos }, target: { ...foe.pos }, color: SIDE[p.side],
           sourceId: p.id, targetId: foe.id,
           ability: `${p.role}:${power ? "power" : "basic"}`,
+          feedback: power ? "skill" : "attack",
         });
         p.atkCd = 0.5;
       }
@@ -828,9 +829,12 @@ export class LogicEngine {
   }
 
   pushFx(f) {
-    // DT_SIM=0.5；小於一個 tick 的舊 0.35s 事件會在 snapshot 前就被清掉。
-    // 至少保留 0.65s，讓 live 與 Replay 都能觀察到一次；只改呈現生命期。
-    const life = Math.max(f.exp ?? (f.type === "ult" ? 0.9 : 0.65), 0.65);
+    // Milestone B.2：正式 GameView 預設加速播放時，H.3 的 0.65 sim-s 只亮不到
+    // 一次人眼可辨識的瞬間。延長「事件呈現窗」而非攻擊 CD / 傷害，讓 live 與
+    // Replay 都能由同一事件完整顯示 cast → travel → impact。
+    const minLife = f.feedback === "skill" || f.type === "ult" ? 3.2
+      : (f.feedback === "attack" || f.type === "line" ? 2.2 : 0.9);
+    const life = Math.max(f.exp ?? minLife, minLife);
     this.fx.push({
       ...f, id: f.id ?? `fx${this._fxSeq++}`, at: f.at ?? this.t,
       exp: life, life: f.life ?? life,

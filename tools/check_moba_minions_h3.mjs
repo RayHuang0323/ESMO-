@@ -190,7 +190,7 @@ ck("18) 舊 Replay 無 fx 時顯示空特效，不重新生成技能",
 const effectsCode = src("src/battle/moba/render/MobaRuntimeEffects.jsx");
 const heroCode = src("src/battle/moba/render/MobaRuntimeHeroes.jsx");
 ck("19) 技能特效為固定三池 InstancedMesh，live / Replay 共用正式 runtime-v2",
-  /const LINE_CAP = 32/.test(effectsCode) && /const BURST_CAP = 16/.test(effectsCode) &&
+  /const LINE_CAP = 48/.test(effectsCode) && /const BURST_CAP = 32/.test(effectsCode) &&
   (effectsCode.match(/<instancedMesh/g) ?? []).length === 3 &&
   /<MobaRuntimeEffects frameRef=\{frameRef\}/.test(viewCode));
 ck("20) 英雄剪影只使用四種通用職業配件，沒有逐英雄模型或受保護素材",
