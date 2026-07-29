@@ -2188,3 +2188,19 @@ shadow decal、FPS、觸控與桌面外觀。未完成前不得宣稱真機通�
   不讓畫面虛構跨圖暴衝。沒有回寫引擎、改 A*、碰撞或速度參數。
 - `check_moba_milestone_b3` 以同一起點與同一目標比較五個 role 的上／中／下路及野區
   A* 到達時間，並掃描正式 v3 逐 tick 位移、Flash／回城例外與 renderer interpolation。
+
+### B.4 小兵戰鬥
+
+- 稽核確認正式 Runtime 原本已有三路雙方各四隻首波與 Replay `mn`，但 v3 小兵戰鬥仍把
+  `130 HP`、`70 DPS` 寫死在 engine，且四隻兵會共同挑陣列第一目標；這會造成血量瞬降、
+  普遍集火快死。血條則固定在 world XY 平面且 fill 未進 transparent queue，是遠景看似
+  全空／斜躺的直接原因。
+- 僅 v3 將小兵參數明文化為 `240 HP`、`30 damage`、`1.0s attack interval`、
+  lane progress 射程 `0.035`；單兵需 8 次命中才死亡。首輪以距離＋slot 對位，
+  傷害仍在同一張表同時結算，藍紅完全對稱且不普遍一擊死亡。
+- 影響說明：小兵對打存活時間有意拉長，但波次、數量、世界移速、塔傷、擊殺金錢、
+  XP、英雄數值與地圖不變；v1/v2 歷史 baseline 維持 130 HP／70 DPS 舊路徑。
+- 血條背景／填充值都明確使用 transparent、`depthTest=false/depthWrite=false` 與固定
+  renderOrder；每幀複製 camera quaternion，填值左對齊沿 camera-local right 計算。
+- `check_moba_milestone_b4` 驗證 24 隻首波、首輪全員存活、8 hits-to-kill、1 APS、
+  partial HP、死亡移除、Replay 還原與 camera-facing 血條。

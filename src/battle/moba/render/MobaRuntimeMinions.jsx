@@ -35,7 +35,10 @@ export default function MobaRuntimeMinions({ frameRef }) {
     blueCaster: new THREE.MeshStandardMaterial({ color: TEAM.blue, emissive: TEAM_DARK.blue, emissiveIntensity: 0.45, roughness: 0.45, flatShading: true }),
     redCaster: new THREE.MeshStandardMaterial({ color: TEAM.red, emissive: TEAM_DARK.red, emissiveIntensity: 0.45, roughness: 0.45, flatShading: true }),
     barBg: new THREE.MeshBasicMaterial({ color: 0x080d12, transparent: true, opacity: 0.78, depthTest: false, depthWrite: false }),
-    barFill: new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true, depthTest: false, depthWrite: false }),
+    barFill: new THREE.MeshBasicMaterial({
+      color: 0xffffff, vertexColors: true, transparent: true, opacity: 0.98,
+      depthTest: false, depthWrite: false,
+    }),
   }), []);
   const scratch = useMemo(() => ({
     matrix: new THREE.Matrix4(),
@@ -43,6 +46,7 @@ export default function MobaRuntimeMinions({ frameRef }) {
     pos: new THREE.Vector3(),
     scale: new THREE.Vector3(),
     axis: new THREE.Vector3(0, 1, 0),
+    right: new THREE.Vector3(1, 0, 0),
     buckets: { blueMelee: [], redMelee: [], blueCaster: [], redCaster: [] },
   }), []);
 
@@ -55,9 +59,9 @@ export default function MobaRuntimeMinions({ frameRef }) {
     };
   }, [geo, mats]);
 
-  useFrame(() => {
+  useFrame(({ camera }) => {
     const minions = frameRef?.current?.minions ?? [];
-    const { matrix, quat, pos, scale, axis, buckets } = scratch;
+    const { matrix, quat, pos, scale, axis, right, buckets } = scratch;
     for (const list of Object.values(buckets)) list.length = 0;
     for (const m of minions) {
       const key = `${m.team}${m.kind === "caster" ? "Caster" : "Melee"}`;
@@ -87,15 +91,17 @@ export default function MobaRuntimeMinions({ frameRef }) {
       fill.count = visibleCount;
       for (let i = 0; i < visibleCount; i++) {
         const m = minions[i];
-        const hp = Math.max(0.01, m.hpRatio ?? 0);
-        const y = GROUND_Y + 2.05 * S;
+        const hp = Math.max(0, Math.min(1, m.hpRatio ?? 0));
+        const y = GROUND_Y + 2.28 * S;
         pos.set(m.world.x, y, m.world.z);
-        quat.identity();
-        scale.set(1.65 * S, 0.18 * S, 1);
+        // Milestone B.4：血條每幀複製 camera quaternion，桌面／手機視角都正對鏡頭。
+        // fill 的左對齊偏移也沿 camera-local right，不能再直接改 world x。
+        quat.copy(camera.quaternion);
+        right.set(1, 0, 0).applyQuaternion(quat);
+        scale.set(2.1 * S, 0.28 * S, 1);
         matrix.compose(pos, quat, scale);
         bg.setMatrixAt(i, matrix);
-        pos.x -= (1 - hp) * 0.82 * S;
-        pos.z += 0.015;
+        pos.addScaledVector(right, -(1 - hp) * 1.05 * S);
         scale.x *= hp;
         matrix.compose(pos, quat, scale);
         fill.setMatrixAt(i, matrix);

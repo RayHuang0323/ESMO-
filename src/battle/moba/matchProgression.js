@@ -180,6 +180,12 @@ SIM_RULES.v3 = {
   // H.3：v2 的首波 60s 在 220×220 新地圖上會讓中路約 1:55、邊路約 2:15
   // 才接線。波次週期與數量不變，只把第一波提前到 25s，讓英雄先到線、兵線再接觸。
   waveFirst: 25,
+  // Milestone B.4：正式 v3 小兵以明確的「每次攻擊」取代 70 DPS/tick 寫死值。
+  // 240 / 30 = 單挑 8 次命中才死亡；雙方共用同一組值，金錢／XP／波次不變。
+  minionMaxHp: 240,
+  minionAttackDamage: 30,
+  minionAttackInterval: 1.0,
+  minionAttackRangeProgress: 0.035,
   minionCollision: true,
   //  H.2：真實碰撞／尋路只在 v3 啟用。v1/v2 是 runtime29 用來重現「修改前病灶」的
   //  歷史基準（§12 首塔 <2.5 分、§23 舊節奏、§29 陣列順序），碰撞會改寫它們的行為

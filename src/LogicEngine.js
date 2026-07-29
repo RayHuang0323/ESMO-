@@ -862,14 +862,16 @@ export class LogicEngine {
     if (this.waveTimer <= 0) {
       this.waveTimer = R.wavePeriod;
       const wave = this.waveNo++;
+      const minionMaxHp = R.minionMaxHp ?? 130;
+      const combatMeta = R.minionAttackInterval ? { atkCd: 0 } : {};
       for (const ln of ["top", "mid", "bot"]) {
         for (let i = 0; i < 4; i++) {
           const meta = { wave, slot: i, kind: i === 3 ? "caster" : "melee" };
           if (this.lanes[ln].bm.length < 16) {
-            this.lanes[ln].bm.push({ id: "b" + this._mid++, t: 0.06, hp: 130, ...meta });
+            this.lanes[ln].bm.push({ id: "b" + this._mid++, t: 0.06, hp: minionMaxHp, ...combatMeta, ...meta });
           }
           if (this.lanes[ln].rm.length < 16) {
-            this.lanes[ln].rm.push({ id: "r" + this._mid++, t: 0.94, hp: 130, ...meta });
+            this.lanes[ln].rm.push({ id: "r" + this._mid++, t: 0.94, hp: minionMaxHp, ...combatMeta, ...meta });
           }
         }
       }
@@ -884,7 +886,7 @@ export class LogicEngine {
         // H.3：既有小兵原本「每 tick 無條件前進」，即使正在兵對兵交戰或存活塔仍在，
         // t 也照樣穿過去。以下只修 v3：用 tick 開始時的位置同時計算雙方 next，
         // 接敵就停在接觸距離、遇存活塔/主堡就停在攻擊帶外緣；不改傷害、金錢或波次數量。
-        const contact = 0.035;
+        const contact = R.minionAttackRangeProgress ?? 0.035;
         // Keep the center inside the existing 0.05 tower targeting band. A
         // larger offset let minions damage a tower from just outside retaliation.
         const stopAtStructure = 0.046;
@@ -937,9 +939,32 @@ export class LogicEngine {
         const bkOf = (side) => R.engagementFsm && this.fsm3 && this.t < (this.fsm3[side].baronBuffUntil ?? 0) ? R.baronMinionFightK : 1;
         const bkB = bkOf("blue"), bkR = bkOf("red");
         const dmg = new Map();
+        if (R.minionAttackInterval) {
+          for (const m of [...this.lanes[ln].bm, ...this.lanes[ln].rm]) {
+            m.atkCd = Math.max(0, (m.atkCd ?? 0) - dt);
+          }
+        }
         const strike = (atk, def, k) => atk.forEach((a) => {
-          const foe = def.find((b) => Math.abs(b.t - a.t) < 0.035);
-          if (foe) dmg.set(foe, (dmg.get(foe) ?? 0) + 70 * k * dt);
+          let foe = null;
+          if (R.minionAttackInterval) {
+            // B.4：先找射程內 lane 位置最近者，再以 slot 差打破平手；避免四隻兵
+            // 每波都無條件集火陣列第一隻。規則對雙方相同，仍在同一張 dmg 表同時結算。
+            let best = Infinity;
+            for (const b of def) {
+              const gap = Math.abs(b.t - a.t);
+              if (gap >= R.minionAttackRangeProgress) continue;
+              const score = gap * 1000 + Math.abs((b.slot ?? 0) - (a.slot ?? 0));
+              if (score < best) { best = score; foe = b; }
+            }
+            if (foe && a.atkCd <= 0) {
+              dmg.set(foe, (dmg.get(foe) ?? 0) + R.minionAttackDamage * k);
+              a.atkCd = R.minionAttackInterval;
+            }
+          } else {
+            // v2 歷史基準：維持舊 70 DPS 與陣列第一目標，避免改寫 runtime29 baseline。
+            foe = def.find((b) => Math.abs(b.t - a.t) < 0.035);
+            if (foe) dmg.set(foe, (dmg.get(foe) ?? 0) + 70 * k * dt);
+          }
         });
         strike(this.lanes[ln].bm, this.lanes[ln].rm, bkB);
         strike(this.lanes[ln].rm, this.lanes[ln].bm, bkR);
@@ -1493,8 +1518,9 @@ export class LogicEngine {
     // S29B2：小兵 hp（0–1）進 snapshot——受擊/瀕死可視化的真實資料來源
     //   （引擎一直都有 m.hp，只是沒輸出；純觀測欄位，不影響任何模擬行為）。
     //   小兵死亡事件 = 消費端以「id 從陣列消失」推導（小兵只會因 hp≤0 離場）。
+    const maxHp = this.rules.minionMaxHp ?? 130;
     const mm = (m) => ({
-      id: m.id, t: m.t, hp: clamp(m.hp / 130, 0, 1),
+      id: m.id, t: m.t, hp: clamp(m.hp / maxHp, 0, 1),
       // H.3：純附加呈現欄位。舊 consumer 只讀 id/t/hp，不受影響。
       wave: m.wave ?? 0, slot: m.slot ?? 0, kind: m.kind ?? "melee",
     });
