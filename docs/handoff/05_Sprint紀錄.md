@@ -2204,3 +2204,25 @@ shadow decal、FPS、觸控與桌面外觀。未完成前不得宣稱真機通�
   renderOrder；每幀複製 camera quaternion，填值左對齊沿 camera-local right 計算。
 - `check_moba_milestone_b4` 驗證 24 隻首波、首輪全員存活、8 hits-to-kill、1 APS、
   partial HP、死亡移除、Replay 還原與 camera-facing 血條。
+- 最終 pacing verifier 第 5 條原本只接受低血英雄立即步行回泉水；目前正式 S29B3
+  會優先進入可被打斷的 `recallT>0` 回城 channel，因此舊斷言誤報原地卡住。
+  已改為只接受「確實向泉水移動」或「`state=回城中` 且 `recallT>0`」兩種可靠狀態，
+  沒有把任意靜止放寬成通過。
+
+### Milestone B 最終驗證與交付
+
+狀態：**四段本機 commit 完成，待人工與 Android 真機驗收；未 push、未部署。**
+
+- commits：B.1 `592a355`、B.2 `fe747f2`、B.3 `adde1aa`、B.4 `7b5c2f8`；
+  整段回退基線 `dfdc826`。
+- B.1–B.4、H.4、H.3 22/22、pacing 25/25、presentation 12/12、
+  controls 18/18、camera/replay 16/16、mobamap 3553/0、navigation/collision 14/0、
+  regress、regress2 8/8、production build 與 `git diff --check` 通過。
+- 正式 `GameView → runtime-v2` 已做 1440×900 與 390×844 viewport；兩者均無水平溢出。
+  手機診斷曾觀測 10 heroes、64 minions、2 active FX／61 FX seen、WebGL2、
+  `DEPTH_BITS=24`、camera 35/1000、`depth=true`。
+- 圖片與完整修改／參數／限制記錄在
+  `review/moba-runtime/milestone-b/MILESTONE_B_REPORT.md`。
+- H.2 flicker CDP probe 連續停在專用 Chrome `Page.enable` 逾時，未改 verifier 掩蓋；
+  Android 真機 FPS、觸控、過熱、閃爍、十名英雄逐一近景、動態技能與完整 Replay
+  仍列人工驗收，不以桌面 Chrome 手機 viewport 宣稱通過。

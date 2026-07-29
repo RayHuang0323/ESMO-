@@ -156,8 +156,12 @@ ck(`3) 首殺時間分布合理（p10=${pct(fks, 10).toFixed(0)}s、p50=${pct(fk
   p.pos = { x: WORLD_BOUNDS.centerX, y: WORLD_BOUNDS.centerY }; p.hp = p.maxHp * 0.10;
   const d0 = dist(p.pos, FOUNTAIN.blue);
   e.tick(DT); e.tick(DT);
-  ck(`5) 低血量會撤退（10% HP ⇒ retreating=true 且向泉水移動：${d0.toFixed(1)} → ${dist(p.pos, FOUNTAIN.blue).toFixed(1)}）`,
-    p.retreating && dist(p.pos, FOUNTAIN.blue) < d0);
+  const d1 = dist(p.pos, FOUNTAIN.blue);
+  // S29B3 起低血英雄可先原地回城，不一定立刻步行；兩者都必須有可靠引擎狀態，
+  // 不能把任意靜止也算成撤退成功。
+  const safeExit = d1 < d0 || (p.state === "回城中" && p.recallT > 0);
+  ck(`5) 低血量會撤退（10% HP ⇒ retreating=true；向泉水 ${d0.toFixed(1)} → ${d1.toFixed(1)}，或進入真實 recall channel=${p.recallT > 0}）`,
+    p.retreating && safeExit);
 }
 
 // ── 6) 追擊有時間/距離上限 ───────────────────────────────────────────────────
