@@ -213,6 +213,16 @@ SIM_RULES.v3 = {
   jgSupJoinBonus: 0.18,    // 打野/輔助參團加成（取代原「無條件參團」）
   hotContactDist: 6,       // 熱點成立要件：實際交戰距離（原 14 太寬）
   hotMinPerSide: 2,        // 熱點成立要件：每側至少 N 人（原 1 敵 + 3 人即成）
+  // Milestone D-fix2：局部交戰決策只讀凍結位置／血量／兵線／塔區／角色與 CD，
+  // 不抽 rng、不改傷害。黏性窗避免同一英雄在「接戰／拉扯」間逐 tick 抖動。
+  explainableCombatDecisions: true,
+  decisionAwareness: 14,
+  decisionContact: 9,
+  decisionEvalPeriod: 2.5,
+  decisionEngageScore: 0.34,
+  decisionRetreatScore: -0.52,
+  decisionTowerRisk: 1.10,
+  decisionEarlyT: 180,
   defenseKillDeficit: 6,   // 劣勢防守：落後 ≥N 殺 ⇒ 參團 −0.2、撤退 +0.05
   defenseTowerDeficit: 3,
   defaultGankInterval: 55, // 無戰術時打野的預設 Gank 週期（失敗即進下一輪冷卻）

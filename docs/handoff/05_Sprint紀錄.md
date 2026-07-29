@@ -2469,3 +2469,60 @@ shadow decal、FPS、觸控與桌面外觀。未完成前不得宣稱真機通�
   `?diag=1&debug=1`，但仍須走正式 Draft／Tactic／GameView，不以
   `?debug=moba-runtime-battle` debug harness 作驗收。
 - 未納入工作區既有 terrain、bug、影片、backup、blend／glb、map review 或 logs。
+
+---
+
+## Milestone D-fix2：Combat Visibility & Explainable Decisions（2026-07-30）
+
+狀態：**兩階段本機實作、正式 GameView 桌面證據、完整戰鬥觀察、直接安全網、
+regress／公平性與 build 完成；未 push、未部署，未開始下一 Milestone。**
+
+### 階段 1：正式 runtime-v2 視覺
+
+- 正式資料鏈確認為 `LogicEngine.pushFx → snapshot.fx → adapter →
+  MobaRuntimeEffects → live/Replay`；source／target／phase 沒有遺失。真正根因是
+  Milestone D 把 Replay 保留時間 `exp` 與實際播放 `life` 同設 3.4／4.2 秒，
+  0.5 秒攻擊週期堆出大量 additive 白圈，且固定 pool 舊事件先佔位，最新 travel
+  反而會被截掉。
+- 保留 Replay 取樣窗，但把 tower／skill／attack 畫面 life 分離為
+  1.45／1.6／1.1 秒；pool 改 tower／skill／travel／新事件優先。塔彈加入亮色核心、
+  外層色球與短尾跡，ring 降權；沒有改傷害、CD 或 Replay contract。
+- 名稱縮為 7px 並移到完整血條上方，Buff icon 在血條下方；紅藍持有者加入低干擾
+  環繞效果。紅藍 Buff 野怪改用不被白 emissive 洗色的模型色，並加入
+  `BLUE BUFF · 藍` 菱形／`RED BUFF · 紅` 三角地面符號。
+- 階段 1 commit：`3beb2c0`（`Milestone D-fix2 phase 1: repair combat visibility`）。
+
+### 階段 2：戰鬥路線與決策
+
+- v3 在任何英雄移動前，以全員凍結位置建立 `decisionPlan`；使用 HP、14 單位敵我
+  人數、9 單位接觸、塔區／兵線、role 理想距離、`atkCd`、目標價值、隊伍劣勢及
+  低血量隊友，輸出 `ENGAGE／KITE／PURSUE／RETREAT／SUPPORT／FALLBACK／LANE`。
+- 每 2.5 秒重評；接戰維持 melee 2.2–2.6、後排 5.0–5.8 的職業距離，拉扯／支援
+  只作短促微調後交還既有 FSM。避塔只處理無兵線單人闖有人守的塔、人數劣勢或
+  塔區低血量，停在敵塔射程外，不再退回自家塔造成長距離來回。
+- 鏡像同職業「同時接戰、同時撤退、同時回滿」的僵局以 seed＋席位固定 hash 的
+  commitment 平手裁決；藍紅同席位等幅反號、0.15–0.19、不抽 rng、不改傷害，
+  snapshot 只在 v3 附加 `decision { action,targetId,score,reasons }`。
+- 60 seeds：60/60 收尾、藍 51.7%／紅 48.3%、反序藍 53.3%，順序偏差 1.7pp；
+  40-seed pacing 正／反序皆藍 22/40、位移 0pp。沒有加入陣營係數或硬改勝負分布。
+- 階段 2 commit：本節與 `MILESTONE_D_FIX2_REPORT.md` 所在 commit。
+
+### 驗證、證據與回退
+
+- 新增 `check_moba_milestone_d_fix2`：FX 資料鏈、Buff Replay、頭頂 UI／紅藍模型
+  靜態安全網、六種決策微場景、陣列順序、鏡像 commitment 與完整比賽全部 PASS。
+  seed 6310 於 20:53.5 收尾，實際出現九種 action／狀態。
+- navigation 14/0、H.3 22/22、presentation 12/12、camera/replay 16/16、
+  pacing 25/25、C-fix／D verifier PASS；regress 15/15、regress2 20/20 且 8/8；
+  production build 2595 modules 通過，只有既有 chunk warning。
+- 正式 GameView 桌面流程與完整 Result 證據位於
+  `review/moba-runtime/milestone-d-fix2/evidence/`；報告為
+  `review/moba-runtime/milestone-d-fix2/MILESTONE_D_FIX2_REPORT.md`。
+- rollback tag `milestone-d-fix2-baseline` →
+  `f688776b4a3b92246a5167afef5a4218a0432e4b`；依序 revert 階段 2、階段 1，
+  不可 `git reset --hard`。
+- 正式入口 `http://127.0.0.1:5187/ESMO-/`；需要事件文字可加
+  `?diag=1&debug=1`，但仍須走正式 Draft／Tactic／GameView。
+- 仍需人工 1× 長時間觀看六職業、塔彈、多人遮擋、決策切換與 Replay；Android
+  真機 FPS、熱降頻、觸控、safe area、WebGL driver／H.2 閃爍未實測。
+- 未納入既有 terrain、bug 影片、backup、logs、舊截圖、blend／glb 或 map review。

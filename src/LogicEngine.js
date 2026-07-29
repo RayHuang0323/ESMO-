@@ -78,6 +78,17 @@ export class LogicEngine {
         const power = lo ? basePower * lo.powerMult : basePower;
         const lv = lo?.level ?? 1;
         const f = FOUNTAIN[side];
+        const playerId = side[0] + (i + 1);
+        // 同職業鏡像局若所有輸入完全相同，雙方會同時接戰／同時撤退而永遠無法收尾。
+        // 用 seed + playerId 的固定 hash 作「平手裁決」；不抽 rng、不依迭代順序、
+        // 不改任何數值，跨 seeds 對藍紅自然對稱。
+        let decisionHash = 2166136261;
+        for (const ch of `${this.seed}:${i + 1}`) {
+          decisionHash = Math.imul(decisionHash ^ ch.charCodeAt(0), 16777619) >>> 0;
+        }
+        const decisionMagnitude = 0.15 + ((decisionHash >>> 1) % 41) / 1000;
+        const preferBlue = (decisionHash & 1) === 0;
+        const decisionTemper = (preferBlue === (side === "blue") ? 1 : -1) * decisionMagnitude;
         //  ⚠ 生成點必須落在可走區。泉水池只有 ±3 的散佈範圍，但泉水外圈牆
         //  （fountain_rim）就貼在旁邊 ⇒ 直接用亂數散佈時實測 10 人裡會有 2 人
         //  一出生就站在牆裡（淨距 1.00 < 英雄半徑 2.4，H.2-close 真實 Chrome 驗收抓到）。
@@ -89,7 +100,7 @@ export class LogicEngine {
           ? projectToWalkable(spawnRaw.x, spawnRaw.y, HERO_RADIUS, null)
           : spawnRaw;
         this.players.push({
-          id: side[0] + (i + 1), side, role, lane: ROLE_LANE[role],
+          id: playerId, side, role, lane: ROLE_LANE[role],
           pos: { x: spawn.x, y: spawn.y },
           maxHp: 600 * tough, hp: 600 * tough, power, tough,
           dead: false, respawn: 0, state: "對線", atkCd: 0, gold: 0,
@@ -111,6 +122,10 @@ export class LogicEngine {
           chaseId: null, chaseUntil: 0, chaseFrom: null,  // 追擊：對象 / 期限 / 錨點
           deathsT: [],                  // 近期死亡時刻（連死保守化觀測窗）
           contactSince: null,           // 連續接觸起點（killContext.duration 用）
+          // Milestone D-fix2：v3 可解釋局部決策。只影響移動意圖；不抽 rng、
+          // 不改傷害，snapshot 的 decision 供 verifier／完整戰鬥觀察使用。
+          decisionAt: -1, decisionAction: "LANE", decisionTargetId: null,
+          decisionScore: 0, decisionReasons: [], decisionTemper,
           sp: {                         // 召喚師技能（F/D 兩格）
             f: { id: "flash", readyAt: 0, lastUsedAt: null, lastReason: null, uses: 0 },
             d: role === "jungle"
@@ -404,6 +419,129 @@ export class LogicEngine {
     }
     if (best) { p.chaseId = best.id; p.chaseUntil = this.t + R.chaseMaxT; p.chaseFrom = { ...p.pos }; }
     return best;
+  }
+  /**
+   * Milestone D-fix2：v3 局部戰鬥決策。
+   *
+   * 呼叫端會先替所有存活英雄建立 decisionPlan，再開始移動，因此雙方讀到的是同一份
+   * 凍結位置。此函式不抽 rng、不寫傷害，只把可解釋的移動意圖記在英雄自己身上。
+   */
+  _combatDecisionV3(p, alive) {
+    const R = this.rules;
+    const awareness = R.decisionAwareness;
+    const hpRatio = clamp(p.hp / p.maxHp, 0, 1);
+    const foes = alive
+      // 只對已進入實際攻擊／貼身圈的敵人改寫路線；14 單位 awareness 仍用於
+      // 人數與支援風險，但不再把遠方敵人當磁鐵，避免過早聚團。
+      .filter((q) => q.side !== p.side && !q.dead && dist(q.pos, p.pos) <= R.decisionContact)
+      .map((q) => ({ q, d: dist(q.pos, p.pos) }))
+      .sort((a, b) => {
+        const av = (1 - a.q.hp / a.q.maxHp) * 5 + (a.q.role === "adc" || a.q.role === "mid" ? 0.25 : 0) - a.d * 0.05;
+        const bv = (1 - b.q.hp / b.q.maxHp) * 5 + (b.q.role === "adc" || b.q.role === "mid" ? 0.25 : 0) - b.d * 0.05;
+        return bv - av || a.q.id.localeCompare(b.q.id);
+      });
+    const allies = alive.filter((q) => q.side === p.side && !q.dead && dist(q.pos, p.pos) <= awareness);
+    const target = foes[0]?.q ?? null;
+    const targetDist = foes[0]?.d ?? Infinity;
+    const targetHp = target ? clamp(target.hp / target.maxHp, 0, 1) : 1;
+    const alliesN = allies.length;
+    const foesN = foes.length;
+
+    let enemyTower = null, towerDist = Infinity;
+    for (const tw of Object.values(this.towers)) {
+      if (tw.side === p.side || tw.hp <= 0) continue;
+      const dd = dist(p.pos, tw.pos);
+      if (dd < towerDist) { towerDist = dd; enemyTower = tw; }
+    }
+    let hasWave = false;
+    if (enemyTower?.lane && enemyTower.lane !== "nexus") {
+      const minions = this.lanes[enemyTower.lane]?.[p.side === "blue" ? "bm" : "rm"] ?? [];
+      hasWave = minions.some((m) => Math.abs(m.t - enemyTower.t) < 0.07);
+    }
+    const inTowerRisk = !!enemyTower && towerDist <= (R.towerAggroRange ?? 8) + 2;
+    const towerDefenders = enemyTower
+      ? alive.filter((q) => q.side !== p.side && dist(q.pos, enemyTower.pos) < 11).length
+      : 0;
+
+    const lowAlly = p.role === "sup"
+      ? allies
+        .filter((q) => q !== p && q.hp / q.maxHp < 0.55 &&
+          foes.some(({ q: foe }) => dist(foe.pos, q.pos) < awareness))
+        .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp || a.id.localeCompare(b.id))[0] ?? null
+      : null;
+    const skillReady = p.atkCd <= 0.08;
+    const roleBias = p.role === "top" || p.role === "jungle" ? 0.13 :
+      p.role === "mid" ? 0.04 : p.role === "adc" ? -0.08 : -0.12;
+    // 高血量本身不是開戰理由：主要看「相對血量」與人數，才不會健康的 1v1
+    // 一見面就固定互毆到死。滿血鏡像局通常拉扯；有血量／人數優勢才接戰。
+    let score = (target ? (hpRatio - targetHp) * 0.9 : 0) +
+      (hpRatio - 0.5) * 0.5 +
+      (alliesN - foesN) * 0.42 +
+      (target ? (1 - targetHp) * 0.65 : 0) +
+      roleBias + (skillReady ? 0.12 : -0.10) + (p.decisionTemper ?? 0);
+    if (target) score -= Math.max(0, targetDist - 8) * 0.025;
+    if (this.t < R.decisionEarlyT && target) score -= 0.14;
+    if (this._teamBehindV3(p.side)) score -= 0.10;
+    if (inTowerRisk && (!hasWave || towerDefenders >= alliesN)) score -= R.decisionTowerRisk;
+
+    const emergencyRetreat = hpRatio < 0.28 || (hpRatio < 0.44 && foesN > alliesN);
+    // 無守軍時沿用既有 0.30× 單人拆塔效率，讓比賽仍能收尾；真正危險的
+    // 「無兵線闖入有人守的塔」或殘血進塔才撤，不把所有推線都改成來回走。
+    const towerFallback = inTowerRisk &&
+      ((!hasWave && towerDefenders > 0 && alliesN === 1) ||
+       (!hasWave && towerDefenders > alliesN) || hpRatio < 0.45);
+    const cachedTargetAlive = !p.decisionTargetId ||
+      alive.some((q) => q.id === p.decisionTargetId && !q.dead);
+    const immediateContact = target && (!p.decisionTargetId || p.decisionAction === "LANE");
+    if (!emergencyRetreat && !towerFallback && !immediateContact &&
+        this.t < p.decisionAt && cachedTargetAlive) {
+      return {
+        action: p.decisionAction, targetId: p.decisionTargetId,
+        score: p.decisionScore, reasons: [...p.decisionReasons], fresh: false,
+      };
+    }
+
+    let action = "LANE", decisionTarget = target;
+    if (emergencyRetreat) {
+      action = "RETREAT";
+    } else if (towerFallback) {
+      action = "FALLBACK";
+      decisionTarget = enemyTower;
+    } else if (target && foesN > alliesN && score <= R.decisionRetreatScore) {
+      action = "RETREAT";
+    } else if (lowAlly) {
+      action = "SUPPORT";
+      decisionTarget = lowAlly;
+    } else if (target && targetHp <= 0.40 && score >= 0.30 && targetDist <= R.decisionContact) {
+      action = "PURSUE";
+    } else if (target && score >= R.decisionEngageScore) {
+      action = "ENGAGE";
+    } else if (target) {
+      action = "KITE";
+    }
+
+    const reasons = [
+      `hp:${Math.round(hpRatio * 100)}`,
+      `numbers:${alliesN}:${foesN}`,
+      `role:${p.role}`,
+      skillReady ? "skill:ready" : "skill:cooling",
+      `commit:${(p.decisionTemper ?? 0) >= 0 ? "+" : ""}${(p.decisionTemper ?? 0).toFixed(2)}`,
+    ];
+    if (target && targetHp <= 0.4) reasons.push("target:low");
+    if (this.t < R.decisionEarlyT && target) reasons.push("phase:lane");
+    if (towerFallback) reasons.push(hasWave ? "tower:defended" : "tower:no-wave");
+    if (lowAlly) reasons.push(`ally:low:${lowAlly.id}`);
+    if (this._teamBehindV3(p.side)) reasons.push("team:behind");
+
+    p.decisionAt = this.t + R.decisionEvalPeriod;
+    p.decisionAction = action;
+    p.decisionTargetId = decisionTarget?.id ?? null;
+    p.decisionScore = Math.round(score * 100) / 100;
+    p.decisionReasons = reasons;
+    return {
+      action, targetId: p.decisionTargetId,
+      score: p.decisionScore, reasons: [...reasons], fresh: true,
+    };
   }
   /** 打野的下一個農怪目標：自家野區最近的存活營地。 */
   _nextCampV3(p) {
@@ -1463,14 +1601,28 @@ export class LogicEngine {
 
     const pendingHits = [];       // S29：本 tick 的英雄傷害（同時結算，見下方 flush）
     const effLanes = new Map();   // S29：loop1 決定的 effLane → loop2 的推塔判定沿用
+    // Milestone D-fix2：在任何英雄移動前，用同一份凍結位置建立全員局部決策。
+    // 這維持 S29 的順序公平性；plan 本身不抽 rng，也不改傷害／技能 CD。
+    const decisionPlans = new Map();
+    if (R.explainableCombatDecisions) {
+      for (const p of alive) decisionPlans.set(p.id, this._combatDecisionV3(p, alive));
+    }
     for (const p of this.players) {
       if (p.dead) {
+        if (R.explainableCombatDecisions) {
+          p.decisionAction = "RESPAWN"; p.decisionTargetId = null;
+          p.decisionScore = 0; p.decisionReasons = ["state:dead"];
+        }
         p.respawn -= dt;
         if (p.respawn <= 0) {
           p.dead = false; p.hp = p.maxHp; p.retreating = false; p.hitBy.clear();
           const f = FOUNTAIN[p.side]; this._navTeleport(p, f); p.state = "回防";   // H.2：重生點投影到可走區
           // S29B1（v3）：復活鎖——RETURN 期間不得參團/追擊，必須先走回戰線
-          if (R.engagementFsm) { p.fsm = "RETURN"; p.reengageAt = this.t + R.respawnLock; p.chaseId = null; p.joinGo = false; p.objGo = false; p.contactSince = null; p.recallT = 0; }
+          if (R.engagementFsm) {
+            p.fsm = "RETURN"; p.reengageAt = this.t + R.respawnLock; p.chaseId = null;
+            p.joinGo = false; p.objGo = false; p.contactSince = null; p.recallT = 0;
+            p.decisionAt = -1; p.decisionAction = "RETURN"; p.decisionTargetId = null;
+          }
         } else if (R.engagementFsm) p.fsm = "RESPAWN";
         continue;
       }
@@ -1490,6 +1642,11 @@ export class LogicEngine {
       if (R.engagementFsm) {
         // S29B1：情境化撤退——被包（敵多於友 +1）提早撤、近期連死提早撤、劣勢隊更保守。
         //   全部是「門檻平移」（同 S28 手法），不引入新 rng 抽樣、不碰傷害。
+        if (R.explainableCombatDecisions) {
+          // 鏡像同職業以固定 commitment 作撤退平手裁決：高 commitment 多承擔一點
+          // 風險、低 commitment 早一步拉開。幅度上限約 5.7pp，且不依陣營或迭代順序。
+          retreatAt = clamp(retreatAt - (p.decisionTemper ?? 0) * 0.22, 0.10, 0.45);
+        }
         const foesN = alive.filter((q) => q.side !== p.side && dist(q.pos, p.pos) < 10).length;
         const alliesN = alive.filter((q) => q.side === p.side && q !== p && dist(q.pos, p.pos) < 10).length;
         retreatAt = Math.min(0.50, retreatAt + R.baseRetreatBonus);   // 基礎餘裕：撤退要撤得活
@@ -1503,6 +1660,10 @@ export class LogicEngine {
         if (this.playerStatsOn && !p.retreating) this.pexec[p.id].retreats++;   // 真實計數
         p.retreating = true;
       } else if (p.hp >= p.maxHp * returnAtEff) p.retreating = false;
+      const localDecision = decisionPlans.get(p.id) ?? null;
+      // 低血量／人數劣勢的局部評估可比固定 25% 門檻更早觸發撤退；
+      // 一旦進入既有 retreating 流程，回城、受擊中斷與回血遲滯仍沿用原機制。
+      if (localDecision?.action === "RETREAT") p.retreating = true;
       let tgt, st, effLane = p.lane, stOv = null;
       // S24：帶線分推 —— 指定分推路的選手在會戰熱點出現時仍留線推進（黏性決策，6 秒重評一次）
       let skipFight = false;
@@ -1545,6 +1706,9 @@ export class LogicEngine {
       if (R.engagementFsm && !p.retreating && !tacTgt && !skipFight && this.t >= p.reengageAt) {
         chaseFoe = this._chaseAliveV3(p);
       } else if (R.engagementFsm && p.chaseId) p.chaseId = null;
+      const localTarget = localDecision?.targetId
+        ? alive.find((q) => q.id === localDecision.targetId && !q.dead) ?? null
+        : null;
       if (p.retreating) {
         tgt = FOUNTAIN[p.side];
         st = R.engagementFsm && dist(p.pos, FOUNTAIN[p.side]) < 10 ? "回城" : "撤退";
@@ -1590,6 +1754,23 @@ export class LogicEngine {
         const ownTw = this.frontTower(p.side === "blue" ? "red" : "blue", p.lane);
         tgt = ownTw ? ownTw.pos : BASE[p.side]; st = "脫戰";
       }
+      // Milestone D-fix2：沒有兵線或人數不夠時不單人硬闖敵塔。這只改移動目標；
+      // 塔傷、塔仇恨、碰撞與正式 tower single source 均不變。
+      else if (localDecision?.action === "FALLBACK") {
+        let threatTower = null, threatDist = Infinity;
+        for (const tw of Object.values(this.towers)) {
+          if (tw.side === p.side || tw.hp <= 0) continue;
+          const dd = dist(p.pos, tw.pos);
+          if (dd < threatDist) { threatDist = dd; threatTower = tw; }
+        }
+        if (threatTower) {
+          const safeDist = (R.towerAggroRange ?? 8) + 2.5;
+          const ux = (p.pos.x - threatTower.pos.x) / (threatDist || 1);
+          const uy = (p.pos.y - threatTower.pos.y) / (threatDist || 1);
+          tgt = { x: threatTower.pos.x + ux * safeDist, y: threatTower.pos.y + uy * safeDist };
+        } else tgt = BASE[p.side];
+        st = "避塔"; p.fsm = "SETUP";
+      }
       // S29B1（v3）：團隊目標窗（龍/巴龍）——窗開著才集結；打野/輔助必去、其他人吃 knob
       else if (R.engagementFsm && this.neutrals && !skipFight && this.fsm3[p.side].objGo &&
                this._objJoinV3(p, this.fsm3[p.side].objKey, K, M)) {
@@ -1605,6 +1786,47 @@ export class LogicEngine {
         : (p.role === "jungle" || p.role === "sup" || (K ? this.rng2() < this._joinChance(K, hot, M) : this.rng() < this._joinChance(null, hot, M))))) {
         tgt = hot; st = "團戰!";
         if (R.engagementFsm) p.fsm = dist(p.pos, hot) < 10 ? "ENGAGE" : "SETUP";
+      }
+      // 1v1／小規模接觸不一定會形成 hot；依血量、人數、角色距離、CD 與目標價值
+      // 選擇支援、接戰、拉扯或追擊，避免「擦身而過仍照原路走」。
+      else if (!skipFight && localDecision?.fresh &&
+               localDecision?.action === "SUPPORT" && localTarget) {
+        tgt = { x: localTarget.pos.x, y: localTarget.pos.y };
+        st = "支援"; p.fsm = "SETUP";
+      }
+      else if (!skipFight && localTarget &&
+               ((localDecision?.action === "ENGAGE" && dist(p.pos, localTarget.pos) <= 6.5) ||
+                (localDecision?.action === "PURSUE" &&
+                 dist(p.pos, localTarget.pos) <= R.decisionContact) ||
+                (localDecision?.fresh && localDecision?.action === "KITE" &&
+                 dist(p.pos, localTarget.pos) <= 6.5))) {
+        const engageDistance = p.role === "top" ? 2.6 : p.role === "jungle" ? 2.2 :
+          p.role === "mid" ? 5.0 : p.role === "adc" ? 5.8 : 5.2;
+        const desired = engageDistance;
+        const dd = dist(p.pos, localTarget.pos) || 1;
+        const ux = (p.pos.x - localTarget.pos.x) / dd;
+        const uy = (p.pos.y - localTarget.pos.y) / dd;
+        if (localDecision.action === "PURSUE") {
+          tgt = { x: localTarget.pos.x, y: localTarget.pos.y };
+          st = "追擊"; p.fsm = "CHASE";
+        } else if (localDecision.action === "KITE" && dd < desired - 0.5) {
+          tgt = { x: p.pos.x + ux * 3.5, y: p.pos.y + uy * 3.5 };
+          st = "拉扯"; p.fsm = "SETUP";
+        } else if (localDecision.action === "KITE" && dd <= desired + 1) {
+          // 保持職業射程並側移，不把「拉扯」實作成直接退出 8 單位戰鬥圈。
+          // 同席位編號採相同旋向（b3/r3 一致）⇒ 不引入陣營特例。
+          const turn = Number(p.id.slice(1)) % 2 ? 1 : -1;
+          const angle = 0.18 * turn, cos = Math.cos(angle), sin = Math.sin(angle);
+          tgt = {
+            x: localTarget.pos.x + (ux * cos - uy * sin) * dd,
+            y: localTarget.pos.y + (ux * sin + uy * cos) * dd,
+          };
+          st = "拉扯"; p.fsm = "SETUP";
+        } else {
+          tgt = { x: localTarget.pos.x + ux * desired, y: localTarget.pos.y + uy * desired };
+          st = localDecision.action === "ENGAGE" ? "接戰" : "拉扯";
+          p.fsm = localDecision.action === "ENGAGE" ? "ENGAGE" : "SETUP";
+        }
       }
       else {
         // S29B1（v3）：防守——自己這路（或主堡）有敵方英雄壓塔 ⇒ 回防
@@ -1660,7 +1882,7 @@ export class LogicEngine {
       //   S29B1（v3）：追擊視同交戰移速；撤退者有逃生移速加成（追擊者沒有）⇒
       //   「撤退＝死亡行軍」的結構性問題從機制面解掉，不是調傷害。
       const d = dist(p.pos, tgt),
-        spd = ((st === "團戰!" || st === "追擊") ? R.fightSpeed : R.moveSpeed) *
+        spd = ((st === "團戰!" || st === "追擊" || st === "接戰" || st === "拉扯") ? R.fightSpeed : R.moveSpeed) *
           (R.engagementFsm && p.retreating ? R.retreatSpeedMult : 1) *
           (R.neutralObjectives && this.t < (p.redSlowUntil ?? 0) ? R.redBuffSlowK : 1) *
           (R.neutralObjectives && this.t < (p.blueBuffUntil ?? 0) ? R.blueBuffMoveK : 1) * dt;
@@ -1792,7 +2014,12 @@ export class LogicEngine {
       ts: this.t,
       // S29：mlv/mxp = **本場**英雄等級（1–18，終局丟棄）；lv = 英雄熟練等級（跨場，
       //   來自 Hero Progress loadout）。兩者並存且不同名 ⇒ 消費端不可能混用。
-      players: this.players.map((p) => ({ id: p.id, side: p.side, role: p.role, pos: { ...p.pos }, hp: clamp(p.hp / p.maxHp, 0, 1), dead: p.dead, respawn: p.respawn, state: p.state, k: p.k, d: p.d, a: p.a, gold: Math.round(p.gold), dmg: Math.round(p.dmg), heal: Math.round(p.heal), twrDmg: Math.round(p.twrDmg), lv: p.lv, mlv: p.mlv, mxp: Math.round(p.mxp), mxpNext: xpNextOf(p), ...(R.summonerSpells ? { sp: spOf(p) } : {}), ...(R.recallChannel ? { rc: p.recallT > 0 ? Math.round(p.recallT * 10) / 10 : 0 } : {}), ...(R.neutralObjectives ? {
+      players: this.players.map((p) => ({ id: p.id, side: p.side, role: p.role, pos: { ...p.pos }, hp: clamp(p.hp / p.maxHp, 0, 1), dead: p.dead, respawn: p.respawn, state: p.state, ...(R.explainableCombatDecisions ? {
+        decision: {
+          action: p.decisionAction, targetId: p.decisionTargetId,
+          score: p.decisionScore, reasons: [...p.decisionReasons],
+        },
+      } : {}), k: p.k, d: p.d, a: p.a, gold: Math.round(p.gold), dmg: Math.round(p.dmg), heal: Math.round(p.heal), twrDmg: Math.round(p.twrDmg), lv: p.lv, mlv: p.mlv, mxp: Math.round(p.mxp), mxpNext: xpNextOf(p), ...(R.summonerSpells ? { sp: spOf(p) } : {}), ...(R.recallChannel ? { rc: p.recallT > 0 ? Math.round(p.recallT * 10) / 10 : 0 } : {}), ...(R.neutralObjectives ? {
         buffs: [
           ...(this.t < (p.redBuffUntil ?? 0) ? [{ id: "red", remaining: Math.round((p.redBuffUntil - this.t) * 10) / 10 }] : []),
           ...(this.t < (p.blueBuffUntil ?? 0) ? [{ id: "blue", remaining: Math.round((p.blueBuffUntil - this.t) * 10) / 10 }] : []),
