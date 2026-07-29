@@ -57,10 +57,17 @@ for (const p of buffEngine.players) { p.dead = true; p.respawn = 9999; }
 const blueJg = buffEngine.players.find((p) => p.id === "b2");
 blueJg.dead = false; blueJg.respawn = 0; blueJg.hp = blueJg.maxHp;
 const blueCamp = buffEngine.neutrals.camps.find((c) => c.presentationKey === "blueBuff");
-blueCamp.alive = true; blueCamp.dmgBy.blue = 10; blueCamp.participants.add(blueJg.id);
+// D-fix3 起 Buff 由主怪個體的真實 participants 結算；舊測具把整營直接設死
+// 會繞過正式傷害路徑。先出生，再只擊殺 index 0，驗證取得者與來源不變。
+buffEngine.t = R.campFirstSpawn + 1;
+blueJg.pos = { x: 100, y: 100 };
+buffEngine._updateNeutralsV3([blueJg], 0.01);
+const blueMain = blueCamp.members.find((m) => m.index === 0);
+blueMain.hp = 1;
+blueJg.power = 10000;
+blueJg.sp.d.readyAt = Infinity;
 blueJg.pos = { ...blueCamp.pos };
-for (const m of blueCamp.members) { m.alive = false; m.hp = 0; }
-buffEngine._updateNeutralsV3([blueJg], 0.1);
+buffEngine._updateNeutralsV3([blueJg], 0.5);
 assert.ok(blueJg.blueBuffUntil > buffEngine.t);
 
 const combat = new LogicEngine(4104, null, { rules: "v3" });

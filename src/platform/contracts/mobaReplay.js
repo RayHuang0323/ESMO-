@@ -64,12 +64,29 @@ export function snapshotToFrame(snap) {
     // S29B2：由「存活位元」升級為 **hp 值**（0–1，0 = 死亡）⇒ Replay 能顯示
     //   與現場一致的逐步掉血（frame 2s 取樣 + 播放端插值），不重新模擬。
     ...(snap.objectives ? { ob: snap.objectives.map((o) => (o.alive ? round3(o.hp) : 0)) } : {}),
+    // D-fix3：目標／營地成員的死亡與重生也保存真值。全部為 optional，
+    // 舊 MobaReplay.v1 沒有時播放端維持原本 aggregate fallback。
+    ...(snap.objectives ? {
+      or: snap.objectives.map((o) => round2(o.respawn ?? 0)),
+      os: snap.objectives.map((o) => o.spawnedOnce ? 1 : 0),
+      om: snap.objectives.map((o) => (o.members ?? []).map((m) => [
+        m.alive ? round3(m.hp) : 0,
+        round2(m.respawn ?? 0),
+        m.spawnedOnce ? 1 : 0,
+      ])),
+    } : {}),
     // Milestone D：每名英雄的限時 Buff／狀態，依 frame.p 同順序。
-    // [red, blue, baron, slow] = 剩餘模擬秒；純附加 optional 欄，舊 Replay 相容。
+    // [red, blue, baron, slow, dragonStacks]；前四格是剩餘模擬秒，
+    // 第五格為本場永久團隊層數。純附加 optional 欄，四格舊 Replay 仍相容。
     ...(snap.players?.some((p) => p.buffs?.length || p.statusEffects?.length) ? {
       bf: snap.players.map((p) => {
         const remaining = (id, list = p.buffs) => round2(list?.find((b) => b.id === id)?.remaining ?? 0);
-        return [remaining("red"), remaining("blue"), remaining("baron"), remaining("slow", p.statusEffects)];
+        const dragonStacks = Math.max(0, Math.round(
+          p.buffs?.find((b) => b.id === "dragon")?.stacks ?? 0));
+        return [
+          remaining("red"), remaining("blue"), remaining("baron"),
+          remaining("slow", p.statusEffects), dragonStacks,
+        ];
       }),
     } : {}),
     // H.3：小兵緊湊 frame。六個固定群組依序 top/mid/bot × blue/red，
@@ -153,9 +170,15 @@ export function validateMobaReplay(r) {
         errors.push(`frame[${i}].fx 形狀錯誤或含非有限數值`); break;
       }
       if (f.bf !== undefined && (!Array.isArray(f.bf) || f.bf.length !== f.p.length ||
-        f.bf.some((row) => !Array.isArray(row) || row.length !== 4 ||
+        f.bf.some((row) => !Array.isArray(row) || (row.length !== 4 && row.length !== 5) ||
           row.some((v) => !Number.isFinite(v) || v < 0)))) {
         errors.push(`frame[${i}].bf 形狀錯誤或含非法秒數`); break;
+      }
+      if (f.om !== undefined && (!Array.isArray(f.om) ||
+        f.om.some((members) => !Array.isArray(members) || members.some((row) =>
+          !Array.isArray(row) || row.length !== 3 ||
+          row.some((v) => !Number.isFinite(v) || v < 0))))) {
+        errors.push(`frame[${i}].om 形狀錯誤或含非法成員狀態`); break;
       }
     }
   }

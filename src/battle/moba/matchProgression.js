@@ -275,9 +275,18 @@ SIM_RULES.v3 = {
   respawnBase: 8, respawnScaleT: 40, respawnCap: 32,   // 10分 ≈ 30s、20分+ = 40s
   // ── 中立目標（真實 HP / participants / killerTeam）───────────────────────
   neutralObjectives: true,
+  // D-fix3：正式基地結構由既有 map tower plan 接入 v3；v1/v2 歷史基準不新增結構。
+  nexusGuards: true,
+  // 兩座門牙塔是同一道基地防線，不應各自套用完整 2100 HP 線塔耐久；
+  // 否則對稱地多出 4200 HP，regress 結束率由 15/15 降為 11/15。
+  // 每座 300（雙塔合計 600）仍要求逐座拆除並各自反擊；900 的初試仍使
+  // regress 只收掉 13/15，因此耐久只承擔「第二道攻城門檻」，不複製線塔血池。
+  nexusGuardHp: 300,
   dragonHp: 1400, baronHp: 3000,
   dragonSpawn: 240, baronSpawn: 480,   // v2 的 90/300 讓熱點過早常駐（根因之一）
-  objRespawn: 150,                     // 與 v2 respawn 一致
+  objRespawn: 150,                     // 舊欄保留相容；正式 v3 分別採下列倒數
+  dragonRespawn: 150,
+  baronRespawn: 210,
   objDmgK: 0.5,                        // 坑內優勢方每人 power×objDmgK×dt
   campHp: 280, buffCampHp: 420,
   // Milestone C-fix：原本首波 4 隻兵給 4×128=512 XP，而 Lv1→Lv3 只需 450，
@@ -310,6 +319,11 @@ SIM_RULES.v3 = {
   // 巴龍 buff（v3 收尾機制之二）：擊殺方 baronBuffT 秒內小兵拆塔 ×baronMinionK
   //  ⇒ 拿下巴龍 = 真實的推進窗，比賽不再拖尾（實測 p99 時長 34 分 → 需 ≤32）
   baronBuffT: 70, baronMinionK: 2.2, baronMinionFightK: 1.7,
+  // D-fix3 的限時進攻增益也作用於英雄攻城；只在 Baron 70 秒窗內、雙方同規則。
+  baronHeroSiegeK: 1.22,
+  // D-fix3「巨龍脈動」：每次擊殺取得一層、本場永久且死亡保留，最多 4 層。
+  // 每層只提供小幅輸出／韌性成長，避免取代英雄等級與裝備節奏。
+  dragonMaxStacks: 4, dragonPowerPerStack: 0.012, dragonGuardPerStack: 0.008,
   // ── 回城 channel（S29B3）────────────────────────────────────────────────
   //  29B2 實機回報「低血量回血看起來像走一下就回血」——根因：引擎沒有回城，
   //  只有「走路回家 + 泉水秒補」。v3 補上真實回城：撤退中、安全（recallSafeDist 內

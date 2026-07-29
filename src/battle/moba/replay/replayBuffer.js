@@ -52,9 +52,19 @@ export function captureReplayFrame(snap) {
   if (cap.frames.length >= MAX_FRAMES) { cap.truncated = true; return; }
   if (cap.frames.length === 0) {
     cap.playersMeta = snap.players.map((p) => ({ id: p.id, side: p.side, role: p.role }));
-    cap.towersMeta = Object.fromEntries(Object.entries(snap.towers).map(([id, t]) => [id, { side: t.side, lane: t.lane, pos: { x: t.pos.x, y: t.pos.y } }]));
+    cap.towersMeta = Object.fromEntries(Object.entries(snap.towers).map(([id, t]) => [id, {
+      side: t.side, lane: t.lane, tier: t.tier, pos: { x: t.pos.x, y: t.pos.y },
+    }]));
     // S29B1：中立目標 meta（位置只存一次；frame.ob 依此順序存 alive 位元）
-    cap.objectivesMeta = (snap.objectives ?? []).map((o) => ({ id: o.id, type: o.type, side: o.side, presentationKey: o.presentationKey ?? o.id, pos: { x: o.pos.x, y: o.pos.y } }));
+    cap.objectivesMeta = (snap.objectives ?? []).map((o) => ({
+      id: o.id, type: o.type, side: o.side,
+      presentationKey: o.presentationKey ?? o.id,
+      pos: { x: o.pos.x, y: o.pos.y },
+      ...(o.members ? { members: o.members.map((m) => ({
+        id: m.id, pos: { x: m.pos.x, y: m.pos.y },
+        homePos: m.homePos ? { x: m.homePos.x, y: m.homePos.y } : { x: m.pos.x, y: m.pos.y },
+      })) } : {}),
+    }));
   }
   cap.frames.push(snapshotToFrame({ ...snap, fx: [...cap.pendingFx.values()] }));
   cap.pendingFx.clear();

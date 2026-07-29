@@ -53,7 +53,7 @@ function nearestLaneT(lane, p) {
 let _cache = null;
 
 /**
- * @returns {{ byId: Object, list: Array }}
+ * @returns {{ byId: Object, list: Array, guardById: Object, nexusGuards: Array }}
  *   byId[id] = { id, side, lane, tier, x, y, t, laneOffset }
  *   laneOffset = 塔離 lane 折線的側偏（模擬單位；驗收用，證明塔仍在路上）
  */
@@ -87,11 +87,26 @@ export function buildTowerPlacement() {
   //  萬一有沒配到對的（未來新增塔），照原值收下，不靜默丟掉
   for (const [id, v] of raw) if (!byId[id]) byId[id] = { ...v, t: v.tRaw };
 
-  _cache = { byId, list: Object.values(byId) };
+  // D-fix3：地圖本來就有雙方各兩座門牙塔；另外輸出正式錨點給引擎，
+  // 但不混進 `list`（該 list 的既有契約是 18 座兵線塔，nav verifier 會逐座
+  // 反算 lane t）。門牙塔沒有單一路線 t，攻城順序由 LogicEngine 管理。
+  const guardById = Object.fromEntries((T.nexusTurrets ?? []).map((tw) => [tw.id, {
+    id: tw.id, side: tw.side, lane: "nexus_guard", tier: tw.tier,
+    x: tw.x, y: tw.y,
+  }]));
+  _cache = {
+    byId, list: Object.values(byId),
+    guardById, nexusGuards: Object.values(guardById),
+  };
   return _cache;
 }
 
 /** 引擎建塔用：id → { x, y, t }。 */
 export function towerPlacementById(id) {
   return buildTowerPlacement().byId[id] ?? null;
+}
+
+/** D-fix3：門牙塔資料錨點；仍由 mapTerrainShapes 的正式 tower plan 產生。 */
+export function nexusGuardPlacementById(id) {
+  return buildTowerPlacement().guardById[id] ?? null;
 }

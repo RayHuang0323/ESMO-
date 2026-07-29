@@ -279,7 +279,42 @@ export default function MobaRuntimeNeutrals({ objectives = [], frameRef = null }
           ? <CampUnit key={objective.id} objective={objective} asset={assets.get(objective.id)}
               geo={geo} mats={mats} register={register} />
           : null)}
+      {objectives
+        .filter((objective) => BOSS_TYPES.has(objective.type) || objective.type === "buff")
+        .map((objective) => (
+          <ObjectiveRespawnLabel key={`respawn:${objective.id}`}
+            objective={objective} frameRef={frameRef} />
+        ))}
     </group>
+  );
+}
+
+function ObjectiveRespawnLabel({ objective, frameRef }) {
+  const label = useRef();
+  useFrame(() => {
+    const live = (frameRef?.current?.objectives ?? []).find((o) => o.id === objective.id)
+      ?? objective;
+    if (!label.current) return;
+    const visible = !live.alive && live.respawnIn > 0;
+    label.current.style.display = visible ? "inline-flex" : "none";
+    if (visible) {
+      label.current.textContent = `${live.respawnState === "unspawned" ? "首次刷新" : "重生"} ${Math.ceil(live.respawnIn)}s`;
+    }
+  });
+  return (
+    <Html position={[objective.world.x, GROUND_Y + 2.2 * S, objective.world.z]}
+      center distanceFactor={190} style={{ pointerEvents: "none" }}>
+      <span ref={label} style={{
+        display: !objective.alive && objective.respawnIn > 0 ? "inline-flex" : "none",
+        alignItems: "center", gap: 3, whiteSpace: "nowrap",
+        font: "800 7px ui-monospace,monospace", color: "#e5e7eb",
+        background: "rgba(5,9,15,.76)", padding: "2px 4px", borderRadius: 4,
+        border: "1px solid rgba(255,255,255,.24)",
+        textShadow: "0 1px 2px #000",
+      }}>
+        {objective.respawnState === "unspawned" ? "首次刷新" : "重生"} {Math.ceil(objective.respawnIn)}s
+      </span>
+    </Html>
   );
 }
 

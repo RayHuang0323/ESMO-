@@ -105,13 +105,20 @@ function SideCell({ p, hero, roster, side, onOpen }) {
         <div style={{ color: "#71717a", fontSize: 8, fontFamily: MONO }}>{p.k}/{p.d}/{p.a ?? 0}</div>
         {!!p.buffs?.length && (
           <div style={{ display: "flex", justifyContent: rev ? "flex-end" : "flex-start", gap: 2, marginTop: 1 }}>
-            {p.buffs.map((buff) => (
-              <span key={buff.id} title={`${buff.id} Buff：${Math.ceil(buff.remaining)}s`} style={{
+            {p.buffs.map((buff) => {
+              const permanent = buff.id === "dragon";
+              const value = permanent ? `×${buff.stacks ?? 0}` : `${Math.ceil(buff.remaining ?? 0)}`;
+              return (
+              <span key={buff.id} title={permanent
+                ? `Dragon 團隊成長：${buff.stacks ?? 0} 層（本場永久、死亡保留）`
+                : `${buff.id} Buff：${Math.ceil(buff.remaining ?? 0)}s`} style={{
                 font: "800 6px ui-monospace,monospace", borderRadius: 2, padding: "0 2px",
-                color: buff.id === "red" ? "#ff735e" : buff.id === "blue" ? "#68b5ff" : "#d8a8ff",
+                color: buff.id === "red" ? "#ff735e"
+                  : buff.id === "blue" ? "#68b5ff"
+                    : buff.id === "dragon" ? "#caa2ff" : "#f4c16f",
                 border: "1px solid currentColor", background: "rgba(0,0,0,.45)",
-              }}>{buff.id === "red" ? "R" : buff.id === "blue" ? "B" : "V"} {Math.ceil(buff.remaining)}</span>
-            ))}
+              }}>{buff.id === "red" ? "R" : buff.id === "blue" ? "B" : buff.id === "dragon" ? "D" : "V"} {value}</span>
+            );})}
           </div>
         )}
       </div>

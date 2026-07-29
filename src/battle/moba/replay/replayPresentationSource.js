@@ -66,7 +66,10 @@ function effectsFromFrame(f) {
     pos: { x: row?.[1] ?? 0, y: row?.[2] ?? 0 },
     target: { x: row?.[3] ?? 0, y: row?.[4] ?? 0 },
     color: row?.[5] ?? 0xffffff,
-    at: row?.[6] ?? f.t ?? 0,
+    // 事件可能在 2 秒取樣窗前段發生。Replay 不能拿已過期的原始 at 立刻丟掉，
+    // 因此從保存它的 frame 時刻播放完整 visual life；eventAt 仍保留原始證據。
+    at: f.t ?? row?.[6] ?? 0,
+    eventAt: row?.[6] ?? f.t ?? 0,
     life: row?.[7] ?? 0.35,
     exp: row?.[7] ?? 0.35,
     ability: typeof row?.[8] === "string" && row[8] ? row[8] : null,
@@ -127,12 +130,26 @@ export function createReplaySource(replay) {
     };
     const objectives = (objMeta ?? []).map((om, i) => {
       const hp = obOf(i, om.id);
+      const memberMeta = Array.isArray(om.members) ? om.members : [];
+      const memberRows = f.om?.[i] ?? [];
       return {
         id: om.id, type: om.type, side: om.side ?? null,
         presentationKey: om.presentationKey ?? om.id, pos: { ...om.pos },
         alive: hp > 0, hp, maxHp: 1,
-        respawn: null,            // 未擷取：不猜倒數秒數
+        spawnedOnce: f.os?.[i] === 1,
+        respawn: Number.isFinite(f.or?.[i]) ? f.or[i] : null,
         killerTeam: null, participants: [],
+        ...(memberMeta.length ? { members: memberMeta.map((mm, mi) => {
+          const row = memberRows[mi] ?? [];
+          const memberHp = clamp01(row[0] ?? 0);
+          return {
+            id: mm.id, pos: { ...mm.pos }, homePos: { ...(mm.homePos ?? mm.pos) },
+            alive: memberHp > 0, hp: memberHp, maxHp: 1,
+            spawnedOnce: row[2] === 1,
+            respawn: Number.isFinite(row[1]) ? row[1] : null,
+            targetId: null, hitAt: null, attackAt: null, killerTeam: null,
+          };
+        }) } : {}),
       };
     });
     const byId = (id) => objectives.find((o) => o.id === id);
@@ -147,6 +164,8 @@ export function createReplaySource(replay) {
         const row = f.p?.[i];
         const buffRow = f.bf?.[i] ?? [];
         const timed = (id, value) => Number.isFinite(value) && value > 0 ? { id, remaining: value } : null;
+        const dragon = Number.isFinite(buffRow[4]) && buffRow[4] > 0
+          ? { id: "dragon", stacks: buffRow[4], remaining: null } : null;
         return {
           id: pm.id, side: pm.side, role: pm.role,
           pos: { x: row?.[0] ?? 0, y: row?.[1] ?? 0 },
@@ -161,7 +180,8 @@ export function createReplaySource(replay) {
           state: null,            // 未擷取：不顯示撤退/回城/團戰徽章
           sp: null,
           buffs: [
-            timed("red", buffRow[0]), timed("blue", buffRow[1]), timed("baron", buffRow[2]),
+            timed("red", buffRow[0]), timed("blue", buffRow[1]),
+            timed("baron", buffRow[2]), dragon,
           ].filter(Boolean),
           statusEffects: [timed("slow", buffRow[3])].filter(Boolean),
         };

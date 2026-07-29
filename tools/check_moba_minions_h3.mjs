@@ -173,11 +173,16 @@ ck("16) 真實英雄交戰產生帶 source/target/role variant 的技能事件�
 const skillRows = skillReplay.frames.flatMap((f) => f.fx ?? []);
 const skillContract = validateMobaReplay(skillReplay);
 const replaySkillRow = skillRows.find((row) => typeof row[8] === "string" && row[8]);
+const replaySkillFrame = skillReplay.frames.find((f) =>
+  (f.fx ?? []).some((row) => typeof row[8] === "string" && row[8]));
 const skillSource = createReplaySource(skillReplay);
-skillSource.seek(eventAt + 0.1);
-const replaySkillFx = adaptEffects(skillSource.getState().snapshot, eventAt + 0.1);
-ck("17) 2 秒 Replay 取樣窗不漏掉 0.65s 技能事件，契約可驗證且播放端按 at 顯示",
-  skillContract.ok && replaySkillRow &&
+// D-fix2 拆開 retention 與 visual lifetime：事件在 Replay 保存 frame 出現時才從
+// visual age 0 播放；原始 eventAt 仍留作證據，不能在保存 frame 前憑空顯示。
+skillSource.seek((replaySkillFrame?.t ?? eventAt) + 0.1);
+const replaySkillFx = adaptEffects(
+  skillSource.getState().snapshot, (replaySkillFrame?.t ?? eventAt) + 0.1);
+ck("17) 2 秒 Replay 取樣窗不漏掉短技能事件，契約可驗證且從保存 frame 完整播放",
+  skillContract.ok && replaySkillRow && replaySkillFrame &&
   replaySkillFx.some((f) => f.ability === replaySkillRow[8]), skillContract.errors.join("; "));
 
 const oldSkillReplay = structuredClone(skillReplay);

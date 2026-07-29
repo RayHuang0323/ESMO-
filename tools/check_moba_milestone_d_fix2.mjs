@@ -82,7 +82,9 @@ for (const token of [
 assert.match(effectsCode, /ring: new THREE\.MeshBasicMaterial\(\{\s*[\s\S]*?opacity: 0\.42/);
 for (const token of [
   "hero-buff-ring", "buffRed", "buffBlue", "HERO.barY + 1.3 * S",
-  'font: "700 7px', "HERO.barY - 0.9 * S",
+  // D-fix3 mobile-first 收尾把名稱由 7px 縮到 6px；上下層錨點仍沿用
+  // D-fix2 已驗證的不重疊位置，因此只更新被新需求取代的固定字級斷言。
+  'font: "700 6px', "HERO.barY - 0.9 * S",
 ]) assert.ok(heroesCode.includes(token), `missing hero HUD guard: ${token}`);
 for (const token of [
   "blueBuffRune", "redBuffRune", "BLUE BUFF · 藍", "RED BUFF · 紅",
@@ -230,7 +232,7 @@ console.log("Milestone D-fix2 verifier: PASS", JSON.stringify({
   presentation: {
     prioritizedPools: true,
     projectileCore: true,
-    compactNameplatePx: 7,
+    compactNameplatePx: 6,
     distinctBuffRunes: true,
   },
   decisions: {

@@ -163,6 +163,8 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
       ringRed: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.red, transparent: true, opacity: 0.75, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
       buffRed: new THREE.MeshBasicMaterial({ color: 0xff5a43, transparent: true, opacity: 0.56, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -10, toneMapped: false }),
       buffBlue: new THREE.MeshBasicMaterial({ color: 0x48aaff, transparent: true, opacity: 0.56, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -10, toneMapped: false }),
+      buffDragon: new THREE.MeshBasicMaterial({ color: 0xc084fc, transparent: true, opacity: 0.36, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -10, toneMapped: false }),
+      buffBaron: new THREE.MeshBasicMaterial({ color: 0xf4b85a, transparent: true, opacity: 0.48, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -10, toneMapped: false }),
       //  ⚠ side: DoubleSide 是保險——血條群組已經每幀反轉回世界朝向（見 useFrame），
       //    但只要有人日後改動 facing 的套用方式，單面材質會讓血條**整條消失**而不是畫錯。
       //
@@ -202,6 +204,7 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
       const {
         root, body, shoulder, accessory, signature, headFeature, classLanguage,
         badge, crest, teamBand, redBuffRing, blueBuffRing,
+        dragonBuffRing, baronBuffRing,
         bar, ring, deathMark, label, bodyAliveMaterial, secondaryAliveMaterial,
       } = node;
       const hitFx = effects.find((fx) => String(fx.targetId ?? "") === h.id && fx.phase === "impact");
@@ -273,6 +276,18 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
         blueBuffRing.rotation.z = -now * 0.62;
         blueBuffRing.scale.setScalar(0.9 + Math.sin(now * 2.7 + 1) * 0.03);
       }
+      const hasDragonBuff = h.alive && (h.buffs ?? []).some((buff) => buff.id === "dragon");
+      const hasBaronBuff = h.alive && (h.buffs ?? []).some((buff) => buff.id === "baron");
+      if (dragonBuffRing) {
+        dragonBuffRing.visible = hasDragonBuff;
+        dragonBuffRing.rotation.z = now * 0.34;
+        dragonBuffRing.scale.setScalar(1.08 + Math.sin(now * 1.8) * 0.025);
+      }
+      if (baronBuffRing) {
+        baronBuffRing.visible = hasBaronBuff;
+        baronBuffRing.rotation.z = -now * 0.48;
+        baronBuffRing.scale.setScalar(1.18 + Math.sin(now * 2.2 + 0.8) * 0.03);
+      }
       //  地面陣亡標記：只有死亡時出現，是「還認得出這裡有人陣亡」的主要線索
       if (deathMark) {
         deathMark.visible = !h.alive;
@@ -334,6 +349,8 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
   const teamBandRef = useRef();
   const redBuffRingRef = useRef();
   const blueBuffRingRef = useRef();
+  const dragonBuffRingRef = useRef();
+  const baronBuffRingRef = useRef();
   const labelRef = useRef();
   const visual = hero.visual ?? HERO_VISUALS[hero.heroId] ?? null;
   const archetype = archetypeData(hero.archetype);
@@ -345,6 +362,7 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
     red: { icon: "R", color: "#ff6b55", title: "紅 Buff" },
     blue: { icon: "B", color: "#55aaff", title: "藍 Buff" },
     baron: { icon: "V", color: "#d8a8ff", title: "Baron Buff" },
+    dragon: { icon: "D", color: "#caa2ff", title: "Dragon 成長" },
     slow: { icon: "↓", color: "#a5b4c8", title: "減速" },
   };
 
@@ -359,6 +377,8 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
       teamBand: teamBandRef.current,
       redBuffRing: redBuffRingRef.current,
       blueBuffRing: blueBuffRingRef.current,
+      dragonBuffRing: dragonBuffRingRef.current,
+      baronBuffRing: baronBuffRingRef.current,
       bar: barRef.current, ring: ringRef.current, deathMark: deathMarkRef.current,
       label: labelRef.current,
       bodyAliveMaterial: bodyMaterial,
@@ -394,6 +414,14 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
         position={[0, RING_LIFT + 0.07, 0]} rotation={[-Math.PI / 2, 0, Math.PI / 4]}
         visible={false} renderOrder={17} frustumCulled={false}
         userData={{ part: "hero-buff-ring", buff: "blue" }} />
+      <mesh ref={dragonBuffRingRef} geometry={geo.buffRing} material={mats.buffDragon}
+        position={[0, RING_LIFT + 0.09, 0]} rotation={[-Math.PI / 2, 0, 0]}
+        visible={false} renderOrder={18} frustumCulled={false}
+        userData={{ part: "hero-buff-ring", buff: "dragon" }} />
+      <mesh ref={baronBuffRingRef} geometry={geo.buffRing} material={mats.buffBaron}
+        position={[0, RING_LIFT + 0.11, 0]} rotation={[-Math.PI / 2, 0, Math.PI / 4]}
+        visible={false} renderOrder={19} frustumCulled={false}
+        userData={{ part: "hero-buff-ring", buff: "baron" }} />
       {/* 陣亡地面標記（四邊形外框；只有死亡時 visible，見 useFrame）*/}
       <mesh ref={deathMarkRef} geometry={geo.deathMark}
         material={team === "blue" ? mats.markBlue : mats.markRed}
@@ -445,17 +473,17 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
           userData={{ part: "hero-team-side-marker", team }} />
       </group>
       {showLabel && (
-        <Html position={[0, HERO.barY + 1.3 * S, 0]} center distanceFactor={154}
+        <Html position={[0, HERO.barY + 1.3 * S, 0]} center distanceFactor={168}
           style={{ pointerEvents: "none" }}>
           <div ref={labelRef} style={{
-            display: "flex", alignItems: "center", gap: 2.5,
-            font: "700 7px ui-monospace,monospace", lineHeight: 1.1, whiteSpace: "nowrap",
-            color: "#f8fafc", padding: "1px 2px", borderRadius: 2,
+            display: "flex", alignItems: "center", gap: 2,
+            font: "700 6px ui-monospace,monospace", lineHeight: 1, whiteSpace: "nowrap",
+            color: "#f8fafc", padding: "1px 1.5px", borderRadius: 2,
             borderLeft: `1px solid ${team === "blue" ? "#4d95f0" : "#f0574d"}`,
             background: "rgba(5,10,18,.3)", textShadow: "0 1px 2px rgba(0,0,0,.9)",
           }}>
             <span style={{
-              width: 4, height: 4, borderRadius: 1,
+              width: 3, height: 3, borderRadius: 1,
               background: team === "blue" ? "#4d95f0" : "#f0574d",
               transform: "rotate(45deg)", boxShadow: "0 0 3px currentColor",
             }} aria-hidden="true" />
@@ -467,20 +495,22 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
       {/* Milestone D：層級固定為 名稱/等級 → 血條 → Buff/狀態。低畫質可隱藏
           次要名稱，但限時狀態仍保留小圖示與秒數。 */}
       {!!timedStates.length && (
-        <Html position={[0, HERO.barY - 0.9 * S, 0]} center distanceFactor={154}
+        <Html position={[0, HERO.barY - 0.9 * S, 0]} center distanceFactor={170}
           style={{ pointerEvents: "none" }}>
           <div style={{ display: "flex", gap: 2, whiteSpace: "nowrap" }}>
             {timedStates.map((state) => {
               const meta = stateMeta[state.id] ?? { icon: "•", color: "#e5e7eb", title: state.id };
               return (
                 <span key={state.id} title={meta.title} style={{
-                  minWidth: 15, height: 12, padding: "0 2px", borderRadius: 3,
+                  minWidth: 13, height: 10, padding: "0 2px", borderRadius: 3,
                   display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 1,
-                  font: "800 7px ui-monospace,monospace", color: meta.color,
+                  font: "800 6px ui-monospace,monospace", color: meta.color,
                   border: `1px solid ${meta.color}99`, background: "rgba(4,8,14,.72)",
                   boxShadow: `0 0 4px ${meta.color}44`,
                 }}>
-                  {meta.icon}<small style={{ fontSize: 6, opacity: 0.82 }}>{Math.ceil(state.remaining ?? 0)}</small>
+                  {meta.icon}<small style={{ fontSize: 5.5, opacity: 0.82 }}>
+                    {Number.isFinite(state.stacks) ? `×${state.stacks}` : Math.ceil(state.remaining ?? 0)}
+                  </small>
                 </span>
               );
             })}

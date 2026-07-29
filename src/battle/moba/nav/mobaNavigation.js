@@ -87,6 +87,13 @@ function nav() {
   for (const t of T.towers) {
     structures.set(t.id, { id: t.id, x: t.x, y: t.y, r: t.tiers?.[0]?.r ?? 2.5, kind: "tower" });
   }
+  // D-fix3：門牙塔的可攻擊狀態進入引擎後，碰撞也必須沿用同一組正式地圖錨點。
+  // classifyStructureBlocking 會照既有規則避免兩座塔合力封死基地出口。
+  for (const t of T.nexusTurrets ?? []) {
+    structures.set(t.id, {
+      id: t.id, x: t.x, y: t.y, r: t.tiers?.[0]?.r ?? 2.5, kind: "nexus_guard",
+    });
+  }
   for (const n of T.meta.nexus ?? []) {
     if (!n.side) continue;
     structures.set(`${n.side}_nexus`, { id: `${n.side}_nexus`, x: n.x, y: n.y, r: NEXUS_CORE_R, kind: "nexus" });

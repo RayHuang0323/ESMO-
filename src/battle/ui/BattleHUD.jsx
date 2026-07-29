@@ -36,6 +36,22 @@ function TowerDots({ towers, side }) {
   );
 }
 
+function TeamObjectiveBuffs({ state, side }) {
+  const dragon = Math.max(0, Math.round(state?.dragonStacks ?? 0));
+  const baron = Math.max(0, state?.baronRemaining ?? 0);
+  if (!dragon && !baron) return null;
+  const align = side === "blue" ? "flex-start" : "flex-end";
+  return (
+    <div data-testid={`team-objective-buffs-${side}`}
+      style={{ display: "flex", justifyContent: align, gap: 3, marginTop: 2 }}>
+      {!!dragon && <span title={`Dragon 團隊成長 ${dragon} 層：本場永久、死亡保留`}
+        style={{ color: "#caa2ff", font: "800 7px ui-monospace,monospace" }}>D×{dragon}</span>}
+      {!!baron && <span title={`Baron 團隊攻城：${Math.ceil(baron)}s`}
+        style={{ color: "#f4c16f", font: "800 7px ui-monospace,monospace" }}>V {Math.ceil(baron)}s</span>}
+    </div>
+  );
+}
+
 function BossStatusBar({ objectives = [] }) {
   const active = objectives
     .filter((o) => (o.type === "dragon" || o.type === "baron") && o.alive)
@@ -128,12 +144,18 @@ export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭
 
       {/* 列3：塔點陣（真資料，每隊 9 外塔）+ 中央龍/巴龍倒數（Legacy 版型）*/}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
-        <TowerDots towers={snap.towers || {}} side="blue" />
+        <div>
+          <TowerDots towers={snap.towers || {}} side="blue" />
+          <TeamObjectiveBuffs state={snap.teamBuffs?.blue} side="blue" />
+        </div>
         <div style={{ display: "flex", gap: 8 }}>
           {pit(snap.dragon || { alive: false, respawn: 0 }, "Dragon", "D")}
           {pit(snap.baron || { alive: false, respawn: 0 }, "Baron", "B")}
         </div>
-        <TowerDots towers={snap.towers || {}} side="red" />
+        <div>
+          <TowerDots towers={snap.towers || {}} side="red" />
+          <TeamObjectiveBuffs state={snap.teamBuffs?.red} side="red" />
+        </div>
       </div>
 
       {/* 列4：勝率條 5px 藍紅漸層 + 兩端 %（Legacy）*/}

@@ -111,7 +111,9 @@ export function adaptHeroes(snapshot, opts = {}) {
       actionState: p.state ?? null,
       respawnIn: num(p.respawn, 0),
       buffs: Array.isArray(p.buffs) ? p.buffs.map((b) => ({
-        id: String(b.id), remaining: Math.max(0, num(b.remaining, 0)),
+        id: String(b.id),
+        remaining: Number.isFinite(b.remaining) ? Math.max(0, b.remaining) : null,
+        ...(Number.isFinite(b.stacks) ? { stacks: Math.max(0, Math.round(b.stacks)) } : {}),
       })) : [],
       statusEffects: Array.isArray(p.statusEffects) ? p.statusEffects.map((b) => ({
         id: String(b.id), remaining: Math.max(0, num(b.remaining, 0)),
@@ -189,7 +191,10 @@ export function adaptObjectives(snapshot) {
       maxHp: num(o.maxHp, 1),
       hpRatio: ratio01(o.hp),
       alive: !!o.alive,
-      respawnState: o.alive ? "alive" : (num(o.respawn, 0) > 0 ? "respawning" : "dead"),
+      spawnedOnce: !!o.spawnedOnce,
+      deathAt: Number.isFinite(o.deathAt) ? o.deathAt : null,
+      respawnState: o.alive ? "alive"
+        : (!!o.spawnedOnce ? (num(o.respawn, 0) > 0 ? "respawning" : "dead") : "unspawned"),
       respawnIn: num(o.respawn, 0),
       state: o.state ?? (o.alive ? "idle" : "dead"),
       targetId: o.targetId ?? null,
@@ -203,6 +208,12 @@ export function adaptObjectives(snapshot) {
           homePosition: m.homePos ? safePos(m.homePos, memberPos).sim : memberPos,
           hp: ratio01(m.hp) * num(m.maxHp, 1), maxHp: num(m.maxHp, 1),
           hpRatio: ratio01(m.hp), alive: !!m.alive,
+          spawnedOnce: !!m.spawnedOnce,
+          deathAt: Number.isFinite(m.deathAt) ? m.deathAt : null,
+          respawnState: m.alive ? "alive"
+            : (!!m.spawnedOnce ? (num(m.respawn, 0) > 0 ? "respawning" : "dead") : "unspawned"),
+          respawnIn: num(m.respawn, 0),
+          killerTeam: m.killerTeam ?? null,
           targetId: m.targetId ?? null,
           hitAt: num(m.hitAt, -Infinity), attackAt: num(m.attackAt, -Infinity),
           clamped: memberClamped,
@@ -420,6 +431,9 @@ export function adaptEffects(snapshot, effectTime = snapshot?.ts, opts = {}) {
       color: heroVisual?.accent ?? (Number.isFinite(f.color) ? f.color : null),
     });
     const progress = ratio01(age / life);
+    const isTower = f.type === "tower" || f.style === "tower";
+    const castEnd = isTower ? 0.18 : 0.24;
+    const travelEnd = isTower ? 0.82 : 0.72;
     let targetId = f.targetId ?? null;
     if (!targetId && f.type === "tower" && f.target) {
       let nearest = null, best = 0.75;
@@ -444,9 +458,13 @@ export function adaptEffects(snapshot, effectTime = snapshot?.ts, opts = {}) {
       color: skillVisual.color,
       skillVisual,
       style: f.type === "tower" ? "tower" : (f.style ?? skillVisual.style),
-      phase: progress < 0.24 ? "cast" : (progress < 0.72 ? "travel" : "impact"),
-      phaseProgress: progress < 0.24 ? progress / 0.24
-        : (progress < 0.72 ? (progress - 0.24) / 0.48 : (progress - 0.72) / 0.28),
+      // D-fix3：塔彈把完整生命期的 64% 留給單體飛行（原 48%），正常 1×
+      // 才能連續看見逐幀位移；技能仍保留較長 cast / impact 以呈現職業語彙。
+      phase: progress < castEnd ? "cast" : (progress < travelEnd ? "travel" : "impact"),
+      phaseProgress: progress < castEnd ? progress / castEnd
+        : (progress < travelEnd
+          ? (progress - castEnd) / (travelEnd - castEnd)
+          : (progress - travelEnd) / (1 - travelEnd)),
       progress,
       world: start,
       targetWorld: target,

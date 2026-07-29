@@ -193,7 +193,8 @@ for (const token of ["buildMonsters", "mapMonsterShapes.js", "dynamic-neutral-me
   assert.match(neutralCode, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 }
 for (const token of ["hero-class-language", "tank-shield", "assassin-left",
-  "mage-staff", "marksman-launcher", "support-halo", "font: \"700 7px", "Lv{hero.level}"]) {
+  // D-fix3 手機優先收尾把名稱縮到 6px；其餘職業輪廓／本場等級契約不變。
+  "mage-staff", "marksman-launcher", "support-halo", "font: \"700 6px", "Lv{hero.level}"]) {
   assert.match(heroCode, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 }
 for (const token of ["tank", "fighter", "assassin", "mage", "marksman", "support"]) {
@@ -226,6 +227,6 @@ console.log("Milestone C-fix verifier: PASS", JSON.stringify({
   presentation: {
     formalMonsterRecipes: true,
     heroClasses: 6,
-    compactNameplatePx: 7,
+    compactNameplatePx: 6,
   },
 }));
