@@ -49,7 +49,9 @@ export function snapshotToFrame(snap) {
     t: round2(snap.ts),
     p: snap.players.map((pl) => [
       round2(pl.pos.x), round2(pl.pos.y), round3(pl.hp), pl.dead ? 1 : 0,
-      pl.k, pl.d, pl.a || 0, Math.round(pl.gold || 0), pl.lv || 1,
+      // frame.p[8] 的既有語意是「畫面本場等級」。舊碼誤錄跨場熟練 lv；
+      // 欄位位置與 contract 不變，只改回正式 snapshot 的 mlv。
+      pl.k, pl.d, pl.a || 0, Math.round(pl.gold || 0), pl.mlv ?? pl.lv ?? 1,
     ]),
     tw: Object.fromEntries(Object.entries(snap.towers).map(([id, t]) => [id, round3(t.hp)])),
     dr: snap.dragon?.alive ? 1 : 0,

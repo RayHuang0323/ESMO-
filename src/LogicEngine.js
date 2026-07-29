@@ -1005,12 +1005,16 @@ export class LogicEngine {
     // Milestone B.2：正式 GameView 預設加速播放時，H.3 的 0.65 sim-s 只亮不到
     // 一次人眼可辨識的瞬間。延長「事件呈現窗」而非攻擊 CD / 傷害，讓 live 與
     // Replay 都能由同一事件完整顯示 cast → travel → impact。
-    const minLife = f.feedback === "skill" || f.type === "ult" ? 3.2
-      : (f.feedback === "attack" || f.type === "line" ? 2.2 : 0.9);
+    const minLife = f.type === "tower" ? 3.4
+      : (f.feedback === "skill" || f.type === "ult" ? 4.2
+        : (f.feedback === "attack" || f.type === "line" ? 2.8 : 0.9));
     const life = Math.max(f.exp ?? minLife, minLife);
     this.fx.push({
       ...f, id: f.id ?? `fx${this._fxSeq++}`, at: f.at ?? this.t,
-      exp: life, life: f.life ?? life,
+      // Milestone D：舊事件可顯式帶較短 life（塔彈原本是 1.1s），但 exp 已被
+      // 拉長；renderer 實際讀 life，造成「事件還在、彈體卻只亮約 0.29 真實秒」。
+      // 兩欄都套同一個最低呈現窗，只改視覺時序，不改 CD／傷害。
+      exp: life, life: Math.max(f.life ?? life, minLife),
     });
     if (this.fx.length > 60) this.fx.shift();
   }

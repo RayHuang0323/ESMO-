@@ -410,22 +410,22 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
           userData={{ part: "hero-team-side-marker", team }} />
       </group>
       {showLabel && (
-        <Html position={[0, HERO.barY + 0.9 * S, 0]} center distanceFactor={132}
+        <Html position={[0, HERO.barY + 0.72 * S, 0]} center distanceFactor={148}
           style={{ pointerEvents: "none" }}>
           <div ref={labelRef} style={{
-            display: "flex", alignItems: "center", gap: 2,
-            font: "700 9px ui-monospace,monospace", whiteSpace: "nowrap",
-            color: "#f8fafc", padding: "0 3px 0 2px", borderRadius: 3,
+            display: "flex", alignItems: "center", gap: 2.5,
+            font: "700 8px ui-monospace,monospace", lineHeight: 1.25, whiteSpace: "nowrap",
+            color: "#f8fafc", padding: "1px 3px 1px 2px", borderRadius: 3,
             borderLeft: `2px solid ${team === "blue" ? "#4d95f0" : "#f0574d"}`,
-            background: "rgba(5,10,18,.5)", textShadow: "0 1px 2px rgba(0,0,0,.9)",
+            background: "rgba(5,10,18,.42)", textShadow: "0 1px 2px rgba(0,0,0,.9)",
           }}>
             <span style={{
               width: 4, height: 4, borderRadius: 1,
               background: team === "blue" ? "#4d95f0" : "#f0574d",
               transform: "rotate(45deg)", boxShadow: "0 0 3px currentColor",
             }} aria-hidden="true" />
-            <span style={{ opacity: 0.66 }}>L{hero.level}</span>
             <span>{hero.displayName}</span>
+            <span style={{ opacity: 0.72 }}>Lv{hero.level}</span>
           </div>
         </Html>
       )}

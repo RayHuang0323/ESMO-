@@ -218,7 +218,12 @@ export default function MobaRuntimeEffects({ frameRef }) {
             x: ax + (bx - ax) * tailP,
             z: az + (bz - az) * tailP,
           }, 0.3 * S * visualWidth, color, projectileY + 0.08 * S, 1.35);
-          addLock(impact, 1.05 * S, color, elapsed * 3.2);
+          // 短尾跡只黏著單顆彈體，不再讓目標腳下的舊白色鎖定圈主導畫面。
+          const tail = {
+            x: ax + (bx - ax) * Math.max(0, phaseProgress - 0.14),
+            z: az + (bz - az) * Math.max(0, phaseProgress - 0.14),
+          };
+          addLine(tail, moving, 0.2 * S * visualWidth, color, projectileY);
         } else if (["twinSlash", "fist", "dash", "minionSlash", "monsterClaw"].includes(style)) {
           addSlash(moving, (isMinion ? 0.62 : 1.15) * S * visualWidth, color, -0.9 + phaseProgress * 1.8);
           if (style === "twinSlash") addSlash(moving, 0.92 * S * visualWidth, color, 2.1 - phaseProgress * 1.4);
@@ -246,7 +251,7 @@ export default function MobaRuntimeEffects({ frameRef }) {
           const strength = Math.max(0.45, 1 - phaseProgress * 0.5);
           addOrb(impact, 0.92 * S * visualWidth * strength, color, GROUND_Y + 1.25 * S);
           addSlash(impact, 0.72 * S * visualWidth, color, phaseProgress * 1.6);
-          addLock(impact, (1.05 - phaseProgress * 0.2) * S, color, elapsed * 4);
+          addSlash(impact, 0.56 * S * visualWidth, color, Math.PI / 2 + phaseProgress * 1.6);
         } else {
           const strength = Math.max(0.55, 1 - phaseProgress * 0.35);
           addOrb(impact, (isSkill ? 1.7 : (isMinion ? 0.7 : 1.05)) * S * visualWidth * strength,

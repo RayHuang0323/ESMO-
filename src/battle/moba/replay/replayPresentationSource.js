@@ -151,7 +151,10 @@ export function createReplaySource(replay) {
           hp: clamp01(row?.[2] ?? 0),
           dead: row?.[3] === 1,
           k: row?.[4] ?? 0, d: row?.[5] ?? 0, a: row?.[6] ?? 0,
-          gold: row?.[7] ?? 0, lv: row?.[8] ?? 1,
+          gold: row?.[7] ?? 0,
+          // 新 frame.p[8] 是本場等級；同時填 mlv/lv 讓正式 adapter、舊 consumer
+          // 都讀同一份已保存 player state，不在 Replay 另算。
+          mlv: row?.[8] ?? 1, lv: row?.[8] ?? 1,
           respawn: null,          // 未擷取：view 顯示「陣亡」而不是假的 0s 倒數
           state: null,            // 未擷取：不顯示撤退/回城/團戰徽章
           sp: null,

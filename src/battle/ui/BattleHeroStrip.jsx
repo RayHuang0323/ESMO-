@@ -92,7 +92,8 @@ function SideCell({ p, hero, roster, side, onOpen }) {
     <div onClick={onOpen} style={{ flex: 1, display: "flex", flexDirection: rev ? "row-reverse" : "row", alignItems: "center", gap: 3, minWidth: 0, cursor: "pointer" }}>
       <div style={{ display: "flex", flexDirection: rev ? "row-reverse" : "row", alignItems: "center", gap: 1.5, flexShrink: 0 }}>
         <StatBars hp={p.hp ?? 0} />
-        <HeroAvatar hero={hero} level={p.lv ?? 1} dead={p.dead} respawn={p.respawn ?? 0} />
+        {/* Milestone D：隊伍面板與世界／Replay 都讀本場 mlv；lv 是跨場熟練度。 */}
+        <HeroAvatar hero={hero} level={p.mlv ?? p.lv ?? 1} dead={p.dead} respawn={p.respawn ?? 0} />
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 1, flexShrink: 0 }}>
         {/* S29B1：F/D 讀 snapshot.players[].sp（引擎唯一資料源；無資料 ⇒ 舊佔位） */}
