@@ -14,13 +14,10 @@
 //      實測：`blue_bot` 有 3 個營地、`red_top` 有 3 個，
 //      但 `blue_top` 與 `red_bot` 是 **0 個** ⇒ 半個野區是空的。
 //
-//  【怎麼解】兩件事都只在呈現層處理：
+//  【怎麼解】
 //
-//   A. **營地位移**：離路太近的營地，整組（空地／踩踏地／口袋牆／怪物）一起
-//      往野區側位移。位移量是離線掃描出來的「滿足所有淨空的最小位移」，
-//      寫死成常數表（不在 runtime 做搜尋：要決定性、也要快），
-//      再由 verifier 逐條驗證淨空確實達標。
-//      藍方解一次、紅方一律取 180° 鏡射 ⇒ 不製造任何單邊差異。
+//   A. **營地位移**：Milestone C 前只有呈現層位移 Buff，模擬仍在舊座標，
+//      造成動態怪物與互動點分離。現在淨空座標已回寫 gameData，這裡不再二次位移。
 //
 //   B. **呈現用營地**：在兩個空象限補上鳥營與蟾蜍。
 //      ⚠⚠ 這些營地**沒有對應的模擬實體**（`sim: false`）。
@@ -28,7 +25,7 @@
 //      它們純粹是「讓野區看起來像野區」的地形佈景。
 //      模擬層之後真的要加營地時，應該以這裡的座標為準去加，然後把 sim 改成 true。
 //
-//  ⚠ 不改 gameData.js、不改任何模擬常數。每個營地都保留 `sim{x,y}` 對照。
+//  每個營地仍保留 `sim{x,y}` 對照，供 verifier 防止日後再度分叉。
 //  ⚠ 純資料、無 THREE/React、不使用 Math.random()。
 // ============================================================================
 import { CAMPS, WORLD_SIZE } from "../../../gameData.js";
@@ -46,15 +43,10 @@ export const CAMP_CLEARANCE = Object.freeze({
 export const CAMP_SIZE = Object.freeze({ buff: 11, camp: 9, pocket: 15.5 });
 
 /**
- * 藍方營地的呈現座標。紅方一律取 (220−x, 220−y)。
- *
- * `camp_blue_buff` 的位移量 17.1 是離線掃描的結果：在「距路 ≥18、距河 ≥15、
- * 距坑 ≥24、距塔 ≥16、距其它營地 ≥20」的條件下，離原座標最近的可行點。
- * 位移後距中路 19.0（原本 5.9），距最近營地 20.2。
- * 另外兩個營地原本就離路 20.5 / 21.3，不需要動。
+ * Milestone C 起呈現座標直接沿用 gameData；表保留為 null 明示不再有隱性 offset。
  */
 const BLUE_DISPLAY = Object.freeze({
-  camp_blue_buff: { x: 76, y: 171 },
+  camp_blue_buff: null,
   camp_blue_a: null,   // null = 沿用 gameData 座標
   camp_blue_b: null,
 });

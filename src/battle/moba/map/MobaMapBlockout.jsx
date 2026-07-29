@@ -271,6 +271,7 @@ export default function MobaMapBlockout({ show = {}, ring = "desktop", castTower
   const showCoords = show.coords ?? false, showDecor = show.decor ?? true;
   const showLabels = show.labels ?? true;
   const showBush = show.bush ?? true, showMonsters = show.monsters ?? true;
+  const dynamicCamps = show.dynamicCamps ?? false;
   const showWalls = show.walls ?? true;   // G.9：獨立的「牆體」總開關（供「只看地表 / 只看基地」乾淨隔離）
   const showBase = show.base ?? true;      // G.9：基地平台 / 主堡 / 泉水總開關
   //  G.14-fix：基地聚焦模式（debug 專用）。null = 正常畫。
@@ -386,7 +387,12 @@ export default function MobaMapBlockout({ show = {}, ring = "desktop", castTower
   }, [T, baseFocus, bpMode]);
 
   // ── 野怪：每隻合併主體 + 發光重點 ────────────────────────────────────────────
-  const monsterData = useMemo(() => T.monsters.map((m) => ({ m, ...buildMonsterGeo(m) })), [T]);
+  const monsterData = useMemo(() => T.monsters
+    // 正式 Runtime 的 6 個可互動營地由 MobaRuntimeNeutrals 畫動態實體；
+    // Debug 地圖與四個 presentation-only 營地仍保留原本靜態剪影。
+    .filter((m) => !dynamicCamps || !(
+      m.id.startsWith("mon_camp_") && !m.id.startsWith("mon_pcamp_")))
+    .map((m) => ({ m, ...buildMonsterGeo(m) })), [T, dynamicCamps]);
 
   // ── 基地高地平台 ────────────────────────────────────────────────────────────
   const baseVolumes = useMemo(() => {

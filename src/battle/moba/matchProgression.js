@@ -235,6 +235,11 @@ SIM_RULES.v3 = {
   heroTowerSoloK: 0.30,
   towerAggroDmg: 66,
   towerAggroRange: 5.5,
+  // Milestone C：塔的傷害改成離散單體射擊。引擎正式 tick 是 0.5s；
+  // 每發 60 完整保留舊 120 DPS / 2s TTK，240 HP 小兵會清楚經過四次扣血才死亡。
+  towerAttackInterval: 0.5,
+  towerMinionDamage: 60,
+  towerChampionThreatT: 3,
   minionShieldRange: 5,
   // ── 後期加速（v3 收尾機制之三：sudden death）─────────────────────────────
   //  無戰術對局的長尾（120 seeds 實測 p99 34.5 分、max 39.2 分）會超過
@@ -264,7 +269,13 @@ SIM_RULES.v3 = {
   objDmgK: 0.5,                        // 坑內優勢方每人 power×objDmgK×dt
   campHp: 280, buffCampHp: 420,
   campFirstSpawn: 30, campRespawn: 90,
-  campDmgK: 0.6,                       // 打野對營地 power×campDmgK×dt（營地不反擊，見設計文件）
+  campDmgK: 0.6,
+  // Milestone C：營地的移動 / 索敵 / 反擊 / leash。只套 v3，v1/v2 歷史基準不變。
+  campIdleRadius: 1.25, campIdleSpeed: 0.55,
+  campAggroRange: 5.5, campAttackRange: 2.35, campLeashRange: 7.5,
+  campMoveSpeed: 2.4, campReturnSpeed: 3.4,
+  // 傷害刻意低：營地反擊是可讀的真實 HP step，但不改寫既有對線/首殺節奏。
+  campAttackInterval: 1.35, campAttackDamage: 4,
   campGold: 60, buffCampGold: 90,
   // 巴龍 buff（v3 收尾機制之二）：擊殺方 baronBuffT 秒內小兵拆塔 ×baronMinionK
   //  ⇒ 拿下巴龍 = 真實的推進窗，比賽不再拖尾（實測 p99 時長 34 分 → 需 ≤32）

@@ -14,9 +14,8 @@
 //   snapshot ⇒ 這裡一律 `towers: false`，塔改由 MobaRuntimeStructures 依 id 對應
 //   呈現座標畫出來。這樣就不可能出現兩套塔。
 //
-//  【營地】野怪剪影（monsters）留著當「營地在哪裡」的地形語言；
-//   **存活狀態**由 MobaRuntimeStructures 的狀態環表示（資料來自 snapshot）。
-//   逐營地的死亡／重生造型留到 H.3 Visual Material Pass。
+//  【營地】呈現用佈景營地保留靜態剪影；6 個可互動營地由
+//   MobaRuntimeNeutrals 依 snapshot 畫動態實體，避免同座標出現兩隻怪。
 // ============================================================================
 import React, { useMemo } from "react";
 import MobaMapBlockout from "./MobaMapBlockout.jsx";
@@ -26,6 +25,7 @@ import { buildTerrainShapes } from "./mapTerrainShapes.js";
 /** 正式 Runtime 的圖層設定：沒有任何 debug 開關。 */
 const RUNTIME_SHOW = Object.freeze({
   lane: true, jungle: true, pits: true, bush: true, monsters: true,
+  dynamicCamps: true,
   decor: true, walls: true, base: true,
   towers: false,        // ← 塔改由 MobaRuntimeStructures 依正式資料畫
   labels: false, coords: false, landmark: false, baseFocus: null,

@@ -112,15 +112,17 @@ export const BUSHES = [
   {x:96,y:58,r:5},{x:124,y:162,r:5},{x:78,y:96,r:5},{x:142,y:124,r:5},
 ];
 
-// ── S29B1：Jungle Camp 座標（單一真實來源：主畫面 / Minimap / Replay / 引擎共用）──
+// ── S29B1 / Milestone C：Jungle Camp 座標（引擎與呈現共用單一真實來源）──
 //  選點規則（以腳本掃格驗證，非手感）：兩側 180° 鏡像（100-x,100-y）、距任一障礙
 //  ≥ r+1.8（英雄避讓半徑 r+1.4 + 互動餘裕）、距三路路線 ≥5.5、距龍/巴龍坑 ≥8、
 //  距草叢 ≥ r+1.5。side 表示「屬於哪一方野區」（該側打野的預設農怪路線）。
 export const CAMPS = [
-  { id: "camp_blue_buff", side: "blue", type: "buff", presentationKey: "blueBuff", x: 74, y: 154 },
+  // Buff 原座標 (74,154)/(146,66) 落在中路視覺帶；G.4 曾只在 renderer 位移，
+  // 導致可攻擊實體與畫面相差 17.1。Milestone C 上線動態野怪後統一到淨空座標。
+  { id: "camp_blue_buff", side: "blue", type: "buff", presentationKey: "blueBuff", x: 76, y: 171 },
   { id: "camp_blue_a",    side: "blue", type: "camp", presentationKey: "jungleCamp", x: 48, y: 142 },
   { id: "camp_blue_b",    side: "blue", type: "camp", presentationKey: "jungleCamp", x: 96, y: 174 },
-  { id: "camp_red_buff",  side: "red",  type: "buff", presentationKey: "redBuff", x: 146, y: 66 },
+  { id: "camp_red_buff",  side: "red",  type: "buff", presentationKey: "redBuff", x: 144, y: 49 },
   { id: "camp_red_a",     side: "red",  type: "camp", presentationKey: "jungleCamp", x: 172, y: 78 },
   { id: "camp_red_b",     side: "red",  type: "camp", presentationKey: "jungleCamp", x: 124, y: 46 },
 ];

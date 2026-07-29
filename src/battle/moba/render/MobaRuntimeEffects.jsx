@@ -160,7 +160,7 @@ export default function MobaRuntimeEffects({ frameRef }) {
           const spread = (0.85 + phaseProgress * (isSkill ? 1.5 : 0.7)) * S * visualWidth;
           addRing(fx.world, spread, color);
           if (isSkill) addRing(fx.world, spread * 0.58, color, GROUND_Y + 0.2);
-          if (["twinSlash", "fist", "dash", "minionSlash"].includes(style)) {
+          if (["twinSlash", "fist", "dash", "minionSlash", "monsterClaw"].includes(style)) {
             addSlash(fx.world, (0.8 + phaseProgress * 0.5) * S * visualWidth, color, -0.65);
           } else {
             addOrb(fx.world, (isSkill ? 0.82 : 0.48) * S * visualWidth, color,
@@ -188,7 +188,7 @@ export default function MobaRuntimeEffects({ frameRef }) {
             z: az + (bz - az) * tailP,
           }, 0.3 * S * visualWidth, color, projectileY + 0.08 * S, 1.35);
           addLock(fx.targetWorld, 1.05 * S, color, elapsed * 3.2);
-        } else if (["twinSlash", "fist", "dash", "minionSlash"].includes(style)) {
+        } else if (["twinSlash", "fist", "dash", "minionSlash", "monsterClaw"].includes(style)) {
           addSlash(moving, (isMinion ? 0.62 : 1.15) * S * visualWidth, color, -0.9 + phaseProgress * 1.8);
           if (style === "twinSlash") addSlash(moving, 0.92 * S * visualWidth, color, 2.1 - phaseProgress * 1.4);
         } else if (style === "quake" || style === "hammer") {

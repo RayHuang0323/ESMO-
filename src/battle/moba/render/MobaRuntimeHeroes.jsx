@@ -201,11 +201,27 @@ export default function MobaRuntimeHeroes({ heroes = [], frameRef = null, showLa
         bar, ring, deathMark, label, bodyAliveMaterial, secondaryAliveMaterial,
       } = node;
       const hitFx = effects.find((fx) => String(fx.targetId ?? "") === h.id && fx.phase === "impact");
+      const actionFx = effects.find((fx) => String(fx.sourceId ?? "") === h.id);
       const hit = hitFx ? Math.max(0, 1 - (hitFx.phaseProgress ?? 0)) : 0;
+      const action = actionFx ? Math.sin(Math.PI * Math.max(0, Math.min(1, actionFx.phaseProgress ?? 0))) : 0;
+      const cast = actionFx?.phase === "cast" ? action : 0;
+      const release = actionFx?.phase === "travel" ? action : 0;
       const shake = hit > 0 ? Math.sin(now * 58 + h.id.length) * 0.24 * S * hit : 0;
       //  ⚠ 地面不在 y = 0（見檔頭 GROUND_Y 註解）⇒ 英雄整體抬到走道表面。
-      root.position.set(h.world.x + shake, GROUND_Y + hit * 0.08 * S, h.world.z - shake * 0.35);
+      root.position.set(h.world.x + shake, GROUND_Y + hit * 0.08 * S + cast * 0.14 * S, h.world.z - shake * 0.35);
       if (h.facing !== null && h.facing !== undefined) root.rotation.y = h.facing;
+      // Milestone C：事件驅動的簡單前搖 / 揮擊 / 後座。只動既有低模零件，
+      // 不新增動畫狀態機，Live 與 Replay 都直接讀同一份 effects。
+      if (signature) {
+        signature.rotation.x = -release * 0.42;
+        signature.rotation.z = cast * 0.16;
+      }
+      if (accessory) {
+        accessory.rotation.x = -release * 0.55;
+        accessory.rotation.z = cast * 0.2;
+      }
+      if (shoulder) shoulder.rotation.z = release * 0.12 - hit * 0.08;
+      if (crest) crest.rotation.y = now * 0.35 + cast * 0.9;
       //  ── 陣亡呈現（見檔頭 TEAM_DEAD / DEAD 註解）──────────────────────────
       //  倒地：本體由站姿轉成橫躺，高度降到「躺在地上」而不是「陷進地裡」
       //  ⇒ 剪影與站立的英雄完全不同，遠看也分得出來。
@@ -355,7 +371,7 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
       <mesh ref={badgeRef} geometry={geo.badge} material={accentMaterial}
         position={[0, HERO.height * 0.72, HERO.radius * 0.96]} scale={0.72}
         frustumCulled={false} userData={{ part: "hero-badge", visual: resolvedVisual.badge }} />
-      {/* 英雄本體保留個人主色；腰間粗環與腳底環專責藍／紅陣營辨識。 */}
+      {/* 英雄本體保留個人主色；腰間粗環、腳底環與血條側標專責藍／紅陣營辨識。 */}
       <mesh ref={teamBandRef} geometry={geo.teamBand}
         material={team === "blue" ? mats.blue : mats.red}
         position={[0, HERO.height * 0.66, 0]} rotation={[Math.PI / 2, 0, 0]}
@@ -378,16 +394,19 @@ function HeroUnit({ hero, geo, mats, showLabel, register }) {
         <Html position={[0, HERO.barY + 1.5 * S, 0]} center distanceFactor={190}
           style={{ pointerEvents: "none" }}>
           <div ref={labelRef} style={{
+            display: "flex", alignItems: "center", gap: 4,
             font: "700 12px ui-monospace,monospace", whiteSpace: "nowrap",
-            color: team === "blue" ? "#bcdcff" : "#ffc9c2",
-            textShadow: "0 1px 3px rgba(0,0,0,.9)",
+            color: "#f8fafc", padding: "1px 5px 1px 3px", borderRadius: 4,
+            borderLeft: `3px solid ${team === "blue" ? "#4d95f0" : "#f0574d"}`,
+            background: "rgba(5,10,18,.62)", textShadow: "0 1px 3px rgba(0,0,0,.9)",
           }}>
             <span style={{
-              display: "inline-block", marginRight: 4, padding: "1px 4px", borderRadius: 3,
-              color: "#fff", background: team === "blue" ? "#2563eb" : "#dc2626",
-              boxShadow: "0 1px 3px rgba(0,0,0,.8)",
-            }}>{team === "blue" ? "藍方" : "紅方"}</span>
-            <span style={{ opacity: 0.75 }}>Lv{hero.level}</span> {hero.displayName}
+              width: 6, height: 6, borderRadius: 1,
+              background: team === "blue" ? "#4d95f0" : "#f0574d",
+              transform: "rotate(45deg)", boxShadow: "0 0 5px currentColor",
+            }} aria-hidden="true" />
+            <span style={{ opacity: 0.72 }}>Lv{hero.level}</span>
+            <span>{hero.displayName}</span>
           </div>
         </Html>
       )}

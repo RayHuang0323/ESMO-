@@ -46,7 +46,9 @@ for (const motif of [
   assert.match(renderer, new RegExp(motif), `missing portrait-driven head motif ${motif}`);
 }
 assert.match(renderer, /hero-team-side-marker/);
-assert.match(renderer, /"藍方" : "紅方"/);
+assert.match(renderer, /hero-team-band/);
+assert.match(renderer, /borderLeft/);
+assert.doesNotMatch(renderer, />\{team === "blue" \? "藍方" : "紅方"\}<\//);
 
 console.log("Milestone B.1 verifier: PASS", JSON.stringify({
   roster: heroes.length,

@@ -23,8 +23,6 @@ import {
   simToWorld, inBoundsSim, clampSim, baseSim, pitSim, LANE_IDS,
 } from "./coordinateMapping.js";
 import { TOWER_HP, NEXUS_HP, ROLE_NAME, posOnLane } from "../../../gameData.js";
-import { buildMobaLayout } from "./mobaMapLayout.js";
-import { buildCampPlan } from "./mapCampLayout.js";
 import { isWalkable, projectToWalkable } from "../nav/mobaNavigation.js";
 import { archetypeForRole, archetypeData, heroVisualFor, skillVisualFor } from "../presentation/heroArchetypes.js";
 
@@ -156,45 +154,20 @@ export function adaptStructures(snapshot, opts = {}) {
 }
 
 /**
- * 野區營地的**呈現座標**（bug 修正：見下方 adaptObjectives 說明）。
- * 只計算一次並快取：`buildCampPlan` 是靜態地圖幾何的純函式（與對局無關），
- * 若每次 adaptObjectives 都重建整份 mobaLayout 會很浪費（這支在 60fps 內插下會被頻繁呼叫）。
- */
-let _campDisplayById = null;
-function campDisplayPos(id) {
-  if (!_campDisplayById) {
-    const plan = buildCampPlan(buildMobaLayout());
-    _campDisplayById = new Map(plan.filter((c) => !c.isPresentation).map((c) => [c.id, { x: c.x, y: c.y }]));
-  }
-  return _campDisplayById.get(id) ?? null;
-}
-
-/**
  * 大型目標與野區營地。
  *   · dragon / baron：snapshot 的獨立欄位；**位置** snapshot 沒有給
  *     ⇒ 用 gameData.PITS 補（presentation fallback，明確標記）。
  *   · objectives[]：v3 規則才有，含營地與大型目標的完整位置與血量。
  *
- *   ⚠ 兩個 Buff 營地（camp_blue_buff / camp_red_buff）的**模擬座標**與**呈現座標**
- *   本來就不同——`mapCampLayout.js`（Milestone G.4）把它們在畫面上位移了 17.1 單位，
- *   理由是原始模擬座標離中路太近，視覺上會變成「怪站在路上」。這個位移**只在呈現層**
- *   生效，LogicEngine 完全不知道（`gameData.js` 與模擬常數都沒有動，Buff 判定距離
- *   仍用原始座標）。
- *   本檔原本直接拿 `o.pos`（模擬座標）當畫面位置，於是「存活狀態環」
- *   （MobaRuntimeStructures 的 objRing）畫在模擬座標，而地圖的野怪剪影（G.4）畫在
- *   位移後的呈現座標 ⇒ 兩者相差 17 個單位，畫面上就是一個孤立的黃圈、旁邊沒有怪
- *   （2026-07-28 手機版問題標記 #1 回報的正是這個）。
- *   修法：野區營地一律改用 `campDisplayPos()` 的呈現座標；沒有位移的營地
- *   （`disp = null`）本來就與模擬座標相同，這裡不會改變它們的畫面位置。
- *   dragon/baron 不受影響（它們不經過 mapCampLayout，維持 PITS 座標）。
+ *   Milestone C 起 camp 的 snapshot.pos 就是動態真值，gameData 與地圖也已共用
+ *   同一出生座標；Renderer 不再偷偷覆蓋 Buff 位置。
  */
 export function adaptObjectives(snapshot) {
   const out = [];
   const seen = new Set();
 
   for (const o of snapshot?.objectives ?? []) {
-    const display = campDisplayPos(o.id);
-    const { sim, clamped } = safePos(display ?? o.pos, { x: 110, y: 110 });
+    const { sim, clamped } = safePos(o.pos, { x: 110, y: 110 });
     seen.add(o.type);
     out.push({
       id: String(o.id),
@@ -203,12 +176,18 @@ export function adaptObjectives(snapshot) {
       team: o.side ?? null,
       position: sim,
       world: simToWorld(sim, RUNTIME_Y.structure),
+      homePosition: o.homePos ? safePos(o.homePos, sim).sim : sim,
+      homeWorld: simToWorld(o.homePos ? safePos(o.homePos, sim).sim : sim, RUNTIME_Y.structure),
       hp: ratio01(o.hp) * num(o.maxHp, 1),
       maxHp: num(o.maxHp, 1),
       hpRatio: ratio01(o.hp),
       alive: !!o.alive,
       respawnState: o.alive ? "alive" : (num(o.respawn, 0) > 0 ? "respawning" : "dead"),
       respawnIn: num(o.respawn, 0),
+      state: o.state ?? (o.alive ? "idle" : "dead"),
+      targetId: o.targetId ?? null,
+      hitAt: num(o.hitAt, -Infinity),
+      attackAt: num(o.attackAt, -Infinity),
       fallbackPosition: false,
       clamped,
     });
@@ -265,13 +244,21 @@ function minionPosition(lane, team, t, slot, aliveStructures) {
   const nx = -ty, ny = tx;
   const lateral = FORMATION_LATERAL[slot % FORMATION_LATERAL.length] ?? 0;
   const trail = slot === 3 ? (team === "blue" ? -1.45 : 1.45) : 0;
-  const candidate = {
-    x: center.x + nx * lateral + tx * trail,
-    y: center.y + ny * lateral + ty * trail,
-  };
+  // Milestone C：塔旁不能直接從隊形候選點跳回 lane center。那會讓 slot offset
+  // 在相鄰 snapshot 間忽然消失，視覺上像穿塔 / 左右彈跳。依序收斂隊形幅度，
+  // 仍不行才投影「最後候選點」，確保位移連續且沿原本側向。
+  let candidate = center;
+  for (const k of [1, 0.65, 0.35, 0]) {
+    const q = {
+      x: center.x + (nx * lateral + tx * trail) * k,
+      y: center.y + (ny * lateral + ty * trail) * k,
+    };
+    candidate = q;
+    if (isWalkable(q.x, q.y, MINION_RADIUS, aliveStructures)) break;
+  }
   const sim = isWalkable(candidate.x, candidate.y, MINION_RADIUS, aliveStructures)
     ? candidate
-    : projectToWalkable(center.x, center.y, MINION_RADIUS, aliveStructures, 7);
+    : projectToWalkable(candidate.x, candidate.y, MINION_RADIUS, aliveStructures, 7);
   return { sim, facing: Math.atan2(tx * (team === "blue" ? 1 : -1), ty * (team === "blue" ? 1 : -1)) };
 }
 
@@ -428,10 +415,10 @@ export function adaptEffects(snapshot, effectTime = snapshot?.ts, opts = {}) {
       sourceId: f.sourceId ?? null,
       targetId,
       archetype,
-      width: archetypeData(archetype).effectWidth,
+      width: num(f.width, skillVisual.width ?? archetypeData(archetype).effectWidth),
       color: skillVisual.color,
       skillVisual,
-      style: f.type === "tower" ? "tower" : skillVisual.style,
+      style: f.type === "tower" ? "tower" : (f.style ?? skillVisual.style),
       phase: progress < 0.24 ? "cast" : (progress < 0.72 ? "travel" : "impact"),
       phaseProgress: progress < 0.24 ? progress / 0.24
         : (progress < 0.72 ? (progress - 0.24) / 0.48 : (progress - 0.72) / 0.28),
@@ -453,9 +440,15 @@ export function adaptRuntimeMapFrame(snapshot, opts = {}) {
   const structures = adaptStructures(snapshot, opts);
   const objectives = adaptObjectives(snapshot);
   const minions = adaptMinions(snapshot, opts, structures);
+  const explicitEffects = adaptEffects(snapshot, opts.effectTime, opts);
+  const derivedMinionEffects = adaptMinionCombatEffects(minions, structures, opts.interpolation ?? 1)
+    // Milestone C 塔彈已由 LogicEngine 的真實射擊事件提供；HP delta fallback 只留給
+    // 舊 snapshot / Replay，避免同一次扣血疊出兩顆塔彈。
+    .filter((fx) => fx.style !== "tower" || !explicitEffects.some((e) =>
+      e.style === "tower" && e.targetId === fx.targetId));
   const effects = [
-    ...adaptEffects(snapshot, opts.effectTime, opts),
-    ...adaptMinionCombatEffects(minions, structures, opts.interpolation ?? 1),
+    ...explicitEffects,
+    ...derivedMinionEffects,
     ...adaptStructureDamageEffects(structures, heroes, minions, opts.interpolation ?? 1),
   ];
   const warnings = [];

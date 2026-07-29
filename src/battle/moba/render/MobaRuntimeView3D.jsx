@@ -23,6 +23,7 @@ import MobaRuntimeHeroes from "./MobaRuntimeHeroes.jsx";
 import MobaRuntimeStructures from "./MobaRuntimeStructures.jsx";
 import MobaRuntimeMinions from "./MobaRuntimeMinions.jsx";
 import MobaRuntimeEffects from "./MobaRuntimeEffects.jsx";
+import MobaRuntimeNeutrals from "./MobaRuntimeNeutrals.jsx";
 import { blendRuntimePosition } from "./runtimeMovementPolicy.js";
 import RuntimeDeviceDiagnosticsPanel from "./RuntimeDeviceDiagnosticsPanel.jsx";
 import { adaptRuntimeMapFrame } from "../map/mobaRuntimeMapAdapter.js";
@@ -390,6 +391,7 @@ export default function MobaRuntimeView3D({ quality = "high", lockHeroId = null,
         frameRef={frameRef}
       />
       <MobaRuntimeMinions frameRef={frameRef} />
+      <MobaRuntimeNeutrals objectives={frame.objectives} frameRef={frameRef} />
       <MobaRuntimeEffects frameRef={frameRef} />
       <MobaRuntimeHeroes heroes={frame.heroes} frameRef={frameRef} showLabels={quality !== "low"} />
 

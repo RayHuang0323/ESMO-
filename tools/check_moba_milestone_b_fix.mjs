@@ -64,10 +64,12 @@ const [heroesCode, effectsCode, minionsCode, structuresCode] = await Promise.all
 ]);
 for (const token of [
   "bodyByHero", "secondaryByHero", "hero-team-band", "hero-team-side-marker",
-  "\"藍方\" : \"紅方\"", "HeroHeadFeature", "emissiveIntensity = 0.14 + hit",
+  "borderLeft", "HeroHeadFeature", "emissiveIntensity = 0.14 + hit",
 ]) {
   assert.match(heroesCode, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 }
+assert.doesNotMatch(heroesCode, />\{team === "blue" \? "藍方" : "紅方"\}<\//,
+  "Milestone C removes the large faction text label; compact color markers remain");
 for (const token of [
   "TorusGeometry", "addSlash", "addLock", "minionSlash", "style === \"tower\"",
   "const projectileY", "const tailP", "不畫全長光束或震波", "塔彈命中不再產生大面積同心圓",

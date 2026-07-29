@@ -255,13 +255,13 @@ ck(`12) Baron 真實出生（出生於 ${V3.baronSpawn}s；maxHp=${V3.baronHp}�
   const engineCamps = e.neutrals.camps;
   const posMatch = engineCamps.every((c) => {
     const def = CAMPS.find((d) => d.id === c.id);
-    return def && c.pos.x === def.x && c.pos.y === def.y;
+    return def && c.homePos.x === def.x && c.homePos.y === def.y;
   });
   // S29B3 修斷言競態：終局看 killerTeam 會被「營地重生 reset」清掉（取決於終局落點）
   //   ⇒ 改為模擬過程中累計「alive→dead 轉場」（真觀測、無競態）。
   const wereKilled = runsV3.every((r) => r.campKills >= 1);
   const totalCampKills = runsV3.reduce((s, r) => s + r.campKills, 0);
-  ck(`13) 野怪營地存在（6 座、藍紅 180° 鏡像、引擎座標 == gameData.CAMPS、每場都有營地被清掉：40 場合計 ${totalCampKills} 次）`,
+  ck(`13) 野怪營地存在（6 座、藍紅 180° 鏡像、引擎出生點 == gameData.CAMPS、每場都有營地被清掉：40 場合計 ${totalCampKills} 次）`,
     CAMPS.length === 6 && mirrored && posMatch && wereKilled);
 }
 
@@ -299,9 +299,10 @@ ck(`12) Baron 真實出生（出生於 ${V3.baronSpawn}s；maxHp=${V3.baronHp}�
   const snapMatches = snap.objectives.every((o) => {
     if (o.type === "dragon" || o.type === "baron") return dist(o.pos, PITS[o.id]) < 1e-9;
     const def = CAMPS.find((d) => d.id === o.id);
-    return def && o.pos.x === def.x && o.pos.y === def.y;
+    return def && o.homePos?.x === def.x && o.homePos?.y === def.y &&
+      Number.isFinite(o.pos.x) && Number.isFinite(o.pos.y);
   });
-  ck("15) Minimap 與世界座標一致（三個視圖都讀 snapshot.objectives / objectivesMeta / PITS，snapshot 座標 == gameData 單一來源；無硬編碼副本）",
+  ck("15) Minimap 與世界座標一致（三個視圖都讀 snapshot.objectives / objectivesMeta / PITS，動態座標 + gameData 出生點同源；無硬編碼副本）",
     snapMatches &&
     /snap\.objectives/.test(GV) && /PITS\.dragon/.test(GV) &&
     /snapshot\.objectives/.test(V3D) && /snap0\.objectives/.test(V3D) &&
