@@ -80,3 +80,26 @@ Codex **預設不得 commit / push**，除非使用者或 Sprint 指令**明確�
 - 未驗證項（尤其手機 UX / FPS / 視覺，誠實標記）
 - 是否 commit / push
 - 建議的下一步 / 交還對象
+
+## 9. MOBA Runtime 正式驗收守則（D-fix3 增補）
+
+- 視覺驗收必須走正式
+  `Dashboard → MOBA → Lineup → Matchmaking → Ban/Pick → Tactic → GameView`；
+  `?debug=moba-runtime-battle` 只能診斷，不能取代正式 GameView。
+- 需要 FX 文字佐證可在正式入口加 `?diag=1&debug=1`，但仍須完成上述流程；
+  驗收倍率固定 1×，桌面與 390×844 都要保存，塔彈需連續影格而非單張事件計數。
+- 禁止為畫面綠燈改地圖幾何、公平門檻、核心碰撞來源、勝負公式或 Replay 重播模式；
+  Replay 只播放保存 frame，不重跑 `LogicEngine`。
+- 既有 terrain、bug 影片、backup、logs、blend／glb、舊截圖不得混入 commit；
+  commit 前用明確檔案清單核對 staged diff。
+- D-fix3 常用直接驗證：
+  `node tools/check_moba_milestone_d_fix3.mjs`、
+  `node tools/check_moba_milestone_d_fix2.mjs`、
+  `node tools/check_moba_milestone_c_fix.mjs`、
+  `node tools/check_moba_nav_h2.mjs`、
+  `node tools/regress.mjs`、`node tools/regress2.mjs`、`npm.cmd run build`。
+- 精準手機 viewport 證據可用：
+  `node tools/shot_moba_runtime.mjs --mobile-only --mobile-width 390 --mobile-height 844`。
+  這仍只是正式 `GameView` 元件的截圖入口，不能取代完整賽前流程或 Android 真機驗收。
+- 英雄頭頂只保留 WebGL 名稱／等級與完整血條；Buff 層數／秒數放隊伍面板，
+  地圖角色僅用低干擾環繞光效。禁止再用 DOM 文字覆蓋 WebGL 血條。

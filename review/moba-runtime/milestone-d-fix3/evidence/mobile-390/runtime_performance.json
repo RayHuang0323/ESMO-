@@ -1,0 +1,74 @@
+{
+  "generatedAt": "2026-07-29T21:30:08.210Z",
+  "method": "headless SwiftShader —— **不可作為正式效能依據**",
+  "manualVisualRead": false,
+  "desktop": null,
+  "mobile": {
+    "fps": 5.1,
+    "frameTimeMs": 198.02,
+    "drawCalls": 566,
+    "triangles": 78319,
+    "geometries": 104,
+    "textures": 10,
+    "programs": 20,
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "vendor": "Google Inc. (Google)",
+    "webglVersion": 2,
+    "depthBits": 24,
+    "contextAttributes": {
+      "alpha": true,
+      "antialias": true,
+      "depth": true,
+      "desynchronized": false,
+      "failIfMajorPerformanceCaveat": false,
+      "powerPreference": "high-performance",
+      "premultipliedAlpha": true,
+      "preserveDrawingBuffer": false,
+      "stencil": true,
+      "xrCompatible": false
+    },
+    "pixelRatio": 1,
+    "drawingBuffer": {
+      "width": 390,
+      "height": 844
+    },
+    "cssCanvas": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  "mobile-low": {
+    "fps": 5.2,
+    "frameTimeMs": 192.87,
+    "drawCalls": 563,
+    "triangles": 77415,
+    "geometries": 104,
+    "textures": 10,
+    "programs": 20,
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "vendor": "Google Inc. (Google)",
+    "webglVersion": 2,
+    "depthBits": 24,
+    "contextAttributes": {
+      "alpha": true,
+      "antialias": true,
+      "depth": true,
+      "desynchronized": false,
+      "failIfMajorPerformanceCaveat": false,
+      "powerPreference": "high-performance",
+      "premultipliedAlpha": true,
+      "preserveDrawingBuffer": false,
+      "stencil": true,
+      "xrCompatible": false
+    },
+    "pixelRatio": 1,
+    "drawingBuffer": {
+      "width": 390,
+      "height": 844
+    },
+    "cssCanvas": {
+      "width": 390,
+      "height": 844
+    }
+  }
+}

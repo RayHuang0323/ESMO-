@@ -120,3 +120,40 @@ Dragon/Baron pit（PITS）——主畫面、Minimap、Replay 用同一組常數�
   程序化造型只使用專案自建幾何，不含第三方官方素材。
 - 真實 HP、Smite、killerTeam、death/respawn、participants 與事件型別完全沿用 29B1，
   Replay 仍播放已存 frame，不重跑引擎。
+
+---
+
+## Milestone D-fix3 增補：個體重生與戰略團隊增益
+
+本節取代上方「整營共用 HP／整營一次重生」及「Dragon 無增益、Baron 只作用兵線」
+的舊限制；v1／v2 歷史規則不啟用。
+
+### 營地個體狀態
+
+- 每個營地成員各自保存 `hp/maxHp/alive/hitAt/deathAt/respawnAt/killerTeam`、
+  `participants`、`dmgBy`、仇恨目標及攻擊 CD。
+- 同一 tick 的英雄傷害與 Smite 先凍結個體目標，再依雙方傷害比例同時結算；
+  反轉 `players` 陣列不會讓後迭代者突然改打下一隻。
+- 主怪死亡才授予紅／藍 Buff；同營側怪不跟著扣血或死亡。每隻在死亡後 90 秒
+  獨立回營，其他存活成員維持自身 HP、仇恨與攻擊。
+- snapshot／adapter／Replay optional `om/or/os` 保存個體 HP、出生與重生倒數；
+  舊 Replay 沒有欄位時仍可讀。
+
+### Dragon／Baron
+
+| 目標 | 重生 | ESMO 團隊效果 | 到期／死亡 |
+|---|---:|---|---|
+| Dragon | 150s | `巨龍脈動`，每層輸出 +1.2%、承傷防護 +0.8%，最多 4 層 | 本場永久；英雄死亡保留 |
+| Baron | 210s | `虛空攻勢` 70s：英雄攻城 ×1.22、兵線拆塔 ×2.2、兵對兵 ×1.7 | 70s 到期移除；英雄死亡不提前移除 |
+
+兩種效果只由真實 `killerTeam` 取得，實際作用於 `LogicEngine`；同一份
+`teamBuffs`／player buffs 經 snapshot、adapter、Replay、世界環與隊伍面板呈現。
+Dragon 層數為 match-long，沒有偽造剩餘秒數；Baron 顯示真實倒數。
+
+### Boss／Buff 重生呈現
+
+- Dragon／Baron／紅 Buff／藍 Buff 死亡後模型消失並顯示倒數，不會立即重生。
+- Dragon 150s、Baron 210s、營地成員 90s；首次出生與死亡後重生使用不同文字。
+- 上方 Boss HUD、地圖物件、英雄環繞光效、隊伍面板與 Replay 均讀正式 snapshot，
+  不以 renderer 自行計時。Buff 文字、層數與剩餘時間只放隊伍面板；英雄頭頂不放
+  `D×1` 類文字，以免遮住姓名與血條。

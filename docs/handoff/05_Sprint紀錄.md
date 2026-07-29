@@ -2526,3 +2526,83 @@ regress／公平性與 build 完成；未 push、未部署，未開始下一 Mil
 - 仍需人工 1× 長時間觀看六職業、塔彈、多人遮擋、決策切換與 Replay；Android
   真機 FPS、熱降頻、觸控、safe area、WebGL driver／H.2 閃爍未實測。
 - 未納入既有 terrain、bug 影片、backup、logs、舊截圖、blend／glb 或 map review。
+
+---
+
+## Milestone D-fix3：Runtime 戰鬥視覺、野區資源與基地結構收尾（2026-07-30）
+
+狀態：**兩階段本機 commits、正式 GameView 桌面流程、390×844 正式元件證據、
+Replay、直接安全網、公平性與 production build 完成；依 Ray 最新指示準備 push／Pages
+部署，未開始下一個 Milestone。**
+
+### 階段 1：中立資源、基地守衛與戰略效果
+
+- rollback tag `milestone-d-fix3-baseline` → `279829f`。階段 1 commit `8c576ff`
+  （`Milestone D-fix3: integrate runtime objectives and base guards`）。
+- 六座營地由整組狀態改為成員個體狀態：每隻獨立 HP、受擊、死亡、仇恨、攻擊 CD、
+  killer／participants 與 90 秒重生；主怪死亡才授予紅／藍 Buff，側怪不再同步扣血。
+- Dragon 150 秒、Baron 210 秒重生。Dragon `巨龍脈動` 每層輸出 +1.2%、
+  防護 +0.8%，最多四層、本場永久且死亡保留；Baron `虛空攻勢` 70 秒，英雄攻城
+  ×1.22、兵線拆塔 ×2.2、兵對兵 ×1.7，到期移除、死亡不提前移除。
+- 增益由 LogicEngine 實際作用並經 snapshot、adapter、Replay、世界環與隊伍面板共用；
+  舊 Replay optional 欄位缺失時仍可讀。
+- 藍紅各兩座 `nexus_guard` 來自正式鏡射 placement；兩座守衛未倒前 nexus 不可選取，
+  renderer 沒有複製假塔。
+
+### 階段 2：塔彈／六職業 FX、頭頂 UI 與小兵繞塔
+
+- 階段 2 commit `76dcca4`
+  （`Milestone D-fix3: close combat visuals and tower routing`）。
+- 正式 live 根因是 `RuntimeFrameFeeder` 在兩張 0.5 秒 snapshot 間固定使用
+  `snapshot.ts`：cast 凍結半秒，下一張直接跳 travel／impact，肉眼只剩地環。
+  現以 `extrapolateLiveEffectTime(prev.ts,snapshot.ts,subT)` 逐幀外推呈現時間；
+  Replay 仍使用已保存 frame 的時間，不改契約。
+- 「黑點」根因是 additive／instance color 在正式 WebGL、遠景與 Bloom 下失去實心輪廓。
+  塔改藍／紅 normal-blended 炮彈外殼＋白熱核心＋尾跡；六職業固定色為坦克琥珀、
+  戰士紅橘、刺客紫、法師青、射手金、輔助薄荷，並保留不同 cast／travel／impact
+  幾何與動作。大型 ring 透明度降至 0.14，只作短提示。
+- 姓名遮血條的真正根因是 DOM `<Html>` 永遠疊在 WebGL canvas 上，
+  `renderOrder` 無法跨層解決；改為 CanvasTexture WebGL Plane，名稱群組獨立 billboard，
+  名牌 order 69、血條 70–72，手機使用較窄 compact plane。
+- Ray 確認 Buff 文字礙眼後，英雄頭上不再顯示 `D×1` 等圖示／秒數；紅／藍／龍／
+  Baron 保留低透明環繞效果，隊伍面板改顯示 `龍×N／巴 Ns／紅Ns／藍Ns`。
+- 小兵穿友軍塔的根因不是敵塔停位，而是 lane progress `t` 的中心線穿過友軍塔心；
+  舊 adapter 每幀投影最近可走點，越過塔心時投影側會瞬間翻面。現以既有 Navigation
+  field 求塔前到塔後的快取折線並沿同一 `t` 取樣；不改兵線時間、攻擊距離、傷害、
+  地圖幾何、公平性或碰撞來源，live／Replay 共用。
+
+### 驗證與證據
+
+- `check_moba_milestone_d_fix3` PASS：塔 travel 進度
+  `0.156→0.500→0.844`，live phase `cast→travel→travel→impact`；
+  四門牙塔、營地個體死亡／重生、Dragon／Baron 增益、Replay 與小兵繞塔均通過。
+  小兵對塔最小端點 clearance 1.049、線段 clearance 1.049、最大 0.001 t 步進 0.337。
+- `check_moba_milestone_d_fix2`、`check_moba_milestone_d`、
+  `check_moba_milestone_c_fix` 全部 PASS；navigation 14/0、小兵 H.3 22/22、
+  presentation 12/12、camera/replay 16/16。
+- `regress` 15/15：平均 24.5 分、31.9 kills、無撤退鎖死；`regress2` 20/20、
+  節奏 8/8：藍 13／紅 7、平均 24.8 分、5 分鐘平均 Lv3.45。
+  本階段未改 LogicEngine／決策／公平門檻，分布變動屬既有 seed 樣本波動，沒有為綠燈
+  硬調結果。
+- production build：2595 modules，exit 0；只有既有 >500 kB chunk warning。
+  `git diff --check` 無 whitespace error。
+- 完整 `presentation29b2` 曾啟動，但其巢狀 runtime29 長鏈在 300 秒無輸出後停止；
+  改跑直接 presentation 12/12、navigation、regress、regress2 與 build，沒有無限等待。
+- 桌面完整正式流程、1× 技能連續影格、無頭頂 Buff 文字、Replay 與 390×844 證據位於
+  `review/moba-runtime/milestone-d-fix3/evidence/`。390×844 的 `shot_stats.json`
+  確認 viewport 390×844、formal GameView=true、10 heroes、debug map UI=0、
+  小地圖與隊伍面板 overlap=false。
+
+### Claude Code 交接／回退／人工項目
+
+- 完整報告：
+  `review/moba-runtime/milestone-d-fix3/MILESTONE_D_FIX3_REPORT.md`。
+- 回退優先用 `git revert`：只退視覺／繞塔可 revert `76dcca4`；連同個體中立資源／
+  門牙塔一起退則再 revert `8c576ff`。`milestone-d-fix3-baseline` 只供比對，
+  不可 `git reset --hard`。
+- Claude Code 接手先讀 `AGENTS.md`、`docs/ai/跨模型交接流程.md`、本節與完整報告，
+  再執行 `git status --short`；不要把既有 terrain、bug 影片、backup、logs、
+  blend／glb、舊截圖混入後續 commit。
+- Android 真機仍需確認塔彈／六職業華麗度與遮擋、姓名／血條、多名重疊、小兵繞塔、
+  Buff 環、Boss 倒數、Replay、觸控、safe area、FPS／熱降頻及 WebGL driver。
+  390×844 桌面 viewport 不代表真機通過。
