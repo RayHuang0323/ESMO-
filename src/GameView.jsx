@@ -111,7 +111,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   const { playing, start, fastForward, rate, setRate, rates } = useLocalServer();
   // S29B3：開局重置相機為導播（預設 ON）；點英雄/拖曳的模式切換由 cameraStore 管理
   // S29B6：一併重置 pan（上一場拖到角落的視野不該帶進新的一場）
-  const begin = () => { const c = useCameraStore.getState(); c.backToDirector(); c.resetView(); start({ tactic }); };
+  const begin = () => { const c = useCameraStore.getState(); c.backToDirector(); c.resetView(); start({ tactic, roster: liveRosterRef.current }); };
   // Sprint09：賽前準備銜接 — autoStart 掛載即開局（預設 false = 現行為不變）
   useEffect(() => { if (autoStart && !playing) begin(); }, []);  // eslint-disable-line
   // ── Milestone G：戰鬥期間關掉瀏覽器的「下拉重新整理」/ 過捲彈跳 ──────────
@@ -129,6 +129,9 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
       body.style.overscrollBehaviorY = prev.body;
     };
   }, []);
+  //  Milestone H：開局時把生效名單交給引擎（英雄定位 → 行為層）。
+  //    用 ref 是因為 begin() 定義在 liveRoster 之前，且開局後名單不應再變動。
+  const liveRosterRef = useRef(null);
   const camMode = useCameraStore((s) => s.mode);
   const directorOn = camMode !== "free";
   // S29：畫質——首次依裝置自動判斷，玩家手動選擇後存 localStorage 並優先
@@ -144,6 +147,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   //   與先發指派）；這裡再套一次 draftRoster 是**冪等**的，只為了保住「單獨掛載
   //   GameView（不傳 roster）」時的既有行為。
   const liveRoster = useMemo(() => draftRoster(roster, draft), [roster, draft]);
+  liveRosterRef.current = liveRoster;
   return (
     <div style={{ position: "relative", width: "100%", height: "min(82vh, 720px)", background: "#0d1420", borderRadius: 14, overflow: "hidden", fontFamily: "system-ui,-apple-system,sans-serif" }}>
       {/* 3D：對局進行中相機由 cameraStore 管理（director/objectiveFocus/heroFocus/free）*/}

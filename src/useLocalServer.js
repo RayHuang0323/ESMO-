@@ -15,6 +15,8 @@ import { useProfileStore } from "./platform/profileStore.js";
 import { toEngineTactic, STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION } from "./platform/contracts/MobaTacticConfig.js";
 import { beginReplayCapture } from "./battle/moba/replay/replayBuffer.js";
 import { buildPlayerStatSlots } from "./battle/moba/mobaRosterAdapter.js";
+import { toEngineHeroMods } from "./battle/moba/mobaHeroProfile.js";
+import { heroById } from "./data/heroDatabase.js";
 import { toEnginePlayerMods } from "./battle/moba/mobaPlayerStats.js";
 
 // ============================================================================
@@ -118,6 +120,15 @@ export function useLocalServer() {
     const players = profilePlayers ?? [];
     const playerMods = toEnginePlayerMods({ blue: buildPlayerStatSlots(players, "blue", lineup), red: [] });
     if (playerMods) eng.configurePlayers(playerMods);
+
+    // ── Milestone H：英雄定位進引擎（Ban/Pick 第一次真的影響對戰）────────
+    //   opts.roster = GameView 的生效名單（draft × 先發指派 × profileStore），
+    //   兩側都從**自己的**選角取得定位 ⇒ 對稱、無陣營特例。
+    //   只影響行為（站位／目標選擇／進退／參團／技能就緒權重），
+    //   不乘進傷害（S28 §2 紅線，見 mobaHeroProfile.js 檔頭）。
+    //   無 roster / 全中性 ⇒ toEngineHeroMods 回 null ⇒ 完全不呼叫 ⇒ 逐位元回到 G。
+    const heroMods = opts.roster ? toEngineHeroMods(opts.roster, heroById) : null;
+    if (heroMods) eng.configureHeroes(heroMods);
 
     // Sprint24：戰術進引擎（TacticScreen 的 MobaTacticConfig → 行為權重 knobs）。
     //   對手戰術目前固定 STANDARD_OPP_TACTIC（無對手戰術來源，不虛構 AI）。

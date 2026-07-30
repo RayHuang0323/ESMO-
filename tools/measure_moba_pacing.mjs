@@ -23,6 +23,7 @@
 // ============================================================================
 import { writeFileSync } from "node:fs";
 import { LogicEngine } from "../src/LogicEngine.js";
+import { toEngineHeroMods } from "../src/battle/moba/mobaHeroProfile.js";
 
 const arg = (k, d) => {
   const i = process.argv.indexOf(k);
@@ -31,6 +32,14 @@ const arg = (k, d) => {
 const SEEDS = Math.max(1, Number(arg("--seeds", "20")) || 20);
 const REVERSE = process.argv.includes("--reverse");
 const OUT = arg("--json", "");
+//  Milestone H：--heroes 會把「英雄定位 → 行為」注入引擎，用來量它對節奏與
+//  勝率分布的影響。定位表以純資料傳入，本工具不 import heroDatabase（396KB data URI）。
+const HEROES = process.argv.includes("--heroes");
+const ARCH = {
+  b1: "坦克", b2: "刺客", b3: "法師", b4: "射手", b5: "輔助",
+  r1: "戰士", r2: "戰士", r3: "法師", r4: "射手", r5: "坦克",
+};
+const heroRoster = Object.fromEntries(Object.entries(ARCH).map(([seat, arch]) => [seat, { heroId: seat, hero: { id: seat, arch } }]));
 const DT = 0.5;
 const MAX_T = 3600;
 const CONV_WINDOW = 25;      // 團戰結束後多久內算「轉化成功」（模擬秒）
@@ -52,6 +61,10 @@ function towerDeadCount(eng, side) {
 
 function runMatch(seed) {
   const eng = new LogicEngine(seed, null, { rules: "v3" });
+  if (HEROES) {
+    const mods = toEngineHeroMods(heroRoster, null);
+    if (mods) eng.configureHeroes(mods);
+  }
   if (REVERSE) eng.players.reverse();
 
   const fights = [];          // { start, end, dur, size, deaths:{blue,red}, winner, converted, convBy }

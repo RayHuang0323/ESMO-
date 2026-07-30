@@ -61,6 +61,8 @@ export class LogicEngine {
     this.seed = seed | 0;          // S24：保留 seed 供戰術層 rng2 派生
     this.tacticOn = false;         // S24：未 configureMatch ⇒ 全部戰術程式碼不生效
     this.playerStatsOn = false;    // S28：未 configurePlayers ⇒ 全部能力程式碼不生效
+    this.heroesOn = false;         // H：未 configureHeroes ⇒ 全部英雄定位程式碼不生效
+    this.hmod = {}; this.heroMeta = null;
     this.rules = rulesFor(opts.rules);   // S29：模擬規則集（v2 預設）
     const R = this.rules;
     this.t = 0; this.over = false; this.winner = null;
@@ -323,6 +325,25 @@ export class LogicEngine {
     this.pexec = {};
     for (const p of this.players) this.pexec[p.id] = { retreats: 0, fights: 0, objTicks: 0 };
   }
+  // ── Milestone H：英雄定位層（configureHeroes）──────────────────────────
+  /**
+   * 英雄定位 → 行為偏移。與 S28 的能力層同構、同一組限幅風格，
+   * 但**只影響行為**（站位距離／目標選擇／進退／參團／技能就緒權重），
+   * 絕不乘進傷害（S28 §2 紅線；理由見 mobaHeroProfile.js 檔頭）。
+   *
+   * 不呼叫 ⇒ `heroesOn` 為 false ⇒ 全部相關程式碼短路 ⇒ 與 Milestone G 逐位元相同。
+   * @param {object} blue/red  { [engineId]: mods }
+   * @param {object} meta      { version, arch } → snapshot.heroMeta
+   */
+  configureHeroes({ blue = null, red = null, meta = null } = {}) {
+    if (!blue && !red) return;
+    this.heroesOn = true;
+    this.heroMeta = meta;
+    this.hmod = { ...(blue ?? {}), ...(red ?? {}) };
+  }
+  /** 該英雄的定位 mods；未啟用 / 無資料 ⇒ null（＝走原始路徑）。 */
+  _heroMod(p) { return this.heroesOn ? (this.hmod[p.id] ?? null) : null; }
+
   /** 依 engineId 取 mods；未啟用 / 該席位無資料 ⇒ null（＝走原始路徑）。 */
   _modById(id) { return this.playerStatsOn ? (this.pmod[id] ?? null) : null; }
   /** 該選手的能力 mods；未啟用 / 該席位無資料 ⇒ null（＝走原始路徑）。 */
@@ -409,6 +430,11 @@ export class LogicEngine {
     if (this.t >= p.joinEvalT) {                                // 黏性：每 joinEvalPeriod 秒重評
       p.joinEvalT = this.t + R.joinEvalPeriod;
       let c = this._joinChance(K, hot, M);                      // 戰術 joinFight + 能力 joinAdj
+      //  Milestone H：英雄定位的參團傾向（坦克／輔助更常進團、刺客更常單獨行動）。
+      //    ⚠ 只有真的有偏移時才套用夾限——無條件加一層 clamp 會在英雄層關閉時
+      //    也改變邊界值的行為，中性就不再是「結構上保證」而是碰運氣。
+      const hJoin = this._heroMod(p)?.joinAdj ?? 0;
+      if (hJoin) c = clamp(c + hJoin, 0.02, 0.98);
       if (p.role === "jungle" || p.role === "sup") c = clamp(c + R.jgSupJoinBonus, 0.05, 0.98);
       if (this._teamBehindV3(p.side)) c = Math.max(0.05, c - 0.2);   // 劣勢 ⇒ 更常防守
       p.joinGo = (K ? this.rng2() : this.rng()) < c;
@@ -422,7 +448,10 @@ export class LogicEngine {
     if (p.role === "jungle" || p.role === "sup") return true;   // 打野控目標、輔助佔視野
     if (this.t >= p.objEvalT) {
       p.objEvalT = this.t + R.joinEvalPeriod;
-      const c = this._joinChance(K, PITS[key], M);              // dragonJoin/baronJoin + objAdj
+      //  Milestone H：英雄定位的目標集結傾向（同樣只在有偏移時才夾，保持中性）。
+      const hObj = this._heroMod(p)?.objAdj ?? 0;
+      const base = this._joinChance(K, PITS[key], M);
+      const c = hObj ? clamp(base + hObj, 0.02, 0.98) : base;
       p.objGo = (K ? this.rng2() : this.rng()) < c;
     }
     return p.objGo;
@@ -480,13 +509,17 @@ export class LogicEngine {
     const enemyAwareness = alive
       .filter((q) => q.side !== p.side && !q.dead && dist(q.pos, p.pos) <= awareness)
       .map((q) => ({ q, d: dist(q.pos, p.pos) }));
+    //  Milestone H：英雄定位影響**目標選擇**——刺客更看殘血、坦克更看誰擋在前面。
+    //    只改排序權重，不改可選目標集合、不改傷害。
+    const H = this._heroMod(p);
+    const lowHpWeight = 5 + (H?.focusLowHp ?? 0) * 10;
     const foes = enemyAwareness
       // 只對已進入實際攻擊／貼身圈的敵人改寫路線；14 單位 awareness 仍用於
       // 人數與支援風險，但不再把遠方敵人當磁鐵，避免過早聚團。
       .filter(({ d }) => d <= R.decisionContact)
       .sort((a, b) => {
-        const av = (1 - a.q.hp / a.q.maxHp) * 5 + (a.q.role === "adc" || a.q.role === "mid" ? 0.25 : 0) - a.d * 0.05;
-        const bv = (1 - b.q.hp / b.q.maxHp) * 5 + (b.q.role === "adc" || b.q.role === "mid" ? 0.25 : 0) - b.d * 0.05;
+        const av = (1 - a.q.hp / a.q.maxHp) * lowHpWeight + (a.q.role === "adc" || a.q.role === "mid" ? 0.25 : 0) - a.d * 0.05;
+        const bv = (1 - b.q.hp / b.q.maxHp) * lowHpWeight + (b.q.role === "adc" || b.q.role === "mid" ? 0.25 : 0) - b.d * 0.05;
         return bv - av || a.q.id.localeCompare(b.q.id);
       });
     const allies = alive.filter((q) => q.side === p.side && !q.dead && dist(q.pos, p.pos) <= awareness);
@@ -512,15 +545,20 @@ export class LogicEngine {
       ? alive.filter((q) => q.side !== p.side && dist(q.pos, enemyTower.pos) < 11).length
       : 0;
 
-    const lowAlly = p.role === "sup"
+    //  Milestone H：保護低血隊友原本綁死在 `role === "sup"`（席位），
+    //    現在改由**英雄定位**也能取得（輔助定位的英雄不管坐哪一路都會護人）。
+    const protective = p.role === "sup" || (H?.protectAdj ?? 0) >= 0.12;
+    const lowAlly = protective
       ? allies
         .filter((q) => q !== p && q.hp / q.maxHp < 0.55 &&
           enemyAwareness.some(({ q: foe }) => dist(foe.pos, q.pos) < awareness))
         .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp || a.id.localeCompare(b.id))[0] ?? null
       : null;
     const skillReady = p.atkCd <= 0.08;
-    const roleBias = p.role === "top" || p.role === "jungle" ? 0.13 :
-      p.role === "mid" ? 0.04 : p.role === "adc" ? -0.08 : -0.12;
+    //  Milestone H：接戰意願＝席位基準 ＋ 英雄定位偏移（坦克戰士更願意開、
+    //    射手法師更保守）。仍是分數層的加項，不碰傷害。
+    const roleBias = (p.role === "top" || p.role === "jungle" ? 0.13 :
+      p.role === "mid" ? 0.04 : p.role === "adc" ? -0.08 : -0.12) + (H?.engageAdj ?? 0);
     const nearbyObjective = ["dragon", "baron"]
       .map((key) => this.neutrals?.[key])
       .find((objective) => objective?.alive && dist(p.pos, objective.pos) <= 11) ?? null;
@@ -530,13 +568,19 @@ export class LogicEngine {
       (hpRatio - 0.5) * 0.5 +
       (alliesN - foesN) * 0.42 +
       (target ? (1 - targetHp) * 0.65 : 0) +
-      roleBias + (skillReady ? 0.12 : -0.10) + (p.decisionTemper ?? 0);
+      //  Milestone H：技能就緒的權重吃英雄定位（法師／刺客更依賴時機，
+      //    坦克／輔助比較不看）。倍率有限幅，不改 CD 也不改傷害。
+      roleBias + (skillReady ? 0.12 : -0.10) * (H?.skillWeight ?? 1) + (p.decisionTemper ?? 0);
     if (target) score -= Math.max(0, targetDist - 8) * 0.025;
     if (this.t < R.decisionEarlyT && target) score -= 0.14;
     if (this._teamBehindV3(p.side)) score -= 0.10;
     if (inTowerRisk && (!hasWave || towerDefenders >= alliesN)) score -= R.decisionTowerRisk;
 
-    const emergencyRetreat = hpRatio < 0.28 || (hpRatio < 0.44 && foesN > alliesN);
+    //  Milestone H：撤退門檻吃英雄定位（刺客／射手更早脫離、坦克撐得久一點）。
+    //    ⚠ 只平移門檻，不改移速、不改傷害、不改復活時間。
+    const retreatShift = H?.retreatAdj ?? 0;
+    const emergencyRetreat = hpRatio < 0.28 + retreatShift ||
+      (hpRatio < 0.44 + retreatShift && foesN > alliesN);
     // 無守軍時沿用既有 0.30× 單人拆塔效率，讓比賽仍能收尾；真正危險的
     // 「無兵線闖入有人守的塔」或殘血進塔才撤，不把所有推線都改成來回走。
     const towerFallback = inTowerRisk &&
@@ -2230,8 +2274,12 @@ export class LogicEngine {
                  dist(p.pos, localTarget.pos) <= R.decisionContact) ||
                 (localDecision?.fresh && localDecision?.action === "KITE" &&
                  dist(p.pos, localTarget.pos) <= 6.5))) {
-        const engageDistance = p.role === "top" ? 2.6 : p.role === "jungle" ? 2.2 :
-          p.role === "mid" ? 5.0 : p.role === "adc" ? 5.8 : 5.2;
+        //  Milestone H：**站位**＝席位基準距離 × 英雄定位倍率。
+        //    坦克／戰士貼得更近、射手／法師站得更遠；倍率限幅 0.7–1.25，
+        //    不改移速、不改攻擊距離判定、不改傷害。
+        const engageDistance = (p.role === "top" ? 2.6 : p.role === "jungle" ? 2.2 :
+          p.role === "mid" ? 5.0 : p.role === "adc" ? 5.8 : 5.2)
+          * (this._heroMod(p)?.engageDistK ?? 1);
         const desired = engageDistance;
         const dd = dist(p.pos, localTarget.pos) || 1;
         const ux = (p.pos.x - localTarget.pos.x) / dd;
@@ -2481,6 +2529,8 @@ export class LogicEngine {
         playerStatsMeta: this.playerStatsMeta ? { ...this.playerStatsMeta } : null,
         playerStatsExec: Object.fromEntries(Object.entries(this.pexec).map(([id, e]) => [id, { ...e }])),
       } : {}),
+      // Milestone H：英雄定位層中繼資料（同樣只在啟用時出現 ⇒ 舊快照形狀不變）
+      ...(this.heroesOn ? { heroMeta: this.heroMeta ? { ...this.heroMeta } : null } : {}),
       // S29B1（v3 才出現 → 舊快照形狀不變）：中立目標 / 召喚師技能事件
       ...(R.neutralObjectives ? {
         teamBuffs: Object.fromEntries(["blue", "red"].map((side) => [side, {
