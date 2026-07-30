@@ -1,0 +1,64 @@
+(node:10308) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+✅ desktop 1) 進入賽前配置
+✅ desktop 2) 五個席位都標示英雄來源
+✅ desktop 3) 來源值都是五種之一（沒有空徽章）
+✅ desktop 4) 明講「不是固定綁定」且指向 Ban/Pick
+  📸 desktop-01-lineup.png
+✅ desktop 5) 進入 Ban/Pick
+✅ desktop 6) Ban/Pick 顯示五路出戰配置
+✅ desktop 7) 五路唯一、五隻英雄不重複
+✅ desktop 8) 每一路都恰好 2 個召喚師技能
+✅ desktop 9) 打野帶懲戒，且只有打野
+  📸 desktop-02-banpick.png
+✅ desktop 10) 進入 Loading
+✅ desktop 11) Loading 十人都顯示召喚師技能
+  📸 desktop-03-loading.png
+✅ desktop 12) 正式 GameView 掛載
+✅ desktop 13) 戰鬥中面板顯示 2 個召喚師技能（不再有「未配置」）
+✅ desktop 13b) 兩格都有引擎狀態（可用／冷卻秒數），沒有純「配置」佔位
+  📸 desktop-04-battle-sheet.png
+✅ desktop 14) 賽後記分板顯示召喚師技能
+✅ desktop 14b) 記分板帶有實際使用次數，且整場至少放過一次（合計 87）
+  📸 desktop-05-result.png
+✅ desktop 15) 可以進入重播
+✅ desktop 16) 重播帶著本場出戰配置（十席）
+  📸 desktop-06-replay.png
+✅ desktop 17) Ban/Pick 與 Replay 的技能逐席相同
+✅ desktop 18) Ban/Pick 與 Replay 的英雄逐席相同
+✅ desktop 19) Loading 與 Ban/Pick 的技能逐席相同
+✅ desktop 20) 戰鬥中面板的技能＝Ban/Pick 給「實際點到的那個席位」的那一組
+✅ desktop 21) Timeline 有技能事件，且每一筆都是該席位帶著的技能（共 2 種）
+✅ mobile 1) 進入賽前配置
+✅ mobile 2) 五個席位都標示英雄來源
+✅ mobile 3) 來源值都是五種之一（沒有空徽章）
+✅ mobile 4) 明講「不是固定綁定」且指向 Ban/Pick
+  📸 mobile-01-lineup.png
+✅ mobile 5) 進入 Ban/Pick
+✅ mobile 6) Ban/Pick 顯示五路出戰配置
+✅ mobile 7) 五路唯一、五隻英雄不重複
+✅ mobile 8) 每一路都恰好 2 個召喚師技能
+✅ mobile 9) 打野帶懲戒，且只有打野
+  📸 mobile-02-banpick.png
+✅ mobile 10) 進入 Loading
+✅ mobile 11) Loading 十人都顯示召喚師技能
+  📸 mobile-03-loading.png
+✅ mobile 12) 正式 GameView 掛載
+✅ mobile 13) 戰鬥中面板顯示 2 個召喚師技能（不再有「未配置」）
+✅ mobile 13b) 兩格都有引擎狀態（可用／冷卻秒數），沒有純「配置」佔位
+  📸 mobile-04-battle-sheet.png
+✅ mobile 14) 賽後記分板顯示召喚師技能
+✅ mobile 14b) 記分板帶有實際使用次數，且整場至少放過一次（合計 76）
+  📸 mobile-05-result.png
+✅ mobile 15) 可以進入重播
+✅ mobile 16) 重播帶著本場出戰配置（十席）
+  📸 mobile-06-replay.png
+✅ mobile 17) Ban/Pick 與 Replay 的技能逐席相同
+✅ mobile 18) Ban/Pick 與 Replay 的英雄逐席相同
+✅ mobile 19) Loading 與 Ban/Pick 的技能逐席相同
+✅ mobile 20) 戰鬥中面板的技能＝Ban/Pick 給「實際點到的那個席位」的那一組
+✅ mobile 21) Timeline 有技能事件，且每一筆都是該席位帶著的技能（共 2 種）
+✅ 跨尺寸 21) 手機版同樣走完整條流程並取得配置
+✅ 跨尺寸 22) 兩個尺寸的配置規則一致（都是 5 路 × 2 技能 × 打野懲戒）
+
+✅ PASS　證據：D:\OneDrive\文件\GitHub\ESMO\review\moba-runtime\milestone-j\evidence
