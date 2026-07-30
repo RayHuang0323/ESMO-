@@ -1292,6 +1292,15 @@ export class LogicEngine {
           soloK = groupN >= (R.heroTowerGroupMin ?? Infinity)
             ? (R.heroTowerGroupK ?? R.heroTowerSoloK)
             : R.heroTowerSoloK;
+          // Milestone F 收尾校準：門牙塔（`nexus_guard`）的「沒有兵線」不是戰術選擇
+          //   ——小兵路線根本沒有延伸進基地廣場（見建構子 nexus_guard 的 `t` 註解），
+          //   那裡**永遠**不可能有兵線。對它套用「帶兵才拆得動」的懲罰等於要求一件
+          //   做不到的事，實測收尾階段門牙塔前平均只有 1.4 人 ⇒ 全程吃 0.30。
+          //   只解除「不可能達成的前提」，不動塔血、不動 heroTowerDmg、
+          //   也不加速任何一座路上塔。
+          if (tw.lane === "nexus_guard") {
+            soloK = Math.max(soloK, R.nexusGuardNoWaveK ?? R.heroTowerSoloK);
+          }
         }
       }
       const structureFactor = R.structureAccelT ? 1 + Math.max(0, this.t - R.structureAccelT) / R.structureAccelDiv : 1;

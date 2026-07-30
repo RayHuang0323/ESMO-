@@ -1,0 +1,33 @@
+⚠ SKIP_NESTED=1：跳過 runtime29 / flow09 / dash10 巢狀驗證（開發迭代模式，不可作為完成依據）
+✅ 1) 5/10/15/20 分擊殺分布落在 S29B1 規格（v3 p50：5分0、10分3、15分11、20分20、終局31、時長23.8分）
+✅ 2) 失衡判定有檢定力：15分 >60 殺零容忍 + 同組門檻餵 v2（15分 p50=10）必須被判失衡
+✅ 3) 首殺時間分布合理（p10=297s、p50=364s、p90=594s；需 p10≥45、p50∈[90,420]）
+✅ 4) 不無條件接戰：人數明顯劣勢 / 超出距離圈 / 重接戰冷卻中 ⇒ 一律不參團（微場景，非統計）
+✅ 5) 低血量會撤退（10% HP ⇒ retreating=true；向泉水 138.6 → 138.6，或進入真實 recall channel=true）
+✅ 6) 追擊有上限：取得需貼身+殘血+在逃；超時（chaseMaxT=4s）放棄、拉開 9 距離放棄、錨點 leash=16
+✅ 7) 復活後需返場時間（復活鎖 10s + 泉水→戰線路程；實測復活→再交戰 p50=29.0s，需 ≥6）
+✅ 8) 同一英雄不會短時間無限連死（40 場最大「3 分鐘窗內死亡數」= 4，需 ≤5；連死 ≥2 會提早撤退且不參團）
+✅ 9) Gank 有 cooldown（無戰術：756 次相鄰 Gank 窗，窗結束→下一窗最小間隔 47s，需 ≥ 45）
+✅ 10) killContext 合法（1335 筆 = 擊殺數 1335；type 全在白名單、participants≥2、duration≥0；分布 {"teamfight":75,"chase":557,"gank":52,"objective":226,"pick":324,"towerDive":67,"ambush":34}）
+✅ 11) Dragon 真實出生（40 場皆在 240s 準時出生、出生時滿血、死後 150s 重生倒數）
+✅ 12) Baron 真實出生（出生於 480s；maxHp=3000）
+✅ 13) 野怪營地存在（6 座、藍紅 180° 鏡像、引擎出生點 == gameData.CAMPS、每場都有營地被清掉：40 場合計 634 次）
+✅ 14) HP 下降與死亡事件一致（死亡前有連續 HP 下降；5 次 DRAGON_SLAIN 事件歸屬 == 引擎 killerTeam）
+✅ 15) Minimap 與世界座標一致（三個視圖都讀 snapshot.objectives / objectivesMeta / PITS，動態座標 + gameData 出生點同源；無硬編碼副本）
+✅ 16) Replay 保存目標與技能事件（目標事件 18 筆、技能事件 55 筆、逐 frame ob 位元 + objectivesMeta 8 筆；Replay 不重新判定）
+✅ 17) Flash 有 cooldown（885 次使用、同人間隔 ≥ 210s、違規 0 筆；HUD cd 欄位由 snapshot 提供）
+✅ 18) Flash 由真實條件觸發（逃生微場景：位移 8.4 > 一般移速上限 3.2；事件帶 reason=escape；全場 reason 分布 {"escape":502,"engage":326,"chase":57}）
+✅ 19) Smite 只給 Jungle（1166 次使用全部來自打野席位；其他位置 D 欄 = 明確 reserved，不虛構）
+✅ 20) Smite 真實作用於中立目標（500 HP 龍被斬殺 ⇒ alive=false、killerTeam=blue、smite 進 75s 冷卻）
+✅ 21) F/D HUD 有資料來源（BattleHeroStrip 讀 snapshot.players[].sp；有冷卻遮罩/秒數；reserved 明確標示；不再是空框）
+✅ 22) 不出現 undefined/NaN（HUD 改為原始值 selector + 尚無 MVP 顯示「計算中」；snapshot 深掃 0 筆異常；MVP 行="★ MVP R2 1/0/1"）
+✅ 23) 不改選手長期 XP（引擎/節奏模組不 import profileStore/applyMatchProgress/heroProgress；跨場 lv 不被本場改寫）
+✅ 24) 不改 MatchProgressTransaction（契約檔不 import 本次新模組；引擎不 import 契約）
+✅ 25) v3 陣列順序不決定勝負（P0 防線：40 seeds 正序藍勝 21/40、反序 25/40，位移 10pp ≤ 15；兩者皆在 30–70%）
+
+25/25 通過
+
+=== v2（S29A）vs v3（S29B1）· 各 20 seeds（戰術 M1）===
+v2: 5分p50=2 10分p50=8 15分p50=10(p90=16) 20分p50=10 終局p50=10 時長p50=12.3分
+v3(混合40): 5分p50=0 10分p50=3 15分p50=11(p90=14) 20分p50=20 終局p50=31 時長p50=23.8分
+⚠ 視覺（3D 低模外觀 / HUD 版面 / 手機實機 FPS）→ 無瀏覽器，未實測（見交付報告）

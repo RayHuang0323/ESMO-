@@ -275,6 +275,9 @@ SIM_RULES.v3 = {
   //   但三人以上同時打同一座塔不該還被當成孤軍。仍明顯低於有兵線的 1.0。
   heroTowerGroupMin: 3,
   heroTowerGroupK: 0.62,
+  //  門牙塔的「無兵線」是結構性的（小兵路線沒有延伸進基地廣場），不是戰術失誤
+  //  ⇒ 不套「帶兵才拆得動」的懲罰。只影響收尾階段的門牙塔，不影響任何路上塔。
+  nexusGuardNoWaveK: 0.62,
   towerAggroDmg: 66,
   towerAggroRange: 5.5,
   // Milestone C：塔的傷害改成離散單體射擊。引擎正式 tick 是 0.5s；
