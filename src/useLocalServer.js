@@ -16,6 +16,7 @@ import { toEngineTactic, STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION } from "./plat
 import { beginReplayCapture } from "./battle/moba/replay/replayBuffer.js";
 import { buildPlayerStatSlots } from "./battle/moba/mobaRosterAdapter.js";
 import { toEngineHeroMods } from "./battle/moba/mobaHeroProfile.js";
+import { toEngineSpells } from "./battle/moba/mobaHeroLoadout.js";
 import { heroById } from "./data/heroDatabase.js";
 import { toEnginePlayerMods } from "./battle/moba/mobaPlayerStats.js";
 
@@ -136,6 +137,14 @@ export function useLocalServer() {
     //   無 roster / 全中性 ⇒ toEngineHeroMods 回 null ⇒ 完全不呼叫 ⇒ 逐位元回到 G。
     const heroMods = opts.roster ? toEngineHeroMods(opts.roster, heroById) : null;
     if (heroMods) eng.configureHeroes(heroMods);
+
+    // ── Milestone J：賽前配置的召喚師技能進引擎 ──────────────────────────
+    //   在此之前，引擎自己決定第二格（打野懲戒、其餘 reserved）⇒ 賽前選的
+    //   傳送／治療／點燃在對戰中根本不存在，畫面有圖示、引擎不認得。
+    //   現在同一份 roster.spells 直接成為引擎真的會放的技能。
+    //   兩側都從自己的名單取得 ⇒ 對稱；無名單 ⇒ 不呼叫 ⇒ 逐位元回到 I。
+    const spellMods = opts.roster ? toEngineSpells(opts.roster) : null;
+    if (spellMods) eng.configureSpells(spellMods);
 
     // Sprint24：戰術進引擎（TacticScreen 的 MobaTacticConfig → 行為權重 knobs）。
     //   對手戰術目前固定 STANDARD_OPP_TACTIC（無對手戰術來源，不虛構 AI）。

@@ -26,11 +26,12 @@ export const HERO_LOADOUT_VERSION = "MobaHeroLoadout.v1";
 export const SUMMONER_SPELLS = Object.freeze({
   flash: { id: "flash", zh: "閃現", icon: "⚡", engine: true, desc: "短距離瞬間位移，逃生或切入" },
   smite: { id: "smite", zh: "懲戒", icon: "🎯", engine: true, desc: "對野怪造成真實傷害，搶奪大型目標" },
-  heal: { id: "heal", zh: "治療", icon: "💚", engine: false, desc: "回復自身與附近隊友生命" },
-  barrier: { id: "barrier", zh: "護盾", icon: "🛡", engine: false, desc: "短時間吸收傷害" },
-  ignite: { id: "ignite", zh: "點燃", icon: "🔥", engine: false, desc: "持續傷害並降低目標回復" },
-  exhaust: { id: "exhaust", zh: "虛弱", icon: "🌀", engine: false, desc: "降低目標傷害與移動速度" },
-  teleport: { id: "teleport", zh: "傳送", icon: "🌐", engine: false, desc: "傳送到我方建築或兵線" },
+  heal: { id: "heal", zh: "治療", icon: "💚", engine: true, desc: "回復自身與附近隊友生命" },
+  barrier: { id: "barrier", zh: "護盾", icon: "🛡", engine: true, desc: "短時間吸收傷害（先扣盾再扣血）" },
+  ignite: { id: "ignite", zh: "點燃", icon: "🔥", engine: true, desc: "持續傷害並降低目標回復" },
+  teleport: { id: "teleport", zh: "傳送", icon: "🌐", engine: true, desc: "傳送支援被圍攻的我方塔" },
+  ghost: { id: "ghost", zh: "幽魂", icon: "💨", engine: true, desc: "短時間移速加成，追擊或脫身" },
+  cleanse: { id: "cleanse", zh: "淨化", icon: "✨", engine: true, desc: "解除減速並短暫免疫" },
 });
 
 /** 五路的預設第二技能（第一格一律閃現；打野第二格一律懲戒）。 */
@@ -39,13 +40,19 @@ export const LANE_SECOND_SPELL = Object.freeze({
   打野: "smite",      // ⚠ 硬性規則：打野必定帶懲戒
   中路: "ignite",     // 中路以擊殺壓制為主
   下路: "heal",       // 下路雙人路的續戰
-  輔助: "exhaust",    // 輔助保護後排
+  輔助: "cleanse",    // 輔助解控保後排
 });
 
-/** 依定位微調第二技能（只在該位置的預設不適合時覆寫；打野不可覆寫）。 */
+/**
+ * 依定位微調第二技能（只在該位置的預設不適合時覆寫；打野不可覆寫）。
+ *
+ * Milestone J：`exhaust` 從技能表移除——它沒有引擎作用點，留著就違反
+ * 「不可只顯示圖示卻沒有引擎效果」。輔助改用淨化，刺客改用幽魂（機動性
+ * 才是刺客要的），八個技能現在全部都有真的戰鬥效果。
+ */
 const ARCH_OVERRIDE = Object.freeze({
-  上路: { 法師: "teleport", 坦克: "teleport" },
-  中路: { 輔助: "barrier", 坦克: "barrier" },
+  上路: { 法師: "teleport", 坦克: "teleport", 刺客: "ghost" },
+  中路: { 輔助: "barrier", 坦克: "barrier", 刺客: "ghost" },
   下路: { 法師: "barrier" },
   輔助: { 戰士: "ignite", 坦克: "ignite" },
 });
@@ -87,6 +94,30 @@ export function buildLoadout(roster = {}, lookup = null) {
     out[seat] = { lane, heroId, spells: spellsFor(hero, lane).map((s) => s.id) };
   }
   return out;
+}
+
+/**
+ * Milestone J：對戰名單 → `engine.configureSpells` 的入參。
+ *
+ * 引擎只認席位與技能 id，不需要知道英雄或位置——所以這裡就是一層薄轉換。
+ * 名單沒有技能資料 ⇒ 回 null ⇒ 呼叫端不呼叫 configureSpells ⇒ 引擎逐位元
+ * 回到 Milestone I 的行為（打野懲戒、其餘 reserved）。
+ *
+ * @param {Object} roster `{ [seatId]: { spells: [id, id] } }`
+ * @returns {{blue:Object, red:Object, meta:Object}|null}
+ */
+export function toEngineSpells(roster = {}) {
+  const blue = {}, red = {};
+  let n = 0;
+  for (const [seat, entry] of Object.entries(roster ?? {})) {
+    const spells = entry?.spells;
+    if (!Array.isArray(spells) || spells.length !== 2) continue;
+    if (spells.some((id) => !SUMMONER_SPELLS[id])) continue;
+    (seat[0] === "r" ? red : blue)[seat] = [...spells];
+    n++;
+  }
+  if (!n) return null;
+  return { blue, red, meta: { version: HERO_LOADOUT_VERSION } };
 }
 
 /** 驗證用：每個席位都恰好 2 個技能，且打野一定有懲戒。 */
