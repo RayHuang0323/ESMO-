@@ -1,0 +1,1076 @@
+{
+  "notes": [
+    {
+      "label": "desktop 1) 進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop 2) 五個席位都標示英雄來源",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "source": "suggested"
+        },
+        {
+          "seat": "b2",
+          "source": "suggested"
+        },
+        {
+          "seat": "b3",
+          "source": "suggested"
+        },
+        {
+          "seat": "b4",
+          "source": "suggested"
+        },
+        {
+          "seat": "b5",
+          "source": "suggested"
+        }
+      ]
+    },
+    {
+      "label": "desktop 3) 來源值都是五種之一（沒有空徽章）",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "source": "suggested"
+        },
+        {
+          "seat": "b2",
+          "source": "suggested"
+        },
+        {
+          "seat": "b3",
+          "source": "suggested"
+        },
+        {
+          "seat": "b4",
+          "source": "suggested"
+        },
+        {
+          "seat": "b5",
+          "source": "suggested"
+        }
+      ]
+    },
+    {
+      "label": "desktop 4) 明講「不是固定綁定」且指向 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop 5) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop 6) Ban/Pick 顯示五路出戰配置",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": "ravager",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": "duskblade",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": "auralith",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": "cinderfist",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        }
+      ]
+    },
+    {
+      "label": "desktop 7) 五路唯一、五隻英雄不重複",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": "ravager",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": "duskblade",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": "auralith",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": "cinderfist",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        }
+      ]
+    },
+    {
+      "label": "desktop 8) 每一路都恰好 2 個召喚師技能",
+      "ok": true,
+      "extra": [
+        "flash,teleport",
+        "flash,smite",
+        "flash,ignite",
+        "flash,heal",
+        "flash,ignite"
+      ]
+    },
+    {
+      "label": "desktop 9) 打野帶懲戒，且只有打野",
+      "ok": true,
+      "extra": [
+        [
+          "上路",
+          "flash,teleport"
+        ],
+        [
+          "打野",
+          "flash,smite"
+        ],
+        [
+          "中路",
+          "flash,ignite"
+        ],
+        [
+          "下路",
+          "flash,heal"
+        ],
+        [
+          "輔助",
+          "flash,ignite"
+        ]
+      ]
+    },
+    {
+      "label": "desktop 10) 進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop 11) Loading 十人都顯示召喚師技能",
+      "ok": true,
+      "extra": [
+        "flash,teleport",
+        "flash,smite",
+        "flash,ignite",
+        "flash,heal",
+        "flash,ignite",
+        "flash,teleport",
+        "flash,smite",
+        "flash,ignite",
+        "flash,heal",
+        "flash,exhaust"
+      ]
+    },
+    {
+      "label": "desktop 12) 正式 GameView 掛載",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop 13) 戰鬥中面板顯示 2 個召喚師技能（不再有「未配置」）",
+      "ok": true,
+      "extra": "flash,teleport"
+    },
+    {
+      "label": "desktop 14) 賽後記分板顯示召喚師技能",
+      "ok": true,
+      "extra": [
+        "flash,teleport",
+        "flash,ignite",
+        "flash,smite",
+        "flash,heal",
+        "flash,ignite",
+        "flash,smite",
+        "flash,ignite",
+        "flash,heal",
+        "flash,teleport",
+        "flash,exhaust"
+      ]
+    },
+    {
+      "label": "desktop 15) 可以進入重播",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop 16) 重播帶著本場出戰配置（十席）",
+      "ok": true,
+      "extra": [
+        [
+          "b1",
+          "flash,teleport"
+        ],
+        [
+          "b2",
+          "flash,smite"
+        ],
+        [
+          "b3",
+          "flash,ignite"
+        ],
+        [
+          "b4",
+          "flash,heal"
+        ],
+        [
+          "b5",
+          "flash,ignite"
+        ],
+        [
+          "r1",
+          "flash,teleport"
+        ],
+        [
+          "r2",
+          "flash,smite"
+        ],
+        [
+          "r3",
+          "flash,ignite"
+        ],
+        [
+          "r4",
+          "flash,heal"
+        ],
+        [
+          "r5",
+          "flash,exhaust"
+        ]
+      ]
+    },
+    {
+      "label": "desktop 17) Ban/Pick 與 Replay 的技能逐席相同",
+      "ok": true,
+      "extra": [
+        [
+          "b1",
+          "flash,teleport",
+          "flash,teleport"
+        ],
+        [
+          "b2",
+          "flash,smite",
+          "flash,smite"
+        ],
+        [
+          "b3",
+          "flash,ignite",
+          "flash,ignite"
+        ],
+        [
+          "b4",
+          "flash,heal",
+          "flash,heal"
+        ],
+        [
+          "b5",
+          "flash,ignite",
+          "flash,ignite"
+        ]
+      ]
+    },
+    {
+      "label": "desktop 18) Ban/Pick 與 Replay 的英雄逐席相同",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop 19) Loading 與 Ban/Pick 的技能逐席相同",
+      "ok": true,
+      "extra": [
+        [
+          "flash,teleport",
+          "flash,smite",
+          "flash,ignite",
+          "flash,heal",
+          "flash,ignite"
+        ],
+        [
+          "flash,teleport",
+          "flash,smite",
+          "flash,ignite",
+          "flash,heal",
+          "flash,ignite"
+        ]
+      ]
+    },
+    {
+      "label": "desktop 20) 戰鬥中面板的技能＝Ban/Pick 給「實際點到的那個席位」的那一組",
+      "ok": true,
+      "extra": [
+        "b1",
+        "flash,teleport",
+        "flash,teleport"
+      ]
+    },
+    {
+      "label": "mobile 1) 進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile 2) 五個席位都標示英雄來源",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "source": "suggested"
+        },
+        {
+          "seat": "b2",
+          "source": "recent"
+        },
+        {
+          "seat": "b3",
+          "source": "suggested"
+        },
+        {
+          "seat": "b4",
+          "source": "suggested"
+        },
+        {
+          "seat": "b5",
+          "source": "suggested"
+        }
+      ]
+    },
+    {
+      "label": "mobile 3) 來源值都是五種之一（沒有空徽章）",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "source": "suggested"
+        },
+        {
+          "seat": "b2",
+          "source": "recent"
+        },
+        {
+          "seat": "b3",
+          "source": "suggested"
+        },
+        {
+          "seat": "b4",
+          "source": "suggested"
+        },
+        {
+          "seat": "b5",
+          "source": "suggested"
+        }
+      ]
+    },
+    {
+      "label": "mobile 4) 明講「不是固定綁定」且指向 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile 5) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile 6) Ban/Pick 顯示五路出戰配置",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": "ravager",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": "sting",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": "voidrift",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": "duskblade",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        }
+      ]
+    },
+    {
+      "label": "mobile 7) 五路唯一、五隻英雄不重複",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": "ravager",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": "sting",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": "voidrift",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": "duskblade",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        }
+      ]
+    },
+    {
+      "label": "mobile 8) 每一路都恰好 2 個召喚師技能",
+      "ok": true,
+      "extra": [
+        "flash,teleport",
+        "flash,smite",
+        "flash,ignite",
+        "flash,heal",
+        "flash,ignite"
+      ]
+    },
+    {
+      "label": "mobile 9) 打野帶懲戒，且只有打野",
+      "ok": true,
+      "extra": [
+        [
+          "上路",
+          "flash,teleport"
+        ],
+        [
+          "打野",
+          "flash,smite"
+        ],
+        [
+          "中路",
+          "flash,ignite"
+        ],
+        [
+          "下路",
+          "flash,heal"
+        ],
+        [
+          "輔助",
+          "flash,ignite"
+        ]
+      ]
+    },
+    {
+      "label": "mobile 10) 進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile 11) Loading 十人都顯示召喚師技能",
+      "ok": true,
+      "extra": [
+        "flash,teleport",
+        "flash,smite",
+        "flash,ignite",
+        "flash,heal",
+        "flash,ignite",
+        "flash,teleport",
+        "flash,smite",
+        "flash,ignite",
+        "flash,heal",
+        "flash,exhaust"
+      ]
+    },
+    {
+      "label": "mobile 12) 正式 GameView 掛載",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile 13) 戰鬥中面板顯示 2 個召喚師技能（不再有「未配置」）",
+      "ok": true,
+      "extra": "flash,ignite"
+    },
+    {
+      "label": "mobile 14) 賽後記分板顯示召喚師技能",
+      "ok": true,
+      "extra": [
+        "flash,teleport",
+        "flash,smite",
+        "flash,ignite",
+        "flash,heal",
+        "flash,ignite",
+        "flash,teleport",
+        "flash,heal",
+        "flash,smite",
+        "flash,ignite",
+        "flash,exhaust"
+      ]
+    },
+    {
+      "label": "mobile 15) 可以進入重播",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile 16) 重播帶著本場出戰配置（十席）",
+      "ok": true,
+      "extra": [
+        [
+          "b1",
+          "flash,teleport"
+        ],
+        [
+          "b2",
+          "flash,smite"
+        ],
+        [
+          "b3",
+          "flash,ignite"
+        ],
+        [
+          "b4",
+          "flash,heal"
+        ],
+        [
+          "b5",
+          "flash,ignite"
+        ],
+        [
+          "r1",
+          "flash,teleport"
+        ],
+        [
+          "r2",
+          "flash,smite"
+        ],
+        [
+          "r3",
+          "flash,ignite"
+        ],
+        [
+          "r4",
+          "flash,heal"
+        ],
+        [
+          "r5",
+          "flash,exhaust"
+        ]
+      ]
+    },
+    {
+      "label": "mobile 17) Ban/Pick 與 Replay 的技能逐席相同",
+      "ok": true,
+      "extra": [
+        [
+          "b1",
+          "flash,teleport",
+          "flash,teleport"
+        ],
+        [
+          "b2",
+          "flash,smite",
+          "flash,smite"
+        ],
+        [
+          "b3",
+          "flash,ignite",
+          "flash,ignite"
+        ],
+        [
+          "b4",
+          "flash,heal",
+          "flash,heal"
+        ],
+        [
+          "b5",
+          "flash,ignite",
+          "flash,ignite"
+        ]
+      ]
+    },
+    {
+      "label": "mobile 18) Ban/Pick 與 Replay 的英雄逐席相同",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile 19) Loading 與 Ban/Pick 的技能逐席相同",
+      "ok": true,
+      "extra": [
+        [
+          "flash,teleport",
+          "flash,smite",
+          "flash,ignite",
+          "flash,heal",
+          "flash,ignite"
+        ],
+        [
+          "flash,teleport",
+          "flash,smite",
+          "flash,ignite",
+          "flash,heal",
+          "flash,ignite"
+        ]
+      ]
+    },
+    {
+      "label": "mobile 20) 戰鬥中面板的技能＝Ban/Pick 給「實際點到的那個席位」的那一組",
+      "ok": true,
+      "extra": [
+        "b3",
+        "flash,ignite",
+        "flash,ignite"
+      ]
+    },
+    {
+      "label": "跨尺寸 21) 手機版同樣走完整條流程並取得配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "跨尺寸 22) 兩個尺寸的配置規則一致（都是 5 路 × 2 技能 × 打野懲戒）",
+      "ok": true,
+      "extra": null
+    }
+  ],
+  "shots": [
+    "desktop-01-lineup.png",
+    "desktop-02-banpick.png",
+    "desktop-03-loading.png",
+    "desktop-04-battle-sheet.png",
+    "desktop-05-result.png",
+    "desktop-06-replay.png",
+    "mobile-01-lineup.png",
+    "mobile-02-banpick.png",
+    "mobile-03-loading.png",
+    "mobile-04-battle-sheet.png",
+    "mobile-05-result.png",
+    "mobile-06-replay.png"
+  ],
+  "data": {
+    "desktop": {
+      "sources": [
+        {
+          "seat": "b1",
+          "source": "suggested"
+        },
+        {
+          "seat": "b2",
+          "source": "suggested"
+        },
+        {
+          "seat": "b3",
+          "source": "suggested"
+        },
+        {
+          "seat": "b4",
+          "source": "suggested"
+        },
+        {
+          "seat": "b5",
+          "source": "suggested"
+        }
+      ],
+      "plan": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": "ravager",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": "duskblade",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": "auralith",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": "cinderfist",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        }
+      ],
+      "loading": [
+        {
+          "lane": "上路",
+          "spells": "flash,teleport"
+        },
+        {
+          "lane": "打野",
+          "spells": "flash,smite"
+        },
+        {
+          "lane": "中路",
+          "spells": "flash,ignite"
+        },
+        {
+          "lane": "下路",
+          "spells": "flash,heal"
+        },
+        {
+          "lane": "輔助",
+          "spells": "flash,ignite"
+        },
+        {
+          "lane": "上路",
+          "spells": "flash,teleport"
+        },
+        {
+          "lane": "打野",
+          "spells": "flash,smite"
+        },
+        {
+          "lane": "中路",
+          "spells": "flash,ignite"
+        },
+        {
+          "lane": "下路",
+          "spells": "flash,heal"
+        },
+        {
+          "lane": "輔助",
+          "spells": "flash,exhaust"
+        }
+      ],
+      "clickedSeat": "b1",
+      "sheet": "flash,teleport",
+      "board": [
+        {
+          "spells": "flash,teleport"
+        },
+        {
+          "spells": "flash,ignite"
+        },
+        {
+          "spells": "flash,smite"
+        },
+        {
+          "spells": "flash,heal"
+        },
+        {
+          "spells": "flash,ignite"
+        },
+        {
+          "spells": "flash,smite"
+        },
+        {
+          "spells": "flash,ignite"
+        },
+        {
+          "spells": "flash,heal"
+        },
+        {
+          "spells": "flash,teleport"
+        },
+        {
+          "spells": "flash,exhaust"
+        }
+      ],
+      "replay": [
+        {
+          "seat": "b1",
+          "hero": "ravager",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "hero": "duskblade",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "hero": "auralith",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "b4",
+          "hero": "cinderfist",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "r1",
+          "hero": "gambler",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "r2",
+          "hero": "greymantle",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "r3",
+          "hero": "maestro",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "r4",
+          "hero": "mantra",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "r5",
+          "hero": "luminary",
+          "spells": "flash,exhaust"
+        }
+      ]
+    },
+    "mobile": {
+      "sources": [
+        {
+          "seat": "b1",
+          "source": "suggested"
+        },
+        {
+          "seat": "b2",
+          "source": "recent"
+        },
+        {
+          "seat": "b3",
+          "source": "suggested"
+        },
+        {
+          "seat": "b4",
+          "source": "suggested"
+        },
+        {
+          "seat": "b5",
+          "source": "suggested"
+        }
+      ],
+      "plan": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": "ravager",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": "sting",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": "voidrift",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": "duskblade",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        }
+      ],
+      "loading": [
+        {
+          "lane": "上路",
+          "spells": "flash,teleport"
+        },
+        {
+          "lane": "打野",
+          "spells": "flash,smite"
+        },
+        {
+          "lane": "中路",
+          "spells": "flash,ignite"
+        },
+        {
+          "lane": "下路",
+          "spells": "flash,heal"
+        },
+        {
+          "lane": "輔助",
+          "spells": "flash,ignite"
+        },
+        {
+          "lane": "上路",
+          "spells": "flash,teleport"
+        },
+        {
+          "lane": "打野",
+          "spells": "flash,smite"
+        },
+        {
+          "lane": "中路",
+          "spells": "flash,ignite"
+        },
+        {
+          "lane": "下路",
+          "spells": "flash,heal"
+        },
+        {
+          "lane": "輔助",
+          "spells": "flash,exhaust"
+        }
+      ],
+      "clickedSeat": "b3",
+      "sheet": "flash,ignite",
+      "board": [
+        {
+          "spells": "flash,teleport"
+        },
+        {
+          "spells": "flash,smite"
+        },
+        {
+          "spells": "flash,ignite"
+        },
+        {
+          "spells": "flash,heal"
+        },
+        {
+          "spells": "flash,ignite"
+        },
+        {
+          "spells": "flash,teleport"
+        },
+        {
+          "spells": "flash,heal"
+        },
+        {
+          "spells": "flash,smite"
+        },
+        {
+          "spells": "flash,ignite"
+        },
+        {
+          "spells": "flash,exhaust"
+        }
+      ],
+      "replay": [
+        {
+          "seat": "b1",
+          "hero": "ravager",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "hero": "sting",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "hero": "voidrift",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "b4",
+          "hero": "duskblade",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "r1",
+          "hero": "razorwing",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "r2",
+          "hero": "auralith",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "r3",
+          "hero": "gambler",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "r4",
+          "hero": "greymantle",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "r5",
+          "hero": "mantra",
+          "spells": "flash,exhaust"
+        }
+      ]
+    }
+  }
+}

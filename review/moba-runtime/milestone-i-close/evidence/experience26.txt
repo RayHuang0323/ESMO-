@@ -1,0 +1,38 @@
+✅ 1) Result receipt level 與 profileStore player level 一致
+✅    receipt XP 與 store xp 一致（同一把尺）
+✅ 2) Roster / PlayerDetail / Lineup 讀同一份 profileStore.players
+✅    Lineup 不再把英雄等級標成無語意「Lv」（分軸標示）
+✅    顯示層 XP 用 playerLevel 唯一刻度（不自己重算公式）
+✅ 3) JSON persistence round-trip 後 level / xp 一致
+✅ 4) reload 不回到 Legacy 靜態 level（結算後 xp 為準，migrate 不覆蓋）
+✅ 5) Player Card 不再渲染未標示 hero overlay（PlayerAvatar 零 HeroPortrait import/渲染）
+✅    Roster / PlayerDetail 不再顯示靜態英雄綁定（heroById 已移除）
+✅ 6) MOBA Draft / Loading / Result 仍可顯示本場英雄（HeroPortrait/ChampFace 保留）
+✅ 7) CS 畫面不受影響（fps 畫面零 PlayerAvatar / 零 heroId）
+✅ 8) MobaReplay.v1 契約合法
+✅    getCurrentReplay = 剛打完這一場（matchId 同源）
+✅ 9) replay frames 可序列化（JSON round-trip 後仍合法，無函式/元件）
+✅ 10) replay 播放不呼叫 LogicEngine.tick()（播放器零引擎 import、零 .tick( 呼叫）
+✅ 11) replay 不觸發 applyMatchProgress（播放器/緩衝零結算 import/呼叫）
+✅ 12) replay 不重複寫 history（播放器/緩衝零 seasonStore import、零入史呼叫）
+✅ 13) timeline 可定位第一格、最後一格
+✅ 14) 快轉倒退不越界（−10s 於 0 / +10s 於終點）
+✅ 15) 0.5×/1×/2×/4× 選項齊備且為正數
+✅ 16) 無 replay 時安全降級（清空後 getCurrentReplay=null；UI 有無法重播態）
+❌ 17) replay size 有上限（本場 836 frames ≈ 2492KB；MAX_FRAMES=1200；不寫 localStorage）
+✅    取樣間隔符合設計（≈ 每 2 模擬秒一格）
+✅ 18) MOBA balance baseline 不變（同 seed 擷取前後 BattleResult 完全一致）
+✅    重播播放不改結算狀態（掃全 frames 前後 state 位元一致）
+✅    Tactic grid 有 min() 防護（<190px 容器不溢出）
+✅    Frame 有寬度防護 + sticky footer（確認鈕永遠可點）
+✅    Lineup / Codex 固定 380px 已移除
+✅    無 transform scale 縮頁 / 無 display:none 藏內容
+✅ 19) Sprint24 tactic verifier（exit=0 且輸出形狀符合）
+✅ 20) Sprint25 progress verifier（exit=0 且輸出形狀符合）
+✅ 21) CS Sprint23 verifier（exit=0 且輸出形狀符合）
+✅    regress（MOBA balance）（exit=0 且輸出形狀符合）
+✅    regress2（節奏門檻 8/8）（exit=0 且輸出形狀符合）
+✅    flow verifier（check_flow09）（exit=0 且輸出形狀符合）
+
+34/35 通過
+重播容量：836 frames · 2492KB/場 · 每 frame ≈ 3053B（session 記憶體，僅留最近一場）

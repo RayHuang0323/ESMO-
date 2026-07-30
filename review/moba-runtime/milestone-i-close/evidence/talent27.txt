@@ -1,0 +1,52 @@
+✅ 1) 12 個 talentId 唯一（共 12 個）
+✅ 2) 所有 category 合法
+✅ 3) 所有 stat key 屬於既有 16 項能力（且可映射 CS 短鍵）
+✅ 4) cost 為正整數
+✅ 5) maxRank 為正整數
+✅ 6) prerequisites 指向存在 talent
+✅    每 rank 效果合計 ≤ 2 點（紅線）
+✅ 7) prerequisites 無循環
+✅ 8) 點數不足不可購買
+✅ 9) 前置不足不可購買
+✅ 10) 滿 rank 不可購買
+✅ 11) 成功購買只扣一次（cost 取自 definition）
+✅ 12) availablePoints 不為負（負值/損壞輸入安全修正）
+✅ 13) spentPoints 可由 definitions 重算（不信任持久層）
+✅ 14) receipt 與 Store 差額一致（statChanges = derived 前後差）
+✅ 15) derived stats 不修改 base stats
+✅ 16) 無天賦時 derived stats 等於 base stats（逐鍵）
+✅ 17) derived stats 不超過合法範圍（98 基礎 + 加成 → clamp 99）
+✅ 18) MOBA adapter 收到 derived stats（buildEngineSlots power 隨天賦變）
+✅ 19) CS adapter 收到 derived stats（rxn/acc 反映天賦；無天賦者不變）
+✅ 20) MobaTactic 適性讀 derived stats（戰術天賦 → m1 適性上升；無天賦不變）
+✅    adapter 輸入不同但 base stats 完全未變（§11）
+✅ 21) persistence round-trip 保留 ranks
+✅ 22) 舊存檔 migration 不遺失 S25/S26 資料（缺 talents → 空狀態；xp/lv/points 不動）
+✅ 23) 損壞 state 不白畫面（rank 非數字/超上限/負 points/幽靈 id/損壞前置全部安全）
+✅ 24) 無天賦 MOBA baseline 不變（buildEngineSlots 與 stats 直傳一致）
+✅ 25) 無天賦 CS baseline 不變（toFpsRoster 輸出 stats = base 直轉）
+✅ 26) 不修改 BattleResult.v2（git diff 零改變）
+✅ 27) 不修改 CsMatchResult.v1（git diff 零改變）
+✅ 28) 不修改 MatchProgressTransaction.v1（git diff 零改變）
+✅ 29) 天賦與引擎零耦合（LogicEngine 不認得天賦；天賦模組不 import 引擎）
+✅ 30) 不修改 FPS presentation（git diff 零改變）
+✅    天賦模組不含傷害/勝率/金錢/XP 字樣（紅線靜態防線）
+✅    正式 UI 無重置鈕（__debugResetTalents 不出現在畫面）
+✅    UI 不直接改 stats/talentPoints（只呼叫 purchasePlayerTalent）
+✅    防誤點：確認區 + 不可重置警語
+✅    響應式：無固定 380/560、grid 有 min() 防護、無 transform scale
+❌ 31) Replay 播放不受影響（experience26 全綠）（exit=1）
+✅ 32) Progress 冪等不受影響（progress25 全綠）（exit=0）
+✅    tactic24（exit=0）
+✅    cs23（exit=0）
+✅    regress（exit=0）
+✅    regress2（節奏門檻 8/8）（exit=0）
+✅    flow09（exit=0）
+
+43/44 通過
+
+=== 固定比較（b3 中路，同 roster）===
+A 無天賦        ：m1 適性 70　CS rxn/acc = 70/70
+B 操作天賦 3 級 ：m1 適性 70　CS rxn/acc = 73/73
+C 戰術天賦 3 級 ：m1 適性 71　CS vis/tac = 73/73
+TALENT27_EXIT=1

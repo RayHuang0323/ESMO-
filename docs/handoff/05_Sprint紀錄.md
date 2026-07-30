@@ -3040,3 +3040,80 @@ roster；**loadout 尚未併入**。
 verifier §14「不抽 rng」的關鍵字掃描掃到模組註解裡的「不抽 rng」字樣而誤判。
 F 的 §19、G 的 §24、H 的 §28 也都是同類問題。
 **結論已定案：禁改／禁用類的斷言一律驗行為，不要用關鍵字掃描。**
+
+---
+
+## Milestone I-close（2026-07-31）— 收尾目標 4／5／6 ＋ 全流程瀏覽器驗收
+
+Milestone I 留下的三件事全部收完，並第一次對這條流程做了真瀏覽器驗收。
+報告：`review/moba-runtime/milestone-i-close/MILESTONE_I_CLOSE_REPORT.md`
+rollback tag：`milestone-i-close-baseline` → `bfd4557`
+
+### 目標 4／6：loadout 貫穿全流程
+
+關鍵決定：**不是把 loadout「傳給」四個畫面，而是讓它只有一份。**
+召喚師技能改成長在對戰名單上——`buildBattleRoster` 決定席位英雄的下一行就決定
+該席位的技能，`draftRoster` 走同一個 `spellsFor`。四個畫面本來就讀同一份 roster
+⇒ 結構上不可能不一致，不是靠「記得同步」。
+
+順手修掉兩處**真的會顯示錯人**的對位（都還在用選取順序，而 I 起 Ban/Pick 另有
+席位分配，兩者不同序時就分岔）：
+
+- `LoadingScreen`：`picks[side][idx]` → 改走 `draftRoster`（與 GameView 同一 adapter）
+- `BattleHeroStrip`：先看 picks → 改為**名單優先**，無名單才退回 picks
+
+引擎只實作閃現與懲戒（本輪沒動引擎）。面板改成分辨兩種技能：引擎技能顯示即時
+CD，配置技能顯示「配置」並淡化——**寧可少說，不能給假 CD**。副作用是非打野的
+第二格不再是「未配置」。
+
+Replay：`playersMeta` 追加 optional 欄（heroId/playerName/lane/spells），
+**版本仍是 `MobaReplay.v1`**，舊 replay 無此欄照舊播放。順帶把名單接給
+`MobaRuntimeView3D`，重播 3D 名牌終於與現場同一批人。容量數字一位都沒變。
+
+### 目標 5：英雄來源徽章
+
+新增 `src/battle/moba/mobaHeroSource.js`，五種來源都對應到真實資料。
+**最重要的一條判定**：「已鎖定」必須「選手綁定英雄 **且與席位預設不同**」。
+初始名單五人的 `player.heroId` 就等於席位預設，照字面判成已鎖定等於用徽章
+去坐實玩家「英雄和選手綁死」的誤解——verifier §26 專門釘住這件事。
+畫面下方另加說明，明講賽前只是參考、正式出戰在 Ban/Pick 才定案。
+
+為此在 `heroProgress` 加了 `lastMatchSeq`。用**單調遞增序號不用 Date.now()**：
+`applyMatchResult` 是純函數，塞時鐘會讓它不可重現。
+
+### 驗證
+
+`check_moba_milestone_i_close`（新增）**44/44**；
+`shot_milestone_i`（新增）桌機 1600×1000 **22/22** ＋ 手機 390×844 **22/22**；
+`milestone_i`／`h`／`g`／`f`／`e` 全 PASS；`regress` 15/15、23.5 分、擊殺 29.8
+（**與 H／I 逐值相同**＝沒碰公平性的證明）；`regress2` 8/8；build 2601 modules。
+
+瀏覽器驗收驗的是「同一份資料」不是「畫面沒炸」：每一站用 `data-*` 抓配置，
+最後**逐席比對** Ban/Pick ↔ Loading ↔ 戰鬥面板 ↔ Replay。
+
+### 手機首跑紅燈是腳本錯，不是產品錯（值得記）
+
+`mobile 20)` 首次紅燈：面板顯示 `flash,ignite`，腳本拿 b1 的 `flash,teleport` 去比。
+查證後是**手機版十人面板預設收合、只渲染目前那一路**，索引 0 不是 b1；
+證據 JSON 顯示 `clickedSeat=b3`，而 b3 的配置正是 `flash,ignite`——產品是對的。
+修法是給 `hero-cell` 加 `data-seat`，比對「實際點到的席位」，**不是放寬斷言**。
+
+### 關鍵字掃描：第五次（兩支是既有假紅燈）
+
+開工前已在 `bfd4557` worktree 重現，確認非本輪造成：
+
+- `check_moba_tactic24` §B 掃字面 `start({ tactic })`，但 **Milestone H** 起是
+  `start({ tactic, roster })` ⇒ **從 H 就一直假紅**。改成 `/start\(\{\s*tactic\b/`。
+- `check_progress25` §16 是上一條的連鎖，隨之轉綠（34/34）。
+- `check_moba_milestone_g` §7 掃完整標題「召喚師技能（即時冷卻）」，而本輪標題
+  正當改動（第二格可能沒有 CD，原標題已不實）。改成驗四個區塊都在。
+
+三處都改成驗行為／驗結構，沒有降低強度。**規則再強調一次：
+禁改／禁用類斷言一律驗行為；連 UI 區塊也不要綁死單一字串。**
+
+### 沒有修的既有紅燈
+
+- `check_dash10`：`snapshotToBattleResult: snapshot 尚未終局` 直接拋錯，
+  已在 `bfd4557` worktree 重現 ⇒ 既有紅燈，診斷屬另一件事，沒有順手重構。
+- `check_moba_experience26 §17`：replay ≈2492KB > 2MB，Ray 已裁決為既有已知問題。
+  改動前後**同為 836 frames ≈ 2492KB**，本輪沒讓它變差。
