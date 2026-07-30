@@ -10,6 +10,7 @@
 // ============================================================================
 
 import { dist, PITS, ROLE_NAME } from "../gameData.js";
+import { SUMMONER_SPELLS } from "./moba/mobaHeroLoadout.js";
 
 const MULTI_WINDOW = 10;       // 同一人連殺判定窗（模擬秒）
 const MULTI_NAME = { 2: "Double Kill", 3: "Triple Kill", 4: "Quadra Kill", 5: "PENTA KILL" };
@@ -96,8 +97,14 @@ export class BattleEventTracker {
         for (const se of snap.spellEvents) {
           if (this.seenSpells.has(se.id)) continue;
           this.seenSpells.add(se.id);
-          const zh = se.spell === "flash" ? "閃現" : "懲戒";
-          const rz = { escape: "逃生", chase: "追擊", engage: "切入" }[se.reason] ?? se.reason;
+          //  Milestone J：八個技能都會出現在這裡了。舊碼是「不是閃現就叫懲戒」的
+          //    二選一，治療／點燃／傳送全部會被寫成「懲戒」——Timeline 與 Replay
+          //    都吃這條字串，等於整場播報說謊。改讀技能表（唯一命名來源）。
+          const zh = SUMMONER_SPELLS[se.spell]?.zh ?? se.spell;
+          const rz = {
+            escape: "逃生", chase: "追擊", engage: "切入",
+            survive: "保命", assist: "救援", execute: "收頭", defend: "支援守塔", slow: "解控",
+          }[se.reason] ?? se.reason;
           push("SPELL_USED", se.side, `${se.playerId.toUpperCase()} 使用${zh}（${rz}）`, se.from, { playerId: se.playerId, spell: se.spell, reason: se.reason });
         }
       }

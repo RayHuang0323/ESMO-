@@ -20,6 +20,7 @@ import { heroById } from "../../data/heroDatabase.js";
 import BattleHeroSheet from "./BattleHeroSheet.jsx";
 import HeroPortrait from "../../ui/HeroPortrait.jsx";
 import { computeFocus } from "../battleFocus.js";
+import { SUMMONER_SPELLS } from "../moba/mobaHeroLoadout.js";
 import { useIsMobile, isMobileViewport } from "../../ui/useViewport.js";
 import { PANEL_MAX_W, Z } from "./battleLayout.js";
 
@@ -118,10 +119,15 @@ function StatusChips({ p, align }) {
 //   F = Flash（⚡；全員）、D = Smite（🎯；只有打野）或 reserved（其他位置尚無
 //   可靠引擎作用點 ⇒ 顯示明確的保留狀態，不虛構技能）。
 //   冷卻中 ⇒ 顯示剩餘秒數 + 暗化；可用 ⇒ 亮色。無 sp 資料（舊 replay/舊規則）⇒ 原佔位。
-const SPELL_META = {
-  flash: { icon: "⚡", zh: "閃現", color: "#fde047" },
-  smite: { icon: "🎯", zh: "懲戒", color: "#4ade80" },
+//  Milestone J：技能名稱／圖示改讀技能表（唯一來源）。舊碼只認得閃現與懲戒，
+//  第二格接上八個技能之後，其餘六個會全部畫成「?」。
+const SPELL_COLOR = {
+  flash: "#fde047", smite: "#4ade80", teleport: "#38bdf8", heal: "#4ade80",
+  barrier: "#93c5fd", ignite: "#fb923c", ghost: "#c4b5fd", cleanse: "#67e8f9",
 };
+const SPELL_META = Object.fromEntries(Object.entries(SUMMONER_SPELLS).map(([id, s]) => [
+  id, { icon: s.icon, zh: s.zh, color: SPELL_COLOR[id] ?? "#a1a1aa" },
+]));
 function SpellSquare({ label, spell }) {
   if (!spell) {
     return <div title="召喚師技能：目前無資料，保留位置（待接）" style={{ width: 14, height: 14, borderRadius: 3, background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, fontWeight: 900, color: "#52525b" }}>{label}</div>;

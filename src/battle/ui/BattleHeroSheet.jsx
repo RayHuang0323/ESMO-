@@ -131,11 +131,18 @@ export default function BattleHeroSheet({ heroId, heroName, playerName, playerId
             <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
               <span style={{ fontSize: 10, color: "#cbd5e1", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, padding: "2px 7px" }}>{stateText}</span>
               {p?.rc > 0 && <span style={{ fontSize: 10, color: "#67e8f9", border: "1px solid #67e8f955", borderRadius: 6, padding: "2px 7px" }}>回城引導 {Math.ceil(p.rc)}s</span>}
-              {(p?.statusEffects ?? []).map((e) => (
-                <span key={e.id} style={{ fontSize: 10, color: "#fda4af", border: "1px solid #fda4af55", borderRadius: 6, padding: "2px 7px" }}>
-                  {e.id === "slow" ? "減速" : e.id} {Math.ceil(e.remaining)}s
-                </span>
-              ))}
+              {/* Milestone J：召喚師技能造成的狀態也要看得到（護盾還剩多少、被點燃幾秒） */}
+              {(p?.statusEffects ?? []).map((e) => {
+                const meta = {
+                  slow: { zh: "減速", c: "#fda4af" }, ignite: { zh: "點燃", c: "#fb923c" },
+                  haste: { zh: "加速", c: "#c4b5fd" }, shield: { zh: "護盾", c: "#93c5fd" },
+                }[e.id] ?? { zh: e.id, c: "#fda4af" };
+                return (
+                  <span key={e.id} style={{ fontSize: 10, color: meta.c, border: `1px solid ${meta.c}55`, borderRadius: 6, padding: "2px 7px" }}>
+                    {meta.zh}{e.amount != null ? ` ${e.amount}` : ""} {Math.ceil(e.remaining)}s
+                  </span>
+                );
+              })}
               {(p?.buffs ?? []).map((b) => {
                 const label = b.id === "red" ? "紅 Buff" : b.id === "blue" ? "藍 Buff" : b.id === "dragon" ? "巨龍" : "巴龍";
                 const val = b.id === "dragon" ? `×${b.stacks ?? 0}` : `${Math.ceil(b.remaining ?? 0)}s`;

@@ -27,7 +27,11 @@ function Row({ p, snap, isMvp, roster }) {
   const hero = roster?.[p.id]?.hero ?? ROLE_NAME[p.role];
   //  Milestone I-close：記分板同時服務戰中 TAB 與賽後 BattleEndScreen ⇒ 在這裡
   //    顯示召喚師技能，Result 就自動與 Ban/Pick／Loading／對戰中一致（同一份 roster）。
-  const spells = roster?.[p.id]?.spells ?? [];
+  //  Milestone J：優先用引擎的 `sp`——它帶著**實際使用次數**，Result 才答得出
+  //    「這場到底放了幾次」。引擎沒資料（未啟用技能層）才退回名單的配置。
+  const engineSpells = (p.sp ?? []).filter((s) => s?.id);
+  const spells = engineSpells.length ? engineSpells.map((s) => s.id) : (roster?.[p.id]?.spells ?? []);
+  const usesOf = (id) => engineSpells.find((s) => s.id === id)?.uses ?? null;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", borderRadius: 6,
       background: isMvp ? "rgba(250,204,21,0.13)" : "transparent", opacity: p.dead ? 0.55 : 1 }}>
@@ -39,9 +43,21 @@ function Row({ p, snap, isMvp, roster }) {
         <div style={{ fontSize: 9, color: "rgba(255,255,255,0.42)", display: "flex", alignItems: "center", gap: 4 }}>
           <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{hero}</span>
           {spells.length > 0 && (
-            <span data-testid="board-spells" data-spells={spells.join(",")} title={spells.map((id) => SUMMONER_SPELLS[id]?.zh ?? id).join(" · ")}
+            <span data-testid="board-spells" data-spells={spells.join(",")}
+              data-uses={spells.map((id) => usesOf(id) ?? "").join(",")}
+              title={spells.map((id) => {
+                const n = usesOf(id);
+                return `${SUMMONER_SPELLS[id]?.zh ?? id}${n != null ? `（使用 ${n} 次）` : ""}`;
+              }).join(" · ")}
               style={{ flexShrink: 0, letterSpacing: "0.05em", opacity: 0.9 }}>
-              {spells.map((id) => SUMMONER_SPELLS[id]?.icon ?? "?").join("")}
+              {spells.map((id) => {
+                const n = usesOf(id);
+                return (
+                  <span key={id} style={{ opacity: n === 0 ? 0.45 : 1 }}>
+                    {SUMMONER_SPELLS[id]?.icon ?? "?"}{n ? <sub style={{ fontSize: 7 }}>{n}</sub> : null}
+                  </span>
+                );
+              })}
             </span>
           )}
         </div>
