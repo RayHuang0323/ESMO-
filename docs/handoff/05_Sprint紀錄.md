@@ -2841,3 +2841,61 @@ safe area／WebGL driver 亦未測。
 **要知道的一點**：平均時長比 E baseline 短約 1.5 分（25.3 → 24.7）。仍在
 `regress2` 的 [14, 26] 內且離下界很遠，但這是門牙塔修正的連帶效果——
 所有比賽都會經過門牙塔階段，不只 seed 42。
+
+---
+
+## Milestone G：戰鬥隊伍面板與手機地圖操作（2026-07-31）
+
+狀態：**本機實作與驗證完成；未 push、未部署，等待 Ray 驗收。**
+rollback tag `milestone-g-baseline` → `e6325f0`。
+完整報告：`review/moba-runtime/milestone-g/MILESTONE_G_REPORT.md`。
+
+性質：**純呈現層**。`regress` 15/15、平均 23.5 分、擊殺 29.8 與 Milestone F
+**逐值相同**，`regress2` 8/8 ⇒ 這一輪確實沒有動到模擬。
+
+### 1. 隊伍面板
+
+- 「沒有血條」的真相：面板其實有，是 Legacy `StatBars` 的 **3px 垂直細條**，
+  在 390px 手機上看不出來。改成**水平血條**（三段顏色＋百分比；陣亡直接顯示復活倒數）。
+- 新增狀態晶片，全部取自 snapshot 既有欄位：`dead`/`respawn`（☠ 倒數）、
+  `rc`（回城 Ns）、`state`（團戰／撤退／追擊／推塔／回防／打野…）、
+  `statusEffects`（緩 Ns）；沒有資料就不顯示。
+- 點英雄改開新的 `BattleHeroSheet`：血量與狀態 → **召喚師技能即時冷卻** →
+  英雄技能（明示引擎不模擬個別技能 CD，不顯示假 CD）→ 本場數據（含 D-fix2 的
+  目前意圖）；生涯／熟練收到底部按鈕才開。
+- 順手修掉既有疊層問題：drei `<Html>` 的世界標籤（`BLUE BUFF`、`首次刷新`）
+  會壓在面板文字上（Milestone E 就記錄過）。新增 `Z.sheet = 18`（低於終局 20／重播 60）。
+
+### 2. 手機地圖操作
+
+- **⚠ 往上滑弄丟整場比賽**的根因是 canvas 沒宣告 `touch-action` ⇒ 瀏覽器把拖曳
+  當頁面過捲、觸發下拉重新整理。修法：canvas `touch-action:none`，並在**戰鬥畫面
+  掛載期間**關閉 `html`/`body` 的 `overscroll-behavior-y`（卸載還原）。
+- **拖曳鈍**還有第二個原因：兩軸共用同一位移係數，但地面被 52° 俯角壓縮
+  ⇒ 直向比橫向鈍。現在垂直分量除以 `sin(pitch)`。
+- **手勢中斷**：舊碼進入捏合時把拖曳狀態清成 null 且不重建 ⇒ 放開一指手勢就斷。
+  現在由剩下那根手指接續（pointer 由第一個進來的事件認領——`touch.identifier`
+  與 `pointerId` 不同組）。雙指也改成**同時可縮放與平移**（`userViewTo` 一次 set）。
+- **縮放**：`ZOOM_MIN` 1.6 → **1.06**，最遠距離 372 → **561**，
+  剛好對到相機本來就設計好的 `distMax 560`（`far:1000` 也是照這個算的）
+  ⇒ 放寬的是 zoom 下限，不是相機設計包絡；`ZOOM_MAX`／近距離不變。
+
+**⚠ 誠實揭露**：390×844 直式要**橫向**看完整張地圖需要距離 977，相機上限是 560
+⇒ 縱向已可全覽、橫向仍只有約 57%。要橫向全覽必須把 `distMax` 拉到約 1040 並放大
+`far`，實算 16-bit 深度量化會從 `Δz 0.132` 惡化到 **0.460（約 3.5 倍）**——那正是
+H.2-flicker 修的「Android 單位整批閃爍」成因，**刻意不做**。全圖總覽仍看小地圖。
+
+### 驗證
+
+- `check_moba_milestone_g`（新增）**30/30**；`tools/shot_milestone_g`
+  真瀏覽器 **20/20 斷言、5 張截圖**（桌機 1600×1000 ＋ 390×844）。
+- 以 CDP 送**真的觸控事件**單指下拖：pan `z 60.3 → −65.6`、`window.scrollY` 不變
+  ⇒ 不會再觸發下拉重新整理。縮放實測可達 `dist 561`、近距離 `dist 66`。
+- `camera_replay29b6` 16/16、`controls29b3` 18/18、`milestone_f` 30/30、
+  `milestone_e` 49/49、`regress` 15/15、`regress2` 8/8、build 2597 modules。
+
+### 未驗證
+
+**Android 真機手感**（跟手細緻度、慣性、低 FPS 表現）與**真實 Android Chrome 的
+pull-to-refresh**：桌面 Chrome 的觸控模擬只能證明「有平移、頁面不捲動」，
+真機仍需 Ray 確認。長時間人眼觀感（面板是否過密）亦未測。

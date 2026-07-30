@@ -1,0 +1,193 @@
+{
+  "notes": [
+    {
+      "label": "desktop：進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop：進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop：進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop：正式 GameView 掛載",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop：隊伍面板顯示血條百分比",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop：點英雄開的是「戰鬥資訊」（不是生涯面板）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop：戰鬥資訊含本場數據與生涯入口",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop：生涯資訊移到獨立入口（開得到 MASTERY）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile390：進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile390：進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile390：進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile390：正式 GameView 掛載",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile：canvas 宣告 touch-action:none（瀏覽器不再攔截拖曳）",
+      "ok": true,
+      "extra": {
+        "canvasTouchAction": "none",
+        "canvasOverscroll": "none",
+        "htmlOverscrollY": "none",
+        "bodyOverscrollY": "none"
+      }
+    },
+    {
+      "label": "mobile：戰鬥期間關閉頁面下拉重新整理（overscroll-behavior-y:none）",
+      "ok": true,
+      "extra": {
+        "canvasTouchAction": "none",
+        "canvasOverscroll": "none",
+        "htmlOverscrollY": "none",
+        "bodyOverscrollY": "none"
+      }
+    },
+    {
+      "label": "mobile：單指往下拖曳有平移地圖",
+      "ok": true,
+      "extra": {
+        "before": {
+          "x": -32.13144523024937,
+          "z": 62.12477507219309
+        },
+        "after": {
+          "x": -32.12795530664781,
+          "z": -63.80567283688921
+        }
+      }
+    },
+    {
+      "label": "mobile：拖曳沒有讓頁面捲動（不會觸發下拉重新整理）",
+      "ok": true,
+      "extra": {
+        "before": {
+          "dist": 195.08196721311475,
+          "pan": {
+            "x": -32.13144523024937,
+            "z": 62.12477507219309
+          },
+          "mode": "director"
+        },
+        "after": {
+          "dist": 195.08196721311475,
+          "pan": {
+            "x": -32.12795530664781,
+            "z": -63.80567283688921
+          },
+          "mode": "free"
+        },
+        "scrollBefore": 0,
+        "scrollAfter": 0
+      }
+    },
+    {
+      "label": "mobile：可以縮到足以綜觀全圖的距離（≥520）",
+      "ok": true,
+      "extra": {
+        "dist": 561.3207547169811
+      }
+    },
+    {
+      "label": "mobile：近距離視角仍在（≤120）",
+      "ok": true,
+      "extra": {
+        "dist": 66.11111111111111
+      }
+    },
+    {
+      "label": "mobile：隊伍面板顯示血條百分比",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile：無水平溢出",
+      "ok": true,
+      "extra": {
+        "horizontalOverflow": false,
+        "innerWidth": 390
+      }
+    }
+  ],
+  "shots": [
+    "G01-desktop-team-panel.png",
+    "G02-desktop-hero-sheet.png",
+    "G03-desktop-career.png",
+    "G04-mobile390-zoom-out.png",
+    "G05-mobile390-team-panel.png"
+  ],
+  "heroCellClick": "clicked:10:1⚡—Kaiser100%0/0/0—",
+  "guards": {
+    "canvasTouchAction": "none",
+    "canvasOverscroll": "none",
+    "htmlOverscrollY": "none",
+    "bodyOverscrollY": "none"
+  },
+  "drag": {
+    "before": {
+      "dist": 195.08196721311475,
+      "pan": {
+        "x": -32.13144523024937,
+        "z": 62.12477507219309
+      },
+      "mode": "director"
+    },
+    "after": {
+      "dist": 195.08196721311475,
+      "pan": {
+        "x": -32.12795530664781,
+        "z": -63.80567283688921
+      },
+      "mode": "free"
+    },
+    "scrollBefore": 0,
+    "scrollAfter": 0
+  },
+  "zoomOut": {
+    "dist": 561.3207547169811
+  },
+  "zoomIn": {
+    "dist": 66.11111111111111
+  },
+  "hud": {
+    "horizontalOverflow": false,
+    "innerWidth": 390
+  }
+}
