@@ -1,0 +1,96 @@
+{
+  "notes": [
+    {
+      "label": "desktop：進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop：進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop：進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop：正式 GameView 掛載",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop：戰鬥資訊面板可開（G 的入口仍正常）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop：可快速完成",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop：進入賽後結果",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop：Replay 固定使用 runtime-v2（與現場同一套戰場）",
+      "ok": true,
+      "extra": {
+        "presentation": "runtime-v2",
+        "isReplay": true
+      }
+    },
+    {
+      "label": "mobile390：進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile390：進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile390：進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile390：正式 GameView 掛載",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile：浮動大字起點在控制鈕欄下方（不再互相遮擋）",
+      "ok": true,
+      "extra": {
+        "btns": 6,
+        "ctrlBottom": 265,
+        "floatTop": 321,
+        "clear": true
+      }
+    }
+  ],
+  "shots": [
+    "H01-desktop-hero-sheet.png",
+    "H02-desktop-battle.png",
+    "H03-desktop-baron-area.png",
+    "H04-desktop-replay-runtime-v2.png",
+    "H05-mobile390-controls.png"
+  ],
+  "heroCellClick": "clicked:10",
+  "baronCam": true,
+  "replay": {
+    "presentation": "runtime-v2",
+    "isReplay": true
+  },
+  "floatOverlap": {
+    "btns": 6,
+    "ctrlBottom": 265,
+    "floatTop": 321,
+    "clear": true
+  }
+}

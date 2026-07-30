@@ -105,8 +105,11 @@ ck("23) 沒有第二套相機系統（仍只有 cameraStore 一份狀態）",
   !view.includes("createCameraStore"));
 
 console.log("\n── §4 禁改邊界 ──");
-ck("24) 未改 LogicEngine",
-  !src("src/LogicEngine.js").includes("Milestone G"));
+//  ⚠ 原本掃「Milestone G」字串，但後續 milestone 只要在註解裡提到 G 就會誤判
+//    （H 在 configureHeroes 的說明寫了「與 Milestone G 逐位元相同」）。
+//    改為斷言真正的意思：G 是純呈現層，引擎不該認識任何 G 的呈現概念。
+ck("24) LogicEngine 不參與 G 的呈現層（血條／名牌／手勢／縮放）",
+  !/HpBar|StatusChips|touchAction|overscroll|ZOOM_MIN|BattleHeroSheet/.test(src("src/LogicEngine.js")));
 ck("25) 未改公平性／節奏常數表",
   !src("src/battle/moba/matchProgression.js").includes("Milestone G"));
 ck("26) 未改地圖幾何與碰撞來源",

@@ -2899,3 +2899,73 @@ H.2-flicker 修的「Android 單位整批閃爍」成因，**刻意不做**。�
 **Android 真機手感**（跟手細緻度、慣性、低 FPS 表現）與**真實 Android Chrome 的
 pull-to-refresh**：桌面 Chrome 的觸控模擬只能證明「有平移、頁面不捲動」，
 真機仍需 Ray 確認。長時間人眼觀感（面板是否過密）亦未測。
+
+---
+
+## Milestone H：英雄選擇進對戰 ＋ 三個呈現修正（2026-07-31）
+
+狀態：**本機實作與驗證完成；未 push、未部署。**
+rollback tag `milestone-h-baseline` → `0813594`。
+完整報告：`review/moba-runtime/milestone-h/MILESTONE_H_REPORT.md`。
+
+### 1. Ban/Pick 第一次真的影響對戰
+
+到 G 為止選角是**純外觀**（`draftRoster.js` 自己寫著引擎 loadout 走 `HERO_ASSIGN`）。
+一直沒接的原因是 `calcMobaPower` 會直接乘進 `dmgAmt = p.power * dt * 0.92`
+⇒ 等於 damage multiplier，違反 S28 §2。
+
+修法是沿用已驗證的行為層管線，新增第三層：
+`S24 戰術 → configureMatch`／`S28 選手能力 → configurePlayers`／
+**`H 英雄定位 → configureHeroes`**。新增純函式
+`src/battle/moba/mobaHeroProfile.js`，六定位各有得失：
+
+- `engageDistK` 站位（坦克 0.72 貼前排／射手 1.20 站後排）
+- `engageAdj`／`retreatAdj` 進退門檻
+- `focusLowHp` 目標選擇（刺客 +0.22 最看殘血）
+- `joinAdj`／`objAdj` 團戰職責、`protectAdj` 保護隊友（輔助 +0.20）
+- `skillWeight` 技能就緒權重（法師 1.18／坦克 0.85）
+
+**不輸出 power／tough**，`_heroMod` 不出現在任何傷害／金錢式子（verifier §4 斷言）。
+
+**中性由結構保證**：實作中一度無條件包了一層 `clamp(c + 0, …)`，那在英雄層關閉時
+也會改變邊界值行為；已改成「有偏移才夾」。並以 `git worktree` 對 baseline
+實跑 5 顆 seed **逐欄相同 5/5**。
+
+### 2. 三個呈現修正
+
+- **巴龍一大片淺色平面**：根因是命中閃光把**整個模型**換成 `#fff1b8`
+  （`toneMapped:false`），而打巴龍時多人持續命中 ⇒ `hit > 0` 幾乎全程成立。
+  巨型目標改成**只閃重點色**，本體保留皮膚材質；小野怪維持原行為。
+- **手機擊殺文字遮住倍率／畫質按鈕**：浮動大字 `top 26%/width 80%` 會壓到
+  `SAFE_TOP` 起算的右上控制欄（約到 31%）。手機改 `top 38%/width 70%`，桌機不動。
+- **Replay 固定 runtime-v2**：原本跟著 `loadMapPresentation()`（預設 legacy），
+  與固定 runtime-v2 的正式 GameView 不一致。現在只要 replay 支援 3D 就一律
+  runtime-v2，舊 replay 仍有 legacy 退路。
+  （過程中一度把 `runtimeMap` 寫在 `use3D` 之前 ⇒ TDZ、build 抓不到、執行才炸；
+  已修並加 verifier §25 防止再犯。）
+
+### 驗證
+
+- `check_moba_milestone_h`（新增）**31/31**；真瀏覽器 **13/13、5 張截圖**。
+- 英雄層關閉 vs baseline：**5/5 seed 逐欄相同**。
+- `milestone_g` 30/30、`milestone_f` 30/30、`milestone_e` 49/49、
+  `camera_replay29b6` 16/16、`controls29b3` 18/18。
+- `pacing29b1` **25/25**（位移 10pp ≤ 15）；`regress` 15/15、23.5 分、擊殺 29.8
+  （與 G 逐值相同）；`regress2` 8/8；build 2598 modules。
+- **英雄層開啟後**（40 seeds）：正序藍勝 0.50、反序 0.50 ⇒ **位移 0pp**；
+  團戰中位 7.25／7.0 秒、無目的遊走率 0.20、零碎碰撞率 0.01 —— 節奏全部維持。
+  測試用定位分布刻意不對稱（預設名單藍 坦/刺/法/射/輔 vs 紅 戰/戰/法/射/坦）仍 50/50。
+
+### 過程中修掉的兩個假斷言（記錄以免重犯）
+
+1. H §19 原本斷言「rng 抽樣次數不變」——**前提錯誤**。行為改變會改變「哪些分支
+   走到抽樣點」，同 seed 次數本來就不同（596 → 657）。改成驗真正的不變量：
+   同 seed + 同定位 ⇒ 完全決定性。
+2. G §24「未改 LogicEngine」是掃字串「Milestone G」——後續 milestone 只要在註解
+   提到 G 就誤判。已改為內容導向。（H §28 也踩過：`mobaNavigation.js` 檔頭寫著
+   舊的「Milestone H.2」。）**結論：禁改邊界不要用 milestone 名稱字串當標記。**
+
+### 未驗證
+
+英雄定位的「手感」需人眼長時間觀看；**巴龍修正的實際觀感沒拍到多人打巴龍那一刻**
+（本輪截圖在開局階段），建議實際打一場看巴龍團確認。Android 真機沿用 G 的清單。
