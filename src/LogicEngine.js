@@ -231,11 +231,19 @@ export class LogicEngine {
       ];
       this.neutrals = { list, dragon: list[0], baron: list[1], camps: list.slice(2) };
     } else this.neutrals = null;
-    this.fsm3 = R.engagementFsm ? {
-      blue: { objEvalT: -1, objGo: false, objUntil: 0, objKey: null, gankLane: null, gankUntil: 0, gankNext: 45, dragonStacks: 0, baronBuffUntil: 0 },
-      red:  { objEvalT: -1, objGo: false, objUntil: 0, objKey: null, gankLane: null, gankUntil: 0, gankNext: 45, dragonStacks: 0, baronBuffUntil: 0 },
-    } : null;
+    const initSide = () => ({
+      objEvalT: -1, objGo: false, objUntil: 0, objKey: null,
+      gankLane: null, gankUntil: 0, gankNext: 45, dragonStacks: 0, baronBuffUntil: 0,
+      // ── Milestone F：團戰勝方的主動權窗 ───────────────────────────────
+      //   initKind: "baron" | "dragon" | "siege" | null；siege 時 initTarget 是塔 id。
+      initUntil: 0, initKind: null, initTarget: null, initFrom: null,
+      defendUntil: 0,          // 敗方：短暫回防窗
+    });
+    this.fsm3 = R.engagementFsm ? { blue: initSide(), red: initSide() } : null;
     this.hot3 = null;         // 上一 tick 的團戰熱點（解散 ⇒ 參與者 DISENGAGE）
+    // Milestone F：進行中的團戰（帶遲滯；接觸暫斷不算結束）。v1/v2 永遠是 null。
+    this.fight3 = null;
+    this.fightLog = [];       // [{ start, end, dur, deaths, winner, kind, converted }]（觀測用）
   }
 
   // ── S24 戰術層 ────────────────────────────────────────────────────────────
@@ -419,6 +427,21 @@ export class LogicEngine {
     }
     return p.objGo;
   }
+  /**
+   * Milestone F：主動權窗的「攻城」分支是否適用於這名英雄。
+   * 條件刻意保守：窗要開著、目標塔還在、血量夠、不是剛復活、也不在追擊中。
+   * 血量不足的人**不跟進**（走既有回城／撤退路徑）——贏了團戰不該接著送人頭。
+   */
+  _initiativeSiegeV3(p) {
+    const T = this.fsm3?.[p.side];
+    if (!T || T.initKind !== "siege" || this.t >= T.initUntil) return false;
+    const tw = this.towers[T.initTarget];
+    if (!tw || tw.hp <= 0) { T.initKind = null; T.initTarget = null; return false; }
+    if (p.dead || p.retreating || p.recallT > 0) return false;
+    if (p.fsm === "RETURN" || p.fsm === "RESPAWN") return false;
+    if (p.hp / p.maxHp < this.rules.initiativeHpMin) return false;
+    return true;
+  }
   /** 追擊維持判定：對象死亡/超時/拉開距離/離錨點太遠/血量回升 ⇒ 放棄。 */
   _chaseAliveV3(p) {
     const R = this.rules;
@@ -543,6 +566,9 @@ export class LogicEngine {
       decisionTarget = lowAlly;
     } else if (target && targetHp <= 0.40 && score >= 0.30 &&
                targetDist <= R.decisionContact &&
+               // Milestone F：不追進敵塔射程。追殘血本身合理，但「追到塔下被塔
+               //   打殘再被反殺」是白送——除非我方在該塔區有人數優勢。
+               (!inTowerRisk || alliesN > towerDefenders + 1) &&
                // 打龍／巴龍時只追真正能立刻收掉的近身殘血，不為追人離開坑區。
                (!nearbyObjective || (targetHp <= 0.25 && targetDist <= 5))) {
       action = "PURSUE";
@@ -642,6 +668,136 @@ export class LogicEngine {
    * 閃現先收集全部施放、再一起套用位移 ⇒ 彼此讀到的都是套用前的位置，
    * 與 players 陣列迭代順序無關（同 S29A pendingHits 的兩相手法）。
    */
+  /**
+   * Milestone F：一場團戰結束 —— 判定勝負，並把勝利**轉化成地圖收益**。
+   *
+   * 這是 Sprint28 技術債 2 的正解。當時的觀察是「團隊天賦單投 = 負回報」，
+   * 因為勝負來自主堡血量（靠兵線與推塔），而打贏團戰之後所有人只是進入
+   * DISENGAGE、走回自家塔、再重新對線 ⇒ 打得多不會變成推進。
+   * E baseline 量到的數字：**只有 23% 的決勝團戰能在 25 秒內換到任何收益**。
+   *
+   * 修法刻意「接線」而不是「加係數」：勝方開一個主動權窗，窗內把既有的
+   * 目標窗（龍／巴龍）或推塔路徑接上去，敗方進短暫回防窗。
+   * 不抽 rng、不改傷害、不加陣營係數 —— 勝負仍由雙方各自的機制產生。
+   *
+   * @param {{pos:Object,start:number,lastContact:number,deaths:Object,members:Set}} F
+   */
+  _resolveFightV3(F, alive) {
+    const R = this.rules;
+    const dur = this.t - F.start;
+    const total = F.deaths.blue + F.deaths.red;
+    const participants = [...F.members]
+      .map((id) => this.players.find((q) => q.id === id))
+      .filter(Boolean);
+
+    // 太短且零陣亡 ⇒ 只是擦身而過，不算一場團戰：不送冷卻、不開窗。
+    // （這一條就是把 baseline 那 49% 的零碎碰撞排除在「團戰」定義之外的地方。）
+    if (dur < R.fightMinDur && total === 0) return;
+
+    // 參與者一律進入 DISENGAGE + 重接戰冷卻（沿用 S29B1 的收手機制）
+    for (const p of participants) {
+      if (p.dead) continue;
+      p.reengageAt = Math.max(p.reengageAt, this.t + R.reengageAfterFight);
+      p.joinGo = false;
+      if (!p.retreating) { p.fsm = "DISENGAGE"; p.fsmUntil = this.t + 4; }
+    }
+
+    // ── 勝負判定：先看陣亡數，平手則看參與者剩餘血量比例總和 ─────────────
+    let winner = null;
+    if (F.deaths.blue !== F.deaths.red) winner = F.deaths.blue < F.deaths.red ? "blue" : "red";
+    else if (total > 0) {
+      const hpOf = (side) => participants
+        .filter((q) => q.side === side && !q.dead)
+        .reduce((s, q) => s + q.hp / q.maxHp, 0);
+      const hb = hpOf("blue"), hr = hpOf("red");
+      if (Math.abs(hb - hr) > 0.6) winner = hb > hr ? "blue" : "red";
+    }
+    const record = {
+      start: Math.round(F.start * 10) / 10, end: Math.round(this.t * 10) / 10,
+      dur: Math.round(dur * 10) / 10, deaths: { ...F.deaths }, winner, kind: null,
+    };
+    if (!winner) { this.fightLog.push(record); return; }
+
+    // ── 勝方開主動權窗：把戰果導向一個**具體目標** ───────────────────────
+    const foeSide = winner === "blue" ? "red" : "blue";
+    const winnersAlive = participants.filter((q) => q.side === winner && !q.dead);
+    if (winnersAlive.length < R.initiativeMinAlive) { this.fightLog.push(record); return; }
+
+    record.kind = this._openInitiativeV3(winner, F.pos, winnersAlive);
+    // 敗方：短暫回防窗（不是懲罰係數，只是行為傾向）
+    this.fsm3[foeSide].defendUntil = this.t + R.initiativeWindow * 0.8;
+    this.fightLog.push(record);
+  }
+
+  /**
+   * Milestone F：開一個主動權窗，並選定要把戰果換成什麼。
+   * 決定性：完全不抽 rng，只看目標存活、距離與勝方人數。
+   * @returns {string|null} 選定的目標種類（沒有可換的東西 ⇒ null，不硬塞）
+   */
+  _openInitiativeV3(side, pos, winnersAlive) {
+    const R = this.rules;
+    const T = this.fsm3?.[side];
+    if (!T || winnersAlive.length < R.initiativeMinAlive) return null;
+    if (this.t < (R.initiativeAfterT ?? 0)) return null;      // 對線期不開窗
+    const foeSide = side === "blue" ? "red" : "blue";
+    const objReach = (key) => {
+      const o = this.neutrals?.[key];
+      return o?.alive && dist(pos, o.pos) <= R.initiativeObjRange;
+    };
+    let kind = null, targetId = null;
+    if (objReach("baron") && winnersAlive.length >= 3) kind = "baron";
+    else if (objReach("dragon")) kind = "dragon";
+    else {
+      // 沒有可打的中立目標 ⇒ 推最近的敵方建築（＝把人數優勢換成塔）
+      let best = null, bd = Infinity;
+      for (const [id, tw] of Object.entries(this.towers)) {
+        if (tw.side !== foeSide || tw.hp <= 0) continue;
+        const dd = dist(pos, tw.pos);
+        if (dd < bd) { bd = dd; best = id; }
+      }
+      if (best) { kind = "siege"; targetId = best; }
+    }
+    if (!kind) return null;
+    T.initUntil = this.t + R.initiativeWindow;
+    T.initKind = kind;
+    T.initTarget = targetId;
+    T.initFrom = { ...pos };
+    // 窗內不受「剛打完架」的重接戰冷卻綁住 —— 否則勝方會站在原地發呆，
+    // 這正是 baseline 轉化率只有 23% 的直接原因。
+    for (const p of winnersAlive) p.reengageAt = Math.min(p.reengageAt, this.t + 2);
+    return kind;
+  }
+
+  /**
+   * Milestone F：擊殺後的主動權判定。
+   *
+   * 為什麼不只靠團戰窗：seed 1000 實測 **42 個擊殺裡有 31 個發生在引擎沒認定
+   * 團戰的時候**——引擎的 `hot` 抓到的多半是「兩邊各兩人對峙但沒人死」，
+   * 真正的收益機會是抓單與以多打少。只綁團戰窗 ⇒ 轉化率量不動（實測 0.23 → 0.24）。
+   * 所以這裡把「剛剛打贏一波」的定義擴大到擊殺事件本身，
+   * 但仍要求**現場真的還有人數優勢**，避免換完命就去送塔。
+   */
+  _maybeInitiativeV3(killer, victim) {
+    const R = this.rules;
+    if (!R.engagementFsm || !this.fsm3) return;
+    const T = this.fsm3[killer.side];
+    if (this.t < T.initUntil) return;                      // 已經有窗，不重開
+    const near = (q, d) => dist(q.pos, victim.pos) <= d;
+    // 現場必須真的有優勢（否則就只是換命，不該接著去推）
+    const localAllies = this.players.filter((q) => q.side === killer.side && !q.dead && near(q, 25));
+    const localFoes = this.players.filter((q) => q.side !== killer.side && !q.dead && near(q, 18));
+    if (localFoes.length >= localAllies.length) return;
+    // 但「誰去換收益」可以是稍遠的隊友——抓單之後由隊伍接手，才是真的把優勢
+    // 用出去。實測只認 25 單位內的健康隊友時，一場只開得起 6 次窗（22 次擊殺），
+    // 轉化率量不動；放寬響應半徑是讓機制真的接上的關鍵。
+    const responders = this.players.filter((q) =>
+      q.side === killer.side && !q.dead && near(q, R.initiativeRespondRange) &&
+      q.hp / q.maxHp >= R.initiativeHpMin);
+    if (responders.length < R.initiativeMinAlive) return;
+    this._openInitiativeV3(killer.side, victim.pos, responders);
+    this.fsm3[victim.side].defendUntil = this.t + R.initiativeWindow * 0.8;
+  }
+
   _postCombatV3(alive, hot) {
     const R = this.rules;
     // 1) 追擊取得（本 tick 陣亡者不取得；維持判定仍在決策迴圈）
@@ -1125,7 +1281,18 @@ export class LogicEngine {
       let soloK = 1;
       if (R.engagementFsm && tw.lane !== "nexus") {
         const hasWave = this._hasWaveAtStructure(p.side, tw);
-        if (!hasWave) soloK = R.heroTowerSoloK;
+        if (!hasWave) {
+          // Milestone F：這個懲罰的原意是「**孤軍**拆不動」，不是「沒有兵線就永遠
+          //   拆不動」。實測 baseline 打贏一波後三、四個人站在塔下，仍吃 0.30
+          //   ⇒ 22 秒的主動權窗根本推不掉一座塔，轉化率因此卡在 ~0.23。
+          //   改為依**同時攻擊同一座建築的人數**分級：單人維持原懲罰，
+          //   成群集火給 heroTowerGroupK（仍低於有兵線的 1.0）。
+          const groupN = alive.filter((q) =>
+            q.side === p.side && !q.dead && dist(q.pos, tw.pos) < 6).length;
+          soloK = groupN >= (R.heroTowerGroupMin ?? Infinity)
+            ? (R.heroTowerGroupK ?? R.heroTowerSoloK)
+            : R.heroTowerSoloK;
+        }
       }
       const structureFactor = R.structureAccelT ? 1 + Math.max(0, this.t - R.structureAccelT) / R.structureAccelDiv : 1;
       const baronK = this.fsm3 && this.t < (this.fsm3[p.side].baronBuffUntil ?? 0)
@@ -1152,6 +1319,14 @@ export class LogicEngine {
     foe.hp = 0;
     if (p.side === "blue") this.bK++; else this.rK++;
     p.k += 1; foe.d += 1; // Sprint04：個人統計（附加）
+    // Milestone F：這一死算在哪一場團戰頭上（勝負判定的唯一輸入）。
+    //   只認距離團戰中心 18 單位內的死亡，避免把另一邊的單殺算進來。
+    if (this.fight3 && dist(foe.pos, this.fight3.pos) < 18) {
+      this.fight3.deaths[foe.side] += 1;
+      this.fight3.members.add(foe.id); this.fight3.members.add(p.id);
+    }
+    // Milestone F：擊殺 ⇒ 判斷要不要開主動權窗（把人頭換成地圖收益）
+    if (R.initiativeWindow) this._maybeInitiativeV3(p, foe);
     const assists = []; // Sprint06：助攻結算（8 秒窗，附加）
     for (const [aid, at] of foe.hitBy) {
       if (aid !== p.id && this.t - at <= 8) {
@@ -1721,8 +1896,42 @@ export class LogicEngine {
         const all = [...new Set(cands.flat())];
         hot = { x: all.reduce((s, p) => s + p.pos.x, 0) / all.length, y: all.reduce((s, p) => s + p.pos.y, 0) / all.length };
       }
-      // 熱點解散 ⇒ 參與者（雙方）進入 DISENGAGE + 重接戰冷卻：斬斷連環互毆
-      if (this.hot3 && !hot) {
+      // ── Milestone F：團戰窗遲滯 ──────────────────────────────────────────
+      //  E baseline 實測：單場 20.8 個熱點窗、49% 短於 3 秒且零陣亡、中位 2.0 秒。
+      //  根因不是「熱點太難成立」，而是**接觸一斷就立刻解散**：每次解散都送出
+      //  DISENGAGE + 13 秒重接戰冷卻，於是同一場遭遇被切成好幾段擦撞，
+      //  既形不成團戰，也永遠沒有「贏了這一波」可以轉化。
+      //  修法：成立條件**完全不放寬**（一樣要每側 2 人 + 實際接觸），
+      //  但成立之後給 fightHoldT 秒的遲滯——接觸暫斷仍算同一場。
+      const holdOn = R.fightHoldT > 0 && this.t >= (R.fightHoldAfterT ?? 0);
+      if (holdOn || this.fight3) {
+        if (hot) {
+          if (this.fight3 && this.t - this.fight3.start > (R.fightMaxDur ?? Infinity)) {
+            // 已經打滿上限仍在接觸 ⇒ 先結算這一場（含轉化），下一 tick 重新開一場
+            this._resolveFightV3(this.fight3, alive);
+            this.fight3 = null;
+          }
+          if (!this.fight3) {
+            this.fight3 = {
+              pos: { ...hot }, start: this.t, lastContact: this.t,
+              deaths: { blue: 0, red: 0 }, members: new Set(),
+            };
+          } else {
+            this.fight3.pos = { ...hot };
+            this.fight3.lastContact = this.t;
+          }
+          for (const p of alive) {
+            if (dist(p.pos, hot) < 16) this.fight3.members.add(p.id);
+          }
+        } else if (this.fight3 && holdOn && this.t - this.fight3.lastContact <= R.fightHoldT &&
+                   this.t - this.fight3.start <= (R.fightMaxDur ?? Infinity)) {
+          hot = { ...this.fight3.pos };          // 遲滯窗內：維持同一場團戰
+        } else if (this.fight3) {
+          this._resolveFightV3(this.fight3, alive);
+          this.fight3 = null;
+        }
+      } else if (this.hot3 && !hot) {
+        // 熱點解散 ⇒ 參與者（雙方）進入 DISENGAGE + 重接戰冷卻：斬斷連環互毆
         for (const p of alive) {
           if (dist(p.pos, this.hot3.pos) < 16) {
             p.reengageAt = Math.max(p.reengageAt, this.t + R.reengageAfterFight);
@@ -1740,6 +1949,18 @@ export class LogicEngine {
           const T = this.fsm3[side];
           const key = this.neutrals.baron.alive ? "baron" : this.neutrals.dragon.alive ? "dragon" : null;
           if (!key) { T.objGo = false; T.objKey = null; continue; }
+          // Milestone F：主動權窗指向龍／巴龍時，直接把目標窗打開。
+          //   這是刻意「接既有路徑」而不是另寫一套集結：目標窗的距離、承諾上限、
+          //   打野/輔助必去、knob 單調性（tactic24 C4c）全部沿用，不重複實作。
+          if (T.initKind && this.t < T.initUntil && (T.initKind === "baron" || T.initKind === "dragon")
+              && this.neutrals[T.initKind]?.alive) {
+            if (!T.objGo || T.objKey !== T.initKind) {
+              T.objGo = true; T.objKey = T.initKind;
+              T.objChance = 0.6; T.objStart = this.t;
+            }
+            T.objUntil = Math.max(T.objUntil, T.initUntil);
+            continue;
+          }
           if (this.t >= T.objEvalT) {
             T.objEvalT = this.t + 12;
             const K = this.tacticOn ? this.tk[side] : null;
@@ -1968,6 +2189,13 @@ export class LogicEngine {
       else if (R.engagementFsm && this.neutrals && !skipFight && this.fsm3[p.side].objGo &&
                this._objJoinV3(p, this.fsm3[p.side].objKey, K, M)) {
         tgt = PITS[this.fsm3[p.side].objKey]; st = "團戰!"; p.fsm = "OBJECTIVE";
+      }
+      // ── Milestone F：主動權窗 · 攻城 ──────────────────────────────────
+      //  剛打贏一波、附近沒有可打的龍／巴龍 ⇒ 把人數優勢換成塔，而不是各自走回線上。
+      //  殘血的人不跟進（交給既有回城邏輯），避免「贏了團戰卻送掉一波人」。
+      else if (R.engagementFsm && !skipFight && this._initiativeSiegeV3(p)) {
+        const tw = this.towers[this.fsm3[p.side].initTarget];
+        tgt = tw.pos; st = "圍攻"; p.fsm = "OBJECTIVE";
       }
       // S28：團戰/目標集結門檻 += joinAdj（勇氣/戰術/配合/溝通/反應＋隊伍領導平均）
       //   或 objAdj（龍/巴龍坑：視野/戰術/專注/溝通＋隊伍領導平均）。
