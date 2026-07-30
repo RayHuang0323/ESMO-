@@ -54,6 +54,8 @@ export function useBattleFeed(draft = null, { roster = null, tacticId = null } =
         const season = useSeasonStore.getState();
         const tx = mobaResultToTransaction(result, {
           players: profile.players ?? [],
+          // Milestone E：席位 → 實際上場選手（新秀在 b3 時，XP 要發給新秀而不是板凳）
+          lineup: profile.lineup ?? null,
           streak: blueWinStreak(season.history ?? []),   // MOBA 自己的連勝（不讀 CS）
           fansNow: profile.meta?.fans ?? 0,
         });

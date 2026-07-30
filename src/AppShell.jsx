@@ -15,7 +15,7 @@
 //    · draft  ← BanPickScreen onNext({picks,bans}) → LoadingScreen / GameView
 //    · tactic ← TacticScreen onNext(tacticObj)     → LoadingScreen / GameView
 // ============================================================================
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import DashboardScreen from "./screens/DashboardScreen.jsx";
 import SeasonScreen from "./screens/SeasonScreen.jsx";
 import LineupScreen from "./screens/moba/LineupScreen.jsx";
@@ -46,6 +46,11 @@ import CsLoadingScreen from "./screens/fps/CsLoadingScreen.jsx";
 import CsResultScreen from "./screens/fps/CsResultScreen.jsx";
 // ── Sprint25：賽後結算（MOBA 在 useBattleFeed 終局；CS 在此處的比賽完成邊界）──
 import { settleCsMatch } from "./platform/progress/settleCsMatch.js";
+// ── Milestone E：對戰名單（唯一一份，Loading / Battle / Result 共用）──
+import { useProfileStore } from "./platform/profileStore.js";
+import { buildBattleRoster } from "./battle/moba/mobaRosterAdapter.js";
+import { ROSTER } from "./data/roster.js";
+import { heroById } from "./data/heroDatabase.js";
 
 export default function AppShell() {
   const [screen, setScreen] = useState("dashboard");
@@ -56,6 +61,21 @@ export default function AppShell() {
   const [csResult, setCsResult] = useState(null); // S23：CsMatchResult.v1（Match → Result 傳遞）
   const go = (s) => () => setScreen(s);
   const home = go("dashboard");
+
+  // ── Milestone E【E1】：對戰名單的唯一組裝點 ───────────────────────────────
+  //   根因：本檔原本沒有把 roster 傳給 GameView ⇒ 3D 名牌／隊伍面板／記分板／
+  //   賽後戰報全部退回 data/roster.js 的靜態預設，而 useLocalServer 注入引擎的
+  //   卻是 profileStore 的真選手 ⇒「上場的人」與「畫面上的人」不是同一批。
+  //   現在 Loading / Battle / Result 共用這一份（買通 draft × lineup × profile）。
+  //   紅方無 profileStore 選手 ⇒ 仍走 ROSTER（AI 對手，不虛構名單）。
+  const profilePlayers = useProfileStore((s) => s.players);
+  const lineup = useProfileStore((s) => s.lineup);
+  const battleRoster = useMemo(
+    () => buildBattleRoster({
+      players: profilePlayers, lineup, baseRoster: ROSTER, draft, heroLookup: heroById,
+    }),
+    [profilePlayers, lineup, draft],
+  );
 
   return (
     <div style={{ width: "100%", height: "min(88vh, 760px)", background: "linear-gradient(180deg,#0b1220,#0d1420)", borderRadius: 14, overflow: "hidden", position: "relative", fontFamily: "system-ui,-apple-system,sans-serif" }}>
@@ -68,8 +88,8 @@ export default function AppShell() {
       {screen === "banpick" && <BanPickScreen onNext={(d) => { setDraft(d); setScreen("tactic"); }} onBack={go("matchmaking")} onCodex={go("codex")} />}
       {screen === "codex" && <CodexScreen onBack={go("banpick")} />}
       {screen === "tactic" && <TacticScreen onNext={(t) => { setTactic(t); setScreen("loading"); }} onBack={go("banpick")} />}
-      {screen === "loading" && <LoadingScreen draft={draft} tactic={tactic} onDone={go("battle")} />}
-      {screen === "battle" && <GameView autoStart draft={draft} tactic={tactic} onContinue={home} />}
+      {screen === "loading" && <LoadingScreen draft={draft} tactic={tactic} roster={battleRoster} onDone={go("battle")} />}
+      {screen === "battle" && <GameView autoStart draft={draft} tactic={tactic} roster={battleRoster} onContinue={home} />}
 
       {/* ── Sprint21 經營模組 ── */}
       {screen === "inbox" && <InboxScreen onBack={home} onNav={(t) => setScreen(t)} />}

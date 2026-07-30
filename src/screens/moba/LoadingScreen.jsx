@@ -32,7 +32,9 @@ function HeroCard({ hero, player, side }) {
   );
 }
 
-export default function LoadingScreen({ draft, tactic = null, onDone }) {
+// Milestone E：roster 由 AppShell 傳入（buildBattleRoster 的同一份對戰名單），
+//   讓 Loading 顯示的選手＝實際上場的人。未傳 ⇒ 退回靜態 ROSTER（行為不變）。
+export default function LoadingScreen({ draft, tactic = null, onDone, roster = ROSTER }) {
   const [pct, setPct] = useState(0);
   const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
   useEffect(() => {
@@ -41,7 +43,7 @@ export default function LoadingScreen({ draft, tactic = null, onDone }) {
   }, []);
 
   // 陣容：draft.picks（實際 BanPick 結果）優先；否則 ROSTER 預設英雄
-  const lanes = (side) => Object.entries(ROSTER).filter(([p]) => p[0] === side[0]);
+  const lanes = (side) => Object.entries(roster).filter(([p]) => p[0] === side[0]);
   const heroFor = (side, idx, rosterHeroId) => {
     const pk = draft?.picks?.[side]?.[idx];
     return pk || heroById(rosterHeroId) || null;

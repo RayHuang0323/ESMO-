@@ -45,11 +45,13 @@ import { applyProgressToState, findReceipt } from "./progress/applyMatchProgress
 import { totalXpForLevel, levelFromTotalXp } from "./progress/playerLevel.js";
 import { sanitizeTalents } from "./contracts/playerTalentState.js";
 import { applyTalentPurchase } from "./talents/purchasePlayerTalent.js";
+import { DEFAULT_LINEUP, normalizeLineup, assignSeat } from "./contracts/matchLineup.js";
 
 const KEY = "esmo.profile.v1";
 /** persistence schema 版本（migration 用；沿用同一個 localStorage key，不清資料）。
- *  v2 = S25（xp/talentPoints）；v3 = S27（players[].talents 天賦狀態）。 */
-export const PROFILE_SCHEMA_VERSION = 3;
+ *  v2 = S25（xp/talentPoints）；v3 = S27（players[].talents 天賦狀態）；
+ *  v4 = Milestone E（lineup 先發指派；舊存檔缺欄 → normalizeLineup 回退 identity）。 */
+export const PROFILE_SCHEMA_VERSION = 4;
 const canLS = typeof localStorage !== "undefined";
 export const WAN = 10_000;                    // 1 萬（Legacy 以「萬」計價，本 Store 以元存放）
 const uid = () => Date.now() + Math.floor(Math.random() * 1000);
@@ -103,6 +105,8 @@ const DEFAULT = {
   },
   meta: { fans: 128_000, reputation: 47, season: 1, players: INITIAL_PLAYERS.length, days: 8, week: 1, achievement: 48, talentPending: 1 },
   players: INITIAL_PLAYERS.map(migratePlayer),   // S25：種子名單也要有 xp/talentPoints
+  // Milestone E：先發指派（引擎席位 b1–b5 → playerId）。預設 identity ⇒ 與 E 之前相同。
+  lineup: { ...DEFAULT_LINEUP },
   activeSponsor: null,           // {id, weeksLeft, signedWeek} — Legacy：一次只能有一家
   scouted: {},                   // {prospectId: 偵查等級 0–2}
   csHistory: [],                 // S23：CS 訓練賽紀錄（CsMatchResult.v1，最新在前，上限 30）
@@ -134,6 +138,8 @@ const load = () => {
   try {
     const saved = JSON.parse(localStorage.getItem(KEY)) || {};
     const f = saved.finance || {};
+    // Milestone E：lineup 依「清洗後的名單」驗證（指到已離隊選手的席位會被回收）。
+    const players = arr(saved.players, DEFAULT.players).map(migratePlayer);
     return {
       manager: { ...DEFAULT.manager, ...saved.manager },
       team:    { ...DEFAULT.team,    ...saved.team },
@@ -148,7 +154,9 @@ const load = () => {
       },
       meta:    { ...DEFAULT.meta, ...saved.meta },
       // S25 migration：舊存檔的 players[] 沒有 xp/talentPoints → 安全補齊（見 migratePlayer）
-      players: arr(saved.players, DEFAULT.players).map(migratePlayer),
+      players,
+      // Milestone E migration：舊存檔沒有 lineup ⇒ 回退 identity（b1→b1…）⇒ 行為不變
+      lineup: normalizeLineup(saved.lineup, players),
       schemaVersion: PROFILE_SCHEMA_VERSION,
       processedMatchTransactions:
         saved.processedMatchTransactions && typeof saved.processedMatchTransactions === "object"
@@ -211,6 +219,21 @@ export const useProfileStore = create((set, get) => ({
 
   save() { if (canLS) try { localStorage.setItem(KEY, JSON.stringify(get())); } catch {} },
   reset() { if (canLS) localStorage.removeItem(KEY); set(DEFAULT); },
+
+  // ── Milestone E：先發指派（席位 b1–b5 → playerId）────────────────────────
+  //   唯一寫入點。規則全部在 contracts/matchLineup.js（互換語意、去重、清洗），
+  //   本 Store 只負責持久化 —— 不在這裡重新實作一套判斷。
+  /** 指派選手到席位；該選手原本在別的席位 ⇒ 兩席互換。playerId=null ⇒ 清空該席位。 */
+  setLineupSeat(seat, playerId) {
+    const players = get().players ?? [];
+    set({ lineup: assignSeat(get().lineup, seat, playerId, players) });
+    get().save();
+  },
+  /** 還原成預設先發（identity）。 */
+  resetLineup() {
+    set({ lineup: normalizeLineup(null, get().players ?? []) });
+    get().save();
+  },
 
   // ── 內部：更新單一選手 ────────────────────────────────────────────────
   _patchPlayer(id, fn) {

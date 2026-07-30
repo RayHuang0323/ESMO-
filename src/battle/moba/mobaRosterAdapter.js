@@ -21,6 +21,7 @@
 // ============================================================================
 
 import { withDerivedStats, getPlayerDerivedStats } from "../../platform/talents/playerDerivedStats.js";
+import { seatPlayers } from "../../platform/contracts/matchLineup.js";
 
 /** 對齊 LogicEngine 的角色順序（5 個 slot）。⚠ 必須與 LogicEngine ROLES 一致。 */
 export const ROLE_ORDER = ["top", "jungle", "mid", "adc", "sup"];
@@ -56,25 +57,104 @@ export const ENGINE_SLOT_IDS = {
  * · 純函式：不改傳入 player、不讀 Store、不碰引擎。
  * · 無天賦 ⇒ derived === base（getPlayerDerivedStats 保證逐鍵相等）⇒ mods 與
  *   S27 baseline 相同。
- * · 缺 player / players 非陣列 / id 不是引擎席位 ⇒ 安全略過（回 []，全隊中性）。
- * · 同 id 重複 ⇒ 第一筆勝出（不讓損壞存檔產生兩份同席位資料）。
+ * · 缺 player / players 非陣列 / 席位無人 ⇒ 安全略過（該席位中性）。
+ * · 同一名選手不可能佔兩個席位（normalizeLineup 保證）。
+ *
+ * Milestone E：對位不再要求「選手 id == 席位 id」，而是走 lineup 指派表
+ *   ⇒ 招募的新秀（id = "r"+timestamp）指派到 b3 後，注入的 key 仍是 `b3`
+ *   （引擎只認席位），但 stats 來自那名新秀。**引擎端零改動**。
+ *   lineup 缺席 ⇒ normalizeLineup 回退 identity ⇒ 與 S28 逐鍵相同。
  *
  * @param {Array} players  profileStore.players（唯一選手來源）
  * @param {"blue"|"red"} side
+ * @param {Object|null} lineup  profileStore.lineup（{seat: playerId}）；null ⇒ identity
  * @returns {Array<{id:string, playerId:string, stats:Object}>}
  */
-export function buildPlayerStatSlots(players, side = "blue") {
+export function buildPlayerStatSlots(players, side = "blue", lineup = null) {
   const order = ENGINE_SLOT_IDS[side] ?? [];
   if (!Array.isArray(players) || !order.length) return [];
+  // 紅方＝ AI 對手，沒有 profileStore 選手，也沒有先發指派 ⇒ 維持 S28 的 id 對位。
+  const seated = side === "blue" ? seatPlayers(lineup, players) : null;
   const byId = new Map();
   for (const p of players) {
-    // 只認引擎席位 id；同 id 重複 ⇒ 第一筆勝出（損壞存檔不產生兩份同席位資料）
-    if (!p || typeof p !== "object" || !order.includes(p.id) || byId.has(p.id)) continue;
+    if (!p || typeof p !== "object" || typeof p.id !== "string" || byId.has(p.id)) continue;
     byId.set(p.id, p);
   }
+  const playerForSeat = (seat) => (seated ? seated[seat] : (order.includes(seat) ? byId.get(seat) : null));
   // 依**席位順序**輸出（非 profileStore 的陣列順序）⇒ 打亂名單順序不改變任何輸出
-  return order.filter((id) => byId.has(id))
-    .map((id) => ({ id, playerId: id, stats: getPlayerDerivedStats(byId.get(id)) }));
+  return order
+    .map((seat) => ({ seat, player: playerForSeat(seat) ?? null }))
+    .filter((x) => x.player)
+    .map(({ seat, player }) => ({
+      id: seat,                 // 引擎席位（configurePlayers 的 key）
+      playerId: player.id,      // 真正上場的人（證據欄位；引擎不讀）
+      stats: getPlayerDerivedStats(player),
+    }));
+}
+
+/**
+ * Milestone E：**唯一**的對戰名單（battle roster）。
+ *
+ * 根因（E1）：`AppShell` 從未傳 roster 給 `GameView` ⇒ 3D 名牌／隊伍面板／
+ *   記分板／賽後戰報全部吃 `data/roster.js` 的靜態預設名單，而同一時間
+ *   `useLocalServer` 注入引擎的卻是 `profileStore` 的真選手能力
+ *   ⇒ 「進引擎的人」與「畫面上的人」不是同一批。
+ *
+ * 本函式把三個既有來源合成一份，**不新增第二套 roster、不新增第二套 Hero DB**：
+ *   1. 席位身分：`profileStore.players` ＋ `lineup`（先發指派）
+ *   2. 英雄身分：`draft.picks`（Ban/Pick）→ 選手綁定英雄 → 靜態名單預設
+ *   3. 缺任一來源時的保底：`data/roster.js`（紅方 AI 全程走這條）
+ *
+ * 輸出形狀與既有 `draftRoster()` **完全相同**（`{pid:{player,heroId,hero,...}}`），
+ * 所以 BattleHUD / BattleHeroStrip / BattleScoreboard / BattleEndScreen /
+ * MobaRuntimeView3D 一行都不用改就能吃到。
+ *
+ * ⚠ 引擎的 `loadout`（英雄熟練 → power/tough）仍由 `heroProgressStore` 以
+ *   `HERO_ASSIGN` 產生，**本函式不影響任何模擬數值**（Milestone E 不碰公平性）。
+ *
+ * @param {Object}      o
+ * @param {Array}       o.players     profileStore.players
+ * @param {Object|null} o.lineup      profileStore.lineup
+ * @param {Object}      o.baseRoster  data/roster.js ROSTER（保底 + 紅方）
+ * @param {Object|null} o.draft       Ban/Pick 結果 { picks:{blue:[],red:[]} }
+ * @param {Function|null} o.heroLookup  heroId → hero 物件。**刻意由呼叫端注入**：
+ *   本檔不 import heroDatabase（它會連帶拉進 396KB 的 heroImages data URI，
+ *   而 check_moba_stats28 / check_talent27 這兩支 Node verifier 會 import 本檔，
+ *   巢狀鏈的記憶體本來就吃緊）。未注入 ⇒ 中文名回退 draft pick / 靜態名單。
+ * @returns {Object} { [pid]: { player, playerId, heroId, hero, playerLv, isStarter, source } }
+ */
+export function buildBattleRoster({
+  players = [], lineup = null, baseRoster = {}, draft = null, heroLookup = null,
+} = {}) {
+  const lookup = typeof heroLookup === "function" ? heroLookup : () => null;
+  const seated = seatPlayers(lineup, Array.isArray(players) ? players : []);
+  const sideOf = (pid) => (pid?.[0] === "r" ? "red" : "blue");
+  // 該側席位順序（與 LANES / picks 對位序一致；沿用 draftRoster 的既有規則）
+  const indexOf = (pid) => Object.keys(baseRoster)
+    .filter((k) => sideOf(k) === sideOf(pid)).indexOf(pid);
+
+  const out = {};
+  for (const [pid, base] of Object.entries(baseRoster ?? {})) {
+    const seatPlayer = sideOf(pid) === "blue" ? (seated[pid] ?? null) : null;
+    const pick = draft?.picks?.[sideOf(pid)]?.[indexOf(pid)] ?? null;
+    // 英雄身分優先序：本場 Ban/Pick → 該選手綁定英雄 → 靜態名單預設
+    const heroId = pick?.id ?? seatPlayer?.heroId ?? base.heroId ?? null;
+    out[pid] = {
+      ...base,
+      player: seatPlayer?.name ?? base.player ?? pid.toUpperCase(),
+      playerId: seatPlayer?.id ?? pid,
+      playerLv: Number.isFinite(seatPlayer?.lv) ? seatPlayer.lv : null,
+      // 播報用（tacticalComms._who）：有真人才給個性，靜態名單沒有這欄 ⇒ null，
+      // 讓播報退回既有的「無個性」語氣，不編造性格。
+      personality: seatPlayer?.personality ?? base.personality ?? null,
+      heroId,
+      hero: lookup(heroId)?.zh ?? pick?.zh ?? (heroId === base.heroId ? base.hero : null) ?? heroId,
+      // 證據欄位（驗證腳本／診斷用；UI 不必讀）：這一格的名字是從哪來的
+      isStarter: !!seatPlayer,
+      source: seatPlayer ? "profile" : "roster",
+    };
+  }
+  return out;
 }
 
 // ============================================================================

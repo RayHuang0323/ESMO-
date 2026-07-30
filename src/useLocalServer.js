@@ -108,13 +108,15 @@ export function useLocalServer() {
     // ── Sprint28：選手能力進引擎（唯一計算點）────────────────────────────
     //   profileStore.players（最新，含天賦）→ getPlayerDerivedStats → 能力 slots
     //   → toEnginePlayerMods → engine.configurePlayers。
-    //   對位靠 playerId（b1–b5），不靠名字、不靠索引；TacticScreen / Battle 不各算一份。
+    //   對位靠**席位**（b1–b5）＋ Milestone E 的先發指派表，不靠名字、不靠索引；
+    //   TacticScreen / Battle 不各算一份。無 lineup ⇒ identity ⇒ 與 S28 逐鍵相同。
     //   ⚠ 必須在 configureMatch **之前**：開局野區入侵在 configureMatch 當下擲骰，
     //     需要打野的 invadeAdj。
     //   紅方＝ AI 對手，無 profileStore 選手 ⇒ 不注入 ⇒ 全隊中性（baseline 行為，
     //     天然對照組）。無先發選手 / 空名單 ⇒ mods 為 null ⇒ 完全不呼叫 ⇒ S27 baseline。
-    const players = useProfileStore.getState().players ?? [];
-    const playerMods = toEnginePlayerMods({ blue: buildPlayerStatSlots(players, "blue"), red: [] });
+    const { players: profilePlayers, lineup } = useProfileStore.getState();
+    const players = profilePlayers ?? [];
+    const playerMods = toEnginePlayerMods({ blue: buildPlayerStatSlots(players, "blue", lineup), red: [] });
     if (playerMods) eng.configurePlayers(playerMods);
 
     // Sprint24：戰術進引擎（TacticScreen 的 MobaTacticConfig → 行為權重 knobs）。

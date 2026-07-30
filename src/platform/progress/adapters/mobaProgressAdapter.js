@@ -13,6 +13,7 @@
 //    winner|duration|score 四個值，碰撞面遠大於此。列為技術債（見交付報告）。
 // ============================================================================
 import { createMatchProgressTransaction } from "../../contracts/matchProgressTransaction.js";
+import { seatPlayers } from "../../contracts/matchLineup.js";
 import { calculateLevelProgress, PLAYER_LEVEL_FORMULA_VERSION } from "../playerLevel.js";
 import {
   teamRewardsFor, mobaPerfFactor, playerXpFor,
@@ -39,8 +40,9 @@ export function mobaMatchId(br) {
 /**
  * BattleResult.v2 → MatchProgressTransaction.v1
  * @param {object} br      BattleResult.v2（唯一資料來源，不重新統計）
- * @param {object} ctx     { players, streak, fansNow }
+ * @param {object} ctx     { players, lineup, streak, fansNow }
  *   players = profileStore.players（用來取 previousXp；只讀，不寫）
+ *   lineup  = profileStore.lineup（Milestone E 先發指派；缺 ⇒ identity ⇒ 行為同 S25）
  *   streak  = 我方 MOBA 連勝（由呼叫端從 seasonStore 推導；本檔不讀 Store）
  *   fansNow = 目前粉絲數（updateEconomy 需要）
  */
@@ -48,7 +50,14 @@ export function mobaResultToTransaction(br, ctx = {}) {
   if (!br || br.schema !== "BattleResult.v2") return null;
 
   const roster = ctx.players ?? [];
+  // ⚠ Milestone E：`BattleResult.players[].id` 是**引擎席位**（b1–b5），不是選手 id。
+  //   先發指派上線後，坐在 b3 的可能是新秀（id = "r"+timestamp）——若仍用席位 id 查
+  //   profileStore，XP 會發給板凳上的原 b3，而不是實際上場的人。這裡用 lineup 把
+  //   席位換回真正的選手；沒有 lineup（舊存檔 / 既有測試 fixture）⇒ identity ⇒ 與 S25 相同。
+  //   BattleResult.v2 契約完全沒有改動。
+  const seatOwner = seatPlayers(ctx.lineup ?? null, roster);
   const byId = new Map(roster.map((p) => [p.id, p]));
+  const playerForSeat = (seatId) => seatOwner[seatId] ?? byId.get(seatId) ?? null;
   const win = br.winner === HOME;
 
   // ── 團隊獎勵（Legacy updateEconomy 逐字；marginF 用 Legacy 非 CS 分支的語意）──
@@ -64,14 +73,14 @@ export function mobaResultToTransaction(br, ctx = {}) {
 
   const playerProgress = [];
   for (const p of ours) {
-    const me = byId.get(p.id);
+    const me = playerForSeat(p.id);
     if (!me) continue;                       // 不在經營名單（引擎預設陣容）→ 不發 XP，不虛構選手
     const perf = mobaPerfFactor(p, meanRating);
     const isMvp = br.mvpId === p.id;
     const xpGained = playerXpFor({ win, perf, isMvp });
     const prog = calculateLevelProgress(me.xp ?? 0, xpGained);
     playerProgress.push({
-      playerId: p.id,
+      playerId: me.id,                       // Milestone E：真正上場的選手（非席位 id）
       ...prog,
       reasons: [
         win ? "勝利" : "落敗",

@@ -22,38 +22,110 @@ import { TEAMS, ROSTER } from "../../data/roster.js";
 import { heroById } from "../../data/heroDatabase.js";
 import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
 import { useProfileStore } from "../../platform/profileStore.js";
+import { ENGINE_SEATS, SEAT_CODE, SEAT_LANE_ZH, seatPlayers, seatOfPlayer } from "../../platform/contracts/matchLineup.js";
 import { GC } from "../../ui/theme.js";
 
 const PURP = "#a78bfa", PURP_D = "#7c3aed", GREEN = "#34d399", GRAY = "#71717a";
 const MONO = "'Courier New',monospace";
 
-// Legacy 五位置（英文位置碼 ↔ heroDatabase.lane）
-const POSITIONS = [
-  { code: "TOP",     lane: "上路", emoji: "🛡", color: "#f97316" },
-  { code: "JUNGLE",  lane: "打野", emoji: "🌿", color: "#22c55e" },
-  { code: "MID",     lane: "中路", emoji: "⚡", color: "#a855f7" },
-  { code: "ADC",     lane: "下路", emoji: "🎯", color: "#eab308" },
-  { code: "SUPPORT", lane: "輔助", emoji: "🧠", color: "#14b8a6" },
-];
+// Legacy 五位置。Milestone E：改以**引擎席位**為主鍵（b1–b5），位置碼與中文路名
+//   來自 contracts/matchLineup.js，不再靠「英雄的 lane 欄位」反查名單
+//   —— 反查在換人／新秀上場後會找不到人（新秀沒有綁定英雄）。
+const POS_STYLE = {
+  b1: { emoji: "🛡", color: "#f97316" },
+  b2: { emoji: "🌿", color: "#22c55e" },
+  b3: { emoji: "⚡", color: "#a855f7" },
+  b4: { emoji: "🎯", color: "#eab308" },
+  b5: { emoji: "🧠", color: "#14b8a6" },
+};
+const POSITIONS = ENGINE_SEATS.map((seat) => ({
+  seat, code: SEAT_CODE[seat], lane: SEAT_LANE_ZH[seat], ...POS_STYLE[seat],
+}));
 
-// Adapter：位置 → 藍隊選手 + 英雄 + heroProgress + profileStore（S26：選手身分/等級的唯一來源）
-function slotFor(lane, progress, storePlayers) {
-  const entry = Object.entries(ROSTER).find(([p, r]) => p[0] === "b" && heroById(r.heroId)?.lane === lane);
-  if (!entry) return null;
-  const [pid, r] = entry;
-  const h = heroById(r.heroId) || {};
-  const hp = progress[r.heroId] || { level: 1, mastery: { games: 0, wins: 0 } };
+// Adapter：席位 → 上場選手 + 英雄 + heroProgress（S26：選手身分/等級的唯一來源＝profileStore）
+//   Milestone E：席位上的人由 lineup 指派表決定；英雄身分優先序與 buildBattleRoster
+//   完全一致（選手綁定英雄 → 席位預設英雄），確保這一頁與戰場顯示同一個人、同一隻英雄。
+function slotFor(seat, progress, storePlayers, lineup) {
+  const base = ROSTER[seat];
+  if (!base) return null;
+  const me = seatPlayers(lineup, storePlayers ?? [])[seat] ?? null;
+  const heroId = me?.heroId ?? base.heroId;
+  const h = heroById(heroId) || {};
+  const hp = progress[heroId] || { level: 1, mastery: { games: 0, wins: 0 } };
   const m = hp.mastery || { games: 0, wins: 0 };
   const fitPct = m.games ? Math.round((m.wins / m.games) * 100) : null;
-  const me = (storePlayers ?? []).find((p) => p.id === pid) || null;   // 持久化選手（改名/升級即時反映）
   return {
-    pid,
-    player: me?.name ?? r.player,            // S26：名字讀 store（renamePlayer 後不再顯示舊名）
-    playerLv: me?.lv ?? null,                // S26：選手等級 = profileStore 持久化值
-    heroId: r.heroId, hero: h.zh, arch: h.arch, title: h.title,
+    seat, pid: seat,
+    playerId: me?.id ?? null,
+    player: me?.name ?? base.player,          // S26：名字讀 store（renamePlayer 後不再顯示舊名）
+    playerLv: Number.isFinite(me?.lv) ? me.lv : null,  // S26：選手等級 = profileStore 持久化值
+    playerRole: me?.role ?? null,
+    seated: !!me,
+    heroId, hero: h.zh, arch: h.arch, title: h.title,
     color: h.color, heroLv: hp.level, fitPct, games: m.games,
     high: fitPct != null && fitPct >= 60,
   };
+}
+
+/**
+ * Milestone E【E1b】：換人面板。
+ * 根因（S28 技術債 4）：引擎席位寫死 b1–b5，招募的新秀 id 是 "r"+timestamp
+ *   ⇒ 簽下來也永遠不可能上場。現在改由 lineup 指派表決定誰坐哪個席位。
+ * 這裡只呼叫 profileStore.setLineupSeat；互換／去重規則全在 contracts/matchLineup.js。
+ */
+function BenchSheet({ seat, players, lineup, onClose }) {
+  const setLineupSeat = useProfileStore((s) => s.setLineupSeat);
+  const list = (players ?? []).filter((p) => p && typeof p.id === "string");
+  return (
+    <div style={{ position: "absolute", inset: 0, zIndex: 45 }}>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)" }} />
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, maxHeight: "76%", overflowY: "auto", borderRadius: "24px 24px 0 0", background: "#16131c", border: "1px solid rgba(255,255,255,0.08)", borderBottom: "none", boxShadow: "0 -8px 60px rgba(0,0,0,0.8)", animation: "esmoSlideUp .36s cubic-bezier(.32,0,.1,1)", paddingBottom: 22 }}>
+        <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 4px" }}><div style={{ width: 36, height: 4, borderRadius: 99, background: "rgba(255,255,255,0.12)" }} /></div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 18px 12px" }}>
+          <div>
+            <div style={{ color: "white", fontSize: 15, fontWeight: 900 }}>指派先發 · {SEAT_CODE[seat]}</div>
+            <div style={{ color: "#52525b", fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", marginTop: 2 }}>{SEAT_LANE_ZH[seat]} · 席位 {seat}</div>
+          </div>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", color: GRAY, fontSize: 13 }}>✕</button>
+        </div>
+        <div style={{ padding: "0 14px", display: "flex", flexDirection: "column", gap: 6 }}>
+          {list.map((p) => {
+            const at = seatOfPlayer(lineup, p.id, list);
+            const isHere = at === seat;
+            const fits = p.role === SEAT_LANE_ZH[seat];
+            return (
+              <button key={p.id} onClick={() => { setLineupSeat(seat, p.id); onClose(); }}
+                disabled={isHere}
+                style={{
+                  display: "flex", alignItems: "center", gap: 9, textAlign: "left", width: "100%",
+                  background: isHere ? "rgba(52,211,153,0.10)" : "rgba(255,255,255,0.04)",
+                  border: `1px solid ${isHere ? "rgba(52,211,153,0.35)" : "rgba(255,255,255,0.07)"}`,
+                  borderRadius: 10, padding: "9px 11px", cursor: isHere ? "default" : "pointer",
+                }}>
+                <div style={{ width: 30, height: 30, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg,#4c1d95,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 10, fontWeight: 900, fontFamily: MONO }}>{(p.name ?? "?").slice(0, 2).toUpperCase()}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 900, color: "#e5e7eb", fontFamily: MONO }}>
+                    {p.name}
+                    <span style={{ marginLeft: 5, fontSize: 9, fontWeight: 800, color: "#93c5fd", background: "rgba(59,130,246,0.14)", borderRadius: 5, padding: "1px 5px", fontFamily: "system-ui" }}>Lv.{p.lv ?? 1}</span>
+                  </div>
+                  <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.45)" }}>
+                    {p.role ?? "—"} · {fits ? "本位" : "非本位"}
+                    {at && at !== seat && <span style={{ color: "#fbbf24" }}> · 目前 {SEAT_CODE[at]}（點擊將互換）</span>}
+                  </div>
+                </div>
+                <span style={{ fontSize: 10, fontWeight: 800, color: isHere ? GREEN : GRAY, flexShrink: 0 }}>{isHere ? "先發中" : "指派"}</span>
+              </button>
+            );
+          })}
+          {!list.length && <div style={{ color: GRAY, fontSize: 11, padding: "12px 4px" }}>名單為空。</div>}
+        </div>
+        <div style={{ fontSize: 9, color: "#3f3f46", padding: "10px 16px 0", lineHeight: 1.6 }}>
+          指派會持久化（profileStore.lineup），並直接決定本場注入引擎的選手能力與天賦。
+          選中已在其他席位的選手 ⇒ 兩席互換。新秀未綁定英雄時，沿用該席位的預設英雄。
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // 選手詳細 Bottom Sheet（Legacy RoleSelectModule 版式輕量內建）
@@ -109,7 +181,9 @@ const Stat = ({ label, val, mono }) => (
 export default function LineupScreen({ onNext, onBack }) {
   const progress = useHeroProgressStore((s) => s.progress);
   const storePlayers = useProfileStore((s) => s.players);   // S26：訂閱 store → 升級/改名即時刷新
+  const lineup = useProfileStore((s) => s.lineup);          // Milestone E：先發指派（席位 → 選手）
   const [sheet, setSheet] = useState(null); // { slot, pos }
+  const [bench, setBench] = useState(null); // Milestone E：換人面板的目標席位
   const [show, setShow] = useState(false);
   useEffect(() => { const t = setTimeout(() => setShow(true), 60); return () => clearTimeout(t); }, []);
 
@@ -120,16 +194,17 @@ export default function LineupScreen({ onNext, onBack }) {
         <div style={{ width: "100%", maxWidth: 420, padding: "0 12px", boxSizing: "border-box" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ fontWeight: 900, color: GC.blueL, fontSize: 13 }}>{TEAMS.blue.emoji} {TEAMS.blue.name} 先發五人</div>
-            <div style={{ fontSize: 9, color: "#52525b", letterSpacing: "0.1em" }}>點擊查看選手詳細</div>
+            <div style={{ fontSize: 9, color: "#52525b", letterSpacing: "0.1em" }}>點擊查看詳細 · 🔁 換人</div>
           </div>
           {POSITIONS.map((pos, i) => {
-            const slot = slotFor(pos.lane, progress, storePlayers);
+            const slot = slotFor(pos.seat, progress, storePlayers, lineup);
             if (!slot) return null;
             return (
-              <button key={pos.code} onClick={() => setSheet({ slot, pos })} style={{
-                width: "100%", display: "flex", alignItems: "center", gap: 10, textAlign: "left", cursor: "pointer",
+              <div key={pos.seat} style={{ display: "flex", alignItems: "stretch", gap: 6, marginBottom: 7 }}>
+              <button onClick={() => setSheet({ slot, pos })} style={{
+                flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 10, textAlign: "left", cursor: "pointer",
                 background: "linear-gradient(148deg,#1a1d26,#13151c)", border: "1px solid rgba(147,197,253,0.18)",
-                borderLeft: `3px solid ${pos.color}`, borderRadius: 10, padding: "9px 11px", marginBottom: 7,
+                borderLeft: `3px solid ${pos.color}`, borderRadius: 10, padding: "9px 11px",
                 opacity: show ? 1 : 0, transform: show ? "translateY(0)" : "translateY(8px)",
                 transition: `opacity .3s ease ${i * 0.05}s, transform .3s cubic-bezier(.23,1,.32,1) ${i * 0.05}s`,
               }}>
@@ -161,12 +236,23 @@ export default function LineupScreen({ onNext, onBack }) {
                   <span style={{ color: "#3f3f46", fontSize: 13 }}>›</span>
                 </div>
               </button>
+              {/* Milestone E【E1b】換人：席位 → 選手（含新秀）。觸控區 ≥40px 寬。 */}
+              <button onClick={() => setBench(pos.seat)} aria-label={`更換 ${pos.code} 先發`} title="指派先發選手"
+                style={{
+                  width: 42, flexShrink: 0, borderRadius: 10, cursor: "pointer",
+                  background: "rgba(167,139,250,0.10)", border: "1px solid rgba(167,139,250,0.3)",
+                  color: "#c4b5fd", fontSize: 15, fontWeight: 900,
+                  opacity: show ? 1 : 0, transition: `opacity .3s ease ${i * 0.05}s`,
+                }}>🔁</button>
+              </div>
             );
           })}
           <div style={{ fontSize: 9, color: "#52525b", marginTop: 6 }}>選手 Lv＝賽後結算持久值（profileStore）；「英雄」欄＝該英雄熟練等級（Hero Progress）· 無出賽顯示「新」，不推估</div>
+          <div style={{ fontSize: 9, color: "#52525b", marginTop: 4 }}>🔁 換人＝先發指派（席位 b1–b5 → 選手，持久化）。這五個人就是進引擎、進 3D 名牌與賽後戰報的同一批人。</div>
         </div>
       </Frame>
       {sheet && <PlayerSheet slot={sheet.slot} pos={sheet.pos} onClose={() => setSheet(null)} />}
+      {bench && <BenchSheet seat={bench} players={storePlayers ?? []} lineup={lineup} onClose={() => setBench(null)} />}
     </div>
   );
 }

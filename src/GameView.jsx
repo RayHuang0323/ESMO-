@@ -125,6 +125,9 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   const [showCtl, setShowCtl] = useState(false);
   // Sprint20【E】生效名單：Ban/Pick 選到的英雄取代 ROSTER 預設英雄（無 draft → 原 ROSTER）。
   //   3D 名牌 / HUD / 記分板 / 終局畫面全部吃這一份 → Loading、Battle、Result 顯示同一批英雄。
+  //   Milestone E：正式流程改由 AppShell 傳入 buildBattleRoster 的對戰名單（已含 draft
+  //   與先發指派）；這裡再套一次 draftRoster 是**冪等**的，只為了保住「單獨掛載
+  //   GameView（不傳 roster）」時的既有行為。
   const liveRoster = useMemo(() => draftRoster(roster, draft), [roster, draft]);
   return (
     <div style={{ position: "relative", width: "100%", height: "min(82vh, 720px)", background: "#0d1420", borderRadius: 14, overflow: "hidden", fontFamily: "system-ui,-apple-system,sans-serif" }}>
