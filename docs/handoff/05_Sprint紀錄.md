@@ -2688,11 +2688,31 @@ Milestone E 2162 KB → 紅，門檻 1953 KB。主因是 H.3 的小兵欄位 `mn
 Milestone E 自身的 `ps`+`tb` 已從 163 KB 壓到 85 KB（在該 fixture 上 +99 KB）。
 這條紅燈會沿 `experience26 → talent27 §31 → stats28 §20/§21 → runtime29 §30`
 往上串，是**同一個根因**不是四個問題。
-**沒有調鬆 verifier 門檻**（那等於為了綠燈拆警報）；處置方式待 Ray 決定，
-選項見報告 §5 與 `08_目前待辦與風險.md`。
+**沒有調鬆 verifier 門檻**（那等於為了綠燈拆警報）。
+**Ray 已裁決：採 (a)** —— 列為既有已知問題，本階段不改 `mn`／IndexedDB／門檻；
+已在 `08_目前待辦與風險.md` 建立「Replay 單場容量治理」的後續獨立待辦。
 
-### 未經瀏覽器實測（不宣稱通過）
+### 正式流程瀏覽器驗收（同日補做，`tools/shot_milestone_e.mjs`）
 
-換人面板的實際觸控與版面、換人後四處同時更新、新秀英雄顯示與 XP 歸屬、
-賽後天賦面板版面、Replay 狀態徽章／倒數／團隊 Buff／播報，以及 Android
-FPS／熱降頻／safe area／WebGL driver —— 全部需要 Ray 人工確認。
+真實 Chrome + CDP，入口是**正式流程**而非 debug harness：
+`Dashboard →（➕ 招募）→ Lineup（🔁 換人）→ Matchmaking → Ban/Pick → Tactic →
+Loading → GameView → Result → Replay`。本輪走真實招募簽下新秀 **Zywuu**
+（中路、未綁定英雄、Lv.1）並指派到 MID（席位 b3）。
+
+- 桌機 1600×1000：**28/28 斷言通過**、8 張截圖；390×844：**21/21 通過**、7 張截圖。
+- 換人後 Lineup／Loading／隊伍面板／賽後戰報**四處都是 Zywuu**，Frost 已離開先發；
+  新秀未綁定英雄 ⇒ 沿用席位預設「冰霜術士」，沒有出現空英雄。
+- 戰中 HeroDetailPanel 出現「本場行為（天賦生效證據）」；賽後同時可見
+  「能力／天賦執行」與「戰術執行」。
+- Replay：播報列（`replay.comms`）首次被顯示；時間軸拉到 21:34 後標頭出現
+  `龍×1`／`龍×3`（本階段新增的 `tb` 欄）。
+- 證據與索引：`review/moba-runtime/milestone-e/evidence/`。
+
+**這次驗收沒有證明的事（不宣稱通過）**：3D 名牌是 WebGL CanvasTexture，DOM 與
+診斷探針都讀不到，兩張 GameView 截圖又在比賽鐘 0:15／1:03（英雄還在泉水附近）
+⇒「新秀姓名出現在 3D 名牌」仍需目視確認；Android 真機 FPS／熱降頻／觸控／
+safe area／WebGL driver 亦未測。
+
+順帶記錄到的既有現象（非本階段造成，未修，已列入候選待辦）：Replay 戰場預設仍走
+`loadMapPresentation()` 的 legacy 呈現（正式 GameView 自 H.1 起固定 runtime-v2）；
+世界標籤會蓋在英雄詳情面板上。

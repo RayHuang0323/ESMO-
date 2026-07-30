@@ -1,0 +1,375 @@
+{
+  "milestone": "E",
+  "capturedAt": "2026-07-30T10:53:47.287Z",
+  "entry": "正式流程（Dashboard → Lineup → Matchmaking → Ban/Pick → Tactic → Loading → GameView → Result → Replay）",
+  "precondition": "localStorage 種入一名板凳新秀（Zywuu），其餘皆為真實點擊",
+  "viewports": {
+    "desktop": {
+      "w": 1600,
+      "h": 1000
+    },
+    "mobile": {
+      "w": 390,
+      "h": 844
+    }
+  },
+  "note": "桌機與手機各為一次獨立的完整正式流程（各自重新招募新秀）；兩份斷言在此合併記錄。",
+  "desktop": {
+    "assertions": [
+      {
+        "label": "前置：走真實招募流程簽下新秀 Zywuu",
+        "ok": true,
+        "extra": {
+          "id": "r1785408120675",
+          "name": "Zywuu",
+          "role": "中路",
+          "heroId": null
+        }
+      },
+      {
+        "label": "新秀未綁定英雄（之後應沿用席位預設英雄）",
+        "ok": true,
+        "extra": {
+          "id": "r1785408120675",
+          "name": "Zywuu",
+          "role": "中路",
+          "heroId": null
+        }
+      },
+      {
+        "label": "desktop：進入 Dashboard",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "desktop：進入賽前配置（Lineup）",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "desktop：換人前 MID 顯示種子選手 Frost",
+        "ok": true,
+        "extra": {
+          "hasRookie": false
+        }
+      },
+      {
+        "label": "desktop：點開 MID 換人面板",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "desktop：換人面板列出板凳新秀",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "desktop：Lineup 的 MID 已換成新秀",
+        "ok": true,
+        "extra": {
+          "frostStillStarter": false
+        }
+      },
+      {
+        "label": "desktop：進入 Ban/Pick",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "desktop：Ban/Pick 完成（我方實際點選 7 次）",
+        "ok": true,
+        "extra": {
+          "picks": 7
+        }
+      },
+      {
+        "label": "desktop：進入戰術",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "desktop：進入 Loading（顯示上場選手）",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "desktop：Loading 顯示的是新秀，不是靜態名單",
+        "ok": true,
+        "extra": {
+          "frost": false
+        }
+      },
+      {
+        "label": "desktop：正式 GameView 掛載（canvas 出現）",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "desktop：GameView 為正式主幹（掛載信標）",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "desktop：GameView 沒有 debug 地圖 UI",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "desktop：隊伍面板顯示新秀",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "desktop：戰中可看到天賦生效證據",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "desktop：測試模式有快速完成",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "desktop：進入賽後結果",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "desktop：賽後結果顯示新秀",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "desktop：賽後可見「能力／天賦執行」",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "desktop：賽後可見「戰術執行」",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "desktop：可觀看重播",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "desktop：重播顯示本場播報（replay.comms，非重新生成）",
+        "ok": true,
+        "extra": {
+          "isReplay": true,
+          "comms": 1,
+          "teamBuffs": 0,
+          "hasDragonBadge": true,
+          "hasBaronBadge": true,
+          "minionNote": false,
+          "presentation": "legacy"
+        }
+      },
+      {
+        "label": "desktop：重播不再誤述「未擷取小兵」",
+        "ok": true,
+        "extra": {
+          "isReplay": true,
+          "comms": 1,
+          "teamBuffs": 0,
+          "hasDragonBadge": true,
+          "hasBaronBadge": true,
+          "minionNote": false,
+          "presentation": "legacy"
+        }
+      },
+      {
+        "label": "desktop：時間軸可拉到中後段",
+        "ok": true,
+        "extra": {
+          "max": 1787,
+          "target": 1287
+        }
+      },
+      {
+        "label": "desktop：重播顯示團隊目標增益（龍×N／巴 Ns）",
+        "ok": true,
+        "extra": {
+          "buffEls": 2,
+          "dragonText": true,
+          "baronText": true,
+          "deadBadge": false
+        }
+      }
+    ],
+    "shots": [
+      "01-desktop-lineup-before.png",
+      "02-desktop-bench-sheet.png",
+      "03-desktop-lineup-after.png",
+      "04-desktop-loading.png",
+      "05-desktop-gameview.png",
+      "06-desktop-talent-in-battle.png",
+      "07-desktop-result.png",
+      "08-desktop-replay.png",
+      "04-mobile390-loading.png",
+      "05-mobile390-gameview.png",
+      "07-mobile390-result.png"
+    ],
+    "clockAtShot": "0:15",
+    "replay": {
+      "isReplay": true,
+      "comms": 1,
+      "teamBuffs": 0,
+      "hasDragonBadge": true,
+      "hasBaronBadge": true,
+      "minionNote": false,
+      "presentation": "legacy"
+    },
+    "replayLater": {
+      "buffEls": 2,
+      "dragonText": true,
+      "baronText": true,
+      "deadBadge": false,
+      "seeked": {
+        "max": 1787,
+        "target": 1287
+      }
+    },
+    "replayPresentationDefault": "legacy",
+    "runtimeDiag": "diag-probe-not-installed(?diag=1 才有)"
+  },
+  "mobile390": {
+    "assertions": [
+      {
+        "label": "mobile390：進入 Dashboard",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "mobile390：進入賽前配置（Lineup）",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "mobile390：換人前 MID 顯示種子選手 Frost",
+        "ok": true,
+        "extra": {
+          "hasRookie": false
+        }
+      },
+      {
+        "label": "mobile390：點開 MID 換人面板",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "mobile390：換人面板列出板凳新秀",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "mobile390：Lineup 的 MID 已換成新秀",
+        "ok": true,
+        "extra": {
+          "frostStillStarter": false
+        }
+      },
+      {
+        "label": "mobile390：進入 Ban/Pick",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "mobile390：Ban/Pick 完成（我方實際點選 7 次）",
+        "ok": true,
+        "extra": {
+          "picks": 7
+        }
+      },
+      {
+        "label": "mobile390：進入戰術",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "mobile390：進入 Loading（顯示上場選手）",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "mobile390：Loading 顯示的是新秀，不是靜態名單",
+        "ok": true,
+        "extra": {
+          "frost": false
+        }
+      },
+      {
+        "label": "mobile390：正式 GameView 掛載（canvas 出現）",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "mobile390：GameView 為正式主幹（掛載信標）",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "mobile390：GameView 沒有 debug 地圖 UI",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "mobile390：隊伍面板顯示新秀",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "mobile390：戰中可看到天賦生效證據",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "mobile390：測試模式有快速完成",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "mobile390：進入賽後結果",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "mobile390：賽後結果顯示新秀",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "mobile390：賽後可見「能力／天賦執行」",
+        "ok": true,
+        "extra": null
+      },
+      {
+        "label": "mobile390：賽後可見「戰術執行」",
+        "ok": true,
+        "extra": null
+      }
+    ],
+    "shots": [
+      "01-mobile390-lineup-before.png",
+      "02-mobile390-bench-sheet.png",
+      "03-mobile390-lineup-after.png",
+      "04-mobile390-loading.png",
+      "05-mobile390-gameview.png",
+      "06-mobile390-talent-in-battle.png",
+      "07-mobile390-result.png"
+    ],
+    "clockAtShot": "1:00",
+    "runtimeDiag": "diag-probe-not-installed(?diag=1 才有)"
+  },
+  "summary": {
+    "desktopPassed": "28/28",
+    "mobilePassed": "21/21",
+    "browserVerified": true,
+    "notVerifiedByTool": [
+      "3D 名牌上的文字（WebGL CanvasTexture，只能人眼從截圖確認）",
+      "Android 真機 FPS／熱降頻／觸控手感"
+    ]
+  }
+}

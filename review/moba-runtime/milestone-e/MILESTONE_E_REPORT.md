@@ -149,20 +149,47 @@ experience26 §17 replay 容量  ── 紅（baseline 就紅）
 它所巢狀的每一支（`talent27`／`experience26`／`progress25`／`regress`／`regress2`／
 `build`）本輪都已**直接單跑**並記錄在上表。這是誠實揭露，不是宣稱通過。
 
-可能的處置（請 Ray 選）：(a) 維持現狀並把它列為已知紅燈；(b) 對 `mn` 做 delta
-壓縮或降精度（會動到 D-fix3 剛驗收過的小兵繞塔精度，需重驗）；(c) 改用
-IndexedDB 並重新設定容量門檻。
+**Ray 已裁決：採 (a)** —— 列為既有已知問題，Milestone E 不改 `mn`、不改
+IndexedDB、不動門檻。後續獨立待辦已記在 `08_目前待辦與風險.md`。
 
-## 6. 未驗證項目（不宣稱通過）
+## 6. 正式流程瀏覽器驗收（2026-07-30 補做）
 
-Node 證不了下列任何一項，需要 Ray 以瀏覽器／真機確認：
+工具：`tools/shot_milestone_e.mjs`（真實 Chrome + CDP，非 headless）。
+入口是**正式流程**而非 debug harness：
+`Dashboard →（➕ 招募）→ Lineup（🔁 換人）→ Matchmaking → Ban/Pick → Tactic
+→ Loading → GameView → Result → Replay`；除了以測試模式的「⏩ 快速完成」
+推進到終局，每一步都是真的點畫面上的控制項。
 
-1. 🔁 換人面板在 320/360/390/430px 的實際觸控與版面；換人後 Loading／3D 名牌／
-   隊伍面板／賽後戰報是否四處同時變成新選手。
-2. 新秀（未綁定英雄）上場後的英雄顯示與賽後 XP 是否落在新秀身上。
-3. 戰中 HeroDetailPanel 與賽後「能力／天賦執行」面板的實際版面與可讀性。
-4. Replay 的狀態徽章、復活倒數、`龍×N`／`巴 Ns`、播報列是否與現場一致。
-5. Android 真機 FPS、熱降頻、safe area、WebGL driver（D-fix3 的清單仍全部有效）。
+本輪走真實招募簽下新秀 **Zywuu**（中路、`heroId = null`、Lv.1），指派到 MID（席位 b3）。
+
+| 驗收項 | 結果 |
+|---|---|
+| 桌機 1600×1000 全流程 | **28/28 斷言通過**，8 張截圖 |
+| 手機 390×844 全流程（不含 Replay） | **21/21 斷言通過**，7 張截圖 |
+| 換人後身分一致 | Lineup／Loading／隊伍面板／賽後戰報四處都是 Zywuu；Frost 已離開先發 |
+| 新秀無綁定英雄 | 沿用席位預設英雄「冰霜術士」，沒有出現空英雄 |
+| 天賦可見 | 戰中 HeroDetailPanel「本場行為（天賦生效證據）」＋賽後「能力／天賦執行」 |
+| 戰術可見 | 賽後「戰術執行」面板（既有欄位，未改） |
+| Replay | 播報列（`replay.comms`）首次顯示；時間軸拉到 21:34 後標頭出現 `龍×1`／`龍×3`（新的 `tb`） |
+
+證據與索引：`review/moba-runtime/milestone-e/evidence/`（`README.md` + `shot_stats.json`）。
+
+### 這次驗收**沒有**證明的事
+
+1. **3D 名牌上的文字**：名牌自 D-fix3 起是 WebGL CanvasTexture，DOM 讀不到、
+   診斷探針也沒有這個欄位。兩張 GameView 截圖分別在比賽鐘 0:15／1:03，英雄還在
+   泉水附近，名牌太小 ⇒ **「新秀姓名出現在 3D 名牌」仍需 Ray 目視確認**。
+   隊伍面板／Loading／賽後戰報三處已由斷言證明。
+2. Android 真機 FPS、熱降頻、觸控手感、safe area、WebGL driver（D-fix3 清單仍有效）。
+
+### 順帶記錄到的既有現象（非本階段造成，未修）
+
+- **Replay 戰場預設仍是 legacy 呈現**：`MobaReplayScreen` 走
+  `loadMapPresentation()`（預設 `legacy`），而正式 GameView 自 H.1 起固定
+  runtime-v2 ⇒ 同一場比賽的現場與重播不是同一套戰場外觀。
+  Milestone E 新增的團隊 Buff 與播報列在兩種模式下都會顯示。
+- **世界標籤蓋住英雄詳情面板**：`06-desktop-talent-in-battle.png` 可見
+  「BLUE BUFF · 藍」壓在面板上。屬既有疊層順序問題。
 
 ## 7. 回退
 
