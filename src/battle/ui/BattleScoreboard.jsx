@@ -10,6 +10,7 @@ import { useGameStore } from "../../useGameStore.js";
 import { useBattleStore } from "../battleStore.js";
 import { playerRating, participation } from "../battleEvents.js";
 import { ROLE_NAME } from "../../gameData.js";
+import { SUMMONER_SPELLS } from "../moba/mobaHeroLoadout.js";
 import { GC } from "../../ui/theme.js";
 
 const ROLE_ICON = { top: "🛡️", jungle: "🌲", mid: "🔮", adc: "🏹", sup: "✨" };
@@ -24,6 +25,9 @@ const C = ({ children, w, color = "#e5e7eb", mono = true }) => <div style={{ wid
 function Row({ p, snap, isMvp, roster }) {
   const name = roster?.[p.id]?.player ?? p.id.toUpperCase();
   const hero = roster?.[p.id]?.hero ?? ROLE_NAME[p.role];
+  //  Milestone I-close：記分板同時服務戰中 TAB 與賽後 BattleEndScreen ⇒ 在這裡
+  //    顯示召喚師技能，Result 就自動與 Ban/Pick／Loading／對戰中一致（同一份 roster）。
+  const spells = roster?.[p.id]?.spells ?? [];
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", borderRadius: 6,
       background: isMvp ? "rgba(250,204,21,0.13)" : "transparent", opacity: p.dead ? 0.55 : 1 }}>
@@ -32,7 +36,15 @@ function Row({ p, snap, isMvp, roster }) {
         <div style={{ fontSize: 11.5, fontWeight: 700, color: "#e5e7eb", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {name}{isMvp && <span style={{ color: "#fde047", marginLeft: 4, fontSize: 9, fontWeight: 900 }}>★MVP</span>}
         </div>
-        <div style={{ fontSize: 9, color: "rgba(255,255,255,0.42)" }}>{hero}</div>
+        <div style={{ fontSize: 9, color: "rgba(255,255,255,0.42)", display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{hero}</span>
+          {spells.length > 0 && (
+            <span data-testid="board-spells" data-spells={spells.join(",")} title={spells.map((id) => SUMMONER_SPELLS[id]?.zh ?? id).join(" · ")}
+              style={{ flexShrink: 0, letterSpacing: "0.05em", opacity: 0.9 }}>
+              {spells.map((id) => SUMMONER_SPELLS[id]?.icon ?? "?").join("")}
+            </span>
+          )}
+        </div>
       </div>
       <C w={50}>{p.k}/{p.d}/{p.a ?? 0}</C>
       <C w={36} color="#fcd34d">{num(p.gold || 0)}</C>

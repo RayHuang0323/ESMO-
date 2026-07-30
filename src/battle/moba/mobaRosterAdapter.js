@@ -22,6 +22,9 @@
 
 import { withDerivedStats, getPlayerDerivedStats } from "../../platform/talents/playerDerivedStats.js";
 import { seatPlayers } from "../../platform/contracts/matchLineup.js";
+//  Milestone I-close：召喚師技能跟著**對戰名單**走，不是各畫面自己算一份。
+//  （純函式模組，無 heroDatabase 依賴 ⇒ 不會把 396KB 的 data URI 拉進 Node verifier）
+import { spellsFor, laneOfSeat } from "./mobaHeroLoadout.js";
 
 /** 對齊 LogicEngine 的角色順序（5 個 slot）。⚠ 必須與 LogicEngine ROLES 一致。 */
 export const ROLE_ORDER = ["top", "jungle", "mid", "adc", "sup"];
@@ -142,8 +145,15 @@ export function buildBattleRoster({
     const assignedHeroId = draft?.assignment?.[sideOf(pid)]?.[pid] ?? null;
     // 英雄身分優先序：本場分配 → Ban/Pick 順序 → 該選手綁定英雄 → 靜態名單預設
     const heroId = assignedHeroId ?? pick?.id ?? seatPlayer?.heroId ?? base.heroId ?? null;
+    //  Milestone I-close：召喚師技能在**這裡**算，且只在這裡算。
+    //    Loading / GameView / Result / Replay 全部讀同一份 roster ⇒ 四個畫面
+    //    不可能各顯示一組技能。第一格恆為閃現、打野第二格恆為懲戒（硬性規則）。
+    const lane = laneOfSeat(pid);
+    const heroObj = lookup(heroId) ?? pick ?? null;
     out[pid] = {
       ...base,
+      lane,
+      spells: lane ? spellsFor(heroObj, lane).map((s) => s.id) : [],
       player: seatPlayer?.name ?? base.player ?? pid.toUpperCase(),
       playerId: seatPlayer?.id ?? pid,
       playerLv: Number.isFinite(seatPlayer?.lv) ? seatPlayer.lv : null,

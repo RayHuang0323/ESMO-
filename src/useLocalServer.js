@@ -105,7 +105,14 @@ export function useLocalServer() {
     const seed = (Date.now() & 0xffff) | 1;
     const eng = new LogicEngine(seed, loadout);
     // Sprint26：開始重播擷取（seed / 戰術只有這裡拿得到；frames 由 useBattleFeed 取樣）
-    beginReplayCapture({ seed, config: opts.tactic?.tacticId ? { tacticId: opts.tactic.tacticId, tacticName: opts.tactic.name ?? null } : {} });
+    // Milestone I-close：連同**本場生效名單**一起交出去。舊 replay 只有 {id,side,role}，
+    //   重播時完全不知道誰用哪隻英雄、帶什麼召喚師技能 ⇒ 同一場比賽「現場」與「重播」
+    //   是兩份不同的資訊。roster 只有十筆，容量影響可忽略（frames 才是大宗）。
+    beginReplayCapture({
+      seed,
+      config: opts.tactic?.tacticId ? { tacticId: opts.tactic.tacticId, tacticName: opts.tactic.name ?? null } : {},
+      roster: opts.roster ?? null,
+    });
 
     // ── Sprint28：選手能力進引擎（唯一計算點）────────────────────────────
     //   profileStore.players（最新，含天賦）→ getPlayerDerivedStats → 能力 slots

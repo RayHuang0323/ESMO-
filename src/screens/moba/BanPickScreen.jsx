@@ -39,7 +39,9 @@ function DraftPlanPanel({ plan, loadout }) {
         const sp = loadout[seat]?.spells ?? [];
         const fitColor = a.heroFit >= 1 ? GC2.green : a.heroFit >= 0.5 ? "#fbbf24" : GC2.red;
         return (
-          <div key={seat} style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+          <div key={seat} data-testid="draft-plan-row" data-seat={seat} data-lane={a.lane}
+            data-hero={a.heroId ?? ""} data-spells={sp.join(",")}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
             <span style={{ width: 30, color: GC2.gray, fontSize: 9, fontWeight: 800 }}>{a.lane}</span>
             <span style={{ width: 54, color: "#e5e7eb", fontSize: 10, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {a.player?.name ?? seat.toUpperCase()}

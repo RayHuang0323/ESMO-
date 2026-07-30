@@ -22,9 +22,9 @@ let cap = null;        // 進行中的擷取 { seed, config, startedAt, frames, 
 let current = null;    // 最近一場完成的 MobaReplay.v1（session 記憶體，最多 1 場）
 
 /** 開始擷取新一場（覆蓋上一場的進行中擷取；已完成的 current 保留到下一次 finalize）。 */
-export function beginReplayCapture({ seed = null, config = {} } = {}) {
+export function beginReplayCapture({ seed = null, config = {}, roster = null } = {}) {
   cap = {
-    seed, config, startedAt: Date.now(), frames: [], playersMeta: [], towersMeta: {}, objectivesMeta: [],
+    seed, config, roster, startedAt: Date.now(), frames: [], playersMeta: [], towersMeta: {}, objectivesMeta: [],
     pendingFx: new Map(), seenFx: new Set(),
     lastT: -Infinity, truncated: false,
     mapMeta: {
@@ -51,7 +51,18 @@ export function captureReplayFrame(snap) {
   if (!due || snap.ts === cap.lastT) return;
   if (cap.frames.length >= MAX_FRAMES) { cap.truncated = true; return; }
   if (cap.frames.length === 0) {
-    cap.playersMeta = snap.players.map((p) => ({ id: p.id, side: p.side, role: p.role }));
+    //  Milestone I-close：playersMeta 追加 optional 欄位（版本仍是 MobaReplay.v1）。
+    //    舊 replay 沒有這些欄 ⇒ 消費端讀到 undefined 就退回原本的顯示，照樣播放。
+    cap.playersMeta = snap.players.map((p) => {
+      const r = cap.roster?.[p.id] ?? null;
+      return {
+        id: p.id, side: p.side, role: p.role,
+        ...(r?.player ? { playerName: r.player } : {}),
+        ...(r?.heroId ? { heroId: r.heroId, heroName: r.hero ?? null } : {}),
+        ...(r?.lane ? { lane: r.lane } : {}),
+        ...(Array.isArray(r?.spells) && r.spells.length ? { spells: [...r.spells] } : {}),
+      };
+    });
     cap.towersMeta = Object.fromEntries(Object.entries(snap.towers).map(([id, t]) => [id, {
       side: t.side, lane: t.lane, tier: t.tier, pos: { x: t.pos.x, y: t.pos.y },
     }]));

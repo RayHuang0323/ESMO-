@@ -20,6 +20,7 @@
 // ============================================================================
 import { ROSTER } from "../../data/roster.js";
 import { heroById } from "../../data/heroDatabase.js";
+import { spellsFor, laneOfSeat } from "./mobaHeroLoadout.js";
 
 const SIDES = { b: "blue", r: "red" };
 
@@ -43,13 +44,34 @@ export function draftHeroIdFor(pid, draft, baseRoster = ROSTER) {
   return draft?.picks?.[side]?.[i]?.id ?? null;
 }
 
-/** ROSTER + draft → 生效名單（英雄名由 heroDatabase 推導，不重複儲存） */
+/**
+ * ROSTER + draft → 生效名單（英雄名由 heroDatabase 推導，不重複儲存）。
+ *
+ * Milestone I-close：換英雄就必須換召喚師技能，否則「單獨掛載 GameView」這條
+ *   路徑會顯示上一隻英雄的配置。技能與 `buildBattleRoster` 走**同一個** spellsFor，
+ *   不是第二套規則。
+ */
 export function draftRoster(baseRoster = ROSTER, draft = null) {
-  if (!draft?.picks) return baseRoster;
+  if (!draft?.picks) return withSpells(baseRoster);
   const out = {};
   for (const [pid, r] of Object.entries(baseRoster)) {
     const heroId = draftHeroIdFor(pid, draft, baseRoster) ?? r.heroId;
-    out[pid] = { ...r, heroId, hero: heroById(heroId)?.zh ?? heroId };
+    const lane = laneOfSeat(pid);
+    out[pid] = {
+      ...r, heroId, hero: heroById(heroId)?.zh ?? heroId,
+      lane, spells: lane ? spellsFor(heroById(heroId), lane).map((s) => s.id) : [],
+    };
+  }
+  return out;
+}
+
+/** 無 draft 時也要有技能欄（否則 Loading／面板得各自補算 ⇒ 又變成兩套規則）。 */
+function withSpells(baseRoster) {
+  const out = {};
+  for (const [pid, r] of Object.entries(baseRoster)) {
+    if (Array.isArray(r?.spells) && r.spells.length === 2) { out[pid] = r; continue; }
+    const lane = laneOfSeat(pid);
+    out[pid] = { ...r, lane, spells: lane ? spellsFor(heroById(r.heroId), lane).map((s) => s.id) : [] };
   }
   return out;
 }

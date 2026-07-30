@@ -147,8 +147,9 @@ function SpellSquare({ label, spell }) {
 function SideCell({ p, hero, roster, side, onOpen }) {
   const idColor = side === "blue" ? BLUE : RED;
   const rev = side === "red";
+  //  data-seat：手機版十人面板收合時只渲染目前這一路，驗收腳本不能靠索引猜席位
   return (
-    <div onClick={onOpen} data-testid="hero-cell" data-side={side} style={{ flex: 1, display: "flex", flexDirection: rev ? "row-reverse" : "row", alignItems: "center", gap: 3, minWidth: 0, cursor: "pointer" }}>
+    <div onClick={onOpen} data-testid="hero-cell" data-side={side} data-seat={p.id} style={{ flex: 1, display: "flex", flexDirection: rev ? "row-reverse" : "row", alignItems: "center", gap: 3, minWidth: 0, cursor: "pointer" }}>
       <div style={{ display: "flex", flexDirection: rev ? "row-reverse" : "row", alignItems: "center", gap: 1.5, flexShrink: 0 }}>
         {/* Milestone D：隊伍面板與世界／Replay 都讀本場 mlv；lv 是跨場熟練度。 */}
         <HeroAvatar hero={hero} level={p.mlv ?? p.lv ?? 1} dead={p.dead} respawn={p.respawn ?? 0} />
@@ -227,10 +228,15 @@ export default function BattleHeroStrip({ roster = ROSTER, draft = null }) {
 
   // Sprint19【C】Draft Adapter：Ban/Pick 實際選角優先（picks[side][i] 為 heroDatabase 完整物件），
   //   無 draft 時回退 ROSTER 預設英雄。對位序 i 與 LANES 一致 → Loading 顯示誰、Strip 就顯示誰。
+  //  Milestone I-close：**名單優先**。舊碼先看 `draft.picks[side][i]`（選取順序對位），
+  //    但 Milestone I 起 Ban/Pick 會另外算出席位分配，兩者不一定同序 ⇒ 十人面板會
+  //    顯示成別人的英雄。roster 已經是 draftRoster/buildBattleRoster 解析過的結果，
+  //    以它為準；沒有 roster 資料（單獨掛載）才退回 picks。
   const heroOf = (side, i, pid) => {
+    const fromRoster = heroById((roster[pid] || {}).heroId);
+    if (fromRoster) return fromRoster;
     const pk = draft?.picks?.[side]?.[i];
-    if (pk?.id) return pk;
-    return heroById((roster[pid] || {}).heroId) || null;
+    return pk?.id ? pk : null;
   };
   // 【F】點擊 → HeroDetailPanel（戰中表現：KDA/Gold/Lv/HeroProgress），英雄身分同樣取自 draft
   const mk = (p, side, i) => {
@@ -238,7 +244,14 @@ export default function BattleHeroStrip({ roster = ROSTER, draft = null }) {
     const h = heroOf(side, i, p.id);
     // Milestone E【E2】：帶上引擎席位 id，讓 HeroDetailPanel 能顯示本場的
     //   playerStatsExec（天賦真的改變了什麼行為）。純呈現參數，不影響統計。
-    return { heroId: h?.id ?? r.heroId, heroName: h?.zh ?? p.id, playerName: r.player ?? p.id.toUpperCase(), side: p.side, playerId: p.id };
+    //  Milestone I-close：把**賽前配置的**召喚師技能一起交給面板。引擎只實作
+    //    閃現與懲戒，其餘技能沒有 CD 可讀 ⇒ 面板要能分辨「引擎技能」與「配置技能」，
+    //    才不會顯示假冷卻，也不會再出現非打野的第二格「未配置」。
+    return {
+      heroId: h?.id ?? r.heroId, heroName: h?.zh ?? p.id,
+      playerName: r.player ?? p.id.toUpperCase(), side: p.side, playerId: p.id,
+      spells: r.spells ?? [], lane: r.lane ?? null,
+    };
   };
 
   const laneRow = (i) => {

@@ -37,6 +37,7 @@ import MobaRuntimeView3D from "../../battle/moba/render/MobaRuntimeView3D.jsx";
 import { loadMapPresentation, isRuntimeV2 } from "../../battle/moba/mobaMapPresentation.js";
 import { createReplaySource, canUse3DPresentation, frameAt } from "../../battle/moba/replay/replayPresentationSource.js";
 import { loadQuality, presetFor } from "../../battle/quality.js";
+import { SUMMONER_SPELLS } from "../../battle/moba/mobaHeroLoadout.js";
 import { useIsMobile } from "../../ui/useViewport.js";
 import { useCameraStore } from "../../battle/cameraStore.js";
 
@@ -111,6 +112,51 @@ function ReplayMap2D({ replay, a, b, f, inset = false }) {
   );
 }
 
+/**
+ * Milestone I-close：重播的出戰名單。
+ *
+ * 舊 replay 的 `playersMeta` 只有 `{id, side, role}` ⇒ 重播完全不知道誰用哪隻英雄、
+ * 帶什麼召喚師技能，同一場比賽的「現場」與「重播」是兩份不同的資訊。現在擷取時
+ * 會把當場生效名單寫進 playersMeta 的 optional 欄（版本仍是 MobaReplay.v1）。
+ * 沒有這些欄的舊 replay ⇒ 回 null ⇒ 一切照舊播放，不白畫面。
+ */
+function replayRosterOf(replay) {
+  const out = {};
+  for (const pm of replay?.playersMeta ?? []) {
+    if (!pm?.id || !pm.heroId) continue;
+    out[pm.id] = {
+      player: pm.playerName ?? pm.id.toUpperCase(),
+      heroId: pm.heroId, hero: pm.heroName ?? pm.heroId,
+      lane: pm.lane ?? null, spells: Array.isArray(pm.spells) ? pm.spells : [],
+    };
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+/** 重播的出戰配置面板（席位 → 選手 → 英雄 → 兩個召喚師技能）。 */
+function ReplayLineup({ roster }) {
+  const side = (s) => Object.entries(roster).filter(([pid]) => pid[0] === s);
+  return (
+    <div data-testid="replay-lineup" style={{ width: "100%", maxWidth: 560, display: "flex", gap: 8, flexShrink: 0 }}>
+      {["b", "r"].map((s) => (
+        <div key={s} style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+          {side(s).map(([pid, r]) => (
+            <div key={pid} data-testid="replay-lineup-row" data-seat={pid} data-hero={r.heroId} data-spells={r.spells.join(",")}
+              style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: "rgba(255,255,255,0.72)", minWidth: 0 }}>
+              <span style={{ width: 26, flexShrink: 0, color: GC.gray, fontSize: 8 }}>{r.lane ?? pid}</span>
+              <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: SIDE_C[s === "b" ? "blue" : "red"] }}>{r.player}</span>
+              <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.hero}</span>
+              <span style={{ flexShrink: 0 }} title={r.spells.map((id) => SUMMONER_SPELLS[id]?.zh ?? id).join(" · ")}>
+                {r.spells.map((id) => SUMMONER_SPELLS[id]?.icon ?? "?").join("")}
+              </span>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function MobaReplayScreen({ replay, onClose }) {
   const frames = replay?.frames ?? [];
   const duration = replay?.duration ?? 0;
@@ -129,6 +175,9 @@ export default function MobaReplayScreen({ replay, onClose }) {
 
   // 唯讀資料源：replay frames → { prev, snapshot, subTRef }（不模擬、不碰 Store）
   const use3D = useMemo(() => canUse3DPresentation(replay), [replay]);
+  //  Milestone I-close：重播的名牌／陣容改用當場保存的名單（舊 replay ⇒ null ⇒ 行為不變）
+  const replayRoster = useMemo(() => replayRosterOf(replay), [replay]);
+  const [showLineup, setShowLineup] = useState(!isMobile);
   //  ── Milestone H：重播固定使用 runtime-v2 ────────────────────────────────
   //   舊碼跟著 `loadMapPresentation()`（預設 legacy），但正式 GameView 自 H.1 起
   //   固定 runtime-v2 ⇒ 同一場比賽的「現場」與「重播」是兩套不同外觀的戰場
@@ -237,8 +286,8 @@ export default function MobaReplayScreen({ replay, onClose }) {
                 （flex item 的 auto 寬度可能塌成 0）⇒ 用 inset:0 的絕對定位層明確給尺寸。 */}
             <div style={{ position: "absolute", inset: 0 }} data-replay-presentation={runtimeMap ? "runtime-v2" : "legacy"}>
               {runtimeMap
-                ? <MobaRuntimeView3D quality={qualityId} source={source} />
-                : <MobaView3D battleFollow autoRotate={false} quality={quality} source={source} roster={null} />}
+                ? <MobaRuntimeView3D quality={qualityId} source={source} roster={replayRoster} compactLabels={isMobile} />
+                : <MobaView3D battleFollow autoRotate={false} quality={quality} source={source} roster={replayRoster} />}
             </div>
             {/* 輔助 inset 小地圖（桌機才放；手機空間留給戰場，避免遮擋） */}
             {!isMobile && (
@@ -254,6 +303,10 @@ export default function MobaReplayScreen({ replay, onClose }) {
           </div>
         )}
       </div>
+
+      {/* Milestone I-close：本場出戰配置（與 Ban/Pick／Loading／對戰中同一份名單）。
+          手機預設收合，把畫面留給戰場。舊 replay 沒有名單資訊 ⇒ 整塊不出現。 */}
+      {replayRoster && showLineup && <ReplayLineup roster={replayRoster} />}
 
       {/* 事件 ticker */}
       <div style={{ minHeight: 34, width: "100%", maxWidth: 560, display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
@@ -289,6 +342,10 @@ export default function MobaReplayScreen({ replay, onClose }) {
         <button onClick={() => { if (!playing && tRef.current >= duration) seek(0); setPlaying((p) => !p); }} style={btn(true)}>{playing ? "⏸ 暫停" : "▶ 播放"}</button>
         <button onClick={() => seek(t + 10)} style={btn(false)}>+10s</button>
         <button onClick={nextEvent} style={btn(false)} title="下一個事件">事件 ⏭</button>
+        {replayRoster && (
+          <button data-testid="replay-lineup-toggle" aria-pressed={showLineup} onClick={() => setShowLineup((v) => !v)}
+            style={btn(false)} title="本場出戰配置（選手／英雄／召喚師技能）">🧾 陣容</button>
+        )}
         <span style={{ width: 8 }} />
         {REPLAY_SPEEDS.map((s) => (
           <button key={s} onClick={() => setSpeed(s)}

@@ -7,15 +7,17 @@
 //    未經 BanPick（直接測試進入）則回退 ROSTER 預設英雄。
 //  Adapter：TEAMS/ROSTER（data/roster.js）+ heroDatabase（唯一英雄資料）。
 // ============================================================================
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { TEAMS, ROSTER } from "../../data/roster.js";
 import { heroById } from "../../data/heroDatabase.js";
 import HeroPortrait from "../../ui/HeroPortrait.jsx";
+import { draftRoster } from "../../battle/moba/draftRoster.js";
+import { SUMMONER_SPELLS } from "../../battle/moba/mobaHeroLoadout.js";
 
 const ARCH_COLOR = { 坦克: "#60a5fa", 戰士: "#f97316", 刺客: "#ef4444", 法師: "#a855f7", 射手: "#22c55e", 輔助: "#14b8a6" };
 const TIPS = ["提示：控制型英雄可反制高機動陣容", "提示：真傷是對付肉盾的最佳解", "提示：射手需要發育時間，前期注意保護", "提示：觀察對手動向，掌握開團時機"];
 
-function HeroCard({ hero, player, side }) {
+function HeroCard({ hero, player, side, spells = [], lane = null }) {
   const h = hero || {};
   let hh = 0; for (let i = 0; i < (h.id || "?").length; i++) hh = (hh * 31 + (h.id || "?").charCodeAt(i)) & 0xffffff;
   const hue = hh % 360;
@@ -27,6 +29,21 @@ function HeroCard({ hero, player, side }) {
       <div style={{ minWidth: 0, textAlign: side === "blue" ? "left" : "right" }}>
         <div style={{ fontSize: 11, fontWeight: 800, color: "#e5e7eb", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{player}</div>
         <div style={{ fontSize: 10, color: ARCH_COLOR[h.arch] || "#71717a" }}>{h.zh || "—"} · {h.arch || "—"}</div>
+        {/* Milestone I-close：賽前就看得到自己帶什麼召喚師技能（與 Ban/Pick、
+            對戰中面板、Replay 同一份 roster.spells，不是這裡另外算的）。 */}
+        <div data-testid="loading-spells" data-lane={lane ?? ""} data-spells={spells.join(",")}
+          style={{ display: "flex", gap: 3, marginTop: 2, flexDirection: side === "blue" ? "row" : "row-reverse" }}>
+          {spells.map((id, i) => {
+            const s = SUMMONER_SPELLS[id];
+            if (!s) return null;
+            return (
+              <span key={i} title={`${s.zh}：${s.desc}`}
+                style={{ fontSize: 9, lineHeight: 1.4, padding: "0 3px", borderRadius: 4, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "#cbd5e1", whiteSpace: "nowrap" }}>
+                {s.icon}{s.zh}
+              </span>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -42,12 +59,13 @@ export default function LoadingScreen({ draft, tactic = null, onDone, roster = R
     return () => clearInterval(iv);
   }, []);
 
-  // 陣容：draft.picks（實際 BanPick 結果）優先；否則 ROSTER 預設英雄
-  const lanes = (side) => Object.entries(roster).filter(([p]) => p[0] === side[0]);
-  const heroFor = (side, idx, rosterHeroId) => {
-    const pk = draft?.picks?.[side]?.[idx];
-    return pk || heroById(rosterHeroId) || null;
-  };
+  //  Milestone I-close：本畫面**不再自己對位**。舊碼是 `draft.picks[side][idx]`
+  //    的順序對位，而 Ban/Pick 從 Milestone I 起會算出「哪隻英雄去哪個席位」——
+  //    兩者一旦不同（例如選了兩隻中路而分配把其中一隻擺去上路），Loading 顯示的
+  //    陣容就和實際上場的不一樣。改用與 GameView 完全相同的 `draftRoster`
+  //    ⇒ 進場畫面與戰場**由同一個 adapter 產生**，不可能再分岔。
+  const live = useMemo(() => draftRoster(roster, draft), [roster, draft]);
+  const lanes = (side) => Object.entries(live).filter(([p]) => p[0] === side[0]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "#0a0b0f", padding: "24px 20px", fontFamily: "system-ui" }}>
@@ -71,8 +89,9 @@ export default function LoadingScreen({ draft, tactic = null, onDone, roster = R
       <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flex: 1 }}>
         {["blue", "red"].map((side) => (
           <div key={side} style={{ flex: 1, minWidth: 0 }}>
-            {lanes(side).map(([pid, r], idx) => (
-              <HeroCard key={pid} hero={heroFor(side, idx, r.heroId)} player={r.player} side={side} />
+            {lanes(side).map(([pid, r]) => (
+              <HeroCard key={pid} hero={heroById(r.heroId)} player={r.player} side={side}
+                spells={r.spells ?? []} lane={r.lane ?? null} />
             ))}
           </div>
         ))}

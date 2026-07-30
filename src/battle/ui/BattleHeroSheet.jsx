@@ -18,16 +18,36 @@ import { useGameStore } from "../../useGameStore.js";
 import { heroById } from "../../data/heroDatabase.js";
 import HeroPortrait from "../../ui/HeroPortrait.jsx";
 import HeroDetailPanel from "./HeroDetailPanel.jsx";
+import { SUMMONER_SPELLS } from "../moba/mobaHeroLoadout.js";
 import { GC } from "../../ui/theme.js";
 import { useIsMobile } from "../../ui/useViewport.js";
 import { Z } from "./battleLayout.js";
 
 const MONO = "ui-monospace,Menlo,monospace";
 
-const SPELL_META = {
-  flash: { icon: "⚡", zh: "閃現" },
-  smite: { icon: "🎯", zh: "懲戒" },
-};
+/**
+ * Milestone I-close：技能名稱／圖示改讀 `SUMMONER_SPELLS`（賽前配置的唯一表），
+ * 不再是這裡自己維護的兩筆對照——否則面板永遠只認得引擎的閃現與懲戒。
+ */
+const SPELL_META = SUMMONER_SPELLS;
+
+/**
+ * 賽前配置的兩個技能 × 引擎的即時狀態 → 面板要畫的兩格。
+ *
+ * · 引擎目前只模擬閃現與懲戒。配置到的其他技能**沒有**引擎冷卻可讀，
+ *   所以標成「配置」而不是給一個假的 CD（面板寧可少說，不能亂說）。
+ * · 沒有配置資料（單獨掛載、舊路徑）⇒ 完全退回引擎的 `sp`，行為與 G 相同。
+ */
+function mergeSpells(configured, live) {
+  const ids = Array.isArray(configured) && configured.length ? configured : null;
+  if (!ids) return Array.isArray(live) ? live : [];
+  const byId = new Map((live ?? []).filter((s) => s?.id).map((s) => [s.id, s]));
+  return ids.map((id) => {
+    const engine = byId.get(id);
+    if (engine) return { ...engine, configured: true, hasEngine: true };
+    return { id, configured: true, hasEngine: false, ready: null, cd: 0 };
+  });
+}
 /** 引擎行為狀態 → 玩家看得懂的說明（沒有對應就原樣顯示，不硬翻）。 */
 const STATE_TEXT = {
   "對線": "在線上發育", "團戰!": "團戰中", "接戰": "接戰中", "拉扯": "拉扯走位",
@@ -47,7 +67,7 @@ const SectionTitle = ({ children }) => (
   <div style={{ fontSize: 9.5, letterSpacing: "0.2em", color: "rgba(255,255,255,0.5)", fontWeight: 900, margin: "12px 0 4px" }}>{children}</div>
 );
 
-export default function BattleHeroSheet({ heroId, heroName, playerName, playerId, side = "blue", onClose }) {
+export default function BattleHeroSheet({ heroId, heroName, playerName, playerId, side = "blue", spells = [], lane = null, onClose }) {
   const [career, setCareer] = useState(false);
   const isMobile = useIsMobile();
   //  只訂閱這一名英雄的即時狀態（引擎唯一資料源）
@@ -62,6 +82,8 @@ export default function BattleHeroSheet({ heroId, heroName, playerName, playerId
     );
   }
 
+  //  賽前配置（roster.spells，與 Ban/Pick／Loading／Replay 同源）× 引擎即時冷卻
+  const shownSpells = mergeSpells(spells, p?.sp);
   const hpPct = p ? Math.max(0, Math.min(100, (p.hp ?? 0) * 100)) : 0;
   const hpColor = p?.dead ? "#f87171" : hpPct > 55 ? "#86efac" : hpPct > 25 ? "#fbbf24" : "#fca5a5";
   const stateText = p ? (STATE_TEXT[p.state] ?? p.state ?? "—") : "—";
@@ -124,10 +146,11 @@ export default function BattleHeroSheet({ heroId, heroName, playerName, playerId
           </div>
 
           {/* ── 技能（本面板的主角）───────────────────────────────────── */}
-          <SectionTitle>召喚師技能（即時冷卻）</SectionTitle>
-          {p?.sp?.length ? (
-            <div style={{ display: "flex", gap: 8 }}>
-              {p.sp.map((s, i) => {
+          <SectionTitle>召喚師技能{lane ? ` · ${lane}` : ""}</SectionTitle>
+          {shownSpells.length ? (
+            <div data-testid="sheet-spells" data-spells={shownSpells.map((s) => s.id ?? "").join(",")}
+              style={{ display: "flex", gap: 8 }}>
+              {shownSpells.map((s, i) => {
                 if (!s?.id) {
                   return (
                     <div key={i} title="此位置尚未配置第二召喚師技能（reserved）"
@@ -137,17 +160,21 @@ export default function BattleHeroSheet({ heroId, heroName, playerName, playerId
                   );
                 }
                 const meta = SPELL_META[s.id] ?? { icon: "?", zh: s.id };
+                //  引擎沒有模擬這個技能 ⇒ 不畫冷卻，標「配置」。給假 CD 比不給更糟。
+                const noEngine = s.configured && s.hasEngine === false;
                 return (
-                  <div key={i} style={{
-                    flex: 1, borderRadius: 8, padding: "6px 8px", textAlign: "center",
-                    background: s.ready ? "rgba(74,222,128,0.10)" : "rgba(0,0,0,0.4)",
-                    border: `1px solid ${s.ready ? "rgba(74,222,128,0.45)" : "rgba(255,255,255,0.12)"}`,
-                    filter: s.ready ? "none" : "grayscale(0.7)",
-                  }}>
+                  <div key={i} title={noEngine ? `${meta.zh}：賽前配置（本引擎未模擬其效果，故不顯示冷卻）` : `${meta.zh}：${meta.desc ?? ""}`}
+                    style={{
+                      flex: 1, borderRadius: 8, padding: "6px 8px", textAlign: "center",
+                      background: noEngine ? "rgba(255,255,255,0.04)" : s.ready ? "rgba(74,222,128,0.10)" : "rgba(0,0,0,0.4)",
+                      border: `1px solid ${noEngine ? "rgba(255,255,255,0.14)" : s.ready ? "rgba(74,222,128,0.45)" : "rgba(255,255,255,0.12)"}`,
+                      filter: noEngine || s.ready ? "none" : "grayscale(0.7)",
+                      opacity: noEngine ? 0.75 : 1,
+                    }}>
                     <div style={{ fontSize: 15 }}>{meta.icon}</div>
                     <div style={{ fontSize: 10, color: "#e5e7eb", fontWeight: 800 }}>{meta.zh}</div>
-                    <div style={{ fontFamily: MONO, fontSize: 10, fontWeight: 900, color: s.ready ? "#86efac" : "#a1a1aa" }}>
-                      {s.ready ? "可用" : `${Math.ceil(s.cd)}s`}
+                    <div style={{ fontFamily: MONO, fontSize: 10, fontWeight: 900, color: noEngine ? "#71717a" : s.ready ? "#86efac" : "#a1a1aa" }}>
+                      {noEngine ? "配置" : s.ready ? "可用" : `${Math.ceil(s.cd)}s`}
                     </div>
                   </div>
                 );
