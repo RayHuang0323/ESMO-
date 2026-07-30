@@ -35,6 +35,11 @@ export function draftHeroIdFor(pid, draft, baseRoster = ROSTER) {
   const side = SIDES[pid[0]];
   const i = sideIndex(baseRoster, pid);
   if (!side || i < 0) return null;
+  //  Milestone I：Ban/Pick 現在會算出「哪隻英雄去哪個席位」的分配結果
+  //  （依英雄位置適性、選手熟練與陣容衝突窮舉最佳解）。有分配就以它為準；
+  //  沒有（舊 draft／直接測試進入）才退回原本的「picks 順序對位」。
+  const assigned = draft?.assignment?.[side]?.[pid];
+  if (assigned) return assigned;
   return draft?.picks?.[side]?.[i]?.id ?? null;
 }
 

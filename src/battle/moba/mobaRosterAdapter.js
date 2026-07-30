@@ -137,8 +137,11 @@ export function buildBattleRoster({
   for (const [pid, base] of Object.entries(baseRoster ?? {})) {
     const seatPlayer = sideOf(pid) === "blue" ? (seated[pid] ?? null) : null;
     const pick = draft?.picks?.[sideOf(pid)]?.[indexOf(pid)] ?? null;
-    // 英雄身分優先序：本場 Ban/Pick → 該選手綁定英雄 → 靜態名單預設
-    const heroId = pick?.id ?? seatPlayer?.heroId ?? base.heroId ?? null;
+    //  Milestone I：Ban/Pick 的自動分配（席位 → 英雄）優先於「選取順序對位」。
+    //    沒有分配結果時完全走原本的路徑 ⇒ 舊 draft 行為不變。
+    const assignedHeroId = draft?.assignment?.[sideOf(pid)]?.[pid] ?? null;
+    // 英雄身分優先序：本場分配 → Ban/Pick 順序 → 該選手綁定英雄 → 靜態名單預設
+    const heroId = assignedHeroId ?? pick?.id ?? seatPlayer?.heroId ?? base.heroId ?? null;
     out[pid] = {
       ...base,
       player: seatPlayer?.name ?? base.player ?? pid.toUpperCase(),

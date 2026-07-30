@@ -9,8 +9,66 @@
 //    ⓘ 開 HeroCodexDetail。Sprint20：ChampFace 已接回 Legacy HERO_IMG 真實英雄圖
 //    （經 heroDatabase.heroImage()），缺圖才退回程序化色塊。
 // ============================================================================
-import React, { useState, useRef, useEffect } from "react";
-import { CHAMPIONS_100 } from "../../data/heroDatabase.js";
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import { useProfileStore } from "../../platform/profileStore.js";
+import { seatPlayers as seatPlayersOf } from "../../platform/contracts/matchLineup.js";
+import { heroTags } from "../../data/heroClassification.js";
+import { assignDraft, assignmentToHeroIds } from "../../battle/moba/mobaDraftAssignment.js";
+import { buildLoadout, SUMMONER_SPELLS } from "../../battle/moba/mobaHeroLoadout.js";
+
+/** assignment → buildLoadout 需要的 `{seat:{heroId}}` 形狀。 */
+const assignmentToRoster = (a = {}) =>
+  Object.fromEntries(Object.entries(a).map(([seat, v]) => [seat, { heroId: v.heroId }]));
+
+/**
+ * Milestone I：出戰配置面板。
+ * 明確顯示「哪位選手、去哪一路、開哪隻英雄、適性多少、有沒有衝突、帶什麼技能」。
+ * 全部來自 assignDraft / buildLoadout 的計算結果，不編造。
+ */
+function DraftPlanPanel({ plan, loadout }) {
+  const rows = Object.entries(plan.assignment);
+  return (
+    <div style={{ background: GC2.card, borderRadius: 12, padding: "10px 12px", marginBottom: 12, border: "1px solid rgba(255,255,255,0.07)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+        <span style={{ color: GC2.blue, fontSize: 11, fontWeight: 800 }}>出戰配置（自動分配）</span>
+        <span style={{ color: plan.conflicts.length ? "#fbbf24" : GC2.green, fontSize: 10, fontWeight: 700 }}>
+          {plan.conflicts.length ? `⚠ ${plan.conflicts.length} 項衝突` : "✓ 無衝突"}
+        </span>
+      </div>
+      {rows.map(([seat, a]) => {
+        const sp = loadout[seat]?.spells ?? [];
+        const fitColor = a.heroFit >= 1 ? GC2.green : a.heroFit >= 0.5 ? "#fbbf24" : GC2.red;
+        return (
+          <div key={seat} style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+            <span style={{ width: 30, color: GC2.gray, fontSize: 9, fontWeight: 800 }}>{a.lane}</span>
+            <span style={{ width: 54, color: "#e5e7eb", fontSize: 10, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {a.player?.name ?? seat.toUpperCase()}
+            </span>
+            <span style={{ flex: 1, minWidth: 0, color: a.hero ? "#fff" : "#52525b", fontSize: 10.5, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {a.hero?.zh ?? "尚未選角"}
+            </span>
+            <span title={`英雄位置適性 ${Math.round(a.heroFit * 100)}%／選手位置熟練 ${Math.round(a.playerFit * 100)}%`}
+              style={{ color: fitColor, fontSize: 9, fontWeight: 800, flexShrink: 0 }}>
+              適性 {Math.round(a.heroFit * 100)}%
+            </span>
+            <span style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+              {sp.map((id) => (
+                <span key={id} title={`${SUMMONER_SPELLS[id]?.zh}${SUMMONER_SPELLS[id]?.engine ? "" : "（配置用，引擎未模擬效果）"}`}
+                  style={{ fontSize: 10, opacity: SUMMONER_SPELLS[id]?.engine ? 1 : 0.55 }}>
+                  {SUMMONER_SPELLS[id]?.icon ?? "?"}
+                </span>
+              ))}
+            </span>
+          </div>
+        );
+      })}
+      {plan.conflicts.map((c) => (
+        <div key={c.seat} style={{ color: "#fbbf24", fontSize: 9, marginTop: 3 }}>⚠ {c.lane}：{c.note}</div>
+      ))}
+    </div>
+  );
+}
+import { CHAMPIONS_100, heroById } from "../../data/heroDatabase.js";
 import HeroCodexDetail from "./HeroCodexDetail.jsx";
 import HeroPortrait from "../../ui/HeroPortrait.jsx";
 
@@ -79,6 +137,11 @@ export function ChampFace({ champ, size = 44 }) {
 }
 
 export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
+  //  ── Milestone I：選手／英雄／五路的自動分配 ─────────────────────────────
+  //    舊版是「picks[i] → 席位 b(i+1)」的順序硬對位：選到兩隻中路照樣塞，
+  //    玩家看不出衝突。現在改用可解釋評分 + 窮舉最佳解（5! = 120 種，決定性）。
+  const storePlayers = useProfileStore((s) => s.players);
+  const storeLineup = useProfileStore((s) => s.lineup);
   const [step, setStep] = useState(0);
   const [bans, setBans] = useState({ blue: [], red: [] });
   const [picks, setPicks] = useState({ blue: [], red: [] });
@@ -87,6 +150,18 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
   const [pickFilter, setPickFilter] = useState("全部");
   const [detailId, setDetailId] = useState(null);
   const usedRef = useRef(new Set());
+
+  //  席位 → 實際上場選手（沿用 Milestone E 的先發指派，不另建一套）
+  const seatPlayers = useMemo(() => seatPlayersOf(storeLineup, storePlayers ?? []), [storeLineup, storePlayers]);
+  //  每次我方選角變動就重算分配 ⇒ 面板隨時反映「目前這批英雄會怎麼排」
+  const draftPlan = useMemo(
+    () => assignDraft({ picks: picks.blue, seatPlayers, tagsOf: heroTags }),
+    [picks.blue, seatPlayers],
+  );
+  const planLoadout = useMemo(
+    () => buildLoadout(assignmentToRoster(draftPlan.assignment), heroById),
+    [draftPlan],
+  );
 
   const cur = step < SEQ.length ? SEQ[step] : null;
   const done = step >= SEQ.length;
@@ -124,7 +199,14 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
 
   useEffect(() => {
     if (done) {
-      const t = setTimeout(() => { if (onComplete) onComplete({ picks, bans }); if (onNext) onNext({ picks, bans }); }, 1200);
+      //  Milestone I：把分配結果與召喚師技能一併往下傳（純附加欄位；
+      //    下游沒有讀 assignment 的舊路徑仍可用 picks 的順序對位）。
+      const payload = {
+        picks, bans,
+        assignment: { blue: assignmentToHeroIds(draftPlan.assignment) },
+        loadout: { blue: planLoadout },
+      };
+      const t = setTimeout(() => { if (onComplete) onComplete(payload); if (onNext) onNext(payload); }, 1200);
       return () => clearTimeout(t);
     }
     if (isMyTurn) { setShowPicker(true); return; }
@@ -210,6 +292,9 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
             </div>
           </div>
         )}
+
+        {/* Milestone I：出戰配置（自動分配）——我方一有選角就顯示 */}
+        {picks.blue.length > 0 && <DraftPlanPanel plan={draftPlan} loadout={planLoadout} />}
 
         <div style={{ background: GC2.card, borderRadius: 12, padding: "12px 14px" }}>
           <div style={{ color: GC2.gray, fontSize: 10, fontWeight: 700, marginBottom: 8 }}>選角動態</div>
