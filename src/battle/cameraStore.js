@@ -27,8 +27,19 @@ import { WORLD_BOUNDS } from "../gameData.js";
 export const CAMERA_MODES = ["director", "free", "heroFocus", "objectiveFocus"];
 export const HERO_FOCUS_MS = 4000;   // 點英雄聚焦時長（任務單：3–5 秒）
 
-/** 正交 zoom 上下限（與 fitZoomFor 的 clamp 同區間；避免縮到看不見或貼臉）。 */
-export const ZOOM_MIN = 1.6;
+/**
+ * 正交 zoom 上下限（與 fitZoomFor 的 clamp 同區間；避免縮到看不見或貼臉）。
+ *
+ * ⚠ Milestone G：ZOOM_MIN 從 1.6 放寬到 1.06。
+ *   `zoom` 與相機距離的關係是 `distance = distDefault(175) × zoomDefault(3.4) / zoom`，
+ *   所以 1.6 ⇒ 最遠只能拉到 372。但 390×844 直式手機要把整張地圖收進畫面需要
+ *   **560**（= 相機本來就設計好的 `CAM.distMax`；`far:1000` 也是照這個值算的）
+ *   ⇒ 舊下限讓手機**物理上不可能綜觀全圖**（桌機 1600×1000 需要 377，同樣差一點）。
+ *   1.06 = 595 / 560，剛好對到相機既有的最遠距離：**放寬的是 zoom 下限，
+ *   不是相機的設計包絡**，也沒有動 pitch / fov / near / far。
+ *   ZOOM_MAX 維持 9（近距離視角不變）。
+ */
+export const ZOOM_MIN = 1.06;
 export const ZOOM_MAX = 9;
 
 const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -105,6 +116,21 @@ export const useCameraStore = create((set) => ({
   userPanTo: (x, y) => set(() => {
     const pan = clampPan(x, y);
     return { mode: "free", heroId: null, focusUntil: 0, pan, savedFreeView: { pan: { ...pan } } };
+  }),
+
+  /**
+   * Milestone G：使用者手勢**同時**平移與縮放（雙指捏合帶平移）。
+   * 與 userPanTo / userZoomTo 同語意（一律進 free），只是合併成一次 set()
+   * ⇒ 一次手勢更新只通知一次訂閱者，不會在捏合時每幀觸發兩輪重繪。
+   * 這仍是同一個 cameraStore，沒有第二套相機系統。
+   */
+  userViewTo: (x, y, z) => set((s) => {
+    const pan = clampPan(x ?? s.pan.x, y ?? s.pan.y);
+    const zoom = clampZoom(z ?? s.zoom);
+    return {
+      mode: "free", heroId: null, focusUntil: 0, pan, zoom,
+      savedFreeView: { pan: { ...pan }, zoom },
+    };
   }),
 
   /** 使用者手動縮放（捏合 / 滾輪）⇒ **一律進 free mode**（任務單 A-4）。 */

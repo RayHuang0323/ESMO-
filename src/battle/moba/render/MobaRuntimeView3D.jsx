@@ -101,6 +101,12 @@ function fitDistance(aspect) {
   return Math.min(CAM.distMax, Math.max(CAM.distMin, Math.max(needV, needH) * 1.06));
 }
 
+//  Milestone G：拖曳增益與俯角補償。
+//    PAN_GAIN 沿用既有手感基準（H.2-close 之後校過的 1.6），
+//    PITCH_SIN 用來補回「地面被俯角壓縮」造成的直向遲鈍。
+const PAN_GAIN = 1.6;
+const PITCH_SIN = Math.sin((CAM.pitchDeg * Math.PI) / 180);
+
 /** 相機距離 → 平移邊界（拉遠時可平移的範圍小一些，避免看到地圖外）。 */
 const panLimit = (dist) => ({
   x: Math.max(0, MAP_HALF_WORLD.x - dist * 0.28),
@@ -166,20 +172,38 @@ function RuntimeCameraInput({ ctrl }) {
     const el = gl.domElement;
     const st = state.current;
     const pos = (e) => ({ x: e.clientX, y: e.clientY });
-      const onDown = (e) => {
+    //  ── Milestone G：手機手勢的根因修正 ─────────────────────────────────
+    //  canvas 沒有 `touch-action` ⇒ 瀏覽器會先「觀望」這一次觸控是要捲動還是要
+    //  給頁面，於是 (a) 拖曳有明顯延遲、跟手很差，(b) **往上滑會觸發下拉重新整理，
+    //  整場比賽直接消失**（Ray 實測回報）。宣告 touch-action:none 之後瀏覽器
+    //  不再介入，手勢完全由本元件處理。
+    el.style.touchAction = "none";
+    el.style.overscrollBehavior = "none";
+    el.style.webkitUserSelect = "none";
+    el.style.userSelect = "none";
+    const onMenu = (e) => e.preventDefault();      // 長按不要跳系統選單
+    el.addEventListener("contextmenu", onMenu);
+    const onDown = (e) => {
       if (e.pointerType === "touch" && e.isPrimary === false) return;
       const cam = useCameraStore.getState();
       st.drag = { ...pos(e), panX: cam.pan.x, panY: cam.pan.y, id: e.pointerId };
       el.setPointerCapture?.(e.pointerId);
     };
     const onMove = (e) => {
-      if (!st.drag || e.pointerId !== st.drag.id) return;
+      if (!st.drag) return;
+      //  id === null ⇒ 「捏合結束後由剩下那根手指接手」的續拖，認領第一個進來的 pointer。
+      //  （touch.identifier 與 pointerId 不是同一組編號，不能直接沿用。）
+      if (st.drag.id == null) st.drag.id = e.pointerId;
+      else if (e.pointerId !== st.drag.id) return;
       //  螢幕像素 → 世界位移：距離愈遠，同樣的拖曳距離要移動愈多世界單位
       const cam = useCameraStore.getState();
       const distance = RUNTIME_CAMERA.distDefault * RUNTIME_CAMERA.zoomDefault / cam.zoom;
-      const k = (distance / el.clientHeight) * 1.6 / S;
+      const k = (distance / el.clientHeight) * PAN_GAIN / S;
+      //  ⚠ 地面被俯角壓縮：同樣的螢幕垂直位移，對應到的世界距離比水平方向大。
+      //    舊碼兩軸用同一個係數 ⇒ 直向拖曳明顯比橫向「鈍」，這就是「移動很慢」的一半原因。
+      const ky = k / PITCH_SIN;
       cam.userPanTo(st.drag.panX - (e.clientX - st.drag.x) * k,
-        st.drag.panY - (e.clientY - st.drag.y) * k);
+        st.drag.panY - (e.clientY - st.drag.y) * ky);
     };
     const onUp = (e) => {
       if (st.drag && e.pointerId === st.drag.id) st.drag = null;
@@ -190,15 +214,27 @@ function RuntimeCameraInput({ ctrl }) {
       const cam = useCameraStore.getState();
       cam.userZoomTo(cam.zoom / (1 + Math.sign(e.deltaY) * 0.12));
     };
-    //  手機雙指縮放
+    //  手機雙指縮放 + 雙指平移（以兩指中心移動帶動視角）
     const touches = new Map();
+    const centroid = () => {
+      const list = [...touches.values()];
+      return {
+        x: list.reduce((s2, t) => s2 + t.x, 0) / list.length,
+        y: list.reduce((s2, t) => s2 + t.y, 0) / list.length,
+      };
+    };
+    const beginPinch = () => {
+      const [a, b] = [...touches.values()];
+      const cam = useCameraStore.getState();
+      st.pinch = {
+        d: Math.hypot(a.x - b.x, a.y - b.y), zoom: cam.zoom,
+        c: centroid(), panX: cam.pan.x, panY: cam.pan.y,
+      };
+      st.drag = null;
+    };
     const onTouchStart = (e) => {
       for (const t of e.changedTouches) touches.set(t.identifier, { x: t.clientX, y: t.clientY });
-      if (touches.size === 2) {
-        const [a, b] = [...touches.values()];
-        st.pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), zoom: useCameraStore.getState().zoom };
-        st.drag = null;
-      }
+      if (touches.size === 2) beginPinch();
     };
     const onTouchMove = (e) => {
       for (const t of e.changedTouches) if (touches.has(t.identifier)) touches.set(t.identifier, { x: t.clientX, y: t.clientY });
@@ -206,19 +242,36 @@ function RuntimeCameraInput({ ctrl }) {
         e.preventDefault();
         const [a, b] = [...touches.values()];
         const d = Math.hypot(a.x - b.x, a.y - b.y);
-        useCameraStore.getState().userZoomTo(st.pinch.zoom * d / Math.max(1, st.pinch.d));
+        const cam = useCameraStore.getState();
+        const zoom = st.pinch.zoom * d / Math.max(1, st.pinch.d);
+        //  Milestone G：雙指同時也能平移。舊版只縮放 ⇒ 想「縮小再看別的地方」
+        //  必須縮放、放開、再單指拖一次，操作被切成兩段。
+        const c = centroid();
+        const distance = RUNTIME_CAMERA.distDefault * RUNTIME_CAMERA.zoomDefault / zoom;
+        const k = (distance / el.clientHeight) * PAN_GAIN / S;
+        cam.userViewTo(st.pinch.panX - (c.x - st.pinch.c.x) * k,
+          st.pinch.panY - (c.y - st.pinch.c.y) * (k / PITCH_SIN), zoom);
       }
     };
     const onTouchEnd = (e) => {
       for (const t of e.changedTouches) touches.delete(t.identifier);
-      if (touches.size < 2) st.pinch = null;
+      if (touches.size >= 2) { beginPinch(); return; }
+      st.pinch = null;
+      //  Milestone G：兩指放開一指時，用**剩下那根手指**接續單指平移。
+      //  舊版在進入 pinch 時把 drag 清成 null 又不重建 ⇒ 手勢在中途斷掉，
+      //  使用者要放開全部手指再重新拖，這正是「操作容易中斷」的來源。
+      if (touches.size === 1) {
+        const [only] = [...touches.values()];
+        const cam = useCameraStore.getState();
+        st.drag = { x: only.x, y: only.y, panX: cam.pan.x, panY: cam.pan.y, id: null };
+      }
     };
     el.addEventListener("pointerdown", onDown);
     el.addEventListener("pointermove", onMove);
     el.addEventListener("pointerup", onUp);
     el.addEventListener("pointercancel", onUp);
     el.addEventListener("wheel", onWheel, { passive: false });
-    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchstart", onTouchStart, { passive: false });
     el.addEventListener("touchmove", onTouchMove, { passive: false });
     el.addEventListener("touchend", onTouchEnd);
     return () => {
@@ -230,6 +283,7 @@ function RuntimeCameraInput({ ctrl }) {
       el.removeEventListener("touchstart", onTouchStart);
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("contextmenu", onMenu);
     };
   }, [gl]);
 

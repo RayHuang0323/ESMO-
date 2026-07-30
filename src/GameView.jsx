@@ -114,6 +114,21 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   const begin = () => { const c = useCameraStore.getState(); c.backToDirector(); c.resetView(); start({ tactic }); };
   // Sprint09：賽前準備銜接 — autoStart 掛載即開局（預設 false = 現行為不變）
   useEffect(() => { if (autoStart && !playing) begin(); }, []);  // eslint-disable-line
+  // ── Milestone G：戰鬥期間關掉瀏覽器的「下拉重新整理」/ 過捲彈跳 ──────────
+  //  Ray 實測：手機在戰場往上滑會觸發下拉重新整理，整場比賽直接消失、退回主選單。
+  //  canvas 已宣告 touch-action:none，但手指若落在 HUD／面板等 DOM 上，過捲仍會
+  //  沿著捲動鏈冒泡到 document ⇒ 這裡在**戰鬥畫面掛載期間**關掉整頁的垂直過捲行為，
+  //  卸載時原樣還原（不影響其他畫面的正常捲動）。
+  useEffect(() => {
+    const root = document.documentElement, body = document.body;
+    const prev = { root: root.style.overscrollBehaviorY, body: body.style.overscrollBehaviorY };
+    root.style.overscrollBehaviorY = "none";
+    body.style.overscrollBehaviorY = "none";
+    return () => {
+      root.style.overscrollBehaviorY = prev.root;
+      body.style.overscrollBehaviorY = prev.body;
+    };
+  }, []);
   const camMode = useCameraStore((s) => s.mode);
   const directorOn = camMode !== "free";
   // S29：畫質——首次依裝置自動判斷，玩家手動選擇後存 localStorage 並優先
