@@ -85,9 +85,13 @@ console.log("\n── §3 召喚師技能 ──");
     Object.values(loadout).filter((e) => e.lane !== "打野").every((e) => !e.spells.includes("smite")));
   ck("22) 五路都有合理的第二技能（不重複、且在技能表內）",
     Object.values(loadout).every((e) => e.spells.length === 2 && e.spells.every((id) => SUMMONER_SPELLS[id])));
-  ck("23) 技能表標明哪些引擎真的有效果（不假裝有 CD）",
-    SUMMONER_SPELLS.flash.engine === true && SUMMONER_SPELLS.smite.engine === true &&
-    SUMMONER_SPELLS.heal.engine === false);
+  //  I 的時候只有閃現與懲戒有引擎作用點，其餘標 engine:false 以免面板假裝有 CD。
+  //  Milestone J 把八個技能全部接上真實效果 ⇒ 這條的意義從「標出哪些沒效果」
+  //  變成「這個欄位仍然存在且誠實」。改成驗表內每一個技能都有明確的 engine 布林，
+  //  且宣稱有效果的技能引擎真的認得（J 的 verifier 另有逐一觸發的行為驗證）。
+  ck("23) 技能表誠實標示引擎作用點（每個技能都有 engine 布林）",
+    Object.values(SUMMONER_SPELLS).every((s) => typeof s.engine === "boolean") &&
+    SUMMONER_SPELLS.flash.engine === true && SUMMONER_SPELLS.smite.engine === true);
   ck("24) 打野的懲戒不受任何定位覆寫影響",
     ["坦克", "戰士", "刺客", "法師", "射手", "輔助"].every((arch) =>
       spellsFor({ arch }, "打野").some((s) => s.id === "smite")));
