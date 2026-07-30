@@ -46,6 +46,12 @@ const NAV_LOOKAHEAD = 25;
 const NAV_REPATH_CD = 8;
 const clampMapX = (x) => clamp(x, WORLD_BOUNDS.minX + MAP_EDGE_PAD, WORLD_BOUNDS.maxX - MAP_EDGE_PAD);
 const clampMapY = (y) => clamp(y, WORLD_BOUNDS.minY + MAP_EDGE_PAD, WORLD_BOUNDS.maxY - MAP_EDGE_PAD);
+//  Milestone J：召喚師技能的特效顏色。舊碼是「flash 黃、其餘綠」的三元式，
+//  第二格能放八種技能之後，畫面上會分不出剛剛放的是治療還是點燃。
+const SPELL_FX_COLOR = {
+  flash: 0xfde047, smite: 0x22c55e, teleport: 0x38bdf8, heal: 0x4ade80,
+  barrier: 0x93c5fd, ignite: 0xf97316, ghost: 0xc4b5fd, cleanse: 0x67e8f9,
+};
 
 export class LogicEngine {
   /**
@@ -63,6 +69,8 @@ export class LogicEngine {
     this.playerStatsOn = false;    // S28：未 configurePlayers ⇒ 全部能力程式碼不生效
     this.heroesOn = false;         // H：未 configureHeroes ⇒ 全部英雄定位程式碼不生效
     this.hmod = {}; this.heroMeta = null;
+    this.spellsOn = false;         // J：未 configureSpells ⇒ 全部召喚師技能 v2 程式碼不生效
+    this.spellMeta = null;
     this.rules = rulesFor(opts.rules);   // S29：模擬規則集（v2 預設）
     const R = this.rules;
     this.t = 0; this.over = false; this.winner = null;
@@ -143,6 +151,14 @@ export class LogicEngine {
           // Milestone D：有限時戰鬥 Buff／Debuff。until 是模擬秒絕對時間；
           // v1/v2 永遠不讀，snapshot 只輸出剩餘秒數。
           redBuffUntil: 0, blueBuffUntil: 0, redSlowUntil: 0,
+          // Milestone J：召喚師技能 v2 的狀態欄。純資料：只有 `spellsOn`
+          //   （configureSpells 之後）才會被讀寫 ⇒ 不呼叫就恆為初值，
+          //   傷害與 rng 序列逐位元不變。
+          shield: 0, shieldUntil: 0,          // 護盾（先扣盾再扣血）
+          igniteUntil: 0, igniteBy: null,     // 點燃：持續傷害與擊殺歸屬
+          healCutUntil: 0,                    // 治療減益（點燃附帶）
+          hasteUntil: 0,                      // 幽魂：移速加成
+          cleanseUntil: 0,                    // 淨化：短暫免疫再減速
         });
       });
     });
@@ -343,6 +359,78 @@ export class LogicEngine {
   }
   /** 該英雄的定位 mods；未啟用 / 無資料 ⇒ null（＝走原始路徑）。 */
   _heroMod(p) { return this.heroesOn ? (this.hmod[p.id] ?? null) : null; }
+
+  // ── Milestone J：召喚師技能層（configureSpells）────────────────────────
+  /**
+   * 賽前配置的兩個召喚師技能 → 引擎真的會使用的技能欄。
+   *
+   * 在此之前，第二格是引擎自己決定的：打野固定懲戒、其餘一律 `reserved`
+   * ⇒ 賽前選了「傳送／治療／點燃…」在對戰中完全不存在，畫面上有圖示、
+   * 引擎卻不認得。這是 Ray 明確點名的「不可只顯示圖示卻沒有引擎效果」。
+   *
+   * 邊界（與前三個行為層同構）：
+   *   · 不呼叫 ⇒ `spellsOn` 為 false ⇒ 全部 v2 程式碼短路，第二格維持舊行為，
+   *     傷害與 rng 序列逐位元不變 ⇒ regress / runtime29 的歷史基準不受影響。
+   *   · 懲戒是**硬性規則**：打野一定有、非打野一定沒有。賽前資料若違反，
+   *     以引擎為準改回來——這是最後一道防線，不是信任呼叫端。
+   *
+   * @param {object} blue/red  { [engineId]: [spellId, spellId] }
+   * @param {object} meta      { version } → snapshot.spellMeta
+   */
+  configureSpells({ blue = null, red = null, meta = null } = {}) {
+    if (!blue && !red) return;
+    this.spellsOn = true;
+    this.spellMeta = meta;
+    const table = { ...(blue ?? {}), ...(red ?? {}) };
+    for (const p of this.players) {
+      const want = table[p.id];
+      if (!Array.isArray(want) || want.length !== 2) continue;
+      const known = this.rules.spellCd ?? {};
+      const ok = (id) => typeof id === "string" && known[id] != null;
+      const isJungle = p.role === "jungle";
+      //  懲戒的歸屬由引擎裁決，不看賽前資料怎麼寫。
+      const cleaned = want.map((id) => (ok(id) ? id : null))
+        .map((id) => (id === "smite" && !isJungle ? null : id));
+      if (isJungle && !cleaned.includes("smite")) cleaned[1] = "smite";
+      p.sp.f = { id: cleaned[0] ?? "flash", readyAt: 0, lastUsedAt: null, lastReason: null, uses: 0 };
+      p.sp.d = cleaned[1]
+        ? { id: cleaned[1], readyAt: 0, lastUsedAt: null, lastReason: null, uses: 0 }
+        : { id: null, status: "reserved" };
+    }
+  }
+
+  /** 技能冷卻（單一查表出口；未知技能 ⇒ 用閃現的冷卻，不會變成 undefined）。 */
+  _spellCd(spell) {
+    const R = this.rules;
+    return (R.spellCd && R.spellCd[spell] != null) ? R.spellCd[spell] : R.flashCd;
+  }
+
+  /** 這名英雄持有該技能的欄位（沒有 ⇒ null）。 */
+  _spellSlot(p, spell) {
+    if (p.sp?.f?.id === spell) return p.sp.f;
+    if (p.sp?.d?.id === spell) return p.sp.d;
+    return null;
+  }
+
+  /** 技能是否可用（持有 ＋ 已過冷卻）。 */
+  _spellReady(p, spell) {
+    const slot = this._spellSlot(p, spell);
+    return !!slot && this.t >= slot.readyAt;
+  }
+
+  /**
+   * Milestone J：英雄受到傷害的唯一出口——先扣護盾再扣血。
+   * 未啟用技能層 ⇒ `shield` 恆為 0 ⇒ 與基準逐位元相同（`foe.hp -= amt`）。
+   */
+  _damageHero(foe, amt) {
+    if (this.spellsOn && foe.shield > 0 && this.t < foe.shieldUntil) {
+      const absorbed = Math.min(foe.shield, amt);
+      foe.shield -= absorbed;
+      amt -= absorbed;
+      if (foe.shield <= 0) { foe.shield = 0; foe.shieldUntil = 0; }
+    }
+    foe.hp -= amt;
+  }
 
   /** 依 engineId 取 mods；未啟用 / 該席位無資料 ⇒ null（＝走原始路徑）。 */
   _modById(id) { return this.playerStatsOn ? (this.pmod[id] ?? null) : null; }
@@ -670,15 +758,148 @@ export class LogicEngine {
 
   /** 召喚師技能事件（唯一出口；Replay 由 battleStore.log 原封保存，不重判定）。 */
   _spellEventV3(p, spell, reason, from, to) {
-    const slot = spell === "flash" ? p.sp.f : p.sp.d;
-    slot.readyAt = this.t + (spell === "flash" ? this.rules.flashCd : this.rules.smiteCd);
+    //  Milestone J：欄位與冷卻都改由技能 id 決定（`_spellSlot` / `_spellCd`）。
+    //    舊寫法是「flash 走 f 欄、其餘一律 d 欄」＋兩個寫死的冷卻常數，
+    //    第二格能放八種技能之後就不成立了。找不到欄位 ⇒ 退回舊的二選一，
+    //    讓未啟用 v2 的路徑逐位元不變。
+    const slot = this._spellSlot(p, spell) ?? (spell === "flash" ? p.sp.f : p.sp.d);
+    slot.readyAt = this.t + this._spellCd(spell);
     slot.lastUsedAt = this.t; slot.lastReason = reason; slot.uses++;
     this.spellLog.push({
       id: "s" + this._spellSeq++, t: this.t, playerId: p.id, side: p.side,
       spell, reason, from: { x: from.x, y: from.y }, to: to ? { x: to.x, y: to.y } : null,
     });
     if (this.spellLog.length > 400) this.spellLog.shift();
-    this.pushFx({ type: "ult", pos: { x: from.x, y: from.y }, color: spell === "flash" ? 0xfde047 : 0x22c55e, exp: 0.45 });
+    this.pushFx({ type: "ult", pos: { x: from.x, y: from.y }, color: SPELL_FX_COLOR[spell] ?? 0x22c55e, exp: 0.45 });
+  }
+
+  // ── Milestone J：召喚師技能 v2 的施放判定 ───────────────────────────────
+  /**
+   * 每 tick 一次，在**全員移動與傷害都結算完**的凍結位置上判定（與 `_postCombatV3`
+   * 同一個理由：先收集後套用 ⇒ 與迭代順序無關。F 的順序優勢事故就是這樣來的）。
+   *
+   * 每名英雄每 tick 最多施放一個技能，依「救命 → 續戰 → 收頭 → 機動」排序，
+   * 兩個欄位都會被檢查。全部條件都用當下可觀測的狀態，不擲 rng
+   * ⇒ 同 seed 同輸入必得同結果。
+   */
+  _summonerSpellsV2(alive, dt) {
+    const R = this.rules;
+    if (!this.spellsOn || !R.spellsV2) return;
+    const casts = [];
+    for (const p of alive) {
+      if (p.dead || p.recallT > 0) continue;
+      const hpR = p.hp / p.maxHp;
+      const foes = alive.filter((q) => q.side !== p.side && !q.dead);
+      const nearFoe = foes.reduce((best, q) => {
+        const d = dist(p.pos, q.pos);
+        return (!best || d < best.d) ? { q, d } : best;
+      }, null);
+
+      // 1) 淨化：身上有減速就解掉（最便宜也最直觀的一條）
+      if (this.t < (p.redSlowUntil ?? 0) && this._spellReady(p, "cleanse")) {
+        casts.push([p, "cleanse", "slow", null]); continue;
+      }
+      // 2) 護盾：血量低且敵人就在身邊 ⇒ 擋下這一波
+      if (hpR < R.barrierHpTrigger && nearFoe && nearFoe.d < R.barrierFoeDist
+        && this._spellReady(p, "barrier")) {
+        casts.push([p, "barrier", "survive", null]); continue;
+      }
+      // 3) 治療：自己殘血、或身邊隊友殘血（雙人路的用法）
+      if (this._spellReady(p, "heal")) {
+        const ally = alive.find((q) => q !== p && q.side === p.side && !q.dead
+          && q.hp / q.maxHp < R.healAllyHpTrigger && dist(p.pos, q.pos) < R.healAllyRange);
+        const selfLow = hpR < R.healHpTrigger && nearFoe && nearFoe.d < R.healFoeDist;
+        if (selfLow || ally) { casts.push([p, "heal", selfLow ? "survive" : "assist", ally ?? null]); continue; }
+      }
+      // 4) 點燃：射程內有殘血敵人且尚未被點燃 ⇒ 收頭／逼退
+      if (this._spellReady(p, "ignite") && nearFoe && nearFoe.d < R.igniteRange
+        && nearFoe.q.hp / nearFoe.q.maxHp < R.igniteHpTrigger
+        && this.t >= (nearFoe.q.igniteUntil ?? 0)) {
+        casts.push([p, "ignite", "execute", nearFoe.q]); continue;
+      }
+      // 5) 幽魂：追擊或撤退時的機動
+      if (this._spellReady(p, "ghost") && nearFoe && nearFoe.d < R.ghostFoeDist
+        && (p.retreating ? hpR < R.ghostHpTrigger : p.fsm === "CHASE" && !!p.chaseId)) {
+        casts.push([p, "ghost", p.retreating ? "escape" : "chase", null]); continue;
+      }
+      // 6) 傳送：自己遠離戰場，而我方某座塔正被多人圍攻 ⇒ 支援
+      //    ⚠ 條件是「身邊沒有敵人」，不是「場上沒有敵人」——`nearFoe` 取的是最近的
+      //    存活敵人，幾乎永遠存在，寫成 `!nearFoe` 會讓傳送一輩子放不出來。
+      const disengaged = !nearFoe || nearFoe.d > R.teleportSafeDist;
+      if (this._spellReady(p, "teleport") && this.t >= R.teleportMinT && disengaged) {
+        let target = null;
+        for (const tw of Object.values(this.towers)) {
+          if (tw.side !== p.side || tw.hp <= 0) continue;
+          if (dist(p.pos, tw.pos) < R.teleportMinDist) continue;
+          const sieging = foes.filter((q) => dist(q.pos, tw.pos) < 9).length;
+          if (sieging >= R.teleportTowerFoeN) { target = tw; break; }
+        }
+        if (target) { casts.push([p, "teleport", "defend", target]); continue; }
+      }
+    }
+
+    // 套用（位置已凍結；施放順序不影響結果，因為效果彼此不搶同一個資源）
+    for (const [p, spell, reason, arg] of casts) {
+      const from = { x: p.pos.x, y: p.pos.y };
+      let to = null;
+      switch (spell) {
+        case "cleanse":
+          p.redSlowUntil = 0;
+          p.cleanseUntil = this.t + R.cleanseT;
+          break;
+        case "barrier":
+          p.shield = p.maxHp * R.barrierPct;
+          p.shieldUntil = this.t + R.barrierT;
+          break;
+        case "heal": {
+          const gain = Math.min(p.maxHp, p.hp + p.maxHp * R.healPct) - p.hp;
+          p.hp += gain; p.heal += gain;
+          if (arg && !arg.dead) {
+            const g2 = Math.min(arg.maxHp, arg.hp + arg.maxHp * R.healAllyPct) - arg.hp;
+            arg.hp += g2; p.heal += g2;       // 治療量記在施放者身上（是他救的）
+          }
+          break;
+        }
+        case "ignite":
+          arg.igniteUntil = this.t + R.igniteT;
+          arg.igniteBy = p.id;
+          arg.healCutUntil = this.t + R.igniteT;
+          to = { x: arg.pos.x, y: arg.pos.y };
+          break;
+        case "ghost":
+          p.hasteUntil = this.t + R.ghostT;
+          break;
+        case "teleport": {
+          const d = dist(p.pos, arg.pos) || 1;
+          const land = {
+            x: clampMapX(arg.pos.x + ((p.pos.x - arg.pos.x) / d) * R.teleportArrive),
+            y: clampMapY(arg.pos.y + ((p.pos.y - arg.pos.y) / d) * R.teleportArrive),
+          };
+          this._navTeleport(p, land);         // 落點必須是可走區（沿用閃現的同一條保證）
+          to = { x: p.pos.x, y: p.pos.y };
+          break;
+        }
+        default: break;
+      }
+      this._spellEventV3(p, spell, reason, from, to);
+    }
+  }
+
+  /**
+   * 點燃的持續傷害。獨立傷害源，不乘進普攻公式
+   * ⇒ 不違反 S28 §2「不得有傷害乘數」的紅線，且雙方同一套參數。
+   */
+  _igniteTickV2(dt) {
+    const R = this.rules;
+    if (!this.spellsOn || !R.spellsV2) return;
+    for (const p of this.players) {
+      if (p.dead || this.t >= (p.igniteUntil ?? 0)) continue;
+      const src = this.players.find((q) => q.id === p.igniteBy) ?? null;
+      const amt = R.igniteDps * dt;
+      this._damageHero(p, amt);
+      if (src) { src.dmg += amt; p.hitBy.set(src.id, this.t); }
+      if (p.hp <= 0 && !p.dead && src) this._resolveKill(src, p);
+    }
   }
   /** killContext 分類（優先級瀑布；全部來自擊殺當下的真實觀測）。 */
   _killCtxV3(p, foe, assists) {
@@ -1271,8 +1492,10 @@ export class LogicEngine {
     }
     // S29B1：連續接觸起點（killContext.startedAt/duration 的資料來源）
     if (R.engagementFsm) p.contactSince = foe ? (p.contactSince ?? this.t) : null;
-    if (nearFountain) { const h = Math.min(p.maxHp, p.hp + p.maxHp * 0.20 * dt) - p.hp; p.hp += h; p.heal += h; }
-    else if (!foe) { const h = Math.min(p.maxHp, p.hp + p.maxHp * 0.02 * dt) - p.hp; p.hp += h; p.heal += h; }
+    //  Milestone J：點燃期間回復量打折（未啟用技能層 ⇒ healK 恆為 1 ⇒ 逐位元不變）
+    const healK = (this.spellsOn && this.t < (p.healCutUntil ?? 0)) ? (1 - R.igniteHealCut) : 1;
+    if (nearFountain) { const h = Math.min(p.maxHp, p.hp + p.maxHp * 0.20 * dt * healK) - p.hp; p.hp += h; p.heal += h; }
+    else if (!foe) { const h = Math.min(p.maxHp, p.hp + p.maxHp * 0.02 * dt * healK) - p.hp; p.hp += h; p.heal += h; }
     if (foe) {
       // S29：dmgK 由規則集決定（v1 0.92 ⇒ TTK 20–30 秒、前 5 分鐘幾乎零擊殺）
       const hasRedBuff = R.neutralObjectives && this.t < (p.redBuffUntil ?? 0);
@@ -1283,7 +1506,9 @@ export class LogicEngine {
         (hasRedBuff || hasBlueBuff ? R.combatBuffDamageK : 1) *
         this._dragonPowerK(p.side) / this._dragonGuardK(foe.side);
       p.dmg += dmgAmt; foe.hitBy.set(p.id, this.t); // Sprint06：傷害/助攻追蹤（附加）
-      if (hasRedBuff) foe.redSlowUntil = Math.max(foe.redSlowUntil ?? 0, this.t + R.redBuffSlowT);
+      //  Milestone J：淨化後的短暫免疫期內不再被掛上減速（否則解了等於沒解）。
+      const cleansed = this.spellsOn && this.t < (foe.cleanseUntil ?? 0);
+      if (hasRedBuff && !cleansed) foe.redSlowUntil = Math.max(foe.redSlowUntil ?? 0, this.t + R.redBuffSlowT);
       if (R.towerAttackInterval) {
         // Milestone C：英雄在敵方塔下攻擊該塔隊友時，短時間成為優先仇恨目標。
         // 只記錄事實，不改英雄傷害；塔端仍會檢查射程與存活。
@@ -1306,7 +1531,7 @@ export class LogicEngine {
         p.atkCd = 0.5 * (hasBlueBuff ? R.blueBuffCooldownK : 1);
       }
       if (R.simultaneousCombat) pendingHits.push([p, foe, dmgAmt]);
-      else { foe.hp -= dmgAmt; if (foe.hp <= 0 && !foe.dead) this._resolveKill(p, foe); }
+      else { this._damageHero(foe, dmgAmt); if (foe.hp <= 0 && !foe.dead) this._resolveKill(p, foe); }
     }
     let tw = this.frontStructure(p.side, effLane, p.pos);
     // 可攻塔判定：v1/v2 = 塔邊有任何敵人就完全打不了塔（Legacy 簡化）。
@@ -2367,7 +2592,9 @@ export class LogicEngine {
         spd = ((st === "團戰!" || st === "追擊" || st === "接戰" || st === "拉扯") ? R.fightSpeed : R.moveSpeed) *
           (R.engagementFsm && p.retreating ? R.retreatSpeedMult : 1) *
           (R.neutralObjectives && this.t < (p.redSlowUntil ?? 0) ? R.redBuffSlowK : 1) *
-          (R.neutralObjectives && this.t < (p.blueBuffUntil ?? 0) ? R.blueBuffMoveK : 1) * dt;
+          (R.neutralObjectives && this.t < (p.blueBuffUntil ?? 0) ? R.blueBuffMoveK : 1) *
+          //  Milestone J：幽魂的移速加成。未啟用技能層 ⇒ hasteUntil 恆為 0 ⇒ 係數恆為 1。
+          (this.spellsOn && this.t < (p.hasteUntil ?? 0) ? R.ghostSpeedK : 1) * dt;
       //  ── H.2：真正的碰撞與導航 ────────────────────────────────────────────
       //  舊版是「直線位移 + 對 28 個手寫圓做推開」，那和畫面上的牆體無關 ⇒ 會穿牆。
       //  現在：目標點先推回通道中心 → 子步進前進（沿牆切線滑動）→ 需要時尋路。
@@ -2408,16 +2635,21 @@ export class LogicEngine {
     // S29（順序偏差修正 ①）：同時結算 —— 本 tick 所有傷害一起套用，再判定死亡。
     //   ⇒ 兩名英雄可在同一 tick 互相擊殺（真實換命），沒有任何一方享有「先手」。
     if (R.simultaneousCombat && pendingHits.length) {
-      for (const [, foe, amt] of pendingHits) foe.hp -= amt;
+      for (const [, foe, amt] of pendingHits) this._damageHero(foe, amt);
       for (const [atk, foe] of pendingHits) {
         if (foe.hp <= 0 && !foe.dead) this._resolveKill(atk, foe);
       }
     }
+    //  Milestone J：點燃的持續傷害在同時結算之後、後置階段之前扣。
+    //    放這裡才會與普攻共用同一個「本 tick 的死亡判定」語意。
+    this._igniteTickV2(dt);
 
     // S29B1（v3）：後置階段——追擊取得與閃現在**全員移動+傷害結算完**的凍結位置上
     //   判定並「先收集、後套用」⇒ 與迭代順序無關（否則先迭代方用敵方舊位置搶先
     //   取得追擊/閃現，lateAccel 提高致命度後實測放大成 ~17pp 的系統性順序優勢）。
     if (R.engagementFsm) this._postCombatV3(alive, hot);
+    //  Milestone J：其餘六個召喚師技能同樣在凍結位置上判定（先收集後套用）。
+    this._summonerSpellsV2(alive, dt);
 
     // S24：會戰/目標戰觀測（真實狀態計數；only when tacticOn）
     if (this.tacticOn) {
@@ -2482,12 +2714,17 @@ export class LogicEngine {
     const winProb = clamp(0.5 + gd / 14000 + (tw("red") - tw("blue")) * 0.05, 0.05, 0.95);
     const R = this.rules;
     // S29B1：F/D 召喚師技能欄（v3 才出現；HUD 的唯一資料來源）
-    const spOf = (p) => [
-      { id: "flash", ready: this.t >= p.sp.f.readyAt, cd: Math.max(0, Math.round((p.sp.f.readyAt - this.t) * 10) / 10), cdMax: R.flashCd, reason: p.sp.f.lastReason, uses: p.sp.f.uses },
-      p.sp.d.id === "smite"
-        ? { id: "smite", ready: this.t >= p.sp.d.readyAt, cd: Math.max(0, Math.round((p.sp.d.readyAt - this.t) * 10) / 10), cdMax: R.smiteCd, reason: p.sp.d.lastReason, uses: p.sp.d.uses }
-        : { id: null, status: "reserved" },
-    ];
+    //  Milestone J：兩格都改成「這一格實際裝了什麼」。舊碼寫死「第一格 flash、
+    //    第二格只認 smite」，其餘一律 reserved ⇒ 賽前配置的技能在 HUD 上永遠是空的。
+    //    未呼叫 configureSpells ⇒ 欄位內容與舊碼相同 ⇒ 輸出逐鍵不變。
+    const slotOf = (slot) => (slot?.id
+      ? {
+        id: slot.id, ready: this.t >= slot.readyAt,
+        cd: Math.max(0, Math.round((slot.readyAt - this.t) * 10) / 10),
+        cdMax: this._spellCd(slot.id), reason: slot.lastReason, uses: slot.uses,
+      }
+      : { id: null, status: "reserved" });
+    const spOf = (p) => [slotOf(p.sp.f), slotOf(p.sp.d)];
     const xpNextOf = (p) => {
       const next = xpToNext(p.mlv);
       return Number.isFinite(next) ? next : 0; // Lv18 已滿等，snapshot 不輸出 Infinity。
@@ -2510,8 +2747,18 @@ export class LogicEngine {
             id: "dragon", stacks: this._dragonStacksV3(p.side), remaining: null,
           }] : []),
         ],
-        statusEffects: this.t < (p.redSlowUntil ?? 0)
-          ? [{ id: "slow", remaining: Math.round((p.redSlowUntil - this.t) * 10) / 10 }] : [],
+        statusEffects: [
+          ...(this.t < (p.redSlowUntil ?? 0)
+            ? [{ id: "slow", remaining: Math.round((p.redSlowUntil - this.t) * 10) / 10 }] : []),
+          //  Milestone J：召喚師技能造成的狀態。未啟用 ⇒ 全為初值 ⇒ 陣列與舊碼相同。
+          ...(this.spellsOn && this.t < (p.igniteUntil ?? 0)
+            ? [{ id: "ignite", remaining: Math.round((p.igniteUntil - this.t) * 10) / 10 }] : []),
+          ...(this.spellsOn && this.t < (p.hasteUntil ?? 0)
+            ? [{ id: "haste", remaining: Math.round((p.hasteUntil - this.t) * 10) / 10 }] : []),
+          ...(this.spellsOn && p.shield > 0 && this.t < (p.shieldUntil ?? 0)
+            ? [{ id: "shield", remaining: Math.round((p.shieldUntil - this.t) * 10) / 10,
+              amount: Math.round(p.shield) }] : []),
+        ],
       } : {}) })),
       towers: Object.fromEntries(Object.entries(this.towers).map(([k, t]) => [k, { side: t.side, lane: t.lane, tier: t.tier, pos: t.pos, hp: clamp(t.hp / (t.maxHp ?? (t.lane === "nexus" ? NEXUS_HP : TOWER_HP)), 0, 1) }])),
       lanes: { top: this._snapLane("top"), mid: this._snapLane("mid"), bot: this._snapLane("bot") },

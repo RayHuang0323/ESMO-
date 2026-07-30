@@ -373,6 +373,33 @@ SIM_RULES.v3 = {
   flashEscapeHp: 0.16, flashEscapeFoeDist: 3.5,
   flashChaseHp: 0.12,
   smiteCd: 75, smiteDmg: 550, smiteRange: 6.5,
+  // ── Milestone J：完整召喚師技能組 ────────────────────────────────────────
+  //  ⚠ 這一整段只有在呼叫 `engine.configureSpells()` 之後才會被讀到
+  //    （`this.spellsOn`）。不呼叫 ⇒ 第二格仍是「打野懲戒、其餘 reserved」，
+  //    rng 序列與傷害逐位元不變 ⇒ regress / runtime29 的歷史基準完全不受影響。
+  //    這是本專案第四個 opt-in 行為層（前三個：configureMatch / configurePlayers /
+  //    configureHeroes），刻意沿用同一套「不呼叫就等於不存在」的邊界。
+  spellsV2: true,
+  //  每個技能自己的冷卻（秒）。flash/smite 沿用上面的既有值，寫在這裡是為了
+  //  讓 `_spellCd()` 只有一個查表出口，不要兩套來源。
+  spellCd: {
+    flash: 210, teleport: 240, smite: 75, heal: 180,
+    barrier: 150, ignite: 165, ghost: 180, cleanse: 195,
+  },
+  //  治療：自己回一段、順便拉最近的殘血隊友（真實 MOBA 的治療就是雙人路技能）
+  healPct: 0.16, healAllyPct: 0.10, healAllyRange: 9,
+  healHpTrigger: 0.42, healFoeDist: 11, healAllyHpTrigger: 0.40,
+  //  護盾：吸收「最大生命的固定比例」，時限內有效；先扣盾再扣血
+  barrierPct: 0.20, barrierT: 3.5, barrierHpTrigger: 0.34, barrierFoeDist: 8,
+  //  點燃：對單一敵人持續傷害 ＋ 治療減益（不是乘進普攻，是獨立的持續傷害源）
+  igniteDps: 26, igniteT: 5, igniteRange: 9, igniteHpTrigger: 0.5, igniteHealCut: 0.4,
+  //  幽魂：短時間移速加成（追擊或撤退時才有意義）
+  ghostT: 6, ghostSpeedK: 1.28, ghostHpTrigger: 0.55, ghostFoeDist: 14,
+  //  淨化：解除減速，並在短時間內免疫再次減速
+  cleanseT: 2.5,
+  //  傳送：只在「自己離戰場很遠、而我方某座塔正被多人圍攻」時支援
+  teleportMinDist: 30, teleportTowerFoeN: 2, teleportArrive: 6, teleportMinT: 90,
+  teleportSafeDist: 18,   // 身邊 18 單位內沒有敵人才算「脫離戰鬥、可以傳送」
   // ── killContext ─────────────────────────────────────────────────────────
   killContext: true,
 };
