@@ -126,10 +126,16 @@ export default function MobaReplayScreen({ replay, onClose }) {
   const quality = useMemo(() => presetFor(qualityId), [qualityId]);
   //  呈現模式與現場對戰共用同一個開關（URL / localStorage / build flag）
   const mapMode = useMemo(() => loadMapPresentation(), []);
-  const runtimeMap = isRuntimeV2(mapMode);
 
   // 唯讀資料源：replay frames → { prev, snapshot, subTRef }（不模擬、不碰 Store）
   const use3D = useMemo(() => canUse3DPresentation(replay), [replay]);
+  //  ── Milestone H：重播固定使用 runtime-v2 ────────────────────────────────
+  //   舊碼跟著 `loadMapPresentation()`（預設 legacy），但正式 GameView 自 H.1 起
+  //   固定 runtime-v2 ⇒ 同一場比賽的「現場」與「重播」是兩套不同外觀的戰場
+  //   （Milestone E 驗收時就記錄過這個落差）。現在只要這份 replay 支援 3D
+  //   （`canUse3DPresentation`：帶 mapMeta 且世界尺度相符），就一律用 runtime-v2；
+  //   舊 replay 仍走既有的 legacy 退路，不會白畫面。
+  const runtimeMap = use3D ? true : isRuntimeV2(mapMode);
   const source = useMemo(() => (use3D ? createReplaySource(replay) : null), [use3D, replay]);
 
   // 重播開場相機回導播（cameraStore 是全域單例；上一場對戰可能停在 free）

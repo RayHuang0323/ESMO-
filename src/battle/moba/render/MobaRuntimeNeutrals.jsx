@@ -199,8 +199,16 @@ export default function MobaRuntimeNeutrals({ objectives = [], frameRef = null }
         node.root.rotation.y = Math.sin(now * 0.55) * 0.16;
         node.root.rotation.x = -attack * 0.16;
         node.root.scale.setScalar(deathScale * (1 + attack * 0.1 + hit * 0.08));
+        //  ── Milestone H：巨型目標不做「全身替換成命中色」──────────────────
+        //   命中閃光原本把整個模型換成 `#fff1b8`（toneMapped:false）。小野怪只有
+        //   一瞬間所以沒問題，但打巴龍時多名英雄持續命中 ⇒ hitAt 一直被刷新 ⇒
+        //   `hit > 0` 幾乎全程成立 ⇒ 直徑約 25 單位的模型整場都是一片米白、
+        //   再被 Bloom 吹亮，就是 Ray 看到的「坑區一大片淺色平面」。
+        //   巨型目標改成**只閃重點色**（眼／胸口核心），本體保留原本的皮膚材質：
+        //   受擊回饋仍在（重點色閃爍＋既有的 attack 縮放脈動＋血條），但不再糊成一塊。
+        const bossFlash = BOSS_TYPES.has(objective.type);
         for (const part of node.parts) {
-          if (part?.body) part.body.material = hit > 0 ? mats.hit : mats.body;
+          if (part?.body) part.body.material = (hit > 0 && !bossFlash) ? mats.hit : mats.body;
           if (part?.accent) part.accent.material = hit > 0 ? mats.hit : mats.accent;
         }
         node.barGroup.visible = objective.alive;

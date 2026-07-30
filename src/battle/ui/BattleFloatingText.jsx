@@ -6,6 +6,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useBattleStore } from "../battleStore.js";
+import { useIsMobile } from "../../ui/useViewport.js";
 
 const STYLE = {
   FIRST_BLOOD:     { color: "#f87171", size: 46, glow: "#ef4444", life: 2600, sub: "首殺" },
@@ -44,11 +45,16 @@ function FloatingItem({ ev, onDone }) {
 export default function BattleFloatingText() {
   const floating = useBattleStore((s) => s.floating);
   const consume = useBattleStore((s) => s.consumeFloating);
+  const mobile = useIsMobile();
   // 同時最多顯示 3 則（避免洗版），其餘留在佇列排隊
   const visible = floating.slice(0, 3);
 
   return (
-    <div style={{ position: "absolute", top: "26%", left: "50%", transform: "translateX(-50%)", zIndex: 11, pointerEvents: "none", display: "flex", flexDirection: "column", alignItems: "center", width: "80%" }}>
+    //  Milestone H：手機把浮動大字往下移並收窄。
+    //    26% + 80% 寬在 390×844 會直接壓到右上的倍率／畫質按鈕欄
+    //    （SAFE_TOP=138 起算的直欄約到 y≈262 ≈ 31%）⇒ 連殺橫幅蓋住可點控制項。
+    //    桌機維持原位（空間夠，不動既有版面）。
+    <div style={{ position: "absolute", top: mobile ? "38%" : "26%", left: "50%", transform: "translateX(-50%)", zIndex: 11, pointerEvents: "none", display: "flex", flexDirection: "column", alignItems: "center", width: mobile ? "70%" : "80%" }}>
       {visible.map((ev) => (
         <FloatingItem key={ev.id} ev={ev} onDone={consume} />
       ))}
