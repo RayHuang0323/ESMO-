@@ -8,6 +8,9 @@
 // ============================================================================
 import React, { useState, useMemo } from "react";
 import { CHAMPIONS_100, heroesByArch, ARCHETYPES } from "../../data/heroDatabase.js";
+//  Milestone I：圖鑑的過濾改用「主定位 + 次要標籤」。
+//    根因不是過濾寫錯，是資料分布——法師只有 10 名（見 heroClassification.js 檔頭）。
+import { heroTags, heroHasTag, correctedArch } from "../../data/heroClassification.js";
 import HeroCodexDetail from "./HeroCodexDetail.jsx";
 import HeroPortrait from "../../ui/HeroPortrait.jsx";
 import { GC, FONT } from "../../ui/theme.js";
@@ -21,7 +24,9 @@ export default function CodexScreen({ onBack }) {
   const [detail, setDetail] = useState(null);
 
   const list = useMemo(() => {
-    let l = arch === "全部" ? CHAMPIONS_100 : heroesByArch(arch);
+    //  Milestone I：改以標籤過濾（主定位或次要標籤任一符合）⇒ 跨定位英雄
+    //    （例如熔岩系的戰士、符文系的輔助）也會出現在「法師」分頁。
+    let l = arch === "全部" ? CHAMPIONS_100 : CHAMPIONS_100.filter((c) => heroHasTag(c, arch));
     if (q.trim()) { const k = q.trim().toLowerCase(); l = l.filter((c) => c.zh.includes(q.trim()) || c.en.toLowerCase().includes(k) || c.title.includes(q.trim())); }
     return l;
   }, [arch, q]);
@@ -47,7 +52,14 @@ export default function CodexScreen({ onBack }) {
               <HeroPortrait heroId={c.id} size={44} radius="50%" border={`2px solid ${c.color}`} alt={c.zh}
                 fallback={<div style={{ width: 44, height: 44, borderRadius: "50%", background: `radial-gradient(circle,${c.color}44,${GC.bg})`, border: `2px solid ${c.color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🦸</div>} />
               <span style={{ color: "white", fontSize: 11, fontWeight: 700, textAlign: "center", lineHeight: 1.1 }}>{c.zh}</span>
-              <span style={{ color: ARCH_COLOR[c.arch] || GC.gray, fontSize: 9, fontWeight: 700 }}>{c.arch}</span>
+              {/* Milestone I：顯示修正後的主定位；有次要標籤時一併標出（淡色），
+                  玩家才知道他為什麼會出現在這個分頁 */}
+              <span style={{ color: ARCH_COLOR[correctedArch(c)] || GC.gray, fontSize: 9, fontWeight: 700 }}>
+                {correctedArch(c)}
+                {heroTags(c).slice(1).map((t) => (
+                  <span key={t} style={{ color: "rgba(255,255,255,0.42)", fontWeight: 600 }}>{` · ${t}`}</span>
+                ))}
+              </span>
             </button>
           ))}
         </div>
