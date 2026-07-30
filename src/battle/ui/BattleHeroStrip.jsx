@@ -9,14 +9,15 @@
 //      兩選手 gold 直接相減（衍生非統計）。
 //    · 待接（保留位置）：MP（引擎無 mana）、CS（引擎無補兵數）、召喚師技能
 //      （SpellSquare 顯示佔位，無 CD 資料）。
-//  互動：點英雄開 HeroDetailPanel（Legacy 無此互動，為既有產品升級保留）。
+//  互動：點英雄開 BattleHeroSheet（Milestone G：技能＋目前戰鬥資訊為主；
+//    生涯／熟練移到該面板底部的入口）。
 //  契約：唯一資料源 useGameStore.snapshot；不重新統計。
 // ============================================================================
 import React, { useState, useRef } from "react";
 import { useGameStore } from "../../useGameStore.js";
 import { ROSTER } from "../../data/roster.js";
 import { heroById } from "../../data/heroDatabase.js";
-import HeroDetailPanel from "./HeroDetailPanel.jsx";
+import BattleHeroSheet from "./BattleHeroSheet.jsx";
 import HeroPortrait from "../../ui/HeroPortrait.jsx";
 import { computeFocus } from "../battleFocus.js";
 import { useIsMobile, isMobileViewport } from "../../ui/useViewport.js";
@@ -42,15 +43,73 @@ function HeroAvatar({ hero, level, dead, respawn }) {
   );
 }
 
-// Legacy StatBars：垂直 HP(綠漸層) + MP(靛漸層，待接=空) 寬3px
-function StatBars({ hp }) {
-  const hpPct = Math.max(0, Math.min(100, hp * 100));
+/**
+ * Milestone G：可讀的**水平血條**。
+ *
+ * 舊版沿用 Legacy 的 `StatBars`：3px 寬的垂直細條 —— 資料是對的，但在 390px
+ * 手機上根本看不出來是血條（Ray 的回報就是「沒有英雄的血條」）。
+ * 這裡改成有寬度、有顏色分級、有數字的橫條，並在陣亡時直接顯示復活倒數。
+ * 資料仍只讀 `snapshot.players[].hp`（0–1），不新增任何統計。
+ */
+function HpBar({ hp, dead, respawn, wide }) {
+  const pct = Math.max(0, Math.min(100, (hp ?? 0) * 100));
+  const color = dead ? "#52525b"
+    : pct > 55 ? "linear-gradient(90deg,#4ade80,#16a34a)"
+      : pct > 25 ? "linear-gradient(90deg,#fbbf24,#d97706)"
+        : "linear-gradient(90deg,#f87171,#dc2626)";
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 1, width: 3 }}>
-      <div style={{ flex: 1, borderRadius: 99, background: "rgba(255,255,255,0.08)", overflow: "hidden", minHeight: 20, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-        <div style={{ height: `${hpPct}%`, width: "100%", borderRadius: 99, background: "linear-gradient(180deg,#4ade80,#16a34a)", boxShadow: "0 0 4px rgba(74,222,128,0.5)" }} />
+    <div style={{ display: "flex", alignItems: "center", gap: 3, width: "100%" }}>
+      <div title={dead ? `陣亡，復活倒數 ${Math.max(0, respawn ?? 0).toFixed(0)}s` : `HP ${pct.toFixed(0)}%`}
+        style={{
+          position: "relative", flex: 1, minWidth: wide ? 56 : 40, height: 5,
+          borderRadius: 99, background: "rgba(255,255,255,0.10)", overflow: "hidden",
+          border: "1px solid rgba(0,0,0,0.45)",
+        }}>
+        <div style={{ width: `${dead ? 0 : pct}%`, height: "100%", background: color, transition: "width .18s linear" }} />
       </div>
-      <div title="MP：引擎目前無 mana 資料，保留位置（待接）" style={{ flex: 1, borderRadius: 99, background: "rgba(129,140,248,0.12)", minHeight: 12 }} />
+      <span style={{ font: `800 8px ${MONO}`, color: dead ? "#f87171" : pct > 25 ? "#d4d4d8" : "#fca5a5", flexShrink: 0, minWidth: 20, textAlign: "right" }}>
+        {dead ? `${Math.max(0, respawn ?? 0).toFixed(0)}s` : `${pct.toFixed(0)}%`}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Milestone G：戰鬥狀態與重要秒數。
+ * 全部來自 snapshot 既有欄位：`dead`/`respawn`（陣亡與復活倒數）、
+ * `rc`（回城引導剩餘秒）、`state`（引擎的行為狀態）、`statusEffects`（減速）。
+ * 沒有資料就不顯示，不編造。
+ */
+const STATE_CHIP = {
+  "團戰!": { t: "團戰", c: "#fca5a5" }, "接戰": { t: "接戰", c: "#fca5a5" },
+  "撤退": { t: "撤退", c: "#fbbf24" }, "脫戰": { t: "脫戰", c: "#fbbf24" },
+  "追擊": { t: "追擊", c: "#f9a8d4" }, "拉扯": { t: "拉扯", c: "#a5b4fc" },
+  "回防": { t: "回防", c: "#93c5fd" }, "避塔": { t: "避塔", c: "#93c5fd" },
+  "圍攻": { t: "推塔", c: "#86efac" }, "攻門牙塔": { t: "推塔", c: "#86efac" },
+  "圍攻主堡": { t: "推主堡", c: "#86efac" }, "支援": { t: "支援", c: "#a5b4fc" },
+  "打野": { t: "打野", c: "#a3e635" }, "抓人": { t: "抓人", c: "#f9a8d4" },
+  "入侵": { t: "入侵", c: "#f9a8d4" },
+};
+function StatusChips({ p, align }) {
+  const chips = [];
+  if (p.dead) chips.push({ key: "dead", t: `☠ ${Math.max(0, p.respawn ?? 0).toFixed(0)}s`, c: "#f87171" });
+  else {
+    if (p.rc > 0) chips.push({ key: "rc", t: `回城 ${Math.ceil(p.rc)}s`, c: "#67e8f9" });
+    const s = STATE_CHIP[p.state];
+    if (s && !(p.rc > 0)) chips.push({ key: "state", t: s.t, c: s.c });
+    for (const e of p.statusEffects ?? []) {
+      if (e.id === "slow") chips.push({ key: "slow", t: `緩 ${Math.ceil(e.remaining)}s`, c: "#fda4af" });
+    }
+  }
+  if (!chips.length) return null;
+  return (
+    <div style={{ display: "flex", justifyContent: align, gap: 2, marginTop: 1, flexWrap: "wrap" }}>
+      {chips.map((c) => (
+        <span key={c.key} style={{
+          font: "800 6.5px ui-monospace,monospace", color: c.c, border: "1px solid currentColor",
+          borderRadius: 2, padding: "0 2px", background: "rgba(0,0,0,.45)", whiteSpace: "nowrap",
+        }}>{c.t}</span>
+      ))}
     </div>
   );
 }
@@ -89,9 +148,8 @@ function SideCell({ p, hero, roster, side, onOpen }) {
   const idColor = side === "blue" ? BLUE : RED;
   const rev = side === "red";
   return (
-    <div onClick={onOpen} style={{ flex: 1, display: "flex", flexDirection: rev ? "row-reverse" : "row", alignItems: "center", gap: 3, minWidth: 0, cursor: "pointer" }}>
+    <div onClick={onOpen} data-testid="hero-cell" data-side={side} style={{ flex: 1, display: "flex", flexDirection: rev ? "row-reverse" : "row", alignItems: "center", gap: 3, minWidth: 0, cursor: "pointer" }}>
       <div style={{ display: "flex", flexDirection: rev ? "row-reverse" : "row", alignItems: "center", gap: 1.5, flexShrink: 0 }}>
-        <StatBars hp={p.hp ?? 0} />
         {/* Milestone D：隊伍面板與世界／Replay 都讀本場 mlv；lv 是跨場熟練度。 */}
         <HeroAvatar hero={hero} level={p.mlv ?? p.lv ?? 1} dead={p.dead} respawn={p.respawn ?? 0} />
       </div>
@@ -100,9 +158,14 @@ function SideCell({ p, hero, roster, side, onOpen }) {
         <SpellSquare label="F" spell={p.sp?.[0] ?? null} />
         <SpellSquare label="D" spell={p.sp?.[1] ?? null} />
       </div>
-      <div style={{ minWidth: 0, textAlign: rev ? "right" : "left" }}>
-        <div style={{ color: idColor, fontSize: 8.5, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 52 }}>{roster.player || p.id}</div>
+      <div style={{ minWidth: 0, flex: 1, textAlign: rev ? "right" : "left" }}>
+        <div style={{ color: idColor, fontSize: 8.5, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{roster.player || p.id}</div>
+        {/* Milestone G：可讀的水平血條（舊版是 3px 直條，手機上看不出來） */}
+        <div style={{ display: "flex", flexDirection: rev ? "row-reverse" : "row" }}>
+          <HpBar hp={p.hp} dead={p.dead} respawn={p.respawn} />
+        </div>
         <div style={{ color: "#71717a", fontSize: 8, fontFamily: MONO }}>{p.k}/{p.d}/{p.a ?? 0}</div>
+        <StatusChips p={p} align={rev ? "flex-end" : "flex-start"} />
         {!!p.buffs?.length && (
           <div style={{ display: "flex", justifyContent: rev ? "flex-end" : "flex-start", gap: 2, marginTop: 1 }}>
             {p.buffs.map((buff) => {
@@ -233,7 +296,7 @@ export default function BattleHeroStrip({ roster = ROSTER, draft = null }) {
           {expand ? LANES.map((_, i) => laneRow(i)) : laneRow(focusIdx)}
         </div>
       </div>
-      {open && <HeroDetailPanel {...open} onClose={() => setOpen(null)} />}
+      {open && <BattleHeroSheet {...open} onClose={() => setOpen(null)} />}
     </>
   );
 }

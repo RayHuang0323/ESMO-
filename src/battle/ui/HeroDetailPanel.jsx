@@ -10,6 +10,7 @@ import { attrs, xpNeed, LEVEL_CAP, emptyHero } from "../../hero/heroProgress.js"
 import { heroById } from "../../data/heroDatabase.js";
 import { GC } from "../../ui/theme.js";
 import { useIsMobile } from "../../ui/useViewport.js";
+import { Z } from "./battleLayout.js";
 
 const MONO = "ui-monospace,Menlo,monospace";
 const pct = (v) => ((v - 1) * 100).toFixed(1) + "%";
@@ -52,7 +53,7 @@ export default function HeroDetailPanel({ heroId, heroName, playerName, side = "
   );
 
   return (
-    <div style={{ position: "absolute", inset: 0, zIndex: 16, display: "flex", alignItems: isMobile ? "stretch" : "center", justifyContent: "center", background: "rgba(4,8,16,0.7)", backdropFilter: "blur(4px)" }} onClick={onClose}>
+    <div style={{ position: "absolute", inset: 0, zIndex: Z.sheet, display: "flex", alignItems: isMobile ? "stretch" : "center", justifyContent: "center", background: "rgba(4,8,16,0.7)", backdropFilter: "blur(4px)" }} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{
         width: isMobile ? "100%" : 340, maxWidth: "100%",
         maxHeight: isMobile ? "100%" : "84%",

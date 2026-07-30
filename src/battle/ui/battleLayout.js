@@ -60,6 +60,11 @@ export const Z = Object.freeze({
   controls: 10,   // 控制鈕（回到導播 / 倍率 / 畫質 / ⚙）
   strip: 11,      // 十人面板 / bottom sheet
   overlay: 12,    // 記分板 / debug 快速完成
+  //  Milestone G：英雄面板（戰鬥資訊 / 生涯）必須蓋過 3D 場景裡的世界標籤。
+  //  drei `<Html>` 預設 zIndexRange 上限是 16，與舊面板同層 ⇒ 後繪的世界標籤
+  //  （BLUE BUFF、首次刷新…）會壓在面板文字上（Milestone E 驗收時就記錄過）。
+  //  18 讓面板穩定在世界標籤之上、仍低於終局畫面(20) 與重播(60)。
+  sheet: 18,      // 英雄戰鬥資訊 / 英雄詳情
   end: 20,        // 終局畫面
   replay: 60,     // 重播全螢幕
 });
