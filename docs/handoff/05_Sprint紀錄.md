@@ -2606,3 +2606,93 @@ Replay、直接安全網、公平性與 production build 完成；依 Ray 最新
 - Android 真機仍需確認塔彈／六職業華麗度與遮擋、姓名／血條、多名重疊、小兵繞塔、
   Buff 環、Boss 倒數、Replay、觸控、safe area、FPS／熱降頻及 WebGL driver。
   390×844 桌面 viewport 不代表真機通過。
+
+---
+
+## Milestone E：對戰身分連動與資料一致性（2026-07-30）
+
+狀態：**本機實作與 Node 驗證完成；未 push、未部署，等待 Ray 確認範圍後才進下一步。
+戰鬥節奏／團戰／目標決策依 Ray 指示另開 Milestone F，本階段完全沒有碰
+LogicEngine、公平性、地圖、碰撞與 SIM_RULES。**
+
+rollback tag：`milestone-e-baseline` → `91904c3`。完整報告：
+`review/moba-runtime/milestone-e/MILESTONE_E_REPORT.md`。
+
+### E1：對戰名單只剩一份
+
+- 根因：`AppShell` 從未把 `roster` 傳給 `GameView`，於是 3D 名牌／隊伍面板／
+  記分板／賽後戰報全部退回 `data/roster.js` 靜態名單，而 `useLocalServer`
+  注入引擎的卻是 `profileStore` 的真選手能力 ⇒ 上場的人與畫面上的人不是同一批。
+- 新增純函式 `buildBattleRoster()`（`mobaRosterAdapter.js`）：draft × lineup ×
+  profileStore 合成**唯一一份**對戰名單，由 `AppShell` 傳給 `LoadingScreen` 與
+  `GameView`。輸出形狀與既有 `draftRoster()` 相同 ⇒ 下游 UI 零改動即生效。
+- 英雄身分優先序：本場 Ban/Pick → 選手綁定英雄 → 席位預設英雄。
+  紅方無 profileStore 選手 ⇒ 仍走靜態名單（AI 對手，不虛構）。
+
+### E1b：先發指派（新秀終於能上場）
+
+- 根因（S28 技術債 4）：引擎席位寫死 b1–b5，招募新秀 id 是 `"r"+timestamp`
+  ⇒ 永遠對不上席位、永遠不可能出賽。
+- 新增契約 `platform/contracts/matchLineup.js`（`MatchLineup.v1`）分離
+  「引擎席位」與「選手身分」；持久化於 `profileStore.lineup`（schema v4）。
+  舊存檔缺欄 ⇒ `normalizeLineup` 回退 identity ⇒ 與 E 之前逐鍵相同。
+- 去重（一人不佔兩席）＋互換語意（指派已在別席的人 ⇒ 兩席對調）。
+  `buildPlayerStatSlots` 改吃 lineup：新秀坐 b3 時注入 key 仍是 `b3`
+  ⇒ **引擎零改動**。入口在 `LineupScreen` 的 🔁 換人面板，唯一寫入點是
+  `profileStore.setLineupSeat`。
+- 連帶修掉會發錯獎的缺陷：`BattleResult.players[].id` 是席位不是選手 id，
+  `mobaResultToTransaction` 現在以 lineup 換回真正上場的人（**BattleResult
+  契約沒有改**），否則 XP 會發給板凳上的原 b3。
+
+### E2：天賦與戰術效果可見化
+
+- `snapshot.playerStatsExec`（S28 起就存在）從來沒有任何 UI 顯示過。
+  戰中在 `HeroDetailPanel` 新增「本場行為（天賦生效證據）」；賽後在
+  `BattleEndScreen` 新增「能力／天賦執行」面板（逐人＋全隊合計）。
+- 兩處都只讀既有欄位，不重新統計、不呼叫引擎、不寫 Store；未注入能力 ⇒
+  整段不顯示，不編造 0。戰術仍讀 `BattleResult.tacticExecution`，不另算一份。
+
+### E3：Replay 與 Live 顯示同一組狀態
+
+- 根因：`state`／`respawn`／`decision`／`teamBuffs` 從未被擷取，
+  `replayPresentationSource` 只能填 null ⇒ 重播沒有狀態徽章、沒有復活倒數、
+  HUD 的 `龍×N`／`巴 Ns` 永遠空白；`replay.comms` 早就保存卻沒有畫面顯示。
+- `MobaReplay.v1` **只附加 optional 欄位**（未升版）：
+  `ps = [stateCode, respawn?, actionCode?]`（字典索引＋變長列，未知字串原樣保存）、
+  `tb =` 團隊 Dragon 層數／Baron 剩餘秒（只在真的有增益時才寫入）。
+  舊 Replay 缺欄 ⇒ 維持既有 null 行為並可完整播放（verifier 有專門的舊檔測試）。
+- `MobaReplayScreen` 顯示團隊 Buff 與已保存的播報（不重新生成對話）；
+  順手修掉「未擷取小兵」的誤述（H.3 起已保存 `mn`，只有舊 Replay 才沒有）。
+
+### 驗證與證據
+
+- 新增 `check_moba_milestone_e`：**49/49 PASS**（契約向後相容／席位注入／
+  對戰名單／XP 歸屬／Replay 附加欄與舊檔相容／接線與紅線／手機靜態安全網）。
+- `check_moba_milestone_d_fix3`／`d_fix2`／`d`／`c_fix` 全部 PASS；
+  `check_progress25` 34/34；`check_moba_stats28` 27/29、`check_talent27` 43/44、
+  `check_moba_experience26` 34/35 —— 這三支的紅燈**全部是同一條既有的 replay 容量
+  紅燈往上串**（詳見下節與 `08_目前待辦與風險.md`），三支自身的斷言都是全過。
+- `check_moba_runtime29` **未跑完**：它巢狀 `stats28`（單跑約 87 分鐘），而鏈上的
+  容量紅燈在 baseline 就存在 ⇒ 跑完也不可能 44/44。改為直接單跑它巢狀的每一支
+  並逐項記錄。這是誠實揭露，不是宣稱通過。
+- **`regress` 15/15、平均 24.5 分、31.9 kills；`regress2` 20/20、節奏 8/8、
+  平均 24.8 分、5 分均 Lv3.45 —— 與 D-fix3 逐值相同**，即模擬確實沒有被動到。
+  這是本階段最重要的回歸訊號：一旦位移就代表引擎被改了。
+- production build 2596 modules、exit 0，只有既有 >500 kB chunk warning。
+
+### ⚠ 既有紅燈（非本階段造成）
+
+`check_moba_experience26` §17「replay size 有上限」在 `91904c3` 就已經是紅的。
+以 `git worktree` 在未改動 baseline 實跑同一支 verifier：**baseline 2063 KB → 紅**、
+Milestone E 2162 KB → 紅，門檻 1953 KB。主因是 H.3 的小兵欄位 `mn` 單場佔 844 KB；
+Milestone E 自身的 `ps`+`tb` 已從 163 KB 壓到 85 KB（在該 fixture 上 +99 KB）。
+這條紅燈會沿 `experience26 → talent27 §31 → stats28 §20/§21 → runtime29 §30`
+往上串，是**同一個根因**不是四個問題。
+**沒有調鬆 verifier 門檻**（那等於為了綠燈拆警報）；處置方式待 Ray 決定，
+選項見報告 §5 與 `08_目前待辦與風險.md`。
+
+### 未經瀏覽器實測（不宣稱通過）
+
+換人面板的實際觸控與版面、換人後四處同時更新、新秀英雄顯示與 XP 歸屬、
+賽後天賦面板版面、Replay 狀態徽章／倒數／團隊 Buff／播報，以及 Android
+FPS／熱降頻／safe area／WebGL driver —— 全部需要 Ray 人工確認。
