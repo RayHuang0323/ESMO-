@@ -4,6 +4,7 @@
 //  資料：useHeroProgressStore（唯一模型）+ heroProgress 公式。不碰 Router：以覆蓋面板呈現。
 // ============================================================================
 import React from "react";
+import { useGameStore } from "../../useGameStore.js";
 import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
 import { attrs, xpNeed, LEVEL_CAP, emptyHero } from "../../hero/heroProgress.js";
 import { heroById } from "../../data/heroDatabase.js";
@@ -13,8 +14,16 @@ import { useIsMobile } from "../../ui/useViewport.js";
 const MONO = "ui-monospace,Menlo,monospace";
 const pct = (v) => ((v - 1) * 100).toFixed(1) + "%";
 
-export default function HeroDetailPanel({ heroId, heroName, playerName, side = "blue", onClose }) {
+export default function HeroDetailPanel({ heroId, heroName, playerName, side = "blue", playerId = null, onClose }) {
   const storeHero = useHeroProgressStore((s) => s.progress[heroId]);
+  // ── Milestone E【E2】：本場行為（＝天賦真的改變了什麼）──────────────────
+  //  資料來源是引擎既有的 `snapshot.playerStatsExec`（S28 就有，只是從來沒有任何
+  //  UI 顯示過）。**只讀不算**：這裡不重新統計、不呼叫引擎、不寫任何 Store。
+  //  沒有注入能力（未選先發 / 紅方 AI）⇒ 欄位不存在 ⇒ 整段不顯示，不編造 0。
+  const exec = useGameStore((s) => (playerId ? s.snapshot?.playerStatsExec?.[playerId] ?? null : null));
+  const statsMeta = useGameStore((s) => s.snapshot?.playerStatsMeta ?? null);
+  const injected = !!(playerId && statsMeta
+    && [...(statsMeta.blueIds ?? []), ...(statsMeta.redIds ?? [])].includes(playerId));
   // S29B2：手機 → 全螢幕 sheet；桌機 → 置中卡片但限高可捲動。
   //   兩者關閉鈕都固定在**頂部**（原本在長內容最下方，手機要捲到底才關得掉）。
   const isMobile = useIsMobile();
@@ -80,6 +89,21 @@ export default function HeroDetailPanel({ heroId, heroName, playerName, side = "
           <div style={{ width: need ? `${Math.min(100, (hero.xp / need) * 100)}%` : "100%", height: "100%", background: "linear-gradient(90deg,#fbbf24,#fde047)" }} />
         </div>
         <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.45)", fontFamily: MONO, textAlign: "right" }}>{need ? `${hero.xp} / ${need} XP` : "MAX LEVEL"}</div>
+
+        {/* Milestone E【E2】：天賦 → 行為的證據列。只在引擎真的注入了能力時出現。 */}
+        {exec && (
+          <>
+            <div style={{ fontSize: 9.5, letterSpacing: "0.2em", color: "rgba(255,255,255,0.5)", fontWeight: 900, margin: "10px 0 3px" }}>本場行為（天賦生效證據）</div>
+            <RowS l="🛡 撤退次數" v={exec.retreats ?? 0} c="#93c5fd" />
+            <RowS l="⚔️ 參與團戰" v={exec.fights ?? 0} c="#fda4af" />
+            <RowS l="🐉 目標周邊駐留" v={`${exec.objTicks ?? 0} tick`} c="#c4b5fd" />
+            <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.35)", marginTop: 2, lineHeight: 1.5 }}>
+              {injected
+                ? `能力／天賦已注入本場（${statsMeta?.version ?? "MobaPlayerStats"}）：影響撤退門檻、參團與目標集結傾向，不改傷害或勝率。`
+                : "本席位未注入選手能力（中性行為基準）。"}
+            </div>
+          </>
+        )}
 
         <div style={{ fontSize: 9.5, letterSpacing: "0.2em", color: "rgba(255,255,255,0.5)", fontWeight: 900, margin: "10px 0 3px" }}>屬性成長（vs Lv1）</div>
         <RowS l="❤️ HP" v={"+" + pct(a.hp)} c="#86efac" />

@@ -21,12 +21,18 @@
 //    · H.3 起新 frame 可選擇帶緊湊 `mn` 小兵欄位；舊 Replay 沒有 `mn`
 //      ⇒ 仍回退成空兵線，不從目前引擎重建。
 //    · H.3 起 `fx` 以取樣窗事件保存；舊 Replay 沒有就顯示空特效。
-//    · `state`（撤退/回城/團戰徽章）、`respawn` 秒數、`contested`、feed /
-//      recallEvents 仍未擷取 ⇒ 一律給 null / 空陣列，讓 view 顯示「無」而不是猜。
+//    · Milestone E 起新 frame 會帶 `ps`（state / respawn / decision）與 `tb`
+//      （團隊層 Dragon 層數與 Baron 剩餘秒）⇒ 重播的狀態徽章、復活倒數與
+//      HUD 的 `龍×N`／`巴 Ns` 與現場一致。**舊 Replay 沒有這兩欄 ⇒ 維持原本的
+//      null / 不輸出**，不從目前引擎回推、不編造。
+//    · `contested`、feed / recallEvents 仍未擷取 ⇒ 一律給 null / 空陣列，
+//      讓 view 顯示「無」而不是猜。播報（comms）在 finalize 時整份保存，
+//      由 MobaReplayScreen 直接讀 `replay.comms`，不進 frame。
 //    · 舊 replay（無 `mapMeta` / 無 `objectivesMeta`）由呼叫端判斷是否可用 3D，
 //      不可用時退回 2D SVG（見 `canUse3DPresentation`）。
 // ============================================================================
 import { WORLD_BOUNDS, PITS } from "../../../gameData.js";
+import { decodePsRow } from "../../../platform/contracts/mobaReplay.js";
 
 const clamp01 = (v) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0);
 
@@ -163,6 +169,8 @@ export function createReplaySource(replay) {
       players: playersMeta.map((pm, i) => {
         const row = f.p?.[i];
         const buffRow = f.bf?.[i] ?? [];
+        // Milestone E：狀態／復活倒數／決策（新 frame 的 `ps`；舊 Replay 無此欄 ⇒ null）
+        const ps = f.ps?.[i] ? decodePsRow(f.ps[i]) : null;
         const timed = (id, value) => Number.isFinite(value) && value > 0 ? { id, remaining: value } : null;
         const dragon = Number.isFinite(buffRow[4]) && buffRow[4] > 0
           ? { id: "dragon", stacks: buffRow[4], remaining: null } : null;
@@ -176,8 +184,12 @@ export function createReplaySource(replay) {
           // 新 frame.p[8] 是本場等級；同時填 mlv/lv 讓正式 adapter、舊 consumer
           // 都讀同一份已保存 player state，不在 Replay 另算。
           mlv: row?.[8] ?? 1, lv: row?.[8] ?? 1,
-          respawn: null,          // 未擷取：view 顯示「陣亡」而不是假的 0s 倒數
-          state: null,            // 未擷取：不顯示撤退/回城/團戰徽章
+          // Milestone E：已擷取 ⇒ 與現場同一組值；舊 Replay 缺 `ps` ⇒ 仍是 null
+          //   （view 顯示「陣亡」而不是假的 0s 倒數、不顯示徽章），行為不變。
+          respawn: ps ? ps.respawn : null,
+          state: ps?.state ?? null,
+          // targetId / score / reasons 不進 Replay（除錯欄位，見 mobaReplay.js 檔頭）
+          ...(ps?.action ? { decision: { action: ps.action, targetId: null, score: null, reasons: [] } } : {}),
           sp: null,
           buffs: [
             timed("red", buffRow[0]), timed("blue", buffRow[1]),
@@ -194,6 +206,19 @@ export function createReplaySource(replay) {
       dragon: legacyMirror("dragon", f.dr),
       baron: legacyMirror("baron", f.br),
       objectives,
+      // Milestone E：團隊層目標增益（HUD 的 龍×N / 巴 Ns）。舊 Replay 無 `tb`
+      //   ⇒ 不輸出此欄（consumer 已能容忍 undefined），不編造 0 層。
+      ...(Array.isArray(f.tb) ? {
+        teamBuffs: Object.fromEntries(["blue", "red"].map((side, si) => {
+          const r = f.tb[si] ?? [];
+          return [side, {
+            dragonStacks: Math.max(0, Math.round(r[0] ?? 0)),
+            dragonPowerK: Number.isFinite(r[1]) ? r[1] : 1,
+            dragonGuardK: Number.isFinite(r[2]) ? r[2] : 1,
+            baronRemaining: Math.max(0, r[3] ?? 0),
+          }];
+        })),
+      } : {}),
       feed: [], fx: effectsFromFrame(f), recallEvents: [],
       bK: f.s?.[0] ?? 0, rK: f.s?.[1] ?? 0,
       bGold: f.g?.[0] ?? 0, rGold: f.g?.[1] ?? 0,

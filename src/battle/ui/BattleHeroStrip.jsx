@@ -173,7 +173,9 @@ export default function BattleHeroStrip({ roster = ROSTER, draft = null }) {
   const mk = (p, side, i) => {
     const r = roster[p.id] || {};
     const h = heroOf(side, i, p.id);
-    return { heroId: h?.id ?? r.heroId, heroName: h?.zh ?? p.id, playerName: r.player ?? p.id.toUpperCase(), side: p.side };
+    // Milestone E【E2】：帶上引擎席位 id，讓 HeroDetailPanel 能顯示本場的
+    //   playerStatsExec（天賦真的改變了什麼行為）。純呈現參數，不影響統計。
+    return { heroId: h?.id ?? r.heroId, heroName: h?.zh ?? p.id, playerName: r.player ?? p.id.toUpperCase(), side: p.side, playerId: p.id };
   };
 
   const laneRow = (i) => {

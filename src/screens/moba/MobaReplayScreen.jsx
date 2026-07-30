@@ -160,6 +160,15 @@ export default function MobaReplayScreen({ replay, onClose }) {
   const events = replay?.events ?? [];
   const { a, b, f } = useMemo(() => frameAt(frames, t), [frames, t]);
   const recentEvents = useMemo(() => events.filter((e) => e.t <= t).slice(-3), [events, t]);
+  // Milestone E【E3】：播報。finalizeReplay 早就把**本場實際產生的**訊息整份存進
+  //   `replay.comms`（S29 §八：重播不重新生成對話），但重播畫面從來沒有顯示過它。
+  //   這裡只是把已保存的訊息按時間放出來，不重新生成、不重跑規則。
+  const comms = replay?.comms ?? [];
+  const recentComms = useMemo(() => comms.filter((c) => c.t <= t).slice(-2), [comms, t]);
+  // 團隊目標增益：新 frame 的 `tb`（舊 Replay 無此欄 ⇒ 不顯示，不編造 0 層）
+  const tb = a?.tb ?? null;
+  // 小兵：H.3 起 frame 會帶 `mn`；舊 Replay 才是真的沒有兵線
+  const hasMinions = Array.isArray(frames[0]?.mn) && frames[0].mn.length === 6;
 
   // 標頭數值（沿用 frame 真值；無 frame ⇒ 中性預設，不白畫面）
   const sA = a?.s ?? [0, 0], gA = a?.g ?? [0, 0], gB = b?.g ?? gA;
@@ -196,6 +205,20 @@ export default function MobaReplayScreen({ replay, onClose }) {
           <div style={{ height: "100%", width: `${lerp(wpA, wpB, f) * 100}%`, background: SIDE_C.blue }} />
         </div>
         {replay.config?.tacticName && <span style={{ fontSize: 9, color: GC.purp }}>戰術 {replay.config.tacticName}</span>}
+        {/* Milestone E：團隊目標增益，與現場 BattleHUD 的 `龍×N` / `巴 Ns` 同一組數字 */}
+        {tb && ["blue", "red"].map((side, si) => {
+          const row = tb[si] ?? [];
+          const stacks = Math.max(0, Math.round(row[0] ?? 0));
+          const baron = Math.max(0, row[3] ?? 0);
+          if (!stacks && !baron) return null;
+          return (
+            <span key={side} data-testid={`replay-team-buffs-${side}`}
+              style={{ display: "flex", gap: 4, fontFamily: MONO, fontSize: 9, fontWeight: 800, color: SIDE_C[side] }}>
+              {!!stacks && <span style={{ color: "#caa2ff" }}>龍×{stacks}</span>}
+              {!!baron && <span style={{ color: "#f4c16f" }}>巴 {Math.ceil(baron)}s</span>}
+            </span>
+          );
+        })}
       </div>
 
       {/* 戰場 */}
@@ -233,6 +256,15 @@ export default function MobaReplayScreen({ replay, onClose }) {
             <span style={{ color: GC.gold }}>[{fmtT(e.t)}]</span> <span style={{ color: SIDE_C[e.side] ?? GC.gray }}>{e.text}</span>
           </div>
         ))}
+        {/* Milestone E：本場播報（已保存於 replay.comms，重播不重新生成對話） */}
+        {recentComms.map((c, i) => (
+          <div key={c.id ?? `c-${c.t}-${i}`} data-testid="replay-comms"
+            style={{ fontSize: 9.5, color: "rgba(255,255,255,0.72)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span style={{ color: GC.gray, fontFamily: MONO }}>[{fmtT(c.t)}]</span>{" "}
+            <span style={{ color: SIDE_C[c.side] ?? GC.gray, fontWeight: 800 }}>{c.speaker ?? c.speakerId}</span>
+            <span style={{ color: GC.gray }}>：</span>{c.text}
+          </div>
+        ))}
       </div>
 
       {/* Timeline */}
@@ -267,7 +299,9 @@ export default function MobaReplayScreen({ replay, onClose }) {
         <span style={{ width: 8 }} />
         <button onClick={onClose} style={btn(false)}>返回 Result</button>
       </div>
-      {use3D && <div style={{ fontSize: 8.5, color: GC.gray, textAlign: "center" }}>重播未擷取小兵（frame 容量限制）⇒ 戰場只顯示英雄 / 塔 / 中立目標</div>}
+      {/* Milestone E：這行原本寫死「未擷取小兵」，但 H.3 起 frame 已保存 `mn`
+          ⇒ 只有**舊 Replay** 才真的沒有兵線。誠實顯示實際狀態，不誤導驗收。 */}
+      {use3D && !hasMinions && <div style={{ fontSize: 8.5, color: GC.gray, textAlign: "center" }}>此場重播未擷取小兵（舊版 Replay）⇒ 戰場只顯示英雄 / 塔 / 中立目標</div>}
       {replay.truncated && <div style={{ fontSize: 9, color: GC.gold }}>⚠ 本場超過重播長度上限，尾段未收錄</div>}
     </div>
   );

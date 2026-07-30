@@ -13,6 +13,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useBattleStore } from "../battleStore.js";
+import { useGameStore } from "../../useGameStore.js";
 import { fmtT, ROLE_NAME } from "../../gameData.js";
 import BattleScoreboard from "./BattleScoreboard.jsx";
 import HeroDetailPanel from "./HeroDetailPanel.jsx";
@@ -93,6 +94,12 @@ function bestStats(players) {
 export default function BattleEndScreen({ roster = null, homeSide = "blue", onContinue = null, blueName = "德國海豹", redName = "赤焰軍團" }) {
   const result = useBattleStore((s) => s.result);        // Sprint09：唯一結算來源
   const series = useBattleStore((s) => s.series);         // 快照取樣曲線（衍生呈現資料）
+  // Milestone E【E2】：能力／天賦的行為執行統計。BattleResult.v2 契約已凍結、
+  //   不加欄位，所以這裡直接讀**終局 snapshot 既有的** playerStatsExec / Meta。
+  //   只讀不算：不重新統計 KDA、不重新結算、不寫任何 Store（結算仍是 useBattleFeed
+  //   的唯一計算點）。未注入能力 ⇒ 欄位不存在 ⇒ 整個面板不出現，不編造。
+  const statsExec = useGameStore((s) => s.snapshot?.playerStatsExec ?? null);
+  const statsMeta = useGameStore((s) => s.snapshot?.playerStatsMeta ?? null);
   const [phase, setPhase] = useState(0);
   const [heroPage, setHeroPage] = useState(null);   // {heroId,heroName,playerName,side}
   const lastDetail = useHeroProgressStore((s) => s.lastDetail);
@@ -182,7 +189,7 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
                   const dTough = (d.attrsAfter.toughMult / d.attrsBefore.toughMult - 1) * 100;
                   const dPower = (d.attrsAfter.powerMult / d.attrsBefore.powerMult - 1) * 100;
                   return (
-                    <div key={d.playerId} onClick={() => setHeroPage({ heroId: d.heroId, heroName: heroById(d.heroId)?.zh ?? r?.hero ?? d.heroId, playerName: r?.player ?? d.playerId.toUpperCase(), side: homeSide })}
+                    <div key={d.playerId} onClick={() => setHeroPage({ heroId: d.heroId, heroName: heroById(d.heroId)?.zh ?? r?.hero ?? d.heroId, playerName: r?.player ?? d.playerId.toUpperCase(), side: homeSide, playerId: d.playerId })}
                       style={{ cursor: "pointer", pointerEvents: "auto", padding: "4px 6px", borderRadius: 7, marginBottom: 2, background: up ? "rgba(250,204,21,0.1)" : "rgba(255,255,255,0.03)", border: up ? "1px solid rgba(250,204,21,0.35)" : "1px solid transparent" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11.5, gap: 6 }}>
                         <span style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0, fontWeight: 800, color: "#e5e7eb" }}>
@@ -233,6 +240,38 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
                   </div>
                   <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
                     Gank 上/中/下 {ex.topGanks ?? 0}/{ex.midGanks ?? 0}/{ex.botGanks ?? 0} · 入侵 {ex.invadeAttempts ?? 0} · 會戰 {ex.groupedFights ?? 0} · 對手戰術：標準（預設）
+                  </div>
+                </Panel>
+              );
+            })()}
+            {/* Milestone E【E2】：能力／天賦執行證據（引擎 playerStatsExec 真實計數）。
+                與戰術面板同一個立場：顯示「行為被改變了多少」，不是「贏了多少」——
+                能力只影響撤退門檻／參團／目標集結，不產生傷害或勝率倍率（S28 §2 紅線）。 */}
+            {statsExec && statsMeta && (() => {
+              const seats = (homeSide === "blue" ? statsMeta.blueIds : statsMeta.redIds) ?? [];
+              const rows = seats
+                .map((id) => ({ id, ex: statsExec[id], name: roster?.[id]?.player ?? id.toUpperCase() }))
+                .filter((r) => r.ex);
+              if (!rows.length) return null;
+              const sum = (k) => rows.reduce((s2, r) => s2 + (r.ex[k] ?? 0), 0);
+              return (
+                <Panel title={`能力／天賦執行 · ${rows.length} 人注入`}>
+                  {rows.map((r) => (
+                    <div key={r.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "2px 0" }}>
+                      <span style={{ color: "rgba(255,255,255,0.7)", fontFamily: MONO }}>{r.name}</span>
+                      <span style={{ fontFamily: MONO, fontWeight: 800, color: "rgba(255,255,255,0.8)" }}>
+                        <span style={{ color: "#93c5fd" }}>撤{r.ex.retreats ?? 0}</span>
+                        {" · "}<span style={{ color: "#fda4af" }}>團{r.ex.fights ?? 0}</span>
+                        {" · "}<span style={{ color: "#c4b5fd" }}>目標{r.ex.objTicks ?? 0}</span>
+                      </span>
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginTop: 4, paddingTop: 4, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+                    <span style={{ color: "rgba(255,255,255,0.5)" }}>全隊合計</span>
+                    <span style={{ fontFamily: MONO, fontWeight: 900, color: "rgba(255,255,255,0.75)" }}>撤{sum("retreats")} · 團{sum("fights")} · 目標{sum("objTicks")}</span>
+                  </div>
+                  <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
+                    {statsMeta.version ?? "MobaPlayerStats"} · 中性錨 {statsMeta.neutralStat ?? 70} 分（全中性 ⇒ 零偏移）· 不改傷害／勝率
                   </div>
                 </Panel>
               );

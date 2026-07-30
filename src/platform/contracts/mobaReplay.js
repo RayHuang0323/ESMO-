@@ -11,7 +11,13 @@
 //      dr: 0|1, br: 0|1,           // Dragon / Baron 存活
 //      s:  [bK, rK],               // 比分
 //      g:  [bGold, rGold],         // 經濟
-//      wp: winProb }               // 勝率條
+//      wp: winProb,                // 勝率條
+//      ps: [[stateCode,respawn?,actionCode?] ×10],  // E：狀態/復活倒數/決策（變長列）
+//      tb: [[dragonStacks,powerK,guardK,baronRemaining] ×2] }      // E：團隊目標增益
+//
+//  ⚠ 版本仍是 MobaReplay.v1：Milestone E 只**附加 optional 欄位**，沒有改變或
+//    移除任何既有欄位語意 ⇒ 舊 Replay（缺 ps/tb）在播放端一律退回原本的
+//    null / 空行為，仍可完整播放。
 //
 //  容量（H.3 seed42 實測）：小兵 mn + 技能 fx 後平均 frame ≈ 2.1KB；
 //    26.3 分鐘 / 791 frames ≈ 1.69MB，40 分鐘上限約 2.6MB。
@@ -42,6 +48,37 @@ const compactMinionId = (id) => {
 };
 
 const FX_KIND = Object.freeze({ line: 0, ult: 1, tower: 2, orb: 3 });
+
+// ── Milestone E：frame.ps 的字典（狀態／決策）─────────────────────────────
+//  只是**壓縮**，不是新語意：索引 → 引擎既有字串。清單以外的字串（引擎日後新增）
+//  直接原字串存進 frame ⇒ 解碼端 `typeof === "string"` 就原樣還原，永遠不會壞。
+export const PS_STATE_CODES = Object.freeze([
+  "對線", "團戰!", "撤退", "回城", "回城中", "回防", "圍攻",
+  "打野", "拉扯", "支援", "脫戰", "追擊", "避塔", "陣亡",
+]);
+export const PS_ACTION_CODES = Object.freeze([
+  "LANE", "ENGAGE", "KITE", "PURSUE", "RETREAT", "SUPPORT", "FALLBACK",
+]);
+const encodeFrom = (table) => (value) => {
+  if (typeof value !== "string" || !value) return null;
+  const i = table.indexOf(value);
+  return i >= 0 ? i : value;             // 未知字串 ⇒ 原樣保存（向前相容）
+};
+const decodeFrom = (table) => (value) => {
+  if (typeof value === "number") return table[value] ?? null;
+  return typeof value === "string" && value ? value : null;
+};
+const encodePsState = encodeFrom(PS_STATE_CODES);
+const encodePsAction = encodeFrom(PS_ACTION_CODES);
+/** frame.ps 單列 → { state, respawn, action }（舊 Replay 無此欄時由呼叫端給 null）。 */
+export function decodePsRow(row) {
+  if (!Array.isArray(row)) return { state: null, respawn: null, action: null };
+  return {
+    state: decodeFrom(PS_STATE_CODES)(row[0]),
+    respawn: Number.isFinite(row[1]) ? row[1] : 0,
+    action: decodeFrom(PS_ACTION_CODES)(row[2]),
+  };
+}
 
 /** 終局 snapshot → 緊湊 frame（唯一轉換點；欄位齊全、全部可序列化）。 */
 export function snapshotToFrame(snap) {
@@ -114,6 +151,44 @@ export function snapshotToFrame(snap) {
         typeof f.sourceId === "string" ? f.sourceId : "",
         typeof f.targetId === "string" ? f.targetId : "",
       ]),
+    } : {}),
+    // ── Milestone E【E3】：讓 Replay 與 Live 顯示同一組狀態 ────────────────
+    //  在此之前，`state`（撤退/回城/團戰）、`respawn` 倒數與 D-fix2 的 `decision`
+    //  完全沒有被擷取，replayPresentationSource 只能一律填 null ⇒ 同一場比賽在
+    //  現場看得到狀態徽章與復活倒數，重播卻永遠是空的。
+    //
+    //  ⚠ 容量紀律：本場實測 frame 已達 ~2.0MB（H.3 的小兵 `mn` 佔 844KB），
+    //    所以這兩欄一律走**最省的形狀**，不讓 Milestone E 成為容量惡化的原因：
+    //      · 狀態／決策存**字典索引**（未知字串才存原字串 ⇒ 引擎日後新增狀態不會壞）
+    //      · 變長列：沒有復活倒數與決策時只存 [stateCode]
+    //      · decision 只存 action（score / reasons / targetId 是除錯欄，不進 Replay）
+    //      · tb 只在「真的有龍層數或 Baron」時才寫入（多數時間整場沒有這一欄）
+    //  · **全 optional**：舊 MobaReplay.v1 沒有此欄 ⇒ 播放端維持既有 null 行為。
+    ...(snap.players?.some((p) => p.state || p.respawn || p.decision) ? {
+      ps: snap.players.map((p) => {
+        const row = [encodePsState(p.state)];
+        const respawn = round2(p.respawn ?? 0);
+        const action = encodePsAction(p.decision?.action);
+        if (action !== null) { row.push(respawn, action); }
+        else if (respawn) { row.push(respawn); }
+        return row;
+      }),
+    } : {}),
+    // 團隊層目標增益（HUD 的 `龍×N` / `巴 Ns` 唯一資料來源）。逐人 bf 只有個人
+    // Buff，團隊層在此之前沒有被保存 ⇒ 重播的 HUD 永遠空白。
+    // tb = [blue, red]，每列 [dragonStacks, dragonPowerK, dragonGuardK, baronRemaining]。
+    ...(snap.teamBuffs && ["blue", "red"].some((side) => {
+      const s = snap.teamBuffs[side] ?? {};
+      return (s.dragonStacks ?? 0) > 0 || (s.baronRemaining ?? 0) > 0;
+    }) ? {
+      tb: ["blue", "red"].map((side) => {
+        const s = snap.teamBuffs[side] ?? {};
+        return [
+          Math.max(0, Math.round(s.dragonStacks ?? 0)),
+          round3(s.dragonPowerK ?? 1), round3(s.dragonGuardK ?? 1),
+          round2(s.baronRemaining ?? 0),
+        ];
+      }),
     } : {}),
   };
 }
