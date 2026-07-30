@@ -52,6 +52,11 @@ export function grantXp(hero, gain) {
 export function applyMatchResult(progress, battleResult, heroAssign) {
   const next = JSON.parse(JSON.stringify(progress));
   const detail = [];
+  //  Milestone I-close：出賽序號。賽前配置要能誠實標示「最近使用」，就得知道
+  //    哪些英雄是**最後一場**出賽的。刻意用單調遞增的序號而非 Date.now()——
+  //    applyMatchResult 是純函數，塞時鐘進去會讓它不再可重現（驗證腳本會抖）。
+  //    舊存檔沒有這個欄位 ⇒ 視為 0 ⇒ 只是還沒有紀錄，不是錯誤。
+  const seq = Object.values(next).reduce((m, h) => Math.max(m, h?.lastMatchSeq ?? 0), 0) + 1;
   for (const pr of battleResult.players) {
     const heroId = heroAssign[pr.id];
     if (!heroId) continue;
@@ -64,6 +69,7 @@ export function applyMatchResult(progress, battleResult, heroAssign) {
     const m = h.mastery;
     m.games += 1; m.wins += pr.won ? 1 : 0; m.mvps += pr.mvp ? 1 : 0;
     m.k += pr.k; m.d += pr.d; m.a += pr.a; m.dmg += pr.dmg; m.heal += pr.heal; m.twrDmg += pr.twrDmg;
+    h.lastMatchSeq = seq;
     detail.push({ playerId: pr.id, heroId, xpGain: gain, levelsGained: g.levelsGained,
       levelBefore: before.level, levelAfter: h.level,
       attrsBefore: before, attrsAfter: attrs(h.level) });

@@ -17,12 +17,13 @@
 //  Sprint26【B】：固定 width:380 → 響應式（≤380px 手機不再水平溢出）。
 //  Frame 仍 export（CodexScreen / TacticScreen 依賴）。
 // ============================================================================
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { TEAMS, ROSTER } from "../../data/roster.js";
 import { heroById } from "../../data/heroDatabase.js";
 import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { ENGINE_SEATS, SEAT_CODE, SEAT_LANE_ZH, seatPlayers, seatOfPlayer } from "../../platform/contracts/matchLineup.js";
+import { heroSourceContext, heroSourceFor, HERO_SOURCES as HERO_SRC } from "../../battle/moba/mobaHeroSource.js";
 import { GC } from "../../ui/theme.js";
 
 const PURP = "#a78bfa", PURP_D = "#7c3aed", GREEN = "#34d399", GRAY = "#71717a";
@@ -45,7 +46,7 @@ const POSITIONS = ENGINE_SEATS.map((seat) => ({
 // Adapter：席位 → 上場選手 + 英雄 + heroProgress（S26：選手身分/等級的唯一來源＝profileStore）
 //   Milestone E：席位上的人由 lineup 指派表決定；英雄身分優先序與 buildBattleRoster
 //   完全一致（選手綁定英雄 → 席位預設英雄），確保這一頁與戰場顯示同一個人、同一隻英雄。
-function slotFor(seat, progress, storePlayers, lineup) {
+function slotFor(seat, progress, storePlayers, lineup, srcCtx) {
   const base = ROSTER[seat];
   if (!base) return null;
   const me = seatPlayers(lineup, storePlayers ?? [])[seat] ?? null;
@@ -64,6 +65,8 @@ function slotFor(seat, progress, storePlayers, lineup) {
     heroId, hero: h.zh, arch: h.arch, title: h.title,
     color: h.color, heroLv: hp.level, fitPct, games: m.games,
     high: fitPct != null && fitPct >= 60,
+    // Milestone I-close【目標 5】這隻英雄為什麼在這一列（不讓玩家誤以為是固定綁定）
+    source: heroSourceFor({ heroId, seatDefault: base.heroId, playerHeroId: me?.heroId ?? null, ctx: srcCtx }),
   };
 }
 
@@ -186,6 +189,8 @@ export default function LineupScreen({ onNext, onBack }) {
   const [bench, setBench] = useState(null); // Milestone E：換人面板的目標席位
   const [show, setShow] = useState(false);
   useEffect(() => { const t = setTimeout(() => setShow(true), 60); return () => clearTimeout(t); }, []);
+  //  Milestone I-close：熟練最高／最近使用是**全名單比較**出來的，一次算好再分給五列
+  const srcCtx = useMemo(() => heroSourceContext(progress), [progress]);
 
   return (
     <div style={{ position: "relative", height: "100%", overflow: "hidden" }}>
@@ -197,7 +202,7 @@ export default function LineupScreen({ onNext, onBack }) {
             <div style={{ fontSize: 9, color: "#52525b", letterSpacing: "0.1em" }}>點擊查看詳細 · 🔁 換人</div>
           </div>
           {POSITIONS.map((pos, i) => {
-            const slot = slotFor(pos.seat, progress, storePlayers, lineup);
+            const slot = slotFor(pos.seat, progress, storePlayers, lineup, srcCtx);
             if (!slot) return null;
             return (
               <div key={pos.seat} style={{ display: "flex", alignItems: "stretch", gap: 6, marginBottom: 7 }}>
@@ -222,6 +227,12 @@ export default function LineupScreen({ onNext, onBack }) {
                     {slot.playerLv != null && <span style={{ marginLeft: 5, fontSize: 9, fontWeight: 800, color: "#93c5fd", background: "rgba(59,130,246,0.14)", borderRadius: 5, padding: "1px 5px", fontFamily: "system-ui" }}>Lv.{slot.playerLv}</span>}
                   </div>
                   <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{slot.hero} · {slot.arch} · {slot.title}</div>
+                  {/* 目標 5：英雄來源徽章。玩家一眼看得出這隻英雄是「推薦」還是「自己指定」 */}
+                  <div data-testid="hero-source" data-seat={pos.seat} data-source={slot.source.id}
+                    title={slot.source.why}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 3, marginTop: 3, fontSize: 8.5, fontWeight: 800, color: slot.source.color, background: `${slot.source.color}1f`, border: `1px solid ${slot.source.color}44`, borderRadius: 5, padding: "1px 5px" }}>
+                    {slot.source.label}
+                  </div>
                 </div>
                 {/* 英雄熟練 / 適配 / 狀態（S26：標明「英雄」，與選手等級分軸） */}
                 <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
@@ -249,6 +260,17 @@ export default function LineupScreen({ onNext, onBack }) {
           })}
           <div style={{ fontSize: 9, color: "#52525b", marginTop: 6 }}>選手 Lv＝賽後結算持久值（profileStore）；「英雄」欄＝該英雄熟練等級（Hero Progress）· 無出賽顯示「新」，不推估</div>
           <div style={{ fontSize: 9, color: "#52525b", marginTop: 4 }}>🔁 換人＝先發指派（席位 b1–b5 → 選手，持久化）。這五個人就是進引擎、進 3D 名牌與賽後戰報的同一批人。</div>
+          {/* 目標 5 的重點：講清楚英雄**不是**綁死的，正式出戰以 Ban/Pick 為準 */}
+          <div data-testid="hero-source-note"
+            style={{ marginTop: 8, fontSize: 9, lineHeight: 1.7, color: "#94a3b8", background: "rgba(148,163,184,0.07)", border: "1px solid rgba(148,163,184,0.18)", borderRadius: 8, padding: "7px 9px" }}>
+            <b style={{ color: "#cbd5e1" }}>這裡的英雄是賽前參考，不是固定綁定。</b><br />
+            徽章說明來源：<span style={{ color: HERO_SRC.mastery.color }}>熟練最高</span>＝目前練最熟的 ·
+            <span style={{ color: HERO_SRC.recent.color }}> 最近使用</span>＝上一場用的 ·
+            <span style={{ color: HERO_SRC.suggested.color }}> 系統推薦</span>＝席位預設 ·
+            <span style={{ color: HERO_SRC.locked.color }}> 已鎖定</span>＝你自己指定過 ·
+            <span style={{ color: HERO_SRC.unpicked.color }}> 尚未選角</span>＝這席還沒有英雄。<br />
+            正式出戰的英雄與五路分配在 <b style={{ color: "#cbd5e1" }}>Ban/Pick</b> 才定案，屆時會依英雄位置適性與選手熟練重新分配。
+          </div>
         </div>
       </Frame>
       {sheet && <PlayerSheet slot={sheet.slot} pos={sheet.pos} onClose={() => setSheet(null)} />}
