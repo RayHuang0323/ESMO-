@@ -1,0 +1,9868 @@
+{
+  "samples": [
+    {
+      "s": 0,
+      "fps": 97,
+      "ts": 7.410479360114135,
+      "clock": "0:07",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "游走": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 1,
+      "fps": 61,
+      "ts": 11.485018240093384,
+      "clock": "0:12",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "游走": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 2,
+      "fps": 62,
+      "ts": 15.522861440230713,
+      "clock": "0:16",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "游走": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 3,
+      "fps": 60,
+      "ts": 19.543932159760132,
+      "clock": "0:20",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "游走": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 4,
+      "fps": 62,
+      "ts": 23.654291840149842,
+      "clock": "0:24",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "游走": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 5,
+      "fps": 55,
+      "ts": 27.58809024011322,
+      "clock": "0:28",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "游走": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 6,
+      "fps": 59,
+      "ts": 31.785445760176696,
+      "clock": "0:32",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 7,
+      "fps": 49,
+      "ts": 35.90660864034973,
+      "clock": "0:36",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 8,
+      "fps": 61,
+      "ts": 39.99062975996307,
+      "clock": "0:40",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "抓人": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 9,
+      "fps": 61,
+      "ts": 44.004096,
+      "clock": "0:44",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "抓人": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 10,
+      "fps": 61,
+      "ts": 48.044268159839476,
+      "clock": "0:48",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "抓人": 1,
+        "打野": 1,
+        "遊走": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 11,
+      "fps": 62,
+      "ts": 52.213074560352176,
+      "clock": "0:52",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 2,
+        "遊走": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 12,
+      "fps": 59,
+      "ts": 56.22810176036438,
+      "clock": "0:56",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 13,
+      "fps": 60,
+      "ts": 60.33548863969055,
+      "clock": "1:00",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 14,
+      "fps": 61,
+      "ts": 64.44201535990814,
+      "clock": "1:04",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 15,
+      "fps": 60,
+      "ts": 68.4712358401941,
+      "clock": "1:09",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 16,
+      "fps": 61,
+      "ts": 72.500576,
+      "clock": "1:13",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "抓人": 1,
+        "打野": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 17,
+      "fps": 62,
+      "ts": 76.576176,
+      "clock": "1:17",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "抓人": 1,
+        "打野": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 18,
+      "fps": 61,
+      "ts": 80.67909823983857,
+      "clock": "1:21",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "抓人": 1,
+        "打野": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 19,
+      "fps": 59,
+      "ts": 84.773424,
+      "clock": "1:25",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 20,
+      "fps": 58,
+      "ts": 88.93364223980346,
+      "clock": "1:29",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 21,
+      "fps": 61,
+      "ts": 92.99569663994995,
+      "clock": "1:33",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 1,
+        "抓人": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 22,
+      "fps": 62,
+      "ts": 97.043264,
+      "clock": "1:37",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 1,
+        "抓人": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 23,
+      "fps": 61,
+      "ts": 101.097344,
+      "clock": "1:41",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 1,
+        "抓人": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 24,
+      "fps": 61,
+      "ts": 105.21086463982483,
+      "clock": "1:45",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 25,
+      "fps": 61,
+      "ts": 109.31406656016449,
+      "clock": "1:49",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "抓人": 1,
+        "打野": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 26,
+      "fps": 60,
+      "ts": 113.41888895989136,
+      "clock": "1:53",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "抓人": 1,
+        "打野": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 27,
+      "fps": 62,
+      "ts": 117.49820223995148,
+      "clock": "1:58",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "抓人": 1,
+        "打野": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 28,
+      "fps": 61,
+      "ts": 121.55161983991333,
+      "clock": "2:02",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 29,
+      "fps": 57,
+      "ts": 125.57096896030487,
+      "clock": "2:06",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 30,
+      "fps": 56,
+      "ts": 129.75950784037414,
+      "clock": "2:10",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 31,
+      "fps": 57,
+      "ts": 133.88330943973938,
+      "clock": "2:14",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 2,
+        "遊走": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 32,
+      "fps": 60,
+      "ts": 137.97257663987367,
+      "clock": "2:18",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 6,
+        "打野": 2,
+        "接戰": 1,
+        "遊走": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 33,
+      "fps": 57,
+      "ts": 141.99976895997682,
+      "clock": "2:22",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 6,
+        "抓人": 2,
+        "接戰": 1,
+        "撤退": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 34,
+      "fps": 62,
+      "ts": 146.02585664006133,
+      "clock": "2:26",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "抓人": 2,
+        "回城中": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 35,
+      "fps": 61,
+      "ts": 150.10653696037355,
+      "clock": "2:30",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 2,
+        "回城中": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 36,
+      "fps": 62,
+      "ts": 154.42774656041016,
+      "clock": "2:34",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 37,
+      "fps": 59,
+      "ts": 158.4416294402765,
+      "clock": "2:38",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 1,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 38,
+      "fps": 62,
+      "ts": 162.57011904010102,
+      "clock": "2:43",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 1,
+        "避塔": 1,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 39,
+      "fps": 52,
+      "ts": 166.74681024018952,
+      "clock": "2:47",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 6,
+        "打野": 1,
+        "避塔": 1,
+        "接戰": 1,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 40,
+      "fps": 61,
+      "ts": 170.80144063966003,
+      "clock": "2:51",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 1,
+        "撤退": 1,
+        "追擊": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 41,
+      "fps": 61,
+      "ts": 174.9580569603125,
+      "clock": "2:55",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 2,
+        "回城中": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 42,
+      "fps": 61,
+      "ts": 178.99526655997374,
+      "clock": "2:59",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 6,
+        "抓人": 1,
+        "回城": 1,
+        "打野": 1,
+        "遊走": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 43,
+      "fps": 61,
+      "ts": 183.00322624002166,
+      "clock": "3:03",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "抓人": 1,
+        "打野": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 44,
+      "fps": 61,
+      "ts": 187.04359744007965,
+      "clock": "3:07",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 45,
+      "fps": 61,
+      "ts": 191.1914937594992,
+      "clock": "3:11",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 46,
+      "fps": 52,
+      "ts": 195.07929855967774,
+      "clock": "3:15",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 47,
+      "fps": 46,
+      "ts": 199.56031936018738,
+      "clock": "3:20",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 1,
+        "抓人": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 48,
+      "fps": 49,
+      "ts": 203.9268838402063,
+      "clock": "3:24",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 1,
+        "抓人": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 49,
+      "fps": 47,
+      "ts": 208.02509056018127,
+      "clock": "3:28",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 2,
+        "接戰": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 50,
+      "fps": 61,
+      "ts": 212.085264,
+      "clock": "3:32",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 6,
+        "打野": 2,
+        "接戰": 1,
+        "拉扯": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 51,
+      "fps": 55,
+      "ts": 216.4808454398416,
+      "clock": "3:36",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 6,
+        "抓人": 1,
+        "接戰": 1,
+        "打野": 1,
+        "避塔": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 52,
+      "fps": 61,
+      "ts": 220.5004665600165,
+      "clock": "3:41",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "接戰": 1,
+        "抓人": 1,
+        "避塔": 1,
+        "對線": 5,
+        "打野": 1,
+        "撤退": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 53,
+      "fps": 62,
+      "ts": 224.569696,
+      "clock": "3:45",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "接戰": 1,
+        "打野": 1,
+        "對線": 6,
+        "回防": 1,
+        "回城中": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 54,
+      "fps": 61,
+      "ts": 228.61397376025758,
+      "clock": "3:49",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "接戰": 1,
+        "打野": 1,
+        "對線": 3,
+        "團戰!": 3,
+        "回防": 1,
+        "撤退": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 55,
+      "fps": 61,
+      "ts": 232.78172416017821,
+      "clock": "3:53",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "接戰": 2,
+        "打野": 1,
+        "避塔": 1,
+        "團戰!": 3,
+        "拉扯": 1,
+        "回防": 1,
+        "回城中": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 56,
+      "fps": 62,
+      "ts": 236.9590342401544,
+      "clock": "3:57",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "接戰": 1,
+        "打野": 1,
+        "避塔": 1,
+        "追擊": 1,
+        "團戰!": 2,
+        "對線": 1,
+        "回防": 1,
+        "回城": 1,
+        "撤退": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 57,
+      "fps": 60,
+      "ts": 240.99493056002717,
+      "clock": "4:01",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "團戰!": 5,
+        "避塔": 1,
+        "脫戰": 3,
+        "回城中": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 58,
+      "fps": 61,
+      "ts": 245.004624,
+      "clock": "4:05",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "團戰!": 5,
+        "脫戰": 3,
+        "撤退": 1,
+        "回城": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 59,
+      "fps": 55,
+      "ts": 249.10969343987367,
+      "clock": "4:09",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 4,
+      "stuck": 0,
+      "states": {
+        "團戰!": 5,
+        "對線": 4,
+        "撤退": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 60,
+      "fps": 56,
+      "ts": 253.28913536017518,
+      "clock": "4:13",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "團戰!": 4,
+        "對線": 4,
+        "接戰": 1,
+        "回城中": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 61,
+      "fps": 62,
+      "ts": 257.4759129600592,
+      "clock": "4:17",
+      "alive": 10,
+      "cluster": 5,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "團戰!": 8,
+        "回城": 1,
+        "對線": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 62,
+      "fps": 61,
+      "ts": 261.5010758400125,
+      "clock": "4:22",
+      "alive": 10,
+      "cluster": 6,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "團戰!": 8,
+        "撤退": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 63,
+      "fps": 76,
+      "ts": 266.51577535985626,
+      "clock": "4:27",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 5,
+      "stuck": 0,
+      "states": {
+        "對線": 3,
+        "脫戰": 4,
+        "打野": 1,
+        "團戰!": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 64,
+      "fps": 61,
+      "ts": 270.5235929601172,
+      "clock": "4:31",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 5,
+        "打野": 2,
+        "團戰!": 2,
+        "撤退": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 65,
+      "fps": 62,
+      "ts": 274.7726617598181,
+      "clock": "4:35",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 5,
+        "打野": 2,
+        "接戰": 1,
+        "團戰!": 1,
+        "拉扯": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 66,
+      "fps": 61,
+      "ts": 278.8939846397516,
+      "clock": "4:39",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "打野": 1,
+        "團戰!": 7
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 67,
+      "fps": 60,
+      "ts": 282.8887110397455,
+      "clock": "4:43",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "打野": 1,
+        "團戰!": 5
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 68,
+      "fps": 60,
+      "ts": 286.95870975968995,
+      "clock": "4:47",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 3,
+        "打野": 1,
+        "避塔": 1,
+        "團戰!": 4,
+        "回城中": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 69,
+      "fps": 56,
+      "ts": 290.9175161601096,
+      "clock": "4:51",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "打野": 1,
+        "避塔": 1,
+        "撤退": 2,
+        "團戰!": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 70,
+      "fps": 58,
+      "ts": 295.03268864006895,
+      "clock": "4:55",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "抓人": 1,
+        "避塔": 1,
+        "脫戰": 3,
+        "回城中": 2,
+        "打野": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 71,
+      "fps": 60,
+      "ts": 299.1139737602576,
+      "clock": "4:59",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 4,
+      "stuck": 0,
+      "states": {
+        "接戰": 2,
+        "抓人": 1,
+        "避塔": 1,
+        "撤退": 1,
+        "對線": 3,
+        "回防": 1,
+        "遊走": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 72,
+      "fps": 61,
+      "ts": 303.2108646398248,
+      "clock": "5:03",
+      "alive": 10,
+      "cluster": 5,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "接戰": 3,
+        "打野": 1,
+        "避塔": 1,
+        "對線": 2,
+        "撤退": 1,
+        "團戰!": 1,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 73,
+      "fps": 61,
+      "ts": 307.37833855986696,
+      "clock": "5:07",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "接戰": 1,
+        "打野": 1,
+        "避塔": 1,
+        "撤退": 1,
+        "回城中": 1,
+        "對線": 2,
+        "團戰!": 2,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 74,
+      "fps": 60,
+      "ts": 311.483616,
+      "clock": "5:11",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 5,
+      "stuck": 0,
+      "states": {
+        "接戰": 1,
+        "打野": 1,
+        "避塔": 1,
+        "對線": 2,
+        "撤退": 1,
+        "脫戰": 3,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 75,
+      "fps": 61,
+      "ts": 315.5012390400537,
+      "clock": "5:16",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "接戰": 2,
+        "打野": 1,
+        "對線": 5,
+        "撤退": 1,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 76,
+      "fps": 59,
+      "ts": 319.529584,
+      "clock": "5:20",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 1,
+      "states": {
+        "接戰": 2,
+        "打野": 1,
+        "避塔": 1,
+        "撤退": 1,
+        "對線": 4,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 77,
+      "fps": 59,
+      "ts": 323.666464,
+      "clock": "5:24",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 1,
+      "states": {
+        "追擊": 2,
+        "打野": 1,
+        "避塔": 1,
+        "對線": 4,
+        "撤退": 1,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 78,
+      "fps": 62,
+      "ts": 327.7817241601782,
+      "clock": "5:28",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 4,
+      "stuck": 1,
+      "states": {
+        "追擊": 2,
+        "打野": 1,
+        "對線": 3,
+        "回城中": 1,
+        "撤退": 2,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 79,
+      "fps": 57,
+      "ts": 331.541616,
+      "clock": "5:32",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 1,
+      "states": {
+        "避塔": 2,
+        "抓人": 1,
+        "撤退": 2,
+        "追擊": 1,
+        "回防": 1,
+        "對線": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 80,
+      "fps": 55,
+      "ts": 336.004624,
+      "clock": "5:36",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 3,
+      "stuck": 1,
+      "states": {
+        "避塔": 2,
+        "抓人": 1,
+        "回防": 2,
+        "回城中": 1,
+        "圍攻": 3
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 81,
+      "fps": 61,
+      "ts": 340.03474496021335,
+      "clock": "5:40",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 1,
+      "states": {
+        "對線": 1,
+        "打野": 1,
+        "避塔": 1,
+        "回防": 2,
+        "回城": 1,
+        "圍攻": 2,
+        "接戰": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 82,
+      "fps": 61,
+      "ts": 344.107584,
+      "clock": "5:44",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 1,
+      "states": {
+        "對線": 1,
+        "打野": 1,
+        "避塔": 2,
+        "撤退": 1,
+        "圍攻": 3,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 83,
+      "fps": 55,
+      "ts": 348.2014214401712,
+      "clock": "5:48",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 1,
+      "states": {
+        "對線": 1,
+        "打野": 1,
+        "避塔": 2,
+        "回城中": 1,
+        "回防": 2,
+        "圍攻": 3
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 84,
+      "fps": 62,
+      "ts": 352.417056,
+      "clock": "5:52",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 3,
+      "stuck": 1,
+      "states": {
+        "避塔": 2,
+        "打野": 1,
+        "回防": 2,
+        "遊走": 1,
+        "圍攻": 4
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 85,
+      "fps": 60,
+      "ts": 356.413799040336,
+      "clock": "5:56",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 1,
+      "states": {
+        "避塔": 3,
+        "打野": 2,
+        "撤退": 1,
+        "遊走": 1,
+        "對線": 1,
+        "回防": 1,
+        "支援": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 86,
+      "fps": 59,
+      "ts": 360.4794937597815,
+      "clock": "6:01",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 1,
+      "states": {
+        "避塔": 3,
+        "打野": 2,
+        "回城中": 1,
+        "對線": 3,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 87,
+      "fps": 62,
+      "ts": 364.518496,
+      "clock": "6:05",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 1,
+      "states": {
+        "對線": 3,
+        "抓人": 2,
+        "避塔": 2,
+        "回防": 3
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 88,
+      "fps": 61,
+      "ts": 368.5639078400964,
+      "clock": "6:09",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 1,
+      "states": {
+        "對線": 2,
+        "回防": 5,
+        "避塔": 2,
+        "抓人": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 89,
+      "fps": 59,
+      "ts": 372.68455616032776,
+      "clock": "6:13",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 1,
+      "states": {
+        "對線": 2,
+        "回防": 5,
+        "接戰": 1,
+        "避塔": 1,
+        "支援": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 90,
+      "fps": 61,
+      "ts": 376.78247103946626,
+      "clock": "6:17",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 4,
+      "stuck": 1,
+      "states": {
+        "拉扯": 1,
+        "打野": 1,
+        "避塔": 2,
+        "追擊": 1,
+        "回防": 3,
+        "接戰": 1,
+        "撤退": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 91,
+      "fps": 61,
+      "ts": 380.8945049598761,
+      "clock": "6:21",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 1,
+      "states": {
+        "避塔": 2,
+        "打野": 1,
+        "撤退": 3,
+        "追擊": 1,
+        "接戰": 1,
+        "回防": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 92,
+      "fps": 60,
+      "ts": 384.9577286402353,
+      "clock": "6:25",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 1,
+      "states": {
+        "對線": 2,
+        "打野": 1,
+        "回城中": 3,
+        "脫戰": 1,
+        "追擊": 1,
+        "回防": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 93,
+      "fps": 46,
+      "ts": 389.0036,
+      "clock": "6:29",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 1,
+      "states": {
+        "撤退": 1,
+        "打野": 1,
+        "避塔": 1,
+        "回城中": 2,
+        "對線": 1,
+        "追擊": 1,
+        "回防": 2,
+        "回城": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 94,
+      "fps": 59,
+      "ts": 393.041616,
+      "clock": "6:33",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 1,
+      "states": {
+        "撤退": 1,
+        "打野": 1,
+        "避塔": 1,
+        "對線": 3,
+        "追擊": 1,
+        "回防": 2,
+        "回城": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 95,
+      "fps": 53,
+      "ts": 397.189399039834,
+      "clock": "6:37",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 2,
+      "states": {
+        "撤退": 2,
+        "抓人": 1,
+        "避塔": 1,
+        "對線": 4,
+        "回防": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 96,
+      "fps": 48,
+      "ts": 401.45903423976836,
+      "clock": "6:41",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 2,
+      "states": {
+        "回城中": 2,
+        "抓人": 1,
+        "避塔": 1,
+        "對線": 4,
+        "回防": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 97,
+      "fps": 53,
+      "ts": 405.482576,
+      "clock": "6:46",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 2,
+      "states": {
+        "回城": 2,
+        "打野": 1,
+        "避塔": 1,
+        "對線": 4,
+        "回防": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 98,
+      "fps": 60,
+      "ts": 409.5631014399042,
+      "clock": "6:50",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 3,
+      "stuck": 2,
+      "states": {
+        "對線": 5,
+        "打野": 1,
+        "避塔": 1,
+        "回防": 3
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 99,
+      "fps": 49,
+      "ts": 413.5643129601935,
+      "clock": "6:54",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 2,
+      "states": {
+        "對線": 4,
+        "打野": 1,
+        "避塔": 1,
+        "回防": 4
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 100,
+      "fps": 50,
+      "ts": 418.0055353599432,
+      "clock": "6:58",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 2,
+      "states": {
+        "對線": 3,
+        "打野": 1,
+        "避塔": 2,
+        "回防": 4
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 101,
+      "fps": 59,
+      "ts": 422.0631014403833,
+      "clock": "7:02",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 2,
+      "states": {
+        "對線": 3,
+        "打野": 1,
+        "避塔": 2,
+        "回防": 4
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 102,
+      "fps": 61,
+      "ts": 426.3256102404779,
+      "clock": "7:06",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 2,
+      "states": {
+        "對線": 4,
+        "打野": 1,
+        "避塔": 1,
+        "回防": 4
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 103,
+      "fps": 61,
+      "ts": 430.4229382397882,
+      "clock": "7:10",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 2,
+      "states": {
+        "對線": 2,
+        "抓人": 1,
+        "避塔": 1,
+        "團戰!": 3,
+        "回防": 2,
+        "接戰": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 104,
+      "fps": 61,
+      "ts": 434.5008294399561,
+      "clock": "7:15",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 2,
+      "stuck": 2,
+      "states": {
+        "對線": 2,
+        "抓人": 1,
+        "避塔": 1,
+        "團戰!": 3,
+        "回防": 3
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 105,
+      "fps": 61,
+      "ts": 438.5170041601492,
+      "clock": "7:19",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 3,
+      "stuck": 2,
+      "states": {
+        "對線": 3,
+        "打野": 1,
+        "回城中": 1,
+        "避塔": 1,
+        "回防": 2,
+        "撤退": 1,
+        "團戰!": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 106,
+      "fps": 59,
+      "ts": 442.6301766401376,
+      "clock": "7:23",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 1,
+      "states": {
+        "接戰": 1,
+        "團戰!": 3,
+        "避塔": 1,
+        "撤退": 1,
+        "脫戰": 2,
+        "回防": 1,
+        "回城中": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 107,
+      "fps": 61,
+      "ts": 446.5766182401056,
+      "clock": "7:27",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "團戰!": 5,
+        "避塔": 1,
+        "回城中": 1,
+        "拉扯": 1,
+        "回城": 1,
+        "接戰": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 108,
+      "fps": 60,
+      "ts": 450.757936,
+      "clock": "7:31",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "團戰!": 5,
+        "對線": 2,
+        "回城中": 1,
+        "遊走": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 109,
+      "fps": 60,
+      "ts": 454.889776,
+      "clock": "7:35",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "團戰!": 7,
+        "避塔": 1,
+        "對線": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 110,
+      "fps": 60,
+      "ts": 458.95805695992186,
+      "clock": "7:39",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "團戰!": 8,
+        "避塔": 1,
+        "對線": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 111,
+      "fps": 61,
+      "ts": 463.001024,
+      "clock": "7:43",
+      "alive": 10,
+      "cluster": 5,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "團戰!": 8,
+        "回城中": 1,
+        "避塔": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 112,
+      "fps": 61,
+      "ts": 467.04194304007814,
+      "clock": "7:47",
+      "alive": 10,
+      "cluster": 5,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 1,
+        "撤退": 2,
+        "避塔": 1,
+        "團戰!": 6
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 113,
+      "fps": 61,
+      "ts": 471.0527161601752,
+      "clock": "7:51",
+      "alive": 10,
+      "cluster": 5,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "團戰!": 3,
+        "回城中": 1,
+        "避塔": 1,
+        "對線": 3,
+        "撤退": 1,
+        "追擊": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 0
+    },
+    {
+      "s": 114,
+      "fps": 60,
+      "ts": 475.4540326401636,
+      "clock": "7:55",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "撤退": 2,
+        "團戰!": 3,
+        "避塔": 1,
+        "對線": 3,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 0
+    },
+    {
+      "s": 115,
+      "fps": 60,
+      "ts": 479.47785855994323,
+      "clock": "8:00",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "撤退": 2,
+        "團戰!": 2,
+        "避塔": 1,
+        "對線": 3,
+        "回城中": 1,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 0
+    },
+    {
+      "s": 116,
+      "fps": 58,
+      "ts": 483.50760383996675,
+      "clock": "8:04",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "回城中": 3,
+        "團戰!": 3,
+        "對線": 2,
+        "脫戰": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 0
+    },
+    {
+      "s": 117,
+      "fps": 61,
+      "ts": 487.8147558395074,
+      "clock": "8:08",
+      "alive": 10,
+      "cluster": 1,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "回城": 1,
+        "回城中": 1,
+        "團戰!": 3,
+        "對線": 4,
+        "抓人": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 118,
+      "fps": 61,
+      "ts": 491.88817664025515,
+      "clock": "8:12",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 5,
+        "抓人": 2,
+        "團戰!": 3
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 119,
+      "fps": 61,
+      "ts": 495.9933414400934,
+      "clock": "8:16",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "團戰!": 7,
+        "對線": 3
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 120,
+      "fps": 55,
+      "ts": 500.041616,
+      "clock": "8:20",
+      "alive": 10,
+      "cluster": 1,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "團戰!": 9,
+        "對線": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 121,
+      "fps": 61,
+      "ts": 504.1086361596228,
+      "clock": "8:24",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "團戰!": 7,
+        "對線": 2,
+        "接戰": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 122,
+      "fps": 61,
+      "ts": 508.1777465595175,
+      "clock": "8:28",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "團戰!": 6,
+        "撤退": 1,
+        "對線": 1,
+        "接戰": 1,
+        "避塔": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 123,
+      "fps": 61,
+      "ts": 512.361616,
+      "clock": "8:32",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "打野": 2,
+        "接戰": 1,
+        "追擊": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 124,
+      "fps": 62,
+      "ts": 516.4687417599325,
+      "clock": "8:36",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "團戰!": 7
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 125,
+      "fps": 60,
+      "ts": 520.4618969600745,
+      "clock": "8:41",
+      "alive": 9,
+      "cluster": 4,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 1,
+        "團戰!": 8
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 126,
+      "fps": 61,
+      "ts": 524.5008761600226,
+      "clock": "8:45",
+      "alive": 9,
+      "cluster": 5,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "團戰!": 8,
+        "對線": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 127,
+      "fps": 59,
+      "ts": 528.5176358400506,
+      "clock": "8:49",
+      "alive": 9,
+      "cluster": 6,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "團戰!": 7
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 128,
+      "fps": 70,
+      "ts": 533.5065286400309,
+      "clock": "8:54",
+      "alive": 10,
+      "cluster": 7,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "團戰!": 8,
+        "撤退": 1,
+        "對線": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 129,
+      "fps": 73,
+      "ts": 538.5191545601584,
+      "clock": "8:59",
+      "alive": 10,
+      "cluster": 8,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "撤退": 2,
+        "對線": 1,
+        "團戰!": 7
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 130,
+      "fps": 60,
+      "ts": 542.8881766402551,
+      "clock": "9:03",
+      "alive": 9,
+      "cluster": 5,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "回城中": 2,
+        "對線": 2,
+        "團戰!": 5
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 131,
+      "fps": 61,
+      "ts": 546.91,
+      "clock": "9:07",
+      "alive": 9,
+      "cluster": 5,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "撤退": 2,
+        "對線": 2,
+        "脫戰": 5
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 132,
+      "fps": 61,
+      "ts": 550.991536,
+      "clock": "9:11",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "回城中": 1,
+        "撤退": 1,
+        "對線": 2,
+        "圍攻": 4,
+        "團戰!": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 133,
+      "fps": 62,
+      "ts": 555.0138297598654,
+      "clock": "9:15",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 4,
+      "stuck": 0,
+      "states": {
+        "脫戰": 5,
+        "回城中": 1,
+        "對線": 2,
+        "圍攻": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 134,
+      "fps": 62,
+      "ts": 559.183184,
+      "clock": "9:19",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "打野": 1,
+        "接戰": 1,
+        "圍攻": 4,
+        "拉扯": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 135,
+      "fps": 61,
+      "ts": 563.3322278396874,
+      "clock": "9:23",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "打野": 1,
+        "圍攻": 4
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 136,
+      "fps": 60,
+      "ts": 567.3295961598425,
+      "clock": "9:27",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 4,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "抓人": 1,
+        "打野": 1,
+        "撤退": 1
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 137,
+      "fps": 61,
+      "ts": 571.419344,
+      "clock": "9:31",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 1,
+      "states": {
+        "對線": 6,
+        "抓人": 1,
+        "避塔": 1,
+        "打野": 1,
+        "撤退": 1
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 138,
+      "fps": 57,
+      "ts": 575.4764070401758,
+      "clock": "9:36",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 1,
+      "states": {
+        "對線": 6,
+        "打野": 1,
+        "避塔": 1,
+        "回防": 2
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 139,
+      "fps": 61,
+      "ts": 579.536557439927,
+      "clock": "9:40",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 3,
+      "stuck": 1,
+      "states": {
+        "對線": 7,
+        "打野": 2,
+        "撤退": 1
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 140,
+      "fps": 58,
+      "ts": 583.6145145597418,
+      "clock": "9:44",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 1,
+      "states": {
+        "對線": 5,
+        "回城中": 1,
+        "撤退": 1,
+        "打野": 1,
+        "團戰!": 1,
+        "追擊": 1
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 141,
+      "fps": 56,
+      "ts": 587.8800070402643,
+      "clock": "9:48",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 1,
+      "states": {
+        "對線": 3,
+        "撤退": 2,
+        "圍攻": 3,
+        "避塔": 1
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 142,
+      "fps": 60,
+      "ts": 591.9587097596899,
+      "clock": "9:52",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 2,
+      "states": {
+        "對線": 3,
+        "回城中": 2,
+        "圍攻": 2,
+        "脫戰": 2
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 143,
+      "fps": 60,
+      "ts": 595.9950438399194,
+      "clock": "9:56",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 2,
+      "states": {
+        "對線": 3,
+        "回城": 1,
+        "圍攻": 4,
+        "回城中": 1
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 144,
+      "fps": 60,
+      "ts": 600.071824,
+      "clock": "10:00",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 2,
+      "states": {
+        "對線": 3,
+        "打野": 1,
+        "圍攻": 3,
+        "回城": 1,
+        "避塔": 1
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 145,
+      "fps": 58,
+      "ts": 604.0978438401194,
+      "clock": "10:04",
+      "alive": 9,
+      "cluster": 4,
+      "reversals": 1,
+      "stuck": 2,
+      "states": {
+        "對線": 3,
+        "抓人": 1,
+        "圍攻": 5
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 146,
+      "fps": 61,
+      "ts": 608.2876633607032,
+      "clock": "10:08",
+      "alive": 9,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 2,
+      "states": {
+        "對線": 3,
+        "抓人": 1,
+        "避塔": 2,
+        "圍攻": 3
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 147,
+      "fps": 61,
+      "ts": 612.3315718403131,
+      "clock": "10:12",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 2,
+      "states": {
+        "對線": 6,
+        "抓人": 1,
+        "避塔": 3
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 148,
+      "fps": 60,
+      "ts": 616.5,
+      "clock": "10:16",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 2,
+      "states": {
+        "對線": 7,
+        "回防": 1,
+        "避塔": 2
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 149,
+      "fps": 61,
+      "ts": 620.523104,
+      "clock": "10:21",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 3,
+      "states": {
+        "對線": 3,
+        "回防": 2,
+        "避塔": 1,
+        "團戰!": 4
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 150,
+      "fps": 61,
+      "ts": 624.6619257604605,
+      "clock": "10:25",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 3,
+      "states": {
+        "對線": 4,
+        "回防": 2,
+        "避塔": 1,
+        "團戰!": 3
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 151,
+      "fps": 61,
+      "ts": 628.7839609598227,
+      "clock": "10:29",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 3,
+      "states": {
+        "對線": 4,
+        "回防": 2,
+        "避塔": 1,
+        "團戰!": 3
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 152,
+      "fps": 61,
+      "ts": 632.893463040249,
+      "clock": "10:33",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 3,
+      "states": {
+        "對線": 3,
+        "回防": 2,
+        "避塔": 1,
+        "團戰!": 4
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 153,
+      "fps": 62,
+      "ts": 636.9955910400506,
+      "clock": "10:37",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 4,
+      "states": {
+        "對線": 3,
+        "回防": 2,
+        "避塔": 1,
+        "團戰!": 4
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 154,
+      "fps": 60,
+      "ts": 640.9863577601782,
+      "clock": "10:41",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 5,
+      "states": {
+        "對線": 4,
+        "回防": 4,
+        "避塔": 1,
+        "打野": 1
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 155,
+      "fps": 62,
+      "ts": 645.0326886397241,
+      "clock": "10:45",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 5,
+      "states": {
+        "對線": 4,
+        "回防": 4,
+        "避塔": 1,
+        "抓人": 1
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 156,
+      "fps": 59,
+      "ts": 649.0390457601508,
+      "clock": "10:49",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 6,
+      "states": {
+        "對線": 4,
+        "回防": 4,
+        "避塔": 1,
+        "抓人": 1
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 157,
+      "fps": 58,
+      "ts": 653.5003686399926,
+      "clock": "10:54",
+      "alive": 10,
+      "cluster": 5,
+      "reversals": 0,
+      "stuck": 6,
+      "states": {
+        "對線": 3,
+        "回防": 4,
+        "避塔": 1,
+        "抓人": 1,
+        "拉扯": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 158,
+      "fps": 61,
+      "ts": 657.5198246400537,
+      "clock": "10:58",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 3,
+      "states": {
+        "對線": 4,
+        "撤退": 4,
+        "回防": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 159,
+      "fps": 59,
+      "ts": 661.5284934400644,
+      "clock": "11:02",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 1,
+      "stuck": 2,
+      "states": {
+        "對線": 2,
+        "回城中": 4,
+        "遊走": 1,
+        "脫戰": 1,
+        "回防": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 160,
+      "fps": 61,
+      "ts": 665.571824,
+      "clock": "11:06",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 3,
+      "states": {
+        "對線": 2,
+        "回城": 4,
+        "避塔": 1,
+        "遊走": 1,
+        "回防": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 161,
+      "fps": 61,
+      "ts": 669.6704038401575,
+      "clock": "11:10",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 5,
+      "stuck": 3,
+      "states": {
+        "對線": 5,
+        "打野": 2,
+        "避塔": 1,
+        "回防": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 162,
+      "fps": 59,
+      "ts": 673.7802265607153,
+      "clock": "11:14",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 3,
+      "states": {
+        "對線": 5,
+        "打野": 2,
+        "避塔": 1,
+        "回防": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 163,
+      "fps": 61,
+      "ts": 677.8913638397486,
+      "clock": "11:18",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 1,
+      "stuck": 3,
+      "states": {
+        "對線": 6,
+        "打野": 2,
+        "回防": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 164,
+      "fps": 61,
+      "ts": 681.964656,
+      "clock": "11:22",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 3,
+      "states": {
+        "對線": 6,
+        "打野": 2,
+        "回防": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 165,
+      "fps": 61,
+      "ts": 685.995904,
+      "clock": "11:26",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 3,
+      "states": {
+        "對線": 6,
+        "打野": 2,
+        "回防": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 166,
+      "fps": 61,
+      "ts": 690.0008761599661,
+      "clock": "11:30",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 4,
+      "states": {
+        "對線": 6,
+        "抓人": 1,
+        "打野": 1,
+        "回防": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 167,
+      "fps": 61,
+      "ts": 694.0387302400751,
+      "clock": "11:34",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 5,
+      "states": {
+        "對線": 6,
+        "抓人": 2,
+        "回防": 1,
+        "遊走": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 168,
+      "fps": 62,
+      "ts": 698.1024,
+      "clock": "11:38",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 5,
+      "states": {
+        "對線": 4,
+        "打野": 1,
+        "回城中": 1,
+        "回防": 3,
+        "遊走": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 169,
+      "fps": 61,
+      "ts": 702.3315718403131,
+      "clock": "11:42",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 5,
+      "states": {
+        "對線": 5,
+        "打野": 2,
+        "回防": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 170,
+      "fps": 61,
+      "ts": 706.4264505601035,
+      "clock": "11:46",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 3,
+      "stuck": 3,
+      "states": {
+        "對線": 3,
+        "打野": 2,
+        "避塔": 1,
+        "遊走": 1,
+        "回防": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 171,
+      "fps": 61,
+      "ts": 710.4808454401056,
+      "clock": "11:51",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 3,
+      "states": {
+        "對線": 3,
+        "回防": 3,
+        "避塔": 1,
+        "遊走": 1,
+        "打野": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 172,
+      "fps": 61,
+      "ts": 714.5005017599829,
+      "clock": "11:55",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 3,
+      "states": {
+        "對線": 3,
+        "打野": 2,
+        "避塔": 1,
+        "撤退": 1,
+        "回防": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 173,
+      "fps": 61,
+      "ts": 718.51721343995,
+      "clock": "11:59",
+      "alive": 9,
+      "cluster": 4,
+      "reversals": 1,
+      "stuck": 3,
+      "states": {
+        "對線": 4,
+        "打野": 2,
+        "回城中": 1,
+        "回防": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 174,
+      "fps": 61,
+      "ts": 722.570119040101,
+      "clock": "12:03",
+      "alive": 9,
+      "cluster": 4,
+      "reversals": 1,
+      "stuck": 3,
+      "states": {
+        "對線": 4,
+        "抓人": 1,
+        "打野": 1,
+        "回城": 1,
+        "回防": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 175,
+      "fps": 61,
+      "ts": 726.6619257604605,
+      "clock": "12:07",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 2,
+      "stuck": 4,
+      "states": {
+        "對線": 5,
+        "抓人": 1,
+        "回防": 3,
+        "打野": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 176,
+      "fps": 61,
+      "ts": 730.7832166405328,
+      "clock": "12:11",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 1,
+      "stuck": 5,
+      "states": {
+        "對線": 6,
+        "打野": 2,
+        "回防": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 177,
+      "fps": 60,
+      "ts": 734.8056953598318,
+      "clock": "12:15",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 1,
+      "stuck": 5,
+      "states": {
+        "對線": 6,
+        "打野": 2,
+        "回防": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 178,
+      "fps": 62,
+      "ts": 738.9963033599768,
+      "clock": "12:19",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 6,
+      "states": {
+        "對線": 6,
+        "打野": 2,
+        "回防": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 179,
+      "fps": 60,
+      "ts": 742.9951558400796,
+      "clock": "12:23",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 6,
+      "states": {
+        "對線": 6,
+        "打野": 1,
+        "抓人": 1,
+        "回防": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 180,
+      "fps": 60,
+      "ts": 747.0050694399729,
+      "clock": "12:27",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 6,
+      "states": {
+        "對線": 6,
+        "打野": 1,
+        "回防": 3
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 181,
+      "fps": 61,
+      "ts": 751.036864,
+      "clock": "12:31",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 6,
+      "states": {
+        "對線": 6,
+        "抓人": 1,
+        "打野": 1,
+        "回防": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 182,
+      "fps": 61,
+      "ts": 755.087616,
+      "clock": "12:35",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "團戰!": 9,
+        "對線": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 183,
+      "fps": 61,
+      "ts": 759.2086662401742,
+      "clock": "12:39",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "團戰!": 4,
+        "撤退": 2,
+        "回城中": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 184,
+      "fps": 61,
+      "ts": 763.3000121601706,
+      "clock": "12:43",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 1,
+        "團戰!": 3,
+        "回城中": 3,
+        "圍攻": 1,
+        "脫戰": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 185,
+      "fps": 59,
+      "ts": 767.4806233600531,
+      "clock": "12:47",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "避塔": 1,
+        "團戰!": 5,
+        "回城": 2,
+        "圍攻": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 186,
+      "fps": 61,
+      "ts": 771.5003686399926,
+      "clock": "12:52",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 4,
+      "stuck": 0,
+      "states": {
+        "團戰!": 6,
+        "回城中": 1,
+        "對線": 1,
+        "圍攻": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 187,
+      "fps": 61,
+      "ts": 775.5180633601539,
+      "clock": "12:56",
+      "alive": 8,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "團戰!": 7,
+        "對線": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 188,
+      "fps": 61,
+      "ts": 779.5705433602027,
+      "clock": "13:00",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "撤退": 1,
+        "團戰!": 5,
+        "對線": 1,
+        "圍攻": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 189,
+      "fps": 61,
+      "ts": 783.6542918401499,
+      "clock": "13:04",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "回城中": 1,
+        "對線": 2,
+        "回防": 1,
+        "團戰!": 5
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 190,
+      "fps": 61,
+      "ts": 787.7824710403559,
+      "clock": "13:08",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "回城中": 1,
+        "對線": 7,
+        "打野": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 191,
+      "fps": 61,
+      "ts": 791.8892441598731,
+      "clock": "13:12",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "抓人": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 192,
+      "fps": 61,
+      "ts": 795.8934630396265,
+      "clock": "13:16",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "抓人": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 193,
+      "fps": 61,
+      "ts": 799.989184,
+      "clock": "13:20",
+      "alive": 9,
+      "cluster": 1,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 6,
+        "回防": 1,
+        "打野": 1,
+        "避塔": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 0
+    },
+    {
+      "s": 194,
+      "fps": 61,
+      "ts": 804.0055353599432,
+      "clock": "13:24",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "抓人": 1,
+        "回防": 2,
+        "團戰!": 4
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 195,
+      "fps": 63,
+      "ts": 808.09,
+      "clock": "13:28",
+      "alive": 9,
+      "cluster": 1,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 3,
+        "抓人": 1,
+        "撤退": 1,
+        "遊走": 1,
+        "團戰!": 3
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 196,
+      "fps": 63,
+      "ts": 812.4687417599325,
+      "clock": "13:32",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "打野": 1,
+        "回城中": 1,
+        "團戰!": 3
+      },
+      "towerDead": 4,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 197,
+      "fps": 61,
+      "ts": 816.5004665599753,
+      "clock": "13:37",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "回防": 1,
+        "團戰!": 5,
+        "避塔": 1,
+        "回城中": 1,
+        "對線": 1
+      },
+      "towerDead": 4,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 198,
+      "fps": 60,
+      "ts": 820.510816,
+      "clock": "13:41",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "接戰": 1,
+        "團戰!": 5,
+        "撤退": 1,
+        "回城": 1,
+        "避塔": 1
+      },
+      "towerDead": 4,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 199,
+      "fps": 62,
+      "ts": 824.656816,
+      "clock": "13:45",
+      "alive": 9,
+      "cluster": 4,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "追擊": 1,
+        "團戰!": 5,
+        "回城中": 1,
+        "對線": 1,
+        "撤退": 1
+      },
+      "towerDead": 4,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 200,
+      "fps": 60,
+      "ts": 828.6166905602606,
+      "clock": "13:49",
+      "alive": 9,
+      "cluster": 4,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "追擊": 2,
+        "回城中": 1,
+        "對線": 3,
+        "撤退": 2,
+        "打野": 1
+      },
+      "towerDead": 4,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 201,
+      "fps": 61,
+      "ts": 832.7884,
+      "clock": "13:53",
+      "alive": 10,
+      "cluster": 5,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "回城中": 1,
+        "追擊": 1,
+        "回城": 1,
+        "對線": 4,
+        "撤退": 1,
+        "打野": 1,
+        "支援": 1
+      },
+      "towerDead": 4,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 202,
+      "fps": 62,
+      "ts": 836.955056,
+      "clock": "13:57",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "回城中": 2,
+        "撤退": 1,
+        "對線": 5,
+        "抓人": 1,
+        "遊走": 1
+      },
+      "towerDead": 4,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 203,
+      "fps": 60,
+      "ts": 840.926016,
+      "clock": "14:01",
+      "alive": 10,
+      "cluster": 1,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "團戰!": 6,
+        "回城中": 2,
+        "對線": 2
+      },
+      "towerDead": 4,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 204,
+      "fps": 61,
+      "ts": 844.9954841600256,
+      "clock": "14:05",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "團戰!": 7,
+        "回城": 1,
+        "對線": 2
+      },
+      "towerDead": 4,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 205,
+      "fps": 62,
+      "ts": 849.0371718400736,
+      "clock": "14:09",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "團戰!": 7,
+        "對線": 3
+      },
+      "towerDead": 4,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 206,
+      "fps": 60,
+      "ts": 853.0371718400736,
+      "clock": "14:13",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "團戰!": 7,
+        "追擊": 1,
+        "對線": 1
+      },
+      "towerDead": 4,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 207,
+      "fps": 62,
+      "ts": 857.163216,
+      "clock": "14:17",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "團戰!": 4,
+        "回城中": 2,
+        "對線": 1,
+        "撤退": 1
+      },
+      "towerDead": 4,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 208,
+      "fps": 60,
+      "ts": 861.2116,
+      "clock": "14:21",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "團戰!": 3,
+        "回城中": 2,
+        "對線": 2,
+        "撤退": 1
+      },
+      "towerDead": 4,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 209,
+      "fps": 59,
+      "ts": 865.3215782403223,
+      "clock": "14:25",
+      "alive": 8,
+      "cluster": 1,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "團戰!": 3,
+        "回城": 2,
+        "回城中": 1
+      },
+      "towerDead": 4,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 210,
+      "fps": 61,
+      "ts": 869.4336422398035,
+      "clock": "14:29",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 3,
+        "打野": 1,
+        "團戰!": 2,
+        "避塔": 1,
+        "回城": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 211,
+      "fps": 61,
+      "ts": 873.4759129597631,
+      "clock": "14:34",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "撤退": 1,
+        "團戰!": 5,
+        "追擊": 1,
+        "對線": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 212,
+      "fps": 61,
+      "ts": 877.5003686399926,
+      "clock": "14:38",
+      "alive": 7,
+      "cluster": 1,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "團戰!": 2,
+        "對線": 3,
+        "打野": 1,
+        "回城中": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 213,
+      "fps": 61,
+      "ts": 881.5157753600959,
+      "clock": "14:42",
+      "alive": 7,
+      "cluster": 1,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "團戰!": 2,
+        "對線": 3,
+        "打野": 1,
+        "回城中": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 214,
+      "fps": 61,
+      "ts": 885.5688537603003,
+      "clock": "14:46",
+      "alive": 8,
+      "cluster": 1,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "團戰!": 2,
+        "對線": 5,
+        "抓人": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 215,
+      "fps": 61,
+      "ts": 889.6593606398477,
+      "clock": "14:50",
+      "alive": 9,
+      "cluster": 1,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "團戰!": 2,
+        "對線": 5,
+        "遊走": 1,
+        "抓人": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 216,
+      "fps": 62,
+      "ts": 893.9006489601203,
+      "clock": "14:54",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "團戰!": 1,
+        "對線": 6,
+        "遊走": 1,
+        "打野": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 217,
+      "fps": 60,
+      "ts": 897.8887110403817,
+      "clock": "14:58",
+      "alive": 9,
+      "cluster": 1,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "團戰!": 2,
+        "對線": 6,
+        "打野": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 218,
+      "fps": 61,
+      "ts": 901.9587097600776,
+      "clock": "15:02",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "打野": 2,
+        "對線": 6,
+        "拉扯": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 219,
+      "fps": 61,
+      "ts": 906.0054169600562,
+      "clock": "15:06",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "打野": 2,
+        "避塔": 1,
+        "對線": 6
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 220,
+      "fps": 61,
+      "ts": 910.097344,
+      "clock": "15:10",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 1,
+      "states": {
+        "對線": 4,
+        "打野": 2,
+        "避塔": 1,
+        "回城中": 1,
+        "回防": 1,
+        "撤退": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 221,
+      "fps": 61,
+      "ts": 914.1091641597479,
+      "clock": "15:14",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 4,
+      "stuck": 0,
+      "states": {
+        "對線": 1,
+        "打野": 1,
+        "回城中": 1,
+        "追擊": 1,
+        "圍攻": 3,
+        "撤退": 2
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 222,
+      "fps": 62,
+      "ts": 918.4307257601004,
+      "clock": "15:18",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "圍攻": 6,
+        "回城": 1,
+        "撤退": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 223,
+      "fps": 60,
+      "ts": 922.419797760108,
+      "clock": "15:22",
+      "alive": 7,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "圍攻": 6,
+        "撤退": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 224,
+      "fps": 61,
+      "ts": 926.47096384013,
+      "clock": "15:27",
+      "alive": 6,
+      "cluster": 1,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "圍攻": 4,
+        "撤退": 1,
+        "回城中": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 0
+    },
+    {
+      "s": 225,
+      "fps": 61,
+      "ts": 930.500338559986,
+      "clock": "15:31",
+      "alive": 6,
+      "cluster": 1,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "圍攻": 4,
+        "回城中": 1,
+        "回城": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 226,
+      "fps": 59,
+      "ts": 934.5659462396081,
+      "clock": "15:35",
+      "alive": 6,
+      "cluster": 1,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "圍攻": 5,
+        "回城": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 227,
+      "fps": 61,
+      "ts": 938.635424,
+      "clock": "15:39",
+      "alive": 6,
+      "cluster": 1,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "遊走": 1,
+        "抓人": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 228,
+      "fps": 61,
+      "ts": 942.7764601607214,
+      "clock": "15:43",
+      "alive": 6,
+      "cluster": 1,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "遊走": 1,
+        "打野": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 229,
+      "fps": 61,
+      "ts": 946.8854854402582,
+      "clock": "15:47",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 6,
+        "打野": 1,
+        "遊走": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 230,
+      "fps": 61,
+      "ts": 950.918432639782,
+      "clock": "15:51",
+      "alive": 8,
+      "cluster": 1,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 6,
+        "打野": 1,
+        "遊走": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 231,
+      "fps": 61,
+      "ts": 955.005776,
+      "clock": "15:55",
+      "alive": 10,
+      "cluster": 1,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "回防": 1,
+        "打野": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 232,
+      "fps": 60,
+      "ts": 959.039680639924,
+      "clock": "15:59",
+      "alive": 10,
+      "cluster": 1,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "抓人": 1,
+        "回城中": 1,
+        "打野": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 233,
+      "fps": 61,
+      "ts": 963.099856,
+      "clock": "16:03",
+      "alive": 10,
+      "cluster": 1,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "抓人": 1,
+        "回城中": 1,
+        "打野": 1
+      },
+      "towerDead": 7,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 234,
+      "fps": 61,
+      "ts": 967.1907942401666,
+      "clock": "16:07",
+      "alive": 10,
+      "cluster": 1,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 2,
+        "回城": 1
+      },
+      "towerDead": 7,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 235,
+      "fps": 61,
+      "ts": 971.3181830395121,
+      "clock": "16:11",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 1,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 7,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 236,
+      "fps": 59,
+      "ts": 975.4247046402094,
+      "clock": "16:15",
+      "alive": 9,
+      "cluster": 1,
+      "reversals": 0,
+      "stuck": 1,
+      "states": {
+        "對線": 7,
+        "打野": 2
+      },
+      "towerDead": 7,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 237,
+      "fps": 62,
+      "ts": 979.500784,
+      "clock": "16:20",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 1,
+      "states": {
+        "對線": 6,
+        "回防": 1,
+        "打野": 1,
+        "避塔": 1
+      },
+      "towerDead": 7,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 238,
+      "fps": 62,
+      "ts": 983.5775065597876,
+      "clock": "16:24",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 1,
+      "states": {
+        "對線": 6,
+        "回防": 1,
+        "抓人": 1,
+        "避塔": 1
+      },
+      "towerDead": 7,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 239,
+      "fps": 59,
+      "ts": 987.569696,
+      "clock": "16:28",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 1,
+      "states": {
+        "對線": 6,
+        "回防": 2,
+        "抓人": 1
+      },
+      "towerDead": 7,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 240,
+      "fps": 61,
+      "ts": 991.66,
+      "clock": "16:32",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 2,
+      "states": {
+        "對線": 3,
+        "回防": 1,
+        "撤退": 1,
+        "遊走": 1,
+        "打野": 1,
+        "避塔": 2
+      },
+      "towerDead": 8,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 241,
+      "fps": 61,
+      "ts": 995.7108646407007,
+      "clock": "16:36",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 2,
+      "states": {
+        "對線": 2,
+        "回防": 1,
+        "回城中": 2,
+        "遊走": 1,
+        "打野": 1,
+        "避塔": 1,
+        "撤退": 1
+      },
+      "towerDead": 9,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 242,
+      "fps": 60,
+      "ts": 999.7741849601813,
+      "clock": "16:40",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 3,
+      "states": {
+        "對線": 4,
+        "回防": 1,
+        "回城": 1,
+        "打野": 1,
+        "回城中": 2
+      },
+      "towerDead": 9,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 243,
+      "fps": 61,
+      "ts": 1003.9593574398461,
+      "clock": "16:44",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 3,
+      "states": {
+        "對線": 4,
+        "回防": 1,
+        "打野": 1,
+        "避塔": 1,
+        "回城": 1,
+        "回城中": 1
+      },
+      "towerDead": 9,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 244,
+      "fps": 61,
+      "ts": 1007.994224,
+      "clock": "16:48",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 3,
+      "states": {
+        "對線": 5,
+        "回防": 2,
+        "打野": 1,
+        "避塔": 1,
+        "回城": 1
+      },
+      "towerDead": 9,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 245,
+      "fps": 62,
+      "ts": 1012.0359481597831,
+      "clock": "16:52",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 3,
+      "states": {
+        "對線": 2,
+        "回防": 2,
+        "撤退": 1,
+        "避塔": 2,
+        "打野": 1,
+        "接戰": 1,
+        "遊走": 1
+      },
+      "towerDead": 9,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 246,
+      "fps": 60,
+      "ts": 1016.0180633601539,
+      "clock": "16:56",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 3,
+      "states": {
+        "對線": 3,
+        "回防": 2,
+        "撤退": 2,
+        "打野": 1,
+        "避塔": 1,
+        "遊走": 1
+      },
+      "towerDead": 9,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 247,
+      "fps": 61,
+      "ts": 1020.1091641603781,
+      "clock": "17:00",
+      "alive": 9,
+      "cluster": 1,
+      "reversals": 0,
+      "stuck": 2,
+      "states": {
+        "對線": 4,
+        "打野": 2,
+        "回城中": 1,
+        "回城": 1,
+        "撤退": 1
+      },
+      "towerDead": 9,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 248,
+      "fps": 61,
+      "ts": 1024.207936,
+      "clock": "17:04",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 2,
+      "states": {
+        "對線": 5,
+        "打野": 2,
+        "回城中": 1,
+        "撤退": 1
+      },
+      "towerDead": 9,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 249,
+      "fps": 61,
+      "ts": 1028.338074240307,
+      "clock": "17:08",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 2,
+      "states": {
+        "對線": 6,
+        "打野": 1,
+        "撤退": 1,
+        "抓人": 1
+      },
+      "towerDead": 9,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 250,
+      "fps": 61,
+      "ts": 1032.389244159873,
+      "clock": "17:12",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 2,
+      "states": {
+        "對線": 6,
+        "抓人": 2,
+        "撤退": 1
+      },
+      "towerDead": 9,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 251,
+      "fps": 61,
+      "ts": 1036.483410559951,
+      "clock": "17:16",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 2,
+      "states": {
+        "對線": 6,
+        "團戰!": 1,
+        "撤退": 1,
+        "抓人": 1
+      },
+      "towerDead": 9,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 252,
+      "fps": 61,
+      "ts": 1040.4997177599937,
+      "clock": "17:21",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 2,
+      "states": {
+        "對線": 6,
+        "團戰!": 1,
+        "撤退": 1,
+        "打野": 1
+      },
+      "towerDead": 9,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 253,
+      "fps": 61,
+      "ts": 1044.5069222399682,
+      "clock": "17:25",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 2,
+      "states": {
+        "對線": 3,
+        "團戰!": 2,
+        "回城中": 2,
+        "打野": 1
+      },
+      "towerDead": 9,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 254,
+      "fps": 61,
+      "ts": 1048.5442681598395,
+      "clock": "17:29",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "避塔": 1,
+        "團戰!": 6,
+        "回城中": 1
+      },
+      "towerDead": 9,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 255,
+      "fps": 61,
+      "ts": 1052.6145145597418,
+      "clock": "17:33",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "團戰!": 7,
+        "對線": 1,
+        "回城": 1
+      },
+      "towerDead": 9,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 256,
+      "fps": 61,
+      "ts": 1056.6757286398401,
+      "clock": "17:37",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 1,
+        "團戰!": 6,
+        "圍攻": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 257,
+      "fps": 61,
+      "ts": 1060.8282726395257,
+      "clock": "17:41",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "團戰!": 5,
+        "圍攻": 2,
+        "撤退": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 258,
+      "fps": 61,
+      "ts": 1064.9264505601034,
+      "clock": "17:45",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "團戰!": 6,
+        "圍攻": 1,
+        "回城中": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 259,
+      "fps": 61,
+      "ts": 1068.979264,
+      "clock": "17:49",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "打野": 1,
+        "團戰!": 4,
+        "撤退": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 260,
+      "fps": 61,
+      "ts": 1073.0002822400063,
+      "clock": "17:53",
+      "alive": 8,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "抓人": 1,
+        "團戰!": 4,
+        "回城中": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 0
+    },
+    {
+      "s": 261,
+      "fps": 61,
+      "ts": 1077.029584,
+      "clock": "17:57",
+      "alive": 7,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 1,
+        "抓人": 1,
+        "圍攻": 1,
+        "回城中": 1,
+        "團戰!": 3
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 0
+    },
+    {
+      "s": 262,
+      "fps": 62,
+      "ts": 1081.1511654401484,
+      "clock": "18:01",
+      "alive": 8,
+      "cluster": 1,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "脫戰": 3,
+        "圍攻": 2,
+        "抓人": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 263,
+      "fps": 60,
+      "ts": 1085.1574502393946,
+      "clock": "18:05",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "打野": 1,
+        "圍攻": 4,
+        "抓人": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 264,
+      "fps": 61,
+      "ts": 1089.2824710394661,
+      "clock": "18:09",
+      "alive": 8,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "打野": 1,
+        "圍攻": 4,
+        "抓人": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 265,
+      "fps": 61,
+      "ts": 1093.3854854396127,
+      "clock": "18:13",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "撤退": 1,
+        "遊走": 1,
+        "圍攻": 4,
+        "打野": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 266,
+      "fps": 61,
+      "ts": 1097.478800639889,
+      "clock": "18:17",
+      "alive": 9,
+      "cluster": 4,
+      "reversals": 2,
+      "stuck": 1,
+      "states": {
+        "對線": 1,
+        "撤退": 2,
+        "遊走": 1,
+        "避塔": 1,
+        "打野": 1,
+        "圍攻": 3
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 267,
+      "fps": 61,
+      "ts": 1101.5,
+      "clock": "18:22",
+      "alive": 8,
+      "cluster": 5,
+      "reversals": 0,
+      "stuck": 1,
+      "states": {
+        "對線": 2,
+        "回城中": 2,
+        "撤退": 2,
+        "打野": 1,
+        "遊走": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 268,
+      "fps": 62,
+      "ts": 1105.5412902399225,
+      "clock": "18:26",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 1,
+      "states": {
+        "對線": 2,
+        "撤退": 2,
+        "回城中": 2,
+        "打野": 1,
+        "遊走": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 269,
+      "fps": 61,
+      "ts": 1109.607584,
+      "clock": "18:30",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 1,
+      "states": {
+        "對線": 2,
+        "回城": 4,
+        "回防": 1,
+        "團戰!": 1,
+        "避塔": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 270,
+      "fps": 60,
+      "ts": 1113.6222201596,
+      "clock": "18:34",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 4,
+      "stuck": 1,
+      "states": {
+        "對線": 1,
+        "團戰!": 6,
+        "回防": 1,
+        "撤退": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 271,
+      "fps": 61,
+      "ts": 1117.7160390401773,
+      "clock": "18:38",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 1,
+      "states": {
+        "對線": 2,
+        "團戰!": 6,
+        "回城中": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 272,
+      "fps": 61,
+      "ts": 1121.8249414403192,
+      "clock": "18:42",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "避塔": 1,
+        "團戰!": 6,
+        "對線": 1,
+        "回城中": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 273,
+      "fps": 62,
+      "ts": 1125.9778585599433,
+      "clock": "18:46",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "撤退": 1,
+        "團戰!": 6,
+        "對線": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 274,
+      "fps": 59,
+      "ts": 1129.9764070398828,
+      "clock": "18:50",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "回城中": 1,
+        "團戰!": 5,
+        "對線": 1,
+        "避塔": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 275,
+      "fps": 61,
+      "ts": 1134.0003686399928,
+      "clock": "18:54",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "回城": 1,
+        "團戰!": 5,
+        "對線": 2
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 276,
+      "fps": 61,
+      "ts": 1138.013456,
+      "clock": "18:58",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "撤退": 1,
+        "圍攻": 4,
+        "團戰!": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 277,
+      "fps": 61,
+      "ts": 1142.1044582404932,
+      "clock": "19:02",
+      "alive": 8,
+      "cluster": 1,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "回城中": 1,
+        "圍攻": 3,
+        "脫戰": 2
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 278,
+      "fps": 61,
+      "ts": 1146.159360640609,
+      "clock": "19:06",
+      "alive": 8,
+      "cluster": 1,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "回城": 1,
+        "團戰!": 4,
+        "圍攻": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 279,
+      "fps": 61,
+      "ts": 1150.2839609598227,
+      "clock": "19:10",
+      "alive": 8,
+      "cluster": 1,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "團戰!": 4,
+        "抓人": 1,
+        "對線": 1,
+        "圍攻": 2
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 280,
+      "fps": 61,
+      "ts": 1154.4109574396584,
+      "clock": "19:14",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "回城中": 2,
+        "團戰!": 5,
+        "對線": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 281,
+      "fps": 61,
+      "ts": 1158.4609542398493,
+      "clock": "19:18",
+      "alive": 8,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "回城中": 2,
+        "團戰!": 4,
+        "對線": 1,
+        "圍攻": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 282,
+      "fps": 61,
+      "ts": 1162.4997177599937,
+      "clock": "19:23",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "回城": 2,
+        "打野": 2,
+        "對線": 2,
+        "圍攻": 3
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 283,
+      "fps": 61,
+      "ts": 1166.5036966400232,
+      "clock": "19:27",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 1,
+        "回防": 1
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 284,
+      "fps": 61,
+      "ts": 1170.539680639924,
+      "clock": "19:31",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "打野": 1,
+        "回城中": 1,
+        "團戰!": 3
+      },
+      "towerDead": 10,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 285,
+      "fps": 61,
+      "ts": 1174.621661440133,
+      "clock": "19:35",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 3,
+        "打野": 1,
+        "回城中": 2,
+        "團戰!": 4
+      },
+      "towerDead": 11,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 286,
+      "fps": 61,
+      "ts": 1178.715296,
+      "clock": "19:39",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 3,
+        "打野": 1,
+        "回城": 1,
+        "回城中": 1,
+        "團戰!": 4
+      },
+      "towerDead": 11,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 287,
+      "fps": 61,
+      "ts": 1182.8374297601538,
+      "clock": "19:43",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 6,
+        "團戰!": 4
+      },
+      "towerDead": 11,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 288,
+      "fps": 61,
+      "ts": 1186.9016550397607,
+      "clock": "19:47",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 5,
+        "團戰!": 5
+      },
+      "towerDead": 11,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 289,
+      "fps": 61,
+      "ts": 1190.9842246401438,
+      "clock": "19:51",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 5,
+        "團戰!": 5
+      },
+      "towerDead": 11,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 290,
+      "fps": 61,
+      "ts": 1195.0037945599295,
+      "clock": "19:55",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "團戰!": 5,
+        "回城中": 1,
+        "對線": 4
+      },
+      "towerDead": 11,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 291,
+      "fps": 61,
+      "ts": 1199.0209670400552,
+      "clock": "19:59",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 1,
+        "追擊": 1
+      },
+      "towerDead": 11,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 292,
+      "fps": 61,
+      "ts": 1203.086200959664,
+      "clock": "20:03",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "圍攻": 4,
+        "打野": 1
+      },
+      "towerDead": 11,
+      "warnings": 0,
+      "offScreen": 0
+    },
+    {
+      "s": 293,
+      "fps": 61,
+      "ts": 1207.3488345598516,
+      "clock": "20:07",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "圍攻": 4,
+        "打野": 1
+      },
+      "towerDead": 11,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 294,
+      "fps": 61,
+      "ts": 1211.3913638403772,
+      "clock": "20:11",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "圍攻": 4,
+        "打野": 1
+      },
+      "towerDead": 11,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 295,
+      "fps": 60,
+      "ts": 1215.3939846403725,
+      "clock": "20:15",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "回城中": 1,
+        "打野": 1,
+        "撤退": 1,
+        "圍攻": 2
+      },
+      "towerDead": 12,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 296,
+      "fps": 61,
+      "ts": 1219.4804,
+      "clock": "20:19",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "撤退": 1,
+        "打野": 1,
+        "回城中": 2,
+        "圍攻": 1
+      },
+      "towerDead": 12,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 297,
+      "fps": 61,
+      "ts": 1223.495376,
+      "clock": "20:24",
+      "alive": 8,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "回城中": 3,
+        "遊走": 1,
+        "接戰": 1,
+        "撤退": 1
+      },
+      "towerDead": 12,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 298,
+      "fps": 60,
+      "ts": 1227.503136,
+      "clock": "20:28",
+      "alive": 7,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 1,
+        "追擊": 1,
+        "回城": 2,
+        "撤退": 1,
+        "攻門牙塔": 1,
+        "回城中": 1
+      },
+      "towerDead": 13,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 299,
+      "fps": 61,
+      "ts": 1231.5409657602315,
+      "clock": "20:32",
+      "alive": 7,
+      "cluster": 4,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 1,
+        "回城中": 2,
+        "回防": 2,
+        "撤退": 1,
+        "回城": 1
+      },
+      "towerDead": 15,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 300,
+      "fps": 61,
+      "ts": 1235.6188870401315,
+      "clock": "20:36",
+      "alive": 7,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 1,
+        "回城": 1,
+        "回防": 1,
+        "打野": 1,
+        "圍攻主堡": 2,
+        "回城中": 1
+      },
+      "towerDead": 16,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 301,
+      "fps": 61,
+      "ts": 1239.719024,
+      "clock": "20:40",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "避塔": 1,
+        "抓人": 1,
+        "對線": 2,
+        "打野": 1,
+        "圍攻主堡": 2,
+        "回城": 1
+      },
+      "towerDead": 16,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 302,
+      "fps": 61,
+      "ts": 1243.8457081598501,
+      "clock": "20:44",
+      "alive": 8,
+      "cluster": 3,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "撤退": 1,
+        "抓人": 1,
+        "對線": 1,
+        "回防": 1,
+        "追擊": 1,
+        "圍攻主堡": 3
+      },
+      "towerDead": 16,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 303,
+      "fps": 61,
+      "ts": 1247.929880959899,
+      "clock": "20:48",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "撤退": 1,
+        "打野": 1,
+        "對線": 2,
+        "追擊": 1,
+        "圍攻主堡": 3
+      },
+      "towerDead": 16,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 304,
+      "fps": 61,
+      "ts": 1251.9844249599523,
+      "clock": "20:52",
+      "alive": 7,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "打野": 1,
+        "對線": 1,
+        "圍攻": 5
+      },
+      "towerDead": 16,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 305,
+      "fps": 61,
+      "ts": 1256.0036966400232,
+      "clock": "20:56",
+      "alive": 7,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "打野": 1,
+        "對線": 1,
+        "圍攻": 5
+      },
+      "towerDead": 16,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 306,
+      "fps": 61,
+      "ts": 1260.0335622402795,
+      "clock": "21:00",
+      "alive": 6,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "打野": 1,
+        "圍攻": 5
+      },
+      "towerDead": 16,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 307,
+      "fps": 61,
+      "ts": 1264.070543359696,
+      "clock": "21:04",
+      "alive": 8,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "打野": 1,
+        "對線": 2,
+        "圍攻": 5
+      },
+      "towerDead": 16,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 308,
+      "fps": 61,
+      "ts": 1268.1587225596961,
+      "clock": "21:08",
+      "alive": 8,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "打野": 1,
+        "對線": 2,
+        "圍攻": 5
+      },
+      "towerDead": 16,
+      "warnings": 0,
+      "offScreen": 0
+    },
+    {
+      "s": 309,
+      "fps": 61,
+      "ts": 1272.273424,
+      "clock": "21:12",
+      "alive": 8,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "打野": 2,
+        "對線": 3,
+        "圍攻主堡": 3
+      },
+      "towerDead": 16,
+      "warnings": 0,
+      "offScreen": 0
+    },
+    {
+      "s": 310,
+      "fps": 61,
+      "ts": 1276.4207014403223,
+      "clock": "21:16",
+      "alive": 8,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "打野": 2,
+        "對線": 3,
+        "圍攻主堡": 3
+      },
+      "towerDead": 16,
+      "warnings": 0,
+      "offScreen": 0
+    },
+    {
+      "s": 311,
+      "fps": 60,
+      "ts": 1280.419344,
+      "clock": "21:20",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "抓人": 1,
+        "回城中": 2,
+        "對線": 1,
+        "打野": 1,
+        "避塔": 1,
+        "撤退": 1,
+        "圍攻主堡": 1
+      },
+      "towerDead": 16,
+      "warnings": 0,
+      "offScreen": 0
+    },
+    {
+      "s": 312,
+      "fps": 58,
+      "ts": 1283,
+      "clock": "21:23",
+      "alive": 8,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "抓人": 1,
+        "回城中": 3,
+        "對線": 1,
+        "打野": 1,
+        "撤退": 2
+      },
+      "towerDead": 16,
+      "warnings": 0,
+      "offScreen": 1
+    },
+    {
+      "s": 0,
+      "fps": 127,
+      "ts": 7.577061759682312,
+      "clock": "0:08",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "入侵": 1,
+        "游走": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 1,
+      "fps": 61,
+      "ts": 11.66,
+      "clock": "0:12",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "入侵": 1,
+        "游走": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 2,
+      "fps": 61,
+      "ts": 15.781724160178223,
+      "clock": "0:16",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "入侵": 1,
+        "游走": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 3,
+      "fps": 61,
+      "ts": 19.891363840377196,
+      "clock": "0:20",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "入侵": 1,
+        "游走": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 4,
+      "fps": 61,
+      "ts": 23.961269759924928,
+      "clock": "0:24",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "入侵": 1,
+        "游走": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 5,
+      "fps": 61,
+      "ts": 27.99569663994995,
+      "clock": "0:28",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "入侵": 1,
+        "回防": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 6,
+      "fps": 61,
+      "ts": 32.005898240029296,
+      "clock": "0:32",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "入侵": 1,
+        "抓人": 1,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 7,
+      "fps": 61,
+      "ts": 36.04260095984253,
+      "clock": "0:36",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "避塔": 1,
+        "抓人": 1,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 8,
+      "fps": 61,
+      "ts": 40.117786239869076,
+      "clock": "0:40",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "避塔": 1,
+        "抓人": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 9,
+      "fps": 61,
+      "ts": 44.21603903929077,
+      "clock": "0:44",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "避塔": 1,
+        "遊走": 1,
+        "打野": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 10,
+      "fps": 62,
+      "ts": 48.434464,
+      "clock": "0:48",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 6,
+        "避塔": 1,
+        "遊走": 1,
+        "回防": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 11,
+      "fps": 60,
+      "ts": 52.43364223980347,
+      "clock": "0:52",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "接戰": 3
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 12,
+      "fps": 61,
+      "ts": 56.484821760047,
+      "clock": "0:57",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "撤退": 1,
+        "追擊": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 13,
+      "fps": 61,
+      "ts": 60.50007744000336,
+      "clock": "1:01",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "撤退": 2,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 14,
+      "fps": 61,
+      "ts": 64.52050624021851,
+      "clock": "1:05",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "回城中": 1,
+        "打野": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 15,
+      "fps": 61,
+      "ts": 68.57054336020263,
+      "clock": "1:09",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "回城": 1,
+        "打野": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 16,
+      "fps": 61,
+      "ts": 72.65745024015136,
+      "clock": "1:13",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 9
+    },
+    {
+      "s": 17,
+      "fps": 60,
+      "ts": 76.66128256030639,
+      "clock": "1:17",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "抓人": 1,
+        "打野": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 9
+    },
+    {
+      "s": 18,
+      "fps": 61,
+      "ts": 80.78396095982269,
+      "clock": "1:21",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "抓人": 1,
+        "打野": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 9
+    },
+    {
+      "s": 19,
+      "fps": 61,
+      "ts": 84.88602623974243,
+      "clock": "1:25",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 2,
+        "遊走": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 9
+    },
+    {
+      "s": 20,
+      "fps": 61,
+      "ts": 88.96031936007599,
+      "clock": "1:29",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 1,
+        "遊走": 1,
+        "抓人": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 9
+    },
+    {
+      "s": 21,
+      "fps": 61,
+      "ts": 92.99559104005066,
+      "clock": "1:33",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 1,
+        "抓人": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 9
+    },
+    {
+      "s": 22,
+      "fps": 61,
+      "ts": 97.00389375995239,
+      "clock": "1:37",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 9
+    },
+    {
+      "s": 23,
+      "fps": 61,
+      "ts": 101.043264,
+      "clock": "1:41",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 24,
+      "fps": 61,
+      "ts": 105.09585215964569,
+      "clock": "1:45",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 25,
+      "fps": 61,
+      "ts": 109.219024,
+      "clock": "1:49",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 26,
+      "fps": 61,
+      "ts": 113.34758784029785,
+      "clock": "1:53",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 27,
+      "fps": 61,
+      "ts": 117.4352806401941,
+      "clock": "1:57",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "抓人": 1,
+        "打野": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 28,
+      "fps": 61,
+      "ts": 121.48215103989807,
+      "clock": "2:02",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "抓人": 1,
+        "打野": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 29,
+      "fps": 61,
+      "ts": 125.500064,
+      "clock": "2:06",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 30,
+      "fps": 61,
+      "ts": 129.51915455989442,
+      "clock": "2:10",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 2,
+        "遊走": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 31,
+      "fps": 61,
+      "ts": 133.56927423989958,
+      "clock": "2:14",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 2,
+        "遊走": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 32,
+      "fps": 61,
+      "ts": 137.65303743985078,
+      "clock": "2:18",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 33,
+      "fps": 61,
+      "ts": 141.78247104035583,
+      "clock": "2:22",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 1,
+        "抓人": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 34,
+      "fps": 61,
+      "ts": 145.88871104038176,
+      "clock": "2:26",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 1,
+        "抓人": 1,
+        "回城中": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 35,
+      "fps": 62,
+      "ts": 149.99668223995604,
+      "clock": "2:30",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 6,
+        "抓人": 1,
+        "避塔": 1,
+        "打野": 1,
+        "回城中": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 36,
+      "fps": 60,
+      "ts": 153.99526655997374,
+      "clock": "2:34",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "抓人": 1,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 37,
+      "fps": 61,
+      "ts": 158.0064,
+      "clock": "2:38",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "抓人": 1,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 9
+    },
+    {
+      "s": 38,
+      "fps": 61,
+      "ts": 162.029584,
+      "clock": "2:42",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 1,
+        "避塔": 1,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 39,
+      "fps": 61,
+      "ts": 166.11778623986908,
+      "clock": "2:46",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 2,
+        "回城中": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 40,
+      "fps": 61,
+      "ts": 170.226576,
+      "clock": "2:50",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 2,
+        "回城中": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 41,
+      "fps": 61,
+      "ts": 174.3387174404596,
+      "clock": "2:54",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 2,
+        "回城": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 9
+    },
+    {
+      "s": 42,
+      "fps": 61,
+      "ts": 178.4324,
+      "clock": "2:58",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 43,
+      "fps": 61,
+      "ts": 182.48422464014374,
+      "clock": "3:03",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 44,
+      "fps": 61,
+      "ts": 186.50036863999267,
+      "clock": "3:07",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "打野": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 45,
+      "fps": 61,
+      "ts": 190.51806335989747,
+      "clock": "3:11",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "抓人": 1,
+        "打野": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 46,
+      "fps": 61,
+      "ts": 194.57054335969605,
+      "clock": "3:15",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "抓人": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 47,
+      "fps": 61,
+      "ts": 198.6612825603064,
+      "clock": "3:19",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 8,
+        "抓人": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 48,
+      "fps": 61,
+      "ts": 202.78321664053283,
+      "clock": "3:23",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 1,
+        "回防": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 49,
+      "fps": 61,
+      "ts": 206.88924415987304,
+      "clock": "3:27",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 1,
+        "回防": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 50,
+      "fps": 61,
+      "ts": 210.9596793599234,
+      "clock": "3:31",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 6,
+        "打野": 1,
+        "避塔": 1,
+        "回防": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 10
+    },
+    {
+      "s": 51,
+      "fps": 61,
+      "ts": 214.995266560105,
+      "clock": "3:35",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "打野": 1,
+        "接戰": 1,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 52,
+      "fps": 61,
+      "ts": 219.00565503997132,
+      "clock": "3:39",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 5,
+        "打野": 1,
+        "撤退": 1,
+        "追擊": 1,
+        "回防": 1,
+        "遊走": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 53,
+      "fps": 61,
+      "ts": 223.038416,
+      "clock": "3:43",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "回防": 1,
+        "撤退": 1,
+        "接戰": 1,
+        "打野": 1,
+        "追擊": 1,
+        "遊走": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 54,
+      "fps": 61,
+      "ts": 227.11614464013002,
+      "clock": "3:47",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 6,
+        "回防": 1,
+        "接戰": 1,
+        "打野": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 55,
+      "fps": 61,
+      "ts": 231.2258150398187,
+      "clock": "3:51",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 5,
+        "接戰": 2,
+        "打野": 1,
+        "撤退": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 56,
+      "fps": 61,
+      "ts": 235.3361369598456,
+      "clock": "3:55",
+      "alive": 9,
+      "cluster": 4,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "拉扯": 2,
+        "接戰": 2,
+        "團戰!": 3,
+        "打野": 1,
+        "對線": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 57,
+      "fps": 61,
+      "ts": 239.4368985600958,
+      "clock": "3:59",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 3,
+        "追擊": 1,
+        "團戰!": 3,
+        "接戰": 1,
+        "打野": 1,
+        "撤退": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 58,
+      "fps": 61,
+      "ts": 243.48442496019044,
+      "clock": "4:04",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "團戰!": 6,
+        "對線": 1,
+        "接戰": 1,
+        "回城中": 1,
+        "撤退": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 59,
+      "fps": 61,
+      "ts": 247.50004095999512,
+      "clock": "4:08",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "追擊": 1,
+        "團戰!": 3,
+        "對線": 1,
+        "回城中": 2,
+        "脫戰": 2,
+        "撤退": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 60,
+      "fps": 61,
+      "ts": 251.51763584005067,
+      "clock": "4:12",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "回城中": 4,
+        "團戰!": 3,
+        "拉扯": 1,
+        "回城": 1,
+        "對線": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 61,
+      "fps": 61,
+      "ts": 255.57974976032318,
+      "clock": "4:16",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "回城中": 3,
+        "團戰!": 3,
+        "對線": 4
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 62,
+      "fps": 61,
+      "ts": 259.6574502401514,
+      "clock": "4:20",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "回城": 2,
+        "團戰!": 6,
+        "對線": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 63,
+      "fps": 61,
+      "ts": 263.780976,
+      "clock": "4:24",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 3,
+        "團戰!": 7
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 64,
+      "fps": 61,
+      "ts": 267.8887110403818,
+      "clock": "4:28",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "團戰!": 10
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 65,
+      "fps": 61,
+      "ts": 271.9587097600775,
+      "clock": "4:32",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 6,
+        "團戰!": 2,
+        "撤退": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 66,
+      "fps": 61,
+      "ts": 275.99504383991945,
+      "clock": "4:36",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "撤退": 3,
+        "避塔": 1,
+        "團戰!": 1,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 67,
+      "fps": 61,
+      "ts": 280.00207936003477,
+      "clock": "4:40",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 1,
+        "回城中": 3,
+        "團戰!": 5,
+        "脫戰": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 68,
+      "fps": 61,
+      "ts": 284.03936256022706,
+      "clock": "4:44",
+      "alive": 10,
+      "cluster": 1,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 3,
+        "回城": 2,
+        "團戰!": 3,
+        "遊走": 1,
+        "撤退": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 69,
+      "fps": 61,
+      "ts": 288.1112889596182,
+      "clock": "4:48",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 4,
+      "stuck": 0,
+      "states": {
+        "對線": 5,
+        "打野": 2,
+        "團戰!": 3
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 70,
+      "fps": 61,
+      "ts": 292.2258150398187,
+      "clock": "4:52",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "打野": 2,
+        "團戰!": 4
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 71,
+      "fps": 62,
+      "ts": 296.42688383969056,
+      "clock": "4:56",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "團戰!": 8
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 72,
+      "fps": 60,
+      "ts": 300.428176,
+      "clock": "5:00",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "團戰!": 8,
+        "對線": 1,
+        "撤退": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 73,
+      "fps": 61,
+      "ts": 304.484624,
+      "clock": "5:05",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "團戰!": 6,
+        "對線": 1,
+        "撤退": 3
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 74,
+      "fps": 61,
+      "ts": 308.500144,
+      "clock": "5:09",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "抓人": 2,
+        "回城中": 3,
+        "脫戰": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 75,
+      "fps": 61,
+      "ts": 312.5172134402002,
+      "clock": "5:13",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 6,
+        "抓人": 1,
+        "回城中": 2,
+        "接戰": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 76,
+      "fps": 61,
+      "ts": 316.5688537597998,
+      "clock": "5:17",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 5,
+        "接戰": 2,
+        "避塔": 1,
+        "拉扯": 1,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 77,
+      "fps": 61,
+      "ts": 320.6593606398477,
+      "clock": "5:21",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 5,
+      "stuck": 0,
+      "states": {
+        "對線": 5,
+        "接戰": 1,
+        "避塔": 1,
+        "撤退": 1,
+        "回防": 1,
+        "追擊": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 78,
+      "fps": 61,
+      "ts": 324.78022656071533,
+      "clock": "5:25",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "避塔": 2,
+        "打野": 1,
+        "對線": 3,
+        "撤退": 1,
+        "接戰": 2,
+        "追擊": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 79,
+      "fps": 61,
+      "ts": 328.90660863976683,
+      "clock": "5:29",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "避塔": 1,
+        "打野": 1,
+        "對線": 4,
+        "撤退": 1,
+        "接戰": 1,
+        "追擊": 1,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 80,
+      "fps": 61,
+      "ts": 332.96525503978665,
+      "clock": "5:33",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "避塔": 2,
+        "打野": 1,
+        "對線": 3,
+        "接戰": 1,
+        "回防": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 81,
+      "fps": 61,
+      "ts": 336.995376,
+      "clock": "5:37",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "避塔": 2,
+        "打野": 2,
+        "對線": 3,
+        "追擊": 1,
+        "接戰": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 82,
+      "fps": 60,
+      "ts": 340.99526655997374,
+      "clock": "5:41",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "撤退": 2,
+        "打野": 2,
+        "回防": 1,
+        "追擊": 1,
+        "對線": 3
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 83,
+      "fps": 61,
+      "ts": 345.004096,
+      "clock": "5:45",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "撤退": 2,
+        "回防": 2,
+        "追擊": 1,
+        "打野": 1,
+        "避塔": 1,
+        "對線": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 84,
+      "fps": 61,
+      "ts": 349.02143295988833,
+      "clock": "5:49",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "撤退": 2,
+        "回防": 2,
+        "遊走": 1,
+        "避塔": 1,
+        "打野": 1,
+        "對線": 3
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 85,
+      "fps": 61,
+      "ts": 353.0866713597754,
+      "clock": "5:53",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "回城中": 2,
+        "回防": 2,
+        "遊走": 1,
+        "對線": 3,
+        "打野": 1,
+        "避塔": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 86,
+      "fps": 61,
+      "ts": 357.215296,
+      "clock": "5:57",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "回城": 1,
+        "回防": 3,
+        "對線": 2,
+        "避塔": 3,
+        "打野": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 87,
+      "fps": 60,
+      "ts": 361.207936,
+      "clock": "6:01",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 5,
+      "stuck": 1,
+      "states": {
+        "對線": 2,
+        "回防": 3,
+        "避塔": 3,
+        "打野": 1,
+        "支援": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 9
+    },
+    {
+      "s": 88,
+      "fps": 61,
+      "ts": 365.34127744030394,
+      "clock": "6:05",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "追擊": 1,
+        "撤退": 2,
+        "回防": 1,
+        "避塔": 2,
+        "抓人": 1,
+        "支援": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 89,
+      "fps": 61,
+      "ts": 369.42688383969056,
+      "clock": "6:09",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "追擊": 1,
+        "回城中": 1,
+        "回防": 1,
+        "抓人": 1,
+        "撤退": 1,
+        "避塔": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 90,
+      "fps": 61,
+      "ts": 373.4810662401575,
+      "clock": "6:14",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 3,
+        "避塔": 2,
+        "拉扯": 1,
+        "回防": 1,
+        "打野": 1,
+        "撤退": 1,
+        "支援": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 91,
+      "fps": 61,
+      "ts": 377.5000409600073,
+      "clock": "6:18",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "回防": 2,
+        "打野": 1,
+        "避塔": 3,
+        "團戰!": 2,
+        "回城中": 1,
+        "撤退": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 92,
+      "fps": 61,
+      "ts": 381.5182790399484,
+      "clock": "6:22",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 1,
+        "打野": 1,
+        "避塔": 2,
+        "團戰!": 2,
+        "回防": 1,
+        "回城": 1,
+        "撤退": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 93,
+      "fps": 61,
+      "ts": 385.5692742398996,
+      "clock": "6:26",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "打野": 1,
+        "撤退": 3,
+        "追擊": 2,
+        "團戰!": 1,
+        "避塔": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 94,
+      "fps": 61,
+      "ts": 389.65872256045594,
+      "clock": "6:30",
+      "alive": 9,
+      "cluster": 4,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "回防": 1,
+        "打野": 2,
+        "團戰!": 2,
+        "避塔": 1,
+        "對線": 1,
+        "撤退": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 95,
+      "fps": 61,
+      "ts": 393.7817241601782,
+      "clock": "6:34",
+      "alive": 9,
+      "cluster": 4,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 3,
+        "打野": 2,
+        "團戰!": 2,
+        "撤退": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 96,
+      "fps": 61,
+      "ts": 397.887104,
+      "clock": "6:38",
+      "alive": 9,
+      "cluster": 4,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "回防": 1,
+        "打野": 2,
+        "脫戰": 2,
+        "避塔": 1,
+        "對線": 1,
+        "撤退": 1,
+        "回城中": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 97,
+      "fps": 61,
+      "ts": 401.9577286402353,
+      "clock": "6:42",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 5,
+      "stuck": 0,
+      "states": {
+        "回防": 1,
+        "抓人": 1,
+        "脫戰": 3,
+        "對線": 2,
+        "打野": 1,
+        "回城中": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 98,
+      "fps": 61,
+      "ts": 405.9956966399499,
+      "clock": "6:46",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "回防": 1,
+        "抓人": 1,
+        "對線": 5,
+        "打野": 1,
+        "回城": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 99,
+      "fps": 61,
+      "ts": 410.00473344002626,
+      "clock": "6:50",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "抓人": 1,
+        "打野": 1,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 100,
+      "fps": 61,
+      "ts": 414.04096576023164,
+      "clock": "6:54",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 6,
+        "打野": 1,
+        "避塔": 1,
+        "抓人": 1,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 101,
+      "fps": 61,
+      "ts": 418.110224,
+      "clock": "6:58",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 5,
+        "回防": 2,
+        "避塔": 2,
+        "抓人": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 102,
+      "fps": 61,
+      "ts": 422.2281017603644,
+      "clock": "7:02",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "回防": 4,
+        "對線": 4,
+        "抓人": 1,
+        "避塔": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 103,
+      "fps": 61,
+      "ts": 426.3457081598502,
+      "clock": "7:06",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 2,
+      "states": {
+        "回防": 4,
+        "對線": 4,
+        "打野": 1,
+        "避塔": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 104,
+      "fps": 61,
+      "ts": 430.4324,
+      "clock": "7:10",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 2,
+      "states": {
+        "對線": 4,
+        "追擊": 2,
+        "打野": 1,
+        "撤退": 1,
+        "回防": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 105,
+      "fps": 61,
+      "ts": 434.4844249599524,
+      "clock": "7:15",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 3,
+      "states": {
+        "對線": 4,
+        "打野": 2,
+        "避塔": 1,
+        "撤退": 1,
+        "回防": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 106,
+      "fps": 61,
+      "ts": 438.5003097600134,
+      "clock": "7:19",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 3,
+      "states": {
+        "對線": 4,
+        "抓人": 1,
+        "避塔": 1,
+        "回防": 3,
+        "回城中": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 107,
+      "fps": 61,
+      "ts": 442.5182790399484,
+      "clock": "7:23",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 3,
+      "states": {
+        "回防": 4,
+        "抓人": 1,
+        "對線": 3,
+        "避塔": 1,
+        "回城中": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 108,
+      "fps": 61,
+      "ts": 446.57096896030487,
+      "clock": "7:27",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 1,
+      "stuck": 3,
+      "states": {
+        "回防": 3,
+        "打野": 2,
+        "撤退": 1,
+        "對線": 4
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 109,
+      "fps": 61,
+      "ts": 450.6638630393823,
+      "clock": "7:31",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 1,
+      "stuck": 3,
+      "states": {
+        "回防": 3,
+        "打野": 2,
+        "回城中": 1,
+        "對線": 4
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 110,
+      "fps": 62,
+      "ts": 454.89963775987917,
+      "clock": "7:35",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 1,
+      "stuck": 3,
+      "states": {
+        "對線": 4,
+        "打野": 2,
+        "回城": 1,
+        "避塔": 1,
+        "回防": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 111,
+      "fps": 60,
+      "ts": 458.88548543961275,
+      "clock": "7:39",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 1,
+      "stuck": 4,
+      "states": {
+        "對線": 5,
+        "打野": 2,
+        "避塔": 1,
+        "回防": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 112,
+      "fps": 60,
+      "ts": 462.8892441605078,
+      "clock": "7:43",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 2,
+      "states": {
+        "對線": 4,
+        "打野": 1,
+        "團戰!": 5
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 9
+    },
+    {
+      "s": 113,
+      "fps": 61,
+      "ts": 466.95903423976836,
+      "clock": "7:47",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 2,
+      "states": {
+        "對線": 4,
+        "打野": 1,
+        "團戰!": 5
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 114,
+      "fps": 61,
+      "ts": 470.995591039924,
+      "clock": "7:51",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 2,
+      "states": {
+        "對線": 4,
+        "打野": 1,
+        "團戰!": 5
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 115,
+      "fps": 61,
+      "ts": 475.004408960076,
+      "clock": "7:55",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "團戰!": 7,
+        "對線": 3
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 9
+    },
+    {
+      "s": 116,
+      "fps": 61,
+      "ts": 479.04460543991945,
+      "clock": "7:59",
+      "alive": 10,
+      "cluster": 5,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "團戰!": 8
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 117,
+      "fps": 61,
+      "ts": 483.1156,
+      "clock": "8:03",
+      "alive": 10,
+      "cluster": 6,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "團戰!": 9,
+        "對線": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 118,
+      "fps": 69,
+      "ts": 487.78247103946626,
+      "clock": "8:08",
+      "alive": 10,
+      "cluster": 7,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "團戰!": 8,
+        "撤退": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 119,
+      "fps": 69,
+      "ts": 492.43281536009886,
+      "clock": "8:12",
+      "alive": 10,
+      "cluster": 5,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "團戰!": 4,
+        "回城中": 2,
+        "撤退": 1,
+        "接戰": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 120,
+      "fps": 61,
+      "ts": 496.476896,
+      "clock": "8:17",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "撤退": 3,
+        "團戰!": 2,
+        "回城中": 3
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 121,
+      "fps": 61,
+      "ts": 500.5003686399927,
+      "clock": "8:21",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "撤退": 4,
+        "脫戰": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 122,
+      "fps": 61,
+      "ts": 504.51784895984713,
+      "clock": "8:25",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 6,
+        "撤退": 2,
+        "團戰!": 1,
+        "打野": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 123,
+      "fps": 61,
+      "ts": 508.57054335969605,
+      "clock": "8:29",
+      "alive": 10,
+      "cluster": 1,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 6,
+        "回城中": 1,
+        "回防": 1,
+        "打野": 1,
+        "撤退": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 124,
+      "fps": 61,
+      "ts": 512.6561830398492,
+      "clock": "8:33",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 1,
+      "states": {
+        "對線": 4,
+        "抓人": 1,
+        "避塔": 1,
+        "回防": 1,
+        "團戰!": 3
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 125,
+      "fps": 62,
+      "ts": 516.8903065601263,
+      "clock": "8:37",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 1,
+      "states": {
+        "對線": 4,
+        "抓人": 1,
+        "回防": 1,
+        "團戰!": 4
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 126,
+      "fps": 60,
+      "ts": 520.8887110397454,
+      "clock": "8:41",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 1,
+      "states": {
+        "對線": 4,
+        "抓人": 1,
+        "團戰!": 5
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 127,
+      "fps": 61,
+      "ts": 524.961584,
+      "clock": "8:45",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 1,
+      "states": {
+        "對線": 5,
+        "打野": 1,
+        "團戰!": 4
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 128,
+      "fps": 61,
+      "ts": 528.9949305600271,
+      "clock": "8:49",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 3,
+      "stuck": 1,
+      "states": {
+        "對線": 6,
+        "打野": 1,
+        "回城中": 1,
+        "回防": 1,
+        "抓人": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 129,
+      "fps": 61,
+      "ts": 533.005299839889,
+      "clock": "8:53",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 4,
+      "stuck": 1,
+      "states": {
+        "團戰!": 7,
+        "撤退": 1,
+        "對線": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 130,
+      "fps": 61,
+      "ts": 537.039680639924,
+      "clock": "8:57",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 3,
+        "團戰!": 6,
+        "回城中": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 131,
+      "fps": 61,
+      "ts": 541.1029126401223,
+      "clock": "9:01",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "團戰!": 6,
+        "回城": 1,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 132,
+      "fps": 61,
+      "ts": 545.2250553596381,
+      "clock": "9:05",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 3,
+        "團戰!": 6,
+        "回防": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 133,
+      "fps": 61,
+      "ts": 549.3406393601523,
+      "clock": "9:09",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "避塔": 1,
+        "撤退": 1,
+        "對線": 2,
+        "團戰!": 5,
+        "接戰": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 134,
+      "fps": 61,
+      "ts": 553.4273158397943,
+      "clock": "9:13",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "團戰!": 7,
+        "對線": 2,
+        "接戰": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 135,
+      "fps": 61,
+      "ts": 557.4844249601904,
+      "clock": "9:18",
+      "alive": 10,
+      "cluster": 5,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "回城中": 1,
+        "團戰!": 7
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 136,
+      "fps": 61,
+      "ts": 561.5000921600073,
+      "clock": "9:22",
+      "alive": 10,
+      "cluster": 5,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 3,
+        "回城中": 2,
+        "團戰!": 5
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 137,
+      "fps": 61,
+      "ts": 565.5170041599005,
+      "clock": "9:26",
+      "alive": 10,
+      "cluster": 6,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "打野": 1,
+        "撤退": 2,
+        "團戰!": 3
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 138,
+      "fps": 70,
+      "ts": 570.2116,
+      "clock": "9:30",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "脫戰": 5,
+        "回城中": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 139,
+      "fps": 61,
+      "ts": 574.332882559844,
+      "clock": "9:34",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "打野": 1,
+        "避塔": 1,
+        "回城中": 1,
+        "回防": 3
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 140,
+      "fps": 61,
+      "ts": 578.4133286402246,
+      "clock": "9:38",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "打野": 1,
+        "避塔": 1,
+        "回城": 1,
+        "回防": 2,
+        "抓人": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 141,
+      "fps": 61,
+      "ts": 582.48278656005,
+      "clock": "9:43",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 5,
+        "打野": 1,
+        "回防": 3,
+        "抓人": 1
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 142,
+      "fps": 61,
+      "ts": 586.500092159989,
+      "clock": "9:47",
+      "alive": 10,
+      "cluster": 1,
+      "reversals": 2,
+      "stuck": 1,
+      "states": {
+        "對線": 4,
+        "打野": 1,
+        "避塔": 1,
+        "回防": 4
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 143,
+      "fps": 61,
+      "ts": 590.5155750400476,
+      "clock": "9:51",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "避塔": 1,
+        "打野": 2,
+        "對線": 3,
+        "回防": 1,
+        "圍攻": 2
+      },
+      "towerDead": 0,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 144,
+      "fps": 61,
+      "ts": 594.530976,
+      "clock": "9:55",
+      "alive": 9,
+      "cluster": 1,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "避塔": 1,
+        "抓人": 1,
+        "對線": 4,
+        "圍攻": 2,
+        "打野": 1
+      },
+      "towerDead": 1,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 145,
+      "fps": 61,
+      "ts": 598.7327097605521,
+      "clock": "9:59",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 6,
+        "抓人": 1,
+        "回防": 1,
+        "打野": 1
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 146,
+      "fps": 61,
+      "ts": 602.7802265598211,
+      "clock": "10:03",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "避塔": 1,
+        "接戰": 2,
+        "回防": 1,
+        "對線": 3,
+        "打野": 1,
+        "遊走": 1
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 147,
+      "fps": 61,
+      "ts": 606.8892441605078,
+      "clock": "10:07",
+      "alive": 9,
+      "cluster": 1,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 4,
+        "回城中": 1,
+        "回防": 1,
+        "打野": 1,
+        "撤退": 1,
+        "遊走": 1
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 148,
+      "fps": 61,
+      "ts": 610.96,
+      "clock": "10:11",
+      "alive": 9,
+      "cluster": 1,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "避塔": 2,
+        "回城中": 2,
+        "對線": 4,
+        "打野": 1
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 149,
+      "fps": 61,
+      "ts": 614.9949305598914,
+      "clock": "10:15",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "避塔": 2,
+        "打野": 2,
+        "對線": 4,
+        "回防": 1,
+        "回城": 1
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 9
+    },
+    {
+      "s": 150,
+      "fps": 61,
+      "ts": 619.002304,
+      "clock": "10:19",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 4,
+      "stuck": 0,
+      "states": {
+        "避塔": 1,
+        "打野": 2,
+        "對線": 6,
+        "回防": 1
+      },
+      "towerDead": 2,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 151,
+      "fps": 61,
+      "ts": 623.0390457601508,
+      "clock": "10:23",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 1,
+      "states": {
+        "對線": 6,
+        "打野": 2,
+        "回防": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 10
+    },
+    {
+      "s": 152,
+      "fps": 61,
+      "ts": 627.1013785597571,
+      "clock": "10:27",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 1,
+      "states": {
+        "對線": 6,
+        "打野": 1,
+        "回防": 2,
+        "抓人": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 153,
+      "fps": 61,
+      "ts": 631.204304,
+      "clock": "10:31",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 1,
+      "states": {
+        "對線": 6,
+        "回防": 4
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 154,
+      "fps": 60,
+      "ts": 635.2160390401773,
+      "clock": "10:35",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 1,
+      "states": {
+        "避塔": 1,
+        "拉扯": 1,
+        "對線": 4,
+        "回防": 1,
+        "打野": 1,
+        "撤退": 1,
+        "團戰!": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 155,
+      "fps": 61,
+      "ts": 639.3450790404504,
+      "clock": "10:39",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 1,
+      "states": {
+        "避塔": 1,
+        "脫戰": 2,
+        "對線": 4,
+        "打野": 1,
+        "撤退": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 156,
+      "fps": 61,
+      "ts": 643.4104793595435,
+      "clock": "10:43",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 1,
+      "states": {
+        "避塔": 2,
+        "打野": 2,
+        "對線": 4,
+        "撤退": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 157,
+      "fps": 61,
+      "ts": 647.4827865597998,
+      "clock": "10:48",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 1,
+      "states": {
+        "對線": 4,
+        "打野": 2,
+        "避塔": 1,
+        "回防": 1,
+        "回城中": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 158,
+      "fps": 61,
+      "ts": 651.5000409599951,
+      "clock": "10:52",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "打野": 1,
+        "撤退": 1,
+        "團戰!": 3,
+        "回防": 1,
+        "回城": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 159,
+      "fps": 61,
+      "ts": 655.5233478400582,
+      "clock": "10:56",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 1,
+        "團戰!": 8,
+        "回城中": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 160,
+      "fps": 61,
+      "ts": 659.5748569596869,
+      "clock": "11:00",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 1,
+        "團戰!": 5,
+        "回城": 1,
+        "接戰": 1,
+        "撤退": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 161,
+      "fps": 61,
+      "ts": 663.6561830398492,
+      "clock": "11:04",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 1,
+      "states": {
+        "對線": 2,
+        "團戰!": 6,
+        "撤退": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 162,
+      "fps": 61,
+      "ts": 667.7794758405374,
+      "clock": "11:08",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 1,
+      "states": {
+        "對線": 3,
+        "團戰!": 4,
+        "避塔": 1,
+        "回城中": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 163,
+      "fps": 61,
+      "ts": 671.8805606403955,
+      "clock": "11:12",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 1,
+      "states": {
+        "對線": 2,
+        "團戰!": 5,
+        "撤退": 1,
+        "回城中": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 164,
+      "fps": 61,
+      "ts": 675.9570681596838,
+      "clock": "11:16",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 1,
+      "states": {
+        "對線": 2,
+        "撤退": 2,
+        "團戰!": 4,
+        "回城中": 1,
+        "回城": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 165,
+      "fps": 61,
+      "ts": 679.9950438400538,
+      "clock": "11:20",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 1,
+      "states": {
+        "對線": 7,
+        "回城中": 2,
+        "撤退": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 166,
+      "fps": 61,
+      "ts": 684.0058982400293,
+      "clock": "11:24",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "團戰!": 6,
+        "回城中": 3,
+        "對線": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 167,
+      "fps": 61,
+      "ts": 688.0541958400888,
+      "clock": "11:28",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "團戰!": 8,
+        "對線": 1,
+        "回城中": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 168,
+      "fps": 61,
+      "ts": 692.1060153602484,
+      "clock": "11:32",
+      "alive": 10,
+      "cluster": 1,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "團戰!": 7,
+        "回城": 1,
+        "對線": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 169,
+      "fps": 61,
+      "ts": 696.215296,
+      "clock": "11:36",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "避塔": 1,
+        "團戰!": 9
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 170,
+      "fps": 61,
+      "ts": 700.346336,
+      "clock": "11:40",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 1,
+        "團戰!": 8,
+        "回城中": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 171,
+      "fps": 61,
+      "ts": 704.4142681598883,
+      "clock": "11:44",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "團戰!": 7,
+        "回城中": 1,
+        "撤退": 1,
+        "對線": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 172,
+      "fps": 61,
+      "ts": 708.483616,
+      "clock": "11:49",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "抓人": 1,
+        "撤退": 1,
+        "打野": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 173,
+      "fps": 61,
+      "ts": 712.500051840011,
+      "clock": "11:53",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 4,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "拉扯": 1,
+        "打野": 1,
+        "接戰": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 174,
+      "fps": 61,
+      "ts": 716.5178489598471,
+      "clock": "11:57",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 3,
+        "撤退": 2,
+        "圍攻": 4
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 175,
+      "fps": 61,
+      "ts": 720.5705433602027,
+      "clock": "12:01",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 3,
+        "回城中": 2,
+        "圍攻": 4
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 176,
+      "fps": 62,
+      "ts": 724.7802265598211,
+      "clock": "12:05",
+      "alive": 9,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 3,
+        "撤退": 1,
+        "圍攻": 4,
+        "回城": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 177,
+      "fps": 60,
+      "ts": 728.777216,
+      "clock": "12:09",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 1,
+        "回城中": 2,
+        "撤退": 1,
+        "避塔": 1,
+        "圍攻": 4
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 178,
+      "fps": 61,
+      "ts": 732.8887110403817,
+      "clock": "12:13",
+      "alive": 9,
+      "cluster": 5,
+      "reversals": 5,
+      "stuck": 0,
+      "states": {
+        "對線": 1,
+        "回城中": 2,
+        "撤退": 2,
+        "避塔": 1,
+        "圍攻": 2,
+        "支援": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 179,
+      "fps": 61,
+      "ts": 736.9580569599219,
+      "clock": "12:17",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 1,
+        "抓人": 1,
+        "回城中": 3,
+        "避塔": 1,
+        "撤退": 1,
+        "圍攻": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 180,
+      "fps": 61,
+      "ts": 740.9951558399468,
+      "clock": "12:21",
+      "alive": 9,
+      "cluster": 1,
+      "reversals": 2,
+      "stuck": 1,
+      "states": {
+        "對線": 4,
+        "抓人": 1,
+        "回城": 2,
+        "避塔": 1,
+        "回城中": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 7
+    },
+    {
+      "s": 181,
+      "fps": 61,
+      "ts": 745.0032262400217,
+      "clock": "12:25",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 2,
+      "stuck": 1,
+      "states": {
+        "對線": 7,
+        "抓人": 1,
+        "遊走": 1,
+        "回城中": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 182,
+      "fps": 61,
+      "ts": 749.0250905598791,
+      "clock": "12:29",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 1,
+      "states": {
+        "對線": 7,
+        "打野": 1,
+        "遊走": 1,
+        "撤退": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 183,
+      "fps": 61,
+      "ts": 753.1134342401285,
+      "clock": "12:33",
+      "alive": 10,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 1,
+      "states": {
+        "對線": 3,
+        "打野": 1,
+        "撤退": 2,
+        "回防": 2,
+        "回城中": 1,
+        "追擊": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 6
+    },
+    {
+      "s": 184,
+      "fps": 61,
+      "ts": 757.2319385594488,
+      "clock": "12:37",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 1,
+      "states": {
+        "對線": 6,
+        "打野": 1,
+        "撤退": 1,
+        "回城": 1,
+        "回城中": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 8
+    },
+    {
+      "s": 185,
+      "fps": 61,
+      "ts": 761.3425497598487,
+      "clock": "12:41",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 1,
+      "states": {
+        "對線": 5,
+        "回防": 1,
+        "撤退": 2,
+        "抓人": 1,
+        "回城中": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 186,
+      "fps": 61,
+      "ts": 765.426016,
+      "clock": "12:45",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "圍攻": 4,
+        "回城中": 1,
+        "對線": 2,
+        "抓人": 1,
+        "撤退": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 187,
+      "fps": 61,
+      "ts": 769.4832038399011,
+      "clock": "12:50",
+      "alive": 9,
+      "cluster": 2,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "圍攻": 4,
+        "回城": 1,
+        "對線": 2,
+        "打野": 1,
+        "撤退": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 188,
+      "fps": 61,
+      "ts": 773.5000409599951,
+      "clock": "12:54",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "團戰!": 7,
+        "回城中": 1,
+        "對線": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 189,
+      "fps": 60,
+      "ts": 777.5000518399972,
+      "clock": "12:58",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "團戰!": 7,
+        "回城中": 1,
+        "對線": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 190,
+      "fps": 61,
+      "ts": 781.517424,
+      "clock": "13:02",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "圍攻": 2,
+        "團戰!": 6,
+        "回城": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 191,
+      "fps": 61,
+      "ts": 785.5735494398965,
+      "clock": "13:06",
+      "alive": 9,
+      "cluster": 4,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "團戰!": 6,
+        "撤退": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 192,
+      "fps": 61,
+      "ts": 789.6606406401529,
+      "clock": "13:10",
+      "alive": 9,
+      "cluster": 3,
+      "reversals": 2,
+      "stuck": 0,
+      "states": {
+        "對線": 2,
+        "團戰!": 5,
+        "回城中": 1,
+        "撤退": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 193,
+      "fps": 61,
+      "ts": 793.7787238394617,
+      "clock": "13:14",
+      "alive": 10,
+      "cluster": 7,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "團戰!": 4,
+        "脫戰": 3,
+        "撤退": 2,
+        "對線": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 3
+    },
+    {
+      "s": 194,
+      "fps": 61,
+      "ts": 797.8833094403909,
+      "clock": "13:18",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "團戰!": 2,
+        "撤退": 2,
+        "對線": 4,
+        "回城中": 2
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 195,
+      "fps": 61,
+      "ts": 801.9587097600776,
+      "clock": "13:22",
+      "alive": 10,
+      "cluster": 4,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "脫戰": 3,
+        "回城中": 2,
+        "對線": 2,
+        "撤退": 2,
+        "團戰!": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 2
+    },
+    {
+      "s": 196,
+      "fps": 61,
+      "ts": 805.994816,
+      "clock": "13:26",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 1,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "回城": 2,
+        "回城中": 1
+      },
+      "towerDead": 3,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 197,
+      "fps": 61,
+      "ts": 810.0041990400247,
+      "clock": "13:30",
+      "alive": 10,
+      "cluster": 1,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 7,
+        "抓人": 2,
+        "團戰!": 1
+      },
+      "towerDead": 4,
+      "warnings": 0,
+      "offScreen": 5
+    },
+    {
+      "s": 198,
+      "fps": 61,
+      "ts": 814.032688640069,
+      "clock": "13:34",
+      "alive": 10,
+      "cluster": 1,
+      "reversals": 3,
+      "stuck": 0,
+      "states": {
+        "對線": 5,
+        "團戰!": 4,
+        "抓人": 1
+      },
+      "towerDead": 4,
+      "warnings": 0,
+      "offScreen": 4
+    },
+    {
+      "s": 199,
+      "fps": 61,
+      "ts": 818.112896,
+      "clock": "13:38",
+      "alive": 10,
+      "cluster": 3,
+      "reversals": 0,
+      "stuck": 0,
+      "states": {
+        "對線": 5,
+        "團戰!": 4,
+        "撤退": 1
+      },
+      "towerDead": 5,
+      "warnings": 0,
+      "offScreen": 5
+    }
+  ],
+  "shots": [
+    "F01-desktop-gameview-start.png",
+    "F03-desktop-teamfight-4m22.png",
+    "F04-desktop-teamfight-8m49.png",
+    "F05-desktop-teamfight-8m54.png",
+    "F02-desktop-late.png",
+    "F05-mobile390-gameview.png",
+    "F03-mobile390-teamfight-8m03.png",
+    "F04-mobile390-teamfight-8m08.png",
+    "F05-mobile390-teamfight-9m26.png",
+    "F06-mobile390-late.png"
+  ],
+  "notes": [
+    {
+      "label": "desktop：進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop：進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop：進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop：正式 GameView 掛載",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile390：進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile390：進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile390：進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile390：正式 GameView 掛載",
+      "ok": true,
+      "extra": null
+    }
+  ],
+  "desktopEnd": "over",
+  "desktop": {
+    "tag": "desktop",
+    "samples": 313,
+    "fps": {
+      "min": 46,
+      "p10": 58,
+      "median": 61,
+      "max": 97
+    },
+    "clusterMax": 8,
+    "clusterMean": 2.59,
+    "secondsWithBigCluster": 4,
+    "reversalsTotal": 354,
+    "stuckSeconds": 102,
+    "offScreenMax": 8,
+    "warningsMax": 0,
+    "stateShare": {
+      "對線": 0.409,
+      "團戰!": 0.167,
+      "打野": 0.078,
+      "回防": 0.067,
+      "圍攻": 0.054,
+      "回城中": 0.042,
+      "避塔": 0.04,
+      "撤退": 0.038,
+      "抓人": 0.027,
+      "回城": 0.017,
+      "脫戰": 0.014,
+      "接戰": 0.013,
+      "遊走": 0.011,
+      "追擊": 0.009,
+      "圍攻主堡": 0.006,
+      "游走": 0.004,
+      "拉扯": 0.003,
+      "支援": 0.001,
+      "攻門牙塔": 0
+    },
+    "lastClock": "21:23",
+    "towerDeadEnd": 16
+  },
+  "mobile": {
+    "tag": "mobile390",
+    "samples": 200,
+    "fps": {
+      "min": 60,
+      "p10": 61,
+      "median": 61,
+      "max": 127
+    },
+    "clusterMax": 7,
+    "clusterMean": 2.67,
+    "secondsWithBigCluster": 4,
+    "reversalsTotal": 216,
+    "stuckSeconds": 38,
+    "offScreenMax": 10,
+    "warningsMax": 0,
+    "stateShare": {
+      "對線": 0.449,
+      "團戰!": 0.174,
+      "打野": 0.071,
+      "回防": 0.061,
+      "撤退": 0.053,
+      "回城中": 0.044,
+      "避塔": 0.037,
+      "抓人": 0.025,
+      "圍攻": 0.017,
+      "接戰": 0.014,
+      "回城": 0.014,
+      "脫戰": 0.012,
+      "追擊": 0.009,
+      "遊走": 0.008,
+      "入侵": 0.004,
+      "拉扯": 0.004,
+      "游走": 0.003,
+      "支援": 0.002
+    },
+    "lastClock": "13:38",
+    "towerDeadEnd": 5
+  },
+  "mobileHud": {
+    "horizontalOverflow": false,
+    "minimapFound": true,
+    "stripFound": true,
+    "minimapOverlapsStrip": false,
+    "innerWidth": 390,
+    "innerHeight": 844
+  }
+}

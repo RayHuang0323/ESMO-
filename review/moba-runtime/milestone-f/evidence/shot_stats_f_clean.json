@@ -1,0 +1,83 @@
+{
+  "samples": [],
+  "shots": [
+    "FC-desktop-8min.png",
+    "FC-desktop-16min.png",
+    "FC-mobile390-8min.png",
+    "FC-mobile390-8min-panel.png",
+    "FC-mobile390-14min.png"
+  ],
+  "notes": [
+    {
+      "label": "desktop：進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop：進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop：進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop：正式 GameView 掛載",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile390：進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile390：進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile390：進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mobile390：正式 GameView 掛載",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop-probe：進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop-probe：進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop-probe：進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desktop-probe：正式 GameView 掛載",
+      "ok": true,
+      "extra": null
+    }
+  ],
+  "stuckProbe": {
+    "checked": 1491,
+    "flagged": 103,
+    "states": {
+      "打野": 18,
+      "避塔": 6,
+      "回防": 47,
+      "對線": 31,
+      "團戰!": 1
+    }
+  }
+}
