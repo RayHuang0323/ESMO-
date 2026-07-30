@@ -47,8 +47,12 @@ ck("5) 英雄格有穩定測試錨點（data-testid=hero-cell）",
 console.log("\n── §2 點英雄：戰鬥資訊優先、生涯移到獨立入口 ──");
 ck("6) 隊伍面板改開 BattleHeroSheet（不是生涯面板）",
   strip.includes("BattleHeroSheet") && !strip.includes("import HeroDetailPanel"));
+//  ⚠ 這條原本掃的是完整標題「召喚師技能（即時冷卻）」。Milestone I-close 之後
+//    第二格可能是引擎沒有模擬的配置技能（顯示「配置」而非 CD），把「即時冷卻」
+//    寫死在標題反而不實 ⇒ 標題改為「召喚師技能 · <位置>」。這裡改成驗**四個
+//    區塊都在**，不再綁單一字串；即時冷卻本身由下一條（§8）獨立把關。
 ck("7) 戰鬥資訊面板以技能與當前戰況為主",
-  sheet.includes("召喚師技能（即時冷卻）") && sheet.includes("英雄技能") &&
+  sheet.includes("召喚師技能") && sheet.includes("英雄技能") &&
   sheet.includes("本場數據") && sheet.includes("血量"));
 ck("8) 召喚師技能顯示引擎的即時冷卻（不是靜態圖示）",
   /s\.ready/.test(sheet) && /Math\.ceil\(s\.cd\)/.test(sheet));

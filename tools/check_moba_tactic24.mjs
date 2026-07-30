@@ -30,8 +30,13 @@ const gv = fs.readFileSync("src/GameView.jsx", "utf8");
 // S29B3：兩個觸發點（START 鈕 / autoStart）統一走 begin()（先重置相機再 start({tactic})）
 //   ⇒ 斷言由「start({ tactic }) 字面出現 ≥2 次」改為「唯一入口帶 tactic ＋ begin 被
 //   定義且兩個觸發點都引用」。意圖不變：開局一定把 tactic 傳進引擎驅動層。
+//  ⚠ 這條掃的是字面 `start({ tactic })`，但 Milestone H 起開局要一併把生效名單
+//    交給引擎（`start({ tactic, roster: ... })`）⇒ 從 H 開始就一直是**假紅燈**：
+//    tactic 明明還是傳進去了，只是同一個物件多了一個鍵。改成驗「唯一入口帶了
+//    tactic 這個參數」，不綁死參數列的其餘內容。
+//    （本專案第五次踩到關鍵字掃描；規則見 05_Sprint紀錄.md：禁改/禁用類斷言驗行為。）
 ck("GameView start({tactic}) 傳入引擎驅動層",
-  gv.includes("start({ tactic })") && (gv.match(/\bbegin\b/g) || []).length >= 3);
+  /start\(\{\s*tactic\b/.test(gv) && (gv.match(/\bbegin\b/g) || []).length >= 3);
 const uls = fs.readFileSync("src/useLocalServer.js", "utf8");
 ck("useLocalServer → engine.configureMatch（含 standard 對手）", uls.includes("configureMatch") && uls.includes("STANDARD_OPP_TACTIC"));
 const le = fs.readFileSync("src/LogicEngine.js", "utf8");
