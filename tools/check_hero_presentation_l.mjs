@@ -507,9 +507,13 @@ console.log("\n── §7 L Hotfix 1：職業 shape language / 三段式戰報 /
     TOWER.includes('fx?.ability !== "tower:basic"') && TOWER.includes("towerRangeWorld"));
   ck("71) 塔射程圈的半徑就是規則裡的 towerAggroRange 換算（沒有偷偷放大）",
     /\(rules\?\.towerAggroRange \?\? 5\.5\) \* S/.test(TOWER));
-  ck("72) 本輪沒有改動任何戰鬥規則常數（塔射程／傷害／間隔原封不動）",
-    /towerAggroDmg: 66,/.test(MP) && /towerAggroRange: 5\.5,/.test(MP)
-    && /towerAttackInterval: 0\.5,/.test(MP) && /towerMinionDamage: 60,/.test(MP));
+  //  ⚠ L Hotfix 2 **刻意**調整了塔與 Boss 的數值（見該輪報告的根因與多 seed 對照）。
+  //     這條因此改成「釘住新基準」——不是為了讓舊數字通過而撤銷正確修復，
+  //     而是讓未來的意外漂移仍然會被抓到。
+  ck("72) 戰鬥規則常數維持 L Hotfix 2 的新基準（塔射程 6.0／傷害 66／間隔 0.5）",
+    /towerAggroDmg: 66,/.test(MP) && /towerAggroRange: 6\.0,/.test(MP)
+    && /towerAttackInterval: 0\.5,/.test(MP) && /towerMinionDamage: 60,/.test(MP)
+    && /towerMinionBand: 0\.10,/.test(MP) && /towerLockRamp: 0\.10,/.test(MP));
 }
 
 console.log(`\n${fail === 0 ? "✅ PASS" : "❌ FAIL"}  ${pass}/${pass + fail}`);

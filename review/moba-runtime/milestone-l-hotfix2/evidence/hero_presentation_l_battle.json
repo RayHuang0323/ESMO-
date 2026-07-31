@@ -1,0 +1,2393 @@
+{
+  "notes": [
+    {
+      "label": "desk1920 B1) 正式 GameView 掛得起來（canvas 存在）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 B2) 模擬真的在推進（3 → 6）",
+      "ok": true,
+      "extra": {
+        "t0": 3,
+        "t1": 6
+      }
+    },
+    {
+      "label": "desk1920 B3) 演出層已掛進 live 對戰並每幀回報計數",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "desk1920 B4) live 套用 low preset 的池容量（halo=10 / bolt=14）",
+      "ok": true,
+      "extra": {
+        "halo": 10,
+        "bar": 10,
+        "bolt": 14,
+        "guard": 8
+      }
+    },
+    {
+      "label": "desk1920 B5) 池計數都沒有超過容量（不是無限成長）",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "desk1920 B7) 戰報預設 compact",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 84,
+        "rootBottom": 176,
+        "vh": 1080,
+        "stored": null
+      }
+    },
+    {
+      "label": "desk1920 B8) compact 高度落在規格區間（72–96px，實測 84）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 84,
+        "rootBottom": 176,
+        "vh": 1080,
+        "stored": null
+      }
+    },
+    {
+      "label": "desk1920 B9) 點一下 → expanded",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "hasBody": true,
+        "bodyH": 432,
+        "rootBottom": 524,
+        "vh": 1080,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "desk1920 B10) expanded 桌機 ≤40%（實測 432px / 1080）",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "hasBody": true,
+        "bodyH": 432,
+        "rootBottom": 524,
+        "vh": 1080,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "desk1920 B11) 再點一下 → hidden（本體收掉，只留可點回來的標籤）",
+      "ok": true,
+      "extra": {
+        "mode": "hidden",
+        "hasBody": false,
+        "bodyH": 0,
+        "rootBottom": 92,
+        "vh": 1080,
+        "stored": "hidden"
+      }
+    },
+    {
+      "label": "desk1920 B12) 使用者的選擇有記到 localStorage",
+      "ok": true,
+      "extra": "hidden"
+    },
+    {
+      "label": "desk1920 B13) 再點一下轉回 compact（三段循環）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 84,
+        "rootBottom": 176,
+        "vh": 1080,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "desk1920 B14) debug 模式下有畫塔射程圈（?diag=1）",
+      "ok": true,
+      "extra": {
+        "rings": 24,
+        "locks": 0,
+        "rangeWorld": 10.2
+      }
+    },
+    {
+      "label": "desk1920 B15) 射程圈半徑 = towerAggroRange(6) × 1.7 = 10.20",
+      "ok": true,
+      "extra": {
+        "got": 10.2,
+        "want": 10.2
+      }
+    },
+    {
+      "label": "desk1920 B17) 記分板預設 compact",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 56,
+        "bottom": 62,
+        "timelineTop": 68,
+        "vh": 1080,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": null
+      }
+    },
+    {
+      "label": "desk1920 B18) compact 高度 56px ≤ 60（比原本的 126 矮很多）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 56,
+        "bottom": 62,
+        "timelineTop": 68,
+        "vh": 1080,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": null
+      }
+    },
+    {
+      "label": "desk1920 B19) compact 仍保留比分、比賽時間與簡短隊名",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 56,
+        "bottom": 62,
+        "timelineTop": 68,
+        "vh": 1080,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": null
+      }
+    },
+    {
+      "label": "desk1920 B20) compact 把次要資訊（MVP／戰術）收起來",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 56,
+        "bottom": 62,
+        "timelineTop": 68,
+        "vh": 1080,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": null
+      }
+    },
+    {
+      "label": "desk1920 B21) 戰報起點跟著記分板變矮（timeline top 68 在記分板底緣 62 之下且不遠）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 56,
+        "bottom": 62,
+        "timelineTop": 68,
+        "vh": 1080,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": null
+      }
+    },
+    {
+      "label": "desk1920 B22) 點一下 → expanded，且高度變高",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "h": 126,
+        "bottom": 132,
+        "timelineTop": 138,
+        "vh": 1080,
+        "hasClock": false,
+        "hasBlue": false,
+        "hasRed": false,
+        "hasMvp": true,
+        "hasTactic": false,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "desk1920 B23) expanded 把完整資訊帶回來（MVP 出現）",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "h": 126,
+        "bottom": 132,
+        "timelineTop": 138,
+        "vh": 1080,
+        "hasClock": false,
+        "hasBlue": false,
+        "hasRed": false,
+        "hasMvp": true,
+        "hasTactic": false,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "desk1920 B24) expanded 高度不超過 viewport 的 20%",
+      "ok": true,
+      "extra": {
+        "h": 126,
+        "vh": 1080
+      }
+    },
+    {
+      "label": "desk1920 B25) 使用者選擇有記到 localStorage",
+      "ok": true,
+      "extra": "expanded"
+    },
+    {
+      "label": "desk1920 B26) 再點一下回到 compact（只有兩個固定檔位，沒有自由拖曳）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 56,
+        "bottom": 62,
+        "timelineTop": 68,
+        "vh": 1080,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "desk1920 B27) 沒有橫向溢出，也沒有因本輪新增縱向捲動軸",
+      "ok": true,
+      "extra": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 1920,
+        "vh": 1080
+      }
+    },
+    {
+      "label": "desk1366 B1) 正式 GameView 掛得起來（canvas 存在）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 B2) 模擬真的在推進（6 → 12）",
+      "ok": true,
+      "extra": {
+        "t0": 6,
+        "t1": 12
+      }
+    },
+    {
+      "label": "desk1366 B3) 演出層已掛進 live 對戰並每幀回報計數",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "desk1366 B4) live 套用 low preset 的池容量（halo=10 / bolt=14）",
+      "ok": true,
+      "extra": {
+        "halo": 10,
+        "bar": 10,
+        "bolt": 14,
+        "guard": 8
+      }
+    },
+    {
+      "label": "desk1366 B5) 池計數都沒有超過容量（不是無限成長）",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "desk1366 B7) 戰報預設 compact",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 84,
+        "rootBottom": 176,
+        "vh": 768,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "desk1366 B8) compact 高度落在規格區間（72–96px，實測 84）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 84,
+        "rootBottom": 176,
+        "vh": 768,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "desk1366 B9) 點一下 → expanded",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "hasBody": true,
+        "bodyH": 307,
+        "rootBottom": 399,
+        "vh": 768,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "desk1366 B10) expanded 桌機 ≤40%（實測 307px / 768）",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "hasBody": true,
+        "bodyH": 307,
+        "rootBottom": 399,
+        "vh": 768,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "desk1366 B11) 再點一下 → hidden（本體收掉，只留可點回來的標籤）",
+      "ok": true,
+      "extra": {
+        "mode": "hidden",
+        "hasBody": false,
+        "bodyH": 0,
+        "rootBottom": 92,
+        "vh": 768,
+        "stored": "hidden"
+      }
+    },
+    {
+      "label": "desk1366 B12) 使用者的選擇有記到 localStorage",
+      "ok": true,
+      "extra": "hidden"
+    },
+    {
+      "label": "desk1366 B13) 再點一下轉回 compact（三段循環）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 84,
+        "rootBottom": 176,
+        "vh": 768,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "desk1366 B14) debug 模式下有畫塔射程圈（?diag=1）",
+      "ok": true,
+      "extra": {
+        "rings": 24,
+        "locks": 0,
+        "rangeWorld": 10.2
+      }
+    },
+    {
+      "label": "desk1366 B15) 射程圈半徑 = towerAggroRange(6) × 1.7 = 10.20",
+      "ok": true,
+      "extra": {
+        "got": 10.2,
+        "want": 10.2
+      }
+    },
+    {
+      "label": "desk1366 B17) 記分板預設 compact",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 56,
+        "bottom": 62,
+        "timelineTop": 68,
+        "vh": 768,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "desk1366 B18) compact 高度 56px ≤ 60（比原本的 126 矮很多）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 56,
+        "bottom": 62,
+        "timelineTop": 68,
+        "vh": 768,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "desk1366 B19) compact 仍保留比分、比賽時間與簡短隊名",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 56,
+        "bottom": 62,
+        "timelineTop": 68,
+        "vh": 768,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "desk1366 B20) compact 把次要資訊（MVP／戰術）收起來",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 56,
+        "bottom": 62,
+        "timelineTop": 68,
+        "vh": 768,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "desk1366 B21) 戰報起點跟著記分板變矮（timeline top 68 在記分板底緣 62 之下且不遠）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 56,
+        "bottom": 62,
+        "timelineTop": 68,
+        "vh": 768,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "desk1366 B22) 點一下 → expanded，且高度變高",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "h": 126,
+        "bottom": 132,
+        "timelineTop": 138,
+        "vh": 768,
+        "hasClock": false,
+        "hasBlue": false,
+        "hasRed": false,
+        "hasMvp": true,
+        "hasTactic": false,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "desk1366 B23) expanded 把完整資訊帶回來（MVP 出現）",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "h": 126,
+        "bottom": 132,
+        "timelineTop": 138,
+        "vh": 768,
+        "hasClock": false,
+        "hasBlue": false,
+        "hasRed": false,
+        "hasMvp": true,
+        "hasTactic": false,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "desk1366 B24) expanded 高度不超過 viewport 的 20%",
+      "ok": true,
+      "extra": {
+        "h": 126,
+        "vh": 768
+      }
+    },
+    {
+      "label": "desk1366 B25) 使用者選擇有記到 localStorage",
+      "ok": true,
+      "extra": "expanded"
+    },
+    {
+      "label": "desk1366 B26) 再點一下回到 compact（只有兩個固定檔位，沒有自由拖曳）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 56,
+        "bottom": 62,
+        "timelineTop": 68,
+        "vh": 768,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "desk1366 B27) 沒有橫向溢出，也沒有因本輪新增縱向捲動軸",
+      "ok": true,
+      "extra": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 1366,
+        "vh": 768
+      }
+    },
+    {
+      "label": "mob430 B1) 正式 GameView 掛得起來（canvas 存在）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob430 B2) 模擬真的在推進（13.5 → 23.5）",
+      "ok": true,
+      "extra": {
+        "t0": 13.5,
+        "t1": 23.5
+      }
+    },
+    {
+      "label": "mob430 B3) 演出層已掛進 live 對戰並每幀回報計數",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob430 B4) live 套用 low preset 的池容量（halo=10 / bolt=14）",
+      "ok": true,
+      "extra": {
+        "halo": 10,
+        "bar": 10,
+        "bolt": 14,
+        "guard": 8
+      }
+    },
+    {
+      "label": "mob430 B5) 池計數都沒有超過容量（不是無限成長）",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob430 B7) 戰報預設 compact",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 50,
+        "rootBottom": 134,
+        "vh": 932,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob430 B8) compact 高度落在規格區間（44–56px，實測 50）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 50,
+        "rootBottom": 134,
+        "vh": 932,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob430 B9) 點一下 → expanded",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "hasBody": true,
+        "bodyH": 280,
+        "rootBottom": 364,
+        "vh": 932,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "mob430 B10) expanded 手機最多占 viewport 30%（實測 280px / 932）",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "hasBody": true,
+        "bodyH": 280,
+        "rootBottom": 364,
+        "vh": 932,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "mob430 B11) 再點一下 → hidden（本體收掉，只留可點回來的標籤）",
+      "ok": true,
+      "extra": {
+        "mode": "hidden",
+        "hasBody": false,
+        "bodyH": 0,
+        "rootBottom": 84,
+        "vh": 932,
+        "stored": "hidden"
+      }
+    },
+    {
+      "label": "mob430 B12) 使用者的選擇有記到 localStorage",
+      "ok": true,
+      "extra": "hidden"
+    },
+    {
+      "label": "mob430 B13) 再點一下轉回 compact（三段循環）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 50,
+        "rootBottom": 134,
+        "vh": 932,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob430 B14) debug 模式下有畫塔射程圈（?diag=1）",
+      "ok": true,
+      "extra": {
+        "rings": 24,
+        "locks": 0,
+        "rangeWorld": 10.2
+      }
+    },
+    {
+      "label": "mob430 B15) 射程圈半徑 = towerAggroRange(6) × 1.7 = 10.20",
+      "ok": true,
+      "extra": {
+        "got": 10.2,
+        "want": 10.2
+      }
+    },
+    {
+      "label": "mob430 B17) 記分板預設 compact",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 932,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob430 B18) compact 高度 48px ≤ 52（比原本的 126 矮很多）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 932,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob430 B19) compact 仍保留比分、比賽時間與簡短隊名",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 932,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob430 B20) compact 把次要資訊（MVP／戰術）收起來",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 932,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob430 B21) 戰報起點跟著記分板變矮（timeline top 60 在記分板底緣 54 之下且不遠）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 932,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob430 B22) 點一下 → expanded，且高度變高",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "h": 118,
+        "bottom": 124,
+        "timelineTop": 130,
+        "vh": 932,
+        "hasClock": false,
+        "hasBlue": false,
+        "hasRed": false,
+        "hasMvp": true,
+        "hasTactic": false,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "mob430 B23) expanded 把完整資訊帶回來（MVP 出現）",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "h": 118,
+        "bottom": 124,
+        "timelineTop": 130,
+        "vh": 932,
+        "hasClock": false,
+        "hasBlue": false,
+        "hasRed": false,
+        "hasMvp": true,
+        "hasTactic": false,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "mob430 B24) expanded 高度不超過 viewport 的 20%",
+      "ok": true,
+      "extra": {
+        "h": 118,
+        "vh": 932
+      }
+    },
+    {
+      "label": "mob430 B25) 使用者選擇有記到 localStorage",
+      "ok": true,
+      "extra": "expanded"
+    },
+    {
+      "label": "mob430 B26) 再點一下回到 compact（只有兩個固定檔位，沒有自由拖曳）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 932,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob430 B27) 沒有橫向溢出，也沒有因本輪新增縱向捲動軸",
+      "ok": true,
+      "extra": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 430,
+        "vh": 932
+      }
+    },
+    {
+      "label": "mob412 B1) 正式 GameView 掛得起來（canvas 存在）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob412 B2) 模擬真的在推進（15 → 26）",
+      "ok": true,
+      "extra": {
+        "t0": 15,
+        "t1": 26
+      }
+    },
+    {
+      "label": "mob412 B3) 演出層已掛進 live 對戰並每幀回報計數",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob412 B4) live 套用 low preset 的池容量（halo=10 / bolt=14）",
+      "ok": true,
+      "extra": {
+        "halo": 10,
+        "bar": 10,
+        "bolt": 14,
+        "guard": 8
+      }
+    },
+    {
+      "label": "mob412 B5) 池計數都沒有超過容量（不是無限成長）",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob412 B7) 戰報預設 compact",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 50,
+        "rootBottom": 134,
+        "vh": 915,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob412 B8) compact 高度落在規格區間（44–56px，實測 50）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 50,
+        "rootBottom": 134,
+        "vh": 915,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob412 B9) 點一下 → expanded",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "hasBody": true,
+        "bodyH": 275,
+        "rootBottom": 359,
+        "vh": 915,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "mob412 B10) expanded 手機最多占 viewport 30%（實測 275px / 915）",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "hasBody": true,
+        "bodyH": 275,
+        "rootBottom": 359,
+        "vh": 915,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "mob412 B11) 再點一下 → hidden（本體收掉，只留可點回來的標籤）",
+      "ok": true,
+      "extra": {
+        "mode": "hidden",
+        "hasBody": false,
+        "bodyH": 0,
+        "rootBottom": 84,
+        "vh": 915,
+        "stored": "hidden"
+      }
+    },
+    {
+      "label": "mob412 B12) 使用者的選擇有記到 localStorage",
+      "ok": true,
+      "extra": "hidden"
+    },
+    {
+      "label": "mob412 B13) 再點一下轉回 compact（三段循環）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 50,
+        "rootBottom": 134,
+        "vh": 915,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob412 B14) debug 模式下有畫塔射程圈（?diag=1）",
+      "ok": true,
+      "extra": {
+        "rings": 24,
+        "locks": 0,
+        "rangeWorld": 10.2
+      }
+    },
+    {
+      "label": "mob412 B15) 射程圈半徑 = towerAggroRange(6) × 1.7 = 10.20",
+      "ok": true,
+      "extra": {
+        "got": 10.2,
+        "want": 10.2
+      }
+    },
+    {
+      "label": "mob412 B17) 記分板預設 compact",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 915,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob412 B18) compact 高度 48px ≤ 52（比原本的 126 矮很多）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 915,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob412 B19) compact 仍保留比分、比賽時間與簡短隊名",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 915,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob412 B20) compact 把次要資訊（MVP／戰術）收起來",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 915,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob412 B21) 戰報起點跟著記分板變矮（timeline top 60 在記分板底緣 54 之下且不遠）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 915,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob412 B22) 點一下 → expanded，且高度變高",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "h": 118,
+        "bottom": 124,
+        "timelineTop": 130,
+        "vh": 915,
+        "hasClock": false,
+        "hasBlue": false,
+        "hasRed": false,
+        "hasMvp": true,
+        "hasTactic": false,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "mob412 B23) expanded 把完整資訊帶回來（MVP 出現）",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "h": 118,
+        "bottom": 124,
+        "timelineTop": 130,
+        "vh": 915,
+        "hasClock": false,
+        "hasBlue": false,
+        "hasRed": false,
+        "hasMvp": true,
+        "hasTactic": false,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "mob412 B24) expanded 高度不超過 viewport 的 20%",
+      "ok": true,
+      "extra": {
+        "h": 118,
+        "vh": 915
+      }
+    },
+    {
+      "label": "mob412 B25) 使用者選擇有記到 localStorage",
+      "ok": true,
+      "extra": "expanded"
+    },
+    {
+      "label": "mob412 B26) 再點一下回到 compact（只有兩個固定檔位，沒有自由拖曳）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 915,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob412 B27) 沒有橫向溢出，也沒有因本輪新增縱向捲動軸",
+      "ok": true,
+      "extra": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 412,
+        "vh": 915
+      }
+    },
+    {
+      "label": "mob390 B1) 正式 GameView 掛得起來（canvas 存在）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 B2) 模擬真的在推進（14 → 25.5）",
+      "ok": true,
+      "extra": {
+        "t0": 14,
+        "t1": 25.5
+      }
+    },
+    {
+      "label": "mob390 B3) 演出層已掛進 live 對戰並每幀回報計數",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob390 B4) live 套用 low preset 的池容量（halo=10 / bolt=14）",
+      "ok": true,
+      "extra": {
+        "halo": 10,
+        "bar": 10,
+        "bolt": 14,
+        "guard": 8
+      }
+    },
+    {
+      "label": "mob390 B5) 池計數都沒有超過容量（不是無限成長）",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob390 B7) 戰報預設 compact",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 50,
+        "rootBottom": 134,
+        "vh": 844,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob390 B8) compact 高度落在規格區間（44–56px，實測 50）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 50,
+        "rootBottom": 134,
+        "vh": 844,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob390 B9) 點一下 → expanded",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "hasBody": true,
+        "bodyH": 253,
+        "rootBottom": 337,
+        "vh": 844,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "mob390 B10) expanded 手機最多占 viewport 30%（實測 253px / 844）",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "hasBody": true,
+        "bodyH": 253,
+        "rootBottom": 337,
+        "vh": 844,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "mob390 B11) 再點一下 → hidden（本體收掉，只留可點回來的標籤）",
+      "ok": true,
+      "extra": {
+        "mode": "hidden",
+        "hasBody": false,
+        "bodyH": 0,
+        "rootBottom": 84,
+        "vh": 844,
+        "stored": "hidden"
+      }
+    },
+    {
+      "label": "mob390 B12) 使用者的選擇有記到 localStorage",
+      "ok": true,
+      "extra": "hidden"
+    },
+    {
+      "label": "mob390 B13) 再點一下轉回 compact（三段循環）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 50,
+        "rootBottom": 134,
+        "vh": 844,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob390 B14) debug 模式下有畫塔射程圈（?diag=1）",
+      "ok": true,
+      "extra": {
+        "rings": 24,
+        "locks": 0,
+        "rangeWorld": 10.2
+      }
+    },
+    {
+      "label": "mob390 B15) 射程圈半徑 = towerAggroRange(6) × 1.7 = 10.20",
+      "ok": true,
+      "extra": {
+        "got": 10.2,
+        "want": 10.2
+      }
+    },
+    {
+      "label": "mob390 B17) 記分板預設 compact",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 844,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob390 B18) compact 高度 48px ≤ 52（比原本的 126 矮很多）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 844,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob390 B19) compact 仍保留比分、比賽時間與簡短隊名",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 844,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob390 B20) compact 把次要資訊（MVP／戰術）收起來",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 844,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob390 B21) 戰報起點跟著記分板變矮（timeline top 60 在記分板底緣 54 之下且不遠）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 844,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob390 B22) 點一下 → expanded，且高度變高",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "h": 118,
+        "bottom": 124,
+        "timelineTop": 130,
+        "vh": 844,
+        "hasClock": false,
+        "hasBlue": false,
+        "hasRed": false,
+        "hasMvp": true,
+        "hasTactic": false,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "mob390 B23) expanded 把完整資訊帶回來（MVP 出現）",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "h": 118,
+        "bottom": 124,
+        "timelineTop": 130,
+        "vh": 844,
+        "hasClock": false,
+        "hasBlue": false,
+        "hasRed": false,
+        "hasMvp": true,
+        "hasTactic": false,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "mob390 B24) expanded 高度不超過 viewport 的 20%",
+      "ok": true,
+      "extra": {
+        "h": 118,
+        "vh": 844
+      }
+    },
+    {
+      "label": "mob390 B25) 使用者選擇有記到 localStorage",
+      "ok": true,
+      "extra": "expanded"
+    },
+    {
+      "label": "mob390 B26) 再點一下回到 compact（只有兩個固定檔位，沒有自由拖曳）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 844,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob390 B27) 沒有橫向溢出，也沒有因本輪新增縱向捲動軸",
+      "ok": true,
+      "extra": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 390,
+        "vh": 844
+      }
+    },
+    {
+      "label": "mob360 B1) 正式 GameView 掛得起來（canvas 存在）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 B2) 模擬真的在推進（15 → 26.5）",
+      "ok": true,
+      "extra": {
+        "t0": 15,
+        "t1": 26.5
+      }
+    },
+    {
+      "label": "mob360 B3) 演出層已掛進 live 對戰並每幀回報計數",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob360 B4) live 套用 low preset 的池容量（halo=10 / bolt=14）",
+      "ok": true,
+      "extra": {
+        "halo": 10,
+        "bar": 10,
+        "bolt": 14,
+        "guard": 8
+      }
+    },
+    {
+      "label": "mob360 B5) 池計數都沒有超過容量（不是無限成長）",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob360 B7) 戰報預設 compact",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 50,
+        "rootBottom": 134,
+        "vh": 800,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob360 B8) compact 高度落在規格區間（44–56px，實測 50）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 50,
+        "rootBottom": 134,
+        "vh": 800,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob360 B9) 點一下 → expanded",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "hasBody": true,
+        "bodyH": 240,
+        "rootBottom": 324,
+        "vh": 800,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "mob360 B10) expanded 手機最多占 viewport 30%（實測 240px / 800）",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "hasBody": true,
+        "bodyH": 240,
+        "rootBottom": 324,
+        "vh": 800,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "mob360 B11) 再點一下 → hidden（本體收掉，只留可點回來的標籤）",
+      "ok": true,
+      "extra": {
+        "mode": "hidden",
+        "hasBody": false,
+        "bodyH": 0,
+        "rootBottom": 84,
+        "vh": 800,
+        "stored": "hidden"
+      }
+    },
+    {
+      "label": "mob360 B12) 使用者的選擇有記到 localStorage",
+      "ok": true,
+      "extra": "hidden"
+    },
+    {
+      "label": "mob360 B13) 再點一下轉回 compact（三段循環）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 50,
+        "rootBottom": 134,
+        "vh": 800,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob360 B14) debug 模式下有畫塔射程圈（?diag=1）",
+      "ok": true,
+      "extra": {
+        "rings": 24,
+        "locks": 0,
+        "rangeWorld": 10.2
+      }
+    },
+    {
+      "label": "mob360 B15) 射程圈半徑 = towerAggroRange(6) × 1.7 = 10.20",
+      "ok": true,
+      "extra": {
+        "got": 10.2,
+        "want": 10.2
+      }
+    },
+    {
+      "label": "mob360 B17) 記分板預設 compact",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 800,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob360 B18) compact 高度 48px ≤ 52（比原本的 126 矮很多）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 800,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob360 B19) compact 仍保留比分、比賽時間與簡短隊名",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 800,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob360 B20) compact 把次要資訊（MVP／戰術）收起來",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 800,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob360 B21) 戰報起點跟著記分板變矮（timeline top 60 在記分板底緣 54 之下且不遠）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 800,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob360 B22) 點一下 → expanded，且高度變高",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "h": 118,
+        "bottom": 124,
+        "timelineTop": 130,
+        "vh": 800,
+        "hasClock": false,
+        "hasBlue": false,
+        "hasRed": false,
+        "hasMvp": true,
+        "hasTactic": false,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "mob360 B23) expanded 把完整資訊帶回來（MVP 出現）",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "h": 118,
+        "bottom": 124,
+        "timelineTop": 130,
+        "vh": 800,
+        "hasClock": false,
+        "hasBlue": false,
+        "hasRed": false,
+        "hasMvp": true,
+        "hasTactic": false,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "mob360 B24) expanded 高度不超過 viewport 的 20%",
+      "ok": true,
+      "extra": {
+        "h": 118,
+        "vh": 800
+      }
+    },
+    {
+      "label": "mob360 B25) 使用者選擇有記到 localStorage",
+      "ok": true,
+      "extra": "expanded"
+    },
+    {
+      "label": "mob360 B26) 再點一下回到 compact（只有兩個固定檔位，沒有自由拖曳）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "h": 48,
+        "bottom": 54,
+        "timelineTop": 60,
+        "vh": 800,
+        "hasClock": true,
+        "hasBlue": true,
+        "hasRed": true,
+        "hasMvp": false,
+        "hasTactic": false,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob360 B27) 沒有橫向溢出，也沒有因本輪新增縱向捲動軸",
+      "ok": true,
+      "extra": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 360,
+        "vh": 800
+      }
+    }
+  ],
+  "shots": [
+    "desk1366-02-battle.png",
+    "mob390-02-battle.png",
+    "mob360-02-battle.png"
+  ],
+  "data": {
+    "desk1920-battle": {
+      "ts": {
+        "t0": 3,
+        "t1": 6
+      },
+      "stats": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      },
+      "timeline": {
+        "start": {
+          "mode": "compact",
+          "hasBody": true,
+          "bodyH": 84,
+          "rootBottom": 176,
+          "vh": 1080,
+          "stored": null
+        },
+        "expanded": {
+          "mode": "expanded",
+          "hasBody": true,
+          "bodyH": 432,
+          "rootBottom": 524,
+          "vh": 1080,
+          "stored": "expanded"
+        },
+        "hidden": {
+          "mode": "hidden",
+          "hasBody": false,
+          "bodyH": 0,
+          "rootBottom": 92,
+          "vh": 1080,
+          "stored": "hidden"
+        }
+      },
+      "towerDebug": {
+        "rings": 24,
+        "locks": 0,
+        "rangeWorld": 10.2
+      },
+      "hud": {
+        "compact": {
+          "mode": "compact",
+          "h": 56,
+          "bottom": 62,
+          "timelineTop": 68,
+          "vh": 1080,
+          "hasClock": true,
+          "hasBlue": true,
+          "hasRed": true,
+          "hasMvp": false,
+          "hasTactic": false,
+          "stored": null
+        },
+        "expanded": {
+          "mode": "expanded",
+          "h": 126,
+          "bottom": 132,
+          "timelineTop": 138,
+          "vh": 1080,
+          "hasClock": false,
+          "hasBlue": false,
+          "hasRed": false,
+          "hasMvp": true,
+          "hasTactic": false,
+          "stored": "expanded"
+        }
+      },
+      "overflow": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 1920,
+        "vh": 1080
+      }
+    },
+    "desk1366-battle": {
+      "ts": {
+        "t0": 6,
+        "t1": 12
+      },
+      "stats": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      },
+      "timeline": {
+        "start": {
+          "mode": "compact",
+          "hasBody": true,
+          "bodyH": 84,
+          "rootBottom": 176,
+          "vh": 768,
+          "stored": "compact"
+        },
+        "expanded": {
+          "mode": "expanded",
+          "hasBody": true,
+          "bodyH": 307,
+          "rootBottom": 399,
+          "vh": 768,
+          "stored": "expanded"
+        },
+        "hidden": {
+          "mode": "hidden",
+          "hasBody": false,
+          "bodyH": 0,
+          "rootBottom": 92,
+          "vh": 768,
+          "stored": "hidden"
+        }
+      },
+      "towerDebug": {
+        "rings": 24,
+        "locks": 0,
+        "rangeWorld": 10.2
+      },
+      "hud": {
+        "compact": {
+          "mode": "compact",
+          "h": 56,
+          "bottom": 62,
+          "timelineTop": 68,
+          "vh": 768,
+          "hasClock": true,
+          "hasBlue": true,
+          "hasRed": true,
+          "hasMvp": false,
+          "hasTactic": false,
+          "stored": "compact"
+        },
+        "expanded": {
+          "mode": "expanded",
+          "h": 126,
+          "bottom": 132,
+          "timelineTop": 138,
+          "vh": 768,
+          "hasClock": false,
+          "hasBlue": false,
+          "hasRed": false,
+          "hasMvp": true,
+          "hasTactic": false,
+          "stored": "expanded"
+        }
+      },
+      "overflow": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 1366,
+        "vh": 768
+      }
+    },
+    "mob430-battle": {
+      "ts": {
+        "t0": 13.5,
+        "t1": 23.5
+      },
+      "stats": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      },
+      "timeline": {
+        "start": {
+          "mode": "compact",
+          "hasBody": true,
+          "bodyH": 50,
+          "rootBottom": 134,
+          "vh": 932,
+          "stored": "compact"
+        },
+        "expanded": {
+          "mode": "expanded",
+          "hasBody": true,
+          "bodyH": 280,
+          "rootBottom": 364,
+          "vh": 932,
+          "stored": "expanded"
+        },
+        "hidden": {
+          "mode": "hidden",
+          "hasBody": false,
+          "bodyH": 0,
+          "rootBottom": 84,
+          "vh": 932,
+          "stored": "hidden"
+        }
+      },
+      "towerDebug": {
+        "rings": 24,
+        "locks": 0,
+        "rangeWorld": 10.2
+      },
+      "hud": {
+        "compact": {
+          "mode": "compact",
+          "h": 48,
+          "bottom": 54,
+          "timelineTop": 60,
+          "vh": 932,
+          "hasClock": true,
+          "hasBlue": true,
+          "hasRed": true,
+          "hasMvp": false,
+          "hasTactic": false,
+          "stored": "compact"
+        },
+        "expanded": {
+          "mode": "expanded",
+          "h": 118,
+          "bottom": 124,
+          "timelineTop": 130,
+          "vh": 932,
+          "hasClock": false,
+          "hasBlue": false,
+          "hasRed": false,
+          "hasMvp": true,
+          "hasTactic": false,
+          "stored": "expanded"
+        }
+      },
+      "overflow": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 430,
+        "vh": 932
+      }
+    },
+    "mob412-battle": {
+      "ts": {
+        "t0": 15,
+        "t1": 26
+      },
+      "stats": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      },
+      "timeline": {
+        "start": {
+          "mode": "compact",
+          "hasBody": true,
+          "bodyH": 50,
+          "rootBottom": 134,
+          "vh": 915,
+          "stored": "compact"
+        },
+        "expanded": {
+          "mode": "expanded",
+          "hasBody": true,
+          "bodyH": 275,
+          "rootBottom": 359,
+          "vh": 915,
+          "stored": "expanded"
+        },
+        "hidden": {
+          "mode": "hidden",
+          "hasBody": false,
+          "bodyH": 0,
+          "rootBottom": 84,
+          "vh": 915,
+          "stored": "hidden"
+        }
+      },
+      "towerDebug": {
+        "rings": 24,
+        "locks": 0,
+        "rangeWorld": 10.2
+      },
+      "hud": {
+        "compact": {
+          "mode": "compact",
+          "h": 48,
+          "bottom": 54,
+          "timelineTop": 60,
+          "vh": 915,
+          "hasClock": true,
+          "hasBlue": true,
+          "hasRed": true,
+          "hasMvp": false,
+          "hasTactic": false,
+          "stored": "compact"
+        },
+        "expanded": {
+          "mode": "expanded",
+          "h": 118,
+          "bottom": 124,
+          "timelineTop": 130,
+          "vh": 915,
+          "hasClock": false,
+          "hasBlue": false,
+          "hasRed": false,
+          "hasMvp": true,
+          "hasTactic": false,
+          "stored": "expanded"
+        }
+      },
+      "overflow": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 412,
+        "vh": 915
+      }
+    },
+    "mob390-battle": {
+      "ts": {
+        "t0": 14,
+        "t1": 25.5
+      },
+      "stats": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      },
+      "timeline": {
+        "start": {
+          "mode": "compact",
+          "hasBody": true,
+          "bodyH": 50,
+          "rootBottom": 134,
+          "vh": 844,
+          "stored": "compact"
+        },
+        "expanded": {
+          "mode": "expanded",
+          "hasBody": true,
+          "bodyH": 253,
+          "rootBottom": 337,
+          "vh": 844,
+          "stored": "expanded"
+        },
+        "hidden": {
+          "mode": "hidden",
+          "hasBody": false,
+          "bodyH": 0,
+          "rootBottom": 84,
+          "vh": 844,
+          "stored": "hidden"
+        }
+      },
+      "towerDebug": {
+        "rings": 24,
+        "locks": 0,
+        "rangeWorld": 10.2
+      },
+      "hud": {
+        "compact": {
+          "mode": "compact",
+          "h": 48,
+          "bottom": 54,
+          "timelineTop": 60,
+          "vh": 844,
+          "hasClock": true,
+          "hasBlue": true,
+          "hasRed": true,
+          "hasMvp": false,
+          "hasTactic": false,
+          "stored": "compact"
+        },
+        "expanded": {
+          "mode": "expanded",
+          "h": 118,
+          "bottom": 124,
+          "timelineTop": 130,
+          "vh": 844,
+          "hasClock": false,
+          "hasBlue": false,
+          "hasRed": false,
+          "hasMvp": true,
+          "hasTactic": false,
+          "stored": "expanded"
+        }
+      },
+      "overflow": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 390,
+        "vh": 844
+      }
+    },
+    "mob360-battle": {
+      "ts": {
+        "t0": 15,
+        "t1": 26.5
+      },
+      "stats": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      },
+      "timeline": {
+        "start": {
+          "mode": "compact",
+          "hasBody": true,
+          "bodyH": 50,
+          "rootBottom": 134,
+          "vh": 800,
+          "stored": "compact"
+        },
+        "expanded": {
+          "mode": "expanded",
+          "hasBody": true,
+          "bodyH": 240,
+          "rootBottom": 324,
+          "vh": 800,
+          "stored": "expanded"
+        },
+        "hidden": {
+          "mode": "hidden",
+          "hasBody": false,
+          "bodyH": 0,
+          "rootBottom": 84,
+          "vh": 800,
+          "stored": "hidden"
+        }
+      },
+      "towerDebug": {
+        "rings": 24,
+        "locks": 0,
+        "rangeWorld": 10.2
+      },
+      "hud": {
+        "compact": {
+          "mode": "compact",
+          "h": 48,
+          "bottom": 54,
+          "timelineTop": 60,
+          "vh": 800,
+          "hasClock": true,
+          "hasBlue": true,
+          "hasRed": true,
+          "hasMvp": false,
+          "hasTactic": false,
+          "stored": "compact"
+        },
+        "expanded": {
+          "mode": "expanded",
+          "h": 118,
+          "bottom": 124,
+          "timelineTop": 130,
+          "vh": 800,
+          "hasClock": false,
+          "hasBlue": false,
+          "hasRed": false,
+          "hasMvp": true,
+          "hasTactic": false,
+          "stored": "expanded"
+        }
+      },
+      "overflow": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 360,
+        "vh": 800
+      }
+    }
+  }
+}

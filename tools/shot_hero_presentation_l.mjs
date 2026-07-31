@@ -50,11 +50,16 @@ const SIZES = [
 //    （實測 0.09 模擬秒／真實秒，推不到英雄開打）。
 //    **六個尺寸的版面、HUD callout、模板、主題色驗收在畫廊段（A 段）完整跑完**；
 //    這一段要證的是「live 對戰這條路真的接通了」，三個尺寸足夠且跑得完。
-const BATTLE_TAGS = new Set(["desk1366", "mob390", "mob360"]);
+//  L Hotfix 2：記分板要在六個尺寸驗，所以對戰段擴到全部尺寸。
+//  （這一段已經是輕量煙霧測試，不再等模擬推進，六個尺寸跑得完。）
+const BATTLE_TAGS = new Set(["desk1920", "desk1366", "mob430", "mob412", "mob390", "mob360"]);
 const TEMPLATES = ["projectile", "line", "area", "dash", "shield", "heal", "control", "ultimate"];
 const HEROES = ["bingshuang", "chichuan", "cinderfist", "dadi", "duskblade",
   "ironclad", "leiting", "lieyan", "stoneguard", "yanfeng"];
 const FALLBACK_HERO = "linghun";
+//  塔射程來自規則（不寫死），debug 射程圈的半徑必須等於它 × WORLD_SCALE。
+const { SIM_RULES } = await import("../src/battle/moba/matchProgression.js");
+const R_TOWER_RANGE = SIM_RULES.v3.towerAggroRange;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const CHROME = ["C:/Program Files/Google/Chrome/Application/chrome.exe",
@@ -417,12 +422,60 @@ async function runBattle(size) {
   const td = await ev(tab, "window.__TOWER_DEBUG_STATS ?? null", 20000).catch(() => null);
   cap.towerDebug = td;
   ck(`${tag} B14) debug 模式下有畫塔射程圈（?diag=1）`, !!td && td.rings > 0, td);
-  ck(`${tag} B15) 射程圈半徑 = towerAggroRange 換算（5.5 × 1.7 = 9.35 世界單位）`,
-    !!td && Math.abs(td.rangeWorld - 9.35) < 0.01, td?.rangeWorld);
+  //  ⚠ 不寫死數字：從規則推導。L Hotfix 2 把射程 5.5 → 6.0，寫死的 9.35 會誤紅。
+  //     這條要驗的是「圈的半徑 == 規則射程 × 世界縮放」這個關係，不是某個數。
+  const wantRing = R_TOWER_RANGE * 1.7;
+  ck(`${tag} B15) 射程圈半徑 = towerAggroRange(${R_TOWER_RANGE}) × 1.7 = ${wantRing.toFixed(2)}`,
+    !!td && Math.abs(td.rangeWorld - wantRing) < 0.02, { got: td?.rangeWorld, want: wantRing });
+
+  //  ── L Hotfix 2 §4：上方記分板 compact / expanded ────────────────────────
+  const readHud = () => ev(tab, `(() => {
+    const h = document.querySelector('[data-testid="battle-hud"]');
+    const tl = document.querySelector('[data-testid="timeline-root"]');
+    if (!h) return null;
+    const b = h.getBoundingClientRect();
+    const tb = tl ? tl.getBoundingClientRect() : null;
+    const txt = h.innerText || "";
+    return { mode: h.getAttribute("data-mode"), h: Math.round(b.height), bottom: Math.round(b.bottom),
+      timelineTop: tb ? Math.round(tb.top) : null, vh: window.innerHeight,
+      hasClock: !!h.querySelector('[data-testid="hud-clock"]'),
+      hasBlue: !!h.querySelector('[data-testid="hud-team-blue"]'),
+      hasRed: !!h.querySelector('[data-testid="hud-team-red"]'),
+      hasMvp: txt.includes("MVP"), hasTactic: txt.includes("戰術"),
+      stored: (() => { try { return localStorage.getItem("esmo.hud.mode.v1"); } catch { return null; } })() };
+  })()`, 20000).catch(() => null);
+  const clickHud = async () => {
+    await ev(tab, `(() => { const b = document.querySelector('[data-testid="hud-toggle"]'); if (b) { b.click(); return true; } return false; })()`, 20000).catch(() => null);
+    await sleep(600);
+  };
+  const h0 = await readHud();
+  cap.hud = { compact: h0 };
+  const maxCompact = size.mobile ? 52 : 60;
+  ck(`${tag} B17) 記分板預設 compact`, h0?.mode === "compact", h0);
+  ck(`${tag} B18) compact 高度 ${h0?.h}px ≤ ${maxCompact}（比原本的 126 矮很多）`,
+    !!h0 && h0.h <= maxCompact, h0);
+  ck(`${tag} B19) compact 仍保留比分、比賽時間與簡短隊名`,
+    !!h0 && h0.hasClock && h0.hasBlue && h0.hasRed, h0);
+  ck(`${tag} B20) compact 把次要資訊（MVP／戰術）收起來`,
+    !!h0 && !h0.hasMvp, h0);
+  ck(`${tag} B21) 戰報起點跟著記分板變矮（timeline top ${h0?.timelineTop} 在記分板底緣 ${h0?.bottom} 之下且不遠）`,
+    !!h0 && h0.timelineTop != null && h0.timelineTop >= h0.bottom && h0.timelineTop - h0.bottom <= 12, h0);
+  await clickHud();
+  const h1 = await readHud();
+  cap.hud.expanded = h1;
+  ck(`${tag} B22) 點一下 → expanded，且高度變高`, h1?.mode === "expanded" && h1.h > h0.h, h1);
+  ck(`${tag} B23) expanded 把完整資訊帶回來（MVP 出現）`, h1?.hasMvp === true, h1);
+  ck(`${tag} B24) expanded 高度不超過 viewport 的 20%`,
+    !!h1 && h1.h <= Math.round(h1.vh * 0.2) + 2, { h: h1?.h, vh: h1?.vh });
+  ck(`${tag} B25) 使用者選擇有記到 localStorage`, h1?.stored === "expanded", h1?.stored);
+  await clickHud();
+  const h2 = await readHud();
+  ck(`${tag} B26) 再點一下回到 compact（只有兩個固定檔位，沒有自由拖曳）`,
+    h2?.mode === "compact" && h2.h === h0.h, h2);
 
   const ovf = await overflowInfo(tab).catch(() => null);
   cap.overflow = ovf;
-  ck(`${tag} B16) 沒有橫向溢出，也沒有因本輪新增縱向捲動軸`,
+  ck(`${tag} B27) 沒有橫向溢出，也沒有因本輪新增縱向捲動軸`,
     !!ovf && ovf.hOverflow <= 1 && ovf.vScrollers.length === 0, ovf);
   if (size.shots.includes("battle")) await shot(`${tag}-02-battle.png`);
   results.data[`${tag}-battle`] = cap;

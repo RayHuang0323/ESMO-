@@ -1277,7 +1277,11 @@ export class LogicEngine {
         // Boss 會黏著坑內最近的真實英雄反擊；不執行最後一擊，以免破壞
         // Σk == Σd 的既有公平性／結果契約。attackAt/targetId 同步給地圖與 HUD。
         o.atkCd = Math.max(0, (o.atkCd ?? 0) - dt);
-        const bossTargets = [...b, ...r].sort((a, z) =>
+        //  L Hotfix 2：只挑**還打得動**的目標。舊碼永遠鎖最近的人，一旦最近的人
+        //  被打到 1 HP 下限（Boss 不執行擊殺），`amount` 就恆為 0 ⇒ Boss 既不出手
+        //  也不重置冷卻，之後整段站在那裡不動作（實測 249/1500 tick 有人在坑內
+        //  卻完全沒反應）。改成跳過打不動的人，坑裡只要還有人就會挨打。
+        const bossTargets = [...b, ...r].filter((p) => p.hp > 1.01).sort((a, z) =>
           dist(a.pos, o.pos) - dist(z.pos, o.pos) || String(a.id).localeCompare(String(z.id)));
         const bossTarget = bossTargets[0] ?? null;
         o.targetId = bossTarget?.id ?? null;
@@ -1388,8 +1392,11 @@ export class LogicEngine {
             m.targetId = memberTarget?.id ?? null;
           }
           if (!memberTarget || dist(m.pos, memberTarget.pos) > R.campAttackRange || m.atkCd > 0) continue;
+          //  L Hotfix 2：Buff 野怪比小野怪更痛（產品目標：前期不能完全無壓力）
+          const campDmgBase = c.type === "buff"
+            ? (R.buffCampAttackDamage ?? R.campAttackDamage) : R.campAttackDamage;
           const amount = Math.min(
-            R.campAttackDamage / this._dragonGuardK(memberTarget.side),
+            campDmgBase / this._dragonGuardK(memberTarget.side),
             Math.max(0, memberTarget.hp - 1));
           if (amount <= 0) continue;
           memberTarget.hp -= amount;
@@ -2001,7 +2008,10 @@ export class LogicEngine {
         for (const tr of [0, 1, 2]) {
           const tw = this.towers[`${side}_${ln}_${tr}`]; if (tw.hp <= 0) continue;
           const enemyKey = side === "blue" ? "rm" : "bm";
-          const inRange = this.lanes[ln][enemyKey].filter((mm) => Math.abs(mm.t - tw.t) < 0.05);
+          //  L Hotfix 2：band 原本寫死 0.05，比 minionSiegeBand(0.06) 還窄
+          //  ⇒ 小兵打得到塔、塔打不到它。改讀規則（v3 = 0.10）。
+          const mBand = R.towerMinionBand ?? 0.05;
+          const inRange = this.lanes[ln][enemyKey].filter((mm) => Math.abs(mm.t - tw.t) < mBand);
           if (R.towerAttackInterval) {
             const enemySide = side === "blue" ? "red" : "blue";
             const priorityHero = this.players.some((p) =>
@@ -2108,7 +2118,11 @@ export class LogicEngine {
           }
           if (R.towerAttackInterval) {
             if (tw.atkCd <= 0) {
-              const shot = R.towerAggroDmg * R.towerAttackInterval * lateFactor;
+              //  L Hotfix 2：連續命中同一英雄的威脅增幅。塔仍不執行擊殺，
+              //  改用「越站越痛」逼退——這是「不能站在塔下無視塔」的機制。
+              const ramp = Math.min(R.towerLockRampMax ?? 1,
+                1 + (tw.lockShots ?? 0) * (R.towerLockRamp ?? 0));
+              const shot = R.towerAggroDmg * R.towerAttackInterval * lateFactor * ramp;
               best.hp -= Math.min(shot, Math.max(0, best.hp - 1));
               tw.atkCd = R.towerAttackInterval; tw.lockShots += 1;
               this.pushFx({

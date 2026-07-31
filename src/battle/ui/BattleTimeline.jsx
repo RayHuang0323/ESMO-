@@ -15,7 +15,9 @@ import { useIsMobile } from "../../ui/useViewport.js";
 import HeroPortrait from "../../ui/HeroPortrait.jsx";
 //  Milestone L：Timeline 的英雄身分也走同一支 Adapter（不在這裡自己查 roster）。
 import { describeTimelinePresentation } from "../moba/heroPresentationAdapter.js";
-import { SAFE_TOP, FEED_LEFT, FEED_MAX_W, FEED_RIGHT_RESERVE, Z } from "./battleLayout.js";
+import { FEED_LEFT, FEED_MAX_W, FEED_RIGHT_RESERVE, Z } from "./battleLayout.js";
+//  L Hotfix 2：安全區高度跟著記分板的 compact/expanded 走（唯一來源）。
+import { useHudMode, hudSafeTop } from "./hudStore.js";
 
 const ICON = { FIRST_BLOOD: "🩸", KILL: "⚔️", MULTI_KILL: "🔥", ACE: "💥", TOWER_DESTROYED: "🗼", DRAGON_SLAIN: "🐉", BARON_SLAIN: "👑", VICTORY: "🏆", SPELL_USED: "✨", OBJECTIVE_SPAWN: "🌀" };
 const LANE = { top: "上", mid: "中", bot: "下", nexus: "堡" };
@@ -130,6 +132,7 @@ export default function BattleTimeline({ open = true, max = 11, roster = null })
   //  桌機與手機都一樣預設 compact ⇒ 戰報永遠不會一開場就吃掉半個畫面，
   //  但也不會什麼都看不到。使用者的選擇記在 localStorage，下一場沿用。
   const [mode, setMode] = useState(loadTimelineMode);
+  const safeTop = hudSafeTop(useHudMode(), isMobile);
   const cycle = () => {
     const next = mode === "compact" ? "expanded" : mode === "expanded" ? "hidden" : "compact";
     setMode(next); saveTimelineMode(next);
@@ -150,7 +153,7 @@ export default function BattleTimeline({ open = true, max = 11, roster = null })
     //   戰報在 DOM 較晚 ⇒ 贏）。改用共用常數 SAFE_TOP（= HUD 底緣 + 6）。
     //   根層 pointerEvents: none ⇒ 戰報不吃掉地圖 pan/zoom；只有可點的標題列開啟。
     <div data-testid="timeline-root" data-mode={mode}
-      style={{ position: "absolute", top: SAFE_TOP, left: FEED_LEFT, width: `min(${FEED_MAX_W}px, 62vw)`, maxWidth: `calc(100% - ${FEED_LEFT + FEED_RIGHT_RESERVE}px)`, zIndex: Z.feed, fontFamily: "system-ui,sans-serif", pointerEvents: "none" }}>
+      style={{ position: "absolute", top: safeTop, left: FEED_LEFT, width: `min(${FEED_MAX_W}px, 62vw)`, maxWidth: `calc(100% - ${FEED_LEFT + FEED_RIGHT_RESERVE}px)`, zIndex: Z.feed, fontFamily: "system-ui,sans-serif", pointerEvents: "none" }}>
       {/* data-testid：驗收腳本要能像使用者一樣切換三段。
           hidden 時只留一顆小標籤，讓它叫得回來。 */}
       <div data-testid="timeline-toggle" data-mode={mode}

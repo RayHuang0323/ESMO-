@@ -20,12 +20,15 @@ import HeroPortrait from "../../../ui/HeroPortrait.jsx";
 import { heroById } from "../../../data/heroDatabase.js";
 import { PRESENTATION_DISCLAIMER } from "../../../data/heroCombatPresentation.js";
 import { toPresentationEvents, pickCallouts, CALLOUT_LIMIT } from "../heroPresentationAdapter.js";
-import { SAFE_TOP, Z } from "../../ui/battleLayout.js";
+import { Z } from "../../ui/battleLayout.js";
+//  L Hotfix 2：安全區高度跟著記分板的 compact/expanded 走（唯一來源）。
+import { useHudMode, hudSafeTop } from "../../ui/hudStore.js";
 
 const EMPHASIS_TONE = { ultimate: 1, signature: 0.82, normal: 0.6, passive: 0.5 };
 
 export default function HeroSkillCallout({ roster = null, source = null }) {
   const isMobile = useIsMobile();
+  const safeTop = hudSafeTop(useHudMode(), isMobile);
   //  `source` 讓 Replay 傳唯讀 adapter 進來（和 MobaView3D 同一個慣例）；
   //  沒傳就是現場對戰的 live store ⇒ 現場行為零改變。
   const liveSnapshot = useGameStore((s) => s.snapshot);
@@ -44,7 +47,7 @@ export default function HeroSkillCallout({ roster = null, source = null }) {
     <div data-testid="hero-callouts" data-count={callouts.length}
       data-limit={isMobile ? CALLOUT_LIMIT.mobile : CALLOUT_LIMIT.desktop}
       style={{
-        position: "absolute", top: SAFE_TOP, right: 8, zIndex: Z.feed,
+        position: "absolute", top: safeTop, right: 8, zIndex: Z.feed,
         //  L Hotfix 1 §2：手機收窄到 40vw 以內，避免壓到戰場中央；
         //  高度由 1–2 則決定（桌機上限 2、手機 1），不會長到蓋住 HUD。
         width: isMobile ? 128 : 176, maxWidth: isMobile ? "40vw" : "26vw",

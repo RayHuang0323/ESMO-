@@ -18,6 +18,9 @@ import { useGameStore } from "../../useGameStore.js";
 import { useBattleStore } from "../battleStore.js";
 import { fmtT } from "../../gameData.js";
 import { HUD_TOP, HUD_H, PANEL_MAX_W, Z } from "./battleLayout.js";
+//  L Hotfix 2 §4：記分板顯示層級（compact / expanded）＋ 安全區高度的唯一來源。
+import { useHudMode, toggleHudMode, hudHeight, HUD_MODE_ZH } from "./hudStore.js";
+import { useIsMobile } from "../../ui/useViewport.js";
 
 const BLUE = "#60a5fa", RED = "#fb923c", MONO = "'Courier New',monospace";
 
@@ -100,15 +103,65 @@ export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭
     </span>
   );
 
+  const hudMode = useHudMode();
+  const isMobile = useIsMobile();
+  const compact = hudMode === "compact";
+  const hudH = hudHeight(hudMode, isMobile);
+  //  簡短隊名：compact 只放得下幾個字，超過就截斷（完整名稱在 expanded）
+  const shortBlue = String(blueName ?? "").slice(0, isMobile ? 4 : 7);
+  const shortRed = String(redName ?? "").slice(0, isMobile ? 4 : 7);
+
   return (
     <>
     {/* S29B6：top / 寬度 / z-index 改讀 `battleLayout` 共用常數。
         戰報與控制鈕的安全區（SAFE_TOP）由 HUD_TOP + HUD_H 推導；
         `maxHeight: HUD_H` 讓「HUD 實際高度 ≤ 常數」在執行期也成立。 */}
-    <div style={{ position: "absolute", top: HUD_TOP, left: "50%", transform: "translateX(-50%)", width: `min(96%, ${PANEL_MAX_W}px)`, maxHeight: HUD_H, boxSizing: "border-box", overflow: "hidden", pointerEvents: "none", fontFamily: "system-ui,-apple-system,sans-serif", zIndex: Z.hud, background: "rgba(13,11,18,0.92)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "6px 12px 7px", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
+    <div data-testid="battle-hud" data-mode={hudMode}
+      style={{ position: "absolute", top: HUD_TOP, left: "50%", transform: "translateX(-50%)", width: `min(96%, ${PANEL_MAX_W}px)`, height: hudH, maxHeight: hudH, boxSizing: "border-box", overflow: "hidden", pointerEvents: "none", fontFamily: "system-ui,-apple-system,sans-serif", zIndex: Z.hud, background: "rgba(13,11,18,0.92)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: compact ? "4px 10px 5px" : "6px 12px 7px", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
       <style>{`@keyframes esmoPulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
 
+      {/*  切換鈕：compact ⇄ expanded。**沒有自由拖曳縮放**，只有兩個固定檔位。
+           選擇記在 localStorage，live 與 Replay 讀同一個 store。 */}
+      <button data-testid="hud-toggle" data-mode={hudMode}
+        onClick={toggleHudMode} title={`記分板：${HUD_MODE_ZH[hudMode]}（點擊切換）`}
+        style={{ position: "absolute", top: 2, right: 4, pointerEvents: "auto", cursor: "pointer",
+          background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)",
+          borderRadius: 5, color: "rgba(255,255,255,0.55)", font: "800 8px system-ui",
+          padding: "1px 5px", lineHeight: 1.4 }}>
+        {hudMode === "compact" ? "▾" : "▴"}
+      </button>
+
+      {/*  ── compact：只留比分、時間、簡短隊名與勝率條 ──────────────────────
+           產品目標是「戰場優先」，所以次要資訊（完整隊名／戰術／塔數／龍巴龍／
+           MVP／經濟）全部移到 expanded。**資料一筆都沒刪**，只是換了資訊層級。 */}
+      {compact && (
+        <>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0, flex: 1 }}>
+              <span style={{ fontSize: 15, width: 18, textAlign: "center", flexShrink: 0 }}>{blueEmoji}</span>
+              <span data-testid="hud-team-blue" style={{ color: BLUE, fontSize: 8.5, fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{shortBlue}</span>
+              <span style={{ color: "white", fontSize: 16, fontWeight: 900, fontFamily: MONO, marginLeft: "auto" }}>{hud.bK}</span>
+            </div>
+            <div style={{ textAlign: "center", flexShrink: 0, padding: "0 6px" }}>
+              <div data-testid="hud-clock" style={{ color: "white", fontSize: 15, fontWeight: 900, fontFamily: MONO, lineHeight: 1.05 }}>{fmtT(hud.ts)}</div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0, flex: 1, justifyContent: "flex-end" }}>
+              <span style={{ color: "white", fontSize: 16, fontWeight: 900, fontFamily: MONO, marginRight: "auto" }}>{hud.rK}</span>
+              <span data-testid="hud-team-red" style={{ color: RED, fontSize: 8.5, fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{shortRed}</span>
+              <span style={{ fontSize: 15, width: 18, textAlign: "center", flexShrink: 0 }}>{redEmoji}</span>
+            </div>
+          </div>
+          {/*  最重要的少量資源資訊：勝率條（保留，因為它是一眼判局勢的東西）*/}
+          <div style={{ marginTop: 4, height: 4, borderRadius: 99, overflow: "hidden", background: "rgba(0,0,0,0.55)", display: "flex" }}>
+            <div style={{ width: `${hud.winProb * 100}%`, background: "linear-gradient(90deg,#1d4ed8,#60a5fa)", transition: "width 0.4s ease" }} />
+            <div style={{ flex: 1, background: "linear-gradient(90deg,#f87171,#b91c1c)" }} />
+          </div>
+        </>
+      )}
+
       {/* 列1：隊名 + LIVE badge（Legacy）*/}
+      {!compact && (
+      <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span style={{ color: BLUE, fontSize: 9.5, fontWeight: 900, letterSpacing: "0.04em" }}>{blueName}</span>
         <span style={{ background: "#dc2626", color: "white", fontSize: 8, fontWeight: 900, borderRadius: 4, padding: "1px 6px", letterSpacing: "0.1em", display: "inline-flex", alignItems: "center", gap: 3 }}>
@@ -172,6 +225,8 @@ export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭
         </span>
         <span style={{ color: RED }}>{((1 - hud.winProb) * 100).toFixed(0)}%</span>
       </div>
+      </>
+      )}
     </div>
     <BossStatusBar objectives={snap.objectives ?? []} />
     </>

@@ -130,7 +130,7 @@ export const SIM_RULES = {
     minionWorldSpeed: 1.8,
     dmgK: 0.65,                  // 實測校準：5 分 ≈ 4 殺（「少量交戰」）、首塔 6.9 分
     waveFirst: 60, wavePeriod: 30,   // 首波 1:00 出兵、30 秒一波（兩軍約 1:25 接線）
-    minionTowerDmg: 9,           // 每隻小兵每模擬秒對塔 9（原 26 × 全路小兵數）
+    minionTowerDmg: 13,          // L Hotfix 2：9 → 13（塔開始清兵後補回攻城節奏）
     minionSiegeBand: 0.06,       // ⭐ 只有**貼在塔附近**的小兵能打塔（原本整路小兵都算）
     minionSiegeCap: 8,           // 同時最多 8 隻計入（防兵線堆疊瞬間拆塔）
     // 中後期收尾壓力：英雄推塔 40 → 70。⚠ 是「提高推進效率」，**不是加塔血**
@@ -192,7 +192,10 @@ SIM_RULES.v3 = {
   //  ⇒ 那兩組維持舊的「直線位移 + gameData.WALLS 圓形推開」。
   navCollision: true,
   laneAdvanceWorldSpeed: 0.25,
-  structureAccelT: 1200, structureAccelDiv: 180, // 20 分後只加速拆建築，不改擊殺或移速
+  //  L Hotfix 2：塔變強之後推線變慢，收斂改用**既有的**後期加速機制補回來，
+  //  而不是把塔的正確修復削回去。1200s→960s（16 分起算）、除數 180→130（更陡）。
+  //  它只加速拆建築，不改擊殺、不改移速、不改任何傷害公式。
+  structureAccelT: 960, structureAccelDiv: 130, // 16 分後只加速拆建築，不改擊殺或移速
   // ── 交戰狀態機（LogicEngine._decideV3）─────────────────────────────────
   engagementFsm: true,
   baseRetreatBonus: 0.06,  // v3 全體基礎撤退餘裕（疊在戰術 retreatAt 之上；撤退要撤得活）
@@ -278,8 +281,24 @@ SIM_RULES.v3 = {
   //  門牙塔的「無兵線」是結構性的（小兵路線沒有延伸進基地廣場），不是戰術失誤
   //  ⇒ 不套「帶兵才拆得動」的懲罰。只影響收尾階段的門牙塔，不影響任何路上塔。
   nexusGuardNoWaveK: 0.62,
+  //  ── L Hotfix 2：塔的威脅感修正（實測根因，非「看起來更痛」的調參）──────
+  //  ① towerAggroRange 5.5 → 7.0
+  //     根因：外塔離自己那條兵線最遠 **5.94**（mid 外塔實測），射程 5.5 蓋不到
+  //     ⇒ 走在線上的英雄「明明在塔旁邊」卻永遠不在射程內。7.0 覆蓋最壞位移
+  //     再留 1.06 餘裕。debug 射程圈讀同一個值，視覺與邏輯因此必然一致。
+  //  ② towerMinionBand（新）0.10
+  //     根因：塔挑小兵目標的 band 原本**寫死 0.05**，比小兵的攻城 band
+  //     `minionSiegeBand: 0.06` 還窄 ⇒ 小兵打得到塔、塔打不到它。實測整場只有
+  //     10 發打小兵、353 發打英雄，塔幾乎不清兵。0.10 覆蓋攻城 band 並對上
+  //     兵線實際交會位置（|Δt|<0.12 時有敵兵的 tick 佔 6.9%）。
+  //  ③ towerLockRamp（新）連續命中同一英雄的威脅增幅
+  //     產品目標：英雄不能長時間站在敵方塔下無視塔。塔傷仍**不執行擊殺**
+  //     （維持 Σk == Σd 的結果契約），改用「越站越痛」逼退。
+  towerLockRamp: 0.10,         // 每連續一發 +22%
+  towerLockRampMax: 1.5,       // 上限 2 倍
+  towerMinionBand: 0.10,       // 塔可鎖定小兵的 lane-progress 半寬
   towerAggroDmg: 66,
-  towerAggroRange: 5.5,
+  towerAggroRange: 6.0,
   // Milestone C：塔的傷害改成離散單體射擊。引擎正式 tick 是 0.5s；
   // 每發 60 完整保留舊 120 DPS / 2s TTK，240 HP 小兵會清楚經過四次扣血才死亡。
   towerAttackInterval: 0.5,
@@ -337,16 +356,25 @@ SIM_RULES.v3 = {
   campDmgK: 0.6,
   // Milestone C：營地的移動 / 索敵 / 反擊 / leash。只套 v3，v1/v2 歷史基準不變。
   campIdleRadius: 1.25, campIdleSpeed: 0.55,
-  campAggroRange: 5.5, campAttackRange: 2.35, campLeashRange: 7.5,
+  //  L Hotfix 2：野怪原本 aggro 5.5 但只在 2.35 內才打得到 ⇒ 追過去也常常搆不著。
+  //  攻擊距離拉到 3.2（仍遠小於 aggro），讓「站在野怪旁邊」真的會被打。
+  campAggroRange: 5.5, campAttackRange: 3.2, campLeashRange: 7.5,
   campMoveSpeed: 2.4, campReturnSpeed: 3.4,
   // 傷害刻意低：營地反擊是可讀的真實 HP step，但不改寫既有對線/首殺節奏。
-  campAttackInterval: 1.35, campAttackDamage: 4,
+  //  L Hotfix 2：小野怪 4 → 12（對 400–960 HP 的英雄，4 點等於沒有威脅）。
+  //  Buff 野怪另外給 20：產品目標要求「Buff 野怪前期不能完全無壓力」。
+  campAttackInterval: 1.35, campAttackDamage: 8, buffCampAttackDamage: 13,
   campGold: 60, buffCampGold: 90,
   // Milestone D：中立首領與紅藍 Buff。全部只在 v3 啟用；Boss 不執行最後一擊，
   // 維持既有 KDA 不變量。Buff 由實際擊殺參與者取得，有限時且進 snapshot/Replay。
   // 反擊用來提供真實受擊／動作回饋，不應把參與者長期壓到 1 HP 主導戰局。
-  dragonAttackInterval: 1.35, dragonAttackDamage: 1,
-  baronAttackInterval: 1.05, baronAttackDamage: 1,
+  //  ── L Hotfix 2：龍與巴龍的威脅感 ────────────────────────────────────────
+  //  原值是 **1**。對 400–960 HP 的英雄，每 1.35 秒打 1 點等於完全沒有存在感——
+  //  「只是高血量、沒有攻擊存在感」正是產品目標明令要修的。
+  //  龍 45（約一名英雄 6% 最大生命）、巴龍 80（明顯高於龍），
+  //  都**不執行擊殺**（沿用既有的 hp-1 下限），維持結果契約。
+  dragonAttackInterval: 1.35, dragonAttackDamage: 26,
+  baronAttackInterval: 1.05, baronAttackDamage: 44,
   combatBuffT: 75,
   combatBuffDamageK: 1.06,
   redBuffSlowT: 1.6, redBuffSlowK: 0.92,
