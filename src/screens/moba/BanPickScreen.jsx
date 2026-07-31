@@ -11,7 +11,7 @@
 // ============================================================================
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
-import { seatPlayers as seatPlayersOf } from "../../platform/contracts/matchLineup.js";
+import { seatPlayers as seatPlayersOf, SEAT_CODE } from "../../platform/contracts/matchLineup.js";
 import { heroTags } from "../../data/heroClassification.js";
 import { assignDraft, assignmentToHeroIds } from "../../battle/moba/mobaDraftAssignment.js";
 import { buildLoadout, SUMMONER_SPELLS } from "../../battle/moba/mobaHeroLoadout.js";
@@ -25,38 +25,62 @@ const assignmentToRoster = (a = {}) =>
  * 明確顯示「哪位選手、去哪一路、開哪隻英雄、適性多少、有沒有衝突、帶什麼技能」。
  * 全部來自 assignDraft / buildLoadout 的計算結果，不編造。
  */
-function DraftPlanPanel({ plan, loadout }) {
+/**
+ * J-close：出戰配置摘要。
+ *
+ * 三個改動的理由（Ray 回報「選完角色只閃現不到 1 秒」）：
+ *  1. 這個面板現在**從一開始就在**，而且排在選角格之上——舊版排在 260px 高的
+ *     選角捲動格**下面**，輪到你選人時它根本被推出畫面外，等於選的時候看不到
+ *     自己會被排到哪一路。
+ *  2. 尚未選的席位顯示「等待選角」，不是整塊消失，玩家才知道還缺幾個。
+ *  3. 多一欄「被壓制」：拿本檔既有的 `archCounterScore` 去比對方已選的英雄，
+ *     不是新的分析系統，只是把 AI 早就在算的東西講給玩家聽。
+ */
+function DraftPlanPanel({ plan, loadout, counterOf }) {
   const rows = Object.entries(plan.assignment);
+  const filled = rows.filter(([, a]) => a.hero).length;
   return (
-    <div style={{ background: GC2.card, borderRadius: 12, padding: "10px 12px", marginBottom: 12, border: "1px solid rgba(255,255,255,0.07)" }}>
+    <div data-testid="draft-plan" data-filled={filled}
+      style={{ background: GC2.card, borderRadius: 12, padding: "10px 12px", marginBottom: 12, border: "1px solid rgba(255,255,255,0.07)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-        <span style={{ color: GC2.blue, fontSize: 11, fontWeight: 800 }}>出戰配置（自動分配）</span>
+        <span style={{ color: GC2.blue, fontSize: 11, fontWeight: 800 }}>出戰配置（自動分配）· {filled}/5</span>
         <span style={{ color: plan.conflicts.length ? "#fbbf24" : GC2.green, fontSize: 10, fontWeight: 700 }}>
-          {plan.conflicts.length ? `⚠ ${plan.conflicts.length} 項衝突` : "✓ 無衝突"}
+          {plan.conflicts.length ? `⚠ ${plan.conflicts.length} 項衝突` : filled === 5 ? "✓ 無衝突" : "選角中…"}
         </span>
       </div>
       {rows.map(([seat, a]) => {
         const sp = loadout[seat]?.spells ?? [];
         const fitColor = a.heroFit >= 1 ? GC2.green : a.heroFit >= 0.5 ? "#fbbf24" : GC2.red;
+        const counter = a.hero ? counterOf(a.hero) : null;
         return (
           <div key={seat} data-testid="draft-plan-row" data-seat={seat} data-lane={a.lane}
             data-hero={a.heroId ?? ""} data-spells={sp.join(",")}
+            data-counter={counter?.by?.id ?? ""}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
             <span style={{ width: 30, color: GC2.gray, fontSize: 9, fontWeight: 800 }}>{a.lane}</span>
             <span style={{ width: 54, color: "#e5e7eb", fontSize: 10, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {a.player?.name ?? seat.toUpperCase()}
             </span>
             <span style={{ flex: 1, minWidth: 0, color: a.hero ? "#fff" : "#52525b", fontSize: 10.5, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {a.hero?.zh ?? "尚未選角"}
+              {a.hero?.zh ?? "等待選角"}
             </span>
+            {/*  被壓制風險：對方已選英雄中對這隻克制分最高的一隻（分數 ≥2 才顯示，
+                低於門檻的相性差異太小，講出來只會變成雜訊）。 */}
+            {counter && (
+              <span data-testid="draft-plan-counter"
+                title={`對方的 ${counter.by.zh} 在定位相性上壓制 ${a.hero.zh}（克制分 ${counter.score}）`}
+                style={{ color: "#fb7185", fontSize: 9, fontWeight: 800, flexShrink: 0, maxWidth: 66, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                ⚠被{counter.by.zh}
+              </span>
+            )}
             <span title={`英雄位置適性 ${Math.round(a.heroFit * 100)}%／選手位置熟練 ${Math.round(a.playerFit * 100)}%`}
-              style={{ color: fitColor, fontSize: 9, fontWeight: 800, flexShrink: 0 }}>
-              適性 {Math.round(a.heroFit * 100)}%
+              style={{ color: a.hero ? fitColor : "#3f3f46", fontSize: 9, fontWeight: 800, flexShrink: 0 }}>
+              適性 {a.hero ? `${Math.round(a.heroFit * 100)}%` : "—"}
             </span>
             <span style={{ display: "flex", gap: 2, flexShrink: 0 }}>
               {sp.map((id) => (
-                <span key={id} title={`${SUMMONER_SPELLS[id]?.zh}${SUMMONER_SPELLS[id]?.engine ? "" : "（配置用，引擎未模擬效果）"}`}
-                  style={{ fontSize: 10, opacity: SUMMONER_SPELLS[id]?.engine ? 1 : 0.55 }}>
+                <span key={id} title={SUMMONER_SPELLS[id]?.zh}
+                  style={{ fontSize: 10 }}>
                   {SUMMONER_SPELLS[id]?.icon ?? "?"}
                 </span>
               ))}
@@ -164,6 +188,53 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
     () => buildLoadout(assignmentToRoster(draftPlan.assignment), heroById),
     [draftPlan],
   );
+  //  J-close：被壓制風險。用的是本檔既有的 archCounterScore（AI 選角本來就在算），
+  //  只是把結果講給玩家聽；門檻 2 分以下不顯示，避免變成滿排的雜訊。
+  /**
+   * J-close 追加：英雄 → 它被分到哪一路。
+   *
+   * ⚠ 關鍵約束（Ray 明講）：頭像上的位置標示與下方摘要**必須用同一份
+   * assignment**，不可以各自判定一次——兩套判定遲早會不一致，而且不一致時
+   * 玩家不知道該信哪一個。所以這裡就是把 `draftPlan.assignment` 轉成
+   * 「heroId → { code, fit, conflict }」的索引，沒有第二次計算。
+   */
+  const laneByHero = useMemo(() => {
+    const conflictBySeat = Object.fromEntries(draftPlan.conflicts.map((c) => [c.seat, c.note]));
+    const out = {};
+    for (const [seat, a] of Object.entries(draftPlan.assignment)) {
+      if (!a.heroId) continue;
+      out[a.heroId] = {
+        code: SEAT_CODE[seat] ?? seat.toUpperCase(),
+        lane: a.lane,
+        fit: a.heroFit,
+        lowFit: a.heroFit < 0.5,          // 不擅長（heroLaneFit 的 0.15 檔）
+        offRole: a.heroFit < 1,           // 非本位但可勝任（0.55 檔）
+        conflict: conflictBySeat[seat] ?? null,
+      };
+    }
+    return out;
+  }, [draftPlan]);
+
+  /**
+   * 陣容需求：已有哪幾路、還缺哪幾路（同一份 assignment 推導）。
+   * 顯示用中文路名；英文碼另存一份供驗收腳本比對，不進畫面。
+   */
+  const compNeeds = useMemo(() => {
+    const have = [], need = [], haveCode = [], needCode = [];
+    for (const [seat, a] of Object.entries(draftPlan.assignment)) {
+      (a.heroId ? have : need).push(a.lane);
+      (a.heroId ? haveCode : needCode).push(SEAT_CODE[seat] ?? seat.toUpperCase());
+    }
+    return { have, need, haveCode, needCode };
+  }, [draftPlan]);
+
+  const counterOf = useMemo(() => (hero) => {
+    if (!hero || !picks.red.length) return null;
+    const best = picks.red
+      .map((rc) => ({ by: rc, score: archCounterScore(rc, hero) }))
+      .sort((a, b) => b.score - a.score)[0];
+    return best && best.score >= 2 ? best : null;
+  }, [picks.red]);
 
   const cur = step < SEQ.length ? SEQ[step] : null;
   const done = step >= SEQ.length;
@@ -199,18 +270,23 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
     setStep((s) => s + 1);
   };
 
+  //  Milestone I：把分配結果與召喚師技能一併往下傳（純附加欄位；
+  //    下游沒有讀 assignment 的舊路徑仍可用 picks 的順序對位）。
+  const confirmDraft = () => {
+    const payload = {
+      picks, bans,
+      assignment: { blue: assignmentToHeroIds(draftPlan.assignment) },
+      loadout: { blue: planLoadout },
+    };
+    if (onComplete) onComplete(payload);
+    if (onNext) onNext(payload);
+  };
+
   useEffect(() => {
-    if (done) {
-      //  Milestone I：把分配結果與召喚師技能一併往下傳（純附加欄位；
-      //    下游沒有讀 assignment 的舊路徑仍可用 picks 的順序對位）。
-      const payload = {
-        picks, bans,
-        assignment: { blue: assignmentToHeroIds(draftPlan.assignment) },
-        loadout: { blue: planLoadout },
-      };
-      const t = setTimeout(() => { if (onComplete) onComplete(payload); if (onNext) onNext(payload); }, 1200);
-      return () => clearTimeout(t);
-    }
+    //  J-close：選角完成後**不再自動跳頁**。舊版是 1.2 秒的 setTimeout，
+    //    最終分路結果只閃現不到一秒就換到戰術頁（Ray 的原話）。
+    //    現在停在這裡，由玩家自己按「確認出戰配置」——要看多久看多久。
+    if (done) return;
     if (isMyTurn) { setShowPicker(true); return; }
     const t = setTimeout(() => {
       const champ = aiPick(cur.team, cur.act);
@@ -260,19 +336,83 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
         </div>
 
         <div style={{ marginBottom: 14 }}>
-          <div style={{ color: GC2.gray, fontSize: 10, fontWeight: 700, marginBottom: 6 }}>已選英雄</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+            <span style={{ color: GC2.gray, fontSize: 10, fontWeight: 700 }}>已選英雄</span>
+            {/*  陣容需求：下一手該補什麼位置，一眼看得出來。與頭像標示、下方摘要
+                同樣來自 draftPlan.assignment，不是第二套判定。 */}
+            <span data-testid="comp-needs" data-have={compNeeds.haveCode.join(",")} data-need={compNeeds.needCode.join(",")}
+              style={{ fontSize: 9, fontWeight: 700 }}>
+              <span style={{ color: GC2.green }}>已有 {compNeeds.have.join("·") || "—"}</span>
+              <span style={{ color: "#3f3f46" }}> ｜ </span>
+              <span style={{ color: compNeeds.need.length ? "#fbbf24" : GC2.green }}>
+                {compNeeds.need.length ? `尚缺 ${compNeeds.need.join("·")}` : "五路到齊"}
+              </span>
+            </span>
+          </div>
           <div style={{ display: "flex", gap: 12 }}>
             {["blue", "red"].map((t) => (
-              <div key={t} style={{ flex: 1 }}>
+              <div key={t} style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ color: t === "blue" ? GC2.blue : GC2.red, fontSize: 9, fontWeight: 700, marginBottom: 5 }}>{t === "blue" ? "🔵 我方" : "🔴 對手"}</div>
                 <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                  {picks[t].map((c) => (<button key={c.id} onClick={() => setDetailId(c.id)} style={{ width: 40, height: 40, borderRadius: 10, overflow: "hidden", border: `2px solid ${ARCH_COLOR[c.arch] || (t === "blue" ? GC2.blue : GC2.red)}`, padding: 0, background: "none", cursor: "pointer" }}><ChampFace champ={c} size={36} /></button>))}
-                  {Array.from({ length: 5 - picks[t].length }).map((_, i) => (<div key={i} style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(255,255,255,0.12)" }} />))}
+                  {picks[t].map((c) => {
+                    //  只有我方才有分路資料（assignment 只算我方）。對手不標，
+                    //  不是留白偷懶——我們本來就不知道對手怎麼分路，標了就是編造。
+                    const at = t === "blue" ? (laneByHero[c.id] ?? null) : null;
+                    const warn = at && (at.conflict || at.lowFit);
+                    return (
+                      <button key={c.id} onClick={() => setDetailId(c.id)}
+                        data-testid={t === "blue" ? "pick-avatar" : undefined}
+                        data-hero={c.id} data-code={at?.code ?? ""} data-lane={at?.lane ?? ""} data-lowfit={at?.lowFit ? "1" : "0"}
+                        title={at ? `${at.lane}（適性 ${Math.round(at.fit * 100)}%）${at.conflict ? `／${at.conflict}` : ""}` : undefined}
+                        style={{ position: "relative", width: 40, height: 52, borderRadius: 10, padding: 0, background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: 10, overflow: "hidden", border: `2px solid ${ARCH_COLOR[c.arch] || (t === "blue" ? GC2.blue : GC2.red)}`, boxSizing: "border-box" }}>
+                          <ChampFace champ={c} size={36} />
+                        </div>
+                        {/*  位置放在頭像**下方**，不疊在臉上 ⇒ 不遮頭像也不遮名稱。
+                            顯示用**中文路名**（介面一律繁中）；英文位置碼只留在
+                            `data-code` 當驗收錨點，不給玩家看。中文兩個字在 40px
+                            寬的格子裡也比 SUPPORT 這種七個字母好排。
+                            警示只用一個 ⚠ 字元，手機上也塞得下。 */}
+                        {t === "blue" && (
+                          <div style={{
+                            marginTop: 1, height: 11, lineHeight: "11px", borderRadius: 3,
+                            font: "900 7.5px system-ui", letterSpacing: "0.02em",
+                            color: at ? (warn ? "#fb7185" : "#0b1220") : "#71717a",
+                            background: at ? (warn ? "rgba(251,113,133,0.16)" : ARCH_COLOR[c.arch] || GC2.blue) : "rgba(255,255,255,0.06)",
+                            border: warn ? "1px solid rgba(251,113,133,0.5)" : "1px solid transparent",
+                            overflow: "hidden", whiteSpace: "nowrap", textOverflow: "clip", boxSizing: "border-box",
+                          }}>
+                            {at ? `${warn ? "⚠" : ""}${at.lane}` : "待分配"}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                  {Array.from({ length: 5 - picks[t].length }).map((_, i) => (<div key={i} style={{ width: 40, height: t === "blue" ? 52 : 40, borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(255,255,255,0.12)", flexShrink: 0 }} />))}
                 </div>
+                {/*  低適性／衝突的一行說明（只在有事時出現，不佔常駐版面） */}
+                {t === "blue" && picks.blue.some((c) => laneByHero[c.id]?.lowFit || laneByHero[c.id]?.conflict) && (
+                  <div data-testid="pick-warnings" style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 2 }}>
+                    {picks.blue.map((c) => {
+                      const at = laneByHero[c.id];
+                      if (!at || (!at.lowFit && !at.conflict)) return null;
+                      return (
+                        <span key={c.id} style={{ color: "#fb7185", fontSize: 8.5, lineHeight: 1.4 }}>
+                          ⚠ {c.zh} → {at.code}{at.lowFit ? "：適性低" : ""}{at.conflict ? `：${at.conflict}` : ""}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
+
+        {/*  J-close：出戰配置**常駐**，而且排在選角格之上。
+            舊版排在下面 ⇒ 輪到你選人時，260px 高的選角格會把它推出畫面外，
+            等於「選的時候看不到自己會被排到哪一路」，選完又只閃 1.2 秒就換頁。 */}
+        <DraftPlanPanel plan={draftPlan} loadout={planLoadout} counterOf={counterOf} />
 
         {isMyTurn && showPicker && (
           <div style={{ background: GC2.card, borderRadius: 12, padding: "12px", marginBottom: 12, border: `1px solid ${GC2.blue}` }}>
@@ -295,16 +435,25 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
           </div>
         )}
 
-        {/* Milestone I：出戰配置（自動分配）——我方一有選角就顯示 */}
-        {picks.blue.length > 0 && <DraftPlanPanel plan={draftPlan} loadout={planLoadout} />}
-
         <div style={{ background: GC2.card, borderRadius: 12, padding: "12px 14px" }}>
           <div style={{ color: GC2.gray, fontSize: 10, fontWeight: 700, marginBottom: 8 }}>選角動態</div>
           {log.length === 0 && <div style={{ color: GC2.gray, fontSize: 10, textAlign: "center", padding: "8px 0" }}>準備開始…</div>}
           {log.map((l, i) => (<div key={i} style={{ color: i === 0 ? "white" : GC2.gray, fontSize: 10, padding: "3px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>{l}</div>))}
         </div>
 
-        {done && <div style={{ textAlign: "center", color: GC2.green, fontSize: 13, fontWeight: 800, marginTop: 14 }}>✓ 選角完成，即將進入對戰</div>}
+        {done && (
+          <div style={{ marginTop: 14, textAlign: "center" }}>
+            <div style={{ color: GC2.green, fontSize: 13, fontWeight: 800, marginBottom: 8 }}>✓ 選角完成 —— 上方是本場最終分路</div>
+            <div style={{ color: GC2.gray, fontSize: 10, marginBottom: 10, lineHeight: 1.6 }}>
+              確認每一路的選手、英雄、適性與衝突提示之後再繼續。<br />
+              這份配置就是接下來 Loading、對戰、戰報與重播看到的同一份。
+            </div>
+            <button data-testid="confirm-draft" onClick={confirmDraft}
+              style={{ background: "linear-gradient(135deg,#3b82f6,#1d4ed8)", border: "2px solid #93c5fd", borderRadius: 10, padding: "10px 26px", color: "#fff", fontSize: 14, fontWeight: 900, cursor: "pointer" }}>
+              確認出戰配置 →
+            </button>
+          </div>
+        )}
       </div>
       {detailId && <HeroCodexDetail heroId={detailId} onClose={() => setDetailId(null)} />}
       <style>{`*::-webkit-scrollbar{display:none}`}</style>
