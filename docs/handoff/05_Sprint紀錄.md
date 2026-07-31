@@ -3800,9 +3800,91 @@ p95 27.8→28.7、擊殺 30.0→32.6、破塔 17.0→17.6、龍/巴龍 5.8/4.1�
 battle **150/150**（**六尺寸**含記分板）、gallery 140/140、replay 16/16、
 matchups_k 47/47・348/348、j_close 35/35、banpick_hotfix2 251/251、build exit 0。
 
+> ### ⚠ 更正（2026-08-01，Milestone M 基礎層時發現）
+>
+> **上面記載的 `regress` 15/15、平均擊殺 31.9 與 `regress2` 8/8 不是本 commit 的實際結果。**
+>
+> 根因：我在套用 v5 數值後跑了 regress / regress2，**之後**才加上「Boss 只挑還打得動的
+> 目標」那一項修正，而**沒有重跑**這兩支，就把中途狀態的數字當成最終結果寫進報告。
+> 這不是轉錄錯誤，是**用過期的量測結果回報**。
+>
+> 實測證據（Milestone M 基礎層期間，把該修正暫時還原再裝回去對照）：
+>
+> | 狀態 | regress | regress2 |
+> |---|---|---|
+> | 還原 Boss 目標修正（＝我當時量到的狀態） | 15/15、平均擊殺 31.9 | 8/8 |
+> | **`a70cf7c` 實際 commit 的狀態** | **14/15、平均擊殺 32.3** | **7/8（最長 33.3 分 > 門檻 32）** |
+>
+> ⇒ **`a70cf7c` 的真實基準是 regress 14/15 / 32.3、regress2 7/8。**
+> 其中 regress2「無極端過長」這一條**目前在 main 上是紅的**，是本 commit 引入、
+> 當時沒被發現的回歸，已列入待辦（見 `08_目前待辦與風險.md`）。
+>
+> 上面的原始內容**保留不改**，只補這段更正。
+
+
+
 ### 教訓
 
 **「引擎狀態不在你以為的地方」本輪踩第二次。** `e.dragon` / `e.baron` 是 v1/v2
 的舊物件（沒有 `pos`、`targetId` 永遠 null），v3 的 Boss 在 **`e.neutrals`**。
 第一版驗證讀錯物件，量出「433 個存活 tick 一次都沒有目標」的假結論。
 加上 Hotfix 1 的 `snapshot.towers` 事件 —— **診斷前先確認狀態在哪個物件**。
+
+---
+
+## Milestone M 基礎層（2026-08-01）— Hero Combat Archetypes（opt-in，未接線）
+
+報告：`review/moba-runtime/milestone-m-foundation/MILESTONE_M_FOUNDATION_REPORT.md`
+
+**這是 Milestone M 的安全切片**：只交付資料契約與第五個 opt-in 行為層，
+**沒有接進正式對戰流程、沒有改變任何現行戰鬥結果**。
+
+### Audit 結論
+
+- 交戰距離 `let bd = 8` **對所有英雄一視同仁**——近戰與遠程完全沒有區別。
+- 傷害是**連續 DPS**（`p.power * dt * dmgK * lateFactor` 每 tick 施加）；
+  `atkCd` 與 `pushFx` **只是呈現**，不是一次真正的攻擊。
+- `heroDatabase.stats.range` 乾淨分群（坦克/刺客 150、戰士 175、輔助 500、
+  法師 525、射手 550），**引擎一次都沒讀**。
+- 移動只有一個決策點 → `_navMove`（碰撞、A*、決定性都已具備，可直接沿用）。
+- `combatClassOf` 可從 Milestone L 直接重用 ⇒ **不必再建第二套映射**。
+
+### 交付
+
+`src/data/heroCombatArchetypes.js`（Contract v1）：100 位英雄全部解析得出合法契約。
+`attackType` 由 `stats.range ≥ 300` 推導（**不是看定位**——輔助路的坦克就該是近戰）。
+唯一換算式 `engineRange = 4.0 + (display − 150) × 0.011`，夾在 [4.0, 8.6]
+⇒ 近戰 **4.00–4.28**、遠程 **7.85–8.40**，兩群不重疊，且近戰 > 野怪攻擊距離 3.2。
+其餘欄位是 `baseAttackRange × 職業倍率` ⇒ 射程一改站位自動跟著走。
+
+LogicEngine 第五個 opt-in 行為層：`configureArchetypes` / `_engageRange` /
+`_archPosition`（front / back / flank / support ＋ 決定性 slot 偏移，
+**沒有新尋路、沒有群體 AI**）。引擎**不 import** 任何英雄資料。
+
+### 逐位元對照
+
+把 `LogicEngine.js` stash 回 `a70cf7c` 跑同一份摘要（15 seeds × 2400 ticks，
+涵蓋時間／勝負／每人 k/d/a/hp/gold/座標 1e-6／全部塔 HP／fx 數）：
+**SHA-256 完全相同**（`0415400483…65d7a`）⇒ 未呼叫時逐位元一致。
+
+### 驗證
+
+`check_combat_archetypes_m` **28/28**（新增）、`check_combat_threat_l2` 19/19、
+`check_hero_presentation_l` 80/80、`check_hero_matchups_k` 47/47、
+`check_moba_milestone_j_close` 35/35、build exit 0。
+`regress` **14/15 / 32.3**、`regress2` **7/8** ⇒ 見下面的更正。
+
+### ⚠ 更正 Hotfix 2 的回歸數字（附實測證據）
+
+Hotfix 2 報告的 `regress` 15/15 / 31.9 與 `regress2` 8/8 **不是該 commit 的結果**。
+我在套用 v5 數值後跑完那兩支，**之後**才加上「Boss 只挑還打得動的目標」修正，
+**沒有重跑**就把中途數字寫進報告。實測對照證實：還原該修正 ⇒ 15/15 / 8/8；
+裝回去（＝ commit 狀態）⇒ **14/15 / 32.3、regress2 7/8（最長 33.3 分 > 門檻 32）**。
+
+⇒ **main 目前 regress2 有一條紅燈**，是 Hotfix 2 引入、當時未發現的回歸。
+那個 Boss 修正本身是對的，建議併進 M1 校正，不要為了讓門檻變綠而撤銷它。
+
+### 教訓
+
+**改完程式碼要重跑回歸，不能沿用改動前的量測。**
+任何「最後一刻的修正」都必須重跑整組回歸才能寫進報告。

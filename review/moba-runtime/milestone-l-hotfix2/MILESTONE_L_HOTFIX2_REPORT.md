@@ -3,6 +3,11 @@
 日期：2026-08-01　起點 commit：`d94e16e`（L Hotfix 1）
 rollback tag：`milestone-l-hotfix2-baseline` → `d94e16e`
 
+> ⚠ **更正（2026-08-01）**：§5 記載的 `regress` 15/15 / 31.9 與 `regress2` 8/8 是
+> **Boss 目標修正落地之前**的量測，之後未重跑就寫入報告。`a70cf7c` 的實際基準是
+> **regress 14/15 / 32.3、regress2 7/8**（最長 33.3 分 > 門檻 32，為本 commit 引入的紅燈）。
+> 原文保留不改，僅補此更正。實測對照見 `review/moba-runtime/milestone-m-foundation/`。
+
 **本輪刻意改變了戰鬥數值**（任務授權）。舊的逐值回歸因此不再相同，
 新基準見 §5，並已同步更新 `check_hero_presentation_l` 第 72 條的釘樁值。
 

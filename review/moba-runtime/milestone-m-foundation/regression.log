@@ -1,0 +1,16 @@
+=== regress ===
+結束率 14/15 | 平均時長 24.2分 | 平均擊殺 32.3 | 0殺場 0 | 撤退鎖死 1 | 平均hot 59% | 平均破塔 17.5/12
+=== regress2 ===
+✅ 5分英雄等級 平均 3.27 落在 [3, 7]
+
+節奏門檻 7/8 通過
+=== check_combat_threat_l2 ===
+✅ PASS  19/19
+=== check_hero_presentation_l ===
+✅ PASS  80/80
+=== check_hero_matchups_k ===
+✅ PASS  47/47
+=== check_moba_milestone_j_close ===
+✅ PASS  35/35
+=== build ===
+[32m✓ built in 8.86s[39m

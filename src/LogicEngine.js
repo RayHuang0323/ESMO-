@@ -360,6 +360,93 @@ export class LogicEngine {
   /** 該英雄的定位 mods；未啟用 / 無資料 ⇒ null（＝走原始路徑）。 */
   _heroMod(p) { return this.heroesOn ? (this.hmod[p.id] ?? null) : null; }
 
+  // ── Milestone M：戰鬥原型層（configureArchetypes）──────────────────────
+  /**
+   * 近戰／遠程、交戰距離、追擊距離與站位線位。
+   *
+   * 沿用既有的四個 opt-in 行為層慣例（configureMatch / configurePlayers /
+   * configureHeroes / configureSpells）：
+   *   · **不呼叫 = 逐位元回到舊行為**（交戰距離恆為硬編碼的 8）
+   *   · 形狀由呼叫端準備（引擎不 import heroDatabase、不認得 heroId）
+   *   · 只改「打得到誰、站哪裡」，**不改任何傷害公式、不新增抽樣**
+   *
+   * @param blue/red `{ playerId: { attackType, engageRange, preferredDistance,
+   *                    chaseDistance, retreatDistance, formationLine, formationSpread } }`
+   */
+  configureArchetypes({ blue = null, red = null, meta = null } = {}) {
+    if (!blue && !red) return;
+    this.archOn = true;
+    this.archMeta = meta;
+    this.arch = { ...(blue ?? {}), ...(red ?? {}) };
+  }
+  /** 該英雄的戰鬥原型；未啟用 / 無資料 ⇒ null（＝走原始路徑）。 */
+  _arch(p) { return this.archOn ? (this.arch[p.id] ?? null) : null; }
+  /** 交戰距離：有原型就用原型的，否則沿用舊的硬編碼 8。 */
+  _engageRange(p) { return this._arch(p)?.engageRange ?? 8; }
+
+  /**
+   * Milestone M：職業站位。把「要去哪裡」的目標點依戰鬥原型微調。
+   *
+   * 刻意做得很便宜——**沒有新的尋路、沒有群體 AI**：只是把既有的 `tgt` 沿著
+   * 「我 → 敵人」這條線推到 `preferredDistance`，再加一個**決定性的**側向 slot 偏移。
+   * 真正的走路仍然交給既有的 `_navMove`（碰撞、牆體、A* 全部不變）。
+   *
+   * 六個線位：
+   *   front（坦克／戰士）壓到 preferredDistance，站得寬
+   *   back （法師／射手）維持 preferredDistance；敵人比 retreatDistance 近就往後挪
+   *   flank（刺客）      走側向切入，不站在正面
+   *   support（輔助）    貼在最需要保護的隊友旁，同時和敵人保持距離
+   *
+   * ⚠ 決定性：slot 由 playerId 的字元碼推導，沒有亂數、不看時間。
+   * ⚠ 未啟用原型層 ⇒ 直接回傳原本的 tgt，一個位元都不動。
+   */
+  _archPosition(p, tgt, alive) {
+    const a = this._arch(p);
+    if (!a || !tgt) return tgt;
+    //  最近的敵方英雄當作站位錨點（沒有敵人就不調整，維持推線目標）
+    let foe = null, fd = Infinity;
+    for (const q of alive) {
+      if (q.side === p.side || q.dead) continue;
+      const dd = dist(p.pos, q.pos);
+      if (dd < fd) { fd = dd; foe = q; }
+    }
+    //  錨點太遠 ⇒ 還在行軍，維持原本的推線／游走目標
+    if (!foe || fd > a.chaseDistance + 6) return tgt;
+
+    //  決定性 slot：同一條線上的隊友靠這個散開，不會疊成一點
+    const seat = String(p.id);
+    const slot = ((seat.charCodeAt(seat.length - 1) || 0) % 5) - 2;   // -2..2
+    const ux = (foe.pos.x - p.pos.x) / (fd || 1);
+    const uy = (foe.pos.y - p.pos.y) / (fd || 1);
+    const px = -uy, py = ux;                                          // 垂直向量
+    const lateral = slot * (a.formationSpread ?? 2) * 0.55;
+
+    let want = a.preferredDistance;
+    if (a.formationLine === "back" || a.formationLine === "support") {
+      //  遠程／輔助：敵人比 retreatDistance 更近就往後拉開（有限度，不是無限風箏）
+      if (a.retreatDistance > 0 && fd < a.retreatDistance) want = a.retreatDistance + 0.6;
+    }
+    //  站到「離敵人 want 距離」的點上，再加側向 slot 偏移
+    let gx = foe.pos.x - ux * want + px * lateral;
+    let gy = foe.pos.y - uy * want + py * lateral;
+
+    if (a.formationLine === "flank") {
+      //  刺客：從側面切入（側向權重更大），但不繞遠路——只是把接近角度推開
+      gx += px * (slot >= 0 ? 2.2 : -2.2);
+      gy += py * (slot >= 0 ? 2.2 : -2.2);
+    } else if (a.formationLine === "support") {
+      //  輔助：往「最需要保護的隊友」靠（血量比例最低的在場隊友）
+      let ally = null, worst = Infinity;
+      for (const q of alive) {
+        if (q.side !== p.side || q.id === p.id || q.dead) continue;
+        const r = q.hp / Math.max(1, q.maxHp);
+        if (r < worst) { worst = r; ally = q; }
+      }
+      if (ally) { gx = (gx + ally.pos.x * 2) / 3; gy = (gy + ally.pos.y * 2) / 3; }
+    }
+    return { x: clampMapX(gx), y: clampMapY(gy) };
+  }
+
   // ── Milestone J：召喚師技能層（configureSpells）────────────────────────
   /**
    * 賽前配置的兩個召喚師技能 → 引擎真的會使用的技能欄。
@@ -1480,7 +1567,9 @@ export class LogicEngine {
     //   （藍方永遠先集火 r1、紅方永遠先集火 b1）。改為打**最近的**敵人 ⇒ 順序無關。
     let foe = null;
     if (R.nearestTarget) {
-      let bd = 8;
+      //  Milestone M：交戰距離改由戰鬥原型決定（近戰 ≈4.0–4.3、遠程 ≈7.9–8.4）。
+      //  未啟用原型層 ⇒ `_engageRange` 回傳 8 ⇒ 逐位元是舊行為。
+      let bd = this._engageRange(p);
       for (const q of alive) {
         if (q.side === p.side || q.dead) continue;
         const dd = dist(p.pos, q.pos);
@@ -1495,7 +1584,8 @@ export class LogicEngine {
         bd = dd; foe = q;
       }
     } else {
-      foe = alive.find((q) => q.side !== p.side && !q.dead && dist(p.pos, q.pos) < 8) ?? null;
+      const legacyRange = this._engageRange(p);
+      foe = alive.find((q) => q.side !== p.side && !q.dead && dist(p.pos, q.pos) < legacyRange) ?? null;
     }
     // S29B1：連續接觸起點（killContext.startedAt/duration 的資料來源）
     if (R.engagementFsm) p.contactSince = foe ? (p.contactSince ?? this.t) : null;
@@ -2602,6 +2692,8 @@ export class LogicEngine {
       //   ⇒「英雄移動看起來過快」。v2 = 2.5/3.0（約小兵 1.4×/1.7×）。
       //   S29B1（v3）：追擊視同交戰移速；撤退者有逃生移速加成（追擊者沒有）⇒
       //   「撤退＝死亡行軍」的結構性問題從機制面解掉，不是調傷害。
+      //  Milestone M：職業站位（未啟用原型層 ⇒ 原樣回傳，逐位元不變）
+      tgt = this._archPosition(p, tgt, alive);
       const d = dist(p.pos, tgt),
         spd = ((st === "團戰!" || st === "追擊" || st === "接戰" || st === "拉扯") ? R.fightSpeed : R.moveSpeed) *
           (R.engagementFsm && p.retreating ? R.retreatSpeedMult : 1) *
