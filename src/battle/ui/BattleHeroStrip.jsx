@@ -130,19 +130,22 @@ const SPELL_META = Object.fromEntries(Object.entries(SUMMONER_SPELLS).map(([id, 
 ]));
 function SpellSquare({ label, spell }) {
   if (!spell) {
-    return <div title="召喚師技能：目前無資料，保留位置（待接）" style={{ width: 14, height: 14, borderRadius: 3, background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, fontWeight: 900, color: "#52525b" }}>{label}</div>;
+    return <div data-testid="spell-square" data-spell="" style={{ width: 16, height: 16,  borderRadius: 3, background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, fontWeight: 900, color: "#52525b" }}>{label}</div>;
   }
   if (!spell.id) {
-    return <div title="此位置尚未配置第二召喚師技能（reserved）" style={{ width: 14, height: 14, borderRadius: 3, background: "rgba(0,0,0,0.35)", border: "1px dashed rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, fontWeight: 900, color: "#3f3f46" }}>—</div>;
+    return <div data-testid="spell-square" data-spell="" title="此位置尚未配置第二召喚師技能（reserved）" style={{ width: 16, height: 16,  borderRadius: 3, background: "rgba(0,0,0,0.35)", border: "1px dashed rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, fontWeight: 900, color: "#3f3f46" }}>—</div>;
   }
   const meta = SPELL_META[spell.id] ?? { icon: "?", zh: spell.id, color: "#a1a1aa" };
   const onCd = !spell.ready;
-  const title = `${meta.zh}${onCd ? `：冷卻中 ${Math.ceil(spell.cd)}s` : "：可使用"}${spell.reason ? `（上次：${spell.reason}）` : ""}`;
+  const title = `${meta.zh}${onCd ? `：冷卻中 ${Math.ceil(spell.cd)}s` : "：可使用"}${spell.uses ? `（本場已用 ${spell.uses} 次）` : ""}${spell.reason ? `（上次：${spell.reason}）` : ""}`;
+  //  J-close：16px（原 14px）。並排之後只多佔 4px，但圖示與冷卻數字在 390px
+  //  寬的手機上才真的讀得出來——這一格的重點是「一眼看到帶什麼、好了沒」。
   return (
-    <div title={title} style={{ position: "relative", width: 14, height: 14, borderRadius: 3, background: onCd ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.08)", border: `1px solid ${onCd ? "rgba(255,255,255,0.1)" : meta.color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, lineHeight: 1, filter: onCd ? "grayscale(0.9)" : "none", opacity: onCd ? 0.75 : 1 }}>
+    <div data-testid="spell-square" data-spell={spell.id} data-ready={onCd ? "0" : "1"}
+      title={title} style={{ position: "relative", width: 16, height: 16, borderRadius: 3, background: onCd ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.08)", border: `1px solid ${onCd ? "rgba(255,255,255,0.1)" : meta.color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, lineHeight: 1, filter: onCd ? "grayscale(0.9)" : "none", opacity: onCd ? 0.75 : 1 }}>
       <span>{meta.icon}</span>
       {onCd && (
-        <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.55)", borderRadius: 2, fontSize: 6.5, fontWeight: 900, color: "#e4e4e7", fontFamily: MONO }}>
+        <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.55)", borderRadius: 2, fontSize: 7, fontWeight: 900, color: "#e4e4e7", fontFamily: MONO }}>
           {Math.ceil(spell.cd)}
         </span>
       )}
@@ -160,7 +163,13 @@ function SideCell({ p, hero, roster, side, onOpen }) {
         {/* Milestone D：隊伍面板與世界／Replay 都讀本場 mlv；lv 是跨場熟練度。 */}
         <HeroAvatar hero={hero} level={p.mlv ?? p.lv ?? 1} dead={p.dead} respawn={p.respawn ?? 0} />
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 1, flexShrink: 0 }}>
+      {/*  J-close：兩個召喚師技能改成**並排**。
+          舊版是 14px 方格上下疊在頭像旁邊的窄欄裡，第二格在手機上幾乎讀不出來
+          （Ray 回報「只看得到第一個」）。並排之後兩顆一樣大、一樣亮，
+          而且這一欄是 flexShrink:0 的獨立區塊 ⇒ 不會去擠名字、血條或狀態標籤。 */}
+      <div data-testid="cell-spells"
+        data-spells={(p.sp ?? []).map((s) => s?.id ?? "").join(",")}
+        style={{ display: "flex", flexDirection: rev ? "row-reverse" : "row", gap: 2, flexShrink: 0 }}>
         {/* S29B1：F/D 讀 snapshot.players[].sp（引擎唯一資料源；無資料 ⇒ 舊佔位） */}
         <SpellSquare label="F" spell={p.sp?.[0] ?? null} />
         <SpellSquare label="D" spell={p.sp?.[1] ?? null} />
