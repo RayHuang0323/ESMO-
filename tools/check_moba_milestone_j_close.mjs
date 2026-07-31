@@ -17,7 +17,7 @@ import { LogicEngine } from "../src/LogicEngine.js";
 import { heroById, CHAMPIONS_100 } from "../src/data/heroDatabase.js";
 import { ROSTER } from "../src/data/roster.js";
 import { heroTags } from "../src/data/heroClassification.js";
-import { assignDraft, LANES } from "../src/battle/moba/mobaDraftAssignment.js";
+import { assignDraft, assignmentToHeroIds, LANES } from "../src/battle/moba/mobaDraftAssignment.js";
 import { SEAT_CODE } from "../src/platform/contracts/matchLineup.js";
 import { spellsFor, laneOfSeat, SUMMONER_SPELLS } from "../src/battle/moba/mobaHeroLoadout.js";
 import { FEATURE_FLAGS, featureEnabled } from "../src/featureFlags.js";
@@ -97,6 +97,30 @@ console.log("── §1 分路摘要與頭像標示：同一份 assignment ─�
   //  只驗兩個錨點名稱存在，不綁 JSX 怎麼寫。
   ck("13)〔原始碼〕頭像與陣容需求都掛了可驗收的錨點",
     BP.includes("pick-avatar") && BP.includes("comp-needs"));
+}
+
+//  ── Hotfix1：分路依「全隊整體適性」最佳化，不是照選取順序硬填 ──────────
+{
+  const base = ["ironclad", "duskblade", "bingshuang", "leiting", "dadi"];
+  const idsOf = (ids) => JSON.stringify(assignmentToHeroIds(planFor(ids).assignment));
+  const ref = idsOf(base);
+  //  窮舉全部 120 種選取順序（不是抽樣），最終 assignment 必須完全一致。
+  const perms = [];
+  const gen = (a, c = []) => { if (!a.length) { perms.push(c); return; } a.forEach((x, k) => gen([...a.slice(0, k), ...a.slice(k + 1)], [...c, x])); };
+  gen(base);
+  const diff = perms.filter((pm) => idsOf(pm) !== ref).length;
+  ck(`13a) 相同英雄組合 × 120 種選取順序 ⇒ assignment 完全一致（不一致 ${diff}）`,
+    perms.length === 120 && diff === 0, diff);
+  //  而且不是「照順序填 上→打→中→下→輔」——用反序輸入驗證。
+  const shuffled = ["dadi", "leiting", "bingshuang", "duskblade", "ironclad"];
+  const got = assignmentToHeroIds(planFor(shuffled).assignment);
+  const naive = Object.fromEntries(SEATS.map((s, k) => [s, shuffled[k]]));
+  ck("13b) 反序輸入不會退化成順序硬填（依全隊整體適性重新配置）",
+    JSON.stringify(got) !== JSON.stringify(naive), { got, naive });
+  const LANE_OF = { b1: "上路", b2: "打野", b3: "中路", b4: "下路", b5: "輔助" };
+  ck("13c) 反序輸入後五路仍各就本位（整體最佳解）",
+    SEATS.every((s) => heroById(got[s]).lane === LANE_OF[s]),
+    SEATS.map((s) => [s, heroById(got[s]).lane]));
 }
 
 console.log("\n── §2 隊伍面板的兩個召喚師技能 ──");
