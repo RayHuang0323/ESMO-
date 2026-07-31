@@ -22,6 +22,7 @@ import { loadQuality, saveQuality, QUALITY_IDS, QUALITY_PRESETS } from "./battle
 import { useIsMobile } from "./ui/useViewport.js";
 import { useCameraStore } from "./battle/cameraStore.js";
 import { isDebugMode } from "./ui/debugMode.js";
+import { featureEnabled } from "./featureFlags.js";
 import {
   DIRECTOR_BOTTOM_DESKTOP,
   DIRECTOR_BOTTOM_MOBILE,
@@ -180,8 +181,12 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
             手機上它原本被 showCtl 收合，Pages 加 ?debug=1 也看不到）。測試模式
             **常駐可見**。fastForward：同一顆引擎安全推進到終局 → 走既有
             Result/發獎/Replay 流程，不重新開局、不重複發獎。 */}
-        {playing && isDebugMode() && (
-          <button onClick={fastForward} title="Debug：把模擬推進到終局並進入戰報（結果與自然跑完相同）"
+        {/*  J-close：加上單一 feature flag（`featureFlags.devFastForward`）。
+            `isDebugMode()` 判斷的是「現在是不是測試模式」，不是「這個開發工具還要不要留」
+            ——兩件事分開之後，正式上線只要改 featureFlags.js 一行就能整個關掉，
+            不必回頭翻每一個使用點。用途與移除條件寫在 08_目前待辦與風險.md。 */}
+        {playing && isDebugMode() && featureEnabled("devFastForward") && (
+          <button data-testid="dev-fast-forward" onClick={fastForward} title="Debug：把模擬推進到終局並進入戰報（走既有結算/發獎/Replay 流程，結果與自然跑完相同）"
             style={{ background: "rgba(168,85,247,0.92)", border: "1px solid #d8b4fe", borderRadius: 8, padding: "6px 12px", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", boxShadow: "0 2px 12px rgba(0,0,0,0.4)" }}>⏩ {isMobile ? "快速完成" : "快速完成比賽"}</button>
         )}
         {/* S29B2：控制鈕收納——手機收進 ⚙ 面板（不常駐佔畫面）；桌機維持常駐 */}
