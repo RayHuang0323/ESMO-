@@ -1,0 +1,225 @@
+(node:119560) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+✅ desk1920 1) 進入賽前配置
+✅ desk1920 2) 五個席位都標示英雄來源
+✅ desk1920 3) 來源值都是五種之一（沒有空徽章）
+✅ desk1920 4) 明講「不是固定綁定」且指向 Ban/Pick
+  📸 desk1920-01-lineup.png
+✅ desk1920 5) 進入 Ban/Pick
+✅ desk1920 5f) 出戰配置預設收合（≤46px，實測 33）
+✅ desk1920 5f2) 出戰配置摘要在首屏可見（top 204 < 1080）
+✅ desk1920 5g) 「選擇你的英雄」在首屏（top 247 < 1080）
+✅ desk1920 5h) 英雄格從首屏開始（top 314）
+✅ desk1920 5i) 篩選列可見
+✅ desk1920 5j) 沒有巢狀捲動陷阱（0 ≤ 1）
+✅ desk1920 5k) 頁面可縱向捲動
+  📸 desk1920-00-banpick-layout.png
+✅ desk1920 5b) 尚未選角時摘要就已常駐（五路皆在，英雄留白）
+✅ desk1920 5c) 陣容需求一開始就顯示「五路皆缺」
+✅ desk1920 5d) 選角途中：頭像位置碼與摘要逐一相同（同一份 assignment）
+✅ desk1920 5e) 選角途中：陣容需求的已有數＝已選英雄數
+  📸 desk1920-02a-banpick-mid.png
+✅ desk1920 6) Ban/Pick 顯示五路出戰配置
+✅ desk1920 7) 五路唯一、五隻英雄不重複
+✅ desk1920 8) 每一路都恰好 2 個召喚師技能
+✅ desk1920 9) 打野帶懲戒，且只有打野
+✅ desk1920 9b) 五個已選頭像都標了位置
+✅ desk1920 9b2) 頭像上顯示的是中文路名（不是 TOP/JUNGLE 等英文）
+✅ desk1920 9c) 頭像位置碼與摘要逐一相同（沒有兩套判定）
+✅ desk1920 9d) 五路到齊時陣容需求顯示無缺口
+✅ desk1920 9e) 選角完成 3 秒後仍停在 Ban/Pick（不再只閃現 1.2 秒）
+  📸 desk1920-02-banpick.png
+✅ desk1920 9f) 有明確的確認鈕
+✅ desk1920 10) 進入 Loading
+✅ desk1920 11) Loading 十人都顯示召喚師技能
+  📸 desk1920-03-loading.png
+✅ desk1920 12) 正式 GameView 掛載
+✅ desk1920 12b) 隊伍面板同時渲染兩個技能格
+✅ desk1920 12c) 兩格**並排**（y 相同、x 不同），不是上下疊
+✅ desk1920 12d) 兩格等大且看得見（≥14px）
+✅ desk1920 12e) 血條沒有被擠掉（仍有可讀寬度 ≥30px）
+✅ desk1920 12f) 兩格都是真的技能（不是 reserved 佔位）
+✅ desk1920 12g) 測試模式下看得到「快速完成」開發按鈕
+✅ desk1920 13) 戰鬥中面板顯示 2 個召喚師技能（不再有「未配置」）
+✅ desk1920 13b) 兩格都有引擎狀態（可用／冷卻秒數），沒有純「配置」佔位
+  📸 desk1920-04-battle-sheet.png
+✅ desk1920 14) 賽後記分板顯示召喚師技能
+✅ desk1920 14b) 記分板帶有實際使用次數，且整場至少放過一次（合計 74）
+  📸 desk1920-05-result.png
+✅ desk1920 15) 可以進入重播
+✅ desk1920 16) 重播帶著本場出戰配置（十席）
+  📸 desk1920-06-replay.png
+✅ desk1920 17) Ban/Pick 與 Replay 的技能逐席相同
+✅ desk1920 18) Ban/Pick 與 Replay 的英雄逐席相同
+✅ desk1920 19) Loading 與 Ban/Pick 的技能逐席相同
+✅ desk1920 20) 戰鬥中面板的技能＝Ban/Pick 給「實際點到的那個席位」的那一組
+✅ desk1920 21) Timeline 有技能事件，且每一筆都是該席位帶著的技能（共 17 種）
+✅ desk1366 1) 進入賽前配置
+✅ desk1366 2) 五個席位都標示英雄來源
+✅ desk1366 3) 來源值都是五種之一（沒有空徽章）
+✅ desk1366 4) 明講「不是固定綁定」且指向 Ban/Pick
+  📸 desk1366-01-lineup.png
+✅ desk1366 5) 進入 Ban/Pick
+✅ desk1366 5f) 出戰配置預設收合（≤46px，實測 33）
+✅ desk1366 5f2) 出戰配置摘要在首屏可見（top 204 < 768）
+✅ desk1366 5g) 「選擇你的英雄」在首屏（top 247 < 768）
+✅ desk1366 5h) 英雄格從首屏開始（top 314）
+✅ desk1366 5i) 篩選列可見
+✅ desk1366 5j) 沒有巢狀捲動陷阱（0 ≤ 1）
+✅ desk1366 5k) 頁面可縱向捲動
+  📸 desk1366-00-banpick-layout.png
+✅ desk1366 5b) 尚未選角時摘要就已常駐（五路皆在，英雄留白）
+✅ desk1366 5c) 陣容需求一開始就顯示「五路皆缺」
+✅ desk1366 5d) 選角途中：頭像位置碼與摘要逐一相同（同一份 assignment）
+✅ desk1366 5e) 選角途中：陣容需求的已有數＝已選英雄數
+  📸 desk1366-02a-banpick-mid.png
+✅ desk1366 6) Ban/Pick 顯示五路出戰配置
+✅ desk1366 7) 五路唯一、五隻英雄不重複
+✅ desk1366 8) 每一路都恰好 2 個召喚師技能
+✅ desk1366 9) 打野帶懲戒，且只有打野
+✅ desk1366 9b) 五個已選頭像都標了位置
+✅ desk1366 9b2) 頭像上顯示的是中文路名（不是 TOP/JUNGLE 等英文）
+✅ desk1366 9c) 頭像位置碼與摘要逐一相同（沒有兩套判定）
+✅ desk1366 9d) 五路到齊時陣容需求顯示無缺口
+✅ desk1366 9e) 選角完成 3 秒後仍停在 Ban/Pick（不再只閃現 1.2 秒）
+  📸 desk1366-02-banpick.png
+✅ desk1366 9f) 有明確的確認鈕
+✅ desk1366 10) 進入 Loading
+✅ desk1366 11) Loading 十人都顯示召喚師技能
+  📸 desk1366-03-loading.png
+✅ desk1366 12) 正式 GameView 掛載
+✅ desk1366 12b) 隊伍面板同時渲染兩個技能格
+✅ desk1366 12c) 兩格**並排**（y 相同、x 不同），不是上下疊
+✅ desk1366 12d) 兩格等大且看得見（≥14px）
+✅ desk1366 12e) 血條沒有被擠掉（仍有可讀寬度 ≥30px）
+✅ desk1366 12f) 兩格都是真的技能（不是 reserved 佔位）
+✅ desk1366 12g) 測試模式下看得到「快速完成」開發按鈕
+✅ desk1366 13) 戰鬥中面板顯示 2 個召喚師技能（不再有「未配置」）
+✅ desk1366 13b) 兩格都有引擎狀態（可用／冷卻秒數），沒有純「配置」佔位
+  📸 desk1366-04-battle-sheet.png
+✅ desk1366 14) 賽後記分板顯示召喚師技能
+✅ desk1366 14b) 記分板帶有實際使用次數，且整場至少放過一次（合計 81）
+  📸 desk1366-05-result.png
+✅ desk1366 15) 可以進入重播
+✅ desk1366 16) 重播帶著本場出戰配置（十席）
+  📸 desk1366-06-replay.png
+✅ desk1366 17) Ban/Pick 與 Replay 的技能逐席相同
+✅ desk1366 18) Ban/Pick 與 Replay 的英雄逐席相同
+✅ desk1366 19) Loading 與 Ban/Pick 的技能逐席相同
+✅ desk1366 20) 戰鬥中面板的技能＝Ban/Pick 給「實際點到的那個席位」的那一組
+✅ desk1366 21) Timeline 有技能事件，且每一筆都是該席位帶著的技能（共 16 種）
+✅ mob390 1) 進入賽前配置
+✅ mob390 2) 五個席位都標示英雄來源
+✅ mob390 3) 來源值都是五種之一（沒有空徽章）
+✅ mob390 4) 明講「不是固定綁定」且指向 Ban/Pick
+  📸 mob390-01-lineup.png
+✅ mob390 5) 進入 Ban/Pick
+✅ mob390 5f) 出戰配置預設收合（≤46px，實測 33）
+✅ mob390 5f2) 出戰配置摘要在首屏可見（top 204 < 844）
+✅ mob390 5g) 「選擇你的英雄」在首屏（top 247 < 844）
+✅ mob390 5h) 英雄格從首屏開始（top 314）
+✅ mob390 5i) 篩選列可見
+✅ mob390 5j) 沒有巢狀捲動陷阱（0 ≤ 1）
+✅ mob390 5k) 頁面可縱向捲動
+  📸 mob390-00-banpick-layout.png
+✅ mob390 5b) 尚未選角時摘要就已常駐（五路皆在，英雄留白）
+✅ mob390 5c) 陣容需求一開始就顯示「五路皆缺」
+✅ mob390 5d) 選角途中：頭像位置碼與摘要逐一相同（同一份 assignment）
+✅ mob390 5e) 選角途中：陣容需求的已有數＝已選英雄數
+  📸 mob390-02a-banpick-mid.png
+✅ mob390 6) Ban/Pick 顯示五路出戰配置
+✅ mob390 7) 五路唯一、五隻英雄不重複
+✅ mob390 8) 每一路都恰好 2 個召喚師技能
+✅ mob390 9) 打野帶懲戒，且只有打野
+✅ mob390 9b) 五個已選頭像都標了位置
+✅ mob390 9b2) 頭像上顯示的是中文路名（不是 TOP/JUNGLE 等英文）
+✅ mob390 9c) 頭像位置碼與摘要逐一相同（沒有兩套判定）
+✅ mob390 9d) 五路到齊時陣容需求顯示無缺口
+✅ mob390 9e) 選角完成 3 秒後仍停在 Ban/Pick（不再只閃現 1.2 秒）
+  📸 mob390-02-banpick.png
+✅ mob390 9f) 有明確的確認鈕
+✅ mob390 10) 進入 Loading
+✅ mob390 11) Loading 十人都顯示召喚師技能
+  📸 mob390-03-loading.png
+✅ mob390 12) 正式 GameView 掛載
+✅ mob390 12b) 隊伍面板同時渲染兩個技能格
+✅ mob390 12c) 兩格**並排**（y 相同、x 不同），不是上下疊
+✅ mob390 12d) 兩格等大且看得見（≥14px）
+✅ mob390 12e) 血條沒有被擠掉（仍有可讀寬度 ≥30px）
+✅ mob390 12f) 兩格都是真的技能（不是 reserved 佔位）
+✅ mob390 12g) 測試模式下看得到「快速完成」開發按鈕
+✅ mob390 13) 戰鬥中面板顯示 2 個召喚師技能（不再有「未配置」）
+✅ mob390 13b) 兩格都有引擎狀態（可用／冷卻秒數），沒有純「配置」佔位
+  📸 mob390-04-battle-sheet.png
+✅ mob390 14) 賽後記分板顯示召喚師技能
+✅ mob390 14b) 記分板帶有實際使用次數，且整場至少放過一次（合計 97）
+  📸 mob390-05-result.png
+✅ mob390 15) 可以進入重播
+✅ mob390 16) 重播帶著本場出戰配置（十席）
+  📸 mob390-06-replay.png
+✅ mob390 17) Ban/Pick 與 Replay 的技能逐席相同
+✅ mob390 18) Ban/Pick 與 Replay 的英雄逐席相同
+✅ mob390 19) Loading 與 Ban/Pick 的技能逐席相同
+✅ mob390 20) 戰鬥中面板的技能＝Ban/Pick 給「實際點到的那個席位」的那一組
+✅ mob390 21) Timeline 有技能事件，且每一筆都是該席位帶著的技能（共 19 種）
+✅ mob360 1) 進入賽前配置
+✅ mob360 2) 五個席位都標示英雄來源
+✅ mob360 3) 來源值都是五種之一（沒有空徽章）
+✅ mob360 4) 明講「不是固定綁定」且指向 Ban/Pick
+  📸 mob360-01-lineup.png
+✅ mob360 5) 進入 Ban/Pick
+✅ mob360 5f) 出戰配置預設收合（≤46px，實測 33）
+✅ mob360 5f2) 出戰配置摘要在首屏可見（top 204 < 800）
+✅ mob360 5g) 「選擇你的英雄」在首屏（top 247 < 800）
+✅ mob360 5h) 英雄格從首屏開始（top 314）
+✅ mob360 5i) 篩選列可見
+✅ mob360 5j) 沒有巢狀捲動陷阱（0 ≤ 1）
+✅ mob360 5k) 頁面可縱向捲動
+  📸 mob360-00-banpick-layout.png
+✅ mob360 5b) 尚未選角時摘要就已常駐（五路皆在，英雄留白）
+✅ mob360 5c) 陣容需求一開始就顯示「五路皆缺」
+✅ mob360 5d) 選角途中：頭像位置碼與摘要逐一相同（同一份 assignment）
+✅ mob360 5e) 選角途中：陣容需求的已有數＝已選英雄數
+  📸 mob360-02a-banpick-mid.png
+✅ mob360 6) Ban/Pick 顯示五路出戰配置
+✅ mob360 7) 五路唯一、五隻英雄不重複
+✅ mob360 8) 每一路都恰好 2 個召喚師技能
+✅ mob360 9) 打野帶懲戒，且只有打野
+✅ mob360 9b) 五個已選頭像都標了位置
+✅ mob360 9b2) 頭像上顯示的是中文路名（不是 TOP/JUNGLE 等英文）
+✅ mob360 9c) 頭像位置碼與摘要逐一相同（沒有兩套判定）
+✅ mob360 9d) 五路到齊時陣容需求顯示無缺口
+✅ mob360 9e) 選角完成 3 秒後仍停在 Ban/Pick（不再只閃現 1.2 秒）
+  📸 mob360-02-banpick.png
+✅ mob360 9f) 有明確的確認鈕
+✅ mob360 10) 進入 Loading
+✅ mob360 11) Loading 十人都顯示召喚師技能
+  📸 mob360-03-loading.png
+✅ mob360 12) 正式 GameView 掛載
+✅ mob360 12b) 隊伍面板同時渲染兩個技能格
+✅ mob360 12c) 兩格**並排**（y 相同、x 不同），不是上下疊
+✅ mob360 12d) 兩格等大且看得見（≥14px）
+✅ mob360 12e) 血條沒有被擠掉（仍有可讀寬度 ≥30px）
+✅ mob360 12f) 兩格都是真的技能（不是 reserved 佔位）
+✅ mob360 12g) 測試模式下看得到「快速完成」開發按鈕
+✅ mob360 13) 戰鬥中面板顯示 2 個召喚師技能（不再有「未配置」）
+✅ mob360 13b) 兩格都有引擎狀態（可用／冷卻秒數），沒有純「配置」佔位
+  📸 mob360-04-battle-sheet.png
+✅ mob360 14) 賽後記分板顯示召喚師技能
+✅ mob360 14b) 記分板帶有實際使用次數，且整場至少放過一次（合計 75）
+  📸 mob360-05-result.png
+✅ mob360 15) 可以進入重播
+✅ mob360 16) 重播帶著本場出戰配置（十席）
+  📸 mob360-06-replay.png
+✅ mob360 17) Ban/Pick 與 Replay 的技能逐席相同
+✅ mob360 18) Ban/Pick 與 Replay 的英雄逐席相同
+✅ mob360 19) Loading 與 Ban/Pick 的技能逐席相同
+✅ mob360 20) 戰鬥中面板的技能＝Ban/Pick 給「實際點到的那個席位」的那一組
+✅ mob360 21) Timeline 有技能事件，且每一筆都是該席位帶著的技能（共 17 種）
+✅ 跨尺寸 A) 四個尺寸都走完整條流程並取得配置
+✅ 跨尺寸 B) 四個尺寸的配置規則一致（5 路 × 2 技能 × 打野懲戒）
+✅ 跨尺寸 C) 四個尺寸的出戰配置都預設收合（≤46px）且在首屏
+✅ 跨尺寸 D) 四個尺寸的英雄格都從首屏開始
+✅ 跨尺寸 E) 四個尺寸都沒有巢狀捲動陷阱
+
+✅ PASS　證據：D:\OneDrive\文件\GitHub\ESMO\review\moba-runtime\j-close-hotfix1\evidence

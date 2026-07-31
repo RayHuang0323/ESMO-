@@ -1,0 +1,4412 @@
+{
+  "notes": [
+    {
+      "label": "desk1920 1) 進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 2) 五個席位都標示英雄來源",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "source": "suggested"
+        },
+        {
+          "seat": "b2",
+          "source": "suggested"
+        },
+        {
+          "seat": "b3",
+          "source": "suggested"
+        },
+        {
+          "seat": "b4",
+          "source": "suggested"
+        },
+        {
+          "seat": "b5",
+          "source": "suggested"
+        }
+      ]
+    },
+    {
+      "label": "desk1920 3) 來源值都是五種之一（沒有空徽章）",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "source": "suggested"
+        },
+        {
+          "seat": "b2",
+          "source": "suggested"
+        },
+        {
+          "seat": "b3",
+          "source": "suggested"
+        },
+        {
+          "seat": "b4",
+          "source": "suggested"
+        },
+        {
+          "seat": "b5",
+          "source": "suggested"
+        }
+      ]
+    },
+    {
+      "label": "desk1920 4) 明講「不是固定綁定」且指向 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 5) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 5f) 出戰配置預設收合（高度 ≤ 46px，實測 33）",
+      "ok": true,
+      "extra": {
+        "top": 1910,
+        "bottom": 1943,
+        "h": 33
+      }
+    },
+    {
+      "label": "desk1920 5g) 「選擇你的英雄」在首屏可見（top 204 < 1080）",
+      "ok": true,
+      "extra": {
+        "label": {
+          "top": 204,
+          "bottom": 1898,
+          "h": 1694
+        },
+        "vh": 1080
+      }
+    },
+    {
+      "label": "desk1920 5h) 英雄格從首屏就開始（grid top 271 < 1080）",
+      "ok": true,
+      "extra": {
+        "grid": {
+          "top": 271,
+          "bottom": 1885,
+          "h": 1614
+        },
+        "vh": 1080
+      }
+    },
+    {
+      "label": "desk1920 5i) 篩選列可見且不被遮住",
+      "ok": true,
+      "extra": {
+        "top": 0,
+        "bottom": 2057,
+        "h": 2057
+      }
+    },
+    {
+      "label": "desk1920 5j) 沒有巢狀捲動陷阱（可捲容器 0 ≤ 1）",
+      "ok": true,
+      "extra": 0
+    },
+    {
+      "label": "desk1920 5k) 頁面可縱向捲動",
+      "ok": true,
+      "extra": true
+    },
+    {
+      "label": "desk1920 5b) 尚未選角時摘要就已常駐（五路皆在，英雄留白）",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": ""
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": ""
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": ""
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": ""
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": ""
+        }
+      ]
+    },
+    {
+      "label": "desk1920 5c) 陣容需求一開始就顯示「五路皆缺」",
+      "ok": true,
+      "extra": {
+        "have": "",
+        "need": "TOP,JUNGLE,MID,ADC,SUPPORT"
+      }
+    },
+    {
+      "label": "desk1920 5d) 選角途中：頭像位置碼與摘要逐一相同（同一份 assignment）",
+      "ok": true,
+      "extra": {
+        "avatars": [
+          {
+            "hero": "ravager",
+            "code": "TOP",
+            "lowfit": "0"
+          },
+          {
+            "hero": "sting",
+            "code": "JUNGLE",
+            "lowfit": "0"
+          }
+        ],
+        "byHero": {
+          "ravager": "TOP",
+          "sting": "JUNGLE"
+        }
+      }
+    },
+    {
+      "label": "desk1920 5e) 選角途中：陣容需求的已有數＝已選英雄數",
+      "ok": true,
+      "extra": {
+        "need": {
+          "have": "TOP,JUNGLE",
+          "need": "MID,ADC,SUPPORT"
+        },
+        "picked": 2
+      }
+    },
+    {
+      "label": "desk1920 6) Ban/Pick 顯示五路出戰配置",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": "ravager",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": "sting",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": "gambler",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": "greymantle",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        }
+      ]
+    },
+    {
+      "label": "desk1920 7) 五路唯一、五隻英雄不重複",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": "ravager",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": "sting",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": "gambler",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": "greymantle",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        }
+      ]
+    },
+    {
+      "label": "desk1920 8) 每一路都恰好 2 個召喚師技能",
+      "ok": true,
+      "extra": [
+        "flash,teleport",
+        "flash,smite",
+        "flash,ignite",
+        "flash,heal",
+        "flash,ignite"
+      ]
+    },
+    {
+      "label": "desk1920 9) 打野帶懲戒，且只有打野",
+      "ok": true,
+      "extra": [
+        [
+          "上路",
+          "flash,teleport"
+        ],
+        [
+          "打野",
+          "flash,smite"
+        ],
+        [
+          "中路",
+          "flash,ignite"
+        ],
+        [
+          "下路",
+          "flash,heal"
+        ],
+        [
+          "輔助",
+          "flash,ignite"
+        ]
+      ]
+    },
+    {
+      "label": "desk1920 9b) 五個已選頭像都標了位置",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "ravager",
+          "code": "TOP",
+          "lane": "上路",
+          "lowfit": "0"
+        },
+        {
+          "hero": "sting",
+          "code": "JUNGLE",
+          "lane": "打野",
+          "lowfit": "0"
+        },
+        {
+          "hero": "greymantle",
+          "code": "ADC",
+          "lane": "下路",
+          "lowfit": "1"
+        },
+        {
+          "hero": "embercoil",
+          "code": "SUPPORT",
+          "lane": "輔助",
+          "lowfit": "1"
+        },
+        {
+          "hero": "gambler",
+          "code": "MID",
+          "lane": "中路",
+          "lowfit": "0"
+        }
+      ]
+    },
+    {
+      "label": "desk1920 9b2) 頭像上顯示的是中文路名（不是 TOP/JUNGLE 等英文）",
+      "ok": true,
+      "extra": [
+        "上路",
+        "打野",
+        "⚠下路",
+        "⚠輔助",
+        "中路"
+      ]
+    },
+    {
+      "label": "desk1920 9c) 頭像位置碼與摘要逐一相同（沒有兩套判定）",
+      "ok": true,
+      "extra": {
+        "av": [
+          {
+            "hero": "ravager",
+            "code": "TOP",
+            "lane": "上路",
+            "lowfit": "0"
+          },
+          {
+            "hero": "sting",
+            "code": "JUNGLE",
+            "lane": "打野",
+            "lowfit": "0"
+          },
+          {
+            "hero": "greymantle",
+            "code": "ADC",
+            "lane": "下路",
+            "lowfit": "1"
+          },
+          {
+            "hero": "embercoil",
+            "code": "SUPPORT",
+            "lane": "輔助",
+            "lowfit": "1"
+          },
+          {
+            "hero": "gambler",
+            "code": "MID",
+            "lane": "中路",
+            "lowfit": "0"
+          }
+        ],
+        "byHero": {
+          "ravager": "TOP",
+          "sting": "JUNGLE",
+          "gambler": "MID",
+          "greymantle": "ADC",
+          "embercoil": "SUPPORT"
+        }
+      }
+    },
+    {
+      "label": "desk1920 9d) 五路到齊時陣容需求顯示無缺口",
+      "ok": true,
+      "extra": {
+        "have": "TOP,JUNGLE,MID,ADC,SUPPORT",
+        "need": ""
+      }
+    },
+    {
+      "label": "desk1920 9e) 選角完成 3 秒後仍停在 Ban/Pick（不再只閃現 1.2 秒）",
+      "ok": true,
+      "extra": 5
+    },
+    {
+      "label": "desk1920 9f) 有明確的確認鈕",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 10) 進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 11) Loading 十人都顯示召喚師技能",
+      "ok": true,
+      "extra": [
+        "flash,teleport",
+        "flash,smite",
+        "flash,ignite",
+        "flash,heal",
+        "flash,ignite",
+        "flash,ghost",
+        "flash,smite",
+        "flash,ghost",
+        "flash,heal",
+        "flash,cleanse"
+      ]
+    },
+    {
+      "label": "desk1920 12) 正式 GameView 掛載",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 12b) 隊伍面板同時渲染兩個技能格",
+      "ok": true,
+      "extra": {
+        "sq": [
+          {
+            "w": 18,
+            "h": 18,
+            "x": 745,
+            "y": 526,
+            "id": "flash"
+          },
+          {
+            "w": 18,
+            "h": 18,
+            "x": 765,
+            "y": 526,
+            "id": "teleport"
+          }
+        ],
+        "hpWidth": 128
+      }
+    },
+    {
+      "label": "desk1920 12c) 兩格**並排**（y 相同、x 不同），不是上下疊",
+      "ok": true,
+      "extra": [
+        {
+          "w": 18,
+          "h": 18,
+          "x": 745,
+          "y": 526,
+          "id": "flash"
+        },
+        {
+          "w": 18,
+          "h": 18,
+          "x": 765,
+          "y": 526,
+          "id": "teleport"
+        }
+      ]
+    },
+    {
+      "label": "desk1920 12d) 兩格等大且看得見（≥14px）",
+      "ok": true,
+      "extra": [
+        {
+          "w": 18,
+          "h": 18,
+          "x": 745,
+          "y": 526,
+          "id": "flash"
+        },
+        {
+          "w": 18,
+          "h": 18,
+          "x": 765,
+          "y": 526,
+          "id": "teleport"
+        }
+      ]
+    },
+    {
+      "label": "desk1920 12e) 血條沒有被擠掉（仍有可讀寬度 ≥30px）",
+      "ok": true,
+      "extra": 128
+    },
+    {
+      "label": "desk1920 12f) 兩格都是真的技能（不是 reserved 佔位）",
+      "ok": true,
+      "extra": [
+        {
+          "w": 18,
+          "h": 18,
+          "x": 745,
+          "y": 526,
+          "id": "flash"
+        },
+        {
+          "w": 18,
+          "h": 18,
+          "x": 765,
+          "y": 526,
+          "id": "teleport"
+        }
+      ]
+    },
+    {
+      "label": "desk1920 12g) 測試模式下看得到「快速完成」開發按鈕",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 13) 戰鬥中面板顯示 2 個召喚師技能（不再有「未配置」）",
+      "ok": true,
+      "extra": "flash,teleport"
+    },
+    {
+      "label": "desk1920 13b) 兩格都有引擎狀態（可用／冷卻秒數），沒有純「配置」佔位",
+      "ok": true,
+      "extra": "⚡\n閃現\n可用\n🌐\n傳送\n可用"
+    },
+    {
+      "label": "desk1920 14) 賽後記分板顯示召喚師技能",
+      "ok": true,
+      "extra": [
+        "flash,teleport",
+        "flash,smite",
+        "flash,ignite",
+        "flash,heal",
+        "flash,ignite",
+        "flash,ghost",
+        "flash,heal",
+        "flash,smite",
+        "flash,ghost",
+        "flash,cleanse"
+      ]
+    },
+    {
+      "label": "desk1920 14b) 記分板帶有實際使用次數，且整場至少放過一次（合計 89）",
+      "ok": true,
+      "extra": [
+        [
+          "flash,teleport",
+          "2,2"
+        ],
+        [
+          "flash,smite",
+          "2,13"
+        ],
+        [
+          "flash,ignite",
+          "5,7"
+        ],
+        [
+          "flash,heal",
+          "1,6"
+        ],
+        [
+          "flash,ignite",
+          "2,5"
+        ],
+        [
+          "flash,ghost",
+          "4,6"
+        ],
+        [
+          "flash,heal",
+          "1,5"
+        ],
+        [
+          "flash,smite",
+          "2,14"
+        ],
+        [
+          "flash,ghost",
+          "4,6"
+        ],
+        [
+          "flash,cleanse",
+          "2,0"
+        ]
+      ]
+    },
+    {
+      "label": "desk1920 15) 可以進入重播",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 16) 重播帶著本場出戰配置（十席）",
+      "ok": true,
+      "extra": [
+        [
+          "b1",
+          "flash,teleport"
+        ],
+        [
+          "b2",
+          "flash,smite"
+        ],
+        [
+          "b3",
+          "flash,ignite"
+        ],
+        [
+          "b4",
+          "flash,heal"
+        ],
+        [
+          "b5",
+          "flash,ignite"
+        ],
+        [
+          "r1",
+          "flash,ghost"
+        ],
+        [
+          "r2",
+          "flash,smite"
+        ],
+        [
+          "r3",
+          "flash,ghost"
+        ],
+        [
+          "r4",
+          "flash,heal"
+        ],
+        [
+          "r5",
+          "flash,cleanse"
+        ]
+      ]
+    },
+    {
+      "label": "desk1920 17) Ban/Pick 與 Replay 的技能逐席相同",
+      "ok": true,
+      "extra": [
+        [
+          "b1",
+          "flash,teleport",
+          "flash,teleport"
+        ],
+        [
+          "b2",
+          "flash,smite",
+          "flash,smite"
+        ],
+        [
+          "b3",
+          "flash,ignite",
+          "flash,ignite"
+        ],
+        [
+          "b4",
+          "flash,heal",
+          "flash,heal"
+        ],
+        [
+          "b5",
+          "flash,ignite",
+          "flash,ignite"
+        ]
+      ]
+    },
+    {
+      "label": "desk1920 18) Ban/Pick 與 Replay 的英雄逐席相同",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 19) Loading 與 Ban/Pick 的技能逐席相同",
+      "ok": true,
+      "extra": [
+        [
+          "flash,teleport",
+          "flash,smite",
+          "flash,ignite",
+          "flash,heal",
+          "flash,ignite"
+        ],
+        [
+          "flash,teleport",
+          "flash,smite",
+          "flash,ignite",
+          "flash,heal",
+          "flash,ignite"
+        ]
+      ]
+    },
+    {
+      "label": "desk1920 20) 戰鬥中面板的技能＝Ban/Pick 給「實際點到的那個席位」的那一組",
+      "ok": true,
+      "extra": [
+        "b1",
+        "flash,teleport",
+        "flash,teleport"
+      ]
+    },
+    {
+      "label": "desk1920 21) Timeline 有技能事件，且每一筆都是該席位帶著的技能（共 17 種）",
+      "ok": true,
+      "extra": {
+        "evs": [
+          "R2|懲戒",
+          "B2|懲戒",
+          "B3|點燃",
+          "R3|幽魂",
+          "R3|閃現",
+          "B3|閃現",
+          "R4|治療",
+          "B4|治療",
+          "B4|閃現",
+          "R1|幽魂",
+          "R1|閃現",
+          "B5|閃現",
+          "B2|閃現",
+          "R5|閃現",
+          "R4|閃現",
+          "B5|點燃",
+          "B1|閃現"
+        ],
+        "bad": []
+      }
+    },
+    {
+      "label": "desk1366 1) 進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 2) 五個席位都標示英雄來源",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "source": "suggested"
+        },
+        {
+          "seat": "b2",
+          "source": "recent"
+        },
+        {
+          "seat": "b3",
+          "source": "suggested"
+        },
+        {
+          "seat": "b4",
+          "source": "suggested"
+        },
+        {
+          "seat": "b5",
+          "source": "suggested"
+        }
+      ]
+    },
+    {
+      "label": "desk1366 3) 來源值都是五種之一（沒有空徽章）",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "source": "suggested"
+        },
+        {
+          "seat": "b2",
+          "source": "recent"
+        },
+        {
+          "seat": "b3",
+          "source": "suggested"
+        },
+        {
+          "seat": "b4",
+          "source": "suggested"
+        },
+        {
+          "seat": "b5",
+          "source": "suggested"
+        }
+      ]
+    },
+    {
+      "label": "desk1366 4) 明講「不是固定綁定」且指向 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 5) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 5f) 出戰配置預設收合（高度 ≤ 46px，實測 33）",
+      "ok": true,
+      "extra": {
+        "top": 1910,
+        "bottom": 1943,
+        "h": 33
+      }
+    },
+    {
+      "label": "desk1366 5g) 「選擇你的英雄」在首屏可見（top 204 < 768）",
+      "ok": true,
+      "extra": {
+        "label": {
+          "top": 204,
+          "bottom": 1898,
+          "h": 1694
+        },
+        "vh": 768
+      }
+    },
+    {
+      "label": "desk1366 5h) 英雄格從首屏就開始（grid top 271 < 768）",
+      "ok": true,
+      "extra": {
+        "grid": {
+          "top": 271,
+          "bottom": 1885,
+          "h": 1614
+        },
+        "vh": 768
+      }
+    },
+    {
+      "label": "desk1366 5i) 篩選列可見且不被遮住",
+      "ok": true,
+      "extra": {
+        "top": 0,
+        "bottom": 2057,
+        "h": 2057
+      }
+    },
+    {
+      "label": "desk1366 5j) 沒有巢狀捲動陷阱（可捲容器 0 ≤ 1）",
+      "ok": true,
+      "extra": 0
+    },
+    {
+      "label": "desk1366 5k) 頁面可縱向捲動",
+      "ok": true,
+      "extra": true
+    },
+    {
+      "label": "desk1366 5b) 尚未選角時摘要就已常駐（五路皆在，英雄留白）",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": ""
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": ""
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": ""
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": ""
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": ""
+        }
+      ]
+    },
+    {
+      "label": "desk1366 5c) 陣容需求一開始就顯示「五路皆缺」",
+      "ok": true,
+      "extra": {
+        "have": "",
+        "need": "TOP,JUNGLE,MID,ADC,SUPPORT"
+      }
+    },
+    {
+      "label": "desk1366 5d) 選角途中：頭像位置碼與摘要逐一相同（同一份 assignment）",
+      "ok": true,
+      "extra": {
+        "avatars": [
+          {
+            "hero": "cinderfist",
+            "code": "TOP",
+            "lowfit": "0"
+          },
+          {
+            "hero": "sting",
+            "code": "JUNGLE",
+            "lowfit": "0"
+          }
+        ],
+        "byHero": {
+          "cinderfist": "TOP",
+          "sting": "JUNGLE"
+        }
+      }
+    },
+    {
+      "label": "desk1366 5e) 選角途中：陣容需求的已有數＝已選英雄數",
+      "ok": true,
+      "extra": {
+        "need": {
+          "have": "TOP,JUNGLE",
+          "need": "MID,ADC,SUPPORT"
+        },
+        "picked": 2
+      }
+    },
+    {
+      "label": "desk1366 6) Ban/Pick 顯示五路出戰配置",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": "cinderfist",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": "sting",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": "gambler",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": "duskblade",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": "voidrift",
+          "spells": "flash,cleanse"
+        }
+      ]
+    },
+    {
+      "label": "desk1366 7) 五路唯一、五隻英雄不重複",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": "cinderfist",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": "sting",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": "gambler",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": "duskblade",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": "voidrift",
+          "spells": "flash,cleanse"
+        }
+      ]
+    },
+    {
+      "label": "desk1366 8) 每一路都恰好 2 個召喚師技能",
+      "ok": true,
+      "extra": [
+        "flash,teleport",
+        "flash,smite",
+        "flash,ignite",
+        "flash,heal",
+        "flash,cleanse"
+      ]
+    },
+    {
+      "label": "desk1366 9) 打野帶懲戒，且只有打野",
+      "ok": true,
+      "extra": [
+        [
+          "上路",
+          "flash,teleport"
+        ],
+        [
+          "打野",
+          "flash,smite"
+        ],
+        [
+          "中路",
+          "flash,ignite"
+        ],
+        [
+          "下路",
+          "flash,heal"
+        ],
+        [
+          "輔助",
+          "flash,cleanse"
+        ]
+      ]
+    },
+    {
+      "label": "desk1366 9b) 五個已選頭像都標了位置",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "cinderfist",
+          "code": "TOP",
+          "lane": "上路",
+          "lowfit": "0"
+        },
+        {
+          "hero": "sting",
+          "code": "JUNGLE",
+          "lane": "打野",
+          "lowfit": "0"
+        },
+        {
+          "hero": "duskblade",
+          "code": "ADC",
+          "lane": "下路",
+          "lowfit": "1"
+        },
+        {
+          "hero": "gambler",
+          "code": "MID",
+          "lane": "中路",
+          "lowfit": "0"
+        },
+        {
+          "hero": "voidrift",
+          "code": "SUPPORT",
+          "lane": "輔助",
+          "lowfit": "1"
+        }
+      ]
+    },
+    {
+      "label": "desk1366 9b2) 頭像上顯示的是中文路名（不是 TOP/JUNGLE 等英文）",
+      "ok": true,
+      "extra": [
+        "上路",
+        "打野",
+        "⚠下路",
+        "中路",
+        "⚠輔助"
+      ]
+    },
+    {
+      "label": "desk1366 9c) 頭像位置碼與摘要逐一相同（沒有兩套判定）",
+      "ok": true,
+      "extra": {
+        "av": [
+          {
+            "hero": "cinderfist",
+            "code": "TOP",
+            "lane": "上路",
+            "lowfit": "0"
+          },
+          {
+            "hero": "sting",
+            "code": "JUNGLE",
+            "lane": "打野",
+            "lowfit": "0"
+          },
+          {
+            "hero": "duskblade",
+            "code": "ADC",
+            "lane": "下路",
+            "lowfit": "1"
+          },
+          {
+            "hero": "gambler",
+            "code": "MID",
+            "lane": "中路",
+            "lowfit": "0"
+          },
+          {
+            "hero": "voidrift",
+            "code": "SUPPORT",
+            "lane": "輔助",
+            "lowfit": "1"
+          }
+        ],
+        "byHero": {
+          "cinderfist": "TOP",
+          "sting": "JUNGLE",
+          "gambler": "MID",
+          "duskblade": "ADC",
+          "voidrift": "SUPPORT"
+        }
+      }
+    },
+    {
+      "label": "desk1366 9d) 五路到齊時陣容需求顯示無缺口",
+      "ok": true,
+      "extra": {
+        "have": "TOP,JUNGLE,MID,ADC,SUPPORT",
+        "need": ""
+      }
+    },
+    {
+      "label": "desk1366 9e) 選角完成 3 秒後仍停在 Ban/Pick（不再只閃現 1.2 秒）",
+      "ok": true,
+      "extra": 5
+    },
+    {
+      "label": "desk1366 9f) 有明確的確認鈕",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 10) 進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 11) Loading 十人都顯示召喚師技能",
+      "ok": true,
+      "extra": [
+        "flash,teleport",
+        "flash,smite",
+        "flash,ignite",
+        "flash,heal",
+        "flash,cleanse",
+        "flash,ghost",
+        "flash,smite",
+        "flash,ignite",
+        "flash,heal",
+        "flash,cleanse"
+      ]
+    },
+    {
+      "label": "desk1366 12) 正式 GameView 掛載",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 12b) 隊伍面板同時渲染兩個技能格",
+      "ok": true,
+      "extra": {
+        "sq": [
+          {
+            "w": 18,
+            "h": 18,
+            "x": 468,
+            "y": 436,
+            "id": "flash"
+          },
+          {
+            "w": 18,
+            "h": 18,
+            "x": 488,
+            "y": 436,
+            "id": "teleport"
+          }
+        ],
+        "hpWidth": 128
+      }
+    },
+    {
+      "label": "desk1366 12c) 兩格**並排**（y 相同、x 不同），不是上下疊",
+      "ok": true,
+      "extra": [
+        {
+          "w": 18,
+          "h": 18,
+          "x": 468,
+          "y": 436,
+          "id": "flash"
+        },
+        {
+          "w": 18,
+          "h": 18,
+          "x": 488,
+          "y": 436,
+          "id": "teleport"
+        }
+      ]
+    },
+    {
+      "label": "desk1366 12d) 兩格等大且看得見（≥14px）",
+      "ok": true,
+      "extra": [
+        {
+          "w": 18,
+          "h": 18,
+          "x": 468,
+          "y": 436,
+          "id": "flash"
+        },
+        {
+          "w": 18,
+          "h": 18,
+          "x": 488,
+          "y": 436,
+          "id": "teleport"
+        }
+      ]
+    },
+    {
+      "label": "desk1366 12e) 血條沒有被擠掉（仍有可讀寬度 ≥30px）",
+      "ok": true,
+      "extra": 128
+    },
+    {
+      "label": "desk1366 12f) 兩格都是真的技能（不是 reserved 佔位）",
+      "ok": true,
+      "extra": [
+        {
+          "w": 18,
+          "h": 18,
+          "x": 468,
+          "y": 436,
+          "id": "flash"
+        },
+        {
+          "w": 18,
+          "h": 18,
+          "x": 488,
+          "y": 436,
+          "id": "teleport"
+        }
+      ]
+    },
+    {
+      "label": "desk1366 12g) 測試模式下看得到「快速完成」開發按鈕",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 13) 戰鬥中面板顯示 2 個召喚師技能（不再有「未配置」）",
+      "ok": true,
+      "extra": "flash,teleport"
+    },
+    {
+      "label": "desk1366 13b) 兩格都有引擎狀態（可用／冷卻秒數），沒有純「配置」佔位",
+      "ok": true,
+      "extra": "⚡\n閃現\n可用\n🌐\n傳送\n可用"
+    },
+    {
+      "label": "desk1366 14) 賽後記分板顯示召喚師技能",
+      "ok": true,
+      "extra": [
+        "flash,smite",
+        "flash,teleport",
+        "flash,ignite",
+        "flash,heal",
+        "flash,cleanse",
+        "flash,smite",
+        "flash,ghost",
+        "flash,cleanse",
+        "flash,ignite",
+        "flash,heal"
+      ]
+    },
+    {
+      "label": "desk1366 14b) 記分板帶有實際使用次數，且整場至少放過一次（合計 78）",
+      "ok": true,
+      "extra": [
+        [
+          "flash,smite",
+          "3,12"
+        ],
+        [
+          "flash,teleport",
+          "3,2"
+        ],
+        [
+          "flash,ignite",
+          "3,6"
+        ],
+        [
+          "flash,heal",
+          "3,4"
+        ],
+        [
+          "flash,cleanse",
+          "4,1"
+        ],
+        [
+          "flash,smite",
+          "3,14"
+        ],
+        [
+          "flash,ghost",
+          "1,4"
+        ],
+        [
+          "flash,cleanse",
+          "2,0"
+        ],
+        [
+          "flash,ignite",
+          "3,4"
+        ],
+        [
+          "flash,heal",
+          "1,5"
+        ]
+      ]
+    },
+    {
+      "label": "desk1366 15) 可以進入重播",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 16) 重播帶著本場出戰配置（十席）",
+      "ok": true,
+      "extra": [
+        [
+          "b1",
+          "flash,teleport"
+        ],
+        [
+          "b2",
+          "flash,smite"
+        ],
+        [
+          "b3",
+          "flash,ignite"
+        ],
+        [
+          "b4",
+          "flash,heal"
+        ],
+        [
+          "b5",
+          "flash,cleanse"
+        ],
+        [
+          "r1",
+          "flash,ghost"
+        ],
+        [
+          "r2",
+          "flash,smite"
+        ],
+        [
+          "r3",
+          "flash,ignite"
+        ],
+        [
+          "r4",
+          "flash,heal"
+        ],
+        [
+          "r5",
+          "flash,cleanse"
+        ]
+      ]
+    },
+    {
+      "label": "desk1366 17) Ban/Pick 與 Replay 的技能逐席相同",
+      "ok": true,
+      "extra": [
+        [
+          "b1",
+          "flash,teleport",
+          "flash,teleport"
+        ],
+        [
+          "b2",
+          "flash,smite",
+          "flash,smite"
+        ],
+        [
+          "b3",
+          "flash,ignite",
+          "flash,ignite"
+        ],
+        [
+          "b4",
+          "flash,heal",
+          "flash,heal"
+        ],
+        [
+          "b5",
+          "flash,cleanse",
+          "flash,cleanse"
+        ]
+      ]
+    },
+    {
+      "label": "desk1366 18) Ban/Pick 與 Replay 的英雄逐席相同",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 19) Loading 與 Ban/Pick 的技能逐席相同",
+      "ok": true,
+      "extra": [
+        [
+          "flash,teleport",
+          "flash,smite",
+          "flash,ignite",
+          "flash,heal",
+          "flash,cleanse"
+        ],
+        [
+          "flash,teleport",
+          "flash,smite",
+          "flash,ignite",
+          "flash,heal",
+          "flash,cleanse"
+        ]
+      ]
+    },
+    {
+      "label": "desk1366 20) 戰鬥中面板的技能＝Ban/Pick 給「實際點到的那個席位」的那一組",
+      "ok": true,
+      "extra": [
+        "b1",
+        "flash,teleport",
+        "flash,teleport"
+      ]
+    },
+    {
+      "label": "desk1366 21) Timeline 有技能事件，且每一筆都是該席位帶著的技能（共 18 種）",
+      "ok": true,
+      "extra": {
+        "evs": [
+          "R2|懲戒",
+          "B2|懲戒",
+          "B3|點燃",
+          "B4|閃現",
+          "B5|閃現",
+          "R1|幽魂",
+          "B2|閃現",
+          "R4|治療",
+          "B1|閃現",
+          "B1|傳送",
+          "B4|治療",
+          "R5|閃現",
+          "B5|淨化",
+          "R2|閃現",
+          "R3|閃現",
+          "R3|點燃",
+          "B3|閃現",
+          "R1|閃現"
+        ],
+        "bad": []
+      }
+    },
+    {
+      "label": "mob390 1) 進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 2) 五個席位都標示英雄來源",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "source": "suggested"
+        },
+        {
+          "seat": "b2",
+          "source": "mastery"
+        },
+        {
+          "seat": "b3",
+          "source": "suggested"
+        },
+        {
+          "seat": "b4",
+          "source": "suggested"
+        },
+        {
+          "seat": "b5",
+          "source": "suggested"
+        }
+      ]
+    },
+    {
+      "label": "mob390 3) 來源值都是五種之一（沒有空徽章）",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "source": "suggested"
+        },
+        {
+          "seat": "b2",
+          "source": "mastery"
+        },
+        {
+          "seat": "b3",
+          "source": "suggested"
+        },
+        {
+          "seat": "b4",
+          "source": "suggested"
+        },
+        {
+          "seat": "b5",
+          "source": "suggested"
+        }
+      ]
+    },
+    {
+      "label": "mob390 4) 明講「不是固定綁定」且指向 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 5) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 5f) 出戰配置預設收合（高度 ≤ 46px，實測 33）",
+      "ok": true,
+      "extra": {
+        "top": 1910,
+        "bottom": 1943,
+        "h": 33
+      }
+    },
+    {
+      "label": "mob390 5g) 「選擇你的英雄」在首屏可見（top 204 < 844）",
+      "ok": true,
+      "extra": {
+        "label": {
+          "top": 204,
+          "bottom": 1898,
+          "h": 1694
+        },
+        "vh": 844
+      }
+    },
+    {
+      "label": "mob390 5h) 英雄格從首屏就開始（grid top 271 < 844）",
+      "ok": true,
+      "extra": {
+        "grid": {
+          "top": 271,
+          "bottom": 1885,
+          "h": 1614
+        },
+        "vh": 844
+      }
+    },
+    {
+      "label": "mob390 5i) 篩選列可見且不被遮住",
+      "ok": true,
+      "extra": {
+        "top": 0,
+        "bottom": 2057,
+        "h": 2057
+      }
+    },
+    {
+      "label": "mob390 5j) 沒有巢狀捲動陷阱（可捲容器 0 ≤ 1）",
+      "ok": true,
+      "extra": 0
+    },
+    {
+      "label": "mob390 5k) 頁面可縱向捲動",
+      "ok": true,
+      "extra": true
+    },
+    {
+      "label": "mob390 5b) 尚未選角時摘要就已常駐（五路皆在，英雄留白）",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": ""
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": ""
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": ""
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": ""
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": ""
+        }
+      ]
+    },
+    {
+      "label": "mob390 5c) 陣容需求一開始就顯示「五路皆缺」",
+      "ok": true,
+      "extra": {
+        "have": "",
+        "need": "TOP,JUNGLE,MID,ADC,SUPPORT"
+      }
+    },
+    {
+      "label": "mob390 5d) 選角途中：頭像位置碼與摘要逐一相同（同一份 assignment）",
+      "ok": true,
+      "extra": {
+        "avatars": [
+          {
+            "hero": "cinderfist",
+            "code": "TOP",
+            "lowfit": "0"
+          },
+          {
+            "hero": "sting",
+            "code": "JUNGLE",
+            "lowfit": "0"
+          }
+        ],
+        "byHero": {
+          "cinderfist": "TOP",
+          "sting": "JUNGLE"
+        }
+      }
+    },
+    {
+      "label": "mob390 5e) 選角途中：陣容需求的已有數＝已選英雄數",
+      "ok": true,
+      "extra": {
+        "need": {
+          "have": "TOP,JUNGLE",
+          "need": "MID,ADC,SUPPORT"
+        },
+        "picked": 2
+      }
+    },
+    {
+      "label": "mob390 6) Ban/Pick 顯示五路出戰配置",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": "cinderfist",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": "sting",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": "auralith",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": "greymantle",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        }
+      ]
+    },
+    {
+      "label": "mob390 7) 五路唯一、五隻英雄不重複",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": "cinderfist",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": "sting",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": "auralith",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": "greymantle",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        }
+      ]
+    },
+    {
+      "label": "mob390 8) 每一路都恰好 2 個召喚師技能",
+      "ok": true,
+      "extra": [
+        "flash,teleport",
+        "flash,smite",
+        "flash,ignite",
+        "flash,heal",
+        "flash,ignite"
+      ]
+    },
+    {
+      "label": "mob390 9) 打野帶懲戒，且只有打野",
+      "ok": true,
+      "extra": [
+        [
+          "上路",
+          "flash,teleport"
+        ],
+        [
+          "打野",
+          "flash,smite"
+        ],
+        [
+          "中路",
+          "flash,ignite"
+        ],
+        [
+          "下路",
+          "flash,heal"
+        ],
+        [
+          "輔助",
+          "flash,ignite"
+        ]
+      ]
+    },
+    {
+      "label": "mob390 9b) 五個已選頭像都標了位置",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "cinderfist",
+          "code": "TOP",
+          "lane": "上路",
+          "lowfit": "0"
+        },
+        {
+          "hero": "sting",
+          "code": "JUNGLE",
+          "lane": "打野",
+          "lowfit": "0"
+        },
+        {
+          "hero": "greymantle",
+          "code": "ADC",
+          "lane": "下路",
+          "lowfit": "1"
+        },
+        {
+          "hero": "embercoil",
+          "code": "SUPPORT",
+          "lane": "輔助",
+          "lowfit": "1"
+        },
+        {
+          "hero": "auralith",
+          "code": "MID",
+          "lane": "中路",
+          "lowfit": "0"
+        }
+      ]
+    },
+    {
+      "label": "mob390 9b2) 頭像上顯示的是中文路名（不是 TOP/JUNGLE 等英文）",
+      "ok": true,
+      "extra": [
+        "上路",
+        "打野",
+        "⚠下路",
+        "⚠輔助",
+        "中路"
+      ]
+    },
+    {
+      "label": "mob390 9c) 頭像位置碼與摘要逐一相同（沒有兩套判定）",
+      "ok": true,
+      "extra": {
+        "av": [
+          {
+            "hero": "cinderfist",
+            "code": "TOP",
+            "lane": "上路",
+            "lowfit": "0"
+          },
+          {
+            "hero": "sting",
+            "code": "JUNGLE",
+            "lane": "打野",
+            "lowfit": "0"
+          },
+          {
+            "hero": "greymantle",
+            "code": "ADC",
+            "lane": "下路",
+            "lowfit": "1"
+          },
+          {
+            "hero": "embercoil",
+            "code": "SUPPORT",
+            "lane": "輔助",
+            "lowfit": "1"
+          },
+          {
+            "hero": "auralith",
+            "code": "MID",
+            "lane": "中路",
+            "lowfit": "0"
+          }
+        ],
+        "byHero": {
+          "cinderfist": "TOP",
+          "sting": "JUNGLE",
+          "auralith": "MID",
+          "greymantle": "ADC",
+          "embercoil": "SUPPORT"
+        }
+      }
+    },
+    {
+      "label": "mob390 9d) 五路到齊時陣容需求顯示無缺口",
+      "ok": true,
+      "extra": {
+        "have": "TOP,JUNGLE,MID,ADC,SUPPORT",
+        "need": ""
+      }
+    },
+    {
+      "label": "mob390 9e) 選角完成 3 秒後仍停在 Ban/Pick（不再只閃現 1.2 秒）",
+      "ok": true,
+      "extra": 5
+    },
+    {
+      "label": "mob390 9f) 有明確的確認鈕",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 10) 進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 11) Loading 十人都顯示召喚師技能",
+      "ok": true,
+      "extra": [
+        "flash,teleport",
+        "flash,smite",
+        "flash,ignite",
+        "flash,heal",
+        "flash,ignite",
+        "flash,ghost",
+        "flash,smite",
+        "flash,ignite",
+        "flash,barrier",
+        "flash,ignite"
+      ]
+    },
+    {
+      "label": "mob390 12) 正式 GameView 掛載",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 12b) 隊伍面板同時渲染兩個技能格",
+      "ok": true,
+      "extra": {
+        "sq": [
+          {
+            "w": 18,
+            "h": 18,
+            "x": 73,
+            "y": 654,
+            "id": "flash"
+          },
+          {
+            "w": 18,
+            "h": 18,
+            "x": 93,
+            "y": 654,
+            "id": "ignite"
+          }
+        ],
+        "hpWidth": 42
+      }
+    },
+    {
+      "label": "mob390 12c) 兩格**並排**（y 相同、x 不同），不是上下疊",
+      "ok": true,
+      "extra": [
+        {
+          "w": 18,
+          "h": 18,
+          "x": 73,
+          "y": 654,
+          "id": "flash"
+        },
+        {
+          "w": 18,
+          "h": 18,
+          "x": 93,
+          "y": 654,
+          "id": "ignite"
+        }
+      ]
+    },
+    {
+      "label": "mob390 12d) 兩格等大且看得見（≥14px）",
+      "ok": true,
+      "extra": [
+        {
+          "w": 18,
+          "h": 18,
+          "x": 73,
+          "y": 654,
+          "id": "flash"
+        },
+        {
+          "w": 18,
+          "h": 18,
+          "x": 93,
+          "y": 654,
+          "id": "ignite"
+        }
+      ]
+    },
+    {
+      "label": "mob390 12e) 血條沒有被擠掉（仍有可讀寬度 ≥30px）",
+      "ok": true,
+      "extra": 42
+    },
+    {
+      "label": "mob390 12f) 兩格都是真的技能（不是 reserved 佔位）",
+      "ok": true,
+      "extra": [
+        {
+          "w": 18,
+          "h": 18,
+          "x": 73,
+          "y": 654,
+          "id": "flash"
+        },
+        {
+          "w": 18,
+          "h": 18,
+          "x": 93,
+          "y": 654,
+          "id": "ignite"
+        }
+      ]
+    },
+    {
+      "label": "mob390 12g) 測試模式下看得到「快速完成」開發按鈕",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 13) 戰鬥中面板顯示 2 個召喚師技能（不再有「未配置」）",
+      "ok": true,
+      "extra": "flash,ignite"
+    },
+    {
+      "label": "mob390 13b) 兩格都有引擎狀態（可用／冷卻秒數），沒有純「配置」佔位",
+      "ok": true,
+      "extra": "⚡\n閃現\n可用\n🔥\n點燃\n可用"
+    },
+    {
+      "label": "mob390 14) 賽後記分板顯示召喚師技能",
+      "ok": true,
+      "extra": [
+        "flash,smite",
+        "flash,ignite",
+        "flash,ignite",
+        "flash,heal",
+        "flash,teleport",
+        "flash,ghost",
+        "flash,smite",
+        "flash,barrier",
+        "flash,ignite",
+        "flash,ignite"
+      ]
+    },
+    {
+      "label": "mob390 14b) 記分板帶有實際使用次數，且整場至少放過一次（合計 94）",
+      "ok": true,
+      "extra": [
+        [
+          "flash,smite",
+          "3,14"
+        ],
+        [
+          "flash,ignite",
+          "3,7"
+        ],
+        [
+          "flash,ignite",
+          "4,5"
+        ],
+        [
+          "flash,heal",
+          "1,6"
+        ],
+        [
+          "flash,teleport",
+          "1,4"
+        ],
+        [
+          "flash,ghost",
+          "2,4"
+        ],
+        [
+          "flash,smite",
+          "3,14"
+        ],
+        [
+          "flash,barrier",
+          "2,4"
+        ],
+        [
+          "flash,ignite",
+          "3,6"
+        ],
+        [
+          "flash,ignite",
+          "2,6"
+        ]
+      ]
+    },
+    {
+      "label": "mob390 15) 可以進入重播",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 16) 重播帶著本場出戰配置（十席）",
+      "ok": true,
+      "extra": [
+        [
+          "b1",
+          "flash,teleport"
+        ],
+        [
+          "b2",
+          "flash,smite"
+        ],
+        [
+          "b3",
+          "flash,ignite"
+        ],
+        [
+          "b4",
+          "flash,heal"
+        ],
+        [
+          "b5",
+          "flash,ignite"
+        ],
+        [
+          "r1",
+          "flash,ghost"
+        ],
+        [
+          "r2",
+          "flash,smite"
+        ],
+        [
+          "r3",
+          "flash,ignite"
+        ],
+        [
+          "r4",
+          "flash,barrier"
+        ],
+        [
+          "r5",
+          "flash,ignite"
+        ]
+      ]
+    },
+    {
+      "label": "mob390 17) Ban/Pick 與 Replay 的技能逐席相同",
+      "ok": true,
+      "extra": [
+        [
+          "b1",
+          "flash,teleport",
+          "flash,teleport"
+        ],
+        [
+          "b2",
+          "flash,smite",
+          "flash,smite"
+        ],
+        [
+          "b3",
+          "flash,ignite",
+          "flash,ignite"
+        ],
+        [
+          "b4",
+          "flash,heal",
+          "flash,heal"
+        ],
+        [
+          "b5",
+          "flash,ignite",
+          "flash,ignite"
+        ]
+      ]
+    },
+    {
+      "label": "mob390 18) Ban/Pick 與 Replay 的英雄逐席相同",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 19) Loading 與 Ban/Pick 的技能逐席相同",
+      "ok": true,
+      "extra": [
+        [
+          "flash,teleport",
+          "flash,smite",
+          "flash,ignite",
+          "flash,heal",
+          "flash,ignite"
+        ],
+        [
+          "flash,teleport",
+          "flash,smite",
+          "flash,ignite",
+          "flash,heal",
+          "flash,ignite"
+        ]
+      ]
+    },
+    {
+      "label": "mob390 20) 戰鬥中面板的技能＝Ban/Pick 給「實際點到的那個席位」的那一組",
+      "ok": true,
+      "extra": [
+        "b3",
+        "flash,ignite",
+        "flash,ignite"
+      ]
+    },
+    {
+      "label": "mob390 21) Timeline 有技能事件，且每一筆都是該席位帶著的技能（共 20 種）",
+      "ok": true,
+      "extra": {
+        "evs": [
+          "B2|懲戒",
+          "R2|懲戒",
+          "B3|點燃",
+          "R3|點燃",
+          "R3|閃現",
+          "B4|治療",
+          "B5|點燃",
+          "B4|閃現",
+          "R1|幽魂",
+          "B3|閃現",
+          "B1|傳送",
+          "R4|護盾",
+          "B2|閃現",
+          "B5|閃現",
+          "R4|閃現",
+          "R2|閃現",
+          "R5|點燃",
+          "R5|閃現",
+          "R1|閃現",
+          "B1|閃現"
+        ],
+        "bad": []
+      }
+    },
+    {
+      "label": "mob360 1) 進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 2) 五個席位都標示英雄來源",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "source": "suggested"
+        },
+        {
+          "seat": "b2",
+          "source": "mastery"
+        },
+        {
+          "seat": "b3",
+          "source": "suggested"
+        },
+        {
+          "seat": "b4",
+          "source": "suggested"
+        },
+        {
+          "seat": "b5",
+          "source": "suggested"
+        }
+      ]
+    },
+    {
+      "label": "mob360 3) 來源值都是五種之一（沒有空徽章）",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "source": "suggested"
+        },
+        {
+          "seat": "b2",
+          "source": "mastery"
+        },
+        {
+          "seat": "b3",
+          "source": "suggested"
+        },
+        {
+          "seat": "b4",
+          "source": "suggested"
+        },
+        {
+          "seat": "b5",
+          "source": "suggested"
+        }
+      ]
+    },
+    {
+      "label": "mob360 4) 明講「不是固定綁定」且指向 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 5) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 5f) 出戰配置預設收合（高度 ≤ 46px，實測 33）",
+      "ok": true,
+      "extra": {
+        "top": 1910,
+        "bottom": 1943,
+        "h": 33
+      }
+    },
+    {
+      "label": "mob360 5g) 「選擇你的英雄」在首屏可見（top 204 < 800）",
+      "ok": true,
+      "extra": {
+        "label": {
+          "top": 204,
+          "bottom": 1898,
+          "h": 1694
+        },
+        "vh": 800
+      }
+    },
+    {
+      "label": "mob360 5h) 英雄格從首屏就開始（grid top 271 < 800）",
+      "ok": true,
+      "extra": {
+        "grid": {
+          "top": 271,
+          "bottom": 1885,
+          "h": 1614
+        },
+        "vh": 800
+      }
+    },
+    {
+      "label": "mob360 5i) 篩選列可見且不被遮住",
+      "ok": true,
+      "extra": {
+        "top": 0,
+        "bottom": 2057,
+        "h": 2057
+      }
+    },
+    {
+      "label": "mob360 5j) 沒有巢狀捲動陷阱（可捲容器 0 ≤ 1）",
+      "ok": true,
+      "extra": 0
+    },
+    {
+      "label": "mob360 5k) 頁面可縱向捲動",
+      "ok": true,
+      "extra": true
+    },
+    {
+      "label": "mob360 5b) 尚未選角時摘要就已常駐（五路皆在，英雄留白）",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": ""
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": ""
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": ""
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": ""
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": ""
+        }
+      ]
+    },
+    {
+      "label": "mob360 5c) 陣容需求一開始就顯示「五路皆缺」",
+      "ok": true,
+      "extra": {
+        "have": "",
+        "need": "TOP,JUNGLE,MID,ADC,SUPPORT"
+      }
+    },
+    {
+      "label": "mob360 5d) 選角途中：頭像位置碼與摘要逐一相同（同一份 assignment）",
+      "ok": true,
+      "extra": {
+        "avatars": [
+          {
+            "hero": "cinderfist",
+            "code": "TOP",
+            "lowfit": "0"
+          },
+          {
+            "hero": "sting",
+            "code": "JUNGLE",
+            "lowfit": "0"
+          }
+        ],
+        "byHero": {
+          "cinderfist": "TOP",
+          "sting": "JUNGLE"
+        }
+      }
+    },
+    {
+      "label": "mob360 5e) 選角途中：陣容需求的已有數＝已選英雄數",
+      "ok": true,
+      "extra": {
+        "need": {
+          "have": "TOP,JUNGLE",
+          "need": "MID,ADC,SUPPORT"
+        },
+        "picked": 2
+      }
+    },
+    {
+      "label": "mob360 6) Ban/Pick 顯示五路出戰配置",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": "cinderfist",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": "sting",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": "voidrift",
+          "spells": "flash,ghost"
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": "greymantle",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        }
+      ]
+    },
+    {
+      "label": "mob360 7) 五路唯一、五隻英雄不重複",
+      "ok": true,
+      "extra": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": "cinderfist",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": "sting",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": "voidrift",
+          "spells": "flash,ghost"
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": "greymantle",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        }
+      ]
+    },
+    {
+      "label": "mob360 8) 每一路都恰好 2 個召喚師技能",
+      "ok": true,
+      "extra": [
+        "flash,teleport",
+        "flash,smite",
+        "flash,ghost",
+        "flash,heal",
+        "flash,ignite"
+      ]
+    },
+    {
+      "label": "mob360 9) 打野帶懲戒，且只有打野",
+      "ok": true,
+      "extra": [
+        [
+          "上路",
+          "flash,teleport"
+        ],
+        [
+          "打野",
+          "flash,smite"
+        ],
+        [
+          "中路",
+          "flash,ghost"
+        ],
+        [
+          "下路",
+          "flash,heal"
+        ],
+        [
+          "輔助",
+          "flash,ignite"
+        ]
+      ]
+    },
+    {
+      "label": "mob360 9b) 五個已選頭像都標了位置",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "cinderfist",
+          "code": "TOP",
+          "lane": "上路",
+          "lowfit": "0"
+        },
+        {
+          "hero": "sting",
+          "code": "JUNGLE",
+          "lane": "打野",
+          "lowfit": "0"
+        },
+        {
+          "hero": "greymantle",
+          "code": "ADC",
+          "lane": "下路",
+          "lowfit": "1"
+        },
+        {
+          "hero": "embercoil",
+          "code": "SUPPORT",
+          "lane": "輔助",
+          "lowfit": "1"
+        },
+        {
+          "hero": "voidrift",
+          "code": "MID",
+          "lane": "中路",
+          "lowfit": "0"
+        }
+      ]
+    },
+    {
+      "label": "mob360 9b2) 頭像上顯示的是中文路名（不是 TOP/JUNGLE 等英文）",
+      "ok": true,
+      "extra": [
+        "上路",
+        "打野",
+        "⚠下路",
+        "⚠輔助",
+        "中路"
+      ]
+    },
+    {
+      "label": "mob360 9c) 頭像位置碼與摘要逐一相同（沒有兩套判定）",
+      "ok": true,
+      "extra": {
+        "av": [
+          {
+            "hero": "cinderfist",
+            "code": "TOP",
+            "lane": "上路",
+            "lowfit": "0"
+          },
+          {
+            "hero": "sting",
+            "code": "JUNGLE",
+            "lane": "打野",
+            "lowfit": "0"
+          },
+          {
+            "hero": "greymantle",
+            "code": "ADC",
+            "lane": "下路",
+            "lowfit": "1"
+          },
+          {
+            "hero": "embercoil",
+            "code": "SUPPORT",
+            "lane": "輔助",
+            "lowfit": "1"
+          },
+          {
+            "hero": "voidrift",
+            "code": "MID",
+            "lane": "中路",
+            "lowfit": "0"
+          }
+        ],
+        "byHero": {
+          "cinderfist": "TOP",
+          "sting": "JUNGLE",
+          "voidrift": "MID",
+          "greymantle": "ADC",
+          "embercoil": "SUPPORT"
+        }
+      }
+    },
+    {
+      "label": "mob360 9d) 五路到齊時陣容需求顯示無缺口",
+      "ok": true,
+      "extra": {
+        "have": "TOP,JUNGLE,MID,ADC,SUPPORT",
+        "need": ""
+      }
+    },
+    {
+      "label": "mob360 9e) 選角完成 3 秒後仍停在 Ban/Pick（不再只閃現 1.2 秒）",
+      "ok": true,
+      "extra": 5
+    },
+    {
+      "label": "mob360 9f) 有明確的確認鈕",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 10) 進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 11) Loading 十人都顯示召喚師技能",
+      "ok": true,
+      "extra": [
+        "flash,teleport",
+        "flash,smite",
+        "flash,ghost",
+        "flash,heal",
+        "flash,ignite",
+        "flash,teleport",
+        "flash,smite",
+        "flash,ignite",
+        "flash,heal",
+        "flash,cleanse"
+      ]
+    },
+    {
+      "label": "mob360 12) 正式 GameView 掛載",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 12b) 隊伍面板同時渲染兩個技能格",
+      "ok": true,
+      "extra": {
+        "sq": [
+          {
+            "w": 18,
+            "h": 18,
+            "x": 72,
+            "y": 618,
+            "id": "flash"
+          },
+          {
+            "w": 18,
+            "h": 18,
+            "x": 92,
+            "y": 618,
+            "id": "heal"
+          }
+        ],
+        "hpWidth": 42
+      }
+    },
+    {
+      "label": "mob360 12c) 兩格**並排**（y 相同、x 不同），不是上下疊",
+      "ok": true,
+      "extra": [
+        {
+          "w": 18,
+          "h": 18,
+          "x": 72,
+          "y": 618,
+          "id": "flash"
+        },
+        {
+          "w": 18,
+          "h": 18,
+          "x": 92,
+          "y": 618,
+          "id": "heal"
+        }
+      ]
+    },
+    {
+      "label": "mob360 12d) 兩格等大且看得見（≥14px）",
+      "ok": true,
+      "extra": [
+        {
+          "w": 18,
+          "h": 18,
+          "x": 72,
+          "y": 618,
+          "id": "flash"
+        },
+        {
+          "w": 18,
+          "h": 18,
+          "x": 92,
+          "y": 618,
+          "id": "heal"
+        }
+      ]
+    },
+    {
+      "label": "mob360 12e) 血條沒有被擠掉（仍有可讀寬度 ≥30px）",
+      "ok": true,
+      "extra": 42
+    },
+    {
+      "label": "mob360 12f) 兩格都是真的技能（不是 reserved 佔位）",
+      "ok": true,
+      "extra": [
+        {
+          "w": 18,
+          "h": 18,
+          "x": 72,
+          "y": 618,
+          "id": "flash"
+        },
+        {
+          "w": 18,
+          "h": 18,
+          "x": 92,
+          "y": 618,
+          "id": "heal"
+        }
+      ]
+    },
+    {
+      "label": "mob360 12g) 測試模式下看得到「快速完成」開發按鈕",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 13) 戰鬥中面板顯示 2 個召喚師技能（不再有「未配置」）",
+      "ok": true,
+      "extra": "flash,ghost"
+    },
+    {
+      "label": "mob360 13b) 兩格都有引擎狀態（可用／冷卻秒數），沒有純「配置」佔位",
+      "ok": true,
+      "extra": "⚡\n閃現\n可用\n💨\n幽魂\n可用"
+    },
+    {
+      "label": "mob360 14) 賽後記分板顯示召喚師技能",
+      "ok": true,
+      "extra": [
+        "flash,smite",
+        "flash,ghost",
+        "flash,heal",
+        "flash,teleport",
+        "flash,ignite",
+        "flash,cleanse",
+        "flash,teleport",
+        "flash,heal",
+        "flash,smite",
+        "flash,ignite"
+      ]
+    },
+    {
+      "label": "mob360 14b) 記分板帶有實際使用次數，且整場至少放過一次（合計 73）",
+      "ok": true,
+      "extra": [
+        [
+          "flash,smite",
+          "2,14"
+        ],
+        [
+          "flash,ghost",
+          "1,5"
+        ],
+        [
+          "flash,heal",
+          "1,4"
+        ],
+        [
+          "flash,teleport",
+          "1,1"
+        ],
+        [
+          "flash,ignite",
+          "3,6"
+        ],
+        [
+          "flash,cleanse",
+          "2,0"
+        ],
+        [
+          "flash,teleport",
+          "2,3"
+        ],
+        [
+          "flash,heal",
+          "1,4"
+        ],
+        [
+          "flash,smite",
+          "2,13"
+        ],
+        [
+          "flash,ignite",
+          "3,5"
+        ]
+      ]
+    },
+    {
+      "label": "mob360 15) 可以進入重播",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 16) 重播帶著本場出戰配置（十席）",
+      "ok": true,
+      "extra": [
+        [
+          "b1",
+          "flash,teleport"
+        ],
+        [
+          "b2",
+          "flash,smite"
+        ],
+        [
+          "b3",
+          "flash,ghost"
+        ],
+        [
+          "b4",
+          "flash,heal"
+        ],
+        [
+          "b5",
+          "flash,ignite"
+        ],
+        [
+          "r1",
+          "flash,teleport"
+        ],
+        [
+          "r2",
+          "flash,smite"
+        ],
+        [
+          "r3",
+          "flash,ignite"
+        ],
+        [
+          "r4",
+          "flash,heal"
+        ],
+        [
+          "r5",
+          "flash,cleanse"
+        ]
+      ]
+    },
+    {
+      "label": "mob360 17) Ban/Pick 與 Replay 的技能逐席相同",
+      "ok": true,
+      "extra": [
+        [
+          "b1",
+          "flash,teleport",
+          "flash,teleport"
+        ],
+        [
+          "b2",
+          "flash,smite",
+          "flash,smite"
+        ],
+        [
+          "b3",
+          "flash,ghost",
+          "flash,ghost"
+        ],
+        [
+          "b4",
+          "flash,heal",
+          "flash,heal"
+        ],
+        [
+          "b5",
+          "flash,ignite",
+          "flash,ignite"
+        ]
+      ]
+    },
+    {
+      "label": "mob360 18) Ban/Pick 與 Replay 的英雄逐席相同",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 19) Loading 與 Ban/Pick 的技能逐席相同",
+      "ok": true,
+      "extra": [
+        [
+          "flash,teleport",
+          "flash,smite",
+          "flash,ghost",
+          "flash,heal",
+          "flash,ignite"
+        ],
+        [
+          "flash,teleport",
+          "flash,smite",
+          "flash,ghost",
+          "flash,heal",
+          "flash,ignite"
+        ]
+      ]
+    },
+    {
+      "label": "mob360 20) 戰鬥中面板的技能＝Ban/Pick 給「實際點到的那個席位」的那一組",
+      "ok": true,
+      "extra": [
+        "b3",
+        "flash,ghost",
+        "flash,ghost"
+      ]
+    },
+    {
+      "label": "mob360 21) Timeline 有技能事件，且每一筆都是該席位帶著的技能（共 18 種）",
+      "ok": true,
+      "extra": {
+        "evs": [
+          "R2|懲戒",
+          "B2|懲戒",
+          "R3|點燃",
+          "B3|幽魂",
+          "R4|治療",
+          "B4|治療",
+          "R5|閃現",
+          "R4|閃現",
+          "B5|閃現",
+          "R1|傳送",
+          "B2|閃現",
+          "R2|閃現",
+          "B4|閃現",
+          "B1|傳送",
+          "B5|點燃",
+          "B3|閃現",
+          "R1|閃現",
+          "B1|閃現"
+        ],
+        "bad": []
+      }
+    },
+    {
+      "label": "跨尺寸 21) 手機版同樣走完整條流程並取得配置",
+      "ok": false,
+      "extra": null
+    },
+    {
+      "label": "跨尺寸 22) 兩個尺寸的配置規則一致（都是 5 路 × 2 技能 × 打野懲戒）",
+      "ok": false,
+      "extra": null
+    }
+  ],
+  "shots": [
+    "desk1920-01-lineup.png",
+    "desk1920-00-banpick-layout.png",
+    "desk1920-02a-banpick-mid.png",
+    "desk1920-02-banpick.png",
+    "desk1920-03-loading.png",
+    "desk1920-04-battle-sheet.png",
+    "desk1920-05-result.png",
+    "desk1920-06-replay.png",
+    "desk1366-01-lineup.png",
+    "desk1366-00-banpick-layout.png",
+    "desk1366-02a-banpick-mid.png",
+    "desk1366-02-banpick.png",
+    "desk1366-03-loading.png",
+    "desk1366-04-battle-sheet.png",
+    "desk1366-05-result.png",
+    "desk1366-06-replay.png",
+    "mob390-01-lineup.png",
+    "mob390-00-banpick-layout.png",
+    "mob390-02a-banpick-mid.png",
+    "mob390-02-banpick.png",
+    "mob390-03-loading.png",
+    "mob390-04-battle-sheet.png",
+    "mob390-05-result.png",
+    "mob390-06-replay.png",
+    "mob360-01-lineup.png",
+    "mob360-00-banpick-layout.png",
+    "mob360-02a-banpick-mid.png",
+    "mob360-02-banpick.png",
+    "mob360-03-loading.png",
+    "mob360-04-battle-sheet.png",
+    "mob360-05-result.png",
+    "mob360-06-replay.png"
+  ],
+  "data": {
+    "desk1920": {
+      "sources": [
+        {
+          "seat": "b1",
+          "source": "suggested"
+        },
+        {
+          "seat": "b2",
+          "source": "suggested"
+        },
+        {
+          "seat": "b3",
+          "source": "suggested"
+        },
+        {
+          "seat": "b4",
+          "source": "suggested"
+        },
+        {
+          "seat": "b5",
+          "source": "suggested"
+        }
+      ],
+      "layout": {
+        "vh": 1080,
+        "plan": {
+          "top": 1910,
+          "bottom": 1943,
+          "h": 33
+        },
+        "label": {
+          "top": 204,
+          "bottom": 1898,
+          "h": 1694
+        },
+        "grid": {
+          "top": 271,
+          "bottom": 1885,
+          "h": 1614
+        },
+        "filters": {
+          "top": 0,
+          "bottom": 2057,
+          "h": 2057
+        },
+        "nestedScrollers": 0,
+        "pageScrollable": true
+      },
+      "planEarly": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": ""
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": ""
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": ""
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": ""
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": ""
+        }
+      ],
+      "needsEarly": {
+        "have": "",
+        "need": "TOP,JUNGLE,MID,ADC,SUPPORT"
+      },
+      "avatarsMid": [
+        {
+          "hero": "ravager",
+          "code": "TOP",
+          "lowfit": "0"
+        },
+        {
+          "hero": "sting",
+          "code": "JUNGLE",
+          "lowfit": "0"
+        }
+      ],
+      "needsMid": {
+        "have": "TOP,JUNGLE",
+        "need": "MID,ADC,SUPPORT"
+      },
+      "plan": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": "ravager",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": "sting",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": "gambler",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": "greymantle",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        }
+      ],
+      "avatars": [
+        {
+          "hero": "ravager",
+          "code": "TOP",
+          "lane": "上路",
+          "lowfit": "0"
+        },
+        {
+          "hero": "sting",
+          "code": "JUNGLE",
+          "lane": "打野",
+          "lowfit": "0"
+        },
+        {
+          "hero": "greymantle",
+          "code": "ADC",
+          "lane": "下路",
+          "lowfit": "1"
+        },
+        {
+          "hero": "embercoil",
+          "code": "SUPPORT",
+          "lane": "輔助",
+          "lowfit": "1"
+        },
+        {
+          "hero": "gambler",
+          "code": "MID",
+          "lane": "中路",
+          "lowfit": "0"
+        }
+      ],
+      "avatarText": [
+        "上路",
+        "打野",
+        "⚠下路",
+        "⚠輔助",
+        "中路"
+      ],
+      "loading": [
+        {
+          "lane": "上路",
+          "spells": "flash,teleport"
+        },
+        {
+          "lane": "打野",
+          "spells": "flash,smite"
+        },
+        {
+          "lane": "中路",
+          "spells": "flash,ignite"
+        },
+        {
+          "lane": "下路",
+          "spells": "flash,heal"
+        },
+        {
+          "lane": "輔助",
+          "spells": "flash,ignite"
+        },
+        {
+          "lane": "上路",
+          "spells": "flash,ghost"
+        },
+        {
+          "lane": "打野",
+          "spells": "flash,smite"
+        },
+        {
+          "lane": "中路",
+          "spells": "flash,ghost"
+        },
+        {
+          "lane": "下路",
+          "spells": "flash,heal"
+        },
+        {
+          "lane": "輔助",
+          "spells": "flash,cleanse"
+        }
+      ],
+      "spellGeo": {
+        "sq": [
+          {
+            "w": 18,
+            "h": 18,
+            "x": 745,
+            "y": 526,
+            "id": "flash"
+          },
+          {
+            "w": 18,
+            "h": 18,
+            "x": 765,
+            "y": 526,
+            "id": "teleport"
+          }
+        ],
+        "hpWidth": 128
+      },
+      "spellEvents": [
+        "R2|懲戒",
+        "B2|懲戒",
+        "B3|點燃",
+        "R3|幽魂",
+        "R3|閃現",
+        "B3|閃現",
+        "R4|治療",
+        "B4|治療",
+        "B4|閃現",
+        "R1|幽魂",
+        "R1|閃現",
+        "B5|閃現",
+        "B2|閃現",
+        "R5|閃現",
+        "R4|閃現",
+        "B5|點燃",
+        "B1|閃現"
+      ],
+      "clickedSeat": "b1",
+      "sheet": "flash,teleport",
+      "sheetText": "⚡\n閃現\n可用\n🌐\n傳送\n可用",
+      "board": [
+        {
+          "spells": "flash,teleport",
+          "uses": "2,2"
+        },
+        {
+          "spells": "flash,smite",
+          "uses": "2,13"
+        },
+        {
+          "spells": "flash,ignite",
+          "uses": "5,7"
+        },
+        {
+          "spells": "flash,heal",
+          "uses": "1,6"
+        },
+        {
+          "spells": "flash,ignite",
+          "uses": "2,5"
+        },
+        {
+          "spells": "flash,ghost",
+          "uses": "4,6"
+        },
+        {
+          "spells": "flash,heal",
+          "uses": "1,5"
+        },
+        {
+          "spells": "flash,smite",
+          "uses": "2,14"
+        },
+        {
+          "spells": "flash,ghost",
+          "uses": "4,6"
+        },
+        {
+          "spells": "flash,cleanse",
+          "uses": "2,0"
+        }
+      ],
+      "totalUses": 89,
+      "replay": [
+        {
+          "seat": "b1",
+          "hero": "ravager",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "hero": "sting",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "hero": "gambler",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "b4",
+          "hero": "greymantle",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "r1",
+          "hero": "duskblade",
+          "spells": "flash,ghost"
+        },
+        {
+          "seat": "r2",
+          "hero": "phantom",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "r3",
+          "hero": "voidrift",
+          "spells": "flash,ghost"
+        },
+        {
+          "seat": "r4",
+          "hero": "mantra",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "r5",
+          "hero": "auralith",
+          "spells": "flash,cleanse"
+        }
+      ]
+    },
+    "desk1366": {
+      "sources": [
+        {
+          "seat": "b1",
+          "source": "suggested"
+        },
+        {
+          "seat": "b2",
+          "source": "recent"
+        },
+        {
+          "seat": "b3",
+          "source": "suggested"
+        },
+        {
+          "seat": "b4",
+          "source": "suggested"
+        },
+        {
+          "seat": "b5",
+          "source": "suggested"
+        }
+      ],
+      "layout": {
+        "vh": 768,
+        "plan": {
+          "top": 1910,
+          "bottom": 1943,
+          "h": 33
+        },
+        "label": {
+          "top": 204,
+          "bottom": 1898,
+          "h": 1694
+        },
+        "grid": {
+          "top": 271,
+          "bottom": 1885,
+          "h": 1614
+        },
+        "filters": {
+          "top": 0,
+          "bottom": 2057,
+          "h": 2057
+        },
+        "nestedScrollers": 0,
+        "pageScrollable": true
+      },
+      "planEarly": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": ""
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": ""
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": ""
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": ""
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": ""
+        }
+      ],
+      "needsEarly": {
+        "have": "",
+        "need": "TOP,JUNGLE,MID,ADC,SUPPORT"
+      },
+      "avatarsMid": [
+        {
+          "hero": "cinderfist",
+          "code": "TOP",
+          "lowfit": "0"
+        },
+        {
+          "hero": "sting",
+          "code": "JUNGLE",
+          "lowfit": "0"
+        }
+      ],
+      "needsMid": {
+        "have": "TOP,JUNGLE",
+        "need": "MID,ADC,SUPPORT"
+      },
+      "plan": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": "cinderfist",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": "sting",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": "gambler",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": "duskblade",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": "voidrift",
+          "spells": "flash,cleanse"
+        }
+      ],
+      "avatars": [
+        {
+          "hero": "cinderfist",
+          "code": "TOP",
+          "lane": "上路",
+          "lowfit": "0"
+        },
+        {
+          "hero": "sting",
+          "code": "JUNGLE",
+          "lane": "打野",
+          "lowfit": "0"
+        },
+        {
+          "hero": "duskblade",
+          "code": "ADC",
+          "lane": "下路",
+          "lowfit": "1"
+        },
+        {
+          "hero": "gambler",
+          "code": "MID",
+          "lane": "中路",
+          "lowfit": "0"
+        },
+        {
+          "hero": "voidrift",
+          "code": "SUPPORT",
+          "lane": "輔助",
+          "lowfit": "1"
+        }
+      ],
+      "avatarText": [
+        "上路",
+        "打野",
+        "⚠下路",
+        "中路",
+        "⚠輔助"
+      ],
+      "loading": [
+        {
+          "lane": "上路",
+          "spells": "flash,teleport"
+        },
+        {
+          "lane": "打野",
+          "spells": "flash,smite"
+        },
+        {
+          "lane": "中路",
+          "spells": "flash,ignite"
+        },
+        {
+          "lane": "下路",
+          "spells": "flash,heal"
+        },
+        {
+          "lane": "輔助",
+          "spells": "flash,cleanse"
+        },
+        {
+          "lane": "上路",
+          "spells": "flash,ghost"
+        },
+        {
+          "lane": "打野",
+          "spells": "flash,smite"
+        },
+        {
+          "lane": "中路",
+          "spells": "flash,ignite"
+        },
+        {
+          "lane": "下路",
+          "spells": "flash,heal"
+        },
+        {
+          "lane": "輔助",
+          "spells": "flash,cleanse"
+        }
+      ],
+      "spellGeo": {
+        "sq": [
+          {
+            "w": 18,
+            "h": 18,
+            "x": 468,
+            "y": 436,
+            "id": "flash"
+          },
+          {
+            "w": 18,
+            "h": 18,
+            "x": 488,
+            "y": 436,
+            "id": "teleport"
+          }
+        ],
+        "hpWidth": 128
+      },
+      "spellEvents": [
+        "R2|懲戒",
+        "B2|懲戒",
+        "B3|點燃",
+        "B4|閃現",
+        "B5|閃現",
+        "R1|幽魂",
+        "B2|閃現",
+        "R4|治療",
+        "B1|閃現",
+        "B1|傳送",
+        "B4|治療",
+        "R5|閃現",
+        "B5|淨化",
+        "R2|閃現",
+        "R3|閃現",
+        "R3|點燃",
+        "B3|閃現",
+        "R1|閃現"
+      ],
+      "clickedSeat": "b1",
+      "sheet": "flash,teleport",
+      "sheetText": "⚡\n閃現\n可用\n🌐\n傳送\n可用",
+      "board": [
+        {
+          "spells": "flash,smite",
+          "uses": "3,12"
+        },
+        {
+          "spells": "flash,teleport",
+          "uses": "3,2"
+        },
+        {
+          "spells": "flash,ignite",
+          "uses": "3,6"
+        },
+        {
+          "spells": "flash,heal",
+          "uses": "3,4"
+        },
+        {
+          "spells": "flash,cleanse",
+          "uses": "4,1"
+        },
+        {
+          "spells": "flash,smite",
+          "uses": "3,14"
+        },
+        {
+          "spells": "flash,ghost",
+          "uses": "1,4"
+        },
+        {
+          "spells": "flash,cleanse",
+          "uses": "2,0"
+        },
+        {
+          "spells": "flash,ignite",
+          "uses": "3,4"
+        },
+        {
+          "spells": "flash,heal",
+          "uses": "1,5"
+        }
+      ],
+      "totalUses": 78,
+      "replay": [
+        {
+          "seat": "b1",
+          "hero": "cinderfist",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "hero": "sting",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "hero": "gambler",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "b4",
+          "hero": "duskblade",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "hero": "voidrift",
+          "spells": "flash,cleanse"
+        },
+        {
+          "seat": "r1",
+          "hero": "razorwing",
+          "spells": "flash,ghost"
+        },
+        {
+          "seat": "r2",
+          "hero": "maestro",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "r3",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "r4",
+          "hero": "greymantle",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "r5",
+          "hero": "luminary",
+          "spells": "flash,cleanse"
+        }
+      ]
+    },
+    "mob390": {
+      "sources": [
+        {
+          "seat": "b1",
+          "source": "suggested"
+        },
+        {
+          "seat": "b2",
+          "source": "mastery"
+        },
+        {
+          "seat": "b3",
+          "source": "suggested"
+        },
+        {
+          "seat": "b4",
+          "source": "suggested"
+        },
+        {
+          "seat": "b5",
+          "source": "suggested"
+        }
+      ],
+      "layout": {
+        "vh": 844,
+        "plan": {
+          "top": 1910,
+          "bottom": 1943,
+          "h": 33
+        },
+        "label": {
+          "top": 204,
+          "bottom": 1898,
+          "h": 1694
+        },
+        "grid": {
+          "top": 271,
+          "bottom": 1885,
+          "h": 1614
+        },
+        "filters": {
+          "top": 0,
+          "bottom": 2057,
+          "h": 2057
+        },
+        "nestedScrollers": 0,
+        "pageScrollable": true
+      },
+      "planEarly": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": ""
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": ""
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": ""
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": ""
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": ""
+        }
+      ],
+      "needsEarly": {
+        "have": "",
+        "need": "TOP,JUNGLE,MID,ADC,SUPPORT"
+      },
+      "avatarsMid": [
+        {
+          "hero": "cinderfist",
+          "code": "TOP",
+          "lowfit": "0"
+        },
+        {
+          "hero": "sting",
+          "code": "JUNGLE",
+          "lowfit": "0"
+        }
+      ],
+      "needsMid": {
+        "have": "TOP,JUNGLE",
+        "need": "MID,ADC,SUPPORT"
+      },
+      "plan": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": "cinderfist",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": "sting",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": "auralith",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": "greymantle",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        }
+      ],
+      "avatars": [
+        {
+          "hero": "cinderfist",
+          "code": "TOP",
+          "lane": "上路",
+          "lowfit": "0"
+        },
+        {
+          "hero": "sting",
+          "code": "JUNGLE",
+          "lane": "打野",
+          "lowfit": "0"
+        },
+        {
+          "hero": "greymantle",
+          "code": "ADC",
+          "lane": "下路",
+          "lowfit": "1"
+        },
+        {
+          "hero": "embercoil",
+          "code": "SUPPORT",
+          "lane": "輔助",
+          "lowfit": "1"
+        },
+        {
+          "hero": "auralith",
+          "code": "MID",
+          "lane": "中路",
+          "lowfit": "0"
+        }
+      ],
+      "avatarText": [
+        "上路",
+        "打野",
+        "⚠下路",
+        "⚠輔助",
+        "中路"
+      ],
+      "loading": [
+        {
+          "lane": "上路",
+          "spells": "flash,teleport"
+        },
+        {
+          "lane": "打野",
+          "spells": "flash,smite"
+        },
+        {
+          "lane": "中路",
+          "spells": "flash,ignite"
+        },
+        {
+          "lane": "下路",
+          "spells": "flash,heal"
+        },
+        {
+          "lane": "輔助",
+          "spells": "flash,ignite"
+        },
+        {
+          "lane": "上路",
+          "spells": "flash,ghost"
+        },
+        {
+          "lane": "打野",
+          "spells": "flash,smite"
+        },
+        {
+          "lane": "中路",
+          "spells": "flash,ignite"
+        },
+        {
+          "lane": "下路",
+          "spells": "flash,barrier"
+        },
+        {
+          "lane": "輔助",
+          "spells": "flash,ignite"
+        }
+      ],
+      "spellGeo": {
+        "sq": [
+          {
+            "w": 18,
+            "h": 18,
+            "x": 73,
+            "y": 654,
+            "id": "flash"
+          },
+          {
+            "w": 18,
+            "h": 18,
+            "x": 93,
+            "y": 654,
+            "id": "ignite"
+          }
+        ],
+        "hpWidth": 42
+      },
+      "spellEvents": [
+        "B2|懲戒",
+        "R2|懲戒",
+        "B3|點燃",
+        "R3|點燃",
+        "R3|閃現",
+        "B4|治療",
+        "B5|點燃",
+        "B4|閃現",
+        "R1|幽魂",
+        "B3|閃現",
+        "B1|傳送",
+        "R4|護盾",
+        "B2|閃現",
+        "B5|閃現",
+        "R4|閃現",
+        "R2|閃現",
+        "R5|點燃",
+        "R5|閃現",
+        "R1|閃現",
+        "B1|閃現"
+      ],
+      "clickedSeat": "b3",
+      "sheet": "flash,ignite",
+      "sheetText": "⚡\n閃現\n可用\n🔥\n點燃\n可用",
+      "board": [
+        {
+          "spells": "flash,smite",
+          "uses": "3,14"
+        },
+        {
+          "spells": "flash,ignite",
+          "uses": "3,7"
+        },
+        {
+          "spells": "flash,ignite",
+          "uses": "4,5"
+        },
+        {
+          "spells": "flash,heal",
+          "uses": "1,6"
+        },
+        {
+          "spells": "flash,teleport",
+          "uses": "1,4"
+        },
+        {
+          "spells": "flash,ghost",
+          "uses": "2,4"
+        },
+        {
+          "spells": "flash,smite",
+          "uses": "3,14"
+        },
+        {
+          "spells": "flash,barrier",
+          "uses": "2,4"
+        },
+        {
+          "spells": "flash,ignite",
+          "uses": "3,6"
+        },
+        {
+          "spells": "flash,ignite",
+          "uses": "2,6"
+        }
+      ],
+      "totalUses": 94,
+      "replay": [
+        {
+          "seat": "b1",
+          "hero": "cinderfist",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "hero": "sting",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "hero": "auralith",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "b4",
+          "hero": "greymantle",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "r1",
+          "hero": "voidrift",
+          "spells": "flash,ghost"
+        },
+        {
+          "seat": "r2",
+          "hero": "duskblade",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "r3",
+          "hero": "maestro",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "r4",
+          "hero": "gambler",
+          "spells": "flash,barrier"
+        },
+        {
+          "seat": "r5",
+          "hero": "suishan",
+          "spells": "flash,ignite"
+        }
+      ]
+    },
+    "mob360": {
+      "sources": [
+        {
+          "seat": "b1",
+          "source": "suggested"
+        },
+        {
+          "seat": "b2",
+          "source": "mastery"
+        },
+        {
+          "seat": "b3",
+          "source": "suggested"
+        },
+        {
+          "seat": "b4",
+          "source": "suggested"
+        },
+        {
+          "seat": "b5",
+          "source": "suggested"
+        }
+      ],
+      "layout": {
+        "vh": 800,
+        "plan": {
+          "top": 1910,
+          "bottom": 1943,
+          "h": 33
+        },
+        "label": {
+          "top": 204,
+          "bottom": 1898,
+          "h": 1694
+        },
+        "grid": {
+          "top": 271,
+          "bottom": 1885,
+          "h": 1614
+        },
+        "filters": {
+          "top": 0,
+          "bottom": 2057,
+          "h": 2057
+        },
+        "nestedScrollers": 0,
+        "pageScrollable": true
+      },
+      "planEarly": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": ""
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": ""
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": ""
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": ""
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": ""
+        }
+      ],
+      "needsEarly": {
+        "have": "",
+        "need": "TOP,JUNGLE,MID,ADC,SUPPORT"
+      },
+      "avatarsMid": [
+        {
+          "hero": "cinderfist",
+          "code": "TOP",
+          "lowfit": "0"
+        },
+        {
+          "hero": "sting",
+          "code": "JUNGLE",
+          "lowfit": "0"
+        }
+      ],
+      "needsMid": {
+        "have": "TOP,JUNGLE",
+        "need": "MID,ADC,SUPPORT"
+      },
+      "plan": [
+        {
+          "seat": "b1",
+          "lane": "上路",
+          "hero": "cinderfist",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "lane": "打野",
+          "hero": "sting",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "lane": "中路",
+          "hero": "voidrift",
+          "spells": "flash,ghost"
+        },
+        {
+          "seat": "b4",
+          "lane": "下路",
+          "hero": "greymantle",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "lane": "輔助",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        }
+      ],
+      "avatars": [
+        {
+          "hero": "cinderfist",
+          "code": "TOP",
+          "lane": "上路",
+          "lowfit": "0"
+        },
+        {
+          "hero": "sting",
+          "code": "JUNGLE",
+          "lane": "打野",
+          "lowfit": "0"
+        },
+        {
+          "hero": "greymantle",
+          "code": "ADC",
+          "lane": "下路",
+          "lowfit": "1"
+        },
+        {
+          "hero": "embercoil",
+          "code": "SUPPORT",
+          "lane": "輔助",
+          "lowfit": "1"
+        },
+        {
+          "hero": "voidrift",
+          "code": "MID",
+          "lane": "中路",
+          "lowfit": "0"
+        }
+      ],
+      "avatarText": [
+        "上路",
+        "打野",
+        "⚠下路",
+        "⚠輔助",
+        "中路"
+      ],
+      "loading": [
+        {
+          "lane": "上路",
+          "spells": "flash,teleport"
+        },
+        {
+          "lane": "打野",
+          "spells": "flash,smite"
+        },
+        {
+          "lane": "中路",
+          "spells": "flash,ghost"
+        },
+        {
+          "lane": "下路",
+          "spells": "flash,heal"
+        },
+        {
+          "lane": "輔助",
+          "spells": "flash,ignite"
+        },
+        {
+          "lane": "上路",
+          "spells": "flash,teleport"
+        },
+        {
+          "lane": "打野",
+          "spells": "flash,smite"
+        },
+        {
+          "lane": "中路",
+          "spells": "flash,ignite"
+        },
+        {
+          "lane": "下路",
+          "spells": "flash,heal"
+        },
+        {
+          "lane": "輔助",
+          "spells": "flash,cleanse"
+        }
+      ],
+      "spellGeo": {
+        "sq": [
+          {
+            "w": 18,
+            "h": 18,
+            "x": 72,
+            "y": 618,
+            "id": "flash"
+          },
+          {
+            "w": 18,
+            "h": 18,
+            "x": 92,
+            "y": 618,
+            "id": "heal"
+          }
+        ],
+        "hpWidth": 42
+      },
+      "spellEvents": [
+        "R2|懲戒",
+        "B2|懲戒",
+        "R3|點燃",
+        "B3|幽魂",
+        "R4|治療",
+        "B4|治療",
+        "R5|閃現",
+        "R4|閃現",
+        "B5|閃現",
+        "R1|傳送",
+        "B2|閃現",
+        "R2|閃現",
+        "B4|閃現",
+        "B1|傳送",
+        "B5|點燃",
+        "B3|閃現",
+        "R1|閃現",
+        "B1|閃現"
+      ],
+      "clickedSeat": "b3",
+      "sheet": "flash,ghost",
+      "sheetText": "⚡\n閃現\n可用\n💨\n幽魂\n可用",
+      "board": [
+        {
+          "spells": "flash,smite",
+          "uses": "2,14"
+        },
+        {
+          "spells": "flash,ghost",
+          "uses": "1,5"
+        },
+        {
+          "spells": "flash,heal",
+          "uses": "1,4"
+        },
+        {
+          "spells": "flash,teleport",
+          "uses": "1,1"
+        },
+        {
+          "spells": "flash,ignite",
+          "uses": "3,6"
+        },
+        {
+          "spells": "flash,cleanse",
+          "uses": "2,0"
+        },
+        {
+          "spells": "flash,teleport",
+          "uses": "2,3"
+        },
+        {
+          "spells": "flash,heal",
+          "uses": "1,4"
+        },
+        {
+          "spells": "flash,smite",
+          "uses": "2,13"
+        },
+        {
+          "spells": "flash,ignite",
+          "uses": "3,5"
+        }
+      ],
+      "totalUses": 73,
+      "replay": [
+        {
+          "seat": "b1",
+          "hero": "cinderfist",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "b2",
+          "hero": "sting",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "b3",
+          "hero": "voidrift",
+          "spells": "flash,ghost"
+        },
+        {
+          "seat": "b4",
+          "hero": "greymantle",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "b5",
+          "hero": "embercoil",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "r1",
+          "hero": "gambler",
+          "spells": "flash,teleport"
+        },
+        {
+          "seat": "r2",
+          "hero": "auralith",
+          "spells": "flash,smite"
+        },
+        {
+          "seat": "r3",
+          "hero": "dawnstrike",
+          "spells": "flash,ignite"
+        },
+        {
+          "seat": "r4",
+          "hero": "razorwing",
+          "spells": "flash,heal"
+        },
+        {
+          "seat": "r5",
+          "hero": "maestro",
+          "spells": "flash,cleanse"
+        }
+      ]
+    }
+  }
+}
