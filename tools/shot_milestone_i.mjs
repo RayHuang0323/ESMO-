@@ -90,7 +90,11 @@ const server = spawn(process.platform === "win32" ? "npm.cmd" : "npm",
 for (let i = 0; i < 120; i++) { try { const r = await fetch(baseUrl, { redirect: "manual" }); if (r.status < 500) break; } catch { /* wait */ } await sleep(500); }
 const profileDir = resolve(ROOT, "node_modules/.cache", `esmo-i-${process.pid}`);
 const port = 9500 + (process.pid % 140);
+//  預設 headless：驗收會跑好幾分鐘，彈出來的視窗會一直搶焦點、打斷正在工作的人。
+//  需要用肉眼看瀏覽器在做什麼時，設 ESMO_SHOT_HEADED=1 就會開實體視窗。
+const HEADLESS = process.env.ESMO_SHOT_HEADED !== "1";
 const browser = spawn(CHROME, [`--remote-debugging-port=${port}`, `--user-data-dir=${profileDir}`,
+  ...(HEADLESS ? ["--headless=new", "--disable-gpu-sandbox", "--use-angle=swiftshader"] : []),
   "--no-first-run", "--no-default-browser-check", "--disable-extensions", "--hide-scrollbars",
   "--force-device-scale-factor=1", `--window-size=${DESK.w},${DESK.h}`, "--window-position=0,0", "about:blank"], { stdio: "ignore" });
 let wsUrl = null;

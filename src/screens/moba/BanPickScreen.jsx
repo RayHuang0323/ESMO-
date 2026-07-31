@@ -36,18 +36,33 @@ const assignmentToRoster = (a = {}) =>
  *  3. 多一欄「被壓制」：拿本檔既有的 `archCounterScore` 去比對方已選的英雄，
  *     不是新的分析系統，只是把 AI 早就在算的東西講給玩家聽。
  */
-function DraftPlanPanel({ plan, loadout, counterOf }) {
+function DraftPlanPanel({ plan, loadout, counterOf, open, onToggle, needs, laneByHero = {}, picks = [] }) {
   const rows = Object.entries(plan.assignment);
   const filled = rows.filter(([, a]) => a.hero).length;
+  const warn = plan.conflicts.length;
   return (
-    <div data-testid="draft-plan" data-filled={filled}
-      style={{ background: GC2.card, borderRadius: 12, padding: "10px 12px", marginBottom: 12, border: "1px solid rgba(255,255,255,0.07)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-        <span style={{ color: GC2.blue, fontSize: 11, fontWeight: 800 }}>出戰配置（自動分配）· {filled}/5</span>
-        <span style={{ color: plan.conflicts.length ? "#fbbf24" : GC2.green, fontSize: 10, fontWeight: 700 }}>
-          {plan.conflicts.length ? `⚠ ${plan.conflicts.length} 項衝突` : filled === 5 ? "✓ 無衝突" : "選角中…"}
+    <div data-testid="draft-plan" data-filled={filled} data-open={open ? "1" : "0"}
+      style={{ background: GC2.card, borderRadius: 10, marginBottom: 10, border: "1px solid rgba(255,255,255,0.06)" }}>
+      {/*  ── Hotfix1：預設收合的一行摘要 ────────────────────────────────────
+          J-close 把這塊常駐展開放在選角格**之上**，五列 ＋ 衝突說明約 150px，
+          加上禁用區與已選英雄區，把「選擇你的英雄」推到 390×844 的 66% 位置，
+          英雄格幾乎全在摺線下 ⇒ 選不完角、進不了戰鬥（Ray 回報的阻斷問題）。
+          現在預設只佔一行；詳細內容按需展開，資料一筆都沒有拿掉。 */}
+      <button data-testid="draft-plan-toggle" aria-expanded={open} onClick={onToggle}
+        style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, background: "none", border: "none",
+          padding: "8px 11px", cursor: "pointer", textAlign: "left", color: "inherit" }}>
+        <span style={{ color: "#cbd5e1", fontSize: 11, fontWeight: 800, flexShrink: 0 }}>出戰配置 {filled}/5</span>
+        {/*  收合時把最關鍵的兩件事留在這一行：還缺哪幾路、有沒有衝突。 */}
+        <span style={{ flex: 1, minWidth: 0, fontSize: 9.5, color: GC2.gray, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {needs?.need?.length ? `尚缺 ${needs.need.join("·")}` : filled === 5 ? "五路到齊" : ""}
         </span>
-      </div>
+        <span style={{ flexShrink: 0, fontSize: 9.5, fontWeight: 700, color: warn ? WARN : GC2.gray }}>
+          {warn ? `${WARN_ICON} ${warn}` : filled === 5 ? "無衝突" : ""}
+        </span>
+        <span style={{ flexShrink: 0, color: "#52525b", fontSize: 10 }}>{open ? "▾" : "▸"}</span>
+      </button>
+      {open && (
+      <div style={{ padding: "0 11px 9px" }}>
       {rows.map(([seat, a]) => {
         const sp = loadout[seat]?.spells ?? [];
         const fitColor = a.heroFit >= 1 ? GC2.green : a.heroFit >= 0.5 ? "#fbbf24" : GC2.red;
@@ -89,8 +104,32 @@ function DraftPlanPanel({ plan, loadout, counterOf }) {
         );
       })}
       {plan.conflicts.map((c) => (
-        <div key={c.seat} style={{ color: "#fbbf24", fontSize: 9, marginTop: 3 }}>⚠ {c.lane}：{c.note}</div>
+        <div key={c.seat} style={{ color: WARN, fontSize: 9, marginTop: 3 }}>{WARN_ICON} {c.lane}：{c.note}</div>
       ))}
+      {/*  Hotfix1：低適性／衝突的逐項說明從「已選英雄」區搬進來（按需展開）。
+          資料完全相同，只是不再常駐佔用選角當下的垂直空間。 */}
+      {picks.some((c) => laneByHero[c.id]?.lowFit || laneByHero[c.id]?.conflict) && (
+        <div data-testid="pick-warnings" style={{ marginTop: 5, display: "flex", flexDirection: "column", gap: 2 }}>
+          {picks.map((c) => {
+            const at = laneByHero[c.id];
+            if (!at || (!at.lowFit && !at.conflict)) return null;
+            return (
+              <span key={c.id} style={{ color: WARN, fontSize: 8.5, lineHeight: 1.4 }}>
+                {WARN_ICON} {c.zh} → {at.lane}{at.lowFit ? "：適性低" : ""}{at.conflict ? `：${at.conflict}` : ""}
+              </span>
+            );
+          })}
+        </div>
+      )}
+      {/*  陣容需求完整版（收合時只在標題列顯示「尚缺 …」）。 */}
+      <div style={{ marginTop: 5, fontSize: 9, color: GC2.gray }}>
+        已有 {needs?.have?.join("·") || "—"}　｜
+        <span style={{ color: needs?.need?.length ? WARN : GC2.green }}>
+          {needs?.need?.length ? `尚缺 ${needs.need.join("·")}` : "五路到齊"}
+        </span>
+      </div>
+      </div>
+      )}
     </div>
   );
 }
@@ -100,6 +139,16 @@ import HeroPortrait from "../../ui/HeroPortrait.jsx";
 
 const GC2 = { bg: "#0a0b0f", card: "#13151c", card2: "#1a1d26", gray: "#71717a", gold: "#fbbf24", green: "#34d399", red: "#ef4444", blue: "#3b82f6", purp: "#a78bfa" };
 const ARCH_COLOR = { 坦克: "#60a5fa", 戰士: "#f97316", 刺客: "#ef4444", 法師: "#a855f7", 射手: "#22c55e", 輔助: "#14b8a6" };
+//  Hotfix1 視覺整理：警告只有**一種**顏色與**一個**圖示。
+//  先前同一頁上「非本位」「被壓制」「衝突」各自用了 #fbbf24 / #fb7185 / #ef4444
+//  三種紅黃，玩家分不出哪個比較嚴重——其實它們都只是「提醒」，不是錯誤。
+const WARN = "#e0a458";        // 低飽和琥珀；取代原本的 #fbbf24 / #fb7185
+const WARN_ICON = "⚠";
+//  定位色降飽和後用於小面積標示（頭像邊框、標籤底），避免整頁像調色盤。
+//  原色仍保留給英雄卡本身，這裡只影響輔助性標示。
+const ARCH_DIM = {
+  坦克: "#4a7bb0", 戰士: "#b06a3a", 刺客: "#a85050", 法師: "#7a5aa8", 射手: "#3f8a52", 輔助: "#2f7a72",
+};
 
 // ════ Legacy 英雄特性分析（技能類型碼 D/C/B/M/O + 描述關鍵字）— 逐字移植 ════
 function analyzeChamp(champ) {
@@ -175,6 +224,9 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
   const [showPicker, setShowPicker] = useState(false);
   const [pickFilter, setPickFilter] = useState("全部");
   const [detailId, setDetailId] = useState(null);
+  //  Hotfix1：出戰配置與陣容細節**預設收合**。阻斷問題的主因就是垂直空間被吃光，
+  //    而這兩塊在選角當下並不需要一直攤開。收合只影響呈現，資料一筆都沒少。
+  const [planOpen, setPlanOpen] = useState(false);
   const usedRef = useRef(new Set());
 
   //  席位 → 實際上場選手（沿用 Milestone E 的先發指派，不另建一套）
@@ -320,120 +372,104 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
 
         {cur && <div style={{ background: GC2.card, borderRadius: 10, padding: "10px 14px", marginBottom: 12, borderLeft: `3px solid ${cur.team === "blue" ? GC2.blue : GC2.red}` }}><span style={{ color: cur.team === "blue" ? GC2.blue : GC2.red, fontSize: 12, fontWeight: 700 }}>{cur.team === "blue" ? "🔵 我方" : "🔴 對手"}</span><span style={{ color: "white", fontSize: 11, marginLeft: 8 }}>{cur.act === "ban" ? "禁用英雄" : "選擇英雄"}{isMyTurn ? " — 點下方選擇" : ""}</span></div>}
 
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ color: GC2.gray, fontSize: 10, fontWeight: 700, marginBottom: 6 }}>禁用</div>
-          <div style={{ display: "flex", gap: 12 }}>
-            {["blue", "red"].map((t) => (
-              <div key={t} style={{ flex: 1 }}>
-                <div style={{ color: t === "blue" ? GC2.blue : GC2.red, fontSize: 9, fontWeight: 700, marginBottom: 5 }}>{t === "blue" ? "🔵 我方" : "🔴 對手"}</div>
-                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                  {bans[t].map((c) => (<div key={c.id} style={{ width: 32, height: 32, borderRadius: 8, overflow: "hidden", opacity: 0.5, filter: "grayscale(1)" }}><ChampFace champ={c} size={32} /></div>))}
-                  {Array.from({ length: 2 - bans[t].length }).map((_, i) => (<div key={i} style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,0.06)", border: "1px dashed rgba(255,255,255,0.15)" }} />))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+        {/*  ── Hotfix1：禁用與已選英雄合併成一個精簡區塊 ────────────────────
+            原本是兩個獨立段落（各有標題列與雙欄小標），加上警告清單約 260px。
+            這裡壓成「一行標題 ＋ 一列頭像」×2，警告清單移進出戰配置的展開區，
+            省下的垂直空間直接還給下方的英雄選擇格。資料一筆都沒有拿掉。 */}
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
             <span style={{ color: GC2.gray, fontSize: 10, fontWeight: 700 }}>已選英雄</span>
-            {/*  陣容需求：下一手該補什麼位置，一眼看得出來。與頭像標示、下方摘要
-                同樣來自 draftPlan.assignment，不是第二套判定。 */}
             <span data-testid="comp-needs" data-have={compNeeds.haveCode.join(",")} data-need={compNeeds.needCode.join(",")}
-              style={{ fontSize: 9, fontWeight: 700 }}>
-              <span style={{ color: GC2.green }}>已有 {compNeeds.have.join("·") || "—"}</span>
-              <span style={{ color: "#3f3f46" }}> ｜ </span>
-              <span style={{ color: compNeeds.need.length ? "#fbbf24" : GC2.green }}>
-                {compNeeds.need.length ? `尚缺 ${compNeeds.need.join("·")}` : "五路到齊"}
-              </span>
+              style={{ fontSize: 9, fontWeight: 700, color: compNeeds.need.length ? WARN : GC2.green }}>
+              {compNeeds.need.length ? `尚缺 ${compNeeds.need.join("·")}` : "五路到齊"}
             </span>
           </div>
-          <div style={{ display: "flex", gap: 12 }}>
-            {["blue", "red"].map((t) => (
-              <div key={t} style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ color: t === "blue" ? GC2.blue : GC2.red, fontSize: 9, fontWeight: 700, marginBottom: 5 }}>{t === "blue" ? "🔵 我方" : "🔴 對手"}</div>
-                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                  {picks[t].map((c) => {
-                    //  只有我方才有分路資料（assignment 只算我方）。對手不標，
-                    //  不是留白偷懶——我們本來就不知道對手怎麼分路，標了就是編造。
-                    const at = t === "blue" ? (laneByHero[c.id] ?? null) : null;
-                    const warn = at && (at.conflict || at.lowFit);
-                    return (
-                      <button key={c.id} onClick={() => setDetailId(c.id)}
-                        data-testid={t === "blue" ? "pick-avatar" : undefined}
-                        data-hero={c.id} data-code={at?.code ?? ""} data-lane={at?.lane ?? ""} data-lowfit={at?.lowFit ? "1" : "0"}
-                        title={at ? `${at.lane}（適性 ${Math.round(at.fit * 100)}%）${at.conflict ? `／${at.conflict}` : ""}` : undefined}
-                        style={{ position: "relative", width: 40, height: 52, borderRadius: 10, padding: 0, background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>
-                        <div style={{ width: 40, height: 40, borderRadius: 10, overflow: "hidden", border: `2px solid ${ARCH_COLOR[c.arch] || (t === "blue" ? GC2.blue : GC2.red)}`, boxSizing: "border-box" }}>
-                          <ChampFace champ={c} size={36} />
+          {["blue", "red"].map((t) => (
+            <div key={t} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+              <span style={{ width: 26, flexShrink: 0, color: t === "blue" ? GC2.blue : "#c2703f", fontSize: 9, fontWeight: 800 }}>
+                {t === "blue" ? "我方" : "對手"}
+              </span>
+              <div style={{ display: "flex", gap: 3, flex: 1, minWidth: 0 }}>
+                {picks[t].map((c) => {
+                  //  只有我方才有分路資料（assignment 只算我方）。對手不標，
+                  //  不是留白偷懶——我們本來就不知道對手怎麼分路，標了就是編造。
+                  const at = t === "blue" ? (laneByHero[c.id] ?? null) : null;
+                  const warn = at && (at.conflict || at.lowFit);
+                  return (
+                    <button key={c.id} onClick={() => setDetailId(c.id)}
+                      data-testid={t === "blue" ? "pick-avatar" : undefined}
+                      data-hero={c.id} data-code={at?.code ?? ""} data-lane={at?.lane ?? ""} data-lowfit={at?.lowFit ? "1" : "0"}
+                      title={at ? `${at.lane}（適性 ${Math.round(at.fit * 100)}%）${at.conflict ? `／${at.conflict}` : ""}` : undefined}
+                      style={{ position: "relative", width: 34, height: t === "blue" ? 45 : 34, borderRadius: 8, padding: 0, background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>
+                      <div style={{ width: 34, height: 34, borderRadius: 8, overflow: "hidden", border: `1px solid ${ARCH_DIM[c.arch] ?? "rgba(255,255,255,0.18)"}`, boxSizing: "border-box" }}>
+                        <ChampFace champ={c} size={32} />
+                      </div>
+                      {/*  位置放在頭像**下方**，不疊在臉上；顯示中文路名（介面一律繁中），
+                          英文碼只留在 data-code 當驗收錨點。警示統一用一個 ⚠。 */}
+                      {t === "blue" && (
+                        <div style={{
+                          marginTop: 1, height: 10, lineHeight: "10px", borderRadius: 2,
+                          font: "800 7px system-ui",
+                          color: at ? (warn ? WARN : "#c7d2de") : "#52525b",
+                          background: at ? (warn ? "rgba(224,164,88,0.14)" : "rgba(255,255,255,0.06)") : "transparent",
+                          overflow: "hidden", whiteSpace: "nowrap", boxSizing: "border-box",
+                        }}>
+                          {at ? `${warn ? WARN_ICON : ""}${at.lane}` : "待分配"}
                         </div>
-                        {/*  位置放在頭像**下方**，不疊在臉上 ⇒ 不遮頭像也不遮名稱。
-                            顯示用**中文路名**（介面一律繁中）；英文位置碼只留在
-                            `data-code` 當驗收錨點，不給玩家看。中文兩個字在 40px
-                            寬的格子裡也比 SUPPORT 這種七個字母好排。
-                            警示只用一個 ⚠ 字元，手機上也塞得下。 */}
-                        {t === "blue" && (
-                          <div style={{
-                            marginTop: 1, height: 11, lineHeight: "11px", borderRadius: 3,
-                            font: "900 7.5px system-ui", letterSpacing: "0.02em",
-                            color: at ? (warn ? "#fb7185" : "#0b1220") : "#71717a",
-                            background: at ? (warn ? "rgba(251,113,133,0.16)" : ARCH_COLOR[c.arch] || GC2.blue) : "rgba(255,255,255,0.06)",
-                            border: warn ? "1px solid rgba(251,113,133,0.5)" : "1px solid transparent",
-                            overflow: "hidden", whiteSpace: "nowrap", textOverflow: "clip", boxSizing: "border-box",
-                          }}>
-                            {at ? `${warn ? "⚠" : ""}${at.lane}` : "待分配"}
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                  {Array.from({ length: 5 - picks[t].length }).map((_, i) => (<div key={i} style={{ width: 40, height: t === "blue" ? 52 : 40, borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(255,255,255,0.12)", flexShrink: 0 }} />))}
-                </div>
-                {/*  低適性／衝突的一行說明（只在有事時出現，不佔常駐版面） */}
-                {t === "blue" && picks.blue.some((c) => laneByHero[c.id]?.lowFit || laneByHero[c.id]?.conflict) && (
-                  <div data-testid="pick-warnings" style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 2 }}>
-                    {picks.blue.map((c) => {
-                      const at = laneByHero[c.id];
-                      if (!at || (!at.lowFit && !at.conflict)) return null;
-                      return (
-                        <span key={c.id} style={{ color: "#fb7185", fontSize: 8.5, lineHeight: 1.4 }}>
-                          ⚠ {c.zh} → {at.code}{at.lowFit ? "：適性低" : ""}{at.conflict ? `：${at.conflict}` : ""}
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
+                      )}
+                    </button>
+                  );
+                })}
+                {Array.from({ length: 5 - picks[t].length }).map((_, i) => (
+                  <div key={i} style={{ width: 34, height: 34, borderRadius: 8, background: "rgba(255,255,255,0.035)", border: "1px dashed rgba(255,255,255,0.10)", flexShrink: 0 }} />
+                ))}
               </div>
-            ))}
-          </div>
+              {/*  禁用縮到同一列的最右側（原本自成一段，含標題共約 90px）。 */}
+              <div style={{ display: "flex", gap: 2, flexShrink: 0, paddingLeft: 4, borderLeft: "1px solid rgba(255,255,255,0.07)" }} title="禁用">
+                {bans[t].map((c) => (
+                  <div key={c.id} style={{ width: 20, height: 20, borderRadius: 5, overflow: "hidden", opacity: 0.42, filter: "grayscale(1)" }}><ChampFace champ={c} size={20} /></div>
+                ))}
+                {Array.from({ length: 2 - bans[t].length }).map((_, i) => (
+                  <div key={i} style={{ width: 20, height: 20, borderRadius: 5, background: "rgba(255,255,255,0.035)", border: "1px dashed rgba(255,255,255,0.10)" }} />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
 
         {/*  J-close：出戰配置**常駐**，而且排在選角格之上。
             舊版排在下面 ⇒ 輪到你選人時，260px 高的選角格會把它推出畫面外，
             等於「選的時候看不到自己會被排到哪一路」，選完又只閃 1.2 秒就換頁。 */}
-        <DraftPlanPanel plan={draftPlan} loadout={planLoadout} counterOf={counterOf} />
+        {/*  ── Hotfix1：收合後的出戰配置只有 33px，放在英雄格上方 ──────────────
+            量測發現：把它移到英雄格**下面**之後，它會被沒有高度上限的英雄格推到
+            y≈1910——技術上捲得到，實際上要滑過上百隻英雄才看得到，等於沒有。
+            收合狀態成本極低，放回上方讓它一直在首屏，英雄格仍從首屏開始。 */}
+        <DraftPlanPanel plan={draftPlan} loadout={planLoadout} counterOf={counterOf}
+          open={planOpen} onToggle={() => setPlanOpen((v) => !v)} needs={compNeeds} laneByHero={laneByHero} picks={picks.blue} />
 
+        {/*  ── Hotfix1：輪到你選人時，英雄格排在最前面 ──────────────────────
+            「選擇你的英雄」不可以被上方資訊推走——它是這一頁唯一需要操作的東西。 */}
         {isMyTurn && showPicker && (
-          <div style={{ background: GC2.card, borderRadius: 12, padding: "12px", marginBottom: 12, border: `1px solid ${GC2.blue}` }}>
-            <div style={{ color: GC2.blue, fontSize: 11, fontWeight: 700, marginBottom: 8 }}>{cur.act === "ban" ? "選擇要禁用的英雄" : "選擇你的英雄"}</div>
+          <div style={{ background: GC2.card, borderRadius: 12, padding: "12px", marginBottom: 12, border: "1px solid rgba(120,160,220,0.28)" }}>
+            <div style={{ color: "#cbd5e1", fontSize: 11, fontWeight: 800, marginBottom: 8 }}>{cur.act === "ban" ? "選擇要禁用的英雄" : "選擇你的英雄"}</div>
             <div style={{ display: "flex", gap: 4, marginBottom: 8, overflowX: "auto" }}>
-              {["全部", "坦克", "戰士", "刺客", "法師", "射手", "輔助"].map((f) => (<button key={f} onClick={() => setPickFilter(f)} style={{ flexShrink: 0, padding: "4px 10px", borderRadius: 99, border: "none", cursor: "pointer", background: pickFilter === f ? (ARCH_COLOR[f] || GC2.blue) : "rgba(255,255,255,0.06)", color: pickFilter === f ? "#fff" : GC2.gray, fontSize: 10, fontWeight: 700 }}>{f}</button>))}
+              {["全部", "坦克", "戰士", "刺客", "法師", "射手", "輔助"].map((f) => (<button key={f} onClick={() => setPickFilter(f)} style={{ flexShrink: 0, padding: "4px 10px", border: "none", cursor: "pointer", background: pickFilter === f ? "rgba(255,255,255,0.14)" : "transparent", color: pickFilter === f ? "#e8eef6" : GC2.gray, fontSize: 10, fontWeight: 700, borderBottom: pickFilter === f ? `2px solid ${ARCH_DIM[f] ?? GC2.blue}` : "2px solid transparent", borderRadius: 6 }}>{f}</button>))}
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 6, maxHeight: 260, overflowY: "auto" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 6, /* Hotfix1：移除巢狀捲動 —— 整頁單一捲動軸，手機才不會「滑不到底」 */ }}>
               {pool.filter((c) => pickFilter === "全部" || c.arch === pickFilter).map((c) => (
-                <div key={c.id} style={{ background: GC2.card2, border: "1.5px solid rgba(255,255,255,0.06)", borderRadius: 9, padding: "6px 3px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, position: "relative" }}>
+                <div key={c.id} style={{ background: GC2.card2, border: "1px solid rgba(255,255,255,0.05)", borderRadius: 8, padding: "6px 3px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, position: "relative" }}>
                   <button onClick={() => setDetailId(c.id)} style={{ position: "absolute", top: 2, right: 2, width: 15, height: 15, borderRadius: "50%", background: "rgba(0,0,0,0.5)", border: "none", cursor: "pointer", color: "#a1a1aa", fontSize: 9, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>ⓘ</button>
                   <button onClick={() => playerChoose(c)} style={{ background: "transparent", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, width: "100%", padding: 0 }}>
                     <ChampFace champ={c} size={34} />
                     <span style={{ color: "white", fontSize: 7, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{c.zh}</span>
-                    <span style={{ color: ARCH_COLOR[c.arch], fontSize: 6.5 }}>{c.arch}</span>
+                    <span style={{ color: ARCH_DIM[c.arch] ?? GC2.gray, fontSize: 6.5 }}>{c.arch}</span>
                   </button>
                 </div>
               ))}
             </div>
           </div>
         )}
+
 
         <div style={{ background: GC2.card, borderRadius: 12, padding: "12px 14px" }}>
           <div style={{ color: GC2.gray, fontSize: 10, fontWeight: 700, marginBottom: 8 }}>選角動態</div>
