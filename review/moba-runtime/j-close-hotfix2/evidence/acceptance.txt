@@ -1,0 +1,292 @@
+(node:92864) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+✅ desk1920 0a) 進入賽前配置
+✅ desk1920 0b) 進入 Ban/Pick
+✅ desk1920 1a) 英雄格是真正的捲動容器（overflow-y auto，351／1620）
+✅ desk1920 1b) 捲動區沒有任何「裁掉內容又不能捲」的祖先
+✅ desk1920 1c) 全頁只有這一個真捲動軸（不是巢狀捲動）
+✅ desk1920 1d) overscroll-behavior 為 contain（捲到底不帶動外層）
+✅ desk1920 1e) touch-action 為 pan-y（明確吃垂直手勢）
+✅ desk1920 1f) 上方出戰配置摘要仍在首屏
+✅ desk1920 1g) 位置篩選列仍在首屏
+✅ desk1920 1h) 搜尋框存在且在首屏
+✅ desk1920 1i) 捲動區整個在 viewport 內（沒有被外框裁掉）
+  📸 desk1920-01-banpick-frame.png
+✅ desk1920 2a) 搜尋「之」產生 ≥6 列（實測 6 列／30 隻）
+✅ desk1920 2b) 計數徽章與實際卡片數一致
+✅ desk1920 3a) 6 列情境：手勢真的捲動了（0 → 135）
+✅ desk1920 3b) 6 列情境：捲到最底（135／135）
+✅ desk1920 3c) 6 列情境：最後一位英雄（tieshixin）完整落在捲動框內
+✅ desk1920 3d) 6 列情境：最後一位英雄完整落在 viewport 內
+✅ desk1920 3e) 6 列情境：最後一位英雄沒有被任何東西蓋住（elementFromPoint 命中卡片本身）
+  📸 desk1920-02-scrolled-bottom-6rows.png
+✅ desk1920 3f) 全部（100 隻／20 列）也能捲到最底
+✅ desk1920 3g) 全部情境：最後一位英雄（linghun）完整可見且未被遮住
+✅ desk1920 4a) 切換位置篩選後英雄格回到頂部（1269 → 0）
+✅ desk1920 4b) 輸入搜尋關鍵字後英雄格回到頂部（1269 → 0）
+✅ desk1920 5a) 從英雄卡上起手拖曳後，被拖的那隻（embercoil）仍在池子裡（沒被選走）
+✅ desk1920 5b) 拖曳後已選數量不變（0 → 0）
+✅ desk1920 5c) 拖曳後仍停在選角格（沒有被帶去別的畫面／彈窗）
+✅ desk1920 6a) 短點擊選到了指名的那一隻（hunpo：已離開英雄池）
+✅ desk1920 6b) 短點擊確實產生了一次選角動作（動態有更新）
+✅ desk1920 7a) 沒有任何「被壓制」節點（draft-plan-counter = 0）
+✅ desk1920 7b) 摘要列不再帶 data-counter 屬性
+✅ desk1920 7c) 整頁文字不再出現「克制／被壓制」
+✅ desk1920 8a) 適性仍在
+✅ desk1920 8b) 陣容需求（尚缺／五路到齊）仍在
+✅ desk1920 8c) comp-needs 錨點仍在且有值
+  📸 desk1920-03-plan-no-counter.png
+✅ desk1366 0a) 進入賽前配置
+✅ desk1366 0b) 進入 Ban/Pick
+✅ desk1366 1a) 英雄格是真正的捲動容器（overflow-y auto，267／1620）
+✅ desk1366 1b) 捲動區沒有任何「裁掉內容又不能捲」的祖先
+✅ desk1366 1c) 全頁只有這一個真捲動軸（不是巢狀捲動）
+✅ desk1366 1d) overscroll-behavior 為 contain（捲到底不帶動外層）
+✅ desk1366 1e) touch-action 為 pan-y（明確吃垂直手勢）
+✅ desk1366 1f) 上方出戰配置摘要仍在首屏
+✅ desk1366 1g) 位置篩選列仍在首屏
+✅ desk1366 1h) 搜尋框存在且在首屏
+✅ desk1366 1i) 捲動區整個在 viewport 內（沒有被外框裁掉）
+  📸 desk1366-01-banpick-frame.png
+✅ desk1366 2a) 搜尋「之」產生 ≥6 列（實測 6 列／30 隻）
+✅ desk1366 2b) 計數徽章與實際卡片數一致
+✅ desk1366 3a) 6 列情境：手勢真的捲動了（0 → 219）
+✅ desk1366 3b) 6 列情境：捲到最底（219／219）
+✅ desk1366 3c) 6 列情境：最後一位英雄（tieshixin）完整落在捲動框內
+✅ desk1366 3d) 6 列情境：最後一位英雄完整落在 viewport 內
+✅ desk1366 3e) 6 列情境：最後一位英雄沒有被任何東西蓋住（elementFromPoint 命中卡片本身）
+  📸 desk1366-02-scrolled-bottom-6rows.png
+✅ desk1366 3f) 全部（100 隻／20 列）也能捲到最底
+✅ desk1366 3g) 全部情境：最後一位英雄（linghun）完整可見且未被遮住
+✅ desk1366 4a) 切換位置篩選後英雄格回到頂部（1353 → 0）
+✅ desk1366 4b) 輸入搜尋關鍵字後英雄格回到頂部（1353 → 0）
+✅ desk1366 5a) 從英雄卡上起手拖曳後，被拖的那隻（embercoil）仍在池子裡（沒被選走）
+✅ desk1366 5b) 拖曳後已選數量不變（0 → 0）
+✅ desk1366 5c) 拖曳後仍停在選角格（沒有被帶去別的畫面／彈窗）
+✅ desk1366 6a) 短點擊選到了指名的那一隻（hunpo：已離開英雄池）
+✅ desk1366 6b) 短點擊確實產生了一次選角動作（動態有更新）
+✅ desk1366 7a) 沒有任何「被壓制」節點（draft-plan-counter = 0）
+✅ desk1366 7b) 摘要列不再帶 data-counter 屬性
+✅ desk1366 7c) 整頁文字不再出現「克制／被壓制」
+✅ desk1366 8a) 適性仍在
+✅ desk1366 8b) 陣容需求（尚缺／五路到齊）仍在
+✅ desk1366 8c) comp-needs 錨點仍在且有值
+  📸 desk1366-03-plan-no-counter.png
+✅ mob430 0a) 進入賽前配置
+✅ mob430 0b) 進入 Ban/Pick
+✅ mob430 1a) 英雄格是真正的捲動容器（overflow-y auto，351／1620）
+✅ mob430 1b) 捲動區沒有任何「裁掉內容又不能捲」的祖先
+✅ mob430 1c) 全頁只有這一個真捲動軸（不是巢狀捲動）
+✅ mob430 1d) overscroll-behavior 為 contain（捲到底不帶動外層）
+✅ mob430 1e) touch-action 為 pan-y（明確吃垂直手勢）
+✅ mob430 1f) 上方出戰配置摘要仍在首屏
+✅ mob430 1g) 位置篩選列仍在首屏
+✅ mob430 1h) 搜尋框存在且在首屏
+✅ mob430 1i) 捲動區整個在 viewport 內（沒有被外框裁掉）
+  📸 mob430-01-banpick-frame.png
+✅ mob430 2a) 搜尋「之」產生 ≥6 列（實測 6 列／30 隻）
+✅ mob430 2b) 計數徽章與實際卡片數一致
+✅ mob430 3a) 6 列情境：手勢真的捲動了（0 → 135）
+✅ mob430 3b) 6 列情境：捲到最底（135／135）
+✅ mob430 3c) 6 列情境：最後一位英雄（tieshixin）完整落在捲動框內
+✅ mob430 3d) 6 列情境：最後一位英雄完整落在 viewport 內
+✅ mob430 3e) 6 列情境：最後一位英雄沒有被任何東西蓋住（elementFromPoint 命中卡片本身）
+  📸 mob430-02-scrolled-bottom-6rows.png
+✅ mob430 3f) 全部（100 隻／20 列）也能捲到最底
+✅ mob430 3g) 全部情境：最後一位英雄（linghun）完整可見且未被遮住
+✅ mob430 4a) 切換位置篩選後英雄格回到頂部（1269 → 0）
+✅ mob430 4b) 輸入搜尋關鍵字後英雄格回到頂部（1269 → 0）
+✅ mob430 5a) 從英雄卡上起手拖曳後，被拖的那隻（embercoil）仍在池子裡（沒被選走）
+✅ mob430 5b) 拖曳後已選數量不變（0 → 0）
+✅ mob430 5c) 拖曳後仍停在選角格（沒有被帶去別的畫面／彈窗）
+✅ mob430 6a) 短點擊選到了指名的那一隻（hunpo：已離開英雄池）
+✅ mob430 6b) 短點擊確實產生了一次選角動作（動態有更新）
+✅ mob430 7a) 沒有任何「被壓制」節點（draft-plan-counter = 0）
+✅ mob430 7b) 摘要列不再帶 data-counter 屬性
+✅ mob430 7c) 整頁文字不再出現「克制／被壓制」
+✅ mob430 8a) 適性仍在
+✅ mob430 8b) 陣容需求（尚缺／五路到齊）仍在
+✅ mob430 8c) comp-needs 錨點仍在且有值
+  📸 mob430-03-plan-no-counter.png
+✅ mob412 0a) 進入賽前配置
+✅ mob412 0b) 進入 Ban/Pick
+✅ mob412 1a) 英雄格是真正的捲動容器（overflow-y auto，351／1620）
+✅ mob412 1b) 捲動區沒有任何「裁掉內容又不能捲」的祖先
+✅ mob412 1c) 全頁只有這一個真捲動軸（不是巢狀捲動）
+✅ mob412 1d) overscroll-behavior 為 contain（捲到底不帶動外層）
+✅ mob412 1e) touch-action 為 pan-y（明確吃垂直手勢）
+✅ mob412 1f) 上方出戰配置摘要仍在首屏
+✅ mob412 1g) 位置篩選列仍在首屏
+✅ mob412 1h) 搜尋框存在且在首屏
+✅ mob412 1i) 捲動區整個在 viewport 內（沒有被外框裁掉）
+  📸 mob412-01-banpick-frame.png
+✅ mob412 2a) 搜尋「之」產生 ≥6 列（實測 6 列／30 隻）
+✅ mob412 2b) 計數徽章與實際卡片數一致
+✅ mob412 3a) 6 列情境：手勢真的捲動了（0 → 135）
+✅ mob412 3b) 6 列情境：捲到最底（135／135）
+✅ mob412 3c) 6 列情境：最後一位英雄（tieshixin）完整落在捲動框內
+✅ mob412 3d) 6 列情境：最後一位英雄完整落在 viewport 內
+✅ mob412 3e) 6 列情境：最後一位英雄沒有被任何東西蓋住（elementFromPoint 命中卡片本身）
+  📸 mob412-02-scrolled-bottom-6rows.png
+✅ mob412 3f) 全部（100 隻／20 列）也能捲到最底
+✅ mob412 3g) 全部情境：最後一位英雄（linghun）完整可見且未被遮住
+✅ mob412 4a) 切換位置篩選後英雄格回到頂部（1269 → 0）
+✅ mob412 4b) 輸入搜尋關鍵字後英雄格回到頂部（1269 → 0）
+✅ mob412 5a) 從英雄卡上起手拖曳後，被拖的那隻（embercoil）仍在池子裡（沒被選走）
+✅ mob412 5b) 拖曳後已選數量不變（0 → 0）
+✅ mob412 5c) 拖曳後仍停在選角格（沒有被帶去別的畫面／彈窗）
+✅ mob412 6a) 短點擊選到了指名的那一隻（hunpo：已離開英雄池）
+✅ mob412 6b) 短點擊確實產生了一次選角動作（動態有更新）
+✅ mob412 7a) 沒有任何「被壓制」節點（draft-plan-counter = 0）
+✅ mob412 7b) 摘要列不再帶 data-counter 屬性
+✅ mob412 7c) 整頁文字不再出現「克制／被壓制」
+✅ mob412 8a) 適性仍在
+✅ mob412 8b) 陣容需求（尚缺／五路到齊）仍在
+✅ mob412 8c) comp-needs 錨點仍在且有值
+  📸 mob412-03-plan-no-counter.png
+✅ mob390 0a) 進入賽前配置
+✅ mob390 0b) 進入 Ban/Pick
+✅ mob390 1a) 英雄格是真正的捲動容器（overflow-y auto，334／1620）
+✅ mob390 1b) 捲動區沒有任何「裁掉內容又不能捲」的祖先
+✅ mob390 1c) 全頁只有這一個真捲動軸（不是巢狀捲動）
+✅ mob390 1d) overscroll-behavior 為 contain（捲到底不帶動外層）
+✅ mob390 1e) touch-action 為 pan-y（明確吃垂直手勢）
+✅ mob390 1f) 上方出戰配置摘要仍在首屏
+✅ mob390 1g) 位置篩選列仍在首屏
+✅ mob390 1h) 搜尋框存在且在首屏
+✅ mob390 1i) 捲動區整個在 viewport 內（沒有被外框裁掉）
+  📸 mob390-01-banpick-frame.png
+✅ mob390 2a) 搜尋「之」產生 ≥6 列（實測 6 列／30 隻）
+✅ mob390 2b) 計數徽章與實際卡片數一致
+✅ mob390 3a) 6 列情境：手勢真的捲動了（0 → 152）
+✅ mob390 3b) 6 列情境：捲到最底（152／152）
+✅ mob390 3c) 6 列情境：最後一位英雄（tieshixin）完整落在捲動框內
+✅ mob390 3d) 6 列情境：最後一位英雄完整落在 viewport 內
+✅ mob390 3e) 6 列情境：最後一位英雄沒有被任何東西蓋住（elementFromPoint 命中卡片本身）
+  📸 mob390-02-scrolled-bottom-6rows.png
+✅ mob390 3f) 全部（100 隻／20 列）也能捲到最底
+✅ mob390 3g) 全部情境：最後一位英雄（linghun）完整可見且未被遮住
+✅ mob390 4a) 切換位置篩選後英雄格回到頂部（1286 → 0）
+✅ mob390 4b) 輸入搜尋關鍵字後英雄格回到頂部（1286 → 0）
+✅ mob390 5a) 從英雄卡上起手拖曳後，被拖的那隻（embercoil）仍在池子裡（沒被選走）
+✅ mob390 5b) 拖曳後已選數量不變（0 → 0）
+✅ mob390 5c) 拖曳後仍停在選角格（沒有被帶去別的畫面／彈窗）
+✅ mob390 6a) 短點擊選到了指名的那一隻（hunpo：已離開英雄池）
+✅ mob390 6b) 短點擊確實產生了一次選角動作（動態有更新）
+✅ mob390 7a) 沒有任何「被壓制」節點（draft-plan-counter = 0）
+✅ mob390 7b) 摘要列不再帶 data-counter 屬性
+✅ mob390 7c) 整頁文字不再出現「克制／被壓制」
+✅ mob390 8a) 適性仍在
+✅ mob390 8b) 陣容需求（尚缺／五路到齊）仍在
+✅ mob390 8c) comp-needs 錨點仍在且有值
+  📸 mob390-03-plan-no-counter.png
+✅ mob360 0a) 進入賽前配置
+✅ mob360 0b) 進入 Ban/Pick
+✅ mob360 1a) 英雄格是真正的捲動容器（overflow-y auto，295／1620）
+✅ mob360 1b) 捲動區沒有任何「裁掉內容又不能捲」的祖先
+✅ mob360 1c) 全頁只有這一個真捲動軸（不是巢狀捲動）
+✅ mob360 1d) overscroll-behavior 為 contain（捲到底不帶動外層）
+✅ mob360 1e) touch-action 為 pan-y（明確吃垂直手勢）
+✅ mob360 1f) 上方出戰配置摘要仍在首屏
+✅ mob360 1g) 位置篩選列仍在首屏
+✅ mob360 1h) 搜尋框存在且在首屏
+✅ mob360 1i) 捲動區整個在 viewport 內（沒有被外框裁掉）
+  📸 mob360-01-banpick-frame.png
+✅ mob360 2a) 搜尋「之」產生 ≥6 列（實測 6 列／30 隻）
+✅ mob360 2b) 計數徽章與實際卡片數一致
+✅ mob360 3a) 6 列情境：手勢真的捲動了（0 → 191）
+✅ mob360 3b) 6 列情境：捲到最底（191／191）
+✅ mob360 3c) 6 列情境：最後一位英雄（tieshixin）完整落在捲動框內
+✅ mob360 3d) 6 列情境：最後一位英雄完整落在 viewport 內
+✅ mob360 3e) 6 列情境：最後一位英雄沒有被任何東西蓋住（elementFromPoint 命中卡片本身）
+  📸 mob360-02-scrolled-bottom-6rows.png
+✅ mob360 3f) 全部（100 隻／20 列）也能捲到最底
+✅ mob360 3g) 全部情境：最後一位英雄（linghun）完整可見且未被遮住
+✅ mob360 4a) 切換位置篩選後英雄格回到頂部（1325 → 0）
+✅ mob360 4b) 輸入搜尋關鍵字後英雄格回到頂部（1325 → 0）
+✅ mob360 5a) 從英雄卡上起手拖曳後，被拖的那隻（embercoil）仍在池子裡（沒被選走）
+✅ mob360 5b) 拖曳後已選數量不變（0 → 0）
+✅ mob360 5c) 拖曳後仍停在選角格（沒有被帶去別的畫面／彈窗）
+✅ mob360 6a) 短點擊選到了指名的那一隻（hunpo：已離開英雄池）
+✅ mob360 6b) 短點擊確實產生了一次選角動作（動態有更新）
+✅ mob360 7a) 沒有任何「被壓制」節點（draft-plan-counter = 0）
+✅ mob360 7b) 摘要列不再帶 data-counter 屬性
+✅ mob360 7c) 整頁文字不再出現「克制／被壓制」
+✅ mob360 8a) 適性仍在
+✅ mob360 8b) 陣容需求（尚缺／五路到齊）仍在
+✅ mob360 8c) comp-needs 錨點仍在且有值
+  📸 mob360-03-plan-no-counter.png
+✅ desk1920 flow F1) 進入 Ban/Pick
+✅ desk1920 flow F2) 這個尺寸選得完角（14 步走到「選角完成」）
+✅ desk1920 flow F3) 我方五隻都選好且都有分路
+  📸 desk1920-04-draft-done.png
+✅ desk1920 flow F4) 確認鈕可見可按
+✅ desk1920 flow F5) 進入 Loading
+✅ desk1920 flow F6) 進入正式 GameView
+✅ desk1920 flow F7) 打到終局並進入 Result
+  📸 desk1920-05-result.png
+✅ desk1920 flow F8) 可以進入 Replay
+  📸 desk1920-06-replay.png
+✅ desk1366 flow F1) 進入 Ban/Pick
+✅ desk1366 flow F2) 這個尺寸選得完角（14 步走到「選角完成」）
+✅ desk1366 flow F3) 我方五隻都選好且都有分路
+  📸 desk1366-04-draft-done.png
+✅ desk1366 flow F4) 確認鈕可見可按
+✅ desk1366 flow F5) 進入 Loading
+✅ desk1366 flow F6) 進入正式 GameView
+✅ desk1366 flow F7) 打到終局並進入 Result
+  📸 desk1366-05-result.png
+✅ desk1366 flow F8) 可以進入 Replay
+  📸 desk1366-06-replay.png
+✅ mob430 flow F1) 進入 Ban/Pick
+✅ mob430 flow F2) 這個尺寸選得完角（14 步走到「選角完成」）
+✅ mob430 flow F3) 我方五隻都選好且都有分路
+  📸 mob430-04-draft-done.png
+✅ mob430 flow F4) 確認鈕可見可按
+✅ mob430 flow F5) 進入 Loading
+✅ mob430 flow F6) 進入正式 GameView
+✅ mob430 flow F7) 打到終局並進入 Result
+  📸 mob430-05-result.png
+✅ mob430 flow F8) 可以進入 Replay
+  📸 mob430-06-replay.png
+✅ mob412 flow F1) 進入 Ban/Pick
+✅ mob412 flow F2) 這個尺寸選得完角（14 步走到「選角完成」）
+✅ mob412 flow F3) 我方五隻都選好且都有分路
+  📸 mob412-04-draft-done.png
+✅ mob412 flow F4) 確認鈕可見可按
+✅ mob412 flow F5) 進入 Loading
+✅ mob412 flow F6) 進入正式 GameView
+✅ mob412 flow F7) 打到終局並進入 Result
+  📸 mob412-05-result.png
+✅ mob412 flow F8) 可以進入 Replay
+  📸 mob412-06-replay.png
+✅ mob390 flow F1) 進入 Ban/Pick
+✅ mob390 flow F2) 這個尺寸選得完角（14 步走到「選角完成」）
+✅ mob390 flow F3) 我方五隻都選好且都有分路
+  📸 mob390-04-draft-done.png
+✅ mob390 flow F4) 確認鈕可見可按
+✅ mob390 flow F5) 進入 Loading
+✅ mob390 flow F6) 進入正式 GameView
+✅ mob390 flow F7) 打到終局並進入 Result
+  📸 mob390-05-result.png
+✅ mob390 flow F8) 可以進入 Replay
+  📸 mob390-06-replay.png
+✅ mob360 flow F1) 進入 Ban/Pick
+✅ mob360 flow F2) 這個尺寸選得完角（14 步走到「選角完成」）
+✅ mob360 flow F3) 我方五隻都選好且都有分路
+  📸 mob360-04-draft-done.png
+✅ mob360 flow F4) 確認鈕可見可按
+✅ mob360 flow F5) 進入 Loading
+✅ mob360 flow F6) 進入正式 GameView
+✅ mob360 flow F7) 打到終局並進入 Result
+  📸 mob360-05-result.png
+✅ mob360 flow F8) 可以進入 Replay
+  📸 mob360-06-replay.png
+✅ 跨尺寸 A) 六個尺寸都只有一個真捲動軸，且就是英雄格
+✅ 跨尺寸 B) 六個尺寸都沒有「裁掉又不能捲」的祖先
+✅ 跨尺寸 C) 六個尺寸都捲得到最後一位英雄且未被遮住（100 隻的最壞情況）
+✅ 跨尺寸 D) 六個尺寸切換篩選與搜尋都回到頂部
+✅ 跨尺寸 E) 六個尺寸都沒有克制關係顯示
+
+✅ PASS　證據：D:\OneDrive\文件\GitHub\ESMO\review\moba-runtime\j-close-hotfix2\evidence
+EXIT=0

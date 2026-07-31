@@ -1,0 +1,4100 @@
+{
+  "notes": [
+    {
+      "label": "desk1920 0a) 進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 0b) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 1a) 英雄格是真正的捲動容器（overflow-y auto，351／1620）",
+      "ok": true,
+      "extra": {
+        "vh": 1080,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "touchAction": "pan-y",
+        "clientH": 351,
+        "scrollH": 1620,
+        "canScroll": true,
+        "clippingAncestors": [],
+        "realScrollers": [
+          "hero-grid-scroll"
+        ],
+        "plan": {
+          "top": 209,
+          "bottom": 242,
+          "h": 33
+        },
+        "search": {
+          "top": 320,
+          "bottom": 346,
+          "h": 26
+        },
+        "filters": {
+          "top": 287,
+          "bottom": 311,
+          "h": 24
+        },
+        "scroller": {
+          "top": 355,
+          "bottom": 706,
+          "h": 351
+        },
+        "docScrollable": false
+      }
+    },
+    {
+      "label": "desk1920 1b) 捲動區沒有任何「裁掉內容又不能捲」的祖先",
+      "ok": true,
+      "extra": []
+    },
+    {
+      "label": "desk1920 1c) 全頁只有這一個真捲動軸（不是巢狀捲動）",
+      "ok": true,
+      "extra": [
+        "hero-grid-scroll"
+      ]
+    },
+    {
+      "label": "desk1920 1d) overscroll-behavior 為 contain（捲到底不帶動外層）",
+      "ok": true,
+      "extra": "contain"
+    },
+    {
+      "label": "desk1920 1e) touch-action 為 pan-y（明確吃垂直手勢）",
+      "ok": true,
+      "extra": "pan-y"
+    },
+    {
+      "label": "desk1920 1f) 上方出戰配置摘要仍在首屏",
+      "ok": true,
+      "extra": {
+        "top": 209,
+        "bottom": 242,
+        "h": 33
+      }
+    },
+    {
+      "label": "desk1920 1g) 位置篩選列仍在首屏",
+      "ok": true,
+      "extra": {
+        "top": 287,
+        "bottom": 311,
+        "h": 24
+      }
+    },
+    {
+      "label": "desk1920 1h) 搜尋框存在且在首屏",
+      "ok": true,
+      "extra": {
+        "top": 320,
+        "bottom": 346,
+        "h": 26
+      }
+    },
+    {
+      "label": "desk1920 1i) 捲動區整個在 viewport 內（沒有被外框裁掉）",
+      "ok": true,
+      "extra": {
+        "scroller": {
+          "top": 355,
+          "bottom": 706,
+          "h": 351
+        },
+        "vh": 1080
+      }
+    },
+    {
+      "label": "desk1920 2a) 搜尋「之」產生 ≥6 列（實測 6 列／30 隻）",
+      "ok": true,
+      "extra": {
+        "cards": 30,
+        "badge": 30,
+        "rows": 6
+      }
+    },
+    {
+      "label": "desk1920 2b) 計數徽章與實際卡片數一致",
+      "ok": true,
+      "extra": {
+        "cards": 30,
+        "badge": 30,
+        "rows": 6
+      }
+    },
+    {
+      "label": "desk1920 3a) 6 列情境：手勢真的捲動了（0 → 135）",
+      "ok": true,
+      "extra": {
+        "before": {
+          "x": 960,
+          "top": 355,
+          "bottom": 706,
+          "h": 351,
+          "scrollTop": 0,
+          "maxScroll": 135
+        },
+        "after": {
+          "x": 960,
+          "top": 355,
+          "bottom": 706,
+          "h": 351,
+          "scrollTop": 135,
+          "maxScroll": 135
+        }
+      }
+    },
+    {
+      "label": "desk1920 3b) 6 列情境：捲到最底（135／135）",
+      "ok": true,
+      "extra": {
+        "x": 960,
+        "top": 355,
+        "bottom": 706,
+        "h": 351,
+        "scrollTop": 135,
+        "maxScroll": 135
+      }
+    },
+    {
+      "label": "desk1920 3c) 6 列情境：最後一位英雄（tieshixin）完整落在捲動框內",
+      "ok": true,
+      "extra": {
+        "hero": "tieshixin",
+        "total": 30,
+        "top": 625,
+        "bottom": 700,
+        "scrollerTop": 355,
+        "scrollerBottom": 706,
+        "vh": 1080,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "desk1920 3d) 6 列情境：最後一位英雄完整落在 viewport 內",
+      "ok": true,
+      "extra": {
+        "hero": "tieshixin",
+        "total": 30,
+        "top": 625,
+        "bottom": 700,
+        "scrollerTop": 355,
+        "scrollerBottom": 706,
+        "vh": 1080,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "desk1920 3e) 6 列情境：最後一位英雄沒有被任何東西蓋住（elementFromPoint 命中卡片本身）",
+      "ok": true,
+      "extra": {
+        "hero": "tieshixin",
+        "total": 30,
+        "top": 625,
+        "bottom": 700,
+        "scrollerTop": 355,
+        "scrollerBottom": 706,
+        "vh": 1080,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "desk1920 3f) 全部（100 隻／20 列）也能捲到最底",
+      "ok": true,
+      "extra": {
+        "x": 960,
+        "top": 355,
+        "bottom": 706,
+        "h": 351,
+        "scrollTop": 1269,
+        "maxScroll": 1269
+      }
+    },
+    {
+      "label": "desk1920 3g) 全部情境：最後一位英雄（linghun）完整可見且未被遮住",
+      "ok": true,
+      "extra": {
+        "hero": "linghun",
+        "total": 100,
+        "top": 625,
+        "bottom": 700,
+        "scrollerTop": 355,
+        "scrollerBottom": 706,
+        "vh": 1080,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "desk1920 4a) 切換位置篩選後英雄格回到頂部（1269 → 0）",
+      "ok": true,
+      "extra": {
+        "before": 1269,
+        "after": 0
+      }
+    },
+    {
+      "label": "desk1920 4b) 輸入搜尋關鍵字後英雄格回到頂部（1269 → 0）",
+      "ok": true,
+      "extra": {
+        "before": 1269,
+        "after": 0
+      }
+    },
+    {
+      "label": "desk1920 5a) 從英雄卡上起手拖曳後，被拖的那隻（embercoil）仍在池子裡（沒被選走）",
+      "ok": true,
+      "extra": {
+        "dragProbe": {
+          "hero": "embercoil",
+          "x": 954,
+          "y": 474,
+          "picks": 0,
+          "cards": 100
+        },
+        "afterDrag": {
+          "picks": 0,
+          "stillInGrid": true,
+          "pickerOpen": true
+        }
+      }
+    },
+    {
+      "label": "desk1920 5b) 拖曳後已選數量不變（0 → 0）",
+      "ok": true,
+      "extra": {
+        "dragProbe": {
+          "hero": "embercoil",
+          "x": 954,
+          "y": 474,
+          "picks": 0,
+          "cards": 100
+        },
+        "afterDrag": {
+          "picks": 0,
+          "stillInGrid": true,
+          "pickerOpen": true
+        }
+      }
+    },
+    {
+      "label": "desk1920 5c) 拖曳後仍停在選角格（沒有被帶去別的畫面／彈窗）",
+      "ok": true,
+      "extra": {
+        "picks": 0,
+        "stillInGrid": true,
+        "pickerOpen": true
+      }
+    },
+    {
+      "label": "desk1920 6a) 短點擊選到了指名的那一隻（hunpo：已離開英雄池）",
+      "ok": true,
+      "extra": {
+        "targetHero": "hunpo",
+        "pos": {
+          "x": 954,
+          "y": 531
+        },
+        "beforeTap": {
+          "picks": 0,
+          "log": "選角動態\n準備開始…"
+        },
+        "afterTap": {
+          "gone": true,
+          "log": "選角動態\n🔴 對手 禁用 荊棘壁壘",
+          "picks": 0
+        }
+      }
+    },
+    {
+      "label": "desk1920 6b) 短點擊確實產生了一次選角動作（動態有更新）",
+      "ok": true,
+      "extra": {
+        "before": "選角動態\n準備開始…",
+        "after": "選角動態\n🔴 對手 禁用 荊棘壁壘"
+      }
+    },
+    {
+      "label": "desk1920 7a) 沒有任何「被壓制」節點（draft-plan-counter = 0）",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "desk1920 7b) 摘要列不再帶 data-counter 屬性",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "desk1920 7c) 整頁文字不再出現「克制／被壓制」",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "desk1920 8a) 適性仍在",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "desk1920 8b) 陣容需求（尚缺／五路到齊）仍在",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "desk1920 8c) comp-needs 錨點仍在且有值",
+      "ok": true,
+      "extra": [
+        {
+          "have": "",
+          "need": "TOP,JUNGLE,MID,ADC,SUPPORT"
+        }
+      ]
+    },
+    {
+      "label": "desk1366 0a) 進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 0b) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 1a) 英雄格是真正的捲動容器（overflow-y auto，267／1620）",
+      "ok": true,
+      "extra": {
+        "vh": 768,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "touchAction": "pan-y",
+        "clientH": 267,
+        "scrollH": 1620,
+        "canScroll": true,
+        "clippingAncestors": [],
+        "realScrollers": [
+          "hero-grid-scroll"
+        ],
+        "plan": {
+          "top": 209,
+          "bottom": 242,
+          "h": 33
+        },
+        "search": {
+          "top": 320,
+          "bottom": 346,
+          "h": 26
+        },
+        "filters": {
+          "top": 287,
+          "bottom": 311,
+          "h": 24
+        },
+        "scroller": {
+          "top": 355,
+          "bottom": 622,
+          "h": 267
+        },
+        "docScrollable": false
+      }
+    },
+    {
+      "label": "desk1366 1b) 捲動區沒有任何「裁掉內容又不能捲」的祖先",
+      "ok": true,
+      "extra": []
+    },
+    {
+      "label": "desk1366 1c) 全頁只有這一個真捲動軸（不是巢狀捲動）",
+      "ok": true,
+      "extra": [
+        "hero-grid-scroll"
+      ]
+    },
+    {
+      "label": "desk1366 1d) overscroll-behavior 為 contain（捲到底不帶動外層）",
+      "ok": true,
+      "extra": "contain"
+    },
+    {
+      "label": "desk1366 1e) touch-action 為 pan-y（明確吃垂直手勢）",
+      "ok": true,
+      "extra": "pan-y"
+    },
+    {
+      "label": "desk1366 1f) 上方出戰配置摘要仍在首屏",
+      "ok": true,
+      "extra": {
+        "top": 209,
+        "bottom": 242,
+        "h": 33
+      }
+    },
+    {
+      "label": "desk1366 1g) 位置篩選列仍在首屏",
+      "ok": true,
+      "extra": {
+        "top": 287,
+        "bottom": 311,
+        "h": 24
+      }
+    },
+    {
+      "label": "desk1366 1h) 搜尋框存在且在首屏",
+      "ok": true,
+      "extra": {
+        "top": 320,
+        "bottom": 346,
+        "h": 26
+      }
+    },
+    {
+      "label": "desk1366 1i) 捲動區整個在 viewport 內（沒有被外框裁掉）",
+      "ok": true,
+      "extra": {
+        "scroller": {
+          "top": 355,
+          "bottom": 622,
+          "h": 267
+        },
+        "vh": 768
+      }
+    },
+    {
+      "label": "desk1366 2a) 搜尋「之」產生 ≥6 列（實測 6 列／30 隻）",
+      "ok": true,
+      "extra": {
+        "cards": 30,
+        "badge": 30,
+        "rows": 6
+      }
+    },
+    {
+      "label": "desk1366 2b) 計數徽章與實際卡片數一致",
+      "ok": true,
+      "extra": {
+        "cards": 30,
+        "badge": 30,
+        "rows": 6
+      }
+    },
+    {
+      "label": "desk1366 3a) 6 列情境：手勢真的捲動了（0 → 219）",
+      "ok": true,
+      "extra": {
+        "before": {
+          "x": 683,
+          "top": 355,
+          "bottom": 622,
+          "h": 267,
+          "scrollTop": 0,
+          "maxScroll": 219
+        },
+        "after": {
+          "x": 683,
+          "top": 355,
+          "bottom": 622,
+          "h": 267,
+          "scrollTop": 219,
+          "maxScroll": 219
+        }
+      }
+    },
+    {
+      "label": "desk1366 3b) 6 列情境：捲到最底（219／219）",
+      "ok": true,
+      "extra": {
+        "x": 683,
+        "top": 355,
+        "bottom": 622,
+        "h": 267,
+        "scrollTop": 219,
+        "maxScroll": 219
+      }
+    },
+    {
+      "label": "desk1366 3c) 6 列情境：最後一位英雄（tieshixin）完整落在捲動框內",
+      "ok": true,
+      "extra": {
+        "hero": "tieshixin",
+        "total": 30,
+        "top": 541,
+        "bottom": 616,
+        "scrollerTop": 355,
+        "scrollerBottom": 622,
+        "vh": 768,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "desk1366 3d) 6 列情境：最後一位英雄完整落在 viewport 內",
+      "ok": true,
+      "extra": {
+        "hero": "tieshixin",
+        "total": 30,
+        "top": 541,
+        "bottom": 616,
+        "scrollerTop": 355,
+        "scrollerBottom": 622,
+        "vh": 768,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "desk1366 3e) 6 列情境：最後一位英雄沒有被任何東西蓋住（elementFromPoint 命中卡片本身）",
+      "ok": true,
+      "extra": {
+        "hero": "tieshixin",
+        "total": 30,
+        "top": 541,
+        "bottom": 616,
+        "scrollerTop": 355,
+        "scrollerBottom": 622,
+        "vh": 768,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "desk1366 3f) 全部（100 隻／20 列）也能捲到最底",
+      "ok": true,
+      "extra": {
+        "x": 683,
+        "top": 355,
+        "bottom": 622,
+        "h": 267,
+        "scrollTop": 1353,
+        "maxScroll": 1353
+      }
+    },
+    {
+      "label": "desk1366 3g) 全部情境：最後一位英雄（linghun）完整可見且未被遮住",
+      "ok": true,
+      "extra": {
+        "hero": "linghun",
+        "total": 100,
+        "top": 541,
+        "bottom": 616,
+        "scrollerTop": 355,
+        "scrollerBottom": 622,
+        "vh": 768,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "desk1366 4a) 切換位置篩選後英雄格回到頂部（1353 → 0）",
+      "ok": true,
+      "extra": {
+        "before": 1353,
+        "after": 0
+      }
+    },
+    {
+      "label": "desk1366 4b) 輸入搜尋關鍵字後英雄格回到頂部（1353 → 0）",
+      "ok": true,
+      "extra": {
+        "before": 1353,
+        "after": 0
+      }
+    },
+    {
+      "label": "desk1366 5a) 從英雄卡上起手拖曳後，被拖的那隻（embercoil）仍在池子裡（沒被選走）",
+      "ok": true,
+      "extra": {
+        "dragProbe": {
+          "hero": "embercoil",
+          "x": 677,
+          "y": 474,
+          "picks": 0,
+          "cards": 100
+        },
+        "afterDrag": {
+          "picks": 0,
+          "stillInGrid": true,
+          "pickerOpen": true
+        }
+      }
+    },
+    {
+      "label": "desk1366 5b) 拖曳後已選數量不變（0 → 0）",
+      "ok": true,
+      "extra": {
+        "dragProbe": {
+          "hero": "embercoil",
+          "x": 677,
+          "y": 474,
+          "picks": 0,
+          "cards": 100
+        },
+        "afterDrag": {
+          "picks": 0,
+          "stillInGrid": true,
+          "pickerOpen": true
+        }
+      }
+    },
+    {
+      "label": "desk1366 5c) 拖曳後仍停在選角格（沒有被帶去別的畫面／彈窗）",
+      "ok": true,
+      "extra": {
+        "picks": 0,
+        "stillInGrid": true,
+        "pickerOpen": true
+      }
+    },
+    {
+      "label": "desk1366 6a) 短點擊選到了指名的那一隻（hunpo：已離開英雄池）",
+      "ok": true,
+      "extra": {
+        "targetHero": "hunpo",
+        "pos": {
+          "x": 677,
+          "y": 489
+        },
+        "beforeTap": {
+          "picks": 0,
+          "log": "選角動態\n準備開始…"
+        },
+        "afterTap": {
+          "gone": true,
+          "log": "選角動態\n🔴 對手 禁用 賭徒",
+          "picks": 0
+        }
+      }
+    },
+    {
+      "label": "desk1366 6b) 短點擊確實產生了一次選角動作（動態有更新）",
+      "ok": true,
+      "extra": {
+        "before": "選角動態\n準備開始…",
+        "after": "選角動態\n🔴 對手 禁用 賭徒"
+      }
+    },
+    {
+      "label": "desk1366 7a) 沒有任何「被壓制」節點（draft-plan-counter = 0）",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "desk1366 7b) 摘要列不再帶 data-counter 屬性",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "desk1366 7c) 整頁文字不再出現「克制／被壓制」",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "desk1366 8a) 適性仍在",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "desk1366 8b) 陣容需求（尚缺／五路到齊）仍在",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "desk1366 8c) comp-needs 錨點仍在且有值",
+      "ok": true,
+      "extra": [
+        {
+          "have": "",
+          "need": "TOP,JUNGLE,MID,ADC,SUPPORT"
+        }
+      ]
+    },
+    {
+      "label": "mob430 0a) 進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob430 0b) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob430 1a) 英雄格是真正的捲動容器（overflow-y auto，351／1620）",
+      "ok": true,
+      "extra": {
+        "vh": 932,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "touchAction": "pan-y",
+        "clientH": 351,
+        "scrollH": 1620,
+        "canScroll": true,
+        "clippingAncestors": [],
+        "realScrollers": [
+          "hero-grid-scroll"
+        ],
+        "plan": {
+          "top": 209,
+          "bottom": 242,
+          "h": 33
+        },
+        "search": {
+          "top": 320,
+          "bottom": 346,
+          "h": 26
+        },
+        "filters": {
+          "top": 287,
+          "bottom": 311,
+          "h": 24
+        },
+        "scroller": {
+          "top": 355,
+          "bottom": 706,
+          "h": 351
+        },
+        "docScrollable": false
+      }
+    },
+    {
+      "label": "mob430 1b) 捲動區沒有任何「裁掉內容又不能捲」的祖先",
+      "ok": true,
+      "extra": []
+    },
+    {
+      "label": "mob430 1c) 全頁只有這一個真捲動軸（不是巢狀捲動）",
+      "ok": true,
+      "extra": [
+        "hero-grid-scroll"
+      ]
+    },
+    {
+      "label": "mob430 1d) overscroll-behavior 為 contain（捲到底不帶動外層）",
+      "ok": true,
+      "extra": "contain"
+    },
+    {
+      "label": "mob430 1e) touch-action 為 pan-y（明確吃垂直手勢）",
+      "ok": true,
+      "extra": "pan-y"
+    },
+    {
+      "label": "mob430 1f) 上方出戰配置摘要仍在首屏",
+      "ok": true,
+      "extra": {
+        "top": 209,
+        "bottom": 242,
+        "h": 33
+      }
+    },
+    {
+      "label": "mob430 1g) 位置篩選列仍在首屏",
+      "ok": true,
+      "extra": {
+        "top": 287,
+        "bottom": 311,
+        "h": 24
+      }
+    },
+    {
+      "label": "mob430 1h) 搜尋框存在且在首屏",
+      "ok": true,
+      "extra": {
+        "top": 320,
+        "bottom": 346,
+        "h": 26
+      }
+    },
+    {
+      "label": "mob430 1i) 捲動區整個在 viewport 內（沒有被外框裁掉）",
+      "ok": true,
+      "extra": {
+        "scroller": {
+          "top": 355,
+          "bottom": 706,
+          "h": 351
+        },
+        "vh": 932
+      }
+    },
+    {
+      "label": "mob430 2a) 搜尋「之」產生 ≥6 列（實測 6 列／30 隻）",
+      "ok": true,
+      "extra": {
+        "cards": 30,
+        "badge": 30,
+        "rows": 6
+      }
+    },
+    {
+      "label": "mob430 2b) 計數徽章與實際卡片數一致",
+      "ok": true,
+      "extra": {
+        "cards": 30,
+        "badge": 30,
+        "rows": 6
+      }
+    },
+    {
+      "label": "mob430 3a) 6 列情境：手勢真的捲動了（0 → 135）",
+      "ok": true,
+      "extra": {
+        "before": {
+          "x": 215,
+          "top": 355,
+          "bottom": 706,
+          "h": 351,
+          "scrollTop": 0,
+          "maxScroll": 135
+        },
+        "after": {
+          "x": 215,
+          "top": 355,
+          "bottom": 706,
+          "h": 351,
+          "scrollTop": 135,
+          "maxScroll": 135
+        }
+      }
+    },
+    {
+      "label": "mob430 3b) 6 列情境：捲到最底（135／135）",
+      "ok": true,
+      "extra": {
+        "x": 215,
+        "top": 355,
+        "bottom": 706,
+        "h": 351,
+        "scrollTop": 135,
+        "maxScroll": 135
+      }
+    },
+    {
+      "label": "mob430 3c) 6 列情境：最後一位英雄（tieshixin）完整落在捲動框內",
+      "ok": true,
+      "extra": {
+        "hero": "tieshixin",
+        "total": 30,
+        "top": 625,
+        "bottom": 700,
+        "scrollerTop": 355,
+        "scrollerBottom": 706,
+        "vh": 932,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "mob430 3d) 6 列情境：最後一位英雄完整落在 viewport 內",
+      "ok": true,
+      "extra": {
+        "hero": "tieshixin",
+        "total": 30,
+        "top": 625,
+        "bottom": 700,
+        "scrollerTop": 355,
+        "scrollerBottom": 706,
+        "vh": 932,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "mob430 3e) 6 列情境：最後一位英雄沒有被任何東西蓋住（elementFromPoint 命中卡片本身）",
+      "ok": true,
+      "extra": {
+        "hero": "tieshixin",
+        "total": 30,
+        "top": 625,
+        "bottom": 700,
+        "scrollerTop": 355,
+        "scrollerBottom": 706,
+        "vh": 932,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "mob430 3f) 全部（100 隻／20 列）也能捲到最底",
+      "ok": true,
+      "extra": {
+        "x": 215,
+        "top": 355,
+        "bottom": 706,
+        "h": 351,
+        "scrollTop": 1269,
+        "maxScroll": 1269
+      }
+    },
+    {
+      "label": "mob430 3g) 全部情境：最後一位英雄（linghun）完整可見且未被遮住",
+      "ok": true,
+      "extra": {
+        "hero": "linghun",
+        "total": 100,
+        "top": 625,
+        "bottom": 700,
+        "scrollerTop": 355,
+        "scrollerBottom": 706,
+        "vh": 932,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "mob430 4a) 切換位置篩選後英雄格回到頂部（1269 → 0）",
+      "ok": true,
+      "extra": {
+        "before": 1269,
+        "after": 0
+      }
+    },
+    {
+      "label": "mob430 4b) 輸入搜尋關鍵字後英雄格回到頂部（1269 → 0）",
+      "ok": true,
+      "extra": {
+        "before": 1269,
+        "after": 0
+      }
+    },
+    {
+      "label": "mob430 5a) 從英雄卡上起手拖曳後，被拖的那隻（embercoil）仍在池子裡（沒被選走）",
+      "ok": true,
+      "extra": {
+        "dragProbe": {
+          "hero": "embercoil",
+          "x": 214,
+          "y": 474,
+          "picks": 0,
+          "cards": 100
+        },
+        "afterDrag": {
+          "picks": 0,
+          "stillInGrid": true,
+          "pickerOpen": true
+        }
+      }
+    },
+    {
+      "label": "mob430 5b) 拖曳後已選數量不變（0 → 0）",
+      "ok": true,
+      "extra": {
+        "dragProbe": {
+          "hero": "embercoil",
+          "x": 214,
+          "y": 474,
+          "picks": 0,
+          "cards": 100
+        },
+        "afterDrag": {
+          "picks": 0,
+          "stillInGrid": true,
+          "pickerOpen": true
+        }
+      }
+    },
+    {
+      "label": "mob430 5c) 拖曳後仍停在選角格（沒有被帶去別的畫面／彈窗）",
+      "ok": true,
+      "extra": {
+        "picks": 0,
+        "stillInGrid": true,
+        "pickerOpen": true
+      }
+    },
+    {
+      "label": "mob430 6a) 短點擊選到了指名的那一隻（hunpo：已離開英雄池）",
+      "ok": true,
+      "extra": {
+        "targetHero": "hunpo",
+        "pos": {
+          "x": 214,
+          "y": 531
+        },
+        "beforeTap": {
+          "picks": 0,
+          "log": "選角動態\n準備開始…"
+        },
+        "afterTap": {
+          "gone": true,
+          "log": "選角動態\n🔴 對手 禁用 暮刃",
+          "picks": 0
+        }
+      }
+    },
+    {
+      "label": "mob430 6b) 短點擊確實產生了一次選角動作（動態有更新）",
+      "ok": true,
+      "extra": {
+        "before": "選角動態\n準備開始…",
+        "after": "選角動態\n🔴 對手 禁用 暮刃"
+      }
+    },
+    {
+      "label": "mob430 7a) 沒有任何「被壓制」節點（draft-plan-counter = 0）",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "mob430 7b) 摘要列不再帶 data-counter 屬性",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "mob430 7c) 整頁文字不再出現「克制／被壓制」",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "mob430 8a) 適性仍在",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "mob430 8b) 陣容需求（尚缺／五路到齊）仍在",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "mob430 8c) comp-needs 錨點仍在且有值",
+      "ok": true,
+      "extra": [
+        {
+          "have": "",
+          "need": "TOP,JUNGLE,MID,ADC,SUPPORT"
+        }
+      ]
+    },
+    {
+      "label": "mob412 0a) 進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob412 0b) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob412 1a) 英雄格是真正的捲動容器（overflow-y auto，351／1620）",
+      "ok": true,
+      "extra": {
+        "vh": 915,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "touchAction": "pan-y",
+        "clientH": 351,
+        "scrollH": 1620,
+        "canScroll": true,
+        "clippingAncestors": [],
+        "realScrollers": [
+          "hero-grid-scroll"
+        ],
+        "plan": {
+          "top": 209,
+          "bottom": 242,
+          "h": 33
+        },
+        "search": {
+          "top": 320,
+          "bottom": 346,
+          "h": 26
+        },
+        "filters": {
+          "top": 287,
+          "bottom": 311,
+          "h": 24
+        },
+        "scroller": {
+          "top": 355,
+          "bottom": 706,
+          "h": 351
+        },
+        "docScrollable": false
+      }
+    },
+    {
+      "label": "mob412 1b) 捲動區沒有任何「裁掉內容又不能捲」的祖先",
+      "ok": true,
+      "extra": []
+    },
+    {
+      "label": "mob412 1c) 全頁只有這一個真捲動軸（不是巢狀捲動）",
+      "ok": true,
+      "extra": [
+        "hero-grid-scroll"
+      ]
+    },
+    {
+      "label": "mob412 1d) overscroll-behavior 為 contain（捲到底不帶動外層）",
+      "ok": true,
+      "extra": "contain"
+    },
+    {
+      "label": "mob412 1e) touch-action 為 pan-y（明確吃垂直手勢）",
+      "ok": true,
+      "extra": "pan-y"
+    },
+    {
+      "label": "mob412 1f) 上方出戰配置摘要仍在首屏",
+      "ok": true,
+      "extra": {
+        "top": 209,
+        "bottom": 242,
+        "h": 33
+      }
+    },
+    {
+      "label": "mob412 1g) 位置篩選列仍在首屏",
+      "ok": true,
+      "extra": {
+        "top": 287,
+        "bottom": 311,
+        "h": 24
+      }
+    },
+    {
+      "label": "mob412 1h) 搜尋框存在且在首屏",
+      "ok": true,
+      "extra": {
+        "top": 320,
+        "bottom": 346,
+        "h": 26
+      }
+    },
+    {
+      "label": "mob412 1i) 捲動區整個在 viewport 內（沒有被外框裁掉）",
+      "ok": true,
+      "extra": {
+        "scroller": {
+          "top": 355,
+          "bottom": 706,
+          "h": 351
+        },
+        "vh": 915
+      }
+    },
+    {
+      "label": "mob412 2a) 搜尋「之」產生 ≥6 列（實測 6 列／30 隻）",
+      "ok": true,
+      "extra": {
+        "cards": 30,
+        "badge": 30,
+        "rows": 6
+      }
+    },
+    {
+      "label": "mob412 2b) 計數徽章與實際卡片數一致",
+      "ok": true,
+      "extra": {
+        "cards": 30,
+        "badge": 30,
+        "rows": 6
+      }
+    },
+    {
+      "label": "mob412 3a) 6 列情境：手勢真的捲動了（0 → 135）",
+      "ok": true,
+      "extra": {
+        "before": {
+          "x": 206,
+          "top": 355,
+          "bottom": 706,
+          "h": 351,
+          "scrollTop": 0,
+          "maxScroll": 135
+        },
+        "after": {
+          "x": 206,
+          "top": 355,
+          "bottom": 706,
+          "h": 351,
+          "scrollTop": 135,
+          "maxScroll": 135
+        }
+      }
+    },
+    {
+      "label": "mob412 3b) 6 列情境：捲到最底（135／135）",
+      "ok": true,
+      "extra": {
+        "x": 206,
+        "top": 355,
+        "bottom": 706,
+        "h": 351,
+        "scrollTop": 135,
+        "maxScroll": 135
+      }
+    },
+    {
+      "label": "mob412 3c) 6 列情境：最後一位英雄（tieshixin）完整落在捲動框內",
+      "ok": true,
+      "extra": {
+        "hero": "tieshixin",
+        "total": 30,
+        "top": 625,
+        "bottom": 700,
+        "scrollerTop": 355,
+        "scrollerBottom": 706,
+        "vh": 915,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "mob412 3d) 6 列情境：最後一位英雄完整落在 viewport 內",
+      "ok": true,
+      "extra": {
+        "hero": "tieshixin",
+        "total": 30,
+        "top": 625,
+        "bottom": 700,
+        "scrollerTop": 355,
+        "scrollerBottom": 706,
+        "vh": 915,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "mob412 3e) 6 列情境：最後一位英雄沒有被任何東西蓋住（elementFromPoint 命中卡片本身）",
+      "ok": true,
+      "extra": {
+        "hero": "tieshixin",
+        "total": 30,
+        "top": 625,
+        "bottom": 700,
+        "scrollerTop": 355,
+        "scrollerBottom": 706,
+        "vh": 915,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "mob412 3f) 全部（100 隻／20 列）也能捲到最底",
+      "ok": true,
+      "extra": {
+        "x": 206,
+        "top": 355,
+        "bottom": 706,
+        "h": 351,
+        "scrollTop": 1269,
+        "maxScroll": 1269
+      }
+    },
+    {
+      "label": "mob412 3g) 全部情境：最後一位英雄（linghun）完整可見且未被遮住",
+      "ok": true,
+      "extra": {
+        "hero": "linghun",
+        "total": 100,
+        "top": 625,
+        "bottom": 700,
+        "scrollerTop": 355,
+        "scrollerBottom": 706,
+        "vh": 915,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "mob412 4a) 切換位置篩選後英雄格回到頂部（1269 → 0）",
+      "ok": true,
+      "extra": {
+        "before": 1269,
+        "after": 0
+      }
+    },
+    {
+      "label": "mob412 4b) 輸入搜尋關鍵字後英雄格回到頂部（1269 → 0）",
+      "ok": true,
+      "extra": {
+        "before": 1269,
+        "after": 0
+      }
+    },
+    {
+      "label": "mob412 5a) 從英雄卡上起手拖曳後，被拖的那隻（embercoil）仍在池子裡（沒被選走）",
+      "ok": true,
+      "extra": {
+        "dragProbe": {
+          "hero": "embercoil",
+          "x": 205,
+          "y": 474,
+          "picks": 0,
+          "cards": 100
+        },
+        "afterDrag": {
+          "picks": 0,
+          "stillInGrid": true,
+          "pickerOpen": true
+        }
+      }
+    },
+    {
+      "label": "mob412 5b) 拖曳後已選數量不變（0 → 0）",
+      "ok": true,
+      "extra": {
+        "dragProbe": {
+          "hero": "embercoil",
+          "x": 205,
+          "y": 474,
+          "picks": 0,
+          "cards": 100
+        },
+        "afterDrag": {
+          "picks": 0,
+          "stillInGrid": true,
+          "pickerOpen": true
+        }
+      }
+    },
+    {
+      "label": "mob412 5c) 拖曳後仍停在選角格（沒有被帶去別的畫面／彈窗）",
+      "ok": true,
+      "extra": {
+        "picks": 0,
+        "stillInGrid": true,
+        "pickerOpen": true
+      }
+    },
+    {
+      "label": "mob412 6a) 短點擊選到了指名的那一隻（hunpo：已離開英雄池）",
+      "ok": true,
+      "extra": {
+        "targetHero": "hunpo",
+        "pos": {
+          "x": 205,
+          "y": 531
+        },
+        "beforeTap": {
+          "picks": 0,
+          "log": "選角動態\n準備開始…"
+        },
+        "afterTap": {
+          "gone": true,
+          "log": "選角動態\n🔴 對手 禁用 暮刃",
+          "picks": 0
+        }
+      }
+    },
+    {
+      "label": "mob412 6b) 短點擊確實產生了一次選角動作（動態有更新）",
+      "ok": true,
+      "extra": {
+        "before": "選角動態\n準備開始…",
+        "after": "選角動態\n🔴 對手 禁用 暮刃"
+      }
+    },
+    {
+      "label": "mob412 7a) 沒有任何「被壓制」節點（draft-plan-counter = 0）",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "mob412 7b) 摘要列不再帶 data-counter 屬性",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "mob412 7c) 整頁文字不再出現「克制／被壓制」",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "mob412 8a) 適性仍在",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "mob412 8b) 陣容需求（尚缺／五路到齊）仍在",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "mob412 8c) comp-needs 錨點仍在且有值",
+      "ok": true,
+      "extra": [
+        {
+          "have": "",
+          "need": "TOP,JUNGLE,MID,ADC,SUPPORT"
+        }
+      ]
+    },
+    {
+      "label": "mob390 0a) 進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 0b) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 1a) 英雄格是真正的捲動容器（overflow-y auto，334／1620）",
+      "ok": true,
+      "extra": {
+        "vh": 844,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "touchAction": "pan-y",
+        "clientH": 334,
+        "scrollH": 1620,
+        "canScroll": true,
+        "clippingAncestors": [],
+        "realScrollers": [
+          "hero-grid-scroll"
+        ],
+        "plan": {
+          "top": 209,
+          "bottom": 242,
+          "h": 33
+        },
+        "search": {
+          "top": 320,
+          "bottom": 346,
+          "h": 26
+        },
+        "filters": {
+          "top": 287,
+          "bottom": 311,
+          "h": 24
+        },
+        "scroller": {
+          "top": 355,
+          "bottom": 689,
+          "h": 334
+        },
+        "docScrollable": false
+      }
+    },
+    {
+      "label": "mob390 1b) 捲動區沒有任何「裁掉內容又不能捲」的祖先",
+      "ok": true,
+      "extra": []
+    },
+    {
+      "label": "mob390 1c) 全頁只有這一個真捲動軸（不是巢狀捲動）",
+      "ok": true,
+      "extra": [
+        "hero-grid-scroll"
+      ]
+    },
+    {
+      "label": "mob390 1d) overscroll-behavior 為 contain（捲到底不帶動外層）",
+      "ok": true,
+      "extra": "contain"
+    },
+    {
+      "label": "mob390 1e) touch-action 為 pan-y（明確吃垂直手勢）",
+      "ok": true,
+      "extra": "pan-y"
+    },
+    {
+      "label": "mob390 1f) 上方出戰配置摘要仍在首屏",
+      "ok": true,
+      "extra": {
+        "top": 209,
+        "bottom": 242,
+        "h": 33
+      }
+    },
+    {
+      "label": "mob390 1g) 位置篩選列仍在首屏",
+      "ok": true,
+      "extra": {
+        "top": 287,
+        "bottom": 311,
+        "h": 24
+      }
+    },
+    {
+      "label": "mob390 1h) 搜尋框存在且在首屏",
+      "ok": true,
+      "extra": {
+        "top": 320,
+        "bottom": 346,
+        "h": 26
+      }
+    },
+    {
+      "label": "mob390 1i) 捲動區整個在 viewport 內（沒有被外框裁掉）",
+      "ok": true,
+      "extra": {
+        "scroller": {
+          "top": 355,
+          "bottom": 689,
+          "h": 334
+        },
+        "vh": 844
+      }
+    },
+    {
+      "label": "mob390 2a) 搜尋「之」產生 ≥6 列（實測 6 列／30 隻）",
+      "ok": true,
+      "extra": {
+        "cards": 30,
+        "badge": 30,
+        "rows": 6
+      }
+    },
+    {
+      "label": "mob390 2b) 計數徽章與實際卡片數一致",
+      "ok": true,
+      "extra": {
+        "cards": 30,
+        "badge": 30,
+        "rows": 6
+      }
+    },
+    {
+      "label": "mob390 3a) 6 列情境：手勢真的捲動了（0 → 152）",
+      "ok": true,
+      "extra": {
+        "before": {
+          "x": 195,
+          "top": 355,
+          "bottom": 689,
+          "h": 334,
+          "scrollTop": 0,
+          "maxScroll": 152
+        },
+        "after": {
+          "x": 195,
+          "top": 355,
+          "bottom": 689,
+          "h": 334,
+          "scrollTop": 152,
+          "maxScroll": 152
+        }
+      }
+    },
+    {
+      "label": "mob390 3b) 6 列情境：捲到最底（152／152）",
+      "ok": true,
+      "extra": {
+        "x": 195,
+        "top": 355,
+        "bottom": 689,
+        "h": 334,
+        "scrollTop": 152,
+        "maxScroll": 152
+      }
+    },
+    {
+      "label": "mob390 3c) 6 列情境：最後一位英雄（tieshixin）完整落在捲動框內",
+      "ok": true,
+      "extra": {
+        "hero": "tieshixin",
+        "total": 30,
+        "top": 608,
+        "bottom": 683,
+        "scrollerTop": 355,
+        "scrollerBottom": 689,
+        "vh": 844,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "mob390 3d) 6 列情境：最後一位英雄完整落在 viewport 內",
+      "ok": true,
+      "extra": {
+        "hero": "tieshixin",
+        "total": 30,
+        "top": 608,
+        "bottom": 683,
+        "scrollerTop": 355,
+        "scrollerBottom": 689,
+        "vh": 844,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "mob390 3e) 6 列情境：最後一位英雄沒有被任何東西蓋住（elementFromPoint 命中卡片本身）",
+      "ok": true,
+      "extra": {
+        "hero": "tieshixin",
+        "total": 30,
+        "top": 608,
+        "bottom": 683,
+        "scrollerTop": 355,
+        "scrollerBottom": 689,
+        "vh": 844,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "mob390 3f) 全部（100 隻／20 列）也能捲到最底",
+      "ok": true,
+      "extra": {
+        "x": 195,
+        "top": 355,
+        "bottom": 689,
+        "h": 334,
+        "scrollTop": 1286,
+        "maxScroll": 1286
+      }
+    },
+    {
+      "label": "mob390 3g) 全部情境：最後一位英雄（linghun）完整可見且未被遮住",
+      "ok": true,
+      "extra": {
+        "hero": "linghun",
+        "total": 100,
+        "top": 608,
+        "bottom": 683,
+        "scrollerTop": 355,
+        "scrollerBottom": 689,
+        "vh": 844,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "mob390 4a) 切換位置篩選後英雄格回到頂部（1286 → 0）",
+      "ok": true,
+      "extra": {
+        "before": 1286,
+        "after": 0
+      }
+    },
+    {
+      "label": "mob390 4b) 輸入搜尋關鍵字後英雄格回到頂部（1286 → 0）",
+      "ok": true,
+      "extra": {
+        "before": 1286,
+        "after": 0
+      }
+    },
+    {
+      "label": "mob390 5a) 從英雄卡上起手拖曳後，被拖的那隻（embercoil）仍在池子裡（沒被選走）",
+      "ok": true,
+      "extra": {
+        "dragProbe": {
+          "hero": "embercoil",
+          "x": 194,
+          "y": 474,
+          "picks": 0,
+          "cards": 100
+        },
+        "afterDrag": {
+          "picks": 0,
+          "stillInGrid": true,
+          "pickerOpen": true
+        }
+      }
+    },
+    {
+      "label": "mob390 5b) 拖曳後已選數量不變（0 → 0）",
+      "ok": true,
+      "extra": {
+        "dragProbe": {
+          "hero": "embercoil",
+          "x": 194,
+          "y": 474,
+          "picks": 0,
+          "cards": 100
+        },
+        "afterDrag": {
+          "picks": 0,
+          "stillInGrid": true,
+          "pickerOpen": true
+        }
+      }
+    },
+    {
+      "label": "mob390 5c) 拖曳後仍停在選角格（沒有被帶去別的畫面／彈窗）",
+      "ok": true,
+      "extra": {
+        "picks": 0,
+        "stillInGrid": true,
+        "pickerOpen": true
+      }
+    },
+    {
+      "label": "mob390 6a) 短點擊選到了指名的那一隻（hunpo：已離開英雄池）",
+      "ok": true,
+      "extra": {
+        "targetHero": "hunpo",
+        "pos": {
+          "x": 194,
+          "y": 522
+        },
+        "beforeTap": {
+          "picks": 0,
+          "log": "選角動態\n準備開始…"
+        },
+        "afterTap": {
+          "gone": true,
+          "log": "選角動態\n🔴 對手 禁用 剃翼",
+          "picks": 0
+        }
+      }
+    },
+    {
+      "label": "mob390 6b) 短點擊確實產生了一次選角動作（動態有更新）",
+      "ok": true,
+      "extra": {
+        "before": "選角動態\n準備開始…",
+        "after": "選角動態\n🔴 對手 禁用 剃翼"
+      }
+    },
+    {
+      "label": "mob390 7a) 沒有任何「被壓制」節點（draft-plan-counter = 0）",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "mob390 7b) 摘要列不再帶 data-counter 屬性",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "mob390 7c) 整頁文字不再出現「克制／被壓制」",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "mob390 8a) 適性仍在",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "mob390 8b) 陣容需求（尚缺／五路到齊）仍在",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "mob390 8c) comp-needs 錨點仍在且有值",
+      "ok": true,
+      "extra": [
+        {
+          "have": "",
+          "need": "TOP,JUNGLE,MID,ADC,SUPPORT"
+        }
+      ]
+    },
+    {
+      "label": "mob360 0a) 進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 0b) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 1a) 英雄格是真正的捲動容器（overflow-y auto，295／1620）",
+      "ok": true,
+      "extra": {
+        "vh": 800,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "touchAction": "pan-y",
+        "clientH": 295,
+        "scrollH": 1620,
+        "canScroll": true,
+        "clippingAncestors": [],
+        "realScrollers": [
+          "hero-grid-scroll"
+        ],
+        "plan": {
+          "top": 209,
+          "bottom": 242,
+          "h": 33
+        },
+        "search": {
+          "top": 320,
+          "bottom": 346,
+          "h": 26
+        },
+        "filters": {
+          "top": 287,
+          "bottom": 311,
+          "h": 24
+        },
+        "scroller": {
+          "top": 355,
+          "bottom": 650,
+          "h": 295
+        },
+        "docScrollable": false
+      }
+    },
+    {
+      "label": "mob360 1b) 捲動區沒有任何「裁掉內容又不能捲」的祖先",
+      "ok": true,
+      "extra": []
+    },
+    {
+      "label": "mob360 1c) 全頁只有這一個真捲動軸（不是巢狀捲動）",
+      "ok": true,
+      "extra": [
+        "hero-grid-scroll"
+      ]
+    },
+    {
+      "label": "mob360 1d) overscroll-behavior 為 contain（捲到底不帶動外層）",
+      "ok": true,
+      "extra": "contain"
+    },
+    {
+      "label": "mob360 1e) touch-action 為 pan-y（明確吃垂直手勢）",
+      "ok": true,
+      "extra": "pan-y"
+    },
+    {
+      "label": "mob360 1f) 上方出戰配置摘要仍在首屏",
+      "ok": true,
+      "extra": {
+        "top": 209,
+        "bottom": 242,
+        "h": 33
+      }
+    },
+    {
+      "label": "mob360 1g) 位置篩選列仍在首屏",
+      "ok": true,
+      "extra": {
+        "top": 287,
+        "bottom": 311,
+        "h": 24
+      }
+    },
+    {
+      "label": "mob360 1h) 搜尋框存在且在首屏",
+      "ok": true,
+      "extra": {
+        "top": 320,
+        "bottom": 346,
+        "h": 26
+      }
+    },
+    {
+      "label": "mob360 1i) 捲動區整個在 viewport 內（沒有被外框裁掉）",
+      "ok": true,
+      "extra": {
+        "scroller": {
+          "top": 355,
+          "bottom": 650,
+          "h": 295
+        },
+        "vh": 800
+      }
+    },
+    {
+      "label": "mob360 2a) 搜尋「之」產生 ≥6 列（實測 6 列／30 隻）",
+      "ok": true,
+      "extra": {
+        "cards": 30,
+        "badge": 30,
+        "rows": 6
+      }
+    },
+    {
+      "label": "mob360 2b) 計數徽章與實際卡片數一致",
+      "ok": true,
+      "extra": {
+        "cards": 30,
+        "badge": 30,
+        "rows": 6
+      }
+    },
+    {
+      "label": "mob360 3a) 6 列情境：手勢真的捲動了（0 → 191）",
+      "ok": true,
+      "extra": {
+        "before": {
+          "x": 180,
+          "top": 355,
+          "bottom": 650,
+          "h": 295,
+          "scrollTop": 0,
+          "maxScroll": 191
+        },
+        "after": {
+          "x": 180,
+          "top": 355,
+          "bottom": 650,
+          "h": 295,
+          "scrollTop": 191,
+          "maxScroll": 191
+        }
+      }
+    },
+    {
+      "label": "mob360 3b) 6 列情境：捲到最底（191／191）",
+      "ok": true,
+      "extra": {
+        "x": 180,
+        "top": 355,
+        "bottom": 650,
+        "h": 295,
+        "scrollTop": 191,
+        "maxScroll": 191
+      }
+    },
+    {
+      "label": "mob360 3c) 6 列情境：最後一位英雄（tieshixin）完整落在捲動框內",
+      "ok": true,
+      "extra": {
+        "hero": "tieshixin",
+        "total": 30,
+        "top": 569,
+        "bottom": 644,
+        "scrollerTop": 355,
+        "scrollerBottom": 650,
+        "vh": 800,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "mob360 3d) 6 列情境：最後一位英雄完整落在 viewport 內",
+      "ok": true,
+      "extra": {
+        "hero": "tieshixin",
+        "total": 30,
+        "top": 569,
+        "bottom": 644,
+        "scrollerTop": 355,
+        "scrollerBottom": 650,
+        "vh": 800,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "mob360 3e) 6 列情境：最後一位英雄沒有被任何東西蓋住（elementFromPoint 命中卡片本身）",
+      "ok": true,
+      "extra": {
+        "hero": "tieshixin",
+        "total": 30,
+        "top": 569,
+        "bottom": 644,
+        "scrollerTop": 355,
+        "scrollerBottom": 650,
+        "vh": 800,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "mob360 3f) 全部（100 隻／20 列）也能捲到最底",
+      "ok": true,
+      "extra": {
+        "x": 180,
+        "top": 355,
+        "bottom": 650,
+        "h": 295,
+        "scrollTop": 1325,
+        "maxScroll": 1325
+      }
+    },
+    {
+      "label": "mob360 3g) 全部情境：最後一位英雄（linghun）完整可見且未被遮住",
+      "ok": true,
+      "extra": {
+        "hero": "linghun",
+        "total": 100,
+        "top": 569,
+        "bottom": 644,
+        "scrollerTop": 355,
+        "scrollerBottom": 650,
+        "vh": 800,
+        "insideScroller": true,
+        "insideViewport": true,
+        "notCovered": true,
+        "hitTestId": "IMG"
+      }
+    },
+    {
+      "label": "mob360 4a) 切換位置篩選後英雄格回到頂部（1325 → 0）",
+      "ok": true,
+      "extra": {
+        "before": 1325,
+        "after": 0
+      }
+    },
+    {
+      "label": "mob360 4b) 輸入搜尋關鍵字後英雄格回到頂部（1325 → 0）",
+      "ok": true,
+      "extra": {
+        "before": 1325,
+        "after": 0
+      }
+    },
+    {
+      "label": "mob360 5a) 從英雄卡上起手拖曳後，被拖的那隻（embercoil）仍在池子裡（沒被選走）",
+      "ok": true,
+      "extra": {
+        "dragProbe": {
+          "hero": "embercoil",
+          "x": 179,
+          "y": 474,
+          "picks": 0,
+          "cards": 100
+        },
+        "afterDrag": {
+          "picks": 0,
+          "stillInGrid": true,
+          "pickerOpen": true
+        }
+      }
+    },
+    {
+      "label": "mob360 5b) 拖曳後已選數量不變（0 → 0）",
+      "ok": true,
+      "extra": {
+        "dragProbe": {
+          "hero": "embercoil",
+          "x": 179,
+          "y": 474,
+          "picks": 0,
+          "cards": 100
+        },
+        "afterDrag": {
+          "picks": 0,
+          "stillInGrid": true,
+          "pickerOpen": true
+        }
+      }
+    },
+    {
+      "label": "mob360 5c) 拖曳後仍停在選角格（沒有被帶去別的畫面／彈窗）",
+      "ok": true,
+      "extra": {
+        "picks": 0,
+        "stillInGrid": true,
+        "pickerOpen": true
+      }
+    },
+    {
+      "label": "mob360 6a) 短點擊選到了指名的那一隻（hunpo：已離開英雄池）",
+      "ok": true,
+      "extra": {
+        "targetHero": "hunpo",
+        "pos": {
+          "x": 179,
+          "y": 503
+        },
+        "beforeTap": {
+          "picks": 0,
+          "log": "選角動態\n準備開始…"
+        },
+        "afterTap": {
+          "gone": true,
+          "log": "選角動態\n🔴 對手 禁用 毒刺",
+          "picks": 0
+        }
+      }
+    },
+    {
+      "label": "mob360 6b) 短點擊確實產生了一次選角動作（動態有更新）",
+      "ok": true,
+      "extra": {
+        "before": "選角動態\n準備開始…",
+        "after": "選角動態\n🔴 對手 禁用 毒刺"
+      }
+    },
+    {
+      "label": "mob360 7a) 沒有任何「被壓制」節點（draft-plan-counter = 0）",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "mob360 7b) 摘要列不再帶 data-counter 屬性",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "mob360 7c) 整頁文字不再出現「克制／被壓制」",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "mob360 8a) 適性仍在",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "mob360 8b) 陣容需求（尚缺／五路到齊）仍在",
+      "ok": true,
+      "extra": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    {
+      "label": "mob360 8c) comp-needs 錨點仍在且有值",
+      "ok": true,
+      "extra": [
+        {
+          "have": "",
+          "need": "TOP,JUNGLE,MID,ADC,SUPPORT"
+        }
+      ]
+    },
+    {
+      "label": "desk1920 flow F1) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 flow F2) 這個尺寸選得完角（14 步走到「選角完成」）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 flow F3) 我方五隻都選好且都有分路",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "cinderfist",
+          "code": "TOP"
+        },
+        {
+          "hero": "greymantle",
+          "code": "JUNGLE"
+        },
+        {
+          "hero": "embercoil",
+          "code": "ADC"
+        },
+        {
+          "hero": "gambler",
+          "code": "MID"
+        },
+        {
+          "hero": "auralith",
+          "code": "SUPPORT"
+        }
+      ]
+    },
+    {
+      "label": "desk1920 flow F4) 確認鈕可見可按",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 flow F5) 進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 flow F6) 進入正式 GameView",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 flow F7) 打到終局並進入 Result",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 flow F8) 可以進入 Replay",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 flow F1) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 flow F2) 這個尺寸選得完角（14 步走到「選角完成」）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 flow F3) 我方五隻都選好且都有分路",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "ravager",
+          "code": "TOP"
+        },
+        {
+          "hero": "duskblade",
+          "code": "JUNGLE"
+        },
+        {
+          "hero": "greymantle",
+          "code": "ADC"
+        },
+        {
+          "hero": "embercoil",
+          "code": "SUPPORT"
+        },
+        {
+          "hero": "gambler",
+          "code": "MID"
+        }
+      ]
+    },
+    {
+      "label": "desk1366 flow F4) 確認鈕可見可按",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 flow F5) 進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 flow F6) 進入正式 GameView",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 flow F7) 打到終局並進入 Result",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 flow F8) 可以進入 Replay",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob430 flow F1) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob430 flow F2) 這個尺寸選得完角（14 步走到「選角完成」）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob430 flow F3) 我方五隻都選好且都有分路",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "ravager",
+          "code": "TOP"
+        },
+        {
+          "hero": "cinderfist",
+          "code": "ADC"
+        },
+        {
+          "hero": "sting",
+          "code": "JUNGLE"
+        },
+        {
+          "hero": "duskblade",
+          "code": "MID"
+        },
+        {
+          "hero": "greymantle",
+          "code": "SUPPORT"
+        }
+      ]
+    },
+    {
+      "label": "mob430 flow F4) 確認鈕可見可按",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob430 flow F5) 進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob430 flow F6) 進入正式 GameView",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob430 flow F7) 打到終局並進入 Result",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob430 flow F8) 可以進入 Replay",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob412 flow F1) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob412 flow F2) 這個尺寸選得完角（14 步走到「選角完成」）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob412 flow F3) 我方五隻都選好且都有分路",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "cinderfist",
+          "code": "TOP"
+        },
+        {
+          "hero": "sting",
+          "code": "JUNGLE"
+        },
+        {
+          "hero": "duskblade",
+          "code": "MID"
+        },
+        {
+          "hero": "greymantle",
+          "code": "ADC"
+        },
+        {
+          "hero": "embercoil",
+          "code": "SUPPORT"
+        }
+      ]
+    },
+    {
+      "label": "mob412 flow F4) 確認鈕可見可按",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob412 flow F5) 進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob412 flow F6) 進入正式 GameView",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob412 flow F7) 打到終局並進入 Result",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob412 flow F8) 可以進入 Replay",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 flow F1) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 flow F2) 這個尺寸選得完角（14 步走到「選角完成」）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 flow F3) 我方五隻都選好且都有分路",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "ravager",
+          "code": "TOP"
+        },
+        {
+          "hero": "cinderfist",
+          "code": "ADC"
+        },
+        {
+          "hero": "duskblade",
+          "code": "JUNGLE"
+        },
+        {
+          "hero": "greymantle",
+          "code": "SUPPORT"
+        },
+        {
+          "hero": "gambler",
+          "code": "MID"
+        }
+      ]
+    },
+    {
+      "label": "mob390 flow F4) 確認鈕可見可按",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 flow F5) 進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 flow F6) 進入正式 GameView",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 flow F7) 打到終局並進入 Result",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 flow F8) 可以進入 Replay",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 flow F1) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 flow F2) 這個尺寸選得完角（14 步走到「選角完成」）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 flow F3) 我方五隻都選好且都有分路",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "cinderfist",
+          "code": "TOP"
+        },
+        {
+          "hero": "sting",
+          "code": "JUNGLE"
+        },
+        {
+          "hero": "duskblade",
+          "code": "MID"
+        },
+        {
+          "hero": "greymantle",
+          "code": "ADC"
+        },
+        {
+          "hero": "embercoil",
+          "code": "SUPPORT"
+        }
+      ]
+    },
+    {
+      "label": "mob360 flow F4) 確認鈕可見可按",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 flow F5) 進入 Loading",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 flow F6) 進入正式 GameView",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 flow F7) 打到終局並進入 Result",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 flow F8) 可以進入 Replay",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "跨尺寸 A) 六個尺寸都只有一個真捲動軸，且就是英雄格",
+      "ok": true,
+      "extra": [
+        [
+          "desk1920",
+          [
+            "hero-grid-scroll"
+          ]
+        ],
+        [
+          "desk1366",
+          [
+            "hero-grid-scroll"
+          ]
+        ],
+        [
+          "mob430",
+          [
+            "hero-grid-scroll"
+          ]
+        ],
+        [
+          "mob412",
+          [
+            "hero-grid-scroll"
+          ]
+        ],
+        [
+          "mob390",
+          [
+            "hero-grid-scroll"
+          ]
+        ],
+        [
+          "mob360",
+          [
+            "hero-grid-scroll"
+          ]
+        ]
+      ]
+    },
+    {
+      "label": "跨尺寸 B) 六個尺寸都沒有「裁掉又不能捲」的祖先",
+      "ok": true,
+      "extra": [
+        [
+          "desk1920",
+          []
+        ],
+        [
+          "desk1366",
+          []
+        ],
+        [
+          "mob430",
+          []
+        ],
+        [
+          "mob412",
+          []
+        ],
+        [
+          "mob390",
+          []
+        ],
+        [
+          "mob360",
+          []
+        ]
+      ]
+    },
+    {
+      "label": "跨尺寸 C) 六個尺寸都捲得到最後一位英雄且未被遮住（100 隻的最壞情況）",
+      "ok": true,
+      "extra": [
+        [
+          "desk1920",
+          "linghun",
+          true
+        ],
+        [
+          "desk1366",
+          "linghun",
+          true
+        ],
+        [
+          "mob430",
+          "linghun",
+          true
+        ],
+        [
+          "mob412",
+          "linghun",
+          true
+        ],
+        [
+          "mob390",
+          "linghun",
+          true
+        ],
+        [
+          "mob360",
+          "linghun",
+          true
+        ]
+      ]
+    },
+    {
+      "label": "跨尺寸 D) 六個尺寸切換篩選與搜尋都回到頂部",
+      "ok": true,
+      "extra": [
+        [
+          "desk1920",
+          {
+            "before": 1269,
+            "after": 0
+          },
+          {
+            "before": 1269,
+            "after": 0
+          }
+        ],
+        [
+          "desk1366",
+          {
+            "before": 1353,
+            "after": 0
+          },
+          {
+            "before": 1353,
+            "after": 0
+          }
+        ],
+        [
+          "mob430",
+          {
+            "before": 1269,
+            "after": 0
+          },
+          {
+            "before": 1269,
+            "after": 0
+          }
+        ],
+        [
+          "mob412",
+          {
+            "before": 1269,
+            "after": 0
+          },
+          {
+            "before": 1269,
+            "after": 0
+          }
+        ],
+        [
+          "mob390",
+          {
+            "before": 1286,
+            "after": 0
+          },
+          {
+            "before": 1286,
+            "after": 0
+          }
+        ],
+        [
+          "mob360",
+          {
+            "before": 1325,
+            "after": 0
+          },
+          {
+            "before": 1325,
+            "after": 0
+          }
+        ]
+      ]
+    },
+    {
+      "label": "跨尺寸 E) 六個尺寸都沒有克制關係顯示",
+      "ok": true,
+      "extra": [
+        [
+          "desk1920",
+          {
+            "counterNodes": 0,
+            "rowsWithCounterAttr": 0,
+            "rows": 5,
+            "hasCounterWord": false,
+            "hasFitWord": true,
+            "hasNeedsWord": true
+          }
+        ],
+        [
+          "desk1366",
+          {
+            "counterNodes": 0,
+            "rowsWithCounterAttr": 0,
+            "rows": 5,
+            "hasCounterWord": false,
+            "hasFitWord": true,
+            "hasNeedsWord": true
+          }
+        ],
+        [
+          "mob430",
+          {
+            "counterNodes": 0,
+            "rowsWithCounterAttr": 0,
+            "rows": 5,
+            "hasCounterWord": false,
+            "hasFitWord": true,
+            "hasNeedsWord": true
+          }
+        ],
+        [
+          "mob412",
+          {
+            "counterNodes": 0,
+            "rowsWithCounterAttr": 0,
+            "rows": 5,
+            "hasCounterWord": false,
+            "hasFitWord": true,
+            "hasNeedsWord": true
+          }
+        ],
+        [
+          "mob390",
+          {
+            "counterNodes": 0,
+            "rowsWithCounterAttr": 0,
+            "rows": 5,
+            "hasCounterWord": false,
+            "hasFitWord": true,
+            "hasNeedsWord": true
+          }
+        ],
+        [
+          "mob360",
+          {
+            "counterNodes": 0,
+            "rowsWithCounterAttr": 0,
+            "rows": 5,
+            "hasCounterWord": false,
+            "hasFitWord": true,
+            "hasNeedsWord": true
+          }
+        ]
+      ]
+    }
+  ],
+  "shots": [
+    "desk1920-01-banpick-frame.png",
+    "desk1920-02-scrolled-bottom-6rows.png",
+    "desk1920-03-plan-no-counter.png",
+    "desk1366-01-banpick-frame.png",
+    "desk1366-02-scrolled-bottom-6rows.png",
+    "desk1366-03-plan-no-counter.png",
+    "mob430-01-banpick-frame.png",
+    "mob430-02-scrolled-bottom-6rows.png",
+    "mob430-03-plan-no-counter.png",
+    "mob412-01-banpick-frame.png",
+    "mob412-02-scrolled-bottom-6rows.png",
+    "mob412-03-plan-no-counter.png",
+    "mob390-01-banpick-frame.png",
+    "mob390-02-scrolled-bottom-6rows.png",
+    "mob390-03-plan-no-counter.png",
+    "mob360-01-banpick-frame.png",
+    "mob360-02-scrolled-bottom-6rows.png",
+    "mob360-03-plan-no-counter.png",
+    "desk1920-04-draft-done.png",
+    "desk1920-05-result.png",
+    "desk1920-06-replay.png",
+    "desk1366-04-draft-done.png",
+    "desk1366-05-result.png",
+    "desk1366-06-replay.png",
+    "mob430-04-draft-done.png",
+    "mob430-05-result.png",
+    "mob430-06-replay.png",
+    "mob412-04-draft-done.png",
+    "mob412-05-result.png",
+    "mob412-06-replay.png",
+    "mob390-04-draft-done.png",
+    "mob390-05-result.png",
+    "mob390-06-replay.png",
+    "mob360-04-draft-done.png",
+    "mob360-05-result.png",
+    "mob360-06-replay.png"
+  ],
+  "data": {
+    "desk1920": {
+      "frame": {
+        "vh": 1080,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "touchAction": "pan-y",
+        "clientH": 351,
+        "scrollH": 1620,
+        "canScroll": true,
+        "clippingAncestors": [],
+        "realScrollers": [
+          "hero-grid-scroll"
+        ],
+        "plan": {
+          "top": 209,
+          "bottom": 242,
+          "h": 33
+        },
+        "search": {
+          "top": 320,
+          "bottom": 346,
+          "h": 26
+        },
+        "filters": {
+          "top": 287,
+          "bottom": 311,
+          "h": 24
+        },
+        "scroller": {
+          "top": 355,
+          "bottom": 706,
+          "h": 351
+        },
+        "docScrollable": false
+      },
+      "query6": {
+        "cards": 30,
+        "badge": 30,
+        "rows": 6
+      },
+      "scroll6": {
+        "before": {
+          "x": 960,
+          "top": 355,
+          "bottom": 706,
+          "h": 351,
+          "scrollTop": 0,
+          "maxScroll": 135
+        },
+        "after": {
+          "x": 960,
+          "top": 355,
+          "bottom": 706,
+          "h": 351,
+          "scrollTop": 135,
+          "maxScroll": 135
+        },
+        "lastCard": {
+          "hero": "tieshixin",
+          "total": 30,
+          "top": 625,
+          "bottom": 700,
+          "scrollerTop": 355,
+          "scrollerBottom": 706,
+          "vh": 1080,
+          "insideScroller": true,
+          "insideViewport": true,
+          "notCovered": true,
+          "hitTestId": "IMG"
+        }
+      },
+      "scrollAll": {
+        "before": {
+          "x": 960,
+          "top": 355,
+          "bottom": 706,
+          "h": 351,
+          "scrollTop": 0,
+          "maxScroll": 1269
+        },
+        "after": {
+          "x": 960,
+          "top": 355,
+          "bottom": 706,
+          "h": 351,
+          "scrollTop": 1269,
+          "maxScroll": 1269
+        },
+        "lastCard": {
+          "hero": "linghun",
+          "total": 100,
+          "top": 625,
+          "bottom": 700,
+          "scrollerTop": 355,
+          "scrollerBottom": 706,
+          "vh": 1080,
+          "insideScroller": true,
+          "insideViewport": true,
+          "notCovered": true,
+          "hitTestId": "IMG"
+        }
+      },
+      "filterReset": {
+        "before": 1269,
+        "after": 0
+      },
+      "queryReset": {
+        "before": 1269,
+        "after": 0
+      },
+      "drag": {
+        "dragProbe": {
+          "hero": "embercoil",
+          "x": 954,
+          "y": 474,
+          "picks": 0,
+          "cards": 100
+        },
+        "afterDrag": {
+          "picks": 0,
+          "stillInGrid": true,
+          "pickerOpen": true
+        }
+      },
+      "tap": {
+        "targetHero": "hunpo",
+        "pos": {
+          "x": 954,
+          "y": 531
+        },
+        "beforeTap": {
+          "picks": 0,
+          "log": "選角動態\n準備開始…"
+        },
+        "afterTap": {
+          "gone": true,
+          "log": "選角動態\n🔴 對手 禁用 荊棘壁壘",
+          "picks": 0
+        }
+      },
+      "counter": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    "desk1366": {
+      "frame": {
+        "vh": 768,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "touchAction": "pan-y",
+        "clientH": 267,
+        "scrollH": 1620,
+        "canScroll": true,
+        "clippingAncestors": [],
+        "realScrollers": [
+          "hero-grid-scroll"
+        ],
+        "plan": {
+          "top": 209,
+          "bottom": 242,
+          "h": 33
+        },
+        "search": {
+          "top": 320,
+          "bottom": 346,
+          "h": 26
+        },
+        "filters": {
+          "top": 287,
+          "bottom": 311,
+          "h": 24
+        },
+        "scroller": {
+          "top": 355,
+          "bottom": 622,
+          "h": 267
+        },
+        "docScrollable": false
+      },
+      "query6": {
+        "cards": 30,
+        "badge": 30,
+        "rows": 6
+      },
+      "scroll6": {
+        "before": {
+          "x": 683,
+          "top": 355,
+          "bottom": 622,
+          "h": 267,
+          "scrollTop": 0,
+          "maxScroll": 219
+        },
+        "after": {
+          "x": 683,
+          "top": 355,
+          "bottom": 622,
+          "h": 267,
+          "scrollTop": 219,
+          "maxScroll": 219
+        },
+        "lastCard": {
+          "hero": "tieshixin",
+          "total": 30,
+          "top": 541,
+          "bottom": 616,
+          "scrollerTop": 355,
+          "scrollerBottom": 622,
+          "vh": 768,
+          "insideScroller": true,
+          "insideViewport": true,
+          "notCovered": true,
+          "hitTestId": "IMG"
+        }
+      },
+      "scrollAll": {
+        "before": {
+          "x": 683,
+          "top": 355,
+          "bottom": 622,
+          "h": 267,
+          "scrollTop": 0,
+          "maxScroll": 1353
+        },
+        "after": {
+          "x": 683,
+          "top": 355,
+          "bottom": 622,
+          "h": 267,
+          "scrollTop": 1353,
+          "maxScroll": 1353
+        },
+        "lastCard": {
+          "hero": "linghun",
+          "total": 100,
+          "top": 541,
+          "bottom": 616,
+          "scrollerTop": 355,
+          "scrollerBottom": 622,
+          "vh": 768,
+          "insideScroller": true,
+          "insideViewport": true,
+          "notCovered": true,
+          "hitTestId": "IMG"
+        }
+      },
+      "filterReset": {
+        "before": 1353,
+        "after": 0
+      },
+      "queryReset": {
+        "before": 1353,
+        "after": 0
+      },
+      "drag": {
+        "dragProbe": {
+          "hero": "embercoil",
+          "x": 677,
+          "y": 474,
+          "picks": 0,
+          "cards": 100
+        },
+        "afterDrag": {
+          "picks": 0,
+          "stillInGrid": true,
+          "pickerOpen": true
+        }
+      },
+      "tap": {
+        "targetHero": "hunpo",
+        "pos": {
+          "x": 677,
+          "y": 489
+        },
+        "beforeTap": {
+          "picks": 0,
+          "log": "選角動態\n準備開始…"
+        },
+        "afterTap": {
+          "gone": true,
+          "log": "選角動態\n🔴 對手 禁用 賭徒",
+          "picks": 0
+        }
+      },
+      "counter": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    "mob430": {
+      "frame": {
+        "vh": 932,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "touchAction": "pan-y",
+        "clientH": 351,
+        "scrollH": 1620,
+        "canScroll": true,
+        "clippingAncestors": [],
+        "realScrollers": [
+          "hero-grid-scroll"
+        ],
+        "plan": {
+          "top": 209,
+          "bottom": 242,
+          "h": 33
+        },
+        "search": {
+          "top": 320,
+          "bottom": 346,
+          "h": 26
+        },
+        "filters": {
+          "top": 287,
+          "bottom": 311,
+          "h": 24
+        },
+        "scroller": {
+          "top": 355,
+          "bottom": 706,
+          "h": 351
+        },
+        "docScrollable": false
+      },
+      "query6": {
+        "cards": 30,
+        "badge": 30,
+        "rows": 6
+      },
+      "scroll6": {
+        "before": {
+          "x": 215,
+          "top": 355,
+          "bottom": 706,
+          "h": 351,
+          "scrollTop": 0,
+          "maxScroll": 135
+        },
+        "after": {
+          "x": 215,
+          "top": 355,
+          "bottom": 706,
+          "h": 351,
+          "scrollTop": 135,
+          "maxScroll": 135
+        },
+        "lastCard": {
+          "hero": "tieshixin",
+          "total": 30,
+          "top": 625,
+          "bottom": 700,
+          "scrollerTop": 355,
+          "scrollerBottom": 706,
+          "vh": 932,
+          "insideScroller": true,
+          "insideViewport": true,
+          "notCovered": true,
+          "hitTestId": "IMG"
+        }
+      },
+      "scrollAll": {
+        "before": {
+          "x": 215,
+          "top": 355,
+          "bottom": 706,
+          "h": 351,
+          "scrollTop": 0,
+          "maxScroll": 1269
+        },
+        "after": {
+          "x": 215,
+          "top": 355,
+          "bottom": 706,
+          "h": 351,
+          "scrollTop": 1269,
+          "maxScroll": 1269
+        },
+        "lastCard": {
+          "hero": "linghun",
+          "total": 100,
+          "top": 625,
+          "bottom": 700,
+          "scrollerTop": 355,
+          "scrollerBottom": 706,
+          "vh": 932,
+          "insideScroller": true,
+          "insideViewport": true,
+          "notCovered": true,
+          "hitTestId": "IMG"
+        }
+      },
+      "filterReset": {
+        "before": 1269,
+        "after": 0
+      },
+      "queryReset": {
+        "before": 1269,
+        "after": 0
+      },
+      "drag": {
+        "dragProbe": {
+          "hero": "embercoil",
+          "x": 214,
+          "y": 474,
+          "picks": 0,
+          "cards": 100
+        },
+        "afterDrag": {
+          "picks": 0,
+          "stillInGrid": true,
+          "pickerOpen": true
+        }
+      },
+      "tap": {
+        "targetHero": "hunpo",
+        "pos": {
+          "x": 214,
+          "y": 531
+        },
+        "beforeTap": {
+          "picks": 0,
+          "log": "選角動態\n準備開始…"
+        },
+        "afterTap": {
+          "gone": true,
+          "log": "選角動態\n🔴 對手 禁用 暮刃",
+          "picks": 0
+        }
+      },
+      "counter": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    "mob412": {
+      "frame": {
+        "vh": 915,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "touchAction": "pan-y",
+        "clientH": 351,
+        "scrollH": 1620,
+        "canScroll": true,
+        "clippingAncestors": [],
+        "realScrollers": [
+          "hero-grid-scroll"
+        ],
+        "plan": {
+          "top": 209,
+          "bottom": 242,
+          "h": 33
+        },
+        "search": {
+          "top": 320,
+          "bottom": 346,
+          "h": 26
+        },
+        "filters": {
+          "top": 287,
+          "bottom": 311,
+          "h": 24
+        },
+        "scroller": {
+          "top": 355,
+          "bottom": 706,
+          "h": 351
+        },
+        "docScrollable": false
+      },
+      "query6": {
+        "cards": 30,
+        "badge": 30,
+        "rows": 6
+      },
+      "scroll6": {
+        "before": {
+          "x": 206,
+          "top": 355,
+          "bottom": 706,
+          "h": 351,
+          "scrollTop": 0,
+          "maxScroll": 135
+        },
+        "after": {
+          "x": 206,
+          "top": 355,
+          "bottom": 706,
+          "h": 351,
+          "scrollTop": 135,
+          "maxScroll": 135
+        },
+        "lastCard": {
+          "hero": "tieshixin",
+          "total": 30,
+          "top": 625,
+          "bottom": 700,
+          "scrollerTop": 355,
+          "scrollerBottom": 706,
+          "vh": 915,
+          "insideScroller": true,
+          "insideViewport": true,
+          "notCovered": true,
+          "hitTestId": "IMG"
+        }
+      },
+      "scrollAll": {
+        "before": {
+          "x": 206,
+          "top": 355,
+          "bottom": 706,
+          "h": 351,
+          "scrollTop": 0,
+          "maxScroll": 1269
+        },
+        "after": {
+          "x": 206,
+          "top": 355,
+          "bottom": 706,
+          "h": 351,
+          "scrollTop": 1269,
+          "maxScroll": 1269
+        },
+        "lastCard": {
+          "hero": "linghun",
+          "total": 100,
+          "top": 625,
+          "bottom": 700,
+          "scrollerTop": 355,
+          "scrollerBottom": 706,
+          "vh": 915,
+          "insideScroller": true,
+          "insideViewport": true,
+          "notCovered": true,
+          "hitTestId": "IMG"
+        }
+      },
+      "filterReset": {
+        "before": 1269,
+        "after": 0
+      },
+      "queryReset": {
+        "before": 1269,
+        "after": 0
+      },
+      "drag": {
+        "dragProbe": {
+          "hero": "embercoil",
+          "x": 205,
+          "y": 474,
+          "picks": 0,
+          "cards": 100
+        },
+        "afterDrag": {
+          "picks": 0,
+          "stillInGrid": true,
+          "pickerOpen": true
+        }
+      },
+      "tap": {
+        "targetHero": "hunpo",
+        "pos": {
+          "x": 205,
+          "y": 531
+        },
+        "beforeTap": {
+          "picks": 0,
+          "log": "選角動態\n準備開始…"
+        },
+        "afterTap": {
+          "gone": true,
+          "log": "選角動態\n🔴 對手 禁用 暮刃",
+          "picks": 0
+        }
+      },
+      "counter": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    "mob390": {
+      "frame": {
+        "vh": 844,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "touchAction": "pan-y",
+        "clientH": 334,
+        "scrollH": 1620,
+        "canScroll": true,
+        "clippingAncestors": [],
+        "realScrollers": [
+          "hero-grid-scroll"
+        ],
+        "plan": {
+          "top": 209,
+          "bottom": 242,
+          "h": 33
+        },
+        "search": {
+          "top": 320,
+          "bottom": 346,
+          "h": 26
+        },
+        "filters": {
+          "top": 287,
+          "bottom": 311,
+          "h": 24
+        },
+        "scroller": {
+          "top": 355,
+          "bottom": 689,
+          "h": 334
+        },
+        "docScrollable": false
+      },
+      "query6": {
+        "cards": 30,
+        "badge": 30,
+        "rows": 6
+      },
+      "scroll6": {
+        "before": {
+          "x": 195,
+          "top": 355,
+          "bottom": 689,
+          "h": 334,
+          "scrollTop": 0,
+          "maxScroll": 152
+        },
+        "after": {
+          "x": 195,
+          "top": 355,
+          "bottom": 689,
+          "h": 334,
+          "scrollTop": 152,
+          "maxScroll": 152
+        },
+        "lastCard": {
+          "hero": "tieshixin",
+          "total": 30,
+          "top": 608,
+          "bottom": 683,
+          "scrollerTop": 355,
+          "scrollerBottom": 689,
+          "vh": 844,
+          "insideScroller": true,
+          "insideViewport": true,
+          "notCovered": true,
+          "hitTestId": "IMG"
+        }
+      },
+      "scrollAll": {
+        "before": {
+          "x": 195,
+          "top": 355,
+          "bottom": 689,
+          "h": 334,
+          "scrollTop": 0,
+          "maxScroll": 1286
+        },
+        "after": {
+          "x": 195,
+          "top": 355,
+          "bottom": 689,
+          "h": 334,
+          "scrollTop": 1286,
+          "maxScroll": 1286
+        },
+        "lastCard": {
+          "hero": "linghun",
+          "total": 100,
+          "top": 608,
+          "bottom": 683,
+          "scrollerTop": 355,
+          "scrollerBottom": 689,
+          "vh": 844,
+          "insideScroller": true,
+          "insideViewport": true,
+          "notCovered": true,
+          "hitTestId": "IMG"
+        }
+      },
+      "filterReset": {
+        "before": 1286,
+        "after": 0
+      },
+      "queryReset": {
+        "before": 1286,
+        "after": 0
+      },
+      "drag": {
+        "dragProbe": {
+          "hero": "embercoil",
+          "x": 194,
+          "y": 474,
+          "picks": 0,
+          "cards": 100
+        },
+        "afterDrag": {
+          "picks": 0,
+          "stillInGrid": true,
+          "pickerOpen": true
+        }
+      },
+      "tap": {
+        "targetHero": "hunpo",
+        "pos": {
+          "x": 194,
+          "y": 522
+        },
+        "beforeTap": {
+          "picks": 0,
+          "log": "選角動態\n準備開始…"
+        },
+        "afterTap": {
+          "gone": true,
+          "log": "選角動態\n🔴 對手 禁用 剃翼",
+          "picks": 0
+        }
+      },
+      "counter": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    "mob360": {
+      "frame": {
+        "vh": 800,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "touchAction": "pan-y",
+        "clientH": 295,
+        "scrollH": 1620,
+        "canScroll": true,
+        "clippingAncestors": [],
+        "realScrollers": [
+          "hero-grid-scroll"
+        ],
+        "plan": {
+          "top": 209,
+          "bottom": 242,
+          "h": 33
+        },
+        "search": {
+          "top": 320,
+          "bottom": 346,
+          "h": 26
+        },
+        "filters": {
+          "top": 287,
+          "bottom": 311,
+          "h": 24
+        },
+        "scroller": {
+          "top": 355,
+          "bottom": 650,
+          "h": 295
+        },
+        "docScrollable": false
+      },
+      "query6": {
+        "cards": 30,
+        "badge": 30,
+        "rows": 6
+      },
+      "scroll6": {
+        "before": {
+          "x": 180,
+          "top": 355,
+          "bottom": 650,
+          "h": 295,
+          "scrollTop": 0,
+          "maxScroll": 191
+        },
+        "after": {
+          "x": 180,
+          "top": 355,
+          "bottom": 650,
+          "h": 295,
+          "scrollTop": 191,
+          "maxScroll": 191
+        },
+        "lastCard": {
+          "hero": "tieshixin",
+          "total": 30,
+          "top": 569,
+          "bottom": 644,
+          "scrollerTop": 355,
+          "scrollerBottom": 650,
+          "vh": 800,
+          "insideScroller": true,
+          "insideViewport": true,
+          "notCovered": true,
+          "hitTestId": "IMG"
+        }
+      },
+      "scrollAll": {
+        "before": {
+          "x": 180,
+          "top": 355,
+          "bottom": 650,
+          "h": 295,
+          "scrollTop": 0,
+          "maxScroll": 1325
+        },
+        "after": {
+          "x": 180,
+          "top": 355,
+          "bottom": 650,
+          "h": 295,
+          "scrollTop": 1325,
+          "maxScroll": 1325
+        },
+        "lastCard": {
+          "hero": "linghun",
+          "total": 100,
+          "top": 569,
+          "bottom": 644,
+          "scrollerTop": 355,
+          "scrollerBottom": 650,
+          "vh": 800,
+          "insideScroller": true,
+          "insideViewport": true,
+          "notCovered": true,
+          "hitTestId": "IMG"
+        }
+      },
+      "filterReset": {
+        "before": 1325,
+        "after": 0
+      },
+      "queryReset": {
+        "before": 1325,
+        "after": 0
+      },
+      "drag": {
+        "dragProbe": {
+          "hero": "embercoil",
+          "x": 179,
+          "y": 474,
+          "picks": 0,
+          "cards": 100
+        },
+        "afterDrag": {
+          "picks": 0,
+          "stillInGrid": true,
+          "pickerOpen": true
+        }
+      },
+      "tap": {
+        "targetHero": "hunpo",
+        "pos": {
+          "x": 179,
+          "y": 503
+        },
+        "beforeTap": {
+          "picks": 0,
+          "log": "選角動態\n準備開始…"
+        },
+        "afterTap": {
+          "gone": true,
+          "log": "選角動態\n🔴 對手 禁用 毒刺",
+          "picks": 0
+        }
+      },
+      "counter": {
+        "counterNodes": 0,
+        "rowsWithCounterAttr": 0,
+        "rows": 5,
+        "hasCounterWord": false,
+        "hasFitWord": true,
+        "hasNeedsWord": true
+      }
+    },
+    "desk1920-flow": {
+      "picks": [
+        {
+          "hero": "cinderfist",
+          "code": "TOP"
+        },
+        {
+          "hero": "greymantle",
+          "code": "JUNGLE"
+        },
+        {
+          "hero": "embercoil",
+          "code": "ADC"
+        },
+        {
+          "hero": "gambler",
+          "code": "MID"
+        },
+        {
+          "hero": "auralith",
+          "code": "SUPPORT"
+        }
+      ]
+    },
+    "desk1366-flow": {
+      "picks": [
+        {
+          "hero": "ravager",
+          "code": "TOP"
+        },
+        {
+          "hero": "duskblade",
+          "code": "JUNGLE"
+        },
+        {
+          "hero": "greymantle",
+          "code": "ADC"
+        },
+        {
+          "hero": "embercoil",
+          "code": "SUPPORT"
+        },
+        {
+          "hero": "gambler",
+          "code": "MID"
+        }
+      ]
+    },
+    "mob430-flow": {
+      "picks": [
+        {
+          "hero": "ravager",
+          "code": "TOP"
+        },
+        {
+          "hero": "cinderfist",
+          "code": "ADC"
+        },
+        {
+          "hero": "sting",
+          "code": "JUNGLE"
+        },
+        {
+          "hero": "duskblade",
+          "code": "MID"
+        },
+        {
+          "hero": "greymantle",
+          "code": "SUPPORT"
+        }
+      ]
+    },
+    "mob412-flow": {
+      "picks": [
+        {
+          "hero": "cinderfist",
+          "code": "TOP"
+        },
+        {
+          "hero": "sting",
+          "code": "JUNGLE"
+        },
+        {
+          "hero": "duskblade",
+          "code": "MID"
+        },
+        {
+          "hero": "greymantle",
+          "code": "ADC"
+        },
+        {
+          "hero": "embercoil",
+          "code": "SUPPORT"
+        }
+      ]
+    },
+    "mob390-flow": {
+      "picks": [
+        {
+          "hero": "ravager",
+          "code": "TOP"
+        },
+        {
+          "hero": "cinderfist",
+          "code": "ADC"
+        },
+        {
+          "hero": "duskblade",
+          "code": "JUNGLE"
+        },
+        {
+          "hero": "greymantle",
+          "code": "SUPPORT"
+        },
+        {
+          "hero": "gambler",
+          "code": "MID"
+        }
+      ]
+    },
+    "mob360-flow": {
+      "picks": [
+        {
+          "hero": "cinderfist",
+          "code": "TOP"
+        },
+        {
+          "hero": "sting",
+          "code": "JUNGLE"
+        },
+        {
+          "hero": "duskblade",
+          "code": "MID"
+        },
+        {
+          "hero": "greymantle",
+          "code": "ADC"
+        },
+        {
+          "hero": "embercoil",
+          "code": "SUPPORT"
+        }
+      ]
+    }
+  }
+}

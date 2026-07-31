@@ -28,15 +28,21 @@ const assignmentToRoster = (a = {}) =>
 /**
  * J-close：出戰配置摘要。
  *
- * 三個改動的理由（Ray 回報「選完角色只閃現不到 1 秒」）：
+ * 兩個改動的理由（Ray 回報「選完角色只閃現不到 1 秒」）：
  *  1. 這個面板現在**從一開始就在**，而且排在選角格之上——舊版排在 260px 高的
  *     選角捲動格**下面**，輪到你選人時它根本被推出畫面外，等於選的時候看不到
  *     自己會被排到哪一路。
  *  2. 尚未選的席位顯示「等待選角」，不是整塊消失，玩家才知道還缺幾個。
- *  3. 多一欄「被壓制」：拿本檔既有的 `archCounterScore` 去比對方已選的英雄，
- *     不是新的分析系統，只是把 AI 早就在算的東西講給玩家聽。
+ *
+ * Hotfix2：**移除「被壓制」欄**（J-close 加的克制關係顯示）。
+ *  Ray 的判斷是：選角當下真正要決策的是「這一路誰去、適不適合、有沒有衝突、
+ *  五路補齊了沒」，克制相性是另一個層級的資訊，混在同一列只會稀釋前四項。
+ *  底層 `archCounterScore` **沒有刪**（AI 選角仍在用，仍是 export 的純函式），
+ *  只是不再有任何 Ban/Pick UI 去呈現它的結果。
+ *  未來要做對位資訊，建議另開 Hero Codex 的「對位」頁籤，見
+ *  `docs/handoff/08_目前待辦與風險.md` 的 Hotfix2 一節。
  */
-function DraftPlanPanel({ plan, loadout, counterOf, open, onToggle, needs, laneByHero = {}, picks = [] }) {
+function DraftPlanPanel({ plan, loadout, open, onToggle, needs, laneByHero = {}, picks = [] }) {
   const rows = Object.entries(plan.assignment);
   const filled = rows.filter(([, a]) => a.hero).length;
   const warn = plan.conflicts.length;
@@ -66,11 +72,9 @@ function DraftPlanPanel({ plan, loadout, counterOf, open, onToggle, needs, laneB
       {rows.map(([seat, a]) => {
         const sp = loadout[seat]?.spells ?? [];
         const fitColor = a.heroFit >= 1 ? GC2.green : a.heroFit >= 0.5 ? "#fbbf24" : GC2.red;
-        const counter = a.hero ? counterOf(a.hero) : null;
         return (
           <div key={seat} data-testid="draft-plan-row" data-seat={seat} data-lane={a.lane}
             data-hero={a.heroId ?? ""} data-spells={sp.join(",")}
-            data-counter={counter?.by?.id ?? ""}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
             <span style={{ width: 30, color: GC2.gray, fontSize: 9, fontWeight: 800 }}>{a.lane}</span>
             <span style={{ width: 54, color: "#e5e7eb", fontSize: 10, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -79,15 +83,8 @@ function DraftPlanPanel({ plan, loadout, counterOf, open, onToggle, needs, laneB
             <span style={{ flex: 1, minWidth: 0, color: a.hero ? "#fff" : "#52525b", fontSize: 10.5, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {a.hero?.zh ?? "等待選角"}
             </span>
-            {/*  被壓制風險：對方已選英雄中對這隻克制分最高的一隻（分數 ≥2 才顯示，
-                低於門檻的相性差異太小，講出來只會變成雜訊）。 */}
-            {counter && (
-              <span data-testid="draft-plan-counter"
-                title={`對方的 ${counter.by.zh} 在定位相性上壓制 ${a.hero.zh}（克制分 ${counter.score}）`}
-                style={{ color: "#fb7185", fontSize: 9, fontWeight: 800, flexShrink: 0, maxWidth: 66, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                ⚠被{counter.by.zh}
-              </span>
-            )}
+            {/*  Hotfix2：原本這裡有一欄「⚠被 XXX」（被壓制風險）。已整欄移除，
+                理由與底層資料的去向見本檔 DraftPlanPanel 上方註解。 */}
             <span title={`英雄位置適性 ${Math.round(a.heroFit * 100)}%／選手位置熟練 ${Math.round(a.playerFit * 100)}%`}
               style={{ color: a.hero ? fitColor : "#3f3f46", fontSize: 9, fontWeight: 800, flexShrink: 0 }}>
               適性 {a.hero ? `${Math.round(a.heroFit * 100)}%` : "—"}
@@ -223,11 +220,22 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
   const [log, setLog] = useState([]);
   const [showPicker, setShowPicker] = useState(false);
   const [pickFilter, setPickFilter] = useState("全部");
+  //  Hotfix2：關鍵字搜尋。英雄池 100 隻 ＝ 20 列，只靠定位頁籤最少也還有 3–4 列；
+  //    想拿特定一隻仍得一路滑。搜尋是把「找特定英雄」從捲動問題變成輸入問題。
+  const [pickQuery, setPickQuery] = useState("");
   const [detailId, setDetailId] = useState(null);
   //  Hotfix1：出戰配置與陣容細節**預設收合**。阻斷問題的主因就是垂直空間被吃光，
   //    而這兩塊在選角當下並不需要一直攤開。收合只影響呈現，資料一筆都沒少。
   const [planOpen, setPlanOpen] = useState(false);
+  //  Hotfix2：英雄格捲到底了沒（決定要不要畫底部漸層提示）。純呈現狀態。
+  const [gridAtEnd, setGridAtEnd] = useState(true);
   const usedRef = useRef(new Set());
+  const gridRef = useRef(null);
+  //  Hotfix2：分辨「點選」與「滑動」。手指在英雄卡上往下滑要捲動，不可以選到英雄。
+  //    瀏覽器在捲動後本來就會抑制 click，但那是各家實作；這裡自己記一份手勢狀態，
+  //    行為才可被驗收腳本重現（見 tools/shot_banpick_hotfix2.mjs §5）。
+  const dragRef = useRef({ y: 0, moved: false });
+  const suppressTapRef = useRef(false);
 
   //  席位 → 實際上場選手（沿用 Milestone E 的先發指派，不另建一套）
   const seatPlayers = useMemo(() => seatPlayersOf(storeLineup, storePlayers ?? []), [storeLineup, storePlayers]);
@@ -240,8 +248,6 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
     () => buildLoadout(assignmentToRoster(draftPlan.assignment), heroById),
     [draftPlan],
   );
-  //  J-close：被壓制風險。用的是本檔既有的 archCounterScore（AI 選角本來就在算），
-  //  只是把結果講給玩家聽；門檻 2 分以下不顯示，避免變成滿排的雜訊。
   /**
    * J-close 追加：英雄 → 它被分到哪一路。
    *
@@ -280,18 +286,21 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
     return { have, need, haveCode, needCode };
   }, [draftPlan]);
 
-  const counterOf = useMemo(() => (hero) => {
-    if (!hero || !picks.red.length) return null;
-    const best = picks.red
-      .map((rc) => ({ by: rc, score: archCounterScore(rc, hero) }))
-      .sort((a, b) => b.score - a.score)[0];
-    return best && best.score >= 2 ? best : null;
-  }, [picks.red]);
-
   const cur = step < SEQ.length ? SEQ[step] : null;
   const done = step >= SEQ.length;
   const isMyTurn = cur && cur.team === "blue";
   const pool = CHAMPIONS_100.filter((c) => !usedRef.current.has(c.id));
+  //  Hotfix2：畫面上實際列出的英雄 ＝ 定位頁籤 ∩ 關鍵字。
+  //    關鍵字比對中文名、英文名、id、稱號與預設路線——玩家記得哪個就打哪個。
+  const query = pickQuery.trim().toLowerCase();
+  const shownPool = pool.filter((c) =>
+    (pickFilter === "全部" || c.arch === pickFilter)
+    && (!query
+      || c.zh.includes(query)
+      || (c.en ?? "").toLowerCase().includes(query)
+      || c.id.includes(query)
+      || (c.title ?? "").includes(query)
+      || (c.lane ?? "").includes(query)));
 
   // Legacy AI：ban 60% 針對性 / pick 50% counter — 逐字移植
   const aiPick = (team, action) => {
@@ -312,6 +321,33 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
       return p[Math.floor(Math.random() * Math.min(8, p.length))];
     }
   };
+
+  //  ── Hotfix2：英雄格的手勢與捲動 ────────────────────────────────────────
+  //    捲動區只有一個（英雄格本身）。這裡三件事：
+  //      1. 記住這次手勢有沒有位移 ⇒ 滑動不會誤選英雄。
+  //      2. 捲到底就把底部漸層提示收掉 ⇒ 提示只在「還有東西沒看到」時出現。
+  //      3. 換篩選／換關鍵字／輪到下一次選人 ⇒ 回到第一列。
+  const syncGridEdge = () => {
+    const el = gridRef.current;
+    if (!el) return;
+    setGridAtEnd(el.scrollHeight - el.scrollTop - el.clientHeight <= 4);
+  };
+  const onGridPointerDown = (e) => { dragRef.current = { y: e.clientY, moved: false }; suppressTapRef.current = false; };
+  const onGridPointerMove = (e) => { if (Math.abs(e.clientY - dragRef.current.y) > 8) dragRef.current.moved = true; };
+  const onGridPointerUp = () => { suppressTapRef.current = dragRef.current.moved; };
+  const onGridScroll = () => { dragRef.current.moved = true; syncGridEdge(); };
+  /** 這一次 click 是真的點擊，還是一段捲動手勢的尾巴？ */
+  const isRealTap = () => {
+    if (!suppressTapRef.current) return true;
+    suppressTapRef.current = false;
+    return false;
+  };
+
+  useEffect(() => {
+    const el = gridRef.current;
+    if (el) el.scrollTop = 0;
+    syncGridEdge();
+  }, [pickFilter, pickQuery, step, showPicker]);
 
   const playerChoose = (champ) => {
     if (!isMyTurn) return;
@@ -344,22 +380,43 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
       const champ = aiPick(cur.team, cur.act);
       if (!champ) { setStep((s) => s + 1); return; }
       usedRef.current.add(champ.id);
-      let counterNote = "";
-      if (cur.act === "pick" && picks.blue.length > 0) {
-        const best = picks.blue.map((bc) => ({ bc, s: archCounterScore(champ, bc) })).sort((a, b) => b.s - a.s)[0];
-        if (best && best.s >= 2) counterNote = `（克制你的${best.bc.zh}）`;
-      }
+      //  Hotfix2：對手選角的播報原本會附「（克制你的 XXX）」。那是 Ban/Pick 裡
+      //    另一處克制關係顯示，本輪一併移除；AI 的選角行為（aiPick）一行未動，
+      //    這裡也沒有動到任何隨機抽樣，所以同 seed 的選角結果不變。
       if (cur.act === "ban") { setBans((b) => ({ ...b, red: [...b.red, champ] })); setLog((l) => [`🔴 對手 禁用 ${champ.zh}`, ...l].slice(0, 8)); }
-      else { setPicks((p) => ({ ...p, red: [...p.red, champ] })); setLog((l) => [`🔴 對手 選擇 ${champ.zh}${counterNote}`, ...l].slice(0, 8)); }
+      else { setPicks((p) => ({ ...p, red: [...p.red, champ] })); setLog((l) => [`🔴 對手 選擇 ${champ.zh}`, ...l].slice(0, 8)); }
       setStep((s) => s + 1);
     }, 700);
     return () => clearTimeout(t);
   }, [step]);
 
   return (
-    <div style={{ minHeight: "100%", background: GC2.bg, fontFamily: "system-ui", padding: "12px 12px 30px", overflow: "auto" }}>
-      <div style={{ maxWidth: 460, margin: "0 auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+    /*  ── Hotfix2：整頁改成「固定框 ＋ 一個捲動區」 ────────────────────────────
+        根因（量出來的，不是猜的）：AppShell 的外框是
+        `height: min(88vh,760px); overflow: hidden` 的**固定高度盒**，而本畫面的根
+        元素只寫了 `minHeight:100%` 沒有 `height:100%` ⇒ 它會長到內容那麼高
+        （390×844 實測 2015px），自己的 `overflow:auto` 因此永遠不會生效，
+        超出 743px 的部分**被外框直接裁掉且沒有任何祖先能捲**。
+        實測：英雄格 top 314、bottom 1928，最後一張卡在 y=1853；
+        `window.scrollBy`、`scrollingElement.scrollTop`、單指觸控拖曳三種方式
+        都動不了它一格 ⇒ 第六列以後的英雄看得到規則、選不到人。
+
+        Hotfix1 把英雄格的 `maxHeight:260` 巢狀捲動拿掉時，假設「整頁是單一捲動軸」
+        ——但這一頁**當時根本沒有任何捲動軸**，所以拿掉之後從「難捲」變成「不能捲」。
+
+        修法不是把頁面拉高，也不是把上方面板砍掉，而是讓根元素真的被高度框住
+        （`height:100%` ＋ flex column），把捲動責任交給一個**明確的**捲動區。 */
+    <div style={{
+      height: "100%", boxSizing: "border-box", background: GC2.bg, fontFamily: "system-ui",
+      display: "flex", flexDirection: "column", overflow: "hidden",
+    }}>
+      <div style={{
+        maxWidth: 460, width: "100%", margin: "0 auto", flex: 1, minHeight: 0, boxSizing: "border-box",
+        display: "flex", flexDirection: "column",
+        //  最後一列不能被 home indicator／瀏覽器工具列蓋住 ⇒ 底部留安全區。
+        padding: "12px 12px calc(env(safe-area-inset-bottom, 0px) + 10px)",
+      }}>
+        <div style={{ flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {onBack && <button onClick={onBack} style={{ background: "none", border: "none", color: GC2.gray, fontSize: 14, cursor: "pointer", padding: 0 }}>←</button>}
             <h2 style={{ color: "white", fontSize: 17, fontWeight: 900, margin: 0 }}>選角階段</h2>
@@ -370,13 +427,13 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
           </div>
         </div>
 
-        {cur && <div style={{ background: GC2.card, borderRadius: 10, padding: "10px 14px", marginBottom: 12, borderLeft: `3px solid ${cur.team === "blue" ? GC2.blue : GC2.red}` }}><span style={{ color: cur.team === "blue" ? GC2.blue : GC2.red, fontSize: 12, fontWeight: 700 }}>{cur.team === "blue" ? "🔵 我方" : "🔴 對手"}</span><span style={{ color: "white", fontSize: 11, marginLeft: 8 }}>{cur.act === "ban" ? "禁用英雄" : "選擇英雄"}{isMyTurn ? " — 點下方選擇" : ""}</span></div>}
+        {cur && <div style={{ flexShrink: 0, background: GC2.card, borderRadius: 10, padding: "10px 14px", marginBottom: 12, borderLeft: `3px solid ${cur.team === "blue" ? GC2.blue : GC2.red}` }}><span style={{ color: cur.team === "blue" ? GC2.blue : GC2.red, fontSize: 12, fontWeight: 700 }}>{cur.team === "blue" ? "🔵 我方" : "🔴 對手"}</span><span style={{ color: "white", fontSize: 11, marginLeft: 8 }}>{cur.act === "ban" ? "禁用英雄" : "選擇英雄"}{isMyTurn ? " — 點下方選擇" : ""}</span></div>}
 
         {/*  ── Hotfix1：禁用與已選英雄合併成一個精簡區塊 ────────────────────
             原本是兩個獨立段落（各有標題列與雙欄小標），加上警告清單約 260px。
             這裡壓成「一行標題 ＋ 一列頭像」×2，警告清單移進出戰配置的展開區，
             省下的垂直空間直接還給下方的英雄選擇格。資料一筆都沒有拿掉。 */}
-        <div style={{ marginBottom: 10 }}>
+        <div style={{ flexShrink: 0, marginBottom: 10 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
             <span style={{ color: GC2.gray, fontSize: 10, fontWeight: 700 }}>已選英雄</span>
             <span data-testid="comp-needs" data-have={compNeeds.haveCode.join(",")} data-need={compNeeds.needCode.join(",")}
@@ -444,55 +501,123 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
             量測發現：把它移到英雄格**下面**之後，它會被沒有高度上限的英雄格推到
             y≈1910——技術上捲得到，實際上要滑過上百隻英雄才看得到，等於沒有。
             收合狀態成本極低，放回上方讓它一直在首屏，英雄格仍從首屏開始。 */}
-        <DraftPlanPanel plan={draftPlan} loadout={planLoadout} counterOf={counterOf}
+        <DraftPlanPanel plan={draftPlan} loadout={planLoadout}
           open={planOpen} onToggle={() => setPlanOpen((v) => !v)} needs={compNeeds} laneByHero={laneByHero} picks={picks.blue} />
 
         {/*  ── Hotfix1：輪到你選人時，英雄格排在最前面 ──────────────────────
-            「選擇你的英雄」不可以被上方資訊推走——它是這一頁唯一需要操作的東西。 */}
-        {isMyTurn && showPicker && (
-          <div style={{ background: GC2.card, borderRadius: 12, padding: "12px", marginBottom: 12, border: "1px solid rgba(120,160,220,0.28)" }}>
-            <div style={{ color: "#cbd5e1", fontSize: 11, fontWeight: 800, marginBottom: 8 }}>{cur.act === "ban" ? "選擇要禁用的英雄" : "選擇你的英雄"}</div>
-            <div style={{ display: "flex", gap: 4, marginBottom: 8, overflowX: "auto" }}>
-              {["全部", "坦克", "戰士", "刺客", "法師", "射手", "輔助"].map((f) => (<button key={f} onClick={() => setPickFilter(f)} style={{ flexShrink: 0, padding: "4px 10px", border: "none", cursor: "pointer", background: pickFilter === f ? "rgba(255,255,255,0.14)" : "transparent", color: pickFilter === f ? "#e8eef6" : GC2.gray, fontSize: 10, fontWeight: 700, borderBottom: pickFilter === f ? `2px solid ${ARCH_DIM[f] ?? GC2.blue}` : "2px solid transparent", borderRadius: 6 }}>{f}</button>))}
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 6, /* Hotfix1：移除巢狀捲動 —— 整頁單一捲動軸，手機才不會「滑不到底」 */ }}>
-              {pool.filter((c) => pickFilter === "全部" || c.arch === pickFilter).map((c) => (
-                <div key={c.id} style={{ background: GC2.card2, border: "1px solid rgba(255,255,255,0.05)", borderRadius: 8, padding: "6px 3px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, position: "relative" }}>
-                  <button onClick={() => setDetailId(c.id)} style={{ position: "absolute", top: 2, right: 2, width: 15, height: 15, borderRadius: "50%", background: "rgba(0,0,0,0.5)", border: "none", cursor: "pointer", color: "#a1a1aa", fontSize: 9, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>ⓘ</button>
-                  <button onClick={() => playerChoose(c)} style={{ background: "transparent", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, width: "100%", padding: 0 }}>
-                    <ChampFace champ={c} size={34} />
-                    <span style={{ color: "white", fontSize: 7, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{c.zh}</span>
-                    <span style={{ color: ARCH_DIM[c.arch] ?? GC2.gray, fontSize: 6.5 }}>{c.arch}</span>
-                  </button>
+            「選擇你的英雄」不可以被上方資訊推走——它是這一頁唯一需要操作的東西。
+            ── Hotfix2：這張卡改成**撐滿剩餘高度**的框（flex:1 ＋ minHeight:0）。
+            標題／篩選／搜尋釘在框頂不動，只有英雄格自己捲 ⇒ 全頁只有一個捲動軸，
+            而且它是**真的**捲得動的那一個（根元素已被 height:100% 框住）。 */}
+        {isMyTurn && showPicker ? (
+          <>
+            <div data-testid="hero-picker" style={{
+              flex: 1, minHeight: 0, display: "flex", flexDirection: "column", position: "relative",
+              background: GC2.card, borderRadius: 12, padding: 12, marginBottom: 8,
+              border: "1px solid rgba(120,160,220,0.28)",
+            }}>
+              <div style={{ flexShrink: 0, color: "#cbd5e1", fontSize: 11, fontWeight: 800, marginBottom: 8 }}>{cur.act === "ban" ? "選擇要禁用的英雄" : "選擇你的英雄"}</div>
+              <div style={{ flexShrink: 0, display: "flex", gap: 4, marginBottom: 8, overflowX: "auto" }}>
+                {["全部", "坦克", "戰士", "刺客", "法師", "射手", "輔助"].map((f) => (<button key={f} data-testid="pick-filter" data-filter={f} data-active={pickFilter === f ? "1" : "0"} onClick={() => setPickFilter(f)} style={{ flexShrink: 0, padding: "4px 10px", border: "none", cursor: "pointer", background: pickFilter === f ? "rgba(255,255,255,0.14)" : "transparent", color: pickFilter === f ? "#e8eef6" : GC2.gray, fontSize: 10, fontWeight: 700, borderBottom: pickFilter === f ? `2px solid ${ARCH_DIM[f] ?? GC2.blue}` : "2px solid transparent", borderRadius: 6 }}>{f}</button>))}
+              </div>
+              {/*  Hotfix2：搜尋。位置篩選之後仍有 3–4 列，要拿特定一隻還是得滑；
+                  打兩個字就到位比捲動快，也比把格子縮小塞更多隻好讀。 */}
+              <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, marginBottom: 8, background: "rgba(255,255,255,0.045)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 7, padding: "0 8px" }}>
+                <span style={{ color: "#52525b", fontSize: 10, flexShrink: 0 }}>🔍</span>
+                <input data-testid="hero-search" value={pickQuery} onChange={(e) => setPickQuery(e.target.value)}
+                  placeholder="搜尋英雄名稱" aria-label="搜尋英雄名稱"
+                  style={{ flex: 1, minWidth: 0, background: "none", border: "none", outline: "none", color: "#e8eef6", fontSize: 11, padding: "6px 0", fontFamily: "inherit" }} />
+                {pickQuery && (
+                  <button data-testid="hero-search-clear" aria-label="清除搜尋" onClick={() => setPickQuery("")}
+                    style={{ flexShrink: 0, background: "none", border: "none", cursor: "pointer", color: GC2.gray, fontSize: 11, padding: 0 }}>✕</button>
+                )}
+                <span data-testid="pick-count" data-count={shownPool.length} style={{ flexShrink: 0, color: GC2.gray, fontSize: 9, fontWeight: 700 }}>{shownPool.length} 位</span>
+              </div>
+              {/*  ★ 全頁唯一的捲動區。min-height:0 是關鍵：沒有它，flex 子元素的
+                  最小高度是內容高度 ⇒ 又會長回去把父框撐破（就是 Hotfix1 的處境）。
+                  overscroll-behavior:contain 讓捲到底不會把外層一起帶走；
+                  touch-action:pan-y 明確只吃垂直手勢。 */}
+              <div ref={gridRef} data-testid="hero-grid-scroll"
+                onScroll={onGridScroll}
+                onPointerDownCapture={onGridPointerDown}
+                onPointerMoveCapture={onGridPointerMove}
+                onPointerUpCapture={onGridPointerUp}
+                onPointerCancelCapture={onGridPointerUp}
+                style={{
+                  flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden",
+                  overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y",
+                  scrollbarWidth: "thin", paddingRight: 2,
+                }}>
+                <div data-testid="hero-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 6, alignContent: "start" }}>
+                  {shownPool.map((c) => (
+                    <div key={c.id} data-testid="hero-card" data-hero={c.id} style={{ background: GC2.card2, border: "1px solid rgba(255,255,255,0.05)", borderRadius: 8, padding: "6px 3px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, position: "relative" }}>
+                      <button onClick={() => { if (isRealTap()) setDetailId(c.id); }} style={{ position: "absolute", top: 2, right: 2, width: 15, height: 15, borderRadius: "50%", background: "rgba(0,0,0,0.5)", border: "none", cursor: "pointer", color: "#a1a1aa", fontSize: 9, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>ⓘ</button>
+                      <button data-testid="hero-choose" data-hero={c.id} onClick={() => { if (isRealTap()) playerChoose(c); }} style={{ background: "transparent", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, width: "100%", padding: 0 }}>
+                        <ChampFace champ={c} size={34} />
+                        <span style={{ color: "white", fontSize: 7, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{c.zh}</span>
+                        <span style={{ color: ARCH_DIM[c.arch] ?? GC2.gray, fontSize: 6.5 }}>{c.arch}</span>
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ))}
+                {shownPool.length === 0 && (
+                  <div style={{ color: GC2.gray, fontSize: 10, textAlign: "center", padding: "18px 0" }}>沒有符合的英雄</div>
+                )}
+                {/*  捲到最底時，最後一列仍要離框底有一點餘裕（別貼著邊）。 */}
+                <div style={{ height: 6 }} />
+              </div>
+              {/*  可捲動提示：只在「下面還有東西」時出現的一道細漸層。
+                  不擋卡片（pointerEvents:none）、不是浮動大字塊。 */}
+              {!gridAtEnd && (
+                <div data-testid="hero-grid-more" aria-hidden="true" style={{
+                  position: "absolute", left: 12, right: 12, bottom: 12, height: 18, borderRadius: "0 0 10px 10px",
+                  background: `linear-gradient(to top, ${GC2.card}, rgba(19,21,28,0))`, pointerEvents: "none",
+                }} />
+              )}
             </div>
-          </div>
-        )}
-
-
-        <div style={{ background: GC2.card, borderRadius: 12, padding: "12px 14px" }}>
-          <div style={{ color: GC2.gray, fontSize: 10, fontWeight: 700, marginBottom: 8 }}>選角動態</div>
-          {log.length === 0 && <div style={{ color: GC2.gray, fontSize: 10, textAlign: "center", padding: "8px 0" }}>準備開始…</div>}
-          {log.map((l, i) => (<div key={i} style={{ color: i === 0 ? "white" : GC2.gray, fontSize: 10, padding: "3px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>{l}</div>))}
-        </div>
-
-        {done && (
-          <div style={{ marginTop: 14, textAlign: "center" }}>
-            <div style={{ color: GC2.green, fontSize: 13, fontWeight: 800, marginBottom: 8 }}>✓ 選角完成 —— 上方是本場最終分路</div>
-            <div style={{ color: GC2.gray, fontSize: 10, marginBottom: 10, lineHeight: 1.6 }}>
-              確認每一路的選手、英雄、適性與衝突提示之後再繼續。<br />
-              這份配置就是接下來 Loading、對戰、戰報與重播看到的同一份。
+            {/*  選角動態在選人當下壓成一行（最新一則）。整份紀錄在「對手選擇中…」
+                與選角完成後都會完整攤開——那時候才是真的會去讀它的時機。
+                這是為了把垂直空間讓給英雄格，資料一筆都沒有拿掉。 */}
+            <div data-testid="draft-log" data-compact="1" style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 8, background: GC2.card, borderRadius: 8, padding: "5px 10px" }}>
+              <span style={{ flexShrink: 0, color: GC2.gray, fontSize: 9, fontWeight: 700 }}>選角動態</span>
+              <span style={{ flex: 1, minWidth: 0, color: "#e5e7eb", fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{log[0] ?? "準備開始…"}</span>
             </div>
-            <button data-testid="confirm-draft" onClick={confirmDraft}
-              style={{ background: "linear-gradient(135deg,#3b82f6,#1d4ed8)", border: "2px solid #93c5fd", borderRadius: 10, padding: "10px 26px", color: "#fff", fontSize: 14, fontWeight: 900, cursor: "pointer" }}>
-              確認出戰配置 →
-            </button>
+          </>
+        ) : (
+          /*  不是你在選人的時候（對手選擇中／選角完成）：剩餘高度讓給完整的
+              選角動態與確認區，而且這一段自己可捲，短螢幕也不會被裁掉。 */
+          <div data-testid="draft-tail-scroll" style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}>
+            <div data-testid="draft-log" data-compact="0" style={{ background: GC2.card, borderRadius: 12, padding: "12px 14px" }}>
+              <div style={{ color: GC2.gray, fontSize: 10, fontWeight: 700, marginBottom: 8 }}>選角動態</div>
+              {log.length === 0 && <div style={{ color: GC2.gray, fontSize: 10, textAlign: "center", padding: "8px 0" }}>準備開始…</div>}
+              {log.map((l, i) => (<div key={i} style={{ color: i === 0 ? "white" : GC2.gray, fontSize: 10, padding: "3px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>{l}</div>))}
+            </div>
+
+            {done && (
+              <div style={{ marginTop: 14, textAlign: "center" }}>
+                <div style={{ color: GC2.green, fontSize: 13, fontWeight: 800, marginBottom: 8 }}>✓ 選角完成 —— 上方是本場最終分路</div>
+                <div style={{ color: GC2.gray, fontSize: 10, marginBottom: 10, lineHeight: 1.6 }}>
+                  確認每一路的選手、英雄、適性與衝突提示之後再繼續。<br />
+                  這份配置就是接下來 Loading、對戰、戰報與重播看到的同一份。
+                </div>
+                <button data-testid="confirm-draft" onClick={confirmDraft}
+                  style={{ background: "linear-gradient(135deg,#3b82f6,#1d4ed8)", border: "2px solid #93c5fd", borderRadius: 10, padding: "10px 26px", color: "#fff", fontSize: 14, fontWeight: 900, cursor: "pointer" }}>
+                  確認出戰配置 →
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
       {detailId && <HeroCodexDetail heroId={detailId} onClose={() => setDetailId(null)} />}
-      <style>{`*::-webkit-scrollbar{display:none}`}</style>
+      {/*  Hotfix2：捲軸不再是「全部藏起來」。英雄格是這一頁唯一要捲的東西，
+          給它一條 4px 細軌當可捲動的靜態暗示（另有底部漸層當動態暗示）。 */}
+      <style>{`
+        *::-webkit-scrollbar{display:none}
+        [data-testid="hero-grid-scroll"]::-webkit-scrollbar{display:block;width:4px}
+        [data-testid="hero-grid-scroll"]::-webkit-scrollbar-track{background:transparent}
+        [data-testid="hero-grid-scroll"]::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.22);border-radius:2px}
+      `}</style>
     </div>
   );
 }
