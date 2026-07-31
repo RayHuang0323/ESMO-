@@ -27,6 +27,9 @@ import {
   findPath, isWalkable, projectToWalkable, structureList,
 } from "../nav/mobaNavigation.js";
 import { archetypeForRole, archetypeData, heroVisualFor, skillVisualFor } from "../presentation/heroArchetypes.js";
+//  Milestone L：英雄戰鬥呈現。**純附加**——只在既有 effect 上多掛一個 `presentation`
+//  欄位，原本每一個欄位都不動 ⇒ 既有 renderer 行為逐像素不變。
+import { describeFxPresentation } from "../heroPresentationAdapter.js";
 
 /** 呈現用高度（世界單位）：英雄站在地面上，結構的血條掛在頭頂。 */
 export const RUNTIME_Y = Object.freeze({ hero: 0, structure: 0 });
@@ -612,6 +615,10 @@ export function adaptEffects(snapshot, effectTime = snapshot?.ts, opts = {}) {
       world: start,
       targetWorld: target,
       lifeRatio: ratio01(1 - age / life),
+      //  Milestone L：演出描述（八選一模板 ＋ 主題色 ＋ 強調程度）。
+      //  ⚠ 這是**新增欄位**，上面每一個既有欄位都沒有被它改寫；
+      //    describeFxPresentation 也不修改 `f`（原始 snapshot.fx 不受影響）。
+      presentation: describeFxPresentation(f, opts.roster ?? null),
     });
   }
   return out;

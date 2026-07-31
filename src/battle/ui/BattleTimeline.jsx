@@ -12,6 +12,9 @@ import { useBattleStore } from "../battleStore.js";
 import { fmtT } from "../../gameData.js";
 import { GC } from "../../ui/theme.js";
 import { useIsMobile } from "../../ui/useViewport.js";
+import HeroPortrait from "../../ui/HeroPortrait.jsx";
+//  Milestone L：Timeline 的英雄身分也走同一支 Adapter（不在這裡自己查 roster）。
+import { describeTimelinePresentation } from "../moba/heroPresentationAdapter.js";
 import { SAFE_TOP, FEED_LEFT, FEED_MAX_W, FEED_RIGHT_RESERVE, Z } from "./battleLayout.js";
 
 const ICON = { FIRST_BLOOD: "🩸", KILL: "⚔️", MULTI_KILL: "🔥", ACE: "💥", TOWER_DESTROYED: "🗼", DRAGON_SLAIN: "🐉", BARON_SLAIN: "👑", VICTORY: "🏆", SPELL_USED: "✨", OBJECTIVE_SPAWN: "🌀" };
@@ -23,8 +26,27 @@ function Name({ id, side, roster }) {
   return <span style={{ color: sideC(side), fontWeight: 800 }}>{roster?.[id]?.player ?? id.toUpperCase()}</span>;
 }
 
+/**
+ *  Milestone L：主角英雄頭像。找不到英雄 ⇒ 用主題色圓點頂替，**不留空白**。
+ *  ⚠ 只掛在「有明確主角」的事件上（擊殺／首殺／連殺／召喚師技能）；
+ *    團隊級事件（拆塔／大龍／ACE）沒有單一主角，掛頭像就是編造。
+ */
+function ActorPortrait({ pres }) {
+  if (!pres?.showPortrait) return null;
+  const c = pres.theme?.primaryColor ?? "#64748b";
+  return (
+    <span data-testid="timeline-portrait" data-hero={pres.heroId} data-source={pres.source}
+      style={{ flexShrink: 0, display: "inline-flex", marginTop: 0.5 }}>
+      <HeroPortrait heroId={pres.heroId} size={14} radius="50%" border={`1px solid ${c}`} alt=""
+        fallback={<span style={{ width: 14, height: 14, borderRadius: "50%", background: c, display: "inline-block" }} />} />
+    </span>
+  );
+}
+
 function Row({ ev, roster }) {
   const d = ev.data;
+  //  呈現描述由 Adapter 產生：本元件不自己推導英雄，也不修改 ev。
+  const pres = describeTimelinePresentation(ev, roster);
   let body;
   if ((ev.type === "KILL" || ev.type === "FIRST_BLOOD") && d) {
     const vSide = ev.side === "blue" ? "red" : "blue";
@@ -49,10 +71,17 @@ function Row({ ev, roster }) {
   } else {
     body = <span style={{ color: sideC(ev.side) }}>{ev.text}</span>;
   }
+  //  大場面標記：ACE / 連殺 / 大龍 / 小龍 / 勝利。左緣加粗 ＋ 底色，一眼看得出來。
+  //  ⚠ 這是**團隊級事件**的標記，不是「某人放了大招」——引擎不模擬技能施放，
+  //    Timeline 也就不會宣稱有人放了 R。
+  const hi = pres.isHighlight;
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 5, padding: "3px 5px", fontSize: 11, lineHeight: 1.35, borderLeft: `1.5px solid ${sideC(ev.side)}`, marginBottom: 1, background: "rgba(255,255,255,0.025)", borderRadius: "0 5px 5px 0" }}>
+    <div data-testid="timeline-row" data-type={ev.type} data-highlight={hi ? "1" : "0"}
+      data-hero={pres.heroId ?? ""}
+      style={{ display: "flex", alignItems: "flex-start", gap: 5, padding: "3px 5px", fontSize: 11, lineHeight: 1.35, borderLeft: `${hi ? 3 : 1.5}px solid ${hi ? GC.gold : sideC(ev.side)}`, marginBottom: 1, background: hi ? "rgba(251,191,36,0.10)" : "rgba(255,255,255,0.025)", borderRadius: "0 5px 5px 0" }}>
       <span style={{ fontSize: 12, flexShrink: 0 }}>{ICON[ev.type] || "•"}</span>
       <span style={{ color: "rgba(255,255,255,0.42)", fontFamily: MONO, fontSize: 9, width: 32, flexShrink: 0, marginTop: 1.5 }}>{fmtT(ev.t)}</span>
+      <ActorPortrait pres={pres} />
       {body}
     </div>
   );

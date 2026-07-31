@@ -1,0 +1,4844 @@
+{
+  "notes": [
+    {
+      "label": "desk1920 A1) 演出畫廊載入",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 A2) 八個演出模板都在，順序與白名單一致",
+      "ok": true,
+      "extra": [
+        "projectile",
+        "line",
+        "area",
+        "dash",
+        "shield",
+        "heal",
+        "control",
+        "ultimate"
+      ]
+    },
+    {
+      "label": "desk1920 A3) 每個模板都指名一位示範英雄與 primitive 組合",
+      "ok": true,
+      "extra": [
+        {
+          "a": "projectile",
+          "hero": "leiting",
+          "prim": "bolt",
+          "label": "彈道演出"
+        },
+        {
+          "a": "line",
+          "hero": "dadi",
+          "prim": "bar",
+          "label": "貫穿演出"
+        },
+        {
+          "a": "area",
+          "hero": "bingshuang",
+          "prim": "halo",
+          "label": "範圍演出"
+        },
+        {
+          "a": "dash",
+          "hero": "chichuan",
+          "prim": "bar,bolt",
+          "label": "突進演出"
+        },
+        {
+          "a": "shield",
+          "hero": "stoneguard",
+          "prim": "guard",
+          "label": "護盾演出"
+        },
+        {
+          "a": "heal",
+          "hero": "yanfeng",
+          "prim": "guard,halo",
+          "label": "回復演出"
+        },
+        {
+          "a": "control",
+          "hero": "ironclad",
+          "prim": "halo,guard",
+          "label": "控制演出"
+        },
+        {
+          "a": "ultimate",
+          "hero": "cinderfist",
+          "prim": "halo,guard,bolt",
+          "label": "大招演出"
+        }
+      ]
+    },
+    {
+      "label": "desk1920 A4) 10 位代表英雄全部列出（用 data-hero 指名）",
+      "ok": true,
+      "extra": [
+        "bingshuang",
+        "chichuan",
+        "cinderfist",
+        "dadi",
+        "duskblade",
+        "ironclad",
+        "leiting",
+        "lieyan",
+        "stoneguard",
+        "yanfeng"
+      ]
+    },
+    {
+      "label": "desk1920 A5) 10 位英雄的主題色互不相同（辨識度的最低門檻）",
+      "ok": true,
+      "extra": [
+        [
+          "bingshuang",
+          "#42c9e8"
+        ],
+        [
+          "chichuan",
+          "#b91c1c"
+        ],
+        [
+          "cinderfist",
+          "#c63f22"
+        ],
+        [
+          "dadi",
+          "#4f6f3f"
+        ],
+        [
+          "duskblade",
+          "#6257a6"
+        ],
+        [
+          "ironclad",
+          "#94a3b8"
+        ],
+        [
+          "leiting",
+          "#30343b"
+        ],
+        [
+          "lieyan",
+          "#7f1d1d"
+        ],
+        [
+          "stoneguard",
+          "#747c8c"
+        ],
+        [
+          "yanfeng",
+          "#c2410c"
+        ]
+      ]
+    },
+    {
+      "label": "desk1920 A6) 每位英雄五個 slot 都有演出模板，且都落在白名單",
+      "ok": true,
+      "extra": [
+        [
+          "bingshuang",
+          [
+            "control",
+            "projectile",
+            "shield",
+            "area",
+            "area"
+          ]
+        ],
+        [
+          "chichuan",
+          [
+            "area",
+            "line",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        ],
+        [
+          "cinderfist",
+          [
+            "area",
+            "area",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        ],
+        [
+          "dadi",
+          [
+            "shield",
+            "line",
+            "shield",
+            "control",
+            "ultimate"
+          ]
+        ],
+        [
+          "duskblade",
+          [
+            "line",
+            "line",
+            "control",
+            "dash",
+            "ultimate"
+          ]
+        ],
+        [
+          "ironclad",
+          [
+            "shield",
+            "dash",
+            "control",
+            "line",
+            "area"
+          ]
+        ],
+        [
+          "leiting",
+          [
+            "projectile",
+            "line",
+            "shield",
+            "dash",
+            "area"
+          ]
+        ],
+        [
+          "lieyan",
+          [
+            "area",
+            "area",
+            "shield",
+            "line",
+            "ultimate"
+          ]
+        ],
+        [
+          "stoneguard",
+          [
+            "shield",
+            "control",
+            "projectile",
+            "shield",
+            "area"
+          ]
+        ],
+        [
+          "yanfeng",
+          [
+            "heal",
+            "projectile",
+            "dash",
+            "area",
+            "ultimate"
+          ]
+        ]
+      ]
+    },
+    {
+      "label": "desk1920 A7) fixture 同時涵蓋八個模板 ＋ 一個 fallback 英雄",
+      "ok": true,
+      "extra": {
+        "quality": "high",
+        "caps": {
+          "halo": 28,
+          "bar": 28,
+          "bolt": 40,
+          "guard": 22
+        },
+        "progress": 0.45,
+        "archetypes": [
+          "projectile",
+          "line",
+          "area",
+          "dash",
+          "shield",
+          "heal",
+          "control",
+          "ultimate",
+          "line"
+        ],
+        "heroes": [
+          "leiting",
+          "dadi",
+          "bingshuang",
+          "chichuan",
+          "stoneguard",
+          "yanfeng",
+          "ironclad",
+          "cinderfist",
+          "linghun"
+        ],
+        "sources": [
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "fallback"
+        ]
+      }
+    },
+    {
+      "label": "desk1920 A8) 特效模板真的畫出 instance（halo/bar/bolt/guard 都 > 0）",
+      "ok": true,
+      "extra": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 28,
+          "bar": 28,
+          "bolt": 40,
+          "guard": 22
+        },
+        "quality": "high"
+      }
+    },
+    {
+      "label": "desk1920 A9) 九筆 fixture 全部被 renderer 認得（live=9）",
+      "ok": true,
+      "extra": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 28,
+          "bar": 28,
+          "bolt": 40,
+          "guard": 22
+        },
+        "quality": "high"
+      }
+    },
+    {
+      "label": "desk1920 A10) 每個池都沒有超過容量上限",
+      "ok": true,
+      "extra": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 28,
+          "bar": 28,
+          "bolt": 40,
+          "guard": 22
+        },
+        "quality": "high"
+      }
+    },
+    {
+      "label": "desk1920 A11) HUD callout 出現（5 筆 fixture ⇒ 顯示 3 則）",
+      "ok": true,
+      "extra": {
+        "limit": 3,
+        "count": 3,
+        "rows": [
+          {
+            "hero": "ironclad",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "鋼鐵衛士",
+            "portrait": true,
+            "w": 190,
+            "h": 36,
+            "visible": true,
+            "inView": true
+          },
+          {
+            "hero": "bingshuang",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "冰霜術士",
+            "portrait": true,
+            "w": 190,
+            "h": 36,
+            "visible": true,
+            "inView": true
+          },
+          {
+            "hero": "leiting",
+            "archetype": "line",
+            "emphasis": "signature",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "貫穿演出",
+            "name": "雷霆神射",
+            "portrait": true,
+            "w": 190,
+            "h": 36,
+            "visible": true,
+            "inView": true
+          }
+        ],
+        "disclaimer": "以下為技能演出分類，依英雄風格對應共用模板，不代表引擎實際施放了該技能。"
+      }
+    },
+    {
+      "label": "desk1920 A12) 同時顯示數量被限流到 3（桌機 3／手機 2）",
+      "ok": true,
+      "extra": {
+        "rows": 3,
+        "limit": 3
+      }
+    },
+    {
+      "label": "desk1920 A13) 每則 callout 都有英雄頭像、英雄中文名與演出分類",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "ironclad",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "鋼鐵衛士",
+          "portrait": true,
+          "w": 190,
+          "h": 36,
+          "visible": true,
+          "inView": true
+        },
+        {
+          "hero": "bingshuang",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "冰霜術士",
+          "portrait": true,
+          "w": 190,
+          "h": 36,
+          "visible": true,
+          "inView": true
+        },
+        {
+          "hero": "leiting",
+          "archetype": "line",
+          "emphasis": "signature",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "貫穿演出",
+          "name": "雷霆神射",
+          "portrait": true,
+          "w": 190,
+          "h": 36,
+          "visible": true,
+          "inView": true
+        }
+      ]
+    },
+    {
+      "label": "desk1920 A14) ⚠ 寫的是「演出分類」不是技能名",
+      "ok": true,
+      "extra": [
+        "範圍演出",
+        "範圍演出",
+        "貫穿演出"
+      ]
+    },
+    {
+      "label": "desk1920 A15) 標明推導依據是引擎事件（basis=engine:power）",
+      "ok": true,
+      "extra": [
+        "engine:power",
+        "engine:power",
+        "engine:power"
+      ]
+    },
+    {
+      "label": "desk1920 A16) callout 完整在畫面內、有實際尺寸且可見",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "ironclad",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "鋼鐵衛士",
+          "portrait": true,
+          "w": 190,
+          "h": 36,
+          "visible": true,
+          "inView": true
+        },
+        {
+          "hero": "bingshuang",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "冰霜術士",
+          "portrait": true,
+          "w": 190,
+          "h": 36,
+          "visible": true,
+          "inView": true
+        },
+        {
+          "hero": "leiting",
+          "archetype": "line",
+          "emphasis": "signature",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "貫穿演出",
+          "name": "雷霆神射",
+          "portrait": true,
+          "w": 190,
+          "h": 36,
+          "visible": true,
+          "inView": true
+        }
+      ]
+    },
+    {
+      "label": "desk1920 A17) callout 區塊帶誠實聲明",
+      "ok": true,
+      "extra": "以下為技能演出分類，依英雄風格對應共用模板，不代表引擎實際施放了該技能。"
+    },
+    {
+      "label": "desk1920 A18) 沒有橫向溢出（實測 0px）",
+      "ok": true,
+      "extra": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 1920,
+        "vh": 1080
+      }
+    },
+    {
+      "label": "desk1920 A19) 誠實聲明在畫面上",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 A1) 演出畫廊載入",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 A2) 八個演出模板都在，順序與白名單一致",
+      "ok": true,
+      "extra": [
+        "projectile",
+        "line",
+        "area",
+        "dash",
+        "shield",
+        "heal",
+        "control",
+        "ultimate"
+      ]
+    },
+    {
+      "label": "desk1366 A3) 每個模板都指名一位示範英雄與 primitive 組合",
+      "ok": true,
+      "extra": [
+        {
+          "a": "projectile",
+          "hero": "leiting",
+          "prim": "bolt",
+          "label": "彈道演出"
+        },
+        {
+          "a": "line",
+          "hero": "dadi",
+          "prim": "bar",
+          "label": "貫穿演出"
+        },
+        {
+          "a": "area",
+          "hero": "bingshuang",
+          "prim": "halo",
+          "label": "範圍演出"
+        },
+        {
+          "a": "dash",
+          "hero": "chichuan",
+          "prim": "bar,bolt",
+          "label": "突進演出"
+        },
+        {
+          "a": "shield",
+          "hero": "stoneguard",
+          "prim": "guard",
+          "label": "護盾演出"
+        },
+        {
+          "a": "heal",
+          "hero": "yanfeng",
+          "prim": "guard,halo",
+          "label": "回復演出"
+        },
+        {
+          "a": "control",
+          "hero": "ironclad",
+          "prim": "halo,guard",
+          "label": "控制演出"
+        },
+        {
+          "a": "ultimate",
+          "hero": "cinderfist",
+          "prim": "halo,guard,bolt",
+          "label": "大招演出"
+        }
+      ]
+    },
+    {
+      "label": "desk1366 A4) 10 位代表英雄全部列出（用 data-hero 指名）",
+      "ok": true,
+      "extra": [
+        "bingshuang",
+        "chichuan",
+        "cinderfist",
+        "dadi",
+        "duskblade",
+        "ironclad",
+        "leiting",
+        "lieyan",
+        "stoneguard",
+        "yanfeng"
+      ]
+    },
+    {
+      "label": "desk1366 A5) 10 位英雄的主題色互不相同（辨識度的最低門檻）",
+      "ok": true,
+      "extra": [
+        [
+          "bingshuang",
+          "#42c9e8"
+        ],
+        [
+          "chichuan",
+          "#b91c1c"
+        ],
+        [
+          "cinderfist",
+          "#c63f22"
+        ],
+        [
+          "dadi",
+          "#4f6f3f"
+        ],
+        [
+          "duskblade",
+          "#6257a6"
+        ],
+        [
+          "ironclad",
+          "#94a3b8"
+        ],
+        [
+          "leiting",
+          "#30343b"
+        ],
+        [
+          "lieyan",
+          "#7f1d1d"
+        ],
+        [
+          "stoneguard",
+          "#747c8c"
+        ],
+        [
+          "yanfeng",
+          "#c2410c"
+        ]
+      ]
+    },
+    {
+      "label": "desk1366 A6) 每位英雄五個 slot 都有演出模板，且都落在白名單",
+      "ok": true,
+      "extra": [
+        [
+          "bingshuang",
+          [
+            "control",
+            "projectile",
+            "shield",
+            "area",
+            "area"
+          ]
+        ],
+        [
+          "chichuan",
+          [
+            "area",
+            "line",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        ],
+        [
+          "cinderfist",
+          [
+            "area",
+            "area",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        ],
+        [
+          "dadi",
+          [
+            "shield",
+            "line",
+            "shield",
+            "control",
+            "ultimate"
+          ]
+        ],
+        [
+          "duskblade",
+          [
+            "line",
+            "line",
+            "control",
+            "dash",
+            "ultimate"
+          ]
+        ],
+        [
+          "ironclad",
+          [
+            "shield",
+            "dash",
+            "control",
+            "line",
+            "area"
+          ]
+        ],
+        [
+          "leiting",
+          [
+            "projectile",
+            "line",
+            "shield",
+            "dash",
+            "area"
+          ]
+        ],
+        [
+          "lieyan",
+          [
+            "area",
+            "area",
+            "shield",
+            "line",
+            "ultimate"
+          ]
+        ],
+        [
+          "stoneguard",
+          [
+            "shield",
+            "control",
+            "projectile",
+            "shield",
+            "area"
+          ]
+        ],
+        [
+          "yanfeng",
+          [
+            "heal",
+            "projectile",
+            "dash",
+            "area",
+            "ultimate"
+          ]
+        ]
+      ]
+    },
+    {
+      "label": "desk1366 A7) fixture 同時涵蓋八個模板 ＋ 一個 fallback 英雄",
+      "ok": true,
+      "extra": {
+        "quality": "high",
+        "caps": {
+          "halo": 28,
+          "bar": 28,
+          "bolt": 40,
+          "guard": 22
+        },
+        "progress": 0.45,
+        "archetypes": [
+          "projectile",
+          "line",
+          "area",
+          "dash",
+          "shield",
+          "heal",
+          "control",
+          "ultimate",
+          "line"
+        ],
+        "heroes": [
+          "leiting",
+          "dadi",
+          "bingshuang",
+          "chichuan",
+          "stoneguard",
+          "yanfeng",
+          "ironclad",
+          "cinderfist",
+          "linghun"
+        ],
+        "sources": [
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "fallback"
+        ]
+      }
+    },
+    {
+      "label": "desk1366 A8) 特效模板真的畫出 instance（halo/bar/bolt/guard 都 > 0）",
+      "ok": true,
+      "extra": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 28,
+          "bar": 28,
+          "bolt": 40,
+          "guard": 22
+        },
+        "quality": "high"
+      }
+    },
+    {
+      "label": "desk1366 A9) 九筆 fixture 全部被 renderer 認得（live=9）",
+      "ok": true,
+      "extra": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 28,
+          "bar": 28,
+          "bolt": 40,
+          "guard": 22
+        },
+        "quality": "high"
+      }
+    },
+    {
+      "label": "desk1366 A10) 每個池都沒有超過容量上限",
+      "ok": true,
+      "extra": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 28,
+          "bar": 28,
+          "bolt": 40,
+          "guard": 22
+        },
+        "quality": "high"
+      }
+    },
+    {
+      "label": "desk1366 A11) HUD callout 出現（5 筆 fixture ⇒ 顯示 3 則）",
+      "ok": true,
+      "extra": {
+        "limit": 3,
+        "count": 3,
+        "rows": [
+          {
+            "hero": "ironclad",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "鋼鐵衛士",
+            "portrait": true,
+            "w": 190,
+            "h": 36,
+            "visible": true,
+            "inView": true
+          },
+          {
+            "hero": "bingshuang",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "冰霜術士",
+            "portrait": true,
+            "w": 190,
+            "h": 36,
+            "visible": true,
+            "inView": true
+          },
+          {
+            "hero": "leiting",
+            "archetype": "line",
+            "emphasis": "signature",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "貫穿演出",
+            "name": "雷霆神射",
+            "portrait": true,
+            "w": 190,
+            "h": 36,
+            "visible": true,
+            "inView": true
+          }
+        ],
+        "disclaimer": "以下為技能演出分類，依英雄風格對應共用模板，不代表引擎實際施放了該技能。"
+      }
+    },
+    {
+      "label": "desk1366 A12) 同時顯示數量被限流到 3（桌機 3／手機 2）",
+      "ok": true,
+      "extra": {
+        "rows": 3,
+        "limit": 3
+      }
+    },
+    {
+      "label": "desk1366 A13) 每則 callout 都有英雄頭像、英雄中文名與演出分類",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "ironclad",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "鋼鐵衛士",
+          "portrait": true,
+          "w": 190,
+          "h": 36,
+          "visible": true,
+          "inView": true
+        },
+        {
+          "hero": "bingshuang",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "冰霜術士",
+          "portrait": true,
+          "w": 190,
+          "h": 36,
+          "visible": true,
+          "inView": true
+        },
+        {
+          "hero": "leiting",
+          "archetype": "line",
+          "emphasis": "signature",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "貫穿演出",
+          "name": "雷霆神射",
+          "portrait": true,
+          "w": 190,
+          "h": 36,
+          "visible": true,
+          "inView": true
+        }
+      ]
+    },
+    {
+      "label": "desk1366 A14) ⚠ 寫的是「演出分類」不是技能名",
+      "ok": true,
+      "extra": [
+        "範圍演出",
+        "範圍演出",
+        "貫穿演出"
+      ]
+    },
+    {
+      "label": "desk1366 A15) 標明推導依據是引擎事件（basis=engine:power）",
+      "ok": true,
+      "extra": [
+        "engine:power",
+        "engine:power",
+        "engine:power"
+      ]
+    },
+    {
+      "label": "desk1366 A16) callout 完整在畫面內、有實際尺寸且可見",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "ironclad",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "鋼鐵衛士",
+          "portrait": true,
+          "w": 190,
+          "h": 36,
+          "visible": true,
+          "inView": true
+        },
+        {
+          "hero": "bingshuang",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "冰霜術士",
+          "portrait": true,
+          "w": 190,
+          "h": 36,
+          "visible": true,
+          "inView": true
+        },
+        {
+          "hero": "leiting",
+          "archetype": "line",
+          "emphasis": "signature",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "貫穿演出",
+          "name": "雷霆神射",
+          "portrait": true,
+          "w": 190,
+          "h": 36,
+          "visible": true,
+          "inView": true
+        }
+      ]
+    },
+    {
+      "label": "desk1366 A17) callout 區塊帶誠實聲明",
+      "ok": true,
+      "extra": "以下為技能演出分類，依英雄風格對應共用模板，不代表引擎實際施放了該技能。"
+    },
+    {
+      "label": "desk1366 A18) 沒有橫向溢出（實測 0px）",
+      "ok": true,
+      "extra": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 1366,
+        "vh": 768
+      }
+    },
+    {
+      "label": "desk1366 A19) 誠實聲明在畫面上",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob430 A1) 演出畫廊載入",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob430 A2) 八個演出模板都在，順序與白名單一致",
+      "ok": true,
+      "extra": [
+        "projectile",
+        "line",
+        "area",
+        "dash",
+        "shield",
+        "heal",
+        "control",
+        "ultimate"
+      ]
+    },
+    {
+      "label": "mob430 A3) 每個模板都指名一位示範英雄與 primitive 組合",
+      "ok": true,
+      "extra": [
+        {
+          "a": "projectile",
+          "hero": "leiting",
+          "prim": "bolt",
+          "label": "彈道演出"
+        },
+        {
+          "a": "line",
+          "hero": "dadi",
+          "prim": "bar",
+          "label": "貫穿演出"
+        },
+        {
+          "a": "area",
+          "hero": "bingshuang",
+          "prim": "halo",
+          "label": "範圍演出"
+        },
+        {
+          "a": "dash",
+          "hero": "chichuan",
+          "prim": "bar,bolt",
+          "label": "突進演出"
+        },
+        {
+          "a": "shield",
+          "hero": "stoneguard",
+          "prim": "guard",
+          "label": "護盾演出"
+        },
+        {
+          "a": "heal",
+          "hero": "yanfeng",
+          "prim": "guard,halo",
+          "label": "回復演出"
+        },
+        {
+          "a": "control",
+          "hero": "ironclad",
+          "prim": "halo,guard",
+          "label": "控制演出"
+        },
+        {
+          "a": "ultimate",
+          "hero": "cinderfist",
+          "prim": "halo,guard,bolt",
+          "label": "大招演出"
+        }
+      ]
+    },
+    {
+      "label": "mob430 A4) 10 位代表英雄全部列出（用 data-hero 指名）",
+      "ok": true,
+      "extra": [
+        "bingshuang",
+        "chichuan",
+        "cinderfist",
+        "dadi",
+        "duskblade",
+        "ironclad",
+        "leiting",
+        "lieyan",
+        "stoneguard",
+        "yanfeng"
+      ]
+    },
+    {
+      "label": "mob430 A5) 10 位英雄的主題色互不相同（辨識度的最低門檻）",
+      "ok": true,
+      "extra": [
+        [
+          "bingshuang",
+          "#42c9e8"
+        ],
+        [
+          "chichuan",
+          "#b91c1c"
+        ],
+        [
+          "cinderfist",
+          "#c63f22"
+        ],
+        [
+          "dadi",
+          "#4f6f3f"
+        ],
+        [
+          "duskblade",
+          "#6257a6"
+        ],
+        [
+          "ironclad",
+          "#94a3b8"
+        ],
+        [
+          "leiting",
+          "#30343b"
+        ],
+        [
+          "lieyan",
+          "#7f1d1d"
+        ],
+        [
+          "stoneguard",
+          "#747c8c"
+        ],
+        [
+          "yanfeng",
+          "#c2410c"
+        ]
+      ]
+    },
+    {
+      "label": "mob430 A6) 每位英雄五個 slot 都有演出模板，且都落在白名單",
+      "ok": true,
+      "extra": [
+        [
+          "bingshuang",
+          [
+            "control",
+            "projectile",
+            "shield",
+            "area",
+            "area"
+          ]
+        ],
+        [
+          "chichuan",
+          [
+            "area",
+            "line",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        ],
+        [
+          "cinderfist",
+          [
+            "area",
+            "area",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        ],
+        [
+          "dadi",
+          [
+            "shield",
+            "line",
+            "shield",
+            "control",
+            "ultimate"
+          ]
+        ],
+        [
+          "duskblade",
+          [
+            "line",
+            "line",
+            "control",
+            "dash",
+            "ultimate"
+          ]
+        ],
+        [
+          "ironclad",
+          [
+            "shield",
+            "dash",
+            "control",
+            "line",
+            "area"
+          ]
+        ],
+        [
+          "leiting",
+          [
+            "projectile",
+            "line",
+            "shield",
+            "dash",
+            "area"
+          ]
+        ],
+        [
+          "lieyan",
+          [
+            "area",
+            "area",
+            "shield",
+            "line",
+            "ultimate"
+          ]
+        ],
+        [
+          "stoneguard",
+          [
+            "shield",
+            "control",
+            "projectile",
+            "shield",
+            "area"
+          ]
+        ],
+        [
+          "yanfeng",
+          [
+            "heal",
+            "projectile",
+            "dash",
+            "area",
+            "ultimate"
+          ]
+        ]
+      ]
+    },
+    {
+      "label": "mob430 A7) fixture 同時涵蓋八個模板 ＋ 一個 fallback 英雄",
+      "ok": true,
+      "extra": {
+        "quality": "low",
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "progress": 0.45,
+        "archetypes": [
+          "projectile",
+          "line",
+          "area",
+          "dash",
+          "shield",
+          "heal",
+          "control",
+          "ultimate",
+          "line"
+        ],
+        "heroes": [
+          "leiting",
+          "dadi",
+          "bingshuang",
+          "chichuan",
+          "stoneguard",
+          "yanfeng",
+          "ironclad",
+          "cinderfist",
+          "linghun"
+        ],
+        "sources": [
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "fallback"
+        ]
+      }
+    },
+    {
+      "label": "mob430 A8) 特效模板真的畫出 instance（halo/bar/bolt/guard 都 > 0）",
+      "ok": true,
+      "extra": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob430 A9) 九筆 fixture 全部被 renderer 認得（live=9）",
+      "ok": true,
+      "extra": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob430 A10) 每個池都沒有超過容量上限",
+      "ok": true,
+      "extra": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob430 A11) HUD callout 出現（5 筆 fixture ⇒ 顯示 2 則）",
+      "ok": true,
+      "extra": {
+        "limit": 2,
+        "count": 2,
+        "rows": [
+          {
+            "hero": "ironclad",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "鋼鐵衛士",
+            "portrait": true,
+            "w": 150,
+            "h": 31,
+            "visible": true,
+            "inView": true
+          },
+          {
+            "hero": "bingshuang",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "冰霜術士",
+            "portrait": true,
+            "w": 150,
+            "h": 31,
+            "visible": true,
+            "inView": true
+          }
+        ],
+        "disclaimer": "以下為技能演出分類，依英雄風格對應共用模板，不代表引擎實際施放了該技能。"
+      }
+    },
+    {
+      "label": "mob430 A12) 同時顯示數量被限流到 2（桌機 3／手機 2）",
+      "ok": true,
+      "extra": {
+        "rows": 2,
+        "limit": 2
+      }
+    },
+    {
+      "label": "mob430 A13) 每則 callout 都有英雄頭像、英雄中文名與演出分類",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "ironclad",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "鋼鐵衛士",
+          "portrait": true,
+          "w": 150,
+          "h": 31,
+          "visible": true,
+          "inView": true
+        },
+        {
+          "hero": "bingshuang",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "冰霜術士",
+          "portrait": true,
+          "w": 150,
+          "h": 31,
+          "visible": true,
+          "inView": true
+        }
+      ]
+    },
+    {
+      "label": "mob430 A14) ⚠ 寫的是「演出分類」不是技能名",
+      "ok": true,
+      "extra": [
+        "範圍演出",
+        "範圍演出"
+      ]
+    },
+    {
+      "label": "mob430 A15) 標明推導依據是引擎事件（basis=engine:power）",
+      "ok": true,
+      "extra": [
+        "engine:power",
+        "engine:power"
+      ]
+    },
+    {
+      "label": "mob430 A16) callout 完整在畫面內、有實際尺寸且可見",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "ironclad",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "鋼鐵衛士",
+          "portrait": true,
+          "w": 150,
+          "h": 31,
+          "visible": true,
+          "inView": true
+        },
+        {
+          "hero": "bingshuang",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "冰霜術士",
+          "portrait": true,
+          "w": 150,
+          "h": 31,
+          "visible": true,
+          "inView": true
+        }
+      ]
+    },
+    {
+      "label": "mob430 A17) callout 區塊帶誠實聲明",
+      "ok": true,
+      "extra": "以下為技能演出分類，依英雄風格對應共用模板，不代表引擎實際施放了該技能。"
+    },
+    {
+      "label": "mob430 A18) 沒有橫向溢出（實測 0px）",
+      "ok": true,
+      "extra": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 430,
+        "vh": 932
+      }
+    },
+    {
+      "label": "mob430 A19) 誠實聲明在畫面上",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob412 A1) 演出畫廊載入",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob412 A2) 八個演出模板都在，順序與白名單一致",
+      "ok": true,
+      "extra": [
+        "projectile",
+        "line",
+        "area",
+        "dash",
+        "shield",
+        "heal",
+        "control",
+        "ultimate"
+      ]
+    },
+    {
+      "label": "mob412 A3) 每個模板都指名一位示範英雄與 primitive 組合",
+      "ok": true,
+      "extra": [
+        {
+          "a": "projectile",
+          "hero": "leiting",
+          "prim": "bolt",
+          "label": "彈道演出"
+        },
+        {
+          "a": "line",
+          "hero": "dadi",
+          "prim": "bar",
+          "label": "貫穿演出"
+        },
+        {
+          "a": "area",
+          "hero": "bingshuang",
+          "prim": "halo",
+          "label": "範圍演出"
+        },
+        {
+          "a": "dash",
+          "hero": "chichuan",
+          "prim": "bar,bolt",
+          "label": "突進演出"
+        },
+        {
+          "a": "shield",
+          "hero": "stoneguard",
+          "prim": "guard",
+          "label": "護盾演出"
+        },
+        {
+          "a": "heal",
+          "hero": "yanfeng",
+          "prim": "guard,halo",
+          "label": "回復演出"
+        },
+        {
+          "a": "control",
+          "hero": "ironclad",
+          "prim": "halo,guard",
+          "label": "控制演出"
+        },
+        {
+          "a": "ultimate",
+          "hero": "cinderfist",
+          "prim": "halo,guard,bolt",
+          "label": "大招演出"
+        }
+      ]
+    },
+    {
+      "label": "mob412 A4) 10 位代表英雄全部列出（用 data-hero 指名）",
+      "ok": true,
+      "extra": [
+        "bingshuang",
+        "chichuan",
+        "cinderfist",
+        "dadi",
+        "duskblade",
+        "ironclad",
+        "leiting",
+        "lieyan",
+        "stoneguard",
+        "yanfeng"
+      ]
+    },
+    {
+      "label": "mob412 A5) 10 位英雄的主題色互不相同（辨識度的最低門檻）",
+      "ok": true,
+      "extra": [
+        [
+          "bingshuang",
+          "#42c9e8"
+        ],
+        [
+          "chichuan",
+          "#b91c1c"
+        ],
+        [
+          "cinderfist",
+          "#c63f22"
+        ],
+        [
+          "dadi",
+          "#4f6f3f"
+        ],
+        [
+          "duskblade",
+          "#6257a6"
+        ],
+        [
+          "ironclad",
+          "#94a3b8"
+        ],
+        [
+          "leiting",
+          "#30343b"
+        ],
+        [
+          "lieyan",
+          "#7f1d1d"
+        ],
+        [
+          "stoneguard",
+          "#747c8c"
+        ],
+        [
+          "yanfeng",
+          "#c2410c"
+        ]
+      ]
+    },
+    {
+      "label": "mob412 A6) 每位英雄五個 slot 都有演出模板，且都落在白名單",
+      "ok": true,
+      "extra": [
+        [
+          "bingshuang",
+          [
+            "control",
+            "projectile",
+            "shield",
+            "area",
+            "area"
+          ]
+        ],
+        [
+          "chichuan",
+          [
+            "area",
+            "line",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        ],
+        [
+          "cinderfist",
+          [
+            "area",
+            "area",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        ],
+        [
+          "dadi",
+          [
+            "shield",
+            "line",
+            "shield",
+            "control",
+            "ultimate"
+          ]
+        ],
+        [
+          "duskblade",
+          [
+            "line",
+            "line",
+            "control",
+            "dash",
+            "ultimate"
+          ]
+        ],
+        [
+          "ironclad",
+          [
+            "shield",
+            "dash",
+            "control",
+            "line",
+            "area"
+          ]
+        ],
+        [
+          "leiting",
+          [
+            "projectile",
+            "line",
+            "shield",
+            "dash",
+            "area"
+          ]
+        ],
+        [
+          "lieyan",
+          [
+            "area",
+            "area",
+            "shield",
+            "line",
+            "ultimate"
+          ]
+        ],
+        [
+          "stoneguard",
+          [
+            "shield",
+            "control",
+            "projectile",
+            "shield",
+            "area"
+          ]
+        ],
+        [
+          "yanfeng",
+          [
+            "heal",
+            "projectile",
+            "dash",
+            "area",
+            "ultimate"
+          ]
+        ]
+      ]
+    },
+    {
+      "label": "mob412 A7) fixture 同時涵蓋八個模板 ＋ 一個 fallback 英雄",
+      "ok": true,
+      "extra": {
+        "quality": "low",
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "progress": 0.45,
+        "archetypes": [
+          "projectile",
+          "line",
+          "area",
+          "dash",
+          "shield",
+          "heal",
+          "control",
+          "ultimate",
+          "line"
+        ],
+        "heroes": [
+          "leiting",
+          "dadi",
+          "bingshuang",
+          "chichuan",
+          "stoneguard",
+          "yanfeng",
+          "ironclad",
+          "cinderfist",
+          "linghun"
+        ],
+        "sources": [
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "fallback"
+        ]
+      }
+    },
+    {
+      "label": "mob412 A8) 特效模板真的畫出 instance（halo/bar/bolt/guard 都 > 0）",
+      "ok": true,
+      "extra": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob412 A9) 九筆 fixture 全部被 renderer 認得（live=9）",
+      "ok": true,
+      "extra": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob412 A10) 每個池都沒有超過容量上限",
+      "ok": true,
+      "extra": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob412 A11) HUD callout 出現（5 筆 fixture ⇒ 顯示 2 則）",
+      "ok": true,
+      "extra": {
+        "limit": 2,
+        "count": 2,
+        "rows": [
+          {
+            "hero": "ironclad",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "鋼鐵衛士",
+            "portrait": true,
+            "w": 150,
+            "h": 31,
+            "visible": true,
+            "inView": true
+          },
+          {
+            "hero": "bingshuang",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "冰霜術士",
+            "portrait": true,
+            "w": 150,
+            "h": 31,
+            "visible": true,
+            "inView": true
+          }
+        ],
+        "disclaimer": "以下為技能演出分類，依英雄風格對應共用模板，不代表引擎實際施放了該技能。"
+      }
+    },
+    {
+      "label": "mob412 A12) 同時顯示數量被限流到 2（桌機 3／手機 2）",
+      "ok": true,
+      "extra": {
+        "rows": 2,
+        "limit": 2
+      }
+    },
+    {
+      "label": "mob412 A13) 每則 callout 都有英雄頭像、英雄中文名與演出分類",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "ironclad",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "鋼鐵衛士",
+          "portrait": true,
+          "w": 150,
+          "h": 31,
+          "visible": true,
+          "inView": true
+        },
+        {
+          "hero": "bingshuang",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "冰霜術士",
+          "portrait": true,
+          "w": 150,
+          "h": 31,
+          "visible": true,
+          "inView": true
+        }
+      ]
+    },
+    {
+      "label": "mob412 A14) ⚠ 寫的是「演出分類」不是技能名",
+      "ok": true,
+      "extra": [
+        "範圍演出",
+        "範圍演出"
+      ]
+    },
+    {
+      "label": "mob412 A15) 標明推導依據是引擎事件（basis=engine:power）",
+      "ok": true,
+      "extra": [
+        "engine:power",
+        "engine:power"
+      ]
+    },
+    {
+      "label": "mob412 A16) callout 完整在畫面內、有實際尺寸且可見",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "ironclad",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "鋼鐵衛士",
+          "portrait": true,
+          "w": 150,
+          "h": 31,
+          "visible": true,
+          "inView": true
+        },
+        {
+          "hero": "bingshuang",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "冰霜術士",
+          "portrait": true,
+          "w": 150,
+          "h": 31,
+          "visible": true,
+          "inView": true
+        }
+      ]
+    },
+    {
+      "label": "mob412 A17) callout 區塊帶誠實聲明",
+      "ok": true,
+      "extra": "以下為技能演出分類，依英雄風格對應共用模板，不代表引擎實際施放了該技能。"
+    },
+    {
+      "label": "mob412 A18) 沒有橫向溢出（實測 0px）",
+      "ok": true,
+      "extra": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 412,
+        "vh": 915
+      }
+    },
+    {
+      "label": "mob412 A19) 誠實聲明在畫面上",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 A1) 演出畫廊載入",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 A2) 八個演出模板都在，順序與白名單一致",
+      "ok": true,
+      "extra": [
+        "projectile",
+        "line",
+        "area",
+        "dash",
+        "shield",
+        "heal",
+        "control",
+        "ultimate"
+      ]
+    },
+    {
+      "label": "mob390 A3) 每個模板都指名一位示範英雄與 primitive 組合",
+      "ok": true,
+      "extra": [
+        {
+          "a": "projectile",
+          "hero": "leiting",
+          "prim": "bolt",
+          "label": "彈道演出"
+        },
+        {
+          "a": "line",
+          "hero": "dadi",
+          "prim": "bar",
+          "label": "貫穿演出"
+        },
+        {
+          "a": "area",
+          "hero": "bingshuang",
+          "prim": "halo",
+          "label": "範圍演出"
+        },
+        {
+          "a": "dash",
+          "hero": "chichuan",
+          "prim": "bar,bolt",
+          "label": "突進演出"
+        },
+        {
+          "a": "shield",
+          "hero": "stoneguard",
+          "prim": "guard",
+          "label": "護盾演出"
+        },
+        {
+          "a": "heal",
+          "hero": "yanfeng",
+          "prim": "guard,halo",
+          "label": "回復演出"
+        },
+        {
+          "a": "control",
+          "hero": "ironclad",
+          "prim": "halo,guard",
+          "label": "控制演出"
+        },
+        {
+          "a": "ultimate",
+          "hero": "cinderfist",
+          "prim": "halo,guard,bolt",
+          "label": "大招演出"
+        }
+      ]
+    },
+    {
+      "label": "mob390 A4) 10 位代表英雄全部列出（用 data-hero 指名）",
+      "ok": true,
+      "extra": [
+        "bingshuang",
+        "chichuan",
+        "cinderfist",
+        "dadi",
+        "duskblade",
+        "ironclad",
+        "leiting",
+        "lieyan",
+        "stoneguard",
+        "yanfeng"
+      ]
+    },
+    {
+      "label": "mob390 A5) 10 位英雄的主題色互不相同（辨識度的最低門檻）",
+      "ok": true,
+      "extra": [
+        [
+          "bingshuang",
+          "#42c9e8"
+        ],
+        [
+          "chichuan",
+          "#b91c1c"
+        ],
+        [
+          "cinderfist",
+          "#c63f22"
+        ],
+        [
+          "dadi",
+          "#4f6f3f"
+        ],
+        [
+          "duskblade",
+          "#6257a6"
+        ],
+        [
+          "ironclad",
+          "#94a3b8"
+        ],
+        [
+          "leiting",
+          "#30343b"
+        ],
+        [
+          "lieyan",
+          "#7f1d1d"
+        ],
+        [
+          "stoneguard",
+          "#747c8c"
+        ],
+        [
+          "yanfeng",
+          "#c2410c"
+        ]
+      ]
+    },
+    {
+      "label": "mob390 A6) 每位英雄五個 slot 都有演出模板，且都落在白名單",
+      "ok": true,
+      "extra": [
+        [
+          "bingshuang",
+          [
+            "control",
+            "projectile",
+            "shield",
+            "area",
+            "area"
+          ]
+        ],
+        [
+          "chichuan",
+          [
+            "area",
+            "line",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        ],
+        [
+          "cinderfist",
+          [
+            "area",
+            "area",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        ],
+        [
+          "dadi",
+          [
+            "shield",
+            "line",
+            "shield",
+            "control",
+            "ultimate"
+          ]
+        ],
+        [
+          "duskblade",
+          [
+            "line",
+            "line",
+            "control",
+            "dash",
+            "ultimate"
+          ]
+        ],
+        [
+          "ironclad",
+          [
+            "shield",
+            "dash",
+            "control",
+            "line",
+            "area"
+          ]
+        ],
+        [
+          "leiting",
+          [
+            "projectile",
+            "line",
+            "shield",
+            "dash",
+            "area"
+          ]
+        ],
+        [
+          "lieyan",
+          [
+            "area",
+            "area",
+            "shield",
+            "line",
+            "ultimate"
+          ]
+        ],
+        [
+          "stoneguard",
+          [
+            "shield",
+            "control",
+            "projectile",
+            "shield",
+            "area"
+          ]
+        ],
+        [
+          "yanfeng",
+          [
+            "heal",
+            "projectile",
+            "dash",
+            "area",
+            "ultimate"
+          ]
+        ]
+      ]
+    },
+    {
+      "label": "mob390 A7) fixture 同時涵蓋八個模板 ＋ 一個 fallback 英雄",
+      "ok": true,
+      "extra": {
+        "quality": "low",
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "progress": 0.45,
+        "archetypes": [
+          "projectile",
+          "line",
+          "area",
+          "dash",
+          "shield",
+          "heal",
+          "control",
+          "ultimate",
+          "line"
+        ],
+        "heroes": [
+          "leiting",
+          "dadi",
+          "bingshuang",
+          "chichuan",
+          "stoneguard",
+          "yanfeng",
+          "ironclad",
+          "cinderfist",
+          "linghun"
+        ],
+        "sources": [
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "fallback"
+        ]
+      }
+    },
+    {
+      "label": "mob390 A8) 特效模板真的畫出 instance（halo/bar/bolt/guard 都 > 0）",
+      "ok": true,
+      "extra": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob390 A9) 九筆 fixture 全部被 renderer 認得（live=9）",
+      "ok": true,
+      "extra": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob390 A10) 每個池都沒有超過容量上限",
+      "ok": true,
+      "extra": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob390 A11) HUD callout 出現（5 筆 fixture ⇒ 顯示 2 則）",
+      "ok": true,
+      "extra": {
+        "limit": 2,
+        "count": 2,
+        "rows": [
+          {
+            "hero": "ironclad",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "鋼鐵衛士",
+            "portrait": true,
+            "w": 150,
+            "h": 31,
+            "visible": true,
+            "inView": true
+          },
+          {
+            "hero": "bingshuang",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "冰霜術士",
+            "portrait": true,
+            "w": 150,
+            "h": 31,
+            "visible": true,
+            "inView": true
+          }
+        ],
+        "disclaimer": "以下為技能演出分類，依英雄風格對應共用模板，不代表引擎實際施放了該技能。"
+      }
+    },
+    {
+      "label": "mob390 A12) 同時顯示數量被限流到 2（桌機 3／手機 2）",
+      "ok": true,
+      "extra": {
+        "rows": 2,
+        "limit": 2
+      }
+    },
+    {
+      "label": "mob390 A13) 每則 callout 都有英雄頭像、英雄中文名與演出分類",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "ironclad",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "鋼鐵衛士",
+          "portrait": true,
+          "w": 150,
+          "h": 31,
+          "visible": true,
+          "inView": true
+        },
+        {
+          "hero": "bingshuang",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "冰霜術士",
+          "portrait": true,
+          "w": 150,
+          "h": 31,
+          "visible": true,
+          "inView": true
+        }
+      ]
+    },
+    {
+      "label": "mob390 A14) ⚠ 寫的是「演出分類」不是技能名",
+      "ok": true,
+      "extra": [
+        "範圍演出",
+        "範圍演出"
+      ]
+    },
+    {
+      "label": "mob390 A15) 標明推導依據是引擎事件（basis=engine:power）",
+      "ok": true,
+      "extra": [
+        "engine:power",
+        "engine:power"
+      ]
+    },
+    {
+      "label": "mob390 A16) callout 完整在畫面內、有實際尺寸且可見",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "ironclad",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "鋼鐵衛士",
+          "portrait": true,
+          "w": 150,
+          "h": 31,
+          "visible": true,
+          "inView": true
+        },
+        {
+          "hero": "bingshuang",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "冰霜術士",
+          "portrait": true,
+          "w": 150,
+          "h": 31,
+          "visible": true,
+          "inView": true
+        }
+      ]
+    },
+    {
+      "label": "mob390 A17) callout 區塊帶誠實聲明",
+      "ok": true,
+      "extra": "以下為技能演出分類，依英雄風格對應共用模板，不代表引擎實際施放了該技能。"
+    },
+    {
+      "label": "mob390 A18) 沒有橫向溢出（實測 0px）",
+      "ok": true,
+      "extra": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 390,
+        "vh": 844
+      }
+    },
+    {
+      "label": "mob390 A19) 誠實聲明在畫面上",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 A1) 演出畫廊載入",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 A2) 八個演出模板都在，順序與白名單一致",
+      "ok": true,
+      "extra": [
+        "projectile",
+        "line",
+        "area",
+        "dash",
+        "shield",
+        "heal",
+        "control",
+        "ultimate"
+      ]
+    },
+    {
+      "label": "mob360 A3) 每個模板都指名一位示範英雄與 primitive 組合",
+      "ok": true,
+      "extra": [
+        {
+          "a": "projectile",
+          "hero": "leiting",
+          "prim": "bolt",
+          "label": "彈道演出"
+        },
+        {
+          "a": "line",
+          "hero": "dadi",
+          "prim": "bar",
+          "label": "貫穿演出"
+        },
+        {
+          "a": "area",
+          "hero": "bingshuang",
+          "prim": "halo",
+          "label": "範圍演出"
+        },
+        {
+          "a": "dash",
+          "hero": "chichuan",
+          "prim": "bar,bolt",
+          "label": "突進演出"
+        },
+        {
+          "a": "shield",
+          "hero": "stoneguard",
+          "prim": "guard",
+          "label": "護盾演出"
+        },
+        {
+          "a": "heal",
+          "hero": "yanfeng",
+          "prim": "guard,halo",
+          "label": "回復演出"
+        },
+        {
+          "a": "control",
+          "hero": "ironclad",
+          "prim": "halo,guard",
+          "label": "控制演出"
+        },
+        {
+          "a": "ultimate",
+          "hero": "cinderfist",
+          "prim": "halo,guard,bolt",
+          "label": "大招演出"
+        }
+      ]
+    },
+    {
+      "label": "mob360 A4) 10 位代表英雄全部列出（用 data-hero 指名）",
+      "ok": true,
+      "extra": [
+        "bingshuang",
+        "chichuan",
+        "cinderfist",
+        "dadi",
+        "duskblade",
+        "ironclad",
+        "leiting",
+        "lieyan",
+        "stoneguard",
+        "yanfeng"
+      ]
+    },
+    {
+      "label": "mob360 A5) 10 位英雄的主題色互不相同（辨識度的最低門檻）",
+      "ok": true,
+      "extra": [
+        [
+          "bingshuang",
+          "#42c9e8"
+        ],
+        [
+          "chichuan",
+          "#b91c1c"
+        ],
+        [
+          "cinderfist",
+          "#c63f22"
+        ],
+        [
+          "dadi",
+          "#4f6f3f"
+        ],
+        [
+          "duskblade",
+          "#6257a6"
+        ],
+        [
+          "ironclad",
+          "#94a3b8"
+        ],
+        [
+          "leiting",
+          "#30343b"
+        ],
+        [
+          "lieyan",
+          "#7f1d1d"
+        ],
+        [
+          "stoneguard",
+          "#747c8c"
+        ],
+        [
+          "yanfeng",
+          "#c2410c"
+        ]
+      ]
+    },
+    {
+      "label": "mob360 A6) 每位英雄五個 slot 都有演出模板，且都落在白名單",
+      "ok": true,
+      "extra": [
+        [
+          "bingshuang",
+          [
+            "control",
+            "projectile",
+            "shield",
+            "area",
+            "area"
+          ]
+        ],
+        [
+          "chichuan",
+          [
+            "area",
+            "line",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        ],
+        [
+          "cinderfist",
+          [
+            "area",
+            "area",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        ],
+        [
+          "dadi",
+          [
+            "shield",
+            "line",
+            "shield",
+            "control",
+            "ultimate"
+          ]
+        ],
+        [
+          "duskblade",
+          [
+            "line",
+            "line",
+            "control",
+            "dash",
+            "ultimate"
+          ]
+        ],
+        [
+          "ironclad",
+          [
+            "shield",
+            "dash",
+            "control",
+            "line",
+            "area"
+          ]
+        ],
+        [
+          "leiting",
+          [
+            "projectile",
+            "line",
+            "shield",
+            "dash",
+            "area"
+          ]
+        ],
+        [
+          "lieyan",
+          [
+            "area",
+            "area",
+            "shield",
+            "line",
+            "ultimate"
+          ]
+        ],
+        [
+          "stoneguard",
+          [
+            "shield",
+            "control",
+            "projectile",
+            "shield",
+            "area"
+          ]
+        ],
+        [
+          "yanfeng",
+          [
+            "heal",
+            "projectile",
+            "dash",
+            "area",
+            "ultimate"
+          ]
+        ]
+      ]
+    },
+    {
+      "label": "mob360 A7) fixture 同時涵蓋八個模板 ＋ 一個 fallback 英雄",
+      "ok": true,
+      "extra": {
+        "quality": "low",
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "progress": 0.45,
+        "archetypes": [
+          "projectile",
+          "line",
+          "area",
+          "dash",
+          "shield",
+          "heal",
+          "control",
+          "ultimate",
+          "line"
+        ],
+        "heroes": [
+          "leiting",
+          "dadi",
+          "bingshuang",
+          "chichuan",
+          "stoneguard",
+          "yanfeng",
+          "ironclad",
+          "cinderfist",
+          "linghun"
+        ],
+        "sources": [
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "fallback"
+        ]
+      }
+    },
+    {
+      "label": "mob360 A8) 特效模板真的畫出 instance（halo/bar/bolt/guard 都 > 0）",
+      "ok": true,
+      "extra": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob360 A9) 九筆 fixture 全部被 renderer 認得（live=9）",
+      "ok": true,
+      "extra": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob360 A10) 每個池都沒有超過容量上限",
+      "ok": true,
+      "extra": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob360 A11) HUD callout 出現（5 筆 fixture ⇒ 顯示 2 則）",
+      "ok": true,
+      "extra": {
+        "limit": 2,
+        "count": 2,
+        "rows": [
+          {
+            "hero": "ironclad",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "鋼鐵衛士",
+            "portrait": true,
+            "w": 150,
+            "h": 31,
+            "visible": true,
+            "inView": true
+          },
+          {
+            "hero": "bingshuang",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "冰霜術士",
+            "portrait": true,
+            "w": 150,
+            "h": 31,
+            "visible": true,
+            "inView": true
+          }
+        ],
+        "disclaimer": "以下為技能演出分類，依英雄風格對應共用模板，不代表引擎實際施放了該技能。"
+      }
+    },
+    {
+      "label": "mob360 A12) 同時顯示數量被限流到 2（桌機 3／手機 2）",
+      "ok": true,
+      "extra": {
+        "rows": 2,
+        "limit": 2
+      }
+    },
+    {
+      "label": "mob360 A13) 每則 callout 都有英雄頭像、英雄中文名與演出分類",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "ironclad",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "鋼鐵衛士",
+          "portrait": true,
+          "w": 150,
+          "h": 31,
+          "visible": true,
+          "inView": true
+        },
+        {
+          "hero": "bingshuang",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "冰霜術士",
+          "portrait": true,
+          "w": 150,
+          "h": 31,
+          "visible": true,
+          "inView": true
+        }
+      ]
+    },
+    {
+      "label": "mob360 A14) ⚠ 寫的是「演出分類」不是技能名",
+      "ok": true,
+      "extra": [
+        "範圍演出",
+        "範圍演出"
+      ]
+    },
+    {
+      "label": "mob360 A15) 標明推導依據是引擎事件（basis=engine:power）",
+      "ok": true,
+      "extra": [
+        "engine:power",
+        "engine:power"
+      ]
+    },
+    {
+      "label": "mob360 A16) callout 完整在畫面內、有實際尺寸且可見",
+      "ok": true,
+      "extra": [
+        {
+          "hero": "ironclad",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "鋼鐵衛士",
+          "portrait": true,
+          "w": 150,
+          "h": 31,
+          "visible": true,
+          "inView": true
+        },
+        {
+          "hero": "bingshuang",
+          "archetype": "area",
+          "emphasis": "ultimate",
+          "source": "authored",
+          "basis": "engine:power",
+          "label": "範圍演出",
+          "name": "冰霜術士",
+          "portrait": true,
+          "w": 150,
+          "h": 31,
+          "visible": true,
+          "inView": true
+        }
+      ]
+    },
+    {
+      "label": "mob360 A17) callout 區塊帶誠實聲明",
+      "ok": true,
+      "extra": "以下為技能演出分類，依英雄風格對應共用模板，不代表引擎實際施放了該技能。"
+    },
+    {
+      "label": "mob360 A18) 沒有橫向溢出（實測 0px）",
+      "ok": true,
+      "extra": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 360,
+        "vh": 800
+      }
+    },
+    {
+      "label": "mob360 A19) 誠實聲明在畫面上",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "P1) low preset 的池容量嚴格小於 high（halo 10 < 28）",
+      "ok": true,
+      "extra": {
+        "low": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "high": {
+          "halo": 28,
+          "bar": 28,
+          "bolt": 40,
+          "guard": 22
+        }
+      }
+    },
+    {
+      "label": "P2) 兩種 preset 都畫得出東西（不是把手機特效整個關掉）",
+      "ok": true,
+      "extra": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    }
+  ],
+  "shots": [
+    "desk1920-01-gallery.png",
+    "desk1366-01-gallery.png",
+    "mob390-01-gallery.png",
+    "mob360-01-gallery.png"
+  ],
+  "data": {
+    "desk1920-gallery": {
+      "cards": [
+        {
+          "a": "projectile",
+          "hero": "leiting",
+          "prim": "bolt",
+          "label": "彈道演出"
+        },
+        {
+          "a": "line",
+          "hero": "dadi",
+          "prim": "bar",
+          "label": "貫穿演出"
+        },
+        {
+          "a": "area",
+          "hero": "bingshuang",
+          "prim": "halo",
+          "label": "範圍演出"
+        },
+        {
+          "a": "dash",
+          "hero": "chichuan",
+          "prim": "bar,bolt",
+          "label": "突進演出"
+        },
+        {
+          "a": "shield",
+          "hero": "stoneguard",
+          "prim": "guard",
+          "label": "護盾演出"
+        },
+        {
+          "a": "heal",
+          "hero": "yanfeng",
+          "prim": "guard,halo",
+          "label": "回復演出"
+        },
+        {
+          "a": "control",
+          "hero": "ironclad",
+          "prim": "halo,guard",
+          "label": "控制演出"
+        },
+        {
+          "a": "ultimate",
+          "hero": "cinderfist",
+          "prim": "halo,guard,bolt",
+          "label": "大招演出"
+        }
+      ],
+      "heroRows": [
+        {
+          "hero": "bingshuang",
+          "primary": "#42c9e8",
+          "sig": "R",
+          "tier": "standard",
+          "slots": [
+            "control",
+            "projectile",
+            "shield",
+            "area",
+            "area"
+          ]
+        },
+        {
+          "hero": "chichuan",
+          "primary": "#b91c1c",
+          "sig": "E",
+          "tier": "standard",
+          "slots": [
+            "area",
+            "line",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "cinderfist",
+          "primary": "#c63f22",
+          "sig": "Q",
+          "tier": "standard",
+          "slots": [
+            "area",
+            "area",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "dadi",
+          "primary": "#4f6f3f",
+          "sig": "Q",
+          "tier": "standard",
+          "slots": [
+            "shield",
+            "line",
+            "shield",
+            "control",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "duskblade",
+          "primary": "#6257a6",
+          "sig": "E",
+          "tier": "light",
+          "slots": [
+            "line",
+            "line",
+            "control",
+            "dash",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "ironclad",
+          "primary": "#94a3b8",
+          "sig": "R",
+          "tier": "standard",
+          "slots": [
+            "shield",
+            "dash",
+            "control",
+            "line",
+            "area"
+          ]
+        },
+        {
+          "hero": "leiting",
+          "primary": "#30343b",
+          "sig": "Q",
+          "tier": "light",
+          "slots": [
+            "projectile",
+            "line",
+            "shield",
+            "dash",
+            "area"
+          ]
+        },
+        {
+          "hero": "lieyan",
+          "primary": "#7f1d1d",
+          "sig": "R",
+          "tier": "heavy",
+          "slots": [
+            "area",
+            "area",
+            "shield",
+            "line",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "stoneguard",
+          "primary": "#747c8c",
+          "sig": "W",
+          "tier": "light",
+          "slots": [
+            "shield",
+            "control",
+            "projectile",
+            "shield",
+            "area"
+          ]
+        },
+        {
+          "hero": "yanfeng",
+          "primary": "#c2410c",
+          "sig": "E",
+          "tier": "standard",
+          "slots": [
+            "heal",
+            "projectile",
+            "dash",
+            "area",
+            "ultimate"
+          ]
+        }
+      ],
+      "fixture": {
+        "quality": "high",
+        "caps": {
+          "halo": 28,
+          "bar": 28,
+          "bolt": 40,
+          "guard": 22
+        },
+        "progress": 0.45,
+        "archetypes": [
+          "projectile",
+          "line",
+          "area",
+          "dash",
+          "shield",
+          "heal",
+          "control",
+          "ultimate",
+          "line"
+        ],
+        "heroes": [
+          "leiting",
+          "dadi",
+          "bingshuang",
+          "chichuan",
+          "stoneguard",
+          "yanfeng",
+          "ironclad",
+          "cinderfist",
+          "linghun"
+        ],
+        "sources": [
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "fallback"
+        ]
+      },
+      "stats": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 28,
+          "bar": 28,
+          "bolt": 40,
+          "guard": 22
+        },
+        "quality": "high"
+      },
+      "callouts": {
+        "limit": 3,
+        "count": 3,
+        "rows": [
+          {
+            "hero": "ironclad",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "鋼鐵衛士",
+            "portrait": true,
+            "w": 190,
+            "h": 36,
+            "visible": true,
+            "inView": true
+          },
+          {
+            "hero": "bingshuang",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "冰霜術士",
+            "portrait": true,
+            "w": 190,
+            "h": 36,
+            "visible": true,
+            "inView": true
+          },
+          {
+            "hero": "leiting",
+            "archetype": "line",
+            "emphasis": "signature",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "貫穿演出",
+            "name": "雷霆神射",
+            "portrait": true,
+            "w": 190,
+            "h": 36,
+            "visible": true,
+            "inView": true
+          }
+        ],
+        "disclaimer": "以下為技能演出分類，依英雄風格對應共用模板，不代表引擎實際施放了該技能。"
+      },
+      "overflow": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 1920,
+        "vh": 1080
+      }
+    },
+    "desk1366-gallery": {
+      "cards": [
+        {
+          "a": "projectile",
+          "hero": "leiting",
+          "prim": "bolt",
+          "label": "彈道演出"
+        },
+        {
+          "a": "line",
+          "hero": "dadi",
+          "prim": "bar",
+          "label": "貫穿演出"
+        },
+        {
+          "a": "area",
+          "hero": "bingshuang",
+          "prim": "halo",
+          "label": "範圍演出"
+        },
+        {
+          "a": "dash",
+          "hero": "chichuan",
+          "prim": "bar,bolt",
+          "label": "突進演出"
+        },
+        {
+          "a": "shield",
+          "hero": "stoneguard",
+          "prim": "guard",
+          "label": "護盾演出"
+        },
+        {
+          "a": "heal",
+          "hero": "yanfeng",
+          "prim": "guard,halo",
+          "label": "回復演出"
+        },
+        {
+          "a": "control",
+          "hero": "ironclad",
+          "prim": "halo,guard",
+          "label": "控制演出"
+        },
+        {
+          "a": "ultimate",
+          "hero": "cinderfist",
+          "prim": "halo,guard,bolt",
+          "label": "大招演出"
+        }
+      ],
+      "heroRows": [
+        {
+          "hero": "bingshuang",
+          "primary": "#42c9e8",
+          "sig": "R",
+          "tier": "standard",
+          "slots": [
+            "control",
+            "projectile",
+            "shield",
+            "area",
+            "area"
+          ]
+        },
+        {
+          "hero": "chichuan",
+          "primary": "#b91c1c",
+          "sig": "E",
+          "tier": "standard",
+          "slots": [
+            "area",
+            "line",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "cinderfist",
+          "primary": "#c63f22",
+          "sig": "Q",
+          "tier": "standard",
+          "slots": [
+            "area",
+            "area",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "dadi",
+          "primary": "#4f6f3f",
+          "sig": "Q",
+          "tier": "standard",
+          "slots": [
+            "shield",
+            "line",
+            "shield",
+            "control",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "duskblade",
+          "primary": "#6257a6",
+          "sig": "E",
+          "tier": "light",
+          "slots": [
+            "line",
+            "line",
+            "control",
+            "dash",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "ironclad",
+          "primary": "#94a3b8",
+          "sig": "R",
+          "tier": "standard",
+          "slots": [
+            "shield",
+            "dash",
+            "control",
+            "line",
+            "area"
+          ]
+        },
+        {
+          "hero": "leiting",
+          "primary": "#30343b",
+          "sig": "Q",
+          "tier": "light",
+          "slots": [
+            "projectile",
+            "line",
+            "shield",
+            "dash",
+            "area"
+          ]
+        },
+        {
+          "hero": "lieyan",
+          "primary": "#7f1d1d",
+          "sig": "R",
+          "tier": "heavy",
+          "slots": [
+            "area",
+            "area",
+            "shield",
+            "line",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "stoneguard",
+          "primary": "#747c8c",
+          "sig": "W",
+          "tier": "light",
+          "slots": [
+            "shield",
+            "control",
+            "projectile",
+            "shield",
+            "area"
+          ]
+        },
+        {
+          "hero": "yanfeng",
+          "primary": "#c2410c",
+          "sig": "E",
+          "tier": "standard",
+          "slots": [
+            "heal",
+            "projectile",
+            "dash",
+            "area",
+            "ultimate"
+          ]
+        }
+      ],
+      "fixture": {
+        "quality": "high",
+        "caps": {
+          "halo": 28,
+          "bar": 28,
+          "bolt": 40,
+          "guard": 22
+        },
+        "progress": 0.45,
+        "archetypes": [
+          "projectile",
+          "line",
+          "area",
+          "dash",
+          "shield",
+          "heal",
+          "control",
+          "ultimate",
+          "line"
+        ],
+        "heroes": [
+          "leiting",
+          "dadi",
+          "bingshuang",
+          "chichuan",
+          "stoneguard",
+          "yanfeng",
+          "ironclad",
+          "cinderfist",
+          "linghun"
+        ],
+        "sources": [
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "fallback"
+        ]
+      },
+      "stats": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 28,
+          "bar": 28,
+          "bolt": 40,
+          "guard": 22
+        },
+        "quality": "high"
+      },
+      "callouts": {
+        "limit": 3,
+        "count": 3,
+        "rows": [
+          {
+            "hero": "ironclad",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "鋼鐵衛士",
+            "portrait": true,
+            "w": 190,
+            "h": 36,
+            "visible": true,
+            "inView": true
+          },
+          {
+            "hero": "bingshuang",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "冰霜術士",
+            "portrait": true,
+            "w": 190,
+            "h": 36,
+            "visible": true,
+            "inView": true
+          },
+          {
+            "hero": "leiting",
+            "archetype": "line",
+            "emphasis": "signature",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "貫穿演出",
+            "name": "雷霆神射",
+            "portrait": true,
+            "w": 190,
+            "h": 36,
+            "visible": true,
+            "inView": true
+          }
+        ],
+        "disclaimer": "以下為技能演出分類，依英雄風格對應共用模板，不代表引擎實際施放了該技能。"
+      },
+      "overflow": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 1366,
+        "vh": 768
+      }
+    },
+    "mob430-gallery": {
+      "cards": [
+        {
+          "a": "projectile",
+          "hero": "leiting",
+          "prim": "bolt",
+          "label": "彈道演出"
+        },
+        {
+          "a": "line",
+          "hero": "dadi",
+          "prim": "bar",
+          "label": "貫穿演出"
+        },
+        {
+          "a": "area",
+          "hero": "bingshuang",
+          "prim": "halo",
+          "label": "範圍演出"
+        },
+        {
+          "a": "dash",
+          "hero": "chichuan",
+          "prim": "bar,bolt",
+          "label": "突進演出"
+        },
+        {
+          "a": "shield",
+          "hero": "stoneguard",
+          "prim": "guard",
+          "label": "護盾演出"
+        },
+        {
+          "a": "heal",
+          "hero": "yanfeng",
+          "prim": "guard,halo",
+          "label": "回復演出"
+        },
+        {
+          "a": "control",
+          "hero": "ironclad",
+          "prim": "halo,guard",
+          "label": "控制演出"
+        },
+        {
+          "a": "ultimate",
+          "hero": "cinderfist",
+          "prim": "halo,guard,bolt",
+          "label": "大招演出"
+        }
+      ],
+      "heroRows": [
+        {
+          "hero": "bingshuang",
+          "primary": "#42c9e8",
+          "sig": "R",
+          "tier": "standard",
+          "slots": [
+            "control",
+            "projectile",
+            "shield",
+            "area",
+            "area"
+          ]
+        },
+        {
+          "hero": "chichuan",
+          "primary": "#b91c1c",
+          "sig": "E",
+          "tier": "standard",
+          "slots": [
+            "area",
+            "line",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "cinderfist",
+          "primary": "#c63f22",
+          "sig": "Q",
+          "tier": "standard",
+          "slots": [
+            "area",
+            "area",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "dadi",
+          "primary": "#4f6f3f",
+          "sig": "Q",
+          "tier": "standard",
+          "slots": [
+            "shield",
+            "line",
+            "shield",
+            "control",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "duskblade",
+          "primary": "#6257a6",
+          "sig": "E",
+          "tier": "light",
+          "slots": [
+            "line",
+            "line",
+            "control",
+            "dash",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "ironclad",
+          "primary": "#94a3b8",
+          "sig": "R",
+          "tier": "standard",
+          "slots": [
+            "shield",
+            "dash",
+            "control",
+            "line",
+            "area"
+          ]
+        },
+        {
+          "hero": "leiting",
+          "primary": "#30343b",
+          "sig": "Q",
+          "tier": "light",
+          "slots": [
+            "projectile",
+            "line",
+            "shield",
+            "dash",
+            "area"
+          ]
+        },
+        {
+          "hero": "lieyan",
+          "primary": "#7f1d1d",
+          "sig": "R",
+          "tier": "heavy",
+          "slots": [
+            "area",
+            "area",
+            "shield",
+            "line",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "stoneguard",
+          "primary": "#747c8c",
+          "sig": "W",
+          "tier": "light",
+          "slots": [
+            "shield",
+            "control",
+            "projectile",
+            "shield",
+            "area"
+          ]
+        },
+        {
+          "hero": "yanfeng",
+          "primary": "#c2410c",
+          "sig": "E",
+          "tier": "standard",
+          "slots": [
+            "heal",
+            "projectile",
+            "dash",
+            "area",
+            "ultimate"
+          ]
+        }
+      ],
+      "fixture": {
+        "quality": "low",
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "progress": 0.45,
+        "archetypes": [
+          "projectile",
+          "line",
+          "area",
+          "dash",
+          "shield",
+          "heal",
+          "control",
+          "ultimate",
+          "line"
+        ],
+        "heroes": [
+          "leiting",
+          "dadi",
+          "bingshuang",
+          "chichuan",
+          "stoneguard",
+          "yanfeng",
+          "ironclad",
+          "cinderfist",
+          "linghun"
+        ],
+        "sources": [
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "fallback"
+        ]
+      },
+      "stats": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      },
+      "callouts": {
+        "limit": 2,
+        "count": 2,
+        "rows": [
+          {
+            "hero": "ironclad",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "鋼鐵衛士",
+            "portrait": true,
+            "w": 150,
+            "h": 31,
+            "visible": true,
+            "inView": true
+          },
+          {
+            "hero": "bingshuang",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "冰霜術士",
+            "portrait": true,
+            "w": 150,
+            "h": 31,
+            "visible": true,
+            "inView": true
+          }
+        ],
+        "disclaimer": "以下為技能演出分類，依英雄風格對應共用模板，不代表引擎實際施放了該技能。"
+      },
+      "overflow": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 430,
+        "vh": 932
+      }
+    },
+    "mob412-gallery": {
+      "cards": [
+        {
+          "a": "projectile",
+          "hero": "leiting",
+          "prim": "bolt",
+          "label": "彈道演出"
+        },
+        {
+          "a": "line",
+          "hero": "dadi",
+          "prim": "bar",
+          "label": "貫穿演出"
+        },
+        {
+          "a": "area",
+          "hero": "bingshuang",
+          "prim": "halo",
+          "label": "範圍演出"
+        },
+        {
+          "a": "dash",
+          "hero": "chichuan",
+          "prim": "bar,bolt",
+          "label": "突進演出"
+        },
+        {
+          "a": "shield",
+          "hero": "stoneguard",
+          "prim": "guard",
+          "label": "護盾演出"
+        },
+        {
+          "a": "heal",
+          "hero": "yanfeng",
+          "prim": "guard,halo",
+          "label": "回復演出"
+        },
+        {
+          "a": "control",
+          "hero": "ironclad",
+          "prim": "halo,guard",
+          "label": "控制演出"
+        },
+        {
+          "a": "ultimate",
+          "hero": "cinderfist",
+          "prim": "halo,guard,bolt",
+          "label": "大招演出"
+        }
+      ],
+      "heroRows": [
+        {
+          "hero": "bingshuang",
+          "primary": "#42c9e8",
+          "sig": "R",
+          "tier": "standard",
+          "slots": [
+            "control",
+            "projectile",
+            "shield",
+            "area",
+            "area"
+          ]
+        },
+        {
+          "hero": "chichuan",
+          "primary": "#b91c1c",
+          "sig": "E",
+          "tier": "standard",
+          "slots": [
+            "area",
+            "line",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "cinderfist",
+          "primary": "#c63f22",
+          "sig": "Q",
+          "tier": "standard",
+          "slots": [
+            "area",
+            "area",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "dadi",
+          "primary": "#4f6f3f",
+          "sig": "Q",
+          "tier": "standard",
+          "slots": [
+            "shield",
+            "line",
+            "shield",
+            "control",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "duskblade",
+          "primary": "#6257a6",
+          "sig": "E",
+          "tier": "light",
+          "slots": [
+            "line",
+            "line",
+            "control",
+            "dash",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "ironclad",
+          "primary": "#94a3b8",
+          "sig": "R",
+          "tier": "standard",
+          "slots": [
+            "shield",
+            "dash",
+            "control",
+            "line",
+            "area"
+          ]
+        },
+        {
+          "hero": "leiting",
+          "primary": "#30343b",
+          "sig": "Q",
+          "tier": "light",
+          "slots": [
+            "projectile",
+            "line",
+            "shield",
+            "dash",
+            "area"
+          ]
+        },
+        {
+          "hero": "lieyan",
+          "primary": "#7f1d1d",
+          "sig": "R",
+          "tier": "heavy",
+          "slots": [
+            "area",
+            "area",
+            "shield",
+            "line",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "stoneguard",
+          "primary": "#747c8c",
+          "sig": "W",
+          "tier": "light",
+          "slots": [
+            "shield",
+            "control",
+            "projectile",
+            "shield",
+            "area"
+          ]
+        },
+        {
+          "hero": "yanfeng",
+          "primary": "#c2410c",
+          "sig": "E",
+          "tier": "standard",
+          "slots": [
+            "heal",
+            "projectile",
+            "dash",
+            "area",
+            "ultimate"
+          ]
+        }
+      ],
+      "fixture": {
+        "quality": "low",
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "progress": 0.45,
+        "archetypes": [
+          "projectile",
+          "line",
+          "area",
+          "dash",
+          "shield",
+          "heal",
+          "control",
+          "ultimate",
+          "line"
+        ],
+        "heroes": [
+          "leiting",
+          "dadi",
+          "bingshuang",
+          "chichuan",
+          "stoneguard",
+          "yanfeng",
+          "ironclad",
+          "cinderfist",
+          "linghun"
+        ],
+        "sources": [
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "fallback"
+        ]
+      },
+      "stats": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      },
+      "callouts": {
+        "limit": 2,
+        "count": 2,
+        "rows": [
+          {
+            "hero": "ironclad",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "鋼鐵衛士",
+            "portrait": true,
+            "w": 150,
+            "h": 31,
+            "visible": true,
+            "inView": true
+          },
+          {
+            "hero": "bingshuang",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "冰霜術士",
+            "portrait": true,
+            "w": 150,
+            "h": 31,
+            "visible": true,
+            "inView": true
+          }
+        ],
+        "disclaimer": "以下為技能演出分類，依英雄風格對應共用模板，不代表引擎實際施放了該技能。"
+      },
+      "overflow": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 412,
+        "vh": 915
+      }
+    },
+    "mob390-gallery": {
+      "cards": [
+        {
+          "a": "projectile",
+          "hero": "leiting",
+          "prim": "bolt",
+          "label": "彈道演出"
+        },
+        {
+          "a": "line",
+          "hero": "dadi",
+          "prim": "bar",
+          "label": "貫穿演出"
+        },
+        {
+          "a": "area",
+          "hero": "bingshuang",
+          "prim": "halo",
+          "label": "範圍演出"
+        },
+        {
+          "a": "dash",
+          "hero": "chichuan",
+          "prim": "bar,bolt",
+          "label": "突進演出"
+        },
+        {
+          "a": "shield",
+          "hero": "stoneguard",
+          "prim": "guard",
+          "label": "護盾演出"
+        },
+        {
+          "a": "heal",
+          "hero": "yanfeng",
+          "prim": "guard,halo",
+          "label": "回復演出"
+        },
+        {
+          "a": "control",
+          "hero": "ironclad",
+          "prim": "halo,guard",
+          "label": "控制演出"
+        },
+        {
+          "a": "ultimate",
+          "hero": "cinderfist",
+          "prim": "halo,guard,bolt",
+          "label": "大招演出"
+        }
+      ],
+      "heroRows": [
+        {
+          "hero": "bingshuang",
+          "primary": "#42c9e8",
+          "sig": "R",
+          "tier": "standard",
+          "slots": [
+            "control",
+            "projectile",
+            "shield",
+            "area",
+            "area"
+          ]
+        },
+        {
+          "hero": "chichuan",
+          "primary": "#b91c1c",
+          "sig": "E",
+          "tier": "standard",
+          "slots": [
+            "area",
+            "line",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "cinderfist",
+          "primary": "#c63f22",
+          "sig": "Q",
+          "tier": "standard",
+          "slots": [
+            "area",
+            "area",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "dadi",
+          "primary": "#4f6f3f",
+          "sig": "Q",
+          "tier": "standard",
+          "slots": [
+            "shield",
+            "line",
+            "shield",
+            "control",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "duskblade",
+          "primary": "#6257a6",
+          "sig": "E",
+          "tier": "light",
+          "slots": [
+            "line",
+            "line",
+            "control",
+            "dash",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "ironclad",
+          "primary": "#94a3b8",
+          "sig": "R",
+          "tier": "standard",
+          "slots": [
+            "shield",
+            "dash",
+            "control",
+            "line",
+            "area"
+          ]
+        },
+        {
+          "hero": "leiting",
+          "primary": "#30343b",
+          "sig": "Q",
+          "tier": "light",
+          "slots": [
+            "projectile",
+            "line",
+            "shield",
+            "dash",
+            "area"
+          ]
+        },
+        {
+          "hero": "lieyan",
+          "primary": "#7f1d1d",
+          "sig": "R",
+          "tier": "heavy",
+          "slots": [
+            "area",
+            "area",
+            "shield",
+            "line",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "stoneguard",
+          "primary": "#747c8c",
+          "sig": "W",
+          "tier": "light",
+          "slots": [
+            "shield",
+            "control",
+            "projectile",
+            "shield",
+            "area"
+          ]
+        },
+        {
+          "hero": "yanfeng",
+          "primary": "#c2410c",
+          "sig": "E",
+          "tier": "standard",
+          "slots": [
+            "heal",
+            "projectile",
+            "dash",
+            "area",
+            "ultimate"
+          ]
+        }
+      ],
+      "fixture": {
+        "quality": "low",
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "progress": 0.45,
+        "archetypes": [
+          "projectile",
+          "line",
+          "area",
+          "dash",
+          "shield",
+          "heal",
+          "control",
+          "ultimate",
+          "line"
+        ],
+        "heroes": [
+          "leiting",
+          "dadi",
+          "bingshuang",
+          "chichuan",
+          "stoneguard",
+          "yanfeng",
+          "ironclad",
+          "cinderfist",
+          "linghun"
+        ],
+        "sources": [
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "fallback"
+        ]
+      },
+      "stats": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      },
+      "callouts": {
+        "limit": 2,
+        "count": 2,
+        "rows": [
+          {
+            "hero": "ironclad",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "鋼鐵衛士",
+            "portrait": true,
+            "w": 150,
+            "h": 31,
+            "visible": true,
+            "inView": true
+          },
+          {
+            "hero": "bingshuang",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "冰霜術士",
+            "portrait": true,
+            "w": 150,
+            "h": 31,
+            "visible": true,
+            "inView": true
+          }
+        ],
+        "disclaimer": "以下為技能演出分類，依英雄風格對應共用模板，不代表引擎實際施放了該技能。"
+      },
+      "overflow": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 390,
+        "vh": 844
+      }
+    },
+    "mob360-gallery": {
+      "cards": [
+        {
+          "a": "projectile",
+          "hero": "leiting",
+          "prim": "bolt",
+          "label": "彈道演出"
+        },
+        {
+          "a": "line",
+          "hero": "dadi",
+          "prim": "bar",
+          "label": "貫穿演出"
+        },
+        {
+          "a": "area",
+          "hero": "bingshuang",
+          "prim": "halo",
+          "label": "範圍演出"
+        },
+        {
+          "a": "dash",
+          "hero": "chichuan",
+          "prim": "bar,bolt",
+          "label": "突進演出"
+        },
+        {
+          "a": "shield",
+          "hero": "stoneguard",
+          "prim": "guard",
+          "label": "護盾演出"
+        },
+        {
+          "a": "heal",
+          "hero": "yanfeng",
+          "prim": "guard,halo",
+          "label": "回復演出"
+        },
+        {
+          "a": "control",
+          "hero": "ironclad",
+          "prim": "halo,guard",
+          "label": "控制演出"
+        },
+        {
+          "a": "ultimate",
+          "hero": "cinderfist",
+          "prim": "halo,guard,bolt",
+          "label": "大招演出"
+        }
+      ],
+      "heroRows": [
+        {
+          "hero": "bingshuang",
+          "primary": "#42c9e8",
+          "sig": "R",
+          "tier": "standard",
+          "slots": [
+            "control",
+            "projectile",
+            "shield",
+            "area",
+            "area"
+          ]
+        },
+        {
+          "hero": "chichuan",
+          "primary": "#b91c1c",
+          "sig": "E",
+          "tier": "standard",
+          "slots": [
+            "area",
+            "line",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "cinderfist",
+          "primary": "#c63f22",
+          "sig": "Q",
+          "tier": "standard",
+          "slots": [
+            "area",
+            "area",
+            "shield",
+            "dash",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "dadi",
+          "primary": "#4f6f3f",
+          "sig": "Q",
+          "tier": "standard",
+          "slots": [
+            "shield",
+            "line",
+            "shield",
+            "control",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "duskblade",
+          "primary": "#6257a6",
+          "sig": "E",
+          "tier": "light",
+          "slots": [
+            "line",
+            "line",
+            "control",
+            "dash",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "ironclad",
+          "primary": "#94a3b8",
+          "sig": "R",
+          "tier": "standard",
+          "slots": [
+            "shield",
+            "dash",
+            "control",
+            "line",
+            "area"
+          ]
+        },
+        {
+          "hero": "leiting",
+          "primary": "#30343b",
+          "sig": "Q",
+          "tier": "light",
+          "slots": [
+            "projectile",
+            "line",
+            "shield",
+            "dash",
+            "area"
+          ]
+        },
+        {
+          "hero": "lieyan",
+          "primary": "#7f1d1d",
+          "sig": "R",
+          "tier": "heavy",
+          "slots": [
+            "area",
+            "area",
+            "shield",
+            "line",
+            "ultimate"
+          ]
+        },
+        {
+          "hero": "stoneguard",
+          "primary": "#747c8c",
+          "sig": "W",
+          "tier": "light",
+          "slots": [
+            "shield",
+            "control",
+            "projectile",
+            "shield",
+            "area"
+          ]
+        },
+        {
+          "hero": "yanfeng",
+          "primary": "#c2410c",
+          "sig": "E",
+          "tier": "standard",
+          "slots": [
+            "heal",
+            "projectile",
+            "dash",
+            "area",
+            "ultimate"
+          ]
+        }
+      ],
+      "fixture": {
+        "quality": "low",
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "progress": 0.45,
+        "archetypes": [
+          "projectile",
+          "line",
+          "area",
+          "dash",
+          "shield",
+          "heal",
+          "control",
+          "ultimate",
+          "line"
+        ],
+        "heroes": [
+          "leiting",
+          "dadi",
+          "bingshuang",
+          "chichuan",
+          "stoneguard",
+          "yanfeng",
+          "ironclad",
+          "cinderfist",
+          "linghun"
+        ],
+        "sources": [
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "authored",
+          "fallback"
+        ]
+      },
+      "stats": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      },
+      "callouts": {
+        "limit": 2,
+        "count": 2,
+        "rows": [
+          {
+            "hero": "ironclad",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "鋼鐵衛士",
+            "portrait": true,
+            "w": 150,
+            "h": 31,
+            "visible": true,
+            "inView": true
+          },
+          {
+            "hero": "bingshuang",
+            "archetype": "area",
+            "emphasis": "ultimate",
+            "source": "authored",
+            "basis": "engine:power",
+            "label": "範圍演出",
+            "name": "冰霜術士",
+            "portrait": true,
+            "w": 150,
+            "h": 31,
+            "visible": true,
+            "inView": true
+          }
+        ],
+        "disclaimer": "以下為技能演出分類，依英雄風格對應共用模板，不代表引擎實際施放了該技能。"
+      },
+      "overflow": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 360,
+        "vh": 800
+      }
+    },
+    "presetDiff": {
+      "low": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      },
+      "high": {
+        "halo": 5,
+        "bar": 3,
+        "bolt": 3,
+        "guard": 4,
+        "live": 9,
+        "caps": {
+          "halo": 28,
+          "bar": 28,
+          "bolt": 40,
+          "guard": 22
+        },
+        "quality": "high"
+      }
+    }
+  }
+}

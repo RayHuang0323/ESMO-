@@ -23,6 +23,7 @@ import MobaRuntimeHeroes from "./MobaRuntimeHeroes.jsx";
 import MobaRuntimeStructures from "./MobaRuntimeStructures.jsx";
 import MobaRuntimeMinions from "./MobaRuntimeMinions.jsx";
 import MobaRuntimeEffects from "./MobaRuntimeEffects.jsx";
+import HeroSkillEffects from "../presentation/HeroSkillEffects.jsx";
 import MobaRuntimeNeutrals from "./MobaRuntimeNeutrals.jsx";
 import BattleCameraController from "../../ui/BattleCameraController.jsx";
 import { useCameraStore } from "../../cameraStore.js";
@@ -452,6 +453,9 @@ export default function MobaRuntimeView3D({
       <MobaRuntimeMinions frameRef={frameRef} />
       <MobaRuntimeNeutrals objectives={frame.objectives} frameRef={frameRef} />
       <MobaRuntimeEffects frameRef={frameRef} />
+      {/*  Milestone L：英雄身分演出層。疊在既有特效之上，讀同一份 frame.effects，
+           只畫「這一下是誰、是哪一種演出分類」。池容量依畫質縮放（手機更小）。 */}
+      <HeroSkillEffects frameRef={frameRef} quality={quality} />
       <MobaRuntimeHeroes
         heroes={frame.heroes}
         frameRef={frameRef}

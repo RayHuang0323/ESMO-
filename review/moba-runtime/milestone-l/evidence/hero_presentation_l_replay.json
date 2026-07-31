@@ -1,0 +1,202 @@
+{
+  "notes": [
+    {
+      "label": "desk1920 C1) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 C2) 選角完成",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 C3) 進入正式 GameView",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 C4) 演出層已掛進正式對戰流程（非 debug 入口，走完整 Ban/Pick → GameView）",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 28,
+          "bar": 28,
+          "bolt": 40,
+          "guard": 22
+        },
+        "quality": "high"
+      }
+    },
+    {
+      "label": "desk1920 C5) 打到終局並進入 Result",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 C6) 可以進入 Replay",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 C7) Replay 畫面開起來了",
+      "ok": true,
+      "extra": {
+        "onReplay": true,
+        "canvas": true,
+        "rows": []
+      }
+    },
+    {
+      "label": "desk1920 C8) Replay 上出現的英雄都是本場實際選到的（同一份 mapping）",
+      "ok": true,
+      "extra": {
+        "replayHeroes": [],
+        "picks": [
+          "ravager",
+          "cinderfist",
+          "greymantle",
+          "embercoil",
+          "gambler"
+        ]
+      }
+    },
+    {
+      "label": "mob390 C1) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 C2) 選角完成",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 C3) 進入正式 GameView",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 C4) 演出層已掛進正式對戰流程（非 debug 入口，走完整 Ban/Pick → GameView）",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob390 C5) 打到終局並進入 Result",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 C6) 可以進入 Replay",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 C7) Replay 畫面開起來了",
+      "ok": true,
+      "extra": {
+        "onReplay": true,
+        "canvas": true,
+        "rows": []
+      }
+    },
+    {
+      "label": "mob390 C8) Replay 上出現的英雄都是本場實際選到的（同一份 mapping）",
+      "ok": true,
+      "extra": {
+        "replayHeroes": [],
+        "picks": [
+          "ravager",
+          "cinderfist",
+          "sting",
+          "duskblade",
+          "embercoil"
+        ]
+      }
+    }
+  ],
+  "shots": [
+    "desk1920-03-replay.png",
+    "mob390-03-replay.png"
+  ],
+  "data": {
+    "desk1920-replay": {
+      "picks": [
+        "ravager",
+        "cinderfist",
+        "greymantle",
+        "embercoil",
+        "gambler"
+      ],
+      "liveCalloutObserved": null,
+      "liveStats": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 28,
+          "bar": 28,
+          "bolt": 40,
+          "guard": 22
+        },
+        "quality": "high"
+      },
+      "replay": {
+        "onReplay": true,
+        "canvas": true,
+        "rows": []
+      },
+      "replayHeroes": []
+    },
+    "mob390-replay": {
+      "picks": [
+        "ravager",
+        "cinderfist",
+        "sting",
+        "duskblade",
+        "embercoil"
+      ],
+      "liveCalloutObserved": null,
+      "liveStats": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      },
+      "replay": {
+        "onReplay": true,
+        "canvas": true,
+        "rows": []
+      },
+      "replayHeroes": []
+    }
+  }
+}

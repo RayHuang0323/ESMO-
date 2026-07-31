@@ -3583,3 +3583,84 @@ Android／iOS 真機未測（`env(safe-area-inset-bottom)` 在模擬器恆為 0�
    永遠走空狀態那半邊。補指名一隻有資料的英雄；指名時又踩第二坑：
    寫死 `ironclad` 全紅，因為他早被選角流程禁掉／選走 ⇒
    改成「清單裡第一個還在池子裡的」。
+
+---
+
+## Milestone L（2026-07-31 ～ 08-01）— Hero Combat Identity Presentation v1
+
+報告：`review/moba-runtime/milestone-l/MILESTONE_L_REPORT.md`
+rollback tag：`milestone-l-baseline` → `78d2395`
+
+### Audit 先做，結論決定了整輪設計
+
+實測 seed 42 跑 1200 tick 統計 `snapshot.fx`：
+
+- `ability` 的值域只有 `{role}:basic` / `{role}:power` / `tower:basic` /
+  `neutral:*` / `boss:*` / `buff:*` / null。**引擎完全沒有 Q/W/E/R，不模擬技能施放。**
+- `sourceId` 是 **playerId**（b1–b5），不是 heroId；heroId 靠 `roster[playerId]` 解析。
+- 最小接線點是既有的 `mobaRuntimeMapAdapter.adaptEffects()`——它本來就在做
+  fx → 呈現的轉換。
+- `presentation/heroArchetypes.js`（H.3/H.4）**已經**有 10 位英雄的 3D 剪影與主色
+  ⇒ 不建第二套顏色。
+
+⇒ 三個設計決定：**不改引擎**（改了就動 RNG）、UI 文案一律寫「演出分類」而非技能名、
+八個模板改用**固定 fixture 畫廊**驗證（實戰只出得來 basic/power 且看 RNG）。
+
+### 做了什麼
+
+- `src/data/heroCombatPresentation.js`（新增）：呈現契約 v1。theme / basicAttack /
+  P-Q-W-E-R 演出對照 / audioProfile / cameraEmphasis / performanceTier。
+  **零平衡數值**（verifier 遞迴掃描，連裸數字都擋）。10 位代表英雄 ＋ 依定位推導的
+  fallback（其餘 90 位走這條，畫面不空白）。
+- `src/battle/moba/heroPresentationAdapter.js`（新增）：唯一翻譯點，純 JS。
+  不改原 event、不改 timestamp、不改順序，輸出帶 `basis: engine:*` 與
+  `isActualSkillCast: false`。
+- `src/battle/moba/presentation/HeroSkillEffects.jsx`（新增）：八個共用模板
+  （projectile/line/area/dash/shield/heal/control/ultimate）。固定 pool、
+  依畫質縮放（low 10/10/14/8 vs high 28/28/40/22）、NormalBlending、
+  大招半徑硬上限、卸載 dispose。**只認得八個字，不認得英雄**⇒ 加第 101 位不必動它。
+- `HeroSkillCallout.jsx`（新增）＋ Timeline 主角頭像與大場面標記。
+- `?debug=hero-presentation` 演出畫廊（lazy 路由，正式流程不載入）。
+- 接線只有三處，全部是**純附加**：`adaptEffects` 多一個 `presentation` 欄位、
+  `MobaRuntimeView3D` 掛一層、`BattlePresentationLayer` 掛一個 callout。
+
+10 位代表英雄（上/打/中/射/輔 各 2）：鋼鐵衛士・炎拳｜暮刃・赤炎武神｜
+冰霜術士・烈焰先知｜雷霆神射・炎鳳射手｜大地守衛・石衛。
+verifier 第 6 條**實際比對**每一路兩位的演出三元組不得相同。
+
+### 驗證
+
+新增 `check_hero_presentation_l` **59/59**、
+`shot_hero_presentation_l` 三段：畫廊 **116/116**（六尺寸）、
+對戰接線 **18/18**（三尺寸）、Replay **16/16**（1920/390 完整流程）。
+回歸 `check_hero_matchups_k` 47/47、`shot_hero_matchups_k` 348/348、
+`check_moba_milestone_j_close` 35/35、`shot_banpick_hotfix2` 251/251、
+`regress` 15/15（23.5 分／29.8 擊殺，**與 J-close／K 逐值相同**）、
+`regress2` 8/8、build exit 0。
+
+### ⚠ 一個環境限制，寫下來避免下次重踩
+
+**headless Chrome 的軟體渲染跑不動需要時間推進的斷言。** 實測：
+SwiftShader 下模擬推進只有 **0.14 模擬秒／真實秒**（1366×768 + low preset + 4× 加速，
+240 秒只到 ts≈32），而英雄互毆要 ts≈60+ 才穩定出現。
+
+所以「live 對戰有沒有出現 callout」「Timeline 有沒有事件列」「fps 有沒有 ≥N」
+這幾條**在這個環境裡只能靠運氣通過**。第一版就是這樣寫的，六個尺寸全紅。
+
+改法：**把實質驗證搬到決定性 fixture，但走 production 程式碼路徑**——
+畫廊把固定 snapshot 推進**正式的 useGameStore**，掛**正式的** HeroSkillCallout
+（不傳任何 prop）⇒ 驗到的是真元件真資料流，只是輸入固定。
+live 對戰段縮成接線煙霧測試（掛得起來、模擬在推進、池容量正確、版面沒壞），
+並在報告 §10 明白寫「live 肉眼觀察未驗，請 Ray 在真實瀏覽器確認」。
+
+### 教訓
+
+1. **瀏覽器測試抓到一個 Node 測試漏掉的真 bug**：roster 有**三種**形狀，
+   我只吃了兩種（`.hero.id` / `.heroId`），漏了 `useGameStore.roster` 的
+   「英雄物件本身」。既有的 `mobaRuntimeMapAdapter` 本來就吃三種——
+   **同一份資料有兩套解讀就是 bug 的溫床**。已對齊並補上回歸斷言。
+2. **`elementFromPoint` 不能用來驗 HUD 疊層有沒有被蓋住**：callout 容器刻意
+   `pointer-events:none`（否則會吃掉地圖手勢）⇒ 那個點永遠打到它後面的東西，
+   恆判「被蓋住」。對這種疊層要驗的是「有尺寸、可見、完整在畫面內」。
+3. **測試中斷要記得收屍**：連續幾次中斷留下 37 個孤兒 Chrome／preview 行程，
+   把機器塞到 CDP 全面逾時，看起來像產品壞了。清乾淨之後同一份腳本 18/18 全過。

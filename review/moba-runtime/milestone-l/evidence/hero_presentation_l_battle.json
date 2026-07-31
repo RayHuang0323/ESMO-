@@ -1,0 +1,296 @@
+{
+  "notes": [
+    {
+      "label": "desk1366 B1) 正式 GameView 掛得起來（canvas 存在）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 B2) 模擬真的在推進（5.5 → 10.5）",
+      "ok": true,
+      "extra": {
+        "t0": 5.5,
+        "t1": 10.5
+      }
+    },
+    {
+      "label": "desk1366 B3) 演出層已掛進 live 對戰並每幀回報計數",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "desk1366 B4) live 套用 low preset 的池容量（halo=10 / bolt=14）",
+      "ok": true,
+      "extra": {
+        "halo": 10,
+        "bar": 10,
+        "bolt": 14,
+        "guard": 8
+      }
+    },
+    {
+      "label": "desk1366 B5) 池計數都沒有超過容量（不是無限成長）",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "desk1366 B6) 沒有橫向溢出，也沒有因本輪新增縱向捲動軸",
+      "ok": true,
+      "extra": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 1366,
+        "vh": 768
+      }
+    },
+    {
+      "label": "mob390 B1) 正式 GameView 掛得起來（canvas 存在）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 B2) 模擬真的在推進（11 → 14）",
+      "ok": true,
+      "extra": {
+        "t0": 11,
+        "t1": 14
+      }
+    },
+    {
+      "label": "mob390 B3) 演出層已掛進 live 對戰並每幀回報計數",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob390 B4) live 套用 low preset 的池容量（halo=10 / bolt=14）",
+      "ok": true,
+      "extra": {
+        "halo": 10,
+        "bar": 10,
+        "bolt": 14,
+        "guard": 8
+      }
+    },
+    {
+      "label": "mob390 B5) 池計數都沒有超過容量（不是無限成長）",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob390 B6) 沒有橫向溢出，也沒有因本輪新增縱向捲動軸",
+      "ok": true,
+      "extra": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 390,
+        "vh": 844
+      }
+    },
+    {
+      "label": "mob360 B1) 正式 GameView 掛得起來（canvas 存在）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 B2) 模擬真的在推進（5.5 → 9）",
+      "ok": true,
+      "extra": {
+        "t0": 5.5,
+        "t1": 9
+      }
+    },
+    {
+      "label": "mob360 B3) 演出層已掛進 live 對戰並每幀回報計數",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob360 B4) live 套用 low preset 的池容量（halo=10 / bolt=14）",
+      "ok": true,
+      "extra": {
+        "halo": 10,
+        "bar": 10,
+        "bolt": 14,
+        "guard": 8
+      }
+    },
+    {
+      "label": "mob360 B5) 池計數都沒有超過容量（不是無限成長）",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob360 B6) 沒有橫向溢出，也沒有因本輪新增縱向捲動軸",
+      "ok": true,
+      "extra": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 360,
+        "vh": 800
+      }
+    }
+  ],
+  "shots": [
+    "desk1366-02-battle.png",
+    "mob390-02-battle.png",
+    "mob360-02-battle.png"
+  ],
+  "data": {
+    "desk1366-battle": {
+      "ts": {
+        "t0": 5.5,
+        "t1": 10.5
+      },
+      "stats": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      },
+      "overflow": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 1366,
+        "vh": 768
+      }
+    },
+    "mob390-battle": {
+      "ts": {
+        "t0": 11,
+        "t1": 14
+      },
+      "stats": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      },
+      "overflow": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 390,
+        "vh": 844
+      }
+    },
+    "mob360-battle": {
+      "ts": {
+        "t0": 5.5,
+        "t1": 9
+      },
+      "stats": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      },
+      "overflow": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 360,
+        "vh": 800
+      }
+    }
+  }
+}

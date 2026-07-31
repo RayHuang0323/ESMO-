@@ -14,6 +14,9 @@ import BattleFloatingText from "./BattleFloatingText.jsx";
 import BattleScoreboard from "./BattleScoreboard.jsx";
 import BattleEndScreen from "./BattleEndScreen.jsx";
 import BattleHeroStrip from "./BattleHeroStrip.jsx";
+//  Milestone L：關鍵演出的 HUD 播報（頭像 ＋ 演出分類）。與 3D 層讀同一份
+//  snapshot.fx，經同一支 heroPresentationAdapter ⇒ 現場與 Replay 不可能分岔。
+import HeroSkillCallout from "../moba/presentation/HeroSkillCallout.jsx";
 import { Z } from "./battleLayout.js";
 
 export default function BattlePresentationLayer({ roster = null, showTimeline = true, onContinue = null, draft = null, tactic = null }) {
@@ -37,6 +40,7 @@ export default function BattlePresentationLayer({ roster = null, showTimeline = 
     <>
       <BattleHUD roster={roster} tactic={tactic} />
       {showTimeline && !over && <BattleTimeline open roster={roster} />}
+      {!over && <HeroSkillCallout roster={roster} />}
       <BattleFloatingText />
       {!over && <BattleHeroStrip roster={roster} draft={draft} />}
 
