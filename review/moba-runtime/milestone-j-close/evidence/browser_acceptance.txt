@@ -1,0 +1,98 @@
+(node:15040) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+✅ desktop 1) 進入賽前配置
+✅ desktop 2) 五個席位都標示英雄來源
+✅ desktop 3) 來源值都是五種之一（沒有空徽章）
+✅ desktop 4) 明講「不是固定綁定」且指向 Ban/Pick
+  📸 desktop-01-lineup.png
+✅ desktop 5) 進入 Ban/Pick
+✅ desktop 5b) 尚未選角時摘要就已常駐（五路皆在，英雄留白）
+✅ desktop 5c) 陣容需求一開始就顯示「五路皆缺」
+✅ desktop 5d) 選角途中：頭像位置碼與摘要逐一相同（同一份 assignment）
+✅ desktop 5e) 選角途中：陣容需求的已有數＝已選英雄數
+  📸 desktop-02a-banpick-mid.png
+✅ desktop 6) Ban/Pick 顯示五路出戰配置
+✅ desktop 7) 五路唯一、五隻英雄不重複
+✅ desktop 8) 每一路都恰好 2 個召喚師技能
+✅ desktop 9) 打野帶懲戒，且只有打野
+✅ desktop 9b) 五個已選頭像都標了位置
+✅ desktop 9b2) 頭像上顯示的是中文路名（不是 TOP/JUNGLE 等英文）
+✅ desktop 9c) 頭像位置碼與摘要逐一相同（沒有兩套判定）
+✅ desktop 9d) 五路到齊時陣容需求顯示無缺口
+✅ desktop 9e) 選角完成 3 秒後仍停在 Ban/Pick（不再只閃現 1.2 秒）
+  📸 desktop-02-banpick.png
+✅ desktop 9f) 有明確的確認鈕
+✅ desktop 10) 進入 Loading
+✅ desktop 11) Loading 十人都顯示召喚師技能
+  📸 desktop-03-loading.png
+✅ desktop 12) 正式 GameView 掛載
+✅ desktop 12b) 隊伍面板同時渲染兩個技能格
+✅ desktop 12c) 兩格**並排**（y 相同、x 不同），不是上下疊
+✅ desktop 12d) 兩格等大且看得見（≥14px）
+✅ desktop 12e) 血條沒有被擠掉（仍有可讀寬度 ≥30px）
+✅ desktop 12f) 兩格都是真的技能（不是 reserved 佔位）
+✅ desktop 12g) 測試模式下看得到「快速完成」開發按鈕
+✅ desktop 13) 戰鬥中面板顯示 2 個召喚師技能（不再有「未配置」）
+✅ desktop 13b) 兩格都有引擎狀態（可用／冷卻秒數），沒有純「配置」佔位
+  📸 desktop-04-battle-sheet.png
+✅ desktop 14) 賽後記分板顯示召喚師技能
+✅ desktop 14b) 記分板帶有實際使用次數，且整場至少放過一次（合計 92）
+  📸 desktop-05-result.png
+✅ desktop 15) 可以進入重播
+✅ desktop 16) 重播帶著本場出戰配置（十席）
+  📸 desktop-06-replay.png
+✅ desktop 17) Ban/Pick 與 Replay 的技能逐席相同
+✅ desktop 18) Ban/Pick 與 Replay 的英雄逐席相同
+✅ desktop 19) Loading 與 Ban/Pick 的技能逐席相同
+✅ desktop 20) 戰鬥中面板的技能＝Ban/Pick 給「實際點到的那個席位」的那一組
+✅ desktop 21) Timeline 有技能事件，且每一筆都是該席位帶著的技能（共 13 種）
+✅ mobile 1) 進入賽前配置
+✅ mobile 2) 五個席位都標示英雄來源
+✅ mobile 3) 來源值都是五種之一（沒有空徽章）
+✅ mobile 4) 明講「不是固定綁定」且指向 Ban/Pick
+  📸 mobile-01-lineup.png
+✅ mobile 5) 進入 Ban/Pick
+✅ mobile 5b) 尚未選角時摘要就已常駐（五路皆在，英雄留白）
+✅ mobile 5c) 陣容需求一開始就顯示「五路皆缺」
+✅ mobile 5d) 選角途中：頭像位置碼與摘要逐一相同（同一份 assignment）
+✅ mobile 5e) 選角途中：陣容需求的已有數＝已選英雄數
+  📸 mobile-02a-banpick-mid.png
+✅ mobile 6) Ban/Pick 顯示五路出戰配置
+✅ mobile 7) 五路唯一、五隻英雄不重複
+✅ mobile 8) 每一路都恰好 2 個召喚師技能
+✅ mobile 9) 打野帶懲戒，且只有打野
+✅ mobile 9b) 五個已選頭像都標了位置
+✅ mobile 9b2) 頭像上顯示的是中文路名（不是 TOP/JUNGLE 等英文）
+✅ mobile 9c) 頭像位置碼與摘要逐一相同（沒有兩套判定）
+✅ mobile 9d) 五路到齊時陣容需求顯示無缺口
+✅ mobile 9e) 選角完成 3 秒後仍停在 Ban/Pick（不再只閃現 1.2 秒）
+  📸 mobile-02-banpick.png
+✅ mobile 9f) 有明確的確認鈕
+✅ mobile 10) 進入 Loading
+✅ mobile 11) Loading 十人都顯示召喚師技能
+  📸 mobile-03-loading.png
+✅ mobile 12) 正式 GameView 掛載
+✅ mobile 12b) 隊伍面板同時渲染兩個技能格
+✅ mobile 12c) 兩格**並排**（y 相同、x 不同），不是上下疊
+✅ mobile 12d) 兩格等大且看得見（≥14px）
+✅ mobile 12e) 血條沒有被擠掉（仍有可讀寬度 ≥30px）
+✅ mobile 12f) 兩格都是真的技能（不是 reserved 佔位）
+✅ mobile 12g) 測試模式下看得到「快速完成」開發按鈕
+✅ mobile 13) 戰鬥中面板顯示 2 個召喚師技能（不再有「未配置」）
+✅ mobile 13b) 兩格都有引擎狀態（可用／冷卻秒數），沒有純「配置」佔位
+  📸 mobile-04-battle-sheet.png
+✅ mobile 14) 賽後記分板顯示召喚師技能
+✅ mobile 14b) 記分板帶有實際使用次數，且整場至少放過一次（合計 88）
+  📸 mobile-05-result.png
+✅ mobile 15) 可以進入重播
+✅ mobile 16) 重播帶著本場出戰配置（十席）
+  📸 mobile-06-replay.png
+✅ mobile 17) Ban/Pick 與 Replay 的技能逐席相同
+✅ mobile 18) Ban/Pick 與 Replay 的英雄逐席相同
+✅ mobile 19) Loading 與 Ban/Pick 的技能逐席相同
+✅ mobile 20) 戰鬥中面板的技能＝Ban/Pick 給「實際點到的那個席位」的那一組
+✅ mobile 21) Timeline 有技能事件，且每一筆都是該席位帶著的技能（共 18 種）
+✅ 跨尺寸 21) 手機版同樣走完整條流程並取得配置
+✅ 跨尺寸 22) 兩個尺寸的配置規則一致（都是 5 路 × 2 技能 × 打野懲戒）
+
+✅ PASS　證據：D:\OneDrive\文件\GitHub\ESMO\review\moba-runtime\milestone-j-close\evidence
