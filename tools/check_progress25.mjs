@@ -270,6 +270,10 @@ ck("   profileStore 有 schemaVersion 且沿用同一個 localStorage key（不�
   PROFILE_SCHEMA_VERSION >= 2 && psSrc.includes('const KEY = "esmo.profile.v1"') && !psSrc.includes("localStorage.clear"));
 
 // ── H. 子行程（必須檢查 exit code；禁止假通過）─────────────────────────────
+//  Milestone K0：flat 模式（ESMO_VERIFY_FLAT=1，由 tools/verify.mjs 設定）⇒
+//  跳過巢狀子驗證，改由 runner 把每一支各跑一次。跳過的標成 SKIP，不計入分母。
+const FLAT = process.env.ESMO_VERIFY_FLAT === "1";
+const SKIPPED = [];
 function runNode(script) {
   try {
     const out = execFileSync(process.execPath, [script], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
@@ -278,14 +282,19 @@ function runNode(script) {
     return { code: e.status ?? 1, out: (e.stdout ?? "") + (e.stderr ?? "") };
   }
 }
-const t24 = runNode("tools/check_moba_tactic24.mjs");
-ck("16) check_moba_tactic24 仍全綠（exit code 0；MOBA balance baseline 未變）",
-  t24.code === 0 && /29\/29 通過/.test(t24.out));   // S29：C4 重導（飽和的 dragonContests → objRate）+2 條
+const t24 = FLAT ? null : runNode("tools/check_moba_tactic24.mjs");
+if (FLAT) {
+  SKIPPED.push("16) check_moba_tactic24 仍全綠");
+} else {
+  ck("16) check_moba_tactic24 仍全綠（exit code 0；MOBA balance baseline 未變）",
+    t24.code === 0 && /29\/29 通過/.test(t24.out));   // S29：C4 重導（飽和的 dragonContests → objRate）+2 條
+}
 
 // ── 報告 ───────────────────────────────────────────────────────────────────
 let pass = 0;
 for (const [n, ok] of A) { console.log(`${ok ? "✅" : "❌"} ${n}`); if (ok) pass++; }
-console.log(`\n${pass}/${A.length} 通過`);
+for (const n of SKIPPED) console.log(`⏭ SKIP ${n}（flat 模式：改由 tools/verify.mjs 各跑一次）`);
+console.log(`\n${pass}/${A.length} 通過` + (SKIPPED.length ? `　+ ${SKIPPED.length} 段委派給 runner（未計入分母）` : ""));
 
 // 平衡比較表（§8 要求輸出）
 const row = (label, t) => [

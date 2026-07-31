@@ -334,6 +334,15 @@ ck("19) CS derived stats 不受影響（fpsRoster 仍走 getPlayerDerivedStats�
 //  ⇒ 統一放寬到 90 分鐘。改動模擬成本時請一併回頭檢視這個值。
 const CHILD_TIMEOUT = 5400000;
 
+//  ── Milestone K0：flat 模式 ────────────────────────────────────────────────
+//  `ESMO_VERIFY_FLAT=1`（由 tools/verify.mjs 設定）時跳過這一段的巢狀子驗證。
+//  展開呼叫圖後發現：一次 runtime29 會產生 63 個子行程，regress 被跑 8 遍、
+//  tactic24 16 遍——跑不完的根因是**重複執行**，不是斷言太多。runner 會把每一支
+//  子驗證各跑一次，所以這裡再跑一次純屬浪費。
+//  ⚠ 被跳過的檢查標成 SKIP，**不計入分母、不算通過**（見下方報告段）。
+const FLAT = process.env.ESMO_VERIFY_FLAT === "1";
+const SKIPPED = [];
+
 function runNode(script, shape, args = []) {
   try {
     const out = execFileSync(process.execPath, [path.join(ROOT, script), ...args],
@@ -355,16 +364,22 @@ for (const [name, script, shape] of [
   //   舊斷言 /達標 19\/20/ 是舊節奏的數值快照，且對 v1 病灶零檢定力（見設計文件 §7）。
   ["26) regress2（節奏門檻 8/8）", "tools/regress2.mjs", /節奏門檻 8\/8 通過/],
 ]) {
+  if (FLAT) { SKIPPED.push(name); continue; }
   const r = runNode(script, shape);
   ck(`${name}（exit=${r.code}）`, r.ok && r.code === 0);
 }
-const build = runNode("node_modules/vite/bin/vite.js", /built in/, ["build"]);
-ck(`27) npm run build 通過（exit=${build.code}）`, build.ok && build.code === 0);
+if (FLAT) {
+  SKIPPED.push("27) npm run build 通過");
+} else {
+  const build = runNode("node_modules/vite/bin/vite.js", /built in/, ["build"]);
+  ck(`27) npm run build 通過（exit=${build.code}）`, build.ok && build.code === 0);
+}
 
 // ── 報告 ────────────────────────────────────────────────────────────────────
 let pass = 0;
 for (const [n, ok] of A) { console.log(`${ok ? "✅" : "❌"} ${n}`); if (ok) pass++; }
-console.log(`\n${pass}/${A.length} 通過`);
+for (const n of SKIPPED) console.log(`⏭ SKIP ${n}（flat 模式：改由 tools/verify.mjs 各跑一次）`);
+console.log(`\n${pass}/${A.length} 通過` + (SKIPPED.length ? `　+ ${SKIPPED.length} 段委派給 runner（未計入分母）` : ""));
 
 // ── 固定 seed 比較表（§6 可觀察證據；同 seed / 同英雄 / 同戰術 / 同 roster，只改 b3 天賦）──
 console.log(`\n=== 固定比較 seed=4242、戰術 ${M1.name}、只改 b3 天賦 ===`);

@@ -429,6 +429,17 @@ ck(`29) v2 陣列順序不決定勝負（藍勝 正序 ${(f2 * 100).toFixed(0)}%
 //  ⇒ 統一放寬到 90 分鐘。改動模擬成本時請一併回頭檢視這個值。
 const CHILD_TIMEOUT = 5400000;
 
+//  ── Milestone K0：flat 模式 ────────────────────────────────────────────────
+//  `ESMO_VERIFY_FLAT=1`（由 tools/verify.mjs 設定）時跳過這一段的巢狀子驗證。
+//  本檔跑不完的根因量化如下：展開呼叫圖後，一次 runtime29 會產生 **63 個子行程**
+//  （tactic24 ×16、cs23 ×8、progress25 ×8、regress ×8、regress2 ×8、flow09 ×6、
+//  experience26 ×4、talent27 ×2、build ×2、stats28 ×1）。regress 單跑就要好幾分鐘，
+//  跑八遍當然收不掉——**不是斷言太多，是同一份斷言被重跑很多次**。
+//  runner 會把每一支子驗證各跑一次（覆蓋率相同），所以這裡跳過。
+//  ⚠ 被跳過的檢查標成 SKIP，**不計入分母、不算通過**（見下方報告段）。
+const FLAT = process.env.ESMO_VERIFY_FLAT === "1";
+const SKIPPED = [];
+
 function runNode(script, shape, args = []) {
   try {
     const out = execFileSync(process.execPath, [path.join(ROOT, script), ...args],
@@ -449,16 +460,22 @@ for (const [name, script, shape] of [
   // S29：regress2 現在是**有門檻的斷言**（節奏門檻 8/8，失敗即 exit 1），不再只是印數字。
   ["37) regress2（節奏門檻全綠）", "tools/regress2.mjs", /節奏門檻 8\/8 通過/],
 ]) {
+  if (FLAT) { SKIPPED.push(name); continue; }
   const r = runNode(script, shape);
   ck(`${name}（exit=${r.code}）`, r.ok && r.code === 0);
 }
-const build = runNode("node_modules/vite/bin/vite.js", /built in/, ["build"]);
-ck(`38) npm run build 通過（exit=${build.code}）`, build.ok && build.code === 0);
+if (FLAT) {
+  SKIPPED.push("38) npm run build 通過");
+} else {
+  const build = runNode("node_modules/vite/bin/vite.js", /built in/, ["build"]);
+  ck(`38) npm run build 通過（exit=${build.code}）`, build.ok && build.code === 0);
+}
 
 // ── 報告 ────────────────────────────────────────────────────────────────────
 let pass = 0;
 for (const [n, ok] of A) { console.log(`${ok ? "✅" : "❌"} ${n}`); if (ok) pass++; }
-console.log(`\n${pass}/${A.length} 通過`);
+for (const n of SKIPPED) console.log(`⏭ SKIP ${n}（flat 模式：改由 tools/verify.mjs 各跑一次）`);
+console.log(`\n${pass}/${A.length} 通過` + (SKIPPED.length ? `　+ ${SKIPPED.length} 段委派給 runner（未計入分母）` : ""));
 
 // ── 修改前 / 修改後對照（Node 可量測部分）───────────────────────────────────
 console.log(`\n=== v1（修改前）vs v2（修改後）· 20 seeds ===`);

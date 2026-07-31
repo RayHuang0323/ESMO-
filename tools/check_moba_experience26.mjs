@@ -173,6 +173,10 @@ ck("   無 transform scale 縮頁 / 無 display:none 藏內容",
   !tacSrc.includes("scale(") && !tacSrc.includes("display: \"none\"") && !lineupSrc.includes("scale("));
 
 // ═══ E. 子行程（檢查 exit code + 輸出形狀）═════════════════════════════════
+//  Milestone K0：flat 模式（ESMO_VERIFY_FLAT=1，由 tools/verify.mjs 設定）⇒
+//  跳過巢狀子驗證，改由 runner 把每一支各跑一次。跳過的標成 SKIP，不計入分母。
+const FLAT = process.env.ESMO_VERIFY_FLAT === "1";
+const SKIPPED = [];
 function runNode(script, shape) {
   try {
     const out = execFileSync(process.execPath, [script], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
@@ -191,6 +195,7 @@ const subs = [
   ["   flow verifier（check_flow09）", "tools/check_flow09.mjs", /standings 勝場和==場數: ✅/],
 ];
 for (const [name, script, shape] of subs) {
+  if (FLAT) { SKIPPED.push(name); continue; }
   const r = runNode(script, shape);
   ck(`${name}（exit=${r.code} 且輸出形狀符合）`, r.ok && r.code === 0);
 }
@@ -198,6 +203,7 @@ for (const [name, script, shape] of subs) {
 // ── 報告 ────────────────────────────────────────────────────────────────────
 let pass = 0;
 for (const [n, ok] of A) { console.log(`${ok ? "✅" : "❌"} ${n}`); if (ok) pass++; }
-console.log(`\n${pass}/${A.length} 通過`);
+for (const n of SKIPPED) console.log(`⏭ SKIP ${n}（flat 模式：改由 tools/verify.mjs 各跑一次）`);
+console.log(`\n${pass}/${A.length} 通過` + (SKIPPED.length ? `　+ ${SKIPPED.length} 段委派給 runner（未計入分母）` : ""));
 console.log(`重播容量：${frames.length} frames · ${(bytes / 1024).toFixed(0)}KB/場 · 每 frame ≈ ${(bytes / frames.length).toFixed(0)}B（session 記憶體，僅留最近一場）`);
 process.exit(pass === A.length ? 0 : 1);

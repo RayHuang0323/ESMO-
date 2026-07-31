@@ -12,3 +12,5 @@ vite-dev.out.log
 vite-dev.err.log
 
 .DS_Store
+# K0：驗證 runner 的本機狀態檔（--resume 用），不進版控
+tools/.verify-state.json

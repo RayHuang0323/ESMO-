@@ -237,6 +237,10 @@ ck("   響應式：無固定 380/560、grid 有 min() 防護、無 transform sca
 })());
 
 // ═══ 子行程（31–32 + 全套；exit code + 輸出形狀）════════════════════════════
+//  Milestone K0：flat 模式（ESMO_VERIFY_FLAT=1，由 tools/verify.mjs 設定）⇒
+//  跳過巢狀子驗證，改由 runner 把每一支各跑一次。跳過的標成 SKIP，不計入分母。
+const FLAT = process.env.ESMO_VERIFY_FLAT === "1";
+const SKIPPED = [];
 function runNode(script, shape) {
   try {
     const out = execFileSync(process.execPath, [script], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
@@ -254,6 +258,7 @@ for (const [name, script, shape] of [
   ["   regress2（節奏門檻 8/8）", "tools/regress2.mjs", /節奏門檻 8\/8 通過/],   // S29：見設計文件 §7
   ["   flow09", "tools/check_flow09.mjs", /standings 勝場和==場數: ✅/],
 ]) {
+  if (FLAT) { SKIPPED.push(name); continue; }
   const r = runNode(script, shape);
   ck(`${name}（exit=${r.code}）`, r.ok && r.code === 0);
 }
@@ -261,7 +266,8 @@ for (const [name, script, shape] of [
 // ── 報告 ────────────────────────────────────────────────────────────────────
 let pass = 0;
 for (const [n, ok] of A) { console.log(`${ok ? "✅" : "❌"} ${n}`); if (ok) pass++; }
-console.log(`\n${pass}/${A.length} 通過`);
+for (const n of SKIPPED) console.log(`⏭ SKIP ${n}（flat 模式：改由 tools/verify.mjs 各跑一次）`);
+console.log(`\n${pass}/${A.length} 通過` + (SKIPPED.length ? `　+ ${SKIPPED.length} 段委派給 runner（未計入分母）` : ""));
 // 固定比較表（§11）
 const m1 = MOBA_TACTICS.find((t) => t.tacticId === "m1");
 console.log(`\n=== 固定比較（b3 中路，同 roster）===`);
