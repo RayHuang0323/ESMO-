@@ -609,7 +609,13 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
           </div>
         )}
       </div>
-      {detailId && <HeroCodexDetail heroId={detailId} onClose={() => setDetailId(null)} />}
+      {/*  Milestone K（Ray 裁決）：ⓘ 開的就是 Hero Codex 本身，五頁都要有。
+           `showMatchups` 是**呼叫端的選擇**，不是元件的全域預設——
+           元件預設仍是 false，其他呼叫端不會被這行影響。
+           ⚠ 這只影響「英雄詳情彈窗裡有第五頁」。Ban/Pick **主畫面**
+           （分路摘要、選角動態、英雄卡）依然沒有任何「誰克制誰」的呈現，
+           J-close Hotfix 2 移除的兩處一個都沒有回來。 */}
+      {detailId && <HeroCodexDetail heroId={detailId} showMatchups onClose={() => setDetailId(null)} />}
       {/*  Hotfix2：捲軸不再是「全部藏起來」。英雄格是這一頁唯一要捲的東西，
           給它一條 4px 細軌當可捲動的靜態暗示（另有底部漸層當動態暗示）。 */}
       <style>{`

@@ -3473,3 +3473,113 @@ AppShell 外框 `scrollHeight 2057 > clientHeight 743` 且 `overflow:hidden`
 往後任何捲動相關的驗收，最低標準是「派真的手勢，看座標有沒有變」，
 不可以用 `scrollHeight > clientHeight` 推論使用者捲得動——
 `overflow:hidden` 的祖先會讓這個推論完全失效。
+
+---
+
+## Milestone K（2026-07-31）— Hero Codex 對位頁籤與 Matchup Data Contract v1
+
+報告：`review/moba-runtime/milestone-k/MILESTONE_K_REPORT.md`
+rollback tag：`milestone-k-baseline` → `9b51a85`
+
+### 做了什麼
+
+J-close Hotfix 2 把「誰克制誰」從 Ban/Pick 移除之後，本輪替它蓋了一個有契約的家：
+**Hero Codex 第五頁「對位」**，頁籤變成 `概覽｜數據｜技能｜戰術｜對位`。
+
+只動五個檔：新增 `src/data/heroMatchups.js`，改 `HeroCodexDetail.jsx` / `CodexScreen.jsx`，
+新增 `tools/check_hero_matchups_k.mjs` 與 `tools/shot_hero_matchups_k.mjs`。
+`git diff 9b51a85 -- src/` 只有那兩個 `.jsx` ＋ 一個新檔。
+
+### Matchup Contract v1
+
+```
+HERO_MATCHUPS[heroId] = { strongAgainst: Entry[], weakAgainst: Entry[], synergies: Entry[] }
+Entry = { heroId, reason, source, confidence }
+source     ∈ design | inferred | verified
+confidence ∈ low | medium | high
+```
+
+原始表**沒有 export**，UI 只能走純函式（`getHeroMatchups` / `getStrongAgainst` /
+`getWeakAgainst` / `getSynergies` / `hasMatchupData` / `listMatchupHeroIds` /
+`validateHeroMatchups`）。資料深凍結；查無資料回**穩定空結構**不 throw；
+`__proto__` / `constructor` / null / 數字都回空結構，不漏原型鏈。
+
+本輪 10 隻英雄、42 筆關係：**design 36 筆、inferred 6 筆、verified 0 筆**。
+其餘 90 隻英雄一律走空狀態——沒整理的就顯示沒整理，不補假資料。
+`luminary` 的「較有優勢」刻意留空，確保**區塊層級**的空狀態真的會出現。
+
+**沒有任何勝率／場次／版本號／選用率**，驗證器用禁用詞正則掃過全部 42 筆 reason。
+對位頁底部主動聲明「本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計」。
+
+### archCounterScore 評估結論：不當產生器，只當審稿工具
+
+實測 20 隻英雄 380 組配對：`analyzeChamp` 幾乎把每隻英雄都標成「爆發」＋「肉盾」，
+**幾乎每一對都拿得到 ≥2 分**，而且方向常常同時成立（A→B 2 分、B→A 4 分）。
+拿它產生 inferred 條目＝把粗規則講成對位事實，正是本輪禁止的事。
+
+改成方向性複核：每筆 inferred 克制條目必須
+`archCounterScore(強方,弱方) − archCounterScore(弱方,強方) ≥ 3`。
+verifier §4 **直接從 `BanPickScreen.jsx` 原始碼抽出現行的兩支純函式重算**
+⇒ 規則被改動時立刻紅燈。`archCounterScore` 一行未改，也沒有被接回 Ban/Pick。
+
+### 「對位」在兩條路徑都有，但那是呼叫端各自決定的
+
+`HeroCodexDetail` 的 `showMatchups` **預設仍是 false**，`CodexScreen` 與 `BanPickScreen`
+**各自明確傳入**。初版我把 Ban/Pick 這條關起來（保守解讀「不得放回 Ban/Pick」），
+Ray 裁決：ⓘ 開的就是 Hero Codex 本身，五頁都要有 ⇒ 已在 `BanPickScreen.jsx`
+加上 `showMatchups`（**只有這一行**，選角流程／AI／版面／捲動結構都沒碰）。
+
+界線因此明確化：**「不得放回 Ban/Pick」指的是主畫面**（分路摘要、選角動態、英雄卡）
+不得出現克制呈現。Hotfix 2 移除的 `draft-plan-counter`／`data-counter`／
+「（克制你的 XXX）」一個都沒回來，六尺寸每輪重驗。
+保留預設 false 的理由：將來新的呼叫端不會莫名其妙多一頁，
+而且「Ban/Pick 要不要有對位」永遠是一行的決定。
+
+### 導覽狀態的單一持有者
+
+`CodexScreen` 持有 `{英雄, 頁籤}` ＋ 瀏覽堆疊 ＋ 關閉後記憶：
+點對位卡 → push 並停在「對位」；「← 上一隻」→ pop 回原英雄**且回原頁籤**；
+✕ 關閉 → 記住最後的 `{英雄, 頁籤}`，再開同一隻時原頁籤還在。
+
+### 驗證
+
+新增：`check_hero_matchups_k` **47/47**、`shot_hero_matchups_k` **348/348**（六尺寸）。
+回歸：`check_moba_milestone_j_close` **35/35**、`shot_banpick_hotfix2` **251/251**、
+`regress` **15/15**（23.5 分／29.8 擊殺，**與 J-close 逐值相同**）、
+`regress2` **20/20** 且節奏 **8/8**、`npm run build` exit 0。
+
+判準一律驗行為：點擊派真滑鼠／觸控事件並先用 `elementFromPoint` 確認沒被蓋住；
+捲動派真手勢看 `scrollTop` 有沒有動（**不用 `scrollHeight > clientHeight` 推論**）；
+英雄一律用 `data-hero` 指名。六尺寸的面板內部巢狀捲動皆為 **0**，
+最後一張卡都完整可見且未被遮住。
+
+另驗 Ban/Pick 路徑：ⓘ 五頁、指名一隻**有資料**的英雄（`stoneguard`）確認三區塊
+真的畫得出來（不是只走空狀態分支）、主畫面克制節點 0、
+以及**開關詳情後篩選／搜尋／捲動位置／已選英雄逐值不變**
+（六尺寸皆 篩選=全部 搜尋=之 捲動=120，前後完全相同）。
+⚠ 這段刻意在**輪到玩家**時量——AI 回合會推進 `step`，那會依 Hotfix 2 的設計把
+`scrollTop` 歸零，在那時量到的紅燈不是本輪造成的。
+
+證據 10 張截圖 ＋ 完整 JSON。
+
+### 未驗
+
+Android／iOS 真機未測（`env(safe-area-inset-bottom)` 在模擬器恆為 0）；
+對位內容的「設計正確性」是 Ray 的裁決，測試只保證格式、來源標籤與方向性；
+`check_moba_runtime29` 全套未跑（TD-21 / TD-19 兩個既有紅燈與 J-close 相同，未受本輪影響）。
+
+### 教訓（三個，都是斷言寫錯而不是程式寫錯）
+
+1. **「誠實聲明」也會被自己的禁用詞掃到。** 六尺寸同時紅在「對位面板不得出現勝率」，
+   兇手是頁尾那句「因此不顯示勝率、場次或版本統計」。要問的是**宣稱資料的區域**
+   有沒有假數字，不是整頁掃關鍵字。修法：免責聲明掛 `data-testid`，比對前從複本移除，
+   另加一條「聲明必須存在且一字不差」。
+2. **量測前後之間，測試自己不可以動到受測狀態。** 驗「關閉詳情不會弄丟捲動位置」
+   六尺寸全紅（120 → 0），看起來像真 bug——其實是腳本在快照之後呼叫了
+   `scrollIntoView` 去找 ⓘ，自己把格子捲回頂端。改成挑一張已經看得到的卡，
+   並把「找卡沒有動到 scrollTop」也寫進斷言。
+3. **`A 或 B` 的斷言可能一次都沒驗到你要的那半邊。** Ban/Pick 路徑第一版寫
+   「三區塊**或**空狀態皆可」，六尺寸全綠——但抽到的英雄全都沒資料，
+   永遠走空狀態那半邊。補指名一隻有資料的英雄；指名時又踩第二坑：
+   寫死 `ironclad` 全紅，因為他早被選角流程禁掉／選走 ⇒
+   改成「清單裡第一個還在池子裡的」。

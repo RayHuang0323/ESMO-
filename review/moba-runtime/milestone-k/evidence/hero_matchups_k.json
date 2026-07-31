@@ -1,0 +1,6348 @@
+{
+  "notes": [
+    {
+      "label": "desk1920 0a) 進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 0b) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 0c) 從 Ban/Pick 進入英雄圖鑑",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 1a) 圖鑑卡沒被遮住，真點擊後開出鋼鐵衛士的詳情",
+      "ok": true,
+      "extra": {
+        "x": 808,
+        "y": 210,
+        "notCovered": true,
+        "state": {
+          "hero": "ironclad",
+          "tab": "overview",
+          "hasBack": false,
+          "x": 960,
+          "top": 254,
+          "bottom": 760,
+          "scrollTop": 0,
+          "maxScroll": 0,
+          "overflowY": "auto",
+          "overscroll": "contain",
+          "padBottom": "26px",
+          "nested": [],
+          "clipping": [],
+          "vh": 1080,
+          "insideViewport": true,
+          "matchupText": "",
+          "dataText": "",
+          "disclaimer": "",
+          "emptyText": "",
+          "inferredNote": ""
+        }
+      }
+    },
+    {
+      "label": "desk1920 1b) 五個頁籤且順序為 概覽｜數據｜技能｜戰術｜對位",
+      "ok": true,
+      "extra": [
+        [
+          "overview",
+          "概覽"
+        ],
+        [
+          "stats",
+          "數據"
+        ],
+        [
+          "skills",
+          "技能"
+        ],
+        [
+          "tactics",
+          "戰術"
+        ],
+        [
+          "matchups",
+          "對位"
+        ]
+      ]
+    },
+    {
+      "label": "desk1920 1c) 五個頁籤全部在 viewport 內且點得到（沒被蓋住、沒被擠爆）",
+      "ok": true,
+      "extra": [
+        [
+          "overview",
+          true,
+          true,
+          86
+        ],
+        [
+          "stats",
+          true,
+          true,
+          86
+        ],
+        [
+          "skills",
+          true,
+          true,
+          86
+        ],
+        [
+          "tactics",
+          true,
+          true,
+          86
+        ],
+        [
+          "matchups",
+          true,
+          true,
+          86
+        ]
+      ]
+    },
+    {
+      "label": "desk1920 1d) 預設停在概覽（開新英雄不會莫名其妙跳到對位）",
+      "ok": true,
+      "extra": "overview"
+    },
+    {
+      "label": "desk1920 1e) 點「對位」真的切過去（data-tab=matchups）",
+      "ok": true,
+      "extra": "matchups"
+    },
+    {
+      "label": "desk1920 2a) 三個區塊都在，順序為 較有優勢／較難應付／適合搭配",
+      "ok": true,
+      "extra": [
+        [
+          "strongAgainst",
+          "較有優勢"
+        ],
+        [
+          "weakAgainst",
+          "較難應付"
+        ],
+        [
+          "synergies",
+          "適合搭配"
+        ]
+      ]
+    },
+    {
+      "label": "desk1920 2b) 各區數量與資料層一致（2／2／2）",
+      "ok": true,
+      "extra": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "label": "desk1920 2c) 卡片數量與各區宣告的數量吻合（6 張）",
+      "ok": true,
+      "extra": {
+        "cards": 6,
+        "secs": [
+          2,
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "label": "desk1920 2d) 每張卡都有來源標籤與信心程度（文案就是規格那三種／三種）",
+      "ok": true,
+      "extra": [
+        [
+          "voidrift",
+          "設計資料",
+          "信心中"
+        ],
+        [
+          "xingchen",
+          "系統推測",
+          "信心中"
+        ],
+        [
+          "ravager",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "maestro",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "bingshuang",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "luminary",
+          "設計資料",
+          "信心中"
+        ]
+      ]
+    },
+    {
+      "label": "desk1920 2e) 卡片以 heroId 指名（測試不靠 DOM 索引猜英雄）",
+      "ok": true,
+      "extra": [
+        "voidrift",
+        "xingchen",
+        "ravager",
+        "maestro",
+        "bingshuang",
+        "luminary"
+      ]
+    },
+    {
+      "label": "desk1920 3a) 有 inferred 條目 ⇒ 顯示推測警語（原文一字不差）",
+      "ok": true,
+      "extra": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。"
+    },
+    {
+      "label": "desk1920 3b) 對位資料區沒有勝率／場次／選用率／版本統計（免責聲明本身不算）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 3c) 系統推測的卡片標籤就寫「系統推測」，不會冒充實戰驗證",
+      "ok": true,
+      "extra": [
+        [
+          "voidrift",
+          "design",
+          "設計資料"
+        ],
+        [
+          "xingchen",
+          "inferred",
+          "系統推測"
+        ],
+        [
+          "ravager",
+          "design",
+          "設計資料"
+        ],
+        [
+          "maestro",
+          "design",
+          "設計資料"
+        ],
+        [
+          "bingshuang",
+          "design",
+          "設計資料"
+        ],
+        [
+          "luminary",
+          "design",
+          "設計資料"
+        ]
+      ]
+    },
+    {
+      "label": "desk1920 3d) 頁面主動聲明「沒有真實對局樣本，不顯示勝率／場次／版本統計」",
+      "ok": true,
+      "extra": "設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。"
+    },
+    {
+      "label": "desk1920 4a) 桌機對位卡兩欄（實測 2 欄）",
+      "ok": true,
+      "extra": [
+        [
+          "voidrift",
+          730,
+          219
+        ],
+        [
+          "xingchen",
+          957,
+          219
+        ]
+      ]
+    },
+    {
+      "label": "desk1920 4b) 面板內部沒有第二個縱向捲動容器（不是巢狀捲動）",
+      "ok": true,
+      "extra": []
+    },
+    {
+      "label": "desk1920 4c) 面板沒有「裁掉內容又捲不動」的祖先",
+      "ok": true,
+      "extra": []
+    },
+    {
+      "label": "desk1920 4d) 面板整個在 viewport 內",
+      "ok": true,
+      "extra": {
+        "top": 45,
+        "bottom": 760,
+        "vh": 1080
+      }
+    },
+    {
+      "label": "desk1920 4e) 面板底部保留 safe-area padding（≥26px）",
+      "ok": true,
+      "extra": "26px"
+    },
+    {
+      "label": "desk1920 4f) overscroll-behavior 為 contain（捲到底不帶動外層）",
+      "ok": true,
+      "extra": "contain"
+    },
+    {
+      "label": "desk1920 5a) 滾輪真的捲得動面板（0 → 62／上限 62）",
+      "ok": true,
+      "extra": {
+        "before": 0,
+        "after": 62,
+        "max": 62
+      }
+    },
+    {
+      "label": "desk1920 5b) 捲到底後最後一張卡（luminary）完整在 viewport 內",
+      "ok": true,
+      "extra": {
+        "hero": "luminary",
+        "x": 1066,
+        "y": 624,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      }
+    },
+    {
+      "label": "desk1920 5c) 最後一張卡沒有被底部安全區或任何東西蓋住（elementFromPoint 反查）",
+      "ok": true,
+      "extra": {
+        "hero": "luminary",
+        "x": 1066,
+        "y": 624,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      }
+    },
+    {
+      "label": "desk1920 6a) 目標對位卡（ravager）在畫面上且沒被蓋住",
+      "ok": true,
+      "extra": {
+        "x": 839,
+        "y": 458,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      }
+    },
+    {
+      "label": "desk1920 6b) 點下去真的開了那隻英雄的詳情（hero=ravager）",
+      "ok": true,
+      "extra": {
+        "hero": "ravager",
+        "tab": "matchups",
+        "hasBack": true
+      }
+    },
+    {
+      "label": "desk1920 6c) 跳過去後仍停在「對位」頁，且出現「← 上一隻」",
+      "ok": true,
+      "extra": {
+        "hero": "ravager",
+        "tab": "matchups",
+        "hasBack": true
+      }
+    },
+    {
+      "label": "desk1920 6d) 返回後回到原英雄（ironclad）**且仍在「對位」頁籤**",
+      "ok": true,
+      "extra": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false
+      }
+    },
+    {
+      "label": "desk1920 6e) 回到最上層後不再顯示「← 上一隻」",
+      "ok": true,
+      "extra": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false
+      }
+    },
+    {
+      "label": "desk1920 7a) 關閉後回到圖鑑列表",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 7b) 再開同一隻英雄 ⇒ 停回「對位」頁（狀態有保留）",
+      "ok": true,
+      "extra": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false,
+        "x": 960,
+        "top": 45,
+        "bottom": 760,
+        "scrollTop": 0,
+        "maxScroll": 62,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "padBottom": "26px",
+        "nested": [],
+        "clipping": [],
+        "vh": 1080,
+        "insideViewport": true,
+        "matchupText": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。\n較有優勢\n2\n虛空裂縫\nVoidrift · 刺客 · 中路\nW 神聖嘲諷是範圍嘲諷，虛空裂縫 R 切到背後後必須留在近身輸出，嘲諷直接吃掉他的收割窗口。\n設計資料\n信心中\n星辰弓手\n射手 · 下路\n高耐久近戰先手對上需要靜止蓄力、又沒有位移的站樁射手。\n系統推測\n信心中\n較難應付\n2\n毀滅者\nRavager · 戰士 · 上路\n毀滅者 R 覆滅之怒 6 秒免疫 CC，嘲諷與擊飛全部無效，還附帶真實傷害穿高護甲。\n設計資料\n信心高\n大師\nMaestro · 射手 · 下路\n大師 P 第四擊附帶「已損失血量 6–12%」真實傷害，血量越高收益越大。\n設計資料\n信心高\n適合搭配\n2\n冰霜術士\n法師 · 中路\nR 神聖審判擊飛 1.75 秒開團，正好給冰霜術士 E／R 的範圍凍結一個穩定落點。\n設計資料\n信心高\n星輝\nLuminary · 輔助 · 輔助\n星輝 W 星塵護衛在承傷瞬間觸發護盾並反射，疊在 P 鑄鐵誓約的護盾層上。\n設計資料\n信心中\n設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。",
+        "dataText": "較有優勢2虛空裂縫Voidrift · 刺客 · 中路W 神聖嘲諷是範圍嘲諷，虛空裂縫 R 切到背後後必須留在近身輸出，嘲諷直接吃掉他的收割窗口。設計資料信心中星辰弓手射手 · 下路高耐久近戰先手對上需要靜止蓄力、又沒有位移的站樁射手。系統推測信心中較難應付2毀滅者Ravager · 戰士 · 上路毀滅者 R 覆滅之怒 6 秒免疫 CC，嘲諷與擊飛全部無效，還附帶真實傷害穿高護甲。設計資料信心高大師Maestro · 射手 · 下路大師 P 第四擊附帶「已損失血量 6–12%」真實傷害，血量越高收益越大。設計資料信心高適合搭配2冰霜術士法師 · 中路R 神聖審判擊飛 1.75 秒開團，正好給冰霜術士 E／R 的範圍凍結一個穩定落點。設計資料信心高星輝Luminary · 輔助 · 輔助星輝 W 星塵護衛在承傷瞬間觸發護盾並反射，疊在 P 鑄鐵誓約的護盾層上。設計資料信心中",
+        "disclaimer": "設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。",
+        "emptyText": "",
+        "inferredNote": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。"
+      }
+    },
+    {
+      "label": "desk1920 8a) 開啟星輝",
+      "ok": true,
+      "extra": {
+        "hero": "luminary",
+        "tab": "overview",
+        "hasBack": false,
+        "x": 960,
+        "top": 254,
+        "bottom": 760,
+        "scrollTop": 0,
+        "maxScroll": 0,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "padBottom": "26px",
+        "nested": [],
+        "clipping": [],
+        "vh": 1080,
+        "insideViewport": true,
+        "matchupText": "",
+        "dataText": "",
+        "disclaimer": "",
+        "emptyText": "",
+        "inferredNote": ""
+      }
+    },
+    {
+      "label": "desk1920 8b) 星輝的「較有優勢」是空的，並顯示區塊空狀態文案",
+      "ok": true,
+      "extra": {
+        "section": "strongAgainst",
+        "count": 0,
+        "empty": true,
+        "emptyText": "目前尚無已整理的對位資料。",
+        "title": "較有優勢"
+      }
+    },
+    {
+      "label": "desk1920 8c) 另外兩區照常有資料（1／2），空的只有該區",
+      "ok": true,
+      "extra": [
+        [
+          "strongAgainst",
+          0,
+          true
+        ],
+        [
+          "weakAgainst",
+          1,
+          false
+        ],
+        [
+          "synergies",
+          2,
+          false
+        ]
+      ]
+    },
+    {
+      "label": "desk1920 9a) 開啟靈魂共鳴（本輪沒有整理對位資料的英雄）",
+      "ok": true,
+      "extra": {
+        "hero": "linghun",
+        "tab": "overview",
+        "hasBack": false,
+        "x": 960,
+        "top": 254,
+        "bottom": 760,
+        "scrollTop": 0,
+        "maxScroll": 0,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "padBottom": "26px",
+        "nested": [],
+        "clipping": [],
+        "vh": 1080,
+        "insideViewport": true,
+        "matchupText": "",
+        "dataText": "",
+        "disclaimer": "",
+        "emptyText": "",
+        "inferredNote": ""
+      }
+    },
+    {
+      "label": "desk1920 9b) 顯示空狀態文案「目前尚無已整理的對位資料。」",
+      "ok": true,
+      "extra": {
+        "tab": "matchups",
+        "emptyText": "目前尚無已整理的對位資料。\n對位資料由設計端逐隻整理，尚未涵蓋全部英雄。",
+        "matchupText": ""
+      }
+    },
+    {
+      "label": "desk1920 9c) 空狀態不會冒出任何卡片，也沒有假數據",
+      "ok": true,
+      "extra": {
+        "tab": "matchups",
+        "emptyText": "目前尚無已整理的對位資料。\n對位資料由設計端逐隻整理，尚未涵蓋全部英雄。",
+        "matchupText": ""
+      }
+    },
+    {
+      "label": "desk1920 10a) 回到 Ban/Pick",
+      "ok": true,
+      "extra": {
+        "onBanPick": true,
+        "counterNodes": 0,
+        "counterText": null
+      }
+    },
+    {
+      "label": "desk1920 10b) Ban/Pick 沒有任何克制節點或克制字樣（Hotfix 2 未被推翻）",
+      "ok": true,
+      "extra": {
+        "onBanPick": true,
+        "counterNodes": 0,
+        "counterText": null
+      }
+    },
+    {
+      "label": "desk1920 11a) 已推進到「輪到玩家」且我方已有 1 隻已選英雄",
+      "ok": true,
+      "extra": {
+        "myTurn": true,
+        "blue": [
+          "ravager"
+        ]
+      }
+    },
+    {
+      "label": "desk1920 11b) 切到非預設篩選「戰士」（英雄池 19 位）",
+      "ok": true,
+      "extra": {
+        "filter": "戰士",
+        "query": "",
+        "scrollTop": 0,
+        "pool": 19,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 19
+      }
+    },
+    {
+      "label": "desk1920 11c) 開關英雄詳情後，篩選仍是「戰士」且英雄池數量不變",
+      "ok": true,
+      "extra": {
+        "before": {
+          "filter": "戰士",
+          "query": "",
+          "scrollTop": 0,
+          "pool": 19,
+          "blue": [
+            "ravager"
+          ],
+          "cards": 19
+        },
+        "after": {
+          "filter": "戰士",
+          "query": "",
+          "scrollTop": 0,
+          "pool": 19,
+          "blue": [
+            "ravager"
+          ],
+          "cards": 19
+        }
+      }
+    },
+    {
+      "label": "desk1920 11d) 量測前狀態已就緒（搜尋「之」／30 位／捲動 120）",
+      "ok": true,
+      "extra": {
+        "filter": "全部",
+        "query": "之",
+        "scrollTop": 120,
+        "pool": 30,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 30
+      }
+    },
+    {
+      "label": "desk1920 11e) 找得到一張看得到的英雄卡的 ⓘ（hunpo），而且沒被蓋住、沒動到捲動位置",
+      "ok": true,
+      "extra": {
+        "id": "hunpo",
+        "x": 819,
+        "y": 417,
+        "notCovered": true,
+        "scrollTop": 120
+      }
+    },
+    {
+      "label": "desk1920 11f) Ban/Pick 的 ⓘ 開出**五個**頁籤，第五個是「對位」",
+      "ok": true,
+      "extra": {
+        "hero": "hunpo",
+        "tabs": [
+          "overview",
+          "stats",
+          "skills",
+          "tactics",
+          "matchups"
+        ]
+      }
+    },
+    {
+      "label": "desk1920 11g) 五個頁籤在 Ban/Pick 這條路徑上也都點得到",
+      "ok": true,
+      "extra": [
+        [
+          "overview",
+          true,
+          true,
+          86
+        ],
+        [
+          "stats",
+          true,
+          true,
+          86
+        ],
+        [
+          "skills",
+          true,
+          true,
+          86
+        ],
+        [
+          "tactics",
+          true,
+          true,
+          86
+        ],
+        [
+          "matchups",
+          true,
+          true,
+          86
+        ]
+      ]
+    },
+    {
+      "label": "desk1920 11h) 對位頁在 Ban/Pick 路徑上真的畫得出來（三區塊或空狀態）",
+      "ok": true,
+      "extra": {
+        "hero": "hunpo",
+        "tab": "matchups",
+        "sections": 0,
+        "empty": true
+      }
+    },
+    {
+      "label": "desk1920 11i) 這一頁一樣沒有勝率／場次／版本統計",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 11j) 關閉詳情後，搜尋關鍵字仍是「之」（英雄池 30 位不變）",
+      "ok": true,
+      "extra": {
+        "before": {
+          "filter": "全部",
+          "query": "之",
+          "scrollTop": 120,
+          "pool": 30,
+          "blue": [
+            "ravager"
+          ],
+          "cards": 30
+        },
+        "after": {
+          "filter": "全部",
+          "query": "之",
+          "scrollTop": 120,
+          "pool": 30,
+          "blue": [
+            "ravager"
+          ],
+          "cards": 30
+        }
+      }
+    },
+    {
+      "label": "desk1920 11k) 關閉詳情後，英雄格捲動位置沒有被歸零（120 → 120）",
+      "ok": true,
+      "extra": {
+        "before": 120,
+        "after": 120
+      }
+    },
+    {
+      "label": "desk1920 11l) 關閉詳情後，已選英雄一隻都沒少",
+      "ok": true,
+      "extra": {
+        "before": [
+          "ravager"
+        ],
+        "after": [
+          "ravager"
+        ]
+      }
+    },
+    {
+      "label": "desk1920 11m) 關閉詳情後仍停在 Ban/Pick，而且還是輪到玩家（沒有被彈窗打斷流程）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 11n) 關閉詳情後 Ban/Pick 主畫面依然沒有克制節點或克制字樣",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1920 11o) Ban/Pick 池子裡找得到有對位資料的英雄（stoneguard）",
+      "ok": true,
+      "extra": {
+        "hero": "stoneguard",
+        "x": 900,
+        "y": 508
+      }
+    },
+    {
+      "label": "desk1920 11p) 在 Ban/Pick 路徑上真的畫出三個區塊與 4 張對位卡（不是空狀態）",
+      "ok": true,
+      "extra": {
+        "hero": "stoneguard",
+        "sections": [
+          [
+            "strongAgainst",
+            2
+          ],
+          [
+            "weakAgainst",
+            1
+          ],
+          [
+            "synergies",
+            1
+          ]
+        ],
+        "cards": 4
+      }
+    },
+    {
+      "label": "desk1920 11q) 這條路徑上的卡片一樣有來源標籤與信心程度",
+      "ok": true,
+      "extra": [
+        [
+          "ravager",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "sting",
+          "設計資料",
+          "信心中"
+        ],
+        [
+          "leiting",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "xingchen",
+          "設計資料",
+          "信心高"
+        ]
+      ]
+    },
+    {
+      "label": "desk1366 0a) 進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 0b) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 0c) 從 Ban/Pick 進入英雄圖鑑",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 1a) 圖鑑卡沒被遮住，真點擊後開出鋼鐵衛士的詳情",
+      "ok": true,
+      "extra": {
+        "x": 531,
+        "y": 210,
+        "notCovered": true,
+        "state": {
+          "hero": "ironclad",
+          "tab": "overview",
+          "hasBack": false,
+          "x": 683,
+          "top": 170,
+          "bottom": 676,
+          "scrollTop": 0,
+          "maxScroll": 0,
+          "overflowY": "auto",
+          "overscroll": "contain",
+          "padBottom": "26px",
+          "nested": [],
+          "clipping": [],
+          "vh": 768,
+          "insideViewport": true,
+          "matchupText": "",
+          "dataText": "",
+          "disclaimer": "",
+          "emptyText": "",
+          "inferredNote": ""
+        }
+      }
+    },
+    {
+      "label": "desk1366 1b) 五個頁籤且順序為 概覽｜數據｜技能｜戰術｜對位",
+      "ok": true,
+      "extra": [
+        [
+          "overview",
+          "概覽"
+        ],
+        [
+          "stats",
+          "數據"
+        ],
+        [
+          "skills",
+          "技能"
+        ],
+        [
+          "tactics",
+          "戰術"
+        ],
+        [
+          "matchups",
+          "對位"
+        ]
+      ]
+    },
+    {
+      "label": "desk1366 1c) 五個頁籤全部在 viewport 內且點得到（沒被蓋住、沒被擠爆）",
+      "ok": true,
+      "extra": [
+        [
+          "overview",
+          true,
+          true,
+          86
+        ],
+        [
+          "stats",
+          true,
+          true,
+          86
+        ],
+        [
+          "skills",
+          true,
+          true,
+          86
+        ],
+        [
+          "tactics",
+          true,
+          true,
+          86
+        ],
+        [
+          "matchups",
+          true,
+          true,
+          86
+        ]
+      ]
+    },
+    {
+      "label": "desk1366 1d) 預設停在概覽（開新英雄不會莫名其妙跳到對位）",
+      "ok": true,
+      "extra": "overview"
+    },
+    {
+      "label": "desk1366 1e) 點「對位」真的切過去（data-tab=matchups）",
+      "ok": true,
+      "extra": "matchups"
+    },
+    {
+      "label": "desk1366 2a) 三個區塊都在，順序為 較有優勢／較難應付／適合搭配",
+      "ok": true,
+      "extra": [
+        [
+          "strongAgainst",
+          "較有優勢"
+        ],
+        [
+          "weakAgainst",
+          "較難應付"
+        ],
+        [
+          "synergies",
+          "適合搭配"
+        ]
+      ]
+    },
+    {
+      "label": "desk1366 2b) 各區數量與資料層一致（2／2／2）",
+      "ok": true,
+      "extra": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "label": "desk1366 2c) 卡片數量與各區宣告的數量吻合（6 張）",
+      "ok": true,
+      "extra": {
+        "cards": 6,
+        "secs": [
+          2,
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "label": "desk1366 2d) 每張卡都有來源標籤與信心程度（文案就是規格那三種／三種）",
+      "ok": true,
+      "extra": [
+        [
+          "voidrift",
+          "設計資料",
+          "信心中"
+        ],
+        [
+          "xingchen",
+          "系統推測",
+          "信心中"
+        ],
+        [
+          "ravager",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "maestro",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "bingshuang",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "luminary",
+          "設計資料",
+          "信心中"
+        ]
+      ]
+    },
+    {
+      "label": "desk1366 2e) 卡片以 heroId 指名（測試不靠 DOM 索引猜英雄）",
+      "ok": true,
+      "extra": [
+        "voidrift",
+        "xingchen",
+        "ravager",
+        "maestro",
+        "bingshuang",
+        "luminary"
+      ]
+    },
+    {
+      "label": "desk1366 3a) 有 inferred 條目 ⇒ 顯示推測警語（原文一字不差）",
+      "ok": true,
+      "extra": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。"
+    },
+    {
+      "label": "desk1366 3b) 對位資料區沒有勝率／場次／選用率／版本統計（免責聲明本身不算）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 3c) 系統推測的卡片標籤就寫「系統推測」，不會冒充實戰驗證",
+      "ok": true,
+      "extra": [
+        [
+          "voidrift",
+          "design",
+          "設計資料"
+        ],
+        [
+          "xingchen",
+          "inferred",
+          "系統推測"
+        ],
+        [
+          "ravager",
+          "design",
+          "設計資料"
+        ],
+        [
+          "maestro",
+          "design",
+          "設計資料"
+        ],
+        [
+          "bingshuang",
+          "design",
+          "設計資料"
+        ],
+        [
+          "luminary",
+          "design",
+          "設計資料"
+        ]
+      ]
+    },
+    {
+      "label": "desk1366 3d) 頁面主動聲明「沒有真實對局樣本，不顯示勝率／場次／版本統計」",
+      "ok": true,
+      "extra": "設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。"
+    },
+    {
+      "label": "desk1366 4a) 桌機對位卡兩欄（實測 2 欄）",
+      "ok": true,
+      "extra": [
+        [
+          "voidrift",
+          453,
+          219
+        ],
+        [
+          "xingchen",
+          680,
+          219
+        ]
+      ]
+    },
+    {
+      "label": "desk1366 4b) 面板內部沒有第二個縱向捲動容器（不是巢狀捲動）",
+      "ok": true,
+      "extra": []
+    },
+    {
+      "label": "desk1366 4c) 面板沒有「裁掉內容又捲不動」的祖先",
+      "ok": true,
+      "extra": []
+    },
+    {
+      "label": "desk1366 4d) 面板整個在 viewport 內",
+      "ok": true,
+      "extra": {
+        "top": 35,
+        "bottom": 676,
+        "vh": 768
+      }
+    },
+    {
+      "label": "desk1366 4e) 面板底部保留 safe-area padding（≥26px）",
+      "ok": true,
+      "extra": "26px"
+    },
+    {
+      "label": "desk1366 4f) overscroll-behavior 為 contain（捲到底不帶動外層）",
+      "ok": true,
+      "extra": "contain"
+    },
+    {
+      "label": "desk1366 5a) 滾輪真的捲得動面板（0 → 136／上限 136）",
+      "ok": true,
+      "extra": {
+        "before": 0,
+        "after": 136,
+        "max": 136
+      }
+    },
+    {
+      "label": "desk1366 5b) 捲到底後最後一張卡（luminary）完整在 viewport 內",
+      "ok": true,
+      "extra": {
+        "hero": "luminary",
+        "x": 789,
+        "y": 540,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      }
+    },
+    {
+      "label": "desk1366 5c) 最後一張卡沒有被底部安全區或任何東西蓋住（elementFromPoint 反查）",
+      "ok": true,
+      "extra": {
+        "hero": "luminary",
+        "x": 789,
+        "y": 540,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      }
+    },
+    {
+      "label": "desk1366 6a) 目標對位卡（ravager）在畫面上且沒被蓋住",
+      "ok": true,
+      "extra": {
+        "x": 562,
+        "y": 374,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      }
+    },
+    {
+      "label": "desk1366 6b) 點下去真的開了那隻英雄的詳情（hero=ravager）",
+      "ok": true,
+      "extra": {
+        "hero": "ravager",
+        "tab": "matchups",
+        "hasBack": true
+      }
+    },
+    {
+      "label": "desk1366 6c) 跳過去後仍停在「對位」頁，且出現「← 上一隻」",
+      "ok": true,
+      "extra": {
+        "hero": "ravager",
+        "tab": "matchups",
+        "hasBack": true
+      }
+    },
+    {
+      "label": "desk1366 6d) 返回後回到原英雄（ironclad）**且仍在「對位」頁籤**",
+      "ok": true,
+      "extra": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false
+      }
+    },
+    {
+      "label": "desk1366 6e) 回到最上層後不再顯示「← 上一隻」",
+      "ok": true,
+      "extra": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false
+      }
+    },
+    {
+      "label": "desk1366 7a) 關閉後回到圖鑑列表",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 7b) 再開同一隻英雄 ⇒ 停回「對位」頁（狀態有保留）",
+      "ok": true,
+      "extra": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false,
+        "x": 683,
+        "top": 35,
+        "bottom": 676,
+        "scrollTop": 0,
+        "maxScroll": 136,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "padBottom": "26px",
+        "nested": [],
+        "clipping": [],
+        "vh": 768,
+        "insideViewport": true,
+        "matchupText": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。\n較有優勢\n2\n虛空裂縫\nVoidrift · 刺客 · 中路\nW 神聖嘲諷是範圍嘲諷，虛空裂縫 R 切到背後後必須留在近身輸出，嘲諷直接吃掉他的收割窗口。\n設計資料\n信心中\n星辰弓手\n射手 · 下路\n高耐久近戰先手對上需要靜止蓄力、又沒有位移的站樁射手。\n系統推測\n信心中\n較難應付\n2\n毀滅者\nRavager · 戰士 · 上路\n毀滅者 R 覆滅之怒 6 秒免疫 CC，嘲諷與擊飛全部無效，還附帶真實傷害穿高護甲。\n設計資料\n信心高\n大師\nMaestro · 射手 · 下路\n大師 P 第四擊附帶「已損失血量 6–12%」真實傷害，血量越高收益越大。\n設計資料\n信心高\n適合搭配\n2\n冰霜術士\n法師 · 中路\nR 神聖審判擊飛 1.75 秒開團，正好給冰霜術士 E／R 的範圍凍結一個穩定落點。\n設計資料\n信心高\n星輝\nLuminary · 輔助 · 輔助\n星輝 W 星塵護衛在承傷瞬間觸發護盾並反射，疊在 P 鑄鐵誓約的護盾層上。\n設計資料\n信心中\n設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。",
+        "dataText": "較有優勢2虛空裂縫Voidrift · 刺客 · 中路W 神聖嘲諷是範圍嘲諷，虛空裂縫 R 切到背後後必須留在近身輸出，嘲諷直接吃掉他的收割窗口。設計資料信心中星辰弓手射手 · 下路高耐久近戰先手對上需要靜止蓄力、又沒有位移的站樁射手。系統推測信心中較難應付2毀滅者Ravager · 戰士 · 上路毀滅者 R 覆滅之怒 6 秒免疫 CC，嘲諷與擊飛全部無效，還附帶真實傷害穿高護甲。設計資料信心高大師Maestro · 射手 · 下路大師 P 第四擊附帶「已損失血量 6–12%」真實傷害，血量越高收益越大。設計資料信心高適合搭配2冰霜術士法師 · 中路R 神聖審判擊飛 1.75 秒開團，正好給冰霜術士 E／R 的範圍凍結一個穩定落點。設計資料信心高星輝Luminary · 輔助 · 輔助星輝 W 星塵護衛在承傷瞬間觸發護盾並反射，疊在 P 鑄鐵誓約的護盾層上。設計資料信心中",
+        "disclaimer": "設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。",
+        "emptyText": "",
+        "inferredNote": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。"
+      }
+    },
+    {
+      "label": "desk1366 8a) 開啟星輝",
+      "ok": true,
+      "extra": {
+        "hero": "luminary",
+        "tab": "overview",
+        "hasBack": false,
+        "x": 683,
+        "top": 170,
+        "bottom": 676,
+        "scrollTop": 0,
+        "maxScroll": 0,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "padBottom": "26px",
+        "nested": [],
+        "clipping": [],
+        "vh": 768,
+        "insideViewport": true,
+        "matchupText": "",
+        "dataText": "",
+        "disclaimer": "",
+        "emptyText": "",
+        "inferredNote": ""
+      }
+    },
+    {
+      "label": "desk1366 8b) 星輝的「較有優勢」是空的，並顯示區塊空狀態文案",
+      "ok": true,
+      "extra": {
+        "section": "strongAgainst",
+        "count": 0,
+        "empty": true,
+        "emptyText": "目前尚無已整理的對位資料。",
+        "title": "較有優勢"
+      }
+    },
+    {
+      "label": "desk1366 8c) 另外兩區照常有資料（1／2），空的只有該區",
+      "ok": true,
+      "extra": [
+        [
+          "strongAgainst",
+          0,
+          true
+        ],
+        [
+          "weakAgainst",
+          1,
+          false
+        ],
+        [
+          "synergies",
+          2,
+          false
+        ]
+      ]
+    },
+    {
+      "label": "desk1366 9a) 開啟靈魂共鳴（本輪沒有整理對位資料的英雄）",
+      "ok": true,
+      "extra": {
+        "hero": "linghun",
+        "tab": "overview",
+        "hasBack": false,
+        "x": 683,
+        "top": 170,
+        "bottom": 676,
+        "scrollTop": 0,
+        "maxScroll": 0,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "padBottom": "26px",
+        "nested": [],
+        "clipping": [],
+        "vh": 768,
+        "insideViewport": true,
+        "matchupText": "",
+        "dataText": "",
+        "disclaimer": "",
+        "emptyText": "",
+        "inferredNote": ""
+      }
+    },
+    {
+      "label": "desk1366 9b) 顯示空狀態文案「目前尚無已整理的對位資料。」",
+      "ok": true,
+      "extra": {
+        "tab": "matchups",
+        "emptyText": "目前尚無已整理的對位資料。\n對位資料由設計端逐隻整理，尚未涵蓋全部英雄。",
+        "matchupText": ""
+      }
+    },
+    {
+      "label": "desk1366 9c) 空狀態不會冒出任何卡片，也沒有假數據",
+      "ok": true,
+      "extra": {
+        "tab": "matchups",
+        "emptyText": "目前尚無已整理的對位資料。\n對位資料由設計端逐隻整理，尚未涵蓋全部英雄。",
+        "matchupText": ""
+      }
+    },
+    {
+      "label": "desk1366 10a) 回到 Ban/Pick",
+      "ok": true,
+      "extra": {
+        "onBanPick": true,
+        "counterNodes": 0,
+        "counterText": null
+      }
+    },
+    {
+      "label": "desk1366 10b) Ban/Pick 沒有任何克制節點或克制字樣（Hotfix 2 未被推翻）",
+      "ok": true,
+      "extra": {
+        "onBanPick": true,
+        "counterNodes": 0,
+        "counterText": null
+      }
+    },
+    {
+      "label": "desk1366 11a) 已推進到「輪到玩家」且我方已有 1 隻已選英雄",
+      "ok": true,
+      "extra": {
+        "myTurn": true,
+        "blue": [
+          "cinderfist"
+        ]
+      }
+    },
+    {
+      "label": "desk1366 11b) 切到非預設篩選「戰士」（英雄池 18 位）",
+      "ok": true,
+      "extra": {
+        "filter": "戰士",
+        "query": "",
+        "scrollTop": 0,
+        "pool": 18,
+        "blue": [
+          "cinderfist"
+        ],
+        "cards": 18
+      }
+    },
+    {
+      "label": "desk1366 11c) 開關英雄詳情後，篩選仍是「戰士」且英雄池數量不變",
+      "ok": true,
+      "extra": {
+        "before": {
+          "filter": "戰士",
+          "query": "",
+          "scrollTop": 0,
+          "pool": 18,
+          "blue": [
+            "cinderfist"
+          ],
+          "cards": 18
+        },
+        "after": {
+          "filter": "戰士",
+          "query": "",
+          "scrollTop": 0,
+          "pool": 18,
+          "blue": [
+            "cinderfist"
+          ],
+          "cards": 18
+        }
+      }
+    },
+    {
+      "label": "desk1366 11d) 量測前狀態已就緒（搜尋「之」／30 位／捲動 120）",
+      "ok": true,
+      "extra": {
+        "filter": "全部",
+        "query": "之",
+        "scrollTop": 120,
+        "pool": 30,
+        "blue": [
+          "cinderfist"
+        ],
+        "cards": 30
+      }
+    },
+    {
+      "label": "desk1366 11e) 找得到一張看得到的英雄卡的 ⓘ（hunpo），而且沒被蓋住、沒動到捲動位置",
+      "ok": true,
+      "extra": {
+        "id": "hunpo",
+        "x": 542,
+        "y": 417,
+        "notCovered": true,
+        "scrollTop": 120
+      }
+    },
+    {
+      "label": "desk1366 11f) Ban/Pick 的 ⓘ 開出**五個**頁籤，第五個是「對位」",
+      "ok": true,
+      "extra": {
+        "hero": "hunpo",
+        "tabs": [
+          "overview",
+          "stats",
+          "skills",
+          "tactics",
+          "matchups"
+        ]
+      }
+    },
+    {
+      "label": "desk1366 11g) 五個頁籤在 Ban/Pick 這條路徑上也都點得到",
+      "ok": true,
+      "extra": [
+        [
+          "overview",
+          true,
+          true,
+          86
+        ],
+        [
+          "stats",
+          true,
+          true,
+          86
+        ],
+        [
+          "skills",
+          true,
+          true,
+          86
+        ],
+        [
+          "tactics",
+          true,
+          true,
+          86
+        ],
+        [
+          "matchups",
+          true,
+          true,
+          86
+        ]
+      ]
+    },
+    {
+      "label": "desk1366 11h) 對位頁在 Ban/Pick 路徑上真的畫得出來（三區塊或空狀態）",
+      "ok": true,
+      "extra": {
+        "hero": "hunpo",
+        "tab": "matchups",
+        "sections": 0,
+        "empty": true
+      }
+    },
+    {
+      "label": "desk1366 11i) 這一頁一樣沒有勝率／場次／版本統計",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 11j) 關閉詳情後，搜尋關鍵字仍是「之」（英雄池 30 位不變）",
+      "ok": true,
+      "extra": {
+        "before": {
+          "filter": "全部",
+          "query": "之",
+          "scrollTop": 120,
+          "pool": 30,
+          "blue": [
+            "cinderfist"
+          ],
+          "cards": 30
+        },
+        "after": {
+          "filter": "全部",
+          "query": "之",
+          "scrollTop": 120,
+          "pool": 30,
+          "blue": [
+            "cinderfist"
+          ],
+          "cards": 30
+        }
+      }
+    },
+    {
+      "label": "desk1366 11k) 關閉詳情後，英雄格捲動位置沒有被歸零（120 → 120）",
+      "ok": true,
+      "extra": {
+        "before": 120,
+        "after": 120
+      }
+    },
+    {
+      "label": "desk1366 11l) 關閉詳情後，已選英雄一隻都沒少",
+      "ok": true,
+      "extra": {
+        "before": [
+          "cinderfist"
+        ],
+        "after": [
+          "cinderfist"
+        ]
+      }
+    },
+    {
+      "label": "desk1366 11m) 關閉詳情後仍停在 Ban/Pick，而且還是輪到玩家（沒有被彈窗打斷流程）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 11n) 關閉詳情後 Ban/Pick 主畫面依然沒有克制節點或克制字樣",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 11o) Ban/Pick 池子裡找得到有對位資料的英雄（stoneguard）",
+      "ok": true,
+      "extra": {
+        "hero": "stoneguard",
+        "x": 623,
+        "y": 466
+      }
+    },
+    {
+      "label": "desk1366 11p) 在 Ban/Pick 路徑上真的畫出三個區塊與 4 張對位卡（不是空狀態）",
+      "ok": true,
+      "extra": {
+        "hero": "stoneguard",
+        "sections": [
+          [
+            "strongAgainst",
+            2
+          ],
+          [
+            "weakAgainst",
+            1
+          ],
+          [
+            "synergies",
+            1
+          ]
+        ],
+        "cards": 4
+      }
+    },
+    {
+      "label": "desk1366 11q) 這條路徑上的卡片一樣有來源標籤與信心程度",
+      "ok": true,
+      "extra": [
+        [
+          "ravager",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "sting",
+          "設計資料",
+          "信心中"
+        ],
+        [
+          "leiting",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "xingchen",
+          "設計資料",
+          "信心高"
+        ]
+      ]
+    },
+    {
+      "label": "mob430 0a) 進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob430 0b) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob430 0c) 從 Ban/Pick 進入英雄圖鑑",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob430 1a) 圖鑑卡沒被遮住，真點擊後開出鋼鐵衛士的詳情",
+      "ok": true,
+      "extra": {
+        "x": 63,
+        "y": 210,
+        "notCovered": true,
+        "state": {
+          "hero": "ironclad",
+          "tab": "overview",
+          "hasBack": false,
+          "x": 215,
+          "top": 254,
+          "bottom": 760,
+          "scrollTop": 0,
+          "maxScroll": 0,
+          "overflowY": "auto",
+          "overscroll": "contain",
+          "padBottom": "26px",
+          "nested": [],
+          "clipping": [],
+          "vh": 932,
+          "insideViewport": true,
+          "matchupText": "",
+          "dataText": "",
+          "disclaimer": "",
+          "emptyText": "",
+          "inferredNote": ""
+        }
+      }
+    },
+    {
+      "label": "mob430 1b) 五個頁籤且順序為 概覽｜數據｜技能｜戰術｜對位",
+      "ok": true,
+      "extra": [
+        [
+          "overview",
+          "概覽"
+        ],
+        [
+          "stats",
+          "數據"
+        ],
+        [
+          "skills",
+          "技能"
+        ],
+        [
+          "tactics",
+          "戰術"
+        ],
+        [
+          "matchups",
+          "對位"
+        ]
+      ]
+    },
+    {
+      "label": "mob430 1c) 五個頁籤全部在 viewport 內且點得到（沒被蓋住、沒被擠爆）",
+      "ok": true,
+      "extra": [
+        [
+          "overview",
+          true,
+          true,
+          73
+        ],
+        [
+          "stats",
+          true,
+          true,
+          73
+        ],
+        [
+          "skills",
+          true,
+          true,
+          73
+        ],
+        [
+          "tactics",
+          true,
+          true,
+          73
+        ],
+        [
+          "matchups",
+          true,
+          true,
+          73
+        ]
+      ]
+    },
+    {
+      "label": "mob430 1d) 預設停在概覽（開新英雄不會莫名其妙跳到對位）",
+      "ok": true,
+      "extra": "overview"
+    },
+    {
+      "label": "mob430 1e) 點「對位」真的切過去（data-tab=matchups）",
+      "ok": true,
+      "extra": "matchups"
+    },
+    {
+      "label": "mob430 2a) 三個區塊都在，順序為 較有優勢／較難應付／適合搭配",
+      "ok": true,
+      "extra": [
+        [
+          "strongAgainst",
+          "較有優勢"
+        ],
+        [
+          "weakAgainst",
+          "較難應付"
+        ],
+        [
+          "synergies",
+          "適合搭配"
+        ]
+      ]
+    },
+    {
+      "label": "mob430 2b) 各區數量與資料層一致（2／2／2）",
+      "ok": true,
+      "extra": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "label": "mob430 2c) 卡片數量與各區宣告的數量吻合（6 張）",
+      "ok": true,
+      "extra": {
+        "cards": 6,
+        "secs": [
+          2,
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "label": "mob430 2d) 每張卡都有來源標籤與信心程度（文案就是規格那三種／三種）",
+      "ok": true,
+      "extra": [
+        [
+          "voidrift",
+          "設計資料",
+          "信心中"
+        ],
+        [
+          "xingchen",
+          "系統推測",
+          "信心中"
+        ],
+        [
+          "ravager",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "maestro",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "bingshuang",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "luminary",
+          "設計資料",
+          "信心中"
+        ]
+      ]
+    },
+    {
+      "label": "mob430 2e) 卡片以 heroId 指名（測試不靠 DOM 索引猜英雄）",
+      "ok": true,
+      "extra": [
+        "voidrift",
+        "xingchen",
+        "ravager",
+        "maestro",
+        "bingshuang",
+        "luminary"
+      ]
+    },
+    {
+      "label": "mob430 3a) 有 inferred 條目 ⇒ 顯示推測警語（原文一字不差）",
+      "ok": true,
+      "extra": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。"
+    },
+    {
+      "label": "mob430 3b) 對位資料區沒有勝率／場次／選用率／版本統計（免責聲明本身不算）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob430 3c) 系統推測的卡片標籤就寫「系統推測」，不會冒充實戰驗證",
+      "ok": true,
+      "extra": [
+        [
+          "voidrift",
+          "design",
+          "設計資料"
+        ],
+        [
+          "xingchen",
+          "inferred",
+          "系統推測"
+        ],
+        [
+          "ravager",
+          "design",
+          "設計資料"
+        ],
+        [
+          "maestro",
+          "design",
+          "設計資料"
+        ],
+        [
+          "bingshuang",
+          "design",
+          "設計資料"
+        ],
+        [
+          "luminary",
+          "design",
+          "設計資料"
+        ]
+      ]
+    },
+    {
+      "label": "mob430 3d) 頁面主動聲明「沒有真實對局樣本，不顯示勝率／場次／版本統計」",
+      "ok": true,
+      "extra": "設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。"
+    },
+    {
+      "label": "mob430 4a) 手機對位卡單欄（實測 1 欄）",
+      "ok": true,
+      "extra": [
+        [
+          "voidrift",
+          19,
+          392
+        ],
+        [
+          "xingchen",
+          19,
+          392
+        ]
+      ]
+    },
+    {
+      "label": "mob430 4b) 面板內部沒有第二個縱向捲動容器（不是巢狀捲動）",
+      "ok": true,
+      "extra": []
+    },
+    {
+      "label": "mob430 4c) 面板沒有「裁掉內容又捲不動」的祖先",
+      "ok": true,
+      "extra": []
+    },
+    {
+      "label": "mob430 4d) 面板整個在 viewport 內",
+      "ok": true,
+      "extra": {
+        "top": 45,
+        "bottom": 760,
+        "vh": 932
+      }
+    },
+    {
+      "label": "mob430 4e) 面板底部保留 safe-area padding（≥26px）",
+      "ok": true,
+      "extra": "26px"
+    },
+    {
+      "label": "mob430 4f) overscroll-behavior 為 contain（捲到底不帶動外層）",
+      "ok": true,
+      "extra": "contain"
+    },
+    {
+      "label": "mob430 5a) 單指拖曳真的捲得動面板（0 → 329／上限 329）",
+      "ok": true,
+      "extra": {
+        "before": 0,
+        "after": 329,
+        "max": 329
+      }
+    },
+    {
+      "label": "mob430 5b) 捲到底後最後一張卡（luminary）完整在 viewport 內",
+      "ok": true,
+      "extra": {
+        "hero": "luminary",
+        "x": 215,
+        "y": 632,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      }
+    },
+    {
+      "label": "mob430 5c) 最後一張卡沒有被底部安全區或任何東西蓋住（elementFromPoint 反查）",
+      "ok": true,
+      "extra": {
+        "hero": "luminary",
+        "x": 215,
+        "y": 632,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      }
+    },
+    {
+      "label": "mob430 6a) 目標對位卡（ravager）在畫面上且沒被蓋住",
+      "ok": true,
+      "extra": {
+        "x": 215,
+        "y": 249,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      }
+    },
+    {
+      "label": "mob430 6b) 點下去真的開了那隻英雄的詳情（hero=ravager）",
+      "ok": true,
+      "extra": {
+        "hero": "ravager",
+        "tab": "matchups",
+        "hasBack": true
+      }
+    },
+    {
+      "label": "mob430 6c) 跳過去後仍停在「對位」頁，且出現「← 上一隻」",
+      "ok": true,
+      "extra": {
+        "hero": "ravager",
+        "tab": "matchups",
+        "hasBack": true
+      }
+    },
+    {
+      "label": "mob430 6d) 返回後回到原英雄（ironclad）**且仍在「對位」頁籤**",
+      "ok": true,
+      "extra": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false
+      }
+    },
+    {
+      "label": "mob430 6e) 回到最上層後不再顯示「← 上一隻」",
+      "ok": true,
+      "extra": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false
+      }
+    },
+    {
+      "label": "mob430 7a) 關閉後回到圖鑑列表",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob430 7b) 再開同一隻英雄 ⇒ 停回「對位」頁（狀態有保留）",
+      "ok": true,
+      "extra": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false,
+        "x": 215,
+        "top": 45,
+        "bottom": 760,
+        "scrollTop": 0,
+        "maxScroll": 329,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "padBottom": "26px",
+        "nested": [],
+        "clipping": [],
+        "vh": 932,
+        "insideViewport": true,
+        "matchupText": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。\n較有優勢\n2\n虛空裂縫\nVoidrift · 刺客 · 中路\nW 神聖嘲諷是範圍嘲諷，虛空裂縫 R 切到背後後必須留在近身輸出，嘲諷直接吃掉他的收割窗口。\n設計資料\n信心中\n星辰弓手\n射手 · 下路\n高耐久近戰先手對上需要靜止蓄力、又沒有位移的站樁射手。\n系統推測\n信心中\n較難應付\n2\n毀滅者\nRavager · 戰士 · 上路\n毀滅者 R 覆滅之怒 6 秒免疫 CC，嘲諷與擊飛全部無效，還附帶真實傷害穿高護甲。\n設計資料\n信心高\n大師\nMaestro · 射手 · 下路\n大師 P 第四擊附帶「已損失血量 6–12%」真實傷害，血量越高收益越大。\n設計資料\n信心高\n適合搭配\n2\n冰霜術士\n法師 · 中路\nR 神聖審判擊飛 1.75 秒開團，正好給冰霜術士 E／R 的範圍凍結一個穩定落點。\n設計資料\n信心高\n星輝\nLuminary · 輔助 · 輔助\n星輝 W 星塵護衛在承傷瞬間觸發護盾並反射，疊在 P 鑄鐵誓約的護盾層上。\n設計資料\n信心中\n設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。",
+        "dataText": "較有優勢2虛空裂縫Voidrift · 刺客 · 中路W 神聖嘲諷是範圍嘲諷，虛空裂縫 R 切到背後後必須留在近身輸出，嘲諷直接吃掉他的收割窗口。設計資料信心中星辰弓手射手 · 下路高耐久近戰先手對上需要靜止蓄力、又沒有位移的站樁射手。系統推測信心中較難應付2毀滅者Ravager · 戰士 · 上路毀滅者 R 覆滅之怒 6 秒免疫 CC，嘲諷與擊飛全部無效，還附帶真實傷害穿高護甲。設計資料信心高大師Maestro · 射手 · 下路大師 P 第四擊附帶「已損失血量 6–12%」真實傷害，血量越高收益越大。設計資料信心高適合搭配2冰霜術士法師 · 中路R 神聖審判擊飛 1.75 秒開團，正好給冰霜術士 E／R 的範圍凍結一個穩定落點。設計資料信心高星輝Luminary · 輔助 · 輔助星輝 W 星塵護衛在承傷瞬間觸發護盾並反射，疊在 P 鑄鐵誓約的護盾層上。設計資料信心中",
+        "disclaimer": "設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。",
+        "emptyText": "",
+        "inferredNote": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。"
+      }
+    },
+    {
+      "label": "mob430 8a) 開啟星輝",
+      "ok": true,
+      "extra": {
+        "hero": "luminary",
+        "tab": "overview",
+        "hasBack": false,
+        "x": 215,
+        "top": 254,
+        "bottom": 760,
+        "scrollTop": 0,
+        "maxScroll": 0,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "padBottom": "26px",
+        "nested": [],
+        "clipping": [],
+        "vh": 932,
+        "insideViewport": true,
+        "matchupText": "",
+        "dataText": "",
+        "disclaimer": "",
+        "emptyText": "",
+        "inferredNote": ""
+      }
+    },
+    {
+      "label": "mob430 8b) 星輝的「較有優勢」是空的，並顯示區塊空狀態文案",
+      "ok": true,
+      "extra": {
+        "section": "strongAgainst",
+        "count": 0,
+        "empty": true,
+        "emptyText": "目前尚無已整理的對位資料。",
+        "title": "較有優勢"
+      }
+    },
+    {
+      "label": "mob430 8c) 另外兩區照常有資料（1／2），空的只有該區",
+      "ok": true,
+      "extra": [
+        [
+          "strongAgainst",
+          0,
+          true
+        ],
+        [
+          "weakAgainst",
+          1,
+          false
+        ],
+        [
+          "synergies",
+          2,
+          false
+        ]
+      ]
+    },
+    {
+      "label": "mob430 9a) 開啟靈魂共鳴（本輪沒有整理對位資料的英雄）",
+      "ok": true,
+      "extra": {
+        "hero": "linghun",
+        "tab": "overview",
+        "hasBack": false,
+        "x": 215,
+        "top": 254,
+        "bottom": 760,
+        "scrollTop": 0,
+        "maxScroll": 0,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "padBottom": "26px",
+        "nested": [],
+        "clipping": [],
+        "vh": 932,
+        "insideViewport": true,
+        "matchupText": "",
+        "dataText": "",
+        "disclaimer": "",
+        "emptyText": "",
+        "inferredNote": ""
+      }
+    },
+    {
+      "label": "mob430 9b) 顯示空狀態文案「目前尚無已整理的對位資料。」",
+      "ok": true,
+      "extra": {
+        "tab": "matchups",
+        "emptyText": "目前尚無已整理的對位資料。\n對位資料由設計端逐隻整理，尚未涵蓋全部英雄。",
+        "matchupText": ""
+      }
+    },
+    {
+      "label": "mob430 9c) 空狀態不會冒出任何卡片，也沒有假數據",
+      "ok": true,
+      "extra": {
+        "tab": "matchups",
+        "emptyText": "目前尚無已整理的對位資料。\n對位資料由設計端逐隻整理，尚未涵蓋全部英雄。",
+        "matchupText": ""
+      }
+    },
+    {
+      "label": "mob430 10a) 回到 Ban/Pick",
+      "ok": true,
+      "extra": {
+        "onBanPick": true,
+        "counterNodes": 0,
+        "counterText": null
+      }
+    },
+    {
+      "label": "mob430 10b) Ban/Pick 沒有任何克制節點或克制字樣（Hotfix 2 未被推翻）",
+      "ok": true,
+      "extra": {
+        "onBanPick": true,
+        "counterNodes": 0,
+        "counterText": null
+      }
+    },
+    {
+      "label": "mob430 11a) 已推進到「輪到玩家」且我方已有 1 隻已選英雄",
+      "ok": true,
+      "extra": {
+        "myTurn": true,
+        "blue": [
+          "ravager"
+        ]
+      }
+    },
+    {
+      "label": "mob430 11b) 切到非預設篩選「戰士」（英雄池 17 位）",
+      "ok": true,
+      "extra": {
+        "filter": "戰士",
+        "query": "",
+        "scrollTop": 0,
+        "pool": 17,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 17
+      }
+    },
+    {
+      "label": "mob430 11c) 開關英雄詳情後，篩選仍是「戰士」且英雄池數量不變",
+      "ok": true,
+      "extra": {
+        "before": {
+          "filter": "戰士",
+          "query": "",
+          "scrollTop": 0,
+          "pool": 17,
+          "blue": [
+            "ravager"
+          ],
+          "cards": 17
+        },
+        "after": {
+          "filter": "戰士",
+          "query": "",
+          "scrollTop": 0,
+          "pool": 17,
+          "blue": [
+            "ravager"
+          ],
+          "cards": 17
+        }
+      }
+    },
+    {
+      "label": "mob430 11d) 量測前狀態已就緒（搜尋「之」／30 位／捲動 120）",
+      "ok": true,
+      "extra": {
+        "filter": "全部",
+        "query": "之",
+        "scrollTop": 120,
+        "pool": 30,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 30
+      }
+    },
+    {
+      "label": "mob430 11e) 找得到一張看得到的英雄卡的 ⓘ（hunpo），而且沒被蓋住、沒動到捲動位置",
+      "ok": true,
+      "extra": {
+        "id": "hunpo",
+        "x": 85,
+        "y": 417,
+        "notCovered": true,
+        "scrollTop": 120
+      }
+    },
+    {
+      "label": "mob430 11f) Ban/Pick 的 ⓘ 開出**五個**頁籤，第五個是「對位」",
+      "ok": true,
+      "extra": {
+        "hero": "hunpo",
+        "tabs": [
+          "overview",
+          "stats",
+          "skills",
+          "tactics",
+          "matchups"
+        ]
+      }
+    },
+    {
+      "label": "mob430 11g) 五個頁籤在 Ban/Pick 這條路徑上也都點得到",
+      "ok": true,
+      "extra": [
+        [
+          "overview",
+          true,
+          true,
+          73
+        ],
+        [
+          "stats",
+          true,
+          true,
+          73
+        ],
+        [
+          "skills",
+          true,
+          true,
+          73
+        ],
+        [
+          "tactics",
+          true,
+          true,
+          73
+        ],
+        [
+          "matchups",
+          true,
+          true,
+          73
+        ]
+      ]
+    },
+    {
+      "label": "mob430 11h) 對位頁在 Ban/Pick 路徑上真的畫得出來（三區塊或空狀態）",
+      "ok": true,
+      "extra": {
+        "hero": "hunpo",
+        "tab": "matchups",
+        "sections": 0,
+        "empty": true
+      }
+    },
+    {
+      "label": "mob430 11i) 這一頁一樣沒有勝率／場次／版本統計",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob430 11j) 關閉詳情後，搜尋關鍵字仍是「之」（英雄池 30 位不變）",
+      "ok": true,
+      "extra": {
+        "before": {
+          "filter": "全部",
+          "query": "之",
+          "scrollTop": 120,
+          "pool": 30,
+          "blue": [
+            "ravager"
+          ],
+          "cards": 30
+        },
+        "after": {
+          "filter": "全部",
+          "query": "之",
+          "scrollTop": 120,
+          "pool": 30,
+          "blue": [
+            "ravager"
+          ],
+          "cards": 30
+        }
+      }
+    },
+    {
+      "label": "mob430 11k) 關閉詳情後，英雄格捲動位置沒有被歸零（120 → 120）",
+      "ok": true,
+      "extra": {
+        "before": 120,
+        "after": 120
+      }
+    },
+    {
+      "label": "mob430 11l) 關閉詳情後，已選英雄一隻都沒少",
+      "ok": true,
+      "extra": {
+        "before": [
+          "ravager"
+        ],
+        "after": [
+          "ravager"
+        ]
+      }
+    },
+    {
+      "label": "mob430 11m) 關閉詳情後仍停在 Ban/Pick，而且還是輪到玩家（沒有被彈窗打斷流程）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob430 11n) 關閉詳情後 Ban/Pick 主畫面依然沒有克制節點或克制字樣",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob430 11o) Ban/Pick 池子裡找得到有對位資料的英雄（stoneguard）",
+      "ok": true,
+      "extra": {
+        "hero": "stoneguard",
+        "x": 162,
+        "y": 508
+      }
+    },
+    {
+      "label": "mob430 11p) 在 Ban/Pick 路徑上真的畫出三個區塊與 4 張對位卡（不是空狀態）",
+      "ok": true,
+      "extra": {
+        "hero": "stoneguard",
+        "sections": [
+          [
+            "strongAgainst",
+            2
+          ],
+          [
+            "weakAgainst",
+            1
+          ],
+          [
+            "synergies",
+            1
+          ]
+        ],
+        "cards": 4
+      }
+    },
+    {
+      "label": "mob430 11q) 這條路徑上的卡片一樣有來源標籤與信心程度",
+      "ok": true,
+      "extra": [
+        [
+          "ravager",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "sting",
+          "設計資料",
+          "信心中"
+        ],
+        [
+          "leiting",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "xingchen",
+          "設計資料",
+          "信心高"
+        ]
+      ]
+    },
+    {
+      "label": "mob412 0a) 進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob412 0b) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob412 0c) 從 Ban/Pick 進入英雄圖鑑",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob412 1a) 圖鑑卡沒被遮住，真點擊後開出鋼鐵衛士的詳情",
+      "ok": true,
+      "extra": {
+        "x": 57,
+        "y": 210,
+        "notCovered": true,
+        "state": {
+          "hero": "ironclad",
+          "tab": "overview",
+          "hasBack": false,
+          "x": 206,
+          "top": 254,
+          "bottom": 760,
+          "scrollTop": 0,
+          "maxScroll": 0,
+          "overflowY": "auto",
+          "overscroll": "contain",
+          "padBottom": "26px",
+          "nested": [],
+          "clipping": [],
+          "vh": 915,
+          "insideViewport": true,
+          "matchupText": "",
+          "dataText": "",
+          "disclaimer": "",
+          "emptyText": "",
+          "inferredNote": ""
+        }
+      }
+    },
+    {
+      "label": "mob412 1b) 五個頁籤且順序為 概覽｜數據｜技能｜戰術｜對位",
+      "ok": true,
+      "extra": [
+        [
+          "overview",
+          "概覽"
+        ],
+        [
+          "stats",
+          "數據"
+        ],
+        [
+          "skills",
+          "技能"
+        ],
+        [
+          "tactics",
+          "戰術"
+        ],
+        [
+          "matchups",
+          "對位"
+        ]
+      ]
+    },
+    {
+      "label": "mob412 1c) 五個頁籤全部在 viewport 內且點得到（沒被蓋住、沒被擠爆）",
+      "ok": true,
+      "extra": [
+        [
+          "overview",
+          true,
+          true,
+          69
+        ],
+        [
+          "stats",
+          true,
+          true,
+          69
+        ],
+        [
+          "skills",
+          true,
+          true,
+          69
+        ],
+        [
+          "tactics",
+          true,
+          true,
+          69
+        ],
+        [
+          "matchups",
+          true,
+          true,
+          69
+        ]
+      ]
+    },
+    {
+      "label": "mob412 1d) 預設停在概覽（開新英雄不會莫名其妙跳到對位）",
+      "ok": true,
+      "extra": "overview"
+    },
+    {
+      "label": "mob412 1e) 點「對位」真的切過去（data-tab=matchups）",
+      "ok": true,
+      "extra": "matchups"
+    },
+    {
+      "label": "mob412 2a) 三個區塊都在，順序為 較有優勢／較難應付／適合搭配",
+      "ok": true,
+      "extra": [
+        [
+          "strongAgainst",
+          "較有優勢"
+        ],
+        [
+          "weakAgainst",
+          "較難應付"
+        ],
+        [
+          "synergies",
+          "適合搭配"
+        ]
+      ]
+    },
+    {
+      "label": "mob412 2b) 各區數量與資料層一致（2／2／2）",
+      "ok": true,
+      "extra": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "label": "mob412 2c) 卡片數量與各區宣告的數量吻合（6 張）",
+      "ok": true,
+      "extra": {
+        "cards": 6,
+        "secs": [
+          2,
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "label": "mob412 2d) 每張卡都有來源標籤與信心程度（文案就是規格那三種／三種）",
+      "ok": true,
+      "extra": [
+        [
+          "voidrift",
+          "設計資料",
+          "信心中"
+        ],
+        [
+          "xingchen",
+          "系統推測",
+          "信心中"
+        ],
+        [
+          "ravager",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "maestro",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "bingshuang",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "luminary",
+          "設計資料",
+          "信心中"
+        ]
+      ]
+    },
+    {
+      "label": "mob412 2e) 卡片以 heroId 指名（測試不靠 DOM 索引猜英雄）",
+      "ok": true,
+      "extra": [
+        "voidrift",
+        "xingchen",
+        "ravager",
+        "maestro",
+        "bingshuang",
+        "luminary"
+      ]
+    },
+    {
+      "label": "mob412 3a) 有 inferred 條目 ⇒ 顯示推測警語（原文一字不差）",
+      "ok": true,
+      "extra": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。"
+    },
+    {
+      "label": "mob412 3b) 對位資料區沒有勝率／場次／選用率／版本統計（免責聲明本身不算）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob412 3c) 系統推測的卡片標籤就寫「系統推測」，不會冒充實戰驗證",
+      "ok": true,
+      "extra": [
+        [
+          "voidrift",
+          "design",
+          "設計資料"
+        ],
+        [
+          "xingchen",
+          "inferred",
+          "系統推測"
+        ],
+        [
+          "ravager",
+          "design",
+          "設計資料"
+        ],
+        [
+          "maestro",
+          "design",
+          "設計資料"
+        ],
+        [
+          "bingshuang",
+          "design",
+          "設計資料"
+        ],
+        [
+          "luminary",
+          "design",
+          "設計資料"
+        ]
+      ]
+    },
+    {
+      "label": "mob412 3d) 頁面主動聲明「沒有真實對局樣本，不顯示勝率／場次／版本統計」",
+      "ok": true,
+      "extra": "設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。"
+    },
+    {
+      "label": "mob412 4a) 手機對位卡單欄（實測 1 欄）",
+      "ok": true,
+      "extra": [
+        [
+          "voidrift",
+          19,
+          374
+        ],
+        [
+          "xingchen",
+          19,
+          374
+        ]
+      ]
+    },
+    {
+      "label": "mob412 4b) 面板內部沒有第二個縱向捲動容器（不是巢狀捲動）",
+      "ok": true,
+      "extra": []
+    },
+    {
+      "label": "mob412 4c) 面板沒有「裁掉內容又捲不動」的祖先",
+      "ok": true,
+      "extra": []
+    },
+    {
+      "label": "mob412 4d) 面板整個在 viewport 內",
+      "ok": true,
+      "extra": {
+        "top": 45,
+        "bottom": 760,
+        "vh": 915
+      }
+    },
+    {
+      "label": "mob412 4e) 面板底部保留 safe-area padding（≥26px）",
+      "ok": true,
+      "extra": "26px"
+    },
+    {
+      "label": "mob412 4f) overscroll-behavior 為 contain（捲到底不帶動外層）",
+      "ok": true,
+      "extra": "contain"
+    },
+    {
+      "label": "mob412 5a) 單指拖曳真的捲得動面板（0 → 346／上限 346）",
+      "ok": true,
+      "extra": {
+        "before": 0,
+        "after": 346,
+        "max": 346
+      }
+    },
+    {
+      "label": "mob412 5b) 捲到底後最後一張卡（luminary）完整在 viewport 內",
+      "ok": true,
+      "extra": {
+        "hero": "luminary",
+        "x": 206,
+        "y": 632,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      }
+    },
+    {
+      "label": "mob412 5c) 最後一張卡沒有被底部安全區或任何東西蓋住（elementFromPoint 反查）",
+      "ok": true,
+      "extra": {
+        "hero": "luminary",
+        "x": 206,
+        "y": 632,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      }
+    },
+    {
+      "label": "mob412 6a) 目標對位卡（ravager）在畫面上且沒被蓋住",
+      "ok": true,
+      "extra": {
+        "x": 206,
+        "y": 249,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      }
+    },
+    {
+      "label": "mob412 6b) 點下去真的開了那隻英雄的詳情（hero=ravager）",
+      "ok": true,
+      "extra": {
+        "hero": "ravager",
+        "tab": "matchups",
+        "hasBack": true
+      }
+    },
+    {
+      "label": "mob412 6c) 跳過去後仍停在「對位」頁，且出現「← 上一隻」",
+      "ok": true,
+      "extra": {
+        "hero": "ravager",
+        "tab": "matchups",
+        "hasBack": true
+      }
+    },
+    {
+      "label": "mob412 6d) 返回後回到原英雄（ironclad）**且仍在「對位」頁籤**",
+      "ok": true,
+      "extra": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false
+      }
+    },
+    {
+      "label": "mob412 6e) 回到最上層後不再顯示「← 上一隻」",
+      "ok": true,
+      "extra": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false
+      }
+    },
+    {
+      "label": "mob412 7a) 關閉後回到圖鑑列表",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob412 7b) 再開同一隻英雄 ⇒ 停回「對位」頁（狀態有保留）",
+      "ok": true,
+      "extra": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false,
+        "x": 206,
+        "top": 45,
+        "bottom": 760,
+        "scrollTop": 0,
+        "maxScroll": 346,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "padBottom": "26px",
+        "nested": [],
+        "clipping": [],
+        "vh": 915,
+        "insideViewport": true,
+        "matchupText": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。\n較有優勢\n2\n虛空裂縫\nVoidrift · 刺客 · 中路\nW 神聖嘲諷是範圍嘲諷，虛空裂縫 R 切到背後後必須留在近身輸出，嘲諷直接吃掉他的收割窗口。\n設計資料\n信心中\n星辰弓手\n射手 · 下路\n高耐久近戰先手對上需要靜止蓄力、又沒有位移的站樁射手。\n系統推測\n信心中\n較難應付\n2\n毀滅者\nRavager · 戰士 · 上路\n毀滅者 R 覆滅之怒 6 秒免疫 CC，嘲諷與擊飛全部無效，還附帶真實傷害穿高護甲。\n設計資料\n信心高\n大師\nMaestro · 射手 · 下路\n大師 P 第四擊附帶「已損失血量 6–12%」真實傷害，血量越高收益越大。\n設計資料\n信心高\n適合搭配\n2\n冰霜術士\n法師 · 中路\nR 神聖審判擊飛 1.75 秒開團，正好給冰霜術士 E／R 的範圍凍結一個穩定落點。\n設計資料\n信心高\n星輝\nLuminary · 輔助 · 輔助\n星輝 W 星塵護衛在承傷瞬間觸發護盾並反射，疊在 P 鑄鐵誓約的護盾層上。\n設計資料\n信心中\n設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。",
+        "dataText": "較有優勢2虛空裂縫Voidrift · 刺客 · 中路W 神聖嘲諷是範圍嘲諷，虛空裂縫 R 切到背後後必須留在近身輸出，嘲諷直接吃掉他的收割窗口。設計資料信心中星辰弓手射手 · 下路高耐久近戰先手對上需要靜止蓄力、又沒有位移的站樁射手。系統推測信心中較難應付2毀滅者Ravager · 戰士 · 上路毀滅者 R 覆滅之怒 6 秒免疫 CC，嘲諷與擊飛全部無效，還附帶真實傷害穿高護甲。設計資料信心高大師Maestro · 射手 · 下路大師 P 第四擊附帶「已損失血量 6–12%」真實傷害，血量越高收益越大。設計資料信心高適合搭配2冰霜術士法師 · 中路R 神聖審判擊飛 1.75 秒開團，正好給冰霜術士 E／R 的範圍凍結一個穩定落點。設計資料信心高星輝Luminary · 輔助 · 輔助星輝 W 星塵護衛在承傷瞬間觸發護盾並反射，疊在 P 鑄鐵誓約的護盾層上。設計資料信心中",
+        "disclaimer": "設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。",
+        "emptyText": "",
+        "inferredNote": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。"
+      }
+    },
+    {
+      "label": "mob412 8a) 開啟星輝",
+      "ok": true,
+      "extra": {
+        "hero": "luminary",
+        "tab": "overview",
+        "hasBack": false,
+        "x": 206,
+        "top": 254,
+        "bottom": 760,
+        "scrollTop": 0,
+        "maxScroll": 0,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "padBottom": "26px",
+        "nested": [],
+        "clipping": [],
+        "vh": 915,
+        "insideViewport": true,
+        "matchupText": "",
+        "dataText": "",
+        "disclaimer": "",
+        "emptyText": "",
+        "inferredNote": ""
+      }
+    },
+    {
+      "label": "mob412 8b) 星輝的「較有優勢」是空的，並顯示區塊空狀態文案",
+      "ok": true,
+      "extra": {
+        "section": "strongAgainst",
+        "count": 0,
+        "empty": true,
+        "emptyText": "目前尚無已整理的對位資料。",
+        "title": "較有優勢"
+      }
+    },
+    {
+      "label": "mob412 8c) 另外兩區照常有資料（1／2），空的只有該區",
+      "ok": true,
+      "extra": [
+        [
+          "strongAgainst",
+          0,
+          true
+        ],
+        [
+          "weakAgainst",
+          1,
+          false
+        ],
+        [
+          "synergies",
+          2,
+          false
+        ]
+      ]
+    },
+    {
+      "label": "mob412 9a) 開啟靈魂共鳴（本輪沒有整理對位資料的英雄）",
+      "ok": true,
+      "extra": {
+        "hero": "linghun",
+        "tab": "overview",
+        "hasBack": false,
+        "x": 206,
+        "top": 254,
+        "bottom": 760,
+        "scrollTop": 0,
+        "maxScroll": 0,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "padBottom": "26px",
+        "nested": [],
+        "clipping": [],
+        "vh": 915,
+        "insideViewport": true,
+        "matchupText": "",
+        "dataText": "",
+        "disclaimer": "",
+        "emptyText": "",
+        "inferredNote": ""
+      }
+    },
+    {
+      "label": "mob412 9b) 顯示空狀態文案「目前尚無已整理的對位資料。」",
+      "ok": true,
+      "extra": {
+        "tab": "matchups",
+        "emptyText": "目前尚無已整理的對位資料。\n對位資料由設計端逐隻整理，尚未涵蓋全部英雄。",
+        "matchupText": ""
+      }
+    },
+    {
+      "label": "mob412 9c) 空狀態不會冒出任何卡片，也沒有假數據",
+      "ok": true,
+      "extra": {
+        "tab": "matchups",
+        "emptyText": "目前尚無已整理的對位資料。\n對位資料由設計端逐隻整理，尚未涵蓋全部英雄。",
+        "matchupText": ""
+      }
+    },
+    {
+      "label": "mob412 10a) 回到 Ban/Pick",
+      "ok": true,
+      "extra": {
+        "onBanPick": true,
+        "counterNodes": 0,
+        "counterText": null
+      }
+    },
+    {
+      "label": "mob412 10b) Ban/Pick 沒有任何克制節點或克制字樣（Hotfix 2 未被推翻）",
+      "ok": true,
+      "extra": {
+        "onBanPick": true,
+        "counterNodes": 0,
+        "counterText": null
+      }
+    },
+    {
+      "label": "mob412 11a) 已推進到「輪到玩家」且我方已有 1 隻已選英雄",
+      "ok": true,
+      "extra": {
+        "myTurn": true,
+        "blue": [
+          "ravager"
+        ]
+      }
+    },
+    {
+      "label": "mob412 11b) 切到非預設篩選「戰士」（英雄池 18 位）",
+      "ok": true,
+      "extra": {
+        "filter": "戰士",
+        "query": "",
+        "scrollTop": 0,
+        "pool": 18,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 18
+      }
+    },
+    {
+      "label": "mob412 11c) 開關英雄詳情後，篩選仍是「戰士」且英雄池數量不變",
+      "ok": true,
+      "extra": {
+        "before": {
+          "filter": "戰士",
+          "query": "",
+          "scrollTop": 0,
+          "pool": 18,
+          "blue": [
+            "ravager"
+          ],
+          "cards": 18
+        },
+        "after": {
+          "filter": "戰士",
+          "query": "",
+          "scrollTop": 0,
+          "pool": 18,
+          "blue": [
+            "ravager"
+          ],
+          "cards": 18
+        }
+      }
+    },
+    {
+      "label": "mob412 11d) 量測前狀態已就緒（搜尋「之」／29 位／捲動 120）",
+      "ok": true,
+      "extra": {
+        "filter": "全部",
+        "query": "之",
+        "scrollTop": 120,
+        "pool": 29,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 29
+      }
+    },
+    {
+      "label": "mob412 11e) 找得到一張看得到的英雄卡的 ⓘ（yanfeng），而且沒被蓋住、沒動到捲動位置",
+      "ok": true,
+      "extra": {
+        "id": "yanfeng",
+        "x": 82,
+        "y": 417,
+        "notCovered": true,
+        "scrollTop": 120
+      }
+    },
+    {
+      "label": "mob412 11f) Ban/Pick 的 ⓘ 開出**五個**頁籤，第五個是「對位」",
+      "ok": true,
+      "extra": {
+        "hero": "yanfeng",
+        "tabs": [
+          "overview",
+          "stats",
+          "skills",
+          "tactics",
+          "matchups"
+        ]
+      }
+    },
+    {
+      "label": "mob412 11g) 五個頁籤在 Ban/Pick 這條路徑上也都點得到",
+      "ok": true,
+      "extra": [
+        [
+          "overview",
+          true,
+          true,
+          69
+        ],
+        [
+          "stats",
+          true,
+          true,
+          69
+        ],
+        [
+          "skills",
+          true,
+          true,
+          69
+        ],
+        [
+          "tactics",
+          true,
+          true,
+          69
+        ],
+        [
+          "matchups",
+          true,
+          true,
+          69
+        ]
+      ]
+    },
+    {
+      "label": "mob412 11h) 對位頁在 Ban/Pick 路徑上真的畫得出來（三區塊或空狀態）",
+      "ok": true,
+      "extra": {
+        "hero": "yanfeng",
+        "tab": "matchups",
+        "sections": 0,
+        "empty": true
+      }
+    },
+    {
+      "label": "mob412 11i) 這一頁一樣沒有勝率／場次／版本統計",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob412 11j) 關閉詳情後，搜尋關鍵字仍是「之」（英雄池 29 位不變）",
+      "ok": true,
+      "extra": {
+        "before": {
+          "filter": "全部",
+          "query": "之",
+          "scrollTop": 120,
+          "pool": 29,
+          "blue": [
+            "ravager"
+          ],
+          "cards": 29
+        },
+        "after": {
+          "filter": "全部",
+          "query": "之",
+          "scrollTop": 120,
+          "pool": 29,
+          "blue": [
+            "ravager"
+          ],
+          "cards": 29
+        }
+      }
+    },
+    {
+      "label": "mob412 11k) 關閉詳情後，英雄格捲動位置沒有被歸零（120 → 120）",
+      "ok": true,
+      "extra": {
+        "before": 120,
+        "after": 120
+      }
+    },
+    {
+      "label": "mob412 11l) 關閉詳情後，已選英雄一隻都沒少",
+      "ok": true,
+      "extra": {
+        "before": [
+          "ravager"
+        ],
+        "after": [
+          "ravager"
+        ]
+      }
+    },
+    {
+      "label": "mob412 11m) 關閉詳情後仍停在 Ban/Pick，而且還是輪到玩家（沒有被彈窗打斷流程）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob412 11n) 關閉詳情後 Ban/Pick 主畫面依然沒有克制節點或克制字樣",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob412 11o) Ban/Pick 池子裡找得到有對位資料的英雄（stoneguard）",
+      "ok": true,
+      "extra": {
+        "hero": "stoneguard",
+        "x": 155,
+        "y": 508
+      }
+    },
+    {
+      "label": "mob412 11p) 在 Ban/Pick 路徑上真的畫出三個區塊與 4 張對位卡（不是空狀態）",
+      "ok": true,
+      "extra": {
+        "hero": "stoneguard",
+        "sections": [
+          [
+            "strongAgainst",
+            2
+          ],
+          [
+            "weakAgainst",
+            1
+          ],
+          [
+            "synergies",
+            1
+          ]
+        ],
+        "cards": 4
+      }
+    },
+    {
+      "label": "mob412 11q) 這條路徑上的卡片一樣有來源標籤與信心程度",
+      "ok": true,
+      "extra": [
+        [
+          "ravager",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "sting",
+          "設計資料",
+          "信心中"
+        ],
+        [
+          "leiting",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "xingchen",
+          "設計資料",
+          "信心高"
+        ]
+      ]
+    },
+    {
+      "label": "mob390 0a) 進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 0b) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 0c) 從 Ban/Pick 進入英雄圖鑑",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 1a) 圖鑑卡沒被遮住，真點擊後開出鋼鐵衛士的詳情",
+      "ok": true,
+      "extra": {
+        "x": 54,
+        "y": 210,
+        "notCovered": true,
+        "state": {
+          "hero": "ironclad",
+          "tab": "overview",
+          "hasBack": false,
+          "x": 195,
+          "top": 237,
+          "bottom": 743,
+          "scrollTop": 0,
+          "maxScroll": 0,
+          "overflowY": "auto",
+          "overscroll": "contain",
+          "padBottom": "26px",
+          "nested": [],
+          "clipping": [],
+          "vh": 844,
+          "insideViewport": true,
+          "matchupText": "",
+          "dataText": "",
+          "disclaimer": "",
+          "emptyText": "",
+          "inferredNote": ""
+        }
+      }
+    },
+    {
+      "label": "mob390 1b) 五個頁籤且順序為 概覽｜數據｜技能｜戰術｜對位",
+      "ok": true,
+      "extra": [
+        [
+          "overview",
+          "概覽"
+        ],
+        [
+          "stats",
+          "數據"
+        ],
+        [
+          "skills",
+          "技能"
+        ],
+        [
+          "tactics",
+          "戰術"
+        ],
+        [
+          "matchups",
+          "對位"
+        ]
+      ]
+    },
+    {
+      "label": "mob390 1c) 五個頁籤全部在 viewport 內且點得到（沒被蓋住、沒被擠爆）",
+      "ok": true,
+      "extra": [
+        [
+          "overview",
+          true,
+          true,
+          65
+        ],
+        [
+          "stats",
+          true,
+          true,
+          65
+        ],
+        [
+          "skills",
+          true,
+          true,
+          65
+        ],
+        [
+          "tactics",
+          true,
+          true,
+          65
+        ],
+        [
+          "matchups",
+          true,
+          true,
+          65
+        ]
+      ]
+    },
+    {
+      "label": "mob390 1d) 預設停在概覽（開新英雄不會莫名其妙跳到對位）",
+      "ok": true,
+      "extra": "overview"
+    },
+    {
+      "label": "mob390 1e) 點「對位」真的切過去（data-tab=matchups）",
+      "ok": true,
+      "extra": "matchups"
+    },
+    {
+      "label": "mob390 2a) 三個區塊都在，順序為 較有優勢／較難應付／適合搭配",
+      "ok": true,
+      "extra": [
+        [
+          "strongAgainst",
+          "較有優勢"
+        ],
+        [
+          "weakAgainst",
+          "較難應付"
+        ],
+        [
+          "synergies",
+          "適合搭配"
+        ]
+      ]
+    },
+    {
+      "label": "mob390 2b) 各區數量與資料層一致（2／2／2）",
+      "ok": true,
+      "extra": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "label": "mob390 2c) 卡片數量與各區宣告的數量吻合（6 張）",
+      "ok": true,
+      "extra": {
+        "cards": 6,
+        "secs": [
+          2,
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "label": "mob390 2d) 每張卡都有來源標籤與信心程度（文案就是規格那三種／三種）",
+      "ok": true,
+      "extra": [
+        [
+          "voidrift",
+          "設計資料",
+          "信心中"
+        ],
+        [
+          "xingchen",
+          "系統推測",
+          "信心中"
+        ],
+        [
+          "ravager",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "maestro",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "bingshuang",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "luminary",
+          "設計資料",
+          "信心中"
+        ]
+      ]
+    },
+    {
+      "label": "mob390 2e) 卡片以 heroId 指名（測試不靠 DOM 索引猜英雄）",
+      "ok": true,
+      "extra": [
+        "voidrift",
+        "xingchen",
+        "ravager",
+        "maestro",
+        "bingshuang",
+        "luminary"
+      ]
+    },
+    {
+      "label": "mob390 3a) 有 inferred 條目 ⇒ 顯示推測警語（原文一字不差）",
+      "ok": true,
+      "extra": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。"
+    },
+    {
+      "label": "mob390 3b) 對位資料區沒有勝率／場次／選用率／版本統計（免責聲明本身不算）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 3c) 系統推測的卡片標籤就寫「系統推測」，不會冒充實戰驗證",
+      "ok": true,
+      "extra": [
+        [
+          "voidrift",
+          "design",
+          "設計資料"
+        ],
+        [
+          "xingchen",
+          "inferred",
+          "系統推測"
+        ],
+        [
+          "ravager",
+          "design",
+          "設計資料"
+        ],
+        [
+          "maestro",
+          "design",
+          "設計資料"
+        ],
+        [
+          "bingshuang",
+          "design",
+          "設計資料"
+        ],
+        [
+          "luminary",
+          "design",
+          "設計資料"
+        ]
+      ]
+    },
+    {
+      "label": "mob390 3d) 頁面主動聲明「沒有真實對局樣本，不顯示勝率／場次／版本統計」",
+      "ok": true,
+      "extra": "設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。"
+    },
+    {
+      "label": "mob390 4a) 手機對位卡單欄（實測 1 欄）",
+      "ok": true,
+      "extra": [
+        [
+          "voidrift",
+          19,
+          352
+        ],
+        [
+          "xingchen",
+          19,
+          352
+        ]
+      ]
+    },
+    {
+      "label": "mob390 4b) 面板內部沒有第二個縱向捲動容器（不是巢狀捲動）",
+      "ok": true,
+      "extra": []
+    },
+    {
+      "label": "mob390 4c) 面板沒有「裁掉內容又捲不動」的祖先",
+      "ok": true,
+      "extra": []
+    },
+    {
+      "label": "mob390 4d) 面板整個在 viewport 內",
+      "ok": true,
+      "extra": {
+        "top": 43,
+        "bottom": 743,
+        "vh": 844
+      }
+    },
+    {
+      "label": "mob390 4e) 面板底部保留 safe-area padding（≥26px）",
+      "ok": true,
+      "extra": "26px"
+    },
+    {
+      "label": "mob390 4f) overscroll-behavior 為 contain（捲到底不帶動外層）",
+      "ok": true,
+      "extra": "contain"
+    },
+    {
+      "label": "mob390 5a) 單指拖曳真的捲得動面板（0 → 361／上限 361）",
+      "ok": true,
+      "extra": {
+        "before": 0,
+        "after": 361,
+        "max": 361
+      }
+    },
+    {
+      "label": "mob390 5b) 捲到底後最後一張卡（luminary）完整在 viewport 內",
+      "ok": true,
+      "extra": {
+        "hero": "luminary",
+        "x": 195,
+        "y": 615,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      }
+    },
+    {
+      "label": "mob390 5c) 最後一張卡沒有被底部安全區或任何東西蓋住（elementFromPoint 反查）",
+      "ok": true,
+      "extra": {
+        "hero": "luminary",
+        "x": 195,
+        "y": 615,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      }
+    },
+    {
+      "label": "mob390 6a) 目標對位卡（ravager）在畫面上且沒被蓋住",
+      "ok": true,
+      "extra": {
+        "x": 195,
+        "y": 232,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      }
+    },
+    {
+      "label": "mob390 6b) 點下去真的開了那隻英雄的詳情（hero=ravager）",
+      "ok": true,
+      "extra": {
+        "hero": "ravager",
+        "tab": "matchups",
+        "hasBack": true
+      }
+    },
+    {
+      "label": "mob390 6c) 跳過去後仍停在「對位」頁，且出現「← 上一隻」",
+      "ok": true,
+      "extra": {
+        "hero": "ravager",
+        "tab": "matchups",
+        "hasBack": true
+      }
+    },
+    {
+      "label": "mob390 6d) 返回後回到原英雄（ironclad）**且仍在「對位」頁籤**",
+      "ok": true,
+      "extra": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false
+      }
+    },
+    {
+      "label": "mob390 6e) 回到最上層後不再顯示「← 上一隻」",
+      "ok": true,
+      "extra": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false
+      }
+    },
+    {
+      "label": "mob390 7a) 關閉後回到圖鑑列表",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 7b) 再開同一隻英雄 ⇒ 停回「對位」頁（狀態有保留）",
+      "ok": true,
+      "extra": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false,
+        "x": 195,
+        "top": 43,
+        "bottom": 743,
+        "scrollTop": 0,
+        "maxScroll": 361,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "padBottom": "26px",
+        "nested": [],
+        "clipping": [],
+        "vh": 844,
+        "insideViewport": true,
+        "matchupText": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。\n較有優勢\n2\n虛空裂縫\nVoidrift · 刺客 · 中路\nW 神聖嘲諷是範圍嘲諷，虛空裂縫 R 切到背後後必須留在近身輸出，嘲諷直接吃掉他的收割窗口。\n設計資料\n信心中\n星辰弓手\n射手 · 下路\n高耐久近戰先手對上需要靜止蓄力、又沒有位移的站樁射手。\n系統推測\n信心中\n較難應付\n2\n毀滅者\nRavager · 戰士 · 上路\n毀滅者 R 覆滅之怒 6 秒免疫 CC，嘲諷與擊飛全部無效，還附帶真實傷害穿高護甲。\n設計資料\n信心高\n大師\nMaestro · 射手 · 下路\n大師 P 第四擊附帶「已損失血量 6–12%」真實傷害，血量越高收益越大。\n設計資料\n信心高\n適合搭配\n2\n冰霜術士\n法師 · 中路\nR 神聖審判擊飛 1.75 秒開團，正好給冰霜術士 E／R 的範圍凍結一個穩定落點。\n設計資料\n信心高\n星輝\nLuminary · 輔助 · 輔助\n星輝 W 星塵護衛在承傷瞬間觸發護盾並反射，疊在 P 鑄鐵誓約的護盾層上。\n設計資料\n信心中\n設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。",
+        "dataText": "較有優勢2虛空裂縫Voidrift · 刺客 · 中路W 神聖嘲諷是範圍嘲諷，虛空裂縫 R 切到背後後必須留在近身輸出，嘲諷直接吃掉他的收割窗口。設計資料信心中星辰弓手射手 · 下路高耐久近戰先手對上需要靜止蓄力、又沒有位移的站樁射手。系統推測信心中較難應付2毀滅者Ravager · 戰士 · 上路毀滅者 R 覆滅之怒 6 秒免疫 CC，嘲諷與擊飛全部無效，還附帶真實傷害穿高護甲。設計資料信心高大師Maestro · 射手 · 下路大師 P 第四擊附帶「已損失血量 6–12%」真實傷害，血量越高收益越大。設計資料信心高適合搭配2冰霜術士法師 · 中路R 神聖審判擊飛 1.75 秒開團，正好給冰霜術士 E／R 的範圍凍結一個穩定落點。設計資料信心高星輝Luminary · 輔助 · 輔助星輝 W 星塵護衛在承傷瞬間觸發護盾並反射，疊在 P 鑄鐵誓約的護盾層上。設計資料信心中",
+        "disclaimer": "設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。",
+        "emptyText": "",
+        "inferredNote": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。"
+      }
+    },
+    {
+      "label": "mob390 8a) 開啟星輝",
+      "ok": true,
+      "extra": {
+        "hero": "luminary",
+        "tab": "overview",
+        "hasBack": false,
+        "x": 195,
+        "top": 237,
+        "bottom": 743,
+        "scrollTop": 0,
+        "maxScroll": 0,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "padBottom": "26px",
+        "nested": [],
+        "clipping": [],
+        "vh": 844,
+        "insideViewport": true,
+        "matchupText": "",
+        "dataText": "",
+        "disclaimer": "",
+        "emptyText": "",
+        "inferredNote": ""
+      }
+    },
+    {
+      "label": "mob390 8b) 星輝的「較有優勢」是空的，並顯示區塊空狀態文案",
+      "ok": true,
+      "extra": {
+        "section": "strongAgainst",
+        "count": 0,
+        "empty": true,
+        "emptyText": "目前尚無已整理的對位資料。",
+        "title": "較有優勢"
+      }
+    },
+    {
+      "label": "mob390 8c) 另外兩區照常有資料（1／2），空的只有該區",
+      "ok": true,
+      "extra": [
+        [
+          "strongAgainst",
+          0,
+          true
+        ],
+        [
+          "weakAgainst",
+          1,
+          false
+        ],
+        [
+          "synergies",
+          2,
+          false
+        ]
+      ]
+    },
+    {
+      "label": "mob390 9a) 開啟靈魂共鳴（本輪沒有整理對位資料的英雄）",
+      "ok": true,
+      "extra": {
+        "hero": "linghun",
+        "tab": "overview",
+        "hasBack": false,
+        "x": 195,
+        "top": 237,
+        "bottom": 743,
+        "scrollTop": 0,
+        "maxScroll": 0,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "padBottom": "26px",
+        "nested": [],
+        "clipping": [],
+        "vh": 844,
+        "insideViewport": true,
+        "matchupText": "",
+        "dataText": "",
+        "disclaimer": "",
+        "emptyText": "",
+        "inferredNote": ""
+      }
+    },
+    {
+      "label": "mob390 9b) 顯示空狀態文案「目前尚無已整理的對位資料。」",
+      "ok": true,
+      "extra": {
+        "tab": "matchups",
+        "emptyText": "目前尚無已整理的對位資料。\n對位資料由設計端逐隻整理，尚未涵蓋全部英雄。",
+        "matchupText": ""
+      }
+    },
+    {
+      "label": "mob390 9c) 空狀態不會冒出任何卡片，也沒有假數據",
+      "ok": true,
+      "extra": {
+        "tab": "matchups",
+        "emptyText": "目前尚無已整理的對位資料。\n對位資料由設計端逐隻整理，尚未涵蓋全部英雄。",
+        "matchupText": ""
+      }
+    },
+    {
+      "label": "mob390 10a) 回到 Ban/Pick",
+      "ok": true,
+      "extra": {
+        "onBanPick": true,
+        "counterNodes": 0,
+        "counterText": null
+      }
+    },
+    {
+      "label": "mob390 10b) Ban/Pick 沒有任何克制節點或克制字樣（Hotfix 2 未被推翻）",
+      "ok": true,
+      "extra": {
+        "onBanPick": true,
+        "counterNodes": 0,
+        "counterText": null
+      }
+    },
+    {
+      "label": "mob390 11a) 已推進到「輪到玩家」且我方已有 1 隻已選英雄",
+      "ok": true,
+      "extra": {
+        "myTurn": true,
+        "blue": [
+          "ravager"
+        ]
+      }
+    },
+    {
+      "label": "mob390 11b) 切到非預設篩選「戰士」（英雄池 19 位）",
+      "ok": true,
+      "extra": {
+        "filter": "戰士",
+        "query": "",
+        "scrollTop": 0,
+        "pool": 19,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 19
+      }
+    },
+    {
+      "label": "mob390 11c) 開關英雄詳情後，篩選仍是「戰士」且英雄池數量不變",
+      "ok": true,
+      "extra": {
+        "before": {
+          "filter": "戰士",
+          "query": "",
+          "scrollTop": 0,
+          "pool": 19,
+          "blue": [
+            "ravager"
+          ],
+          "cards": 19
+        },
+        "after": {
+          "filter": "戰士",
+          "query": "",
+          "scrollTop": 0,
+          "pool": 19,
+          "blue": [
+            "ravager"
+          ],
+          "cards": 19
+        }
+      }
+    },
+    {
+      "label": "mob390 11d) 量測前狀態已就緒（搜尋「之」／29 位／捲動 120）",
+      "ok": true,
+      "extra": {
+        "filter": "全部",
+        "query": "之",
+        "scrollTop": 120,
+        "pool": 29,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 29
+      }
+    },
+    {
+      "label": "mob390 11e) 找得到一張看得到的英雄卡的 ⓘ（yanfeng），而且沒被蓋住、沒動到捲動位置",
+      "ok": true,
+      "extra": {
+        "id": "yanfeng",
+        "x": 77,
+        "y": 417,
+        "notCovered": true,
+        "scrollTop": 120
+      }
+    },
+    {
+      "label": "mob390 11f) Ban/Pick 的 ⓘ 開出**五個**頁籤，第五個是「對位」",
+      "ok": true,
+      "extra": {
+        "hero": "yanfeng",
+        "tabs": [
+          "overview",
+          "stats",
+          "skills",
+          "tactics",
+          "matchups"
+        ]
+      }
+    },
+    {
+      "label": "mob390 11g) 五個頁籤在 Ban/Pick 這條路徑上也都點得到",
+      "ok": true,
+      "extra": [
+        [
+          "overview",
+          true,
+          true,
+          65
+        ],
+        [
+          "stats",
+          true,
+          true,
+          65
+        ],
+        [
+          "skills",
+          true,
+          true,
+          65
+        ],
+        [
+          "tactics",
+          true,
+          true,
+          65
+        ],
+        [
+          "matchups",
+          true,
+          true,
+          65
+        ]
+      ]
+    },
+    {
+      "label": "mob390 11h) 對位頁在 Ban/Pick 路徑上真的畫得出來（三區塊或空狀態）",
+      "ok": true,
+      "extra": {
+        "hero": "yanfeng",
+        "tab": "matchups",
+        "sections": 0,
+        "empty": true
+      }
+    },
+    {
+      "label": "mob390 11i) 這一頁一樣沒有勝率／場次／版本統計",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 11j) 關閉詳情後，搜尋關鍵字仍是「之」（英雄池 29 位不變）",
+      "ok": true,
+      "extra": {
+        "before": {
+          "filter": "全部",
+          "query": "之",
+          "scrollTop": 120,
+          "pool": 29,
+          "blue": [
+            "ravager"
+          ],
+          "cards": 29
+        },
+        "after": {
+          "filter": "全部",
+          "query": "之",
+          "scrollTop": 120,
+          "pool": 29,
+          "blue": [
+            "ravager"
+          ],
+          "cards": 29
+        }
+      }
+    },
+    {
+      "label": "mob390 11k) 關閉詳情後，英雄格捲動位置沒有被歸零（120 → 120）",
+      "ok": true,
+      "extra": {
+        "before": 120,
+        "after": 120
+      }
+    },
+    {
+      "label": "mob390 11l) 關閉詳情後，已選英雄一隻都沒少",
+      "ok": true,
+      "extra": {
+        "before": [
+          "ravager"
+        ],
+        "after": [
+          "ravager"
+        ]
+      }
+    },
+    {
+      "label": "mob390 11m) 關閉詳情後仍停在 Ban/Pick，而且還是輪到玩家（沒有被彈窗打斷流程）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 11n) 關閉詳情後 Ban/Pick 主畫面依然沒有克制節點或克制字樣",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 11o) Ban/Pick 池子裡找得到有對位資料的英雄（stoneguard）",
+      "ok": true,
+      "extra": {
+        "hero": "stoneguard",
+        "x": 146,
+        "y": 499
+      }
+    },
+    {
+      "label": "mob390 11p) 在 Ban/Pick 路徑上真的畫出三個區塊與 4 張對位卡（不是空狀態）",
+      "ok": true,
+      "extra": {
+        "hero": "stoneguard",
+        "sections": [
+          [
+            "strongAgainst",
+            2
+          ],
+          [
+            "weakAgainst",
+            1
+          ],
+          [
+            "synergies",
+            1
+          ]
+        ],
+        "cards": 4
+      }
+    },
+    {
+      "label": "mob390 11q) 這條路徑上的卡片一樣有來源標籤與信心程度",
+      "ok": true,
+      "extra": [
+        [
+          "ravager",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "sting",
+          "設計資料",
+          "信心中"
+        ],
+        [
+          "leiting",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "xingchen",
+          "設計資料",
+          "信心高"
+        ]
+      ]
+    },
+    {
+      "label": "mob360 0a) 進入賽前配置",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 0b) 進入 Ban/Pick",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 0c) 從 Ban/Pick 進入英雄圖鑑",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 1a) 圖鑑卡沒被遮住，真點擊後開出鋼鐵衛士的詳情",
+      "ok": true,
+      "extra": {
+        "x": 50,
+        "y": 244,
+        "notCovered": true,
+        "state": {
+          "hero": "ironclad",
+          "tab": "overview",
+          "hasBack": false,
+          "x": 180,
+          "top": 198,
+          "bottom": 704,
+          "scrollTop": 0,
+          "maxScroll": 0,
+          "overflowY": "auto",
+          "overscroll": "contain",
+          "padBottom": "26px",
+          "nested": [],
+          "clipping": [],
+          "vh": 800,
+          "insideViewport": true,
+          "matchupText": "",
+          "dataText": "",
+          "disclaimer": "",
+          "emptyText": "",
+          "inferredNote": ""
+        }
+      }
+    },
+    {
+      "label": "mob360 1b) 五個頁籤且順序為 概覽｜數據｜技能｜戰術｜對位",
+      "ok": true,
+      "extra": [
+        [
+          "overview",
+          "概覽"
+        ],
+        [
+          "stats",
+          "數據"
+        ],
+        [
+          "skills",
+          "技能"
+        ],
+        [
+          "tactics",
+          "戰術"
+        ],
+        [
+          "matchups",
+          "對位"
+        ]
+      ]
+    },
+    {
+      "label": "mob360 1c) 五個頁籤全部在 viewport 內且點得到（沒被蓋住、沒被擠爆）",
+      "ok": true,
+      "extra": [
+        [
+          "overview",
+          true,
+          true,
+          59
+        ],
+        [
+          "stats",
+          true,
+          true,
+          59
+        ],
+        [
+          "skills",
+          true,
+          true,
+          59
+        ],
+        [
+          "tactics",
+          true,
+          true,
+          59
+        ],
+        [
+          "matchups",
+          true,
+          true,
+          59
+        ]
+      ]
+    },
+    {
+      "label": "mob360 1d) 預設停在概覽（開新英雄不會莫名其妙跳到對位）",
+      "ok": true,
+      "extra": "overview"
+    },
+    {
+      "label": "mob360 1e) 點「對位」真的切過去（data-tab=matchups）",
+      "ok": true,
+      "extra": "matchups"
+    },
+    {
+      "label": "mob360 2a) 三個區塊都在，順序為 較有優勢／較難應付／適合搭配",
+      "ok": true,
+      "extra": [
+        [
+          "strongAgainst",
+          "較有優勢"
+        ],
+        [
+          "weakAgainst",
+          "較難應付"
+        ],
+        [
+          "synergies",
+          "適合搭配"
+        ]
+      ]
+    },
+    {
+      "label": "mob360 2b) 各區數量與資料層一致（2／2／2）",
+      "ok": true,
+      "extra": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "label": "mob360 2c) 卡片數量與各區宣告的數量吻合（6 張）",
+      "ok": true,
+      "extra": {
+        "cards": 6,
+        "secs": [
+          2,
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "label": "mob360 2d) 每張卡都有來源標籤與信心程度（文案就是規格那三種／三種）",
+      "ok": true,
+      "extra": [
+        [
+          "voidrift",
+          "設計資料",
+          "信心中"
+        ],
+        [
+          "xingchen",
+          "系統推測",
+          "信心中"
+        ],
+        [
+          "ravager",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "maestro",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "bingshuang",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "luminary",
+          "設計資料",
+          "信心中"
+        ]
+      ]
+    },
+    {
+      "label": "mob360 2e) 卡片以 heroId 指名（測試不靠 DOM 索引猜英雄）",
+      "ok": true,
+      "extra": [
+        "voidrift",
+        "xingchen",
+        "ravager",
+        "maestro",
+        "bingshuang",
+        "luminary"
+      ]
+    },
+    {
+      "label": "mob360 3a) 有 inferred 條目 ⇒ 顯示推測警語（原文一字不差）",
+      "ok": true,
+      "extra": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。"
+    },
+    {
+      "label": "mob360 3b) 對位資料區沒有勝率／場次／選用率／版本統計（免責聲明本身不算）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 3c) 系統推測的卡片標籤就寫「系統推測」，不會冒充實戰驗證",
+      "ok": true,
+      "extra": [
+        [
+          "voidrift",
+          "design",
+          "設計資料"
+        ],
+        [
+          "xingchen",
+          "inferred",
+          "系統推測"
+        ],
+        [
+          "ravager",
+          "design",
+          "設計資料"
+        ],
+        [
+          "maestro",
+          "design",
+          "設計資料"
+        ],
+        [
+          "bingshuang",
+          "design",
+          "設計資料"
+        ],
+        [
+          "luminary",
+          "design",
+          "設計資料"
+        ]
+      ]
+    },
+    {
+      "label": "mob360 3d) 頁面主動聲明「沒有真實對局樣本，不顯示勝率／場次／版本統計」",
+      "ok": true,
+      "extra": "設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。"
+    },
+    {
+      "label": "mob360 4a) 手機對位卡單欄（實測 1 欄）",
+      "ok": true,
+      "extra": [
+        [
+          "voidrift",
+          19,
+          322
+        ],
+        [
+          "xingchen",
+          19,
+          322
+        ]
+      ]
+    },
+    {
+      "label": "mob360 4b) 面板內部沒有第二個縱向捲動容器（不是巢狀捲動）",
+      "ok": true,
+      "extra": []
+    },
+    {
+      "label": "mob360 4c) 面板沒有「裁掉內容又捲不動」的祖先",
+      "ok": true,
+      "extra": []
+    },
+    {
+      "label": "mob360 4d) 面板整個在 viewport 內",
+      "ok": true,
+      "extra": {
+        "top": 38,
+        "bottom": 704,
+        "vh": 800
+      }
+    },
+    {
+      "label": "mob360 4e) 面板底部保留 safe-area padding（≥26px）",
+      "ok": true,
+      "extra": "26px"
+    },
+    {
+      "label": "mob360 4f) overscroll-behavior 為 contain（捲到底不帶動外層）",
+      "ok": true,
+      "extra": "contain"
+    },
+    {
+      "label": "mob360 5a) 單指拖曳真的捲得動面板（0 → 413／上限 413）",
+      "ok": true,
+      "extra": {
+        "before": 0,
+        "after": 413,
+        "max": 413
+      }
+    },
+    {
+      "label": "mob360 5b) 捲到底後最後一張卡（luminary）完整在 viewport 內",
+      "ok": true,
+      "extra": {
+        "hero": "luminary",
+        "x": 180,
+        "y": 576,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      }
+    },
+    {
+      "label": "mob360 5c) 最後一張卡沒有被底部安全區或任何東西蓋住（elementFromPoint 反查）",
+      "ok": true,
+      "extra": {
+        "hero": "luminary",
+        "x": 180,
+        "y": 576,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      }
+    },
+    {
+      "label": "mob360 6a) 目標對位卡（ravager）在畫面上且沒被蓋住",
+      "ok": true,
+      "extra": {
+        "x": 180,
+        "y": 193,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      }
+    },
+    {
+      "label": "mob360 6b) 點下去真的開了那隻英雄的詳情（hero=ravager）",
+      "ok": true,
+      "extra": {
+        "hero": "ravager",
+        "tab": "matchups",
+        "hasBack": true
+      }
+    },
+    {
+      "label": "mob360 6c) 跳過去後仍停在「對位」頁，且出現「← 上一隻」",
+      "ok": true,
+      "extra": {
+        "hero": "ravager",
+        "tab": "matchups",
+        "hasBack": true
+      }
+    },
+    {
+      "label": "mob360 6d) 返回後回到原英雄（ironclad）**且仍在「對位」頁籤**",
+      "ok": true,
+      "extra": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false
+      }
+    },
+    {
+      "label": "mob360 6e) 回到最上層後不再顯示「← 上一隻」",
+      "ok": true,
+      "extra": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false
+      }
+    },
+    {
+      "label": "mob360 7a) 關閉後回到圖鑑列表",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 7b) 再開同一隻英雄 ⇒ 停回「對位」頁（狀態有保留）",
+      "ok": true,
+      "extra": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false,
+        "x": 180,
+        "top": 38,
+        "bottom": 704,
+        "scrollTop": 0,
+        "maxScroll": 413,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "padBottom": "26px",
+        "nested": [],
+        "clipping": [],
+        "vh": 800,
+        "insideViewport": true,
+        "matchupText": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。\n較有優勢\n2\n虛空裂縫\nVoidrift · 刺客 · 中路\nW 神聖嘲諷是範圍嘲諷，虛空裂縫 R 切到背後後必須留在近身輸出，嘲諷直接吃掉他的收割窗口。\n設計資料\n信心中\n星辰弓手\n射手 · 下路\n高耐久近戰先手對上需要靜止蓄力、又沒有位移的站樁射手。\n系統推測\n信心中\n較難應付\n2\n毀滅者\nRavager · 戰士 · 上路\n毀滅者 R 覆滅之怒 6 秒免疫 CC，嘲諷與擊飛全部無效，還附帶真實傷害穿高護甲。\n設計資料\n信心高\n大師\nMaestro · 射手 · 下路\n大師 P 第四擊附帶「已損失血量 6–12%」真實傷害，血量越高收益越大。\n設計資料\n信心高\n適合搭配\n2\n冰霜術士\n法師 · 中路\nR 神聖審判擊飛 1.75 秒開團，正好給冰霜術士 E／R 的範圍凍結一個穩定落點。\n設計資料\n信心高\n星輝\nLuminary · 輔助 · 輔助\n星輝 W 星塵護衛在承傷瞬間觸發護盾並反射，疊在 P 鑄鐵誓約的護盾層上。\n設計資料\n信心中\n設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。",
+        "dataText": "較有優勢2虛空裂縫Voidrift · 刺客 · 中路W 神聖嘲諷是範圍嘲諷，虛空裂縫 R 切到背後後必須留在近身輸出，嘲諷直接吃掉他的收割窗口。設計資料信心中星辰弓手射手 · 下路高耐久近戰先手對上需要靜止蓄力、又沒有位移的站樁射手。系統推測信心中較難應付2毀滅者Ravager · 戰士 · 上路毀滅者 R 覆滅之怒 6 秒免疫 CC，嘲諷與擊飛全部無效，還附帶真實傷害穿高護甲。設計資料信心高大師Maestro · 射手 · 下路大師 P 第四擊附帶「已損失血量 6–12%」真實傷害，血量越高收益越大。設計資料信心高適合搭配2冰霜術士法師 · 中路R 神聖審判擊飛 1.75 秒開團，正好給冰霜術士 E／R 的範圍凍結一個穩定落點。設計資料信心高星輝Luminary · 輔助 · 輔助星輝 W 星塵護衛在承傷瞬間觸發護盾並反射，疊在 P 鑄鐵誓約的護盾層上。設計資料信心中",
+        "disclaimer": "設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。",
+        "emptyText": "",
+        "inferredNote": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。"
+      }
+    },
+    {
+      "label": "mob360 8a) 開啟星輝",
+      "ok": true,
+      "extra": {
+        "hero": "luminary",
+        "tab": "overview",
+        "hasBack": false,
+        "x": 180,
+        "top": 198,
+        "bottom": 704,
+        "scrollTop": 0,
+        "maxScroll": 0,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "padBottom": "26px",
+        "nested": [],
+        "clipping": [],
+        "vh": 800,
+        "insideViewport": true,
+        "matchupText": "",
+        "dataText": "",
+        "disclaimer": "",
+        "emptyText": "",
+        "inferredNote": ""
+      }
+    },
+    {
+      "label": "mob360 8b) 星輝的「較有優勢」是空的，並顯示區塊空狀態文案",
+      "ok": true,
+      "extra": {
+        "section": "strongAgainst",
+        "count": 0,
+        "empty": true,
+        "emptyText": "目前尚無已整理的對位資料。",
+        "title": "較有優勢"
+      }
+    },
+    {
+      "label": "mob360 8c) 另外兩區照常有資料（1／2），空的只有該區",
+      "ok": true,
+      "extra": [
+        [
+          "strongAgainst",
+          0,
+          true
+        ],
+        [
+          "weakAgainst",
+          1,
+          false
+        ],
+        [
+          "synergies",
+          2,
+          false
+        ]
+      ]
+    },
+    {
+      "label": "mob360 9a) 開啟靈魂共鳴（本輪沒有整理對位資料的英雄）",
+      "ok": true,
+      "extra": {
+        "hero": "linghun",
+        "tab": "overview",
+        "hasBack": false,
+        "x": 180,
+        "top": 184,
+        "bottom": 704,
+        "scrollTop": 0,
+        "maxScroll": 0,
+        "overflowY": "auto",
+        "overscroll": "contain",
+        "padBottom": "26px",
+        "nested": [],
+        "clipping": [],
+        "vh": 800,
+        "insideViewport": true,
+        "matchupText": "",
+        "dataText": "",
+        "disclaimer": "",
+        "emptyText": "",
+        "inferredNote": ""
+      }
+    },
+    {
+      "label": "mob360 9b) 顯示空狀態文案「目前尚無已整理的對位資料。」",
+      "ok": true,
+      "extra": {
+        "tab": "matchups",
+        "emptyText": "目前尚無已整理的對位資料。\n對位資料由設計端逐隻整理，尚未涵蓋全部英雄。",
+        "matchupText": ""
+      }
+    },
+    {
+      "label": "mob360 9c) 空狀態不會冒出任何卡片，也沒有假數據",
+      "ok": true,
+      "extra": {
+        "tab": "matchups",
+        "emptyText": "目前尚無已整理的對位資料。\n對位資料由設計端逐隻整理，尚未涵蓋全部英雄。",
+        "matchupText": ""
+      }
+    },
+    {
+      "label": "mob360 10a) 回到 Ban/Pick",
+      "ok": true,
+      "extra": {
+        "onBanPick": true,
+        "counterNodes": 0,
+        "counterText": null
+      }
+    },
+    {
+      "label": "mob360 10b) Ban/Pick 沒有任何克制節點或克制字樣（Hotfix 2 未被推翻）",
+      "ok": true,
+      "extra": {
+        "onBanPick": true,
+        "counterNodes": 0,
+        "counterText": null
+      }
+    },
+    {
+      "label": "mob360 11a) 已推進到「輪到玩家」且我方已有 1 隻已選英雄",
+      "ok": true,
+      "extra": {
+        "myTurn": true,
+        "blue": [
+          "ravager"
+        ]
+      }
+    },
+    {
+      "label": "mob360 11b) 切到非預設篩選「戰士」（英雄池 18 位）",
+      "ok": true,
+      "extra": {
+        "filter": "戰士",
+        "query": "",
+        "scrollTop": 0,
+        "pool": 18,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 18
+      }
+    },
+    {
+      "label": "mob360 11c) 開關英雄詳情後，篩選仍是「戰士」且英雄池數量不變",
+      "ok": true,
+      "extra": {
+        "before": {
+          "filter": "戰士",
+          "query": "",
+          "scrollTop": 0,
+          "pool": 18,
+          "blue": [
+            "ravager"
+          ],
+          "cards": 18
+        },
+        "after": {
+          "filter": "戰士",
+          "query": "",
+          "scrollTop": 0,
+          "pool": 18,
+          "blue": [
+            "ravager"
+          ],
+          "cards": 18
+        }
+      }
+    },
+    {
+      "label": "mob360 11d) 量測前狀態已就緒（搜尋「之」／30 位／捲動 120）",
+      "ok": true,
+      "extra": {
+        "filter": "全部",
+        "query": "之",
+        "scrollTop": 120,
+        "pool": 30,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 30
+      }
+    },
+    {
+      "label": "mob360 11e) 找得到一張看得到的英雄卡的 ⓘ（hunpo），而且沒被蓋住、沒動到捲動位置",
+      "ok": true,
+      "extra": {
+        "id": "hunpo",
+        "x": 71,
+        "y": 417,
+        "notCovered": true,
+        "scrollTop": 120
+      }
+    },
+    {
+      "label": "mob360 11f) Ban/Pick 的 ⓘ 開出**五個**頁籤，第五個是「對位」",
+      "ok": true,
+      "extra": {
+        "hero": "hunpo",
+        "tabs": [
+          "overview",
+          "stats",
+          "skills",
+          "tactics",
+          "matchups"
+        ]
+      }
+    },
+    {
+      "label": "mob360 11g) 五個頁籤在 Ban/Pick 這條路徑上也都點得到",
+      "ok": true,
+      "extra": [
+        [
+          "overview",
+          true,
+          true,
+          59
+        ],
+        [
+          "stats",
+          true,
+          true,
+          59
+        ],
+        [
+          "skills",
+          true,
+          true,
+          59
+        ],
+        [
+          "tactics",
+          true,
+          true,
+          59
+        ],
+        [
+          "matchups",
+          true,
+          true,
+          59
+        ]
+      ]
+    },
+    {
+      "label": "mob360 11h) 對位頁在 Ban/Pick 路徑上真的畫得出來（三區塊或空狀態）",
+      "ok": true,
+      "extra": {
+        "hero": "hunpo",
+        "tab": "matchups",
+        "sections": 0,
+        "empty": true
+      }
+    },
+    {
+      "label": "mob360 11i) 這一頁一樣沒有勝率／場次／版本統計",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 11j) 關閉詳情後，搜尋關鍵字仍是「之」（英雄池 30 位不變）",
+      "ok": true,
+      "extra": {
+        "before": {
+          "filter": "全部",
+          "query": "之",
+          "scrollTop": 120,
+          "pool": 30,
+          "blue": [
+            "ravager"
+          ],
+          "cards": 30
+        },
+        "after": {
+          "filter": "全部",
+          "query": "之",
+          "scrollTop": 120,
+          "pool": 30,
+          "blue": [
+            "ravager"
+          ],
+          "cards": 30
+        }
+      }
+    },
+    {
+      "label": "mob360 11k) 關閉詳情後，英雄格捲動位置沒有被歸零（120 → 120）",
+      "ok": true,
+      "extra": {
+        "before": 120,
+        "after": 120
+      }
+    },
+    {
+      "label": "mob360 11l) 關閉詳情後，已選英雄一隻都沒少",
+      "ok": true,
+      "extra": {
+        "before": [
+          "ravager"
+        ],
+        "after": [
+          "ravager"
+        ]
+      }
+    },
+    {
+      "label": "mob360 11m) 關閉詳情後仍停在 Ban/Pick，而且還是輪到玩家（沒有被彈窗打斷流程）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 11n) 關閉詳情後 Ban/Pick 主畫面依然沒有克制節點或克制字樣",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 11o) Ban/Pick 池子裡找得到有對位資料的英雄（stoneguard）",
+      "ok": true,
+      "extra": {
+        "hero": "stoneguard",
+        "x": 134,
+        "y": 480
+      }
+    },
+    {
+      "label": "mob360 11p) 在 Ban/Pick 路徑上真的畫出三個區塊與 4 張對位卡（不是空狀態）",
+      "ok": true,
+      "extra": {
+        "hero": "stoneguard",
+        "sections": [
+          [
+            "strongAgainst",
+            2
+          ],
+          [
+            "weakAgainst",
+            1
+          ],
+          [
+            "synergies",
+            1
+          ]
+        ],
+        "cards": 4
+      }
+    },
+    {
+      "label": "mob360 11q) 這條路徑上的卡片一樣有來源標籤與信心程度",
+      "ok": true,
+      "extra": [
+        [
+          "ravager",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "sting",
+          "設計資料",
+          "信心中"
+        ],
+        [
+          "leiting",
+          "設計資料",
+          "信心高"
+        ],
+        [
+          "xingchen",
+          "設計資料",
+          "信心高"
+        ]
+      ]
+    }
+  ],
+  "shots": [
+    "desk1920-01-matchups-top.png",
+    "desk1920-03-matchups-empty.png",
+    "desk1920-04-banpick-matchups.png",
+    "desk1366-04-banpick-matchups.png",
+    "mob390-01-matchups-top.png",
+    "mob390-02-matchups-bottom.png",
+    "mob390-03-matchups-empty.png",
+    "mob390-04-banpick-matchups.png",
+    "mob360-01-matchups-top.png",
+    "mob360-04-banpick-matchups.png"
+  ],
+  "data": {
+    "desk1920": {
+      "tabs": [
+        {
+          "tab": "overview",
+          "label": "概覽",
+          "active": true,
+          "x": 773,
+          "y": 372,
+          "w": 86,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "stats",
+          "label": "數據",
+          "active": false,
+          "x": 867,
+          "y": 372,
+          "w": 86,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "skills",
+          "label": "技能",
+          "active": false,
+          "x": 960,
+          "y": 372,
+          "w": 86,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "tactics",
+          "label": "戰術",
+          "active": false,
+          "x": 1053,
+          "y": 372,
+          "w": 86,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "matchups",
+          "label": "對位",
+          "active": false,
+          "x": 1147,
+          "y": 372,
+          "w": 86,
+          "inView": true,
+          "reachable": true
+        }
+      ],
+      "sections": [
+        {
+          "section": "strongAgainst",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "較有優勢"
+        },
+        {
+          "section": "weakAgainst",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "較難應付"
+        },
+        {
+          "section": "synergies",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "適合搭配"
+        }
+      ],
+      "cards": [
+        {
+          "hero": "voidrift",
+          "source": "design",
+          "conf": "medium",
+          "section": "strongAgainst",
+          "left": 730,
+          "top": 275,
+          "bottom": 418,
+          "w": 219,
+          "srcLabel": "設計資料",
+          "confLabel": "信心中"
+        },
+        {
+          "hero": "xingchen",
+          "source": "inferred",
+          "conf": "medium",
+          "section": "strongAgainst",
+          "left": 957,
+          "top": 275,
+          "bottom": 418,
+          "w": 219,
+          "srcLabel": "系統推測",
+          "confLabel": "信心中"
+        },
+        {
+          "hero": "ravager",
+          "source": "design",
+          "conf": "high",
+          "section": "weakAgainst",
+          "left": 730,
+          "top": 457,
+          "bottom": 584,
+          "w": 219,
+          "srcLabel": "設計資料",
+          "confLabel": "信心高"
+        },
+        {
+          "hero": "maestro",
+          "source": "design",
+          "conf": "high",
+          "section": "weakAgainst",
+          "left": 957,
+          "top": 457,
+          "bottom": 584,
+          "w": 219,
+          "srcLabel": "設計資料",
+          "confLabel": "信心高"
+        },
+        {
+          "hero": "bingshuang",
+          "source": "design",
+          "conf": "high",
+          "section": "synergies",
+          "left": 730,
+          "top": 623,
+          "bottom": 749,
+          "w": 219,
+          "srcLabel": "設計資料",
+          "confLabel": "信心高"
+        },
+        {
+          "hero": "luminary",
+          "source": "design",
+          "conf": "medium",
+          "section": "synergies",
+          "left": 957,
+          "top": 623,
+          "bottom": 749,
+          "w": 219,
+          "srcLabel": "設計資料",
+          "confLabel": "信心中"
+        }
+      ],
+      "matchupText": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。\n較有優勢\n2\n虛空裂縫\nVoidrift · 刺客 · 中路\nW 神聖嘲諷是範圍嘲諷，虛空裂縫 R 切到背後後必須留在近身輸出，嘲諷直接吃掉他的收割窗口。\n設計資料\n信心中\n星辰弓手\n射手 · 下路\n高耐久近戰先手對上需要靜止蓄力、又沒有位移的站樁射手。\n系統推測\n信心中\n較難應付\n2\n毀滅者\nRavager · 戰士 · 上路\n毀滅者 R 覆滅之怒 6 秒免疫 CC，嘲諷與擊飛全部無效，還附帶真實傷害穿高護甲。\n設計資料\n信心高\n大師\nMaestro · 射手 · 下路\n大師 P 第四擊附帶「已損失血量 6–12%」真實傷害，血量越高收益越大。\n設計資料\n信心高\n適合搭配\n2\n冰霜術士\n法師 · 中路\nR 神聖審判擊飛 1.75 秒開團，正好給冰霜術士 E／R 的範圍凍結一個穩定落點。\n設計資料\n信心高\n星輝\nLuminary · 輔助 · 輔助\n星輝 W 星塵護衛在承傷瞬間觸發護盾並反射，疊在 P 鑄鐵誓約的護盾層上。\n設計資料\n信心中\n設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。",
+      "cols": 2,
+      "scroll": {
+        "before": 0,
+        "after": 62,
+        "max": 62
+      },
+      "lastCard": {
+        "hero": "luminary",
+        "x": 1066,
+        "y": 624,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      },
+      "pushed": {
+        "hero": "ravager",
+        "tab": "matchups",
+        "hasBack": true
+      },
+      "popped": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false
+      },
+      "luminary": [
+        {
+          "section": "strongAgainst",
+          "count": 0,
+          "empty": true,
+          "emptyText": "目前尚無已整理的對位資料。",
+          "title": "較有優勢"
+        },
+        {
+          "section": "weakAgainst",
+          "count": 1,
+          "empty": false,
+          "emptyText": "",
+          "title": "較難應付"
+        },
+        {
+          "section": "synergies",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "適合搭配"
+        }
+      ],
+      "empty": {
+        "tab": "matchups",
+        "emptyText": "目前尚無已整理的對位資料。\n對位資料由設計端逐隻整理，尚未涵蓋全部英雄。",
+        "matchupText": ""
+      },
+      "banpick": {
+        "onBanPick": true,
+        "counterNodes": 0,
+        "counterText": null
+      },
+      "bpFilterBefore": {
+        "filter": "戰士",
+        "query": "",
+        "scrollTop": 0,
+        "pool": 19,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 19
+      },
+      "bpBefore": {
+        "filter": "全部",
+        "query": "之",
+        "scrollTop": 120,
+        "pool": 30,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 30
+      },
+      "banpickTabs": [
+        "overview",
+        "stats",
+        "skills",
+        "tactics",
+        "matchups"
+      ],
+      "banpickMatchups": {
+        "hero": "hunpo",
+        "tab": "matchups",
+        "sections": 0,
+        "empty": true
+      },
+      "bpAfter": {
+        "filter": "全部",
+        "query": "之",
+        "scrollTop": 120,
+        "pool": 30,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 30
+      },
+      "banpickWithData": {
+        "hero": "stoneguard",
+        "sections": [
+          [
+            "strongAgainst",
+            2
+          ],
+          [
+            "weakAgainst",
+            1
+          ],
+          [
+            "synergies",
+            1
+          ]
+        ],
+        "cards": 4
+      }
+    },
+    "desk1366": {
+      "tabs": [
+        {
+          "tab": "overview",
+          "label": "概覽",
+          "active": true,
+          "x": 496,
+          "y": 288,
+          "w": 86,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "stats",
+          "label": "數據",
+          "active": false,
+          "x": 590,
+          "y": 288,
+          "w": 86,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "skills",
+          "label": "技能",
+          "active": false,
+          "x": 683,
+          "y": 288,
+          "w": 86,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "tactics",
+          "label": "戰術",
+          "active": false,
+          "x": 776,
+          "y": 288,
+          "w": 86,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "matchups",
+          "label": "對位",
+          "active": false,
+          "x": 870,
+          "y": 288,
+          "w": 86,
+          "inView": true,
+          "reachable": true
+        }
+      ],
+      "sections": [
+        {
+          "section": "strongAgainst",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "較有優勢"
+        },
+        {
+          "section": "weakAgainst",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "較難應付"
+        },
+        {
+          "section": "synergies",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "適合搭配"
+        }
+      ],
+      "cards": [
+        {
+          "hero": "voidrift",
+          "source": "design",
+          "conf": "medium",
+          "section": "strongAgainst",
+          "left": 453,
+          "top": 265,
+          "bottom": 408,
+          "w": 219,
+          "srcLabel": "設計資料",
+          "confLabel": "信心中"
+        },
+        {
+          "hero": "xingchen",
+          "source": "inferred",
+          "conf": "medium",
+          "section": "strongAgainst",
+          "left": 680,
+          "top": 265,
+          "bottom": 408,
+          "w": 219,
+          "srcLabel": "系統推測",
+          "confLabel": "信心中"
+        },
+        {
+          "hero": "ravager",
+          "source": "design",
+          "conf": "high",
+          "section": "weakAgainst",
+          "left": 453,
+          "top": 447,
+          "bottom": 574,
+          "w": 219,
+          "srcLabel": "設計資料",
+          "confLabel": "信心高"
+        },
+        {
+          "hero": "maestro",
+          "source": "design",
+          "conf": "high",
+          "section": "weakAgainst",
+          "left": 680,
+          "top": 447,
+          "bottom": 574,
+          "w": 219,
+          "srcLabel": "設計資料",
+          "confLabel": "信心高"
+        },
+        {
+          "hero": "bingshuang",
+          "source": "design",
+          "conf": "high",
+          "section": "synergies",
+          "left": 453,
+          "top": 613,
+          "bottom": 739,
+          "w": 219,
+          "srcLabel": "設計資料",
+          "confLabel": "信心高"
+        },
+        {
+          "hero": "luminary",
+          "source": "design",
+          "conf": "medium",
+          "section": "synergies",
+          "left": 680,
+          "top": 613,
+          "bottom": 739,
+          "w": 219,
+          "srcLabel": "設計資料",
+          "confLabel": "信心中"
+        }
+      ],
+      "matchupText": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。\n較有優勢\n2\n虛空裂縫\nVoidrift · 刺客 · 中路\nW 神聖嘲諷是範圍嘲諷，虛空裂縫 R 切到背後後必須留在近身輸出，嘲諷直接吃掉他的收割窗口。\n設計資料\n信心中\n星辰弓手\n射手 · 下路\n高耐久近戰先手對上需要靜止蓄力、又沒有位移的站樁射手。\n系統推測\n信心中\n較難應付\n2\n毀滅者\nRavager · 戰士 · 上路\n毀滅者 R 覆滅之怒 6 秒免疫 CC，嘲諷與擊飛全部無效，還附帶真實傷害穿高護甲。\n設計資料\n信心高\n大師\nMaestro · 射手 · 下路\n大師 P 第四擊附帶「已損失血量 6–12%」真實傷害，血量越高收益越大。\n設計資料\n信心高\n適合搭配\n2\n冰霜術士\n法師 · 中路\nR 神聖審判擊飛 1.75 秒開團，正好給冰霜術士 E／R 的範圍凍結一個穩定落點。\n設計資料\n信心高\n星輝\nLuminary · 輔助 · 輔助\n星輝 W 星塵護衛在承傷瞬間觸發護盾並反射，疊在 P 鑄鐵誓約的護盾層上。\n設計資料\n信心中\n設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。",
+      "cols": 2,
+      "scroll": {
+        "before": 0,
+        "after": 136,
+        "max": 136
+      },
+      "lastCard": {
+        "hero": "luminary",
+        "x": 789,
+        "y": 540,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      },
+      "pushed": {
+        "hero": "ravager",
+        "tab": "matchups",
+        "hasBack": true
+      },
+      "popped": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false
+      },
+      "luminary": [
+        {
+          "section": "strongAgainst",
+          "count": 0,
+          "empty": true,
+          "emptyText": "目前尚無已整理的對位資料。",
+          "title": "較有優勢"
+        },
+        {
+          "section": "weakAgainst",
+          "count": 1,
+          "empty": false,
+          "emptyText": "",
+          "title": "較難應付"
+        },
+        {
+          "section": "synergies",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "適合搭配"
+        }
+      ],
+      "empty": {
+        "tab": "matchups",
+        "emptyText": "目前尚無已整理的對位資料。\n對位資料由設計端逐隻整理，尚未涵蓋全部英雄。",
+        "matchupText": ""
+      },
+      "banpick": {
+        "onBanPick": true,
+        "counterNodes": 0,
+        "counterText": null
+      },
+      "bpFilterBefore": {
+        "filter": "戰士",
+        "query": "",
+        "scrollTop": 0,
+        "pool": 18,
+        "blue": [
+          "cinderfist"
+        ],
+        "cards": 18
+      },
+      "bpBefore": {
+        "filter": "全部",
+        "query": "之",
+        "scrollTop": 120,
+        "pool": 30,
+        "blue": [
+          "cinderfist"
+        ],
+        "cards": 30
+      },
+      "banpickTabs": [
+        "overview",
+        "stats",
+        "skills",
+        "tactics",
+        "matchups"
+      ],
+      "banpickMatchups": {
+        "hero": "hunpo",
+        "tab": "matchups",
+        "sections": 0,
+        "empty": true
+      },
+      "bpAfter": {
+        "filter": "全部",
+        "query": "之",
+        "scrollTop": 120,
+        "pool": 30,
+        "blue": [
+          "cinderfist"
+        ],
+        "cards": 30
+      },
+      "banpickWithData": {
+        "hero": "stoneguard",
+        "sections": [
+          [
+            "strongAgainst",
+            2
+          ],
+          [
+            "weakAgainst",
+            1
+          ],
+          [
+            "synergies",
+            1
+          ]
+        ],
+        "cards": 4
+      }
+    },
+    "mob430": {
+      "tabs": [
+        {
+          "tab": "overview",
+          "label": "概覽",
+          "active": true,
+          "x": 55,
+          "y": 372,
+          "w": 73,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "stats",
+          "label": "數據",
+          "active": false,
+          "x": 135,
+          "y": 372,
+          "w": 73,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "skills",
+          "label": "技能",
+          "active": false,
+          "x": 215,
+          "y": 372,
+          "w": 73,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "tactics",
+          "label": "戰術",
+          "active": false,
+          "x": 295,
+          "y": 372,
+          "w": 73,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "matchups",
+          "label": "對位",
+          "active": false,
+          "x": 375,
+          "y": 372,
+          "w": 73,
+          "inView": true,
+          "reachable": true
+        }
+      ],
+      "sections": [
+        {
+          "section": "strongAgainst",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "較有優勢"
+        },
+        {
+          "section": "weakAgainst",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "較難應付"
+        },
+        {
+          "section": "synergies",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "適合搭配"
+        }
+      ],
+      "cards": [
+        {
+          "hero": "voidrift",
+          "source": "design",
+          "conf": "medium",
+          "section": "strongAgainst",
+          "left": 19,
+          "top": 275,
+          "bottom": 384,
+          "w": 392,
+          "srcLabel": "設計資料",
+          "confLabel": "信心中"
+        },
+        {
+          "hero": "xingchen",
+          "source": "inferred",
+          "conf": "medium",
+          "section": "strongAgainst",
+          "left": 19,
+          "top": 392,
+          "bottom": 484,
+          "w": 392,
+          "srcLabel": "系統推測",
+          "confLabel": "信心中"
+        },
+        {
+          "hero": "ravager",
+          "source": "design",
+          "conf": "high",
+          "section": "weakAgainst",
+          "left": 19,
+          "top": 523,
+          "bottom": 633,
+          "w": 392,
+          "srcLabel": "設計資料",
+          "confLabel": "信心高"
+        },
+        {
+          "hero": "maestro",
+          "source": "design",
+          "conf": "high",
+          "section": "weakAgainst",
+          "left": 19,
+          "top": 641,
+          "bottom": 750,
+          "w": 392,
+          "srcLabel": "設計資料",
+          "confLabel": "信心高"
+        },
+        {
+          "hero": "bingshuang",
+          "source": "design",
+          "conf": "high",
+          "section": "synergies",
+          "left": 19,
+          "top": 789,
+          "bottom": 898,
+          "w": 392,
+          "srcLabel": "設計資料",
+          "confLabel": "信心高"
+        },
+        {
+          "hero": "luminary",
+          "source": "design",
+          "conf": "medium",
+          "section": "synergies",
+          "left": 19,
+          "top": 906,
+          "bottom": 1016,
+          "w": 392,
+          "srcLabel": "設計資料",
+          "confLabel": "信心中"
+        }
+      ],
+      "matchupText": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。\n較有優勢\n2\n虛空裂縫\nVoidrift · 刺客 · 中路\nW 神聖嘲諷是範圍嘲諷，虛空裂縫 R 切到背後後必須留在近身輸出，嘲諷直接吃掉他的收割窗口。\n設計資料\n信心中\n星辰弓手\n射手 · 下路\n高耐久近戰先手對上需要靜止蓄力、又沒有位移的站樁射手。\n系統推測\n信心中\n較難應付\n2\n毀滅者\nRavager · 戰士 · 上路\n毀滅者 R 覆滅之怒 6 秒免疫 CC，嘲諷與擊飛全部無效，還附帶真實傷害穿高護甲。\n設計資料\n信心高\n大師\nMaestro · 射手 · 下路\n大師 P 第四擊附帶「已損失血量 6–12%」真實傷害，血量越高收益越大。\n設計資料\n信心高\n適合搭配\n2\n冰霜術士\n法師 · 中路\nR 神聖審判擊飛 1.75 秒開團，正好給冰霜術士 E／R 的範圍凍結一個穩定落點。\n設計資料\n信心高\n星輝\nLuminary · 輔助 · 輔助\n星輝 W 星塵護衛在承傷瞬間觸發護盾並反射，疊在 P 鑄鐵誓約的護盾層上。\n設計資料\n信心中\n設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。",
+      "cols": 1,
+      "scroll": {
+        "before": 0,
+        "after": 329,
+        "max": 329
+      },
+      "lastCard": {
+        "hero": "luminary",
+        "x": 215,
+        "y": 632,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      },
+      "pushed": {
+        "hero": "ravager",
+        "tab": "matchups",
+        "hasBack": true
+      },
+      "popped": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false
+      },
+      "luminary": [
+        {
+          "section": "strongAgainst",
+          "count": 0,
+          "empty": true,
+          "emptyText": "目前尚無已整理的對位資料。",
+          "title": "較有優勢"
+        },
+        {
+          "section": "weakAgainst",
+          "count": 1,
+          "empty": false,
+          "emptyText": "",
+          "title": "較難應付"
+        },
+        {
+          "section": "synergies",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "適合搭配"
+        }
+      ],
+      "empty": {
+        "tab": "matchups",
+        "emptyText": "目前尚無已整理的對位資料。\n對位資料由設計端逐隻整理，尚未涵蓋全部英雄。",
+        "matchupText": ""
+      },
+      "banpick": {
+        "onBanPick": true,
+        "counterNodes": 0,
+        "counterText": null
+      },
+      "bpFilterBefore": {
+        "filter": "戰士",
+        "query": "",
+        "scrollTop": 0,
+        "pool": 17,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 17
+      },
+      "bpBefore": {
+        "filter": "全部",
+        "query": "之",
+        "scrollTop": 120,
+        "pool": 30,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 30
+      },
+      "banpickTabs": [
+        "overview",
+        "stats",
+        "skills",
+        "tactics",
+        "matchups"
+      ],
+      "banpickMatchups": {
+        "hero": "hunpo",
+        "tab": "matchups",
+        "sections": 0,
+        "empty": true
+      },
+      "bpAfter": {
+        "filter": "全部",
+        "query": "之",
+        "scrollTop": 120,
+        "pool": 30,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 30
+      },
+      "banpickWithData": {
+        "hero": "stoneguard",
+        "sections": [
+          [
+            "strongAgainst",
+            2
+          ],
+          [
+            "weakAgainst",
+            1
+          ],
+          [
+            "synergies",
+            1
+          ]
+        ],
+        "cards": 4
+      }
+    },
+    "mob412": {
+      "tabs": [
+        {
+          "tab": "overview",
+          "label": "概覽",
+          "active": true,
+          "x": 54,
+          "y": 372,
+          "w": 69,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "stats",
+          "label": "數據",
+          "active": false,
+          "x": 130,
+          "y": 372,
+          "w": 69,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "skills",
+          "label": "技能",
+          "active": false,
+          "x": 206,
+          "y": 372,
+          "w": 69,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "tactics",
+          "label": "戰術",
+          "active": false,
+          "x": 282,
+          "y": 372,
+          "w": 69,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "matchups",
+          "label": "對位",
+          "active": false,
+          "x": 358,
+          "y": 372,
+          "w": 69,
+          "inView": true,
+          "reachable": true
+        }
+      ],
+      "sections": [
+        {
+          "section": "strongAgainst",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "較有優勢"
+        },
+        {
+          "section": "weakAgainst",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "較難應付"
+        },
+        {
+          "section": "synergies",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "適合搭配"
+        }
+      ],
+      "cards": [
+        {
+          "hero": "voidrift",
+          "source": "design",
+          "conf": "medium",
+          "section": "strongAgainst",
+          "left": 19,
+          "top": 275,
+          "bottom": 384,
+          "w": 374,
+          "srcLabel": "設計資料",
+          "confLabel": "信心中"
+        },
+        {
+          "hero": "xingchen",
+          "source": "inferred",
+          "conf": "medium",
+          "section": "strongAgainst",
+          "left": 19,
+          "top": 392,
+          "bottom": 501,
+          "w": 374,
+          "srcLabel": "系統推測",
+          "confLabel": "信心中"
+        },
+        {
+          "hero": "ravager",
+          "source": "design",
+          "conf": "high",
+          "section": "weakAgainst",
+          "left": 19,
+          "top": 540,
+          "bottom": 650,
+          "w": 374,
+          "srcLabel": "設計資料",
+          "confLabel": "信心高"
+        },
+        {
+          "hero": "maestro",
+          "source": "design",
+          "conf": "high",
+          "section": "weakAgainst",
+          "left": 19,
+          "top": 658,
+          "bottom": 767,
+          "w": 374,
+          "srcLabel": "設計資料",
+          "confLabel": "信心高"
+        },
+        {
+          "hero": "bingshuang",
+          "source": "design",
+          "conf": "high",
+          "section": "synergies",
+          "left": 19,
+          "top": 806,
+          "bottom": 916,
+          "w": 374,
+          "srcLabel": "設計資料",
+          "confLabel": "信心高"
+        },
+        {
+          "hero": "luminary",
+          "source": "design",
+          "conf": "medium",
+          "section": "synergies",
+          "left": 19,
+          "top": 924,
+          "bottom": 1033,
+          "w": 374,
+          "srcLabel": "設計資料",
+          "confLabel": "信心中"
+        }
+      ],
+      "matchupText": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。\n較有優勢\n2\n虛空裂縫\nVoidrift · 刺客 · 中路\nW 神聖嘲諷是範圍嘲諷，虛空裂縫 R 切到背後後必須留在近身輸出，嘲諷直接吃掉他的收割窗口。\n設計資料\n信心中\n星辰弓手\n射手 · 下路\n高耐久近戰先手對上需要靜止蓄力、又沒有位移的站樁射手。\n系統推測\n信心中\n較難應付\n2\n毀滅者\nRavager · 戰士 · 上路\n毀滅者 R 覆滅之怒 6 秒免疫 CC，嘲諷與擊飛全部無效，還附帶真實傷害穿高護甲。\n設計資料\n信心高\n大師\nMaestro · 射手 · 下路\n大師 P 第四擊附帶「已損失血量 6–12%」真實傷害，血量越高收益越大。\n設計資料\n信心高\n適合搭配\n2\n冰霜術士\n法師 · 中路\nR 神聖審判擊飛 1.75 秒開團，正好給冰霜術士 E／R 的範圍凍結一個穩定落點。\n設計資料\n信心高\n星輝\nLuminary · 輔助 · 輔助\n星輝 W 星塵護衛在承傷瞬間觸發護盾並反射，疊在 P 鑄鐵誓約的護盾層上。\n設計資料\n信心中\n設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。",
+      "cols": 1,
+      "scroll": {
+        "before": 0,
+        "after": 346,
+        "max": 346
+      },
+      "lastCard": {
+        "hero": "luminary",
+        "x": 206,
+        "y": 632,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      },
+      "pushed": {
+        "hero": "ravager",
+        "tab": "matchups",
+        "hasBack": true
+      },
+      "popped": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false
+      },
+      "luminary": [
+        {
+          "section": "strongAgainst",
+          "count": 0,
+          "empty": true,
+          "emptyText": "目前尚無已整理的對位資料。",
+          "title": "較有優勢"
+        },
+        {
+          "section": "weakAgainst",
+          "count": 1,
+          "empty": false,
+          "emptyText": "",
+          "title": "較難應付"
+        },
+        {
+          "section": "synergies",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "適合搭配"
+        }
+      ],
+      "empty": {
+        "tab": "matchups",
+        "emptyText": "目前尚無已整理的對位資料。\n對位資料由設計端逐隻整理，尚未涵蓋全部英雄。",
+        "matchupText": ""
+      },
+      "banpick": {
+        "onBanPick": true,
+        "counterNodes": 0,
+        "counterText": null
+      },
+      "bpFilterBefore": {
+        "filter": "戰士",
+        "query": "",
+        "scrollTop": 0,
+        "pool": 18,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 18
+      },
+      "bpBefore": {
+        "filter": "全部",
+        "query": "之",
+        "scrollTop": 120,
+        "pool": 29,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 29
+      },
+      "banpickTabs": [
+        "overview",
+        "stats",
+        "skills",
+        "tactics",
+        "matchups"
+      ],
+      "banpickMatchups": {
+        "hero": "yanfeng",
+        "tab": "matchups",
+        "sections": 0,
+        "empty": true
+      },
+      "bpAfter": {
+        "filter": "全部",
+        "query": "之",
+        "scrollTop": 120,
+        "pool": 29,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 29
+      },
+      "banpickWithData": {
+        "hero": "stoneguard",
+        "sections": [
+          [
+            "strongAgainst",
+            2
+          ],
+          [
+            "weakAgainst",
+            1
+          ],
+          [
+            "synergies",
+            1
+          ]
+        ],
+        "cards": 4
+      }
+    },
+    "mob390": {
+      "tabs": [
+        {
+          "tab": "overview",
+          "label": "概覽",
+          "active": true,
+          "x": 51,
+          "y": 355,
+          "w": 65,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "stats",
+          "label": "數據",
+          "active": false,
+          "x": 123,
+          "y": 355,
+          "w": 65,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "skills",
+          "label": "技能",
+          "active": false,
+          "x": 195,
+          "y": 355,
+          "w": 65,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "tactics",
+          "label": "戰術",
+          "active": false,
+          "x": 267,
+          "y": 355,
+          "w": 65,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "matchups",
+          "label": "對位",
+          "active": false,
+          "x": 339,
+          "y": 355,
+          "w": 65,
+          "inView": true,
+          "reachable": true
+        }
+      ],
+      "sections": [
+        {
+          "section": "strongAgainst",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "較有優勢"
+        },
+        {
+          "section": "weakAgainst",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "較難應付"
+        },
+        {
+          "section": "synergies",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "適合搭配"
+        }
+      ],
+      "cards": [
+        {
+          "hero": "voidrift",
+          "source": "design",
+          "conf": "medium",
+          "section": "strongAgainst",
+          "left": 19,
+          "top": 273,
+          "bottom": 382,
+          "w": 352,
+          "srcLabel": "設計資料",
+          "confLabel": "信心中"
+        },
+        {
+          "hero": "xingchen",
+          "source": "inferred",
+          "conf": "medium",
+          "section": "strongAgainst",
+          "left": 19,
+          "top": 390,
+          "bottom": 499,
+          "w": 352,
+          "srcLabel": "系統推測",
+          "confLabel": "信心中"
+        },
+        {
+          "hero": "ravager",
+          "source": "design",
+          "conf": "high",
+          "section": "weakAgainst",
+          "left": 19,
+          "top": 538,
+          "bottom": 648,
+          "w": 352,
+          "srcLabel": "設計資料",
+          "confLabel": "信心高"
+        },
+        {
+          "hero": "maestro",
+          "source": "design",
+          "conf": "high",
+          "section": "weakAgainst",
+          "left": 19,
+          "top": 656,
+          "bottom": 765,
+          "w": 352,
+          "srcLabel": "設計資料",
+          "confLabel": "信心高"
+        },
+        {
+          "hero": "bingshuang",
+          "source": "design",
+          "conf": "high",
+          "section": "synergies",
+          "left": 19,
+          "top": 804,
+          "bottom": 913,
+          "w": 352,
+          "srcLabel": "設計資料",
+          "confLabel": "信心高"
+        },
+        {
+          "hero": "luminary",
+          "source": "design",
+          "conf": "medium",
+          "section": "synergies",
+          "left": 19,
+          "top": 921,
+          "bottom": 1031,
+          "w": 352,
+          "srcLabel": "設計資料",
+          "confLabel": "信心中"
+        }
+      ],
+      "matchupText": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。\n較有優勢\n2\n虛空裂縫\nVoidrift · 刺客 · 中路\nW 神聖嘲諷是範圍嘲諷，虛空裂縫 R 切到背後後必須留在近身輸出，嘲諷直接吃掉他的收割窗口。\n設計資料\n信心中\n星辰弓手\n射手 · 下路\n高耐久近戰先手對上需要靜止蓄力、又沒有位移的站樁射手。\n系統推測\n信心中\n較難應付\n2\n毀滅者\nRavager · 戰士 · 上路\n毀滅者 R 覆滅之怒 6 秒免疫 CC，嘲諷與擊飛全部無效，還附帶真實傷害穿高護甲。\n設計資料\n信心高\n大師\nMaestro · 射手 · 下路\n大師 P 第四擊附帶「已損失血量 6–12%」真實傷害，血量越高收益越大。\n設計資料\n信心高\n適合搭配\n2\n冰霜術士\n法師 · 中路\nR 神聖審判擊飛 1.75 秒開團，正好給冰霜術士 E／R 的範圍凍結一個穩定落點。\n設計資料\n信心高\n星輝\nLuminary · 輔助 · 輔助\n星輝 W 星塵護衛在承傷瞬間觸發護盾並反射，疊在 P 鑄鐵誓約的護盾層上。\n設計資料\n信心中\n設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。",
+      "cols": 1,
+      "scroll": {
+        "before": 0,
+        "after": 361,
+        "max": 361
+      },
+      "lastCard": {
+        "hero": "luminary",
+        "x": 195,
+        "y": 615,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      },
+      "pushed": {
+        "hero": "ravager",
+        "tab": "matchups",
+        "hasBack": true
+      },
+      "popped": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false
+      },
+      "luminary": [
+        {
+          "section": "strongAgainst",
+          "count": 0,
+          "empty": true,
+          "emptyText": "目前尚無已整理的對位資料。",
+          "title": "較有優勢"
+        },
+        {
+          "section": "weakAgainst",
+          "count": 1,
+          "empty": false,
+          "emptyText": "",
+          "title": "較難應付"
+        },
+        {
+          "section": "synergies",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "適合搭配"
+        }
+      ],
+      "empty": {
+        "tab": "matchups",
+        "emptyText": "目前尚無已整理的對位資料。\n對位資料由設計端逐隻整理，尚未涵蓋全部英雄。",
+        "matchupText": ""
+      },
+      "banpick": {
+        "onBanPick": true,
+        "counterNodes": 0,
+        "counterText": null
+      },
+      "bpFilterBefore": {
+        "filter": "戰士",
+        "query": "",
+        "scrollTop": 0,
+        "pool": 19,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 19
+      },
+      "bpBefore": {
+        "filter": "全部",
+        "query": "之",
+        "scrollTop": 120,
+        "pool": 29,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 29
+      },
+      "banpickTabs": [
+        "overview",
+        "stats",
+        "skills",
+        "tactics",
+        "matchups"
+      ],
+      "banpickMatchups": {
+        "hero": "yanfeng",
+        "tab": "matchups",
+        "sections": 0,
+        "empty": true
+      },
+      "bpAfter": {
+        "filter": "全部",
+        "query": "之",
+        "scrollTop": 120,
+        "pool": 29,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 29
+      },
+      "banpickWithData": {
+        "hero": "stoneguard",
+        "sections": [
+          [
+            "strongAgainst",
+            2
+          ],
+          [
+            "weakAgainst",
+            1
+          ],
+          [
+            "synergies",
+            1
+          ]
+        ],
+        "cards": 4
+      }
+    },
+    "mob360": {
+      "tabs": [
+        {
+          "tab": "overview",
+          "label": "概覽",
+          "active": true,
+          "x": 48,
+          "y": 316,
+          "w": 59,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "stats",
+          "label": "數據",
+          "active": false,
+          "x": 114,
+          "y": 316,
+          "w": 59,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "skills",
+          "label": "技能",
+          "active": false,
+          "x": 180,
+          "y": 316,
+          "w": 59,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "tactics",
+          "label": "戰術",
+          "active": false,
+          "x": 246,
+          "y": 316,
+          "w": 59,
+          "inView": true,
+          "reachable": true
+        },
+        {
+          "tab": "matchups",
+          "label": "對位",
+          "active": false,
+          "x": 312,
+          "y": 316,
+          "w": 59,
+          "inView": true,
+          "reachable": true
+        }
+      ],
+      "sections": [
+        {
+          "section": "strongAgainst",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "較有優勢"
+        },
+        {
+          "section": "weakAgainst",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "較難應付"
+        },
+        {
+          "section": "synergies",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "適合搭配"
+        }
+      ],
+      "cards": [
+        {
+          "hero": "voidrift",
+          "source": "design",
+          "conf": "medium",
+          "section": "strongAgainst",
+          "left": 19,
+          "top": 286,
+          "bottom": 395,
+          "w": 322,
+          "srcLabel": "設計資料",
+          "confLabel": "信心中"
+        },
+        {
+          "hero": "xingchen",
+          "source": "inferred",
+          "conf": "medium",
+          "section": "strongAgainst",
+          "left": 19,
+          "top": 403,
+          "bottom": 512,
+          "w": 322,
+          "srcLabel": "系統推測",
+          "confLabel": "信心中"
+        },
+        {
+          "hero": "ravager",
+          "source": "design",
+          "conf": "high",
+          "section": "weakAgainst",
+          "left": 19,
+          "top": 551,
+          "bottom": 661,
+          "w": 322,
+          "srcLabel": "設計資料",
+          "confLabel": "信心高"
+        },
+        {
+          "hero": "maestro",
+          "source": "design",
+          "conf": "high",
+          "section": "weakAgainst",
+          "left": 19,
+          "top": 669,
+          "bottom": 778,
+          "w": 322,
+          "srcLabel": "設計資料",
+          "confLabel": "信心高"
+        },
+        {
+          "hero": "bingshuang",
+          "source": "design",
+          "conf": "high",
+          "section": "synergies",
+          "left": 19,
+          "top": 817,
+          "bottom": 926,
+          "w": 322,
+          "srcLabel": "設計資料",
+          "confLabel": "信心高"
+        },
+        {
+          "hero": "luminary",
+          "source": "design",
+          "conf": "medium",
+          "section": "synergies",
+          "left": 19,
+          "top": 934,
+          "bottom": 1044,
+          "w": 322,
+          "srcLabel": "設計資料",
+          "confLabel": "信心中"
+        }
+      ],
+      "matchupText": "⚠\n此內容依英雄定位與技能特性推測，不代表真實玩家勝率。\n較有優勢\n2\n虛空裂縫\nVoidrift · 刺客 · 中路\nW 神聖嘲諷是範圍嘲諷，虛空裂縫 R 切到背後後必須留在近身輸出，嘲諷直接吃掉他的收割窗口。\n設計資料\n信心中\n星辰弓手\n射手 · 下路\n高耐久近戰先手對上需要靜止蓄力、又沒有位移的站樁射手。\n系統推測\n信心中\n較難應付\n2\n毀滅者\nRavager · 戰士 · 上路\n毀滅者 R 覆滅之怒 6 秒免疫 CC，嘲諷與擊飛全部無效，還附帶真實傷害穿高護甲。\n設計資料\n信心高\n大師\nMaestro · 射手 · 下路\n大師 P 第四擊附帶「已損失血量 6–12%」真實傷害，血量越高收益越大。\n設計資料\n信心高\n適合搭配\n2\n冰霜術士\n法師 · 中路\nR 神聖審判擊飛 1.75 秒開團，正好給冰霜術士 E／R 的範圍凍結一個穩定落點。\n設計資料\n信心高\n星輝\nLuminary · 輔助 · 輔助\n星輝 W 星塵護衛在承傷瞬間觸發護盾並反射，疊在 P 鑄鐵誓約的護盾層上。\n設計資料\n信心中\n設計資料＝依雙方技能組寫明的互動；系統推測＝依定位與技能特性推論。\n本作沒有真實對局樣本，因此不顯示勝率、場次或版本統計。",
+      "cols": 1,
+      "scroll": {
+        "before": 0,
+        "after": 413,
+        "max": 413
+      },
+      "lastCard": {
+        "hero": "luminary",
+        "x": 180,
+        "y": 576,
+        "inView": true,
+        "notCovered": true,
+        "hitId": "DIV"
+      },
+      "pushed": {
+        "hero": "ravager",
+        "tab": "matchups",
+        "hasBack": true
+      },
+      "popped": {
+        "hero": "ironclad",
+        "tab": "matchups",
+        "hasBack": false
+      },
+      "luminary": [
+        {
+          "section": "strongAgainst",
+          "count": 0,
+          "empty": true,
+          "emptyText": "目前尚無已整理的對位資料。",
+          "title": "較有優勢"
+        },
+        {
+          "section": "weakAgainst",
+          "count": 1,
+          "empty": false,
+          "emptyText": "",
+          "title": "較難應付"
+        },
+        {
+          "section": "synergies",
+          "count": 2,
+          "empty": false,
+          "emptyText": "",
+          "title": "適合搭配"
+        }
+      ],
+      "empty": {
+        "tab": "matchups",
+        "emptyText": "目前尚無已整理的對位資料。\n對位資料由設計端逐隻整理，尚未涵蓋全部英雄。",
+        "matchupText": ""
+      },
+      "banpick": {
+        "onBanPick": true,
+        "counterNodes": 0,
+        "counterText": null
+      },
+      "bpFilterBefore": {
+        "filter": "戰士",
+        "query": "",
+        "scrollTop": 0,
+        "pool": 18,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 18
+      },
+      "bpBefore": {
+        "filter": "全部",
+        "query": "之",
+        "scrollTop": 120,
+        "pool": 30,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 30
+      },
+      "banpickTabs": [
+        "overview",
+        "stats",
+        "skills",
+        "tactics",
+        "matchups"
+      ],
+      "banpickMatchups": {
+        "hero": "hunpo",
+        "tab": "matchups",
+        "sections": 0,
+        "empty": true
+      },
+      "bpAfter": {
+        "filter": "全部",
+        "query": "之",
+        "scrollTop": 120,
+        "pool": 30,
+        "blue": [
+          "ravager"
+        ],
+        "cards": 30
+      },
+      "banpickWithData": {
+        "hero": "stoneguard",
+        "sections": [
+          [
+            "strongAgainst",
+            2
+          ],
+          [
+            "weakAgainst",
+            1
+          ],
+          [
+            "synergies",
+            1
+          ]
+        ],
+        "cards": 4
+      }
+    }
+  }
+}
