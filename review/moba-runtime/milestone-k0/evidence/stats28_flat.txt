@@ -1,0 +1,40 @@
+   [13b] 藍隊終局 mlv（無/操作/戰術/團隊天賦）：5/8/7/6/7  |  7/6/9/8/5  |  7/12/11/8/6  |  7/6/9/8/5
+   [13b] ⇒ 終局 power 因等級不同而不同 = 合法；同等級下 power 相同 = 已逐點驗證
+✅ 1) mobaRosterAdapter 使用 derived stats（天賦加成真的進 slot）
+✅ 2) base stats 不被修改（天賦只走 derived 層）
+✅ 3) 無 talent state ⇒ 安全降級（derived === base，逐鍵相等）
+✅ 4) 缺 player ⇒ 安全失敗（不丟例外、不虛構選手）
+✅ 5) playerId 對應穩定（id 對位；非名字、非陣列索引；順序無關；新秀不誤入席位）
+✅ 6) match config 帶入 roster（mods 封包含版本與對位證據）
+✅ 7) LogicEngine 收到 roster（playerStatsOn / pmod / snapshot meta）
+✅ 8) feature off ⇒ baseline 不變（snapshot 不含 S28 欄位；同 seed 逐位元一致）
+✅ 9) 中性能力（全 70）⇒ mods 全中性，且 6 seed 逐位元 == feature off（含/不含戰術）
+✅ 10) derived stats 改變引擎輸入（A/B/C/D 的 b3 mods 兩兩不同；其餘席位不變）
+✅ 11) 多 seed 行為輸出改變（B 12/12、C 12/12、D 6/12 seed 行為不同）
+✅ 12) 不直接寫 winner（勝負只由主堡血量歸零決定；能力層完全不碰 winner）
+✅ 13) 無 winRate/damageMultiplier 偷渡欄位（mods 只有 10 個行為鍵；Lv1 錨點 basePower/tough/baseMaxHp 不受天賦影響）
+✅ 13b) 同等級錨點：同席位同 mlv ⇒ power/maxHp 逐值相同（4 配置 × 2720 取樣、涵蓋 Lv 1–15、112 組 (id,mlv)；衝突 0 筆、偏離等級公式 0 筆）
+✅ 14) Support（b5）天賦有可觀察作用（遊走/集結/個人行為：9/12 seed 不同）
+✅ 15) Jungle（b2）天賦有可觀察作用（Gank 節奏/入侵/個人行為：12/12 seed 不同）
+✅    五路（top/jungle/mid/adc/sup）皆有能力作用點（心理天賦皆改變 mods）
+✅ 16) Replay frames 來自實際比賽（790 幀逐幀位置 == 該 tick 真實 snapshot，非重新模擬）
+✅ 17) Replay 不重複結算（replay 模組不 import 引擎、不呼叫發獎/入史/寫 Store）
+✅ 18) Progress 冪等不受影響（同 tx 二次套用 ⇒ alreadyApplied，不重複發獎）
+✅ 19) CS derived stats 不受影響（fpsRoster 仍走 getPlayerDerivedStats，天賦照樣生效）
+⏭ SKIP 20) Sprint27 verifier 44/44（flat 模式：改由 tools/verify.mjs 各跑一次）
+⏭ SKIP 21) Sprint26 verifier 35/35（flat 模式：改由 tools/verify.mjs 各跑一次）
+⏭ SKIP 22) Sprint25 verifier 34/34（flat 模式：改由 tools/verify.mjs 各跑一次）
+⏭ SKIP 23) Sprint24 verifier 29/29（flat 模式：改由 tools/verify.mjs 各跑一次）
+⏭ SKIP 24) Sprint23 verifier 28/28（flat 模式：改由 tools/verify.mjs 各跑一次）
+⏭ SKIP 25) regress（結束率 15/15）（flat 模式：改由 tools/verify.mjs 各跑一次）
+⏭ SKIP 26) regress2（節奏門檻 8/8）（flat 模式：改由 tools/verify.mjs 各跑一次）
+⏭ SKIP 27) npm run build 通過（flat 模式：改由 tools/verify.mjs 各跑一次）
+
+21/21 通過　+ 8 段委派給 runner（未計入分母）
+
+=== 固定比較 seed=4242、戰術 速推流、只改 b3 天賦 ===
+A 無天賦   b3 mods{join 0.044 obj 0.041 retreat 0.003 lane 0.005} │ KDA 1/8/0 撤退 13 團戰 14 目標 8 │ 隊 會戰 15 分推 0 龍爭 3 │ red 4:21
+B 操作天賦 b3 mods{join 0.047 obj 0.041 retreat 0.011 lane 0.004} │ KDA 4/11/2 撤退 23 團戰 13 目標 32 │ 隊 會戰 13 分推 0 龍爭 5 │ red 13:34
+C 戰術天賦 b3 mods{join 0.048 obj 0.051 retreat 0.009 lane 0.003} │ KDA 4/2/5 撤退 10 團戰 35 目標 138 │ 隊 會戰 21 分推 0 龍爭 5 │ blue 24:7
+D 團隊天賦 b3 mods{join 0.051 obj 0.046 retreat 0.003 lane 0.005} │ KDA 1/8/0 撤退 13 團戰 14 目標 8 │ 隊 會戰 15 分推 0 龍爭 3 │ red 4:21
+多 seed 行為差異：B 12/12、C 12/12、D 6/12 seed（Support 9、Jungle 12）

@@ -1,0 +1,23 @@
+--resume：略過 16 個已通過的區段
+
+執行 2 個區段（逾時 45 分／段）
+
+▶ experience26         S26 體驗（flat：6 段委派；§17 replay 容量既有紅燈 TD-19） … ❌ FAIL　5s
+      ⏭ SKIP 21) CS Sprint23 verifier（flat 模式：改由 tools/verify.mjs 各跑一次）
+      ⏭ SKIP    regress（MOBA balance）（flat 模式：改由 tools/verify.mjs 各跑一次）
+      ⏭ SKIP    regress2（節奏門檻 8/8）（flat 模式：改由 tools/verify.mjs 各跑一次）
+      ⏭ SKIP    flow verifier（check_flow09）（flat 模式：改由 tools/verify.mjs 各跑一次）
+      28/29 通過　+ 6 段委派給 runner（未計入分母）
+      重播容量：836 frames · 2492KB/場 · 每 frame ≈ 3053B（session 記憶體，僅留最近一場）
+▶ runtime29            S29 執行期（flat：9 段委派；§29 順序公平性既有紅燈 TD-21） … ❌ FAIL　29s
+      34/35 通過　+ 9 段委派給 runner（未計入分母）
+      === v1（修改前）vs v2（修改後）· 20 seeds ===
+      v1: 結束 20/20 | 時長 20.2分 | 首塔 1.6分 | 5分: 擊殺 0.7 塔倒 8.3 均Lv 1.0 | 終局 擊殺 30 均Lv 1.0
+      v2: 結束 20/20 | 時長 12.8分 | 首塔 3.3分 | 5分: 擊殺 2.1 塔倒 1.1 均Lv 3.4 | 終局 擊殺 12 均Lv 7.8
+      播報：seed 4242 共 146 則、密度 6.6 則/分、最小間隔 6.0s
+      ⚠ FPS / draw calls / triangles / heap / DPR / 視覺 → **無瀏覽器，未量測**（見交付報告）
+
+════════════════════════════════════════════════════════════════
+本次：0/2 通過　❌ 失敗 2（experience26, runtime29）
+累計：16/18 區段通過
+狀態檔：D:\OneDrive\文件\GitHub\ESMO\tools\.verify-state.json　（--resume 續跑、--list 查看）
