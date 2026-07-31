@@ -20,10 +20,10 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import HeroSkillCallout from "../../battle/moba/presentation/HeroSkillCallout.jsx";
 import { useGameStore } from "../../useGameStore.js";
-import HeroSkillEffects, { TEMPLATE_PRIMITIVES, capsFor } from "../../battle/moba/presentation/HeroSkillEffects.jsx";
+import HeroSkillEffects, { TEMPLATE_PRIMITIVES, capsFor, CLASS_STYLE } from "../../battle/moba/presentation/HeroSkillEffects.jsx";
 import {
   PRESENTATION_ARCHETYPES, ARCHETYPE_LABEL, PRESENTATION_DISCLAIMER,
-  SKILL_SLOTS, listPresentationHeroIds, getHeroCombatPresentation,
+  SKILL_SLOTS, listPresentationHeroIds, getHeroCombatPresentation, COMBAT_CLASSES,
 } from "../../data/heroCombatPresentation.js";
 import { heroById } from "../../data/heroDatabase.js";
 import HeroPortrait from "../../ui/HeroPortrait.jsx";
@@ -36,6 +36,7 @@ const TEMPLATE_DEMO = {
 };
 //  一隻**沒有**專屬設定的英雄，用來證明 fallback 真的畫得出東西。
 const FALLBACK_DEMO = "linghun";
+const CLASS_ZH = { tank: "坦克", fighter: "戰士", assassin: "刺客", mage: "法師", marksman: "射手", support: "輔助" };
 
 /** 固定 fixture：八個模板 ＋ 一個 fallback，排成一列，座標寫死 ⇒ 完全決定性。 */
 function buildFixtureFrame(progress) {
@@ -56,7 +57,8 @@ function buildFixtureFrame(progress) {
       targetWorld: { x, y: 0, z: 10 },
       progress, width: 1,
       presentation: Object.freeze({
-        heroId, source: p.source, archetype: spec.archetype, effect: spec.effect,
+        heroId, source: p.source, combatClass: p.combatClass,
+        archetype: spec.archetype, effect: spec.effect,
         emphasis: spec.emphasis, label: ARCHETYPE_LABEL[spec.archetype],
         basis: "fixture", isActualSkillCast: false,
         isUltimate: spec.emphasis === "ultimate",
@@ -158,6 +160,29 @@ export default function HeroPresentationGallery() {
         })}
       </div>
 
+      {/* L Hotfix 1 §4：六職業 shape language 對照（證明差異不只在顏色） */}
+      <div style={{ padding: "2px 12px 8px" }}>
+        <div style={{ fontSize: 13, fontWeight: 900, margin: "6px 0 6px" }}>六職業 shape language</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 8 }}>
+          {COMBAT_CLASSES.map((c) => {
+            const sp = CLASS_STYLE[c];
+            return (
+              <div key={c} data-testid="class-style-card" data-class={c}
+                data-speed={sp.speed} data-width={sp.width} data-height={sp.height}
+                data-hug={sp.hug} data-env={sp.env}
+                style={{ background: GC.card2, border: `1px solid ${GC.line}`, borderRadius: 10, padding: "7px 9px" }}>
+                <div style={{ fontSize: 12, fontWeight: 900 }}>{CLASS_ZH[c]}</div>
+                <div style={{ fontSize: 9, color: GC.gray, fontFamily: MONO, lineHeight: 1.6, marginTop: 3 }}>
+                  速度 {sp.speed}　粗細 {sp.width}<br />
+                  高度 {sp.height}　貼地 {sp.hug}<br />
+                  節奏 {sp.env}　抖動 {sp.spin}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* 10 位代表英雄的演出對照表 */}
       <div style={{ padding: "4px 12px 26px" }}>
         <div style={{ fontSize: 13, fontWeight: 900, margin: "8px 0 6px" }}>10 位代表英雄・技能演出對照</div>
@@ -171,7 +196,7 @@ export default function HeroPresentationGallery() {
           return (
             <div key={id} data-testid="gallery-hero" data-hero={id}
               data-primary={p.theme.primaryColor} data-signature={p.signatureSlot}
-              data-tier={p.performanceTier}
+              data-tier={p.performanceTier} data-class={p.combatClass}
               style={{ display: "flex", alignItems: "center", gap: 8, background: GC.card2, borderLeft: `3px solid ${p.theme.primaryColor}`, borderRadius: 8, padding: "6px 8px", marginBottom: 5 }}>
               <HeroPortrait heroId={id} size={30} radius="50%" border={`2px solid ${p.theme.primaryColor}`} alt={hero?.zh ?? id}
                 fallback={<div style={{ width: 30, height: 30, borderRadius: "50%", background: p.theme.primaryColor }} />} />

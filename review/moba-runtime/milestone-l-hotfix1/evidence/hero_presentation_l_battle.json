@@ -1,0 +1,662 @@
+{
+  "notes": [
+    {
+      "label": "desk1366 B1) 正式 GameView 掛得起來（canvas 存在）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "desk1366 B2) 模擬真的在推進（5 → 10）",
+      "ok": true,
+      "extra": {
+        "t0": 5,
+        "t1": 10
+      }
+    },
+    {
+      "label": "desk1366 B3) 演出層已掛進 live 對戰並每幀回報計數",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "desk1366 B4) live 套用 low preset 的池容量（halo=10 / bolt=14）",
+      "ok": true,
+      "extra": {
+        "halo": 10,
+        "bar": 10,
+        "bolt": 14,
+        "guard": 8
+      }
+    },
+    {
+      "label": "desk1366 B5) 池計數都沒有超過容量（不是無限成長）",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "desk1366 B7) 戰報預設 compact",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 84,
+        "rootBottom": 246,
+        "vh": 768,
+        "stored": null
+      }
+    },
+    {
+      "label": "desk1366 B8) compact 高度落在規格區間（72–96px，實測 84）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 84,
+        "rootBottom": 246,
+        "vh": 768,
+        "stored": null
+      }
+    },
+    {
+      "label": "desk1366 B9) 點一下 → expanded",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "hasBody": true,
+        "bodyH": 307,
+        "rootBottom": 469,
+        "vh": 768,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "desk1366 B10) expanded 桌機 ≤40%（實測 307px / 768）",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "hasBody": true,
+        "bodyH": 307,
+        "rootBottom": 469,
+        "vh": 768,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "desk1366 B11) 再點一下 → hidden（本體收掉，只留可點回來的標籤）",
+      "ok": true,
+      "extra": {
+        "mode": "hidden",
+        "hasBody": false,
+        "bodyH": 0,
+        "rootBottom": 162,
+        "vh": 768,
+        "stored": "hidden"
+      }
+    },
+    {
+      "label": "desk1366 B12) 使用者的選擇有記到 localStorage",
+      "ok": true,
+      "extra": "hidden"
+    },
+    {
+      "label": "desk1366 B13) 再點一下轉回 compact（三段循環）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 84,
+        "rootBottom": 246,
+        "vh": 768,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "desk1366 B14) debug 模式下有畫塔射程圈（?diag=1）",
+      "ok": true,
+      "extra": {
+        "rings": 24,
+        "locks": 0,
+        "rangeWorld": 9.35
+      }
+    },
+    {
+      "label": "desk1366 B15) 射程圈半徑 = towerAggroRange 換算（5.5 × 1.7 = 9.35 世界單位）",
+      "ok": true,
+      "extra": 9.35
+    },
+    {
+      "label": "desk1366 B16) 沒有橫向溢出，也沒有因本輪新增縱向捲動軸",
+      "ok": true,
+      "extra": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 1366,
+        "vh": 768
+      }
+    },
+    {
+      "label": "mob390 B1) 正式 GameView 掛得起來（canvas 存在）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob390 B2) 模擬真的在推進（13 → 23）",
+      "ok": true,
+      "extra": {
+        "t0": 13,
+        "t1": 23
+      }
+    },
+    {
+      "label": "mob390 B3) 演出層已掛進 live 對戰並每幀回報計數",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob390 B4) live 套用 low preset 的池容量（halo=10 / bolt=14）",
+      "ok": true,
+      "extra": {
+        "halo": 10,
+        "bar": 10,
+        "bolt": 14,
+        "guard": 8
+      }
+    },
+    {
+      "label": "mob390 B5) 池計數都沒有超過容量（不是無限成長）",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob390 B7) 戰報預設 compact",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 50,
+        "rootBottom": 212,
+        "vh": 844,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob390 B8) compact 高度落在規格區間（44–56px，實測 50）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 50,
+        "rootBottom": 212,
+        "vh": 844,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob390 B9) 點一下 → expanded",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "hasBody": true,
+        "bodyH": 253,
+        "rootBottom": 415,
+        "vh": 844,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "mob390 B10) expanded 手機最多占 viewport 30%（實測 253px / 844）",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "hasBody": true,
+        "bodyH": 253,
+        "rootBottom": 415,
+        "vh": 844,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "mob390 B11) 再點一下 → hidden（本體收掉，只留可點回來的標籤）",
+      "ok": true,
+      "extra": {
+        "mode": "hidden",
+        "hasBody": false,
+        "bodyH": 0,
+        "rootBottom": 162,
+        "vh": 844,
+        "stored": "hidden"
+      }
+    },
+    {
+      "label": "mob390 B12) 使用者的選擇有記到 localStorage",
+      "ok": true,
+      "extra": "hidden"
+    },
+    {
+      "label": "mob390 B13) 再點一下轉回 compact（三段循環）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 50,
+        "rootBottom": 212,
+        "vh": 844,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob390 B14) debug 模式下有畫塔射程圈（?diag=1）",
+      "ok": true,
+      "extra": {
+        "rings": 24,
+        "locks": 0,
+        "rangeWorld": 9.35
+      }
+    },
+    {
+      "label": "mob390 B15) 射程圈半徑 = towerAggroRange 換算（5.5 × 1.7 = 9.35 世界單位）",
+      "ok": true,
+      "extra": 9.35
+    },
+    {
+      "label": "mob390 B16) 沒有橫向溢出，也沒有因本輪新增縱向捲動軸",
+      "ok": true,
+      "extra": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 390,
+        "vh": 844
+      }
+    },
+    {
+      "label": "mob360 B1) 正式 GameView 掛得起來（canvas 存在）",
+      "ok": true,
+      "extra": null
+    },
+    {
+      "label": "mob360 B2) 模擬真的在推進（15 → 26）",
+      "ok": true,
+      "extra": {
+        "t0": 15,
+        "t1": 26
+      }
+    },
+    {
+      "label": "mob360 B3) 演出層已掛進 live 對戰並每幀回報計數",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob360 B4) live 套用 low preset 的池容量（halo=10 / bolt=14）",
+      "ok": true,
+      "extra": {
+        "halo": 10,
+        "bar": 10,
+        "bolt": 14,
+        "guard": 8
+      }
+    },
+    {
+      "label": "mob360 B5) 池計數都沒有超過容量（不是無限成長）",
+      "ok": true,
+      "extra": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      }
+    },
+    {
+      "label": "mob360 B7) 戰報預設 compact",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 50,
+        "rootBottom": 212,
+        "vh": 800,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob360 B8) compact 高度落在規格區間（44–56px，實測 50）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 50,
+        "rootBottom": 212,
+        "vh": 800,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob360 B9) 點一下 → expanded",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "hasBody": true,
+        "bodyH": 240,
+        "rootBottom": 402,
+        "vh": 800,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "mob360 B10) expanded 手機最多占 viewport 30%（實測 240px / 800）",
+      "ok": true,
+      "extra": {
+        "mode": "expanded",
+        "hasBody": true,
+        "bodyH": 240,
+        "rootBottom": 402,
+        "vh": 800,
+        "stored": "expanded"
+      }
+    },
+    {
+      "label": "mob360 B11) 再點一下 → hidden（本體收掉，只留可點回來的標籤）",
+      "ok": true,
+      "extra": {
+        "mode": "hidden",
+        "hasBody": false,
+        "bodyH": 0,
+        "rootBottom": 162,
+        "vh": 800,
+        "stored": "hidden"
+      }
+    },
+    {
+      "label": "mob360 B12) 使用者的選擇有記到 localStorage",
+      "ok": true,
+      "extra": "hidden"
+    },
+    {
+      "label": "mob360 B13) 再點一下轉回 compact（三段循環）",
+      "ok": true,
+      "extra": {
+        "mode": "compact",
+        "hasBody": true,
+        "bodyH": 50,
+        "rootBottom": 212,
+        "vh": 800,
+        "stored": "compact"
+      }
+    },
+    {
+      "label": "mob360 B14) debug 模式下有畫塔射程圈（?diag=1）",
+      "ok": true,
+      "extra": {
+        "rings": 24,
+        "locks": 0,
+        "rangeWorld": 9.35
+      }
+    },
+    {
+      "label": "mob360 B15) 射程圈半徑 = towerAggroRange 換算（5.5 × 1.7 = 9.35 世界單位）",
+      "ok": true,
+      "extra": 9.35
+    },
+    {
+      "label": "mob360 B16) 沒有橫向溢出，也沒有因本輪新增縱向捲動軸",
+      "ok": true,
+      "extra": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 360,
+        "vh": 800
+      }
+    }
+  ],
+  "shots": [
+    "desk1366-02-battle.png",
+    "mob390-02-battle.png",
+    "mob360-02-battle.png"
+  ],
+  "data": {
+    "desk1366-battle": {
+      "ts": {
+        "t0": 5,
+        "t1": 10
+      },
+      "stats": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      },
+      "timeline": {
+        "start": {
+          "mode": "compact",
+          "hasBody": true,
+          "bodyH": 84,
+          "rootBottom": 246,
+          "vh": 768,
+          "stored": null
+        },
+        "expanded": {
+          "mode": "expanded",
+          "hasBody": true,
+          "bodyH": 307,
+          "rootBottom": 469,
+          "vh": 768,
+          "stored": "expanded"
+        },
+        "hidden": {
+          "mode": "hidden",
+          "hasBody": false,
+          "bodyH": 0,
+          "rootBottom": 162,
+          "vh": 768,
+          "stored": "hidden"
+        }
+      },
+      "towerDebug": {
+        "rings": 24,
+        "locks": 0,
+        "rangeWorld": 9.35
+      },
+      "overflow": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 1366,
+        "vh": 768
+      }
+    },
+    "mob390-battle": {
+      "ts": {
+        "t0": 13,
+        "t1": 23
+      },
+      "stats": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      },
+      "timeline": {
+        "start": {
+          "mode": "compact",
+          "hasBody": true,
+          "bodyH": 50,
+          "rootBottom": 212,
+          "vh": 844,
+          "stored": "compact"
+        },
+        "expanded": {
+          "mode": "expanded",
+          "hasBody": true,
+          "bodyH": 253,
+          "rootBottom": 415,
+          "vh": 844,
+          "stored": "expanded"
+        },
+        "hidden": {
+          "mode": "hidden",
+          "hasBody": false,
+          "bodyH": 0,
+          "rootBottom": 162,
+          "vh": 844,
+          "stored": "hidden"
+        }
+      },
+      "towerDebug": {
+        "rings": 24,
+        "locks": 0,
+        "rangeWorld": 9.35
+      },
+      "overflow": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 390,
+        "vh": 844
+      }
+    },
+    "mob360-battle": {
+      "ts": {
+        "t0": 15,
+        "t1": 26
+      },
+      "stats": {
+        "halo": 0,
+        "bar": 0,
+        "bolt": 0,
+        "guard": 0,
+        "live": 0,
+        "caps": {
+          "halo": 10,
+          "bar": 10,
+          "bolt": 14,
+          "guard": 8
+        },
+        "quality": "low"
+      },
+      "timeline": {
+        "start": {
+          "mode": "compact",
+          "hasBody": true,
+          "bodyH": 50,
+          "rootBottom": 212,
+          "vh": 800,
+          "stored": "compact"
+        },
+        "expanded": {
+          "mode": "expanded",
+          "hasBody": true,
+          "bodyH": 240,
+          "rootBottom": 402,
+          "vh": 800,
+          "stored": "expanded"
+        },
+        "hidden": {
+          "mode": "hidden",
+          "hasBody": false,
+          "bodyH": 0,
+          "rootBottom": 162,
+          "vh": 800,
+          "stored": "hidden"
+        }
+      },
+      "towerDebug": {
+        "rings": 24,
+        "locks": 0,
+        "rangeWorld": 9.35
+      },
+      "overflow": {
+        "hOverflow": 0,
+        "vScrollers": [],
+        "vw": 360,
+        "vh": 800
+      }
+    }
+  }
+}

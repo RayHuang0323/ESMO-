@@ -22,11 +22,12 @@ import {
   PRESENTATION_ARCHETYPES, PRESENTATION_EFFECTS, PRESENTATION_EMPHASIS,
   AUDIO_PROFILES, CAMERA_EMPHASIS, PERFORMANCE_TIERS, SKILL_SLOTS,
   ARCHETYPE_LABEL, PRESENTATION_DISCLAIMER, FORBIDDEN_PRESENTATION_KEYS,
+  COMBAT_CLASSES, combatClassOf,
 } from "../src/data/heroCombatPresentation.js";
 import {
   describeFxPresentation, toPresentationEvent, toPresentationEvents,
   describeTimelinePresentation, resolveHeroId, parseAbility, pickCallouts,
-  CALLOUT_LIMIT, SUPPORTED_TEMPLATES,
+  CALLOUT_LIMIT, SUPPORTED_TEMPLATES, CALLOUT_ARCHETYPES, CALLOUT_DEDUPE_SEC,
 } from "../src/battle/moba/heroPresentationAdapter.js";
 
 let pass = 0, fail = 0;
@@ -293,15 +294,43 @@ console.log("\n── §4 Adapter：不改原事件、保留身分、不虛構�
   ck("37) Adapter 決定性：同一輸入兩次逐值相同",
     JSON.stringify(describeFxPresentation({ ability: "top:power", sourceId: "b1", type: "ult" }, roster))
     === JSON.stringify(describeFxPresentation({ ability: "top:power", sourceId: "b1", type: "ult" }, roster)));
-  ck("38) callout 限流：桌機 3、手機 2，且挑選是決定性的",
+  //  ── L Hotfix 1 §2：callout 降低干擾 ────────────────────────────────────
+  ck(`38) callout 限流：桌機 ${CALLOUT_LIMIT.desktop}、手機 ${CALLOUT_LIMIT.mobile}，且挑選是決定性的`,
     (() => {
-      const many = Array.from({ length: 9 }, (_, i) => ({
-        id: `e${i}`, at: i, ability: "top:power", type: "ult", sourceId: "b1",
+      //  五隻不同英雄、時間錯開 ⇒ 不會被去重擋掉，純測上限
+      const rs = { b1: { heroId: "ironclad" }, b2: { heroId: "duskblade" }, b3: { heroId: "bingshuang" },
+        b4: { heroId: "dadi" }, b5: { heroId: "stoneguard" } };
+      const many = Object.keys(rs).map((sid, i) => ({
+        id: `e${i}`, at: i * 10, ability: "top:power", type: "ult", sourceId: sid,
       }));
-      const evs = toPresentationEvents(many, roster);
+      const evs = toPresentationEvents(many, rs);
       const d = pickCallouts(evs, { mobile: false }), m = pickCallouts(evs, { mobile: true });
-      return d.length === CALLOUT_LIMIT.desktop && m.length === CALLOUT_LIMIT.mobile
+      return CALLOUT_LIMIT.desktop === 2 && CALLOUT_LIMIT.mobile === 1
+        && d.length === 2 && m.length === 1
         && JSON.stringify(d.map((x) => x.id)) === JSON.stringify(pickCallouts(evs, { mobile: false }).map((x) => x.id));
+    })());
+  ck("38a) 普攻永遠不跳 callout（basic 推導出來的一律被擋）",
+    (() => {
+      const basics = ["b1", "b2", "b3"].map((sid, i) => ({
+        id: `bb${i}`, at: i * 10, ability: "top:basic", feedback: "attack", sourceId: sid,
+      }));
+      return pickCallouts(toPresentationEvents(basics, roster), { mobile: false }).length === 0;
+    })());
+  ck(`38b) 只有看得出戰術意義的分類才跳（白名單 ${CALLOUT_ARCHETYPES.join("/")}）`,
+    Array.isArray(CALLOUT_ARCHETYPES) && CALLOUT_ARCHETYPES.length > 0
+    && !CALLOUT_ARCHETYPES.includes("projectile") && !CALLOUT_ARCHETYPES.includes("line")
+    && CALLOUT_ARCHETYPES.every((a) => SUPPORTED_TEMPLATES.includes(a)),
+    CALLOUT_ARCHETYPES);
+  ck(`38c) 同英雄同分類 ${CALLOUT_DEDUPE_SEC} 秒內去重（洗版被擋掉）`,
+    (() => {
+      const spam = [0, 1, 2, 3].map((i) => ({
+        id: `s${i}`, at: 100 + i * 0.5, ability: "top:power", type: "ult", sourceId: "b1",
+      }));
+      const kept = pickCallouts(toPresentationEvents(spam, roster), { mobile: false });
+      const later = [{ id: "s9", at: 100, ability: "top:power", type: "ult", sourceId: "b1" },
+        { id: "s10", at: 100 + CALLOUT_DEDUPE_SEC + 1, ability: "top:power", type: "ult", sourceId: "b1" }];
+      const two = pickCallouts(toPresentationEvents(later, roster), { mobile: false });
+      return CALLOUT_DEDUPE_SEC >= 3 && CALLOUT_DEDUPE_SEC <= 5 && kept.length === 1 && two.length === 2;
     })());
   ck("39) Timeline 呈現描述：主角解析正確、團隊級事件不掛頭像",
     (() => {
@@ -411,6 +440,76 @@ console.log("\n── §6 UI 原始碼結構（實際演出由 shot 腳本在瀏
       return !t.includes("heroPresentationAdapter") && !t.includes("heroCombatPresentation")
         && !/presentation\s*:/.test(t);
     }));
+}
+
+console.log("\n── §7 L Hotfix 1：職業 shape language / 三段式戰報 / 塔 debug ──");
+{
+  const FX = src("src/battle/moba/presentation/HeroSkillEffects.jsx");
+  const TOWER = src("src/battle/moba/presentation/TowerRangeDebug.jsx");
+  const VIEW = src("src/battle/moba/render/MobaRuntimeView3D.jsx");
+  const MP = src("src/battle/moba/matchProgression.js");
+
+  ck("58) 六個職業都對得到 combatClass，且落在白名單",
+    COMBAT_CLASSES.length === 6
+    && CHAMPIONS_100.every((c) => COMBAT_CLASSES.includes(combatClassOf(c.id)))
+    && combatClassOf("ironclad") === "tank" && combatClassOf("duskblade") === "assassin"
+    && combatClassOf("bingshuang") === "mage" && combatClassOf("leiting") === "marksman",
+    COMBAT_CLASSES);
+  ck("59) presentation 帶得出 combatClass（英雄有、非英雄來源為 null）",
+    describeFxPresentation({ ability: "top:power", type: "ult", sourceId: "b1" },
+      { b1: { heroId: "ironclad" } }).combatClass === "tank"
+    && describeFxPresentation({ ability: "tower:basic", sourceId: "blue_t1" }, null).combatClass === null);
+  {
+    //  這一條是本 Hotfix §4 的核心：差異**不能只在顏色**。
+    //  直接抽出 CLASS_STYLE 與 ENVELOPE 執行，比對六職業的動態參數真的互不相同。
+    let mod = null, why = null;
+    try {
+      const i = FX.indexOf("export const CLASS_STYLE");
+      const j = FX.indexOf("export const envelopeFor");
+      const code = FX.slice(i, FX.indexOf(";", j) + 1).replace(/export /g, "");
+      mod = new Function(code + "\nreturn { CLASS_STYLE, styleFor, ENVELOPE, envelopeFor };")();
+    } catch (e) { why = e.message; }
+    ck("60) 抽得出 CLASS_STYLE / ENVELOPE（shape language 真的在程式碼裡）", !!mod, why);
+    if (mod) {
+      const keys = ["speed", "width", "height", "hug", "spin", "env"];
+      const rows = COMBAT_CLASSES.map((c) => mod.styleFor(c));
+      ck("61) 六職業都有完整的 shape language 參數",
+        rows.every((r) => keys.every((k) => r[k] != null)), rows);
+      for (const k of ["speed", "width", "height", "hug"]) {
+        const vals = rows.map((r) => r[k]);
+        ck(`62-${k}) ${k} 六職業幾乎互不相同（不是只換顏色）`, new Set(vals).size >= 5, vals);
+      }
+      ck("63) 出現／消失節奏有四種且行為不同（同一個 t 給出不同值）",
+        (() => {
+          const names = Object.keys(mod.ENVELOPE);
+          const at = names.map((n) => mod.ENVELOPE[n](0.15).toFixed(3));
+          return names.length === 4 && new Set(at).size === 4;
+        })(), Object.keys(mod.ENVELOPE));
+      ck("64) 未知職業回 fallback，不 throw",
+        mod.styleFor("nope") === mod.styleFor("fighter") && !!mod.envelopeFor("nope"));
+    }
+  }
+  ck("65)〔原始碼〕shape language 只影響呈現（沒有把它乘進任何傷害／命中）",
+    !/damage|dmg/i.test(FX));
+  ck("66)〔原始碼〕三段式戰報：hidden / compact / expanded，且沒有自由拖拉 resize",
+    TIMELINE_SRC.includes('TIMELINE_MODES = Object.freeze(["hidden", "compact", "expanded"])')
+    && TIMELINE_SRC.includes('data-testid="timeline-root"')
+    && TIMELINE_SRC.includes('data-testid="timeline-body"')
+    && !/onMouseMove|onPointerMove/i.test(TIMELINE_SRC));
+  ck("67)〔原始碼〕戰報預設 compact，且使用者選擇記在 localStorage",
+    TIMELINE_SRC.includes('return "compact";') && TIMELINE_SRC.includes("esmo.timeline.mode.v1")
+    && TIMELINE_SRC.includes("saveTimelineMode"));
+  ck("68)〔原始碼〕戰報高度是固定檔位（桌機 compact 84／手機 50；expanded 手機 30vh）",
+    /isMobile \? 50 : 84/.test(TIMELINE_SRC) && /isMobile \? "30vh" : "40vh"/.test(TIMELINE_SRC));
+  ck("69)〔原始碼〕塔射程圈／鎖定線**只在 debug 模式**掛載",
+    /diagnosticsEnabled\(\) && <TowerRangeDebug/.test(VIEW));
+  ck("70)〔原始碼〕鎖定線來自引擎真實 tower fx，不是自己重算誰該被打",
+    TOWER.includes('fx?.ability !== "tower:basic"') && TOWER.includes("towerRangeWorld"));
+  ck("71) 塔射程圈的半徑就是規則裡的 towerAggroRange 換算（沒有偷偷放大）",
+    /\(rules\?\.towerAggroRange \?\? 5\.5\) \* S/.test(TOWER));
+  ck("72) 本輪沒有改動任何戰鬥規則常數（塔射程／傷害／間隔原封不動）",
+    /towerAggroDmg: 66,/.test(MP) && /towerAggroRange: 5\.5,/.test(MP)
+    && /towerAttackInterval: 0\.5,/.test(MP) && /towerMinionDamage: 60,/.test(MP));
 }
 
 console.log(`\n${fail === 0 ? "✅ PASS" : "❌ FAIL"}  ${pass}/${pass + fail}`);

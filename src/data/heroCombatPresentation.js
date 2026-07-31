@@ -52,6 +52,15 @@ export const PERFORMANCE_TIERS = Object.freeze(["light", "standard", "heavy"]);
 
 export const SKILL_SLOTS = Object.freeze(["P", "Q", "W", "E", "R"]);
 
+//  L Hotfix 1 §4：六職業的 shape language 由 combatClass 決定（形狀／速度／軌跡／
+//  貼地方式／出現消失節奏），**不是只換顏色**。這裡只做「英雄 → 職業」的對應，
+//  真正的視覺參數在 HeroSkillEffects.CLASS_STYLE。唯一來源是 heroDatabase 的 arch。
+export const COMBAT_CLASSES = Object.freeze(["tank", "fighter", "assassin", "mage", "marksman", "support"]);
+const ARCH_TO_CLASS = Object.freeze({
+  坦克: "tank", 戰士: "fighter", 刺客: "assassin", 法師: "mage", 射手: "marksman", 輔助: "support",
+});
+export const combatClassOf = (heroId) => ARCH_TO_CLASS[heroById(heroId)?.arch] ?? "fighter";
+
 /** 演出分類的中文文案。⚠ 一律是「演出」，不是「技能」——這是誠實邊界。 */
 export const ARCHETYPE_LABEL = Object.freeze({
   projectile: "彈道演出", line: "貫穿演出", area: "範圍演出", dash: "突進演出",
@@ -242,6 +251,7 @@ const freezeSkill = (s) => Object.freeze({
 const build = (heroId, spec) => Object.freeze({
   heroId,
   source: "authored",
+  combatClass: combatClassOf(heroId),
   theme: themeFor(heroId, spec),
   basicAttack: Object.freeze({ ...spec.basicAttack }),
   signatureSlot: spec.signatureSlot,
@@ -269,6 +279,7 @@ export function getFallbackHeroPresentation(heroId) {
   return Object.freeze({
     heroId: id,
     source: "fallback",
+    combatClass: combatClassOf(id),
     theme: themeFor(id, { symbol: fb.symbol, shapeLanguage: fb.shape }),
     basicAttack: Object.freeze({ archetype: fb.basic, effect: fb.effect }),
     signatureSlot: "R",

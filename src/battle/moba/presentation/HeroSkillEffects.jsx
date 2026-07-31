@@ -36,6 +36,42 @@ export const TEMPLATE_CAPS = Object.freeze({
 });
 export const capsFor = (quality) => TEMPLATE_CAPS[quality] ?? TEMPLATE_CAPS.medium;
 
+//  ── L Hotfix 1 §4：六職業的 shape language ───────────────────────────────
+//  「只換顏色」看不出差別。這張表決定的是**動態**：
+//    speed  時間曲線——刺客的東西早到、坦克的晚到且拖得久
+//    width  粗細——坦克寬厚、射手細長
+//    height 離地高度——法師浮空、坦克貼地
+//    hug    貼地程度——1 = 完全貼地環，0 = 全部浮空
+//    spin   軌跡側向抖動——刺客銳利折線、坦克穩重直推
+//    env    出現／消失節奏（見 ENVELOPE）
+//  ⚠ 這些全部是**呈現參數**，沒有一個進入傷害、命中或任何平衡計算。
+export const CLASS_STYLE = Object.freeze({
+  tank: Object.freeze({ speed: 0.72, width: 1.42, height: 0.5, hug: 1.0, spin: 0.35, env: "slow" }),
+  fighter: Object.freeze({ speed: 1.0, width: 1.14, height: 0.85, hug: 0.72, spin: 1.0, env: "snap" }),
+  assassin: Object.freeze({ speed: 1.6, width: 0.74, height: 1.0, hug: 0.45, spin: 1.9, env: "flash" }),
+  mage: Object.freeze({ speed: 0.86, width: 1.22, height: 1.5, hug: 0.3, spin: 0.65, env: "swell" }),
+  marksman: Object.freeze({ speed: 1.38, width: 0.7, height: 0.92, hug: 0.55, spin: 1.15, env: "snap" }),
+  support: Object.freeze({ speed: 0.8, width: 1.18, height: 1.12, hug: 0.85, spin: 0.5, env: "swell" }),
+});
+const DEFAULT_STYLE = CLASS_STYLE.fighter;
+export const styleFor = (combatClass) => CLASS_STYLE[combatClass] ?? DEFAULT_STYLE;
+
+/**
+ * 出現／消失節奏。回傳 0–1 的尺度包絡：
+ *   slow  慢起慢收、尾巴長（坦克）
+ *   snap  瞬間到位、乾脆收掉（戰士／射手）
+ *   flash 極快閃現、幾乎沒有尾巴（刺客）
+ *   swell 慢慢漲大、停留、緩退（法師／輔助）
+ * 純函式、無亂數 ⇒ 同一個 t 永遠同一個值。
+ */
+export const ENVELOPE = Object.freeze({
+  slow: (t) => Math.sin(Math.PI * Math.min(1, Math.max(0, t))) ** 0.55,
+  snap: (t) => (t < 0.14 ? t / 0.14 : (1 - t) ** 0.72),
+  flash: (t) => (t < 0.07 ? t / 0.07 : (1 - t) ** 1.7),
+  swell: (t) => (t < 0.42 ? (t / 0.42) ** 0.75 : 0.55 + 0.45 * (1 - t) ** 0.5),
+});
+export const envelopeFor = (name) => ENVELOPE[name] ?? ENVELOPE.snap;
+
 /** 八個模板各自使用哪些 primitive（給 verifier 與畫廊對照，不在 runtime 分支用）。 */
 export const TEMPLATE_PRIMITIVES = Object.freeze({
   projectile: Object.freeze(["bolt"]),
@@ -156,10 +192,21 @@ export default function HeroSkillEffects({ frameRef, quality = "medium" }) {
       accent.set(p.theme.accentColor ?? p.theme.primaryColor);
       const origin = world.get(String(fx.sourceId ?? "")) ?? fx.world;
       const target = world.get(String(fx.targetId ?? "")) ?? fx.targetWorld ?? null;
-      const t = Math.max(0, Math.min(1, fx.progress ?? 0));
-      const fade = 1 - t;                     // 生命末端縮小 ⇒ 視覺上會「收掉」
+      const raw = Math.max(0, Math.min(1, fx.progress ?? 0));
+      //  ── 職業 shape language（L Hotfix 1 §4）──────────────────────────
+      const sp = styleFor(p.combatClass);
+      //  speed：刺客／射手的東西早到，坦克／法師晚到 ⇒ 同一個引擎事件，
+      //  不同職業的軌跡節奏完全不同（不是只換顏色）。
+      const t = Math.max(0, Math.min(1, raw * sp.speed));
+      const env = envelopeFor(sp.env)(raw);   // 出現／消失節奏
+      const fade = Math.max(0.05, env);
       const big = p.emphasis === "ultimate" || p.isUltimate;
-      const w = (fx.width ?? 1) * (big ? 1.5 : 1);
+      const w = (fx.width ?? 1) * (big ? 1.5 : 1) * sp.width;
+      //  height / hug：法師浮空、坦克貼地。地環高度也跟著壓低或抬高。
+      const hi = GROUND_Y + (1.0 * sp.height) * S;
+      const groundY = GROUND_Y + (0.18 + (1 - sp.hug) * 0.9) * S;
+      //  spin：軌跡的側向抖動。刺客銳利、坦克穩重。純幾何位移，不用亂數。
+      const jitter = Math.sin(raw * Math.PI * 2) * sp.spin * 0.12 * S;
 
       switch (p.archetype) {
         case "projectile": {
@@ -167,43 +214,50 @@ export default function HeroSkillEffects({ frameRef, quality = "medium" }) {
           const at = target && origin
             ? { x: origin.x + (target.x - origin.x) * t, z: origin.z + (target.z - origin.z) * t }
             : origin;
-          addBolt(at, (0.34 + 0.1 * fade) * S * w, accent);
+          addBolt(at, (0.3 + 0.16 * env) * S * w, accent, hi);
           break;
         }
         case "line":
-          addBar(origin, target ?? origin, 0.16 * S * w * (0.5 + fade), color);
+          addBar(origin, target ?? origin, 0.16 * S * w * (0.45 + env), color,
+            GROUND_Y + (0.9 * sp.height) * S);
           break;
         case "area":
-          addHalo(target ?? origin, (0.9 + t * 1.5) * S * w, color);
+          addHalo(target ?? origin, (0.8 + t * 1.6) * S * w * (0.6 + 0.4 * env), color, groundY);
           break;
         case "dash": {
           //  拖尾：從起點畫到目前位置，前端再補一顆彈體當「人在哪」。
           const at = target && origin
             ? { x: origin.x + (target.x - origin.x) * t, z: origin.z + (target.z - origin.z) * t }
             : origin;
-          addBar(origin, at, 0.2 * S * w * fade, color);
-          addBolt(at, 0.3 * S * w * fade, accent);
+          //  拖尾帶側向抖動 ⇒ 刺客像折線閃現，坦克像直推
+          addBar(origin, { x: at.x + jitter, z: at.z - jitter }, 0.2 * S * w * fade, color,
+            GROUND_Y + (0.8 * sp.height) * S);
+          addBolt(at, 0.28 * S * w * fade, accent, hi);
           break;
         }
         case "shield":
-          addGuard(origin, (0.9 + t * 0.25) * S * w, color);
+          addGuard(origin, (0.85 + t * 0.3) * S * w * (0.7 + 0.3 * env), color,
+            GROUND_Y + (0.9 * sp.height) * S);
           break;
         case "heal":
           //  護環往上飄 ＋ 腳下淡環：和 shield 用同一組資源，只差高度與節奏。
-          addGuard(origin, (0.8 + t * 0.2) * S * w, accent, GROUND_Y + (0.7 + t * 1.6) * S);
-          addHalo(origin, (0.7 + t * 0.4) * S * w, accent);
+          addGuard(origin, (0.78 + t * 0.22) * S * w, accent,
+            GROUND_Y + (0.6 + t * 1.7 * sp.height) * S);
+          addHalo(origin, (0.68 + t * 0.42) * S * w * env, accent, groundY);
           break;
         case "control":
-          addHalo(target ?? origin, (0.8 + t * 0.7) * S * w, color);
-          addGuard(target ?? origin, (0.62 + t * 0.3) * S * w, color, GROUND_Y + 0.55 * S);
+          addHalo(target ?? origin, (0.78 + t * 0.72) * S * w, color, groundY);
+          addGuard(target ?? origin, (0.6 + t * 0.32) * S * w * (0.6 + 0.4 * env), color,
+            GROUND_Y + 0.5 * sp.height * S);
           break;
         case "ultimate":
           //  大招要明顯，但**不可以遮住整個戰場**：兩個環 ＋ 一顆核心，
           //  半徑上限鎖在 3.2×S；不做全螢幕閃光、不做整片地面著色。
-          addHalo(origin, Math.min(3.2, 1.1 + t * 2.2) * S * w, color);
-          addHalo(origin, Math.min(3.2, 0.7 + t * 1.4) * S * w, accent);
-          addGuard(origin, (1.0 + t * 0.5) * S * w, accent, GROUND_Y + (0.9 + t * 0.9) * S);
-          addBolt(origin, 0.42 * S * w * fade, accent, GROUND_Y + 2.1 * S);
+          addHalo(origin, Math.min(3.2, 1.1 + t * 2.2) * S * w, color, groundY);
+          addHalo(origin, Math.min(3.2, 0.7 + t * 1.4) * S * w * (0.6 + 0.4 * env), accent, groundY);
+          addGuard(origin, (1.0 + t * 0.5) * S * w, accent,
+            GROUND_Y + (0.85 + t * 0.95 * sp.height) * S);
+          addBolt(origin, 0.42 * S * w * fade, accent, GROUND_Y + 2.1 * sp.height * S);
           break;
         default:
           break;

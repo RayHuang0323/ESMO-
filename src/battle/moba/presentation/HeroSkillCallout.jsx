@@ -45,7 +45,9 @@ export default function HeroSkillCallout({ roster = null, source = null }) {
       data-limit={isMobile ? CALLOUT_LIMIT.mobile : CALLOUT_LIMIT.desktop}
       style={{
         position: "absolute", top: SAFE_TOP, right: 8, zIndex: Z.feed,
-        width: isMobile ? 150 : 190, maxWidth: "44vw",
+        //  L Hotfix 1 §2：手機收窄到 40vw 以內，避免壓到戰場中央；
+        //  高度由 1–2 則決定（桌機上限 2、手機 1），不會長到蓋住 HUD。
+        width: isMobile ? 128 : 176, maxWidth: isMobile ? "40vw" : "26vw",
         display: "flex", flexDirection: "column", gap: 4,
         pointerEvents: "none", fontFamily: "system-ui,sans-serif",
       }}>

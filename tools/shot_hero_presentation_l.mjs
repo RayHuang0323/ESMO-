@@ -259,9 +259,10 @@ async function runGallery(size) {
       disclaimer: document.querySelector('[data-testid="callout-disclaimer"]')?.innerText ?? "" };
   })()`);
   cap.callouts = co;
-  const wantLimit = size.mobile ? 2 : 3;
+  //  L Hotfix 1 §2：桌機 2、手機 1（原本 3/2 太吵）
+  const wantLimit = size.mobile ? 1 : 2;
   ck(`${tag} A11) HUD callout 出現（5 筆 fixture ⇒ 顯示 ${co.rows.length} 則）`, co.rows.length > 0, co);
-  ck(`${tag} A12) 同時顯示數量被限流到 ${wantLimit}（桌機 3／手機 2）`,
+  ck(`${tag} A12) 同時顯示數量被限流到 ${wantLimit}（桌機 2／手機 1）`,
     co.rows.length === wantLimit && co.limit === wantLimit, { rows: co.rows.length, limit: co.limit });
   ck(`${tag} A13) 每則 callout 都有英雄頭像、英雄中文名與演出分類`,
     co.rows.every((r) => !!r.hero && !!r.name && r.portrait && TEMPLATES.includes(r.archetype)), co.rows);
@@ -274,10 +275,32 @@ async function runGallery(size) {
   ck(`${tag} A17) callout 區塊帶誠實聲明`,
     co.disclaimer.includes("不代表引擎實際施放了該技能"), co.disclaimer);
 
+  //  ── L Hotfix 1 §4：六職業 shape language 真的不只換顏色 ────────────────
+  const cls = await ev(tab, `[...document.querySelectorAll('[data-testid="class-style-card"]')].map((e) => ({
+    cls: e.getAttribute("data-class"), speed: Number(e.getAttribute("data-speed")),
+    width: Number(e.getAttribute("data-width")), height: Number(e.getAttribute("data-height")),
+    hug: Number(e.getAttribute("data-hug")), env: e.getAttribute("data-env"),
+  }))`);
+  cap.classStyles = cls;
+  ck(`${tag} A18) 六個職業的 shape language 都列出來了`, cls.length === 6, cls.map((c) => c.cls));
+  ck(`${tag} A19) 速度／粗細／高度／貼地 四個維度都有差異（不是只換顏色）`,
+    ["speed", "width", "height", "hug"].every((k) => new Set(cls.map((c) => c[k])).size >= 5),
+    ["speed", "width", "height", "hug"].map((k) => [k, [...new Set(cls.map((c) => c[k]))].length]));
+  ck(`${tag} A20) 出現／消失節奏至少三種`, new Set(cls.map((c) => c.env)).size >= 3,
+    [...new Set(cls.map((c) => c.env))]);
+  {
+    //  10 位英雄的職業標記也要對得上（畫廊列）
+    const heroCls = await ev(tab, `[...document.querySelectorAll('[data-testid="gallery-hero"]')].map((e) => [e.getAttribute("data-hero"), e.getAttribute("data-class")])`);
+    cap.heroClasses = heroCls;
+    ck(`${tag} A21) 10 位代表英雄都標得出職業，且涵蓋 ≥4 種`,
+      heroCls.length === 10 && heroCls.every((h) => !!h[1])
+      && new Set(heroCls.map((h) => h[1])).size >= 4, heroCls);
+  }
+
   const ovf = await overflowInfo(tab);
   cap.overflow = ovf;
-  ck(`${tag} A18) 沒有橫向溢出（實測 ${ovf.hOverflow}px）`, ovf.hOverflow <= 1, ovf);
-  ck(`${tag} A19) 誠實聲明在畫面上`,
+  ck(`${tag} A22) 沒有橫向溢出（實測 ${ovf.hOverflow}px）`, ovf.hOverflow <= 1, ovf);
+  ck(`${tag} A23) 誠實聲明在畫面上`,
     (await text(tab)).includes("不代表引擎實際施放了該技能"));
   if (size.shots.includes("gallery")) await shot(`${tag}-01-gallery.png`);
   results.data[`${tag}-gallery`] = cap;
@@ -351,9 +374,55 @@ async function runBattle(size) {
     !!st && st.halo <= st.caps.halo && st.bar <= st.caps.bar
     && st.bolt <= st.caps.bolt && st.guard <= st.caps.guard, st);
 
+  //  ── L Hotfix 1 §3：三段式戰報（hidden / compact / expanded）──────────────
+  const readTl = () => ev(tab, `(() => {
+    const root = document.querySelector('[data-testid="timeline-root"]');
+    const body = document.querySelector('[data-testid="timeline-body"]');
+    if (!root) return null;
+    const rb = root.getBoundingClientRect();
+    const bb = body ? body.getBoundingClientRect() : null;
+    return { mode: root.getAttribute("data-mode"), hasBody: !!body,
+      bodyH: bb ? Math.round(bb.height) : 0, rootBottom: Math.round(rb.bottom),
+      vh: window.innerHeight,
+      stored: (() => { try { return localStorage.getItem("esmo.timeline.mode.v1"); } catch { return null; } })() };
+  })()`, 20000).catch(() => null);
+  const clickTl = async () => {
+    await ev(tab, `(() => { const t = document.querySelector('[data-testid="timeline-toggle"]'); if (t) { t.click(); return true; } return false; })()`, 20000).catch(() => null);
+    await sleep(600);
+  };
+  const tl0 = await readTl();
+  cap.timeline = { start: tl0 };
+  const compactMax = size.mobile ? 56 : 96;
+  const compactMin = size.mobile ? 44 : 72;
+  ck(`${tag} B7) 戰報預設 compact`, tl0?.mode === "compact", tl0);
+  ck(`${tag} B8) compact 高度落在規格區間（${compactMin}–${compactMax}px，實測 ${tl0?.bodyH}）`,
+    !!tl0 && tl0.bodyH >= compactMin && tl0.bodyH <= compactMax, tl0);
+  await clickTl();
+  const tl1 = await readTl();
+  cap.timeline.expanded = tl1;
+  ck(`${tag} B9) 點一下 → expanded`, tl1?.mode === "expanded", tl1);
+  ck(`${tag} B10) expanded ${size.mobile ? "手機最多占 viewport 30%" : "桌機 ≤40%"}（實測 ${tl1?.bodyH}px / ${tl1?.vh}）`,
+    !!tl1 && tl1.bodyH <= Math.round(tl1.vh * (size.mobile ? 0.31 : 0.41)), tl1);
+  await clickTl();
+  const tl2 = await readTl();
+  cap.timeline.hidden = tl2;
+  ck(`${tag} B11) 再點一下 → hidden（本體收掉，只留可點回來的標籤）`,
+    tl2?.mode === "hidden" && tl2?.hasBody === false, tl2);
+  ck(`${tag} B12) 使用者的選擇有記到 localStorage`, tl2?.stored === "hidden", tl2?.stored);
+  await clickTl();
+  const tl3 = await readTl();
+  ck(`${tag} B13) 再點一下轉回 compact（三段循環）`, tl3?.mode === "compact", tl3);
+
+  //  ── L Hotfix 1 §1：塔射程圈與鎖定線只在 debug 模式出現 ──────────────────
+  const td = await ev(tab, "window.__TOWER_DEBUG_STATS ?? null", 20000).catch(() => null);
+  cap.towerDebug = td;
+  ck(`${tag} B14) debug 模式下有畫塔射程圈（?diag=1）`, !!td && td.rings > 0, td);
+  ck(`${tag} B15) 射程圈半徑 = towerAggroRange 換算（5.5 × 1.7 = 9.35 世界單位）`,
+    !!td && Math.abs(td.rangeWorld - 9.35) < 0.01, td?.rangeWorld);
+
   const ovf = await overflowInfo(tab).catch(() => null);
   cap.overflow = ovf;
-  ck(`${tag} B6) 沒有橫向溢出，也沒有因本輪新增縱向捲動軸`,
+  ck(`${tag} B16) 沒有橫向溢出，也沒有因本輪新增縱向捲動軸`,
     !!ovf && ovf.hOverflow <= 1 && ovf.vScrollers.length === 0, ovf);
   if (size.shots.includes("battle")) await shot(`${tag}-02-battle.png`);
   results.data[`${tag}-battle`] = cap;

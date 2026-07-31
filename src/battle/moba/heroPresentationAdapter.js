@@ -86,6 +86,7 @@ export function describeFxPresentation(fx, roster = null) {
       heroId: null, source: `engine:${group}`,
       archetype: group === "boss" ? "ultimate" : nh.archetype,
       effect: nh.effect, emphasis: group === "boss" ? "ultimate" : "normal",
+      combatClass: null,
       label: nh.label, basis: `engine:${group}:${variant}`,
       isActualSkillCast: false, isUltimate: group === "boss",
       theme: null, cameraEmphasis: "none", performanceTier: "light", slot: null,
@@ -102,6 +103,8 @@ export function describeFxPresentation(fx, roster = null) {
   return Object.freeze({
     heroId: heroId ?? null,
     source: p.source,                       // authored | fallback
+    //  L Hotfix 1 §4：職業決定 shape language（形狀／速度／節奏），不只顏色。
+    combatClass: heroId ? p.combatClass : null,
     archetype,
     effect: spec.effect,
     emphasis: power ? (spec.emphasis ?? "signature") : "normal",
@@ -172,21 +175,47 @@ export function describeTimelinePresentation(ev, roster = null) {
   });
 }
 
-/** 同時活著的 callout 上限（手機更少）。呈現層限流，不影響事件流。 */
-export const CALLOUT_LIMIT = Object.freeze({ desktop: 3, mobile: 2 });
+//  ── L Hotfix 1 §2：callout 降低干擾 ───────────────────────────────────────
+//  原本桌機 3／手機 2、只要 signature 以上就跳，實際看起來還是太吵：
+//  一場團戰同一隻英雄會連續洗版。三道閘門：
+//    1. 普攻（emphasis normal/passive）**永遠不跳**
+//    2. 只有「看得出戰術意義」的演出分類才跳（見 CALLOUT_ARCHETYPES）
+//    3. 同一隻英雄的同一種演出，冷卻窗內只留最新一筆
+/** 同時活著的 callout 上限。桌機 2、手機 1。 */
+export const CALLOUT_LIMIT = Object.freeze({ desktop: 2, mobile: 1 });
+/** 值得打斷觀眾注意力的演出分類。普通彈道／貫穿（＝多半是普攻）不在內。 */
+export const CALLOUT_ARCHETYPES = Object.freeze(["control", "shield", "heal", "area", "ultimate", "dash"]);
+/** 同英雄同分類的去重窗（模擬秒）。規格要求 3～5 秒，取中間值。 */
+export const CALLOUT_DEDUPE_SEC = 4;
 
 /**
  * 從 presentation event 流挑出「值得跳 callout」的幾筆。
  * 決定性：同樣輸入永遠同樣輸出（只依 at / id 排序，不用亂數、不看牆鐘）。
  */
-export function pickCallouts(events, { mobile = false, limit = null } = {}) {
+export function pickCallouts(events, { mobile = false, limit = null, dedupeSec = CALLOUT_DEDUPE_SEC } = {}) {
   const cap = limit ?? (mobile ? CALLOUT_LIMIT.mobile : CALLOUT_LIMIT.desktop);
   const worthy = (Array.isArray(events) ? events : []).filter((e) => {
     const p = e?.presentation;
-    return !!p?.heroId && (p.isUltimate || p.emphasis === "signature" || p.emphasis === "ultimate");
+    if (!p?.heroId) return false;
+    //  ① 普攻不跳：basic 推導出來的演出一律 emphasis normal
+    if (p.emphasis !== "signature" && p.emphasis !== "ultimate" && !p.isUltimate) return false;
+    //  ② 只留看得出戰術意義的分類
+    return CALLOUT_ARCHETYPES.includes(p.archetype);
   });
+  //  新的排前面（同時間比 id，確保決定性）
   worthy.sort((a, b) => (b.at ?? 0) - (a.at ?? 0) || String(b.id).localeCompare(String(a.id)));
-  return worthy.slice(0, Math.max(0, cap));
+  //  ③ 同英雄同分類去重：窗內只留最新的那一筆
+  const kept = [];
+  const lastAt = new Map();
+  for (const e of worthy) {
+    const key = `${e.presentation.heroId}:${e.presentation.archetype}`;
+    const prev = lastAt.get(key);
+    if (prev != null && Math.abs(prev - (e.at ?? 0)) < dedupeSec) continue;
+    lastAt.set(key, e.at ?? 0);
+    kept.push(e);
+    if (kept.length >= cap) break;
+  }
+  return kept;
 }
 
 /** renderer 只認得這八個字；給 verifier 與 gallery 用的白名單再輸出一次。 */

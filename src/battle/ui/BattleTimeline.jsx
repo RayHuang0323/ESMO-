@@ -22,6 +22,24 @@ const LANE = { top: "上", mid: "中", bot: "下", nexus: "堡" };
 const sideC = (s) => (s === "blue" ? GC.blueL : s === "red" ? GC.redL : "#cbd5e1");
 const MONO = "ui-monospace,Menlo,monospace";
 
+//  L Hotfix 1 §3：三段式戰報。**沒有自由拖拉 resize**——只有三個固定檔位，
+//  這樣 live 與 Replay 永遠是同一組版面規則，也不會出現使用者拉到奇怪高度的狀態。
+export const TIMELINE_MODES = Object.freeze(["hidden", "compact", "expanded"]);
+export const TIMELINE_MODE_ZH = Object.freeze({ hidden: "隱藏", compact: "精簡", expanded: "展開" });
+const TIMELINE_MODE_ICON = Object.freeze({ hidden: "▸", compact: "▾", expanded: "▴" });
+const TIMELINE_MODE_KEY = "esmo.timeline.mode.v1";
+export function loadTimelineMode() {
+  try {
+    const v = localStorage.getItem(TIMELINE_MODE_KEY);
+    if (TIMELINE_MODES.includes(v)) return v;
+  } catch { /* localStorage 不可用 ⇒ 走預設 */ }
+  return "compact";      // 桌機與手機都預設 compact
+}
+export function saveTimelineMode(m) {
+  if (!TIMELINE_MODES.includes(m)) return;
+  try { localStorage.setItem(TIMELINE_MODE_KEY, m); } catch { /* 忽略 */ }
+}
+
 function Name({ id, side, roster }) {
   return <span style={{ color: sideC(side), fontWeight: 800 }}>{roster?.[id]?.player ?? id.toUpperCase()}</span>;
 }
@@ -107,35 +125,52 @@ export default function BattleTimeline({ open = true, max = 11, roster = null })
   // S29：隊伍溝通（規則式播報）與系統事件/擊殺**分開存**，在此合併顯示但可區分：
   //   系統事件走 Row（原樣式）；COMMS 走 CommsRow（引號 + 說話者，明顯不同）。
   const comms = useBattleStore((s) => s.comms);
-  // S29B2：手機**預設收合**（抽屜化）——戰報不再長期遮住地圖；桌機維持展開。
   const isMobile = useIsMobile();
-  const [fold, setFold] = useState(() => isMobile);
+  //  L Hotfix 1 §3：三段式（hidden / compact / expanded），**預設 compact**。
+  //  桌機與手機都一樣預設 compact ⇒ 戰報永遠不會一開場就吃掉半個畫面，
+  //  但也不會什麼都看不到。使用者的選擇記在 localStorage，下一場沿用。
+  const [mode, setMode] = useState(loadTimelineMode);
+  const cycle = () => {
+    const next = mode === "compact" ? "expanded" : mode === "expanded" ? "hidden" : "compact";
+    setMode(next); saveTimelineMode(next);
+  };
   if (!open) return null;
   const merged = [...events, ...comms].sort((a, b) => (a.t ?? 0) - (b.t ?? 0));
-  const rows = merged.reverse().slice(0, isMobile ? 7 : max);
+  const rows = merged.reverse().slice(0, mode === "expanded" ? (isMobile ? 9 : max) : (isMobile ? 2 : 3));
   const latest = rows[0];
+  //  規格高度：桌機 compact 72–96px、手機 compact 44–56px；
+  //  expanded 手機最多占 viewport 30%（桌機 40vh）。**沒有自由拖拉 resize。**
+  const bodyH = mode === "expanded"
+    ? (isMobile ? "30vh" : "40vh")
+    : (isMobile ? 50 : 84);
 
   return (
     // S29B6 版面根因修：舊碼寫死 `top: 96`，而 BattleHUD（score header）從 top 6 起
     //   高約 106–122px ⇒ 戰報**壓在藍紅勝率條與 MVP 列上**（兩者 zIndex 都是 8，
     //   戰報在 DOM 較晚 ⇒ 贏）。改用共用常數 SAFE_TOP（= HUD 底緣 + 6）。
     //   根層 pointerEvents: none ⇒ 戰報不吃掉地圖 pan/zoom；只有可點的標題列開啟。
-    <div style={{ position: "absolute", top: SAFE_TOP, left: FEED_LEFT, width: `min(${FEED_MAX_W}px, 62vw)`, maxWidth: `calc(100% - ${FEED_LEFT + FEED_RIGHT_RESERVE}px)`, zIndex: Z.feed, fontFamily: "system-ui,sans-serif", pointerEvents: "none" }}>
-      {/* data-testid：手機版預設收合（S29B2），驗收腳本要能像使用者一樣展開它。
-          收合時標題會被換成「最新一則」，所以不能靠文字找這顆。 */}
-      <div data-testid="timeline-toggle" aria-expanded={!fold} onClick={() => setFold((v) => !v)} style={{ cursor: "pointer", pointerEvents: "auto", display: "flex", justifyContent: "space-between", gap: 6, alignItems: "center",
-        background: "rgba(8,14,24,0.78)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: fold ? 9 : "9px 9px 0 0",
-        padding: "4px 9px", fontSize: 10, fontWeight: 900, color: "rgba(255,255,255,0.6)", letterSpacing: fold ? 0 : "0.16em" }}>
-        {/* 收合時顯示最新一則（toast 語意）：不佔地圖也不失去資訊 */}
-        {fold && latest
-          ? <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: 0, fontWeight: 700 }}>
-              {ICON[latest.type] || "💬"} {latest.type === "COMMS" ? `${latest.speaker}：${latest.text}` : latest.text}
-            </span>
+    <div data-testid="timeline-root" data-mode={mode}
+      style={{ position: "absolute", top: SAFE_TOP, left: FEED_LEFT, width: `min(${FEED_MAX_W}px, 62vw)`, maxWidth: `calc(100% - ${FEED_LEFT + FEED_RIGHT_RESERVE}px)`, zIndex: Z.feed, fontFamily: "system-ui,sans-serif", pointerEvents: "none" }}>
+      {/* data-testid：驗收腳本要能像使用者一樣切換三段。
+          hidden 時只留一顆小標籤，讓它叫得回來。 */}
+      <div data-testid="timeline-toggle" data-mode={mode}
+        aria-expanded={mode === "expanded"} onClick={cycle}
+        title={`戰報：${TIMELINE_MODE_ZH[mode]}（點擊切換）`}
+        style={{ cursor: "pointer", pointerEvents: "auto", display: "flex", justifyContent: "space-between", gap: 6, alignItems: "center",
+          background: "rgba(8,14,24,0.78)", border: "1px solid rgba(255,255,255,0.14)",
+          borderRadius: mode === "hidden" ? 9 : "9px 9px 0 0",
+          width: mode === "hidden" ? "auto" : undefined,
+          alignSelf: "flex-start",
+          padding: "4px 9px", fontSize: 10, fontWeight: 900, color: "rgba(255,255,255,0.6)",
+          letterSpacing: mode === "hidden" ? 0 : "0.16em" }}>
+        {mode === "hidden"
+          ? <span style={{ letterSpacing: 0, fontWeight: 800 }}>⚡ 戰報</span>
           : <span>⚡ 戰報 TIMELINE</span>}
-        <span style={{ flexShrink: 0 }}>{fold ? "▸" : "▾"}</span>
+        <span style={{ flexShrink: 0, marginLeft: 6 }}>{TIMELINE_MODE_ICON[mode]}</span>
       </div>
-      {!fold && (
-        <div style={{ maxHeight: isMobile ? "30vh" : "40vh", overflow: "hidden", background: "rgba(8,14,24,0.6)", border: "1px solid rgba(255,255,255,0.12)", borderTop: "none", borderRadius: "0 0 9px 9px", backdropFilter: "blur(4px)", padding: "5px 4px", pointerEvents: "none" }}>
+      {mode !== "hidden" && (
+        <div data-testid="timeline-body" data-mode={mode}
+          style={{ height: bodyH, maxHeight: bodyH, overflow: "hidden", background: "rgba(8,14,24,0.6)", border: "1px solid rgba(255,255,255,0.12)", borderTop: "none", borderRadius: "0 0 9px 9px", backdropFilter: "blur(4px)", padding: "5px 4px", pointerEvents: "none", boxSizing: "border-box" }}>
           {rows.length === 0 && <div style={{ fontSize: 10.5, color: "rgba(255,255,255,0.35)", padding: 4 }}>尚無事件…</div>}
           {rows.map((ev) => (ev.type === "COMMS"
             ? <CommsRow key={ev.id} msg={ev} />

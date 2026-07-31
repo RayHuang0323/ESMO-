@@ -3664,3 +3664,72 @@ live 對戰段縮成接線煙霧測試（掛得起來、模擬在推進、池容
    恆判「被蓋住」。對這種疊層要驗的是「有尺寸、可見、完整在畫面內」。
 3. **測試中斷要記得收屍**：連續幾次中斷留下 37 個孤兒 Chrome／preview 行程，
    把機器塞到 CDP 全面逾時，看起來像產品壞了。清乾淨之後同一份腳本 18/18 全過。
+
+---
+
+## Milestone L Hotfix 1（2026-08-01）— 塔攻擊 Audit ／ 演出降噪 ／ 三段式戰報 ／ 職業語彙
+
+報告：`review/moba-runtime/milestone-l-hotfix1/MILESTONE_L_HOTFIX1_REPORT.md`
+rollback tag：`milestone-l-hotfix1-baseline` → `a834851`
+
+**本輪一行引擎、一個平衡常數都沒改**，`regress` 15/15 逐值與 L／K／J-close 相同。
+
+### §1 塔攻擊 Audit（81,214 個「塔 × tick」）
+
+新增 `tools/audit_tower_attack_l1.mjs`（唯讀診斷）。三個結論：
+
+1. **「有傷害但沒有 FX」= 0 次。** 呈現層乾淨，不是特效漏畫。
+2. **「有敵人卻完全不動作」= 0.3%**，逐筆看是 `atkCd` 未歸零或剛切目標的 tick。
+3. **真正的發現：`lanes` 塔從來不打小兵。** `LogicEngine.js:2095` 的分支是
+   「塔位有兵 ⇒ `continue`」，一般車道塔**沒有攻擊小兵的程式碼路徑**（只有
+   `nexus_guard` 有）。而且小兵在全部樣本裡**一次都沒有**進入 `towerAggroRange`
+   的世界距離內（Δt 0.05 ≈ 12.5 世界單位，射程只有 5.5）。
+   **程式碼與它自己的註解（`:2050`「射程內有敵方小兵 ⇒ 塔打兵」）不符。**
+
+**本輪不改它**：讓車道塔清兵不是最小修正，是平衡改動（兵線在塔前融化 ⇒ 推線節奏、
+金錢經驗分配、比賽長度全變 ⇒ regress2 節奏門檻幾乎確定要重新校準）。
+必須獨立一輪做並附多 seed 前後對照。**也絕不是放大射程**——射程對英雄是有效的
+（0.8% 的 tick 打得到），問題在缺少清兵分支。
+
+⚠ **測量陷阱記一筆**：第一版拿 `snapshot.towers` 量，得到「100% 有 FX、0% 有傷害」
+的假結論——因為 **snapshot 只序列化 `side/lane/tier/pos/hp`**，沒有 `targetId`。
+**snapshot 不是引擎狀態的全集**；診斷工具要直接讀引擎。
+
+新增 `TowerRangeDebug.jsx`：**只在 `?diag=1` / `?shot=`** 顯示射程圈
+（半徑 = 5.5 × 1.7 = 9.35 世界單位，verifier 盯著這個換算防止偷改）與鎖定線
+（來源是引擎真實的 `tower:basic` fx，不是自己重算誰該被打）。
+
+### §2 Callout 降噪
+
+三道閘門：普攻永不跳、只留 `control/shield/heal/area/ultimate/dash`、
+同英雄同分類 **4 秒**去重。上限 3/2 → **桌機 2／手機 1**。版位收窄到手機 40vw。
+
+### §3 Timeline 三段式
+
+`hidden / compact / expanded`，點標題循環，**無自由拖拉 resize**。
+桌機 compact **84px**、手機 **50px**；expanded 手機 ≤ **30vh**、桌機 ≤ 40vh。
+兩邊都預設 compact，選擇存 `localStorage["esmo.timeline.mode.v1"]`。
+
+### §4 六職業 shape language（不只換顏色）
+
+`CLASS_STYLE` 決定 speed／width／height／hug（貼地）／spin（軌跡抖動）／
+env（出現消失節奏，四種包絡）。刺客早到細長閃現折線、坦克晚到寬厚貼地拖長、
+法師浮空慢漲、射手又快又細。八個模板與 fallback **仍共用**，沒有替任何英雄複製 JSX。
+`combatClass` 唯一來源是 `heroDatabase.arch`，沒有第二套英雄資料。
+
+### §5 melee / ranged Audit（只做報告）
+
+**引擎完全沒有 melee/ranged 區分**：英雄交戰距離是硬編碼的 `8`
+（`LogicEngine.js:1476/1491`），所有英雄一視同仁；`heroDatabase.stats.range`
+（鋼鐵衛士 150／雷霆神射 550）**存在但引擎一次都沒讀**；追擊 `chaseGiveUpDist: 9`
+也不分職業；引擎沒有彈道概念。小兵**有** `kind: melee|caster`，英雄沒有。
+
+給 Milestone M 的最小 Contract 與四項風險（改距離＝改所有數值、遠程優勢會放大、
+與 TD-21 交互作用、呈現層已就緒不需再改）詳見報告 §5。
+
+### 驗證
+
+`check_hero_presentation_l` **80/80**、gallery **140/140**（六尺寸）、
+battle **45/45**（三尺寸，含三段式戰報與塔 debug）、replay **16/16**。
+回歸：matchups_k 47/47・348/348、j_close 35/35、banpick_hotfix2 251/251、
+`regress` 15/15（23.5 分／29.8 擊殺，**逐值相同**）、regress2 8/8、build exit 0。
