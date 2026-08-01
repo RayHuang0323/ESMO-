@@ -25,6 +25,9 @@ import {
   getHeroCombatPresentation, getHeroSkillPresentation, getHeroPresentationTheme,
   ARCHETYPE_LABEL, PRESENTATION_ARCHETYPES,
 } from "../../data/heroCombatPresentation.js";
+//  Milestone M1：近戰／遠程與站位線位一併帶進呈現描述。
+//  **只補欄位**，不改 Milestone L 的演出分類（archetype / label / basis 一字未動）。
+import { getHeroCombatArchetype } from "../../data/heroCombatArchetypes.js";
 
 export const PRESENTATION_ADAPTER_VERSION = "heroPresentation.adapter.v1";
 
@@ -105,6 +108,9 @@ export function describeFxPresentation(fx, roster = null) {
     source: p.source,                       // authored | fallback
     //  L Hotfix 1 §4：職業決定 shape language（形狀／速度／節奏），不只顏色。
     combatClass: heroId ? p.combatClass : null,
+    //  M1：近戰／遠程與站位線位（供 UI 標示；**不影響演出分類的選擇**）
+    attackType: heroId ? getHeroCombatArchetype(heroId).attackType : null,
+    positionRole: heroId ? getHeroCombatArchetype(heroId).formationLine : null,
     archetype,
     effect: spec.effect,
     emphasis: power ? (spec.emphasis ?? "signature") : "normal",

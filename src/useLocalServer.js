@@ -17,6 +17,7 @@ import { beginReplayCapture } from "./battle/moba/replay/replayBuffer.js";
 import { buildPlayerStatSlots } from "./battle/moba/mobaRosterAdapter.js";
 import { toEngineHeroMods } from "./battle/moba/mobaHeroProfile.js";
 import { toEngineSpells } from "./battle/moba/mobaHeroLoadout.js";
+import { toEngineArchetypes, COMBAT_ARCHETYPE_CONTRACT_VERSION } from "./data/heroCombatArchetypes.js";
 import { heroById } from "./data/heroDatabase.js";
 import { toEnginePlayerMods } from "./battle/moba/mobaPlayerStats.js";
 
@@ -137,6 +138,24 @@ export function useLocalServer() {
     //   無 roster / 全中性 ⇒ toEngineHeroMods 回 null ⇒ 完全不呼叫 ⇒ 逐位元回到 G。
     const heroMods = opts.roster ? toEngineHeroMods(opts.roster, heroById) : null;
     if (heroMods) eng.configureHeroes(heroMods);
+
+    // ── Milestone M1：戰鬥原型進引擎（近戰／遠程與職業站位的唯一計算點）──
+    //   opts.roster = GameView 的生效名單（draft × 先發指派 × profileStore），
+    //   兩側都從**自己的**選角推導 ⇒ 對稱、無陣營特例。
+    //   `toEngineArchetypes` 是唯一的形狀轉換點：UI 不拼資料、引擎不認得 heroId。
+    //   資料缺漏 ⇒ 契約層回**決定性 fallback**（不使用亂數）。
+    //   無 roster ⇒ 完全不呼叫 ⇒ 交戰距離逐位元回到硬編碼 8（M 基礎層的保證）。
+    const archMods = opts.roster ? toEngineArchetypes(opts.roster) : null;
+    if (archMods && Object.keys(archMods).length) {
+      const blue = {}, red = {};
+      for (const [pid, mod] of Object.entries(archMods)) {
+        (String(pid)[0] === "r" ? red : blue)[pid] = mod;
+      }
+      eng.configureArchetypes({
+        blue, red,
+        meta: { version: COMBAT_ARCHETYPE_CONTRACT_VERSION, seats: Object.keys(archMods).length },
+      });
+    }
 
     // ── Milestone J：賽前配置的召喚師技能進引擎 ──────────────────────────
     //   在此之前，引擎自己決定第二格（打野懲戒、其餘 reserved）⇒ 賽前選的

@@ -61,16 +61,19 @@ export const toEngineRange = (displayRange) => {
 
 //  ── 每個職業的行為輪廓 ────────────────────────────────────────────────────
 //  只有六筆，因為差異的來源是**職業**，不是逐隻英雄手寫。
+//  ⚠ M1 校正：近戰的 preferK 原本是 0.92 / 0.80（站在射程邊緣），實測會在
+//    邊界擺盪、遲遲進不了攻擊距離 ⇒ 比賽拉長、有場次收不掉。
+//    收到 0.78 / 0.70 讓近戰站進射程內側，真的打得到人。
 //  preferK / chaseK / retreatK 是相對 baseAttackRange 的倍率 ⇒ 射程一改，
 //  站位自動跟著走，不會有兩份數字要同步。
 const CLASS_PROFILE = Object.freeze({
   tank: Object.freeze({
     line: "front", movement: "engage", targeting: "frontMost", style: "heavyImpact",
-    preferK: 0.92, chaseK: 1.9, retreatK: 0.0, spread: 2.4,
+    preferK: 0.78, chaseK: 1.9, retreatK: 0.0, spread: 2.4,
   }),
   fighter: Object.freeze({
     line: "front", movement: "engage", targeting: "nearest", style: "slash",
-    preferK: 0.80, chaseK: 2.4, retreatK: 0.0, spread: 1.9,
+    preferK: 0.70, chaseK: 2.4, retreatK: 0.0, spread: 1.9,
   }),
   assassin: Object.freeze({
     line: "flank", movement: "flank", targeting: "weakest", style: "slash",

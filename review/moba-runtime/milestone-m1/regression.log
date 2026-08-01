@@ -1,0 +1,21 @@
+=== positioning_m1 ===
+✅ 16) 塔與野怪仍讀自己的規則常數（沒有被英雄契約覆蓋）
+
+✅ PASS  17/17
+=== archetypes_m ===
+❌ FAIL  27/28
+=== threat_l2 ===
+✅ PASS  19/19
+=== presentation_l ===
+✅ PASS  80/80
+=== matchups_k ===
+✅ PASS  47/47
+=== j_close ===
+✅ PASS  35/35
+=== regress ===
+結束率 15/15 | 平均時長 23.1分 | 平均擊殺 30.9 | 0殺場 0 | 撤退鎖死 1 | 平均hot 57% | 平均破塔 17.4/12
+=== regress2 ===
+
+節奏門檻 8/8 通過
+=== build ===
+[32m✓ built in 8.33s[39m

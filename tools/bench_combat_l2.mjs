@@ -28,6 +28,21 @@ const MAX_TICKS = Number(arg("--maxTicks", "6000"));
 const LABEL = arg("--label", "run");
 const JSON_OUT = arg("--json", "");
 const R = SIM_RULES.v3 ?? SIM_RULES;
+//  M1：--arch=1 ⇒ 啟用戰鬥原型層（近戰／遠程距離 + 職業站位）。
+//  預設關閉 ⇒ 與 M 基礎層之前的量測可直接比較。
+const USE_ARCH = arg("--arch", "0") === "1";
+const A = USE_ARCH ? await import("../src/data/heroCombatArchetypes.js") : null;
+const ARCH_LINEUP = ["ironclad", "duskblade", "bingshuang", "leiting", "shengguang",
+  "cinderfist", "chichuan", "lieyan", "yanfeng", "dadi"];
+const archCfg = (() => {
+  if (!A) return null;
+  const seats = ["b1", "b2", "b3", "b4", "b5", "r1", "r2", "r3", "r4", "r5"];
+  const roster = Object.fromEntries(seats.map((s2, i) => [s2, { heroId: ARCH_LINEUP[i] }]));
+  const mods = A.toEngineArchetypes(roster);
+  const blue = {}, red = {};
+  for (const [pid, m] of Object.entries(mods)) (pid[0] === "r" ? red : blue)[pid] = m;
+  return { blue, red, meta: null };
+})();
 
 const SEEDS = Array.from({ length: N }, (_, i) => [1, 2, 3, 7, 42, 99, 123, 777, 2024, 5555,
   314, 271, 1618, 8080, 4242, 31, 64, 128, 256, 512, 1024, 2048, 4096, 8192][i] ?? (10007 + i * 97));
@@ -43,6 +58,7 @@ const mean = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0);
 const rows = [];
 for (const seed of SEEDS) {
   const e = new LogicEngine(seed);
+  if (archCfg) e.configureArchetypes(archCfg);
   let towerDmgToHeroes = 0, towerShots = 0;
   let bossDmgToHeroes = 0, bossShots = 0, campDmgToHeroes = 0, campShots = 0;
   let towerCleanShots = 0, bossCleanShots = 0, campCleanShots = 0;

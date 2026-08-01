@@ -3888,3 +3888,63 @@ Hotfix 2 報告的 `regress` 15/15 / 31.9 與 `regress2` 8/8 **不是該 commit 
 
 **改完程式碼要重跑回歸，不能沿用改動前的量測。**
 任何「最後一刻的修正」都必須重跑整組回歸才能寫進報告。
+
+---
+
+## Milestone M1（2026-08-01）— 契約接線、交戰距離、職業站位、長局校正
+
+報告：`review/moba-runtime/milestone-m1/MILESTONE_M1_REPORT.md`
+rollback tag：`milestone-m1-baseline` → `147139f`
+
+**M2（projectile lifecycle）尚未開始。**
+
+### 長局紅燈的根因：推進閘門，不是塔也不是 Boss
+
+seed 777（33.3 分）逐 2 分鐘取樣：22 分時還有 5 座車道塔散在三路、門牙 4/4 完好。
+根因是 `frontStructure()` 規定**必須某一路三座全倒**才輪得到門牙塔；
+兩隊對稱互拆 ⇒ 沒有任何一路被清空 ⇒ 沒人打得到門牙 ⇒ 高原期。
+這是既有結構性質，被 Hotfix 2 的 Boss 修正推過 32 分線。
+
+修法：`structureAccelT/Div` **960/130 → 900/115**（只加速拆建築，不改擊殺／移速／
+任何傷害公式）。**沒有提高門檻、沒有刪 seed、沒有削弱塔或 Boss。**
+seed 777 **33.3 → 23.4 分**；`regress2` **7/8 → 8/8**（最長 27.4）；
+`regress` **14/15 → 15/15**（23.1 分 / 30.9 擊殺）；`check_combat_threat_l2` 19/19 不變。
+
+### 接線
+
+唯一計算點在 `useLocalServer.start()`（緊接 `configureHeroes` 之後）：
+`opts.roster → toEngineArchetypes → 依席位拆 blue/red → configureArchetypes`。
+UI 不拼資料（verifier 掃描所有 `.jsx` 確認沒有元件 import Adapter）；
+缺資料走**決定性 fallback**，無亂數；無 roster ⇒ 不呼叫 ⇒ 逐位元回到硬編碼 8。
+Presentation 只**補兩個欄位**（`attackType` / `positionRole`），
+Milestone L 的演出分類一字未動。
+
+### 實測差異（5 seeds，只採計最近敵人 < 15 的交戰窗）
+
+近戰有效交戰距離 **3.89**、遠程 **6.53**。
+線位平均最近敵距：**front 4.53 / flank 4.76 / back 7.08 / support 6.98**
+⇒ 前排真的在前排、後排不貼進近戰核心（7.08 > 4.28）、flank 與兩者都不同。
+重疊佔比全部 < 25%、無卡死、同 seed 兩次逐值相同（無新增 RNG）。
+
+⚠ 量測教訓：整場平均會被**對線地理**主導（上路／打野天生離敵人遠），
+第一版因此把 front/back 判反。要量站位就必須限制在交戰窗內。
+
+### 多 seed（未接線 24 seeds vs 接線 20 seeds）
+
+完成率 100% → 100%、勝率 58/42 → 60/40、平均時長 23.2 → 25.7 分、
+p95 27.1 → 31.8、擊殺 **31.4 → 65.5**、破塔 17.3 → 16.0。
+
+擊殺上升是**預期**（近戰必須貼到 3.9 才打得到 ⇒ 團戰變近距離互毆）。
+第一版近戰 `preferK` 設在射程邊緣（0.92/0.80）會在邊界擺盪、有場次收不掉，
+收到 **0.78/0.70** 後回到 100%。p95 31.8 與擊殺 65.5 **仍是技術債**，
+正解是 M2 的 projectile lifecycle（遠程改成命中才結算後輸出會回落）。
+
+⚠ `regress`/`regress2` 測的是**未接線的裸引擎**（直接 `new LogicEngine`），
+所以它們反映長局修正，不是接線後的平衡。
+
+### 驗證
+
+`check_combat_positioning_m1` **17/17**（新增）、`check_combat_archetypes_m` **30/30**、
+`check_combat_threat_l2` 19/19、`check_hero_presentation_l` 80/80、
+`check_hero_matchups_k` 47/47、`check_moba_milestone_j_close` 35/35、
+`regress` 15/15、`regress2` 8/8、build exit 0。

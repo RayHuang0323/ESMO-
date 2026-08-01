@@ -208,9 +208,28 @@ console.log("\n── §2 第五個 opt-in 行為層 ──");
     const imports = src.split(/\r?\n/).filter((l) => /^\s*import\s/.test(l)).join("|");
     ck("27) LogicEngine 沒有 import 英雄資料（形狀全由呼叫端準備）",
       !/heroCombatArchetypes|heroDatabase|heroCombatPresentation/.test(imports), imports.slice(0, 200));
-    ck("28) 本輪沒有把原型層接進正式流程（useLocalServer 尚未呼叫）",
-      !(await import("node:fs")).readFileSync("src/useLocalServer.js", "utf8")
-        .includes("configureArchetypes"));
+    //  M 基礎層時這條驗的是「尚未接線」；**M1 已接線**，所以反轉成
+    //  「有接、而且只經 Adapter 接」——UI 不得自己拼形狀。
+    const uls = (await import("node:fs")).readFileSync("src/useLocalServer.js", "utf8");
+    ck("28) 原型層已接進正式流程的唯一計算點（useLocalServer）",
+      uls.includes("configureArchetypes") && uls.includes("toEngineArchetypes"));
+    ck("29) 只有 opts.roster 有值才呼叫（無名單 ⇒ 逐位元回到舊行為）",
+      /opts\.roster \? toEngineArchetypes\(opts\.roster\) : null/.test(uls));
+    {
+      //  UI 不得直接拼原型資料：只有 Adapter 與引擎接線點可以碰
+      const fs = await import("node:fs");
+      const offenders = [];
+      const walk = (dir) => {
+        for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
+          const q = `${dir}/${f.name}`;
+          if (f.isDirectory()) { walk(q); continue; }
+          if (!/\.jsx$/.test(f.name)) continue;
+          if (fs.readFileSync(q, "utf8").includes("toEngineArchetypes")) offenders.push(q);
+        }
+      };
+      walk("src");
+      ck("30) 沒有任何 UI（.jsx）自己拼原型資料", offenders.length === 0, offenders);
+    }
   }
 }
 

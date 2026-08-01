@@ -195,7 +195,7 @@ SIM_RULES.v3 = {
   //  L Hotfix 2：塔變強之後推線變慢，收斂改用**既有的**後期加速機制補回來，
   //  而不是把塔的正確修復削回去。1200s→960s（16 分起算）、除數 180→130（更陡）。
   //  它只加速拆建築，不改擊殺、不改移速、不改任何傷害公式。
-  structureAccelT: 960, structureAccelDiv: 130, // 16 分後只加速拆建築，不改擊殺或移速
+  structureAccelT: 900, structureAccelDiv: 115, // 16 分後只加速拆建築，不改擊殺或移速
   // ── 交戰狀態機（LogicEngine._decideV3）─────────────────────────────────
   engagementFsm: true,
   baseRetreatBonus: 0.06,  // v3 全體基礎撤退餘裕（疊在戰術 retreatAt 之上；撤退要撤得活）
