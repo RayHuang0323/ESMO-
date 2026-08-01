@@ -20,14 +20,16 @@ import * as THREE from "three";
 import { WORLD_SCALE } from "../map/coordinateMapping.js";
 import { LAYER_Y } from "../map/mapVisualStyle.js";
 import { SIM_RULES } from "../matchProgression.js";
+import { towerRangeWorld, structureRangeWorld } from "./towerRangeGeometry.js";
 
 const S = WORLD_SCALE;
 const GROUND_Y = Number.isFinite(LAYER_Y.lane_surface) ? LAYER_Y.lane_surface : 0;
 const RING_CAP = 24;      // 地圖上最多 22 座建築
 const LOCK_CAP = 24;
 
-/** 射程（模擬單位）→ 世界半徑。這就是「圈畫多大」的唯一換算。 */
-export const towerRangeWorld = (rules = SIM_RULES.v3) => (rules?.towerAggroRange ?? 5.5) * S;
+//  M1.6：射程 → 畫面半徑的換算搬到 towerRangeGeometry.js（純資料模組），
+//  verifier（node，不吃 .jsx）才讀得到同一份換算並斷言「引擎判定 == 射程圈」。
+export { towerRangeWorld, structureRangeWorld } from "./towerRangeGeometry.js";
 
 /** 診斷輸出：讓截圖工具讀得到「畫了幾個圈、幾條鎖定線」。 */
 const STATS = { rings: 0, locks: 0, rangeWorld: 0 };
@@ -86,7 +88,9 @@ export default function TowerRangeDebug({ frameRef }) {
       if ((st.hp ?? 1) <= 0) continue;
       color.set(st.team === "red" || st.side === "red" ? 0xff6647 : 0x35cfff);
       pos.set(st.world.x, GROUND_Y + 0.22, st.world.z);
-      scale.set(rangeR, rangeR, 1);
+      //  M1.6：逐座取半徑（門牙塔／主堡與路上塔不同），不再一律用 towerAggroRange。
+      const rr = structureRangeWorld(st.lane);
+      scale.set(rr, rr, 1);
       matrix.compose(pos, flat, scale);
       ringMesh.setMatrixAt(rings, matrix); ringMesh.setColorAt(rings, color); rings++;
     }

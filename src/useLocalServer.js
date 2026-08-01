@@ -157,6 +157,14 @@ export function useLocalServer() {
       });
     }
 
+    //  ── Milestone M1.6：戰鬥判定 Debug ────────────────────────────────────
+    //  只有 `?diag=1` / `?shot=` 時開啟。不開 ⇒ 引擎不輸出 `debug` 區塊
+    //  ⇒ snapshot 形狀與既有契約逐位元相同（Replay / BattleResult 不受影響）。
+    if (typeof window !== "undefined") {
+      const qs = new URLSearchParams(window.location.search);
+      if (qs.get("diag") === "1" || qs.has("shot")) eng.enableCombatDebug(true);
+    }
+
     // ── Milestone J：賽前配置的召喚師技能進引擎 ──────────────────────────
     //   在此之前，引擎自己決定第二格（打野懲戒、其餘 reserved）⇒ 賽前選的
     //   傳送／治療／點燃在對戰中根本不存在，畫面有圖示、引擎不認得。

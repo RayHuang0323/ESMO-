@@ -296,9 +296,23 @@ SIM_RULES.v3 = {
   //     （維持 Σk == Σd 的結果契約），改用「越站越痛」逼退。
   towerLockRamp: 0.10,         // 每連續一發 +22%
   towerLockRampMax: 1.5,       // 上限 2 倍
-  towerMinionBand: 0.10,       // 塔可鎖定小兵的 lane-progress 半寬
+  towerMinionBand: 0.10,       // 塔可鎖定小兵的 lane-progress 半寬（僅 towerRangeWorld=false 時使用）
   towerAggroDmg: 66,
   towerAggroRange: 6.0,
+  //  M1.6：塔對小兵也改用**世界距離**判定（原本是 lane progress 半寬，
+  //  0.10 在上/下路 = ±30.9 世界單位，射程圈卻畫 6.0 ⇒ 66.5% 的發數在圈外、
+  //  特效線拉到河道）。開啟後 判定＝射程圈＝特效線 三者同源。
+  towerRangeWorld: true,
+  //  門牙塔的接戰半徑（它不在 lane 上，本來就用世界距離；抽出來讓 debug 射程圈
+  //  能照每座建築畫正確大小，不再一律畫 towerAggroRange）。
+  nexusGuardRange: 13,
+  //  ── M1.6：站位穩定化（修「兩三個英雄靠近後持續繞圈、長時間不攻擊」）────────
+  //  舊站位以「我→敵人」的當下向量取垂直方向做側向偏移，側移會轉動該向量
+  //  ⇒ 目標點跟著轉 ⇒ 必然繞圈。開啟後：站位框改用「我方基地→敵人」這條不隨
+  //  自身移動而轉的軸、錨點黏著、並加上進入／離開攻擊距離的遲滯。
+  stableFormation: true,
+  attackHoldEnterK: 0.85,   // 進到 engageRange × 0.85 就停下來打
+  attackHoldExitK: 1.05,    // 目標離開 engageRange × 1.05 才重新移動（遲滯緩衝）
   // Milestone C：塔的傷害改成離散單體射擊。引擎正式 tick 是 0.5s；
   // 每發 60 完整保留舊 120 DPS / 2s TTK，240 HP 小兵會清楚經過四次扣血才死亡。
   towerAttackInterval: 0.5,

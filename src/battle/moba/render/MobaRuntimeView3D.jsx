@@ -30,6 +30,7 @@ import BattleCameraController from "../../ui/BattleCameraController.jsx";
 import { useCameraStore } from "../../cameraStore.js";
 import { blendRuntimePosition } from "./runtimeMovementPolicy.js";
 import RuntimeDeviceDiagnosticsPanel from "./RuntimeDeviceDiagnosticsPanel.jsx";
+import CombatDebugPanel from "./CombatDebugPanel.jsx";
 import {
   adaptRuntimeMapFrame, extrapolateLiveEffectTime,
 } from "../map/mobaRuntimeMapAdapter.js";
@@ -473,6 +474,9 @@ export default function MobaRuntimeView3D({
       <RuntimeDiagnosticsBridge frameRef={frameRef} />
     </Canvas>
     <RuntimeDeviceDiagnosticsPanel />
+    {/*  M1.6：戰鬥判定 Debug（塔射程/鎖定、英雄狀態/目標/停止距離/避碰修正）。
+         同樣只在 ?diag=1 / ?shot= 掛，正式對戰不顯示。 */}
+    <CombatDebugPanel />
     </>
   );
 }

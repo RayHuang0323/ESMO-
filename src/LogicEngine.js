@@ -403,38 +403,95 @@ export class LogicEngine {
   _archPosition(p, tgt, alive) {
     const a = this._arch(p);
     if (!a || !tgt) return tgt;
-    //  最近的敵方英雄當作站位錨點（沒有敵人就不調整，維持推線目標）
+    const R = this.rules;
+    //  ── M1.6：錨點**黏著**（原本每 tick 重挑最近敵人）────────────────────
+    //  每 tick 換錨點 ⇒ 站位目標跳動 ⇒ 英雄在兩個目標之間來回。
+    //  規則：目標活著、且沒有明顯脫離（chaseDistance + 6 的 1.25 倍）就不換人。
     let foe = null, fd = Infinity;
-    for (const q of alive) {
-      if (q.side === p.side || q.dead) continue;
-      const dd = dist(p.pos, q.pos);
-      if (dd < fd) { fd = dd; foe = q; }
+    const pick = (q) => { const dd = dist(p.pos, q.pos); if (dd < fd) { fd = dd; foe = q; } };
+    if (R.stableFormation && p._archFoe) {
+      const held = alive.find((q) => q.id === p._archFoe && q.side !== p.side && !q.dead);
+      if (held && dist(p.pos, held.pos) <= (a.chaseDistance + 6) * 1.25) {
+        foe = held; fd = dist(p.pos, held.pos);
+      }
     }
+    if (!foe) for (const q of alive) { if (q.side === p.side || q.dead) continue; pick(q); }
     //  錨點太遠 ⇒ 還在行軍，維持原本的推線／游走目標
-    if (!foe || fd > a.chaseDistance + 6) return tgt;
+    if (!foe || fd > a.chaseDistance + 6) { if (R.stableFormation) { p._archFoe = null; p._hold = false; } return tgt; }
+    if (R.stableFormation) p._archFoe = foe.id;
 
     //  決定性 slot：同一條線上的隊友靠這個散開，不會疊成一點
     const seat = String(p.id);
     const slot = ((seat.charCodeAt(seat.length - 1) || 0) % 5) - 2;   // -2..2
-    const ux = (foe.pos.x - p.pos.x) / (fd || 1);
-    const uy = (foe.pos.y - p.pos.y) / (fd || 1);
+    //  ── M1.6：站位參考框改成**不隨自己移動而轉**的軸 ────────────────────
+    //  舊寫法用「我 → 敵人」的當下向量取垂直方向做側向偏移。側移會轉動這個向量，
+    //  目標點就跟著轉 ⇒ 英雄追著一個一直轉的點跑 = **數學上必然繞圈**
+    //  （實測接上原型層後：1971 次繞圈事件、最長連續 1230 秒、單一視窗最多繞 7.76 圈，
+    //   接戰距離內真的有攻擊目標的 tick 只剩 5.0%）。
+    //  改用「我方基地 → 敵人」這條軸：它不隨我的側移改變 ⇒ 每個 slot 是固定角度的
+    //  圍攻位，多人圍攻自然分開站，收斂而不是繞圈。
+    let ux, uy;
+    if (R.stableFormation) {
+      const b = BASE[p.side];
+      const bl = Math.hypot(foe.pos.x - b.x, foe.pos.y - b.y) || 1;
+      ux = (foe.pos.x - b.x) / bl; uy = (foe.pos.y - b.y) / bl;
+    } else {
+      ux = (foe.pos.x - p.pos.x) / (fd || 1);
+      uy = (foe.pos.y - p.pos.y) / (fd || 1);
+    }
     const px = -uy, py = ux;                                          // 垂直向量
     const lateral = slot * (a.formationSpread ?? 2) * 0.55;
+    //  ── M1.6：進入／離開攻擊距離的緩衝（遲滯）──────────────────────────
+    //  進到 holdEnter 就**停下來打**，直到目標離開 holdExit 才重新移動。
+    //  沒有這段緩衝時，英雄會在「站位點」與「攻擊距離」的邊界上每 tick 反覆進出。
+    //  ⚠ 追擊（CHASE）與撤退不套用：那兩個狀態本來就該持續移動。
+    if (R.stableFormation) {
+      const range = this._engageRange(p);
+      const enter = range * (R.attackHoldEnterK ?? 0.85);
+      const exit = range * (R.attackHoldExitK ?? 1.05);
+      const chasing = p.fsm === "CHASE" || p.retreating;
+      if (chasing) p._hold = false;
+      else if (p._hold) { if (fd > exit) p._hold = false; }
+      else if (fd <= enter) p._hold = true;
+      p.dbgHold = p._hold === true;
+      p.dbgEnter = enter; p.dbgExit = exit; p.dbgFoeDist = fd; p.dbgFoeId = foe.id;
+      if (p._hold) return { x: p.pos.x, y: p.pos.y };   // 站定輸出，不再每 tick 微調
+    }
 
     let want = a.preferredDistance;
     if (a.formationLine === "back" || a.formationLine === "support") {
       //  遠程／輔助：敵人比 retreatDistance 更近就往後拉開（有限度，不是無限風箏）
       if (a.retreatDistance > 0 && fd < a.retreatDistance) want = a.retreatDistance + 0.6;
     }
-    //  站到「離敵人 want 距離」的點上，再加側向 slot 偏移
-    let gx = foe.pos.x - ux * want + px * lateral;
-    let gy = foe.pos.y - uy * want + py * lateral;
-
-    if (a.formationLine === "flank") {
-      //  刺客：從側面切入（側向權重更大），但不繞遠路——只是把接近角度推開
-      gx += px * (slot >= 0 ? 2.2 : -2.2);
-      gy += py * (slot >= 0 ? 2.2 : -2.2);
-    } else if (a.formationLine === "support") {
+    //  ── M1.6：slot 改成沿**同一個半徑的圓弧**分開，不再線性外加側向偏移 ────
+    //  舊寫法 `foe − u*want + perp*lateral` 會讓實際距離變成 √(want² + lateral²)：
+    //  坦克 want 3.12、lateral 2.64 ⇒ **4.09**，而近戰 engageRange 只有 4.00
+    //  ⇒ 站位點永遠在自己的攻擊距離**之外**，兩個近戰對站著一動不動、誰也打不到誰
+    //  （實測 1v1：距離凍結在 4.09、60 秒 0 次攻擊、雙方 HP 完全沒掉）。
+    //  改成角度偏移之後，任何 slot 的實際距離都**恰好等於 want**，多人圍攻自然
+    //  沿圓弧散開（不疊位），而且每個人都在自己的攻擊距離內。
+    let gx, gy;
+    if (R.stableFormation) {
+      //  想要的弧長間距 → 角度；want 越小角度越大，弧上實際間距才一致。
+      const arc = (a.formationSpread ?? 2) * 0.55;
+      let theta = slot * Math.asin(Math.max(-0.85, Math.min(0.85, arc / Math.max(1, want))));
+      //  刺客：把切入角再推開，仍留在同一個半徑上 ⇒ 側面進場但打得到。
+      if (a.formationLine === "flank") theta += (slot >= 0 ? 1 : -1) * 0.55;
+      const cs = Math.cos(theta), sn = Math.sin(theta);
+      const rx = ux * cs - uy * sn, ry = ux * sn + uy * cs;
+      gx = foe.pos.x - rx * want;
+      gy = foe.pos.y - ry * want;
+    } else {
+      //  站到「離敵人 want 距離」的點上，再加側向 slot 偏移
+      gx = foe.pos.x - ux * want + px * lateral;
+      gy = foe.pos.y - uy * want + py * lateral;
+      if (a.formationLine === "flank") {
+        //  刺客：從側面切入（側向權重更大），但不繞遠路——只是把接近角度推開
+        gx += px * (slot >= 0 ? 2.2 : -2.2);
+        gy += py * (slot >= 0 ? 2.2 : -2.2);
+      }
+    }
+    if (a.formationLine === "support") {
       //  輔助：往「最需要保護的隊友」靠（血量比例最低的在場隊友）
       let ally = null, worst = Infinity;
       for (const q of alive) {
@@ -1835,6 +1892,72 @@ export class LogicEngine {
    *   （實測：兵線走進 13 單位 6/30 seeds，但那時門牙塔早就沒了 ⇒ 進基地率恆為 0）。
    * 統一成同一個述詞之後，攻城與閘門看的是同一件事。
    */
+  /**
+   * M1.6：一座建築的接戰半徑（世界單位）——**射程的單一真實來源**。
+   * 引擎的目標判定、debug 射程圈、鎖定線長度全部讀這裡，
+   * 不會再出現「圈畫 6.0、實際打 30.7」。門牙塔／主堡不在 lane 上，用自己的半徑。
+   */
+  towerRange(tw) {
+    const R = this.rules;
+    return (tw.lane === "nexus_guard" || tw.lane === "nexus")
+      ? (R.nexusGuardRange ?? 13) : R.towerAggroRange;
+  }
+  /**
+   * M1.6：開啟戰鬥 Debug 輸出（`?diag=1` 時由呈現層呼叫）。
+   *
+   * **預設關閉**：不呼叫 ⇒ snapshot 不多任何欄位、形狀與既有契約逐位元相同。
+   * 開啟後 snapshot 多一個 `debug` 區塊，內容全部是**引擎當下的真實狀態**
+   * （不重算、不推測），供疊層顯示塔射程／鎖定與英雄接戰狀態。
+   */
+  enableCombatDebug(on = true) { this.debugOn = !!on; }
+  /** M1.6：debug 區塊。只有 `enableCombatDebug()` 之後才會被呼叫。 */
+  _snapDebug() {
+    const towers = {};
+    for (const [id, tw] of Object.entries(this.towers)) {
+      if (tw.hp <= 0) continue;
+      const pos = this._towerTargetPos(tw);
+      towers[id] = {
+        range: this.towerRange(tw),
+        targetId: tw.targetId ?? null,
+        targetKind: tw.targetKind ?? null,
+        targetDist: pos ? Math.round(dist(pos, tw.pos) * 100) / 100 : null,
+        locked: !!tw.targetId && !!pos,
+        lockShots: tw.lockShots ?? 0,
+      };
+    }
+    const heroes = {};
+    for (const p of this.players) {
+      heroes[p.id] = {
+        state: p.state ?? null,          // 追擊／接戰／拉扯／撤退／回城…（引擎原字串）
+        fsm: p.fsm ?? null,
+        dead: !!p.dead,
+        retreating: !!p.retreating,
+        targetId: p.dbgFoeId ?? p.chaseId ?? null,
+        foeDist: p.dbgFoeDist == null ? null : Math.round(p.dbgFoeDist * 100) / 100,
+        attackRange: this._engageRange(p),
+        holdEnter: p.dbgEnter == null ? null : Math.round(p.dbgEnter * 100) / 100,
+        holdExit: p.dbgExit == null ? null : Math.round(p.dbgExit * 100) / 100,
+        holding: !!p.dbgHold,            // 已進入攻擊距離、站定輸出
+        navDelta: p.dbgNavDelta == null ? null : Math.round(p.dbgNavDelta * 1000) / 1000,
+      };
+    }
+    return { towers, heroes };
+  }
+  /** M1.6：塔目前鎖定目標的世界座標（找不到＝目標已離場）。 */
+  _towerTargetPos(tw) {
+    if (tw.targetKind === "hero") {
+      const p = this.players.find((x) => x.id === tw.targetId);
+      return p && !p.dead ? p.pos : null;
+    }
+    if (tw.targetKind === "minion") {
+      const key = tw.side === "blue" ? "rm" : "bm";
+      for (const lane of ["top", "mid", "bot"]) {
+        const m = this.lanes[lane][key].find((x) => x.id === tw.targetId);
+        if (m) return posOnLane(lane, m.t);
+      }
+    }
+    return null;
+  }
   _minionAtBase(attacker, tw, lane, m) {
     const pos = posOnLane(lane, m.t);
     return dist(pos, tw.pos) <= 13 ||
@@ -1930,7 +2053,13 @@ export class LogicEngine {
         }
       } else nav.stuck = 0;
     }
-    ns.moved += Math.hypot(p.pos.x - x0, p.pos.y - y0);
+    const movedNow = Math.hypot(p.pos.x - x0, p.pos.y - y0);
+    ns.moved += movedNow;
+    //  M1.6 debug：這一 tick「想走多少」與「真的走了多少」的差 ＝ 避碰／尋路的修正量。
+    //  純觀測欄位，只有 enableCombatDebug() 之後才會被讀進 snapshot。
+    if (this.debugOn) {
+      p.dbgNavDelta = Math.max(0, Math.min(spd, Math.hypot(tgt.x - x0, tgt.y - y0)) - movedNow);
+    }
     p.pos.x = clampMapX(p.pos.x); p.pos.y = clampMapY(p.pos.y);
   }
 
@@ -2207,8 +2336,19 @@ export class LogicEngine {
           const enemyKey = side === "blue" ? "rm" : "bm";
           //  L Hotfix 2：band 原本寫死 0.05，比 minionSiegeBand(0.06) 還窄
           //  ⇒ 小兵打得到塔、塔打不到它。改讀規則（v3 = 0.10）。
-          const mBand = R.towerMinionBand ?? 0.05;
-          const inRange = this.lanes[ln][enemyKey].filter((mm) => Math.abs(mm.t - tw.t) < mBand);
+          //  ── M1.6：改用**世界距離**，與英雄判定、debug 射程圈同一個來源 ──────
+          //  `towerMinionBand` 是 **lane progress** 半寬，不是距離：0.10 在上/下路
+          //  ＝ ±30.9 世界單位、中路 ±22.6，而 `towerAggroRange` 只有 6.0。
+          //  實測（5 seeds、31,563 發）塔打小兵的真實距離 平均 14.91 / 中位 17.82 /
+          //  p95 25.91 / **最大 30.68**，**66.5% 的發數落在射程圈之外**，特效線因此
+          //  一路拉到河道——這是判定與呈現用了兩套模型，不是比例或美術問題。
+          //  改成和英雄同一個 `towerAggroRange` 之後，判定＝射程圈＝特效線。
+          //  ⚠ 舊規則集沒有 `towerRangeWorld` ⇒ 仍走 band ⇒ 歷史基準逐位元不變。
+          const inRange = R.towerRangeWorld
+            ? this.lanes[ln][enemyKey].filter((mm) =>
+              dist(posOnLane(ln, mm.t), tw.pos) <= R.towerAggroRange)
+            : this.lanes[ln][enemyKey].filter((mm) =>
+              Math.abs(mm.t - tw.t) < (R.towerMinionBand ?? 0.05));
           if (R.towerAttackInterval) {
             const enemySide = side === "blue" ? "red" : "blue";
             const priorityHero = this.players.some((p) =>
@@ -2218,8 +2358,12 @@ export class LogicEngine {
             // 固定鎖定仍在射程內的目標；目標離場後才換人，避免血條與鎖定提示抖動。
             let m = tw.targetKind === "minion" ? inRange.find((mm) => mm.id === tw.targetId) : null;
             if (!m) {
+              //  M1.6：選目標的「最近」也改用世界距離，和 inRange 同一個度量。
+              const key2 = R.towerRangeWorld
+                ? (mm) => dist(posOnLane(ln, mm.t), tw.pos)
+                : (mm) => Math.abs(mm.t - tw.t);
               m = inRange.slice().sort((a, b) =>
-                Math.abs(a.t - tw.t) - Math.abs(b.t - tw.t) || String(a.id).localeCompare(String(b.id)))[0] ?? null;
+                key2(a) - key2(b) || String(a.id).localeCompare(String(b.id)))[0] ?? null;
               tw.targetId = m?.id ?? null; tw.targetKind = m ? "minion" : null; tw.lockShots = 0;
             }
             // 舊 v3 每個「塔有目標」tick 都為 renderer FX 消耗一次主 rng。
@@ -2231,7 +2375,7 @@ export class LogicEngine {
               this.pushFx({
                 type: "tower", pos: { ...tw.pos }, target: posOnLane(ln, m.t),
                 color: SIDE[side], sourceId: `${side}_${ln}_${tr}`, targetId: m.id,
-                ability: "tower:basic", feedback: "attack", width: 1.2, exp: 1.15, life: 1.1,
+                ability: "tower:basic", feedback: "attack", width: 1.2, exp: 1.15, life: 1.1, targetKind: "minion",
                 lockShots: tw.lockShots,
               });
             }
@@ -2273,9 +2417,11 @@ export class LogicEngine {
             for (const m of this.lanes[lane][enemyKey]) {
               const pos = posOnLane(lane, m.t);
               const gap = dist(pos, tw.pos);
-              if (gap <= 13 || (enemySide === "blue" ? m.t >= 0.95 : m.t <= 0.05)) {
-                inRange.push({ m, lane, pos, gap });
-              }
+              //  M1.6：門牙塔**射擊**只看世界距離。
+              //  `_minionAtBase()` 的 `m.t ≥ 0.95` 分支回答的是「兵線到基地了沒」
+              //  （M1.5 的攻城／閘門述詞），拿它當射程會讓門牙塔打到 26 單位外的
+              //  小兵、特效線橫跨半個基地。兩個問題分開：閘門照舊，射擊用 nexusGuardRange。
+              if (gap <= (R.nexusGuardRange ?? 13)) inRange.push({ m, lane, pos, gap });
             }
           }
           const locked = tw.targetKind === "minion"
@@ -2292,7 +2438,7 @@ export class LogicEngine {
               this.pushFx({
                 type: "tower", pos: { ...tw.pos }, target: { ...target.pos },
                 color: SIDE[tw.side], sourceId: k, targetId: target.m.id,
-                ability: "tower:basic", feedback: "attack", width: 1.2,
+                ability: "tower:basic", feedback: "attack", width: 1.2, targetKind: "minion",
                 exp: 1.15, life: 1.1, lockShots: tw.lockShots,
               });
             }
@@ -2310,11 +2456,19 @@ export class LogicEngine {
         if (!best) best = nearest(candidates);
         if (best) {
           if (R.towerAttackInterval) this.rng(); // 保留舊塔 FX 的 rng 消耗序列，見清兵分支註解。
-          if (tw.targetId !== best.id || tw.targetKind !== "hero") {
-            tw.targetId = best.id; tw.targetKind = "hero"; tw.lockShots = 0;
-          }
+          //  M1.6：鎖定只在**真的開火時**更新。原本每 tick 無條件覆寫成英雄，但同一
+          //  tick 若已對小兵開火就打不出來（`atkCd > 0`）⇒ 塔實際在清兵、`targetId`
+          //  卻寫著英雄（實測 seed 7：343 個這種 tick，其中 108 個目標早已離開射程）。
+          //  debug 疊層與鎖定線因此指向一個沒被打的人。不改傷害與 rng 序列。
+          const lockToBest = () => {
+            if (tw.targetId !== best.id || tw.targetKind !== "hero") {
+              tw.targetId = best.id; tw.targetKind = "hero"; tw.lockShots = 0;
+            }
+          };
+          if (!R.towerRangeWorld) lockToBest();
           if (R.towerAttackInterval) {
             if (tw.atkCd <= 0) {
+              if (R.towerRangeWorld) lockToBest();
               //  L Hotfix 2：連續命中同一英雄的威脅增幅。塔仍不執行擊殺，
               //  改用「越站越痛」逼退——這是「不能站在塔下無視塔」的機制。
               const ramp = Math.min(R.towerLockRampMax ?? 1,
@@ -2325,7 +2479,7 @@ export class LogicEngine {
               this.pushFx({
                 type: "tower", pos: { ...tw.pos }, target: { x: best.pos.x, y: best.pos.y },
                 color: SIDE[tw.side], sourceId: k, targetId: best.id,
-                ability: "tower:basic", feedback: "attack", width: 1.2, exp: 1.15, life: 1.1,
+                ability: "tower:basic", feedback: "attack", width: 1.2, exp: 1.15, life: 1.1, targetKind: "hero",
                 lockShots: tw.lockShots,
               });
             }
@@ -2335,6 +2489,18 @@ export class LogicEngine {
           }
         } else if (R.towerAttackInterval && tw.targetKind === "hero") {
           tw.targetId = null; tw.targetKind = null; tw.lockShots = 0;
+        }
+      }
+      //  M1.6：清掉**失效的鎖定**。開火前本來就會重新驗證射程，所以這不改傷害；
+      //  但 `targetId` 會留在離開射程／已陣亡的目標上（實測 33.1% 的鎖定 tick 是
+      //  這種殘影），debug 疊層與鎖定線因此顯示「還鎖著」。這裡讓引擎狀態誠實。
+      if (R.towerRangeWorld) {
+        for (const tw of Object.values(this.towers)) {
+          if (!tw.targetId) continue;
+          const pos = this._towerTargetPos(tw);
+          if (!pos || dist(pos, tw.pos) > this.towerRange(tw)) {
+            tw.targetId = null; tw.targetKind = null; tw.lockShots = 0;
+          }
         }
       }
     }
@@ -2726,9 +2892,13 @@ export class LogicEngine {
         } else if (localDecision.action === "KITE" && dd < desired - 0.5) {
           tgt = { x: p.pos.x + ux * 3.5, y: p.pos.y + uy * 3.5 };
           st = "拉扯"; p.fsm = "SETUP";
-        } else if (localDecision.action === "KITE" && dd <= desired + 1) {
+        } else if (localDecision.action === "KITE" && dd <= desired + 1 &&
+                   !(R.stableFormation && dd <= this._engageRange(p))) {
           // 保持職業射程並側移，不把「拉扯」實作成直接退出 8 單位戰鬥圈。
           // 同席位編號採相同旋向（b3/r3 一致）⇒ 不引入陣營特例。
+          //  M1.6：這個分支每 tick 固定轉 0.18 rad（≈10.3°）⇒ 35 tick 就是**一整圈**，
+          //  只要 KITE 持續就永遠繞。已進入自己的攻擊距離時不再側移：站定輸出火力，
+          //  符合「進入攻擊距離後應穩定停下並攻擊」。拉扯本身（拉開距離）保留。
           const turn = Number(p.id.slice(1)) % 2 ? 1 : -1;
           const angle = 0.18 * turn, cos = Math.cos(angle), sin = Math.sin(angle);
           tgt = {
@@ -2983,6 +3153,8 @@ export class LogicEngine {
       } : {}) })),
       towers: Object.fromEntries(Object.entries(this.towers).map(([k, t]) => [k, { side: t.side, lane: t.lane, tier: t.tier, pos: t.pos, hp: clamp(t.hp / (t.maxHp ?? (t.lane === "nexus" ? NEXUS_HP : TOWER_HP)), 0, 1) }])),
       lanes: { top: this._snapLane("top"), mid: this._snapLane("mid"), bot: this._snapLane("bot") },
+      //  M1.6：戰鬥 Debug。未呼叫 enableCombatDebug() ⇒ 這個 key 完全不存在。
+      ...(this.debugOn ? { debug: this._snapDebug() } : {}),
       dragon: { ...this.dragon }, baron: { ...this.baron },
       fx: this.fx.map((f) => ({ ...f })), feed: this.feed.slice(),
       bK: this.bK, rK: this.rK, bGold: this.bGold, rGold: this.rGold, winProb, over: this.over, winner: this.winner,
