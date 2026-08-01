@@ -1591,8 +1591,28 @@ export class LogicEngine {
     if (R.engagementFsm) p.contactSince = foe ? (p.contactSince ?? this.t) : null;
     //  Milestone J：點燃期間回復量打折（未啟用技能層 ⇒ healK 恆為 1 ⇒ 逐位元不變）
     const healK = (this.spellsOn && this.t < (p.healCutUntil ?? 0)) ? (1 - R.igniteHealCut) : 1;
-    if (nearFountain) { const h = Math.min(p.maxHp, p.hp + p.maxHp * 0.20 * dt * healK) - p.hp; p.hp += h; p.heal += h; }
-    else if (!foe) { const h = Math.min(p.maxHp, p.hp + p.maxHp * 0.02 * dt * healK) - p.hp; p.hp += h; p.heal += h; }
+    //  Milestone M1.5：三段式回復（交戰中／脫戰延遲後／泉水），數值全部來自 R.regen 單一設定源。
+    //  舊規則集（v1/v2）沒有 regen 契約 ⇒ 走下面的 legacy 分支 ⇒ 歷史基準逐位元不變。
+    const RG = R.regen;
+    if (RG) {
+      const inFountain = nearFountain;
+      let pctPerSec;
+      if (inFountain) pctPerSec = RG.fountainPctPerSec;
+      else {
+        //  lastDamagedAt 由 tick 尾端的統一比對點寫入（涵蓋英雄／技能／塔／小兵／野怪／Boss）
+        const since = this.t - (p.lastDamagedAt ?? -Infinity);
+        const settled = since >= RG.outOfCombatDelaySec;
+        pctPerSec = (!foe && settled) ? RG.outOfCombatPctPerSec : RG.inCombatPctPerSec;
+      }
+      const h = Math.min(p.maxHp, p.hp + p.maxHp * pctPerSec * dt * healK) - p.hp;
+      p.hp += h; p.heal += h;
+      p.regenMode = inFountain ? "fountain"
+        : pctPerSec === RG.outOfCombatPctPerSec ? "outOfCombat"
+          : (foe ? "combat" : "waiting");
+    } else {
+      if (nearFountain) { const h = Math.min(p.maxHp, p.hp + p.maxHp * 0.20 * dt * healK) - p.hp; p.hp += h; p.heal += h; }
+      else if (!foe) { const h = Math.min(p.maxHp, p.hp + p.maxHp * 0.02 * dt * healK) - p.hp; p.hp += h; p.heal += h; }
+    }
     if (foe) {
       // S29：dmgK 由規則集決定（v1 0.92 ⇒ TTK 20–30 秒、前 5 分鐘幾乎零擊殺）
       const hasRedBuff = R.neutralObjectives && this.t < (p.redBuffUntil ?? 0);
@@ -1645,9 +1665,20 @@ export class LogicEngine {
     if (canSiege) {
       // S29B1（v3）：沒有己方兵線抵塔 ⇒ 拆塔效率大減（孤軍不融塔；修 6 分鐘推穿主堡）
       let soloK = 1;
-      if (R.engagementFsm && tw.lane !== "nexus") {
+      //  ── M1.5：基地建築的兵線硬閘門 ──────────────────────────────────────
+      //  在此之前「兵線」對建築只是傷害倍率（`soloK`），而且主堡完全跳過判定
+      //  ⇒ 五個人可以在沒有任何小兵的情況下直接拆穿基地，兵線在收尾階段沒有意義。
+      //  M1.5 把**門牙塔與主堡**改成硬閘門：沒有己方兵線抵達就完全打不動，
+      //  逼收尾回到「先推兵線、再進基地」的真實 MOBA 節奏。
+      //  ⚠ 這條之所以現在才能收，是因為本次同步修好了兵線推進（縱隊 + 強化兵）；
+      //    在那之前門牙塔前**永遠**不可能有兵線，硬閘門會讓比賽收不掉。
+      //  ⚠ 路上的三座塔不套用（維持 Milestone F 的分級懲罰，孤軍推塔只是慢，不是零）。
+      const gateHard = R.nexusWaveGate &&
+        (tw.lane === "nexus_guard" || tw.lane === "nexus");
+      if (R.engagementFsm && (tw.lane !== "nexus" || gateHard)) {
         const hasWave = this._hasWaveAtStructure(p.side, tw);
-        if (!hasWave) {
+        if (!hasWave && gateHard) soloK = 0;
+        else if (!hasWave) {
           // Milestone F：這個懲罰的原意是「**孤軍**拆不動」，不是「沒有兵線就永遠
           //   拆不動」。實測 baseline 打贏一波後三、四個人站在塔下，仍吃 0.30
           //   ⇒ 22 秒的主動權窗根本推不掉一座塔，轉化率因此卡在 ~0.23。
@@ -1664,6 +1695,8 @@ export class LogicEngine {
           //   做不到的事，實測收尾階段門牙塔前平均只有 1.4 人 ⇒ 全程吃 0.30。
           //   只解除「不可能達成的前提」，不動塔血、不動 heroTowerDmg、
           //   也不加速任何一座路上塔。
+          //   M1.5：兵線修好後這個放寬已不需要，`nexusWaveGate` 啟用時走不到這裡；
+          //   保留分支是為了舊規則集（未開 `nexusWaveGate`）仍逐位元不變。
           if (tw.lane === "nexus_guard") {
             soloK = Math.max(soloK, R.nexusGuardNoWaveK ?? R.heroTowerSoloK);
           }
@@ -1673,6 +1706,7 @@ export class LogicEngine {
       const baronK = this.fsm3 && this.t < (this.fsm3[p.side].baronBuffUntil ?? 0)
         ? (R.baronHeroSiegeK ?? 1) : 1;
       const td = R.heroTowerDmg * soloK * baronK * dt * lateFactor * structureFactor;
+      if (td <= 0) return;                 // M1.5 硬閘門：沒有兵線 ⇒ 不扣血、也不算推塔波次
       tw.hp -= td; p.twrDmg += td;
       // S24：推塔波次（同隊 10 秒節流一次的真實計數）
       if (K && this.t - S.pushTick > 10) { S.pushTick = this.t; this.exec[p.side].towerPushes++; }
@@ -1785,13 +1819,26 @@ export class LogicEngine {
     }
     if (tw.lane === "nexus_guard" || tw.lane === "nexus") {
       return ["top", "mid", "bot"].some((lane) =>
-        this.lanes[lane][key].some((m) => {
-          const pos = posOnLane(lane, m.t);
-          return dist(pos, tw.pos) <= 13 ||
-            (attacker === "blue" ? m.t >= 0.95 : m.t <= 0.05);
-        }));
+        this.lanes[lane][key].some((m) => this._minionAtBase(attacker, tw, lane, m)));
     }
     return false;
+  }
+  /**
+   * M1.5：「這隻小兵算不算抵達基地建築」的**單一判定**。
+   *
+   * 門牙塔與主堡不在任何一條 lane 上，它們的 `t`（0.02 / 0.98）只是建構子裡的
+   * 佔位值（見該處註解）。在此之前有兩套互相矛盾的標準：
+   *   · 兵線存在判定（`_hasWaveAtStructure`）用**世界距離 13**
+   *   · 小兵攻城判定用 `|m.t − tw.t| ≤ minionSiegeBand(0.06)`，比的是**佔位 t**
+   * 後者在 t≈0.92（離門牙塔 20 單位以上、還在基地外）就成立
+   * ⇒ 小兵在「還沒進基地」的位置就把門牙塔拆掉，兩個判定永遠對不起來
+   *   （實測：兵線走進 13 單位 6/30 seeds，但那時門牙塔早就沒了 ⇒ 進基地率恆為 0）。
+   * 統一成同一個述詞之後，攻城與閘門看的是同一件事。
+   */
+  _minionAtBase(attacker, tw, lane, m) {
+    const pos = posOnLane(lane, m.t);
+    return dist(pos, tw.pos) <= 13 ||
+      (attacker === "blue" ? m.t >= 0.95 : m.t <= 0.05);
   }
   /**
    * H.2：把一個英雄朝 tgt 推進 spd（模擬單位），全程遵守 mobaNavigation 的可走區。
@@ -1924,6 +1971,9 @@ export class LogicEngine {
   tick(dt) {
     if (this.over) return;
     const R = this.rules;                       // S29：模擬規則集（移速/傷害/兵線/攻塔）
+    //  M1.5：本 tick 開始時的血量快照。tick 尾端比對即可涵蓋**所有**傷害來源
+    //  （英雄／技能／塔／小兵／野怪／龍／巴龍），不必在十幾個扣血點各埋一次時間戳。
+    const _hpAtTickStart = R.regen ? this.players.map((p) => p.hp) : null;
     this.t += dt;
     if (R.maxXpLevelsPerTick) {
       for (const p of this.players) this._addXp(p, 0, true);
@@ -1950,13 +2000,22 @@ export class LogicEngine {
       const minionMaxHp = R.minionMaxHp ?? 130;
       const combatMeta = R.minionAttackInterval ? { atkCd: 0 } : {};
       for (const ln of ["top", "mid", "bot"]) {
+        //  M1.5：該路高地塔（tier 0）已倒 ⇒ 攻方出強化兵（真實 MOBA 的超級兵）。
+        //  只看建築狀態、雙方同規則；v1/v2 沒有 `laneBreachHpK` ⇒ 恆為 1 ⇒ 歷史基準不變。
+        const breachHp = (side) => {
+          const foe = side === "blue" ? "red" : "blue";
+          return R.laneBreachHpK && this.towers[`${foe}_${ln}_0`].hp <= 0
+            ? R.laneBreachHpK : 1;
+        };
+        const bHp = minionMaxHp * breachHp("blue");
+        const rHp = minionMaxHp * breachHp("red");
         for (let i = 0; i < 4; i++) {
           const meta = { wave, slot: i, kind: i === 3 ? "caster" : "melee" };
           if (this.lanes[ln].bm.length < 16) {
-            this.lanes[ln].bm.push({ id: "b" + this._mid++, t: 0.06, hp: minionMaxHp, ...combatMeta, ...meta });
+            this.lanes[ln].bm.push({ id: "b" + this._mid++, t: 0.06, hp: bHp, maxHp: bHp, ...combatMeta, ...meta, super: bHp > minionMaxHp });
           }
           if (this.lanes[ln].rm.length < 16) {
-            this.lanes[ln].rm.push({ id: "r" + this._mid++, t: 0.94, hp: minionMaxHp, ...combatMeta, ...meta });
+            this.lanes[ln].rm.push({ id: "r" + this._mid++, t: 0.94, hp: rHp, maxHp: rHp, ...combatMeta, ...meta, super: rHp > minionMaxHp });
           }
         }
       }
@@ -1972,6 +2031,10 @@ export class LogicEngine {
         // t 也照樣穿過去。以下只修 v3：用 tick 開始時的位置同時計算雙方 next，
         // 接敵就停在接觸距離、遇存活塔/主堡就停在攻擊帶外緣；不改傷害、金錢或波次數量。
         const contact = R.minionAttackRangeProgress ?? 0.035;
+        //  M1.5：友軍排隊間距。以**世界單位**設定再換算成該路的 progress，
+        //  三條長度不同的路才有相同的實際隊形（與 minionWorldSpeed 同一套慣例）。
+        const queueGap = R.minionQueueGapWorld
+          ? R.minionQueueGapWorld / laneLength(ln) : 0;
         // Keep the center inside the existing 0.05 tower targeting band. A
         // larger offset let minions damage a tower from just outside retaliation.
         const advance = (arr, foes, side) => {
@@ -1995,7 +2058,7 @@ export class LogicEngine {
             }
             stopT = clamp(blocker.t - dir * hi, 0, 1);
           }
-          return arr.map((m) => {
+          const next = arr.map((m) => {
             let next = clamp(m.t + dir * minionStep, 0, 1);
             let nearest = null;
             let nearestGap = Infinity;
@@ -2017,6 +2080,34 @@ export class LogicEngine {
             }
             return clamp(next, 0, 1);
           });
+          //  ── M1.5：友軍排隊（兵線推進的關鍵環節）────────────────────────────
+          //  在此之前小兵**只被敵人與建築擋**，友軍之間完全穿透 ⇒ 同一波 4 隻的 t
+          //  一路維持完全相同（實測 `B[0.441 ×4 | 0.267 ×4 | 0.092 ×4]`），波與波固定
+          //  相隔 wavePeriod × 速度（0.174）。後果：兩波接觸時 `strike()` 的
+          //  `|slot 差|` tie-break 把 4v4 配成完美 1:1 對決，雙方同 tick 同歸於盡；
+          //  後續波次距離 0.17，8 秒的對決期只推進 0.046 ⇒ **永遠來不及參戰**。
+          //  兵線位置因此變成週期 = wavePeriod 的極限環（實測 30/30 seeds：高地全倒、
+          //  一路清空，但兵線最深只到 t≈0.72，抵達門牙塔 13 單位 **0 次**）。
+          //  推塔換來的兵力優勢（該路塔倒 ⇒ 我方小兵不再被塔清掉 ⇒ 12 隻 vs 8 隻）
+          //  完全卡在後方，轉不成推進。
+          //  讓後方小兵貼到前方友軍後面 queueGap 排隊，一波才會變成縱隊、整支兵力
+          //  進入攻擊距離，人數優勢才能打穿敵波並繼續往基地走。
+          //  ⚠ 只慢不退：排隊上限永遠不會把小兵推回它現在的位置之後。
+          //  ⚠ 雙方同一條規則、順序以 next 排序 + 陣列索引破平手 ⇒ 決定性不變。
+          //  ⚠ v1/v2 沒有 `minionQueueGapWorld` ⇒ queueGap 恆為 0 ⇒ 歷史基準逐位元不變。
+          if (queueGap > 0 && arr.length > 1) {
+            const order = arr.map((_, i) => i)
+              .sort((a, b) => (next[b] - next[a]) * dir || a - b);
+            for (let k = 1; k < order.length; k++) {
+              const cur = order[k], ahead = order[k - 1];
+              const limit = next[ahead] - dir * queueGap;
+              const lim = side === "blue"
+                ? Math.max(limit, arr[cur].t) : Math.min(limit, arr[cur].t);
+              next[cur] = side === "blue"
+                ? Math.min(next[cur], lim) : Math.max(next[cur], lim);
+            }
+          }
+          return next;
         };
         const bNext = advance(this.lanes[ln].bm, this.lanes[ln].rm, "blue");
         const rNext = advance(this.lanes[ln].rm, this.lanes[ln].bm, "red");
@@ -2034,7 +2125,17 @@ export class LogicEngine {
         //   偏差就放大成「藍方 20/20 全勝」。改成雙方各自出手、傷害同時結算。
         // S29B1（v3）：巴龍 buff 兵線兵對兵也加成——否則強化波永遠被敵方新波次
         //   擋在出兵點，到不了主堡（收尾機制的關鍵環節；雙方對稱規則）。
-        const bkOf = (side) => R.engagementFsm && this.fsm3 && this.t < (this.fsm3[side].baronBuffUntil ?? 0) ? R.baronMinionFightK : 1;
+        //  M1.5：高地塔（tier 0，最內層）被推掉 ⇒ 該路強化兵（真實 MOBA 的水晶/超級兵）。
+        //    加上縱隊之後兵線仍卡在**中線**：交戰點落在 t≈0.5，離雙方任何一座塔都很遠，
+        //    「推掉塔」根本沒有進到兵線交換裡 ⇒ 兩軍出兵數、傷害、HP 完全對稱 ⇒ 對稱系統
+        //    只有對稱平衡點，前線永遠不動（實測縱隊後最深仍只到 t=0.84、進基地 0/30）。
+        //    這裡把「拆掉該路最內層塔」變成該路兵線的**明確不對稱**，收尾才有因果鏈。
+        //    雙方同一條規則、只看建築狀態，不看 seed。
+        const breachK = (side) =>
+          R.laneBreachFightK &&
+            this.towers[`${side === "blue" ? "red" : "blue"}_${ln}_0`].hp <= 0
+            ? R.laneBreachFightK : 1;
+        const bkOf = (side) => (R.engagementFsm && this.fsm3 && this.t < (this.fsm3[side].baronBuffUntil ?? 0) ? R.baronMinionFightK : 1) * breachK(side);
         const bkB = bkOf("blue"), bkR = bkOf("red");
         const dmg = new Map();
         if (R.minionAttackInterval) {
@@ -2087,7 +2188,13 @@ export class LogicEngine {
         } else {
           // v2（S29）：只有**實際貼在塔附近**的小兵能打塔，且同時計入上限 minionSiegeCap
           //   ⇒ 兵線堆疊不再瞬間拆塔；塔必須被持續圍攻才會倒。
-          const n = Math.min(arr.filter((m) => Math.abs(m.t - tw.t) <= R.minionSiegeBand).length, R.minionSiegeCap);
+          //  M1.5：基地建築（門牙塔／主堡）不在 lane 上，改用與兵線閘門同一個述詞；
+          //  路上的三座塔維持既有的 lane band 判定不動。
+          const baseStruct = R.nexusWaveGate &&
+            (tw.lane === "nexus_guard" || tw.lane === "nexus");
+          const n = Math.min(arr.filter((m) => baseStruct
+            ? this._minionAtBase(side, tw, ln, m)
+            : Math.abs(m.t - tw.t) <= R.minionSiegeBand).length, R.minionSiegeCap);
           // S29B1（v3）：巴龍 buff——擊殺方限時兵線攻城強化（收尾機制）
           const bk = R.engagementFsm && this.fsm3 && this.t < (this.fsm3[side].baronBuffUntil ?? 0) ? R.baronMinionK : 1;
           const structureFactor = R.structureAccelT ? 1 + Math.max(0, this.t - R.structureAccelT) / R.structureAccelDiv : 1;
@@ -2808,6 +2915,14 @@ export class LogicEngine {
 
     this.bGold += 14 * dt; this.rGold += 14 * dt;
     this.fx = this.fx.filter((f) => (f.exp -= dt) > 0);
+    //  M1.5：脫戰計時器的**唯一**寫入點（見 tick 開頭的血量快照）。
+    if (_hpAtTickStart) {
+      for (let i = 0; i < this.players.length; i++) {
+        const p = this.players[i];
+        if (p.dead) { p.lastDamagedAt = undefined; p.regenMode = "dead"; continue; }
+        if (p.hp < _hpAtTickStart[i] - 1e-9) p.lastDamagedAt = this.t;
+      }
+    }
 
     if (this.towers.blue_nexus.hp <= 0) { this.over = true; this.winner = "red"; }
     if (this.towers.red_nexus.hp <= 0) { this.over = true; this.winner = "blue"; }
@@ -2930,9 +3045,13 @@ export class LogicEngine {
     //   小兵死亡事件 = 消費端以「id 從陣列消失」推導（小兵只會因 hp≤0 離場）。
     const maxHp = this.rules.minionMaxHp ?? 130;
     const mm = (m) => ({
-      id: m.id, t: m.t, hp: clamp(m.hp / maxHp, 0, 1),
+      //  M1.5：強化兵的最大生命不是 minionMaxHp，用牠自己的 maxHp 正規化，
+      //  否則血條在掉到 240 之前都會顯示滿血。普通兵 maxHp === minionMaxHp ⇒ 數值不變。
+      id: m.id, t: m.t, hp: clamp(m.hp / (m.maxHp ?? maxHp), 0, 1),
       // H.3：純附加呈現欄位。舊 consumer 只讀 id/t/hp，不受影響。
       wave: m.wave ?? 0, slot: m.slot ?? 0, kind: m.kind ?? "melee",
+      // M1.5：該路高地塔已倒 ⇒ 強化兵，給渲染層區分用（引擎不讀）。
+      super: m.super === true,
     });
     return { bm: this.lanes[ln].bm.map(mm), rm: this.lanes[ln].rm.map(mm) };
   }
