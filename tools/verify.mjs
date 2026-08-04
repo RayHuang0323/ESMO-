@@ -69,6 +69,10 @@ const SEGMENTS = [
   { id: "experience26", script: "tools/check_moba_experience26.mjs", shape: /29\/29 通過/, note: "S26 體驗（flat：6 段委派；§17 replay 容量既有紅燈 TD-19）" },
   { id: "talent27", script: "tools/check_talent27.mjs", shape: /37\/37 通過/, note: "S27 天賦（flat：7 段委派）" },
   { id: "stats28", script: "tools/check_moba_stats28.mjs", shape: /21\/21 通過/, note: "S28 選手能力（flat：8 段委派）" },
+  //  P 系列：選手成長 → MOBA 戰鬥品質。三支都是純邏輯、秒級。
+  { id: "growth_p0", script: "tools/check_growth_loop_p0.mjs", shape: /25\/25 通過/, note: "P0 等級→能力成長" },
+  { id: "ability_p02", script: "tools/check_moba_ability_p02.mjs", shape: /20\/20 通過/, note: "P0-2 能力→本場經驗速率" },
+  { id: "quality_p03", script: "tools/check_moba_quality_p03.mjs", shape: /53\/53 通過/, note: "P0-3 能力→戰鬥品質（A/B 雙方皆真實能力）" },
   { id: "regress", script: "tools/regress.mjs", shape: /結束率 15\/15/, note: "回歸：15 seeds" },
   { id: "regress2", script: "tools/regress2.mjs", shape: /節奏門檻 8\/8 通過/, note: "節奏門檻" },
   { id: "runtime29", script: "tools/check_moba_runtime29.mjs", shape: /35\/35 通過/, note: "S29 執行期（flat：9 段委派；§29 順序公平性既有紅燈 TD-21）" },

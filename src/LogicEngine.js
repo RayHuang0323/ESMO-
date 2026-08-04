@@ -340,6 +340,12 @@ export class LogicEngine {
     // 每位選手的真實行為計數（純儀器化；只在啟用能力層時出現在 snapshot）
     this.pexec = {};
     for (const p of this.players) this.pexec[p.id] = { retreats: 0, fights: 0, objTicks: 0 };
+    //  P0-3：品質判定用的**獨立亂數流**。
+    //  ⚠ 不能借用 rng2：那是戰術層的流，被多抽一次 Gank／遊走時機就整個平移
+    //  （＝能力層默默改動戰術層）。也不能借用主 rng（改動特效與擊殺分支）。
+    //  同 seed ＋ 同能力 ⇒ 同序列 ⇒ 仍然完全可重現。
+    let z = (this.seed ^ 0x85ebca6b) | 0;
+    this.rng3 = () => ((z = (z * 1103515245 + 12345) & 0x7fffffff) >>> 0) / 0x7fffffff;
   }
   // ── Milestone H：英雄定位層（configureHeroes）──────────────────────────
   /**
@@ -595,6 +601,24 @@ export class LogicEngine {
   /** 該選手的能力 mods；未啟用 / 該席位無資料 ⇒ null（＝走原始路徑）。 */
   _mod(p) { return this._modById(p.id); }
 
+  // ── Milestone P0-3：最小戰鬥品質層 ─────────────────────────────────────
+  //  五個掛點：補刀成功率／無效攻擊率／技能有效施放率／集火品質／撤退時機。
+  //  前四個是擲骰事件（`_qualRoll`），撤退時機是決定性門檻平移（`_qual`）。
+  //  **中性（全 70 能力）＝ 全部係數為 0 ⇒ 不擲骰、不改變任何行為**，
+  //  未 configurePlayers 更是完全短路 ⇒ regress 逐值不變。
+  //  ⚠ 一律**不碰**傷害式、血量與防禦：這裡只決定「這一次行動有沒有生效」，
+  //    沒有任何係數乘進 dmgAmt / maxHp / power（S28 紅線）。
+  _qual(p, key) {
+    const m = this._modById(p.id);
+    const v = m?.[key];
+    return Number.isFinite(v) ? v : 0;
+  }
+  /** 決定性擲骰：只在係數 > 0 時消耗 RNG ⇒ 中性不擾動亂數序列。 */
+  _qualRoll(p, key) {
+    const r = this._qual(p, key);
+    return r > 0 && this.rng3() < r;
+  }
+
   // ── S29 本場英雄 XP／等級 ─────────────────────────────────────────────────
   /** 加本場 XP；升級即重算 power/maxHp（雙方對稱，不是勝率係數）。rules v1 ⇒ 完全短路。 */
   _addXp(p, amt, drain = false) {
@@ -651,7 +675,14 @@ export class LogicEngine {
     const base = this.rules.minionXp ?? XP.MINION;
     const share = this.rules.minionXpShare ?? XP.MINION_SHARE;
     const each = near.length === 1 ? base : base * share;
-    for (const q of near) this._addXp(q, each);
+    for (const q of near) {
+      //  P0-3 ①：補刀成功率。引擎原本沒有「補刀」概念（見上方註解），
+      //  這裡補上最小模型：能力低的人會漏兵，該份 XP 直接流失（不轉給別人）。
+      q.csAttempt = (q.csAttempt ?? 0) + 1;
+      if (this._qualRoll(q, "lastHitLoss")) { q.csMiss = (q.csMiss ?? 0) + 1; continue; }
+      q.csHit = (q.csHit ?? 0) + 1;
+      this._addXp(q, each);
+    }
   }
   /** 團隊目標 XP：擊殺方**全隊存活者**皆得 ⇒ 輔助/打野不因低擊殺而卡等級（S29 §3）。 */
   _awardObjectiveXp(side, key) {
@@ -1154,6 +1185,18 @@ export class LogicEngine {
 
     // 套用（位置已凍結；施放順序不影響結果，因為效果彼此不搶同一個資源）
     for (const [p, spell, reason, arg] of casts) {
+      //  P0-3 ③：技能**有效施放率**。判定失敗 ⇒ 技能交出去了（冷卻照算），
+      //  但沒有任何效果，也不寫 spellLog／不放特效——那一下就是放空了。
+      //  ⚠ 這裡動的是「放出去的技能有沒有生效」，**不是技能傷害**：
+      //    ignite 的 DPS、barrier 的護盾量等全部沒有被能力乘過（S28 紅線）。
+      p.castTry = (p.castTry ?? 0) + 1;
+      if (this._qualRoll(p, "castMiss")) {
+        p.castMiss = (p.castMiss ?? 0) + 1;
+        const slot = this._spellSlot(p, spell);
+        if (slot) { slot.readyAt = this.t + this._spellCd(spell); slot.lastUsedAt = this.t; }
+        continue;
+      }
+      p.castOk = (p.castOk ?? 0) + 1;
       const from = { x: p.pos.x, y: p.pos.y };
       let to = null;
       switch (spell) {
@@ -1793,6 +1836,8 @@ export class LogicEngine {
     // S29（順序偏差修正 ③）：舊碼 alive.find ⇒ 一律打「陣列索引最小」的敵人
     //   （藍方永遠先集火 r1、紅方永遠先集火 b1）。改為打**最近的**敵人 ⇒ 順序無關。
     let foe = null;
+    //  P0-3 ④：集火品質。只有 playerStatsOn 時才收集候選（省掉基準路徑的配置）。
+    const cands = this.playerStatsOn ? [] : null;
     if (R.nearestTarget) {
       //  Milestone M：交戰距離改由戰鬥原型決定（近戰 ≈4.0–4.3、遠程 ≈7.9–8.4）。
       //  未啟用原型層 ⇒ `_engageRange` 回傳 8 ⇒ 逐位元是舊行為。
@@ -1808,7 +1853,17 @@ export class LogicEngine {
           // 自己在撤退/脫戰/回線：不主動出手；貼身（≤contactKeep）被纏住仍會還手。
           if ((p.retreating || p.fsm === "DISENGAGE" || p.fsm === "RETURN") && dd > R.contactKeep) continue;
         }
+        if (cands) cands.push(q);
         bd = dd; foe = q;
+      }
+      //  決策／地圖意識／應變高 ⇒ 有機會改打**射程內血量最低**的敵人，
+      //  而不是機械式地打最近的。中性 ⇒ 係數 0 ⇒ 不擲骰、行為不變。
+      //  ⚠ 這只換目標，不改任何傷害數字。
+      if (foe && cands && cands.length > 1 && this._qualRoll(p, "focusRate")) {
+        let best = foe;
+        for (const q of cands) if (q.hp < best.hp) best = q;
+        p.focusPick = (p.focusPick ?? 0) + 1;
+        if (best !== foe) { p.focusSwap = (p.focusSwap ?? 0) + 1; foe = best; }
       }
     } else {
       const legacyRange = this._engageRange(p);
@@ -1840,7 +1895,16 @@ export class LogicEngine {
       if (nearFountain) { const h = Math.min(p.maxHp, p.hp + p.maxHp * 0.20 * dt * healK) - p.hp; p.hp += h; p.heal += h; }
       else if (!foe) { const h = Math.min(p.maxHp, p.hp + p.maxHp * 0.02 * dt * healK) - p.hp; p.hp += h; p.heal += h; }
     }
+    //  P0-3 ②：無效攻擊率。空揮的那一 tick 不造成傷害，但**其餘語意不變**
+    //  （接戰狀態、仇恨、特效仍照舊）——所以只用旗標跳過傷害段，不動 `foe`。
+    //  ⚠ 誠實揭露：期望值上等同少量 DPS 損失。任何「無效攻擊」機制都必然如此；
+    //    差別在於這是**離散事件**，沒有把能力乘進傷害式（S28 紅線）。
+    let wasted = false;
     if (foe) {
+      p.atkTicks = (p.atkTicks ?? 0) + 1;
+      if (this._qualRoll(p, "attackWaste")) { p.atkWasted = (p.atkWasted ?? 0) + 1; wasted = true; }
+    }
+    if (foe && !wasted) {
       // S29：dmgK 由規則集決定（v1 0.92 ⇒ TTK 20–30 秒、前 5 分鐘幾乎零擊殺）
       const hasRedBuff = R.neutralObjectives && this.t < (p.redBuffUntil ?? 0);
       const hasBlueBuff = R.neutralObjectives && this.t < (p.blueBuffUntil ?? 0);
@@ -2945,6 +3009,12 @@ export class LogicEngine {
         p.dbgRetreatAt = Math.round(retreatAt * 1000) / 1000;
         p.dbgBurst = Math.round(burst * 1000) / 1000;
       }
+      //  P0-3 ④b：撤退時機。決策／應變／地圖意識低 ⇒ 該撤的時候撤得太晚
+      //  （門檻下修，最多 6 個百分點）。**決定性平移，不擲骰**；
+      //  中性 ⇒ 0 ⇒ 逐位元回到現行行為。高能力不給提早撤退的獎勵——
+      //  只修掉低能力的失誤，避免強隊被無限疊加優勢。
+      const rLate = this._qual(p, "retreatLate");
+      if (rLate > 0) retreatAt = Math.max(0.08, retreatAt - rLate);
       if (p.hp < p.maxHp * retreatAt) {
         if (this.playerStatsOn && !p.retreating) this.pexec[p.id].retreats++;   // 真實計數
         p.retreating = true;

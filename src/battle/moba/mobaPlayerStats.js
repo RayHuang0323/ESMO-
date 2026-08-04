@@ -83,12 +83,49 @@ export const STAT_MAP = {
   //  幅度刻意小：合計 ±0.06 ⇒ 全 100 分與全 40 分之間差 ~12% 經驗速率，
   //  一場約 0.5–1 個本場等級。看得出來，但不會壓過戰術與操作。
   xpRateScale: { accuracy: +0.022, apm: +0.016, focus: +0.014, mapAware: +0.008 },
+
+  //  ── Milestone P0-3：最小戰鬥品質層 ────────────────────────────────────
+  //  設計原則：**中性（全 70）＝現行行為**。
+  //    · 前三項是「低能力受罰」：u<0 才產生損失，u≥0 為 0（不給額外獎勵）
+  //    · focusRate 是「高能力得利」：u>0 才有集火，u≤0 為 0（＝現行的打最近）
+  //  ⇒ 全 70 分時四項全為中性值 ⇒ 不消耗 RNG、不改變任何行為。
+  //
+  //  ⚠ 誠實揭露：`attackWasteWeight` 讓一部分攻擊 tick 不生效，
+  //    期望值上等同於少量 DPS 損失。任何「無效攻擊」機制都必然如此；
+  //    差別在於它是**離散事件**而非把能力乘進傷害式（S28 紅線）。
+
+  //  ⚠ 三個 penalty 映射的權重是**正值**：penalty = clamp(−Σw·u, 0, hi)
+  //    ⇒ 能力高（u>0）⇒ −Σ 為負 ⇒ 夾成 0（無罰）；能力低（u<0）⇒ 產生損失。
+  //    （第一版誤用負權重，結果變成高能力受罰，已修正。）
+  //  補刀成功率損失（accuracy/apm/focus 低 ⇒ 漏兵）
+  lastHitLoss: { accuracy: +0.050, apm: +0.030, focus: +0.020 },
+  //  無效攻擊率（accuracy/reflex/positioning 低 ⇒ 空揮）
+  attackWaste: { accuracy: +0.035, reflex: +0.030, positioning: +0.015 },
+  //  技能無效施放率（tacticalIQ/decision/clutch 低 ⇒ 放空）
+  castMiss: { tacticalIQ: +0.045, decision: +0.035, clutch: +0.020 },
+  //  集火品質（decision/mapAware/adaptability 高 ⇒ 會挑殘血打，而不是打最近的）
+  focusRate: { decision: +0.150, mapAware: +0.120, adaptability: +0.080 },
+  //  撤退時機（decision/adaptability/mapAware 低 ⇒ 該撤時撤得太晚）
+  //  ⚠ 這一項是**決定性門檻平移**，不擲骰：直接下修撤退血量門檻。
+  retreatLate: { decision: +0.040, adaptability: +0.030, mapAware: +0.020 },
 };
 
 /** 各作用點的限幅（§2「所有映射必須有限幅」）。 */
 export const MOD_CLAMP = {
   retreatAdj: 0.10, returnAdj: 0.10, joinAdj: 0.15, objAdj: 0.15,
   laneAdj: 0.04, roamAdj: 0.20, splitAdj: 0.15, invadeAdj: 0.12,
+};
+/**
+ * P0-3：單向限幅（只在一個方向生效，另一側恆為 0 ⇒ 中性＝現行行為）。
+ *   penalty：u<0 才有損失，最多 hi
+ *   bonus  ：u>0 才有加成，最多 hi
+ */
+export const ONESIDED_CLAMP = {
+  lastHitLoss: { dir: "penalty", hi: 0.10 },
+  attackWaste: { dir: "penalty", hi: 0.08 },
+  castMiss: { dir: "penalty", hi: 0.10 },
+  focusRate: { dir: "bonus", hi: 0.35 },
+  retreatLate: { dir: "penalty", hi: 0.06 },
 };
 /** 倍率型作用點的上下界。 */
 export const SCALE_CLAMP = {
@@ -111,6 +148,8 @@ export const NEUTRAL_MODS = Object.freeze({
   gankIntervalScale: 1, gankWindowScale: 1, roamAdj: 0, splitAdj: 0, invadeAdj: 0,
   //  P0-2：中性 ⇒ 乘 1 ⇒ baseline 逐位元不變
   xpRateScale: 1,
+  //  P0-3：中性 ⇒ 全 0 ⇒ 不消耗 RNG、不改變行為
+  lastHitLoss: 0, attackWaste: 0, castMiss: 0, focusRate: 0, retreatLate: 0,
 });
 
 /** 加權和：Σ w_i × u(stat_i)。 */
@@ -133,6 +172,12 @@ export function toPlayerMods(stats, teamLedU = 0) {
     const [lo, hi] = SCALE_CLAMP[key];
     return fix(clamp(1 + wsum(stats, STAT_MAP[key]), lo, hi));
   };
+  //  P0-3：單向映射。penalty 只取負向（低能力才受罰）、bonus 只取正向。
+  const oneSided = (key) => {
+    const { dir, hi } = ONESIDED_CLAMP[key];
+    const raw = wsum(stats, STAT_MAP[key]);
+    return fix(dir === "penalty" ? clamp(-raw, 0, hi) : clamp(raw, 0, hi));
+  };
   const join = clamp(wsum(stats, STAT_MAP.joinAdj) + TEAM_LED_JOIN * teamLedU, -MOD_CLAMP.joinAdj, MOD_CLAMP.joinAdj);
   const obj = clamp(wsum(stats, STAT_MAP.objAdj) + TEAM_LED_OBJ * teamLedU, -MOD_CLAMP.objAdj, MOD_CLAMP.objAdj);
   return {
@@ -148,6 +193,12 @@ export function toPlayerMods(stats, teamLedU = 0) {
     invadeAdj: c("invadeAdj"),
     //  P0-2：本場經驗獲取速率（乘數；中性 = 1）
     xpRateScale: scale("xpRateScale"),
+    //  P0-3：最小戰鬥品質層（單向；中性 = 0 ⇒ 現行行為）
+    lastHitLoss: oneSided("lastHitLoss"),
+    attackWaste: oneSided("attackWaste"),
+    castMiss: oneSided("castMiss"),
+    focusRate: oneSided("focusRate"),
+    retreatLate: oneSided("retreatLate"),
   };
 }
 
