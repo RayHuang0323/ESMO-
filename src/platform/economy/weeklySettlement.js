@@ -35,16 +35,35 @@
 import { WAN } from "./units.js";
 import { sponsorById } from "../../data/playerModel.js";
 import { deriveTime } from "./timeline.js";
+import { SPONSOR_SPLIT, FORM, scenarioById } from "./economyConfig.js";
+import { teamWeeklySalary } from "./salary.js";
 
 /** 交易分類 → 顏色（沿用 finance.transactions 既有色票，畫面不必改對照表）。 */
 const COLOR = Object.freeze({
   sponsor: "#a78bfa",
+  bonus: "#c084fc",
   base: "#60a5fa",
   salary: "#f87171",
   ops: "#94a3b8",
 });
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+/**
+ * 近期戰績（0–1），贊助績效獎金用它縮放。
+ *
+ * 資料來源是 `csHistory`（profileStore 自己擁有的比賽紀錄）。
+ * ⚠ MOBA 戰績存在 seasonStore，不在本 Store ⇒ 目前的 form **只反映 CS 訓練賽**。
+ *   要把 MOBA 也算進來需要跨 Store 讀取，屬於後續項目，這裡不假裝有。
+ * 沒有任何紀錄 ⇒ 回中性值（不獎不罰）。
+ */
+export function recentForm(state) {
+  const hist = Array.isArray(state?.csHistory) ? state.csHistory.slice(0, FORM.window) : [];
+  if (!hist.length) return FORM.neutral;
+  const wins = hist.filter((h) => h?.winner === "us").length;
+  return clamp(wins / hist.length, FORM.min, FORM.max);
+}
 
 /**
  * 這一週的收支明細（不寫入任何狀態，畫面可以直接拿去預覽「本週」）。
@@ -52,42 +71,57 @@ const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
  * @param {object} state profileStore 切片（players / finance / activeSponsor）
  * @returns {{lines:Array, income:number, expense:number, net:number}} 金額單位為元
  */
-export function buildWeekLines(state) {
-  const finance = state.finance ?? {};
+export function buildWeekLines(state, opts = {}) {
   const players = state.players ?? [];
   const active = state.activeSponsor ?? null;
+  const sc = scenarioById(state.economy?.scenario);
+  //  form 可覆寫：現金預測要問「如果戰績維持現況，未來幾週會怎樣」。
+  const form = Number.isFinite(Number(opts.form)) ? clamp(Number(opts.form), FORM.min, FORM.max) : recentForm(state);
   const lines = [];
 
   //  ── 收入 ────────────────────────────────────────────────────────────────
-  const base = num(finance.weeklyIncome);
+  //  N2：基礎營收與營運成本改由**情境**決定（economyConfig.SCENARIOS），
+  //  不再讀 finance.weeklyIncome / weeklyCost 那兩個種子值。
+  const base = sc.baselineWeekly * WAN;
   if (base > 0) lines.push({ cat: "base", label: "基礎營收（直播分潤・周邊）", amount: base, color: COLOR.base });
 
   //  贊助：只有**合約仍有效**（weeksLeft > 0）才入帳。到期後 activeSponsor 會被
   //  清成 null（見下方 settleWeekInState），所以這裡不會再有收入——「到期後仍入帳」
   //  是本 Milestone 明確要擋掉的錯誤，驗證器有對應斷言。
+  //
+  //  N2：拆成「固定收入」與「績效獎金」兩條。固定的是經營地板；績效的由近期
+  //  戰績縮放，成績差就真的拿不到 ⇒ 低成績會形成風險。
+  //  ⚠ 賽事獎金不在這裡發：它由 S25 的 applyMatchProgress 在賽後入帳，
+  //    週結算再算一次就是雙重入帳。現金預測另以帳本裡的真實獎金估未來收入。
   if (active && num(active.weeksLeft) > 0) {
     const sp = sponsorById(active.id);
     if (sp) {
-      lines.push({
-        cat: "sponsor",
-        label: `贊助收入 · ${sp.name}`,
-        amount: num(sp.weekly) * WAN,
-        color: COLOR.sponsor,
-      });
+      const fixed = num(sp.weekly) * SPONSOR_SPLIT.fixed * WAN;
+      const perf = num(sp.weekly) * SPONSOR_SPLIT.performance * form * WAN;
+      if (fixed > 0) lines.push({ cat: "sponsor", label: `贊助固定收入 · ${sp.name}`, amount: Math.round(fixed), color: COLOR.sponsor });
+      if (perf > 0) {
+        lines.push({
+          cat: "bonus",
+          label: `贊助績效獎金（近期戰績 ${Math.round(form * 100)}%）`,
+          amount: Math.round(perf),
+          color: COLOR.bonus,
+        });
+      }
     }
   }
 
   //  ── 支出（一律存負數，帳本才能直接相加）────────────────────────────────
-  //  薪資唯一來源 = players[].salary（週薪・萬）。不讀 expenseBd 的展示值。
-  const salary = players.reduce((s, p) => s + num(p.salary), 0) * WAN;
+  //  N2：薪資唯一來源 = economy/salary.js（由能力推導），不再讀 players[].salary。
+  const { total: salaryWan } = teamWeeklySalary(players);
+  const salary = Math.round(salaryWan * WAN);
   if (salary > 0) lines.push({ cat: "salary", label: `選手薪資 × ${players.length} 人`, amount: -salary, color: COLOR.salary });
 
-  const ops = num(finance.weeklyCost);
+  const ops = Math.round((sc.operatingBase + sc.operatingPerPlayer * players.length) * WAN);
   if (ops > 0) lines.push({ cat: "ops", label: "營運成本（場地・行政）", amount: -ops, color: COLOR.ops });
 
   const income = lines.filter((l) => l.amount > 0).reduce((s, l) => s + l.amount, 0);
   const expense = lines.filter((l) => l.amount < 0).reduce((s, l) => s - l.amount, 0);
-  return { lines, income, expense, net: income - expense };
+  return { lines, income, expense, net: income - expense, form, scenario: sc.id };
 }
 
 /**
@@ -109,7 +143,7 @@ export function settleWeekInState(state, week) {
   if (existing) return { nextState: null, receipt: { ...existing, alreadySettled: true } };
 
   const finance = state.finance ?? {};
-  const { lines, income, expense, net } = buildWeekLines(state);
+  const { lines, income, expense, net, form, scenario } = buildWeekLines(state);
   const fundsBefore = num(finance.funds);
   const fundsAfter = fundsBefore + net;
 
@@ -165,6 +199,8 @@ export function settleWeekInState(state, week) {
     income,
     expense,
     net,
+    form,
+    scenario,
     fundsBefore,
     fundsAfter,
     sponsorExpired: !!active && !nextSponsor,
@@ -175,6 +211,10 @@ export function settleWeekInState(state, week) {
     finance: {
       ...finance,
       funds: fundsAfter,
+      //  N2：把本週實際收支寫回這兩個舊欄位，讓仍在讀它們的 Legacy 圖表
+      //  （近 9 週收支條等）顯示真實值，而不是永遠不變的種子數。
+      weeklyIncome: income,
+      weeklyCost: expense,
       //  新交易排在最前（與既有 transactions 相同慣例），上限 60 筆避免無限成長。
       transactions: [...txs, ...(finance.transactions ?? [])].slice(0, 60),
     },

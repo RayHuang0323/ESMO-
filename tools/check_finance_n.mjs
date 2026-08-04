@@ -14,6 +14,8 @@
 import { deriveTime, weeksCompletedBetween, DAYS_PER_WEEK, WEEKS_PER_SEASON } from "../src/platform/economy/timeline.js";
 import { buildWeekLines, settleWeekInState, advanceDaysInState } from "../src/platform/economy/weeklySettlement.js";
 import { WAN } from "../src/platform/economy/units.js";
+import { teamWeeklySalary } from "../src/platform/economy/salary.js";
+import { scenarioById, SPONSOR_SPLIT } from "../src/platform/economy/economyConfig.js";
 import { SPONSORS } from "../src/data/playerModel.js";
 
 let pass = 0, fail = 0;
@@ -23,19 +25,32 @@ const ck = (name, ok, detail = "") => {
 };
 
 //  ── 測試用狀態（不依賴 localStorage / zustand）──────────────────────────
+//  ⚠ N2 起，費率來自 economyConfig（薪資由能力推導、營收與營運看情境）。
+//    本檔驗的是**機制**，所以期望值一律從設定推導，不寫死某一組數字——
+//    否則每次調平衡都要改驗證器，驗證器就會變成平衡的絆腳石。
+const statsAll = (v) => Object.fromEntries(
+  ["reflex", "accuracy", "apm", "positioning", "mapAware", "tacticalIQ", "decision", "adaptability",
+    "courage", "clutch", "focus", "resilience", "comms", "leadership", "synergy", "learning"]
+    .map((k) => [k, v]));
+const mkPlayers = () => [
+  { id: "b1", lv: 38, potential: 90, stats: statsAll(74), training: null },
+  { id: "b2", lv: 35, potential: 87, stats: statsAll(72), training: null },
+  { id: "b3", lv: 42, potential: 93, stats: statsAll(79), training: null },
+];
+const SCENARIO = "standard";
 const mkState = (over = {}) => ({
   meta: { days: 1, week: 1, season: 1 },
-  finance: { funds: 1_000_000, weeklyIncome: 85_000, weeklyCost: 62_000, transactions: [] },
-  players: [
-    { id: "b1", salary: 8, training: null },
-    { id: "b2", salary: 7, training: null },
-    { id: "b3", salary: 12, training: null },
-  ],
+  finance: { funds: 1_000_000, transactions: [] },
+  players: mkPlayers(),
   activeSponsor: null,
-  economy: { settledWeeks: {}, lastSettledWeek: 0 },
+  csHistory: [],
+  economy: { settledWeeks: {}, lastSettledWeek: 0, scenario: SCENARIO },
   ...over,
 });
-const SALARY = (8 + 7 + 12) * WAN;   // 27 萬 = 270,000 元
+const SC = scenarioById(SCENARIO);
+const SALARY = Math.round(teamWeeklySalary(mkPlayers()).total * WAN);
+const OPERATING = Math.round((SC.operatingBase + SC.operatingPerPlayer * mkPlayers().length) * WAN);
+const BASELINE = SC.baselineWeekly * WAN;
 
 console.log("══ Milestone N：經營時間軸與財務閉環 ══\n");
 
@@ -58,10 +73,10 @@ ck("1e) 一次推進多天不漏週：day 8 → 22 跨過第 2、3 週",
 {
   const s = mkState();
   const { nextState, receipt } = settleWeekInState(s, 1);
-  const expectIncome = 85_000;
-  const expectExpense = SALARY + 62_000;
+  const expectIncome = BASELINE;
+  const expectExpense = SALARY + OPERATING;
   ck("2) 收入 = 基礎營收（無贊助時）", receipt.income === expectIncome, `${receipt.income}`);
-  ck("2b) 支出 = 選手薪資 + 營運成本", receipt.expense === expectExpense, `${receipt.expense}（薪資 ${SALARY} + 營運 62000）`);
+  ck("2b) 支出 = 選手薪資 + 營運成本", receipt.expense === expectExpense, `${receipt.expense}（薪資 ${SALARY} + 營運 ${OPERATING}）`);
   ck("2c) 淨額 = 收入 − 支出", receipt.net === expectIncome - expectExpense, `${receipt.net}`);
   ck("2d) 資金實際變化 = 淨額",
     nextState.finance.funds - s.finance.funds === receipt.net,
@@ -109,9 +124,10 @@ ck("1e) 一次推進多天不漏週：day 8 → 22 跨過第 2、3 週",
   const sp = SPONSORS.find((x) => x.id === "local");     // weekly 6 萬、weeks 6
   const s = mkState({ activeSponsor: { id: sp.id, weeksLeft: sp.weeks, signedWeek: 1 } });
   const first = settleWeekInState(s, 1);
-  ck("5) 合約有效時，贊助收入有入帳",
-    first.receipt.lines.some((l) => l.cat === "sponsor" && l.amount === sp.weekly * WAN),
-    `+${sp.weekly}萬`);
+  //  N2：贊助拆成固定（cat "sponsor"）與績效（cat "bonus"）兩條，這裡只驗固定那條。
+  ck("5) 合約有效時，贊助固定收入有入帳",
+    first.receipt.lines.some((l) => l.cat === "sponsor" && l.amount === Math.round(sp.weekly * SPONSOR_SPLIT.fixed * WAN)),
+    `+${sp.weekly * SPONSOR_SPLIT.fixed}萬`);
   ck("5b) 結算後合約週數 −1", first.nextState.activeSponsor.weeksLeft === sp.weeks - 1);
 
   //  一路跑到合約走完
@@ -148,12 +164,13 @@ ck("1e) 一次推進多天不漏週：day 8 → 22 跨過第 2、3 週",
   const snapshot = JSON.stringify(s);
   buildWeekLines(s);
   ck("6c) 本週預覽是唯讀（不改變任何狀態）", JSON.stringify(s) === snapshot);
-  //  資金可以是負的（負債），不得被夾成 0——那會讓帳目對不起來
-  const broke = mkState({ finance: { ...mkState().finance, funds: 1_000 } });
+  //  資金可以是負的（負債），不得被夾成 0——那會讓帳目對不起來。
+  //  用「沒有贊助 + 資金極低」構造必定為負的一週（不依賴特定費率）。
+  const broke = mkState({ finance: { funds: 1_000, transactions: [] }, activeSponsor: null });
   const rb = settleWeekInState(broke, 1);
   ck("6d) 資金允許為負（負債），帳目仍相平",
     rb.nextState.finance.funds === 1_000 + rb.receipt.net && rb.nextState.finance.funds < 0,
-    `${rb.nextState.finance.funds}`);
+    `淨 ${rb.receipt.net} ⇒ 資金 ${rb.nextState.finance.funds}`);
 }
 
 // ── 7) 存檔往返：結算結果可保存與重新載入 ────────────────────────────────

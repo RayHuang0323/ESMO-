@@ -47,6 +47,8 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
   const finBars = profile.finance.weekly9 ?? [6, 4, 5, 3, 2, 9, 5, 6, 4];
   //  Milestone N：本週收支預覽（唯讀；與週結算共用同一份計算，畫面不另算一套）
   const wk = profile.currentWeekPreview();
+  //  N2：未來四週現金預測（含贊助到期造成的收入斷崖）與資金警告等級
+  const fc = profile.cashForecast();
   const sponsor = profile.activeSponsor ? sponsorById(profile.activeSponsor.id) : null;
   const modes = [
     { id: "moba", name: "MOBA", emoji: "⚔️", fans: "2041", color: GC.purp, badge: "3 小時內", on: true },
@@ -118,6 +120,48 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
                     {sponsor.name} · 剩 {profile.activeSponsor?.weeksLeft ?? 0} 週{profile.activeSponsor?.weeksLeft <= 2 ? "（即將到期）" : ""}
                   </span>
                 : <span>無合約中的贊助商</span>}
+              <span style={{ marginLeft: 8 }}>· 近期戰績 {Math.round((wk.form ?? 0.5) * 100)}%</span>
+              <span style={{ marginLeft: 8 }}>· {wk.scenarioName}</span>
+            </div>
+          </button>
+
+          {/* N2：未來四週現金預測。預測與週結算共用同一份計算，贊助到期會直接反映
+              在收入上；預測期內會見底就亮紅燈。 */}
+          <button onClick={() => sel("finance")} style={{
+            background: GC.card,
+            border: `1px solid ${fc.level === "danger" ? GC.red : fc.level === "warn" ? GC.gold : GC.line}`,
+            borderRadius: 14, padding: "12px 14px", cursor: "pointer", textAlign: "left", width: "100%",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
+              <span style={{ fontSize: 15 }}>📈</span>
+              <span style={{ color: "white", fontSize: 13, fontWeight: 700 }}>未來 {fc.weeks.length} 週現金預測</span>
+              {fc.level !== "ok" && (
+                <span style={{
+                  marginLeft: "auto", fontSize: 9, fontWeight: 800, borderRadius: 6, padding: "2px 7px",
+                  background: fc.level === "danger" ? "rgba(248,113,113,0.18)" : "rgba(251,191,36,0.18)",
+                  color: fc.level === "danger" ? GC.red : GC.gold,
+                }}>
+                  {fc.level === "danger" ? `第 ${fc.bankruptWeek} 週資金見底` : "本週淨額為負"}
+                </span>
+              )}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${fc.weeks.length}, 1fr)`, gap: 6 }}>
+              {fc.weeks.map((w) => (
+                <div key={w.week} style={{
+                  background: GC.card2, borderRadius: 9, padding: "7px 6px",
+                  border: w.funds < 0 ? `1px solid ${GC.red}` : w.sponsorExpiring ? `1px solid ${GC.gold}` : "1px solid transparent",
+                }}>
+                  <div style={{ color: GC.gray, fontSize: 9, marginBottom: 2 }}>第 {w.week} 週</div>
+                  <div style={{ color: w.funds < 0 ? GC.red : "white", fontSize: 12, fontWeight: 800 }}>{money(w.funds)}</div>
+                  <div style={{ color: w.net >= 0 ? GC.green : GC.red, fontSize: 9, fontWeight: 700 }}>
+                    {w.net >= 0 ? "+" : "−"}{money(Math.abs(w.net))}
+                  </div>
+                  {w.sponsorExpiring && <div style={{ color: GC.gold, fontSize: 8, marginTop: 2 }}>合約到期</div>}
+                </div>
+              ))}
+            </div>
+            <div style={{ color: GC.gray, fontSize: 8, marginTop: 6 }}>
+              含賽事獎金估計 {money(fc.weeklyPrize)}/週（取自實際獎金紀錄，無紀錄則為 0）
             </div>
           </button>
           {/* 財務 + 贊助 */}

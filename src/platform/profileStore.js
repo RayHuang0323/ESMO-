@@ -48,7 +48,9 @@ import { applyTalentPurchase } from "./talents/purchasePlayerTalent.js";
 import { DEFAULT_LINEUP, normalizeLineup, assignSeat } from "./contracts/matchLineup.js";
 import { WAN as WAN_UNIT } from "./economy/units.js";
 import { deriveTime } from "./economy/timeline.js";
-import { advanceDaysInState, buildWeekLines } from "./economy/weeklySettlement.js";
+import { advanceDaysInState, buildWeekLines, recentForm } from "./economy/weeklySettlement.js";
+import { forecastWeeks } from "./economy/forecast.js";
+import { DEFAULT_SCENARIO, SCENARIOS, scenarioById } from "./economy/economyConfig.js";
 
 const KEY = "esmo.profile.v1";
 /** persistence schema 版本（migration 用；沿用同一個 localStorage key，不清資料）。
@@ -123,7 +125,8 @@ const DEFAULT = {
   scouted: {},                   // {prospectId: 偵查等級 0–2}
   csHistory: [],                 // S23：CS 訓練賽紀錄（CsMatchResult.v1，最新在前，上限 30）
   //  Milestone N：週結算帳本。settledWeeks 的 key = 累計週次（全域唯一）⇒ 冪等。
-  economy: { settledWeeks: {}, lastSettledWeek: 0 },
+  //  N2：scenario 決定基礎營收與營運成本（economyConfig.SCENARIOS）。
+  economy: { settledWeeks: {}, lastSettledWeek: 0, scenario: DEFAULT_SCENARIO },
   schemaVersion: PROFILE_SCHEMA_VERSION,
   processedMatchTransactions: {},// S25：冪等帳本 {transactionId: receipt}（防重複發獎）
   inbox: [
@@ -157,10 +160,14 @@ const arr = (v, d) => (Array.isArray(v) ? v : d);
  */
 function normalizeEconomy(saved, days) {
   const past = Math.max(0, deriveTime(days).week - 1);
-  if (!saved || typeof saved !== "object") return { settledWeeks: {}, lastSettledWeek: past };
+  if (!saved || typeof saved !== "object") {
+    return { settledWeeks: {}, lastSettledWeek: past, scenario: DEFAULT_SCENARIO };
+  }
   const weeks = saved.settledWeeks && typeof saved.settledWeeks === "object" ? saved.settledWeeks : {};
   const last = Number.isFinite(Number(saved.lastSettledWeek)) ? Number(saved.lastSettledWeek) : past;
-  return { settledWeeks: weeks, lastSettledWeek: last };
+  //  N2：未知或缺少的 scenario → 預設情境（不讓存檔帶進不存在的 key）
+  const scenario = SCENARIOS[saved.scenario] ? saved.scenario : DEFAULT_SCENARIO;
+  return { settledWeeks: weeks, lastSettledWeek: last, scenario };
 }
 const load = () => {
   if (!canLS) return DEFAULT;
@@ -353,9 +360,20 @@ export const useProfileStore = create((set, get) => ({
   advanceTrainingDay() { return get().advanceDay(1); },
   /** 本週（尚未結算）的收支預覽——畫面用，不寫入任何狀態。 */
   currentWeekPreview() {
-    const { lines, income, expense, net } = buildWeekLines(get());
+    const { lines, income, expense, net, form, scenario } = buildWeekLines(get());
     const t = deriveTime(get().meta?.days ?? 1);
-    return { ...t, lines, income, expense, net };
+    return { ...t, lines, income, expense, net, form, scenario, scenarioName: scenarioById(scenario).name };
+  },
+  /** N2：未來 n 週現金預測（唯讀）。含贊助到期造成的收入斷崖與資金警告等級。 */
+  cashForecast(weeks) { return forecastWeeks(get(), weeks); },
+  /** N2：近期戰績（0–1），贊助績效獎金的縮放依據。 */
+  recentForm() { return recentForm(get()); },
+  /** N2：切換財務情境（新手／一般／頂級）。未知 id 一律忽略。 */
+  setScenario(id) {
+    if (!SCENARIOS[id]) return false;
+    set({ economy: { ...(get().economy ?? {}), scenario: id } });
+    get().save();
+    return true;
   },
 
   // ── 贊助商（Legacy SponsorModule）───────────────────────────────────

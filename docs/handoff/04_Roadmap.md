@@ -23,20 +23,31 @@ S28–S29 與 Milestone A–N 之後的實際進度以本節與
 
 ### 經營（非對戰）
 
-- **Milestone N**（分支 `milestone-n-finance`，未 merge）——
+- **Milestone N1**（分支 `milestone-n-finance`，commit `8c3c8e2`，未 merge）——
   經營時間軸與財務閉環。統一時鐘、週結算、合約倒數、交易帳本。
   驗證 `tools/check_finance_n.mjs` 32/32。
-  **待決策：費率平衡**（種子薪資 42 萬/週 vs 資金 120 萬，見 08 文件）。
+- **Milestone N2**（同分支，未 merge）——經濟平衡。費率集中到
+  `economy/economyConfig.js`、薪資由能力推導、贊助拆固定＋績效、
+  三種隊伍情境、四週現金預測與資金警告。
+  驗證 `tools/check_finance_n2.mjs` 35/35。
+  平衡結果：薪資 42 → 12.2 萬/週；一般情境 −24.7 → **+3.5 萬/週**。
+  ⚠ 三項明確缺口（詳見 08 文件）：
+  ① 三種情境有設定但**沒有開新局入口**，實際遊戲一律 `standard`、起始資金仍走種子；
+  ② **MOBA 賽績尚未接入**績效贊助紀錄（`recentForm` 只讀 CS 訓練賽，MOBA 在 seasonStore）；
+  ③ 目前薪資與贊助數值是**第一版平衡基準**，待轉會與合約系統完成後再校正。
 
 ### 建議的下一步（依優先序）
 
-1. **費率平衡決策**（Balance，需 Ray 核准）——N 的機制已就位，數字關係要定。
+1. **N1/N2 的瀏覽器實機驗收**——兩者都還沒在畫面上看過。
 2. **商店（equip）與經營儀表板（dash）**——Dashboard 僅剩的兩個誠實佔位。
-   有了週期性支出，商店的取捨才有意義。
-3. **轉會市場／合約談判**（Legacy NegotiationModule）——相依於 1、2。
-4. **AI 對手隊伍 + 賽程聯賽化**——紅方目前全隊中性能力，
+   有了週期性支出與現金預測，商店的取捨才有意義。
+3. **賽事獎金與績效的資料缺口**——績效獎金目前只看 CS 訓練賽
+   （MOBA 戰績在 seasonStore，跨 Store 未接）；情境選擇與起始資金也還沒有
+   「開新局」流程。這兩項補齊，經濟閉環才算完整。
+4. **轉會市場／合約談判**（Legacy NegotiationModule）——相依於 2、3。
+5. **AI 對手隊伍 + 賽程聯賽化**——紅方目前全隊中性能力，
    Prep 的「賽程」分頁因此未恢復。這是讓賽季有結構的前提。
-5. 技術債清理：`src/platform/DashboardScreen.jsx` 死碼、`team.lv/xp` 刻度、
+6. 技術債清理：`src/platform/DashboardScreen.jsx` 死碼、`team.lv/xp` 刻度、
    `meta.reputation` 靜態值、重播持久化（IndexedDB）、bundle 瘦身（2.4 MB）。
 
 ## 近期 Roadmap（歷史，停在 2026-07-14）
