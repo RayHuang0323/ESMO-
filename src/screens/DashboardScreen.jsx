@@ -45,6 +45,8 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
   const talentTotal = players.reduce((s, p) => s + (Number.isFinite(p.talentPoints) ? p.talentPoints : 0), 0);
   const T = { ...profile.team, ...profile.meta, gold: money(profile.finance.funds), players: players.length, mail: inbox.length, inbox: inbox.filter((m) => m.unread).length, talentPending: talentTotal };
   const finBars = profile.finance.weekly9 ?? [6, 4, 5, 3, 2, 9, 5, 6, 4];
+  //  Milestone N：本週收支預覽（唯讀；與週結算共用同一份計算，畫面不另算一套）
+  const wk = profile.currentWeekPreview();
   const sponsor = profile.activeSponsor ? sponsorById(profile.activeSponsor.id) : null;
   const modes = [
     { id: "moba", name: "MOBA", emoji: "⚔️", fans: "2041", color: GC.purp, badge: "3 小時內", on: true },
@@ -88,6 +90,36 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
             <Tile emoji="🌿" label="天賦" badge={T.talentPending} color={GC.purp} onClick={() => sel("talent")} />
             <Tile emoji="🛒" label="商店" color={GC.gold} onClick={() => sel("equip")} />
           </div>
+          {/* Milestone N：本週財務（真實值，非種子）＋ 合約狀態 ─────────────
+              收入／支出／淨額全部來自 currentWeekPreview()（= 週結算會用的同一份
+              計算），不在畫面另算一套。合約剩餘週數來自 activeSponsor.weeksLeft，
+              它現在每週真的會遞減。 */}
+          <button onClick={() => sel("finance")} style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 14, padding: "12px 14px", cursor: "pointer", textAlign: "left", width: "100%" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 9 }}>
+              <span style={{ fontSize: 15 }}>📅</span>
+              <span style={{ color: "white", fontSize: 13, fontWeight: 700 }}>本週財務</span>
+              <span style={{ color: GC.gray, fontSize: 10 }}>S{wk.season}・第 {wk.week} 週・第 {wk.dayOfWeek}/7 天</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
+              {[
+                { k: "收入", v: wk.income, c: GC.green, sign: "+" },
+                { k: "支出", v: wk.expense, c: GC.red, sign: "−" },
+                { k: "淨額", v: Math.abs(wk.net), c: wk.net >= 0 ? GC.green : GC.red, sign: wk.net >= 0 ? "+" : "−" },
+              ].map((x) => (
+                <div key={x.k} style={{ background: GC.card2, borderRadius: 9, padding: "7px 8px" }}>
+                  <div style={{ color: GC.gray, fontSize: 9, marginBottom: 2 }}>{x.k}</div>
+                  <div style={{ color: x.c, fontSize: 13, fontWeight: 800 }}>{x.sign}{money(x.v)}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ color: GC.gray, fontSize: 9 }}>
+              合約狀態：{sponsor
+                ? <span style={{ color: profile.activeSponsor?.weeksLeft <= 2 ? GC.gold : GC.green, fontWeight: 700 }}>
+                    {sponsor.name} · 剩 {profile.activeSponsor?.weeksLeft ?? 0} 週{profile.activeSponsor?.weeksLeft <= 2 ? "（即將到期）" : ""}
+                  </span>
+                : <span>無合約中的贊助商</span>}
+            </div>
+          </button>
           {/* 財務 + 贊助 */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <button onClick={() => sel("finance")} style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 14, padding: "13px 14px", cursor: "pointer", textAlign: "left" }}>
@@ -98,7 +130,9 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
             <button onClick={() => sel("sponsor")} style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 14, padding: "13px 14px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}><span style={{ fontSize: 17, color: GC.gold }}>🤝</span><span style={{ color: "white", fontSize: 14, fontWeight: 700 }}>贊助</span></div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 60 }}><div style={{ width: 60, height: 60, borderRadius: "50%", background: `radial-gradient(circle,${sponsor ? sponsor.color + "44" : "#1a2a3a"},#0a0b0f)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, border: `2px solid ${sponsor ? sponsor.color : "#2a4a5a"}` }}>{sponsor?.emoji ?? "🤝"}</div></div>
-              <div style={{ color: GC.gray, fontSize: 8, textAlign: "center", marginTop: 3 }}>{sponsor?.name ?? "無贊助商"}</div>
+              <div style={{ color: GC.gray, fontSize: 8, textAlign: "center", marginTop: 3 }}>
+                {sponsor ? `${sponsor.name} · 剩 ${profile.activeSponsor?.weeksLeft ?? 0} 週` : "無贊助商"}
+              </div>
             </button>
           </div>
           {/* 選手 + 招募 */}

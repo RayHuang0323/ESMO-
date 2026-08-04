@@ -46,14 +46,20 @@ import { totalXpForLevel, levelFromTotalXp } from "./progress/playerLevel.js";
 import { sanitizeTalents } from "./contracts/playerTalentState.js";
 import { applyTalentPurchase } from "./talents/purchasePlayerTalent.js";
 import { DEFAULT_LINEUP, normalizeLineup, assignSeat } from "./contracts/matchLineup.js";
+import { WAN as WAN_UNIT } from "./economy/units.js";
+import { deriveTime } from "./economy/timeline.js";
+import { advanceDaysInState, buildWeekLines } from "./economy/weeklySettlement.js";
 
 const KEY = "esmo.profile.v1";
 /** persistence schema 版本（migration 用；沿用同一個 localStorage key，不清資料）。
  *  v2 = S25（xp/talentPoints）；v3 = S27（players[].talents 天賦狀態）；
- *  v4 = Milestone E（lineup 先發指派；舊存檔缺欄 → normalizeLineup 回退 identity）。 */
-export const PROFILE_SCHEMA_VERSION = 4;
+ *  v4 = Milestone E（lineup 先發指派；舊存檔缺欄 → normalizeLineup 回退 identity）；
+ *  v5 = Milestone N（economy 週結算帳本；舊存檔缺欄 → 回退空帳本，不補結算過去的週）。 */
+export const PROFILE_SCHEMA_VERSION = 5;
 const canLS = typeof localStorage !== "undefined";
-export const WAN = 10_000;                    // 1 萬（Legacy 以「萬」計價，本 Store 以元存放）
+//  1 萬。定義搬到 economy/units.js（純邏輯模組不能 import 本檔），這裡 re-export
+//  讓既有 `import { WAN } from "platform/profileStore.js"` 的呼叫端不受影響。
+export const WAN = WAN_UNIT;
 const uid = () => Date.now() + Math.floor(Math.random() * 1000);
 
 const DEFAULT = {
@@ -103,13 +109,21 @@ const DEFAULT = {
       { label: "緊急備用金", budgeted: 8_000,  spent: 0,      color: "#52525b" },
     ],
   },
-  meta: { fans: 128_000, reputation: 47, season: 1, players: INITIAL_PLAYERS.length, days: 8, week: 1, achievement: 48, talentPending: 1 },
+  //  Milestone N：week / season 一律由 days 導出（唯一計數）。種子 days = 8
+  //  ⇒ week 2、season 1。舊種子寫死 week: 1 與 days: 8 不一致，這裡一併修正。
+  meta: {
+    fans: 128_000, reputation: 47, players: INITIAL_PLAYERS.length,
+    days: 8, week: deriveTime(8).week, season: deriveTime(8).season,
+    achievement: 48, talentPending: 1,
+  },
   players: INITIAL_PLAYERS.map(migratePlayer),   // S25：種子名單也要有 xp/talentPoints
   // Milestone E：先發指派（引擎席位 b1–b5 → playerId）。預設 identity ⇒ 與 E 之前相同。
   lineup: { ...DEFAULT_LINEUP },
   activeSponsor: null,           // {id, weeksLeft, signedWeek} — Legacy：一次只能有一家
   scouted: {},                   // {prospectId: 偵查等級 0–2}
   csHistory: [],                 // S23：CS 訓練賽紀錄（CsMatchResult.v1，最新在前，上限 30）
+  //  Milestone N：週結算帳本。settledWeeks 的 key = 累計週次（全域唯一）⇒ 冪等。
+  economy: { settledWeeks: {}, lastSettledWeek: 0 },
   schemaVersion: PROFILE_SCHEMA_VERSION,
   processedMatchTransactions: {},// S25：冪等帳本 {transactionId: receipt}（防重複發獎）
   inbox: [
@@ -133,6 +147,21 @@ const DEFAULT = {
 };
 
 const arr = (v, d) => (Array.isArray(v) ? v : d);
+/**
+ * Milestone N：economy 帳本的 migration。
+ *
+ * 舊存檔（schemaVersion ≤ 4）沒有這個切片。回退規則刻意保守：
+ *   · settledWeeks 空 ⇒ 過去的週**不補算**（不憑空扣一大筆薪資）。
+ *   · lastSettledWeek 設為「載入時已結束的最後一週」⇒ 之後推進天數時，
+ *     `advanceDaysInState` 只會結算真正新跨過的週，不會回頭補。
+ */
+function normalizeEconomy(saved, days) {
+  const past = Math.max(0, deriveTime(days).week - 1);
+  if (!saved || typeof saved !== "object") return { settledWeeks: {}, lastSettledWeek: past };
+  const weeks = saved.settledWeeks && typeof saved.settledWeeks === "object" ? saved.settledWeeks : {};
+  const last = Number.isFinite(Number(saved.lastSettledWeek)) ? Number(saved.lastSettledWeek) : past;
+  return { settledWeeks: weeks, lastSettledWeek: last };
+}
 const load = () => {
   if (!canLS) return DEFAULT;
   try {
@@ -152,7 +181,13 @@ const load = () => {
         transactions: arr(f.transactions, DEFAULT.finance.transactions),
         budget:       arr(f.budget,       DEFAULT.finance.budget),
       },
-      meta:    { ...DEFAULT.meta, ...saved.meta },
+      //  Milestone N：載入時強制由 days 重新導出 week / season。
+      //  舊存檔可能存著與 days 對不上的 week（舊版是各自遞增的），以 days 為準。
+      meta:    (() => {
+        const m = { ...DEFAULT.meta, ...saved.meta };
+        const t = deriveTime(m.days ?? DEFAULT.meta.days);
+        return { ...m, days: t.day, week: t.week, season: t.season };
+      })(),
       // S25 migration：舊存檔的 players[] 沒有 xp/talentPoints → 安全補齊（見 migratePlayer）
       players,
       // Milestone E migration：舊存檔沒有 lineup ⇒ 回退 identity（b1→b1…）⇒ 行為不變
@@ -166,6 +201,10 @@ const load = () => {
       activeSponsor: saved.activeSponsor ?? DEFAULT.activeSponsor,
       scouted: saved.scouted && typeof saved.scouted === "object" ? saved.scouted : {},
       csHistory: arr(saved.csHistory, []),   // S23：舊存檔沒有 → 空（向下相容）
+      //  Milestone N migration：舊存檔沒有 economy ⇒ 空帳本。
+      //  ⚠ 刻意**不補結算過去的週**：那會在載入當下憑空扣一大筆薪資，
+      //    使用者無從理解。舊存檔從載入後的下一個週結尾開始計費。
+      economy: normalizeEconomy(saved.economy, saved.meta?.days ?? DEFAULT.meta.days),
       inbox:         arr(saved.inbox,         DEFAULT.inbox).map(normalizeMsg),
       notifications: arr(saved.notifications, DEFAULT.notifications),
       worldNews:     arr(saved.worldNews,     DEFAULT.worldNews),
@@ -282,18 +321,41 @@ export const useProfileStore = create((set, get) => ({
   cancelTraining(id) {
     get()._patchPlayer(id, (p) => ({ ...p, training: null }));
   },
-  /** 推進一個訓練日：訓練中的選手 daysLeft−1，歸零則以 applyCourse 結算成長。 */
-  advanceTrainingDay() {
-    const players = (get().players ?? []).map((p) => {
-      if (!p.training) return p;
-      const daysLeft = p.training.daysLeft - 1;
-      if (daysLeft > 0) return { ...p, training: { ...p.training, daysLeft } };
-      return applyCourse(p, p.training.courseId);
-    });
-    const meta = { ...get().meta, days: (get().meta.days ?? 0) + 1 };
-    meta.week = Math.floor((meta.days - 1) / 7) + 1;
-    set({ players, meta });
+  // ── Milestone N：統一時間軸（日／週／賽季的唯一入口）──────────────────
+  /**
+   * 推進 n 天。這是**唯一**的時鐘：
+   *   · 每一天：訓練中的選手 daysLeft−1，歸零則以 applyCourse 結算成長。
+   *   · 跨過週結尾：以 `settleWeekInState` 結算那一週（薪資／營運／贊助／合約倒數）。
+   * week / season 一律由 `meta.days` 導出，不另存第二份計數。
+   *
+   * 冪等：結算的冪等鍵是累計週次，同一週不可能結算兩次（見 weeklySettlement）。
+   * 單一 set()：錢、合約、帳本、時間一次寫完，不會出現半套狀態。
+   *
+   * @returns {object[]} 本次推進產生的週結算 receipts（沒跨週則為空陣列）
+   */
+  advanceDay(n = 1) {
+    const { nextState, receipts } = advanceDaysInState(get(), n, (cur) => ({
+      players: (cur.players ?? []).map((p) => {
+        if (!p.training) return p;
+        const daysLeft = p.training.daysLeft - 1;
+        if (daysLeft > 0) return { ...p, training: { ...p.training, daysLeft } };
+        return applyCourse(p, p.training.courseId);
+      }),
+    }));
+    set(nextState);
+    //  收件匣通知（合約到期／即將到期）由這裡發：pushInbox 會用 Date.now 產 id，
+    //  屬於不決定性的部分，所以純 reducer 只回傳 notices，不自己寫 inbox。
+    for (const r of receipts) for (const note of r.notices ?? []) get().pushInbox(note);
     get().save();
+    return receipts;
+  },
+  /** 舊名保留：訓練頁與 Legacy 呼叫端沿用，行為 = 推進一天（含週結算）。 */
+  advanceTrainingDay() { return get().advanceDay(1); },
+  /** 本週（尚未結算）的收支預覽——畫面用，不寫入任何狀態。 */
+  currentWeekPreview() {
+    const { lines, income, expense, net } = buildWeekLines(get());
+    const t = deriveTime(get().meta?.days ?? 1);
+    return { ...t, lines, income, expense, net };
   },
 
   // ── 贊助商（Legacy SponsorModule）───────────────────────────────────

@@ -4314,3 +4314,86 @@ allow = hpOk && shotsOk && (sieging || hasWave || kill)
      `retreatAt` / `burst4s` / `towerHits` / `towerZone`）在疊層 UI 上**是否有畫出來**
      ——資料層已有，呈現層未驗證。
   5. 手機真機（Android / iOS）完全未測。
+
+## Milestone N（2026-08-04）— 經營時間軸與財務閉環
+
+分支 `milestone-n-finance`（從 `milestone-m1.7-rc1` 開出）。**未 merge 回 main。**
+
+### 問題
+
+主幹**沒有時鐘**。`advanceTrainingDay()` 會把 `meta.days` +1 並推導 `meta.week`，
+但那是訓練功能的副作用：`activeSponsor.weeksLeft` 簽約後永遠不遞減、
+`finance.weeklyIncome` / `weeklyCost` 從未入帳。錢只會因為比賽獎金增加，
+不會因為經營而變動 ⇒ 贊助簽了等於永久生效、經營沒有壓力。
+
+### 交付
+
+**新增三個純邏輯模組**（不 import React / zustand / localStorage ⇒ 可直接 Node 測）：
+
+- `src/platform/economy/units.js` — `WAN` 換算常數。從 profileStore 搬出來，
+  避免純模組反向 import Store 造成循環；profileStore 改為 re-export，呼叫端不受影響。
+- `src/platform/economy/timeline.js` — 時間的**唯一換算來源**。
+  `deriveTime(days)` → `{day, week, season, dayOfWeek, weekOfSeason}`；
+  `DAYS_PER_WEEK = 7`、`WEEKS_PER_SEASON = 12`。
+  week / season 一律由 `meta.days` 導出，**不另存第二份計數**
+  （避免 team.lv/xp 那種兩邊不同步的坑）。週次跨賽季不重置 ⇒ 可當全域唯一的冪等鍵。
+- `src/platform/economy/weeklySettlement.js` — 週結算純 reducer。
+  `buildWeekLines(state)`（唯讀預覽）、`settleWeekInState(state, week)`、
+  `advanceDaysInState(state, n, onDay)`。
+
+**profileStore**（`schemaVersion` 4 → 5）：
+
+- 新增 `economy: { settledWeeks, lastSettledWeek }` 帳本切片。
+- 新增 `advanceDay(n)` = **唯一的時鐘**：每天結算訓練，跨週結尾則結算該週。
+  `advanceTrainingDay()` 保留為 `advanceDay(1)` 的別名（訓練頁與 Legacy 呼叫端不必改）。
+- 新增 `currentWeekPreview()` 給畫面用（唯讀）。
+- migration：舊存檔沒有 `economy` ⇒ 空帳本，且**刻意不補算過去的週**
+  （那會在載入當下憑空扣一大筆薪資）。載入時強制由 `days` 重新導出 week / season。
+- 種子 `meta` 原本 `days: 8` 配 `week: 1`（互相矛盾），改為由 days 導出 ⇒ week 2。
+
+**收支組成**（金額一律以元存放，Legacy 表以「萬」計價）：
+
+| 項目 | 來源 | 種子值 |
+|---|---|---|
+| 基礎營收 | `finance.weeklyIncome` | 8.5 萬/週 |
+| 贊助收入 | `activeSponsor` → SPONSORS.weekly | 6–35 萬/週 |
+| 選手薪資 | `players[].salary`（**週薪・萬**，依 Legacy `EsportsGame.jsx:559` / `:5822`） | 五人合計 42 萬/週 |
+| 營運成本 | `finance.weeklyCost` | 6.2 萬/週 |
+
+⚠ `weeklyCost` 明確定義為**不含薪資**的固定營運支出。種子 `expenseBd` 另有一筆
+「選手薪資」，那是 Legacy 寫死的展示分解；薪資的唯一來源是 `players[].salary`，
+兩者不相加，避免重複計算。
+
+**合約**：先入帳、再遞減 ⇒ 合約 N 週就領滿 N 週；遞減到 0 當週清空
+`activeSponsor` 並發收件匣通知（剩 ≤2 週也會預告）。到期後不再有任何贊助收入。
+
+**Dashboard / FinanceScreen**：新增「本週財務」卡（收入／支出／淨額／合約剩餘週數、
+S/週/天座標）；FinanceScreen 的「本週收入・本週支出」改讀 `currentWeekPreview()`——
+原本直接顯示 `weeklyIncome` / `weeklyCost`，那會少算薪資與贊助。
+
+### 驗證（2026-08-04 實跑）
+
+- `node tools/check_finance_n.mjs` → **32/32 通過**。涵蓋：
+  時間換算與跨賽季、一次推進多天不漏週、金額正確、
+  **帳本相平**（本週交易加總 = 淨額 = 資金實際變化）、
+  **冪等**（同週再結算完全不寫入、資金不被扣第二次）、
+  **合約恰好領滿不多不少**、**到期後仍結算也沒有贊助收入**、
+  資金允許為負（不夾成 0，否則帳目對不起來）、JSON 往返後續推進不重算。
+- `verify.mjs --only=progress25,talent27,experience26,cs23,build` → **5/5 通過**。
+- `npm run build` 通過。
+
+### ⚠ 平衡問題（機制正確，數字關係要決策）
+
+依 Legacy 規格，五人週薪合計 **42 萬**，而種子資金 120 萬、基礎營收 8.5 萬/週。
+以最高階贊助（35 萬/週）計算，每週淨額仍是 **−24.7 萬**⇒ 數週內見底。
+
+這是**種子資料的數字關係**問題，不是機制 bug。費率全部集中在
+`weeklySettlement.buildWeekLines` 一處可調，但調整費率屬 Balance 決策
+（CLAUDE.md：Balance 變更需 Ray 核准），本 Milestone **不自行調整**。
+
+### 未做（刻意，超出本 Milestone 範圍）
+
+- 轉會市場、合約談判、商店 —— 使用者明確指定不做。
+- 沒有碰任何 MOBA 戰鬥邏輯（LogicEngine / BattleResult / Replay 一行未改）。
+- **瀏覽器實機驗收未做**：本週財務卡的版面、合約到期通知、
+  推進日的實際手感，都還沒在畫面上看過。

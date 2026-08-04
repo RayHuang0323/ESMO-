@@ -90,6 +90,8 @@ const TABS = [{ id: "overview", label: "總覽" }, { id: "analysis", label: "分
 
 export default function FinanceScreen({ onBack }) {
   const fin = useProfileStore((s) => s.finance);
+  //  Milestone N：本週收支預覽（與週結算共用同一份計算，畫面不另算一套）
+  const wk = useProfileStore((s) => s.currentWeekPreview)();
   const [tab, setTab] = useState("overview");
   const [txFilter, setTxFilter] = useState("all");
 
@@ -114,9 +116,13 @@ export default function FinanceScreen({ onBack }) {
           <div style={{ color: "white", fontSize: 32, fontWeight: 900, lineHeight: 1, marginBottom: 8 }}>${(fin.funds ?? 0).toLocaleString()}</div>
           <div style={{ display: "flex", gap: 16 }}>
             {[
-              { Icon: ArrowUpRight, val: `$${(fin.weeklyIncome ?? 0).toLocaleString()}`, label: "本週收入", c: T.green },
+              //  Milestone N：本週收入／支出改讀 currentWeekPreview()——即週結算
+              //  真正會用的那份計算（含選手薪資與贊助收入）。
+              //  `fin.weeklyIncome` / `fin.weeklyCost` 現在只是其中兩個組成項
+              //  （基礎營收與營運成本），單獨顯示會少算薪資與贊助。
+              { Icon: ArrowUpRight, val: `$${wk.income.toLocaleString()}`, label: "本週收入", c: T.green },
               { Icon: TrendingUp,   val: `${parseFloat(netChg) >= 0 ? "+" : ""}${netChg}%`, label: "月淨利成長", c: T.purpL },
-              { Icon: ArrowDownLeft, val: `$${(fin.weeklyCost ?? 0).toLocaleString()}`, label: "本週支出", c: T.amber },
+              { Icon: ArrowDownLeft, val: `$${wk.expense.toLocaleString()}`, label: "本週支出", c: T.amber },
             ].map(({ Icon, val, label, c }) => (
               <div key={label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
                 <Icon size={12} style={{ color: c }} />

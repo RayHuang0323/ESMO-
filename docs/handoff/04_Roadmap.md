@@ -8,7 +8,38 @@ ESMO 目前處於：
 
 不是新功能擴張階段。
 
-## 近期 Roadmap
+## 現況（2026-08-04 更新）
+
+⚠ 下方「近期 Roadmap」的 Sprint 19–27 段落停在 2026-07-14，僅供歷史參考。
+S28–S29 與 Milestone A–N 之後的實際進度以本節與
+`05_Sprint紀錄.md`、`08_目前待辦與風險.md` 為準。
+
+### 對戰（MOBA）
+
+- **Milestone M1.7 RC1**（tag `milestone-m1.7-rc1`，已在 main）——
+  英雄決策與撤退。狀態：**程式與自動驗證完成，待瀏覽器實機驗收**。
+- 驗證入口是 `node tools/verify.mjs`（flat runner），不是直接跑 runtime29。
+- 既有紅燈：runtime29 §29（TD-21）、milestone_j §26/§31（HEAD 即紅）。
+
+### 經營（非對戰）
+
+- **Milestone N**（分支 `milestone-n-finance`，未 merge）——
+  經營時間軸與財務閉環。統一時鐘、週結算、合約倒數、交易帳本。
+  驗證 `tools/check_finance_n.mjs` 32/32。
+  **待決策：費率平衡**（種子薪資 42 萬/週 vs 資金 120 萬，見 08 文件）。
+
+### 建議的下一步（依優先序）
+
+1. **費率平衡決策**（Balance，需 Ray 核准）——N 的機制已就位，數字關係要定。
+2. **商店（equip）與經營儀表板（dash）**——Dashboard 僅剩的兩個誠實佔位。
+   有了週期性支出，商店的取捨才有意義。
+3. **轉會市場／合約談判**（Legacy NegotiationModule）——相依於 1、2。
+4. **AI 對手隊伍 + 賽程聯賽化**——紅方目前全隊中性能力，
+   Prep 的「賽程」分頁因此未恢復。這是讓賽季有結構的前提。
+5. 技術債清理：`src/platform/DashboardScreen.jsx` 死碼、`team.lv/xp` 刻度、
+   `meta.reputation` 靜態值、重播持久化（IndexedDB）、bundle 瘦身（2.4 MB）。
+
+## 近期 Roadmap（歷史，停在 2026-07-14）
 
 ### Sprint 19：MOBA 主流程修復 + Draft Presentation 串接
 
