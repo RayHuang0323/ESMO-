@@ -313,6 +313,33 @@ SIM_RULES.v3 = {
   stableFormation: true,
   attackHoldEnterK: 0.85,   // 進到 engageRange × 0.85 就停下來打
   attackHoldExitK: 1.05,    // 目標離開 engageRange × 1.05 才重新移動（遲滯緩衝）
+  //  ── M1.7：英雄決策與撤退（四個實機問題的修正開關）────────────────────────
+  //  Audit 實測（10 seeds，接原型層）：
+  //    ① 37.0% 的存活 tick 在發呆，其中 92.7% 是「已抵達目標點就站著等」，
+  //       連續發呆平均 19.4 秒、最長 125.5 秒
+  //    ② 塔下停留 ≥5 秒的 42 段平均掉血 52.9pp，最長一段 75 秒
+  //    ③ 第一個吃到的營地是 Buff 的比例 **0%**，第一次吃到 Buff 平均已 13.9 分
+  //    ④ 撤退開始時平均只剩 26.6% 血；23.5% 的死亡「死時根本沒在撤退」，
+  //       死前 6 秒最高血量平均 58.2%
+  decisionV17: true,
+  //  ① 發呆：合法停留的界線
+  idleCooldownSec: 3,       // 剛受傷後可以站一下（不是計時器掩蓋：只在剛受傷後成立）
+  waitWaveRange: 28,        // 己方兵線在這個距離內且還在來 ⇒「等兵線」合法
+  waitWaveMaxSec: 8,        // 等兵線的上限，超過就必須再任務
+  //  ② 塔區：四項同時成立才允許塔下作戰，否則退到射程外
+  diveMinHp: 0.55,
+  diveMaxShots: 3,          // 連續吃到第 3 發塔就退（塔傷有 towerLockRamp 疊加）
+  diveKillHp: 0.35,         // 射程內有這麼殘的敵人才算「有擊殺機會」
+  towerSafePad: 2.5,        // 退到塔射程外緣再加的餘裕
+  //  ④ 撤退：四項情境的門檻平移（不是計時器、不是強制位移）
+  tradeWindowSec: 4,        // 短期換血的觀察窗
+  burstRetreatAt: 0.22,     // 4 秒內掉超過 22% 最大生命 ⇒ 視為換血吃虧
+  burstRetreatBonus: 0.16,
+  //  （曾有 towerZoneRetreatBonus 0.12，已移除：與 _towerZoneV17 的退出規則重複計算，
+  //    理由與實測見 LogicEngine 該處註解）
+  supportRadius: 8,
+  supportRetreatRelief: 0.05,
+  escapeRetreatRelief: 0.03,
   // Milestone C：塔的傷害改成離散單體射擊。引擎正式 tick 是 0.5s；
   // 每發 60 完整保留舊 120 DPS / 2s TTK，240 HP 小兵會清楚經過四次扣血才死亡。
   towerAttackInterval: 0.5,

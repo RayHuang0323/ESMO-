@@ -404,6 +404,16 @@ export class LogicEngine {
     const a = this._arch(p);
     if (!a || !tgt) return tgt;
     const R = this.rules;
+    //  ── M1.7：撤退／回城的目標**不得**被站位層覆寫 ──────────────────────
+    //  站位層在撤退分支之後才套用，只要附近還有敵人（chaseDistance+6）就會把
+    //  「回泉水」改寫成「站到敵人旁邊的圍攻位」⇒ 撤退等於沒發生。
+    //  實測：撤退中卻站著不動的 tick 有 10,970 個（發呆總量第二名），
+    //  且 23.5% 的死亡是「死時根本沒在撤退」。撤退必須贏過站位。
+    if (R.decisionV17 && (p.retreating || p.fsm === "RECALL" || p.fsm === "RETREAT")) {
+      //  一併清掉站位遲滯狀態：撤退中不可能「站定輸出」，殘值會讓 debug 疊層說謊。
+      p._hold = false; p.dbgHold = false; p.dbgFoeId = null; p.dbgFoeDist = null;
+      return tgt;
+    }
     //  ── M1.6：錨點**黏著**（原本每 tick 重挑最近敵人）────────────────────
     //  每 tick 換錨點 ⇒ 站位目標跳動 ⇒ 英雄在兩個目標之間來回。
     //  規則：目標活著、且沒有明顯脫離（chaseDistance + 6 的 1.25 倍）就不換人。
@@ -450,7 +460,11 @@ export class LogicEngine {
       const enter = range * (R.attackHoldEnterK ?? 0.85);
       const exit = range * (R.attackHoldExitK ?? 1.05);
       const chasing = p.fsm === "CHASE" || p.retreating;
-      if (chasing) p._hold = false;
+      //  M1.7：後排被貼臉時**不站定**。M1.6 的遲滯早於下面的 `retreatDistance` 判定，
+      //  會把法師／射手凍結在近身距離（實測 3v3：射程 8.13 的法師被鎖在 1.2–3.6 開打）
+      //  ⇒ 後排的拉開完全失效。貼進 retreatDistance 以內就解除站定，交回拉開邏輯。
+      const tooClose = R.decisionV17 && a.retreatDistance > 0 && fd < a.retreatDistance;
+      if (chasing || tooClose) p._hold = false;
       else if (p._hold) { if (fd > exit) p._hold = false; }
       else if (fd <= enter) p._hold = true;
       p.dbgHold = p._hold === true;
@@ -881,6 +895,24 @@ export class LogicEngine {
   /** 打野的下一個農怪目標：自家野區最近的存活營地。 */
   _nextCampV3(p) {
     if (!this.neutrals) return null;
+    //  ── M1.7：打野路線有明確優先序，不再「只挑最近的」──────────────────
+    //  舊寫法是純粹的最近營地。實測 20 個 seed-side：**第一個吃到的營地是 Buff 的
+    //  比例 0%**、只有 4 個曾經吃到 Buff、第一次吃到平均已經 13.9 分鐘。
+    //  Buff 是打野的核心收益，開局與重生後都應該先拿。
+    //  路線仍**可中斷**：Gank／會戰／回防的分支都排在呼叫這裡之前，
+    //  而且這裡每次都重新評估（沒有鎖死的巡邏佇列）。
+    if (this.rules.decisionV17) {
+      const mine = this.neutrals.camps.filter((c) => c.alive && c.side === p.side);
+      if (!mine.length) return null;
+      const buff = mine.filter((c) => c.type === "buff");
+      //  ① Buff 營優先（多座就取最近的）
+      if (buff.length) {
+        return buff.reduce((b, c) => (dist(p.pos, c.pos) < dist(p.pos, b.pos) ? c : b));
+      }
+      //  ② Buff 都被吃掉了 ⇒ 一般營地取最近，並以 id 破平手（決定性）
+      return mine.slice().sort((a, b) =>
+        dist(p.pos, a.pos) - dist(p.pos, b.pos) || String(a.id).localeCompare(String(b.id)))[0];
+    }
     let best = null, bd = Infinity;
     for (const c of this.neutrals.camps) {
       if (!c.alive || c.side !== p.side) continue;
@@ -888,6 +920,131 @@ export class LogicEngine {
       if (dd < bd) { bd = dd; best = c; }
     }
     return best;
+  }
+  /**
+   * M1.7：這座敵方塔的「危險程度」與是否允許塔下作戰。
+   *
+   * 判準（全部是引擎當下的真實狀態，不用計時器掩蓋）：
+   *   · 己方兵線在塔邊 ⇒ 有兵扛塔傷，可以壓
+   *   · 血量足夠（`diveMinHp`）
+   *   · 連續吃塔的發數還沒超過 `diveMaxShots`（塔會越打越痛，towerLockRamp）
+   *   · 有明確擊殺機會（射程內有殘血敵人）
+   * 四項不同時成立就必須退出塔區。實測舊行為：塔下停留 ≥5 秒的 42 段平均掉血
+   * **52.9pp**，最長一段 75 秒——不是「有計畫的越塔」，是沒有退出條件。
+   */
+  /**
+   * M1.7：這一次「站著不動」是否**合法**。回傳理由字串；`null` = 不合法，必須再任務。
+   * 合法清單由產品定義：等兵線／埋伏／回城／防守／集合／短暫冷卻。
+   */
+  _idleReasonV17(p, st, effLane, alive) {
+    const R = this.rules;
+    if (p.recallT > 0 || st === "回城" || st === "回城中") return "回城";
+    if (dist(p.pos, FOUNTAIN[p.side]) < 12) return "泉水補給";
+    if (st === "回防") return "防守";
+    //  短暫冷卻：剛被打完，站一下再動（不是計時器掩蓋——有上限且只在剛受傷後成立）
+    const since = this.t - (p.lastDamagedAt ?? -Infinity);
+    if (since < (R.idleCooldownSec ?? 3)) return "短暫冷卻";
+    //  集合：隊友正在往我這裡靠（附近已有隊友且會戰熱點存在）
+    const allies = alive.filter((q) => q.side === p.side && q !== p && dist(q.pos, p.pos) < 14).length;
+    if (allies >= 2 && this._hotNow) return "集合";
+    //  等兵線：己方兵線還沒推到我這裡，但**正在來**（同一路、還在我後方）
+    if (this.lanes[effLane]) {
+      const key = p.side === "blue" ? "bm" : "rm";
+      const arr = this.lanes[effLane][key];
+      if (arr.length) {
+        const lead = p.side === "blue" ? Math.max(...arr.map((m) => m.t)) : Math.min(...arr.map((m) => m.t));
+        const near = dist(posOnLane(effLane, lead), p.pos);
+        //  兵線在 28 單位內且還沒到 ⇒ 等它（超過就不是等兵線，是發呆）
+        if (near <= (R.waitWaveRange ?? 28)) {
+          p._waitWaveSince ??= this.t;
+          if (this.t - p._waitWaveSince <= (R.waitWaveMaxSec ?? 8)) return "等兵線";
+        } else p._waitWaveSince = null;
+      }
+    }
+    //  埋伏：站在草叢裡、附近有敵人可以埋
+    for (const b of BUSHES) {
+      if (dist(p.pos, b) <= b.r &&
+        alive.some((q) => q.side !== p.side && !q.dead && dist(q.pos, p.pos) < 18)) return "埋伏";
+    }
+    return null;
+  }
+  /**
+   * M1.7：發呆時的**下一個有效任務**。順序是固定的、可解釋的，不用亂數。
+   * 只回傳「要去哪裡」，走路仍交給既有的 nav 與碰撞。
+   */
+  _nextTaskV17(p, effLane, alive) {
+    //  ① 打野：回去跑野區路線（Buff 優先）
+    if (p.role === "jungle") {
+      const camp = this._nextCampV3(p);
+      if (camp && dist(p.pos, camp.pos) > 1.5) {
+        return { pos: camp.pos, st: "打野", fsm: "FARM", intent: "續跑野區路線" };
+      }
+    }
+    //  ② 推進：壓向這一路的敵方前線建築。
+    //  ⚠ 但如果那座建築被**兵線閘門**擋住（M1.5：門牙塔／主堡沒有己方兵線就零傷害），
+    //  站過去只是換個地方發呆——實測 seed 63：雙方路上塔全倒，五個人站在門牙塔前
+    //  滿血不動、兵線鎖在中線，對局拖到 50 分鐘還沒結束。這種時候要回去接兵線。
+    const ftw = this.frontStructure(p.side, effLane, p.pos);
+    const gated = ftw && (ftw.lane === "nexus_guard" || ftw.lane === "nexus") &&
+      this.rules.nexusWaveGate && !this._hasWaveAtStructure(p.side, ftw);
+    if (ftw && !gated && dist(p.pos, ftw.pos) > 1.5) {
+      return { pos: ftw.pos, st: "推進", fsm: "LANE", intent: "壓向前線建築" };
+    }
+    //  ③ 跟兵線：己方這一路最前面的小兵（沒有建築可推時的推進基準）
+    const key = p.side === "blue" ? "bm" : "rm";
+    const arr = this.lanes[effLane]?.[key] ?? [];
+    if (arr.length) {
+      const lead = p.side === "blue" ? Math.max(...arr.map((m) => m.t)) : Math.min(...arr.map((m) => m.t));
+      const pos = posOnLane(effLane, lead);
+      if (dist(p.pos, pos) > 1.5) return { pos, st: "跟兵線", fsm: "LANE", intent: "跟上己方兵線" };
+    }
+    //  ④ 集合：往最近的隊友靠（避免單人乾站）
+    let ally = null, ad = Infinity;
+    for (const q of alive) {
+      if (q.side !== p.side || q === p || q.dead) continue;
+      const d = dist(p.pos, q.pos);
+      if (d < ad) { ad = d; ally = q; }
+    }
+    if (ally && ad > 3) return { pos: { ...ally.pos }, st: "集合", fsm: "SETUP", intent: "向隊友集合" };
+    return null;
+  }
+  _towerZoneV17(p, alive, objective = null) {
+    const R = this.rules;
+    let tw = null, td = Infinity;
+    for (const t of Object.values(this.towers)) {
+      if (t.hp <= 0 || t.side === p.side) continue;
+      const d = dist(p.pos, t.pos);
+      if (d <= this.towerRange(t) && d < td) { td = d; tw = t; }
+    }
+    if (!tw) { p.towerHits = 0; return { inZone: false, allow: true, tower: null }; }
+    const hasWave = this._hasWaveAtStructure(p.side, tw);
+    const hpOk = p.hp >= p.maxHp * (R.diveMinHp ?? 0.55);
+    const shotsOk = (p.towerHits ?? 0) < (R.diveMaxShots ?? 3);
+    let kill = false;
+    for (const q of alive) {
+      if (q.side === p.side || q.dead) continue;
+      if (dist(p.pos, q.pos) <= this._engageRange(p) && q.hp <= q.maxHp * (R.diveKillHp ?? 0.35)) { kill = true; break; }
+    }
+    //  進入敵塔射程要有理由，理由有三種（**擇一**即可，不是全部成立）：
+    //    · 這座塔**就是我的推進目標** ⇒ 這是圍攻，本來就得站進去打
+    //    · 有己方兵線在扛塔 ⇒ 正常的推線
+    //    · 沒有兵線但有明確擊殺機會 ⇒ 有計畫的越塔
+    //  外加兩個「不准站到殘血」的硬條件：血量足夠、連續吃塔沒超過上限——
+    //  這兩項才是 M1.7 真正要解的「站到死」，退出條件由它們負責，不是禁止靠近。
+    //
+    //  ⚠ 這裡踩過兩次坑，都是同一個錯誤：把「圍攻」當成「越塔」來管。
+    //    第一版 allow = hasWave && hpOk && shotsOk && kill（四項全 AND）
+    //      ⇒ 要求圍攻基地時射程內要有殘血敵人，推建築時永遠不成立。
+    //    第二版 allow = hpOk && shotsOk && (hasWave || kill)
+    //      ⇒ 沒兵線時仍然禁止，而**門牙塔射程 13、英雄攻擊距離只有 4–8**，
+    //        英雄在 15.5 單位就被彈開，永遠靠不進攻擊距離。
+    //    實測 seed 7：25 分所有路上塔倒光後，4 座門牙塔整場維持滿血 300、
+    //    全場沒有任何敵方英雄進入過攻擊距離，對局拖到 45 分未結束。
+    //    引擎本來就允許無兵線攻城（`nexusGuardNoWaveK` 0.62 是**乘數不是歸零**），
+    //    決策層不該把它擋死。
+    const sieging = !!objective && objective === tw;
+    const allow = hpOk && shotsOk && (sieging || hasWave || kill);
+    return { inZone: true, allow, tower: tw, hasWave, hpOk, shotsOk, kill, sieging };
   }
   /** S29B3：回城事件（唯一出口；phase = start / done / cancel；done 帶傳送起點）。 */
   _recallEventV3(p, phase, from = null) {
@@ -1939,6 +2096,15 @@ export class LogicEngine {
         holdExit: p.dbgExit == null ? null : Math.round(p.dbgExit * 100) / 100,
         holding: !!p.dbgHold,            // 已進入攻擊距離、站定輸出
         navDelta: p.dbgNavDelta == null ? null : Math.round(p.dbgNavDelta * 1000) / 1000,
+        //  M1.7：決策診斷
+        actionState: p.actionState ?? null,   // 機器可讀狀態（RETREAT / IDLE / DISENGAGE_TOWER…）
+        intent: p.intent ?? null,             // 這個任務的理由
+        idleReason: p.idleReason ?? null,     // 站著不動的**合法**理由；null＝已再任務
+        retreatReason: p.retreatReason ?? null,
+        retreatAt: p.dbgRetreatAt ?? null,    // 這一 tick 的實際撤退門檻
+        burst4s: p.dbgBurst ?? null,          // 最近 4 秒掉血比例
+        towerHits: p.towerHits ?? 0,
+        towerZone: p.dbgTower ?? null,        // 在敵塔射程內時的四項判準
       };
     }
     return { towers, heroes };
@@ -2475,6 +2641,9 @@ export class LogicEngine {
                 1 + (tw.lockShots ?? 0) * (R.towerLockRamp ?? 0));
               const shot = R.towerAggroDmg * R.towerAttackInterval * lateFactor * ramp;
               best.hp -= Math.min(shot, Math.max(0, best.hp - 1));
+              //  M1.7：被塔連續打了幾發。`_towerZoneV17` 用它當「該撤了」的硬訊號；
+              //  離開塔區時歸零（見 _towerZoneV17）。塔傷本身一點都沒改。
+              best.towerHits = (best.towerHits ?? 0) + 1;
               tw.atkCd = R.towerAttackInterval; tw.lockShots += 1;
               this.pushFx({
                 type: "tower", pos: { ...tw.pos }, target: { x: best.pos.x, y: best.pos.y },
@@ -2667,6 +2836,8 @@ export class LogicEngine {
       }
     }
     }   // ← v1/v2 熱點路徑結束（v3 走上方 engagementFsm 分支）
+    //  M1.7：本 tick 是否存在團戰熱點（`_idleReasonV17` 判定「集合」是否合法用）。
+    this._hotNow = !!hot;
 
     const pendingHits = [];       // S29：本 tick 的英雄傷害（同時結算，見下方 flush）
     const effLanes = new Map();   // S29：loop1 決定的 effLane → loop2 的推塔判定沿用
@@ -2725,6 +2896,42 @@ export class LogicEngine {
         // RECALL：已撤到泉水附近 ⇒ 補到 88% 才重新出門（回城/補給有始有終）
         if (p.retreating && dist(p.pos, FOUNTAIN[p.side]) < 12) returnAtEff = Math.max(returnAt, 0.88);
       }
+      //  ── M1.7：撤退門檻再疊四項情境（全部是門檻平移，不用計時器、不強制位移）──
+      //  舊行為實測：撤退**開始**時平均只剩 26.6% 血（中位 27.4%、p10 8.3%），
+      //  而且 23.5% 的死亡是「死時根本沒在撤退」、死前 6 秒的最高血量平均 58.2%
+      //  ⇒ 從近六成血被打到死，中間沒有任何拉開的決策。
+      if (R.decisionV17) {
+        //  ① 短期換血：最近 4 秒掉了多少血（爆發傷害比絕對血量更能預測死亡）
+        const W = R.tradeWindowSec ?? 4;
+        (p._hpWin ??= []).push({ t: this.t, hp: p.hp });
+        while (p._hpWin.length && p._hpWin[0].t < this.t - W) p._hpWin.shift();
+        const burst = Math.max(0, (p._hpWin[0]?.hp ?? p.hp) - p.hp) / p.maxHp;
+        //  ② 塔區：站在敵塔射程內，塔傷會疊加，門檻提高
+        const inTowerZone = Object.values(this.towers).some((t) =>
+          t.hp > 0 && t.side !== p.side && dist(p.pos, t.pos) <= this.towerRange(t));
+        //  ③ 逃生手段：閃現就緒 ⇒ 有本錢再撐一點
+        const escapeReady = this.spellsOn && p.sp?.f && this.t >= p.sp.f.readyAt;
+        //  ④ 支援：附近有還健康的隊友 ⇒ 可以再站一下
+        const support = alive.some((q) => q.side === p.side && q !== p &&
+          dist(q.pos, p.pos) < (R.supportRadius ?? 8) && q.hp > q.maxHp * 0.5);
+        let reason = null;
+        if (burst >= (R.burstRetreatAt ?? 0.22)) { retreatAt = Math.min(0.62, retreatAt + (R.burstRetreatBonus ?? 0.16)); reason = "短期換血吃虧"; }
+        //  ⚠ 這裡曾經再加 `towerZoneRetreatBonus`（+0.12），已移除：塔區的風險
+        //  已經由 `_towerZoneV17` 的退出規則負責（血量／連續吃塔／有沒有理由待著），
+        //  再疊一次撤退門檻等於同一件事算兩遍——而撤退在 M1.7 又贏過站位層，
+        //  結果是「一走進敵塔射程就往家裡跑」。實測移除後：20 seeds 收得掉
+        //  19/20 → 20/20、最長 45.0 分 → 26.1 分、撤退鎖死 1 → 0。
+        //  `inTowerZone` 保留下來只當**理由字串**，不再平移門檻。
+        if (inTowerZone) reason ??= "在敵塔射程內";
+        const nFoe = alive.filter((q) => q.side !== p.side && dist(q.pos, p.pos) < 10).length;
+        const nAlly = alive.filter((q) => q.side === p.side && q !== p && dist(q.pos, p.pos) < 10).length;
+        if (nFoe > nAlly + 1) reason ??= "人數劣勢";
+        if (support) { retreatAt = Math.max(0.10, retreatAt - (R.supportRetreatRelief ?? 0.05)); }
+        if (escapeReady) { retreatAt = Math.max(0.10, retreatAt - (R.escapeRetreatRelief ?? 0.03)); }
+        p.retreatReason = p.hp < p.maxHp * retreatAt ? (reason ?? "血量低於門檻") : null;
+        p.dbgRetreatAt = Math.round(retreatAt * 1000) / 1000;
+        p.dbgBurst = Math.round(burst * 1000) / 1000;
+      }
       if (p.hp < p.maxHp * retreatAt) {
         if (this.playerStatsOn && !p.retreating) this.pexec[p.id].retreats++;   // 真實計數
         p.retreating = true;
@@ -2734,6 +2941,7 @@ export class LogicEngine {
       // 一旦進入既有 retreating 流程，回城、受擊中斷與回血遲滯仍沿用原機制。
       if (localDecision?.action === "RETREAT") p.retreating = true;
       let tgt, st, effLane = p.lane, stOv = null;
+      if (R.decisionV17) { p.intent = null; p.idleReason = null; p.dbgTower = null; }
       // S24：帶線分推 —— 指定分推路的選手在會戰熱點出現時仍留線推進（黏性決策，6 秒重評一次）
       let skipFight = false;
       if (K && hot && K.splitLane === p.lane && p.role !== "jungle" && p.role !== "sup") {
@@ -2971,6 +3179,53 @@ export class LogicEngine {
       //   「撤退＝死亡行軍」的結構性問題從機制面解掉，不是調傷害。
       //  Milestone M：職業站位（未啟用原型層 ⇒ 原樣回傳，逐位元不變）
       tgt = this._archPosition(p, tgt, alive);
+      //  ── M1.7 ②：塔區退出。允許有計畫的越塔，禁止「站到殘血為止」──────────
+      if (R.decisionV17 && !p.retreating) {
+        //  這一路的前線建築＝我的推進目標；它若正好是把我罩住的那座塔，就是圍攻。
+        const tz = this._towerZoneV17(p, alive, this.frontStructure(p.side, effLane, p.pos));
+        p.dbgTower = tz.inZone
+          ? { allow: tz.allow, siege: !!tz.sieging, wave: !!tz.hasWave, hp: !!tz.hpOk, shots: p.towerHits ?? 0, kill: !!tz.kill }
+          : null;
+        if (tz.inZone && !tz.allow) {
+          //  退到塔射程外緣＋餘裕的方向（沿「塔 → 我」的射線，不是瞬移、不是強制位移：
+          //  只是把移動目標換掉，走路仍然由既有 nav 決定）
+          const tw = tz.tower;
+          const d = dist(p.pos, tw.pos) || 1;
+          const safe = this.towerRange(tw) + (R.towerSafePad ?? 2.5);
+          tgt = {
+            x: clampMapX(tw.pos.x + (p.pos.x - tw.pos.x) / d * safe),
+            y: clampMapY(tw.pos.y + (p.pos.y - tw.pos.y) / d * safe),
+          };
+          st = "避塔"; p.fsm = "DISENGAGE";
+          p.intent = !tz.hpOk ? "血量不足以越塔" : !tz.shotsOk ? "連續吃塔過多"
+            : "無兵線也無擊殺機會";
+        }
+      }
+      //  ── M1.7 ①：發呆再任務 ───────────────────────────────────────────────
+      //  實測 37.0% 的存活 tick 是「幾乎沒動、沒有攻擊目標」，其中 **92.7%**
+      //  的成因是「已抵達目標點就站著等」——決策層給的是一個**位置**，
+      //  站到了就沒有下一個任務。連續發呆平均 19.4 秒、最長 125.5 秒。
+      //  合法停留只有下面這幾種；其餘一律取得下一個有效任務。
+      if (R.decisionV17 && tgt && !p.retreating) {
+        //  「抵達」不能只看 0.9：打建築是**站在攻擊距離上**輸出（4–8 單位），
+        //  用 0.9 判定的話，站在建築前面的人永遠不算抵達 ⇒ 永遠不會再任務。
+        //  這正是把 M1.5 的兵線閘門變成死局的那一步：門牙塔／主堡沒有己方兵線
+        //  時傷害為零，英雄卻站在那裡「攻門牙塔」到天荒地老——實測 seed 7：
+        //  20 分後 state 最大宗就是 `攻門牙塔` 8582 tick，主堡整場滿血 7200、
+        //  對局拖到 45 分未結束。站著打不會掉血的東西，就是發呆。
+        const gateStalled = R.nexusWaveGate && (st === "攻門牙塔" || st === "圍攻主堡") &&
+          !this._hasWaveAtStructure(p.side, this.frontStructure(p.side, effLane, p.pos));
+        const arrived = dist(p.pos, tgt) <= 0.9 || (gateStalled && dist(p.pos, tgt) <= this._engageRange(p) + 1);
+        const hasFoe = alive.some((q) => q.side !== p.side && !q.dead &&
+          dist(p.pos, q.pos) <= this._engageRange(p));
+        if (arrived && !hasFoe) {
+          p.idleReason = this._idleReasonV17(p, st, effLane, alive);
+          if (!p.idleReason) {
+            const next = this._nextTaskV17(p, effLane, alive);
+            if (next) { tgt = next.pos; st = next.st; p.fsm = next.fsm; p.intent = next.intent; }
+          }
+        } else p.idleReason = null;
+      }
       const d = dist(p.pos, tgt),
         spd = ((st === "團戰!" || st === "追擊" || st === "接戰" || st === "拉扯") ? R.fightSpeed : R.moveSpeed) *
           (R.engagementFsm && p.retreating ? R.retreatSpeedMult : 1) *
@@ -2998,6 +3253,16 @@ export class LogicEngine {
         if (this.baron.alive && dist(p.pos, PITS.baron) < 9) this.pexec[p.id].objTicks++;
       }
       p.state = st;
+      //  M1.7：可觀測診斷。`state` 是既有的中文顯示字串（不動它），
+      //  `actionState` 是穩定的機器可讀值，`intent` 說明「為什麼是這個任務」。
+      if (R.decisionV17) {
+        p.actionState = p.retreating ? "RETREAT"
+          : st === "避塔" ? "DISENGAGE_TOWER"
+            : st === "回城" || st === "回城中" ? "RECALL"
+              : p.idleReason ? "IDLE"
+                : (p.fsm ?? "LANE");
+        p.intent ??= st;
+      }
       effLanes.set(p, effLane);
       // v1：交戰緊接著移動、在同一迴圈內處理（＝舊行為，含「用敵方舊位置判定接戰」）。
       if (!R.twoPhaseTick) this._combatStep(p, effLane, alive, dt, lateFactor, pendingHits);

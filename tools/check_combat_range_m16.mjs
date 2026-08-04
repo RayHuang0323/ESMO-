@@ -180,7 +180,10 @@ function duel(n, seed, ticks = 120) {
       const s = st.get(p.id);
       let foe = null, fd = Infinity;
       for (const q of e.players) { if (q.side === p.side || q.dead) continue; const d = dist(p.pos, q.pos); if (d < fd) { fd = d; foe = q; } }
-      if (!foe || fd > e._engageRange(p) + 4) { s.ang = null; continue; }
+      //  M1.7：撤退／回城中不計入繞圈。「繞圈」的定義是**接戰中**繞著敵人轉而不攻擊；
+      //  脫離戰場時從敵人旁邊繞開本來就會掃過角度（M1.6 當時撤退被站位層壓住不會動，
+      //  所以看不到這一項）。門檻仍是 1.0 圈，只是不再把「走掉」誤判成「繞圈」。
+      if (!foe || fd > e._engageRange(p) + 4 || p.retreating) { s.ang = null; continue; }
       s.eng++; if (p.contactSince != null) s.atk++;
       const a = Math.atan2(p.pos.y - foe.pos.y, p.pos.x - foe.pos.x);
       if (s.ang != null) { let d2 = a - s.ang; while (d2 > Math.PI) d2 -= TAU; while (d2 < -Math.PI) d2 += TAU; s.rot += d2; }
@@ -192,6 +195,8 @@ function duel(n, seed, ticks = 120) {
       for (let x = 0; x < grp.length; x++) for (let y = x + 1; y < grp.length; y++) {
         const A = grp[x], B = grp[y];
         if (A.dead || B.dead) continue;
+        //  M1.7：撤退／回城中的隊友不算「圍攻疊位」——一起站在自家泉水回城是正常的。
+        if (A.retreating || B.retreating) continue;
         if (!A.dbgHold || !B.dbgHold) continue;
         minPairDist = Math.min(minPairDist, dist(A.pos, B.pos));
       }
@@ -237,7 +242,7 @@ function duel(n, seed, ticks = 120) {
         let foe = null, fd = Infinity;
         for (const q of e.players) { if (q.side === p.side || q.dead) continue; const d = dist(p.pos, q.pos); if (d < fd) { fd = d; foe = q; } }
         if (fd <= e._engageRange(p)) { inRange++; if (p.contactSince != null) inRangeAtk++; }
-        if (!foe || fd > e._engageRange(p) + 4) { h.length = 0; continue; }
+        if (!foe || fd > e._engageRange(p) + 4 || p.retreating) { h.length = 0; continue; }
         h.push({ ang: Math.atan2(p.pos.y - foe.pos.y, p.pos.x - foe.pos.x), atk: p.contactSince != null });
         if (h.length > WIN) h.shift();
         if (h.length < WIN) continue;

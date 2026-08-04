@@ -4126,3 +4126,191 @@ v1/v2 沒有這四個 key ⇒ 全部退回原分支 ⇒ 歷史基準逐位元不
 
 - Debug 疊層（HTML 面板與逐座射程圈）只在 node 端驗證資料正確，畫面未實際開啟確認。
 - 塔不再打遠處小兵之後的「清兵手感」變化未在瀏覽器確認。
+
+## Hero Proxy 上場測試（2026-08-02）
+
+- 本輪只接入一隻 `chichuan`，使用 `ESMO-hero-models` 的 `chichuan_cli_five_pass_v003.blend` 匯出 GLB，未使用 Human Base Mesh。
+- 新增 `ChichuanHeroProxy.jsx` 與 `heroProxyChichuan` feature flag；既有 placeholder 可用 `?heroProxy=0` 比較，其他英雄不受影響。
+- `npm.cmd run build` 通過；GLB 24 Mesh、2928 vertices、5760 polygons，HTTP asset 回應 200。
+- `check_moba_runtime29.mjs` 本輪執行 184 秒 timeout，未取得 verifier pass；不得將本輪記為完整 runtime 回歸通過。
+- Browser control backend 無法啟動，因此 MOBA 畫面、console、FPS、地面接觸與遠距可讀性列為待人工驗收。
+- 未 commit、未 push。
+
+### Hero Proxy 黑屏修正（2026-08-02）
+
+- 根因是 proxy 接線的 `proxyReady` 作用域與 `frameRef` props 傳遞錯誤，已修正。
+- Chrome/CDP 重測兩種開關均無例外；聚焦 `r2` 後可直接比較 proxy 與原 placeholder。
+- 新增 debug-only `focusHero` query，不影響正式 GameView 或戰鬥邏輯。
+
+### Hero Proxy A/B 對照（2026-08-02）
+
+- Desktop v002 已以同一 Blender GLB 匯出與 Runtime loader 規格建立獨立資產；CLI v003 未覆蓋。
+- `heroProxyVariant=cli-v003|desktop-v002` 已接入，預設仍為 CLI。
+- Chrome/CDP 兩版本均 Canvas 2、uncaught exception 0；A/B 截圖與 JSON：`review/hero-proxy/ab-v001/`。
+- 初步畫面觀察 Desktop v002 的紅／橙與火焰輪廓較清楚；SwiftShader 效能數字不作真實 GPU 結論。
+- 未 commit、未 push。
+
+## Milestone M1.7：英雄決策與撤退（2026-08-03，**未 commit、驗證未過，暫停中**）
+
+> 這一節是在原本的 M1.7 session 崩潰（WT 異常跳回 PowerShell）之後，
+> 從 working tree 的實際 diff 重建範圍、當場重跑驗證所寫。
+> 崩潰前的對話與驗證輸出**沒有留下任何檔案**，不引用、不複述。
+
+### 改動範圍（HEAD 仍是 e883fe2 = M1.6；以下皆為未 commit）
+
+只有三個檔屬於 M1.7（`git status` 其餘項目是 hero-proxy 等更早的未 commit 工作）：
+
+- `src/battle/moba/matchProgression.js`：`SIM_RULES.v3` 新增總開關 `decisionV17` 與 14 個參數
+  （`idleCooldownSec` / `waitWaveRange` / `waitWaveMaxSec`、`diveMinHp` / `diveMaxShots` /
+  `diveKillHp` / `towerSafePad`、`tradeWindowSec` / `burstRetreatAt` / `burstRetreatBonus` /
+  `towerZoneRetreatBonus` / `supportRadius` / `supportRetreatRelief` / `escapeRetreatRelief`）。
+- `src/LogicEngine.js`（+233 行）：
+  ① 撤退／回城的目標不再被 `_archPosition` 站位層覆寫；後排貼進 `retreatDistance` 內解除站定遲滯。
+  ② `_towerZoneV17`：塔區四項判準（有兵線／血量／連續吃塔發數／有擊殺機會）不同時成立就退出塔射程；
+     塔傷本身未改，只新增 `towerHits` 計數。
+  ③ `_nextCampV3` 改為 Buff 營優先、以 id 破平手（決定性）。
+  ④ `_idleReasonV17` / `_nextTaskV17`：站著不動要有合法理由（回城／泉水／防守／短暫冷卻／集合／
+     等兵線／埋伏），否則取得下一個任務（打野路線 → 推進前線建築 → 跟兵線 → 集合），
+     其中推進會避開被兵線閘門擋住的門牙塔／主堡。
+  ⑤ 撤退門檻四項情境平移（短期換血、塔區、支援、閃現就緒），皆為門檻調整，不用計時器、不強制位移。
+  ⑥ debug snapshot 新增 8 個診斷欄位：`actionState` / `intent` / `idleReason` / `retreatReason` /
+     `retreatAt` / `burst4s` / `towerHits` / `towerZone`。
+- `tools/check_combat_range_m16.mjs`：繞圈與同隊疊位判定排除 `retreating`
+  （撤退時從敵人旁邊繞開本來就會掃過角度，M1.6 因為撤退被站位層壓住才看不到）。
+
+### 驗證結果（2026-08-03 實跑）
+
+- ✅ `npm run build` — `built in 10.25s`。
+- ✅ `node tools/check_combat_range_m16.mjs` — **19/19 通過**。
+- ⚠️ `node tools/regress.mjs` — 結束率 **14/15**、**撤退鎖死 1**、平均擊殺 18.8。
+- ❌ `node tools/regress2.mjs` — **節奏門檻 6/8**（需 8/8）：
+  「收得掉 19/20」與「最長 45.0 分（需 ≤32）」兩項紅。
+- 🔄 `node tools/check_moba_runtime29.mjs` — **未取得結論**。
+  第一次以預設 heap 執行 6 秒即 `FATAL ERROR: Zone Allocation failed`（exit 134）；
+  改 `--max-old-space-size` 重跑時尚未產生輸出即結束本輪工作。
+  ⚠️ 另注意：8GB heap 的 runtime29 與 `npm run build` **同時**執行會把 esbuild 擠死
+  （`The service was stopped`）——那次 build 失敗是資源競爭，不是程式碼問題，單獨重跑即通過。
+
+### A/B 歸屬（已確認：回歸由 M1.7 造成）
+
+把 `decisionV17` 暫時切為 `false` 再跑同一組驗證，跑完已改回 `true`：
+
+| 指標 | decisionV17 關（≈M1.6） | decisionV17 開（M1.7） |
+|---|---|---|
+| regress2 節奏門檻 | **8/8** | **6/8** |
+| ‧ 收得掉 | 20/20 | 19/20 |
+| ‧ 最長時長 | 28.1 分 | **45.0 分** |
+| ‧ 平均時長 | 22.8 分 | 24.8 分 |
+| regress 結束率 | **15/15** | 14/15 |
+| regress 撤退鎖死 | **0** | **1** |
+| 平均擊殺 | 25.7 / 27.3 | 18.8 / 22.6 |
+
+症狀一致：撤退門檻拉高＋發呆再任務之後，出現撤退鎖死的場次，對局收不掉、拖到 45 分。
+方向合理（英雄更保命），但保命過頭變成不打架、不收線。
+
+### 未完成 / 未驗證
+
+- **runtime29 44/44 未取得**（regress2 已知 6/8，預期它也不會全綠）。
+- **完全沒有瀏覽器實測**：塔下撤退、後排拉開、打野先吃 Buff 的手感，
+  以及新增 8 個 debug 欄位在疊層上的顯示，一項都沒在瀏覽器看過。
+- 程式碼註解引用的舊行為 audit 數據（37.0% 發呆 tick、塔下 ≥5 秒平均掉血 52.9pp、
+  第一個營地是 Buff 的比例 0%、撤退開始平均剩 26.6% 血）**來源腳本已不存在，本輪未複驗**。
+
+### 下一步（未執行，等使用者決定）
+
+1. 先收斂撤退門檻（`burstRetreatAt` 0.22 / `burstRetreatBonus` 0.16 / `towerZoneRetreatBonus` 0.12
+   疊太厚），目標：regress2 回到 8/8、regress 撤退鎖死回到 0。
+2. 再跑 runtime29 求 44/44（單獨跑，不要與 build 併行）。
+3. 最後才進瀏覽器驗收。
+4. 在上述 1 未達成前**不要 commit** M1.7。
+
+- 未 commit、未 push。
+
+### M1.7 Fix 1：圍攻不是越塔（2026-08-04）
+
+上面那節的建議（先收斂撤退門檻）**只猜對了一半**。實測診斷後，45 分卡死的主因
+不是門檻，是塔區規則把**圍攻基地**也一起禁掉了。
+
+#### 診斷（20 seeds，逐 seed 觀測 + 單場 trace）
+
+- 撤退 tick 只從 15.8% 升到 19.1%，撤退加成**不是**主因。
+- seed 256（45 分未結束）：主堡滿血 7200、擊殺 91、最後一座塔 29 分才倒。
+- 把塔區條件放寬一次之後，同樣的 45 分卡死**跑到 seed 7 去了**（換 seed 不換病）：
+  - 25 分時所有路上塔倒光，只剩 4 座門牙塔，各自滿血 300；
+  - **整場沒有任何敵方英雄進入過攻擊距離**（逐 5 分鐘取樣皆為 0）；
+  - 20 分後 state 最大宗是 `攻門牙塔` 8582 tick——站在那裡，但打不到。
+- 原因：**門牙塔射程 13，英雄攻擊距離只有 4–8**。`_towerZoneV17` 不允許時會把人
+  推到 `towerRange + 2.5 = 15.5`，於是英雄永遠靠不進攻擊距離，無限彈開。
+- 附帶澄清：`nexusGuardNoWaveK = 0.62` 是**乘數不是歸零**，引擎本來就允許無兵線
+  攻城；是決策層自己把它擋死的。
+
+#### 修正
+
+`_towerZoneV17` 的允許條件重寫為：
+
+```
+allow = hpOk && shotsOk && (sieging || hasWave || kill)
+```
+
+- `sieging`：這座塔**就是我這一路的前線建築**（`frontStructure`）⇒ 圍攻，本來就得站進去打。
+- `hasWave`：有己方兵線扛塔 ⇒ 正常推線。
+- `kill`：沒兵線但射程內有殘血敵人 ⇒ 有計畫的越塔。
+- `hpOk` / `shotsOk` 維持不變——「不准站到殘血」由這兩項負責，不是靠禁止靠近。
+
+同時移除 `towerZoneRetreatBonus`（原 0.12）：塔區風險已由上面的退出規則處理，
+再平移一次撤退門檻是同一件事算兩遍，而撤退在 M1.7 又贏過站位層，結果是
+「一走進敵塔射程就往家裡跑」。`inTowerZone` 保留為**理由字串**，不再改門檻。
+
+另修一個較小的問題：再任務的「抵達」判定原本只看 `dist ≤ 0.9`，但打建築是站在
+攻擊距離上輸出，永遠不算抵達 ⇒ 站在被閘門壓住的建築前不會再任務。已改為
+建築情境下用 `engageRange + 1`。
+
+#### 驗證（2026-08-04 實跑，修正後）
+
+| 驗證 | 修正前 | 修正後 |
+|---|---|---|
+| `regress2.mjs` 節奏門檻 | 6/8 ❌ | **8/8 ✅** |
+| ‧ 收得掉 | 19/20 | **20/20** |
+| ‧ 時長 平均／中位／最長 | 24.8／23.9／**45.0** | 22.8／23.1／**26.1** |
+| `regress.mjs` 結束率 | 14/15 | **15/15 ✅** |
+| ‧ 撤退鎖死 | 1 | **0 ✅** |
+| `check_combat_range_m16.mjs` | 19/19 ✅ | **19/19 ✅** |
+| `npm run build` | ✅ | ✅ `built in 12.22s` |
+
+參數候選 `d_soft`（放寬換血觸發 0.28／加成 0.08）實測反而讓撤退鎖死變 2，已捨棄；
+最終只動了「移除 towerZoneRetreatBonus」這一顆，`burstRetreatAt` 0.22 /
+`burstRetreatBonus` 0.16 維持原值。
+
+#### 仍未完成
+
+- 瀏覽器實測仍然一項都沒做（塔下撤退／後排拉開／打野先吃 Buff 的手感、
+  新增 debug 欄位在疊層上的顯示）。
+- 程式碼註解引用的舊行為 audit 數據仍未複驗（來源腳本已不存在）。
+
+### M1.7 封存為 RC1（2026-08-04）
+
+**狀態：程式與自動驗證完成，待瀏覽器實機驗收。**
+⚠ 這**不是**正式驗收完成。RC1 只代表「自動化能驗的都驗過了」，
+凡是需要人眼與真機的項目一律仍未驗，見下方清單。
+
+- Tag：`milestone-m1.7-rc1`
+- 自動驗證（2026-08-04，全部實跑）：
+  - `verify.mjs` 18 區段 → **16/18 通過**，時戳皆為 2026-08-04。
+  - 2 個 FAIL 都已證實為**既有紅燈**，非 M1.7 造成：
+    - `runtime29` §29 陣列順序公平性（runner 自標 TD-21）。
+    - `milestone_j` §26/§31（用 `git worktree` 開 HEAD e883fe2 的唯讀副本比對，
+      **HEAD 跑出完全相同的兩條紅燈、同樣 14/15**）。
+  - `regress` 15/15、撤退鎖死 0；`regress2` 節奏門檻 8/8；
+    `check_combat_range_m16` 19/19；`npm run build` 通過。
+- ⚠ 巢狀跑法（直接 `node tools/check_moba_runtime29.mjs`）為 **37/44**，耗時 1h42m，
+  其中 6 個紅燈是 OOM 崩潰（exit=134 / 3221226505），單獨重跑全綠。
+  **正式入口是 `tools/verify.mjs`**（flat 模式，各腳本只跑一次），runtime29 檔頭
+  自己就寫明巢狀會產生 63 個子行程、跑不完。日後回報請以 verify.mjs 為準。
+- **待瀏覽器實機驗收（RC1 未涵蓋）**：
+  1. 塔下撤退：血量不足／連吃三發時退出，但**推塔與推門牙塔時要能站進去打**。
+  2. 撤退回血後的重新接戰，不卡泉水或半路。
+  3. 發呆：站著不動要有合法理由，不得長時間無理由站樁。
+  4. 新增 8 個 debug 欄位（`actionState` / `intent` / `idleReason` / `retreatReason` /
+     `retreatAt` / `burst4s` / `towerHits` / `towerZone`）在疊層 UI 上**是否有畫出來**
+     ——資料層已有，呈現層未驗證。
+  5. 手機真機（Android / iOS）完全未測。
