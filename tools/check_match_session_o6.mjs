@@ -76,7 +76,14 @@ console.log("══ Milestone O6：比賽場次與進場 ══\n");
     session.seed === ticket.assignment.seed, `seed ${session.seed}`);
   ck("1e) 標明簽發者且帶一次性令牌",
     session.issuedBy === "mock-gateway" && /^lt_[0-9a-f]{8}$/.test(session.launchToken) && session.tokenUsed === false);
-  ck("1f) 初始狀態為待啟動", session.state === SESSION_STATES.created && SESSION_TERMINAL.length === 3);
+  //  ⚠ O7 起 `launched` **不再是終局**（比賽開打後還要能恢復／完成／放棄），
+  //  終局改為 completed / abandoned / cancelled / expired。這裡逐項比對整組，
+  //  比原本只比長度更嚴格。
+  ck("1f) 初始狀態為待啟動，且終局集合正確（O7 後 launched 不是終局）",
+    session.state === SESSION_STATES.created &&
+    [...SESSION_TERMINAL].sort().join() === "abandoned,cancelled,completed,expired" &&
+    !SESSION_TERMINAL.includes(SESSION_STATES.launched),
+    SESSION_TERMINAL.join("/"));
 
   //  房間未雙方確認不得簽發
   const { ticket: t2, room: r2 } = confirmedSetup();
@@ -181,8 +188,13 @@ console.log("══ Milestone O6：比賽場次與進場 ══\n");
   const usedRound = JSON.parse(JSON.stringify(afterReload.session));
   ck("6c) **已啟動的場次重整後仍不可再啟動**",
     !consumeLaunchToken(usedRound, usedRound.launchToken, { room: round.room, ticket: round.ticket, now: T0 + 6000 }).ok);
-  ck("6d) isSessionTerminal 判定正確",
-    isSessionTerminal(usedRound) && !isSessionTerminal(round.session));
+  //  O7：已啟動的場次**不是**終局（要能恢復），但它已經不能再啟動一次。
+  //  「不可再啟動」由 6c 驗；這裡改驗終局判定本身。
+  ck("6d) isSessionTerminal 判定正確（launched 非終局；completed/abandoned 才是）",
+    !isSessionTerminal(usedRound) && !isSessionTerminal(round.session) &&
+    isSessionTerminal({ state: SESSION_STATES.completed }) &&
+    isSessionTerminal({ state: SESSION_STATES.abandoned }) &&
+    isSessionTerminal({ state: SESSION_STATES.cancelled }));
 
   //  CS 共用同一套
   const cs = sessionOf("cs");

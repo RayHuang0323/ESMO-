@@ -61,9 +61,12 @@ import {
 } from "./contracts/matchmaking.js";
 import { pollGateway, openRoom, pollRoom, openSession } from "./matchmaking/mockGateway.js";
 import {
-  SESSION_STATES, consumeLaunchToken, validateSession, cancelSession,
+  SESSION_STATES, CONNECTION_STATES, consumeLaunchToken, validateSession, cancelSession,
   sessionStateLabel, isSessionExpired, isSessionTerminal,
+  resumeSession, markDisconnected, abandonSession,
 } from "./contracts/matchSession.js";
+import { createMatchResult, RESULT_SOURCES } from "./contracts/matchResult.js";
+import { settleMatchResultInState, settlementIdOf } from "./progress/settleMatchResult.js";
 import {
   ROOM_STATES, transitionRoom, confirmSide, canEnterRoom, roomStateLabel,
   remainingSeconds, isRoomTerminal,
@@ -164,7 +167,8 @@ const DEFAULT = {
   //  Milestone O4：配對票券。同一隊伍**同時只能有一張有效票券**。
   //  O5：比賽房間（由 gateway 開；與票券／指派單綁定）
   //  O6：比賽場次（gateway 簽發；帶一次性啟動令牌）
-  matchmaking: { ticket: null, room: null, session: null, launch: null },
+  //  O7：結果與結算帳本（單次結算 ＋ 追蹤鏈）
+  matchmaking: { ticket: null, room: null, session: null, launch: null, lastResult: null, settlements: {}, lastSettlementError: null },
   schemaVersion: PROFILE_SCHEMA_VERSION,
   processedMatchTransactions: {},// S25：冪等帳本 {transactionId: receipt}（防重複發獎）
   inbox: [
@@ -217,7 +221,14 @@ function normalizeMatchmaking(saved) {
   //  所以 created 原樣保留；已啟動／已取消／已逾期也原樣保留（純顯示）。
   //  真正的把關在 consumeLaunchToken：令牌用過、過期、綁定對不上都會被拒。
   const session = src.session && typeof src.session === "object" ? src.session : null;
-  return { ticket, room, session, launch: src.launch ?? null };
+  return {
+    ticket, room, session,
+    launch: src.launch ?? null,
+    //  O7：結果與結算帳本要保留——重整後重試結算必須認得出「已經算過了」
+    lastResult: src.lastResult ?? null,
+    settlements: src.settlements && typeof src.settlements === "object" ? src.settlements : {},
+    lastSettlementError: src.lastSettlementError ?? null,
+  };
 }
 function normalizeEconomy(saved, days) {
   const past = Math.max(0, deriveTime(days).week - 1);
@@ -702,6 +713,82 @@ export const useProfileStore = create((set, get) => ({
     get().save();
     return { ok: true, session: r.session, errors: [] };
   },
+  // ── Milestone O7：場次恢復、結果回報、單次結算、追蹤鏈 ──────────────
+  /**
+   * 恢復同一場次（重整或短暫斷線後）。**不會開新場、不會再消耗令牌。**
+   * 回傳的 launch 與首次啟動逐欄相同（同一個 seed ⇒ 同一份初始戰鬥狀態）。
+   */
+  resumeMatchSession(now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const r = resumeSession(mm.session ?? null, { room: mm.room ?? null, ticket: mm.ticket ?? null, now });
+    if (!r.ok) return { ok: false, launch: null, errors: r.errors };
+    set({ matchmaking: { ...mm, session: r.session, launch: r.launch } });
+    get().save();
+    return { ok: true, launch: r.launch, errors: [] };
+  },
+  /** 標記斷線（仍可恢復）。 */
+  markMatchDisconnected(now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const r = markDisconnected(mm.session ?? null, now);
+    if (!r.ok) return { ok: false, errors: r.errors };
+    set({ matchmaking: { ...mm, session: r.session } });
+    get().save();
+    return { ok: true, errors: [] };
+  },
+  /** 放棄本場（不可再恢復）。 */
+  abandonMatchSession(reason = "已放棄本場比賽", now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const r = abandonSession(mm.session ?? null, reason, now);
+    if (!r.ok) return { ok: false, errors: r.errors };
+    set({ matchmaking: { ...mm, session: r.session } });
+    get().save();
+    return { ok: true, errors: [] };
+  },
+  /**
+   * 回報比賽結果並**單次結算**。
+   *
+   * · 結果先經 `MatchResult.v1` 驗證（來源可信、與場次一致、無衝突）。
+   * · 結算委派 S25 的 `applyMatchProgress`——**不建立第二套結算流程**。
+   * · 同一份結果重送 ⇒ 回同一張 receipt；同一場送不同結果 ⇒ 拒絕。
+   * · 中斷後重試安全：沒寫入就是沒寫入，寫過就回既有 receipt。
+   *
+   * @param {object} outcome     { matchId, winner, score:{us,opponent}, durationSec }
+   * @param {object} transaction MatchProgressTransaction.v1（既有 adapter 產生）
+   */
+  reportMatchResult(outcome, transaction, { source = RESULT_SOURCES.engine, now = Date.now() } = {}) {
+    const mm = get().matchmaking ?? {};
+    const session = mm.session ?? null;
+    if (!session) return { ok: false, receipt: null, errors: [{ code: "no_session", message: "沒有進行中的比賽場次" }] };
+    const made = createMatchResult({ session, outcome, source, now });
+    if (!made.ok) return { ok: false, receipt: null, errors: made.errors };
+    const { nextState, receipt } = settleMatchResultInState(get(), {
+      result: made.result, session, transaction, now,
+    });
+    if (nextState) { set(nextState); get().save(); }
+    return { ok: !!receipt.ok, receipt, errors: receipt.errors ?? [] };
+  },
+  /** 唯讀：完整追蹤鏈（debug 用；一般 UI 不顯示 launchToken 等敏感內容）。 */
+  matchTrace() {
+    const mm = get().matchmaking ?? {};
+    const s = mm.session ?? null;
+    const last = mm.lastResult ?? null;
+    const settlement = last ? (mm.settlements ?? {})[settlementIdOf(last)] ?? null : null;
+    return {
+      ticketId: mm.ticket?.ticketId ?? null,
+      assignmentId: mm.ticket?.assignment?.assignmentId ?? null,
+      roomId: mm.room?.roomId ?? null,
+      sessionId: s?.sessionId ?? null,
+      matchId: last?.matchId ?? s?.matchId ?? null,
+      resultId: last?.resultId ?? s?.resultId ?? null,
+      settlementId: settlement?.settlementId ?? s?.settlementId ?? null,
+      sessionState: s?.state ?? null,
+      connection: s?.connection ?? null,
+      resumeCount: s?.resumeCount ?? 0,
+      seed: s?.seed ?? null,
+      //  ⚠ 刻意不回傳 launchToken：一般 UI 不得顯示敏感憑證
+      lastError: mm.lastSettlementError?.reason ?? null,
+    };
+  },
   /** 唯讀：場次狀態 ＋ 能否啟動（畫面不自己判規則）。 */
   matchSessionView(now = Date.now()) {
     const mm = get().matchmaking ?? {};
@@ -813,7 +900,7 @@ export const useProfileStore = create((set, get) => ({
       processedMatchTransactions: {},
       economy: ng.economy,
       recruitment: { signed: {} },
-      matchmaking: { ticket: null, room: null, session: null, launch: null },
+      matchmaking: { ticket: null, room: null, session: null, launch: null, lastResult: null, settlements: {}, lastSettlementError: null },
       schemaVersion: PROFILE_SCHEMA_VERSION,
     });
     get().pushInbox({

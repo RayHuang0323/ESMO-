@@ -12,6 +12,7 @@
 import React, { useEffect, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { TICKET_STATES } from "../../platform/contracts/matchmaking.js";
+import { isDebugMode } from "../../ui/debugMode.js";
 
 const C = {
   ok: "#34d399", bad: "#f87171", warn: "#fbbf24", info: "#60a5fa",
@@ -49,6 +50,10 @@ export default function MatchQueuePanel({ mode = "moba", canQueue = false, onRea
   const view = useProfileStore((s) => s.matchmakingView)();
   const room = useProfileStore((s) => s.matchRoomView)();
   const session = useProfileStore((s) => s.matchSessionView)();
+  //  O7：追蹤鏈只在 debug 模式顯示；**一般 UI 不顯示 launchToken 等敏感內容**
+  //  （matchTrace 本身就不回傳 launchToken，這裡再加一層可見性控制）
+  const trace = useProfileStore((s) => s.matchTrace)();
+  const debug = isDebugMode();
   const t = view.ticket;
   const queued = view.state === TICKET_STATES.queued;
 
@@ -262,6 +267,28 @@ export default function MatchQueuePanel({ mode = "moba", canQueue = false, onRea
             style={{ marginTop: 8, width: "100%", background: C.card2, border: `1px solid ${C.line}`, borderRadius: 9, padding: "8px", cursor: "pointer", color: "white", fontSize: 11, fontWeight: 700 }}>
             重新配對
           </button>
+        </div>
+      )}
+
+      {/* O7：debug 追蹤鏈（ticket → assignment → room → session → match →
+          result → settlement）。一般玩家看不到，也不含任何憑證。 */}
+      {debug && showTicket && (
+        <div style={{ marginTop: 8, background: "rgba(0,0,0,0.35)", borderRadius: 9, padding: "8px 9px", border: `1px dashed ${C.line}` }}>
+          <div style={{ color: C.gray2, fontSize: 8.5, fontWeight: 800, marginBottom: 5 }}>DEBUG · 追蹤鏈</div>
+          {[
+            ["ticket", trace.ticketId], ["assignment", trace.assignmentId], ["room", trace.roomId],
+            ["session", trace.sessionId], ["match", trace.matchId], ["result", trace.resultId],
+            ["settlement", trace.settlementId],
+          ].map(([k, v]) => (
+            <div key={k} style={{ display: "flex", gap: 6, fontSize: 8.5, fontFamily: "monospace", lineHeight: 1.7 }}>
+              <span style={{ color: C.gray, width: 74, flexShrink: 0 }}>{k}</span>
+              <span style={{ color: v ? C.gray2 : "#3f3f46", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v ?? "—"}</span>
+            </div>
+          ))}
+          <div style={{ color: C.gray, fontSize: 8, marginTop: 5 }}>
+            seed {trace.seed ?? "—"}｜{trace.sessionState ?? "—"}／{trace.connection ?? "—"}｜恢復 {trace.resumeCount} 次
+            {trace.lastError ? `｜錯誤：${trace.lastError}` : ""}
+          </div>
         </div>
       )}
 

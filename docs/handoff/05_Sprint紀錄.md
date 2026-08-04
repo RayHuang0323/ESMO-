@@ -5176,3 +5176,120 @@ LogicEngine 的實際亂數種子**。要接需要改 GameView / LoadingScreen �
 - 沒有修改任何既有戰鬥演算。
 - **瀏覽器實機驗收未做**：場次識別顯示、進入對戰、重複進場被擋、
   320–430 響應式。
+
+## Milestone O7（2026-08-04）— 權威場次、恢復與單次結算
+
+同分支 `milestone-n-finance`。**未 merge 回 main。**
+
+### 1. 權威戰鬥啟動（補上 O6 明確欠下的那一條）
+
+`src/useLocalServer.js:108` 原本是 `const seed = (Date.now() & 0xffff) | 1;`
+——引擎自己用時鐘產生 seed。現在改為：
+
+```js
+const authoritative = Number.isFinite(opts.seed);
+const seed = authoritative ? ((opts.seed >>> 0) | 1) : ((Date.now() & 0xffff) | 1);
+```
+
+- `GameView` 從 **Store** 讀 `matchmaking.launch`（由 O6 一次性令牌寫入），
+  **刻意不接受 props 傳入 seed** ⇒ 前端無法覆寫 seed、對手或場次資料。
+- 引擎要求奇數 seed，因此做一次**決定性**正規化 `| 1`——同一個 session seed
+  永遠映射到同一個引擎 seed。
+- 沒有場次時（debug harness / 舊路徑）才退回時鐘，並在 replay capture 標記
+  `seedSource: "local"`，讓追蹤看得出這一場不是權威場次。
+
+**實測**：同一 seed 兩個引擎的初始快照**逐位元相同**；跑 200 tick 後結果也相同；
+不同 seed 則不同（測試有檢定力）。
+
+### 2. 場次恢復
+
+`MatchSession` 擴充生命週期：
+`created → launched → completed / abandoned`（＋ `cancelled` / `expired`），
+另有正交的 `connection: connected / disconnected`。
+
+⚠ **`launched` 不再是終局**——比賽開打後還要能恢復。終局改為
+`completed / abandoned / cancelled / expired`。
+
+`resumeSession()` **不開新場、不再消耗令牌**，回傳的 launch 與首次啟動**逐欄相同**
+（同 seed ⇒ 同初始狀態）。拒絕恢復的情況全部附中文原因：
+尚未啟動／已取消／已放棄／已完成／已逾期／票券不符／seed 被竄改／無簽發者。
+
+### 3. `MatchResult.v1`
+
+綁定 sessionId、matchId、雙方隊伍版本、seed、winner、score、durationSec、resultSource。
+
+- `resultId` 由**內容雜湊**推導 ⇒ 同一份結果重送得到同一個 id；
+  **同一場送不同結果 ⇒ 雜湊不同 ⇒ 立即偵測衝突並拒絕**。
+- `resultSource` 只接受 `engine` / `server`。客戶端自稱的 `client` / `manual` 拒絕。
+- 竄改勝負、比分或時長 ⇒ resultId 對不上 ⇒ 被抓出來。
+- 內容雜湊刻意只取會影響結算的欄位（時長四捨五入），避免時間戳造成假衝突。
+
+### 4. 單次結算
+
+`src/platform/progress/settleMatchResult.js` **不建立第二套結算流程**：
+驗證通過後一律委派 **S25 的 `applyMatchProgress`**（唯一發獎入口）。它只負責
+「該不該讓那一步發生」與「記錄」。
+
+- 同一份結果重送 ⇒ 回既有 receipt，**完全不寫入**。
+- 驗證失敗 ⇒ 不入帳，但**保存失敗原因**（`lastSettlementError`）。
+- **中斷後重試安全**：失敗時沒有任何寫入（不會只完成一半），重試成功且只入帳一次。
+- 實測：資金 100 萬 → 112 萬（一次）、經驗 +60（一次）、體力 95 → 83（一次）；
+  重送後三者都沒有再變動。
+
+### 5. 完整追蹤鏈
+
+`ticketId → assignmentId → roomId → sessionId → matchId → resultId → settlementId`
+（另附 transactionId）。`matchTrace()` 供 debug 查看，
+**刻意不回傳 launchToken**；面板的追蹤區塊只在 `isDebugMode()` 時顯示。
+
+### 驗證（2026-08-04 實跑）
+
+- `node tools/check_authoritative_o7.mjs` → **48/48 通過**。涵蓋需求列出的每一項：
+  正常啟動、重複啟動、seed 篡改、重整恢復、斷線恢復、取消、逾時、
+  結果重送、衝突結果、結算中斷重試，以及
+  **相同 seed ＋ 相同陣容可重現相同初始狀態與結果**、
+  **同一場重送不會重複加錢／經驗／戰績或重複扣體力**。
+- O0–O6 全數重跑：`check_match_session_o6` 36/36、`check_match_room_o5` 45/45、
+  `check_matchmaking_o4` 47/47、`check_match_entry_o3` 35/35、
+  `check_condition_o2` 30/30、`check_squad_o1` 40/40、`check_recruit_o` 40/40。
+- 財務：`check_finance_n/n2/n3/n31` 32/35/40/31。
+- `verify.mjs --only=progress25,talent27,experience26,cs23,regress,regress2,build` → **7/7**。
+
+#### ⚠ 既有驗證變紅 → 已修正（未放寬門檻）
+
+`check_match_session_o6` 的兩條因為 O7 合理改變語意而變紅：
+
+1. `1f` 原本斷言 `SESSION_TERMINAL.length === 3`。
+2. `6d` 原本斷言 `isSessionTerminal(launched) === true`。
+
+O7 之後 `launched` 不再是終局（要能恢復）。修法是**改成逐項比對整組終局狀態**
+（`abandoned,cancelled,completed,expired`）並額外斷言 `launched` 不在其中——
+比原本只比長度**更嚴格**，不是放寬。
+
+### 已知限制（誠實揭露）
+
+1. **沒有真正的後端**：場次、房間、結果裁決全部由本機 mock gateway 決定性模擬。
+   「權威」目前指的是**客戶端內部的單一權威來源**（場次 → 引擎），
+   不是「伺服器裁決」。
+2. **結果仍由本機引擎產生**：`resultSource: "engine"` 是誠實標記，
+   契約已預留 `server`。真正的伺服器裁決要等後端。
+3. **對手隊伍版本是推導值**：`rosterVersions.opponent` 由對手 id 雜湊而來
+   （本機沒有對手的真實名單）。
+4. **`reportMatchResult` 尚未接進賽後流程**：目前由驗證器直接呼叫。
+   要讓實際打完的比賽走這條路，需要在 `useBattleFeed` / Result 畫面接線，
+   那會動到既有賽後流程，超出「不大幅重構」的範圍。
+5. 追蹤鏈只存最近一場（`lastResult` ＋ `settlements`），沒有歷史查詢介面。
+
+### 人工驗收清單（未經瀏覽器實測）
+
+1. MOBA 賽前配置 → 開始配對 → 雙方確認 → 進入對戰，確認能正常開打。
+2. 用 `?debug=1` 開啟，面板底部應出現 DEBUG 追蹤鏈，且**看不到 launchToken**。
+3. 進對戰後重整頁面，確認場次仍在（不會變成新的一場）。
+4. 重複按「進入對戰」應被擋（O6 已驗，這輪未改動該路徑）。
+5. 手機 320 / 360 / 390 / 430 寬度下面板不水平溢出。
+
+### 未做（刻意，依本輪限制）
+
+- 真正的後端、WebSocket、帳號登入、聊天、排行榜、觀戰、正式反作弊。
+- 未修改 MOBA／CS 戰鬥平衡與英雄 AI（`regress` / `regress2` 皆綠可佐證）。
+- 未碰 `ESMO-hero-models` worktree。

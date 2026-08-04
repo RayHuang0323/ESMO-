@@ -104,7 +104,16 @@ export function useLocalServer() {
     stop();
     const { pushFrame, subTRef } = useGameStore.getState();
     const loadout = useHeroProgressStore.getState().getLoadout();   // Sprint08：下場沿用
-    const seed = (Date.now() & 0xffff) | 1;
+    //  ── Milestone O7：權威 seed ─────────────────────────────────────────
+    //  seed 一律優先取自 **MatchSession**（gateway 在配對時決定、經一次性令牌
+    //  啟動後存進 `matchmaking.launch`）。同一個 session 恢復或重播 ⇒ 同一個
+    //  引擎 seed ⇒ 同一份初始戰鬥狀態。
+    //  ⚠ 引擎要求奇數 seed（既有慣例），因此做一次**決定性**正規化 `| 1`，
+    //    同一個 session seed 永遠映射到同一個引擎 seed。
+    //  沒有 session 時（debug harness / 舊路徑）才退回舊行為，並標記來源，
+    //  讓驗證器與追蹤鏈看得出這一場不是權威場次。
+    const authoritative = Number.isFinite(opts.seed);
+    const seed = authoritative ? ((opts.seed >>> 0) | 1) : ((Date.now() & 0xffff) | 1);
     const eng = new LogicEngine(seed, loadout);
     // Sprint26：開始重播擷取（seed / 戰術只有這裡拿得到；frames 由 useBattleFeed 取樣）
     // Milestone I-close：連同**本場生效名單**一起交出去。舊 replay 只有 {id,side,role}，
@@ -112,6 +121,9 @@ export function useLocalServer() {
     //   是兩份不同的資訊。roster 只有十筆，容量影響可忽略（frames 才是大宗）。
     beginReplayCapture({
       seed,
+      //  O7：這一場是不是權威場次（由 MatchSession 指定 seed）
+      sessionId: opts.sessionId ?? null,
+      seedSource: authoritative ? "session" : "local",
       config: opts.tactic?.tacticId ? { tacticId: opts.tactic.tacticId, tacticName: opts.tactic.name ?? null } : {},
       roster: opts.roster ?? null,
     });
