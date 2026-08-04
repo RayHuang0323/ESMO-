@@ -4743,3 +4743,26 @@ migration 對舊存檔給空帳本，**刻意不回填**既有選手的招募來
 - 沒有碰 MOBA 戰鬥邏輯、沒有碰 `ESMO-hero-models` worktree。
 - **瀏覽器實機驗收未做**：招募狀態列、名額量表、簽約回饋條、
   320–430 響應式、實際簽約後 Roster／財務頁的變化。
+
+### Milestone O Hotfix 1：招募詳情視窗白畫面（2026-08-04）
+
+**症狀**：在招募頁點開任何一位新秀的詳情視窗 → 整頁白／黑畫面。
+
+**根因**：`RecruitScreen` 的詳情視窗（第 203 行）仍引用 `signedNames`，
+但那個變數在本輪已被移除（「已簽約」改讀招募帳本）。列表那一處有換掉，
+**詳情視窗那一處漏了** ⇒ 一開啟詳情就 `ReferenceError: signedNames is not defined`，
+React 整棵樹卸載 ⇒ 白畫面。
+
+**修正**：`const isSigned = isSignedOf(sel);`（與列表同一個判定函式）。
+
+#### ⚠ 這次暴露的驗證缺口（比 bug 本身重要）
+
+- `npm run build` **抓不到**這種錯：它是 runtime ReferenceError，
+  esbuild/rollup 不做未定義變數的作用域分析。
+- `check_recruit_o.mjs` 只測**純邏輯**（contract / reducer / store），
+  完全沒有涵蓋畫面 ⇒ 40/40 全綠但畫面是壞的。
+- 專案目前**沒有 linter**（no-undef 這類規則正好會抓到這個）。
+
+⇒ 結論：**UI 改動不能只靠 build 綠燈就宣稱完成**（03_開發規範 早有此條，
+本輪違反了）。已在回報中列為「未經瀏覽器實測」，但仍應在交付前自行點過一次。
+是否導入 ESLint（至少 `no-undef`）列為待決策項。

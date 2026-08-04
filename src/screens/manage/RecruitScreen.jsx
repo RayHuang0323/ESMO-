@@ -200,7 +200,7 @@ export default function RecruitScreen({ onBack }) {
         const sc = scoutOf(sel);
         const bp = bestPositions(sel);
         const pers = personalityById(sel.personality);
-        const isSigned = signedNames.has(sel.name);
+        const isSigned = isSignedOf(sel);
         const afford = budgetWan >= sel.cost;
         const inQueue = Boolean(scoutQueue[sel.id]);
         const decade = Math.floor(sel.potential / 10) * 10;
