@@ -22,6 +22,7 @@ import { levelFromTotalXp, TALENT_POINTS_PER_LEVEL } from "./playerLevel.js";
 import { appendFormEntry } from "../economy/formLog.js";
 import { deriveTime } from "../economy/timeline.js";
 import { applyMatchWear } from "../condition/playerCondition.js";
+import { applyLevelGrowth } from "./levelGrowth.js";
 
 /**
  * 純 reducer：state + transaction → { nextState, receipt }
@@ -79,11 +80,19 @@ export function applyProgressToState(state, tx) {
     //  這裡就是那個唯一入口——tx.playerProgress 是 adapter 依實際陣容產生的名單，
     //  替補與未登錄根本不會出現在其中，所以不可能誤拿出賽獎勵或損耗。
     //  受傷判定以 `${transactionId}:${playerId}` 決定性推導 ⇒ 伺服器可獨立重算。
+    //  Milestone P0：**升級 → 基礎能力成長**。
+    //  在此之前升級只發天賦點，玩家不手動花掉就完全不影響實力。
+    //  成長是 (選手, 升幾級) 的決定性函式，沿用定位權重與潛力上限，
+    //  寫回 `stats`（基礎值）⇒ 天賦加成仍疊在上面，不重複計算。
+    //  冪等由既有的 transactionId 保證：同一場再結算不會二次成長。
+    const growth = applyLevelGrowth(me, levelsGained);
+
     const wear = applyMatchWear({
       ...me,
       xp: newXp,
       lv: newLevel,                                     // lv 一律由 xp 導出 → 不會與 xp 不一致
       talentPoints: prevTalent + talentGained,
+      stats: growth.stats,                              // P0：等級成長後的能力
       restDays: 0,                                      // 今天出賽了 ⇒ 休息日數歸零
     }, `${tx.transactionId}:${pp.playerId}`);
     patched.set(pp.playerId, wear.player);
@@ -98,6 +107,8 @@ export function applyProgressToState(state, tx) {
       newLevel,
       levelsGained,
       talentPointsGained: talentGained,
+      //  P0：升級帶來的能力成長（可直接顯示「成長前後差異」）
+      growth: { gains: growth.gains, total: growth.total },
       //  O2：狀態變化一併回報（畫面顯示、伺服器對帳）
       condition: {
         energyBefore: Math.round(num(me.energy ?? 100)),
