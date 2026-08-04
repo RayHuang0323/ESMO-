@@ -19,6 +19,8 @@
 //  純函式：不 import React / zustand / localStorage。
 // ============================================================================
 import { ENGINE_SEATS, SEAT_LANE_ZH, normalizeLineup } from "./matchLineup.js";
+//  Milestone O2：傷停與體力過低同樣不可出賽（門檻與判定在 condition 層，不在這裡重寫）
+import { matchFitness, isMatchFit } from "../condition/playerCondition.js";
 
 export const MATCH_SQUAD_VERSION = "MatchSquad.v1";
 
@@ -100,6 +102,12 @@ export function validateSquad({ mode = "moba", seats = {}, players = [], strictR
         code: "ineligible", seat, playerId: pid,
         message: `${me.name} 為未登錄名單，不可出賽`,
       });
+      continue;
+    }
+    //  O2：傷停／體力過低 ⇒ 阻擋（理由由 condition 層產生，這裡不重寫規則）
+    const fit = matchFitness(me);
+    if (!fit.ok) {
+      errors.push({ code: fit.code, seat, playerId: pid, message: `${seatLabel(mode, seat)}：${fit.message}` });
       continue;
     }
     filled++;
@@ -189,7 +197,7 @@ export function autoFillSquad({ mode = "moba", seats = {}, players = [] } = {}) 
   const base = mode === "cs" ? normalizeCsLineup(seats, players) : normalizeLineup(seats, players);
   const used = new Set(Object.values(base).filter(Boolean));
   const pool = (players ?? [])
-    .filter((p) => p && typeof p.id === "string" && isEligible(p) && !used.has(p.id));
+    .filter((p) => p && typeof p.id === "string" && isEligible(p) && isMatchFit(p) && !used.has(p.id));
   const rank = (p) => (tierOf(p) === "active" ? 0 : 1);
   const out = { ...base };
   for (const seat of required) {

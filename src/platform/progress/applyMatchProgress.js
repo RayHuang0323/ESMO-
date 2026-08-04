@@ -21,6 +21,7 @@ import { validateMatchProgressTransaction } from "../contracts/matchProgressTran
 import { levelFromTotalXp, TALENT_POINTS_PER_LEVEL } from "./playerLevel.js";
 import { appendFormEntry } from "../economy/formLog.js";
 import { deriveTime } from "../economy/timeline.js";
+import { applyMatchWear } from "../condition/playerCondition.js";
 
 /**
  * 純 reducer：state + transaction → { nextState, receipt }
@@ -74,12 +75,18 @@ export function applyProgressToState(state, tx) {
     const talentGained = levelsGained * TALENT_POINTS_PER_LEVEL;
     const prevTalent = Math.max(0, num(me.talentPoints));
 
-    patched.set(pp.playerId, {
+    //  Milestone O2：出賽損耗（體力／連續出賽／受傷）只對**實際出賽的人**套用。
+    //  這裡就是那個唯一入口——tx.playerProgress 是 adapter 依實際陣容產生的名單，
+    //  替補與未登錄根本不會出現在其中，所以不可能誤拿出賽獎勵或損耗。
+    //  受傷判定以 `${transactionId}:${playerId}` 決定性推導 ⇒ 伺服器可獨立重算。
+    const wear = applyMatchWear({
       ...me,
       xp: newXp,
       lv: newLevel,                                     // lv 一律由 xp 導出 → 不會與 xp 不一致
       talentPoints: prevTalent + talentGained,
-    });
+      restDays: 0,                                      // 今天出賽了 ⇒ 休息日數歸零
+    }, `${tx.transactionId}:${pp.playerId}`);
+    patched.set(pp.playerId, wear.player);
 
     playerReceipts.push({
       playerId: pp.playerId,
@@ -91,6 +98,15 @@ export function applyProgressToState(state, tx) {
       newLevel,
       levelsGained,
       talentPointsGained: talentGained,
+      //  O2：狀態變化一併回報（畫面顯示、伺服器對帳）
+      condition: {
+        energyBefore: Math.round(num(me.energy ?? 100)),
+        energyAfter: wear.player.energy,
+        drained: wear.drained,
+        matchStreak: wear.player.matchStreak,
+        injured: wear.injured,
+        injuryDays: wear.injuryDays,
+      },
       reasons: pp.reasons ?? [],
     });
   }

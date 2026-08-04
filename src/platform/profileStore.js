@@ -53,6 +53,7 @@ import { forecastWeeks } from "./economy/forecast.js";
 import { DEFAULT_SCENARIO, SCENARIOS, scenarioById } from "./economy/economyConfig.js";
 import { seedFormLogFromCsHistory } from "./economy/formLog.js";
 import { newGameFinancials } from "./economy/newGame.js";
+import { applyDailyRecovery, conditionSummary } from "./condition/playerCondition.js";
 import { createRecruitmentTransaction } from "./contracts/recruitment.js";
 import { applyRecruitmentToState } from "./recruit/applyRecruitment.js";
 import {
@@ -374,10 +375,13 @@ export const useProfileStore = create((set, get) => ({
   advanceDay(n = 1) {
     const { nextState, receipts } = advanceDaysInState(get(), n, (cur) => ({
       players: (cur.players ?? []).map((p) => {
-        if (!p.training) return p;
+        //  Milestone O2：每一天都要跑恢復——傷停天數 −1、沒排訓練的人回體力、
+        //  連續幾天沒出賽就把連續出賽計數歸零。訓練與恢復不重複計算體力。
+        if (!p.training) return applyDailyRecovery(p);
         const daysLeft = p.training.daysLeft - 1;
-        if (daysLeft > 0) return { ...p, training: { ...p.training, daysLeft } };
-        return applyCourse(p, p.training.courseId);
+        if (daysLeft > 0) return applyDailyRecovery({ ...p, training: { ...p.training, daysLeft } });
+        //  課程今天結算 ⇒ 體力由 applyCourse 決定，恢復只處理傷勢與計數
+        return applyDailyRecovery(applyCourse(p, p.training.courseId), { skipEnergy: true });
       }),
     }));
     set(nextState);
@@ -444,6 +448,11 @@ export const useProfileStore = create((set, get) => ({
       : { lineup: normalizeLineup(filled, players) });
     get().save();
     return filled;
+  },
+  /** O2：選手狀態摘要（唯讀；畫面不自己算一套）。 */
+  playerCondition(playerId) {
+    const me = (get().players ?? []).find((p) => p.id === playerId);
+    return me ? conditionSummary(me) : null;
   },
   /** 出賽前檢查（唯讀）。回傳可直接顯示的阻擋理由，畫面不自己再判一次規則。 */
   squadCheck(mode = "moba") {

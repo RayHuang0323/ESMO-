@@ -18,6 +18,8 @@ import { calculateLevelProgress } from "../../platform/progress/playerLevel.js";
 import { PlayerAvatar } from "../../ui/PlayerFace.jsx";
 import { withDerivedStats } from "../../platform/talents/playerDerivedStats.js";
 import { ROSTER_TIERS, tierOf } from "../../platform/contracts/matchSquad.js";
+import { conditionSummary } from "../../platform/condition/playerCondition.js";
+import { totalXpForLevel, xpRequiredForLevel } from "../../platform/progress/playerLevel.js";
 import { GC } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
 
@@ -28,6 +30,15 @@ const aggr = (p) => {
   const s = p.stats || {};
   const avg = (...keys) => Math.round(keys.reduce((a, k) => a + (s[k] || 50), 0) / keys.length);
   return { 機動: avg("apm", "reflex", "positioning"), 攻擊: avg("accuracy", "courage", "decision"), 防禦: avg("positioning", "clutch", "resilience"), 反應: avg("reflex", "focus", "mapAware") };
+};
+//  O2：等級進度（用既有的 playerLevel 公式，不另算一套刻度）
+const levelProgressOf = (p) => {
+  const lv = Math.max(1, Number(p?.lv) || 1);
+  const xp = Math.max(0, Number(p?.xp) || 0);
+  const base = totalXpForLevel(lv);
+  const need = xpRequiredForLevel(lv + 1);
+  const into = Math.max(0, xp - base);
+  return { into: Math.round(into), need: Math.round(need), pct: need > 0 ? Math.min(100, Math.round((into / need) * 100)) : 0 };
 };
 const statusOf = (p) => ((p.energy ?? 100) < 30 ? "閒置" : p.status === "主力" ? "主力" : p.status || "預備隊");
 const statusColor = (st) => (st === "主力" ? GC.green : st === "閒置" ? GC.red : st === "訓練中" ? GC.gold : GC.gray);
@@ -68,6 +79,9 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
           const st = statusOf(p);
           const c = statusColor(st);
           const a = aggr(withDerivedStats(p));   // S27：顯示 derived（含天賦）
+          //  Milestone O2：狀態摘要（唯讀，由 condition 層產生，畫面不自己算）
+          const cond = conditionSummary(p);
+          const lvProg = levelProgressOf(p);
           const dp = withDerivedStats(p); const mp = calcPower(dp, "moba"), fp = calcPower(dp, "fps");
           return (
             <button key={p.id} onClick={() => { setSelId(p.id); setEditName(false); }}
@@ -81,6 +95,26 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
                   <span style={{ color: GC.gray, fontSize: 9 }}>{p.role}</span>
                   {personalityById(p.personality) && <span style={{ fontSize: 10 }}>{personalityById(p.personality).emoji}</span>}
                   {String(p.id).startsWith("r") && <span style={{ color: GC.green, fontSize: 7, fontWeight: 700 }}>🆕</span>}
+                  {/* O2：可否出賽——顏色配文字，不只靠顏色 */}
+                  <span style={{
+                    marginLeft: "auto", fontSize: 8, fontWeight: 800, borderRadius: 5, padding: "1px 5px",
+                    background: cond.canPlay ? "rgba(52,211,153,0.14)" : "rgba(248,113,113,0.14)",
+                    color: cond.canPlay ? GC.green : GC.red,
+                  }}>
+                    {cond.injured ? `傷停 ${cond.injuryDays}天` : cond.canPlay ? "可出賽" : "不可出賽"}
+                  </span>
+                </div>
+                {/* O2：經驗進度 ＋ 體力（疲勞）兩條細軸 */}
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                  <span style={{ color: GC.gray, fontSize: 7.5, width: 20 }}>EXP</span>
+                  <div style={{ flex: 1, height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${lvProg.pct}%`, background: GC.gold }} />
+                  </div>
+                  <span style={{ color: GC.gray, fontSize: 7.5, width: 20 }}>體力</span>
+                  <div style={{ flex: 1, height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${cond.energy}%`, background: cond.energy >= 70 ? GC.green : cond.energy >= 40 ? GC.gold : GC.red }} />
+                  </div>
+                  <span style={{ color: GC.gray, fontSize: 7.5 }}>{cond.energy}</span>
                 </div>
                 <div style={{ display: "flex", gap: 7, marginTop: 3 }}>
                   {Object.entries(a).map(([k, v]) => (
@@ -199,6 +233,53 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
                     );
                   })}
                 </div>
+
+                {/* Milestone O2：出賽狀態（等級進度／體力／連續出賽／傷停／可否出賽） */}
+                {(() => {
+                  const cond = conditionSummary(sel);
+                  const lp = levelProgressOf(sel);
+                  return (
+                    <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: "9px 10px", marginBottom: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 7, flexWrap: "wrap" }}>
+                        <span style={{ color: "white", fontSize: 11.5, fontWeight: 800 }}>出賽狀態</span>
+                        <span style={{
+                          fontSize: 9, fontWeight: 800, borderRadius: 5, padding: "1px 6px",
+                          background: cond.canPlay ? "rgba(52,211,153,0.14)" : "rgba(248,113,113,0.14)",
+                          color: cond.canPlay ? GC.green : GC.red,
+                        }}>{cond.canPlay ? "可出賽" : "不可出賽"}</span>
+                        <span style={{ color: GC.gray, fontSize: 9 }}>{cond.condition}</span>
+                      </div>
+                      {!cond.canPlay && cond.reason && (
+                        <div style={{ color: GC.red, fontSize: 9.5, marginBottom: 7 }}>⚠ {cond.reason}</div>
+                      )}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
+                        {[
+                          { k: "等級", v: `Lv.${sel.lv ?? 1}`, sub: `${lp.into} / ${lp.need} EXP`, pct: lp.pct, c: GC.gold },
+                          { k: "體力", v: `${cond.energy}`, sub: cond.condition, pct: cond.energy, c: cond.energy >= 70 ? GC.green : cond.energy >= 40 ? GC.gold : GC.red },
+                        ].map((x) => (
+                          <div key={x.k} style={{ background: GC.card2, borderRadius: 8, padding: "6px 8px", minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
+                              <span style={{ color: GC.gray, fontSize: 8.5 }}>{x.k}</span>
+                              <span style={{ color: x.c, fontSize: 12, fontWeight: 800 }}>{x.v}</span>
+                            </div>
+                            <div style={{ height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden", margin: "4px 0 3px" }}>
+                              <div style={{ height: "100%", width: `${x.pct}%`, background: x.c }} />
+                            </div>
+                            <div style={{ color: GC.gray, fontSize: 7.5 }}>{x.sub}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display: "flex", gap: 10, marginTop: 7, flexWrap: "wrap" }}>
+                        <span style={{ color: GC.gray, fontSize: 9 }}>連續出賽 <b style={{ color: cond.matchStreak >= 3 ? GC.gold : "white" }}>{cond.matchStreak}</b> 場</span>
+                        <span style={{ color: GC.gray, fontSize: 9 }}>傷停 <b style={{ color: cond.injured ? GC.red : "white" }}>{cond.injuryDays}</b> 天</span>
+                        <span style={{ color: GC.gray, fontSize: 9 }}>近期出賽 <b style={{ color: "white" }}>{cond.recentMatches}</b> 場</span>
+                      </div>
+                      <div style={{ color: GC.gray, fontSize: 8, marginTop: 6, lineHeight: 1.6 }}>
+                        連續出賽會加重體力消耗與受傷風險；安排休息或訓練日可恢復。
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Milestone O1：名單分層（一隊／替補／未登錄）。
                     未登錄不可出賽——設為未登錄時，若他正坐在席位上會一併被移除，
