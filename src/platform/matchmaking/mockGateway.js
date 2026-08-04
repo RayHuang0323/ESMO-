@@ -21,6 +21,7 @@ import { createAssignment, TICKET_STATES } from "../contracts/matchmaking.js";
 import {
   createRoom, ROOM_STATES, isRoomTerminal, isExpired, remainingSeconds,
 } from "../contracts/matchRoom.js";
+import { createSession } from "../contracts/matchSession.js";
 import { validateMatchEntryRequest } from "../contracts/matchEntry.js";
 
 /** 模擬的等待區間（秒）。真伺服器由實際佇列長度決定。 */
@@ -146,4 +147,18 @@ export function pollRoom({ room, now = 0 }) {
     return { decision: "waiting", remainingSec: remainingSeconds(room, now), reason: null };
   }
   return { decision: "none", remainingSec: 0, reason: null };
+}
+
+// ── Milestone O6：比賽場次（同樣是決定性模擬，不是後端）────────────────────
+
+/**
+ * 由 gateway 簽發比賽場次。**客戶端不得自己造場次或自訂 seed。**
+ * 同一個房間重複簽發會得到同一個 sessionId（契約以 roomId 推導）
+ * ⇒ 不會重複建立比賽。
+ */
+export function openSession({ room, ticket, now = 0 }) {
+  if (!room || room.state !== ROOM_STATES.confirmed) {
+    return { ok: false, session: null, errors: [{ code: "not_confirmed", message: "房間尚未雙方確認，無法建立比賽場次" }] };
+  }
+  return createSession({ room, ticket, now, server: "mock-gateway" });
 }

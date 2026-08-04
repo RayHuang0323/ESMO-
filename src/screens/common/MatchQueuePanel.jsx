@@ -40,11 +40,15 @@ export default function MatchQueuePanel({ mode = "moba", canQueue = false, onRea
   const confirmMatchReady = useProfileStore((s) => s.confirmMatchReady);
   const cancelMatchRoom = useProfileStore((s) => s.cancelMatchRoom);
   const roomState = useProfileStore((s) => s.matchmaking?.room?.state ?? null);
+  //  Milestone O6：比賽場次與一次性進場令牌
+  const createMatchSession = useProfileStore((s) => s.createMatchSession);
+  const launchMatchSession = useProfileStore((s) => s.launchMatchSession);
   const [tick, setTick] = useState(0);
   const [err, setErr] = useState(null);
 
   const view = useProfileStore((s) => s.matchmakingView)();
   const room = useProfileStore((s) => s.matchRoomView)();
+  const session = useProfileStore((s) => s.matchSessionView)();
   const t = view.ticket;
   const queued = view.state === TICKET_STATES.queued;
 
@@ -58,6 +62,11 @@ export default function MatchQueuePanel({ mode = "moba", canQueue = false, onRea
   //  O5：配對成功 ⇒ 由 gateway 開房（重複呼叫不會產生第二間）
   const matched = view.state === TICKET_STATES.matched;
   useEffect(() => { if (matched && !room.room) openMatchRoom(); }, [matched, room.room, openMatchRoom]);
+
+  //  O6：雙方確認完成 ⇒ 由 gateway 簽發場次（重複呼叫不會建立第二場）
+  useEffect(() => {
+    if (room.state === "confirmed" && !session.session) createMatchSession();
+  }, [room.state, session.session, createMatchSession]);
 
   //  O5：房間進行中每秒輪詢（驅動確認階段、對手確認、逾時）
   const roomLive = !!room.room && (room.state === "waiting" || room.state === "ready_check");
@@ -184,11 +193,34 @@ export default function MatchQueuePanel({ mode = "moba", canQueue = false, onRea
                   我方確認
                 </button>
               )}
-              {room.canEnter && onReady && (
-                <button onClick={onReady}
-                  style={{ marginTop: 8, width: "100%", background: `linear-gradient(135deg,${C.ok},#059669)`, border: "none", borderRadius: 10, padding: "11px", cursor: "pointer", color: "#fff", fontSize: 13, fontWeight: 800 }}>
-                  進入對戰
-                </button>
+              {/* O6：進場必須消耗一次性令牌；成功才真的進對戰。
+                  重複進場、場次逾期、資料不一致都會在這裡被擋下並顯示原因。 */}
+              {room.canEnter && session.session && (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+                    <span style={{ color: C.gray, fontSize: 8.5 }}>場次</span>
+                    <span style={{ color: C.gray2, fontSize: 9, fontFamily: "monospace", whiteSpace: "nowrap" }}>
+                      {session.session.sessionId.slice(-12)}
+                    </span>
+                    <span style={{ marginLeft: "auto", fontSize: 8.5, fontWeight: 800, borderRadius: 5, padding: "1px 6px", background: C.card, color: session.canLaunch ? C.ok : C.gray }}>
+                      {session.stateLabel}
+                    </span>
+                  </div>
+                  {session.canLaunch && onReady && (
+                    <button onClick={() => {
+                      const r = launchMatchSession();
+                      if (!r.ok) { setErr(r.errors?.[0]?.message ?? "無法進入對戰"); return; }
+                      setErr(null);
+                      onReady();
+                    }}
+                      style={{ marginTop: 8, width: "100%", background: `linear-gradient(135deg,${C.ok},#059669)`, border: "none", borderRadius: 10, padding: "11px", cursor: "pointer", color: "#fff", fontSize: 13, fontWeight: 800 }}>
+                      進入對戰
+                    </button>
+                  )}
+                  {!session.canLaunch && session.blockedReason && (
+                    <div style={{ color: C.bad, fontSize: 10.5, marginTop: 8, lineHeight: 1.7 }}>⚠ {session.blockedReason}</div>
+                  )}
+                </>
               )}
               {!room.canEnter && room.blockedReason && room.state !== "ready_check" && (
                 <div style={{ color: C.bad, fontSize: 10.5, marginTop: 8, lineHeight: 1.7 }}>⚠ {room.blockedReason}</div>

@@ -5097,3 +5097,82 @@ roomId，不會產生第二間。
   以免本機流程變得不可預測。拒絕路徑由驗證器直接測。
 - **瀏覽器實機驗收未做**：房間面板、雙方確認指示、倒數、逾時與取消、
   320–430 響應式。
+
+## Milestone O6（2026-08-04）— 正式對戰場次與進場
+
+同分支 `milestone-n-finance`。**未 merge 回 main。**
+
+### 定位
+
+O5 結束於「雙方都確認了」。但確認完到真的開打之間還有一個缺口：
+**誰有資格啟動這場比賽、可以啟動幾次、用什麼參數啟動。**
+沒有這一層的話，畫面只要呼叫一次進場函式就能開打，而且可以呼叫很多次
+（重整、連點、回上一頁再進來），每次都是一場新比賽。
+
+### 交付：`MatchSession.v1`（`src/platform/contracts/matchSession.js`）
+
+四種狀態：`created`（待啟動）/ `launched`（已啟動）/ `cancelled` / `expired`。
+
+**綁定**：roomId、assignmentId、ticketId、模式、**雙方隊伍版本**、比賽 seed、
+`issuedBy`。任何一項對不上就拒絕啟動。
+
+**一次性 launchToken**：`consumeLaunchToken` 是唯一入口。拒絕的情況全部附中文原因：
+
+| 情況 | 訊息 |
+|---|---|
+| 令牌已用過 | 本場比賽已經啟動過，無法重複進入 |
+| 令牌不符 | 啟動憑證無效 |
+| 場次逾期（300 秒） | 場次已逾期，請重新配對 |
+| 場次取消 | 已取消本場比賽 |
+| 舊票券 | 場次與目前票券不符（舊票券不可啟動比賽） |
+| seed 被竄改 | 場次的對戰種子與配對結果不符 |
+| 自造場次 | 場次未標明簽發者，拒絕啟動 |
+
+**啟動參數**由場次提供：`{sessionId, mode, seed, opponentId, opponentName, issuedBy}`
+——**沒有陣容、沒有能力數值、沒有比賽結果**。seed 沿用 gateway 在配對時決定的那一個，
+前端無從指定。
+
+**不重複建立比賽**：`sessionId` 由 roomId 決定性推導，同一房間重複簽發回同一場次、
+同一個令牌。
+
+**重整恢復**：`created` 狀態的場次**刻意在 migration 中保留**（這是需求明確要求的）；
+把關不靠「載入時清掉」，而靠 `consumeLaunchToken` ——
+已啟動的場次重整後仍然不可再啟動（`tokenUsed` 會被存下來）。
+
+**Store**：`matchmaking.session` / `matchmaking.launch`；
+`createMatchSession` / `launchMatchSession` / `cancelMatchSession` / `matchSessionView`。
+
+**UI**：沿用 O4/O5 的共用面板（不另開頁面、不大幅重構）。
+雙方確認完成後自動簽發場次並顯示場次識別與狀態；
+「進入對戰」改為**先消耗一次性令牌，成功才真的進場**，失敗顯示中文原因。
+
+### 驗證（2026-08-04 實跑）
+
+`node tools/check_match_session_o6.mjs` → **36/36 通過**。要害逐項：
+
+- 房間尚未雙方確認 → 不得簽發；房間與票券不符 → 不得簽發。
+- **首次使用令牌成功、第二次拒絕**（重複進場）。
+- 逾期／取消／房間不符／舊票券／指派單被抽換／seed 被竄改／自造場次，全部拒絕。
+- 啟動參數欄位固定為六個識別欄，序列化後不含 stats/power/roster/winner/score。
+- 同一房間重複簽發 → 同一個 sessionId 與同一個令牌。
+- **重整後未啟動的場次仍可啟動；已啟動的場次重整後仍不可再啟動。**
+- MOBA 與 CS 共用同一套契約，CS 同樣是一次性令牌。
+
+其餘回歸：`check_match_room_o5` 45/45、`check_matchmaking_o4` 47/47、
+`check_match_entry_o3` 35/35、`check_condition_o2` 30/30、`check_squad_o1` 40/40、
+`check_recruit_o` 40/40、`check_finance_n/n2/n3/n31` 32/35/40/31、
+`verify.mjs` 5 區段全過、build 通過。
+
+### ⚠ 誠實揭露：seed 尚未driven 引擎
+
+`launch.seed` 目前**存進 `matchmaking.launch` 供對戰入口讀取，但還沒有接到
+LogicEngine 的實際亂數種子**。要接需要改 GameView / LoadingScreen 的參數傳遞，
+那超出「不大幅重構、不修改既有戰鬥演算」的範圍，因此列為後續項。
+現階段的保證是：**沒有有效場次與未使用的令牌就進不了對戰入口**。
+
+### 未做（刻意）
+
+- 真正的後端、WebSocket、聊天、排行榜、觀戰 —— 使用者明確指定不做。
+- 沒有修改任何既有戰鬥演算。
+- **瀏覽器實機驗收未做**：場次識別顯示、進入對戰、重複進場被擋、
+  320–430 響應式。

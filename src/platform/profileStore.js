@@ -59,7 +59,11 @@ import {
   TICKET_STATES, createTicket, transitionTicket, isActiveTicket,
   canEnterMatch as canEnterMatchOf, waitedSeconds, stateLabel,
 } from "./contracts/matchmaking.js";
-import { pollGateway, openRoom, pollRoom } from "./matchmaking/mockGateway.js";
+import { pollGateway, openRoom, pollRoom, openSession } from "./matchmaking/mockGateway.js";
+import {
+  SESSION_STATES, consumeLaunchToken, validateSession, cancelSession,
+  sessionStateLabel, isSessionExpired, isSessionTerminal,
+} from "./contracts/matchSession.js";
 import {
   ROOM_STATES, transitionRoom, confirmSide, canEnterRoom, roomStateLabel,
   remainingSeconds, isRoomTerminal,
@@ -159,7 +163,8 @@ const DEFAULT = {
   recruitment: { signed: {} },
   //  Milestone O4：配對票券。同一隊伍**同時只能有一張有效票券**。
   //  O5：比賽房間（由 gateway 開；與票券／指派單綁定）
-  matchmaking: { ticket: null, room: null },
+  //  O6：比賽場次（gateway 簽發；帶一次性啟動令牌）
+  matchmaking: { ticket: null, room: null, session: null, launch: null },
   schemaVersion: PROFILE_SCHEMA_VERSION,
   processedMatchTransactions: {},// S25：冪等帳本 {transactionId: receipt}（防重複發獎）
   inbox: [
@@ -208,7 +213,11 @@ function normalizeMatchmaking(saved) {
     : (r.state === "waiting" || r.state === "ready_check")
       ? { ...r, state: "cancelled", reason: "重新載入後房間已關閉" }
       : r;
-  return { ticket, room };
+  //  O6：**尚未啟動的場次要能在重整後恢復**（這是需求明確要求的），
+  //  所以 created 原樣保留；已啟動／已取消／已逾期也原樣保留（純顯示）。
+  //  真正的把關在 consumeLaunchToken：令牌用過、過期、綁定對不上都會被拒。
+  const session = src.session && typeof src.session === "object" ? src.session : null;
+  return { ticket, room, session, launch: src.launch ?? null };
 }
 function normalizeEconomy(saved, days) {
   const past = Math.max(0, deriveTime(days).week - 1);
@@ -539,7 +548,7 @@ export const useProfileStore = create((set, get) => ({
     //  validating → queued（轉移規則在契約裡，這裡不自己判斷）
     const queued = transitionTicket(made.ticket, TICKET_STATES.queued, { now });
     if (!queued.ok) return { ok: false, ticket: null, errors: queued.errors };
-    set({ matchmaking: { ticket: queued.ticket, room: null } });
+    set({ matchmaking: { ticket: queued.ticket, room: null, session: null, launch: null } });
     get().save();
     return { ok: true, ticket: queued.ticket, errors: [] };
   },
@@ -572,13 +581,13 @@ export const useProfileStore = create((set, get) => ({
     if (!isActiveTicket(ticket)) return { ok: false, ticket, errors: [{ code: "not_active", message: "目前沒有進行中的配對" }] };
     const next = transitionTicket(ticket, TICKET_STATES.cancelled, { now });
     if (!next.ok) return { ok: false, ticket, errors: next.errors };
-    set({ matchmaking: { ticket: next.ticket, room: null } });
+    set({ matchmaking: { ticket: next.ticket, room: null, session: null, launch: null } });
     get().save();
     return { ok: true, ticket: next.ticket, errors: [] };
   },
   /** 清掉終局票券，回到 idle（畫面上的「重新配對」）。 */
   resetMatchmaking() {
-    set({ matchmaking: { ticket: null, room: null } });
+    set({ matchmaking: { ticket: null, room: null, session: null, launch: null } });
     get().save();
     return true;
   },
@@ -647,6 +656,66 @@ export const useProfileStore = create((set, get) => ({
     set({ matchmaking: { ...mm, room: next.room } });
     get().save();
     return { ok: true, room: next.room, errors: [] };
+  },
+  // ── Milestone O6：比賽場次與一次性進場 ───────────────────────────────
+  /**
+   * 由 gateway 簽發比賽場次（房間雙方確認後）。
+   * **不會重複建立比賽**：sessionId 由 roomId 推導，已有對應場次就回傳既有的。
+   */
+  createMatchSession(now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const cur = mm.session ?? null;
+    if (cur && cur.roomId === mm.room?.roomId && !isSessionTerminal(cur) && !isSessionExpired(cur, now)) {
+      return { ok: true, session: cur, errors: [], reused: true };
+    }
+    const made = openSession({ room: mm.room ?? null, ticket: mm.ticket ?? null, now });
+    if (!made.ok) return { ok: false, session: null, errors: made.errors };
+    set({ matchmaking: { ...mm, session: made.session } });
+    get().save();
+    return { ok: true, session: made.session, errors: [], reused: false };
+  },
+  /**
+   * 使用一次性令牌啟動比賽。**這是對戰入口的唯一許可**。
+   *
+   * 拒絕：令牌不符／已使用（重複進場）／場次過期或取消／與房間或票券資料不一致。
+   * 成功後把啟動參數存進 `matchmaking.launch`——只有模式／種子／對手識別，
+   * 沒有陣容數值、沒有比賽結果。
+   */
+  launchMatchSession(now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const session = mm.session ?? null;
+    if (!session) return { ok: false, launch: null, errors: [{ code: "no_session", message: "尚未建立比賽場次" }] };
+    const r = consumeLaunchToken(session, session.launchToken, {
+      room: mm.room ?? null, ticket: mm.ticket ?? null, now,
+    });
+    if (!r.ok) return { ok: false, launch: null, errors: r.errors };
+    set({ matchmaking: { ...mm, session: r.session, launch: r.launch } });
+    get().save();
+    return { ok: true, launch: r.launch, errors: [] };
+  },
+  /** 取消場次（附中文原因）。 */
+  cancelMatchSession(reason = "已取消本場比賽", now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const r = cancelSession(mm.session ?? null, reason, now);
+    if (!r.ok) return { ok: false, session: mm.session ?? null, errors: r.errors };
+    set({ matchmaking: { ...mm, session: r.session } });
+    get().save();
+    return { ok: true, session: r.session, errors: [] };
+  },
+  /** 唯讀：場次狀態 ＋ 能否啟動（畫面不自己判規則）。 */
+  matchSessionView(now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const session = mm.session ?? null;
+    const v = session ? validateSession(session, { room: mm.room ?? null, ticket: mm.ticket ?? null, now }) : { ok: false, errors: [] };
+    return {
+      session,
+      launch: mm.launch ?? null,
+      state: session?.state ?? null,
+      stateLabel: session ? sessionStateLabel(session.state) : "尚未建立場次",
+      canLaunch: !!session && v.ok,
+      blockedReason: session ? (v.ok ? null : v.errors[0]?.message ?? null) : null,
+      expired: isSessionExpired(session, now),
+    };
   },
   /** 唯讀：房間狀態 ＋ 倒數 ＋ 能否進場（畫面不自己判規則）。 */
   matchRoomView(now = Date.now()) {
@@ -744,7 +813,7 @@ export const useProfileStore = create((set, get) => ({
       processedMatchTransactions: {},
       economy: ng.economy,
       recruitment: { signed: {} },
-      matchmaking: { ticket: null, room: null },
+      matchmaking: { ticket: null, room: null, session: null, launch: null },
       schemaVersion: PROFILE_SCHEMA_VERSION,
     });
     get().pushInbox({
