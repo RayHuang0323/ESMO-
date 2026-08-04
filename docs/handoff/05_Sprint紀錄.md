@@ -5293,3 +5293,82 @@ O7 之後 `launched` 不再是終局（要能恢復）。修法是**改成逐項
 - 真正的後端、WebSocket、帳號登入、聊天、排行榜、觀戰、正式反作弊。
 - 未修改 MOBA／CS 戰鬥平衡與英雄 AI（`regress` / `regress2` 皆綠可佐證）。
 - 未碰 `ESMO-hero-models` worktree。
+
+## Milestone O7.1（2026-08-04）— 真實賽後流程接入 O7
+
+同分支 `milestone-n-finance`。**未 merge 回 main。**
+補完 O7 明確記錄的那個缺口：`reportMatchResult` 原本只有 verifier 在走。
+
+### 動工前的現況
+
+| 模式 | 賽後結算點 | 問題 |
+|---|---|---|
+| MOBA | `useBattleFeed.js` 終局分支 → `profile.applyMatchProgress(tx)` | 直接呼叫 S25，繞過 O7 |
+| CS | `settleCsMatch()` → `applyMatchProgress(tx)` | 同上 |
+
+兩條路都沒有場次綁定與衝突偵測。
+
+### 交付：唯一結算邊界
+
+新增 `src/platform/progress/settleMatchBoundary.js`，兩條真實流程都改走它：
+
+```
+比賽結束 → settleMatchThroughSession()
+             ├─ 有場次 → reportMatchResult()（O7：綁定／防重送／防衝突／追蹤鏈）
+             └─ 無場次 → applyMatchProgress()（S25，並標記 viaSession: false）
+                    ↑ 兩條最後都由 S25 實際入帳——**沒有第二套結算**
+```
+
+另附兩個純轉換函式 `outcomeFromBattleResult` / `outcomeFromCsResult`——
+**不重新統計**，winner / score / duration 全部照抄既有結果契約。
+
+### ⚠ 實作時抓到的自己的漏洞
+
+第一版把「可用場次」判定為 `state === launched`。但**首次結算會把場次標成
+`completed`**，於是第二次回報（Result 畫面重整、重送）就退回 S25 路徑——
+S25 本身冪等所以不會重複入帳，**但拿不到 O7 的 receipt，也不會偵測衝突**，
+等於「同一場送不同勝負」會被默默忽略而不是拒絕。
+
+驗證器的 3c / 4 / 4b / 5 / 5b / 5d / 6c / 6d 一次抓出這個問題。
+修法是把 `completed` 也納入可用場次。
+
+### 沒有場次時的取捨（誠實揭露）
+
+debug harness（`?debug=moba-runtime-battle`）或舊流程可能在沒有 MatchSession 的
+狀態下打完一場。這時**仍走 S25 入帳**（否則獎勵會憑空消失），但回傳
+`viaSession: false` 明確標記那一場未經權威驗證。
+寧可標記清楚，也不要讓玩家的獎勵默默不見。
+
+### 驗證（2026-08-04 實跑）
+
+`node tools/check_result_flow_o71.mjs` → **27/27 通過**。這支**實際操作
+profileStore**，走的就是真實流程用的那些函式，不是純契約測試。涵蓋：
+
+1. **正常打完一場只結算一次**：資金 100 萬 → 109 萬、經驗 +50、體力 85 → 73，各一次。
+2. **Result 畫面重整不重複結算**：資金／粉絲／經驗／體力都沒有再變動。
+3. **重送相同結果 → 同一個 settlementId**，第二次標記 `alreadySettled`。
+4. **重送不同勝負 → 拒絕**，原因為中文（「本場已回報過不同的結果…」），且完全沒有入帳。
+5. **MOBA 與 CS 共用同一條流程**（CS 的重送與衝突各驗一次）。
+6. **全庫掃描**：除了 store 自身、邊界與 O7 結算層，**沒有任何呼叫點直接呼叫
+   `applyMatchProgress`**。
+
+回歸全綠：`check_authoritative_o7` 48/48、`check_match_session_o6` 36/36、
+`check_match_room_o5` 45/45、`check_matchmaking_o4` 47/47、
+`check_match_entry_o3` 35/35、`check_condition_o2` 30/30、`check_squad_o1` 40/40、
+`check_recruit_o` 40/40、`check_finance_n/n2/n3/n31` 32/35/40/31、
+`verify.mjs --only=progress25,talent27,experience26,cs23,regress,regress2,build` **7/7**。
+
+### 仍然沒做（本輪限制）
+
+- 未修改戰鬥演算、平衡、AI（`regress` / `regress2` 綠可佐證）。
+- 未改 UI 主架構——只換了兩個結算呼叫點，畫面完全沒動。
+- 未碰 `ESMO-hero-models`。
+- 仍然沒有真正的後端：`resultSource` 仍是 `engine`（本機引擎產生），
+  契約已預留 `server`。
+
+### 人工驗收清單（未經瀏覽器實測）
+
+1. 完整打完一場 MOBA，確認 Result 畫面的獎勵數字正常。
+2. 在 Result 畫面重整，確認資金／經驗**沒有再增加**。
+3. 打完一場 CS，重複上述兩步。
+4. 用 `?debug=1` 看追蹤鏈，`settlement` 一環應該有值。
