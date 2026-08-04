@@ -37,6 +37,7 @@ import { sponsorById } from "../../data/playerModel.js";
 import { deriveTime } from "./timeline.js";
 import { SPONSOR_SPLIT, FORM, scenarioById } from "./economyConfig.js";
 import { teamWeeklySalary } from "./salary.js";
+import { formFromLog } from "./formLog.js";
 
 /** 交易分類 → 顏色（沿用 finance.transactions 既有色票，畫面不必改對照表）。 */
 const COLOR = Object.freeze({
@@ -53,12 +54,16 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 /**
  * 近期戰績（0–1），贊助績效獎金用它縮放。
  *
- * 資料來源是 `csHistory`（profileStore 自己擁有的比賽紀錄）。
- * ⚠ MOBA 戰績存在 seasonStore，不在本 Store ⇒ 目前的 form **只反映 CS 訓練賽**。
- *   要把 MOBA 也算進來需要跨 Store 讀取，屬於後續項目，這裡不假裝有。
- * 沒有任何紀錄 ⇒ 回中性值（不獎不罰）。
+ * N3：資料來源是 `economy.formLog`——**MOBA 與 CS 一視同仁**的統一賽績紀錄，
+ * 由 S25 唯一發獎點 `applyMatchProgress` 在賽後寫入（見 economy/formLog.js）。
+ * N3 之前只讀 `csHistory`，MOBA 打再多都不影響收入，那是已修掉的收入盲點。
+ *
+ * 回退順序：formLog → csHistory（舊存檔且尚未 migration 時）→ 中性值。
+ * 沒有任何紀錄 ⇒ 中性值（不獎不罰），不假裝有資料。
  */
 export function recentForm(state) {
+  const fromLog = formFromLog(state?.economy);
+  if (fromLog !== null) return clamp(fromLog, FORM.min, FORM.max);
   const hist = Array.isArray(state?.csHistory) ? state.csHistory.slice(0, FORM.window) : [];
   if (!hist.length) return FORM.neutral;
   const wins = hist.filter((h) => h?.winner === "us").length;

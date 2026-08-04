@@ -56,11 +56,12 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
 
     { id: "bracket", name: "賽事", emoji: "🏆", fans: "0", color: GC.green, badge: "🌙", on: true },
   ];
-  const more = [{ id: "team", n: "戰隊詳情", i: "🛡" }, { id: "training", n: "訓練中心", i: "📅" }, { id: "dash", n: "儀表板", i: "📊" }, { id: "sponsor", n: "贊助商", i: "🤝" }];
+  //  N3：「開新局」是三種財務情境（新手／一般／頂級）的唯一入口。
+  const more = [{ id: "team", n: "戰隊詳情", i: "🛡" }, { id: "training", n: "訓練中心", i: "📅" }, { id: "newgame", n: "開新局", i: "🎬" }, { id: "dash", n: "儀表板", i: "📊" }, { id: "sponsor", n: "贊助商", i: "🤝" }];
 
   // Sprint21：八個經營模組已 Component 化 → 直接導頁；其餘 Legacy 模組維持誠實佔位。
   // S27：天賦已恢復（每位選手獨立）→「天賦」磚導向選手名單（點選手 → 詳情 → 天賦）。
-  const NAV = { notify: "inbox", finance: "finance", sponsor: "sponsor", roster: "roster", team: "team", training: "training", recruit: "recruit", cs: "csPrep", talent: "roster" };
+  const NAV = { notify: "inbox", finance: "finance", sponsor: "sponsor", roster: "roster", team: "team", training: "training", recruit: "recruit", cs: "csPrep", talent: "roster", newgame: "newGame" };
   const sel = (id) => {
     if (id === "moba") return onMoba();
     if (id === "bracket") return onSeason();

@@ -4531,3 +4531,72 @@ Legacy 選手表寫死的 `salary`、SPONSORS 的 `weekly`。結果沒人說得�
   `check_finance_n2.mjs` 35/35（呈現層改動不影響經濟邏輯，數字未變）。
 - **未經瀏覽器實測**：財務頁新版面、手機直向排列、320/360/390/430 響應式、
   警告配色。需人工驗收。
+
+## Milestone N3（2026-08-04）— 開新局情境 ＋ 統一賽績
+
+同分支 `milestone-n-finance`。**未 merge 回 main。**
+範圍就是補完 N2 明確記錄在案的兩個缺口，不含商店與轉會。
+
+### 缺口①：三種情境沒有入口 → 已補
+
+- `profileStore.startNewGame(scenarioId)`：以指定情境開新局。
+  資金 = 該情境 `startingFunds`（60／120／300 萬）、時間從第 1 天重新起算、
+  交易帳本／贊助／賽績／冪等帳本全部清空。
+  ⚠ 破壞性動作，UI 有兩段式確認。
+- `src/screens/manage/NewGameScreen.jsx`：三張情境卡，各自顯示起始資金、
+  基礎營收、營運成本與**起手週淨額**（已扣種子五人週薪）。
+  選定後跳出紅框確認卡，明列會清掉哪些資料。
+- Dashboard「更多」列新增「開新局」入口；AppShell 新增 `newGame` 路由。
+- 新局刻意清空 `finance.transactions`：種子交易是 Legacy 展示樣本，
+  留著會讓「近四週賽事獎金估計」憑空多出收入。
+
+### 缺口②：MOBA 賽績沒進績效 → 已補
+
+- `src/platform/economy/formLog.js`：統一賽績紀錄。
+  勝負直接取自契約既有的 `MatchProgressTransaction.metadata.winner`
+  （"us" | "enemy"，**兩種模式統一語意**），寫入點是 S25 唯一發獎點
+  `applyMatchProgress` ⇒ MOBA 與 CS 一視同仁。
+- **不是第二套統計**：不重新計算任何戰績，戰績來源仍是 BattleResult / seasonStore。
+  本紀錄只服務經濟層的「近期狀態」，Result / Season / Dashboard 不得讀它算勝率。
+- `recentForm()` 改讀 `economy.formLog`，回退順序：formLog → csHistory（舊存檔）→ 中性值。
+- migration：舊存檔以 csHistory 種一次 formLog，避免升級後績效獎金莫名歸零。
+- 冪等由 `applyMatchProgress` 的 transactionId 保證，`appendFormEntry` 另擋一次同 id。
+  紀錄上限 20 筆，取樣視窗 `FORM.window`（6 場）。
+
+### 驗證（2026-08-04 實跑）
+
+- `node tools/check_finance_n3.mjs` → **40/40 通過**。含：
+  三情境開新局的資金／時間／帳本／贊助狀態、薪資與營運成本、
+  **四週預測與實際結算一致**（三種情境各驗一次）、
+  簽贊助後預測看得到合約斷崖、
+  **MOBA 勝場提高績效獎金／敗場歸零／CS 同樣有效／兩者一視同仁**、
+  **週結算實際入帳金額確實隨賽績改變**（全勝淨 7.3 萬 vs 全敗淨 −0.2 萬）、
+  賽績冪等與上限、舊存檔 migration、開新局後四週帳目相平。
+- `check_finance_n.mjs` 32/32、`check_finance_n2.mjs` 35/35。
+- `verify.mjs --only=progress25,talent27,experience26,cs23,regress,regress2,build` → 7/7。
+- `npm run build` 通過。
+
+⚠ 過程中 `progress25` §11 曾紅一次：該驗證器以**字串比對**確保 MOBA 路徑不碰
+CS 的歷史清單，而我在 `applyMatchProgress.js` 的**註解**裡寫了那個識別字。
+已改寫措辭（邏輯未動），並在該處留下提醒。
+
+### ⚠ 新局起手是負現金流（數字正確，是否為預期需決策）
+
+三種情境在**尚未簽贊助**時的起手週淨額：
+
+| 情境 | 起始資金 | 週收入 | 週支出 | 週淨額 | 四週後 | 警告 |
+|---|---|---|---|---|---|---|
+| 新手 | 60 萬 | 6.0 萬 | 17.7 萬 | **−11.7 萬** | 13.2 萬 | warn |
+| 一般 | 120 萬 | 12.0 萬 | 19.7 萬 | **−7.7 萬** | 89.2 萬 | warn |
+| 頂級 | 300 萬 | 22.0 萬 | 22.7 萬 | **−0.7 萬** | 297.2 萬 | warn |
+
+新手約 5 週見底 ⇒ 必須盡快簽贊助。這**可以**是刻意的開局壓力，
+但也可能太緊（入門贊助「在地網咖」只有 6 萬/週，簽了新手仍是 −7.2 萬）。
+**本輪未調整任何經濟數值**（使用者指定不改），列為平衡決策。
+
+### 未做（刻意）
+
+- 商店、轉會市場、合約談判 —— 使用者明確指定不做。
+- 沒有碰 MOBA 戰鬥邏輯，沒有碰 `ESMO-hero-models` worktree。
+- **瀏覽器實機驗收未做**：開新局畫面版面與確認流程、情境卡在 320–430 的排版、
+  開新局後 Dashboard／財務頁的數字是否如預期。

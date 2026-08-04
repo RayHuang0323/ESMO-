@@ -51,6 +51,7 @@ import { deriveTime } from "./economy/timeline.js";
 import { advanceDaysInState, buildWeekLines, recentForm } from "./economy/weeklySettlement.js";
 import { forecastWeeks } from "./economy/forecast.js";
 import { DEFAULT_SCENARIO, SCENARIOS, scenarioById } from "./economy/economyConfig.js";
+import { seedFormLogFromCsHistory } from "./economy/formLog.js";
 
 const KEY = "esmo.profile.v1";
 /** persistence schema 版本（migration 用；沿用同一個 localStorage key，不清資料）。
@@ -167,7 +168,7 @@ function normalizeEconomy(saved, days) {
   const last = Number.isFinite(Number(saved.lastSettledWeek)) ? Number(saved.lastSettledWeek) : past;
   //  N2：未知或缺少的 scenario → 預設情境（不讓存檔帶進不存在的 key）
   const scenario = SCENARIOS[saved.scenario] ? saved.scenario : DEFAULT_SCENARIO;
-  return { settledWeeks: weeks, lastSettledWeek: last, scenario };
+  return { settledWeeks: weeks, lastSettledWeek: last, scenario, formLog: saved.formLog };
 }
 const load = () => {
   if (!canLS) return DEFAULT;
@@ -211,7 +212,11 @@ const load = () => {
       //  Milestone N migration：舊存檔沒有 economy ⇒ 空帳本。
       //  ⚠ 刻意**不補結算過去的週**：那會在載入當下憑空扣一大筆薪資，
       //    使用者無從理解。舊存檔從載入後的下一個週結尾開始計費。
-      economy: normalizeEconomy(saved.economy, saved.meta?.days ?? DEFAULT.meta.days),
+      //  N3：沒有 formLog 的存檔以 csHistory 種一次，避免升級後績效獎金莫名歸零。
+      economy: seedFormLogFromCsHistory(
+        normalizeEconomy(saved.economy, saved.meta?.days ?? DEFAULT.meta.days),
+        arr(saved.csHistory, []),
+      ),
       inbox:         arr(saved.inbox,         DEFAULT.inbox).map(normalizeMsg),
       notifications: arr(saved.notifications, DEFAULT.notifications),
       worldNews:     arr(saved.worldNews,     DEFAULT.worldNews),
@@ -372,6 +377,47 @@ export const useProfileStore = create((set, get) => ({
   setScenario(id) {
     if (!SCENARIOS[id]) return false;
     set({ economy: { ...(get().economy ?? {}), scenario: id } });
+    get().save();
+    return true;
+  },
+  /**
+   * N3：以指定情境**開新局**。
+   *
+   * ⚠ 破壞性：整份存檔回到初始狀態（選手、資金、帳本、賽績、收件匣全部重來）。
+   *   呼叫端必須先向使用者確認——`NewGameScreen` 有兩段式確認。
+   *
+   * 這是讓三種情境真正生效的入口：N2 已定義 `startingFunds`（60／120／300 萬），
+   * 但在此之前沒有任何地方套用它，實際遊戲永遠是種子的 120 萬。
+   *
+   *   · 資金 = 該情境的 startingFunds
+   *   · 時間從第 1 天重新起算（week / season 由 days 導出）
+   *   · 交易帳本清空——種子交易是 Legacy 的展示樣本，留著會讓新局的
+   *     「近四週賽事獎金估計」憑空多出收入
+   *   · 贊助、賽績紀錄、冪等帳本全部清空
+   *
+   * @returns {boolean} false = 未知情境 id（不做任何事）
+   */
+  startNewGame(scenarioId) {
+    const sc = SCENARIOS[scenarioId];
+    if (!sc) return false;
+    const t = deriveTime(1);
+    set({
+      ...DEFAULT,
+      players: INITIAL_PLAYERS.map(migratePlayer),
+      lineup: { ...DEFAULT_LINEUP },
+      meta: { ...DEFAULT.meta, days: t.day, week: t.week, season: t.season },
+      finance: { ...DEFAULT.finance, funds: sc.startingFunds * WAN, transactions: [] },
+      activeSponsor: null,
+      csHistory: [],
+      processedMatchTransactions: {},
+      economy: { settledWeeks: {}, lastSettledWeek: 0, scenario: sc.id, formLog: [] },
+      schemaVersion: PROFILE_SCHEMA_VERSION,
+    });
+    get().pushInbox({
+      type: "match", from: "戰隊管理處",
+      subject: `新賽季開始 · ${sc.name}`,
+      text: `已以「${sc.name}」情境開始新局：起始資金 $${sc.startingFunds}萬、基礎營收 $${sc.baselineWeekly}萬/週。祝好運。`,
+    });
     get().save();
     return true;
   },

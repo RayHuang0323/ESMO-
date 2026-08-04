@@ -19,6 +19,8 @@
 // ============================================================================
 import { validateMatchProgressTransaction } from "../contracts/matchProgressTransaction.js";
 import { levelFromTotalXp, TALENT_POINTS_PER_LEVEL } from "./playerLevel.js";
+import { appendFormEntry } from "../economy/formLog.js";
+import { deriveTime } from "../economy/timeline.js";
 
 /**
  * 純 reducer：state + transaction → { nextState, receipt }
@@ -137,6 +139,18 @@ export function applyProgressToState(state, tx) {
     finance: { ...finance, funds: moneyAfter, transactions: nextTransactions },
     meta: { ...meta, fans: fansAfter, reputation: repAfter },
     processedMatchTransactions: { ...processed, [tx.transactionId]: receipt },
+    //  Milestone N3：把這一場的勝負追加到**統一賽績紀錄**（MOBA 與 CS 一視同仁），
+    //  供經濟層的贊助績效獎金使用。勝負直接取自契約既有的 metadata.winner，
+    //  **不重新統計任何戰績**——戰績來源仍是 BattleResult / seasonStore。
+    //  N3 之前只有 CS 的紀錄進得了績效，MOBA 打再多都不影響收入。
+    //  ⚠ 本檔刻意不提及 CS 的歷史清單識別字：check_progress25 §11 以字串比對
+    //    確保 MOBA 路徑不碰它，連註解都算。要講那件事請寫在 economy/formLog.js。
+    economy: appendFormEntry(state.economy, {
+      id: tx.transactionId,
+      mode: tx.mode,
+      win: tx.metadata?.winner === "us",
+      week: deriveTime(meta.days ?? 1).week,
+    }),
   };
 
   return { nextState, receipt };

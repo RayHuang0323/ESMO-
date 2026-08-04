@@ -30,6 +30,7 @@ import InboxScreen from "./screens/manage/InboxScreen.jsx";
 import FinanceScreen from "./screens/manage/FinanceScreen.jsx";
 import SponsorScreen from "./screens/manage/SponsorScreen.jsx";
 import TeamScreen from "./screens/manage/TeamScreen.jsx";
+import NewGameScreen from "./screens/manage/NewGameScreen.jsx";
 import RosterScreen from "./screens/manage/RosterScreen.jsx";
 import TrainingScreen from "./screens/manage/TrainingScreen.jsx";
 import RecruitScreen from "./screens/manage/RecruitScreen.jsx";
@@ -96,6 +97,8 @@ export default function AppShell() {
       {screen === "finance" && <FinanceScreen onBack={home} />}
       {screen === "sponsor" && <SponsorScreen onBack={home} />}
       {screen === "team" && <TeamScreen onBack={home} />}
+      {/* Milestone N3：開新局／情境選擇（三種財務情境的唯一入口） */}
+      {screen === "newGame" && <NewGameScreen onBack={home} onDone={home} />}
       {screen === "roster" && <RosterScreen onBack={home} onRecruit={go("recruit")} onPlayer={(id) => { setPlayerId(id); setScreen("playerDetail"); }} />}
       {screen === "training" && <TrainingScreen onBack={home} />}
       {screen === "recruit" && <RecruitScreen onBack={home} />}
