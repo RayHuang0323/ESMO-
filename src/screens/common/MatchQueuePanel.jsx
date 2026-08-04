@@ -34,10 +34,17 @@ export default function MatchQueuePanel({ mode = "moba", canQueue = false, onRea
   const pollMatchmaking = useProfileStore((s) => s.pollMatchmaking);
   const resetMatchmaking = useProfileStore((s) => s.resetMatchmaking);
   const ticketState = useProfileStore((s) => s.matchmaking?.ticket?.state ?? null);
+  //  Milestone O5：比賽房間與雙方確認
+  const openMatchRoom = useProfileStore((s) => s.openMatchRoom);
+  const pollMatchRoom = useProfileStore((s) => s.pollMatchRoom);
+  const confirmMatchReady = useProfileStore((s) => s.confirmMatchReady);
+  const cancelMatchRoom = useProfileStore((s) => s.cancelMatchRoom);
+  const roomState = useProfileStore((s) => s.matchmaking?.room?.state ?? null);
   const [tick, setTick] = useState(0);
   const [err, setErr] = useState(null);
 
   const view = useProfileStore((s) => s.matchmakingView)();
+  const room = useProfileStore((s) => s.matchRoomView)();
   const t = view.ticket;
   const queued = view.state === TICKET_STATES.queued;
 
@@ -47,6 +54,18 @@ export default function MatchQueuePanel({ mode = "moba", canQueue = false, onRea
     const id = setInterval(() => { pollMatchmaking(); setTick((v) => v + 1); }, 1000);
     return () => clearInterval(id);
   }, [queued, pollMatchmaking, ticketState]);
+
+  //  O5：配對成功 ⇒ 由 gateway 開房（重複呼叫不會產生第二間）
+  const matched = view.state === TICKET_STATES.matched;
+  useEffect(() => { if (matched && !room.room) openMatchRoom(); }, [matched, room.room, openMatchRoom]);
+
+  //  O5：房間進行中每秒輪詢（驅動確認階段、對手確認、逾時）
+  const roomLive = !!room.room && (room.state === "waiting" || room.state === "ready_check");
+  useEffect(() => {
+    if (!roomLive) return undefined;
+    const id = setInterval(() => { pollMatchRoom(); setTick((v) => v + 1); }, 1000);
+    return () => clearInterval(id);
+  }, [roomLive, pollMatchRoom, roomState]);
 
   const start = () => {
     setErr(null);
@@ -108,7 +127,7 @@ export default function MatchQueuePanel({ mode = "moba", canQueue = false, onRea
         </>
       )}
 
-      {/* 已配對：顯示對手與種子，並提供進場 */}
+      {/* O5：已配對 → 比賽房間與雙方確認 */}
       {view.state === TICKET_STATES.matched && t.assignment && (
         <div style={{ marginTop: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.card2, borderRadius: 9, padding: "8px 10px" }}>
@@ -121,12 +140,73 @@ export default function MatchQueuePanel({ mode = "moba", canQueue = false, onRea
                 種子 {t.assignment.seed} · 由 {t.assignment.issuedBy} 簽發
               </div>
             </div>
+            {room.room && (
+              <span style={{ fontSize: 9, fontWeight: 800, borderRadius: 6, padding: "2px 7px", background: C.card, color: C.gray2, whiteSpace: "nowrap" }}>
+                {room.stateLabel}
+              </span>
+            )}
           </div>
-          {onReady && (
-            <button onClick={onReady}
-              style={{ marginTop: 8, width: "100%", background: `linear-gradient(135deg,${C.ok},#059669)`, border: "none", borderRadius: 10, padding: "11px", cursor: "pointer", color: "#fff", fontSize: 13, fontWeight: 800 }}>
-              進入對戰
-            </button>
+
+          {/* 雙方確認狀態 ＋ 倒數 */}
+          {room.room && (
+            <div style={{ marginTop: 8, background: C.card2, borderRadius: 9, padding: "9px 10px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 7, flexWrap: "wrap" }}>
+                <span style={{ color: "white", fontSize: 11.5, fontWeight: 800 }}>雙方確認</span>
+                {room.state === "ready_check" && (
+                  <span style={{
+                    marginLeft: "auto", fontSize: 11, fontWeight: 800, fontFamily: "monospace",
+                    color: room.remainingSec <= 5 ? C.bad : C.warn, whiteSpace: "nowrap",
+                  }}>
+                    {room.remainingSec}s
+                  </span>
+                )}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
+                {[
+                  { k: "我方", ready: room.usReady },
+                  { k: "對手", ready: room.opponentReady },
+                ].map((x) => (
+                  <div key={x.k} style={{
+                    background: C.card, borderRadius: 8, padding: "7px 9px",
+                    border: `1px solid ${x.ready ? C.ok + "55" : C.line}`,
+                  }}>
+                    <div style={{ color: C.gray, fontSize: 8.5, marginBottom: 2 }}>{x.k}</div>
+                    <div style={{ color: x.ready ? C.ok : C.gray2, fontSize: 11, fontWeight: 800 }}>
+                      {x.ready ? "✓ 已確認" : "等待中…"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {room.state === "ready_check" && !room.usReady && (
+                <button onClick={() => { const r = confirmMatchReady(); if (!r.ok) setErr(r.errors?.[0]?.message ?? null); }}
+                  style={{ marginTop: 8, width: "100%", background: `linear-gradient(135deg,${C.warn},#d97706)`, border: "none", borderRadius: 10, padding: "11px", cursor: "pointer", color: "#0a0b0f", fontSize: 13, fontWeight: 900 }}>
+                  我方確認
+                </button>
+              )}
+              {room.canEnter && onReady && (
+                <button onClick={onReady}
+                  style={{ marginTop: 8, width: "100%", background: `linear-gradient(135deg,${C.ok},#059669)`, border: "none", borderRadius: 10, padding: "11px", cursor: "pointer", color: "#fff", fontSize: 13, fontWeight: 800 }}>
+                  進入對戰
+                </button>
+              )}
+              {!room.canEnter && room.blockedReason && room.state !== "ready_check" && (
+                <div style={{ color: C.bad, fontSize: 10.5, marginTop: 8, lineHeight: 1.7 }}>⚠ {room.blockedReason}</div>
+              )}
+              {(room.state === "waiting" || room.state === "ready_check") && (
+                <button onClick={() => cancelMatchRoom()}
+                  style={{ marginTop: 7, width: "100%", background: "transparent", border: `1px solid ${C.line}`, borderRadius: 9, padding: "7px", cursor: "pointer", color: C.gray2, fontSize: 10, fontWeight: 700 }}>
+                  取消對戰
+                </button>
+              )}
+              {(room.state === "expired" || room.state === "cancelled") && (
+                <button onClick={() => resetMatchmaking()}
+                  style={{ marginTop: 7, width: "100%", background: C.card, border: `1px solid ${C.line}`, borderRadius: 9, padding: "8px", cursor: "pointer", color: "white", fontSize: 11, fontWeight: 700 }}>
+                  重新配對
+                </button>
+              )}
+              {err && <div style={{ color: C.bad, fontSize: 10, marginTop: 6 }}>⚠ {err}</div>}
+            </div>
           )}
         </div>
       )}

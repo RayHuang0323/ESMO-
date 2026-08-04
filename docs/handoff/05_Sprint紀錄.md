@@ -5031,3 +5031,69 @@ MOBA 與 CS 兩個賽前頁共用同一套流程與版面（不新增第二套�
   狀態流程與版面都不必改。
 - **瀏覽器實機驗收未做**：排隊面板在兩個賽前頁的版面、等待動畫、
   取消與重新配對、320–430 響應式。
+
+## Milestone O5（2026-08-04）— 比賽房間與雙方確認
+
+同分支 `milestone-n-finance`。**未 merge 回 main。**
+
+### 定位
+
+O4 配對成功後拿到 `MatchAssignment`，但「進對戰之前雙方要不要確認」沒有形狀：
+沒有房間、沒有確認、沒有倒數、沒有逾時，也沒有「舊票券能不能進新房間」的界線。
+
+### 交付：`MatchRoom.v1`（`src/platform/contracts/matchRoom.js`）
+
+五種狀態：`waiting` / `ready_check` / `confirmed` / `cancelled` / `expired`。
+轉移表寫在契約裡，`transitionRoom` 是唯一入口，非法轉移附中文理由
+（例：「房間無法從『等待就緒』變更為『雙方已確認』」）。
+
+**三條紅線**：
+
+1. **房間由 gateway 開**：`roomId` 由 assignmentId 決定性推導、帶 `issuedBy`。
+   客戶端自造的房間（無簽發者）**拒絕進場**。
+2. **雙方都確認才可進場**：只有一方確認不行；未雙方確認時硬轉 `confirmed` 也擋。
+3. **房間與票券＋指派單綁定**：拿別張票券、票券換新、指派單被抽換，一律拒絕
+   ——**舊票券進不了新房間**。
+
+**確認倒數** 20 秒。逾時後不可再確認、不得進場，理由是中文句子。
+**防重複**：重複確認拒絕（`already_confirmed`）；同一張指派單重複開房得到同一個
+roomId，不會產生第二間。
+
+**mock gateway 擴充**（仍是純函式決定性模擬，不是後端）：
+`openRoom` 簽發房間；`pollRoom` 驅動 `waiting → ready_check`、對手確認（2–8 秒，
+一定小於倒數）、逾時。
+
+**Store**（schemaVersion 8 沿用）：`matchmaking.room`；
+`openMatchRoom` / `pollMatchRoom` / `confirmMatchReady` / `cancelMatchRoom` / `matchRoomView`。
+⚠ `pollMatchRoom` 會先檢查票券——票券被取消／被拒絕／換了新票，房間直接關閉，
+不讓人靠舊票券進場。migration：載入時把殘留的 `waiting` / `ready_check` 作廢。
+
+**UI**：沿用 O4 的共用面板 `MatchQueuePanel`（不另開頁面、不大幅重構）。
+配對成功後顯示房間狀態、**我方／對手兩格確認指示**、倒數（剩 5 秒轉紅）、
+「我方確認」與「取消對戰」；雙方到齊才出現「進入對戰」。
+
+### 驗證（2026-08-04 實跑）
+
+`node tools/check_match_room_o5.mjs` → **45/45 通過**。要害逐項：
+
+- 五種狀態齊全；跳過確認直接進 `confirmed`、終局狀態再變更，全部拒絕。
+- 我方確認後**仍不可進場**；只有對手確認也不行；雙方到齊才自動進 `confirmed`。
+- 逾時後不可再確認、**不得進場**；取消後不得進場，皆附中文原因。
+- 重複確認（我方與對手各驗一次）拒絕；非確認階段不能確認。
+- 同一張指派單重複開房 → 同一個 roomId。
+- **拿別張票券進房間 → 拒絕**；票券換新、指派單被抽換、票券沒有指派單，全部拒絕。
+- **自造房間（無簽發者）→ 拒絕進場**。
+- mock gateway 決定性：同房間重複輪詢逐欄相同。
+- MOBA 與 CS 共用同一套契約，房間彼此獨立。
+
+其餘回歸：`check_matchmaking_o4` 47/47、`check_match_entry_o3` 35/35、
+`check_condition_o2` 30/30、`check_squad_o1` 40/40、`check_recruit_o` 40/40、
+`check_finance_n/n2/n3/n31` 32/35/40/31、`verify.mjs` 5 區段全過、build 通過。
+
+### 未做（刻意）
+
+- 真正的後端、WebSocket、聊天、排行榜 —— 使用者明確指定不做。
+- 對手在 mock 裡**一定會確認**（2–8 秒）；契約支援對手拒絕，但 mock 不模擬，
+  以免本機流程變得不可預測。拒絕路徑由驗證器直接測。
+- **瀏覽器實機驗收未做**：房間面板、雙方確認指示、倒數、逾時與取消、
+  320–430 響應式。

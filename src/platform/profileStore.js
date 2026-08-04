@@ -59,7 +59,11 @@ import {
   TICKET_STATES, createTicket, transitionTicket, isActiveTicket,
   canEnterMatch as canEnterMatchOf, waitedSeconds, stateLabel,
 } from "./contracts/matchmaking.js";
-import { pollGateway } from "./matchmaking/mockGateway.js";
+import { pollGateway, openRoom, pollRoom } from "./matchmaking/mockGateway.js";
+import {
+  ROOM_STATES, transitionRoom, confirmSide, canEnterRoom, roomStateLabel,
+  remainingSeconds, isRoomTerminal,
+} from "./contracts/matchRoom.js";
 import { createRecruitmentTransaction } from "./contracts/recruitment.js";
 import { applyRecruitmentToState } from "./recruit/applyRecruitment.js";
 import {
@@ -154,7 +158,8 @@ const DEFAULT = {
   //  不可能被簽兩次（M O 之前沒有這一道，可以無限簽同一人、無限扣款）。
   recruitment: { signed: {} },
   //  Milestone O4：配對票券。同一隊伍**同時只能有一張有效票券**。
-  matchmaking: { ticket: null },
+  //  O5：比賽房間（由 gateway 開；與票券／指派單綁定）
+  matchmaking: { ticket: null, room: null },
   schemaVersion: PROFILE_SCHEMA_VERSION,
   processedMatchTransactions: {},// S25：冪等帳本 {transactionId: receipt}（防重複發獎）
   inbox: [
@@ -191,12 +196,19 @@ const arr = (v, d) => (Array.isArray(v) ? v : d);
  * 排隊中的票跨 session 沒有意義 ⇒ 作廢；終局狀態原樣保留。
  */
 function normalizeMatchmaking(saved) {
-  const t = saved && typeof saved === "object" ? saved.ticket : null;
-  if (!t || typeof t !== "object") return { ticket: null };
-  if (t.state === "validating" || t.state === "queued") {
-    return { ticket: { ...t, state: "cancelled", reason: "重新載入後配對已中止" } };
-  }
-  return { ticket: t };
+  const src = saved && typeof saved === "object" ? saved : {};
+  const t = src.ticket && typeof src.ticket === "object" ? src.ticket : null;
+  const r = src.room && typeof src.room === "object" ? src.room : null;
+  const ticket = !t ? null
+    : (t.state === "validating" || t.state === "queued")
+      ? { ...t, state: "cancelled", reason: "重新載入後配對已中止" }
+      : t;
+  //  O5：房間同理——跨 session 的確認沒有伺服器會回應，一律作廢
+  const room = !r ? null
+    : (r.state === "waiting" || r.state === "ready_check")
+      ? { ...r, state: "cancelled", reason: "重新載入後房間已關閉" }
+      : r;
+  return { ticket, room };
 }
 function normalizeEconomy(saved, days) {
   const past = Math.max(0, deriveTime(days).week - 1);
@@ -527,7 +539,7 @@ export const useProfileStore = create((set, get) => ({
     //  validating → queued（轉移規則在契約裡，這裡不自己判斷）
     const queued = transitionTicket(made.ticket, TICKET_STATES.queued, { now });
     if (!queued.ok) return { ok: false, ticket: null, errors: queued.errors };
-    set({ matchmaking: { ticket: queued.ticket } });
+    set({ matchmaking: { ticket: queued.ticket, room: null } });
     get().save();
     return { ok: true, ticket: queued.ticket, errors: [] };
   },
@@ -550,7 +562,7 @@ export const useProfileStore = create((set, get) => ({
       ? transitionTicket(ticket, TICKET_STATES.matched, { now, assignment: res.assignment })
       : transitionTicket(ticket, TICKET_STATES.rejected, { now, reason: res.reason });
     if (!next.ok) return { changed: false, ticket, errors: next.errors };
-    set({ matchmaking: { ticket: next.ticket } });
+    set({ matchmaking: { ...(get().matchmaking ?? {}), ticket: next.ticket } });
     get().save();
     return { changed: true, ticket: next.ticket };
   },
@@ -560,15 +572,97 @@ export const useProfileStore = create((set, get) => ({
     if (!isActiveTicket(ticket)) return { ok: false, ticket, errors: [{ code: "not_active", message: "目前沒有進行中的配對" }] };
     const next = transitionTicket(ticket, TICKET_STATES.cancelled, { now });
     if (!next.ok) return { ok: false, ticket, errors: next.errors };
-    set({ matchmaking: { ticket: next.ticket } });
+    set({ matchmaking: { ticket: next.ticket, room: null } });
     get().save();
     return { ok: true, ticket: next.ticket, errors: [] };
   },
   /** 清掉終局票券，回到 idle（畫面上的「重新配對」）。 */
   resetMatchmaking() {
-    set({ matchmaking: { ticket: null } });
+    set({ matchmaking: { ticket: null, room: null } });
     get().save();
     return true;
+  },
+  // ── Milestone O5：比賽房間與雙方確認 ─────────────────────────────────
+  /**
+   * 開房（由 mock gateway 簽發 roomId 與簽發者；客戶端不得自己造房間）。
+   *
+   * **防止重複建立**：同一張指派單推導出同一個 roomId，
+   * 已經有對應房間就直接回傳既有的，不會產生第二間。
+   */
+  openMatchRoom(now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const ticket = mm.ticket ?? null;
+    const cur = mm.room ?? null;
+    if (cur && ticket && cur.assignmentId === ticket.assignment?.assignmentId && !isRoomTerminal(cur)) {
+      return { ok: true, room: cur, errors: [], reused: true };
+    }
+    const made = openRoom({ ticket, now });
+    if (!made.ok) return { ok: false, room: null, errors: made.errors };
+    set({ matchmaking: { ...mm, room: made.room } });
+    get().save();
+    return { ok: true, room: made.room, errors: [], reused: false };
+  },
+  /**
+   * 輪詢房間（本機 mock）：驅動 waiting → ready_check、對手確認、逾時。
+   * ⚠ 票券若已失效（不是 matched）⇒ 房間直接取消，不讓人靠舊票券進場。
+   */
+  pollMatchRoom(now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const room = mm.room ?? null;
+    const ticket = mm.ticket ?? null;
+    if (!room || isRoomTerminal(room)) return { changed: false, room };
+    //  票券失效（被取消／被拒絕／換了新票）⇒ 房間不得繼續
+    if (!ticket || ticket.state !== TICKET_STATES.matched || room.ticketId !== ticket.ticketId) {
+      const dead = transitionRoom(room, ROOM_STATES.cancelled, { now, reason: "票券已失效，房間關閉" });
+      if (dead.ok) { set({ matchmaking: { ...mm, room: dead.room } }); get().save(); }
+      return { changed: dead.ok, room: dead.room ?? room };
+    }
+    const res = pollRoom({ room, now });
+    let next = null;
+    if (res.decision === "start_ready") next = transitionRoom(room, ROOM_STATES.ready_check, { now });
+    else if (res.decision === "opponent_ready") next = confirmSide(room, "opponent", { now });
+    else if (res.decision === "expired") next = transitionRoom(room, ROOM_STATES.expired, { now, reason: res.reason });
+    if (!next || !next.ok) return { changed: false, room, remainingSec: res.remainingSec };
+    set({ matchmaking: { ...mm, room: next.room } });
+    get().save();
+    return { changed: true, room: next.room, remainingSec: res.remainingSec };
+  },
+  /** 我方確認。重複確認會被契約擋下並回中文理由。 */
+  confirmMatchReady(now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const room = mm.room ?? null;
+    const r = confirmSide(room, "us", { now });
+    if (!r.ok) return { ok: false, room, errors: r.errors };
+    set({ matchmaking: { ...mm, room: r.room } });
+    get().save();
+    return { ok: true, room: r.room, errors: [] };
+  },
+  /** 取消房間（我方主動）。取消後不得進場。 */
+  cancelMatchRoom(now = Date.now(), reason = "已取消本次對戰") {
+    const mm = get().matchmaking ?? {};
+    const room = mm.room ?? null;
+    if (!room || isRoomTerminal(room)) return { ok: false, room, errors: [{ code: "not_active", message: "目前沒有進行中的房間" }] };
+    const next = transitionRoom(room, ROOM_STATES.cancelled, { now, reason });
+    if (!next.ok) return { ok: false, room, errors: next.errors };
+    set({ matchmaking: { ...mm, room: next.room } });
+    get().save();
+    return { ok: true, room: next.room, errors: [] };
+  },
+  /** 唯讀：房間狀態 ＋ 倒數 ＋ 能否進場（畫面不自己判規則）。 */
+  matchRoomView(now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const room = mm.room ?? null;
+    const enter = canEnterRoom(room, mm.ticket ?? null);
+    return {
+      room,
+      state: room?.state ?? null,
+      stateLabel: room ? roomStateLabel(room.state) : "尚未建立房間",
+      remainingSec: remainingSeconds(room, now),
+      usReady: !!room?.confirmations?.us,
+      opponentReady: !!room?.confirmations?.opponent,
+      canEnter: enter.ok,
+      blockedReason: enter.ok ? null : enter.message,
+    };
   },
   /** 唯讀：目前票券 ＋ 等待秒數 ＋ 能否進場（畫面不自己判規則）。 */
   matchmakingView(now = Date.now()) {
@@ -650,7 +744,7 @@ export const useProfileStore = create((set, get) => ({
       processedMatchTransactions: {},
       economy: ng.economy,
       recruitment: { signed: {} },
-      matchmaking: { ticket: null },
+      matchmaking: { ticket: null, room: null },
       schemaVersion: PROFILE_SCHEMA_VERSION,
     });
     get().pushInbox({

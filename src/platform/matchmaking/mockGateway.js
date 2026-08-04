@@ -18,6 +18,9 @@
 //  · 拒絕一定附中文原因。
 // ============================================================================
 import { createAssignment, TICKET_STATES } from "../contracts/matchmaking.js";
+import {
+  createRoom, ROOM_STATES, isRoomTerminal, isExpired, remainingSeconds,
+} from "../contracts/matchRoom.js";
 import { validateMatchEntryRequest } from "../contracts/matchEntry.js";
 
 /** 模擬的等待區間（秒）。真伺服器由實際佇列長度決定。 */
@@ -97,4 +100,50 @@ export function pollGateway({ ticket, entryRequest, players = [], now = 0 }) {
       server: "mock-gateway",
     }),
   };
+}
+
+// ── Milestone O5：比賽房間（同樣是決定性模擬，不是後端）────────────────────
+
+/** 對手要花幾秒才會按確認（決定性；真伺服器是真人／AI 的實際反應）。 */
+export function opponentReadyDelay(room) {
+  //  2–8 秒，且一定小於確認倒數 ⇒ mock 情境下對手不會害你逾時
+  return 2 + (hash32(`${room?.roomId}:ready`) % 7);
+}
+
+/**
+ * 由 gateway 開房。**客戶端不得自己造房間**——roomId 與簽發者都由這裡給。
+ * 同一張指派單重複開房會得到同一個 roomId（契約以 assignmentId 推導）。
+ */
+export function openRoom({ ticket, now = 0 }) {
+  if (!ticket || ticket.state !== TICKET_STATES.matched) {
+    return { ok: false, room: null, errors: [{ code: "not_matched", message: "票券尚未配對成功，無法開房" }] };
+  }
+  return createRoom({ assignment: ticket.assignment, ticket, now, server: "mock-gateway" });
+}
+
+/**
+ * 輪詢房間。純函式：只回報「伺服器會怎麼回」，不改狀態。
+ *
+ * @returns {{decision:"waiting"|"start_ready"|"opponent_ready"|"expired"|"none",
+ *            remainingSec:number, reason:string|null}}
+ */
+export function pollRoom({ room, now = 0 }) {
+  if (!room || isRoomTerminal(room)) return { decision: "none", remainingSec: 0, reason: null };
+
+  //  ① 開房後短暫等待就進入確認階段
+  if (room.state === ROOM_STATES.waiting) {
+    return { decision: "start_ready", remainingSec: room.readySeconds, reason: null };
+  }
+  //  ② 確認中：先看逾時，再看對手是否該按確認了
+  if (room.state === ROOM_STATES.ready_check) {
+    if (isExpired(room, now)) {
+      return { decision: "expired", remainingSec: 0, reason: "確認逾時，本次配對已取消" };
+    }
+    const elapsed = Math.floor((now - (room.readyStartedAt ?? now)) / 1000);
+    if (!room.confirmations.opponent && elapsed >= opponentReadyDelay(room)) {
+      return { decision: "opponent_ready", remainingSec: remainingSeconds(room, now), reason: null };
+    }
+    return { decision: "waiting", remainingSec: remainingSeconds(room, now), reason: null };
+  }
+  return { decision: "none", remainingSec: 0, reason: null };
 }
