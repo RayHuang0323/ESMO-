@@ -53,13 +53,16 @@ import { forecastWeeks } from "./economy/forecast.js";
 import { DEFAULT_SCENARIO, SCENARIOS, scenarioById } from "./economy/economyConfig.js";
 import { seedFormLogFromCsHistory } from "./economy/formLog.js";
 import { newGameFinancials } from "./economy/newGame.js";
+import { createRecruitmentTransaction } from "./contracts/recruitment.js";
+import { applyRecruitmentToState } from "./recruit/applyRecruitment.js";
 
 const KEY = "esmo.profile.v1";
 /** persistence schema 版本（migration 用；沿用同一個 localStorage key，不清資料）。
  *  v2 = S25（xp/talentPoints）；v3 = S27（players[].talents 天賦狀態）；
  *  v4 = Milestone E（lineup 先發指派；舊存檔缺欄 → normalizeLineup 回退 identity）；
- *  v5 = Milestone N（economy 週結算帳本；舊存檔缺欄 → 回退空帳本，不補結算過去的週）。 */
-export const PROFILE_SCHEMA_VERSION = 5;
+ *  v5 = Milestone N（economy 週結算帳本；舊存檔缺欄 → 回退空帳本，不補結算過去的週）；
+ *  v6 = Milestone O（recruitment 招募帳本；舊存檔缺欄 → 空帳本，既有選手不回填來源）。 */
+export const PROFILE_SCHEMA_VERSION = 6;
 const canLS = typeof localStorage !== "undefined";
 //  1 萬。定義搬到 economy/units.js（純邏輯模組不能 import 本檔），這裡 re-export
 //  讓既有 `import { WAN } from "platform/profileStore.js"` 的呼叫端不受影響。
@@ -129,6 +132,9 @@ const DEFAULT = {
   //  Milestone N：週結算帳本。settledWeeks 的 key = 累計週次（全域唯一）⇒ 冪等。
   //  N2：scenario 決定基礎營收與營運成本（economyConfig.SCENARIOS）。
   economy: { settledWeeks: {}, lastSettledWeek: 0, scenario: DEFAULT_SCENARIO },
+  //  Milestone O：招募帳本。key = RecruitmentTransaction 的冪等鍵 ⇒ 同一位新秀
+  //  不可能被簽兩次（M O 之前沒有這一道，可以無限簽同一人、無限扣款）。
+  recruitment: { signed: {} },
   schemaVersion: PROFILE_SCHEMA_VERSION,
   processedMatchTransactions: {},// S25：冪等帳本 {transactionId: receipt}（防重複發獎）
   inbox: [
@@ -214,6 +220,13 @@ const load = () => {
       //  ⚠ 刻意**不補結算過去的週**：那會在載入當下憑空扣一大筆薪資，
       //    使用者無從理解。舊存檔從載入後的下一個週結尾開始計費。
       //  N3：沒有 formLog 的存檔以 csHistory 種一次，避免升級後績效獎金莫名歸零。
+      //  Milestone O migration：舊存檔沒有 recruitment ⇒ 空帳本。
+      //  刻意**不回填**既有選手的招募來源：那是編造歷史。舊存檔的選手就是既有選手，
+      //  只是沒有簽約憑證；重複保護對他們無意義（他們本來就不在新秀池裡）。
+      recruitment: saved.recruitment && typeof saved.recruitment === "object"
+        && typeof saved.recruitment.signed === "object"
+        ? { signed: saved.recruitment.signed }
+        : { signed: {} },
       economy: seedFormLogFromCsHistory(
         normalizeEconomy(saved.economy, saved.meta?.days ?? DEFAULT.meta.days),
         arr(saved.csHistory, []),
@@ -416,6 +429,7 @@ export const useProfileStore = create((set, get) => ({
       csHistory: [],
       processedMatchTransactions: {},
       economy: ng.economy,
+      recruitment: { signed: {} },
       schemaVersion: PROFILE_SCHEMA_VERSION,
     });
     get().pushInbox({
@@ -541,41 +555,39 @@ export const useProfileStore = create((set, get) => ({
     return entry;
   },
 
-  /** 簽下新秀：扣款（cost 單位為萬）→ 進 players[] → 發收件匣。回傳 false = 預算不足 / 名額滿。 */
-  signProspect(prospect) {
-    const players = get().players ?? [];
-    if (players.length >= ROSTER_CAP) return false;
-    const cost = (prospect.cost ?? 0) * WAN;
-    if (get().finance.funds < cost) return false;
-    const energy = 100;
-    const player = {
-      id: "r" + uid(),
-      name: prospect.name,
-      heroId: prospect.heroId ?? null,     // 尚未綁定英雄 → Roster 頁顯示未綁定，不亂塞
-      role: prospect.role,
-      status: "預備隊",
-      training: null,
-      lv: 1,
-      xp: 0,                  // S25：新秀從 0 累積總 XP（lv 由 xp 導出）
-      talentPoints: 0,
-      potential: prospect.potential,
-      age: prospect.age,
-      personality: prospect.personality,
-      morale: 80 + Math.floor(Math.random() * 20),
-      energy,
-      condition: conditionFor(energy),
-      contract: 365,
-      salary: Math.max(1, Math.round(prospect.cost / 10)),
-      traits: prospect.traits ?? [],
-      tier: prospect.tier?.grade ?? null,
-      stats: { ...prospect.stats },
-    };
-    set({
-      players: [...players, player],
-      finance: { ...get().finance, funds: get().finance.funds - cost },
-      meta: { ...get().meta, players: players.length + 1 },
+  /**
+   * Milestone O：簽下新秀。**唯一**的招募入口（薄包裝）。
+   *
+   * 純邏輯在 `recruit/applyRecruitment.js`，本函式只負責：
+   * 建交易單 → 套用 → 存檔 → 發收件匣。
+   *
+   * 三道保護（名額／餘額／重複）與冪等都在 reducer 裡，畫面不必自己判。
+   * 回傳 receipt，`receipt.reason` 直接可顯示：
+   *   `roster_full` / `insufficient_funds` / `invalid`，或 `alreadySigned: true`。
+   *
+   * ⚠ M O 之前這裡有兩個問題：沒有呼叫 `save()`（招募重整就消失），
+   *   以及沒有重複保護（同一位新秀可無限簽、無限扣款）。
+   *
+   * @param {object} prospect data/recruitPool.js 的新秀
+   * @param {number|string} poolSeed 新秀池識別（畫面目前的 seed；日後為伺服器池 id）
+   * @returns {object} receipt
+   */
+  signProspect(prospect, poolSeed = 7) {
+    const t = deriveTime(get().meta?.days ?? 1);
+    const tx = createRecruitmentTransaction({
+      poolSeed,
+      prospect,
+      signedAt: { day: t.day, week: t.week, season: t.season },
     });
-    get().pushInbox({ type: "recruit", from: "球探部", subject: `簽下新秀 ${prospect.name}`, text: `簽下新秀 ${prospect.name}（${prospect.role}）· 簽約金 $${prospect.cost}萬` });
-    return true;
+    const { nextState, receipt } = applyRecruitmentToState(get(), tx);
+    if (!nextState) return receipt;          // 未通過保護 或 已簽過 → 完全不寫入
+    set(nextState);
+    get().pushInbox({
+      type: "recruit", from: "球探部",
+      subject: `簽下新秀 ${receipt.name}`,
+      text: `簽下新秀 ${receipt.name}（${receipt.role}）· 簽約金 $${Math.round(receipt.cost / WAN)}萬。目前名單 ${receipt.rosterSize}/${receipt.rosterCap} 人，可至訓練中心安排課程提升能力。`,
+    });
+    get().save();                            // ⚠ M O 之前漏了這一行：招募不會被保存
+    return receipt;
   },
 }));
