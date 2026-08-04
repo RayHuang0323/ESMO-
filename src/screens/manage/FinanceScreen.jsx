@@ -12,7 +12,7 @@
 import React, { useMemo, useState } from "react";
 import { Award, Users, Star, Package, Zap, BarChart2, ArrowUpRight, ArrowDownLeft, TrendingUp } from "lucide-react";
 import { useProfileStore } from "../../platform/profileStore.js";
-import { sponsorById } from "../../data/playerModel.js";
+import { resolveSponsor } from "../../platform/economy/sponsors.js";
 import { useIsMobile } from "../../ui/useViewport.js";
 import ManageFrame from "./ManageFrame.jsx";
 
@@ -101,7 +101,7 @@ export default function FinanceScreen({ onBack }) {
   const wk = useProfileStore((s) => s.currentWeekPreview)();
   const fc = useProfileStore((s) => s.cashForecast)();
   const activeSponsor = useProfileStore((s) => s.activeSponsor);
-  const sponsor = activeSponsor ? sponsorById(activeSponsor.id) : null;
+  const sponsor = activeSponsor ? resolveSponsor(activeSponsor.id) : null;
   const sponsorWeeksLeft = activeSponsor?.weeksLeft ?? 0;
   const isMobile = useIsMobile();
   const [tab, setTab] = useState("overview");

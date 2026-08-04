@@ -20,6 +20,7 @@ import { teamWeeklySalary } from "../src/platform/economy/salary.js";
 import { appendFormEntry, formFromLog, seedFormLogFromCsHistory, FORM_LOG_CAP } from "../src/platform/economy/formLog.js";
 import { SCENARIOS, SPONSOR_SPLIT, FORM } from "../src/platform/economy/economyConfig.js";
 import { deriveTime } from "../src/platform/economy/timeline.js";
+import { newGameFinancials } from "../src/platform/economy/newGame.js";
 import { WAN } from "../src/platform/economy/units.js";
 import { applyProgressToState } from "../src/platform/progress/applyMatchProgress.js";
 import { createMatchProgressTransaction } from "../src/platform/contracts/matchProgressTransaction.js";
@@ -33,19 +34,18 @@ const ck = (name, ok, detail = "") => {
 };
 const wan = (yuan) => (yuan / WAN).toFixed(1);
 
-//  ── 開新局的純狀態（與 profileStore.startNewGame 同一組規則）───────────────
-//  ⚠ 這裡刻意重建一份「新局初始狀態」而不 import profileStore（那會拉進 zustand）。
-//    欄位若與 store 不同步，下面 §1 的斷言會直接抓到（資金／情境／時間都對得上）。
+//  ── 開新局的純狀態 ────────────────────────────────────────────────────────
+//  N3.1 起，「開新局長什麼樣」由 economy/newGame.js 定義，store 與本檔共用同一份
+//  ⇒ 不會出現「驗證器驗了一個現實中不存在的狀態」那種綠燈。
 const newGameState = (scenarioId) => {
-  const sc = SCENARIOS[scenarioId];
-  const t = deriveTime(1);
+  const ng = newGameFinancials(scenarioId);
   return {
-    meta: { days: t.day, week: t.week, season: t.season },
-    finance: { funds: sc.startingFunds * WAN, transactions: [] },
+    meta: { days: ng.time.day, week: ng.time.week, season: ng.time.season },
+    finance: { funds: ng.funds, transactions: [] },
     players: INITIAL_PLAYERS.map((p) => ({ ...p })),
-    activeSponsor: null,
+    activeSponsor: ng.activeSponsor,
     csHistory: [],
-    economy: { settledWeeks: {}, lastSettledWeek: 0, scenario: sc.id, formLog: [] },
+    economy: ng.economy,
     processedMatchTransactions: {},
   };
 };
@@ -78,14 +78,20 @@ console.log("══ Milestone N3：開新局情境 ＋ 統一賽績 ══\n");
   for (const id of Object.keys(SCENARIOS)) {
     const sc = SCENARIOS[id];
     const s = newGameState(id);
+    const ng = newGameFinancials(id);
     const w = buildWeekLines(s);
     const expectSalary = Math.round(salary * WAN);
     const expectOps = Math.round((sc.operatingBase + sc.operatingPerPlayer * INITIAL_PLAYERS.length) * WAN);
     ck(`2) ${sc.name}：薪資與營運成本正確`,
       w.expense === expectSalary + expectOps,
       `薪資 ${wan(expectSalary)}萬 + 營運 ${wan(expectOps)}萬 = ${wan(w.expense)}萬`);
-    ck(`2b) ${sc.name}：收入 = 基礎營收（新局無贊助）`,
-      w.income === sc.baselineWeekly * WAN, `${wan(w.income)}萬`);
+    //  N3.1：新手情境開局附帶扶持贊助 ⇒ 收入不再只有基礎營收。
+    //  期望值一律從設定推導（基礎營收 ＋ 扶持的固定與績效），不寫死數字。
+    const st = ng.starter;
+    const expectIncome = sc.baselineWeekly * WAN
+      + (st ? Math.round(st.weekly * SPONSOR_SPLIT.fixed * WAN) + Math.round(st.weekly * SPONSOR_SPLIT.performance * FORM.neutral * WAN) : 0);
+    ck(`2b) ${sc.name}：收入 = 基礎營收${st ? " ＋ 開局扶持贊助" : "（新局無贊助）"}`,
+      w.income === expectIncome, `${wan(w.income)}萬`);
     //  預測必須與實際結算一致——這是「不另算一套」的驗收
     const fc = forecastWeeks(s, 4);
     const { nextState } = advanceDaysInState(s, 28);

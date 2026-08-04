@@ -33,7 +33,9 @@
 //    是否調整費率屬 Balance 決策（見 CLAUDE.md：Balance 變更需 Ray 核准）。
 // ============================================================================
 import { WAN } from "./units.js";
-import { sponsorById } from "../../data/playerModel.js";
+//  N3.1：贊助解析改用 economy/sponsors.js 的統一入口——除了市集目錄，
+//  還要認得開局扶持方案（rookie_grant），否則新手開局會有合約卻沒有收入。
+import { resolveSponsor } from "./sponsors.js";
 import { deriveTime } from "./timeline.js";
 import { SPONSOR_SPLIT, FORM, scenarioById } from "./economyConfig.js";
 import { teamWeeklySalary } from "./salary.js";
@@ -99,7 +101,7 @@ export function buildWeekLines(state, opts = {}) {
   //  ⚠ 賽事獎金不在這裡發：它由 S25 的 applyMatchProgress 在賽後入帳，
   //    週結算再算一次就是雙重入帳。現金預測另以帳本裡的真實獎金估未來收入。
   if (active && num(active.weeksLeft) > 0) {
-    const sp = sponsorById(active.id);
+    const sp = resolveSponsor(active.id);
     if (sp) {
       const fixed = num(sp.weekly) * SPONSOR_SPLIT.fixed * WAN;
       const perf = num(sp.weekly) * SPONSOR_SPLIT.performance * form * WAN;
@@ -160,7 +162,7 @@ export function settleWeekInState(state, week) {
   let nextSponsor = active;
   if (active && num(active.weeksLeft) > 0) {
     const left = num(active.weeksLeft) - 1;
-    const sp = sponsorById(active.id);
+    const sp = resolveSponsor(active.id);
     if (left <= 0) {
       nextSponsor = null;
       notices.push({

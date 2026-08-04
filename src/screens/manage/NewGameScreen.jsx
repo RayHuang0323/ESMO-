@@ -12,7 +12,8 @@
 // ============================================================================
 import React, { useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
-import { SCENARIOS } from "../../platform/economy/economyConfig.js";
+import { SCENARIOS, SPONSOR_SPLIT, FORM } from "../../platform/economy/economyConfig.js";
+import { resolveSponsor } from "../../platform/economy/sponsors.js";
 import { teamWeeklySalary } from "../../platform/economy/salary.js";
 import { INITIAL_PLAYERS } from "../../data/players.js";
 import { GC } from "../../ui/theme.js";
@@ -49,7 +50,14 @@ export default function NewGameScreen({ onBack, onDone }) {
           const t = TONE[sc.id] ?? TONE.standard;
           const on = picked === sc.id;
           const operating = sc.operatingBase + sc.operatingPerPlayer * INITIAL_PLAYERS.length;
-          const net = sc.baselineWeekly - salary - operating;
+          //  N3.1：情境可能附帶開局扶持贊助（目前只有新手）。起手淨額要把它算進去，
+          //  否則畫面會說新手 −11.7 萬、實際開局卻是 −1.2 萬，數字對不上。
+          //  比例與週結算同一組常數（SPONSOR_SPLIT），戰績以中性值估。
+          const starter = sc.starterSponsor ? resolveSponsor(sc.starterSponsor) : null;
+          const starterIncome = starter
+            ? starter.weekly * (SPONSOR_SPLIT.fixed + SPONSOR_SPLIT.performance * FORM.neutral)
+            : 0;
+          const net = sc.baselineWeekly + starterIncome - salary - operating;
           return (
             <button key={sc.id} onClick={() => setPicked(sc.id)} style={{
               background: on ? `linear-gradient(145deg,${t.color}22,${GC.card})` : GC.card,
@@ -77,8 +85,22 @@ export default function NewGameScreen({ onBack, onDone }) {
                   </div>
                 ))}
               </div>
+              {starter && (
+                <div style={{
+                  marginTop: 8, background: `${starter.color}18`, border: `1px solid ${starter.color}55`,
+                  borderRadius: 9, padding: "7px 9px",
+                }}>
+                  <div style={{ color: starter.color, fontSize: 10.5, fontWeight: 800, marginBottom: 2 }}>
+                    {starter.emoji} 開局附帶「{starter.name}」
+                  </div>
+                  <div style={{ color: GC.gray, fontSize: 9, lineHeight: 1.6 }}>
+                    ${starter.weekly}萬/週 × {starter.weeks} 週（一半固定、一半依戰績）。
+                    到期後不續約，須在期限內談到正式贊助。
+                  </div>
+                </div>
+              )}
               <div style={{ color: GC.gray, fontSize: 9, marginTop: 7 }}>
-                起手週淨額已扣掉種子五人週薪 ${salary}萬，尚未計入贊助與賽事獎金
+                起手週淨額已扣掉種子五人週薪 ${salary}萬{starter ? "、並計入扶持贊助（戰績以中性值估）" : ""}，尚未計入賽事獎金
               </div>
             </button>
           );

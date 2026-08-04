@@ -12,7 +12,7 @@
 // ============================================================================
 import React, { useState } from "react";
 import { useProfileStore } from "../platform/profileStore.js";
-import { sponsorById } from "../data/playerModel.js";
+import { resolveSponsor } from "../platform/economy/sponsors.js";
 import { GC, FONT } from "../ui/theme.js";
 
 const money = (n) => "$" + (n / 10000).toFixed(1) + "萬";
@@ -49,7 +49,7 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
   const wk = profile.currentWeekPreview();
   //  N2：未來四週現金預測（含贊助到期造成的收入斷崖）與資金警告等級
   const fc = profile.cashForecast();
-  const sponsor = profile.activeSponsor ? sponsorById(profile.activeSponsor.id) : null;
+  const sponsor = profile.activeSponsor ? resolveSponsor(profile.activeSponsor.id) : null;
   const modes = [
     { id: "moba", name: "MOBA", emoji: "⚔️", fans: "2041", color: GC.purp, badge: "3 小時內", on: true },
     { id: "cs", name: "CS", emoji: "🎯", fans: "0", color: "#fb923c", badge: "訓練賽", on: true }, // S23：接 CS 完整流程（Prep→Map→Tactic→Loading→Match→Result）

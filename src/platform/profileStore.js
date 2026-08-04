@@ -52,6 +52,7 @@ import { advanceDaysInState, buildWeekLines, recentForm } from "./economy/weekly
 import { forecastWeeks } from "./economy/forecast.js";
 import { DEFAULT_SCENARIO, SCENARIOS, scenarioById } from "./economy/economyConfig.js";
 import { seedFormLogFromCsHistory } from "./economy/formLog.js";
+import { newGameFinancials } from "./economy/newGame.js";
 
 const KEY = "esmo.profile.v1";
 /** persistence schema 版本（migration 用；沿用同一個 localStorage key，不清資料）。
@@ -400,17 +401,21 @@ export const useProfileStore = create((set, get) => ({
   startNewGame(scenarioId) {
     const sc = SCENARIOS[scenarioId];
     if (!sc) return false;
-    const t = deriveTime(1);
+    //  N3.1：新局的財務起點由 economy/newGame.js 決定（含情境附帶的扶持贊助）。
+    //  規則只有一份 ⇒ 驗證器可以驗到**真正會發生**的狀態，不會兩邊漂移。
+    const ng = newGameFinancials(scenarioId);
+    const t = ng.time;
+    const starter = ng.starter;
     set({
       ...DEFAULT,
       players: INITIAL_PLAYERS.map(migratePlayer),
       lineup: { ...DEFAULT_LINEUP },
       meta: { ...DEFAULT.meta, days: t.day, week: t.week, season: t.season },
-      finance: { ...DEFAULT.finance, funds: sc.startingFunds * WAN, transactions: [] },
-      activeSponsor: null,
+      finance: { ...DEFAULT.finance, funds: ng.funds, transactions: [] },
+      activeSponsor: ng.activeSponsor,
       csHistory: [],
       processedMatchTransactions: {},
-      economy: { settledWeeks: {}, lastSettledWeek: 0, scenario: sc.id, formLog: [] },
+      economy: ng.economy,
       schemaVersion: PROFILE_SCHEMA_VERSION,
     });
     get().pushInbox({
@@ -418,6 +423,13 @@ export const useProfileStore = create((set, get) => ({
       subject: `新賽季開始 · ${sc.name}`,
       text: `已以「${sc.name}」情境開始新局：起始資金 $${sc.startingFunds}萬、基礎營收 $${sc.baselineWeekly}萬/週。祝好運。`,
     });
+    if (starter) {
+      get().pushInbox({
+        type: "sponsor", from: starter.name,
+        subject: `扶持合約成立 · ${starter.weeks} 週`,
+        text: `${starter.name}提供為期 ${starter.weeks} 週、每週 $${starter.weekly}萬 的開局扶持（一半固定、一半依戰績）。到期後不續約，請在期限內談到正式贊助。`,
+      });
+    }
     get().save();
     return true;
   },

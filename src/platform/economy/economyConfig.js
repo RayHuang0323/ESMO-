@@ -64,6 +64,10 @@ export const SCENARIOS = Object.freeze({
     operatingBase: 3,         // 固定營運成本 萬／週
     operatingPerPlayer: 0.5,  // 每名選手的營運成本 萬／週
     startingFunds: 60,        // 起始資金 萬
+    //  N3.1：開局自動附帶的扶持贊助（定義在 economy/sponsors.js，不進贊助市集）。
+    //  沒有它的話新手每週淨額 −11.7 萬、約 5 週見底，開局壓力來得太早。
+    //  有了它是 −1.2 萬／週（戰績 50%），8 週到期後才回到原本的壓力。
+    starterSponsor: "rookie_grant",
   }),
   standard: Object.freeze({
     id: "standard", name: "一般戰隊",
