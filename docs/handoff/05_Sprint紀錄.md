@@ -4962,3 +4962,72 @@ MOBA 與 CS 兩個賽前頁共用（不各寫一份判斷與版面）：
   要保留送單歷史等有後端再說（現在存了也只是本機資料）。
 - **瀏覽器實機驗收未做**：申請面板在兩個賽前頁的版面、展開明細、
   320–430 響應式。
+
+## Milestone O4（2026-08-04）— 線上配對票券與等待狀態
+
+同分支 `milestone-n-finance`。**未 merge 回 main。**
+
+### 定位
+
+O3 產生了出賽申請單，但「按下配對之後發生什麼事」沒有形狀：沒有排隊狀態、
+沒有等待、沒有取消、沒有拒絕理由，也沒有「對手由誰決定」的界線。O4 補的就是這一段。
+
+### 交付
+
+**`MatchmakingTicket.v1`**（`src/platform/contracts/matchmaking.js`）
+
+六種狀態：`idle` / `validating` / `queued` / `matched` / `cancelled` / `rejected`。
+**轉移規則寫在契約裡**，畫面與 Store 都不得自己判斷——
+`transitionTicket` 是唯一入口，非法轉移一律拒絕並附中文理由
+（例：「無法從『驗證中』變更為『已配對』」）。
+`ticketId` 由 O3 申請單的 transactionId 決定性推導 ⇒ 重複建票同一個 id。
+
+**`MatchAssignment.v1`** —— 配對結果**只能由 gateway 簽發**。契約明確擋掉：
+
+- 夾帶比賽結果（`winner` / `result` / `score` / `rewards` / `mvp` / `kills` / `outcome`）
+- 對手夾帶戰力數值（`power` / `stats` / `rating` / `lv`）
+- 指派單與票券不符、缺對手、缺種子、未標明簽發者
+
+**`src/platform/matchmaking/mockGateway.js`** —— 本機**決定性**模擬，不是後端。
+等待秒數（3–9s）、對手、對戰種子全部由 ticketId 雜湊推導 ⇒ 驗證器驗得動。
+**每次輪詢都用當下的名單重新驗證資格**：排隊中受傷、被改成未登錄、離隊，
+一律 `rejected` 並附中文原因。日後換成真伺服器只要換掉這一支。
+
+**Store**（schemaVersion 7 → 8）：`matchmaking.ticket` 單一票券；
+`enqueueMatch` / `pollMatchmaking` / `cancelMatchmaking` / `resetMatchmaking` /
+`matchmakingView`。**同一隊伍同時只能有一張有效票券**——重複按不會產生第二張。
+migration：載入時把殘留的 `validating` / `queued` 作廢成 `cancelled`
+（沒有伺服器會回應一張跨 session 的票，讓玩家看到永遠不會有結果的排隊更糟）。
+
+**UI**：新增共用元件 `src/screens/common/MatchQueuePanel.jsx`，
+MOBA 與 CS 兩個賽前頁共用同一套流程與版面（不新增第二套資料來源）：
+排隊中顯示等待計時、模式、隊伍版本、票券碼與三點等待動畫＋取消鈕；
+配對成功顯示對手、種子、簽發者與「進入對戰」；被拒絕顯示中文原因並可重新配對。
+
+### 驗證（2026-08-04 實跑）
+
+`node tools/check_matchmaking_o4.mjs` → **47/47 通過**。要害逐項：
+
+- 六種狀態齊全；非法轉移（終局狀態再變更、跳過中間狀態）全部拒絕。
+- **取消後不可進場**、**被拒絕後不可進場**、已配對但指派單被抽掉也不可進場。
+- 五種夾帶比賽結果的指派單逐一拒絕；對手夾帶戰力數值拒絕。
+- mock gateway 決定性：同票券重複輪詢逐欄相同。
+- **排隊期間資格改變 → 拒絕**：受傷／未登錄／離隊各驗一次，
+  且不必等到時間到就會被擋。
+- MOBA 與 CS 走同一套契約與狀態，票券彼此獨立。
+
+⚠ 驗證器抓到契約的一個真漏洞：`Number(null)` 是 `0`，
+所以原本的 `Number.isFinite(Number(a.seed))` 會讓 `seed: null` 矇混過關。
+已改為檢查型別（`typeof a.seed !== "number"`）。
+
+其餘回歸：`check_match_entry_o3` 35/35、`check_condition_o2` 30/30、
+`check_squad_o1` 40/40、`check_recruit_o` 40/40、
+`check_finance_n/n2/n3/n31` 32/35/40/31、`verify.mjs` 5 區段全過、build 通過。
+
+### 未做（刻意）
+
+- 真正的後端、WebSocket、排行榜 —— 使用者明確指定不做。
+- 輪詢目前由畫面的 1 秒計時器驅動；接上真伺服器改成訂閱推播即可，
+  狀態流程與版面都不必改。
+- **瀏覽器實機驗收未做**：排隊面板在兩個賽前頁的版面、等待動畫、
+  取消與重新配對、320–430 響應式。

@@ -24,6 +24,7 @@ import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { ENGINE_SEATS, SEAT_CODE, SEAT_LANE_ZH, seatPlayers, seatOfPlayer } from "../../platform/contracts/matchLineup.js";
 import MatchEntryPanel from "../common/MatchEntryPanel.jsx";
+import MatchQueuePanel from "../common/MatchQueuePanel.jsx";
 import { heroSourceContext, heroSourceFor, HERO_SOURCES as HERO_SRC } from "../../battle/moba/mobaHeroSource.js";
 import { GC } from "../../ui/theme.js";
 
@@ -202,6 +203,8 @@ export default function LineupScreen({ onNext, onBack }) {
       <Frame title="賽前配置" sub="LINEUP · 五路先發陣容" onBack={onBack} onNext={onNext} nextLabel="確認陣容 → 配對" nextDisabled={!check.ok}>
         {/* Milestone O3：出賽申請面板（阻擋理由、自動填入、提交內容都在裡面）*/}
         <MatchEntryPanel mode="moba" onAutoFill={() => autoFillLineup("moba")} />
+        {/* Milestone O4：配對票券與等待狀態（與 CS 共用同一套流程） */}
+        <MatchQueuePanel mode="moba" canQueue={check.ok} onReady={onNext} />
         <div style={{ width: "100%", maxWidth: 420, padding: "0 12px", boxSizing: "border-box" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ fontWeight: 900, color: GC.blueL, fontSize: 13 }}>{TEAMS.blue.emoji} {TEAMS.blue.name} 先發五人</div>

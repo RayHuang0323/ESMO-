@@ -15,6 +15,7 @@ import React, { useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { CS_SEATS } from "../../platform/contracts/matchSquad.js";
 import MatchEntryPanel from "../common/MatchEntryPanel.jsx";
+import MatchQueuePanel from "../common/MatchQueuePanel.jsx";
 import { calcPower, bestPositions, personalityById } from "../../data/playerModel.js";
 import { MOBA2FPS, FPS_ROLE_ZH } from "../../battle/fps/fpsRoster.js";
 import PlayerFace from "../../ui/PlayerFace.jsx";
@@ -97,6 +98,8 @@ export default function CsPrepScreen({ onNext, onBack }) {
               </div>
               {/* Milestone O3：出賽申請面板（阻擋理由、自動填入、提交內容都在裡面）*/}
               <MatchEntryPanel mode="cs" onAutoFill={() => autoFillLineup("cs")} />
+              {/* Milestone O4：配對票券與等待狀態（與 MOBA 共用同一套流程） */}
+              <MatchQueuePanel mode="cs" canQueue={check.ok} onReady={onNext} />
             </div>
 
             <button onClick={onNext} disabled={!check.ok} style={{ width: "100%", background: check.ok ? `linear-gradient(135deg,${ACC},${ACC}aa)` : "rgba(255,255,255,0.06)", border: "none", borderRadius: 14, padding: "16px", cursor: check.ok ? "pointer" : "not-allowed", color: check.ok ? "#fff" : GC.gray, fontSize: 16, fontWeight: 900 }}>🔍 配對對手 · 開始比賽</button>

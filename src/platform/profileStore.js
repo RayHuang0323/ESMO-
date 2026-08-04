@@ -55,6 +55,11 @@ import { seedFormLogFromCsHistory } from "./economy/formLog.js";
 import { newGameFinancials } from "./economy/newGame.js";
 import { applyDailyRecovery, conditionSummary } from "./condition/playerCondition.js";
 import { createMatchEntryRequest, validateMatchEntryRequest } from "./contracts/matchEntry.js";
+import {
+  TICKET_STATES, createTicket, transitionTicket, isActiveTicket,
+  canEnterMatch as canEnterMatchOf, waitedSeconds, stateLabel,
+} from "./contracts/matchmaking.js";
+import { pollGateway } from "./matchmaking/mockGateway.js";
 import { createRecruitmentTransaction } from "./contracts/recruitment.js";
 import { applyRecruitmentToState } from "./recruit/applyRecruitment.js";
 import {
@@ -69,8 +74,10 @@ const KEY = "esmo.profile.v1";
  *  v5 = Milestone N（economy 週結算帳本；舊存檔缺欄 → 回退空帳本，不補結算過去的週）；
  *  v6 = Milestone O（recruitment 招募帳本；舊存檔缺欄 → 空帳本，既有選手不回填來源）；
  *  v7 = Milestone O1（csLineup CS 出賽陣容 + players[].rosterTier 名單分層；
- *       舊存檔缺欄 → csLineup 全空、rosterTier 由既有 status 推導，不把人踢出名單）。 */
-export const PROFILE_SCHEMA_VERSION = 7;
+ *       舊存檔缺欄 → csLineup 全空、rosterTier 由既有 status 推導，不把人踢出名單）；
+ *  v8 = Milestone O4（matchmaking 配對票券；載入時把殘留的排隊中票券作廢，
+ *       因為沒有伺服器會回應一張跨 session 的票）。 */
+export const PROFILE_SCHEMA_VERSION = 8;
 const canLS = typeof localStorage !== "undefined";
 //  1 萬。定義搬到 economy/units.js（純邏輯模組不能 import 本檔），這裡 re-export
 //  讓既有 `import { WAN } from "platform/profileStore.js"` 的呼叫端不受影響。
@@ -146,6 +153,8 @@ const DEFAULT = {
   //  Milestone O：招募帳本。key = RecruitmentTransaction 的冪等鍵 ⇒ 同一位新秀
   //  不可能被簽兩次（M O 之前沒有這一道，可以無限簽同一人、無限扣款）。
   recruitment: { signed: {} },
+  //  Milestone O4：配對票券。同一隊伍**同時只能有一張有效票券**。
+  matchmaking: { ticket: null },
   schemaVersion: PROFILE_SCHEMA_VERSION,
   processedMatchTransactions: {},// S25：冪等帳本 {transactionId: receipt}（防重複發獎）
   inbox: [
@@ -177,6 +186,18 @@ const arr = (v, d) => (Array.isArray(v) ? v : d);
  *   · lastSettledWeek 設為「載入時已結束的最後一週」⇒ 之後推進天數時，
  *     `advanceDaysInState` 只會結算真正新跨過的週，不會回頭補。
  */
+/**
+ * Milestone O4：配對票券的 migration。
+ * 排隊中的票跨 session 沒有意義 ⇒ 作廢；終局狀態原樣保留。
+ */
+function normalizeMatchmaking(saved) {
+  const t = saved && typeof saved === "object" ? saved.ticket : null;
+  if (!t || typeof t !== "object") return { ticket: null };
+  if (t.state === "validating" || t.state === "queued") {
+    return { ticket: { ...t, state: "cancelled", reason: "重新載入後配對已中止" } };
+  }
+  return { ticket: t };
+}
 function normalizeEconomy(saved, days) {
   const past = Math.max(0, deriveTime(days).week - 1);
   if (!saved || typeof saved !== "object") {
@@ -237,6 +258,10 @@ const load = () => {
       //  Milestone O migration：舊存檔沒有 recruitment ⇒ 空帳本。
       //  刻意**不回填**既有選手的招募來源：那是編造歷史。舊存檔的選手就是既有選手，
       //  只是沒有簽約憑證；重複保護對他們無意義（他們本來就不在新秀池裡）。
+      //  Milestone O4 migration：跨 session 的排隊沒有意義（沒有伺服器會回應它），
+      //  載入時一律把 validating / queued 作廢成 cancelled，不讓玩家看到一張永遠
+      //  不會有結果的票。已配對／已取消／已拒絕的票原樣保留（純顯示）。
+      matchmaking: normalizeMatchmaking(saved.matchmaking),
       recruitment: saved.recruitment && typeof saved.recruitment === "object"
         && typeof saved.recruitment.signed === "object"
         ? { signed: saved.recruitment.signed }
@@ -480,6 +505,84 @@ export const useProfileStore = create((set, get) => ({
       context: { teamId: get().team?.tag ?? null, teamName: get().team?.name ?? null, day: t.day, week: t.week, season: t.season },
     });
   },
+  // ── Milestone O4：配對票券 ───────────────────────────────────────────
+  /**
+   * 排隊。先產生 O3 申請單並驗證，通過才建票並進入 queued。
+   *
+   * **同一隊伍同時只能有一張有效票券**（validating / queued）——
+   * 重複按不會產生第二張，直接回傳既有票券。
+   *
+   * @returns {{ok:boolean, ticket:object|null, errors:Array}}
+   */
+  enqueueMatch(mode = "moba", now = Date.now()) {
+    const cur = get().matchmaking?.ticket ?? null;
+    if (isActiveTicket(cur)) {
+      return { ok: false, ticket: cur, errors: [{ code: "already_queued", message: `已有一張進行中的票券（${stateLabel(cur.state)}），請先取消` }] };
+    }
+    const entry = get().matchEntry(mode);
+    if (!entry.ok) return { ok: false, ticket: null, errors: entry.errors };
+
+    const made = createTicket(entry.request, { now });
+    if (!made.ok) return { ok: false, ticket: null, errors: made.errors };
+    //  validating → queued（轉移規則在契約裡，這裡不自己判斷）
+    const queued = transitionTicket(made.ticket, TICKET_STATES.queued, { now });
+    if (!queued.ok) return { ok: false, ticket: null, errors: queued.errors };
+    set({ matchmaking: { ticket: queued.ticket } });
+    get().save();
+    return { ok: true, ticket: queued.ticket, errors: [] };
+  },
+  /**
+   * 輪詢閘道（本機 mock）。queued 才有作用。
+   * 每次輪詢都會用**當下的名單**重新驗證資格 ⇒ 排隊中受傷或被改成未登錄會被拒絕。
+   */
+  pollMatchmaking(now = Date.now()) {
+    const ticket = get().matchmaking?.ticket ?? null;
+    if (!ticket || ticket.state !== TICKET_STATES.queued) return { changed: false, ticket };
+    const entry = get().matchEntry(ticket.mode);
+    const res = pollGateway({
+      ticket,
+      entryRequest: entry.request,
+      players: get().players ?? [],
+      now,
+    });
+    if (res.decision === "waiting") return { changed: false, ticket, etaSec: res.etaSec };
+    const next = res.decision === "matched"
+      ? transitionTicket(ticket, TICKET_STATES.matched, { now, assignment: res.assignment })
+      : transitionTicket(ticket, TICKET_STATES.rejected, { now, reason: res.reason });
+    if (!next.ok) return { changed: false, ticket, errors: next.errors };
+    set({ matchmaking: { ticket: next.ticket } });
+    get().save();
+    return { changed: true, ticket: next.ticket };
+  },
+  /** 取消排隊。取消之後**不得**直接進入對戰（canEnterMatch 會擋）。 */
+  cancelMatchmaking(now = Date.now()) {
+    const ticket = get().matchmaking?.ticket ?? null;
+    if (!isActiveTicket(ticket)) return { ok: false, ticket, errors: [{ code: "not_active", message: "目前沒有進行中的配對" }] };
+    const next = transitionTicket(ticket, TICKET_STATES.cancelled, { now });
+    if (!next.ok) return { ok: false, ticket, errors: next.errors };
+    set({ matchmaking: { ticket: next.ticket } });
+    get().save();
+    return { ok: true, ticket: next.ticket, errors: [] };
+  },
+  /** 清掉終局票券，回到 idle（畫面上的「重新配對」）。 */
+  resetMatchmaking() {
+    set({ matchmaking: { ticket: null } });
+    get().save();
+    return true;
+  },
+  /** 唯讀：目前票券 ＋ 等待秒數 ＋ 能否進場（畫面不自己判規則）。 */
+  matchmakingView(now = Date.now()) {
+    const ticket = get().matchmaking?.ticket ?? null;
+    const enter = canEnterMatchOf(ticket);
+    return {
+      ticket,
+      state: ticket?.state ?? TICKET_STATES.idle,
+      stateLabel: stateLabel(ticket?.state ?? TICKET_STATES.idle),
+      waitedSec: waitedSeconds(ticket, now),
+      canEnter: enter.ok,
+      enterBlockedReason: enter.ok ? null : enter.message,
+    };
+  },
   /** O3：以本地名單驗證一張申請單（模擬伺服器端會做的事）。 */
   verifyMatchEntry(req) { return validateMatchEntryRequest(req, get().players ?? []); },
   /**
@@ -547,6 +650,7 @@ export const useProfileStore = create((set, get) => ({
       processedMatchTransactions: {},
       economy: ng.economy,
       recruitment: { signed: {} },
+      matchmaking: { ticket: null },
       schemaVersion: PROFILE_SCHEMA_VERSION,
     });
     get().pushInbox({
