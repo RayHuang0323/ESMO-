@@ -17,6 +17,7 @@ import {
 import { calculateLevelProgress } from "../../platform/progress/playerLevel.js";
 import { PlayerAvatar } from "../../ui/PlayerFace.jsx";
 import { withDerivedStats } from "../../platform/talents/playerDerivedStats.js";
+import { ROSTER_TIERS, tierOf } from "../../platform/contracts/matchSquad.js";
 import { GC } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
 
@@ -36,6 +37,7 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
   const renamePlayer = useProfileStore((s) => s.renamePlayer);
   const setPlayerRole = useProfileStore((s) => s.setPlayerRole);
   const setPlayerStatus = useProfileStore((s) => s.setPlayerStatus);
+  const setRosterTier = useProfileStore((s) => s.setRosterTier);
   const [filter, setFilter] = useState("全部");
   const [selId, setSelId] = useState(null);
   const [editName, setEditName] = useState(false);
@@ -198,15 +200,24 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
                   })}
                 </div>
 
-                <div style={{ color: GC.gray, fontSize: 9, marginBottom: 5 }}>出賽狀態</div>
+                {/* Milestone O1：名單分層（一隊／替補／未登錄）。
+                    未登錄不可出賽——設為未登錄時，若他正坐在席位上會一併被移除，
+                    避免「不能上場卻還在陣容裡」的矛盾狀態。 */}
+                <div style={{ color: GC.gray, fontSize: 9, marginBottom: 5 }}>名單分層</div>
                 <div style={{ display: "flex", gap: 4 }}>
-                  {["主力", "預備隊"].map((st) => {
-                    const isCur = (sel.status || "預備隊") === st;
+                  {Object.values(ROSTER_TIERS).map((t) => {
+                    const isCur = tierOf(sel) === t.id;
+                    const c = t.id === "active" ? GC.green : t.id === "bench" ? GC.blue : GC.gray;
                     return (
-                      <button key={st} onClick={() => setPlayerStatus(sel.id, st)}
-                        style={{ flex: 1, padding: "6px 4px", borderRadius: 8, border: `1px solid ${isCur ? GC.green : "rgba(255,255,255,0.08)"}`, background: isCur ? `${GC.green}22` : "transparent", cursor: "pointer", color: isCur ? GC.green : "#d4d4d8", fontSize: 10, fontWeight: 700 }}>{st}</button>
+                      <button key={t.id} onClick={() => setRosterTier(sel.id, t.id)}
+                        style={{ flex: 1, padding: "7px 4px", borderRadius: 8, border: `1px solid ${isCur ? c : "rgba(255,255,255,0.08)"}`, background: isCur ? `${c}22` : "transparent", cursor: "pointer", color: isCur ? c : "#d4d4d8", fontSize: 10, fontWeight: 700 }}>
+                        {t.label}
+                      </button>
                     );
                   })}
+                </div>
+                <div style={{ color: GC.gray, fontSize: 8.5, marginTop: 5, lineHeight: 1.6 }}>
+                  一隊與替補都可被指派到出賽席位；未登錄不可出賽。
                 </div>
               </div>
 

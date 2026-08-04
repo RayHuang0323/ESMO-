@@ -27,7 +27,9 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
   const [seed] = useState(() => config?.seed ?? ((Date.now() & 0xffff) | 1));
   const mapKey = config?.mapKey ?? CS_MAP_KEYS[seed % CS_MAP_KEYS.length];
   const mapName = config?.mapName ?? csMapByKey(mapKey)?.name ?? mapKey;
-  const roster = useMemo(() => toFpsRoster(players), [players]);
+  //  Milestone O1：以**出賽陣容**建立引擎名單（誰上場不再看陣列順序）
+  const csLineup = useProfileStore((s) => s.csLineup);
+  const roster = useMemo(() => toFpsRoster(players, csLineup), [players, csLineup]);
   const [result, setResult] = useState(null); // 引擎原生 MatchResult
 
   const csResult = useMemo(() => (result ? toCsMatchResult(result, {

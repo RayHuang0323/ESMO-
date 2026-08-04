@@ -4766,3 +4766,64 @@ React 整棵樹卸載 ⇒ 白畫面。
 ⇒ 結論：**UI 改動不能只靠 build 綠燈就宣稱完成**（03_開發規範 早有此條，
 本輪違反了）。已在回報中列為「未經瀏覽器實測」，但仍應在交付前自行點過一次。
 是否導入 ESLint（至少 `no-undef`）列為待決策項。
+
+## Milestone O1（2026-08-04）— 隊伍名單與出賽陣容閉環
+
+同分支 `milestone-n-finance`。**未 merge 回 main。**
+
+### 動工前的現況分析
+
+| 面向 | 現況 |
+|---|---|
+| MOBA 陣容 | ✅ Milestone E 已有 `lineup`（席位→playerId）＋ `LineupScreen` 指派＋回寫 `playerId` |
+| CS 陣容 | ❌ **完全沒有**——`CsPrepScreen` 拿 `status === "主力"` 的前五個，`toFpsRoster` 再用非主力遞補。誰上場看陣列順序，位置不符照上 |
+| 名單分層 | ❌ 只有 `status`（"主力"/"預備隊"）兩種字串，沒有「未登錄」概念 |
+| 出賽阻擋 | ❌ 不檢查。CS 只擋「不足 5 人」，MOBA 完全不擋 |
+| 伺服器可驗證性 | ❌ 沒有提交契約 |
+
+### 交付
+
+**契約**（`src/platform/contracts/matchSquad.js`）— `MatchSquad.v1`：
+
+- **名單分層** `ROSTER_TIERS`：`active`（一隊）／`bench`（替補）可出賽，
+  `unlisted`（未登錄）不可。舊存檔由 `status` 推導，**不把任何人踢出名單**。
+- `validateSquad()` 產生**可直接顯示的中文理由**，不是布林值：
+  `empty_seat` / `unknown_player` / `duplicate_player` / `ineligible` / `role_mismatch`。
+  位置不符預設是**警告**（允許刻意換位），`strictRole` 時升級為阻擋。
+- `createSquadSubmission()` — **只含 playerId 與席位，刻意不帶任何數值**。
+  這是「不信任前端提交的數值」的落實：伺服器拿 playerId 自己查真實資料。
+  `validateSquadSubmission()` 會明確拒絕夾帶 `stats/power/tough/lv/rating` 的提交單。
+- `autoFillSquad()` — 一隊優先、定位相符優先；未登錄永遠不填。
+
+**CS 陣容**：新增 `csLineup`（f1–f5，對齊 `MOBA2FPS` 的定位對位），
+`toFpsRoster(players, csLineup)` **依陣容取人**，缺人回 `null`（不虛構陣容）。
+沒有陣容時退回舊行為，舊存檔與既有 fixture 不受影響。
+
+**Store**（schemaVersion 6 → 7）：`csLineup` ＋ `players[].rosterTier`；
+新增 `setRosterTier` / `setCsSeat` / `autoFillLineup` / `squadCheck` / `squadSubmission`。
+把人設為未登錄時，會**一併把他從兩份陣容移除**——否則會留下「不能上場卻還坐在
+席位上」的矛盾，等到出賽才報錯太晚。
+
+**UI**：
+- `RosterScreen` 的「主力／預備隊」改為三層分層鈕（一隊／替補／未登錄）＋說明。
+- `LineupScreen`（MOBA）與 `CsPrepScreen`（CS）加上**出賽閘門**：
+  不合法就停用出賽鈕，並逐條列出理由，附「⚡ 自動填入」一鍵修復。
+  位置不符另以琥珀色警告呈現（仍可出賽）。
+
+### 驗證（2026-08-04 實跑）
+
+- `node tools/check_squad_o1.mjs` → **40/40 通過**。含五個要害：
+  分層與舊存檔推導、五種阻擋理由（訊息是中文不是錯誤碼）、
+  MOBA/CS 陣容獨立且都指回 `players[]`、
+  **CS 引擎名單依陣容取人而非陣列順序**、
+  **賽後 XP 寫到實際出賽的 playerId**（席位換成替補 p6 ⇒ 寫給 p6，不是 p1 也不是席位 id）、
+  提交單無數值且夾帶數值一律拒絕、自動填入不碰未登錄且零位置警告。
+- `check_recruit_o` 40/40、`check_finance_n/n2/n3/n31` 32/35/40/31、
+  `verify.mjs --only=progress25,talent27,experience26,cs23,build` 5/5。
+
+### 未做（刻意）
+
+- 轉會市場、拍賣、即時 PvP 配對、後端連線 —— 使用者明確指定不做。
+- CS 陣容目前**沒有專屬的指派畫面**：可用「自動填入」或先在 MOBA 側調整；
+  獨立的 CS 指派 UI 列為後續。
+- **瀏覽器實機驗收未做**：三層分層鈕、兩個出賽閘門、自動填入、320–430 響應式。

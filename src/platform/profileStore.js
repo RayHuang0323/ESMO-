@@ -55,14 +55,20 @@ import { seedFormLogFromCsHistory } from "./economy/formLog.js";
 import { newGameFinancials } from "./economy/newGame.js";
 import { createRecruitmentTransaction } from "./contracts/recruitment.js";
 import { applyRecruitmentToState } from "./recruit/applyRecruitment.js";
+import {
+  CS_SEATS, ROSTER_TIERS, tierOf, validateSquad, createSquadSubmission,
+  normalizeCsLineup, autoFillSquad,
+} from "./contracts/matchSquad.js";
 
 const KEY = "esmo.profile.v1";
 /** persistence schema 版本（migration 用；沿用同一個 localStorage key，不清資料）。
  *  v2 = S25（xp/talentPoints）；v3 = S27（players[].talents 天賦狀態）；
  *  v4 = Milestone E（lineup 先發指派；舊存檔缺欄 → normalizeLineup 回退 identity）；
  *  v5 = Milestone N（economy 週結算帳本；舊存檔缺欄 → 回退空帳本，不補結算過去的週）；
- *  v6 = Milestone O（recruitment 招募帳本；舊存檔缺欄 → 空帳本，既有選手不回填來源）。 */
-export const PROFILE_SCHEMA_VERSION = 6;
+ *  v6 = Milestone O（recruitment 招募帳本；舊存檔缺欄 → 空帳本，既有選手不回填來源）；
+ *  v7 = Milestone O1（csLineup CS 出賽陣容 + players[].rosterTier 名單分層；
+ *       舊存檔缺欄 → csLineup 全空、rosterTier 由既有 status 推導，不把人踢出名單）。 */
+export const PROFILE_SCHEMA_VERSION = 7;
 const canLS = typeof localStorage !== "undefined";
 //  1 萬。定義搬到 economy/units.js（純邏輯模組不能 import 本檔），這裡 re-export
 //  讓既有 `import { WAN } from "platform/profileStore.js"` 的呼叫端不受影響。
@@ -126,6 +132,9 @@ const DEFAULT = {
   players: INITIAL_PLAYERS.map(migratePlayer),   // S25：種子名單也要有 xp/talentPoints
   // Milestone E：先發指派（引擎席位 b1–b5 → playerId）。預設 identity ⇒ 與 E 之前相同。
   lineup: { ...DEFAULT_LINEUP },
+  //  Milestone O1：CS 出賽陣容（f1–f5）。CS 之前沒有陣容概念——直接拿
+  //  `status === "主力"` 的前五個，隱式且無驗證。現在與 MOBA 一樣是明確指派。
+  csLineup: normalizeCsLineup(null, null),
   activeSponsor: null,           // {id, weeksLeft, signedWeek} — Legacy：一次只能有一家
   scouted: {},                   // {prospectId: 偵查等級 0–2}
   csHistory: [],                 // S23：CS 訓練賽紀錄（CsMatchResult.v1，最新在前，上限 30）
@@ -207,6 +216,9 @@ const load = () => {
       players,
       // Milestone E migration：舊存檔沒有 lineup ⇒ 回退 identity（b1→b1…）⇒ 行為不變
       lineup: normalizeLineup(saved.lineup, players),
+      //  Milestone O1 migration：舊存檔沒有 csLineup ⇒ 全空（出賽前會被擋下並
+      //  提示去指派）。刻意不自動填：憑空決定誰上場比擋下來更糟。
+      csLineup: normalizeCsLineup(saved.csLineup, players),
       schemaVersion: PROFILE_SCHEMA_VERSION,
       processedMatchTransactions:
         saved.processedMatchTransactions && typeof saved.processedMatchTransactions === "object"
@@ -377,6 +389,79 @@ export const useProfileStore = create((set, get) => ({
   },
   /** 舊名保留：訓練頁與 Legacy 呼叫端沿用，行為 = 推進一天（含週結算）。 */
   advanceTrainingDay() { return get().advanceDay(1); },
+  // ── Milestone O1：名單分層與出賽陣容 ──────────────────────────────────
+  /**
+   * 設定選手的名單分層：`active`（一隊）／`bench`（替補）／`unlisted`（未登錄）。
+   *
+   * 未登錄的選手**不可出賽**（`validateSquad` 會擋）。若把一位正在席位上的選手
+   * 設為未登錄，這裡順手把他從兩份陣容中移除——否則會留下一個「合約上不能上場、
+   * 卻還坐在席位上」的矛盾狀態，出賽時才報錯太晚。
+   *
+   * 同時維護 Legacy 的 `status` 欄位（"主力"/"預備隊"），
+   * 讓既有畫面與 CS 舊路徑不會突然看不懂這個人。
+   */
+  setRosterTier(playerId, tier) {
+    if (!ROSTER_TIERS[tier]) return false;
+    const players = (get().players ?? []).map((p) =>
+      p.id === playerId
+        ? { ...p, rosterTier: tier, status: tier === "active" ? "主力" : p.status === "主力" ? "預備隊" : (p.status || "預備隊") }
+        : p);
+    const drop = (map, seats) => Object.fromEntries(
+      seats.map((seat) => [seat, tier === "unlisted" && map?.[seat] === playerId ? null : (map?.[seat] ?? null)]));
+    set({
+      players,
+      lineup: normalizeLineup(drop(get().lineup, ENGINE_SEATS), players),
+      csLineup: normalizeCsLineup(drop(get().csLineup, CS_SEATS), players),
+    });
+    get().save();
+    return true;
+  },
+  /** 指派 CS 席位（與 MOBA 的 setLineupSeat 對稱；同一人不可佔兩席）。 */
+  setCsSeat(seat, playerId) {
+    if (!CS_SEATS.includes(seat)) return false;
+    const players = get().players ?? [];
+    const base = normalizeCsLineup(get().csLineup, players);
+    const next = { ...base };
+    if (!playerId) next[seat] = null;
+    else {
+      //  該選手原本在別的席位 ⇒ 兩席互換（同 assignSeat 的語意，不產生重複）
+      const from = CS_SEATS.find((x) => base[x] === playerId && x !== seat) ?? null;
+      const displaced = base[seat] ?? null;
+      next[seat] = playerId;
+      if (from) next[from] = displaced;
+    }
+    set({ csLineup: normalizeCsLineup(next, players) });
+    get().save();
+    return true;
+  },
+  /** 自動填滿空席位（一隊優先、定位相符優先；未登錄永遠不填）。 */
+  autoFillLineup(mode = "moba") {
+    const players = get().players ?? [];
+    const cur = mode === "cs" ? get().csLineup : get().lineup;
+    const filled = autoFillSquad({ mode, seats: cur, players });
+    set(mode === "cs"
+      ? { csLineup: normalizeCsLineup(filled, players) }
+      : { lineup: normalizeLineup(filled, players) });
+    get().save();
+    return filled;
+  },
+  /** 出賽前檢查（唯讀）。回傳可直接顯示的阻擋理由，畫面不自己再判一次規則。 */
+  squadCheck(mode = "moba") {
+    const players = get().players ?? [];
+    const seats = mode === "cs" ? get().csLineup : get().lineup;
+    return validateSquad({ mode, seats, players });
+  },
+  /**
+   * 產生出賽提交單（**只含 playerId 與席位，不含任何數值**）。
+   * 陣容不合法 ⇒ null。日後連線時就是把這張單送給伺服器。
+   */
+  squadSubmission(mode = "moba") {
+    const players = get().players ?? [];
+    const seats = mode === "cs" ? get().csLineup : get().lineup;
+    const t = deriveTime(get().meta?.days ?? 1);
+    return createSquadSubmission({ mode, seats, players, submittedAt: { day: t.day, week: t.week, season: t.season } });
+  },
+
   /** 本週（尚未結算）的收支預覽——畫面用，不寫入任何狀態。 */
   currentWeekPreview() {
     const { lines, income, expense, net, form, scenario } = buildWeekLines(get());
@@ -423,6 +508,7 @@ export const useProfileStore = create((set, get) => ({
       ...DEFAULT,
       players: INITIAL_PLAYERS.map(migratePlayer),
       lineup: { ...DEFAULT_LINEUP },
+      csLineup: normalizeCsLineup(null, null),
       meta: { ...DEFAULT.meta, days: t.day, week: t.week, season: t.season },
       finance: { ...DEFAULT.finance, funds: ng.funds, transactions: [] },
       activeSponsor: ng.activeSponsor,

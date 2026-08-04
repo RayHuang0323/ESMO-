@@ -13,6 +13,7 @@
 // ============================================================================
 import React, { useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
+import { CS_SEATS } from "../../platform/contracts/matchSquad.js";
 import { calcPower, bestPositions, personalityById } from "../../data/playerModel.js";
 import { MOBA2FPS, FPS_ROLE_ZH } from "../../battle/fps/fpsRoster.js";
 import PlayerFace from "../../ui/PlayerFace.jsx";
@@ -25,7 +26,14 @@ export default function CsPrepScreen({ onNext, onBack }) {
   const players = useProfileStore((s) => s.players) ?? [];
   const csHistory = useProfileStore((s) => s.csHistory) ?? [];
   const [tab, setTab] = useState("prep");
-  const starters = players.filter((p) => p.status === "主力").slice(0, 5);
+  //  Milestone O1：CS 出賽陣容改由 csLineup 決定（之前是拿 status === "主力"
+  //  的前五個，隱式且無驗證）。陣容不合法就擋下出賽並顯示原因。
+  const csLineup = useProfileStore((s) => s.csLineup);
+  const squadCheck = useProfileStore((s) => s.squadCheck);
+  const autoFillLineup = useProfileStore((s) => s.autoFillLineup);
+  const check = squadCheck("cs");
+  const byId = new Map(players.map((p) => [p.id, p]));
+  const starters = CS_SEATS.map((seat) => byId.get(csLineup?.[seat])).filter(Boolean);
   const myPow = starters.length ? Math.round(starters.reduce((t, p) => t + calcPower(p, "fps"), 0) / starters.length) : 0;
 
   return (
@@ -86,10 +94,32 @@ export default function CsPrepScreen({ onNext, onBack }) {
                   );
                 })}
               </div>
-              {starters.length < 5 && <div style={{ color: GC.red, fontSize: 9, marginTop: 8, textAlign: "center" }}>主力不足 5 人，到選手名單設定主力</div>}
+              {/* Milestone O1：阻擋理由逐條列出，而不是只說「不足 5 人」 */}
+              {!check.ok && (
+                <div style={{ marginTop: 10, background: "rgba(248,113,113,0.10)", border: `1px solid ${GC.red}55`, borderRadius: 10, padding: "9px 10px" }}>
+                  <div style={{ color: GC.red, fontSize: 11, fontWeight: 800, marginBottom: 5 }}>
+                    ⚠ 陣容不完整，無法出賽（{check.filled}/{check.required} 席）
+                  </div>
+                  {check.errors.slice(0, 5).map((e, i) => (
+                    <div key={i} style={{ color: GC.gray, fontSize: 9.5, lineHeight: 1.7 }}>· {e.message}</div>
+                  ))}
+                  <button onClick={() => autoFillLineup("cs")}
+                    style={{ marginTop: 8, width: "100%", background: GC.card2, border: `1px solid ${GC.line}`, borderRadius: 9, padding: "8px", cursor: "pointer", color: "white", fontSize: 11, fontWeight: 700 }}>
+                    ⚡ 自動填入（一隊優先・定位相符優先）
+                  </button>
+                </div>
+              )}
+              {check.ok && check.warnings.length > 0 && (
+                <div style={{ marginTop: 10, background: "rgba(251,191,36,0.10)", border: "1px solid rgba(251,191,36,0.35)", borderRadius: 10, padding: "9px 10px" }}>
+                  <div style={{ color: GC.gold, fontSize: 11, fontWeight: 800, marginBottom: 4 }}>位置不符（仍可出賽）</div>
+                  {check.warnings.map((w, i) => (
+                    <div key={i} style={{ color: GC.gray, fontSize: 9.5, lineHeight: 1.7 }}>· {w.message}</div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <button onClick={onNext} disabled={starters.length < 5} style={{ width: "100%", background: starters.length >= 5 ? `linear-gradient(135deg,${ACC},${ACC}aa)` : "rgba(255,255,255,0.06)", border: "none", borderRadius: 14, padding: "16px", cursor: starters.length >= 5 ? "pointer" : "not-allowed", color: starters.length >= 5 ? "#fff" : GC.gray, fontSize: 16, fontWeight: 900 }}>🔍 配對對手 · 開始比賽</button>
+            <button onClick={onNext} disabled={!check.ok} style={{ width: "100%", background: check.ok ? `linear-gradient(135deg,${ACC},${ACC}aa)` : "rgba(255,255,255,0.06)", border: "none", borderRadius: 14, padding: "16px", cursor: check.ok ? "pointer" : "not-allowed", color: check.ok ? "#fff" : GC.gray, fontSize: 16, fontWeight: 900 }}>🔍 配對對手 · 開始比賽</button>
             <div style={{ textAlign: "center", color: GC.gray, fontSize: 9, marginTop: 8 }}>配對後將選擇地圖、部署戰術，接著開始攻防</div>
           </div>
         )}
