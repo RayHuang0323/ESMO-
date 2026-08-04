@@ -54,6 +54,7 @@ import { DEFAULT_SCENARIO, SCENARIOS, scenarioById } from "./economy/economyConf
 import { seedFormLogFromCsHistory } from "./economy/formLog.js";
 import { newGameFinancials } from "./economy/newGame.js";
 import { applyDailyRecovery, conditionSummary } from "./condition/playerCondition.js";
+import { createMatchEntryRequest, validateMatchEntryRequest } from "./contracts/matchEntry.js";
 import { createRecruitmentTransaction } from "./contracts/recruitment.js";
 import { applyRecruitmentToState } from "./recruit/applyRecruitment.js";
 import {
@@ -460,6 +461,27 @@ export const useProfileStore = create((set, get) => ({
     const seats = mode === "cs" ? get().csLineup : get().lineup;
     return validateSquad({ mode, seats, players });
   },
+  /**
+   * Milestone O3：產生**出賽申請單**（MatchEntryRequest.v1）。
+   *
+   * 這是配對前的最後一道：陣容不合法就回 `ok:false` 與可顯示的理由，
+   * 合法才產生決定性 `transactionId` 與陣容快照。
+   * 申請單只含身分與編制（playerId / seat / 位置 / 分層 / 隊伍版本），
+   * **不含能力、體力、傷害等任何前端自算的數值**。
+   *
+   * ⚠ 目前沒有後端：本機模擬入口照舊，這裡只負責把資料形狀先定下來。
+   */
+  matchEntry(mode = "moba") {
+    const players = get().players ?? [];
+    const seats = mode === "cs" ? get().csLineup : get().lineup;
+    const t = deriveTime(get().meta?.days ?? 1);
+    return createMatchEntryRequest({
+      mode, seats, players,
+      context: { teamId: get().team?.tag ?? null, teamName: get().team?.name ?? null, day: t.day, week: t.week, season: t.season },
+    });
+  },
+  /** O3：以本地名單驗證一張申請單（模擬伺服器端會做的事）。 */
+  verifyMatchEntry(req) { return validateMatchEntryRequest(req, get().players ?? []); },
   /**
    * 產生出賽提交單（**只含 playerId 與席位，不含任何數值**）。
    * 陣容不合法 ⇒ null。日後連線時就是把這張單送給伺服器。

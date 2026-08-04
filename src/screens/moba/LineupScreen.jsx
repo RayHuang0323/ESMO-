@@ -23,6 +23,7 @@ import { heroById } from "../../data/heroDatabase.js";
 import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { ENGINE_SEATS, SEAT_CODE, SEAT_LANE_ZH, seatPlayers, seatOfPlayer } from "../../platform/contracts/matchLineup.js";
+import MatchEntryPanel from "../common/MatchEntryPanel.jsx";
 import { heroSourceContext, heroSourceFor, HERO_SOURCES as HERO_SRC } from "../../battle/moba/mobaHeroSource.js";
 import { GC } from "../../ui/theme.js";
 
@@ -199,30 +200,8 @@ export default function LineupScreen({ onNext, onBack }) {
     <div style={{ position: "relative", height: "100%", overflow: "hidden" }}>
       <style>{`@keyframes esmoSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
       <Frame title="賽前配置" sub="LINEUP · 五路先發陣容" onBack={onBack} onNext={onNext} nextLabel="確認陣容 → 配對" nextDisabled={!check.ok}>
-        {/* Milestone O1：出賽閘門。缺人／重複／未登錄／指到不存在的選手一律擋下，
-            並逐條說明原因（之前是不檢查就開打）。 */}
-        {!check.ok && (
-          <div style={{ background: "rgba(248,113,113,0.10)", border: "1px solid rgba(248,113,113,0.35)", borderRadius: 12, padding: "10px 12px", marginBottom: 10 }}>
-            <div style={{ color: "#f87171", fontSize: 11.5, fontWeight: 800, marginBottom: 5 }}>
-              ⚠ 陣容不完整，無法出賽（{check.filled}/{check.required} 席）
-            </div>
-            {check.errors.slice(0, 5).map((e, i) => (
-              <div key={i} style={{ color: "#a1a1aa", fontSize: 10, lineHeight: 1.7 }}>· {e.message}</div>
-            ))}
-            <button onClick={() => autoFillLineup("moba")}
-              style={{ marginTop: 8, width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 9, padding: "8px", cursor: "pointer", color: "white", fontSize: 11, fontWeight: 700 }}>
-              ⚡ 自動填入（一隊優先・定位相符優先）
-            </button>
-          </div>
-        )}
-        {check.ok && check.warnings.length > 0 && (
-          <div style={{ background: "rgba(251,191,36,0.10)", border: "1px solid rgba(251,191,36,0.35)", borderRadius: 12, padding: "10px 12px", marginBottom: 10 }}>
-            <div style={{ color: "#fbbf24", fontSize: 11.5, fontWeight: 800, marginBottom: 4 }}>位置不符（仍可出賽）</div>
-            {check.warnings.map((w, i) => (
-              <div key={i} style={{ color: "#a1a1aa", fontSize: 10, lineHeight: 1.7 }}>· {w.message}</div>
-            ))}
-          </div>
-        )}
+        {/* Milestone O3：出賽申請面板（阻擋理由、自動填入、提交內容都在裡面）*/}
+        <MatchEntryPanel mode="moba" onAutoFill={() => autoFillLineup("moba")} />
         <div style={{ width: "100%", maxWidth: 420, padding: "0 12px", boxSizing: "border-box" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ fontWeight: 900, color: GC.blueL, fontSize: 13 }}>{TEAMS.blue.emoji} {TEAMS.blue.name} 先發五人</div>
