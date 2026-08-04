@@ -71,6 +71,18 @@ export const STAT_MAP = {
   splitAdj: { adaptability: +0.080, decision: +0.060, courage: +0.050, focus: +0.040 },
   // 開局野區入侵率（戰術 invadeChance 之上疊加；只讀該側打野）
   invadeAdj: { courage: +0.080, mapAware: +0.060 },
+
+  //  ── Milestone P0-2：執行品質 → 本場經驗獲取速率 ────────────────────────
+  //  **為什麼是這條路**：引擎的 `p.power = p.basePower * powerMultFor(p.mlv)`
+  //  ——戰力由**本場等級**導出。因此讓能力小幅影響「補刀與清線的效率」，
+  //  其餘交給引擎既有的等級→戰力曲線，就**完全不會把能力乘進傷害式**
+  //  （S28 紅線：`dmgAmt = p.power * dt * ...`，注入 power 即違規）。
+  //
+  //  取樣的四項＝「把兵吃乾淨」實際需要的能力：
+  //    accuracy 補刀精準｜apm 出手速度｜focus 專注度（不漏兵）｜mapAware 路線效率
+  //  幅度刻意小：合計 ±0.06 ⇒ 全 100 分與全 40 分之間差 ~12% 經驗速率，
+  //  一場約 0.5–1 個本場等級。看得出來，但不會壓過戰術與操作。
+  xpRateScale: { accuracy: +0.022, apm: +0.016, focus: +0.014, mapAware: +0.008 },
 };
 
 /** 各作用點的限幅（§2「所有映射必須有限幅」）。 */
@@ -79,7 +91,11 @@ export const MOD_CLAMP = {
   laneAdj: 0.04, roamAdj: 0.20, splitAdj: 0.15, invadeAdj: 0.12,
 };
 /** 倍率型作用點的上下界。 */
-export const SCALE_CLAMP = { gankIntervalScale: [0.75, 1.25], gankWindowScale: [0.85, 1.15] };
+export const SCALE_CLAMP = {
+  gankIntervalScale: [0.75, 1.25], gankWindowScale: [0.85, 1.15],
+  //  P0-2：經驗速率的硬上下界。±6% ⇒ 不誇張、可驗證。
+  xpRateScale: [0.94, 1.06],
+};
 
 /**
  * 團隊層級加成：領導力（led）＝「隊伍決策一致性」。
@@ -93,6 +109,8 @@ const TEAM_LED_OBJ = 0.040;
 export const NEUTRAL_MODS = Object.freeze({
   retreatAdj: 0, returnAdj: 0, joinAdj: 0, objAdj: 0, laneAdj: 0,
   gankIntervalScale: 1, gankWindowScale: 1, roamAdj: 0, splitAdj: 0, invadeAdj: 0,
+  //  P0-2：中性 ⇒ 乘 1 ⇒ baseline 逐位元不變
+  xpRateScale: 1,
 });
 
 /** 加權和：Σ w_i × u(stat_i)。 */
@@ -128,6 +146,8 @@ export function toPlayerMods(stats, teamLedU = 0) {
     roamAdj: c("roamAdj"),
     splitAdj: c("splitAdj"),
     invadeAdj: c("invadeAdj"),
+    //  P0-2：本場經驗獲取速率（乘數；中性 = 1）
+    xpRateScale: scale("xpRateScale"),
   };
 }
 

@@ -599,6 +599,19 @@ export class LogicEngine {
   /** 加本場 XP；升級即重算 power/maxHp（雙方對稱，不是勝率係數）。rules v1 ⇒ 完全短路。 */
   _addXp(p, amt, drain = false) {
     if (!this.rules.matchXp || p.dead) return;
+    //  ── Milestone P0-2：執行品質影響**本場經驗獲取速率** ──────────────────
+    //  這是「選手能力影響 MOBA 戰鬥品質」的唯一注入點，刻意選在這裡而不是傷害式：
+    //  引擎的 `p.power = p.basePower * powerMultFor(p.mlv)` 本來就由等級導出，
+    //  所以影響「多快升級」＝影響戰力，但**沒有任何一項係數乘進 dmgAmt**
+    //  （S28 紅線）。幅度由 mobaPlayerStats.SCALE_CLAMP.xpRateScale 限在 ±6%。
+    //
+    //  ⚠ 只縮放**正向獲得**：drain（等級落後補正的扣除）維持原樣，
+    //    否則能力高的人連被扣都比較少，那是雙重優勢。
+    //  ⚠ 未 configurePlayers ⇒ _mod 回 null ⇒ 係數恆為 1 ⇒ **baseline 逐位元不變**。
+    if (amt > 0) {
+      const xpK = this._mod(p)?.xpRateScale;
+      if (Number.isFinite(xpK)) amt *= xpK;
+    }
     if (this.rules.maxXpLevelsPerTick) {
       if (amt > 0) p.mxpBank = (p.mxpBank ?? 0) + amt;
       if (!(p.mxpBank > 0) || (!(amt > 0) && !drain)) return;
