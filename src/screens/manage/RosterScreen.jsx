@@ -15,6 +15,8 @@ import {
   calcPower, posFit, bestPositions, personalityById,
 } from "../../data/playerModel.js";
 import { calculateLevelProgress } from "../../platform/progress/playerLevel.js";
+import { latestGrowth, growthLogOf } from "../../platform/progress/growthLog.js";
+import { LatestGrowthHint, GrowthEntryRow } from "../../ui/GrowthUI.jsx";
 import { PlayerAvatar } from "../../ui/PlayerFace.jsx";
 import { withDerivedStats } from "../../platform/talents/playerDerivedStats.js";
 import { ROSTER_TIERS, tierOf } from "../../platform/contracts/matchSquad.js";
@@ -116,13 +118,17 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
                   </div>
                   <span style={{ color: GC.gray, fontSize: 7.5 }}>{cond.energy}</span>
                 </div>
-                <div style={{ display: "flex", gap: 7, marginTop: 3 }}>
+                <div style={{ display: "flex", gap: 7, marginTop: 3, flexWrap: "wrap", minWidth: 0 }}>
                   {Object.entries(a).map(([k, v]) => (
                     <span key={k} style={{ fontSize: 8 }}>
                       <span style={{ color: GC.gray }}>{k}</span>{" "}
                       <span style={{ color: v >= 80 ? GC.gold : v >= 65 ? GC.green : "#a1a1aa", fontWeight: 700 }}>{v}</span>
                     </span>
                   ))}
+                  {/* Milestone P1：最近一次成長提示（讀成長帳簿，畫面不重算） */}
+                  <span style={{ marginLeft: "auto", minWidth: 0, overflow: "hidden" }}>
+                    <LatestGrowthHint entry={latestGrowth(p)} />
+                  </span>
                 </div>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -277,6 +283,21 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
                       <div style={{ color: GC.gray, fontSize: 8, marginTop: 6, lineHeight: 1.6 }}>
                         連續出賽會加重體力消耗與受傷風險；安排休息或訓練日可恢復。
                       </div>
+
+                      {/* Milestone P1：最近三筆成長（完整 10+ 筆在選手詳情頁） */}
+                      {(() => {
+                        const glog = growthLogOf(sel).slice(0, 3);
+                        return (
+                          <div style={{ marginTop: 9, borderTop: `1px solid ${GC.line}`, paddingTop: 7 }}>
+                            <div style={{ color: "white", fontSize: 10.5, fontWeight: 800, marginBottom: 2 }}>近期成長</div>
+                            {glog.length === 0 ? (
+                              <div style={{ color: GC.gray, fontSize: 9 }}>尚無成長紀錄 · 出賽或完成訓練後會記錄在這裡</div>
+                            ) : glog.map((e, i) => (
+                              <GrowthEntryRow key={e.id} entry={e} last={i === glog.length - 1} />
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })()}

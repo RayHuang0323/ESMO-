@@ -23,6 +23,7 @@ import { appendFormEntry } from "../economy/formLog.js";
 import { deriveTime } from "../economy/timeline.js";
 import { applyMatchWear } from "../condition/playerCondition.js";
 import { applyLevelGrowth } from "./levelGrowth.js";
+import { makeGrowthEntry, appendGrowth } from "./growthLog.js";
 
 /**
  * 純 reducer：state + transaction → { nextState, receipt }
@@ -95,7 +96,31 @@ export function applyProgressToState(state, tx) {
       stats: growth.stats,                              // P0：等級成長後的能力
       restDays: 0,                                      // 今天出賽了 ⇒ 休息日數歸零
     }, `${tx.transactionId}:${pp.playerId}`);
-    patched.set(pp.playerId, wear.player);
+
+    //  Milestone P1：把**這次實際套用的差值**記進選手的成長紀錄。
+    //  ⚠ 不重算任何東西——`gains` 就是上面 `applyLevelGrowth` 的輸出、
+    //    `xpGained` 就是上面算出的 `gain`。紀錄與入帳同源，不可能分離。
+    //  ⚠ 也不是第二套資料：能力現值仍只存在 `player.stats`，這裡只留帳簿。
+    //  冪等：id 帶 transactionId ⇒ 同一場再結算不會產生第二筆
+    //  （外層 `processedMatchTransactions` 已擋一層，`appendGrowth` 再擋一層）。
+    const growthEntry = makeGrowthEntry({
+      id: `${tx.transactionId}:${pp.playerId}`,
+      source: "match",
+      mode: tx.mode,
+      label: `${tx.mode === "cs" ? "CS" : "MOBA"} ${tx.metadata?.winner === "us" ? "勝利" : "出賽"}`,
+      day: num(meta.days) || 1,
+      week: deriveTime(num(meta.days) || 1).week,
+      at: tx.recordedAt,
+      xpGained: gain,
+      levelBefore: prevLevel,
+      levelAfter: newLevel,
+      gains: growth.gains,
+      statsAfter: growth.stats,          // 成長**後**的能力（用來還原成長前的值）
+    });
+    patched.set(pp.playerId, {
+      ...wear.player,
+      growthLog: appendGrowth(me.growthLog, growthEntry),
+    });
 
     playerReceipts.push({
       playerId: pp.playerId,

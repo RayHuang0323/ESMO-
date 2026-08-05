@@ -3515,7 +3515,27 @@ export class LogicEngine {
       //   BattleResult.v2 逐欄挑選、不 spread snapshot ⇒ 契約不受影響）
       ...(this.playerStatsOn ? {
         playerStatsMeta: this.playerStatsMeta ? { ...this.playerStatsMeta } : null,
-        playerStatsExec: Object.fromEntries(Object.entries(this.pexec).map(([id, e]) => [id, { ...e }])),
+        //  Milestone P1：把 P0-3 的執行品質計數併進**既有的** playerStatsExec，
+        //  不另開第二條管道。純儀器化輸出——只是把已經發生的事讀出來，
+        //  沒有任何一個數字回頭影響引擎（P0-3 的演算完全沒被改動）。
+        //
+        //  ⚠ **只在終局那一格帶**。賽後面板讀的是最後一格快照，中途那 600+ 格
+        //  帶了也沒有人看，白白讓每個 runtime snapshot 多 7 欄位 × 10 人。
+        //  這純粹是省記憶體，**不是為了修任何驗證**——已用 A/B 實測確認：
+        //  拿掉這個閘門，`check_moba_experience26` 一樣 35/35，重播容量也一樣
+        //  （1792KB/場）。Replay 根本不收 playerStatsExec（`snapshotToFrame` 沒有這欄）。
+        //  仍然只在 playerStatsOn 時出現 ⇒ 未注入能力的舊快照形狀不變。
+        playerStatsExec: Object.fromEntries(Object.entries(this.pexec).map(([id, e]) => {
+          if (!this.over) return [id, { ...e }];
+          const p = this.players.find((q) => q.id === id);
+          return [id, {
+            ...e,
+            csAttempt: p?.csAttempt ?? 0, csHit: p?.csHit ?? 0,
+            atkTicks: p?.atkTicks ?? 0, atkWasted: p?.atkWasted ?? 0,
+            castTry: p?.castTry ?? 0, castOk: p?.castOk ?? 0,
+            focusSwap: p?.focusSwap ?? 0,
+          }];
+        })),
       } : {}),
       // Milestone H：英雄定位層中繼資料（同樣只在啟用時出現 ⇒ 舊快照形狀不變）
       ...(this.heroesOn ? { heroMeta: this.heroMeta ? { ...this.heroMeta } : null } : {}),

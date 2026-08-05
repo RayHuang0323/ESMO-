@@ -43,6 +43,7 @@ import {
 import { CS_RESULT_SCHEMA } from "./contracts/CsMatchResult.js";
 import { applyProgressToState, findReceipt } from "./progress/applyMatchProgress.js";
 import { totalXpForLevel, levelFromTotalXp } from "./progress/playerLevel.js";
+import { makeGrowthEntry, appendGrowth, GROWTH_SOURCES, GROWTH_LOG_CAP } from "./progress/growthLog.js";
 import { sanitizeTalents } from "./contracts/playerTalentState.js";
 import { applyTalentPurchase } from "./talents/purchasePlayerTalent.js";
 import { DEFAULT_LINEUP, normalizeLineup, assignSeat } from "./contracts/matchLineup.js";
@@ -329,7 +330,14 @@ function migratePlayer(p) {
   const talentPoints = Number.isFinite(p.talentPoints) && p.talentPoints >= 0 ? Math.floor(p.talentPoints) : 0;
   // S27：talents 清洗（缺 → 空狀態；未知 talentId 忽略；rank 修正；spentPoints 由
   // definitions 重算——不信任持久層）。不重置 talentPoints / lv / xp。
-  return { ...p, xp, lv, talentPoints, talents: sanitizeTalents(p.talents) };
+  //  Milestone P1：成長紀錄清洗。不信任持久層——壞掉的 localStorage 不該
+  //  讓選手頁整頁炸掉。只留形狀正確的紀錄，並套用上限。
+  //  ⚠ 這裡不重建、不補算任何成長：清洗掉的紀錄就是永久消失，
+  //    但選手的能力值一點都不受影響（紀錄是帳簿，不是帳戶）。
+  const growthLog = (Array.isArray(p.growthLog) ? p.growthLog : [])
+    .filter((e) => e && typeof e === "object" && typeof e.id === "string" && GROWTH_SOURCES.includes(e.source))
+    .slice(0, GROWTH_LOG_CAP);
+  return { ...p, xp, lv, talentPoints, growthLog, talents: sanitizeTalents(p.talents) };
 }
 function clampLevel(v) {
   const n = typeof v === "number" ? v : Number(v);
@@ -431,6 +439,10 @@ export const useProfileStore = create((set, get) => ({
    * @returns {object[]} 本次推進產生的週結算 receipts（沒跨週則為空陣列）
    */
   advanceDay(n = 1) {
+    //  Milestone P1：本次推進實際完成的訓練成長（供訓練頁顯示真實數值）。
+    //  ⚠ 訓練頁**不得**再自己從課程定義推斷「提升了哪幾項」——那是猜的，
+    //    而且猜不到潛力上限造成的實際差異。這裡收的是套用前後的真實 diff。
+    const trained = [];
     const { nextState, receipts } = advanceDaysInState(get(), n, (cur) => ({
       players: (cur.players ?? []).map((p) => {
         //  Milestone O2：每一天都要跑恢復——傷停天數 −1、沒排訓練的人回體力、
@@ -439,7 +451,36 @@ export const useProfileStore = create((set, get) => ({
         const daysLeft = p.training.daysLeft - 1;
         if (daysLeft > 0) return applyDailyRecovery({ ...p, training: { ...p.training, daysLeft } });
         //  課程今天結算 ⇒ 體力由 applyCourse 決定，恢復只處理傷勢與計數
-        return applyDailyRecovery(applyCourse(p, p.training.courseId), { skipEnergy: true });
+        const courseId = p.training.courseId;
+        const done = applyDailyRecovery(applyCourse(p, courseId), { skipEnergy: true });
+
+        //  ── P1：擷取**實際**能力差值（applyCourse 前後逐項比對）──────────
+        //  成長公式完全沒有被改動；這裡只是把它算完的結果讀出來。
+        //  能力已達潛力上限 ⇒ diff 為空 ⇒ `appendGrowth` 不會建立假紀錄。
+        const gains = {};
+        for (const k in (done.stats ?? {})) {
+          const d = Number(done.stats[k]) - Number((p.stats ?? {})[k] ?? 0);
+          if (Number.isFinite(d) && d > 0) gains[k] = Math.round(d * 10) / 10;
+        }
+        const day = Number(cur.meta?.days) || 1;
+        //  決定性 id：同一位選手、同一天、同一門課只會有一筆。
+        //  重整或重複點「推進訓練日」都不可能讓同一筆再加一次。
+        const entry = makeGrowthEntry({
+          id: `train:${p.id}:${day}:${courseId}`,
+          source: "training",
+          courseId,
+          label: courseById(courseId)?.name ?? "訓練",
+          day,
+          week: deriveTime(day).week,
+          at: String(day),
+          xpGained: 0,                       // 訓練不給經驗（經驗只來自出賽）
+          levelBefore: done.lv ?? p.lv ?? 1,
+          levelAfter: done.lv ?? p.lv ?? 1,
+          gains,
+          statsAfter: done.stats,          // applyCourse 套用後的實際能力值
+        });
+        if (entry) trained.push({ playerId: p.id, name: p.name, entry });
+        return { ...done, growthLog: appendGrowth(p.growthLog, entry) };
       }),
     }));
     set(nextState);
@@ -447,6 +488,8 @@ export const useProfileStore = create((set, get) => ({
     //  屬於不決定性的部分，所以純 reducer 只回傳 notices，不自己寫 inbox。
     for (const r of receipts) for (const note of r.notices ?? []) get().pushInbox(note);
     get().save();
+    //  舊呼叫端只看 receipts（陣列），行為不變；訓練頁改讀 `.trained`。
+    receipts.trained = trained;
     return receipts;
   },
   /** 舊名保留：訓練頁與 Legacy 呼叫端沿用，行為 = 推進一天（含週結算）。 */

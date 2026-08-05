@@ -10,6 +10,7 @@
 // ============================================================================
 import React from "react";
 import { GC, MONO } from "./theme.js";
+import { StatGainList, LevelUpBadge } from "./GrowthUI.jsx";
 
 const wan = (n) => `${Math.round(n / 10000)}萬`;
 
@@ -36,6 +37,9 @@ export default function RewardReceiptPanel({ receipt, accent = GC.gold }) {
   const players = receipt.players ?? [];
   const totals = receipt.totals ?? {};
   const settled = receipt.alreadyApplied;
+  //  P1：全隊能力成長總點數。只是把 receipt 裡已有的差值加總，不重算成長。
+  const statTotal = Math.round(
+    players.reduce((s, p) => s + (Number(p.growth?.total) || 0), 0) * 10) / 10;
 
   return (
     <div style={box(accent)}>
@@ -64,22 +68,37 @@ export default function RewardReceiptPanel({ receipt, accent = GC.gold }) {
       {players.length > 0 ? (
         <>
           {players.map((p) => (
-            <div key={p.playerId} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10.5, padding: "3px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              <span style={{ color: "#e5e7eb", fontWeight: 700, width: 62, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
-              <span style={{ fontFamily: MONO, color: GC.blueL, fontWeight: 800 }}>+{p.xpGained} XP</span>
-              {p.levelsGained > 0 ? (
-                <span style={{ color: GC.gold, fontSize: 9.5, fontWeight: 900 }}>
-                  ⬆ Lv.{p.previousLevel}→{p.newLevel}　天賦 +{p.talentPointsGained}
-                </span>
-              ) : (
-                <span style={{ color: GC.gray, fontSize: 9 }}>Lv.{p.newLevel}</span>
-              )}
-              <span style={{ marginLeft: "auto", color: "rgba(255,255,255,0.35)", fontSize: 8.5 }}>{(p.reasons ?? []).slice(0, 2).join(" · ")}</span>
+            <div key={p.playerId} style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 10.5, padding: "5px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", minWidth: 0 }}>
+              {/* 第一列：誰、拿多少經驗、有沒有升級。手機窄寬度會自動換行，不橫向溢出。 */}
+              <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, minWidth: 0 }}>
+                <span style={{ color: "#e5e7eb", fontWeight: 700, maxWidth: 84, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+                <span style={{ fontFamily: MONO, color: GC.blueL, fontWeight: 800 }}>+{p.xpGained} XP</span>
+                {p.levelsGained > 0 ? (
+                  <>
+                    <LevelUpBadge from={p.previousLevel} to={p.newLevel} />
+                    <span style={{ color: GC.purp, fontSize: 9, fontWeight: 800 }}>天賦 +{p.talentPointsGained}</span>
+                  </>
+                ) : (
+                  <span style={{ color: GC.gray, fontSize: 9 }}>Lv.{p.newLevel}</span>
+                )}
+                <span style={{ marginLeft: "auto", color: "rgba(255,255,255,0.35)", fontSize: 8.5 }}>{(p.reasons ?? []).slice(0, 2).join(" · ")}</span>
+              </div>
+              {/* 第二列：Milestone P1 —— 本場實際的能力成長。
+                  ⚠ 直接讀 receipt 的 `growth.gains`（= applyLevelGrowth 實際套用值），
+                    畫面不重算；沒有成長就明說，不生成假的 +0。 */}
+              <StatGainList
+                gains={p.growth?.gains} compact
+                emptyText={p.levelsGained > 0 ? "已達潛力上限，本次無能力成長" : null}
+              />
             </div>
           ))}
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, marginTop: 6, color: GC.gray }}>
             <span>選手 XP 合計 <b style={{ color: GC.blueL, fontFamily: MONO }}>+{totals.xpGained ?? 0}</b></span>
-            <span>升級 <b style={{ color: GC.gold }}>{totals.levelsGained ?? 0}</b> · 天賦點 <b style={{ color: GC.purp }}>+{totals.talentPointsGained ?? 0}</b></span>
+            <span>
+              升級 <b style={{ color: GC.gold }}>{totals.levelsGained ?? 0}</b>
+              {" · "}天賦點 <b style={{ color: GC.purp }}>+{totals.talentPointsGained ?? 0}</b>
+              {statTotal > 0 && <>{" · "}能力 <b style={{ color: GC.green }}>+{statTotal}</b></>}
+            </span>
           </div>
         </>
       ) : (
