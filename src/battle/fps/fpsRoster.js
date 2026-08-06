@@ -15,6 +15,7 @@
 // ============================================================================
 
 import { getPlayerDerivedStats } from "../../platform/talents/playerDerivedStats.js";
+import { CS_SEATS } from "../../platform/contracts/matchSquad.js";
 
 /** 長鍵(playerModel STAT_DEF) → 短鍵(3D 引擎)；Legacy STAT_L2S 逐字 */
 export const STAT_L2S = { reflex: "rxn", accuracy: "acc", apm: "apm", positioning: "pos", mapAware: "vis", tacticalIQ: "tac", decision: "dec", adaptability: "adp", courage: "cou", clutch: "str", focus: "foc", resilience: "res", comms: "com", leadership: "led", synergy: "coo", learning: "lrn" };
@@ -36,9 +37,15 @@ export const CS_MAP_KEYS = ["dust2", "mirage", "inferno"];
  * 主力優先，不足 5 人以其餘選手遞補；總數仍不足 5 → 回傳 null
  * （呼叫端不傳 roster prop，引擎自動用內建示範陣容，UI 需誠實標示）。
  */
-export function toFpsRoster(players = []) {
-  const pool = [...players.filter((p) => p.status === "主力"), ...players.filter((p) => p.status !== "主力")];
-  if (pool.length < 5) return null;
+export function toFpsRoster(players = [], csLineup = null) {
+  //  Milestone O1：CS 現在有**明確的出賽陣容**（csLineup: f1–f5 → playerId）。
+  //  沒有陣容時才退回舊行為（主力優先遞補），讓舊存檔與驗證 fixture 不受影響。
+  //  ⚠ 舊行為是隱式的：拿 `status === "主力"` 的前五個，位置不符也照上、
+  //    誰上場完全看陣列順序。有陣容時一律以陣容為準。
+  const pool = csLineup
+    ? CS_SEATS.map((seat) => players.find((p) => p && p.id === csLineup[seat]) ?? null)
+    : [...players.filter((p) => p.status === "主力"), ...players.filter((p) => p.status !== "主力")];
+  if (pool.length < 5 || pool.some((p) => !p)) return null;
   return pool.slice(0, 5).map((p, i) => {
     // S27：CS 引擎吃 **derived stats**（base + 天賦，clamp 1–99）。
     //   引擎 sim 的 persStat 直讀 stats[key] → 天賦真的影響 CS 對戰輸入。

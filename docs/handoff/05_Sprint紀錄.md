@@ -4314,3 +4314,1552 @@ allow = hpOk && shotsOk && (sieging || hasWave || kill)
      `retreatAt` / `burst4s` / `towerHits` / `towerZone`）在疊層 UI 上**是否有畫出來**
      ——資料層已有，呈現層未驗證。
   5. 手機真機（Android / iOS）完全未測。
+
+## Milestone N（2026-08-04）— 經營時間軸與財務閉環
+
+分支 `milestone-n-finance`（從 `milestone-m1.7-rc1` 開出）。**未 merge 回 main。**
+
+### 問題
+
+主幹**沒有時鐘**。`advanceTrainingDay()` 會把 `meta.days` +1 並推導 `meta.week`，
+但那是訓練功能的副作用：`activeSponsor.weeksLeft` 簽約後永遠不遞減、
+`finance.weeklyIncome` / `weeklyCost` 從未入帳。錢只會因為比賽獎金增加，
+不會因為經營而變動 ⇒ 贊助簽了等於永久生效、經營沒有壓力。
+
+### 交付
+
+**新增三個純邏輯模組**（不 import React / zustand / localStorage ⇒ 可直接 Node 測）：
+
+- `src/platform/economy/units.js` — `WAN` 換算常數。從 profileStore 搬出來，
+  避免純模組反向 import Store 造成循環；profileStore 改為 re-export，呼叫端不受影響。
+- `src/platform/economy/timeline.js` — 時間的**唯一換算來源**。
+  `deriveTime(days)` → `{day, week, season, dayOfWeek, weekOfSeason}`；
+  `DAYS_PER_WEEK = 7`、`WEEKS_PER_SEASON = 12`。
+  week / season 一律由 `meta.days` 導出，**不另存第二份計數**
+  （避免 team.lv/xp 那種兩邊不同步的坑）。週次跨賽季不重置 ⇒ 可當全域唯一的冪等鍵。
+- `src/platform/economy/weeklySettlement.js` — 週結算純 reducer。
+  `buildWeekLines(state)`（唯讀預覽）、`settleWeekInState(state, week)`、
+  `advanceDaysInState(state, n, onDay)`。
+
+**profileStore**（`schemaVersion` 4 → 5）：
+
+- 新增 `economy: { settledWeeks, lastSettledWeek }` 帳本切片。
+- 新增 `advanceDay(n)` = **唯一的時鐘**：每天結算訓練，跨週結尾則結算該週。
+  `advanceTrainingDay()` 保留為 `advanceDay(1)` 的別名（訓練頁與 Legacy 呼叫端不必改）。
+- 新增 `currentWeekPreview()` 給畫面用（唯讀）。
+- migration：舊存檔沒有 `economy` ⇒ 空帳本，且**刻意不補算過去的週**
+  （那會在載入當下憑空扣一大筆薪資）。載入時強制由 `days` 重新導出 week / season。
+- 種子 `meta` 原本 `days: 8` 配 `week: 1`（互相矛盾），改為由 days 導出 ⇒ week 2。
+
+**收支組成**（金額一律以元存放，Legacy 表以「萬」計價）：
+
+| 項目 | 來源 | 種子值 |
+|---|---|---|
+| 基礎營收 | `finance.weeklyIncome` | 8.5 萬/週 |
+| 贊助收入 | `activeSponsor` → SPONSORS.weekly | 6–35 萬/週 |
+| 選手薪資 | `players[].salary`（**週薪・萬**，依 Legacy `EsportsGame.jsx:559` / `:5822`） | 五人合計 42 萬/週 |
+| 營運成本 | `finance.weeklyCost` | 6.2 萬/週 |
+
+⚠ `weeklyCost` 明確定義為**不含薪資**的固定營運支出。種子 `expenseBd` 另有一筆
+「選手薪資」，那是 Legacy 寫死的展示分解；薪資的唯一來源是 `players[].salary`，
+兩者不相加，避免重複計算。
+
+**合約**：先入帳、再遞減 ⇒ 合約 N 週就領滿 N 週；遞減到 0 當週清空
+`activeSponsor` 並發收件匣通知（剩 ≤2 週也會預告）。到期後不再有任何贊助收入。
+
+**Dashboard / FinanceScreen**：新增「本週財務」卡（收入／支出／淨額／合約剩餘週數、
+S/週/天座標）；FinanceScreen 的「本週收入・本週支出」改讀 `currentWeekPreview()`——
+原本直接顯示 `weeklyIncome` / `weeklyCost`，那會少算薪資與贊助。
+
+### 驗證（2026-08-04 實跑）
+
+- `node tools/check_finance_n.mjs` → **32/32 通過**。涵蓋：
+  時間換算與跨賽季、一次推進多天不漏週、金額正確、
+  **帳本相平**（本週交易加總 = 淨額 = 資金實際變化）、
+  **冪等**（同週再結算完全不寫入、資金不被扣第二次）、
+  **合約恰好領滿不多不少**、**到期後仍結算也沒有贊助收入**、
+  資金允許為負（不夾成 0，否則帳目對不起來）、JSON 往返後續推進不重算。
+- `verify.mjs --only=progress25,talent27,experience26,cs23,build` → **5/5 通過**。
+- `npm run build` 通過。
+
+### ⚠ 平衡問題（機制正確，數字關係要決策）
+
+依 Legacy 規格，五人週薪合計 **42 萬**，而種子資金 120 萬、基礎營收 8.5 萬/週。
+以最高階贊助（35 萬/週）計算，每週淨額仍是 **−24.7 萬**⇒ 數週內見底。
+
+這是**種子資料的數字關係**問題，不是機制 bug。費率全部集中在
+`weeklySettlement.buildWeekLines` 一處可調，但調整費率屬 Balance 決策
+（CLAUDE.md：Balance 變更需 Ray 核准），本 Milestone **不自行調整**。
+
+### 未做（刻意，超出本 Milestone 範圍）
+
+- 轉會市場、合約談判、商店 —— 使用者明確指定不做。
+- 沒有碰任何 MOBA 戰鬥邏輯（LogicEngine / BattleResult / Replay 一行未改）。
+- **瀏覽器實機驗收未做**：本週財務卡的版面、合約到期通知、
+  推進日的實際手感，都還沒在畫面上看過。
+
+## Milestone N2（2026-08-04）— 經濟平衡
+
+同分支 `milestone-n-finance`，接在 N1（commit `8c3c8e2`）之後。**未 merge 回 main。**
+
+### 問題
+
+N1 的機制是對的，數值卻散在三處：種子 `finance.weeklyIncome` / `weeklyCost`、
+Legacy 選手表寫死的 `salary`、SPONSORS 的 `weekly`。結果沒人說得出「這隊每週
+該賺多少」——實測就算簽下最高階贊助，每週淨額仍是 **−24.7 萬**。
+
+### 交付
+
+**費率集中**：`src/platform/economy/economyConfig.js` 是唯一設定來源
+（薪資公式、贊助拆分比例、戰績取樣、三種情境、警告門檻）。
+週結算**不再讀** `finance.weeklyIncome` / `weeklyCost` / `players[].salary`，
+驗證器有專門斷言擋住（把種子值改成荒謬數字，結果不得改變）。
+
+**薪資由能力決定**（`economy/salary.js`）：
+
+```
+週薪 = 底薪 0.8
+     + (綜合能力 − 60) × 0.06     ← 16 項能力平均
+     + (等級 − 30)     × 0.08
+     + max(0, 潛力 − 85) × 0.04   ← 只有高潛力才加價
+     夾在 [1.0, 8.0] 萬／週
+```
+
+種子五人：2.5 / 2.0 / 3.2 / 2.2 / 2.3 萬 ⇒ 合計 **12.2 萬／週**
+（N1 是選手表寫死的 42 萬）。舊欄位 `players[].salary` 保留給轉會報價與身價顯示，
+但週結算不再讀它。
+
+**贊助拆成兩條入帳 + 一條不入帳**：
+
+| 成分 | 比例 | 行為 |
+|---|---|---|
+| 固定收入 | 50% | 合約保證，不看成績 ⇒ 經營地板 |
+| 績效獎金 | 50% | 依近期戰績（`csHistory` 最近 6 場勝率）縮放，全敗歸零 |
+| 賽事獎金 | — | **不在週結算發放**，由 S25 `applyMatchProgress` 賽後入帳；週結算再算一次就是雙重入帳 |
+
+⚠ 戰績目前只反映 **CS 訓練賽**——MOBA 戰績在 seasonStore，不在本 Store。
+沒有比賽紀錄時取中性值 0.5（不獎不罰）。跨 Store 讀 MOBA 戰績列為後續項。
+
+**三種情境**（`SCENARIOS`，差在營收規模與營運成本，不在薪資公式）：
+
+| 情境 | 基礎營收 | 營運成本 | 起始資金 | 實測淨額 |
+|---|---|---|---|---|
+| 新手 | 6 萬/週 | 3 + 0.5×人 | 60 萬 | **0.0 萬**（勉強打平） |
+| 一般 | 12 萬/週 | 5 + 0.5×人 | 120 萬 | **+3.5 萬** |
+| 頂級 | 22 萬/週 | 8 + 0.5×人 | 300 萬 | **+17.3 萬** |
+
+**現金預測**（`economy/forecast.js`）：未來 4 週，逐週遞減合約 ⇒
+贊助到期造成的收入斷崖在預測上直接看得到。賽事獎金只認帳本裡 `cat === "prize"`
+的真實紀錄去估，沒有紀錄就估 0（寧可保守）。預測是唯讀的。
+
+**Dashboard**：新增「未來 4 週現金預測」卡——逐週資金／淨額、合約到期標記、
+資金見底週次警告（紅／黃／無）。本週財務卡加上近期戰績與情境名稱。
+
+### 平衡前後對照（一般情境・種子五人・戰績 50%）
+
+| 贊助 | N1 淨額 | N2 淨額 | N2 收入 | N2 支出 |
+|---|---|---|---|---|
+| 無 | −39.7 萬 | **−7.7 萬** | 12.0 萬 | 19.7 萬 |
+| 在地網咖（6 萬） | −33.7 萬 | **−3.2 萬** | 16.5 萬 | 19.7 萬 |
+| HyperX（15 萬） | −24.7 萬 | **+3.5 萬** | 23.3 萬 | 19.7 萬 |
+| 加密貨幣交易所（35 萬） | −4.7 萬 | **+18.6 萬** | 38.3 萬 | 19.7 萬 |
+
+薪資：42 萬/週 → **12.2 萬/週**。
+
+### 風險確實成立（驗證器逐項斷言）
+
+- 贊助到期：+3.5 萬 → **−7.7 萬**（由盈轉虧）
+- 戰績低落（全敗）：+3.5 萬 → **−0.2 萬**（績效獎金歸零）
+- 高薪陣容（全明星，薪資 25.5 萬）撐在一般隊營收上：**−9.8 萬**
+
+### 驗證（2026-08-04 實跑）
+
+- `node tools/check_finance_n2.mjs` → **35/35 通過**。含費率集中、薪資單調與上下限、
+  贊助拆分、三情境體質、三種風險、現金預測，其中最關鍵的一條是
+  **「預測與實際結算一致」**（預測 130.7 萬 vs 實際跑三週 130.7 萬）。
+- `node tools/check_finance_n.mjs` → **32/32 通過**。
+  ⚠ 本檔的期望值已改為**從設定推導**，不再寫死 N1 費率——否則每次調平衡都要改
+  驗證器，驗證器會變成平衡的絆腳石。它驗的仍是機制（不重複結算／帳目相平／
+  到期不入帳／存檔往返）。
+- `verify.mjs --only=progress25,talent27,experience26,cs23` → 4/4 通過。
+- `npm run build` 通過。
+
+### 未做（刻意）
+
+- 商店、完整轉會與合約談判 —— 使用者明確指定不做。
+- 沒有碰任何 MOBA 戰鬥邏輯，沒有碰 `ESMO-hero-models` worktree。
+- **瀏覽器實機驗收未做**：現金預測卡版面、警告配色、320–1920 響應式。
+
+### ⚠ 三項必須記錄在案的缺口（2026-08-04 確認）
+
+1. **三種情境有設定，但沒有正式的開新局入口。**
+   `SCENARIOS`（新手／一般／頂級）與 `profileStore.setScenario(id)` 都已就緒，
+   `startingFunds`（60／120／300 萬）也已定義，但**畫面上沒有選擇情境的地方**，
+   起始資金仍走既有種子（`finance.funds` 120 萬）。要讓三種情境真的有不同起點，
+   需要一個「開新局／難度選擇」流程——**本輪未做**，預設一律 `standard`。
+
+2. **MOBA 賽績尚未接入統一的績效贊助紀錄。**
+   贊助績效獎金由 `recentForm()` 決定，而它只讀 `csHistory`（CS 訓練賽）。
+   MOBA 戰績存在 **seasonStore**，不在 profileStore ⇒ 目前打再多 MOBA 也不會
+   影響績效獎金。沒有任何比賽紀錄時取中性值 0.5，不假裝有資料。
+   要接起來需要跨 Store 的統一賽績來源——**本輪未做**。
+
+3. **目前的薪資與贊助數值是第一版平衡基準，不是定案。**
+   薪資公式係數（底薪 0.8／能力 0.06／等級 0.08／潛力 0.04，上下限 1.0–8.0 萬）
+   與贊助拆分（固定 50%／績效 50%）都是 N2 為了「讓正常經營活得下去」訂的**起點**。
+   等轉會市場與合約談判完成之後，選手身價、簽約金、違約金會進入同一個經濟迴圈，
+   屆時**必須重新校正**這組數字。費率全部集中在
+   `src/platform/economy/economyConfig.js`，校正時只改那一支。
+
+### N2 UI 調整：現金預測移至財務頁（2026-08-04）
+
+小型呈現層調整，**沒有動任何經濟數值、計算或狀態**。
+
+- Dashboard 首頁移除「未來 4 週現金預測」整張卡，只保留「本週財務」摘要
+  （收入／支出／淨額、S-週-天、情境、近期戰績、合約狀態）＋ 進入財務頁的入口。
+  資金警告仍在首頁露一個小標籤（見底週次／本週淨額為負），詳細預測到財務頁看。
+- `FinanceScreen` 在餘額大卡之後、分頁之前新增一段集中呈現：
+  本週收入／支出／淨額、**本週收支逐項明細**（與結算逐筆入帳的項目相同）、
+  合約狀態（剩餘週數，≤2 週轉琥珀色並標「即將到期」）、
+  未來 4 週現金預測（逐週資金與淨額、合約到期標記、資金見底警告）。
+- 資料來源仍是 `currentWeekPreview()` 與 `cashForecast()`——即週結算會用的
+  同一份 `buildWeekLines`。**沒有重算、沒有第二套狀態、沒有新增 Store 欄位。**
+- 手機：預測卡改為**直向排列**（`useIsMobile()`，響應式唯一來源
+  `src/ui/useViewport.js`）；金額一律 `whiteSpace: nowrap` ＋ 容器 `minWidth: 0`，
+  長標籤以 ellipsis 截斷 ⇒ 不水平溢出。
+- 驗證：`npm run build` 通過；`check_finance_n.mjs` 32/32、
+  `check_finance_n2.mjs` 35/35（呈現層改動不影響經濟邏輯，數字未變）。
+- **未經瀏覽器實測**：財務頁新版面、手機直向排列、320/360/390/430 響應式、
+  警告配色。需人工驗收。
+
+## Milestone N3（2026-08-04）— 開新局情境 ＋ 統一賽績
+
+同分支 `milestone-n-finance`。**未 merge 回 main。**
+範圍就是補完 N2 明確記錄在案的兩個缺口，不含商店與轉會。
+
+### 缺口①：三種情境沒有入口 → 已補
+
+- `profileStore.startNewGame(scenarioId)`：以指定情境開新局。
+  資金 = 該情境 `startingFunds`（60／120／300 萬）、時間從第 1 天重新起算、
+  交易帳本／贊助／賽績／冪等帳本全部清空。
+  ⚠ 破壞性動作，UI 有兩段式確認。
+- `src/screens/manage/NewGameScreen.jsx`：三張情境卡，各自顯示起始資金、
+  基礎營收、營運成本與**起手週淨額**（已扣種子五人週薪）。
+  選定後跳出紅框確認卡，明列會清掉哪些資料。
+- Dashboard「更多」列新增「開新局」入口；AppShell 新增 `newGame` 路由。
+- 新局刻意清空 `finance.transactions`：種子交易是 Legacy 展示樣本，
+  留著會讓「近四週賽事獎金估計」憑空多出收入。
+
+### 缺口②：MOBA 賽績沒進績效 → 已補
+
+- `src/platform/economy/formLog.js`：統一賽績紀錄。
+  勝負直接取自契約既有的 `MatchProgressTransaction.metadata.winner`
+  （"us" | "enemy"，**兩種模式統一語意**），寫入點是 S25 唯一發獎點
+  `applyMatchProgress` ⇒ MOBA 與 CS 一視同仁。
+- **不是第二套統計**：不重新計算任何戰績，戰績來源仍是 BattleResult / seasonStore。
+  本紀錄只服務經濟層的「近期狀態」，Result / Season / Dashboard 不得讀它算勝率。
+- `recentForm()` 改讀 `economy.formLog`，回退順序：formLog → csHistory（舊存檔）→ 中性值。
+- migration：舊存檔以 csHistory 種一次 formLog，避免升級後績效獎金莫名歸零。
+- 冪等由 `applyMatchProgress` 的 transactionId 保證，`appendFormEntry` 另擋一次同 id。
+  紀錄上限 20 筆，取樣視窗 `FORM.window`（6 場）。
+
+### 驗證（2026-08-04 實跑）
+
+- `node tools/check_finance_n3.mjs` → **40/40 通過**。含：
+  三情境開新局的資金／時間／帳本／贊助狀態、薪資與營運成本、
+  **四週預測與實際結算一致**（三種情境各驗一次）、
+  簽贊助後預測看得到合約斷崖、
+  **MOBA 勝場提高績效獎金／敗場歸零／CS 同樣有效／兩者一視同仁**、
+  **週結算實際入帳金額確實隨賽績改變**（全勝淨 7.3 萬 vs 全敗淨 −0.2 萬）、
+  賽績冪等與上限、舊存檔 migration、開新局後四週帳目相平。
+- `check_finance_n.mjs` 32/32、`check_finance_n2.mjs` 35/35。
+- `verify.mjs --only=progress25,talent27,experience26,cs23,regress,regress2,build` → 7/7。
+- `npm run build` 通過。
+
+⚠ 過程中 `progress25` §11 曾紅一次：該驗證器以**字串比對**確保 MOBA 路徑不碰
+CS 的歷史清單，而我在 `applyMatchProgress.js` 的**註解**裡寫了那個識別字。
+已改寫措辭（邏輯未動），並在該處留下提醒。
+
+### ⚠ 新局起手是負現金流（數字正確，是否為預期需決策）
+
+三種情境在**尚未簽贊助**時的起手週淨額：
+
+| 情境 | 起始資金 | 週收入 | 週支出 | 週淨額 | 四週後 | 警告 |
+|---|---|---|---|---|---|---|
+| 新手 | 60 萬 | 6.0 萬 | 17.7 萬 | **−11.7 萬** | 13.2 萬 | warn |
+| 一般 | 120 萬 | 12.0 萬 | 19.7 萬 | **−7.7 萬** | 89.2 萬 | warn |
+| 頂級 | 300 萬 | 22.0 萬 | 22.7 萬 | **−0.7 萬** | 297.2 萬 | warn |
+
+新手約 5 週見底 ⇒ 必須盡快簽贊助。這**可以**是刻意的開局壓力，
+但也可能太緊（入門贊助「在地網咖」只有 6 萬/週，簽了新手仍是 −7.2 萬）。
+**本輪未調整任何經濟數值**（使用者指定不改），列為平衡決策。
+
+### 未做（刻意）
+
+- 商店、轉會市場、合約談判 —— 使用者明確指定不做。
+- 沒有碰 MOBA 戰鬥邏輯，沒有碰 `ESMO-hero-models` worktree。
+- **瀏覽器實機驗收未做**：開新局畫面版面與確認流程、情境卡在 320–430 的排版、
+  開新局後 Dashboard／財務頁的數字是否如預期。
+
+## Milestone N3.1（2026-08-04）— 新手開局經濟平衡
+
+同分支 `milestone-n-finance`。**只調新手情境**，一般與頂級數值一律不動。
+
+### 問題
+
+N3 交付後量到：新手情境無贊助時每週淨額 **−11.7 萬**，起始資金 60 萬
+⇒ 約 5 週見底。開局壓力來得太早，玩家還沒站穩就先被財務追著跑。
+
+### 作法：開局附帶「新創扶持計畫」
+
+- `src/platform/economy/sponsors.js`（新增）——開局扶持方案的定義與
+  **統一贊助解析入口** `resolveSponsor(id)`（市集目錄 → 扶持方案）。
+  扶持方案**刻意不放進** `data/playerModel.js` 的 SPONSORS：那是 Legacy 的
+  贊助市集目錄，任何人都能簽；扶持是開局贈與，不該出現在市集裡被重複簽。
+- 內容：**14 萬/週 × 8 週**，一半固定、一半依戰績（沿用既有 `SPONSOR_SPLIT`），
+  無簽約金，到期不續約。
+- `SCENARIOS.rookie.starterSponsor = "rookie_grant"`；一般／頂級沒有這個欄位。
+- 週結算、現金預測與**所有畫面**（Dashboard／財務頁／贊助頁）都改用
+  `resolveSponsor` ⇒ 不會出現「經濟層有收入、但畫面說沒有贊助商」的不一致。
+
+### 順手修掉一個會讓驗證器失真的問題
+
+N3 時「開新局長什麼樣」寫在 `profileStore.startNewGame` 裡，驗證器只好自己再組
+一份（它不能 import profileStore）。N3.1 加了扶持之後兩邊就不一致——
+驗證器會綠燈，但驗的是**現實中不存在的狀態**。
+
+⇒ 抽出 `src/platform/economy/newGame.js`：`newGameFinancials(scenarioId)` 是
+新局財務起點的唯一定義，store 與 N3／N3.1 兩支驗證器共用同一份。
+
+### 平衡結果（種子五人・戰績中性）
+
+| 情境 | 開局贊助 | 起始資金 | 週收入 | 週支出 | 週淨額 | 四週後 |
+|---|---|---|---|---|---|---|
+| 新手 | 新創扶持 14萬×8週 | 60 萬 | 16.5 萬 | 17.7 萬 | **−1.2 萬** | 55.2 萬 |
+| 一般 | 無 | 120 萬 | 12.0 萬 | 19.7 萬 | −7.7 萬 | 89.2 萬 |
+| 頂級 | 無 | 300 萬 | 22.0 萬 | 22.7 萬 | −0.7 萬 | 297.2 萬 |
+
+新手：**−11.7 萬 → −1.2 萬**（接近平衡的小幅虧損）。
+成績仍然有意義：全勝 **+2.3 萬**、全敗 **−4.7 萬**。
+扶持期末（第 8 週）資金 50.4 萬，不會在期限內見底；
+到期後回到 −11.7 萬/週 ⇒ 扶持是**緩衝期**，不是永久補貼。
+
+### 驗證（2026-08-04 實跑）
+
+- `node tools/check_finance_n31.mjs` → **31/31 通過**。含：
+  扶持只給新手、**一般／頂級週收支逐項數字不變**（回歸保護）、薪資公式未動、
+  合約長度落在 6～8 週、開局淨額落在 −3～+1 萬、成績仍有意義、
+  扶持期內不見底、**扶持不在贊助市集**、
+  到期效果（領滿 8 週 → 清空 → 之後零入帳 → 回到 −11.7 萬）、
+  四週預測含扶持且看得到到期斷崖、**預測與實際結算一致（含跨越到期點）**、
+  不重複結算、帳目相平、存檔往返。
+- `check_finance_n` 32/32、`check_finance_n2` 35/35、`check_finance_n3` 40/40。
+  （N3 §2b 的前提「新局無贊助」對新手已不成立，期望值改為從設定推導。）
+- `verify.mjs --only=progress25,talent27,experience26,cs23` 4/4；`npm run build` 通過。
+
+### 未動 / 未驗
+
+- **沒有改薪資公式、週結算架構，也沒有新增第二套資料來源**
+  （扶持方案是 `resolveSponsor` 的第二個來源，但市集目錄仍然只有 SPONSORS 一份）。
+- 沒有碰 MOBA 戰鬥邏輯、沒有碰 `ESMO-hero-models`，沒有開始商店或轉會。
+- **瀏覽器實機驗收未做**：新局畫面的扶持說明卡、財務頁與贊助頁顯示扶持合約、
+  四週預測在扶持到期前後的變化。
+
+## Milestone O（2026-08-04）— 選手招募與隊伍養成基礎閉環
+
+同分支 `milestone-n-finance`。**未 merge 回 main。**
+背景：ESMO 未來以**線上連線對戰**為核心，新開局與單機財務不再深入擴充，
+所以本輪的重點是「閉環可用」＋「資料契約要能被伺服器接管」。
+
+### 動工前的現況分析（三個實際缺口）
+
+`signProspect` 原本已經檢查名額與餘額並扣款，但：
+
+1. **沒有呼叫 `save()`** —— 招募成功後不寫 localStorage，**重整就消失**。
+2. **沒有重複招募保護** —— 同一位新秀可以無限簽、無限扣款、無限複製成多名選手
+   （畫面雖有「已簽約」提示，但那是比對**名字**，不同批新秀撞名就誤判）。
+3. **用 `Math.random()` 產士氣、`Date.now()` 產 id** —— 同一次招募無法重現，
+   未來由伺服器發放／重播時對不起來。
+
+### 交付
+
+**契約**（`src/platform/contracts/recruitment.js`）— `RecruitmentTransaction.v1`：
+
+- 冪等鍵 `recruit:<poolSeed>:<prospectId>:v1`，由「新秀池識別 + 池內編號」
+  **決定性推導** ⇒ 同一位新秀不可能被簽兩次。
+  日後 poolSeed 換成伺服器的池 id 即可，形狀不變。
+- 交易單自帶**簽約當下的選手快照**（stats/potential/age/traits…）⇒
+  伺服器日後即使改了新秀池演算法，既有合約仍能原樣重播。
+- `validateRecruitmentTransaction`：不合法一律拒絕，不得部分套用。
+
+**純 reducer**（`src/platform/recruit/applyRecruitment.js`）— 招募的唯一寫入點：
+
+- 三道保護：**名額**（ROSTER_CAP 15）／**餘額**／**重複**（帳本冪等）。
+- 一次寫完：名單、資金、交易帳本、招募帳本同一個 nextState
+  ⇒ 不會出現「扣了錢沒進人」或「進了人沒扣錢」。
+- **完全決定性**：選手 id 由冪等鍵推導（`r<seed>-<id>`），
+  士氣由 potential 推導（72–92），沒有任何亂數與時鐘。
+- receipt 帶 `reason`（`roster_full` / `insufficient_funds` / `invalid`）
+  與 `alreadySigned`，畫面直接顯示，不必自己再判一次規則。
+
+**Store**（schemaVersion 5 → 6）：新增 `recruitment: { signed: {} }` 帳本；
+`signProspect(prospect, poolSeed)` 降為薄包裝（建單 → 套用 → **save()** → 收件匣）；
+migration 對舊存檔給空帳本，**刻意不回填**既有選手的招募來源（那是編造歷史）。
+
+**UI**（`RecruitScreen`）：新增圖形化狀態列——**名額量表**（15 格席次，滿了轉紅）、
+可用資金、簽約結果回饋條；「已簽約」判定改讀招募帳本而非名字比對。
+
+### 沒有建立第二套資料
+
+- 選手唯一存放處仍是 `profileStore.players[]`；交易單只是入隊憑證。
+- 資金唯一來源仍是 `finance.funds`；招募扣款走既有欄位並進既有交易帳本
+  （`cat: "recruit"`，財務頁看得到）。
+- 薪資仍由 N2 的 `economy/salary.js` 依能力推導；`players[].salary`
+  是身價／轉會用欄位，週結算不讀它。
+
+### 驗證（2026-08-04 實跑）
+
+- `node tools/check_recruit_o.mjs` → **40/40 通過**。含契約與竄改防護、
+  三道保護與邊界（剩最後一個名額仍可簽）、扣款與交易帳本、入隊欄位、
+  **決定性重播逐欄相同**、連續招募 5 人、既有訓練系統對招募選手有效、
+  存檔往返後重複招募仍被擋。
+- `check_finance_n` 32/32、`n2` 35/35、`n3` 40/40、`n31` 31/31。
+- `verify.mjs --only=progress25,talent27,experience26,cs23,build` 5/5。
+
+### ⚠ 驗證過程發現的一件事（不是 bug，但要知道）
+
+低潛力新秀**練到潛力上限，週薪仍停在下限 1.0 萬**。
+原因是 N2 薪資公式的加項門檻是「綜合能力 60 / 等級 30」，
+潛力 42 的新秀練滿也只有綜合 36.8，跨不過門檻。
+
+高潛力新秀則會動：潛力 96 的新秀綜合 42.6 → 62.1、週薪 1.2 → 1.4 萬。
+
+這是刻意的（便宜的人本來就便宜），但意味著**養成低潛力選手在經濟上沒有回饋**。
+兩條都已寫成驗證器斷言，避免日後被誤當成 bug 修掉。
+
+### 未做（刻意）
+
+- 完整轉會市場、拍賣、市場即時交易、PvP 配對 —— 使用者明確指定不做。
+- 沒有碰 MOBA 戰鬥邏輯、沒有碰 `ESMO-hero-models` worktree。
+- **瀏覽器實機驗收未做**：招募狀態列、名額量表、簽約回饋條、
+  320–430 響應式、實際簽約後 Roster／財務頁的變化。
+
+### Milestone O Hotfix 1：招募詳情視窗白畫面（2026-08-04）
+
+**症狀**：在招募頁點開任何一位新秀的詳情視窗 → 整頁白／黑畫面。
+
+**根因**：`RecruitScreen` 的詳情視窗（第 203 行）仍引用 `signedNames`，
+但那個變數在本輪已被移除（「已簽約」改讀招募帳本）。列表那一處有換掉，
+**詳情視窗那一處漏了** ⇒ 一開啟詳情就 `ReferenceError: signedNames is not defined`，
+React 整棵樹卸載 ⇒ 白畫面。
+
+**修正**：`const isSigned = isSignedOf(sel);`（與列表同一個判定函式）。
+
+#### ⚠ 這次暴露的驗證缺口（比 bug 本身重要）
+
+- `npm run build` **抓不到**這種錯：它是 runtime ReferenceError，
+  esbuild/rollup 不做未定義變數的作用域分析。
+- `check_recruit_o.mjs` 只測**純邏輯**（contract / reducer / store），
+  完全沒有涵蓋畫面 ⇒ 40/40 全綠但畫面是壞的。
+- 專案目前**沒有 linter**（no-undef 這類規則正好會抓到這個）。
+
+⇒ 結論：**UI 改動不能只靠 build 綠燈就宣稱完成**（03_開發規範 早有此條，
+本輪違反了）。已在回報中列為「未經瀏覽器實測」，但仍應在交付前自行點過一次。
+是否導入 ESLint（至少 `no-undef`）列為待決策項。
+
+## Milestone O1（2026-08-04）— 隊伍名單與出賽陣容閉環
+
+同分支 `milestone-n-finance`。**未 merge 回 main。**
+
+### 動工前的現況分析
+
+| 面向 | 現況 |
+|---|---|
+| MOBA 陣容 | ✅ Milestone E 已有 `lineup`（席位→playerId）＋ `LineupScreen` 指派＋回寫 `playerId` |
+| CS 陣容 | ❌ **完全沒有**——`CsPrepScreen` 拿 `status === "主力"` 的前五個，`toFpsRoster` 再用非主力遞補。誰上場看陣列順序，位置不符照上 |
+| 名單分層 | ❌ 只有 `status`（"主力"/"預備隊"）兩種字串，沒有「未登錄」概念 |
+| 出賽阻擋 | ❌ 不檢查。CS 只擋「不足 5 人」，MOBA 完全不擋 |
+| 伺服器可驗證性 | ❌ 沒有提交契約 |
+
+### 交付
+
+**契約**（`src/platform/contracts/matchSquad.js`）— `MatchSquad.v1`：
+
+- **名單分層** `ROSTER_TIERS`：`active`（一隊）／`bench`（替補）可出賽，
+  `unlisted`（未登錄）不可。舊存檔由 `status` 推導，**不把任何人踢出名單**。
+- `validateSquad()` 產生**可直接顯示的中文理由**，不是布林值：
+  `empty_seat` / `unknown_player` / `duplicate_player` / `ineligible` / `role_mismatch`。
+  位置不符預設是**警告**（允許刻意換位），`strictRole` 時升級為阻擋。
+- `createSquadSubmission()` — **只含 playerId 與席位，刻意不帶任何數值**。
+  這是「不信任前端提交的數值」的落實：伺服器拿 playerId 自己查真實資料。
+  `validateSquadSubmission()` 會明確拒絕夾帶 `stats/power/tough/lv/rating` 的提交單。
+- `autoFillSquad()` — 一隊優先、定位相符優先；未登錄永遠不填。
+
+**CS 陣容**：新增 `csLineup`（f1–f5，對齊 `MOBA2FPS` 的定位對位），
+`toFpsRoster(players, csLineup)` **依陣容取人**，缺人回 `null`（不虛構陣容）。
+沒有陣容時退回舊行為，舊存檔與既有 fixture 不受影響。
+
+**Store**（schemaVersion 6 → 7）：`csLineup` ＋ `players[].rosterTier`；
+新增 `setRosterTier` / `setCsSeat` / `autoFillLineup` / `squadCheck` / `squadSubmission`。
+把人設為未登錄時，會**一併把他從兩份陣容移除**——否則會留下「不能上場卻還坐在
+席位上」的矛盾，等到出賽才報錯太晚。
+
+**UI**：
+- `RosterScreen` 的「主力／預備隊」改為三層分層鈕（一隊／替補／未登錄）＋說明。
+- `LineupScreen`（MOBA）與 `CsPrepScreen`（CS）加上**出賽閘門**：
+  不合法就停用出賽鈕，並逐條列出理由，附「⚡ 自動填入」一鍵修復。
+  位置不符另以琥珀色警告呈現（仍可出賽）。
+
+### 驗證（2026-08-04 實跑）
+
+- `node tools/check_squad_o1.mjs` → **40/40 通過**。含五個要害：
+  分層與舊存檔推導、五種阻擋理由（訊息是中文不是錯誤碼）、
+  MOBA/CS 陣容獨立且都指回 `players[]`、
+  **CS 引擎名單依陣容取人而非陣列順序**、
+  **賽後 XP 寫到實際出賽的 playerId**（席位換成替補 p6 ⇒ 寫給 p6，不是 p1 也不是席位 id）、
+  提交單無數值且夾帶數值一律拒絕、自動填入不碰未登錄且零位置警告。
+- `check_recruit_o` 40/40、`check_finance_n/n2/n3/n31` 32/35/40/31、
+  `verify.mjs --only=progress25,talent27,experience26,cs23,build` 5/5。
+
+### 未做（刻意）
+
+- 轉會市場、拍賣、即時 PvP 配對、後端連線 —— 使用者明確指定不做。
+- CS 陣容目前**沒有專屬的指派畫面**：可用「自動填入」或先在 MOBA 側調整；
+  獨立的 CS 指派 UI 列為後續。
+- **瀏覽器實機驗收未做**：三層分層鈕、兩個出賽閘門、自動填入、320–430 響應式。
+
+## Milestone O2（2026-08-04）— 選手出賽與養成回饋閉環
+
+同分支 `milestone-n-finance`。**未 merge 回 main。**
+
+### 動工前的分析
+
+| 面向 | 現況 |
+|---|---|
+| 只有出賽者拿經驗 | ✅ 結構上已成立（`applyProgressToState` 只迭代 `tx.playerProgress`，而那是 adapter 依實際陣容產生的名單）——但**沒有任何驗證在守它** |
+| MOBA / CS 回寫 | ✅ MOBA 走 `seatPlayers`、CS 走 `_gid`（O1 已確認） |
+| 疲勞 | ❌ **比賽完全不消耗體力**，只有訓練會扣 ⇒ 連續出賽零代價，替補與輪換沒有意義 |
+| 近期狀態 | ❌ 只有由體力導出的 `condition` 文字，沒有出賽紀錄 |
+| 受傷 | ❌ 不存在 |
+| 名單頁顯示 | ❌ 只有等級數字，沒有經驗進度／體力／可否出賽 |
+
+### 交付
+
+**`src/platform/condition/playerCondition.js`**（純函式）：
+
+- **出賽損耗**：單場 −12 體力，**連續出賽每多一場再多扣 3**（第 4 場扣 21）
+  ⇒ 輪換有實際意義。
+- **受傷風險**：基礎 2%；體力 < 30 時改用 12% 基準；連續出賽每場 +2%，上限 35%。
+  傷停 2–6 天。**刻意不做**複雜醫療系統（沒有部位、療程、復健）。
+- **恢復**：每日自然 +8 體力（有排訓練的人由 `applyCourse` 處理，不重複計算）；
+  傷停每日 −1 天；隔天沒出賽就把連續出賽計數歸零。
+- **不可出賽**：體力 < 15 或傷停中，理由是可直接顯示的中文句子。
+
+**決定性（伺服器要能重算）**：受傷判定用 `transactionId + playerId` 的 FNV-1a 雜湊，
+**沒有 `Math.random()`、沒有時鐘**。同一場比賽重播逐欄相同 ⇒ 伺服器可獨立驗算，
+不必信任前端提交的狀態。與 S25 發獎、Milestone O 招募是同一套手法。
+
+**接線**：損耗掛在 `applyProgressToState`——**S25 既有的單一結算入口**。
+好處是三件事一次到位：只有出賽者會被套用（替補／未登錄根本不在名單裡）、
+沿用既有的 transactionId 冪等（不會重複扣體力）、receipt 逐人回報狀態變化可稽核。
+
+**閘門**：`matchSquad.validateSquad` 新增 `injured` / `exhausted` 兩種阻擋，
+`autoFillSquad` 不會選到不可出賽的人。
+
+**UI（名單頁）**：
+- 列表卡：可出賽／傷停 N 天標籤（**顏色配文字**）＋ EXP 與體力兩條細軸。
+- 詳情：出賽狀態區塊——等級與經驗進度、體力與狀態文字、連續出賽場數、
+  傷停天數、近期出賽場數，不可出賽時顯示理由。
+
+### 驗證（2026-08-04 實跑）
+
+`node tools/check_condition_o2.mjs` → **30/30 通過**。要害逐項：
+
+- **替補與未登錄零經驗、零損耗**（體力、連續出賽計數都沒動）；receipt 只含 5 人。
+- **換上替補 ⇒ 經驗與損耗都落在替補**，原先發完全沒動（MOBA 與 CS 各驗一次）。
+- CS 的 `playerId === null`（引擎示範陣容）不發經驗，不虛構選手。
+- 連續出賽消耗遞增 **12 → 15 → 18 → 21**；受傷機率 0.020 → 0.120 且有上限。
+- 休息一天回體力並把連續出賽歸零；有排訓練不重複回體力；傷停每天 −1。
+- 體力剛好在門檻上仍可出賽（邊界不誤擋）。
+- **重播逐欄相同**；同一場再結算完全不寫入。
+- **前端灌水的 `previousXp` / `newLevel` 一律無效**——交易單宣稱 Lv99，
+  實際仍以 Store 現值重算為 Lv3。
+
+其餘回歸：`check_squad_o1` 40/40、`check_recruit_o` 40/40、
+`check_finance_n/n2/n3/n31` 32/35/40/31、
+`verify.mjs --only=progress25,talent27,experience26,cs23` 4/4、build 通過。
+
+### 未做（刻意）
+
+- 轉會市場、拍賣、即時配對、正式後端 —— 使用者明確指定不做。
+- 複雜醫療系統（部位／療程／復健／二次傷害）—— 明確排除。
+- **瀏覽器實機驗收未做**：名單頁的兩條細軸與出賽狀態區塊、閘門在傷停時的顯示、
+  320–430 響應式。
+
+## Milestone O3（2026-08-04）— 線上出賽提交與驗證契約
+
+同分支 `milestone-n-finance`。**未 merge 回 main。**
+
+### 定位
+
+O1 的 `MatchSquad.v1` 回答的是「這份陣容合法嗎、要提交什麼」，那是**陣容的描述**。
+O3 補的是**一次出賽申請**：我是誰、用哪一份名單、誰坐哪個席位、這次申請的識別碼，
+以及伺服器要怎麼獨立驗證、偵測名單漂移、日後重播。
+
+**目前沒有真正的後端**；本機模擬入口照舊，這一輪只是把資料形狀先定下來，
+讓連線那天不必重做。
+
+### 交付：`MatchEntryRequest.v1`（`src/platform/contracts/matchEntry.js`）
+
+**只送身分，不送數值**（延續 O1 紅線並擴大檢查）：
+
+| 送 | 不送 |
+|---|---|
+| playerId、seat、位置（role / seatRole）、名單分層 | 能力值、體力、士氣、傷害、戰力、等級、經驗、評分 |
+| 隊伍版本、隊伍識別、提交時間 | 任何前端自算的結果 |
+
+`validateMatchEntryRequest` 會**遞迴掃描整張申請單**（含 `squad` 每一列），
+發現 `FORBIDDEN_VALUE_KEYS` 裡任何欄位就拒絕。
+
+**隊伍版本 `rosterVersion`**：由「名單成員 id ＋ 名單分層 ＋ 陣容指派」推導的雜湊，
+**不含任何能力數值** ⇒ 練功、升級、受傷都不會讓版本失效；
+只有換人、改分層、改陣容才會。伺服器用它偵測「客戶端拿舊名單送單」。
+
+**決定性 transactionId ＋ 陣容快照**：
+`entry:<mode>:<rosterVersion>:<seatsHash>:s<賽季>w<週>d<天>`。
+同一份陣容同一天送兩次 ⇒ 同一個 id ⇒ 伺服器天然可去重；
+換人或換天就是不同場次。快照讓伺服器日後能原樣重播這次申請，
+不需要保存整個客戶端狀態。
+
+**UI**：新增共用元件 `src/screens/common/MatchEntryPanel.jsx`，
+MOBA 與 CS 兩個賽前頁共用（不各寫一份判斷與版面）：
+通過時顯示綠標、隊伍版本、申請識別與可展開的「提交內容」明細
+（並註明能力數值不會提交）；未通過時逐條列出理由並提供「⚡ 自動填入」。
+位置不符以琥珀色警告呈現，仍可提交。
+
+### 驗證（2026-08-04 實跑）
+
+`node tools/check_match_entry_o3.mjs` → **35/35 通過**。要害逐項：
+
+- 序列化後**不含**任何 `stats/power/energy/rating/lv/xp/dmg`；
+  頂層與**巢狀**夾帶數值都會被遞迴掃出來並拒絕。
+- 六種阻擋各驗一次：缺人／不存在／重複／未登錄／**傷停**／**體力不足**
+  （後兩者來自 O2 的 `matchFitness`，規則沒有第二份）。
+- 失敗時 `request` 為 `null`——**不送半套申請**；理由是中文句子不是錯誤碼。
+- 同陣容同日 ⇒ 同一個 id；換人或換天 ⇒ id 改變。
+- **練功／升級／受傷不會改變隊伍版本**；改分層或改陣容才會。
+- 伺服器端模擬驗證：竄改 transactionId、換掉陣容沿用舊 id、
+  schema/mode 竄改、席位數不符，全部拒絕；
+  且**以伺服器自己的名單重驗資格**——客戶端送單時還健康、伺服器端已受傷，一樣擋得下。
+
+其餘回歸：`check_condition_o2` 30/30、`check_squad_o1` 40/40、`check_recruit_o` 40/40、
+`check_finance_n/n2/n3/n31` 32/35/40/31、`verify.mjs` 5 區段全過、build 通過。
+
+### 未做（刻意）
+
+- 真正的後端、即時配對、排行榜、轉會市場 —— 使用者明確指定不做。
+- 申請單**不持久化**：`matchEntry(mode)` 是唯讀、隨用隨產。
+  要保留送單歷史等有後端再說（現在存了也只是本機資料）。
+- **瀏覽器實機驗收未做**：申請面板在兩個賽前頁的版面、展開明細、
+  320–430 響應式。
+
+## Milestone O4（2026-08-04）— 線上配對票券與等待狀態
+
+同分支 `milestone-n-finance`。**未 merge 回 main。**
+
+### 定位
+
+O3 產生了出賽申請單，但「按下配對之後發生什麼事」沒有形狀：沒有排隊狀態、
+沒有等待、沒有取消、沒有拒絕理由，也沒有「對手由誰決定」的界線。O4 補的就是這一段。
+
+### 交付
+
+**`MatchmakingTicket.v1`**（`src/platform/contracts/matchmaking.js`）
+
+六種狀態：`idle` / `validating` / `queued` / `matched` / `cancelled` / `rejected`。
+**轉移規則寫在契約裡**，畫面與 Store 都不得自己判斷——
+`transitionTicket` 是唯一入口，非法轉移一律拒絕並附中文理由
+（例：「無法從『驗證中』變更為『已配對』」）。
+`ticketId` 由 O3 申請單的 transactionId 決定性推導 ⇒ 重複建票同一個 id。
+
+**`MatchAssignment.v1`** —— 配對結果**只能由 gateway 簽發**。契約明確擋掉：
+
+- 夾帶比賽結果（`winner` / `result` / `score` / `rewards` / `mvp` / `kills` / `outcome`）
+- 對手夾帶戰力數值（`power` / `stats` / `rating` / `lv`）
+- 指派單與票券不符、缺對手、缺種子、未標明簽發者
+
+**`src/platform/matchmaking/mockGateway.js`** —— 本機**決定性**模擬，不是後端。
+等待秒數（3–9s）、對手、對戰種子全部由 ticketId 雜湊推導 ⇒ 驗證器驗得動。
+**每次輪詢都用當下的名單重新驗證資格**：排隊中受傷、被改成未登錄、離隊，
+一律 `rejected` 並附中文原因。日後換成真伺服器只要換掉這一支。
+
+**Store**（schemaVersion 7 → 8）：`matchmaking.ticket` 單一票券；
+`enqueueMatch` / `pollMatchmaking` / `cancelMatchmaking` / `resetMatchmaking` /
+`matchmakingView`。**同一隊伍同時只能有一張有效票券**——重複按不會產生第二張。
+migration：載入時把殘留的 `validating` / `queued` 作廢成 `cancelled`
+（沒有伺服器會回應一張跨 session 的票，讓玩家看到永遠不會有結果的排隊更糟）。
+
+**UI**：新增共用元件 `src/screens/common/MatchQueuePanel.jsx`，
+MOBA 與 CS 兩個賽前頁共用同一套流程與版面（不新增第二套資料來源）：
+排隊中顯示等待計時、模式、隊伍版本、票券碼與三點等待動畫＋取消鈕；
+配對成功顯示對手、種子、簽發者與「進入對戰」；被拒絕顯示中文原因並可重新配對。
+
+### 驗證（2026-08-04 實跑）
+
+`node tools/check_matchmaking_o4.mjs` → **47/47 通過**。要害逐項：
+
+- 六種狀態齊全；非法轉移（終局狀態再變更、跳過中間狀態）全部拒絕。
+- **取消後不可進場**、**被拒絕後不可進場**、已配對但指派單被抽掉也不可進場。
+- 五種夾帶比賽結果的指派單逐一拒絕；對手夾帶戰力數值拒絕。
+- mock gateway 決定性：同票券重複輪詢逐欄相同。
+- **排隊期間資格改變 → 拒絕**：受傷／未登錄／離隊各驗一次，
+  且不必等到時間到就會被擋。
+- MOBA 與 CS 走同一套契約與狀態，票券彼此獨立。
+
+⚠ 驗證器抓到契約的一個真漏洞：`Number(null)` 是 `0`，
+所以原本的 `Number.isFinite(Number(a.seed))` 會讓 `seed: null` 矇混過關。
+已改為檢查型別（`typeof a.seed !== "number"`）。
+
+其餘回歸：`check_match_entry_o3` 35/35、`check_condition_o2` 30/30、
+`check_squad_o1` 40/40、`check_recruit_o` 40/40、
+`check_finance_n/n2/n3/n31` 32/35/40/31、`verify.mjs` 5 區段全過、build 通過。
+
+### 未做（刻意）
+
+- 真正的後端、WebSocket、排行榜 —— 使用者明確指定不做。
+- 輪詢目前由畫面的 1 秒計時器驅動；接上真伺服器改成訂閱推播即可，
+  狀態流程與版面都不必改。
+- **瀏覽器實機驗收未做**：排隊面板在兩個賽前頁的版面、等待動畫、
+  取消與重新配對、320–430 響應式。
+
+## Milestone O5（2026-08-04）— 比賽房間與雙方確認
+
+同分支 `milestone-n-finance`。**未 merge 回 main。**
+
+### 定位
+
+O4 配對成功後拿到 `MatchAssignment`，但「進對戰之前雙方要不要確認」沒有形狀：
+沒有房間、沒有確認、沒有倒數、沒有逾時，也沒有「舊票券能不能進新房間」的界線。
+
+### 交付：`MatchRoom.v1`（`src/platform/contracts/matchRoom.js`）
+
+五種狀態：`waiting` / `ready_check` / `confirmed` / `cancelled` / `expired`。
+轉移表寫在契約裡，`transitionRoom` 是唯一入口，非法轉移附中文理由
+（例：「房間無法從『等待就緒』變更為『雙方已確認』」）。
+
+**三條紅線**：
+
+1. **房間由 gateway 開**：`roomId` 由 assignmentId 決定性推導、帶 `issuedBy`。
+   客戶端自造的房間（無簽發者）**拒絕進場**。
+2. **雙方都確認才可進場**：只有一方確認不行；未雙方確認時硬轉 `confirmed` 也擋。
+3. **房間與票券＋指派單綁定**：拿別張票券、票券換新、指派單被抽換，一律拒絕
+   ——**舊票券進不了新房間**。
+
+**確認倒數** 20 秒。逾時後不可再確認、不得進場，理由是中文句子。
+**防重複**：重複確認拒絕（`already_confirmed`）；同一張指派單重複開房得到同一個
+roomId，不會產生第二間。
+
+**mock gateway 擴充**（仍是純函式決定性模擬，不是後端）：
+`openRoom` 簽發房間；`pollRoom` 驅動 `waiting → ready_check`、對手確認（2–8 秒，
+一定小於倒數）、逾時。
+
+**Store**（schemaVersion 8 沿用）：`matchmaking.room`；
+`openMatchRoom` / `pollMatchRoom` / `confirmMatchReady` / `cancelMatchRoom` / `matchRoomView`。
+⚠ `pollMatchRoom` 會先檢查票券——票券被取消／被拒絕／換了新票，房間直接關閉，
+不讓人靠舊票券進場。migration：載入時把殘留的 `waiting` / `ready_check` 作廢。
+
+**UI**：沿用 O4 的共用面板 `MatchQueuePanel`（不另開頁面、不大幅重構）。
+配對成功後顯示房間狀態、**我方／對手兩格確認指示**、倒數（剩 5 秒轉紅）、
+「我方確認」與「取消對戰」；雙方到齊才出現「進入對戰」。
+
+### 驗證（2026-08-04 實跑）
+
+`node tools/check_match_room_o5.mjs` → **45/45 通過**。要害逐項：
+
+- 五種狀態齊全；跳過確認直接進 `confirmed`、終局狀態再變更，全部拒絕。
+- 我方確認後**仍不可進場**；只有對手確認也不行；雙方到齊才自動進 `confirmed`。
+- 逾時後不可再確認、**不得進場**；取消後不得進場，皆附中文原因。
+- 重複確認（我方與對手各驗一次）拒絕；非確認階段不能確認。
+- 同一張指派單重複開房 → 同一個 roomId。
+- **拿別張票券進房間 → 拒絕**；票券換新、指派單被抽換、票券沒有指派單，全部拒絕。
+- **自造房間（無簽發者）→ 拒絕進場**。
+- mock gateway 決定性：同房間重複輪詢逐欄相同。
+- MOBA 與 CS 共用同一套契約，房間彼此獨立。
+
+其餘回歸：`check_matchmaking_o4` 47/47、`check_match_entry_o3` 35/35、
+`check_condition_o2` 30/30、`check_squad_o1` 40/40、`check_recruit_o` 40/40、
+`check_finance_n/n2/n3/n31` 32/35/40/31、`verify.mjs` 5 區段全過、build 通過。
+
+### 未做（刻意）
+
+- 真正的後端、WebSocket、聊天、排行榜 —— 使用者明確指定不做。
+- 對手在 mock 裡**一定會確認**（2–8 秒）；契約支援對手拒絕，但 mock 不模擬，
+  以免本機流程變得不可預測。拒絕路徑由驗證器直接測。
+- **瀏覽器實機驗收未做**：房間面板、雙方確認指示、倒數、逾時與取消、
+  320–430 響應式。
+
+## Milestone O6（2026-08-04）— 正式對戰場次與進場
+
+同分支 `milestone-n-finance`。**未 merge 回 main。**
+
+### 定位
+
+O5 結束於「雙方都確認了」。但確認完到真的開打之間還有一個缺口：
+**誰有資格啟動這場比賽、可以啟動幾次、用什麼參數啟動。**
+沒有這一層的話，畫面只要呼叫一次進場函式就能開打，而且可以呼叫很多次
+（重整、連點、回上一頁再進來），每次都是一場新比賽。
+
+### 交付：`MatchSession.v1`（`src/platform/contracts/matchSession.js`）
+
+四種狀態：`created`（待啟動）/ `launched`（已啟動）/ `cancelled` / `expired`。
+
+**綁定**：roomId、assignmentId、ticketId、模式、**雙方隊伍版本**、比賽 seed、
+`issuedBy`。任何一項對不上就拒絕啟動。
+
+**一次性 launchToken**：`consumeLaunchToken` 是唯一入口。拒絕的情況全部附中文原因：
+
+| 情況 | 訊息 |
+|---|---|
+| 令牌已用過 | 本場比賽已經啟動過，無法重複進入 |
+| 令牌不符 | 啟動憑證無效 |
+| 場次逾期（300 秒） | 場次已逾期，請重新配對 |
+| 場次取消 | 已取消本場比賽 |
+| 舊票券 | 場次與目前票券不符（舊票券不可啟動比賽） |
+| seed 被竄改 | 場次的對戰種子與配對結果不符 |
+| 自造場次 | 場次未標明簽發者，拒絕啟動 |
+
+**啟動參數**由場次提供：`{sessionId, mode, seed, opponentId, opponentName, issuedBy}`
+——**沒有陣容、沒有能力數值、沒有比賽結果**。seed 沿用 gateway 在配對時決定的那一個，
+前端無從指定。
+
+**不重複建立比賽**：`sessionId` 由 roomId 決定性推導，同一房間重複簽發回同一場次、
+同一個令牌。
+
+**重整恢復**：`created` 狀態的場次**刻意在 migration 中保留**（這是需求明確要求的）；
+把關不靠「載入時清掉」，而靠 `consumeLaunchToken` ——
+已啟動的場次重整後仍然不可再啟動（`tokenUsed` 會被存下來）。
+
+**Store**：`matchmaking.session` / `matchmaking.launch`；
+`createMatchSession` / `launchMatchSession` / `cancelMatchSession` / `matchSessionView`。
+
+**UI**：沿用 O4/O5 的共用面板（不另開頁面、不大幅重構）。
+雙方確認完成後自動簽發場次並顯示場次識別與狀態；
+「進入對戰」改為**先消耗一次性令牌，成功才真的進場**，失敗顯示中文原因。
+
+### 驗證（2026-08-04 實跑）
+
+`node tools/check_match_session_o6.mjs` → **36/36 通過**。要害逐項：
+
+- 房間尚未雙方確認 → 不得簽發；房間與票券不符 → 不得簽發。
+- **首次使用令牌成功、第二次拒絕**（重複進場）。
+- 逾期／取消／房間不符／舊票券／指派單被抽換／seed 被竄改／自造場次，全部拒絕。
+- 啟動參數欄位固定為六個識別欄，序列化後不含 stats/power/roster/winner/score。
+- 同一房間重複簽發 → 同一個 sessionId 與同一個令牌。
+- **重整後未啟動的場次仍可啟動；已啟動的場次重整後仍不可再啟動。**
+- MOBA 與 CS 共用同一套契約，CS 同樣是一次性令牌。
+
+其餘回歸：`check_match_room_o5` 45/45、`check_matchmaking_o4` 47/47、
+`check_match_entry_o3` 35/35、`check_condition_o2` 30/30、`check_squad_o1` 40/40、
+`check_recruit_o` 40/40、`check_finance_n/n2/n3/n31` 32/35/40/31、
+`verify.mjs` 5 區段全過、build 通過。
+
+### ⚠ 誠實揭露：seed 尚未driven 引擎
+
+`launch.seed` 目前**存進 `matchmaking.launch` 供對戰入口讀取，但還沒有接到
+LogicEngine 的實際亂數種子**。要接需要改 GameView / LoadingScreen 的參數傳遞，
+那超出「不大幅重構、不修改既有戰鬥演算」的範圍，因此列為後續項。
+現階段的保證是：**沒有有效場次與未使用的令牌就進不了對戰入口**。
+
+### 未做（刻意）
+
+- 真正的後端、WebSocket、聊天、排行榜、觀戰 —— 使用者明確指定不做。
+- 沒有修改任何既有戰鬥演算。
+- **瀏覽器實機驗收未做**：場次識別顯示、進入對戰、重複進場被擋、
+  320–430 響應式。
+
+## Milestone O7（2026-08-04）— 權威場次、恢復與單次結算
+
+同分支 `milestone-n-finance`。**未 merge 回 main。**
+
+### 1. 權威戰鬥啟動（補上 O6 明確欠下的那一條）
+
+`src/useLocalServer.js:108` 原本是 `const seed = (Date.now() & 0xffff) | 1;`
+——引擎自己用時鐘產生 seed。現在改為：
+
+```js
+const authoritative = Number.isFinite(opts.seed);
+const seed = authoritative ? ((opts.seed >>> 0) | 1) : ((Date.now() & 0xffff) | 1);
+```
+
+- `GameView` 從 **Store** 讀 `matchmaking.launch`（由 O6 一次性令牌寫入），
+  **刻意不接受 props 傳入 seed** ⇒ 前端無法覆寫 seed、對手或場次資料。
+- 引擎要求奇數 seed，因此做一次**決定性**正規化 `| 1`——同一個 session seed
+  永遠映射到同一個引擎 seed。
+- 沒有場次時（debug harness / 舊路徑）才退回時鐘，並在 replay capture 標記
+  `seedSource: "local"`，讓追蹤看得出這一場不是權威場次。
+
+**實測**：同一 seed 兩個引擎的初始快照**逐位元相同**；跑 200 tick 後結果也相同；
+不同 seed 則不同（測試有檢定力）。
+
+### 2. 場次恢復
+
+`MatchSession` 擴充生命週期：
+`created → launched → completed / abandoned`（＋ `cancelled` / `expired`），
+另有正交的 `connection: connected / disconnected`。
+
+⚠ **`launched` 不再是終局**——比賽開打後還要能恢復。終局改為
+`completed / abandoned / cancelled / expired`。
+
+`resumeSession()` **不開新場、不再消耗令牌**，回傳的 launch 與首次啟動**逐欄相同**
+（同 seed ⇒ 同初始狀態）。拒絕恢復的情況全部附中文原因：
+尚未啟動／已取消／已放棄／已完成／已逾期／票券不符／seed 被竄改／無簽發者。
+
+### 3. `MatchResult.v1`
+
+綁定 sessionId、matchId、雙方隊伍版本、seed、winner、score、durationSec、resultSource。
+
+- `resultId` 由**內容雜湊**推導 ⇒ 同一份結果重送得到同一個 id；
+  **同一場送不同結果 ⇒ 雜湊不同 ⇒ 立即偵測衝突並拒絕**。
+- `resultSource` 只接受 `engine` / `server`。客戶端自稱的 `client` / `manual` 拒絕。
+- 竄改勝負、比分或時長 ⇒ resultId 對不上 ⇒ 被抓出來。
+- 內容雜湊刻意只取會影響結算的欄位（時長四捨五入），避免時間戳造成假衝突。
+
+### 4. 單次結算
+
+`src/platform/progress/settleMatchResult.js` **不建立第二套結算流程**：
+驗證通過後一律委派 **S25 的 `applyMatchProgress`**（唯一發獎入口）。它只負責
+「該不該讓那一步發生」與「記錄」。
+
+- 同一份結果重送 ⇒ 回既有 receipt，**完全不寫入**。
+- 驗證失敗 ⇒ 不入帳，但**保存失敗原因**（`lastSettlementError`）。
+- **中斷後重試安全**：失敗時沒有任何寫入（不會只完成一半），重試成功且只入帳一次。
+- 實測：資金 100 萬 → 112 萬（一次）、經驗 +60（一次）、體力 95 → 83（一次）；
+  重送後三者都沒有再變動。
+
+### 5. 完整追蹤鏈
+
+`ticketId → assignmentId → roomId → sessionId → matchId → resultId → settlementId`
+（另附 transactionId）。`matchTrace()` 供 debug 查看，
+**刻意不回傳 launchToken**；面板的追蹤區塊只在 `isDebugMode()` 時顯示。
+
+### 驗證（2026-08-04 實跑）
+
+- `node tools/check_authoritative_o7.mjs` → **48/48 通過**。涵蓋需求列出的每一項：
+  正常啟動、重複啟動、seed 篡改、重整恢復、斷線恢復、取消、逾時、
+  結果重送、衝突結果、結算中斷重試，以及
+  **相同 seed ＋ 相同陣容可重現相同初始狀態與結果**、
+  **同一場重送不會重複加錢／經驗／戰績或重複扣體力**。
+- O0–O6 全數重跑：`check_match_session_o6` 36/36、`check_match_room_o5` 45/45、
+  `check_matchmaking_o4` 47/47、`check_match_entry_o3` 35/35、
+  `check_condition_o2` 30/30、`check_squad_o1` 40/40、`check_recruit_o` 40/40。
+- 財務：`check_finance_n/n2/n3/n31` 32/35/40/31。
+- `verify.mjs --only=progress25,talent27,experience26,cs23,regress,regress2,build` → **7/7**。
+
+#### ⚠ 既有驗證變紅 → 已修正（未放寬門檻）
+
+`check_match_session_o6` 的兩條因為 O7 合理改變語意而變紅：
+
+1. `1f` 原本斷言 `SESSION_TERMINAL.length === 3`。
+2. `6d` 原本斷言 `isSessionTerminal(launched) === true`。
+
+O7 之後 `launched` 不再是終局（要能恢復）。修法是**改成逐項比對整組終局狀態**
+（`abandoned,cancelled,completed,expired`）並額外斷言 `launched` 不在其中——
+比原本只比長度**更嚴格**，不是放寬。
+
+### 已知限制（誠實揭露）
+
+1. **沒有真正的後端**：場次、房間、結果裁決全部由本機 mock gateway 決定性模擬。
+   「權威」目前指的是**客戶端內部的單一權威來源**（場次 → 引擎），
+   不是「伺服器裁決」。
+2. **結果仍由本機引擎產生**：`resultSource: "engine"` 是誠實標記，
+   契約已預留 `server`。真正的伺服器裁決要等後端。
+3. **對手隊伍版本是推導值**：`rosterVersions.opponent` 由對手 id 雜湊而來
+   （本機沒有對手的真實名單）。
+4. **`reportMatchResult` 尚未接進賽後流程**：目前由驗證器直接呼叫。
+   要讓實際打完的比賽走這條路，需要在 `useBattleFeed` / Result 畫面接線，
+   那會動到既有賽後流程，超出「不大幅重構」的範圍。
+5. 追蹤鏈只存最近一場（`lastResult` ＋ `settlements`），沒有歷史查詢介面。
+
+### 人工驗收清單（未經瀏覽器實測）
+
+1. MOBA 賽前配置 → 開始配對 → 雙方確認 → 進入對戰，確認能正常開打。
+2. 用 `?debug=1` 開啟，面板底部應出現 DEBUG 追蹤鏈，且**看不到 launchToken**。
+3. 進對戰後重整頁面，確認場次仍在（不會變成新的一場）。
+4. 重複按「進入對戰」應被擋（O6 已驗，這輪未改動該路徑）。
+5. 手機 320 / 360 / 390 / 430 寬度下面板不水平溢出。
+
+### 未做（刻意，依本輪限制）
+
+- 真正的後端、WebSocket、帳號登入、聊天、排行榜、觀戰、正式反作弊。
+- 未修改 MOBA／CS 戰鬥平衡與英雄 AI（`regress` / `regress2` 皆綠可佐證）。
+- 未碰 `ESMO-hero-models` worktree。
+
+## Milestone O7.1（2026-08-04）— 真實賽後流程接入 O7
+
+同分支 `milestone-n-finance`。**未 merge 回 main。**
+補完 O7 明確記錄的那個缺口：`reportMatchResult` 原本只有 verifier 在走。
+
+### 動工前的現況
+
+| 模式 | 賽後結算點 | 問題 |
+|---|---|---|
+| MOBA | `useBattleFeed.js` 終局分支 → `profile.applyMatchProgress(tx)` | 直接呼叫 S25，繞過 O7 |
+| CS | `settleCsMatch()` → `applyMatchProgress(tx)` | 同上 |
+
+兩條路都沒有場次綁定與衝突偵測。
+
+### 交付：唯一結算邊界
+
+新增 `src/platform/progress/settleMatchBoundary.js`，兩條真實流程都改走它：
+
+```
+比賽結束 → settleMatchThroughSession()
+             ├─ 有場次 → reportMatchResult()（O7：綁定／防重送／防衝突／追蹤鏈）
+             └─ 無場次 → applyMatchProgress()（S25，並標記 viaSession: false）
+                    ↑ 兩條最後都由 S25 實際入帳——**沒有第二套結算**
+```
+
+另附兩個純轉換函式 `outcomeFromBattleResult` / `outcomeFromCsResult`——
+**不重新統計**，winner / score / duration 全部照抄既有結果契約。
+
+### ⚠ 實作時抓到的自己的漏洞
+
+第一版把「可用場次」判定為 `state === launched`。但**首次結算會把場次標成
+`completed`**，於是第二次回報（Result 畫面重整、重送）就退回 S25 路徑——
+S25 本身冪等所以不會重複入帳，**但拿不到 O7 的 receipt，也不會偵測衝突**，
+等於「同一場送不同勝負」會被默默忽略而不是拒絕。
+
+驗證器的 3c / 4 / 4b / 5 / 5b / 5d / 6c / 6d 一次抓出這個問題。
+修法是把 `completed` 也納入可用場次。
+
+### 沒有場次時的取捨（誠實揭露）
+
+debug harness（`?debug=moba-runtime-battle`）或舊流程可能在沒有 MatchSession 的
+狀態下打完一場。這時**仍走 S25 入帳**（否則獎勵會憑空消失），但回傳
+`viaSession: false` 明確標記那一場未經權威驗證。
+寧可標記清楚，也不要讓玩家的獎勵默默不見。
+
+### 驗證（2026-08-04 實跑）
+
+`node tools/check_result_flow_o71.mjs` → **27/27 通過**。這支**實際操作
+profileStore**，走的就是真實流程用的那些函式，不是純契約測試。涵蓋：
+
+1. **正常打完一場只結算一次**：資金 100 萬 → 109 萬、經驗 +50、體力 85 → 73，各一次。
+2. **Result 畫面重整不重複結算**：資金／粉絲／經驗／體力都沒有再變動。
+3. **重送相同結果 → 同一個 settlementId**，第二次標記 `alreadySettled`。
+4. **重送不同勝負 → 拒絕**，原因為中文（「本場已回報過不同的結果…」），且完全沒有入帳。
+5. **MOBA 與 CS 共用同一條流程**（CS 的重送與衝突各驗一次）。
+6. **全庫掃描**：除了 store 自身、邊界與 O7 結算層，**沒有任何呼叫點直接呼叫
+   `applyMatchProgress`**。
+
+回歸全綠：`check_authoritative_o7` 48/48、`check_match_session_o6` 36/36、
+`check_match_room_o5` 45/45、`check_matchmaking_o4` 47/47、
+`check_match_entry_o3` 35/35、`check_condition_o2` 30/30、`check_squad_o1` 40/40、
+`check_recruit_o` 40/40、`check_finance_n/n2/n3/n31` 32/35/40/31、
+`verify.mjs --only=progress25,talent27,experience26,cs23,regress,regress2,build` **7/7**。
+
+### 仍然沒做（本輪限制）
+
+- 未修改戰鬥演算、平衡、AI（`regress` / `regress2` 綠可佐證）。
+- 未改 UI 主架構——只換了兩個結算呼叫點，畫面完全沒動。
+- 未碰 `ESMO-hero-models`。
+- 仍然沒有真正的後端：`resultSource` 仍是 `engine`（本機引擎產生），
+  契約已預留 `server`。
+
+### 人工驗收清單（未經瀏覽器實測）
+
+1. 完整打完一場 MOBA，確認 Result 畫面的獎勵數字正常。
+2. 在 Result 畫面重整，確認資金／經驗**沒有再增加**。
+3. 打完一場 CS，重複上述兩步。
+4. 用 `?debug=1` 看追蹤鏈，`settlement` 一環應該有值。
+
+## Milestone P0（2026-08-05）— 選手等級與能力成長規則
+
+同分支 `milestone-n-finance`。**未 merge 回 main。**
+O0–O7.1 已封存為 tag `milestone-o7.1-archive`。
+
+### 為什麼做這個
+
+閉環分析發現：**升級對實力零影響**。`lv` 由 xp 導出（S25），但升級只發
+`talentPoints`；玩家不去天賦樹手動花掉，等級就完全不影響任何數值。
+`lv` 的消費者只有三個——戰報存檔、名牌顯示、薪資公式——沒有一個影響戰鬥。
+
+### 規則（`src/platform/progress/levelGrowth.js`）
+
+每升一級給 **3.0 點**成長，依**定位主能力**分配：
+
+```
+分配依據 = playerModel.POSITION_PROFILE[`MOBA${role}`].key   ← 沿用既有定位規則
+權重     = 5 / 4 / 3 / 2 / 1（與 posFit 同一組，總和 15）
+單項成長 = 3.0 × (權重/15) × 潛力空間係數
+潛力空間係數 = clamp((潛力上限 − 目前值) / 25, 0, 1)   ← 越接近上限成長越慢
+上限     = 潛力上限、99 硬上限、單項每級 +1.5
+```
+
+**四個設計原則**：
+
+1. **不另立第二套定位規則**——分配沿用 `POSITION_PROFILE` 與 `posFit` 的同一組
+   能力與權重。「這個定位重視什麼」在專案裡只有一份定義。
+2. **不建立第二套能力資料**——成長寫回 `players[].stats`（基礎值），
+   天賦加成仍由 `getPlayerDerivedStats` 疊在上面，兩者不重複計算。
+3. **完全決定性**——沒有亂數、沒有時鐘，成長只是 (選手, 升幾級) 的函式
+   ⇒ 伺服器可獨立重算（與 O 系列同一立場）。
+4. **天賦點照發**——本檔不取代天賦系統，只是讓等級本身也有基礎回饋。
+
+### 接線
+
+掛在 **S25 唯一結算入口** `applyProgressToState` 的升級分支裡，
+與 XP／等級／天賦點／出賽損耗同一個迴圈、同一個 `nextState`。
+⇒ 冪等由既有 `transactionId` 保證，同一場重送不會二次成長。
+receipt 新增 `growth: { gains, total }`，可直接顯示「成長前後差異」。
+
+### 實際數字
+
+中路選手 Lv5→6（能力 60／潛力 90）：
+**精準度 +1、操作速度 +0.8、決策力 +0.6、應變力 +0.4、反應速度 +0.2（共 +3）**
+
+收斂行為：距潛力上限 45 點時每級 +3；距上限 3 點時每級 +0.3；到頂則完全不成長。
+
+### 驗證（2026-08-05 實跑）
+
+`node tools/check_growth_loop_p0.mjs` → **25/25 通過**。涵蓋：
+
+- 依定位分配、權重遞減、不同定位成長項不同、其他能力不動。
+- 決定性（重算逐欄相同）、純函式（不修改輸入）。
+- 潛力上限／99 硬上限／單項每級上限／越接近上限越慢／到頂不再成長。
+- 走 S25 唯一入口；**同一場重送不會二次成長**；沒升級的比賽零成長。
+- **天賦點照發**（兩套成長不互相取代）。
+- 成長真的傳到對戰輸入：derived stats ↑、**CS 引擎綜合 60 → 61**、
+  MOBA 行為 mods 改變。
+
+回歸全綠：O7.1 27/27、O7 48/48、O6 36/36、O5 45/45、O4 47/47、O3 35/35、
+O2 30/30、O1 40/40、O 40/40、財務 32/35/40/31、
+`verify.mjs --only=progress25,talent27,experience26,cs23,regress,regress2,build` **7/7**
+（regress／regress2 綠 ⇒ 未動戰鬥平衡）。
+
+### ⚠ 仍未解的另一半（P0 的第二項，本輪未做）
+
+**MOBA 能力仍不影響戰力。** 現役路徑（`useLocalServer.js:142-143`）只注入
+行為 mods（撤退門檻／gank 視窗／roam／分推／推線深度／參團意願），
+**沒有任何一項影響傷害或戰力**。`calcMobaPower` / `calcMobaTough` 存在，
+但唯一呼叫點是 `src/App.jsx:389`（Legacy 原型）⇒ **現役路徑死碼**。
+
+⇒ 目前狀態：**練功會讓 CS 變強、讓 MOBA 的行為更聰明，但不會讓 MOBA 打得更痛。**
+這一項需要一個不違反 S28 紅線（不得乘進傷害式）的設計決策，
+驗證器 5d 已把「MOBA 只有行為層」寫成斷言，避免日後誤以為已完成。
+
+### 未做（刻意）
+
+- 未動戰鬥平衡、英雄 AI、UI 主架構（本輪沒有改任何畫面）。
+- 未碰後端／WebSocket／商城／轉會市場／新模式。
+- 未碰 `ESMO-hero-models`。
+- **瀏覽器實機驗收未做**：賽後 receipt 的成長明細目前只在資料層，畫面尚未顯示
+  （屬 P1 成長可見性）。
+
+## Milestone P0-2（2026-08-05）— 能力影響 MOBA 戰鬥品質
+
+同分支 `milestone-n-finance`。**未 merge 回 main。**
+
+### 問題與紅線
+
+P0 之後練功會讓 CS 變強、讓 MOBA 行為更聰明，但**不會讓 MOBA 打得更痛**：
+現役路徑只注入行為 mods（撤退／gank／roam／分推／推線深度／參團），沒有一項影響戰力。
+
+而 S28 的紅線是：`dmgAmt = p.power * dt * ...` ——
+**把選手能力注入 `power` 就是把能力乘進傷害式，不可以。**
+
+### 解法：走引擎既有的成長通道
+
+關鍵觀察在 `LogicEngine.js:628`：
+
+```js
+p.power = p.basePower * powerMultFor(p.mlv);
+```
+
+**戰力本來就由「本場等級」導出。** 所以讓能力小幅影響**本場經驗獲取速率**，
+其餘完全交給引擎既有的等級→戰力／HP 曲線 ⇒
+**沒有任何一項係數乘進傷害式**，紅線沒有被碰。
+
+### 實作
+
+- `mobaPlayerStats.js` 新增 `xpRateScale`（沿用既有 mods 的映射與限幅慣例）：
+
+  | 能力 | 權重 | 理由 |
+  |---|---|---|
+  | accuracy | +0.022 | 補刀精準 |
+  | apm | +0.016 | 出手速度 |
+  | focus | +0.014 | 專注度（不漏兵） |
+  | mapAware | +0.008 | 路線效率 |
+
+  硬限幅 `[0.94, 1.06]`：全 100 分 ×1.06、全 70 分 ×1、全 40 分 ×0.94。
+
+- `LogicEngine._addXp` 是**所有經驗來源的單一入口**（小兵／野怪／擊殺／助攻／推塔），
+  係數只套在這一處。
+- **只縮放正向獲得**：`drain`（等級落後補正的扣除）維持原樣——
+  否則能力高的人連被扣都比較少，那是雙重優勢。
+- 未 `configurePlayers` ⇒ `_mod` 回 null ⇒ 係數不存在 ⇒ 本改動完全不生效。
+
+### 實測差異（可驗證、可重現、不誇張）
+
+15 seeds、跑到 800 秒：
+
+- 強能力隊（全 95）平均本場等級 **6.99**，弱能力隊（全 45）**5.88**
+- **逐場同向 13/15**（不是噪音）
+- 平均等級差 **1.11 級** ——看得出來，但不會壓過戰術與操作
+- 同 seed ＋ 同能力 ⇒ 逐位元可重現
+
+### 驗證（2026-08-05 實跑）
+
+`node tools/check_moba_ability_p02.mjs` → **20/20 通過**。含：
+
+- 未注入能力時本改動完全不生效（`playerStatsOn === false` 且 `_mod` 回 null）。
+- 中性能力時 `xpRateScale` 有無此欄位**逐位元相同**。
+- 強弱差異可重現、多數 seed 同向、確實改變模擬結果。
+- 限幅、取樣能力項、等級差落在 0.1–2.5 級的「不誇張」區間。
+- 只縮放正向獲得（原始碼層級斷言）。
+- 雙方同能力 → 藍勝 6/15，**沒有系統性偏袒**。
+- **傷害式一行未動**（原始碼斷言 `dmgAmt = p.power * dt * ...` 沒有夾帶能力係數）。
+
+#### ⚠ 驗證器自身修正（不是放寬）
+
+第一版斷言「中性能力 ⇒ 與未注入逐位元相同」**紅了**。查證後確認
+**這是 S28 既有性質、不是 P0-2 造成的**——把 `xpRateScale` 整個移除後仍然不同，
+因為 `configurePlayers` 本身就會切換 S28 的程式路徑。
+斷言前提寫錯了，已改為驗「**本改動**在中性時不生效」（有無該欄位逐位元相同），
+並補一條 `1d` 直接斷言未注入時引擎沒有任何能力係數——那才是保護 regress 的真正機制。
+
+另外 `5)` 對稱性原本用 2400 tick，多數場次未分勝負 ⇒ **空過（0/0）**。
+已拉長到 4000 tick，實際分出 15 場才做比例判定。
+
+回歸全綠：**`regress` 15/15、`regress2` 8/8**（這是本輪最關鍵的門檻——
+證明未注入能力的既有對局逐值不變）、`check_combat_range_m16` 19/19、
+P0 25/25、O 系列九支、財務四支、build 通過。
+
+### 已知限制
+
+1. **只影響經驗速率，不影響操作品質本身**：能力高不會讓補刀命中率、技能命中率
+   改變（引擎沒有這些機制）。這是在「不新增戰鬥機制」前提下最小的可行注入點。
+2. **幅度是第一版**：±6% 是保守起點。若體感太弱／太強，改
+   `SCALE_CLAMP.xpRateScale` 與 `STAT_MAP.xpRateScale` 一處即可，屬 Balance 決策。
+3. **對手（紅方）沒有真實選手**，仍是中性能力 ⇒ 目前等於「我方能力對上中性對手」。
+   要對稱需要 AI Teams（既有待辦）。
+
+### 未做（刻意）
+
+- 未新增任何戰鬥機制（沒有命中/失誤模型、沒有技能 CD 調整）。
+- 未修改傷害式、平衡參數、英雄 AI。
+- 未碰後端／WebSocket／商城／轉會市場／新模式／`ESMO-hero-models`。
+- **瀏覽器實機驗收未做**。
+
+---
+
+## Milestone P0-3：MOBA 選手能力 → 實際戰鬥品質（2026-08-05）
+
+P0-2 只做到「能力影響本場經驗速率」。P0-3 補上原目標真正要的東西：
+**能力影響操作品質本身**——補刀、空揮、技能有效施放、目標選擇、撤退時機。
+
+### 五個掛點（全部只改行為，不碰傷害式）
+
+| 係數 | 取樣能力 | 方向 | 限幅 | 引擎掛點 |
+|---|---|---|---|---|
+| `lastHitLoss` | accuracy / apm / focus | 低能力受罰 | 10% | `_awardMinionXp`：漏兵 ⇒ 該隻兵的經驗不給 |
+| `attackWaste` | accuracy / reflex / positioning | 低能力受罰 | 8% | 傷害段前：該 tick 空揮，不造成傷害 |
+| `castMiss` | tacticalIQ / decision / clutch | 低能力受罰 | 10% | `_summonerSpellsV2` 套用迴圈：冷卻照算、效果沒了 |
+| `focusRate` | decision / mapAware / adaptability | 高能力得利 | 35% | `_combatStep` 選敵：改打射程內**血量最低**者 |
+| `retreatLate` | decision / adaptability / mapAware | 低能力受罰 | 6% | 撤退門檻**決定性下修**（不擲骰）⇒ 該撤時撤太晚 |
+
+### 設計不變量
+
+1. **中性（全 70）＝ 現行行為**。五項全為 0 ⇒ 不擲骰、不改任何分支。
+   驗證器 §3a 直接證明：中性注入 vs 未注入，戰局狀態逐位元相同 8/8。
+2. **單向映射**。penalty 只罰低能力（`clamp(−Σw·u, 0, hi)`），bonus 只給高能力。
+   高能力不會拿到「攻擊必中加成」——他只是不犯低能力會犯的錯。
+3. **獨立亂數流 `rng3`**（`configurePlayers` 時建立）。不能借 `rng2`：那是戰術層的流，
+   多抽一次 Gank／遊走時機就整個平移＝能力層默默改動戰術層。
+4. **S28 紅線未越界**：`dmgAmt = p.power * dt * R.dmgK * ...` 原封不動。
+   驗證器 §2 在原始碼層級斷言 maxHp / basePower / igniteDps 都沒被能力係數碰過。
+
+### A/B 驗證：`tools/check_moba_quality_p03.mjs` — **53/53**
+
+**兩組都同時給雙方真實能力資料**（不用中性對手代替）：
+A 對照＝藍 70／紅 70；B 實驗＝藍 88／紅 55。20 seeds、4000 ticks。
+
+| 指標 | A（70 vs 70） | B（88 vs 55） |
+|---|---|---|
+| 補刀成功率 | 100% / 100% | **100% / 95.1%**（差 4.9pp） |
+| 無效攻擊比例 | 0% / 0% | **0% / 4.2%** |
+| 有效技能施放率 | 100% / 100% | **100% / 94.5%**（差 5.5pp） |
+| 集火改目標次數 | 0 / 0 | **8.1 / 0** |
+| 平均死亡數 | 13.2 / 11.6 | **9.8 / 14.9** |
+| 平均經濟 | 對稱 | **1026 / 764** |
+| 平均本場等級 | 9.13 / 9.27 | **10.44 / 7.98**（差 2.46 級） |
+| 勝率 | — | **高能力方 73.7%（14/19）**，低能力方仍贏 5 場 |
+
+勝率門檻設在 **≤ 85%**：高能力隊要明顯較強，但**不得固定獲勝**。
+
+### ⚠ 驗證器自身的三處前提修正（不是放寬門檻）
+
+1. **「中性 ⇒ snapshot 逐位元相同」的前提是錯的**。`configurePlayers` 一定會寫入
+   `playerStatsMeta` 與 `pexec`（儀器化欄位）。已改為比對**戰局狀態指紋**
+   （位置／血量／經濟／等級／KD），並補 §3a' 明確釘住「差異僅限 meta」。
+2. **死亡數讀錯欄位**：引擎用 `p.d`，不是 `p.deaths`。原本 0 ≥ 0 空過，已修正。
+3. **對照組藍方勝率 31.6%**——查證後確認是**技能層既有的陣營偏斜**：
+   完全不注入能力、只開 `configureSpells` 跑同一組 seeds，baseline 就是藍勝 6/20。
+   因此**不**斷言「對照組接近五成」（那等於拿既有問題擋 P0-3），改為斷言
+   「中性對照組與 baseline **每一場勝負都相同**」＝沒有新增任何偏斜，
+   並用 §4-6f 把既有偏斜記為技術債。
+
+### ⚠ 順手抓到的既有紅燈：`check_moba_stats28` §13
+
+§13 是 mods 鍵名的**精確比對 allowlist**（紅線的執行機制：想偷渡 `damageMult`
+就得先在清單裡寫下來）。**P0-2 加了 `xpRateScale` 卻沒登記，這條自 P0-2 起就是紅的**——
+只是巢狀模式跑不完（多次逾時／被中止），所以 P0-2 當時回報「全綠」其實沒真的跑到。
+
+已補登 `xpRateScale` 與 P0-3 的五個係數（共 16 鍵）。**維持精確比對，沒有放寬**：
+`!ALLOWED.some(k => /power|hp|dmg|damage/i.test(k))` 仍然守著鍵名紅線。
+修正後 flat 模式 **21/21 通過**。
+
+教訓：**巢狀 verifier 跑不完 ≠ 通過**。stats28 / runtime29 一律用
+`node tools/verify.mjs --only=<id>`（flat 模式，228 秒）跑，不要直接跑巢狀版。
+
+### 已知限制
+
+1. **「補刀」是本層新造的語意**。引擎原本沒有補刀概念（兵死了範圍內共享經驗），
+   `lastHitLoss` 是掛在經驗分配上的漏兵模型，不是真的最後一擊判定。
+2. **`attackWaste` 期望值上等同少量 DPS 損失**——任何「無效攻擊」機制都必然如此。
+   差別在於它是**離散事件**，不是把能力乘進傷害式。這是自覺取捨，不是漏洞。
+3. **幅度是第一版**。要調手感只改 `STAT_MAP` 的五組權重與 `ONESIDED_CLAMP`，
+   引擎端不需要動。
+4. **技能層陣營偏斜（藍 6/20）是既有技術債**，本輪未處理。
+5. **瀏覽器實機驗收未做**——本輪全部是純邏輯驗證。
+
+### 未做（刻意）
+
+- 未建立第二套選手能力資料（仍是 `mobaPlayerStats` 單一來源）。
+- 未大改 LogicEngine 架構（五個掛點都是就地插入，中性時全部短路）。
+- 未碰技能傷害數值、平衡參數、英雄 AI。
+- 未碰後端／WebSocket／商城／轉會市場／新模式／`ESMO-hero-models`。
+- **未開始 P1。**
+
+---
+
+## Milestone P1：選手成長可視化（2026-08-05）
+
+P0／P0-2／P0-3 讓「練了會變強」成立，但玩家**看不見**。P1 補上那一段。
+**沒有動任何成長公式、戰鬥係數或平衡參數**（驗證器 §8 用原始碼指紋釘住）。
+
+### 開工時發現的兩個真問題
+
+1. **訓練成長完全沒有憑證**。`applyCourse` 在 `advanceDay` 的 map 裡直接換掉選手物件，
+   差值當場丟棄。訓練頁的日誌是**照課程定義猜的**（`c.stats.map(statZh)` →
+   「專注、抗壓 提升」）——選手若已頂到潛力上限，一項都沒漲，畫面照樣喊「提升」。
+   而且它存在 React state，重整就消失。
+2. **賽後 receipt 早就有 `growth.gains`，但 `RewardReceiptPanel` 只顯示 XP 與等級**。
+   資料一直在，只是沒有畫出來。
+
+### 做法：一本帳簿，三處共用
+
+新增 `src/platform/progress/growthLog.js`（純函式）。
+
+**它是帳簿，不是帳戶**——只存「已經套用完成的差值」，不存能力現值／XP 總量／等級。
+把 `growthLog` 整個刪光，選手一點都不會變弱。這是「不建立第二套選手資料」的具體判準，
+驗證器 §1j 直接斷言帳簿裡沒有 `stats` / `xp` / `totalXp`。
+
+| 項目 | 決定性 id | 冪等來源 |
+|---|---|---|
+| 比賽 | `${transactionId}:${playerId}` | S25 `processedMatchTransactions` ＋ `appendGrowth` 去重（兩層） |
+| 訓練 | `train:${playerId}:${day}:${courseId}` | `advanceDay` 是唯一時鐘，`daysLeft` 歸零只會發生一次 ＋ 去重 |
+
+上限 12 筆／人（任務單要求 ≥10）。存在 `player.growthLog`，隨既有存檔持久化，
+載入時清洗形狀（不信任持久層，但**不重建**任何成長）。
+
+### 「成長前 → 成長後」為什麼要釘住當下值
+
+不能拿選手**現值**減差值回推——再成長一次之後那樣算就錯了。
+所以 `makeGrowthEntry` 收 `statsAfter`，把當下的成長後值一起存下來，
+`beforeAfter()` 才能精確還原。舊紀錄沒有這個欄位 ⇒ 回 `null`，只顯示增加值，**不編造前後值**。
+
+### 四處 UI
+
+| 位置 | 內容 |
+|---|---|
+| 賽後結算（**MOBA / CS 同一個元件**） | 每人的能力增幅膠囊（前→後 +差值）、升級徽章、全隊能力總點數 |
+| 訓練中心 | 日誌改讀 `advanceDay().trained` 的**實際差值**，附能力增幅膠囊 |
+| 選手詳情 | 「近期成長」完整清單：來源／週次／經驗／等級／能力差值 ＋ 經驗進度條 |
+| 名單卡 ＋ 名單詳情 | 最近一次成長提示（一行）／最近三筆 |
+
+MOBA 與 CS 的顯示規格一致不是靠兩邊各自對齊，而是**同一個 `RewardReceiptPanel`**。
+
+P0-3 的戰鬥品質數字（補刀率／空揮率／技能成功率／集火次數）**只在 debug 模式**
+出現在 BattleEndScreen。正式玩家畫面刻意不放——玩家要看的是「我的選手變強了」。
+資料走既有的 `playerStatsExec`，沒有新增第二條管道。
+
+### 驗證：`tools/check_growth_ui_p1.mjs` — **62/62**
+
+涵蓋任務單的每一條驗收：訓練一次只加一次（§3c/§3i/§3j）、MOBA 結算正確顯示
+（§2b–§2f）、CS 對等（§2m）、無升級但有成長（§4f）、有升級但能力已達上限不得虛假增加
+（§4c/§4d/§4e）、重整後仍在（§5a/§5b）、重送同一 receipt 不重複（§2g/§2h/§2i）。
+
+**新增一種驗證能力：§6 UI 未定義識別字掃描。**
+用 `@babel/parser` + `traverse` 做真正的作用域分析。動機是 O 系列那次事故——
+RecruitScreen 留了一個已刪除變數的參照，`npm run build` 全綠，一點進選手詳情整頁白掉。
+build 只做打包，**不做作用域分析**。這段補上那個缺口。
+
+### ⚠ 驗證器自身的兩處誤判（我寫錯的，已修正）
+
+1. **§7a 原本用 `src.includes("applyLevelGrowth")`** 判斷「畫面層有沒有重算成長」——
+   結果抓到我自己寫的註解「= applyLevelGrowth 實際套用值」。那是在說明資料來源，
+   不是在重算。已改用 AST 檢查真正的 import 與識別字（註解不是 AST 節點，天然排除）。
+2. **§2 原本手工拼交易單物件**，被契約驗證擋掉（缺 `sourceResultVersion`、
+   `transactionId` 必須可決定性推導等 12 項）。已改用官方工廠
+   `createMatchProgressTransaction` ⇒ 驗的是真實流程，不是湊出來的假物件。
+
+### ⚠ 一次無法歸因的紅燈（誠實記錄，不假裝修好了）
+
+收尾回歸時 `check_moba_experience26` 出現一次 **34/35**（基準是 35/35）。
+當下沒有捕捉到是哪一條斷言失敗——只 grep 了結尾計數，輸出就沒了。
+
+我第一時間歸因為「P1 把 P0-3 的計數塞進每格 snapshot ⇒ 撐破 §17 重播容量門檻
+（一場 < 2MB，基準已是 1792KB ＝ 92%）」，並據此加了「只在終局帶計數」的閘門。
+
+**這個歸因是錯的**，已用兩件事證偽：
+1. `snapshotToFrame`（`src/platform/contracts/mobaReplay.js`）**根本不收
+   `playerStatsExec`** ⇒ 該欄位無論多大都不會進 Replay。
+2. A/B 實測：把閘門停用（回到每格都帶）重跑，仍是 **35/35**，
+   重播容量三次跑一模一樣（632 frames · 1792KB · 2903B/格）。
+
+⇒ 那次 34/35 **不是 P1 造成的**，且連續三次完整跑（兩次有閘門、一次無閘門）
+都沒有重現。列為**未歸因的偶發紅燈**，不是已修復。
+
+「只在終局帶計數」的閘門**保留**——它不是修復，只是純粹省記憶體
+（中途 600+ 格帶了也沒有人讀）。程式碼註解已寫明這一點，避免後人誤以為它在守什麼。
+
+**教訓**：跑長驗證時要 `> file 2>&1` 保存完整輸出，不要只 grep 結尾計數。
+紅燈當下沒留下證據，後面就只能猜。
+
+### 已知限制
+
+1. **`§9 窄螢幕檢查不是真的排版測試`**。證明 320/360/390/430px 不水平溢出需要
+   瀏覽器排版引擎，本專案沒有。§9 只能檢查「必然造成溢出的寫法」有沒有被引入
+   （≥320px 寫死寬度、缺 flexWrap／minWidth:0／ellipsis）。**實機仍須人工確認。**
+2. **訓練不發經驗**（經驗只來自出賽）——這是既有設計，P1 沒有改，只是把它顯示清楚。
+3. **舊存檔的選手沒有歷史紀錄**。帳簿從 P1 之後才開始記，不回頭補算
+   （回頭補算就會變成「編造」，違反本輪的核心原則）。
+
+### 未做（刻意）
+
+- 未修改 P0／P0-2／P0-3 的任何演算、係數或平衡參數。
+- 未調整勝率、傷害、AI、撤退與技能參數。
+- 未建立第二套 receipt／歷史／能力／經驗資料。
+- 未碰後端／WebSocket／商店／轉會市場／`ESMO-hero-models`。
+- **瀏覽器實機驗收未做。**
+
+---
+
+## Milestone P1 結案：最終驗證紀錄（2026-08-06）
+
+P1 的程式、驗證器與文件已於 `e608e07` 提交。本節記錄**結案前的最後一次獨立確認**。
+
+### 實跑的三項（完整 stdout/stderr 已保存後檢視，未只看結尾計數）
+
+| 命令 | 結果 | Exit |
+|---|---|---|
+| `node tools/check_moba_experience26.mjs` | **35/35 通過**，全檔 `❌` / `FAIL` 零命中，`✅` 計數 35 | 0 |
+| `node tools/check_growth_ui_p1.mjs` | **62/62 通過**，零個 `❌` | 0 |
+| `npm run build` | `✓ built in 32.79s`，無 error | 0 |
+
+`experience26` 重播容量：`632 frames · 1792KB/場 · 每 frame ≈ 2903B`
+——與 P0-3 當時及先前三次重跑**逐字相同**。
+
+⚠ 原始 log 刻意**不入版控**（`review/p1/*.log`，untracked）。上表即為結論；
+需要重驗時重跑命令即可，log 是過程產物不是規格。
+
+### `experience26` 34/35 的最終結論：偶發且無法重現
+
+- **失敗的 assertion：未知**。那次只 grep 了結尾計數，輸出當場丟失
+  ⇒ **實際值／期望值拿不出來**——不是沒查，是證據當時就沒留下。
+- **可重現性：0/4**。連續四次完整跑（兩次含終局閘門、一次停用閘門、本次結案跑）
+  全部 35/35。
+- **我最初的歸因已被證偽並收回**：曾判定為「P1 把 P0-3 計數塞進每格 snapshot
+  ⇒ 撐破 §17 重播容量門檻」。兩項反證——(1) `snapshotToFrame`
+  （`src/platform/contracts/mobaReplay.js`）**根本不收 `playerStatsExec`**；
+  (2) A/B 實測停用閘門後仍 35/35 且重播容量位元相同。
+- ⇒ **記錄為偶發且無法重現，停止追查。** 不是「已修復」。
+
+「只在終局帶計數」的閘門保留，但它**不是修復**，純粹是省記憶體
+（中途 600+ 格帶了沒有人讀）。程式碼註解已寫明，避免後人誤以為它在守什麼。
+
+### 本次結案未做任何規避
+
+**沒有**放寬 assertion、**沒有**刪測試、**沒有**加 timeout、**沒有**改產品邏輯。
+工作區的 `src/` 與 `tools/` 與 `e608e07` 完全一致。
+
+### 立下的規則（已寫入 `AGENTS.md` 的排程見待辦）
+
+跑長驗證一律 `> file 2>&1` 保存完整輸出，不得只 grep 結尾計數。
+紅燈當下沒留下證據，事後就只能猜——這次就是。
+
+**P1 自動驗證全數通過，正式結案。瀏覽器實機驗收仍未進行（見待辦）。**
+
+---
+
+## 集中驗收修正包 `acceptance-fix/p1-ui`（2026-08-06）
+
+`milestone-n-finance` 的**第一次真實環境驗收**（N/O/P 全部成果）找出五項
+UI／流程問題。本包只修這五項，**不開新功能、不改戰鬥平衡**。
+
+在獨立 worktree `ESMO-acceptance-fix` 進行，主工作區與對照用的 `ESMO-acceptance`
+全程未被更動。
+
+### 五項修正
+
+| # | 根因 | 修法 |
+|---|---|---|
+| 一 | `MatchQueuePanel` 有「開始配對」、`Frame` 底部又有「確認陣容 → 配對」，**兩顆主要按鈕都推進流程** | 底部改為**唯一**主按鈕並隨流程改身分；狀態卡加 `statusOnly` ⇒ 只顯示狀態 |
+| 二 | 主畫面直接曝露 `rosterVersion` / `transactionId` / `submittedAt` / `ticketId` | 主畫面只留狀態／陣容 n/5／模式；其餘進展開區與 `?debug=1`。**契約欄位一個沒刪** |
+| 三 | 驗收缺資金，且沒有安全的補充方式 | `profileStore.grantTestFunds()`：資金與帳本在**同一個 `set()`**，決定性 id 防重複；入口 debug-only |
+| 四 | CS 用 `.filter(Boolean)`，**缺人的席位整列消失** | 新增共用 `MatchPrepFrame` + `SquadSeatRow`，MOBA／CS 同一套結構；CS 五席恆在 |
+| 五 | `NAV.talent = "roster"`，天賦流程斷在普通名單 | 新增 `talentPick`（`RosterScreen` 的 `purpose="talent"`）→ 直達既有 `PlayerTalentScreen` |
+
+### 「唯一主按鈕」的設計
+
+底部那顆的身分由 `primaryActionFor()` 決定，涵蓋九種狀態：
+未通過驗證／開始配對／配對中（含等待秒數）／已配對／我方確認／等待對手／
+進入對戰／重新配對（取消・拒絕・逾期）。
+
+⚠ **沒有第二條配對邏輯**——每個分支都只是呼叫 O4–O7 既有的 store action
+（`enqueueMatch` / `confirmMatchReady` / `launchMatchSession` / `resetMatchmaking`）。
+收斂的是**入口**，不是流程。
+
+### 驗證：`tools/check_acceptance_fix_p1.mjs` — **81/81**
+
+§1 單一入口與九種狀態｜§2 工程資訊不外洩｜§3 測試資金三方一致｜
+§4 兩模式共用元件｜§5 CS 缺員席位｜§6 天賦入口｜
+§7 UI 未定義識別字掃描（AST 作用域分析）｜§8 契約與戰鬥平衡未被動過。
+
+既有回歸全綠：`growth_ui_p1` 62/62、`experience26` 35/35、O 系列七支、
+財務四支、`talent27` 44/44、`regress` 15/15、`regress2` 8/8、build EXIT=0。
+
+### ⚠ 驗證器抓到我兩個真缺失（已修，不是放寬門檻）
+
+1. **項目二只做一半**：配對狀態卡排隊時仍在顯示隊伍版本與票券。
+2. **主按鈕邏輯寫在 `.jsx`，Node 匯入不了 ⇒ 等於沒驗到**。已抽成純函式
+   `matchPrepAction.js`，九種狀態才真的逐條驗過。
+   **教訓：值得驗的邏輯不要留在 `.jsx` 裡。**
+
+另有一處是我的檢查誤判：`§2f` 直接對原始碼比對「隊伍版本」，抓到自己寫的註解
+（與 P1 `§7a` 同一種錯），已改為去註解後比對。**註解不是畫面。**
+
+### 人工瀏覽器實機驗收：**五項全部通過**
+
+桌面與 320 / 360 / 390 / 430px 皆確認**無水平溢出**。
+這是 N/O/P 系列累積的驗收債第一次真正清掉——先前每一輪回報結尾的
+「未經瀏覽器實測」，到這裡才有了實機結論。
+
+詳細結果：`review/acceptance-fix/ACCEPTANCE_RESULT.md`。
+完整驗證 log 保留在同目錄 `*.log`，**刻意不入版控**（見 `.gitignore`）。
+
+### 未做（刻意）
+
+未 merge `main`、未部署 Pages、未開始 P2、未碰商店／轉會市場。
+未改戰鬥平衡、契約欄位、驗證邏輯與 Store 資料形狀。

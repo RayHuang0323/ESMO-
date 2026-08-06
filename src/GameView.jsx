@@ -15,6 +15,7 @@ import MobaRuntimeView3D from "./battle/moba/render/MobaRuntimeView3D.jsx";
 import BattlePresentationLayer from "./battle/ui/BattlePresentationLayer.jsx";
 import { useGameStore } from "./useGameStore.js";
 import { useLocalServer } from "./useLocalServer.js";
+import { useProfileStore } from "./platform/profileStore.js";
 import { LANES, PITS, FOUNTAIN, RIVER, WORLD_BOUNDS, mapNormX, presentationForObjective } from "./gameData.js";
 import { ROSTER } from "./data/roster.js";
 import { draftRoster } from "./battle/moba/draftRoster.js";
@@ -110,9 +111,26 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   // Sprint29：playbackRate（1×/2×/4×）+ quality preset（low/medium/high）。
   //   ⚠ 兩者都**只影響呈現**：rate 只改 tick 的真實間隔（dt 恆定）、quality 只改怎麼畫。
   const { playing, start, fastForward, rate, setRate, rates } = useLocalServer();
+  //  ── Milestone O7：權威場次 ─────────────────────────────────────────────
+  //  seed / sessionId 一律**從 Store 讀**（由 O6 的一次性令牌寫入），
+  //  刻意**不接受 props 傳入** ⇒ 前端無法覆寫 seed、對手或場次資料。
+  //  沒有場次時（debug harness）launch 為 null，引擎退回本機 seed。
+  const launch = useProfileStore((st) => st.matchmaking?.launch ?? null);
   // S29B3：開局重置相機為導播（預設 ON）；點英雄/拖曳的模式切換由 cameraStore 管理
   // S29B6：一併重置 pan（上一場拖到角落的視野不該帶進新的一場）
-  const begin = () => { const c = useCameraStore.getState(); c.backToDirector(); c.resetView(); start({ tactic, roster: liveRosterRef.current }); };
+  const begin = () => {
+    const c = useCameraStore.getState();
+    c.backToDirector(); c.resetView();
+    start({
+      tactic,
+      roster: liveRosterRef.current,
+      //  O7：權威啟動參數（沒有場次就是 undefined ⇒ 退回舊行為）
+      seed: launch?.seed,
+      sessionId: launch?.sessionId ?? null,
+      mode: launch?.mode ?? null,
+      opponentId: launch?.opponentId ?? null,
+    });
+  };
   // Sprint09：賽前準備銜接 — autoStart 掛載即開局（預設 false = 現行為不變）
   useEffect(() => { if (autoStart && !playing) begin(); }, []);  // eslint-disable-line
   // ── Milestone G：戰鬥期間關掉瀏覽器的「下拉重新整理」/ 過捲彈跳 ──────────

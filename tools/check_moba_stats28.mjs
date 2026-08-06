@@ -189,8 +189,21 @@ ck("12) 不直接寫 winner（勝負只由主堡血量歸零決定；能力層�
   /towers\.red_nexus\.hp <= 0[^\n]*this\.winner = "blue"/.test(ENG_SRC) &&
   !/winner|over\s*=/.test(MPS_SRC));
 
+//  ⚠ 這是**精確比對**的 allowlist（數量與鍵名都要相符），不是「至少包含」。
+//  任何新增的作用點都必須在這裡明確登記過——這正是紅線的執行機制：
+//  想偷渡一個 damageMult 進 mods，就得先在這份清單裡寫下來。
+//
+//  2026-08-05 更新：補上 P0-2 的 `xpRateScale` 與 P0-3 的五個品質係數。
+//  ⚠ 誠實揭露：本條自 **P0-2 起就是紅的**（那時加了 `xpRateScale` 卻沒登記），
+//    只是巢狀模式跑不完所以一直沒被看見。不是 P0-3 造成的，但由 P0-3 一併修正。
+//  下方 `!ALLOWED.some(...)` 仍然守住「鍵名不得含 power/hp/dmg/damage」，
+//  且新增的六個鍵全都只影響行為與成長速率，沒有一個乘進傷害式。
 const ALLOWED = ["retreatAdj", "returnAdj", "joinAdj", "objAdj", "laneAdj",
-  "gankIntervalScale", "gankWindowScale", "roamAdj", "splitAdj", "invadeAdj"];
+  "gankIntervalScale", "gankWindowScale", "roamAdj", "splitAdj", "invadeAdj",
+  //  P0-2：本場經驗獲取速率（→ mlv → 引擎自己的等級曲線）
+  "xpRateScale",
+  //  P0-3：最小戰鬥品質層（補刀／空揮／技能放空／集火／撤退時機）
+  "lastHitLoss", "attackWaste", "castMiss", "focusRate", "retreatLate"];
 const modKeysOk = Object.values(modsB.blue).every(
   (m) => Object.keys(m).length === ALLOWED.length && Object.keys(m).every((k) => ALLOWED.includes(k)));
 const rA = run(4242, { mods: modsA, tactic: M1 }), rD = run(4242, { mods: modsD, tactic: M1 });
@@ -208,7 +221,7 @@ const rA = run(4242, { mods: modsA, tactic: M1 }), rD = run(4242, { mods: modsD,
 //    (b) 同等級錨點   ：同一席位在**同一 mlv** 時，有無天賦的 power / maxHp 必須逐值相同。
 //                      ⇒ 天賦唯一能影響的是「多快升到那一級」，不是「到了那級有多強」。
 const anchorOf = (e) => JSON.stringify(e.players.map((p) => [p.id, p.basePower, p.tough, p.baseMaxHp]));
-ck("13) 無 winRate/damageMultiplier 偷渡欄位（mods 只有 10 個行為鍵；Lv1 錨點 basePower/tough/baseMaxHp 不受天賦影響）",
+ck("13) 無 winRate/damageMultiplier 偷渡欄位（mods 只有 allowlist 上的 16 個行為鍵；Lv1 錨點 basePower/tough/baseMaxHp 不受天賦影響）",
   modKeysOk &&
   !/(winRate|winProbBonus|damageMult|dmgMult|goldMult|powerMult|toughMult)/.test(MPS_SRC) &&
   anchorOf(rA.eng) === anchorOf(rD.eng) &&

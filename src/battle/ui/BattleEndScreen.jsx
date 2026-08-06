@@ -26,6 +26,7 @@ import { useProfileStore } from "../../platform/profileStore.js";
 import { makeTransactionId } from "../../platform/contracts/matchProgressTransaction.js";
 import { mobaMatchId } from "../../platform/progress/adapters/mobaProgressAdapter.js";
 import RewardReceiptPanel from "../../ui/RewardReceiptPanel.jsx";
+import { isDebugMode } from "../../ui/debugMode.js";
 import { getCurrentReplay } from "../moba/replay/replayBuffer.js";
 import MobaReplayScreen from "../../screens/moba/MobaReplayScreen.jsx";
 
@@ -272,6 +273,42 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
                   </div>
                   <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
                     {statsMeta.version ?? "MobaPlayerStats"} · 中性錨 {statsMeta.neutralStat ?? 70} 分（全中性 ⇒ 零偏移）· 不改傷害／勝率
+                  </div>
+                </Panel>
+              );
+            })()}
+            {/* ── Milestone P1【§5】：P0-3 戰鬥品質摘要（**只在 debug 模式**）──────
+                正式玩家畫面刻意不放這些——玩家要看的是「我的選手變強了」，
+                不是補刀率與空揮率。這裡只給驗收與後續調平衡用。
+                資料來自既有的 `playerStatsExec`（引擎真實計數），不新增第二條管道。 */}
+            {isDebugMode() && statsExec && statsMeta && (() => {
+              const seats = (homeSide === "blue" ? statsMeta.blueIds : statsMeta.redIds) ?? [];
+              const rows = seats.map((id) => ({ id, ex: statsExec[id], name: roster?.[id]?.player ?? id.toUpperCase() }))
+                .filter((r) => r.ex && (r.ex.csAttempt || r.ex.atkTicks || r.ex.castTry));
+              if (!rows.length) return null;
+              const sum = (k) => rows.reduce((a, r) => a + (r.ex[k] ?? 0), 0);
+              const rate = (a, b) => (b > 0 ? `${((a / b) * 100).toFixed(1)}%` : "—");
+              return (
+                <Panel title="🛠 戰鬥品質（P0-3 · 僅測試模式）">
+                  {rows.map((r) => (
+                    <div key={r.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, padding: "2px 0", gap: 6, flexWrap: "wrap" }}>
+                      <span style={{ color: "rgba(255,255,255,0.7)", fontFamily: MONO }}>{r.name}</span>
+                      <span style={{ fontFamily: MONO, fontWeight: 800 }}>
+                        <span style={{ color: "#86efac" }}>補刀 {rate(r.ex.csHit, r.ex.csAttempt)}</span>
+                        {" · "}<span style={{ color: "#fca5a5" }}>空揮 {rate(r.ex.atkWasted, r.ex.atkTicks)}</span>
+                        {" · "}<span style={{ color: "#93c5fd" }}>技能 {rate(r.ex.castOk, r.ex.castTry)}</span>
+                        {" · "}<span style={{ color: "#c4b5fd" }}>集火 {r.ex.focusSwap ?? 0}</span>
+                      </span>
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginTop: 4, paddingTop: 4, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+                    <span style={{ color: "rgba(255,255,255,0.5)" }}>全隊合計</span>
+                    <span style={{ fontFamily: MONO, fontWeight: 900, color: "rgba(255,255,255,0.75)" }}>
+                      補刀 {rate(sum("csHit"), sum("csAttempt"))} · 空揮 {rate(sum("atkWasted"), sum("atkTicks"))} · 技能 {rate(sum("castOk"), sum("castTry"))}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
+                    中性能力（全 70）⇒ 補刀 100%、空揮 0%、技能 100%。低能力才會出現損失。
                   </div>
                 </Panel>
               );

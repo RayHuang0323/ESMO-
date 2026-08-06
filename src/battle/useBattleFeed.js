@@ -14,6 +14,7 @@ import { useProfileStore } from "../platform/profileStore.js";
 import { snapshotToBattleResult } from "./battleResult.js";
 import { draftHeroAssign } from "./moba/draftRoster.js";
 import { mobaResultToTransaction, mobaMatchId } from "../platform/progress/adapters/mobaProgressAdapter.js";
+import { settleMatchThroughSession, outcomeFromBattleResult } from "../platform/progress/settleMatchBoundary.js";
 import { captureReplayFrame, finalizeReplay } from "./moba/replay/replayBuffer.js";
 
 /**
@@ -59,7 +60,17 @@ export function useBattleFeed(draft = null, { roster = null, tacticId = null } =
           streak: blueWinStreak(season.history ?? []),   // MOBA 自己的連勝（不讀 CS）
           fansNow: profile.meta?.fans ?? 0,
         });
-        if (tx) profile.applyMatchProgress(tx);
+        //  ── Milestone O7.1：改走**唯一結算邊界** ────────────────────────
+        //  有場次 ⇒ reportMatchResult（場次綁定／防重送／防衝突／追蹤鏈）；
+        //  沒有場次（debug harness）⇒ 仍入帳但標記未經權威驗證。
+        //  ⚠ 實際入帳一律還是 S25 的 applyMatchProgress，沒有第二套結算。
+        if (tx) {
+          settleMatchThroughSession({
+            mode: "moba",
+            outcome: outcomeFromBattleResult(result, mobaMatchId(result)),
+            transaction: tx,
+          });
+        }
 
         // S26：重播定稿（matchId 與結算同源 → Result 可比對「這場」的重播；
         //      只組裝已擷取的 frames，不觸發任何發獎 / 入史）

@@ -19,6 +19,11 @@
 // ============================================================================
 import { validateMatchProgressTransaction } from "../contracts/matchProgressTransaction.js";
 import { levelFromTotalXp, TALENT_POINTS_PER_LEVEL } from "./playerLevel.js";
+import { appendFormEntry } from "../economy/formLog.js";
+import { deriveTime } from "../economy/timeline.js";
+import { applyMatchWear } from "../condition/playerCondition.js";
+import { applyLevelGrowth } from "./levelGrowth.js";
+import { makeGrowthEntry, appendGrowth } from "./growthLog.js";
 
 /**
  * 純 reducer：state + transaction → { nextState, receipt }
@@ -72,11 +77,49 @@ export function applyProgressToState(state, tx) {
     const talentGained = levelsGained * TALENT_POINTS_PER_LEVEL;
     const prevTalent = Math.max(0, num(me.talentPoints));
 
-    patched.set(pp.playerId, {
+    //  Milestone O2：出賽損耗（體力／連續出賽／受傷）只對**實際出賽的人**套用。
+    //  這裡就是那個唯一入口——tx.playerProgress 是 adapter 依實際陣容產生的名單，
+    //  替補與未登錄根本不會出現在其中，所以不可能誤拿出賽獎勵或損耗。
+    //  受傷判定以 `${transactionId}:${playerId}` 決定性推導 ⇒ 伺服器可獨立重算。
+    //  Milestone P0：**升級 → 基礎能力成長**。
+    //  在此之前升級只發天賦點，玩家不手動花掉就完全不影響實力。
+    //  成長是 (選手, 升幾級) 的決定性函式，沿用定位權重與潛力上限，
+    //  寫回 `stats`（基礎值）⇒ 天賦加成仍疊在上面，不重複計算。
+    //  冪等由既有的 transactionId 保證：同一場再結算不會二次成長。
+    const growth = applyLevelGrowth(me, levelsGained);
+
+    const wear = applyMatchWear({
       ...me,
       xp: newXp,
       lv: newLevel,                                     // lv 一律由 xp 導出 → 不會與 xp 不一致
       talentPoints: prevTalent + talentGained,
+      stats: growth.stats,                              // P0：等級成長後的能力
+      restDays: 0,                                      // 今天出賽了 ⇒ 休息日數歸零
+    }, `${tx.transactionId}:${pp.playerId}`);
+
+    //  Milestone P1：把**這次實際套用的差值**記進選手的成長紀錄。
+    //  ⚠ 不重算任何東西——`gains` 就是上面 `applyLevelGrowth` 的輸出、
+    //    `xpGained` 就是上面算出的 `gain`。紀錄與入帳同源，不可能分離。
+    //  ⚠ 也不是第二套資料：能力現值仍只存在 `player.stats`，這裡只留帳簿。
+    //  冪等：id 帶 transactionId ⇒ 同一場再結算不會產生第二筆
+    //  （外層 `processedMatchTransactions` 已擋一層，`appendGrowth` 再擋一層）。
+    const growthEntry = makeGrowthEntry({
+      id: `${tx.transactionId}:${pp.playerId}`,
+      source: "match",
+      mode: tx.mode,
+      label: `${tx.mode === "cs" ? "CS" : "MOBA"} ${tx.metadata?.winner === "us" ? "勝利" : "出賽"}`,
+      day: num(meta.days) || 1,
+      week: deriveTime(num(meta.days) || 1).week,
+      at: tx.recordedAt,
+      xpGained: gain,
+      levelBefore: prevLevel,
+      levelAfter: newLevel,
+      gains: growth.gains,
+      statsAfter: growth.stats,          // 成長**後**的能力（用來還原成長前的值）
+    });
+    patched.set(pp.playerId, {
+      ...wear.player,
+      growthLog: appendGrowth(me.growthLog, growthEntry),
     });
 
     playerReceipts.push({
@@ -89,6 +132,17 @@ export function applyProgressToState(state, tx) {
       newLevel,
       levelsGained,
       talentPointsGained: talentGained,
+      //  P0：升級帶來的能力成長（可直接顯示「成長前後差異」）
+      growth: { gains: growth.gains, total: growth.total },
+      //  O2：狀態變化一併回報（畫面顯示、伺服器對帳）
+      condition: {
+        energyBefore: Math.round(num(me.energy ?? 100)),
+        energyAfter: wear.player.energy,
+        drained: wear.drained,
+        matchStreak: wear.player.matchStreak,
+        injured: wear.injured,
+        injuryDays: wear.injuryDays,
+      },
       reasons: pp.reasons ?? [],
     });
   }
@@ -137,6 +191,18 @@ export function applyProgressToState(state, tx) {
     finance: { ...finance, funds: moneyAfter, transactions: nextTransactions },
     meta: { ...meta, fans: fansAfter, reputation: repAfter },
     processedMatchTransactions: { ...processed, [tx.transactionId]: receipt },
+    //  Milestone N3：把這一場的勝負追加到**統一賽績紀錄**（MOBA 與 CS 一視同仁），
+    //  供經濟層的贊助績效獎金使用。勝負直接取自契約既有的 metadata.winner，
+    //  **不重新統計任何戰績**——戰績來源仍是 BattleResult / seasonStore。
+    //  N3 之前只有 CS 的紀錄進得了績效，MOBA 打再多都不影響收入。
+    //  ⚠ 本檔刻意不提及 CS 的歷史清單識別字：check_progress25 §11 以字串比對
+    //    確保 MOBA 路徑不碰它，連註解都算。要講那件事請寫在 economy/formLog.js。
+    economy: appendFormEntry(state.economy, {
+      id: tx.transactionId,
+      mode: tx.mode,
+      win: tx.metadata?.winner === "us",
+      week: deriveTime(meta.days ?? 1).week,
+    }),
   };
 
   return { nextState, receipt };

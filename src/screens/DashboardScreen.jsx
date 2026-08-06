@@ -12,7 +12,7 @@
 // ============================================================================
 import React, { useState } from "react";
 import { useProfileStore } from "../platform/profileStore.js";
-import { sponsorById } from "../data/playerModel.js";
+import { resolveSponsor } from "../platform/economy/sponsors.js";
 import { GC, FONT } from "../ui/theme.js";
 
 const money = (n) => "$" + (n / 10000).toFixed(1) + "萬";
@@ -45,18 +45,27 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
   const talentTotal = players.reduce((s, p) => s + (Number.isFinite(p.talentPoints) ? p.talentPoints : 0), 0);
   const T = { ...profile.team, ...profile.meta, gold: money(profile.finance.funds), players: players.length, mail: inbox.length, inbox: inbox.filter((m) => m.unread).length, talentPending: talentTotal };
   const finBars = profile.finance.weekly9 ?? [6, 4, 5, 3, 2, 9, 5, 6, 4];
-  const sponsor = profile.activeSponsor ? sponsorById(profile.activeSponsor.id) : null;
+  //  Milestone N：本週收支預覽（唯讀；與週結算共用同一份計算，畫面不另算一套）
+  const wk = profile.currentWeekPreview();
+  //  N2：未來四週現金預測（含贊助到期造成的收入斷崖）與資金警告等級
+  const fc = profile.cashForecast();
+  const sponsor = profile.activeSponsor ? resolveSponsor(profile.activeSponsor.id) : null;
   const modes = [
     { id: "moba", name: "MOBA", emoji: "⚔️", fans: "2041", color: GC.purp, badge: "3 小時內", on: true },
     { id: "cs", name: "CS", emoji: "🎯", fans: "0", color: "#fb923c", badge: "訓練賽", on: true }, // S23：接 CS 完整流程（Prep→Map→Tactic→Loading→Match→Result）
 
     { id: "bracket", name: "賽事", emoji: "🏆", fans: "0", color: GC.green, badge: "🌙", on: true },
   ];
-  const more = [{ id: "team", n: "戰隊詳情", i: "🛡" }, { id: "training", n: "訓練中心", i: "📅" }, { id: "dash", n: "儀表板", i: "📊" }, { id: "sponsor", n: "贊助商", i: "🤝" }];
+  //  N3：「開新局」是三種財務情境（新手／一般／頂級）的唯一入口。
+  const more = [{ id: "team", n: "戰隊詳情", i: "🛡" }, { id: "training", n: "訓練中心", i: "📅" }, { id: "newgame", n: "開新局", i: "🎬" }, { id: "dash", n: "儀表板", i: "📊" }, { id: "sponsor", n: "贊助商", i: "🤝" }];
 
   // Sprint21：八個經營模組已 Component 化 → 直接導頁；其餘 Legacy 模組維持誠實佔位。
-  // S27：天賦已恢復（每位選手獨立）→「天賦」磚導向選手名單（點選手 → 詳情 → 天賦）。
-  const NAV = { notify: "inbox", finance: "finance", sponsor: "sponsor", roster: "roster", team: "team", training: "training", recruit: "recruit", cs: "csPrep", talent: "roster" };
+  //  集中驗收修正（項目五）：「天賦」磚原本導向 `roster`——玩家點進去只看到
+  //  一般選手名單，沒有任何天賦入口，流程就斷在那裡。
+  //  現在導向 `talentPick`（同一個 RosterScreen，但標題是「選擇要培養的選手」，
+  //  每張卡有「查看天賦」直達天賦樹）。**沒有第二套天賦系統**——
+  //  天賦樹仍是既有的 PlayerTalentScreen。
+  const NAV = { notify: "inbox", finance: "finance", sponsor: "sponsor", roster: "roster", team: "team", training: "training", recruit: "recruit", cs: "csPrep", talent: "talentPick", newgame: "newGame" };
   const sel = (id) => {
     if (id === "moba") return onMoba();
     if (id === "bracket") return onSeason();
@@ -88,6 +97,52 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
             <Tile emoji="🌿" label="天賦" badge={T.talentPending} color={GC.purp} onClick={() => sel("talent")} />
             <Tile emoji="🛒" label="商店" color={GC.gold} onClick={() => sel("equip")} />
           </div>
+          {/* Milestone N：本週財務（真實值，非種子）＋ 合約狀態 ─────────────
+              收入／支出／淨額全部來自 currentWeekPreview()（= 週結算會用的同一份
+              計算），不在畫面另算一套。合約剩餘週數來自 activeSponsor.weeksLeft，
+              它現在每週真的會遞減。 */}
+          <button onClick={() => sel("finance")} style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 14, padding: "12px 14px", cursor: "pointer", textAlign: "left", width: "100%" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 9 }}>
+              <span style={{ fontSize: 15 }}>📅</span>
+              <span style={{ color: "white", fontSize: 13, fontWeight: 700 }}>本週財務</span>
+              <span style={{ color: GC.gray, fontSize: 10 }}>S{wk.season}・第 {wk.week} 週・第 {wk.dayOfWeek}/7 天</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
+              {[
+                { k: "收入", v: wk.income, c: GC.green, sign: "+" },
+                { k: "支出", v: wk.expense, c: GC.red, sign: "−" },
+                { k: "淨額", v: Math.abs(wk.net), c: wk.net >= 0 ? GC.green : GC.red, sign: wk.net >= 0 ? "+" : "−" },
+              ].map((x) => (
+                <div key={x.k} style={{ background: GC.card2, borderRadius: 9, padding: "7px 8px" }}>
+                  <div style={{ color: GC.gray, fontSize: 9, marginBottom: 2 }}>{x.k}</div>
+                  <div style={{ color: x.c, fontSize: 13, fontWeight: 800 }}>{x.sign}{money(x.v)}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ color: GC.gray, fontSize: 9 }}>
+              合約狀態：{sponsor
+                ? <span style={{ color: profile.activeSponsor?.weeksLeft <= 2 ? GC.gold : GC.green, fontWeight: 700 }}>
+                    {sponsor.name} · 剩 {profile.activeSponsor?.weeksLeft ?? 0} 週{profile.activeSponsor?.weeksLeft <= 2 ? "（即將到期）" : ""}
+                  </span>
+                : <span>無合約中的贊助商</span>}
+              <span style={{ marginLeft: 8 }}>· 近期戰績 {Math.round((wk.form ?? 0.5) * 100)}%</span>
+              <span style={{ marginLeft: 8 }}>· {wk.scenarioName}</span>
+            </div>
+            {/* 首頁只做摘要＋入口：資金警告在這裡露一個提示，詳細的四週現金預測
+                在財務頁與本週收支集中呈現（避免首頁塞第二張大卡）。 */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
+              {fc.level !== "ok" && (
+                <span style={{
+                  fontSize: 9, fontWeight: 800, borderRadius: 6, padding: "2px 7px",
+                  background: fc.level === "danger" ? "rgba(248,113,113,0.18)" : "rgba(251,191,36,0.18)",
+                  color: fc.level === "danger" ? GC.red : GC.gold,
+                }}>
+                  {fc.level === "danger" ? `⚠ 第 ${fc.bankruptWeek} 週資金見底` : "⚠ 本週淨額為負"}
+                </span>
+              )}
+              <span style={{ marginLeft: "auto", color: GC.gray, fontSize: 9 }}>財務頁看未來 {fc.weeks.length} 週預測 ›</span>
+            </div>
+          </button>
           {/* 財務 + 贊助 */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <button onClick={() => sel("finance")} style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 14, padding: "13px 14px", cursor: "pointer", textAlign: "left" }}>
@@ -98,7 +153,9 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
             <button onClick={() => sel("sponsor")} style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 14, padding: "13px 14px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}><span style={{ fontSize: 17, color: GC.gold }}>🤝</span><span style={{ color: "white", fontSize: 14, fontWeight: 700 }}>贊助</span></div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 60 }}><div style={{ width: 60, height: 60, borderRadius: "50%", background: `radial-gradient(circle,${sponsor ? sponsor.color + "44" : "#1a2a3a"},#0a0b0f)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, border: `2px solid ${sponsor ? sponsor.color : "#2a4a5a"}` }}>{sponsor?.emoji ?? "🤝"}</div></div>
-              <div style={{ color: GC.gray, fontSize: 8, textAlign: "center", marginTop: 3 }}>{sponsor?.name ?? "無贊助商"}</div>
+              <div style={{ color: GC.gray, fontSize: 8, textAlign: "center", marginTop: 3 }}>
+                {sponsor ? `${sponsor.name} · 剩 ${profile.activeSponsor?.weeksLeft ?? 0} 週` : "無贊助商"}
+              </div>
             </button>
           </div>
           {/* 選手 + 招募 */}

@@ -13,6 +13,7 @@
 import { useProfileStore } from "../profileStore.js";
 import { validateCsMatchResult } from "../contracts/CsMatchResult.js";
 import { csResultToTransaction } from "./adapters/csProgressAdapter.js";
+import { settleMatchThroughSession, outcomeFromCsResult } from "./settleMatchBoundary.js";
 
 /**
  * @param {object} csResult  CsMatchResult.v1
@@ -34,8 +35,14 @@ export function settleCsMatch(csResult) {
   });
   if (!tx) return { ok: false, applied: false, alreadyApplied: false, errors: ["無法建立 transaction"] };
 
-  // 3) Apply（唯一發獎點；冪等）
-  const receipt = useProfileStore.getState().applyMatchProgress(tx);
+  // 3) Apply —— O7.1：改走**唯一結算邊界**（與 MOBA 同一條路）。
+  //    有場次 ⇒ 經 MatchResult 綁定與衝突偵測；沒有場次 ⇒ 仍入帳但標記未驗證。
+  //    ⚠ 實際入帳仍是 S25 的 applyMatchProgress，沒有第二套結算。
+  const { receipt } = settleMatchThroughSession({
+    mode: "cs",
+    outcome: outcomeFromCsResult(csResult),
+    transaction: tx,
+  });
 
   // 4) 入史（只寫紀錄，不發獎；同 matchId 冪等）
   useProfileStore.getState().recordCsMatch(csResult, receipt);

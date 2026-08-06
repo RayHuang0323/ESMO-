@@ -30,6 +30,7 @@ import InboxScreen from "./screens/manage/InboxScreen.jsx";
 import FinanceScreen from "./screens/manage/FinanceScreen.jsx";
 import SponsorScreen from "./screens/manage/SponsorScreen.jsx";
 import TeamScreen from "./screens/manage/TeamScreen.jsx";
+import NewGameScreen from "./screens/manage/NewGameScreen.jsx";
 import RosterScreen from "./screens/manage/RosterScreen.jsx";
 import TrainingScreen from "./screens/manage/TrainingScreen.jsx";
 import RecruitScreen from "./screens/manage/RecruitScreen.jsx";
@@ -96,7 +97,13 @@ export default function AppShell() {
       {screen === "finance" && <FinanceScreen onBack={home} />}
       {screen === "sponsor" && <SponsorScreen onBack={home} />}
       {screen === "team" && <TeamScreen onBack={home} />}
+      {/* Milestone N3：開新局／情境選擇（三種財務情境的唯一入口） */}
+      {screen === "newGame" && <NewGameScreen onBack={home} onDone={home} />}
       {screen === "roster" && <RosterScreen onBack={home} onRecruit={go("recruit")} onPlayer={(id) => { setPlayerId(id); setScreen("playerDetail"); }} />}
+      {/*  集中驗收修正（項目五）：天賦入口的中介頁。同一個 RosterScreen，
+           purpose="talent" 只改標題與每張卡的動作 —— 點選手**直達該選手的天賦樹**，
+           不再停在一般名單。天賦樹本身仍是既有的 PlayerTalentScreen（無第二套）。 */}
+      {screen === "talentPick" && <RosterScreen purpose="talent" onBack={home} onPlayer={(id) => { setPlayerId(id); setScreen("playerTalent"); }} />}
       {screen === "training" && <TrainingScreen onBack={home} />}
       {screen === "recruit" && <RecruitScreen onBack={home} />}
       {screen === "playerDetail" && <PlayerDetailScreen playerId={playerId} onBack={go("roster")} onTalent={(id) => { setPlayerId(id); setScreen("playerTalent"); }} />}

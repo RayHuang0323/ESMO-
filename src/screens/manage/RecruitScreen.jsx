@@ -17,6 +17,7 @@ import { Search } from "lucide-react";
 import { useProfileStore, WAN } from "../../platform/profileStore.js";
 import { genProspects, TIERS, SCOUT_DAYS } from "../../data/recruitPool.js";
 import { STAT_DEF, STAT_CATS, MOBA_ROLES, ROSTER_CAP, bestPositions, personalityById } from "../../data/playerModel.js";
+import { makeRecruitmentId } from "../../platform/contracts/recruitment.js";
 import { GC } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
 
@@ -28,6 +29,10 @@ export default function RecruitScreen({ onBack }) {
   const scouted = useProfileStore((s) => s.scouted) ?? {};
   const setScouted = useProfileStore((s) => s.setScouted);
   const signProspect = useProfileStore((s) => s.signProspect);
+  //  Milestone O：已簽約狀態改讀**招募帳本**（冪等鍵 = 池 seed + 池內編號）。
+  //  之前是比對「名字相同」——不同批新秀撞名就會被誤判成已簽約。
+  const signedLedger = useProfileStore((s) => s.recruitment?.signed) ?? {};
+  const [notice, setNotice] = useState(null);
 
   const [seed, setSeed] = useState(7);
   const [roleF, setRoleF] = useState("全部");
@@ -38,8 +43,18 @@ export default function RecruitScreen({ onBack }) {
 
   const prospects = useMemo(() => genProspects(seed), [seed]);
   const budgetWan = Math.floor(funds / WAN);
-  const signedNames = new Set(players.map((p) => p.name));
   const full = players.length >= ROSTER_CAP;
+  const isSignedOf = (p) => !!signedLedger[makeRecruitmentId(seed, p.id)];
+  //  簽約 → 依 receipt.reason 給明確回饋，畫面不自己再判一次規則
+  const doSign = (p) => {
+    const r = signProspect(p, seed);
+    if (r?.signed) { setSelId(null); setNotice({ ok: true, text: `已簽下 ${r.name}（${r.role}）· 名單 ${r.rosterSize}/${r.rosterCap} 人` }); return; }
+    const msg = r?.alreadySigned ? "這位新秀已經簽過了"
+      : r?.reason === "roster_full" ? `名單已滿（${ROSTER_CAP} 人）`
+      : r?.reason === "insufficient_funds" ? "資金不足，無法支付簽約金"
+      : "簽約未完成";
+    setNotice({ ok: false, text: msg });
+  };
 
   const scoutOf = (p) => Math.max(p.scoutLv, scouted[p.id] ?? 0);
   const list = prospects.filter((p) =>
@@ -87,6 +102,38 @@ export default function RecruitScreen({ onBack }) {
         </div>
       )}
 
+      {/* Milestone O：招募狀態列（圖形化，手機優先）──────────────────────
+          名額用量表、資金用金額 + 是否負擔得起的顏色。純呈現，數字全部來自
+          既有 Store（players.length / finance.funds），不另算一套。 */}
+      <div style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 12, padding: "10px 12px", marginBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 13 }}>👥</span>
+          <span style={{ color: "white", fontSize: 12, fontWeight: 800 }}>隊伍名額</span>
+          <span style={{ color: full ? GC.red : GC.gray, fontSize: 11, fontWeight: 700 }}>{players.length} / {ROSTER_CAP}</span>
+          <span style={{ marginLeft: "auto", color: GC.gray, fontSize: 10 }}>可用資金</span>
+          <span style={{ color: GC.gold, fontSize: 13, fontWeight: 900 }}>${budgetWan}萬</span>
+        </div>
+        {/* 名額量表：每一格是一個席次，滿了轉紅 */}
+        <div style={{ display: "flex", gap: 3 }}>
+          {Array.from({ length: ROSTER_CAP }, (_, i) => (
+            <div key={i} style={{
+              flex: 1, height: 6, borderRadius: 99,
+              background: i < players.length ? (full ? GC.red : GC.green) : "rgba(255,255,255,0.10)",
+              transition: "background .2s",
+            }} />
+          ))}
+        </div>
+        {notice && (
+          <div style={{
+            marginTop: 8, borderRadius: 9, padding: "7px 9px", fontSize: 11, fontWeight: 700,
+            background: notice.ok ? "rgba(52,211,153,0.14)" : "rgba(248,113,113,0.14)",
+            color: notice.ok ? GC.green : GC.red,
+          }}>
+            {notice.ok ? "✓ " : "⚠ "}{notice.text}
+          </div>
+        )}
+      </div>
+
       {/* 搜尋 */}
       <div style={{ display: "flex", alignItems: "center", gap: 6, background: GC.card, borderRadius: 10, padding: "7px 11px", marginBottom: 8, border: "1px solid rgba(255,255,255,0.08)" }}>
         <Search size={13} style={{ color: GC.gray }} />
@@ -114,7 +161,7 @@ export default function RecruitScreen({ onBack }) {
         {list.map((p) => {
           const sc = scoutOf(p);
           const bp = bestPositions(p);
-          const isSigned = signedNames.has(p.name);
+          const isSigned = isSignedOf(p);
           const afford = budgetWan >= p.cost;
           const decade = Math.floor(p.potential / 10) * 10;
           const potShow = sc >= 2 ? p.potential : sc >= 1 ? `${decade}~${decade + 9}` : "???";
@@ -153,7 +200,7 @@ export default function RecruitScreen({ onBack }) {
         const sc = scoutOf(sel);
         const bp = bestPositions(sel);
         const pers = personalityById(sel.personality);
-        const isSigned = signedNames.has(sel.name);
+        const isSigned = isSignedOf(sel);
         const afford = budgetWan >= sel.cost;
         const inQueue = Boolean(scoutQueue[sel.id]);
         const decade = Math.floor(sel.potential / 10) * 10;
@@ -251,7 +298,7 @@ export default function RecruitScreen({ onBack }) {
                 ) : full ? (
                   <div style={{ color: GC.red, fontSize: 11, fontWeight: 700 }}>名單已滿 {ROSTER_CAP} 人</div>
                 ) : (
-                  <button onClick={() => { if (signProspect(sel)) setSelId(null); }} disabled={!afford}
+                  <button onClick={() => { doSign(sel); }} disabled={!afford}
                     style={{ padding: "11px 22px", borderRadius: 11, border: "none", cursor: afford ? "pointer" : "not-allowed", background: afford ? `linear-gradient(135deg,${GC.green},#059669)` : "rgba(255,255,255,0.06)", color: afford ? "#fff" : GC.gray, fontSize: 13, fontWeight: 800 }}>
                     {afford ? "簽約" : "預算不足"}
                   </button>

@@ -17,13 +17,14 @@
 //  Sprint26【B】：固定 width:380 → 響應式（≤380px 手機不再水平溢出）。
 //  Frame 仍 export（CodexScreen / TacticScreen 依賴）。
 // ============================================================================
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { TEAMS, ROSTER } from "../../data/roster.js";
 import { heroById } from "../../data/heroDatabase.js";
 import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { ENGINE_SEATS, SEAT_CODE, SEAT_LANE_ZH, seatPlayers, seatOfPlayer } from "../../platform/contracts/matchLineup.js";
-import { heroSourceContext, heroSourceFor, HERO_SOURCES as HERO_SRC } from "../../battle/moba/mobaHeroSource.js";
+import MatchPrepFrame, { SquadSeatRow } from "../common/MatchPrepFrame.jsx";
+import { heroSourceContext, heroSourceFor } from "../../battle/moba/mobaHeroSource.js";
 import { GC } from "../../ui/theme.js";
 
 const PURP = "#a78bfa", PURP_D = "#7c3aed", GREEN = "#34d399", GRAY = "#71717a";
@@ -185,94 +186,83 @@ export default function LineupScreen({ onNext, onBack }) {
   const progress = useHeroProgressStore((s) => s.progress);
   const storePlayers = useProfileStore((s) => s.players);   // S26：訂閱 store → 升級/改名即時刷新
   const lineup = useProfileStore((s) => s.lineup);          // Milestone E：先發指派（席位 → 選手）
+  const autoFillLineup = useProfileStore((s) => s.autoFillLineup);
   const [sheet, setSheet] = useState(null); // { slot, pos }
   const [bench, setBench] = useState(null); // Milestone E：換人面板的目標席位
-  const [show, setShow] = useState(false);
-  useEffect(() => { const t = setTimeout(() => setShow(true), 60); return () => clearTimeout(t); }, []);
   //  Milestone I-close：熟練最高／最近使用是**全名單比較**出來的，一次算好再分給五列
   const srcCtx = useMemo(() => heroSourceContext(progress), [progress]);
+
+  //  集中驗收修正（項目一、四）：改用 MOBA / CS 共用的 MatchPrepFrame。
+  //  五個席位改用共用的 SquadSeatRow ⇒ 與 CS 同一個視覺結構、同一種缺員呈現。
+  //  ⚠ 底部主按鈕是**唯一**的配對入口，配對狀態卡不再放第二顆主要按鈕。
+  const seats = POSITIONS.map((pos) => {
+    const slot = slotFor(pos.seat, progress, storePlayers, lineup, srcCtx);
+    if (!slot) return null;
+    return (
+      <SquadSeatRow
+        key={pos.seat}
+        code={pos.code} label={`${pos.code} · ${pos.lane}`} emoji={pos.emoji} color={pos.color}
+        seated={slot.seated} playerName={slot.player} playerLv={slot.playerLv}
+        onClick={() => setSheet({ slot, pos })}
+        onSwap={() => setBench(pos.seat)}
+        avatar={slot.seated ? (
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: slot.color || GC.blue, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#0b1220", fontSize: 14, flexShrink: 0 }}>{(slot.hero || "?").slice(0, 1)}</div>
+        ) : null}
+        subLine={(
+          <>
+            <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{slot.hero} · {slot.arch} · {slot.title}</div>
+            {/* 目標 5：英雄來源徽章。玩家一眼看得出這隻英雄是「推薦」還是「自己指定」 */}
+            <div data-testid="hero-source" data-seat={pos.seat} data-source={slot.source.id}
+              title={slot.source.why}
+              style={{ display: "inline-flex", alignItems: "center", gap: 3, marginTop: 3, fontSize: 8.5, fontWeight: 800, color: slot.source.color, background: `${slot.source.color}1f`, border: `1px solid ${slot.source.color}44`, borderRadius: 5, padding: "1px 5px" }}>
+              {slot.source.label}
+            </div>
+          </>
+        )}
+        right={(
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+            <div style={{ background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.28)", borderRadius: 7, padding: "3px 7px", textAlign: "center" }}>
+              <div style={{ fontSize: 7.5, color: "#a16207" }}>英雄</div>
+              <div style={{ fontSize: 12, fontWeight: 900, color: "#fde047", fontFamily: MONO, lineHeight: 1 }}>{slot.heroLv}</div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 3, background: slot.high ? "rgba(52,211,153,0.1)" : "rgba(113,113,122,0.12)", border: `1px solid ${slot.high ? "rgba(52,211,153,0.25)" : "rgba(113,113,122,0.2)"}`, borderRadius: 7, padding: "4px 7px", minWidth: 52, justifyContent: "center" }}>
+              <div style={{ width: 5, height: 5, borderRadius: "50%", background: slot.high ? GREEN : GRAY, boxShadow: slot.high ? "0 0 5px #34d399" : "none" }} />
+              <span style={{ fontSize: 10, fontWeight: 800, color: slot.high ? GREEN : GRAY }}>{slot.fitPct != null ? `${slot.fitPct}%` : "新"}</span>
+            </div>
+          </div>
+        )}
+      />
+    );
+  });
 
   return (
     <div style={{ position: "relative", height: "100%", overflow: "hidden" }}>
       <style>{`@keyframes esmoSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
-      <Frame title="賽前配置" sub="LINEUP · 五路先發陣容" onBack={onBack} onNext={onNext} nextLabel="確認陣容 → 配對">
-        <div style={{ width: "100%", maxWidth: 420, padding: "0 12px", boxSizing: "border-box" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+      <MatchPrepFrame
+        mode="moba" title="MOBA 賽前配置" subtitle="LINEUP · 五路先發陣容"
+        icon="🎮" accent={PURP}
+        onBack={onBack} onEnterBattle={onNext}
+        onAutoFill={() => autoFillLineup("moba")}
+        aboveSeats={(
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, flexWrap: "wrap", gap: 6, minWidth: 0 }}>
             <div style={{ fontWeight: 900, color: GC.blueL, fontSize: 13 }}>{TEAMS.blue.emoji} {TEAMS.blue.name} 先發五人</div>
             <div style={{ fontSize: 9, color: "#52525b", letterSpacing: "0.1em" }}>點擊查看詳細 · 🔁 換人</div>
           </div>
-          {POSITIONS.map((pos, i) => {
-            const slot = slotFor(pos.seat, progress, storePlayers, lineup, srcCtx);
-            if (!slot) return null;
-            return (
-              <div key={pos.seat} style={{ display: "flex", alignItems: "stretch", gap: 6, marginBottom: 7 }}>
-              <button onClick={() => setSheet({ slot, pos })} style={{
-                flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 10, textAlign: "left", cursor: "pointer",
-                background: "linear-gradient(148deg,#1a1d26,#13151c)", border: "1px solid rgba(147,197,253,0.18)",
-                borderLeft: `3px solid ${pos.color}`, borderRadius: 10, padding: "9px 11px",
-                opacity: show ? 1 : 0, transform: show ? "translateY(0)" : "translateY(8px)",
-                transition: `opacity .3s ease ${i * 0.05}s, transform .3s cubic-bezier(.23,1,.32,1) ${i * 0.05}s`,
-              }}>
-                {/* 位置徽章 */}
-                <div style={{ width: 52, flexShrink: 0, textAlign: "center" }}>
-                  <div style={{ fontSize: 15 }}>{pos.emoji}</div>
-                  <div style={{ fontSize: 7.5, fontWeight: 900, color: pos.color, letterSpacing: "0.06em" }}>{pos.code}</div>
-                </div>
-                {/* 英雄色塊 */}
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: slot.color || GC.blue, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#0b1220", fontSize: 14, flexShrink: 0 }}>{(slot.hero || "?").slice(0, 1)}</div>
-                {/* 選手 + 英雄 */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 900, color: "#e5e7eb", fontFamily: MONO }}>
-                    {slot.player}
-                    {slot.playerLv != null && <span style={{ marginLeft: 5, fontSize: 9, fontWeight: 800, color: "#93c5fd", background: "rgba(59,130,246,0.14)", borderRadius: 5, padding: "1px 5px", fontFamily: "system-ui" }}>Lv.{slot.playerLv}</span>}
-                  </div>
-                  <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{slot.hero} · {slot.arch} · {slot.title}</div>
-                  {/* 目標 5：英雄來源徽章。玩家一眼看得出這隻英雄是「推薦」還是「自己指定」 */}
-                  <div data-testid="hero-source" data-seat={pos.seat} data-source={slot.source.id}
-                    title={slot.source.why}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 3, marginTop: 3, fontSize: 8.5, fontWeight: 800, color: slot.source.color, background: `${slot.source.color}1f`, border: `1px solid ${slot.source.color}44`, borderRadius: 5, padding: "1px 5px" }}>
-                    {slot.source.label}
-                  </div>
-                </div>
-                {/* 英雄熟練 / 適配 / 狀態（S26：標明「英雄」，與選手等級分軸） */}
-                <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                  <div style={{ background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.28)", borderRadius: 7, padding: "3px 7px", textAlign: "center" }}>
-                    <div style={{ fontSize: 7.5, color: "#a16207" }}>英雄</div>
-                    <div style={{ fontSize: 12, fontWeight: 900, color: "#fde047", fontFamily: MONO, lineHeight: 1 }}>{slot.heroLv}</div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 3, background: slot.high ? "rgba(52,211,153,0.1)" : "rgba(113,113,122,0.12)", border: `1px solid ${slot.high ? "rgba(52,211,153,0.25)" : "rgba(113,113,122,0.2)"}`, borderRadius: 7, padding: "4px 7px", minWidth: 52, justifyContent: "center" }}>
-                    <div style={{ width: 5, height: 5, borderRadius: "50%", background: slot.high ? GREEN : GRAY, boxShadow: slot.high ? "0 0 5px #34d399" : "none" }} />
-                    <span style={{ fontSize: 10, fontWeight: 800, color: slot.high ? GREEN : GRAY }}>{slot.fitPct != null ? `${slot.fitPct}%` : "新"}</span>
-                  </div>
-                  <span style={{ color: "#3f3f46", fontSize: 13 }}>›</span>
-                </div>
-              </button>
-              {/* Milestone E【E1b】換人：席位 → 選手（含新秀）。觸控區 ≥40px 寬。 */}
-              <button onClick={() => setBench(pos.seat)} aria-label={`更換 ${pos.code} 先發`} title="指派先發選手"
-                style={{
-                  width: 42, flexShrink: 0, borderRadius: 10, cursor: "pointer",
-                  background: "rgba(167,139,250,0.10)", border: "1px solid rgba(167,139,250,0.3)",
-                  color: "#c4b5fd", fontSize: 15, fontWeight: 900,
-                  opacity: show ? 1 : 0, transition: `opacity .3s ease ${i * 0.05}s`,
-                }}>🔁</button>
-              </div>
-            );
-          })}
-          <div style={{ fontSize: 9, color: "#52525b", marginTop: 6 }}>選手 Lv＝賽後結算持久值（profileStore）；「英雄」欄＝該英雄熟練等級（Hero Progress）· 無出賽顯示「新」，不推估</div>
-          <div style={{ fontSize: 9, color: "#52525b", marginTop: 4 }}>🔁 換人＝先發指派（席位 b1–b5 → 選手，持久化）。這五個人就是進引擎、進 3D 名牌與賽後戰報的同一批人。</div>
-          {/* 目標 5 的重點：講清楚英雄**不是**綁死的，正式出戰以 Ban/Pick 為準 */}
-          <div data-testid="hero-source-note"
-            style={{ marginTop: 8, fontSize: 9, lineHeight: 1.7, color: "#94a3b8", background: "rgba(148,163,184,0.07)", border: "1px solid rgba(148,163,184,0.18)", borderRadius: 8, padding: "7px 9px" }}>
-            <b style={{ color: "#cbd5e1" }}>這裡的英雄是賽前參考，不是固定綁定。</b><br />
-            徽章說明來源：<span style={{ color: HERO_SRC.mastery.color }}>熟練最高</span>＝目前練最熟的 ·
-            <span style={{ color: HERO_SRC.recent.color }}> 最近使用</span>＝上一場用的 ·
-            <span style={{ color: HERO_SRC.suggested.color }}> 系統推薦</span>＝席位預設 ·
-            <span style={{ color: HERO_SRC.locked.color }}> 已鎖定</span>＝你自己指定過 ·
-            <span style={{ color: HERO_SRC.unpicked.color }}> 尚未選角</span>＝這席還沒有英雄。<br />
-            正式出戰的英雄與五路分配在 <b style={{ color: "#cbd5e1" }}>Ban/Pick</b> 才定案，屆時會依英雄位置適性與選手熟練重新分配。
-          </div>
-        </div>
-      </Frame>
+        )}
+        seats={seats}
+        belowSeats={(
+          <>
+            <div style={{ fontSize: 9, color: "#52525b", marginTop: 6 }}>選手 Lv＝賽後結算持久值（profileStore）；「英雄」欄＝該英雄熟練等級（Hero Progress）· 無出賽顯示「新」，不推估</div>
+            <div style={{ fontSize: 9, color: "#52525b", marginTop: 4, marginBottom: 8 }}>🔁 換人＝先發指派（席位 b1–b5 → 選手，持久化）。這五個人就是進引擎、進 3D 名牌與賽後戰報的同一批人。</div>
+            {/* 目標 5 的重點：講清楚英雄**不是**綁死的，正式出戰以 Ban/Pick 為準 */}
+            <div data-testid="hero-source-note"
+              style={{ marginBottom: 10, fontSize: 9, lineHeight: 1.7, color: "#94a3b8", background: "rgba(148,163,184,0.07)", border: "1px solid rgba(148,163,184,0.18)", borderRadius: 8, padding: "7px 9px" }}>
+              <b style={{ color: "#cbd5e1" }}>這裡的英雄是賽前參考，不是固定綁定。</b><br />
+              正式出戰的英雄與五路分配在 <b style={{ color: "#cbd5e1" }}>Ban/Pick</b> 才定案，屆時會依英雄位置適性與選手熟練重新分配。
+            </div>
+          </>
+        )}
+      />
       {sheet && <PlayerSheet slot={sheet.slot} pos={sheet.pos} onClose={() => setSheet(null)} />}
       {bench && <BenchSheet seat={bench} players={storePlayers ?? []} lineup={lineup} onClose={() => setBench(null)} />}
     </div>
@@ -291,7 +281,7 @@ export default function LineupScreen({ onNext, onBack }) {
  *   （吸在捲動容器底部，永遠可點）＋ flexWrap（320px 也不溢出）＋漸層底
  *   讓內容從按鈕下方滑過不打架。不縮字級、不 transform scale、不藏內容。
  */
-export function Frame({ title, sub, children, onBack, onNext, nextLabel = "下一步 →", extra = null }) {
+export function Frame({ title, sub, children, onBack, onNext, nextLabel = "下一步 →", extra = null, nextDisabled = false }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", height: "100%", padding: "18px 0 0", overflow: "auto", width: "100%", boxSizing: "border-box" }}>
       <div style={{ fontSize: 19, fontWeight: 900, color: "#e5e7eb", letterSpacing: "0.15em", textAlign: "center", padding: "0 12px" }}>{title}</div>
@@ -300,7 +290,12 @@ export function Frame({ title, sub, children, onBack, onNext, nextLabel = "下�
       <div style={{ position: "sticky", bottom: 0, zIndex: 15, width: "100%", marginTop: "auto", display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center", padding: "14px 12px 12px", boxSizing: "border-box", background: "linear-gradient(180deg, rgba(11,18,32,0) 0%, rgba(11,18,32,0.92) 34%, rgba(11,18,32,0.98) 100%)" }}>
         {onBack && <button onClick={onBack} style={btn(false)}>← 返回</button>}
         {extra}
-        {onNext && <button onClick={onNext} style={btn(true)}>{nextLabel}</button>}
+        {onNext && (
+          <button onClick={onNext} disabled={nextDisabled}
+            style={{ ...btn(true), ...(nextDisabled ? { background: "rgba(255,255,255,0.06)", color: "#71717a", cursor: "not-allowed" } : null) }}>
+            {nextLabel}
+          </button>
+        )}
       </div>
     </div>
   );

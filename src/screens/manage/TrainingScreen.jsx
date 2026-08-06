@@ -14,6 +14,7 @@ import { useProfileStore } from "../../platform/profileStore.js";
 import {
   STAT_DEF, TRAINING_COURSES, courseById, calcPower, bestPositions, personalityById, statZh,
 } from "../../data/playerModel.js";
+import { StatGainList } from "../../ui/GrowthUI.jsx";
 import { PlayerAvatar } from "../../ui/PlayerFace.jsx";
 import { withDerivedStats } from "../../platform/talents/playerDerivedStats.js";
 import { GC } from "../../ui/theme.js";
@@ -30,7 +31,8 @@ export default function TrainingScreen({ onBack }) {
   const [selId, setSelId] = useState(null);
   const [log, setLog] = useState([]);
 
-  const push = (t) => setLog((l) => [{ t }, ...l].slice(0, 12));
+  //  日誌一筆 = { t: 文字, entry: 成長紀錄或 null }。有 entry 就一併畫出能力增幅膠囊。
+  const push = (t, entry = null) => setLog((l) => [{ t, entry }, ...l].slice(0, 12));
   const training = players.filter((p) => p.training);
   const idle = players.filter((p) => !p.training);
   const sel = idle.find((p) => p.id === selId) || null;
@@ -44,14 +46,26 @@ export default function TrainingScreen({ onBack }) {
 
   const advance = () => {
     if (training.length === 0) { push("無選手在訓練中"); return; }
-    const finishing = training.filter((p) => p.training.daysLeft <= 1);
-    advanceTrainingDay();
-    finishing.forEach((p) => {
-      const c = courseById(p.training.courseId);
-      const sn = c.stats.map(statZh).join("、");
-      push(`✓ ${p.name} 完成「${c.name}」${c.id === "rest" ? "，體力恢復" : ` → ${sn} 提升`}`);
-    });
-    if (finishing.length === 0) push(`訓練日推進 · ${training.length} 人訓練中`);
+    //  Milestone P1：日誌改讀**實際結算結果**。
+    //  ⚠ 舊版是照課程定義猜「→ 專注、抗壓 提升」——那是猜的：課程說要練兩項，
+    //    但選手若已頂到潛力上限，實際可能一項都沒漲，畫面卻還是照喊「提升」。
+    //    現在 `advanceDay` 會回傳每位完成訓練者的真實差值，這裡只負責顯示。
+    const res = advanceTrainingDay();
+    const trained = res?.trained ?? [];
+    if (trained.length === 0) {
+      push(`訓練日推進 · ${training.length} 人訓練中`);
+      return;
+    }
+    for (const t of trained) {
+      const c = courseById(t.entry.courseId);
+      if (c?.id === "rest") { push(`✓ ${t.name} 完成「${c.name}」，體力恢復`, null); continue; }
+      push(
+        t.entry.total > 0
+          ? `✓ ${t.name} 完成「${t.entry.label}」`
+          : `✓ ${t.name} 完成「${t.entry.label}」→ 已達潛力上限，本次無能力成長`,
+        t.entry.total > 0 ? t.entry : null,
+      );
+    }
   };
 
   return (
@@ -182,7 +196,11 @@ export default function TrainingScreen({ onBack }) {
         <div style={{ marginTop: 8 }}>
           <div style={{ color: GC.gray, fontSize: 10, fontWeight: 700, marginBottom: 4 }}>訓練日誌</div>
           {log.map((l, i) => (
-            <div key={i} style={{ color: i === 0 ? "white" : GC.gray, fontSize: 10, padding: "4px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>{l.t}</div>
+            <div key={i} style={{ padding: "5px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", minWidth: 0 }}>
+              <div style={{ color: i === 0 ? "white" : GC.gray, fontSize: 10 }}>{l.t}</div>
+              {/* 實際套用的能力差值（含成長前 → 成長後）；沒有就不畫，不編造 */}
+              {l.entry && <div style={{ marginTop: 4 }}><StatGainList gains={l.entry.gains} entry={l.entry} /></div>}
+            </div>
           ))}
         </div>
       )}

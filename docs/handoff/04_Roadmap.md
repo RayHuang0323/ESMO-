@@ -8,7 +8,67 @@ ESMO 目前處於：
 
 不是新功能擴張階段。
 
-## 近期 Roadmap
+## 現況（2026-08-04 更新）
+
+⚠ 下方「近期 Roadmap」的 Sprint 19–27 段落停在 2026-07-14，僅供歷史參考。
+S28–S29 與 Milestone A–N 之後的實際進度以本節與
+`05_Sprint紀錄.md`、`08_目前待辦與風險.md` 為準。
+
+### 對戰（MOBA）
+
+- **Milestone M1.7 RC1**（tag `milestone-m1.7-rc1`，已在 main）——
+  英雄決策與撤退。狀態：**程式與自動驗證完成，待瀏覽器實機驗收**。
+- 驗證入口是 `node tools/verify.mjs`（flat runner），不是直接跑 runtime29。
+- 既有紅燈：runtime29 §29（TD-21）、milestone_j §26/§31（HEAD 即紅）。
+
+### 經營（非對戰）
+
+- **Milestone N1**（分支 `milestone-n-finance`，commit `8c3c8e2`，未 merge）——
+  經營時間軸與財務閉環。統一時鐘、週結算、合約倒數、交易帳本。
+  驗證 `tools/check_finance_n.mjs` 32/32。
+- **Milestone N2**（同分支，未 merge）——經濟平衡。費率集中到
+  `economy/economyConfig.js`、薪資由能力推導、贊助拆固定＋績效、
+  三種隊伍情境、四週現金預測與資金警告。
+  驗證 `tools/check_finance_n2.mjs` 35/35。
+  平衡結果：薪資 42 → 12.2 萬/週；一般情境 −24.7 → **+3.5 萬/週**。
+  ⚠ 仍待決策：薪資與贊助數值是**第一版平衡基準**，待轉會與合約系統完成後再校正。
+- **Milestone N3**（同分支，未 merge）——補完 N2 的兩個缺口。
+  ① **開新局入口**：`startNewGame(scenarioId)` ＋ `NewGameScreen`，
+     三種情境的起始資金（60／120／300 萬）真的會套用。
+  ② **統一賽績**：`economy/formLog.js` 掛在 S25 唯一發獎點，
+     MOBA 與 CS 一視同仁地影響贊助績效獎金。
+  驗證 `tools/check_finance_n3.mjs` 40/40。
+  ⚠ 新發現的平衡決策：新局尚未簽贊助時三種情境都是負現金流
+  （−11.7／−7.7／−0.7 萬/週），新手約 5 週見底。是否為預期的開局壓力待定。
+
+- **Milestone O**（同分支，未 merge）——選手招募與隊伍養成基礎閉環。
+  `RecruitmentTransaction.v1` 契約（冪等鍵可決定性推導、自帶選手快照）、
+  招募純 reducer（名額／餘額／重複三道保護）、招募帳本、圖形化招募狀態列。
+  修掉三個實際缺口：沒有 `save()`、沒有重複保護、用亂數與時鐘。
+  驗證 `tools/check_recruit_o.mjs` 40/40。
+  ⚠ 已知特性：低潛力新秀練到頂週薪仍在下限，養成沒有經濟回饋（Balance 決策）。
+
+### 產品方向（2026-08-04 確認）
+
+**ESMO 未來以線上連線對戰為核心**；新開局與單機財務不再深入擴充。
+Milestone O 起的資料契約都以「日後由伺服器接管」為前提設計
+（決定性冪等鍵、交易單自帶快照、純 reducer 可重播）。
+
+### 建議的下一步（依優先序）
+
+1. **N1–N3 的瀏覽器實機驗收**——三者都還沒在畫面上看過。
+2. **開局現金流的平衡決策**——新局未簽贊助時三種情境都是負的（見上）。
+   確認是否為預期壓力，或調整 `economyConfig.js`。
+3. **商店（equip）與經營儀表板（dash）**——Dashboard 僅剩的兩個誠實佔位。
+   有了週期性支出與現金預測，商店的取捨才有意義。
+4. **轉會市場／合約談判**（Legacy NegotiationModule）——完成後要回頭重新校正
+   N2 的薪資與贊助費率（身價／簽約金／違約金會進同一個經濟迴圈）。
+5. **AI 對手隊伍 + 賽程聯賽化**——紅方目前全隊中性能力，
+   Prep 的「賽程」分頁因此未恢復。這是讓賽季有結構的前提。
+6. 技術債清理：`src/platform/DashboardScreen.jsx` 死碼、`team.lv/xp` 刻度、
+   `meta.reputation` 靜態值、重播持久化（IndexedDB）、bundle 瘦身（2.4 MB）。
+
+## 近期 Roadmap（歷史，停在 2026-07-14）
 
 ### Sprint 19：MOBA 主流程修復 + Draft Presentation 串接
 

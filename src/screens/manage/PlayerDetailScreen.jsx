@@ -21,6 +21,8 @@ import { TIERS } from "../../data/recruitPool.js";
 import { calculateLevelProgress } from "../../platform/progress/playerLevel.js";
 import { getStatLayers } from "../../platform/talents/playerDerivedStats.js";
 import { getPlayerTalentState } from "../../platform/contracts/playerTalentState.js";
+import { growthLogOf } from "../../platform/progress/growthLog.js";
+import { GrowthEntryRow, LevelXpBar } from "../../ui/GrowthUI.jsx";
 import ManageFrame from "./ManageFrame.jsx";
 
 const HIGH = 74;
@@ -109,6 +111,9 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
   // 底部進度：目前平均能力 / 潛力天花板
   const avg = Math.round(STAT_DEF.reduce((a, s) => a + (p.stats?.[s.key] ?? 50), 0) / STAT_DEF.length);
   const growthPct = Math.min(100, Math.round((avg / potential) * 100));
+  //  Milestone P1：近期成長紀錄。直接讀選手身上的帳簿（唯一來源），
+  //  **不重新推算**任何一筆——歷史是結算當下寫下的，不是事後回推的。
+  const growthLog = growthLogOf(p);
   const initials = p.name.slice(0, 2).toUpperCase();
   const moraleColor = morale >= 85 ? "#34d399" : morale >= 65 ? "#fbbf24" : "#f87171";
   const energyColor = energy >= 70 ? "#34d399" : energy >= 40 ? "#fbbf24" : "#f87171";
@@ -265,7 +270,36 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
                 <span style={{ color: "#a1a1aa", fontSize: 9, fontWeight: 700 }}>{Math.max(0, potential - avg)} 點</span>
               </div>
             </div>
+
+            {/* 等級與經驗進度（與賽後 receipt 同一把尺：playerLevel） */}
+            <div style={{ marginTop: 4 }}>
+              <LevelXpBar level={lp.newLevel} into={lp.xpIntoLevel} need={lp.xpForNextLevel}
+                pct={lp.xpForNextLevel > 0 ? (lp.xpIntoLevel / lp.xpForNextLevel) * 100 : 0} />
+            </div>
           </div>
+
+          {/* ── Milestone P1：近期成長紀錄 ────────────────────────────────
+              來源、週次、經驗、等級、能力差值全部來自結算當下寫下的帳簿。
+              重整後仍在（隨 profileStore 持久化），重送同一筆不會重複出現。 */}
+          <div style={{ height: 1, background: "rgba(255,255,255,0.05)", margin: "14px 0 10px" }} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+            <span style={{ color: "#a1a1aa", fontSize: 11, fontWeight: 800 }}>近期成長</span>
+            <span style={{ color: "#52525b", fontSize: 8.5, fontWeight: 600, letterSpacing: "0.08em" }}>
+              {growthLog.length > 0 ? `最近 ${growthLog.length} 筆` : "RECENT GROWTH"}
+            </span>
+          </div>
+          {growthLog.length === 0 ? (
+            <div style={{ color: "#52525b", fontSize: 10, textAlign: "center", padding: "14px 0", lineHeight: 1.7 }}>
+              尚無成長紀錄<br />
+              <span style={{ fontSize: 9 }}>出賽或完成訓練後，這裡會記下每一次實際的能力變化</span>
+            </div>
+          ) : (
+            <div style={{ minWidth: 0 }}>
+              {growthLog.map((e, i) => (
+                <GrowthEntryRow key={e.id} entry={e} last={i === growthLog.length - 1} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </ManageFrame>

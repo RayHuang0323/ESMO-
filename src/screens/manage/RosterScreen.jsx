@@ -15,8 +15,13 @@ import {
   calcPower, posFit, bestPositions, personalityById,
 } from "../../data/playerModel.js";
 import { calculateLevelProgress } from "../../platform/progress/playerLevel.js";
+import { latestGrowth, growthLogOf } from "../../platform/progress/growthLog.js";
+import { LatestGrowthHint, GrowthEntryRow } from "../../ui/GrowthUI.jsx";
 import { PlayerAvatar } from "../../ui/PlayerFace.jsx";
 import { withDerivedStats } from "../../platform/talents/playerDerivedStats.js";
+import { ROSTER_TIERS, tierOf } from "../../platform/contracts/matchSquad.js";
+import { conditionSummary } from "../../platform/condition/playerCondition.js";
+import { totalXpForLevel, xpRequiredForLevel } from "../../platform/progress/playerLevel.js";
 import { GC } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
 
@@ -28,14 +33,31 @@ const aggr = (p) => {
   const avg = (...keys) => Math.round(keys.reduce((a, k) => a + (s[k] || 50), 0) / keys.length);
   return { 機動: avg("apm", "reflex", "positioning"), 攻擊: avg("accuracy", "courage", "decision"), 防禦: avg("positioning", "clutch", "resilience"), 反應: avg("reflex", "focus", "mapAware") };
 };
+//  O2：等級進度（用既有的 playerLevel 公式，不另算一套刻度）
+const levelProgressOf = (p) => {
+  const lv = Math.max(1, Number(p?.lv) || 1);
+  const xp = Math.max(0, Number(p?.xp) || 0);
+  const base = totalXpForLevel(lv);
+  const need = xpRequiredForLevel(lv + 1);
+  const into = Math.max(0, xp - base);
+  return { into: Math.round(into), need: Math.round(need), pct: need > 0 ? Math.min(100, Math.round((into / need) * 100)) : 0 };
+};
 const statusOf = (p) => ((p.energy ?? 100) < 30 ? "閒置" : p.status === "主力" ? "主力" : p.status || "預備隊");
 const statusColor = (st) => (st === "主力" ? GC.green : st === "閒置" ? GC.red : st === "訓練中" ? GC.gold : GC.gray);
 
-export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
+/**
+ * @param {"roster"|"talent"} [purpose] 集中驗收修正（項目五）：
+ *   "talent" ⇒ 本頁是**天賦入口的中介頁**——標題改為「選擇要培養的選手」，
+ *   每張卡多一顆「查看天賦」，點下去直達該選手的天賦樹（PlayerTalentScreen）。
+ *   ⚠ 只改標題與卡片動作，**沒有第二套天賦系統、沒有第二套選手資料**。
+ */
+export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "roster" }) {
+  const talentMode = purpose === "talent";
   const players = useProfileStore((s) => s.players) ?? [];
   const renamePlayer = useProfileStore((s) => s.renamePlayer);
   const setPlayerRole = useProfileStore((s) => s.setPlayerRole);
   const setPlayerStatus = useProfileStore((s) => s.setPlayerStatus);
+  const setRosterTier = useProfileStore((s) => s.setRosterTier);
   const [filter, setFilter] = useState("全部");
   const [selId, setSelId] = useState(null);
   const [editName, setEditName] = useState(false);
@@ -52,8 +74,11 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
 
   return (
     <ManageFrame
-      title="選手名單" subtitle="ROSTER" onBack={onBack}
-      right={<span style={{ background: players.length >= ROSTER_CAP ? "rgba(239,68,68,0.15)" : "rgba(96,165,250,0.15)", color: players.length >= ROSTER_CAP ? GC.red : GC.blue, fontSize: 11, fontWeight: 800, borderRadius: 8, padding: "4px 10px", whiteSpace: "nowrap" }}>{players.length} / {ROSTER_CAP} 人</span>}
+      title={talentMode ? "選擇要培養的選手" : "選手名單"}
+      subtitle={talentMode ? "TALENT · 選擇選手後進入天賦樹" : "ROSTER"} onBack={onBack}
+      right={talentMode
+        ? <span style={{ background: "rgba(167,139,250,0.15)", color: GC.purp, fontSize: 11, fontWeight: 800, borderRadius: 8, padding: "4px 10px", whiteSpace: "nowrap" }}>可用天賦點 {players.reduce((t, p) => t + (Number(p.talentPoints) || 0), 0)}</span>
+        : <span style={{ background: players.length >= ROSTER_CAP ? "rgba(239,68,68,0.15)" : "rgba(96,165,250,0.15)", color: players.length >= ROSTER_CAP ? GC.red : GC.blue, fontSize: 11, fontWeight: 800, borderRadius: 8, padding: "4px 10px", whiteSpace: "nowrap" }}>{players.length} / {ROSTER_CAP} 人</span>}
     >
       <div style={{ display: "flex", gap: 5, marginBottom: 12, overflowX: "auto" }}>
         {FILTERS.map((f) => (
@@ -66,9 +91,12 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
           const st = statusOf(p);
           const c = statusColor(st);
           const a = aggr(withDerivedStats(p));   // S27：顯示 derived（含天賦）
+          //  Milestone O2：狀態摘要（唯讀，由 condition 層產生，畫面不自己算）
+          const cond = conditionSummary(p);
+          const lvProg = levelProgressOf(p);
           const dp = withDerivedStats(p); const mp = calcPower(dp, "moba"), fp = calcPower(dp, "fps");
           return (
-            <button key={p.id} onClick={() => { setSelId(p.id); setEditName(false); }}
+            <button key={p.id} onClick={() => { if (talentMode) { onPlayer?.(p.id); return; } setSelId(p.id); setEditName(false); }}
               style={{ display: "flex", alignItems: "center", gap: 11, background: GC.card, border: `1px solid ${p.id === selId ? GC.purp : "rgba(255,255,255,0.06)"}`, borderRadius: 13, padding: "11px 13px", cursor: "pointer", textAlign: "left", width: "100%" }}>
               <PlayerAvatar player={p} size={46} ring={c} />
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -79,14 +107,38 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
                   <span style={{ color: GC.gray, fontSize: 9 }}>{p.role}</span>
                   {personalityById(p.personality) && <span style={{ fontSize: 10 }}>{personalityById(p.personality).emoji}</span>}
                   {String(p.id).startsWith("r") && <span style={{ color: GC.green, fontSize: 7, fontWeight: 700 }}>🆕</span>}
+                  {/* O2：可否出賽——顏色配文字，不只靠顏色 */}
+                  <span style={{
+                    marginLeft: "auto", fontSize: 8, fontWeight: 800, borderRadius: 5, padding: "1px 5px",
+                    background: cond.canPlay ? "rgba(52,211,153,0.14)" : "rgba(248,113,113,0.14)",
+                    color: cond.canPlay ? GC.green : GC.red,
+                  }}>
+                    {cond.injured ? `傷停 ${cond.injuryDays}天` : cond.canPlay ? "可出賽" : "不可出賽"}
+                  </span>
                 </div>
-                <div style={{ display: "flex", gap: 7, marginTop: 3 }}>
+                {/* O2：經驗進度 ＋ 體力（疲勞）兩條細軸 */}
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                  <span style={{ color: GC.gray, fontSize: 7.5, width: 20 }}>EXP</span>
+                  <div style={{ flex: 1, height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${lvProg.pct}%`, background: GC.gold }} />
+                  </div>
+                  <span style={{ color: GC.gray, fontSize: 7.5, width: 20 }}>體力</span>
+                  <div style={{ flex: 1, height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${cond.energy}%`, background: cond.energy >= 70 ? GC.green : cond.energy >= 40 ? GC.gold : GC.red }} />
+                  </div>
+                  <span style={{ color: GC.gray, fontSize: 7.5 }}>{cond.energy}</span>
+                </div>
+                <div style={{ display: "flex", gap: 7, marginTop: 3, flexWrap: "wrap", minWidth: 0 }}>
                   {Object.entries(a).map(([k, v]) => (
                     <span key={k} style={{ fontSize: 8 }}>
                       <span style={{ color: GC.gray }}>{k}</span>{" "}
                       <span style={{ color: v >= 80 ? GC.gold : v >= 65 ? GC.green : "#a1a1aa", fontWeight: 700 }}>{v}</span>
                     </span>
                   ))}
+                  {/* Milestone P1：最近一次成長提示（讀成長帳簿，畫面不重算） */}
+                  <span style={{ marginLeft: "auto", minWidth: 0, overflow: "hidden" }}>
+                    <LatestGrowthHint entry={latestGrowth(p)} />
+                  </span>
                 </div>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -94,14 +146,20 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
                   <span style={{ color: GC.purp, fontSize: 9, fontWeight: 700 }}>M{mp}</span>
                   <span style={{ color: "#fb923c", fontSize: 9, fontWeight: 700 }}>F{fp}</span>
                 </div>
-                <span style={{ background: `${c}22`, color: c, fontSize: 8, fontWeight: 700, borderRadius: 5, padding: "2px 6px" }}>{st}</span>
+                {talentMode ? (
+                  <span data-testid="talent-open" style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "rgba(167,139,250,0.16)", border: `1px solid ${GC.purp}66`, color: "#ddd6fe", fontSize: 9, fontWeight: 800, borderRadius: 6, padding: "3px 7px", whiteSpace: "nowrap" }}>
+                    🌿 查看天賦{Number(p.talentPoints) > 0 ? ` · ${p.talentPoints}點` : ""}
+                  </span>
+                ) : (
+                  <span style={{ background: `${c}22`, color: c, fontSize: 8, fontWeight: 700, borderRadius: 5, padding: "2px 6px" }}>{st}</span>
+                )}
               </div>
             </button>
           );
         })}
       </div>
 
-      {players.length < ROSTER_CAP && (
+      {!talentMode && players.length < ROSTER_CAP && (
         <div onClick={onRecruit} style={{ textAlign: "center", color: GC.gray, fontSize: 10, marginTop: 14, padding: 12, border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 12, cursor: onRecruit ? "pointer" : "default" }}>
           還可招募 {ROSTER_CAP - players.length} 名選手 · 到「球探招募」挖掘新星
         </div>
@@ -198,15 +256,86 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
                   })}
                 </div>
 
-                <div style={{ color: GC.gray, fontSize: 9, marginBottom: 5 }}>出賽狀態</div>
+                {/* Milestone O2：出賽狀態（等級進度／體力／連續出賽／傷停／可否出賽） */}
+                {(() => {
+                  const cond = conditionSummary(sel);
+                  const lp = levelProgressOf(sel);
+                  return (
+                    <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: "9px 10px", marginBottom: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 7, flexWrap: "wrap" }}>
+                        <span style={{ color: "white", fontSize: 11.5, fontWeight: 800 }}>出賽狀態</span>
+                        <span style={{
+                          fontSize: 9, fontWeight: 800, borderRadius: 5, padding: "1px 6px",
+                          background: cond.canPlay ? "rgba(52,211,153,0.14)" : "rgba(248,113,113,0.14)",
+                          color: cond.canPlay ? GC.green : GC.red,
+                        }}>{cond.canPlay ? "可出賽" : "不可出賽"}</span>
+                        <span style={{ color: GC.gray, fontSize: 9 }}>{cond.condition}</span>
+                      </div>
+                      {!cond.canPlay && cond.reason && (
+                        <div style={{ color: GC.red, fontSize: 9.5, marginBottom: 7 }}>⚠ {cond.reason}</div>
+                      )}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
+                        {[
+                          { k: "等級", v: `Lv.${sel.lv ?? 1}`, sub: `${lp.into} / ${lp.need} EXP`, pct: lp.pct, c: GC.gold },
+                          { k: "體力", v: `${cond.energy}`, sub: cond.condition, pct: cond.energy, c: cond.energy >= 70 ? GC.green : cond.energy >= 40 ? GC.gold : GC.red },
+                        ].map((x) => (
+                          <div key={x.k} style={{ background: GC.card2, borderRadius: 8, padding: "6px 8px", minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
+                              <span style={{ color: GC.gray, fontSize: 8.5 }}>{x.k}</span>
+                              <span style={{ color: x.c, fontSize: 12, fontWeight: 800 }}>{x.v}</span>
+                            </div>
+                            <div style={{ height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden", margin: "4px 0 3px" }}>
+                              <div style={{ height: "100%", width: `${x.pct}%`, background: x.c }} />
+                            </div>
+                            <div style={{ color: GC.gray, fontSize: 7.5 }}>{x.sub}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display: "flex", gap: 10, marginTop: 7, flexWrap: "wrap" }}>
+                        <span style={{ color: GC.gray, fontSize: 9 }}>連續出賽 <b style={{ color: cond.matchStreak >= 3 ? GC.gold : "white" }}>{cond.matchStreak}</b> 場</span>
+                        <span style={{ color: GC.gray, fontSize: 9 }}>傷停 <b style={{ color: cond.injured ? GC.red : "white" }}>{cond.injuryDays}</b> 天</span>
+                        <span style={{ color: GC.gray, fontSize: 9 }}>近期出賽 <b style={{ color: "white" }}>{cond.recentMatches}</b> 場</span>
+                      </div>
+                      <div style={{ color: GC.gray, fontSize: 8, marginTop: 6, lineHeight: 1.6 }}>
+                        連續出賽會加重體力消耗與受傷風險；安排休息或訓練日可恢復。
+                      </div>
+
+                      {/* Milestone P1：最近三筆成長（完整 10+ 筆在選手詳情頁） */}
+                      {(() => {
+                        const glog = growthLogOf(sel).slice(0, 3);
+                        return (
+                          <div style={{ marginTop: 9, borderTop: `1px solid ${GC.line}`, paddingTop: 7 }}>
+                            <div style={{ color: "white", fontSize: 10.5, fontWeight: 800, marginBottom: 2 }}>近期成長</div>
+                            {glog.length === 0 ? (
+                              <div style={{ color: GC.gray, fontSize: 9 }}>尚無成長紀錄 · 出賽或完成訓練後會記錄在這裡</div>
+                            ) : glog.map((e, i) => (
+                              <GrowthEntryRow key={e.id} entry={e} last={i === glog.length - 1} />
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  );
+                })()}
+
+                {/* Milestone O1：名單分層（一隊／替補／未登錄）。
+                    未登錄不可出賽——設為未登錄時，若他正坐在席位上會一併被移除，
+                    避免「不能上場卻還在陣容裡」的矛盾狀態。 */}
+                <div style={{ color: GC.gray, fontSize: 9, marginBottom: 5 }}>名單分層</div>
                 <div style={{ display: "flex", gap: 4 }}>
-                  {["主力", "預備隊"].map((st) => {
-                    const isCur = (sel.status || "預備隊") === st;
+                  {Object.values(ROSTER_TIERS).map((t) => {
+                    const isCur = tierOf(sel) === t.id;
+                    const c = t.id === "active" ? GC.green : t.id === "bench" ? GC.blue : GC.gray;
                     return (
-                      <button key={st} onClick={() => setPlayerStatus(sel.id, st)}
-                        style={{ flex: 1, padding: "6px 4px", borderRadius: 8, border: `1px solid ${isCur ? GC.green : "rgba(255,255,255,0.08)"}`, background: isCur ? `${GC.green}22` : "transparent", cursor: "pointer", color: isCur ? GC.green : "#d4d4d8", fontSize: 10, fontWeight: 700 }}>{st}</button>
+                      <button key={t.id} onClick={() => setRosterTier(sel.id, t.id)}
+                        style={{ flex: 1, padding: "7px 4px", borderRadius: 8, border: `1px solid ${isCur ? c : "rgba(255,255,255,0.08)"}`, background: isCur ? `${c}22` : "transparent", cursor: "pointer", color: isCur ? c : "#d4d4d8", fontSize: 10, fontWeight: 700 }}>
+                        {t.label}
+                      </button>
                     );
                   })}
+                </div>
+                <div style={{ color: GC.gray, fontSize: 8.5, marginTop: 5, lineHeight: 1.6 }}>
+                  一隊與替補都可被指派到出賽席位；未登錄不可出賽。
                 </div>
               </div>
 

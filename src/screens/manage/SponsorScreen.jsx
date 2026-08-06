@@ -13,7 +13,10 @@ import React, { useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { useSeasonStore } from "../../platform/seasonStore.js";
 import { standings } from "../../platform/seasonData.js";
-import { SPONSORS, sponsorById } from "../../data/playerModel.js";
+import { SPONSORS } from "../../data/playerModel.js";
+//  N3.1：目前合作中的贊助可能是**開局扶持方案**（不在市集目錄裡），
+//  所以解析要用統一入口；下方市集列表仍然只列 SPONSORS。
+import { resolveSponsor } from "../../platform/economy/sponsors.js";
 import { GC } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
 
@@ -29,7 +32,7 @@ export default function SponsorScreen({ onBack }) {
   const fans = meta.fans ?? 0;
   const wins = blue.wins ?? 0;
 
-  const active = activeRef ? { ...sponsorById(activeRef.id), ...activeRef } : null;
+  const active = activeRef ? { ...resolveSponsor(activeRef.id), ...activeRef } : null;
   const qualifies = (sp) => fans >= sp.reqFans && wins >= sp.reqWins;
 
   return (

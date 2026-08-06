@@ -43,17 +43,57 @@ import {
 import { CS_RESULT_SCHEMA } from "./contracts/CsMatchResult.js";
 import { applyProgressToState, findReceipt } from "./progress/applyMatchProgress.js";
 import { totalXpForLevel, levelFromTotalXp } from "./progress/playerLevel.js";
+import { makeGrowthEntry, appendGrowth, GROWTH_SOURCES, GROWTH_LOG_CAP } from "./progress/growthLog.js";
 import { sanitizeTalents } from "./contracts/playerTalentState.js";
 import { applyTalentPurchase } from "./talents/purchasePlayerTalent.js";
 import { DEFAULT_LINEUP, normalizeLineup, assignSeat } from "./contracts/matchLineup.js";
+import { WAN as WAN_UNIT } from "./economy/units.js";
+import { deriveTime } from "./economy/timeline.js";
+import { advanceDaysInState, buildWeekLines, recentForm } from "./economy/weeklySettlement.js";
+import { forecastWeeks } from "./economy/forecast.js";
+import { DEFAULT_SCENARIO, SCENARIOS, scenarioById } from "./economy/economyConfig.js";
+import { seedFormLogFromCsHistory } from "./economy/formLog.js";
+import { newGameFinancials } from "./economy/newGame.js";
+import { applyDailyRecovery, conditionSummary } from "./condition/playerCondition.js";
+import { createMatchEntryRequest, validateMatchEntryRequest } from "./contracts/matchEntry.js";
+import {
+  TICKET_STATES, createTicket, transitionTicket, isActiveTicket,
+  canEnterMatch as canEnterMatchOf, waitedSeconds, stateLabel,
+} from "./contracts/matchmaking.js";
+import { pollGateway, openRoom, pollRoom, openSession } from "./matchmaking/mockGateway.js";
+import {
+  SESSION_STATES, CONNECTION_STATES, consumeLaunchToken, validateSession, cancelSession,
+  sessionStateLabel, isSessionExpired, isSessionTerminal,
+  resumeSession, markDisconnected, abandonSession,
+} from "./contracts/matchSession.js";
+import { createMatchResult, RESULT_SOURCES } from "./contracts/matchResult.js";
+import { settleMatchResultInState, settlementIdOf } from "./progress/settleMatchResult.js";
+import {
+  ROOM_STATES, transitionRoom, confirmSide, canEnterRoom, roomStateLabel,
+  remainingSeconds, isRoomTerminal,
+} from "./contracts/matchRoom.js";
+import { createRecruitmentTransaction } from "./contracts/recruitment.js";
+import { applyRecruitmentToState } from "./recruit/applyRecruitment.js";
+import {
+  CS_SEATS, ROSTER_TIERS, tierOf, validateSquad, createSquadSubmission,
+  normalizeCsLineup, autoFillSquad,
+} from "./contracts/matchSquad.js";
 
 const KEY = "esmo.profile.v1";
 /** persistence schema 版本（migration 用；沿用同一個 localStorage key，不清資料）。
  *  v2 = S25（xp/talentPoints）；v3 = S27（players[].talents 天賦狀態）；
- *  v4 = Milestone E（lineup 先發指派；舊存檔缺欄 → normalizeLineup 回退 identity）。 */
-export const PROFILE_SCHEMA_VERSION = 4;
+ *  v4 = Milestone E（lineup 先發指派；舊存檔缺欄 → normalizeLineup 回退 identity）；
+ *  v5 = Milestone N（economy 週結算帳本；舊存檔缺欄 → 回退空帳本，不補結算過去的週）；
+ *  v6 = Milestone O（recruitment 招募帳本；舊存檔缺欄 → 空帳本，既有選手不回填來源）；
+ *  v7 = Milestone O1（csLineup CS 出賽陣容 + players[].rosterTier 名單分層；
+ *       舊存檔缺欄 → csLineup 全空、rosterTier 由既有 status 推導，不把人踢出名單）；
+ *  v8 = Milestone O4（matchmaking 配對票券；載入時把殘留的排隊中票券作廢，
+ *       因為沒有伺服器會回應一張跨 session 的票）。 */
+export const PROFILE_SCHEMA_VERSION = 8;
 const canLS = typeof localStorage !== "undefined";
-export const WAN = 10_000;                    // 1 萬（Legacy 以「萬」計價，本 Store 以元存放）
+//  1 萬。定義搬到 economy/units.js（純邏輯模組不能 import 本檔），這裡 re-export
+//  讓既有 `import { WAN } from "platform/profileStore.js"` 的呼叫端不受影響。
+export const WAN = WAN_UNIT;
 const uid = () => Date.now() + Math.floor(Math.random() * 1000);
 
 const DEFAULT = {
@@ -103,13 +143,33 @@ const DEFAULT = {
       { label: "緊急備用金", budgeted: 8_000,  spent: 0,      color: "#52525b" },
     ],
   },
-  meta: { fans: 128_000, reputation: 47, season: 1, players: INITIAL_PLAYERS.length, days: 8, week: 1, achievement: 48, talentPending: 1 },
+  //  Milestone N：week / season 一律由 days 導出（唯一計數）。種子 days = 8
+  //  ⇒ week 2、season 1。舊種子寫死 week: 1 與 days: 8 不一致，這裡一併修正。
+  meta: {
+    fans: 128_000, reputation: 47, players: INITIAL_PLAYERS.length,
+    days: 8, week: deriveTime(8).week, season: deriveTime(8).season,
+    achievement: 48, talentPending: 1,
+  },
   players: INITIAL_PLAYERS.map(migratePlayer),   // S25：種子名單也要有 xp/talentPoints
   // Milestone E：先發指派（引擎席位 b1–b5 → playerId）。預設 identity ⇒ 與 E 之前相同。
   lineup: { ...DEFAULT_LINEUP },
+  //  Milestone O1：CS 出賽陣容（f1–f5）。CS 之前沒有陣容概念——直接拿
+  //  `status === "主力"` 的前五個，隱式且無驗證。現在與 MOBA 一樣是明確指派。
+  csLineup: normalizeCsLineup(null, null),
   activeSponsor: null,           // {id, weeksLeft, signedWeek} — Legacy：一次只能有一家
   scouted: {},                   // {prospectId: 偵查等級 0–2}
   csHistory: [],                 // S23：CS 訓練賽紀錄（CsMatchResult.v1，最新在前，上限 30）
+  //  Milestone N：週結算帳本。settledWeeks 的 key = 累計週次（全域唯一）⇒ 冪等。
+  //  N2：scenario 決定基礎營收與營運成本（economyConfig.SCENARIOS）。
+  economy: { settledWeeks: {}, lastSettledWeek: 0, scenario: DEFAULT_SCENARIO },
+  //  Milestone O：招募帳本。key = RecruitmentTransaction 的冪等鍵 ⇒ 同一位新秀
+  //  不可能被簽兩次（M O 之前沒有這一道，可以無限簽同一人、無限扣款）。
+  recruitment: { signed: {} },
+  //  Milestone O4：配對票券。同一隊伍**同時只能有一張有效票券**。
+  //  O5：比賽房間（由 gateway 開；與票券／指派單綁定）
+  //  O6：比賽場次（gateway 簽發；帶一次性啟動令牌）
+  //  O7：結果與結算帳本（單次結算 ＋ 追蹤鏈）
+  matchmaking: { ticket: null, room: null, session: null, launch: null, lastResult: null, settlements: {}, lastSettlementError: null },
   schemaVersion: PROFILE_SCHEMA_VERSION,
   processedMatchTransactions: {},// S25：冪等帳本 {transactionId: receipt}（防重複發獎）
   inbox: [
@@ -133,6 +193,55 @@ const DEFAULT = {
 };
 
 const arr = (v, d) => (Array.isArray(v) ? v : d);
+/**
+ * Milestone N：economy 帳本的 migration。
+ *
+ * 舊存檔（schemaVersion ≤ 4）沒有這個切片。回退規則刻意保守：
+ *   · settledWeeks 空 ⇒ 過去的週**不補算**（不憑空扣一大筆薪資）。
+ *   · lastSettledWeek 設為「載入時已結束的最後一週」⇒ 之後推進天數時，
+ *     `advanceDaysInState` 只會結算真正新跨過的週，不會回頭補。
+ */
+/**
+ * Milestone O4：配對票券的 migration。
+ * 排隊中的票跨 session 沒有意義 ⇒ 作廢；終局狀態原樣保留。
+ */
+function normalizeMatchmaking(saved) {
+  const src = saved && typeof saved === "object" ? saved : {};
+  const t = src.ticket && typeof src.ticket === "object" ? src.ticket : null;
+  const r = src.room && typeof src.room === "object" ? src.room : null;
+  const ticket = !t ? null
+    : (t.state === "validating" || t.state === "queued")
+      ? { ...t, state: "cancelled", reason: "重新載入後配對已中止" }
+      : t;
+  //  O5：房間同理——跨 session 的確認沒有伺服器會回應，一律作廢
+  const room = !r ? null
+    : (r.state === "waiting" || r.state === "ready_check")
+      ? { ...r, state: "cancelled", reason: "重新載入後房間已關閉" }
+      : r;
+  //  O6：**尚未啟動的場次要能在重整後恢復**（這是需求明確要求的），
+  //  所以 created 原樣保留；已啟動／已取消／已逾期也原樣保留（純顯示）。
+  //  真正的把關在 consumeLaunchToken：令牌用過、過期、綁定對不上都會被拒。
+  const session = src.session && typeof src.session === "object" ? src.session : null;
+  return {
+    ticket, room, session,
+    launch: src.launch ?? null,
+    //  O7：結果與結算帳本要保留——重整後重試結算必須認得出「已經算過了」
+    lastResult: src.lastResult ?? null,
+    settlements: src.settlements && typeof src.settlements === "object" ? src.settlements : {},
+    lastSettlementError: src.lastSettlementError ?? null,
+  };
+}
+function normalizeEconomy(saved, days) {
+  const past = Math.max(0, deriveTime(days).week - 1);
+  if (!saved || typeof saved !== "object") {
+    return { settledWeeks: {}, lastSettledWeek: past, scenario: DEFAULT_SCENARIO };
+  }
+  const weeks = saved.settledWeeks && typeof saved.settledWeeks === "object" ? saved.settledWeeks : {};
+  const last = Number.isFinite(Number(saved.lastSettledWeek)) ? Number(saved.lastSettledWeek) : past;
+  //  N2：未知或缺少的 scenario → 預設情境（不讓存檔帶進不存在的 key）
+  const scenario = SCENARIOS[saved.scenario] ? saved.scenario : DEFAULT_SCENARIO;
+  return { settledWeeks: weeks, lastSettledWeek: last, scenario, formLog: saved.formLog };
+}
 const load = () => {
   if (!canLS) return DEFAULT;
   try {
@@ -152,11 +261,20 @@ const load = () => {
         transactions: arr(f.transactions, DEFAULT.finance.transactions),
         budget:       arr(f.budget,       DEFAULT.finance.budget),
       },
-      meta:    { ...DEFAULT.meta, ...saved.meta },
+      //  Milestone N：載入時強制由 days 重新導出 week / season。
+      //  舊存檔可能存著與 days 對不上的 week（舊版是各自遞增的），以 days 為準。
+      meta:    (() => {
+        const m = { ...DEFAULT.meta, ...saved.meta };
+        const t = deriveTime(m.days ?? DEFAULT.meta.days);
+        return { ...m, days: t.day, week: t.week, season: t.season };
+      })(),
       // S25 migration：舊存檔的 players[] 沒有 xp/talentPoints → 安全補齊（見 migratePlayer）
       players,
       // Milestone E migration：舊存檔沒有 lineup ⇒ 回退 identity（b1→b1…）⇒ 行為不變
       lineup: normalizeLineup(saved.lineup, players),
+      //  Milestone O1 migration：舊存檔沒有 csLineup ⇒ 全空（出賽前會被擋下並
+      //  提示去指派）。刻意不自動填：憑空決定誰上場比擋下來更糟。
+      csLineup: normalizeCsLineup(saved.csLineup, players),
       schemaVersion: PROFILE_SCHEMA_VERSION,
       processedMatchTransactions:
         saved.processedMatchTransactions && typeof saved.processedMatchTransactions === "object"
@@ -166,6 +284,25 @@ const load = () => {
       activeSponsor: saved.activeSponsor ?? DEFAULT.activeSponsor,
       scouted: saved.scouted && typeof saved.scouted === "object" ? saved.scouted : {},
       csHistory: arr(saved.csHistory, []),   // S23：舊存檔沒有 → 空（向下相容）
+      //  Milestone N migration：舊存檔沒有 economy ⇒ 空帳本。
+      //  ⚠ 刻意**不補結算過去的週**：那會在載入當下憑空扣一大筆薪資，
+      //    使用者無從理解。舊存檔從載入後的下一個週結尾開始計費。
+      //  N3：沒有 formLog 的存檔以 csHistory 種一次，避免升級後績效獎金莫名歸零。
+      //  Milestone O migration：舊存檔沒有 recruitment ⇒ 空帳本。
+      //  刻意**不回填**既有選手的招募來源：那是編造歷史。舊存檔的選手就是既有選手，
+      //  只是沒有簽約憑證；重複保護對他們無意義（他們本來就不在新秀池裡）。
+      //  Milestone O4 migration：跨 session 的排隊沒有意義（沒有伺服器會回應它），
+      //  載入時一律把 validating / queued 作廢成 cancelled，不讓玩家看到一張永遠
+      //  不會有結果的票。已配對／已取消／已拒絕的票原樣保留（純顯示）。
+      matchmaking: normalizeMatchmaking(saved.matchmaking),
+      recruitment: saved.recruitment && typeof saved.recruitment === "object"
+        && typeof saved.recruitment.signed === "object"
+        ? { signed: saved.recruitment.signed }
+        : { signed: {} },
+      economy: seedFormLogFromCsHistory(
+        normalizeEconomy(saved.economy, saved.meta?.days ?? DEFAULT.meta.days),
+        arr(saved.csHistory, []),
+      ),
       inbox:         arr(saved.inbox,         DEFAULT.inbox).map(normalizeMsg),
       notifications: arr(saved.notifications, DEFAULT.notifications),
       worldNews:     arr(saved.worldNews,     DEFAULT.worldNews),
@@ -193,7 +330,14 @@ function migratePlayer(p) {
   const talentPoints = Number.isFinite(p.talentPoints) && p.talentPoints >= 0 ? Math.floor(p.talentPoints) : 0;
   // S27：talents 清洗（缺 → 空狀態；未知 talentId 忽略；rank 修正；spentPoints 由
   // definitions 重算——不信任持久層）。不重置 talentPoints / lv / xp。
-  return { ...p, xp, lv, talentPoints, talents: sanitizeTalents(p.talents) };
+  //  Milestone P1：成長紀錄清洗。不信任持久層——壞掉的 localStorage 不該
+  //  讓選手頁整頁炸掉。只留形狀正確的紀錄，並套用上限。
+  //  ⚠ 這裡不重建、不補算任何成長：清洗掉的紀錄就是永久消失，
+  //    但選手的能力值一點都不受影響（紀錄是帳簿，不是帳戶）。
+  const growthLog = (Array.isArray(p.growthLog) ? p.growthLog : [])
+    .filter((e) => e && typeof e === "object" && typeof e.id === "string" && GROWTH_SOURCES.includes(e.source))
+    .slice(0, GROWTH_LOG_CAP);
+  return { ...p, xp, lv, talentPoints, growthLog, talents: sanitizeTalents(p.talents) };
 }
 function clampLevel(v) {
   const n = typeof v === "number" ? v : Number(v);
@@ -282,18 +426,585 @@ export const useProfileStore = create((set, get) => ({
   cancelTraining(id) {
     get()._patchPlayer(id, (p) => ({ ...p, training: null }));
   },
-  /** 推進一個訓練日：訓練中的選手 daysLeft−1，歸零則以 applyCourse 結算成長。 */
-  advanceTrainingDay() {
-    const players = (get().players ?? []).map((p) => {
-      if (!p.training) return p;
-      const daysLeft = p.training.daysLeft - 1;
-      if (daysLeft > 0) return { ...p, training: { ...p.training, daysLeft } };
-      return applyCourse(p, p.training.courseId);
-    });
-    const meta = { ...get().meta, days: (get().meta.days ?? 0) + 1 };
-    meta.week = Math.floor((meta.days - 1) / 7) + 1;
-    set({ players, meta });
+  // ── Milestone N：統一時間軸（日／週／賽季的唯一入口）──────────────────
+  /**
+   * 推進 n 天。這是**唯一**的時鐘：
+   *   · 每一天：訓練中的選手 daysLeft−1，歸零則以 applyCourse 結算成長。
+   *   · 跨過週結尾：以 `settleWeekInState` 結算那一週（薪資／營運／贊助／合約倒數）。
+   * week / season 一律由 `meta.days` 導出，不另存第二份計數。
+   *
+   * 冪等：結算的冪等鍵是累計週次，同一週不可能結算兩次（見 weeklySettlement）。
+   * 單一 set()：錢、合約、帳本、時間一次寫完，不會出現半套狀態。
+   *
+   * @returns {object[]} 本次推進產生的週結算 receipts（沒跨週則為空陣列）
+   */
+  advanceDay(n = 1) {
+    //  Milestone P1：本次推進實際完成的訓練成長（供訓練頁顯示真實數值）。
+    //  ⚠ 訓練頁**不得**再自己從課程定義推斷「提升了哪幾項」——那是猜的，
+    //    而且猜不到潛力上限造成的實際差異。這裡收的是套用前後的真實 diff。
+    const trained = [];
+    const { nextState, receipts } = advanceDaysInState(get(), n, (cur) => ({
+      players: (cur.players ?? []).map((p) => {
+        //  Milestone O2：每一天都要跑恢復——傷停天數 −1、沒排訓練的人回體力、
+        //  連續幾天沒出賽就把連續出賽計數歸零。訓練與恢復不重複計算體力。
+        if (!p.training) return applyDailyRecovery(p);
+        const daysLeft = p.training.daysLeft - 1;
+        if (daysLeft > 0) return applyDailyRecovery({ ...p, training: { ...p.training, daysLeft } });
+        //  課程今天結算 ⇒ 體力由 applyCourse 決定，恢復只處理傷勢與計數
+        const courseId = p.training.courseId;
+        const done = applyDailyRecovery(applyCourse(p, courseId), { skipEnergy: true });
+
+        //  ── P1：擷取**實際**能力差值（applyCourse 前後逐項比對）──────────
+        //  成長公式完全沒有被改動；這裡只是把它算完的結果讀出來。
+        //  能力已達潛力上限 ⇒ diff 為空 ⇒ `appendGrowth` 不會建立假紀錄。
+        const gains = {};
+        for (const k in (done.stats ?? {})) {
+          const d = Number(done.stats[k]) - Number((p.stats ?? {})[k] ?? 0);
+          if (Number.isFinite(d) && d > 0) gains[k] = Math.round(d * 10) / 10;
+        }
+        const day = Number(cur.meta?.days) || 1;
+        //  決定性 id：同一位選手、同一天、同一門課只會有一筆。
+        //  重整或重複點「推進訓練日」都不可能讓同一筆再加一次。
+        const entry = makeGrowthEntry({
+          id: `train:${p.id}:${day}:${courseId}`,
+          source: "training",
+          courseId,
+          label: courseById(courseId)?.name ?? "訓練",
+          day,
+          week: deriveTime(day).week,
+          at: String(day),
+          xpGained: 0,                       // 訓練不給經驗（經驗只來自出賽）
+          levelBefore: done.lv ?? p.lv ?? 1,
+          levelAfter: done.lv ?? p.lv ?? 1,
+          gains,
+          statsAfter: done.stats,          // applyCourse 套用後的實際能力值
+        });
+        if (entry) trained.push({ playerId: p.id, name: p.name, entry });
+        return { ...done, growthLog: appendGrowth(p.growthLog, entry) };
+      }),
+    }));
+    set(nextState);
+    //  收件匣通知（合約到期／即將到期）由這裡發：pushInbox 會用 Date.now 產 id，
+    //  屬於不決定性的部分，所以純 reducer 只回傳 notices，不自己寫 inbox。
+    for (const r of receipts) for (const note of r.notices ?? []) get().pushInbox(note);
     get().save();
+    //  舊呼叫端只看 receipts（陣列），行為不變；訓練頁改讀 `.trained`。
+    receipts.trained = trained;
+    return receipts;
+  },
+  /** 舊名保留：訓練頁與 Legacy 呼叫端沿用，行為 = 推進一天（含週結算）。 */
+  advanceTrainingDay() { return get().advanceDay(1); },
+  // ── Milestone O1：名單分層與出賽陣容 ──────────────────────────────────
+  /**
+   * 設定選手的名單分層：`active`（一隊）／`bench`（替補）／`unlisted`（未登錄）。
+   *
+   * 未登錄的選手**不可出賽**（`validateSquad` 會擋）。若把一位正在席位上的選手
+   * 設為未登錄，這裡順手把他從兩份陣容中移除——否則會留下一個「合約上不能上場、
+   * 卻還坐在席位上」的矛盾狀態，出賽時才報錯太晚。
+   *
+   * 同時維護 Legacy 的 `status` 欄位（"主力"/"預備隊"），
+   * 讓既有畫面與 CS 舊路徑不會突然看不懂這個人。
+   */
+  setRosterTier(playerId, tier) {
+    if (!ROSTER_TIERS[tier]) return false;
+    const players = (get().players ?? []).map((p) =>
+      p.id === playerId
+        ? { ...p, rosterTier: tier, status: tier === "active" ? "主力" : p.status === "主力" ? "預備隊" : (p.status || "預備隊") }
+        : p);
+    const drop = (map, seats) => Object.fromEntries(
+      seats.map((seat) => [seat, tier === "unlisted" && map?.[seat] === playerId ? null : (map?.[seat] ?? null)]));
+    set({
+      players,
+      lineup: normalizeLineup(drop(get().lineup, ENGINE_SEATS), players),
+      csLineup: normalizeCsLineup(drop(get().csLineup, CS_SEATS), players),
+    });
+    get().save();
+    return true;
+  },
+  /** 指派 CS 席位（與 MOBA 的 setLineupSeat 對稱；同一人不可佔兩席）。 */
+  setCsSeat(seat, playerId) {
+    if (!CS_SEATS.includes(seat)) return false;
+    const players = get().players ?? [];
+    const base = normalizeCsLineup(get().csLineup, players);
+    const next = { ...base };
+    if (!playerId) next[seat] = null;
+    else {
+      //  該選手原本在別的席位 ⇒ 兩席互換（同 assignSeat 的語意，不產生重複）
+      const from = CS_SEATS.find((x) => base[x] === playerId && x !== seat) ?? null;
+      const displaced = base[seat] ?? null;
+      next[seat] = playerId;
+      if (from) next[from] = displaced;
+    }
+    set({ csLineup: normalizeCsLineup(next, players) });
+    get().save();
+    return true;
+  },
+  // ── 集中驗收：測試資金（項目三）──────────────────────────────────────
+  /**
+   * 把資金補到指定金額（預設一億），**並在帳本留下一筆可追蹤的交易**。
+   *
+   * ⚠ 這是**驗收／測試專用**，入口只在 debug 模式出現（見 FinanceScreen）。
+   * 立場：
+   *   · **不改任何經濟平衡**——薪資公式、獎金、贊助費率、週結算全部沒動。
+   *     這裡只是憑空補一筆錢，讓驗收有足夠預算去測招募／訓練／贊助／週結算。
+   *   · **禁止畫面與 Store 不一致**：資金與帳本在**同一個 set()** 裡寫完，
+   *     不可能出現「畫面有錢但帳本沒紀錄」。帳本那筆的金額就是實際補的差額。
+   *   · 已經達標 ⇒ 不做事、不留紀錄（不製造無意義的 0 元交易）。
+   *
+   * @param {number} target 目標金額（元）
+   * @returns {{ok:boolean, granted:number, funds:number, reason?:string}}
+   */
+  grantTestFunds(target = 100_000_000) {
+    const want = Math.floor(Number(target));
+    if (!Number.isFinite(want) || want <= 0) {
+      return { ok: false, granted: 0, funds: get().finance?.funds ?? 0, reason: "目標金額無效" };
+    }
+    const fin = get().finance ?? {};
+    const before = Math.floor(Number(fin.funds) || 0);
+    const delta = want - before;
+    if (delta <= 0) {
+      return { ok: false, granted: 0, funds: before, reason: "目前資金已達或超過目標，未補充" };
+    }
+    const t = deriveTime(get().meta?.days ?? 1);
+    const entry = {
+      //  決定性 id：同一天、同一個目標金額只會有一筆（重複點不會灌爆帳本）
+      id: `testfunds-d${get().meta?.days ?? 1}-${want}`,
+      date: `W${t.week}`,
+      type: "income",
+      cat: "test",
+      label: `測試資金補充（驗收用）`,
+      amount: delta,
+      color: "#a78bfa",
+    };
+    const prev = Array.isArray(fin.transactions) ? fin.transactions : [];
+    if (prev.some((x) => x?.id === entry.id)) {
+      return { ok: false, granted: 0, funds: before, reason: "今天已補充過相同金額" };
+    }
+    set({ finance: { ...fin, funds: want, transactions: [entry, ...prev].slice(0, 30) } });
+    get().save();
+    return { ok: true, granted: delta, funds: want };
+  },
+  /** 自動填滿空席位（一隊優先、定位相符優先；未登錄永遠不填）。 */
+  autoFillLineup(mode = "moba") {
+    const players = get().players ?? [];
+    const cur = mode === "cs" ? get().csLineup : get().lineup;
+    const filled = autoFillSquad({ mode, seats: cur, players });
+    set(mode === "cs"
+      ? { csLineup: normalizeCsLineup(filled, players) }
+      : { lineup: normalizeLineup(filled, players) });
+    get().save();
+    return filled;
+  },
+  /** O2：選手狀態摘要（唯讀；畫面不自己算一套）。 */
+  playerCondition(playerId) {
+    const me = (get().players ?? []).find((p) => p.id === playerId);
+    return me ? conditionSummary(me) : null;
+  },
+  /** 出賽前檢查（唯讀）。回傳可直接顯示的阻擋理由，畫面不自己再判一次規則。 */
+  squadCheck(mode = "moba") {
+    const players = get().players ?? [];
+    const seats = mode === "cs" ? get().csLineup : get().lineup;
+    return validateSquad({ mode, seats, players });
+  },
+  /**
+   * Milestone O3：產生**出賽申請單**（MatchEntryRequest.v1）。
+   *
+   * 這是配對前的最後一道：陣容不合法就回 `ok:false` 與可顯示的理由，
+   * 合法才產生決定性 `transactionId` 與陣容快照。
+   * 申請單只含身分與編制（playerId / seat / 位置 / 分層 / 隊伍版本），
+   * **不含能力、體力、傷害等任何前端自算的數值**。
+   *
+   * ⚠ 目前沒有後端：本機模擬入口照舊，這裡只負責把資料形狀先定下來。
+   */
+  matchEntry(mode = "moba") {
+    const players = get().players ?? [];
+    const seats = mode === "cs" ? get().csLineup : get().lineup;
+    const t = deriveTime(get().meta?.days ?? 1);
+    return createMatchEntryRequest({
+      mode, seats, players,
+      context: { teamId: get().team?.tag ?? null, teamName: get().team?.name ?? null, day: t.day, week: t.week, season: t.season },
+    });
+  },
+  // ── Milestone O4：配對票券 ───────────────────────────────────────────
+  /**
+   * 排隊。先產生 O3 申請單並驗證，通過才建票並進入 queued。
+   *
+   * **同一隊伍同時只能有一張有效票券**（validating / queued）——
+   * 重複按不會產生第二張，直接回傳既有票券。
+   *
+   * @returns {{ok:boolean, ticket:object|null, errors:Array}}
+   */
+  enqueueMatch(mode = "moba", now = Date.now()) {
+    const cur = get().matchmaking?.ticket ?? null;
+    if (isActiveTicket(cur)) {
+      return { ok: false, ticket: cur, errors: [{ code: "already_queued", message: `已有一張進行中的票券（${stateLabel(cur.state)}），請先取消` }] };
+    }
+    const entry = get().matchEntry(mode);
+    if (!entry.ok) return { ok: false, ticket: null, errors: entry.errors };
+
+    const made = createTicket(entry.request, { now });
+    if (!made.ok) return { ok: false, ticket: null, errors: made.errors };
+    //  validating → queued（轉移規則在契約裡，這裡不自己判斷）
+    const queued = transitionTicket(made.ticket, TICKET_STATES.queued, { now });
+    if (!queued.ok) return { ok: false, ticket: null, errors: queued.errors };
+    set({ matchmaking: { ticket: queued.ticket, room: null, session: null, launch: null } });
+    get().save();
+    return { ok: true, ticket: queued.ticket, errors: [] };
+  },
+  /**
+   * 輪詢閘道（本機 mock）。queued 才有作用。
+   * 每次輪詢都會用**當下的名單**重新驗證資格 ⇒ 排隊中受傷或被改成未登錄會被拒絕。
+   */
+  pollMatchmaking(now = Date.now()) {
+    const ticket = get().matchmaking?.ticket ?? null;
+    if (!ticket || ticket.state !== TICKET_STATES.queued) return { changed: false, ticket };
+    const entry = get().matchEntry(ticket.mode);
+    const res = pollGateway({
+      ticket,
+      entryRequest: entry.request,
+      players: get().players ?? [],
+      now,
+    });
+    if (res.decision === "waiting") return { changed: false, ticket, etaSec: res.etaSec };
+    const next = res.decision === "matched"
+      ? transitionTicket(ticket, TICKET_STATES.matched, { now, assignment: res.assignment })
+      : transitionTicket(ticket, TICKET_STATES.rejected, { now, reason: res.reason });
+    if (!next.ok) return { changed: false, ticket, errors: next.errors };
+    set({ matchmaking: { ...(get().matchmaking ?? {}), ticket: next.ticket } });
+    get().save();
+    return { changed: true, ticket: next.ticket };
+  },
+  /** 取消排隊。取消之後**不得**直接進入對戰（canEnterMatch 會擋）。 */
+  cancelMatchmaking(now = Date.now()) {
+    const ticket = get().matchmaking?.ticket ?? null;
+    if (!isActiveTicket(ticket)) return { ok: false, ticket, errors: [{ code: "not_active", message: "目前沒有進行中的配對" }] };
+    const next = transitionTicket(ticket, TICKET_STATES.cancelled, { now });
+    if (!next.ok) return { ok: false, ticket, errors: next.errors };
+    set({ matchmaking: { ticket: next.ticket, room: null, session: null, launch: null } });
+    get().save();
+    return { ok: true, ticket: next.ticket, errors: [] };
+  },
+  /** 清掉終局票券，回到 idle（畫面上的「重新配對」）。 */
+  resetMatchmaking() {
+    set({ matchmaking: { ticket: null, room: null, session: null, launch: null } });
+    get().save();
+    return true;
+  },
+  // ── Milestone O5：比賽房間與雙方確認 ─────────────────────────────────
+  /**
+   * 開房（由 mock gateway 簽發 roomId 與簽發者；客戶端不得自己造房間）。
+   *
+   * **防止重複建立**：同一張指派單推導出同一個 roomId，
+   * 已經有對應房間就直接回傳既有的，不會產生第二間。
+   */
+  openMatchRoom(now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const ticket = mm.ticket ?? null;
+    const cur = mm.room ?? null;
+    if (cur && ticket && cur.assignmentId === ticket.assignment?.assignmentId && !isRoomTerminal(cur)) {
+      return { ok: true, room: cur, errors: [], reused: true };
+    }
+    const made = openRoom({ ticket, now });
+    if (!made.ok) return { ok: false, room: null, errors: made.errors };
+    set({ matchmaking: { ...mm, room: made.room } });
+    get().save();
+    return { ok: true, room: made.room, errors: [], reused: false };
+  },
+  /**
+   * 輪詢房間（本機 mock）：驅動 waiting → ready_check、對手確認、逾時。
+   * ⚠ 票券若已失效（不是 matched）⇒ 房間直接取消，不讓人靠舊票券進場。
+   */
+  pollMatchRoom(now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const room = mm.room ?? null;
+    const ticket = mm.ticket ?? null;
+    if (!room || isRoomTerminal(room)) return { changed: false, room };
+    //  票券失效（被取消／被拒絕／換了新票）⇒ 房間不得繼續
+    if (!ticket || ticket.state !== TICKET_STATES.matched || room.ticketId !== ticket.ticketId) {
+      const dead = transitionRoom(room, ROOM_STATES.cancelled, { now, reason: "票券已失效，房間關閉" });
+      if (dead.ok) { set({ matchmaking: { ...mm, room: dead.room } }); get().save(); }
+      return { changed: dead.ok, room: dead.room ?? room };
+    }
+    const res = pollRoom({ room, now });
+    let next = null;
+    if (res.decision === "start_ready") next = transitionRoom(room, ROOM_STATES.ready_check, { now });
+    else if (res.decision === "opponent_ready") next = confirmSide(room, "opponent", { now });
+    else if (res.decision === "expired") next = transitionRoom(room, ROOM_STATES.expired, { now, reason: res.reason });
+    if (!next || !next.ok) return { changed: false, room, remainingSec: res.remainingSec };
+    set({ matchmaking: { ...mm, room: next.room } });
+    get().save();
+    return { changed: true, room: next.room, remainingSec: res.remainingSec };
+  },
+  /** 我方確認。重複確認會被契約擋下並回中文理由。 */
+  confirmMatchReady(now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const room = mm.room ?? null;
+    const r = confirmSide(room, "us", { now });
+    if (!r.ok) return { ok: false, room, errors: r.errors };
+    set({ matchmaking: { ...mm, room: r.room } });
+    get().save();
+    return { ok: true, room: r.room, errors: [] };
+  },
+  /** 取消房間（我方主動）。取消後不得進場。 */
+  cancelMatchRoom(now = Date.now(), reason = "已取消本次對戰") {
+    const mm = get().matchmaking ?? {};
+    const room = mm.room ?? null;
+    if (!room || isRoomTerminal(room)) return { ok: false, room, errors: [{ code: "not_active", message: "目前沒有進行中的房間" }] };
+    const next = transitionRoom(room, ROOM_STATES.cancelled, { now, reason });
+    if (!next.ok) return { ok: false, room, errors: next.errors };
+    set({ matchmaking: { ...mm, room: next.room } });
+    get().save();
+    return { ok: true, room: next.room, errors: [] };
+  },
+  // ── Milestone O6：比賽場次與一次性進場 ───────────────────────────────
+  /**
+   * 由 gateway 簽發比賽場次（房間雙方確認後）。
+   * **不會重複建立比賽**：sessionId 由 roomId 推導，已有對應場次就回傳既有的。
+   */
+  createMatchSession(now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const cur = mm.session ?? null;
+    if (cur && cur.roomId === mm.room?.roomId && !isSessionTerminal(cur) && !isSessionExpired(cur, now)) {
+      return { ok: true, session: cur, errors: [], reused: true };
+    }
+    const made = openSession({ room: mm.room ?? null, ticket: mm.ticket ?? null, now });
+    if (!made.ok) return { ok: false, session: null, errors: made.errors };
+    set({ matchmaking: { ...mm, session: made.session } });
+    get().save();
+    return { ok: true, session: made.session, errors: [], reused: false };
+  },
+  /**
+   * 使用一次性令牌啟動比賽。**這是對戰入口的唯一許可**。
+   *
+   * 拒絕：令牌不符／已使用（重複進場）／場次過期或取消／與房間或票券資料不一致。
+   * 成功後把啟動參數存進 `matchmaking.launch`——只有模式／種子／對手識別，
+   * 沒有陣容數值、沒有比賽結果。
+   */
+  launchMatchSession(now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const session = mm.session ?? null;
+    if (!session) return { ok: false, launch: null, errors: [{ code: "no_session", message: "尚未建立比賽場次" }] };
+    const r = consumeLaunchToken(session, session.launchToken, {
+      room: mm.room ?? null, ticket: mm.ticket ?? null, now,
+    });
+    if (!r.ok) return { ok: false, launch: null, errors: r.errors };
+    set({ matchmaking: { ...mm, session: r.session, launch: r.launch } });
+    get().save();
+    return { ok: true, launch: r.launch, errors: [] };
+  },
+  /** 取消場次（附中文原因）。 */
+  cancelMatchSession(reason = "已取消本場比賽", now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const r = cancelSession(mm.session ?? null, reason, now);
+    if (!r.ok) return { ok: false, session: mm.session ?? null, errors: r.errors };
+    set({ matchmaking: { ...mm, session: r.session } });
+    get().save();
+    return { ok: true, session: r.session, errors: [] };
+  },
+  // ── Milestone O7：場次恢復、結果回報、單次結算、追蹤鏈 ──────────────
+  /**
+   * 恢復同一場次（重整或短暫斷線後）。**不會開新場、不會再消耗令牌。**
+   * 回傳的 launch 與首次啟動逐欄相同（同一個 seed ⇒ 同一份初始戰鬥狀態）。
+   */
+  resumeMatchSession(now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const r = resumeSession(mm.session ?? null, { room: mm.room ?? null, ticket: mm.ticket ?? null, now });
+    if (!r.ok) return { ok: false, launch: null, errors: r.errors };
+    set({ matchmaking: { ...mm, session: r.session, launch: r.launch } });
+    get().save();
+    return { ok: true, launch: r.launch, errors: [] };
+  },
+  /** 標記斷線（仍可恢復）。 */
+  markMatchDisconnected(now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const r = markDisconnected(mm.session ?? null, now);
+    if (!r.ok) return { ok: false, errors: r.errors };
+    set({ matchmaking: { ...mm, session: r.session } });
+    get().save();
+    return { ok: true, errors: [] };
+  },
+  /** 放棄本場（不可再恢復）。 */
+  abandonMatchSession(reason = "已放棄本場比賽", now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const r = abandonSession(mm.session ?? null, reason, now);
+    if (!r.ok) return { ok: false, errors: r.errors };
+    set({ matchmaking: { ...mm, session: r.session } });
+    get().save();
+    return { ok: true, errors: [] };
+  },
+  /**
+   * 回報比賽結果並**單次結算**。
+   *
+   * · 結果先經 `MatchResult.v1` 驗證（來源可信、與場次一致、無衝突）。
+   * · 結算委派 S25 的 `applyMatchProgress`——**不建立第二套結算流程**。
+   * · 同一份結果重送 ⇒ 回同一張 receipt；同一場送不同結果 ⇒ 拒絕。
+   * · 中斷後重試安全：沒寫入就是沒寫入，寫過就回既有 receipt。
+   *
+   * @param {object} outcome     { matchId, winner, score:{us,opponent}, durationSec }
+   * @param {object} transaction MatchProgressTransaction.v1（既有 adapter 產生）
+   */
+  reportMatchResult(outcome, transaction, { source = RESULT_SOURCES.engine, now = Date.now() } = {}) {
+    const mm = get().matchmaking ?? {};
+    const session = mm.session ?? null;
+    if (!session) return { ok: false, receipt: null, errors: [{ code: "no_session", message: "沒有進行中的比賽場次" }] };
+    const made = createMatchResult({ session, outcome, source, now });
+    if (!made.ok) return { ok: false, receipt: null, errors: made.errors };
+    const { nextState, receipt } = settleMatchResultInState(get(), {
+      result: made.result, session, transaction, now,
+    });
+    if (nextState) { set(nextState); get().save(); }
+    return { ok: !!receipt.ok, receipt, errors: receipt.errors ?? [] };
+  },
+  /** 唯讀：完整追蹤鏈（debug 用；一般 UI 不顯示 launchToken 等敏感內容）。 */
+  matchTrace() {
+    const mm = get().matchmaking ?? {};
+    const s = mm.session ?? null;
+    const last = mm.lastResult ?? null;
+    const settlement = last ? (mm.settlements ?? {})[settlementIdOf(last)] ?? null : null;
+    return {
+      ticketId: mm.ticket?.ticketId ?? null,
+      assignmentId: mm.ticket?.assignment?.assignmentId ?? null,
+      roomId: mm.room?.roomId ?? null,
+      sessionId: s?.sessionId ?? null,
+      matchId: last?.matchId ?? s?.matchId ?? null,
+      resultId: last?.resultId ?? s?.resultId ?? null,
+      settlementId: settlement?.settlementId ?? s?.settlementId ?? null,
+      sessionState: s?.state ?? null,
+      connection: s?.connection ?? null,
+      resumeCount: s?.resumeCount ?? 0,
+      seed: s?.seed ?? null,
+      //  ⚠ 刻意不回傳 launchToken：一般 UI 不得顯示敏感憑證
+      lastError: mm.lastSettlementError?.reason ?? null,
+    };
+  },
+  /** 唯讀：場次狀態 ＋ 能否啟動（畫面不自己判規則）。 */
+  matchSessionView(now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const session = mm.session ?? null;
+    const v = session ? validateSession(session, { room: mm.room ?? null, ticket: mm.ticket ?? null, now }) : { ok: false, errors: [] };
+    return {
+      session,
+      launch: mm.launch ?? null,
+      state: session?.state ?? null,
+      stateLabel: session ? sessionStateLabel(session.state) : "尚未建立場次",
+      canLaunch: !!session && v.ok,
+      blockedReason: session ? (v.ok ? null : v.errors[0]?.message ?? null) : null,
+      expired: isSessionExpired(session, now),
+    };
+  },
+  /** 唯讀：房間狀態 ＋ 倒數 ＋ 能否進場（畫面不自己判規則）。 */
+  matchRoomView(now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const room = mm.room ?? null;
+    const enter = canEnterRoom(room, mm.ticket ?? null);
+    return {
+      room,
+      state: room?.state ?? null,
+      stateLabel: room ? roomStateLabel(room.state) : "尚未建立房間",
+      remainingSec: remainingSeconds(room, now),
+      usReady: !!room?.confirmations?.us,
+      opponentReady: !!room?.confirmations?.opponent,
+      canEnter: enter.ok,
+      blockedReason: enter.ok ? null : enter.message,
+    };
+  },
+  /** 唯讀：目前票券 ＋ 等待秒數 ＋ 能否進場（畫面不自己判規則）。 */
+  matchmakingView(now = Date.now()) {
+    const ticket = get().matchmaking?.ticket ?? null;
+    const enter = canEnterMatchOf(ticket);
+    return {
+      ticket,
+      state: ticket?.state ?? TICKET_STATES.idle,
+      stateLabel: stateLabel(ticket?.state ?? TICKET_STATES.idle),
+      waitedSec: waitedSeconds(ticket, now),
+      canEnter: enter.ok,
+      enterBlockedReason: enter.ok ? null : enter.message,
+    };
+  },
+  /** O3：以本地名單驗證一張申請單（模擬伺服器端會做的事）。 */
+  verifyMatchEntry(req) { return validateMatchEntryRequest(req, get().players ?? []); },
+  /**
+   * 產生出賽提交單（**只含 playerId 與席位，不含任何數值**）。
+   * 陣容不合法 ⇒ null。日後連線時就是把這張單送給伺服器。
+   */
+  squadSubmission(mode = "moba") {
+    const players = get().players ?? [];
+    const seats = mode === "cs" ? get().csLineup : get().lineup;
+    const t = deriveTime(get().meta?.days ?? 1);
+    return createSquadSubmission({ mode, seats, players, submittedAt: { day: t.day, week: t.week, season: t.season } });
+  },
+
+  /** 本週（尚未結算）的收支預覽——畫面用，不寫入任何狀態。 */
+  currentWeekPreview() {
+    const { lines, income, expense, net, form, scenario } = buildWeekLines(get());
+    const t = deriveTime(get().meta?.days ?? 1);
+    return { ...t, lines, income, expense, net, form, scenario, scenarioName: scenarioById(scenario).name };
+  },
+  /** N2：未來 n 週現金預測（唯讀）。含贊助到期造成的收入斷崖與資金警告等級。 */
+  cashForecast(weeks) { return forecastWeeks(get(), weeks); },
+  /** N2：近期戰績（0–1），贊助績效獎金的縮放依據。 */
+  recentForm() { return recentForm(get()); },
+  /** N2：切換財務情境（新手／一般／頂級）。未知 id 一律忽略。 */
+  setScenario(id) {
+    if (!SCENARIOS[id]) return false;
+    set({ economy: { ...(get().economy ?? {}), scenario: id } });
+    get().save();
+    return true;
+  },
+  /**
+   * N3：以指定情境**開新局**。
+   *
+   * ⚠ 破壞性：整份存檔回到初始狀態（選手、資金、帳本、賽績、收件匣全部重來）。
+   *   呼叫端必須先向使用者確認——`NewGameScreen` 有兩段式確認。
+   *
+   * 這是讓三種情境真正生效的入口：N2 已定義 `startingFunds`（60／120／300 萬），
+   * 但在此之前沒有任何地方套用它，實際遊戲永遠是種子的 120 萬。
+   *
+   *   · 資金 = 該情境的 startingFunds
+   *   · 時間從第 1 天重新起算（week / season 由 days 導出）
+   *   · 交易帳本清空——種子交易是 Legacy 的展示樣本，留著會讓新局的
+   *     「近四週賽事獎金估計」憑空多出收入
+   *   · 贊助、賽績紀錄、冪等帳本全部清空
+   *
+   * @returns {boolean} false = 未知情境 id（不做任何事）
+   */
+  startNewGame(scenarioId) {
+    const sc = SCENARIOS[scenarioId];
+    if (!sc) return false;
+    //  N3.1：新局的財務起點由 economy/newGame.js 決定（含情境附帶的扶持贊助）。
+    //  規則只有一份 ⇒ 驗證器可以驗到**真正會發生**的狀態，不會兩邊漂移。
+    const ng = newGameFinancials(scenarioId);
+    const t = ng.time;
+    const starter = ng.starter;
+    set({
+      ...DEFAULT,
+      players: INITIAL_PLAYERS.map(migratePlayer),
+      lineup: { ...DEFAULT_LINEUP },
+      csLineup: normalizeCsLineup(null, null),
+      meta: { ...DEFAULT.meta, days: t.day, week: t.week, season: t.season },
+      finance: { ...DEFAULT.finance, funds: ng.funds, transactions: [] },
+      activeSponsor: ng.activeSponsor,
+      csHistory: [],
+      processedMatchTransactions: {},
+      economy: ng.economy,
+      recruitment: { signed: {} },
+      matchmaking: { ticket: null, room: null, session: null, launch: null, lastResult: null, settlements: {}, lastSettlementError: null },
+      schemaVersion: PROFILE_SCHEMA_VERSION,
+    });
+    get().pushInbox({
+      type: "match", from: "戰隊管理處",
+      subject: `新賽季開始 · ${sc.name}`,
+      text: `已以「${sc.name}」情境開始新局：起始資金 $${sc.startingFunds}萬、基礎營收 $${sc.baselineWeekly}萬/週。祝好運。`,
+    });
+    if (starter) {
+      get().pushInbox({
+        type: "sponsor", from: starter.name,
+        subject: `扶持合約成立 · ${starter.weeks} 週`,
+        text: `${starter.name}提供為期 ${starter.weeks} 週、每週 $${starter.weekly}萬 的開局扶持（一半固定、一半依戰績）。到期後不續約，請在期限內談到正式贊助。`,
+      });
+    }
+    get().save();
+    return true;
   },
 
   // ── 贊助商（Legacy SponsorModule）───────────────────────────────────
@@ -403,41 +1114,39 @@ export const useProfileStore = create((set, get) => ({
     return entry;
   },
 
-  /** 簽下新秀：扣款（cost 單位為萬）→ 進 players[] → 發收件匣。回傳 false = 預算不足 / 名額滿。 */
-  signProspect(prospect) {
-    const players = get().players ?? [];
-    if (players.length >= ROSTER_CAP) return false;
-    const cost = (prospect.cost ?? 0) * WAN;
-    if (get().finance.funds < cost) return false;
-    const energy = 100;
-    const player = {
-      id: "r" + uid(),
-      name: prospect.name,
-      heroId: prospect.heroId ?? null,     // 尚未綁定英雄 → Roster 頁顯示未綁定，不亂塞
-      role: prospect.role,
-      status: "預備隊",
-      training: null,
-      lv: 1,
-      xp: 0,                  // S25：新秀從 0 累積總 XP（lv 由 xp 導出）
-      talentPoints: 0,
-      potential: prospect.potential,
-      age: prospect.age,
-      personality: prospect.personality,
-      morale: 80 + Math.floor(Math.random() * 20),
-      energy,
-      condition: conditionFor(energy),
-      contract: 365,
-      salary: Math.max(1, Math.round(prospect.cost / 10)),
-      traits: prospect.traits ?? [],
-      tier: prospect.tier?.grade ?? null,
-      stats: { ...prospect.stats },
-    };
-    set({
-      players: [...players, player],
-      finance: { ...get().finance, funds: get().finance.funds - cost },
-      meta: { ...get().meta, players: players.length + 1 },
+  /**
+   * Milestone O：簽下新秀。**唯一**的招募入口（薄包裝）。
+   *
+   * 純邏輯在 `recruit/applyRecruitment.js`，本函式只負責：
+   * 建交易單 → 套用 → 存檔 → 發收件匣。
+   *
+   * 三道保護（名額／餘額／重複）與冪等都在 reducer 裡，畫面不必自己判。
+   * 回傳 receipt，`receipt.reason` 直接可顯示：
+   *   `roster_full` / `insufficient_funds` / `invalid`，或 `alreadySigned: true`。
+   *
+   * ⚠ M O 之前這裡有兩個問題：沒有呼叫 `save()`（招募重整就消失），
+   *   以及沒有重複保護（同一位新秀可無限簽、無限扣款）。
+   *
+   * @param {object} prospect data/recruitPool.js 的新秀
+   * @param {number|string} poolSeed 新秀池識別（畫面目前的 seed；日後為伺服器池 id）
+   * @returns {object} receipt
+   */
+  signProspect(prospect, poolSeed = 7) {
+    const t = deriveTime(get().meta?.days ?? 1);
+    const tx = createRecruitmentTransaction({
+      poolSeed,
+      prospect,
+      signedAt: { day: t.day, week: t.week, season: t.season },
     });
-    get().pushInbox({ type: "recruit", from: "球探部", subject: `簽下新秀 ${prospect.name}`, text: `簽下新秀 ${prospect.name}（${prospect.role}）· 簽約金 $${prospect.cost}萬` });
-    return true;
+    const { nextState, receipt } = applyRecruitmentToState(get(), tx);
+    if (!nextState) return receipt;          // 未通過保護 或 已簽過 → 完全不寫入
+    set(nextState);
+    get().pushInbox({
+      type: "recruit", from: "球探部",
+      subject: `簽下新秀 ${receipt.name}`,
+      text: `簽下新秀 ${receipt.name}（${receipt.role}）· 簽約金 $${Math.round(receipt.cost / WAN)}萬。目前名單 ${receipt.rosterSize}/${receipt.rosterCap} 人，可至訓練中心安排課程提升能力。`,
+    });
+    get().save();                            // ⚠ M O 之前漏了這一行：招募不會被保存
+    return receipt;
   },
 }));
