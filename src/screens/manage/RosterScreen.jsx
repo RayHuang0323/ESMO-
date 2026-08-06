@@ -45,7 +45,14 @@ const levelProgressOf = (p) => {
 const statusOf = (p) => ((p.energy ?? 100) < 30 ? "閒置" : p.status === "主力" ? "主力" : p.status || "預備隊");
 const statusColor = (st) => (st === "主力" ? GC.green : st === "閒置" ? GC.red : st === "訓練中" ? GC.gold : GC.gray);
 
-export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
+/**
+ * @param {"roster"|"talent"} [purpose] 集中驗收修正（項目五）：
+ *   "talent" ⇒ 本頁是**天賦入口的中介頁**——標題改為「選擇要培養的選手」，
+ *   每張卡多一顆「查看天賦」，點下去直達該選手的天賦樹（PlayerTalentScreen）。
+ *   ⚠ 只改標題與卡片動作，**沒有第二套天賦系統、沒有第二套選手資料**。
+ */
+export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "roster" }) {
+  const talentMode = purpose === "talent";
   const players = useProfileStore((s) => s.players) ?? [];
   const renamePlayer = useProfileStore((s) => s.renamePlayer);
   const setPlayerRole = useProfileStore((s) => s.setPlayerRole);
@@ -67,8 +74,11 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
 
   return (
     <ManageFrame
-      title="選手名單" subtitle="ROSTER" onBack={onBack}
-      right={<span style={{ background: players.length >= ROSTER_CAP ? "rgba(239,68,68,0.15)" : "rgba(96,165,250,0.15)", color: players.length >= ROSTER_CAP ? GC.red : GC.blue, fontSize: 11, fontWeight: 800, borderRadius: 8, padding: "4px 10px", whiteSpace: "nowrap" }}>{players.length} / {ROSTER_CAP} 人</span>}
+      title={talentMode ? "選擇要培養的選手" : "選手名單"}
+      subtitle={talentMode ? "TALENT · 選擇選手後進入天賦樹" : "ROSTER"} onBack={onBack}
+      right={talentMode
+        ? <span style={{ background: "rgba(167,139,250,0.15)", color: GC.purp, fontSize: 11, fontWeight: 800, borderRadius: 8, padding: "4px 10px", whiteSpace: "nowrap" }}>可用天賦點 {players.reduce((t, p) => t + (Number(p.talentPoints) || 0), 0)}</span>
+        : <span style={{ background: players.length >= ROSTER_CAP ? "rgba(239,68,68,0.15)" : "rgba(96,165,250,0.15)", color: players.length >= ROSTER_CAP ? GC.red : GC.blue, fontSize: 11, fontWeight: 800, borderRadius: 8, padding: "4px 10px", whiteSpace: "nowrap" }}>{players.length} / {ROSTER_CAP} 人</span>}
     >
       <div style={{ display: "flex", gap: 5, marginBottom: 12, overflowX: "auto" }}>
         {FILTERS.map((f) => (
@@ -86,7 +96,7 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
           const lvProg = levelProgressOf(p);
           const dp = withDerivedStats(p); const mp = calcPower(dp, "moba"), fp = calcPower(dp, "fps");
           return (
-            <button key={p.id} onClick={() => { setSelId(p.id); setEditName(false); }}
+            <button key={p.id} onClick={() => { if (talentMode) { onPlayer?.(p.id); return; } setSelId(p.id); setEditName(false); }}
               style={{ display: "flex", alignItems: "center", gap: 11, background: GC.card, border: `1px solid ${p.id === selId ? GC.purp : "rgba(255,255,255,0.06)"}`, borderRadius: 13, padding: "11px 13px", cursor: "pointer", textAlign: "left", width: "100%" }}>
               <PlayerAvatar player={p} size={46} ring={c} />
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -136,14 +146,20 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer }) {
                   <span style={{ color: GC.purp, fontSize: 9, fontWeight: 700 }}>M{mp}</span>
                   <span style={{ color: "#fb923c", fontSize: 9, fontWeight: 700 }}>F{fp}</span>
                 </div>
-                <span style={{ background: `${c}22`, color: c, fontSize: 8, fontWeight: 700, borderRadius: 5, padding: "2px 6px" }}>{st}</span>
+                {talentMode ? (
+                  <span data-testid="talent-open" style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "rgba(167,139,250,0.16)", border: `1px solid ${GC.purp}66`, color: "#ddd6fe", fontSize: 9, fontWeight: 800, borderRadius: 6, padding: "3px 7px", whiteSpace: "nowrap" }}>
+                    🌿 查看天賦{Number(p.talentPoints) > 0 ? ` · ${p.talentPoints}點` : ""}
+                  </span>
+                ) : (
+                  <span style={{ background: `${c}22`, color: c, fontSize: 8, fontWeight: 700, borderRadius: 5, padding: "2px 6px" }}>{st}</span>
+                )}
               </div>
             </button>
           );
         })}
       </div>
 
-      {players.length < ROSTER_CAP && (
+      {!talentMode && players.length < ROSTER_CAP && (
         <div onClick={onRecruit} style={{ textAlign: "center", color: GC.gray, fontSize: 10, marginTop: 14, padding: 12, border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 12, cursor: onRecruit ? "pointer" : "default" }}>
           還可招募 {ROSTER_CAP - players.length} 名選手 · 到「球探招募」挖掘新星
         </div>

@@ -9,6 +9,7 @@
 // ============================================================================
 import React, { useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
+import { isDebugMode } from "../../ui/debugMode.js";
 
 const C = {
   ok: "#34d399", bad: "#f87171", warn: "#fbbf24",
@@ -22,9 +23,14 @@ const C = {
  */
 export default function MatchEntryPanel({ mode = "moba", onAutoFill = null }) {
   const entry = useProfileStore((s) => s.matchEntry)(mode);
+  //  「幾人／共幾人」直接讀契約算好的 filled / required，畫面不自己數
+  const check = useProfileStore((s) => s.squadCheck)(mode);
   const [open, setOpen] = useState(false);
   const ok = entry.ok;
   const req = entry.request;
+  const debug = isDebugMode();
+  const modeName = mode === "cs" ? "CS" : "MOBA";
+  const full = check.filled >= check.required;
 
   return (
     <div style={{
@@ -73,26 +79,42 @@ export default function MatchEntryPanel({ mode = "moba", onAutoFill = null }) {
         </div>
       )}
 
+      {/*  集中驗收修正（項目二）：主畫面只留玩家看得懂的三件事——
+           出賽申請狀態、陣容是否 5/5、模式名稱。
+           隊伍版本 / 申請識別 / 提交時間屬於工程資訊，移到「查看提交內容」展開區
+           （或 ?debug=1）。⚠ 契約欄位一個都沒刪，驗證邏輯與 Store 形狀完全未動。 */}
+      <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap", minWidth: 0 }}>
+        {[
+          { k: "模式", v: modeName, c: "white" },
+          { k: "陣容", v: `${check.filled}/${check.required}`, c: full ? C.ok : C.bad },
+        ].map((x) => (
+          <div key={x.k} style={{ background: C.card2, borderRadius: 8, padding: "5px 9px", minWidth: 0 }}>
+            <div style={{ color: C.gray, fontSize: 8 }}>{x.k}</div>
+            <div style={{ color: x.c, fontSize: 11, fontWeight: 800, whiteSpace: "nowrap" }}>{x.v}</div>
+          </div>
+        ))}
+      </div>
+
       {ok && (
         <>
-          <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-            {[
-              { k: "隊伍版本", v: req.rosterVersion },
-              { k: "申請識別", v: req.transactionId.slice(-12) },
-              { k: "時間", v: `S${req.submittedAt.season}・W${req.submittedAt.week}` },
-            ].map((x) => (
-              <div key={x.k} style={{ background: C.card2, borderRadius: 8, padding: "5px 8px", minWidth: 0 }}>
-                <div style={{ color: C.gray, fontSize: 8 }}>{x.k}</div>
-                <div style={{ color: "white", fontSize: 10, fontWeight: 700, fontFamily: "monospace", whiteSpace: "nowrap" }}>{x.v}</div>
-              </div>
-            ))}
-          </div>
-
           {open && (
             <div style={{ marginTop: 8 }}>
               <div style={{ color: C.gray, fontSize: 8.5, marginBottom: 5, lineHeight: 1.6 }}>
                 提交內容只有身分與編制。能力、體力、傷害等數值**不會提交**，
                 由伺服器以 playerId 自行查詢。
+              </div>
+              {/*  工程資訊：只在展開區或 debug 顯示，不在主畫面 */}
+              <div data-testid="entry-internal-ids" style={{ display: "flex", gap: 8, marginBottom: 6, flexWrap: "wrap", minWidth: 0 }}>
+                {[
+                  { k: "隊伍版本", v: req.rosterVersion },
+                  { k: "申請識別", v: req.transactionId.slice(-12) },
+                  { k: "時間", v: `S${req.submittedAt.season}・W${req.submittedAt.week}` },
+                ].map((x) => (
+                  <div key={x.k} style={{ background: C.card2, borderRadius: 8, padding: "5px 8px", minWidth: 0 }}>
+                    <div style={{ color: C.gray, fontSize: 8 }}>{x.k}</div>
+                    <div style={{ color: "white", fontSize: 10, fontWeight: 700, fontFamily: "monospace", whiteSpace: "nowrap" }}>{x.v}</div>
+                  </div>
+                ))}
               </div>
               {req.squad.map((r) => (
                 <div key={r.seat} style={{ display: "flex", alignItems: "center", gap: 7, padding: "4px 0", borderTop: `1px solid ${C.line}`, fontSize: 10 }}>
@@ -100,6 +122,19 @@ export default function MatchEntryPanel({ mode = "moba", onAutoFill = null }) {
                   <span style={{ color: "white", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.playerId}</span>
                   <span style={{ color: r.role === r.seatRole ? C.gray2 : C.warn, whiteSpace: "nowrap" }}>{r.role}</span>
                   <span style={{ color: C.gray, whiteSpace: "nowrap" }}>{r.tier === "active" ? "一隊" : "替補"}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {!open && debug && (
+            <div data-testid="entry-internal-ids-debug" style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap", minWidth: 0 }}>
+              {[
+                { k: "隊伍版本", v: req.rosterVersion },
+                { k: "申請識別", v: req.transactionId.slice(-12) },
+              ].map((x) => (
+                <div key={x.k} style={{ background: "rgba(0,0,0,0.35)", border: `1px dashed ${C.line}`, borderRadius: 8, padding: "5px 8px", minWidth: 0 }}>
+                  <div style={{ color: C.gray, fontSize: 8 }}>DEBUG · {x.k}</div>
+                  <div style={{ color: C.gray2, fontSize: 10, fontWeight: 700, fontFamily: "monospace", whiteSpace: "nowrap" }}>{x.v}</div>
                 </div>
               ))}
             </div>

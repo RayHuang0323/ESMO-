@@ -539,6 +539,51 @@ export const useProfileStore = create((set, get) => ({
     get().save();
     return true;
   },
+  // ── 集中驗收：測試資金（項目三）──────────────────────────────────────
+  /**
+   * 把資金補到指定金額（預設一億），**並在帳本留下一筆可追蹤的交易**。
+   *
+   * ⚠ 這是**驗收／測試專用**，入口只在 debug 模式出現（見 FinanceScreen）。
+   * 立場：
+   *   · **不改任何經濟平衡**——薪資公式、獎金、贊助費率、週結算全部沒動。
+   *     這裡只是憑空補一筆錢，讓驗收有足夠預算去測招募／訓練／贊助／週結算。
+   *   · **禁止畫面與 Store 不一致**：資金與帳本在**同一個 set()** 裡寫完，
+   *     不可能出現「畫面有錢但帳本沒紀錄」。帳本那筆的金額就是實際補的差額。
+   *   · 已經達標 ⇒ 不做事、不留紀錄（不製造無意義的 0 元交易）。
+   *
+   * @param {number} target 目標金額（元）
+   * @returns {{ok:boolean, granted:number, funds:number, reason?:string}}
+   */
+  grantTestFunds(target = 100_000_000) {
+    const want = Math.floor(Number(target));
+    if (!Number.isFinite(want) || want <= 0) {
+      return { ok: false, granted: 0, funds: get().finance?.funds ?? 0, reason: "目標金額無效" };
+    }
+    const fin = get().finance ?? {};
+    const before = Math.floor(Number(fin.funds) || 0);
+    const delta = want - before;
+    if (delta <= 0) {
+      return { ok: false, granted: 0, funds: before, reason: "目前資金已達或超過目標，未補充" };
+    }
+    const t = deriveTime(get().meta?.days ?? 1);
+    const entry = {
+      //  決定性 id：同一天、同一個目標金額只會有一筆（重複點不會灌爆帳本）
+      id: `testfunds-d${get().meta?.days ?? 1}-${want}`,
+      date: `W${t.week}`,
+      type: "income",
+      cat: "test",
+      label: `測試資金補充（驗收用）`,
+      amount: delta,
+      color: "#a78bfa",
+    };
+    const prev = Array.isArray(fin.transactions) ? fin.transactions : [];
+    if (prev.some((x) => x?.id === entry.id)) {
+      return { ok: false, granted: 0, funds: before, reason: "今天已補充過相同金額" };
+    }
+    set({ finance: { ...fin, funds: want, transactions: [entry, ...prev].slice(0, 30) } });
+    get().save();
+    return { ok: true, granted: delta, funds: want };
+  },
   /** 自動填滿空席位（一隊優先、定位相符優先；未登錄永遠不填）。 */
   autoFillLineup(mode = "moba") {
     const players = get().players ?? [];

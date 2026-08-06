@@ -14,6 +14,7 @@ import { Award, Users, Star, Package, Zap, BarChart2, ArrowUpRight, ArrowDownLef
 import { useProfileStore } from "../../platform/profileStore.js";
 import { resolveSponsor } from "../../platform/economy/sponsors.js";
 import { useIsMobile } from "../../ui/useViewport.js";
+import { isDebugMode } from "../../ui/debugMode.js";
 import ManageFrame from "./ManageFrame.jsx";
 
 // Legacy FinanceModule 專用色票（比主幹 GC 更深的紫調，保留 Legacy 視覺階層）
@@ -119,9 +120,38 @@ export default function FinanceScreen({ onBack }) {
   const incomeBd = fin.incomeBd ?? [], expenseBd = fin.expenseBd ?? [], budget = fin.budget ?? [];
   const k = (n) => `${Math.round(n / 1000)}k`;
 
+  //  集中驗收（項目三）：測試資金入口。**只在 debug／驗收模式出現**，
+  //  正式玩家畫面看不到。補的錢會同時寫進帳本，畫面與 Store 不可能不一致。
+  const grantTestFunds = useProfileStore((s) => s.grantTestFunds);
+  const [grantMsg, setGrantMsg] = useState(null);
+  const debug = isDebugMode();
+
   return (
     <ManageFrame title="財務儀表板" subtitle="FINANCE DASHBOARD" onBack={onBack}>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {debug && (
+          <div data-testid="test-funds-panel" style={{ borderRadius: 12, padding: "10px 12px", background: "rgba(0,0,0,0.35)", border: "1px dashed rgba(167,139,250,0.45)", minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", minWidth: 0 }}>
+              <span style={{ fontSize: 13 }}>🛠</span>
+              <span style={{ color: "white", fontSize: 11.5, fontWeight: 800 }}>驗收工具</span>
+              <span style={{ fontSize: 8.5, fontWeight: 800, borderRadius: 5, padding: "1px 6px", background: "rgba(167,139,250,0.18)", color: T.purpL, whiteSpace: "nowrap" }}>僅測試模式</span>
+            </div>
+            <button onClick={() => setGrantMsg(grantTestFunds(100_000_000))}
+              style={{ marginTop: 8, width: "100%", borderRadius: 10, padding: "10px", border: "1px solid rgba(167,139,250,0.45)", background: "rgba(167,139,250,0.14)", color: "#e9d5ff", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+              補充測試資金至 $100,000,000
+            </button>
+            {grantMsg && (
+              <div style={{ marginTop: 6, fontSize: 10, lineHeight: 1.7, color: grantMsg.ok ? T.green : T.gray2 }}>
+                {grantMsg.ok
+                  ? `✅ 已補充 $${grantMsg.granted.toLocaleString()}，目前餘額 $${grantMsg.funds.toLocaleString()}（已寫入下方交易紀錄）`
+                  : `· ${grantMsg.reason}`}
+              </div>
+            )}
+            <div style={{ marginTop: 5, fontSize: 8.5, color: T.gray2, lineHeight: 1.6 }}>
+              只補資金，不改薪資公式、獎金、贊助費率或週結算。補的金額會以「測試資金補充（驗收用）」記入交易帳本。
+            </div>
+          </div>
+        )}
         {/* 餘額大卡 */}
         <div style={{ borderRadius: 20, padding: 16, background: "linear-gradient(145deg,#1a1528,#0f0c18)", border: "1px solid rgba(167,139,250,0.25)", position: "relative", overflow: "hidden" }}>
           <div style={{ color: T.gray2, fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>當前總餘額</div>

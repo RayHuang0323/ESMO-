@@ -5800,3 +5800,66 @@ P1 的程式、驗證器與文件已於 `e608e07` 提交。本節記錄**結案�
 紅燈當下沒留下證據，事後就只能猜——這次就是。
 
 **P1 自動驗證全數通過，正式結案。瀏覽器實機驗收仍未進行（見待辦）。**
+
+---
+
+## 集中驗收修正包 `acceptance-fix/p1-ui`（2026-08-06）
+
+`milestone-n-finance` 的**第一次真實環境驗收**（N/O/P 全部成果）找出五項
+UI／流程問題。本包只修這五項，**不開新功能、不改戰鬥平衡**。
+
+在獨立 worktree `ESMO-acceptance-fix` 進行，主工作區與對照用的 `ESMO-acceptance`
+全程未被更動。
+
+### 五項修正
+
+| # | 根因 | 修法 |
+|---|---|---|
+| 一 | `MatchQueuePanel` 有「開始配對」、`Frame` 底部又有「確認陣容 → 配對」，**兩顆主要按鈕都推進流程** | 底部改為**唯一**主按鈕並隨流程改身分；狀態卡加 `statusOnly` ⇒ 只顯示狀態 |
+| 二 | 主畫面直接曝露 `rosterVersion` / `transactionId` / `submittedAt` / `ticketId` | 主畫面只留狀態／陣容 n/5／模式；其餘進展開區與 `?debug=1`。**契約欄位一個沒刪** |
+| 三 | 驗收缺資金，且沒有安全的補充方式 | `profileStore.grantTestFunds()`：資金與帳本在**同一個 `set()`**，決定性 id 防重複；入口 debug-only |
+| 四 | CS 用 `.filter(Boolean)`，**缺人的席位整列消失** | 新增共用 `MatchPrepFrame` + `SquadSeatRow`，MOBA／CS 同一套結構；CS 五席恆在 |
+| 五 | `NAV.talent = "roster"`，天賦流程斷在普通名單 | 新增 `talentPick`（`RosterScreen` 的 `purpose="talent"`）→ 直達既有 `PlayerTalentScreen` |
+
+### 「唯一主按鈕」的設計
+
+底部那顆的身分由 `primaryActionFor()` 決定，涵蓋九種狀態：
+未通過驗證／開始配對／配對中（含等待秒數）／已配對／我方確認／等待對手／
+進入對戰／重新配對（取消・拒絕・逾期）。
+
+⚠ **沒有第二條配對邏輯**——每個分支都只是呼叫 O4–O7 既有的 store action
+（`enqueueMatch` / `confirmMatchReady` / `launchMatchSession` / `resetMatchmaking`）。
+收斂的是**入口**，不是流程。
+
+### 驗證：`tools/check_acceptance_fix_p1.mjs` — **81/81**
+
+§1 單一入口與九種狀態｜§2 工程資訊不外洩｜§3 測試資金三方一致｜
+§4 兩模式共用元件｜§5 CS 缺員席位｜§6 天賦入口｜
+§7 UI 未定義識別字掃描（AST 作用域分析）｜§8 契約與戰鬥平衡未被動過。
+
+既有回歸全綠：`growth_ui_p1` 62/62、`experience26` 35/35、O 系列七支、
+財務四支、`talent27` 44/44、`regress` 15/15、`regress2` 8/8、build EXIT=0。
+
+### ⚠ 驗證器抓到我兩個真缺失（已修，不是放寬門檻）
+
+1. **項目二只做一半**：配對狀態卡排隊時仍在顯示隊伍版本與票券。
+2. **主按鈕邏輯寫在 `.jsx`，Node 匯入不了 ⇒ 等於沒驗到**。已抽成純函式
+   `matchPrepAction.js`，九種狀態才真的逐條驗過。
+   **教訓：值得驗的邏輯不要留在 `.jsx` 裡。**
+
+另有一處是我的檢查誤判：`§2f` 直接對原始碼比對「隊伍版本」，抓到自己寫的註解
+（與 P1 `§7a` 同一種錯），已改為去註解後比對。**註解不是畫面。**
+
+### 人工瀏覽器實機驗收：**五項全部通過**
+
+桌面與 320 / 360 / 390 / 430px 皆確認**無水平溢出**。
+這是 N/O/P 系列累積的驗收債第一次真正清掉——先前每一輪回報結尾的
+「未經瀏覽器實測」，到這裡才有了實機結論。
+
+詳細結果：`review/acceptance-fix/ACCEPTANCE_RESULT.md`。
+完整驗證 log 保留在同目錄 `*.log`，**刻意不入版控**（見 `.gitignore`）。
+
+### 未做（刻意）
+
+未 merge `main`、未部署 Pages、未開始 P2、未碰商店／轉會市場。
+未改戰鬥平衡、契約欄位、驗證邏輯與 Store 資料形狀。
