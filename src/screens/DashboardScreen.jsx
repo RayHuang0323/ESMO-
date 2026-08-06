@@ -60,8 +60,12 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
   const more = [{ id: "team", n: "戰隊詳情", i: "🛡" }, { id: "training", n: "訓練中心", i: "📅" }, { id: "newgame", n: "開新局", i: "🎬" }, { id: "dash", n: "儀表板", i: "📊" }, { id: "sponsor", n: "贊助商", i: "🤝" }];
 
   // Sprint21：八個經營模組已 Component 化 → 直接導頁；其餘 Legacy 模組維持誠實佔位。
-  // S27：天賦已恢復（每位選手獨立）→「天賦」磚導向選手名單（點選手 → 詳情 → 天賦）。
-  const NAV = { notify: "inbox", finance: "finance", sponsor: "sponsor", roster: "roster", team: "team", training: "training", recruit: "recruit", cs: "csPrep", talent: "roster", newgame: "newGame" };
+  //  集中驗收修正（項目五）：「天賦」磚原本導向 `roster`——玩家點進去只看到
+  //  一般選手名單，沒有任何天賦入口，流程就斷在那裡。
+  //  現在導向 `talentPick`（同一個 RosterScreen，但標題是「選擇要培養的選手」，
+  //  每張卡有「查看天賦」直達天賦樹）。**沒有第二套天賦系統**——
+  //  天賦樹仍是既有的 PlayerTalentScreen。
+  const NAV = { notify: "inbox", finance: "finance", sponsor: "sponsor", roster: "roster", team: "team", training: "training", recruit: "recruit", cs: "csPrep", talent: "talentPick", newgame: "newGame" };
   const sel = (id) => {
     if (id === "moba") return onMoba();
     if (id === "bracket") return onSeason();

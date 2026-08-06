@@ -28,8 +28,11 @@ const TONE = {
  * @param {"moba"|"cs"} mode
  * @param {boolean} canQueue  出賽申請是否已通過驗證（未通過就不給排隊）
  * @param {() => void} [onReady] 配對成功後按「進入對戰」要做的事
+ * @param {boolean} [statusOnly] 集中驗收修正：**本卡只顯示狀態，不放主要按鈕**。
+ *        流程推進一律交給 `MatchPrepFrame` 的底部固定主按鈕，避免畫面上出現
+ *        兩顆都會推進流程的主要按鈕（驗收項目一）。取消類的次要動作仍保留。
  */
-export default function MatchQueuePanel({ mode = "moba", canQueue = false, onReady = null }) {
+export default function MatchQueuePanel({ mode = "moba", canQueue = false, onReady = null, statusOnly = false }) {
   const enqueueMatch = useProfileStore((s) => s.enqueueMatch);
   const cancelMatchmaking = useProfileStore((s) => s.cancelMatchmaking);
   const pollMatchmaking = useProfileStore((s) => s.pollMatchmaking);
@@ -112,11 +115,16 @@ export default function MatchQueuePanel({ mode = "moba", canQueue = false, onRea
       {/* 排隊中：等待時間、模式、隊伍版本、取消 */}
       {queued && (
         <>
+          {/*  集中驗收修正（項目二）：排隊中只顯示玩家看得懂的「模式」。
+               隊伍版本與票券識別是工程資訊，移到下方的 debug 追蹤鏈。
+               ⚠ 契約欄位沒有刪，只是不在正式主畫面直接顯示。 */}
           <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
             {[
               { k: "模式", v: t.mode === "cs" ? "CS" : "MOBA" },
-              { k: "隊伍版本", v: t.rosterVersion },
-              { k: "票券", v: t.ticketId.slice(-8) },
+              ...(debug ? [
+                { k: "隊伍版本", v: t.rosterVersion },
+                { k: "票券", v: t.ticketId.slice(-8) },
+              ] : []),
             ].map((x) => (
               <div key={x.k} style={{ background: C.card2, borderRadius: 8, padding: "5px 8px", minWidth: 0 }}>
                 <div style={{ color: C.gray, fontSize: 8 }}>{x.k}</div>
@@ -192,7 +200,7 @@ export default function MatchQueuePanel({ mode = "moba", canQueue = false, onRea
                 ))}
               </div>
 
-              {room.state === "ready_check" && !room.usReady && (
+              {room.state === "ready_check" && !room.usReady && !statusOnly && (
                 <button onClick={() => { const r = confirmMatchReady(); if (!r.ok) setErr(r.errors?.[0]?.message ?? null); }}
                   style={{ marginTop: 8, width: "100%", background: `linear-gradient(135deg,${C.warn},#d97706)`, border: "none", borderRadius: 10, padding: "11px", cursor: "pointer", color: "#0a0b0f", fontSize: 13, fontWeight: 900 }}>
                   我方確認
@@ -211,7 +219,7 @@ export default function MatchQueuePanel({ mode = "moba", canQueue = false, onRea
                       {session.stateLabel}
                     </span>
                   </div>
-                  {session.canLaunch && onReady && (
+                  {session.canLaunch && onReady && !statusOnly && (
                     <button onClick={() => {
                       const r = launchMatchSession();
                       if (!r.ok) { setErr(r.errors?.[0]?.message ?? "無法進入對戰"); return; }
@@ -236,7 +244,7 @@ export default function MatchQueuePanel({ mode = "moba", canQueue = false, onRea
                   取消對戰
                 </button>
               )}
-              {(room.state === "expired" || room.state === "cancelled") && (
+              {(room.state === "expired" || room.state === "cancelled") && !statusOnly && (
                 <button onClick={() => resetMatchmaking()}
                   style={{ marginTop: 7, width: "100%", background: C.card, border: `1px solid ${C.line}`, borderRadius: 9, padding: "8px", cursor: "pointer", color: "white", fontSize: 11, fontWeight: 700 }}>
                   重新配對
@@ -252,10 +260,10 @@ export default function MatchQueuePanel({ mode = "moba", canQueue = false, onRea
       {view.state === TICKET_STATES.rejected && (
         <div style={{ marginTop: 8 }}>
           <div style={{ color: C.bad, fontSize: 10.5, lineHeight: 1.7 }}>⚠ {t.reason}</div>
-          <button onClick={() => resetMatchmaking()}
+          {!statusOnly && <button onClick={() => resetMatchmaking()}
             style={{ marginTop: 8, width: "100%", background: C.card2, border: `1px solid ${C.line}`, borderRadius: 9, padding: "8px", cursor: "pointer", color: "white", fontSize: 11, fontWeight: 700 }}>
             重新配對
-          </button>
+          </button>}
         </div>
       )}
 
@@ -263,10 +271,10 @@ export default function MatchQueuePanel({ mode = "moba", canQueue = false, onRea
       {view.state === TICKET_STATES.cancelled && (
         <div style={{ marginTop: 8 }}>
           <div style={{ color: C.gray2, fontSize: 10.5 }}>{t.reason ?? "已取消配對，未進入對戰。"}</div>
-          <button onClick={() => resetMatchmaking()}
+          {!statusOnly && <button onClick={() => resetMatchmaking()}
             style={{ marginTop: 8, width: "100%", background: C.card2, border: `1px solid ${C.line}`, borderRadius: 9, padding: "8px", cursor: "pointer", color: "white", fontSize: 11, fontWeight: 700 }}>
             重新配對
-          </button>
+          </button>}
         </div>
       )}
 
@@ -293,7 +301,12 @@ export default function MatchQueuePanel({ mode = "moba", canQueue = false, onRea
       )}
 
       {/* 尚未排隊 */}
-      {!showTicket && (
+      {!showTicket && statusOnly && (
+        <div style={{ marginTop: 8, color: C.gray2, fontSize: 10.5, lineHeight: 1.7 }}>
+          尚未配對。陣容確認後，請按下方主按鈕開始配對。
+        </div>
+      )}
+      {!showTicket && !statusOnly && (
         <div style={{ marginTop: 8 }}>
           <button onClick={start} disabled={!canQueue}
             style={{

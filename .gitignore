@@ -14,3 +14,9 @@ vite-dev.err.log
 .DS_Store
 # K0：驗證 runner 的本機狀態檔（--resume 用），不進版控
 tools/.verify-state.json
+
+#  驗收／修正包的完整驗證輸出：保留在本機供覆查，**不入版控**。
+#  結論寫在 review/acceptance-fix/ACCEPTANCE_RESULT.md（那份要提交）。
+#  log 是過程產物，不是規格——需要重驗就重跑命令。
+review/acceptance-fix/*.log
+review/p1/*.log
