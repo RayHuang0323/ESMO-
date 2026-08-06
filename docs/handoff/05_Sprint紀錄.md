@@ -5863,3 +5863,84 @@ UI／流程問題。本包只修這五項，**不開新功能、不改戰鬥平�
 
 未 merge `main`、未部署 Pages、未開始 P2、未碰商店／轉會市場。
 未改戰鬥平衡、契約欄位、驗證邏輯與 Store 資料形狀。
+
+---
+
+## 併入 `main` 與正式部署（2026-08-06）
+
+### PR #1 — `milestone-n-finance` → `main`
+
+| 項目 | 值 |
+|---|---|
+| PR | **#1** https://github.com/RayHuang0323/ESMO-/pull/1 |
+| 合併前 head | `cf9bfae`（ahead 0 / behind 0） |
+| mergeable_state | `clean`（無衝突） |
+| 規模 | 22 commits、**79 檔**、+13,536 / −290 |
+| 合併方式 | merge commit（**未**用 squash／rebase，歷史完整保留） |
+| **`main` 的 merge commit** | **`4d64e0c`** |
+
+⚠ **本 repo 沒有 PR 層級的 CI**：`deploy.yml` 只在 push 到 `main` 時觸發。
+所以合併前的 build 證據是本機在 `cf9bfae` 上跑的（EXIT=0），
+真正的 CI 訊號要等合併後的部署 workflow。
+
+PR 檔案清單已逐一比對，**確認未納入**主工作區原有的 7 個未提交檔案
+（`MobaRuntimeHeroes.jsx`、`MobaRuntimeBattleHarness.jsx`、`featureFlags.js`、
+`00_目前專案狀態.md`、3 個 terrain PNG）、任何 `.log`、以及 `ESMO-hero-models`。
+
+### GitHub Actions
+
+**build job：成功。** Checkout → Setup Node → Install → Build → Setup Pages →
+Upload artifact 全綠。CI 用的是 `npm install --legacy-peer-deps`（`deploy.yml:33`），
+與本地驗收環境同法。
+
+**deploy job：失敗 ×2。**
+
+| 嘗試 | 結果 |
+|---|---|
+| attempt 1（run#64） | `deployment_queued` 持續 10 分鐘 → `Timeout reached, aborting!` |
+| attempt 2（rerun failed jobs） | 同上，12:07:58 逾時 |
+
+### ⚠ 這**不是**本次合併造成的——根因是 deployment ID ＝ commit SHA
+
+deploy log 的關鍵一行：
+
+```
+Created deployment for 4d64e0c…, ID: 4d64e0c78970fad5aea5ae20df5a40cbfd10a5a5
+```
+
+**Pages 的 deployment ID 就是 commit SHA**（來自 `pages_build_version`）。
+只要還在同一個 commit 上重跑，送出的永遠是**同一個 deployment ID**。
+第一次把 `4d64e0c` 卡住之後，後續同 commit 的部署一送出就被判為重複而取消。
+
+| Run | 結果 | 耗時 |
+|---|---|---|
+| #64 attempt 1 | `deployment_queued` → `Timeout reached, aborting!` | 10 分 |
+| #64 attempt 2（rerun failed jobs） | 同上 | 10 分 |
+| #65 | **`Deployment cancelled.`** | 8 秒 |
+| #66（清理殘留後） | **`Deployment cancelled.`** | 9 秒 |
+
+⚠ **我最初判定為「Pages 佇列停滯」，那是錯的，已收回。**
+清理 environment 裡的殘留 deployment（`5779094527` / `5778903038` / `5778736335`，
+各自標 `inactive` 後刪除）**沒有解決**——因為 ID 由 commit 決定，不由那些紀錄決定。
+
+已排除的其他可能：
+1. **不是 artifact 過大**：1.6 MB，與歷次成功部署完全相同。
+2. **不是環境審核卡關**：`github-pages` 只有 `branch_policy`，無 required reviewer。
+3. **不是 GitHub 全域故障**：githubstatus 顯示 Actions 與 Pages 皆 `operational`。
+4. **不是 build 問題**：三次 build job 全部成功。
+
+⇒ **解法：在 `main` 上產生新的 commit SHA**，自然得到新的 `pages_build_version`。
+
+⚠ 刻意保留 `5740205057`（`3a69dd2`，`success`）＝目前線上實際服務的那一份，
+刪掉會讓站台下線。
+
+### 正式站台現況（部署成功前）
+
+`https://rayhuang0323.github.io/ESMO-/` 回 HTTP 200，bundle 仍是 `index-BBjRmZoH.js`。
+以新程式碼獨有字串驗證線上 bundle：
+
+| 字串 | 命中 |
+|---|---|
+| 選擇要培養的選手 / 補充測試資金 / 確認陣容 → 開始配對 / 未指派 / 近期成長 | 全部 **0** |
+
+⇒ 對外仍是 `3a69dd2`（M1.7 RC1）。正式環境驗收因此**無法執行**。
