@@ -18,13 +18,16 @@
 //    · 每幀更新走 ref.position / ref.scale，不觸發 React re-render
 //    · 名稱與等級使用 WebGL Plane，與血條共用 renderOrder；不會再由 DOM 疊在血條上
 // ============================================================================
-import React, { useMemo, useRef, useLayoutEffect } from "react";
+import React, { useEffect, useMemo, useRef, useLayoutEffect, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { WORLD_SCALE } from "../map/coordinateMapping.js";
 import { LAYER_Y } from "../map/mapVisualStyle.js";
 import { countMount, countUnmount } from "./runtimeDiagnostics.js";
 import { archetypeData, HERO_VISUALS } from "../presentation/heroArchetypes.js";
+import ChichuanHeroProxy from "./ChichuanHeroProxy.jsx";
+import DadiHeroProxy from "./DadiHeroProxy.jsx";
+import { heroProxyEnabled, heroProxyVariant } from "../../../featureFlags.js";
 
 const S = WORLD_SCALE;
 const TEAM_COLOR = { blue: 0x4d95f0, red: 0xf0574d };
@@ -222,6 +225,7 @@ export default function MobaRuntimeHeroes({
         badge, crest, teamBand, redBuffRing, blueBuffRing,
         dragonBuffRing, baronBuffRing,
         bar, ring, deathMark, hitMarker, label, bodyAliveMaterial, secondaryAliveMaterial,
+        proxyReady,
       } = node;
       const hitFx = effects.find((fx) => String(fx.targetId ?? "") === h.id && fx.phase === "impact");
       const actionFx = effects.find((fx) => String(fx.sourceId ?? "") === h.id);
@@ -281,18 +285,24 @@ export default function MobaRuntimeHeroes({
       body.material = h.alive
         ? bodyAliveMaterial
         : (h.team === "blue" ? mats.blueDead : mats.redDead);
+      //  proxy 就緒 ⇒ 隱藏占位幾何，讓 GLB 當主體；找不到模型 ⇒ 占位物照舊出現（fallback）。
+      const placeholderVisible = h.alive && !proxyReady;
+      //  ⚠ 死亡時 body 必須留著：上一行才剛把屍體材質（blueDead/redDead）指定上去，
+      //  若跟著 placeholderVisible 一起關掉，**所有英雄的屍體都會直接消失**
+      //  （proxy 英雄的 GLB 在死亡時本來就會被 DadiHeroProxy 隱藏）。
+      body.visible = h.alive ? !proxyReady : true;
       if (bodyAliveMaterial) bodyAliveMaterial.emissiveIntensity = 0.14 + hit * 1.65;
       //  肩塊只在活著時出現：屍體是一具橫躺的膠囊，多一塊方塊只會變回「色塊」
       if (shoulder) {
-        shoulder.visible = h.alive;
+        shoulder.visible = placeholderVisible;
         shoulder.material = secondaryAliveMaterial;
       }
-      if (accessory) accessory.visible = h.alive;
-      if (signature) signature.visible = h.alive;
-      if (headFeature) headFeature.visible = h.alive;
-      if (badge) badge.visible = h.alive;
-      if (crest) crest.visible = h.alive;
-      if (teamBand) teamBand.visible = h.alive;
+      if (accessory) accessory.visible = placeholderVisible;
+      if (signature) signature.visible = placeholderVisible;
+      if (headFeature) headFeature.visible = placeholderVisible;
+      if (badge) badge.visible = placeholderVisible;
+      if (crest) crest.visible = placeholderVisible;
+      if (teamBand) teamBand.visible = placeholderVisible;
       ring.visible = h.alive;
       const hasRedBuff = h.alive && (h.buffs ?? []).some((buff) => buff.id === "red");
       const hasBlueBuff = h.alive && (h.buffs ?? []).some((buff) => buff.id === "blue");
@@ -353,6 +363,7 @@ export default function MobaRuntimeHeroes({
           hero={h}
           geo={geo}
           mats={mats}
+          frameRef={frameRef}
           showLabel={showLabels}
           compactLabel={compactLabels}
           register={(id, node) => {
@@ -365,7 +376,7 @@ export default function MobaRuntimeHeroes({
   );
 }
 
-function HeroUnit({ hero, geo, mats, showLabel, compactLabel, register }) {
+function HeroUnit({ hero, geo, mats, frameRef, showLabel, compactLabel, register }) {
   const rootRef = useRef();
   const bodyRef = useRef();
   const shoulderRef = useRef();
@@ -385,6 +396,10 @@ function HeroUnit({ hero, geo, mats, showLabel, compactLabel, register }) {
   const baronBuffRingRef = useRef();
   const hitMarkerRef = useRef();
   const labelRef = useRef();
+  const [proxyReady, setProxyReady] = useState(false);
+  const useChichuanProxy = hero.heroId === "chichuan" && heroProxyEnabled();
+  const useDadiProxy = hero.heroId === "dadi";
+  const proxyVariant = heroProxyVariant();
   const visual = hero.visual ?? HERO_VISUALS[hero.heroId] ?? null;
   const archetype = archetypeData(hero.archetype);
   const bodyMaterial = mats.bodyByHero?.[visual?.id] ?? mats.accent;
@@ -405,6 +420,7 @@ function HeroUnit({ hero, geo, mats, showLabel, compactLabel, register }) {
     toneMapped: false,
     sizeAttenuation: true,
   }), [labelTexture]);
+  useEffect(() => { setProxyReady(false); }, [proxyVariant, hero.heroId]);
   useLayoutEffect(() => () => {
     labelMaterial.dispose();
     labelTexture.dispose();
@@ -428,9 +444,10 @@ function HeroUnit({ hero, geo, mats, showLabel, compactLabel, register }) {
       label: labelRef.current,
       bodyAliveMaterial: bodyMaterial,
       secondaryAliveMaterial: secondaryMaterial,
+      proxyReady,
     });
     return () => register(hero.id, null);
-  }, [hero.id, register, bodyMaterial, secondaryMaterial]);
+  }, [hero.id, register, bodyMaterial, secondaryMaterial, proxyReady]);
 
   const resolvedVisual = visual ?? { badge: archetype.accessory, scale: archetype.bodyScale };
   const accentMaterial = mats.accentByHero?.[resolvedVisual.id] ?? mats.accent;
@@ -445,6 +462,23 @@ function HeroUnit({ hero, geo, mats, showLabel, compactLabel, register }) {
   return (
     <group ref={rootRef} position={[hero.world.x, GROUND_Y, hero.world.z]}
       userData={{ heroId: hero.id, team }}>
+      {useChichuanProxy && (
+        <ChichuanHeroProxy
+          heroId={hero.id}
+          variant={proxyVariant}
+          alive={hero.alive}
+          frameRef={frameRef}
+          onReady={setProxyReady}
+        />
+      )}
+      {useDadiProxy && (
+        <DadiHeroProxy
+          heroId={hero.id}
+          alive={hero.alive}
+          frameRef={frameRef}
+          onReady={setProxyReady}
+        />
+      )}
       {/* 腳底選取環（抬到地形表面之上，否則整圈埋在路面／塔基底下看不見）*/}
       <mesh ref={ringRef} geometry={geo.ring} material={team === "blue" ? mats.ringBlue : mats.ringRed}
         position={[0, RING_LIFT, 0]} rotation={[-Math.PI / 2, 0, 0]}

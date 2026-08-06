@@ -19,4 +19,5 @@ tools/.verify-state.json
 #  結論寫在 review/acceptance-fix/ACCEPTANCE_RESULT.md（那份要提交）。
 #  log 是過程產物，不是規格——需要重驗就重跑命令。
 review/acceptance-fix/*.log
+review/matchmaking-flow-fix/*.log
 review/p1/*.log

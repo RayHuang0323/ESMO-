@@ -29,7 +29,29 @@ export const FEATURE_FLAGS = Object.freeze({
    * 關閉方式：把這一行改成 `false`。
    */
   devFastForward: true,
+
+  /** 單英雄戰場替身測試；可用 `?heroProxy=0` 暫時關閉比較。 */
+  heroProxyChichuan: true,
+  /** Hero Proxy A/B 版本；可用 `?heroProxyVariant=desktop-v002` 切換。 */
+  heroProxyVariant: "cli-v003",
 });
 
 /** 單一查詢出口（呼叫端不直接讀物件，日後要改成遠端旗標也只動這裡）。 */
 export const featureEnabled = (name) => FEATURE_FLAGS[name] === true;
+
+export const heroProxyEnabled = () => {
+  if (typeof window !== "undefined") {
+    const value = new URLSearchParams(window.location.search).get("heroProxy");
+    if (value === "0") return false;
+    if (value === "1") return true;
+  }
+  return featureEnabled("heroProxyChichuan");
+};
+
+export const heroProxyVariant = () => {
+  if (typeof window !== "undefined") {
+    const value = new URLSearchParams(window.location.search).get("heroProxyVariant");
+    if (value === "desktop-v002" || value === "cli-v003") return value;
+  }
+  return FEATURE_FLAGS.heroProxyVariant;
+};
