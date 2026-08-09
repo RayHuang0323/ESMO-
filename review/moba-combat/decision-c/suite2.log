@@ -1,0 +1,11 @@
+=== experience26 ===
+✅    flow verifier（check_flow09）（exit=0 且輸出形狀符合）
+
+35/35 通過
+重播容量：558 frames · 1636KB/場 · 每 frame ≈ 3002B（session 記憶體，僅留最近一場）
+
+=== stats28 ===
+B 操作天賦 b3 mods{join 0.047 obj 0.041 retreat 0.011 lane 0.004} │ KDA 6/1/2 撤退 17 團戰 31 目標 101 │ 隊 會戰 23 分推 0 龍爭 4 │ blue 17:9
+C 戰術天賦 b3 mods{join 0.048 obj 0.051 retreat 0.009 lane 0.003} │ KDA 2/2/1 撤退 15 團戰 32 目標 78 │ 隊 會戰 21 分推 0 龍爭 4 │ blue 14:5
+D 團隊天賦 b3 mods{join 0.051 obj 0.046 retreat 0.003 lane 0.005} │ KDA 0/2/0 撤退 21 團戰 23 目標 62 │ 隊 會戰 21 分推 0 龍爭 4 │ red 2:10
+多 seed 行為差異：B 12/12、C 12/12、D 5/12 seed（Support 5、Jungle 12）

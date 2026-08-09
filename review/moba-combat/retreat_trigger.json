@@ -1,0 +1,37 @@
+{
+  "generatedBy": "tools/probe_retreat_trigger.mjs",
+  "seeds": [
+    1,
+    2,
+    3,
+    7,
+    42,
+    99,
+    123,
+    777,
+    2024,
+    5555
+  ],
+  "stat": "decision",
+  "value": 70,
+  "episodes": 1475,
+  "done": 1273,
+  "hpStart": 0.34141297057698045,
+  "thrStart": 0.4389230164964647,
+  "aboveThrAtStartPct": 10.290652003142183,
+  "noFoeAtStartPct": 46.34721131186174,
+  "durSec": 18.390416339355852,
+  "hpEnd": 0.9406766567546858,
+  "atFountainPct": 95.44383346425765,
+  "thrClearedPct": 99.84289080911233,
+  "rigidSec": 9.951219512195122,
+  "rigidMed": 7,
+  "rigidFoesSec": 16.96123417721519,
+  "reasons": {
+    "短期換血吃虧": 998,
+    "人數劣勢": 18,
+    "在敵塔射程內": 66,
+    "血量低於門檻": 54,
+    "(無)": 137
+  }
+}

@@ -1,0 +1,24 @@
+
+> esmo-moba-3d@1.0.0 build
+> vite build
+
+[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+[32m✓[39m 2646 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/[22m[32mindex.html                                   [39m[1m[2m    0.46 kB[22m[1m[22m[2m │ gzip:   0.33 kB[22m
+[2mdist/[22m[36massets/MobaRuntimeBattleHarness-CsDbGNsy.js  [39m[1m[2m    1.46 kB[22m[1m[22m[2m │ gzip:   0.81 kB[22m
+[2mdist/[22m[36massets/Profiler-_FOtkZdh.js                  [39m[1m[2m    3.47 kB[22m[1m[22m[2m │ gzip:   1.64 kB[22m
+[2mdist/[22m[36massets/TerrainSandbox-Fkg0GeRL.js            [39m[1m[2m    5.78 kB[22m[1m[22m[2m │ gzip:   2.57 kB[22m
+[2mdist/[22m[36massets/HeroPresentationGallery-C-3u80U3.js   [39m[1m[2m    6.41 kB[22m[1m[22m[2m │ gzip:   2.85 kB[22m
+[2mdist/[22m[36massets/OrbitControls-DXIMKizd.js             [39m[1m[2m   15.51 kB[22m[1m[22m[2m │ gzip:   4.76 kB[22m
+[2mdist/[22m[36massets/EnvironmentRuntime-PYDaNrXQ.js        [39m[1m[2m   20.29 kB[22m[1m[22m[2m │ gzip:   8.30 kB[22m
+[2mdist/[22m[36massets/MobaMapPreview-ZGF5MUJP.js            [39m[1m[2m   56.82 kB[22m[1m[22m[2m │ gzip:  20.70 kB[22m
+[2mdist/[22m[36massets/index-DBAAMtOa.js                     [39m[1m[33m2,521.66 kB[39m[22m[2m │ gzip: 921.32 kB[22m
+[33m
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[32m✓ built in 10.65s[39m

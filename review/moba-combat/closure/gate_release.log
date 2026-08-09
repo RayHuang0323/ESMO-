@@ -1,0 +1,17 @@
+START 2026-08-10 01:52:03
+執行 8 個區段（逾時 45 分／段）
+
+▶ experience26         S26 體驗（flat：6 段委派；§17 replay 容量既有紅燈 TD-19） … ✅ PASS　10s
+▶ stats28              S28 選手能力（flat：8 段委派） … ✅ PASS　271s
+▶ ability_p02          P0-2 能力→本場經驗速率 … ✅ PASS　117s
+▶ quality_p03          P0-3 能力→戰鬥品質（A/B 雙方皆真實能力） … ✅ PASS　156s
+▶ regress              回歸：15 seeds … ✅ PASS　37s
+▶ regress2             節奏門檻 … ✅ PASS　39s
+▶ runtime29            S29 執行期（flat：9 段委派；§29 順序公平性既有紅燈 TD-21） … ✅ PASS　96s
+▶ build                production build … ✅ PASS　14s
+
+════════════════════════════════════════════════════════════════
+本次：8/8 通過
+累計：8/22 區段通過　（尚未執行 14：milestone_j_close, milestone_j, milestone_i_close, milestone_i, milestone_h, milestone_g, milestone_f, milestone_e, tactic24, cs23, progress25, talent27, growth_p0, growth_ui_p1）
+狀態檔：D:\OneDrive\文件\GitHub\ESMO-combat\tools\.verify-state.json　（--resume 續跑、--list 查看）
+EXIT=0
