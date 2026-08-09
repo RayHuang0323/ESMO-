@@ -5982,3 +5982,21 @@ Created deployment for 4d64e0c…, ID: 4d64e0c78970fad5aea5ae20df5a40cbfd10a5a5
 本 release **不含** hero-models／GLB／Chichuan・Dadi proxy／terrain／matchmaking／UI screens。
 那些留在 `fix/moba-combat-credibility`（已推上 origin，成果未刪除），
 其中含 32 MB 的 `dadi_final_texture.glb`，不應與 Combat closure 混在同一次發布。
+
+
+### 封版識別（2026-08-10 補記）
+
+| 項目 | 值 |
+|---|---|
+| Branch | `release/moba-combat-closure` |
+| Commits | `6efac04`（closure）／`22daf6b`（handoff・Roadmap・Sprint） |
+| **Tag** | **`moba-combat-closure`**（已推上 origin） |
+| Merge to main | ⏳ 待人工執行——`git push origin release/moba-combat-closure:main` 被安全機制阻擋，未繞過 |
+| Pages 部署 | ⏳ 未觸發（只在 push 到 main 時執行） |
+| 本機 build smoke test | ✅ `index.html` 200／main bundle 200（2.55 MB）。**僅證明建置產物可服務，非功能驗收** |
+
+**四項已知未完成不阻擋封版**：撤退僵硬（低）、`comms` `roamInfoAdj` 不通電（中）、
+`synergy` 分布飽和（中）、TD-19 replay 容量（中）。四者皆不造成 build 失敗、
+資料損壞或重大回歸。明細見 `08_目前待辦與風險.md` 封版紀錄節。
+
+**下一位（Codex）**：CS 16 項素質盤點。第一步見 `04_Roadmap.md`「下一階段交接」。

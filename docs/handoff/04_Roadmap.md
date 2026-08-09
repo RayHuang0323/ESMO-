@@ -3,6 +3,16 @@
 ## MOBA Combat AI 封版（2026-08-10）
 
 **狀態：✅ 已封版。** Release Gate 8/8 全綠（首次），combat credibility 45/45。
+
+| 封版識別 | 值 |
+|---|---|
+| Branch | `release/moba-combat-closure` |
+| Commits | `6efac04`（closure）／`22daf6b`（紀錄） |
+| **Tag** | **`moba-combat-closure`** |
+| Merge to main | ⏳ 待人工執行（安全機制阻擋，未繞過） |
+
+**四項已知未完成（撤退僵硬／comms／synergy／TD-19）均不阻擋封版**，
+明細見 `08_目前待辦與風險.md` 的封版紀錄節。
 報告：`review/moba-combat/STAT_IMPACT_FINAL_R10.md`（16 項素質最終分類，含 §7 R11 更正）、
 `RETREAT_REEVAL.md`（撤退根因與四組實驗）、`RETREAT_CHAIN_FIX.md`（失敗實驗記錄）、
 `METHOD_CAVEAT.md`（兩條工程規則）。
@@ -28,6 +38,19 @@
 ### 下一階段交接
 
 **CS 16 項素質盤點**（交 Codex）。本輪未動任何 CS 程式，`check_cs23` 未跑。
+
+**Codex 第一步（依序）**：
+
+1. 讀 `review/moba-combat/METHOD_CAVEAT.md` 開頭兩條工程規則——尤其
+   **「summary counter ≠ gameplay outcome」**。CS 盤點若拿 `exec.*` 計數器當效果指標，
+   會重蹈 `towerPushes` 的覆轍（那讓整輪結論作廢）。
+2. 讀 `review/moba-combat/STAT_IMPACT_FINAL_R10.md` §7——16 項素質的分類框架與
+   **六種病因**（權重幅度／作用點設計／情境限定／分布飽和／接線不通電／量測錯誤）。
+   CS 可直接沿用同一套。
+3. 讀 `AGENTS.md` §7——長 verifier 一律走 `tools/verify.mjs`，不要直接跑 `check_cs23`。
+4. 執行 `node tools/verify.mjs --only=cs23` 建立 CS 基準。
+5. **動手量測前**先讀每個 CS 素質作用點的遞增條件（層級／節流／上限），
+   確認 KPI 量得到它宣稱要量的東西。本輪最貴的教訓就是這個順序搞反了。
 
 ---
 
