@@ -5944,3 +5944,41 @@ Created deployment for 4d64e0c…, ID: 4d64e0c78970fad5aea5ae20df5a40cbfd10a5a5
 | 選擇要培養的選手 / 補充測試資金 / 確認陣容 → 開始配對 / 未指派 / 近期成長 | 全部 **0** |
 
 ⇒ 對外仍是 `3a69dd2`（M1.7 RC1）。正式環境驗收因此**無法執行**。
+
+
+---
+
+## MOBA Combat AI Closure（2026-08-10）
+
+**分支**：`release/moba-combat-closure`（自 `origin/main` 拆出，只 cherry-pick 本輪 closure commit）
+
+### 完成項
+
+1. **16 項素質影響盤點封版**。分類 A 0／B 5／C 6／D 2／E 1／F 2。
+2. **`towerPushes` 指標誤讀更正**：它是隊伍層級、每 10 秒最多 +1 的責任週期計數器，
+   不是推進強度。真實 KPI 改用 `p.twrDmg`。責任週期計數器 8/8 素質顯著，
+   真實推塔傷害只有 2/8，decision 甚至方向相反。
+3. **TD-21 解決**：根因是檢定力不足（40 seeds 噪音底線 ±20pp > 門檻 15pp），
+   非引擎偏差（位移依 1/√n 收斂，n=200 時 1.5pp、McNemar p=0.830）。
+   `ORDER_SEEDS` 40→160，門檻未動。`runtime29` 首次 35/35。
+4. **撤退僵硬根因證明**：進場動態門檻／離場固定門檻／無重評，僵硬段佔 54.1%。
+5. 新增量測與驗證工具 10 支；兩條工程規則寫入 AGENTS.md／CLAUDE.md。
+
+### 未完成／未出貨
+
+- **`retreatReevalV1` 預設關閉**：可運作但撞破 `quality_p03` 能力放大護欄
+  （等級差 3.79 vs ≤2.5）。未放寬門檻。列後續低優先。
+- `retreatHoldV1` 為上一輪失敗實驗，保留 `false` 作可重現記錄。
+- Release Gate 只涵蓋 22 區段中的 8 個；其餘 14 個本輪未跑。
+
+### 已知風險
+
+- TD-19（`experience26` §17 replay 容量）貼近上限，比賽變長就會觸發。
+- F 類兩項（comms `roamInfoAdj` 不通電、synergy 分布飽和）未修。
+- 逐場 raw sample（約 15 MB）已排除入庫，需要時以固定 seed 重跑產生。
+
+### 刻意排除
+
+本 release **不含** hero-models／GLB／Chichuan・Dadi proxy／terrain／matchmaking／UI screens。
+那些留在 `fix/moba-combat-credibility`（已推上 origin，成果未刪除），
+其中含 32 MB 的 `dadi_final_texture.glb`，不應與 Combat closure 混在同一次發布。

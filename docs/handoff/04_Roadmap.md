@@ -1,5 +1,37 @@
 # 04 Roadmap
 
+## MOBA Combat AI 封版（2026-08-10）
+
+**狀態：✅ 已封版。** Release Gate 8/8 全綠（首次），combat credibility 45/45。
+報告：`review/moba-combat/STAT_IMPACT_FINAL_R10.md`（16 項素質最終分類，含 §7 R11 更正）、
+`RETREAT_REEVAL.md`（撤退根因與四組實驗）、`RETREAT_CHAIN_FIX.md`（失敗實驗記錄）、
+`METHOD_CAVEAT.md`（兩條工程規則）。
+
+### 本輪解決
+
+| 項目 | 結果 |
+|---|---|
+| 16 項素質影響盤點 | 完成。分類：A 0／B 5／C 6／D 2／E 1／**F 2**（comms、synergy） |
+| `towerPushes` 指標誤讀 | 更正。推進強度改用 `p.twrDmg` ＋推掉的塔＋主堡傷害 |
+| **TD-21**（`runtime29` §29 順序公平性） | ✅ **解決**——根因是**檢定力不足不是引擎偏差**。`ORDER_SEEDS` 40→160，**門檻未動**。`runtime29` 首次 35/35 |
+| 長 verifier 跑法 | 一律走 `tools/verify.mjs`（直跑 runtime29 會 fan-out 63 子行程） |
+
+### 後續（低優先）
+
+1. **撤退僵硬體驗** — `retreatReevalV1` 已實作但**未出貨**（撞破 `quality_p03` 能力放大護欄）。
+   下一輪把取消改成**引擎預設行為（雙方等值）**。詳見 `08_目前待辦與風險.md`。
+2. **F 類兩項** — `comms` 的 `roamInfoAdj`（全表最大權重之一卻不通電）、
+   `synergy` 的分布飽和（40 分與 70 分逐位元相同）。
+3. **TD-19** — `experience26` §17 replay 容量，目前 PASS 但貼近上限（670 frames／1974KB）。
+4. 另外 8 項素質尚未用真實 KPI 在 standard 條件重測（判定不依賴已失效指標，補測僅為一致性）。
+
+### 下一階段交接
+
+**CS 16 項素質盤點**（交 Codex）。本輪未動任何 CS 程式，`check_cs23` 未跑。
+
+---
+
+
 ## 目前階段
 
 ESMO 目前處於：
