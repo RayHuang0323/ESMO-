@@ -1,0 +1,24 @@
+=== build ===
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[32m✓ built in 15.80s[39m
+
+=== regress ===
+│ 14      │ 4242 │ '25.8' │ '✅' │ 'blue' │ 31 │ 19 │ 442 │ '58%' │ '無' │ '2/2' │ '1/2' │
+└─────────┴──────┴────────┴──────┴────────┴────┴────┴─────┴───────┴──────┴───────┴───────┘
+結束率 15/15 | 平均時長 22.8分 | 平均擊殺 20.8 | 0殺場 0 | 撤退鎖死 0 | 平均hot 60% | 平均破塔 16.3/12
+
+=== regress2 ===
+✅ 5分英雄等級 平均 3.50 落在 [3, 7]
+
+節奏門檻 8/8 通過
+
+=== credibility ===
+✅ §6c 新行為只在 v3
+✅ §6d 未啟用時完全短路（`riskAssess` 為假 ⇒ 不放棄追擊）
+
+🟢 MOBA 戰鬥可信度：45/45 通過
+
+=== experience26 ===

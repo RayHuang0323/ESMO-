@@ -130,6 +130,10 @@ export const TRAINING_COURSES = [
   { id: "vod",         name: "覆盤分析",     emoji: "📺", stats: ["mapAware", "adaptability"], gain: 1, energyCost: 5,  hours: 1 },
   { id: "mental",      name: "心理訓練",     emoji: "🧠", stats: ["clutch", "focus"],          gain: 2, energyCost: 10, hours: 2 },
   { id: "teamwork",    name: "團隊默契",     emoji: "🤝", stats: ["synergy", "comms"],         gain: 2, energyCost: 12, hours: 2 },
+  //  2026-08-07：學習力原本**沒有任何成長管道**——8 門課沒有一門練它、
+  //  `POSITION_PROFILE` 也不含它（⇒ 升級成長分配不到），玩家只能靠天賦 team_3。
+  //  補一門「版本研究」把它接回可培養的循環，順帶帶戰術理解（研究版本＝理解戰術）。
+  { id: "meta",        name: "版本研究",     emoji: "📚", stats: ["learning", "tacticalIQ"],  gain: 2, energyCost: 8,  hours: 2 },
   { id: "rest",        name: "休息調整",     emoji: "😴", stats: [],                           gain: 0, energyCost: 0,  hours: 1 },
 ];
 export const courseById = (id) => TRAINING_COURSES.find((c) => c.id === id) || null;

@@ -1,0 +1,29 @@
+執行 4 個區段（逾時 45 分／段）
+
+▶ experience26         S26 體驗（flat：6 段委派；§17 replay 容量既有紅燈 TD-19） … ❌ FAIL　10s
+      ⏭ SKIP 21) CS Sprint23 verifier（flat 模式：改由 tools/verify.mjs 各跑一次）
+      ⏭ SKIP    regress（MOBA balance）（flat 模式：改由 tools/verify.mjs 各跑一次）
+      ⏭ SKIP    regress2（節奏門檻 8/8）（flat 模式：改由 tools/verify.mjs 各跑一次）
+      ⏭ SKIP    flow verifier（check_flow09）（flat 模式：改由 tools/verify.mjs 各跑一次）
+      28/29 通過　+ 6 段委派給 runner（未計入分母）
+      重播容量：670 frames · 1974KB/場 · 每 frame ≈ 3017B（session 記憶體，僅留最近一場）
+▶ stats28              S28 選手能力（flat：8 段委派） … ✅ PASS　271s
+▶ quality_p03          P0-3 能力→戰鬥品質（A/B 雙方皆真實能力） … ❌ FAIL　156s
+      ✅ §4-6e 中性對照組與未注入 baseline **每一場勝負都相同**（沒有新增偏斜）　baseline 藍勝 7/20、對照組藍勝 7/20
+      ✅ §4-6f 既有陣營偏斜已記錄（技能層 baseline 藍方勝率 < 50%，非 P0-3 造成）　⚠ 技術債：技能層陣營平衡，另案處理
+      ══ §5 可重現性 ══
+      ✅ §5a 同 seed ＋ 同能力 ⇒ 逐位元相同（6 seeds）　6/6
+      ✅ §5b 能力對調 ⇒ 優勢跟著換邊（兩邊都是高能力方領先）　藍高時 +4.04 級　紅高時 +2.86 級
+      🔴 P0-3 戰鬥品質層：51/53 通過
+▶ runtime29            S29 執行期（flat：9 段委派；§29 順序公平性既有紅燈 TD-21） … ❌ FAIL　44s
+      34/35 通過　+ 9 段委派給 runner（未計入分母）
+      === v1（修改前）vs v2（修改後）· 20 seeds ===
+      v1: 結束 20/20 | 時長 20.2分 | 首塔 1.6分 | 5分: 擊殺 0.7 塔倒 8.3 均Lv 1.0 | 終局 擊殺 30 均Lv 1.0
+      v2: 結束 20/20 | 時長 13.2分 | 首塔 3.1分 | 5分: 擊殺 2.3 塔倒 1.3 均Lv 3.5 | 終局 擊殺 13 均Lv 7.8
+      播報：seed 4242 共 143 則、密度 6.4 則/分、最小間隔 6.0s
+      ⚠ FPS / draw calls / triangles / heap / DPR / 視覺 → **無瀏覽器，未量測**（見交付報告）
+
+════════════════════════════════════════════════════════════════
+本次：1/4 通過　❌ 失敗 3（experience26, quality_p03, runtime29）
+累計：1/22 區段通過　（尚未執行 18：milestone_j_close, milestone_j, milestone_i_close, milestone_i, milestone_h, milestone_g, milestone_f, milestone_e, tactic24, cs23, progress25, talent27, growth_p0, ability_p02, growth_ui_p1, regress, regress2, build）
+狀態檔：D:\OneDrive\文件\GitHub\ESMO-combat\tools\.verify-state.json　（--resume 續跑、--list 查看）

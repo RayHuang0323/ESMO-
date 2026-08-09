@@ -1,0 +1,15 @@
+=== regress ===
+└─────────┴──────┴────────┴──────┴────────┴────┴────┴─────┴───────┴──────┴───────┴───────┘
+結束率 15/15 | 平均時長 22.5分 | 平均擊殺 19.7 | 0殺場 0 | 撤退鎖死 0 | 平均hot 60% | 平均破塔 16.1/12
+
+=== regress2 ===
+
+節奏門檻 8/8 通過
+
+=== credibility ===
+
+🟢 MOBA 戰鬥可信度：45/45 通過
+
+=== build ===
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[32m✓ built in 14.24s[39m

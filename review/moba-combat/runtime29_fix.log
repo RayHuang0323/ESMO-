@@ -1,0 +1,52 @@
+✅ 1) 本場 hero level 與 player career level 分離（mlv/mxp vs lv 並存且不同名）
+✅ 2) 本場 XP 可正常增加（XP 曲線單調、上限 18、addMatchXp 純函式）
+✅ 3) 5 分鐘不再全員固定 Lv.1（均等級 3.4、最低 1、擊殺 2）
+✅    v1 baseline 對照：舊規則確實全場 Lv1（證明 3) 不是量測誤差）
+✅ 4) KDA 與擊殺事件一致（Σk=26 == bK+rK=26 == Σd=26）
+✅ 5) Timeline 與 snapshot KDA 同源（事件流的擊殺數 > 0 且 snapshot 統計自洽）
+✅ 6) BattleResult 與終局 snapshot KDA 一致（逐位元；不重新統計）
+✅ 7) Support 可獲得本場 XP（藍/紅輔助等級 7/10，非 Lv1）
+✅ 8) simTime 不依賴 render FPS（引擎只吃固定 DT_SIM；rAF 只算內插 subT，不呼叫 tick）
+✅ 9) 1× / 2× / 4× 不改變模擬結果（rate 只改真實間隔，dt 恆為 DT_SIM ⇒ 同結果）
+✅ 10) playback rate 不污染 rng（rate 不進引擎；引擎建構子只吃 seed/loadout/rules）
+✅ 11) movement 不因低 FPS 變慢或加速（世界移動只發生在 tick；渲染只做內插）
+✅ 12) 塔拆除節奏合理（現役 v3 首塔平均 11.1 分、最早 10.4 分；v2 參考 3.1 分；v1 舊病灶 1.6 分）
+✅    不存在「大量塔倒但全場零交戰」的異常常態（5 分鐘 ≥6 塔倒且 0 擊殺 = 0 場）
+✅ 13) Replay 保存原始 level / KDA（frame 由真實 snapshot 取樣，含 lv/k/d/a）
+✅ 14) Replay 不重新計算（不 import 引擎、不 tick、不重跑播報、不重新結算）
+✅ 15) Tactical comms 由真實事件觸發（157 則；每則都帶 ruleId + evidence）
+✅ 16) comms 有 cooldown（同 ruleId 間隔 ≥ 各自 cooldown；違規 0 筆）
+✅ 17) 無事件時不洗版（全域最小間隔 6.0s ≥ 6s；密度 6.0 則/分）
+✅ 18) Replay 保存 comms（finalizeReplay 收 comms 並原封存入；Replay 不重新生成對話）
+✅    comms 決定性（同 seed 兩次跑出逐位元相同的播報串）
+✅ 19) HUD 不訂閱不必要的完整 store（BattleHUD 不再用無 selector 的 useBattleStore()）
+✅ 20) replay buffer 有容量上限（MAX_FRAMES 且達上限即停止收幀）
+✅ 21) FX 有容量上限與物件池（maxFx 分級；useFrame 內不再 new geometry/material）
+✅ 22) mobile quality 不改變邏輯（quality.js 不 import 引擎/Store，preset 只有呈現欄位）
+✅ 23) feature off baseline 可比較（rules:v1 重現舊節奏：全場 Lv1 + 首塔 <2.5 分 + 5 分幾乎零交戰）
+✅ 24) 傷害同時結算：互相致命 ⇒ 兩人同歸於盡（v2 正序 雙亡、反序 雙亡）
+✅    v1 對照：舊規則只有「先被迭代的一方」活下來，且反轉陣列即換人死（正序死 r1、反序死 b1）
+✅ 25) 小兵雙方迭代對稱：對稱開局 ⇒ 雙方存活/血量相同（v2 藍 [130] vs 紅 [130]）
+✅    v1 對照：舊規則只迭代藍方小兵 ⇒ 紅兵系統性先死（v1 藍 [35,95] vs 紅 [130]）
+✅ 26) 目標選取 = 最近的敵人，與陣列順序無關（v2 正序打 r5、反序打 r5；兩者都應是最近的 r5）
+✅    v1 對照：舊規則 alive.find ⇒ 打「索引最小」的敵人，反轉陣列就換目標（正序 r1、反序 r5）
+✅ 27) 地圖對稱（基地/泉水 180° 鏡像、塔與主堡路線參數和為 1、小兵出生鏡像、每個坑對雙方基地等距 ≤0.5：dragon 0.00、baron 0.00）
+✅ 28) 測試有檢定力：v1 決定性微場景仍能偵測立即傷害 / alive.find 順序病灶（整場位移僅 10pp，不再作固定門檻）
+❌ 29) v2 陣列順序不決定勝負（藍勝 正序 43% / 反序 63%，位移 20 個百分點；需 ≤15 且兩者都在 30–70%）
+⏭ SKIP 30) Sprint28 verifier 29/29（flat 模式：改由 tools/verify.mjs 各跑一次）
+⏭ SKIP 31) Sprint27 verifier 44/44（flat 模式：改由 tools/verify.mjs 各跑一次）
+⏭ SKIP 32) Sprint26 verifier 35/35（flat 模式：改由 tools/verify.mjs 各跑一次）
+⏭ SKIP 33) Sprint25 verifier 34/34（flat 模式：改由 tools/verify.mjs 各跑一次）
+⏭ SKIP 34) Sprint24 verifier 29/29（flat 模式：改由 tools/verify.mjs 各跑一次）
+⏭ SKIP 35) Sprint23 verifier 28/28（flat 模式：改由 tools/verify.mjs 各跑一次）
+⏭ SKIP 36) regress（結束率 15/15）（flat 模式：改由 tools/verify.mjs 各跑一次）
+⏭ SKIP 37) regress2（節奏門檻全綠）（flat 模式：改由 tools/verify.mjs 各跑一次）
+⏭ SKIP 38) npm run build 通過（flat 模式：改由 tools/verify.mjs 各跑一次）
+
+34/35 通過　+ 9 段委派給 runner（未計入分母）
+
+=== v1（修改前）vs v2（修改後）· 20 seeds ===
+v1: 結束 20/20 | 時長 20.2分 | 首塔 1.6分 | 5分: 擊殺 0.7 塔倒 8.3 均Lv 1.0 | 終局 擊殺 30 均Lv 1.0
+v2: 結束 20/20 | 時長 13.2分 | 首塔 3.1分 | 5分: 擊殺 2.3 塔倒 1.3 均Lv 3.5 | 終局 擊殺 13 均Lv 7.8
+播報：seed 4242 共 157 則、密度 6.0 則/分、最小間隔 6.0s
+⚠ FPS / draw calls / triangles / heap / DPR / 視覺 → **無瀏覽器，未量測**（見交付報告）
