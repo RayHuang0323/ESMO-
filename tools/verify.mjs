@@ -61,6 +61,7 @@ const SEGMENTS = [
   { id: "milestone_e", script: "tools/check_moba_milestone_e.mjs", shape: /49\/49 通過/, note: "E" },
   { id: "tactic24", script: "tools/check_moba_tactic24.mjs", shape: /29\/29 通過/, note: "S24 戰術" },
   { id: "cs23", script: "tools/check_cs23.mjs", shape: /28\/28 通過/, note: "S23 CS 流程" },
+  { id: "cs_measure_r1", script: "tools/check_cs_measurement_r1.mjs", shape: /CS Measurement R1: PASS/, note: "CS gameplay 決定性量測 pilot" },
   //  ⚠ 下面五支在 flat 模式下的分母會變小（巢狀子驗證改由本 runner 各跑一次）。
   //    這裡填的是**該支自己健康時的完整數字**，不是遷就現況——所以
   //    experience26（§17 replay 容量，TD-19）與 runtime29（§29 順序公平性，TD-21）

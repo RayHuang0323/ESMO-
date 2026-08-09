@@ -6000,3 +6000,56 @@ Created deployment for 4d64e0c…, ID: 4d64e0c78970fad5aea5ae20df5a40cbfd10a5a5
 資料損壞或重大回歸。明細見 `08_目前待辦與風險.md` 封版紀錄節。
 
 **下一位（Codex）**：CS 16 項素質盤點。第一步見 `04_Roadmap.md`「下一階段交接」。
+
+---
+
+## CS Measurement Pilot R1（2026-08-10）
+
+### 目標與判定
+
+本 Sprint 只證明真實 CS 引擎可在 Node 中穩定量測，並鎖定 fixed-seed gameplay baseline。
+採 `accuracy × t2 T rifler × Inferno` 單一 pilot；不擴成 16 素質／多角色／多地圖，
+不做 p-value、權重調整或 calibration。最終判定：**R1 PASS；Calibration No-Go**。
+
+### 實作
+
+- 新增 `tools/check_cs_measurement_r1.mjs`。
+- `tools/verify.mjs` 只新增 `cs_measure_r1` segment。
+- 使用 Vite test-only memory transform，fail-closed 注入 `simulateFps`／`ROSTER`／
+  `TACTICS_DB` 測試 export；不寫回 `EsportsFPS3D.jsx`、不複製模擬器、不加 dependency。
+- 建立版本化 `CsGameplayDigest.v1` 正式 regression gate；`strictSimDigest` 只作診斷。
+- 固定 `CsMeasurementSeedSet.v1` 的 16 paired seeds，A-B-A-B 共 64 simulations。
+- hard gate 證明 treatment 只有 `roster.t2.stats.acc 88 → 68`、兩組各自 deterministic、
+  collector 為純後處理、輸入未被 mutate；A/B digest 相同不是失敗條件。
+- expected baseline suite：
+  `546a3e5753ceadfa28c64e7f322556ebbff32f0848eebe2c9b477a29f1a195c2`。
+
+### 驗證
+
+```text
+node tools/verify.mjs --only=cs23,cs_measure_r1,build --timeout=600000
+```
+
+- `cs23`：28/28 PASS。
+- `cs_measure_r1`：PASS。
+- `build`：PASS。
+- runner 本次 3/3，exit 0；其餘 segment 未跑，不宣稱全套通過。
+- `git diff --check`：PASS。
+- `EsportsFPS3D.jsx` SHA-256 保持
+  `5b9360f457c95034cdfdc9e864c04a761e1afdba01501c7e383bb9075e048c3d`。
+
+### Pilot 觀察（非 calibration 結論）
+
+16 paired seeds 中 A/B gameplay digest 相同 0/16。目標選手 baseline→treatment：
+平均 K 10.813→5.625、D 8.813→9.25、ADR 150.188→90.625、HS% 84.5→69.813、
+KAST 65.875→50.563、rating 1.554→0.888；兩組 T wins 都是 0/16。
+這只證明 paired measurement 可重現，不以方向／顯著性作 gate，也不換 seed。
+
+### 刻意未做與下一步
+
+未修改 CS gameplay／contract／Store／UI／CS23 verifier；未自動 rebaseline、未 push。
+既有未追蹤 `review/moba-combat/cs23-baseline-20260810.log` 保持未納管。
+下一步先做 16 項素質 Audit 與最小 opportunity→trigger→conversion instrumentation；
+learning／synergy 接線、公式、角色定位與 calibration 均只做證據，不直接修改。
+
+完整方法與 schema：`review/cs-gameplay/CS_MEASUREMENT_PILOT_R1.md`。
