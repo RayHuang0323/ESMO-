@@ -49,20 +49,24 @@ opportunity→trigger→conversion，off／on 完整 sim 逐 seed 相同，21 �
 call sites 不變；正式 FPS source 未修改。報告：
 `review/cs-gameplay/CS_INSTRUMENTATION_R2_REPORT.md`。
 
+`CS 16 Stat Wiring R3` 已完成：固定 16 seeds、16 個單一 treatment、每 arm 重跑兩次，
+共 544 simulations；13/16 項觀察到 output-only gameplay 差異。`resilience` 是
+lastAlive 情境未觀察到，player-side `synergy` 不可達，`learning` 無 gameplay read。
+完整矩陣：`review/cs-gameplay/CS_16_STAT_AUDIT_R3.md`。
+
 **下一步（依序）**：
 
 1. 持續遵守 `review/moba-combat/METHOD_CAVEAT.md` 開頭兩條工程規則——尤其
    **「summary counter ≠ gameplay outcome」**。CS 盤點若拿 `exec.*` 計數器當效果指標，
    會重蹈 `towerPushes` 的覆轍（那讓整輪結論作廢）。
-2. 沿用 `review/moba-combat/STAT_IMPACT_FINAL_R10.md` §7 的 16 項素質分類框架與
-   **六種病因**（權重幅度／作用點設計／情境限定／分布飽和／接線不通電／量測錯誤）。
-3. 逐一建立 16 項素質矩陣：實際讀取位置、作用點、廣泛／情境／未生效、
-   是否改變 `simulateFps`、KPI 缺口、文件差異、A–E 分類、風險與優先級。
-4. R2 已完成第一條 opportunity→trigger→conversion instrumentation；後續只按
-   16 項矩陣證據補 retreat／clutch／defuse 等獨立最小量測，不整批擴張。
-5. **動手量測前**先讀每個 CS 素質作用點的遞增條件（層級／節流／上限），
+2. R3 已沿用 `STAT_IMPACT_FINAL_R10.md` §7 的六種病因完成 16 項矩陣；不得用
+   13/16 observed 或 changed-seed count 比較素質強弱。
+3. 下一個最小 Sprint 只補 true clutch / lastAlive opportunity→combat→round conversion，
+   解除 `resilience` 0/16 與 legacy `clutches` 定義的量測不確定性。
+4. retreat 與 defuse 之後各自拆成獨立 instrumentation Sprint，不與 clutch 綁在一起。
+5. **動手量測前**仍先讀作用點遞增條件（層級／節流／上限），
    確認 KPI 量得到它宣稱要量的東西。本輪最貴的教訓就是這個順序搞反了。
-6. learning／synergy 未接線、權重、公式、新 branch、角色定位只做證據與建議；
+6. learning／synergy 接線、權重、公式、新 branch、角色定位只做證據與建議；
    不直接修改。Calibration 維持 No-Go，直到 measurement coverage 足以辨識病因。
 
 ---

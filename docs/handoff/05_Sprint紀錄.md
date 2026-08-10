@@ -6105,3 +6105,60 @@ node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,build --timeout
 
 完整報告：`review/cs-gameplay/CS_INSTRUMENTATION_R2_REPORT.md`。
 下一步進入 16 項素質 Audit／wiring probe；Calibration 仍為 No-Go。
+
+---
+
+## CS 16 Stat Audit + Wiring Measurement R3（2026-08-10）
+
+### 目標與邊界
+
+完成 16 項玩家素質逐項矩陣：真實讀取位置、gameplay 作用點、作用層級、是否改變
+`simulateFps`、KPI 缺口、文件差異、A–E 問題分類、風險與 calibration readiness。
+本輪只做 Audit + Measurement；不調權重、公式、角色定位，不新增 gameplay branch。
+
+### 規格審查與量測設計
+
+- 規格：`review/cs-gameplay/CS_STAT_WIRING_R3_SPEC.md`。
+- 發現完整 sim JSON 會展開 input stats，R1 digest 也含 `inputSha256`；兩者都不能直接
+  比較 treatment effect。另建 `CsStatWiringDigest.v1`，只投影 output gameplay state。
+- 固定 Inferno、`t_aexec`、`c_std`、既有 ROSTER 與 R1 16 seeds。
+- 16 cases 各只改一名代表 T player 的一個 short stat，固定 −20；accuracy 沿用 88→68。
+- baseline 與每個 treatment 逐 seed 各跑兩次，共 **544 simulations**。
+- memory transform 只注入 test export、可逐字逆轉；21 個 `rand()` call sites 數量/順序不變。
+- treatment deep diff 必須只有指定 stat 一條；不接受 CLI flag、換 seed 或自動 rebaseline。
+
+### 結果
+
+`CsStatWiringDigest.v1` suite：
+`fe6b16dc81c356828e45181b186356b222e7b8de2311c8cadb689fdef3f1343e`。
+
+- 13/16 項在固定情境觀察到 output-only gameplay 差異。
+- `resilience` 0/16：靜態 read 只在 lastAlive，缺真 1vN opportunity，不能判定未接線。
+- player-side `synergy` 0/16：唯一 support profile 對玩家角色映射不可達。
+- `learning` 0/16：只有 roster/OVR/personality 資料，`simulateFps` 無 gameplay read。
+- ADR overkill 仍是 A measurement bug；legacy `clutches` 也不是可證明的 1vN KPI。
+- 文件原稱 16 項完整生效、以 fpsOvr 推論 rating，已依實作證據更正。
+
+完整矩陣與分類：`review/cs-gameplay/CS_16_STAT_AUDIT_R3.md`。
+
+### 驗證
+
+```text
+node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,cs_stat_wiring_r3,build --timeout=600000
+```
+
+- `cs23` 28/28 PASS。
+- `cs_measure_r1` PASS；`CsGameplayDigest.v1` expected suite 未變。
+- `cs_instrument_r2` PASS。
+- `cs_stat_wiring_r3` PASS（544 simulations）。
+- build PASS。
+- runner 本次 5/5、exit 0；其餘 13 segments 未執行，不宣稱全套通過。
+- 正式 FPS source SHA 仍為
+  `5b9360f457c95034cdfdc9e864c04a761e1afdba01501c7e383bb9075e048c3d`。
+- `git diff --check`：PASS。
+
+### 下一步
+
+Calibration 維持 No-Go。下一個最小安全 Sprint 是 true clutch / lastAlive
+opportunity→combat→round conversion instrumentation；不夾帶 retreat、defuse、result contract
+修正或 learning/synergy 接線。既有未追蹤 baseline log 仍排除，未 push。
