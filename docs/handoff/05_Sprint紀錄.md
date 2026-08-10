@@ -6314,3 +6314,36 @@ node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,cs_stat_wiring_
 完整報告：`review/cs-gameplay/CS_DEFUSE_R6_REPORT.md`。
 Calibration 維持 No-Go。下一個安全任務是 CS Utility Damage Audit R7，只做 read-chain、
 分類與最小量測規格，不新增假 damage、平衡值或 gameplay branch。未 push。
+
+---
+
+## CS Utility Damage Audit R7（2026-08-10）
+
+### 目標與邊界
+
+唯讀追查 `utilDmg:0` 是漏收既有 damage，還是正式 simulator 根本沒有 utility damage。
+本輪不新增 verifier、不改 source/contract/UI/RNG/數值，也不以視覺事件假裝 gameplay outcome。
+
+### Read-chain 結論
+
+- `roundDmg`、`dmgDealt`、HP damage 都只有 firearm duel 一個寫入點。
+- HE：購買／throw／cast／render 有，detonation damage 無。
+- molly：player throw 與 tactic fire render 有，damage/zone/path gameplay 無。
+- player smoke：購買／throw 有，但不寫入 `smokes`，不阻 LOS；tactic smoke 才會進
+  `smokeBlocks`，但沒有 player attribution。
+- flash：throw 與 AoE 會寫 `p.flash`、`flashPen` 改 Pt；但每次 firearm duel 也把雙方
+  `flash=3`，state source 混用，無法把 conversion 歸因給 utility。
+- engine 硬寫 `utilDmg:0`；`CsMatchResult.v1` 不轉出、現行 Result UI 不顯示。
+
+### 分類與判定
+
+- `utilDmg:0`：**C gameplay/design placeholder**，不是 A 類漏收。
+- HE/molly/player smoke：**C gameplay/design 缺口**。
+- tactic smoke：**E 窄但真實生效**。
+- flash attribution：**B instrumentation 缺口**；gun-hit/flash 共用 state 為 **A/C 語意混用**。
+- 新增 utilDmg instrumentation：**No-Go**；沒有 damage conversion 可量。
+
+完整證據：`review/cs-gameplay/CS_UTILITY_DAMAGE_R7_AUDIT.md`。
+16 項最終風險／P0–P3 優先級已追加到 `CS_16_STAT_AUDIT_R3.md`。
+Calibration 維持 No-Go；下一步若修 ADR overkill、stale defuse、`how:bomb`、learning/synergy
+或 utility gameplay，都會觸及正式 gameplay/result/contract/digest，需另開授權 Sprint。未 push。

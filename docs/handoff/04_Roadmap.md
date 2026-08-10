@@ -67,6 +67,11 @@ actual displacements、261 round-player episodes、94 recontacts、74 fire re-en
 ticks 與 4 completes。量到 1 次 stale dead T 阻擋 live CT 的 gate bug；`how:bomb` 也過載
 CT 全滅／round timeout／timer zero。報告：`review/cs-gameplay/CS_DEFUSE_R6_REPORT.md`。
 
+`CS Utility Damage R7` 唯讀 audit 已完成：HE/molly 無 damage branch，player smoke 無 LOS
+gameplay，flash 有 Pt effect 但與 gun hit 共用 `p.flash` 且無 attribution。`utilDmg:0` 是
+gameplay/design placeholder，不是少收既有 damage。報告：
+`review/cs-gameplay/CS_UTILITY_DAMAGE_R7_AUDIT.md`。
+
 **下一步（依序）**：
 
 1. 持續遵守 `review/moba-combat/METHOD_CAVEAT.md` 開頭兩條工程規則——尤其
@@ -79,11 +84,12 @@ CT 全滅／round timeout／timer zero。報告：`review/cs-gameplay/CS_DEFUSE_
 4. R5 retreat measurement 已完成；沒有修改 `0.82` threshold、公式或 gameplay branch。
 5. R6 defuse baseline measurement 已完成；stale-array 與 `how:bomb` 真 bug 只留證據，
    未修改 gameplay/result/UI。
-6. 下一個安全任務只做 utility damage read-chain audit，判定 `utilDmg:0` 是 measurement 還是
-   gameplay/design 缺口；不加入假 damage 或平衡值。
-7. **動手量測前**仍先讀作用點遞增條件（層級／節流／上限），
+6. R7 utility read-chain 已完成；禁止為固定 0 新增假 collector 或 UI 數字。
+7. 目前安全 measurement Sprint 已收斂。下一步優先建議另案審查 ADR overkill/result semantics；
+   它會改 result/rating 與 digest，沒有新授權不得實作。
+8. **動手量測前**仍先讀作用點遞增條件（層級／節流／上限），
    確認 KPI 量得到它宣稱要量的東西。本輪最貴的教訓就是這個順序搞反了。
-8. learning／synergy 接線、權重、公式、新 branch、角色定位只做證據與建議；
+9. learning／synergy 接線、權重、公式、新 branch、角色定位只做證據與建議；
    不直接修改。Calibration 維持 No-Go，直到 measurement coverage 足以辨識病因。
 
 ---

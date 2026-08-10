@@ -201,3 +201,30 @@ contract，必須另開 Sprint。完整報告：
 16 項最終 readiness 仍是：`learning`／player-side `synergy` 為 design No-Go；`resilience`、
 defuse 與 retreat 相關素質因機會分布狹窄而 No-Go；其餘 11 項只能視為未來 paired calibration
 候選，不能由 R3 changed-seed counts 排名強弱。全域 Calibration 仍為 **No-Go**。
+
+### 16 項最終風險／優先級
+
+優先級語意：P0＝先做 design/contract 決策，不代表直接實作；P1＝解除全域 blocker 後的首批
+paired pilot 候選；P2＝需先補 sample/作用點分離；P3＝情境過窄或產品語意未定，延後。
+
+| 素質 | 真實生效狀態 | 主要剩餘問題 | 風險 | 優先級 | Calibration readiness |
+|---|---|---|---|---|---|
+| reflex | 廣泛生效；R2 combat KPI 可量 | outcome 仍受 ADR 污染 | 中 | **P1** | 最乾淨候選；全域 gate 解除後才可 pilot |
+| accuracy | 廣泛生效；headshot 直讀 raw | ADR overkill、raw/persStat 語意分裂 | 高 | P2 | No-Go |
+| apm | combat＋retreat 生效 | retreat threshold 分布離散、作用點混合 | 中高 | P2 | No-Go |
+| positioning | combat＋retreat／role 情境生效 | retreat 近門檻 sample=0、作用點多 | 中高 | P2 | No-Go |
+| mapAware | 廣泛弱作用＋lurker | 全域與 role 成分未分離 | 中 | P2 | 條件式候選 |
+| tacticalIQ | IGL/support role profile | 名稱像戰術，實作是個人 duel role-fit | 高 | P3 | Design semantics first |
+| decision | combat＋IGL/lurker＋CT defuse | defuse sample 稀疏、stale gate bug | 高 | P3 | No-Go |
+| adaptability | IGL/lurker role profile | 作用極窄、sample 少 | 中 | P3 | 更多角色/seed plan 後候選 |
+| courage | entry＋combat/retreat `aggr` | threshold 分布離散、作用點混合 | 中高 | P2 | No-Go |
+| clutch | combat/role/lowHP/lastAlive/retreat | 多作用點、legacy KPI 語意錯 | 高 | P3 | No-Go |
+| focus | combat/awp/rifler/holding＋CT defuse | defuse 只覆蓋 ct2/ct3、stale bug | 高 | P3 | No-Go |
+| resilience | 只在 lastAlive | t2 僅 1 state/2 combat opportunities | 高 | P3 | No-Go |
+| comms | IGL/support 個人 duel profile | 無 team comms/call quality 作用點 | 高 | P3 | Design semantics first |
+| leadership | 只在 IGL 個人 duel profile | 無 team leadership/tactic 作用點 | 高 | P3 | Design semantics first |
+| synergy | player-side support path 不可達 | 角色接線/產品定位未決 | 極高 | **P0** | Design No-Go |
+| learning | `simulateFps` 無 gameplay read | 需要跨場或新 gameplay design | 極高 | **P0** | Design No-Go |
+
+R7 再確認：utility 購買/投擲沒有讀任何 16 項素質，`utilDmg:0` 也不是可校正作用點。
+詳見 `review/cs-gameplay/CS_UTILITY_DAMAGE_R7_AUDIT.md`。
