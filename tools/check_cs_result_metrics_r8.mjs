@@ -27,9 +27,9 @@ const PROGRESS_SOURCE_PROVENANCE = Object.freeze({
 });
 
 const LEGACY_SOURCE_SHA256 = "5b9360f457c95034cdfdc9e864c04a761e1afdba01501c7e383bb9075e048c3d";
-const REPAIRED_SOURCE_SHA256 = "__CAPTURE_AFTER_REPAIR__";
+const REPAIRED_SOURCE_SHA256 = "870678267543c8e502fac55c7a91a656a135f31fdfb0d673adc30c91c4d8f47b";
 const LEGACY_BASELINE_SUITE_V1 = "546a3e5753ceadfa28c64e7f322556ebbff32f0848eebe2c9b477a29f1a195c2";
-const EXPECTED_REPAIRED_BASELINE_SUITE_V2 = "__CAPTURE_MANUALLY__";
+const EXPECTED_REPAIRED_BASELINE_SUITE_V2 = "5e39e463148d2cd43bbd30b97c485858d75a5edf7f42a035f8f49e1d473293e9";
 const EXPECTED_RAND_CALLS = 21;
 
 const DIGEST_SCHEMA_V1 = "CsGameplayDigest.v1";
@@ -478,6 +478,7 @@ function validateEffectiveAccounting(sim, events, seed) {
   }
 
   const mvpRoundCount = new Map();
+  const kastRoundCount = new Map();
   for (let roundIndex = 0; roundIndex < sim.roundHist.length; roundIndex += 1) {
     const round = roundIndex + 1;
     const lastFrame = [...sim.frames].reverse().find((frame) => frame.rnd === roundIndex);
@@ -487,6 +488,9 @@ function validateEffectiveAccounting(sim, events, seed) {
       const framePlayer = frameById.get(resultPlayer.id);
       gate(Boolean(framePlayer), "ROUND_PLAYER_MISSING", `seed=${seed} round=${round} player=${resultPlayer.id}`);
       const damage = roundDamage.get(key(round, resultPlayer.id)) ?? 0;
+      if (framePlayer.k > 0 || framePlayer.a > 0 || framePlayer.d === 0) {
+        kastRoundCount.set(resultPlayer.id, (kastRoundCount.get(resultPlayer.id) ?? 0) + 1);
+      }
       return {
         name: resultPlayer.name,
         side: resultPlayer.side,
@@ -514,10 +518,13 @@ function validateEffectiveAccounting(sim, events, seed) {
     let totalDamage = 0;
     for (let round = 1; round <= sim.roundHist.length; round += 1) totalDamage += roundDamage.get(key(round, player.id)) ?? 0;
     const adr = totalDamage / rounds;
+    const kast = (kastRoundCount.get(player.id) ?? 0) / rounds * 100;
     const expectedRating = Math.max(0, +(0.4 + 0.7 * (player.k / rounds) + 0.2 * (player.a / rounds)
-      + 0.0045 * adr + 0.003 * player.kast - 0.55 * (player.d / rounds)).toFixed(3));
+      + 0.0045 * adr + 0.003 * kast - 0.55 * (player.d / rounds)).toFixed(3));
     gate(player.adr === Math.round(adr), "RESULT_ADR_MISMATCH", `seed=${seed} player=${player.id}`);
-    gate(player.rating === expectedRating, "RESULT_RATING_MISMATCH", `seed=${seed} player=${player.id}`);
+    gate(player.kast === Math.round(kast), "RESULT_KAST_MISMATCH", `seed=${seed} player=${player.id}`);
+    gate(player.rating === expectedRating, "RESULT_RATING_MISMATCH",
+      `seed=${seed} player=${player.id} expected=${expectedRating} actual=${player.rating}`);
     gate(player.mvpRounds === (mvpRoundCount.get(player.name) ?? 0), "RESULT_MVP_ROUNDS_MISMATCH",
       `seed=${seed} player=${player.id}`);
   }

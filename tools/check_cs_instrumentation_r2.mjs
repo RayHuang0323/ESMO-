@@ -22,7 +22,7 @@ const FIXED_SEEDS = Object.freeze([
   951543597, 2082574495, 474649321, 3950420867,
 ]);
 const EXPECTED_SEED_SET_SHA256 = "52414f0e6b09ba72b9223b5e76b6ad9d859e8b8ea6fe77dcc2a2a08876a74c6d";
-const CAPTURED_ENGINE_SOURCE_SHA256 = "5b9360f457c95034cdfdc9e864c04a761e1afdba01501c7e383bb9075e048c3d";
+const CAPTURED_ENGINE_SOURCE_SHA256 = "870678267543c8e502fac55c7a91a656a135f31fdfb0d673adc30c91c4d8f47b";
 const EXPECTED_RAND_CALLS = 21;
 const EXPECTED_EVENT_ONLY_SUITE_V1 = "1b4b139c50e7fe646a5b307a36ca83de26094bbdd8f617661054a9d47d0c836f";
 
@@ -38,7 +38,7 @@ const PT_REPLACEMENT = [
   PT_MARKER,
   '          __measure?.record("combat_trigger",{round:rnd+1,sec,tPlayerId:tp.id,cPlayerId:cp.id,tRole:tp.role,cRole:cp.role,distance:d,sniperInvolved,fireChance,tSkill:tSk,cSkill:cSk,pt:Pt,mapEdge:(MAP_EDGE[mapKey]??0.02),ecoEdge,flashPen,tacEdge,atLowerClamp:Pt===0.07,atUpperClamp:Pt===0.93});',
 ].join("\n");
-const DAMAGE_MARKER = '          df.hp-=dmg;at.dmgDealt=(at.dmgDealt||0)+dmg;roundDmg[at.id]=(roundDmg[at.id]||0)+dmg;at.flash=3;df.flash=3;at.state="ENGAGE";df.state="ENGAGE";at.shooting=df.hp<=0?1:2;';
+const DAMAGE_MARKER = '          const hpBefore=df.hp,effectiveDamage=Math.min(dmg,hpBefore);\n          df.hp-=dmg;at.dmgDealt=(at.dmgDealt||0)+effectiveDamage;roundDmg[at.id]=(roundDmg[at.id]||0)+effectiveDamage;at.flash=3;df.flash=3;at.state="ENGAGE";df.state="ENGAGE";at.shooting=df.hp<=0?1:2;';
 const DAMAGE_REPLACEMENT = [
   DAMAGE_MARKER,
   '          __measure?.record("combat_conversion",{round:rnd+1,sec,tPlayerId:tp.id,cPlayerId:cp.id,tWon:tw,attackerId:at.id,attackerSide:at.side,attackerRole:at.role,defenderId:df.id,defenderSide:df.side,defenderRole:df.role,pt:Pt,headshotChance:g.hs*(0.72+0.55*((at.stats?.acc||80)/100)),headshot:isHS,rolledDamage:dmg,hpBefore:df.hp+dmg,effectiveDamage:Math.min(dmg,df.hp+dmg),overkillDamage:Math.max(0,-df.hp),kill:df.hp<=0});',

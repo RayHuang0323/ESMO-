@@ -13,7 +13,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
 const FPS_MODULE_ID = "/src/battle/fps/EsportsFPS3D.jsx";
 
-const DIGEST_SCHEMA = "CsStatWiringDigest.v1";
+const DIGEST_SCHEMA = "CsStatWiringDigest.v2";
 const SEED_GENERATION_VERSION = "CsMeasurementSeedSet.v1";
 const SEED_NAMESPACE = "ESMO:CsMeasurementPilot.v1:";
 const FIXED_SEEDS = Object.freeze([
@@ -23,12 +23,13 @@ const FIXED_SEEDS = Object.freeze([
   951543597, 2082574495, 474649321, 3950420867,
 ]);
 const EXPECTED_SEED_SET_SHA256 = "52414f0e6b09ba72b9223b5e76b6ad9d859e8b8ea6fe77dcc2a2a08876a74c6d";
-const CAPTURED_ENGINE_SOURCE_SHA256 = "5b9360f457c95034cdfdc9e864c04a761e1afdba01501c7e383bb9075e048c3d";
+const CAPTURED_ENGINE_SOURCE_SHA256 = "870678267543c8e502fac55c7a91a656a135f31fdfb0d673adc30c91c4d8f47b";
 const EXPECTED_RAND_CALLS = 21;
 
 // Intentionally no update/rebaseline path. Capture once through the runner, inspect,
 // then replace this literal manually.
-const EXPECTED_WIRING_SUITE_V1 = "fe6b16dc81c356828e45181b186356b222e7b8de2311c8cadb689fdef3f1343e";
+const LEGACY_EXPECTED_WIRING_SUITE_V1 = "fe6b16dc81c356828e45181b186356b222e7b8de2311c8cadb689fdef3f1343e";
+const EXPECTED_WIRING_SUITE_V2 = "6501b46d7f8c37e78877e9cb9fb17f2e87520a5422f11f2d1880d7078ac29e00";
 const EXPECTED_TRAJECTORY_SUITE_V1 = "00fa99fee39a80d85d6fb713fee65c11081266bbd0c6a4dbd113f1720874f2f0";
 
 const RETURN_MARKER = "return { EsportsFPS3D, buildMatchResult };";
@@ -327,7 +328,7 @@ function buildDigests(sim, scenario) {
   const rounds = roundsProjection(sim);
   const wiringDocument = buildWiringDocument(sim, scenario);
   const trajectoryDocument = buildMetricNeutralTrajectoryDocument(wiringDocument);
-  gate(wiringDocument.schema === "CsStatWiringDigest.v1", "SCHEMA_MISMATCH");
+  gate(wiringDocument.schema === "CsStatWiringDigest.v2", "SCHEMA_MISMATCH");
   gate(trajectoryDocument.schema === "CsStatMetricNeutralTrajectory.v1", "TRAJECTORY_SCHEMA_MISMATCH");
   const playerResultDigests = Object.fromEntries(
     result.players.map((player) => [player.id, sha256(canonicalJson(player, { rejectUndefined: true }))]),
@@ -600,10 +601,11 @@ async function main() {
     console.log("statistics: not computed (no p-value; no significance gate)");
     console.log("formal gameplay baseline: protected by separate cs_measure_r1 segment");
 
-    gate(EXPECTED_WIRING_SUITE_V1 !== "__CAPTURE_MANUALLY__", "WIRING_SUITE_NOT_LOCKED",
+    console.log(`legacyWiringSuiteV1: ${LEGACY_EXPECTED_WIRING_SUITE_V1}`);
+    gate(EXPECTED_WIRING_SUITE_V2 !== "__CAPTURE_MANUALLY__", "WIRING_SUITE_NOT_LOCKED",
       `candidate=${suiteDigest}`);
-    gate(suiteDigest === EXPECTED_WIRING_SUITE_V1, "WIRING_MEASUREMENT_REGRESSION",
-      `expected=${EXPECTED_WIRING_SUITE_V1}\nactual=${suiteDigest}`);
+    gate(suiteDigest === EXPECTED_WIRING_SUITE_V2, "WIRING_MEASUREMENT_REGRESSION",
+      `expected=${EXPECTED_WIRING_SUITE_V2}\nactual=${suiteDigest}`);
     gate(EXPECTED_TRAJECTORY_SUITE_V1 !== "__CAPTURE_MANUALLY__", "TRAJECTORY_SUITE_NOT_LOCKED",
       `candidate=${trajectorySuiteDigest}`);
     gate(trajectorySuiteDigest === EXPECTED_TRAJECTORY_SUITE_V1, "STAT_TRAJECTORY_REGRESSION",

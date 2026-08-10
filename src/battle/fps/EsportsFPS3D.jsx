@@ -524,7 +524,8 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
           if(df.armor&&!isHS)dmg*=0.72; // 護甲減傷（非爆頭）
           dmg=Math.round(dmg);
           if(!df._hitters)df._hitters=[];if(!df._hitters.includes(at.id))df._hitters.push(at.id);
-          df.hp-=dmg;at.dmgDealt=(at.dmgDealt||0)+dmg;roundDmg[at.id]=(roundDmg[at.id]||0)+dmg;at.flash=3;df.flash=3;at.state="ENGAGE";df.state="ENGAGE";at.shooting=df.hp<=0?1:2;
+          const hpBefore=df.hp,effectiveDamage=Math.min(dmg,hpBefore);
+          df.hp-=dmg;at.dmgDealt=(at.dmgDealt||0)+effectiveDamage;roundDmg[at.id]=(roundDmg[at.id]||0)+effectiveDamage;at.flash=3;df.flash=3;at.state="ENGAGE";df.state="ENGAGE";at.shooting=df.hp<=0?1:2;
           tracers.push({id:`tr${fi}${sec}${at.id}`,from:{...at.pos},to:{x:df.pos.x,y:df.pos.y},tl:2,color:at.side==="ct"?"#7dd3fc":"#fdba74",hit:true,sniper:g.cls==="狙擊"});
           muzzles.push({id:`mz${fi}${at.id}`,pos:{...at.pos},side:at.side,tl:2,big:g.cls==="狙擊",cls:g.cls,kill:df.hp<=0});
           if(df.hp<=0){df.dead=true;df.hp=0;at.k++;df.d++;if(isHS)at.hsCount++;at.money+=killReward(at.gun);roundKills[at.id]=(roundKills[at.id]||0)+1;roundDeaths[df.id]=1;

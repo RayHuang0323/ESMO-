@@ -15,7 +15,8 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
 const FPS_MODULE_ID = "/src/battle/fps/EsportsFPS3D.jsx";
 
-const DIGEST_SCHEMA = "CsGameplayDigest.v1";
+const LEGACY_DIGEST_SCHEMA_V1 = "CsGameplayDigest.v1";
+const DIGEST_SCHEMA = "CsGameplayDigest.v2";
 const SEED_GENERATION_VERSION = "CsMeasurementSeedSet.v1";
 const SEED_NAMESPACE = "ESMO:CsMeasurementPilot.v1:";
 const FIXED_SEEDS = Object.freeze([
@@ -25,11 +26,12 @@ const FIXED_SEEDS = Object.freeze([
   951543597, 2082574495, 474649321, 3950420867,
 ]);
 const EXPECTED_SEED_SET_SHA256 = "52414f0e6b09ba72b9223b5e76b6ad9d859e8b8ea6fe77dcc2a2a08876a74c6d";
-const CAPTURED_ENGINE_SOURCE_SHA256 = "5b9360f457c95034cdfdc9e864c04a761e1afdba01501c7e383bb9075e048c3d";
+const CAPTURED_ENGINE_SOURCE_SHA256 = "870678267543c8e502fac55c7a91a656a135f31fdfb0d673adc30c91c4d8f47b";
 
 // Intentionally no --update/--rebaseline path. The first verifier run prints the
 // candidate; a human must inspect it and replace this literal explicitly.
-const EXPECTED_BASELINE_SUITE_V1 = "546a3e5753ceadfa28c64e7f322556ebbff32f0848eebe2c9b477a29f1a195c2";
+const LEGACY_EXPECTED_BASELINE_SUITE_V1 = "546a3e5753ceadfa28c64e7f322556ebbff32f0848eebe2c9b477a29f1a195c2";
+const EXPECTED_BASELINE_SUITE_V2 = "5e39e463148d2cd43bbd30b97c485858d75a5edf7f42a035f8f49e1d473293e9";
 
 const RETURN_MARKER = "return { EsportsFPS3D, buildMatchResult };";
 const RETURN_REPLACEMENT = "return { EsportsFPS3D, buildMatchResult, simulateFps, ROSTER, TACTICS_DB };";
@@ -203,6 +205,10 @@ function buildGameplayDocument(sim, scenario) {
 
   const document = {
     schema: DIGEST_SCHEMA,
+    metricSemantics: {
+      damageAccounting: "effectiveHpDamage.v1",
+      ratingFormula: "CsRating.v1",
+    },
     scenario: {
       seed: scenario.seed,
       mapKey: scenario.mapKey,
@@ -259,7 +265,7 @@ function buildGameplayDocument(sim, scenario) {
     })),
   };
 
-  gate(document.schema === "CsGameplayDigest.v1", "SCHEMA_MISMATCH", `actual=${document.schema}`);
+  gate(document.schema === "CsGameplayDigest.v2", "SCHEMA_MISMATCH", `actual=${document.schema}`);
   return document;
 }
 
@@ -491,10 +497,11 @@ async function main() {
     console.log(`treatment pilot: ${JSON.stringify(pilotSummary(treatment))}`);
     console.log("statistics: not computed (no p-value; no significance gate)");
 
-    gate(EXPECTED_BASELINE_SUITE_V1 !== "__CAPTURE_MANUALLY__", "BASELINE_NOT_LOCKED",
+    console.log(`legacyBaselineSuite: ${LEGACY_DIGEST_SCHEMA_V1} ${LEGACY_EXPECTED_BASELINE_SUITE_V1}`);
+    gate(EXPECTED_BASELINE_SUITE_V2 !== "__CAPTURE_MANUALLY__", "BASELINE_NOT_LOCKED",
       `candidate=${baselineSuiteDigest}`);
-    gate(baselineSuiteDigest === EXPECTED_BASELINE_SUITE_V1, "GAMEPLAY_REGRESSION",
-      `schema=${DIGEST_SCHEMA}\nexpected=${EXPECTED_BASELINE_SUITE_V1}\nactual=${baselineSuiteDigest}`);
+    gate(baselineSuiteDigest === EXPECTED_BASELINE_SUITE_V2, "GAMEPLAY_REGRESSION",
+      `schema=${DIGEST_SCHEMA}\nexpected=${EXPECTED_BASELINE_SUITE_V2}\nactual=${baselineSuiteDigest}`);
 
     console.log("CS Measurement R1: PASS");
   } finally {

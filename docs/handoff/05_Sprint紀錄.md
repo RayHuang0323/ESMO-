@@ -6347,3 +6347,47 @@ Calibration 維持 No-Go。下一個安全任務是 CS Utility Damage Audit R7�
 16 項最終風險／P0–P3 優先級已追加到 `CS_16_STAT_AUDIT_R3.md`。
 Calibration 維持 No-Go；下一步若修 ADR overkill、stale defuse、`how:bomb`、learning/synergy
 或 utility gameplay，都會觸及正式 gameplay/result/contract/digest，需另開授權 Sprint。未 push。
+
+---
+
+## CS ADR Overkill / Result Metrics Repair R8（2026-08-10）
+
+### 目標與邊界
+
+修正 firearm overkill 被計入 ADR／rating 的 A 類 measurement bug。ADR 與 rating 同一
+Sprint；rating 公式與係數不改。`CsMatchResult.js`、contract、Store、UI、Progress formula、
+settlement、defuse、`how:bomb`、utility、learning、synergy 與 calibration 全部不在範圍。
+
+### 舊版證據與 production 修法
+
+- 在舊 source SHA `5b9360f…8c3d` 先鎖定 v1 suite、16 個 per-seed gameplay digests、
+  baseline/treatment metric-neutral trajectories、R2/R4/R5/R6 event-only suites、R3 全
+  16 treatment trajectory 與 Progress neutral suite。
+- 正式 source 只新增 `effectiveDamage=min(dmg,hpBefore)`；`df.hp -= dmg`、death、kill、
+  winner、score、RNG 與 gameplay branch 維持 rolled damage，只有 `dmgDealt`／`roundDmg`
+  改記有效 HP 傷害。
+- exact JSON path allowlist 只含 player ADR／rating／mvpRounds 與 frame dmgDealt；每個值由
+  damage events 重算，非白名單差異立即 FAIL，沒有自動 rebaseline。
+
+### v1 → v2 與 Progress gate
+
+- legacy `CsGameplayDigest.v1` suite：`546a3e5753ceadfa28c64e7f322556ebbff32f0848eebe2c9b477a29f1a195c2`。
+- repaired `CsGameplayDigest.v2` suite：`5e39e463148d2cd43bbd30b97c485858d75a5edf7f42a035f8f49e1d473293e9`。
+- 16/16 v1 gameplay digests 合法改變；metric-neutral trajectories、damage event suite、
+  opportunity／trigger／conversion data 全部維持舊 hash。
+- 真實 chain `engine result → toCsMatchResult → csResultToTransaction` 通過：未修改的
+  XP formula 逐玩家重算相等；fixed suite 的 final MVP 不變，winner／score／money／fans
+  不變。只呼叫 pure adapters，沒有 settlement 或歷史 migration。
+
+### 驗證
+
+```text
+node tools/verify.mjs --only=cs_measure_r1,cs_instrument_r2,cs_stat_wiring_r3,cs_clutch_r4,cs_retreat_r5,cs_defuse_r6,cs_result_metrics_r8 --timeout=600000
+```
+
+- R1–R8 measurement chain **7/7 PASS**。
+- R3 16-case trajectory suite：`00fa99fee39a80d85d6fb713fee65c11081266bbd0c6a4dbd113f1720874f2f0`，與舊版相同。
+- R8 報告：`review/cs-gameplay/CS_RESULT_METRICS_R8_REPORT.md`。
+- 最終 runner 加入 CS23、Progress25、production build，共 **10/10 PASS**；
+  `git diff --check` PASS。其餘非本 Sprint segments 未執行，不宣稱全套通過。
+- Calibration 維持 No-Go；未 push。

@@ -22,9 +22,10 @@ const FIXED_SEEDS = Object.freeze([
   951543597, 2082574495, 474649321, 3950420867,
 ]);
 const EXPECTED_SEED_SET_SHA256 = "52414f0e6b09ba72b9223b5e76b6ad9d859e8b8ea6fe77dcc2a2a08876a74c6d";
-const CAPTURED_ENGINE_SOURCE_SHA256 = "5b9360f457c95034cdfdc9e864c04a761e1afdba01501c7e383bb9075e048c3d";
+const CAPTURED_ENGINE_SOURCE_SHA256 = "870678267543c8e502fac55c7a91a656a135f31fdfb0d673adc30c91c4d8f47b";
 const EXPECTED_RAND_CALLS = 21;
-const EXPECTED_EVENT_SUITE_V1 = "1a0e78c1073dea522dffa52e87aab4f094f4116a778d4cfe7a9fe9127aedc6d3";
+const LEGACY_EXPECTED_EVENT_SUITE_V1 = "1a0e78c1073dea522dffa52e87aab4f094f4116a778d4cfe7a9fe9127aedc6d3";
+const EXPECTED_EVENT_SUITE_V2 = "e3a32ac8990a1bd866936827701352cb4fdd8c665b1984e9eb2fd3942d6d0b0d";
 const EXPECTED_EVENT_ONLY_SUITE_V1 = "4d8b082092a5a735c76b0c75d5618d3eec7be8f45ac7ce59ed8a25a3ab7f053c";
 
 const SIGNATURE_MARKER = "function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){";
@@ -61,7 +62,7 @@ const PT_REPLACEMENT = [
   PT_MARKER,
   '          if(__clutchPlayerIds)__measure?.record("clutch_combat_trigger",{round:rnd+1,sec,tPlayerId:tp.id,cPlayerId:cp.id,clutchPlayerIds:__clutchPlayerIds,fireChance,tSkill:tSk,cSkill:cSk,pt:Pt});',
 ].join("\n");
-const DAMAGE_MARKER = '          df.hp-=dmg;at.dmgDealt=(at.dmgDealt||0)+dmg;roundDmg[at.id]=(roundDmg[at.id]||0)+dmg;at.flash=3;df.flash=3;at.state="ENGAGE";df.state="ENGAGE";at.shooting=df.hp<=0?1:2;';
+const DAMAGE_MARKER = '          const hpBefore=df.hp,effectiveDamage=Math.min(dmg,hpBefore);\n          df.hp-=dmg;at.dmgDealt=(at.dmgDealt||0)+effectiveDamage;roundDmg[at.id]=(roundDmg[at.id]||0)+effectiveDamage;at.flash=3;df.flash=3;at.state="ENGAGE";df.state="ENGAGE";at.shooting=df.hp<=0?1:2;';
 const DAMAGE_REPLACEMENT = [
   DAMAGE_MARKER,
   '          if(__clutchPlayerIds)__measure?.record("clutch_combat_conversion",{round:rnd+1,sec,tPlayerId:tp.id,cPlayerId:cp.id,clutchPlayerIds:__clutchPlayerIds,tWon:tw,attackerId:at.id,defenderId:df.id,pt:Pt,rolledDamage:dmg,hpBefore:df.hp+dmg,effectiveDamage:Math.min(dmg,df.hp+dmg),overkillDamage:Math.max(0,-df.hp),kill:df.hp<=0});',
@@ -596,10 +597,11 @@ async function main() {
     console.log("formal gameplay baseline: protected by separate cs_measure_r1 segment");
     console.log("statistics: not computed (no p-value; no significance gate)");
 
-    gate(EXPECTED_EVENT_SUITE_V1 !== "__CAPTURE_MANUALLY__", "EVENT_SUITE_NOT_LOCKED",
+    console.log(`legacyEventSuiteV1: ${LEGACY_EXPECTED_EVENT_SUITE_V1}`);
+    gate(EXPECTED_EVENT_SUITE_V2 !== "__CAPTURE_MANUALLY__", "EVENT_SUITE_NOT_LOCKED",
       `candidate=${suiteDigest}`);
-    gate(suiteDigest === EXPECTED_EVENT_SUITE_V1, "CLUTCH_MEASUREMENT_REGRESSION",
-      `expected=${EXPECTED_EVENT_SUITE_V1}\nactual=${suiteDigest}`);
+    gate(suiteDigest === EXPECTED_EVENT_SUITE_V2, "CLUTCH_MEASUREMENT_REGRESSION",
+      `expected=${EXPECTED_EVENT_SUITE_V2}\nactual=${suiteDigest}`);
     gate(EXPECTED_EVENT_ONLY_SUITE_V1 !== "__CAPTURE_MANUALLY__", "EVENT_ONLY_SUITE_NOT_LOCKED",
       `candidate=${eventOnlySuiteDigest}`);
     gate(eventOnlySuiteDigest === EXPECTED_EVENT_ONLY_SUITE_V1, "CLUTCH_EVENT_STREAM_REGRESSION",
