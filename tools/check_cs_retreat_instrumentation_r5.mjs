@@ -25,6 +25,7 @@ const EXPECTED_SEED_SET_SHA256 = "52414f0e6b09ba72b9223b5e76b6ad9d859e8b8ea6fe77
 const CAPTURED_ENGINE_SOURCE_SHA256 = "5b9360f457c95034cdfdc9e864c04a761e1afdba01501c7e383bb9075e048c3d";
 const EXPECTED_RAND_CALLS = 21;
 const EXPECTED_EVENT_SUITE_V1 = "4e94fc5c2e95633f7972d19b8864e846b793a893dbdb9a8610e84f01c87c6f20";
+const EXPECTED_EVENT_ONLY_SUITE_V1 = "210af8175f444f99782e8bcd271954e6f22e514f588d060658b78ee0402fd217";
 
 const SIGNATURE_MARKER = "function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){";
 const SIGNATURE_REPLACEMENT = "function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,__measure=null){";
@@ -581,6 +582,12 @@ async function main() {
       seedSetSha256,
       suite,
     }));
+    const eventOnlySuiteDigest = sha256(canonicalJson({
+      schema: EVENT_SCHEMA,
+      seedGenerationVersion: SEED_GENERATION_VERSION,
+      seedSetSha256,
+      suite: suite.map(({ seed, eventDigest, counts }) => ({ seed, eventDigest, counts })),
+    }));
     const playerSummary = Object.fromEntries(Object.entries(totals.players).map(([id, player]) => [id, {
       role: roster.find((item) => item.id === id)?.role ?? null,
       opportunities: player.opportunities,
@@ -622,6 +629,7 @@ async function main() {
       players: playerSummary,
     };
     console.log(`eventSuiteDigest: ${suiteDigest}`);
+    console.log(`eventOnlySuiteDigest: ${eventOnlySuiteDigest}`);
     console.log(`retreat summary: ${JSON.stringify(summary)}`);
     console.log("formal gameplay baseline: protected by separate cs_measure_r1 segment");
     console.log("statistics: not computed (no p-value; no significance gate)");
@@ -630,6 +638,10 @@ async function main() {
       `candidate=${suiteDigest}`);
     gate(suiteDigest === EXPECTED_EVENT_SUITE_V1, "RETREAT_MEASUREMENT_REGRESSION",
       `expected=${EXPECTED_EVENT_SUITE_V1}\nactual=${suiteDigest}`);
+    gate(EXPECTED_EVENT_ONLY_SUITE_V1 !== "__CAPTURE_MANUALLY__", "EVENT_ONLY_SUITE_NOT_LOCKED",
+      `candidate=${eventOnlySuiteDigest}`);
+    gate(eventOnlySuiteDigest === EXPECTED_EVENT_ONLY_SUITE_V1, "RETREAT_EVENT_STREAM_REGRESSION",
+      `expected=${EXPECTED_EVENT_ONLY_SUITE_V1}\nactual=${eventOnlySuiteDigest}`);
     console.log("CS Retreat R5: PASS");
   } finally {
     if (vite) await vite.close();

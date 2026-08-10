@@ -24,6 +24,7 @@ const FIXED_SEEDS = Object.freeze([
 const EXPECTED_SEED_SET_SHA256 = "52414f0e6b09ba72b9223b5e76b6ad9d859e8b8ea6fe77dcc2a2a08876a74c6d";
 const CAPTURED_ENGINE_SOURCE_SHA256 = "5b9360f457c95034cdfdc9e864c04a761e1afdba01501c7e383bb9075e048c3d";
 const EXPECTED_RAND_CALLS = 21;
+const EXPECTED_EVENT_ONLY_SUITE_V1 = "1b4b139c50e7fe646a5b307a36ca83de26094bbdd8f617661054a9d47d0c836f";
 
 const SIGNATURE_MARKER = "function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){";
 const SIGNATURE_REPLACEMENT = "function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,__measure=null){";
@@ -365,6 +366,12 @@ async function main() {
       seedSetSha256,
       suite,
     }));
+    const eventOnlySuiteDigest = sha256(canonicalJson({
+      schema: EVENT_SCHEMA,
+      seedGenerationVersion: SEED_GENERATION_VERSION,
+      seedSetSha256,
+      suite: suite.map(({ seed, eventDigest, counts }) => ({ seed, eventDigest, counts })),
+    }));
     const summary = {
       simulations: FIXED_SEEDS.length * 3,
       opportunities: totals.opportunities,
@@ -383,9 +390,14 @@ async function main() {
       targetT2Conversions: totals.targetConversions,
     };
     console.log("eventSuiteDigest: " + suiteDigest);
+    console.log("eventOnlySuiteDigest: " + eventOnlySuiteDigest);
     console.log("combat summary: " + JSON.stringify(summary));
     console.log("formal baseline: protected by separate cs_measure_r1 segment");
     console.log("statistics: not computed (no p-value; no significance gate)");
+    gate(EXPECTED_EVENT_ONLY_SUITE_V1 !== "__CAPTURE_MANUALLY__", "EVENT_ONLY_SUITE_NOT_LOCKED",
+      "candidate=" + eventOnlySuiteDigest);
+    gate(eventOnlySuiteDigest === EXPECTED_EVENT_ONLY_SUITE_V1, "COMBAT_EVENT_STREAM_REGRESSION",
+      "expected=" + EXPECTED_EVENT_ONLY_SUITE_V1 + "\nactual=" + eventOnlySuiteDigest);
     console.log("CS Instrumentation R2: PASS");
   } finally {
     if (vite) await vite.close();

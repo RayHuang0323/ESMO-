@@ -25,6 +25,7 @@ const EXPECTED_SEED_SET_SHA256 = "52414f0e6b09ba72b9223b5e76b6ad9d859e8b8ea6fe77
 const CAPTURED_ENGINE_SOURCE_SHA256 = "5b9360f457c95034cdfdc9e864c04a761e1afdba01501c7e383bb9075e048c3d";
 const EXPECTED_RAND_CALLS = 21;
 const EXPECTED_EVENT_SUITE_V1 = "9c33c3c2b10ff48bf0acdc59067184a48f5408f6b32b88324137fdd9fa0d7368";
+const EXPECTED_EVENT_ONLY_SUITE_V1 = "3f8a0b32acf85c2facd417e2be99657a144721463b6f61790f85150153cb2196";
 
 const SIGNATURE_MARKER = "function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){";
 const SIGNATURE_REPLACEMENT = "function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,__measure=null){";
@@ -640,6 +641,12 @@ async function main() {
       seedSetSha256,
       suite,
     }));
+    const eventOnlySuiteDigest = sha256(canonicalJson({
+      schema: EVENT_SCHEMA,
+      seedGenerationVersion: SEED_GENERATION_VERSION,
+      seedSetSha256,
+      suite: suite.map(({ seed, eventDigest, counts }) => ({ seed, eventDigest, counts })),
+    }));
     const playerSummary = Object.fromEntries(Object.entries(totals.players ?? {}).map(([id, player]) => [id, {
       role: roster.find((item) => item.id === id)?.role ?? null,
       focus: roster.find((item) => item.id === id)?.stats?.foc ?? null,
@@ -685,6 +692,7 @@ async function main() {
       players: playerSummary,
     };
     console.log(`eventSuiteDigest: ${suiteDigest}`);
+    console.log(`eventOnlySuiteDigest: ${eventOnlySuiteDigest}`);
     console.log(`defuse summary: ${JSON.stringify(summary)}`);
     console.log("formal gameplay baseline: protected by separate cs_measure_r1 segment");
     console.log("statistics: not computed (no p-value; no significance gate)");
@@ -693,6 +701,10 @@ async function main() {
       `candidate=${suiteDigest}`);
     gate(suiteDigest === EXPECTED_EVENT_SUITE_V1, "DEFUSE_MEASUREMENT_REGRESSION",
       `expected=${EXPECTED_EVENT_SUITE_V1}\nactual=${suiteDigest}`);
+    gate(EXPECTED_EVENT_ONLY_SUITE_V1 !== "__CAPTURE_MANUALLY__", "EVENT_ONLY_SUITE_NOT_LOCKED",
+      `candidate=${eventOnlySuiteDigest}`);
+    gate(eventOnlySuiteDigest === EXPECTED_EVENT_ONLY_SUITE_V1, "DEFUSE_EVENT_STREAM_REGRESSION",
+      `expected=${EXPECTED_EVENT_ONLY_SUITE_V1}\nactual=${eventOnlySuiteDigest}`);
     console.log("CS Defuse R6: PASS");
   } finally {
     if (vite) await vite.close();

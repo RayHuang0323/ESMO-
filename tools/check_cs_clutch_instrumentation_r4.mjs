@@ -25,6 +25,7 @@ const EXPECTED_SEED_SET_SHA256 = "52414f0e6b09ba72b9223b5e76b6ad9d859e8b8ea6fe77
 const CAPTURED_ENGINE_SOURCE_SHA256 = "5b9360f457c95034cdfdc9e864c04a761e1afdba01501c7e383bb9075e048c3d";
 const EXPECTED_RAND_CALLS = 21;
 const EXPECTED_EVENT_SUITE_V1 = "1a0e78c1073dea522dffa52e87aab4f094f4116a778d4cfe7a9fe9127aedc6d3";
+const EXPECTED_EVENT_ONLY_SUITE_V1 = "4d8b082092a5a735c76b0c75d5618d3eec7be8f45ac7ce59ed8a25a3ab7f053c";
 
 const SIGNATURE_MARKER = "function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){";
 const SIGNATURE_REPLACEMENT = "function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,__measure=null){";
@@ -550,6 +551,12 @@ async function main() {
       seedSetSha256,
       suite,
     }));
+    const eventOnlySuiteDigest = sha256(canonicalJson({
+      schema: EVENT_SCHEMA,
+      seedGenerationVersion: SEED_GENERATION_VERSION,
+      seedSetSha256,
+      suite: suite.map(({ seed, eventDigest, counts }) => ({ seed, eventDigest, counts })),
+    }));
     const summary = {
       simulations: FIXED_SEEDS.length * 3,
       rounds: totals.rounds,
@@ -584,6 +591,7 @@ async function main() {
       targetT2Wins: totals.targetT2Wins,
     };
     console.log(`eventSuiteDigest: ${suiteDigest}`);
+    console.log(`eventOnlySuiteDigest: ${eventOnlySuiteDigest}`);
     console.log(`clutch summary: ${JSON.stringify(summary)}`);
     console.log("formal gameplay baseline: protected by separate cs_measure_r1 segment");
     console.log("statistics: not computed (no p-value; no significance gate)");
@@ -592,6 +600,10 @@ async function main() {
       `candidate=${suiteDigest}`);
     gate(suiteDigest === EXPECTED_EVENT_SUITE_V1, "CLUTCH_MEASUREMENT_REGRESSION",
       `expected=${EXPECTED_EVENT_SUITE_V1}\nactual=${suiteDigest}`);
+    gate(EXPECTED_EVENT_ONLY_SUITE_V1 !== "__CAPTURE_MANUALLY__", "EVENT_ONLY_SUITE_NOT_LOCKED",
+      `candidate=${eventOnlySuiteDigest}`);
+    gate(eventOnlySuiteDigest === EXPECTED_EVENT_ONLY_SUITE_V1, "CLUTCH_EVENT_STREAM_REGRESSION",
+      `expected=${EXPECTED_EVENT_ONLY_SUITE_V1}\nactual=${eventOnlySuiteDigest}`);
     console.log("CS True Clutch R4: PASS");
   } finally {
     if (vite) await vite.close();

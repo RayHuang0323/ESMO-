@@ -29,6 +29,7 @@ const EXPECTED_RAND_CALLS = 21;
 // Intentionally no update/rebaseline path. Capture once through the runner, inspect,
 // then replace this literal manually.
 const EXPECTED_WIRING_SUITE_V1 = "fe6b16dc81c356828e45181b186356b222e7b8de2311c8cadb689fdef3f1343e";
+const EXPECTED_TRAJECTORY_SUITE_V1 = "00fa99fee39a80d85d6fb713fee65c11081266bbd0c6a4dbd113f1720874f2f0";
 
 const RETURN_MARKER = "return { EsportsFPS3D, buildMatchResult };";
 const RETURN_REPLACEMENT = "return { EsportsFPS3D, buildMatchResult, simulateFps, ROSTER, TACTICS_DB };";
@@ -302,12 +303,32 @@ function buildWiringDocument(sim, scenario) {
   };
 }
 
+function buildMetricNeutralTrajectoryDocument(wiringDocument) {
+  return {
+    schema: "CsStatMetricNeutralTrajectory.v1",
+    scenario: wiringDocument.scenario,
+    result: {
+      tScore: wiringDocument.result.tScore,
+      ctScore: wiringDocument.result.ctScore,
+      roundCount: wiringDocument.result.roundCount,
+      players: wiringDocument.result.players.map(({ adr, mvpRounds, rating, ...player }) => player),
+    },
+    rounds: wiringDocument.rounds,
+    frames: wiringDocument.frames.map((frame) => ({
+      ...frame,
+      players: frame.players.map(({ dmgDealt, ...player }) => player),
+    })),
+  };
+}
+
 function buildDigests(sim, scenario) {
   const strictBefore = JSON.stringify(sim);
   const result = resultProjection(sim);
   const rounds = roundsProjection(sim);
   const wiringDocument = buildWiringDocument(sim, scenario);
+  const trajectoryDocument = buildMetricNeutralTrajectoryDocument(wiringDocument);
   gate(wiringDocument.schema === "CsStatWiringDigest.v1", "SCHEMA_MISMATCH");
+  gate(trajectoryDocument.schema === "CsStatMetricNeutralTrajectory.v1", "TRAJECTORY_SCHEMA_MISMATCH");
   const playerResultDigests = Object.fromEntries(
     result.players.map((player) => [player.id, sha256(canonicalJson(player, { rejectUndefined: true }))]),
   );
@@ -316,6 +337,7 @@ function buildDigests(sim, scenario) {
     behaviorDigest: sha256(canonicalJson(wiringDocument, { gameplay: true, rejectUndefined: true })),
     resultDigest: sha256(canonicalJson(result, { rejectUndefined: true })),
     roundsDigest: sha256(canonicalJson(rounds, { rejectUndefined: true })),
+    trajectoryDigest: sha256(canonicalJson(trajectoryDocument, { gameplay: true, rejectUndefined: true })),
     playerResultDigests,
   };
   const strictAfter = JSON.stringify(sim);
@@ -349,6 +371,7 @@ function assertRepeat(first, second, label) {
   gate(first.behaviorDigest === second.behaviorDigest, "BEHAVIOR_NON_DETERMINISTIC", label);
   gate(first.resultDigest === second.resultDigest, "RESULT_NON_DETERMINISTIC", label);
   gate(first.roundsDigest === second.roundsDigest, "ROUNDS_NON_DETERMINISTIC", label);
+  gate(first.trajectoryDigest === second.trajectoryDigest, "TRAJECTORY_NON_DETERMINISTIC", label);
   gate(canonicalJson(first.playerResultDigests) === canonicalJson(second.playerResultDigests),
     "PLAYER_RESULT_NON_DETERMINISTIC", label);
 }
@@ -364,6 +387,10 @@ function treatmentView(mapKey, tTactic, ctTactic, roster) {
         .map((player) => [player.id, player]),
     ),
   };
+}
+
+function legacyRunProjection({ trajectoryDigest, ...run }) {
+  return run;
 }
 
 async function main() {
@@ -547,14 +574,28 @@ async function main() {
       schema: DIGEST_SCHEMA,
       seedGenerationVersion: SEED_GENERATION_VERSION,
       seedSetSha256,
-      baseline: baselineSuite,
-      treatments: treatmentSuite,
+      baseline: baselineSuite.map(legacyRunProjection),
+      treatments: treatmentSuite.map(({ statCase, runs }) => ({
+        statCase,
+        runs: runs.map(legacyRunProjection),
+      })),
       summaries,
     };
     const suiteDigest = sha256(canonicalJson(suitePayload, { rejectUndefined: true }));
+    const trajectorySuiteDigest = sha256(canonicalJson({
+      schema: "CsStatMetricNeutralTrajectory.v1",
+      seedGenerationVersion: SEED_GENERATION_VERSION,
+      seedSetSha256,
+      baseline: baselineSuite.map(({ seed, trajectoryDigest }) => ({ seed, trajectoryDigest })),
+      treatments: treatmentSuite.map(({ statCase, runs }) => ({
+        statCase,
+        runs: runs.map(({ seed, trajectoryDigest }) => ({ seed, trajectoryDigest })),
+      })),
+    }, { rejectUndefined: true }));
     const simulationCount = FIXED_SEEDS.length * 2 * (STAT_CASES.length + 1);
     console.log(`simulations: ${simulationCount}`);
     console.log(`wiringSuiteDigest: ${suiteDigest}`);
+    console.log(`trajectorySuiteDigest: ${trajectorySuiteDigest}`);
     console.log(`stat summaries: ${JSON.stringify(summaries)}`);
     console.log("statistics: not computed (no p-value; no significance gate)");
     console.log("formal gameplay baseline: protected by separate cs_measure_r1 segment");
@@ -563,6 +604,10 @@ async function main() {
       `candidate=${suiteDigest}`);
     gate(suiteDigest === EXPECTED_WIRING_SUITE_V1, "WIRING_MEASUREMENT_REGRESSION",
       `expected=${EXPECTED_WIRING_SUITE_V1}\nactual=${suiteDigest}`);
+    gate(EXPECTED_TRAJECTORY_SUITE_V1 !== "__CAPTURE_MANUALLY__", "TRAJECTORY_SUITE_NOT_LOCKED",
+      `candidate=${trajectorySuiteDigest}`);
+    gate(trajectorySuiteDigest === EXPECTED_TRAJECTORY_SUITE_V1, "STAT_TRAJECTORY_REGRESSION",
+      `expected=${EXPECTED_TRAJECTORY_SUITE_V1}\nactual=${trajectorySuiteDigest}`);
 
     console.log("CS Stat Wiring R3: PASS");
   } finally {
