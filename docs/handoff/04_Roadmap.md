@@ -54,6 +54,10 @@ call sites 不變；正式 FPS source 未修改。報告：
 lastAlive 情境未觀察到，player-side `synergy` 不可達，`learning` 無 gameplay read。
 完整矩陣：`review/cs-gameplay/CS_16_STAT_AUDIT_R3.md`。
 
+`CS True Clutch R4` 亦已完成：158 lastAlive player opportunities（140 次 1v2+）已可連到
+combat 與 round conversion；legacy 27 次只是真實 32 次勝利的 kill-involved subset。
+報告：`review/cs-gameplay/CS_TRUE_CLUTCH_R4_REPORT.md`。
+
 **下一步（依序）**：
 
 1. 持續遵守 `review/moba-combat/METHOD_CAVEAT.md` 開頭兩條工程規則——尤其
@@ -61,9 +65,10 @@ lastAlive 情境未觀察到，player-side `synergy` 不可達，`learning` 無 
    會重蹈 `towerPushes` 的覆轍（那讓整輪結論作廢）。
 2. R3 已沿用 `STAT_IMPACT_FINAL_R10.md` §7 的六種病因完成 16 項矩陣；不得用
    13/16 observed 或 changed-seed count 比較素質強弱。
-3. 下一個最小 Sprint 只補 true clutch / lastAlive opportunity→combat→round conversion，
-   解除 `resilience` 0/16 與 legacy `clutches` 定義的量測不確定性。
-4. retreat 與 defuse 之後各自拆成獨立 instrumentation Sprint，不與 clutch 綁在一起。
+3. R4 已解除 true clutch/lastAlive baseline coverage；`resilience` 對 t2 只有 1 次 state／
+   2 次 combat opportunities，仍不足以 calibration。
+4. 下一個最小 Sprint 只補 retreat opportunity→gate→displacement→re-engage/result；
+   defuse 之後另拆，不與 retreat 綁在一起。
 5. **動手量測前**仍先讀作用點遞增條件（層級／節流／上限），
    確認 KPI 量得到它宣稱要量的東西。本輪最貴的教訓就是這個順序搞反了。
 6. learning／synergy 接線、權重、公式、新 branch、角色定位只做證據與建議；

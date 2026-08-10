@@ -6162,3 +6162,55 @@ node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,cs_stat_wiring_
 Calibration 維持 No-Go。下一個最小安全 Sprint 是 true clutch / lastAlive
 opportunity→combat→round conversion instrumentation；不夾帶 retreat、defuse、result contract
 修正或 learning/synergy 接線。既有未追蹤 baseline log 仍排除，未 push。
+
+---
+
+## CS True Clutch / LastAlive Instrumentation R4（2026-08-10）
+
+### 目標與邊界
+
+R3 的 `resilience` fixed probe 為 0/16，但靜態作用點只在 `lastAlive`；現行
+`clutches` 又只有勝方單一 survivor + round kill 條件。本 Sprint 只建立真實
+lastAlive opportunity→combat→round result 量測，不修改公式、result 或 contract。
+
+### 實作與 hard gates
+
+- 規格：`review/cs-gameplay/CS_TRUE_CLUTCH_R4_SPEC.md`。
+- 新增 `tools/check_cs_clutch_instrumentation_r4.mjs` 與 runner `cs_clutch_r4` segment。
+- state hook 放在每 tick fresh `aliveT/aliveCT` 後、combat 前；避免死亡後 stale array length。
+- 記錄 state opportunity、combat opportunity、fire trigger、damage conversion、round result
+  與每回合 legacy summary；1v1 與 1v2+ 分開。
+- 固定 R1 16 seeds，每 seed collector off/on-1/on-2，共 48 simulations。
+- off/on 完整 sim JSON、on-1/on-2 events 逐 seed一致；21 RNG call sites 不變。
+- 每個 opportunity/result、combat chain、round summary 與 sim `players[].clutches` 全部交叉驗證。
+
+### 固定結果（非 calibration）
+
+eventSuiteDigest：
+`1a0e78c1073dea522dffa52e87aab4f094f4116a778d4cfe7a9fe9127aedc6d3`。
+
+- 16 場／171 rounds：158 player opportunities；1v1 18、1v2+ 140。
+- 1v2/1v3/1v4/1v5 = 24/50/40/26。
+- opportunity wins 32（20.253%）；1v2+ wins 22（15.714%）。
+- combat opportunities 444；triggers/conversions 266/266；kills 159。
+- legacy clutches 27，legacy-without-opportunity 0；另有 5 次 opportunity win 未被計入
+  （bomb 1、time 4）。因此 legacy 是 kill-involved subset，不是全部 true clutch wins。
+- `t2` 只有 1 state opportunity、2 combat opportunities、1 win；resilience 樣本極窄，
+  不能由 R3 0/16 推論未接線或權重過輕。
+
+### 驗證
+
+```text
+node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,cs_stat_wiring_r3,cs_clutch_r4,build --timeout=600000
+```
+
+- CS23 28/28、R1、R2、R3、R4、build 全 PASS。
+- runner 本次 6/6、exit 0；其餘 13 segments 未執行，不宣稱全套通過。
+- `CsGameplayDigest.v1` expected suite、正式 source SHA、RNG、result shape 均未變。
+- `git diff --check`：PASS。
+
+### 下一步
+
+Calibration 維持 No-Go。下一個最小安全 Sprint 是 retreat opportunity→gate→displacement→
+re-engage/result instrumentation，只服務 `apm/positioning/courage/clutch`，不夾帶 defuse、
+threshold/公式修改、legacy result 修正或 learning/synergy 接線。未 push。

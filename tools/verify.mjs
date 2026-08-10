@@ -64,6 +64,7 @@ const SEGMENTS = [
   { id: "cs_measure_r1", script: "tools/check_cs_measurement_r1.mjs", shape: /CS Measurement R1: PASS/, note: "CS gameplay 決定性量測 pilot" },
   { id: "cs_instrument_r2", script: "tools/check_cs_instrumentation_r2.mjs", shape: /CS Instrumentation R2: PASS/, note: "CS combat opportunity→conversion 旁路量測" },
   { id: "cs_stat_wiring_r3", script: "tools/check_cs_stat_wiring_r3.mjs", shape: /CS Stat Wiring R3: PASS/, note: "CS 16 項素質 paired wiring measurement" },
+  { id: "cs_clutch_r4", script: "tools/check_cs_clutch_instrumentation_r4.mjs", shape: /CS True Clutch R4: PASS/, note: "CS lastAlive／1vN opportunity→round conversion" },
   //  ⚠ 下面五支在 flat 模式下的分母會變小（巢狀子驗證改由本 runner 各跑一次）。
   //    這裡填的是**該支自己健康時的完整數字**，不是遷就現況——所以
   //    experience26（§17 replay 容量，TD-19）與 runtime29（§29 順序公平性，TD-21）
