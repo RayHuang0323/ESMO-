@@ -6391,3 +6391,37 @@ node tools/verify.mjs --only=cs_measure_r1,cs_instrument_r2,cs_stat_wiring_r3,cs
 - 最終 runner 加入 CS23、Progress25、production build，共 **10/10 PASS**；
   `git diff --check` PASS。其餘非本 Sprint segments 未執行，不宣稱全套通過。
 - Calibration 維持 No-Go；未 push。
+
+---
+
+## CS Defuse Stale State Repair R9 Counterfactual Audit（2026-08-10）
+
+### Checkpoint
+
+先將 R1–R8 的 14 個 local commits push 到既有
+`origin/release/moba-combat-closure`。本機、remote-tracking 與 GitHub remote HEAD 均為
+`6418f96834e641b753b31c0508a93cb4233c6303`；既有未追蹤 baseline log 未納入。
+
+### 規劃與 Grill
+
+封版只允許 defuse block 內建立 post-combat `defuseAliveT/defuseAliveCT`，禁止刷新共用
+alive arrays、處理 `how:bomb`／utility／learning／synergy 或調整 balance。簡短 Grill 判定
+Go with hard gates：score/winner、RNG consumption 與非 defuse gameplay 必須 zero-diff；
+任一失敗立即 No-Go，禁止更新 expected digest 掩蓋。
+
+### Counterfactual 結果
+
+- baseline seed `3820910912`：candidate 移除 dead T contest，defuse 提前一 tick；比分、
+  winner/how、final result 與 RNG call count相同，legacy 只多一個無 events/casts/comms 的
+  defuse-tail frame。
+- `reflex` treatment seed `1011896540`：證明 legacy 已死亡 ct5 可被選為 defuser，甚至留下
+  「拆彈中」state；candidate 可正確移除。
+- `clutch` treatment seed `4200255727`：runtime RNG consumption **2005→2004**。當下比分、
+  round winner/how 與 final player result仍相同，但後續 RNG trajectory 不再 zero-diff。
+
+### 判定
+
+**No-Go。** Production source、R1–R8 verifier／expected hashes、contract、Store、UI、Progress
+全部未修改；未建立 R9 runner segment。沒有採用 dummy RNG、特判延遲完成、per-round RNG
+重構或放寬 verifier。No-Go 收尾後 CS23、R1–R8、Progress25、build **10/10 PASS**；
+完整證據：`review/cs-gameplay/CS_DEFUSE_STALE_REPAIR_R9_SPEC.md`。
