@@ -6463,3 +6463,55 @@ Calibration 維持 No-Go。下一個安全任務是 CS Utility Damage Audit R7�
 16 項最終風險／P0–P3 優先級已追加到 `CS_16_STAT_AUDIT_R3.md`。
 Calibration 維持 No-Go；下一步若修 ADR overkill、stale defuse、`how:bomb`、learning/synergy
 或 utility gameplay，都會觸及正式 gameplay/result/contract/digest，需另開授權 Sprint。未 push。
+
+---
+
+## MOBA Combat 16 項素質 closure — Codex 整合部署（2026-08-10）
+
+### 整合策略與範圍
+
+- 從乾淨 `main@8ad658f` 建立 `integrate/moba-combat-closure`，以 squash 方式承接
+  `release/moba-combat-closure` 的 15 commits；唯一衝突是本檔追加章節，雙方內容完整保留。
+- 原 release 歷史誤追蹤 201 個 `.log/.json/.csv` fixed-seed probe 產物，未直接推入 main；
+  部署版排除全部生成輸出並加入 ignore 規則。原分支／未追蹤 baseline log 均未改動。
+- 正式 `src` 僅 5 檔：`LogicEngine.js`、`matchProgression.js`、`mobaPlayerStats.js`、
+  `playerModel.js`、`mobaReplay.js`。正式 FPS source、RNG、result、Store、UI 均未修改。
+
+### 玩家行為改動
+
+- `teamfightSyncV1`、`roamQualityV1`、`riskAssess`、`diveAssess` 為現役 v3 行為；
+  synergy 改為共同投入品質，Support 遊走增加候選評分／travel commitment／6 秒重評，
+  並拒絕明顯不安全追擊與越塔。
+- learning 進入本場 `xpRateScale`，新增 `meta`「版本研究」課程；replay 取樣 2.0→2.5 秒。
+- `retreatReevalV1=false`、`retreatHoldV1=false`，修法未出貨；未修改傷害、winner、gold、
+  post-match reward 或 replay frame contract 版本。
+- CS R1–R7 仍是 deterministic instrumentation／read-chain audit；Calibration No-Go。
+
+### Fresh 驗證與 baseline 判定
+
+```text
+乾淨 main：milestone_j 37/39 EXIT=1；milestone_e 47/49 EXIT=1
+integration tools/verify.mjs：26/28；唯一兩紅仍為 J 37/39、E 47/49
+runtime29 PASS（190s）；production build PASS（28s）
+combat credibility 45/45 PASS
+roam quality 18/18 PASS
+teamfight commitment 15/15 PASS
+retreat chain：retreatHoldV1=false，只完成基準診斷，未做斷言
+git diff --check／未解衝突／禁止產物：全部 0
+```
+
+E 在 runner 顯示 0 秒是 208ms 完整執行，不是啟動 crash。舊 acceptance worktree 中屬於
+已不存在合併樹的 ignored `.verify-state.json` 已精確移除；未停止任何既有 Node 行程。
+
+### Commit／push／Pages
+
+- 整合 commit：`ce22b9b`（`MOBA Combat: integrate 16-stat closure and CS audit`）。
+- 遠端 `main` 經 SHA 核對後由 `8ad658f` fast-forward 到 `ce22b9b`，未 force push。
+- GitHub Actions run `31362830501`：build、deploy jobs 均 `success`。
+- 正式站 HTML 與 bundle 均 HTTP 200；現役 `assets/index-CUf50IjS.js`（2,600,619 bytes）
+  已驗到「版本研究」與 `predicted_ttk_too_long`，不是只確認 workflow 狀態。
+
+### 未實測
+
+Node 與 HTTP 無法證明 Android 真機 FPS、觸控、熱降頻或視覺體感；以上仍待 Ray 人工驗收。
+本輪完成後停止，未自動開始下一 Sprint。
