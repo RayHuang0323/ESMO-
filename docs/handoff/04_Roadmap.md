@@ -44,6 +44,11 @@
 也未進入 calibration。完整證據見
 `review/cs-gameplay/CS_MEASUREMENT_PILOT_R1.md`。
 
+`CS Combat Instrumentation R2` 也已完成：test-only memory hooks 量到
+opportunity→trigger→conversion，off／on 完整 sim 逐 seed 相同，21 個 `rand()`
+call sites 不變；正式 FPS source 未修改。報告：
+`review/cs-gameplay/CS_INSTRUMENTATION_R2_REPORT.md`。
+
 **下一步（依序）**：
 
 1. 持續遵守 `review/moba-combat/METHOD_CAVEAT.md` 開頭兩條工程規則——尤其
@@ -53,8 +58,8 @@
    **六種病因**（權重幅度／作用點設計／情境限定／分布飽和／接線不通電／量測錯誤）。
 3. 逐一建立 16 項素質矩陣：實際讀取位置、作用點、廣泛／情境／未生效、
    是否改變 `simulateFps`、KPI 缺口、文件差異、A–E 分類、風險與優先級。
-4. 只實作最小、不改 gameplay outcome 的 instrumentation；先量
-   opportunity→trigger→conversion，並以 R1 fixed-seed digest 逐 seed 對照。
+4. R2 已完成第一條 opportunity→trigger→conversion instrumentation；後續只按
+   16 項矩陣證據補 retreat／clutch／defuse 等獨立最小量測，不整批擴張。
 5. **動手量測前**先讀每個 CS 素質作用點的遞增條件（層級／節流／上限），
    確認 KPI 量得到它宣稱要量的東西。本輪最貴的教訓就是這個順序搞反了。
 6. learning／synergy 未接線、權重、公式、新 branch、角色定位只做證據與建議；

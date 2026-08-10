@@ -6053,3 +6053,55 @@ KAST 65.875→50.563、rating 1.554→0.888；兩組 T wins 都是 0/16。
 learning／synergy 接線、公式、角色定位與 calibration 均只做證據，不直接修改。
 
 完整方法與 schema：`review/cs-gameplay/CS_MEASUREMENT_PILOT_R1.md`。
+
+---
+
+## CS Combat Instrumentation R2（2026-08-10）
+
+### 目標與邊界
+
+建立第一條真實 action-point KPI：
+combat opportunity→fire trigger→duel／damage conversion→headshot result。
+採 Vite test-only exact memory hooks，不修改正式 `EsportsFPS3D.jsx`、
+gameplay／contract／Store／UI，也不調 RNG、公式、權重或平衡值。
+
+### 實作與 hard gates
+
+- 新增 `tools/check_cs_instrumentation_r2.mjs`。
+- `tools/verify.mjs` 新增 `cs_instrument_r2` segment。
+- 六個 transform marker 各精確命中一次，逆轉後逐字等於正式來源。
+- 原始 21 個 `rand()` call tokens 的數量與順序完全不變。
+- 固定 R1 的 16 seeds；每 seed 跑 collector off／on-1／on-2，共 48 simulations。
+- off／on 完整 sim JSON 逐 seed 相同；兩次 collector event digest 相同。
+- opportunity ≥ trigger，trigger＝conversion，probability／clamp／damage／kill invariants 全通過。
+
+### 固定情境結果（非 calibration）
+
+eventSuiteDigest：
+`5720e45fd72e5e5428ff6e8e800068012a7f6b2b04c4886ce8e9f0cfb1a50089`。
+
+- opportunities 4,385；triggers／conversions 2,133（48.643%）。
+- kills 1,079（50.586% conversion）；headshots 971（45.523%）。
+- Pt lower／upper clamp 5／1。
+- `t2` opportunities／conversions 1,257／606。
+- overkill 1,069 events／53,309 damage。
+
+ADR 目前把 rolled damage 全額計入，即使超過 defender 剩餘 HP；R2 將此確認為
+**A 類 measurement bug**。本輪不改 result／rating／contract／digest，只留證據。
+
+### 驗證
+
+```text
+node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,build --timeout=600000
+```
+
+- `cs23` 28/28 PASS。
+- `cs_measure_r1` PASS；`CsGameplayDigest.v1` expected baseline 未變。
+- `cs_instrument_r2` PASS。
+- build PASS。
+- runner 本次 4/4、exit 0；其他 13 segments 未跑。
+- 正式 FPS source SHA 仍為
+  `5b9360f457c95034cdfdc9e864c04a761e1afdba01501c7e383bb9075e048c3d`。
+
+完整報告：`review/cs-gameplay/CS_INSTRUMENTATION_R2_REPORT.md`。
+下一步進入 16 項素質 Audit／wiring probe；Calibration 仍為 No-Go。
