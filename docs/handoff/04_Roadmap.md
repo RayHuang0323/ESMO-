@@ -1,5 +1,100 @@
 # 04 Roadmap
 
+## MOBA Combat AI 封版（2026-08-10）
+
+**狀態：✅ 已封版。** Release Gate 8/8 全綠（首次），combat credibility 45/45。
+
+| 封版識別 | 值 |
+|---|---|
+| Branch | `release/moba-combat-closure` |
+| Commits | `6efac04`（closure）／`22daf6b`（紀錄） |
+| **Tag** | **`moba-combat-closure`** |
+| Merge to main | ⏳ 待人工執行（安全機制阻擋，未繞過） |
+
+**四項已知未完成（撤退僵硬／comms／synergy／TD-19）均不阻擋封版**，
+明細見 `08_目前待辦與風險.md` 的封版紀錄節。
+報告：`review/moba-combat/STAT_IMPACT_FINAL_R10.md`（16 項素質最終分類，含 §7 R11 更正）、
+`RETREAT_REEVAL.md`（撤退根因與四組實驗）、`RETREAT_CHAIN_FIX.md`（失敗實驗記錄）、
+`METHOD_CAVEAT.md`（兩條工程規則）。
+
+### 本輪解決
+
+| 項目 | 結果 |
+|---|---|
+| 16 項素質影響盤點 | 完成。分類：A 0／B 5／C 6／D 2／E 1／**F 2**（comms、synergy） |
+| `towerPushes` 指標誤讀 | 更正。推進強度改用 `p.twrDmg` ＋推掉的塔＋主堡傷害 |
+| **TD-21**（`runtime29` §29 順序公平性） | ✅ **解決**——根因是**檢定力不足不是引擎偏差**。`ORDER_SEEDS` 40→160，**門檻未動**。`runtime29` 首次 35/35 |
+| 長 verifier 跑法 | 一律走 `tools/verify.mjs`（直跑 runtime29 會 fan-out 63 子行程） |
+
+### 後續（低優先）
+
+1. **撤退僵硬體驗** — `retreatReevalV1` 已實作但**未出貨**（撞破 `quality_p03` 能力放大護欄）。
+   下一輪把取消改成**引擎預設行為（雙方等值）**。詳見 `08_目前待辦與風險.md`。
+2. **F 類兩項** — `comms` 的 `roamInfoAdj`（全表最大權重之一卻不通電）、
+   `synergy` 的分布飽和（40 分與 70 分逐位元相同）。
+3. **TD-19** — `experience26` §17 replay 容量，目前 PASS 但貼近上限（670 frames／1974KB）。
+4. 另外 8 項素質尚未用真實 KPI 在 standard 條件重測（判定不依賴已失效指標，補測僅為一致性）。
+
+### 下一階段交接
+
+**CS Measurement／16 項素質盤點**（Codex，2026-08-10 更新）。
+
+`CS Measurement Pilot R1` 已完成：`cs23` 28/28、`cs_measure_r1`、build 均 PASS；
+`CsGameplayDigest.v1` 已用固定 16 seeds 鎖定。R1 未修改正式 `EsportsFPS3D.jsx`，
+也未進入 calibration。完整證據見
+`review/cs-gameplay/CS_MEASUREMENT_PILOT_R1.md`。
+
+`CS Combat Instrumentation R2` 也已完成：test-only memory hooks 量到
+opportunity→trigger→conversion，off／on 完整 sim 逐 seed 相同，21 個 `rand()`
+call sites 不變；正式 FPS source 未修改。報告：
+`review/cs-gameplay/CS_INSTRUMENTATION_R2_REPORT.md`。
+
+`CS 16 Stat Wiring R3` 已完成：固定 16 seeds、16 個單一 treatment、每 arm 重跑兩次，
+共 544 simulations；13/16 項觀察到 output-only gameplay 差異。`resilience` 是
+lastAlive 情境未觀察到，player-side `synergy` 不可達，`learning` 無 gameplay read。
+完整矩陣：`review/cs-gameplay/CS_16_STAT_AUDIT_R3.md`。
+
+`CS True Clutch R4` 亦已完成：158 lastAlive player opportunities（140 次 1v2+）已可連到
+combat 與 round conversion；legacy 27 次只是真實 32 次勝利的 kill-involved subset。
+報告：`review/cs-gameplay/CS_TRUE_CLUTCH_R4_REPORT.md`。
+
+`CS Retreat R5` 已完成：1,492 player-tick opportunities 可連到 895 threshold triggers／
+actual displacements、261 round-player episodes、94 recontacts、74 fire re-engages 與 round result。
+固定 roster 沒有 0.82–0.87 近門檻 exposure，不能由 trigger count推論效果或直接 calibration。
+報告：`review/cs-gameplay/CS_RETREAT_R5_REPORT.md`。
+
+`CS Defuse R6` 已完成：20 planted rounds／140 bomb ticks 可連到 27 proximity、16 progress
+ticks 與 4 completes。量到 1 次 stale dead T 阻擋 live CT 的 gate bug；`how:bomb` 也過載
+CT 全滅／round timeout／timer zero。報告：`review/cs-gameplay/CS_DEFUSE_R6_REPORT.md`。
+
+`CS Utility Damage R7` 唯讀 audit 已完成：HE/molly 無 damage branch，player smoke 無 LOS
+gameplay，flash 有 Pt effect 但與 gun hit 共用 `p.flash` 且無 attribution。`utilDmg:0` 是
+gameplay/design placeholder，不是少收既有 damage。報告：
+`review/cs-gameplay/CS_UTILITY_DAMAGE_R7_AUDIT.md`。
+
+**下一步（依序）**：
+
+1. 持續遵守 `review/moba-combat/METHOD_CAVEAT.md` 開頭兩條工程規則——尤其
+   **「summary counter ≠ gameplay outcome」**。CS 盤點若拿 `exec.*` 計數器當效果指標，
+   會重蹈 `towerPushes` 的覆轍（那讓整輪結論作廢）。
+2. R3 已沿用 `STAT_IMPACT_FINAL_R10.md` §7 的六種病因完成 16 項矩陣；不得用
+   13/16 observed 或 changed-seed count 比較素質強弱。
+3. R4 已解除 true clutch/lastAlive baseline coverage；`resilience` 對 t2 只有 1 次 state／
+   2 次 combat opportunities，仍不足以 calibration。
+4. R5 retreat measurement 已完成；沒有修改 `0.82` threshold、公式或 gameplay branch。
+5. R6 defuse baseline measurement 已完成；stale-array 與 `how:bomb` 真 bug 只留證據，
+   未修改 gameplay/result/UI。
+6. R7 utility read-chain 已完成；禁止為固定 0 新增假 collector 或 UI 數字。
+7. 目前安全 measurement Sprint 已收斂。下一步優先建議另案審查 ADR overkill/result semantics；
+   它會改 result/rating 與 digest，沒有新授權不得實作。
+8. **動手量測前**仍先讀作用點遞增條件（層級／節流／上限），
+   確認 KPI 量得到它宣稱要量的東西。本輪最貴的教訓就是這個順序搞反了。
+9. learning／synergy 接線、權重、公式、新 branch、角色定位只做證據與建議；
+   不直接修改。Calibration 維持 No-Go，直到 measurement coverage 足以辨識病因。
+
+---
+
+
 ## 目前階段
 
 ESMO 目前處於：

@@ -203,7 +203,11 @@ const ALLOWED = ["retreatAdj", "returnAdj", "joinAdj", "objAdj", "laneAdj",
   //  P0-2：本場經驗獲取速率（→ mlv → 引擎自己的等級曲線）
   "xpRateScale",
   //  P0-3：最小戰鬥品質層（補刀／空揮／技能放空／集火／撤退時機）
-  "lastHitLoss", "attackWaste", "castMiss", "focusRate", "retreatLate"];
+  "lastHitLoss", "attackWaste", "castMiss", "focusRate", "retreatLate", "commitAdj",
+  //  Combat Decision C（2026-08-08）：遊走決策品質層。四項素質分工，
+  //  全部**決定性**使用（不擲骰、不消耗 rng），沒有一個乘進傷害式。
+  //  mapAware→可見範圍｜comms→資訊可信度｜decision→出發門檻｜leadership→協同
+  "roamSightAdj", "roamInfoAdj", "roamGateAdj", "roamFollowAdj"];
 const modKeysOk = Object.values(modsB.blue).every(
   (m) => Object.keys(m).length === ALLOWED.length && Object.keys(m).every((k) => ALLOWED.includes(k)));
 const rA = run(4242, { mods: modsA, tactic: M1 }), rD = run(4242, { mods: modsD, tactic: M1 });

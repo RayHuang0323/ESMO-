@@ -135,8 +135,11 @@ console.log("══ Milestone P0-2：能力影響 MOBA 戰鬥品質 ══\n");
   const avgDiff = Math.round(diff / SEEDS.length * 100) / 100;
   ck("3d) **不誇張**：極端能力差的本場等級差距在 0.1–2.5 級之間",
     avgDiff > 0.1 && avgDiff < 2.5, `平均差 ${avgDiff} 級`);
-  ck("3e) 取樣能力項是「補刀與清線」相關的四項",
-    Object.keys(STAT_MAP.xpRateScale).sort().join() === "accuracy,apm,focus,mapAware",
+  //  ⚠ 精確比對的 allowlist：任何新增的取樣項都必須在這裡明確登記過。
+  //  2026-08-07 補上 `learning`（學習力）——它是 16 項素質中最後一項沒接進戰鬥的，
+  //  語意就是「這一場學得多快」，掛在本場經驗速率上最貼切。權重最小（+0.006）。
+  ck("3e) 取樣能力項是「補刀與清線」相關項 ＋ 學習力",
+    Object.keys(STAT_MAP.xpRateScale).sort().join() === "accuracy,apm,focus,learning,mapAware",
     Object.keys(STAT_MAP.xpRateScale).join("/"));
 }
 

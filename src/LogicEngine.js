@@ -53,6 +53,7 @@ const SPELL_FX_COLOR = {
   barrier: 0x93c5fd, ignite: 0xf97316, ghost: 0xc4b5fd, cleanse: 0x67e8f9,
 };
 
+const NEUTRAL_ROAM = { roamSightAdj: 0, roamInfoAdj: 0, roamGateAdj: 0, roamFollowAdj: 0 };
 export class LogicEngine {
   /**
    * @param {number} seed
@@ -148,6 +149,20 @@ export class LogicEngine {
           recallT: 0,          // 引導剩餘秒數（>0 = 回城中，原地不動）
           recallHpLast: 0,     // 上一 tick 血量（受擊中斷判定）
           recallCdAt: 0,       // 中斷後的重試冷卻
+          //  Retreat Hold：本段撤退是否已惡化到「非回泉水不可」。
+          //  黏性旗標（一旦為真就維持到本段撤退結束）⇒ 血量在門檻附近抖動時
+          //  不會讓移動目標在「自家塔」與「泉水」之間來回跳。
+          retreatDeep: false,
+          //  Retreat Hold：這一 tick 是否處於「退守自家塔就地恢復」狀態。
+          //  由移動決策階段寫入、由 `_combatStep` 的回復段讀取（兩相 tick 下
+          //  移動已全數跑完才進交戰，順序安全）。
+          retreatHolding: false,
+          //  Retreat Re-evaluate：下一次撤退重評的時點。
+          //  ⚠ 觸發分支每 tick 都會把它往後推 ⇒ 血量仍低於門檻時不會重評（正確：
+          //     還在危險裡，沒有取消的道理）。只有血量回到門檻之上、觸發分支
+          //     不再執行時，這個計時器才會到期 ⇒ 取消檢查自然只在「已脫離」時發生。
+          retreatEvalT: 0,
+          retreatCancelCdAt: 0,   // Retreat Re-evaluate：取消冷卻到期時點（打斷限制環）
           // Milestone D：有限時戰鬥 Buff／Debuff。until 是模擬秒絕對時間；
           // v1/v2 永遠不讀，snapshot 只輸出剩餘秒數。
           redBuffUntil: 0, blueBuffUntil: 0, redSlowUntil: 0,
@@ -262,6 +277,20 @@ export class LogicEngine {
     // Milestone F：進行中的團戰（帶遲滯；接觸暫斷不算結束）。v1/v2 永遠是 null。
     this.fight3 = null;
     this.fightLog = [];       // [{ start, end, dur, deaths, winner, kind, converted }]（觀測用）
+    //  Combat Decision B：投入決策的純觀測容器**必須在 constructor 就存在**。
+    //  ⚠ `_joinV3` 在**沒有呼叫 `configureMatch`** 時也會執行（regress / regress2
+    //     不帶戰術）。初始化只放在 `configureMatch` 會讓那條路徑直接炸
+    //     （實測：`Cannot read properties of undefined (reading 'blue')`）。
+    //     `configureMatch` 仍會重設一次，讓每次設定戰術都從零開始計數。
+    this.tfObs = { blue: this._newTfObs(), red: this._newTfObs() };
+    this._tfEp = { blue: null, red: null };
+  }
+
+  /** Combat Decision B：投入決策觀測欄位（constructor 與 configureMatch 共用）。 */
+  _newTfObs() {
+    return { soloEntry: 0, held: 0, releasedSync: 0, releasedTimeout: 0,
+      entries: 0, readyAtEngage: 0, spreadSum: 0, spreadN: 0,
+      commit: 0, hold: 0, decline: 0, badCommit: 0 };
   }
 
   // ── S24 戰術層 ────────────────────────────────────────────────────────────
@@ -286,12 +315,31 @@ export class LogicEngine {
     const E = () => ({ invadeAttempts: 0, invadeKills: 0, topGanks: 0, midGanks: 0, botGanks: 0, gankKills: 0,
       dragonContests: 0, baronContests: 0, groupedFights: 0, splitPushActions: 0, towerPushes: 0, supportRoams: 0 });
     this.exec = { blue: E(), red: E() };
+    //  Combat Decision C：遊走決策的**純觀測**計數。
+    //  ⚠ 刻意不放進 `exec`：那個物件的形狀被 replay 契約與既有驗證器讀取，
+    //    加欄位會擴散到不相干的斷言。這裡是獨立命名空間，只在 playerStatsOn 時遞增。
+    const RO = () => ({ declined: 0, aborted: 0, retargeted: 0, lanes: { top: 0, mid: 0, bot: 0 } });
+    this.roamObs = { blue: RO(), red: RO() };
+    //  Combat Decision B：團戰同步的純觀測（同樣不放進 exec，理由同上）。
+    //    soloEntry     進場當下該側在戰場半徑內少於 2 人 ⇒ 單獨送頭
+    //    held          因同步閘而在 standoff 待命的 tick 數
+    //    releasedSync  因 ETA 對齊而放行的次數
+    //    releasedTimeout 因等待窗逾時而放行的次數（越多代表同步越失敗）
+    //    entries       進場次數（soloEntry 的分母）
+    //    readyAtEngage 進場當下已在戰場半徑內的同側人數累計（÷entries = tfReadyAtEngage）
+    //    firstIn/lastIn 每場團戰的首位／末位進場時點（算 arrivalSpread）
+    this.tfObs = { blue: this._newTfObs(), red: this._newTfObs() };
+    this._tfEp = { blue: null, red: null };
     this._tac = {};
     for (const side of ["blue", "red"]) {
       const K = this.tk[side];
       const st = { gankLane: null, gankUntil: 0, gankNext: 25 + this.rng2() * 15, invadeUntil: 0,
         splitEvalT: -1, splitGo: false, splitTick: -99, pushTick: -99,
-        roamUntil: 0, roamNext: 35 + this.rng2() * 15, inFight: false, dragonSeen: false, baronSeen: false };
+        roamUntil: 0, roamNext: 35 + this.rng2() * 15, inFight: false, dragonSeen: false, baronSeen: false,
+        //  Combat Decision C：遊走目標與重評時點
+        roamLane: null, roamEvalT: -1,
+        //  Combat Decision B：團戰集結窗（第一個承諾者開窗；逾時一律放行防卡死）
+        rallyAt: -1, rallyPos: null };
       // 開局入侵決策。S28：入侵率吃該側**打野**（席位 b2/r2）的 invadeAdj；
       //   無能力層 ⇒ 原值。無論如何 rng2 都抽一次 ⇒ 序列不變。
       const jg = this._modById(side[0] + "2");
@@ -729,8 +777,179 @@ export class LogicEngine {
       if (this._teamBehindV3(p.side)) c = Math.max(0.05, c - 0.2);   // 劣勢 ⇒ 更常防守
       p.joinGo = (K ? this.rng2() : this.rng()) < c;
     }
-    return p.joinGo;
+    if (!p.joinGo) { p._tfGate = null; return false; }
+    //  Combat Decision B：有參戰意圖之後，再判斷「這一場值不值得投入」。
+    //  decline ⇒ 這裡回傳 false，讓外層 if-else 自然落到對線／推線分支
+    //  （不能只在呼叫端跳過，否則 tgt/st 會維持未設定）。
+    if (this.rules.teamfightSyncV1) {
+      const G = this._commitGateV1(p, hot, M, alive);
+      p._tfGate = G.act;
+      const O = this.tfObs[p.side];
+      if (G.act === "commit") { if (G.ratio != null) { O.commit++; if (G.ratio < 0) O.badCommit++; } }
+      else if (G.act === "hold") O.hold++;
+      else { O.decline++; return false; }
+    } else p._tfGate = "commit";
+    return true;
   }
+  /**
+   * Combat Decision B：團戰**投入決策**閘（**完全決定性，不消耗任何 rng**）。
+   *
+   * ⚠ 前身是「抵達同步閘」，已被實測否決（`TEAMFIGHT_COMMITMENT_SPEC.md` §1）：
+   *   抵達離散度本來就只有 ~1.08 秒、峰值參戰 3.8/5，閘門幾乎從不啟動
+   *   ⇒ synergy 40 vs 90 有 59/60 場逐場完全相同。
+   *   真正的機制是「投入更多身體到同一場團戰，卻換不到更好的結果」：
+   *   每場團戰死亡 +15%、擊殺僅 +1.4%，交換比 1.054 → 0.931 單調惡化。
+   *
+   * 本閘判斷「**這一場值不值得投入**」，不改變「傾向不傾向參戰」（那仍是 joinAdj）。
+   *
+   * ⚠ 防呆：已在戰場半徑內的人**永不攔**（不把人從團戰裡拉出來）；
+   *   當地沒有敵人時不視為投入決策。
+   *
+   * @returns {{act:"commit"|"hold"|"decline", ratio:number|null}}
+   */
+  _commitGateV1(p, hot, M, alive) {
+    const R = this.rules;
+    const engageR = R.syncEngageR ?? 10;
+    const dMe = dist(p.pos, hot);
+    //  已在戰場內 ⇒ 永不攔（不把人從團戰裡拉出來）
+    if (dMe < engageR) return { act: "commit", ratio: null };
+
+    const foeSide = p.side === "blue" ? "red" : "blue";
+    const localR = R.commitLocalR ?? 20;
+    const spd = Math.max(0.1, R.fightSpeed ?? 5);
+    const etaMax = R.commitEtaMax ?? 6;
+
+    //  ── 有效戰力：人數 × 平均血量（＝血量份數總和）。
+    //  ⚠ 兩側的計入規則必須**對稱**，否則門檻沒有意義：
+    //     第一版我方計入「已在當地 ＋ 有意圖且快到的援軍」、敵方只計「已在當地」
+    //     ⇒ 實測我方平均 4.26 人 vs 敵方 2.26 人，比值中位數 17.6，閘門從不觸發。
+    //     現在雙方都計入「已在當地」與「ETA 內會到」；我方額外要求 `joinGo`
+    //     （自己的意圖看得到，敵人的看不到，只能用距離推估）。
+    let allyHp = p.hp / p.maxHp, foeHp = 0, nFoe = 0;
+    for (const q of alive) {
+      const dq = dist(q.pos, hot);
+      const inRange = dq < localR || dq / spd <= etaMax;
+      if (!inRange) continue;
+      if (q.side === p.side) {
+        if (q === p) continue;
+        if (dq < localR || q.joinGo) allyHp += q.hp / q.maxHp;
+      } else { nFoe++; foeHp += q.hp / q.maxHp; }
+    }
+    //  沒有敵人 ⇒ 這不是「要不要投入」的問題
+    if (nFoe === 0) return { act: "commit", ratio: null };
+
+    //  ⚠ 用**有界**的優勢度，不用比值：敵方殘血時比值會爆炸（實測中位數 17.6），
+    //     根本無法設門檻。adv ∈ [−1, +1]，0 = 勢均力敵。
+    const adv = (allyHp - foeHp) / Math.max(1, allyHp + foeHp);
+
+    //  commitAdj 高 ⇒ 門檻更嚴：明顯不利的團戰不投入。
+    //  中性（0）⇒ 基準門檻（略低於 0 ⇒ 只擋掉「明顯打不贏」的情況）。
+    const adj = M?.commitAdj ?? 0;
+    const need = clamp((R.commitAdv ?? -0.12) + (R.commitAdvGain ?? 0.35) * adj, -0.6, 0.6);
+
+    if (adv >= need) return { act: "commit", ratio: adv };
+    //  邊際 ⇒ 等隊友（hold，在 standoff 待命）；明顯劣勢 ⇒ 不投入（decline）
+    return { act: adv >= need - (R.commitHoldBand ?? 0.15) ? "hold" : "decline", ratio: adv };
+  }
+
+  /**
+   * Combat Decision C：遊走候選評分（**完全決定性，不消耗任何 rng**）。
+   *
+   * 為什麼不擲骰：新決策若抽 rng，會平移之後所有戰鬥的隨機序列，
+   * 使「這次改動造成的差異」與「seed 序列位移造成的差異」無法分離。
+   * 全部用決定性分數 ⇒ 同 seed 可重跑一致（C-9），且出發擲骰的次數與時點不變。
+   *
+   * 四項素質分工（互不重疊，見 ROAM_SUPPORT_QUALITY_SPEC.md §2-D）：
+   *   mapAware  → `roamSightAdj`：看得到多遠的候選
+   *   comms     → `roamInfoAdj` ：視野外候選的資訊可信度（隊友回報）
+   *   decision  → `roamGateAdj` ：出發門檻（值不值得離線）
+   *   leadership→ `roamFollowAdj`：隊友已在往同一目標時的協同價值
+   *
+   * @returns {{lane:string, v:number}|null} null = 沒有值得去的候選（decline）
+   */
+  _roamPickV1(p, M, alive) {
+    const R = this.rules;
+    const foeSide = p.side === "blue" ? "red" : "blue";
+    const sightR = (R.roamSightR ?? 60) * (1 + (M.roamSightAdj ?? 0));
+    //  加法而非乘法：`roamInfoAdj` 已是可信度的絕對位移（±0.36），
+    //  乘法會讓低 comms 的懲罰遠小於高 comms 的獎勵（不對稱）。
+    const infoW = clamp((R.roamInfoBase ?? 0.55) + (M.roamInfoAdj ?? 0), 0, 1);
+    const follow = M.roamFollowAdj ?? 0;
+    const nearR = R.roamNearR ?? 20;
+
+    let best = null;
+    for (const lane of ["top", "mid", "bot"]) {
+      if (lane === p.lane) continue;                     // 自己這條不算「遊走」
+      //  目標點＝該路我方對線者。沒有活著的隊友 ⇒ 這條路沒有可支援對象。
+      const mate = alive.find((q) => q.side === p.side && q !== p && q.lane === lane);
+      if (!mate) continue;
+      const tgt = mate.pos;
+
+      const d = dist(p.pos, tgt);
+      const eta = d / Math.max(0.1, R.roamSpeedRef ?? 3);
+      //  可見性：視野內＝完整資訊；視野外＝只能靠隊友回報，可信度打折（comms）
+      const conf = d <= sightR ? 1 : infoW;
+
+      const alliesN = alive.filter((q) => q.side === p.side && q !== p && dist(q.pos, tgt) < nearR).length;
+      const foesN = alive.filter((q) => q.side === foeSide && dist(q.pos, tgt) < nearR).length;
+      if (foesN === 0 && mate.hp >= mate.maxHp * 0.9) continue;   // 沒敵人又沒人受傷 ⇒ 去了沒事做
+
+      //  ── 各項價值（皆已正規化到約 [-1, 1]）
+      const fightNow = foesN > 0 && alliesN + 1 > 0 ? 1 : 0;
+      const numAdv = clamp((alliesN + 1 - foesN) / 3, -1, 1);      // 我到了之後的人數差
+      let foeWeak = 0;
+      for (const q of alive) {
+        if (q.side !== foeSide || dist(q.pos, tgt) >= nearR) continue;
+        foeWeak = Math.max(foeWeak, 1 - q.hp / q.maxHp);           // 有殘血可收
+      }
+      const allyRisk = 1 - mate.hp / mate.maxHp;                    // 隊友快死 ⇒ 值得去救
+      const objNear = ["dragon", "baron"].some((k) => {
+        const o = this.neutrals?.[k];
+        return o?.alive && dist(tgt, o.pos) < (R.roamObjR ?? 40);
+      }) ? 1 : 0;
+      //  ⚠ ETA 的角色校準過程（四個版本，全部有實測；留著是因為每一版都錯得不一樣）：
+      //     · `eta/20`、−0.45 ⇒ 婉拒率 87%、遊走 13.4→2.1，等於把機制關掉
+      //     · `eta/45`、−0.25 ⇒ 太寬鬆，約 47% 的遊走選上路；但候選 ETA 中位數 25 秒
+      //       ≫ 當時的固定 8 秒窗 ⇒ **根本到不了**，純粹離線走路，
+      //       推塔顯著掉 2.50（同權重表下舊模型只有 +0.06）
+      //     · `eta/16`、−0.40 ⇒ 遠路被排除，但 comms 的作用面**只有視野外的候選** ⇒
+      //       可達候選只剩相鄰那一路，「目標選擇」無選擇可做，comms 失去決策面
+      //     · 最終：改成**承諾到抵達為止**（見下方 `dur`），遠路真的到得了
+      //       ⇒ ETA 回到「離線成本」（走越久越貴），不再是可達性否決。
+      const etaN = clamp(eta / (R.roamEtaRef ?? 30), 0, 1);
+      //  已有隊友前往同一路：中性視為重複（扣分），leadership 高 ⇒ 協同（加分）。
+      const dup = alive.some((q) => q.side === p.side && q !== p && q !== mate &&
+        q.role !== "sup" && q.lane !== lane && q.fsm === "ROAM" &&
+        dist(q.pos, tgt) < dist(p.pos, tgt));
+      const dupTerm = dup ? (-0.30 + 4 * follow) : 0;
+
+      const vTrue =
+        0.35 * fightNow + 0.30 * numAdv + 0.25 * foeWeak +
+        0.20 * allyRisk + 0.15 * objNear - 0.40 * etaN + dupTerm;
+
+      //  ⚠ 資訊品質決定「挑得準不準」，**不是**「去不去」。
+      //    第一版寫成 `v = conf * vTrue`，等於低 comms 把所有候選一起壓低
+      //    ⇒ 直接變成「不出門」（實測出發 3.03 vs 6.44），量與質再次糾纏，
+      //    空手數只是跟著出門數走。
+      //    改為往先驗收縮：看得見的候選保留真值，看不見的被拉回中位
+      //    ⇒ 出門次數大致不變，但低 comms 只能依賴自己看得到的那些，
+      //      會系統性地挑到次佳目標。這才是「資訊共享」的語意。
+      const prior = R.roamGate ?? 0.15;
+      const v = prior + conf * (vTrue - prior);
+
+      //  停留時間＝走得到＋到場後還有事做（規格 §2-B：「不是固定 8 秒」）。
+      //  固定 8 秒時遠路必然白走；承諾到抵達為止，遠路才有意義，
+      //  途中的 6 秒重評仍可隨時取消 ⇒ 不會變成「無腦離線 30 秒」。
+      const dur = clamp(eta + (R.roamDur ?? 8), R.roamDur ?? 8, R.roamDurMax ?? 30);
+
+      if (!best || v > best.v) best = { lane, v, dur };
+    }
+
+    //  出發門檻：decision 高 ⇒ 更挑（門檻拉高）⇒ 明顯不值得的不去。
+    const gate = clamp((R.roamGate ?? 0.30) * (1 + (M.roamGateAdj ?? 0)), 0.05, 0.90);
+    return best && best.v >= gate ? best : null;
+  }
+
   /** 目標（龍/巴龍）參與判定：窗開著才會有人去；打野/輔助必去、其他人吃 knob。 */
   _objJoinV3(p, key, K, M) {
     const R = this.rules;
@@ -762,9 +981,14 @@ export class LogicEngine {
     return true;
   }
   /** 追擊維持判定：對象死亡/超時/拉開距離/離錨點太遠/血量回升 ⇒ 放棄。 */
-  _chaseAliveV3(p) {
+  _chaseAliveV3(p, alive = null) {
     const R = this.rules;
     if (!p.chaseId) return null;
+    //  戰鬥可信度：明顯打不贏就放棄追擊（人數劣勢／殘血／沒有退路／可能被夾擊）。
+    //  ⚠ 只會放棄，不會產生新的追擊；未啟用 `riskAssess` ⇒ 完全短路，逐值不變。
+    if (alive && this._shouldDropChaseV18(p, alive)) {
+      p.chaseId = null; p.chaseDropped = (p.chaseDropped ?? 0) + 1; return null;
+    }
     const foe = this.players.find((q) => q.id === p.chaseId);
     if (!foe || foe.dead || this.t > p.chaseUntil ||
         dist(p.pos, foe.pos) > R.chaseGiveUpDist ||
@@ -1065,9 +1289,17 @@ export class LogicEngine {
     const hpOk = p.hp >= p.maxHp * (R.diveMinHp ?? 0.55);
     const shotsOk = (p.towerHits ?? 0) < (R.diveMaxShots ?? 3);
     let kill = false;
+    let killWhy = null;
     for (const q of alive) {
       if (q.side === p.side || q.dead) continue;
-      if (dist(p.pos, q.pos) <= this._engageRange(p) && q.hp <= q.maxHp * (R.diveKillHp ?? 0.35)) { kill = true; break; }
+      if (dist(p.pos, q.pos) <= this._engageRange(p) && q.hp <= q.maxHp * (R.diveKillHp ?? 0.35)) {
+        //  ⚠ 殘血只是**第一道篩**，不是越塔的理由。
+        //  舊規則到這裡就 kill = true ⇒「只要對方殘血就越塔」，
+        //  不看打不打得死、會不會先被磨死、走不走得掉。
+        const a = R.diveAssess ? this._diveAssessV18(p, q, tw, alive) : { ok: true, why: null };
+        if (a.ok) { kill = true; killWhy = null; break; }
+        killWhy = a.why;
+      }
     }
     //  進入敵塔射程要有理由，理由有三種（**擇一**即可，不是全部成立）：
     //    · 這座塔**就是我的推進目標** ⇒ 這是圍攻，本來就得站進去打
@@ -1088,7 +1320,155 @@ export class LogicEngine {
     //    決策層不該把它擋死。
     const sieging = !!objective && objective === tw;
     const allow = hpOk && shotsOk && (sieging || hasWave || kill);
-    return { inZone: true, allow, tower: tw, hasWave, hpOk, shotsOk, kill, sieging };
+    return { inZone: true, allow, tower: tw, hasWave, hpOk, shotsOk, kill, sieging, killWhy };
+  }
+
+  /**
+   * 越塔強殺把握評估（2026-08-07 戰鬥可信度）。
+   *
+   * 只回答一件事：**這一次越塔，殺得掉、活得下來、走得掉嗎？**
+   * 全部用引擎既有的數值推導，不新增傷害通道、不改任何傷害公式。
+   *
+   * ⚠ 塔**打不死英雄**（扣血時有 `Math.max(0, best.hp - 1)`），所以真正的死法是
+   *   「塔把你磨到殘血、敵人補刀」。下面的存活判斷照這個真實模型算：
+   *   塔傷 + 目標反擊 一起估。
+   *
+   * 判準（四項全部成立才允許）：
+   *   ① 殺得掉：預估擊殺時間 ≤ `diveMaxTtk`
+   *   ② 不會先死：預估承受傷害 × 餘裕 < 目前血量
+   *   ③ 走得掉：把「撤離所需時間」也算進承受傷害
+   *   ④ 沒有人數劣勢：塔邊敵方英雄不多於我方
+   */
+  _diveAssessV18(p, target, tw, alive) {
+    const R = this.rules;
+    //  ① 殺得掉？——用既有傷害公式的**同一組係數**做唯讀估算
+    const myDps = Math.max(1e-6, p.power * (R.dmgK ?? 0.92));
+    const ttk = target.hp / myDps;
+    if (ttk > (R.diveMaxTtk ?? 6)) return { ok: false, why: "predicted_ttk_too_long" };
+
+    //  ③ 走得掉？——先算撤離時間，再把它算進暴露時間
+    const range = this.towerRange(tw);
+    const gap = Math.max(0, range - dist(p.pos, tw.pos)) + (R.diveEscapeMargin ?? 2);
+    const speed = Math.max(1e-6, R.moveSpeed ?? 5.6);
+    const escapeT = gap / speed;
+    const exposure = ttk + escapeT;
+
+    //  ② 不會先死？——塔傷（含連續命中增幅）＋ 目標反擊
+    const ramp = Math.min(R.towerLockRampMax ?? 1,
+      1 + (p.towerHits ?? 0) * (R.towerLockRamp ?? 0));
+    const towerDmg = (R.towerAggroDmg ?? 66) * exposure * ramp;
+    const foeDmg = target.power * (R.dmgK ?? 0.92) * Math.min(ttk, exposure);
+    const expected = (towerDmg + foeDmg) * (R.diveSafetyMargin ?? 1.25);
+    if (expected >= p.hp) return { ok: false, why: "would_die_before_kill" };
+
+    //  ④ 人數：塔邊的敵方英雄不能多於我方（含自己）
+    let foes = 0, mates = 1;
+    for (const q of alive) {
+      if (q.dead || q === p) continue;
+      if (dist(q.pos, tw.pos) > range + 4) continue;
+      if (q.side === p.side) mates++; else foes++;
+    }
+    if (foes > mates) return { ok: false, why: "outnumbered_at_tower" };
+
+    return { ok: true, why: null };
+  }
+
+  /**
+   * 交戰風險評估（2026-08-07 戰鬥可信度）。
+   *
+   * 回傳五級之一，全部用引擎既有資料推導，**不新增傷害通道、不改傷害公式**：
+   *   engage    繼續交戰
+   *   trade     保守換血
+   *   fighting  邊打邊退
+   *   retreat   立即撤退
+   *   dropChase 放棄追擊
+   *
+   * 讀的資料（全是既有欄位）：
+   *   · 自身剩餘生命 `p.hp / p.maxHp`
+   *   · 敵方／我方附近英雄數（同一個半徑，避免高估支援）
+   *   · 技能與位移是否就緒（`p.sp` 召喚師技能欄位、`p.atkCd`）
+   *   · 防禦塔位置（敵塔射程內與否）
+   *   · 是否存在安全撤退路線（退到我方半場所需時間 vs 預估承受傷害）
+   *   · 夾擊風險（`riskFlankRadius` 內、不在當前交戰圈的敵人）
+   *   · 隊友是否正在靠近（`riskSupportRadius` 內的存活隊友）
+   *   · 兵線（`_hasWaveAtStructure`，透過呼叫端傳入）
+   *
+   * ⚠ 素質的影響**沿用 P0-3 既有係數**（`retreatLate`），不新增第二套能力模型、
+   *   不新增素質欄位、不改 16 項素質的定義。
+   * ⚠ 個性目前**完全沒有接入 MOBA 引擎**（`LogicEngine` 讀取 personality 次數為 0），
+   *   本函式因此不讀個性——不假裝已經接線。接線列為待辦。
+   */
+  _riskAssessV18(p, alive) {
+    const R = this.rules;
+    const hpR = clamp(p.hp / p.maxHp, 0, 1);
+    const radius = (R.decisionContact ?? 9) + 2;
+
+    let foesN = 0, alliesN = 0, incoming = 0, flank = 0;
+    for (const q of alive) {
+      if (q.dead || q === p) continue;
+      const d = dist(q.pos, p.pos);
+      if (q.side === p.side) {
+        if (d <= radius) alliesN++;
+        else if (d <= (R.riskSupportRadius ?? 14)) incoming++;   // 正在靠近支援
+      } else {
+        if (d <= radius) foesN++;
+        else if (d <= (R.riskFlankRadius ?? 20)) flank++;        // 可能夾擊
+      }
+    }
+
+    //  敵塔威脅：站在敵塔射程內要多算一份持續傷害
+    let towerThreat = 0;
+    for (const t of Object.values(this.towers)) {
+      if (t.hp <= 0 || t.side === p.side) continue;
+      if (dist(p.pos, t.pos) <= this.towerRange(t)) { towerThreat = R.towerAggroDmg ?? 66; break; }
+    }
+
+    //  退路：退回我方半場所需時間，以及這段時間預估承受的傷害
+    const home = FOUNTAIN[p.side];
+    const speed = Math.max(1e-6, R.moveSpeed ?? 5.6);
+    const escapeT = Math.min(6, dist(p.pos, home) / speed);
+    const foeDps = foesN * 22 + towerThreat;          // 22 ≈ 單一英雄的粗估壓制值
+    const escapeCost = foeDps * escapeT * (R.riskEscapeMargin ?? 1.4);
+    const hasEscape = escapeCost < p.hp;
+
+    //  逃生手段：閃現／幽魂就緒 ⇒ 退路更可靠
+    const escapeReady = this.spellsOn && p.sp?.f && this.t >= p.sp.f.readyAt;
+
+    //  P0-3：決策／應變／視野意識低的人，同樣情況會撤得比較晚（既有係數，不新增）
+    const late = this._qual(p, "retreatLate");
+
+    const outnumbered = foesN > alliesN + 1;
+    const even = foesN <= alliesN;
+
+    //  ── 分級（由重到輕）──────────────────────────────────────────────
+    if (hpR < 0.30 - late || (!hasEscape && hpR < 0.50 - late)) {
+      return { level: "retreat", hpR, foesN, alliesN, incoming, flank, hasEscape, escapeReady, towerThreat };
+    }
+    if (outnumbered && flank > 0 && incoming === 0) {
+      return { level: "retreat", hpR, foesN, alliesN, incoming, flank, hasEscape, escapeReady, towerThreat };
+    }
+    if (outnumbered || (hpR < 0.45 - late && !escapeReady)) {
+      return { level: "fighting", hpR, foesN, alliesN, incoming, flank, hasEscape, escapeReady, towerThreat };
+    }
+    if (!even || flank > 0 || towerThreat > 0) {
+      return { level: "trade", hpR, foesN, alliesN, incoming, flank, hasEscape, escapeReady, towerThreat };
+    }
+    return { level: "engage", hpR, foesN, alliesN, incoming, flank, hasEscape, escapeReady, towerThreat };
+  }
+
+  /**
+   * 追擊還值不值得（2026-08-07）。
+   * 舊版只看「對方在逃且夠殘」；這裡補上「我追過去會不會反而死」。
+   * 只會**放棄**追擊，不會製造新的追擊。
+   */
+  _shouldDropChaseV18(p, alive) {
+    if (!this.rules.riskAssess) return false;
+    const r = this._riskAssessV18(p, alive);
+    //  ⚠ 只在「立即撤退」這一級才放棄追擊。
+    //  第一版連 `fighting`（邊打邊退）也放棄 ⇒ 英雄太容易脫戰、對局收不掉，
+    //  實測 regress2 掉到 6/8（一場 45.0 分未結束，正是 M1.7 那個失敗模式）。
+    //  收尾能力優先於「追擊看起來合不合理」。
+    return r.level === "retreat";
   }
   /** S29B3：回城事件（唯一出口；phase = start / done / cancel；done 帶傳送起點）。 */
   _recallEventV3(p, phase, from = null) {
@@ -1420,8 +1800,67 @@ export class LogicEngine {
     this.fsm3[victim.side].defendUntil = this.t + R.initiativeWindow * 0.8;
   }
 
+  /**
+   * Retreat Re-evaluate v1：撤退中的週期性重評（唯一新增的**取消**條件）。
+   *
+   * ── 為什麼需要 ────────────────────────────────────────────────────────────
+   * 進入撤退的 `retreatAt` 是**動態**的，主要由暫時性事件推動
+   * （`burstRetreatBonus +0.16` 只有 4 秒窗、人數劣勢隨位置變動…），
+   * 但離開只有「血量回到 `returnAtEff`」一條路，中間**沒有任何重新評估**。
+   * 實測（`tools/probe_retreat_trigger.mjs`，1273 段撤退）：
+   *   · 78% 的觸發理由是「短期換血吃虧」（4 秒窗）
+   *   · 觸發當下 46.3% 身邊根本沒有敵人
+   *   · **99.8% 的撤退在途中門檻就已解除**，卻還要再跑 10.0 秒才離開
+   *   · ⇒ **僵硬段佔整段撤退的 54.1%**
+   *
+   * ── 為什麼在這一相位（**公平性紅線**）────────────────────────────────────
+   * 取消條件要讀「附近有沒有敵人」。若在決策迴圈裡即時讀，先迭代方讀到敵方
+   * **舊位置**、後迭代方讀到**已移動的新位置** ⇒ 兩邊取消時機系統性不對稱。
+   * 實測會破壞 `ability_p02` 5b（雙方同能力 → 等級差 1.56）與 `quality_p03`。
+   * 這與 `_postCombatV3` 開頭註解描述的是同一個失敗族。
+   * ⇒ 一律在**凍結位置**上判定，並「先收集、後套用」。
+   *
+   * ⚠ 不擲骰、不改傷害、不改回血、不動任何 stat 權重。
+   */
+  _retreatReevalV3(alive) {
+    const R = this.rules;
+    if (!R.retreatReevalV1) return;
+    const cancels = [];
+    for (const p of alive) {
+      if (p.dead || !p.retreating) continue;
+      //  觸發分支每 tick 都會把 `retreatEvalT` 往後推 ⇒ 血量仍低於門檻時不會到期
+      //  （還在危險裡，沒有取消的道理）。冷卻則是限制環的防線：取消過一次之後
+      //  短期內再撤就老老實實回家（沿用 `recallCd` 防 retry-thrash 的既有手法）。
+      if (this.t < (p.retreatEvalT ?? 0) || this.t < (p.retreatCancelCdAt ?? 0)) continue;
+      //  `dbgRetreatAt` = 這一 tick 引擎實際採用的門檻（含所有情境修正）。
+      //  decisionV17 未啟用時不存在 ⇒ 不做取消（保守，且歷史規則集逐位元不變）。
+      const thr = p.dbgRetreatAt;
+      if (!Number.isFinite(thr)) continue;
+      p.retreatEvalT = this.t + R.retreatReevalPeriod;   // 標記為「本次已評估」
+      //  三個條件缺一不可：
+      //   ① 身邊無敵人 —— 真的脫離了，不是還在被追
+      //   ② 打得動 —— 高於當下門檻＋餘裕（不會立刻再觸發）**且**高於絕對地板
+      //      （只有前者時實測製造反覆撤退 +425% 與死亡 +11.7%）
+      //   ③ 還在路上 —— 已走到泉水就不取消（補給有始有終，那段本來就快）
+      const clear = !alive.some((q) => !q.dead && q.side !== p.side && dist(q.pos, p.pos) < R.retreatCancelSafeDist);
+      const recovered = p.hp >= p.maxHp * Math.max(thr + R.retreatCancelMargin, R.retreatCancelMinHp);
+      const enRoute = dist(p.pos, FOUNTAIN[p.side]) > R.retreatCancelHomeDist;
+      if (clear && recovered && enRoute) cancels.push(p);
+    }
+    //  一起套用（與收集階段分開 ⇒ 同一相位內也不受迭代順序影響）
+    for (const p of cancels) {
+      p.retreating = false;
+      p.retreatDeep = false;
+      p.retreatHolding = false;
+      p.retreatCancelCdAt = this.t + R.retreatCancelCd;
+      p.intent = "危險解除，回到崗位";
+    }
+  }
+
   _postCombatV3(alive, hot) {
     const R = this.rules;
+    //  0) 撤退重評（凍結位置、先收集後套用）——理由見 `_retreatReevalV3` 的說明。
+    this._retreatReevalV3(alive);
     // 1) 追擊取得（本 tick 陣亡者不取得；維持判定仍在決策迴圈）
     for (const p of alive) {
       if (p.dead || p.chaseId) continue;
@@ -1884,13 +2323,25 @@ export class LogicEngine {
         //  lastDamagedAt 由 tick 尾端的統一比對點寫入（涵蓋英雄／技能／塔／小兵／野怪／Boss）
         const since = this.t - (p.lastDamagedAt ?? -Infinity);
         const settled = since >= RG.outOfCombatDelaySec;
-        pctPerSec = (!foe && settled) ? RG.outOfCombatPctPerSec : RG.inCombatPctPerSec;
+        //  Retreat Hold：退守自家塔時的恢復速率。
+        //  ⚠ 這不是「調高回血」——它補的是撤退生命週期裡**缺掉的 recovery 階段**。
+        //  舊數值下野外恢復（0.75%/秒）相對泉水（10%/秒）慢 13 倍，
+        //  ⇒「回家」在經濟上完全支配「就地恢復」，退守狀態即使存在也沒人用得起
+        //  （實測：只加退守目標、不改速率 ⇒ 段落時長 18.2→37.0 秒、
+        //   完整往返成本 65.7→72.5 秒，反而更糟）。
+        //  作用範圍極窄：**只有**撤退中、未惡化到非回家不可、已退到自家前線塔
+        //  且該塔附近無敵人時才套用；仍受既有的「脫戰 7 秒延遲」與
+        //  「交戰中不回血」兩道閘門管制 ⇒ 不影響換血、追擊或塔下壓力。
+        const outRate = (R.retreatHoldV1 && p.retreatHolding)
+          ? R.retreatHoldRegenPctPerSec : RG.outOfCombatPctPerSec;
+        pctPerSec = (!foe && settled) ? outRate : RG.inCombatPctPerSec;
       }
       const h = Math.min(p.maxHp, p.hp + p.maxHp * pctPerSec * dt * healK) - p.hp;
       p.hp += h; p.heal += h;
       p.regenMode = inFountain ? "fountain"
-        : pctPerSec === RG.outOfCombatPctPerSec ? "outOfCombat"
-          : (foe ? "combat" : "waiting");
+        : pctPerSec === R.retreatHoldRegenPctPerSec ? "retreatHold"
+          : pctPerSec === RG.outOfCombatPctPerSec ? "outOfCombat"
+            : (foe ? "combat" : "waiting");
     } else {
       if (nearFountain) { const h = Math.min(p.maxHp, p.hp + p.maxHp * 0.20 * dt * healK) - p.hp; p.hp += h; p.heal += h; }
       else if (!foe) { const h = Math.min(p.maxHp, p.hp + p.maxHp * 0.02 * dt * healK) - p.hp; p.hp += h; p.heal += h; }
@@ -2932,7 +3383,7 @@ export class LogicEngine {
         }
         p.respawn -= dt;
         if (p.respawn <= 0) {
-          p.dead = false; p.hp = p.maxHp; p.retreating = false; p.hitBy.clear();
+          p.dead = false; p.hp = p.maxHp; p.retreating = false; p.retreatDeep = false; p.hitBy.clear();
           const f = FOUNTAIN[p.side]; this._navTeleport(p, f); p.state = "回防";   // H.2：重生點投影到可走區
           // S29B1（v3）：復活鎖——RETURN 期間不得參團/追擊，必須先走回戰線
           if (R.engagementFsm) {
@@ -2970,7 +3421,11 @@ export class LogicEngine {
         if (foesN > alliesN + 1) retreatAt = Math.min(0.50, retreatAt + R.outnumberRetreatBonus);
         if (this._recentDeathsV3(p) >= 2) retreatAt = Math.min(0.55, retreatAt + R.repeatDeathRetreatBonus);
         if (this._teamBehindV3(p.side)) retreatAt = Math.min(0.55, retreatAt + 0.05);
-        // RECALL：已撤到泉水附近 ⇒ 補到 88% 才重新出門（回城/補給有始有終）
+        //  RECALL：已撤到泉水附近 ⇒ 補到 88% 才重新出門（回城/補給有始有終）
+        //  ⚠ 實測否決過一個看似合理的變體：讓**退守也**補到 88% 才回場
+        //  （理由是「退守應該是回家的替代品，恢復目標要一致」）。
+        //  結果更糟：退守以 2.5%/秒 從 30% 補到 88% 要 23 秒站著不動，
+        //  regress 結束率 13/15 → 12/15、regress2 6/8 → 5/8。已回退。
         if (p.retreating && dist(p.pos, FOUNTAIN[p.side]) < 12) returnAtEff = Math.max(returnAt, 0.88);
       }
       //  ── M1.7：撤退門檻再疊四項情境（全部是門檻平移，不用計時器、不強制位移）──
@@ -3018,7 +3473,13 @@ export class LogicEngine {
       if (p.hp < p.maxHp * retreatAt) {
         if (this.playerStatsOn && !p.retreating) this.pexec[p.id].retreats++;   // 真實計數
         p.retreating = true;
-      } else if (p.hp >= p.maxHp * returnAtEff) p.retreating = false;
+        p.retreatEvalT = this.t + (R.retreatReevalPeriod ?? 0);   // 觸發後隔一個週期才重評
+      } else if (p.hp >= p.maxHp * returnAtEff) { p.retreating = false; p.retreatDeep = false; }
+      //  ⚠ Retreat Re-evaluate 的**取消判定不在這裡**——它必須在全員移動與傷害
+      //     結算完的凍結位置上做，否則先迭代方讀到敵方舊位置、後迭代方讀到新位置，
+      //     會累積成系統性的陣列順序優勢（實測破壞 ability_p02 5b 與 quality_p03
+      //     兩支公平性驗證器）。見 `_retreatReevalV3()` 與 `_postCombatV3` 的說明。
+      if (!p.retreating) p.retreatHolding = false;
       const localDecision = decisionPlans.get(p.id) ?? null;
       // 低血量／人數劣勢的局部評估可比固定 25% 門檻更早觸發撤退；
       // 一旦進入既有 retreating 流程，回城、受擊中斷與回血遲滯仍沿用原機制。
@@ -3056,20 +3517,82 @@ export class LogicEngine {
       // S24：輔助遊走（無會戰時依 roamRate 週期性走中路製造人數差）
       if (K && !tacTgt && p.role === "sup" && !p.retreating && !hot) {
         // S28：遊走率 += roamAdj（視野/溝通/手速/領導）——輔助的主要作用點
-        if (this.t >= S.roamNext) { S.roamNext = this.t + 40 + this.rng2() * 15; if (this.rng2() < (M ? clamp(K.roamRate + M.roamAdj, 0, 1) : K.roamRate)) { S.roamUntil = this.t + 8; this.exec[p.side].supportRoams++; } }
-        if (this.t < S.roamUntil) { effLane = "mid"; stOv = "遊走"; }
+        //  ⚠ rng 消耗必須與舊版**逐次相同**：無論後面是否 decline，這兩次 rng2 都照抽。
+        //     decline 只影響「要不要出發」，不影響隨機序列 ⇒ 差異可歸因於決策本身。
+        if (this.t >= S.roamNext) {
+          S.roamNext = this.t + 40 + this.rng2() * 15;
+          const go = this.rng2() < (M ? clamp(K.roamRate + M.roamAdj, 0, 1) : K.roamRate);
+          if (go) {
+            //  Combat Decision C：命中出發傾向之後，再決定「去哪裡／要不要去」。
+            //  未注入能力層（M 為 null）⇒ 走原本的「無條件中路 8 秒」，逐位元不變。
+            if (R.roamQualityV1) {
+              const pick = this._roamPickV1(p, M ?? NEUTRAL_ROAM, alive);
+              if (pick) {
+                S.roamLane = pick.lane;
+                S.roamUntil = this.t + pick.dur;
+                S.roamEvalT = this.t + (R.roamEvalPeriod ?? 6);
+                this.exec[p.side].supportRoams++;
+                this.roamObs[p.side].lanes[pick.lane]++;
+              } else {
+                this.roamObs[p.side].declined++;        // 純觀測：正確地不去
+              }
+            } else {
+              S.roamLane = "mid"; S.roamUntil = this.t + 8;
+              this.exec[p.side].supportRoams++;
+            }
+          }
+        }
+        //  途中重評：沿用參團黏性的同一個 6 秒節奏，不新增計時系統。
+        //  戰況消失 ⇒ 取消（abort）；出現更好的候選 ⇒ 改道（retarget）。
+        if (R.roamQualityV1 && this.t < S.roamUntil && this.t >= S.roamEvalT) {
+          S.roamEvalT = this.t + (R.roamEvalPeriod ?? 6);
+          const re = this._roamPickV1(p, M ?? NEUTRAL_ROAM, alive);
+          if (!re) { S.roamUntil = 0; S.roamLane = null; this.roamObs[p.side].aborted++; }
+          else if (re.lane !== S.roamLane) { S.roamLane = re.lane; this.roamObs[p.side].retargeted++; }
+        }
+        if (this.t < S.roamUntil) { effLane = S.roamLane ?? "mid"; stOv = "遊走"; }
       }
       // S29B1（v3）：追擊**維持**判定（取得已移到 _postCombatV3——在全員移動與
       //   傷害結算完的凍結位置上判定，否則先迭代方用敵方舊位置搶先取得追擊，
       //   實測會累積成 ~17pp 的系統性順序優勢）
       let chaseFoe = null;
       if (R.engagementFsm && !p.retreating && !tacTgt && !skipFight && this.t >= p.reengageAt) {
-        chaseFoe = this._chaseAliveV3(p);
+        chaseFoe = this._chaseAliveV3(p, alive);
       } else if (R.engagementFsm && p.chaseId) p.chaseId = null;
       const localTarget = localDecision?.targetId
         ? alive.find((q) => q.id === localDecision.targetId && !q.dead) ?? null
         : null;
       if (p.retreating) {
+        //  ── Retreat Hold（兩段式撤退）──────────────────────────────────
+        //  舊行為只有一個撤退終點＝泉水 ⇒ 每次撤退都是整趟離場：
+        //  補到 94% 血、再從離敵塔 172 單位的地方走回來，首次推塔要 47.5 秒，
+        //  64.5% 到下次撤退前根本沒再推到塔。缺的是「退到安全位置就地恢復」。
+        //  這裡補上：撐得住 ⇒ 退守自家前線塔（`frontTower` 與 DISENGAGE 同一個
+        //  位置來源）；血量真的危險（retreatDeep）⇒ 照舊回泉水。
+        //  ⚠ `st` 刻意仍是「撤退」：既有驗證器與 UI 會讀這個中文狀態字串
+        //     （check_moba_milestone_j / check_moba_nav_chrome_h2close / diag_full），
+        //     新增字串會連鎖破壞。差異放在 `p.intent`（自由文字診斷欄）。
+        //  ⚠ 不擲骰、不改傷害、不改回血、不動任何 stat 權重。
+        if (R.retreatHoldV1 && p.hp < p.maxHp * R.retreatHoldHp) p.retreatDeep = true;
+        let holdPos = null;
+        if (R.retreatHoldV1 && !p.retreatDeep) {
+          const ownTw = this.frontTower(p.side === "blue" ? "red" : "blue", p.lane);
+          //  ⚠ 安全檢查必須同時看「敵人離塔多遠」**與**「敵人離這名選手多遠」。
+          //  第一版只檢查前者：選手可以站在離塔 10 的位置、敵人離他 6（離塔 16）
+          //  ⇒ 通過檢查卻正在被打。實測 30 個 tick 發生這個狀況。
+          const clear = (pos) => !alive.some((q) => q.side !== p.side && dist(q.pos, pos) < R.retreatHoldSafeDist);
+          if (ownTw && clear(ownTw.pos) && clear(p.pos)) holdPos = ownTw.pos;
+        }
+        if (holdPos) {
+          tgt = holdPos;
+          st = "撤退";
+          if (R.engagementFsm) p.fsm = "RETREAT";
+          p.intent = "退守自家塔";
+          //  恢復速率只在**真的退到塔邊**之後才套用——走回去的路上不回血，
+          //  否則等同於「一按撤退就開始補血」，會把換血與追擊的意義吃掉。
+          p.retreatHolding = dist(p.pos, holdPos) < R.retreatHoldSafeDist;
+        } else {
+          p.retreatHolding = false;
         tgt = FOUNTAIN[p.side];
         st = R.engagementFsm && dist(p.pos, FOUNTAIN[p.side]) < 10 ? "回城" : "撤退";
         if (R.engagementFsm) p.fsm = st === "回城" ? "RECALL" : "RETREAT";
@@ -3105,6 +3628,7 @@ export class LogicEngine {
             st = "回城中"; p.fsm = "RECALL";
           }
           p.recallHpLast = p.hp;
+        }
         }
       }
       else if (tacTgt) { tgt = tacTgt; st = stOv; if (R.engagementFsm) p.fsm = "ROAM"; }
@@ -3151,8 +3675,36 @@ export class LogicEngine {
       else if (!skipFight && hot && (R.engagementFsm
         ? this._joinV3(p, hot, K, M, alive)
         : (p.role === "jungle" || p.role === "sup" || (K ? this.rng2() < this._joinChance(K, hot, M) : this.rng() < this._joinChance(null, hot, M))))) {
-        tgt = hot; st = "團戰!";
-        if (R.engagementFsm) p.fsm = dist(p.pos, hot) < 10 ? "ENGAGE" : "SETUP";
+        //  Combat Decision B：`_joinV3` 已做完投入決策（decline 不會走到這裡）。
+        //    commit = 進場｜hold = 在 standoff 待命等隊友
+        if (p._tfGate === "hold") {
+          const dHot = dist(p.pos, hot);
+          const standoff = R.syncStandoffR ?? 15;
+          tgt = dHot > standoff ? hot : p.pos;   // 還沒到待命圈 ⇒ 繼續靠近；到了 ⇒ 原地
+          st = "團戰!";
+          if (R.engagementFsm) p.fsm = "SETUP";
+          this.tfObs[p.side].held++;
+        } else {
+          //  進場當下的觀測（純讀取）：同側已在戰場半徑內的人數
+          if (p.state !== "團戰!" || p.fsm === "SETUP") {
+            const engageR = R.syncEngageR ?? 10;
+            let ready = 0;
+            for (const q of alive) {
+              if (q.side === p.side && q !== p && dist(q.pos, hot) < engageR) ready++;
+            }
+            const O = this.tfObs[p.side];
+            O.entries++; O.readyAtEngage += ready;
+            if (ready < 1) O.soloEntry++;
+            //  段落內的首位／末位進場時點 ⇒ arrivalSpread
+            const ep = this._tfEp[p.side];
+            if (!ep || this.t - ep.last > (R.fightHoldT ?? 8)) {
+              if (ep && ep.n > 1) { O.spreadSum += ep.last - ep.first; O.spreadN++; }
+              this._tfEp[p.side] = { first: this.t, last: this.t, n: 1 };
+            } else { ep.last = this.t; ep.n++; }
+          }
+          tgt = hot; st = "團戰!";
+          if (R.engagementFsm) p.fsm = dist(p.pos, hot) < 10 ? "ENGAGE" : "SETUP";
+        }
       }
       // 1v1／小規模接觸不一定會形成 hot；依血量、人數、角色距離、CD 與目標價值
       // 選擇支援、接戰、拉扯或追擊，避免「擦身而過仍照原路走」。

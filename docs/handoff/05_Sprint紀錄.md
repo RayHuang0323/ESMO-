@@ -6061,3 +6061,405 @@ Fallback 保留：載入失敗仍顯示占位物。
 
 `dadi_final_texture.glb` **32 MB**（Pages artifact 原本 1.6 MB）。尚未壓縮，
 會永久留在 git 歷史並可能讓本就容易逾時的 Pages 部署更難完成。
+
+---
+
+## MOBA Combat AI Closure（2026-08-10）
+
+**分支**：`release/moba-combat-closure`（自 `origin/main` 拆出，只 cherry-pick 本輪 closure commit）
+
+### 完成項
+
+1. **16 項素質影響盤點封版**。分類 A 0／B 5／C 6／D 2／E 1／F 2。
+2. **`towerPushes` 指標誤讀更正**：它是隊伍層級、每 10 秒最多 +1 的責任週期計數器，
+   不是推進強度。真實 KPI 改用 `p.twrDmg`。責任週期計數器 8/8 素質顯著，
+   真實推塔傷害只有 2/8，decision 甚至方向相反。
+3. **TD-21 解決**：根因是檢定力不足（40 seeds 噪音底線 ±20pp > 門檻 15pp），
+   非引擎偏差（位移依 1/√n 收斂，n=200 時 1.5pp、McNemar p=0.830）。
+   `ORDER_SEEDS` 40→160，門檻未動。`runtime29` 首次 35/35。
+4. **撤退僵硬根因證明**：進場動態門檻／離場固定門檻／無重評，僵硬段佔 54.1%。
+5. 新增量測與驗證工具 10 支；兩條工程規則寫入 AGENTS.md／CLAUDE.md。
+
+### 未完成／未出貨
+
+- **`retreatReevalV1` 預設關閉**：可運作但撞破 `quality_p03` 能力放大護欄
+  （等級差 3.79 vs ≤2.5）。未放寬門檻。列後續低優先。
+- `retreatHoldV1` 為上一輪失敗實驗，保留 `false` 作可重現記錄。
+- Release Gate 只涵蓋 22 區段中的 8 個；其餘 14 個本輪未跑。
+
+### 已知風險
+
+- TD-19（`experience26` §17 replay 容量）貼近上限，比賽變長就會觸發。
+- F 類兩項（comms `roamInfoAdj` 不通電、synergy 分布飽和）未修。
+- 逐場 raw sample（約 15 MB）已排除入庫，需要時以固定 seed 重跑產生。
+
+### 刻意排除
+
+本 release **不含** hero-models／GLB／Chichuan・Dadi proxy／terrain／matchmaking／UI screens。
+那些留在 `fix/moba-combat-credibility`（已推上 origin，成果未刪除），
+其中含 32 MB 的 `dadi_final_texture.glb`，不應與 Combat closure 混在同一次發布。
+
+
+### 封版識別（2026-08-10 補記）
+
+| 項目 | 值 |
+|---|---|
+| Branch | `release/moba-combat-closure` |
+| Commits | `6efac04`（closure）／`22daf6b`（handoff・Roadmap・Sprint） |
+| **Tag** | **`moba-combat-closure`**（已推上 origin） |
+| Merge to main | ⏳ 待人工執行——`git push origin release/moba-combat-closure:main` 被安全機制阻擋，未繞過 |
+| Pages 部署 | ⏳ 未觸發（只在 push 到 main 時執行） |
+| 本機 build smoke test | ✅ `index.html` 200／main bundle 200（2.55 MB）。**僅證明建置產物可服務，非功能驗收** |
+
+**四項已知未完成不阻擋封版**：撤退僵硬（低）、`comms` `roamInfoAdj` 不通電（中）、
+`synergy` 分布飽和（中）、TD-19 replay 容量（中）。四者皆不造成 build 失敗、
+資料損壞或重大回歸。明細見 `08_目前待辦與風險.md` 封版紀錄節。
+
+**下一位（Codex）**：CS 16 項素質盤點。第一步見 `04_Roadmap.md`「下一階段交接」。
+
+---
+
+## CS Measurement Pilot R1（2026-08-10）
+
+### 目標與判定
+
+本 Sprint 只證明真實 CS 引擎可在 Node 中穩定量測，並鎖定 fixed-seed gameplay baseline。
+採 `accuracy × t2 T rifler × Inferno` 單一 pilot；不擴成 16 素質／多角色／多地圖，
+不做 p-value、權重調整或 calibration。最終判定：**R1 PASS；Calibration No-Go**。
+
+### 實作
+
+- 新增 `tools/check_cs_measurement_r1.mjs`。
+- `tools/verify.mjs` 只新增 `cs_measure_r1` segment。
+- 使用 Vite test-only memory transform，fail-closed 注入 `simulateFps`／`ROSTER`／
+  `TACTICS_DB` 測試 export；不寫回 `EsportsFPS3D.jsx`、不複製模擬器、不加 dependency。
+- 建立版本化 `CsGameplayDigest.v1` 正式 regression gate；`strictSimDigest` 只作診斷。
+- 固定 `CsMeasurementSeedSet.v1` 的 16 paired seeds，A-B-A-B 共 64 simulations。
+- hard gate 證明 treatment 只有 `roster.t2.stats.acc 88 → 68`、兩組各自 deterministic、
+  collector 為純後處理、輸入未被 mutate；A/B digest 相同不是失敗條件。
+- expected baseline suite：
+  `546a3e5753ceadfa28c64e7f322556ebbff32f0848eebe2c9b477a29f1a195c2`。
+
+### 驗證
+
+```text
+node tools/verify.mjs --only=cs23,cs_measure_r1,build --timeout=600000
+```
+
+- `cs23`：28/28 PASS。
+- `cs_measure_r1`：PASS。
+- `build`：PASS。
+- runner 本次 3/3，exit 0；其餘 segment 未跑，不宣稱全套通過。
+- `git diff --check`：PASS。
+- `EsportsFPS3D.jsx` SHA-256 保持
+  `5b9360f457c95034cdfdc9e864c04a761e1afdba01501c7e383bb9075e048c3d`。
+
+### Pilot 觀察（非 calibration 結論）
+
+16 paired seeds 中 A/B gameplay digest 相同 0/16。目標選手 baseline→treatment：
+平均 K 10.813→5.625、D 8.813→9.25、ADR 150.188→90.625、HS% 84.5→69.813、
+KAST 65.875→50.563、rating 1.554→0.888；兩組 T wins 都是 0/16。
+這只證明 paired measurement 可重現，不以方向／顯著性作 gate，也不換 seed。
+
+### 刻意未做與下一步
+
+未修改 CS gameplay／contract／Store／UI／CS23 verifier；未自動 rebaseline、未 push。
+既有未追蹤 `review/moba-combat/cs23-baseline-20260810.log` 保持未納管。
+下一步先做 16 項素質 Audit 與最小 opportunity→trigger→conversion instrumentation；
+learning／synergy 接線、公式、角色定位與 calibration 均只做證據，不直接修改。
+
+完整方法與 schema：`review/cs-gameplay/CS_MEASUREMENT_PILOT_R1.md`。
+
+---
+
+## CS Combat Instrumentation R2（2026-08-10）
+
+### 目標與邊界
+
+建立第一條真實 action-point KPI：
+combat opportunity→fire trigger→duel／damage conversion→headshot result。
+採 Vite test-only exact memory hooks，不修改正式 `EsportsFPS3D.jsx`、
+gameplay／contract／Store／UI，也不調 RNG、公式、權重或平衡值。
+
+### 實作與 hard gates
+
+- 新增 `tools/check_cs_instrumentation_r2.mjs`。
+- `tools/verify.mjs` 新增 `cs_instrument_r2` segment。
+- 六個 transform marker 各精確命中一次，逆轉後逐字等於正式來源。
+- 原始 21 個 `rand()` call tokens 的數量與順序完全不變。
+- 固定 R1 的 16 seeds；每 seed 跑 collector off／on-1／on-2，共 48 simulations。
+- off／on 完整 sim JSON 逐 seed 相同；兩次 collector event digest 相同。
+- opportunity ≥ trigger，trigger＝conversion，probability／clamp／damage／kill invariants 全通過。
+
+### 固定情境結果（非 calibration）
+
+eventSuiteDigest：
+`5720e45fd72e5e5428ff6e8e800068012a7f6b2b04c4886ce8e9f0cfb1a50089`。
+
+- opportunities 4,385；triggers／conversions 2,133（48.643%）。
+- kills 1,079（50.586% conversion）；headshots 971（45.523%）。
+- Pt lower／upper clamp 5／1。
+- `t2` opportunities／conversions 1,257／606。
+- overkill 1,069 events／53,309 damage。
+
+ADR 目前把 rolled damage 全額計入，即使超過 defender 剩餘 HP；R2 將此確認為
+**A 類 measurement bug**。本輪不改 result／rating／contract／digest，只留證據。
+
+### 驗證
+
+```text
+node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,build --timeout=600000
+```
+
+- `cs23` 28/28 PASS。
+- `cs_measure_r1` PASS；`CsGameplayDigest.v1` expected baseline 未變。
+- `cs_instrument_r2` PASS。
+- build PASS。
+- runner 本次 4/4、exit 0；其他 13 segments 未跑。
+- 正式 FPS source SHA 仍為
+  `5b9360f457c95034cdfdc9e864c04a761e1afdba01501c7e383bb9075e048c3d`。
+
+完整報告：`review/cs-gameplay/CS_INSTRUMENTATION_R2_REPORT.md`。
+下一步進入 16 項素質 Audit／wiring probe；Calibration 仍為 No-Go。
+
+---
+
+## CS 16 Stat Audit + Wiring Measurement R3（2026-08-10）
+
+### 目標與邊界
+
+完成 16 項玩家素質逐項矩陣：真實讀取位置、gameplay 作用點、作用層級、是否改變
+`simulateFps`、KPI 缺口、文件差異、A–E 問題分類、風險與 calibration readiness。
+本輪只做 Audit + Measurement；不調權重、公式、角色定位，不新增 gameplay branch。
+
+### 規格審查與量測設計
+
+- 規格：`review/cs-gameplay/CS_STAT_WIRING_R3_SPEC.md`。
+- 發現完整 sim JSON 會展開 input stats，R1 digest 也含 `inputSha256`；兩者都不能直接
+  比較 treatment effect。另建 `CsStatWiringDigest.v1`，只投影 output gameplay state。
+- 固定 Inferno、`t_aexec`、`c_std`、既有 ROSTER 與 R1 16 seeds。
+- 16 cases 各只改一名代表 T player 的一個 short stat，固定 −20；accuracy 沿用 88→68。
+- baseline 與每個 treatment 逐 seed 各跑兩次，共 **544 simulations**。
+- memory transform 只注入 test export、可逐字逆轉；21 個 `rand()` call sites 數量/順序不變。
+- treatment deep diff 必須只有指定 stat 一條；不接受 CLI flag、換 seed 或自動 rebaseline。
+
+### 結果
+
+`CsStatWiringDigest.v1` suite：
+`fe6b16dc81c356828e45181b186356b222e7b8de2311c8cadb689fdef3f1343e`。
+
+- 13/16 項在固定情境觀察到 output-only gameplay 差異。
+- `resilience` 0/16：靜態 read 只在 lastAlive，缺真 1vN opportunity，不能判定未接線。
+- player-side `synergy` 0/16：唯一 support profile 對玩家角色映射不可達。
+- `learning` 0/16：只有 roster/OVR/personality 資料，`simulateFps` 無 gameplay read。
+- ADR overkill 仍是 A measurement bug；legacy `clutches` 也不是可證明的 1vN KPI。
+- 文件原稱 16 項完整生效、以 fpsOvr 推論 rating，已依實作證據更正。
+
+完整矩陣與分類：`review/cs-gameplay/CS_16_STAT_AUDIT_R3.md`。
+
+### 驗證
+
+```text
+node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,cs_stat_wiring_r3,build --timeout=600000
+```
+
+- `cs23` 28/28 PASS。
+- `cs_measure_r1` PASS；`CsGameplayDigest.v1` expected suite 未變。
+- `cs_instrument_r2` PASS。
+- `cs_stat_wiring_r3` PASS（544 simulations）。
+- build PASS。
+- runner 本次 5/5、exit 0；其餘 13 segments 未執行，不宣稱全套通過。
+- 正式 FPS source SHA 仍為
+  `5b9360f457c95034cdfdc9e864c04a761e1afdba01501c7e383bb9075e048c3d`。
+- `git diff --check`：PASS。
+
+### 下一步
+
+Calibration 維持 No-Go。下一個最小安全 Sprint 是 true clutch / lastAlive
+opportunity→combat→round conversion instrumentation；不夾帶 retreat、defuse、result contract
+修正或 learning/synergy 接線。既有未追蹤 baseline log 仍排除，未 push。
+
+---
+
+## CS True Clutch / LastAlive Instrumentation R4（2026-08-10）
+
+### 目標與邊界
+
+R3 的 `resilience` fixed probe 為 0/16，但靜態作用點只在 `lastAlive`；現行
+`clutches` 又只有勝方單一 survivor + round kill 條件。本 Sprint 只建立真實
+lastAlive opportunity→combat→round result 量測，不修改公式、result 或 contract。
+
+### 實作與 hard gates
+
+- 規格：`review/cs-gameplay/CS_TRUE_CLUTCH_R4_SPEC.md`。
+- 新增 `tools/check_cs_clutch_instrumentation_r4.mjs` 與 runner `cs_clutch_r4` segment。
+- state hook 放在每 tick fresh `aliveT/aliveCT` 後、combat 前；避免死亡後 stale array length。
+- 記錄 state opportunity、combat opportunity、fire trigger、damage conversion、round result
+  與每回合 legacy summary；1v1 與 1v2+ 分開。
+- 固定 R1 16 seeds，每 seed collector off/on-1/on-2，共 48 simulations。
+- off/on 完整 sim JSON、on-1/on-2 events 逐 seed一致；21 RNG call sites 不變。
+- 每個 opportunity/result、combat chain、round summary 與 sim `players[].clutches` 全部交叉驗證。
+
+### 固定結果（非 calibration）
+
+eventSuiteDigest：
+`1a0e78c1073dea522dffa52e87aab4f094f4116a778d4cfe7a9fe9127aedc6d3`。
+
+- 16 場／171 rounds：158 player opportunities；1v1 18、1v2+ 140。
+- 1v2/1v3/1v4/1v5 = 24/50/40/26。
+- opportunity wins 32（20.253%）；1v2+ wins 22（15.714%）。
+- combat opportunities 444；triggers/conversions 266/266；kills 159。
+- legacy clutches 27，legacy-without-opportunity 0；另有 5 次 opportunity win 未被計入
+  （bomb 1、time 4）。因此 legacy 是 kill-involved subset，不是全部 true clutch wins。
+- `t2` 只有 1 state opportunity、2 combat opportunities、1 win；resilience 樣本極窄，
+  不能由 R3 0/16 推論未接線或權重過輕。
+
+### 驗證
+
+```text
+node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,cs_stat_wiring_r3,cs_clutch_r4,build --timeout=600000
+```
+
+- CS23 28/28、R1、R2、R3、R4、build 全 PASS。
+- runner 本次 6/6、exit 0；其餘 13 segments 未執行，不宣稱全套通過。
+- `CsGameplayDigest.v1` expected suite、正式 source SHA、RNG、result shape 均未變。
+- `git diff --check`：PASS。
+
+### 下一步
+
+Calibration 維持 No-Go。下一個最小安全 Sprint 是 retreat opportunity→gate→displacement→
+re-engage/result instrumentation，只服務 `apm/positioning/courage/clutch`，不夾帶 defuse、
+threshold/公式修改、legacy result 修正或 learning/synergy 接線。未 push。
+
+---
+
+## CS Retreat Instrumentation R5（2026-08-10）
+
+### 目標與邊界
+
+R3 已確認 `apm/positioning/courage/clutch` 會進 `aggr()`，但現行 retreat 只有
+`aggr(p) < 0.82` branch，沒有 opportunity、真實位移或後續結果量測。本 Sprint 只建立
+opportunity→trigger→displacement→episode→recontact/re-engage→round result，不修改 threshold、
+公式、AI、result 或 contract。
+
+### 實作與 hard gates
+
+- 規格：`review/cs-gameplay/CS_RETREAT_R5_SPEC.md`。
+- 新增 `tools/check_cs_retreat_instrumentation_r5.mjs` 與 runner `cs_retreat_r5` segment。
+- `retreat_opportunity` 是 player-tick exposure；round-player episode 是 measurement grouping，
+  兩者都不當成 gameplay outcome。
+- trigger 後讀 `safeMove` 真實 from/to；零位移保留。recontact 與真正通過 fire roll 的
+  re-engage 分開。
+- 固定 R1 16 seeds，每 seed collector off/on-1/on-2，共 48 simulations。
+- off/on 完整 sim、on-1/on-2 events 逐 seed一致；transform 可逆、21 RNG call sites 不變；
+  input、event identities、episode 累計與 round summary 全部閉合。
+
+### 固定結果（非 calibration）
+
+eventSuiteDigest：
+`4e94fc5c2e95633f7972d19b8864e846b793a893dbdb9a8610e84f01c87c6f20`。
+
+- 16 場／171 rounds：1,492 opportunities，895 threshold triggers／actual displacements。
+- 261 round-player episodes；94 recontacts、74 fire re-engages。
+- 真實位移總計 2,440.276、平均 2.727；6 次 branch trigger 後位移為 0，如實保留。
+- survived episodes 60；won episodes 124。兩者只作 chain 終點，不是 retreat 因果效果。
+- 固定 roster 沒有 `aggr` 介於 0.82–0.87 的近門檻 exposure；t1／t2／ct4 全部 blocked，
+  其餘五名低於門檻玩家全部通過。證明 branch 生效，但 sample 不適合 threshold calibration。
+
+### 驗證
+
+```text
+node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,cs_stat_wiring_r3,cs_clutch_r4,cs_retreat_r5,build --timeout=600000
+```
+
+- CS23 28/28、R1、R2、R3、R4、R5、build 全 PASS。
+- runner 本次 7/7、exit 0；其餘 13 segments 未執行，不宣稱全套通過。
+- `CsGameplayDigest.v1` expected suite、正式 source SHA、RNG、result shape 均未變。
+- `git diff --check`：PASS。
+
+完整報告：`review/cs-gameplay/CS_RETREAT_R5_REPORT.md`。
+Calibration 維持 No-Go。下一個最小安全 Sprint 是 CT defuse opportunity→progress→
+interrupt/complete→round result instrumentation；不夾帶 utility、economy、規則或 contract 修改。
+未 push。
+
+---
+
+## CS Defuse Instrumentation R6（2026-08-10）
+
+### 目標與邊界
+
+R3 確認 CT `focus/decision` 直接進 defuse progress，但正式 result 只留 `how`。本 Sprint
+只建立 plant→bomb tick→proximity→contest→progress→complete→round result，並比較 production
+tick-start alive arrays 與 fresh post-combat view；不改 defuse 規則、result、contract 或 UI。
+
+### 實作與 hard gates
+
+- 規格：`review/cs-gameplay/CS_DEFUSE_R6_SPEC.md`。
+- 新增 `tools/check_cs_defuse_instrumentation_r6.mjs` 與 runner `cs_defuse_r6` segment。
+- 正式 tick 是 2 秒；progress delta=`0.45+foc/250+dec/300`、threshold 3.5、跨 pause/換人不 reset。
+- 固定 R1 16 seeds，每 seed collector off/on-1/on-2，共 48 simulations。
+- off/on 完整 sim、on-1/on-2 events 逐 seed一致；transform 可逆、21 RNG call sites 不變；
+  frame/tick/progress/complete/result identities 全部閉合。
+- fixed suite 無 progress-start 後 pause。依 systematic debugging 確認是 sample 零值，不換 seed；
+  pause/owner-switch 推導函式另以 synthetic chain 自我驗證。
+
+### 固定結果（非 calibration）
+
+eventSuiteDigest：
+`9c33c3c2b10ff48bf0acdc59067184a48f5408f6b32b88324137fdd9fa0d7368`。
+
+- 171 rounds 中 20 planted；140 bomb ticks、27 production proximity、16 progress ticks。
+- 4 個 progress-started rounds 全部完成；pause/owner-switch 0，只有 ct2/ct3 增加進度。
+- 三個 stale selected-defuser ticks，但沒有 dead-defuser progress/complete。
+- seed 3820910912、R5、62s：已死亡 t1 仍在 stale `aliveT`，讓 live ct3 的 production gate
+  false、fresh gate true。真 branch bug 已證明，回合結果影響未證明，本輪不修。
+- 16 個 `how:bomb` 只有 1 個 c4t=0；15 個仍有時間、14 個 final fresh CT=0。
+  `how:bomb` 不是可靠 explosion KPI，UI 一律顯示「炸彈引爆」屬 result/UI semantic bug。
+
+### 驗證
+
+```text
+node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,cs_stat_wiring_r3,cs_clutch_r4,cs_retreat_r5,cs_defuse_r6,build --timeout=600000
+```
+
+- CS23 28/28、R1–R6、build 全 PASS。
+- runner 本次 8/8、exit 0；其餘 13 segments 未執行，不宣稱全套通過。
+- `CsGameplayDigest.v1` expected suite、正式 source SHA、RNG、result shape 均未變。
+- `git diff --check`：PASS。
+
+完整報告：`review/cs-gameplay/CS_DEFUSE_R6_REPORT.md`。
+Calibration 維持 No-Go。下一個安全任務是 CS Utility Damage Audit R7，只做 read-chain、
+分類與最小量測規格，不新增假 damage、平衡值或 gameplay branch。未 push。
+
+---
+
+## CS Utility Damage Audit R7（2026-08-10）
+
+### 目標與邊界
+
+唯讀追查 `utilDmg:0` 是漏收既有 damage，還是正式 simulator 根本沒有 utility damage。
+本輪不新增 verifier、不改 source/contract/UI/RNG/數值，也不以視覺事件假裝 gameplay outcome。
+
+### Read-chain 結論
+
+- `roundDmg`、`dmgDealt`、HP damage 都只有 firearm duel 一個寫入點。
+- HE：購買／throw／cast／render 有，detonation damage 無。
+- molly：player throw 與 tactic fire render 有，damage/zone/path gameplay 無。
+- player smoke：購買／throw 有，但不寫入 `smokes`，不阻 LOS；tactic smoke 才會進
+  `smokeBlocks`，但沒有 player attribution。
+- flash：throw 與 AoE 會寫 `p.flash`、`flashPen` 改 Pt；但每次 firearm duel 也把雙方
+  `flash=3`，state source 混用，無法把 conversion 歸因給 utility。
+- engine 硬寫 `utilDmg:0`；`CsMatchResult.v1` 不轉出、現行 Result UI 不顯示。
+
+### 分類與判定
+
+- `utilDmg:0`：**C gameplay/design placeholder**，不是 A 類漏收。
+- HE/molly/player smoke：**C gameplay/design 缺口**。
+- tactic smoke：**E 窄但真實生效**。
+- flash attribution：**B instrumentation 缺口**；gun-hit/flash 共用 state 為 **A/C 語意混用**。
+- 新增 utilDmg instrumentation：**No-Go**；沒有 damage conversion 可量。
+
+完整證據：`review/cs-gameplay/CS_UTILITY_DAMAGE_R7_AUDIT.md`。
+16 項最終風險／P0–P3 優先級已追加到 `CS_16_STAT_AUDIT_R3.md`。
+Calibration 維持 No-Go；下一步若修 ADR overkill、stale defuse、`how:bomb`、learning/synergy
+或 utility gameplay，都會觸及正式 gameplay/result/contract/digest，需另開授權 Sprint。未 push。

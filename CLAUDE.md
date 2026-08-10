@@ -38,11 +38,44 @@ node tools/regress2.mjs # 一律跑（若存在）
 - **現役（必跑，全綠）**：`check_moba_runtime29` `check_moba_stats28` `check_talent27`
   `check_moba_experience26` `check_progress25` `check_moba_tactic24` `check_cs23`
   `check_flow09` `check_dash10`
-  （`check_moba_runtime29` 已內含前六支＋regress＋regress2＋build 的子行程驗證 ⇒
-  **跑它一支就等於跑完全部**，44/44。⚠ 巢狀 fan-out 很深，單跑約 10–15 分鐘。）
-- **各支的檢查數**（改動 verifier 時，這些數字被彼此的輸出形狀正則硬編碼，會連動）：
-  `runtime29` 44、`stats28` 29、`talent27` 44、`experience26` 35、`progress25` 34、
-  `tactic24` 29、`cs23` 28、`regress2` 節奏門檻 8/8。
+
+  ### ⚠⚠ 長 verifier 一律走 `tools/verify.mjs`，**禁止直接執行巢狀腳本**
+
+  **本段先前的敘述是錯的**（原文：「跑 runtime29 一支就等於跑完全部，44/44，單跑約
+  10–15 分鐘」）。實際情形，依 `tools/verify.mjs` 與 `check_moba_runtime29.mjs:428`
+  的實測註解：
+
+  - `check_moba_runtime29` 直接跑會展開 **63 個子行程**
+    （tactic24 ×16、cs23 ×8、progress25 ×8、regress ×8、regress2 ×8、flow09 ×6、
+    experience26 ×4、talent27 ×2、build ×2、stats28 ×1）⇒ **跑不完**。
+    不是斷言太多，是同一份斷言被重跑很多次。
+  - `check_moba_stats28` **單跑約 87 分鐘**。舊逾時值會把還在正常跑的子驗證器砍掉，
+    回報成 `exit=-1` ＋空 stdout，**看起來像斷言失敗**——這是已知誤判陷阱。
+  - 這些腳本的 `ck()` 是「累積到最後才一次印出」⇒ **執行中 log 是 0 bytes 屬正常**，
+    不得用 stdout byte 數判斷是否卡住。
+
+  **正確跑法**：
+
+  ```
+  node tools/verify.mjs --list                    # 區段清單與目前狀態
+  node tools/verify.mjs --only=experience26       # 單段
+  node tools/verify.mjs --resume                  # 只跑還沒通過的
+  node tools/verify.mjs                           # 全部（依機器／負載；2026-08-10 fresh run 約 27 分）
+  ```
+
+  runner 會對每個子行程設 `ESMO_VERIFY_FLAT=1`，讓會 fan-out 的腳本跳過巢狀子驗證
+  （那些子項目 runner 已各跑一次）。被跳過的標成 **SKIP 且排除在分母外**，不假裝通過。
+  每段跑完即寫 `tools/.verify-state.json` ⇒ 中斷可 `--resume` 續跑。
+  預設逾時 45 分/段（`--timeout=<ms>` 可調）。
+
+- **各支的檢查數**：⚠ **FLAT 模式（走 runner）與直接跑的分母不同**，
+  因為巢狀子驗證被委派出去了。以 `tools/verify.mjs` 的 `SEGMENTS` 表為唯一事實來源：
+  flat 下 `runtime29` 35/35、`stats28` 21/21、`experience26` 29/29、`progress25` 33/33、
+  `talent27` 37/37、`tactic24` 29、`cs23` 28、`regress` 結束率 15/15、
+  `regress2` 節奏門檻 8/8。
+- **既有紅燈必須以乾淨 `main` baseline 為準**：2026-08-10 為 `milestone_j` 37/39、
+  `milestone_e` 47/49；本輪 integration fresh run 同形。TD-19 replay 容量目前 PASS 但仍是
+  近上限風險；TD-21 已以增加樣本數解決，兩者都不是現役紅燈。**不得為了變綠放寬門檻**。
 - **已失效（S27 起即紅，非本次改動所致，勿當回歸訊號）**：`check_equiv06/07/08`
   （import 不存在的 `tools/src/LogicEngine.s05.js` fixture）、`check_hero08`、
   `check_mount09`（斷言 S09 時代的 AppShell 畫面清單）、`check_loop08`、`check_ux07`、

@@ -21,3 +21,14 @@ tools/.verify-state.json
 review/acceptance-fix/*.log
 review/matchmaking-flow-fix/*.log
 review/p1/*.log
+
+# MOBA Combat closure（2026-08-10）：量測輸出只作本機分析用，不入庫。
+# 結論與可重現方法寫在 .md；需要原始數據時，以 tools/probe_*.mjs /
+# measure_stat_sensitivity.mjs 的固定 seed 重跑。
+review/moba-combat/**/*.log
+review/moba-combat/**/*.json
+review/moba-combat/**/*.csv
+# 制度檔輪替備份（規則見 ~/.claude/playbook/40_MAINTENANCE.md §1）
+_backup_*
+tools/_backup_*
+review/moba-combat/_backup_*

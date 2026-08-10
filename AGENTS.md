@@ -63,7 +63,47 @@ ESMO 是 **Web MOBA / 電競經營模擬遊戲**。目標不是程式實驗，�
 
 - 碰 **MOBA battle** 依影響範圍跑：current Sprint verifier、`runtime29`、`pacing29b1`、
   `presentation29b2`、`controls29b3`、`regress` / `regress2`、`build`。
-  （`runtime29` 已巢狀包含 S23–S28 + regress + regress2 + build ⇒ 跑它=跑完全部，約 10–15 分。）
+
+### ⚠⚠ 長 verifier 一律走 `tools/verify.mjs`（2026-08-09 更正）
+
+**本節原本寫「`runtime29` 跑它=跑完全部，約 10–15 分」——那是錯的。**
+直接跑 `check_moba_runtime29.mjs` 會展開 **63 個子行程**，不應作為日常入口；
+`check_moba_stats28.mjs` 直接跑曾量到約 **87 分鐘**。走 runner 的耗時依機器與負載而異；
+2026-08-10 Codex fresh integration run 為：全套 28 段約 27 分鐘、`stats28` 302 秒、
+`runtime29` 190 秒。這些是觀測值，不是 timeout 或效能 SLA。
+
+```
+node tools/verify.mjs --list              # 區段清單與狀態
+node tools/verify.mjs --only=<id>[,<id>]  # 單段／多段
+node tools/verify.mjs --resume            # 只跑還沒通過的
+node tools/verify.mjs                     # 全部
+```
+
+runner 對每個子行程設 `ESMO_VERIFY_FLAT=1` ⇒ fan-out 腳本跳過巢狀子驗證
+（那些子項目 runner 已各跑一次）；被跳過的標成 **SKIP 且排除在分母外**。
+每段跑完即寫 `tools/.verify-state.json`，中斷可 `--resume`。
+
+**長驗證回報規則（不可妥協）**：
+1. **必須保留完整 stdout + stderr 與 checkpoint**（CI／terminal transcript 或 ignored 本機 log），
+   不得只記最後一行 assertion count；log／probe output 不得 commit。
+2. 這些腳本的 `ck()` 累積到最後才印 ⇒ **執行中 log 是 0 bytes 屬正常**，
+   不得用 stdout byte 數判斷卡住或失敗。
+3. 被 timeout／中止／0 stdout／靠推論得到的結果，一律標
+   **NOT RUN / TIMEOUT / SKIP，禁止標 PASS**。
+4. 既有紅燈必須先在乾淨 `main` 重現並具名，不得為了變綠而放寬門檻。
+   2026-08-10 baseline 為 `milestone_j` 37/39、`milestone_e` 47/49；本輪整合結果相同。
+   TD-19 replay 容量目前 PASS 但仍接近上限；TD-21 已以增加樣本數解決，兩者都不是現役紅燈。
+
+### ⚠ 指標規則：exec summary counter 只作診斷，不作 gameplay outcome KPI
+
+`exec[side].*` 這類彙總計數器是為**診斷**寫的。已知陷阱：
+`towerPushes`（隊伍層級、每 10 秒最多 +1 ⇒ 是「塔邊責任週期」，**不是推進強度**）、
+`splitPushActions`（8 秒節流）、`dragonContests` / `baronContests`（門檻只是「有人到場」）、
+`invadeKills`（實測 319 次入侵 0 擊殺）。
+**推進強度一律用 `p.twrDmg` ＋ 推掉的塔數 ＋ 主堡傷害。**
+使用任何 `exec.*` 前，必須在報告註明：層級（個人/隊伍）、遞增條件、有無節流或上限。
+詳見 `review/moba-combat/METHOD_CAVEAT.md` 開頭兩條工程規則。
+
 - 碰 **Progress / Reward** → 跑 `check_progress25`（冪等、不重複發獎）。
 - 碰 **Replay** → 跑含 replay 斷言的 verifier（`experience26` / `presentation29b2` / `controls29b3`）。
 - **所有子行程必須檢查 exit code 與輸出形狀**（不可只看有沒有印字）。

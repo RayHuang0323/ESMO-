@@ -55,7 +55,26 @@ export const STAT_MAP = {
   // 重返戰場門檻（引擎預設 0.60）：韌性/反應/應變 → 更快回場
   returnAdj: { resilience: -0.050, reflex: -0.040, adaptability: -0.030, positioning: +0.030 },
   // 團戰參與率（引擎預設 0.60 / 戰術 joinFight）
-  joinAdj: { courage: +0.050, tacticalIQ: +0.040, synergy: +0.040, comms: +0.030, reflex: +0.030 },
+  //  ⚠ Combat Decision B：`synergy` 已移出。
+  //    這一項的語意是「**是否**參戰」；synergy 的語意是「已決定參戰後，
+  //    是否願意等隊友、同步進場」，兩者不同層 ⇒ 改掛下面的 `syncAdj`。
+  //    實測根因：synergy 留在這裡時只讓個人更常參戰（命中率 +7.13±4.21pp ★），
+  //    但同時進場人數 3.787/3.818/3.803 **非單調**，唯一顯著的下游效果是
+  //    死亡 +2.117 ★ —— 更頻繁地**逐個**走進戰場。
+  //  ⚠ 移除後總和由 0.19 降為 0.15，但**四項各自的絕對權重未變**；
+  //    單項量測（其餘固定 70）時 `wsum` 只加總變動的那一項
+  //    ⇒ 不會意外放大 courage / tacticalIQ / comms / reflex 任何一項。
+  joinAdj: { courage: +0.050, tacticalIQ: +0.040, comms: +0.030, reflex: +0.030 },
+
+  //  ── Combat Decision B：團戰**投入決策**（TEAMFIGHT_COMMITMENT_SPEC.md）──
+  //  ⚠ 前身是「抵達同步」（syncAdj），已被實測否決：抵達離散度本來就只有 ~1.08 秒、
+  //    峰值參戰 3.8/5，同步閘幾乎從不啟動 ⇒ synergy 40 vs 90 有 59/60 場完全相同。
+  //    真正的機制是「投入更多身體到同一場團戰，卻換不到更好的結果」——
+  //    每場團戰死亡 +15%、擊殺僅 +1.4%，交換比 1.054 → 0.931 單調惡化。
+  //  決定性使用（不擲骰）⇒ 不改變 rng 序列。中性（70）⇒ 0 ⇒ 基準門檻。
+  //  高 synergy ⇒ 投入門檻**更嚴**（明顯不利的團戰不投入）；
+  //  低 synergy ⇒ 有意圖就進場（≈ 改動前的行為）。
+  commitAdj: { synergy: +0.350 },
   // 龍/巴龍集結率（引擎預設 0.60 / 戰術 dragonJoin、baronJoin）
   objAdj: { mapAware: +0.050, tacticalIQ: +0.050, focus: +0.040, comms: +0.030 },
   // 推線深度偏移（引擎預設 0；戰術 laneOffset 之上再疊加）
@@ -66,7 +85,33 @@ export const STAT_MAP = {
   // 打野 Gank 停留窗倍率（1 = 原 9 秒）
   gankWindowScale: { mapAware: +0.100, tacticalIQ: +0.050 },
   // 輔助遊走率（戰術 roamRate 之上疊加）
-  roamAdj: { mapAware: +0.100, comms: +0.080, apm: +0.060, leadership: +0.050 },
+  //  ⚠ Combat Decision C：這一項**降級為「出發傾向／頻率」**，不再代表遊走品質。
+  //    品質改由下面四個 `roam*Adj` 分工負責（見 ROAM_SUPPORT_QUALITY_SPEC.md §2-D）。
+  //  ⚠ `apm` 已移除：操作速度與「支援決策品質」無語意關聯，且它與
+  //    mapAware/comms/leadership 擠在同一個作用點，正是「四項素質重複控制同一件事」
+  //    的來源。apm 其餘四條正式路徑（gankIntervalScale / lastHitLoss /
+  //    xpRateScale / laneAdj）完全未動。
+  //  ⚠ `comms` 與 `leadership` 也已移出：它們的角色分別是「資訊可信度」與「協同」，
+  //    留在這裡會繼續推高遊走**次數** —— 實測（校準中間版本）正是因此讓
+  //    空手遊走 +1.53 ★、推塔 −2.34 ★，也就是舊問題原封不動地重現。
+  //    只保留 mapAware：它的語意（知道哪裡有機會）本來就同時涵蓋
+  //    「值得出動的頻率」與「看得多遠」，兩者不衝突。
+  roamAdj: { mapAware: +0.100 },
+
+  //  ── Combat Decision C：遊走決策品質層（四項素質分工，互不重疊）──────────
+  //  全部**決定性**使用（不擲骰）⇒ 不改變 rng 序列。
+  //  中性（全 70）⇒ 四項皆 0 ⇒ 評分退回基準值。
+  //  ⚠ 幅度刻意大於行為層的 ±0.12：這四項是**決定性**係數，不像機率型作用點
+  //    會被大量擲骰放大，幅度太小會被候選評分的其他項淹沒（實測 ±0.12 時
+  //    comms 的品質效果量不出來）。
+  //  mapAware：看得到多遠的候選（可見範圍）
+  roamSightAdj: { mapAware: +0.350 },
+  //  comms：隊友回報的遠端資訊有多可信（資訊共享品質）
+  roamInfoAdj: { comms: +0.360 },
+  //  decision：這趟離線值不值得（出發門檻；高 ⇒ 更挑）
+  roamGateAdj: { decision: +0.120 },
+  //  leadership：隊友已在往同一目標移動時的協同價值（號召／跟進）
+  roamFollowAdj: { leadership: +0.120 },
   // 分推承諾度（戰術 splitPush 之上疊加）
   splitAdj: { adaptability: +0.080, decision: +0.060, courage: +0.050, focus: +0.040 },
   // 開局野區入侵率（戰術 invadeChance 之上疊加；只讀該側打野）
@@ -82,7 +127,16 @@ export const STAT_MAP = {
   //    accuracy 補刀精準｜apm 出手速度｜focus 專注度（不漏兵）｜mapAware 路線效率
   //  幅度刻意小：合計 ±0.06 ⇒ 全 100 分與全 40 分之間差 ~12% 經驗速率，
   //  一場約 0.5–1 個本場等級。看得出來，但不會壓過戰術與操作。
-  xpRateScale: { accuracy: +0.022, apm: +0.016, focus: +0.014, mapAware: +0.008 },
+  //  2026-08-07：補上 `learning`（學習力）——16 項素質中**最後一項**沒接進戰鬥的。
+  //  S28 當初的理由是「引擎沒有跨場成長迴圈可掛」，但 P0-2 之後有了
+  //  「本場經驗獲取速率」這個作用點，而學習力的語意正是**這一場學得多快**，
+  //  掛在這裡最貼切，而且沿用既有係數、不新增第二個作用點。
+  //  權重刻意最小（+0.006）：它是輔助項，不該主宰本場成長。
+  //  ⚠ 權重**在原本 0.060 的總量內重新分配**，不是外加。
+  //  第一版直接加 +0.006 ⇒ 總量變 0.066，高低能力的本場等級差距從 2.46 撐到 2.61，
+  //  踩破 P0-3 §4-5c「不誇張 ≤ 2.5 級」的門檻。接新素質不該順便放大整體幅度。
+  //  0.020 + 0.015 + 0.013 + 0.007 + 0.005 = 0.060（與加入 learning 之前相同）
+  xpRateScale: { accuracy: +0.020, apm: +0.015, focus: +0.013, mapAware: +0.007, learning: +0.005 },
 
   //  ── Milestone P0-3：最小戰鬥品質層 ────────────────────────────────────
   //  設計原則：**中性（全 70）＝現行行為**。
@@ -114,6 +168,10 @@ export const STAT_MAP = {
 export const MOD_CLAMP = {
   retreatAdj: 0.10, returnAdj: 0.10, joinAdj: 0.15, objAdj: 0.15,
   laneAdj: 0.04, roamAdj: 0.20, splitAdj: 0.15, invadeAdj: 0.12,
+  //  Combat Decision C：四個品質作用點各自限幅（單一素質權重 0.120 ⇒ 剛好不觸限）
+  roamSightAdj: 0.35, roamInfoAdj: 0.36, roamGateAdj: 0.12, roamFollowAdj: 0.12,
+  //  Combat Decision B：團戰投入決策（單一素質權重 0.350 ⇒ 剛好不觸限）
+  commitAdj: 0.35,
 };
 /**
  * P0-3：單向限幅（只在一個方向生效，另一側恆為 0 ⇒ 中性＝現行行為）。
@@ -141,11 +199,28 @@ export const SCALE_CLAMP = {
  */
 const TEAM_LED_JOIN = 0.020;
 const TEAM_LED_OBJ = 0.040;
+/**
+ * 隊伍層級：學習力＝「整隊在這一場調整得多快」。
+ *
+ * 沿用 `TEAM_LED_*` 立下的同一個機制（取該側平均、加在既有作用點上），
+ * **不新增作用點、不新增素質**。
+ *
+ * 為什麼需要：學習力原本在 16 項裡權重 0.005，是唯一幾乎沒有作用的一項；
+ * 個性的 boost/nerf 掛在它身上等於空轉，天賦 team_3 加了也沒有效果。
+ * 幅度刻意小（0.012），與 `TEAM_LED_JOIN` 同一個量級。
+ */
+const TEAM_LRN_XP = 0.012;
 
 /** 中性 mods（全 70 分的輸出；引擎公式加 0 / 乘 1 ⇒ baseline）。 */
 export const NEUTRAL_MODS = Object.freeze({
-  retreatAdj: 0, returnAdj: 0, joinAdj: 0, objAdj: 0, laneAdj: 0,
-  gankIntervalScale: 1, gankWindowScale: 1, roamAdj: 0, splitAdj: 0, invadeAdj: 0,
+  retreatAdj: 0, returnAdj: 0, joinAdj: 0, commitAdj: 0, objAdj: 0, laneAdj: 0,
+  //  ⚠ 鍵的**順序**必須與 `toPlayerMods()` 的回傳完全一致：
+  //    `check_moba_stats28` §9 用 `JSON.stringify` 逐字比對中性 mods，
+  //    順序不同就會紅（實測踩過：四個 roam* 鍵原本接在 invadeAdj 之後，
+  //    但 toPlayerMods 是插在 roamAdj 之後 ⇒ 值全對、順序不對 ⇒ §9 失敗）。
+  gankIntervalScale: 1, gankWindowScale: 1, roamAdj: 0,
+  roamSightAdj: 0, roamInfoAdj: 0, roamGateAdj: 0, roamFollowAdj: 0,
+  splitAdj: 0, invadeAdj: 0,
   //  P0-2：中性 ⇒ 乘 1 ⇒ baseline 逐位元不變
   xpRateScale: 1,
   //  P0-3：中性 ⇒ 全 0 ⇒ 不消耗 RNG、不改變行為
@@ -165,12 +240,14 @@ const fix = (v) => Math.round(v * 1e6) / 1e6 + 0;
  * 單一選手能力 → 行為 mods。
  * @param {Object} stats    derived 16 項能力（長鍵；缺鍵 ⇒ 中性）
  * @param {number} teamLedU 該側 leadership 平均的 u 值（團隊層級項）
+ * @param {number} teamLrnU 該側 learning 平均的 u 值（團隊層級項）
  */
-export function toPlayerMods(stats, teamLedU = 0) {
+export function toPlayerMods(stats, teamLedU = 0, teamLrnU = 0) {
   const c = (key) => fix(clamp(wsum(stats, STAT_MAP[key]), -MOD_CLAMP[key], MOD_CLAMP[key]));
   const scale = (key) => {
     const [lo, hi] = SCALE_CLAMP[key];
-    return fix(clamp(1 + wsum(stats, STAT_MAP[key]), lo, hi));
+    const team = key === "xpRateScale" ? TEAM_LRN_XP * teamLrnU : 0;
+    return fix(clamp(1 + wsum(stats, STAT_MAP[key]) + team, lo, hi));
   };
   //  P0-3：單向映射。penalty 只取負向（低能力才受罰）、bonus 只取正向。
   const oneSided = (key) => {
@@ -184,11 +261,18 @@ export function toPlayerMods(stats, teamLedU = 0) {
     retreatAdj: c("retreatAdj"),
     returnAdj: c("returnAdj"),
     joinAdj: fix(join),
+    //  Combat Decision B：團戰投入決策（決定性讀取，不擲骰）
+    commitAdj: c("commitAdj"),
     objAdj: fix(obj),
     laneAdj: c("laneAdj"),
     gankIntervalScale: scale("gankIntervalScale"),
     gankWindowScale: scale("gankWindowScale"),
     roamAdj: c("roamAdj"),
+    //  Combat Decision C：遊走品質層（決定性讀取，不擲骰）
+    roamSightAdj: c("roamSightAdj"),
+    roamInfoAdj: c("roamInfoAdj"),
+    roamGateAdj: c("roamGateAdj"),
+    roamFollowAdj: c("roamFollowAdj"),
     splitAdj: c("splitAdj"),
     invadeAdj: c("invadeAdj"),
     //  P0-2：本場經驗獲取速率（乘數；中性 = 1）
@@ -212,8 +296,10 @@ export function toSideMods(slots = []) {
   if (!list.length) return {};
   // 團隊 leadership 平均（缺 leadership 的 slot 以中性 70 計入 → 不因缺資料受懲罰）
   const teamLedU = list.reduce((s, x) => s + u(x.stats, "leadership"), 0) / list.length;
+  //  同一個機制：該側學習力平均 ⇒ 全隊的本場經驗速率（見 TEAM_LRN_XP）
+  const teamLrnU = list.reduce((s, x) => s + u(x.stats, "learning"), 0) / list.length;
   const out = {};
-  for (const s of list) out[s.id] = toPlayerMods(s.stats ?? {}, teamLedU);
+  for (const s of list) out[s.id] = toPlayerMods(s.stats ?? {}, teamLedU, teamLrnU);
   return out;
 }
 
