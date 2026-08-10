@@ -176,3 +176,28 @@ node tools/verify.mjs --only=cs_stat_wiring_r3 --timeout=600000
 - 統計顯著性：未計算。
 - `CsGameplayDigest.v1` 正式保護由聯合 gate 的 `cs_measure_r1` 負責；本節不先行宣稱
   尚未執行的聯合 gate 結果。
+
+---
+
+## 9. R4–R6 Measurement Coverage Addendum（2026-08-10）
+
+本文件第 4–7 節保留 R3 當時的 audit snapshot；後續 test-only instrumentation 已補：
+
+| 素質 | 後續 coverage | 現況修正 | Calibration |
+|---|---|---|---|
+| `clutch/str`、`resilience/res` | R4 true lastAlive→combat→round conversion | 158 opportunities；t2 只有 1 state/2 combat，情境仍極窄 | No-Go |
+| `apm/positioning/courage/clutch` | R5 retreat opportunity→gate→displacement→re-engage/result | 1,492 opportunities；固定 roster 無 0.82–0.87 近門檻 exposure | No-Go |
+| `focus/foc`、`decision/dec` | R6 bomb tick→proximity→contest→progress→complete/result | 20 planted rounds、16 progress ticks、4 completes，只涵蓋 ct2/ct3 | No-Go |
+
+因此第 4 節 matrix 中這三組「Instrumentation first」的 baseline KPI 缺口已關閉，但不代表
+sample、treatment 或 outcome 已足夠 calibration。R6 另發現 stale alive-array gate bug 與
+`how:"bomb"` result semantic overload；兩者都會污染 defuse outcome 解讀，修正又會改 gameplay／
+contract，必須另開 Sprint。完整報告：
+
+- `review/cs-gameplay/CS_TRUE_CLUTCH_R4_REPORT.md`
+- `review/cs-gameplay/CS_RETREAT_R5_REPORT.md`
+- `review/cs-gameplay/CS_DEFUSE_R6_REPORT.md`
+
+16 項最終 readiness 仍是：`learning`／player-side `synergy` 為 design No-Go；`resilience`、
+defuse 與 retreat 相關素質因機會分布狹窄而 No-Go；其餘 11 項只能視為未來 paired calibration
+候選，不能由 R3 changed-seed counts 排名強弱。全域 Calibration 仍為 **No-Go**。

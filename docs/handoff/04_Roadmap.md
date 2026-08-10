@@ -63,6 +63,10 @@ actual displacements、261 round-player episodes、94 recontacts、74 fire re-en
 固定 roster 沒有 0.82–0.87 近門檻 exposure，不能由 trigger count推論效果或直接 calibration。
 報告：`review/cs-gameplay/CS_RETREAT_R5_REPORT.md`。
 
+`CS Defuse R6` 已完成：20 planted rounds／140 bomb ticks 可連到 27 proximity、16 progress
+ticks 與 4 completes。量到 1 次 stale dead T 阻擋 live CT 的 gate bug；`how:bomb` 也過載
+CT 全滅／round timeout／timer zero。報告：`review/cs-gameplay/CS_DEFUSE_R6_REPORT.md`。
+
 **下一步（依序）**：
 
 1. 持續遵守 `review/moba-combat/METHOD_CAVEAT.md` 開頭兩條工程規則——尤其
@@ -73,11 +77,13 @@ actual displacements、261 round-player episodes、94 recontacts、74 fire re-en
 3. R4 已解除 true clutch/lastAlive baseline coverage；`resilience` 對 t2 只有 1 次 state／
    2 次 combat opportunities，仍不足以 calibration。
 4. R5 retreat measurement 已完成；沒有修改 `0.82` threshold、公式或 gameplay branch。
-5. 下一個最小 Sprint 只補 CT defuse opportunity→progress→interrupt/complete→round result；
-   不與 utility、economy 或 result contract 修正綁在一起。
-6. **動手量測前**仍先讀作用點遞增條件（層級／節流／上限），
+5. R6 defuse baseline measurement 已完成；stale-array 與 `how:bomb` 真 bug 只留證據，
+   未修改 gameplay/result/UI。
+6. 下一個安全任務只做 utility damage read-chain audit，判定 `utilDmg:0` 是 measurement 還是
+   gameplay/design 缺口；不加入假 damage 或平衡值。
+7. **動手量測前**仍先讀作用點遞增條件（層級／節流／上限），
    確認 KPI 量得到它宣稱要量的東西。本輪最貴的教訓就是這個順序搞反了。
-7. learning／synergy 接線、權重、公式、新 branch、角色定位只做證據與建議；
+8. learning／synergy 接線、權重、公式、新 branch、角色定位只做證據與建議；
    不直接修改。Calibration 維持 No-Go，直到 measurement coverage 足以辨識病因。
 
 ---

@@ -6265,3 +6265,52 @@ node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,cs_stat_wiring_
 Calibration 維持 No-Go。下一個最小安全 Sprint 是 CT defuse opportunity→progress→
 interrupt/complete→round result instrumentation；不夾帶 utility、economy、規則或 contract 修改。
 未 push。
+
+---
+
+## CS Defuse Instrumentation R6（2026-08-10）
+
+### 目標與邊界
+
+R3 確認 CT `focus/decision` 直接進 defuse progress，但正式 result 只留 `how`。本 Sprint
+只建立 plant→bomb tick→proximity→contest→progress→complete→round result，並比較 production
+tick-start alive arrays 與 fresh post-combat view；不改 defuse 規則、result、contract 或 UI。
+
+### 實作與 hard gates
+
+- 規格：`review/cs-gameplay/CS_DEFUSE_R6_SPEC.md`。
+- 新增 `tools/check_cs_defuse_instrumentation_r6.mjs` 與 runner `cs_defuse_r6` segment。
+- 正式 tick 是 2 秒；progress delta=`0.45+foc/250+dec/300`、threshold 3.5、跨 pause/換人不 reset。
+- 固定 R1 16 seeds，每 seed collector off/on-1/on-2，共 48 simulations。
+- off/on 完整 sim、on-1/on-2 events 逐 seed一致；transform 可逆、21 RNG call sites 不變；
+  frame/tick/progress/complete/result identities 全部閉合。
+- fixed suite 無 progress-start 後 pause。依 systematic debugging 確認是 sample 零值，不換 seed；
+  pause/owner-switch 推導函式另以 synthetic chain 自我驗證。
+
+### 固定結果（非 calibration）
+
+eventSuiteDigest：
+`9c33c3c2b10ff48bf0acdc59067184a48f5408f6b32b88324137fdd9fa0d7368`。
+
+- 171 rounds 中 20 planted；140 bomb ticks、27 production proximity、16 progress ticks。
+- 4 個 progress-started rounds 全部完成；pause/owner-switch 0，只有 ct2/ct3 增加進度。
+- 三個 stale selected-defuser ticks，但沒有 dead-defuser progress/complete。
+- seed 3820910912、R5、62s：已死亡 t1 仍在 stale `aliveT`，讓 live ct3 的 production gate
+  false、fresh gate true。真 branch bug 已證明，回合結果影響未證明，本輪不修。
+- 16 個 `how:bomb` 只有 1 個 c4t=0；15 個仍有時間、14 個 final fresh CT=0。
+  `how:bomb` 不是可靠 explosion KPI，UI 一律顯示「炸彈引爆」屬 result/UI semantic bug。
+
+### 驗證
+
+```text
+node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,cs_stat_wiring_r3,cs_clutch_r4,cs_retreat_r5,cs_defuse_r6,build --timeout=600000
+```
+
+- CS23 28/28、R1–R6、build 全 PASS。
+- runner 本次 8/8、exit 0；其餘 13 segments 未執行，不宣稱全套通過。
+- `CsGameplayDigest.v1` expected suite、正式 source SHA、RNG、result shape 均未變。
+- `git diff --check`：PASS。
+
+完整報告：`review/cs-gameplay/CS_DEFUSE_R6_REPORT.md`。
+Calibration 維持 No-Go。下一個安全任務是 CS Utility Damage Audit R7，只做 read-chain、
+分類與最小量測規格，不新增假 damage、平衡值或 gameplay branch。未 push。

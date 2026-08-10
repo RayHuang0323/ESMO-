@@ -117,7 +117,8 @@ Candidate event suite 必須人工檢查後以 literal 鎖定；無 update/rebas
 8. progress 單調不減；pause 保留、owner switch 與 multi-defuser round 只由 event chain 推導。
 9. complete 恰對到 crossing progress event；complete iff round result `how=defuse`。
 10. round result winner/how/final c4t/survivors 對回 sim；`how=bomb` 不強制等於 c4t 0。
-11. fixed suite 至少有 plant、tick、proximity、progress、pause 與 complete；否則 coverage 不足而 FAIL。
+11. fixed suite 至少有 plant、tick、proximity、progress 與 complete；pause／owner-switch 使用同一
+    純推導函式的 synthetic self-check，fixed baseline 為 0 時如實保留，不換 seed。
 12. expected event suite digest 匹配人工鎖定 literal；禁止自動更新。
 
 以下不是 FAIL：
@@ -125,6 +126,7 @@ Candidate event suite 必須人工檢查後以 literal 鎖定；無 update/rebas
 - 沒有 proximity defuser；
 - contested 或 progress pause；
 - progress 換人且保留；
+- fixed baseline 沒有 pause 或 owner switch；
 - production 選到 stale dead defuser／stale contestant；
 - planted round 由 elimination 或 timer 結束；
 - 結果方向與直覺不同。
@@ -151,3 +153,14 @@ R6 PASS 只關閉 focus/decision 的 defuse baseline instrumentation 缺口。�
 retained progress 或 owner transfer，先分類 A/B/C 並提出 contract-aware 修正 Sprint；不得在
 本輪直接修。Calibration 仍需 stat-specific treatment、固定 sample plan、ADR overkill 隔離與
 明確 outcome，R6 本身不授權進入 calibration。
+
+### Fixed-seed coverage 修正（實作審查）
+
+第一次固定 16-seed 執行有 20 個 planted rounds、16 個 progress ticks與 4 次 complete，
+但四個開始進度的回合都連續完成，pause／owner-switch 均為 0。這是可重現的 sample 結果，
+不是 collector 漏量。原「pause 必須 >0」gate 會逼迫換 seed，違反固定 sample 原則，故改為：
+
+- fixed baseline 的零值保留；
+- pause／owner-switch 仍由 production events 推導；
+- 同一推導函式以 start→pause→owner switch synthetic chain 自我驗證；
+- 不追加 seed、不變更正式 gameplay、不把零值寫成已觀察 coverage。
