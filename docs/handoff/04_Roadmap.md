@@ -58,6 +58,11 @@ lastAlive 情境未觀察到，player-side `synergy` 不可達，`learning` 無 
 combat 與 round conversion；legacy 27 次只是真實 32 次勝利的 kill-involved subset。
 報告：`review/cs-gameplay/CS_TRUE_CLUTCH_R4_REPORT.md`。
 
+`CS Retreat R5` 已完成：1,492 player-tick opportunities 可連到 895 threshold triggers／
+actual displacements、261 round-player episodes、94 recontacts、74 fire re-engages 與 round result。
+固定 roster 沒有 0.82–0.87 近門檻 exposure，不能由 trigger count推論效果或直接 calibration。
+報告：`review/cs-gameplay/CS_RETREAT_R5_REPORT.md`。
+
 **下一步（依序）**：
 
 1. 持續遵守 `review/moba-combat/METHOD_CAVEAT.md` 開頭兩條工程規則——尤其
@@ -67,11 +72,12 @@ combat 與 round conversion；legacy 27 次只是真實 32 次勝利的 kill-inv
    13/16 observed 或 changed-seed count 比較素質強弱。
 3. R4 已解除 true clutch/lastAlive baseline coverage；`resilience` 對 t2 只有 1 次 state／
    2 次 combat opportunities，仍不足以 calibration。
-4. 下一個最小 Sprint 只補 retreat opportunity→gate→displacement→re-engage/result；
-   defuse 之後另拆，不與 retreat 綁在一起。
-5. **動手量測前**仍先讀作用點遞增條件（層級／節流／上限），
+4. R5 retreat measurement 已完成；沒有修改 `0.82` threshold、公式或 gameplay branch。
+5. 下一個最小 Sprint 只補 CT defuse opportunity→progress→interrupt/complete→round result；
+   不與 utility、economy 或 result contract 修正綁在一起。
+6. **動手量測前**仍先讀作用點遞增條件（層級／節流／上限），
    確認 KPI 量得到它宣稱要量的東西。本輪最貴的教訓就是這個順序搞反了。
-6. learning／synergy 接線、權重、公式、新 branch、角色定位只做證據與建議；
+7. learning／synergy 接線、權重、公式、新 branch、角色定位只做證據與建議；
    不直接修改。Calibration 維持 No-Go，直到 measurement coverage 足以辨識病因。
 
 ---

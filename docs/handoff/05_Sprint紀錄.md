@@ -6214,3 +6214,54 @@ node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,cs_stat_wiring_
 Calibration 維持 No-Go。下一個最小安全 Sprint 是 retreat opportunity→gate→displacement→
 re-engage/result instrumentation，只服務 `apm/positioning/courage/clutch`，不夾帶 defuse、
 threshold/公式修改、legacy result 修正或 learning/synergy 接線。未 push。
+
+---
+
+## CS Retreat Instrumentation R5（2026-08-10）
+
+### 目標與邊界
+
+R3 已確認 `apm/positioning/courage/clutch` 會進 `aggr()`，但現行 retreat 只有
+`aggr(p) < 0.82` branch，沒有 opportunity、真實位移或後續結果量測。本 Sprint 只建立
+opportunity→trigger→displacement→episode→recontact/re-engage→round result，不修改 threshold、
+公式、AI、result 或 contract。
+
+### 實作與 hard gates
+
+- 規格：`review/cs-gameplay/CS_RETREAT_R5_SPEC.md`。
+- 新增 `tools/check_cs_retreat_instrumentation_r5.mjs` 與 runner `cs_retreat_r5` segment。
+- `retreat_opportunity` 是 player-tick exposure；round-player episode 是 measurement grouping，
+  兩者都不當成 gameplay outcome。
+- trigger 後讀 `safeMove` 真實 from/to；零位移保留。recontact 與真正通過 fire roll 的
+  re-engage 分開。
+- 固定 R1 16 seeds，每 seed collector off/on-1/on-2，共 48 simulations。
+- off/on 完整 sim、on-1/on-2 events 逐 seed一致；transform 可逆、21 RNG call sites 不變；
+  input、event identities、episode 累計與 round summary 全部閉合。
+
+### 固定結果（非 calibration）
+
+eventSuiteDigest：
+`4e94fc5c2e95633f7972d19b8864e846b793a893dbdb9a8610e84f01c87c6f20`。
+
+- 16 場／171 rounds：1,492 opportunities，895 threshold triggers／actual displacements。
+- 261 round-player episodes；94 recontacts、74 fire re-engages。
+- 真實位移總計 2,440.276、平均 2.727；6 次 branch trigger 後位移為 0，如實保留。
+- survived episodes 60；won episodes 124。兩者只作 chain 終點，不是 retreat 因果效果。
+- 固定 roster 沒有 `aggr` 介於 0.82–0.87 的近門檻 exposure；t1／t2／ct4 全部 blocked，
+  其餘五名低於門檻玩家全部通過。證明 branch 生效，但 sample 不適合 threshold calibration。
+
+### 驗證
+
+```text
+node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,cs_stat_wiring_r3,cs_clutch_r4,cs_retreat_r5,build --timeout=600000
+```
+
+- CS23 28/28、R1、R2、R3、R4、R5、build 全 PASS。
+- runner 本次 7/7、exit 0；其餘 13 segments 未執行，不宣稱全套通過。
+- `CsGameplayDigest.v1` expected suite、正式 source SHA、RNG、result shape 均未變。
+- `git diff --check`：PASS。
+
+完整報告：`review/cs-gameplay/CS_RETREAT_R5_REPORT.md`。
+Calibration 維持 No-Go。下一個最小安全 Sprint 是 CT defuse opportunity→progress→
+interrupt/complete→round result instrumentation；不夾帶 utility、economy、規則或 contract 修改。
+未 push。
