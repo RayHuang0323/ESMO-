@@ -135,6 +135,6 @@ node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,cs_stat_wiring_
 ## 下一個最小 Sprint
 
 建議只做 **CT Defuse Instrumentation R6**：建立 bomb planted 後的 CT defuse opportunity→
-start/continue/progress→interrupt/complete→round result，並先讀現行 0.1 秒 tick、距離、存活與
-kit/progress 條件。仍只用 test-only hooks，不修改 defuse 規則、時間、地圖、經濟或結果契約；
+start/continue/progress→interrupt/complete→round result，並先讀現行 2 秒 tick、距離、存活與
+progress 條件。仍只用 test-only hooks，不修改 defuse 規則、時間、地圖、經濟或結果契約；
 Calibration 維持 No-Go。
