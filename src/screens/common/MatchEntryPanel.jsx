@@ -1,11 +1,20 @@
 // ============================================================================
-//  screens/common/MatchEntryPanel.jsx — 出賽申請狀態（Milestone O3）
+//  screens/common/MatchEntryPanel.jsx — 出賽陣容是否完整（純顯示）
 //
-//  MOBA 與 CS 兩個賽前頁共用同一個面板，避免兩邊各寫一份判斷與版面。
-//  資料全部來自 `profileStore.matchEntry(mode)`（＝契約產生的結果），
-//  **畫面不自己判規則、不自己算數字**。
+//  ── 正式環境驗收後的定位 ──────────────────────────────────────────────────
+//  這張卡在正式模式只回答一件事：**陣容湊齊了沒有，沒齊是差什麼**。
 //
-//  手機優先：單欄、可換行、金額與代碼 nowrap，320px 不水平溢出。
+//  拿掉的東西與理由：
+//    · 「出賽申請」這個詞本身就是內部流程用語 → 正式標題改成「出賽陣容」。
+//    · 隊伍版本／申請識別／提交時間／提交內容明細 → 只在 `?debug=1` 出現，
+//      而且預設收合。玩家不需要知道 `MatchEntryRequest` 存在。
+//
+//  ⚠ **契約欄位一個都沒刪**，`matchEntry` 的驗證邏輯與 Store 形狀完全未動；
+//    改的只是「畫面上畫什麼」。
+//
+//  ── 單一狀態來源 ──────────────────────────────────────────────────────────
+//  狀態由 `useMatchFlow` 透過 `flow` 傳進來；本元件不自己訂閱 store。
+//  （`flow` 缺席時退回自行讀取，讓既有呼叫端不會壞。）
 // ============================================================================
 import React, { useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
@@ -19,43 +28,42 @@ const C = {
 
 /**
  * @param {"moba"|"cs"} mode
- * @param {() => void} [onAutoFill] 有阻擋時顯示「自動填入」；不給就不顯示
+ * @param {() => void} [onAutoFill] 有阻擋時顯示「自動填入」
+ * @param {object} [flow] `useMatchFlow` 的輸出（單一狀態來源）
  */
-export default function MatchEntryPanel({ mode = "moba", onAutoFill = null }) {
-  const entry = useProfileStore((s) => s.matchEntry)(mode);
-  //  「幾人／共幾人」直接讀契約算好的 filled / required，畫面不自己數
-  const check = useProfileStore((s) => s.squadCheck)(mode);
+export default function MatchEntryPanel({ mode = "moba", onAutoFill = null, flow = null }) {
+  const fallbackEntry = useProfileStore((s) => s.matchEntry);
+  const fallbackCheck = useProfileStore((s) => s.squadCheck);
+  const entry = flow?.entry ?? fallbackEntry(mode);
+  const check = flow?.check ?? fallbackCheck(mode);
   const [open, setOpen] = useState(false);
+  const debug = isDebugMode();
+
   const ok = entry.ok;
   const req = entry.request;
-  const debug = isDebugMode();
-  const modeName = mode === "cs" ? "CS" : "MOBA";
   const full = check.filled >= check.required;
 
   return (
     <div style={{
       background: C.card, borderRadius: 12, padding: "10px 12px", marginBottom: 10,
-      border: `1px solid ${ok ? "rgba(52,211,153,0.35)" : "rgba(248,113,113,0.35)"}`,
+      border: `1px solid ${ok ? "rgba(52,211,153,0.35)" : "rgba(248,113,113,0.35)"}`, minWidth: 0,
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", minWidth: 0 }}>
         <span style={{ fontSize: 13 }}>{ok ? "🛡" : "⚠"}</span>
-        <span style={{ color: "white", fontSize: 12, fontWeight: 800 }}>出賽申請</span>
+        <span style={{ color: "white", fontSize: 12, fontWeight: 800 }}>出賽陣容</span>
         <span style={{
-          fontSize: 9, fontWeight: 800, borderRadius: 6, padding: "2px 7px",
-          background: ok ? "rgba(52,211,153,0.15)" : "rgba(248,113,113,0.15)",
-          color: ok ? C.ok : C.bad,
+          fontSize: 10, fontWeight: 900, borderRadius: 6, padding: "2px 8px",
+          background: full ? "rgba(52,211,153,0.15)" : "rgba(248,113,113,0.15)",
+          color: full ? C.ok : C.bad, whiteSpace: "nowrap",
         }}>
-          {ok ? "已通過驗證" : `未通過（${entry.errors.length} 項）`}
+          {check.filled}/{check.required}
         </span>
-        {ok && (
-          <button onClick={() => setOpen((v) => !v)}
-            style={{ marginLeft: "auto", background: "transparent", border: "none", cursor: "pointer", color: C.gray2, fontSize: 10, fontWeight: 700 }}>
-            {open ? "收合明細 ▲" : "查看提交內容 ▼"}
-          </button>
-        )}
+        <span style={{ color: ok ? C.ok : C.bad, fontSize: 10, fontWeight: 700 }}>
+          {ok ? "已就緒" : "尚未完成"}
+        </span>
       </div>
 
-      {/* 阻擋理由：逐條顯示契約產生的訊息 */}
+      {/* 缺什麼：逐條顯示契約產生的中文理由 */}
       {!ok && (
         <div style={{ marginTop: 7 }}>
           {entry.errors.slice(0, 6).map((e, i) => (
@@ -79,32 +87,20 @@ export default function MatchEntryPanel({ mode = "moba", onAutoFill = null }) {
         </div>
       )}
 
-      {/*  集中驗收修正（項目二）：主畫面只留玩家看得懂的三件事——
-           出賽申請狀態、陣容是否 5/5、模式名稱。
-           隊伍版本 / 申請識別 / 提交時間屬於工程資訊，移到「查看提交內容」展開區
-           （或 ?debug=1）。⚠ 契約欄位一個都沒刪，驗證邏輯與 Store 形狀完全未動。 */}
-      <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap", minWidth: 0 }}>
-        {[
-          { k: "模式", v: modeName, c: "white" },
-          { k: "陣容", v: `${check.filled}/${check.required}`, c: full ? C.ok : C.bad },
-        ].map((x) => (
-          <div key={x.k} style={{ background: C.card2, borderRadius: 8, padding: "5px 9px", minWidth: 0 }}>
-            <div style={{ color: C.gray, fontSize: 8 }}>{x.k}</div>
-            <div style={{ color: x.c, fontSize: 11, fontWeight: 800, whiteSpace: "nowrap" }}>{x.v}</div>
-          </div>
-        ))}
-      </div>
-
-      {ok && (
-        <>
+      {/* 技術內容：正式模式**不出現**；debug 模式出現且預設收合 */}
+      {debug && ok && req && (
+        <div style={{ marginTop: 8 }}>
+          <button onClick={() => setOpen((v) => !v)}
+            style={{ background: "transparent", border: "none", cursor: "pointer", color: C.gray2, fontSize: 9.5, fontWeight: 700, padding: 0 }}>
+            {open ? "收合技術內容 ▲" : "查看技術內容 ▼"}
+          </button>
           {open && (
-            <div style={{ marginTop: 8 }}>
+            <div data-testid="entry-internals" style={{ marginTop: 6 }}>
               <div style={{ color: C.gray, fontSize: 8.5, marginBottom: 5, lineHeight: 1.6 }}>
-                提交內容只有身分與編制。能力、體力、傷害等數值**不會提交**，
+                提交內容只有身分與編制。能力、體力、傷害等數值不會提交，
                 由伺服器以 playerId 自行查詢。
               </div>
-              {/*  工程資訊：只在展開區或 debug 顯示，不在主畫面 */}
-              <div data-testid="entry-internal-ids" style={{ display: "flex", gap: 8, marginBottom: 6, flexWrap: "wrap", minWidth: 0 }}>
+              <div style={{ display: "flex", gap: 8, marginBottom: 6, flexWrap: "wrap", minWidth: 0 }}>
                 {[
                   { k: "隊伍版本", v: req.rosterVersion },
                   { k: "申請識別", v: req.transactionId.slice(-12) },
@@ -117,8 +113,8 @@ export default function MatchEntryPanel({ mode = "moba", onAutoFill = null }) {
                 ))}
               </div>
               {req.squad.map((r) => (
-                <div key={r.seat} style={{ display: "flex", alignItems: "center", gap: 7, padding: "4px 0", borderTop: `1px solid ${C.line}`, fontSize: 10 }}>
-                  <span style={{ color: C.gray, width: 28, fontFamily: "monospace" }}>{r.seat}</span>
+                <div key={r.seat} style={{ display: "flex", alignItems: "center", gap: 7, padding: "4px 0", borderTop: `1px solid ${C.line}`, fontSize: 10, minWidth: 0 }}>
+                  <span style={{ color: C.gray, width: 28, fontFamily: "monospace", flexShrink: 0 }}>{r.seat}</span>
                   <span style={{ color: "white", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.playerId}</span>
                   <span style={{ color: r.role === r.seatRole ? C.gray2 : C.warn, whiteSpace: "nowrap" }}>{r.role}</span>
                   <span style={{ color: C.gray, whiteSpace: "nowrap" }}>{r.tier === "active" ? "一隊" : "替補"}</span>
@@ -126,20 +122,7 @@ export default function MatchEntryPanel({ mode = "moba", onAutoFill = null }) {
               ))}
             </div>
           )}
-          {!open && debug && (
-            <div data-testid="entry-internal-ids-debug" style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap", minWidth: 0 }}>
-              {[
-                { k: "隊伍版本", v: req.rosterVersion },
-                { k: "申請識別", v: req.transactionId.slice(-12) },
-              ].map((x) => (
-                <div key={x.k} style={{ background: "rgba(0,0,0,0.35)", border: `1px dashed ${C.line}`, borderRadius: 8, padding: "5px 8px", minWidth: 0 }}>
-                  <div style={{ color: C.gray, fontSize: 8 }}>DEBUG · {x.k}</div>
-                  <div style={{ color: C.gray2, fontSize: 10, fontWeight: 700, fontFamily: "monospace", whiteSpace: "nowrap" }}>{x.v}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
+        </div>
       )}
     </div>
   );

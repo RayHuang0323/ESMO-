@@ -5944,3 +5944,120 @@ Created deployment for 4d64e0c…, ID: 4d64e0c78970fad5aea5ae20df5a40cbfd10a5a5
 | 選擇要培養的選手 / 補充測試資金 / 確認陣容 → 開始配對 / 未指派 / 近期成長 | 全部 **0** |
 
 ⇒ 對外仍是 `3a69dd2`（M1.7 RC1）。正式環境驗收因此**無法執行**。
+
+---
+
+## 正式部署成功（2026-08-06）
+
+### 解法奏效：新的 commit SHA
+
+把 Sprint 紀錄單獨 commit（`774fc85`）→ PR #2 → `main` 得到新 SHA **`72242b7`**
+→ 自動觸發 run#67 → **內容真的上線了**。
+
+驗證了先前的根因判定：deployment ID ＝ commit SHA，同一個 commit 重跑必然被判重複。
+
+### ⚠ run#67 仍被標記 failure，但**內容確實已發佈**
+
+| 項目 | 值 |
+|---|---|
+| build job | success |
+| deploy job | **failure**（`deployment_queued` → `Timeout reached, aborting!`） |
+| deployment `5780162339`（`72242b7`） | 狀態歷程 `waiting → queued → in_progress → failure` |
+| **線上實際內容** | **已是新版** |
+
+Pages 後端**已經把內容發佈出去**，只是沒在 `actions/deploy-pages` 的 10 分鐘視窗內
+回報成功，所以 action 判定逾時。⇒ **workflow 的紅燈與站台實況不一致**，
+以站台實況為準。這一點值得記著：往後看到 deploy 紅燈，先查線上 bundle 再下結論。
+
+### 正式站台驗證
+
+**網址**：https://rayhuang0323.github.io/ESMO-/
+
+| 檢查 | 結果 |
+|---|---|
+| `index.html` | HTTP 200 |
+| entry bundle | `index-NvL8YtPy.js`，HTTP 200，2,544,283 B（舊版是 `index-BBjRmZoH.js`） |
+| lazy chunks（5 支） | `EnvironmentRuntime` / `HeroPresentationGallery` / `MobaMapPreview` / `MobaRuntimeBattleHarness` / `TerrainSandbox` 全部 **200** |
+| viewport meta | `width=device-width, initial-scale=1.0` ✅ |
+
+### 九項驗收領域：程式碼已上線（字串比對）
+
+以各功能獨有字串直接查線上 bundle：
+
+| 領域 | 佐證字串（命中） |
+|---|---|
+| ① 首頁與主要導覽 | 球探招募 1｜訓練中心 2｜財務儀表板 1｜選手名單 1｜賽前配置 2 |
+| ② 招募／名單／編隊／訓練 | 選擇要培養的選手 1｜可用天賦點 1｜還可招募 1｜推進訓練日 1｜已達潛力上限 2 |
+| ③ MOBA 與 CS 賽前配置 | MOBA 賽前配置 1｜CS 賽前準備 1｜未指派 1｜沒有指派選手 1 |
+| ④ 出賽申請／配對／房間確認 | 出賽申請 1｜確認陣容 → 開始配對 1｜我方確認 1｜進入對戰 2｜尋找對手中 1｜重新配對 1｜查看提交內容 1 |
+| ⑤ 天賦樹入口 | 查看天賦 1｜天賦樹 1｜天賦點 3 |
+| ⑥ 財務週結算與四週預測 | 本週收入 1｜週現金預測 1｜補充測試資金 1｜驗收工具 1 |
+| ⑦ 賽後結算與成長顯示 | 賽後結算 3｜近期成長 1｜本場已結算 1｜能力 + 1 |
+| ⑧⑨ 版面 | flexWrap 7｜minWidth 8｜textOverflow 7 |
+
+### ⚠ 這是「程式碼已部署」，**不等於「流程實測通過」**
+
+上表證明的是：**正式站台載入的就是新版程式，九個領域的程式碼都在線上、資源都取得到**。
+
+它**沒有**證明點擊流程正確——我無法在正式站台實際操作 SPA（招募→簽約、
+推進訓練日、走完配對→房間確認→進場、打完一場看結算、在真實裝置量測是否溢出）。
+**互動流程與版面的正式環境驗收仍須人工完成。**
+
+本機 dev server 上這九項已經人工驗過（見上方「集中驗收修正包」一節），
+但那是修正 worktree 的 dev build，不等於正式環境。
+
+---
+
+## 正式環境驗收修正：配對流程 ＋ 英雄資產接線（2026-08-07）
+
+分支 `fix/matchmaking-flow`。詳細結果：`review/matchmaking-flow-fix/ACCEPTANCE_RESULT.md`。
+
+### 配對流程：五個驗收問題，同一個根因（**我上一輪造成的**）
+
+```js
+const view = useProfileStore((s) => s.matchmakingView)();   // ← 訂閱的是函式本身
+```
+
+函式身分永不改變 ⇒ zustand 從不通知 ⇒ **底部主按鈕凍結**。上一輪把「我方確認」
+「進入對戰」「重新配對」全搬到那顆凍結的按鈕上，流程整條斷掉。
+
+修法：新增 `useMatchFlow`＝**單一狀態來源**（只訂閱原始值、獨佔輪詢、
+負責開房／簽發場次／自動進場）；`matchPrepAction.js` 成為主按鈕的唯一純函式判定；
+新增 `requeueMatch`（作廢舊房間與票券 ＋ 重新排隊，連按不重複）。
+
+⚠ 契約加入 `attempt`：`ticketId` 由 `transactionId` 決定性推導，而後者由陣容與週次
+決定 ⇒ **同一套陣容重新配對必然得到同一個 id**。加入 attempt 後才是可分辨的新票券，
+仍完全決定性，且 `attempt = 0` 與加入前逐位元相同。
+
+### 追加：進了 Ban/Pick 又離開會永久卡死
+
+場次停在 `launched`，回賽前頁命中停用的「進入 Ban/Pick…」，而一次性令牌已消耗。
+**與線上連線無關**。O6 早就備好 `resumeSession`／`abandonSession`，UI 沒接。
+已接上「返回進行中的對戰」「放棄本場」，並補「場次終局 ⇒ 可重新配對」——
+驗證器抓到放棄後 room 仍是 `confirmed` 會造成**第二層卡死**。
+
+### 英雄資產：大地守衛回退成旗子
+
+**根因：那些檔案從來沒有進版控**，只存在主工作區的未提交狀態，
+任何乾淨 worktree 都沒有 ⇒ fallback。已帶入 `DadiHeroProxy` / `ChichuanHeroProxy` /
+`MobaRuntimeHeroes` / `featureFlags` 與三個 GLB（未帶 terrain、截圖、debug harness）。
+
+`dadi` ＝大地守衛（無旗標保護）、`chichuan` 受旗標控制、**`ironclad` 本來就沒有 GLB**。
+Fallback 保留：載入失敗仍顯示占位物。
+
+順手修掉附帶回歸：`body.visible = placeholderVisible` 讓**所有英雄的屍體消失**
+（上一行才剛指定屍體材質），已改為 `h.alive ? !proxyReady : true`。
+
+### 驗證
+
+`check_matchmaking_flow_acceptance` **97/97**（新增）、`acceptance_fix_p1` 81/81、
+`o4` 47/47、`o5` 45/45、`o6` 36/36、`o7` 48/48、`o71` 27/27、`experience26` 35/35、
+`growth_ui_p1` 62/62、`regress` 15/15、`regress2` 8/8、build EXIT=0。
+
+兩支既有驗證改了斷言，**都不是放寬**：`o4` 補登 `attempt`（維持精確比對）；
+`acceptance_fix_p1` 的 19 條在描述已被取代的舊實作，改寫後**更嚴格**。
+
+### ⚠ 待決
+
+`dadi_final_texture.glb` **32 MB**（Pages artifact 原本 1.6 MB）。尚未壓縮，
+會永久留在 git 歷史並可能讓本就容易逾時的 Pages 部署更難完成。

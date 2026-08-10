@@ -1,55 +1,127 @@
 // ============================================================================
 //  screens/common/matchPrepAction.js — 賽前主按鈕的身分判定（純函式）
 //
-//  ── 為什麼獨立成一支 .js ──────────────────────────────────────────────────
-//  這段是整個賽前流程唯一的「現在該做什麼」判定，值得被獨立驗證。
-//  放在 .jsx 裡 Node 匯入不了（JSX 語法），驗證器就只能用正則猜——
-//  那等於沒驗到。抽出來之後 `check_acceptance_fix_p1` 可以直接呼叫它，
-//  把九種狀態一條一條驗過。
+//  ── 這是正式主按鈕狀態的**唯一**判定來源 ────────────────────────────────
+//  `MatchPrepFrame`、`MatchQueuePanel` 與底部主按鈕都吃這一份輸出，
+//  不得各自再判一次「現在能不能配對／能不能進場」。
 //
-//  ⚠ 這裡**不做任何決策**，只是把 store 已經算好的 view 翻譯成按鈕文案：
-//  「能不能進場」「票券有沒有效」全部是 O4–O7 契約的結論，本檔不重判。
+//  放在 .js 而不是 .jsx 的理由：Node 匯入得了，驗證器才驗得到每一種狀態。
+//  上一輪它曾經寫在 .jsx 裡，驗證只能用正則猜——那等於沒驗。
+//
+//  ⚠ 本檔**不做決策**，只把 store 已經算好的 view 翻譯成按鈕文案。
+//    「票券有沒有效」「房間能不能進場」「場次能不能啟動」全部是 O4–O7
+//    契約的結論（`canEnterMatchOf` / `canEnterRoom` / `validateSession`）。
+//
+//  ── 玩家只需要理解四步 ────────────────────────────────────────────────────
+//      確認出賽陣容 → 尋找對手 → 雙方確認 → 進入 Ban/Pick
+//  按鈕文案一律照這四步的語言寫，不出現票券、房間、場次等內部詞彙。
 // ============================================================================
 import { TICKET_STATES } from "../../platform/contracts/matchmaking.js";
+import { SESSION_TERMINAL } from "../../platform/contracts/matchSession.js";
+
+/** 四步流程的階段代碼（畫面用來畫步驟指示器）。 */
+export const FLOW_STEPS = Object.freeze([
+  { key: "lineup", label: "確認出賽陣容" },
+  { key: "search", label: "尋找對手" },
+  { key: "confirm", label: "雙方確認" },
+  { key: "enter", label: "進入 Ban/Pick" },
+]);
+
+/**
+ * 目前走到四步中的哪一步（0–3）。純推導，不判規則。
+ */
+export function flowStepOf({ view, room, session }) {
+  if (session?.canLaunch || session?.state === "launched") return 3;
+  if (room?.state === "ready_check" || room?.state === "confirmed") return 2;
+  if (room?.state === "waiting" || view?.state === TICKET_STATES.matched) return 2;
+  if (view?.state === TICKET_STATES.queued || view?.state === TICKET_STATES.validating) return 1;
+  return 0;
+}
+
+const mmss = (sec) => {
+  const s = Math.max(0, Number(sec) || 0);
+  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+};
 
 /**
  * 底部主按鈕該長什麼樣。**唯一的流程推進點。**
  *
- * @param {object} p
- * @param {boolean} p.entryOk  出賽申請是否通過驗證
- * @param {object}  p.view     matchmakingView()
- * @param {object}  p.room     matchRoomView()
- * @param {object}  p.session  matchSessionView()
  * @returns {{key:string, label:string, disabled:boolean, tone:string}}
+ *   key ∈ enqueue | blocked | queued | waiting | confirm | launching | requeue
  */
 export function primaryActionFor({ entryOk, view, room, session }) {
   const st = view?.state ?? TICKET_STATES.idle;
 
-  //  終局類：票券作廢 ⇒ 重新配對
+  //  ① 終局：票券或房間作廢 ⇒ 重新配對（**實際作廢並重新排隊**，不是回到起點）
   if (st === TICKET_STATES.rejected || st === TICKET_STATES.cancelled
     || room?.state === "expired" || room?.state === "cancelled") {
-    return { key: "reset", label: "重新配對", disabled: false, tone: "neutral" };
+    return { key: "requeue", label: "重新配對", disabled: false, tone: "neutral" };
   }
-  //  場次已簽發且可進場 ⇒ 進入對戰
-  if (session?.canLaunch) return { key: "launch", label: "進入對戰", disabled: false, tone: "go" };
-  //  雙方確認階段
+
+  //  ② 已經啟動、但人回到賽前頁 ⇒ **可以回到那場比賽**
+  //  ⚠ 這一條是正式驗收踩到的坑：進了 Ban/Pick 又離開，場次仍是 `launched`
+  //    （一場沒打完的比賽），舊版只顯示停用的「進入 Ban/Pick…」⇒ **永久卡死**，
+  //    而且一次性 launchToken 已經用掉，再按也沒用。
+  //    O6 早就備好 `resumeSession`／`abandonSession`，只是 UI 從來沒接。
+  if (session?.state === "launched") {
+    return { key: "resume", label: "返回進行中的對戰", disabled: false, tone: "go" };
+  }
+  //  ③ 場次已進入終局（打完／放棄／取消／逾期）⇒ 可以重新配對
+  //  ⚠ 少了這一條一樣會卡死：放棄本場之後 room 仍是 `confirmed`，
+  //    按鈕會落到下面「雙方已確認，準備進場…」的停用分支，玩家還是動不了。
+  //    終局清單直接取自 O6 契約（`SESSION_TERMINAL`），不另外維護第二份。
+  if (session?.state && SESSION_TERMINAL.includes(session.state)) {
+    return { key: "requeue", label: "重新配對", disabled: false, tone: "neutral" };
+  }
+  //  ④ 場次已簽發且通過驗證 ⇒ 自動進入 Ban/Pick（按鈕只是狀態顯示，不需要玩家再按）
+  if (session?.canLaunch) {
+    return { key: "launching", label: "進入 Ban/Pick…", disabled: true, tone: "go" };
+  }
+
+  //  ③ 雙方確認階段
   if (room?.state === "ready_check") {
-    return room.usReady
-      ? { key: "wait", label: "等待對手確認…", disabled: true, tone: "wait" }
-      : { key: "confirm", label: "我方確認", disabled: false, tone: "warn" };
+    if (!room.usReady) {
+      const t = Number.isFinite(room.remainingSec) ? `（${room.remainingSec}s）` : "";
+      return { key: "confirm", label: `確認進入對戰${t}`, disabled: false, tone: "warn" };
+    }
+    return { key: "waiting", label: "已確認，等待對手…", disabled: true, tone: "wait" };
   }
-  if (room?.state === "waiting") return { key: "wait", label: "等待房間開啟…", disabled: true, tone: "wait" };
-  if (room?.state === "confirmed") return { key: "wait", label: "場次簽發中…", disabled: true, tone: "wait" };
-  //  排隊中
+  if (room?.state === "confirmed") return { key: "waiting", label: "雙方已確認，準備進場…", disabled: true, tone: "wait" };
+  if (room?.state === "waiting") return { key: "waiting", label: "對手已找到，開啟房間中…", disabled: true, tone: "wait" };
+
+  //  ④ 尋找對手中
   if (st === TICKET_STATES.queued || st === TICKET_STATES.validating) {
-    const s = Number(view?.waitedSec) || 0;
-    const mm = String(Math.floor(s / 60)).padStart(2, "0");
-    const ss = String(s % 60).padStart(2, "0");
-    return { key: "queued", label: `配對中… ${mm}:${ss}`, disabled: true, tone: "wait" };
+    return { key: "queued", label: `正在尋找對手… ${mmss(view?.waitedSec)}`, disabled: true, tone: "wait" };
   }
-  if (st === TICKET_STATES.matched) return { key: "wait", label: "已配對，開啟房間中…", disabled: true, tone: "wait" };
-  //  尚未排隊
+  if (st === TICKET_STATES.matched) return { key: "waiting", label: "對手已找到，開啟房間中…", disabled: true, tone: "wait" };
+
+  //  ⑤ 尚未開始
   return entryOk
-    ? { key: "enqueue", label: "確認陣容 → 開始配對", disabled: false, tone: "go" }
-    : { key: "blocked", label: "陣容未通過驗證，無法配對", disabled: true, tone: "off" };
+    ? { key: "enqueue", label: "確認陣容並開始配對", disabled: false, tone: "go" }
+    : { key: "blocked", label: "陣容尚未完成，無法開始配對", disabled: true, tone: "off" };
+}
+
+/**
+ * 玩家看得懂的流程狀態句（正式畫面用；不含票券／房間／場次等內部詞彙）。
+ */
+export function flowStatusText({ entryOk, view, room, session, opponentName }) {
+  const st = view?.state ?? TICKET_STATES.idle;
+  if (st === TICKET_STATES.rejected) return view?.ticket?.reason ?? "配對被拒絕，請重新配對";
+  if (st === TICKET_STATES.cancelled) return view?.ticket?.reason ?? "已取消配對，未進入對戰";
+  if (room?.state === "expired") return "確認逾時，本次配對已取消";
+  if (room?.state === "cancelled") return room?.room?.reason ?? "本次對戰已取消";
+  if (session?.state && SESSION_TERMINAL.includes(session.state)) {
+    return session.state === "completed" ? "上一場已結束，可以開始新的配對" : "已放棄上一場，可以重新配對";
+  }
+  if (session?.state === "launched") return "你有一場進行中的對戰";
+  if (session?.canLaunch) return "雙方已確認，正在進入 Ban/Pick";
+  if (room?.state === "ready_check") {
+    return room.usReady ? "你已確認，等待對手確認" : "對手已就緒，請確認進入對戰";
+  }
+  if (room?.state === "confirmed") return "雙方已確認，正在準備場次";
+  if (room?.state === "waiting" || st === TICKET_STATES.matched) {
+    return opponentName ? `已找到對手：${opponentName}` : "已找到對手，正在開啟房間";
+  }
+  if (st === TICKET_STATES.queued || st === TICKET_STATES.validating) return "正在尋找對手…";
+  return entryOk ? "陣容已就緒，可以開始配對" : "請先補滿出賽陣容";
 }

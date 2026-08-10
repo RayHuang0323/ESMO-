@@ -76,16 +76,29 @@ function hash8(input) {
  * @param {object} entryRequest MatchEntryRequest.v1
  * @param {{now:number}} opts   now = 真實時間戳（等待時間用；可注入以便測試）
  */
-export function createTicket(entryRequest, { now = 0 } = {}) {
+export function createTicket(entryRequest, { now = 0, attempt = 0 } = {}) {
   if (!entryRequest || entryRequest.schema !== MATCH_ENTRY_VERSION) {
     return { ok: false, ticket: null, errors: [{ code: "invalid_entry", message: "出賽申請單無效，無法建立配對票券" }] };
   }
+  //  ── `attempt`：第幾次為同一套陣容排隊 ─────────────────────────────────
+  //  正式環境驗收發現的問題：`ticketId` 由 `transactionId` 決定性推導，而
+  //  `transactionId` 又由陣容與週次決定 ⇒ **重新配對會得到與被丟棄那張
+  //  一模一樣的 ticketId**（assignmentId、roomId 也跟著相同）。
+  //  玩家的體感就是「按了重新配對沒有反應」。
+  //
+  //  加入 attempt 之後，重新配對是一張**可分辨的新票券**，
+  //  但仍然完全決定性——給定 (申請單, attempt) 伺服器可以自己重算出同一個 id，
+  //  O4「不信任前端數值」的立場沒有被放寬。
+  //  ⚠ `attempt = 0` 的 id 與加入本欄位之前**逐位元相同**，舊驗證不受影響。
+  const n = Math.max(0, Math.floor(Number(attempt) || 0));
+  const idSeed = n > 0 ? `${entryRequest.transactionId}#${n}` : entryRequest.transactionId;
   return {
     ok: true,
     errors: [],
     ticket: {
       schema: TICKET_VERSION,
-      ticketId: `ticket:${entryRequest.mode}:${hash8(entryRequest.transactionId)}`,
+      ticketId: `ticket:${entryRequest.mode}:${hash8(idSeed)}`,
+      attempt: n,
       mode: entryRequest.mode,
       //  只保留**識別**，不複製整張申請單（申請單本身可由陣容重建）
       entryTransactionId: entryRequest.transactionId,

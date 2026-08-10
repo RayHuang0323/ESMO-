@@ -634,7 +634,7 @@ export const useProfileStore = create((set, get) => ({
    *
    * @returns {{ok:boolean, ticket:object|null, errors:Array}}
    */
-  enqueueMatch(mode = "moba", now = Date.now()) {
+  enqueueMatch(mode = "moba", now = Date.now(), attempt = null) {
     const cur = get().matchmaking?.ticket ?? null;
     if (isActiveTicket(cur)) {
       return { ok: false, ticket: cur, errors: [{ code: "already_queued", message: `已有一張進行中的票券（${stateLabel(cur.state)}），請先取消` }] };
@@ -642,12 +642,16 @@ export const useProfileStore = create((set, get) => ({
     const entry = get().matchEntry(mode);
     if (!entry.ok) return { ok: false, ticket: null, errors: entry.errors };
 
-    const made = createTicket(entry.request, { now });
+    //  attempt：同一套陣容第幾次排隊。未指定 ⇒ 沿用目前計數（預設 0）。
+    //  ⇒ 重新配對時 +1，票券／指派／房間的 id 全部跟著換一組，
+    //    但仍然完全決定性（見 contracts/matchmaking.js 的說明）。
+    const n = Number.isFinite(attempt) ? attempt : (get().matchmaking?.attempt ?? 0);
+    const made = createTicket(entry.request, { now, attempt: n });
     if (!made.ok) return { ok: false, ticket: null, errors: made.errors };
     //  validating → queued（轉移規則在契約裡，這裡不自己判斷）
     const queued = transitionTicket(made.ticket, TICKET_STATES.queued, { now });
     if (!queued.ok) return { ok: false, ticket: null, errors: queued.errors };
-    set({ matchmaking: { ticket: queued.ticket, room: null, session: null, launch: null } });
+    set({ matchmaking: { ticket: queued.ticket, room: null, session: null, launch: null, attempt: n } });
     get().save();
     return { ok: true, ticket: queued.ticket, errors: [] };
   },
@@ -684,7 +688,32 @@ export const useProfileStore = create((set, get) => ({
     get().save();
     return { ok: true, ticket: next.ticket, errors: [] };
   },
-  /** 清掉終局票券，回到 idle（畫面上的「重新配對」）。 */
+  /**
+   * 「重新配對」：**作廢舊房間與舊票券，直接重新排隊**。
+   *
+   * ── 為什麼需要這一支（正式環境驗收發現）──────────────────────────────
+   * 舊做法是 `resetMatchmaking()` 只把狀態清成 idle，玩家看到的是
+   * 「按了重新配對沒有反應」——因為它只回到起點，還要再按一次開始配對，
+   * 而那顆按鈕當時是壞的。這裡把「作廢 → 重新排隊」合成一個動作。
+   *
+   * ⚠ **不是第二套配對流程**：作廢就是清空 matchmaking，重新排隊就是既有的
+   *   `enqueueMatch`（同一組契約、同一套驗證）。這裡只是把兩步接起來。
+   *
+   * 防重複：已經在 `queued` / `validating` 的票券直接沿用，連按不會產生第二張。
+   * 舊房間的雙方確認狀態隨著 room 一起被丟棄，不可能被沿用。
+   */
+  requeueMatch(mode = "moba", now = Date.now()) {
+    const cur = get().matchmaking?.ticket ?? null;
+    if (cur && (cur.state === TICKET_STATES.queued || cur.state === TICKET_STATES.validating)) {
+      return { ok: true, ticket: cur, reused: true, errors: [] };
+    }
+    //  作廢：票券、房間（含雙方確認）、場次、進場令牌一次清乾淨
+    const nextAttempt = (get().matchmaking?.attempt ?? 0) + 1;
+    set({ matchmaking: { ticket: null, room: null, session: null, launch: null, attempt: nextAttempt } });
+    const r = get().enqueueMatch(mode, now, nextAttempt);
+    return { ...r, reused: false };
+  },
+  /** 清掉終局票券，回到 idle（保留給既有呼叫端；玩家路徑改用 requeueMatch）。 */
   resetMatchmaking() {
     set({ matchmaking: { ticket: null, room: null, session: null, launch: null } });
     get().save();

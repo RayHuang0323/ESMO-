@@ -60,7 +60,11 @@ console.log("══ Milestone O4：配對票券與等待狀態 ══\n");
   ck("1b) 由 O3 申請單建票，初始狀態為驗證中",
     t.schema === TICKET_VERSION && t.state === TICKET_STATES.validating, t.ticketId);
   ck("1c) 票券只保留識別，不複製整張申請單",
-    Object.keys(t).sort().join() === "assignment,createdAt,entryTransactionId,mode,queuedAt,reason,rosterVersion,schema,state,teamId,ticketId,updatedAt",
+    Object.keys(t).sort().join() === //  ⚠ 精確比對（排序後）：任何新欄位都必須在這裡明確登記，這是紅線的執行機制。
+    //  2026-08-07 新增 `attempt`（同一套陣容第幾次排隊）。它是 ticketId 的推導來源
+    //  之一，屬於**識別**，不是把申請單複製進來——加入後重新配對才會產生
+    //  可分辨的新票券；`attempt = 0` 的 id 與加入前逐位元相同（見 1d）。
+    "assignment,attempt,createdAt,entryTransactionId,mode,queuedAt,reason,rosterVersion,schema,state,teamId,ticketId,updatedAt",
     Object.keys(t).join(","));
   ck("1d) ticketId 由申請單決定性推導（重複建票同一個 id）",
     newTicket().ticketId === t.ticketId);

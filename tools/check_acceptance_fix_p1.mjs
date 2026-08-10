@@ -65,17 +65,17 @@ console.log("\n══ §1 只有一個主要配對入口 ══");
   const primaryCount = (frame.match(/data-testid="prep-primary-action"/g) ?? []).length;
   ck("§1b 共用外框只有一顆主按鈕", primaryCount === 1, `找到 ${primaryCount} 顆`);
 
-  //  配對狀態卡改成 statusOnly ⇒ 不再放主要按鈕
-  ck("§1c 兩個賽前頁都以 statusOnly 使用配對狀態卡",
-    /MatchQueuePanel mode=\{?mode\}? statusOnly/.test(frame) || /statusOnly/.test(frame),
-    "MatchPrepFrame 傳入 statusOnly");
-  ck("§1d 配對狀態卡有 statusOnly 參數且預設關閉（不影響其他呼叫端）",
-    /statusOnly = false/.test(queue));
-  ck("§1e statusOnly 時「開始配對」按鈕不會出現",
-    /\{!showTicket && statusOnly &&/.test(queue) && /\{!showTicket && !statusOnly &&/.test(queue));
-  ck("§1f statusOnly 時「我方確認」「進入對戰」也不在狀態卡上",
-    /room\.state === "ready_check" && !room\.usReady && !statusOnly/.test(queue) &&
-    /session\.canLaunch && onReady && !statusOnly/.test(queue));
+  //  ⚠ 2026-08-07：`statusOnly` 這個開關已被**更強的做法**取代——
+  //  狀態卡現在根本不含任何推進流程的按鈕，也不呼叫任何 store action，
+  //  不需要開關來「關掉」它們。以下斷言照新機制寫，強度不低於舊版。
+  const noAdvance = ["enqueueMatch", "confirmMatchReady", "launchMatchSession", "requeueMatch", "resetMatchmaking"];
+  ck("§1c 狀態卡只吃 flow，不自己訂閱 store",
+    /MatchQueuePanel\(\{ mode = "moba", flow \}\)/.test(queue) && !/useProfileStore/.test(queue));
+  ck("§1d 狀態卡不呼叫任何推進流程的 store action",
+    noAdvance.every((a) => !queue.includes(a)), "無");
+  ck("§1e 狀態卡沒有「開始配對」按鈕", !/開始配對/.test(queue.replace(/\/\/.*$/gm, "")));
+  ck("§1f 狀態卡沒有「我方確認」「進入對戰」按鈕（那些在底部唯一主按鈕上）",
+    !/<button[^>]*>\s*我方確認/.test(queue) && !/<button[^>]*>\s*進入對戰/.test(queue));
 
   //  ── 主按鈕的身分要涵蓋任務單列的每一個狀態 ──
   if (!primaryActionFor) {
@@ -86,7 +86,7 @@ console.log("\n══ §1 只有一個主要配對入口 ══");
       A({ entryOk: true, view: { state: "idle" }, room: {}, session: {} }).key === "enqueue");
     ck("§1h 陣容不合法 ⇒ 停用並說明原因",
       (() => { const r = A({ entryOk: false, view: { state: "idle" }, room: {}, session: {} });
-        return r.disabled && /未通過驗證/.test(r.label); })());
+        return r.disabled && /陣容尚未完成/.test(r.label); })());
     ck("§1i 配對中 ⇒ 停用並顯示等待時間",
       (() => { const r = A({ entryOk: true, view: { state: "queued", waitedSec: 75 }, room: {}, session: {} });
         return r.disabled && r.label.includes("01:15"); })(), "01:15");
@@ -96,14 +96,18 @@ console.log("\n══ §1 只有一個主要配對入口 ══");
       A({ entryOk: true, view: { state: "matched" }, room: { state: "ready_check", usReady: false }, session: {} }).key === "confirm");
     ck("§1l 我方已確認 ⇒ 停用並等待對手",
       A({ entryOk: true, view: { state: "matched" }, room: { state: "ready_check", usReady: true }, session: {} }).disabled);
-    ck("§1m 場次可進場 ⇒ 進入對戰",
-      A({ entryOk: true, view: { state: "matched" }, room: { state: "confirmed" }, session: { canLaunch: true } }).key === "launch");
+    //  ⚠ 2026-08-07：進場改為**自動**（雙方確認後不需玩家再按），key 由 launch → launching
+    ck("§1m 場次可進場 ⇒ 自動進入 Ban/Pick",
+      A({ entryOk: true, view: { state: "matched" }, room: { state: "confirmed" }, session: { canLaunch: true } }).key === "launching");
+    //  ⚠ key 由 reset → requeue：現在是「作廢並重新排隊」，不只是回到起點
     ck("§1n 已取消 ⇒ 重新配對",
-      A({ entryOk: true, view: { state: "cancelled" }, room: {}, session: {} }).key === "reset");
+      A({ entryOk: true, view: { state: "cancelled" }, room: {}, session: {} }).key === "requeue");
+    //  ⚠ key 由 reset → requeue：現在是「作廢並重新排隊」，不只是回到起點
     ck("§1o 被拒絕 ⇒ 重新配對",
-      A({ entryOk: true, view: { state: "rejected" }, room: {}, session: {} }).key === "reset");
+      A({ entryOk: true, view: { state: "rejected" }, room: {}, session: {} }).key === "requeue");
+    //  ⚠ key 由 reset → requeue：現在是「作廢並重新排隊」，不只是回到起點
     ck("§1p 房間逾期 ⇒ 重新配對",
-      A({ entryOk: true, view: { state: "matched" }, room: { state: "expired" }, session: {} }).key === "reset");
+      A({ entryOk: true, view: { state: "matched" }, room: { state: "expired" }, session: {} }).key === "requeue");
   }
 
   //  ⚠ 不得建立第二條配對邏輯：外框只能呼叫既有 store action
@@ -116,43 +120,37 @@ console.log("\n══ §1 只有一個主要配對入口 ══");
 // ════════════════════════════════════════════════════════════════════════════
 console.log("\n══ §2 主畫面不顯示內部識別資訊 ══");
 {
+  //  ⚠ 2026-08-07：出賽卡已重寫。舊版把工程資訊放進「查看提交內容」展開區，
+  //  新版**在正式模式完全不出現**（只有 ?debug=1 才有，且預設收合）——比舊版嚴格。
   const entry = read(ENTRY);
-  //  主畫面（非 open、非 debug）只顯示：狀態、陣容 n/5、模式
-  ck("§2a 主畫面顯示模式名稱與陣容完整度",
-    /k: "模式"/.test(entry) && /k: "陣容"/.test(entry) && /check\.filled\}\/\$\{check\.required\}/.test(entry));
-  ck("§2b 陣容完整度讀契約算好的 filled／required（畫面不自己數）",
-    /squadCheck\)\(mode\)/.test(entry) && !/players\.filter\([\s\S]{0,40}length === 5/.test(entry));
-
-  //  工程資訊只能出現在展開區或 debug 區
-  const mainStart = entry.indexOf('data-testid="entry-internal-ids"');
-  const debugStart = entry.indexOf('data-testid="entry-internal-ids-debug"');
-  ck("§2c 隊伍版本／申請識別／時間都移進「查看提交內容」展開區", mainStart > 0);
-  ck("§2d 展開區在 `open` 條件裡", (() => {
-    const openIdx = entry.indexOf("{open && (");
-    return openIdx > 0 && openIdx < mainStart;
-  })());
-  ck("§2e debug 模式另有一份（不展開也看得到）",
-    debugStart > 0 && /!open && debug &&/.test(entry));
-  //  主畫面區塊（第一個 return 到 open 之前）不得出現這些字
   const entryCode = stripComments(entry);
-  const head = entryCode.slice(entryCode.indexOf("return ("), entryCode.indexOf("{open && ("));
-  ck("§2f 主畫面區塊沒有『隊伍版本／申請識別』字樣（已去註解比對）",
-    !head.includes("隊伍版本") && !head.includes("申請識別"), "已移出主畫面");
-  ck("§2g 主畫面沒有 rosterVersion / transactionId 的直接輸出",
-    !/req\.rosterVersion/.test(head) && !/req\.transactionId/.test(head));
+  const queueCode = stripComments(read(QUEUE));
 
-  //  ticketId 不得出現在配對狀態卡的一般顯示
-  const queue = read(QUEUE);
-  const queueCode = stripComments(queue);
-  const queuedBlock = queueCode.slice(queueCode.indexOf("{queued && ("), queueCode.indexOf("{view.state === TICKET_STATES.matched"));
-  ck("§2h 排隊區的隊伍版本／票券只在 debug 顯示",
-    /\.\.\.\(debug \? \[/.test(queuedBlock) &&
-    /k: "模式"/.test(queuedBlock),
-    "模式常駐，其餘進 debug");
-  ck("§2i 追蹤鏈（ticket/assignment/room/session…）仍只在 debug 顯示",
-    /\{debug && showTicket &&/.test(queue));
+  ck("§2a 主畫面顯示陣容完整度（n/5）",
+    /check\.filled\}\/\{check\.required\}/.test(entryCode));
+  ck("§2b 陣容完整度讀契約算好的 filled／required（畫面不自己數）",
+    /check\.filled/.test(entryCode) && !/players\.filter\([\s\S]{0,40}length === 5/.test(entryCode));
 
-  //  契約欄位一個都不能少
+  const dbg = entryCode.indexOf("{debug && ok && req && (");
+  const main = entryCode.slice(0, dbg > 0 ? dbg : entryCode.length);
+  ck("§2c 隊伍版本／申請識別整區都在 debug 之後", dbg > 0);
+  ck("§2d 正式區塊沒有 rosterVersion / transactionId",
+    !main.includes("rosterVersion") && !main.includes("transactionId"));
+  ck("§2e debug 區塊預設收合（查看技術內容）",
+    /useState\(false\)/.test(entryCode) && /查看技術內容/.test(entryCode));
+  ck("§2f 「出賽申請」這個內部詞彙已從正式標題移除",
+    !/出賽申請/.test(main) && /出賽陣容/.test(main));
+  ck("§2g 缺人時顯示契約產生的中文原因", /e\.message/.test(entryCode));
+
+  const qdbg = queueCode.indexOf("{debug && (");
+  const qmain = queueCode.slice(0, qdbg > 0 ? qdbg : queueCode.length);
+  const secrets = ["rosterVersion", "transactionId", "ticketId", "roomId", "seed", "issuedBy"];
+  ck("§2h 狀態卡正式區塊沒有任何內部識別",
+    !secrets.some((k) => qmain.includes(k)),
+    secrets.filter((k) => qmain.includes(k)).join(",") || "無");
+  ck("§2i 追蹤鏈只在 debug 顯示且預設收合",
+    qdbg > 0 && /查看技術內容/.test(queueCode) && /data-testid="flow-internals"/.test(queueCode));
+
   const req = read("src/platform/contracts/matchEntry.js");
   ck("§2j 契約欄位未被刪除（rosterVersion / transactionId / submittedAt 都還在）",
     req.includes("rosterVersion") && req.includes("transactionId") && req.includes("submittedAt"));
@@ -216,15 +214,17 @@ console.log("\n══ §4 MOBA 與 CS 共用同一套賽前元件 ══");
 
   //  共用外框負責的七件事
   const parts = [
-    ["頁首", /<div style=\{\{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12/],
+    ["頁首", (f) => f.includes("{onBack &&") && f.includes("{icon}") && f.includes("{title}")],
     ["五人陣容席位", /\{seats && </],
     ["出賽申請卡", /<MatchEntryPanel/],
     ["配對狀態", /<MatchQueuePanel/],
     ["底部主按鈕", /data-testid="prep-primary-action"/],
   ];
-  for (const [name, re] of parts) ck(`§4b 共用外框負責「${name}」`, re.test(frame));
-  ck("§4c 房間確認入口在共用的配對狀態卡內",
-    read(QUEUE).includes("雙方確認") && read(QUEUE).includes("我方確認"));
+  for (const [name, m] of parts) ck(`§4b 共用外框負責「${name}」`, typeof m === "function" ? m(frame) : m.test(frame));
+  //  ⚠ 2026-08-07：確認**動作**已收斂到底部唯一主按鈕；狀態卡只顯示確認**狀態**。
+  ck("§4c 房間確認：動作在唯一主按鈕，狀態在共用狀態卡",
+    /key: "confirm"/.test(read("src/screens/common/matchPrepAction.js")) &&
+    /我方/.test(read(QUEUE)) && /對手/.test(read(QUEUE)) && /已確認/.test(read(QUEUE)));
 
   //  兩邊都不得再自己組出賽卡／配對卡
   ck("§4d CS 不再自己放 MatchEntryPanel／MatchQueuePanel（改由外框統一）",
@@ -240,10 +240,12 @@ console.log("\n══ §4 MOBA 與 CS 共用同一套賽前元件 ══");
     /title="MOBA 賽前配置"/.test(lineup) && /accent=\{PURP\}/.test(lineup));
 
   //  沿用既有流程，不得有第二套
-  ck("§4h 兩邊沿用同一組既有契約流程（validateSquad / MatchEntryRequest / Ticket / Room）",
-    /squadCheck/.test(read(ENTRY)) &&
-    /matchEntry/.test(frame) && /matchmakingView/.test(frame) &&
-    /matchRoomView/.test(frame) && /matchSessionView/.test(frame));
+  //  ⚠ 2026-08-07：契約 view 改由 useMatchFlow 統一取得（單一狀態來源），
+  //  外框不再各自訂閱——那正是按鈕凍結的根因。
+  ck("§4h 兩邊沿用同一組既有契約流程（經由 useMatchFlow 單一來源）",
+    (() => { const h = read("src/screens/common/useMatchFlow.js");
+      return /matchEntry/.test(h) && /squadCheck/.test(h) && /matchmakingView/.test(h)
+        && /matchRoomView/.test(h) && /matchSessionView/.test(h) && /useMatchFlow/.test(frame); })());
 }
 
 // ════════════════════════════════════════════════════════════════════════════

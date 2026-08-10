@@ -23,13 +23,32 @@
 //  手機優先：全部 flex-wrap ＋ minWidth:0，320px 不水平溢出。
 // ============================================================================
 import React from "react";
-import { useProfileStore } from "../../platform/profileStore.js";
-import { primaryActionFor } from "./matchPrepAction.js";
+import { useMatchFlow } from "./useMatchFlow.js";
+import { FLOW_STEPS } from "./matchPrepAction.js";
 import MatchEntryPanel from "./MatchEntryPanel.jsx";
 import MatchQueuePanel from "./MatchQueuePanel.jsx";
 import { GC } from "../../ui/theme.js";
 
 const MONO = "'Courier New',monospace";
+
+/** 四步流程指示器。純呈現，狀態來自 `flowStepOf`。 */
+function FlowSteps({ step, accent }) {
+  return (
+    <div data-testid="flow-steps" style={{ display: "flex", gap: 4, marginBottom: 10, minWidth: 0 }}>
+      {FLOW_STEPS.map((s, i) => {
+        const done = i < step, now = i === step;
+        return (
+          <div key={s.key} style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ height: 3, borderRadius: 99, background: done || now ? accent : "rgba(255,255,255,0.10)", opacity: done ? 0.55 : 1 }} />
+            <div style={{ marginTop: 4, fontSize: 8.5, fontWeight: now ? 900 : 700, color: now ? accent : done ? "rgba(255,255,255,0.45)" : "#52525b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {i + 1}. {s.label}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 const TONE_STYLE = {
   go: (accent) => ({ background: `linear-gradient(135deg,${accent},${accent}bb)`, color: "#fff", border: "none" }),
@@ -121,46 +140,17 @@ export default function MatchPrepFrame({
   seats = null, aboveSeats = null, belowSeats = null,
   onBack = null, onEnterBattle = null, onAutoFill = null,
 }) {
-  const entry = useProfileStore((s) => s.matchEntry)(mode);
-  const view = useProfileStore((s) => s.matchmakingView)();
-  const room = useProfileStore((s) => s.matchRoomView)();
-  const session = useProfileStore((s) => s.matchSessionView)();
-  const enqueueMatch = useProfileStore((s) => s.enqueueMatch);
-  const confirmMatchReady = useProfileStore((s) => s.confirmMatchReady);
-  const launchMatchSession = useProfileStore((s) => s.launchMatchSession);
-  const resetMatchmaking = useProfileStore((s) => s.resetMatchmaking);
-  const [err, setErr] = React.useState(null);
-
-  const act = primaryActionFor({ entryOk: entry.ok, view, room, session });
-
-  //  ⚠ 這裡沒有任何新的流程判斷——每一個分支都只是呼叫既有的 store action。
-  const run = () => {
-    setErr(null);
-    if (act.key === "enqueue") {
-      const r = enqueueMatch(mode);
-      if (!r.ok) setErr(r.errors?.[0]?.message ?? "無法開始配對");
-      return;
-    }
-    if (act.key === "confirm") {
-      const r = confirmMatchReady();
-      if (!r.ok) setErr(r.errors?.[0]?.message ?? "無法確認");
-      return;
-    }
-    if (act.key === "launch") {
-      const r = launchMatchSession();
-      if (!r.ok) { setErr(r.errors?.[0]?.message ?? "無法進入對戰"); return; }
-      onEnterBattle?.();
-      return;
-    }
-    if (act.key === "reset") resetMatchmaking();
-  };
+  //  ⚠ **單一狀態來源**：流程狀態、唯一操作、輪詢、自動進場全在這個 hook 裡。
+  //  本元件不得再自己訂閱 matchmaking 狀態，也不得自己判斷「能不能配對」。
+  const flow = useMatchFlow(mode, onEnterBattle);
+  const { act, err } = flow;
 
   return (
     <div style={{ height: "100%", overflow: "auto", background: GC.bg, boxSizing: "border-box" }}>
       <div style={{ maxWidth: 460, margin: "0 auto", padding: "12px 12px 0", boxSizing: "border-box", display: "flex", flexDirection: "column", minHeight: "100%" }}>
 
         {/* 頁首（兩模式同一結構；只有圖示、標題、色彩不同） */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, minWidth: 0 }}>
           {onBack && (
             <button onClick={onBack} style={{ background: "rgba(255,255,255,0.08)", border: `1px solid ${GC.line}`, borderRadius: 8, padding: "5px 10px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>←</button>
           )}
@@ -171,6 +161,9 @@ export default function MatchPrepFrame({
           </div>
         </div>
 
+        {/*  四步流程指示器：玩家只需要理解這四步 */}
+        <FlowSteps step={flow.step} accent={accent} />
+
         {aboveSeats}
 
         {/* 五人陣容席位 */}
@@ -178,19 +171,20 @@ export default function MatchPrepFrame({
 
         {belowSeats}
 
-        {/* 出賽申請卡（含缺人與錯誤提示） */}
-        <MatchEntryPanel mode={mode} onAutoFill={onAutoFill} />
+        {/* 出賽陣容是否完整（含缺人原因） */}
+        <MatchEntryPanel mode={mode} onAutoFill={onAutoFill} flow={flow} />
 
-        {/* 配對狀態（只顯示狀態，沒有主要按鈕）＋ 房間確認入口 */}
-        <MatchQueuePanel mode={mode} statusOnly />
+        {/* 目前流程狀態、對手、雙方確認、倒數（只顯示狀態，沒有主要按鈕） */}
+        <MatchQueuePanel mode={mode} flow={flow} />
 
         {/* 底部固定主按鈕：唯一的提交／配對／進場入口 */}
         <div style={{
           position: "sticky", bottom: 0, marginTop: "auto", zIndex: 15,
           padding: "12px 0", boxSizing: "border-box",
+          display: "flex", flexWrap: "wrap", gap: 8, minWidth: 0,
           background: "linear-gradient(180deg, rgba(10,11,15,0) 0%, rgba(10,11,15,0.92) 34%, rgba(10,11,15,0.98) 100%)",
         }}>
-          <button onClick={run} disabled={act.disabled}
+          <button onClick={flow.run} disabled={act.disabled}
             data-testid="prep-primary-action" data-action={act.key}
             style={{
               width: "100%", borderRadius: 12, padding: "15px 12px",
