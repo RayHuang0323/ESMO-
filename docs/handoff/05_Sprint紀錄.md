@@ -7690,3 +7690,50 @@ Q3 `6h`「**沒有** FinalStandings／獎金（那是 Q4）」與 Q3.5 `5f`「**
 - 名次獎金只發**玩家隊**：AI 隊沒有 `funds`，也沒有任何系統會消費它們的錢。
   要發給 AI 得先有 AI 的經營狀態，那不在 MVP（設計文件 §9）。
 - 賽季歷史封存清單（多個賽季的 FinalStandings 一起看）——換季做完才有意義。
+
+## Q4 部署紀錄（2026-08-12）
+
+### 整合
+
+`origin/main` 全程沒有前進（`0 behind / 2 ahead`）⇒ 純 fast-forward、無 merge commit：
+
+```
+9b2147d  (舊 main)
+  → 52b5b10 Handoff: requeue 結算查證
+  → 28e5005 Milestone Q4       ← main 現在在這
+```
+
+在 `ESMO-acceptance` 工作區（main，乾淨）快轉。主工作區
+`D:\OneDrive\文件\GitHub\ESMO`（`milestone-n-finance` ＋ hero-proxy WIP）與其他
+六個工作區**全程沒有碰**。
+
+### 整合後重跑（全綠）
+
+`q1 93/93`、`q2a 112/112`、`q2b 92/92`、`q3 90/90`、`q35 65/65`、**`q4 68/68`**、
+`matchmaking_o4 47/47`、`matchmaking_flow_acceptance 97/97`、
+`regress 15/15`、`regress2 8/8`、`npm run build` exit 0（`built in 11.62s`）。
+
+### 部署與線上版本驗證
+
+Actions run **31535506168**（`28e5005`）：build ✅ / deploy ✅。
+
+線上版本確認（沿用 Q3.5/Q3.6 那套四層，不只看 Actions 綠燈）：
+HTTP 200 → 線上 entry bundle `assets/index-B8RqIleJ.js` 與本機 build 同名 →
+下載後 `cmp` **byte-identical** → 線上 bundle 內含 Q4 的畫面字串
+（`最終名次 FINAL STANDINGS`／`已封存`／`名次獎金`／`無（前四名才有）`／`最終積分榜`）。
+
+### 正式站 smoke test
+
+**在正式站實際跑完一整季**（賽事頁棄權 ＋ 訓練中心推進，第 12 天 → 第 95 天）：
+最後一場收尾當下自動封存，Final Standings 區塊出現（最終名次 8/8、冠軍 暗影狼群、
+名次獎金「無（前四名才有）」、本季 56 場：實際對戰 0 · 模擬 42 · 棄權 14 · 第 95 天封存），
+重新整理後一字不差，console 0 錯誤。測後把 Ray 的存檔從 `__q4bak.*` 完整還原。
+
+⚠ **兩次瀏覽器實測（本機、正式站）都是一路棄權拿第 8 名**
+⇒ 只驗到「沒有獎金」那一半；錢真的入帳仍然只有 Node 驗證器 §7 驗過。
+
+### 這次學到的：背景分頁會讓「跑完整季」慢到不可行
+
+Chrome 把背景分頁的計時器節流到約 1 秒，整季 50 次互動的腳本因此每次呼叫都撞到
+CDP 的 45 秒上限。分頁點到前景後同一段腳本速度差了三倍以上。
+**要在瀏覽器跑長流程（整季、長對戰），先確認分頁在前景。**
