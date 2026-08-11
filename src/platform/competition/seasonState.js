@@ -339,6 +339,80 @@ export function applySealSeason(state, sealedAtDay) {
   return { ok: true, state: { ...state, final: made.final }, final: made.final, alreadySealed: false, errors: [] };
 }
 
+// ── Milestone Q5：跨賽季換季 ──────────────────────────────────────────────
+
+/**
+ * 可以換到下一季了嗎。
+ *
+ * 條件只有一條：**目前這一季已經封存**。封存本身已經保證「每一場都收尾」，
+ * 所以這裡不再重數一次場次——那會變成第二份「賽季結束了沒」的規則。
+ *
+ * @returns {{ok:boolean, reason:string|null, nextSeason:number|null}}
+ */
+export function canRollSeason(state) {
+  if (!state?.schema) return { ok: false, reason: "目前沒有賽季", nextSeason: null };
+  if (!state.final) return { ok: false, reason: "這一季還沒結束，不能開下一季", nextSeason: null };
+  return { ok: true, reason: null, nextSeason: (Number(state.season) || 1) + 1 };
+}
+
+/**
+ * 換到下一個賽季。
+ *
+ * ── 這一支只做「換容器」──────────────────────────────────────────────────
+ * 產生一個**全新的**賽季狀態（新 Competition／Stage／56 場賽程／空 outcomes），
+ * 並把上一季**已封存的** `FinalStandings` 交給呼叫端存進歷史。
+ * 選手、資金、成長、贊助合約**完全不碰**——那些不住在賽季狀態裡。
+ *
+ * ⚠ **賽季編號自己 +1，不讀 `meta.season`。**
+ *   `meta.season` 是由 `meta.days` 導出的**經濟週期**（12 週一輪），
+ *   而賽事賽季錨在「建立當天」（Q3.5 的 `startDay`），兩者本來就會逐季偏移。
+ *   Q5 的決定：**賽季編號由賽事自己擁有**，畫面上的「賽季」只認這一個。
+ *
+ * ⚠ 新賽季的種子仍是 `seedForSeason(seasonSeed, 季號)`（Q1 就備好的派生函式）
+ *   ⇒ 同一個存檔的 S2／S3／S4 賽程逐場決定性，重跑一模一樣。
+ *
+ * @param {object} p
+ * @param {object} p.state       目前（已封存）的賽季狀態
+ * @param {object} p.playerTeam  `profileStore.team`
+ * @param {number} p.seasonSeed  `meta.seasonSeed`（不可變）
+ * @param {number} p.startDay    新賽季錨在哪一天（＝換季當下的 `meta.days`）
+ * @returns {{ok:boolean, state:object|null, archived:object|null, errors:Array}}
+ *   `archived` = 上一季的 FinalStandings（呼叫端負責存進歷史）
+ */
+export function rollToNextSeason({ state, playerTeam, seasonSeed, startDay } = {}) {
+  const can = canRollSeason(state);
+  if (!can.ok) return { ok: false, state: null, archived: null, errors: [{ code: "cannot_roll", message: can.reason }] };
+
+  const made = createSeasonState({
+    playerTeam,
+    season: can.nextSeason,
+    seasonSeed,
+    gameMode: state.competition?.gameMode ?? "moba",
+    startDay,
+  });
+  if (!made.ok) return { ok: false, state: null, archived: null, errors: made.errors };
+
+  //  新賽季不得繼承任何上一季的痕跡——這裡順手斷言一次，
+  //  因為「歸零」是規格明列的驗收項，出錯要在這裡就爆，而不是三個畫面之後。
+  if ((made.state.outcomes ?? []).length !== 0 || made.state.final) {
+    return { ok: false, state: null, archived: null, errors: [{ code: "not_clean", message: "新賽季必須是乾淨的（無賽果、無封存）" }] };
+  }
+  return { ok: true, state: made.state, archived: state.final, errors: [] };
+}
+
+/**
+ * 賽季相對進度（Q5 修的顯示問題）。
+ *
+ * 舊版畫面拿**絕對遊戲日**去對 84 天，於是賽季末會顯示「第 95 / 84 天」——
+ * 因為賽季錨在建立當天（`startDay`），不是遊戲的第 1 天。
+ * 這一支回傳的是**本賽季第幾天**，畫面只顯示它。
+ */
+export function seasonDayOf(state, currentDay) {
+  const start = Number(state?.startDay) || 1;
+  const d = Math.max(1, Math.floor(Number(currentDay) || 1) - start + 1);
+  return { seasonDay: Math.min(d, SEASON_DAYS), seasonDays: SEASON_DAYS, overrun: d > SEASON_DAYS };
+}
+
 /** 積分榜（唯一入口；畫面不得自己算）。 */
 export function seasonStandings(state, rule = "win3") {
   return computeStandings({

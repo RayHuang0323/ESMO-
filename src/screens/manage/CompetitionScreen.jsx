@@ -55,6 +55,14 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
   }
 
   const { standings, next, nextDay, today, progress, participants, live, final, award } = view;
+  //  Q5：賽季進度改用**賽季相對天數**（`seasonDay`），不再拿絕對遊戲日對 84
+  const { seasonDay, seasonDays, history, canRoll } = view;
+
+  const rollSeason = () => {
+    setErr(null);
+    const r = useProfileStore.getState().rollToNextCompetitionSeason();
+    if (!r.ok) setErr(r.reason ?? "無法開始下一賽季");
+  };
   const myId = useProfileStore.getState().competition?.playerTeamId;
   const nameOf = (id) => participants.find((p) => p.id === id)?.name ?? id;
   const tagOf = (id) => participants.find((p) => p.id === id)?.tag ?? "";
@@ -93,7 +101,7 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
   return (
     <ManageFrame
       title="聯賽"
-      subtitle={`S${view.season} · 第 ${days} / ${progress.seasonDays} 天`}
+      subtitle={`S${view.season} · 第 ${seasonDay} / ${seasonDays} 天`}
       onBack={onBack}
       right={<span style={{ ...{ fontSize: 9, fontWeight: 800, color: GC.gray } }}>{progress.playerCompleted}/{progress.playerTotal} 場</span>}
     >
@@ -136,6 +144,36 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
               　·　第 {final.sealedAtDay} 天封存
             </div>
           )}
+          {/*  Q5：換季是**玩家自己按**的。封存與發獎自動（漏發是災難），
+               但換季會把這一頁換成新賽季的空賽程——玩家還沒看到成績就被收走不合理。
+               能不能換由 Store 的 `canRoll` 決定，畫面不自己判。 */}
+          {canRoll?.ok && (
+            <button
+              onClick={rollSeason}
+              style={{ width: "100%", marginTop: 10, background: `linear-gradient(135deg,${GC.purp},#7c3aed)`, border: "none", borderRadius: 10, padding: "11px 0", color: "#fff", fontSize: 13, fontWeight: 900, cursor: "pointer" }}
+            >
+              ▶ 開始第 {canRoll.nextSeason} 賽季
+            </button>
+          )}
+        </Panel>
+      )}
+
+      {/*  ── 歷屆成績（Q5）──────────────────────────────────────────────
+           換季之後上一季的最終名次仍然查得到。這裡只讀已封存的快照，
+           不重算任何名次——那些數字在封存那一刻就固定了。 */}
+      {history?.length > 0 && (
+        <Panel title="歷屆成績 HISTORY" right={<span style={{ fontSize: 9, color: GC.gray }}>{history.length} 季</span>}>
+          {history.map((h) => (
+            <div key={h.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11.5, padding: "4px 0", borderTop: `1px solid ${GC.line}` }}>
+              <span style={{ color: GC.gray, fontFamily: MONO }}>S{h.season}</span>
+              <span style={{ flex: 1, textAlign: "left", marginLeft: 10, color: "rgba(255,255,255,0.8)" }}>
+                🏆 {h.rows?.[0]?.name ?? "—"}
+              </span>
+              <span style={{ fontWeight: 800, color: h.playerRank <= 4 ? GC.gold : GC.gray, fontFamily: MONO }}>
+                我 第 {h.playerRank} 名
+              </span>
+            </div>
+          ))}
         </Panel>
       )}
 

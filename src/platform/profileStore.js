@@ -62,6 +62,7 @@ import {
   fixtureById, nextPlayerFixture, pendingPlayerFixtureOn, seasonStandings,
   seasonProgress, participantsOf, absoluteDayOf, isFixtureLaunched,
   canSealSeason, applySealSeason,
+  canRollSeason, rollToNextSeason, seasonDayOf,
 } from "./competition/seasonState.js";
 //  Milestone Q4：名次獎金。錢的第三個入口（唯一新增的一個），純函式在 economy/。
 import { settleCompetitionAwardInState } from "./economy/competitionAward.js";
@@ -197,6 +198,7 @@ const DEFAULT = {
   schemaVersion: PROFILE_SCHEMA_VERSION,
   processedMatchTransactions: {},// S25：冪等帳本 {transactionId: receipt}（防重複發獎）
   processedCompetitionAwards: {},// Q4：名次獎金冪等帳本 {finalStandingsId: receipt}
+  competitionHistory: [],        // Q5：歷屆已封存賽季（FinalStandings[]，新的在前）
   inbox: [
     { id: 1, type: "match",   from: "聯賽官方",         subject: "第 1 週賽程已公布",   text: "第 1 週賽程已公布，請確認出賽名單。", time: "剛剛", unread: true },
     { id: 2, type: "recruit", from: "球探部",           subject: "3 名新星進入觀察名單", text: "球探回報：3 名新星進入觀察名單，可前往招募查看。", time: "1 小時前", unread: true },
@@ -330,6 +332,10 @@ const load = () => {
         saved.processedCompetitionAwards && typeof saved.processedCompetitionAwards === "object"
           ? saved.processedCompetitionAwards
           : {},
+      //  Milestone Q5 migration：舊存檔沒有歷屆賽季 ⇒ 空陣列。
+      //  ⚠ 刻意**不從現有 competition.final 回填**：那一季還沒換季，
+      //    它仍然是「當前賽季」，回填會讓同一季同時出現在當前與歷史兩個地方。
+      competitionHistory: arr(saved.competitionHistory, []),
       // Sprint10 的 sponsors[] 假名單已退場；舊存檔沒有 activeSponsor → null（尚未簽約）
       activeSponsor: saved.activeSponsor ?? DEFAULT.activeSponsor,
       scouted: saved.scouted && typeof saved.scouted === "object" ? saved.scouted : {},
@@ -763,6 +769,52 @@ export const useProfileStore = create((set, get) => ({
     return { sealed: true, final, award: settled.receipt };
   },
   /**
+   * 換到下一個賽季（Milestone Q5）。**玩家主動按的**——不自動換。
+   *
+   * ── 為什麼不自動 ──────────────────────────────────────────────────────
+   * 封存與發獎自動（漏發獎勵是災難），但換季不是：換季會把「最終名次」那一頁
+   * 換成新賽季的空賽程。自動換季等於玩家還沒看到成績就被收走。
+   * 這與 Q3 「棄權必須玩家自己按」是同一個判斷：**不可逆且會改變畫面的事，
+   * 讓玩家自己決定時機。**
+   *
+   * ── 冪等（規格需求 9）────────────────────────────────────────────────
+   * 三道，任何一道成立就不會產生第二個新賽季：
+   *   ① 沒有 `final`（＝當前賽季沒封存）⇒ 直接拒絕。換季後新賽季沒有 `final`，
+   *      所以**連按兩下的第二下必然落在這一道上**。
+   *   ② 歷史裡已經有同一個 `final.id` ⇒ 不重複封存進歷史。
+   *   ③ 新賽季 id 由 `season` 與 `seasonSeed` 決定性推導 ⇒ 就算真的跑兩次，
+   *      產生的也是同一份賽程，不會出現兩份不同的 S2。
+   */
+  rollToNextCompetitionSeason() {
+    const state = get().competition;
+    const can = canRollSeason(state);
+    if (!can.ok) return { ok: false, errors: [{ code: "cannot_roll", message: can.reason }], reason: can.reason };
+
+    const res = rollToNextSeason({
+      state,
+      playerTeam: get().team,
+      seasonSeed: get().meta?.seasonSeed,
+      //  新賽季錨在**換季當下**這一天（與 `ensureCompetitionSeason` 同一條規則）
+      startDay: Number(get().meta?.days) || 1,
+    });
+    if (!res.ok) return { ok: false, errors: res.errors, reason: res.errors?.[0]?.message ?? null };
+
+    const history = arr(get().competitionHistory, []);
+    const already = history.some((h) => h?.id === res.archived?.id);
+    set({
+      competition: res.state,
+      //  新的在前；上限 20 季（一季一筆、每筆 8 列，容量遠小於 replay 那類東西）
+      competitionHistory: already ? history : [res.archived, ...history].slice(0, 20),
+    });
+    get().save();
+    get().pushInbox({
+      type: "match", from: "聯賽官方",
+      subject: `第 ${res.state.season} 賽季 常規賽 開賽`,
+      text: `第 ${res.state.season} 賽季常規賽賽程已公布，共 ${res.state.fixtures.length} 場。上一季的最終名次已存入歷屆成績。`,
+    });
+    return { ok: true, season: res.state.season, archived: res.archived, errors: [] };
+  },
+  /**
    * 這條賽前流程屬於哪一場賽程（Q3.6）。**判斷只在這裡做一次。**
    *
    * 認定依據只有 `fixtureAssignment`——它在「出賽」時寫入，並且在
@@ -780,7 +832,13 @@ export const useProfileStore = create((set, get) => ({
   /** 賽事總覽（畫面唯一入口；不得自己算積分榜或自己找下一場）。 */
   competitionView() {
     const state = get().competition;
-    if (!state?.schema) return { hasSeason: false, standings: null, next: null, today: null, progress: null, live: null };
+    if (!state?.schema) {
+      return {
+        hasSeason: false, standings: null, next: null, today: null, progress: null, live: null,
+        final: null, award: null, canRoll: { ok: false, reason: "目前沒有賽季", nextSeason: null },
+        history: arr(get().competitionHistory, []),
+      };
+    }
     const day = Number(get().meta?.days) || 1;
     const next = nextPlayerFixture(state, day);
     return {
@@ -804,6 +862,12 @@ export const useProfileStore = create((set, get) => ({
         if (!session || !isFixtureSession(session) || isSessionTerminal(session)) return null;
         return { fixtureId: fixtureIdOfSession(session), state: session.state };
       })(),
+      //  Q5：賽季**相對**進度。畫面只顯示這個，不得再拿 `meta.days` 去對 84
+      //  （那會在賽季末顯示「第 95 / 84 天」——賽季錨在建立當天，不是第 1 天）。
+      ...seasonDayOf(state, day),
+      //  Q5：歷屆已封存賽季（新的在前）＋ 能不能開下一季
+      history: arr(get().competitionHistory, []),
+      canRoll: canRollSeason(state),
       //  Q4：賽季封存後的**不可變**最終名次（沒封存 ⇒ null）。
       //  ⚠ 賽季進行中畫面要顯示的是上面的 `standings`（推導值）；
       //    `final` 只在結束後出現。兩者不會同時是「現在的名次」，不算兩份真相。
@@ -1391,6 +1455,7 @@ export const useProfileStore = create((set, get) => ({
       csHistory: [],
       processedMatchTransactions: {},
       processedCompetitionAwards: {},
+      competitionHistory: [],
       economy: ng.economy,
       recruitment: { signed: {} },
       matchmaking: { ticket: null, room: null, session: null, launch: null, lastResult: null, settlements: {}, lastSettlementError: null },

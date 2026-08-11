@@ -271,8 +271,13 @@ const finishWholeSeason = (maxSteps = 200) => {
     (ps.match(/funds:\s*fundsAfter/g) ?? []).length <= 2);
   ck("5e) **沒有碰 Battle Engine**",
     !/LogicEngine|battleStore|useLocalServer/.test(awardSrc + finalSrc));
-  ck("5f) **沒有換季**（Q4 不含跨賽季，那是後續）",
-    !/nextSeason|rollSeason|startNextSeason/.test(awardSrc + finalSrc + seasonStateHas()));
+  //  ⚠ 2026-08-12（Q5）：本條原本是「**沒有換季**（Q4 不含跨賽季，那是後續）」，
+  //    掃描範圍含 `seasonState.js`。Q5 已實作換季，而換季依規格就住在 seasonState
+  //    ⇒ 原斷言必然紅。保留這條守的**真正邊界**：
+  //    **名次獎金與最終名次契約不得涉入換季**（換季不發錢、發錢不換季）。
+  ck("5f) 名次獎金與最終名次契約**不碰換季**（換季在 seasonState，兩者不互相插手）",
+    !/nextSeason|rollSeason|rollToNextSeason|startNextSeason/.test(awardSrc + finalSrc) &&
+    !/settleCompetitionAward|prizeForRank/.test(seasonStateHas()));
   ck("5g) 沒有 Shop／MMR／牌位", !/tokens|entitlement|\bmmr\b/i.test(awardSrc + finalSrc));
   ck("5h) 封存不可逆：`applySealSeason` 不提供解除封存",
     !/unseal|clearFinal|resetFinal/.test(readCode("src/platform/competition/seasonState.js")));

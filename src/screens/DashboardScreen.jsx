@@ -116,7 +116,10 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
             <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 9 }}>
               <span style={{ fontSize: 15 }}>📅</span>
               <span style={{ color: "white", fontSize: 13, fontWeight: 700 }}>本週財務</span>
-              <span style={{ color: GC.gray, fontSize: 10 }}>S{wk.season}・第 {wk.week} 週・第 {wk.dayOfWeek}/7 天</span>
+              {/*  Q5：拿掉 S 號。`meta.season` 是**經濟週期**（12 週一輪，由 days 導出），
+                   與賽事賽季（錨在建立當天）本來就會逐季偏移，兩個 S 並排會互相矛盾。
+                   全案唯一顯示的「賽季」在賽事頁；這裡只講週期。 */}
+              <span style={{ color: GC.gray, fontSize: 10 }}>第 {wk.week} 週・第 {wk.dayOfWeek}/7 天</span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
               {[
