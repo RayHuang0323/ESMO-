@@ -54,6 +54,7 @@ import { forecastWeeks } from "./economy/forecast.js";
 import { DEFAULT_SCENARIO, SCENARIOS, scenarioById } from "./economy/economyConfig.js";
 import { seedFormLogFromCsHistory } from "./economy/formLog.js";
 import { newGameFinancials } from "./economy/newGame.js";
+import { ensureTeamIdentity } from "./identity/teamIdentity.js";
 import { applyDailyRecovery, conditionSummary } from "./condition/playerCondition.js";
 import { createMatchEntryRequest, validateMatchEntryRequest } from "./contracts/matchEntry.js";
 import {
@@ -242,14 +243,32 @@ function normalizeEconomy(saved, days) {
   const scenario = SCENARIOS[saved.scenario] ? saved.scenario : DEFAULT_SCENARIO;
   return { settledWeeks: weeks, lastSettledWeek: last, scenario, formLog: saved.formLog };
 }
+/**
+ * Milestone Q1：補齊不可變的隊伍身分（`team.id`）與賽季種子（`meta.seasonSeed`）。
+ *
+ * 規則在 `identity/teamIdentity.js`（純模組，驗證器共用同一份，不另組一套）。
+ * 冪等：已有合法值就原樣保留 ⇒ **改隊名不會換 id**。
+ *
+ * ⚠ 一定要在合併完 `saved.team` **之後**才呼叫——否則會拿 DEFAULT 的隊名去
+ *   推導，讓不同存檔算出同一個 id。
+ */
+function withIdentity(state) {
+  const { team, meta } = ensureTeamIdentity({
+    team: state.team,
+    meta: state.meta,
+    scenario: state.economy?.scenario ?? DEFAULT_SCENARIO,
+  });
+  return { ...state, team, meta };
+}
+
 const load = () => {
-  if (!canLS) return DEFAULT;
+  if (!canLS) return withIdentity(DEFAULT);
   try {
     const saved = JSON.parse(localStorage.getItem(KEY)) || {};
     const f = saved.finance || {};
     // Milestone E：lineup 依「清洗後的名單」驗證（指到已離隊選手的席位會被回收）。
     const players = arr(saved.players, DEFAULT.players).map(migratePlayer);
-    return {
+    return withIdentity({
       manager: { ...DEFAULT.manager, ...saved.manager },
       team:    { ...DEFAULT.team,    ...saved.team },
       finance: {
@@ -307,8 +326,8 @@ const load = () => {
       notifications: arr(saved.notifications, DEFAULT.notifications),
       worldNews:     arr(saved.worldNews,     DEFAULT.worldNews),
       events:        arr(saved.events,        DEFAULT.events),
-    };
-  } catch { return DEFAULT; }
+    });
+  } catch { return withIdentity(DEFAULT); }
 };
 
 /**
@@ -622,7 +641,11 @@ export const useProfileStore = create((set, get) => ({
     const t = deriveTime(get().meta?.days ?? 1);
     return createMatchEntryRequest({
       mode, seats, players,
-      context: { teamId: get().team?.tag ?? null, teamName: get().team?.name ?? null, day: t.day, week: t.week, season: t.season },
+      //  Milestone Q1：teamId 一律用不可變的 `team.id`。
+      //  Q1 之前這裡是 `team.tag`（顯示用縮寫）——改隊名就會讓賽季紀錄斷開。
+      //  ⚠ teamId **不進** transactionId 的雜湊（entry:mode:rosterVersion:seatsHash:s..w..d..）
+      //    ⇒ 這個改動不影響任何既有識別碼。
+      context: { teamId: get().team?.id ?? null, teamName: get().team?.name ?? null, day: t.day, week: t.week, season: t.season },
     });
   },
   // ── Milestone O4：配對票券 ───────────────────────────────────────────
@@ -1005,11 +1028,15 @@ export const useProfileStore = create((set, get) => ({
     const ng = newGameFinancials(scenarioId);
     const t = ng.time;
     const starter = ng.starter;
-    set({
+    //  Milestone Q1：新局要拿到**全新**的 team.id 與 meta.seasonSeed。
+    //  DEFAULT.team / DEFAULT.meta 刻意不帶這兩個欄位 ⇒ withIdentity 會依新情境
+    //  重新推導；舊局的身分不會被沿用。
+    set(withIdentity({
       ...DEFAULT,
       players: INITIAL_PLAYERS.map(migratePlayer),
       lineup: { ...DEFAULT_LINEUP },
       csLineup: normalizeCsLineup(null, null),
+      team: { ...DEFAULT.team },
       meta: { ...DEFAULT.meta, days: t.day, week: t.week, season: t.season },
       finance: { ...DEFAULT.finance, funds: ng.funds, transactions: [] },
       activeSponsor: ng.activeSponsor,
@@ -1019,7 +1046,7 @@ export const useProfileStore = create((set, get) => ({
       recruitment: { signed: {} },
       matchmaking: { ticket: null, room: null, session: null, launch: null, lastResult: null, settlements: {}, lastSettlementError: null },
       schemaVersion: PROFILE_SCHEMA_VERSION,
-    });
+    }));
     get().pushInbox({
       type: "match", from: "戰隊管理處",
       subject: `新賽季開始 · ${sc.name}`,

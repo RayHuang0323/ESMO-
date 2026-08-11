@@ -17,6 +17,7 @@
 //  純函式：不 import React / zustand / localStorage。
 // ============================================================================
 import { ASSIGNMENT_VERSION, validateAssignment } from "./matchmaking.js";
+import { ORIGIN_VERSION, originFromTicket, compatTicketIdOf, sameOrigin } from "./matchOrigin.js";
 
 export const ROOM_VERSION = "MatchRoom.v1";
 
@@ -67,10 +68,14 @@ function hash8(input) {
  * `roomId` 由 assignmentId 決定性推導 ⇒ 同一張指派單重複開房會得到同一個
  * roomId，天然防止重複建立房間。
  */
-export function createRoom({ assignment, ticket, now = 0, server = "mock-gateway", readySeconds = READY_SECONDS }) {
-  const v = validateAssignment(assignment, ticket);
+export function createRoom({ assignment, ticket, origin = null, now = 0, server = "mock-gateway", readySeconds = READY_SECONDS }) {
+  const v = validateAssignment(assignment, origin ?? ticket);
   if (!v.ok) return { ok: false, room: null, errors: v.errors };
-  if (!ticket?.ticketId) {
+  //  Q1：來源可以是票券或賽程，且優先取呼叫端的憑證（票券）。
+  //  指派單自帶的 origin 只在賽程路徑（無票券）時才會被採用；票券與指派單
+  //  的一致性在上面 validateAssignment 已經比對過。
+  const src = origin ?? originFromTicket(ticket).origin ?? assignment?.origin;
+  if (!src) {
     return { ok: false, room: null, errors: [{ code: "ticket", message: "缺少票券，無法開房" }] };
   }
   return {
@@ -79,8 +84,10 @@ export function createRoom({ assignment, ticket, now = 0, server = "mock-gateway
     room: {
       schema: ROOM_VERSION,
       roomId: `room:${assignment.mode}:${hash8(assignment.assignmentId)}`,
-      //  綁定來源：舊票券／別張指派單都進不了這個房間
-      ticketId: ticket.ticketId,
+      //  綁定來源：舊來源／別張指派單都進不了這個房間
+      //  ⚠ ticketId 是 origin 的衍生相容欄位（見 matchOrigin.js），不是第二份真相
+      ticketId: compatTicketIdOf(src),
+      origin: src,
       assignmentId: assignment.assignmentId,
       mode: assignment.mode,
       opponent: { id: assignment.opponent?.id ?? null, name: assignment.opponent?.name ?? null },
@@ -184,7 +191,7 @@ export function remainingSeconds(room, now = 0) {
  *   · 房間帶 gateway 簽發者
  *   · 房間與**目前票券**、**該票券的指派單**三者一致（舊票券進不了新房間）
  */
-export function canEnterRoom(room, ticket = null) {
+export function canEnterRoom(room, ref = null) {
   if (!room) return { ok: false, message: "尚未建立比賽房間" };
   if (room.state !== ROOM_STATES.confirmed) {
     return { ok: false, message: room.reason ?? `房間狀態為「${roomStateLabel(room.state)}」，不可進入對戰` };
@@ -193,11 +200,21 @@ export function canEnterRoom(room, ticket = null) {
     return { ok: false, message: "雙方都確認後才能進入對戰" };
   }
   if (!room.issuedBy) return { ok: false, message: "房間未標明簽發者，拒絕進入" };
-  if (ticket) {
-    if (room.ticketId !== ticket.ticketId) return { ok: false, message: "房間與目前票券不符（舊票券不可進入新房間）" };
-    const a = ticket.assignment;
-    if (!a || a.schema !== ASSIGNMENT_VERSION) return { ok: false, message: "票券缺少有效的配對結果" };
-    if (room.assignmentId !== a.assignmentId) return { ok: false, message: "房間與配對結果不符" };
+  if (ref) {
+    if (ref.schema === ORIGIN_VERSION) {
+      //  Q1：賽程來源只比對來源本身。
+      //  ⚠ 指派單綁定由呼叫端負責——賽程路徑的指派單由 competitionGateway 持有，
+      //    這裡沒有票券可取。該檢查在 Q3 接上 competitionGateway 時補上。
+      if (!sameOrigin(room.origin, ref)) {
+        return { ok: false, message: "房間與目前比賽來源不符（舊來源不可進入新房間）" };
+      }
+    } else {
+      //  票券路徑：訊息與判定與 O5 逐字相同
+      if (room.ticketId !== ref.ticketId) return { ok: false, message: "房間與目前票券不符（舊票券不可進入新房間）" };
+      const a = ref.assignment;
+      if (!a || a.schema !== ASSIGNMENT_VERSION) return { ok: false, message: "票券缺少有效的配對結果" };
+      if (room.assignmentId !== a.assignmentId) return { ok: false, message: "房間與配對結果不符" };
+    }
   }
   return { ok: true, message: null };
 }

@@ -18,6 +18,9 @@
 //  純函式：不 import React / zustand / localStorage。
 // ============================================================================
 import { MATCH_ENTRY_VERSION } from "./matchEntry.js";
+import {
+  ORIGIN_VERSION, ORIGIN_KINDS, originFromTicket, validateOrigin, compatTicketIdOf,
+} from "./matchOrigin.js";
 
 export const TICKET_VERSION = "MatchmakingTicket.v1";
 export const ASSIGNMENT_VERSION = "MatchAssignment.v1";
@@ -190,17 +193,31 @@ export function canEnterMatch(ticket) {
 /**
  * 建立配對指派單。**只應由 gateway（未來的伺服器）呼叫。**
  *
+ * Q1 起接受兩種來源（見 `matchOrigin.js`）：
+ *   · 傳 `ticket`  → 內部轉成 ticket 來源（O4 既有路徑，行為逐值不變）
+ *   · 傳 `origin`  → 直接使用（賽程來源；生產者是 Q3 的 competitionGateway）
+ * 兩者擇一，同時傳則以 `origin` 為準。
+ *
+ * ⚠ `assignmentId` 由 `origin.originId` 推導，而票券來源的 `originId` **就是**
+ *   `ticketId` ⇒ 既有排隊路徑產生的 id 逐字元不變。
+ *
  * @param {object} p
- * @param {object} p.ticket
+ * @param {object} [p.ticket]
+ * @param {object} [p.origin]  MatchOrigin.v1
  * @param {object} p.opponent  { id, name, power? }  ← 由伺服器決定，客戶端不得指定
  * @param {number} p.seed      對戰亂數種子（伺服器決定 ⇒ 前端無法選有利種子）
  */
-export function createAssignment({ ticket, opponent, seed, now = 0, server = "mock-gateway" }) {
+export function createAssignment({ ticket, origin = null, opponent, seed, now = 0, server = "mock-gateway" }) {
+  const src = origin ?? originFromTicket(ticket).origin;
+  if (!src) throw new TypeError("createAssignment：必須提供 ticket 或 origin");
   return {
     schema: ASSIGNMENT_VERSION,
-    assignmentId: `assign:${hash8(`${ticket.ticketId}:${seed}`)}`,
-    ticketId: ticket.ticketId,
-    mode: ticket.mode,
+    assignmentId: `assign:${hash8(`${src.originId}:${seed}`)}`,
+    //  ⚠ 衍生相容欄位（ticket 來源 = originId，fixture 來源 = null）。
+    //    正規來源是下面的 `origin`，不是這一欄。推導點只有 compatTicketIdOf 一處。
+    ticketId: compatTicketIdOf(src),
+    origin: src,
+    mode: src.mode,
     //  對手只有識別，沒有戰力數值——真實數值由伺服器自己持有
     opponent: { id: opponent?.id ?? null, name: opponent?.name ?? null },
     seed,
@@ -213,8 +230,12 @@ export function createAssignment({ ticket, opponent, seed, now = 0, server = "mo
  * 驗證指派單。
  * 除了形狀，特別擋掉**客戶端自行指定比賽結果**：
  * 指派單只能說「你要跟誰打、用哪個種子」，不能夾帶勝負、比分、獎勵。
+ *
+ * @param {object} a
+ * @param {object|null} ref 比對對象：**票券或 MatchOrigin 皆可**（以 schema 分辨）。
+ *   傳票券時的錯誤碼與訊息與 O4 完全相同 ⇒ 既有斷言不受影響。
  */
-export function validateAssignment(a, ticket = null) {
+export function validateAssignment(a, ref = null) {
   const errors = [];
   if (!a || typeof a !== "object") return { ok: false, errors: [{ code: "invalid", message: "配對結果不是物件" }] };
   if (a.schema !== ASSIGNMENT_VERSION) errors.push({ code: "schema", message: `schema 必須為 ${ASSIGNMENT_VERSION}` });
@@ -232,9 +253,38 @@ export function validateAssignment(a, ticket = null) {
   if (leaked.length) errors.push({ code: "result_leak", message: `配對結果不得夾帶比賽結果：${leaked.join(", ")}` });
   const oppLeak = Object.keys(a.opponent ?? {}).filter((k) => ["power", "stats", "rating", "lv"].includes(k));
   if (oppLeak.length) errors.push({ code: "opponent_values", message: `對手資料不得夾帶數值：${oppLeak.join(", ")}` });
-  if (ticket) {
-    if (a.ticketId !== ticket.ticketId) errors.push({ code: "ticket_mismatch", message: "配對結果與票券不符" });
-    if (a.mode !== ticket.mode) errors.push({ code: "mode_mismatch", message: "配對結果的模式與票券不符" });
+
+  //  Q1：來源若存在則必須合法，且相容欄位必須與它一致。
+  //  **不強制要求 origin 存在**——手造的舊形狀指派單仍照 O4 規則判定。
+  if (a.origin) {
+    const ov = validateOrigin(a.origin);
+    if (!ov.ok) {
+      errors.push(...ov.errors.map((e) => ({ code: `origin_${e.code}`, message: `比賽來源無效：${e.message}` })));
+    } else if (a.ticketId !== compatTicketIdOf(a.origin)) {
+      errors.push({ code: "origin_ticket_mismatch", message: "指派單的票券欄位與比賽來源不符" });
+    }
+  }
+
+  if (ref) {
+    if (ref.schema === ORIGIN_VERSION) {
+      if (a.origin?.originId !== ref.originId) errors.push({ code: "origin_mismatch", message: "配對結果與比賽來源不符" });
+      if (a.mode !== ref.mode) errors.push({ code: "mode_mismatch", message: "配對結果的模式與比賽來源不符" });
+    } else {
+      //  票券路徑：錯誤碼與訊息與 O4 逐字相同
+      if (a.ticketId !== ref.ticketId) errors.push({ code: "ticket_mismatch", message: "配對結果與票券不符" });
+      if (a.mode !== ref.mode) errors.push({ code: "mode_mismatch", message: "配對結果的模式與票券不符" });
+    }
   }
   return { ok: errors.length === 0, errors };
+}
+
+/** 指派單的來源（無 origin 的舊形狀 ⇒ 視為票券來源）。下游共用這一個推導點。 */
+export function originOfAssignment(a) {
+  if (a?.origin) return a.origin;
+  if (!a?.ticketId) return null;
+  return {
+    schema: ORIGIN_VERSION, kind: ORIGIN_KINDS.ticket, originId: a.ticketId, mode: a.mode ?? null,
+    entryTransactionId: null, rosterVersion: null, teamId: null,
+    competitionId: null, stageId: null, fixtureId: null,
+  };
 }
