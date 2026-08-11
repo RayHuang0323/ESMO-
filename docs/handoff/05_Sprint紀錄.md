@@ -6425,3 +6425,13 @@ Go with hard gates：score/winner、RNG consumption 與非 defuse gameplay 必�
 全部未修改；未建立 R9 runner segment。沒有採用 dummy RNG、特判延遲完成、per-round RNG
 重構或放寬 verifier。No-Go 收尾後 CS23、R1–R8、Progress25、build **10/10 PASS**；
 完整證據：`review/cs-gameplay/CS_DEFUSE_STALE_REPAIR_R9_SPEC.md`。
+---
+
+## CS Determinism Migration R10 — 2026-08-11
+
+- R10 規格已封版並完成 local implementation；production 只改 defuse block 的 fresh post-combat alive snapshot。
+- `CsGameplayDigest.v1/v2` 與 R1-R8 constants 保留；`CsGameplayDigest.v3` 新 baseline：`7c2f8d8ae0f2717c4884b993370f43c5935cd4ad891222c03224438f2ccbe1eb`。
+- paired matrix：16 R3 treatments × 16 seeds = 256；14/256 trajectory changed，1/256 RNG changed。
+- 唯一 RNG 差異：`clutch / 4200255727`，`2005 -> 2004`，`idle_aim_jitter`，`ct3`，R12/sec64/call2005；確認為正確提早結束回合跳過既有 tick RNG。
+- R1-R8 以 `tools/cs_r10_legacy_source.mjs` memory legacy view 保留歷史 evidence，不 rebaseline。
+- per-round/subsystem RNG deferred；Calibration、balance、how:bomb、utility、learning、synergy 不在 scope。

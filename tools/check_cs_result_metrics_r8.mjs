@@ -15,6 +15,7 @@ import { createServer } from "vite";
 import { toCsMatchResult } from "../src/platform/contracts/CsMatchResult.js";
 import { csResultToTransaction } from "../src/platform/progress/adapters/csProgressAdapter.js";
 import { csPerfFactor, playerXpFor } from "../src/platform/progress/rewardFormulas.js";
+import { csR10LegacySource } from "./cs_r10_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -28,6 +29,7 @@ const PROGRESS_SOURCE_PROVENANCE = Object.freeze({
 
 const LEGACY_SOURCE_SHA256 = "5b9360f457c95034cdfdc9e864c04a761e1afdba01501c7e383bb9075e048c3d";
 const REPAIRED_SOURCE_SHA256 = "870678267543c8e502fac55c7a91a656a135f31fdfb0d673adc30c91c4d8f47b";
+const CURRENT_SOURCE_SHA256 = "ba3305ea6cd92fe06df5ee3fd4eb3ca47e1385910672b1ec111f804da0859b8d";
 const LEGACY_BASELINE_SUITE_V1 = "546a3e5753ceadfa28c64e7f322556ebbff32f0848eebe2c9b477a29f1a195c2";
 const EXPECTED_REPAIRED_BASELINE_SUITE_V2 = "5e39e463148d2cd43bbd30b97c485858d75a5edf7f42a035f8f49e1d473293e9";
 const EXPECTED_RAND_CALLS = 21;
@@ -538,9 +540,11 @@ async function main() {
   const originalSource = readFileSync(FPS_FILE, "utf8");
   const sourceSha256 = sha256(originalSource);
   const legacyStage = sourceSha256 === LEGACY_SOURCE_SHA256;
-  const repairedStage = sourceSha256 === REPAIRED_SOURCE_SHA256;
+  const repairedStage = sourceSha256 === REPAIRED_SOURCE_SHA256 || sourceSha256 === CURRENT_SOURCE_SHA256;
   gate(legacyStage || repairedStage, "SOURCE_PROVENANCE_MISMATCH",
     `legacy=${LEGACY_SOURCE_SHA256}\nrepaired=${REPAIRED_SOURCE_SHA256}\nactual=${sourceSha256}`);
+  const historicalSource = sourceSha256 === CURRENT_SOURCE_SHA256
+    ? csR10LegacySource(originalSource) : originalSource;
   gate(randTokens(originalSource).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT",
     `expected=${EXPECTED_RAND_CALLS} actual=${randTokens(originalSource).length}`);
   gate(canonicalJson(generatedSeeds()) === canonicalJson(FIXED_SEEDS), "SEED_GENERATION_MISMATCH");
@@ -555,7 +559,7 @@ async function main() {
   const damageMarker = legacyStage ? LEGACY_DAMAGE_MARKER : REPAIRED_DAMAGE_MARKER;
   const damageReplacement = `${damageMarker}\n${DAMAGE_EVENT_HOOK}`;
   for (const marker of [SIGNATURE_MARKER, damageMarker, RETURN_MARKER, EXPORT_MARKER]) {
-    gate(occurrences(originalSource, marker) === 1, "MARKER_COUNT", marker);
+    gate(occurrences(historicalSource, marker) === 1, "MARKER_COUNT", marker);
   }
 
   let transformSeen = 0;
@@ -580,7 +584,7 @@ async function main() {
           if (resolve(id.split("?")[0]).toLowerCase() !== FPS_FILE.toLowerCase()) return null;
           transformSeen += 1;
           gate(code === originalSource, "VITE_SOURCE_MISMATCH");
-          const transformed = code
+          const transformed = historicalSource
             .replace(SIGNATURE_MARKER, SIGNATURE_REPLACEMENT)
             .replace(damageMarker, damageReplacement)
             .replace(RETURN_MARKER, RETURN_REPLACEMENT)
@@ -590,8 +594,8 @@ async function main() {
             .replace(RETURN_REPLACEMENT, RETURN_MARKER)
             .replace(damageReplacement, damageMarker)
             .replace(SIGNATURE_REPLACEMENT, SIGNATURE_MARKER);
-          restoredExactly = restored === code;
-          transformedRandIntegrity = canonicalJson(randTokens(transformed)) === canonicalJson(randTokens(code));
+          restoredExactly = restored === historicalSource;
+          transformedRandIntegrity = canonicalJson(randTokens(transformed)) === canonicalJson(randTokens(historicalSource));
           gate(restoredExactly, "TRANSFORM_NOT_EXACTLY_REVERSIBLE");
           gate(transformedRandIntegrity, "TRANSFORM_CHANGED_RAND_TOKENS");
           return { code: transformed, map: null };

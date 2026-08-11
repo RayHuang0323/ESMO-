@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
+import { csR10LegacySource } from "./cs_r10_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -24,6 +25,7 @@ const FIXED_SEEDS = Object.freeze([
 ]);
 const EXPECTED_SEED_SET_SHA256 = "52414f0e6b09ba72b9223b5e76b6ad9d859e8b8ea6fe77dcc2a2a08876a74c6d";
 const CAPTURED_ENGINE_SOURCE_SHA256 = "870678267543c8e502fac55c7a91a656a135f31fdfb0d673adc30c91c4d8f47b";
+const CURRENT_ENGINE_SOURCE_SHA256 = "ba3305ea6cd92fe06df5ee3fd4eb3ca47e1385910672b1ec111f804da0859b8d";
 const EXPECTED_RAND_CALLS = 21;
 
 // Intentionally no update/rebaseline path. Capture once through the runner, inspect,
@@ -400,13 +402,15 @@ async function main() {
 
   const originalSource = readFileSync(FPS_FILE, "utf8");
   const sourceSha256 = sha256(originalSource);
-  gate(sourceSha256 === CAPTURED_ENGINE_SOURCE_SHA256, "SOURCE_PROVENANCE_MISMATCH",
-    `expected=${CAPTURED_ENGINE_SOURCE_SHA256}\nactual=${sourceSha256}`);
-  gate(occurrences(originalSource, RETURN_MARKER) === 1, "RETURN_MARKER_COUNT");
-  gate(occurrences(originalSource, EXPORT_MARKER) === 1, "EXPORT_MARKER_COUNT");
+  gate([CAPTURED_ENGINE_SOURCE_SHA256, CURRENT_ENGINE_SOURCE_SHA256].includes(sourceSha256), "SOURCE_PROVENANCE_MISMATCH",
+    `expected=${CAPTURED_ENGINE_SOURCE_SHA256} or ${CURRENT_ENGINE_SOURCE_SHA256}\nactual=${sourceSha256}`);
+  const historicalSource = sourceSha256 === CURRENT_ENGINE_SOURCE_SHA256
+    ? csR10LegacySource(originalSource) : originalSource;
+  gate(occurrences(historicalSource, RETURN_MARKER) === 1, "RETURN_MARKER_COUNT");
+  gate(occurrences(historicalSource, EXPORT_MARKER) === 1, "EXPORT_MARKER_COUNT");
 
-  const originalRandTokens = randTokens(originalSource);
-  const originalRngTokens = rngTokens(originalSource);
+  const originalRandTokens = randTokens(historicalSource);
+  const originalRngTokens = rngTokens(historicalSource);
   gate(originalRandTokens.length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT",
     `expected=${EXPECTED_RAND_CALLS} actual=${originalRandTokens.length}`);
   gate(canonicalJson(generatedSeeds()) === canonicalJson(FIXED_SEEDS), "SEED_GENERATION_MISMATCH");
@@ -449,13 +453,13 @@ async function main() {
           gate(code === originalSource, "VITE_SOURCE_MISMATCH");
           gate(occurrences(code, RETURN_MARKER) === 1, "TRANSFORM_RETURN_MARKER_COUNT");
           gate(occurrences(code, EXPORT_MARKER) === 1, "TRANSFORM_EXPORT_MARKER_COUNT");
-          const transformed = code
+          const transformed = historicalSource
             .replace(RETURN_MARKER, RETURN_REPLACEMENT)
             .replace(EXPORT_MARKER, EXPORT_REPLACEMENT);
           const restored = transformed
             .replace(RETURN_REPLACEMENT, RETURN_MARKER)
             .replace(EXPORT_REPLACEMENT, EXPORT_MARKER);
-          transformRestoredExactly = restored === code;
+          transformRestoredExactly = restored === historicalSource;
           transformedRngTokensMatch =
             canonicalJson(rngTokens(transformed)) === canonicalJson(originalRngTokens);
           gate(transformRestoredExactly, "TRANSFORM_NOT_EXPORT_ONLY");

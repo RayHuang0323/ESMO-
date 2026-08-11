@@ -68,6 +68,7 @@ const SEGMENTS = [
   { id: "cs_retreat_r5", script: "tools/check_cs_retreat_instrumentation_r5.mjs", shape: /CS Retreat R5: PASS/, note: "CS retreat opportunity→displacement→re-engage" },
   { id: "cs_defuse_r6", script: "tools/check_cs_defuse_instrumentation_r6.mjs", shape: /CS Defuse R6: PASS/, note: "CS defuse opportunity→progress→round conversion" },
   { id: "cs_result_metrics_r8", script: "tools/check_cs_result_metrics_r8.mjs", shape: /CS Result Metrics R8(?: Legacy Evidence)?: PASS/, note: "CS ADR overkill／result metrics migration" },
+  { id: "cs_determinism_migration_r10", script: "tools/check_cs_determinism_migration_r10.mjs", shape: /CS Determinism Migration R10: PASS/, note: "CS defuse stale-state determinism migration" },
   //  ⚠ 下面五支在 flat 模式下的分母會變小（巢狀子驗證改由本 runner 各跑一次）。
   //    這裡填的是**該支自己健康時的完整數字**，不是遷就現況——所以
   //    experience26（§17 replay 容量，TD-19）與 runtime29（§29 順序公平性，TD-21）
