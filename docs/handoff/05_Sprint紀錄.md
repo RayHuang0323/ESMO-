@@ -6558,4 +6558,4 @@ Node 與 HTTP 無法證明 Android 真機 FPS、觸控、熱降頻或視覺體�
 - `runtime29`：**34/35**；紅燈是既有 **TD-21**。`tools/verify.mjs` 的紅燈為既有
   **TD-21／milestone_j**，不是本輪小兵選敵修正新增；未放寬門檻或刪除斷言。
 
-本輪尚未 commit／push／deploy；未開始英雄清兵、補刀或其他下一功能。
+本輪已完成 commit／push／deploy；未開始英雄清兵、補刀或其他下一功能。
