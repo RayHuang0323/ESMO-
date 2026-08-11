@@ -37,6 +37,8 @@ import RecruitScreen from "./screens/manage/RecruitScreen.jsx";
 import PlayerDetailScreen from "./screens/manage/PlayerDetailScreen.jsx";
 // ── Sprint27：選手天賦（入口在 PlayerDetail）──
 import PlayerTalentScreen from "./screens/manage/PlayerTalentScreen.jsx";
+//  Milestone Q3.5：聯賽（賽程 / 積分榜 / 出賽入口）
+import CompetitionScreen from "./screens/manage/CompetitionScreen.jsx";
 // ── Sprint22：CS 對戰（EsportsFPS3D 引擎 + fpsRoster Adapter）──
 // ── Sprint23：CS 完整流程 Prep → Map → Tactic → Loading → Match → Result ──
 import CsMatchScreen from "./screens/fps/CsMatchScreen.jsx";
@@ -80,7 +82,15 @@ export default function AppShell() {
 
   return (
     <div style={{ width: "100%", height: "min(88vh, 760px)", background: "linear-gradient(180deg,#0b1220,#0d1420)", borderRadius: 14, overflow: "hidden", position: "relative", fontFamily: "system-ui,-apple-system,sans-serif" }}>
-      {screen === "dashboard" && <DashboardScreen onMoba={go("lineup")} onSeason={go("season")} onNav={(t) => setScreen(t)} />}
+      {/* Q3.5：主畫面「🏆 賽事」改指向聯賽（不另建第二個入口）。
+          Sprint09 的「賽季戰績」仍在 `season`，由 MenuScreen 進入——那是
+          BattleResult 的統計頁，與聯賽是不同資料源，兩者刻意不合併。 */}
+      {screen === "dashboard" && <DashboardScreen onMoba={go("lineup")} onSeason={go("competition")} onNav={(t) => setScreen(t)} />}
+      {/* ⚠ 出賽要導到 `lineup`（賽前配置頁）而不是 `matchmaking`。
+          `MatchmakingScreen` 是 Sprint11 的**純過場動畫**（寫死對手、假計時），
+          真正的房間確認／場次簽發／一次性進場在 `LineupScreen` 的 `MatchPrepFrame`
+          ＋ `useMatchFlow`。導錯的話場次永遠不會簽發，賽果也就寫不回賽程。 */}
+      {screen === "competition" && <CompetitionScreen onBack={home} onPlay={go("lineup")} />}
       {screen === "season" && <SeasonScreen onBack={home} />}
 
       {/* ── MOBA 賽前流程 ── */}

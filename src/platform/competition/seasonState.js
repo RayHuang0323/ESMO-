@@ -44,7 +44,7 @@ export { SEASON_DAYS };
  * @param {number} p.season      meta.season
  * @param {number} p.seasonSeed  meta.seasonSeed
  */
-export function createSeasonState({ playerTeam, season = 1, seasonSeed, gameMode = "moba" } = {}) {
+export function createSeasonState({ playerTeam, season = 1, seasonSeed, gameMode = "moba", startDay = 1 } = {}) {
   const built = buildRegularSeason({ playerTeam, season, seasonSeed, gameMode });
   if (!built.ok) return { ok: false, state: null, errors: built.errors };
   return {
@@ -54,6 +54,12 @@ export function createSeasonState({ playerTeam, season = 1, seasonSeed, gameMode
       schema: SEASON_STATE_VERSION,
       season,
       seed: built.summary.seed,
+      //  ⚠ 賽季錨定在**建立當天**（Q3.5 修）。
+      //  賽程產生器排的是「賽季第 1–84 天」，但存檔的時鐘不一定從第 1 天開始
+      //  （預設新局就是第 8 天）。若直接把賽程日當成 meta.days 比對，
+      //  第 1–7 天的場次一建立就是「過期」⇒ 下次推進會被補判棄權，
+      //  玩家連看都沒看到就先輸幾場。實測在瀏覽器抓到的。
+      startDay: Math.max(1, Math.floor(Number(startDay) || 1)),
       playerTeamId: playerTeam.id,
       competition: built.competition,
       stage: built.stage,
@@ -81,12 +87,27 @@ export function rostersFor(state, playerRoster = []) {
 }
 
 export const fixtureById = (state, id) => (state?.fixtures ?? []).find((f) => f.id === id) ?? null;
-export const fixturesOn = (state, day) => (state?.fixtures ?? []).filter((f) => f.day === day);
+
+/**
+ * 賽程日 → 遊戲日（`meta.days`）。
+ * **所有跟時鐘比對的地方都要用這一支**，不得直接讀 `fixture.day`。
+ */
+export const absoluteDayOf = (state, fixture) =>
+  (Number(state?.startDay) || 1) + (Number(fixture?.day) || 1) - 1;
+
+export const fixturesOn = (state, day) =>
+  (state?.fixtures ?? []).filter((f) => absoluteDayOf(state, f) === day);
 export const outcomeFor = (state, fixtureId) =>
   (state?.outcomes ?? []).find((o) => o.fixtureId === fixtureId) ?? null;
 
 /** 這場是不是玩家的（而不是 AI vs AI）。 */
 export const isPlayerFixture = (state, f) => involvesTeam(f, state?.playerTeamId);
+
+/**
+ * 這場是不是「已經開打但還沒收尾」。
+ * Store 用它判斷要不要走重新進場，不必自己認得狀態字串。
+ */
+export const isFixtureLaunched = (f) => f?.status === FIXTURE_STATES.launched;
 
 /**
  * 這一天有沒有「還沒收尾的玩家場次」。
@@ -99,7 +120,7 @@ export function pendingPlayerFixtureOn(state, day) {
 /** 下一場玩家賽事（含今天）；沒有則 null。畫面用。 */
 export function nextPlayerFixture(state, fromDay = 1) {
   return (state?.fixtures ?? [])
-    .filter((f) => isPlayerFixture(state, f) && !isFixtureTerminal(f) && f.day >= fromDay)
+    .filter((f) => isPlayerFixture(state, f) && !isFixtureTerminal(f) && absoluteDayOf(state, f) >= fromDay)
     .sort((a, b) => a.day - b.day)[0] ?? null;
 }
 
@@ -149,7 +170,7 @@ export function sweepOverdue(state, currentDay) {
   let next = state;
   const forfeited = [];
   for (const f of state.fixtures) {
-    if (f.day >= currentDay || isFixtureTerminal(f)) continue;
+    if (absoluteDayOf(state, f) >= currentDay || isFixtureTerminal(f)) continue;
     //  AI vs AI 逾期 ⇒ 主隊判負（沒有「誰缺席」可言，取一致規則即可）
     //  玩家場次逾期 ⇒ 玩家判負
     const loser = isPlayerFixture(next, f) ? next.playerTeamId : f.sideA;

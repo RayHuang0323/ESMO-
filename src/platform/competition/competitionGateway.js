@@ -82,6 +82,7 @@ export function fixtureOriginInput(fixture) {
  */
 export function issueFor({
   fixture, entryRequest, playerTeamId, players = [], participants = [], now = 0,
+  allowRelaunch = false,
 } = {}) {
   const fail = (code, message) => ({
     ok: false, assignment: null, origin: null, reason: message, errors: [{ code, message }],
@@ -91,11 +92,19 @@ export function issueFor({
   const fv = validateFixture(fixture);
   if (!fv.ok) return { ok: false, assignment: null, origin: null, reason: fv.errors[0]?.message ?? "賽程場次不合法", errors: fv.errors };
 
-  //  ② 只有「已排定」可以出賽。
-  //     completed／forfeited 是終局；launched 不得重發——重發等於發第二張入場券，
-  //     而 O6 的 `tokenUsed` 是靠「一張票只能用一次」擋重複進場的。
-  //     中離要回來走的是 `resumeSession`（O6 既有機制），不是再簽一張。
-  if (fixture.status !== FIXTURE_STATES.scheduled) {
+  //  ② 只有「已排定」可以出賽。completed／forfeited 是終局，永遠不得再簽發。
+  //
+  //  `launched` 預設也擋——重發等於發第二張入場券，而 O6 的 `tokenUsed` 就是靠
+  //  「一張票只能用一次」擋重複進場的。中離回來走 `resumeSession`（O6 既有機制）。
+  //
+  //  ⚠ 唯一例外 `allowRelaunch`（Q3.5，瀏覽器實測補的）：房間確認只有 20 秒，
+  //    逾時之後房間變成 expired，但賽程已經是 launched ⇒ 玩家既回不去也重來不了，
+  //    只剩棄權一條路。20 秒逾時是很常見的事，讓它等於丟一場正是規格 D15 要避免的。
+  //    **呼叫端必須自己確認沒有仍然存活的場次**才可以帶這個旗標（見 profileStore）。
+  //    賽程狀態不會因此倒退回 scheduled——`launched` 不可逆的不變式仍然成立。
+  const terminal = fixture.status === FIXTURE_STATES.completed || fixture.status === FIXTURE_STATES.forfeited;
+  const relaunchable = allowRelaunch && fixture.status === FIXTURE_STATES.launched;
+  if (terminal || (fixture.status !== FIXTURE_STATES.scheduled && !relaunchable)) {
     return fail("status", `本場已是「${fixtureStatusLabel(fixture.status)}」，不能再簽發出賽`);
   }
 

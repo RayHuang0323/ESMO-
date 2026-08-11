@@ -60,12 +60,15 @@ import { ensureTeamIdentity } from "./identity/teamIdentity.js";
 import {
   createSeasonState, advanceSeasonDays, applyLaunch, applyCompleted, applyForfeit,
   fixtureById, nextPlayerFixture, pendingPlayerFixtureOn, seasonStandings,
-  seasonProgress, participantsOf,
+  seasonProgress, participantsOf, absoluteDayOf, isFixtureLaunched,
 } from "./competition/seasonState.js";
 import {
   issueFor as issueCompetitionMatch, openRoomForFixture, openSessionForFixture,
   isCompetitionAssignment, fixtureIdOfAssignment,
 } from "./competition/competitionGateway.js";
+import {
+  fixtureOutcomeInputFrom, isFixtureSession, fixtureIdOfSession,
+} from "./competition/fixtureResultBridge.js";
 import { applyDailyRecovery, conditionSummary } from "./condition/playerCondition.js";
 import { createMatchEntryRequest, validateMatchEntryRequest } from "./contracts/matchEntry.js";
 import {
@@ -582,6 +585,9 @@ export const useProfileStore = create((set, get) => ({
       playerTeam: get().team,
       season: Number(get().meta?.season) || 1,
       seasonSeed: get().meta?.seasonSeed,
+      //  賽季從「建立當天」開始算（預設新局是第 8 天，不是第 1 天）。
+      //  少了這一行，第 1–7 天的場次一建立就過期，玩家會先被判負幾場。
+      startDay: Number(get().meta?.days) || 1,
     });
     if (!made.ok) return { ok: false, state: null, created: false, errors: made.errors };
     set({ competition: made.state });
@@ -618,6 +624,18 @@ export const useProfileStore = create((set, get) => ({
     const fixture = fixtureById(state, fixtureId);
     if (!fixture) return { ok: false, errors: [{ code: "fixture", message: "找不到這場賽程" }], reason: "找不到這場賽程" };
 
+    //  ── 房間逾時之後的重新進場（Q3.5）────────────────────────────────
+    //  賽程已是 `launched`，但那一場的房間／場次都已經終局（例如確認逾時 20 秒）
+    //  ⇒ 允許重新簽發。**還活著的場次不算**——那要走 `resumeMatchSession`，
+    //  否則就是發第二張入場券，O6 的一次性令牌會被繞過。
+    const mmNow = get().matchmaking ?? {};
+    const liveSession = mmNow.session && !isSessionTerminal(mmNow.session);
+    const sameFixture = fixtureIdOfSession(mmNow.session) === fixtureId;
+    const allowRelaunch = isFixtureLaunched(fixture) && !(liveSession && sameFixture);
+    if (isFixtureLaunched(fixture) && liveSession && sameFixture) {
+      return { ok: false, errors: [{ code: "live_session", message: "你有一場進行中的對戰，請直接返回那一場" }], reason: "你有一場進行中的對戰，請直接返回那一場" };
+    }
+
     const entry = get().matchEntry(fixture.gameMode);
     const issued = issueCompetitionMatch({
       fixture,
@@ -626,6 +644,7 @@ export const useProfileStore = create((set, get) => ({
       players: get().players ?? [],
       participants: participantsOf(state),
       now,
+      allowRelaunch,
     });
     if (!issued.ok) return { ok: false, errors: issued.errors, reason: issued.reason };
 
@@ -634,7 +653,8 @@ export const useProfileStore = create((set, get) => ({
     const room = openRoomForFixture({ assignment: issued.assignment, now });
     if (!room.ok) return { ok: false, errors: room.errors, reason: room.errors[0]?.message ?? null };
 
-    const lit = applyLaunch(state, fixtureId);
+    //  已經是 launched（重新進場）就不再轉一次狀態；狀態機不接受 launched → launched。
+    const lit = allowRelaunch ? { ok: true, state } : applyLaunch(state, fixtureId);
     if (!lit.ok) return { ok: false, errors: lit.errors, reason: lit.errors[0]?.message ?? null };
 
     set({
@@ -692,12 +712,16 @@ export const useProfileStore = create((set, get) => ({
     const state = get().competition;
     if (!state?.schema) return { hasSeason: false, standings: null, next: null, today: null, progress: null };
     const day = Number(get().meta?.days) || 1;
+    const next = nextPlayerFixture(state, day);
     return {
       hasSeason: true,
       season: state.season,
       competition: state.competition,
       standings: seasonStandings(state),
-      next: nextPlayerFixture(state, day),
+      next,
+      //  ⚠ 賽程日是「賽季第 N 天」，畫面要顯示的是遊戲日 ⇒ 這裡換算好再給。
+      //    畫面不得自己加 startDay，否則換算規則會有兩份。
+      nextDay: next ? absoluteDayOf(state, next) : null,
       today: pendingPlayerFixtureOn(state, day),
       progress: seasonProgress(state),
       participants: participantsOf(state),
@@ -1108,7 +1132,33 @@ export const useProfileStore = create((set, get) => ({
       result: made.result, session, transaction, now,
     });
     if (nextState) { set(nextState); get().save(); }
+    //  ── Milestone Q3.5：賽程賽果回寫 ──────────────────────────────────
+    //  掛在這裡的理由：`MatchResult.v1` 到這一行已經**正式成立**（來源可信、
+    //  與場次一致、無衝突），S25 也已經入完帳。賽事只是把同一份正式賽果換個
+    //  座標記進賽程——**沒有第二套結算，也沒有第二份勝負真相**。
+    //
+    //  ⚠ 失敗不影響上面的結算：獎勵已經發了，賽程寫不進去只是賽程沒更新。
+    //    這是刻意的取捨——寧可賽程落後，也不要讓玩家的獎勵跟著一起消失。
+    if (receipt?.ok && isFixtureSession(session)) {
+      get()._writeFixtureResultFromMatch(made.result, session);
+    }
     return { ok: !!receipt.ok, receipt, errors: receipt.errors ?? [] };
+  },
+  /**
+   * 內部：把一份**已經正式成立**的 `MatchResult.v1` 記進賽程。
+   * 只由 `reportMatchResult` 呼叫；換算規則在 `fixtureResultBridge`（純函式）。
+   */
+  _writeFixtureResultFromMatch(result, session) {
+    const state = get().competition;
+    const fixtureId = fixtureIdOfSession(session);
+    if (!state?.schema || !fixtureId) return { ok: false, errors: [{ code: "no_fixture", message: "這場不是賽程比賽" }] };
+    const fixture = fixtureById(state, fixtureId);
+    if (!fixture) return { ok: false, errors: [{ code: "fixture", message: "找不到對應的賽程場次" }] };
+    const mapped = fixtureOutcomeInputFrom({
+      result, fixture, playerTeamId: state.playerTeamId,
+    });
+    if (!mapped.ok) return { ok: false, errors: mapped.errors };
+    return get().completeFixtureMatch(mapped.input);
   },
   /** 唯讀：完整追蹤鏈（debug 用；一般 UI 不顯示 launchToken 等敏感內容）。 */
   matchTrace() {
