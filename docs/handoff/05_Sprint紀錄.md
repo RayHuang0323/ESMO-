@@ -7521,3 +7521,63 @@ Q3.5-close 登記的兩個**流程**風險，這一輪修掉。範圍刻意壓�
 - 賽事頁的 `live` 若對應到**不是今天焦點**的那一場，畫面仍然只顯示焦點場次的資訊
   （按鈕會把玩家帶回真正進行中的那一場）。實務上兩者一致（推進會停在比賽日），
   沒有做額外提示。
+
+## Q3.5 ＋ Q3.6 部署紀錄（2026-08-12）
+
+### 整合
+
+`origin/main` 在整段開發期間**沒有前進**（`0 behind / 5 ahead`）
+⇒ 整合是純 fast-forward，**沒有 merge commit、沒有衝突**：
+
+```
+078707e  (舊 main)
+  → e4c194d Milestone Q3.5
+  → a6dd33a Handoff: record Q3.5
+  → 1443dbc Q3.5-fix
+  → 824b47a Q3.5 closure
+  → 8bcdf46 Q3.6 flow safety      ← main 現在在這
+```
+
+快轉是在 **`ESMO-acceptance` 工作區**（main，乾淨）做的。
+主工作區 `D:\OneDrive\文件\GitHub\ESMO`（`milestone-n-finance`，帶 hero-proxy WIP
+與一堆未追蹤檔）**全程沒有碰**。
+
+### 整合後重跑（全綠）
+
+`q1 93/93`、`q2a 112/112`、`q2b 92/92`、`q3 90/90`、`q35 65/65`、
+`matchmaking_o4 47/47`、`matchmaking_flow_acceptance 97/97`、
+`regress 15/15`、`regress2 8/8`、`npm run build` exit 0（`built in 12.85s`）。
+
+### 部署與線上版本驗證
+
+Actions run **31526750948**（`8bcdf46`）：build ✅ 28s／deploy ✅ 10s。
+
+線上版本怎麼確認「真的是最新」——**不要只看 Actions 綠燈**：
+
+1. `curl` 正式站 → HTTP **200**
+2. 從線上 `index.html` 取 entry bundle 名稱 → `assets/index-B-7q98CP.js`
+   （**與本機 build 的檔名雜湊相同**）
+3. 下載線上 bundle 與本機 `dist/` 的同一支做 `cmp` → **byte-identical**
+4. 在線上 bundle 內搜 Q3.6 的字串（`重新進入本場賽事`／`返回比賽`／逾時提示）→ 全部命中
+   （`selectOpponentName` 這種**函式名搜不到是正常的**，minify 會改名；
+   要驗就搜**使用者看得到的字串**）
+
+### 正式站 smoke test ＋ 存檔保護
+
+在正式站實測：出賽 → 對手名一路一致到終局（「DEFEAT · 翡翠龍騎 獲勝」）、
+故意逾時只給「重新進入本場賽事」且對手不變、進行中場次「返回比賽」可直達、
+賽果回寫 1/14。細節見 `08_目前待辦與風險.md` 最上方那一節。
+
+⚠ 這是**跑在 Ray 的真實存檔上**。做法（以後照抄）：
+測前把 `localStorage` 全部 key 複製到 `__prodbak.*`（並逐一比對），
+測後寫回、刪備份鍵、清 `esmo_debug`，重載確認回到測試前的狀態。
+**不要用「清掉 localStorage」來製造乾淨環境**——要乾淨環境就換一個 port／origin。
+
+### 兩個實測環境教訓
+
+- **Chrome 視窗最小化 ⇒ rAF 暫停 ⇒ 對戰時鐘不動**。讀 DOM／點按鈕在背景沒問題，
+  跑對戰一定要前景。背景時仍以約 5 倍速前進（setInterval 節流），但等不完。
+- **正式站沒有「⏩ 快速完成比賽」不是缺陷**：閘門是
+  `isDebugMode() && featureEnabled("devFastForward")`，加 `?debug=1` 就會出現
+  （已在正式站實測）。**不需要為了測試另外加按鈕**；真正的待辦是對外上線前
+  把 `featureFlags.devFastForward` 改成 `false`。
