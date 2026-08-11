@@ -149,6 +149,57 @@ S28–S29 與 Milestone A–N 之後的實際進度以本節與
 Milestone O 起的資料契約都以「日後由伺服器接管」為前提設計
 （決定性冪等鍵、交易單自帶快照、純 reducer 可重播）。
 
+### 賽季與賽事系統（2026-08-10 規劃完成；Q1／Q2a／Q2b 已實作並 commit）
+
+長期架構規格：**`docs/design/賽季與賽事系統架構.md`**（Competition / Ranking / Shop）。
+規格於 2026-08-10 定案，Q1／Q2a／Q2b 於 2026-08-11 在分支
+`milestone-q-competition` 收尾 commit（詳見 `05_Sprint紀錄.md` 最後一節）。
+**Q3／Q4 尚未開始。**
+
+已定案的 18 項決策摘要：
+
+- **Competition 採 Stage Graph 抽象**——賽事＝Stage 有向圖，邊是晉級資格。
+  MOBA 聯賽與 CS Major 是兩張圖，不是兩套系統。項目差異收在 `formats/*.js`。
+- **賽事系統是既有七層比賽契約的「上游排程器」與「下游記分器」**，不是第二條比賽路徑。
+  接法是 `MatchOrigin.v1`：assignment 的來源抽象成 ticket / fixture 兩種，
+  **不造假 ticket、不建第二條進場流程**。
+- **錢的入口從兩個變三個**：新增 `settleCompetitionAward`（賽事名次獎金），
+  `cat: "award"` 與單場 `cat: "prize"` 分開，`forecast` 不外推一次性 award。
+- **兩條 ladder 分開計分**：`career`（AI 聯賽）／`competitive`（線上），互不換算。
+  `RankingKey = (subjectType, subjectId, gameMode, ladderId)`，
+  `subjectType` 是日後 PlayerRanking 的擴充點。
+- **Shop 設計凍結、第二階段實作**：Product / Shop / Purchase / Entitlement /
+  Inventory / Effect 五層分離；雙貨幣 `funds` / `tokens`，`tokens → funds` 永久禁止；
+  P2W 防線是有版本的 `CompetitivePolicy`（可驗證、可演進），不是硬編白名單。
+- **AI 選手共用 `playerModel.js` 但不進 `profileStore.players[]`**——
+  `players[]` 的定義是「會被經營系統寫入的人」。
+
+**MVP 定義**：玩家能完成一個 MOBA 常規賽賽季（玩家 + 7 AI = 8 隊，雙循環 56 場）
+→ AI 背景賽快速模擬 → 玩家比賽日走既有 Battle Pipeline 親自出賽
+→ Standings → 最終名次 → 名次獎金。
+
+**MVP 切成五個 Milestone**（Q1 / Q2a / Q2b / Q3 / Q4，各附一支 verifier）：
+
+| | 內容 |
+|---|---|
+| Q1 | `team.id` + `meta.seasonSeed` + `MatchOrigin.v1` |
+| Q2a | 7 支 AI 隊伍 + Competition/Stage/Fixture 契約 + `round_robin` + 賽程產生器 |
+| Q2b | `FixtureOutcome` + `teamStrength` + 決定性模擬 + Standings 推導 |
+| Q3 | 接 `advanceDay` + `competitionGateway` + 玩家出賽 + resume / forfeit |
+| Q4 | `FinalStandings` + `settleCompetitionAward` + 賽季封存 |
+
+**Q1 驗收基線已實跑（2026-08-10）**：六支 match verifier **238/238、exit 全 0**
+（`match_entry_o3` 35、`matchmaking_o4` 47、`match_room_o5` 45、`match_session_o6` 36、
+`authoritative_o7` 48、`result_flow_o71` 27）。都與 TD-19／TD-21 無關。
+
+⚠ **明確不進 MVP**：MMR／牌位、Circuit Points、Qualification 邊、季後賽、
+Shop 實作、雙貨幣實作、CS 賽事、`lineups[gameMode]`、`SEATS_BY_MODE`、第三款遊戲抽象。
+
+⚠ **三個要先知道的風險**：
+① TD-21（順序公平性 20pp）會被聯賽場數放大，建議在第二階段前解決；
+② `advanceDay` 遇玩家賽事日要停止推進，這是全案唯一會修改既有 verifier 斷言的地方（Q3 單獨處理）；
+③ MVP 模擬勝率與 LogicEngine 不保證一致，這是刻意取捨，校準列第二階段。
+
 ### 建議的下一步（依優先序）
 
 1. **N1–N3 的瀏覽器實機驗收**——三者都還沒在畫面上看過。
@@ -160,6 +211,8 @@ Milestone O 起的資料契約都以「日後由伺服器接管」為前提設�
    N2 的薪資與贊助費率（身價／簽約金／違約金會進同一個經濟迴圈）。
 5. **AI 對手隊伍 + 賽程聯賽化**——紅方目前全隊中性能力，
    Prep 的「賽程」分頁因此未恢復。這是讓賽季有結構的前提。
+   ⇒ **已於 2026-08-10 完成規劃**，見上節與 `docs/design/賽季與賽事系統架構.md`；
+   對應 Milestone Q1 → Q2a → Q2b → Q3 → Q4。
 6. 技術債清理：`src/platform/DashboardScreen.jsx` 死碼、`team.lv/xp` 刻度、
    `meta.reputation` 靜態值、重播持久化（IndexedDB）、bundle 瘦身（2.4 MB）。
 

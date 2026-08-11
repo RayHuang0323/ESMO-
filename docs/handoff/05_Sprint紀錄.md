@@ -6559,3 +6559,375 @@ Node 與 HTTP 無法證明 Android 真機 FPS、觸控、熱降頻或視覺體�
   **TD-21／milestone_j**，不是本輪小兵選敵修正新增；未放寬門檻或刪除斷言。
 
 本輪已完成 commit／push／deploy；未開始英雄清兵、補刀或其他下一功能。
+---
+
+## Milestone Q1（2026-08-10）— 隊伍身分 / 賽季種子 / 比賽來源
+
+Competition MVP 的第一個 Milestone。規格：`docs/design/賽季與賽事系統架構.md`。
+**已於 2026-08-11 收尾 commit（`339411f`），見本檔最後一節。**
+
+### 做了什麼
+
+| # | 項目 | 檔案 |
+|---|---|---|
+| 1 | **不可變 `team.id`** | `platform/identity/teamIdentity.js`（新）＋ `profileStore` |
+| 2 | **不可變 `meta.seasonSeed`** | 同上 |
+| 3 | **`MatchOrigin.v1`** | `platform/contracts/matchOrigin.js`（新） |
+| 4 | assignment / room / session 支援兩種來源 | `matchmaking.js`／`matchRoom.js`／`matchSession.js` |
+
+### 為什麼要有 team.id
+
+Q1 之前，全專案唯一被當隊伍識別碼用的是 `profileStore.team.tag`（值 `"GSEAL"`）
+——那是**顯示用的縮寫**。單機看不出問題，賽季系統一接上就會壞：玩家改隊名或
+改 tag，積分榜、Circuit Points、歷史賽果全部斷開。
+
+`identity/teamIdentity.js` 是**唯一**的補齊規則（比照 `economy/newGame.js` 的教訓：
+store 與驗證器共用同一份，不讓驗證器自己再組一套而驗到現實中不存在的狀態）。
+`ensureTeamIdentity()` **冪等**——已有合法值就原樣回傳，這就是「不可變」的實作：
+改隊名不會換 id。
+
+⚠ `withIdentity()` 必須在合併完 `saved.team` **之後**呼叫，否則會拿 DEFAULT 的隊名
+去推導，讓不同存檔算出同一個 id。
+
+### 為什麼要有 seasonSeed
+
+賽程產生器需要「同一賽季重排逐場相同」。那個種子若來自 `Date.now()`，
+O 系列一路守住的決定性鏈當場就斷。
+
+`seedForSeason(seasonSeed, seasonNumber)` 是**逐賽季派生**——Q2a 的賽程產生器必須
+用這一支，不得直接用 `meta.seasonSeed`，否則每個賽季會排出完全一樣的賽程。
+
+### MatchOrigin.v1：換名 + 放寬，不是語意變更
+
+```
+票券來源：{ kind: "ticket",  originId: ticket.ticketId, ... }
+賽程來源：{ kind: "fixture", originId: fixture.fixtureId, competitionId, stageId, ... }
+```
+
+因為票券來源的 `originId` **就是** `ticketId`：
+
+```
+assignmentId = hash8(`${originId}:${seed}`) ≡ hash8(`${ticketId}:${seed}`)
+```
+
+⇒ 既有排隊路徑產生的每一個 id 逐字元不變，**六支既有 verifier 的斷言一條都沒改**。
+
+`assignment.ticketId` / `room.ticketId` / `session.ticketId` 自 Q1 起降級為
+**origin 的衍生相容欄位**（ticket 來源 = originId，fixture 來源 = null），
+推導點只有 `compatTicketIdOf()` 一處，不是第二份真相。
+完全移除它們留到 fixture 路徑真正上線之後，本輪刻意不動。
+
+### 兩個 verifier 抓到的真 bug（不是放寬斷言）
+
+**（一）`check_match_session_o6 §1h` 紅燈**：我原本讓 `src` 優先取 `room.origin`，
+導致「房間與票券不符」的檢查變成**自己比自己**，永遠成立。
+根因是取值優先序——房間是被檢查的對象，不是憑證。修法：
+`src = origin ?? originFromTicket(ticket).origin`，**不得回退到 `room.origin`**。
+這條已寫成 `check_competition_q1 §7c` 的原始碼斷言釘住。
+
+**（二）第十次踩到「verifier 掃關鍵字」**：`check_competition_q1 §6` 第一版斷言
+「新模組沒有 `Math.random()`」，結果掃到**自己檔頭註解裡**的那行說明而假紅。
+修法：① 先剝掉註解再掃原始碼；② 純度改用**行為**證明（`deriveTeamId` 連跑 200 次
+結果全同）。08 文件的「制度教訓（一）」計數 +1。
+
+### 驗證
+
+| 項目 | 結果 |
+|---|---|
+| `check_competition_q1`（新增） | **93/93** exit 0 |
+| 六支既有 match verifier | **238/238** 全 exit 0，**斷言零修改** |
+| 排隊路徑識別碼逐字一致 | moba／cs 各 9 項全部與 Q1 前基線相同（釘死在 §5） |
+| `check_finance_n` / `n2` / `n3` | 32/32、35/35、40/40 |
+| `check_recruit_o` / `check_progress25` | 40/40、34/34 |
+| `check_talent27`（`ESMO_VERIFY_FLAT=1`） | 37/37 |
+| `npm run build` | exit 0，`built in 12.63s` |
+
+引擎零改動：`LogicEngine.js`、`src/battle/`、`mobaReplay.js`、`BattleResult.js`
+全不在本輪 diff 內。
+
+### 未做（刻意）
+
+- **Q2a 以後全部沒開始**：沒有 AI 隊伍、沒有 Competition／Stage／Fixture、
+  沒有賽程產生器、沒有 `competitionGateway`。
+- **`canEnterRoom` 的賽程分支只比對來源，沒比對指派單**——賽程路徑的指派單由
+  `competitionGateway` 持有，Q1 沒有那個東西。已在原始碼註明，Q3 補上。
+- **`launchConfigOf` 沒有加 `origin`**：`check_match_session_o6 §154` 斷言了它的
+  完整欄位集合。要加是 Q3 的決定，本輪維持既有斷言不動。
+- 票券物件也沒有加任何欄位（`check_matchmaking_o4 §63` 斷言了完整欄位集合）。
+- **未經瀏覽器實測**：`team.id` / `seasonSeed` 的 migration 只有 Node 驗證，
+  真實舊存檔載入未在瀏覽器跑過。
+
+---
+
+## Milestone Q2a（2026-08-10）— AI 隊伍 / 賽事契約 / 賽程產生器
+
+Competition MVP 第二個 Milestone。規格：`docs/design/賽季與賽事系統架構.md`。
+全部是新檔，既有原始碼零修改。
+**已於 2026-08-11 收尾 commit（`57d1c6f`），見本檔最後一節。**
+
+### 做了什麼
+
+| # | 項目 | 檔案（皆為新增） |
+|---|---|---|
+| 1 | 7 支唯讀 AI 隊伍 + 8 隊參賽者組裝 | `platform/competition/aiTeams.js` |
+| 2 | Competition / Stage / Fixture 契約 | `platform/contracts/competition.js` |
+| 3 | `round_robin` 雙循環賽程產生器 | `platform/competition/scheduleGenerator.js` |
+| 4 | 常規賽組裝入口 | `platform/competition/regularSeason.js` |
+| 5 | 驗證器 112 條 | `tools/check_competition_q2a.mjs` |
+
+### AI 隊伍為什麼不進 profileStore.players[]
+
+規格 D9。`players[]` 的定義是**「會被經營系統寫入的人」**——薪資、訓練、疲勞、
+招募、天賦全掛在上面。35 名 AI 選手若進那張表，週結算會付他們薪水、
+`advanceDay` 會幫他們回體力、RosterScreen 會列出他們。
+
+分成兩件事處理：**資料模型**共用 `data/playerModel.js` 的 16 項能力與個性
+（不是第二套模型，verifier §1h 逐鍵比對證明）；**儲存位置**在 competition domain，
+唯讀靜態。AI 選手日後真被買走時才走既有招募路徑進 `players[]`。
+
+唯讀的可驗證判準（§1m/§1n）：AI 選手**不帶任何經營欄位**
+（`rosterTier`／`salary`／`xp`／`talentPoints`／`talents`／`training`），且都標 `readOnly: true`。
+
+AI 隊伍 id 用 Q1 的 `deriveTeamId` 產生 ⇒ **與玩家在同一個命名空間**（`isTeamId` 驗得過）。
+隊名沿用 Legacy `AI_TEAMS` 的 ESMO 自有名稱（取 7 支），未使用任何真實戰隊名稱。
+
+### 賽程演算法
+
+環形演算法（circle method）：固定第一支、其餘輪轉。8 隊 ⇒ 每循環 7 輪 × 4 場。
+奇數輪把第一組主客互換，避免固定隊伍每輪都是主場。
+第二循環把第一循環每一場主客互換。
+
+**主客場對稱的數學保證**：每隊第一循環打 7 場（主客分布任意），第二循環全部互換
+⇒ 總主場 = 第一循環主場數 + 第一循環客場數 = **恰好 7**。與洗牌結果無關。
+
+日程：14 輪平均分配到 84 天 ⇒ 每 6 天一輪，第 1 輪第 6 天、第 14 輪第 84 天。
+同一輪的 4 場在同一天（比賽日）。**玩家每輪恰好一場**——這是 Q3 行事曆驅動的前提。
+
+### 種子鏈
+
+```
+meta.seasonSeed（Q1，不可變）
+  → seedForSeason(seasonSeed, season)   ← regularSeason.js 派生
+    → 決定性洗牌 8 名參賽者
+      → 環形演算法 → 56 場 Fixture
+```
+
+⚠ **不得直接用 `meta.seasonSeed`**——那會讓每個賽季排出完全一樣的賽程。
+§5c 用「第 1 賽季與第 2 賽季賽程必須不同」把這條釘住。
+
+`fixtureId = fx:<gameMode>:<hash8(stageId|r<round>|sideA|sideB)>`，**有序**
+⇒ 主客互換是不同 id（§7d）、不同輪次的同一對也是不同 id（§7e）。
+
+### 驗證
+
+| 項目 | 結果 |
+|---|---|
+| `check_competition_q2a`（新增） | **112/112** exit 0 |
+| 8 隊雙循環場數 | **56 場**（14 輪 × 4 場） |
+| 玩家 / AI vs AI | **14 / 42**，相加 = 56 |
+| 同 seed 重跑 | 連跑 20 次賽程逐場完全一致（含順序） |
+| 主客場對稱 | 8 隊全部 7 主 7 客；每對互為主客各一次；第二循環 = 第一循環互換 |
+| fixtureId | 56 個全部唯一、格式一致、重跑逐字相同、跨賽季不相撞 |
+| `check_competition_q1` | 93/93 |
+| 六支既有 match verifier | 238/238 |
+| `finance_n/n2/n3`・`recruit_o`・`progress25`・`talent27`(FLAT) | 32/35/40・40・34・37 |
+| `npm run build` | exit 0，`built in 9.68s` |
+
+**獨立抽查**（不透過 verifier，直接印賽程）：
+第 1 輪 `FP主vIG／TB主vOB／SW主vSE／ED主vME`，
+第 8 輪 `IG主vFP／ME主vED／OB主vTB／SE主vSW` ⇒ 確為主客互換。
+玩家對手分布 `{ED:2, OB:2, TB:2, FP:2, SW:2, SE:2, IG:2}`、主 7 客 7、
+比賽日 `6,12,…,84`。
+
+### 未做（刻意，且由 §8 的斷言擋住）
+
+- **不產生 `FixtureOutcome`**、**不做 `simulateFixture`**、**不做 Standings** —— Q2b。
+- **不碰 Battle Engine / Shop / Ranking** —— §8f/§8g 原始碼斷言。
+- **不做 CS 賽事** —— 契約層允許 `cs`，但組裝入口只建 MOBA（§8h/§8i）。
+- **Stage Graph 只有一個節點、零條邊** —— 型別在、圖是空的（§8j）。
+  第二階段加季後賽是「加節點加邊」，不是改模型。
+- **沒有接 `advanceDay`、沒有 `competitionGateway`、沒有畫面** —— Q3。
+- **賽程尚未持久化** —— 目前是純函式產生，沒有存進 profileStore。Q3 要決定
+  「存整份賽程」還是「存 seed 重算」。⚠ 這與 D11（賽果不可變）不同層次：
+  賽程可重算，賽果不可。
+
+---
+
+## Milestone Q2b（2026-08-10）— 賽果 / 隊伍實力 / 決定性模擬 / 積分榜
+
+Competition MVP 第三個 Milestone。規格：`docs/design/賽季與賽事系統架構.md`。
+全部是新檔，既有原始碼零修改。
+**已於 2026-08-11 收尾 commit（`b41d550`），見本檔最後一節。**
+
+### 做了什麼
+
+| # | 項目 | 檔案（皆為新增） |
+|---|---|---|
+| 1 | `FixtureOutcome.v1` ＋ 兩類 Analytics 出口 | `platform/contracts/fixtureOutcome.js` |
+| 2 | `teamStrength(roster)` | `platform/competition/teamStrength.js` |
+| 3 | 決定性 `simulateFixture` / `simulateFixtures` | `platform/competition/simulateFixture.js` |
+| 4 | Standings 純推導 ＋ 五級 tiebreaker | `platform/competition/standings.js` |
+| 5 | 驗證器 92 條 | `tools/check_competition_q2b.mjs` |
+
+### teamStrength 為什麼要建在 calcPower 之上
+
+規格 D16 的重點是「模擬器**必須真的吃 16 項能力**」。若模擬只用
+`AI_TEAMS[].strength`（那是 Q2a 用來**產生 roster 的錨點**），35 名 AI 選手的
+16 項能力就一項都沒被用到，D9「共用 playerModel」只是好看。
+
+`calcPower(player, mode)`（Legacy 逐字）已經處理了 16 項能力 × 模式權重 ×
+個性 boost/nerf × 士氣 × 狀態。`teamStrength` 只負責「五個人怎麼合成一隊」：
+`0.8 × 全隊平均 + 0.2 × 最強一人`。刻意只有兩項——沒有校準資料之前，
+更複雜的模型只是假精確。
+
+**行為證明**（不是掃關鍵字）：
+- §2e 改隊伍的 `strength` 欄位 ⇒ 實力值不變
+- §2f 改任一名選手能力 ⇒ 實力值改變
+- §2g **16 項能力逐項驗**：每一項各加 12 分，實力值都必須改變（沒有任何一項被忽略）
+- §3f/§3g 模擬層同樣的兩條
+- §6g 模擬器**根本沒有 import aiTeams** ⇒ 拿不到 `strength`
+
+### FixtureOutcome 的兩個設計決定
+
+**（一）自帶對戰雙方。** `sideA`/`sideB` 從 fixture 複製過來。理由：賽果不可變、
+但**賽程可由 seed 重算**——若賽程產生器日後改版，舊賽果仍必須說得出「當時是誰打誰」。
+自帶雙方 id 才是可稽核的紀錄，這不是重複的真相。
+
+**（二）不可變是實作出來的，不是寫在文件裡。** `Object.freeze` 賽果與其 `score`，
+且契約**刻意不提供任何** update／patch／transition 函式（§1f/§1g 斷言）。
+
+`simulatorVersion` 與來源必須相符：simulated 必填、**engine 必須為 null**（§1i）。
+
+### 兩類 Analytics 是結構上的分界，不是自律
+
+```
+competitionOutcomes()  → 勝敗／Standings／晉級／積分／獎金／賽季歷史（engine + simulated）
+combatOutcomes()       → KDA／場均擊殺／龍／巴龍／引擎平衡校準（**只吃 engine**）
+```
+
+§5g 有一條原始碼斷言：**Standings 不得呼叫 `combatOutcomes`**——否則 42 場 AI 賽果
+會被吃掉，積分榜只剩玩家自己的 14 場。
+
+### Standings 的五級 tiebreaker 必須是全序
+
+```
+積分 → 對戰成績 → 淨勝分 → 總得分 → teamId 字典序
+```
+
+最後一級不是裝飾。沒有它的話，同分同差同得分的兩隊排序會取決於**陣列順序**
+——那正是本專案 P0 級缺陷「players 陣列順序決定勝負」的同一種病。
+§4l/§4m 用「打亂賽果順序」「打亂參賽者順序」證明結果完全相同。
+
+### 驗證
+
+| 項目 | 結果 |
+|---|---|
+| `check_competition_q2b`（新增） | **92/92** exit 0 |
+| 決定性 | 同 fixture + 同 seed + 同版本連跑 50 次逐值一致；整批 42 場重跑一致 |
+| 場次獨立性 | 每場種子由 fixtureId 派生 ⇒ 抽掉前 5 場，其餘 37 場結果逐值不變 |
+| 積分榜 | 56 場全計入、總勝場 = 總敗場 = 56、淨勝分總和 0、名次連續 1–8 |
+| 既有回歸 | `q2a` 112、`q1` 93、六支 match 238、`finance_n/n2/n3` 32/35/40、`recruit_o` 40、`progress25` 34、`talent27`(FLAT) 37 |
+| `npm run build` | exit 0，`built in 12.22s` |
+
+**獨立抽查**（不透過 verifier）：跑完整季 56 場，積分榜
+`SW 11-3(33)／TB 9-5(27)／FP 8-6(24)／IG 8-6(24)／ME 7-7(21)／ED 6-8(18)／SE 4-10(12)／OB 3-11(9)`。
+勝敗各 56、淨勝分總和 0。
+
+FP 與 IG 同積分 24，但 FP 淨勝分較低（17 vs 23）卻排在前面——**查證確認**
+FP 對 IG 直接對戰 2–0（`26:20` 與作客 `19:23`），對戰成績 tiebreaker 確實生效，
+不是巧合。
+
+### ⚠ 制度教訓（第十一次，且是同一 session 內重犯）
+
+Q1 剛把「verifier 掃關鍵字會掃到自己的註解」寫成第十次教訓，本輪 §5g 第一版
+又踩：`standings.js` 的**註解裡**提到 `combatOutcomes()`，被自己的正則抓到而假紅。
+§6 明明已經有 `stripComments`，但 §5g 自己寫了一份沒剝註解的掃描。
+
+**修法不是再補一次，而是移除重複**：`stripComments` / `readCode` 提到模組層級，
+全檔共用，各節不得自己寫掃描。往後新 verifier 一律照這個結構。
+
+### 未做（刻意，且由 §6 的斷言擋住）
+
+- **不接 profileStore**（§6d）、**不做 advanceDay**（§6e）、
+  **不做玩家出賽／competitionGateway**（§6f）—— Q3。
+- **不碰 Battle Engine**（§6c，連 `BattleResult` 字樣都不得出現）。
+- **棄權（forfeited）尚未產生賽果** —— Fixture 有 `forfeited` 狀態，但 Q2b 沒有
+  對應的 FixtureOutcome。**Q3 要決定**：棄權是產生一筆賽果，還是由 Standings
+  另讀 `fixture.status`？⚠ 若選後者，就等於引入第二份勝敗真相，要很小心。
+- **模擬勝率未與 LogicEngine 校準** —— 規格 D16／R10 的自覺取捨，列第二階段。
+
+---
+
+## Competition MVP 收尾：Q1／Q2a／Q2b 上分支（2026-08-11）
+
+分支 **`milestone-q-competition`**，基準 **`origin/main` = `9b40df2`**。
+Q3 未開始。
+
+### 為什麼不是直接在原工作區 commit
+
+Q1–Q2b 是在 `milestone-n-finance`（`7bd858c`）上做的，而 **main 早已前進 8 個
+commit**（MOBA 戰鬥收斂、M1.5 小兵選敵、配對流程修正）。`main..HEAD` 為空
+⇒ 該分支的內容已全在 main 裡，繼續在上面疊等於在過期基準上長分支。
+
+同時工作區還躺著 **hero-proxy 的 WIP**（`featureFlags.js`、`ChichuanHeroProxy.jsx`、
+`DadiHeroProxy.jsx`、`public/assets/`），而 main 也動過同一批檔案
+⇒ 直接 merge 會被擋，硬解會壓到那份未完成的工作。
+
+**做法**：另開 worktree、從 `origin/main` 開新分支，把 Q 系列以 patch／複製落上去。
+原工作區**一個檔都沒動**，hero-proxy WIP 原封不動留在 `milestone-n-finance`。
+
+### 落地方式與衝突
+
+| 對象 | 方式 | 結果 |
+|---|---|---|
+| Q 系列新檔（14 個） | 直接複製 | 無衝突 |
+| Q1 對既有契約的修改（`matchRoom`／`matchSession`／`matchmaking`／`profileStore`） | `git apply -3` | **四檔全部乾淨套用** |
+| `00_目前專案狀態`／`04_Roadmap` | `git apply -3` | 乾淨 |
+| `05_Sprint紀錄`／`08_目前待辦與風險` | `git apply -3` | **衝突**——main 也在同位置追加。手動保留雙方，依時序排列 |
+
+**風險點已查證**：main 動過 `src/data/playerModel.js`，而 `teamStrength` 相依
+`calcPower()`。實查 diff 為**只新增 `TRAINING_COURSES` 條目**，`calcPower` 未動
+⇒ 實力推導基準不變，Q2b 的模擬數值不受影響（驗證器逐值比對亦全綠）。
+
+### Commit 切分
+
+| SHA | 內容 |
+|---|---|
+| `8b20f6d` | 規格文件 `docs/design/賽季與賽事系統架構.md` |
+| `339411f` | Milestone Q1：`team.id`／`meta.seasonSeed`／`matchOrigin` |
+| `57d1c6f` | Milestone Q2a：Competition 契約／AI 隊伍／賽程產生器 |
+| `b41d550` | Milestone Q2b：`FixtureOutcome`／`teamStrength`／模擬／Standings |
+| （本節） | handoff 文件同步 |
+
+### 在**整合後的樹**上重跑的驗證
+
+| 項目 | 結果 |
+|---|---|
+| `check_competition_q1` | **93/93** exit 0 |
+| `check_competition_q2a` | **112/112** exit 0 |
+| `check_competition_q2b` | **92/92** exit 0 |
+| `check_match_entry_o3` | 35/35 |
+| `check_match_room_o5` | 45/45 |
+| `check_match_session_o6` | 36/36 |
+| `check_matchmaking_o4` | 47/47 |
+| `check_matchmaking_flow_acceptance` | 97/97 |
+| `check_acceptance_fix_p1` | 81/81 |
+| `regress.mjs` | 結束率 15/15、平均時長 22.5 分、0 殺場 0、撤退鎖死 0 |
+| `regress2.mjs` | 節奏門檻 **8/8** |
+| `npm run build` | exit 0，`built in 11.84s` |
+
+O 系列六支 match verifier 全綠是本輪的重點——Q1 改的是**共用契約**，換基準後必須
+重驗，不能沿用舊基準的結果。
+
+### 未驗證（誠實標示）
+
+- **完全沒有瀏覽器實測。** Q1–Q2b 沒有任何 UI，但 `profileStore.load()` 的
+  `withIdentity()` 會在**每次載入既有存檔**時跑 ⇒ 舊存檔的實際載入行為只有
+  Node 層斷言，沒有真的在瀏覽器開過。Q3 接上畫面前應補一次。
+- **分支未合併回 main、未部署。** 只 push 分支。
+
+### 未做
+
+- **Q3 未開始**（`advanceDay`／`competitionGateway`／玩家出賽／resume／forfeit）。
+- 棄權賽果模型仍未決定——見 `08_目前待辦與風險.md`，這是唯一可能回頭推翻 Q2b
+  設計的問題。
