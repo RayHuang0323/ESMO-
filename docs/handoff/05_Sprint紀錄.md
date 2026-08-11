@@ -6858,10 +6858,11 @@ Q1 剛把「verifier 掃關鍵字會掃到自己的註解」寫成第十次教�
 
 ---
 
-## Competition MVP 收尾：Q1／Q2a／Q2b 上分支（2026-08-11）
+## Competition MVP 收尾：Q1／Q2a／Q2b 上分支並部署（2026-08-11）
 
-分支 **`milestone-q-competition`**，基準 **`origin/main` = `9b40df2`**。
-Q3 未開始。
+分支 **`milestone-q-competition`**，基準 **`origin/main` = `9b40df2`**，
+已 fast-forward 併入 main（`f21d18a`）並部署。Q3 未開始。
+部署與整合細節見本節最後的「正式整合與部署」。
 
 ### 為什麼不是直接在原工作區 commit
 
@@ -6931,3 +6932,35 @@ O 系列六支 match verifier 全綠是本輪的重點——Q1 改的是**共用
 - **Q3 未開始**（`advanceDay`／`competitionGateway`／玩家出賽／resume／forfeit）。
 - 棄權賽果模型仍未決定——見 `08_目前待辦與風險.md`，這是唯一可能回頭推翻 Q2b
   設計的問題。
+
+### 正式整合與部署（2026-08-11）
+
+**fast-forward，無 merge commit**：`main` `9b40df2` → **`f21d18a`**
+（超前 5、落後 0，`git merge-base --is-ancestor` 確認後才動）。
+
+整合當下 main 正被第三個 worktree `ESMO-acceptance` 佔用（dirty 0）。
+`git branch -f main` 會被 git 擋下（分支已被 worktree 檢出），因此改為
+`git push origin milestone-q-competition:main` 先推遠端，再由該 worktree
+`merge --ff-only origin/main` 補齊本地。**主工作區 `ESMO` 全程未動**——
+仍停在 `7bd858c`／`milestone-n-finance`，124 項 dirty（hero-proxy WIP）原封不動。
+
+| 驗證項 | 結果 |
+|---|---|
+| `check_competition_q1` | **93/93** exit 0 |
+| `check_competition_q2a` | **112/112** exit 0 |
+| `check_competition_q2b` | **92/92** exit 0 |
+| `npm run build` | exit 0，`built in 10.07s` |
+| Actions run 31453814360（`f21d18a`） | **success** |
+| <https://rayhuang0323.github.io/ESMO-/> | **HTTP 200** |
+| 線上 bundle `assets/index-C3BhJ1mz.js` | HTTP 200；**與本地 `f21d18a` 建置 hash 逐字相同** |
+
+比對 bundle hash 是刻意的：本專案有過「workflow 綠燈但站上不是那份程式」與
+「deploy 成功但 workflow 顯示 failed」的前例，**只看 Actions 結論不足以宣稱已部署**。
+
+⚠ 第一次在 `ESMO-acceptance` 跑 build 時失敗，訊息是
+`memory allocation of 919100 bytes failed`——**主機記憶體不足，不是程式錯誤**。
+同一個 commit 換一個 worktree 重跑即通過。與 M1.5 那次 Codex 中斷是同一類現象。
+
+**仍未驗證**：完全沒有瀏覽器實測。已部署不等於已驗收——`profileStore.load()`
+的 `withIdentity()` 會在每次載入既有存檔時執行，正式站上舊存檔的實際載入行為
+**沒有任何人用瀏覽器看過**。這是目前最該補的一項。
