@@ -13,7 +13,8 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
 const FPS_MODULE_ID = "/src/battle/fps/EsportsFPS3D.jsx";
 const SOURCE_SHA256 = "7622f87b8b389a504c19b887b860de791dbf8ea240e6ba57c424e159cb655c89";
-const EVENT_SCHEMA = "CsReflexCalibrationEvent.v1";
+const EVENT_SCHEMA = "CsReflexCalibrationRepairEvent.v1";
+const SUITE_SCHEMA = "CsReflexCalibrationRepairSuite.v1";
 const SEED_GENERATION_VERSION = "CsMeasurementSeedSet.v1";
 const SEED_NAMESPACE = "ESMO:CsMeasurementPilot.v1:";
 const FIXED_SEEDS = Object.freeze([
@@ -28,11 +29,15 @@ const MAP_KEY = "inferno";
 const T_TACTIC_ID = "t_aexec";
 const CT_TACTIC_ID = "c_std";
 const BAND = 12;
-const PRIMARY_METRICS = Object.freeze(["targetConversions", "targetKills", "targetDamage"]);
+const PRIMARY_METRICS = Object.freeze(["targetAttackerConversions", "targetAttackerKills", "targetAttackerDamage"]);
 const METRICS = Object.freeze([
-  "opportunities", "fireAttempts", "fireTriggers", "conversions", "kills", "damage",
-  "targetOpportunities", "targetFireAttempts", "targetFireTriggers", "targetConversions",
-  "targetKills", "targetDamage", "roundWins", "roundCount", "upperClampPct", "lowerClampPct",
+  "pairOpportunities", "pairFireAttempts", "pairFireTriggers", "pairResolutions", "pairConversions", "pairKills", "pairDamage",
+  "targetPairOpportunities", "targetPairFireAttempts", "targetPairFireTriggers",
+  "targetAttackerResolutions", "targetAttackerConversions", "targetAttackerKills", "targetAttackerDamage",
+  "targetAttackerHeadshots", "targetAttackerHeadshotRate",
+  "targetDefenderResolutions", "targetDefenderHits", "targetDefenderDeaths", "targetDefenderDamageTaken",
+  "targetDefenderHeadshots", "targetDefenderHeadshotRate",
+  "roundWins", "roundCount", "upperClampPct", "lowerClampPct",
 ]);
 
 const SIGNATURE_MARKER = "function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){";
@@ -43,6 +48,8 @@ const FIRE_MARKER = "if(rand()>=fireChance)continue;";
 const FIRE_REPLACEMENT = "const __r18FireRoll=rand();__measure?.record(\"fire\",{round:rnd+1,sec,tPlayerId:tp.id,cPlayerId:cp.id,tRole:tp.role,cRole:cp.role,distance:d,fireChance,roll:__r18FireRoll});if(__r18FireRoll>=fireChance)continue;";
 const PT_MARKER = "const Pt=clamp(0.5+(tSk-cSk)*0.013+(MAP_EDGE[mapKey]??0.02)+ecoEdge+flashPen+tacEdge,0.07,0.93);";
 const PT_REPLACEMENT = `${PT_MARKER}__measure?.record("probability",{round:rnd+1,sec,tPlayerId:tp.id,cPlayerId:cp.id,tRole:tp.role,cRole:cp.role,pt:Pt,lowerClamp:Pt===0.07,upperClamp:Pt===0.93});`;
+const RESOLUTION_MARKER = "const g=GUNS[at.gun];const isHS=rand()<g.hs*(0.72+0.55*((at.stats?.acc||80)/100));";
+const RESOLUTION_REPLACEMENT = `${RESOLUTION_MARKER}__measure?.record("resolution",{round:rnd+1,sec,tPlayerId:tp.id,cPlayerId:cp.id,tRole:tp.role,cRole:cp.role,distance:d,attackerId:at.id,defenderId:df.id,attackerSide:at.side,defenderSide:df.side,pt:Pt,headshot:isHS});`;
 const DAMAGE_MARKER = "const {killed}=applyDamage(at,df,dmg);";
 const DAMAGE_REPLACEMENT = `const __r18DamageBefore=at.dmgDealt||0;${DAMAGE_MARKER}__measure?.record("conversion",{round:rnd+1,sec,tPlayerId:tp.id,cPlayerId:cp.id,attackerId:at.id,defenderId:df.id,attackerSide:at.side,defenderSide:df.side,rawDamage:dmg,effectiveDamage:(at.dmgDealt||0)-__r18DamageBefore,killed,headshot:isHS,pt:Pt});`;
 const RETURN_MARKER = "return { EsportsFPS3D, buildMatchResult };";
@@ -61,6 +68,7 @@ const TRANSFORMS = Object.freeze([
   ["opportunity", OPPORTUNITY_MARKER, OPPORTUNITY_REPLACEMENT],
   ["fire", FIRE_MARKER, FIRE_REPLACEMENT],
   ["probability", PT_MARKER, PT_REPLACEMENT],
+  ["resolution", RESOLUTION_MARKER, RESOLUTION_REPLACEMENT],
   ["conversion", DAMAGE_MARKER, DAMAGE_REPLACEMENT],
   ["return export", RETURN_MARKER, RETURN_REPLACEMENT],
   ["module export", EXPORT_MARKER, EXPORT_REPLACEMENT],
@@ -104,7 +112,7 @@ function createCollector() {
   return {
     events,
     record(type, payload) {
-      gate(["opportunity", "fire", "probability", "conversion"].includes(type), "UNKNOWN_EVENT", type);
+      gate(["opportunity", "fire", "probability", "resolution", "conversion"].includes(type), "UNKNOWN_EVENT", type);
       gate(payload && typeof payload === "object" && !Array.isArray(payload), "EVENT_PAYLOAD");
       const event = { schema: EVENT_SCHEMA, type, ...payload };
       for (const [key, value] of Object.entries(event)) {
@@ -120,6 +128,7 @@ function validateEvents(events, targetId) {
   const opportunities = new Map();
   const fires = new Map();
   const probabilities = new Map();
+  const resolutions = new Map();
   const conversions = new Map();
   for (const event of events) {
     gate(event.schema === EVENT_SCHEMA, "EVENT_SCHEMA", event.type);
@@ -143,9 +152,23 @@ function validateEvents(events, targetId) {
       gate(event.lowerClamp === (event.pt === 0.07), "LOWER_CLAMP", key);
       gate(event.upperClamp === (event.pt === 0.93), "UPPER_CLAMP", key);
       probabilities.set(key, event);
+    } else if (event.type === "resolution") {
+      gate(probabilities.has(key), "RESOLUTION_WITHOUT_PROBABILITY", key);
+      gate(!resolutions.has(key), "DUPLICATE_RESOLUTION", key);
+      gate(typeof event.attackerId === "string" && typeof event.defenderId === "string", "RESOLUTION_ACTORS", key);
+      gate(typeof event.attackerSide === "string" && typeof event.defenderSide === "string", "RESOLUTION_SIDES", key);
+      gate(typeof event.headshot === "boolean", "RESOLUTION_HEADSHOT", key);
+      resolutions.set(key, event);
     } else {
+      gate(resolutions.has(key), "CONVERSION_WITHOUT_RESOLUTION", key);
       gate(probabilities.has(key), "CONVERSION_WITHOUT_PROBABILITY", key);
       gate(!conversions.has(key), "DUPLICATE_CONVERSION", key);
+      const resolution = resolutions.get(key);
+      gate(event.attackerId === resolution.attackerId && event.defenderId === resolution.defenderId,
+        "CONVERSION_ACTOR_MISMATCH", key);
+      gate(event.attackerSide === resolution.attackerSide && event.defenderSide === resolution.defenderSide,
+        "CONVERSION_SIDE_MISMATCH", key);
+      gate(event.headshot === resolution.headshot, "CONVERSION_HEADSHOT_MISMATCH", key);
       gate(Number.isInteger(event.rawDamage) && event.rawDamage > 0, "CONVERSION_RAW_DAMAGE", key);
       gate(Number.isInteger(event.effectiveDamage) && event.effectiveDamage > 0 && event.effectiveDamage <= event.rawDamage,
         "CONVERSION_EFFECTIVE_DAMAGE", key);
@@ -157,7 +180,9 @@ function validateEvents(events, targetId) {
   gate(fires.size === opportunities.size, "FIRE_OPPORTUNITY_MISMATCH", `${fires.size}/${opportunities.size}`);
   gate(probabilities.size === [...fires.values()].filter((event) => event.roll < event.fireChance).length,
     "PROBABILITY_TRIGGER_MISMATCH", `${probabilities.size}/${[...fires.values()].filter((event) => event.roll < event.fireChance).length}`);
-  return { opportunities, fires, probabilities, conversions };
+  gate(resolutions.size === probabilities.size, "RESOLUTION_TRIGGER_MISMATCH", `${resolutions.size}/${probabilities.size}`);
+  gate(conversions.size === resolutions.size, "CONVERSION_RESOLUTION_MISMATCH", `${conversions.size}/${resolutions.size}`);
+  return { opportunities, fires, probabilities, resolutions, conversions };
 }
 
 function resultMetrics(sim, events, targetId) {
@@ -165,28 +190,45 @@ function resultMetrics(sim, events, targetId) {
   const players = Array.isArray(sim.players) ? sim.players : [];
   const target = players.find((player) => player.id === targetId);
   gate(target, "TARGET_RESULT_MISSING", targetId);
-  const targetEvents = (kind) => [...validated[kind].values()].filter((event) => event.tPlayerId === targetId);
-  const opportunityEvents = [...validated.opportunities.values()];
-  const fireEvents = [...validated.fires.values()];
+  const targetPairEvents = (kind) => [...validated[kind].values()].filter((event) => event.tPlayerId === targetId);
+  const resolutionEvents = [...validated.resolutions.values()];
   const conversionEvents = [...validated.conversions.values()];
-  const totalDamage = conversionEvents.reduce((sum, event) => sum + event.effectiveDamage, 0);
+  const targetResolutions = resolutionEvents.filter((event) => event.tPlayerId === targetId);
+  const targetConversions = conversionEvents.filter((event) => event.tPlayerId === targetId);
+  const attackerResolutions = targetResolutions.filter((event) => event.attackerId === targetId);
+  const attackerConversions = targetConversions.filter((event) => event.attackerId === targetId);
+  const defenderResolutions = targetResolutions.filter((event) => event.defenderId === targetId);
+  const defenderConversions = targetConversions.filter((event) => event.defenderId === targetId);
+  gate(attackerResolutions.length + defenderResolutions.length === targetResolutions.length, "TARGET_RESOLUTION_PARTITION", targetId);
+  gate(attackerConversions.length + defenderConversions.length === targetConversions.length, "TARGET_CONVERSION_PARTITION", targetId);
+  const rate = (numerator, denominator) => denominator ? +(100 * numerator / denominator).toFixed(4) : 0;
   return {
-    opportunities: opportunityEvents.length,
-    fireAttempts: fireEvents.length,
-    fireTriggers: fireEvents.filter((event) => event.roll < event.fireChance).length,
-    conversions: conversionEvents.length,
-    kills: conversionEvents.filter((event) => event.killed).length,
-    damage: totalDamage,
-    targetOpportunities: targetEvents("opportunities").length,
-    targetFireAttempts: targetEvents("fires").length,
-    targetFireTriggers: targetEvents("fires").filter((event) => event.roll < event.fireChance).length,
-    targetConversions: targetEvents("conversions").length,
-    targetKills: targetEvents("conversions").filter((event) => event.killed).length,
-    targetDamage: targetEvents("conversions").reduce((sum, event) => sum + event.effectiveDamage, 0),
+    pairOpportunities: validated.opportunities.size,
+    pairFireAttempts: validated.fires.size,
+    pairFireTriggers: [...validated.fires.values()].filter((event) => event.roll < event.fireChance).length,
+    pairResolutions: resolutionEvents.length,
+    pairConversions: conversionEvents.length,
+    pairKills: conversionEvents.filter((event) => event.killed).length,
+    pairDamage: conversionEvents.reduce((sum, event) => sum + event.effectiveDamage, 0),
+    targetPairOpportunities: targetPairEvents("opportunities").length,
+    targetPairFireAttempts: targetPairEvents("fires").length,
+    targetPairFireTriggers: targetPairEvents("fires").filter((event) => event.roll < event.fireChance).length,
+    targetAttackerResolutions: attackerResolutions.length,
+    targetAttackerConversions: attackerConversions.length,
+    targetAttackerKills: attackerConversions.filter((event) => event.killed).length,
+    targetAttackerDamage: attackerConversions.reduce((sum, event) => sum + event.effectiveDamage, 0),
+    targetAttackerHeadshots: attackerResolutions.filter((event) => event.headshot).length,
+    targetAttackerHeadshotRate: rate(attackerResolutions.filter((event) => event.headshot).length, attackerResolutions.length),
+    targetDefenderResolutions: defenderResolutions.length,
+    targetDefenderHits: defenderConversions.length,
+    targetDefenderDeaths: defenderConversions.filter((event) => event.killed).length,
+    targetDefenderDamageTaken: defenderConversions.reduce((sum, event) => sum + event.effectiveDamage, 0),
+    targetDefenderHeadshots: defenderResolutions.filter((event) => event.headshot).length,
+    targetDefenderHeadshotRate: rate(defenderResolutions.filter((event) => event.headshot).length, defenderResolutions.length),
     roundWins: Number(sim.tScore) || 0,
     roundCount: Number(sim.rounds) || 0,
-    upperClampPct: fireEvents.length ? +(100 * [...validated.probabilities.values()].filter((event) => event.upperClamp).length / fireEvents.length).toFixed(3) : 0,
-    lowerClampPct: fireEvents.length ? +(100 * [...validated.probabilities.values()].filter((event) => event.lowerClamp).length / fireEvents.length).toFixed(3) : 0,
+    upperClampPct: validated.fires.size ? +(100 * [...validated.probabilities.values()].filter((event) => event.upperClamp).length / validated.fires.size).toFixed(3) : 0,
+    lowerClampPct: validated.fires.size ? +(100 * [...validated.probabilities.values()].filter((event) => event.lowerClamp).length / validated.fires.size).toFixed(3) : 0,
   };
 }
 
@@ -213,6 +255,9 @@ function pairedStats(treatmentRows, baselineRows) {
   }
   return out;
 }
+function strictMajority(count, total = FIXED_SEEDS.length) {
+  return count > total / 2;
+}
 function aggregate(rows) {
   return Object.fromEntries(METRICS.map((metric) => [metric, +mean(rows.map((row) => row.metrics[metric])).toFixed(4)]));
 }
@@ -222,7 +267,7 @@ function monotonicity(levelRows, baselineRows) {
     const low = pairedStats(levelRows.low, baselineRows)[metric];
     const high = pairedStats(levelRows.high, baselineRows)[metric];
     const aggregateDirection = high.meanDiff >= 0 && low.meanDiff <= 0;
-    const signedDirection = high.positiveSeeds >= 8 && low.negativeSeeds >= 8;
+    const signedDirection = strictMajority(high.positiveSeeds) && strictMajority(low.negativeSeeds);
     metrics[metric] = { aggregateDirection, signedDirection, pass: aggregateDirection && signedDirection, low, high };
   }
   return { metrics, passCount: Object.values(metrics).filter((item) => item.pass).length };
@@ -244,6 +289,13 @@ function saturation(levelRows, baselineRows) {
   };
 }
 
+function changedPaths(before, after, path = "root") {
+  if (Object.is(before, after)) return [];
+  if (!before || !after || typeof before !== "object" || typeof after !== "object") return [path];
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  return [...keys].sort().flatMap((key) => changedPaths(before[key], after[key], `${path}.${key}`));
+}
+
 function treatmentRoster(baselineRoster, targetId, level) {
   const next = clone(baselineRoster);
   const baseTarget = baselineRoster.find((player) => player.id === targetId);
@@ -255,6 +307,9 @@ function treatmentRoster(baselineRoster, targetId, level) {
   gate(values.low < values.baseline && values.baseline < values.high, "RXN_BAND_CLAMPED", `${targetId} ${JSON.stringify(values)}`);
   target.stats.rxn = values[level];
   gate(target.fps === baseTarget.fps && target.moba === baseTarget.moba, "HUD_OVR_RECOMPUTED", targetId);
+  const targetIndex = baselineRoster.findIndex((player) => player.id === targetId);
+  const diff = changedPaths(baselineRoster, next, "roster");
+  gate(diff.length === 1 && diff[0] === `roster.${targetIndex}.stats.rxn`, "TREATMENT_INPUT_DIFF", `${targetId}: ${JSON.stringify(diff)}`);
   return { roster: freeze(next), value: values[level], values };
 }
 function inputDigest(mapKey, tTactic, ctTactic, roster) { return sha256(json({ mapKey, tTactic, ctTactic, roster })); }
@@ -273,13 +328,27 @@ function runArm(api, { mapKey, tTactic, ctTactic, roster, seed, targetId }) {
   gate(eventJson1 === eventJson2, "EVENT_NON_DETERMINISTIC", `seed=${seed}`);
   const after = inputDigest(mapKey, tTactic, ctTactic, roster);
   gate(before === after, "SIM_MUTATED_INPUT", `seed=${seed}`);
+  const metrics = targetId ? resultMetrics(on1, collector1.events, targetId) : null;
   return {
     seed,
     strictSimDigest: sha256(offJson),
     eventDigest: sha256(eventJson1),
-    metrics: targetId ? resultMetrics(on1, collector1.events, targetId) : null,
+    metrics,
+    metricsDigest: metrics ? sha256(json(metrics)) : null,
     sim: on1,
     events: collector1.events,
+  };
+}
+
+function changedSeedStats(treatmentRows, baselineRows) {
+  const strictChangedSeeds = treatmentRows.filter((row, index) => row.strictSimDigest !== baselineRows[index].strictSimDigest).length;
+  const targetMetricChangedSeeds = treatmentRows.filter((row, index) => row.metricsDigest !== baselineRows[index].metricsDigest).length;
+  const total = treatmentRows.length;
+  return {
+    strictChangedSeeds,
+    strictChangedSeedRatio: total ? +(strictChangedSeeds / total).toFixed(4) : 0,
+    targetMetricChangedSeeds,
+    targetMetricChangedSeedRatio: total ? +(targetMetricChangedSeeds / total).toFixed(4) : 0,
   };
 }
 
@@ -341,6 +410,7 @@ async function main() {
   gate(randTokens(source).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT", String(randTokens(source).length));
   gate(json(generatedSeeds()) === json(FIXED_SEEDS), "SEED_GENERATION");
   gate(sha256(json(FIXED_SEEDS)) === SEED_SET_SHA256, "SEED_SET_SHA256");
+  gate(!strictMajority(8, 16) && strictMajority(9, 16), "STRICT_MAJORITY_GATE");
   console.log(`schema: ${EVENT_SCHEMA}`);
   console.log(`seed generation version: ${SEED_GENERATION_VERSION}`);
   console.log(`seedSetSha256: ${SEED_SET_SHA256}`);
@@ -370,7 +440,8 @@ async function main() {
     const levelRows = { low: [], baseline: [], high: [] };
     levelRows.baseline = FIXED_SEEDS.map((seed) => {
       const arm = baselineBySeed.get(seed);
-      return { ...arm, metrics: resultMetrics(arm.sim, arm.events, target.id) };
+      const metrics = resultMetrics(arm.sim, arm.events, target.id);
+      return { ...arm, metrics, metricsDigest: sha256(json(metrics)) };
     });
     const values = {};
     for (const level of ["low", "high"]) {
@@ -389,27 +460,39 @@ async function main() {
       levels: { low: values.low, baseline: target.stats.rxn, high: values.high },
       aggregate: Object.fromEntries(Object.entries(levelRows).map(([level, rows]) => [level, aggregate(rows)])),
       paired: {
-        low: pairedStats(levelRows.low, levelRows.baseline),
-        high: pairedStats(levelRows.high, levelRows.baseline),
+        lowBaseline: pairedStats(levelRows.low, levelRows.baseline),
+        highBaseline: pairedStats(levelRows.high, levelRows.baseline),
+        lowHigh: pairedStats(levelRows.low, levelRows.high),
+      },
+      changedSeeds: {
+        lowBaseline: changedSeedStats(levelRows.low, levelRows.baseline),
+        highBaseline: changedSeedStats(levelRows.high, levelRows.baseline),
+        lowHigh: changedSeedStats(levelRows.low, levelRows.high),
       },
     };
     summary.monotonicity = monotonicity(levelRows, levelRows.baseline);
     summary.saturation = saturation(levelRows, levelRows.baseline);
     cases.push(summary);
-    const secondaryMetrics = ["targetOpportunities", "targetFireTriggers", "opportunities", "fireTriggers", "roundWins", "damage", "upperClampPct", "lowerClampPct"];
+    const secondaryMetrics = [
+      "targetPairOpportunities", "targetPairFireTriggers", "pairOpportunities", "pairFireTriggers",
+      "targetAttackerResolutions", "targetAttackerHeadshots", "targetAttackerHeadshotRate",
+      "targetDefenderHits", "targetDefenderDeaths", "targetDefenderDamageTaken", "targetDefenderHeadshotRate",
+      "roundWins", "pairDamage", "upperClampPct", "lowerClampPct",
+    ];
     console.log(`reflex case: ${JSON.stringify({
       targetId: summary.targetId,
       role: summary.role,
       levels: summary.levels,
-      primary: Object.fromEntries(PRIMARY_METRICS.map((metric) => [metric, { low: summary.paired.low[metric], high: summary.paired.high[metric] }])),
-      secondary: Object.fromEntries(secondaryMetrics.map((metric) => [metric, { low: summary.paired.low[metric], high: summary.paired.high[metric] }])),
+      primary: Object.fromEntries(PRIMARY_METRICS.map((metric) => [metric, { lowBaseline: summary.paired.lowBaseline[metric], highBaseline: summary.paired.highBaseline[metric], lowHigh: summary.paired.lowHigh[metric] }])),
+      secondary: Object.fromEntries(secondaryMetrics.map((metric) => [metric, { lowBaseline: summary.paired.lowBaseline[metric], highBaseline: summary.paired.highBaseline[metric], lowHigh: summary.paired.lowHigh[metric] }])),
+      changedSeeds: summary.changedSeeds,
       monotonicity: summary.monotonicity,
       saturation: summary.saturation,
     })}`);
   }
   const monotonicPasses = cases.reduce((sum, item) => sum + item.monotonicity.passCount, 0);
   const suite = {
-    schema: "CsReflexCalibrationSuite.v1",
+    schema: SUITE_SCHEMA,
     sourceSha256,
     seedSetSha256: SEED_SET_SHA256,
     scenario: { mapKey: MAP_KEY, tTacticId: T_TACTIC_ID, ctTacticId: CT_TACTIC_ID },

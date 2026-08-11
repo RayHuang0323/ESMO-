@@ -6826,3 +6826,26 @@ R3 verifier 的總模擬數為 544，static RNG call sites 維持 21。
 - Future production wiring：目前 **No-Go**；後續狀態為 **Revise**，須先完成 R19 read-chain / role audit，再證明 actor-specific observation-to-decision consequence 才能重新評估 Go。
 - 完整規格與 evidence：`review/cs-gameplay/CS_MAPAWARE_SEMANTICS_R18B_SPEC.md`、`review/cs-gameplay/CS_MAPAWARE_SEMANTICS_R18B_REPORT.md`。
 - R18-B local commit；不 push。
+
+---
+
+## Sprint R18-A Verifier Repair — 2026-08-13
+
+### Scope / guard
+
+- 接受 R18-A 原 review 的 No-Go，只修 verifier attribution、strict-majority gate、spec 與 evidence；不開始 R19。
+- 不修改 `src/` production gameplay、RNG、stat formula、role mapping、contract 或 R18-B historical evidence；不 rebaseline R1–R17。
+
+### Repair / evidence
+
+- `CsReflexCalibrationRepairEvent.v1` 補上 attacker / defender / side / headshot，target attacker KPI 僅計 target player 作為 attacker 的 conversion、kill、effective damage。
+- monotonicity strict-majority 明確使用 `count > total / 2`；16 seeds 的 8/16 不通過，9/16 才是 majority。
+- focused sweep PASS：528 simulations、5 roles、16 fixed seeds、static RNG sites=21；suite digest `104c38526b6ff0bbd9da41b89631d60bba298dce0fd45cee3a209253973a471b`。
+- 重新輸出 paired mean / SD / effect size、low→baseline / baseline→high / low→high、headshot、saturation、changed-seed 與 role-by-role target-player-only KPI。
+
+### 判定
+
+- 修正版 verifier：**PASS**。
+- R18-A calibration：**Revise**；`0/15` monotonicity checks、`0/5` saturation signals，沒有 production calibration patch。
+- 修正後仍有 role-specific non-monotonic / direction anomaly，因此 R19 仍有必要；R19 只列為後續待辦，本 Sprint 不執行。
+- local commit；不 push。

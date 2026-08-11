@@ -47,6 +47,8 @@ ESMO 是 **Web MOBA / 電競經營模擬遊戲**。目標不是程式實驗，�
 
 ## 5. Development Principles
 
+- **Repository-wide language rule**：所有回報、review finding、規劃、handoff 與最終摘要一律使用繁體中文；檔名、指令、程式碼與符號保留原格式。
+
 - **小步修改**，不任意大重構。
 - **不寫死**勝負、擊殺數、獎勵、result。
 - **不用 UI 假資料**掩蓋引擎缺資料——缺資料就補可靠來源或誠實標記。

@@ -2,7 +2,7 @@
 
 ## 狀態
 
-R18-A 只做 `reflex` / `rxn` 的 deterministic combat calibration pilot。這不是完整 16-stat calibration，也不是最終 balance approval；R18-B 尚未開始。
+R18-A 只做 `reflex` / `rxn` 的 deterministic combat calibration pilot。這不是完整 16-stat calibration，也不是最終 balance approval；R18-B 已另行完成 semantics / read-point design，未修改 production gameplay。
 
 固定基線：
 
@@ -40,26 +40,31 @@ R18-A 只做 `reflex` / `rxn` 的 deterministic combat calibration pilot。這�
 
 ## KPI
 
-主要 KPI：
+主要 KPI（只代表 target player 作為 attacker 的事件）：
 
-- combat opportunity count
-- fire trigger count / opportunity
-- combat conversion count
-- kill conversion / conversion
-- target player 的 opportunity、fire、conversion、kill
+- `targetAttackerConversions`
+- `targetAttackerKills`
+- `targetAttackerDamage`
 
-secondary KPI：
+明確分開的 secondary KPI：
 
-- round win rate / round count
-- total kills、effective damage（以 simulator result 的既有欄位為準）
-- headshot conversion rate、clamp rate
-- changed-seed ratio 與 target result changed-seed ratio
+- attacker-side：`targetAttackerResolutions`、`targetAttackerHeadshots`、`targetAttackerHeadshotRate`
+- defender-side：`targetDefenderResolutions`、`targetDefenderHits`、`targetDefenderDeaths`、`targetDefenderDamageTaken`、`targetDefenderHeadshots`、`targetDefenderHeadshotRate`
+- pair/context：`targetPairOpportunities`、`targetPairFireAttempts`、`targetPairFireTriggers` 及全 pair 的 `pair*` 指標；這些不算 target attacker KPI
+- result/boundary：`roundWins`、`roundCount`、`upperClampPct`、`lowerClampPct`
+- deterministic evidence：`strictChangedSeedRatio`、`targetMetricChangedSeedRatio`
 
-每個 KPI 同時輸出 low→baseline、baseline→high、low→high 的 paired mean difference、paired standard deviation、標準化 effect size（paired difference / paired SD；SD=0 時明確標記 `0` 或 `undefined`），以及 seed-level distribution。
+每個 KPI 同時輸出 `low→baseline`、`baseline→high`、`low→high` 的 paired mean difference、paired standard deviation、標準化 effect size（paired difference / paired SD；SD=0 時明確標記 `0` 或 `undefined`），以及 seed-level distribution。每個 treatment pair 另輸出 strict changed-seed 與 target-metric changed-seed 計數/比例。
+
+## R18-A Verifier Repair
+
+原 R18-A report 保留為修正前 historical snapshot；其中 target conversion / kill / damage 的 pair-level 結果不得再解讀為 target-player causality。修正版 verifier 使用 `CsReflexCalibrationRepairEvent.v1` 與 `CsReflexCalibrationRepairSuite.v1`：resolution/conversion event 會記錄 attacker、defender、side 與 headshot，再將 target attacker 與 target defender 分區；同一 combat pair 中 opponent 的行為不會進入 target attacker KPI。
+
+monotonicity 的 signed-majority gate 使用 `count > total / 2`；固定 16 seeds 時必須至少 9/16，8/16 明確不通過。修正版仍只在 memory transform 中觀測既有 simulator，不修改 production source、RNG、stat formula 或 role mapping。
 
 ## 判讀規則
 
-- `monotonicity`：high 的方向性 paired effect 必須與 baseline→low 相反，並以 seed-level signed majority 與 aggregate direction 同時檢查；不是只看平均值。
+- `monotonicity`：high 的方向性 paired effect 必須與 baseline→low 相反，並以 seed-level signed majority 與 aggregate direction 同時檢查；固定 16 seeds 時必須嚴格超過半數（至少 9/16），8/16 不通過；不是只看平均值。
 - `saturation`：檢查 high/low 端的 clamp、trigger probability 是否落在既有 bounded range，以及 marginal response 是否接近零；三點 pilot 只能標記 `signal` / `not-observed` / `inconclusive`，不得宣稱已找到最終 plateau。
 - `reasonable calibration range`：只在 read-chain 完整、deterministic、主要 KPI 方向一致，且沒有大比例 clamp 或明顯 role-specific inversion 時提出；範圍仍是後續 production review 的候選，不自動寫回 production。
 - 若主要 KPI 方向不一致、effect size 只出現在 secondary/result、或 raw/personality-adjusted 混用遮蔽因果，R18-A 只交付 measurement evidence，不提出 production patch。
@@ -71,4 +76,3 @@ secondary KPI：
 - 不處理 synergy / learning。
 - 不建立新的 AI 或 MapAware feature。
 - 不因 aggregate runner 成本而刪除、弱化或改寫 correctness gate。
-
