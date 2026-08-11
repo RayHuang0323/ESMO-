@@ -6766,3 +6766,39 @@ playerModel.STAT_DEF.learning
 - 未來若要接線，必須另開 state-contract Sprint，先決定 state owner、跨場更新時機、消費端、
   migration 與 history 相容性；不得默認成 duel modifier。
 - 完整規格：`review/cs-gameplay/CS_LEARNING_LIFECYCLE_R16B_SPEC.md`。
+
+---
+
+## Sprint R17：CS 16-Stat Calibration Readiness Audit — 2026-08-11
+
+### Scope / guard
+
+本 Sprint 只做 readiness evidence synthesis，不調整 `FPS_W`、`combatSkill`、權重、clamp、
+balance constant，不改 production、contract、Store、Progress，不新增 RNG，也不 rebaseline
+R1～R16 historical digest。固定沿用 R3 的 16 seeds × 16 treatments、256 paired comparisons；
+R3 verifier 的總模擬數為 544，static RNG call sites 維持 21。
+
+### 完成內容
+
+- 新增 `tools/check_cs_calibration_readiness_r17.mjs`，鎖定 current FPS source、R2/R3/R16
+  evidence、R3 suite digests 與 16 項結果；verifier exit 0。
+- 新增 `CsCalibrationReadiness.v1` evidence：
+  `e5838664749625863caa2b35fe6d4b999dbda7fd8c3600fee50523b5415573ad`。
+- 16 項分類：
+  - 可直接進 calibration：`reflex`、`mapAware`。
+  - 需先補 measurement：`accuracy`、`apm`、`positioning`、`decision`、`courage`、`clutch`、
+    `focus`、`resilience`。
+  - 需重新設計語意：`tacticalIQ`、`comms`、`leadership`、`synergy`、`learning`。
+  - 建議維持現狀：`adaptability`。
+- 後續優先順序：`reflex`、`mapAware`、retreat measurement 後的 `positioning` / `apm` / `courage`。
+  `accuracy` 等待 effective damage/headshot measurement；`focus` / `decision` 等待 defuse
+  KPI；`clutch` / `resilience` 等待 true 1vN KPI。
+
+### 判定
+
+- Readiness evidence：**Go / PASS**。
+- 本輪直接 calibration：**No-Go**。
+- 下一階段分批 calibration：**Revise**，須依 measurement gate 開獨立 Sprint。
+- Synergy 與 Learning 維持 R16 語意結論，不在 R17 接入 gameplay。
+
+完整規格：`review/cs-gameplay/CS_CALIBRATION_READINESS_R17_SPEC.md`。
