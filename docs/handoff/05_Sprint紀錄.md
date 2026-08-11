@@ -6895,3 +6895,40 @@ R3 verifier 的總模擬數為 544，static RNG call sites 維持 21。
 - direct `combatSkill` / `Pt` 對 rxn 仍單調，`aggr` 不讀 rxn；R18-A final KPI 反轉由 deterministic Pt/kill/alive/pair/economy state path 放大，不能用 balance 調參掩蓋。
 - R19 audit：**Go / PASS**；production semantic correction：**Revise**；production calibration：**No-Go**。若要 production patch，下一輪先短 Grill。
 - local commit；不 push。
+
+---
+
+## Sprint R20：CS Positioning Measurement Completion — 2026-08-12
+
+### Scope / guard
+
+- R19 checkpoint `f26d4e0113d74740aa4883be3fa7a031dde84ea3` 已 push，local / tracking / remote
+  SHA 一致。
+- Reflex semantic correction 標記為 **Done / Go**；Reflex calibration 標記為
+  **Deferred / Revise**。原因是 direct effect 正向，但 match-level deterministic path
+  amplification 讓目前 KPI 不具可靠 monotonic calibration signal。
+- R20 不做 calibration、不修改 production、RNG、其他 stat、role mapping、balance constant
+  或 R1～R19 historical evidence。
+
+### Read-chain / measurement
+
+- 新增 `tools/check_cs_positioning_measurement_r20.mjs`，並正式接入 `tools/verify.mjs` 的
+  `cs_positioning_measurement_r20` aggregate gate。
+- raw `stats.pos` → `posSkill` role-fit；effective `persStat(pos)` → `combatSkill`、`aggr`、
+  retreat gate 與 pair admission；movement speed 仍讀 `sta`。
+- 固定 `inferno / t_aexec / c_std`、5 個 T roles、low/baseline/high、16 seeds，執行
+  528 次 off/on/repeated-on simulation；事件包含 retreat timing / trigger / displacement /
+  re-engage、survival / death exposure、pair admission 與 attacker / defender attribution。
+- verifier PASS，suite digest：
+  `6849de4fc39b6b8311c67e91411a7aaf6c1844e435c729c631c7d03e600f410c`；第二次 focused
+  regression digest 完全一致；static RNG sites=21。
+
+### 判定
+
+- R20 measurement completion：**Go / PASS**。
+- Positioning calibration readiness：**Revise / No-Go**。entry/rifler 的 retreat gate 被
+  baseline `aggr` 完全擋住；lurker high 跨過 `0.82` 造成 trigger/displacement/re-engage
+  離散跳變；survival、pair admission 與 exchange 仍是 downstream evidence，不可直接當作
+  balance KPI。
+- `npm.cmd run build` PASS；historical 14 區段保持 PASS，未 rebaseline。R20 local commit，
+  不 push。

@@ -75,6 +75,7 @@ const SEGMENTS = [
   { id: "cs_he_gameplay_r14", script: "tools/check_cs_he_gameplay_r14.mjs", shape: /CS HE Gameplay R14: PASS/, note: "CS deterministic HE damage／utilDmg causal migration" },
   { id: "cs_molly_gameplay_r15", script: "tools/check_cs_molly_gameplay_r15.mjs", shape: /CS Molly Gameplay R15: PASS/, note: "CS player-molly deterministic DoT／utilDmg causal migration" },
   { id: "cs_calibration_readiness_r17", script: "tools/check_cs_calibration_readiness_r17.mjs", shape: /CS 16-Stat Calibration Readiness Audit R17: PASS/, note: "CS 16-stat calibration readiness gate" },
+  { id: "cs_positioning_measurement_r20", script: "tools/check_cs_positioning_measurement_r20.mjs", shape: /CS Positioning Measurement Completion R20: PASS/, note: "CS positioning read-chain／retreat measurement" },
   //  ⚠ 下面五支在 flat 模式下的分母會變小（巢狀子驗證改由本 runner 各跑一次）。
   //    這裡填的是**該支自己健康時的完整數字**，不是遷就現況——所以
   //    experience26（§17 replay 容量，TD-19）與 runtime29（§29 順序公平性，TD-21）
