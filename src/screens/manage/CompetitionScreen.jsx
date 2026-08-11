@@ -30,7 +30,7 @@ const Panel = ({ title, right, children }) => (
   </div>
 );
 
-export default function CompetitionScreen({ onBack, onPlay }) {
+export default function CompetitionScreen({ onBack, onPlay, onResume }) {
   //  訂閱原始值 ⇒ 賽季一變就重繪（不訂閱函式本身：那是正式驗收踩過的坑）
   const competition = useProfileStore((s) => s.competition);
   const days = useProfileStore((s) => s.meta?.days ?? 1);
@@ -54,7 +54,7 @@ export default function CompetitionScreen({ onBack, onPlay }) {
     );
   }
 
-  const { standings, next, nextDay, today, progress, participants } = view;
+  const { standings, next, nextDay, today, progress, participants, live } = view;
   const myId = useProfileStore.getState().competition?.playerTeamId;
   const nameOf = (id) => participants.find((p) => p.id === id)?.name ?? id;
   const tagOf = (id) => participants.find((p) => p.id === id)?.tag ?? "";
@@ -64,6 +64,18 @@ export default function CompetitionScreen({ onBack, onPlay }) {
     const r = useProfileStore.getState().startFixtureMatch(fixtureId);
     if (!r.ok) { setErr(r.reason ?? "無法出賽"); return; }
     onPlay?.();
+  };
+  //  Q3.6：進行中的賽程對戰，從這裡直接回去。
+  //  舊行為是賽事頁只寫「你有一場進行中的對戰，請直接返回那一場」卻**沒有按鈕**，
+  //  玩家得繞 主畫面 → MOBA 磚 → 賽前配置 才回得去。
+  //  ⚠ 用的是既有的 `resumeMatchSession()`（賽前頁那顆「返回進行中的對戰」同一支），
+  //    導向也是同一個目的地 ⇒ 沒有第二條進場流程。能不能 resume 由 Store 判，
+  //    這裡只負責把失敗原因顯示出來。
+  const resume = () => {
+    setErr(null);
+    const r = useProfileStore.getState().resumeMatchSession();
+    if (!r.ok) { setErr(r.errors?.[0]?.message ?? "無法返回比賽"); return; }
+    onResume?.();
   };
   const forfeit = (fixtureId) => {
     setErr(null);
@@ -138,11 +150,15 @@ export default function CompetitionScreen({ onBack, onPlay }) {
                 </>
               ) : (
               <div style={{ display: "flex", gap: 8 }}>
+                {/*  Q3.6：已經有一場進行中的賽程對戰 ⇒ 這顆改成「返回比賽」。
+                     維持原本的位置與樣式，玩家的主要動作永遠是同一顆。
+                     `live` 是 Store 給的事實（有沒有沒打完的賽程場次），
+                     畫面不自己判斷「能不能回去」——那由 `resumeMatchSession()` 決定。 */}
                 <button
-                  onClick={() => play(focus.id)}
+                  onClick={() => (live ? resume() : play(focus.id))}
                   style={{ flex: 1, background: `linear-gradient(135deg,${GC.purp},#7c3aed)`, border: "none", borderRadius: 10, padding: "11px 0", color: "#fff", fontSize: 13.5, fontWeight: 900, cursor: "pointer" }}
                 >
-                  ⚔️ 出賽
+                  {live ? "⚔️ 返回比賽" : "⚔️ 出賽"}
                 </button>
                 <button
                   onClick={() => setConfirmForfeit(focus.id)}

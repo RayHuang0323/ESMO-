@@ -90,7 +90,10 @@ export default function AppShell() {
           `MatchmakingScreen` 是 Sprint11 的**純過場動畫**（寫死對手、假計時），
           真正的房間確認／場次簽發／一次性進場在 `LineupScreen` 的 `MatchPrepFrame`
           ＋ `useMatchFlow`。導錯的話場次永遠不會簽發，賽果也就寫不回賽程。 */}
-      {screen === "competition" && <CompetitionScreen onBack={home} onPlay={go("lineup")} />}
+      {/*  Q3.6：`onResume` 是「進行中的賽程對戰」的直接返回入口，導向與賽前頁
+           那顆「返回進行中的對戰」**同一個目的地**（`matchmaking` 過場 → Ban/Pick）。
+           出賽仍然必須走 `lineup`（真正跑 useMatchFlow 的賽前頁），兩者不可對調。 */}
+      {screen === "competition" && <CompetitionScreen onBack={home} onPlay={go("lineup")} onResume={go("matchmaking")} />}
       {screen === "season" && <SeasonScreen onBack={home} />}
 
       {/* ── MOBA 賽前流程 ── */}

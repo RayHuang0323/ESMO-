@@ -707,10 +707,25 @@ export const useProfileStore = create((set, get) => ({
     get().save();
     return { ok: true, outcome: res.outcome, errors: [] };
   },
+  /**
+   * 這條賽前流程屬於哪一場賽程（Q3.6）。**判斷只在這裡做一次。**
+   *
+   * 認定依據只有 `fixtureAssignment`——它在「出賽」時寫入，並且在
+   * `completeFixtureMatch()` / `forfeitFixture()`（賽程走到終局）時被清掉。
+   * 所以它活著＝「這條流程仍然綁在一場沒打完的賽程上」，正是我們要保護的區間。
+   *
+   * ⚠ 刻意**不看** `room.origin.kind`：房間在賽程打完之後仍然是 fixture 來源，
+   *   拿它判定會讓已完賽的場次也被當成「還能重新進入」。
+   */
+  matchFixtureContext() {
+    const fa = get().matchmaking?.fixtureAssignment ?? null;
+    const fixtureId = fa?.origin?.fixtureId ?? null;
+    return { inFixture: !!fixtureId, fixtureId };
+  },
   /** 賽事總覽（畫面唯一入口；不得自己算積分榜或自己找下一場）。 */
   competitionView() {
     const state = get().competition;
-    if (!state?.schema) return { hasSeason: false, standings: null, next: null, today: null, progress: null };
+    if (!state?.schema) return { hasSeason: false, standings: null, next: null, today: null, progress: null, live: null };
     const day = Number(get().meta?.days) || 1;
     const next = nextPlayerFixture(state, day);
     return {
@@ -725,6 +740,15 @@ export const useProfileStore = create((set, get) => ({
       today: pendingPlayerFixtureOn(state, day),
       progress: seasonProgress(state),
       participants: participantsOf(state),
+      //  Q3.6：有沒有一場**還沒結束的賽程對戰**正在進行。有的話賽事頁要給得出
+      //  「返回比賽」，否則玩家只能繞主畫面 → MOBA 磚 → 賽前配置才回得去。
+      //  ⚠ 這裡只回報**事實**（哪一場、什麼狀態），不判斷「能不能 resume」——
+      //    那是 `resumeMatchSession()` 的職責，畫面不得自己判規則。
+      live: (() => {
+        const session = get().matchmaking?.session ?? null;
+        if (!session || !isFixtureSession(session) || isSessionTerminal(session)) return null;
+        return { fixtureId: fixtureIdOfSession(session), state: session.state };
+      })(),
     };
   },
   // ── Milestone O1：名單分層與出賽陣容 ──────────────────────────────────
@@ -940,6 +964,16 @@ export const useProfileStore = create((set, get) => ({
    * 舊房間的雙方確認狀態隨著 room 一起被丟棄，不可能被沿用。
    */
   requeueMatch(mode = "moba", now = Date.now()) {
+    //  ── Q3.6：賽程進行中不得走一般配對 ──────────────────────────────────
+    //  瀏覽器實測踩到：聯賽場次確認逾時後按「重新配對」，走的是一般配對，
+    //  **配到隨機對手**（不是賽程對手），而那一場聯賽仍掛著沒打。
+    //  重新配對會把整個 matchmaking 換掉（含 `fixtureAssignment`）⇒ 賽程身分直接消失。
+    //  在賽程區間內，重新進場的唯一入口是 `startFixtureMatch(fixtureId)`
+    //  （它自己有 `allowRelaunch`，對手與 seed 都由同一場賽程決定）。
+    if (get().matchFixtureContext().inFixture) {
+      const message = "這是聯賽賽程，請重新進入本場，不會換對手";
+      return { ok: false, ticket: null, reused: false, errors: [{ code: "in_fixture", message }] };
+    }
     const cur = get().matchmaking?.ticket ?? null;
     if (cur && (cur.state === TICKET_STATES.queued || cur.state === TICKET_STATES.validating)) {
       return { ok: true, ticket: cur, reused: true, errors: [] };

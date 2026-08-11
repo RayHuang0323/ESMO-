@@ -118,9 +118,12 @@ export function useMatchFlow(mode = "moba", onEnterBattle = null) {
   //  （`platform/matchTeamNames.js`，已含 fixtureAssignment 那一段）。
   //  ⚠ 仍是原始值（字串／null），符合本檔「只訂閱原始值」的規則。
   const opponentName = selectOpponentName(store);
+  //  Q3.6：這條流程綁在哪一場賽程。判定在 Store（`matchFixtureContext`），
+  //  這裡只是把結論帶給按鈕判定——本檔不判「算不算賽程」。
+  const fixture = store.matchFixtureContext();
 
-  const act = primaryActionFor({ entryOk: entry.ok, view, room, session });
-  const statusText = flowStatusText({ entryOk: entry.ok, view, room, session, opponentName });
+  const act = primaryActionFor({ entryOk: entry.ok, view, room, session, fixture });
+  const statusText = flowStatusText({ entryOk: entry.ok, view, room, session, opponentName, fixture });
 
   //  ── 唯一的流程推進點 ────────────────────────────────────────────────
   const run = () => {
@@ -148,6 +151,15 @@ export function useMatchFlow(mode = "moba", onEnterBattle = null) {
       launchedFor.current = null;
       const r = st.requeueMatch(mode);
       if (!r.ok) setErr(r.errors?.[0]?.message ?? "無法重新配對");
+      return;
+    }
+    //  Q3.6：賽程區間內的「重新來過」＝重新進入同一場賽程。
+    //  ⚠ 用的是出賽那一支 `startFixtureMatch()`（內建 `allowRelaunch`），
+    //    對手／seed 都由賽程決定 ⇒ 不可能換到隨機對手，也沒有第二條賽事流程。
+    if (act.key === "refixture") {
+      launchedFor.current = null;
+      const r = st.startFixtureMatch(fixture.fixtureId);
+      if (!r.ok) setErr(r.reason ?? r.errors?.[0]?.message ?? "無法重新進入本場賽事");
       return;
     }
   };

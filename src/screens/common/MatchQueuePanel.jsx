@@ -20,6 +20,7 @@
 // ============================================================================
 import React, { useState } from "react";
 import { isDebugMode } from "../../ui/debugMode.js";
+import { RETRY_ACTION_KEYS } from "./matchPrepAction.js";
 
 const C = {
   ok: "#34d399", bad: "#f87171", warn: "#fbbf24", info: "#60a5fa",
@@ -29,7 +30,7 @@ const C = {
 
 /** 依四步流程給狀態色（不是依內部狀態機代碼）。 */
 const toneOf = (flow) => {
-  if (flow.act.key === "requeue") return C.bad;
+  if (RETRY_ACTION_KEYS.includes(flow.act.key)) return C.bad;
   if (flow.act.key === "launching") return C.ok;
   if (flow.act.key === "confirm") return C.warn;
   if (flow.step >= 1) return C.info;
@@ -134,7 +135,7 @@ export default function MatchQueuePanel({ mode = "moba", flow }) {
       )}
 
       {/* 中文失敗原因（逾時／取消／被拒絕） */}
-      {act.key === "requeue" && (
+      {RETRY_ACTION_KEYS.includes(act.key) && (
         <div style={{ color: C.bad, fontSize: 10.5, marginTop: 8, lineHeight: 1.7 }}>⚠ {statusText}</div>
       )}
       {flow.err && <div style={{ color: C.bad, fontSize: 10, marginTop: 6 }}>⚠ {flow.err}</div>}

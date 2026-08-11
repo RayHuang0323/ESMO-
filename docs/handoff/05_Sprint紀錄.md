@@ -7439,3 +7439,85 @@ profileStore.launchFixtureMatch()  →  ticket: null      ← 賽程路徑沒有
 上一節把 `useBattleFeed` 沒傳隊名這件事判成「玩家在 AppShell 流程裡看不到」，
 所以延後。**一進瀏覽器，它就是每一場結束時畫面正中央最大的那行字。**
 延後一個缺口之前，先把玩家會走到的畫面實際點過一遍再說「看不到」。
+
+## Milestone Q3.6（2026-08-12）— 賽事流程安全性 hotfix（兩件事）
+
+Q3.5-close 登記的兩個**流程**風險，這一輪修掉。範圍刻意壓到最小：
+不碰 Battle gameplay、不碰結算、不新增第二條賽事流程。
+
+### 修正 1：房間逾時後，不得從「重新配對」離開原賽程
+
+實測踩到的路徑：聯賽出賽 → 房間確認倒數走完 → 主按鈕變「重新配對」→ 按下去
+**走的是一般配對**，配到隨機對手（實測「翠光學院」），而那一場聯賽仍掛著沒打。
+
+根因是「重新配對」對賽程一無所知：`requeueMatch()` 直接把整個 `matchmaking`
+換掉——**連 `fixtureAssignment` 一起丟掉** ⇒ 賽程身分就此消失。
+
+修法（**優先「重新建立同一 fixture 的進場流程」**，不是把入口拿掉）：
+
+| 位置 | 改動 |
+|---|---|
+| `profileStore.matchFixtureContext()`（新增） | 「這條流程綁在哪一場賽程」的**唯一判定點**。只認 `fixtureAssignment.origin.fixtureId` |
+| `profileStore.requeueMatch()` | 賽程區間內**直接拒絕**（回中文原因），一般配對進不來 |
+| `matchPrepAction.primaryActionFor()` | 賽程區間內，兩個「終局 → 退路」分支改給 `refixture`＝「重新進入本場賽事」 |
+| `matchPrepAction.flowStatusText()` | 逾時訊息改寫成「這是聯賽賽程，可以重新進入本場，**對手不會換**」 |
+| `useMatchFlow` | `refixture` → 呼叫**出賽用的同一支** `startFixtureMatch(fixtureId)` |
+| `MatchQueuePanel` | 失敗原因與狀態色改吃 `RETRY_ACTION_KEYS`，不再各自列舉字串 |
+
+⚠ **為什麼 `matchFixtureContext` 只看 `fixtureAssignment`、不看 `room.origin.kind`**：
+房間在賽程打完之後仍然是 fixture 來源，拿它判定會讓**已完賽**的場次也被當成
+「還能重新進入」。`fixtureAssignment` 則正好在 `completeFixtureMatch()` /
+`forfeitFixture()` 被清掉 ⇒ 它活著＝這場賽程還沒走到終局，正是要保護的區間。
+
+⚠ 沒有新流程：`startFixtureMatch()` 本來就有 `allowRelaunch`
+（Q3.5 為「逾時後重新進場」加的），對手與 seed 都由同一場賽程決定
+⇒ **不可能換到隨機對手**。
+
+### 修正 2：賽事頁給得出「返回比賽」
+
+舊行為：賽事頁只寫「你有一場進行中的對戰，請直接返回那一場」，**卻沒有按鈕**，
+玩家得繞 主畫面 → MOBA 磚 → 賽前配置 →「返回進行中的對戰」。
+
+修法：
+- `competitionView()` 新增 `live`：有沒有一場**還沒終局的賽程場次**（`{fixtureId, state}`）。
+  ⚠ 只回報**事實**，不判斷「能不能 resume」——那是 `resumeMatchSession()` 的職責。
+- `CompetitionScreen`：`live` 存在時，原本那顆「⚔️ 出賽」就地變成「⚔️ 返回比賽」
+  （**同一顆按鈕、同一個位置**，玩家的主要動作永遠在同一格），呼叫既有的
+  `resumeMatchSession()`。
+- `AppShell`：新增 `onResume={go("matchmaking")}`——與賽前頁那顆「返回進行中的對戰」
+  **同一個目的地**。⚠ `onPlay` 仍必須是 `lineup`，兩者不可對調（q35 §4c 在守這條）。
+
+### 瀏覽器實測（本機 dev server，第 32／38 天兩場賽程）
+
+| 驗收項 | 結果 |
+|---|---|
+| 逾時後不會配到隨機對手 | ✅ 主按鈕變「重新進入本場賽事」，狀態文字寫明對手不會換 |
+| 原 fixture 身分與對手不變 | ✅ 重進後仍是「黑曜劍士」，場次計數維持 4/14（打完才變 5/14） |
+| 進行中的 fixture 從賽事頁直接返回 | ✅「⚔️ 返回比賽」→ 直達過場（對手已確認）→ Ban/Pick |
+| resume 不回歸 | ✅ 賽前頁「返回進行中的對戰」仍在 |
+| completed 不回歸 | ✅ 打完寫回 5/14、實際對戰 4；賽前頁**退回一般「重新配對」**且按得動 |
+| forfeited 不回歸 | ✅ 棄權後 6/14、棄權 2；賽前頁同樣退回一般「重新配對」 |
+| 瀏覽器 console | 0 錯誤 |
+
+⚠ 實測中途視窗被最小化，Chrome 暫停 rAF ⇒ 對戰時鐘卡住。**這不是 bug**，
+但下次跑對戰實測要記得：讀 DOM 可以在背景，**跑模擬一定要視窗在前景**。
+
+### 驗證
+
+| 項目 | 結果 |
+|---|---|
+| `q1` / `q2a` / `q2b` / `q3` / `q35` | 93/93、112/112、92/92、90/90、**65/65** |
+| `check_matchmaking_o4` / `check_matchmaking_flow_acceptance` | 47/47、**97/97** |
+| `check_flow09` / `check_dash10` | exit 0 |
+| `regress` / `regress2` | 15/15、**8/8** |
+| `npm run build` | exit 0（`built in 17.21s`） |
+
+### 沒做（刻意）
+
+- 賽程場次逾時後**要不要乾脆不給退路**（直接判棄權或只能等下一天）——那是規則決策，
+  不是 hotfix 該定的。目前給的是最保守的一種：重進同一場，什麼都不變。
+- `requeueMatch()` 會連 `lastResult` / `settlements` 一起丟掉（它整個換掉 `matchmaking`）。
+  本輪沒動——那是既有行為，且已被上面的守門擋在賽程區間外。列入風險。
+- 賽事頁的 `live` 若對應到**不是今天焦點**的那一場，畫面仍然只顯示焦點場次的資訊
+  （按鈕會把玩家帶回真正進行中的那一場）。實務上兩者一致（推進會停在比賽日），
+  沒有做額外提示。
