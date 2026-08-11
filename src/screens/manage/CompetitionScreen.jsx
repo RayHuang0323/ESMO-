@@ -111,6 +111,32 @@ export default function CompetitionScreen({ onBack, onPlay }) {
               </div>
             </div>
             {isToday ? (
+              //  UI 修正：棄權是**不可逆**的（fixture 進 forfeited 就是終局，
+              //  Q3 的 issueFor 永遠不會再簽發）。舊版的二次確認就地把「棄權」
+              //  換成「確定棄權？」——**同一個座標**，手機上連點兩下就直接丟掉一場。
+              //  現在確認態換成一整列：「取消」放回原本棄權鈕的位置（誤觸的第二下
+              //  打在取消上），確定鍵移到左邊並寫明後果，且一定給得起退路。
+              confirmForfeit === focus.id ? (
+                <>
+                  <div style={{ fontSize: 11, color: GC.redL, marginBottom: 7, lineHeight: 1.45 }}>
+                    棄權後本場直接記為敗場，<b>不能再打、也不能還原</b>。確定嗎？
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      onClick={() => forfeit(focus.id)}
+                      style={{ flex: 1, background: GC.red, border: "none", borderRadius: 10, padding: "11px 0", color: "#fff", fontSize: 13, fontWeight: 900, cursor: "pointer" }}
+                    >
+                      確定棄權
+                    </button>
+                    <button
+                      onClick={() => setConfirmForfeit(null)}
+                      style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GC.line}`, borderRadius: 10, padding: "11px 20px", color: "#e5e7eb", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}
+                    >
+                      取消
+                    </button>
+                  </div>
+                </>
+              ) : (
               <div style={{ display: "flex", gap: 8 }}>
                 <button
                   onClick={() => play(focus.id)}
@@ -118,22 +144,14 @@ export default function CompetitionScreen({ onBack, onPlay }) {
                 >
                   ⚔️ 出賽
                 </button>
-                {confirmForfeit === focus.id ? (
-                  <button
-                    onClick={() => forfeit(focus.id)}
-                    style={{ background: GC.red, border: "none", borderRadius: 10, padding: "11px 14px", color: "#fff", fontSize: 12, fontWeight: 900, cursor: "pointer" }}
-                  >
-                    確定棄權？
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setConfirmForfeit(focus.id)}
-                    style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GC.line}`, borderRadius: 10, padding: "11px 14px", color: GC.gray, fontSize: 12, fontWeight: 800, cursor: "pointer" }}
-                  >
-                    棄權
-                  </button>
-                )}
+                <button
+                  onClick={() => setConfirmForfeit(focus.id)}
+                  style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GC.line}`, borderRadius: 10, padding: "11px 14px", color: GC.gray, fontSize: 12, fontWeight: 800, cursor: "pointer" }}
+                >
+                  棄權
+                </button>
               </div>
+              )
             ) : (
               <div style={{ fontSize: 11, color: GC.gray, textAlign: "center" }}>
                 推進天數到第 {nextDay} 天就能出賽（推進會自動停在比賽日）

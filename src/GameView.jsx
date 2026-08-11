@@ -16,6 +16,7 @@ import BattlePresentationLayer from "./battle/ui/BattlePresentationLayer.jsx";
 import { useGameStore } from "./useGameStore.js";
 import { useLocalServer } from "./useLocalServer.js";
 import { useProfileStore } from "./platform/profileStore.js";
+import { selectOpponentName, selectTeamName } from "./platform/matchTeamNames.js";
 import { LANES, PITS, FOUNTAIN, RIVER, WORLD_BOUNDS, mapNormX, presentationForObjective } from "./gameData.js";
 import { ROSTER } from "./data/roster.js";
 import { draftRoster } from "./battle/moba/draftRoster.js";
@@ -116,6 +117,12 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   //  刻意**不接受 props 傳入** ⇒ 前端無法覆寫 seed、對手或場次資料。
   //  沒有場次時（debug harness）launch 為 null，引擎退回本機 seed。
   const launch = useProfileStore((st) => st.matchmaking?.launch ?? null);
+  //  Q3.5-fix：對戰畫面的隊名。對手名來自本場的正式指派單（賽事＝賽程對手，
+  //  排隊＝配對到的對手），**不是** data/roster.js 的 AI 預設「赤焰軍團」。
+  //  訂閱的是字串原始值 ⇒ 名字一到就重繪（理由見 matchTeamNames.js 檔頭）。
+  //  沒有場次時回 null，交給 BattlePresentationLayer 的既有預設 ⇒ 行為不變。
+  const oppName = useProfileStore(selectOpponentName);
+  const teamName = useProfileStore(selectTeamName);
   // S29B3：開局重置相機為導播（預設 ON）；點英雄/拖曳的模式切換由 cameraStore 管理
   // S29B6：一併重置 pan（上一場拖到角落的視野不該帶進新的一場）
   const begin = () => {
@@ -172,7 +179,8 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
       {/* 3D：對局進行中相機由 cameraStore 管理（director/objectiveFocus/heroFocus/free）*/}
       <MobaRuntimeView3D quality={qualityId} roster={liveRoster} compactLabels={isMobile} />
       {/* Battle Presentation Layer：HUD / Timeline / 浮動大字 / TAB 記分板 / 終局畫面 */}
-      <BattlePresentationLayer roster={liveRoster} draft={draft} tactic={tactic} onContinue={onContinue} />
+      <BattlePresentationLayer roster={liveRoster} draft={draft} tactic={tactic} onContinue={onContinue}
+        blueName={teamName} redName={oppName} />
 
       {/* Start / Stop / 鏡頭切換 */}
       {!playing && !hud.over && (

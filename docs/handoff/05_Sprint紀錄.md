@@ -7242,3 +7242,101 @@ if (receipt?.ok && isFixtureSession(session)) get()._writeFixtureResultFromMatch
   沒有人把 `assignment.opponent.name` 串進去。玩家一定看得到，優先修。
 - 賽事畫面只有「下一場 ＋ 積分榜 ＋ 進度」，**沒有完整賽程表、沒有歷史賽果**（刻意）。
 - 沒有在正式站驗過（本輪只在本機 preview）。
+
+---
+
+## Milestone Q3.5-fix（2026-08-11）— 對手名稱收斂 ＋ 兩個 UI 修正
+
+上一節列的「已知缺口」第一項修掉了：對戰畫面不再寫死「赤焰軍團」。
+
+### ⚠ 先更正上一節的根因判斷（重要）
+
+上一節寫「來源是 `platformToMobaConfig.js` 的 `oppName ?? "赤焰軍團"`」——**那個判斷是錯的**。
+`platformToMobaConfig` 只被 `src/EsportsGame.jsx`（Legacy）呼叫，而 `main.jsx` 掛的是
+`AppShell`，`EsportsGame.jsx` 沒有任何人 import ⇒ **它根本不在玩家走的那條路上**。
+
+真正的來源是：`GameView` 從來沒把隊名傳給呈現層，於是
+`BattleHUD` / `BattleScoreboard` / `BattleEndScreen` 三個元件各自的**預設參數**
+（`redName = "赤焰軍團"`）生效了。同理，`LoadingScreen` 與 `MatchmakingScreen`
+直接讀 `data/roster.js` 的 `TEAMS.red.name`。
+**教訓：改 UI 前先確認那個檔在不在 `main.jsx` → `AppShell` 的可達路徑上**——
+這個 repo 有一整套同名的 Legacy 畫面，改錯邊會「改完沒反應」。
+
+### 做了什麼
+
+對手隊名**早就有正式來源**，只是沒接上，這一輪沒有新增任何資料：
+
+```
+competitionGateway.issueFor() → assignment.opponent.name
+  → createSession()           → session.opponent.name
+  → consumeLaunchToken()      → launch.opponentName      ← 進場時的權威值
+```
+
+新增 `src/platform/matchTeamNames.js`（唯一讀取點，兩個 selector，不含 fallback 以外的邏輯）：
+`selectOpponentName` 依 `launch → session → ticket.assignment` 取值，查不到回 `null`
+（**不編造名字**，由元件既有預設接手 ⇒ debug harness／單獨掛 GameView 行為不變）。
+`selectTeamName` 讀 `team.name`（開新局可改名），不是 `roster.js` 的預設值。
+
+接上的畫面（全部吃同一支 selector，**沒有第二份對應規則**）：
+
+| 畫面 | 改法 |
+|---|---|
+| 正式對戰 | `GameView` 讀值 → `BattlePresentationLayer` → HUD／記分板／終局畫面 |
+| Ban/Pick | 標題下加「vs 對手名」（全程可見）＋ 行動列與選角播報指名道姓 |
+| Loading | 雙方隊徽下的隊名 |
+| Matchmaking 過場 | 同上 |
+
+⚠ `BattlePresentationLayer` 內把 `null → undefined` 是**必要**的：子元件用預設參數，
+只有 `undefined` 會觸發預設，傳 `null` 會讓隊名變空白。
+
+⚠ Ban/Pick 的 AI 播報在 `deps: [step]` 的 effect 裡，**不能用外層閉包的 `oppName`**
+（會是舊值）⇒ 改成當場 `selectOpponentName(useProfileStore.getState())`。
+
+### 兩個 UI 修正（輕量 usability pass，非視覺重做）
+
+1. **棄權的二次確認會誤觸**（安全性，最重要）。舊版就地把「棄權」換成「確定棄權？」
+   ——**同一個座標**，手機連點兩下就丟掉一場，而 `forfeited` 是**終局、不可逆**。
+   現在確認態換成一整列：警告文字寫明後果，「取消」放回原本棄權鈕的位置
+   （誤觸的第二下打在取消上），「確定棄權」移到左邊。
+2. **主畫面「賽事」磚的標籤是「🌙」**，既不是狀態也不是提示。改成由既有
+   `competitionView()` 導出的「🔴 今日有賽事／下一場 第 N 天／本季已完賽／進入聯賽」。
+   畫面不自己判賽程規則，與 CompetitionScreen 同一個出口。
+
+⚠ 踩到的坑：`q35 §4b` 用「`DashboardScreen.jsx` 原始檔裡的獎盃 emoji 只能出現一次」
+來擋「多開一個賽事入口」。我在**註解**裡寫了一顆獎盃就被判紅。
+斷言的用意是對的，改註解即可——但這類「數原始字元」的斷言會被註解誤觸，記在這裡。
+
+### 驗證
+
+| 項目 | 結果 |
+|---|---|
+| `check_competition_q35` | **65/65** exit 0 |
+| `q1` / `q2a` / `q2b` / `q3` | 93/93、112/112、92/92、90/90 |
+| `regress` / `regress2` | 15/15、**8/8** |
+| `npm run build` | exit 0（`built in 9.59s`） |
+| 殘留寫死掃描 | live path 乾淨；剩下的都是元件預設參數、`roster.js` AI 名單、`mockGateway` 的合法對手名 |
+
+### ⚠ 未經瀏覽器實測（本輪 session 沒有瀏覽器工具，如實記錄）
+
+上面全部是 Node 斷言 ＋ build。**沒有任何一項在瀏覽器裡看過**。
+而 Q3.5 這一輪自己的教訓就是「Node 全綠證明不了 UI 可用」，所以以下必須人工走一遍：
+
+1. 賽事頁記下對手隊名 → Ban/Pick 標題「vs ○○」是同一個名字
+2. → Loading 紅方隊名同上 → 對戰中 HUD／TAB 記分板／終局畫面同上
+3. 長隊名（≥6 字）在手機寬度下不擠爆 Ban/Pick 標題列與 HUD
+4. 棄權：點「棄權」→ 出現警告列 →「取消」回得去；再點一次 →「確定棄權」才真的棄權
+5. 主畫面「賽事」磚的標籤文字與賽事頁的「今日／下一場」一致
+6. 沒有場次時單獨進對戰（`?debug=moba-runtime-battle`）仍顯示預設隊名、不空白
+
+### 沒做（刻意留下）
+
+- `useBattleFeed.js:46` 呼叫 `snapshotToBattleResult` 時**沒有傳 `meta.teamName/oppName`**
+  ⇒ `BattleResult.ctName` 仍是預設的「赤焰軍團」。那是**結算邊界**上的資料欄位，
+  本輪守住「不改 Battle gameplay／不碰結算」的界線沒動。玩家在 AppShell 流程裡
+  看不到它（MOBA 戰報頁 `MobaMatchReport` 只有 Legacy 用），但它會進賽季統計與
+  `analytics`。要修就是在那一行補 meta，**下一輪一併處理**。
+- 賽事頁仍然只有「下一場 ＋ 積分榜 ＋ 進度」：沒有完整賽程表、沒有歷史賽果、
+  沒有對手戰績。刻意留給後續。
+- 「不是比賽日」時畫面只寫「推進天數到第 N 天」，**沒有給按鈕**，玩家得自己退回主畫面。
+- 主畫面三顆模式磚的「👁 2041 / 0 / 0」是 Sprint 早期的假資料，賽事磚顯示 `👁 0`
+  看起來像「沒東西」。要處理就是整排一起處理，不單改一顆。
