@@ -154,7 +154,7 @@ Milestone O 起的資料契約都以「日後由伺服器接管」為前提設�
 長期架構規格：**`docs/design/賽季與賽事系統架構.md`**（Competition / Ranking / Shop）。
 規格於 2026-08-10 定案，Q1／Q2a／Q2b 於 2026-08-11 收尾並 fast-forward 併入
 main（`f21d18a`），已部署到正式站。**Q3**（出賽閘道／日曆停止／棄權）同日完成，
-在分支 `milestone-q3-competition`，`check_competition_q3` 90/90，**未 merge、未部署**。
+`check_competition_q3` 90/90，已 fast-forward 併入 main（**`98a439f`**）並部署。
 
 ⚠ **Q3 沒有 UI**：Store 動作齊了但沒有畫面，玩家在瀏覽器裡到不了賽事流程。
 `BattleResult.v2 → FixtureOutcome` 的換算也還沒寫。兩者都列在

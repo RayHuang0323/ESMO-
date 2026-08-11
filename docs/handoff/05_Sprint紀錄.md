@@ -7104,3 +7104,35 @@ Store 端只改了兩處既有行為，都是為了讓賽程房間走得通：
 
 - **沒有瀏覽器實測**（沒有 UI 可測）。所有 Q3 行為都只有 Node 層斷言。
 - 賽季跑完整 84 天的長流程沒有端到端跑過（驗證器只跑到前 20 天左右）。
+
+### 整合與部署（2026-08-11）
+
+**fast-forward，無 merge commit**：main `99eb3ec` → **`98a439f`**（超前 2、落後 0）。
+與上一輪同樣的處理：main 被 `ESMO-acceptance` worktree 佔用 ⇒ 先
+`git push origin milestone-q3-competition:main` 推遠端，再由該 worktree
+`merge --ff-only origin/main` 補齊本地。**主工作區 `ESMO` 全程未動**——
+仍是 `7bd858c`／`milestone-n-finance`／124 dirty，hero-proxy WIP 原封不動。
+
+| 驗證項（在整合後的 main 上） | 結果 |
+|---|---|
+| `check_competition_q1` / `q2a` / `q2b` / `q3` | **93 / 112 / 92 / 90**，全 exit 0 |
+| `npm run build` | exit 0，`built in 21.98s` |
+| Actions run 31469969268（`98a439f`） | **success** |
+| <https://rayhuang0323.github.io/ESMO-/> | **HTTP 200** |
+| 線上 bundle `assets/index-DkgAU4pq.js` | 200；**與本地 `98a439f` 建置 hash 逐字相同** |
+
+### ⚠ 一個方法論教訓（本輪自己踩的）
+
+`check_talent27` 第一次跑出 **43/44**。事後在乾淨樹上重跑，Q3 分支與 main
+baseline **都是 44/44 且逐條相同**。原因是那次執行期間**我正在編輯
+`profileStore.js`**，而 talent27 的 fan-out 子程序會在執行中 import 它。
+
+**規則：verifier 執行期間不得改動它會讀到的原始碼。** 否則拿到的紅燈既不能
+當回歸訊號、也不能當通過證據。⚠ 那次的失敗條目名稱沒有保留下來，所以
+「成因是邊跑邊改檔」是**推論**；能證明的只有「乾淨樹下無回歸」。
+
+### 下一輪：Q3.5（已排定，未開始）
+
+最小 Competition UI ＋ `BattleResult.v2 → FixtureOutcome` 接線，
+讓玩家真的能從賽程進場、完成比賽、回寫賽果與 Standings。
+**Q4 等 Q3.5 的瀏覽器流程通過後才開始。**
