@@ -6492,3 +6492,47 @@ node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,cs_stat_wiring_
   全部未處理；Calibration 維持 No-Go。
 - 完整規格：`review/cs-gameplay/CS_BOMB_RESULT_SEMANTICS_R11_SPEC.md`。
 - 本 Sprint 完成後 local commit，不再次 push。
+
+---
+
+## CS Flash Attribution Instrumentation R12（2026-08-11）
+
+### Checkpoint、Audit 與 Grill
+
+- Sprint 開始前將 R11 local commit `f3bfccd` push 到
+  `origin/release/moba-combat-closure`；本機／tracking ref／remote 完整 SHA 均為
+  `f3bfccdceb88b38b77002fc83cd66c8e25ad2b6d`。
+- Read-chain 結論：flash 是唯一 player utility 已真正進 gameplay；player smoke 只有視覺，
+  tactic smoke 才阻 LOS；HE/molly 沒有 damage/zone gameplay。
+- 短 Grill 封版：R12 只做 flash attribution instrumentation；固定 R1 16 seeds；`utilDmg`
+  unavailable；smoke 禁稱 prevented kills；same-roll counterfactual 不新增 RNG、不改 contract。
+
+### Verifier-side 實作
+
+- 新增 `tools/check_cs_flash_attribution_r12.mjs` 與 runner segment
+  `cs_flash_attribution_r12`；production source、contract、Store、Progress、UI 零修改。
+- Vite memory off/on variants 每 seed 各跑兩次；完整 trajectory、RNG stream 與 attribution
+  events 都需 exact。
+- Sidecar 同時追蹤 production-equivalent flash、no-grenade shadow 與來源 timers；firearm
+  `flash=3` 依 production assignment 語意覆寫，不誤保留先前 grenade attribution。
+- Duel counterfactual 重用同一顆既有 roll，只比較當下 `Pt`，不是重模擬另一條 trajectory。
+
+### Evidence 與判定
+
+- `CsFlashAttribution.v1`：
+  `265c9f3b79324e395004a726f996772bbba2b4033979ac6ec91600cfb68702a0`。
+- 16 seeds：804 flash purchases、196 throws、456 exposure writes、195 effective writes、
+  2,133 duels、62 grenade-only opportunities、60 marginal penalty opportunities、9 same-roll
+  local outcome flips。
+- Go gate non-zero grenade-only coverage 通過；沒有換 seed、擴大 treatment 或改 gameplay。
+- 判定：**Go / Complete**。player smoke integration 為後續獨立 Sprint；HE/molly 本輪 No-Go。
+
+### 驗證與環境事件
+
+- 第一次 13-segment runner：11/13 PASS；R10/build 皆 exit 134 process abort，無 assertion
+  failure，保留為 FAIL。
+- R10 direct 256 paired PASS、build direct PASS、focused runner 2/2 PASS；R3 direct 544
+  simulations PASS。最新相關 checkpoint 共 13/13 PASS。
+- R3 wiring/trajectory、R10 v3、R11 semantics 與 R1～R8 historical constants 全部 exact，
+  未 rebaseline。完整 triage 與限制見 `CS_FLASH_ATTRIBUTION_R12_SPEC.md`。
+- Calibration 維持 No-Go；本 Sprint 完成後 local commit，不 push。

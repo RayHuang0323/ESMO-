@@ -70,6 +70,7 @@ const SEGMENTS = [
   { id: "cs_result_metrics_r8", script: "tools/check_cs_result_metrics_r8.mjs", shape: /CS Result Metrics R8(?: Legacy Evidence)?: PASS/, note: "CS ADR overkill／result metrics migration" },
   { id: "cs_determinism_migration_r10", script: "tools/check_cs_determinism_migration_r10.mjs", shape: /CS Determinism Migration R10: PASS/, note: "CS defuse stale-state determinism migration" },
   { id: "cs_bomb_result_semantics_r11", script: "tools/check_cs_bomb_result_semantics_r11.mjs", shape: /CS Bomb Result Semantics R11: PASS/, note: "CS bomb round-end result semantics" },
+  { id: "cs_flash_attribution_r12", script: "tools/check_cs_flash_attribution_r12.mjs", shape: /CS Flash Attribution R12: PASS/, note: "CS flash source attribution／same-roll counterfactual" },
   //  ⚠ 下面五支在 flat 模式下的分母會變小（巢狀子驗證改由本 runner 各跑一次）。
   //    這裡填的是**該支自己健康時的完整數字**，不是遷就現況——所以
   //    experience26（§17 replay 容量，TD-19）與 runtime29（§29 順序公平性，TD-21）
