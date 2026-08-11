@@ -6725,3 +6725,44 @@ node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,cs_stat_wiring_
 - 建議 canonical 語意：**team-level coordination**；但目前尚未有可直接採用的既有 team-level
   read point，player-side wiring：**No-Go**。
 - 下一階段進入獨立 R16-B Learning Lifecycle / State Design；不在 R16-A 內改 gameplay。
+
+---
+
+## Sprint R16-B：CS Learning Lifecycle / State Design — 2026-08-11
+
+### 範圍與硬邊界
+
+- 只盤點 `learning` 的 canonical source、更新者、持久化與 CS runtime read-chain。
+- 不把 learning 加入 `combatSkill`、tactic、utility、單局 damage 或任何 balance formula。
+- 不修改 production gameplay、Store、Progress、`CsMatchResult.v1`、RNG 或 R1～R15 historical
+  constants/digests；不跑完整 16-stat calibration。
+
+### 真實資料鏈
+
+```text
+playerModel.STAT_DEF.learning
+  ├→ TRAINING_COURSES.meta → applyCourse → players[].stats.learning
+  ├→ talentDefinitions.team_3 → playerDerivedStats → derived.learning
+  └→ fpsRoster.STAT_L2S.learning → CS roster.lrn
+```
+
+- `profileStore.players[].stats` 是 base state；`training` 是課程進度；`growthLog.statsAfter`
+  是訓練完成後的實際紀錄。
+- `team_3` rank 3 pure probe = `learning +6`；`meta` course pure probe = `70→71.5`；原始
+  player input 不被 mutate。
+- `fpsOvr`／`STAT_GROUPS`／personality 是 display/definition，不是 simulator read。
+- `simulateFps`、`combatSkill`、tactic、utility、`CsMatchResult.v1` 均沒有 `lrn` consumer。
+  `csHistory` 也沒有 learning observation 或 adaptation state。
+
+### Evidence 與判定
+
+- `tools/check_cs_learning_lifecycle_r16b.mjs` 鎖定 7 個 source SHA，static RNG sites=21，
+  不 instantiate Store、不寫 localStorage、不建立新 RNG。
+- `CsLearningLifecycle.v1`：
+  `02561a4e3979a2869435d6e2edb4aac9be4e501fd88020729bc8f199755d979b`。
+- 根因是 **cross-match lifecycle / data-model design gap**：資料沒有遺失，但缺少 observation、
+  update、persistence 與 consumer contract。
+- R16-B lifecycle/state audit：**Go / PASS**；learning production wiring：**No-Go**。
+- 未來若要接線，必須另開 state-contract Sprint，先決定 state owner、跨場更新時機、消費端、
+  migration 與 history 相容性；不得默認成 duel modifier。
+- 完整規格：`review/cs-gameplay/CS_LEARNING_LIFECYCLE_R16B_SPEC.md`。
