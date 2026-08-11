@@ -16,7 +16,7 @@ const R16A_SPEC = resolve(ROOT, "review/cs-gameplay/CS_SYNERGY_SEMANTICS_R16A_SP
 const R16B_SPEC = resolve(ROOT, "review/cs-gameplay/CS_LEARNING_LIFECYCLE_R16B_SPEC.md");
 
 const SCHEMA = "CsCalibrationReadiness.v1";
-const SOURCE_SHA256 = "7622f87b8b389a504c19b887b860de791dbf8ea240e6ba57c424e159cb655c89";
+const SOURCE_SHA256 = "57476524ffa5693cb2cd00f28d73a1355e2dcf14ce0e018c9aa766febc706c29";
 const R3_REPORT_SHA256 = "95962ac5169748f4dbd601cf4d03fd774b98accb8fb8161fb2c0e261ddc6e348";
 const R2_REPORT_SHA256 = "9cf97c77d2111a06c220e6927107922ed1a7d8f89d5624638145f9d64f0102df";
 const R16A_SPEC_SHA256 = "222b936dfa73f261d4931662523e0a4cbac236dc5b98727f68c5962f24e19e21";
@@ -28,7 +28,7 @@ const RNG_CALL_SITES = 21;
 const SEED_SET_SHA256 = "52414f0e6b09ba72b9223b5e76b6ad9d859e8b8ea6fe77dcc2a2a08876a74c6d";
 
 // Locked after review; no CLI update/rebaseline path.
-const EXPECTED_READINESS_SHA256 = "e5838664749625863caa2b35fe6d4b999dbda7fd8c3600fee50523b5415573ad";
+const EXPECTED_READINESS_SHA256 = "34e67a22fd6f9e44463d55cd5f53c3f6d2c9281c6bb88abbbcb00062017b9213";
 
 const CATEGORY = Object.freeze({
   direct: "可直接進 calibration",

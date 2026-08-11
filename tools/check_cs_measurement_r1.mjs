@@ -13,7 +13,7 @@ import { createServer } from "vite";
 import { csR10LegacySource } from "./cs_r10_legacy_source.mjs";
 import { CS_R11_REPAIRED_SOURCE_SHA256, csR11R10Source } from "./cs_r11_legacy_source.mjs";
 import { CS_R13_PLAYER_SMOKE_SOURCE_SHA256, csR13R12Source } from "./cs_r13_legacy_source.mjs";
-import { csR15EvidenceSources as csR14EvidenceSources } from "./cs_r15_legacy_source.mjs";
+import { CS_R19_SEMANTIC_SOURCE_SHA256, csR15EvidenceSources as csR14EvidenceSources } from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -367,8 +367,8 @@ async function main() {
   const engineSourceSha256 = sha256(originalSource);
   const r14Sources = csR14EvidenceSources(originalSource);
   gate(r14Sources || [CAPTURED_ENGINE_SOURCE_SHA256, R10_ENGINE_SOURCE_SHA256, CS_R11_REPAIRED_SOURCE_SHA256,
-    CS_R13_PLAYER_SMOKE_SOURCE_SHA256].includes(engineSourceSha256), "SOURCE_PROVENANCE_MISMATCH",
-  `expected=${CAPTURED_ENGINE_SOURCE_SHA256}, ${R10_ENGINE_SOURCE_SHA256}, ${CS_R11_REPAIRED_SOURCE_SHA256}, or ${CS_R13_PLAYER_SMOKE_SOURCE_SHA256}\nactual=${engineSourceSha256}`);
+    CS_R13_PLAYER_SMOKE_SOURCE_SHA256, CS_R19_SEMANTIC_SOURCE_SHA256].includes(engineSourceSha256), "SOURCE_PROVENANCE_MISMATCH",
+  `expected=${CAPTURED_ENGINE_SOURCE_SHA256}, ${R10_ENGINE_SOURCE_SHA256}, ${CS_R11_REPAIRED_SOURCE_SHA256}, ${CS_R13_PLAYER_SMOKE_SOURCE_SHA256}, or ${CS_R19_SEMANTIC_SOURCE_SHA256}\nactual=${engineSourceSha256}`);
   const r12Source = r14Sources?.r12 ?? (engineSourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256
     ? csR13R12Source(originalSource) : originalSource);
   if (engineSourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256) {

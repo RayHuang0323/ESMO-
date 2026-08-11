@@ -1,5 +1,7 @@
 # R19 CS Reflex Read-Chain / Role Interaction Audit Report
 
+> 本文件保留 R19 semantic correction 前的 audit snapshot（source SHA `7622f87b...`）。production patch 後的最新 verifier、R18-A revalidation 與 checkpoint 以 `CS_REFLEX_SEMANTIC_CORRECTION_R19_REVALIDATION_REPORT.md` 為準；本文件不被覆寫，以保留歷史 evidence。
+
 ## 判定摘要
 
 - R19 audit / measurement：**Go / PASS**。

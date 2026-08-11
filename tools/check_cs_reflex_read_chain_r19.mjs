@@ -12,7 +12,7 @@ import { createServer } from "vite";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
 const FPS_MODULE_ID = "/src/battle/fps/EsportsFPS3D.jsx";
-const SOURCE_SHA256 = "7622f87b8b389a504c19b887b860de791dbf8ea240e6ba57c424e159cb655c89";
+const SOURCE_SHA256 = "57476524ffa5693cb2cd00f28d73a1355e2dcf14ce0e018c9aa766febc706c29";
 const EVENT_SCHEMA = "CsReflexReadChainAuditEvent.v1";
 const SUITE_SCHEMA = "CsReflexReadChainAuditSuite.v1";
 const R18A_SUITE_DIGEST = "104c38526b6ff0bbd9da41b89631d60bba298dce0fd45cee3a209253973a471b";
@@ -38,10 +38,10 @@ const SIGNATURE_MARKER = "function simulateFps(mapKey,tacticT,tacticCT,seed=42,r
 const SIGNATURE_REPLACEMENT = SIGNATURE_MARKER;
 const PERS_MARKER = "function persStat(p,key){let v=(p.stats&&p.stats[key])||50;const pr=p.personality&&PERSONALITY[p.personality];if(pr){if(pr.boost.includes(key))v+=PERS_BOOST;if(pr.nerf.includes(key))v-=PERS_NERF;}return clamp(v,1,99);}";
 const PERS_REPLACEMENT = "function persStat(p,key){let v=(p.stats&&p.stats[key])||50;const pr=p.personality&&PERSONALITY[p.personality];if(pr){if(pr.boost.includes(key))v+=PERS_BOOST;if(pr.nerf.includes(key))v-=PERS_NERF;}const effective=clamp(v,1,99);if(key===\"rxn\")globalThis.__CS_R19_AUDIT__?.record(\"persStatRxn\",{playerId:p.id,role:p.role,personality:p.personality,rawRxn:Number(p.stats?.rxn??50),effectiveRxn:effective});return effective;}";
-const POS_MARKER = "function posSkill(p){const prof=POS_PROFILE[p.role]||POS_PROFILE.rifler;const s=p.stats||{};let t=0;prof.forEach((k,i)=>t+=(s[k]||50)*(5-i));return t/15;}";
-const POS_REPLACEMENT = "function posSkill(p){const prof=POS_PROFILE[p.role]||POS_PROFILE.rifler;const s=p.stats||{};let t=0;prof.forEach((k,i)=>t+=(s[k]||50)*(5-i));const result=t/15;const rxnIndex=prof.indexOf(\"rxn\");globalThis.__CS_R19_AUDIT__?.record(\"posSkill\",{playerId:p.id,role:p.role,profile:prof.join(\",\"),rawRxn:Number(s.rxn??50),rxnWeight:rxnIndex<0?0:5-rxnIndex,result});return result;}";
-const S_MARKER = "const S=k=>persStat(p,k);";
-const S_REPLACEMENT = "let __r19AdjustedRxn=null;const S=k=>{const value=persStat(p,k);if(k===\"rxn\"){__r19AdjustedRxn=value;globalThis.__CS_R19_AUDIT__?.record(\"combatSkillRxnRead\",{playerId:p.id,role:p.role,adjustedRxn:value});}return value;};";
+const POS_MARKER = "function posSkill(p,rawReflex=Number((p.stats||{}).rxn??50)){const prof=POS_PROFILE[p.role]||POS_PROFILE.rifler;const s=p.stats||{};let t=0;prof.forEach((k,i)=>t+=(k===\"rxn\"?rawReflex:(s[k]||50))*(5-i));return t/15;}";
+const POS_REPLACEMENT = "function posSkill(p,rawReflex=Number((p.stats||{}).rxn??50)){const prof=POS_PROFILE[p.role]||POS_PROFILE.rifler;const s=p.stats||{};let t=0;prof.forEach((k,i)=>t+=(k===\"rxn\"?rawReflex:(s[k]||50))*(5-i));const result=t/15;const rxnIndex=prof.indexOf(\"rxn\");globalThis.__CS_R19_AUDIT__?.record(\"posSkill\",{playerId:p.id,role:p.role,profile:prof.join(\",\"),rawRxn:Number(rawReflex),rxnWeight:rxnIndex<0?0:5-rxnIndex,result});return result;}";
+const S_MARKER = "const S=k=>k===\"rxn\"?effectiveReflex:persStat(p,k);";
+const S_REPLACEMENT = "let __r19AdjustedRxn=null;const S=k=>{const value=k===\"rxn\"?effectiveReflex:persStat(p,k);if(k===\"rxn\"){__r19AdjustedRxn=value;globalThis.__CS_R19_AUDIT__?.record(\"combatSkillRxnRead\",{playerId:p.id,role:p.role,adjustedRxn:value});}return value;};";
 const COMBAT_RETURN_MARKER = "return v*formMul(p);";
 const COMBAT_RETURN_REPLACEMENT = "const __r19Form=formMul(p),__r19Result=v*__r19Form;globalThis.__CS_R19_AUDIT__?.record(\"combatSkill\",{playerId:p.id,role:p.role,rawRxn:Number(p.stats?.rxn??50),adjustedRxn:__r19AdjustedRxn,gunClass:cls||\"unknown\",roleFit:role,mechanics:mech,weapon:wpn,baseBeforeForm:v,formMul:__r19Form,result:__r19Result,holding:Boolean(opts?.holding),entry:Boolean(opts?.entry),lurk:Boolean(opts?.lurk),lastAlive:Boolean(opts?.lastAlive),lowHP:Boolean(opts?.lowHP)});return __r19Result;";
 const AGGR_MARKER = "function aggr(p){const s=p.stats;if(!s)return 0.6;const base=(persStat(p,\"cou\")*0.5+persStat(p,\"str\")*0.22+persStat(p,\"apm\")*0.16+persStat(p,\"pos\")*0.12)/100;const pr=p.personality&&PERSONALITY[p.personality];return clamp(base+(ROLE_AGGR[p.role]||0)+(pr?pr.aggro:0),0.2,1.15);}";
@@ -221,10 +221,13 @@ async function main() {
   const source = readFileSync(FPS_FILE, "utf8"); const sourceSha256 = sha256(source);
   gate(sourceSha256 === SOURCE_SHA256, "SOURCE_SHA256", sourceSha256); gate(randTokens(source).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT", String(randTokens(source).length));
   gate(FIXED_SEEDS.length === 16, "SEED_COUNT"); gate(ROLE_RXN_POS_WEIGHT.entry === 4 && ROLE_RXN_POS_WEIGHT.rifler === 4 && ROLE_RXN_POS_WEIGHT.awp === 1 && ROLE_RXN_POS_WEIGHT.lurker === 0 && ROLE_RXN_POS_WEIGHT.igl === 0, "ROLE_RXN_PROFILE");
+  gate(source.includes("const rawReflex=Number(s.rxn??50),effectiveReflex=persStat(p,\"rxn\");"), "EFFECTIVE_REFLEX_ALIAS");
+  gate(source.includes("const role=posSkill(p,rawReflex);"), "RAW_ROLE_FIT_WIRING");
+  gate(source.includes("effectiveReflex*0.45") && source.includes("effectiveReflex*0.28") && source.includes("effectiveReflex*0.02"), "EFFECTIVE_COMBAT_WIRING");
   gate(!AGGR_MARKER.includes("rxn"), "AGGR_RXN_READ");
   console.log(`schema: ${EVENT_SCHEMA}`); console.log(`seed generation version: ${SEED_GENERATION_VERSION}`); console.log(`seedSetSha256: ${SEED_SET_SHA256}`); console.log(`engineSourceSha256: ${sourceSha256}`); console.log(`rand() call sites: ${randTokens(source).length}`);
   console.log(`R18-A repair evidence: ${R18A_SUITE_DIGEST}`);
-  console.log(`static read points: adapter derived stats.rxn -> raw ovr/display; posSkill raw; combatSkill persStat(mechanics/weapon/options) + posSkill; aggr no rxn`);
+  console.log(`static read points: adapter derived stats.rxn -> raw ovr/display; posSkill(rawReflex); combatSkill effectiveReflex alias for mechanics/weapon/entry + raw role-fit; aggr no rxn`);
 
   const api = await loadApi(source); const map = api.TACTICS_DB[MAP_KEY]; const tTactic = freeze(clone(map?.t?.find((item) => item.id === T_TACTIC_ID))); const ctTactic = freeze(clone(map?.ct?.find((item) => item.id === CT_TACTIC_ID))); const baselineRoster = freeze(clone(api.ROSTER));
   gate(tTactic?.id === T_TACTIC_ID && ctTactic?.id === CT_TACTIC_ID, "TACTIC_MISSING"); const targets = baselineRoster.filter((player) => player.side === "t"); gate(targets.length === 5, "TARGET_COUNT"); gate(targets.every((player) => TARGET_ROLES.includes(player.role)), "TARGET_ROLES");

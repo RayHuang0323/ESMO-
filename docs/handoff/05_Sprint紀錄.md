@@ -6852,6 +6852,30 @@ R3 verifier 的總模擬數為 544，static RNG call sites 維持 21。
 
 ---
 
+## Sprint R19：Reflex Semantic Correction → R18-A Revalidation — 2026-08-12
+
+### Semantic patch
+
+- `src/battle/fps/EsportsFPS3D.jsx` 只做 raw/effective Reflex boundary correction：`rawReflex` 保留 role-fit，`effectiveReflex` 統一 live combat read。
+- `posSkill` 明確接收 rawReflex；`combatSkill` 的 mechanics、weapon、entry contribution 明確使用 effectiveReflex。
+- 未改 balance constant、role mapping、RNG、contract 或其他 15 項 stat。
+
+### Evidence / verification
+
+- R19 focused verifier：176 simulations，suite digest `a2b0db3aa6357ba9d551217634e6426f726d1028d0d60428d7544bd6c2f34030`。
+- R18-A focused sweep：low / baseline / high、5 roles、16 fixed seeds、target-player-only KPI，共 528 simulations；suite digest `fa483388aaeb348fc9552381655f2da8ff192a90d736a39838962159bfc43fec`。
+- accepted focused regression 第二次 digest 完全相同；monotonicity `0/15`、saturation `0/5`。
+- historical checkpoint gate：14/14 PASS；production build PASS；R1～R18 historical evidence 保留，未 rebaseline。
+- 新 checkpoint digest：`c83f2b2efc58454b1c6ce86c857cac262af929b3ad7959a4841731a0a00dae73`。
+
+### 判定
+
+- semantic correction：**Go**。
+- Reflex calibration：**Revise / No-Go**；rifler / lurker / IGL 的 non-monotonic outcome 與 deterministic path amplification 仍在，不能以調參掩蓋。
+- 不提出 production calibration patch；local commit，**不 push**。
+
+---
+
 ## Sprint R19：CS Reflex Read-Chain / Role Interaction Audit — 2026-08-13
 
 ### Scope / guard

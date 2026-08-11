@@ -60,3 +60,14 @@ R19 不修改此公式；只測量其對 rxn 的實際暴露與下游 outcome �
 - 若 direct `combatSkill` / `Pt` 單調，但 result KPI 反轉，必須標示為 state / threshold path evidence，不得直接調 balance 修正。
 - 不提出 production patch，除非 raw/adjusted 語意選擇、role-fit 語意與 replay/digest 影響先獲得獨立決策。
 - 不處理其他 15 項 stat、synergy、learning 或全面 balance calibration。
+
+## R19 semantic correction revalidation
+
+R19 production semantic boundary 已封版並以最小 patch 實作：
+
+- `rawReflex = stats.rxn` 是 raw role-fit 基礎值。
+- `effectiveReflex = persStat(p, "rxn")` 是 live combat contribution。
+- `posSkill(p, rawReflex)` 只讀 raw role-fit reflex。
+- `combatSkill` mechanics / weapon / entry contribution 只讀 effectiveReflex alias；其他 stat 維持既有 effective read。
+
+本段不改寫前段 audit snapshot，也不把目前 `vis` 或任何單一 outcome KPI 宣稱為完整 calibration evidence。新的 R19 / R18-A 結果與 checkpoint 由 `CS_REFLEX_SEMANTIC_CORRECTION_R19_REVALIDATION_REPORT.md` 保存。

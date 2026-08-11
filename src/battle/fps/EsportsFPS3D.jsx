@@ -255,17 +255,18 @@ const POS_PROFILE={
 // FPS 全域素質權重（取自遊戲 FPS_WEIGHTS）
 const FPS_W={acc:1.4,rxn:1.3,str:1.3,pos:1.2,cou:1.1,vis:1.1,apm:1.0,tac:1.0,foc:1.0,dec:0.9,com:0.9,adp:0.8,res:0.8,coo:0.8,led:0.7,lrn:0.5};
 const _mechKeys=["acc","rxn","apm","pos","foc","str"],_mechW=_mechKeys.reduce((a,k)=>a+FPS_W[k],0);
-function posSkill(p){const prof=POS_PROFILE[p.role]||POS_PROFILE.rifler;const s=p.stats||{};let t=0;prof.forEach((k,i)=>t+=(s[k]||50)*(5-i));return t/15;} // 與遊戲 posFit 一致
+function posSkill(p,rawReflex=Number((p.stats||{}).rxn??50)){const prof=POS_PROFILE[p.role]||POS_PROFILE.rifler;const s=p.stats||{};let t=0;prof.forEach((k,i)=>t+=(k==="rxn"?rawReflex:(s[k]||50))*(5-i));return t/15;} // role-fit / positioning aptitude；rxn 保留 rawReflex
 // 對槍實力：機械對槍核心（FPS 權重）+ 武器契合 + 角色定位契合（5 項關鍵素質）+ 情境（呼應 fpsRoles 戰術）
 function combatSkill(p,opts){const s=p.stats;if(!s)return 80;const cls=GUNS[p.gun]?.cls;
-  const S=k=>persStat(p,k); // 個性調整後的有效素質
+  const rawReflex=Number(s.rxn??50),effectiveReflex=persStat(p,"rxn");
+  const S=k=>k==="rxn"?effectiveReflex:persStat(p,k); // live combat 使用 effectiveReflex；其他素質維持既有 effective read
   let mech=0;_mechKeys.forEach(k=>mech+=S(k)*FPS_W[k]);mech/=_mechW;
-  const wpn=cls==="狙擊"?(S("acc")*0.45+S("foc")*0.3+S("pos")*0.25):cls==="手槍"?(S("acc")*0.55+S("rxn")*0.45):(S("acc")*0.42+S("apm")*0.3+S("rxn")*0.28);
-  const role=posSkill(p); // 定位契合（用該位置關鍵素質）
+  const wpn=cls==="狙擊"?(S("acc")*0.45+S("foc")*0.3+S("pos")*0.25):cls==="手槍"?(S("acc")*0.55+effectiveReflex*0.45):(S("acc")*0.42+S("apm")*0.3+effectiveReflex*0.28);
+  const role=posSkill(p,rawReflex); // raw role-fit；live combat 另用 effectiveReflex
   let v=mech*0.5+wpn*0.28+role*0.14+S("vis")*0.04+S("dec")*0.04;
   if(opts){
     if(opts.holding)v+=S("pos")*0.05+S("foc")*0.05;            // 狙擊手/防守：主動架點
-    if(opts.entry)v+=S("cou")*0.06+S("rxn")*0.02;              // 突破手：首發突進
+    if(opts.entry)v+=S("cou")*0.06+effectiveReflex*0.02;        // 突破手：首發突進；effectiveReflex
     if(opts.lastAlive)v+=(S("str")-76)*0.22+(S("res")-76)*0.12; // 殘局（clutch=抗壓 + 韌性）
     if(opts.lurk)v+=(S("vis")-76)*0.05+(S("pos")-76)*0.04;     // 自由人：埋伏陰人
     if(opts.lowHP)v-=(100-S("str"))*0.05;

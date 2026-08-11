@@ -17,6 +17,7 @@ export {
   normalizeCsSource,
 } from "./cs_r14_legacy_source.mjs";
 export const CS_R15_MOLLY_SOURCE_SHA256 = "7622f87b8b389a504c19b887b860de791dbf8ea240e6ba57c424e159cb655c89";
+export const CS_R19_SEMANTIC_SOURCE_SHA256 = "57476524ffa5693cb2cd00f28d73a1355e2dcf14ce0e018c9aa766febc706c29";
 
 const HE_CONSTANT_ANCHOR = "const HE_R=12,HE_MAX_DAMAGE=80,HE_ARMOR_SCALE=0.72;";
 const MOLLY_CONSTANT_BLOCK = `${HE_CONSTANT_ANCHOR}
@@ -61,8 +62,39 @@ export function csR15R14Source(input) {
   return source;
 }
 
+// R19 changes only the reflex semantic boundary. Legacy evidence adapters
+// must view the pre-R19 source so R1-R15 historical gameplay digests remain
+// byte-stable; the live source hash is still checked by each current gate.
+export function csR19R15Source(input) {
+  let source = normalizeCsSource(input);
+  if (sha256(source) !== CS_R19_SEMANTIC_SOURCE_SHA256) return source;
+  source = replaceExact(source,
+    'function posSkill(p,rawReflex=Number((p.stats||{}).rxn??50)){const prof=POS_PROFILE[p.role]||POS_PROFILE.rifler;const s=p.stats||{};let t=0;prof.forEach((k,i)=>t+=(k==="rxn"?rawReflex:(s[k]||50))*(5-i));return t/15;} // role-fit / positioning aptitude；rxn 保留 rawReflex',
+    'function posSkill(p){const prof=POS_PROFILE[p.role]||POS_PROFILE.rifler;const s=p.stats||{};let t=0;prof.forEach((k,i)=>t+=(s[k]||50)*(5-i));return t/15;} // 與遊戲 posFit 一致',
+    "POS_SEMANTIC_BOUNDARY");
+  source = replaceExact(source,
+    '  const rawReflex=Number(s.rxn??50),effectiveReflex=persStat(p,"rxn");\n  const S=k=>k==="rxn"?effectiveReflex:persStat(p,k); // live combat 使用 effectiveReflex；其他素質維持既有 effective read',
+    '  const S=k=>persStat(p,k); // 個性調整後的有效素質',
+    "COMBAT_S_READ");
+  source = replaceExact(source,
+    '  const wpn=cls==="狙擊"?(S("acc")*0.45+S("foc")*0.3+S("pos")*0.25):cls==="手槍"?(S("acc")*0.55+effectiveReflex*0.45):(S("acc")*0.42+S("apm")*0.3+effectiveReflex*0.28);',
+    '  const wpn=cls==="狙擊"?(S("acc")*0.45+S("foc")*0.3+S("pos")*0.25):cls==="手槍"?(S("acc")*0.55+S("rxn")*0.45):(S("acc")*0.42+S("apm")*0.3+S("rxn")*0.28);',
+    "WEAPON_REFLEX_READ");
+  source = replaceExact(source,
+    '  const role=posSkill(p,rawReflex); // raw role-fit；live combat 另用 effectiveReflex',
+    '  const role=posSkill(p); // 定位契合（用該位置關鍵素質）',
+    "POS_CALL");
+  source = replaceExact(source,
+    '    if(opts.entry)v+=S("cou")*0.06+effectiveReflex*0.02;        // 突破手：首發突進；effectiveReflex',
+    '    if(opts.entry)v+=S("cou")*0.06+S("rxn")*0.02;              // 突破手：首發突進',
+    "ENTRY_REFLEX_READ");
+  return source;
+}
+
 export function csR15EvidenceSources(input) {
-  const r15 = normalizeCsSource(input);
+  const normalized = normalizeCsSource(input);
+  const r15 = sha256(normalized) === CS_R19_SEMANTIC_SOURCE_SHA256
+    ? csR19R15Source(normalized) : normalized;
   if (sha256(r15) !== CS_R15_MOLLY_SOURCE_SHA256) return null;
   const r14 = csR15R14Source(r15);
   const actualR14 = sha256(r14);

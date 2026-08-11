@@ -12,7 +12,7 @@ import { createServer } from "vite";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
 const FPS_MODULE_ID = "/src/battle/fps/EsportsFPS3D.jsx";
-const SOURCE_SHA256 = "7622f87b8b389a504c19b887b860de791dbf8ea240e6ba57c424e159cb655c89";
+const SOURCE_SHA256 = "57476524ffa5693cb2cd00f28d73a1355e2dcf14ce0e018c9aa766febc706c29";
 const EVENT_SCHEMA = "CsReflexCalibrationRepairEvent.v1";
 const SUITE_SCHEMA = "CsReflexCalibrationRepairSuite.v1";
 const SEED_GENERATION_VERSION = "CsMeasurementSeedSet.v1";
