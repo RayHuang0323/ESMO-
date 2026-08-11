@@ -6802,3 +6802,27 @@ R3 verifier 的總模擬數為 544，static RNG call sites 維持 21。
 - Synergy 與 Learning 維持 R16 語意結論，不在 R17 接入 gameplay。
 
 完整規格：`review/cs-gameplay/CS_CALIBRATION_READINESS_R17_SPEC.md`。
+
+---
+
+## Sprint R18-B：CS MapAware Semantics / Read-Point Design — 2026-08-12
+
+### Scope / guard
+
+- R18-A Reflex Calibration Pilot 結論維持 **Revise**；不提出 production calibration patch，也不擴大 sweep。
+- R18-B 只做 CS `mapAware` 產品語意、既有 simulator read-point 盤點與 focused evidence/verifier 設計。
+- 不修改 `src/` production gameplay、`fpsRoster.js`、contract/store、RNG 或 `tools/verify.mjs` aggregate gate；不 rebaseline R1～R17。
+
+### Semantics / selected read point
+
+- `mapAware` 定義為 actor 對 enemy / teammate spatial context、LOS / utility boundary、rotation/reposition 與 bomb-state 的解讀，並且要有可歸因的 tactical decision consequence；不是 visibility scalar，也不是目前 `mapAware -> vis` adapter 的完成證明。
+- 選定最小 read point：既有 `simulateFps` combat pair admission 的 memory-only `CsMapAwareSpatialReadPoint.v1`，側錄 pair distance、wall/smoke LOS、`visibleCandidate` 與雙方 teammate context；不改原本 pair gate 或 gameplay。
+- utility danger、rotation timing、bomb-state 保留為後續候選，避免本輪擴大成新 AI 系統。
+
+### Evidence / verdict
+
+- `tools/check_cs_mapaware_semantics_r18b.mjs` PASS：固定 16 seeds、`inferno / t_aexec / c_std`、off/on/repeated-on 共 48 simulations；source SHA 固定、RNG call sites `21`、instrumentation result exact、event deterministic、input immutable。
+- `CsMapAwareSpatialReadPoint.v1` 共 `52,351` read points；visible candidates `5,603`；wall-blocked `41,969`；smoke-blocked `18,248`；T/CT teammate context `49,005 / 49,991`。
+- Future production wiring：目前 **No-Go**；後續狀態為 **Revise**，須先完成 R19 read-chain / role audit，再證明 actor-specific observation-to-decision consequence 才能重新評估 Go。
+- 完整規格與 evidence：`review/cs-gameplay/CS_MAPAWARE_SEMANTICS_R18B_SPEC.md`、`review/cs-gameplay/CS_MAPAWARE_SEMANTICS_R18B_REPORT.md`。
+- R18-B local commit；不 push。
