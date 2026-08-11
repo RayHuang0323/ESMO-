@@ -11,6 +11,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 import { csR10LegacySource } from "./cs_r10_legacy_source.mjs";
+import { CS_R11_REPAIRED_SOURCE_SHA256, csR11R10Source } from "./cs_r11_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -28,7 +29,7 @@ const FIXED_SEEDS = Object.freeze([
 ]);
 const EXPECTED_SEED_SET_SHA256 = "52414f0e6b09ba72b9223b5e76b6ad9d859e8b8ea6fe77dcc2a2a08876a74c6d";
 const CAPTURED_ENGINE_SOURCE_SHA256 = "870678267543c8e502fac55c7a91a656a135f31fdfb0d673adc30c91c4d8f47b";
-const CURRENT_ENGINE_SOURCE_SHA256 = "ba3305ea6cd92fe06df5ee3fd4eb3ca47e1385910672b1ec111f804da0859b8d";
+const R10_ENGINE_SOURCE_SHA256 = "ba3305ea6cd92fe06df5ee3fd4eb3ca47e1385910672b1ec111f804da0859b8d";
 
 // Intentionally no --update/--rebaseline path. The first verifier run prints the
 // candidate; a human must inspect it and replace this literal explicitly.
@@ -362,10 +363,12 @@ async function main() {
 
   const originalSource = readFileSync(FPS_FILE, "utf8");
   const engineSourceSha256 = sha256(originalSource);
-  gate([CAPTURED_ENGINE_SOURCE_SHA256, CURRENT_ENGINE_SOURCE_SHA256].includes(engineSourceSha256), "SOURCE_PROVENANCE_MISMATCH",
-    `expected=${CAPTURED_ENGINE_SOURCE_SHA256} or ${CURRENT_ENGINE_SOURCE_SHA256}\nactual=${engineSourceSha256}`);
-  const historicalSource = engineSourceSha256 === CURRENT_ENGINE_SOURCE_SHA256
-    ? csR10LegacySource(originalSource) : originalSource;
+  gate([CAPTURED_ENGINE_SOURCE_SHA256, R10_ENGINE_SOURCE_SHA256, CS_R11_REPAIRED_SOURCE_SHA256].includes(engineSourceSha256), "SOURCE_PROVENANCE_MISMATCH",
+    `expected=${CAPTURED_ENGINE_SOURCE_SHA256}, ${R10_ENGINE_SOURCE_SHA256}, or ${CS_R11_REPAIRED_SOURCE_SHA256}\nactual=${engineSourceSha256}`);
+  const r10Source = engineSourceSha256 === CS_R11_REPAIRED_SOURCE_SHA256
+    ? csR11R10Source(originalSource) : originalSource;
+  const historicalSource = [R10_ENGINE_SOURCE_SHA256, CS_R11_REPAIRED_SOURCE_SHA256].includes(engineSourceSha256)
+    ? csR10LegacySource(r10Source) : originalSource;
   gate(occurrences(historicalSource, RETURN_MARKER) === 1, "RETURN_MARKER_COUNT");
   gate(occurrences(historicalSource, EXPORT_MARKER) === 1, "EXPORT_MARKER_COUNT");
 

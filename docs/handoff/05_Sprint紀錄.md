@@ -6435,3 +6435,60 @@ Go with hard gates：score/winner、RNG consumption 與非 defuse gameplay 必�
 - 唯一 RNG 差異：`clutch / 4200255727`，`2005 -> 2004`，`idle_aim_jitter`，`ct3`，R12/sec64/call2005；確認為正確提早結束回合跳過既有 tick RNG。
 - R1-R8 以 `tools/cs_r10_legacy_source.mjs` memory legacy view 保留歷史 evidence，不 rebaseline。
 - per-round/subsystem RNG deferred；Calibration、balance、how:bomb、utility、learning、synergy 不在 scope。
+
+---
+
+## CS Bomb Result Semantics Repair R11（2026-08-11）
+
+### Checkpoint、Audit 與 Grill
+
+- Sprint 開始前先將 R10 local commit `638c28a` push 到既有
+  `origin/release/moba-combat-closure`；`ls-remote` 完整 SHA 為
+  `638c28a41a319d061b4d63edb450f5b05276c8d2`。
+- Read-chain 確認為 `simulateFps roundEnd → roundHist → buildMatchResult.rounds →
+  CsMatchResult.v1.summaryEvents → live RoundOverlay/ScoreBar/audio + CsResultScreen`。
+- 根因只有兩個 result annotation 過載：post-plant CT 全滅與 post-plant round clock 到期
+  都寫成 `how:"bomb"`；真正 C4 引爆已有獨立 `c4t<=0` branch。
+- 短 Grill 封版：沿用 `bomb/defuse/elim/time`；不增 contract 欄位；既有 csHistory 不回算；
+  不建立 `CsGameplayDigest.v4`，改建獨立 `CsBombResultSemantics.v1`。
+
+### Verifier-first 與 production 修法
+
+- 新 verifier 先在 R10 production 上用 memory candidate 重現：固定 16 seeds 中，14 個
+  post-plant CT elimination 與 1 個 post-plant timeout 被誤標 `bomb`；真引爆只有 1 個。
+  Pair 的 RNG 16/16 相同、非 how gameplay differences = 0，最後以
+  `PRODUCTION_SEMANTICS_NOT_REPAIRED` 如預期紅燈。
+- Production 只改兩行：
+  - `aliveCT.length===0` → `how:"elim"`；
+  - `sec>=114` → `how:"time"`。
+- 條件、優先序、winner、score、economy、player state、frame timing、RNG call site/count/value
+  全部未改；UI 已消費既有 enum，因此不需 UI rewrite，也未順手改 gameplay rule。
+
+### Evidence 與歷史相容
+
+- R11 source SHA：`b26ec0947c0b569401ec35f85f02e5efae7a4aaf7baa4381d27587ae235c3482`。
+- `CsBombResultSemantics.v1`：
+  `64a16a36092976b2e433fa5e276e03f2987ec35508b658bf5ec17c41b032ed28`。
+- repaired semantics coverage：`bomb=1 / defuse=4 / elim=89 / time=77`；`bomb` 全部 `c4t<=0`。
+- 新增 exact R11→R10 memory adapter；R1-R8 再串既有 R10→historical adapter，舊 constants
+  永久保留。初版 adapter 因修改行 LF／歷史 CRLF 導致 raw SHA mismatch，停線後改由相鄰
+  historical EOL 精確還原，成功重建 R10 source SHA `ba3305…b8d`，沒有放寬 hash gate。
+
+### 驗證與邊界
+
+```text
+node tools/verify.mjs --only=cs_determinism_migration_r10 --timeout=900000
+```
+
+- R10 256 paired historical evidence：1/1 PASS（328s）。
+
+```text
+node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,cs_stat_wiring_r3,cs_clutch_r4,cs_retreat_r5,cs_defuse_r6,cs_result_metrics_r8,cs_bomb_result_semantics_r11,progress25,build --timeout=900000
+```
+
+- 最終相關 runner：11/11 PASS（237s）；production build PASS。
+- `CsMatchResult.v1` schema、Store、Progress、reward、runtime contract、既有 csHistory 零修改。
+- Utility、learning、synergy、balance/calibration、post-plant clock gameplay 與 RNG architecture
+  全部未處理；Calibration 維持 No-Go。
+- 完整規格：`review/cs-gameplay/CS_BOMB_RESULT_SEMANTICS_R11_SPEC.md`。
+- 本 Sprint 完成後 local commit，不再次 push。

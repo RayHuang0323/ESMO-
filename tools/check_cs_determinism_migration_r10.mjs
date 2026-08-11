@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
+import { CS_R11_REPAIRED_SOURCE_SHA256, csR11R10Source } from "./cs_r11_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -381,10 +382,17 @@ async function main() {
 
   const originalSource = readFileSync(FPS_FILE, "utf8");
   const sourceSha256 = sha256(originalSource);
-  const sourceStage = sourceSha256 === REPAIRED_SOURCE_SHA256 ? "repaired"
+  const sourceStage = sourceSha256 === CS_R11_REPAIRED_SOURCE_SHA256 ? "r11-repaired"
+    : sourceSha256 === REPAIRED_SOURCE_SHA256 ? "repaired"
     : sourceSha256 === LEGACY_SOURCE_SHA256 ? "legacy" : null;
   gate(sourceStage, "SOURCE_PROVENANCE_MISMATCH",
-    `legacy=${LEGACY_SOURCE_SHA256}\nrepaired=${REPAIRED_SOURCE_SHA256}\nactual=${sourceSha256}`);
+    `legacy=${LEGACY_SOURCE_SHA256}\nrepaired=${REPAIRED_SOURCE_SHA256}\nr11=${CS_R11_REPAIRED_SOURCE_SHA256}\nactual=${sourceSha256}`);
+  const r10EvidenceSource = sourceSha256 === CS_R11_REPAIRED_SOURCE_SHA256
+    ? csR11R10Source(originalSource) : originalSource;
+  if (sourceStage === "r11-repaired") {
+    gate(sha256(r10EvidenceSource) === REPAIRED_SOURCE_SHA256, "R11_R10_ADAPTER_MISMATCH",
+      `expected=${REPAIRED_SOURCE_SHA256}\nactual=${sha256(r10EvidenceSource)}`);
+  }
   gate(randTokens(originalSource).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT",
     `expected=${EXPECTED_RAND_CALLS} actual=${randTokens(originalSource).length}`);
 
@@ -412,7 +420,7 @@ async function main() {
           if (!variant) return null;
           transformSeen += 1;
           gate(code === originalSource, "VITE_SOURCE_MISMATCH");
-          const transformed = transformSource(code, variant);
+          const transformed = transformSource(r10EvidenceSource, variant);
           transformVariants.push({ variant, randTokens: randTokens(transformed) });
           return { code: transformed, map: null };
         },

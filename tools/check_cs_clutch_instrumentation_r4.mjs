@@ -9,6 +9,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 import { csR10LegacySource } from "./cs_r10_legacy_source.mjs";
+import { CS_R11_REPAIRED_SOURCE_SHA256, csR11R10Source } from "./cs_r11_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -24,7 +25,7 @@ const FIXED_SEEDS = Object.freeze([
 ]);
 const EXPECTED_SEED_SET_SHA256 = "52414f0e6b09ba72b9223b5e76b6ad9d859e8b8ea6fe77dcc2a2a08876a74c6d";
 const CAPTURED_ENGINE_SOURCE_SHA256 = "870678267543c8e502fac55c7a91a656a135f31fdfb0d673adc30c91c4d8f47b";
-const CURRENT_ENGINE_SOURCE_SHA256 = "ba3305ea6cd92fe06df5ee3fd4eb3ca47e1385910672b1ec111f804da0859b8d";
+const R10_ENGINE_SOURCE_SHA256 = "ba3305ea6cd92fe06df5ee3fd4eb3ca47e1385910672b1ec111f804da0859b8d";
 const EXPECTED_RAND_CALLS = 21;
 const LEGACY_EXPECTED_EVENT_SUITE_V1 = "1a0e78c1073dea522dffa52e87aab4f094f4116a778d4cfe7a9fe9127aedc6d3";
 const EXPECTED_EVENT_SUITE_V2 = "e3a32ac8990a1bd866936827701352cb4fdd8c665b1984e9eb2fd3942d6d0b0d";
@@ -434,10 +435,12 @@ async function main() {
     "No update, rebaseline, seed, treatment, or calibration flags are supported.");
   const originalSource = readFileSync(FPS_FILE, "utf8");
   const sourceSha256 = sha256(originalSource);
-  gate([CAPTURED_ENGINE_SOURCE_SHA256, CURRENT_ENGINE_SOURCE_SHA256].includes(sourceSha256), "SOURCE_PROVENANCE_MISMATCH",
-    `expected=${CAPTURED_ENGINE_SOURCE_SHA256} or ${CURRENT_ENGINE_SOURCE_SHA256}\nactual=${sourceSha256}`);
-  const historicalSource = sourceSha256 === CURRENT_ENGINE_SOURCE_SHA256
-    ? csR10LegacySource(originalSource) : originalSource;
+  gate([CAPTURED_ENGINE_SOURCE_SHA256, R10_ENGINE_SOURCE_SHA256, CS_R11_REPAIRED_SOURCE_SHA256].includes(sourceSha256), "SOURCE_PROVENANCE_MISMATCH",
+    `expected=${CAPTURED_ENGINE_SOURCE_SHA256}, ${R10_ENGINE_SOURCE_SHA256}, or ${CS_R11_REPAIRED_SOURCE_SHA256}\nactual=${sourceSha256}`);
+  const r10Source = sourceSha256 === CS_R11_REPAIRED_SOURCE_SHA256
+    ? csR11R10Source(originalSource) : originalSource;
+  const historicalSource = [R10_ENGINE_SOURCE_SHA256, CS_R11_REPAIRED_SOURCE_SHA256].includes(sourceSha256)
+    ? csR10LegacySource(r10Source) : originalSource;
   for (const [name, marker] of TRANSFORMS) {
     gate(occurrences(historicalSource, marker) === 1, "MARKER_COUNT", `name=${name}`);
   }

@@ -574,8 +574,8 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
       }
       if(!roundEnd){
         if(aliveT.length===0&&!planted)roundEnd={winner:"ct",how:"elim"};
-        else if(aliveCT.length===0)roundEnd={winner:"t",how:planted?"bomb":"elim"};
-        else if(sec>=114)roundEnd={winner:planted?"t":"ct",how:planted?"bomb":"time"};
+        else if(aliveCT.length===0)roundEnd={winner:"t",how:"elim"};
+        else if(sec>=114)roundEnd={winner:planted?"t":"ct",how:"time"};
       }
       frames.push({fi,ts:rnd*120+sec,rnd,roundSec:sec,target,planted,buyP,c4t:c4t!==null?Math.ceil(c4t):null,c4pos:c4pos?{...c4pos}:null,
         players:ps.map(p=>({...p,pos:{...p.pos},prevPos:{...p.prevPos}})),
