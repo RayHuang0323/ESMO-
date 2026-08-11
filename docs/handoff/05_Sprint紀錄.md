@@ -6964,3 +6964,143 @@ O 系列六支 match verifier 全綠是本輪的重點——Q1 改的是**共用
 **仍未驗證**：完全沒有瀏覽器實測。已部署不等於已驗收——`profileStore.load()`
 的 `withIdentity()` 會在每次載入既有存檔時執行，正式站上舊存檔的實際載入行為
 **沒有任何人用瀏覽器看過**。這是目前最該補的一項。
+
+**（後續補記，2026-08-11）** 上面這一項已用**正式站真實瀏覽器**驗過：
+以 Q1 前的程式（`9b40df2`）產生一份真實舊存檔灌進正式站，reload 後隊名／tag／
+資金／天數／週次／賽季／5 名選手全部保留、console 零錯誤；指派訓練觸發存檔後
+`team.id` = `team:31180251`、`seasonSeed` = `1848900820` 落盤，與 Node 層預期值
+逐字相同。用的是專案自製的零相依 CDP（獨立 profile 的 headless Chrome），
+沒有碰到任何人的真實存檔。
+
+---
+
+## Milestone Q3（2026-08-11）— 出賽 / 日曆 / 棄權
+
+Competition MVP 第四個 Milestone。規格：`docs/design/賽季與賽事系統架構.md` §9。
+分支 `milestone-q3-competition`（基準 `origin/main` = `99eb3ec`）。Q4 未開始。
+
+### 做了什麼
+
+| # | 項目 | 檔案 |
+|---|---|---|
+| 1 | 棄權賽果（第三種來源 `forfeited`） | `contracts/fixtureOutcome.js`（改） |
+| 2 | 來源分計把棄權與模擬分開 | `competition/standings.js`（改） |
+| 3 | 賽程出賽閘道 | `competition/competitionGateway.js`（新） |
+| 4 | 賽季日曆純 reducer | `competition/seasonState.js`（新） |
+| 5 | Store 整合（賽季 slice、`advanceDay` 停止、出賽／收尾／棄權） | `platform/profileStore.js`（改） |
+| 6 | 驗證器 | `tools/check_competition_q3.mjs`（新，90 條） |
+
+### 棄權定案（本輪由 Ray 拍板）
+
+棄權**產生正式 `FixtureOutcome`**，`resultSource: "forfeited"`，有勝方有敗方。
+另一個選項是讓 Standings 自己去讀 `fixture.status`——**那等於第二份勝敗真相**，
+積分榜要同時看賽果陣列與賽程狀態，不一致時沒人說得出聽誰的。
+
+不偽造任何 Combat 資料，而且是**建立面與驗證面雙向擋**：
+
+```
+score 必須 0:0 · duration 必須 0 · seed 必須 0 · 不得有 highlights · 不得有 simulatorVersion
+```
+
+`seed: 0` 是刻意的：棄權沒有任何亂數過程，非零種子會暗示一個不存在的隨機決定。
+副作用是棄權對淨勝分零貢獻——勝方拿 3 分但不拿分差，這是正確的。
+
+Analytics 分界照 Q2b 的結構延伸：`competitionOutcomes()` 收棄權（正式敗場），
+`combatOutcomes()` **排除**棄權（一場沒發生過的比賽會直接汙染場均擊殺的分母）。
+
+⚠ `standings.js` 原本是 `if (engine) ... else simulated`，棄權加進來會被那個
+`else` **謊報成模擬**。已改成三路分計並加 `forfeitedGames`，§1o 用行為釘住。
+
+### ⚠ 與規格的一處刻意偏離：停在哪一天
+
+規格 §9 的算術舉例是「第 3 天有比賽 ⇒ `advanceDay(7)` 只推 2 天」，也就是停在
+比賽日的**前一天**。照那樣做，玩家永遠走不到比賽日，比賽也就永遠打不了。
+
+改採：**走得進比賽日，但比賽沒收尾就走不出去**。
+
+```
+advanceDay(30) 從第 1 天 → 實際推 5 天，停在第 6 天（比賽日）
+比賽沒收尾時再 advanceDay(5) → 推進 0 天，時鐘完全不動
+出賽收尾（或棄權）後 → 推得動，停在下一個玩家賽事日
+```
+
+規格 D15 否決過「照推並自動判棄權」（玩家會因手滑丟掉整季），所以
+**棄權不會自動發生**，要玩家自己按 `forfeitFixture()`。唯一的自動棄權是
+`sweepOverdue()`——把「日期已過卻還沒收尾」的場次補判掉，用途是讓
+「過去不存在未完成場次」這個不變式成立（舊存檔、日後的賽季快進）。
+
+### 沒有建立第二條比賽流程
+
+`competitionGateway` 與 `matchmaking/mockGateway` 的關係是**兩個伺服器實作對同
+一份契約**，不是兩條管線：
+
+```
+issueFor()            → contracts/matchmaking.js  createAssignment
+openRoomForFixture()  → contracts/matchRoom.js    createRoom
+openSessionForFixture() → contracts/matchSession.js createSession
+之後 poll / 確認 / launch / 結算 / resume 完全共用既有 action
+```
+
+§6d 有原始碼斷言：閘道不得自己出現 `roomId:` / `sessionId:` / `launchToken`，
+§6e 斷言不得自己組 `assignmentId`。中離重連沿用 O6 既有的 `resumeSession`，
+**Q3 沒有為賽事新增任何重連機制**。
+
+Store 端只改了兩處既有行為，都是為了讓賽程房間走得通：
+
+1. `pollMatchRoom` 對 `origin.kind === "fixture"` 的房間**跳過票券檢查**——
+   賽程房間依契約 `ticketId` 為 null，那道檢查會一開房就把它關掉。
+2. `openMatchRoom` 認得賽程房間並沿用，不重開（重開會產生第二張進場令牌，
+   正好是 O6 要擋的事）。
+
+### 一個 Q1／Q2a 之間的接縫
+
+`originFromFixture()`（Q1）寫在 `Fixture.v1`（Q2a）定型之前，欄位名對不上：
+契約用 `id` / `gameMode`，來源函式讀 `fixtureId` / `mode`。轉接收在
+`competitionGateway.fixtureOriginInput()` **一處**，沒有散到呼叫端。
+
+### 驗證
+
+| 項目 | 結果 |
+|---|---|
+| `check_competition_q3`（新增） | **90/90** exit 0 |
+| `check_competition_q1` / `q2a` / `q2b` | 93／112／92，全 exit 0 |
+| `finance_n` / `n2` / `n3` | 32／35／40 |
+| O 系列六支 match verifier | 35／47／45／36／48／27 |
+| `recruit_o` / `progress25` | 40／34 |
+| 兩支驗收包 | `acceptance_fix_p1` 81、`matchmaking_flow` 97 |
+| `regress` / `regress2` | 結束率 15/15、節奏門檻 **8/8** |
+| `npm run build` | exit 0，`built in 22.00s` |
+
+**驗證器自身做過突變測試**（避免「一次就全綠」其實是斷言沒作用）：
+把 `combatOutcomes` 改成也吃棄權 ⇒ §1n 變紅；把「停在比賽日」的判斷關掉 ⇒
+§3a/§3b/§3c/§3g 四條變紅；還原後回到 90/90。
+
+### ⚠ 修改到既有 verifier 斷言的地方（規格要求單獨列出）
+
+規格 §9 預告「`advanceDay` 是全案唯一會修改既有 verifier 斷言的地方」。
+**實際結果與預告不同，兩個方向都要講清楚**：
+
+- **`finance_n` 系列一條都沒改，而且全綠。** 因為停止只在「存檔已有賽季」時
+  才生效，而那些驗證器建立的存檔 `competition` 是 null ⇒ 走的是與 Q3 之前
+  **逐值相同**的路徑。§5a 用行為把這件事釘住。
+- **真正被改的是 `check_competition_q2b` 的兩條**：
+  §1k「只有兩種來源」→ 三種（新增 `forfeited`）；
+  §4t 來源分佈 → 三種相加才等於出賽數。兩條都是棄權定案的直接後果。
+
+### 未做（刻意）
+
+- **完全沒有 UI。** Q3 做的是管線與 Store 動作（`ensureCompetitionSeason`／
+  `startFixtureMatch`／`completeFixtureMatch`／`forfeitFixture`／`competitionView`），
+  **沒有任何畫面**。⇒ **玩家目前在瀏覽器裡到不了賽事流程**，只有 Node 呼叫得到。
+  賽事畫面要接在哪一頁、長什麼樣，是還沒決定的產品問題。
+- **跨賽季換季沒做**（`meta.season` 前進時重建賽季並封存上一季）——那需要
+  `FinalStandings`，是 Q4。目前 `ensureCompetitionSeason()` 只建當前賽季。
+- **`completeFixtureMatch` 需要呼叫端把 `BattleResult.v2` 換算成 winner/score/
+  duration**。換算函式**還沒寫**，因為賽後結算的接點在 UI 層，而 UI 沒做。
+  ⇒ 玩家實打的賽果目前只能由測試手動餵。這是 Q3 最大的缺口。
+- 不做 Q4／Shop／MMR／CS 賽事；沒碰 Battle Engine gameplay（§6c/§6g/§6h 釘住）。
+
+### 未驗證
+
+- **沒有瀏覽器實測**（沒有 UI 可測）。所有 Q3 行為都只有 Node 層斷言。
+- 賽季跑完整 84 天的長流程沒有端到端跑過（驗證器只跑到前 20 天左右）。

@@ -149,12 +149,16 @@ S28–S29 與 Milestone A–N 之後的實際進度以本節與
 Milestone O 起的資料契約都以「日後由伺服器接管」為前提設計
 （決定性冪等鍵、交易單自帶快照、純 reducer 可重播）。
 
-### 賽季與賽事系統（2026-08-10 規劃完成；Q1／Q2a／Q2b **已部署**）
+### 賽季與賽事系統（Q1／Q2a／Q2b 已部署；Q3 已完成未部署）
 
 長期架構規格：**`docs/design/賽季與賽事系統架構.md`**（Competition / Ranking / Shop）。
 規格於 2026-08-10 定案，Q1／Q2a／Q2b 於 2026-08-11 收尾並 fast-forward 併入
-main（`f21d18a`），已部署到正式站（詳見 `05_Sprint紀錄.md` 最後一節）。
-**Q3／Q4 尚未開始。**
+main（`f21d18a`），已部署到正式站。**Q3**（出賽閘道／日曆停止／棄權）同日完成，
+在分支 `milestone-q3-competition`，`check_competition_q3` 90/90，**未 merge、未部署**。
+
+⚠ **Q3 沒有 UI**：Store 動作齊了但沒有畫面，玩家在瀏覽器裡到不了賽事流程。
+`BattleResult.v2 → FixtureOutcome` 的換算也還沒寫。兩者都列在
+`08_目前待辦與風險.md` 的 Q3 待辦最前面。**Q4 尚未開始。**
 
 已定案的 18 項決策摘要：
 
