@@ -6849,3 +6849,25 @@ R3 verifier 的總模擬數為 544，static RNG call sites 維持 21。
 - R18-A calibration：**Revise**；`0/15` monotonicity checks、`0/5` saturation signals，沒有 production calibration patch。
 - 修正後仍有 role-specific non-monotonic / direction anomaly，因此 R19 仍有必要；R19 只列為後續待辦，本 Sprint 不執行。
 - local commit；不 push。
+
+---
+
+## Sprint R19：CS Reflex Read-Chain / Role Interaction Audit — 2026-08-13
+
+### Scope / guard
+
+- 接受 R18-A Verifier Repair = Go；R18-A Calibration 維持 Revise，R18 checkpoint 不 push。
+- R19 只做 read-chain / role interaction audit；不修改 production、RNG、stat formula、role mapping、balance constant，不 rebaseline R1–R18，不處理其他 15 項 stat。
+
+### Measurement
+
+- 新增 `tools/check_cs_reflex_read_chain_r19.mjs`，以 memory-only transform 追蹤 `persStatRxn`、`posSkill`、`combatSkillRxnRead`、`combatSkill`、`aggr`、`Pt` 與 clamp。
+- 使用 R18-A 修正版 evidence reference `104c38526b6ff0bbd9da41b89631d60bba298dce0fd45cee3a209253973a471b`；同一 source SHA、16 seeds、`inferno / t_aexec / c_std`，R19 read-chain sweep 為 176 simulations。
+- R19 suite digest：`37db1597d443b399c4c02d0e47023aa8730b5c714e572933bbcad11a46e9ddda`；static RNG sites=21；production source 未修改。
+
+### Root cause / verdict
+
+- `posSkill` raw 與 `combatSkill` personality-adjusted read 混用；entry/rifler/awp/lurker/igl 的 rxn read exposure 不同，存在 role-dependent multiple read / double-counting risk。
+- direct `combatSkill` / `Pt` 對 rxn 仍單調，`aggr` 不讀 rxn；R18-A final KPI 反轉由 deterministic Pt/kill/alive/pair/economy state path 放大，不能用 balance 調參掩蓋。
+- R19 audit：**Go / PASS**；production semantic correction：**Revise**；production calibration：**No-Go**。若要 production patch，下一輪先短 Grill。
+- local commit；不 push。
