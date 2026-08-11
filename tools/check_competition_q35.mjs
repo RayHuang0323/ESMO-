@@ -364,8 +364,15 @@ const settle = (br, matchId) => settleMatchThroughSession({
   ck("5d) 回寫只在賽程來源時觸發", /isFixtureSession\(session\)/.test(ps));
   ck("5e) Store 不自己換座標（換算在 bridge）",
     /fixtureOutcomeInputFrom/.test(ps) && !/score:\s*\{\s*a:\s*result/.test(ps));
-  ck("5f) **沒有 Q4 的東西**（FinalStandings／獎金）",
-    !/FinalStandings|settleCompetitionAward/.test(bridge + screen + ps));
+  //  ⚠ 2026-08-12（Q4）：本條原本是「**沒有** Q4 的東西（FinalStandings／獎金）」。
+  //    Q4 已經實作，`profileStore` 依規格要呼叫 `settleCompetitionAwardInState`
+  //    ⇒ 原斷言必然紅。保留這條守的**真正邊界**：
+  //    ① 賽果回寫（bridge）與賽事畫面完全不碰名次獎金
+  //    ② Store 只**委派**發獎，不自己算獎金金額（金額表在 economyConfig）
+  ck("5f) 賽果回寫與畫面不碰名次獎金；Store 只委派、不自己算金額",
+    !/FinalStandings|settleCompetitionAward|prizeForRank/.test(bridge + screen) &&
+    /settleCompetitionAwardInState/.test(ps) &&
+    !/prizeForRank|COMPETITION_PRIZE/.test(ps));
   ck("5g) 沒有 Shop／MMR", !/tokens|entitlement|mmr\b/i.test(bridge + screen));
 }
 

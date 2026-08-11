@@ -32,7 +32,8 @@ import {
 import { buildRegularSeason, SEASON_DAYS } from "./regularSeason.js";
 import { simulateFixture, simSeedFor } from "./simulateFixture.js";
 import { AI_TEAMS } from "./aiTeams.js";
-import { computeStandings } from "./standings.js";
+import { computeStandings, outcomeSourceMix, TIEBREAKERS } from "./standings.js";
+import { createFinalStandings } from "../contracts/finalStandings.js";
 
 export const SEASON_STATE_VERSION = "SeasonState.v1";
 export { SEASON_DAYS };
@@ -280,6 +281,62 @@ export function applyForfeit(state, { fixtureId, loser = null, reason = "玩家�
   const t = transitionFixture(f, FIXTURE_STATES.forfeited, { reason });
   if (!t.ok) return { ok: false, state, errors: t.errors };
   return { ok: true, state: withOutcome(withFixture(state, t.fixture), made.outcome), outcome: made.outcome, errors: [] };
+}
+
+// ── Milestone Q4：賽季封存 ────────────────────────────────────────────────
+
+/**
+ * 這個賽季可以封存了嗎。
+ *
+ * 條件只有一條：**每一場都收尾了**（completed / forfeited）。
+ * 刻意**不用「第 84 天到了」**當條件——賽程日與 `meta.days` 之間隔著
+ * `startDay` 錨點（Q3.5 修的那件事），拿天數判會在舊存檔上判錯；
+ * 而「場次全部收尾」是賽季真正結束的定義，與時鐘怎麼走無關。
+ *
+ * @returns {{ok:boolean, sealed:boolean, remaining:number, reason:string|null}}
+ */
+export function canSealSeason(state) {
+  if (!state?.schema) return { ok: false, sealed: false, remaining: 0, reason: "目前沒有賽季" };
+  if (state.final) return { ok: false, sealed: true, remaining: 0, reason: "這個賽季已經封存過了" };
+  const fx = state.fixtures ?? [];
+  const remaining = fx.filter((f) => !isFixtureTerminal(f)).length;
+  if (remaining > 0) {
+    return { ok: false, sealed: false, remaining, reason: `還有 ${remaining} 場沒有結果，賽季還沒結束` };
+  }
+  return { ok: true, sealed: false, remaining: 0, reason: null };
+}
+
+/**
+ * 封存賽季：把**當下推導出來的** Standings 凍結成不可變的 `FinalStandings.v1`。
+ *
+ * ⚠ 一個賽季只能封存一次（D11）。已封存還再呼叫 ⇒ 回既有那一份、不覆寫。
+ *   這與 `applyCompleted` 拒絕覆寫賽果是同一條紀律：**寫進去的就不會再變**。
+ *
+ * ⚠ 本檔**不發獎金**。獎金是經濟層的事（`economy/competitionAward.js`），
+ *   賽季狀態不碰錢——否則錢就有第四個入口了。
+ *
+ * @param {object} state
+ * @param {number} sealedAtDay  封存當下的遊戲日（`meta.days`）
+ */
+export function applySealSeason(state, sealedAtDay) {
+  const can = canSealSeason(state);
+  if (!can.ok) {
+    //  已封存不算失敗——回既有那一份，讓呼叫端能安全重試
+    if (can.sealed) return { ok: true, state, final: state.final, alreadySealed: true, errors: [] };
+    return { ok: false, state, final: null, alreadySealed: false, errors: [{ code: "not_finished", message: can.reason }] };
+  }
+  const standings = seasonStandings(state);
+  const made = createFinalStandings({
+    standings,
+    competition: state.competition,
+    stageId: state.stage?.id ?? null,
+    sealedAtDay,
+    tiebreakers: TIEBREAKERS,
+    sourceMix: outcomeSourceMix(state.outcomes ?? []),
+    playerTeamId: state.playerTeamId ?? null,
+  });
+  if (!made.ok) return { ok: false, state, final: null, alreadySealed: false, errors: made.errors };
+  return { ok: true, state: { ...state, final: made.final }, final: made.final, alreadySealed: false, errors: [] };
 }
 
 /** 積分榜（唯一入口；畫面不得自己算）。 */

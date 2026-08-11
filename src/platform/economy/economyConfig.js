@@ -90,6 +90,31 @@ export const DEFAULT_SCENARIO = "standard";
 
 export const scenarioById = (id) => SCENARIOS[id] ?? SCENARIOS[DEFAULT_SCENARIO];
 
+/**
+ * 賽季名次獎金（Milestone Q4）。單位：萬（與 `funds` 同單位）。
+ *
+ * 規模刻意保守——冠軍約等於**兩週**的六人薪資（週薪上限 8 萬／人）。
+ * 理由：R8 記錄了「費率仍是第一版基準、待轉會與合約系統完成後再校正」，
+ * 這時候放一筆會翻盤的獎金，等於在還沒校正的天平上再加一顆砝碼。
+ * 名次獎金要成為主要收入來源，應該是**校正費率之後**的產品決策。
+ *
+ * ⚠ 只列前四名。第五名以後**沒有獎金**（不是 0 元的一列，是根本不入帳、
+ *   帳本上不會出現一筆 $0 的交易）。
+ */
+export const COMPETITION_PRIZE = Object.freeze({
+  currency: "funds",
+  //  rank → 金額（萬）。查表用 rank，不是陣列索引 ⇒ 名次含義一眼看得懂。
+  byRank: Object.freeze({ 1: 80, 2: 45, 3: 25, 4: 12 }),
+});
+
+/** 名次 → 獎金（沒有獎金的名次回 0）。**查獎金的唯一出口。** */
+export const prizeForRank = (rank, table = COMPETITION_PRIZE) => {
+  const r = Math.trunc(Number(rank));
+  if (!Number.isFinite(r) || r < 1) return 0;
+  const v = Number(table?.byRank?.[r]);
+  return Number.isFinite(v) && v > 0 ? v : 0;
+};
+
 /** 資金警告門檻。 */
 export const WARN = Object.freeze({
   //  現金預測的展望週數（Dashboard 顯示未來幾週）

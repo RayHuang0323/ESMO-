@@ -61,7 +61,10 @@ import {
   createSeasonState, advanceSeasonDays, applyLaunch, applyCompleted, applyForfeit,
   fixtureById, nextPlayerFixture, pendingPlayerFixtureOn, seasonStandings,
   seasonProgress, participantsOf, absoluteDayOf, isFixtureLaunched,
+  canSealSeason, applySealSeason,
 } from "./competition/seasonState.js";
+//  Milestone Q4：名次獎金。錢的第三個入口（唯一新增的一個），純函式在 economy/。
+import { settleCompetitionAwardInState } from "./economy/competitionAward.js";
 import {
   issueFor as issueCompetitionMatch, openRoomForFixture, openSessionForFixture,
   isCompetitionAssignment, fixtureIdOfAssignment,
@@ -193,6 +196,7 @@ const DEFAULT = {
   competition: null,
   schemaVersion: PROFILE_SCHEMA_VERSION,
   processedMatchTransactions: {},// S25：冪等帳本 {transactionId: receipt}（防重複發獎）
+  processedCompetitionAwards: {},// Q4：名次獎金冪等帳本 {finalStandingsId: receipt}
   inbox: [
     { id: 1, type: "match",   from: "聯賽官方",         subject: "第 1 週賽程已公布",   text: "第 1 週賽程已公布，請確認出賽名單。", time: "剛剛", unread: true },
     { id: 2, type: "recruit", from: "球探部",           subject: "3 名新星進入觀察名單", text: "球探回報：3 名新星進入觀察名單，可前往招募查看。", time: "1 小時前", unread: true },
@@ -318,6 +322,13 @@ const load = () => {
       processedMatchTransactions:
         saved.processedMatchTransactions && typeof saved.processedMatchTransactions === "object"
           ? saved.processedMatchTransactions
+          : {},
+      //  Milestone Q4 migration：舊存檔沒有名次獎金帳本 ⇒ 空。
+      //  ⚠ 空帳本代表「還沒發過」，而舊存檔本來就沒有封存過的賽季
+      //    （`competition.final` 也不存在）⇒ 不會憑空補發，也不會漏發。
+      processedCompetitionAwards:
+        saved.processedCompetitionAwards && typeof saved.processedCompetitionAwards === "object"
+          ? saved.processedCompetitionAwards
           : {},
       // Sprint10 的 sponsors[] 假名單已退場；舊存檔沒有 activeSponsor → null（尚未簽約）
       activeSponsor: saved.activeSponsor ?? DEFAULT.activeSponsor,
@@ -611,6 +622,8 @@ export const useProfileStore = create((set, get) => ({
       //    否則記憶體與存檔會不一致（重整後那些補判會消失又重算一次）。
       get().save();
     }
+    //  Q4：AI 場次模擬完可能正好是本季最後一場 ⇒ 這裡也要試著封存。
+    get()._sealSeasonIfFinished();
     return { daysAdvanced: res.daysAdvanced, stoppedBy: res.stoppedBy };
   },
   /**
@@ -689,7 +702,9 @@ export const useProfileStore = create((set, get) => ({
       matchmaking: { ...(get().matchmaking ?? {}), fixtureAssignment: null },
     });
     get().save();
-    return { ok: true, outcome: res.outcome, errors: [] };
+    //  Q4：這可能就是本季最後一場（玩家親自打完的那一場）
+    const sealed = get()._sealSeasonIfFinished();
+    return { ok: true, outcome: res.outcome, sealed, errors: [] };
   },
   /**
    * 棄權。**玩家主動按的**——推進日曆不會自動幫他棄權（規格 D15）。
@@ -705,7 +720,47 @@ export const useProfileStore = create((set, get) => ({
       matchmaking: { ...(get().matchmaking ?? {}), fixtureAssignment: null },
     });
     get().save();
-    return { ok: true, outcome: res.outcome, errors: [] };
+    //  Q4：棄權也是一種收尾 ⇒ 最後一場被棄權掉，賽季一樣結束了
+    const sealed = get()._sealSeasonIfFinished();
+    return { ok: true, outcome: res.outcome, sealed, errors: [] };
+  },
+  /**
+   * 內部：賽季每一場都收尾了 ⇒ **封存最終名次，並發名次獎金**（Milestone Q4）。
+   *
+   * ── 為什麼掛在這裡，而不是等玩家點某顆按鈕 ────────────────────────────
+   * 與 S25「結算掛在引擎終局、不掛在 Result 畫面掛載」同一個理由：
+   * 玩家就算再也不打開賽事頁，名次與獎金也不該漏掉。
+   *
+   * ⚠ 呼叫點有三個（推進天數、玩家打完、棄權），因為「最後一場」可能由這三者
+   *   任一造成。**冪等由封存與獎金各自的帳本保證**，呼叫幾次都一樣。
+   * ⚠ 順序固定：先封存（產生不可變名次）→ 再依那份名次發獎。
+   *   反過來就得先算一次名次才知道發多少，等於有兩份名次。
+   */
+  _sealSeasonIfFinished() {
+    const state = get().competition;
+    if (!state?.schema) return { sealed: false, final: null, award: null };
+
+    const can = canSealSeason(state);
+    if (!can.ok && !can.sealed) return { sealed: false, final: null, award: null, reason: can.reason };
+
+    let final = state.final ?? null;
+    if (!final) {
+      const res = applySealSeason(state, Number(get().meta?.days) || 1);
+      if (!res.ok) return { sealed: false, final: null, award: null, reason: res.errors?.[0]?.message ?? null };
+      final = res.final;
+      set({ competition: res.state });
+      get().pushInbox({
+        type: "match", from: "聯賽官方",
+        subject: `第 ${final.season} 賽季 常規賽 結束`,
+        text: `第 ${final.season} 賽季常規賽全部賽程已完成，最終名次已公布。你的隊伍最終排名第 ${final.playerRank} 名。`,
+      });
+    }
+
+    //  名次獎金：純函式算，這裡只寫回。重複呼叫由 `processedCompetitionAwards` 擋住。
+    const settled = settleCompetitionAwardInState(get(), { final, day: Number(get().meta?.days) || 1 });
+    if (settled.nextState) set(settled.nextState);
+    get().save();
+    return { sealed: true, final, award: settled.receipt };
   },
   /**
    * 這條賽前流程屬於哪一場賽程（Q3.6）。**判斷只在這裡做一次。**
@@ -749,6 +804,12 @@ export const useProfileStore = create((set, get) => ({
         if (!session || !isFixtureSession(session) || isSessionTerminal(session)) return null;
         return { fixtureId: fixtureIdOfSession(session), state: session.state };
       })(),
+      //  Q4：賽季封存後的**不可變**最終名次（沒封存 ⇒ null）。
+      //  ⚠ 賽季進行中畫面要顯示的是上面的 `standings`（推導值）；
+      //    `final` 只在結束後出現。兩者不會同時是「現在的名次」，不算兩份真相。
+      final: state.final ?? null,
+      //  對應的名次獎金收據（發過才有；沒獎金的名次也會有一張 amount:0 的收據）
+      award: state.final ? (get().processedCompetitionAwards ?? {})[state.final.id] ?? null : null,
     };
   },
   // ── Milestone O1：名單分層與出賽陣容 ──────────────────────────────────
@@ -1329,6 +1390,7 @@ export const useProfileStore = create((set, get) => ({
       activeSponsor: ng.activeSponsor,
       csHistory: [],
       processedMatchTransactions: {},
+      processedCompetitionAwards: {},
       economy: ng.economy,
       recruitment: { signed: {} },
       matchmaking: { ticket: null, room: null, session: null, launch: null, lastResult: null, settlements: {}, lastSettlementError: null },

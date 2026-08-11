@@ -423,8 +423,13 @@ const ROSTER = ["上路", "打野", "中路", "下路", "輔助"].map((role, i) 
   ck("6f) seasonState 不接 profileStore（規則層不依賴 Store）", !/profileStore/.test(ss));
   ck("6g) **沒有 Shop／MMR／CS 賽事**（Q3 範圍外）",
     !/shop|tokens|entitlement|mmr|ladder/i.test(both) && !/gameMode\s*[:=]\s*["']cs["']/.test(both));
-  ck("6h) **沒有 FinalStandings／獎金**（那是 Q4）",
-    !/FinalStandings|settleCompetitionAward/.test(both));
+  //  ⚠ 2026-08-12（Q4）：本條原本是「**沒有** FinalStandings／獎金（那是 Q4）」。
+  //    Q4 已經實作，`seasonState` 依規格持有封存（`applySealSeason`）⇒ 原斷言必然紅。
+  //    保留這條守的**真正邊界**：賽季狀態可以封存名次，但**不得碰錢**——
+  //    獎金在 `economy/competitionAward.js`。gateway 兩者都不該碰。
+  ck("6h) 賽季狀態可封存名次但**不碰錢**；gateway 兩者都不碰",
+    !/settleCompetitionAward|prizeForRank|COMPETITION_PRIZE|funds/.test(ss) &&
+    !/FinalStandings|settleCompetitionAward/.test(gw));
   ck("6i) 棄權只有敗場：程式裡沒有聲望／罰款／降級",
     !/reputation|penalt|relegat|fine\b/i.test(both));
   ck("6j) Store 的賽事動作都轉呼叫純函式，不在 Store 裡判規則", (() => {

@@ -54,7 +54,7 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
     );
   }
 
-  const { standings, next, nextDay, today, progress, participants, live } = view;
+  const { standings, next, nextDay, today, progress, participants, live, final, award } = view;
   const myId = useProfileStore.getState().competition?.playerTeamId;
   const nameOf = (id) => participants.find((p) => p.id === id)?.name ?? id;
   const tagOf = (id) => participants.find((p) => p.id === id)?.tag ?? "";
@@ -101,6 +101,42 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
         <div style={{ background: "rgba(239,68,68,0.12)", border: `1px solid ${GC.red}55`, borderRadius: 10, padding: "8px 11px", marginBottom: 10, fontSize: 11.5, color: GC.redL }}>
           {err}
         </div>
+      )}
+
+      {/*  ── 賽季結束：最終名次 ＋ 名次獎金（Milestone Q4）──────────────
+           賽季封存後才出現。**畫面不判斷賽季結不結束、也不算名次與獎金**——
+           `final` 是 Store 封存好的不可變快照，`award` 是既有的獎金收據，
+           這裡只是把兩份既有資料顯示出來。 */}
+      {final && (
+        <Panel
+          title="最終名次 FINAL STANDINGS"
+          right={<span style={{ fontSize: 9, fontWeight: 800, color: GC.gold }}>第 {final.season} 賽季 · 已封存</span>}
+        >
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 8, padding: "4px 0 8px" }}>
+            <span style={{ fontSize: 11, color: GC.gray }}>你的最終名次</span>
+            <span style={{ fontSize: 30, fontWeight: 900, color: GC.gold, fontFamily: MONO, lineHeight: 1 }}>{final.playerRank}</span>
+            <span style={{ fontSize: 11, color: GC.gray }}>／ {final.rows.length} 隊</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "3px 0", borderTop: `1px solid ${GC.line}` }}>
+            <span style={{ color: GC.gray }}>🏆 冠軍</span>
+            <span style={{ fontWeight: 800, color: "#e5e7eb" }}>{nameOf(final.rows[0]?.teamId)}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "3px 0" }}>
+            <span style={{ color: GC.gray }}>💰 名次獎金</span>
+            {/*  誠實顯示：沒有獎金的名次就寫「無」，不寫 $0 假裝有發 */}
+            <span style={{ fontWeight: 800, color: award?.amount > 0 ? GC.green : GC.gray, fontFamily: MONO }}>
+              {award ? (award.amount > 0 ? `+$${award.amount}萬` : "無（前四名才有）") : "—"}
+            </span>
+          </div>
+          {final.sourceMix && (
+            <div style={{ fontSize: 9, color: GC.gray, marginTop: 7, paddingTop: 6, borderTop: `1px solid ${GC.line}` }}>
+              本季 {final.sourceMix.total} 場：實際對戰 {final.sourceMix.engine}
+              {final.sourceMix.simulated ? ` · 模擬 ${final.sourceMix.simulated}` : ""}
+              {final.sourceMix.forfeited ? ` · 棄權 ${final.sourceMix.forfeited}` : ""}
+              　·　第 {final.sealedAtDay} 天封存
+            </div>
+          )}
+        </Panel>
       )}
 
       {/* ── 我的下一場 ─────────────────────────────────────────────── */}
@@ -178,7 +214,7 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
       </Panel>
 
       {/* ── 積分榜 ─────────────────────────────────────────────────── */}
-      <Panel title="積分榜 STANDINGS" right={<span style={{ fontSize: 9, color: GC.gray }}>{standings.rule.label}</span>}>
+      <Panel title={final ? "最終積分榜 STANDINGS" : "積分榜 STANDINGS"} right={<span style={{ fontSize: 9, color: GC.gray }}>{standings.rule.label}</span>}>
         <div style={{ display: "grid", gridTemplateColumns: "18px 1fr 46px 30px 34px", fontSize: 8.5, color: GC.gray, fontWeight: 800, paddingBottom: 4, borderBottom: `1px solid ${GC.line}` }}>
           <span>#</span><span>隊伍</span><span style={{ textAlign: "center" }}>勝敗</span><span style={{ textAlign: "center" }}>分</span><span style={{ textAlign: "right" }}>淨勝</span>
         </div>
