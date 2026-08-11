@@ -6688,3 +6688,40 @@ node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,cs_stat_wiring_
   movement denial 與 contract/UI 擴充不在 scope。Calibration 維持 No-Go。
 - Live killfeed fire icon、既有 fire-zone WebGL renderer、手機視覺／FPS／觸控未人工真機驗收。
   完整規格：`review/cs-gameplay/CS_MOLLY_GAMEPLAY_R15_SPEC.md`。完成後 local commit，不 push。
+
+---
+
+## Sprint R16-A：CS Synergy Semantics / Read-Chain — 2026-08-11
+
+### 範圍與硬邊界
+
+- 維持現有玩家 role mapping：上路→entry、打野→lurker、中路→rifler、下路→awp、輔助→igl；
+  不將玩家輔助自行改成 `support`。
+- 只做 `synergy` 資料鏈與 gameplay read-point audit；不修改 production gameplay、RNG、
+  contract、Store、Progress、balance/calibration 或任何 R1～R15 historical evidence。
+- 不建立第二套 team model；以正式 `simulateFps` 的 memory-only transform 做 focused verifier。
+
+### Read-chain 結論
+
+- `playerModel.synergy` → `getPlayerDerivedStats` → `fpsRoster.STAT_L2S.coo` 的資料鏈存在。
+- 引擎 `POS_PROFILE.support` 讀 `coo`，內建 `ct5` support 因此有個人 role-fit read；玩家五席
+  沒有 support role，故 player-side 不可達。
+- `tacticEdge`、`contactCalled`、`comms`、`teamAvg` 等現有 team-level candidates 均沒有讀
+  `coo`；不能把個人 `posSkill` 誤稱 team-level coordination。
+
+### Focused evidence
+
+- `tools/check_cs_synergy_semantics_r16a.mjs`：7 focused treatments × 16 seeds = 112 paired runs。
+- 玩家五席 `coo -20`：output/RNG changed 均 0/80。
+- CT `ct5 support`：output changed 4/16、RNG changed 3/16；CT `ct1 igl` control 0/16。
+- Source SHA：`7622f87b8b389a504c19b887b860de791dbf8ea240e6ba57c424e159cb655c89`；static RNG call
+  sites=21。
+- `CsSynergySemantics.v1`：
+  `db856f15099943d73b89f16702710031e4a48f33c65538e197c7271ad2eb2022`。
+
+### 判定
+
+- R16-A audit：**Go / PASS**。
+- 建議 canonical 語意：**team-level coordination**；但目前尚未有可直接採用的既有 team-level
+  read point，player-side wiring：**No-Go**。
+- 下一階段進入獨立 R16-B Learning Lifecycle / State Design；不在 R16-A 內改 gameplay。
