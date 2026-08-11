@@ -107,9 +107,12 @@ console.log("══ Milestone Q2b：賽果 / 實力 / 模擬 / 積分榜 ══\
     !createFixtureOutcome({ fixture: fx, resultSource: "engine", simulatorVersion: "x", winner: fx.sideA, score: { a: 1, b: 0 }, duration: 60, seed: 1 }).ok);
   ck("1j) 實際對戰賽果（simulatorVersion = null）可建立",
     createFixtureOutcome({ fixture: fx, resultSource: "engine", winner: fx.sideA, score: { a: 1, b: 0 }, duration: 60, seed: 1 }).ok);
-  ck("1k) 只有兩種來源，中文名齊全",
-    Object.keys(RESULT_SOURCES).sort().join() === "engine,simulated" &&
-    resultSourceLabel("simulated") === "快速模擬");
+  //  ⚠ Q3 由兩種來源改為三種（新增 forfeited）。這是本專案第二處
+  //    「新 Milestone 修改既有 verifier 斷言」，已在 Q3 報告單獨列出。
+  ck("1k) 只有三種來源，中文名齊全",
+    Object.keys(RESULT_SOURCES).sort().join() === "engine,forfeited,simulated" &&
+    resultSourceLabel("simulated") === "快速模擬" &&
+    resultSourceLabel("forfeited") === "棄權判負");
 
   //  拒絕條件
   ck("1l) 勝方不是對戰雙方之一 → 拒絕",
@@ -326,8 +329,9 @@ console.log("══ Milestone Q2b：賽果 / 實力 / 模擬 / 積分榜 ══\
   ck("4r) 未知規則回退預設", computeStandings({ outcomes: all, participants: PARTICIPANTS, rule: "nope" }).rule.id === "win3");
   ck("4s) standingOf 查得到、查不到回 null",
     standingOf(st, PLAYER_TEAM.id) !== null && standingOf(st, "team:deadbeef") === null);
-  ck("4t) 積分榜列出來源分佈（誠實標示有多少場是模擬）",
-    st.rows.every((r) => r.engineGames + r.simulatedGames === r.played));
+  //  ⚠ Q3 加入 forfeitedGames：三種來源相加才等於出賽數。
+  ck("4t) 積分榜列出來源分佈（誠實標示有多少場是模擬／棄權）",
+    st.rows.every((r) => r.engineGames + r.simulatedGames + r.forfeitedGames === r.played));
 }
 
 // ── 5) ★ 兩類 Analytics 的分界 ──────────────────────────────────────────

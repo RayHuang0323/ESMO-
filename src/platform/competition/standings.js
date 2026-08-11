@@ -62,7 +62,7 @@ export function computeStandings({ outcomes, participants = [], rule = "win3" } 
       teamId: p.id, name: p.name ?? null, tag: p.tag ?? null, isAi: !!p.isAi,
       played: 0, wins: 0, losses: 0, points: 0,
       scoreFor: 0, scoreAgainst: 0, scoreDiff: 0,
-      engineGames: 0, simulatedGames: 0,
+      engineGames: 0, simulatedGames: 0, forfeitedGames: 0,
     });
   }
 
@@ -85,8 +85,11 @@ export function computeStandings({ outcomes, participants = [], rule = "win3" } 
     w.wins++; w.points += R.win;
     l.losses++; l.points += R.loss;
 
-    //  來源分計（供畫面誠實標示「其中 N 場為模擬」；不影響任何排序）
+    //  來源分計（供畫面誠實標示「其中 N 場為模擬／棄權」；不影響任何排序）
+    //  ⚠ 三種來源要分開數。Q3 之前這裡是 `if engine else simulated`，
+    //    棄權加進來之後那個 else 會把棄權謊報成模擬。
     if (o.resultSource === "engine") { a.engineGames++; b.engineGames++; }
+    else if (o.resultSource === "forfeited") { a.forfeitedGames++; b.forfeitedGames++; }
     else { a.simulatedGames++; b.simulatedGames++; }
 
     h2h.set(`${o.winner}>${loser}`, (h2h.get(`${o.winner}>${loser}`) ?? 0) + 1);
@@ -129,6 +132,9 @@ export const standingOf = (standings, teamId) =>
  */
 export function outcomeSourceMix(outcomes) {
   const valid = competitionOutcomes(outcomes);
-  const engine = valid.filter((o) => o.resultSource === "engine").length;
-  return { total: valid.length, engine, simulated: valid.length - engine };
+  const count = (src) => valid.filter((o) => o.resultSource === src).length;
+  const engine = count("engine");
+  const simulated = count("simulated");
+  const forfeited = count("forfeited");
+  return { total: valid.length, engine, simulated, forfeited };
 }
