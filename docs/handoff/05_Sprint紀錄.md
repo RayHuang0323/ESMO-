@@ -7136,3 +7136,109 @@ baseline **都是 44/44 且逐條相同**。原因是那次執行期間**我正�
 最小 Competition UI ＋ `BattleResult.v2 → FixtureOutcome` 接線，
 讓玩家真的能從賽程進場、完成比賽、回寫賽果與 Standings。
 **Q4 等 Q3.5 的瀏覽器流程通過後才開始。**
+
+---
+
+## Milestone Q3.5（2026-08-11）— 賽事 UI ＋ 賽果回寫
+
+Q3 的管線做完但沒有畫面，玩家到不了。本輪把那條路接通，並在**真實瀏覽器裡
+從頭打完一場正式聯賽比賽**。分支 `milestone-q35-competition-ui`（基準 `98a439f`）。
+
+### 做了什麼
+
+| # | 項目 | 檔案 |
+|---|---|---|
+| 1 | `MatchResult.v1` → `FixtureOutcome` 換座標 | `competition/fixtureResultBridge.js`（新） |
+| 2 | 回寫掛進既有唯一結算邊界 | `platform/profileStore.js`（改） |
+| 3 | 最小聯賽畫面（賽程／積分榜／出賽／棄權） | `screens/manage/CompetitionScreen.jsx`（新） |
+| 4 | 「🏆 賽事」改指向聯賽 | `src/AppShell.jsx`（改） |
+| 5 | 賽季錨定 ＋ 逾時重新進場 | `competition/seasonState.js`、`competitionGateway.js`（改） |
+| 6 | 驗證器 | `tools/check_competition_q35.mjs`（新，65 條） |
+
+### 資料來源：為什麼是 MatchResult 而不是 BattleResult
+
+```
+BattleResult.v2（winner: blue/red）
+  → outcomeFromBattleResult()      既有，照抄不統計
+  → createMatchResult()            → **MatchResult.v1 正式成立**（winner: us/opponent）
+  → fixtureResultBridge            → FixtureOutcome（winner: teamId）
+```
+
+`BattleResult` 的勝負是**戰場陣營**，要換成隊伍還得知道「玩家在哪一側」——
+而那個知識 `outcomeFromBattleResult()` 已經處理過一次了。若 bridge 再讀一次
+BattleResult，勝負歸屬就會有**兩個決定點**。所以 bridge 的簽名根本拿不到
+BattleResult，§1k 用原始碼斷言把這件事鎖住。
+
+取的正式欄位只有四個：`winner`（us/opponent）、`score.us` / `score.opponent`、
+`durationSec`、`seed`。**一個數字都不重算。** 唯一的判斷是「玩家是主隊還是客隊」，
+決定 `score.a/b` 要不要對調（§1b 用客場案例證明）。
+
+### 掛在哪個結算點
+
+`profileStore.reportMatchResult()` 內，**`MatchResult.v1` 正式成立且 S25 入完帳之後**：
+
+```js
+if (receipt?.ok && isFixtureSession(session)) get()._writeFixtureResultFromMatch(made.result, session);
+```
+
+選這裡的理由：再早一步賽果還沒通過來源／場次／衝突驗證；再晚一步就得另外找
+呼叫點，等於第二條路。回寫失敗**不影響**上面的結算——獎勵已經發了，賽程沒更新
+只是賽程沒更新，不會連獎勵一起消失。
+
+### ⚠ 瀏覽器實測抓到三個問題（Node 驗證器全綠時都看不出來）
+
+1. **賽季沒有錨定在建立當天。** `DEFAULT.meta.days` 是 8（沒按過「開新局」的存檔
+   都是），但賽程從第 1 天排起 ⇒ 第 1–7 天的場次一建立就過期，下次推進會被
+   `sweepOverdue` 直接判負，玩家連看都沒看到。修法：`startDay` 錨點 ＋
+   `absoluteDayOf()`，所有跟時鐘的比對都走它。§3j–§3p 釘住。
+2. **出賽導錯頁。** 原本導到 `matchmaking`——那是 Sprint11 的**純過場動畫**
+   （寫死對手、假計時），完全沒有 `useMatchFlow` ⇒ 場次永遠不會簽發，賽果寫不回。
+   正解是 `lineup`（`MatchPrepFrame` ＋ `useMatchFlow`）。§4c 釘住。
+3. **房間確認逾時就只剩棄權。** ready check 只有 20 秒，逾時後房間 expired、
+   賽程停在 `launched`，再按出賽會被 gateway 擋掉。20 秒逾時是很常見的事，
+   讓它等於丟一場正是 D15 要避免的。修法：`issueFor({allowRelaunch})`——
+   **只有在「那一場沒有仍然存活的場次」時**才允許重簽，賽程狀態不倒退回
+   `scheduled`。§3q–§3w 釘住，包含「場次還活著時不得重簽」。
+
+### 瀏覽器端到端驗收（本機 preview，非正式站）
+
+從全新 Chrome profile、全程真實點擊：
+
+| 驗收項 | 結果 |
+|---|---|
+| 從「🏆 賽事」進入 | ✅ 賽季自動建立（56 場），`startDay=8` |
+| 看到當前賽程／對手 | ✅「第 13 天 德國海豹 主場 VS 翡翠龍騎 客場」 |
+| 推進停在比賽日 | ✅ 第 8 → 13 天，自動棄權 0 場 |
+| 玩家完成一場正式比賽 | ✅ 出賽 → 確認 → Ban/Pick → 戰術 → 對戰 → 戰報（DEFEAT 3:9，20:24） |
+| 賽果回寫 | ✅ `completed` / `engine` / `3:9` / `dur 1225` / `seed 61797`（＝ session seed） |
+| Standings 更新 | ✅ ED 1-0 +6、GSEAL 0-1 −6 |
+| 棄權計入 | ✅ `0:0` / `seed 0` / `dur 0`，GSEAL 0-2 |
+| AI 模擬計入 | ✅ 同一份存檔 engine 1 / simulated 6 / forfeited 1 |
+| console 錯誤 | ✅ **0 個 JS 錯誤**（唯一 4xx 是 `/favicon.ico` 404，既有、與本輪無關） |
+
+⚠ 比賽用專案自帶的 `dev-fast-forward`（`?debug=1`）推到終局——那顆按鈕本來就
+「走既有 Result／發獎／Replay 流程」，不是繞過結算。截圖在 `scratchpad/q35-e2e/`。
+
+### 驗證
+
+| 項目 | 結果 |
+|---|---|
+| `check_competition_q35`（新增） | **65/65** exit 0 |
+| `q1` / `q2a` / `q2b` / `q3` | 93 / 112 / 92 / 90 |
+| `finance_n/n2/n3`、O 系列六支、`recruit_o`、`progress25` | 全綠 |
+| 兩支驗收包 | 81 / 97 |
+| `regress` / `regress2` | 15/15、**8/8** |
+| `npm run build` | exit 0 |
+
+**突變測試**：把客場比分對調拿掉 ⇒ §1b／§2e 變紅；把「只在賽程來源回寫」的判斷
+拿掉 ⇒ §5d 變紅（但行為測試 §2j 仍綠——因為還有第二道防線，票券 session 的
+`fixtureIdOfSession()` 回 null。**這是縱深防禦，不是斷言失效**，如實記錄）。
+
+### ⚠ 已知缺口（未修，留給下一輪）
+
+- **對戰畫面顯示的對手名字是寫死的「赤焰軍團」**，不是賽程對手「翡翠龍騎」。
+  賽果資料完全正確（比分／勝負／回寫都對），錯的只有戰鬥中與戰報上的**顯示名稱**。
+  來源是 `platformToMobaConfig.js` 的 `oppName: input.oppName ?? "赤焰軍團"`，
+  沒有人把 `assignment.opponent.name` 串進去。玩家一定看得到，優先修。
+- 賽事畫面只有「下一場 ＋ 積分榜 ＋ 進度」，**沒有完整賽程表、沒有歷史賽果**（刻意）。
+- 沒有在正式站驗過（本輪只在本機 preview）。

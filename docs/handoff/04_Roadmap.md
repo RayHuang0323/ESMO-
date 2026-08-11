@@ -156,9 +156,13 @@ Milestone O 起的資料契約都以「日後由伺服器接管」為前提設�
 main（`f21d18a`），已部署到正式站。**Q3**（出賽閘道／日曆停止／棄權）同日完成，
 `check_competition_q3` 90/90，已 fast-forward 併入 main（**`98a439f`**）並部署。
 
-⚠ **Q3 沒有 UI**：Store 動作齊了但沒有畫面，玩家在瀏覽器裡到不了賽事流程。
-`BattleResult.v2 → FixtureOutcome` 的換算也還沒寫。兩者都列在
-`08_目前待辦與風險.md` 的 Q3 待辦最前面。**Q4 尚未開始。**
+**Q3.5**（最小賽事 UI ＋ `MatchResult.v1 → FixtureOutcome` 回寫）同日完成，
+在分支 `milestone-q35-competition-ui`，`check_competition_q35` 65/65，
+**瀏覽器端到端全項通過**（進賽事 → 出賽 → 打完 → 回寫 → Standings → 棄權，0 JS 錯誤），
+**未 merge、未部署**。
+
+⚠ 已知缺口：對戰畫面的對手名字仍是寫死的「赤焰軍團」（賽果資料正確，只有顯示名稱錯）。
+**Q4 尚未開始**——等 Q3.5 部署與驗收後再開。
 
 已定案的 18 項決策摘要：
 
