@@ -2966,28 +2966,35 @@ export class LogicEngine {
             m.atkCd = Math.max(0, (m.atkCd ?? 0) - dt);
           }
         }
-        const strike = (atk, def, k) => atk.forEach((a) => {
-          let foe = null;
-          if (R.minionAttackInterval) {
-            // B.4：先找射程內 lane 位置最近者，再以 slot 差打破平手；避免四隻兵
-            // 每波都無條件集火陣列第一隻。規則對雙方相同，仍在同一張 dmg 表同時結算。
-            let best = Infinity;
-            for (const b of def) {
-              const gap = Math.abs(b.t - a.t);
-              if (gap >= R.minionAttackRangeProgress) continue;
-              const score = gap * 1000 + Math.abs((b.slot ?? 0) - (a.slot ?? 0));
-              if (score < best) { best = score; foe = b; }
+        const strike = (atk, def, k) => {
+          // M1.5 target-assignment fix：queue gap 讓首輪前排近 0.00125 progress；舊分數
+          // gap×1000 + slotGap×1 因此讓 1.25 點距離差壓過相鄰 slot，四兵重複鎖前排。
+          // 距離仍是主排序，只把 slot 權重提高到 2，剛好保住首輪 lane 對位；不建立
+          // 唯一配對或持久鎖定，殘兵與多波混戰仍沿用原本的自然轉火。
+          // 只改本輪選敵，不改移動、射程、傷害、攻速或同時結算。
+          atk.forEach((a) => {
+            let foe = null;
+            if (R.minionAttackInterval) {
+              if (a.atkCd > 0) return;
+              let best = Infinity;
+              for (const b of def) {
+                const gap = Math.abs(b.t - a.t);
+                if (gap >= R.minionAttackRangeProgress) continue;
+                const slotGap = Math.abs((b.slot ?? 0) - (a.slot ?? 0));
+                const score = gap * 1000 + slotGap * 2;
+                if (score < best) { best = score; foe = b; }
+              }
+              if (foe) {
+                dmg.set(foe, (dmg.get(foe) ?? 0) + R.minionAttackDamage * k);
+                a.atkCd = R.minionAttackInterval;
+              }
+            } else {
+              // v2 歷史基準：維持舊 70 DPS 與陣列第一目標，避免改寫 runtime29 baseline。
+              foe = def.find((b) => Math.abs(b.t - a.t) < 0.035);
+              if (foe) dmg.set(foe, (dmg.get(foe) ?? 0) + 70 * k * dt);
             }
-            if (foe && a.atkCd <= 0) {
-              dmg.set(foe, (dmg.get(foe) ?? 0) + R.minionAttackDamage * k);
-              a.atkCd = R.minionAttackInterval;
-            }
-          } else {
-            // v2 歷史基準：維持舊 70 DPS 與陣列第一目標，避免改寫 runtime29 baseline。
-            foe = def.find((b) => Math.abs(b.t - a.t) < 0.035);
-            if (foe) dmg.set(foe, (dmg.get(foe) ?? 0) + 70 * k * dt);
-          }
-        });
+          });
+        };
         strike(this.lanes[ln].bm, this.lanes[ln].rm, bkB);
         strike(this.lanes[ln].rm, this.lanes[ln].bm, bkR);
         for (const [m, v] of dmg) m.hp -= v;

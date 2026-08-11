@@ -51,6 +51,7 @@ const STATE = resolve(ROOT, "tools/.verify-state.json");
  * 順序＝由快到慢、由基礎到整合，讓失敗盡早出現。
  */
 const SEGMENTS = [
+  { id: "milestone_b4", script: "tools/check_moba_milestone_b4.mjs", shape: /Milestone B\.4 verifier: PASS/, note: "B.4：小兵離散攻擊／並行選敵／Replay" },
   { id: "milestone_j_close", script: "tools/check_moba_milestone_j_close.mjs", shape: /✅ PASS/, note: "J-close" },
   { id: "milestone_j", script: "tools/check_moba_milestone_j.mjs", shape: /✅ PASS/, note: "J：召喚師技能引擎效果" },
   { id: "milestone_i_close", script: "tools/check_moba_milestone_i_close.mjs", shape: /✅ PASS/, note: "I-close" },

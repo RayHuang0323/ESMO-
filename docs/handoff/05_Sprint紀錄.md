@@ -6515,3 +6515,47 @@ E 在 runner 顯示 0 秒是 208ms 完整執行，不是啟動 crash。舊 accep
 
 Node 與 HTTP 無法證明 Android 真機 FPS、觸控、熱降頻或視覺體感；以上仍待 Ray 人工驗收。
 本輪完成後停止，未自動開始下一 Sprint。
+
+---
+
+## Milestone M1.5 小兵選敵回歸修正收尾（2026-08-11）
+
+### 決策與實際修改
+
+- **小兵集中攻擊前排回歸已修正。** M1.5 的 `queueGap` 會讓前排只有極小距離差，
+  舊的 `gap × 1000 + slotGap × 1` 仍會使四隻兵重複鎖定同一前排；本輪只把現役 v3
+  選敵的 slot tie-break 權重調為 2，讓首輪四對四維持可達的一人一目標。
+- **保留 M1.5 兵線前進機制。** `queueGap`、高地倒後強化兵、基地兵線閘門與兵線進基地
+  路徑都沒有移除或繞過；B.4 微場景另斷言雙方位置仍有 queue gap。
+- 不改小兵移動、射程、傷害、攻速、同時結算，也不改英雄、勝負、獎勵、Replay contract
+  或已 PASS 的 M1.5／M1.6 核心修法。本輪到此停止調參與核心邏輯修改。
+
+### B.4 正式安全網
+
+- `tools/check_moba_milestone_b4.mjs` 補強四對四首輪逐隻 HP、M1.5 queue gap、同 seed
+  Replay frame 決定性與塔離散清兵斷言。
+- `tools/verify.mjs` 已正式登記 `milestone_b4` segment；不是只留一支游離腳本。
+- 2026-08-11 聚焦重跑：直接執行 B.4 與 `verify --only=milestone_b4` 均為
+  **exit 0／PASS**，runner 本次 **1/1**。
+
+### 30-seed M1.5 sweep 與記憶體事件
+
+- `waveFrontBias` 五組候選（baseline、0.018、0.022、0.026、0.030）均改以獨立行程完成
+  各自完整 **30 seeds**；五組結果逐值相同：完成率 100%、15–32 分鐘 100%、
+  平均／中位／p95／最長 23.0／23.1／26.9／28.8 分、藍勝率 50%。
+- **30-seed sweep 全部完成，determinism 100%、進基地 100%。** 另量到終局 waveT
+  上／中／下 0.51／0.51／0.48，無兵線攻擊建築 1；沒有降低任何驗收標準。
+- 較早一次合併 sweep 中途曾出現 `memory allocation of 4191520 bytes failed` 並退出回
+  PowerShell。該腳本沒有 Rust／subprocess 路徑；判定為 Node 原生配置在主機記憶體壓力下
+  失敗，不是 Codex 本身。**中斷那次不計入結果**；後續以獨立、完整的五組 30-seed
+  驗證取代，因此不影響上述結論。
+
+### 正式 gates 與既有紅燈
+
+- `check_combat_range_m16.mjs`：**19/19 PASS**。
+- `regress.mjs`：**15/15 PASS**；`regress2.mjs`：**8/8 PASS**（20/20 完成）。
+- production build：**PASS**（只有既有 chunk-size warning）。
+- `runtime29`：**34/35**；紅燈是既有 **TD-21**。`tools/verify.mjs` 的紅燈為既有
+  **TD-21／milestone_j**，不是本輪小兵選敵修正新增；未放寬門檻或刪除斷言。
+
+本輪尚未 commit／push／deploy；未開始英雄清兵、補刀或其他下一功能。
