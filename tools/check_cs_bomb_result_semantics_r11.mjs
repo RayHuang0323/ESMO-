@@ -16,6 +16,7 @@ import {
   CS_R11_REPAIRED_SOURCE_SHA256,
 } from "./cs_r11_legacy_source.mjs";
 import { CS_R13_PLAYER_SMOKE_SOURCE_SHA256, csR13R12Source } from "./cs_r13_legacy_source.mjs";
+import { csR14EvidenceSources } from "./cs_r14_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -255,12 +256,14 @@ async function main() {
 
   const originalSource = readFileSync(FPS_FILE, "utf8");
   const sourceSha256 = sha256(originalSource);
-  const r11EvidenceSource = sourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256
-    ? csR13R12Source(originalSource) : originalSource;
+  const r14Sources = csR14EvidenceSources(originalSource);
+  const r11EvidenceSource = r14Sources?.r12 ?? (sourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256
+    ? csR13R12Source(originalSource) : originalSource);
   if (sourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256) {
     gate(sha256(r11EvidenceSource) === CS_R11_REPAIRED_SOURCE_SHA256, "R13_R12_ADAPTER_MISMATCH");
   }
-  const sourceStage = sourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256 ? "r13-player-smoke"
+  const sourceStage = r14Sources ? "r14-he"
+    : sourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256 ? "r13-player-smoke"
     : sourceSha256 === CS_R10_SOURCE_SHA256 ? "r10-overloaded"
     : sourceSha256 === CS_R11_REPAIRED_SOURCE_SHA256 ? "r11-repaired" : null;
   gate(sourceStage, "SOURCE_PROVENANCE_MISMATCH",
@@ -270,8 +273,8 @@ async function main() {
   const contractSource = readFileSync(CONTRACT_FILE, "utf8");
   const resultUiSource = readFileSync(RESULT_UI_FILE, "utf8");
   gate(occurrences(contractSource, CONTRACT_READ_MARKER) === 1, "CONTRACT_READ_CHAIN");
-  gate(occurrences(originalSource, OVERLAY_READ_MARKER) === 1, "ROUND_OVERLAY_READ_CHAIN");
-  gate(occurrences(originalSource, AUDIO_READ_MARKER) === 1, "BOMB_AUDIO_READ_CHAIN");
+  gate(occurrences(r11EvidenceSource, OVERLAY_READ_MARKER) === 1, "ROUND_OVERLAY_READ_CHAIN");
+  gate(occurrences(r11EvidenceSource, AUDIO_READ_MARKER) === 1, "BOMB_AUDIO_READ_CHAIN");
   gate(occurrences(resultUiSource, RESULT_TOOLTIP_MARKER) === 1, "RESULT_UI_READ_CHAIN");
 
   const tempRoot = mkdtempSync(join(tmpdir(), "esmo-cs-bomb-result-r11-"));
@@ -355,7 +358,7 @@ async function main() {
     console.log(`RNG paired equality: ${records.length}/${records.length}`);
     console.log(`non-how gameplay differences: 0`);
     console.log(`${EVIDENCE_SCHEMA}: ${suiteSha256}`);
-    gate(sourceStage === "r11-repaired" || sourceStage === "r13-player-smoke",
+    gate(["r11-repaired", "r13-player-smoke", "r14-he"].includes(sourceStage),
       "PRODUCTION_SEMANTICS_NOT_REPAIRED",
       "R10 still overloads post-plant elimination/timeout as bomb.");
     if (EXPECTED_SEMANTICS_SUITE_SHA256 === "__CAPTURE_MANUALLY__") {

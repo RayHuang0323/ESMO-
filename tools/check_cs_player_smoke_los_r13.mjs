@@ -14,10 +14,17 @@ import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 import {
   CS_R12_SOURCE_SHA256,
+  CS_R12_LF_SHA256,
   CS_R13_PLAYER_SMOKE_SOURCE_SHA256,
+  CS_R13_PLAYER_SMOKE_LF_SHA256,
   R13_PLAYER_SMOKE_LINE,
   csR13R12Source,
 } from "./cs_r13_legacy_source.mjs";
+import {
+  CS_R14_HE_SOURCE_SHA256,
+  csR14R13Source,
+  normalizeCsSource,
+} from "./cs_r14_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -659,24 +666,31 @@ async function main() {
   gate(sha256(canonicalJson(FIXED_SEEDS)) === EXPECTED_SEED_SET_SHA256, "SEED_SET_HASH_MISMATCH");
 
   const originalSource = readFileSync(FPS_FILE, "utf8");
-  const sourceSha256 = sha256(originalSource);
+  const normalizedSource = normalizeCsSource(originalSource);
+  const liveSourceSha256 = sha256(normalizedSource);
+  const sourceStage = liveSourceSha256 === CS_R14_HE_SOURCE_SHA256 ? "r14-he"
+    : liveSourceSha256 === CS_R13_PLAYER_SMOKE_LF_SHA256 ? "r13-player-smoke" : null;
+  gate(sourceStage, "SOURCE_PROVENANCE_MISMATCH",
+    `expected R13 LF=${CS_R13_PLAYER_SMOKE_LF_SHA256}\nexpected R14=${CS_R14_HE_SOURCE_SHA256}\nactual=${liveSourceSha256}`);
+  const r13Source = sourceStage === "r14-he" ? csR14R13Source(normalizedSource) : normalizedSource;
+  const sourceSha256 = sha256(r13Source);
   gate(randTokens(originalSource).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT",
     `expected=${EXPECTED_RAND_CALLS} actual=${randTokens(originalSource).length}`);
-  gate(occurrences(originalSource, R13_PLAYER_SMOKE_LINE) === 1, "PLAYER_SMOKE_GAMEPLAY_BRANCH_COUNT",
-    `expected=1 actual=${occurrences(originalSource, R13_PLAYER_SMOKE_LINE)}`);
-  gate(sourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256, "SOURCE_PROVENANCE_MISMATCH",
-    `expected=${CS_R13_PLAYER_SMOKE_SOURCE_SHA256}\nactual=${sourceSha256}`);
-  const baselineSource = csR13R12Source(originalSource);
-  gate(sha256(baselineSource) === CS_R12_SOURCE_SHA256, "R13_R12_ADAPTER_MISMATCH",
-    `expected=${CS_R12_SOURCE_SHA256}\nactual=${sha256(baselineSource)}`);
+  gate(occurrences(r13Source, R13_PLAYER_SMOKE_LINE) === 1, "PLAYER_SMOKE_GAMEPLAY_BRANCH_COUNT",
+    `expected=1 actual=${occurrences(r13Source, R13_PLAYER_SMOKE_LINE)}`);
+  gate(sourceSha256 === CS_R13_PLAYER_SMOKE_LF_SHA256, "R14_R13_ADAPTER_MISMATCH",
+    `expected=${CS_R13_PLAYER_SMOKE_LF_SHA256}\nactual=${sourceSha256}`);
+  const baselineSource = csR13R12Source(r13Source);
+  gate(sha256(baselineSource) === CS_R12_LF_SHA256, "R13_R12_ADAPTER_MISMATCH",
+    `expected=${CS_R12_LF_SHA256}\nactual=${sha256(baselineSource)}`);
   gate(occurrences(baselineSource, R13_PLAYER_SMOKE_LINE) === 0, "R12_ADAPTER_BRANCH_REMAINS");
   gate(randTokens(baselineSource).length === EXPECTED_RAND_CALLS, "R12_ADAPTER_RAND_COUNT");
 
-  gate(occurrences(originalSource, "const SMOKE_R=6;") === 1, "SMOKE_RADIUS_PROVENANCE");
-  gate(occurrences(originalSource, TACTIC_SMOKE_MARKER) === 1, "TACTIC_SMOKE_PATH_PROVENANCE");
-  gate(occurrences(originalSource, AGING_MARKER) === 1, "SMOKE_AGING_PROVENANCE");
-  gate(occurrences(originalSource, FRAME_SMOKE_MARKER) === 1, "SMOKE_FRAME_READ_CHAIN");
-  gate(occurrences(originalSource, RENDERER_SMOKE_MARKER) === 1, "SMOKE_RENDERER_READ_CHAIN");
+  gate(occurrences(r13Source, "const SMOKE_R=6;") === 1, "SMOKE_RADIUS_PROVENANCE");
+  gate(occurrences(r13Source, TACTIC_SMOKE_MARKER) === 1, "TACTIC_SMOKE_PATH_PROVENANCE");
+  gate(occurrences(r13Source, AGING_MARKER) === 1, "SMOKE_AGING_PROVENANCE");
+  gate(occurrences(r13Source, FRAME_SMOKE_MARKER) === 1, "SMOKE_FRAME_READ_CHAIN");
+  gate(occurrences(r13Source, RENDERER_SMOKE_MARKER) === 1, "SMOKE_RENDERER_READ_CHAIN");
 
   const tempRoot = mkdtempSync(join(tmpdir(), "esmo-cs-player-smoke-r13-"));
   let vite = null;
@@ -703,7 +717,7 @@ async function main() {
           transformSeen += 1;
           gate(code === originalSource, "VITE_SOURCE_MISMATCH");
           return {
-            code: transformSource(variant === "baseline" ? baselineSource : originalSource, variant),
+            code: transformSource(variant === "baseline" ? baselineSource : r13Source, variant),
             map: null,
           };
         },
@@ -816,8 +830,10 @@ async function main() {
       records: gameplayRecords,
     }, { gameplay: true, rejectUndefined: true }));
 
-    console.log(`sourceSha256: ${sourceSha256}`);
-    console.log(`R12 byte-exact source: ${CS_R12_SOURCE_SHA256}`);
+    console.log(`sourceStage: ${sourceStage}`);
+    console.log(`sourceSha256 (canonical LF R13): ${sourceSha256}`);
+    console.log(`historical R13 working-tree source: ${CS_R13_PLAYER_SMOKE_SOURCE_SHA256}`);
+    console.log(`R12 canonical LF / historical source: ${CS_R12_LF_SHA256} / ${CS_R12_SOURCE_SHA256}`);
     console.log(`static rand() call sites: ${EXPECTED_RAND_CALLS}->${randTokens(originalSource).length}`);
     console.log(`neutral coverage: ${canonicalJson(losTotals)}`);
     console.log(`matrix: ${STAT_CASES.length} treatments x ${FIXED_SEEDS.length} seeds = ${gameplayRecords.length} paired runs`);

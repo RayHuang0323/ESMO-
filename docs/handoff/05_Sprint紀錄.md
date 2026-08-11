@@ -6588,3 +6588,49 @@ node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,cs_stat_wiring_
 - WebGL/frame renderer source chain 已驗證，但 browser／手機視覺與 FPS 未人工實測。
 - 完整規格：`review/cs-gameplay/CS_PLAYER_SMOKE_LOS_R13_SPEC.md`。完成後 local commit，
   不 push。
+
+---
+
+## CS HE Gameplay Integration R14（2026-08-11）
+
+### 封版與 verifier-first
+
+- R13 checkpoint `48054db` 已在 Sprint 前 push 至
+  `origin/release/moba-combat-closure`。
+- 短 Grill 封版：`HE_R=12`、center max 80、linear-to-zero、敵方限定、wall block、
+  armor `×0.72`、不新增 RNG。明確定義為 functional baseline，不代表 calibration 完成。
+- Causal boundary 為第一筆正值 HE effective damage；boundary 前 exact，zero-impact run 全場
+  zero-diff，boundary 後只接受可追溯至 HE damage 的差異。固定 16×16=256 paired；靜態 RNG
+  sites 必須保持 21。
+- Verifier-first memory candidate 完成全部 gates 後，只以 `PRODUCTION_HE_NOT_INTEGRATED` 紅燈
+  停止；production patch 後同一 hashes 在 pre-lock run 只停於 `R14_BASELINE_NOT_LOCKED`，人工
+  核對後鎖定，未提供 capture/update/rebaseline CLI。
+
+### Production 最小實作
+
+- 新增 round-local `throwerByNadeId` 與 `roundUtilDmg`；HE detonation 走 deterministic radius、
+  wall、falloff、armor 計算。
+- 把既有 firearm damage/death accounting 抽成共用 `applyDamage` / `finalizeKill`，HE 與 firearm
+  使用同一份 `_hitters`、effective damage、kill/death/assist、economy、drop、first-kill、KAST
+  帳本，沒有第二套系統。
+- Engine raw result 的 `utilDmg` 改讀 HE effective damage；live killfeed 補正 HE icon。
+  `CsMatchResult.v1`、Store、Progress、reward、`csHistory`、賽後 UI 與 runtime contract 零修改。
+- Production canonical LF source SHA：
+  `943cd562019f966d43bde9aa7aa05bc41cbcc2cda25a32a2556fe08bdf470720`；`rand()` sites 21。
+
+### Evidence、歷史保護與判定
+
+- `CsHEGameplay.v1`：
+  `97b42b973e9d34cf9dccf1fd53fa3ee6ad5a25345de15051e64674104ef390ab`。
+- `CsGameplayDigest.v5`：
+  `46952997a395f76980da25273e67d7f1e03b912247c2d5593fcfba205cd3f545`。
+- Neutral 16 seeds：29 throws、27 detonations、9 damage events、305 effective damage、2 kills、
+  1 assist。256 matrix：85 impacted、171 zero-impact；所有 causal gates PASS。
+- 新增 canonical LF R14→R13→R12→R10→R8 memory adapter。R13 原 mixed-EOL SHA
+  `bab677…` 永久保留，另以 canonical Git blob SHA `574c6d…` 避免 autocrlf 環境耦合；沒有改
+  R1～R13 expected digest constants。
+- R13、R12、R11、R10、R8 direct PASS；R1～R6 串行全部 PASS；R14 locked direct PASS；
+  central runner `cs_he_gameplay_r14` 1/1 PASS；production build PASS。
+- 判定：**Go / Complete**。Molly、learning、synergy、balance/calibration、RNG stream 重構不在
+  scope；Calibration 維持 No-Go。完整規格：`review/cs-gameplay/CS_HE_GAMEPLAY_R14_SPEC.md`。
+- 完成後 local commit，不 push。

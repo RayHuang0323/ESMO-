@@ -4,6 +4,8 @@
 
 export const CS_R12_SOURCE_SHA256 = "b26ec0947c0b569401ec35f85f02e5efae7a4aaf7baa4381d27587ae235c3482";
 export const CS_R13_PLAYER_SMOKE_SOURCE_SHA256 = "bab6776110eac6181bf7b75250061592e2dfc892d4523ea9817cdb15e1cfe341";
+export const CS_R12_LF_SHA256 = "634e7063e95ea3c1267d4f5ec3871930b4f776c415f8460e894ee43f6b92115d";
+export const CS_R13_PLAYER_SMOKE_LF_SHA256 = "574c6d419950db6892eca5c76be5cdf1eca59cf380148b7c0779f76d34a2c9ce";
 
 export const R13_PLAYER_SMOKE_LINE = '        if(tw.type==="smoke")smokes.push({id:`s${tw.id}`,pos:{...tw.to},tl:18,age:0});';
 

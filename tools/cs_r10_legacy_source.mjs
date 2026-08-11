@@ -3,6 +3,8 @@
 // evidence against the R9 legacy defuse semantics after production migrates.
 
 export const CS_R10_REPAIRED_SOURCE_SHA256 = "ba3305ea6cd92fe06df5ee3fd4eb3ca47e1385910672b1ec111f804da0859b8d";
+export const CS_R10_REPAIRED_LF_SHA256 = "1362106a6e1b21b9e459a4c1b0fd06f4d86ceea0a8bf7e2064f5b72e39ee17a7";
+export const CS_R8_LEGACY_LF_SHA256 = "8c9768949e9fbedd0f3048d82fd25a4ff50bc9daf71b7155f6d154c67bb393c0";
 
 const LEGACY_DEFUSE_LINES = [
   "        const defuser=aliveCT.find(cp=>dist(cp.pos,c4pos)<6);",

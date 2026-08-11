@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 import { CS_R11_REPAIRED_SOURCE_SHA256 } from "./cs_r11_legacy_source.mjs";
 import { CS_R13_PLAYER_SMOKE_SOURCE_SHA256, csR13R12Source } from "./cs_r13_legacy_source.mjs";
+import { csR14EvidenceSources } from "./cs_r14_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -412,18 +413,19 @@ async function main() {
 
   const originalSource = readFileSync(FPS_FILE, "utf8");
   const sourceSha256 = sha256(originalSource);
-  gate([CS_R11_REPAIRED_SOURCE_SHA256, CS_R13_PLAYER_SMOKE_SOURCE_SHA256].includes(sourceSha256),
+  const r14Sources = csR14EvidenceSources(originalSource);
+  gate(r14Sources || [CS_R11_REPAIRED_SOURCE_SHA256, CS_R13_PLAYER_SMOKE_SOURCE_SHA256].includes(sourceSha256),
     "SOURCE_PROVENANCE_MISMATCH",
     `expected=${CS_R11_REPAIRED_SOURCE_SHA256} or ${CS_R13_PLAYER_SMOKE_SOURCE_SHA256}\nactual=${sourceSha256}`);
-  const r12EvidenceSource = sourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256
-    ? csR13R12Source(originalSource) : originalSource;
+  const r12EvidenceSource = r14Sources?.r12 ?? (sourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256
+    ? csR13R12Source(originalSource) : originalSource);
   if (sourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256) {
     gate(sha256(r12EvidenceSource) === CS_R11_REPAIRED_SOURCE_SHA256, "R13_R12_ADAPTER_MISMATCH");
   }
   gate(randTokens(originalSource).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT",
     `expected=${EXPECTED_RAND_CALLS} actual=${randTokens(originalSource).length}`);
-  gate(occurrences(originalSource, "utilDmg:0") === 1, "UTIL_DMG_UNAVAILABLE_MARKER");
-  gate(occurrences(originalSource, "if(tw.type===\"flash\")") === 1, "FLASH_GAMEPLAY_BRANCH_COUNT");
+  gate(occurrences(r12EvidenceSource, "utilDmg:0") === 1, "UTIL_DMG_UNAVAILABLE_MARKER");
+  gate(occurrences(r12EvidenceSource, "if(tw.type===\"flash\")") === 1, "FLASH_GAMEPLAY_BRANCH_COUNT");
 
   const tempRoot = mkdtempSync(join(tmpdir(), "esmo-cs-flash-attribution-r12-"));
   let vite = null;
@@ -506,6 +508,7 @@ async function main() {
       seedSetSha256: EXPECTED_SEED_SET_SHA256,
       records,
     }));
+    console.log(`sourceStage: ${r14Sources ? "r14-he via canonical R12" : "historical"}`);
     console.log(`sourceSha256: ${sourceSha256}`);
     console.log(`fixed seeds: ${FIXED_SEEDS.length}`);
     console.log(`collector off/on trajectory equality: ${records.length}/${records.length}`);
