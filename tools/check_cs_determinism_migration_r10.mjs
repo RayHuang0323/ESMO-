@@ -13,6 +13,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 import { CS_R11_REPAIRED_SOURCE_SHA256, csR11R10Source } from "./cs_r11_legacy_source.mjs";
+import { CS_R13_PLAYER_SMOKE_SOURCE_SHA256, csR13R12Source } from "./cs_r13_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -382,14 +383,21 @@ async function main() {
 
   const originalSource = readFileSync(FPS_FILE, "utf8");
   const sourceSha256 = sha256(originalSource);
-  const sourceStage = sourceSha256 === CS_R11_REPAIRED_SOURCE_SHA256 ? "r11-repaired"
+  const r12Source = sourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256
+    ? csR13R12Source(originalSource) : originalSource;
+  if (sourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256) {
+    gate(sha256(r12Source) === CS_R11_REPAIRED_SOURCE_SHA256, "R13_R12_ADAPTER_MISMATCH");
+  }
+  const r12SourceSha256 = sha256(r12Source);
+  const sourceStage = sourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256 ? "r13-player-smoke"
+    : sourceSha256 === CS_R11_REPAIRED_SOURCE_SHA256 ? "r11-repaired"
     : sourceSha256 === REPAIRED_SOURCE_SHA256 ? "repaired"
     : sourceSha256 === LEGACY_SOURCE_SHA256 ? "legacy" : null;
   gate(sourceStage, "SOURCE_PROVENANCE_MISMATCH",
-    `legacy=${LEGACY_SOURCE_SHA256}\nrepaired=${REPAIRED_SOURCE_SHA256}\nr11=${CS_R11_REPAIRED_SOURCE_SHA256}\nactual=${sourceSha256}`);
-  const r10EvidenceSource = sourceSha256 === CS_R11_REPAIRED_SOURCE_SHA256
-    ? csR11R10Source(originalSource) : originalSource;
-  if (sourceStage === "r11-repaired") {
+    `legacy=${LEGACY_SOURCE_SHA256}\nrepaired=${REPAIRED_SOURCE_SHA256}\nr11=${CS_R11_REPAIRED_SOURCE_SHA256}\nr13=${CS_R13_PLAYER_SMOKE_SOURCE_SHA256}\nactual=${sourceSha256}`);
+  const r10EvidenceSource = r12SourceSha256 === CS_R11_REPAIRED_SOURCE_SHA256
+    ? csR11R10Source(r12Source) : r12Source;
+  if (sourceStage === "r11-repaired" || sourceStage === "r13-player-smoke") {
     gate(sha256(r10EvidenceSource) === REPAIRED_SOURCE_SHA256, "R11_R10_ADAPTER_MISMATCH",
       `expected=${REPAIRED_SOURCE_SHA256}\nactual=${sha256(r10EvidenceSource)}`);
   }

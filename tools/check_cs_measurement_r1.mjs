@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 import { csR10LegacySource } from "./cs_r10_legacy_source.mjs";
 import { CS_R11_REPAIRED_SOURCE_SHA256, csR11R10Source } from "./cs_r11_legacy_source.mjs";
+import { CS_R13_PLAYER_SMOKE_SOURCE_SHA256, csR13R12Source } from "./cs_r13_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -363,12 +364,19 @@ async function main() {
 
   const originalSource = readFileSync(FPS_FILE, "utf8");
   const engineSourceSha256 = sha256(originalSource);
-  gate([CAPTURED_ENGINE_SOURCE_SHA256, R10_ENGINE_SOURCE_SHA256, CS_R11_REPAIRED_SOURCE_SHA256].includes(engineSourceSha256), "SOURCE_PROVENANCE_MISMATCH",
-    `expected=${CAPTURED_ENGINE_SOURCE_SHA256}, ${R10_ENGINE_SOURCE_SHA256}, or ${CS_R11_REPAIRED_SOURCE_SHA256}\nactual=${engineSourceSha256}`);
-  const r10Source = engineSourceSha256 === CS_R11_REPAIRED_SOURCE_SHA256
-    ? csR11R10Source(originalSource) : originalSource;
-  const historicalSource = [R10_ENGINE_SOURCE_SHA256, CS_R11_REPAIRED_SOURCE_SHA256].includes(engineSourceSha256)
-    ? csR10LegacySource(r10Source) : originalSource;
+  gate([CAPTURED_ENGINE_SOURCE_SHA256, R10_ENGINE_SOURCE_SHA256, CS_R11_REPAIRED_SOURCE_SHA256,
+    CS_R13_PLAYER_SMOKE_SOURCE_SHA256].includes(engineSourceSha256), "SOURCE_PROVENANCE_MISMATCH",
+  `expected=${CAPTURED_ENGINE_SOURCE_SHA256}, ${R10_ENGINE_SOURCE_SHA256}, ${CS_R11_REPAIRED_SOURCE_SHA256}, or ${CS_R13_PLAYER_SMOKE_SOURCE_SHA256}\nactual=${engineSourceSha256}`);
+  const r12Source = engineSourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256
+    ? csR13R12Source(originalSource) : originalSource;
+  if (engineSourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256) {
+    gate(sha256(r12Source) === CS_R11_REPAIRED_SOURCE_SHA256, "R13_R12_ADAPTER_MISMATCH");
+  }
+  const r12SourceSha256 = sha256(r12Source);
+  const r10Source = r12SourceSha256 === CS_R11_REPAIRED_SOURCE_SHA256
+    ? csR11R10Source(r12Source) : r12Source;
+  const historicalSource = [R10_ENGINE_SOURCE_SHA256, CS_R11_REPAIRED_SOURCE_SHA256].includes(r12SourceSha256)
+    ? csR10LegacySource(r10Source) : r12Source;
   gate(occurrences(historicalSource, RETURN_MARKER) === 1, "RETURN_MARKER_COUNT");
   gate(occurrences(historicalSource, EXPORT_MARKER) === 1, "EXPORT_MARKER_COUNT");
 

@@ -560,6 +560,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
       mollys=mollys.map(m=>({...m,tl:m.tl-1})).filter(m=>m.tl>0);
       throwables=throwables.map(tw=>{if(tw.flying){tw.t+=0.25;if(tw.t>=1){tw.flying=false;tw.detonate=true;tw.boom=3;
         if(tw.type==="flash"){ps.forEach(pl=>{if(pl.dead)return;const d=dist(pl.pos,tw.to);if(d<24&&!lineBlocked(pl.pos,tw.to,walls)){const enemy=pl.side!==tw.side;pl.flash=Math.max(pl.flash,enemy?(d<12?6:4):(d<8?3:0));}});}
+        if(tw.type==="smoke")smokes.push({id:`s${tw.id}`,pos:{...tw.to},tl:18,age:0});
       }}else if(tw.detonate){tw.boom--;}return tw;}).filter(tw=>tw.flying||tw.boom>0);
       if(planted&&c4t!==null){c4t--;
         // 警察必須真的抵達包點且無匪徒壓制，才會累積拆彈進度（受專注力/決策影響）

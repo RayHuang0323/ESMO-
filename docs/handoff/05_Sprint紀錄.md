@@ -6536,3 +6536,55 @@ node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,cs_stat_wiring_
 - R3 wiring/trajectory、R10 v3、R11 semantics 與 R1～R8 historical constants 全部 exact，
   未 rebaseline。完整 triage 與限制見 `CS_FLASH_ATTRIBUTION_R12_SPEC.md`。
 - Calibration 維持 No-Go；本 Sprint 完成後 local commit，不 push。
+
+---
+
+## CS Player Smoke LOS Gameplay Integration R13（2026-08-11）
+
+### Audit、短 Grill 與封版
+
+- R12 checkpoint `f9de21a` 已在 Sprint 前 push 至
+  `origin/release/moba-combat-closure`。Audit 確認 player smoke 原本只有 throwable/frame
+  視覺資料，只有 tactic smoke 會進入 `smokes → smokeBlocks → LOS` gameplay。
+- 短 Grill 封版：共用 tactic smoke 的 `SMOKE_R=6 / tl:18 / aging / smokeBlocks / frames /
+  renderer`；不改 phase/timing/balance、不增 RNG、不做 stream 重構。
+- 採 causal migration：第一個實際 player-smoke block 前 non-smoke trajectory/result/RNG
+  exact；之後只有能追溯到 `smokeBlocks` 的差異合法。固定 16×16=256 paired，不擴 scenario。
+
+### Verifier-first 與 production 實作
+
+- 新增 `tools/check_cs_player_smoke_los_r13.mjs` 與 `CsPlayerSmokeLOS.v1` /
+  `CsGameplayDigest.v4`；先以 memory candidate 證明 coverage 與 causal gates，再落 production。
+- Production 唯一改動是在 player smoke detonation 時加入
+  `smokes.push({id,pos,tl:18,age:0})`；下一 tick 自然走既有 LOS phase。靜態 RNG call sites
+  `21 → 21`，沒有 dummy RNG。
+- 新增 exact R13→R12 source adapter；R1～R12 historical verifiers 先還原 byte-exact R12
+  source，再串既有 adapters。舊 constants/digests 全部保留，禁止 auto rebaseline。
+
+### Causal evidence 與 debugging
+
+- Locked `CsPlayerSmokeLOS.v1`：
+  `effe21748fe9e4a31d293332aa0c7f65b2c62a0bcbc653c60167ac9087831d67`。
+- Locked `CsGameplayDigest.v4`：
+  `01ef345a70a3c3ae274b65c54cc19a68b80907fb2fd81495ff7855096d8d2289`。
+- Neutral 16 seeds：80 throws、79 spawns、479 opportunities、96 episodes、66 natural expiry、
+  13 round-end truncation。256 matrix 中 205 runs 有 block、51 runs zero-block。
+- blocked opportunity 只代表 LOS candidate 被 player smoke 阻擋；episode 為同 round/pair 的
+  連續 tick。attribution/lifetime 全由 verifier 重建，不增 contract，不宣稱 prevented kills。
+- 初版 pre-boundary gate 發現舊 frame 的 nested `_hitters` 被後續狀態回寫。根因是 production
+  frame shallow copy 仍 alias 該 array，不是真實的早期 trajectory drift；verifier 改為 exact-tick
+  deep snapshot，未改 production、未排除欄位，也未掩蓋 digest 差異。
+
+### 驗證、範圍與判定
+
+- R13 direct PASS（256 paired，約 653s）；R1/R2/R4/R5/R6/R8/R11/R12 focused 8/8 PASS；
+  R3 direct 544 simulations PASS；R10 direct 256 paired PASS；CS23 28/28 PASS；Progress25
+  flat 33/33 PASS；production build PASS。
+- 一次 R3 wrapper 寫 `.verify-state.json` 遭 EPERM，但 child assertions 已過；另以 direct exit 0
+  重驗，不改寫該 wrapper failure。一次誤啟的 nested tactic child 發現超 scope 後即停止，
+  Progress25 改用 flat mode 重驗；沒有 balance 改動。
+- 判定：**Go / Complete**。不需 per-round/subsystem RNG；HE、molly、learning、synergy、
+  balance/calibration、`utilDmg` 均未處理。Calibration 維持 No-Go。
+- WebGL/frame renderer source chain 已驗證，但 browser／手機視覺與 FPS 未人工實測。
+- 完整規格：`review/cs-gameplay/CS_PLAYER_SMOKE_LOS_R13_SPEC.md`。完成後 local commit，
+  不 push。

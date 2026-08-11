@@ -12,6 +12,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 import { CS_R11_REPAIRED_SOURCE_SHA256 } from "./cs_r11_legacy_source.mjs";
+import { CS_R13_PLAYER_SMOKE_SOURCE_SHA256, csR13R12Source } from "./cs_r13_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -411,8 +412,14 @@ async function main() {
 
   const originalSource = readFileSync(FPS_FILE, "utf8");
   const sourceSha256 = sha256(originalSource);
-  gate(sourceSha256 === CS_R11_REPAIRED_SOURCE_SHA256, "SOURCE_PROVENANCE_MISMATCH",
-    `expected=${CS_R11_REPAIRED_SOURCE_SHA256}\nactual=${sourceSha256}`);
+  gate([CS_R11_REPAIRED_SOURCE_SHA256, CS_R13_PLAYER_SMOKE_SOURCE_SHA256].includes(sourceSha256),
+    "SOURCE_PROVENANCE_MISMATCH",
+    `expected=${CS_R11_REPAIRED_SOURCE_SHA256} or ${CS_R13_PLAYER_SMOKE_SOURCE_SHA256}\nactual=${sourceSha256}`);
+  const r12EvidenceSource = sourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256
+    ? csR13R12Source(originalSource) : originalSource;
+  if (sourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256) {
+    gate(sha256(r12EvidenceSource) === CS_R11_REPAIRED_SOURCE_SHA256, "R13_R12_ADAPTER_MISMATCH");
+  }
   gate(randTokens(originalSource).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT",
     `expected=${EXPECTED_RAND_CALLS} actual=${randTokens(originalSource).length}`);
   gate(occurrences(originalSource, "utilDmg:0") === 1, "UTIL_DMG_UNAVAILABLE_MARKER");
@@ -441,7 +448,7 @@ async function main() {
           if (!variant) return null;
           transformSeen += 1;
           gate(code === originalSource, "VITE_SOURCE_MISMATCH");
-          return { code: transformSource(code, variant), map: null };
+          return { code: transformSource(r12EvidenceSource, variant), map: null };
         },
       }],
     });

@@ -17,6 +17,7 @@ import { csResultToTransaction } from "../src/platform/progress/adapters/csProgr
 import { csPerfFactor, playerXpFor } from "../src/platform/progress/rewardFormulas.js";
 import { csR10LegacySource } from "./cs_r10_legacy_source.mjs";
 import { CS_R11_REPAIRED_SOURCE_SHA256, csR11R10Source } from "./cs_r11_legacy_source.mjs";
+import { CS_R13_PLAYER_SMOKE_SOURCE_SHA256, csR13R12Source } from "./cs_r13_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -540,15 +541,21 @@ async function main() {
     "No update, rebaseline, seed, treatment, settlement, or migration flags are supported.");
   const originalSource = readFileSync(FPS_FILE, "utf8");
   const sourceSha256 = sha256(originalSource);
-  const legacyStage = sourceSha256 === LEGACY_SOURCE_SHA256;
-  const repairedStage = sourceSha256 === REPAIRED_SOURCE_SHA256 || sourceSha256 === R10_SOURCE_SHA256
-    || sourceSha256 === CS_R11_REPAIRED_SOURCE_SHA256;
+  const r12Source = sourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256
+    ? csR13R12Source(originalSource) : originalSource;
+  if (sourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256) {
+    gate(sha256(r12Source) === CS_R11_REPAIRED_SOURCE_SHA256, "R13_R12_ADAPTER_MISMATCH");
+  }
+  const r12SourceSha256 = sha256(r12Source);
+  const legacyStage = r12SourceSha256 === LEGACY_SOURCE_SHA256;
+  const repairedStage = r12SourceSha256 === REPAIRED_SOURCE_SHA256 || r12SourceSha256 === R10_SOURCE_SHA256
+    || r12SourceSha256 === CS_R11_REPAIRED_SOURCE_SHA256;
   gate(legacyStage || repairedStage, "SOURCE_PROVENANCE_MISMATCH",
     `legacy=${LEGACY_SOURCE_SHA256}\nrepaired=${REPAIRED_SOURCE_SHA256}\nactual=${sourceSha256}`);
-  const r10Source = sourceSha256 === CS_R11_REPAIRED_SOURCE_SHA256
-    ? csR11R10Source(originalSource) : originalSource;
-  const historicalSource = [R10_SOURCE_SHA256, CS_R11_REPAIRED_SOURCE_SHA256].includes(sourceSha256)
-    ? csR10LegacySource(r10Source) : originalSource;
+  const r10Source = r12SourceSha256 === CS_R11_REPAIRED_SOURCE_SHA256
+    ? csR11R10Source(r12Source) : r12Source;
+  const historicalSource = [R10_SOURCE_SHA256, CS_R11_REPAIRED_SOURCE_SHA256].includes(r12SourceSha256)
+    ? csR10LegacySource(r10Source) : r12Source;
   gate(randTokens(originalSource).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT",
     `expected=${EXPECTED_RAND_CALLS} actual=${randTokens(originalSource).length}`);
   gate(canonicalJson(generatedSeeds()) === canonicalJson(FIXED_SEEDS), "SEED_GENERATION_MISMATCH");
