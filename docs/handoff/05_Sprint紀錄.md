@@ -6634,3 +6634,57 @@ node tools/verify.mjs --only=cs23,cs_measure_r1,cs_instrument_r2,cs_stat_wiring_
 - 判定：**Go / Complete**。Molly、learning、synergy、balance/calibration、RNG stream 重構不在
   scope；Calibration 維持 No-Go。完整規格：`review/cs-gameplay/CS_HE_GAMEPLAY_R14_SPEC.md`。
 - 完成後 local commit，不 push。
+
+---
+
+## CS Molly Gameplay Integration R15（2026-08-11）
+
+### Checkpoint、Audit 與封版
+
+- Sprint 開始前將 R14 local commit `be1fc39` push 到
+  `origin/release/moba-combat-closure` 作為安全 checkpoint。
+- Audit 確認 player molly 已有 purchase／throw／flight／detonation visual，但 detonation 不會產生
+  persistent player zone；tactic molly 只在 sec 24 寫入 `mollys` 並老化/render，沒有 owner。
+- 短 Grill 封版：只接 player-thrown molly；`MOLLY_R=4`、`tl=8`、每個既有 2 秒 tick 固定
+  10 damage、無 falloff／armor modifier、牆體阻擋、只傷敵方、下一 tick 生效、不新增 RNG。
+  這是 functional baseline，不代表 calibration 完成。
+- 多 zone 依既有 array order additive；不做 route avoidance、繞路、主動撤離、stacking balance，
+  tactic molly 維持 visual-only，不虛構 owner/team damage。
+
+### Verifier-first 與 production 最小實作
+
+- 新增 `tools/check_cs_molly_gameplay_r15.mjs`：固定 16 R3 treatments × 16 seeds = 256 pairs，
+  驗證 thrower attribution、spawn/lifetime、enemy/radius/wall gate、fixed damage、effective damage、
+  utilDmg、kill/death/assist/economy、array order、deterministic rerun 與 21 個 RNG call sites。
+- 雙邊界 gate：spawn 前完整 exact；spawn→第一筆正值 DoT 只允許 player-molly lifecycle/frame；
+  首筆有效 damage 後才允許可歸因 trajectory/RNG 差異。No detonation 全場完整 exact；detonate
+  無 damage 則 non-molly gameplay/result/RNG 全場 exact。
+- Verifier-first 在 R14 production 完整跑完 gates 後只報
+  `PRODUCTION_MOLLY_NOT_INTEGRATED`；候選 canonical source SHA 為
+  `7622f87b8b389a504c19b887b860de791dbf8ea240e6ba57c424e159cb655c89`。
+- Production 只新增 functional constants、player-zone DoT processor、detonation spawn、molly
+  utilDmg subset 與 killfeed icon。沿用既有 `mollys`、`throwerByNadeId`、`applyDamage`、
+  `finalizeKill`、frames 與 renderer；沒有第二套 zone/damage/death ledger。
+- Player zone 在 detonation frame 以 tl 8 出現，因 phase order 從下一個 tick 才判定 damage；
+  tactic IDs 不符合 player source prefix，因此永不進 damage branch。
+
+### Evidence、歷史保護與驗證
+
+- `CsMollyGameplay.v1`：
+  `362d1095dcd3e06d7fcc79b26e920a444c22a50976c5cd03e5eec1771a5a54c9`。
+- `CsGameplayDigest.v6`：
+  `e0622480e1b1a833098c8186b0dcef00fd7cf69ee880b1b4ac3b45189f97a8ae`。
+- Matrix coverage：164 throws、153 detonations/spawns、1,205 player-zone ticks、78 damage events、
+  774 effective damage、1 kill、1 assist；137 no-detonation、98 detonate/no-damage、21 damage runs。
+  Tactic visual-zone ticks 20,761 且 damage=0。Overlap damage 自然 coverage=0，不作 stacking
+  calibration 結論。
+- 新增 strict R15→R14 canonical adapter，必須還原 R14 SHA `943cd5…0720` 才能串既有
+  historical chain。R1～R14 expected constants/digests 零修改；R1～R14 direct 全部 PASS。
+- R15 direct PASS；central runner `cs_molly_gameplay_r15` 1/1 PASS（212s）；CS23 28/28 PASS；
+  production build PASS（2643 modules，只有既有 large-chunk warning）。
+- 曾並行跑 R13/R14，因 middleware Vite WebSocket port conflict 且 timeout，該次未計為成功；
+  之後逐支序列重跑，R13（488s）與 R14（464s）皆 exit 0 / 完整 shape PASS。
+- 判定：**Go / Complete**。不需 per-round/subsystem RNG；learning、synergy、balance/calibration、
+  movement denial 與 contract/UI 擴充不在 scope。Calibration 維持 No-Go。
+- Live killfeed fire icon、既有 fire-zone WebGL renderer、手機視覺／FPS／觸控未人工真機驗收。
+  完整規格：`review/cs-gameplay/CS_MOLLY_GAMEPLAY_R15_SPEC.md`。完成後 local commit，不 push。

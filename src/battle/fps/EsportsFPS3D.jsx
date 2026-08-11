@@ -124,6 +124,8 @@ function segPtDist(ax,ay,bx,by,px,py){const dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy;if(
 const SMOKE_R=6;
 // R14 functional baseline only; balance calibration requires a separate Sprint.
 const HE_R=12,HE_MAX_DAMAGE=80,HE_ARMOR_SCALE=0.72;
+// R15 functional baseline only; balance calibration requires a separate Sprint.
+const MOLLY_R=4,MOLLY_TL=8,MOLLY_DAMAGE_PER_TICK=10;
 function smokeBlocks(a,b,smokes){if(!smokes||!smokes.length)return false;for(const s of smokes){if((s.tl??1)<=0)continue;if(segPtDist(a.x,a.y,b.x,b.y,s.pos.x,s.pos.y)<SMOKE_R)return true;}return false;}
 
 // ─── 地圖資料（walls = 碰撞 + 3D 建築）───────────────────────────────────
@@ -429,7 +431,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
         if(!df._hitters)df._hitters=[];if(!df._hitters.includes(at.id))df._hitters.push(at.id);
         const hpBefore=df.hp,effectiveDamage=Math.min(damage,hpBefore);
         df.hp-=damage;at.dmgDealt=(at.dmgDealt||0)+effectiveDamage;roundDmg[at.id]=(roundDmg[at.id]||0)+effectiveDamage;
-        if(source==="he")roundUtilDmg[at.id]=(roundUtilDmg[at.id]||0)+effectiveDamage;
+        if(source==="he"||source==="molly")roundUtilDmg[at.id]=(roundUtilDmg[at.id]||0)+effectiveDamage;
         return{hpBefore,effectiveDamage,killed:df.hp<=0};
       };
       const finalizeKill=(at,df,{weapon=at.gun,isHS=false,distance=Infinity,sourceId=null}={})=>{
@@ -441,7 +443,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
         events.push({type:"kill",killerId:at.id,killer:at.name,killerSide:at.side,victim:df.name,gun:weapon,hs:isHS,pos:{...df.pos},firstKill:isFirst});
         const rk=roundKills[at.id];
         if(rk>=2){const ml={2:"雙殺",3:"三殺",4:"四殺",5:"團滅"};events.push({type:"multikill",player:at.name,side:at.side,count:rk,label:ml[Math.min(rk,5)]});highlights.push({fi,label:`${at.name} ${ml[Math.min(rk,5)]}`});}
-        if(weapon==="he")casts.push(`💥 ${at.name} 高爆彈擊殺 ${df.name}！`);else if(isHS)casts.push(`💀 ${at.name} 爆頭擊殺 ${df.name}！`);else if(isFirst)casts.push(`🔫 ${at.name} 取得首殺，拿下開局優勢`);else if(distance<12)casts.push(`${at.name} 近距離擊殺 ${df.name}`);else if(GUNS[weapon]?.cls==="狙擊")casts.push(`🎯 ${at.name} 一槍狙掉 ${df.name}`);else if(rand()<0.4)casts.push(`${at.name} 擊殺 ${df.name}`);
+        if(weapon==="molly")casts.push(`🔥 ${at.name} 燃燒彈擊殺 ${df.name}`);else if(weapon==="he")casts.push(`💥 ${at.name} 高爆彈擊殺 ${df.name}！`);else if(isHS)casts.push(`💀 ${at.name} 爆頭擊殺 ${df.name}！`);else if(isFirst)casts.push(`🔫 ${at.name} 取得首殺，拿下開局優勢`);else if(distance<12)casts.push(`${at.name} 近距離擊殺 ${df.name}`);else if(GUNS[weapon]?.cls==="狙擊")casts.push(`🎯 ${at.name} 一槍狙掉 ${df.name}`);else if(rand()<0.4)casts.push(`${at.name} 擊殺 ${df.name}`);
         if(rand()<0.4)comms.push({side:at.side,name:at.name,text:rk>=2?"清掉了，跟上！":isHS?"爆頭收掉":`收一個，剩 ${df.side==="t"?aliveT.length-1:aliveCT.length-1} 個`});
         const sameTeam=ps.filter(x=>x.side===df.side&&!x.dead&&!x.reassigned);
         if(sameTeam.length&&rand()<0.6){const taker=sameTeam[0];taker.reassigned=true;const goal=df.side==="t"?N[target==="a"?"aSite":"bSite"]:df.pos;if(goal){taker.route=[taker.pos,goal];taker.routeIdx=0;taker.routeT=0;casts.push(`🔄 ${taker.name} 接管 ${df.name} 的位置`);}}
@@ -568,11 +570,17 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
         }
       }
       smokes=smokes.map(s=>({...s,tl:s.tl-1,age:(s.age||0)+1})).filter(s=>s.tl>0);
+      mollys.forEach((m,zoneIndex)=>{
+        const sourceId=String(m.id).startsWith("mnd")?String(m.id).slice(1):null;if(!sourceId)return;
+        const at=ps.find(pl=>pl.id===throwerByNadeId[sourceId]);if(!at)return;
+        ps.forEach(df=>{if(df.dead||df.side===at.side)return;const d=dist(df.pos,m.pos);if(d>=MOLLY_R||lineBlocked(m.pos,df.pos,walls))return;const {killed}=applyDamage(at,df,MOLLY_DAMAGE_PER_TICK,"molly",sourceId);if(killed)finalizeKill(at,df,{weapon:"molly",distance:d,sourceId});});
+      });
       mollys=mollys.map(m=>({...m,tl:m.tl-1})).filter(m=>m.tl>0);
       throwables=throwables.map(tw=>{if(tw.flying){tw.t+=0.25;if(tw.t>=1){tw.flying=false;tw.detonate=true;tw.boom=3;
         if(tw.type==="flash"){ps.forEach(pl=>{if(pl.dead)return;const d=dist(pl.pos,tw.to);if(d<24&&!lineBlocked(pl.pos,tw.to,walls)){const enemy=pl.side!==tw.side;pl.flash=Math.max(pl.flash,enemy?(d<12?6:4):(d<8?3:0));}});}
         if(tw.type==="he"){const at=ps.find(pl=>pl.id===throwerByNadeId[tw.id]);if(at)ps.forEach(df=>{if(df.dead||df.side===tw.side)return;const d=dist(df.pos,tw.to);if(d>=HE_R||lineBlocked(tw.to,df.pos,walls))return;const rawDamage=Math.max(0,Math.round(HE_MAX_DAMAGE*(1-d/HE_R)));const damage=Math.round(rawDamage*(df.armor?HE_ARMOR_SCALE:1));if(damage<=0)return;const {killed}=applyDamage(at,df,damage,"he",tw.id);if(killed)finalizeKill(at,df,{weapon:"he",distance:d,sourceId:tw.id});});}
         if(tw.type==="smoke")smokes.push({id:`s${tw.id}`,pos:{...tw.to},tl:18,age:0});
+        if(tw.type==="molly")mollys.push({id:`m${tw.id}`,pos:{...tw.to},tl:MOLLY_TL});
       }}else if(tw.detonate){tw.boom--;}return tw;}).filter(tw=>tw.flying||tw.boom>0);
       if(planted&&c4t!==null){c4t--;
         // 警察必須真的抵達包點且無匪徒壓制，才會累積拆彈進度（受專注力/決策影響）
@@ -1601,7 +1609,7 @@ function EsportsFPS3D({
               <div key={e.id} style={{display:"flex",alignItems:"center",gap:5,background:e.hs?"rgba(40,30,0,0.88)":"rgba(0,0,0,0.82)",border:`1px solid ${e.hs?C.gold:sideColor(e.killerSide)}77`,borderRadius:6,padding:"3px 8px",animation:"slideL 0.25s",fontSize:9}}>
                 <span style={{color:e.killerSide==="ct"?C.ctL:C.tL,fontWeight:800}}>{e.killer}</span>
                 {e.firstKill&&<span style={{color:C.gold,fontSize:7,fontWeight:900,border:`1px solid ${C.gold}`,borderRadius:3,padding:"0 2px"}}>FK</span>}
-                <span style={{color:e.hs?C.gold:"#aeb4be",fontSize:10}}>{e.gun==="he"?"💥":GUNS[e.gun]?.cls==="狙擊"?"🎯":GUNS[e.gun]?.cls==="衝鋒"?"🧨":"🔫"}</span>
+                <span style={{color:e.hs?C.gold:"#aeb4be",fontSize:10}}>{e.gun==="molly"?"🔥":e.gun==="he"?"💥":GUNS[e.gun]?.cls==="狙擊"?"🎯":GUNS[e.gun]?.cls==="衝鋒"?"🧨":"🔫"}</span>
                 {e.hs&&<span title="爆頭" style={{fontSize:11,filter:"drop-shadow(0 0 3px #fbbf24)"}}>🗡️</span>}
                 <span style={{color:e.killerSide==="ct"?C.tL:C.ctL,fontWeight:600,opacity:0.85}}>{e.victim}</span>
               </div>

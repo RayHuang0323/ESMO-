@@ -16,9 +16,11 @@ import { createServer } from "vite";
 import {
   CS_R13_PLAYER_SMOKE_LF_SHA256,
   CS_R14_HE_SOURCE_SHA256,
+  CS_R15_MOLLY_SOURCE_SHA256,
   csR14R13Source,
+  csR15R14Source,
   normalizeCsSource,
-} from "./cs_r14_legacy_source.mjs";
+} from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -710,21 +712,23 @@ async function main() {
   const originalSource = readFileSync(FPS_FILE, "utf8");
   const normalizedSource = normalizeCsSource(originalSource);
   const sourceSha256 = sha256(normalizedSource);
-  const sourceStage = sourceSha256 === CS_R14_HE_SOURCE_SHA256 ? "r14-he"
+  const sourceStage = sourceSha256 === CS_R15_MOLLY_SOURCE_SHA256 ? "r15-molly"
+    : sourceSha256 === CS_R14_HE_SOURCE_SHA256 ? "r14-he"
     : sourceSha256 === CS_R13_PLAYER_SMOKE_LF_SHA256 ? "r13-verifier-first" : null;
   gate(sourceStage, "SOURCE_PROVENANCE_MISMATCH",
-    `expected R13 LF=${CS_R13_PLAYER_SMOKE_LF_SHA256}\nexpected R14=${CS_R14_HE_SOURCE_SHA256}\nactual=${sourceSha256}`);
+    `expected R13 LF=${CS_R13_PLAYER_SMOKE_LF_SHA256}\nexpected R14=${CS_R14_HE_SOURCE_SHA256}\nexpected R15=${CS_R15_MOLLY_SOURCE_SHA256}\nactual=${sourceSha256}`);
   gate(randTokens(originalSource).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT",
     `expected=${EXPECTED_RAND_CALLS} actual=${randTokens(originalSource).length}`);
 
-  const r13Source = sourceStage === "r14-he" ? csR14R13Source(normalizedSource) : normalizedSource;
+  const r14Source = sourceStage === "r15-molly" ? csR15R14Source(normalizedSource) : normalizedSource;
+  const r13Source = sourceStage === "r13-verifier-first" ? normalizedSource : csR14R13Source(r14Source);
   gate(sha256(r13Source) === CS_R13_PLAYER_SMOKE_LF_SHA256, "R14_R13_ADAPTER_MISMATCH",
     `expected=${CS_R13_PLAYER_SMOKE_LF_SHA256}\nactual=${sha256(r13Source)}`);
   const expectedCandidateSource = buildCandidateSource(r13Source);
-  if (sourceStage === "r14-he") {
-    gate(normalizedSource === expectedCandidateSource, "PRODUCTION_CANDIDATE_MISMATCH");
+  if (sourceStage !== "r13-verifier-first") {
+    gate(r14Source === expectedCandidateSource, "PRODUCTION_CANDIDATE_MISMATCH");
   }
-  const candidateSource = sourceStage === "r14-he" ? normalizedSource : expectedCandidateSource;
+  const candidateSource = sourceStage === "r13-verifier-first" ? expectedCandidateSource : r14Source;
   const contractSource = readFileSync(CONTRACT_FILE, "utf8");
   const resultUiSource = readFileSync(RESULT_UI_FILE, "utf8");
   gate(!contractSource.includes("utilDmg"), "CS_MATCH_RESULT_CONTRACT_SCOPE_EXPANDED");

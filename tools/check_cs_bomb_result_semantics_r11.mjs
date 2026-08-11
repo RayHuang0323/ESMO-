@@ -16,7 +16,7 @@ import {
   CS_R11_REPAIRED_SOURCE_SHA256,
 } from "./cs_r11_legacy_source.mjs";
 import { CS_R13_PLAYER_SMOKE_SOURCE_SHA256, csR13R12Source } from "./cs_r13_legacy_source.mjs";
-import { csR14EvidenceSources } from "./cs_r14_legacy_source.mjs";
+import { csR15EvidenceSources as csR14EvidenceSources } from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");

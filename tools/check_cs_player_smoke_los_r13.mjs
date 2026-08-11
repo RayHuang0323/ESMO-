@@ -22,9 +22,11 @@ import {
 } from "./cs_r13_legacy_source.mjs";
 import {
   CS_R14_HE_SOURCE_SHA256,
+  CS_R15_MOLLY_SOURCE_SHA256,
   csR14R13Source,
+  csR15R14Source,
   normalizeCsSource,
-} from "./cs_r14_legacy_source.mjs";
+} from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -668,11 +670,13 @@ async function main() {
   const originalSource = readFileSync(FPS_FILE, "utf8");
   const normalizedSource = normalizeCsSource(originalSource);
   const liveSourceSha256 = sha256(normalizedSource);
-  const sourceStage = liveSourceSha256 === CS_R14_HE_SOURCE_SHA256 ? "r14-he"
+  const sourceStage = liveSourceSha256 === CS_R15_MOLLY_SOURCE_SHA256 ? "r15-molly"
+    : liveSourceSha256 === CS_R14_HE_SOURCE_SHA256 ? "r14-he"
     : liveSourceSha256 === CS_R13_PLAYER_SMOKE_LF_SHA256 ? "r13-player-smoke" : null;
   gate(sourceStage, "SOURCE_PROVENANCE_MISMATCH",
-    `expected R13 LF=${CS_R13_PLAYER_SMOKE_LF_SHA256}\nexpected R14=${CS_R14_HE_SOURCE_SHA256}\nactual=${liveSourceSha256}`);
-  const r13Source = sourceStage === "r14-he" ? csR14R13Source(normalizedSource) : normalizedSource;
+    `expected R13 LF=${CS_R13_PLAYER_SMOKE_LF_SHA256}\nexpected R14=${CS_R14_HE_SOURCE_SHA256}\nexpected R15=${CS_R15_MOLLY_SOURCE_SHA256}\nactual=${liveSourceSha256}`);
+  const r14Source = sourceStage === "r15-molly" ? csR15R14Source(normalizedSource) : normalizedSource;
+  const r13Source = sourceStage === "r13-player-smoke" ? normalizedSource : csR14R13Source(r14Source);
   const sourceSha256 = sha256(r13Source);
   gate(randTokens(originalSource).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT",
     `expected=${EXPECTED_RAND_CALLS} actual=${randTokens(originalSource).length}`);
