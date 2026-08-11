@@ -7340,3 +7340,102 @@ competitionGateway.issueFor() → assignment.opponent.name
 - 「不是比賽日」時畫面只寫「推進天數到第 N 天」，**沒有給按鈕**，玩家得自己退回主畫面。
 - 主畫面三顆模式磚的「👁 2041 / 0 / 0」是 Sprint 早期的假資料，賽事磚顯示 `👁 0`
   看起來像「沒東西」。要處理就是整排一起處理，不單改一顆。
+
+## Milestone Q3.5-close（2026-08-12）— 瀏覽器實測驗收 ＋ 三個接線修正
+
+上一節（Q3.5-fix）留下的「六項全部未經瀏覽器實測」補完了。
+**六項全部通過**，過程中抓到 **兩個 Node 斷言證明不了的真 bug**，都已修並重測。
+
+### 怎麼測的（環境，供下次重現）
+
+- 本機 `npm run dev`（`http://localhost:5173/ESMO-/`），Claude in Chrome 驅動。
+- 用既有的 localhost 存檔（德國海豹 Lv.93）走完整流程：
+  訓練中心推進天數 → 賽事頁 → 出賽 → 房間確認 → Ban/Pick → 戰術 → Loading →
+  對戰 → 快速完成 → 終局 → 賽後結算 → 回主畫面 → 積分榜回寫。
+  **實際打完三場**（vs 烈焰鳳凰 / 暗影狼群 / 翡翠龍騎）＋ **真的棄權一場**（vs 白銀之鷹）。
+- 第 6 項需要「完全沒有場次」的乾淨狀態。**不清 localStorage**（那是破壞性動作），
+  改成 `npx vite --port 5199` 另開一個 **port ＝另一個 origin ＝ 全新存檔**，
+  在該 origin 上跑 `?debug=moba-runtime-battle`。這招之後要測「新玩家第一次進場」都能用。
+
+### 六項驗收結果
+
+| # | 項目 | 結果與證據 |
+|---|---|---|
+| 1 | 賽事頁對手名 = Ban/Pick 對手名 | ✅ 三場皆同名；Ban/Pick 標題「vs ○○」、AI 播報「🔴 ○○ 禁用 炎拳」都指名道姓 |
+| 2 | Loading／HUD／TAB 記分板／終局一致 | ⚠️→✅ **終局橫幅原本寫「赤焰軍團 獲勝」**（見下方根因）。修後重測為「暗影狼群 獲勝」「翡翠龍騎 獲勝」，全頁掃不到「赤焰軍團」 |
+| 3 | 長隊名在手機寬度不擠爆 | ✅ 390px 下量測：Ban/Pick 標題與 HUD 隊名皆 `white-space:nowrap` ＋ `text-overflow:ellipsis`；塞 8–11 字名稱後 `scrollWidth == clientWidth`、容器 `scrollWidth == 390`（不外溢）、兩隊名區間不重疊 |
+| 4 | 棄權 / 取消 / 真棄權 | ✅ 確認態「取消」落在原棄權鈕座標（誤觸的第二下打在取消上）；取消後戰績不變；確定棄權後 我方 0-2→0-3、對手 0-2→1-2、場次 2/14→3/14、畫面切回「下一場賽事」 |
+| 5 | 主畫面標籤 = 賽事頁 | ✅ 三種狀態都對上：`進入聯賽`（尚無賽季）／`下一場 第 N 天`／`🔴 今日有賽事` |
+| 6 | debug battle 單獨進場 | ✅ 全新 origin、`localStorage` 0 筆 ⇒ HUD 顯示「德國海豹／赤焰軍團」，終局橫幅同樣退回預設，**不空白** |
+
+### Bug 1：終局橫幅寫死「赤焰軍團」（第 2 項）
+
+`BattleEndScreen.jsx:148` 顯示的是 **`result.teams[win].name`**——不是 HUD 那組
+`blueName/redName` props。所以 Q3.5-fix 只接了 props，同一個畫面就會
+HUD 寫「烈焰鳳凰」、正中央橫幅寫「赤焰軍團」。
+
+**根因就是上一節「沒做（刻意留下）」的第一條**：`useBattleFeed` 呼叫
+`snapshotToBattleResult` 時沒給隊名。上一節判斷「玩家在 AppShell 流程裡看不到」——
+**那個判斷是錯的，玩家每一場結束都會看到**。
+
+修法（`src/battle/useBattleFeed.js`）：終局那一次呼叫補 `teams`，值取自
+`platform/matchTeamNames.js` 的同一組 selector。
+
+- ⚠ **只覆蓋 `name`**：`id`／`tag` 等識別欄位仍是 `roster.js` 的，結算與統計規則完全不動。
+- ⚠ 查不到（debug harness、單獨掛 GameView）⇒ **不覆蓋** ⇒ 退回既有預設（第 6 項就是在驗這條）。
+- `SeasonScreen` / `platform/DashboardScreen` 也是讀 `r.teams[winner].name`，
+  **理論上一併修對**（同一份資料），但**這兩處沒有在瀏覽器裡驗過**——
+  `platform/DashboardScreen` 不在 live path（主畫面走 `src/screens/DashboardScreen.jsx`，
+  儀表板目前仍是 Legacy 佔位頁），`SeasonScreen` 本輪沒走到。如實記錄。
+
+### Bug 2：賽前房間的「對手」欄整段確認階段都是「—」（第 1 項的同一條鏈）
+
+一般配對顯示得出對手名，**賽事出賽卻是「—」**。根因不是顯示層：
+
+```
+profileStore.launchFixtureMatch()  →  ticket: null      ← 賽程路徑沒有票券
+                                      fixtureAssignment: issued.assignment   ← 指派單在這
+```
+
+而 Q3.5-fix 的「唯一讀取點」只列到 `ticket.assignment`，
+`useMatchFlow.js` 又**自己再讀一次** `view.ticket?.assignment?.opponent?.name`
+（第二份對應規則）。兩邊都拿不到 ⇒「—」。
+
+修法：
+1. `platform/matchTeamNames.js`：`selectOpponentName` 補上第 ④ 順位
+   `fixtureAssignment.opponent.name`。③④ 是**同一階段的兩種簽發者**
+   （mockGateway／competitionGateway），不是兩份真相。
+2. `screens/common/useMatchFlow.js`：刪掉自己那份規則，改吃同一個 selector
+   （回傳仍是原始值 字串／null，符合本檔「只訂閱原始值」的紀律）。
+
+實測：「—」→「翡翠龍騎」，從房間確認階段就有名字。
+
+### 驗證
+
+| 項目 | 結果 |
+|---|---|
+| `q1` / `q2a` / `q2b` / `q3` / `q35` | 93/93、112/112、92/92、90/90、**65/65** |
+| `check_matchmaking_o4` / `check_matchmaking_flow_acceptance` | 47/47、**97/97** |
+| `check_flow09` / `check_dash10` | exit 0 |
+| `regress` / `regress2` | 15/15、**8/8** |
+| `verify.mjs --only=runtime29,progress25` | **2/2 PASS**（runtime29 89s） |
+| `npm run build` | exit 0（`built in 9.91s`） |
+| 瀏覽器 console | 0 個新錯誤 |
+
+### 沒做（本輪刻意不碰，全部登記在 `08_目前待辦與風險.md`）
+
+- **房間確認逾時後按「重新配對」會離開原 fixture**：實測逾時後重新配對，
+  配到的是隨機對手（「翠光學院」），而聯賽那一場仍掛著沒打。
+  這是**流程設計問題**（重新配對該不該重簽同一場賽程），不是名字問題，不在本輪 6 項內。
+- **進行中的聯賽對戰沒有直接返回入口**：賽事頁只寫「你有一場進行中的對戰，請直接返回那一場」，
+  但那一頁**沒有按鈕**，玩家得自己走主畫面 → MOBA 磚 → 賽前配置 →「返回進行中的對戰」。
+- **終局畫面在低視窗高度版面破**：視窗內高 495px 時，終局覆蓋層 `justify-content:center`
+  把橫幅推到畫面上方外面，且捲不回去。**既有版面問題，非本輪改動造成**，本輪沒動。
+- `BattleEndScreen` 既有的 React `unique "key" prop` 警告（dev-only，非本輪造成）。
+- 上一節列的其餘待辦（非比賽日沒有推進按鈕、👁 假資料、賽事頁美術）原樣保留。
+
+### ⚠ 這一輪學到的：「刻意留下」要先確認玩家真的看不到
+
+上一節把 `useBattleFeed` 沒傳隊名這件事判成「玩家在 AppShell 流程裡看不到」，
+所以延後。**一進瀏覽器，它就是每一場結束時畫面正中央最大的那行字。**
+延後一個缺口之前，先把玩家會走到的畫面實際點過一遍再說「看不到」。

@@ -11,6 +11,8 @@ import { useBattleStore } from "./battleStore.js";
 import { useHeroProgressStore } from "../hero/heroProgressStore.js";
 import { useSeasonStore } from "../platform/seasonStore.js";
 import { useProfileStore } from "../platform/profileStore.js";
+import { selectTeamName, selectOpponentName } from "../platform/matchTeamNames.js";
+import { TEAMS } from "../data/roster.js";
 import { snapshotToBattleResult } from "./battleResult.js";
 import { draftHeroAssign } from "./moba/draftRoster.js";
 import { mobaResultToTransaction, mobaMatchId } from "../platform/progress/adapters/mobaProgressAdapter.js";
@@ -43,7 +45,22 @@ export function useBattleFeed(draft = null, { roster = null, tacticId = null } =
       // Sprint09：唯一計算點 — 終局只在此產出一份 BattleResult，分送所有消費者
       const bs = useBattleStore.getState();
       if (snap.over && !bs.result) {
-        const result = snapshotToBattleResult(snap, bs.log, { heroAssign: draftHeroAssign(draftRef.current) });
+        //  Q3.5 驗收：終局畫面的「○○ 獲勝」讀的是 BattleResult.teams[].name，
+        //  不是 HUD 那組 props ⇒ 不在這裡接線，同一個畫面就會 HUD 寫「烈焰鳳凰」、
+        //  橫幅寫 roster.js 的預設「赤焰軍團」。隊名的唯一來源仍是
+        //  `platform/matchTeamNames.js`（HUD／記分板／終局吃同一組值）。
+        //  ⚠ 只覆蓋 name：id／tag 等識別欄位維持 roster.js，結算與統計規則不變。
+        //  ⚠ 查不到（debug harness、單獨掛 GameView）⇒ 不覆蓋 ⇒ 退回既有預設。
+        const ps = useProfileStore.getState();
+        const blueName = selectTeamName(ps);
+        const redName = selectOpponentName(ps);
+        const result = snapshotToBattleResult(snap, bs.log, {
+          heroAssign: draftHeroAssign(draftRef.current),
+          teams: {
+            blue: { ...TEAMS.blue, ...(blueName ? { name: blueName } : {}) },
+            red: { ...TEAMS.red, ...(redName ? { name: redName } : {}) },
+          },
+        });
         bs.setResult(result);                                        // → EndScreen（禁止重新統計）
         useHeroProgressStore.getState().recordBattleResult(result);  // → Hero Progress
 

@@ -29,6 +29,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { TICKET_STATES } from "../../platform/contracts/matchmaking.js";
+import { selectOpponentName } from "../../platform/matchTeamNames.js";
 import { primaryActionFor, flowStatusText, flowStepOf } from "./matchPrepAction.js";
 
 /**
@@ -110,11 +111,16 @@ export function useMatchFlow(mode = "moba", onEnterBattle = null) {
     onEnterBattle?.();
   }, [sessionId, sessionState, roomState, onEnterBattle]);
 
+  //  Q3.5 驗收：賽事出賽時房間的「對手」欄整段確認階段都是「—」。原因是這裡
+  //  只讀 `ticket.assignment`，而 `launchFixtureMatch()` 把 ticket 設成 null
+  //  （賽程路徑沒有票券），指派單放在 `matchmaking.fixtureAssignment`
+  //  ⇒ 同一條流程上出現第二份對應規則。改吃隊名的唯一讀取點
+  //  （`platform/matchTeamNames.js`，已含 fixtureAssignment 那一段）。
+  //  ⚠ 仍是原始值（字串／null），符合本檔「只訂閱原始值」的規則。
+  const opponentName = selectOpponentName(store);
+
   const act = primaryActionFor({ entryOk: entry.ok, view, room, session });
-  const statusText = flowStatusText({
-    entryOk: entry.ok, view, room, session,
-    opponentName: view.ticket?.assignment?.opponent?.name ?? null,
-  });
+  const statusText = flowStatusText({ entryOk: entry.ok, view, room, session, opponentName });
 
   //  ── 唯一的流程推進點 ────────────────────────────────────────────────
   const run = () => {
@@ -167,7 +173,7 @@ export function useMatchFlow(mode = "moba", onEnterBattle = null) {
     mode, entry, check, view, room, session,
     act, statusText, step: flowStepOf({ view, room, session }),
     usReady, oppReady,
-    opponentName: view.ticket?.assignment?.opponent?.name ?? null,
+    opponentName,
     remainingSec: room.remainingSec,
     waitedSec: view.waitedSec,
     canCancel: live,

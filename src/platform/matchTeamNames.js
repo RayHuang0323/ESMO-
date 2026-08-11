@@ -30,7 +30,13 @@
  * 順序＝可信度由高到低，全部是同一條鏈路上的同一個值：
  *   ① `launch.opponentName`：一次性令牌換來的進場參數（對戰中最權威）
  *   ② `session.opponent.name`：場次已簽發、尚未進場
- *   ③ `ticket.assignment.opponent.name`：還在房間確認階段（賽前頁用的就是它）
+ *   ③ `ticket.assignment.opponent.name`：還在房間確認階段（**一般配對**用的）
+ *   ④ `fixtureAssignment.opponent.name`：同樣是房間確認階段，但**賽程路徑**
+ *
+ * ⚠ ④ 是 Q3.5 驗收補上的：賽事出賽時 `profileStore.launchFixtureMatch()` 明確
+ *   把 `ticket` 設成 null（賽程路徑沒有票券），指派單改放 `fixtureAssignment`。
+ *   只列 ③ 的話，賽前房間的「對手」欄在整個確認階段都是「—」。
+ *   ③④ 是同一階段的兩種簽發者（mockGateway／competitionGateway），不是兩份真相。
  *
  * @returns {string|null} 查不到回 null（由呼叫端決定預設顯示）
  */
@@ -38,6 +44,7 @@ export const selectOpponentName = (s) =>
   s?.matchmaking?.launch?.opponentName
   ?? s?.matchmaking?.session?.opponent?.name
   ?? s?.matchmaking?.ticket?.assignment?.opponent?.name
+  ?? s?.matchmaking?.fixtureAssignment?.opponent?.name
   ?? null;
 
 /**
