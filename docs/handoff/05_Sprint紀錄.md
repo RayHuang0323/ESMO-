@@ -8192,3 +8192,86 @@ reward/XP 不重複、A 的賽果未被動到（D11）→ B 的正牌結果之�
 `RESOLVE_APP_MODULES` 入口驅動真實模組，所以**跨場次防串的行為本身不是在正式站
 驗的**，而是在 dev build 的兩支 gate（24/24、26/26）。正式站只證明
 「這份程式碼確實上線了、站台沒壞」。
+
+---
+
+## Q7a 安全前提（2026-08-13）＋ 上一節根因的更正
+
+### ⚠ 更正：上一節寫的 gate 根因是錯的
+
+上一節把「gate 一下 24/24 一下 19/24」歸因於**模組實例分裂**（自己 import 的
+profileStore 不是 `settleMatchBoundary` 閉包裡那一個），並據此把前導程式改成
+從 boundary 原始碼推導 store URL。
+
+**那個結論沒有成立。** 真正的問題是 `startDevServer` 漏行程：
+
+- `spawn(..., { shell: true })` 之下 `proc.kill()` 只殺得到 shell，**vite 活下來
+  繼續佔 port**。跑幾輪之後實測有 **7 個**殘留的 dev server 還在監聽
+  （5311/5312/5313/5317/5318/5319/5321）。
+- 於是 `--strictPort` 從保護變成陷阱：新的 vite 因為 port 被佔直接結束，但
+  「等 server 起來」那個 `fetch` **會對舊的那一個成功** ⇒ gate 靜默地連上
+  **別的 worktree 的 dev server**，測到的根本不是它以為的原始碼。
+
+把殘留行程清掉、port 確認是空的之後重跑：**當初被判定「不可能通過」的天真版
+前導（自己直接 import profileStore）同樣 24/24 通過**。所以模組分裂那套說法
+不成立——支持它的證據，全部來自 dev server 來源未經確認的那些跑。
+
+**修法**（`tools/browser/cdp.mjs`）：起 server 前先確認 port 是空的，被佔就
+**直接 throw**（不重試、不換 port）；收工用 `taskkill /T /F` 殺整棵行程樹。
+`RESOLVE_APP_MODULES` 保留——把 store 身分寫明確本身有價值——但它是**加固，
+不是修正**，敘述已改。
+
+**教訓（延續上一節那條，而且更難堪）**：上一節說「驗證器最危險的失敗是靜默地
+量錯對象」，然後我對「量錯的是什麼」下了錯誤結論，因為我沒有先確認**驗證器連
+到的是不是自己起的 server**。前提要驗到底：不只是「我拿到的 store 對不對」，
+還有「這個頁面是誰供應的」。
+
+### Q7a 產品方向（已定案）
+
+```
+賽季 Season → 遊戲項目 Game Mode → 巡迴賽體系 Circuit → 單一賽事 Event
+  → 賽事階段 Competition / Stage → 晉級資格 Qualification → 具體對戰 Fixture
+```
+
+Season 仍是 ESMO 第一級的時間／生涯週期，**不降級成 Circuit 的屬性**。
+Circuit 是該 Season 內某個遊戲項目的一條競賽路線，Event 是 Circuit 裡的一站。
+MOBA 與 CS 共用 Season 但 Circuit 結構不同（MOBA 以聯賽／季後賽為生涯主線，
+CS 偏多站巡迴＋Circuit Points＋年度大賽）。Circuit 是**一級實體**，積分跨 Event
+累積並決定晉級；賽區（Region）只是名稱，不限制報名資格。
+
+### 本輪只做兩個安全前提（audit 的第 1、2 項）
+
+兩者都與 Circuit / Event 的資料形狀無關，所以先做，不必等 Q7a 定案。
+
+**① 一次只能有一場進行中的對戰。** `startFixtureMatch` 以前只擋「同一個 fixture
+且已 launched」；另一場還是 `scheduled` 的賽程可以直接開下去，而它會把
+`matchmaking.session` 設成 null ⇒ **前一場進行中的場次無聲消失**，賽果之後只走
+S25 路徑、不寫進賽程，那場 fixture 永遠停在 `launched`。一季一賽事時很難踩到，
+多賽事並存之後是常態。現在**任何 live session 都擋**，訊息帶對手名字。
+逾期分狀態判定：`launched` 一律擋（打久了不該能繞過去），`created` 逾期不擋
+（作廢的入場券不該卡人）。
+
+**② 同一天的第二場不再隱形。** 資料模型本來就放得下一天多場，但
+`pendingPlayerFixtureOn` 只回第一場 ⇒ 第二場看不見卻仍擋著日曆，玩家卡在
+「走不出今天、也不知道還要打什麼」。新增 `pendingPlayerFixturesOn` 回傳清單，
+單數版改成取清單第一個（既有呼叫端零影響），`competitionView().todayPending`
+把整份給畫面。
+
+### 驗證
+
+| 項目 | 結果 |
+|---|---|
+| `check_q7a_safety`（新增） | **18/18** |
+| Q1 / Q2a / Q2b / Q3 / Q3.5 / Q4 / Q5 / Q6 | 93 / 112 / 92 / 90 / 65 / 68 / 66 / 57 |
+| `o7` / `integrity` / `cs23` / `progress25` | 48/48 / 20/20 / 28/28 / exit 0 |
+| `regress` / `regress2` / `build` | exit 0 / 8/8 / `built in 10.07s` |
+| 三支瀏覽器 gate | 票券 24/24、fixture 26/26、q6 20/20 |
+
+⚠ 瀏覽器 gate 的數字是在**清掉殘留 dev server、port 確認乾淨**之後跑的。
+往後任何一支 gate 紅了，第一件事是確認 port，不是懷疑被測程式。
+
+### 未做（刻意）
+
+audit 的第 3～6 項（Circuit/Event 契約與 `competition.id` 換根、seasonState 多賽事、
+季後賽收編成 Stage 賽制、time-slot 排程）**都沒有動**。第 3 項開始前要先提出
+最小 migration 方案與 seasonState 的資料形狀。
