@@ -8059,3 +8059,109 @@ Actions run **31603291866**（`c3a5ba4`）：build ✅ / deploy ✅。
 Q6 之後：獨立 Chrome 有**自己的 user-data-dir** ⇒ 正式站那個 origin 在裡面是
 **全新 profile**（實測 `localStorage 0 筆`）。
 ⇒ **不需要備份、不需要還原、不需要人**。這套流程之後每一輪都該直接沿用。
+
+---
+
+## 賽果完整性 hotfix（2026-08-13）— 跨場次防串 ＋ 瀏覽器 gate 重做
+
+稽核指出：**已結算過的舊 BattleResult，若在另一個 active 場次存在時被重送，
+可能錯誤完成另一個 fixture。** 本輪只做這件事，未動 reward／match flow／
+Battle Engine，未開 Q7。
+
+### 成因不是「結果沒綁場次」，是綁定方向反了
+
+`createMatchResult({ session, outcome })` 是把**當下場次的身分**
+（sessionId / seed / rosterVersions）**蓋到**呼叫端遞來的 outcome 上。於是舊
+payload 重送時會被重新蓋章成一份**形式上完全合法**的本場結果：contentHash
+重算得過、與 session 逐欄相符（欄位本來就是抄來的）、與 `lastResult` 的
+sessionId 不同所以衝突偵測也不觸發。
+
+錢因為 S25 以 `transactionId` 冪等不會重複發，這也是它一直沒被發現的原因。
+真正的損害是**場次被舊結果佔用並標成 `completed`**，而這一場真正的賽果從此
+再也結算不進去（`completeSession` 只收 `launched`，且正牌結果會與被寫入的舊
+`lastResult` 撞成 `conflict`）。
+
+### 在最新 main 上，這條路是真的會走到底的
+
+`profileStore.js` 的賽程回寫邊界是：
+
+```js
+if (receipt?.ok && isFixtureSession(session)) {
+  get()._writeFixtureResultFromMatch(made.result, session);   // → completeFixtureMatch()
+}
+```
+
+**只看 `receipt.ok`，沒有看 `alreadySettled`。** 所以在 Q3.5 之後的主幹上，
+被錯誤受理的舊結果會一路寫進賽程並完成該場 —— 而 FixtureOutcome 依 D11
+不可變，寫錯改不回來。擋住它的唯一一道關卡就是結算本身。
+
+### 修法（`settleMatchResult.js`，+43 −1，大半是註解）
+
+新不變量：**這筆對戰的進度先前已入帳，但本場次沒有任何對應它的結算紀錄
+⇒ 結果來自別場，拒絕且完全不寫入**（`code: "foreign_result"`）。一條規則同時
+蓋住兩種變體（已有 O7 結算紀錄／只經 S25 入帳），因為兩者共同的事實都是
+「錢已經發過，但不是這一場發的」。不新增 state 形狀、舊存檔不必遷移。
+
+順帶修掉冪等捷徑沒檢查場次的問題：原本拿舊結果去別的場次重送會拿到一張
+`ok: true` 的 receipt，下游看 `receipt.ok` 就會被騙；現在改由既有的
+`session_mismatch` 拒絕。
+
+cherry-pick 到 main 零衝突（`settleMatchResult.js` 在 main 與 base 逐字元相同）。
+
+### 瀏覽器 gate 的根因與重做（本輪真正花時間的地方）
+
+第一版 gate 跑出 24/24，之後**穩定 19/24**。用乾淨 worktree 檢出那個 commit
+本身也是 19/24 ⇒ **那次綠是偶然，不是程式的性質**。
+
+根因：gate 假設「同一頁 import `profileStore` 與 import `settleMatchBoundary`
+會拿到同一個 store」。這個假設不成立，而且**失敗是靜默的**——gate 驅動一個
+store，`settleMatchThroughSession` 讀另一個，於是走無場次分支、從未呼叫
+`reportMatchResult`，後面每一條斷言都在量空氣。
+
+定位證據（在 gate 自己的 closure、同一個 evaluate 內）：
+
+| 觀測 | 值 |
+|---|---|
+| 我的 store：session launched / moba / schema 正確 | `usableMine = true` |
+| 同一刻呼叫 boundary | `viaSession = false` |
+| 事後再 import 一次 profileStore 與 INSTALL 捕獲的比對 | `freshEqualsInstall = true` |
+
+第三列排除了「我這一側有兩份」⇒ 第二份是從 boundary 的 `../profileStore.js`
+這條邊進來的。對照組是決定性的：**最小腳本跑完全相同的流程得到
+`viaSession: true`／`receiptOk: true`**。
+
+已用單一變因實測排除：合成時鐘 vs 真實時鐘（改真實反而更糟 24→19）、
+`Promise.all` 併發 import（改循序無效）、reload 造成實例分裂（navigate／reload／
+再 reload 三次身分一致）、app 計時器競爭（清光 timer 無效）、共用 `node_modules`
+與 Vite 快取（自裝 + `--force` 皆無效）、工作區被改髒（乾淨 worktree 同分）。
+
+**修法是移除假設，不是繞過**：頁面前導程式抓 dev server 供應的 **boundary
+轉譯後原始碼**，讀出它實際 import 的 profileStore URL，再 import 那一個。
+被測 store 與 production 路徑用的 store 從此在定義上同一個。
+
+**前提改成強制**：第一次真實結算必須 `viaSession === true`，否則立刻 abort 並
+印出解析到的 store URL。接線問題不能再偽裝成綠或紅。前提由**真實場次**擔任，
+不用獨立假 session probe 當證據（那只在診斷階段用過）。
+
+### 驗證
+
+| 項目 | 結果 |
+|---|---|
+| `check_fixture_result_integrity`（新增） | 20/20；**修正前先跑過 10/20**（重現，非事後補測） |
+| `check_fixture_result_browser`（票券來源，重做） | 24/24，連跑 3 次一致 |
+| `browser_check_fixture_integrity`（賽程來源，新增） | 26/26，連跑 3 次一致 |
+| `check_authoritative_o7` | 48/48 |
+| `check_competition_q1 / q2a / q2b / q3 / q35 / q4 / q5 / q6` | 93 / 112 / 92 / 90 / 65 / 68 / 66 / 57 |
+| `check_progress25` / `check_cs23` | exit 0 / 28/28 |
+| `regress` / `regress2` | exit 0 / 8/8 |
+| `npm run build` | `built in 13.61s` |
+
+賽程來源那支驗到底：賽程 A 完成並產生 engine 賽果 → 啟動賽程 B → 重送 A 的舊
+BattleResult **被拒** → B 仍 `launched`、**沒有賽果**、賽果總數 7→7 不變、
+reward/XP 不重複、A 的賽果未被動到（D11）→ B 的正牌結果之後仍能正常完成（7→8）。
+
+### 這一輪的教訓
+
+**驗證器最危險的失敗不是紅，是靜默地量錯對象。** 這支 gate 曾經「綠過一次」，
+而那次綠與被測行為完全無關。往後任何跨 realm／跨模組邊界的驗證，都必須把
+「我量到的是不是同一個東西」寫成**開場就會 abort 的前提**，而不是註解裡的假設。
