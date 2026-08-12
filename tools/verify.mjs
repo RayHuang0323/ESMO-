@@ -83,6 +83,7 @@ const SEGMENTS = [
   { id: "cs_accuracy_semantics_r25", script: "tools/check_cs_accuracy_semantics_r25.mjs", shape: /CS Accuracy Semantic Audit \/ Minimal Correction R25: PASS/, note: "CS Accuracy product semantics／minimal raw-effective headshot correction" },
   { id: "cs_decision_measurement_r26", script: "tools/check_cs_decision_measurement_r26.mjs", shape: /CS Decision Measurement \/ Calibration Readiness R26: PASS/, note: "CS Decision read-chain／deterministic calibration-readiness measurement" },
   { id: "cs_decision_semantics_r27", script: "tools/check_cs_decision_semantics_r27.mjs", shape: /CS Decision Semantic Audit \/ Minimal Correction R27: PASS/, note: "CS Decision product semantics／minimal raw-effective defuse correction" },
+  { id: "cs_focus_measurement_r28", script: "tools/check_cs_focus_measurement_r28.mjs", shape: /CS Focus Measurement \/ Calibration Readiness R28: PASS/, note: "CS Focus read-chain／deterministic calibration-readiness measurement" },
   //  ⚠ 下面五支在 flat 模式下的分母會變小（巢狀子驗證改由本 runner 各跑一次）。
   //    這裡填的是**該支自己健康時的完整數字**，不是遷就現況——所以
   //    experience26（§17 replay 容量，TD-19）與 runtime29（§29 順序公平性，TD-21）

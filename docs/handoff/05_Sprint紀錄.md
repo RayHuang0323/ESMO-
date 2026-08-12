@@ -7199,3 +7199,40 @@ R3 verifier 的總模擬數為 544，static RNG call sites 維持 21。
 - R27 correction：**Go**；semantic completeness：**Revise**；calibration：**No-Go / Deferred**。
 - Spec / report：`review/cs-gameplay/CS_DECISION_SEMANTICS_R27_SPEC.md`、
   `review/cs-gameplay/CS_DECISION_SEMANTICS_R27_REPORT.md`。完成後 local commit，不 push。
+
+## Sprint R28：CS Focus Measurement / Calibration Readiness（2026-08-13）
+
+### Scope / checkpoint
+
+- R27 local commit `5a6c14152c9218365ffb0acda058baaf871a0864` 先 push 到
+  `release/moba-combat-closure`，local / tracking / remote SHA 確認一致後開始 R28。
+- 本輪只做 Focus measurement / readiness；不做 calibration、不修 Decision、不處理 Accuracy miss、
+  不修改其他 stat、scenario、RNG、contracts、Store、Progress、Replay 或 historical evidence。
+
+### Read-chain / measurement
+
+- raw `stats.foc` → rifler / awp raw `posSkill` role-fit與 CT defuse progress；effective
+  `persStat(foc)` → combatSkill mechanics、AWP weapon fit與 holding bonus；`formMul()`只乘最後
+  combat output。
+- target / engagement choice、retreat / re-engage、utility timing、aggr、lastAlive clutch /
+  resilience、plant / tactic / role / buy choice均沒有 Focus read。
+- 新增 `tools/check_cs_focus_measurement_r28.mjs` 與 R28 central verifier segment；固定
+  `inferno / t_aexec / c_std`、5 T roles、low / baseline / high、16 seeds，off / on / repeated-on
+  共 528 executions。
+- Direct effective Focus / combatSkill / local Pt：5 roles均16/16 strict-majority；rifler / awp
+  raw role-fit也16/16；clamp reads `0 / 0 / 0`；RNG call sites=21。
+- Baseline defuse：134 bomb ticks、20 proximity、17 progress ticks、4 completes、2 owners；CT-side
+  opportunity仍不足以核准完整 Focus calibration。
+
+### Semantic boundary / verdict
+
+- defuse仍讀 raw Focus `/250`，combat讀 effective Focus；personality live execution語意未完全一致。
+  Focus與 R27 修正後的 Decision共同進 defuse progress，屬 coarse overlap；本輪不直接改 `/250`、
+  不提出 production patch。
+- Level 4 kills / damage / survival只作 secondary；runtime conversion與defuse tick受到既有
+  deterministic path amplification，不能反推 Focus arithmetic失效。
+- suite digest：`7f6e08393a54d5c594bd9c9abce49adbf70a9a6297a197fe4d9624151b4b69a0`；production source與
+  historical evidence未修改。
+- R28：measurement **Go / PASS**；semantic completeness **Revise**；calibration **No-Go / Deferred**。
+- Spec / report：`review/cs-gameplay/CS_FOCUS_MEASUREMENT_R28_SPEC.md`、
+  `review/cs-gameplay/CS_FOCUS_MEASUREMENT_R28_REPORT.md`。完成後 local commit，不 push。
