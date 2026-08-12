@@ -7018,3 +7018,40 @@ R3 verifier 的總模擬數為 544，static RNG call sites 維持 21。
 - production semantic / balance patch：**No-Go（本輪不提出）**。
 - 完整 spec/report：`review/cs-gameplay/CS_LOCAL_CAUSAL_CALIBRATION_R22_SPEC.md`、
   `review/cs-gameplay/CS_LOCAL_CAUSAL_CALIBRATION_R22_REPORT.md`。
+
+## Sprint R23：CS Courage Measurement / Calibration Readiness — 2026-08-12
+
+### Scope / guard
+
+- R22 checkpoint `f091aec549d0ec5838ad364de72c795f816b33db` 已 push 至
+  `release/moba-combat-closure`；開始前已確認 local、tracking、remote SHA 一致。
+- R23 只做 Courage measurement / readiness，不做 balance calibration；不處理 Reflex、APM、
+  Positioning threshold、MapAware、Synergy、Learning。
+- 沿用 R22 framework，不新增 RNG、不修改 scenario、不改 role mapping、不 rebaseline
+  R1～R22 historical evidence，也不修改 production source。
+
+### Read-chain / evidence
+
+- raw `stats.cou` → entry `posSkill` role-fit；`posSkill` 的 Courage 權重只有 entry 有效，
+  其他本輪 role 沒有 raw Courage read。
+- `persStat(cou)` → entry `combatSkill` 的 entry option，以及所有五個 role 的 `aggr`。
+  `aggr` 再影響 pair fire chance 與 `aggr < 0.82` retreat gate。
+- focused verifier 是 behavioral memory-only transform，驗證 raw/effective attribution、
+  role applicability、target attacker / defender 分流、pair / retreat chain、strict-majority、
+  effect size、clamp、threshold、changed seed 與 repeated deterministic digest。
+- 5 roles × low/baseline/high × 16 fixed seeds；off/on/repeated-on 共 528 次 simulator
+  execution；suite digest：
+  `5809adbd6fff29662cf6adc6eb4fc9adcde5a672d47f6735f1e2b57d1349f271`。
+- Courage treatment 使用 raw ±10，避免 t1 raw high=100 造成 treatment 自身越界；runtime personality
+  clamp 仍獨立量測。
+
+### 判定
+
+- Courage measurement：**Go / PASS**；semantic：**Done**；calibration readiness：
+  **Revise / Deferred**。
+- 五個 role 的 effective Courage / aggr 都是 16/16 local monotonic；entry 的 raw role-fit 與
+  entry live combat 也有 direct signal，但 pair / match KPI 沒有一致跨 role 的 monotonic gate。
+- lurker、igl 各 16/16 跨過 `aggr < 0.82`，造成 retreat trigger / displacement 的離散分支；
+  kills、damage、survival 保留為 target-only secondary，不能取代 local gate。
+- R22 framework 已成功重用，沒有建立第二套 simulator。無 blocking issue；下一步不開始
+  Courage balance calibration。R23 local commit，完成後不 push。
