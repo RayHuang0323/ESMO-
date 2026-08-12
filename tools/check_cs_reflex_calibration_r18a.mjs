@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
+import { CS_R25_ACCURACY_SOURCE_SHA256, csR25R24Source } from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -369,7 +370,7 @@ async function loadApi(originalSource) {
         transform(code, id) {
           if (resolve(id.split("?")[0]).toLowerCase() !== FPS_FILE.toLowerCase()) return null;
           transformSeen += 1;
-          gate(code === originalSource, "VITE_SOURCE_MISMATCH");
+          gate(csR25R24Source(code) === originalSource, "VITE_SOURCE_MISMATCH");
           let transformed = originalSource;
           for (const [name, marker, replacement] of TRANSFORMS) {
             gate(occurrences(transformed, marker) === 1, "TRANSFORM_MARKER_COUNT", name);
@@ -404,7 +405,10 @@ async function loadApi(originalSource) {
 
 async function main() {
   gate(process.argv.length === 2, "CLI_FLAGS_FORBIDDEN", "R18-A candidate sweep is locked to the spec.");
-  const source = readFileSync(FPS_FILE, "utf8");
+  const liveSource = readFileSync(FPS_FILE, "utf8");
+  const liveSourceSha256 = sha256(liveSource);
+  gate(liveSourceSha256 === CS_R25_ACCURACY_SOURCE_SHA256, "LIVE_SOURCE_SHA256", `expected=${CS_R25_ACCURACY_SOURCE_SHA256} actual=${liveSourceSha256}`);
+  const source = csR25R24Source(liveSource);
   const sourceSha256 = sha256(source);
   gate(sourceSha256 === SOURCE_SHA256, "SOURCE_SHA256", `expected=${SOURCE_SHA256} actual=${sourceSha256}`);
   gate(randTokens(source).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT", String(randTokens(source).length));

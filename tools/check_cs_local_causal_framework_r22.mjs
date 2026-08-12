@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { CS_R25_ACCURACY_SOURCE_SHA256, csR25R24Source } from "./cs_r15_legacy_source.mjs";
 import {
   CALIBRATION_LEVELS,
   changedSeedSummary,
@@ -139,7 +140,9 @@ function evidenceNumber(value) {
 }
 
 function verifyProvenance() {
-  const source = readFileSync(FPS_FILE, "utf8");
+  const liveSource = readFileSync(FPS_FILE, "utf8");
+  gate(sha256(liveSource) === CS_R25_ACCURACY_SOURCE_SHA256, "LIVE_SOURCE_SHA256", sha256(liveSource));
+  const source = csR25R24Source(liveSource);
   gate(sha256(source) === SOURCE_SHA256, "SOURCE_SHA256", sha256(source));
   gate((source.match(/\brand\s*\(\s*\)/g) || []).length === RNG_CALL_SITES, "RNG_CALL_SITES");
   gate(source.includes("const rawReflex=Number(s.rxn??50),effectiveReflex=persStat(p,\"rxn\");"), "REFLEX_ALIAS_BOUNDARY");

@@ -18,8 +18,10 @@ import {
   CS_R14_HE_SOURCE_SHA256,
   CS_R15_MOLLY_SOURCE_SHA256,
   CS_R19_SEMANTIC_SOURCE_SHA256,
+  CS_R25_ACCURACY_SOURCE_SHA256,
   csR14R13Source,
   csR19R15Source,
+  csR25R24Source,
   csR15R14Source,
   normalizeCsSource,
 } from "./cs_r15_legacy_source.mjs";
@@ -714,22 +716,24 @@ async function main() {
   const originalSource = readFileSync(FPS_FILE, "utf8");
   const normalizedSource = normalizeCsSource(originalSource);
   const sourceSha256 = sha256(normalizedSource);
-  const sourceStage = sourceSha256 === CS_R19_SEMANTIC_SOURCE_SHA256 ? "r19-semantic-correction"
+  const sourceStage = sourceSha256 === CS_R25_ACCURACY_SOURCE_SHA256 ? "r25-accuracy-correction"
+    : sourceSha256 === CS_R19_SEMANTIC_SOURCE_SHA256 ? "r19-semantic-correction"
     : sourceSha256 === CS_R15_MOLLY_SOURCE_SHA256 ? "r15-molly"
     : sourceSha256 === CS_R14_HE_SOURCE_SHA256 ? "r14-he"
     : sourceSha256 === CS_R13_PLAYER_SMOKE_LF_SHA256 ? "r13-verifier-first" : null;
   gate(sourceStage, "SOURCE_PROVENANCE_MISMATCH",
-    `expected R13 LF=${CS_R13_PLAYER_SMOKE_LF_SHA256}\nexpected R14=${CS_R14_HE_SOURCE_SHA256}\nexpected R15=${CS_R15_MOLLY_SOURCE_SHA256}\nexpected R19=${CS_R19_SEMANTIC_SOURCE_SHA256}\nactual=${sourceSha256}`);
+    `expected R13 LF=${CS_R13_PLAYER_SMOKE_LF_SHA256}\nexpected R14=${CS_R14_HE_SOURCE_SHA256}\nexpected R15=${CS_R15_MOLLY_SOURCE_SHA256}\nexpected R19=${CS_R19_SEMANTIC_SOURCE_SHA256}\nexpected R25=${CS_R25_ACCURACY_SOURCE_SHA256}\nactual=${sourceSha256}`);
   gate(randTokens(originalSource).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT",
     `expected=${EXPECTED_RAND_CALLS} actual=${randTokens(originalSource).length}`);
 
-  const r19BaseSource = sourceStage === "r19-semantic-correction" ? csR19R15Source(normalizedSource) : normalizedSource;
-  const r14Source = sourceStage === "r15-molly" || sourceStage === "r19-semantic-correction" ? csR15R14Source(r19BaseSource) : normalizedSource;
+  const r24BaseSource = sourceStage === "r25-accuracy-correction" ? csR25R24Source(normalizedSource) : normalizedSource;
+  const r19BaseSource = sourceStage === "r19-semantic-correction" || sourceStage === "r25-accuracy-correction" ? csR19R15Source(r24BaseSource) : r24BaseSource;
+  const r14Source = sourceStage === "r15-molly" || sourceStage === "r19-semantic-correction" || sourceStage === "r25-accuracy-correction" ? csR15R14Source(r19BaseSource) : normalizedSource;
   const r13Source = sourceStage === "r13-verifier-first" ? normalizedSource : csR14R13Source(r14Source);
   gate(sha256(r13Source) === CS_R13_PLAYER_SMOKE_LF_SHA256, "R14_R13_ADAPTER_MISMATCH",
     `expected=${CS_R13_PLAYER_SMOKE_LF_SHA256}\nactual=${sha256(r13Source)}`);
   const expectedCandidateSource = buildCandidateSource(r13Source);
-  if (sourceStage !== "r13-verifier-first" && sourceStage !== "r19-semantic-correction") {
+  if (sourceStage !== "r13-verifier-first" && sourceStage !== "r19-semantic-correction" && sourceStage !== "r25-accuracy-correction") {
     gate(r14Source === expectedCandidateSource, "PRODUCTION_CANDIDATE_MISMATCH");
   }
   const candidateSource = sourceStage === "r13-verifier-first" ? expectedCandidateSource : r14Source;

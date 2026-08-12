@@ -7074,3 +7074,48 @@ R3 verifier 的總模擬數為 544，static RNG call sites 維持 21。
 - focused verifier 重跑兩次均 PASS，suite digest `3c6d1625a06684b91b3b99424cdfb4c79c963f17da82411b825264d0f77eaf05`。
 - source SHA `57476524ffa5693cb2cd00f28d73a1355e2dcf14ce0e018c9aa766febc706c29`，RNG call sites=21，production source 未修改。
 - 詳細文件：`review/cs-gameplay/CS_ACCURACY_MEASUREMENT_R24_SPEC.md`、`review/cs-gameplay/CS_ACCURACY_MEASUREMENT_R24_REPORT.md`。
+
+---
+
+## Sprint R25：CS Accuracy Semantic Audit / Minimal Correction（2026-08-13）
+
+### Scope / checkpoint
+
+- R24 local commit `b8dd4e1204a397c757fbf1611ec0dc15a68d0869` 先 push 到
+  `release/moba-combat-closure`，local / tracking / remote SHA 已確認一致。
+- 本輪只處理 Accuracy raw/effective/headshot semantic boundary；不做 balance calibration、不處理
+  其他 15 項、不新增 miss system 或 RNG、不改 role mapping / scenario / contract / Store / Progress。
+
+### Audit / root cause
+
+- 產品證據把 Accuracy 定義為 shooting precision：操作類素質、FPS weight 1.4、精準射擊訓練、
+  步槍手 / 狙擊手第一 role stat、狙擊架點與 Dust II favored stat。
+- raw Accuracy 應保留為基礎值與 `posSkill()` role-fit；personality-adjusted effective Accuracy 應供
+  live execution consumer 使用。
+- R24 的 `combatSkill()` 已讀 effective Accuracy，但 headshot 直接讀 raw `at.stats.acc`；grinder +6
+  與 shotcaller -4 因而只作用於 duel skill、不作用於爆頭，確認為 semantic inconsistency。
+- 現況沒有獨立 hit/miss branch；pair admission 後的 duel winner 必定進 headshot / damage。
+
+### Minimal patch / evidence
+
+- `src/battle/fps/EsportsFPS3D.jsx` 只改 headshot 所在一行，保留 raw fallback，實際 chance 改讀
+  `persStat(at,"acc")`；沒有調係數、damage、armor 或任何 balance constant。
+- `tools/check_cs_accuracy_semantics_r25.mjs` 驗證 source boundary、no-miss pipeline、RNG token exact、
+  R25 / R24 first-boundary causality、neutral zero-diff 與 repeated instrumentation determinism。
+- 固定 16 seeds、`inferno / t_aexec / c_std`，R24 historical / R25 live 各跑 off/on/repeated-on，
+  共 96 executions；grinder / shotcaller / neutral headshot coverage 為 137 / 368 / 1466，
+  gain / penalty first-boundary seeds 為 1 / 3。
+- suite digest：`26ef0739e8ec2c110aeba4ad063727770dad4886d45df70a041e21dcf17892c8`；
+  live source SHA：`68d75bb357a504cee8529c4d8cce023c92c364e72cde88e507a8af0df811780e`；
+  static RNG call sites 21。
+
+### Historical / verdict
+
+- exact R25→R24 adapter 讓舊 verifier 使用 byte-stable R24 view；未更新任何 expected historical digest。
+- central CS aggregate 20/20 PASS；額外 R18-A、R18-B、R19 PASS；R24 digest 仍為
+  `3c6d1625a06684b91b3b99424cdfb4c79c963f17da82411b825264d0f77eaf05`。
+- R25 semantic audit / minimal correction：**Go**。
+- Accuracy calibration：**Deferred / Revise**；需用修正後 semantic 另做 calibration evidence，不在本輪調參。
+- miss branch：R25 **No-Go**。若未來批准，必須另開 Sprint，處理新 RNG draw、gameplay / digest
+  migration、first-boundary historical gate，以及選擇性 shots/hits contract migration。
+- 完成 production build、review 後 local commit；不 push。

@@ -547,7 +547,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
           const flashPen=(tp.flash>0?-0.12:0)+(cp.flash>0?0.12:0);
           const Pt=clamp(0.5+(tSk-cSk)*0.013+(MAP_EDGE[mapKey]??0.02)+ecoEdge+flashPen+tacEdge,0.07,0.93); // 結構平衡 + 戰術剋制
           const tw=rand()<Pt;const at=tw?tp:cp,df=tw?cp:tp;
-          const g=GUNS[at.gun];const isHS=rand()<g.hs*(0.72+0.55*((at.stats?.acc||80)/100));let dmg=(g.dmg+Math.floor(rand()*40))*(isHS?2:1);
+          const g=GUNS[at.gun],rawAccuracy=at.stats?.acc||80,effectiveAccuracy=at.stats?.acc!=null?persStat(at,"acc"):rawAccuracy;const isHS=rand()<g.hs*(0.72+0.55*(effectiveAccuracy/100));let dmg=(g.dmg+Math.floor(rand()*40))*(isHS?2:1);
           if(df.armor&&!isHS)dmg*=0.72; // 護甲減傷（非爆頭）
           dmg=Math.round(dmg);
           const {killed}=applyDamage(at,df,dmg);

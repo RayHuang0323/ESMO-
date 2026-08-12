@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
+import { CS_R25_ACCURACY_SOURCE_SHA256, csR25R24Source } from "./cs_r15_legacy_source.mjs";
 import {
   CALIBRATION_LEVELS,
   changedSeedSummary,
@@ -214,7 +215,7 @@ async function loadApi(originalSource) {
     vite = await createServer({ root: ROOT, configFile: false, envFile: false, appType: "custom", logLevel: "error", cacheDir: join(tempRoot, "vite-cache"), optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true }, plugins: [{
       name: "cs-courage-r23-memory-hooks", enforce: "pre", transform(code, id) {
         if (resolve(id.split("?")[0]).toLowerCase() !== FPS_FILE.toLowerCase()) return null;
-        transformSeen += 1; gate(code === originalSource, "VITE_SOURCE_MISMATCH"); let transformed = originalSource;
+        transformSeen += 1; gate(csR25R24Source(code) === originalSource, "VITE_SOURCE_MISMATCH"); let transformed = originalSource;
         for (const [name, marker, replacement] of TRANSFORMS) { gate(occurrences(transformed, marker) === 1, "TRANSFORM_MARKER_COUNT", name); transformed = transformed.replace(marker, replacement); }
         let roundTrip = transformed;
         for (const [name, marker, replacement] of [...TRANSFORMS].reverse()) { gate(occurrences(roundTrip, replacement) === 1, "TRANSFORM_REPLACEMENT_COUNT", name); roundTrip = roundTrip.replace(replacement, marker); }
@@ -351,7 +352,7 @@ function runArm(api, { mapKey, tTactic, ctTactic, roster, seed }) {
 }
 
 async function main() {
-  const source = readFileSync(FPS_FILE, "utf8"), sourceSha256 = sha256(source); gate(sourceSha256 === SOURCE_SHA256, "SOURCE_SHA256", sourceSha256); gate(randTokens(source).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT", String(randTokens(source).length)); gate(FIXED_SEEDS.length === 16, "SEED_COUNT");
+  const liveSource = readFileSync(FPS_FILE, "utf8"), liveSourceSha256 = sha256(liveSource); gate(liveSourceSha256 === CS_R25_ACCURACY_SOURCE_SHA256, "LIVE_SOURCE_SHA256", liveSourceSha256); const source = csR25R24Source(liveSource), sourceSha256 = sha256(source); gate(sourceSha256 === SOURCE_SHA256, "SOURCE_SHA256", sourceSha256); gate(randTokens(source).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT", String(randTokens(source).length)); gate(FIXED_SEEDS.length === 16, "SEED_COUNT");
   gate(!((8) > 16 / 2) && (9) > 16 / 2, "STRICT_MAJORITY_GATE"); gate(source.includes('const role=posSkill(p,rawReflex);'), "RAW_ROLE_FIT_SOURCE_GATE"); gate(source.includes('S("cou")*0.06'), "EFFECTIVE_COURAGE_COMBAT_SOURCE_GATE"); gate(source.includes('persStat(p,"cou")*0.5'), "EFFECTIVE_COURAGE_AGGR_SOURCE_GATE"); gate(source.includes("aggr(p)<0.82") && source.includes("dx/L*3.2"), "COURAGE_RETREAT_THRESHOLD_SOURCE_GATE"); gate(source.includes("fireChance*=(0.55+0.5*Math.max(aggr(tp),aggr(cp)))"), "COURAGE_PAIR_SOURCE_GATE");
   console.log("schema: " + EVENT_SCHEMA); console.log("seed generation version: " + SEED_GENERATION_VERSION); console.log("seedSetSha256: " + SEED_SET_SHA256); console.log("engineSourceSha256: " + sourceSha256); console.log("rand() call sites: " + randTokens(source).length); console.log("read-chain source: raw stats.cou -> entry posSkill role-fit; persStat(cou) -> entry combatSkill and aggr; aggr -> pair fireChance / retreat threshold");
   const api = await loadApi(source); gate(typeof api?.simulateFps === "function", "TEST_SIMULATOR_EXPORT_MISSING"); gate(Array.isArray(api?.ROSTER), "TEST_ROSTER_EXPORT_MISSING"); gate(api?.TACTICS_DB && typeof api.TACTICS_DB === "object", "TEST_TACTICS_EXPORT_MISSING"); const map = api.TACTICS_DB[MAP_KEY]; const tTactic = freeze(clone(map?.t?.find((item) => item.id === T_TACTIC_ID))); const ctTactic = freeze(clone(map?.ct?.find((item) => item.id === CT_TACTIC_ID))); const baselineRoster = freeze(clone(api.ROSTER)); gate(tTactic?.id === T_TACTIC_ID && ctTactic?.id === CT_TACTIC_ID, "TACTIC_MISSING"); gate(baselineRoster.length === 10, "ROSTER_SIZE", String(baselineRoster.length)); const targets = baselineRoster.filter((player) => player.side === "t"); gate(targets.length === 5 && targets.every((player) => TARGET_ROLES.includes(player.role)), "TARGET_ROLES");

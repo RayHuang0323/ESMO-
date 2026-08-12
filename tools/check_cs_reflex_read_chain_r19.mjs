@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
+import { CS_R25_ACCURACY_SOURCE_SHA256, csR25R24Source } from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -126,7 +127,7 @@ async function loadApi(originalSource) {
       cacheDir: join(tempRoot, "vite-cache"), optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true },
       plugins: [{ name: "cs-reflex-r19-memory-hooks", enforce: "pre", transform(code, id) {
         if (resolve(id.split("?")[0]).toLowerCase() !== FPS_FILE.toLowerCase()) return null;
-        transformSeen += 1; gate(code === originalSource, "VITE_SOURCE_MISMATCH");
+        transformSeen += 1; gate(csR25R24Source(code) === originalSource, "VITE_SOURCE_MISMATCH");
         let transformed = originalSource;
         for (const [name, marker, replacement] of TRANSFORMS) {
           gate(occurrences(transformed, marker) === 1, "TRANSFORM_MARKER_COUNT", name);
@@ -218,7 +219,9 @@ function pairedRead(rows, baselineRows, key) {
 }
 
 async function main() {
-  const source = readFileSync(FPS_FILE, "utf8"); const sourceSha256 = sha256(source);
+  const liveSource = readFileSync(FPS_FILE, "utf8"); const liveSourceSha256 = sha256(liveSource);
+  gate(liveSourceSha256 === CS_R25_ACCURACY_SOURCE_SHA256, "LIVE_SOURCE_SHA256", liveSourceSha256);
+  const source = csR25R24Source(liveSource); const sourceSha256 = sha256(source);
   gate(sourceSha256 === SOURCE_SHA256, "SOURCE_SHA256", sourceSha256); gate(randTokens(source).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT", String(randTokens(source).length));
   gate(FIXED_SEEDS.length === 16, "SEED_COUNT"); gate(ROLE_RXN_POS_WEIGHT.entry === 4 && ROLE_RXN_POS_WEIGHT.rifler === 4 && ROLE_RXN_POS_WEIGHT.awp === 1 && ROLE_RXN_POS_WEIGHT.lurker === 0 && ROLE_RXN_POS_WEIGHT.igl === 0, "ROLE_RXN_PROFILE");
   gate(source.includes("const rawReflex=Number(s.rxn??50),effectiveReflex=persStat(p,\"rxn\");"), "EFFECTIVE_REFLEX_ALIAS");

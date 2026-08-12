@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
+import { CS_R25_ACCURACY_SOURCE_SHA256, csR25R24Source } from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -195,7 +196,7 @@ function createCollector() {
   };
 }
 
-async function loadApi(originalSource) {
+async function loadApi(liveSource, originalSource) {
   let transformSeen = 0; let restored = false; let rngSame = false; let vite = null;
   const tempRoot = mkdtempSync(join(tmpdir(), "esmo-cs-positioning-r20-"));
   try {
@@ -205,7 +206,7 @@ async function loadApi(originalSource) {
       plugins: [{ name: "cs-positioning-r20-memory-hooks", enforce: "pre", transform(code, id) {
         if (resolve(id.split("?")[0]).toLowerCase() !== FPS_FILE.toLowerCase()) return null;
         transformSeen += 1;
-        gate(code === originalSource, "VITE_SOURCE_MISMATCH");
+        gate(code === liveSource, "VITE_SOURCE_MISMATCH");
         let transformed = originalSource;
         for (const [name, marker, replacement] of TRANSFORMS) {
           gate(occurrences(transformed, marker) === 1, "TRANSFORM_MARKER_COUNT", name);
@@ -557,7 +558,10 @@ function runArm(api, { mapKey, tTactic, ctTactic, roster, seed }) {
 }
 
 async function main() {
-  const source = readFileSync(FPS_FILE, "utf8");
+  const liveSource = readFileSync(FPS_FILE, "utf8");
+  const liveSourceSha256 = sha256(liveSource);
+  gate(liveSourceSha256 === CS_R25_ACCURACY_SOURCE_SHA256, "LIVE_SOURCE_SHA256", liveSourceSha256);
+  const source = csR25R24Source(liveSource);
   const sourceSha256 = sha256(source);
   gate(sourceSha256 === SOURCE_SHA256, "SOURCE_SHA256", sourceSha256);
   gate(randTokens(source).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT", String(randTokens(source).length));
@@ -574,7 +578,7 @@ async function main() {
   console.log(`rand() call sites: ${randTokens(source).length}`);
   console.log("read-chain source: raw stats.pos -> posSkill role-fit; persStat(pos) -> combatSkill/aggr live behavior; movement speed uses sta; retreat uses aggr gate and safeMove displacement; pair admission uses aggr-derived fireChance");
 
-  const api = await loadApi(source);
+  const api = await loadApi(liveSource, source);
   gate(typeof api?.simulateFps === "function", "TEST_SIMULATOR_EXPORT_MISSING");
   gate(Array.isArray(api?.ROSTER), "TEST_ROSTER_EXPORT_MISSING");
   gate(api?.TACTICS_DB && typeof api.TACTICS_DB === "object", "TEST_TACTICS_EXPORT_MISSING");
