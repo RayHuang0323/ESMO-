@@ -7055,3 +7055,22 @@ R3 verifier 的總模擬數為 544，static RNG call sites 維持 21。
   kills、damage、survival 保留為 target-only secondary，不能取代 local gate。
 - R22 framework 已成功重用，沒有建立第二套 simulator。無 blocking issue；下一步不開始
   Courage balance calibration。R23 local commit，完成後不 push。
+## Sprint R24：CS Accuracy Measurement / Calibration Readiness（2026-08-12）
+
+### Scope
+
+- R23 checkpoint `bc1ad9787d0453c3ac880e99e37d31dedc732216` 已 push 到 `release/moba-combat-closure`，local / tracking / remote SHA 一致。
+- R24 沿用 R22 Local Causal Calibration Framework，只做 Accuracy read-chain、local opportunity、immediate conversion 與 readiness measurement；不修改 production balance、RNG、role mapping、scenario，也不 rebaseline R1～R23。
+
+### 結果
+
+- Accuracy 確實影響 `combatSkill`、headshot chance 與 attacker-side firearm effective damage。
+- `rifler` / `entry` / `awp` 的 `posSkill()` 讀 raw Accuracy；`lurker` / `igl` 的 role-fit 不讀 Accuracy；五種角色仍可在 live `combatSkill()` 讀 effective Accuracy。
+- `combatSkill()` 使用 personality-adjusted effective Accuracy，但 headshot 仍使用 raw Accuracy；admitted firearm exchange 沒有獨立 miss 分支。這兩項是 calibration blocking semantic boundary，Accuracy calibration = **Revise / Deferred**。
+
+### Evidence / verification
+
+- `tools/check_cs_accuracy_measurement_r24.mjs`：5 roles × low / baseline / high × 16 fixed seeds，共 528 次 simulator execution；target attacker / defender attribution 分離，effective damage 與 overkill 分離。
+- focused verifier 重跑兩次均 PASS，suite digest `3c6d1625a06684b91b3b99424cdfb4c79c963f17da82411b825264d0f77eaf05`。
+- source SHA `57476524ffa5693cb2cd00f28d73a1355e2dcf14ce0e018c9aa766febc706c29`，RNG call sites=21，production source 未修改。
+- 詳細文件：`review/cs-gameplay/CS_ACCURACY_MEASUREMENT_R24_SPEC.md`、`review/cs-gameplay/CS_ACCURACY_MEASUREMENT_R24_REPORT.md`。
