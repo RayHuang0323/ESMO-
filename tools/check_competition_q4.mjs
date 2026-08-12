@@ -123,9 +123,18 @@ const finishWholeSeason = (maxSteps = 200) => {
 
   const final = st().competitionView().final;
   ck("2b) **打完就自動封存**（不必玩家點任何按鈕）", !!final, final ? `第 ${final.playerRank} 名` : "");
-  ck("2b2) 封存的名次與封存當下的推導值一致",
-    !!final && JSON.stringify(final.rows.map((r) => r.teamId)) ===
-      JSON.stringify(seasonStandings(st().competition).rows.map((r) => r.teamId)));
+  //  ⚠ 2026-08-12（Q6）：本條原本斷言「封存的列順序 == 常規賽推導順序」。
+  //    Q6 之後**最終名次的前四名由季後賽決定**，那個順序本來就會不同 ⇒ 原斷言必然紅。
+  //    保留這條真正要守的東西：**封存快照裡的常規賽資料必須與推導值逐列一致**
+  //    （`regularRank` 對得上，勝敗／積分沒有被季後賽改寫）。
+  ck("2b2) 封存快照裡的**常規賽資料**與推導值逐列一致（季後賽只重排名次，不改成績）",
+    !!final && (() => {
+      const reg = seasonStandings(st().competition).rows;
+      return final.rows.every((r) => {
+        const m = reg.find((x) => x.teamId === r.teamId);
+        return m && m.rank === r.regularRank && m.wins === r.wins && m.losses === r.losses && m.points === r.points;
+      });
+    })());
   ck("2b3) 封存快照通過契約驗證", validateFinalStandings(final).ok);
   ck("2b4) 八隊都在榜上", final?.rows?.length === 8);
   ck("2b5) 封存日 = 當下遊戲日", final?.sealedAtDay === st().meta.days);

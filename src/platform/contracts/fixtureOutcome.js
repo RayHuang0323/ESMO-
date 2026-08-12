@@ -128,6 +128,11 @@ export function createFixtureOutcome({
       schema: FIXTURE_OUTCOME_VERSION,
       //  ── provenance：這筆賽果是誰、在什麼條件下產生的 ──
       fixtureId: fixture.id,
+      //  Q6：**哪一個賽段**的賽果。與 sideA/sideB 同一個立場——從 fixture 複製的快照。
+      //  ⚠ 沒有這一欄，季後賽的賽果會被算進常規賽積分榜
+      //    （`computeStandings` 只看「參賽者在不在名單裡」，而季後賽四隊都在）。
+      //    這是 Q6 的第一個前提，不是可有可無的欄位。
+      stageId: fixture.stageId ?? null,
       gameMode: fixture.gameMode,
       seed,
       simulatorVersion,

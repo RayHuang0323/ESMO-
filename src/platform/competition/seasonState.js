@@ -34,6 +34,10 @@ import { simulateFixture, simSeedFor } from "./simulateFixture.js";
 import { AI_TEAMS } from "./aiTeams.js";
 import { computeStandings, outcomeSourceMix, TIEBREAKERS } from "./standings.js";
 import { createFinalStandings } from "../contracts/finalStandings.js";
+import {
+  createQualification, createPlayoffStage, ensurePlayoffFixtures,
+  playoffOrder, playoffBracket, PLAYOFF_STAGE_KEY, PLAYOFF_MATCHES,
+} from "./playoffs.js";
 
 export const SEASON_STATE_VERSION = "SeasonState.v1";
 export { SEASON_DAYS };
@@ -303,6 +307,15 @@ export function canSealSeason(state) {
   if (remaining > 0) {
     return { ok: false, sealed: false, remaining, reason: `還有 ${remaining} 場沒有結果，賽季還沒結束` };
   }
+  //  ⚠ Q6：常規賽打完**不等於**賽季結束——還有季後賽。
+  //    少了這一道，常規賽最後一場收尾的當下就會封存，季後賽永遠排不出來
+  //    （而且 Q5 的換季會在季後賽之前就開放）。
+  if (!isPlayoffDone(state)) {
+    return {
+      ok: false, sealed: false, remaining: 0,
+      reason: state.playoff ? "季後賽還沒打完" : "季後賽還沒排定",
+    };
+  }
   return { ok: true, sealed: false, remaining: 0, reason: null };
 }
 
@@ -326,6 +339,10 @@ export function applySealSeason(state, sealedAtDay) {
     return { ok: false, state, final: null, alreadySealed: false, errors: [{ code: "not_finished", message: can.reason }] };
   }
   const standings = seasonStandings(state);
+  //  Q6：最終名次的**前四名由季後賽決定**（冠／亞／季／殿），5–8 名維持常規賽順序。
+  //  ⚠ 常規賽的勝敗、積分、淨勝分**原樣保留在每一列裡**，只有 `rank` 會被重排，
+  //    而且每一列都留著 `regularRank` ⇒ 常規賽成績不可能被季後賽覆寫。
+  const po = playoffOrder({ fixtures: playoffFixturesOf(state), outcomes: state.outcomes ?? [] });
   const made = createFinalStandings({
     standings,
     competition: state.competition,
@@ -334,6 +351,9 @@ export function applySealSeason(state, sealedAtDay) {
     tiebreakers: TIEBREAKERS,
     sourceMix: outcomeSourceMix(state.outcomes ?? []),
     playerTeamId: state.playerTeamId ?? null,
+    playoffOrder: po.order,
+    championTeamId: po.championTeamId,
+    playoffStageId: state.playoff?.stage?.id ?? null,
   });
   if (!made.ok) return { ok: false, state, final: null, alreadySealed: false, errors: made.errors };
   return { ok: true, state: { ...state, final: made.final }, final: made.final, alreadySealed: false, errors: [] };
@@ -413,11 +433,106 @@ export function seasonDayOf(state, currentDay) {
   return { seasonDay: Math.min(d, SEASON_DAYS), seasonDays: SEASON_DAYS, overrun: d > SEASON_DAYS };
 }
 
-/** 積分榜（唯一入口；畫面不得自己算）。 */
+/**
+ * 常規賽積分榜（唯一入口；畫面不得自己算）。
+ *
+ * ⚠ Q6：**只吃常規賽的賽果**。季後賽場次住在同一個 `state.fixtures`／`outcomes`
+ *   裡（那是刻意的——所有既有機制因此不用改），但它們**不能進常規賽積分榜**。
+ */
 export function seasonStandings(state, rule = "win3") {
   return computeStandings({
     outcomes: state?.outcomes ?? [], participants: participantsOf(state), rule,
+    stageId: state?.stage?.id ?? null,
   });
+}
+
+// ── Milestone Q6：季後賽 ──────────────────────────────────────────────────
+
+/** 季後賽的場次（沒有季後賽 ⇒ 空陣列）。 */
+export const playoffFixturesOf = (state) =>
+  (state?.fixtures ?? []).filter((f) => f.stageId === state?.playoff?.stage?.id);
+
+/** 常規賽的場次。 */
+export const regularFixturesOf = (state) =>
+  (state?.fixtures ?? []).filter((f) => f.stageId === state?.stage?.id);
+
+/** 常規賽是不是每一場都收尾了。 */
+export const isRegularSeasonDone = (state) =>
+  regularFixturesOf(state).length > 0 && regularFixturesOf(state).every(isFixtureTerminal);
+
+/**
+ * 常規賽結束 ⇒ 產生晉級資格與季後賽對戰表。**冪等、可重複呼叫。**
+ *
+ * 第一次呼叫建立賽段與兩場準決賽；準決賽都收尾後再呼叫，才補得出季軍戰與決賽
+ * （決賽對手要等準決賽打完才知道——見 `playoffs.js` 檔頭）。
+ *
+ * ⚠ 常規賽沒打完就呼叫 ⇒ 什麼都不做。季後賽的種子順序來自**常規賽**積分榜，
+ *   還沒打完就排等於用不完整的名次決定晉級。
+ */
+export function ensurePlayoffs(state) {
+  if (!state?.schema) return { ok: false, state, added: 0, errors: [{ code: "no_season", message: "目前沒有賽季" }] };
+  if (state.final) return { ok: true, state, added: 0, errors: [] };          // 已封存，不再動
+  if (!isRegularSeasonDone(state)) return { ok: true, state, added: 0, errors: [] };
+
+  let next = state;
+  //  ① 還沒有季後賽賽段 ⇒ 依常規賽積分榜產生晉級資格與賽段
+  if (!next.playoff) {
+    const q = createQualification({
+      standings: seasonStandings(next),
+      stage: next.stage,
+      toStageId: `stage:${next.competition.id}:${PLAYOFF_STAGE_KEY}`,
+    });
+    if (!q.ok) return { ok: false, state, added: 0, errors: q.errors };
+    //  季後賽接在**最後一場常規賽之後**。+2 是刻意留一天喘息，
+    //  也讓「賽季第 N 天」讀起來像真的賽程表而不是連著打。
+    const lastRegularDay = Math.max(...regularFixturesOf(next).map((f) => f.day), 1);
+    const st2 = createPlayoffStage({
+      competition: next.competition,
+      qualification: q.qualification,
+      dayRange: { from: lastRegularDay + 2, to: lastRegularDay + 4 },
+    });
+    if (!st2.ok) return { ok: false, state, added: 0, errors: st2.errors };
+    next = {
+      ...next,
+      playoff: { stage: st2.stage, qualification: q.qualification, baseDay: lastRegularDay + 2 },
+      competition: { ...next.competition, stageIds: [...(next.competition.stageIds ?? []), st2.stage.id] },
+    };
+  }
+
+  //  ② 補出現在排得出來的場次
+  const made = ensurePlayoffFixtures({
+    stage: next.playoff.stage,
+    qualification: next.playoff.qualification,
+    fixtures: playoffFixturesOf(next),
+    outcomes: next.outcomes ?? [],
+    baseDay: next.playoff.baseDay,
+  });
+  if (!made.ok) return { ok: false, state, added: 0, errors: made.errors };
+  if (made.added.length) next = { ...next, fixtures: [...next.fixtures, ...made.added] };
+  return { ok: true, state: next, added: made.added.length, errors: [] };
+}
+
+/** 季後賽是不是打完了（含季軍戰與決賽）。 */
+export function isPlayoffDone(state) {
+  if (!state?.playoff) return false;
+  const fx = playoffFixturesOf(state);
+  //  四場都要在（sf1／sf2／bronze／final），而且都收尾
+  return fx.length === PLAYOFF_MATCHES.length && fx.every(isFixtureTerminal);
+}
+
+/** 季後賽對戰表（畫面用）。 */
+export function playoffView(state) {
+  if (!state?.playoff) return null;
+  const fixtures = playoffFixturesOf(state);
+  return {
+    stageId: state.playoff.stage.id,
+    qualified: state.playoff.qualification.qualified,
+    bracket: playoffBracket({
+      fixtures, outcomes: state.outcomes ?? [], participants: participantsOf(state),
+    }),
+    done: isPlayoffDone(state),
+    ...playoffOrder({ fixtures, outcomes: state.outcomes ?? [] }),
+  };
 }
 
 /** 賽季進度摘要（畫面用）。 */

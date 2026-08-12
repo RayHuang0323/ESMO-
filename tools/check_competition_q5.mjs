@@ -255,8 +255,13 @@ const runs = [];
     !/funds|transactions|COMPETITION_PRIZE|settleCompetitionAward/.test(ss));
   ck("7c) **沒有做選手老化**（Q5 邊界：只換容器）",
     !/agePlayer|ageOneSeason|retire/i.test(ss + ps.split("rollToNextCompetitionSeason")[1]?.slice(0, 2000) ?? ""));
-  ck("7d) 沒有季後賽／CS 巡迴／MMR／Shop",
-    !/playoff|single_elim|double_elim|circuit|\bmmr\b|tokens|entitlement/i.test(ss));
+  //  ⚠ 2026-08-12（Q6）：本條原本也擋 `playoff|single_elim`。Q6 已實作季後賽，
+  //    而季後賽依規格就住在 seasonState ⇒ 原斷言必然紅。
+  //    保留仍然成立的部分：**換季本身不碰季後賽的內部規則**（`rollToNextSeason`
+  //    只換容器），以及 CS 巡迴／MMR／Shop 一律不得出現。
+  ck("7d) 換季不碰季後賽規則；且沒有 CS 巡迴／MMR／Shop",
+    !/double_elim|circuit|\bmmr\b|tokens|entitlement/i.test(ss) &&
+    !/playoff/i.test(ss.split("export function rollToNextSeason")[1]?.split("export function")[0] ?? ""));
   ck("7e) 賽季編號由賽事自己 +1，**不讀 `meta.season`**",
     !/meta[?.]*\.season/.test(ss) && /Number\(state\.season\)\s*\|\|\s*1\)\s*\+\s*1/.test(ss));
   ck("7f) 畫面不自己判能不能換季（吃 Store 的 canRoll）",

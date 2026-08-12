@@ -27,6 +27,9 @@ const ROW_FIELDS = Object.freeze([
   "played", "wins", "losses", "points",
   "scoreFor", "scoreAgainst", "scoreDiff",
   "engineGames", "simulatedGames", "forfeitedGames",
+  //  Q6：常規賽名次。季後賽會重排前四名的 `rank`，但**常規賽的名次與成績
+  //  必須原樣留著**——否則「季後賽不得覆蓋常規賽資料」這條就只是口號。
+  "regularRank",
 ]);
 
 /**
@@ -67,6 +70,8 @@ function normalizeRow(r) {
 export function createFinalStandings({
   standings, competition, stageId, sealedAtDay, tiebreakers = [],
   sourceMix = null, playerTeamId = null,
+  //  Q6：季後賽名次（冠／亞／季／殿的 teamId 順序）。給了就用它重排前四名。
+  playoffOrder = null, championTeamId = null, playoffStageId = null,
 } = {}) {
   const errors = [];
   const rows = standings?.rows;
@@ -80,7 +85,17 @@ export function createFinalStandings({
   }
   if (errors.length) return { ok: false, final: null, errors };
 
-  const normalized = rows.map(normalizeRow);
+  //  ── Q6：季後賽重排前四名 ──────────────────────────────────────────────
+  //  每一列先記下**常規賽名次**（`regularRank`），再依季後賽順序重排 `rank`。
+  //  5–8 名維持常規賽順序。列裡的勝敗／積分／淨勝分**完全不動**。
+  let ordered = rows.map((r) => ({ ...r, regularRank: r.regularRank ?? r.rank }));
+  if (Array.isArray(playoffOrder) && playoffOrder.length) {
+    const rank = new Map(playoffOrder.map((id, i) => [id, i + 1]));
+    const inPlayoff = ordered.filter((r) => rank.has(r.teamId)).sort((a, b) => rank.get(a.teamId) - rank.get(b.teamId));
+    const rest = ordered.filter((r) => !rank.has(r.teamId));   // 已是常規賽順序
+    ordered = [...inPlayoff, ...rest].map((r, i) => ({ ...r, rank: i + 1 }));
+  }
+  const normalized = ordered.map(normalizeRow);
   //  名次必須是 1..n 的全序（`computeStandings` 保證了，這裡是防呆：
   //  若哪天有人手動塞一份 rows 進來，這道會擋住）
   const ranks = normalized.map((r) => r.rank).sort((a, b) => a - b);
@@ -113,6 +128,12 @@ export function createFinalStandings({
         : null,
       playerTeamId: playerTeamId ?? null,
       playerRank: mine ? mine.rank : null,
+      //  Q6：季後賽的存證。`rankSource` 讓讀的人一眼知道這份名次怎麼來的——
+      //  舊賽季（Q6 之前封存的）是 `"regular"`，不會被誤讀成季後賽結果。
+      rankSource: Array.isArray(playoffOrder) && playoffOrder.length ? "playoff" : "regular",
+      championTeamId: championTeamId ?? (mine ? normalized[0]?.teamId ?? null : normalized[0]?.teamId ?? null),
+      playoffStageId: playoffStageId ?? null,
+      playerRegularRank: mine ? mine.regularRank : null,
     },
   };
 }

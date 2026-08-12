@@ -63,6 +63,7 @@ import {
   seasonProgress, participantsOf, absoluteDayOf, isFixtureLaunched,
   canSealSeason, applySealSeason,
   canRollSeason, rollToNextSeason, seasonDayOf,
+  ensurePlayoffs, playoffView, isRegularSeasonDone,
 } from "./competition/seasonState.js";
 //  Milestone Q4：名次獎金。錢的第三個入口（唯一新增的一個），純函式在 economy/。
 import { settleCompetitionAwardInState } from "./economy/competitionAward.js";
@@ -575,6 +576,9 @@ export const useProfileStore = create((set, get) => ({
     //  屬於不決定性的部分，所以純 reducer 只回傳 notices，不自己寫 inbox。
     for (const r of receipts) for (const note of r.notices ?? []) get().pushInbox(note);
     get().save();
+    //  Q6：**時鐘更新之後**才排季後賽／封存，否則「封存日」會記成推進前的舊日子
+    //  （季後賽最後一場常常是 AI vs AI 在推進中被模擬掉，這個時間差會變成常態）。
+    get()._sealSeasonIfFinished();
     //  舊呼叫端只看 receipts（陣列），行為不變；訓練頁改讀 `.trained`。
     receipts.trained = trained;
     //  Q3：既有呼叫端不讀這兩個屬性也完全不受影響（同 `.trained` 的手法）。
@@ -628,8 +632,12 @@ export const useProfileStore = create((set, get) => ({
       //    否則記憶體與存檔會不一致（重整後那些補判會消失又重算一次）。
       get().save();
     }
-    //  Q4：AI 場次模擬完可能正好是本季最後一場 ⇒ 這裡也要試著封存。
-    get()._sealSeasonIfFinished();
+    //  ⚠ Q6：**這裡不封存。**
+    //  `_advanceCompetition` 是在 `advanceDay` 更新 `meta.days` **之前**跑的，
+    //  在這裡封存會把「封存日」記成推進前的舊日子。Q6 之前很少踩到
+    //  （最後一場通常是玩家自己打完／棄權觸發的），但季後賽最後一場常常是
+    //  AI vs AI 在推進中被模擬掉 ⇒ 這個時間差就變成常態。
+    //  封存改由 `advanceDay` 在時鐘更新之後呼叫。
     return { daysAdvanced: res.daysAdvanced, stoppedBy: res.stoppedBy };
   },
   /**
@@ -743,8 +751,27 @@ export const useProfileStore = create((set, get) => ({
    *   反過來就得先算一次名次才知道發多少，等於有兩份名次。
    */
   _sealSeasonIfFinished() {
-    const state = get().competition;
+    let state = get().competition;
     if (!state?.schema) return { sealed: false, final: null, award: null };
+
+    //  ── Q6：先確保季後賽排定／補齊，再談封存 ──────────────────────────
+    //  掛在這裡的理由與 Q4 封存相同：三個觸發點（推進天數／打完／棄權）都會
+    //  經過這裡，而「常規賽最後一場收尾」與「準決賽收尾」都可能是需要補排的時機。
+    //  `ensurePlayoffs` 冪等 ⇒ 呼叫幾次都一樣。
+    const po = ensurePlayoffs(state);
+    if (po.ok && po.state !== state) {
+      state = po.state;
+      set({ competition: state });
+      get().save();
+      if (po.added > 0 && isRegularSeasonDone(state) && state.playoff) {
+        const q = state.playoff.qualification.qualified;
+        get().pushInbox({
+          type: "match", from: "聯賽官方",
+          subject: `第 ${state.season} 賽季 季後賽 對戰表公布`,
+          text: `常規賽結束，前四名晉級季後賽：${q.map((x) => `${x.seed}. ${x.name}`).join("、")}。`,
+        });
+      }
+    }
 
     const can = canSealSeason(state);
     if (!can.ok && !can.sealed) return { sealed: false, final: null, award: null, reason: can.reason };
@@ -755,10 +782,11 @@ export const useProfileStore = create((set, get) => ({
       if (!res.ok) return { sealed: false, final: null, award: null, reason: res.errors?.[0]?.message ?? null };
       final = res.final;
       set({ competition: res.state });
+      const champ = participantsOf(res.state).find((p) => p.id === final.championTeamId)?.name ?? "—";
       get().pushInbox({
         type: "match", from: "聯賽官方",
-        subject: `第 ${final.season} 賽季 常規賽 結束`,
-        text: `第 ${final.season} 賽季常規賽全部賽程已完成，最終名次已公布。你的隊伍最終排名第 ${final.playerRank} 名。`,
+        subject: `第 ${final.season} 賽季 結束 · ${champ} 奪冠`,
+        text: `第 ${final.season} 賽季常規賽與季後賽全部結束，${champ} 拿下冠軍。你的隊伍最終排名第 ${final.playerRank} 名（常規賽第 ${final.playerRegularRank} 名）。`,
       });
     }
 
@@ -868,6 +896,8 @@ export const useProfileStore = create((set, get) => ({
       //  Q5：歷屆已封存賽季（新的在前）＋ 能不能開下一季
       history: arr(get().competitionHistory, []),
       canRoll: canRollSeason(state),
+      //  Q6：季後賽（沒排定 ⇒ null）。畫面只顯示，不自己判晉級或勝敗。
+      playoff: playoffView(state),
       //  Q4：賽季封存後的**不可變**最終名次（沒封存 ⇒ null）。
       //  ⚠ 賽季進行中畫面要顯示的是上面的 `standings`（推導值）；
       //    `final` 只在結束後出現。兩者不會同時是「現在的名次」，不算兩份真相。

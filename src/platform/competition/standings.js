@@ -50,9 +50,16 @@ export const TIEBREAKERS = Object.freeze([
  * @param {string} [p.rule]        STANDINGS_RULES 的 id
  * @returns {{rows:Array, played:number, rule:object}}
  */
-export function computeStandings({ outcomes, participants = [], rule = "win3" } = {}) {
+export function computeStandings({ outcomes, participants = [], rule = "win3", stageId = null } = {}) {
   const R = ruleById(rule);
-  const valid = competitionOutcomes(outcomes);
+  //  Q6：`stageId` 給定時只算**那一個賽段**的賽果。
+  //  ⚠ 少了這道，季後賽賽果會被算進常規賽積分榜——`known` 是參賽者名單，
+  //    而季後賽四隊本來就都在名單裡，光靠它擋不住。
+  //  ⚠ 舊存檔的賽果沒有 `stageId`（Q6 之前的欄位）⇒ 視為常規賽，行為不變。
+  const scoped = stageId
+    ? (outcomes ?? []).filter((o) => (o?.stageId ?? stageId) === stageId)
+    : outcomes;
+  const valid = competitionOutcomes(scoped);
   const known = new Set(participants.map((p) => p.id));
 
   //  ① 建列：參賽者都要有一列，即使還沒打過（0 場也要看得到自己）

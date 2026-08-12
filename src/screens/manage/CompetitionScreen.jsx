@@ -56,7 +56,8 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
 
   const { standings, next, nextDay, today, progress, participants, live, final, award } = view;
   //  Q5：賽季進度改用**賽季相對天數**（`seasonDay`），不再拿絕對遊戲日對 84
-  const { seasonDay, seasonDays, history, canRoll } = view;
+  const { seasonDay, seasonDays, history, canRoll, playoff } = view;
+  const MATCH_LABEL = { sf1: "準決賽 ①", sf2: "準決賽 ②", bronze: "季軍戰", final: "決賽" };
 
   const rollSeason = () => {
     setErr(null);
@@ -127,8 +128,16 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "3px 0", borderTop: `1px solid ${GC.line}` }}>
             <span style={{ color: GC.gray }}>🏆 冠軍</span>
-            <span style={{ fontWeight: 800, color: "#e5e7eb" }}>{nameOf(final.rows[0]?.teamId)}</span>
+            <span style={{ fontWeight: 800, color: "#e5e7eb" }}>{nameOf(final.championTeamId ?? final.rows[0]?.teamId)}</span>
           </div>
+          {/*  Q6：名次由季後賽決定時，同時標出常規賽名次——兩個都是事實，
+               只顯示一個會讓「常規賽第 1 但季後賽輸了」看起來像資料錯誤。 */}
+          {final.rankSource === "playoff" && final.playerRegularRank && (
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "3px 0" }}>
+              <span style={{ color: GC.gray }}>📋 常規賽名次</span>
+              <span style={{ fontWeight: 800, color: GC.gray2 ?? "#a1a1aa", fontFamily: MONO }}>第 {final.playerRegularRank} 名</span>
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "3px 0" }}>
             <span style={{ color: GC.gray }}>💰 名次獎金</span>
             {/*  誠實顯示：沒有獎金的名次就寫「無」，不寫 $0 假裝有發 */}
@@ -174,6 +183,43 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
               </span>
             </div>
           ))}
+        </Panel>
+      )}
+
+      {/*  ── 季後賽對戰表（Milestone Q6）────────────────────────────────
+           常規賽結束後才出現。畫面**不判斷誰晉級、不算勝負**——晉級名單與
+           對戰表都是 Store 依常規賽積分榜產生好的。 */}
+      {playoff && (
+        <Panel
+          title="季後賽 PLAYOFFS"
+          right={<span style={{ fontSize: 9, fontWeight: 800, color: playoff.done ? GC.gold : GC.gray }}>
+            {playoff.done ? "已結束" : "進行中"}
+          </span>}
+        >
+          <div style={{ fontSize: 9, color: GC.gray, marginBottom: 7 }}>
+            常規賽前四名晉級：{playoff.qualified.map((q) => `${q.seed}. ${q.name}`).join("　")}
+          </div>
+          {playoff.bracket.filter((m) => m.exists).map((m) => (
+            <div key={m.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11.5, padding: "4px 0", borderTop: `1px solid ${GC.line}` }}>
+              <span style={{ color: GC.gray, width: 62, flexShrink: 0 }}>{MATCH_LABEL[m.key]}</span>
+              <span style={{ flex: 1, textAlign: "center", color: "rgba(255,255,255,0.85)" }}>
+                <b style={{ color: m.winner === m.sideA ? GC.gold : "inherit" }}>{m.nameA}</b>
+                <span style={{ color: GC.gray, margin: "0 6px", fontFamily: MONO }}>
+                  {m.score ? `${m.score.a}:${m.score.b}` : "vs"}
+                </span>
+                <b style={{ color: m.winner === m.sideB ? GC.gold : "inherit" }}>{m.nameB}</b>
+              </span>
+              <span style={{ width: 44, textAlign: "right", fontSize: 9, color: m.done ? GC.green : GC.gray }}>
+                {m.done ? "已完成" : `第 ${m.day} 天`}
+              </span>
+            </div>
+          ))}
+          {/*  誠實顯示：決賽與季軍戰要等準決賽打完才排得出來，不畫假的空格子 */}
+          {playoff.bracket.some((m) => !m.exists) && (
+            <div style={{ fontSize: 9, color: GC.gray, marginTop: 6 }}>
+              決賽與季軍戰的對手要等準決賽結束才確定。
+            </div>
+          )}
         </Panel>
       )}
 
