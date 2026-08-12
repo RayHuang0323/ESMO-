@@ -51,7 +51,8 @@ export const RESOLVE_APP_MODULES = `
   const S = () => profile.useProfileStore.getState();
 `;
 
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import { createServer } from "node:net";
 import { mkdtempSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -79,10 +80,44 @@ async function waitFor(fn, { timeoutMs = 30_000, everyMs = 250, what = "條件" 
  * dev server 供應原始模組 ⇒ 頁面裡 `import()` 同一個 URL 拿到的是同一個單例。
  */
 export async function startDevServer({ port, base = "/ESMO-/" } = {}) {
+  //  ⚠ 這兩道防護是實測踩出來的，缺一不可：
+  //
+  //  ① **先確認 port 是空的**。`--strictPort` 撞 port 時 vite 會直接結束，但
+  //     下面的 `fetch` 仍然會成功——成功的是**上一次留下來的那一個 dev server**。
+  //     它可能供應的是另一個 worktree 的原始碼，於是驗證器靜默地測到不是自己
+  //     要測的程式碼（同一個 commit 一下 24/24 一下 19/24 就是這樣來的）。
+  //     所以 port 有人佔就直接 throw，不猜、不重試、不換 port。
+  //
+  //  ② **收工要殺整棵行程樹**。`shell: true` 之下 `proc.kill()` 只殺得到 shell，
+  //     真正的 vite 會活下來繼續佔 port ⇒ 每跑一次就漏一個，下一次就踩 ①。
+  if (!(await isPortFree(port))) {
+    throw new Error(
+      `port ${port} 已經有人在聽。多半是上一次跑剩下的 dev server。\n` +
+      `   驗證器**拒絕**連上不是自己起的 server——那會靜默地測到別的原始碼。\n` +
+      `   請先關掉佔用 ${port} 的行程再跑。`);
+  }
   const url = `http://localhost:${port}${base}`;
   const proc = spawn("npx", ["vite", "--port", String(port), "--strictPort"], { shell: true, stdio: "ignore" });
   await waitFor(async () => (await fetch(url)).ok, { timeoutMs: 90_000, what: `dev server ${url}` });
-  return { url, proc, stop: () => { try { proc.kill(); } catch {} } };
+  return {
+    url, proc,
+    stop: () => {
+      try {
+        if (process.platform === "win32") spawnSync("taskkill", ["/pid", String(proc.pid), "/T", "/F"], { stdio: "ignore" });
+        else proc.kill();
+      } catch { /* 已經死了就算了 */ }
+    },
+  };
+}
+
+/** port 現在有沒有人在聽（用「綁得起來嗎」判定，不猜）。 */
+function isPortFree(port) {
+  return new Promise((resolve) => {
+    const s = createServer();
+    s.once("error", () => resolve(false));
+    s.once("listening", () => s.close(() => resolve(true)));
+    s.listen(port, "127.0.0.1");
+  });
 }
 
 /**
