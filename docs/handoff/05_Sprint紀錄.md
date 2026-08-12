@@ -8275,3 +8275,33 @@ S25 路徑、不寫進賽程，那場 fixture 永遠停在 `launched`。一季�
 audit 的第 3～6 項（Circuit/Event 契約與 `competition.id` 換根、seasonState 多賽事、
 季後賽收編成 Stage 賽制、time-slot 排程）**都沒有動**。第 3 項開始前要先提出
 最小 migration 方案與 seasonState 的資料形狀。
+
+### 已部署（2026-08-13）
+
+| 項目 | 值 |
+|---|---|
+| 分支 | `q7a/safety-preconditions` → `6ba820e` |
+| `main` | `9534ed0` → **`6ba820e`**（fast-forward，無 merge commit、無 force） |
+| Actions | [31641064119](https://github.com/RayHuang0323/ESMO-/actions/runs/31641064119) — success |
+
+上線前重跑全綠：Q1 93／Q2a 112／Q2b 92／Q3 90／Q3.5 65／Q4 68／Q5 66／Q6 57、
+`q7a_safety` 18/18、`o7` 48/48、`integrity` 20/20、`cs23` 28/28、`progress25` exit 0、
+`regress` exit 0、`regress2` 8/8、`build` `built in 10.92s`；
+三支瀏覽器 gate：票券 24/24、fixture 26/26、q6 20/20。
+
+**正式站 smoke 7/7**（獨立 Chrome profile／CDP／headless，注入自造存檔，不碰正式存檔）：
+bundle 含新的拒絕訊息與 `todayPending` 欄位；帶著「進行中場次」的存檔正常開得起來；
+賽事頁給的是「⚔️ 返回比賽 ／ 棄權」而**不是**重新出賽 ⇒ 進行中場次在正式站被正確尊重；
+全程無未捕捉例外。
+
+### ⚠ 第 ② 項只做了資料層，**UI 沒有做**
+
+`competitionView().todayPending` 已經把當天全部場次給出去了，但**沒有任何元件用它**。
+`CompetitionScreen.jsx:97` 仍是 `const focus = today ?? next`——一次只渲染一場。
+
+正式站 smoke 用「同一天兩場」的存檔實測，賽事頁確實只列出一場
+（`今日賽事｜今天｜德國海豹 客場 VS 雷霆戰熊 主場`）。
+
+⇒ **「同一天多場都可被 UI 看見」目前不成立**。資料層已經正確、日曆阻擋也正確
+（當天全部終局才走得出去），缺的是把清單畫出來。列入 08 待辦。
+本輪刻意不動 UI：安全前提與畫面改動分開上線，出事時好切。
