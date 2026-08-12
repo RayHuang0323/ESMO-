@@ -6980,3 +6980,41 @@ R3 verifier 的總模擬數為 544，static RNG call sites 維持 21。
   跨過 aggr < 0.82，並有 effective APM high clamp，造成 threshold / path discontinuity。
 - APM measurement：**Go**；APM semantic：**Done**；calibration readiness：**Revise / No-Go**。
 - 不提出 production calibration patch；local commit，完成後不 push。
+
+---
+
+## Sprint R22：CS Local Causal Calibration Framework
+
+### Scope / framework
+
+- R22 只建立 reusable local causal measurement framework，不修改 production balance、RNG、
+  role mapping、scenario、MapAware、Synergy、Learning 或其他 stat，也不 rebaseline R1～R21。
+- 四層定義：Level 1 stat/direct consumer、Level 2 local opportunity、Level 3 immediate
+  action/conversion、Level 4 downstream match outcome。Level 4 的 kill、damage、survival、
+  economy、winner 保留為 secondary spillover，不作所有 stat 的 primary monotonic gate。
+- 新增 `tools/cs_calibration_measurement.mjs`，集中處理 paired effect、strict-majority、
+  monotonicity、clamp、threshold crossing、changed seeds 與 readiness classification；沒有
+  建立第二套 simulator。
+- 新增 `tools/check_cs_local_causal_framework_r22.mjs`，對 R18-A/R19/R20/R21 report 做
+  SHA-256 provenance lock，只使用既有 fixed-seed evidence。8/16 明確不通過，9/16 才通過。
+
+### Evidence / readiness
+
+- focused verifier：PASS；helper behavioral contracts、historical snapshot gate、repeated
+  digest 均 PASS；framework digest：
+  `b0c4db3a0122f720006f679b33792de06dddc0f05c6412afbcca92d8838a4b38`。
+- Reflex：Level 1 `combatSkill` / Level 2 `Pt` direct/local signal 可重現；target attacker
+  conversion、kill、damage 仍標記為 path-amplified secondary，故 **Ready for calibration
+  pilot（local causal scope）**，不提出 balance patch。
+- Positioning：direct chain 正向，但 entry/rifler opportunity coverage 不足、lurker 跨
+  `aggr < 0.82`、Level 3 離散，故 **Deferred**；不改 threshold、不改 scenario。
+- APM：effective APM / combatSkill / aggr direct signal 與 strict-majority 可重現；pair /
+  retreat / match KPI 標為 spillover，故 **Ready for calibration pilot（local causal scope）**。
+- Courage：只允許作下一項 measurement design；本輪不開始 Courage balance calibration。
+
+### 判定
+
+- R22 framework：**Go / PASS**。
+- production semantic / balance patch：**No-Go（本輪不提出）**。
+- 完整 spec/report：`review/cs-gameplay/CS_LOCAL_CAUSAL_CALIBRATION_R22_SPEC.md`、
+  `review/cs-gameplay/CS_LOCAL_CAUSAL_CALIBRATION_R22_REPORT.md`。
