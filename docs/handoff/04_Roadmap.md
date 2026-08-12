@@ -149,7 +149,7 @@ S28–S29 與 Milestone A–N 之後的實際進度以本節與
 Milestone O 起的資料契約都以「日後由伺服器接管」為前提設計
 （決定性冪等鍵、交易單自帶快照、純 reducer 可重播）。
 
-### 賽季與賽事系統（Q1–Q5 已部署；**Q6 已完成未部署**）
+### 賽季與賽事系統（Q1–Q6 **全部已部署**）
 
 > **2026-08-12 更新。** 下面那一段（「Q1／Q2a／Q2b 已部署；Q3 已完成未部署」起）
 > 停在 2026-08-11 的狀態，僅供歷史參考；**現況以本節為準**。
@@ -164,13 +164,24 @@ Milestone O 起的資料契約都以「日後由伺服器接管」為前提設�
 | Q3.6 | 流程安全 hotfix（逾時不換對手、賽事頁返回比賽） | ✅ 已部署 | 併入 q35／o4 |
 | **Q4** | `FinalStandings` ＋ `settleCompetitionAward` ＋ 賽季封存 | ✅ **已部署**（main `28e5005`） | `q4` 68/68 |
 | **Q5** | **跨賽季換季**（S1 → S2 → S3…） | ✅ **已部署**（main `e34d8a9`） | `q5` 66/66 |
-| **Q6** | **季後賽**（Top 4 晉級 ＋ 4 隊單淘汰含季軍戰） | ✅ 已完成，**未 merge／未部署** | `q6` 57/57 ＋ 瀏覽器 20/20 |
+| **Q6** | **季後賽**（Top 4 晉級 ＋ 4 隊單淘汰含季軍戰） | ✅ **已部署**（main `c3a5ba4`） | `q6` 57/57 ＋ 瀏覽器 20/20 ＋ 正式站 14/14 |
 
 **MVP（五個 Milestone）已全部完成並部署。** Q5 是 MVP 之後的第一個延伸，
 把「一個賽季」變成「可以一直打下去的賽季序列」。
 Q5 部署驗證：Actions run `31566276535`（build ✅／deploy ✅）、正式站 HTTP 200、
 線上 bundle `assets/index-CBU6FsAl.js` 與本機 build **逐位元相同**、
 正式站實跑 S1 封存 → 開 S2 → 七項驗收全過（細節見 `05_Sprint紀錄.md`）。
+
+Q6 部署驗證：Actions run `31603291866`（build ✅／deploy ✅）、正式站 HTTP 200、
+線上 bundle `assets/index-D8fgZrD9.js` 與本機 build **逐位元相同**、
+正式站自動 smoke test **14/14**（Top 4 晉級、季後賽 4 場、前四由季後賽決定、
+`regularRank` 保留、換季後歷史保留季後賽結果）。
+
+**自 Q6 起瀏覽器驗收全自動**：`tools/browser_check_q6.mjs`（dev）與
+`tools/browser_check_q6_prod.mjs`（正式站）各自起一個**獨立 Chrome**
+（獨立 user-data-dir／CDP port／headless、關閉背景節流），用 CDP 驅動。
+⇒ 不碰日常 Chrome、**不碰正式站存檔**（獨立 profile 下那個 origin 是全新的）、
+不需要人工把視窗點到前景。只用 Node 內建 `fetch`／`WebSocket`，未新增相依。
 
 **Q5 的兩個邊界**（與 Ray 確認）：
 ① 賽事賽季是全案唯一顯示的「賽季」，`meta.season` 降級為經濟層內部週期；

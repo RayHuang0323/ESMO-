@@ -8012,3 +8012,50 @@ Battle Engine 一行沒動。**
 - 季後賽**沒有獨立獎金**：名次獎金仍是同一張表、依最終名次發（Ray 選的方案）。
 - 賽制固定 4 隊單淘汰（`PLAYOFF_SLOTS`）。要改名額就要一起改賽制，不做半套參數化。
 - 季後賽場次目前**沒有 BO3**（`matchFormat` 欄位空著，契約支援但本輪不用）。
+
+## Q6 部署紀錄（2026-08-12）
+
+### 整合
+
+`origin/main` 全程沒有前進（`0 behind / 1 ahead`）⇒ **純 fast-forward**：
+`0231b93 → 4e5b37b → c3a5ba4`。`git log --merges 0231b93..HEAD` 為空，
+**無 merge commit、未 force**。在 `ESMO-acceptance` 工作區（main，乾淨）快轉；
+Q6 本身開在**獨立 worktree**（`scratchpad/q6-playoffs`），其他工作區全程沒碰。
+
+### 整合後重跑（全綠）
+
+`q1 93`／`q2a 112`／`q2b 92`／`q3 90`／`q35 65`／`q4 68`／`q5 66`／**`q6 57`**、
+`finance_n 32`／`n2 35`／`n3 40`、`matchmaking_o4 47`／`flow_acceptance 97`、
+`regress 15/15`／`regress2 8/8`、`npm run build` exit 0（`built in 17.53s`）、
+**`browser_check_q6` 20/20**。
+
+### 部署與線上版本驗證
+
+Actions run **31603291866**（`c3a5ba4`）：build ✅ / deploy ✅。
+四層確認：HTTP 200 → 線上 entry bundle `assets/index-D8fgZrD9.js` 與本機 build 同名
+→ `cmp` **byte-identical** → 線上 bundle 內含
+`季後賽 PLAYOFFS`／`準決賽`／`季軍戰`／`常規賽名次`／`常規賽前四名晉級`。
+
+### 正式站 smoke test：**14/14，全自動**
+
+`tools/browser_check_q6_prod.mjs` 起一個獨立 Chrome（headless、獨立 user-data-dir、
+獨立 CDP port、關閉背景節流），**走 UI** 跑完整季：
+
+| 項目 | 結果 |
+|---|---|
+| 常規賽能產生 Top 4 | ✅ 暗影狼群／烈焰鳳凰／寒冰守衛／雷霆戰熊 |
+| 季後賽區塊正常顯示 | ✅ 準決賽 ①②／季軍戰／決賽都在畫面上 |
+| 4 場季後賽完整產生 | ✅ `sf1, sf2, bronze, final` 且全部收尾 |
+| FinalStandings 前四由季後賽決定 | ✅ `rankSource: "playoff"`，冠軍 烈焰鳳凰 |
+| `regularRank` 仍保留 | ✅ 每一列都在（我方最終第 8 名／常規賽第 8 名） |
+| Q5 換季後歷史保留季後賽結果 | ✅ S1 進歷史後 `rankSource` 與冠軍都還在，`regularRank` 也在 |
+
+### 這一輪最大的流程改變：正式站測試不再需要動 Ray 的存檔
+
+前面每一輪（Q3.5／Q4／Q5）的正式站驗收都是驅動 Ray 的日常 Chrome，
+所以要「備份 21 個 localStorage key → 測 → 逐一寫回 → 清 `esmo_debug`」，
+而且跑一整季得請他把分頁點到前景（背景節流三倍慢）。
+
+Q6 之後：獨立 Chrome 有**自己的 user-data-dir** ⇒ 正式站那個 origin 在裡面是
+**全新 profile**（實測 `localStorage 0 筆`）。
+⇒ **不需要備份、不需要還原、不需要人**。這套流程之後每一輪都該直接沿用。
