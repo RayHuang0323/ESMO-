@@ -8165,3 +8165,30 @@ reward/XP 不重複、A 的賽果未被動到（D11）→ B 的正牌結果之�
 **驗證器最危險的失敗不是紅，是靜默地量錯對象。** 這支 gate 曾經「綠過一次」，
 而那次綠與被測行為完全無關。往後任何跨 realm／跨模組邊界的驗證，都必須把
 「我量到的是不是同一個東西」寫成**開場就會 abort 的前提**，而不是註解裡的假設。
+
+### 已部署（2026-08-13）
+
+| 項目 | 值 |
+|---|---|
+| 分支 | `hotfix/fixture-result-integrity` → `ddd4c04` |
+| `main` | `1fe85d3` → **`ddd4c04`**（fast-forward，無 merge commit、無 force） |
+| Actions | `Deploy Vite site to GitHub Pages` run [31634938771](https://github.com/RayHuang0323/ESMO-/actions/runs/31634938771) — success |
+| 正式站 | https://rayhuang0323.github.io/ESMO-/ |
+
+上線前最後一次驗證：`integrity` 20/20、`o7` 48/48、`q35` 65/65、
+`check_fixture_result_browser` 24/24、`browser_check_fixture_integrity` 26/26、
+`build` `built in 15.67s`。
+
+**正式站最小 smoke（4/4）** —— 獨立 Chrome profile／獨立 CDP／headless，
+不碰日常瀏覽器、不碰正式存檔：
+
+1. 站台載入且 app 真的掛載（`esmo · MOBA 3D`，畫面 342 字，Dashboard 正常）
+2. 該 origin 的 `localStorage` **0 筆** ⇒ 確認是全新 profile，沒有動到正式存檔
+3. **部署出去的 bundle 確實含本次守衛** —— 在 `index-DFIyHT-O.js` 找到
+   fail-closed 的中文原因字串「這份對戰結果屬於另一場比賽」
+4. 無未捕捉的頁面例外
+
+⚠ smoke 刻意只做到這裡：正式站是 minified bundle，無法用 dev server 那套
+`RESOLVE_APP_MODULES` 入口驅動真實模組，所以**跨場次防串的行為本身不是在正式站
+驗的**，而是在 dev build 的兩支 gate（24/24、26/26）。正式站只證明
+「這份程式碼確實上線了、站台沒壞」。
