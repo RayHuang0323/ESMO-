@@ -115,11 +115,27 @@ export const isPlayerFixture = (state, f) => involvesTeam(f, state?.playerTeamId
 export const isFixtureLaunched = (f) => f?.status === FIXTURE_STATES.launched;
 
 /**
- * 這一天有沒有「還沒收尾的玩家場次」。
+ * 這一天**全部**還沒收尾的玩家場次（依既有順序，不重排）。
+ *
+ * ⚠ 同一天可以有多場：Q7a 的產品規則是「賽程與賽事可以並存、同一天也可以有
+ *   多場玩家賽事」，只有**進行中的 battle session** 一次限一個。資料模型本來
+ *   就放得下（`fixturesOn` 不限筆數），但先前只取第一場 ⇒ 第二場在畫面上
+ *   看不見，玩家會卡在「今天走不出去、卻不知道還要打什麼」。
+ */
+export function pendingPlayerFixturesOn(state, day) {
+  return fixturesOn(state, day).filter((f) => isPlayerFixture(state, f) && !isFixtureTerminal(f));
+}
+
+/**
+ * 這一天有沒有「還沒收尾的玩家場次」——回傳**第一場**。
  * 有的話就是**推進的阻擋點**——走得進今天，但走不出去。
+ *
+ * ⚠ 一天多場時這裡只回第一場（沿用既有語意，避免動到既有呼叫端）。
+ *   要列出全部請用 `pendingPlayerFixturesOn`。推進阻擋不受影響：
+ *   只要當天還有任何一場沒收尾，這裡就仍然回傳非 null。
  */
 export function pendingPlayerFixtureOn(state, day) {
-  return fixturesOn(state, day).find((f) => isPlayerFixture(state, f) && !isFixtureTerminal(f)) ?? null;
+  return pendingPlayerFixturesOn(state, day)[0] ?? null;
 }
 
 /** 下一場玩家賽事（含今天）；沒有則 null。畫面用。 */

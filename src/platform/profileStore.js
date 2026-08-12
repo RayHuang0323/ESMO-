@@ -59,7 +59,7 @@ import { ensureTeamIdentity } from "./identity/teamIdentity.js";
 //     本檔只負責「讀狀態 → 呼叫純函式 → 寫回」，不在 Store 裡判規則。
 import {
   createSeasonState, advanceSeasonDays, applyLaunch, applyCompleted, applyForfeit,
-  fixtureById, nextPlayerFixture, pendingPlayerFixtureOn, seasonStandings,
+  fixtureById, nextPlayerFixture, pendingPlayerFixtureOn, pendingPlayerFixturesOn, seasonStandings,
   seasonProgress, participantsOf, absoluteDayOf, isFixtureLaunched,
   canSealSeason, applySealSeason,
   canRollSeason, rollToNextSeason, seasonDayOf,
@@ -651,17 +651,40 @@ export const useProfileStore = create((set, get) => ({
     const fixture = fixtureById(state, fixtureId);
     if (!fixture) return { ok: false, errors: [{ code: "fixture", message: "找不到這場賽程" }], reason: "找不到這場賽程" };
 
+    //  ── 一次只能有一場進行中的對戰（Q7a 安全前提）────────────────────
+    //  產品規則：賽程與賽事可以並存、同一天也可以有多場，但**玩家隊伍同一時間
+    //  只能有一個進行中的 battle session**，打完並結算後才能進下一場。
+    //
+    //  ⚠ 這裡以前只擋「同一個 fixture 且該 fixture 已 launched」。於是另一場
+    //    還是 `scheduled` 的賽程可以直接開下去，而下面的 `set()` 會把
+    //    `session` 設成 null ⇒ **前一場進行中的場次無聲消失**：它的賽果之後
+    //    只會走 S25 路徑（`viaSession: false`）、不會寫進賽程，那場 fixture
+    //    就永遠停在 `launched`。同季多賽事並存之後這會變成常態，不是邊角。
+    //
+    //  ⚠ 逾期的判定要分狀態：`launched` 代表對戰真的在進行中，**一律擋**
+    //    （TTL 過了也一樣，否則打久一點就能繞過去）；`created` 只是還沒用掉的
+    //    入場券，逾期就等於作廢，不該卡住玩家。
+    const mmNow = get().matchmaking ?? {};
+    const cur = mmNow.session ?? null;
+    const liveSession = !!cur && !isSessionTerminal(cur) &&
+      (cur.state === SESSION_STATES.launched || !isSessionExpired(cur, now));
+    if (liveSession) {
+      const same = fixtureIdOfSession(cur) === fixtureId;
+      const opp = cur.opponent?.name ?? null;
+      const message = same
+        ? "你有一場進行中的對戰，請直接返回那一場"
+        : `你有一場進行中的對戰${opp ? `（對手：${opp}）` : ""}，請先打完或放棄那一場，才能開始這一場`;
+      return {
+        ok: false,
+        errors: [{ code: same ? "live_session" : "other_live_session", message }],
+        reason: message,
+      };
+    }
     //  ── 房間逾時之後的重新進場（Q3.5）────────────────────────────────
     //  賽程已是 `launched`，但那一場的房間／場次都已經終局（例如確認逾時 20 秒）
-    //  ⇒ 允許重新簽發。**還活著的場次不算**——那要走 `resumeMatchSession`，
-    //  否則就是發第二張入場券，O6 的一次性令牌會被繞過。
-    const mmNow = get().matchmaking ?? {};
-    const liveSession = mmNow.session && !isSessionTerminal(mmNow.session);
-    const sameFixture = fixtureIdOfSession(mmNow.session) === fixtureId;
-    const allowRelaunch = isFixtureLaunched(fixture) && !(liveSession && sameFixture);
-    if (isFixtureLaunched(fixture) && liveSession && sameFixture) {
-      return { ok: false, errors: [{ code: "live_session", message: "你有一場進行中的對戰，請直接返回那一場" }], reason: "你有一場進行中的對戰，請直接返回那一場" };
-    }
+    //  ⇒ 允許重新簽發。走到這裡代表沒有進行中的場次（上面已擋掉），
+    //  所以「還活著的場次要走 resumeMatchSession」那條規則仍然成立。
+    const allowRelaunch = isFixtureLaunched(fixture);
 
     const entry = get().matchEntry(fixture.gameMode);
     const issued = issueCompetitionMatch({
@@ -879,6 +902,9 @@ export const useProfileStore = create((set, get) => ({
       //    畫面不得自己加 startDay，否則換算規則會有兩份。
       nextDay: next ? absoluteDayOf(state, next) : null,
       today: pendingPlayerFixtureOn(state, day),
+      //  Q7a：同一天可能有多場（多賽事並存）。`today` 沿用舊語意只給第一場，
+      //  畫面要列出全部得用這一份，否則第二場玩家看不到、卻又走不出今天。
+      todayPending: pendingPlayerFixturesOn(state, day),
       progress: seasonProgress(state),
       participants: participantsOf(state),
       //  Q3.6：有沒有一場**還沒結束的賽程對戰**正在進行。有的話賽事頁要給得出
