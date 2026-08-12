@@ -6932,3 +6932,51 @@ R3 verifier 的總模擬數為 544，static RNG call sites 維持 21。
   balance KPI。
 - `npm.cmd run build` PASS；historical 14 區段保持 PASS，未 rebaseline。R20 local commit，
   不 push。
+---
+
+## Sprint R20 checkpoint — 2026-08-12
+
+- R20 local commit 2e730cf2fc9d820774046f52d3259a7b6d92817f 已 push 至
+  release/moba-combat-closure；local / tracking / remote SHA 一致。
+- Positioning 狀態：measurement **Done / Go**、semantic **Done**、calibration
+  **Deferred / Revise**。
+- 原因：retreat coverage 與 aggr < 0.82 threshold 造成離散行為，pair admission / survival
+  又受到 deterministic path amplification。不得修改 retreat threshold 或為了 coverage 調整 scenario。
+
+## Sprint R21：CS APM Measurement / Calibration Readiness — 2026-08-12
+
+### Scope / guard
+
+- 只處理 APM read-chain measurement 與 calibration readiness；不處理 Reflex / Positioning
+  calibration、MapAware、Synergy、Learning。
+- 不修改 production、RNG、stat formula、role mapping、其他 15 項 stat、retreat threshold
+  或 measurement scenario；不 rebaseline R1～R20 historical evidence。
+
+### Read-chain / evidence
+
+- raw stats.apm → posSkill role-fit read；目前只有 entry POS_PROFILE 以 APM weight 3 讀 raw APM，
+  rifler / awp / lurker / igl 的 APM role-fit weight 為 0。
+- combatSkill 的 mechanical / weapon read 使用 effective APM，但其結果仍包含 raw posSkill
+  role-fit component；因此 entry 有兩條 APM exposure，R21 將兩者分開量測。
+- persStat(apm) → combatSkill mechanical / rifle read 與 aggr live behavior；目前只有 personality
+  adjustment，沒有額外 state / morale APM adjustment。awp calm、igl shotcaller 為 -4，lurker
+  lonewolf 為 +6。
+- movement speed 仍讀 sta；aggr 的 APM coefficient 為 0.16 / 100，並 downstream 影響 pair
+  fire chance 與 aggr < 0.82 retreat gate。
+- 新增 tools/check_cs_apm_measurement_r21.mjs 與兩份 R21 spec/report；verifier 是 behavioral
+  memory-only transform，包含 raw/effective attribution、attacker/defender KPI、pair/round
+  coverage、strict-majority、clamp、threshold 與 deterministic path evidence。
+- 固定 inferno / t_aexec / c_std、5 roles、low/baseline/high、16 fixed seeds；off/on/repeated-on
+  共 528 次 simulator execution。suite digest：
+  0380561f76b66ddf774fdf86decf048bd261082c23fe06a978553d637a8d429a。
+
+### 判定
+
+- focused verifier PASS；第二次 focused digest 相同；aggregate gate PASS；historical checkpoint
+  gate 15/15 已通過；production source 未修改。
+- direct effective APM 與 aggr 均為 5/5 roles、16/16 seeds monotonic；combatSkill 為
+  entry/lurker/igl 16/16、rifler 13/16、awp 14/16，均通過 strict-majority。
+- target-player-only match KPI 未跨 role / seed 形成可靠 monotonic calibration signal；lurker high
+  跨過 aggr < 0.82，並有 effective APM high clamp，造成 threshold / path discontinuity。
+- APM measurement：**Go**；APM semantic：**Done**；calibration readiness：**Revise / No-Go**。
+- 不提出 production calibration patch；local commit，完成後不 push。
