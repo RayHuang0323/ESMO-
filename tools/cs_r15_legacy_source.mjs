@@ -19,9 +19,13 @@ export {
 export const CS_R15_MOLLY_SOURCE_SHA256 = "7622f87b8b389a504c19b887b860de791dbf8ea240e6ba57c424e159cb655c89";
 export const CS_R19_SEMANTIC_SOURCE_SHA256 = "57476524ffa5693cb2cd00f28d73a1355e2dcf14ce0e018c9aa766febc706c29";
 export const CS_R25_ACCURACY_SOURCE_SHA256 = "68d75bb357a504cee8529c4d8cce023c92c364e72cde88e507a8af0df811780e";
+export const CS_R26_DECISION_SOURCE_SHA256 = CS_R25_ACCURACY_SOURCE_SHA256;
+export const CS_R27_DECISION_SOURCE_SHA256 = "f0e5dd4bddc82d06ae715784201877821de0db4fc785d226ab403132bb984e87";
 
 const R24_RAW_ACCURACY_HEADSHOT = '          const g=GUNS[at.gun];const isHS=rand()<g.hs*(0.72+0.55*((at.stats?.acc||80)/100));let dmg=(g.dmg+Math.floor(rand()*40))*(isHS?2:1);';
 const R25_EFFECTIVE_ACCURACY_HEADSHOT = '          const g=GUNS[at.gun],rawAccuracy=at.stats?.acc||80,effectiveAccuracy=at.stats?.acc!=null?persStat(at,"acc"):rawAccuracy;const isHS=rand()<g.hs*(0.72+0.55*(effectiveAccuracy/100));let dmg=(g.dmg+Math.floor(rand()*40))*(isHS?2:1);';
+const R26_RAW_DECISION_DEFUSE = '          defuseProg+=defuser.stats?(0.45+defuser.stats.foc/250+defuser.stats.dec/300):0.7;';
+const R27_EFFECTIVE_DECISION_DEFUSE = '          defuseProg+=defuser.stats?(0.45+defuser.stats.foc/250+persStat(defuser,"dec")/300):0.7;';
 
 const HE_CONSTANT_ANCHOR = "const HE_R=12,HE_MAX_DAMAGE=80,HE_ARMOR_SCALE=0.72;";
 const MOLLY_CONSTANT_BLOCK = `${HE_CONSTANT_ANCHOR}
@@ -66,10 +70,24 @@ export function csR15R14Source(input) {
   return source;
 }
 
+// R27 changes only the live defuse Decision read. R26 and older verifiers use
+// the byte-exact R26 view; the focused R27 gate separately checks live source.
+export function csR27R26Source(input) {
+  let source = normalizeCsSource(input);
+  if (sha256(source) !== CS_R27_DECISION_SOURCE_SHA256) return source;
+  source = replaceExact(source, R27_EFFECTIVE_DECISION_DEFUSE, R26_RAW_DECISION_DEFUSE,
+    "R27_DECISION_DEFUSE_BOUNDARY");
+  const actual = sha256(source);
+  if (actual !== CS_R26_DECISION_SOURCE_SHA256) {
+    throw new Error(`[R27_LEGACY_R26_SHA] expected=${CS_R26_DECISION_SOURCE_SHA256} actual=${actual}`);
+  }
+  return source;
+}
+
 // R25 changes only the live headshot Accuracy read. Historical verifiers use
 // the byte-exact R24 view; the focused R25 gate separately checks live source.
 export function csR25R24Source(input) {
-  let source = normalizeCsSource(input);
+  let source = csR27R26Source(input);
   if (sha256(source) !== CS_R25_ACCURACY_SOURCE_SHA256) return source;
   source = replaceExact(source, R25_EFFECTIVE_ACCURACY_HEADSHOT, R24_RAW_ACCURACY_HEADSHOT,
     "R25_ACCURACY_HEADSHOT_BOUNDARY");
@@ -111,8 +129,7 @@ export function csR19R15Source(input) {
 
 export function csR15EvidenceSources(input) {
   const normalized = normalizeCsSource(input);
-  const r24 = sha256(normalized) === CS_R25_ACCURACY_SOURCE_SHA256
-    ? csR25R24Source(normalized) : normalized;
+  const r24 = csR25R24Source(normalized);
   const r15 = sha256(r24) === CS_R19_SEMANTIC_SOURCE_SHA256
     ? csR19R15Source(r24) : r24;
   if (sha256(r15) !== CS_R15_MOLLY_SOURCE_SHA256) return null;

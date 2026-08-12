@@ -7154,3 +7154,48 @@ R3 verifier 的總模擬數為 544，static RNG call sites 維持 21。
 - Central CS aggregate 22/22 PASS；production build PASS（2643 modules，既有 large-chunk warning）。
 - 規格 / 報告：`review/cs-gameplay/CS_DECISION_MEASUREMENT_R26_SPEC.md`、
   `review/cs-gameplay/CS_DECISION_MEASUREMENT_R26_REPORT.md`。
+
+## Sprint R27：CS Decision Semantic Audit / Minimal Correction（2026-08-13）
+
+### Scope / checkpoint
+
+- R26 local commit `63c47d8a9f2ad324f0c05f01c26f2d0f98d90fce` 先 push 到
+  `release/moba-combat-closure`，local / tracking / remote SHA已確認一致。
+- 本輪只處理 Decision產品語意與 defuse raw / effective boundary；不做 calibration、不新增
+  target / utility / retreat / bomb / purchase / tactic decision feature、不改其他 15 項。
+
+### Audit / semantic decision
+
+- raw Decision是穩定基礎值與 IGL / lurker role-fit aptitude；effective Decision是 aggressive -4、
+  calm +6後 clamp的 live value。Morale / condition只乘 final combat output，不改 Decision本身。
+- 現有 defuse selection、proximity、contested與 start / stop均不讀 Decision；它只線性增加已開始
+  defuse的 progress。因此產品宣稱限於 abstract execution / commitment，不等於完整 decision AI。
+- TacticalIQ負責理解計畫與局勢，Focus負責持續執行，Comms負責共享資訊／掩護協調；目前只有 raw
+  Focus與 Decision共同進 progress，屬 coarse overlap。沒有證據授權移除 Decision或轉移 ownership。
+- Personality明確以 aggressive「容易衝動」下修 Decision、calm「關鍵時刻穩定」提升 Decision；
+  live defuse略過 personality而讀 raw，判定為 semantic inconsistency。
+
+### Minimal patch / focused evidence
+
+- `src/battle/fps/EsportsFPS3D.jsx` 第 592 行只把 `defuser.stats.dec/300` 改為
+  `persStat(defuser,"dec")/300`；base 0.45、raw Focus /250、Decision /300、threshold 3.5、
+  fallback 0.7均不變。
+- `tools/check_cs_decision_semantics_r27.mjs` 以 exact reversible memory hooks比較 R26 raw與 R27
+  effective view；固定 16 seeds、兩個 view各 off / on / repeated-on，共 96 executions。
+- Coverage：134 bomb ticks、17 progress ticks、4 completes；calm ct5 1 tick delta增加 0.02、neutral
+  ct2 16 ticks不變，無 aggressive runtime progress。Direct probes另鎖 aggressive 76→72、
+  calm 82→88、neutral 80→80，並證明 morale不調整 Decision。
+- Live source SHA `f0e5dd4bddc82d06ae715784201877821de0db4fc785d226ab403132bb984e87`；
+  R26 view SHA `68d75bb357a504cee8529c4d8cce023c92c364e72cde88e507a8af0df811780e`；
+  suite digest `fd93059811d17401bc66b7a5421e18bcc15aec564a6b28068dd45536a8fcd324`；RNG=21。
+
+### Historical / verdict
+
+- 新增 exact R27→R26 adapter，既有 R25→R24→R19→R15 historical chain保持 byte-exact；未修改
+  R1～R26任何 expected digest，未 rebaseline。
+- Fixed suite的有效值差異未跨 threshold，16個完整 simulation均 zero-diff；這不等於所有 roster /
+  seed永遠 zero-diff，historical verifier仍以 adapter保護。
+- Focused / repeated、central CS aggregate 23/23與 production build PASS；既有 large-chunk warning。
+- R27 correction：**Go**；semantic completeness：**Revise**；calibration：**No-Go / Deferred**。
+- Spec / report：`review/cs-gameplay/CS_DECISION_SEMANTICS_R27_SPEC.md`、
+  `review/cs-gameplay/CS_DECISION_SEMANTICS_R27_REPORT.md`。完成後 local commit，不 push。

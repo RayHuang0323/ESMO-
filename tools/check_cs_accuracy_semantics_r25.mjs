@@ -11,7 +11,9 @@ import { createServer } from "vite";
 import {
   CS_R19_SEMANTIC_SOURCE_SHA256,
   CS_R25_ACCURACY_SOURCE_SHA256,
+  CS_R27_DECISION_SOURCE_SHA256,
   csR25R24Source,
+  csR27R26Source,
 } from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -235,10 +237,12 @@ function verifyStaticSemantics(liveSource, historicalSource) {
 
 async function main() {
   gate(process.argv.slice(2).length === 0, "CLI_FLAGS_FORBIDDEN");
-  const liveSource = readFileSync(FPS_FILE, "utf8"), historicalSource = csR25R24Source(liveSource);
+  const currentSource = readFileSync(FPS_FILE, "utf8");
+  gate(sha256(currentSource) === CS_R27_DECISION_SOURCE_SHA256, "CURRENT_SOURCE_SHA256", sha256(currentSource));
+  const liveSource = csR27R26Source(currentSource), historicalSource = csR25R24Source(currentSource);
   const changedLines = verifyStaticSemantics(liveSource, historicalSource);
-  const liveApi = await loadApi(liveSource, liveSource, "live");
-  const historicalApi = await loadApi(liveSource, historicalSource, "historical");
+  const liveApi = await loadApi(currentSource, liveSource, "live");
+  const historicalApi = await loadApi(currentSource, historicalSource, "historical");
   for (const api of [liveApi, historicalApi]) {
     gate(typeof api?.simulateFps === "function" && Array.isArray(api?.ROSTER) && api?.TACTICS_DB, "TEST_API_SHAPE");
   }

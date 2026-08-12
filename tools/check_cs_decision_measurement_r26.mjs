@@ -8,7 +8,11 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
-import { CS_R25_ACCURACY_SOURCE_SHA256 } from "./cs_r15_legacy_source.mjs";
+import {
+  CS_R26_DECISION_SOURCE_SHA256,
+  CS_R27_DECISION_SOURCE_SHA256,
+  csR27R26Source,
+} from "./cs_r15_legacy_source.mjs";
 import {
   CALIBRATION_LEVELS,
   changedSeedSummary,
@@ -203,7 +207,7 @@ function sourceSlice(source, start, end, label) {
   gate(from >= 0 && to > from, "SOURCE_SLICE", label); return source.slice(from, to);
 }
 
-async function loadApi(source) {
+async function loadApi(source, currentSource) {
   let transformSeen = 0; let restored = false; let rngSame = false; let vite = null;
   const tempRoot = mkdtempSync(join(tmpdir(), "esmo-cs-decision-r26-"));
   try {
@@ -213,7 +217,7 @@ async function loadApi(source) {
       plugins: [{
         name: "cs-decision-r26-memory-hooks", enforce: "pre", transform(code, id) {
           if (resolve(id.split("?")[0]).toLowerCase() !== FPS_FILE.toLowerCase()) return null;
-          transformSeen += 1; gate(code === source, "VITE_SOURCE_MISMATCH"); let transformed = source;
+          transformSeen += 1; gate(code === currentSource, "VITE_SOURCE_MISMATCH"); let transformed = source;
           for (const [name, marker, replacement] of TRANSFORMS) {
             gate(occurrences(transformed, marker) === 1, "TRANSFORM_MARKER_COUNT", name); transformed = transformed.replace(marker, replacement);
           }
@@ -416,8 +420,10 @@ function metricEvidence(rows, baselineRows, key, direction = "higher") {
 }
 
 async function main() {
-  const source = readFileSync(FPS_FILE, "utf8"); const sourceSha256 = sha256(source);
-  gate(sourceSha256 === CS_R25_ACCURACY_SOURCE_SHA256, "SOURCE_SHA256", sourceSha256); gate(randTokens(source).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT", String(randTokens(source).length));
+  const currentSource = readFileSync(FPS_FILE, "utf8");
+  gate(sha256(currentSource) === CS_R27_DECISION_SOURCE_SHA256, "CURRENT_SOURCE_SHA256", sha256(currentSource));
+  const source = csR27R26Source(currentSource); const sourceSha256 = sha256(source);
+  gate(sourceSha256 === CS_R26_DECISION_SOURCE_SHA256, "SOURCE_SHA256", sourceSha256); gate(randTokens(source).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT", String(randTokens(source).length));
   gate(FIXED_SEEDS.length === 16 && !(8 > FIXED_SEEDS.length / 2) && 9 > FIXED_SEEDS.length / 2, "STRICT_MAJORITY_GATE");
   gate(source.includes('const role=posSkill(p,rawReflex);') && source.includes('S("dec")*0.04'), "DECISION_COMBAT_READ_CHAIN");
   gate(source.includes("defuser.stats.dec/300") && !source.includes('persStat(defuser,"dec")'), "DECISION_RAW_DEFUSE_READ_CHAIN");
@@ -440,7 +446,7 @@ async function main() {
   console.log("read-chain source: raw stats.dec -> IGL/lurker role-fit and CT defuse progress; persStat(dec) -> combatSkill 4%; formMul adjusts final combat output, not Decision itself");
   console.log("negative consumers: target/engagement selection, retreat/re-engage, utility timing, plant/buy/tactic choice, and aggr do not read Decision");
 
-  const api = await loadApi(source); gate(typeof api?.simulateFps === "function" && typeof api?.combatSkill === "function" && typeof api?.persStat === "function", "TEST_API_MISSING");
+  const api = await loadApi(source, currentSource); gate(typeof api?.simulateFps === "function" && typeof api?.combatSkill === "function" && typeof api?.persStat === "function", "TEST_API_MISSING");
   const map = api.TACTICS_DB[MAP_KEY]; const tTactic = freeze(clone(map?.t?.find((item) => item.id === T_TACTIC_ID))); const ctTactic = freeze(clone(map?.ct?.find((item) => item.id === CT_TACTIC_ID))); const baselineRoster = freeze(clone(api.ROSTER));
   gate(tTactic?.id === T_TACTIC_ID && ctTactic?.id === CT_TACTIC_ID && baselineRoster.length === 10, "FIXED_INPUTS");
   const targets = baselineRoster.filter((player) => player.side === "t"); gate(targets.length === 5 && targets.every((player) => TARGET_ROLES.includes(player.role)), "TARGET_ROLES");

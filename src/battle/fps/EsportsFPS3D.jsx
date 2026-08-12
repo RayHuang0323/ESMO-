@@ -589,7 +589,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
         const defuser=defuseAliveCT.find(cp=>dist(cp.pos,c4pos)<6);
         const contested=defuser&&defuseAliveT.some(tp=>dist(tp.pos,c4pos)<9&&!lineBlocked(tp.pos,defuser.pos,walls));
         if(defuser&&!contested){defuser.state="拆彈中";defuser.va=Math.atan2(c4pos.y-defuser.pos.y,c4pos.x-defuser.pos.x)*180/Math.PI;
-          defuseProg+=defuser.stats?(0.45+defuser.stats.foc/250+defuser.stats.dec/300):0.7;
+          defuseProg+=defuser.stats?(0.45+defuser.stats.foc/250+persStat(defuser,"dec")/300):0.7;
           if(!defuseCalled){defuseCalled=true;comms.push({side:"ct",name:defuser.name,text:"我拆，掩護我！"});}}
         if(defuseProg>=3.5)roundEnd={winner:"ct",how:"defuse"};
         else if(c4t<=0)roundEnd={winner:"t",how:"bomb"};
