@@ -7119,3 +7119,38 @@ R3 verifier 的總模擬數為 544，static RNG call sites 維持 21。
 - miss branch：R25 **No-Go**。若未來批准，必須另開 Sprint，處理新 RNG draw、gameplay / digest
   migration、first-boundary historical gate，以及選擇性 shots/hits contract migration。
 - 完成 production build、review 後 local commit；不 push。
+
+## R26 — CS Decision Measurement / Calibration Readiness（2026-08-13）
+
+### Audit
+
+- R25 commit `3c58e31fcb3d5045b5a4e1dbadaf592deeb321bb` 已 push 並確認 local / tracking /
+  remote SHA 一致後才開始 R26。
+- Production read-chain：raw `stats.dec` → IGL / lurker `posSkill` 與 CT defuse progress；
+  `persStat(dec)` → 全角色 `combatSkill` 的 4%；morale / condition只乘 final combat output。
+- Negative source gates確認 target / engagement choice、retreat / re-engage、utility timing、plant / buy /
+  role-route / tactic choice與 `aggr()` 均不讀 Decision。
+
+### Measurement
+
+- 新增 `tools/check_cs_decision_measurement_r26.mjs` 與 central verifier segment。
+- `inferno / t_aexec / c_std`、五個 T roles、raw Decision ±10、16 fixed seeds；off / on /
+  repeated-on共 528 executions，instrumentation 不改完整 sim、RNG token sequence或 input。
+- Direct isolated `combatSkill` / duel `Pt`：5/5 roles各 16/16 strict-majority；IGL / lurker另有
+  raw role-fit 16/16。沒有 clamp、Decision threshold或 `aggr` crossing。
+- Runtime actual mean `Pt`：entry/rifler/awp/lurker/IGL = 16/16、16/16、16/16、14/16、13/16；
+  realized attacker rate均未達 strict-majority。kills / damage / survival 只保留 secondary observation。
+- Baseline defuse：134 bomb ticks、17 progress ticks、4 completes、2 owners；ct5 calm 實際有 1 tick
+  raw Decision progress，證實 defuse raw / combat effective 是 live semantic inconsistency。
+- Suite digest：`f8f3db1e6568f5d7fd4171f4d2b82bdf441e09bb9e45cd57924ce9307d68ccb4`。
+
+### Decision
+
+- Measurement：**Go / PASS**。
+- Semantic correctness：**Revise**；Decision 現況是 generic duel aptitude，不是 named decision AI。
+- Calibration：**No-Go / Deferred**；五個 T-role treatment未直接涵蓋 CT-only raw defuse consumer，
+  且 TacticalIQ / MapAware / Focus consumer 語意重疊。
+- 本輪未修改 production、balance、RNG、scenario或 historical baselines；未新增 gameplay feature。
+- Central CS aggregate 22/22 PASS；production build PASS（2643 modules，既有 large-chunk warning）。
+- 規格 / 報告：`review/cs-gameplay/CS_DECISION_MEASUREMENT_R26_SPEC.md`、
+  `review/cs-gameplay/CS_DECISION_MEASUREMENT_R26_REPORT.md`。
