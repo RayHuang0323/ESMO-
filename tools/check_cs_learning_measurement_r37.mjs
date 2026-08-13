@@ -53,6 +53,9 @@ function main() {
   console.log(`training probe: low=${byLevel.low} baseline=${byLevel.baseline} high=${byLevel.high} (Learning is a direct training target; gain formula is course/potential based)`);
   console.log(`repeated digest: ${digest}`);
   console.log("cross-match consumer: absent; persistence owner: profileStore.players[].stats/training/growthLog");
+  console.log("R22 layers: L1 training target=monotonic; L2 opportunity=none; L3 conversion=none; L4 match outcome=secondary/none");
+  console.log("strict-majority/effect: L1 5/5 roles monotonic; no cross-match effect size exists because no post-match consumer");
+  console.log("clamp/threshold/path amplification: existing potential/99 clamp only; no Learning-specific threshold or single-match amplification");
   console.log("single-match gameplay impact: none; production modified: no");
   console.log("verdict: measurement=Go semantic=Confirmed lifecycle-gap calibration=Deferred/No-Go");
   console.log("CS Learning Measurement / Calibration Readiness R37: PASS");

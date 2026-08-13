@@ -63,6 +63,9 @@ async function main() {
   console.log(`aggregate: ${JSON.stringify(aggregate)}`);
   console.log(`repeated digest: ${digest}`);
   console.log("consumer boundary: pair admission reads distance/wall/smoke only; vis has generic combatSkill read, no actor-awareness decision edge");
+  console.log("R22 layers: L1 generic combatSkill vis read; L2 spatial opportunities covered; L3 MapAware-specific conversion absent; L4 outcomes secondary/non-attributable");
+  console.log("local monotonicity/strict-majority/effect: MapAware-specific 0 direct reads, 0/5 roles with an awareness action; any path delta is generic combat spillover");
+  console.log("clamp/threshold/path amplification: generic persStat 1..99 clamp only; no MapAware-specific threshold or amplification");
   console.log("production modified: no (memory transform only); RNG/scenario/history: unchanged");
   console.log("verdict: measurement=Go spatial-read evidence semantic=Design-gap calibration=Deferred/No-Go");
   console.log("CS Map Awareness Measurement / Calibration Readiness R37: PASS");
