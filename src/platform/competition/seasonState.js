@@ -75,17 +75,18 @@ export const competitionEntry = (state, competitionId) =>
   state?.competitions?.[competitionId] ?? null;
 
 /**
- * 目前**聚焦**的賽制條目。
+ * **主賽制**條目——沿用 v1「那一個賽事」語意的地方（`seasonStandings`、
+ * `participantsOf`、`ensurePlayoffs` 等）都指它。
  *
- * ⚠ `activeEventId` 只決定「畫面看哪一個」，**不參與任何規則判定**。
- *   規則一律走完整集合，否則「玩家在看哪個賽事」會影響結算，那是災難。
+ * ⚠ **刻意不讀 `activeEventId`。** 那是畫面聚焦用的，讀了就會變成
+ *   「玩家在看哪個賽事」會影響 `ensurePlayoffs` 對哪個賽制排季後賽、
+ *   `seasonStandings` 回哪張榜——規則跟著畫面跑，那是災難。
+ *   畫面要看某個 Event，請用帶 id 的 `standingsOf` / `eventStandingsOf`。
+ * ⚠ 單一賽制時（所有既有存檔）此函式與讀 `activeEventId` 的版本結果相同，
+ *   所以這次解耦對現況逐值無影響。
  */
 export function activeEntryOf(state) {
-  const entries = competitionEntries(state);
-  if (entries.length === 0) return null;
-  const ev = state?.events?.[state?.activeEventId] ?? null;
-  const ranked = ev?.rankingCompetitionId ? competitionEntry(state, ev.rankingCompetitionId) : null;
-  return ranked ?? entries[0];
+  return competitionEntries(state)[0] ?? null;
 }
 export const activeCompetitionOf = (state) => activeEntryOf(state)?.competition ?? null;
 export const activeStageOf = (state) => activeEntryOf(state)?.stage ?? null;
@@ -244,6 +245,54 @@ export function eventFinalOf(state, eventId) {
   if (ev.final) return ev.final;
   const onlyOne = Object.keys(state?.events ?? {}).length === 1;
   return onlyOne ? (state?.final ?? null) : null;
+}
+
+
+/**
+ * 每個 Event 的畫面摘要（Q7a-3b.5）。
+ *
+ * ⚠ 這是**唯讀推導**：狀態、階段、名次全部從既有資料算出來，
+ *   不新增任何「第二份真相」的欄位。畫面不得自己判這些。
+ */
+export function eventViewsOf(state, currentDay = 1) {
+  return Object.entries(state?.events ?? {}).map(([id, ev]) => {
+    const cid = ev.rankingCompetitionId;
+    const entry = competitionEntry(state, cid);
+    const final = eventFinalOf(state, id);
+    const comps = competitionsOfEvent(state, id);
+    const fixtures = comps.flatMap((e) => fixturesOfCompetition(state, e.competition.id));
+    const done = fixtures.filter(isFixtureTerminal).length;
+    const played = fixtures.some(isFixtureTerminal);
+    //  狀態只有三種，且**由事實推導**：封存 → 已封存；有打過 → 進行中；否則未開始
+    const status = final ? "sealed" : (played ? "running" : "upcoming");
+    const mine = fixtures.filter((f) => isPlayerFixture(state, f));
+    const nextMine = mine
+      .filter((f) => !isFixtureTerminal(f))
+      .sort((a, b) => a.day - b.day)[0] ?? null;
+    const rows = final?.rows ?? standingsOf(state, cid)?.rows ?? [];
+    const meRow = rows.find((r) => r.teamId === state?.playerTeamId) ?? null;
+    return {
+      id,
+      name: ev.name ?? id,
+      circuitId: ev.circuitId ?? null,
+      status,
+      statusLabel: ({ sealed: "已封存", running: "進行中", upcoming: "未開始" })[status],
+      //  目前階段：封存後看季後賽有沒有排過，否則看常規賽/季後賽
+      stageLabel: final ? "已結束"
+        : (entry?.playoff && playoffFixturesOfCompetition(state, cid).length > 0 ? "季後賽" : "常規賽"),
+      hasPrize: !!ev.prizePolicy,
+      awardAmount: ev.award?.amount ?? null,
+      playerRank: final?.playerRank ?? (meRow ? rows.indexOf(meRow) + 1 : null),
+      playerRankIsFinal: !!final,
+      total: fixtures.length,
+      done,
+      mineTotal: mine.length,
+      mineDone: mine.filter(isFixtureTerminal).length,
+      nextFixtureId: nextMine?.id ?? null,
+      nextDay: nextMine ? absoluteDayOf(state, nextMine) : null,
+      isToday: !!nextMine && absoluteDayOf(state, nextMine) === currentDay,
+    };
+  });
 }
 
 /** 參賽者（隊名查詢用）。 */

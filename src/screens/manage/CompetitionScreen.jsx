@@ -17,7 +17,7 @@
 // ============================================================================
 import React, { useEffect, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
-import { GC, MONO } from "../../ui/theme.js";
+import { GC, MONO, chip } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
 
 const Panel = ({ title, right, children }) => (
@@ -57,6 +57,13 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
   const { standings, next, nextDay, today, progress, participants, live, final, award } = view;
   //  Q5：賽季進度改用**賽季相對天數**（`seasonDay`），不再拿絕對遊戲日對 84
   const { seasonDay, seasonDays, history, canRoll, playoff } = view;
+  //  Q7a-3b.5：同季多個 Event。**只有兩個以上才出現切換列**——
+  //  單一 Event（所有既有存檔）的畫面與先前逐格相同。
+  const eventViews = view.eventViews ?? [];
+  const multiEvent = eventViews.length > 1;
+  const focusedEventId = view.activeEventId ?? null;
+  //  三種狀態各給一個顏色，讓「已封存／進行中／未開始」一眼分得出來
+  const STATUS_TONE = { sealed: GC.gray, running: GC.gold, upcoming: GC.blueL };
   const MATCH_LABEL = { sf1: "準決賽 ①", sf2: "準決賽 ②", bronze: "季軍戰", final: "決賽" };
 
   const rollSeason = () => {
@@ -110,6 +117,78 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
       onBack={onBack}
       right={<span style={{ ...{ fontSize: 9, fontWeight: 800, color: GC.gray } }}>{progress.playerCompleted}/{progress.playerTotal} 場</span>}
     >
+      {/* ── Q7a-3b.5：同季多個 Event 的切換列 ────────────────────────────
+           ⚠ 切換**只影響畫面聚焦**（`setActiveEvent`），不參與任何規則：
+             積分榜、季後賽排定、封存與獎金都不讀 `activeEventId`。
+           ⚠ 只有兩個以上 Event 才渲染；單一 Event 時整段不存在，
+             legacy 畫面維持現況。
+           ⚠ 橫向捲動 ＋ 每張卡最小寬度 ⇒ 手機上也點得到、看得完。 */}
+      {multiEvent && (
+        <Panel
+          title="本季賽事 EVENTS"
+          right={<span style={{ fontSize: 9, fontWeight: 800, color: GC.gray }}>{eventViews.length} 項</span>}
+        >
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "2px 1px 4px", WebkitOverflowScrolling: "touch" }}>
+            {eventViews.map((ev) => {
+              const on = ev.id === focusedEventId;
+              const tone = STATUS_TONE[ev.status];
+              const pct = ev.mineTotal > 0 ? Math.round((ev.mineDone / ev.mineTotal) * 100) : 0;
+              return (
+                <button
+                  key={ev.id}
+                  onClick={() => { setErr(null); useProfileStore.getState().setActiveEvent(ev.id); }}
+                  style={{
+                    position: "relative", flex: "0 0 auto", width: 158, textAlign: "left",
+                    background: on
+                      ? `linear-gradient(160deg, rgba(167,139,250,0.20), rgba(167,139,250,0.05))`
+                      : "rgba(255,255,255,0.04)",
+                    border: `1px solid ${on ? GC.purp + "aa" : GC.line}`,
+                    borderRadius: 12, padding: "9px 11px 10px", cursor: "pointer", color: "#e5e7eb",
+                    overflow: "hidden",
+                  }}
+                >
+                  {/*  左側狀態色條：不用讀字也分得出三種狀態 */}
+                  <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: tone, opacity: on ? 1 : 0.55 }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 5 }}>
+                    <span style={chip(tone)}>{ev.statusLabel}</span>
+                    {ev.isToday && <span style={chip(GC.gold)}>今天</span>}
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 900, lineHeight: 1.3, minHeight: 31 }}>{ev.name}</div>
+
+                  {/*  我方進度條——比純數字更快讀懂「這個賽事我打到哪」 */}
+                  <div style={{ height: 3, borderRadius: 2, background: "rgba(255,255,255,0.08)", margin: "7px 0 5px", overflow: "hidden" }}>
+                    <div style={{ width: `${pct}%`, height: "100%", background: tone, opacity: 0.85 }} />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: GC.gray, fontFamily: MONO }}>
+                    <span>{ev.stageLabel}</span>
+                    <span>{ev.mineDone}/{ev.mineTotal}</span>
+                  </div>
+
+                  {ev.playerRank != null && (
+                    <div style={{ marginTop: 5, fontSize: 10.5, fontWeight: 800, color: ev.playerRankIsFinal ? GC.gold : "#e5e7eb" }}>
+                      {ev.playerRankIsFinal && ev.playerRank === 1 ? "🏆 " : ""}
+                      第 {ev.playerRank} 名
+                      <span style={{ fontSize: 8.5, color: GC.gray, fontWeight: 700 }}>
+                        {ev.playerRankIsFinal ? "　最終" : "　暫定"}
+                      </span>
+                    </div>
+                  )}
+                  {/*  誠實顯示：沒有獎金的賽事就不寫獎金，不寫 $0 假裝有 */}
+                  {ev.awardAmount > 0 && (
+                    <div style={{ marginTop: 3, fontSize: 9.5, color: GC.green, fontFamily: MONO, fontWeight: 800 }}>
+                      +${ev.awardAmount}萬
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ fontSize: 9, color: GC.gray, marginTop: 6, lineHeight: 1.5 }}>
+            切換只改變這一頁看哪一個賽事，不影響賽程、積分與獎金結算。
+          </div>
+        </Panel>
+      )}
+
       {err && (
         <div style={{ background: "rgba(239,68,68,0.12)", border: `1px solid ${GC.red}55`, borderRadius: 10, padding: "8px 11px", marginBottom: 10, fontSize: 11.5, color: GC.redL }}>
           {err}

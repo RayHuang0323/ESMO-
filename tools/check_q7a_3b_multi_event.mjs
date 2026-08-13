@@ -31,6 +31,7 @@ const {
   canSealSeason, applySealSeason, activeCompetitionOf, activeStageOf,
   competitionEntry, competitionsOfEvent, fixturesOfCompetition, outcomesOfCompetition,
   applyLaunch, applyCompleted, LEGACY_PRIZE_POLICY,
+  eventViewsOf, participantsOf, activeEntryOf, isPlayoffDone,
 } = await import("../src/platform/competition/seasonState.js");
 const { createCircuit, createEvent, competitionIdForEvent } = await import("../src/platform/contracts/circuit.js");
 const { createCompetition, createStage, createFixture, STAGE_FORMATS } = await import("../src/platform/contracts/competition.js");
@@ -204,6 +205,55 @@ console.log("══ Q7a-3b：同季多賽事並存 ══\n");
   ck("6b) **重複封存不重發獎金**", store().finance.funds === fundsAfter, `$${fundsAfter}`);
   ck("6c) 重複封存不改 final", JSON.stringify(store().competition.final) === JSON.stringify(c.final));
 }
+
+// ── 7) 畫面聚焦（activeEventId）不得影響規則（Q7a-3b.5）─────────────────
+{
+  store().startNewGame("standard");
+  store().ensureCompetitionSeason();
+  const s7 = addSecondEvent(store().competition, { prizePolicy: null });
+  useProfileStore.setState({ competition: s7 });
+  const c0 = store().competition;
+  const leagueEventId = c0.activeEventId;
+  const cupEventId = Object.keys(c0.events).find((e) => e !== leagueEventId);
+
+  const views = eventViewsOf(c0, store().meta.days);
+  ck("7) `eventViewsOf` 每個 Event 都有狀態與階段",
+    views.length === 2 && views.every((v) => !!v.statusLabel && !!v.stageLabel),
+    views.map((v) => `${v.name}:${v.statusLabel}/${v.stageLabel}`).join("　"));
+  ck("7b) 狀態只有三種，且由事實推導",
+    views.every((v) => ["sealed", "running", "upcoming"].includes(v.status)));
+
+  //  ⭐ 切換聚焦前後，**規則面**的推導必須逐值不變
+  const snapshot = () => JSON.stringify({
+    primary: activeEntryOf(store().competition).competition.id,
+    standings: seasonStandings(store().competition),
+    participants: participantsOf(store().competition).length,
+    playoffDone: isPlayoffDone(store().competition),
+    sealable: sealableEventIds(store().competition),
+    canSeason: canSealSeason(store().competition),
+  });
+  const before = snapshot();
+  const uiBefore = store().competitionView().standings.rows.length;
+
+  const sw = store().setActiveEvent(cupEventId);
+  ck("7c) 切換得到另一個 Event",
+    sw.ok === true && store().competition.activeEventId === cupEventId);
+  ck("7d) **切換聚焦後，規則面逐值不變**（主賽制／積分／參賽者／季後賽／封存判定）",
+    snapshot() === before, `主賽制仍為 ${activeEntryOf(store().competition).competition.id}`);
+
+  const uiAfter = store().competitionView().standings.rows.length;
+  ck("7e) **但畫面的積分榜確實跟著換**", uiBefore === 8 && uiAfter === 2, `${uiBefore} → ${uiAfter}`);
+  ck("7f) 切回去也一樣", store().setActiveEvent(leagueEventId).ok === true &&
+    store().competitionView().standings.rows.length === 8);
+  ck("7g) 切到不存在的 Event 會被擋", store().setActiveEvent("event:nope").ok === false);
+
+  //  legacy：只有一個 Event ⇒ 畫面不出現切換列
+  store().startNewGame("standard");
+  store().ensureCompetitionSeason();
+  ck("7h) legacy 單 Event：`eventViews` 只有一筆（切換列不渲染）",
+    store().competitionView().eventViews.length === 1);
+}
+
 
 console.log(`\n${pass}/${pass + fail} 通過`);
 process.exit(fail === 0 ? 0 : 1);

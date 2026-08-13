@@ -61,7 +61,7 @@ import {
   createSeasonState, advanceSeasonDays, applyLaunch, applyCompleted, applyForfeit,
   fixtureById, nextPlayerFixture, pendingPlayerFixtureOn, pendingPlayerFixturesOn, seasonStandings,
   upgradeSeasonShape, activeCompetitionOf, activeStageOf, activePlayoffOf,
-  sealableEventIds, applySealEvent, eventFinalOf,
+  sealableEventIds, applySealEvent, eventFinalOf, eventViewsOf, eventStandingsOf,
   seasonProgress, participantsOf, absoluteDayOf, isFixtureLaunched,
   canSealSeason, applySealSeason,
   canRollSeason, rollToNextSeason, seasonDayOf,
@@ -930,7 +930,11 @@ export const useProfileStore = create((set, get) => ({
       events: state.events ?? {},
       circuits: state.circuits ?? {},
       activeEventId: state.activeEventId ?? null,
-      standings: seasonStandings(state),
+      //  ⚠ Q7a-3b.5：積分榜依**聚焦的 Event**（畫面），不是主賽制。
+      //    單一 Event（所有既有存檔）時兩者相同 ⇒ legacy 畫面逐值不變。
+      standings: eventStandingsOf(state, state.activeEventId ?? null) ?? seasonStandings(state),
+      //  每個 Event 的狀態摘要（唯讀推導，畫面不得自己判）
+      eventViews: eventViewsOf(state, day),
       next,
       //  ⚠ 賽程日是「賽季第 N 天」，畫面要顯示的是遊戲日 ⇒ 這裡換算好再給。
       //    畫面不得自己加 startDay，否則換算規則會有兩份。
@@ -1408,6 +1412,22 @@ export const useProfileStore = create((set, get) => ({
     });
     if (!mapped.ok) return { ok: false, errors: mapped.errors };
     return get().completeFixtureMatch(mapped.input);
+  },
+  /**
+   * 切換賽事頁聚焦的 Event（Q7a-3b.5）。
+   *
+   * ⚠ **只影響畫面**。`activeEventId` 不參與任何規則判定——`seasonStandings`、
+   *   `ensurePlayoffs`、封存與獎金全部走主賽制或完整集合，不讀這個欄位。
+   *   （`activeEntryOf` 已刻意與它解耦。）
+   */
+  setActiveEvent(eventId) {
+    const state = get().competition;
+    if (!state?.schema) return { ok: false, errors: [{ code: "no_season", message: "目前沒有賽季" }] };
+    if (!state.events?.[eventId]) return { ok: false, errors: [{ code: "no_event", message: "找不到這個賽事" }] };
+    if (state.activeEventId === eventId) return { ok: true, errors: [] };
+    set({ competition: { ...state, activeEventId: eventId } });
+    get().save();
+    return { ok: true, errors: [] };
   },
   /** 唯讀：完整追蹤鏈（debug 用；一般 UI 不顯示 launchToken 等敏感內容）。 */
   matchTrace() {
