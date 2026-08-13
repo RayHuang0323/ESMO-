@@ -11,6 +11,25 @@ export const SEASON_V2_SCHEMA = "Season.v1";
 export const CIRCUIT_V2_SCHEMA = "Circuit.v1";
 export const EVENT_V2_SCHEMA = "Event.v1";
 export const EVENT_HISTORY_V2_SCHEMA = "EventHistory.v1";
+export const EVENT_STATUS = Object.freeze({ active: "active", sealed: "sealed" });
+export const SEASON_STATUS = Object.freeze({ active: "active", sealed: "sealed" });
+export const POINTS_STATUS = Object.freeze({
+  notStarted: "not_started",
+  policyRequired: "policy_required",
+  settled: "settled",
+});
+
+// Compatibility reference only. It points at the existing Q4 award algorithm
+// and policy; it does not copy a prize table into SeasonState.v2.
+export function legacyPrizePolicyRefFor(competitionId = null) {
+  if (!competitionId) return null;
+  return {
+    schema: "CompetitionPrizePolicy.v1",
+    id: "legacy:competition-prize:v1",
+    path: "competitionAward:COMPETITION_PRIZE",
+    competitionId,
+  };
+}
 
 const finite = (value, fallback = null) => {
   const n = Number(value);
@@ -43,6 +62,7 @@ export function createEmptySeasonStateV2({ season = 1, seed = null, startDay = 1
   return {
     schema: SEASON_STATE_V2_SCHEMA,
     version: 2,
+    status: SEASON_STATUS.active,
     season: emptySeason({ season, seed, startDay }),
     active: null,
     gameModes: [],
@@ -137,6 +157,7 @@ export function wrapLegacySeasonState({ legacyState, competitionHistory = [], aw
   const circuitId = circuitIdOf(season.id, "moba", "career");
   const eventId = eventIdOf(circuitId, "league");
   const final = awardEnvelopeOf(legacyState.final, awardLedger);
+  const prizePolicyRef = legacyPrizePolicyRefFor(legacyCompetition.id);
   const event = {
     schema: EVENT_V2_SCHEMA,
     id: eventId,
@@ -156,6 +177,12 @@ export function wrapLegacySeasonState({ legacyState, competitionHistory = [], aw
     fixtureIds: idsOf(legacyState.fixtures),
     outcomeIds: idsOf(legacyState.outcomes),
     finalId: legacyState.final?.id ?? null,
+    status: legacyState.final ? EVENT_STATUS.sealed : EVENT_STATUS.active,
+    sealedAtDay: legacyState.final?.sealedAtDay ?? null,
+    prizePolicyRef,
+    pointsPolicyRef: null,
+    pointsSettlementRef: null,
+    pointsStatus: legacyState.final ? POINTS_STATUS.policyRequired : POINTS_STATUS.notStarted,
     // Final is reference-only: never embed FinalStandings.rows here.
     final,
   };
@@ -174,6 +201,7 @@ export function wrapLegacySeasonState({ legacyState, competitionHistory = [], aw
   return {
     schema: SEASON_STATE_V2_SCHEMA,
     version: 2,
+    status: SEASON_STATUS.active,
     season,
     active: { gameMode: "moba", circuitId, eventId },
     // Exactly one MOBA career circuit/event is introduced by this migration.
@@ -192,6 +220,9 @@ function normalizeRef(ref, fallback = null) {
     competitionId: source.competitionId ?? null,
   };
   if (source.key != null) out.key = source.key;
+  if (source.eventId != null) out.eventId = source.eventId;
+  if (source.circuitId != null) out.circuitId = source.circuitId;
+  if (source.settlementKey != null) out.settlementKey = source.settlementKey;
   return out;
 }
 
@@ -244,6 +275,16 @@ function normalizeEvent(event) {
     return { ...source, __normalizationConflict: "competitionRef" };
   }
   const competitionRef = canonical ?? deprecated ?? null;
+  const finalEnvelope = normalizeFinalEnvelope(source);
+  // An older M1 v2 save may already contain the legacy award receipt but not
+  // the explicit policy reference. That one compatibility case can be
+  // recovered because the event is still bound to SeasonState.v1. Arbitrary
+  // v2 events never infer a policy from a receipt.
+  const prizePolicyRef = source.prizePolicyRef != null
+    ? normalizeRef(source.prizePolicyRef)
+    : (finalEnvelope?.awardReceiptRef && source.legacyStateSchema === SEASON_STATE_V1_SCHEMA
+      ? legacyPrizePolicyRefFor(competitionRef?.id)
+      : null);
   const normalized = {
     schema: EVENT_V2_SCHEMA,
     id: source.id ?? null,
@@ -267,7 +308,13 @@ function normalizeEvent(event) {
     fixtureIds: Array.isArray(source.fixtureIds) ? [...source.fixtureIds] : [],
     outcomeIds: Array.isArray(source.outcomeIds) ? [...source.outcomeIds] : [],
     finalId: source.finalId ?? source.final?.sourceRef?.id ?? null,
-    final: normalizeFinalEnvelope(source),
+    status: source.status ?? (finalEnvelope ? EVENT_STATUS.sealed : EVENT_STATUS.active),
+    sealedAtDay: source.sealedAtDay ?? null,
+    prizePolicyRef,
+    pointsPolicyRef: source.pointsPolicyRef != null ? normalizeRef(source.pointsPolicyRef) : null,
+    pointsSettlementRef: source.pointsSettlementRef != null ? normalizeRef(source.pointsSettlementRef) : null,
+    pointsStatus: source.pointsStatus ?? (source.pointsSettlementRef ? POINTS_STATUS.settled : (finalEnvelope ? POINTS_STATUS.policyRequired : POINTS_STATUS.notStarted)),
+    final: finalEnvelope,
     ...(source.__normalizationConflict ? { __normalizationConflict: source.__normalizationConflict } : {}),
   };
   if (Object.prototype.hasOwnProperty.call(source.final ?? {}, "rows")) {
@@ -311,6 +358,7 @@ export function normalizeSeasonStateV2(value) {
   return {
     schema: SEASON_STATE_V2_SCHEMA,
     version: 2,
+    status: value.status ?? SEASON_STATUS.active,
     season,
     active: value.active == null ? null : {
       gameMode: value.active.gameMode ?? null,
@@ -324,6 +372,9 @@ export function normalizeSeasonStateV2(value) {
 
 function validateCanonical(value) {
   const errors = [];
+  if (value?.status != null && !Object.values(SEASON_STATUS).includes(value.status)) {
+    errors.push({ code: "season_status", message: "invalid season status" });
+  }
   if (!value || typeof value !== "object") return [{ code: "invalid", message: "SeasonState.v2 必須是物件" }];
   if (value.schema !== SEASON_STATE_V2_SCHEMA) errors.push({ code: "schema", message: "SeasonState.v2 schema 不符" });
   if (Number(value.version) !== 2) errors.push({ code: "version", message: "SeasonState.v2 version 不符" });
@@ -382,6 +433,27 @@ function validateCanonical(value) {
               : "Event competitionRef 有衝突，拒絕自動選擇",
           });
         }
+        if (event.status != null && !Object.values(EVENT_STATUS).includes(event.status)) {
+          errors.push({ code: "event_status", message: "invalid event status" });
+        }
+        if (event.pointsStatus != null && !Object.values(POINTS_STATUS).includes(event.pointsStatus)) {
+          errors.push({ code: "points_status", message: "invalid points status" });
+        }
+        if (event.status === EVENT_STATUS.sealed && !event.final) {
+          errors.push({ code: "sealed_without_final", message: "sealed event requires a final reference" });
+        }
+        if (event.pointsSettlementRef && event.pointsStatus !== POINTS_STATUS.settled) {
+          errors.push({ code: "points_ref_status", message: "points settlement reference/status mismatch" });
+        }
+        if (event.pointsSettlementRef && event.pointsSettlementRef.eventId != null && event.pointsSettlementRef.eventId !== event.id) {
+          errors.push({ code: "points_event_mismatch", message: "pointsSettlementRef event scope mismatch" });
+        }
+        if (event.pointsSettlementRef && event.pointsSettlementRef.circuitId != null && event.pointsSettlementRef.circuitId !== event.circuitId) {
+          errors.push({ code: "points_circuit_mismatch", message: "pointsSettlementRef circuit scope mismatch" });
+        }
+        if (!event.prizePolicyRef && event.final?.awardReceiptRef) {
+          errors.push({ code: "award_without_policy", message: "award receipt requires a prize policy reference" });
+        }
         if (event.circuitId !== circuit.id) errors.push({ code: "event_circuit_mismatch", message: "Event 與 Circuit scope 不一致" });
         if (event.gameMode !== mode.gameMode) errors.push({ code: "event_mode_mismatch", message: "Event 與 gameMode scope 不一致" });
         if (Object.prototype.hasOwnProperty.call(event, "legacyCompetitionRef")) {
@@ -436,6 +508,9 @@ function validateCanonical(value) {
         errors.push({ code: "active_scope_mismatch", message: "active 與 Event scope 不一致" });
       }
     }
+  }
+  if (value.status === SEASON_STATUS.sealed && value.active != null) {
+    errors.push({ code: "sealed_active", message: "sealed season must have null active" });
   }
   return errors;
 }
@@ -573,14 +648,20 @@ export function activeEventOf(seasonStateV2) {
 export function activeEventAdapter({ seasonStateV2, legacyState } = {}) {
   const normalized = normalizeSeasonStateV2(seasonStateV2);
   const validation = validateSeasonStateV2(normalized);
-  const event = validation.ok ? activeEventOf(normalized) : null;
+  let event = validation.ok ? activeEventOf(normalized) : null;
+  if (validation.ok && !event && normalized?.active == null) {
+    const sealedEvents = (normalized.gameModes ?? [])
+      .flatMap((mode) => (mode.circuits ?? []).flatMap((circuit) => circuit.events ?? []))
+      .filter((candidate) => candidate?.status === EVENT_STATUS.sealed);
+    if (sealedEvents.length === 1) event = sealedEvents[0];
+  }
   const legacyCompetitionId = legacyState?.competition?.id ?? null;
   const compatible = !!event
     && !!event.competitionRef?.id
     && event.competitionRef.id === legacyCompetitionId;
   const activeCompatible = normalized?.active == null || compatible;
   return {
-    ok: validation.ok && (!!event === (normalized?.active != null)) && activeCompatible,
+    ok: validation.ok && (normalized?.active == null ? (!event || compatible) : !!event && activeCompatible),
     errors: validation.errors,
     seasonStateV2: validation.ok ? normalized : seasonStateV2 ?? null,
     active: validation.ok ? normalized?.active ?? null : null,

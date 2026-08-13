@@ -77,6 +77,9 @@ import {
 import {
   syncSeasonStateV2, activeEventAdapter,
 } from "./competition/seasonStateV2.js";
+import {
+  sealEventBoundary, sealSeasonBoundary,
+} from "./competition/seasonSealingV2.js";
 import { applyDailyRecovery, conditionSummary } from "./condition/playerCondition.js";
 import { createMatchEntryRequest, validateMatchEntryRequest } from "./contracts/matchEntry.js";
 import {
@@ -200,6 +203,8 @@ const DEFAULT = {
   //  null = 這個存檔還沒有賽季；`ensureCompetitionSeason()` 會依 team.id 與
   //  meta.seasonSeed 決定性地建立，所以舊存檔載入後也拿得到同一份賽程。
   competition: null,
+  // 3b-M2: independent Circuit Points ledger. Event only stores a reference.
+  circuitPointsLedger: {},
   schemaVersion: PROFILE_SCHEMA_VERSION,
   processedMatchTransactions: {},// S25：冪等帳本 {transactionId: receipt}（防重複發獎）
   processedCompetitionAwards: {},// Q4：名次獎金冪等帳本 {finalStandingsId: receipt}
@@ -375,6 +380,9 @@ const load = () => {
       //  ⚠ 刻意**不在載入時建立賽季**：那會讓每個舊存檔在毫無預期的情況下
       //    突然多出一整季賽程。改由 `ensureCompetitionSeason()` 在真的要用到時建立。
       competition: saved.competition ?? null,
+      circuitPointsLedger: saved.circuitPointsLedger && typeof saved.circuitPointsLedger === "object"
+        ? saved.circuitPointsLedger
+        : {},
       seasonStateV2: saved.seasonStateV2 ?? null,
       recruitment: saved.recruitment && typeof saved.recruitment === "object"
         && typeof saved.recruitment.signed === "object"
@@ -477,6 +485,34 @@ export const useProfileStore = create((set, get) => ({
     const seasonStateV2 = seasonStateV2For(current);
     set({ seasonStateV2 });
     return seasonStateV2;
+  },
+  sealCompetitionEvent({ eventId = null, pointsPolicy = null, allowUnscored = true, sealedAtDay = null } = {}) {
+    const current = get();
+    const result = sealEventBoundary({
+      seasonStateV2: current.seasonStateV2,
+      legacyState: current.competition,
+      profileState: current,
+      eventId,
+      pointsPolicy,
+      allowUnscored,
+      sealedAtDay: sealedAtDay ?? current.meta?.days ?? 1,
+    });
+    if (!result.ok) return result;
+    if (!result.nextState) return result;
+    set({
+      ...result.nextState,
+      competition: result.legacyState,
+      seasonStateV2: result.seasonStateV2,
+    });
+    get().save();
+    return result;
+  },
+  sealCompetitionSeason({ requiredEventIds = null } = {}) {
+    const result = sealSeasonBoundary({ seasonStateV2: get().seasonStateV2, requiredEventIds });
+    if (!result.ok || result.alreadySealed) return result;
+    set({ seasonStateV2: result.seasonStateV2 });
+    get().save();
+    return result;
   },
   activeCompetitionEvent() {
     return activeEventAdapter({
@@ -833,6 +869,29 @@ export const useProfileStore = create((set, get) => ({
   _sealSeasonIfFinished() {
     let state = get().activeCompetitionEvent().legacyState;
     if (!state?.schema) return { sealed: false, final: null, award: null };
+
+    // 3b-M2: route live completion through the Event then Season boundary.
+    {
+      const po2 = ensurePlayoffs(state);
+      if (po2.ok && po2.state !== state) {
+        state = po2.state;
+        get()._setCompetitionState(state);
+        get().save();
+      }
+      const can2 = canSealSeason(state);
+      if (!can2.ok && !can2.sealed) return { sealed: false, final: null, award: null, reason: can2.reason };
+      const event2 = get().activeCompetitionEvent().event;
+      const boundary2 = get().sealCompetitionEvent({
+        eventId: event2?.id ?? null,
+        allowUnscored: true,
+        sealedAtDay: Number(get().meta?.days) || 1,
+      });
+      if (!boundary2.ok) return { sealed: false, final: null, award: null, reason: boundary2.reason };
+      const season2 = get().sealCompetitionSeason({ requiredEventIds: event2?.id ? [event2.id] : null });
+      if (!season2.ok) return { sealed: false, final: boundary2.final ?? null, award: boundary2.awardReceipt ?? null, reason: season2.reason };
+      get().save();
+      return { sealed: true, final: boundary2.final ?? state.final ?? null, award: boundary2.awardReceipt ?? null };
+    }
 
     //  ── Q6：先確保季後賽排定／補齊，再談封存 ──────────────────────────
     //  掛在這裡的理由與 Q4 封存相同：三個觸發點（推進天數／打完／棄權）都會

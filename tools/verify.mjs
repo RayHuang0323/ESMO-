@@ -106,6 +106,7 @@ const SEGMENTS = [
   { id: "q6_playoffs", script: "tools/check_competition_q6.mjs", shape: /57\/57 通過/, note: "Q6 stage/playoff historical gate" },
   { id: "q7a_safety", script: "tools/check_q7a_safety.mjs", shape: /18\/18/, note: "Q7a single live session / same-day fixture safety" },
   { id: "q7b_season_state_v2", script: "tools/check_season_state_v2_migration_q7b.mjs", shape: /SeasonState v2 Q7b: 34\/34 PASS/, note: "Q7b/3b-M1 SeasonState.v2 migration-safe foundation" },
+  { id: "m2_season_state_v2_sealing", script: "tools/check_season_state_v2_sealing_m2.mjs", shape: /SeasonState v2 M2 sealing: 23\/23 PASS/, note: "3b-M2 Event / Season sealing boundaries" },
   { id: "build", script: "node_modules/vite/bin/vite.js", args: ["build"], shape: /built in/, note: "production build" },
 ];
 

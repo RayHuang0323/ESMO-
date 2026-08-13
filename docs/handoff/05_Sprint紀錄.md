@@ -7248,6 +7248,15 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
   reference 與單一 live session / resume 行為均不重算、不重排、不改 ID。
 - post-merge gates：Q7b migration 22/22、Q7a safety 18/18、Q4/Q5/Q6 68/66/57，另行通過
   production build 與 review 後才可 push release checkpoint。
+## 3b-M2：Event / Season Sealing Boundaries（2026-08-13）
+
+- M1 checkpoint `ceb5b6f42a312e51c259db99e97ea9057428f09b` 已正常推送，local / tracking / remote SHA 一致。
+- 新增 `seasonSealingV2.js`：Event seal 先驗證所有 fixtures terminal，再沿用既有 `applySealSeason` / FinalStandings；Event.final 是 reference-only envelope。
+- 獎金只在 Event 有 `prizePolicyRef` 時呼叫既有 award reducer；無 policy 不產生 0 元 receipt、finance transaction 或 processed key。重複 Event seal 由 status、Final ID 與既有 award ledger 冪等。
+- Circuit Points 使用獨立 profile 頂層 `circuitPointsLedger`，Event 只留 `pointsSettlementRef`。由於名次→點數政策尚未封版，production 不提供預設數值；顯式 policy 才 settle，否則 `policy_required`。
+- Season seal 只檢查必要 Events sealed，設 `status=sealed`、`active=null`，不重算 Final、不重發 award / points、不建立下一季或 CS Event。sealed Event adapter 維持舊 caller 兼容。
+- `tools/check_season_state_v2_sealing_m2.mjs` 23/23 PASS；M1/Q7a/Q4/Q5/Q6/progress aggregate 7/7 PASS；build PASS（既有 large-chunk warning）。整體 verdict：**Revise**，待正式 Circuit Points policy 才能宣稱完整 M2 Go。
+
 ## 3b-M1：SeasonState.v2 Migration-safe Foundation（2026-08-13）
 
 - 範圍固定為 validator / normalization、legacy v1 → v2 migration、deterministic indexes、active Event adapter、Event.final reference-only envelope。
