@@ -181,7 +181,8 @@ export default function FinanceScreen({ onBack }) {
         <div style={card({ padding: "12px 13px" })}>
           <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10, flexWrap: "wrap" }}>
             <span style={{ color: "white", fontSize: 12.5, fontWeight: 800 }}>本週財務</span>
-            <span style={{ color: T.gray2, fontSize: 9 }}>S{wk.season}・第 {wk.week} 週・第 {wk.dayOfWeek}/7 天</span>
+            {/*  Q5：拿掉 S 號（同 DashboardScreen 的理由——賽季只在賽事頁顯示）。 */}
+            <span style={{ color: T.gray2, fontSize: 9 }}>第 {wk.week} 週・第 {wk.dayOfWeek}/7 天</span>
             <span style={{ color: T.gray2, fontSize: 9 }}>· {wk.scenarioName}</span>
             <span style={{ color: T.gray2, fontSize: 9 }}>· 近期戰績 {Math.round((wk.form ?? 0.5) * 100)}%</span>
           </div>

@@ -53,11 +53,11 @@ events（battleStore.log 本來就有完整事件 + 時間戳）。
 
 ```
 useLocalServer.start()   → beginReplayCapture({seed, tactic})   ← seed 唯一來源
-useBattleFeed（每幀）     → captureReplayFrame(snap)             ← 2 模擬秒取樣一格
+useBattleFeed（每幀）     → captureReplayFrame(snap)             ← 2.5 模擬秒取樣一格
 useBattleFeed（終局）     → finalizeReplay({matchId, events, resultSummary})
 ```
 
-- 取樣間隔 2 模擬秒 + 播放時**位置線性插值** → 平順且不重算。
+- 取樣間隔 2.5 模擬秒 + 播放時**位置線性插值** → 平順且不重算。
 - 終局幀必收（比分 / 塔況收尾正確）。
 - 首幀同時記 `playersMeta` / `towersMeta`（不逐幀重複）。
 - 擷取只「讀」snapshot——實測同 seed 擷取前後 `BattleResult`
@@ -65,10 +65,13 @@ useBattleFeed（終局）     → finalizeReplay({matchId, events, resultSummary
 
 ## 容量與持久化邊界
 
-實測（seed 99，17 分鐘場）：**503 frames、345KB、每 frame ≈ 703B**。
+S26 原始實測（當時尚未加入小兵、狀態與 Buff 欄位）為 503 frames／345KB；
+該數字只保留為歷史基準。現役 compact frame 約 2.9KB，容量以
+`check_moba_experience26` §17 的實際序列化結果為準。
 
-- `MAX_FRAMES = 1200`（≈ 40 分鐘）——到頂**停止擷取**並標 `truncated`，
-  不無限成長。上限容量 ≈ 0.85MB。
+- `MAX_FRAMES = 1200`（2.5 秒取樣約 50 分鐘）——到頂**停止擷取**並標 `truncated`，
+  不無限成長。這是 frame 數保護，不代表 2MB 的位元組保證；典型場次仍由容量 verifier
+  把關，未來若欄位再增加需做 delta 壓縮或改持久層。
 - **不寫 localStorage**：5MB 配額已被 profile / season / heroProgress 佔用，
   塞 0.3–0.9MB/場 的 frames 不合適 → **只保存當前 session 的最近一場
   （模組記憶體，`replayBuffer.js`）**。重整頁面後重播消失，

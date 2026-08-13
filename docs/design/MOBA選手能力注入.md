@@ -6,6 +6,29 @@
 關聯文件：`選手天賦與能力成長系統.md`（天賦樹本身）、`MOBA戰術系統.md`（S24 戰術層，
 本層的同構前例）、`Phase11_MOBA戰力公式設計.md`（power/tough 公式，**刻意未採用**，見 §6）。
 
+## 2026-08-10 現役補充（P0-2／P0-3／MOBA Combat Closure）
+
+本文件原本記錄 Sprint 28 的第一版 9 個行為作用點；下方「accuracy／learning 未映射」
+與「XP 完全不受能力影響」只代表當時狀態，**不再是現役結論**。目前權威實作是
+`src/battle/moba/mobaPlayerStats.js` 的 `STAT_MAP`／限幅表，以及
+`review/moba-combat/COMBAT_STAT_AUDIT_FINAL.md`、`STAT_IMPACT_FINAL_R10.md` 的實測報告。
+
+現役差異如下：
+
+- P0-2／P0-3 已讓 `accuracy` 參與本場 XP、漏兵／空揮等操作品質；
+  仍不直接乘進傷害式。
+- `learning` 現在以個人小權重加上隊伍平均小幅作用於 `xpRateScale`，並新增
+  「版本研究」訓練課程；接線存在，但固定樣本的可量測效果仍很弱，不得宣稱已完成平衡。
+- `synergy` 已從 `joinAdj` 移到決定性的 `commitAdj`，控制有參戰意圖後的
+  commit／hold／decline；40 與 70 分仍可能因門檻飽和而逐位元相同。
+- 輔助遊走改為候選評分、抵達承諾與每 6 秒重評；`mapAware`／`comms`／`decision`／
+  `leadership` 分別控制視距、遠端資訊、出發門檻與跟進價值。此模型是 v3 引擎預設行為。
+- `riskAssess` 與 `diveAssess` 會讓追擊與無兵線越塔更保守；不改傷害公式。
+- `retreatReevalV1`、`retreatHoldV1` 雖有實作，正式 v3 設定皆為 `false`，本次不出貨。
+
+紅線仍成立：能力不得直接寫入 `power`／`tough`、不得寫死 winner、不得另算 gold／reward。
+`xpRateScale` 只影響**本場**成長與既有等級曲線，不是賽後獎勵的第二套計算。
+
 ---
 
 ## 1. Sprint 28 之前的實況（Audit）

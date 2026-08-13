@@ -33,6 +33,19 @@ function hash8(input) {
 export const settlementIdOf = (result) => `settle:${hash8(result?.resultId ?? "")}`;
 
 /**
+ * 本場次是否已經有對應這筆 matchId 的結算紀錄。
+ *
+ * 掃 ledger 而不另建索引：結算一場才掃一次，且**不引入第二份真相**
+ * （trace 已經存了 matchId 與 sessionId），舊存檔也不必遷移。
+ */
+function settledInThisSession(ledger, result) {
+  for (const s of Object.values(ledger ?? {})) {
+    if (s?.trace?.matchId === result?.matchId && s?.trace?.sessionId === result?.sessionId) return true;
+  }
+  return false;
+}
+
+/**
  * 純 reducer：結果 + 進度交易 → 單次結算。
  *
  * @param {object} state    profileStore 狀態
@@ -50,9 +63,12 @@ export function settleMatchResultInState(state, { result, session, transaction, 
   const known = mm.lastResult ?? null;
 
   //  ① 冪等：同一份結果重送 ⇒ 回既有 receipt，不重複入帳
+  //  ⚠ 只有在**結果確實屬於當下場次**時才走這條捷徑。否則「拿舊結果去別的場次
+  //    重送」會拿到一張 ok:true 的 receipt——下游的賽程完成邊界看 `receipt.ok`
+  //    就會被騙。不屬於本場的，一律往下走驗證，由 session_mismatch 拒絕。
   const settlementId = settlementIdOf(result);
   const existing = ledger[settlementId];
-  if (existing && isSameResult(known, result)) {
+  if (existing && isSameResult(known, result) && (!session || result?.sessionId === session.sessionId)) {
     return { nextState: null, receipt: { ...existing, alreadySettled: true } };
   }
 
@@ -81,6 +97,32 @@ export function settleMatchResultInState(state, { result, session, transaction, 
       settlementId, resultId: result.resultId,
       errors: applied.receipt?.errors ?? [{ code: "progress", message: "賽後結算被拒絕" }],
       reason: applied.receipt?.errors?.[0] ?? "賽後結算被拒絕",
+      failedAt: now,
+    };
+    return {
+      nextState: { matchmaking: { ...mm, lastSettlementError: failure } },
+      receipt: failure,
+    };
+  }
+
+  //  ③b **跨場次防串**：這筆對戰的進度先前已入帳，但本場次沒有任何對應它的
+  //  結算紀錄 ⇒ 這份結果來自**別場**，不是本場打出來的。
+  //
+  //  為什麼非擋不可：`createMatchResult` 是把「當下場次的身分」蓋到呼叫端遞來的
+  //  outcome 上，所以一份舊 BattleResult 重送時會被重新蓋章成一份**形式上完全
+  //  合法**的本場結果——contentHash 重算得過、與 session 逐欄相符、與 lastResult
+  //  也不衝突（sessionId 不同 ⇒ 衝突偵測不觸發）。錢因為 S25 冪等不會重複發，
+  //  但**場次會被舊結果佔用並標成 completed**，本場真正的賽果從此再也結算不進去。
+  //  對賽程場次而言，這等同於用別場的勝負去完成這一場。
+  //
+  //  ⚠ 這道關卡放在此處而不是下游的賽程完成邊界：下游只能決定「要不要寫賽程
+  //    紀錄」，擋不住 session 與 lastResult 被寫壞。
+  if (applied.receipt?.alreadyApplied && !settledInThisSession(ledger, result)) {
+    const failure = {
+      ok: false, settled: false, alreadySettled: false,
+      settlementId, resultId: result.resultId,
+      errors: [{ code: "foreign_result", message: "這份對戰結果屬於另一場比賽，不得用於本場次結算" }],
+      reason: "這份對戰結果屬於另一場比賽，不得用於本場次結算",
       failedAt: now,
     };
     return {

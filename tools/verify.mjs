@@ -51,6 +51,7 @@ const STATE = resolve(ROOT, "tools/.verify-state.json");
  * 順序＝由快到慢、由基礎到整合，讓失敗盡早出現。
  */
 const SEGMENTS = [
+  { id: "milestone_b4", script: "tools/check_moba_milestone_b4.mjs", shape: /Milestone B\.4 verifier: PASS/, note: "B.4：小兵離散攻擊／並行選敵／Replay" },
   { id: "milestone_j_close", script: "tools/check_moba_milestone_j_close.mjs", shape: /✅ PASS/, note: "J-close" },
   { id: "milestone_j", script: "tools/check_moba_milestone_j.mjs", shape: /✅ PASS/, note: "J：召喚師技能引擎效果" },
   { id: "milestone_i_close", script: "tools/check_moba_milestone_i_close.mjs", shape: /✅ PASS/, note: "I-close" },
@@ -100,6 +101,11 @@ const SEGMENTS = [
   { id: "regress", script: "tools/regress.mjs", shape: /結束率 15\/15/, note: "回歸：15 seeds" },
   { id: "regress2", script: "tools/regress2.mjs", shape: /節奏門檻 8\/8 通過/, note: "節奏門檻" },
   { id: "runtime29", script: "tools/check_moba_runtime29.mjs", shape: /35\/35 通過/, note: "S29 執行期（flat：9 段委派；§29 順序公平性既有紅燈 TD-21）" },
+  { id: "q4_history", script: "tools/check_competition_q4.mjs", shape: /68\/68 通過/, note: "Q4 FinalStandings / award historical gate" },
+  { id: "q5_history", script: "tools/check_competition_q5.mjs", shape: /66\/66 通過/, note: "Q5 cross-season history gate" },
+  { id: "q6_playoffs", script: "tools/check_competition_q6.mjs", shape: /57\/57 通過/, note: "Q6 stage/playoff historical gate" },
+  { id: "q7a_safety", script: "tools/check_q7a_safety.mjs", shape: /18\/18/, note: "Q7a single live session / same-day fixture safety" },
+  { id: "q7b_season_state_v2", script: "tools/check_season_state_v2_migration_q7b.mjs", shape: /SeasonState v2 Q7b: 22\/22 PASS/, note: "Q7b SeasonState.v2 compatibility migration" },
   { id: "build", script: "node_modules/vite/bin/vite.js", args: ["build"], shape: /built in/, note: "production build" },
 ];
 

@@ -50,11 +50,22 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
   //  N2：未來四週現金預測（含贊助到期造成的收入斷崖）與資金警告等級
   const fc = profile.cashForecast();
   const sponsor = profile.activeSponsor ? resolveSponsor(profile.activeSponsor.id) : null;
+  //  UI 修正（Q3.5）：「賽事」磚原本掛一個「🌙」的標籤——那既不是狀態也不是
+  //    ⚠ 註解不要寫獎盃 emoji：q35 §4b 用「原始檔裡的獎盃只能出現一次」
+  //      來擋「多開一個賽事入口」，註解裡多寫一顆就會誤判。
+  //    提示，玩家看不出這裡有沒有事要做。Q3.5 之後這裡是聯賽的入口，最該講的
+  //    就是「今天要不要出賽」。值全部來自既有的 `competitionView()`，
+  //    畫面不自己判賽程規則（與 CompetitionScreen 同一個出口，沒有第二份）。
+  const comp = profile.competitionView();
+  const bracketBadge = !comp.hasSeason ? "進入聯賽"
+    : comp.today ? "🔴 今日有賽事"
+    : comp.next ? `下一場 第 ${comp.nextDay} 天`
+    : "本季已完賽";
   const modes = [
     { id: "moba", name: "MOBA", emoji: "⚔️", fans: "2041", color: GC.purp, badge: "3 小時內", on: true },
     { id: "cs", name: "CS", emoji: "🎯", fans: "0", color: "#fb923c", badge: "訓練賽", on: true }, // S23：接 CS 完整流程（Prep→Map→Tactic→Loading→Match→Result）
 
-    { id: "bracket", name: "賽事", emoji: "🏆", fans: "0", color: GC.green, badge: "🌙", on: true },
+    { id: "bracket", name: "賽事", emoji: "🏆", fans: "0", color: GC.green, badge: bracketBadge, on: true },
   ];
   //  N3：「開新局」是三種財務情境（新手／一般／頂級）的唯一入口。
   const more = [{ id: "team", n: "戰隊詳情", i: "🛡" }, { id: "training", n: "訓練中心", i: "📅" }, { id: "newgame", n: "開新局", i: "🎬" }, { id: "dash", n: "儀表板", i: "📊" }, { id: "sponsor", n: "贊助商", i: "🤝" }];
@@ -105,7 +116,10 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
             <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 9 }}>
               <span style={{ fontSize: 15 }}>📅</span>
               <span style={{ color: "white", fontSize: 13, fontWeight: 700 }}>本週財務</span>
-              <span style={{ color: GC.gray, fontSize: 10 }}>S{wk.season}・第 {wk.week} 週・第 {wk.dayOfWeek}/7 天</span>
+              {/*  Q5：拿掉 S 號。`meta.season` 是**經濟週期**（12 週一輪，由 days 導出），
+                   與賽事賽季（錨在建立當天）本來就會逐季偏移，兩個 S 並排會互相矛盾。
+                   全案唯一顯示的「賽季」在賽事頁；這裡只講週期。 */}
+              <span style={{ color: GC.gray, fontSize: 10 }}>第 {wk.week} 週・第 {wk.dayOfWeek}/7 天</span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
               {[

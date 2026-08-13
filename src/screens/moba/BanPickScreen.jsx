@@ -11,6 +11,7 @@
 // ============================================================================
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
+import { selectOpponentName, selectTeamName } from "../../platform/matchTeamNames.js";
 import { seatPlayers as seatPlayersOf, SEAT_CODE } from "../../platform/contracts/matchLineup.js";
 import { heroTags } from "../../data/heroClassification.js";
 import { assignDraft, assignmentToHeroIds } from "../../battle/moba/mobaDraftAssignment.js";
@@ -214,6 +215,12 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
   //    玩家看不出衝突。現在改用可解釋評分 + 窮舉最佳解（5! = 120 種，決定性）。
   const storePlayers = useProfileStore((s) => s.players);
   const storeLineup = useProfileStore((s) => s.lineup);
+  //  Q3.5-fix：選角階段要指名道姓——玩家從賽事頁看到的是「某某戰隊」，
+  //  進來卻只寫「對手」，中間斷了一截。名字來自本場指派單（唯一來源見
+  //  `platform/matchTeamNames.js`），沒有場次就退回中性的「對手／我方」。
+  const oppName = useProfileStore(selectOpponentName);
+  const teamName = useProfileStore(selectTeamName);
+  const sideLabel = (side) => (side === "blue" ? (teamName ?? "我方") : (oppName ?? "對手"));
   const [step, setStep] = useState(0);
   const [bans, setBans] = useState({ blue: [], red: [] });
   const [picks, setPicks] = useState({ blue: [], red: [] });
@@ -383,8 +390,11 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
       //  Hotfix2：對手選角的播報原本會附「（克制你的 XXX）」。那是 Ban/Pick 裡
       //    另一處克制關係顯示，本輪一併移除；AI 的選角行為（aiPick）一行未動，
       //    這裡也沒有動到任何隨機抽樣，所以同 seed 的選角結果不變。
-      if (cur.act === "ban") { setBans((b) => ({ ...b, red: [...b.red, champ] })); setLog((l) => [`🔴 對手 禁用 ${champ.zh}`, ...l].slice(0, 8)); }
-      else { setPicks((p) => ({ ...p, red: [...p.red, champ] })); setLog((l) => [`🔴 對手 選擇 ${champ.zh}`, ...l].slice(0, 8)); }
+      //  Q3.5-fix：播報要指名對手。本 effect 的 deps 只有 [step]，所以**不能**
+      //    用外層閉包的 oppName（會是舊值）——這裡當場向 Store 讀一次。
+      const opp = selectOpponentName(useProfileStore.getState()) ?? "對手";
+      if (cur.act === "ban") { setBans((b) => ({ ...b, red: [...b.red, champ] })); setLog((l) => [`🔴 ${opp} 禁用 ${champ.zh}`, ...l].slice(0, 8)); }
+      else { setPicks((p) => ({ ...p, red: [...p.red, champ] })); setLog((l) => [`🔴 ${opp} 選擇 ${champ.zh}`, ...l].slice(0, 8)); }
       setStep((s) => s + 1);
     }, 700);
     return () => clearTimeout(t);
@@ -417,9 +427,19 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
         padding: "12px 12px calc(env(safe-area-inset-bottom, 0px) + 10px)",
       }}>
         <div style={{ flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {onBack && <button onClick={onBack} style={{ background: "none", border: "none", color: GC2.gray, fontSize: 14, cursor: "pointer", padding: 0 }}>←</button>}
-            <h2 style={{ color: "white", fontSize: 17, fontWeight: 900, margin: 0 }}>選角階段</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+            {onBack && <button onClick={onBack} style={{ background: "none", border: "none", color: GC2.gray, fontSize: 14, cursor: "pointer", padding: 0, flexShrink: 0 }}>←</button>}
+            <div style={{ minWidth: 0 }}>
+              <h2 style={{ color: "white", fontSize: 17, fontWeight: 900, margin: 0 }}>選角階段</h2>
+              {/*  Q3.5-fix：對手是誰要**全程看得到**，不能只在「換對手行動」時才出現
+                   ——玩家從賽事頁一路走過來，這裡斷名字就等於斷了脈絡。
+                   長隊名以 ellipsis 收掉，不把右側的圖鑑／狀態擠出畫面。 */}
+              {oppName && (
+                <div style={{ color: GC2.gray, fontSize: 10.5, fontWeight: 700, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  vs <span style={{ color: GC2.red }}>{oppName}</span>
+                </div>
+              )}
+            </div>
           </div>
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             {onCodex && <button onClick={onCodex} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 8, padding: "4px 10px", color: "#e5e7eb", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>📖 圖鑑</button>}
@@ -427,7 +447,7 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
           </div>
         </div>
 
-        {cur && <div style={{ flexShrink: 0, background: GC2.card, borderRadius: 10, padding: "10px 14px", marginBottom: 12, borderLeft: `3px solid ${cur.team === "blue" ? GC2.blue : GC2.red}` }}><span style={{ color: cur.team === "blue" ? GC2.blue : GC2.red, fontSize: 12, fontWeight: 700 }}>{cur.team === "blue" ? "🔵 我方" : "🔴 對手"}</span><span style={{ color: "white", fontSize: 11, marginLeft: 8 }}>{cur.act === "ban" ? "禁用英雄" : "選擇英雄"}{isMyTurn ? " — 點下方選擇" : ""}</span></div>}
+        {cur && <div style={{ flexShrink: 0, background: GC2.card, borderRadius: 10, padding: "10px 14px", marginBottom: 12, borderLeft: `3px solid ${cur.team === "blue" ? GC2.blue : GC2.red}` }}><span style={{ color: cur.team === "blue" ? GC2.blue : GC2.red, fontSize: 12, fontWeight: 700 }}>{cur.team === "blue" ? `🔵 ${sideLabel("blue")}` : `🔴 ${sideLabel("red")}`}</span><span style={{ color: "white", fontSize: 11, marginLeft: 8 }}>{cur.act === "ban" ? "禁用英雄" : "選擇英雄"}{isMyTurn ? " — 點下方選擇" : ""}</span></div>}
 
         {/*  ── Hotfix1：禁用與已選英雄合併成一個精簡區塊 ────────────────────
             原本是兩個獨立段落（各有標題列與雙欄小標），加上警告清單約 260px。

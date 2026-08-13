@@ -22,6 +22,7 @@
 // ============================================================================
 import { ROOM_VERSION, ROOM_STATES } from "./matchRoom.js";
 import { ASSIGNMENT_VERSION } from "./matchmaking.js";
+import { originFromTicket, sameOrigin } from "./matchOrigin.js";
 
 export const SESSION_VERSION = "MatchSession.v1";
 
@@ -67,15 +68,20 @@ function hash8(input) {
  * `sessionId` 由 roomId 決定性推導 ⇒ 同一個房間重複簽發會得到同一個場次，
  * **不會重複建立比賽**。
  */
-export function createSession({ room, ticket, now = 0, server = "mock-gateway", ttlSeconds = SESSION_TTL_SECONDS }) {
+export function createSession({ room, ticket, origin = null, assignment: assignmentArg = null, now = 0, server = "mock-gateway", ttlSeconds = SESSION_TTL_SECONDS }) {
   const errors = [];
   if (!room || room.schema !== ROOM_VERSION) errors.push({ code: "room", message: "房間無效，無法建立場次" });
   else if (room.state !== ROOM_STATES.confirmed) errors.push({ code: "room_state", message: "房間尚未雙方確認，無法建立場次" });
   else if (!room.confirmations?.us || !room.confirmations?.opponent) errors.push({ code: "not_both_ready", message: "雙方都確認後才能建立場次" });
-  if (!ticket?.ticketId) errors.push({ code: "ticket", message: "缺少票券，無法建立場次" });
-  const assignment = ticket?.assignment ?? null;
+  //  Q1：來源可以是票券或賽程，且**必須來自呼叫端的憑證**。
+  //  ⚠ 不得回退到 room.origin——那會讓下面「房間與來源不符」的檢查變成自己比自己
+  //    （o6 §1h 抓到過）。房間是被檢查的對象，不是憑證。
+  const src = origin ?? originFromTicket(ticket).origin;
+  if (!src) errors.push({ code: "ticket", message: "缺少票券，無法建立場次" });
+  //  賽程路徑的指派單由 competitionGateway 持有（Q3），故允許明確傳入
+  const assignment = assignmentArg ?? ticket?.assignment ?? null;
   if (!assignment || assignment.schema !== ASSIGNMENT_VERSION) errors.push({ code: "assignment", message: "缺少有效的配對結果" });
-  if (room && ticket && room.ticketId !== ticket.ticketId) errors.push({ code: "ticket_mismatch", message: "房間與票券不符" });
+  if (room && src && room.origin && !sameOrigin(room.origin, src)) errors.push({ code: "ticket_mismatch", message: "房間與票券不符" });
   if (room && assignment && room.assignmentId !== assignment.assignmentId) errors.push({ code: "assignment_mismatch", message: "房間與配對結果不符" });
   if (errors.length) return { ok: false, session: null, errors };
 
@@ -89,11 +95,13 @@ export function createSession({ room, ticket, now = 0, server = "mock-gateway", 
       //  綁定來源（任何一項對不上都不得啟動）
       roomId: room.roomId,
       assignmentId: room.assignmentId,
+      //  ⚠ ticketId 是 origin 的衍生相容欄位（見 matchOrigin.js），不是第二份真相
       ticketId: room.ticketId,
+      origin: src,
       mode: room.mode,
-      //  雙方隊伍版本：我方來自票券；對手由伺服器持有（本機 mock 以對手 id 推導）
+      //  雙方隊伍版本：我方來自來源（票券或申請單）；對手由伺服器持有（本機 mock 以對手 id 推導）
       rosterVersions: {
-        us: ticket.rosterVersion ?? null,
+        us: src.rosterVersion ?? ticket?.rosterVersion ?? null,
         opponent: hash8(`${assignment.opponent?.id ?? "unknown"}:roster`),
       },
       //  比賽 seed 沿用 gateway 在配對時決定的那一個（前端不得挑）

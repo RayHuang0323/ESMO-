@@ -9,6 +9,8 @@
 // ============================================================================
 import React, { useEffect, useMemo, useState } from "react";
 import { TEAMS, ROSTER } from "../../data/roster.js";
+import { useProfileStore } from "../../platform/profileStore.js";
+import { selectOpponentName, selectTeamName } from "../../platform/matchTeamNames.js";
 import { heroById } from "../../data/heroDatabase.js";
 import HeroPortrait from "../../ui/HeroPortrait.jsx";
 import { draftRoster } from "../../battle/moba/draftRoster.js";
@@ -54,6 +56,10 @@ function HeroCard({ hero, player, side, spells = [], lane = null }) {
 export default function LoadingScreen({ draft, tactic = null, onDone, roster = ROSTER }) {
   const [pct, setPct] = useState(0);
   const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
+  //  Q3.5-fix：進場畫面的隊名同樣來自本場指派單（唯一來源見
+  //  `platform/matchTeamNames.js`）。沒有場次（單獨測試進入）才退回 TEAMS 預設。
+  const oppName = useProfileStore(selectOpponentName);
+  const teamName = useProfileStore(selectTeamName);
   useEffect(() => {
     const iv = setInterval(() => setPct((p) => { if (p >= 100) { clearInterval(iv); setTimeout(onDone, 400); return 100; } return p + 3; }), 50);
     return () => clearInterval(iv);
@@ -73,7 +79,7 @@ export default function LoadingScreen({ draft, tactic = null, onDone, roster = R
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div style={{ textAlign: "center", flex: 1 }}>
           <div style={{ width: 64, height: 64, margin: "0 auto 8px", borderRadius: 16, background: "linear-gradient(135deg,#3b82f6,#1e40af)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, border: "2px solid #60a5fa" }}>{TEAMS.blue.emoji}</div>
-          <div style={{ color: "white", fontSize: 13, fontWeight: 800 }}>{TEAMS.blue.name}</div>
+          <div style={{ color: "white", fontSize: 13, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{teamName ?? TEAMS.blue.name}</div>
         </div>
         <div style={{ textAlign: "center", padding: "0 12px" }}>
           <div style={{ color: "#fbbf24", fontSize: 24, fontWeight: 900 }}>VS</div>
@@ -81,7 +87,7 @@ export default function LoadingScreen({ draft, tactic = null, onDone, roster = R
         </div>
         <div style={{ textAlign: "center", flex: 1 }}>
           <div style={{ width: 64, height: 64, margin: "0 auto 8px", borderRadius: 16, background: "linear-gradient(135deg,#ef4444,#7f1d1d)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, border: "2px solid #f87171" }}>{TEAMS.red.emoji}</div>
-          <div style={{ color: "white", fontSize: 13, fontWeight: 800 }}>{TEAMS.red.name}</div>
+          <div style={{ color: "white", fontSize: 13, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{oppName ?? TEAMS.red.name}</div>
         </div>
       </div>
 

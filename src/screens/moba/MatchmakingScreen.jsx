@@ -1,18 +1,25 @@
 // screens/moba/MatchmakingScreen.jsx — MOBA 配對過場（Sprint11）
 import React, { useEffect, useState } from "react";
 import { TEAMS } from "../../data/roster.js";
+import { useProfileStore } from "../../platform/profileStore.js";
+import { selectOpponentName, selectTeamName } from "../../platform/matchTeamNames.js";
 import { GC } from "../../ui/theme.js";
 
 export default function MatchmakingScreen({ onDone, onBack }) {
   const [found, setFound] = useState(false);
+  //  Q3.5-fix：這頁是過場動畫（真正的配對／簽發在 LineupScreen 的 MatchPrepFrame），
+  //  但它顯示的隊名一樣得是本場的對手，否則玩家會在賽事頁與對戰畫面之間
+  //  看到第三個名字。來源與其他畫面同一支：`platform/matchTeamNames.js`。
+  const oppName = useProfileStore(selectOpponentName);
+  const teamName = useProfileStore(selectTeamName);
   useEffect(() => { const t = setTimeout(() => setFound(true), 1400); return () => clearTimeout(t); }, []);
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 16 }}>
       <div style={{ fontSize: 13, letterSpacing: "0.2em", color: "rgba(255,255,255,0.5)" }}>{found ? "對手已確認" : "配對中…"}</div>
       <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-        <Team t={TEAMS.blue} c={GC.blueL} />
+        <Team t={{ ...TEAMS.blue, name: teamName ?? TEAMS.blue.name }} c={GC.blueL} />
         <div style={{ fontSize: 22, fontWeight: 900, color: "#fde047" }}>VS</div>
-        <Team t={found ? TEAMS.red : { emoji: "❓", name: "搜尋中" }} c={GC.redL} dim={!found} />
+        <Team t={found ? { ...TEAMS.red, name: oppName ?? TEAMS.red.name } : { emoji: "❓", name: "搜尋中" }} c={GC.redL} dim={!found} />
       </div>
       <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
         {onBack && <button onClick={onBack} style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "9px 24px", color: "#fff", fontWeight: 800, cursor: "pointer" }}>← 取消</button>}

@@ -19,7 +19,14 @@ import BattleHeroStrip from "./BattleHeroStrip.jsx";
 import HeroSkillCallout from "../moba/presentation/HeroSkillCallout.jsx";
 import { Z } from "./battleLayout.js";
 
-export default function BattlePresentationLayer({ roster = null, showTimeline = true, onContinue = null, draft = null, tactic = null }) {
+export default function BattlePresentationLayer({ roster = null, showTimeline = true, onContinue = null, draft = null, tactic = null, blueName = null, redName = null }) {
+  //  Q3.5-fix：雙方隊名由 GameView 從本場指派單讀來（唯一來源見
+  //  `platform/matchTeamNames.js`）。HUD／記分板／終局畫面吃的是**同一組值**，
+  //  所以三處不可能再各顯示各的。
+  //  ⚠ null → undefined 是必要的：子元件用的是預設參數（`redName = "赤焰軍團"`），
+  //    只有 undefined 會觸發預設值，傳 null 會讓隊名整個變空白。
+  //    沒有場次（debug harness、單獨掛 GameView）⇒ 兩者皆 null ⇒ 退回既有預設。
+  const names = { blueName: blueName ?? undefined, redName: redName ?? undefined };
   // Sprint20【E】draft 交給 useBattleFeed：終局產出的 BattleResult.players[].heroId
   //   = Ban/Pick 實際選到的英雄（沿用 snapshotToBattleResult 既有的 heroAssign 選項，
   //   BattleResult 結構不變、不重新統計）→ Result 顯示的英雄與 Draft/Battle 一致。
@@ -38,7 +45,7 @@ export default function BattlePresentationLayer({ roster = null, showTimeline = 
 
   return (
     <>
-      <BattleHUD roster={roster} tactic={tactic} />
+      <BattleHUD roster={roster} tactic={tactic} {...names} />
       {showTimeline && !over && <BattleTimeline open roster={roster} />}
       {!over && <HeroSkillCallout roster={roster} />}
       <BattleFloatingText />
@@ -47,12 +54,12 @@ export default function BattlePresentationLayer({ roster = null, showTimeline = 
       {/* 戰中 TAB 記分板 */}
       {showBoard && !over && (
         <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: Z.overlay, pointerEvents: "none" }}>
-          <BattleScoreboard roster={roster} />
+          <BattleScoreboard roster={roster} {...names} />
         </div>
       )}
 
       {/* 終局：Victory/Defeat 動畫 + MVP + 最佳數據 + Timeline 摘要 → Result */}
-      {over && <BattleEndScreen roster={roster} onContinue={onContinue} />}
+      {over && <BattleEndScreen roster={roster} onContinue={onContinue} {...names} />}
     </>
   );
 }

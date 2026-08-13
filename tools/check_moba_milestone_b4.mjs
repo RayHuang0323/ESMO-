@@ -52,7 +52,7 @@ assert.equal(duel.lanes.mid.bm.length, 0);
 assert.equal(duel.lanes.mid.rm.length, 0, "simultaneous combat must remain symmetric");
 assert.equal(replayFrames[1].mn[2][0][2], 0.875, "first hit must leave a clearly partial HP ratio");
 
-// 四對四首輪按 slot 配對：沒有任何一隻被四兵一擊集火死亡。
+// 四對四首輪保留可達目標：M1.5 queue gap 存在時仍須一人打一隻。
 const waveFight = new LogicEngine(8402, null, { rules: "v3" });
 clearLanes(waveFight);
 waveFight.lanes.mid.bm = [0, 1, 2, 3].map((slot) => minion(`b91${slot}`, slot, 0.49));
@@ -60,8 +60,43 @@ waveFight.lanes.mid.rm = [0, 1, 2, 3].map((slot) => minion(`r91${slot}`, slot, 0
 waveFight.tick(0.5);
 assert.equal(waveFight.lanes.mid.bm.length, 4);
 assert.equal(waveFight.lanes.mid.rm.length, 4);
-assert.ok([...waveFight.lanes.mid.bm, ...waveFight.lanes.mid.rm]
-  .every((m) => m.hp === R.minionMaxHp - R.minionAttackDamage));
+const firstVolleyHp = {
+  blue: waveFight.lanes.mid.bm.map((m) => m.hp),
+  red: waveFight.lanes.mid.rm.map((m) => m.hp),
+};
+const expectedVolleyHp = Array(4).fill(R.minionMaxHp - R.minionAttackDamage);
+assert.deepEqual(firstVolleyHp.blue, expectedVolleyHp,
+  "blue 4v4 first volley must assign one reachable target per attacker");
+assert.deepEqual(firstVolleyHp.red, expectedVolleyHp,
+  "red 4v4 first volley must assign one reachable target per attacker");
+assert.ok(new Set(waveFight.lanes.mid.bm.map((m) => m.t)).size > 1,
+  "M1.5 blue queue gap must remain active in the regression scenario");
+assert.ok(new Set(waveFight.lanes.mid.rm.map((m) => m.t)).size > 1,
+  "M1.5 red queue gap must remain active in the regression scenario");
+
+const waveRepeat = new LogicEngine(8402, null, { rules: "v3" });
+clearLanes(waveRepeat);
+waveRepeat.lanes.mid.bm = [0, 1, 2, 3].map((slot) => minion(`b91${slot}`, slot, 0.49));
+waveRepeat.lanes.mid.rm = [0, 1, 2, 3].map((slot) => minion(`r91${slot}`, slot, 0.51));
+waveRepeat.tick(0.5);
+assert.deepEqual(snapshotToFrame(waveRepeat.snapshot()), snapshotToFrame(waveFight.snapshot()),
+  "same seed and target-assignment state must produce the same replay frame");
+
+// 現役世界距離微場景：外塔要能離散清掉貼塔小兵，小兵死前仍可正常攻城。
+const towerCase = new LogicEngine(8404, null, { rules: "v3" });
+clearLanes(towerCase);
+const redFront = towerCase.frontTower("blue", "top");
+towerCase.lanes.top.bm = [{
+  ...minion("btower", 0, redFront.t - 0.01),
+  hp: R.towerMinionDamage * 2,
+}];
+const towerHp0 = redFront.hp;
+towerCase.tick(0.5);
+towerCase.tick(0.5);
+assert.equal(towerCase.lanes.top.bm.length, 0,
+  "tower must clear an in-range minion in two discrete shots");
+assert.equal(redFront.hp, towerHp0 - R.minionTowerDmg,
+  "minion must keep its existing siege cadence until the tower clears it");
 
 // 正式首波仍是三路 × 雙方 × 四隻，並帶滿血 ratio。
 const formal = new LogicEngine(8403, null, { rules: "v3" });
@@ -111,7 +146,8 @@ console.log("Milestone B.4 verifier: PASS", JSON.stringify({
     rangeProgress: R.minionAttackRangeProgress,
   },
   firstWave: firstWave.length,
-  firstVolleySurvivors: { blue: waveFight.lanes.mid.bm.length, red: waveFight.lanes.mid.rm.length },
-  replay: ["partial-hp", "death-removal"],
+  firstVolley: { hp: firstVolleyHp, survivors: { blue: waveFight.lanes.mid.bm.length, red: waveFight.lanes.mid.rm.length } },
+  towerClear: { shots: 2, siegeDamage: towerHp0 - redFront.hp },
+  replay: ["partial-hp", "death-removal", "deterministic-frame"],
   bars: "camera-billboard",
 }));

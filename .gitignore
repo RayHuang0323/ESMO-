@@ -25,6 +25,10 @@ review/p1/*.log
 #   單檔最大 1.75 MB、合計約 15 MB；摘要 .json/.csv 與報告 .md 已足以複現結論，
 #   需要 raw 時用 tools/probe_*.mjs / measure_stat_sensitivity.mjs 以固定 seed 重跑即可。
 review/moba-combat/*.raw.json
+# Q7a/Q7b integration verifier logs and probe tables are local evidence only.
+review/moba-combat/**/*.log
+review/moba-combat/**/*.json
+review/moba-combat/**/*.csv
 # 制度檔輪替備份（規則見 ~/.claude/playbook/40_MAINTENANCE.md §1）
 _backup_*
 tools/_backup_*

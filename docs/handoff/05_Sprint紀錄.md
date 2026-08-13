@@ -7236,3 +7236,15 @@ R3 verifier 的總模擬數為 544，static RNG call sites 維持 21。
 - R28：measurement **Go / PASS**；semantic completeness **Revise**；calibration **No-Go / Deferred**。
 - Spec / report：`review/cs-gameplay/CS_FOCUS_MEASUREMENT_R28_SPEC.md`、
   `review/cs-gameplay/CS_FOCUS_MEASUREMENT_R28_REPORT.md`。完成後 local commit，不 push。
+
+## Integration checkpoint：SeasonState.v2（Q7b，2026-08-13）
+
+本次只做安全整合，不開始新的賽事功能。以 release closure 的 CS R1–R28 為基底，正常
+non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b migration。
+
+- legacy `competition` 仍是唯一真相；`seasonStateV2` 是 metadata-only compatibility wrapper。
+- migration 冪等、舊存檔可載入、空 competition 不建賽事；不建立 CS Circuit / Event。
+- fixture / outcome / stage / playoff / final ID、competitionHistory、settlement / award receipt
+  reference 與單一 live session / resume 行為均不重算、不重排、不改 ID。
+- post-merge gates：Q7b migration 22/22、Q7a safety 18/18、Q4/Q5/Q6 68/66/57，另行通過
+  production build 與 review 後才可 push release checkpoint。
