@@ -62,7 +62,7 @@ import {
   fixtureById, nextPlayerFixture, pendingPlayerFixtureOn, pendingPlayerFixturesOn, seasonStandings,
   upgradeSeasonShape, activeCompetitionOf, activeStageOf, activePlayoffOf,
   sealableEventIds, applySealEvent, eventFinalOf, eventViewsOf,
-  tryEventStandingsOf, nextPlayerFixtureOfEvent,
+  tryEventStandingsOf, nextPlayerFixtureOfEvent, tryCareerFinalStandingsOf,
   seasonProgress, participantsOf, absoluteDayOf, isFixtureLaunched,
   canSealSeason, applySealSeason,
   canRollSeason, rollToNextSeason, seasonDayOf,
@@ -1032,6 +1032,13 @@ export const useProfileStore = create((set, get) => ({
       standings: tryEventStandingsOf(state, state.activeEventId ?? null) ?? seasonStandings(state),
       //  每個 Event 的狀態摘要（唯讀推導，畫面不得自己判）
       eventViews: eventViewsOf(state, day),
+      //  ── Q7a-3f.1：生涯主要賽事的最終名次 ──────────────────────────
+      //  ⚠ `final`（上面那個）是**賽季**封存物件：單 Event 時是 FinalStandings，
+      //    多 Event 時是 SeasonSeal（沒有 rows／playerRank）。
+      //    畫面要顯示「我這一季第幾名」讀的是**這一個**，不是那一個。
+      //  ⚠ optional 版本：指不到生涯賽事就回 null，**不猜其他 Event**。
+      careerFinal: tryCareerFinalStandingsOf(state),
+      careerEventId: state.careerEventId ?? null,
       //  ── Q7a-3c：巡迴積分與晉級資格（唯讀推導）────────────────────────
       //  ⚠ `standings` 是**從帳本算出來的**，不是另存一份。畫面要顯示積分只能
       //    讀這裡；自己去加總 `pointsLog` 就會出現第二套加總規則。

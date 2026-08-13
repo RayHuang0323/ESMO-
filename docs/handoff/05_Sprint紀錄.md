@@ -9034,3 +9034,91 @@ Q1 93／Q2a 112／Q2b 92／**Q3 91**／Q3.5 65／Q4 68／**Q5 69**／Q6 57；
 Q7a safety 18／3a 29／3b 51／3c 69／3d 65／**3f 43**；B2 20／B3 13；
 integrity 20；o7 48／o7.1 27；瀏覽器 gate 21／26／7／8／20；
 `regress` exit 0、`regress2` 8/8、`build` `built in 9.77s`。
+
+---
+
+## Q7a-3f.1 生涯主要賽事成績相容層（2026-08-14，已 commit 未部署）
+
+架構決策（使用者定案）：**Season-level 的 `state.final` 與 Event-level 的
+FinalStandings 不得再混在一起。** 單 Event 維持 `FinalStandings.v1`、
+多 Event 維持 `SeasonSeal.v1` —— 這一輪**一個字都沒改**。
+
+於是「我這一季在官方聯賽第幾名」需要一條明確的路。
+
+### Schema：`careerEventId`
+
+賽季狀態新增一個欄位（**只是一個 id 指標，不是鏡像**）：
+
+```js
+careerEventId: string | null   // 這一季的生涯主要 Event
+```
+
+- **建立時直接寫入**（`createSeasonState`）——建立者當下就知道是哪一個
+- **不從 organizer／tier／idScheme／expectsPlayoff／prizePolicy／名稱／陣列順序推斷**
+  （audit 過：那些沒有一個真的表示「角色」，`tier` 甚至當場二義——
+  亞洲巡迴春季站也是 `regular`）
+- 與 `activeEventId` 是**兩件事**：那是畫面聚焦、玩家可切換；這是生涯主線
+- 換季時新賽季照樣寫入（走同一條建立路徑）
+
+### Migration：無歧義才回填
+
+- 只有一個 Event ⇒ 回填那一個
+- **多個 Event 卻沒有這個欄位 ⇒ 留 `null`，不猜**
+- v1 → v2 形狀升級同時回填；**冪等且保參考**（欄位已存在就原樣回傳同一個物件）
+
+### Accessor：fail-closed
+
+`careerFinalStandingsOf(state)`（strict，取不到 **throw**）／
+`tryCareerFinalStandingsOf(state)`（optional，回 `null`）。
+**指標缺失或壞掉時都不退而求其次挑別的 Event。**
+
+`validateSeasonScope` 增加 `career_event`：指到不存在的 Event 才算錯，
+**`null` 不算錯**（那是舊存檔的曖昧情形，由 accessor fail-closed 接住）。
+
+### 畫面改走 accessor
+
+`CompetitionScreen` 的最終名次面板與歷屆成績不再直讀
+`final.rows` / `final.playerRank` / `final.championTeamId`。
+取不到生涯成績時顯示「—」與「（生涯主要賽事尚無資料）」，不 crash。
+
+歷屆成績也改存**生涯成績**：`rollToNextSeason` 的 `archived` 從
+`state.final` 改成生涯 final。⚠ 單 Event 時兩者是**同一個物件**
+（`applySealSeason` 本來就拿它當賽季 final）⇒ **legacy 逐位元不變**。
+
+### 驗證
+
+`check_q7a_3f1_career_final` **42/42** ＋ `browser_check_career_final_ui` **12/12**。
+
+畫面 gate 證明的是 3f 量到的那個阻擋真的消失了：多 Event 時
+`state.final` 仍是 `SeasonSeal.v1`，但名次欄位顯示的是**官方聯賽**的名次。
+
+⚠ 又抓到一次假綠，而且是同一個家族：原本用「整頁不含 undefined」當證據——
+**React 把 `undefined` 渲染成空白，不是字串**。實測把畫面改回直讀
+`final.playerRank`，全頁掃描照樣綠（名次那格只是變空的），連「包含 —」
+也照樣綠（獎金那列本來就有一個）。改成**結構化讀出名次欄位那一行**
+才有檢定力：變異時讀到「／ 8 隊」⇒ 紅。
+
+另有一條 §4e 是**測試自己造了一份現實不存在的 v1 存檔**（刪了容器卻留著
+`idScheme`／`eventId`，於是身分升級判成「已升級」而不重建容器）。
+
+### 旗標開著時的剩餘清單（**逐條重驗過**，旗標仍為 false）
+
+| 驗證器 | 3f 之後 | **3f.1 之後** | 性質 |
+|---|---|---|---|
+| Q3 | 3 紅 | **0** | 已收 |
+| Q5 | 5 紅 | **1**（§2g） | `sealedIds` 收 `final.id`，SeasonSeal 沒有 id ⇒ 改讀生涯 final 的 id |
+| Q4 | crash | crash | 讀 `state.final.rows` ⇒ 改讀生涯 final |
+| Q6 | 2 紅＋crash | 2 紅＋crash | 同上（`rankSource`／`championTeamId`／`rows`） |
+| Q3.5 | 2 紅 | 2 紅 | 測試拿 `today`（可能是巡迴賽場次）⇒ 要指名聯賽場次 |
+| 3b | 5 紅 | 7 紅 | 測試用 store 建 baseline 被巡迴賽污染 |
+| 3d | 5 紅 | 5 紅 | **刻意**在驗「旗標預設關閉」，翻預設時改成明確驅動旗標 |
+
+⇒ 生涯成績這條路已經通了；剩下的都是**測試表達**問題，不是產品行為問題。
+
+### 全套回歸（旗標維持 false）
+
+Q1 93／Q2a 112／Q2b 92／Q3 91／Q3.5 65／Q4 68／Q5 69／Q6 57；
+Q7a safety 18／3a 29／3b 51／3c 69／3d 65／3f 43／**3f.1 42**；
+B2 20／B3 13；integrity 20；o7 48／o7.1 27；
+瀏覽器 gate **12**／21／26／7／8／20；
+`regress` exit 0、`regress2` 8/8、`build` `built in 14.19s`。

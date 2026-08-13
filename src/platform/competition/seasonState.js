@@ -205,6 +205,11 @@ export function createSeasonState({ playerTeam, season = 1, seasonSeed, gameMode
           } }
         : {},
       activeEventId: up.event?.id ?? null,
+      //  Q7a-3f.1：**生涯主要賽事**。建立者當下就知道是哪一個，直接寫下來——
+      //  不由 organizer／tier／idScheme／名稱／陣列順序事後推斷（那些都不是角色）。
+      //  ⚠ 這與 `activeEventId` 是**兩件事**：那是畫面聚焦、可被玩家切換；
+      //    這是生涯主線，寫定之後不隨畫面改變。
+      careerEventId: up.event?.id ?? null,
       fixtures: built.fixtures,
       //  賽果一經寫入即不可變（D11）——本檔只 append，永遠不改既有元素
       outcomes: [],
@@ -245,9 +250,26 @@ export function upgradeSeasonIdentity(state) {
  *   兩份封存快照。
  * ⚠ **冪等**：已是 v2 就回傳同一個物件參考。
  */
+/**
+ * Q7a-3f.1：補上 `careerEventId`（**只在無歧義時**）。
+ *
+ * ⚠ 只有一個 Event ⇒ 那一個必然是生涯主線，回填無歧義。
+ * ⚠ 多個 Event 卻沒有這個欄位 ⇒ **留 null，不猜**。組合出來的判據
+ *   （organizer／tier／idScheme／expectsPlayoff／prizePolicy／名稱／順序）
+ *   沒有一個真的表示「角色」，猜錯會把整季生涯成績記到別的賽事頭上。
+ * ⚠ 冪等且**保參考**：欄位已經在就原樣回傳同一個物件——不然每次載入都產生
+ *   新物件，會害畫面白重繪，也會讓「重載後逐字未變」那類比對失準。
+ */
+function withCareerEvent(state) {
+  if (!state || typeof state !== "object") return state;
+  if ("careerEventId" in state) return state;
+  const ids = Object.keys(state.events ?? {});
+  return { ...state, careerEventId: ids.length === 1 ? ids[0] : null };
+}
+
 export function upgradeSeasonShape(state) {
   if (!state?.schema) return state;
-  if (state.competitions) return state;            // 已經是 v2
+  if (state.competitions) return withCareerEvent(state);   // 已經是 v2
   const withId = upgradeSeasonIdentity(state);     // 先補 3a 的身分（冪等）
   const comp = withId.competition;
   if (!comp) return state;
@@ -273,7 +295,7 @@ export function upgradeSeasonShape(state) {
   };
   //  頂層的單數欄位到此退場——`competitions{}` 是唯一真相，不留鏡像
   delete next.competition; delete next.stage; delete next.playoff;
-  return next;
+  return withCareerEvent(next);
 }
 
 /**
@@ -288,6 +310,45 @@ export function eventFinalOf(state, eventId) {
   return onlyOne ? (state?.final ?? null) : null;
 }
 
+
+// ── Q7a-3f.1：生涯主要賽事成績 ─────────────────────────────────────────────
+//
+//  ⚠ 為什麼需要這一層：`state.final` 在多 Event 時是 `SeasonSeal.v1`
+//    （3b 的設計，賽季本身不再產生總名次），沒有 rows／playerRank／champion。
+//    但「我這一季在**官方聯賽**拿第幾名」仍然是玩家的生涯成績，那份資料
+//    活在 Event 的 `final` 裡。本層只是**指過去**——不複製、不鏡像，
+//    `state.final` 的語意一個字都不動。
+
+/** 這一季的生涯主要賽事（沒有指定 ⇒ null，不猜）。 */
+export const careerEventOf = (state) => {
+  const id = state?.careerEventId ?? null;
+  return id && state?.events?.[id] ? state.events[id] : null;
+};
+
+/**
+ * 生涯主要賽事的封存名次（規則／結算用，**找不到就明確失敗**）。
+ *
+ * ⚠ 這裡刻意 throw 而不是回 null：規則面拿不到生涯成績時，
+ *   「沒有這個賽季」與「指標壞了」必須分得開（與 3c 前置那一層同一條紀律）。
+ *   畫面請用 `tryCareerFinalStandingsOf`。
+ */
+export function careerFinalStandingsOf(state) {
+  const id = state?.careerEventId ?? null;
+  if (!id) {
+    throw new TypeError(
+      "careerFinalStandingsOf：這個賽季沒有指定生涯主要賽事（careerEventId）。" +
+      "這不是「還沒封存」——要允許沒有請改用 tryCareerFinalStandingsOf。");
+  }
+  requireEvent(state, id, "careerFinalStandingsOf");
+  return eventFinalOf(state, id);
+}
+
+/** 同上，但允許「沒有／還沒封存」⇒ 回 `null`（畫面用）。**不猜其他 Event。** */
+export function tryCareerFinalStandingsOf(state) {
+  const id = state?.careerEventId ?? null;
+  if (!id || !state?.events?.[id]) return null;
+  return eventFinalOf(state, id);
+}
 
 /**
  * 每個 Event 的畫面摘要（Q7a-3b.5）。
@@ -390,6 +451,16 @@ export function validateSeasonScope(state) {
     if (listed !== [...mine].sort().join(",")) {
       errors.push({ code: "competition_list", message: `賽事 ${eid} 的 competitionIds 與實際綁定不一致（列出 [${listed}]，實際 [${mine.join(",")}]）` });
     }
+  }
+
+  //  Q7a-3f.1：生涯主要賽事的指標必須指得到。
+  //  ⚠ `null` **不算錯**——多 Event 的舊存檔回填不了時就是 null（不猜），
+  //    accessor 會 fail-closed。錯的是「指了一個不存在的 Event」。
+  if (state.careerEventId != null && !events[state.careerEventId]) {
+    errors.push({
+      code: "career_event",
+      message: `careerEventId ${state.careerEventId} 指不到存在的賽事`,
+    });
   }
 
   return { ok: errors.length === 0, errors };
@@ -846,7 +917,14 @@ export function rollToNextSeason({ state, playerTeam, seasonSeed, startDay } = {
   if ((made.state.outcomes ?? []).length !== 0 || made.state.final) {
     return { ok: false, state: null, archived: null, errors: [{ code: "not_clean", message: "新賽季必須是乾淨的（無賽果、無封存）" }] };
   }
-  return { ok: true, state: made.state, archived: state.final, errors: [] };
+  //  Q7a-3f.1：歷屆成績存的是**生涯主要賽事的最終名次**，不是賽季封存物件。
+  //  ⚠ 單一 Event（所有既有存檔）時，`careerFinal` 與 `state.final` 是
+  //    **同一個物件**（`applySealSeason` 就是拿它當賽季 final）⇒ 逐位元不變。
+  //  ⚠ 多 Event 時 `state.final` 是 SeasonSeal（沒有 rows），存進歷史等於
+  //    讓「歷屆成績」那一頁失去內容。生涯成績才是玩家要看的東西。
+  //  ⚠ 指不到生涯賽事（舊存檔的曖昧情形）⇒ 退回 `state.final`，不編一份假的。
+  const careerFinal = tryCareerFinalStandingsOf(state);
+  return { ok: true, state: made.state, archived: careerFinal ?? state.final, errors: [] };
 }
 
 /**

@@ -55,6 +55,12 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
   }
 
   const { standings, next, nextDay, today, progress, participants, live, final, award } = view;
+  //  ── Q7a-3f.1：生涯成績與賽季封存物件是**兩件事** ──────────────────────
+  //  `final` 是**賽季**封存物件：單 Event 時是 FinalStandings，
+  //  多 Event 時是 `SeasonSeal.v1`（**沒有** rows／playerRank／championTeamId）。
+  //  玩家要看的「我這一季第幾名」在**生涯主要賽事**的封存名次裡 ⇒ 讀 `careerFinal`。
+  //  ⚠ 指不到生涯賽事時是 `null`（舊存檔的曖昧情形），畫面顯示「—」，**不猜**。
+  const careerFinal = view.careerFinal ?? null;
   //  Q5：賽季進度改用**賽季相對天數**（`seasonDay`），不再拿絕對遊戲日對 84
   const { seasonDay, seasonDays, history, canRoll, playoff } = view;
   //  Q7a-3b.5：同季多個 Event。**只有兩個以上才出現切換列**——
@@ -396,19 +402,25 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
         >
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 8, padding: "4px 0 8px" }}>
             <span style={{ fontSize: 11, color: GC.gray }}>你的最終名次</span>
-            <span style={{ fontSize: 30, fontWeight: 900, color: GC.gold, fontFamily: MONO, lineHeight: 1 }}>{final.playerRank}</span>
-            <span style={{ fontSize: 11, color: GC.gray }}>／ {final.rows.length} 隊</span>
+            <span style={{ fontSize: 30, fontWeight: 900, color: GC.gold, fontFamily: MONO, lineHeight: 1 }}>
+              {careerFinal?.playerRank ?? "—"}
+            </span>
+            <span style={{ fontSize: 11, color: GC.gray }}>
+              {careerFinal ? `／ ${careerFinal.rows.length} 隊` : "（生涯主要賽事尚無資料）"}
+            </span>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "3px 0", borderTop: `1px solid ${GC.line}` }}>
-            <span style={{ color: GC.gray }}>🏆 冠軍</span>
-            <span style={{ fontWeight: 800, color: "#e5e7eb" }}>{nameOf(final.championTeamId ?? final.rows[0]?.teamId)}</span>
-          </div>
+          {careerFinal && (
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "3px 0", borderTop: `1px solid ${GC.line}` }}>
+              <span style={{ color: GC.gray }}>🏆 冠軍</span>
+              <span style={{ fontWeight: 800, color: "#e5e7eb" }}>{nameOf(careerFinal.championTeamId ?? careerFinal.rows[0]?.teamId)}</span>
+            </div>
+          )}
           {/*  Q6：名次由季後賽決定時，同時標出常規賽名次——兩個都是事實，
                只顯示一個會讓「常規賽第 1 但季後賽輸了」看起來像資料錯誤。 */}
-          {final.rankSource === "playoff" && final.playerRegularRank && (
+          {careerFinal?.rankSource === "playoff" && careerFinal.playerRegularRank && (
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "3px 0" }}>
               <span style={{ color: GC.gray }}>📋 常規賽名次</span>
-              <span style={{ fontWeight: 800, color: GC.gray2 ?? "#a1a1aa", fontFamily: MONO }}>第 {final.playerRegularRank} 名</span>
+              <span style={{ fontWeight: 800, color: GC.gray2 ?? "#a1a1aa", fontFamily: MONO }}>第 {careerFinal.playerRegularRank} 名</span>
             </div>
           )}
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "3px 0" }}>
@@ -418,12 +430,12 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
               {award ? (award.amount > 0 ? `+$${award.amount}萬` : "無（前四名才有）") : "—"}
             </span>
           </div>
-          {final.sourceMix && (
+          {careerFinal?.sourceMix && (
             <div style={{ fontSize: 9, color: GC.gray, marginTop: 7, paddingTop: 6, borderTop: `1px solid ${GC.line}` }}>
-              本季 {final.sourceMix.total} 場：實際對戰 {final.sourceMix.engine}
-              {final.sourceMix.simulated ? ` · 模擬 ${final.sourceMix.simulated}` : ""}
-              {final.sourceMix.forfeited ? ` · 棄權 ${final.sourceMix.forfeited}` : ""}
-              　·　第 {final.sealedAtDay} 天封存
+              本季 {careerFinal.sourceMix.total} 場：實際對戰 {careerFinal.sourceMix.engine}
+              {careerFinal.sourceMix.simulated ? ` · 模擬 ${careerFinal.sourceMix.simulated}` : ""}
+              {careerFinal.sourceMix.forfeited ? ` · 棄權 ${careerFinal.sourceMix.forfeited}` : ""}
+              　·　第 {careerFinal.sealedAtDay} 天封存
             </div>
           )}
           {/*  Q5：換季是**玩家自己按**的。封存與發獎自動（漏發是災難），
@@ -451,8 +463,10 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
               <span style={{ flex: 1, textAlign: "left", marginLeft: 10, color: "rgba(255,255,255,0.8)" }}>
                 🏆 {h.rows?.[0]?.name ?? "—"}
               </span>
-              <span style={{ fontWeight: 800, color: h.playerRank <= 4 ? GC.gold : GC.gray, fontFamily: MONO }}>
-                我 第 {h.playerRank} 名
+              {/*  ⚠ 舊存檔可能留著沒有 rows 的賽季封存物件（多 Event 的 SeasonSeal）。
+                   那時候寫「—」，不寫「第 undefined 名」。 */}
+              <span style={{ fontWeight: 800, color: h.playerRank != null && h.playerRank <= 4 ? GC.gold : GC.gray, fontFamily: MONO }}>
+                {h.playerRank != null ? `我 第 ${h.playerRank} 名` : "我 —"}
               </span>
             </div>
           ))}

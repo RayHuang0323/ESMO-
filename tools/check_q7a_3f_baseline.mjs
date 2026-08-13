@@ -282,9 +282,13 @@ let baseOff = null, baseOn = null;
     multi?.schema === "SeasonSeal.v1", multi?.schema);
   ck("7c) ⚠ 因此 `rows` / `playerRank` / `championTeamId` 全都是 undefined",
     multi?.rows === undefined && multi?.playerRank === undefined && multi?.championTeamId === undefined);
-  ck("7d) ⚠ 而畫面與歷史都直接讀那幾個欄位 ⇒ 會顯示「第 undefined 名」",
-    /final\.playerRank/.test(await (await import("node:fs")).promises.readFile(
-      new URL("../src/screens/manage/CompetitionScreen.jsx", import.meta.url), "utf8")));
+  //  ⚠ 這一條原本記錄的是**阻擋**（畫面直讀 `final.playerRank` ⇒ 會顯示
+  //    「第 undefined 名」）。3f.1 把畫面改走生涯 accessor 之後，它翻面成守衛：
+  //    **畫面不得再直讀賽季封存物件的名次欄位**。
+  ck("7d) 畫面**不再直讀**賽季封存物件的名次欄位（改走生涯 accessor）",
+    !/final\.(playerRank|rows|championTeamId)/.test(
+      await (await import("node:fs")).promises.readFile(
+        new URL("../src/screens/manage/CompetitionScreen.jsx", import.meta.url), "utf8")));
   ck("7e) ⚠ 但**金流不受影響**（獎金按 Event 結算，不靠 `state.final`）",
     Object.keys(st().processedCompetitionAwards ?? {}).length >= 1,
     `獎金帳本 ${Object.keys(st().processedCompetitionAwards ?? {}).length} 筆`);
