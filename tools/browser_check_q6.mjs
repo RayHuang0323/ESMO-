@@ -13,7 +13,8 @@
 //
 //  執行：`node tools/browser_check_q6.mjs`（會自己起 vite、自己開 Chrome、自己收）。
 // ============================================================================
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import { createServer } from "node:net";
 import { mkdtempSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -73,13 +74,37 @@ class Cdp {
 }
 
 const procs = [];
-const cleanup = () => { for (const p of procs) { try { p.kill(); } catch {} } };
+//  ⚠ `shell: true` 之下 `p.kill()` 只殺得到 shell，真正的 vite 會活下來繼續佔
+//    port ⇒ 每跑一次就漏一個。實測一度有 7 個殘留 dev server 還在監聽，而下一次
+//    跑時 `--strictPort` 讓新 vite 直接結束、readiness 的 fetch 卻對**舊的那一個**
+//    成功 ⇒ 驗證器靜默地測到別的 worktree 的原始碼。所以收工要殺整棵行程樹。
+const cleanup = () => {
+  for (const p of procs) {
+    try {
+      if (process.platform === "win32") spawnSync("taskkill", ["/pid", String(p.pid), "/T", "/F"], { stdio: "ignore" });
+      else p.kill();
+    } catch { /* 已經死了就算了 */ }
+  }
+};
 process.on("exit", cleanup);
+
+/** port 現在有沒有人在聽（用「綁得起來嗎」判定，不猜）。 */
+const isPortFree = (port) => new Promise((resolve) => {
+  const s = createServer();
+  s.once("error", () => resolve(false));
+  s.once("listening", () => s.close(() => resolve(true)));
+  s.listen(port, "127.0.0.1");
+});
 
 let userDataDir = null;
 try {
   // ── ① 起獨立 vite ────────────────────────────────────────────────────
   console.log(`\n▶ 起 vite（port ${VITE_PORT}）`);
+  //  ⚠ port 有人佔就直接失敗，不重試、不換 port：連上不是自己起的 server
+  //    等於靜默地測到別的原始碼（見上方 cleanup 的說明）。
+  if (!(await isPortFree(VITE_PORT))) {
+    throw new Error(`port ${VITE_PORT} 已經有人在聽（多半是上一次跑剩下的 dev server）。請先關掉它再跑。`);
+  }
   procs.push(spawn("npx", ["vite", "--port", String(VITE_PORT), "--strictPort"], { shell: true, stdio: "ignore" }));
   for (let i = 0; i < 60; i++) { try { if ((await fetch(BASE)).ok) break; } catch {} await sleep(500); }
 
