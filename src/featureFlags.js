@@ -30,6 +30,21 @@ export const FEATURE_FLAGS = Object.freeze({
    */
   devFastForward: true,
 
+  /**
+   * 亞洲巡迴賽（Q7a-3d）：新賽季會多出一條巡迴賽、三站 Event、巡迴積分與晉級資格。
+   *
+   * **預設關閉**，理由要講清楚：
+   *   · 打開之後，**新賽季**的賽程會從 56 場變成 56 + 3×28 場，玩家每季多打 21 場。
+   *     那是產品層級的改變，不該由一次技術上線順手決定。
+   *   · Q3 §5c／§5s 與 Q5 §2b 三條既有斷言明文寫著「新賽季 56 場」。
+   *     預設打開會讓它們變紅，而那些斷言描述的正是**預設行為** ⇒ 要改它們，
+   *     得先有人決定「新賽季本來就該有巡迴賽」。
+   *   · 舊存檔任何情況下都不受影響：已經建好的賽季不會被插入新 Event。
+   *
+   * 開啟方式：把這一行改成 `true`，或用網址 `?asiaCircuit=1` 單次試玩。
+   */
+  asiaCircuit: false,
+
   /** 單英雄戰場替身測試；可用 `?heroProxy=0` 暫時關閉比較。 */
   heroProxyChichuan: true,
   /** Hero Proxy A/B 版本；可用 `?heroProxyVariant=desktop-v002` 切換。 */
@@ -38,6 +53,21 @@ export const FEATURE_FLAGS = Object.freeze({
 
 /** 單一查詢出口（呼叫端不直接讀物件，日後要改成遠端旗標也只動這裡）。 */
 export const featureEnabled = (name) => FEATURE_FLAGS[name] === true;
+
+/**
+ * 亞洲巡迴賽開關。網址參數優先（`?asiaCircuit=1` / `=0`），否則看旗標。
+ *
+ * ⚠ 只在**建立新賽季那一刻**被讀到。中途打開不會把巡迴賽補進已經開始的賽季——
+ *   那等於在賽季中途插入 84 場比賽，玩家的行程會整個變形。
+ */
+export const asiaCircuitEnabled = () => {
+  if (typeof window !== "undefined") {
+    const value = new URLSearchParams(window.location.search).get("asiaCircuit");
+    if (value === "0") return false;
+    if (value === "1") return true;
+  }
+  return featureEnabled("asiaCircuit");
+};
 
 export const heroProxyEnabled = () => {
   if (typeof window !== "undefined") {

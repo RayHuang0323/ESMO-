@@ -77,8 +77,13 @@ import { settleCompetitionAwardInState } from "./economy/competitionAward.js";
 //  ⚠ 積分**不碰錢**：它只寫自己的帳本，一分錢都不動。
 import {
   settleAllPendingPoints, grantAllReadyQualifications, pointsStatusOfEvent,
-  circuitStandings, qualificationsOf, pointsLogOf,
+  circuitStandings, qualificationsOf, pointsLogOf, summarizeAllCircuits,
 } from "./competition/circuitPoints.js";
+//  ── Milestone Q7a-3d：第一條可運作的亞洲巡迴賽 ──────────────────────────
+//  ⚠ 只在**建立新賽季**時掛上，而且由旗標控制（預設關閉，理由見 featureFlags）。
+//    既有賽季一律不動——中途插入三站等於在賽季中間塞 84 場比賽。
+import { applyAsiaCircuit } from "./competition/asiaCircuit.js";
+import { asiaCircuitEnabled } from "../featureFlags.js";
 import {
   issueFor as issueCompetitionMatch, openRoomForFixture, openSessionForFixture,
   isCompetitionAssignment, fixtureIdOfAssignment,
@@ -212,6 +217,10 @@ const DEFAULT = {
   processedMatchTransactions: {},// S25：冪等帳本 {transactionId: receipt}（防重複發獎）
   processedCompetitionAwards: {},// Q4：名次獎金冪等帳本 {finalStandingsId: receipt}
   competitionHistory: [],        // Q5：歷屆已封存賽季（FinalStandings[]，新的在前）
+  //  Q7a-3d：歷屆巡迴賽摘要（CircuitSeasonSummary[]，新的在前）。
+  //  ⚠ 與 competitionHistory 分開存：一個是「聯賽最終名次」，一個是「巡迴總成績」，
+  //    合在一起就得在讀的時候分辨每一筆是哪一種，那是自找的麻煩。
+  circuitHistory: [],
   inbox: [
     { id: 1, type: "match",   from: "聯賽官方",         subject: "第 1 週賽程已公布",   text: "第 1 週賽程已公布，請確認出賽名單。", time: "剛剛", unread: true },
     { id: 2, type: "recruit", from: "球探部",           subject: "3 名新星進入觀察名單", text: "球探回報：3 名新星進入觀察名單，可前往招募查看。", time: "1 小時前", unread: true },
@@ -349,6 +358,10 @@ const load = () => {
       //  ⚠ 刻意**不從現有 competition.final 回填**：那一季還沒換季，
       //    它仍然是「當前賽季」，回填會讓同一季同時出現在當前與歷史兩個地方。
       competitionHistory: arr(saved.competitionHistory, []),
+      //  Q7a-3d migration：舊存檔沒有巡迴摘要 ⇒ 空陣列。
+      //  ⚠ 刻意**不從現有 competition 回填**：那一季還沒換季，它的積分仍然
+      //    活在當前賽季裡，回填會讓同一季同時出現在當前與歷史兩個地方。
+      circuitHistory: arr(saved.circuitHistory, []),
       // Sprint10 的 sponsors[] 假名單已退場；舊存檔沒有 activeSponsor → null（尚未簽約）
       activeSponsor: saved.activeSponsor ?? DEFAULT.activeSponsor,
       scouted: saved.scouted && typeof saved.scouted === "object" ? saved.scouted : {},
@@ -625,9 +638,24 @@ export const useProfileStore = create((set, get) => ({
       startDay: Number(get().meta?.days) || 1,
     });
     if (!made.ok) return { ok: false, state: null, created: false, errors: made.errors };
-    set({ competition: made.state });
+    //  Q7a-3d：新賽季掛上亞洲巡迴賽（旗標預設關閉）。
+    //  ⚠ 這裡是**建立**路徑，所以只有全新的賽季會拿到；舊存檔已經有賽季，
+    //    上面第一行就 return 了，永遠走不到這裡。
+    const withCircuit = get()._withAsiaCircuit(made.state);
+    set({ competition: withCircuit });
     get().save();
-    return { ok: true, state: made.state, created: true, errors: [] };
+    return { ok: true, state: withCircuit, created: true, errors: [] };
+  },
+  /**
+   * 依旗標把亞洲巡迴賽掛到一個**剛建好的**賽季上。
+   *
+   * ⚠ 旗標關閉、或掛不上去（缺 team.id／seasonSeed）都**原樣回傳**——
+   *   巡迴賽是加值內容，它失敗不該讓玩家連賽季都開不了。
+   */
+  _withAsiaCircuit(state) {
+    if (!asiaCircuitEnabled()) return state;
+    const r = applyAsiaCircuit(state, { playerTeam: get().team, seasonSeed: get().meta?.seasonSeed });
+    return r.ok ? r.state : state;
   },
   /**
    * 內部：把賽季日曆往前推，回傳「實際能推幾天」。由 `advanceDay` 呼叫。
@@ -925,10 +953,23 @@ export const useProfileStore = create((set, get) => ({
 
     const history = arr(get().competitionHistory, []);
     const already = history.some((h) => h?.id === res.archived?.id);
+
+    //  ── Q7a-3d：換季前先封存這一季的巡迴摘要 ──────────────────────────
+    //  ⚠ `pointsLog` 會跟著舊賽季一起消失，那是對的——積分每季重來
+    //    （Circuit id 綁賽季）。但玩家上一季拿了幾分、排第幾、有沒有晉級
+    //    **不能就這樣不見**。摘要只留結論（各站名次與得分、總分、總排名、
+    //    晉級名單），不留中間計算。
+    //  ⚠ 冪等：同一個 `csum:` id 已經在歷史裡就不重複寫。
+    const summaries = summarizeAllCircuits(state, eventFinalOf);
+    const circuitHistory = arr(get().circuitHistory, []);
+    const fresh = summaries.filter((s) => !circuitHistory.some((h) => h?.id === s.id && h?.season === s.season));
+
     set({
-      competition: res.state,
+      //  新賽季也掛上巡迴賽（同一條規則：只在**建立**時掛）
+      competition: get()._withAsiaCircuit(res.state),
       //  新的在前；上限 20 季（一季一筆、每筆 8 列，容量遠小於 replay 那類東西）
       competitionHistory: already ? history : [res.archived, ...history].slice(0, 20),
+      circuitHistory: fresh.length ? [...fresh, ...circuitHistory].slice(0, 20) : circuitHistory,
     });
     get().save();
     get().pushInbox({

@@ -438,6 +438,72 @@ export function grantAllReadyQualifications(state, grantedAtDay, finalOf) {
   return { state: next, granted };
 }
 
+// ── 賽季封存摘要（Q7a-3d）──────────────────────────────────────────────────
+
+export const CIRCUIT_SUMMARY_VERSION = "CircuitSeasonSummary.v1";
+
+/**
+ * 把一整季的巡迴成果壓成一份**可以帶過換季**的摘要。
+ *
+ * ⚠ 為什麼需要這個：換季會換掉整個賽季狀態，`pointsLog` 跟著歸零——那是對的，
+ *   積分本來就每季重來（Circuit id 綁賽季）。但玩家上一季拿了幾分、排第幾、
+ *   有沒有晉級，**不能就這樣消失**。
+ * ⚠ 只留結論，不留中間計算：每站保留最終名次與該站得分，加上總分、總排名、
+ *   晉級名單。不保留 `finalId` 以外的推導細節——那些在當季已經驗過了，
+ *   歷史頁需要的是「發生了什麼」，不是「怎麼算出來的」。
+ */
+export function summarizeCircuitSeason(state, circuitId, finalOf) {
+  const circuit = state?.circuits?.[circuitId] ?? null;
+  if (!circuit) return null;
+  const entries = pointsEntriesOfCircuit(state, circuitId);
+  if (entries.length === 0) return null;      // 沒有積分的巡迴賽不留空白紀錄
+
+  const eventIds = eventIdsOfCircuit(state, circuitId);
+  const standings = circuitStandings(state, circuitId);
+  const mine = standings.rows.find((r) => r.teamId === state.playerTeamId) ?? null;
+
+  return {
+    schema: CIRCUIT_SUMMARY_VERSION,
+    id: `csum:${circuitId}`,
+    circuitId,
+    circuitName: circuit.name ?? circuitId,
+    season: circuit.season ?? state.season ?? null,
+    playerTeamId: state.playerTeamId ?? null,
+    playerRank: mine?.rank ?? null,
+    playerPoints: mine?.points ?? 0,
+    //  各站：最終名次 ＋ 該站取得的積分
+    events: eventIds.map((id) => {
+      const ev = state.events[id];
+      const final = typeof finalOf === "function" ? finalOf(state, id) : (ev?.final ?? null);
+      const mineHere = entries.filter((e) => e.eventId === id);
+      return {
+        eventId: id,
+        name: ev?.name ?? id,
+        tier: ev?.tier ?? null,
+        tierMultiplier: mineHere[0]?.tierMultiplier ?? null,
+        finalId: final?.id ?? null,
+        sealedAtDay: final?.sealedAtDay ?? null,
+        rows: [...mineHere]
+          .sort((a, b) => a.rank - b.rank)
+          .map((e) => ({ rank: e.rank, teamId: e.teamId, name: e.teamName ?? null, points: e.points })),
+      };
+    }),
+    //  最終總分與巡迴排名
+    standings: standings.rows.map((r) => ({
+      rank: r.rank, teamId: r.teamId, name: r.name,
+      points: r.points, events: r.events, championships: r.championships, podiums: r.podiums,
+    })),
+    //  晉級名單（沒發出來就是 null，不編一份假的）
+    qualification: circuitQualificationOf(state, circuitId),
+  };
+}
+
+/** 這一季所有有積分的巡迴賽摘要（換季前呼叫）。 */
+export const summarizeAllCircuits = (state, finalOf) =>
+  Object.keys(state?.circuits ?? {})
+    .map((id) => summarizeCircuitSeason(state, id, finalOf))
+    .filter(Boolean);
+
 /** 這一隊拿到晉級資格了嗎（正式資料查詢，不是畫面標籤）。 */
 export const isQualified = (state, teamId, circuitId = null) =>
   qualificationsOf(state).some((q) =>
