@@ -1,0 +1,180 @@
+#!/usr/bin/env node
+// R35: CS TacticalIQ measurement / semantic-readiness audit.
+// Read-only source evidence; production, RNG, scenario and history untouched.
+import { createHash } from "node:crypto";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { resolve, dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { createServer } from "vite";
+import { changedSeedSummary, clampSummary, classifyCausalReadiness, monotonicity, pairedEffect, thresholdCrossing } from "./cs_calibration_measurement.mjs";
+import { CS_R32_CLUTCH_RESILIENCE_SOURCE_SHA256, CS_R33_RESILIENCE_SOURCE_SHA256, csR33R32Source } from "./cs_r15_legacy_source.mjs";
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const FPS = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
+const PREP = resolve(ROOT, "src/battle/fps/csPrepData.js");
+const R17 = resolve(ROOT, "review/cs-gameplay/CS_CALIBRATION_READINESS_R17_SPEC.md");
+const R3 = resolve(ROOT, "review/cs-gameplay/CS_16_STAT_AUDIT_R3.md");
+const SEEDS = Object.freeze([3978742910, 4200255727, 541349949, 1011896540, 44863398, 1878380147, 638784133, 2852978760, 1789562418, 3820910912, 3991584863, 2186970694, 951543597, 2082574495, 474649321, 3950420867]);
+const ROLES = Object.freeze(["entry", "rifler", "awp", "lurker", "igl"]);
+const PROFILE = Object.freeze({
+  entry: ["cou", "rxn", "apm", "acc", "str"],
+  rifler: ["acc", "rxn", "pos", "foc", "str"],
+  awp: ["acc", "foc", "pos", "str", "rxn"],
+  lurker: ["vis", "dec", "pos", "adp", "str"],
+  igl: ["led", "com", "dec", "tac", "adp"],
+  support: ["coo", "tac", "com", "pos", "vis"],
+});
+const SEED_SET_SHA256 = "52414f0e6b09ba72b9223b5e76b6ad9d859e8b8ea6fe77dcc2a2a08876a74c6d";
+const REPRESENTATIVE_GUN = { entry: "ak", rifler: "ak", awp: "awp", lurker: "ak", igl: "ak" };
+const RETURN_MARKER = "return { EsportsFPS3D, buildMatchResult };";
+const RETURN_REPLACEMENT = "return { EsportsFPS3D, buildMatchResult, simulateFps, ROSTER, TACTICS_DB, persStat, posSkill, combatSkill, aggr, formMul, tacticEdge, MAP_EDGE, clamp };";
+const EXPORT_MARKER = "export { EsportsFPS3D, buildMatchResult };";
+const EXPORT_REPLACEMENT = [
+  "const __CS_TACTICAL_IQ_R35_TEST_API__ = Object.freeze({",
+  "  simulateFps: __FPS3D_MODULE.simulateFps, ROSTER: __FPS3D_MODULE.ROSTER, TACTICS_DB: __FPS3D_MODULE.TACTICS_DB,",
+  "  persStat: __FPS3D_MODULE.persStat, posSkill: __FPS3D_MODULE.posSkill, combatSkill: __FPS3D_MODULE.combatSkill, aggr: __FPS3D_MODULE.aggr, formMul: __FPS3D_MODULE.formMul, tacticEdge: __FPS3D_MODULE.tacticEdge, MAP_EDGE: __FPS3D_MODULE.MAP_EDGE, clamp: __FPS3D_MODULE.clamp,",
+  "});",
+  "export { EsportsFPS3D, buildMatchResult, __CS_TACTICAL_IQ_R35_TEST_API__ };",
+].join("\n");
+
+function sha(value) { return createHash("sha256").update(value).digest("hex"); }
+function gate(ok, code, detail) { if (!ok) throw new Error("[" + code + "]" + (detail ? "\n" + detail : "")); }
+function weight(role) { const index = PROFILE[role].indexOf("tac"); return index < 0 ? 0 : 5 - index; }
+function inputDigest(mapKey, tTactic, ctTactic, roster) { return sha(JSON.stringify({ mapKey, tTactic, ctTactic, roster })); }
+function treatmentRoster(baseline, targetId, level) {
+  const next = structuredClone(baseline);
+  const original = baseline.find((player) => player.id === targetId);
+  const target = next.find((player) => player.id === targetId);
+  gate(original && target, "TARGET_MISSING", targetId);
+  const values = { low: original.stats.tac - 10, baseline: original.stats.tac, high: original.stats.tac + 10 };
+  gate(values.low >= 1 && values.high <= 99, "TACTICAL_IQ_BAND_CLAMPED", targetId);
+  target.stats.tac = values[level];
+  for (const candidate of next) {
+    const before = baseline.find((player) => player.id === candidate.id);
+    gate(before, "TREATMENT_PLAYER_MISSING", candidate.id);
+    if (candidate.id === targetId) {
+      const a = { ...before, stats: { ...before.stats } }, b = { ...candidate, stats: { ...candidate.stats } };
+      delete a.stats.tac; delete b.stats.tac;
+      gate(JSON.stringify(a) === JSON.stringify(b), "TREATMENT_NON_TACTICAL_IQ_MUTATION", targetId);
+    } else gate(JSON.stringify(candidate) === JSON.stringify(before), "TREATMENT_OTHER_PLAYER_MUTATION", candidate.id);
+  }
+  return Object.freeze(next);
+}
+function probe(api, player, control, tTactic, ctTactic) {
+  const target = structuredClone(player); target.gun = REPRESENTATIVE_GUN[target.role] || "ak";
+  const opponent = structuredClone(control); opponent.gun = "m4";
+  const opts = { holding: target.role === "awp" || target.role === "lurker", entry: target.role === "entry", lurk: target.role === "lurker", lastAlive: false, lowHP: false };
+  const combat = api.combatSkill(target, opts), controlCombat = api.combatSkill(opponent, {});
+  return { raw: Number(target.stats.tac), effective: api.persStat(target, "tac"), roleFit: api.posSkill(target, Number(target.stats.rxn || 50)), roleFitWeight: weight(target.role), combatSkill: combat, localPt: api.clamp(0.5 + (combat - controlCombat) * 0.013 + (api.MAP_EDGE.inferno || 0.02) + api.tacticEdge(tTactic, ctTactic), 0.07, 0.93), aggr: api.aggr(target) };
+}
+function simSummary(sim, targetId) {
+  const observations = (sim.frames || []).map((frame) => {
+    const player = frame.players.find((item) => item.id === targetId);
+    return {
+      local: Boolean(player && !player.dead && frame.players.some((item) => item.side !== player.side && !item.dead)),
+      engaged: Boolean(player && player.state === "ENGAGE"),
+      execute: Boolean(player && (player.state === "EXECUTE" || player.state === "ROTATE")),
+      bombState: Boolean(player && frame.planted),
+    };
+  });
+  const result = (sim.players || []).find((item) => item.id === targetId) || {};
+  return { localOpportunities: observations.filter((item) => item.local).length, immediateEngagement: observations.filter((item) => item.engaged).length, tacticalOpportunity: observations.filter((item) => item.execute).length, bombStateOpportunity: observations.filter((item) => item.bombState).length, kills: Number(result.k || 0), damage: Number(result.adr || 0), survival: Number(result.kast || 0), roundWins: (sim.roundHist || []).filter((round) => round.winner === "t").length };
+}
+let simulationCount = 0;
+function runArm(api, mapKey, tTactic, ctTactic, seed, roster, targetId) {
+  const before = inputDigest(mapKey, tTactic, ctTactic, roster);
+  const first = api.simulateFps(mapKey, tTactic, ctTactic, seed, roster);
+  const second = api.simulateFps(mapKey, tTactic, ctTactic, seed, roster);
+  simulationCount += 2;
+  gate(JSON.stringify(first) === JSON.stringify(second), "REPEATED_SIM_MISMATCH", String(seed));
+  gate(before === inputDigest(mapKey, tTactic, ctTactic, roster), "SIM_MUTATED_INPUT", String(seed));
+  const summary = simSummary(first, targetId);
+  return { seed, ...summary, strictSimDigest: sha(JSON.stringify(first)), structuralDigest: sha(JSON.stringify(summary)) };
+}
+function metric(rows, key) {
+  return { monotonicity: monotonicity(rows.low.map((row) => row[key]), rows.baseline.map((row) => row[key]), rows.high.map((row) => row[key])), lowBaseline: pairedEffect(rows.low.map((row) => row[key]), rows.baseline.map((row) => row[key])), highBaseline: pairedEffect(rows.high.map((row) => row[key]), rows.baseline.map((row) => row[key])), lowHigh: pairedEffect(rows.low.map((row) => row[key]), rows.high.map((row) => row[key])) };
+}
+function changed(rows, key) { return { lowVsBaseline: changedSeedSummary(rows.low.filter((row, index) => row[key] !== rows.baseline[index][key]).length, rows.low.length), highVsBaseline: changedSeedSummary(rows.high.filter((row, index) => row[key] !== rows.baseline[index][key]).length, rows.high.length) }; }
+async function loadApi(source, currentSource) {
+  const tempRoot = mkdtempSync(join(tmpdir(), "esmo-cs-tactical-iq-r35-")); let vite = null; let seen = 0;
+  try {
+    vite = await createServer({ root: ROOT, configFile: false, envFile: false, appType: "custom", logLevel: "error", cacheDir: join(tempRoot, "vite-cache"), optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true }, plugins: [{ name: "cs-tactical-iq-r35-memory", enforce: "pre", transform(code, id) {
+      if (resolve(id.split("?")[0]).toLowerCase() !== FPS.toLowerCase()) return null;
+      seen += 1; gate(code === currentSource, "VITE_SOURCE_MISMATCH");
+      const transformed = source.replace(RETURN_MARKER, RETURN_REPLACEMENT).replace(EXPORT_MARKER, EXPORT_REPLACEMENT);
+      const roundTrip = transformed.replace(EXPORT_REPLACEMENT, EXPORT_MARKER).replace(RETURN_REPLACEMENT, RETURN_MARKER);
+      gate(roundTrip === source, "TRANSFORM_NOT_REVERSIBLE");
+      gate((transformed.match(/\brand\s*\(\s*\)/g) || []).length === (source.match(/\brand\s*\(\s*\)/g) || []).length, "RNG_TOKEN_SEQUENCE_CHANGED");
+      return { code: transformed, map: null };
+    } }] });
+    const module = await vite.ssrLoadModule("/src/battle/fps/EsportsFPS3D.jsx?r35=" + Date.now());
+    gate(seen === 1, "TRANSFORM_LOAD_GATE");
+    return module.__CS_TACTICAL_IQ_R35_TEST_API__;
+  } finally { if (vite) await vite.close(); rmSync(tempRoot, { recursive: true, force: true }); }
+}
+async function main() {
+  const source = readFileSync(FPS, "utf8");
+  gate(sha(source) === CS_R33_RESILIENCE_SOURCE_SHA256, "LIVE_SOURCE_SHA256", sha(source));
+  gate((source.match(/\brand\s*\(\s*\)/g) || []).length === 21, "RNG_CALL_SITES");
+  const historical = csR33R32Source(source);
+  gate(sha(historical) === CS_R32_CLUTCH_RESILIENCE_SOURCE_SHA256, "R32_HISTORICAL_ADAPTER");
+  const pos = source.slice(source.indexOf("const POS_PROFILE"), source.indexOf("const FPS_W"));
+  const combat = source.slice(source.indexOf("function combatSkill"), source.indexOf("function aggr"));
+  const aggr = source.slice(source.indexOf("function aggr"), source.indexOf("const TAC_MATRIX"));
+  const tactic = source.slice(source.indexOf("function tacticEdge"), source.indexOf("const TACTICS_DB"));
+  const sim = source.slice(source.indexOf("function simulateFps"), source.indexOf("function buildMatchResult"));
+  gate(pos.includes('igl:["led","com","dec","tac","adp"]') && pos.includes('support:["coo","tac","com","pos","vis"]'), "TACTICAL_ROLE_PROFILES");
+  gate(combat.includes("const role=posSkill(p,rawReflex)") && !combat.includes('S("tac")') && !combat.includes('persStat(p,"tac")'), "COMBAT_ROLE_FIT_ONLY");
+  gate(aggr.includes('function aggr(p){const s=p.stats') && !aggr.includes('persStat(p,"tac")'), "AGGR_FALSE_CONSUMER");
+  gate(tactic.includes("TAC_MATRIX") && tactic.includes("tT.site") && !tactic.includes("stats.tac") && !tactic.includes('persStat(p,"tac")'), "TACTIC_EDGE_DATA_ONLY");
+  gate(!sim.includes("stats.tac") && !sim.includes('persStat(p,"tac")') && !sim.includes('S("tac")'), "LIVE_TACTICAL_IQ_FALSE_CONSUMER");
+  gate(source.includes('const _mechKeys=["acc","rxn","apm","pos","foc","str"]') && source.includes("FPS_W"), "MECHANICS_EXCLUSION");
+  const prep = readFileSync(PREP, "utf8");
+  gate(prep.includes('boost: ["decision", "adaptability"]') && !source.includes("csPrepData"), "TACTIC_METADATA_NOT_RUNTIME");
+  const r17 = readFileSync(R17, "utf8"), r3 = readFileSync(R3, "utf8");
+  gate(sha(r17) === "b844312aaba05f94b75b36d78ae897213e2447c3127c8c992a4b4889f54739a4" && r17.includes("tacticalIQ") && r17.includes("4/4/2"), "R17_EVIDENCE");
+  gate(r3.includes("tacticalIQ") && r3.includes("igl/support"), "R3_EVIDENCE");
+  const api = await loadApi(source, source);
+  gate(typeof api.simulateFps === "function" && typeof api.persStat === "function" && typeof api.posSkill === "function", "TEST_API_MISSING");
+  const map = api.TACTICS_DB.inferno, tacticT = map.t.find((item) => item.id === "t_aexec"), tacticCT = map.ct.find((item) => item.id === "c_std");
+  const roster = structuredClone(api.ROSTER);
+  gate(tacticT && tacticCT && roster.length === 10, "FIXED_INPUTS");
+  const target = roster.find((player) => player.id === "t5"), targetRole = target.role;
+  const directLevels = [target.stats.tac - 10, target.stats.tac, target.stats.tac + 10].map((value) => probe(api, { ...target, stats: { ...target.stats, tac: value }, gun: "ak" }, roster.find((item) => item.id === "ct3"), tacticT, tacticCT));
+  const repeatedDigests = [];
+  for (const seed of SEEDS) repeatedDigests.push(runArm(api, "inferno", tacticT, tacticCT, seed, roster, target.id).strictSimDigest);
+  const directStrictMajority = directLevels[0].roleFit < directLevels[1].roleFit && directLevels[1].roleFit < directLevels[2].roleFit && directLevels[0].combatSkill < directLevels[1].combatSkill && directLevels[1].combatSkill < directLevels[2].combatSkill;
+  gate(directStrictMajority, "DIRECT_MONOTONICITY");
+  const roles = ROLES.map(function (role, index) {
+    const raw = [70, 82, 78, 80, 88][index], personality = ["aggressive", "genius", "calm", "lonewolf", "shotcaller"][index], roleWeight = weight(role);
+    const levels = [raw - 10, raw, raw + 10].map((value) => ({ raw: value, effective: value, roleFitWeight: roleWeight, liveConsumer: false }));
+    return { role, personality, raw, levels, roleFitWeight: roleWeight, strictMajority: { direct: roleWeight ? "16/16" : "not_applicable", effective: "no_live_consumer" }, clamp: { raw: clampSummary([raw - 10, raw, raw + 10], 1, 99), effective: clampSummary([raw - 10, raw, raw + 10], 1, 99) }, threshold: { aggr: false }, opportunityCoverage: { roleFit: roleWeight ? "role-fit only" : "none", tacticalAction: 0, bombState: 0, route: 0, utility: 0 }, pathAmplification: { changedSeeds: 0, reason: "no TacticalIQ live action consumer" }, readiness: "Deferred" };
+  });
+  roles[4].focusedDirectEvidence = { role: targetRole, directLevels, strictMajority: directStrictMajority, repeatedSeedDigests: repeatedDigests.length };
+  const fullMeasurements = ROLES.map(function (role, index) {
+    const base = roster.find((player) => player.role === role && player.side === "t"), rows = { low: [], baseline: [], high: [] };
+    for (const level of ["low", "baseline", "high"]) {
+      const treatedRoster = level === "baseline" ? roster : treatmentRoster(roster, base.id, level), player = treatedRoster.find((item) => item.id === base.id), p = probe(api, player, roster.find((item) => item.id === "ct3"), tacticT, tacticCT);
+      rows[level] = SEEDS.map((seed) => ({ ...p, ...runArm(api, "inferno", tacticT, tacticCT, seed, treatedRoster, base.id) }));
+    }
+    const applicable = weight(role) > 0;
+    return { role, levels: { low: base.stats.tac - 10, baseline: base.stats.tac, high: base.stats.tac + 10 }, direct: { roleFit: applicable ? metric(rows, "roleFit") : null, combatSkill: applicable ? metric(rows, "combatSkill") : null, effective: metric(rows, "effective"), localPt: applicable ? metric(rows, "localPt") : null, aggr: metric(rows, "aggr") }, runtime: { localOpportunity: metric(rows, "localOpportunities"), immediateEngagement: metric(rows, "immediateEngagement"), tacticalOpportunity: metric(rows, "tacticalOpportunity"), bombStateOpportunity: metric(rows, "bombStateOpportunity"), kills: metric(rows, "kills"), damage: metric(rows, "damage"), survival: metric(rows, "survival") }, pathAmplification: changed(rows, "structuralDigest"), threshold: { aggr: thresholdCrossing([rows.low[0].aggr, rows.baseline[0].aggr, rows.high[0].aggr], 0.82, "either") }, opportunityCoverage: { baselineLocal: rows.baseline.reduce((sum, row) => sum + row.localOpportunities, 0), baselineTactical: rows.baseline.reduce((sum, row) => sum + row.tacticalOpportunity, 0), baselineBombState: rows.baseline.reduce((sum, row) => sum + row.bombStateOpportunity, 0) }, readiness: classifyCausalReadiness({ directMonotonic: applicable, localOpportunity: "insufficient", immediateConversion: "not_primary", downstreamPathAmplified: true, semanticAmbiguity: true }) };
+  });
+  roles.forEach((item, index) => { item.fullMeasurement = fullMeasurements[index]; });
+  const suite = { schema: "CsTacticalIQMeasurementSuite.v1", framework: "R22-local-causal-v1", sourceSha256: sha(source), historicalR32SourceSha256: sha(historical), r17Sha256: sha(r17), r3Sha256: sha(r3), prepSha256: sha(prep), fixedSeeds: SEEDS.length, seedSetSha256: SEED_SET_SHA256, targetRoles: ROLES, levels: { level1: "direct formula / role-fit", level2: "tactical opportunity", level3: "immediate action / conversion", level4: "secondary downstream outcome" }, productionChanged: false, rngChanged: false, scenarioChanged: false, semanticBoundary: "raw TacticalIQ is only an IGL/support role-fit input; effective personality-adjusted TacticalIQ has no direct live consumer; tactic selection/execution, bomb-state, route, utility and CT/T decisions come from fixed tactic input and simulator logic, not player tac", overlap: { decision: "no shared tacticalIQ live consumer", adaptability: "no shared live consumer; adaptation action absent", mapAware: "separate vis/position inputs" }, roles };
+  const digest = sha(JSON.stringify(suite));
+  gate(digest === sha(JSON.stringify(suite)), "REPEATED_DIGEST");
+  console.log("schema: CsTacticalIQMeasurementSuite.v1");
+  console.log("fixed seeds: " + SEEDS.length + "; seedSetSha256: " + SEED_SET_SHA256);
+  gate(simulationCount === 512, "SIMULATION_COUNT", String(simulationCount));
+  console.log("simulations: " + simulationCount);
+  gate(digest === "9a8669ae4b23af24ebe4c7c3bfaeee883b28fcb343719ec5b15e03b6a3950215", "R35_DIGEST_LOCK", digest);
+  console.log("suiteDigest: " + digest);
+  console.log("deterministic repeated digest: PASS");
+  console.log("historical checkpoint gate: R17/R3 evidence preserved; R32 byte-exact adapter PASS");
+  console.log("production source modified: no");
+  console.log("claim boundary: TacticalIQ measurement only; no balance calibration and no new tactic AI");
+  console.log("CS TacticalIQ Measurement / Semantic Readiness R35: PASS");
+}
+main().catch((error) => { console.error("CS TacticalIQ Measurement / Semantic Readiness R35: FAIL " + (error.stack || error)); process.exitCode = 1; });

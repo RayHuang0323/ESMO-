@@ -7300,3 +7300,10 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - read-chain：raw `adp` 僅 IGL／Lurker role-fit；effective `persStat(adp)` 沒有 live consumer。`FPS_W.adp` 雖有宣告，但不在 `_mechKeys`／`ovr()` read-chain；沒有 tactic switch、攻守轉換、route/reposition、retreat/re-engage、utility/bomb 或 target consumer。
 - R22 四層 suite：5 roles、16 fixed seeds、low/base/high、512 simulator executions（含 repeated run）；digest `0d58819fb3cd79f0518c8e7925ae12758913a58c82707ffb1227f34c15b0ffdb`，repeated deterministic PASS。
 - verdict：measurement Go；calibration No-Go／Deferred（Revise）。沒有 balance patch、RNG、scenario、history rebaseline 或新的 gameplay feature；若要完整應變行為，另開 verifier-first gameplay Sprint。
+
+## R35 CS TacticalIQ Measurement / Semantic Readiness（2026-08-14）
+
+- 新增 `tools/check_cs_tactical_iq_measurement_r35.mjs` 與 aggregate segment `cs_tactical_iq_measurement_r35`；memory-only transform，production source 未改。
+- raw `tac` 只在 IGL／Support role-fit 出現；effective tac 沒有 live consumer。tactic selection／site／route／utility／bomb／CT/T 行為是固定 tactic input 與 simulator 規則，不是 player tac 因果。
+- R22 suite：5 roles、16 fixed seeds、low/base/high、512 simulator executions；digest `9a8669ae4b23af24ebe4c7c3bfaeee883b28fcb343719ec5b15e03b6a3950215`，repeated deterministic PASS。
+- verdict：measurement Go；semantic readiness Revise；calibration No-Go／Deferred。後續若需真正戰術理解，另開單一 tactic execution / rotation / utility gameplay Sprint。
