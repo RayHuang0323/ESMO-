@@ -92,9 +92,13 @@ const RULE_SNAPSHOT = `
 async function main() {
   console.log("══ 同季多 Event：畫面驗證 ══\n");
   const server = await startDevServer({ port: VITE_PORT });
-  const chrome = await launchChrome({ url: server.url, port: CDP_PORT, headless: HEADLESS });
+//  ⚠ Q7a-3f.2：**旗標狀態寫進網址，不吃預設值**。
+//    asiaCircuit 預設已經翻成開啟（新賽季含亞洲巡迴賽三站）。本檔的情境是
+//    自己組出來的，巡迴賽對它只是雜訊——不明確關掉的話，測的就不是原本那件事。
+const APP = server.url + "?asiaCircuit=0";
+  const chrome = await launchChrome({ url: APP, port: CDP_PORT, headless: HEADLESS });
   try {
-    await chrome.navigate(server.url);
+    await chrome.navigate(APP);
     await chrome.evaluate(`localStorage.clear(); return true;`);
     await chrome.reload();
 

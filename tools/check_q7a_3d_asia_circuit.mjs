@@ -48,13 +48,20 @@ console.log("══ Q7a-3d：第一條可運作的亞洲巡迴賽 ══\n");
 // ── §1 旗標 ─────────────────────────────────────────────────────────────
 {
   console.log("── §1 旗標 ──");
+  //  ⚠ Q7a-3f.2：**這三條的產品規則翻面了**。
+  //    原本守的是「旗標預設關閉，所以『新賽季 56 場』的既有斷言仍然成立」——
+  //    在基線還沒重新定義之前那是對的。3f 把基線改成「**官方聯賽** 56 場」、
+  //    3f.1 把生涯成績的讀取路徑補齊之後，
+  //    「新賽季包含亞洲巡迴賽」正式成為預設產品規則。
+  //    現在守的是：**預設開啟**，而且 `?asiaCircuit=0` 仍是明確的逃生口。
   setFlag(null);
-  ck("1a) **預設關閉**（新賽季 56 場的既有斷言因此仍然成立）",
-    FEATURE_FLAGS.asiaCircuit === false && asiaCircuitEnabled() === false);
+  ck("1a) **預設開啟**（新賽季正式包含亞洲巡迴賽）",
+    FEATURE_FLAGS.asiaCircuit === true && asiaCircuitEnabled() === true);
   setFlag(true);
-  ck("1b) `?asiaCircuit=1` 打得開", asiaCircuitEnabled() === true);
+  ck("1b) `?asiaCircuit=1` 明確打開", asiaCircuitEnabled() === true);
   setFlag(false);
-  ck("1c) `?asiaCircuit=0` 關得掉", asiaCircuitEnabled() === false);
+  ck("1c) **`?asiaCircuit=0` 是逃生口**（明確關閉、可回退到舊制）",
+    asiaCircuitEnabled() === false);
 }
 
 // ── §2 產生器（純函式）──────────────────────────────────────────────────
@@ -150,23 +157,43 @@ let base = null, withC = null, circuitId = null;
 
 // ── §6 Store：旗標關著 ⇒ 現況不變 ───────────────────────────────────────
 {
-  console.log("\n── §6 旗標關著：現況逐場不變 ──");
+  console.log("\n── §6 預設開啟；逃生口仍然有效 ──");
+  //  ⚠ Q7a-3f.2：原本這一節驗「旗標關著 ⇒ 現況逐場不變」。預設翻成開啟之後，
+  //    那個「現況」已經是新制。改守兩件事：
+  //      ① **不帶參數（預設）就會建出新制**
+  //      ② **`?asiaCircuit=0` 仍然建得出完整的舊制新局**（回退路徑沒壞）
   setFlag(null);
   store().startNewGame("standard");
-  const ens = store().ensureCompetitionSeason();
-  ck("6a) **新賽季仍是 56 場**（Q3 §5c／§5s、Q5 §2b 因此不受影響）",
-    ens.ok && store().competition.fixtures.length === 56, `${store().competition.fixtures.length} 場`);
-  ck("6b) 仍然只有一個賽事、一條巡迴賽",
+  const def = store().ensureCompetitionSeason();
+  ck("6a) **預設新局就有三站**（56 ＋ 84 ＝ 140 場、4 個賽事）",
+    def.ok && store().competition.fixtures.length === 140 &&
+    Object.keys(store().competition.events).length === 4,
+    `${store().competition.fixtures.length} 場`);
+  ck("6a2) 預設新局的**官方聯賽仍然 56 場**", (() => {
+    const c = store().competition;
+    return S.fixturesOfCompetition(c, S.activeCompetitionOf(c).id).length === 56;
+  })());
+
+  setFlag(false);
+  store().startNewGame("standard");
+  const off = store().ensureCompetitionSeason();
+  ck("6b) **`?asiaCircuit=0` 建得出舊制新局**：56 場、一個賽事、一條巡迴賽",
+    off.ok && store().competition.fixtures.length === 56 &&
     Object.keys(store().competition.events).length === 1 &&
-    Object.keys(store().competition.circuits).length === 1);
-  ck("6c) 沒有任何積分政策 ⇒ 機制維持休眠",
+    Object.keys(store().competition.circuits).length === 1,
+    `${store().competition.fixtures.length} 場`);
+  ck("6c) 舊制新局沒有任何積分政策 ⇒ 巡迴積分對它維持休眠",
     Object.values(store().competition.circuits).every((c) => c.pointsPolicy == null));
+  ck("6d) 舊制新局**一樣有 careerEventId**（生涯主線與旗標無關）",
+    !!store().competition.careerEventId);
 }
 
 // ── §7 Store：舊存檔不得被插入 ──────────────────────────────────────────
 {
   console.log("\n── §7 舊存檔不得被插入新賽事 ──");
-  setFlag(null);
+  //  ⚠ Q7a-3f.2：舊存檔要用**明確關閉**建出來（模擬 3d 之前的存檔）。
+  //    不能靠「當時的預設值剛好是關的」——預設值已經翻面了。
+  setFlag(false);
   store().startNewGame("standard");
   store().ensureCompetitionSeason();
   store().save();

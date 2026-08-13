@@ -113,9 +113,13 @@ const GOTO = `
 
 console.log("══ Q7a-3f.1：生涯成績畫面 ══\n");
 const dev = await startDevServer({ port: VITE_PORT });
-const chrome = await launchChrome({ url: dev.url, port: CDP_PORT, headless: HEADLESS });
+//  ⚠ Q7a-3f.2：**旗標狀態寫進網址，不吃預設值**。
+//    asiaCircuit 預設已經翻成開啟（新賽季含亞洲巡迴賽三站）。本檔的情境是
+//    自己組出來的，巡迴賽對它只是雜訊——不明確關掉的話，測的就不是原本那件事。
+const APP = dev.url + "?asiaCircuit=0";
+const chrome = await launchChrome({ url: APP, port: CDP_PORT, headless: HEADLESS });
 try {
-  await chrome.navigate(dev.url);
+  await chrome.navigate(APP);
   await new Promise((r) => setTimeout(r, 3500));
 
   // ── ① 單 Event（legacy）────────────────────────────────────────────

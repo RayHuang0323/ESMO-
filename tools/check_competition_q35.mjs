@@ -32,6 +32,29 @@ globalThis.localStorage = {
 const { fixtureOutcomeInputFrom, isFixtureSession, fixtureIdOfSession } =
   await import("../src/platform/competition/fixtureResultBridge.js");
 const { useProfileStore } = await import("../src/platform/profileStore.js");
+const { activeCompetitionOf, fixturesOfCompetition } =
+  await import("../src/platform/competition/seasonState.js");
+
+// ── Q7a-3f.2：要「今天的**官方聯賽**場次」就得指名，不能拿當日第一場 ──────
+//  ⚠ 多賽事並存之後，`competitionView().today` 是**當日清單的第一場**，
+//    可能是巡迴賽的比賽。本檔 §3 驗的是**官方聯賽積分榜**，拿錯場次去打／棄權，
+//    聯賽榜上自然什麼都沒有（實測就是這樣紅的）。
+const leagueTodayFixture = (st) => {
+  const c = st().competition;
+  const ids = new Set(fixturesOfCompetition(c, activeCompetitionOf(c)?.id ?? null).map((f) => f.id));
+  return (st().competitionView().todayPending ?? []).find((f) => ids.has(f.id)) ?? null;
+};
+/** 推進到「今天有官方聯賽的比賽」為止；沿途別的賽事場次先棄權清掉。 */
+const advanceToLeagueFixture = (st, maxSteps = 60) => {
+  for (let i = 0; i < maxSteps; i++) {
+    const f = leagueTodayFixture(st);
+    if (f) return f;
+    const pending = st().competitionView().todayPending ?? [];
+    if (pending.length) { st().forfeitFixture(pending[0].id); continue; }
+    if (st().advanceDay(7).daysAdvanced === 0) break;
+  }
+  return null;
+};
 const { settleMatchThroughSession, outcomeFromBattleResult } =
   await import("../src/platform/progress/settleMatchBoundary.js");
 const { mobaResultToTransaction } =
@@ -197,12 +220,12 @@ const settle = (br, matchId) => settleMatchThroughSession({
   const myId = st().competition.playerTeamId;
 
   st().advanceDay(30);
-  const f1 = st().competitionView().today;
+  const f1 = advanceToLeagueFixture(st);
   driveToLaunch(f1.id);
   settle(mkBattleResult(), `moba:q35b:${f1.id}`);
 
   st().advanceDay(30);
-  const f2 = st().competitionView().today;
+  const f2 = advanceToLeagueFixture(st);
   st().forfeitFixture(f2.id);
   st().advanceDay(10);
 

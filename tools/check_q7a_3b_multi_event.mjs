@@ -24,6 +24,12 @@ globalThis.localStorage = {
   setItem: (k, v) => { if (k === KEY) LS = v; },
   removeItem: () => { LS = null; },
 };
+//  ── Q7a-3f.2：**明確指定旗標狀態，不吃全域預設值** ────────────────────────
+//  ⚠ 本檔驗的是「同季多賽事並存」這個**形狀**，用的是它自己合成的盃賽 Event。
+//    亞洲巡迴賽（3d）是另一個變數：它一開，這裡的「legacy 單一 Event」情境
+//    就變成 5 個 Event，好幾條斷言會因為**測試意圖被預設值改掉**而紅。
+//    所以這裡把它明確關掉——不是為了讓燈變綠，是為了讓這支測的還是原本那件事。
+globalThis.window = { location: { search: "?asiaCircuit=0" } };
 
 const {
   createSeasonState, standingsOf, eventStandingsOf, seasonStandings,

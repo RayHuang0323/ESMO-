@@ -34,6 +34,7 @@ const {
   ensurePlayoffs, isPlayoffDone, isRegularSeasonDone, playoffView,
   playoffFixturesOf, regularFixturesOf, seasonStandings, canSealSeason,
   activePlayoffOf,
+  canSealEvent,
 } = await import("../src/platform/competition/seasonState.js");
 const { computeStandings } = await import("../src/platform/competition/standings.js");
 const { createFixtureOutcome } = await import("../src/platform/contracts/fixtureOutcome.js");
@@ -162,8 +163,11 @@ let s1Final = null;
   ck("4a) 常規賽 56 場（前置）", regularCount === 56);
 
   const v = runSeason();
-  ck("4b) 賽季走得完並封存", !!v.final, v.final ? `我方第 ${v.final.playerRank} 名` : "");
-  s1Final = v.final;
+  ck("4b) 賽季走得完並封存", !!v.final,
+    v.careerFinal ? `我方第 ${v.careerFinal.playerRank} 名` : "");
+  //  ⚠ Q7a-3f.2：歷屆成績存的是**生涯主賽事**的最終名次（3f.1），
+  //    所以 §5b/§5c 的比對基準也要是它。
+  s1Final = v.careerFinal;
 
   const state = st().competition;
   ck("4c) **季後賽賽段被建出來了**", !!activePlayoffOf(state), activePlayoffOf(state)?.stage?.format ?? "");
@@ -176,7 +180,10 @@ let s1Final = null;
     seasonStandings(state).rows.slice(0, 4).map((r) => r.teamId).join(","));
 
   //  最終名次
-  const f = v.final;
+  //  ⚠ Q7a-3f.2：季後賽決定的是**官方聯賽這個 Event** 的最終名次。
+  //    `v.final` 是賽季封存物件（多 Event 時是 SeasonSeal，沒有 rows）——
+  //    本節每一條要驗的都是那份 FinalStandings ⇒ 走生涯 accessor。
+  const f = v.careerFinal;
   ck("4h) **最終名次標明來源是季後賽**", f.rankSource === "playoff");
   ck("4i) 冠軍 = 決賽勝方", f.championTeamId === playoffView(state).championTeamId && f.rows[0].teamId === f.championTeamId);
   ck("4j) 前四名順序 = 季後賽名次",
@@ -212,7 +219,13 @@ let s1Final = null;
   //  把常規賽全部收尾但不排季後賽 ⇒ 仍不可封存
   const doneRegular = { ...mid, fixtures: mid.fixtures.map((f) => ({ ...f, status: "forfeited" })) };
   const can = canSealSeason(doneRegular);
-  ck("5f) **常規賽打完但季後賽還沒排 ⇒ 不可封存**", !can.ok && /季後賽/.test(can.reason ?? ""), can.reason ?? "");
+  //  ⚠ Q7a-3f.2：原本比對的是**賽季層**的理由字串。多賽事並存之後，賽季層
+  //    只會回報「還有 N 個賽事沒有封存」——那是對的，只是它不再是這條要守的東西。
+  //    真正的不變式在**官方聯賽這個 Event** 上：季後賽沒排／沒打完就封不了。
+  const careerCan = canSealEvent(doneRegular, doneRegular.careerEventId);
+  ck("5f) **常規賽打完但季後賽還沒排 ⇒ 官方聯賽不可封存**（賽季自然也封不了）",
+    !can.ok && !careerCan.ok && /季後賽/.test(careerCan.reason ?? ""),
+    `賽季：${can.reason ?? ""}　／　官方聯賽：${careerCan.reason ?? ""}`);
   ck("5g) `isRegularSeasonDone` 認得常規賽結束", isRegularSeasonDone(doneRegular) === true);
   ck("5h) `isPlayoffDone` 對沒有季後賽的狀態回 false", isPlayoffDone(doneRegular) === false);
 }

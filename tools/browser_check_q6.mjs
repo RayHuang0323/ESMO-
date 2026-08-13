@@ -22,7 +22,10 @@ import { join } from "node:path";
 
 const VITE_PORT = 5311;
 const CDP_PORT = 9333;
-const BASE = `http://localhost:${VITE_PORT}/ESMO-/`;
+//  ⚠ Q7a-3f.2：**旗標狀態寫進網址，不吃預設值**。
+//    asiaCircuit 預設已經翻成開啟（新賽季含亞洲巡迴賽三站）。
+//    本檔驗的是**官方聯賽的季後賽**，巡迴賽對它只是雜訊。
+const BASE = `http://localhost:${VITE_PORT}/ESMO-/?asiaCircuit=0`;
 
 const CHROME_CANDIDATES = [
   "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",

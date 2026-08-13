@@ -121,8 +121,13 @@ const finishWholeSeason = (maxSteps = 200) => {
   ck("2b0) 整季跑得完（前置）", view.progress.remaining === 0,
     `完成 ${view.progress.completed}/${view.progress.total}`);
 
-  const final = st().competitionView().final;
-  ck("2b) **打完就自動封存**（不必玩家點任何按鈕）", !!final, final ? `第 ${final.playerRank} 名` : "");
+  //  ⚠ Q7a-3f.2：**賽季有沒有封存**與**生涯最終名次**是兩件事。
+  //    前者看 `view.final`（多 Event 時是 SeasonSeal），後者看 `view.careerFinal`
+  //    （官方聯賽那個 Event 的 FinalStandings）。本節底下驗的全是後者。
+  const seasonSealed = st().competitionView().final;
+  const final = st().competitionView().careerFinal;
+  ck("2b) **打完就自動封存**（不必玩家點任何按鈕）",
+    !!seasonSealed && !!final, final ? `第 ${final.playerRank} 名` : "");
   //  ⚠ 2026-08-12（Q6）：本條原本斷言「封存的列順序 == 常規賽推導順序」。
   //    Q6 之後**最終名次的前四名由季後賽決定**，那個順序本來就會不同 ⇒ 原斷言必然紅。
   //    保留這條真正要守的東西：**封存快照裡的常規賽資料必須與推導值逐列一致**
@@ -140,11 +145,15 @@ const finishWholeSeason = (maxSteps = 200) => {
   ck("2b5) 封存日 = 當下遊戲日", final?.sealedAtDay === st().meta.days);
 
   //  ── 凍結的意義：再動賽季狀態也不會改名次 ──
+  //  ⚠ Q7a-3f.2：§2c 驗的是「**賽季封存**不會被覆寫」，比對對象因此是
+  //    賽季封存物件（`seasonSealed`），不是生涯名次；§2c2/§2e 才是名次那一份。
   const before = JSON.stringify(final);
   const again = applySealSeason(st().competition, 999);
   ck("2c) **重複封存不覆寫**（回既有那一份）",
-    again.ok && again.alreadySealed === true && JSON.stringify(again.final) === before);
-  ck("2c2) 重複封存不會把封存日改掉", again.final?.sealedAtDay === final.sealedAtDay);
+    again.ok && again.alreadySealed === true &&
+    JSON.stringify(again.final) === JSON.stringify(seasonSealed));
+  ck("2c2) 重複封存不會把生涯名次的封存日改掉",
+    st().competitionView().careerFinal?.sealedAtDay === final.sealedAtDay);
 
   //  賽季已封存 ⇒ canSeal 回報 sealed
   const canAfter = canSealSeason(st().competition);
@@ -153,13 +162,15 @@ const finishWholeSeason = (maxSteps = 200) => {
   //  推進更多天也不會動到 final
   st().advanceDay(14);
   ck("2e) **封存後繼續推進天數，名次一個字都不變**",
-    JSON.stringify(st().competitionView().final) === before);
+    JSON.stringify(st().competitionView().careerFinal) === before);
 }
 
 // ── §3 名次獎金與冪等 ───────────────────────────────────────────────────
 {
   console.log("\n── §3 名次獎金 ──");
-  const final = st().competitionView().final;
+  //  ⚠ Q7a-3f.2：獎金結算的依據是**生涯主賽事的 FinalStandings**，
+  //    不是賽季封存物件（多 Event 時後者是 SeasonSeal，沒有 rows／playerRank）。
+  const final = st().competitionView().careerFinal;
   const award = st().competitionView().award;
   const expected = prizeForRank(final.playerRank);
 

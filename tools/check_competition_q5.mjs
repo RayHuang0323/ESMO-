@@ -111,8 +111,13 @@ const runs = [];
     prints.push(scheduleFingerprint(st().competition));
 
     const done = finishSeason();
-    ck(`2-${n}c) 第 ${n} 季打得完並封存`, !!done.final, done.final ? `第 ${done.final.playerRank} 名` : "");
-    sealedIds.push(done.final?.id);
+    //  ⚠ Q7a-3f.2：`done.final` 是**賽季**封存物件——單 Event 時是 FinalStandings，
+    //    多 Event 時是 `SeasonSeal.v1`（沒有 id、沒有 playerRank）。
+    //    這裡真正要守的是「**每一季的生涯主賽事最終名次各自獨立**」，
+    //    所以改讀生涯 accessor；賽季有沒有封存仍然看 `done.final`。
+    ck(`2-${n}c) 第 ${n} 季打得完並封存`, !!done.final,
+      done.careerFinal ? `第 ${done.careerFinal.playerRank} 名` : "");
+    sealedIds.push(done.careerFinal?.id);
 
     if (n < 3) {
       const r = st().rollToNextCompetitionSeason();
@@ -125,7 +130,10 @@ const runs = [];
   ck("2e2) 種子是由 `seedForSeason(seasonSeed, 季號)` 決定性派生的",
     seeds.every((s, i) => s === seedForSeason(st().meta.seasonSeed, i + 1)));
   ck("2f) 三季的賽程各不相同（不是同一張表重播）", new Set(prints).size === 3);
-  ck("2g) 三季的賽事識別碼各不相同", new Set(sealedIds).size === 3, sealedIds.join(" / "));
+  //  ⚠ 原本讀 `final.id`。多 Event 之後那是 SeasonSeal（沒有 id）⇒ 三個都是 undefined。
+  //    要守的不變式沒變：**三季的生涯最終名次是三份不同的封存快照**。
+  ck("2g) 三季的生涯最終名次識別碼各不相同",
+    new Set(sealedIds).size === 3 && sealedIds.every(Boolean), sealedIds.join(" / "));
 }
 
 // ── §2R 決定性：同一個存檔重跑一次，三季逐場相同 ────────────────────────

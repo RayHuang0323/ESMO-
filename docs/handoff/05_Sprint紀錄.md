@@ -9122,3 +9122,60 @@ Q7a safety 18／3a 29／3b 51／3c 69／3d 65／3f 43／**3f.1 42**；
 B2 20／B3 13；integrity 20；o7 48／o7.1 27；
 瀏覽器 gate **12**／21／26／7／8／20；
 `regress` exit 0、`regress2` 8/8、`build` `built in 14.19s`。
+
+---
+
+## Q7a-3f.2 asiaCircuit 正式預設開啟（2026-08-14，已 commit 未部署）
+
+**`src/featureFlags.js` 的 `asiaCircuit` 已改為 `true`。**
+新賽季正式包含亞洲巡迴賽三站；`?asiaCircuit=0` 是逃生口，不需改程式也不需重新部署。
+
+### 逐條記錄：原本守什麼 → 為何不再精確 → 現在守什麼
+
+| 斷言 | 原本守什麼 | 為何在多 Event 世界不再精確 | 現在守什麼 |
+|---|---|---|---|
+| **Q5 §2c/§2g** | 三季的 `final.id` 各不相同 | `state.final` 多 Event 時是 `SeasonSeal.v1`，**沒有 id** ⇒ 三個都 undefined | 三季的**生涯主賽事** FinalStandings id 各不相同，且都存在 |
+| **Q4 §2b** | `!!final` ＋ `final.playerRank` | 前者是賽季封存、後者是名次，多 Event 時是**兩個物件** | 賽季有封存（`view.final`）**且**生涯名次取得到（`view.careerFinal`） |
+| **Q4 §2b2–2b5、§2e、§3a–§3e** | 把 `view.final` 當 FinalStandings 用 | 同上 | 一律改讀 `view.careerFinal` |
+| **Q4 §2c** | 重複封存不覆寫，比對名次 JSON | 比對對象搞混了：這條驗的是**賽季封存**不被覆寫 | 與**賽季封存物件**比對；名次那份交給 §2c2／§2e |
+| **Q6 §4h–§4m** | 季後賽決定的最終名次（讀 `v.final`） | 季後賽決定的是**官方聯賽這個 Event** 的名次 | 改讀 `v.careerFinal`，斷言內容一字未減 |
+| **Q6 §5b/§5c** | 歷史第一筆 == `s1Final` | 3f.1 之後歷史存的是生涯成績 | `s1Final` 改成 `v.careerFinal` |
+| **Q6 §5f** | 賽季層理由字串含「季後賽」 | 多賽事時賽季層只會說「還有 N 個賽事沒有封存」——那是對的，只是不再是這條要守的東西 | **官方聯賽這個 Event** 封不了，且理由是季後賽（賽季自然也封不了） |
+| **Q3.5 §3b/§3c** | 三種賽果都進積分榜（拿 `today` 任一場） | `today` 是**當日清單第一場**，可能是巡迴賽的比賽 ⇒ 聯賽榜上什麼都沒有 | 明確 scope 到官方聯賽的場次（`advanceToLeagueFixture`） |
+| **3b 全檔** | 同季多賽事並存的**形狀**（用它自己合成的盃賽） | 亞洲巡迴賽是另一個變數，一開就變成 5 個 Event，legacy 情境全毀 | 檔頭明確 `?asiaCircuit=0`——不是為了讓燈變綠，是為了讓這支測的還是原本那件事 |
+| **3d §1a/§1b/§1c** | 旗標**預設關閉** | 基線（3f）與生涯成績相容層（3f.1）完成後，前提已翻面 | **預設開啟**；`?asiaCircuit=1` 明確打開；**`?asiaCircuit=0` 是逃生口** |
+| **3d §6** | 旗標關著 ⇒ 現況逐場不變 | 「現況」已經是新制 | ① 預設新局就是 140 場／4 賽事，**官方聯賽仍 56 場**　② `?asiaCircuit=0` 建得出完整舊制新局（＋ 舊制也有 careerEventId） |
+| **3d §7** | 用「當時預設剛好是關的」建舊存檔 | 預設值已翻面 | 用**明確關閉**建舊存檔，再打開旗標重載 |
+| **3f §1a** | 「本輪未啟用」 | 前置條件已全部完成 | 預設為 `true` |
+| **5 支 browser gate** | 用頁面預設值建情境 | 預設翻面後，各自的情境被巡迴賽污染 | **旗標狀態寫進網址**（`?asiaCircuit=0`），情境明確 |
+
+⇒ **沒有刪除或弱化任何一條斷言**；總檢查數反而增加
+（3d 65 → **67**，另新增 `browser_check_default_scheme` **15**）。
+
+### ⚠ 一個 production 讀取點（不是測試問題）
+
+`competitionView().award` 用 `state.final.id` 查獎金收據。獎金是按 **Event**
+結算的，收據的冪等鍵是**那個 Event 的 FinalStandings id**；多 Event 時
+`state.final` 是 SeasonSeal（沒有 id）⇒ **錢明明發了，畫面卻顯示「—」**。
+
+這是 3f.1 漏掉的同一族讀取點（`final.rows`／`playerRank`／`championTeamId`
+那一批有改，收據那一條沒有）。已改成用生涯 final 的 id 查。
+⚠ **金額與帳本完全沒動**——錯的只有「查不查得到收據」。
+單 Event 時兩者是同一個物件 ⇒ legacy 逐值不變。
+
+### 新增：預設路徑的畫面 gate
+
+其他 gate 為了守住各自情境全部改成 `?asiaCircuit=0`，結果**沒有任何 gate
+在走玩家真正會走的那條路**。新增 `browser_check_default_scheme` **15/15**：
+不帶參數開新局 ⇒ 140 場／4 賽事／聯賽 56 場、巡迴區塊出現、無 undefined；
+整季封存 ⇒ `state.final` 是 SeasonSeal 但生涯名次取得到（第 8 名）；
+換季後仍是新制；`?asiaCircuit=0` 建得出舊制；
+**舊制存檔在預設下重載逐 id 不變**；全程無例外。
+
+### 全套回歸（**預設 `true`**）
+
+Q1 93／Q2a 112／Q2b 92／Q3 91／Q3.5 65／Q4 68／Q5 69／Q6 57；
+Q7a safety 18／3a 29／3b 51／3c 69／**3d 67**／3f 43／3f.1 42；
+B2 20／B3 13；integrity 20；o7 48／o7.1 27；
+瀏覽器 gate **15**／12／21／26／7／8／20；
+`regress` exit 0、`regress2` 8/8、`build` `built in 11.77s`。

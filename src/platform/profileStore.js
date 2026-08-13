@@ -1092,7 +1092,16 @@ export const useProfileStore = create((set, get) => ({
       //    `final` 只在結束後出現。兩者不會同時是「現在的名次」，不算兩份真相。
       final: state.final ?? null,
       //  對應的名次獎金收據（發過才有；沒獎金的名次也會有一張 amount:0 的收據）
-      award: state.final ? (get().processedCompetitionAwards ?? {})[state.final.id] ?? null : null,
+      //  ⚠ Q7a-3f.2：收據的冪等鍵是**發獎當下那份 FinalStandings 的 id**，
+      //    而獎金是按 **Event** 結算的（`_sealSeasonIfFinished`）⇒ 要用
+      //    **生涯主賽事**的 final 去查。單 Event 時 `state.final` 與它是同一個
+      //    物件，行為逐值不變；多 Event 時 `state.final` 是 SeasonSeal（沒有 id），
+      //    拿它查一定查不到 ⇒ 錢明明發了，畫面卻顯示「—」。
+      //    這是 3f.1 漏掉的同一族讀取點（錢本身沒錯，只有收據查得到查不到）。
+      award: (() => {
+        const cf = tryCareerFinalStandingsOf(state);
+        return cf ? (get().processedCompetitionAwards ?? {})[cf.id] ?? null : null;
+      })(),
     };
   },
   // ── Milestone O1：名單分層與出賽陣容 ──────────────────────────────────

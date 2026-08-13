@@ -50,9 +50,11 @@ console.log("══ Q7a-3f：賽季基線與 legacy 政策 ══\n");
 // ── §1 旗標預設 ─────────────────────────────────────────────────────────
 {
   console.log("── §1 旗標 ──");
+  //  ⚠ Q7a-3f.2：3f 那一輪這裡守的是「本輪未啟用」。前置條件（新基線、
+  //    生涯成績相容層、效能量測、legacy 政策）全部完成之後，預設正式翻成開啟。
   setFlag(null);
-  ck("1a) `asiaCircuit` **預設仍為 false**（本輪未啟用）",
-    FEATURE_FLAGS.asiaCircuit === false && asiaCircuitEnabled() === false);
+  ck("1a) `asiaCircuit` **預設為 true**（新賽季正式包含亞洲巡迴賽）",
+    FEATURE_FLAGS.asiaCircuit === true && asiaCircuitEnabled() === true);
   setFlag(true);
   ck("1b) `?asiaCircuit=1` 打得開", asiaCircuitEnabled() === true);
   setFlag(false);
