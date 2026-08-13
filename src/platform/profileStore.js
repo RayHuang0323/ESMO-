@@ -78,6 +78,7 @@ import { settleCompetitionAwardInState } from "./economy/competitionAward.js";
 import {
   settleAllPendingPoints, grantAllReadyQualifications, pointsStatusOfEvent,
   circuitStandings, qualificationsOf, pointsLogOf, summarizeAllCircuits,
+  CIRCUIT_QUAL_SLOTS,
 } from "./competition/circuitPoints.js";
 //  ── Milestone Q7a-3d：第一條可運作的亞洲巡迴賽 ──────────────────────────
 //  ⚠ 只在**建立新賽季**時掛上，而且由旗標控制（預設關閉，理由見 featureFlags）。
@@ -1043,6 +1044,13 @@ export const useProfileStore = create((set, get) => ({
             [id, pointsStatusOfEvent(state, id, eventFinalOf)])),
           standings: Object.fromEntries(ids.map((id) => [id, circuitStandings(state, id)])),
           qualifications: qualificationsOf(state),
+          //  ── Q7a-3e（UI）：以下兩個都是**傳遞**，不是新的計算 ──────────
+          //  ⚠ `slots`：晉級名額。畫面要畫「晉級線」就得知道線在第幾名，
+          //    但那個數字是規則的一部分 ⇒ 從這裡給，不讓畫面寫死 4。
+          slots: CIRCUIT_QUAL_SLOTS,
+          //  ⚠ `playerEntries`：玩家自己的積分紀錄（**只是 filter，沒有加總**）。
+          //    畫面要顯示「這一站我拿幾分」，否則只看得到總分，看不出各站表現。
+          playerEntries: pointsLogOf(state).filter((e) => e.teamId === state.playerTeamId),
         };
       })(),
       next,

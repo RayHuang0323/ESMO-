@@ -66,6 +66,20 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
   const STATUS_TONE = { sealed: GC.gray, running: GC.gold, upcoming: GC.blueL };
   const MATCH_LABEL = { sf1: "準決賽 ①", sf2: "準決賽 ②", bronze: "季軍戰", final: "決賽" };
 
+  //  ── Q7a-3e：巡迴積分（唯讀）──────────────────────────────────────────
+  //  ⚠ 這一段**一分都不算**：名次、分數、晉級名單全部來自
+  //    `competitionView().circuitPoints`（底下是 3c 的純函式）。畫面只做兩件事：
+  //    挑出要顯示的資料、把它畫出來。
+  //  ⚠ **只顯示「有積分政策」的巡迴賽**。legacy 聯賽那條巡迴賽沒有政策
+  //    （也永遠不會有），把它畫成「未結算」只是噪音——舊存檔的畫面因此
+  //    與先前逐格相同，整個區塊根本不會出現。
+  const cp = view.circuitPoints ?? null;
+  const pointCircuits = Object.values(view.circuits ?? {}).filter((c) => c?.pointsPolicy);
+  //  歷屆巡迴摘要：換季時封存的結論（Store 切片，不是重算出來的）
+  const circuitHistory = useProfileStore.getState().circuitHistory ?? [];
+  const POINTS_TONE = { settled: GC.green, not_started: GC.gray, policy_required: GC.red };
+  const POINTS_LABEL = { settled: "已結算", not_started: "未結算", policy_required: "缺積分政策" };
+
   const rollSeason = () => {
     setErr(null);
     const r = useProfileStore.getState().rollToNextCompetitionSeason();
@@ -193,6 +207,182 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
         <div style={{ background: "rgba(239,68,68,0.12)", border: `1px solid ${GC.red}55`, borderRadius: 10, padding: "8px 11px", marginBottom: 10, fontSize: 11.5, color: GC.redL }}>
           {err}
         </div>
+      )}
+
+      {/*  ── 巡迴積分（Q7a-3e）────────────────────────────────────────────
+           三站分開打、積分跨站累積、前四名拿年度總決賽資格——這些先前只存在
+           資料裡，玩家完全看不到。這個區塊把它變成看得見的東西。
+           ⚠ 全部唯讀：一個數字都不是這裡算的。 */}
+      {cp && pointCircuits.map((circuit) => {
+        const table = cp.standings?.[circuit.id] ?? { rows: [] };
+        const rowsC = table.rows ?? [];
+        const meRow = rowsC.find((r) => r.teamId === myId) ?? null;
+        const qual = (cp.qualifications ?? []).find((q) => q.circuitId === circuit.id) ?? null;
+        const slots = cp.slots ?? 0;
+        const stops = eventViews.filter((ev) => ev.circuitId === circuit.id);
+        const settledCount = stops.filter((ev) => cp.eventStatus?.[ev.id]?.status === "settled").length;
+        //  晉級狀態：已核發就是定局；還沒核發就只能說「暫定」——
+        //  ⚠ 不可以把暫定講成已晉級，那是最容易讓玩家記恨的一種錯。
+        const inZone = meRow && slots > 0 && meRow.rank <= slots;
+        const qualified = qual ? (qual.qualified ?? []).some((x) => x.teamId === myId) : null;
+        const cutRow = slots > 0 ? rowsC[slots - 1] ?? null : null;
+        const gap = meRow && cutRow && meRow.rank > slots ? cutRow.points - meRow.points : null;
+
+        return (
+          <Panel
+            key={circuit.id}
+            title="巡迴積分 CIRCUIT POINTS"
+            right={<span style={{ fontSize: 9, fontWeight: 800, color: GC.gray }}>{settledCount}/{stops.length} 站結算</span>}
+          >
+            <div style={{ fontSize: 11.5, fontWeight: 900, color: GC.purp, marginBottom: 8 }}>{circuit.name}</div>
+
+            {/*  我的名次：這一頁最重要的一個數字，給它應有的體積 */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", marginBottom: 9,
+              background: `linear-gradient(135deg, ${inZone ? "rgba(251,191,36,0.14)" : "rgba(255,255,255,0.04)"}, rgba(255,255,255,0.02))`,
+              border: `1px solid ${inZone ? GC.gold + "55" : GC.line}`, borderRadius: 12,
+            }}>
+              <div style={{ textAlign: "center", minWidth: 62 }}>
+                <div style={{ fontSize: 34, fontWeight: 900, lineHeight: 1, fontFamily: MONO, color: inZone ? GC.gold : "#e5e7eb" }}>
+                  {meRow ? meRow.rank : "—"}
+                </div>
+                <div style={{ fontSize: 8.5, color: GC.gray, marginTop: 3 }}>／ {rowsC.length || "—"} 隊</div>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 17, fontWeight: 900, color: "#e5e7eb", fontFamily: MONO }}>
+                  {meRow ? meRow.points : 0}<span style={{ fontSize: 10, color: GC.gray, fontWeight: 700 }}> 分</span>
+                </div>
+                <div style={{ fontSize: 9.5, color: GC.gray, marginTop: 2 }}>
+                  {meRow ? `${meRow.events} 站出賽　冠軍 ${meRow.championships}　前三 ${meRow.podiums}` : "尚未取得積分"}
+                </div>
+                <div style={{ marginTop: 6 }}>
+                  {qual
+                    ? <span style={chip(qualified ? GC.gold : GC.gray)}>{qualified ? "✓ 已取得年度總決賽資格" : "未取得資格"}</span>
+                    : <span style={chip(inZone ? GC.gold : GC.blueL)}>
+                        {inZone ? `暫居晉級區（前 ${slots}）` : gap != null ? `距晉級線 ${gap} 分` : "尚未進入晉級區"}
+                      </span>}
+                </div>
+              </div>
+            </div>
+
+            {/*  三站狀態：一站一張卡，橫向捲動 ⇒ 手機也看得完 */}
+            <div style={{ display: "flex", gap: 7, overflowX: "auto", padding: "1px 1px 5px", WebkitOverflowScrolling: "touch", marginBottom: 4 }}>
+              {stops.map((ev) => {
+                const ps = cp.eventStatus?.[ev.id] ?? { status: "not_started" };
+                const mine = (cp.playerEntries ?? []).find((e) => e.eventId === ev.id) ?? null;
+                const tone = POINTS_TONE[ps.status] ?? GC.gray;
+                return (
+                  <div key={ev.id} style={{
+                    position: "relative", flex: "0 0 auto", width: 132, padding: "8px 10px 9px",
+                    background: "rgba(255,255,255,0.04)", border: `1px solid ${GC.line}`, borderRadius: 11, overflow: "hidden",
+                  }}>
+                    <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: tone, opacity: 0.8 }} />
+                    <div style={{ fontSize: 11, fontWeight: 900, color: "#e5e7eb", lineHeight: 1.3, minHeight: 29 }}>{ev.name}</div>
+                    <div style={{ marginTop: 5, display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={chip(tone)}>{POINTS_LABEL[ps.status] ?? ps.status}</span>
+                      {mine?.tierMultiplier > 1 && <span style={chip(GC.purp)}>×{mine.tierMultiplier}</span>}
+                    </div>
+                    <div style={{ marginTop: 6, fontSize: 13, fontWeight: 900, fontFamily: MONO, color: mine ? GC.green : GC.gray }}>
+                      {mine ? `+${mine.points}` : "—"}
+                      {mine && <span style={{ fontSize: 8.5, color: GC.gray, fontWeight: 700 }}>　第 {mine.rank} 名</span>}
+                    </div>
+                    {/*  ⚠ 缺政策要**寫出原因**。只寫「未結算」會讓玩家（和我自己）
+                         以為只是還沒打完，而不是這一站根本給不了分。 */}
+                    {ps.status === "policy_required" && (
+                      <div style={{ marginTop: 4, fontSize: 8.5, color: GC.redL, lineHeight: 1.4 }}>{ps.reason}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/*  巡迴榜：前 N 名畫成晉級區，第 N 名之後拉一條線 */}
+            {rowsC.map((r, i) => {
+              const isMe = r.teamId === myId;
+              const inCut = slots > 0 && r.rank <= slots;
+              return (
+                <div key={r.teamId} style={{
+                  display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, padding: "4px 6px",
+                  borderTop: i === 0 ? "none" : `1px solid ${GC.line}`,
+                  borderBottom: slots > 0 && r.rank === slots ? `1px dashed ${GC.gold}77` : undefined,
+                  background: isMe ? "rgba(167,139,250,0.10)" : undefined,
+                  borderRadius: isMe ? 6 : undefined,
+                }}>
+                  <span style={{ width: 18, textAlign: "right", fontFamily: MONO, fontWeight: 900, color: inCut ? GC.gold : GC.gray }}>{r.rank}</span>
+                  <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: isMe ? 900 : 600, color: isMe ? "#fff" : "rgba(255,255,255,0.82)" }}>
+                    {r.name ?? nameOf(r.teamId)}{r.championships > 0 ? ` 🏆${r.championships}` : ""}
+                  </span>
+                  <span style={{ fontFamily: MONO, fontWeight: 900, color: isMe ? GC.purp : "rgba(255,255,255,0.7)" }}>{r.points}</span>
+                </div>
+              );
+            })}
+            {rowsC.length === 0 && (
+              <div style={{ fontSize: 11, color: GC.gray, padding: "6px 0" }}>
+                還沒有任何一站結算，巡迴榜要等賽事封存後才會出現。
+              </div>
+            )}
+
+            {/*  已核發的資格名單——正式資料，不是預測 */}
+            {qual && (
+              <div style={{ marginTop: 9, paddingTop: 8, borderTop: `1px solid ${GC.line}` }}>
+                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: GC.gold, fontWeight: 900, marginBottom: 5 }}>
+                  年度總決賽晉級名單
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                  {(qual.qualified ?? []).map((q) => (
+                    <span key={q.teamId} style={{
+                      fontSize: 10.5, fontWeight: 800, padding: "3px 8px", borderRadius: 7,
+                      background: q.teamId === myId ? "rgba(251,191,36,0.18)" : "rgba(255,255,255,0.05)",
+                      border: `1px solid ${q.teamId === myId ? GC.gold + "88" : GC.line}`,
+                      color: q.teamId === myId ? GC.gold : "rgba(255,255,255,0.8)",
+                    }}>
+                      {q.seed}. {q.name ?? nameOf(q.teamId)}
+                      <span style={{ fontFamily: MONO, color: GC.gray, fontWeight: 700 }}> {q.points}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div style={{ fontSize: 9, color: GC.gray, marginTop: 7, lineHeight: 1.5 }}>
+              每一站封存後依最終名次給分，跨站累積；全部結算完才核發晉級資格。
+            </div>
+          </Panel>
+        );
+      })}
+
+      {/*  ── 歷屆巡迴（Q7a-3e）──────────────────────────────────────────
+           換季會把當季積分歸零，但摘要在換季前就封存進 `circuitHistory`。
+           這裡只把結論顯示出來，不重算任何名次。 */}
+      {circuitHistory.length > 0 && (
+        <Panel title="歷屆巡迴 CIRCUIT HISTORY" right={<span style={{ fontSize: 9, color: GC.gray }}>{circuitHistory.length} 季</span>}>
+          {circuitHistory.map((h) => {
+            const mineQual = (h.qualification?.qualified ?? []).some((x) => x.teamId === h.playerTeamId);
+            return (
+              <div key={`${h.id}:${h.season}`} style={{ padding: "6px 0", borderTop: `1px solid ${GC.line}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5 }}>
+                  <span style={{ color: GC.gray, fontFamily: MONO }}>S{h.season}</span>
+                  <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "rgba(255,255,255,0.8)" }}>
+                    🏆 {h.standings?.[0]?.name ?? "—"}
+                  </span>
+                  <span style={{ fontWeight: 900, fontFamily: MONO, color: h.playerRank <= (h.qualification?.slots ?? 4) ? GC.gold : GC.gray }}>
+                    我 第 {h.playerRank} 名 · {h.playerPoints} 分
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 4, flexWrap: "wrap" }}>
+                  {mineQual && <span style={chip(GC.gold)}>當季晉級</span>}
+                  {(h.events ?? []).map((e) => {
+                    const mine = (e.rows ?? []).find((r) => r.teamId === h.playerTeamId) ?? null;
+                    return (
+                      <span key={e.eventId} style={{ fontSize: 9, color: GC.gray, fontFamily: MONO }}>
+                        {e.name}<b style={{ color: "rgba(255,255,255,0.7)" }}> {mine ? `${mine.rank}名/${mine.points}分` : "—"}</b>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </Panel>
       )}
 
       {/*  ── 賽季結束：最終名次 ＋ 名次獎金（Milestone Q4）──────────────
