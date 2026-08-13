@@ -114,7 +114,10 @@ try {
     const p = JSON.parse(localStorage.getItem('esmo.profile.v1') || '{}');
     const c = p.competition || {};
     const f = c.final || null;
-    const po = c.playoff || null;
+    //  Q7a-3b：v2 之後季後賽住在 competitions 條目裡，頂層沒有鏡像。
+    //  正式站是 minified bundle，沒有模組可以 import，所以這裡直接讀持久化
+    //  形狀（v2 優先、v1 回退）——這是 prod 的限制，不是另開一套讀法。
+    const po = (Object.values(c.competitions || {})[0]?.playoff) || c.playoff || null;
     const pf = (c.fixtures||[]).filter(x => x.stageId === po?.stage?.id);
     return {
       ui: document.body.innerText.replace(/\\n/g,'|').slice(0, 460),

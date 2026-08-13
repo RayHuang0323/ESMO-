@@ -44,7 +44,7 @@ const {
 const {
   createSeasonState, advanceSeasonDays, applyLaunch, applyCompleted, applyForfeit,
   sweepOverdue, fixtureById, nextPlayerFixture, pendingPlayerFixtureOn,
-  isPlayerFixture, simulateAiFixturesOn, seasonStandings,
+  isPlayerFixture, simulateAiFixturesOn, seasonStandings, participantsOf,
 } = await import("../src/platform/competition/seasonState.js");
 const {
   issueFor, seedForFixture, openRoomForFixture, openSessionForFixture,
@@ -131,7 +131,7 @@ const ROSTER = ["上路", "打野", "中路", "下路", "輔助"].map((role, i) 
   })());
 
   console.log("── §1 Standings 計入棄權 ──");
-  const st = computeStandings({ outcomes: [ff.outcome], participants: S0.stage.participants });
+  const st = computeStandings({ outcomes: [ff.outcome], participants: participantsOf(S0) });
   const me = standingOf(st, TEAM.id);
   const opp = standingOf(st, ff.outcome.winner);
   ck("1p) **棄權方記一敗**", me.losses === 1 && me.wins === 0 && me.played === 1);
@@ -158,7 +158,7 @@ const ROSTER = ["上路", "打野", "中路", "下路", "輔助"].map((role, i) 
   const okEntry = { ...entry };
   const issue = (over = {}) => issueFor({
     fixture: MY_FIXTURE, entryRequest: okEntry, playerTeamId: TEAM.id,
-    players: [], participants: S0.stage.participants, now: 1000, ...over,
+    players: [], participants: participantsOf(S0), now: 1000, ...over,
   });
 
   const r = issue();
@@ -177,7 +177,7 @@ const ROSTER = ["上路", "打野", "中路", "下路", "輔助"].map((role, i) 
   const realEntry = store().matchEntry("moba").request;
   const good = issueFor({
     fixture: realFixture, entryRequest: realEntry, playerTeamId: realTeamId,
-    players: store().players, participants: realSeason.stage.participants, now: 1000,
+    players: store().players, participants: participantsOf(realSeason), now: 1000,
   });
   ck("2b) 合格申請單可簽發指派單", good.ok, good.reason ?? "");
   ck("2c) 來源是賽程（kind = fixture）",
@@ -196,25 +196,25 @@ const ROSTER = ["上路", "打野", "中路", "下路", "輔助"].map((role, i) 
   ck("2i) 種子決定性：同一場重簽逐值相同",
     seedForFixture(realFixture) === seedForFixture(realFixture) &&
     issueFor({ fixture: realFixture, entryRequest: realEntry, playerTeamId: realTeamId,
-      players: store().players, participants: realSeason.stage.participants, now: 9999,
+      players: store().players, participants: participantsOf(realSeason), now: 9999,
     }).assignment.assignmentId === good.assignment.assignmentId);
 
   console.log("── §2 拒絕條件 ──");
   const notMine = realSeason.fixtures.find((f) => !isPlayerFixture(realSeason, f));
   ck("2j) 拒絕「這場沒有你的隊伍」", !issueFor({
     fixture: notMine, entryRequest: realEntry, playerTeamId: realTeamId,
-    players: store().players, participants: realSeason.stage.participants,
+    players: store().players, participants: participantsOf(realSeason),
   }).ok);
   for (const s of ["launched", "completed", "forfeited"]) {
     const f = { ...realFixture, status: s };
     ck(`2k) 拒絕已是「${s}」的場次（不得重發入場券）`, !issueFor({
       fixture: f, entryRequest: realEntry, playerTeamId: realTeamId,
-      players: store().players, participants: realSeason.stage.participants,
+      players: store().players, participants: participantsOf(realSeason),
     }).ok);
   }
   ck("2l) 拒絕模式不符的申請單", !issueFor({
     fixture: realFixture, entryRequest: { ...realEntry, mode: "cs" }, playerTeamId: realTeamId,
-    players: store().players, participants: realSeason.stage.participants,
+    players: store().players, participants: participantsOf(realSeason),
   }).ok);
 
   console.log("── §2 開房與場次沿用既有契約 ──");

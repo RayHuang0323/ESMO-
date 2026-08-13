@@ -13,6 +13,7 @@
 //
 //  執行：`node tools/browser_check_q6.mjs`（會自己起 vite、自己開 Chrome、自己收）。
 // ============================================================================
+import { RESOLVE_APP_MODULES } from "./browser/cdp.mjs";
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:net";
 import { mkdtempSync, rmSync, existsSync } from "node:fs";
@@ -131,7 +132,15 @@ try {
   await sleep(6000);
 
   // ── ③ 拿到 store（dev server 供應原始模組 ⇒ 同一個單例）────────────
-  await cdp.eval(`const m = await import('/ESMO-/src/platform/profileStore.js'); window.__S = m.useProfileStore; return 1;`);
+  //  ⚠ Q7a-3b：改用既有的 `RESOLVE_APP_MODULES` 入口取得**頁面實際使用的**
+  //    模組，不另開一套 import 路徑；再從同一個 base 取 seasonState 的存取器
+  //    （v2 之後 stage / playoff 住在 `competitions{}` 裡，頂層沒有鏡像）。
+  await cdp.eval(`
+    ${RESOLVE_APP_MODULES}
+    window.__S = profile.useProfileStore;
+    window.__SS = await import(B + "/src/platform/competition/seasonState.js");
+    return 1;
+  `);
   const boot = await cdp.eval(`const s = __S.getState(); return { team: s.team?.name, keys: Object.keys(localStorage).length };`);
   ck("0a) 獨立 Chrome ＋ 獨立 profile 起得來", !!boot?.team, `${boot.team}／localStorage ${boot.keys} 筆`);
 
@@ -174,8 +183,8 @@ try {
       playerRank: v.final?.playerRank, playerRegularRank: v.final?.playerRegularRank,
       top4: (v.final?.rows ?? []).slice(0,4).map(x => x.name),
       regularKept: (v.final?.rows ?? []).every(x => Number.isInteger(x.regularRank)),
-      regularFixtures: c.fixtures.filter(f => f.stageId === c.stage.id).length,
-      playoffFixtures: c.fixtures.filter(f => f.stageId === c.playoff?.stage?.id).length,
+      regularFixtures: c.fixtures.filter(f => f.stageId === __SS.activeStageOf(c).id).length,
+      playoffFixtures: c.fixtures.filter(f => f.stageId === __SS.activePlayoffOf(c)?.stage?.id).length,
       awardRank: v.award?.rank, awardAmount: v.award?.amount,
     };
   `);

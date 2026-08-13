@@ -60,7 +60,7 @@ import { ensureTeamIdentity } from "./identity/teamIdentity.js";
 import {
   createSeasonState, advanceSeasonDays, applyLaunch, applyCompleted, applyForfeit,
   fixtureById, nextPlayerFixture, pendingPlayerFixtureOn, pendingPlayerFixturesOn, seasonStandings,
-  upgradeSeasonIdentity,
+  upgradeSeasonShape, activeCompetitionOf, activeStageOf, activePlayoffOf,
   seasonProgress, participantsOf, absoluteDayOf, isFixtureLaunched,
   canSealSeason, applySealSeason,
   canRollSeason, rollToNextSeason, seasonDayOf,
@@ -358,7 +358,7 @@ const load = () => {
       //    突然多出一整季賽程。改由 `ensureCompetitionSeason()` 在真的要用到時建立。
       //  Q7a-3a：載入時補上 Circuit/Event 身分（`idScheme`）。
       //  ⚠ 只補欄位，**一個既有 id 都不改**；已升級過就原樣回傳同一個參考。
-      competition: upgradeSeasonIdentity(saved.competition ?? null),
+      competition: upgradeSeasonShape(saved.competition ?? null),
       recruitment: saved.recruitment && typeof saved.recruitment === "object"
         && typeof saved.recruitment.signed === "object"
         ? { signed: saved.recruitment.signed }
@@ -789,8 +789,8 @@ export const useProfileStore = create((set, get) => ({
       state = po.state;
       set({ competition: state });
       get().save();
-      if (po.added > 0 && isRegularSeasonDone(state) && state.playoff) {
-        const q = state.playoff.qualification.qualified;
+      if (po.added > 0 && isRegularSeasonDone(state) && activePlayoffOf(state)) {
+        const q = activePlayoffOf(state).qualification.qualified;
         get().pushInbox({
           type: "match", from: "聯賽官方",
           subject: `第 ${state.season} 賽季 季後賽 對戰表公布`,
@@ -898,7 +898,12 @@ export const useProfileStore = create((set, get) => ({
     return {
       hasSeason: true,
       season: state.season,
-      competition: state.competition,
+      competition: activeCompetitionOf(state),
+      //  Q7a-3b：多賽事並存之後，畫面要拿得到整份集合
+      competitions: state.competitions ?? {},
+      events: state.events ?? {},
+      circuits: state.circuits ?? {},
+      activeEventId: state.activeEventId ?? null,
       standings: seasonStandings(state),
       next,
       //  ⚠ 賽程日是「賽季第 N 天」，畫面要顯示的是遊戲日 ⇒ 這裡換算好再給。

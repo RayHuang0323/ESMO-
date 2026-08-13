@@ -40,7 +40,82 @@ import {
   playoffOrder, playoffBracket, PLAYOFF_STAGE_KEY, PLAYOFF_MATCHES,
 } from "./playoffs.js";
 
-export const SEASON_STATE_VERSION = "SeasonState.v1";
+export const SEASON_STATE_VERSION = "SeasonState.v2";
+export const SEASON_STATE_VERSION_V1 = "SeasonState.v1";
+
+// ── Q7a-3b：同季多賽事並存的存取層 ─────────────────────────────────────────
+//
+//  v2 把「賽制」從單數的 `competition` / `stage` / `playoff` 改成
+//  `competitions: { [competitionId]: { competition, stage, playoff } }`。
+//
+//  ⚠ **`competitions{}` 是唯一真相**。頂層刻意**不留** stage / playoff 鏡像——
+//    留鏡像就是兩個地方存同一份東西，遲早漂移。要拿就從這裡拿。
+//  ⚠ `fixtures` / `outcomes` **維持頂層單一陣列，不拆進 competitions**：
+//    ① `fixturesOn(day)` 必須跨賽事掃（同日多場的前提）
+//    ② `fixture.stageId` 已經可以回推 competition → event → circuit
+//    ③ 拆了就會每個 competition 一份副本 ⇒ 第二份真相
+
+/**
+ * Event 的獎金政策。**可以是 null**——不是每個 Event 都有獎金（產品規則），
+ * 而且沒有獎金的 Event **不得被迫產生一筆 0 元的假獎金**。
+ *
+ * ⚠ 這裡只存**抽象政策**，不存金額、不算錢、**也不指名任何獎金表**。
+ *   把表名寫在這裡會讓賽季層知道經濟層的東西——Q4 §4c／Q5 §7b 的守衛正是
+ *   為了擋這件事，而且它抓到過（本輪第一版寫了表名，守衛立刻紅）。
+ *   `table: "default"` 由經濟層自己對應到實際獎金表。
+ * ⚠ legacy 的 MOBA 聯賽用 default 政策 ⇒ 舊存檔的發放時點與金額都不變。
+ */
+export const LEGACY_PRIZE_POLICY = Object.freeze({ kind: "rank_table", table: "default" });
+
+/** 這個賽季裡的所有賽制條目（{competition, stage, playoff}）。 */
+export const competitionEntries = (state) => Object.values(state?.competitions ?? {});
+
+/** 用 id 取賽制條目。 */
+export const competitionEntry = (state, competitionId) =>
+  state?.competitions?.[competitionId] ?? null;
+
+/**
+ * 目前**聚焦**的賽制條目。
+ *
+ * ⚠ `activeEventId` 只決定「畫面看哪一個」，**不參與任何規則判定**。
+ *   規則一律走完整集合，否則「玩家在看哪個賽事」會影響結算，那是災難。
+ */
+export function activeEntryOf(state) {
+  const entries = competitionEntries(state);
+  if (entries.length === 0) return null;
+  const ev = state?.events?.[state?.activeEventId] ?? null;
+  const ranked = ev?.rankingCompetitionId ? competitionEntry(state, ev.rankingCompetitionId) : null;
+  return ranked ?? entries[0];
+}
+export const activeCompetitionOf = (state) => activeEntryOf(state)?.competition ?? null;
+export const activeStageOf = (state) => activeEntryOf(state)?.stage ?? null;
+export const activePlayoffOf = (state) => activeEntryOf(state)?.playoff ?? null;
+
+/** 把某個賽制條目換掉，回傳新的 state（不改原物件）。 */
+function withEntry(state, competitionId, next) {
+  return { ...state, competitions: { ...state.competitions, [competitionId]: next } };
+}
+
+// ── 反向查詢：全部用推導，**不存反向索引**（存了就會漂移）─────────────────
+export const stageIdsOfCompetition = (state, cid) => {
+  const e = competitionEntry(state, cid);
+  return [e?.stage?.id, e?.playoff?.stage?.id].filter(Boolean);
+};
+export const competitionIdOfFixture = (state, fixture) =>
+  competitionEntries(state).find((e) =>
+    e.stage?.id === fixture?.stageId || e.playoff?.stage?.id === fixture?.stageId)?.competition?.id ?? null;
+export const fixturesOfCompetition = (state, cid) => {
+  const ids = new Set(stageIdsOfCompetition(state, cid));
+  return (state?.fixtures ?? []).filter((f) => ids.has(f.stageId));
+};
+export const outcomesOfCompetition = (state, cid) => {
+  const ids = new Set(fixturesOfCompetition(state, cid).map((f) => f.id));
+  return (state?.outcomes ?? []).filter((o) => ids.has(o.fixtureId));
+};
+export const competitionsOfEvent = (state, eventId) =>
+  competitionEntries(state).filter((e) => e.competition?.eventId === eventId);
+export const eventsOfCircuit = (state, circuitId) =>
+  Object.values(state?.events ?? {}).filter((e) => e.circuitId === circuitId);
 export { SEASON_DAYS };
 
 /**
@@ -71,12 +146,20 @@ export function createSeasonState({ playerTeam, season = 1, seasonSeed, gameMode
       //  玩家連看都沒看到就先輸幾場。實測在瀏覽器抓到的。
       startDay: Math.max(1, Math.floor(Number(startDay) || 1)),
       playerTeamId: playerTeam.id,
-      competition: up.competition,
-      //  ⚠ 3a 只帶身分容器，還沒有多賽事並存（那是 3b）。
-      //    這裡是 map 而不是單數，是為了讓 3b 加第二個 Event 時不必改形狀。
+      //  Q7a-3b：賽制放進 map，頂層不再有單數的 competition / stage / playoff
+      competitions: { [up.competition.id]: { competition: up.competition, stage: built.stage, playoff: null } },
       circuits: up.circuit ? { [up.circuit.id]: up.circuit } : {},
-      events: up.event ? { [up.event.id]: up.event } : {},
-      stage: built.stage,
+      events: up.event
+        ? { [up.event.id]: {
+            ...up.event,
+            competitionIds: [up.competition.id],
+            //  Event 只有一個 Competition ⇒ 可以自動指定（產品規則）
+            rankingCompetitionId: up.competition.id,
+            //  legacy 的 MOBA 聯賽沿用既有名次獎金；其他 Event 預設沒有獎金
+            prizePolicy: LEGACY_PRIZE_POLICY,
+          } }
+        : {},
+      activeEventId: up.event?.id ?? null,
       fixtures: built.fixtures,
       //  賽果一經寫入即不可變（D11）——本檔只 append，永遠不改既有元素
       outcomes: [],
@@ -105,8 +188,63 @@ export function upgradeSeasonIdentity(state) {
   };
 }
 
+/**
+ * v1 → v2 形狀升級（Q7a-3b）。
+ *
+ * v1 的單數 `competition` / `stage` / `playoff` 包成 `competitions{}` 的一筆。
+ *
+ * ⚠ **`fixtures` / `outcomes` 用同一個參考**，不複製、不重建——它們是事實層，
+ *   而且 Q1–Q6 有 25 處直接讀它們。
+ * ⚠ **`state.final` 原樣保留不動**（Q6 是逐字比對）。legacy Event 的 `final`
+ *   留 null，由 `eventFinalOf()` 在 legacy 情境回傳 `state.final` ⇒ 不產生
+ *   兩份封存快照。
+ * ⚠ **冪等**：已是 v2 就回傳同一個物件參考。
+ */
+export function upgradeSeasonShape(state) {
+  if (!state?.schema) return state;
+  if (state.competitions) return state;            // 已經是 v2
+  const withId = upgradeSeasonIdentity(state);     // 先補 3a 的身分（冪等）
+  const comp = withId.competition;
+  if (!comp) return state;
+
+  const eventId = comp.eventId ?? null;
+  const events = { ...(withId.events ?? {}) };
+  if (eventId && events[eventId]) {
+    events[eventId] = {
+      ...events[eventId],
+      competitionIds: [comp.id],
+      rankingCompetitionId: comp.id,               // 只有一個 ⇒ 可自動指定
+      prizePolicy: LEGACY_PRIZE_POLICY,            // 舊聯賽沿用既有名次獎金
+      final: events[eventId].final ?? null,        // 見上方說明：不複製 state.final
+    };
+  }
+
+  const next = {
+    ...withId,
+    schema: SEASON_STATE_VERSION,
+    competitions: { [comp.id]: { competition: comp, stage: withId.stage, playoff: withId.playoff ?? null } },
+    events,
+    activeEventId: withId.activeEventId ?? eventId ?? null,
+  };
+  //  頂層的單數欄位到此退場——`competitions{}` 是唯一真相，不留鏡像
+  delete next.competition; delete next.stage; delete next.playoff;
+  return next;
+}
+
+/**
+ * 取某個 Event 的封存名次。
+ * legacy（只有一個 Event 且沿用舊語意）回傳 `state.final`，避免同一份快照存兩次。
+ */
+export function eventFinalOf(state, eventId) {
+  const ev = state?.events?.[eventId] ?? null;
+  if (!ev) return null;
+  if (ev.final) return ev.final;
+  const onlyOne = Object.keys(state?.events ?? {}).length === 1;
+  return onlyOne ? (state?.final ?? null) : null;
+}
+
 /** 參賽者（隊名查詢用）。 */
-export const participantsOf = (state) => state?.stage?.participants ?? [];
+export const participantsOf = (state) => activeStageOf(state)?.participants ?? [];
 
 /**
  * 模擬用的 roster 表。
@@ -359,7 +497,7 @@ export function canSealSeason(state) {
   if (!isPlayoffDone(state)) {
     return {
       ok: false, sealed: false, remaining: 0,
-      reason: state.playoff ? "季後賽還沒打完" : "季後賽還沒排定",
+      reason: activePlayoffOf(state) ? "季後賽還沒打完" : "季後賽還沒排定",
     };
   }
   return { ok: true, sealed: false, remaining: 0, reason: null };
@@ -391,15 +529,15 @@ export function applySealSeason(state, sealedAtDay) {
   const po = playoffOrder({ fixtures: playoffFixturesOf(state), outcomes: state.outcomes ?? [] });
   const made = createFinalStandings({
     standings,
-    competition: state.competition,
-    stageId: state.stage?.id ?? null,
+    competition: activeCompetitionOf(state),
+    stageId: activeStageOf(state)?.id ?? null,
     sealedAtDay,
     tiebreakers: TIEBREAKERS,
     sourceMix: outcomeSourceMix(state.outcomes ?? []),
     playerTeamId: state.playerTeamId ?? null,
     playoffOrder: po.order,
     championTeamId: po.championTeamId,
-    playoffStageId: state.playoff?.stage?.id ?? null,
+    playoffStageId: activePlayoffOf(state)?.stage?.id ?? null,
   });
   if (!made.ok) return { ok: false, state, final: null, alreadySealed: false, errors: made.errors };
   return { ok: true, state: { ...state, final: made.final }, final: made.final, alreadySealed: false, errors: [] };
@@ -453,7 +591,7 @@ export function rollToNextSeason({ state, playerTeam, seasonSeed, startDay } = {
     playerTeam,
     season: can.nextSeason,
     seasonSeed,
-    gameMode: state.competition?.gameMode ?? "moba",
+    gameMode: activeCompetitionOf(state)?.gameMode ?? "moba",
     startDay,
   });
   if (!made.ok) return { ok: false, state: null, archived: null, errors: made.errors };
@@ -488,7 +626,7 @@ export function seasonDayOf(state, currentDay) {
 export function seasonStandings(state, rule = "win3") {
   return computeStandings({
     outcomes: state?.outcomes ?? [], participants: participantsOf(state), rule,
-    stageId: state?.stage?.id ?? null,
+    stageId: activeStageOf(state)?.id ?? null,
   });
 }
 
@@ -496,11 +634,11 @@ export function seasonStandings(state, rule = "win3") {
 
 /** 季後賽的場次（沒有季後賽 ⇒ 空陣列）。 */
 export const playoffFixturesOf = (state) =>
-  (state?.fixtures ?? []).filter((f) => f.stageId === state?.playoff?.stage?.id);
+  (state?.fixtures ?? []).filter((f) => f.stageId === activePlayoffOf(state)?.stage?.id);
 
 /** 常規賽的場次。 */
 export const regularFixturesOf = (state) =>
-  (state?.fixtures ?? []).filter((f) => f.stageId === state?.stage?.id);
+  (state?.fixtures ?? []).filter((f) => f.stageId === activeStageOf(state)?.id);
 
 /** 常規賽是不是每一場都收尾了。 */
 export const isRegularSeasonDone = (state) =>
@@ -522,36 +660,38 @@ export function ensurePlayoffs(state) {
 
   let next = state;
   //  ① 還沒有季後賽賽段 ⇒ 依常規賽積分榜產生晉級資格與賽段
-  if (!next.playoff) {
+  if (!activePlayoffOf(next)) {
     const q = createQualification({
       standings: seasonStandings(next),
-      stage: next.stage,
-      toStageId: `stage:${next.competition.id}:${PLAYOFF_STAGE_KEY}`,
+      stage: activeStageOf(next),
+      toStageId: `stage:${activeCompetitionOf(next).id}:${PLAYOFF_STAGE_KEY}`,
     });
     if (!q.ok) return { ok: false, state, added: 0, errors: q.errors };
     //  季後賽接在**最後一場常規賽之後**。+2 是刻意留一天喘息，
     //  也讓「賽季第 N 天」讀起來像真的賽程表而不是連著打。
     const lastRegularDay = Math.max(...regularFixturesOf(next).map((f) => f.day), 1);
+    const entry = activeEntryOf(next);
     const st2 = createPlayoffStage({
-      competition: next.competition,
+      competition: entry.competition,
       qualification: q.qualification,
       dayRange: { from: lastRegularDay + 2, to: lastRegularDay + 4 },
     });
     if (!st2.ok) return { ok: false, state, added: 0, errors: st2.errors };
-    next = {
-      ...next,
+    //  ⚠ Q7a-3b：季後賽住在**它自己那個賽制條目**裡，不是賽季頂層。
+    next = withEntry(next, entry.competition.id, {
+      ...entry,
+      competition: { ...entry.competition, stageIds: [...(entry.competition.stageIds ?? []), st2.stage.id] },
       playoff: { stage: st2.stage, qualification: q.qualification, baseDay: lastRegularDay + 2 },
-      competition: { ...next.competition, stageIds: [...(next.competition.stageIds ?? []), st2.stage.id] },
-    };
+    });
   }
 
   //  ② 補出現在排得出來的場次
   const made = ensurePlayoffFixtures({
-    stage: next.playoff.stage,
-    qualification: next.playoff.qualification,
+    stage: activePlayoffOf(next).stage,
+    qualification: activePlayoffOf(next).qualification,
     fixtures: playoffFixturesOf(next),
     outcomes: next.outcomes ?? [],
-    baseDay: next.playoff.baseDay,
+    baseDay: activePlayoffOf(next).baseDay,
   });
   if (!made.ok) return { ok: false, state, added: 0, errors: made.errors };
   if (made.added.length) next = { ...next, fixtures: [...next.fixtures, ...made.added] };
@@ -560,7 +700,7 @@ export function ensurePlayoffs(state) {
 
 /** 季後賽是不是打完了（含季軍戰與決賽）。 */
 export function isPlayoffDone(state) {
-  if (!state?.playoff) return false;
+  if (!activePlayoffOf(state)) return false;
   const fx = playoffFixturesOf(state);
   //  四場都要在（sf1／sf2／bronze／final），而且都收尾
   return fx.length === PLAYOFF_MATCHES.length && fx.every(isFixtureTerminal);
@@ -568,11 +708,11 @@ export function isPlayoffDone(state) {
 
 /** 季後賽對戰表（畫面用）。 */
 export function playoffView(state) {
-  if (!state?.playoff) return null;
+  if (!activePlayoffOf(state)) return null;
   const fixtures = playoffFixturesOf(state);
   return {
-    stageId: state.playoff.stage.id,
-    qualified: state.playoff.qualification.qualified,
+    stageId: activePlayoffOf(state).stage.id,
+    qualified: activePlayoffOf(state).qualification.qualified,
     bracket: playoffBracket({
       fixtures, outcomes: state.outcomes ?? [], participants: participantsOf(state),
     }),

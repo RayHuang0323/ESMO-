@@ -33,6 +33,7 @@ const {
 const {
   ensurePlayoffs, isPlayoffDone, isRegularSeasonDone, playoffView,
   playoffFixturesOf, regularFixturesOf, seasonStandings, canSealSeason,
+  activePlayoffOf,
 } = await import("../src/platform/competition/seasonState.js");
 const { computeStandings } = await import("../src/platform/competition/standings.js");
 const { createFixtureOutcome } = await import("../src/platform/contracts/fixtureOutcome.js");
@@ -165,13 +166,13 @@ let s1Final = null;
   s1Final = v.final;
 
   const state = st().competition;
-  ck("4c) **季後賽賽段被建出來了**", !!state.playoff, state.playoff?.stage?.format ?? "");
+  ck("4c) **季後賽賽段被建出來了**", !!activePlayoffOf(state), activePlayoffOf(state)?.stage?.format ?? "");
   ck("4d) 季後賽 4 場（兩準決＋季軍戰＋決賽）", playoffFixturesOf(state).length === PLAYOFF_MATCHES.length);
   ck("4e) 常規賽場次數沒有被季後賽稀釋", regularFixturesOf(state).length === 56);
   ck("4f) 季後賽排在常規賽之後",
     Math.min(...playoffFixturesOf(state).map((f) => f.day)) > Math.max(...regularFixturesOf(state).map((f) => f.day)));
   ck("4g) 晉級的就是常規賽前四名",
-    state.playoff.qualification.qualified.map((x) => x.teamId).join(",") ===
+    activePlayoffOf(state).qualification.qualified.map((x) => x.teamId).join(",") ===
     seasonStandings(state).rows.slice(0, 4).map((r) => r.teamId).join(","));
 
   //  最終名次
@@ -203,7 +204,7 @@ let s1Final = null;
   ck("5b) S1 進歷史且冠軍資訊留著",
     st().competitionView().history[0]?.championTeamId === s1Final.championTeamId);
   ck("5c) S1 的最終名次逐字未變", JSON.stringify(st().competitionView().history[0]) === JSON.stringify(s1Final));
-  ck("5d) 新賽季沒有季後賽（還沒打）", !st().competition.playoff);
+  ck("5d) 新賽季沒有季後賽（還沒打）", !activePlayoffOf(st().competition));
 
   //  季後賽沒打完不得封存
   const mid = { ...st().competition };
@@ -227,7 +228,7 @@ let s1Final = null;
   //  已封存之後再呼叫也不該有事
   for (let i = 0; i < 5; i++) st()._sealSeasonIfFinished();
   ck("6a) 封存後重複觸發不會多排場次", st().competition.fixtures.length === n0);
-  ck("6b) 也不會產生第二個季後賽賽段", st().competition.playoff?.stage?.id === before.playoff?.stage?.id);
+  ck("6b) 也不會產生第二個季後賽賽段", activePlayoffOf(st().competition)?.stage?.id === activePlayoffOf(before)?.stage?.id);
   ck("6c) 最終名次沒有被改寫", JSON.stringify(st().competition.final) === JSON.stringify(before.final));
   //  純函式層
   const a = ensurePlayoffs(before), b = ensurePlayoffs(a.state);

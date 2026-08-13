@@ -30,7 +30,10 @@ const {
   competitionIdForEvent, upgradeCompetitionIdentity, needsIdentityUpgrade, isLegacyIdentity,
 } = await import("../src/platform/contracts/circuit.js");
 const { createCompetition } = await import("../src/platform/contracts/competition.js");
-const { createSeasonState, upgradeSeasonIdentity } = await import("../src/platform/competition/seasonState.js");
+const {
+  createSeasonState, upgradeSeasonIdentity, upgradeSeasonShape,
+  activeCompetitionOf, activeStageOf, competitionEntries,
+} = await import("../src/platform/competition/seasonState.js");
 const { useProfileStore } = await import("../src/platform/profileStore.js");
 
 const store = () => useProfileStore.getState();
@@ -101,30 +104,31 @@ console.log("══ Q7a-3a：Circuit / Event 身分與 legacy 升級 ══\n");
   const team = { id: "team:aaaaaaaa", name: "白貓戰隊", tag: "GSEAL" };
   const s = createSeasonState({ playerTeam: team, season: 1, seasonSeed: 12345 });
   ck("6) 新建賽季也帶身分容器（新舊同一條路徑）",
-    s.ok && isLegacyIdentity(s.state.competition) &&
+    s.ok && isLegacyIdentity(activeCompetitionOf(s.state)) &&
     Object.keys(s.state.circuits).length === 1 && Object.keys(s.state.events).length === 1,
-    s.state.competition.circuitId);
+    activeCompetitionOf(s.state).circuitId);
 
   //  模擬「Q7a 之前的舊存檔」：把身分欄位與容器拿掉
-  const { circuitId, eventId, idScheme, ...legacyComp } = s.state.competition;
-  const legacy = { ...s.state, competition: legacyComp };
-  delete legacy.circuits; delete legacy.events;
+  const { circuitId, eventId, idScheme, ...legacyComp } = activeCompetitionOf(s.state);
+  //  還原成 v1 形狀（頂層單數 + 無身分欄位）
+  const legacy = { ...s.state, competition: legacyComp, stage: activeStageOf(s.state), playoff: null };
+  delete legacy.circuits; delete legacy.events; delete legacy.competitions; delete legacy.activeEventId;
   const idsBefore = {
     comp: legacy.competition.id,
     stage: legacy.stage.id,
     fixtures: legacy.fixtures.map((f) => f.id),
   };
 
-  const upped = upgradeSeasonIdentity(legacy);
+  const upped = upgradeSeasonShape(legacy);
   ck("6b) **升級後 competition / stage id 逐字元不變**",
-    upped.competition.id === idsBefore.comp && upped.stage.id === idsBefore.stage);
+    activeCompetitionOf(upped).id === idsBefore.comp && activeStageOf(upped).id === idsBefore.stage);
   ck("6c) **每一個 fixture id 逐字元不變**",
     JSON.stringify(upped.fixtures.map((f) => f.id)) === JSON.stringify(idsBefore.fixtures),
     `${idsBefore.fixtures.length} 場`);
   ck("6d) fixtures 陣列本身沒有被換掉（沒有多餘的重建）", upped.fixtures === legacy.fixtures);
   ck("6e) 升級後補上容器", Object.keys(upped.circuits).length === 1 && Object.keys(upped.events).length === 1);
-  ck("6f) 賽季層級升級也冪等（同一個參考）", upgradeSeasonIdentity(upped) === upped);
-  ck("6g) 沒有賽季時原樣回傳", upgradeSeasonIdentity(null) === null);
+  ck("6f) 賽季層級升級也冪等（同一個參考）", upgradeSeasonShape(upped) === upped);
+  ck("6g) 沒有賽季時原樣回傳", upgradeSeasonShape(null) === null);
 }
 
 // ── 4) 走完整 store：存檔 → 重載，id 全部不變 ──────────────────────────
@@ -133,18 +137,23 @@ console.log("══ Q7a-3a：Circuit / Event 身分與 legacy 升級 ══\n");
   store().ensureCompetitionSeason();
   const c0 = store().competition;
   const snapshot = {
-    comp: c0.competition.id,
-    stage: c0.stage.id,
+    comp: activeCompetitionOf(c0).id,
+    stage: activeStageOf(c0).id,
     fixtures: c0.fixtures.map((f) => f.id),
-    scheme: c0.competition.idScheme,
+    scheme: activeCompetitionOf(c0).idScheme,
   };
   ck("7) 新局建的賽季帶 legacy 身分", snapshot.scheme === ID_SCHEMES.legacy, snapshot.comp);
 
   //  ⚠ 模擬真正的舊存檔：把落盤的 JSON 裡的身分欄位拔掉再重載
   const raw = JSON.parse(LS);
-  delete raw.competition.competition.circuitId;
-  delete raw.competition.competition.eventId;
-  delete raw.competition.competition.idScheme;
+  const rawComp = Object.values(raw.competition.competitions)[0];
+  delete rawComp.competition.circuitId;
+  delete rawComp.competition.eventId;
+  delete rawComp.competition.idScheme;
+  raw.competition.competition = rawComp.competition;
+  raw.competition.stage = rawComp.stage;
+  raw.competition.playoff = rawComp.playoff ?? null;
+  delete raw.competition.competitions; delete raw.competition.activeEventId;
   delete raw.competition.circuits;
   delete raw.competition.events;
   LS = JSON.stringify(raw);
@@ -154,12 +163,12 @@ console.log("══ Q7a-3a：Circuit / Event 身分與 legacy 升級 ══\n");
   const fresh = (await import("../src/platform/profileStore.js?q7a3a=1")).useProfileStore;
   const c1 = fresh.getState().competition;
   ck("7b) **重載舊存檔後 competition / stage id 不變**",
-    c1.competition.id === snapshot.comp && c1.stage.id === snapshot.stage);
+    activeCompetitionOf(c1).id === snapshot.comp && activeStageOf(c1).id === snapshot.stage);
   ck("7c) **重載舊存檔後每一個 fixture id 不變**",
     JSON.stringify(c1.fixtures.map((f) => f.id)) === JSON.stringify(snapshot.fixtures),
     `${snapshot.fixtures.length} 場`);
   ck("7d) 重載時自動補上身分（不必玩家做任何事）",
-    isLegacyIdentity(c1.competition) && !!c1.circuits && !!c1.events);
+    isLegacyIdentity(activeCompetitionOf(c1)) && !!c1.circuits && !!c1.events);
   ck("7e) 賽事仍可正常運作（推進日曆不受影響）", (() => {
     const before = fresh.getState().meta.days;
     const r = fresh.getState().advanceDay(3);
