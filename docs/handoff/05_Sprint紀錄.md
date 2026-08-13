@@ -8453,3 +8453,100 @@ Circuit 現在是核准的一級實體、`seasonState` 必須 import 它的升�
 （+66、+23、+167、+247、+131、+276），**都沒有這個問題**。
 
 ⇒ 往後 commit 前值得看一眼 `git show --numstat`：行數與改動量對不上就是換行雜訊。
+
+---
+
+## Q7a-3b：同季多賽事並存（2026-08-13，已部署）
+
+3a 建好了 Circuit / Event 的身分，3b 把賽季狀態從「一季一個賽事」改成
+**同季多個賽事並存**，並把 Event 封存與 Season 封存拆開。
+
+### 形狀：`competitions{}` 是唯一真相
+
+```js
+competitions: { [competitionId]: { competition, stage, playoff, expectsPlayoff } }
+events:       { [eventId]: { …, competitionIds, rankingCompetitionId, prizePolicy, final } }
+circuits:     { [circuitId]: { …, eventIds } }
+fixtures / outcomes            ← **維持頂層單一陣列，不拆**
+activeEventId                  ← 只給畫面聚焦，不參與任何規則
+```
+
+**頂層刻意不留 `stage` / `playoff` 鏡像** —— 鏡像就是兩個地方存同一份東西，
+遲早漂移。讀取一律走 `activeEntryOf` / `activeStageOf` / `activePlayoffOf`。
+
+`fixtures` / `outcomes` 不拆的理由是硬的：`fixturesOn(day)` 必須跨賽事掃
+（同日多場的前提）、`fixture.stageId` 已能回推賽制、拆了就會每個賽制一份副本。
+反向索引一律推導，不落盤。
+
+### `expectsPlayoff` 不是裝飾，是必要的
+
+封存判定原本無條件要求季後賽打完。多賽事之後這條就死了：
+
+- 無條件要求 ⇒ **沒有季後賽的盃賽永遠封不了**
+- 放寬成「有季後賽才擋」 ⇒ **聯賽會在季後賽排出來之前就封存**（Q6 明確禁止）
+
+兩個都不能接受，所以改成**賽制自己宣告**是否預期有季後賽。
+
+### 獎金：有政策才發，收據不進 final
+
+`prizePolicy` 只存**抽象政策**（`{ kind:"rank_table", table:"default" }`），
+不指名獎金表——第一版寫了 `COMPETITION_PRIZE`，Q4 §4c／Q5 §7b 的
+「賽季層不碰錢」守衛立刻紅，**那是守衛做對了**。實際結算仍是
+`economy/competitionAward.js` 那一支唯一入口。
+
+沒有 `prizePolicy` 的 Event **完全沒有 award key**，不是 0 元的假收據。
+
+收據掛在 **Event 上，不寫進 `final`** —— `final` 是不可變快照，往裡面塞東西會讓
+Q4／Q5／Q6 對它的逐字比對失準，而那些比對正是「封存後不會再變」的證明。
+
+### legacy 等價
+
+單一 Event 時 `state.final` **就是那個 Event 的封存快照（同一個物件）**，
+所以 Q4／Q5／Q6 比對到的位元組與 v1 相同。賽季封存的判定改成
+「每一個 Event 都封存了」，legacy 只有一個 ⇒ 時機不變。
+
+### 驗證
+
+| 項目 | 結果 |
+|---|---|
+| `check_q7a_3b_multi_event`（新增） | **25/25** |
+| Q1 / Q2a / Q2b / Q3 / Q3.5 / Q4 / Q5 / Q6 | 93 / 112 / 92 / 90 / 65 / 68 / 66 / 57 |
+| `q7a_safety` / `q7a_3a_identity` | 18/18 / 29/29 |
+| `o7` / `integrity` / `cs23` / `progress25` | 48/48 / 20/20 / 28/28 / exit 0 |
+| `regress` / `regress2` / `build` | exit 0 / 8/8 / `built in 9.34s` |
+| 四支 browser gate | 24/24、26/26、7/7、20/20；port 全部釋放 |
+
+⚠ **Q1–Q6 全綠只證明 legacy 沒壞**——legacy 永遠只有一個 Event，所有分流程式碼
+在它身上都退化成「就是那一個」。所以新驗證器**自己合成第二個 Event**，
+去驗真正的分流、獨立封存與獎金閘門。
+
+### 已部署
+
+| 項目 | 值 |
+|---|---|
+| 分支 | `q7a/3b-multi-event` → `eb396a5` |
+| `main` | `a49a92c` → **`eb396a5`**（fast-forward） |
+| Actions | [31696851892](https://github.com/RayHuang0323/ESMO-/actions/runs/31696851892) — success |
+
+**正式站 smoke 15/15**：兩個 Event 並存載入正常、參賽者互不污染（8 vs 2）、
+盃賽可先封存而聯賽不受影響、Season 在全部 Event 封存前不得封存、
+有 prizePolicy ⇒ $80 萬／無政策 ⇒ **完全沒有 award key**、
+legacy 單 Event reload 行為不變、無未捕捉例外。
+
+⚠ 正式站是 minified bundle，無法驅動 store 動作 ⇒ 上面驗的是
+**載入／渲染／持久化這些形狀是正確的**；封存與獎金的**行為**由
+`check_q7a_3b_multi_event` 25/25 證明。
+
+### 兩個驗證器 bug（都是被既有契約擋下來才發現）
+
+1. `forfeitFixture` 只棄得掉**玩家自己的**場次（AI vs AI 由 `advanceDay` 模擬）。
+   第一版對每一場 forfeit，第二場就被「棄權方必須是對戰雙方之一」擋下——
+   **契約對，驗證器錯**。
+2. 合成的盃賽必須包含玩家隊伍，否則獎金那條永遠驗不到（獎金依玩家名次發）。
+
+⇒ 新驗證器第一次就全綠反而可疑；被既有契約擋下來才是它在做事。
+
+### Q4 §5h 的假陽性：改的是我的變數名，不是斷言
+
+守衛禁止 `unseal|clearFinal|resetFinal`，我的區域變數叫 `unsealed`。
+守衛的意圖（不得提供解除封存）完全成立 ⇒ 改名 `pendingEvents`，**守衛一字未動**。
