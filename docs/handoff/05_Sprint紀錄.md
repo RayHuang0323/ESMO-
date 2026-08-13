@@ -7307,3 +7307,10 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - raw `tac` 只在 IGL／Support role-fit 出現；effective tac 沒有 live consumer。tactic selection／site／route／utility／bomb／CT/T 行為是固定 tactic input 與 simulator 規則，不是 player tac 因果。
 - R22 suite：5 roles、16 fixed seeds、low/base/high、512 simulator executions；digest `9a8669ae4b23af24ebe4c7c3bfaeee883b28fcb343719ec5b15e03b6a3950215`，repeated deterministic PASS。
 - verdict：measurement Go；semantic readiness Revise；calibration No-Go／Deferred。後續若需真正戰術理解，另開單一 tactic execution / rotation / utility gameplay Sprint。
+## R36 CS 溝通 × 領導力 × 配合度 Audit（2026-08-14）
+
+- focused verifier：`tools/check_cs_team_stats_measurement_r36.mjs --stat=com|led|coo`；aggregate segments：`cs_comms_measurement_r36`、`cs_leadership_measurement_r36`、`cs_synergy_measurement_r36`。
+- Comms digest `e8dc743f39af3aa02b0a44c47b9c29245475366038be07a1bec93ec856063a33`：IGL / Support role-fit only，沒有 player information-sharing consumer；B / Measurement Go / Semantic Revise / Calibration No-Go。
+- Leadership digest `6909e5080c0992eecaa48108dd0e48f083bfd6387d71ffdb4ab72e3e50efbb16`：IGL role-fit only，沒有 team direction consumer；B / Measurement Go / Semantic Revise / Calibration No-Go。
+- Synergy digest `aa5f90bc1c582ea5210c304604df8c69001ba9d7646b98d873519f307d66095b`：Support role-fit only，玩家側無 team-level coordination；C / Measurement Go / Semantic Revise / Calibration No-Go。
+- R16-A verifier 透過 legacy adapter 重跑，digest `db856f15099943d73b89f16702710031e4a48f33c65538e197c7271ad2eb2022` 保留；未新增 team AI、RNG、scenario 或 balance。

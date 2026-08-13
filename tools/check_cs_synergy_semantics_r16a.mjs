@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
+import { csR15EvidenceSources } from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -253,7 +254,12 @@ function staticAudit(fpsSource, rosterSource, playerModelSource) {
 
 async function main() {
   gate(process.argv.slice(2).length === 0, "CLI_FLAGS_FORBIDDEN");
-  const fpsSource = readFileSync(FPS_FILE, "utf8");
+  const liveFpsSource = readFileSync(FPS_FILE, "utf8");
+  // R16-A is historical evidence.  View the current source through the
+  // byte-exact R15 adapter rather than silently rebaselining its digest.
+  const historical = csR15EvidenceSources(liveFpsSource);
+  gate(historical?.r15, "R16A_HISTORICAL_ADAPTER");
+  const fpsSource = historical.r15;
   const rosterSource = readFileSync(FPS_ROSTER_FILE, "utf8");
   const playerModelSource = readFileSync(PLAYER_MODEL_FILE, "utf8");
   const staticEvidence = staticAudit(fpsSource, rosterSource, playerModelSource);
@@ -278,7 +284,7 @@ async function main() {
           if (resolve(id.split("?")[0]).toLowerCase() !== FPS_FILE.toLowerCase()) return null;
           if (!(id.split("?")[1] ?? "").includes("cs-r16a")) return null;
           transformSeen += 1;
-          gate(code === fpsSource, "VITE_SOURCE_MISMATCH");
+          gate(code === liveFpsSource, "VITE_SOURCE_MISMATCH");
           return { code: instrumentSource(fpsSource), map: null };
         },
       }],

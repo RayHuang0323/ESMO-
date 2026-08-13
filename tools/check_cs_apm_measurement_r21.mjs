@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
-import { CS_R27_DECISION_SOURCE_SHA256, csR25R24Source } from "./cs_r15_legacy_source.mjs";
+import { CS_R33_RESILIENCE_SOURCE_SHA256, csR25R24Source } from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -765,7 +765,7 @@ function runArm(api, { mapKey, tTactic, ctTactic, roster, seed }) {
 async function main() {
   const liveSource = readFileSync(FPS_FILE, "utf8");
   const liveSourceSha256 = sha256(liveSource);
-  gate(liveSourceSha256 === CS_R27_DECISION_SOURCE_SHA256, "LIVE_SOURCE_SHA256", liveSourceSha256);
+  gate(liveSourceSha256 === CS_R33_RESILIENCE_SOURCE_SHA256, "LIVE_SOURCE_SHA256", liveSourceSha256);
   const source = csR25R24Source(liveSource);
   const sourceSha256 = sha256(source);
   gate(sourceSha256 === SOURCE_SHA256, "SOURCE_SHA256", sourceSha256);

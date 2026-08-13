@@ -12,6 +12,7 @@ import {
   CS_R19_SEMANTIC_SOURCE_SHA256,
   CS_R25_ACCURACY_SOURCE_SHA256,
   CS_R27_DECISION_SOURCE_SHA256,
+  CS_R33_RESILIENCE_SOURCE_SHA256,
   csR25R24Source,
   csR27R26Source,
 } from "./cs_r15_legacy_source.mjs";
@@ -238,7 +239,7 @@ function verifyStaticSemantics(liveSource, historicalSource) {
 async function main() {
   gate(process.argv.slice(2).length === 0, "CLI_FLAGS_FORBIDDEN");
   const currentSource = readFileSync(FPS_FILE, "utf8");
-  gate(sha256(currentSource) === CS_R27_DECISION_SOURCE_SHA256, "CURRENT_SOURCE_SHA256", sha256(currentSource));
+  gate(sha256(currentSource) === CS_R33_RESILIENCE_SOURCE_SHA256, "CURRENT_SOURCE_SHA256", sha256(currentSource));
   const liveSource = csR27R26Source(currentSource), historicalSource = csR25R24Source(currentSource);
   const changedLines = verifyStaticSemantics(liveSource, historicalSource);
   const liveApi = await loadApi(currentSource, liveSource, "live");

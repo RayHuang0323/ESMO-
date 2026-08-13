@@ -11,7 +11,9 @@ import { createServer } from "vite";
 import {
   CS_R26_DECISION_SOURCE_SHA256,
   CS_R27_DECISION_SOURCE_SHA256,
+  CS_R33_RESILIENCE_SOURCE_SHA256,
   csR27R26Source,
+  csR33R32Source,
 } from "./cs_r15_legacy_source.mjs";
 import {
   CALIBRATION_LEVELS,
@@ -421,9 +423,9 @@ function metricEvidence(rows, baselineRows, key, direction = "higher") {
 
 async function main() {
   const currentSource = readFileSync(FPS_FILE, "utf8");
-  gate(sha256(currentSource) === CS_R27_DECISION_SOURCE_SHA256, "CURRENT_SOURCE_SHA256", sha256(currentSource));
+  gate(sha256(currentSource) === CS_R33_RESILIENCE_SOURCE_SHA256, "CURRENT_SOURCE_SHA256", sha256(currentSource));
   const historicalSource = csR27R26Source(currentSource); gate(sha256(historicalSource) === CS_R26_DECISION_SOURCE_SHA256, "HISTORICAL_R26_SOURCE_SHA256", sha256(historicalSource));
-  const source = currentSource; const sourceSha256 = sha256(source);
+  const source = csR33R32Source(currentSource); const sourceSha256 = sha256(source);
   gate(sourceSha256 === CS_R27_DECISION_SOURCE_SHA256, "SOURCE_SHA256", sourceSha256); gate(randTokens(source).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT", String(randTokens(source).length));
   gate(FIXED_SEEDS.length === 16 && !(8 > FIXED_SEEDS.length / 2) && 9 > FIXED_SEEDS.length / 2, "STRICT_MAJORITY_GATE");
   gate(source.includes('const role=posSkill(p,rawReflex);') && source.includes('S("foc")'), "FOCUS_COMBAT_READ_CHAIN");
