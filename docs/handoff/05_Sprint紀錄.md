@@ -9179,3 +9179,34 @@ Q7a safety 18／3a 29／3b 51／3c 69／**3d 67**／3f 43／3f.1 42；
 B2 20／B3 13；integrity 20；o7 48／o7.1 27；
 瀏覽器 gate **15**／12／21／26／7／8／20；
 `regress` exit 0、`regress2` 8/8、`build` `built in 11.77s`。
+
+### Q7a-3f / 3f.1 / 3f.2 收尾上線（2026-08-14）
+
+| 項目 | 值 |
+|---|---|
+| `main` | `051ecb6` → **`11a4ac1`**（fast-forward，三個 commit，無 merge commit、無 force） |
+| Actions | [31730891948](https://github.com/RayHuang0323/ESMO-/actions/runs/31730891948) — success |
+| `asiaCircuit` | **`true`**（正式預設開啟；`?asiaCircuit=0` 為逃生口） |
+| 合併後全套 | Q1–Q6 全綠、Q7a 7 支全綠、B2/B3、integrity、o7/o7.1、瀏覽器 gate ×7、`regress` exit 0、`regress2` 8/8、`build` `built in 11.29s` |
+
+**正式站 smoke 22/22**（獨立 Chrome profile／port／headless）：
+
+- 不帶參數開新局 ⇒ **140 場 / 4 賽事 / 官方聯賽 56 場**，有 careerEventId
+- **巡迴積分 UI 正常出現**，全頁無 undefined
+- 注入已封存的新制存檔 ⇒ `state.final` 是 **`SeasonSeal.v1`**，
+  而畫面名次欄位顯示「8」、冠軍「暗影狼群」、「／ 8 隊」
+- **獎金收據查得到**（顯示「無（前四名才有）」而不是「—」）
+  ⇒ 3f.2 修的那個讀取點在正式站也對
+- 在畫面上按「▶ 開始第 2 賽季」⇒ **換季後仍是新制**（第 2 季 / 140 場 / 聯賽 56 場）
+- `?asiaCircuit=0` 建得出舊制新局（56 場 / 1 賽事），畫面看不到巡迴區塊
+- **舊制存檔在預設（新制）下重載：逐 fixture id 不變**
+- 手機 390px 無水平溢出（容器 390/390）、全程無未捕捉例外
+
+⚠ smoke 第一版 §8/§10 紅是**讀取順序寫錯**：賽季是進賽事頁時才建立的
+（`ensureCompetitionSeason`），我卻先讀存檔 ⇒ 每個欄位都是 undefined。
+§1 的順序本來就是對的，§2 寫反了。
+
+### 玩家端的實際變化
+
+正式站**新開的局就是 140 場**（每季多打 21 場）。既有存檔當季不受影響，
+換季之後才進新制。要回退：網址加 `?asiaCircuit=0`，不必改程式也不必重新部署。
