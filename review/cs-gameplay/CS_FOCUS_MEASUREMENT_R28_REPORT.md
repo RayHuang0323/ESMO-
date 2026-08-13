@@ -128,3 +128,14 @@ boundary。
 - Focus semantic completeness：**Revise**。
 - Focus balance calibration：**No-Go / Deferred**。
 - 本輪沒有 production patch；local commit 另於交付摘要提供，未 push。
+
+## 9. SeasonState.v2 整合後重驗（2026-08-13）
+
+- 驗證基準為已整合的 `7438ad389bb471a3584522965e53d503b1c1db1b`；R28 live source 仍維持
+  byte-exact SHA `f0e5dd4bddc82d06ae715784201877821de0db4fc785d226ab403132bb984e87`，沒有因
+  SeasonState.v2 merge 改動 CS production。
+- `check_cs_focus_measurement_r28.mjs` repeated deterministic suite digest 仍為
+  `7f6e08393a54d5c594bd9c9abce49adbf70a9a6297a197fe4d9624151b4b69a0`，focused gate PASS。
+- aggregate gate `cs_decision_semantics_r27,cs_focus_measurement_r28`：**2/2 PASS**；production
+  build：**PASS**；historical R26 adapter：**PASS**。
+- 本節只記錄整合後重驗，不新增 gameplay、不調 balance、不改 RNG、scenario 或 historical evidence。
