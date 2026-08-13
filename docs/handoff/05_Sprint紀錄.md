@@ -7278,3 +7278,10 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - 5 roles × low/baseline/high ±10 × 16 fixed seeds：176 logical arms、528 simulator executions；direct effective/lastAlive/local duel evidence 各 role 16/16 strict-majority。baseline：134 opportunities、19 low-HP、122 次 1vN、215 pair conversions、24 legacy clutches。
 - role opportunity：entry 7、rifler 3、awp 37、lurker 25、igl 3；role-fit weight 全為 0。Clutch 與 Resilience 共用 lastAlive branch（`str` +0.22、`res` +0.12），有 semantic ownership / duplicate responsibility risk；Level 2/3 不足、Level 4 只作 secondary。
 - verdict：measurement **Go / PASS**；semantic completeness **Revise**；calibration **No-Go / Deferred**。suite digest：`fd43e879354d70de15d208d04e6f0b7d6a2f78c6204adfb197cc71caa882fd9a`。Spec/report：`review/cs-gameplay/CS_RESILIENCE_MEASUREMENT_R31_SPEC.md`、`review/cs-gameplay/CS_RESILIENCE_MEASUREMENT_R31_REPORT.md`。
+
+## R32 CS Clutch × Resilience Semantic Boundary Audit（2026-08-13）
+
+- R31 checkpoint `b49e1b9108b290c75fcb239f3ce3ae29ff633481` 已 push 並核對 local / tracking / remote 一致。R32 只審查 CS Clutch／Resilience，不碰賽事系統或其他 stat。
+- Read-chain：Clutch `str` 進 raw role-fit、effective mechanics、lastAlive、low HP、`aggr`／fire／retreat；Resilience `res` 只有 effective lastAlive consumer。兩者在同一 lastAlive formula 疊加 +0.22 / +0.12，構成 semantic overlap / attribution risk。
+- 推薦 Model A：Clutch 主責 1vN / lastAlive 主動勝負與局部轉換；Resilience 主責 pressure / low-HP / 逆風穩定執行。Model B 目前證據不足，不能只因程式現況就接受。
+- R32 focused source audit **Go / PASS**；production semantic correction **Revise（本輪不實作）**；pressure/low-HP gameplay **另開 Sprint**；calibration **No-Go**。audit digest：`5d0bca552118364c96e893ea184eb77ad6230cad1ae59d501bdc44c2f6f50c45`。
