@@ -29,6 +29,7 @@ import {
 import {
   createFixtureOutcome, createForfeitOutcome, RESULT_SOURCES, validateFixtureOutcome,
 } from "../contracts/fixtureOutcome.js";
+import { upgradeCompetitionIdentity } from "../contracts/circuit.js";
 import { buildRegularSeason, SEASON_DAYS } from "./regularSeason.js";
 import { simulateFixture, simSeedFor } from "./simulateFixture.js";
 import { AI_TEAMS } from "./aiTeams.js";
@@ -52,6 +53,10 @@ export { SEASON_DAYS };
 export function createSeasonState({ playerTeam, season = 1, seasonSeed, gameMode = "moba", startDay = 1 } = {}) {
   const built = buildRegularSeason({ playerTeam, season, seasonSeed, gameMode });
   if (!built.ok) return { ok: false, state: null, errors: built.errors };
+  //  Q7a-3a：新建的賽季也走同一條身分升級路徑，讓新舊存檔的形狀一致。
+  //  ⚠ 這一輪仍然是 legacy 推導（`comp:{mode}:s{season}:{org}:{tier}`）——
+  //    3a 只補身分欄位，**不改任何 id**。由 Event 推導 id 是 3b 的事。
+  const up = upgradeCompetitionIdentity(built.competition);
   return {
     ok: true,
     errors: [],
@@ -66,12 +71,37 @@ export function createSeasonState({ playerTeam, season = 1, seasonSeed, gameMode
       //  玩家連看都沒看到就先輸幾場。實測在瀏覽器抓到的。
       startDay: Math.max(1, Math.floor(Number(startDay) || 1)),
       playerTeamId: playerTeam.id,
-      competition: built.competition,
+      competition: up.competition,
+      //  ⚠ 3a 只帶身分容器，還沒有多賽事並存（那是 3b）。
+      //    這裡是 map 而不是單數，是為了讓 3b 加第二個 Event 時不必改形狀。
+      circuits: up.circuit ? { [up.circuit.id]: up.circuit } : {},
+      events: up.event ? { [up.event.id]: up.event } : {},
       stage: built.stage,
       fixtures: built.fixtures,
       //  賽果一經寫入即不可變（D11）——本檔只 append，永遠不改既有元素
       outcomes: [],
     },
+  };
+}
+
+/**
+ * 舊存檔的身分升級（Q7a-3a）。
+ *
+ * ⚠ **不改任何既有 id**：`competition.id`、`stage.id`、每一個 `fixture.id`、
+ *   每一筆 `outcome.fixtureId` 都原樣保留。只補 `circuitId` / `eventId` /
+ *   `idScheme`，並掛上合成的 legacy 容器。
+ * ⚠ **冪等**：已升級過就**原樣回傳同一個物件參考**。不這樣的話每次載入都會
+ *   產生新物件，害畫面白重繪，也會讓「重載後逐字未變」那類 JSON 比對失準。
+ */
+export function upgradeSeasonIdentity(state) {
+  if (!state?.schema || !state.competition) return state;
+  const up = upgradeCompetitionIdentity(state.competition);
+  if (up.alreadyUpgraded) return state;
+  return {
+    ...state,
+    competition: up.competition,
+    circuits: { ...(state.circuits ?? {}), ...(up.circuit ? { [up.circuit.id]: up.circuit } : {}) },
+    events: { ...(state.events ?? {}), ...(up.event ? { [up.event.id]: up.event } : {}) },
   };
 }
 

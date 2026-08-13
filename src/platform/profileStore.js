@@ -60,6 +60,7 @@ import { ensureTeamIdentity } from "./identity/teamIdentity.js";
 import {
   createSeasonState, advanceSeasonDays, applyLaunch, applyCompleted, applyForfeit,
   fixtureById, nextPlayerFixture, pendingPlayerFixtureOn, pendingPlayerFixturesOn, seasonStandings,
+  upgradeSeasonIdentity,
   seasonProgress, participantsOf, absoluteDayOf, isFixtureLaunched,
   canSealSeason, applySealSeason,
   canRollSeason, rollToNextSeason, seasonDayOf,
@@ -355,7 +356,9 @@ const load = () => {
       //  Milestone Q3 migration：舊存檔沒有 competition ⇒ null。
       //  ⚠ 刻意**不在載入時建立賽季**：那會讓每個舊存檔在毫無預期的情況下
       //    突然多出一整季賽程。改由 `ensureCompetitionSeason()` 在真的要用到時建立。
-      competition: saved.competition ?? null,
+      //  Q7a-3a：載入時補上 Circuit/Event 身分（`idScheme`）。
+      //  ⚠ 只補欄位，**一個既有 id 都不改**；已升級過就原樣回傳同一個參考。
+      competition: upgradeSeasonIdentity(saved.competition ?? null),
       recruitment: saved.recruitment && typeof saved.recruitment === "object"
         && typeof saved.recruitment.signed === "object"
         ? { signed: saved.recruitment.signed }
