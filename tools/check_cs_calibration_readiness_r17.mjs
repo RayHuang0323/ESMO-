@@ -6,7 +6,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CS_R27_DECISION_SOURCE_SHA256, csR25R24Source } from "./cs_r15_legacy_source.mjs";
+import { CS_R33_RESILIENCE_SOURCE_SHA256, csR25R24Source } from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -201,7 +201,9 @@ function json(value) {
 
 function verifySourceAndEvidence() {
   const liveFps = normalizedFile(FPS_FILE);
-  gate(sha256(liveFps) === CS_R27_DECISION_SOURCE_SHA256, "LIVE_FPS_SOURCE_SHA256");
+  // R17 is historical evidence: accept the current R33 source, then use the
+  // existing byte-exact adapters below for the locked R17 view.
+  gate(sha256(liveFps) === CS_R33_RESILIENCE_SOURCE_SHA256, "LIVE_FPS_SOURCE_SHA256");
   const fps = csR25R24Source(liveFps);
   const r3 = normalizedFile(R3_REPORT);
   const r3Verifier = normalizedFile(R3_VERIFIER);

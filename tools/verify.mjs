@@ -54,6 +54,7 @@ const SEGMENTS = [
   { id: "cs_clutch_measurement_r30", script: "tools/check_cs_clutch_measurement_r30.mjs", shape: /CS Clutch Measurement \/ Calibration Readiness R30: PASS/, note: "CS Clutch read-chain deterministic calibration-readiness measurement" },
   { id: "cs_resilience_measurement_r31", script: "tools/check_cs_resilience_measurement_r31.mjs", shape: /CS Resilience Measurement \/ Calibration Readiness R31: PASS/, note: "CS Resilience read-chain deterministic calibration-readiness measurement" },
   { id: "cs_clutch_resilience_semantics_r32", script: "tools/check_cs_clutch_resilience_semantics_r32.mjs", shape: /CS Clutch × Resilience Semantic Boundary Audit R32: PASS/, note: "CS Clutch／Resilience semantic ownership boundary audit" },
+  { id: "cs_adaptability_measurement_r34", script: "tools/check_cs_adaptability_measurement_r34.mjs", shape: /CS Adaptability Measurement \/ Calibration Readiness R34: PASS/, note: "CS Adaptability read-chain／deterministic calibration-readiness measurement" },
   { id: "milestone_b4", script: "tools/check_moba_milestone_b4.mjs", shape: /Milestone B\.4 verifier: PASS/, note: "B.4：小兵離散攻擊／並行選敵／Replay" },
   { id: "milestone_j_close", script: "tools/check_moba_milestone_j_close.mjs", shape: /✅ PASS/, note: "J-close" },
   { id: "milestone_j", script: "tools/check_moba_milestone_j.mjs", shape: /✅ PASS/, note: "J：召喚師技能引擎效果" },

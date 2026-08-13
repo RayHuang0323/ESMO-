@@ -7293,3 +7293,10 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - historical R30 digest `56dea7e81163275ab7d6ca43a287d804dfeccb37d0eea10fb855a93c40e33a3c`、R32 old source `f0e5dd4bddc82d06ae715784201877821de0db4fc785d226ab403132bb984e87` 以 byte-exact adapter 保留，沒有 rebaseline。
 - R30/R31/R32、R22、Q7a、progress/reward、R24 historical gate、production build PASS。Calibration 仍 Revise / No-Go：low-HP direct path 可量測，但角色 opportunity 與 immediate conversion 未達全體 strict-majority；Level 4 只作 secondary。
 - Spec/report：`review/cs-gameplay/CS_CLUTCH_RESILIENCE_SEMANTICS_R33_SPEC.md`、`CS_CLUTCH_RESILIENCE_SEMANTICS_R33_REPORT.md`。
+
+## R34 CS Adaptability Measurement / Calibration Readiness（2026-08-14）
+
+- 先 audit 再量測；新增 `tools/check_cs_adaptability_measurement_r34.mjs`，並註冊 `cs_adaptability_measurement_r34` aggregate segment。
+- read-chain：raw `adp` 僅 IGL／Lurker role-fit；effective `persStat(adp)` 沒有 live consumer。`FPS_W.adp` 雖有宣告，但不在 `_mechKeys`／`ovr()` read-chain；沒有 tactic switch、攻守轉換、route/reposition、retreat/re-engage、utility/bomb 或 target consumer。
+- R22 四層 suite：5 roles、16 fixed seeds、low/base/high、512 simulator executions（含 repeated run）；digest `0d58819fb3cd79f0518c8e7925ae12758913a58c82707ffb1227f34c15b0ffdb`，repeated deterministic PASS。
+- verdict：measurement Go；calibration No-Go／Deferred（Revise）。沒有 balance patch、RNG、scenario、history rebaseline 或新的 gameplay feature；若要完整應變行為，另開 verifier-first gameplay Sprint。
