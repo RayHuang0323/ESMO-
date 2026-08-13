@@ -8733,3 +8733,29 @@ regular 1.0 / major 1.5 / championship 2.0。`Math.round` 是政策的一部分
 正式站**沒有任何 Circuit 帶政策** ⇒ 機制上線但休眠，舊存檔行為完全不變；
 **沒有畫面**（`competitionView().circuitPoints` 已備妥，無元件在讀）；
 資格核發後**還沒有東西消費它**；換季會丟掉 `pointsLog`。
+
+### Q7a-3c 收尾上線（2026-08-13）
+
+| 項目 | 值 |
+|---|---|
+| `main` | `9436cc8` → **`ce594bb`**（fast-forward，無 merge commit、無 force） |
+| Actions | [31715373711](https://github.com/RayHuang0323/ESMO-/actions/runs/31715373711) — success |
+| 合併後全套 | Q1–Q6 全綠、Q7a 4 支全綠、B2/B3、fixture integrity、o7/o7.1、瀏覽器 gate ×4、`regress` exit 0、`regress2` 8/8、`build` `built in 11.36s` |
+
+**正式站最小 smoke 17/17**（獨立 Chrome profile／獨立 port／headless，
+沒有碰日常 Chrome 與正式存檔）：
+
+- bundle 含 fail-closed 訊息與 `CircuitPointsEntry.v1` / `CircuitQualification.v1`
+  ⇒ 3c 真的上線了
+- **legacy 單 Event 畫面完全不變**：標題仍是「聯賽」、沒有切換列、
+  沒有冒出任何積分字樣
+- 注入「已封存的盃賽 ＋ 沒有任何積分政策」的存檔 → **推進一天**
+  （第 1 天 → 第 2 天，確實經過 `_sealSeasonIfFinished`）⇒
+  帳本仍是 0 筆、Event 上沒有收據、沒有發資格、沒有人偷補政策
+- 獎金冪等帳本 0 → 0 筆，資金逐元不動
+- 全程無未捕捉例外
+
+⚠ 這一輪的 smoke 一開始是**空包彈**：導覽鈕用 `/訓練/` 比對，先命中儀表板上的
+「CS · **訓練**賽」磚，點進 CS 頁就再也找不到推進鈕；而且存檔裡沒有人在訓練時，
+「推進訓練日」會在 `training.length === 0` 直接 return。兩件都修掉之後才是真的
+有觸發結算——**沒有觸發就宣稱「沒有產生假積分」是沒有意義的**。
