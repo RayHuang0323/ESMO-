@@ -26,8 +26,20 @@ globalThis.localStorage = {
   removeItem: () => { LS = null; },
 };
 
-const { canRollSeason, rollToNextSeason, seasonDayOf, canSealSeason } =
+const { canRollSeason, rollToNextSeason, seasonDayOf, canSealSeason,
+  activeCompetitionOf, fixturesOfCompetition, competitionEntries } =
   await import("../src/platform/competition/seasonState.js");
+
+// ── Q7a-3f：賽季基線改用**範圍明確**的斷言 ─────────────────────────────────
+//  原本寫 `fixtures.length === 56`，那個數字守的是「MOBA 官方聯賽 8 隊雙循環」，
+//  卻用全域總數表達；同季一旦多出別的賽事就會誤紅。改成聯賽本身 56 場，
+//  再加一條「總場次 ＝ 各賽制加總」——後者比寫死總數更強（抓得到孤兒場次），
+//  而且賽事增減都不必回來改。
+const leagueFixtureCount = (state) =>
+  fixturesOfCompetition(state, activeCompetitionOf(state)?.id ?? null).length;
+const fixturesAddUp = (state) =>
+  (state?.fixtures ?? []).length ===
+  competitionEntries(state).reduce((n, e) => n + fixturesOfCompetition(state, e.competition.id).length, 0);
 const { seedForSeason } = await import("../src/platform/identity/teamIdentity.js");
 const { useProfileStore } = await import("../src/platform/profileStore.js");
 
@@ -89,9 +101,12 @@ const runs = [];
   for (let n = 1; n <= 3; n++) {
     const v0 = st().competitionView();
     ck(`2-${n}a) 目前是第 ${n} 賽季`, v0.season === n, `season=${v0.season}`);
-    ck(`2-${n}b) 新賽季賽程 56 場、賽果與封存都是空的`,
-      st().competition.fixtures.length === 56 &&
-      (st().competition.outcomes ?? []).length === 0 && !st().competition.final);
+    ck(`2-${n}b) 新賽季**官方聯賽 56 場**、賽果與封存都是空的`,
+      leagueFixtureCount(st().competition) === 56 &&
+      (st().competition.outcomes ?? []).length === 0 && !st().competition.final,
+      `聯賽 ${leagueFixtureCount(st().competition)} 場／全季 ${st().competition.fixtures.length} 場`);
+    ck(`2-${n}b2) 新賽季**總場次 ＝ 各賽制加總**（沒有孤兒場次）`,
+      fixturesAddUp(st().competition));
     seeds.push(st().competition.seed);
     prints.push(scheduleFingerprint(st().competition));
 

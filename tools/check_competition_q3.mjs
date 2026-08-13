@@ -45,7 +45,22 @@ const {
   createSeasonState, advanceSeasonDays, applyLaunch, applyCompleted, applyForfeit,
   sweepOverdue, fixtureById, nextPlayerFixture, pendingPlayerFixtureOn,
   isPlayerFixture, simulateAiFixturesOn, seasonStandings, participantsOf,
+  activeCompetitionOf, fixturesOfCompetition, competitionEntries,
 } = await import("../src/platform/competition/seasonState.js");
+
+// ── Q7a-3f：賽季基線改用**範圍明確**的斷言 ─────────────────────────────────
+//
+//  ⚠ 原本這裡寫的是 `state.fixtures.length === 56`。那個數字守的其實是
+//    「MOBA 官方聯賽是 8 隊雙循環」，但它是**全域**的——同季一旦多出別的賽事
+//    （Q7a 之後這是常態），它就會因為「總數變了」而紅，而聯賽本身根本沒變。
+//  ⇒ 改成兩條：① 官方聯賽仍然 56 場（真正的不變式）
+//              ② 總場次 ＝ 各賽制加總（**比寫死總數更強**：它會抓到
+//                 stageId 指不到任何賽制的孤兒場次，而且賽事增減都不必改）
+const officialLeagueId = (state) => activeCompetitionOf(state)?.id ?? null;
+const leagueFixtureCount = (state) => fixturesOfCompetition(state, officialLeagueId(state)).length;
+const fixturesAddUp = (state) =>
+  (state?.fixtures ?? []).length ===
+  competitionEntries(state).reduce((n, e) => n + fixturesOfCompetition(state, e.competition.id).length, 0);
 const {
   issueFor, seedForFixture, openRoomForFixture, openSessionForFixture,
   isCompetitionAssignment, fixtureIdOfAssignment, COMPETITION_SERVER,
@@ -332,7 +347,11 @@ const ROSTER = ["上路", "打野", "中路", "下路", "輔助"].map((role, i) 
 
   store().startNewGame("standard");
   const ens = store().ensureCompetitionSeason();
-  ck("5c) 建得出賽季，56 場", ens.ok && store().competition.fixtures.length === 56);
+  ck("5c) 建得出賽季，**官方聯賽 56 場**",
+    ens.ok && leagueFixtureCount(store().competition) === 56,
+    `聯賽 ${leagueFixtureCount(store().competition)} 場／全季 ${store().competition.fixtures.length} 場`);
+  ck("5c2) **總場次 ＝ 各賽制加總**（沒有孤兒場次；賽事增減不必改這條）",
+    fixturesAddUp(store().competition));
   ck("5d) 重複呼叫不會重建（決定性、不覆寫）", (() => {
     const again = store().ensureCompetitionSeason();
     return again.created === false && again.state === ens.state;
@@ -384,7 +403,21 @@ const ROSTER = ["上路", "打野", "中路", "下路", "輔助"].map((role, i) 
   ck("5o) 收尾寫入 engine 賽果", done.ok && done.outcome.resultSource === "engine");
   const r3 = store().advanceDay(30);
   ck("5p) 收尾後推得動", r3.daysAdvanced > 0);
-  const f2 = store().competitionView().today;
+  //  ⚠ 多賽事並存之後，「今天的比賽」不一定是官方聯賽那一場。§5t 驗的是
+  //    **官方聯賽**積分榜，所以這裡要指名聯賽的場次——拿 `today`（當日清單的
+  //    第一場）會棄權到別的賽事去，聯賽榜上自然一場棄權都沒有。
+  const leagueTodayFixture = () => {
+    const s = store().competition;
+    const ids = new Set(fixturesOfCompetition(s, officialLeagueId(s)).map((x) => x.id));
+    return (store().competitionView().todayPending ?? []).find((x) => ids.has(x.id)) ?? null;
+  };
+  let f2 = leagueTodayFixture();
+  for (let i = 0; i < 40 && !f2; i++) {
+    const pending = store().competitionView().todayPending ?? [];
+    if (pending.length) { store().forfeitFixture(pending[0].id); }   // 別的賽事，清掉才走得動
+    else if (store().advanceDay(7).daysAdvanced === 0) break;
+    f2 = leagueTodayFixture();
+  }
   const ff = store().forfeitFixture(f2.id);
   ck("5q) 棄權由玩家主動觸發，寫入 forfeited 賽果",
     ff.ok && ff.outcome.resultSource === "forfeited" && ff.outcome.seed === 0);
@@ -392,7 +425,9 @@ const ROSTER = ["上路", "打野", "中路", "下路", "輔助"].map((role, i) 
 
   const saved = JSON.parse(LS);
   ck("5s) 賽季有進存檔（重整後不會消失）",
-    !!saved.competition && saved.competition.fixtures.length === 56 && saved.competition.outcomes.length > 0);
+    !!saved.competition && leagueFixtureCount(saved.competition) === 56 &&
+    fixturesAddUp(saved.competition) && saved.competition.outcomes.length > 0,
+    `聯賽 ${saved.competition ? leagueFixtureCount(saved.competition) : "—"} 場`);
   ck("5t) 積分榜由 store 唯一入口提供，且計入 engine 與 forfeited", (() => {
     const me = store().competitionView().standings.rows.find((x) => x.teamId === store().team.id);
     return me.engineGames === 1 && me.forfeitedGames === 1 && me.played === 2;
