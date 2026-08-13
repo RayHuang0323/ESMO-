@@ -222,6 +222,7 @@ function normalizeRef(ref, fallback = null) {
   if (source.key != null) out.key = source.key;
   if (source.eventId != null) out.eventId = source.eventId;
   if (source.circuitId != null) out.circuitId = source.circuitId;
+  if (source.competitionId != null) out.competitionId = source.competitionId;
   if (source.settlementKey != null) out.settlementKey = source.settlementKey;
   return out;
 }
@@ -451,6 +452,9 @@ function validateCanonical(value) {
         if (event.pointsSettlementRef && event.pointsSettlementRef.circuitId != null && event.pointsSettlementRef.circuitId !== event.circuitId) {
           errors.push({ code: "points_circuit_mismatch", message: "pointsSettlementRef circuit scope mismatch" });
         }
+        if (event.pointsSettlementRef && event.pointsSettlementRef.competitionId != null && event.pointsSettlementRef.competitionId !== event.competitionRef?.id) {
+          errors.push({ code: "points_competition_mismatch", message: "pointsSettlementRef competition scope mismatch" });
+        }
         if (!event.prizePolicyRef && event.final?.awardReceiptRef) {
           errors.push({ code: "award_without_policy", message: "award receipt requires a prize policy reference" });
         }
@@ -488,6 +492,9 @@ function validateCanonical(value) {
           }
           if (final?.sourceRef?.competitionId && event.competitionRef?.id && final.sourceRef.competitionId !== event.competitionRef.id) {
             errors.push({ code: "final_competition_mismatch", message: "Final 與 Competition scope 不一致" });
+          }
+          if (final?.awardReceiptRef?.competitionId && event.competitionRef?.id && final.awardReceiptRef.competitionId !== event.competitionRef.id) {
+            errors.push({ code: "award_competition_mismatch", message: "award receipt competition scope mismatch" });
           }
         } else if (event.finalId != null) {
           errors.push({ code: "final_ref", message: "有 finalId 時必須有 final reference envelope" });

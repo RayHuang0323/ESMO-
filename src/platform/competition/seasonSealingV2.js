@@ -21,6 +21,8 @@ export const CIRCUIT_POINTS_POLICY_SCHEMA = "CircuitPointsPolicy.v1";
 
 const objectOf = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : null;
 const integer = (value) => Number.isInteger(Number(value)) ? Number(value) : null;
+const ids = (items, key = "id") => (Array.isArray(items) ? items : []).map((item) => item?.[key] ?? null);
+const sameIds = (a, b) => JSON.stringify(a ?? []) === JSON.stringify(b ?? []);
 
 export function allFixturesTerminal(legacyState) {
   const fixtures = Array.isArray(legacyState?.fixtures) ? legacyState.fixtures : [];
@@ -184,6 +186,9 @@ export function sealEventBoundary({
   if (!legacyState?.competition?.id || event.competitionRef?.id !== legacyState.competition.id) {
     return { ok: false, reason: "competition_scope_mismatch", errors: [{ code: "competition_scope", message: "Event competitionRef does not match legacy Competition" }] };
   }
+  if (!sameIds(event.fixtureIds, ids(legacyState.fixtures)) || !sameIds(event.outcomeIds, ids(legacyState.outcomes, "id"))) {
+    return { ok: false, reason: "legacy_index_mismatch", errors: [{ code: "legacy_index", message: "Event fixture/outcome index does not match legacy Competition" }] };
+  }
   if (event.status === EVENT_STATUS.sealed) {
     if (!legacyState.final || event.finalId !== legacyState.final.id) {
       return { ok: false, reason: "final_scope_mismatch", errors: [{ code: "final_scope", message: "Sealed Event final does not match legacy FinalStandings" }] };
@@ -272,7 +277,7 @@ export function sealEventBoundary({
     sealedAtDay: integer(sealedAtDay) ?? final.sealedAtDay ?? null,
     finalId: final.id,
     final: finalReferenceEnvelope(final, event.prizePolicyRef ? awardReceipt : null),
-    pointsSettlementRef: pointsReceipt ? { schema: pointsReceipt.schema, id: pointsReceipt.id, path: "circuitPointsLedger", eventId: event.id } : null,
+    pointsSettlementRef: pointsReceipt ? { schema: pointsReceipt.schema, id: pointsReceipt.id, path: "circuitPointsLedger", eventId: event.id, circuitId: event.circuitId, competitionId: final.competitionId } : null,
     pointsStatus,
   });
   const profilePatch = nextProfile ? { ...nextProfile, circuitPointsLedger: nextPointsLedger } : { circuitPointsLedger: nextPointsLedger };
