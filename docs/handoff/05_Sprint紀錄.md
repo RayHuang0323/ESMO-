@@ -8550,3 +8550,68 @@ legacy 單 Event reload 行為不變、無未捕捉例外。
 
 守衛禁止 `unseal|clearFinal|resetFinal`，我的區域變數叫 `unsealed`。
 守衛的意圖（不得提供解除封存）完全成立 ⇒ 改名 `pendingEvents`，**守衛一字未動**。
+
+---
+
+## Q7a-3b.5 ＋ 3c 前置（2026-08-13，已部署）
+
+### ① 多 Event UI 的資訊一致性
+
+先前切換聚焦後，**積分榜換了、頁首還寫「聯賽」、下一場還顯示另一個賽事的比賽**
+——同一畫面說兩個故事。已修：頁首標題與「下一場賽事」都跟著聚焦的 Event。
+
+⚠ 兩者都**只在多 Event 時啟用**；單一 Event（所有既有存檔）沿用「聯賽」與全季
+`nextPlayerFixture`，legacy 畫面逐格不變。
+
+### ② 查詢層 fail-closed（3c 的前置條件）
+
+**問題（實測）**：`standingsOf(state, "comp:不存在")` **靜默回 0 列**，與「這個賽制
+真的一場都沒打」長得一模一樣；而且 `validateSeasonState` 根本不存在。
+
+3c 的 Circuit Points 會沿著 circuit → event → competition 撈名次，
+**撈錯會被算成 0 分並寫進不可變的積分帳本**。所以這件事必須在 3c 之前處理。
+
+- 規則／結算用 accessor（`standingsOf` / `eventStandingsOf` / `competitionsOfEvent`）
+  對不存在或未指定的 id **明確 throw**，訊息寫明「這是呼叫端傳錯 id，不是沒有資料」
+- 畫面的 optional 查詢用 `tryStandingsOf` / `tryEventStandingsOf` /
+  `tryCompetitionsOfEvent` ⇒ 回 `null`
+- **`null`（找不到）與 `rows: []`（真的 0 筆）不再混用**
+- 新增 `validateSeasonScope`：賽制→Event、Event→Circuit、`rankingCompetitionId`
+  歸屬、**duplicate binding**、`competitionIds` 與實際綁定一致（五種各一條斷言）
+
+### ③ Codex 賽事工作稽核（唯讀，結論見 08 第 13 項）
+
+`seasonStateV2.js` 是**唯讀投影模型**（legacy 為真相、存檔另存 `seasonStateV2`），
+與主線「`competitions{}` 是唯一真相、不留鏡像」衝突，且**沒有封存／獎金／積分行為**。
+**不 cherry-pick、不 merge**。只吸收 fail-closed 思路（重寫，非移植程式碼）。
+
+### 驗證
+
+| 項目 | 結果 |
+|---|---|
+| `check_q7a_3b_multi_event` | **51/51**（+18：fail-closed、scope 驗證、UI 聚焦） |
+| Q1–Q6 | 93 / 112 / 92 / 90 / 65 / 68 / 66 / 57 |
+| `q7a_safety` / `q7a_3a_identity` | 18/18 / 29/29 |
+| `o7` / `integrity` / `cs23` / `progress25` | 48/48 / 20/20 / 28/28 / exit 0 |
+| `regress` / `regress2` / `build` | exit 0 / 8/8 / `built in 11.18s` |
+| 五支 browser gate | 24/24、26/26、7/7、8/8、20/20；port 全部釋放 |
+
+**正式站 smoke 8/8**：切換後標題正確（`第 1 賽季 常規賽 → 亞洲盃 春季站`）、
+下一場賽事跟著聚焦、積分榜 **8 隊 → 2 隊**、legacy 單 Event 標題仍是「聯賽」且無
+切換列、**全程無未捕捉例外**（fail-closed 上線後最大的新風險就是 UI 誤用會 throw
+的版本，這條專門驗它）。
+
+### 已部署
+
+| 項目 | 值 |
+|---|---|
+| 分支 | `q7a/3b-multi-event` → `4b9ebc1` |
+| `main` | `b29a833` → **`4b9ebc1`**（fast-forward） |
+| Actions | [31707062813](https://github.com/RayHuang0323/ESMO-/actions/runs/31707062813) — success |
+
+### 過程中驗證器自己抓到的兩個 bug（都是驗證器的錯）
+
+1. multi-event gate 用 `/聯賽/` 判斷「到站了沒」，而標題現在會跟著聚焦改變
+   ⇒ 改用不會移動的「積分榜 STANDINGS」。**硬編碼標題當偵測條件的代價。**
+2. 正式站 smoke 數列數時，`/\n\s*\d+\s/` 把一列數成兩筆（名次與勝敗都有數字），
+   且抓到頁尾的 `ESMO`／`AI` ⇒ 改成「夾住區塊上下界 ＋ 隊伍 tag 唯一數」。
