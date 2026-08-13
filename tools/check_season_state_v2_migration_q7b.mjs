@@ -102,6 +102,9 @@ const mismatchedAdapter = activeEventAdapter({
   legacyState: { ...legacy, competition: { ...legacy.competition, id: "comp:wrong" } },
 });
 ck("adapter competition mismatch fails closed", mismatchedAdapter.ok === false && mismatchedAdapter.legacyState === null);
+const indexConflict = stateWithEvent((item) => ({ ...item, fixtureIds: ["fx:wrong"] }));
+const conflictReload = migrateSeasonStateV2({ seasonStateV2: indexConflict, legacyState: legacy });
+ck("existing fixture index mismatch fails closed", json(conflictReload) === json(indexConflict));
 
 // 2) v2 -> v2 must be byte-for-byte stable for the same legacy state.
 const again = migrateSeasonStateV2({

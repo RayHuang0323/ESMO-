@@ -331,6 +331,21 @@ function normalizeEvent(event) {
 function refreshLegacyIndexes(seasonStateV2, legacyState) {
   const active = seasonStateV2?.active;
   if (!active) return seasonStateV2;
+  const canonicalStageIds = stageIdsOf(legacyState);
+  const canonicalFixtureIds = idsOf(legacyState.fixtures);
+  const canonicalOutcomeIds = idsOf(legacyState.outcomes);
+  const prefixOnly = (stored, canonical) => {
+    const old = Array.isArray(stored) ? stored : [];
+    return old.length <= canonical.length && old.every((id, index) => id === canonical[index]);
+  };
+  const bound = activeEventOf(seasonStateV2);
+  if (!bound || !prefixOnly(bound.stageIds, canonicalStageIds)
+    || !prefixOnly(bound.fixtureIds, canonicalFixtureIds)
+    || !prefixOnly(bound.outcomeIds, canonicalOutcomeIds)) {
+    // Legacy writes may append IDs (for example, playoff fixtures), but an
+    // existing mismatch is corruption. Never repair/rebind it during load.
+    return null;
+  }
   return {
     ...seasonStateV2,
     gameModes: (seasonStateV2.gameModes ?? []).map((mode) => ({
@@ -341,10 +356,10 @@ function refreshLegacyIndexes(seasonStateV2, legacyState) {
           if (event.id !== active.eventId || event.competitionRef?.id !== legacyState?.competition?.id) return event;
           return {
             ...event,
-            stageIds: stageIdsOf(legacyState),
+            stageIds: canonicalStageIds,
             playoffRef: playoffRefOf(legacyState),
-            fixtureIds: idsOf(legacyState.fixtures),
-            outcomeIds: idsOf(legacyState.outcomes),
+            fixtureIds: canonicalFixtureIds,
+            outcomeIds: canonicalOutcomeIds,
             // A missing legacy index may be filled from canonical state; an
             // existing finalId is never rebound to a different FinalStandings.
             finalId: event.finalId ?? legacyState.final?.id ?? null,
@@ -601,6 +616,7 @@ export function migrateSeasonStateV2({
       // corruption, not a stale index that migration may silently replace.
       if (indexedEvent.finalId != null && legacyState.final?.id != null && indexedEvent.finalId !== legacyState.final.id) return seasonStateV2;
       const refreshed = refreshLegacyIndexes(normalized, legacyState);
+      if (!refreshed) return seasonStateV2;
       if (legacyState?.final?.id && refreshed.active) {
         const currentEvent = activeEventOf(refreshed);
         if (currentEvent && currentEvent.finalId === legacyState.final.id && currentEvent.status !== EVENT_STATUS.sealed) {
