@@ -52,6 +52,7 @@ const STATE = resolve(ROOT, "tools/.verify-state.json");
  */
 const SEGMENTS = [
   { id: "cs_clutch_measurement_r30", script: "tools/check_cs_clutch_measurement_r30.mjs", shape: /CS Clutch Measurement \/ Calibration Readiness R30: PASS/, note: "CS Clutch read-chain deterministic calibration-readiness measurement" },
+  { id: "cs_resilience_measurement_r31", script: "tools/check_cs_resilience_measurement_r31.mjs", shape: /CS Resilience Measurement \/ Calibration Readiness R31: PASS/, note: "CS Resilience read-chain deterministic calibration-readiness measurement" },
   { id: "milestone_b4", script: "tools/check_moba_milestone_b4.mjs", shape: /Milestone B\.4 verifier: PASS/, note: "B.4：小兵離散攻擊／並行選敵／Replay" },
   { id: "milestone_j_close", script: "tools/check_moba_milestone_j_close.mjs", shape: /✅ PASS/, note: "J-close" },
   { id: "milestone_j", script: "tools/check_moba_milestone_j.mjs", shape: /✅ PASS/, note: "J：召喚師技能引擎效果" },

@@ -7271,3 +7271,10 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - 五個 T role 使用 16 fixed seeds；176 logical arms / 528 simulator executions；R30 suite digest `56dea7e81163275ab7d6ca43a287d804dfeccb37d0eea10fb855a93c40e33a3c`；aggregate registration `cs_clutch_measurement_r30` PASS。
 - 直接公式五個 role 均 16/16 strict-majority monotonic；實際殘局 opportunity 在 role 間稀疏且不均，Level 2/3 未達校準 gate。Lurker 的 generic `aggr < 0.82` crossing 造成 downstream path amplification；Level 4 僅 secondary。
 - verdict：measurement Go；semantic / calibration Revise / No-Go；local-only，未 push。
+## R31 CS Resilience Measurement / Calibration Readiness（2026-08-13）
+
+- R31 focused verifier：`tools/check_cs_resilience_measurement_r31.mjs`；僅做 R22 read-chain / local causal measurement，不修改 production、balance、RNG、scenario、historical evidence 或其他 stat。
+- raw `stats.res` 沒有 role-fit consumer；effective `persStat(res)` 只進 `lastAlive` `combatSkill` 的 `(res - 76) * 0.12`。low HP、`aggr`／retreat、defuse、utility、target/tactic/buy choice 不讀 Resilience；`formMul` 只縮放 final output。
+- 5 roles × low/baseline/high ±10 × 16 fixed seeds：176 logical arms、528 simulator executions；direct effective/lastAlive/local duel evidence 各 role 16/16 strict-majority。baseline：134 opportunities、19 low-HP、122 次 1vN、215 pair conversions、24 legacy clutches。
+- role opportunity：entry 7、rifler 3、awp 37、lurker 25、igl 3；role-fit weight 全為 0。Clutch 與 Resilience 共用 lastAlive branch（`str` +0.22、`res` +0.12），有 semantic ownership / duplicate responsibility risk；Level 2/3 不足、Level 4 只作 secondary。
+- verdict：measurement **Go / PASS**；semantic completeness **Revise**；calibration **No-Go / Deferred**。suite digest：`fd43e879354d70de15d208d04e6f0b7d6a2f78c6204adfb197cc71caa882fd9a`。Spec/report：`review/cs-gameplay/CS_RESILIENCE_MEASUREMENT_R31_SPEC.md`、`review/cs-gameplay/CS_RESILIENCE_MEASUREMENT_R31_REPORT.md`。
