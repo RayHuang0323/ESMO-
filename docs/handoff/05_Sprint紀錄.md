@@ -7264,3 +7264,10 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - 同一 Event 僅一個 competitionRef；eventId / competitionId / circuitId scope mismatch、duplicate competition binding、duplicate legacy ref、final rows、active mismatch 均 fail closed；active 可為 null。
 - focused verifier 34/34；aggregate relevant gates 6/6；Q7a 18/18、Q4 68/68、Q5 66/66、Q6 57/57、progress25 33/33、build PASS。
 - 未開始 Circuit Points、Event / Season sealing、qualification、time-slot scheduler、CS Event；M1 local-only，待 commit，不 push。
+## R30 CS Clutch Measurement / Calibration Readiness（2026-08-13）
+
+- 本 Sprint 僅做只讀 measurement / readiness；沒有 balance calibration、RNG、scenario、historical rebaseline、new gameplay 或其他 stat 變更。
+- 新增 `tools/check_cs_clutch_measurement_r30.mjs` 與 R22 deterministic gates：raw/effective/role-fit/live consumer、lastAlive opportunity、pair conversion、round result、clamp、threshold、path amplification、overlap audit。
+- 五個 T role 使用 16 fixed seeds；176 logical arms / 528 simulator executions；R30 suite digest `56dea7e81163275ab7d6ca43a287d804dfeccb37d0eea10fb855a93c40e33a3c`；aggregate registration `cs_clutch_measurement_r30` PASS。
+- 直接公式五個 role 均 16/16 strict-majority monotonic；實際殘局 opportunity 在 role 間稀疏且不均，Level 2/3 未達校準 gate。Lurker 的 generic `aggr < 0.82` crossing 造成 downstream path amplification；Level 4 僅 secondary。
+- verdict：measurement Go；semantic / calibration Revise / No-Go；local-only，未 push。
