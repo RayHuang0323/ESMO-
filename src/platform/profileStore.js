@@ -61,6 +61,7 @@ import {
   createSeasonState, advanceSeasonDays, applyLaunch, applyCompleted, applyForfeit,
   fixtureById, nextPlayerFixture, pendingPlayerFixtureOn, pendingPlayerFixturesOn, seasonStandings,
   upgradeSeasonShape, activeCompetitionOf, activeStageOf, activePlayoffOf,
+  sealableEventIds, applySealEvent, eventFinalOf,
   seasonProgress, participantsOf, absoluteDayOf, isFixtureLaunched,
   canSealSeason, applySealSeason,
   canRollSeason, rollToNextSeason, seasonDayOf,
@@ -799,6 +800,40 @@ export const useProfileStore = create((set, get) => ({
       }
     }
 
+    //  ── Q7a-3b：先封存「封得了的 Event」，再談賽季封存 ────────────────
+    //  ⚠ 順序不能反：賽季結束的定義已經改成「每一個 Event 都封存了」。
+    //  ⚠ 獎金**只有 Event 有 prizePolicy 才發**——沒有政策的 Event 不得被迫
+    //    生出一筆 0 元的假獎金（產品規則 7）。
+    //  ⚠ 收據**不寫進 final**：final 是不可變快照，塞東西進去會讓
+    //    Q4／Q5／Q6 對它的逐字比對失準。收據掛在 Event 上。
+    let lastAward = null;
+    for (const eid of sealableEventIds(state)) {
+      const day = Number(get().meta?.days) || 1;
+      const r = applySealEvent(state, eid, day);
+      if (!r.ok) continue;
+      state = r.state;
+      set({ competition: state });
+
+      const ev = state.events[eid];
+      if (ev.prizePolicy) {
+        const settled = settleCompetitionAwardInState(get(), { final: r.final, day });
+        if (settled.nextState) set(settled.nextState);
+        lastAward = settled.receipt ?? lastAward;
+        state = {
+          ...state,
+          events: { ...state.events, [eid]: { ...state.events[eid], award: settled.receipt ?? null } },
+        };
+        set({ competition: state });
+      }
+
+      const champ = participantsOf(state).find((p) => p.id === r.final.championTeamId)?.name ?? "—";
+      get().pushInbox({
+        type: "match", from: "聯賽官方",
+        subject: `第 ${r.final.season} 賽季 結束 · ${champ} 奪冠`,
+        text: `第 ${r.final.season} 賽季常規賽與季後賽全部結束，${champ} 拿下冠軍。你的隊伍最終排名第 ${r.final.playerRank} 名（常規賽第 ${r.final.playerRegularRank} 名）。`,
+      });
+    }
+
     const can = canSealSeason(state);
     if (!can.ok && !can.sealed) return { sealed: false, final: null, award: null, reason: can.reason };
 
@@ -807,20 +842,11 @@ export const useProfileStore = create((set, get) => ({
       const res = applySealSeason(state, Number(get().meta?.days) || 1);
       if (!res.ok) return { sealed: false, final: null, award: null, reason: res.errors?.[0]?.message ?? null };
       final = res.final;
-      set({ competition: res.state });
-      const champ = participantsOf(res.state).find((p) => p.id === final.championTeamId)?.name ?? "—";
-      get().pushInbox({
-        type: "match", from: "聯賽官方",
-        subject: `第 ${final.season} 賽季 結束 · ${champ} 奪冠`,
-        text: `第 ${final.season} 賽季常規賽與季後賽全部結束，${champ} 拿下冠軍。你的隊伍最終排名第 ${final.playerRank} 名（常規賽第 ${final.playerRegularRank} 名）。`,
-      });
+      state = res.state;
+      set({ competition: state });
     }
-
-    //  名次獎金：純函式算，這裡只寫回。重複呼叫由 `processedCompetitionAwards` 擋住。
-    const settled = settleCompetitionAwardInState(get(), { final, day: Number(get().meta?.days) || 1 });
-    if (settled.nextState) set(settled.nextState);
     get().save();
-    return { sealed: true, final, award: settled.receipt };
+    return { sealed: true, final, award: lastAward };
   },
   /**
    * 換到下一個賽季（Milestone Q5）。**玩家主動按的**——不自動換。

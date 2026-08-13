@@ -147,7 +147,10 @@ export function createSeasonState({ playerTeam, season = 1, seasonSeed, gameMode
       startDay: Math.max(1, Math.floor(Number(startDay) || 1)),
       playerTeamId: playerTeam.id,
       //  Q7a-3b：賽制放進 map，頂層不再有單數的 competition / stage / playoff
-      competitions: { [up.competition.id]: { competition: up.competition, stage: built.stage, playoff: null } },
+      //  ⚠ `expectsPlayoff`：這個賽制**預期**有季後賽。常規賽聯賽有（Q6），
+      //    盃賽／資格賽可能沒有。少了這個宣告，封存判定只能二選一：
+      //    要嘛聯賽在季後賽排出來之前就封存，要嘛沒有季後賽的賽事永遠封不了。
+      competitions: { [up.competition.id]: { competition: up.competition, stage: built.stage, playoff: null, expectsPlayoff: true } },
       circuits: up.circuit ? { [up.circuit.id]: up.circuit } : {},
       events: up.event
         ? { [up.event.id]: {
@@ -222,7 +225,7 @@ export function upgradeSeasonShape(state) {
   const next = {
     ...withId,
     schema: SEASON_STATE_VERSION,
-    competitions: { [comp.id]: { competition: comp, stage: withId.stage, playoff: withId.playoff ?? null } },
+    competitions: { [comp.id]: { competition: comp, stage: withId.stage, playoff: withId.playoff ?? null, expectsPlayoff: true } },
     events,
     activeEventId: withId.activeEventId ?? eventId ?? null,
   };
@@ -483,21 +486,103 @@ export function applyForfeit(state, { fixtureId, loser = null, reason = "玩家�
  *
  * @returns {{ok:boolean, sealed:boolean, remaining:number, reason:string|null}}
  */
+// ── Q7a-3b：Event 封存（與 Season 封存分開）──────────────────────────────
+//
+//  ⚠ 這一層**只產生名次，不碰錢**（Q4 §4c／Q5 §7b 的紅線）。獎金由 Store 層
+//    呼叫既有的 `economy/competitionAward.js`，而且**只有 Event 有 prizePolicy
+//    才發**——沒有獎金的 Event 不得被迫生出一筆 0 元的假獎金。
+
+/** 這個 Event 封存得了嗎（它底下每一個賽制的每一場都要收尾）。 */
+export function canSealEvent(state, eventId) {
+  const ev = state?.events?.[eventId] ?? null;
+  if (!ev) return { ok: false, sealed: false, remaining: 0, reason: "找不到這個賽事" };
+  if (eventFinalOf(state, eventId)) return { ok: false, sealed: true, remaining: 0, reason: "這個賽事已經封存過了" };
+
+  const comps = competitionsOfEvent(state, eventId);
+  if (comps.length === 0) return { ok: false, sealed: false, remaining: 0, reason: "這個賽事底下沒有賽制" };
+  //  ⚠ 名次來源必須明確：Event 只有一個賽制時可以自動指定，兩個以上一定要
+  //    明講是哪一個（資格賽只決定晉級／種子，不進 Event 最終名次）。
+  if (!ev.rankingCompetitionId) {
+    return { ok: false, sealed: false, remaining: 0, reason: "賽事沒有指定決定名次的賽制（rankingCompetitionId）" };
+  }
+  if (!comps.some((e) => e.competition.id === ev.rankingCompetitionId)) {
+    return { ok: false, sealed: false, remaining: 0, reason: "rankingCompetitionId 指到的賽制不屬於這個賽事" };
+  }
+
+  const remaining = comps
+    .flatMap((e) => fixturesOfCompetition(state, e.competition.id))
+    .filter((f) => !isFixtureTerminal(f)).length;
+  if (remaining > 0) {
+    return { ok: false, sealed: false, remaining, reason: `還有 ${remaining} 場沒有結果，賽事還沒結束` };
+  }
+  //  ⚠ 只有**宣告有季後賽**的賽制才用季後賽當關卡。
+  //    聯賽必須等季後賽打完（Q6：常規賽打完不等於賽季結束）；
+  //    沒有季後賽的盃賽若也套這一條，就永遠封不了。
+  const rankEntry = competitionEntry(state, ev.rankingCompetitionId);
+  if (rankEntry?.expectsPlayoff && !isPlayoffDoneOf(state, ev.rankingCompetitionId)) {
+    return {
+      ok: false, sealed: false, remaining: 0,
+      reason: rankEntry.playoff ? "季後賽還沒打完" : "季後賽還沒排定",
+    };
+  }
+  return { ok: true, sealed: false, remaining: 0, reason: null };
+}
+
+/**
+ * 封存一個 Event：把它 `rankingCompetitionId` 的名次凍成不可變快照。
+ *
+ * ⚠ 與 v1 的賽季封存用**完全同一組輸入**呼叫 `createFinalStandings`，
+ *   所以 legacy 單 Event 存檔算出來的 final 逐欄與現況相同。
+ */
+export function applySealEvent(state, eventId, sealedAtDay) {
+  const can = canSealEvent(state, eventId);
+  if (!can.ok) {
+    if (can.sealed) return { ok: true, state, final: eventFinalOf(state, eventId), alreadySealed: true, errors: [] };
+    return { ok: false, state, final: null, alreadySealed: false, errors: [{ code: "not_finished", message: can.reason }] };
+  }
+  const ev = state.events[eventId];
+  const cid = ev.rankingCompetitionId;
+  const entry = competitionEntry(state, cid);
+  const po = playoffOrder({ fixtures: playoffFixturesOfCompetition(state, cid), outcomes: state.outcomes ?? [] });
+  const made = createFinalStandings({
+    standings: standingsOf(state, cid),
+    competition: entry.competition,
+    stageId: entry.stage?.id ?? null,
+    sealedAtDay,
+    tiebreakers: TIEBREAKERS,
+    sourceMix: outcomeSourceMix(state.outcomes ?? []),
+    playerTeamId: state.playerTeamId ?? null,
+    playoffOrder: po.order,
+    championTeamId: po.championTeamId,
+    playoffStageId: entry.playoff?.stage?.id ?? null,
+  });
+  if (!made.ok) return { ok: false, state, final: null, alreadySealed: false, errors: made.errors };
+  return {
+    ok: true,
+    alreadySealed: false,
+    errors: [],
+    final: made.final,
+    state: { ...state, events: { ...state.events, [eventId]: { ...ev, final: made.final } } },
+  };
+}
+
+/** 還沒封存、但已經封得了的 Event。 */
+export const sealableEventIds = (state) =>
+  Object.keys(state?.events ?? {}).filter((id) => canSealEvent(state, id).ok);
+
 export function canSealSeason(state) {
   if (!state?.schema) return { ok: false, sealed: false, remaining: 0, reason: "目前沒有賽季" };
   if (state.final) return { ok: false, sealed: true, remaining: 0, reason: "這個賽季已經封存過了" };
-  const fx = state.fixtures ?? [];
-  const remaining = fx.filter((f) => !isFixtureTerminal(f)).length;
-  if (remaining > 0) {
-    return { ok: false, sealed: false, remaining, reason: `還有 ${remaining} 場沒有結果，賽季還沒結束` };
-  }
-  //  ⚠ Q6：常規賽打完**不等於**賽季結束——還有季後賽。
-  //    少了這一道，常規賽最後一場收尾的當下就會封存，季後賽永遠排不出來
-  //    （而且 Q5 的換季會在季後賽之前就開放）。
-  if (!isPlayoffDone(state)) {
+  const ids = Object.keys(state.events ?? {});
+  if (ids.length === 0) return { ok: false, sealed: false, remaining: 0, reason: "這個賽季沒有賽事" };
+  //  ⚠ Q7a-3b：賽季結束 ＝ **這一季每一個 Event 都封存了**，
+  //    不再是「唯一那個賽事打完了」。legacy 只有一個 Event ⇒ 判定時機與 v1 相同。
+  const pendingEvents = ids.filter((id) => !eventFinalOf(state, id));
+  if (pendingEvents.length > 0) {
+    const first = canSealEvent(state, pendingEvents[0]);
     return {
-      ok: false, sealed: false, remaining: 0,
-      reason: activePlayoffOf(state) ? "季後賽還沒打完" : "季後賽還沒排定",
+      ok: false, sealed: false, remaining: first.remaining ?? 0,
+      reason: pendingEvents.length === 1 ? first.reason : `還有 ${pendingEvents.length} 個賽事沒有封存`,
     };
   }
   return { ok: true, sealed: false, remaining: 0, reason: null };
@@ -522,25 +607,21 @@ export function applySealSeason(state, sealedAtDay) {
     if (can.sealed) return { ok: true, state, final: state.final, alreadySealed: true, errors: [] };
     return { ok: false, state, final: null, alreadySealed: false, errors: [{ code: "not_finished", message: can.reason }] };
   }
-  const standings = seasonStandings(state);
-  //  Q6：最終名次的**前四名由季後賽決定**（冠／亞／季／殿），5–8 名維持常規賽順序。
-  //  ⚠ 常規賽的勝敗、積分、淨勝分**原樣保留在每一列裡**，只有 `rank` 會被重排，
-  //    而且每一列都留著 `regularRank` ⇒ 常規賽成績不可能被季後賽覆寫。
-  const po = playoffOrder({ fixtures: playoffFixturesOf(state), outcomes: state.outcomes ?? [] });
-  const made = createFinalStandings({
-    standings,
-    competition: activeCompetitionOf(state),
-    stageId: activeStageOf(state)?.id ?? null,
-    sealedAtDay,
-    tiebreakers: TIEBREAKERS,
-    sourceMix: outcomeSourceMix(state.outcomes ?? []),
-    playerTeamId: state.playerTeamId ?? null,
-    playoffOrder: po.order,
-    championTeamId: po.championTeamId,
-    playoffStageId: activePlayoffOf(state)?.stage?.id ?? null,
-  });
-  if (!made.ok) return { ok: false, state, final: null, alreadySealed: false, errors: made.errors };
-  return { ok: true, state: { ...state, final: made.final }, final: made.final, alreadySealed: false, errors: [] };
+  const ids = Object.keys(state.events ?? {});
+  //  ⚠ 單一 Event（legacy）：賽季封存 ＝ 那個 Event 的封存快照，**同一個物件**。
+  //    這樣 `state.final` 與 v1 逐位元相同 ⇒ Q4／Q5／Q6 對它的逐字比對仍然成立。
+  //    多 Event：賽季本身不再產生「總名次」——它只負責整季封存與換季，
+  //    年度總排名獎金是未來的 Season Award，另立實體（產品規則 4、5）。
+  const final = ids.length === 1
+    ? eventFinalOf(state, ids[0])
+    : {
+        schema: "SeasonSeal.v1",
+        season: state.season,
+        sealedAtDay,
+        eventIds: ids,
+      };
+  if (!final) return { ok: false, state, final: null, alreadySealed: false, errors: [{ code: "no_final", message: "賽事尚未封存" }] };
+  return { ok: true, state: { ...state, final }, final, alreadySealed: false, errors: [] };
 }
 
 // ── Milestone Q5：跨賽季換季 ──────────────────────────────────────────────
@@ -623,16 +704,38 @@ export function seasonDayOf(state, currentDay) {
  * ⚠ Q6：**只吃常規賽的賽果**。季後賽場次住在同一個 `state.fixtures`／`outcomes`
  *   裡（那是刻意的——所有既有機制因此不用改），但它們**不能進常規賽積分榜**。
  */
-export function seasonStandings(state, rule = "win3") {
+export function standingsOf(state, competitionId, rule = "win3") {
+  const entry = competitionEntry(state, competitionId);
+  //  ⚠ 這裡刻意仍然把**整份 outcomes** 交給 computeStandings，由它用 stageId
+  //    過濾（季後賽賽果不進常規賽榜，Q6 §那條）。先自己篩一次再交出去，
+  //    等於把同一條過濾規則寫兩個地方。
   return computeStandings({
-    outcomes: state?.outcomes ?? [], participants: participantsOf(state), rule,
-    stageId: activeStageOf(state)?.id ?? null,
+    outcomes: state?.outcomes ?? [],
+    participants: entry?.stage?.participants ?? [],
+    rule,
+    stageId: entry?.stage?.id ?? null,
   });
+}
+
+/** 目前聚焦賽制的積分榜。legacy 只有一個賽制 ⇒ 與 v1 逐值相同。 */
+export function seasonStandings(state, rule = "win3") {
+  return standingsOf(state, activeEntryOf(state)?.competition?.id, rule);
+}
+
+/** 某個 Event 的積分榜——由它的 `rankingCompetitionId` 決定（資格賽不算進去）。 */
+export function eventStandingsOf(state, eventId, rule = "win3") {
+  const ev = state?.events?.[eventId] ?? null;
+  return ev?.rankingCompetitionId ? standingsOf(state, ev.rankingCompetitionId, rule) : null;
 }
 
 // ── Milestone Q6：季後賽 ──────────────────────────────────────────────────
 
 /** 季後賽的場次（沒有季後賽 ⇒ 空陣列）。 */
+export const playoffFixturesOfCompetition = (state, cid) =>
+  (state?.fixtures ?? []).filter((f) => f.stageId === competitionEntry(state, cid)?.playoff?.stage?.id);
+export const regularFixturesOfCompetition = (state, cid) =>
+  (state?.fixtures ?? []).filter((f) => f.stageId === competitionEntry(state, cid)?.stage?.id);
+
 export const playoffFixturesOf = (state) =>
   (state?.fixtures ?? []).filter((f) => f.stageId === activePlayoffOf(state)?.stage?.id);
 
@@ -699,11 +802,15 @@ export function ensurePlayoffs(state) {
 }
 
 /** 季後賽是不是打完了（含季軍戰與決賽）。 */
-export function isPlayoffDone(state) {
-  if (!activePlayoffOf(state)) return false;
-  const fx = playoffFixturesOf(state);
+export function isPlayoffDoneOf(state, cid) {
+  if (!competitionEntry(state, cid)?.playoff) return false;
+  const fx = playoffFixturesOfCompetition(state, cid);
   //  四場都要在（sf1／sf2／bronze／final），而且都收尾
   return fx.length === PLAYOFF_MATCHES.length && fx.every(isFixtureTerminal);
+}
+
+export function isPlayoffDone(state) {
+  return isPlayoffDoneOf(state, activeEntryOf(state)?.competition?.id);
 }
 
 /** 季後賽對戰表（畫面用）。 */
