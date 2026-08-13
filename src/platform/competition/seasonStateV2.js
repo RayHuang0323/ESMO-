@@ -324,6 +324,37 @@ function normalizeEvent(event) {
   return normalized;
 }
 
+// Legacy gameplay writes may append playoff fixtures/outcomes after the v2
+// wrapper was first created. Refresh only the deterministic ID indexes for the
+// already-bound Competition; never change Event/Circuit/Competition scope or
+// any sealing/settlement reference.
+function refreshLegacyIndexes(seasonStateV2, legacyState) {
+  const active = seasonStateV2?.active;
+  if (!active) return seasonStateV2;
+  return {
+    ...seasonStateV2,
+    gameModes: (seasonStateV2.gameModes ?? []).map((mode) => ({
+      ...mode,
+      circuits: (mode.circuits ?? []).map((circuit) => ({
+        ...circuit,
+        events: (circuit.events ?? []).map((event) => {
+          if (event.id !== active.eventId || event.competitionRef?.id !== legacyState?.competition?.id) return event;
+          return {
+            ...event,
+            stageIds: stageIdsOf(legacyState),
+            playoffRef: playoffRefOf(legacyState),
+            fixtureIds: idsOf(legacyState.fixtures),
+            outcomeIds: idsOf(legacyState.outcomes),
+            // A missing legacy index may be filled from canonical state; an
+            // existing finalId is never rebound to a different FinalStandings.
+            finalId: event.finalId ?? legacyState.final?.id ?? null,
+          };
+        }),
+      })),
+    })),
+  };
+}
+
 /**
  * Normalize only representation details from Q7b. It never repairs a scope:
  * mismatched event/circuit/competition/active IDs remain visible to the
@@ -446,6 +477,12 @@ function validateCanonical(value) {
         if (event.pointsSettlementRef && event.pointsStatus !== POINTS_STATUS.settled) {
           errors.push({ code: "points_ref_status", message: "points settlement reference/status mismatch" });
         }
+        if (event.pointsStatus === POINTS_STATUS.settled && !event.pointsSettlementRef) {
+          errors.push({ code: "points_ref_missing", message: "settled points require a settlement reference" });
+        }
+        if (event.pointsStatus === POINTS_STATUS.settled && !event.pointsPolicyRef) {
+          errors.push({ code: "points_policy_missing", message: "settled points require a points policy reference" });
+        }
         if (event.pointsSettlementRef && event.pointsSettlementRef.eventId != null && event.pointsSettlementRef.eventId !== event.id) {
           errors.push({ code: "points_event_mismatch", message: "pointsSettlementRef event scope mismatch" });
         }
@@ -560,7 +597,28 @@ export function migrateSeasonStateV2({
       // Within one season, a competition mismatch is corruption, not a cue to
       // rebind the Event. Keep the value and let the adapter fail closed.
       if (!indexedEvent || indexedEvent.competitionRef?.id !== legacyState.competition.id) return seasonStateV2;
-      return normalized;
+      // Final IDs are immutable references. A conflicting stored ID is
+      // corruption, not a stale index that migration may silently replace.
+      if (indexedEvent.finalId != null && legacyState.final?.id != null && indexedEvent.finalId !== legacyState.final.id) return seasonStateV2;
+      const refreshed = refreshLegacyIndexes(normalized, legacyState);
+      if (legacyState?.final?.id && refreshed.active) {
+        const currentEvent = activeEventOf(refreshed);
+        if (currentEvent && currentEvent.finalId === legacyState.final.id && currentEvent.status !== EVENT_STATUS.sealed) {
+          return {
+            ...refreshed,
+            status: SEASON_STATUS.sealed,
+            active: null,
+            gameModes: refreshed.gameModes.map((mode) => ({
+              ...mode,
+              circuits: mode.circuits.map((circuit) => ({
+                ...circuit,
+                events: circuit.events.map((event) => event.id === currentEvent.id ? { ...event, status: EVENT_STATUS.sealed, sealedAtDay: legacyState.final.sealedAtDay ?? null, final: awardEnvelopeOf(legacyState.final, awardLedger) } : event),
+              })),
+            })),
+          };
+        }
+      }
+      return refreshed;
     }
     return normalized;
   }

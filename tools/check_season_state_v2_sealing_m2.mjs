@@ -138,6 +138,33 @@ ck("a sealed Event can fill its missing points ledger once", deferredPoints.ok &
 
 const seasonBlocked = sealSeasonBoundary({ seasonStateV2: activeV2() });
 ck("Season cannot seal while required Event is open", seasonBlocked.ok === false && seasonBlocked.reason === "events_not_sealed");
+const secondEvent = {
+  ...awardRun.event,
+  id: `${awardRun.event.id}:second`,
+  competitionRef: { schema: "Competition.v1", id: "comp:moba:m2:second", path: "competition" },
+  fixtureIds: ["fx:m2:second"],
+  outcomeIds: ["out:m2:second"],
+  finalId: null,
+  final: null,
+  status: "active",
+  sealedAtDay: null,
+  pointsPolicyRef: null,
+  pointsSettlementRef: null,
+  pointsStatus: "not_started",
+};
+const multiEventState = normalizeSeasonStateV2({
+  ...awardRun.seasonStateV2,
+  gameModes: [{
+    ...awardRun.seasonStateV2.gameModes[0],
+    circuits: [{
+      ...awardRun.seasonStateV2.gameModes[0].circuits[0],
+      eventIds: [awardRun.event.id, secondEvent.id],
+      events: [awardRun.event, secondEvent],
+    }],
+  }],
+});
+const multiEventBlocked = sealSeasonBoundary({ seasonStateV2: multiEventState });
+ck("Season does not ignore another open Event", multiEventBlocked.ok === false && multiEventBlocked.reason === "events_not_sealed");
 const seasonSealed = sealSeasonBoundary({ seasonStateV2: awardRun.seasonStateV2, requiredEventIds: [baseEvent.id] });
 ck("Season seals after Event", seasonSealed.ok && seasonSealed.seasonStateV2.status === "sealed" && seasonSealed.seasonStateV2.active === null);
 const seasonAgain = sealSeasonBoundary({ seasonStateV2: seasonSealed.seasonStateV2, requiredEventIds: [baseEvent.id] });

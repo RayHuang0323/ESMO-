@@ -887,7 +887,10 @@ export const useProfileStore = create((set, get) => ({
         sealedAtDay: Number(get().meta?.days) || 1,
       });
       if (!boundary2.ok) return { sealed: false, final: null, award: null, reason: boundary2.reason };
-      const season2 = get().sealCompetitionSeason({ requiredEventIds: event2?.id ? [event2.id] : null });
+      // The Season boundary owns the complete Event set. Do not narrow the
+      // requirement to whichever Event happened to be active: that would let
+      // a future multi-Event Season seal while another Event is still open.
+      const season2 = get().sealCompetitionSeason();
       if (!season2.ok) return { sealed: false, final: boundary2.final ?? null, award: boundary2.awardReceipt ?? null, reason: season2.reason };
       get().save();
       return { sealed: true, final: boundary2.final ?? state.final ?? null, award: boundary2.awardReceipt ?? null };

@@ -21,7 +21,8 @@ export const CIRCUIT_POINTS_POLICY_SCHEMA = "CircuitPointsPolicy.v1";
 
 const objectOf = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : null;
 const integer = (value) => Number.isInteger(Number(value)) ? Number(value) : null;
-const ids = (items, key = "id") => (Array.isArray(items) ? items : []).map((item) => item?.[key] ?? null);
+const ids = (items, key = "id") => (Array.isArray(items) ? items : [])
+  .map((item) => key === "id" ? (item?.id ?? item?.fixtureId ?? null) : (item?.[key] ?? null));
 const sameIds = (a, b) => JSON.stringify(a ?? []) === JSON.stringify(b ?? []);
 
 export function allFixturesTerminal(legacyState) {
@@ -81,6 +82,15 @@ export function settleCircuitPoints({ ledger = {}, event, final, policy, sealedA
     };
   }
   const settlementKey = pointsSettlementKey(event, final, policy);
+  if (event.pointsSettlementRef && event.pointsSettlementRef.id !== settlementKey) {
+    return {
+      ok: false,
+      alreadySettled: false,
+      receipt: null,
+      nextLedger: ledger,
+      errors: [{ code: "points_key_mismatch", message: "Existing points settlement reference does not match the deterministic key" }],
+    };
+  }
   const existing = objectOf(ledger?.[settlementKey]);
   if (existing) return { ok: true, alreadySettled: true, receipt: existing, nextLedger: ledger, errors: [] };
 
@@ -193,6 +203,21 @@ export function sealEventBoundary({
     if (!legacyState.final || event.finalId !== legacyState.final.id) {
       return { ok: false, reason: "final_scope_mismatch", errors: [{ code: "final_scope", message: "Sealed Event final does not match legacy FinalStandings" }] };
     }
+    if (event.pointsStatus === POINTS_STATUS.settled) {
+      const pointsRef = event.pointsSettlementRef;
+      const pointsReceipt = pointsRef ? profileState?.circuitPointsLedger?.[pointsRef.id] : null;
+      const expectedKey = pointsSettlementKey(event, legacyState.final, event.pointsPolicyRef);
+      const receiptScopeMatches = pointsReceipt
+        && pointsReceipt.id === expectedKey
+        && pointsReceipt.settlementKey === expectedKey
+        && pointsReceipt.eventId === event.id
+        && pointsReceipt.circuitId === event.circuitId
+        && pointsReceipt.competitionId === legacyState.final.competitionId
+        && pointsReceipt.finalId === legacyState.final.id;
+      if (!pointsRef || pointsRef.id !== expectedKey || !receiptScopeMatches) {
+        return { ok: false, reason: "points_receipt_missing", errors: [{ code: "points_receipt_missing", message: "Settled Event is missing its Circuit Points ledger receipt" }] };
+      }
+    }
     if (event.pointsStatus !== POINTS_STATUS.settled && pointsPolicy) {
       const points = settleCircuitPoints({
         ledger: profileState?.circuitPointsLedger ?? {},
@@ -203,7 +228,14 @@ export function sealEventBoundary({
       });
       if (!points.ok) return { ok: false, reason: "points_failed", errors: points.errors };
       const nextSeasonStateV2 = updateEvent(normalized, event.id, {
-        pointsSettlementRef: { schema: points.receipt.schema, id: points.receipt.id, path: "circuitPointsLedger", eventId: event.id, circuitId: event.circuitId },
+        pointsSettlementRef: {
+          schema: points.receipt.schema,
+          id: points.receipt.id,
+          path: "circuitPointsLedger",
+          eventId: event.id,
+          circuitId: event.circuitId,
+          competitionId: legacyState.final.competitionId,
+        },
         pointsStatus: POINTS_STATUS.settled,
       });
       return {
