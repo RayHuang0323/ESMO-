@@ -259,8 +259,13 @@ const runs = [];
   //    而季後賽依規格就住在 seasonState ⇒ 原斷言必然紅。
   //    保留仍然成立的部分：**換季本身不碰季後賽的內部規則**（`rollToNextSeason`
   //    只換容器），以及 CS 巡迴／MMR／Shop 一律不得出現。
-  ck("7d) 換季不碰季後賽規則；且沒有 CS 巡迴／MMR／Shop",
-    !/double_elim|circuit|\bmmr\b|tokens|entitlement/i.test(ss) &&
+  //  ⚠ 2026-08-13（Q7a-3a）：本條原本也擋 `circuit`。Circuit 已是核准的一級實體
+  //    （Season → Game Mode → Circuit → Event → Competition/Stage → Fixture），
+  //    而 seasonState 必須 import 它的身分升級 ⇒ 原字面必然紅。
+  //    **收窄而不是拿掉**：改擋 `circuitPoints`——身分可以進來，
+  //    **積分玩法仍然擋在門外**（那是 3c，且來源必須是 Event 最終名次而非 outcomes）。
+  ck("7d) 換季不碰季後賽規則；且沒有 CS 巡迴積分／MMR／Shop",
+    !/double_elim|circuitPoints|\bmmr\b|tokens|entitlement/i.test(ss) &&
     !/playoff/i.test(ss.split("export function rollToNextSeason")[1]?.split("export function")[0] ?? ""));
   ck("7e) 賽季編號由賽事自己 +1，**不讀 `meta.season`**",
     !/meta[?.]*\.season/.test(ss) && /Number\(state\.season\)\s*\|\|\s*1\)\s*\+\s*1/.test(ss));
