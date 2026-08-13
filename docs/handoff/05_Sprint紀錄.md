@@ -7314,3 +7314,9 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - Leadership digest `6909e5080c0992eecaa48108dd0e48f083bfd6387d71ffdb4ab72e3e50efbb16`：IGL role-fit only，沒有 team direction consumer；B / Measurement Go / Semantic Revise / Calibration No-Go。
 - Synergy digest `aa5f90bc1c582ea5210c304604df8c69001ba9d7646b98d873519f307d66095b`：Support role-fit only，玩家側無 team-level coordination；C / Measurement Go / Semantic Revise / Calibration No-Go。
 - R16-A verifier 透過 legacy adapter 重跑，digest `db856f15099943d73b89f16702710031e4a48f33c65538e197c7271ad2eb2022` 保留；未新增 team AI、RNG、scenario 或 balance。
+## R37 CS Learning × Map Awareness (2026-08-14)
+
+- 先核對並推送 R36 `9ba4e35e6940554c3abd5b7ae868cfca6b5a13cb`；R37 scope 僅 CS 16 stats。
+- 新增 `check_cs_learning_measurement_r37.mjs`：5 roles × low/baseline/high × 16 seeds，共 240 training probes；確認 Learning 只接既有 training／talent／growth persistence，無 match-result 或單局 combat consumer。digest `76a55f011cac560f618855bc0eb93cfdd26952f55757686412d5bdbf60d30eaf`。
+- 新增 `check_cs_mapaware_measurement_r37.mjs`：memory-only pair admission read-point candidate，240 arms、480 repeated runs；coverage aggregate probes `801295`、visible `86064`、wall `637714`、smoke `288592`，digest `2d3fc0f130ac4c724f2cfdf95b9789a59b0cedde2d704a182720a57e94112fad`。
+- R16-B / R18-B verifier 改以 historical adapter 保留鎖定 evidence；未 rebaseline。R37 不新增 production feature，兩項 calibration 均 Deferred / No-Go。

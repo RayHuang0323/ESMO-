@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
-import { CS_R27_DECISION_SOURCE_SHA256, csR19R15Source } from "./cs_r15_legacy_source.mjs";
+import { CS_R33_RESILIENCE_SOURCE_SHA256, csR19R15Source } from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -256,7 +256,7 @@ async function main() {
   gate(process.argv.length === 2, "CLI_FLAGS_FORBIDDEN", "R18-B verifier is locked to the focused design.");
   const liveSource = readFileSync(FPS_FILE, "utf8");
   const liveSourceSha256 = sha256(liveSource);
-  gate(liveSourceSha256 === CS_R27_DECISION_SOURCE_SHA256, "LIVE_SOURCE_SHA256", `expected=${CS_R27_DECISION_SOURCE_SHA256} actual=${liveSourceSha256}`);
+  gate(liveSourceSha256 === CS_R33_RESILIENCE_SOURCE_SHA256, "LIVE_SOURCE_SHA256", `expected=${CS_R33_RESILIENCE_SOURCE_SHA256} actual=${liveSourceSha256}`);
   const source = csR19R15Source(liveSource);
   const sourceSha256 = sha256(source);
   gate(sourceSha256 === SOURCE_SHA256, "SOURCE_SHA256", `expected=${SOURCE_SHA256} actual=${sourceSha256}`);
