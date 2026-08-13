@@ -292,6 +292,7 @@ function seasonStateV2For(state) {
     seasonStateV2: state?.seasonStateV2,
     legacyState: state?.competition,
     competitionHistory: arr(state?.competitionHistory, []),
+    awardLedger: state?.processedCompetitionAwards,
     meta: state?.meta,
   });
 }

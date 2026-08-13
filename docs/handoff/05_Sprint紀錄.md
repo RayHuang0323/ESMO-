@@ -7248,3 +7248,10 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
   reference 與單一 live session / resume 行為均不重算、不重排、不改 ID。
 - post-merge gates：Q7b migration 22/22、Q7a safety 18/18、Q4/Q5/Q6 68/66/57，另行通過
   production build 與 review 後才可 push release checkpoint。
+## 3b-M1：SeasonState.v2 Migration-safe Foundation（2026-08-13）
+
+- 範圍固定為 validator / normalization、legacy v1 → v2 migration、deterministic indexes、active Event adapter、Event.final reference-only envelope。
+- `competition` 是唯一真相；v2 不複製 Competition 或 FinalStandings.rows，只保存 competitionRef、legacy ID references、playoffRef、final sourceRef 與 optional award receipt / summary。
+- 同一 Event 僅一個 competitionRef；eventId / competitionId / circuitId scope mismatch、duplicate competition binding、duplicate legacy ref、final rows、active mismatch 均 fail closed；active 可為 null。
+- focused verifier 34/34；aggregate relevant gates 6/6；Q7a 18/18、Q4 68/68、Q5 66/66、Q6 57/57、progress25 33/33、build PASS。
+- 未開始 Circuit Points、Event / Season sealing、qualification、time-slot scheduler、CS Event；M1 local-only，待 commit，不 push。

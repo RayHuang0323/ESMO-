@@ -18,6 +18,7 @@ const {
 } = await import("../src/platform/competition/seasonState.js");
 const {
   migrateSeasonStateV2, activeEventOf, activeEventAdapter,
+  validateSeasonStateV2, buildSeasonStateV2Indexes, standingsScopeFor,
 } = await import("../src/platform/competition/seasonStateV2.js");
 
 let pass = 0;
@@ -49,16 +50,58 @@ ck("legacy state migrates", v2.schema === "SeasonState.v2" && v2.active?.gameMod
 ck("single MOBA career route", v2.gameModes.length === 1 && v2.gameModes[0].gameMode === "moba" &&
   v2.gameModes[0].circuits.length === 1 && v2.gameModes[0].circuits[0].ladderId === "career" &&
   v2.gameModes[0].circuits[0].events.length === 1 && v2.gameModes[0].circuits[0].events[0].kind === "league");
-ck("legacy Competition reference", event?.legacyCompetitionRef?.id === legacy.competition.id &&
+ck("legacy Competition reference", event?.competitionRef?.id === legacy.competition.id &&
   event?.legacyStatePath === "competition");
 ck("fixture IDs preserved", json(event?.fixtureIds) === json(ids(legacy.fixtures)));
 ck("outcome IDs preserved", json(event?.outcomeIds) === json(ids(legacy.outcomes)));
 ck("stage/playoff/final references preserved", event?.stageIds.includes(legacy.stage.id) &&
   event?.finalId === legacy.final.id);
-ck("competitionHistory references preserved", json(v2.history[0]?.legacyFinalRef) === json({
-  id: history[0].id, competitionId: history[0].competitionId,
+ck("competitionHistory references preserved", json(v2.history[0]?.sourceRef) === json({
+  schema: "FinalStandings.v1", id: history[0].id, path: "competitionHistory", competitionId: history[0].competitionId,
 }));
+ck("reference-only final envelope", validateSeasonStateV2(v2).ok && event?.final?.sourceRef?.id === legacy.final.id &&
+  !Object.prototype.hasOwnProperty.call(event?.final ?? {}, "rows"));
+ck("deterministic indexes", (() => {
+  const built = buildSeasonStateV2Indexes(v2);
+  const scope = standingsScopeFor(v2, { eventId: event.id, competitionId: legacy.competition.id, stageId: legacy.stage.id });
+  return built.ok && built.indexes.eventsById[event.id]?.event?.id === event.id && scope.ok && scope.scope.circuitId === event.circuitId;
+})());
+ck("scope mismatch fails closed", !standingsScopeFor(v2, {
+  eventId: event.id, competitionId: "comp:wrong", stageId: legacy.stage.id,
+}).ok);
+ck("active null is valid", validateSeasonStateV2({ ...v2, active: null }).ok);
 ck("no CS Event created", v2.gameModes.every((mode) => mode.gameMode !== "cs"));
+const stateWithEvent = (transform) => {
+  const copy = JSON.parse(json(v2));
+  const circuit = copy.gameModes[0].circuits[0];
+  circuit.events[0] = transform(circuit.events[0]);
+  return copy;
+};
+ck("same Event has only one competitionRef", !validateSeasonStateV2(stateWithEvent((item) => ({
+  ...item, legacyCompetitionRef: { ...item.competitionRef },
+}))).ok);
+ck("duplicate competition binding fails closed", (() => {
+  const copy = JSON.parse(json(v2));
+  const circuit = copy.gameModes[0].circuits[0];
+  const second = { ...circuit.events[0], id: `${circuit.events[0].id}:duplicate` };
+  circuit.events = [circuit.events[0], second];
+  circuit.eventIds = circuit.events.map((item) => item.id);
+  return !validateSeasonStateV2(copy).ok;
+})());
+ck("event/circuit scope mismatch fails closed", !validateSeasonStateV2(stateWithEvent((item) => ({
+  ...item, circuitId: "circuit:wrong",
+}))).ok);
+ck("active scope mismatch fails closed", !validateSeasonStateV2({
+  ...v2, active: { ...v2.active, circuitId: "circuit:wrong" },
+}).ok);
+ck("final rows fail closed", !validateSeasonStateV2(stateWithEvent((item) => ({
+  ...item, final: { ...item.final, rows: [] },
+}))).ok);
+const mismatchedAdapter = activeEventAdapter({
+  seasonStateV2: v2,
+  legacyState: { ...legacy, competition: { ...legacy.competition, id: "comp:wrong" } },
+});
+ck("adapter competition mismatch fails closed", mismatchedAdapter.ok === false && mismatchedAdapter.legacyState === null);
 
 // 2) v2 -> v2 must be byte-for-byte stable for the same legacy state.
 const again = migrateSeasonStateV2({
@@ -67,6 +110,18 @@ const again = migrateSeasonStateV2({
   competitionHistory: history,
 });
 ck("v2 migration is idempotent", json(again) === json(v2));
+const oldQ7bV2 = JSON.parse(json(v2));
+const oldQ7bEvent = oldQ7bV2.gameModes[0].circuits[0].events[0];
+oldQ7bEvent.legacyCompetitionRef = oldQ7bEvent.competitionRef;
+delete oldQ7bEvent.competitionRef;
+delete oldQ7bEvent.final;
+oldQ7bV2.history[0].legacyFinalRef = oldQ7bV2.history[0].sourceRef;
+delete oldQ7bV2.history[0].sourceRef;
+const oldQ7bReloaded = migrateSeasonStateV2({ seasonStateV2: oldQ7bV2 });
+ck("old v2 representation normalizes canonically", validateSeasonStateV2(oldQ7bReloaded).ok &&
+  oldQ7bReloaded.gameModes[0].circuits[0].events[0].competitionRef.id === legacy.competition.id &&
+  !Object.prototype.hasOwnProperty.call(oldQ7bReloaded.gameModes[0].circuits[0].events[0], "legacyCompetitionRef") &&
+  oldQ7bReloaded.history[0].sourceRef.id === history[0].id);
 const digestOf = (value) => createHash("sha256").update(json(value)).digest("hex");
 const digestA = digestOf(migrateSeasonStateV2({ legacyState: legacy, competitionHistory: history }));
 const digestB = digestOf(migrateSeasonStateV2({ legacyState: legacy, competitionHistory: history }));
@@ -107,12 +162,20 @@ current = store();
 const legacyCompetition = current.competition;
 const fixtureIdsBefore = ids(legacyCompetition.fixtures);
 const outcomeIdsBefore = ids(legacyCompetition.outcomes);
-const receipt = { receiptId: "receipt:q7b", finalId: "final:receipt-q7b" };
+const receipt = {
+  receiptId: "receipt:q7b",
+  finalId: "final:receipt-q7b",
+  competitionId: legacyCompetition.competition.id,
+};
 const historyBefore = [{ id: "final:history-live", season: 1, competitionId: legacyCompetition.competition.id }];
 firstModule.useProfileStore.setState({
   competitionHistory: historyBefore,
   processedCompetitionAwards: { [receipt.finalId]: receipt },
-  competition: { ...legacyCompetition, outcomes: [{ id: "outcome:live", fixtureId: fixture.id }] },
+  competition: {
+    ...legacyCompetition,
+    final: { id: receipt.finalId, schema: "FinalStandings.v1", competitionId: legacyCompetition.competition.id },
+    outcomes: [{ id: "outcome:live", fixtureId: fixture.id }],
+  },
 });
 store().save();
 const savedWithV2 = JSON.parse(raw);
@@ -150,7 +213,10 @@ ck("settlement receipt survives save load", json(loaded.processedCompetitionAwar
 ck("live session binding survives save load", json(mmIdentity(loaded.matchmaking)) === json(mmIdentity(oldMatchmaking)) &&
   loaded.matchmaking.fixtureAssignment?.origin?.fixtureId === fixture.id);
 ck("active Event points at loaded Competition", loaded.seasonStateV2.active?.eventId &&
-  loaded.seasonStateV2.gameModes[0].circuits[0].events[0].legacyCompetitionRef.id === loaded.competition.competition.id);
+  loaded.seasonStateV2.gameModes[0].circuits[0].events[0].competitionRef.id === loaded.competition.competition.id);
+ck("award receipt reference survives migration", loaded.seasonStateV2.gameModes[0].circuits[0].events[0].final?.awardReceiptRef?.key === receipt.finalId &&
+  loaded.seasonStateV2.gameModes[0].circuits[0].events[0].final.awardReceiptRef.id === receipt.receiptId &&
+  loaded.seasonStateV2.gameModes[0].circuits[0].events[0].final.awardReceiptRef.competitionId === receipt.competitionId);
 
 const resumed = secondModule.useProfileStore.getState().resumeMatchSession(tick + 13_500);
 const resumedState = secondModule.useProfileStore.getState();
