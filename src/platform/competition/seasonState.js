@@ -113,8 +113,49 @@ export const outcomesOfCompetition = (state, cid) => {
   const ids = new Set(fixturesOfCompetition(state, cid).map((f) => f.id));
   return (state?.outcomes ?? []).filter((o) => ids.has(o.fixtureId));
 };
-export const competitionsOfEvent = (state, eventId) =>
-  competitionEntries(state).filter((e) => e.competition?.eventId === eventId);
+/**
+ * ── 查詢層 fail-closed（Q7a-3c 前置）─────────────────────────────────────
+ *
+ * ⚠ 為什麼要有這一層：先前 `standingsOf(state, "comp:不存在")` 會**靜默回 0 列**，
+ *   與「這個賽制真的一場都還沒打」長得一模一樣。畫面上就是一張空表，
+ *   看不出是資料錯還是真的沒比賽；3c 的 Circuit Points 若照這樣撈名次，
+ *   錯的 id 會被算成 0 分並寫進不可變的積分帳本。
+ *
+ * ⇒ **規則／結算用的 accessor 一律明確失敗（throw）**；
+ *   畫面合理的 optional 查詢請用 `try*` 版本，語意是「可能沒有」，回 `null`。
+ *   `null`（找不到）與 `rows: []`（真的 0 筆）從此不會混在一起。
+ */
+function requireEntry(state, competitionId, where) {
+  const entry = competitionEntry(state, competitionId);
+  if (!entry) {
+    throw new TypeError(
+      `${where}：找不到賽制 ${competitionId ?? "(未指定)"}。` +
+      `這是呼叫端傳錯 id，不是「沒有資料」——要允許找不到請改用 try 版本。`);
+  }
+  return entry;
+}
+
+function requireEvent(state, eventId, where) {
+  const ev = state?.events?.[eventId];
+  if (!ev) {
+    throw new TypeError(
+      `${where}：找不到賽事 ${eventId ?? "(未指定)"}。` +
+      `這是呼叫端傳錯 id，不是「沒有資料」——要允許找不到請改用 try 版本。`);
+  }
+  return ev;
+}
+
+/** 某個 Event 底下的賽制。**找不到該 Event ⇒ throw**（規則面用）。 */
+export function competitionsOfEvent(state, eventId) {
+  requireEvent(state, eventId, "competitionsOfEvent");
+  return competitionEntries(state).filter((e) => e.competition?.eventId === eventId);
+}
+
+/** 同上，但允許「沒有這個 Event」⇒ 回 `null`（畫面 optional 查詢用）。 */
+export function tryCompetitionsOfEvent(state, eventId) {
+  if (!state?.events?.[eventId]) return null;
+  return competitionEntries(state).filter((e) => e.competition?.eventId === eventId);
+}
 export const eventsOfCircuit = (state, circuitId) =>
   Object.values(state?.events ?? {}).filter((e) => e.circuitId === circuitId);
 export { SEASON_DAYS };
@@ -295,6 +336,65 @@ export function eventViewsOf(state, currentDay = 1) {
   });
 }
 
+/**
+ * 賽季範圍一致性驗證（Q7a-3c 前置）。
+ *
+ * ⚠ 這是**結構驗證**，不是「有沒有資料」的查詢：它檢查身分層彼此指得對不對。
+ *   3c 的 Circuit Points 會沿著 circuit → event → competition 去撈名次，
+ *   任何一段指錯都會讓積分算在錯的對象上，而且會寫進不可變帳本。
+ *
+ * 檢查五件事：
+ *   ① 每個賽制的 `eventId` 指得到存在的 Event
+ *   ② 每個 Event 的 `circuitId` 指得到存在的 Circuit
+ *   ③ `rankingCompetitionId` 必須屬於該 Event（多賽制時尤其重要）
+ *   ④ **同一個賽制不得綁在兩個 Event 底下**（duplicate binding）
+ *   ⑤ Event 的 `competitionIds` 與實際綁定一致（不得漏列或多列）
+ */
+export function validateSeasonScope(state) {
+  const errors = [];
+  if (!state?.schema) return { ok: false, errors: [{ code: "no_season", message: "目前沒有賽季" }] };
+
+  const events = state.events ?? {};
+  const circuits = state.circuits ?? {};
+  const entries = competitionEntries(state);
+  const seen = new Map();   // competitionId → eventId（抓 duplicate binding）
+
+  for (const e of entries) {
+    const cid = e.competition?.id;
+    const eid = e.competition?.eventId ?? null;
+    if (!eid || !events[eid]) {
+      errors.push({ code: "competition_event", message: `賽制 ${cid} 的 eventId ${eid ?? "(無)"} 指不到存在的賽事` });
+      continue;
+    }
+    if (seen.has(cid)) {
+      errors.push({ code: "duplicate_binding", message: `賽制 ${cid} 同時綁在 ${seen.get(cid)} 與 ${eid} 底下` });
+    }
+    seen.set(cid, eid);
+  }
+
+  for (const [eid, ev] of Object.entries(events)) {
+    if (!ev.circuitId || !circuits[ev.circuitId]) {
+      errors.push({ code: "event_circuit", message: `賽事 ${eid} 的 circuitId ${ev.circuitId ?? "(無)"} 指不到存在的巡迴賽體系` });
+    }
+    const mine = entries.filter((e) => e.competition?.eventId === eid).map((e) => e.competition.id);
+    if (ev.rankingCompetitionId && !mine.includes(ev.rankingCompetitionId)) {
+      errors.push({
+        code: "ranking_scope",
+        message: `賽事 ${eid} 的 rankingCompetitionId ${ev.rankingCompetitionId} 不屬於這個賽事`,
+      });
+    }
+    if (mine.length > 1 && !ev.rankingCompetitionId) {
+      errors.push({ code: "ranking_required", message: `賽事 ${eid} 有 ${mine.length} 個賽制，必須明確指定 rankingCompetitionId` });
+    }
+    const listed = [...(ev.competitionIds ?? [])].sort().join(",");
+    if (listed !== [...mine].sort().join(",")) {
+      errors.push({ code: "competition_list", message: `賽事 ${eid} 的 competitionIds 與實際綁定不一致（列出 [${listed}]，實際 [${mine.join(",")}]）` });
+    }
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
 /** 參賽者（隊名查詢用）。 */
 export const participantsOf = (state) => activeStageOf(state)?.participants ?? [];
 
@@ -356,6 +456,21 @@ export function pendingPlayerFixturesOn(state, day) {
  */
 export function pendingPlayerFixtureOn(state, day) {
   return pendingPlayerFixturesOn(state, day)[0] ?? null;
+}
+
+/**
+ * 某個 Event 底下的下一場玩家賽事（含今天）。畫面用。
+ *
+ * ⚠ 只影響**畫面**：聚焦哪個 Event 就看哪個 Event 的下一場。
+ *   規則面仍然走 `nextPlayerFixture`（全季）。
+ */
+export function nextPlayerFixtureOfEvent(state, eventId, fromDay = 1) {
+  const ids = new Set(
+    tryCompetitionsOfEvent(state, eventId)?.flatMap((e) => fixturesOfCompetition(state, e.competition.id).map((f) => f.id)) ?? [],
+  );
+  return (state?.fixtures ?? [])
+    .filter((f) => ids.has(f.id) && isPlayerFixture(state, f) && !isFixtureTerminal(f) && absoluteDayOf(state, f) >= fromDay)
+    .sort((a, b) => a.day - b.day)[0] ?? null;
 }
 
 /** 下一場玩家賽事（含今天）；沒有則 null。畫面用。 */
@@ -754,7 +869,7 @@ export function seasonDayOf(state, currentDay) {
  *   裡（那是刻意的——所有既有機制因此不用改），但它們**不能進常規賽積分榜**。
  */
 export function standingsOf(state, competitionId, rule = "win3") {
-  const entry = competitionEntry(state, competitionId);
+  const entry = requireEntry(state, competitionId, "standingsOf");
   //  ⚠ 這裡刻意仍然把**整份 outcomes** 交給 computeStandings，由它用 stageId
   //    過濾（季後賽賽果不進常規賽榜，Q6 §那條）。先自己篩一次再交出去，
   //    等於把同一條過濾規則寫兩個地方。
@@ -771,10 +886,29 @@ export function seasonStandings(state, rule = "win3") {
   return standingsOf(state, activeEntryOf(state)?.competition?.id, rule);
 }
 
-/** 某個 Event 的積分榜——由它的 `rankingCompetitionId` 決定（資格賽不算進去）。 */
+/**
+ * 某個 Event 的積分榜——由它的 `rankingCompetitionId` 決定（資格賽不算進去）。
+ * **找不到該 Event ⇒ throw**；Event 存在但還沒指定名次賽制 ⇒ throw（那是設定缺失，
+ * 不是「沒有資料」）。
+ */
 export function eventStandingsOf(state, eventId, rule = "win3") {
-  const ev = state?.events?.[eventId] ?? null;
-  return ev?.rankingCompetitionId ? standingsOf(state, ev.rankingCompetitionId, rule) : null;
+  const ev = requireEvent(state, eventId, "eventStandingsOf");
+  if (!ev.rankingCompetitionId) {
+    throw new TypeError(`eventStandingsOf：賽事 ${eventId} 沒有指定 rankingCompetitionId，無法決定名次來源`);
+  }
+  return standingsOf(state, ev.rankingCompetitionId, rule);
+}
+
+/** 同上，但允許「沒有這個 Event／還沒指定名次賽制」⇒ 回 `null`（畫面用）。 */
+export function tryEventStandingsOf(state, eventId, rule = "win3") {
+  const ev = state?.events?.[eventId];
+  if (!ev?.rankingCompetitionId || !competitionEntry(state, ev.rankingCompetitionId)) return null;
+  return standingsOf(state, ev.rankingCompetitionId, rule);
+}
+
+/** 同上，賽制版。 */
+export function tryStandingsOf(state, competitionId, rule = "win3") {
+  return competitionEntry(state, competitionId) ? standingsOf(state, competitionId, rule) : null;
 }
 
 // ── Milestone Q6：季後賽 ──────────────────────────────────────────────────

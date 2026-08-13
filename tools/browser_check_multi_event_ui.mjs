@@ -64,7 +64,10 @@ const SETUP = `
 
 const GOTO = `
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-  const on = () => /聯賽/.test(document.body.innerText) && /積分榜|今日賽事/.test(document.body.innerText);
+  //  ⚠ 到站判斷**不能靠標題**：3b.5 之後頁首會跟著聚焦的 Event 改名，
+  //    寫死「聯賽」會在切換後判成沒到站（本檔第一版就這樣紅過）。
+  //    改用這一頁必然存在、且與聚焦無關的區塊。
+  const on = () => /積分榜 STANDINGS/.test(document.body.innerText);
   for (let i = 0; i < 14 && !on(); i++) {
     const tile = [...document.querySelectorAll("button")].find((b) => /🏆/.test(b.innerText) && /賽事/.test(b.innerText));
     if (tile) { tile.click(); await wait(1000); continue; }

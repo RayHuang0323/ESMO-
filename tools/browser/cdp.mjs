@@ -110,13 +110,20 @@ export async function startDevServer({ port, base = "/ESMO-/" } = {}) {
   };
 }
 
-/** port 現在有沒有人在聽（用「綁得起來嗎」判定，不猜）。 */
+/**
+ * port 現在有沒有人在聽（用「綁得起來嗎」判定，不猜）。
+ *
+ * ⚠ **不要指定 127.0.0.1**。vite 綁的是 `localhost`，在這台機器上會解析到
+ *   IPv6 的 `::1`；只綁 IPv4 迴環的話，殘留的 vite 佔著 `::1` 時這裡仍然回
+ *   「空的」⇒ 前置檢查形同虛設（實測踩到：port 5320 明明被佔，preflight 說沒事，
+ *   然後 readiness 卡到逾時）。不指定 host ⇒ 綁所有介面，兩種都測得到。
+ */
 function isPortFree(port) {
   return new Promise((resolve) => {
     const s = createServer();
     s.once("error", () => resolve(false));
     s.once("listening", () => s.close(() => resolve(true)));
-    s.listen(port, "127.0.0.1");
+    s.listen(port);
   });
 }
 

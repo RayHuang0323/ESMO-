@@ -32,6 +32,7 @@ const {
   competitionEntry, competitionsOfEvent, fixturesOfCompetition, outcomesOfCompetition,
   applyLaunch, applyCompleted, LEGACY_PRIZE_POLICY,
   eventViewsOf, participantsOf, activeEntryOf, isPlayoffDone,
+  tryStandingsOf, tryEventStandingsOf, tryCompetitionsOfEvent, validateSeasonScope,
 } = await import("../src/platform/competition/seasonState.js");
 const { createCircuit, createEvent, competitionIdForEvent } = await import("../src/platform/contracts/circuit.js");
 const { createCompetition, createStage, createFixture, STAGE_FORMATS } = await import("../src/platform/contracts/competition.js");
@@ -252,6 +253,114 @@ console.log("══ Q7a-3b：同季多賽事並存 ══\n");
   store().ensureCompetitionSeason();
   ck("7h) legacy 單 Event：`eventViews` 只有一筆（切換列不渲染）",
     store().competitionView().eventViews.length === 1);
+}
+
+
+// ── 8) 查詢層 fail-closed（3c 前置）─────────────────────────────────────
+//
+//  ⚠ 先前 `standingsOf(state, "不存在")` 會靜默回 0 列，與「真的一場都沒打」
+//    長得一樣。3c 的 Circuit Points 沿著 id 撈名次，撈錯會被算成 0 分並寫進
+//    不可變帳本 —— 所以規則面一律明確失敗，畫面的 optional 查詢走 try 版本。
+{
+  const st8 = createSeasonState({ playerTeam: TEAM, season: 1, seasonSeed: 12345 }).state;
+  const good = activeCompetitionOf(st8).id;
+  const eid = st8.activeEventId;
+  const threw = (fn) => { try { fn(); return false; } catch { return true; } };
+
+  ck("8) 正確 id 照常回表", standingsOf(st8, good).rows.length === 8);
+  ck("8b) **不存在的賽制 id ⇒ 明確 throw**（不再靜默回空表）",
+    threw(() => standingsOf(st8, "comp:does-not-exist")));
+  ck("8c) 未指定 id 也 throw（不把 undefined 當成「沒有資料」）",
+    threw(() => standingsOf(st8, null)));
+  ck("8d) **不存在的賽事 id ⇒ 明確 throw**",
+    threw(() => eventStandingsOf(st8, "event:nope")) && threw(() => competitionsOfEvent(st8, "event:nope")));
+
+  //  try 版本：語意是「可能沒有」，回 null，且與「真的 0 筆」分得開
+  ck("8e) try 版本找不到 ⇒ 回 null（不是空表）",
+    tryStandingsOf(st8, "comp:nope") === null &&
+    tryEventStandingsOf(st8, "event:nope") === null &&
+    tryCompetitionsOfEvent(st8, "event:nope") === null);
+  ck("8f) try 版本找得到 ⇒ 回真正的結果（null 與 0 筆不混用）",
+    tryStandingsOf(st8, good)?.rows.length === 8 &&
+    tryCompetitionsOfEvent(st8, eid)?.length === 1);
+
+  //  「真的 0 筆」仍然是合法結果：新賽季每隊都 0 場，但列數是 8
+  ck("8g) **「找不到」與「真的 0 筆」分得開**",
+    standingsOf(st8, good).rows.every((r) => r.played === 0) &&
+    standingsOf(st8, good).rows.length === 8);
+}
+
+// ── 9) 範圍一致性驗證（duplicate binding / event→competition / circuit→event）──
+{
+  const base = createSeasonState({ playerTeam: TEAM, season: 1, seasonSeed: 12345 }).state;
+  ck("9) 正常賽季通過範圍驗證", validateSeasonScope(base).ok === true,
+    JSON.stringify(validateSeasonScope(base).errors));
+
+  const two = addSecondEvent(base);
+  ck("9b) 兩個 Event 也通過", validateSeasonScope(two).ok === true,
+    JSON.stringify(validateSeasonScope(two).errors));
+
+  const codesOf = (st) => validateSeasonScope(st).errors.map((e) => e.code);
+
+  //  ① 賽制指到不存在的 Event
+  const cid = activeCompetitionOf(base).id;
+  const badEvent = { ...base, competitions: { ...base.competitions,
+    [cid]: { ...base.competitions[cid], competition: { ...base.competitions[cid].competition, eventId: "event:ghost" } } } };
+  ck("9c) 賽制的 eventId 指不到 ⇒ 抓得出來", codesOf(badEvent).includes("competition_event"));
+
+  //  ② Event 指到不存在的 Circuit
+  const eid = base.activeEventId;
+  const badCircuit = { ...base, events: { ...base.events, [eid]: { ...base.events[eid], circuitId: "circuit:ghost" } } };
+  ck("9d) Event 的 circuitId 指不到 ⇒ 抓得出來", codesOf(badCircuit).includes("event_circuit"));
+
+  //  ③ rankingCompetitionId 不屬於該 Event
+  const badRanking = { ...two, events: { ...two.events,
+    [eid]: { ...two.events[eid], rankingCompetitionId: Object.keys(two.competitions).find((c) => c !== cid) } } };
+  ck("9e) **rankingCompetitionId 指到別的 Event 的賽制 ⇒ 抓得出來**",
+    codesOf(badRanking).includes("ranking_scope"));
+
+  //  ④ duplicate binding：同一個賽制綁在兩個 Event
+  const otherEid = Object.keys(two.events).find((e) => e !== eid);
+  const dup = { ...two, events: { ...two.events,
+    [otherEid]: { ...two.events[otherEid], competitionIds: [...two.events[otherEid].competitionIds, cid] } } };
+  ck("9f) **competitionIds 與實際綁定不一致 ⇒ 抓得出來**", codesOf(dup).includes("competition_list"));
+
+  //  ⑤ 多賽制卻沒指定名次來源
+  const twoInOne = { ...two, competitions: { ...two.competitions } };
+  const cupId = Object.keys(two.competitions).find((c) => c !== cid);
+  twoInOne.competitions[cupId] = { ...two.competitions[cupId],
+    competition: { ...two.competitions[cupId].competition, eventId: eid } };
+  twoInOne.events = { ...two.events, [eid]: { ...two.events[eid], competitionIds: [cid, cupId], rankingCompetitionId: null } };
+  ck("9g) **一個 Event 有兩個賽制卻沒指定名次來源 ⇒ 抓得出來**",
+    codesOf(twoInOne).includes("ranking_required"));
+}
+
+// ── 10) UI 聚焦：標題與「下一場」跟著走，但仍不影響規則 ──────────────────
+{
+  store().startNewGame("standard");
+  store().ensureCompetitionSeason();
+  const s10 = addSecondEvent(store().competition, { prizePolicy: null });
+  useProfileStore.setState({ competition: s10 });
+  const leagueId = store().competition.activeEventId;
+  const cupId = Object.keys(store().competition.events).find((e) => e !== leagueId);
+
+  const v1 = store().competitionView();
+  ck("10) 聚焦聯賽時，標題用聚焦 Event 名稱", !!v1.focusedEventName,
+    v1.focusedEventName ?? "(null)");
+
+  store().setActiveEvent(cupId);
+  const v2 = store().competitionView();
+  ck("10b) **切換後標題跟著換**", v2.focusedEventName !== v1.focusedEventName,
+    `${v1.focusedEventName} → ${v2.focusedEventName}`);
+  ck("10c) **「下一場」也跟著換到該 Event 的場次**",
+    v1.next?.id !== v2.next?.id || (v1.next === null) !== (v2.next === null),
+    `${v1.next?.id ?? "null"} → ${v2.next?.id ?? "null"}`);
+
+  //  legacy：單一 Event ⇒ 標題不接管（畫面沿用「聯賽」）
+  store().startNewGame("standard");
+  store().ensureCompetitionSeason();
+  ck("10d) legacy 單 Event：標題不接管、`next` 與全季一致",
+    store().competitionView().focusedEventName === null);
 }
 
 

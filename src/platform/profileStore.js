@@ -61,7 +61,8 @@ import {
   createSeasonState, advanceSeasonDays, applyLaunch, applyCompleted, applyForfeit,
   fixtureById, nextPlayerFixture, pendingPlayerFixtureOn, pendingPlayerFixturesOn, seasonStandings,
   upgradeSeasonShape, activeCompetitionOf, activeStageOf, activePlayoffOf,
-  sealableEventIds, applySealEvent, eventFinalOf, eventViewsOf, eventStandingsOf,
+  sealableEventIds, applySealEvent, eventFinalOf, eventViewsOf,
+  tryEventStandingsOf, nextPlayerFixtureOfEvent,
   seasonProgress, participantsOf, absoluteDayOf, isFixtureLaunched,
   canSealSeason, applySealSeason,
   canRollSeason, rollToNextSeason, seasonDayOf,
@@ -920,7 +921,14 @@ export const useProfileStore = create((set, get) => ({
       };
     }
     const day = Number(get().meta?.days) || 1;
-    const next = nextPlayerFixture(state, day);
+    //  ⚠ Q7a-3b.5：多 Event 時「下一場」要跟著**聚焦的 Event**，否則畫面會
+    //    自相矛盾——積分榜換了、下一場還顯示另一個賽事的比賽。
+    //    單一 Event（既有存檔）時兩者相同 ⇒ 逐值不變。
+    const focusedId = state.activeEventId ?? null;
+    const multi = Object.keys(state.events ?? {}).length > 1;
+    const next = (multi && focusedId)
+      ? nextPlayerFixtureOfEvent(state, focusedId, day)
+      : nextPlayerFixture(state, day);
     return {
       hasSeason: true,
       season: state.season,
@@ -930,9 +938,13 @@ export const useProfileStore = create((set, get) => ({
       events: state.events ?? {},
       circuits: state.circuits ?? {},
       activeEventId: state.activeEventId ?? null,
+      //  ⚠ 標題只在**多 Event 時**跟著聚焦走；單一 Event 沿用畫面既有的「聯賽」，
+      //    legacy 存檔的頁首逐字不變。
+      focusedEventName: (Object.keys(state.events ?? {}).length > 1 && state.activeEventId)
+        ? (state.events[state.activeEventId]?.name ?? null) : null,
       //  ⚠ Q7a-3b.5：積分榜依**聚焦的 Event**（畫面），不是主賽制。
       //    單一 Event（所有既有存檔）時兩者相同 ⇒ legacy 畫面逐值不變。
-      standings: eventStandingsOf(state, state.activeEventId ?? null) ?? seasonStandings(state),
+      standings: tryEventStandingsOf(state, state.activeEventId ?? null) ?? seasonStandings(state),
       //  每個 Event 的狀態摘要（唯讀推導，畫面不得自己判）
       eventViews: eventViewsOf(state, day),
       next,

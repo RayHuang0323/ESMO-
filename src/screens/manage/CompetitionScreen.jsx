@@ -112,7 +112,7 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
 
   return (
     <ManageFrame
-      title="聯賽"
+      title={view.focusedEventName ?? "聯賽"}
       subtitle={`S${view.season} · 第 ${seasonDay} / ${seasonDays} 天`}
       onBack={onBack}
       right={<span style={{ ...{ fontSize: 9, fontWeight: 800, color: GC.gray } }}>{progress.playerCompleted}/{progress.playerTotal} 場</span>}
