@@ -8615,3 +8615,55 @@ legacy 單 Event reload 行為不變、無未捕捉例外。
    ⇒ 改用不會移動的「積分榜 STANDINGS」。**硬編碼標題當偵測條件的代價。**
 2. 正式站 smoke 數列數時，`/\n\s*\d+\s/` 把一列數成兩筆（名次與勝敗都有數字），
    且抓到頁尾的 `ESMO`／`AI` ⇒ 改成「夾住區塊上下界 ＋ 隊伍 tag 唯一數」。
+
+---
+
+## B2 / B3 覆蓋補強（2026-08-13，已部署）
+
+Codex 稽核指出的兩個**覆蓋缺口**。兩項都是**純新增驗證器**，
+production 一行未改，也**都沒有發現 production 缺陷**。
+
+### B2：進行中的比賽跨存檔升級（`check_q7a_live_session_migration` **20/20**）
+
+形狀升級發生在**載入時**，而那一刻玩家可能正在打一場賽程比賽。
+先前我只能說「從程式碼看應該沒事」——現在是實測。
+
+驗證器走真實入口到「fixture 已 launched、對戰尚未完成」，存檔 →
+**把存檔改回 v1 形狀** → 重載（真正的 legacy→v2 路徑）：
+
+- sessionId／fixtureId／assignmentId／roomId／**seed／一次性令牌**全部不漂移
+- 賽程場次仍是 `launched`（沒有被判成別的狀態）
+- 畫面仍拿得到「返回比賽」需要的事實（`competitionView().live`）
+- `resumeMatchSession()` 恢復成功，**啟動參數逐欄相同**（同 seed ⇒ 同初始戰鬥狀態）
+- 恢復後打完可正常結算，**賽果寫進賽程**
+- **重送 3 次不重複發錢／XP、不重複寫 FixtureOutcome**
+
+### B3：推導索引的決定性摘要（`check_q7a_index_digest` **13/13**）
+
+v2 刻意**不落盤反向索引**（避免第二份真相），代價是「推導悄悄指歪了」沒有東西擋。
+本檔把七段索引壓成一個摘要：competitions／events／circuits／
+fixture→competition／competition→event／event→circuit／standings scope。
+
+**相同性**：重算、**鍵插入順序不同**、JSON 往返、存檔→重載、legacy v1→升級
+⇒ 摘要皆逐字元相同。
+
+**檢定力**（摘要不會變就等於廢的）：改綁 Event、改指 Circuit、多一場 fixture、
+參賽者變動 **都會讓摘要改變**；只改顯示名稱 **不變**。
+
+⚠ 摘要**算在驗證器裡，沒有加進 production**——加進去比較好寫，
+但那就是為了測試方便去改被測對象。
+
+### 驗證與部署
+
+| 項目 | 結果 |
+|---|---|
+| `check_q7a_live_session_migration` | **20/20** |
+| `check_q7a_index_digest` | **13/13** |
+| `q7a_safety` / `q7a_3a_identity` / `q7a_3b_multi_event` | 18/18 / 29/29 / 51/51 |
+| Q4 / Q5 / Q6 / `o7` / `integrity` | 68 / 66 / 57 / 48 / 20 |
+| `regress` / `regress2` / `build` | exit 0 / 8/8 / `built in 11.96s` |
+
+| 項目 | 值 |
+|---|---|
+| `main` | `9812146` → **`e7e8a4c`**（fast-forward） |
+| Actions | [31711886832](https://github.com/RayHuang0323/ESMO-/actions/runs/31711886832) — success |
