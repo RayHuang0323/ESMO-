@@ -51,7 +51,7 @@ const slug = (s) => String(s ?? "").trim().toLowerCase().replace(/[^a-z0-9-]+/g,
  * ⚠ Season 仍是第一級的時間／生涯週期，Circuit 掛在 Season 底下，
  *   不是反過來（產品定案 2026-08-13）。
  */
-export function createCircuit({ gameMode = "moba", season = 1, circuitKey = "", name = "" } = {}) {
+export function createCircuit({ gameMode = "moba", season = 1, circuitKey = "", name = "", pointsPolicy = null } = {}) {
   const errors = [];
   if (gameMode !== "moba" && gameMode !== "cs") errors.push({ code: "mode", message: `gameMode 必須為 moba/cs，收到 ${gameMode}` });
   if (!Number.isInteger(season) || season < 1) errors.push({ code: "season", message: "賽季編號必須是 1 以上的整數" });
@@ -69,10 +69,14 @@ export function createCircuit({ gameMode = "moba", season = 1, circuitKey = "", 
       season,
       circuitKey: key,
       name: name || `第 ${season} 賽季 ${key}`,
-      //  ⚠ 只存身分，不存積分。Circuit Points 是 3c 的事，而且來源必須是
-      //    各 Event 封存後的**最終名次**，不是 FixtureOutcome——否則會出現
-      //    第二份晉級真相（與 competitionOutcomes 是唯一出口的立場衝突）。
+      //  ⚠ 只存身分與**政策**，不存任何分數。分數住在賽季狀態的 `pointsLog`，
+      //    而且來源必須是各 Event 封存後的**最終名次**，不是 FixtureOutcome——
+      //    否則會出現第二份晉級真相（與 competitionOutcomes 是唯一出口衝突）。
       eventIds: [],
+      //  Q7a-3c：積分政策。**預設 `null` ⇒ 這條巡迴賽不給積分**（fail-closed）。
+      //  沒有政策不等於 0 分：見 `competition/circuitPoints.js` 的
+      //  `policy_required`。既有的 legacy 容器一律走這個預設 ⇒ 舊存檔行為不變。
+      pointsPolicy,
     },
   };
 }

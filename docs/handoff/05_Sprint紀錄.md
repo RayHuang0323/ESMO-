@@ -8667,3 +8667,69 @@ fixture→competition／competition→event／event→circuit／standings scope�
 |---|---|
 | `main` | `9812146` → **`e7e8a4c`**（fast-forward） |
 | Actions | [31711886832](https://github.com/RayHuang0323/ESMO-/actions/runs/31711886832) — success |
+
+---
+
+## Q7a-3c 巡迴積分與晉級資格（2026-08-13，已 commit 未部署）
+
+賽季 → 巡迴賽體系 → 單一賽事 → **最終名次 → 巡迴積分 → 晉級資格**。
+本輪把後面三段接起來。
+
+### 一個決定：積分不住在 seasonState
+
+Q5 §7d 有一條斷言明文擋住賽季層出現 `circuitPoints`（3a 收窄那條守衛時寫得很白：
+身分可以進來，**積分玩法擋在門外**）。3c **沒有去改它**——它要擋的事現在依然對：
+賽季層管賽程與名次，積分是另一個生命週期。
+
+新檔 `src/platform/competition/circuitPoints.js` 是純函式，由 Store 編排。
+這不是為了閃守衛：**積分結算與獎金結算是同一層的事**，而獎金一直住在 Store
+（`settleCompetitionAwardInState`），現在兩者在 `_sealSeasonIfFinished` 並排。
+
+⇒ **本輪沒有修改任何 Q1～Q6 既有斷言。**
+
+### 三條不能破的線
+
+| 線 | 怎麼實作的 |
+|---|---|
+| 積分**只能**從封存後的 `final` 產生 | 每筆帶 `finalId`；原始碼守衛禁止 `circuitPoints.js` 出現 `outcomes`／`computeStandings` |
+| 沒有政策 ⇒ **擋住，不是 0 分** | 三態 `not_started` / `policy_required` / `settled`；被拒時**不寫紀錄、不寫收據** |
+| `pointsLog` 是唯一帳本 | 只 append；`points` 一律推導；Event 只留收據，**收據裡一個分數都沒有** |
+
+### 政策（數字集中在一處）
+
+1 = 100、2 = 70、3 = 50、4 = 35、5–8 = 15、其餘 0；
+regular 1.0 / major 1.5 / championship 2.0。`Math.round` 是政策的一部分
+（35 × 1.5 = 52.5 → 53）。**層級查不到倍率不是 1.0，是 `policy_required`**。
+
+### 驗證（`check_q7a_3c_circuit_points` **69/69**）
+
+12 項驗收全數涵蓋，其中值得一提的：
+
+- **§11 Store 端到端**：上面 60 條純函式全綠，也證明不了 production 有沒有接線。
+  §11 補的就是那一段——實際跑 `_sealSeasonIfFinished`，看積分自動入帳、資格自動核發、
+  再跑 3 次與重載後**逐字不變**、資金逐元不動。
+- **檢定力實測**（守衛不會紅就等於廢的）：拔掉 Store 那行接線 ⇒ 69→65；
+  在規則碼寫死 100 分 ⇒ §1b 紅；讓積分去讀 `outcomes` ⇒ §10c 紅。
+- **§9 對照組**：改 Event／Circuit **名稱**積分逐字不變；改 **final／政策／層級**才會變。
+
+⚠ 途中修掉自己的兩條假綠：§1b 原本 `split(...)[2] ?? ""`（索引不存在 ⇒ 在空字串上
+跑正則，永遠綠）；§11i 原本拿「現在的資金」跟「現在的資金」比。另有一條 §8h 是
+**測試自己寫錯**（兩站名次相反，取 rank ≤ 2 反而湊出 4 支隊伍），程式碼是對的。
+
+### 全套回歸（無一條斷言被改）
+
+| 項目 | 結果 |
+|---|---|
+| Q1 / Q2a / Q2b / Q3 / Q3.5 | 93 / 112 / 92 / 90 / 65 |
+| Q4 / Q5 / Q6 | 68 / 66 / 57 |
+| Q7a safety / 3a / 3b / **3c** | 18 / 29 / 51 / **69** |
+| Q7a B2 / B3 / fixture integrity | 20 / 13 / 20 |
+| o7 / o7.1 | 48 / 27 |
+| 瀏覽器 gate ×4 | 26 / 7 / 8 / 20 |
+| `regress` / `regress2` / `build` | exit 0 / 8/8 / `built in 17.09s` |
+
+### 尚未做（見 08 §15）
+
+正式站**沒有任何 Circuit 帶政策** ⇒ 機制上線但休眠，舊存檔行為完全不變；
+**沒有畫面**（`competitionView().circuitPoints` 已備妥，無元件在讀）；
+資格核發後**還沒有東西消費它**；換季會丟掉 `pointsLog`。

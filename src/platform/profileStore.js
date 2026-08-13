@@ -70,6 +70,15 @@ import {
 } from "./competition/seasonState.js";
 //  Milestone Q4：名次獎金。錢的第三個入口（唯一新增的一個），純函式在 economy/。
 import { settleCompetitionAwardInState } from "./economy/competitionAward.js";
+//  ── Milestone Q7a-3c：巡迴積分與晉級資格 ────────────────────────────────
+//  ⚠ 刻意**不住在 seasonState**：Q5 §7d 明文擋住賽季層出現積分玩法，而那條
+//    斷言仍然對——賽季層管賽程與名次，積分是另一個生命週期。積分結算與**獎金
+//    結算**是同一層的事（上面那個 import），所以兩者在此並排。
+//  ⚠ 積分**不碰錢**：它只寫自己的帳本，一分錢都不動。
+import {
+  settleAllPendingPoints, grantAllReadyQualifications, pointsStatusOfEvent,
+  circuitStandings, qualificationsOf, pointsLogOf,
+} from "./competition/circuitPoints.js";
 import {
   issueFor as issueCompetitionMatch, openRoomForFixture, openSessionForFixture,
   isCompetitionAssignment, fixtureIdOfAssignment,
@@ -835,6 +844,40 @@ export const useProfileStore = create((set, get) => ({
       });
     }
 
+    //  ── Q7a-3c：巡迴積分與晉級資格 ────────────────────────────────────
+    //  ⚠ 掃**全部** Event 而不是「剛封存的那些」：3c 之前就封好的 Event 也要
+    //    補得到分，而且重載之後還補得回來。兩個動作都冪等 ⇒ 跑幾次都一樣。
+    //  ⚠ 順序不能反：資格要等每一站都結算完才發得出來（發錯資格難收回）。
+    //  ⚠ 這一段**完全不碰錢**——積分與獎金是兩件事，共用的只有「Event 封存」
+    //    這個時點。
+    {
+      const day = Number(get().meta?.days) || 1;
+      let pointsChanged = false;
+      const pts = settleAllPendingPoints(state, eventFinalOf);
+      if (pts.state !== state) { state = pts.state; set({ competition: state }); pointsChanged = true; }
+      const qual = grantAllReadyQualifications(state, day, eventFinalOf);
+      if (qual.state !== state) {
+        state = qual.state;
+        set({ competition: state });
+        pointsChanged = true;
+        for (const id of qual.granted) {
+          const q = state.qualifications[id];
+          const mine = (q.qualified ?? []).find((x) => x.teamId === state.playerTeamId);
+          get().pushInbox({
+            type: "match", from: "聯賽官方",
+            subject: `巡迴積分結算 · 年度總決賽晉級名單公布`,
+            text: mine
+              ? `巡迴賽全部賽事結束，你以 ${mine.points} 分排名第 ${mine.seed}，取得年度總決賽參賽資格。`
+              : `巡迴賽全部賽事結束，晉級年度總決賽的是：${(q.qualified ?? []).map((x) => `${x.seed}. ${x.name ?? x.teamId}`).join("、")}。你這一季沒有取得資格。`,
+          });
+        }
+      }
+      //  ⚠ 這裡要自己存：底下的賽季封存可能因為「還有賽事沒結束」提早 return，
+      //    那條路徑走不到最後的 `save()`。積分寫了卻沒落盤，重載才補得回來——
+      //    雖然結算冪等所以補得回來，但「記憶體與存檔不一致」本身就是漏洞。
+      if (pointsChanged) get().save();
+    }
+
     const can = canSealSeason(state);
     if (!can.ok && !can.sealed) return { sealed: false, final: null, award: null, reason: can.reason };
 
@@ -947,6 +990,20 @@ export const useProfileStore = create((set, get) => ({
       standings: tryEventStandingsOf(state, state.activeEventId ?? null) ?? seasonStandings(state),
       //  每個 Event 的狀態摘要（唯讀推導，畫面不得自己判）
       eventViews: eventViewsOf(state, day),
+      //  ── Q7a-3c：巡迴積分與晉級資格（唯讀推導）────────────────────────
+      //  ⚠ `standings` 是**從帳本算出來的**，不是另存一份。畫面要顯示積分只能
+      //    讀這裡；自己去加總 `pointsLog` 就會出現第二套加總規則。
+      circuitPoints: (() => {
+        const ids = Object.keys(state.circuits ?? {});
+        return {
+          logSize: pointsLogOf(state).length,
+          //  每個 Event 現在能不能給分、為什麼不能——fail-closed 的理由要看得見
+          eventStatus: Object.fromEntries(Object.keys(state.events ?? {}).map((id) =>
+            [id, pointsStatusOfEvent(state, id, eventFinalOf)])),
+          standings: Object.fromEntries(ids.map((id) => [id, circuitStandings(state, id)])),
+          qualifications: qualificationsOf(state),
+        };
+      })(),
       next,
       //  ⚠ 賽程日是「賽季第 N 天」，畫面要顯示的是遊戲日 ⇒ 這裡換算好再給。
       //    畫面不得自己加 startDay，否則換算規則會有兩份。
