@@ -7,17 +7,17 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CS_R27_DECISION_SOURCE_SHA256 } from "./cs_r15_legacy_source.mjs";
+import { CS_R32_CLUTCH_RESILIENCE_SOURCE_SHA256, CS_R33_RESILIENCE_SOURCE_SHA256, csR33R32Source } from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
 const SOURCE_SCHEMA = "CsClutchResilienceSemanticSourceEvidence.v1";
 const AUDIT_SCHEMA = "CsClutchResilienceSemanticAudit.v1";
-const EXPECTED_SOURCE_SHA256 = CS_R27_DECISION_SOURCE_SHA256;
+const EXPECTED_SOURCE_SHA256 = CS_R33_RESILIENCE_SOURCE_SHA256;
 const EXPECTED_RAND_CALLS = 21;
 const EXPECTED_R30_SUITE_DIGEST = "56dea7e81163275ab7d6ca43a287d804dfeccb37d0eea10fb855a93c40e33a3c";
 const EXPECTED_R31_SUITE_DIGEST = "fd43e879354d70de15d208d04e6f0b7d6a2f78c6204adfb197cc71caa882fd9a";
-const EXPECTED_AUDIT_DIGEST = "5d0bca552118364c96e893ea184eb77ad6230cad1ae59d501bdc44c2f6f50c45";
+const EXPECTED_AUDIT_DIGEST = "f6328d28096ff0845ad2f6db6293c234079984ecef3701e09468c133bcc26272";
 
 function fail(code, detail = "") { throw new Error(`[${code}]${detail ? `\n${detail}` : ""}`); }
 function gate(ok, code, detail = "") { if (!ok) fail(code, detail); }
@@ -68,9 +68,9 @@ function main() {
   // Direct combat consumers: Clutch is broad; Resilience is lastAlive-only.
   has(source, 'const _mechKeys=["acc","rxn","apm","pos","foc","str"]', "CLUTCH_MECHANICS_READ_MISSING");
   absent(source, 'const _mechKeys=["acc","rxn","apm","pos","foc","str","res"]', "RESILIENCE_FALSE_MECHANICS_READ");
-  has(combat, 'if(opts.lastAlive)v+=(S("str")-76)*0.22+(S("res")-76)*0.12;', "LAST_ALIVE_STACK_MISSING");
-  has(combat, 'if(opts.lowHP)v-=(100-S("str"))*0.05;', "CLUTCH_LOW_HP_READ_MISSING");
-  absent(combat, 'if(opts.lowHP)v-=(100-S("res"))', "RESILIENCE_FALSE_LOW_HP_READ");
+  has(combat, 'if(opts.lastAlive)v+=(S("str")-76)*0.22;', "CLUTCH_LAST_ALIVE_OWNER_MISSING");
+  has(combat, 'if(opts.lowHP)v-=(100-S("str"))*0.05-(S("res")-76)*0.12;', "CLUTCH_LOW_HP_READ_MISSING");
+  has(combat, 'if(opts.lowHP)v-=(100-S("str"))*0.05-(S("res")-76)*0.12;', "RESILIENCE_LOW_HP_OWNER_MISSING");
   has(combat, 'const role=posSkill(p,rawReflex);', "COMBAT_ROLE_FIT_READ_MISSING");
   has(combat, 'return v*formMul(p);', "FORM_MULTIPLIER_MISSING");
 
@@ -112,8 +112,8 @@ function main() {
     },
     consumers: {
       combatSkill: { clutch: ["mechanics", "role-fit", "lastAlive", "lowHP"], resilience: ["lastAlive"] },
-      lastAlive: { clutch: { coefficient: 0.22, ownership: "active clutch combat" }, resilience: { coefficient: 0.12, ownership: "co-located stability cofactor" }, stackedInSameFormula: true },
-      lowHP: { clutch: "effective str modifier", resilience: "absent" },
+      lastAlive: { clutch: { coefficient: 0.22, ownership: "active clutch combat" }, resilience: "absent", stackedInSameFormula: false },
+      lowHP: { clutch: "effective str penalty", resilience: { coefficient: 0.12, ownership: "stability retention" } },
       aggrFireRetreat: { clutch: "effective str -> aggr -> fire chance / retreat gate", resilience: "absent" },
       defuse: { clutch: "absent", resilience: "absent" },
       utility: { clutch: "absent", resilience: "absent" },
@@ -121,21 +121,21 @@ function main() {
       state: { clutch: "formMul output only", resilience: "formMul output only; no state-adjusted stat" },
     },
     overlap: {
-      arithmetic: "two distinct stats are added in one lastAlive combat branch",
+      arithmetic: "Clutch remains in lastAlive; Resilience now offsets the existing lowHP penalty",
       semantic: "both can be read as surviving/performing in a clutch state",
-      doubleCountingRisk: "high enough to block calibration attribution; not duplicate raw field or duplicate RNG",
+      doubleCountingRisk: "removed at the shared lastAlive branch; lowHP contribution remains separately attributable",
       broadClutchSurface: "Clutch also contributes to general mechanics, role-fit, lowHP and aggr; Resilience does not",
     },
     recommendation: {
       model: "A",
       clutch: "retain primary 1vN / lastAlive active win and conversion ownership",
       resilience: "reserve for pressure / lowHP / adverse-state execution stability",
-      sameFormulaStack: "avoid directly stacking two similar lastAlive bonuses",
-      implementationBoundary: "pressure/lowHP consumer would be a new gameplay semantic and must be a separate verifier-first Sprint",
+      sameFormulaStack: "no direct Resilience stack in lastAlive",
+      implementationBoundary: "one existing lowHP signal is reused; no new state machine or RNG",
     },
-    provenance: { r30SuiteDigest: EXPECTED_R30_SUITE_DIGEST, r31SuiteDigest: EXPECTED_R31_SUITE_DIGEST, productionChanged: false, rngChanged: false, scenarioChanged: false },
+    provenance: { r30SuiteDigest: EXPECTED_R30_SUITE_DIGEST, r31SuiteDigest: EXPECTED_R31_SUITE_DIGEST, historicalSourceSha256: CS_R32_CLUTCH_RESILIENCE_SOURCE_SHA256, productionChanged: true, rngChanged: false, scenarioChanged: false },
   };
-  const audit = { schema: AUDIT_SCHEMA, framework: "R32-CS-semantic-boundary-v1", evidence, verdict: { audit: "Go", semantics: "Revise", calibration: "No-Go", productionPatch: "deferred", pressureSprint: "separate-sprint-required" } };
+  const audit = { schema: AUDIT_SCHEMA, framework: "R33-CS-semantic-boundary-v1", evidence, verdict: { audit: "Go", semantics: "Go", calibration: "Revise", productionPatch: "minimal-lowHP-correction", pressureSprint: "not-required-for-this-single-signal" } };
   const auditDigest = sha256(json(audit));
   gate(EXPECTED_AUDIT_DIGEST !== "__CAPTURE_MANUALLY__", "AUDIT_NOT_LOCKED", `candidate=${auditDigest}`);
   gate(auditDigest === EXPECTED_AUDIT_DIGEST, "SEMANTIC_AUDIT_REGRESSION", `expected=${EXPECTED_AUDIT_DIGEST}\nactual=${auditDigest}`);
@@ -145,13 +145,13 @@ function main() {
   console.log(`rand() call sites: ${randCalls.length}`);
   console.log("raw/effective: Clutch raw str + effective persStat(str); Resilience raw res + effective persStat(res)");
   console.log("role-fit: Clutch weights entry/rifler/awp/lurker/igl = 1/1/2/1/0; Resilience = 0/0/0/0/0");
-  console.log("combat consumers: Clutch mechanics + role-fit + lastAlive + lowHP + aggr; Resilience lastAlive only");
+  console.log("combat consumers: Clutch mechanics + role-fit + lastAlive + aggr; Resilience offsets the existing lowHP penalty");
   console.log("negative consumers: neither stat directly controls defuse, utility, target, tactic or buy");
-  console.log("overlap: direct lastAlive formula stacks distinct +0.22 Clutch and +0.12 Resilience bonuses");
-  console.log("recommended boundary: Model A; Clutch owns lastAlive active win, Resilience owns future pressure/lowHP stability");
-  console.log("pressure/lowHP extension: new gameplay semantic; separate verifier-first Sprint required");
+  console.log("overlap: resolved; lastAlive is Clutch-owned and Resilience is lowHP stability");
+  console.log("recommended boundary: Model A; Clutch owns lastAlive active win, Resilience owns lowHP stability retention");
+  console.log("pressure/lowHP extension: one existing lowHP signal only; no new state machine or RNG");
   console.log(`auditDigest: ${auditDigest}`);
-  console.log("production source modified: no");
+  console.log("production source modified: yes; R33 minimal ownership correction is covered by the current source SHA");
   console.log("CS Clutch × Resilience Semantic Boundary Audit R32: PASS");
 }
 

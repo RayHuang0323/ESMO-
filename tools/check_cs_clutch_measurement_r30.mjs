@@ -12,6 +12,9 @@ import { createServer } from "vite";
 import {
   CS_R26_DECISION_SOURCE_SHA256,
   CS_R27_DECISION_SOURCE_SHA256,
+  CS_R32_CLUTCH_RESILIENCE_SOURCE_SHA256,
+  CS_R33_RESILIENCE_SOURCE_SHA256,
+  csR33R32Source,
   csR27R26Source,
 } from "./cs_r15_legacy_source.mjs";
 import {
@@ -346,7 +349,7 @@ function metricEvidence(rows, baselineRows, key, direction = "higher") { return 
 
 async function main() {
   gate(process.argv.slice(2).length === 0, "CLI_FLAGS_FORBIDDEN", "R30 verifier is measurement-only.");
-  const currentSource = readFileSync(FPS_FILE, "utf8"); const sourceSha256 = sha256(currentSource); gate(sourceSha256 === CS_R27_DECISION_SOURCE_SHA256, "CURRENT_SOURCE_SHA256", sourceSha256); const historicalSource = csR27R26Source(currentSource); gate(sha256(historicalSource) === CS_R26_DECISION_SOURCE_SHA256, "HISTORICAL_R26_SOURCE_SHA256"); gate(randTokens(currentSource).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT", String(randTokens(currentSource).length)); gate(FIXED_SEEDS.length === 16 && 9 > FIXED_SEEDS.length / 2, "STRICT_MAJORITY_GATE");
+  const actualSource = readFileSync(FPS_FILE, "utf8"); gate(sha256(actualSource) === CS_R33_RESILIENCE_SOURCE_SHA256, "CURRENT_SOURCE_SHA256", sha256(actualSource)); const currentSource = csR33R32Source(actualSource); const sourceSha256 = sha256(currentSource); gate(sourceSha256 === CS_R32_CLUTCH_RESILIENCE_SOURCE_SHA256, "HISTORICAL_R32_SOURCE_SHA256", sourceSha256); const historicalSource = csR27R26Source(actualSource); gate(sha256(historicalSource) === CS_R26_DECISION_SOURCE_SHA256, "HISTORICAL_R26_SOURCE_SHA256"); gate(randTokens(currentSource).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT", String(randTokens(currentSource).length)); gate(FIXED_SEEDS.length === 16 && 9 > FIXED_SEEDS.length / 2, "STRICT_MAJORITY_GATE");
   const combat = sourceSlice(currentSource, "function combatSkill", "function aggr", "combatSkill"); const defuse = sourceSlice(currentSource, "const defuseAliveCT", "if(!roundEnd)", "defuse"); const targetChoice = sourceSlice(currentSource, "let pairs=[];", "const tHold=", "target/engagement"); const utility = sourceSlice(currentSource, 'if(p.state==="EXECUTE"', "if(sec===18)", "utility");
   gate(combat.includes('if(opts.lastAlive)v+=(S("str")-76)*0.22+(S("res")-76)*0.12;'), "LAST_ALIVE_CLUTCH_READ_MISSING"); gate(combat.includes('if(opts.lowHP)v-=(100-S("str"))*0.05;'), "LOW_HP_CLUTCH_READ_MISSING"); gate(currentSource.includes('persStat(p,"str")*0.22'), "AGGR_CLUTCH_READ_MISSING"); gate(defuse.includes("defuser.stats.foc/250") && !defuse.includes('stats.str') && !defuse.includes('persStat(defuser,"str")'), "DEFUSE_FALSE_CLUTCH_CONSUMER"); gate(!targetChoice.includes('stats.str') && !targetChoice.includes('persStat(p,"str")') && !utility.includes('stats.str') && !utility.includes('persStat(p,"str")'), "UNEXPECTED_CLUTCH_CONSUMER");
   console.log(`schema: ${EVENT_SCHEMA}`); console.log(`framework: R22-local-causal-v1`); console.log(`seedSetSha256: ${SEED_SET_SHA256}`); console.log(`engineSourceSha256: ${sourceSha256}`); console.log(`rand() call sites: ${randTokens(currentSource).length}`); console.log("read-chain source: raw stats.str -> entry/rifler/awp/lurker role-fit; effective persStat(str) -> generic aggr, combatSkill mechanics, low-HP and lastAlive branch"); console.log("negative consumers: Clutch does not directly read target choice, utility timing, defuse progress, bomb choice, tactic choice, or buy choice"); console.log(`historical checkpoint gate: R4 event digest ${R4_EVENT_SUITE_DIGEST}; event-only digest ${R4_EVENT_ONLY_SUITE_DIGEST}; R26 byte-exact adapter PASS`);

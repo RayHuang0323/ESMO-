@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
-import { CS_R27_DECISION_SOURCE_SHA256, csR25R24Source } from "./cs_r15_legacy_source.mjs";
+import { CS_R27_DECISION_SOURCE_SHA256, CS_R33_RESILIENCE_SOURCE_SHA256, csR25R24Source, csR33R32Source } from "./cs_r15_legacy_source.mjs";
 import {
   CALIBRATION_LEVELS,
   changedSeedSummary,
@@ -701,8 +701,8 @@ function runArm(api, { mapKey, tTactic, ctTactic, roster, seed }) {
 async function main() {
   const liveSource = readFileSync(FPS_FILE, "utf8");
   const liveSourceSha256 = sha256(liveSource);
-  gate(liveSourceSha256 === CS_R27_DECISION_SOURCE_SHA256, "LIVE_SOURCE_SHA256", liveSourceSha256);
-  const source = csR25R24Source(liveSource);
+  gate(liveSourceSha256 === CS_R33_RESILIENCE_SOURCE_SHA256, "LIVE_SOURCE_SHA256", liveSourceSha256);
+  const source = csR25R24Source(csR33R32Source(liveSource));
   const sourceSha256 = sha256(source);
   gate(sourceSha256 === SOURCE_SHA256, "SOURCE_SHA256", sourceSha256);
   gate(randTokens(source).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT", String(randTokens(source).length));

@@ -21,11 +21,17 @@ export const CS_R19_SEMANTIC_SOURCE_SHA256 = "57476524ffa5693cb2cd00f28d73a1355e
 export const CS_R25_ACCURACY_SOURCE_SHA256 = "68d75bb357a504cee8529c4d8cce023c92c364e72cde88e507a8af0df811780e";
 export const CS_R26_DECISION_SOURCE_SHA256 = CS_R25_ACCURACY_SOURCE_SHA256;
 export const CS_R27_DECISION_SOURCE_SHA256 = "f0e5dd4bddc82d06ae715784201877821de0db4fc785d226ab403132bb984e87";
+export const CS_R32_CLUTCH_RESILIENCE_SOURCE_SHA256 = CS_R27_DECISION_SOURCE_SHA256;
+export const CS_R33_RESILIENCE_SOURCE_SHA256 = "edf311b13347dc185713d687e8dad22e05087aceede233a47baae62707b2cbf3";
 
 const R24_RAW_ACCURACY_HEADSHOT = '          const g=GUNS[at.gun];const isHS=rand()<g.hs*(0.72+0.55*((at.stats?.acc||80)/100));let dmg=(g.dmg+Math.floor(rand()*40))*(isHS?2:1);';
 const R25_EFFECTIVE_ACCURACY_HEADSHOT = '          const g=GUNS[at.gun],rawAccuracy=at.stats?.acc||80,effectiveAccuracy=at.stats?.acc!=null?persStat(at,"acc"):rawAccuracy;const isHS=rand()<g.hs*(0.72+0.55*(effectiveAccuracy/100));let dmg=(g.dmg+Math.floor(rand()*40))*(isHS?2:1);';
 const R26_RAW_DECISION_DEFUSE = '          defuseProg+=defuser.stats?(0.45+defuser.stats.foc/250+defuser.stats.dec/300):0.7;';
 const R27_EFFECTIVE_DECISION_DEFUSE = '          defuseProg+=defuser.stats?(0.45+defuser.stats.foc/250+persStat(defuser,"dec")/300):0.7;';
+const R33_LAST_ALIVE = '    if(opts.lastAlive)v+=(S("str")-76)*0.22;                      // 殘局主動勝負：由 Clutch 負責';
+const R32_LAST_ALIVE = '    if(opts.lastAlive)v+=(S("str")-76)*0.22+(S("res")-76)*0.12; // 殘局（clutch=抗壓 + 韌性）';
+const R33_LOW_HP = '    if(opts.lowHP)v-=(100-S("str"))*0.05-(S("res")-76)*0.12;   // 低血量穩定執行：Resilience 減少衰退';
+const R32_LOW_HP = '    if(opts.lowHP)v-=(100-S("str"))*0.05;';
 
 const HE_CONSTANT_ANCHOR = "const HE_R=12,HE_MAX_DAMAGE=80,HE_ARMOR_SCALE=0.72;";
 const MOLLY_CONSTANT_BLOCK = `${HE_CONSTANT_ANCHOR}
@@ -73,13 +79,27 @@ export function csR15R14Source(input) {
 // R27 changes only the live defuse Decision read. R26 and older verifiers use
 // the byte-exact R26 view; the focused R27 gate separately checks live source.
 export function csR27R26Source(input) {
-  let source = normalizeCsSource(input);
+  let source = csR33R32Source(input);
   if (sha256(source) !== CS_R27_DECISION_SOURCE_SHA256) return source;
   source = replaceExact(source, R27_EFFECTIVE_DECISION_DEFUSE, R26_RAW_DECISION_DEFUSE,
     "R27_DECISION_DEFUSE_BOUNDARY");
   const actual = sha256(source);
   if (actual !== CS_R26_DECISION_SOURCE_SHA256) {
     throw new Error(`[R27_LEGACY_R26_SHA] expected=${CS_R26_DECISION_SOURCE_SHA256} actual=${actual}`);
+  }
+  return source;
+}
+
+// R33 historical adapter: expose the exact R32 source to all prior verifiers
+// so their locked evidence remains historical rather than silently rebased.
+export function csR33R32Source(input) {
+  let source = normalizeCsSource(input);
+  if (sha256(source) !== CS_R33_RESILIENCE_SOURCE_SHA256) return source;
+  source = replaceExact(source, R33_LAST_ALIVE, R32_LAST_ALIVE, "R33_LAST_ALIVE_BOUNDARY");
+  source = replaceExact(source, R33_LOW_HP, R32_LOW_HP, "R33_LOW_HP_BOUNDARY");
+  const actual = sha256(source);
+  if (actual !== CS_R32_CLUTCH_RESILIENCE_SOURCE_SHA256) {
+    throw new Error(`[R33_LEGACY_R32_SHA] expected=${CS_R32_CLUTCH_RESILIENCE_SOURCE_SHA256} actual=${actual}`);
   }
   return source;
 }

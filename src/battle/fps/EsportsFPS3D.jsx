@@ -267,9 +267,9 @@ function combatSkill(p,opts){const s=p.stats;if(!s)return 80;const cls=GUNS[p.gu
   if(opts){
     if(opts.holding)v+=S("pos")*0.05+S("foc")*0.05;            // 狙擊手/防守：主動架點
     if(opts.entry)v+=S("cou")*0.06+effectiveReflex*0.02;        // 突破手：首發突進；effectiveReflex
-    if(opts.lastAlive)v+=(S("str")-76)*0.22+(S("res")-76)*0.12; // 殘局（clutch=抗壓 + 韌性）
+    if(opts.lastAlive)v+=(S("str")-76)*0.22;                      // 殘局主動勝負：由 Clutch 負責
     if(opts.lurk)v+=(S("vis")-76)*0.05+(S("pos")-76)*0.04;     // 自由人：埋伏陰人
-    if(opts.lowHP)v-=(100-S("str"))*0.05;
+    if(opts.lowHP)v-=(100-S("str"))*0.05-(S("res")-76)*0.12;   // 低血量穩定執行：Resilience 減少衰退
   }
   return v*formMul(p); // 士氣 / 體能狀態 影響整體發揮
 }

@@ -7285,3 +7285,11 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - Read-chain：Clutch `str` 進 raw role-fit、effective mechanics、lastAlive、low HP、`aggr`／fire／retreat；Resilience `res` 只有 effective lastAlive consumer。兩者在同一 lastAlive formula 疊加 +0.22 / +0.12，構成 semantic overlap / attribution risk。
 - 推薦 Model A：Clutch 主責 1vN / lastAlive 主動勝負與局部轉換；Resilience 主責 pressure / low-HP / 逆風穩定執行。Model B 目前證據不足，不能只因程式現況就接受。
 - R32 focused source audit **Go / PASS**；production semantic correction **Revise（本輪不實作）**；pressure/low-HP gameplay **另開 Sprint**；calibration **No-Go**。audit digest：`5d0bca552118364c96e893ea184eb77ad6230cad1ae59d501bdc44c2f6f50c45`。
+## R33 CS Clutch × Resilience Semantic Ownership + Pressure / Low-HP (2026-08-14)
+
+- R33 只處理 CS 16 項素質，不碰 SeasonState、Circuit、Event、competition 或賽事系統。
+- 最小 production semantic correction：`combatSkill(lastAlive)` 由 Clutch `str` 單獨擁有；Resilience `res` 改接既有 `lowHP` penalty，作穩定執行／衰退抵銷。未改 balance constant、role mapping、scenario、RNG（21 sites 保持）、contract 或其他 stat。
+- 5 roles × 16 fixed seeds × low/baseline/high；R31 current suite digest `6cfac07a531b5e1e7d410bf822b0b2ae820400773c405ebc346a79cf034804c3`；R33 focused digest `30ebd902a9ad819d4c96cdd0609d8f4ba4a4f59bd8f0acacf9c09bbb6d05a372`。
+- historical R30 digest `56dea7e81163275ab7d6ca43a287d804dfeccb37d0eea10fb855a93c40e33a3c`、R32 old source `f0e5dd4bddc82d06ae715784201877821de0db4fc785d226ab403132bb984e87` 以 byte-exact adapter 保留，沒有 rebaseline。
+- R30/R31/R32、R22、Q7a、progress/reward、R24 historical gate、production build PASS。Calibration 仍 Revise / No-Go：low-HP direct path 可量測，但角色 opportunity 與 immediate conversion 未達全體 strict-majority；Level 4 只作 secondary。
+- Spec/report：`review/cs-gameplay/CS_CLUTCH_RESILIENCE_SEMANTICS_R33_SPEC.md`、`CS_CLUTCH_RESILIENCE_SEMANTICS_R33_REPORT.md`。

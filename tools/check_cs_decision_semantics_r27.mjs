@@ -10,7 +10,10 @@ import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 import {
   CS_R26_DECISION_SOURCE_SHA256,
+  CS_R32_CLUTCH_RESILIENCE_SOURCE_SHA256,
   CS_R27_DECISION_SOURCE_SHA256,
+  CS_R33_RESILIENCE_SOURCE_SHA256,
+  csR33R32Source,
   csR27R26Source,
 } from "./cs_r15_legacy_source.mjs";
 
@@ -299,10 +302,12 @@ function directProbes(api, roster) {
 
 async function main() {
   gate(process.argv.slice(2).length === 0, "CLI_FLAGS_FORBIDDEN");
-  const liveSource = readFileSync(FPS_FILE, "utf8"), historicalSource = csR27R26Source(liveSource);
+  const currentSource = readFileSync(FPS_FILE, "utf8");
+  gate(sha256(currentSource) === CS_R33_RESILIENCE_SOURCE_SHA256, "CURRENT_SOURCE_SHA256", sha256(currentSource));
+  const liveSource = csR33R32Source(currentSource), historicalSource = csR27R26Source(currentSource);
   const changedLines = verifyStaticSemantics(liveSource, historicalSource);
-  const liveApi = await loadApi(liveSource, liveSource, "live");
-  const historicalApi = await loadApi(liveSource, historicalSource, "historical");
+  const liveApi = await loadApi(currentSource, liveSource, "live");
+  const historicalApi = await loadApi(currentSource, historicalSource, "historical");
   for (const api of [liveApi, historicalApi]) {
     gate(typeof api?.simulateFps === "function" && Array.isArray(api?.ROSTER)
       && api?.TACTICS_DB && typeof api?.persStat === "function", "TEST_API_SHAPE");
@@ -349,7 +354,7 @@ async function main() {
     "SUITE_SEMANTIC_BOUNDARY", json(coverage));
   const suite = {
     schema: SUITE_SCHEMA, eventSchema: EVENT_SCHEMA,
-    liveSourceSha256: CS_R27_DECISION_SOURCE_SHA256,
+    liveSourceSha256: CS_R32_CLUTCH_RESILIENCE_SOURCE_SHA256,
     historicalSourceSha256: CS_R26_DECISION_SOURCE_SHA256,
     changedLines, rngCallSites: EXPECTED_RAND_CALLS,
     semanticBoundary: {
@@ -368,7 +373,7 @@ async function main() {
   };
   const suiteDigest = sha256(json(suite));
   console.log(`schema: ${SUITE_SCHEMA}`);
-  console.log(`liveSourceSha256: ${CS_R27_DECISION_SOURCE_SHA256}`);
+  console.log(`liveSourceSha256: ${CS_R32_CLUTCH_RESILIENCE_SOURCE_SHA256}`);
   console.log(`historicalSourceSha256: ${CS_R26_DECISION_SOURCE_SHA256}`);
   console.log(`minimal patch lines: ${changedLines.join(",")}`);
   console.log(`rand() call sites: ${EXPECTED_RAND_CALLS}`);
