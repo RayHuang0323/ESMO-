@@ -8305,3 +8305,29 @@ bundle 含新的拒絕訊息與 `todayPending` 欄位；帶著「進行中場次
 ⇒ **「同一天多場都可被 UI 看見」目前不成立**。資料層已經正確、日曆阻擋也正確
 （當天全部終局才走得出去），缺的是把清單畫出來。列入 08 待辦。
 本輪刻意不動 UI：安全前提與畫面改動分開上線，出事時好切。
+
+## Q7b — SeasonState.v2 單一路線 migration（2026-08-13）
+
+### 目標與實作
+
+本輪只包裝既有資料，不重算、不重排、不改舊 ID：
+
+`Season → MOBA Career Circuit → League Event → existing Competition`。
+
+新增 `src/platform/competition/seasonStateV2.js` 與 profile 欄位 `seasonStateV2`。
+v2 保存 season/circuit/event 的穩定識別與 legacy references；fixture、outcome、
+stage、playoff、final、competitionHistory、settlement receipt 仍由舊 SeasonState.v1／
+profile 頂層保存。`competitionView`、出賽、回寫、結算走 active Event adapter，沒有新增 CS Event。
+
+### Verifier / gates
+
+- `node tools/check_season_state_v2_migration_q7b.mjs`：**22/22 PASS**，含 repeated digest、
+  legacy→v2、v2→v2、empty state、live session/resume、history、fixture/outcome ID。
+- `node tools/check_q7a_safety.mjs`：**18/18**（單一 live session、同日多 fixture）。
+- `node tools/verify.mjs --only=q7a_safety,q7b_season_state_v2`：**2/2**。
+- historical checkpoints：Q4 **68/68**、Q5 **66/66**、Q6 **57/57**；production build 通過。
+
+### 邊界
+
+未開始 Circuit Points、Stage 統一、qualification、time-slot scheduler、CS Event，
+也未重算 FinalStandings 或改 caller。瀏覽器／真機視覺驗證仍待後續專項。

@@ -74,6 +74,9 @@ import {
 import {
   fixtureOutcomeInputFrom, isFixtureSession, fixtureIdOfSession,
 } from "./competition/fixtureResultBridge.js";
+import {
+  syncSeasonStateV2, activeEventAdapter,
+} from "./competition/seasonStateV2.js";
 import { applyDailyRecovery, conditionSummary } from "./condition/playerCondition.js";
 import { createMatchEntryRequest, validateMatchEntryRequest } from "./contracts/matchEntry.js";
 import {
@@ -108,8 +111,9 @@ const KEY = "esmo.profile.v1";
  *  v7 = Milestone O1（csLineup CS 出賽陣容 + players[].rosterTier 名單分層；
  *       舊存檔缺欄 → csLineup 全空、rosterTier 由既有 status 推導，不把人踢出名單）；
  *  v8 = Milestone O4（matchmaking 配對票券；載入時把殘留的排隊中票券作廢，
- *       因為沒有伺服器會回應一張跨 session 的票）。 */
-export const PROFILE_SCHEMA_VERSION = 8;
+ *       因為沒有伺服器會回應一張跨 session 的票）；
+ *  v9 = Q7b（metadata-only SeasonState.v2 wrapper；legacy state / IDs 不變）。 */
+export const PROFILE_SCHEMA_VERSION = 9;
 const canLS = typeof localStorage !== "undefined";
 //  1 萬。定義搬到 economy/units.js（純邏輯模組不能 import 本檔），這裡 re-export
 //  讓既有 `import { WAN } from "platform/profileStore.js"` 的呼叫端不受影響。
@@ -200,6 +204,8 @@ const DEFAULT = {
   processedMatchTransactions: {},// S25：冪等帳本 {transactionId: receipt}（防重複發獎）
   processedCompetitionAwards: {},// Q4：名次獎金冪等帳本 {finalStandingsId: receipt}
   competitionHistory: [],        // Q5：歷屆已封存賽季（FinalStandings[]，新的在前）
+  // Q7b: metadata-only Season -> MOBA Career Circuit -> League Event wrapper.
+  seasonStateV2: null,
   inbox: [
     { id: 1, type: "match",   from: "聯賽官方",         subject: "第 1 週賽程已公布",   text: "第 1 週賽程已公布，請確認出賽名單。", time: "剛剛", unread: true },
     { id: 2, type: "recruit", from: "球探部",           subject: "3 名新星進入觀察名單", text: "球探回報：3 名新星進入觀察名單，可前往招募查看。", time: "1 小時前", unread: true },
@@ -253,6 +259,8 @@ function normalizeMatchmaking(saved) {
   return {
     ticket, room, session,
     launch: src.launch ?? null,
+    // Q7b: the fixture binding is part of the live-session/resume contract.
+    fixtureAssignment: src.fixtureAssignment ?? null,
     //  O7：結果與結算帳本要保留——重整後重試結算必須認得出「已經算過了」
     lastResult: src.lastResult ?? null,
     settlements: src.settlements && typeof src.settlements === "object" ? src.settlements : {},
@@ -279,13 +287,23 @@ function normalizeEconomy(saved, days) {
  * ⚠ 一定要在合併完 `saved.team` **之後**才呼叫——否則會拿 DEFAULT 的隊名去
  *   推導，讓不同存檔算出同一個 id。
  */
+function seasonStateV2For(state) {
+  return syncSeasonStateV2({
+    seasonStateV2: state?.seasonStateV2,
+    legacyState: state?.competition,
+    competitionHistory: arr(state?.competitionHistory, []),
+    meta: state?.meta,
+  });
+}
+
 function withIdentity(state) {
   const { team, meta } = ensureTeamIdentity({
     team: state.team,
     meta: state.meta,
     scenario: state.economy?.scenario ?? DEFAULT_SCENARIO,
   });
-  return { ...state, team, meta };
+  const next = { ...state, team, meta };
+  return { ...next, seasonStateV2: seasonStateV2For(next) };
 }
 
 const load = () => {
@@ -356,6 +374,7 @@ const load = () => {
       //  ⚠ 刻意**不在載入時建立賽季**：那會讓每個舊存檔在毫無預期的情況下
       //    突然多出一整季賽程。改由 `ensureCompetitionSeason()` 在真的要用到時建立。
       competition: saved.competition ?? null,
+      seasonStateV2: saved.seasonStateV2 ?? null,
       recruitment: saved.recruitment && typeof saved.recruitment === "object"
         && typeof saved.recruitment.signed === "object"
         ? { signed: saved.recruitment.signed }
@@ -422,8 +441,48 @@ function normalizeMsg(m, i) {
 export const useProfileStore = create((set, get) => ({
   ...load(),
 
-  save() { if (canLS) try { localStorage.setItem(KEY, JSON.stringify(get())); } catch {} },
-  reset() { if (canLS) localStorage.removeItem(KEY); set(DEFAULT); },
+  save() {
+    if (!canLS) return;
+    try {
+      const current = get();
+      const seasonStateV2 = seasonStateV2For(current);
+      if (JSON.stringify(seasonStateV2) !== JSON.stringify(current.seasonStateV2)) set({ seasonStateV2 });
+      localStorage.setItem(KEY, JSON.stringify({ ...get(), seasonStateV2 }));
+    } catch {}
+  },
+  reset() { if (canLS) localStorage.removeItem(KEY); set(withIdentity(DEFAULT)); },
+
+  // Keep legacy SeasonState.v1 authoritative while every write carries a
+  // deterministic SeasonState.v2 compatibility index.
+  _setCompetitionState(nextCompetition, extra = {}) {
+    const current = get();
+    const history = Object.prototype.hasOwnProperty.call(extra, "competitionHistory")
+      ? arr(extra.competitionHistory, [])
+      : arr(current.competitionHistory, []);
+    const { competitionHistory: ignored, ...rest } = extra;
+    const next = {
+      ...rest,
+      competition: nextCompetition,
+      competitionHistory: history,
+    };
+    set({
+      ...next,
+      seasonStateV2: seasonStateV2For({ ...current, ...next }),
+    });
+    return nextCompetition;
+  },
+  _syncSeasonStateV2() {
+    const current = get();
+    const seasonStateV2 = seasonStateV2For(current);
+    set({ seasonStateV2 });
+    return seasonStateV2;
+  },
+  activeCompetitionEvent() {
+    return activeEventAdapter({
+      seasonStateV2: get().seasonStateV2,
+      legacyState: get().competition,
+    });
+  },
 
   // ── Milestone E：先發指派（席位 b1–b5 → playerId）────────────────────────
   //   唯一寫入點。規則全部在 contracts/matchLineup.js（互換語意、去重、清洗），
@@ -611,7 +670,7 @@ export const useProfileStore = create((set, get) => ({
       startDay: Number(get().meta?.days) || 1,
     });
     if (!made.ok) return { ok: false, state: null, created: false, errors: made.errors };
-    set({ competition: made.state });
+    get()._setCompetitionState(made.state);
     get().save();
     return { ok: true, state: made.state, created: true, errors: [] };
   },
@@ -620,13 +679,13 @@ export const useProfileStore = create((set, get) => ({
    * 沒有賽季（例如還沒建立）⇒ 不阻擋，行為與 Q3 之前完全相同。
    */
   _advanceCompetition(fromDay, days) {
-    const state = get().competition;
+    const state = get().activeCompetitionEvent().legacyState;
     if (!state?.schema) return { daysAdvanced: days, stoppedBy: null };
     const res = advanceSeasonDays({
       state, fromDay, days, playerRoster: get().players ?? [],
     });
     if (res.state !== state) {
-      set({ competition: res.state });
+      get()._setCompetitionState(res.state);
       //  ⚠ 一天都沒推進時 `advanceDay` 會提早 return（不動時鐘、不結算），
       //    但賽季狀態可能已經被 `sweepOverdue` 改過。這裡自己存檔，
       //    否則記憶體與存檔會不一致（重整後那些補判會消失又重算一次）。
@@ -647,7 +706,7 @@ export const useProfileStore = create((set, get) => ({
   startFixtureMatch(fixtureId, now = Date.now()) {
     const ensured = get().ensureCompetitionSeason();
     if (!ensured.ok) return { ok: false, errors: ensured.errors, reason: ensured.errors[0]?.message ?? null };
-    const state = get().competition;
+    const state = get().activeCompetitionEvent().legacyState;
     const fixture = fixtureById(state, fixtureId);
     if (!fixture) return { ok: false, errors: [{ code: "fixture", message: "找不到這場賽程" }], reason: "找不到這場賽程" };
 
@@ -707,8 +766,7 @@ export const useProfileStore = create((set, get) => ({
     const lit = allowRelaunch ? { ok: true, state } : applyLaunch(state, fixtureId);
     if (!lit.ok) return { ok: false, errors: lit.errors, reason: lit.errors[0]?.message ?? null };
 
-    set({
-      competition: lit.state,
+    get()._setCompetitionState(lit.state, {
       matchmaking: {
         ...(get().matchmaking ?? {}),
         //  ⚠ 賽程路徑沒有票券。舊票券要清掉，否則 pollMatchRoom 會拿一張
@@ -730,12 +788,11 @@ export const useProfileStore = create((set, get) => ({
    * ⚠ 只接受已經 `launched` 的場次，且同一場只能寫一次賽果（D11 不可變）。
    */
   completeFixtureMatch({ fixtureId, winner, score, duration, seed } = {}) {
-    const state = get().competition;
+    const state = get().activeCompetitionEvent().legacyState;
     if (!state?.schema) return { ok: false, errors: [{ code: "no_season", message: "目前沒有賽季" }] };
     const res = applyCompleted(state, { fixtureId, winner, score, duration, seed });
     if (!res.ok) return { ok: false, errors: res.errors };
-    set({
-      competition: res.state,
+    get()._setCompetitionState(res.state, {
       matchmaking: { ...(get().matchmaking ?? {}), fixtureAssignment: null },
     });
     get().save();
@@ -748,12 +805,11 @@ export const useProfileStore = create((set, get) => ({
    * MVP 的棄權只有敗場：不扣聲望、不罰款、不降級。
    */
   forfeitFixture(fixtureId, reason = "玩家棄權") {
-    const state = get().competition;
+    const state = get().activeCompetitionEvent().legacyState;
     if (!state?.schema) return { ok: false, errors: [{ code: "no_season", message: "目前沒有賽季" }] };
     const res = applyForfeit(state, { fixtureId, reason });
     if (!res.ok) return { ok: false, errors: res.errors };
-    set({
-      competition: res.state,
+    get()._setCompetitionState(res.state, {
       matchmaking: { ...(get().matchmaking ?? {}), fixtureAssignment: null },
     });
     get().save();
@@ -774,7 +830,7 @@ export const useProfileStore = create((set, get) => ({
    *   反過來就得先算一次名次才知道發多少，等於有兩份名次。
    */
   _sealSeasonIfFinished() {
-    let state = get().competition;
+    let state = get().activeCompetitionEvent().legacyState;
     if (!state?.schema) return { sealed: false, final: null, award: null };
 
     //  ── Q6：先確保季後賽排定／補齊，再談封存 ──────────────────────────
@@ -784,7 +840,7 @@ export const useProfileStore = create((set, get) => ({
     const po = ensurePlayoffs(state);
     if (po.ok && po.state !== state) {
       state = po.state;
-      set({ competition: state });
+      get()._setCompetitionState(state);
       get().save();
       if (po.added > 0 && isRegularSeasonDone(state) && state.playoff) {
         const q = state.playoff.qualification.qualified;
@@ -804,7 +860,7 @@ export const useProfileStore = create((set, get) => ({
       const res = applySealSeason(state, Number(get().meta?.days) || 1);
       if (!res.ok) return { sealed: false, final: null, award: null, reason: res.errors?.[0]?.message ?? null };
       final = res.final;
-      set({ competition: res.state });
+      get()._setCompetitionState(res.state);
       const champ = participantsOf(res.state).find((p) => p.id === final.championTeamId)?.name ?? "—";
       get().pushInbox({
         type: "match", from: "聯賽官方",
@@ -815,7 +871,10 @@ export const useProfileStore = create((set, get) => ({
 
     //  名次獎金：純函式算，這裡只寫回。重複呼叫由 `processedCompetitionAwards` 擋住。
     const settled = settleCompetitionAwardInState(get(), { final, day: Number(get().meta?.days) || 1 });
-    if (settled.nextState) set(settled.nextState);
+    if (settled.nextState) {
+      set(settled.nextState);
+      get()._syncSeasonStateV2();
+    }
     get().save();
     return { sealed: true, final, award: settled.receipt };
   },
@@ -837,7 +896,7 @@ export const useProfileStore = create((set, get) => ({
    *      產生的也是同一份賽程，不會出現兩份不同的 S2。
    */
   rollToNextCompetitionSeason() {
-    const state = get().competition;
+    const state = get().activeCompetitionEvent().legacyState;
     const can = canRollSeason(state);
     if (!can.ok) return { ok: false, errors: [{ code: "cannot_roll", message: can.reason }], reason: can.reason };
 
@@ -852,10 +911,10 @@ export const useProfileStore = create((set, get) => ({
 
     const history = arr(get().competitionHistory, []);
     const already = history.some((h) => h?.id === res.archived?.id);
-    set({
-      competition: res.state,
+    const nextHistory = already ? history : [res.archived, ...history].slice(0, 20);
+    get()._setCompetitionState(res.state, {
       //  新的在前；上限 20 季（一季一筆、每筆 8 列，容量遠小於 replay 那類東西）
-      competitionHistory: already ? history : [res.archived, ...history].slice(0, 20),
+      competitionHistory: nextHistory,
     });
     get().save();
     get().pushInbox({
@@ -882,18 +941,22 @@ export const useProfileStore = create((set, get) => ({
   },
   /** 賽事總覽（畫面唯一入口；不得自己算積分榜或自己找下一場）。 */
   competitionView() {
-    const state = get().competition;
+    const adapter = get().activeCompetitionEvent();
+    const state = adapter.legacyState;
     if (!state?.schema) {
       return {
         hasSeason: false, standings: null, next: null, today: null, progress: null, live: null,
         final: null, award: null, canRoll: { ok: false, reason: "目前沒有賽季", nextSeason: null },
         history: arr(get().competitionHistory, []),
+        activeEvent: null,
       };
     }
     const day = Number(get().meta?.days) || 1;
     const next = nextPlayerFixture(state, day);
     return {
       hasSeason: true,
+      activeEvent: adapter.event,
+      seasonStateV2: get().seasonStateV2,
       season: state.season,
       competition: state.competition,
       standings: seasonStandings(state),
@@ -1364,7 +1427,7 @@ export const useProfileStore = create((set, get) => ({
    * 只由 `reportMatchResult` 呼叫；換算規則在 `fixtureResultBridge`（純函式）。
    */
   _writeFixtureResultFromMatch(result, session) {
-    const state = get().competition;
+    const state = get().activeCompetitionEvent().legacyState;
     const fixtureId = fixtureIdOfSession(session);
     if (!state?.schema || !fixtureId) return { ok: false, errors: [{ code: "no_fixture", message: "這場不是賽程比賽" }] };
     const fixture = fixtureById(state, fixtureId);
