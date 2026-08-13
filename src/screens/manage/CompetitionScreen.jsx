@@ -94,10 +94,14 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
   };
 
   //  今天的比賽優先；沒有就顯示下一場
-  const focus = today ?? next;
   const isToday = !!today;
-  const oppId = focus ? (focus.sideA === myId ? focus.sideB : focus.sideA) : null;
-  const home = focus ? focus.sideA === myId : false;
+  //  ── Q7a：同一天可能有多場 ────────────────────────────────────────────
+  //  多個 Event 並存之後，今天不一定只有一場。`todayPending` 是 Store 給的
+  //  **當天全部未收尾**的玩家賽事；以前這裡只畫 `today`（清單第一場），
+  //  第二場就變成「看不見卻走不出今天」。
+  //  ⚠ 舊存檔或舊 Store 沒有這個欄位 ⇒ 退回單筆，畫面不會壞。
+  const todayList = view.todayPending ?? (today ? [today] : []);
+  const rows = isToday ? todayList : (next ? [next] : []);
 
   return (
     <ManageFrame
@@ -226,11 +230,24 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
       {/* ── 我的下一場 ─────────────────────────────────────────────── */}
       <Panel
         title={isToday ? "今日賽事" : "下一場賽事"}
-        right={focus && <span style={{ fontSize: 9, fontWeight: 800, color: isToday ? GC.gold : GC.gray }}>{isToday ? "今天" : `第 ${nextDay} 天`}</span>}
+        right={rows.length > 0 && (
+          <span style={{ fontSize: 9, fontWeight: 800, color: isToday ? GC.gold : GC.gray }}>
+            {isToday ? (rows.length > 1 ? `今天 · ${rows.length} 場` : "今天") : `第 ${nextDay} 天`}
+          </span>
+        )}
       >
-        {!focus && <div style={{ fontSize: 12, color: GC.gray }}>本季你的比賽都打完了。</div>}
-        {focus && (
-          <>
+        {rows.length === 0 && <div style={{ fontSize: 12, color: GC.gray }}>本季你的比賽都打完了。</div>}
+        {/*  ⚠ 一天多場時，每一場都自己一列、自己一組按鈕。棄權確認本來就以
+             fixture id 為 key，所以天然是「棄哪一場就確認哪一場」。
+             ⚠ 有進行中場次時，其他場的「出賽」**刻意仍然可按**——能不能開下一場
+             由 Store 判（會回「請先打完或放棄那一場」並顯示在上方錯誤列），
+             畫面不自己判規則。 */}
+        {rows.map((focus, idx) => {
+          const oppId = focus.sideA === myId ? focus.sideB : focus.sideA;
+          const home = focus.sideA === myId;
+          const isLive = live?.fixtureId === focus.id;
+          return (
+          <div key={focus.id} style={idx > 0 ? { marginTop: 10, paddingTop: 10, borderTop: `1px solid ${GC.line}` } : undefined}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "6px 0 10px" }}>
               <div style={{ textAlign: "right", flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 900, color: "#e5e7eb" }}>{nameOf(myId)}</div>
@@ -275,10 +292,10 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
                      `live` 是 Store 給的事實（有沒有沒打完的賽程場次），
                      畫面不自己判斷「能不能回去」——那由 `resumeMatchSession()` 決定。 */}
                 <button
-                  onClick={() => (live ? resume() : play(focus.id))}
+                  onClick={() => (isLive ? resume() : play(focus.id))}
                   style={{ flex: 1, background: `linear-gradient(135deg,${GC.purp},#7c3aed)`, border: "none", borderRadius: 10, padding: "11px 0", color: "#fff", fontSize: 13.5, fontWeight: 900, cursor: "pointer" }}
                 >
-                  {live ? "⚔️ 返回比賽" : "⚔️ 出賽"}
+                  {isLive ? "⚔️ 返回比賽" : "⚔️ 出賽"}
                 </button>
                 <button
                   onClick={() => setConfirmForfeit(focus.id)}
@@ -293,8 +310,9 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
                 推進天數到第 {nextDay} 天就能出賽（推進會自動停在比賽日）
               </div>
             )}
-          </>
-        )}
+          </div>
+          );
+        })}
       </Panel>
 
       {/* ── 積分榜 ─────────────────────────────────────────────────── */}
