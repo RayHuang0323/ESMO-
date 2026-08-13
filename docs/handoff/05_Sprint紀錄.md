@@ -8371,3 +8371,85 @@ bundle 含新的拒絕訊息與 `todayPending` 欄位；帶著「進行中場次
    （`你有一場進行中的對戰（對手：雷霆戰熊），請先打完或放棄那一場`），且**停在原畫面**
 4. 第一場完成後 → 今日賽事只剩第二場、只有「出賽」，按下去**正常進入**
    （到達 `MOBA 賽前配置`）
+
+---
+
+## Q7a-3a：Circuit / Event 契約與 legacy 升級（2026-08-13，已部署）
+
+範圍**刻意很小**：只做契約、`idScheme`、legacy 升級。**沒有做**多賽事並存（3b）、
+Circuit Points（3c），也**沒有任何賽事用新推導產生**。
+
+### 為什麼要加這一層
+
+`competition.id = comp:{mode}:s{season}:{organizerId}:{tier}` 只有四個鑑別欄位，
+**沒有賽事身分**。同季只要辦兩個 mode/organizer/tier 相同的賽事就是同一個 id
+⇒ 同一個 stageId ⇒ 同輪次同對戰即同一個 fixtureId ⇒ 同 seed ⇒ 同 sessionId。
+整條鏈都是它的函數。
+
+```
+circuit.id = circuit:{gameMode}:s{season}:{circuitKey}
+event.id   = event:{circuit.id}:{eventKey}
+competitionIdForEvent(event, tier) = comp:{event.id}:{tier}   ← 3a 尚無呼叫端
+```
+
+**只加最上面一層，下游四層（stage/fixture/seed/session）的推導公式一個字都不改。**
+
+### legacy 升級：只增不改
+
+舊存檔的 `comp:moba:s1:official:regular` **原字串保留**，只補
+`circuitId` / `eventId` / `idScheme: "legacy-v1"` 三個欄位，並合成一條
+legacy circuit + event 當容器。**重寫 competition.id 會讓所有既有 fixture 與
+已封存賽果全部對不上，這是本 milestone 唯一不能做的事。**
+
+新建賽季走**同一條路徑**，新舊存檔形狀一致。
+
+升級**冪等且回傳同一個物件參考**——不是只有值相同。若每次載入都產生新物件，
+畫面會白重繪，而且 Q5/Q6 那些「重載後逐字未變」的 JSON 比對會失準。
+
+### Q5 的紅線守衛：收窄，不是拿掉
+
+`check_competition_q5.mjs` §7d 原本擋 `double_elim|circuit|mmr|tokens|entitlement`。
+Circuit 現在是核准的一級實體、`seasonState` 必須 import 它的升級 ⇒ 原字面必然紅。
+
+改成擋 `circuitPoints`：**身分可以進來，積分玩法仍擋在門外**（3c 之前不得出現）。
+照 Q6 修訂同一條斷言的前例，在旁邊註明原因。
+**驗過它還有檢定力**：故意注入 `circuitPoints` 到 `seasonState.js`，斷言確實變紅。
+
+### 驗證
+
+| 項目 | 結果 |
+|---|---|
+| `check_q7a_3a_identity`（新增） | **29/29** |
+| Q1 / Q2a / Q2b / Q3 / Q3.5 / Q4 / Q5 / Q6 | 93 / 112 / 92 / 90 / 65 / 68 / **66** / 57 |
+| `q7a_safety` / `o7` / `integrity` / `cs23` / `progress25` | 18/18 / 48/48 / 20/20 / 28/28 / exit 0 |
+| `regress` / `regress2` / `build` | exit 0 / 8/8 / `built in 9.09s` |
+| 四支 browser gate | 票券 24/24、fixture 26/26、same-day 7/7、q6 20/20；**port 全部釋放** |
+
+紅線斷言（`check_q7a_3a_identity`）驗到的：`competition.id` 逐字元不變、
+既有 **11 個欄位全部不變**、新增的**正好**是那三個、原物件沒有被就地改動、
+**56 場 fixture id 全部不變**、`fixtures` 陣列連參考都沒換、存檔→重載後 id 不變。
+
+### 已部署
+
+| 項目 | 值 |
+|---|---|
+| 分支 | `q7a/3a-circuit-event` → `324d374` |
+| `main` | `150860e` → **`324d374`**（fast-forward） |
+| Actions | [31666995097](https://github.com/RayHuang0323/ESMO-/actions/runs/31666995097) — success |
+
+**正式站 smoke 8/8**：bundle 含升級碼；**舊存檔（拔掉身分欄位）正常載入**；
+`competition.id` / `stage.id` / **56 場 fixture id 逐字元沒變**；
+**升級前後畫面逐字相同**（積分榜／今日賽事／天數全部一致）；再次 reload 無漂移。
+
+⚠ 有一項正式站**看不到**，如實記錄：身分欄位是在**載入時的記憶體**補上的，
+`localStorage` 要等下一次 `save()` 才改寫，所以 prod 讀不到那三個欄位。
+這是預期行為（載入不主動寫檔），欄位本身的斷言由 `check_q7a_3a_identity` 涵蓋。
+
+### 一個自己造成、push 前抓到的問題
+
+第一次 commit 顯示「2650 增／2246 刪」——編輯把 `seasonState.js` 與
+`profileStore.js` 寫成 CRLF，而 repo 存 LF，整檔被重寫。實質改動只有
+31／200／4／171 行。已轉回 LF 並 amend。回頭查過先前六個已 push 的 commit
+（+66、+23、+167、+247、+131、+276），**都沒有這個問題**。
+
+⇒ 往後 commit 前值得看一眼 `git show --numstat`：行數與改動量對不上就是換行雜訊。
