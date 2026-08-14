@@ -7336,3 +7336,9 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - 新增 `tools/check_cs_apm_calibration_r40.mjs` 與 `CS_APM_CALIBRATION_R40_SPEC/REPORT.md`。verifier 使用 memory-only Vite transform，檢查 source SHA、marker 可逆、RNG token sequence、輸入不可變、off/on/repeated-on digest。
 - 量測 `60/70/80/90/100 × 5 roles × 16 seeds = 400 arms`。direct combat 與 aggr 相鄰 bands 均 20/20 strict-majority；每 +10 的 combatSkill 約 +0.0686～+0.1576，aggr 約 +0.016（高端 clamp／threshold 例外）。
 - `aggr < 0.82` retreat threshold 保持原樣；lurker 與 IGL 在 90→100 出現 gate crossing，AWP direct combat scaling 最低，entry 保留 raw role-fit double exposure。無 production patch，APM verdict 為 Calibration Ready（local causal pilot）。
+## Sprint R41：CS 勇氣 Calibration Pilot — 2026-08-15
+
+- 只處理 Courage；R40 checkpoint `ff5b89c5ea9c1391cfbe50e02dcaf1b4ccaab6fe` 先推送核對，R41 local commit 不 push。未碰 Season / Circuit / Event / competition 或其他 stat。
+- 新增 `tools/check_cs_courage_calibration_r41.mjs` 與 `CS_COURAGE_CALIBRATION_R41_SPEC/REPORT.md`。verifier 使用 memory-only Vite transform，檢查 source SHA、marker 可逆、RNG token sequence、輸入不可變、off/on/repeated-on digest。
+- 量測 `60/70/80/90/100 × 5 roles × 16 seeds = 400 arms`。aggr direct 20/20 strict-majority；Entry combat／raw role-fit 各 4/4。每 +10 Courage 在一般區間約 +0.05 aggr。
+- Lurker／IGL 在 80→90 跨既有 `aggr < 0.82`，90 以上 retreat trigger 變為 0；Entry 高端碰 effective clamp。無 production patch，Courage verdict 為 Calibration Ready（threshold-aware local pilot）。
