@@ -51,6 +51,7 @@ const STATE = resolve(ROOT, "tools/.verify-state.json");
  * 順序＝由快到慢、由基礎到整合，讓失敗盡早出現。
  */
 const SEGMENTS = [
+  { id: "cs_identity_gap_r38", script: "tools/check_cs_identity_gap_r38.mjs", shape: /CS 16-Stat Gameplay Identity Gap Closure R38: PASS/, note: "CS seven identity-gap classification and prioritization" },
   { id: "cs_learning_lifecycle_r16b", script: "tools/check_cs_learning_lifecycle_r16b.mjs", shape: /CS Learning Lifecycle \/ State Design R16-B: PASS/, note: "CS Learning historical lifecycle evidence" },
   { id: "cs_mapaware_semantics_r18b", script: "tools/check_cs_mapaware_semantics_r18b.mjs", shape: /CS MapAware Semantics \/ Read-Point Design R18-B: PASS/, note: "CS MapAware historical spatial read-point evidence" },
   { id: "cs_learning_measurement_r37", script: "tools/check_cs_learning_measurement_r37.mjs", shape: /CS Learning Measurement \/ Calibration Readiness R37: PASS/, note: "CS Learning cross-match lifecycle measurement" },
