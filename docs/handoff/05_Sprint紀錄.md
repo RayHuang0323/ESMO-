@@ -7342,3 +7342,9 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - 新增 `tools/check_cs_courage_calibration_r41.mjs` 與 `CS_COURAGE_CALIBRATION_R41_SPEC/REPORT.md`。verifier 使用 memory-only Vite transform，檢查 source SHA、marker 可逆、RNG token sequence、輸入不可變、off/on/repeated-on digest。
 - 量測 `60/70/80/90/100 × 5 roles × 16 seeds = 400 arms`。aggr direct 20/20 strict-majority；Entry combat／raw role-fit 各 4/4。每 +10 Courage 在一般區間約 +0.05 aggr。
 - Lurker／IGL 在 80→90 跨既有 `aggr < 0.82`，90 以上 retreat trigger 變為 0；Entry 高端碰 effective clamp。無 production patch，Courage verdict 為 Calibration Ready（threshold-aware local pilot）。
+## Sprint R42：CS 站位 Calibration Pilot — 2026-08-15
+
+- 只處理 Positioning；R41 checkpoint `7ca346b55b9d3cbfb83ac89a3142050b674fb5fa` 先推送核對，R42 local commit 不 push。未碰 Season / Circuit / Event / competition 或其他 stat。
+- 新增 `tools/check_cs_positioning_calibration_r42.mjs` 與 `CS_POSITIONING_CALIBRATION_R42_SPEC/REPORT.md`。verifier 使用 memory-only Vite transform，檢查 source SHA、marker 可逆、RNG token sequence、輸入不可變、off/on/repeated-on digest。
+- 量測 `60/70/80/90/100 × 5 roles × 16 seeds = 400 arms`。aggr direct 20/20 strict-majority；raw role-fit applicable roles 為 rifler／awp／lurker，每 +10 約 +2.00 role-fit。
+- Lurker 在 90→100 跨 `aggr < 0.82`，高端 retreat trigger 變為 0；effective Positioning 100 受 99 clamp。數值可進受限 pilot，但沒有新增空間站位 AI，gameplay identity 仍 incomplete。
