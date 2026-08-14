@@ -53,6 +53,7 @@ const STATE = resolve(ROOT, "tools/.verify-state.json");
 const SEGMENTS = [
   { id: "cs_identity_gap_r38", script: "tools/check_cs_identity_gap_r38.mjs", shape: /CS 16-Stat Gameplay Identity Gap Closure R38: PASS/, note: "CS seven identity-gap classification and prioritization" },
   { id: "cs_reflex_calibration_r39", script: "tools/check_cs_reflex_calibration_r39.mjs", shape: /CS Reflex Calibration Pilot R39: PASS/, note: "CS Reflex finite calibration sweep" },
+  { id: "cs_apm_calibration_r40", script: "tools/check_cs_apm_calibration_r40.mjs", shape: /CS APM Calibration Pilot R40: PASS/, note: "CS APM finite calibration sweep" },
   { id: "cs_reflex_read_chain_r19", script: "tools/check_cs_reflex_read_chain_r19.mjs", shape: /CS Reflex Read-Chain \/ Role Interaction Audit R19: PASS/, note: "CS Reflex historical read-chain semantic verifier" },
   { id: "cs_learning_lifecycle_r16b", script: "tools/check_cs_learning_lifecycle_r16b.mjs", shape: /CS Learning Lifecycle \/ State Design R16-B: PASS/, note: "CS Learning historical lifecycle evidence" },
   { id: "cs_mapaware_semantics_r18b", script: "tools/check_cs_mapaware_semantics_r18b.mjs", shape: /CS MapAware Semantics \/ Read-Point Design R18-B: PASS/, note: "CS MapAware historical spatial read-point evidence" },

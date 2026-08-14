@@ -7330,3 +7330,9 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - 新增 `check_cs_reflex_calibration_r39.mjs` 與 R39 spec/report；只做 memory-only calibration sweep，沒有改 `src/`、RNG、scenario、role mapping 或 balance constant。
 - 5 roles × raw 60/70/80/90/100 × 16 fixed seeds，共 400 arms；effective Reflex、combatSkill、mechanics、weapon、role-fit、Pt、opportunity、conversion 與 secondary outcome 分層記錄。
 - 20/20 相鄰 direct combat bands strict-majority；entry 沒有比 rifler / IGL 明顯過高。90→100 的 effective clamp 是 saturation boundary，R39 不提出 production patch。R19 verifier 改以 current source adapter 保留 historical view。
+## Sprint R40：CS APM／操作量 Calibration Pilot — 2026-08-14
+
+- 只處理 APM；R39 checkpoint `9357ed24ebe42c38866600fa8925cf5eef7b7a4a` 先推送核對，R40 local commit 不 push。未碰 Season / Circuit / Event / competition 或其他 stat。
+- 新增 `tools/check_cs_apm_calibration_r40.mjs` 與 `CS_APM_CALIBRATION_R40_SPEC/REPORT.md`。verifier 使用 memory-only Vite transform，檢查 source SHA、marker 可逆、RNG token sequence、輸入不可變、off/on/repeated-on digest。
+- 量測 `60/70/80/90/100 × 5 roles × 16 seeds = 400 arms`。direct combat 與 aggr 相鄰 bands 均 20/20 strict-majority；每 +10 的 combatSkill 約 +0.0686～+0.1576，aggr 約 +0.016（高端 clamp／threshold 例外）。
+- `aggr < 0.82` retreat threshold 保持原樣；lurker 與 IGL 在 90→100 出現 gate crossing，AWP direct combat scaling 最低，entry 保留 raw role-fit double exposure。無 production patch，APM verdict 為 Calibration Ready（local causal pilot）。
