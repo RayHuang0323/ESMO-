@@ -9295,3 +9295,31 @@ Q7a safety 18／3a 29／3b 51／3c 69／3d 67／3f 43／3f.1 42／**Q7b 72**；
 B2 20／B3 13；integrity 20；o7 48／o7.1 27；
 瀏覽器 gate 15／12／21／26／7／8／20；
 `regress` exit 0、`regress2` 8/8、`build` `built in 16.16s`。
+
+### Q7b 收尾上線（2026-08-15）
+
+| 項目 | 值 |
+|---|---|
+| `main` | `ac50790` → **`3555314`**（fast-forward，無 merge commit、無 force） |
+| Actions | [31843274082](https://github.com/RayHuang0323/ESMO-/actions/runs/31843274082) — success |
+| 合併後全套 | Q1–Q6 全綠、Q7a 7 支全綠、**Q7b 72/72**、B2/B3、integrity、o7/o7.1、瀏覽器 gate ×7、`regress` exit 0、`regress2` 8/8、`build` `built in 12.95s` |
+
+**正式站 smoke 32/32**（獨立 Chrome profile／port／headless）。
+存檔由**真實的 production 路徑**在 Node 造好再注入 ⇒ 畫面與存檔拿到的是真資料。
+
+- 新局仍是**預設亞洲巡迴新制**（140 場 / 4 賽事）
+- **三站未完成 ⇒ 沒有資格、也沒有年度總決賽**（fail-closed，不先開一個空的）
+- 三站封存 ⇒ 資格核發（seed 1–4）、**年度總決賽自動建立**且自己一條 circuit
+- **participants 與 qualification 逐 teamId 相同（含順序）**；**第 5 名進不來**
+- **sf1 = 1v4、sf2 = 2v3**，一開始只有兩場準決賽
+- 準決賽收尾 ⇒ 補出季軍戰與決賽；**四場沒打完 `Event.final` 不存在**
+- 四場打完 ⇒ `Event.final` 是 `FinalStandings.v1`、`rankSource: playoff`、
+  **年度冠軍＝決賽勝方（寒冰守衛）且必為四支晉級隊伍之一**
+- **`state.final` 仍是 `SeasonSeal.v1`**、**`careerEventId` 仍指官方聯賽**
+- **年終賽不產生 Circuit Points**（帳本仍 24 筆）、**不發獎金**
+  （獎金帳本只有官方聯賽那一筆）
+- 官方聯賽常規賽仍 56 場；**舊制存檔在預設下重載沒有被插入年終賽**
+- 無 undefined、全程無未捕捉例外
+
+⚠ 第一版 smoke 漏了兩項你列的（打完的 `Event.final`、`state.final` 維持
+SeasonSeal），已補第三份存檔（四場打完＋整季封存）驗到 ⇒ 25 → 32 條。
