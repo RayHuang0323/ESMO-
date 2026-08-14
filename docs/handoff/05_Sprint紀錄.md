@@ -7325,3 +7325,8 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - 新增 `tools/check_cs_identity_gap_r38.mjs` 與 `CS_IDENTITY_GAP_CLOSURE_R38_SPEC/REPORT.md`。
 - 七項責任明確分開：Learning 跨場成長；Map Awareness 空間資訊；Comms 資訊傳遞；Leadership 統一方向；Synergy 共同執行；Adaptability 情勢改變後調整；TacticalIQ 理解既定戰術。
 - 本輪沒有新增 production gameplay，避免用 generic combat / role-fit / fixed tactic 冒充 identity。七項均不進 balance calibration；保留 verifier-first 候選方向。
+## R39 CS Reflex Calibration Pilot (2026-08-14)
+
+- 新增 `check_cs_reflex_calibration_r39.mjs` 與 R39 spec/report；只做 memory-only calibration sweep，沒有改 `src/`、RNG、scenario、role mapping 或 balance constant。
+- 5 roles × raw 60/70/80/90/100 × 16 fixed seeds，共 400 arms；effective Reflex、combatSkill、mechanics、weapon、role-fit、Pt、opportunity、conversion 與 secondary outcome 分層記錄。
+- 20/20 相鄰 direct combat bands strict-majority；entry 沒有比 rifler / IGL 明顯過高。90→100 的 effective clamp 是 saturation boundary，R39 不提出 production patch。R19 verifier 改以 current source adapter 保留 historical view。
