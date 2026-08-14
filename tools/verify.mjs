@@ -56,6 +56,7 @@ const SEGMENTS = [
   { id: "cs_apm_calibration_r40", script: "tools/check_cs_apm_calibration_r40.mjs", shape: /CS APM Calibration Pilot R40: PASS/, note: "CS APM finite calibration sweep" },
   { id: "cs_courage_calibration_r41", script: "tools/check_cs_courage_calibration_r41.mjs", shape: /CS Courage Calibration Pilot R41: PASS/, note: "CS Courage finite calibration sweep" },
   { id: "cs_positioning_calibration_r42", script: "tools/check_cs_positioning_calibration_r42.mjs", shape: /CS Positioning Calibration Pilot R42: PASS/, note: "CS Positioning finite calibration sweep" },
+  { id: "cs_accuracy_calibration_r43", script: "tools/check_cs_accuracy_calibration_r43.mjs", shape: /CS Accuracy Calibration Pilot R43: PASS/, note: "CS Accuracy finite calibration sweep" },
   { id: "cs_reflex_read_chain_r19", script: "tools/check_cs_reflex_read_chain_r19.mjs", shape: /CS Reflex Read-Chain \/ Role Interaction Audit R19: PASS/, note: "CS Reflex historical read-chain semantic verifier" },
   { id: "cs_learning_lifecycle_r16b", script: "tools/check_cs_learning_lifecycle_r16b.mjs", shape: /CS Learning Lifecycle \/ State Design R16-B: PASS/, note: "CS Learning historical lifecycle evidence" },
   { id: "cs_mapaware_semantics_r18b", script: "tools/check_cs_mapaware_semantics_r18b.mjs", shape: /CS MapAware Semantics \/ Read-Point Design R18-B: PASS/, note: "CS MapAware historical spatial read-point evidence" },

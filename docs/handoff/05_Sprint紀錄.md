@@ -7348,3 +7348,9 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - 新增 `tools/check_cs_positioning_calibration_r42.mjs` 與 `CS_POSITIONING_CALIBRATION_R42_SPEC/REPORT.md`。verifier 使用 memory-only Vite transform，檢查 source SHA、marker 可逆、RNG token sequence、輸入不可變、off/on/repeated-on digest。
 - 量測 `60/70/80/90/100 × 5 roles × 16 seeds = 400 arms`。aggr direct 20/20 strict-majority；raw role-fit applicable roles 為 rifler／awp／lurker，每 +10 約 +2.00 role-fit。
 - Lurker 在 90→100 跨 `aggr < 0.82`，高端 retreat trigger 變為 0；effective Positioning 100 受 99 clamp。數值可進受限 pilot，但沒有新增空間站位 AI，gameplay identity 仍 incomplete。
+## R43 CS Accuracy Calibration Pilot（2026-08-15）
+
+- 先推送 R42 checkpoint `c9f1940645c0ab35c873c0b772c9277f4b456a4e`，並確認 local／tracking／remote SHA 一致；R43 未 push。
+- 新增 `tools/check_cs_accuracy_calibration_r43.mjs` 與 runner segment `cs_accuracy_calibration_r43`。Verifier 使用 `inferno／t_aexec／c_std`、5 roles、Accuracy 60／70／80／90／100、16 fixed seeds，共 400 arms；三次 deterministic run 完全一致，source SHA `edf311b13347dc185713d687e8dad22e05087aceede233a47baae62707b2cbf3`，suite digest `4ac077fd277cf742ee46ee79c32439ee3e98c73e279124a6377f21a84771ed00`。
+- 主要結果：每 +10 Accuracy 的 combatSkill 與 headshot chance 在 20 個相鄰區間皆 strict-majority 正向；AWP 使用 sniper branch `S("acc")*0.45`，Rifler／Entry／Lurker／IGL 的 exposure 分開保留。90→100 多數角色碰 effective 99 clamp，建議 60–90 作 stable pilot range；IGL 因 personality adjustment 未碰 99，但仍列 high-end caution。
+- `aggr` 沒有 Accuracy delta；沒有把 hit rate 當 KPI，也未新增 miss branch。R24、R25、R22、R38 及 focused gate PASS；沒有 production patch、RNG、scenario、其他 stat balance 或 historical rebaseline。Accuracy verdict：Calibration Ready／Go。
