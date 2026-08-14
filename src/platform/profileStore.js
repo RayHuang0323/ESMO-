@@ -84,6 +84,10 @@ import {
 //  ⚠ 只在**建立新賽季**時掛上，而且由旗標控制（預設關閉，理由見 featureFlags）。
 //    既有賽季一律不動——中途插入三站等於在賽季中間塞 84 場比賽。
 import { applyAsiaCircuit } from "./competition/asiaCircuit.js";
+//  ── Milestone Q7b：亞洲年度總決賽 ──────────────────────
+//  ⚠ 懶建、冇等，與 `ensurePlayoffs` 同一形狀：
+//    **已核發的晶級資格**就是唱一門檻，沒有就什麼都不做。
+import { ensureAsiaFinals, asiaFinalsCircuitIdFor } from "./competition/asiaFinals.js";
 import { asiaCircuitEnabled } from "../featureFlags.js";
 import {
   issueFor as issueCompetitionMatch, openRoomForFixture, openSessionForFixture,
@@ -839,6 +843,25 @@ export const useProfileStore = create((set, get) => ({
       }
     }
 
+    //  ── Q7b：年度總決賽在封存之前先補齊場次 ───────────────────────────
+    //  ⚠ 誠實說明：這一個呼叫點與 `expectsPlayoff: true` **互為冗餘**——
+    //    變異測過，拿掉任何一個，另一個都還接得住：
+    //      · 拿掉這裡 ⇒ `isPlayoffDoneOf` 仍要求四場都在，封存被擋，
+    //        季軍戰與決賽由下面那個呼叫點在同一拍補出來。
+    //      · 拿掉 `expectsPlayoff` ⇒ 這裡會先把四場補齊，封存時就沒有
+    //        「只剩兩場」的窗口。
+    //    真正**單獨可失效**的是 `expectsPlayoff`（見 check_q7b §8d2）。
+    //    這一層留著是縱深防禦：代價只有一次冪等呼叫，
+    //    而失手的後果是冒出一個**沒有打過決賽的年度冠軍**。
+    {
+      const fin = ensureAsiaFinals(state, { participants: participantsOf(state) });
+      if (fin.ok && fin.state !== state) {
+        state = fin.state;
+        set({ competition: state });
+        get().save();
+      }
+    }
+
     //  ── Q7a-3b：先封存「封得了的 Event」，再談賽季封存 ────────────────
     //  ⚠ 順序不能反：賽季結束的定義已經改成「每一個 Event 都封存了」。
     //  ⚠ 獎金**只有 Event 有 prizePolicy 才發**——沒有政策的 Event 不得被迫
@@ -905,6 +928,30 @@ export const useProfileStore = create((set, get) => ({
       //    那條路徑走不到最後的 `save()`。積分寫了卻沒落盤，重載才補得回來——
       //    雖然結算冪等所以補得回來，但「記憶體與存檔不一致」本身就是漏洞。
       if (pointsChanged) get().save();
+    }
+
+    //  ── Q7b：資格剛核發的**同一拍**就要把年度總決賽開出來 ──────────────
+    //  ⚠ 這一個呼叫點也是必要的，理由與上面那個不同：資格是在上面那一段
+    //    才核發的。如果等下一次 `_sealSeasonIfFinished` 才建，中間這一拍
+    //    `canSealSeason` 會看到「所有 Event 都封存了」而**把整季封掉**——
+    //    年度總決賽就永遠不會發生。
+    {
+      const day = Number(get().meta?.days) || 1;
+      const fin = ensureAsiaFinals(state, { participants: participantsOf(state) });
+      if (fin.ok && fin.state !== state) {
+        state = fin.state;
+        set({ competition: state });
+        get().save();
+        const ev = state.events[Object.keys(state.events).find((id) =>
+          state.events[id].circuitId === asiaFinalsCircuitIdFor("moba", state.season))];
+        const seeds = state.competitions[ev.rankingCompetitionId]?.playoff?.qualification?.qualified ?? [];
+        get().pushInbox({
+          type: "match", from: "聯賽官方",
+          subject: `${ev.name} 對戰表公布`,
+          text: `巡迴賽三站全部結束，前四名取得參賽資格：${seeds.map((x) => `${x.seed}. ${x.name}`).join("、")}。`
+            + `　首輪由 1 對 4、2 對 3，第 ${day} 天起陸續開打。`,
+        });
+      }
     }
 
     const can = canSealSeason(state);

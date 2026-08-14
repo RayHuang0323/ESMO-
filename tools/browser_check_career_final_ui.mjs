@@ -138,8 +138,14 @@ try {
 
   // ── ② 多 Event ──────────────────────────────────────────────────────
   const many = await chrome.evaluate(SETUP_MULTI);
+  //  ⚠ Q7b：原本寫死 `events === 4`（聯賽 ＋ 三站）。三站打完之後會核發晉級資格，
+  //    **年度總決賽跟著自動建立** ⇒ 打完的賽季是 5 個賽事。
+  //    這一條真正要守的是「多 Event 時賽季封存物件仍是 Season-level 的
+  //    `SeasonSeal.v1`」，賽事**幾個**不是重點；把它改成「多於一個」，
+  //    並把 5 這個組成寫進說明，日後再加賽事也不必回來改。
   ck("2) 多 Event：**`state.final` 仍是 `SeasonSeal.v1`**（Season-level 語意未動）",
-    many.seasonSchema === "SeasonSeal.v1" && many.events === 4, many.seasonSchema);
+    many.seasonSchema === "SeasonSeal.v1" && many.events > 1,
+    `${many.seasonSchema}，${many.events} 個賽事（聯賽＋三站＋年度總決賽）`);
   ck("2b) 生涯指標指向官方聯賽，名次取得到",
     !!many.careerEventId && typeof many.rank === "number", `我第 ${many.rank} 名`);
   await chrome.reload();

@@ -9210,3 +9210,88 @@ B2 20／B3 13；integrity 20；o7 48／o7.1 27；
 
 正式站**新開的局就是 140 場**（每季多打 21 場）。既有存檔當季不受影響，
 換季之後才進新制。要回退：網址加 `?asiaCircuit=0`，不必改程式也不必重新部署。
+
+---
+
+## Q7b 亞洲年度總決賽（2026-08-15，已 commit 未部署）
+
+三站巡迴賽 → Circuit Points → Top 4 資格 → **亞洲年度總決賽** → 年度冠軍。
+資格終於有了消費端。
+
+### ⚠ 開工前先講一件事：工作樹被系統清掉過一次
+
+做到一半發現 `tools/*.mjs` 全失蹤、`src/platform/contracts/` 全空、`.git` 不見。
+`git worktree list` 顯示 **8 個 scratchpad worktree 全部 `prunable`** ——
+整個 `AppData\Local\Temp\claude\...` 被系統清理了，不是操作造成的。
+
+**已 commit 的工作一行都沒丟**（`origin/main` 在 `ac50790`）。
+從 `origin/q7a/3b-multi-event` 重建工作樹後繼續。
+⚠ 緩解措施：worktree 的 commit 物件會寫進 **D: 主 repo 的 `.git`**，不在 temp ⇒
+**盡早 local commit** 就能保住工作。本輪照做了。
+
+### 三個 audit 的結論（都有實測）
+
+| 問題 | 結論 |
+|---|---|
+| `pointsPolicy = null` 會不會阻塞封存？ | **不會。** `canSealSeason` 只看「每個 Event 有沒有 final」，與積分無關。實測 `canSealSeason` 的 reason 是「還有 N 個賽事沒有封存」，不是缺政策。 |
+| Q6 的季後賽能不能重用？ | **能，而且是完全參數化的。** `createPlayoffStage` 直接吃得下 `CircuitQualification.v1`（它的 `seed` 就是巡迴名次），`ensurePlayoffFixtures` 產出 sf1=1v4、sf2=2v3、季軍戰、決賽。**本輪沒有寫任何對戰表邏輯。** |
+| 獎金政策能不能沿用既有表？ | **沿用＝替年度總決賽訂一份金額，那是產品決定** ⇒ 本輪 `prizePolicy: null`（與三站一致），不新增任何數字。要發獎金請另外決定。 |
+
+### 資料流
+
+```
+巡迴賽三站封存 → settleAllPendingPoints → grantAllReadyQualifications
+   → state.qualifications["qual:circuit:…:asia:championship:top4"]
+   → ensureAsiaFinals（只讀這一份）→ createPlayoffStage(qualification)
+   → sf1 / sf2 →（打完）→ bronze / final → Event.final → 年度冠軍
+```
+
+**資格是唯一門檻**：`asiaFinals.js` 沒有 import `circuitStandings`／`pointsLogOf`，
+也沒有讀它們（§12b 有守衛）。實測：把 `pointsLog` 清空、巡迴榜歸零，
+參賽名單一個字都不變；把資格拿掉、積分榜完好，**建不出來**。
+
+### 賽制與容器
+
+4 隊單淘汰、1v4／2v3、**有季軍戰**（不是額外做的——共用程式碼本來就會排，
+而 `isPlayoffDoneOf` 要求四場都收尾才算結束；刻意拿掉反而要改共用程式碼）。
+
+**年度總決賽有自己的 circuit（`asia-finals`），不是巡迴賽第四站。** 兩個理由都量過：
+① `canGrantCircuitQualification` 要求 circuit 底下每一站都已結算，
+而年終賽封存後是 `policy_required` ⇒ 放同一條就會產生「靠呼叫順序才安全」的耦合；
+② `summarizeCircuitSeason` 會把每個 Event 列進歷史，放同一條會多出一站空紀錄。
+
+⚠ `stage` 與 `playoff.stage` **刻意是同一個賽段**：`standingsOf` 讀前者（封存需要
+rows），`playoffOrder` 讀後者（冠軍由決賽勝方決定，不是由勝場數推）。指同一個
+賽段 ⇒ 沒有第二份真相。
+
+### 排程
+
+排在**所有既有場次之後 +6 天**。聯賽季後賽在「最後一場常規賽 +2／+4」，
+用 +6 不論它排了沒有都不會撞，也不必回頭查它排在哪。
+
+### 驗證（`check_q7b_asia_finals` **72/72**）
+
+18 項驗收全數涵蓋。**檢定力實測**：
+- 改成從積分榜取前四（而不是資格）⇒ §1e／§7c／§12b 紅
+- `expectsPlayoff` 改成 false ⇒ §8d2 紅
+
+⚠ 中途發現自己的兩條保護**互為冗餘**：拿掉「封存前補場次」或拿掉
+`expectsPlayoff`，另一個都還接得住，所以兩個變異都不紅。
+我在程式碼註解裡寫的「這個呼叫點是必要的，不是保險」**是錯的**，已改成
+誠實說明哪一個才是單獨可失效的，並補上 §8d2 直接驗 `expectsPlayoff`
+（只剩兩場準決賽、都收尾——最危險的那一刻）。
+
+### 改到的既有斷言（1 條）
+
+`browser_check_career_final_ui` §2 原本寫死 `events === 4`（聯賽＋三站）。
+Q7b 之後打完的賽季是 **5 個**賽事。真正要守的是「多 Event 時 `state.final`
+仍是 `SeasonSeal.v1`」，賽事幾個不是重點 ⇒ 改成「多於一個」並把組成寫進說明，
+日後再加賽事也不必回來改。**沒有減少覆蓋。**
+
+### 全套回歸
+
+Q1 93／Q2a 112／Q2b 92／Q3 91／Q3.5 65／Q4 68／Q5 69／Q6 57；
+Q7a safety 18／3a 29／3b 51／3c 69／3d 67／3f 43／3f.1 42／**Q7b 72**；
+B2 20／B3 13；integrity 20；o7 48／o7.1 27；
+瀏覽器 gate 15／12／21／26／7／8／20；
+`regress` exit 0、`regress2` 8/8、`build` `built in 16.16s`。
