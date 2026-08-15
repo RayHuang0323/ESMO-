@@ -9323,3 +9323,108 @@ B2 20／B3 13；integrity 20；o7 48／o7.1 27；
 
 ⚠ 第一版 smoke 漏了兩項你列的（打完的 `Event.final`、`state.final` 維持
 SeasonSeal），已補第三份存檔（四場打完＋整季封存）驗到 ⇒ 25 → 32 條。
+
+---
+
+## Q7c 年度總決賽 UI（2026-08-16，已部署）
+
+資格終於有了畫面。三站巡迴賽 → 積分 → Top 4 資格 → 年度總決賽 → 年度冠軍，
+整條鏈玩家在瀏覽器裡看得到了。
+
+**分工**：Claude 主控（規格、review、驗證），**UI 實作交給 Codex**
+（`gpt-5.6-luna` / `xhigh`），Claude 不自己重寫 UI。
+
+| 項目 | 值 |
+|---|---|
+| `main` | `03f9575` → **`5ba2333`**（fast-forward，五筆，無 merge commit、無 force） |
+| Actions | [31894225623](https://github.com/RayHuang0323/ESMO-/actions/runs/31894225623) — success |
+| 合併後全套 | Q1–Q6 全綠、Q7a 7 支、Q7b 72、B2/B3、integrity、o7/o7.1、瀏覽器 gate ×8、`regress` exit 0、`regress2` 8/8、`build` `built in 13.31s` |
+
+### 五個 commit
+
+| SHA | 內容 |
+|---|---|
+| `94b7ac3` | Q7c 規格（先寫規格再實作） |
+| `8cbf794` | 第一輪：結構實作 ＋ `browser_check_asia_finals_ui` 15 條 |
+| `d4cf10d` | 註解錯字修正（見下） |
+| `4d39747` | 視覺 Polish 附錄 |
+| `5ba2333` | 第二輪：視覺 Polish |
+
+### 資料層只多一個唯讀投影
+
+`competitionView().asiaFinals` 由**既有函式**組成
+（`asiaFinalsEventOf` / `canOpenAsiaFinals` / `isAsiaFinalsDone` / `playoffBracket` /
+`playoffOrder` / `eventFinalOf` / `absoluteDayOf`）。
+UI 目錄 grep 不到任何計算函式——積分、晉級、勝方、名次都不是畫面算的。
+
+### 三條語意紅線（都有 gate 守著）
+
+1. **`Event.final` 是年度冠軍唯一真相**：`AnnualChampionBanner` 第一行
+   `if (!final) return null`，冠軍由 `championTeamId` 找。**打完決賽但 Event 未封存
+   不會提前出現冠軍**。
+2. **`view.final` 是 `SeasonSeal.v1`**，年度榮耀區塊完全不讀它。
+3. **`careerEventId` / `careerFinal` 是官方聯賽生涯成績**，與年度冠軍分開呈現。
+
+### 視覺：金色是稀缺資源
+
+`.af-panel` 的外框由金色改為中性；金色只留給晉級區、冠軍、**冠軍之路**。
+
+**Signature 冠軍之路**：`championId = asiaFinals.final?.championTeamId ?? null`，
+`onPath = !!championId && match.winner === championId`。
+`final` 為 null ⇒ 整條路徑不存在。用**新的** `.af-match-onpath`，
+`.af-match-champion`（語意是「這是決賽」）未被覆寫。
+
+**種子 ①②③④** 以 `teamId` 對 `qualified` 查表取得（純顯示層 join，
+`playoffBracket` 與 `asiaFinals` 資料形狀一行未動），一致出現在晉級卡、
+對戰卡雙方、冠軍名次列。
+
+**文案**改成明確資訊：「決賽對手將在兩場準決賽結束後排定」取代「等準決賽結果」。
+
+**Desktop** 兩欄對戰樹（季軍戰獨立一列）；**Mobile 390px** 垂直四場列表，
+不把桌機樹硬塞進去。
+
+### gate 的改動全是加強，沒有弱化
+
+| 條目 | 變更 |
+|---|---|
+| #3 | 加驗種子標記，並擴及對戰卡雙方 |
+| #6 | 待定文案換成新字串，**仍保留**「待定」與「無假對戰組合」 |
+| #8 | **新增** `pathMatches === 0`——冠軍未產生時不得有任何冠軍路徑 |
+| #10 | 加驗名次列的種子 |
+
+### 驗證（Claude 獨立重跑，不採信 Codex 回報）
+
+`browser_check_asia_finals_ui` **15/15**；全套回歸零下降。
+
+**變異測試（Claude 自己做）**：
+- `final=null` 時用已完成的準決賽勝方造路徑 ⇒ **#8 紅**
+- 塞 900px 固定寬元素 ⇒ **#13 紅**（`925/390`，量滾動容器）
+- 把第 1 種子對成 3 ⇒ **#3 與 #10 同時紅**
+
+⚠ 我第一次寫變異①時拿**決賽**勝方當替代來源，但那份存檔裡決賽還沒打
+（winner 為 null）⇒ 沒造出路徑、自然不紅。**變異本身無效**，改用已完成的
+準決賽才測得到。
+
+### 正式站 smoke **25/25**
+
+資格未核發整塊不出現／種子 ①②③④ 正確／sf1 1v4、sf2 2v3／未完成時無冠軍橫幅
+且 **onPath 為 0**／`Event.final` 出現後冠軍正確（寒冰守衛）／**冠軍之路恰好兩場
+（sf1 ＋ final）且都是冠軍贏的**／非冠軍已完成比賽 opacity 0.62 仍可讀／
+Desktop 樹可見手機列表隱藏／Mobile 390px 反之且容器 390/390 無溢出／
+`state.final` 仍 SeasonSeal、`careerEventId` 仍指官方聯賽／無未捕捉例外。
+
+⚠ smoke 第一版 #13/#22 紅是**斷言寫錯**：DOM 裡同時有桌機與手機兩套佈局
+（一套 CSS 隱藏），卡片是 8 張不是 4 張，`length === 2` 當然不成立。
+以 match key 去重才對——**不是 UI 有問題**。
+
+### 順手修掉的既有錯字（`d4cf10d`）
+
+`profileStore.js` 的 Q7b 註解有三個錯字：冇等→冪等、晶級→晉級、唱一→唯一。
+成因是我在 `3555314` 用 Python heredoc **手寫 unicode escape 打錯**
+（`\u5187` 應為 `\u51AA` 等），已隨那次部署上線。純註解、無功能影響。
+同一輪用 Edit 工具寫的註解都正確——**不要用 escape 拼中文**。
+
+### 尚未做
+
+年度總決賽仍**沒有獎金**（金額是產品決定）；年度冠軍**還沒有下游消費端**
+（沒有 Season Award、沒有生涯成就）。
