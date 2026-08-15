@@ -328,6 +328,29 @@ function synergyTradeCandidate(attacker,victim,players,walls){
   candidates.sort((a,b)=>((b.role==="support"?1:0)-(a.role==="support"?1:0))||dist(a.pos,attacker.pos)-dist(b.pos,attacker.pos));
   return candidates[0]||null;
 }
+function leadershipFollowUpRoute(leader,teammate,goal){
+  if(!leader||!teammate||leader===teammate||leader.dead||teammate.dead||leader.side!==teammate.side||leader.role!=="igl"||persStat(leader,"led")<LEADERSHIP_EXECUTION_THRESHOLD||!goal)return null;
+  const next=Array.isArray(leader.route)&&leader.route.length>1?leader.route[Math.min(leader.routeIdx+1,leader.route.length-1)]:null;
+  const via=next&&dist(next,goal)>4?next:null;
+  if(dist(teammate.pos,goal)<=4)return null;
+  return via?[{...teammate.pos},{...via},{...goal}]:[{...teammate.pos},{...goal}];
+}
+function leadershipFollowUpAfterKill(victim,players,target,N){
+  const goal=victim.side==="t"?N[target==="a"?"aSite":"bSite"]:victim.pos;
+  const leader=players.find(p=>p.side===victim.side&&p.role==="igl"&&!p.dead&&!p.reassigned);
+  const teammates=players.filter(p=>p.side===victim.side&&p!==leader&&!p.dead&&!p.reassigned);
+  const teammate=teammates[teammates.length-1]||null;
+  const opportunity=Boolean(leader&&teammate&&goal);
+  const route=leadershipFollowUpRoute(leader,teammate,goal);
+  if(route){teammate.reassigned=true;teammate.route=route;teammate.routeIdx=0;teammate.routeT=0;teammate.state="ROTATE";}
+  return {opportunity,action:Boolean(route),leaderId:leader?.id??null,playerId:teammate?.id??null,leaderRole:leader?.role??null,role:teammate?.role??null,led:leader?persStat(leader,"led"):null};
+}
+function synergyCoverFollowUpRoute(attacker,partner,victim){
+  if(!attacker||!partner||!victim||attacker===partner||attacker.dead||partner.dead||victim.dead)return null;
+  const dx=victim.pos.x-partner.pos.x,dy=victim.pos.y-partner.pos.y,L=Math.hypot(dx,dy)||1;
+  const cover={x:clamp(partner.pos.x-dx/L*7,5,95),y:clamp(partner.pos.y-dy/L*7,5,95)};
+  return dist(attacker.pos,cover)>4?[{...attacker.pos},cover]:null;
+}
 function applyCommsBombAwareness(carrier,sitePos,players){
   const candidates=players.filter(p=>p!==carrier&&!p.dead&&!p.reassigned&&dist(p.pos,carrier.pos)<50&&persStat(p,"com")>=COMMS_HANDOFF_THRESHOLD);
   candidates.sort((a,b)=>((b.role==="support"?1:0)-(a.role==="support"?1:0))||persStat(b,"com")-persStat(a,"com")||dist(a.pos,sitePos)-dist(b.pos,sitePos));
@@ -495,6 +518,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
       };
       const finalizeKill=(at,df,{weapon=at.gun,isHS=false,distance=Infinity,sourceId=null}={})=>{
         df.dead=true;df.hp=0;at.k++;df.d++;if(isHS)at.hsCount++;at.money+=killReward(weapon);roundKills[at.id]=(roundKills[at.id]||0)+1;roundDeaths[df.id]=1;
+        const leadershipSecond=leadershipFollowUpAfterKill(df,ps,target,N);
         (df._hitters||[]).forEach(id=>{if(id!==at.id){const ap=ps.find(x=>x.id===id);if(ap){ap.a++;roundAst[id]=(roundAst[id]||0)+1;}}});
         if(!["glock","usp"].includes(df.gun))droppedGuns.push({id:`dg${fi}${df.id}`,gun:df.gun,pos:{...df.pos}});
         if(df.hasBomb&&!planted){df.hasBomb=false;droppedBomb={pos:{...df.pos}};casts.push(`💣 炸彈掉落！`);}
@@ -610,7 +634,11 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
           const attackerMapAware=tw?mapAwareT:mapAwareCT;if(!attackerMapAware)continue;
           const synergyPartner=synergyTradeCandidate(at,df,ps,walls);
           const synergyReady=Boolean(synergyPartner&&Math.max(persStat(at,"coo"),persStat(synergyPartner,"coo"))>=SYNERGY_TRADE_THRESHOLD);
-          if(synergyReady){synergyPartner.va=Math.atan2(df.pos.y-synergyPartner.pos.y,df.pos.x-synergyPartner.pos.x)*180/Math.PI;synergyPartner.state="ENGAGE";synergyPartner.shooting=Math.max(synergyPartner.shooting,1);}
+          const synergySecond=synergyReady?synergyCoverFollowUpRoute(at,synergyPartner,df):null;
+          if(synergyReady){
+            synergyPartner.va=Math.atan2(df.pos.y-synergyPartner.pos.y,df.pos.x-synergyPartner.pos.x)*180/Math.PI;synergyPartner.state="ENGAGE";synergyPartner.shooting=Math.max(synergyPartner.shooting,1);
+            if(synergySecond){at.route=synergySecond;at.routeIdx=0;at.routeT=0;at.state="ROTATE";}
+          }
           const g=GUNS[at.gun],rawAccuracy=at.stats?.acc||80,effectiveAccuracy=at.stats?.acc!=null?persStat(at,"acc"):rawAccuracy;const isHS=rand()<g.hs*(0.72+0.55*(effectiveAccuracy/100));let dmg=(g.dmg+Math.floor(rand()*40))*(isHS?2:1);
           if(df.armor&&!isHS)dmg*=0.72; // 護甲減傷（非爆頭）
           dmg=Math.round(dmg);

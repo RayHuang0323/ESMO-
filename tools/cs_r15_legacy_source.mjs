@@ -102,6 +102,41 @@ const R50_TACTICAL_PLANT = '            aliveCT.forEach(cp=>{const tacticalRoute
 const R50_TACTICAL_LEGACY = '            aliveCT.forEach(cp=>{cp.reassigned=false;cp.route=appr&&dist(cp.pos,appr)>6?[{...cp.pos},appr,{...c4pos}]:[{...cp.pos},{...c4pos}];cp.routeIdx=0;cp.routeT=0;cp.state="RETAKE";});';
 const R50_COMMS_PLANT = '            comms.push({side:"t",name:carrier.name,text:`包下了，${target==="a"?"A":"B"} 點，全員交叉！`});const bombAwareReceiver=applyCommsBombAwareness(carrier,c4pos,aliveT);if(bombAwareReceiver)comms.push({side:"t",name:bombAwareReceiver.name,text:"收到包點資訊，調整路線"});';
 const R50_COMMS_LEGACY = '            comms.push({side:"t",name:carrier.name,text:`包下了，${target==="a"?"A":"B"} 點，全員交叉！`});const cov=aliveT.find(x=>x.id!==carrier.id);if(cov)comms.push({side:"t",name:cov.name,text:"收到，我架槍"});';
+// R51 historical adapter: remove the second Leadership/Synergy consumers so
+// the earlier R47-R50 evidence remains byte-exact and is not rebaselined.
+const R51_IDENTITY_HELPERS = `function leadershipFollowUpRoute(leader,teammate,goal){
+  if(!leader||!teammate||leader===teammate||leader.dead||teammate.dead||leader.side!==teammate.side||leader.role!=="igl"||persStat(leader,"led")<LEADERSHIP_EXECUTION_THRESHOLD||!goal)return null;
+  const next=Array.isArray(leader.route)&&leader.route.length>1?leader.route[Math.min(leader.routeIdx+1,leader.route.length-1)]:null;
+  const via=next&&dist(next,goal)>4?next:null;
+  if(dist(teammate.pos,goal)<=4)return null;
+  return via?[{...teammate.pos},{...via},{...goal}]:[{...teammate.pos},{...goal}];
+}
+function leadershipFollowUpAfterKill(victim,players,target,N){
+  const goal=victim.side==="t"?N[target==="a"?"aSite":"bSite"]:victim.pos;
+  const leader=players.find(p=>p.side===victim.side&&p.role==="igl"&&!p.dead&&!p.reassigned);
+  const teammates=players.filter(p=>p.side===victim.side&&p!==leader&&!p.dead&&!p.reassigned);
+  const teammate=teammates[teammates.length-1]||null;
+  const opportunity=Boolean(leader&&teammate&&goal);
+  const route=leadershipFollowUpRoute(leader,teammate,goal);
+  if(route){teammate.reassigned=true;teammate.route=route;teammate.routeIdx=0;teammate.routeT=0;teammate.state="ROTATE";}
+  return {opportunity,action:Boolean(route),leaderId:leader?.id??null,playerId:teammate?.id??null,leaderRole:leader?.role??null,role:teammate?.role??null,led:leader?persStat(leader,"led"):null};
+}
+function synergyCoverFollowUpRoute(attacker,partner,victim){
+  if(!attacker||!partner||!victim||attacker===partner||attacker.dead||partner.dead||victim.dead)return null;
+  const dx=victim.pos.x-partner.pos.x,dy=victim.pos.y-partner.pos.y,L=Math.hypot(dx,dy)||1;
+  const cover={x:clamp(partner.pos.x-dx/L*7,5,95),y:clamp(partner.pos.y-dy/L*7,5,95)};
+  return dist(attacker.pos,cover)>4?[{...attacker.pos},cover]:null;
+}
+`;
+const R51_LEADERSHIP_CALL = '        const leadershipSecond=leadershipFollowUpAfterKill(df,ps,target,N);\n';
+const R51_SYNERGY_BLOCK = `          const synergyPartner=synergyTradeCandidate(at,df,ps,walls);
+          const synergyReady=Boolean(synergyPartner&&Math.max(persStat(at,"coo"),persStat(synergyPartner,"coo"))>=SYNERGY_TRADE_THRESHOLD);
+          const synergySecond=synergyReady?synergyCoverFollowUpRoute(at,synergyPartner,df):null;
+          if(synergyReady){
+            synergyPartner.va=Math.atan2(df.pos.y-synergyPartner.pos.y,df.pos.x-synergyPartner.pos.x)*180/Math.PI;synergyPartner.state="ENGAGE";synergyPartner.shooting=Math.max(synergyPartner.shooting,1);
+            if(synergySecond){at.route=synergySecond;at.routeIdx=0;at.routeT=0;at.state="ROTATE";}
+          }
+`;
 // R47 historical adapter: remove the three new identity consumers so R18/R34/R35/R37
 // continue to inspect their locked pre-R47 source rather than silently rebaseline.
 const R47_IDENTITY_HELPERS = `const MAPAWARE_BASE_RANGE=28,MAPAWARE_VIS_RANGE=0.28;
@@ -183,6 +218,11 @@ export function csR47R46Source(input) {
 export function csR48R47Source(input) {
   let source = normalizeCsSource(input);
   if (!source.includes(R48_IDENTITY_HELPERS)) return source;
+  if (source.includes(R51_IDENTITY_HELPERS)) {
+    source = replaceExact(source, R51_IDENTITY_HELPERS, "", "R51_IDENTITY_HELPERS");
+    source = replaceExact(source, R51_LEADERSHIP_CALL, "", "R51_LEADERSHIP_CALL");
+    source = replaceExact(source, R51_SYNERGY_BLOCK, R48_SYNERGY_BLOCK, "R51_SYNERGY_BLOCK");
+  }
   source = replaceExact(source, R48_IDENTITY_HELPERS, "", "R48_IDENTITY_HELPERS");
   source = replaceExact(source, R48_ROUTE_KEYS, R47_TEAM_ROUTE_KEYS, "R48_LEADERSHIP_ROUTE");
   source = replaceExact(source, R48_COMMS_LINE, R47_COMMS_LINE, "R48_COMMS_HANDOFF");
