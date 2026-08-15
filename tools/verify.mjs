@@ -59,6 +59,7 @@ const SEGMENTS = [
   { id: "cs_accuracy_calibration_r43", script: "tools/check_cs_accuracy_calibration_r43.mjs", shape: /CS Accuracy Calibration Pilot R43: PASS/, note: "CS Accuracy finite calibration sweep" },
   { id: "cs_focus_semantic_correction_r44", script: "tools/check_cs_focus_semantic_correction_r44.mjs", shape: /CS Focus Semantic Correction Readiness R44: PASS/, note: "CS Focus raw/effective semantic correction readiness" },
   { id: "cs_batch_calibration_r45", script: "tools/check_cs_batch_calibration_r45.mjs", shape: /CS Batch Calibration R45: PASS/, note: "CS Focus / Decision / Clutch(str) / Resilience(res) batch local calibration" },
+  { id: "cs_distribution_baseline_r46", script: "tools/check_cs_distribution_r46.mjs", shape: /CS Distribution Baseline R46: PASS/, note: "CS mature-stat role distribution and generation baseline" },
   { id: "cs_reflex_read_chain_r19", script: "tools/check_cs_reflex_read_chain_r19.mjs", shape: /CS Reflex Read-Chain \/ Role Interaction Audit R19: PASS/, note: "CS Reflex historical read-chain semantic verifier" },
   { id: "cs_learning_lifecycle_r16b", script: "tools/check_cs_learning_lifecycle_r16b.mjs", shape: /CS Learning Lifecycle \/ State Design R16-B: PASS/, note: "CS Learning historical lifecycle evidence" },
   { id: "cs_mapaware_semantics_r18b", script: "tools/check_cs_mapaware_semantics_r18b.mjs", shape: /CS MapAware Semantics \/ Read-Point Design R18-B: PASS/, note: "CS MapAware historical spatial read-point evidence" },

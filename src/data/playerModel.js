@@ -38,6 +38,69 @@ export const STAT_DEF = [
 export const STAT_CATS = ["操作", "戰術", "心理", "團隊"];
 export const statZh = (key) => STAT_DEF.find((s) => s.key === key)?.zh ?? key;
 
+/**
+ * R46：已進入 Calibration Ready / Limited 的 CS 素質。
+ * 正式 key 與中文名稱仍以 STAT_DEF 為唯一來源；CS adapter 的 legacy `str`
+ * 只是 `clutch` 的短鍵，不在這裡另造一個正式欄位。
+ */
+export const CS_CALIBRATION_STAT_KEYS = Object.freeze([
+  "reflex", "accuracy", "apm", "positioning", "decision",
+  "courage", "clutch", "focus", "resilience",
+]);
+
+/** profileStore 的既有 MOBA 定位 → CS 五種主要定位；不改既有資料結構。 */
+export const CS_ROLE_BY_MOBA_ROLE = Object.freeze({
+  "上路": "entry",
+  "中路": "rifler",
+  "下路": "awp",
+  "打野": "lurker",
+  "輔助": "igl",
+});
+
+/**
+ * R46 第一版 CS 新秀能力分布基準。
+ * bias 是相對於同一潛力／當前能力基線的 role-specific 偏移；cap 只限制
+ * 這九項成熟素質的生成高端，避免新秀普遍落在 99 clamp 或 threshold 區。
+ * gameplay-gap 素質不放進這張表，維持既有 producer，待另開 identity Sprint。
+ */
+export const CS_ROLE_DISTRIBUTION_PROFILES = Object.freeze({
+  entry: Object.freeze({
+    zh: "突破手",
+    strengths: Object.freeze(["courage", "reflex", "apm"]),
+    weaknesses: Object.freeze(["focus", "decision", "resilience"]),
+    bias: Object.freeze({ reflex: 8, accuracy: 2, apm: 7, positioning: -1, decision: -6, courage: 9, clutch: -3, focus: -5, resilience: -4 }),
+    cap: Object.freeze({ reflex: 90, accuracy: 88, apm: 88, positioning: 84, decision: 78, courage: 90, clutch: 82, focus: 82, resilience: 82 }),
+  }),
+  rifler: Object.freeze({
+    zh: "步槍手",
+    strengths: Object.freeze(["accuracy", "reflex", "positioning", "focus"]),
+    weaknesses: Object.freeze([]),
+    bias: Object.freeze({ reflex: 5, accuracy: 8, apm: 2, positioning: 6, decision: 1, courage: 0, clutch: 4, focus: 6, resilience: 2 }),
+    cap: Object.freeze({ reflex: 90, accuracy: 92, apm: 86, positioning: 90, decision: 86, courage: 84, clutch: 88, focus: 90, resilience: 86 }),
+  }),
+  awp: Object.freeze({
+    zh: "狙擊手",
+    strengths: Object.freeze(["accuracy", "focus", "positioning"]),
+    weaknesses: Object.freeze(["apm", "courage"]),
+    bias: Object.freeze({ reflex: 1, accuracy: 9, apm: -5, positioning: 7, decision: 0, courage: -6, clutch: 2, focus: 10, resilience: 1 }),
+    cap: Object.freeze({ reflex: 86, accuracy: 92, apm: 80, positioning: 92, decision: 84, courage: 78, clutch: 86, focus: 94, resilience: 86 }),
+  }),
+  lurker: Object.freeze({
+    zh: "游走手",
+    strengths: Object.freeze(["decision", "positioning", "clutch"]),
+    weaknesses: Object.freeze(["courage"]),
+    bias: Object.freeze({ reflex: 1, accuracy: 0, apm: 3, positioning: 8, decision: 9, courage: -5, clutch: 5, focus: 3, resilience: 0 }),
+    cap: Object.freeze({ reflex: 86, accuracy: 86, apm: 84, positioning: 90, decision: 92, courage: 78, clutch: 86, focus: 86, resilience: 86 }),
+  }),
+  igl: Object.freeze({
+    zh: "指揮",
+    strengths: Object.freeze(["decision", "resilience", "focus"]),
+    weaknesses: Object.freeze(["accuracy", "apm", "courage"]),
+    bias: Object.freeze({ reflex: -4, accuracy: -5, apm: -7, positioning: 0, decision: 11, courage: -4, clutch: 1, focus: 4, resilience: 6 }),
+    cap: Object.freeze({ reflex: 82, accuracy: 82, apm: 78, positioning: 84, decision: 94, courage: 78, clutch: 84, focus: 88, resilience: 90 }),
+  }),
+});
+
 /** 個性：boost +8 / nerf −5（Legacy PERSONALITY 逐字） */
 export const PERSONALITY = [
   { id: "aggressive", zh: "進攻型", emoji: "⚔️", boost: ["courage", "reflex"],        nerf: ["decision", "focus"],        desc: "敢衝敢打，但容易衝動" },

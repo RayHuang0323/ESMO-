@@ -7367,3 +7367,9 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - 新增 tools/check_cs_batch_calibration_r45.mjs 與 R45 spec/report。2,400 次 deterministic simulation，四項各自保留 raw/effective、role-fit、local opportunity、conversion、clamp/threshold evidence。
 - str 的 source canonical label 是「抗壓」，既有產品 mapping 的 Clutch／殘局能力沿用 legacy str；res canonical label 是「韌性」。R33 的 Clutch lastAlive / Resilience low-HP ownership boundary 維持。
 - 無 production patch、無 RNG/scenario/historical rebaseline；R45 focused verifier PASS。
+## R46 CS 已成熟素質整合＋第一版能力分布基準（2026-08-16）
+
+- R45 `2ed88f4` 先 push 並確認三方一致；R46 不重做 R39–R45 calibration sweep。
+- 核對 `STAT_DEF` 九項正式 key/中文名，新增 `CS_CALIBRATION_STAT_KEYS`、集中 MOBA→FPS mapping 與 `CS_ROLE_DISTRIBUTION_PROFILES`；`clutch` 正式 key 不改名，CS engine 仍由 adapter 轉 `str`。
+- `recruitPool.genProspects()` 沿既有 deterministic producer 改為九項成熟 stat 使用 role bias + cap；gap stat 舊 roleBoost 與 recruitment transaction 保留。五 role profile：Entry 強 Courage/Reflex/APM、AWP 強 Accuracy/Focus/Positioning、Lurker 強 Decision/Positioning/Clutch、IGL 強 Decision/Resilience/Focus、Rifler 維持均衡。
+- R46 focused verifier PASS：240 prospects、6 seeds、deterministic digest `a78dc5879b929fbff62d18fb215780d8f67ed81dda20dd752de8b022626aa82f`；90+ 0.51%、99 clamp 0、threshold band 3.33%。

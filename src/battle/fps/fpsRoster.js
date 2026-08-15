@@ -16,13 +16,14 @@
 
 import { getPlayerDerivedStats } from "../../platform/talents/playerDerivedStats.js";
 import { CS_SEATS } from "../../platform/contracts/matchSquad.js";
+import { CS_ROLE_BY_MOBA_ROLE } from "../../data/playerModel.js";
 
 /** 長鍵(playerModel STAT_DEF) → 短鍵(3D 引擎)；Legacy STAT_L2S 逐字 */
 export const STAT_L2S = { reflex: "rxn", accuracy: "acc", apm: "apm", positioning: "pos", mapAware: "vis", tacticalIQ: "tac", decision: "dec", adaptability: "adp", courage: "cou", clutch: "str", focus: "foc", resilience: "res", comms: "com", leadership: "led", synergy: "coo", learning: "lrn" };
 export const toShortStats = (stats = {}) => { const o = {}; for (const k in STAT_L2S) o[STAT_L2S[k]] = stats[k] ?? 50; return o; };
 
 /** MOBA 路線 → FPS 定位（Legacy MOBA2FPS 逐字；與引擎內建德國海豹對位一致） */
-export const MOBA2FPS = { "上路": "entry", "打野": "lurker", "中路": "rifler", "下路": "awp", "輔助": "igl" };
+export const MOBA2FPS = CS_ROLE_BY_MOBA_ROLE;
 export const FPS_ROLE_ZH = { entry: "突破手", rifler: "步槍手", awp: "狙擊手", lurker: "游走手", igl: "指揮", support: "輔助" };
 
 /** FPS 綜合戰力（Legacy FPS_W_S / fpsOvr 逐字；HUD 展示用，不進引擎演算法） */
