@@ -9428,3 +9428,86 @@ Desktop 樹可見手機列表隱藏／Mobile 390px 反之且容器 390/390 無�
 
 年度總決賽仍**沒有獎金**（金額是產品決定）；年度冠軍**還沒有下游消費端**
 （沒有 Season Award、沒有生涯成就）。
+
+---
+
+## Q7d 生涯榮耀（2026-08-16，已 commit 未部署）
+
+`Event.final` → 年度冠軍 → **Career Honors** → 歷屆紀錄。
+年度冠軍終於有了長期下游消費端。**資料層由 Claude 做，本輪不做 UI。**
+
+### Audit：既有三層都承載不了
+
+| 候選 | 為什麼不行 |
+|---|---|
+| `competitionHistory` | 存 `FinalStandings`（官方聯賽名次），Q5／Q6 對它的形狀有斷言。塞別種東西會讓「歷屆成績」變成兩種型別 |
+| `circuitHistory` | 存巡迴積分摘要。年度總決賽**刻意不在巡迴賽那條 circuit**（Q7b：自己一條、無積分政策），`summarizeCircuitSeason` 對它回 null |
+| `processedCompetitionAwards` | 是**錢**的冪等帳本 |
+
+而且**前兩者都只在換季時寫入、上限 20 季** —— 年度冠軍是在
+`_sealSeasonIfFinished` 就產生的，等換季才記＝玩家不換季就沒有榮耀。
+
+⇒ **榮耀自己一層**：新的 Store 頂層切片 `honors: []`，**不設上限**
+（一季一筆小物件，與那兩個存整張名次表的 history 不同；榮耀被裁掉＝歷史被改寫）。
+
+### 資料流
+
+```
+年度總決賽四場打完 → applySealEvent → Event.final（含 championTeamId）
+  → _recordHonors（冪等 sweep）→ honors[] ← 唯一真相
+  → annualChampionsOf / teamHonorCount / latestAnnualChampion（全部推導）
+```
+
+**唯一來源是 `Event.final`**：`honors.js` 沒有 import 也沒有讀
+`playoffBracket` / `playoffOrder` / `circuitStandings` / `pointsLogOf` /
+`standingsOf` / SeasonSeal（§11b 有守衛）。每筆帶 `sourceFinalId`。
+
+### 冪等靠 id 而不是內容比對
+
+`honor:{honorType}:{gameMode}:s{season}` —— **一季一個項目就只有一個年度冠軍**，
+這件事編碼進 id，重複寫入在 id 這一層就被擋。
+
+### 兩個寫入時機，缺一不可
+
+1. **`_sealSeasonIfFinished`** —— 年度總決賽封存的當下就記，玩家不必換季。
+   放在賽季封存判定**之前**（那一行可能因「還有賽事沒結束」提早 return）。
+2. **`rollToNextCompetitionSeason`** —— 補住「賽季早就封存、之後沒再推進天數
+   就直接按換季」的存檔。**換季之後來源就消失了，補不回來。**
+
+### legacy / migration：只補看得見來源的
+
+載入時**不回填**（回填需要當季的 `Event.final`，換季後就不存在）。
+真正的補寫由上面兩個 sweep 負責。舊制存檔（沒有年度總決賽）
+**永遠不會產生榮耀**，不猜、不補假的。
+
+### accessor（全部推導，不落盤索引）
+
+`annualChampionsOf` / `latestAnnualChampion` / `teamHonorCount` /
+`honorsOfSeason` / `hasAnnualChampionHonor` / `validateHonors`，
+外加 `competitionView().honorsView`（歷屆冠軍、最近一季、我拿過幾次）。
+
+⚠ **玩家拿過幾次是算出來的，不另存計數** —— 存了就會與清單漂移。
+
+### 世界歷史，不是玩家的獎盃櫃
+
+冠軍是 AI 隊伍照樣寫（§6 實測 S1 寒冰守衛、S2 烈焰鳳凰都是 AI）。
+
+### 驗證（`check_q7d_honors` **59/59**）
+
+**檢定力實測**：
+- Event 未封存也發榮耀（改用準決賽勝方）⇒ **§1c／1d／2d／2e 紅**
+- id 不含賽季 ⇒ **§2g／2h／3a／3b 紅**（一季一筆的保證消失）
+- `teamHonorCount` 多算一次 ⇒ **§5c／5d／6c 紅**
+
+### 全套回歸
+
+Q1 93／Q2a 112／Q2b 92／Q3 91／Q3.5 65／Q4 68／Q5 69／Q6 57；
+Q7a safety 18／3a 29／3b 51／3c 69／3d 67／3f 43／3f.1 42／Q7b 72／**Q7d 59**；
+B2 20／B3 13；integrity 20；o7 48／o7.1 27；
+瀏覽器 gate 15／15／12／21／26／7／8／20；
+`regress` exit 0、`regress2` 8/8、`build` `built in 12.13s`。零下降。
+
+### 尚未做
+
+**沒有榮譽櫃 UI**（資料層已備妥 `honorsView`，下一輪可交 Codex）。
+年度總決賽仍**沒有獎金**（榮耀與獎金分離，金額是產品決定）。

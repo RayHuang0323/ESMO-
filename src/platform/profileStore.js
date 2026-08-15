@@ -91,6 +91,14 @@ import {
   ensureAsiaFinals, asiaFinalsCircuitIdFor,
   asiaFinalsEventOf, canOpenAsiaFinals, isAsiaFinalsDone,
 } from "./competition/asiaFinals.js";
+//  ── Milestone Q7d：生涯榮耀 ────────────────────────────────
+//  ⚠ 自己一層：它既不是聯賽名次（competitionHistory）、不是巡迴積分摘要
+//    （circuitHistory）、也不是錢（processedCompetitionAwards）。
+//    而且那兩個 history 都只在**換季**時寫入，年度冠軍在封存當下就產生了。
+import {
+  recordPendingHonors, annualChampionsOf, latestAnnualChampion,
+  teamHonorCount, honorsOf, HONOR_TYPES,
+} from "./competition/honors.js";
 import { playoffBracket, playoffOrder } from "./competition/playoffs.js";
 import { asiaCircuitEnabled } from "../featureFlags.js";
 import {
@@ -230,6 +238,11 @@ const DEFAULT = {
   //  ⚠ 與 competitionHistory 分開存：一個是「聯賽最終名次」，一個是「巡迴總成績」，
   //    合在一起就得在讀的時候分辨每一筆是哪一種，那是自找的麻煩。
   circuitHistory: [],
+  //  Q7d：生涯榮耀（Honor.v1[]，新的在前）。**世界歷史，不是玩家的獎盃櫃**——
+  //  冠軍是 AI 也照樣寫；玩家拿過幾次由 `teamHonorCount` 推導，不另存計數。
+  //  ⚠ 刻意**不設上限**：一季一筆小物件，與那兩個存整張名次表的 history 不同，
+  //    而榮耀一旦被裁掉就等於歷史被改寫。
+  honors: [],
   inbox: [
     { id: 1, type: "match",   from: "聯賽官方",         subject: "第 1 週賽程已公布",   text: "第 1 週賽程已公布，請確認出賽名單。", time: "剛剛", unread: true },
     { id: 2, type: "recruit", from: "球探部",           subject: "3 名新星進入觀察名單", text: "球探回報：3 名新星進入觀察名單，可前往招募查看。", time: "1 小時前", unread: true },
@@ -371,6 +384,12 @@ const load = () => {
       //  ⚠ 刻意**不從現有 competition 回填**：那一季還沒換季，它的積分仍然
       //    活在當前賽季裡，回填會讓同一季同時出現在當前與歷史兩個地方。
       circuitHistory: arr(saved.circuitHistory, []),
+      //  Q7d migration：舊存檔沒有榮耀 ⇒ 空陣列。
+      //  ⚠ 刻意**不在載入時回填**：回填需要當季的年度總決賽 Event.final，
+      //    而那份資料在換季之後就不存在了。真正的補寫由結算與換季那兩個
+      //    時機的冪等 sweep 負責（見 `_recordHonors`）——只補**還看得到來源**的，
+      //    看不到來源的一律不猜。
+      honors: arr(saved.honors, []),
       // Sprint10 的 sponsors[] 假名單已退場；舊存檔沒有 activeSponsor → null（尚未簽約）
       activeSponsor: saved.activeSponsor ?? DEFAULT.activeSponsor,
       scouted: saved.scouted && typeof saved.scouted === "object" ? saved.scouted : {},
@@ -661,6 +680,32 @@ export const useProfileStore = create((set, get) => ({
    * ⚠ 旗標關閉、或掛不上去（缺 team.id／seasonSeed）都**原樣回傳**——
    *   巡迴賽是加值內容，它失敗不該讓玩家連賽季都開不了。
    */
+  /**
+   * Q7d：把「該有但還沒有」的生涯榮耀補齊。**冪等、可重複呼叫。**
+   *
+   * ⚠ 唯一來源是年度總決賽**已封存的** `Event.final`
+   *   （純函式在 `competition/honors.js`，本層只負責讀狀態→寫回）。
+   * ⚠ 呼叫時機有兩個，缺一不可：
+   *     · `_sealSeasonIfFinished` —— 年度總決賽封存的**當下**就記，
+   *       玩家不必換季也拿得到。
+   *     · `rollToNextCompetitionSeason` —— 補住「賽季早就封存、之後都沒再
+   *       推進天數就直接換季」那條路徑；換季之後來源就消失了，補不回來。
+   * @returns {number} 這次新增幾筆
+   */
+  _recordHonors(state) {
+    const r = recordPendingHonors(state, get().honors, eventFinalOf);
+    if (r.added.length === 0) return 0;
+    set({ honors: r.honors });
+    for (const h of r.added) {
+      get().pushInbox({
+        type: "match", from: "聯賽官方",
+        subject: `第 ${h.season} 賽季 ${h.label}`,
+        text: `${h.eventName}落幕，${h.championTeamName ?? h.championTeamId} 成為第 ${h.season} 賽季${h.label}。`
+          + `　這項榮耀已記入歷屆紀錄。`,
+      });
+    }
+    return r.added.length;
+  },
   _withAsiaCircuit(state) {
     if (!asiaCircuitEnabled()) return state;
     const r = applyAsiaCircuit(state, { playerTeam: get().team, seasonSeed: get().meta?.seasonSeed });
@@ -958,6 +1003,11 @@ export const useProfileStore = create((set, get) => ({
       }
     }
 
+    //  ── Q7d：年度總決賽封存的當下就記下榮耀 ────────────────────────────
+    //  ⚠ 放在賽季封存判定**之前**：底下那一行可能因為「還有賽事沒結束」提早
+    //    return，而年度總決賽此時可能已經封存完畢了。
+    if (get()._recordHonors(state) > 0) get().save();
+
     const can = canSealSeason(state);
     if (!can.ok && !can.sealed) return { sealed: false, final: null, award: null, reason: can.reason };
 
@@ -993,6 +1043,12 @@ export const useProfileStore = create((set, get) => ({
     const state = get().competition;
     const can = canRollSeason(state);
     if (!can.ok) return { ok: false, errors: [{ code: "cannot_roll", message: can.reason }], reason: can.reason };
+
+    //  ── Q7d：換季前最後一次機會 ──────────────────────────────────────
+    //  ⚠ 換季之後這一季的年度總決賽 `Event.final` 就不在 `competition` 裡了，
+    //    來源消失就補不回來。這條路徑補的是「賽季早就封存、之後沒再推進天數
+    //    就直接按換季」的存檔。冪等，所以正常情形下這裡什麼都不會做。
+    get()._recordHonors(state);
 
     const res = rollToNextSeason({
       state,
@@ -1109,6 +1165,21 @@ export const useProfileStore = create((set, get) => ({
           //  ⚠ `playerEntries`：玩家自己的積分紀錄（**只是 filter，沒有加總**）。
           //    畫面要顯示「這一站我拿幾分」，否則只看得到總分，看不出各站表現。
           playerEntries: pointsLogOf(state).filter((e) => e.teamId === state.playerTeamId),
+        };
+      })(),
+      //  ── Q7d：生涯榮耀（唯讀推導，**不落盤任何索引**）──────────────────
+      //  ⚠ 真相是 `honors[]` 那一份；「歷屆冠軍」「我拿過幾次」「最近一季」
+      //    全部即時算出來。存一份計數就一定會與清單漂移。
+      honorsView: (() => {
+        const honors = honorsOf(get().honors);
+        const myTeamId = get().team?.id ?? null;
+        return {
+          all: honors,
+          annualChampions: annualChampionsOf(honors),
+          latestAnnualChampion: latestAnnualChampion(honors),
+          myAnnualChampionCount: teamHonorCount(honors, myTeamId, {
+            honorType: HONOR_TYPES.asiaAnnualChampion,
+          }),
         };
       })(),
       //  ── Q7c：亞洲年度總決賽（唯讀資料投影）──────────────────────────
