@@ -7361,3 +7361,9 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - Read-chain：`posSkill()` 的 Rifler／AWP 使用 raw role-fit；`combatSkill()` mechanics／weapon／holding 與 CT defuse progress 使用 effective Focus；Decision 仍為獨立 effective cofactor。target、retreat、utility、bomb choice、tactic choice、aggr 沒有 Focus consumer。
 - 5 CT roles × 16 fixed seeds 的 current／historical paired evidence：16／16 progress coverage，12 個 personality-direction changes、4 個 neutral；RNG 21 個 call sites、scenario、role mapping、coefficient 均不變。focused R44、R28、R22、R43、historical、progress/reward、Q7a、build 全部 PASS。
 - Production patch 只有 defuse semantic correction，沒有 balance calibration。Focus semantic correction = Go；Focus full calibration = Revise／Deferred，留給 R45。
+## R45 CS Focus / Decision / Clutch / Resilience 批次 Calibration Pilot（2026-08-15）
+
+- 先核對並推送 R44 6ee917727bafdeb8c5a700ed15f308d7154d3369；R45 local-only，不 push。
+- 新增 tools/check_cs_batch_calibration_r45.mjs 與 R45 spec/report。2,400 次 deterministic simulation，四項各自保留 raw/effective、role-fit、local opportunity、conversion、clamp/threshold evidence。
+- str 的 source canonical label 是「抗壓」，既有產品 mapping 的 Clutch／殘局能力沿用 legacy str；res canonical label 是「韌性」。R33 的 Clutch lastAlive / Resilience low-HP ownership boundary 維持。
+- 無 production patch、無 RNG/scenario/historical rebaseline；R45 focused verifier PASS。
