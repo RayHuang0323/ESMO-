@@ -75,7 +75,12 @@ const styles = `
 `;
 
 export default function TeamHonorsPanel() {
-  useProfileStore((s) => s.competition);
+  //  訂閱**榮耀本身**：`honorsView` 讀的是 `get().honors`（頂層 slice），
+  //  而 `_recordHonors` 做的是 `set({ honors })`——訂 `competition` 叫不醒這裡。
+  //  ⚠ selector 只取既有參考，不做 filter/map/sort、不建新物件（否則每次都重繪）。
+  //  `myTeamId` 來自 `get().team?.id`，但 `team` 在執行期沒有寫入點，
+  //  唯一會變的 `_hydrate` 同時也會寫 `honors`，所以這條訂閱已經涵蓋。
+  useProfileStore((s) => s.honors);
   const honorsView = useProfileStore.getState().competitionView().honorsView ?? {};
   const annualChampions = Array.isArray(honorsView.annualChampions) ? honorsView.annualChampions : [];
   const latestAnnualChampion = honorsView.latestAnnualChampion ?? null;

@@ -99,6 +99,50 @@ const injectSave = async (chrome, save) => {
   return chrome.evaluate(TEAM_UI);
 };
 
+//  面板已掛載的情況下直接 `set({ honors })`，**不重新導頁**，畫面必須即時更新。
+//  ⚠ 這條的檢定力來自「只動 honors 這一個 slice」：訂閱別的 slice
+//    （例如 competition）的元件不會被叫醒，DOM 就會停在舊的列數。
+const LIVE_UPDATE = `
+  ${PRELUDE}
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const panel = document.querySelector('[data-testid="team-honors-panel"]');
+  if (!panel) throw new Error("即時更新檢查：面板沒有掛載");
+  const seasonsOf = () => [...panel.querySelectorAll('[data-testid="honor-history-item"]')]
+    .map((el) => Number(el.dataset.season));
+
+  const before = seasonsOf();
+  const beforeCount = Number(panel.querySelector('[data-testid="honor-my-count"]')?.dataset.count ?? -1);
+
+  //  合成一筆新榮耀，季次刻意取最大值 ⇒ 應該排在最前面
+  const myTeamId = st().team?.id ?? null;
+  const injected = {
+    schema: "Honor.v1",
+    id: "honor:asia_annual_champion:moba:s99",
+    honorType: "asia_annual_champion",
+    label: "亞洲年度冠軍",
+    season: 99,
+    gameMode: "moba",
+    eventId: "live-probe",
+    eventName: "live-probe",
+    championTeamId: myTeamId,
+    championTeamName: "即時更新測試隊",
+    finalRank: 1,
+    earnedAtDay: 1,
+    sourceFinalId: "live-probe-final",
+  };
+  //  **只動 honors，不碰 competition、不導頁、不 reload**
+  profile.useProfileStore.setState({ honors: [injected, ...st().honors] });
+  await wait(500);
+
+  const after = seasonsOf();
+  const afterCount = Number(panel.querySelector('[data-testid="honor-my-count"]')?.dataset.count ?? -1);
+  return {
+    before, after, beforeCount, afterCount,
+    stillMounted: document.querySelector('[data-testid="team-honors-panel"]') === panel,
+    viewLen: st().competitionView().honorsView.annualChampions.length,
+  };
+`;
+
 const PLAYER_FIXTURES = `
   ${PRELUDE}
   const seasonState = await import(B + "/src/platform/competition/seasonState.js");
@@ -293,6 +337,15 @@ try {
   const uiEntry = await injectSave(chrome, SAVE_AI_ONE);
   ck("14) 儀表板「更多功能 → 戰隊詳情」入口可達，且面板在該頁",
     uiEntry.entered && !!uiEntry.panelText && uiEntry.panelText.includes("TEAM HONORS"));
+
+  const live = await chrome.evaluate(LIVE_UPDATE);
+  ck("15) 面板已掛載時 set({honors}) 不導頁也能即時更新（訂閱訂在 honors）",
+    live.stillMounted &&
+    live.after.length === live.before.length + 1 &&
+    live.after[0] === 99 && !live.before.includes(99) &&
+    live.after.length === live.viewLen &&
+    live.afterCount === live.beforeCount + 1,
+    `列數 ${live.before.length}→${live.after.length}（view ${live.viewLen}）、我方冠軍數 ${live.beforeCount}→${live.afterCount}`);
 
   console.log("\n--- honorsView（玩家多冠）---");
   console.log(JSON.stringify(uiPlayerMulti.view, null, 2));
