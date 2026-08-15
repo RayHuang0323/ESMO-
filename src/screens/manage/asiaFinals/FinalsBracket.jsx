@@ -1,5 +1,4 @@
 import React from "react";
-import { GC } from "../../../ui/theme.js";
 import BracketMatch from "./BracketMatch.jsx";
 
 const labels = {
@@ -9,7 +8,15 @@ const labels = {
   final: "決賽 🏆",
 };
 
-export default function FinalsBracket({ bracket = [], days = [], done = false }) {
+export default function FinalsBracket({
+  bracket = [],
+  days = {},
+  done = false,
+  championId = null,
+  playerTeamId = null,
+  seedOf,
+  seedMark,
+}) {
   const byKey = (key) => bracket.find((match) => match.key === key) ?? { key, exists: false };
   const sf1 = byKey("sf1");
   const sf2 = byKey("sf2");
@@ -17,15 +24,26 @@ export default function FinalsBracket({ bracket = [], days = [], done = false })
   const final = byKey("final");
   const finalLabel = final.exists && !final.done ? "冠軍戰 🏆" : labels.final;
 
-  const item = (match, label, championMatch = false) => (
+  const item = (match, label, championMatch = false) => {
+    const onPath = !!championId && match.winner === championId;
+    const offPath = !!championId && match.done && !onPath;
+    const playerMatch = !!playerTeamId && match.exists && !match.done &&
+      [match.sideA, match.sideB].includes(playerTeamId);
+    return (
     <BracketMatch
       key={match.key}
       match={match}
       label={label}
       day={days[match.key]}
       championMatch={championMatch}
+      onPath={onPath}
+      offPath={offPath}
+      playerMatch={playerMatch}
+      seedOf={seedOf}
+      seedMark={seedMark}
     />
-  );
+    );
+  };
 
   return (
     <section className="af-section af-bracket-section" data-testid="finals-bracket" data-complete={done ? "true" : "false"}>

@@ -1,7 +1,6 @@
 import React from "react";
-import { GC, MONO } from "../../../ui/theme.js";
 
-export default function AnnualChampionBanner({ final }) {
+export default function AnnualChampionBanner({ final, seedOf, seedMark }) {
   // Event.final 是年度冠軍唯一真相；沒有它就沒有冠軍橫幅。
   if (!final) return null;
 
@@ -21,8 +20,11 @@ export default function AnnualChampionBanner({ final }) {
       </div>
       <div className="af-final-placements" data-testid="annual-final-placements">
         {rows.map((row) => (
-          <div key={row.teamId} className={`af-placement${row.teamId === final.championTeamId ? " af-placement-champion" : ""}`} data-team-id={row.teamId} data-rank={row.rank}>
-            <span className="af-placement-rank">第 {row.rank} 名</span>
+          <div key={row.teamId} className={`af-placement${row.teamId === final.championTeamId ? " af-placement-champion" : ""}`} data-team-id={row.teamId} data-rank={row.rank} data-seed={seedOf?.(row.teamId) ?? ""}>
+            <span className="af-placement-rank">
+              <span className="af-seed-mark">{seedMark?.(seedOf?.(row.teamId)) ?? "—"}</span>
+              <span>第 {row.rank} 名</span>
+            </span>
             <span className="af-placement-name">{row.name}</span>
             {row.teamId === final.championTeamId && <span className="af-placement-label">冠軍</span>}
           </div>

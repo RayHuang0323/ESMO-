@@ -66,7 +66,10 @@ const GOTO = `
     body: document.body.innerText,
     status: panel?.querySelector('[data-testid="asia-finals-status"]')?.innerText ?? null,
     qualified: [...(panel?.querySelectorAll('[data-testid="qualified-team"]') ?? [])].map((el) => ({
-      seed: Number(el.dataset.seed), teamId: el.dataset.teamId, text: el.innerText,
+      seed: Number(el.dataset.seed),
+      teamId: el.dataset.teamId,
+      text: el.innerText,
+      seedMark: el.querySelector(".af-seed-mark")?.innerText ?? null,
     })),
     matches: [...(panel?.querySelectorAll('[data-testid="bracket-match"]') ?? [])].map((el) => ({
       key: el.dataset.matchKey,
@@ -74,16 +77,26 @@ const GOTO = `
       teamA: el.dataset.teamA ?? null,
       teamB: el.dataset.teamB ?? null,
       text: el.innerText,
+      sideSeeds: [...el.querySelectorAll(".af-match-side")].map((side) => ({
+        teamId: side.dataset.teamId,
+        seed: Number(side.dataset.seed),
+        seedMark: side.querySelector(".af-seed-mark")?.innerText ?? null,
+      })),
       winnerIds: [...el.querySelectorAll('[data-winner="true"]')].map((side) => side.dataset.teamId),
       score: el.querySelector('[data-testid="bracket-score"]')?.innerText ?? null,
     })),
     placements: [...(panel?.querySelectorAll('[data-testid="annual-final-placements"] [data-team-id]') ?? [])].map((el) => ({
-      teamId: el.dataset.teamId, rank: Number(el.dataset.rank), text: el.innerText,
+      teamId: el.dataset.teamId,
+      rank: Number(el.dataset.rank),
+      seed: Number(el.dataset.seed),
+      seedMark: el.querySelector(".af-seed-mark")?.innerText ?? null,
+      text: el.innerText,
     })),
     champion: (() => {
       const el = panel?.querySelector('[data-testid="annual-champion-name"]');
       return el ? { teamId: el.dataset.teamId, text: el.innerText } : null;
     })(),
+    pathMatches: panel?.querySelectorAll(".af-match-onpath").length ?? 0,
     viewAsia: view.asiaFinals ?? null,
     careerFinal: view.careerFinal ?? null,
     annualEventId: view.asiaFinals?.eventId ?? null,
@@ -146,8 +159,16 @@ try {
 
   const expectedQualified = uiReady.viewAsia.qualified.map((entry) => ({ seed: entry.seed, teamId: entry.teamId }));
   ck("3) 晉級區有四隊，seed 1–4 與 qualified 順序逐 teamId 相同",
-    uiReady.qualified.length === 4 &&
-    JSON.stringify(uiReady.qualified.map(({ seed, teamId }) => ({ seed, teamId }))) === JSON.stringify(expectedQualified));
+    (() => {
+      const seedMarks = { 1: "①", 2: "②", 3: "③", 4: "④" };
+      const expectedSeedByTeam = Object.fromEntries(expectedQualified.map(({ seed, teamId }) => [teamId, seed]));
+      const readyMatches = uiReady.matches.filter((match) => match.exists);
+      return uiReady.qualified.length === 4 &&
+        JSON.stringify(uiReady.qualified.map(({ seed, teamId }) => ({ seed, teamId }))) === JSON.stringify(expectedQualified) &&
+        uiReady.qualified.every((entry) => entry.seedMark === seedMarks[entry.seed]) &&
+        readyMatches.every((match) => match.sideSeeds.every((side) =>
+          side.seed === expectedSeedByTeam[side.teamId] && side.seedMark === seedMarks[side.seed]));
+    })());
 
   ck("4) 第 5 名不在年度總決賽晉級區",
     !!uiReady.fifthName && !uiReady.panelText.includes(uiReady.fifthName) && uiReady.qualified.length === 4,
@@ -169,7 +190,10 @@ try {
   ck("6) 尚未排出的季軍戰與決賽顯示待定，不畫假的對戰組合",
     ["bronze", "final"].every((key) => {
       const match = uiReady.matches.find((item) => item.key === key);
-      return match && !match.exists && match.text.includes("待定") && match.text.includes("等準決賽結果") && !match.teamA && !match.teamB;
+      const expectedCopy = key === "final"
+        ? "決賽對手將在兩場準決賽結束後排定"
+        : "季軍戰對手將在兩場準決賽結束後排定";
+      return match && !match.exists && match.text.includes("待定") && match.text.includes(expectedCopy) && !match.teamA && !match.teamB;
     }));
 
   // 7–8) 準決賽完成、四場尚未完成；winner／score／final 對手均以 view 逐值對照。
@@ -187,7 +211,7 @@ try {
     [...finalOpponents].every((id) => [finalView.sideA, finalView.sideB].includes(id)));
 
   ck("8) 四場尚未完成時沒有亞洲年度冠軍橫幅或字樣",
-    !uiSemis.champion && !uiSemis.panelText.includes("亞洲年度冠軍"));
+    !uiSemis.champion && !uiSemis.panelText.includes("亞洲年度冠軍") && uiSemis.pathMatches === 0);
 
   // 9–12) 四場完成＋賽季封存：年度 final 與官方聯賽 career final 分開驗。
   const uiSealed = await injectSave(chrome, SAVE_SEALED);
@@ -198,6 +222,13 @@ try {
     uiSealed.champion?.text ?? "沒有冠軍橫幅");
 
   ck("10) 冠軍橫幅名次逐列來自 Event.final.rows（teamId／rank／隊名相同）",
+    (() => {
+      const seedMarks = { 1: "①", 2: "②", 3: "③", 4: "④" };
+      const expectedSeedByTeam = Object.fromEntries(uiSealed.viewAsia.qualified.map(({ seed, teamId }) => [teamId, seed]));
+      return uiSealed.placements.every((placement) =>
+        placement.seed === expectedSeedByTeam[placement.teamId] &&
+        placement.seedMark === seedMarks[placement.seed]);
+    })() &&
     JSON.stringify(uiSealed.placements.map(({ teamId, rank }) => ({ teamId, rank }))) ===
     JSON.stringify(sealedFinal.rows.map(({ teamId, rank }) => ({ teamId, rank }))) &&
     sealedFinal.rows.every((row) => uiSealed.placements.find((item) => item.teamId === row.teamId)?.text.includes(`${row.rank}`) && uiSealed.placements.find((item) => item.teamId === row.teamId)?.text.includes(row.name)));
