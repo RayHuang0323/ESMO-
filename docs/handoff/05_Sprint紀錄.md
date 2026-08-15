@@ -9511,3 +9511,43 @@ B2 20／B3 13；integrity 20；o7 48／o7.1 27；
 
 **沒有榮譽櫃 UI**（資料層已備妥 `honorsView`，下一輪可交 Codex）。
 年度總決賽仍**沒有獎金**（榮耀與獎金分離，金額是產品決定）。
+
+### Q7d 收尾上線（2026-08-16）
+
+| 項目 | 值 |
+|---|---|
+| `main` | `ccf80c6` → **`375b0e7`**（fast-forward，單筆，無 merge commit、無 force） |
+| Actions | [31896620848](https://github.com/RayHuang0323/ESMO-/actions/runs/31896620848) — success |
+| 合併後全套 | Q1–Q6 全綠、Q7a 7 支、Q7b 72、**Q7d 59**、B2/B3、integrity、o7/o7.1、瀏覽器 gate ×8、`regress` exit 0、`regress2` 8/8、`build` `built in 11.87s` |
+
+**正式站 smoke 27/27**（獨立 Chrome profile／port／headless）。
+存檔由真實 production 路徑造好再注入；本輪沒有 UI，驗的是資料層在正式 bundle 上的行為。
+
+- 年度總決賽**未完成 ⇒ honors 不新增**（`Event.final` 為 null、honors 0 筆）
+- `Event.final` 出現後**自動 1 筆** `asia_annual_champion`，
+  `championTeamId` 與 `Event.final` **完全一致**，`sourceFinalId` 逐字等於 `Event.final.id`
+- **AI 冠軍照樣寫**（兩季冠軍都是 AI，玩家 0 次）
+- **重載 3 次 ＋ 重跑結算路徑，honors 逐字不變**
+- 換季後第 1 季 honor 仍在；第 2 季**累積為 2 筆**、新的在前、兩筆 id 與來源各自綁自己那一季
+- `teamHonorCount` 兩支 AI 各 1、玩家 0；`latestAnnualChampion` 是第 2 季
+- `careerEventId` 仍指官方聯賽、`competitionHistory` 仍只有 `FinalStandings.v1`、
+  `circuitHistory` 仍只有 `CircuitSeasonSummary.v1`、獎金帳本沒有 `honor:` 開頭的鍵、
+  巡迴積分仍 24 筆、`state.final` 仍 `SeasonSeal.v1`
+- 無 undefined、全程無未捕捉例外
+
+**⚠ 正式站驗到了「舊存檔補寫」那條路徑**：注入 Q7d **之前**造的已封存存檔
+⇒ 載入後 honors 是 0 筆（**設計如此，載入不回填**）⇒ 在畫面上按「開始第 2 賽季」
+⇒ 換季前的 sweep **把榮耀補寫了**（寒冰守衛），`sourceFinalId` 對得上。
+這比任何文件宣稱都有力。
+
+### smoke 途中我自己的三個錯
+
+1. **#21 第一版是空包彈**：拿「兩季累積」那份存檔驗 `state.final` 是 SeasonSeal，
+   但它正處於第 2 季進行中、`state.final` 本來就不存在，而斷言又允許 `null` 通過。
+   改用已封存的存檔才真的驗得到。
+2. **#21b 第一版斷言錯了方向**：以為載入就該回填。**載入本來就不回填**——
+   那是刻意的（回填需要當季的 `Event.final`，換季後就沒了）。改成分別驗
+   「載入不回填」與「換季 sweep 會補寫」，兩件事都成為事實。
+3. **正則被 template literal 吃掉**：`/開始第 \d+ 賽季/` 寫在 template literal 裡，
+   反斜線 d 被吃成 `d`，永遠找不到按鈕。改用 `[0-9]+`。
+   ⚠ 同一段註解裡用反引號又提前關掉 template literal——**這輪踩了兩次**。
