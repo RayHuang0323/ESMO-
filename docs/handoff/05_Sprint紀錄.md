@@ -7385,3 +7385,10 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - Comms：既有 visible enemy contact 後，`com >= 88` 的 spotter 將資訊交給附近 teammate，support 優先，receiver 立即取得既有 route/aim handoff。Leadership：`led >= 90` 的存活 IGL 將既有 tactic route 提供給非 IGL teammate，形成 route consistency。Synergy：既有 visible trade partner 成立且雙方 effective `coo >= 90` 時，partner 立即 aim、`ENGAGE`、沿既有 shooting path 行動。
 - R48 focused verifier PASS：16 fixed seeds、固定 `inferno/t_aexec/c_std`、low/baseline/high `82/90/98`、L2/L3、role coverage、deterministic off/on/repeated-on、21 RNG call sites；新增 RNG 0。suite digest `8b498c39ca1d7d9e12ad233d31cea1b48e6f1f5e46fb8aa3c734a641a7e2a0ef`。
 - R16-A、R36（三項）、R38、R47 historical gates PASS，原 digest 與分類保留；progress/reward/Q7a、build、review 與 diff check 於本輪收尾記錄。R48 verdict：Go，三項 Measurement Ready，尚非 calibration ready。
+## R49 CS 六項 Gameplay Consumer 批次 Measurement（2026-08-16）
+
+- R48 `a2a6ddd` 先 push 並確認三方一致；R49 強制每次只跑一項 `tools/check_cs_gameplay_measurement_r49.mjs --item=...`，避免昂貴 Node simulation 並行。
+- 六項各自完成 low/baseline/high、applicable-role baseline、16 fixed seeds、L1/L2/L3、effect size、threshold/clamp、role attribution、deterministic digest；R47/R48 production、九項 calibration、Learning lifecycle 均未修改。
+- MapAware：read-limit direct/local `16/16`、五 role coverage，Calibration Ready - Limited。Adaptability：只有 AWP/Lurker/IGL coverage，`adp >= 80` 與既有 `aggr < 0.82` 造成 threshold/path boundary，Deferred。TacticalIQ：IGL-only、`tac >= 90` saturation，Deferred。
+- Comms：support handoff baseline `24/24`，但 CT target role coverage 4/5 且 `com >= 88` saturation；Leadership：teammate route adoption `596/596`，`led >= 90` saturation 且 high effective `99` clamp；Synergy：trade partner action `231/231`，`coo >= 90` saturation。三項均 Measurement Ready / Deferred。
+- R49 focused suite digest 分項保存於 report；R18-B/R34/R35/R36/R38/R47/R48、CS historical、progress/reward/Q7a、build、review、diff check 於收尾逐段驗證。R49：Go（measurement），下一步優先第二階段 Gameplay Identity Sprint。
