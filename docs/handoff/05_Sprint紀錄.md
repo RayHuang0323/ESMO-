@@ -7373,3 +7373,9 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - 核對 `STAT_DEF` 九項正式 key/中文名，新增 `CS_CALIBRATION_STAT_KEYS`、集中 MOBA→FPS mapping 與 `CS_ROLE_DISTRIBUTION_PROFILES`；`clutch` 正式 key 不改名，CS engine 仍由 adapter 轉 `str`。
 - `recruitPool.genProspects()` 沿既有 deterministic producer 改為九項成熟 stat 使用 role bias + cap；gap stat 舊 roleBoost 與 recruitment transaction 保留。五 role profile：Entry 強 Courage/Reflex/APM、AWP 強 Accuracy/Focus/Positioning、Lurker 強 Decision/Positioning/Clutch、IGL 強 Decision/Resilience/Focus、Rifler 維持均衡。
 - R46 focused verifier PASS：240 prospects、6 seeds、deterministic digest `a78dc5879b929fbff62d18fb215780d8f67ed81dda20dd752de8b022626aa82f`；90+ 0.51%、99 clamp 0、threshold band 3.33%。
+## R47 CS Gameplay Identity Gap Sprint（2026-08-16）
+
+- R46 `af080d93` 先 push 並確認三方一致；R47 不重做九項 calibration，固定沿用 R18/R34/R35 的 16 seeds 與 `inferno/t_aexec/c_std`。
+- MapAware：既有 LOS/smoke/visible candidate pair admission 加 actor read window，aware attacker 才能完成 immediate engage。Adaptability：既有 low-HP retreat opportunity 加 `adp >= 80` waypoint route adjustment。TacticalIQ：既有 IGL tactic route 加 `tac >= 90` direct route execution。
+- R47 focused verifier PASS；suite digest `e3a90541390b52b254bd684496450909358218f630222efa1b3ba3ca56e636c1`，RNG call sites 21、新增 RNG 0；三項均可進下一階段 measurement，尚非 calibration ready。
+- R34/R35 historical verifier 各完成 512 simulations PASS；R34 digest `0d58819f`、R35 digest `9a8669ae`。透過 historical adapter 保留既有 evidence，未 rebaseline、未修改歷史 calibration 結論；R18-B/R38 provenance 保留。

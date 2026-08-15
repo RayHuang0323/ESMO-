@@ -8,7 +8,7 @@ import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 import { changedSeedSummary, clampSummary, classifyCausalReadiness, monotonicity, pairedEffect, thresholdCrossing } from "./cs_calibration_measurement.mjs";
-import { CS_R32_CLUTCH_RESILIENCE_SOURCE_SHA256, CS_R33_RESILIENCE_SOURCE_SHA256, csR33R32Source } from "./cs_r15_legacy_source.mjs";
+import { CS_R32_CLUTCH_RESILIENCE_SOURCE_SHA256, CS_R43_ACCURACY_SOURCE_SHA256, CS_R33_RESILIENCE_SOURCE_SHA256, csR33R32Source, csR44R43Source, csR47R46Source } from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -114,8 +114,10 @@ async function loadApi(source, currentSource) {
   } finally { if (vite) await vite.close(); rmSync(tempRoot, { recursive: true, force: true }); }
 }
 async function main() {
-  const source = readFileSync(FPS, "utf8");
-  gate(sha(source) === CS_R33_RESILIENCE_SOURCE_SHA256, "LIVE_SOURCE_SHA256", sha(source));
+  const liveSource = readFileSync(FPS, "utf8");
+  const source = csR44R43Source(csR47R46Source(liveSource));
+  gate(sha(source) === CS_R43_ACCURACY_SOURCE_SHA256, "R43_HISTORICAL_SOURCE", sha(source));
+  gate(sha(source) === CS_R43_ACCURACY_SOURCE_SHA256, "LIVE_SOURCE_SHA256", sha(source));
   gate((source.match(/\brand\s*\(\s*\)/g) || []).length === 21, "RNG_CALL_SITES");
   const historical = csR33R32Source(source);
   gate(sha(historical) === CS_R32_CLUTCH_RESILIENCE_SOURCE_SHA256, "R32_HISTORICAL_ADAPTER");
@@ -135,7 +137,7 @@ async function main() {
   const r17 = readFileSync(R17, "utf8"), r3 = readFileSync(R3, "utf8");
   gate(sha(r17) === "b844312aaba05f94b75b36d78ae897213e2447c3127c8c992a4b4889f54739a4" && r17.includes("tacticalIQ") && r17.includes("4/4/2"), "R17_EVIDENCE");
   gate(r3.includes("tacticalIQ") && r3.includes("igl/support"), "R3_EVIDENCE");
-  const api = await loadApi(source, source);
+  const api = await loadApi(source, liveSource);
   gate(typeof api.simulateFps === "function" && typeof api.persStat === "function" && typeof api.posSkill === "function", "TEST_API_MISSING");
   const map = api.TACTICS_DB.inferno, tacticT = map.t.find((item) => item.id === "t_aexec"), tacticCT = map.ct.find((item) => item.id === "c_std");
   const roster = structuredClone(api.ROSTER);

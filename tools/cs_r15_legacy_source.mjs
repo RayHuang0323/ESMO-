@@ -39,6 +39,36 @@ const R33_LOW_HP = '    if(opts.lowHP)v-=(100-S("str"))*0.05-(S("res")-76)*0.12;
 const R32_LOW_HP = '    if(opts.lowHP)v-=(100-S("str"))*0.05;';
 const R28_RAW_FOCUS_DEFUSE = '          defuseProg+=defuser.stats?(0.45+defuser.stats.foc/250+persStat(defuser,"dec")/300):0.7;';
 const R29_EFFECTIVE_FOCUS_DEFUSE = '          defuseProg+=defuser.stats?(0.45+persStat(defuser,"foc")/250+persStat(defuser,"dec")/300):0.7;';
+// R47 historical adapter: remove the three new identity consumers so R18/R34/R35/R37
+// continue to inspect their locked pre-R47 source rather than silently rebaseline.
+const R47_IDENTITY_HELPERS = `const MAPAWARE_BASE_RANGE=28,MAPAWARE_VIS_RANGE=0.28;
+function mapAwareCanReadVisibleCandidate(p,distance,visibleCandidate){
+  if(!visibleCandidate)return false;
+  return distance<=MAPAWARE_BASE_RANGE+persStat(p,"vis")*MAPAWARE_VIS_RANGE;
+}
+const ADAPT_ROUTE_THRESHOLD=80;
+function adaptiveRouteGoal(p,target,N){
+  if(persStat(p,"adp")<ADAPT_ROUTE_THRESHOLD)return null;
+  const goal=p.side==="t"?N[target==="a"?"aConn":"car"]:N[target==="a"?"aSite":"bSite"];
+  return goal&&dist(p.pos,goal)>6?goal:null;
+}
+const TACTICAL_EXECUTION_THRESHOLD=90;
+function tacticalRouteKeys(p,tactic,tr,RKF){
+  const direct=tr[p.role];
+  const fallback=tr[RKF[p.role]]||tr.rifler||tr.entry||Object.values(tr)[0]||["tSpawn"];
+  return p.role==="igl"&&persStat(p,"tac")>=TACTICAL_EXECUTION_THRESHOLD&&direct?direct:tr[p.role]||fallback;
+}
+`;
+const R47_ROUTE_KEYS = '      const routeKeys=tacticalRouteKeys(c,tactic,tr,RKF);';
+const R46_ROUTE_KEYS = '      const routeKeys=tr[c.role]||tr[RKF[c.role]]||tr.rifler||tr.entry||Object.values(tr)[0]||["tSpawn"];';
+const R47_ADAPT_ROUTE = `            const adaptiveGoal=adaptiveRouteGoal(p,target,N);
+            if(adaptiveGoal){p.route=[{...p.pos},{...adaptiveGoal}];p.routeIdx=0;p.routeT=0;p.state="ROTATE";return;}
+`;
+const R47_PAIR_ADMISSION = '        let pairs=[];aliveT.forEach(tp=>aliveCT.forEach(cp=>{const d=dist(tp.pos,cp.pos);const visibleCandidate=d<55&&!lineBlocked(tp.pos,cp.pos,walls)&&!smokeBlocks(tp.pos,cp.pos,smokes);const mapAwareT=mapAwareCanReadVisibleCandidate(tp,d,visibleCandidate);const mapAwareCT=mapAwareCanReadVisibleCandidate(cp,d,visibleCandidate);if(visibleCandidate&&(mapAwareT||mapAwareCT))pairs.push([tp,cp,d,mapAwareT,mapAwareCT]);}));';
+const R46_PAIR_ADMISSION = '        let pairs=[];aliveT.forEach(tp=>aliveCT.forEach(cp=>{const d=dist(tp.pos,cp.pos);if(d<55&&!lineBlocked(tp.pos,cp.pos,walls)&&!smokeBlocks(tp.pos,cp.pos,smokes))pairs.push([tp,cp,d]);}));';
+const R47_PAIR_LOOP = '        for(const[tp,cp,d,mapAwareT,mapAwareCT] of ordered){';
+const R46_PAIR_LOOP = '        for(const[tp,cp,d] of ordered){';
+const R47_MAPAWARE_ACTION = '          const attackerMapAware=tw?mapAwareT:mapAwareCT;if(!attackerMapAware)continue;\n';
 
 const HE_CONSTANT_ANCHOR = "const HE_R=12,HE_MAX_DAMAGE=80,HE_ARMOR_SCALE=0.72;";
 const MOLLY_CONSTANT_BLOCK = `${HE_CONSTANT_ANCHOR}
@@ -69,6 +99,22 @@ function replaceExact(source, from, to, label) {
 
 function sha256(source) {
   return createHash("sha256").update(source).digest("hex");
+}
+
+export function csR47R46Source(input) {
+  let source = normalizeCsSource(input);
+  if (!source.includes(R47_IDENTITY_HELPERS)) return source;
+  source = replaceExact(source, R47_IDENTITY_HELPERS, "", "IDENTITY_HELPERS");
+  source = replaceExact(source, R47_ROUTE_KEYS, R46_ROUTE_KEYS, "TACTICAL_ROUTE");
+  source = replaceExact(source, R47_ADAPT_ROUTE, "", "ADAPT_ROUTE");
+  source = replaceExact(source, R47_PAIR_ADMISSION, R46_PAIR_ADMISSION, "MAPAWARE_PAIR");
+  source = replaceExact(source, R47_PAIR_LOOP, R46_PAIR_LOOP, "MAPAWARE_LOOP");
+  source = replaceExact(source, R47_MAPAWARE_ACTION, "", "MAPAWARE_ACTION");
+  const actual = sha256(source);
+  if (actual !== CS_R33_RESILIENCE_SOURCE_SHA256) {
+    throw new Error(`[R47_LEGACY_R46_SHA] expected=${CS_R33_RESILIENCE_SOURCE_SHA256} actual=${actual}`);
+  }
+  return source;
 }
 
 export function csR15R14Source(input) {

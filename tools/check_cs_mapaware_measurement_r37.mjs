@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
+import { csR47R46Source } from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -30,9 +31,9 @@ const transformSource = (input) => {
   return s;
 };
 async function loadApi() {
-  const original = readFileSync(FPS_FILE, "utf8"); let seen = 0; const temp = mkdtempSync(join(tmpdir(), "esmo-r37-mapaware-")); let server;
+  const original = readFileSync(FPS_FILE, "utf8"); const historical = csR47R46Source(original); let seen = 0; const temp = mkdtempSync(join(tmpdir(), "esmo-r37-mapaware-")); let server;
   try {
-    server = await createServer({ root: ROOT, configFile: false, envFile: false, appType: "custom", logLevel: "error", cacheDir: join(temp, "vite"), optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true }, plugins: [{ name: "r37-mapaware", enforce: "pre", transform(code, id) { if (resolve(id.split("?")[0]).toLowerCase() !== FPS_FILE.toLowerCase()) return null; seen += 1; return { code: transformSource(original), map: null }; } }] });
+    server = await createServer({ root: ROOT, configFile: false, envFile: false, appType: "custom", logLevel: "error", cacheDir: join(temp, "vite"), optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true }, plugins: [{ name: "r37-mapaware", enforce: "pre", transform(code, id) { if (resolve(id.split("?")[0]).toLowerCase() !== FPS_FILE.toLowerCase()) return null; seen += 1; return { code: transformSource(historical), map: null }; } }] });
     const loaded = await server.ssrLoadModule(MODULE); gate(seen === 1, "TRANSFORM_COUNT", String(seen)); return loaded.__R37_API__;
   } finally { if (server) await server.close(); rmSync(temp, { recursive: true, force: true }); }
 }

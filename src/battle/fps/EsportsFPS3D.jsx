@@ -278,6 +278,23 @@ const ROLE_AGGR={entry:0.14,rifler:0.05,igl:0,support:-0.03,awp:-0.05,lurker:-0.
 // 各地圖 T 方結構平衡微調（校正回合勝率趨近 50%）
 const MAP_EDGE={dust2:-0.42,mirage:0.08,inferno:0.057};
 function aggr(p){const s=p.stats;if(!s)return 0.6;const base=(persStat(p,"cou")*0.5+persStat(p,"str")*0.22+persStat(p,"apm")*0.16+persStat(p,"pos")*0.12)/100;const pr=p.personality&&PERSONALITY[p.personality];return clamp(base+(ROLE_AGGR[p.role]||0)+(pr?pr.aggro:0),0.2,1.15);}
+const MAPAWARE_BASE_RANGE=28,MAPAWARE_VIS_RANGE=0.28;
+function mapAwareCanReadVisibleCandidate(p,distance,visibleCandidate){
+  if(!visibleCandidate)return false;
+  return distance<=MAPAWARE_BASE_RANGE+persStat(p,"vis")*MAPAWARE_VIS_RANGE;
+}
+const ADAPT_ROUTE_THRESHOLD=80;
+function adaptiveRouteGoal(p,target,N){
+  if(persStat(p,"adp")<ADAPT_ROUTE_THRESHOLD)return null;
+  const goal=p.side==="t"?N[target==="a"?"aConn":"car"]:N[target==="a"?"aSite":"bSite"];
+  return goal&&dist(p.pos,goal)>6?goal:null;
+}
+const TACTICAL_EXECUTION_THRESHOLD=90;
+function tacticalRouteKeys(p,tactic,tr,RKF){
+  const direct=tr[p.role];
+  const fallback=tr[RKF[p.role]]||tr.rifler||tr.entry||Object.values(tr)[0]||["tSpawn"];
+  return p.role==="igl"&&persStat(p,"tac")>=TACTICAL_EXECUTION_THRESHOLD&&direct?direct:tr[p.role]||fallback;
+}
 // ── 戰術剋制關係（剪刀石頭布 + 站點對位）──────────────────────────────
 // 回傳「對 T 方有利」的對槍機率偏移（+ 利攻方 / − 利守方）。一回合內固定。
 // 類型剋制：T(rush/execute/default) × CT(default/stack/aggro)
@@ -418,7 +435,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
       // 路線指派：戰術未定義該角色時，退回相近角色路線（避免指揮/輔助等留在出生點不參戰）
       const RKF={igl:"rifler",support:"rifler",lurker:"rifler",awp:"rifler",rifler:"entry",entry:"rifler"};
       const tr=tactic.routes||{};
-      const routeKeys=tr[c.role]||tr[RKF[c.role]]||tr.rifler||tr.entry||Object.values(tr)[0]||["tSpawn"];
+      const routeKeys=tacticalRouteKeys(c,tactic,tr,RKF);
       const route=routeKeys.map(nk=>N[nk]).filter(Boolean);
       const hasBomb=c.side==="t"&&c.role==="entry";
       return{...c,pos:{...SPAWN[c.side==="ct"?"ct":"t"]},prevPos:{...SPAWN[c.side==="ct"?"ct":"t"]},
@@ -469,6 +486,8 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
          const near=en.length?en.reduce((a,b)=>dist(b.pos,p.pos)<dist(a.pos,p.pos)?b:a):null;
          const mates=(p.side==="t"?aliveT:aliveCT).length;
          if(near&&!buyP&&dist(near.pos,p.pos)<32&&p.hp<48&&aggr(p)<0.82&&mates>1){
+            const adaptiveGoal=adaptiveRouteGoal(p,target,N);
+            if(adaptiveGoal){p.route=[{...p.pos},{...adaptiveGoal}];p.routeIdx=0;p.routeT=0;p.state="ROTATE";return;}
            const dx=p.pos.x-near.pos.x,dy=p.pos.y-near.pos.y,L=Math.hypot(dx,dy)||1;
            p.pos=safeMove(p.pos,{x:p.pos.x+dx/L*3.2,y:p.pos.y+dy/L*3.2},walls,PLAYER_R);
            p.va=Math.atan2(near.pos.y-p.pos.y,near.pos.x-p.pos.x)*180/Math.PI;p.state="撤退";return;
@@ -520,7 +539,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
       if(sec===18)(tacticT.smokes||[]).forEach(sk=>{const n=N[sk];if(n)smokes.push({id:`s${rnd}${sk}`,pos:{...n},tl:18,age:0});});
       if(sec===24)(tacticT.mollys||[]).forEach(mk=>{const n=N[mk];if(n)mollys.push({id:`m${rnd}${mk}`,pos:{...n},tl:8});});
       if(prog>0.15&&aliveT.length&&aliveCT.length){
-        let pairs=[];aliveT.forEach(tp=>aliveCT.forEach(cp=>{const d=dist(tp.pos,cp.pos);if(d<55&&!lineBlocked(tp.pos,cp.pos,walls)&&!smokeBlocks(tp.pos,cp.pos,smokes))pairs.push([tp,cp,d]);}));
+        let pairs=[];aliveT.forEach(tp=>aliveCT.forEach(cp=>{const d=dist(tp.pos,cp.pos);const visibleCandidate=d<55&&!lineBlocked(tp.pos,cp.pos,walls)&&!smokeBlocks(tp.pos,cp.pos,smokes);const mapAwareT=mapAwareCanReadVisibleCandidate(tp,d,visibleCandidate);const mapAwareCT=mapAwareCanReadVisibleCandidate(cp,d,visibleCandidate);if(visibleCandidate&&(mapAwareT||mapAwareCT))pairs.push([tp,cp,d,mapAwareT,mapAwareCT]);}));
         // 排序用「有效距離」：狙擊架點專長遠距 → 加權使其搶得到交火名額（避免狙擊整局零參與）
         const effD=pr=>pr[2]*((GUNS[pr[0].gun]?.cls==="狙擊"||GUNS[pr[1].gun]?.cls==="狙擊")?0.45:1);
         pairs.sort((a,b)=>effD(a)-effD(b));
@@ -530,7 +549,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
         const usedT=new Set(),usedCT=new Set();
         const maxEngage=Math.min(pairs.length,Math.max(2,Math.ceil((aliveT.length+aliveCT.length)/3)));
         let done=0;
-        for(const[tp,cp,d] of ordered){
+        for(const[tp,cp,d,mapAwareT,mapAwareCT] of ordered){
           const sniperInvolved=isSniperPair([tp,cp]);
           if(!sniperInvolved&&done>=maxEngage)break;
           if(tp.dead||cp.dead||usedT.has(tp.id)||usedCT.has(cp.id))continue;
@@ -547,6 +566,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
           const flashPen=(tp.flash>0?-0.12:0)+(cp.flash>0?0.12:0);
           const Pt=clamp(0.5+(tSk-cSk)*0.013+(MAP_EDGE[mapKey]??0.02)+ecoEdge+flashPen+tacEdge,0.07,0.93); // 結構平衡 + 戰術剋制
           const tw=rand()<Pt;const at=tw?tp:cp,df=tw?cp:tp;
+          const attackerMapAware=tw?mapAwareT:mapAwareCT;if(!attackerMapAware)continue;
           const g=GUNS[at.gun],rawAccuracy=at.stats?.acc||80,effectiveAccuracy=at.stats?.acc!=null?persStat(at,"acc"):rawAccuracy;const isHS=rand()<g.hs*(0.72+0.55*(effectiveAccuracy/100));let dmg=(g.dmg+Math.floor(rand()*40))*(isHS?2:1);
           if(df.armor&&!isHS)dmg*=0.72; // 護甲減傷（非爆頭）
           dmg=Math.round(dmg);

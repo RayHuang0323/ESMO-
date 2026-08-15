@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
-import { CS_R33_RESILIENCE_SOURCE_SHA256, csR19R15Source } from "./cs_r15_legacy_source.mjs";
+import { CS_R33_RESILIENCE_SOURCE_SHA256, csR19R15Source, csR47R46Source } from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -219,7 +219,7 @@ async function loadApi(originalSource) {
         transform(code, id) {
           if (resolve(id.split("?")[0]).toLowerCase() !== FPS_FILE.toLowerCase()) return null;
           transformSeen += 1;
-          gate(csR19R15Source(code) === originalSource, "VITE_SOURCE_MISMATCH");
+          gate(csR19R15Source(csR47R46Source(code)) === originalSource, "VITE_SOURCE_MISMATCH");
           let transformed = originalSource;
           for (const [name, marker, replacement] of TRANSFORMS) {
             gate(occurrences(transformed, marker) === 1, "TRANSFORM_MARKER_COUNT", name);
@@ -254,7 +254,7 @@ async function loadApi(originalSource) {
 
 async function main() {
   gate(process.argv.length === 2, "CLI_FLAGS_FORBIDDEN", "R18-B verifier is locked to the focused design.");
-  const liveSource = readFileSync(FPS_FILE, "utf8");
+  const liveSource = csR47R46Source(readFileSync(FPS_FILE, "utf8"));
   const liveSourceSha256 = sha256(liveSource);
   gate(liveSourceSha256 === CS_R33_RESILIENCE_SOURCE_SHA256, "LIVE_SOURCE_SHA256", `expected=${CS_R33_RESILIENCE_SOURCE_SHA256} actual=${liveSourceSha256}`);
   const source = csR19R15Source(liveSource);
