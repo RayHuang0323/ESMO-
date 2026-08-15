@@ -22,7 +22,12 @@ export const CS_R25_ACCURACY_SOURCE_SHA256 = "68d75bb357a504cee8529c4d8cce023c92
 export const CS_R26_DECISION_SOURCE_SHA256 = CS_R25_ACCURACY_SOURCE_SHA256;
 export const CS_R27_DECISION_SOURCE_SHA256 = "f0e5dd4bddc82d06ae715784201877821de0db4fc785d226ab403132bb984e87";
 export const CS_R32_CLUTCH_RESILIENCE_SOURCE_SHA256 = CS_R27_DECISION_SOURCE_SHA256;
-export const CS_R33_RESILIENCE_SOURCE_SHA256 = "edf311b13347dc185713d687e8dad22e05087aceede233a47baae62707b2cbf3";
+// R43 Accuracy evidence is locked against the pre-R44 Focus semantic patch.
+// R44 changes only the live defuse Focus read; historical adapters restore the
+// old byte-exact view before running R24/R43 and earlier evidence.
+export const CS_R43_ACCURACY_SOURCE_SHA256 = "edf311b13347dc185713d687e8dad22e05087aceede233a47baae62707b2cbf3";
+export const CS_R44_FOCUS_SOURCE_SHA256 = "80a6ef4e776c825f602f5b41a8a7d9e6c97546dd157e87de2e6f4e3e69fced5e";
+export const CS_R33_RESILIENCE_SOURCE_SHA256 = CS_R44_FOCUS_SOURCE_SHA256;
 
 const R24_RAW_ACCURACY_HEADSHOT = '          const g=GUNS[at.gun];const isHS=rand()<g.hs*(0.72+0.55*((at.stats?.acc||80)/100));let dmg=(g.dmg+Math.floor(rand()*40))*(isHS?2:1);';
 const R25_EFFECTIVE_ACCURACY_HEADSHOT = '          const g=GUNS[at.gun],rawAccuracy=at.stats?.acc||80,effectiveAccuracy=at.stats?.acc!=null?persStat(at,"acc"):rawAccuracy;const isHS=rand()<g.hs*(0.72+0.55*(effectiveAccuracy/100));let dmg=(g.dmg+Math.floor(rand()*40))*(isHS?2:1);';
@@ -32,6 +37,8 @@ const R33_LAST_ALIVE = '    if(opts.lastAlive)v+=(S("str")-76)*0.22;            
 const R32_LAST_ALIVE = '    if(opts.lastAlive)v+=(S("str")-76)*0.22+(S("res")-76)*0.12; // 殘局（clutch=抗壓 + 韌性）';
 const R33_LOW_HP = '    if(opts.lowHP)v-=(100-S("str"))*0.05-(S("res")-76)*0.12;   // 低血量穩定執行：Resilience 減少衰退';
 const R32_LOW_HP = '    if(opts.lowHP)v-=(100-S("str"))*0.05;';
+const R28_RAW_FOCUS_DEFUSE = '          defuseProg+=defuser.stats?(0.45+defuser.stats.foc/250+persStat(defuser,"dec")/300):0.7;';
+const R29_EFFECTIVE_FOCUS_DEFUSE = '          defuseProg+=defuser.stats?(0.45+persStat(defuser,"foc")/250+persStat(defuser,"dec")/300):0.7;';
 
 const HE_CONSTANT_ANCHOR = "const HE_R=12,HE_MAX_DAMAGE=80,HE_ARMOR_SCALE=0.72;";
 const MOLLY_CONSTANT_BLOCK = `${HE_CONSTANT_ANCHOR}
@@ -90,11 +97,25 @@ export function csR27R26Source(input) {
   return source;
 }
 
+// R44 historical adapter: expose the exact pre-R44 source to R43/R28
+// evidence. It never writes production and is a no-op for older views.
+export function csR44R43Source(input) {
+  let source = normalizeCsSource(input);
+  if (sha256(source) !== CS_R44_FOCUS_SOURCE_SHA256) return source;
+  source = replaceExact(source, R29_EFFECTIVE_FOCUS_DEFUSE, R28_RAW_FOCUS_DEFUSE,
+    "R44_FOCUS_DEFUSE_BOUNDARY");
+  const actual = sha256(source);
+  if (actual !== CS_R43_ACCURACY_SOURCE_SHA256) {
+    throw new Error(`[R44_LEGACY_R43_SHA] expected=${CS_R43_ACCURACY_SOURCE_SHA256} actual=${actual}`);
+  }
+  return source;
+}
+
 // R33 historical adapter: expose the exact R32 source to all prior verifiers
 // so their locked evidence remains historical rather than silently rebased.
 export function csR33R32Source(input) {
-  let source = normalizeCsSource(input);
-  if (sha256(source) !== CS_R33_RESILIENCE_SOURCE_SHA256) return source;
+  let source = csR44R43Source(input);
+  if (sha256(source) !== CS_R43_ACCURACY_SOURCE_SHA256) return source;
   source = replaceExact(source, R33_LAST_ALIVE, R32_LAST_ALIVE, "R33_LAST_ALIVE_BOUNDARY");
   source = replaceExact(source, R33_LOW_HP, R32_LOW_HP, "R33_LOW_HP_BOUNDARY");
   const actual = sha256(source);

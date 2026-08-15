@@ -8,12 +8,12 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
-import { CS_R33_RESILIENCE_SOURCE_SHA256 } from "./cs_r15_legacy_source.mjs";
+import { CS_R43_ACCURACY_SOURCE_SHA256, CS_R44_FOCUS_SOURCE_SHA256, csR44R43Source } from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
 const FPS_MODULE_ID = "/src/battle/fps/EsportsFPS3D.jsx";
-const SOURCE_SHA256 = CS_R33_RESILIENCE_SOURCE_SHA256;
+const SOURCE_SHA256 = CS_R43_ACCURACY_SOURCE_SHA256;
 const SCHEMA = "CsAccuracyCalibrationPilotR43.v1";
 const MAP_KEY = "inferno", T_TACTIC_ID = "t_aexec", CT_TACTIC_ID = "c_std";
 const LEVELS = Object.freeze([60, 70, 80, 90, 100]);
@@ -66,13 +66,13 @@ function freeze(value, seen = new Set()) { if (!value || typeof value !== "objec
 function collector() { const events = []; return { events, record(type, payload) { events.push(Object.freeze({ schema: SCHEMA, type, ...payload })); } }; }
 function inputDigest(tTactic, ctTactic, roster) { return sha256(json({ MAP_KEY, tTactic, ctTactic, roster })); }
 
-async function loadApi(source) {
+async function loadApi(source, liveSource) {
   let transformSeen = 0, vite = null;
   const tempRoot = mkdtempSync(join(tmpdir(), "esmo-cs-r43-"));
   try {
     vite = await createServer({ root: ROOT, configFile: false, envFile: false, appType: "custom", logLevel: "error", cacheDir: join(tempRoot, "vite-cache"), optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true }, plugins: [{ name: "cs-accuracy-r43-memory-hooks", enforce: "pre", transform(code, id) {
       if (resolve(id.split("?")[0]).toLowerCase() !== FPS_FILE.toLowerCase()) return null;
-      transformSeen += 1; gate(code === source, "VITE_SOURCE_MISMATCH"); let transformed = source;
+      transformSeen += 1; gate(code === liveSource, "VITE_SOURCE_MISMATCH"); let transformed = source;
       for (const [name, marker, replacement] of TRANSFORMS) { gate(occurrences(transformed, marker) === 1, "TRANSFORM_MARKER_COUNT", `${name}:${occurrences(transformed, marker)}`); transformed = transformed.replace(marker, replacement); }
       let roundTrip = transformed; for (const [name, marker, replacement] of [...TRANSFORMS].reverse()) { gate(occurrences(roundTrip, replacement) === 1, "TRANSFORM_REPLACEMENT_COUNT", name); roundTrip = roundTrip.replace(replacement, marker); }
       gate(roundTrip === source, "TRANSFORM_NOT_REVERSIBLE"); gate(json(randTokens(transformed)) === json(randTokens(source)), "RNG_TOKEN_SEQUENCE_CHANGED"); return { code: transformed, map: null };
@@ -120,11 +120,11 @@ function summarizeRole(target, rows) {
 }
 
 async function main() {
-  const source = readFileSync(FPS_FILE, "utf8");
-  gate(sha256(source) === SOURCE_SHA256, "LIVE_SOURCE_SHA256", sha256(source)); gate(LEVELS.length === 5 && FIXED_SEEDS.length === 16, "SWEEP_SHAPE"); gate(randTokens(source).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT", String(randTokens(source).length));
+  const liveSource = readFileSync(FPS_FILE, "utf8");
+  gate(sha256(liveSource) === CS_R44_FOCUS_SOURCE_SHA256, "LIVE_SOURCE_SHA256", sha256(liveSource)); const source = csR44R43Source(liveSource); gate(sha256(source) === SOURCE_SHA256, "HISTORICAL_R43_SOURCE_SHA256", sha256(source)); gate(LEVELS.length === 5 && FIXED_SEEDS.length === 16, "SWEEP_SHAPE"); gate(randTokens(source).length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT", String(randTokens(source).length));
   gate(source.includes('S("acc")') && source.includes('persStat(at,"acc")'), "ACCURACY_SOURCE_GATE"); gate(source.includes("const tw=rand()<Pt") && source.includes("applyDamage(at,df,dmg)"), "FIREARM_CONSUMER_GATE"); gate(!source.includes("missChance") && !source.includes("hitChance"), "NO_MISS_BRANCH_GATE");
   const aggrStart = source.indexOf("function aggr(p)"); const aggrEnd = source.indexOf("}\n", aggrStart) + 2; gate(aggrStart >= 0 && !source.slice(aggrStart, aggrEnd).includes("acc"), "ACCURACY_AGGR_OWNERSHIP_GATE");
-  const api = await loadApi(source), map = api.TACTICS_DB[MAP_KEY], tTactic = freeze(clone(map?.t?.find((i) => i.id === T_TACTIC_ID))), ctTactic = freeze(clone(map?.ct?.find((i) => i.id === CT_TACTIC_ID))), base = freeze(clone(api.ROSTER)); gate(tTactic?.id === T_TACTIC_ID && ctTactic?.id === CT_TACTIC_ID, "TACTIC_MISSING");
+  const api = await loadApi(source, liveSource), map = api.TACTICS_DB[MAP_KEY], tTactic = freeze(clone(map?.t?.find((i) => i.id === T_TACTIC_ID))), ctTactic = freeze(clone(map?.ct?.find((i) => i.id === CT_TACTIC_ID))), base = freeze(clone(api.ROSTER)); gate(tTactic?.id === T_TACTIC_ID && ctTactic?.id === CT_TACTIC_ID, "TACTIC_MISSING");
   const targets = base.filter((p) => p.side === "t"); gate(targets.length === 5 && targets.every((p) => ROLES.includes(p.role)), "ROLE_COVERAGE"); const cases = [];
   for (const target of targets) { const rows = {}; for (const level of LEVELS) rows[level] = FIXED_SEEDS.map((seed) => runArm(api, tTactic, ctTactic, treatmentRoster(base, target.id, level), target.id, seed)); const result = summarizeRole(target, rows); cases.push(result); console.log(`role ${result.role} ${result.targetId}: per10=${JSON.stringify(result.directPer10)} strict=${JSON.stringify(result.directStrictMajority)}`); console.log(`  levels=${LEVELS.map((level) => `${level}:eff=${result.levels[level].effectiveAccuracy.mean},combat=${result.levels[level].combatSkill.mean},roleFit=${result.levels[level].roleFit.mean},hsChance=${result.levels[level].headshotChance.mean},pt=${result.levels[level].pt.mean},aggr=${result.levels[level].aggr.mean}`).join(" | ")}`); console.log(`  adjacent=${Object.entries(result.adjacent).map(([band, edge]) => `${band}:combat=${edge.combatSkill.meanDiff},hsChance=${edge.headshotChance.meanDiff},roleFit=${edge.roleFit.meanDiff},pt=${edge.pt.meanDiff},aggr=${edge.aggr.meanDiff},actualHS=${edge.actualHeadshots.meanDiff}`).join(" | ")}`); }
   const combatEdges = cases.flatMap((item) => Object.values(item.adjacent).map((edge) => edge.combatSkill)); gate(combatEdges.every((edge) => edge.strictMajorityPositive), "DIRECT_COMBAT_STRICT_MAJORITY", `${combatEdges.filter((edge) => edge.strictMajorityPositive).length}/20`);
