@@ -332,3 +332,151 @@ cd 到 Q7e 指定的 worktree，然後執行並確認：
 ⑥ 既有驗證器前後數字
 ⑦ 規格中做不到的部分與原因
 ```
+
+---
+---
+
+# 視覺 Polish 附錄（第二輪）
+
+> 第一輪（`a339bd8`）已通過全套驗證與四項 mutation test，**結構與資料層定案**。
+> 本附錄只談**視覺**與**一個 UI 韌性小修**。
+> ⚠ 附錄不覆寫正文任何一條紅線；正文 §F 三條紅線、§I 的 14 條 gate **全部繼續有效**。
+
+## K. 這一輪能動什麼
+
+| 可以動 | 不能動 |
+|---|---|
+| `honors/*.jsx` 的 CSS 與 DOM 結構 | `honorsView` 的資料語意（欄位、型別、順序） |
+| class 名稱、新增 `data-*` 顯示鉤子 | 新增任何 selector 計算 |
+| `TeamHonorsPanel` 的訂閱方式（見 §O） | Q7d `honors.js` 的真相層 |
+| — | `TeamScreen` 重構、新頁面／Router |
+
+**第一輪已經做對、不得回退的三件事**：
+① 面板只讀 `competitionView().honorsView`，不碰 `s.team.id`；
+② 不排序、不算次數；③ `earnedAtDay` 不顯示。
+
+---
+
+## L. Signature：**獎盃銘板牆**
+
+歷屆冠軍**不要是一般 card list**。每一季是一塊**刻在獎盃底座上的金屬銘板**——
+橫向、扁、彼此以刻線相接，像同一座獎盃上依年份排下來的一整排銘板。
+
+### L.1 造型規則
+
+| 項目 | 規則 |
+|---|---|
+| 排列 | 銘板**直接相鄰**，用 `1px` `GC.line` 當**刻線**分隔；不要每列獨立圓角卡片、不要列間 gap |
+| 圓角 | 只有整面牆的**最外框**有圓角，內部銘板**不要各自圓角** |
+| Season 編號 | 使用既有 `MONO`（`src/ui/theme.js`），定寬、字距略開，像壓印的年份 |
+| 冠軍隊名 | **主要視覺**——本列字級最大、字重最高，其他元素都讓位給它 |
+| 榮耀標籤 | 降為次要：小字、`GC.gray`、不搶隊名 |
+| 刻痕感 | 靠 `inset` 髮絲線（亮下沿／暗上沿）做**壓印**，不是靠 `box-shadow` 外擴 |
+| 禁止 | 大量 shadow 堆疊、emoji、卡片層層堆疊、新色票、動畫進場 |
+
+⚠ `MONO` 目前在 `honors/` **完全沒被使用**——這是本輪要引入的既有 token，
+不是新字體。
+
+### L.2 兩種銘板
+
+| | AI 冠軍 | 玩家自己的冠軍 |
+|---|---|---|
+| 材質語意 | **鋼灰／中性** | **金色刻痕** |
+| 底色 | 與牆面同階，不加色 | `GC.gold` 極低透明度，仍要壓得住不刺眼 |
+| 隊名色 | 中性亮色（沿用 `GC.blueL` 或中性白） | `GC.gold` |
+| Season | `GC.gray` | `GC.gold` |
+| 層級 | 平貼 | **略高一階**（更亮的刻線／左側金色軸），但**不得靠放大字級或位移破壞對齊** |
+
+⚠ AI 冠軍**必須完整可讀**（隊名、賽季、標籤都在）——這是世界歷史，
+不是把 AI 做成灰掉的背景板。正文 gate #4 守這件事。
+
+---
+
+## M. 視覺克制
+
+- **大膽只花在銘板牆**。`HonorSummary` 與 `LatestChampionCard` **保持安靜**：
+  維持既有結構與密度，不要跟著做金屬質感，不要與銘板牆爭主視覺。
+- **金色只代表真正屬於玩家的冠軍榮耀。**
+  「世界已有冠軍」≠「玩家有冠軍」，兩者視覺上必須分得開。
+- ⚠ **第一輪這件事已經做對了，不要改壞**：`HonorSummary` 的
+  `data-has-honors` 是由 **`hasMine`**（玩家自己）驅動，
+  **不是** `annualChampions.length > 0`。
+  現有 21 處 `GC.gold` 全部掛在 `-mine` 或 `data-has-honors="true"` 之下。
+  **維持這條線**：任何金色都必須能追溯到「這是玩家的」。
+- **玩家 0 冠仍要明確顯示 0**（正文 gate #5），不得因為視覺安靜而藏掉、
+  換成「—」或整塊不渲染。
+
+---
+
+## N. 明確不做
+
+- ❌ **不做完整賽季時間軸**。那需要 `currentSeason` 之類的額外資料，
+  **本輪不為了視覺增加資料層需求**。銘板牆只呈現 `annualChampions` 已有的季次，
+  缺季不補空位、不畫連續軸線。
+- ❌ 不新增色票、不引入新視覺系統（正文 §H 已定）。
+
+---
+
+## N.1 Mobile 390px
+
+- 銘板改**垂直堆疊**（既有 `@media (max-width: 767px)` 內處理，不新增斷點）
+- **隊名與 Season 必須仍可快速掃讀**：Season 不得縮到難辨，隊名不得被截斷成
+  無法辨識；長隊名沿用既有 `overflow-wrap: anywhere` 換行，不用 ellipsis 吃掉
+- **不得水平溢出**（正文 gate #11，量 app 滾動容器）
+
+---
+
+## O. UI 韌性小修（唯一允許的非視覺改動）
+
+`TeamHonorsPanel` 目前是：
+
+```js
+const honorsView = useProfileStore.getState().competitionView().honorsView ?? {};
+```
+
+`getState()` **沒有建立訂閱**，`honorsView` 更新時元件不會重新 render。
+目前沒有實際 bug（榮耀只在別的畫面產生、進頁面才讀），但很脆。
+
+**改成正式 Zustand 訂閱**，比照同專案既有寫法
+（`AsiaFinalsPanel` 用 `useProfileStore((s) => s.competition)`）。
+
+限制：
+- **不改 `honorsView` 資料語意**
+- **不新增 selector 計算**——訂閱既有 slice 後仍呼叫 `competitionView()`，
+  不要在 selector 裡做 `filter` / `sort` / `map` / 物件字面量
+  （會產生新參考，每次都重繪）
+- 不因此改動 `profileStore.js`
+
+---
+
+## P. 第二輪 gate 與 mutation test
+
+`tools/browser_check_team_honors_ui.mjs` 既有 14 條**全部必須續綠**。
+視覺改動若讓任何一條變紅，是改壞了，不是斷言過時。
+
+### P.1 本輪必做的 mutation test
+
+延續正文 §I「測試紀律」——**每條斷言先確認改壞會紅，再相信它**：
+
+1. **把「玩家自己的銘板」判斷改成永遠 `true`** ⇒ **gate #4 必須紅**（本輪硬性要求）
+2. 把 `myAnnualChampionCount` 改成 `+1` ⇒ #5／#6／#7 必須紅
+3. 把歷屆清單反向排序 ⇒ #3／#9 必須紅
+4. 塞一個 900px 固定寬元素 ⇒ #11 必須紅
+
+⚠ **變異必須先確認真的生效**。第一輪做 #4 時，用了不存在的錨點字串
+（`<div className="th-overview` 實際是 template literal），
+`String.replace` **靜默 no-op**，gate 照樣全綠 ——
+差點被誤判成「gate 漏檢」。
+**每次變異後先驗證檔案真的被改了**（grep 改動後的特徵字串），再跑 gate。
+變異全部還原後，`git status` 必須乾淨。
+
+### P.2 完整驗證（宣稱完成前必跑）
+
+- 五支 browser gate：`circuit_points` 21、`career_final` 12、`default_scheme` 15、
+  `asia_finals` 15、`team_honors` 14
+- Node：Q1 93／Q2a 112／Q2b 92／Q3 91／Q3.5 65／Q4 68／Q5 69／Q6 57／
+  3a 29／3b 51／3c 69／3d 67／3f 43／3f.1 42／Q7b 72／**Q7d 59**
+- `regress` 15/15、`regress2` 8/8、`npm run build` 看到 `built in`
+
+⚠ **既有紅燈、非回歸訊號**：`check_moba_milestone_b2`（斷言 `1.1` vs `2.2`）
+在沒有本 milestone 的主幹上就是紅的，與 Q7e 無關，不要試圖修它。
