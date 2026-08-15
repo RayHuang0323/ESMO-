@@ -85,8 +85,8 @@ import {
 //    既有賽季一律不動——中途插入三站等於在賽季中間塞 84 場比賽。
 import { applyAsiaCircuit } from "./competition/asiaCircuit.js";
 //  ── Milestone Q7b：亞洲年度總決賽 ──────────────────────
-//  ⚠ 懶建、冇等，與 `ensurePlayoffs` 同一形狀：
-//    **已核發的晶級資格**就是唱一門檻，沒有就什麼都不做。
+//  ⚠ 懶建、冪等，與 `ensurePlayoffs` 同一形狀：
+//    **已核發的晉級資格**就是唯一門檻，沒有就什麼都不做。
 import {
   ensureAsiaFinals, asiaFinalsCircuitIdFor,
   asiaFinalsEventOf, canOpenAsiaFinals, isAsiaFinalsDone,
