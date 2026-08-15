@@ -87,7 +87,11 @@ import { applyAsiaCircuit } from "./competition/asiaCircuit.js";
 //  ── Milestone Q7b：亞洲年度總決賽 ──────────────────────
 //  ⚠ 懶建、冇等，與 `ensurePlayoffs` 同一形狀：
 //    **已核發的晶級資格**就是唱一門檻，沒有就什麼都不做。
-import { ensureAsiaFinals, asiaFinalsCircuitIdFor } from "./competition/asiaFinals.js";
+import {
+  ensureAsiaFinals, asiaFinalsCircuitIdFor,
+  asiaFinalsEventOf, canOpenAsiaFinals, isAsiaFinalsDone,
+} from "./competition/asiaFinals.js";
+import { playoffBracket, playoffOrder } from "./competition/playoffs.js";
 import { asiaCircuitEnabled } from "../featureFlags.js";
 import {
   issueFor as issueCompetitionMatch, openRoomForFixture, openSessionForFixture,
@@ -1105,6 +1109,32 @@ export const useProfileStore = create((set, get) => ({
           //  ⚠ `playerEntries`：玩家自己的積分紀錄（**只是 filter，沒有加總**）。
           //    畫面要顯示「這一站我拿幾分」，否則只看得到總分，看不出各站表現。
           playerEntries: pointsLogOf(state).filter((e) => e.teamId === state.playerTeamId),
+        };
+      })(),
+      //  ── Q7c：亞洲年度總決賽（唯讀資料投影）──────────────────────────
+      //  ⚠ 這裡只串接既有 accessor／playoff 函式；畫面不得自己算資格、
+      //     對戰表、勝方、日期或年度名次。
+      asiaFinals: (() => {
+        const ev = asiaFinalsEventOf(state);
+        const can = canOpenAsiaFinals(state);
+        if (!ev) return { exists: false, reason: can.reason };
+        const entry = state.competitions[ev.rankingCompetitionId];
+        const fixtures = (state.fixtures ?? []).filter((f) => f.stageId === entry.playoff.stage.id);
+        const order = playoffOrder({ fixtures, outcomes: state.outcomes ?? [] });
+        return {
+          exists: true,
+          eventId: ev.id,
+          name: ev.name,
+          qualified: entry.playoff.qualification.qualified,
+          bracket: playoffBracket({
+            fixtures, outcomes: state.outcomes ?? [],
+            participants: entry.stage.participants,
+          }),
+          days: Object.fromEntries(fixtures.map((f) => [f.playoffKey, absoluteDayOf(state, f)])),
+          done: isAsiaFinalsDone(state),
+          championTeamId: order.championTeamId,
+          final: eventFinalOf(state, ev.id),
+          playerTeamId: state.playerTeamId,
         };
       })(),
       next,

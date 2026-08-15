@@ -19,6 +19,7 @@ import React, { useEffect, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { GC, MONO, chip } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
+import AsiaFinalsPanel from "./asiaFinals/AsiaFinalsPanel.jsx";
 
 const Panel = ({ title, right, children }) => (
   <div style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 12, padding: "11px 13px", marginBottom: 10 }}>
@@ -137,6 +138,7 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
       onBack={onBack}
       right={<span style={{ ...{ fontSize: 9, fontWeight: 800, color: GC.gray } }}>{progress.playerCompleted}/{progress.playerTotal} 場</span>}
     >
+      <AsiaFinalsPanel />
       {/* ── Q7a-3b.5：同季多個 Event 的切換列 ────────────────────────────
            ⚠ 切換**只影響畫面聚焦**（`setActiveEvent`），不參與任何規則：
              積分榜、季後賽排定、封存與獎金都不讀 `activeEventId`。
