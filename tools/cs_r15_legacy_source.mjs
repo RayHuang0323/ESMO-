@@ -74,6 +74,34 @@ const R48_SYNERGY_BLOCK = `          const synergyPartner=synergyTradeCandidate(
           const synergyReady=Boolean(synergyPartner&&Math.max(persStat(at,"coo"),persStat(synergyPartner,"coo"))>=SYNERGY_TRADE_THRESHOLD);
           if(synergyReady){synergyPartner.va=Math.atan2(df.pos.y-synergyPartner.pos.y,df.pos.x-synergyPartner.pos.x)*180/Math.PI;synergyPartner.state="ENGAGE";synergyPartner.shooting=Math.max(synergyPartner.shooting,1);}
 `;
+// R50 historical adapter: remove the second-layer identity consumers so
+// R47/R49 evidence continues to inspect the locked pre-R50 source.
+const R50_ADAPT_HELPER = `function adaptivePostPlantGoal(p,planted,c4pos){
+  if(!planted||p.side!=="t"||p.hp<48||p._adaptivePostPlant||persStat(p,"adp")<ADAPT_ROUTE_THRESHOLD)return null;
+  return c4pos&&dist(p.pos,c4pos)>10?c4pos:null;
+}
+`;
+const R50_TACTICAL_HELPER = `function tacticalRetakeRoute(p,tactic,N,c4pos){
+  if(p.side!=="ct"||!c4pos||persStat(p,"tac")<TACTICAL_EXECUTION_THRESHOLD)return null;
+  const keys=tactic?.routes?.[p.role]||tactic?.routes?.rifler||tactic?.routes?.entry;if(!Array.isArray(keys)||keys.length<3)return null;
+  const staging=keys.slice(1,-1).map(key=>N[key]).find(node=>node&&dist(node,c4pos)>8);
+  return staging?[{...p.pos},{...staging},{...c4pos}]:null;
+}
+`;
+const R50_COMMS_HELPER = `function applyCommsBombAwareness(carrier,sitePos,players){
+  const candidates=players.filter(p=>p!==carrier&&!p.dead&&!p.reassigned&&dist(p.pos,carrier.pos)<50&&persStat(p,"com")>=COMMS_HANDOFF_THRESHOLD);
+  candidates.sort((a,b)=>((b.role==="support"?1:0)-(a.role==="support"?1:0))||persStat(b,"com")-persStat(a,"com")||dist(a.pos,sitePos)-dist(b.pos,sitePos));
+  const receiver=candidates[0];if(!receiver||!sitePos)return null;
+  receiver.route=[{...receiver.pos},{...sitePos}];receiver.routeIdx=0;receiver.routeT=0;receiver.state="ROTATE";
+  receiver.va=Math.atan2(sitePos.y-receiver.pos.y,sitePos.x-receiver.pos.x)*180/Math.PI;
+  return receiver;
+}
+`;
+const R50_ADAPT_PLANT = '            aliveT.filter(p=>p.id!==carrier.id&&!p.dead&&!p.reassigned).forEach(p=>{const adaptivePostPlant=adaptivePostPlantGoal(p,planted,c4pos);if(adaptivePostPlant){p._adaptivePostPlant=true;p.route=[{...p.pos},{...adaptivePostPlant}];p.routeIdx=0;p.routeT=0;p.state="ROTATE";}});\n';
+const R50_TACTICAL_PLANT = '            aliveCT.forEach(cp=>{const tacticalRoute=tacticalRetakeRoute(cp,tacticCT,N,c4pos);cp.reassigned=false;cp.route=tacticalRoute||(appr&&dist(cp.pos,appr)>6?[{...cp.pos},appr,{...c4pos}]:[{...cp.pos},{...c4pos}]);cp.routeIdx=0;cp.routeT=0;cp.state="RETAKE";});';
+const R50_TACTICAL_LEGACY = '            aliveCT.forEach(cp=>{cp.reassigned=false;cp.route=appr&&dist(cp.pos,appr)>6?[{...cp.pos},appr,{...c4pos}]:[{...cp.pos},{...c4pos}];cp.routeIdx=0;cp.routeT=0;cp.state="RETAKE";});';
+const R50_COMMS_PLANT = '            comms.push({side:"t",name:carrier.name,text:`包下了，${target==="a"?"A":"B"} 點，全員交叉！`});const bombAwareReceiver=applyCommsBombAwareness(carrier,c4pos,aliveT);if(bombAwareReceiver)comms.push({side:"t",name:bombAwareReceiver.name,text:"收到包點資訊，調整路線"});';
+const R50_COMMS_LEGACY = '            comms.push({side:"t",name:carrier.name,text:`包下了，${target==="a"?"A":"B"} 點，全員交叉！`});const cov=aliveT.find(x=>x.id!==carrier.id);if(cov)comms.push({side:"t",name:cov.name,text:"收到，我架槍"});';
 // R47 historical adapter: remove the three new identity consumers so R18/R34/R35/R37
 // continue to inspect their locked pre-R47 source rather than silently rebaseline.
 const R47_IDENTITY_HELPERS = `const MAPAWARE_BASE_RANGE=28,MAPAWARE_VIS_RANGE=0.28;
@@ -159,6 +187,14 @@ export function csR48R47Source(input) {
   source = replaceExact(source, R48_ROUTE_KEYS, R47_TEAM_ROUTE_KEYS, "R48_LEADERSHIP_ROUTE");
   source = replaceExact(source, R48_COMMS_LINE, R47_COMMS_LINE, "R48_COMMS_HANDOFF");
   source = replaceExact(source, R48_SYNERGY_BLOCK, "", "R48_SYNERGY_TRADE");
+  if (source.includes(R50_ADAPT_HELPER)) {
+    source = replaceExact(source, R50_ADAPT_HELPER, "", "R50_ADAPT_HELPER");
+    source = replaceExact(source, R50_TACTICAL_HELPER, "", "R50_TACTICAL_HELPER");
+    source = replaceExact(source, R50_COMMS_HELPER, "", "R50_COMMS_HELPER");
+    source = replaceExact(source, R50_ADAPT_PLANT, "", "R50_ADAPT_PLANT");
+    source = replaceExact(source, R50_TACTICAL_PLANT, R50_TACTICAL_LEGACY, "R50_TACTICAL_PLANT");
+    source = replaceExact(source, R50_COMMS_PLANT, R50_COMMS_LEGACY, "R50_COMMS_PLANT");
+  }
   const actual = sha256(source);
   if (actual !== CS_R47_IDENTITY_SOURCE_SHA256) {
     throw new Error(`[R48_LEGACY_R47_SHA] expected=${CS_R47_IDENTITY_SOURCE_SHA256} actual=${actual}`);

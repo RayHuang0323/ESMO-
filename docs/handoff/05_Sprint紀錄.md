@@ -7392,3 +7392,9 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - MapAware：read-limit direct/local `16/16`、五 role coverage，Calibration Ready - Limited。Adaptability：只有 AWP/Lurker/IGL coverage，`adp >= 80` 與既有 `aggr < 0.82` 造成 threshold/path boundary，Deferred。TacticalIQ：IGL-only、`tac >= 90` saturation，Deferred。
 - Comms：support handoff baseline `24/24`，但 CT target role coverage 4/5 且 `com >= 88` saturation；Leadership：teammate route adoption `596/596`，`led >= 90` saturation 且 high effective `99` clamp；Synergy：trade partner action `231/231`，`coo >= 90` saturation。三項均 Measurement Ready / Deferred。
 - R49 focused suite digest 分項保存於 report；R18-B/R34/R35/R36/R38/R47/R48、CS historical、progress/reward/Q7a、build、review、diff check 於收尾逐段驗證。R49：Go（measurement），下一步優先第二階段 Gameplay Identity Sprint。
+## R50 CS Gameplay Identity 第二階段：應變力 × 戰術理解 × 溝通（2026-08-16）
+
+- R49 `bc892c515e8daced1eb82a43e0a391f579173ff6` 先 push 並確認三方一致；R50 不重做九項 calibration，新增三個既有 hook 的第二層 consumer。
+- Adaptability：炸彈安裝後存活 T teammate 以既有 `c4pos` route 做 post-plant adjustment。TacticalIQ：炸彈安裝後 CT 以既有 `tacticCT.routes` staging waypoint + `c4pos` 做 retake adherence，不再只測 IGL direct route。Comms：炸彈安裝後以 teammate/support context 做 package-awareness route/aim handoff。
+- R50 verifier 分項執行 16 fixed seeds、low/baseline/high、Level 2/3、role attribution、threshold/clamp、deterministic digest；應變力 primary `t4` baseline 1/1、action direction 1/16；TacticalIQ primary `ct2` baseline 1/0、high action 1/16；Comms primary `t5` baseline 0/0，T3/T4 只有 opportunity。三項皆 Measurement Ready / Deferred。
+- 新增 `tools/check_cs_gameplay_identity_r50.mjs`、`CS_GAMEPLAY_IDENTITY_STAGE2_R50_SPEC/REPORT.md`，並更新 R50 historical adapter；R34/R35/R36、R47/R49、CS historical 28/28、progress/reward 33/33、Q7a 18/18、R38 均 PASS。新增 RNG 0；九項 calibration 與 Learning lifecycle 不變。

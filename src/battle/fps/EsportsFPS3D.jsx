@@ -295,6 +295,16 @@ function tacticalRouteKeys(p,tactic,tr,RKF){
   const fallback=tr[RKF[p.role]]||tr.rifler||tr.entry||Object.values(tr)[0]||["tSpawn"];
   return p.role==="igl"&&persStat(p,"tac")>=TACTICAL_EXECUTION_THRESHOLD&&direct?direct:tr[p.role]||fallback;
 }
+function adaptivePostPlantGoal(p,planted,c4pos){
+  if(!planted||p.side!=="t"||p.hp<48||p._adaptivePostPlant||persStat(p,"adp")<ADAPT_ROUTE_THRESHOLD)return null;
+  return c4pos&&dist(p.pos,c4pos)>10?c4pos:null;
+}
+function tacticalRetakeRoute(p,tactic,N,c4pos){
+  if(p.side!=="ct"||!c4pos||persStat(p,"tac")<TACTICAL_EXECUTION_THRESHOLD)return null;
+  const keys=tactic?.routes?.[p.role]||tactic?.routes?.rifler||tactic?.routes?.entry;if(!Array.isArray(keys)||keys.length<3)return null;
+  const staging=keys.slice(1,-1).map(key=>N[key]).find(node=>node&&dist(node,c4pos)>8);
+  return staging?[{...p.pos},{...staging},{...c4pos}]:null;
+}
 const COMMS_HANDOFF_THRESHOLD=88;
 function applyCommsHandoff(spotter,enemy,players,walls){
   if(persStat(spotter,"com")<COMMS_HANDOFF_THRESHOLD)return null;
@@ -317,6 +327,14 @@ function synergyTradeCandidate(attacker,victim,players,walls){
   const candidates=players.filter(p=>p!==attacker&&!p.dead&&!p.reassigned&&p.side===attacker.side&&dist(p.pos,attacker.pos)<24&&dist(p.pos,victim.pos)<38&&!lineBlocked(p.pos,victim.pos,walls));
   candidates.sort((a,b)=>((b.role==="support"?1:0)-(a.role==="support"?1:0))||dist(a.pos,attacker.pos)-dist(b.pos,attacker.pos));
   return candidates[0]||null;
+}
+function applyCommsBombAwareness(carrier,sitePos,players){
+  const candidates=players.filter(p=>p!==carrier&&!p.dead&&!p.reassigned&&dist(p.pos,carrier.pos)<50&&persStat(p,"com")>=COMMS_HANDOFF_THRESHOLD);
+  candidates.sort((a,b)=>((b.role==="support"?1:0)-(a.role==="support"?1:0))||persStat(b,"com")-persStat(a,"com")||dist(a.pos,sitePos)-dist(b.pos,sitePos));
+  const receiver=candidates[0];if(!receiver||!sitePos)return null;
+  receiver.route=[{...receiver.pos},{...sitePos}];receiver.routeIdx=0;receiver.routeT=0;receiver.state="ROTATE";
+  receiver.va=Math.atan2(sitePos.y-receiver.pos.y,sitePos.x-receiver.pos.x)*180/Math.PI;
+  return receiver;
 }
 // ── 戰術剋制關係（剪刀石頭布 + 站點對位）──────────────────────────────
 // 回傳「對 T 方有利」的對槍機率偏移（+ 利攻方 / − 利守方）。一回合內固定。
@@ -609,11 +627,12 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
           const endsNear=carrier.route.length&&dist(carrier.route[carrier.route.length-1],sitePos)<10;
           if(!endsNear&&dist(carrier.pos,sitePos)>8){const ap=N[target==="a"?"aConn":"car"];carrier.route=ap?[carrier.pos,ap,sitePos]:[carrier.pos,sitePos];carrier.routeIdx=0;carrier.routeT=0;}
           if(dist(carrier.pos,sitePos)<9){const ctNear=aliveCT.filter(cp=>dist(cp.pos,sitePos)<13&&!lineBlocked(carrier.pos,cp.pos,walls)).length;const canPlant=(ctNear===0&&rand()<0.55)||(ctNear<=1&&aliveT.length>aliveCT.length&&rand()<0.18);if(canPlant){planted=true;c4pos={...sitePos};c4t=20;carrier.hasBomb=false;carrier.state="安裝中";carrier.money+=300;casts.push(`💣 ${carrier.name} 安裝炸彈！`);highlights.push({fi,label:`R${rnd+1} 炸彈安裝`});
-            comms.push({side:"t",name:carrier.name,text:`包下了，${target==="a"?"A":"B"} 點，全員交叉！`});const cov=aliveT.find(x=>x.id!==carrier.id);if(cov)comms.push({side:"t",name:cov.name,text:"收到，我架槍"});
+            aliveT.filter(p=>p.id!==carrier.id&&!p.dead&&!p.reassigned).forEach(p=>{const adaptivePostPlant=adaptivePostPlantGoal(p,planted,c4pos);if(adaptivePostPlant){p._adaptivePostPlant=true;p.route=[{...p.pos},{...adaptivePostPlant}];p.routeIdx=0;p.routeT=0;p.state="ROTATE";}});
+            comms.push({side:"t",name:carrier.name,text:`包下了，${target==="a"?"A":"B"} 點，全員交叉！`});const bombAwareReceiver=applyCommsBombAwareness(carrier,c4pos,aliveT);if(bombAwareReceiver)comms.push({side:"t",name:bombAwareReceiver.name,text:"收到包點資訊，調整路線"});
             const cd=aliveCT[0];if(cd)comms.push({side:"ct",name:cd.name,text:`${target==="a"?"A":"B"} 響了，全員回防拆彈！`});
             // 炸彈安裝後：所有存活警察立刻往包點移動（回防 / 拆彈）
             const appr=target==="a"?N.aConn:N.bTop;
-            aliveCT.forEach(cp=>{cp.reassigned=false;cp.route=appr&&dist(cp.pos,appr)>6?[{...cp.pos},appr,{...c4pos}]:[{...cp.pos},{...c4pos}];cp.routeIdx=0;cp.routeT=0;cp.state="RETAKE";});}}
+            aliveCT.forEach(cp=>{const tacticalRoute=tacticalRetakeRoute(cp,tacticCT,N,c4pos);cp.reassigned=false;cp.route=tacticalRoute||(appr&&dist(cp.pos,appr)>6?[{...cp.pos},appr,{...c4pos}]:[{...cp.pos},{...c4pos}]);cp.routeIdx=0;cp.routeT=0;cp.state="RETAKE";});}}
         }
       }
       smokes=smokes.map(s=>({...s,tl:s.tl-1,age:(s.age||0)+1})).filter(s=>s.tl>0);
