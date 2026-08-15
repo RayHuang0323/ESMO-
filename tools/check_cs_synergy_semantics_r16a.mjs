@@ -213,7 +213,8 @@ function staticAudit(fpsSource, rosterSource, playerModelSource) {
 
   gate(rosterSource.includes('synergy: "coo"') || rosterSource.includes('synergy:"coo"'), "STAT_L2S_SYNERGY_MAPPING");
   gate(rosterSource.includes('learning: "lrn"') || rosterSource.includes('learning:"lrn"'), "STAT_L2S_LEARNING_MAPPING");
-  gate(rosterSource.includes('"輔助": "igl"') || rosterSource.includes('"輔助":"igl"'), "PLAYER_ROLE_MAPPING_CHANGED");
+  gate((rosterSource.includes('"輔助": "igl"') || rosterSource.includes('"輔助":"igl"'))
+    || (rosterSource.includes("MOBA2FPS = CS_ROLE_BY_MOBA_ROLE") && playerModelSource.includes('"輔助": "igl"')), "PLAYER_ROLE_MAPPING_CHANGED");
   gate(/"FPS輔助"\s*:\s*\{\s*key:\s*\["synergy",\s*"tacticalIQ",\s*"comms",\s*"positioning",\s*"mapAware"\]/.test(playerModelSource), "PLAYER_MODEL_SUPPORT_SEMANTICS");
 
   const profile = sourceBlock(normalized, "const POS_PROFILE=", "const FPS_W=", "POS_PROFILE");

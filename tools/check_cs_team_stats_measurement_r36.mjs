@@ -9,7 +9,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 import { changedSeedSummary, classifyCausalReadiness, clampSummary, monotonicity, pairedEffect, thresholdCrossing } from "./cs_calibration_measurement.mjs";
-import { CS_R32_CLUTCH_RESILIENCE_SOURCE_SHA256, CS_R33_RESILIENCE_SOURCE_SHA256, csR33R32Source } from "./cs_r15_legacy_source.mjs";
+import { CS_R32_CLUTCH_RESILIENCE_SOURCE_SHA256, CS_R33_RESILIENCE_SOURCE_SHA256, csR33R32Source, csR47R46Source } from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -157,12 +157,12 @@ function instrument(source, stat) {
   gate((transformed.match(/\brand\s*\(\s*\)/g) || []).length === (source.match(/\brand\s*\(\s*\)/g) || []).length, "RNG_TOKEN_SEQUENCE_CHANGED");
   return transformed;
 }
-async function loadApi(source, stat) {
+async function loadApi(source, liveSource, stat) {
   const tempRoot = mkdtempSync(join(tmpdir(), `esmo-cs-${stat}-r36-`)); let vite = null; let seen = 0;
   try {
     vite = await createServer({ root: ROOT, configFile: false, envFile: false, appType: "custom", logLevel: "error", cacheDir: join(tempRoot, "vite-cache"), optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true }, plugins: [{ name: `cs-${stat}-r36-memory`, enforce: "pre", transform(code, id) {
       if (resolve(id.split("?")[0]).toLowerCase() !== FPS.toLowerCase()) return null;
-      seen += 1; gate(code === source, "VITE_SOURCE_MISMATCH"); return { code: instrument(source, stat), map: null };
+      seen += 1; gate(code === liveSource, "VITE_SOURCE_MISMATCH"); return { code: instrument(source, stat), map: null };
     } }] });
     const module = await vite.ssrLoadModule(`/src/battle/fps/EsportsFPS3D.jsx?r36-${stat}`);
     gate(seen === 1, "TRANSFORM_LOAD_GATE"); return module.__CS_TEAM_STATS_R36_TEST_API__;
@@ -186,10 +186,10 @@ function staticAudit(source, stat, config, r17, r3, r16) {
   return { sourceSha256: sha(source), roleConsumers: config.roleConsumers, directCombatConsumer: false, liveConsumer: false, teamConsumer: false, tacticConsumer: false, r16SynergyEvidence: stat === "coo" ? "preserved" : "not applicable" };
 }
 async function main() {
-  const stat = statArg(), config = CONFIG[stat], source = readFileSync(FPS, "utf8"), r17 = readFileSync(R17, "utf8"), r3 = readFileSync(R3, "utf8"), r16 = readFileSync(R16, "utf8");
-  const historical = csR33R32Source(source);
+  const stat = statArg(), config = CONFIG[stat], liveSource = readFileSync(FPS, "utf8"), source = csR47R46Source(liveSource), r17 = readFileSync(R17, "utf8"), r3 = readFileSync(R3, "utf8"), r16 = readFileSync(R16, "utf8");
+  const historical = csR33R32Source(liveSource);
   gate(sha(historical) === CS_R32_CLUTCH_RESILIENCE_SOURCE_SHA256, "R32_HISTORICAL_ADAPTER");
-  const staticEvidence = staticAudit(source, stat, config, r17, r3, r16), api = await loadApi(source, stat);
+  const staticEvidence = staticAudit(source, stat, config, r17, r3, r16), api = await loadApi(source, liveSource, stat);
   gate(typeof api?.simulateFps === "function" && Array.isArray(api.ROSTER), "TEST_API_MISSING");
   const map = api.TACTICS_DB.inferno, tTactic = map.t.find((item) => item.id === "t_aexec"), ctTactic = map.ct.find((item) => item.id === "c_std"), roster = structuredClone(api.ROSTER);
   gate(tTactic && ctTactic && roster.length === 10, "FIXED_INPUTS");

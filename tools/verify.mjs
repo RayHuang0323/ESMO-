@@ -61,6 +61,7 @@ const SEGMENTS = [
   { id: "cs_batch_calibration_r45", script: "tools/check_cs_batch_calibration_r45.mjs", shape: /CS Batch Calibration R45: PASS/, note: "CS Focus / Decision / Clutch(str) / Resilience(res) batch local calibration" },
   { id: "cs_distribution_baseline_r46", script: "tools/check_cs_distribution_r46.mjs", shape: /CS Distribution Baseline R46: PASS/, note: "CS mature-stat role distribution and generation baseline" },
   { id: "cs_identity_consumers_r47", script: "tools/check_cs_identity_consumers_r47.mjs", shape: /CS Identity Consumers R47: PASS/, note: "CS MapAware / Adaptability / TacticalIQ minimal live consumers" },
+  { id: "cs_team_identity_consumers_r48", script: "tools/check_cs_team_identity_consumers_r48.mjs", shape: /CS Team Identity Consumers R48: PASS/, note: "CS Comms / Leadership / Synergy minimal team consumers" },
   { id: "cs_reflex_read_chain_r19", script: "tools/check_cs_reflex_read_chain_r19.mjs", shape: /CS Reflex Read-Chain \/ Role Interaction Audit R19: PASS/, note: "CS Reflex historical read-chain semantic verifier" },
   { id: "cs_learning_lifecycle_r16b", script: "tools/check_cs_learning_lifecycle_r16b.mjs", shape: /CS Learning Lifecycle \/ State Design R16-B: PASS/, note: "CS Learning historical lifecycle evidence" },
   { id: "cs_mapaware_semantics_r18b", script: "tools/check_cs_mapaware_semantics_r18b.mjs", shape: /CS MapAware Semantics \/ Read-Point Design R18-B: PASS/, note: "CS MapAware historical spatial read-point evidence" },

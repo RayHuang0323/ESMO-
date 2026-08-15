@@ -295,6 +295,29 @@ function tacticalRouteKeys(p,tactic,tr,RKF){
   const fallback=tr[RKF[p.role]]||tr.rifler||tr.entry||Object.values(tr)[0]||["tSpawn"];
   return p.role==="igl"&&persStat(p,"tac")>=TACTICAL_EXECUTION_THRESHOLD&&direct?direct:tr[p.role]||fallback;
 }
+const COMMS_HANDOFF_THRESHOLD=88;
+function applyCommsHandoff(spotter,enemy,players,walls){
+  if(persStat(spotter,"com")<COMMS_HANDOFF_THRESHOLD)return null;
+  const candidates=players.filter(p=>p!==spotter&&!p.dead&&!p.reassigned&&p.side===spotter.side&&(dist(p.pos,enemy.pos)<50||dist(p.pos,spotter.pos)<45));
+  candidates.sort((a,b)=>((b.role==="support"?1:0)-(a.role==="support"?1:0))||dist(a.pos,enemy.pos)-dist(b.pos,enemy.pos));
+  const receiver=candidates[0];if(!receiver)return null;
+  receiver.route=[{...receiver.pos},{...enemy.pos}];receiver.routeIdx=0;receiver.routeT=0;receiver.state="ROTATE";
+  receiver.va=Math.atan2(enemy.pos.y-receiver.pos.y,enemy.pos.x-receiver.pos.x)*180/Math.PI;
+  return receiver;
+}
+const LEADERSHIP_EXECUTION_THRESHOLD=90;
+function leadershipRouteKeys(p,tactic,tr,RKF,roster){
+  const base=tacticalRouteKeys(p,tactic,tr,RKF);
+  if(p.role==="igl")return base;
+  const leader=roster.find(q=>q.side===p.side&&q.role==="igl"&&!q.dead);
+  return leader&&persStat(leader,"led")>=LEADERSHIP_EXECUTION_THRESHOLD&&tr[leader.role]?tr[leader.role]:base;
+}
+const SYNERGY_TRADE_THRESHOLD=90;
+function synergyTradeCandidate(attacker,victim,players,walls){
+  const candidates=players.filter(p=>p!==attacker&&!p.dead&&!p.reassigned&&p.side===attacker.side&&dist(p.pos,attacker.pos)<24&&dist(p.pos,victim.pos)<38&&!lineBlocked(p.pos,victim.pos,walls));
+  candidates.sort((a,b)=>((b.role==="support"?1:0)-(a.role==="support"?1:0))||dist(a.pos,attacker.pos)-dist(b.pos,attacker.pos));
+  return candidates[0]||null;
+}
 // ── 戰術剋制關係（剪刀石頭布 + 站點對位）──────────────────────────────
 // 回傳「對 T 方有利」的對槍機率偏移（+ 利攻方 / − 利守方）。一回合內固定。
 // 類型剋制：T(rush/execute/default) × CT(default/stack/aggro)
@@ -435,7 +458,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
       // 路線指派：戰術未定義該角色時，退回相近角色路線（避免指揮/輔助等留在出生點不參戰）
       const RKF={igl:"rifler",support:"rifler",lurker:"rifler",awp:"rifler",rifler:"entry",entry:"rifler"};
       const tr=tactic.routes||{};
-      const routeKeys=tacticalRouteKeys(c,tactic,tr,RKF);
+      const routeKeys=leadershipRouteKeys(c,tactic,tr,RKF,RS);
       const route=routeKeys.map(nk=>N[nk]).filter(Boolean);
       const hasBomb=c.side==="t"&&c.role==="entry";
       return{...c,pos:{...SPAWN[c.side==="ct"?"ct":"t"]},prevPos:{...SPAWN[c.side==="ct"?"ct":"t"]},
@@ -557,7 +580,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
           fireChance*=(0.55+0.5*Math.max(aggr(tp),aggr(cp))); // 進攻性影響交火意願（雙方都龜縮→少對槍）
           if(rand()>=fireChance)continue;
           usedT.add(tp.id);usedCT.add(cp.id);if(!sniperInvolved)done++; // 狙擊不計入一般名額
-          if(!contactCalled){contactCalled=true;const spotter=cp;comms.push({side:spotter.side,name:spotter.name,text:`${nearCO(tp.pos)} 有人，${aliveT.length} 個！`});}
+          if(!contactCalled){contactCalled=true;const spotter=cp;comms.push({side:spotter.side,name:spotter.name,text:`${nearCO(tp.pos)} 有人，${aliveT.length} 個！`});const handoffReceiver=applyCommsHandoff(spotter,tp,ps,walls);}
           // 對槍勝負由雙方 16 項素質 + 武器 + 情境決定（非隨機）
           const tHold=(tp.state==="架槍"||tp.state==="HOLD"),cHold=(cp.state==="架槍"||cp.state==="HOLD");
           const tSk=combatSkill(tp,{holding:tHold,entry:tp.role==="entry"&&!tHold,lurk:tp.role==="lurker"&&tHold,lastAlive:aliveT.length===1,lowHP:tp.hp<40});
@@ -567,6 +590,9 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
           const Pt=clamp(0.5+(tSk-cSk)*0.013+(MAP_EDGE[mapKey]??0.02)+ecoEdge+flashPen+tacEdge,0.07,0.93); // 結構平衡 + 戰術剋制
           const tw=rand()<Pt;const at=tw?tp:cp,df=tw?cp:tp;
           const attackerMapAware=tw?mapAwareT:mapAwareCT;if(!attackerMapAware)continue;
+          const synergyPartner=synergyTradeCandidate(at,df,ps,walls);
+          const synergyReady=Boolean(synergyPartner&&Math.max(persStat(at,"coo"),persStat(synergyPartner,"coo"))>=SYNERGY_TRADE_THRESHOLD);
+          if(synergyReady){synergyPartner.va=Math.atan2(df.pos.y-synergyPartner.pos.y,df.pos.x-synergyPartner.pos.x)*180/Math.PI;synergyPartner.state="ENGAGE";synergyPartner.shooting=Math.max(synergyPartner.shooting,1);}
           const g=GUNS[at.gun],rawAccuracy=at.stats?.acc||80,effectiveAccuracy=at.stats?.acc!=null?persStat(at,"acc"):rawAccuracy;const isHS=rand()<g.hs*(0.72+0.55*(effectiveAccuracy/100));let dmg=(g.dmg+Math.floor(rand()*40))*(isHS?2:1);
           if(df.armor&&!isHS)dmg*=0.72; // 護甲減傷（非爆頭）
           dmg=Math.round(dmg);

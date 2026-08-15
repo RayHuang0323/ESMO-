@@ -7379,3 +7379,9 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - MapAware：既有 LOS/smoke/visible candidate pair admission 加 actor read window，aware attacker 才能完成 immediate engage。Adaptability：既有 low-HP retreat opportunity 加 `adp >= 80` waypoint route adjustment。TacticalIQ：既有 IGL tactic route 加 `tac >= 90` direct route execution。
 - R47 focused verifier PASS；suite digest `e3a90541390b52b254bd684496450909358218f630222efa1b3ba3ca56e636c1`，RNG call sites 21、新增 RNG 0；三項均可進下一階段 measurement，尚非 calibration ready。
 - R34/R35 historical verifier 各完成 512 simulations PASS；R34 digest `0d58819f`、R35 digest `9a8669ae`。透過 historical adapter 保留既有 evidence，未 rebaseline、未修改歷史 calibration 結論；R18-B/R38 provenance 保留。
+## R48 CS Team Gameplay Identity Sprint：Comms × Leadership × Synergy（2026-08-16）
+
+- R47 `fda8887` 先 push 並確認 local / tracking / remote 一致；R48 不重做九項 calibration，不碰 MapAware / Adaptability / TacticalIQ balance、賽季／賽事或 Learning lifecycle。
+- Comms：既有 visible enemy contact 後，`com >= 88` 的 spotter 將資訊交給附近 teammate，support 優先，receiver 立即取得既有 route/aim handoff。Leadership：`led >= 90` 的存活 IGL 將既有 tactic route 提供給非 IGL teammate，形成 route consistency。Synergy：既有 visible trade partner 成立且雙方 effective `coo >= 90` 時，partner 立即 aim、`ENGAGE`、沿既有 shooting path 行動。
+- R48 focused verifier PASS：16 fixed seeds、固定 `inferno/t_aexec/c_std`、low/baseline/high `82/90/98`、L2/L3、role coverage、deterministic off/on/repeated-on、21 RNG call sites；新增 RNG 0。suite digest `8b498c39ca1d7d9e12ad233d31cea1b48e6f1f5e46fb8aa3c734a641a7e2a0ef`。
+- R16-A、R36（三項）、R38、R47 historical gates PASS，原 digest 與分類保留；progress/reward/Q7a、build、review 與 diff check 於本輪收尾記錄。R48 verdict：Go，三項 Measurement Ready，尚非 calibration ready。

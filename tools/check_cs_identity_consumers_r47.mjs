@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
+import { csR48R47Source } from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -156,7 +157,7 @@ function runArm(api, mapKey, tTactic, ctTactic, seed, roster, targetId) {
     metrics: summarize(events1, targetId),
   };
 }
-async function loadApi(currentSource) {
+async function loadApi(currentSource, liveSource) {
   let seen = 0;
   const tempRoot = mkdtempSync(join(tmpdir(), "esmo-cs-identity-r47-"));
   let vite = null;
@@ -170,7 +171,7 @@ async function loadApi(currentSource) {
         transform(code, id) {
           if (resolve(id.split("?")[0]).toLowerCase() !== FPS_FILE.toLowerCase()) return null;
           seen += 1;
-          gate(code === currentSource, "VITE_SOURCE_MISMATCH");
+          gate(code === liveSource, "VITE_SOURCE_MISMATCH");
           let transformed = currentSource;
           for (const [name, marker, replacement] of TRANSFORMS) {
             gate(transformed.split(marker).length - 1 === 1, "TRANSFORM_MARKER_COUNT", name);
@@ -241,13 +242,13 @@ function digestRows(rows) {
 }
 
 async function main() {
-  const source = readFileSync(FPS_FILE, "utf8");
+  const source = csR48R47Source(readFileSync(FPS_FILE, "utf8"));
   gate(randTokens(source).length === 21, "BASELINE_RNG_CALL_SITES", String(randTokens(source).length));
   gate(source.includes("mapAwareCanReadVisibleCandidate") && source.includes("adaptiveRouteGoal") && source.includes("tacticalRouteKeys"), "PRODUCTION_CONSUMERS_MISSING");
   gate(source.includes("mapAwareT||mapAwareCT") && source.includes("attackerMapAware"), "MAPAWARE_PAIR_CONSUMER_MISSING");
   gate(source.includes("ADAPT_ROUTE_THRESHOLD") && source.includes('p.state="ROTATE"'), "ADAPTABILITY_ROUTE_CONSUMER_MISSING");
   gate(source.includes("TACTICAL_EXECUTION_THRESHOLD") && source.includes('p.role==="igl"'), "TACTICAL_ROUTE_CONSUMER_MISSING");
-  const api = await loadApi(source);
+  const api = await loadApi(source, readFileSync(FPS_FILE, "utf8"));
   gate(typeof api?.simulateFps === "function" && Array.isArray(api?.ROSTER), "SIMULATOR_API_MISSING");
   const map = api.TACTICS_DB[MAP_KEY];
   const tTactic = freeze(clone(map?.t?.find((item) => item.id === T_TACTIC_ID)));

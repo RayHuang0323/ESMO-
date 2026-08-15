@@ -28,6 +28,7 @@ export const CS_R32_CLUTCH_RESILIENCE_SOURCE_SHA256 = CS_R27_DECISION_SOURCE_SHA
 export const CS_R43_ACCURACY_SOURCE_SHA256 = "edf311b13347dc185713d687e8dad22e05087aceede233a47baae62707b2cbf3";
 export const CS_R44_FOCUS_SOURCE_SHA256 = "80a6ef4e776c825f602f5b41a8a7d9e6c97546dd157e87de2e6f4e3e69fced5e";
 export const CS_R33_RESILIENCE_SOURCE_SHA256 = CS_R44_FOCUS_SOURCE_SHA256;
+export const CS_R47_IDENTITY_SOURCE_SHA256 = "d2769a3534a590e7cca5fde95662836731e738bdf78e4ef3b12d1999de1e5339";
 
 const R24_RAW_ACCURACY_HEADSHOT = '          const g=GUNS[at.gun];const isHS=rand()<g.hs*(0.72+0.55*((at.stats?.acc||80)/100));let dmg=(g.dmg+Math.floor(rand()*40))*(isHS?2:1);';
 const R25_EFFECTIVE_ACCURACY_HEADSHOT = '          const g=GUNS[at.gun],rawAccuracy=at.stats?.acc||80,effectiveAccuracy=at.stats?.acc!=null?persStat(at,"acc"):rawAccuracy;const isHS=rand()<g.hs*(0.72+0.55*(effectiveAccuracy/100));let dmg=(g.dmg+Math.floor(rand()*40))*(isHS?2:1);';
@@ -39,6 +40,40 @@ const R33_LOW_HP = '    if(opts.lowHP)v-=(100-S("str"))*0.05-(S("res")-76)*0.12;
 const R32_LOW_HP = '    if(opts.lowHP)v-=(100-S("str"))*0.05;';
 const R28_RAW_FOCUS_DEFUSE = '          defuseProg+=defuser.stats?(0.45+defuser.stats.foc/250+persStat(defuser,"dec")/300):0.7;';
 const R29_EFFECTIVE_FOCUS_DEFUSE = '          defuseProg+=defuser.stats?(0.45+persStat(defuser,"foc")/250+persStat(defuser,"dec")/300):0.7;';
+// R48 historical adapter: remove team identity consumers so R47/R36/R18
+// evidence continues to inspect its locked pre-R48 source.
+const R48_IDENTITY_HELPERS = `const COMMS_HANDOFF_THRESHOLD=88;
+function applyCommsHandoff(spotter,enemy,players,walls){
+  if(persStat(spotter,"com")<COMMS_HANDOFF_THRESHOLD)return null;
+  const candidates=players.filter(p=>p!==spotter&&!p.dead&&!p.reassigned&&p.side===spotter.side&&(dist(p.pos,enemy.pos)<50||dist(p.pos,spotter.pos)<45));
+  candidates.sort((a,b)=>((b.role==="support"?1:0)-(a.role==="support"?1:0))||dist(a.pos,enemy.pos)-dist(b.pos,enemy.pos));
+  const receiver=candidates[0];if(!receiver)return null;
+  receiver.route=[{...receiver.pos},{...enemy.pos}];receiver.routeIdx=0;receiver.routeT=0;receiver.state="ROTATE";
+  receiver.va=Math.atan2(enemy.pos.y-receiver.pos.y,enemy.pos.x-receiver.pos.x)*180/Math.PI;
+  return receiver;
+}
+const LEADERSHIP_EXECUTION_THRESHOLD=90;
+function leadershipRouteKeys(p,tactic,tr,RKF,roster){
+  const base=tacticalRouteKeys(p,tactic,tr,RKF);
+  if(p.role==="igl")return base;
+  const leader=roster.find(q=>q.side===p.side&&q.role==="igl"&&!q.dead);
+  return leader&&persStat(leader,"led")>=LEADERSHIP_EXECUTION_THRESHOLD&&tr[leader.role]?tr[leader.role]:base;
+}
+const SYNERGY_TRADE_THRESHOLD=90;
+function synergyTradeCandidate(attacker,victim,players,walls){
+  const candidates=players.filter(p=>p!==attacker&&!p.dead&&!p.reassigned&&p.side===attacker.side&&dist(p.pos,attacker.pos)<24&&dist(p.pos,victim.pos)<38&&!lineBlocked(p.pos,victim.pos,walls));
+  candidates.sort((a,b)=>((b.role==="support"?1:0)-(a.role==="support"?1:0))||dist(a.pos,attacker.pos)-dist(b.pos,attacker.pos));
+  return candidates[0]||null;
+}
+`;
+const R48_ROUTE_KEYS = '      const routeKeys=leadershipRouteKeys(c,tactic,tr,RKF,RS);';
+const R47_TEAM_ROUTE_KEYS = '      const routeKeys=tacticalRouteKeys(c,tactic,tr,RKF);';
+const R48_COMMS_LINE = '          if(!contactCalled){contactCalled=true;const spotter=cp;comms.push({side:spotter.side,name:spotter.name,text:`${nearCO(tp.pos)} 有人，${aliveT.length} 個！`});const handoffReceiver=applyCommsHandoff(spotter,tp,ps,walls);}';
+const R47_COMMS_LINE = '          if(!contactCalled){contactCalled=true;const spotter=cp;comms.push({side:spotter.side,name:spotter.name,text:`${nearCO(tp.pos)} 有人，${aliveT.length} 個！`});}';
+const R48_SYNERGY_BLOCK = `          const synergyPartner=synergyTradeCandidate(at,df,ps,walls);
+          const synergyReady=Boolean(synergyPartner&&Math.max(persStat(at,"coo"),persStat(synergyPartner,"coo"))>=SYNERGY_TRADE_THRESHOLD);
+          if(synergyReady){synergyPartner.va=Math.atan2(df.pos.y-synergyPartner.pos.y,df.pos.x-synergyPartner.pos.x)*180/Math.PI;synergyPartner.state="ENGAGE";synergyPartner.shooting=Math.max(synergyPartner.shooting,1);}
+`;
 // R47 historical adapter: remove the three new identity consumers so R18/R34/R35/R37
 // continue to inspect their locked pre-R47 source rather than silently rebaseline.
 const R47_IDENTITY_HELPERS = `const MAPAWARE_BASE_RANGE=28,MAPAWARE_VIS_RANGE=0.28;
@@ -102,7 +137,7 @@ function sha256(source) {
 }
 
 export function csR47R46Source(input) {
-  let source = normalizeCsSource(input);
+  let source = csR48R47Source(input);
   if (!source.includes(R47_IDENTITY_HELPERS)) return source;
   source = replaceExact(source, R47_IDENTITY_HELPERS, "", "IDENTITY_HELPERS");
   source = replaceExact(source, R47_ROUTE_KEYS, R46_ROUTE_KEYS, "TACTICAL_ROUTE");
@@ -113,6 +148,20 @@ export function csR47R46Source(input) {
   const actual = sha256(source);
   if (actual !== CS_R33_RESILIENCE_SOURCE_SHA256) {
     throw new Error(`[R47_LEGACY_R46_SHA] expected=${CS_R33_RESILIENCE_SOURCE_SHA256} actual=${actual}`);
+  }
+  return source;
+}
+
+export function csR48R47Source(input) {
+  let source = normalizeCsSource(input);
+  if (!source.includes(R48_IDENTITY_HELPERS)) return source;
+  source = replaceExact(source, R48_IDENTITY_HELPERS, "", "R48_IDENTITY_HELPERS");
+  source = replaceExact(source, R48_ROUTE_KEYS, R47_TEAM_ROUTE_KEYS, "R48_LEADERSHIP_ROUTE");
+  source = replaceExact(source, R48_COMMS_LINE, R47_COMMS_LINE, "R48_COMMS_HANDOFF");
+  source = replaceExact(source, R48_SYNERGY_BLOCK, "", "R48_SYNERGY_TRADE");
+  const actual = sha256(source);
+  if (actual !== CS_R47_IDENTITY_SOURCE_SHA256) {
+    throw new Error(`[R48_LEGACY_R47_SHA] expected=${CS_R47_IDENTITY_SOURCE_SHA256} actual=${actual}`);
   }
   return source;
 }
@@ -146,7 +195,7 @@ export function csR27R26Source(input) {
 // R44 historical adapter: expose the exact pre-R44 source to R43/R28
 // evidence. It never writes production and is a no-op for older views.
 export function csR44R43Source(input) {
-  let source = normalizeCsSource(input);
+  let source = csR47R46Source(input);
   if (sha256(source) !== CS_R44_FOCUS_SOURCE_SHA256) return source;
   source = replaceExact(source, R29_EFFECTIVE_FOCUS_DEFUSE, R28_RAW_FOCUS_DEFUSE,
     "R44_FOCUS_DEFUSE_BOUNDARY");
@@ -215,7 +264,7 @@ export function csR19R15Source(input) {
 }
 
 export function csR15EvidenceSources(input) {
-  const normalized = normalizeCsSource(input);
+  const normalized = csR48R47Source(input);
   const r24 = csR25R24Source(normalized);
   const r15 = sha256(r24) === CS_R19_SEMANTIC_SOURCE_SHA256
     ? csR19R15Source(r24) : r24;
