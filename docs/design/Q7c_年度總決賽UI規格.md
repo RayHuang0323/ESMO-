@@ -358,3 +358,175 @@ Event.final  FinalStandings.v1，rankSource: "playoff"，4 列
 state.final  SeasonSeal.v1        ← Season-level，與年度冠軍無關
 careerFinal  comp:moba:s1:official:regular，玩家第 8 名   ← 生涯成績，官方聯賽
 ```
+
+---
+
+# 視覺 Polish 附錄（Q7c 第二輪）
+
+> 前置：第一輪結構實作已 commit（`8cbf794`），browser gate 15/15。
+> 本附錄**只談呈現**。第二輪**不得改 production 規則**。
+
+## 1. 視覺定位
+
+年度總決賽是**整季最高層級的賽事**——它是三站巡迴賽與整套積分制度的收束點，
+一季只出現一次，而且只在賽季末段出現。它的視覺重量應該高於同頁任何其他區塊。
+
+玩家掃過這個面板，三件事要**各自在一眼之內**成立：
+
+| 要看懂 | 靠什麼 |
+|---|---|
+| 誰靠積分晉級 | 晉級區的四張卡：種子 ＋ 隊名 ＋ 巡迴總分 |
+| 現在打到哪 | 對戰樹的完成／進行／待定狀態差異 |
+| 誰是年度冠軍 | 冠軍橫幅（只在有結果時存在） |
+
+⚠ 三件事**不要互搶**。同一時間只有一件是主角：冠軍未產生時主角是對戰樹，
+冠軍產生後主角是橫幅、對戰樹退為佐證。
+
+## 2. 色彩紀律
+
+- **不新增色票。** 一律使用 `src/ui/theme.js` 的既有 `GC` token
+  （`gold` `purp` `green` `blue` `red` `gray` `line` `card`）與現有的
+  `rgba(...)` 衍生值。不得引入新的色相。
+- **金色（`GC.gold` / `#fbbf24`）是稀缺資源**，只保留給三處：
+  1. 晉級區（種子圓章、我方卡片邊框）
+  2. 冠軍（橫幅、冠軍那一列名次）
+  3. **冠軍之路**（見 §3）
+- **不得把整塊面板鍍金。** 面板外框、標題、狀態徽章、未完成的比賽一律走
+  中性色（`GC.gray` / `line` / 白色低透明度）。
+  ⚠ 現況 `.af-panel` 的外框已是 `rgba(251,191,36,0.32)`——那是**整塊鍍金的起點**，
+  第二輪應把它降為中性，把金色讓給真正該亮的東西。
+- 敗方用**降透明度**表達，不要用紅色。輸掉不是錯誤狀態。
+
+## 3. Signature：冠軍之路
+
+**這是整個面板唯一的「大膽」之處，其他地方保持安靜。**
+
+`Event.final` 出現之後，把**冠軍實際走過的那條路**用金色連起來：
+準決賽（他贏的那一場）→ 決賽。其餘對戰（另一場準決賽、季軍戰）降低視覺權重。
+
+實作方式（純顯示，不新增資料）：
+
+```
+championId = asiaFinals.final?.championTeamId        // 只有 final 存在時才有
+onPath(match) = !!championId && match.winner === championId
+```
+
+- `onPath` 的比賽：金色描邊 ＋ 提高對比
+- 其餘比賽：降飽和／降透明度
+- Desktop 可在準決賽與決賽之間畫一條金色連接線；Mobile 用左側金色細軸即可
+
+⚠ **紅線**：`championId` **只能**來自 `asiaFinals.final.championTeamId`。
+`final` 為 `null` 時**整條路徑不存在**——不得用 bracket 的決賽 `winner` 代替。
+（第一輪的 gate #8 正是在守這件事，變異測過會紅。）
+
+⚠ 命名衝突提醒：現況 `.af-match-champion` 的語意是「**這是決賽**」
+（`championMatch` prop），不是「冠軍走過的路」。第二輪若要用類似命名，
+請換一個 class（例如 `.af-match-onpath`），不要覆寫既有語意。
+
+## 4. 種子資訊
+
+種子 ①②③④ **是資訊不是裝飾**——它是三站積分掙來的，順序本身帶訊息：
+看到「④ 擊敗 ①」才讀得出爆冷。
+
+**現況缺口**：種子目前**只有晉級名單有**（`QualifiedList` 的 `data-seed`）。
+`playoffBracket` 不回傳 seed，所以**對戰卡與冠軍橫幅上沒有種子**。
+
+**第二輪要補**：對戰卡的雙方、冠軍橫幅的每一列，都要帶種子標記。
+
+⚠ **作法：以 `teamId` 對 `asiaFinals.qualified` 做查表**，
+不要改 `competitionView().asiaFinals` 的資料形狀。
+
+```
+seedOf = (teamId) => qualified.find((q) => q.teamId === teamId)?.seed ?? null
+```
+
+這是兩個既有欄位的顯示層 join，不是計算。**不需要動資料層。**
+
+種子的視覺形式在三處要**一致**（同樣的圓章樣式與尺寸階層），
+玩家才會把它認成同一個概念。
+
+## 5. 狀態文案
+
+現況的文案偏「氣氛式 TBD」，第二輪要改成**明確告訴玩家發生了什麼、接下來會怎樣**。
+
+| 位置 | 現況 | 應改為（語意，不必逐字） |
+|---|---|---|
+| 未排出的決賽 | 「待定」＋「等準決賽結果」 | **「決賽對手將在兩場準決賽結束後排定」** |
+| 未排出的季軍戰 | 同上 | **「季軍戰對手將在兩場準決賽結束後排定」** |
+| 冠軍未產生 | （無） | **「年度冠軍將在決賽完成後產生」** |
+| 玩家未晉級 | （無） | **「你這一季沒有取得年度總決賽資格」** |
+| 日期未定 | 「日期待定」 | **「賽程將在對戰確定後公布」** |
+
+原則（沿用專案既有的誠實界線）：
+- 空狀態是**指路**，不是留白，也不是裝可愛
+- 用主動語態、與資料層同一套詞彙（晉級／封存／已結算／核發）
+- **不得**用「敬請期待」「即將開始」這種沒有資訊的句子
+
+⚠ 「你這一季沒有取得年度總決賽資格」是**新增**的一句話。
+既有 gate #12 斷言面板**不出現「你的名次」**——新句子不含那四個字，
+但第二輪加完**必須重跑 gate 確認 #12 仍綠**。
+
+## 6. Desktop
+
+- **資訊架構維持第一輪**：冠軍橫幅 → 晉級區 → 對戰樹。不重排、不新增區塊。
+- 強化的是**舞台感與層級**：面板標題與內文的字級差要拉開；
+  區塊之間用留白分層，不要再加更多外框線。
+- 對戰樹的**可讀性**優先於樹的形狀：準決賽兩場、決賽一場、季軍戰獨立一列
+  （第一輪已是這個結構，維持）。連接線是輔助，不是主角。
+- **不得為了視覺效果改 bracket 邏輯**——`FinalsBracket` 讀哪一場、
+  `BracketMatch` 判勝負的方式一行都不動。
+
+## 7. Mobile 390px
+
+- **維持垂直比賽列表**（第一輪已是 `@media (max-width: 767px)` 切換），
+  **不得**把桌機的兩欄樹硬塞進 390px。
+- 優先順序（由上到下）：**冠軍 > 晉級名單 > 玩家下一場 > 其他比賽**。
+  ⚠ 現況順序是 冠軍 → 晉級 → 對戰（sf1/sf2/季軍/決賽）。
+  「玩家下一場」目前**沒有被提前**——第二輪可考慮把玩家有份且未完成的那一場
+  在手機上標記出來（例如加一個「你的下一場」徽章），但**不要重排對戰順序**，
+  賽程順序本身是資訊。
+- **整頁不得水平溢出。** 量法：滾動容器的 `scrollWidth` vs `clientWidth`
+  （gate #13 已經是這樣量的，`document.body` 量不到）。
+
+## 8. 禁止事項
+
+- **不改 `competitionView().asiaFinals` 的資料形狀。**
+  若真的缺純顯示欄位（目前評估：**不缺**，種子可由 `qualified` 查表取得），
+  **先停下回報**，不要自行加欄位。
+- 不改 `qualification`、不改 `Event.final`、不改 `SeasonSeal` / `careerFinal` 語意
+- 不新增 Circuit Points、獎金、賽制
+- **不做動畫大改或重型特效**：允許 hover／狀態轉場等微互動，
+  不要做進場動畫序列、粒子、持續動畫。要尊重 `prefers-reduced-motion`。
+- 不動 `src/platform/` 底下任何檔案（第一輪的資料投影已足夠）
+
+## 9. 既有 gate 是契約
+
+`tools/browser_check_asia_finals_ui.mjs` 的 15 條**必須維持全綠**。
+其中有些斷言鎖在**具體的 DOM 掛鉤與字串**上，polish 時很容易誤傷：
+
+| 掛鉤 | 被哪條用 |
+|---|---|
+| `data-testid="asia-finals-panel"` / `annual-champion-banner` / `qualified-team` / `bracket-match` | 多條 |
+| `data-seed` / `data-team-id` / `data-team-a` / `data-team-b` / `data-rank` | #3 #5 #7 #10 |
+| `data-exists="false"`（待定卡） | #6 |
+| 標題字串 `ASIA ANNUAL FINALS` | #2 |
+
+⇒ **這些掛鉤與字串視為契約，不要重新命名。**
+若 polish 確實需要改動被斷言的字串（例如 §5 的文案），
+**必須在同一個 commit 內同步更新 gate，並重跑到 15/15**，
+在回報中逐條說明改了哪一條、為什麼、原本守什麼、現在守什麼。
+
+## 10. 第二輪驗收
+
+- `node tools/browser_check_asia_finals_ui.mjs` → **15/15**（若有新增斷言，一併說明）
+- `node tools/check_q7b_asia_finals.mjs` → 72/72
+- `node tools/check_q7a_3f1_career_final.mjs` → 42/42
+- `node tools/browser_check_career_final_ui.mjs` → 12/12
+- `node tools/browser_check_circuit_points_ui.mjs` → 21/21
+- `node tools/check_competition_q4.mjs` / `q5` / `q6` → 68 / 69 / 57
+- `node tools/regress.mjs`、`node tools/regress2.mjs`、`npm run build`
+- `git diff --stat` 必須**只有** `src/screens/manage/asiaFinals/*` 與（必要時）
+  `tools/browser_check_asia_finals_ui.mjs`
+
+⚠ 新增或修改的斷言一律先做**變異測試**：故意把對應樣式／邏輯改壞，
+確認斷言會紅再相信它。理由與三次假綠的紀錄見 §G。
