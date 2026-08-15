@@ -1177,6 +1177,7 @@ export const useProfileStore = create((set, get) => ({
           all: honors,
           annualChampions: annualChampionsOf(honors),
           latestAnnualChampion: latestAnnualChampion(honors),
+          myTeamId,
           myAnnualChampionCount: teamHonorCount(honors, myTeamId, {
             honorType: HONOR_TYPES.asiaAnnualChampion,
           }),

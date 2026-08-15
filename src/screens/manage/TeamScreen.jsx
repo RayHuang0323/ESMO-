@@ -18,6 +18,7 @@ import { PlayerAvatar } from "../../ui/PlayerFace.jsx";
 import { withDerivedStats } from "../../platform/talents/playerDerivedStats.js";
 import { GC } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
+import TeamHonorsPanel from "./honors/TeamHonorsPanel.jsx";
 
 const DIVS = [
   { k: "moba", l: "⚔️ MOBA 分部", c: GC.purp },
@@ -50,6 +51,8 @@ export default function TeamScreen({ onBack }) {
           <div style={{ color: GC.gray, fontSize: 10 }}>Lv.{team.lv} · {rec.wins}勝{rec.losses}負 · 粉絲 {(meta.fans ?? 0).toLocaleString()}</div>
         </div>
       </div>
+
+      <TeamHonorsPanel />
 
       {/* 分部切換 */}
       <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
