@@ -6,7 +6,7 @@
 // ============================================================================
 import React from "react";
 import { useProfileStore } from "../../../platform/profileStore.js";
-import { GC } from "../../../ui/theme.js";
+import { GC, MONO } from "../../../ui/theme.js";
 import HonorSummary from "./HonorSummary.jsx";
 import LatestChampionCard from "./LatestChampionCard.jsx";
 import ChampionHistoryList from "./ChampionHistoryList.jsx";
@@ -38,7 +38,7 @@ const styles = `
   .th-summary[data-has-honors="true"] .th-summary-latest { color: ${GC.gold}; }
   .th-latest { padding: 13px 14px 12px; }
   .th-latest-mine { border-color: ${GC.gold}66; background: linear-gradient(145deg, ${GC.gold}18, ${GC.card}); }
-  .th-season-mark { color: ${GC.blueL}; font-family: ui-monospace, Menlo, monospace; font-size: 11px; font-weight: 900; }
+  .th-season-mark { color: ${GC.blueL}; font-family: ${MONO}; font-size: 11px; font-weight: 900; }
   .th-latest-mine .th-season-mark { color: ${GC.gold}; }
   .th-latest-team { margin-top: 12px; overflow-wrap: anywhere; color: ${GC.blueL}; font-size: 19px; font-weight: 950; line-height: 1.18; }
   .th-latest-mine .th-latest-team { color: ${GC.gold}; }
@@ -49,15 +49,15 @@ const styles = `
   .th-history { min-width: 0; margin-top: 15px; }
   .th-history-head { padding-bottom: 7px; }
   .th-history-head span:first-child { color: ${GC.blueL}; font-size: 11px; }
-  .th-history-list { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-  .th-history-row { display: grid; grid-template-columns: 48px minmax(0, 1fr) minmax(0, auto); align-items: center; gap: 8px; min-width: 0; box-sizing: border-box; padding: 9px 10px; border: 1px solid ${GC.line}; border-radius: 9px; background: ${GC.card}; }
-  .th-history-row-mine { border-color: ${GC.gold}55; box-shadow: inset 3px 0 0 ${GC.gold}; background: linear-gradient(90deg, ${GC.gold}16, ${GC.card}); }
-  .th-history-season { color: ${GC.blueL}; font-family: ui-monospace, Menlo, monospace; font-size: 11px; font-weight: 900; }
+  .th-history-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; min-width: 0; overflow: hidden; border: 1px solid ${GC.line}; border-radius: 10px; background: ${GC.line}; }
+  .th-history-row { position: relative; display: grid; grid-template-columns: 58px minmax(0, 1fr) minmax(0, 104px); align-items: center; gap: 10px; min-width: 0; box-sizing: border-box; padding: 13px 12px 12px; border: 0; border-radius: 0; background: ${GC.card}; box-shadow: inset 0 1px 0 ${GC.bg}, inset 0 -1px 0 ${GC.line}; }
+  .th-history-row-mine { z-index: 1; box-shadow: inset 3px 0 0 ${GC.gold}, inset 0 1px 0 ${GC.bg}, inset 0 -1px 0 ${GC.gold}66; background: linear-gradient(90deg, ${GC.gold}16, ${GC.card}); }
+  .th-history-season { color: ${GC.gray}; font-family: ${MONO}; font-size: 10px; font-weight: 900; letter-spacing: 0.12em; }
   .th-history-row-mine .th-history-season { color: ${GC.gold}; }
-  .th-history-team { min-width: 0; overflow-wrap: anywhere; color: ${GC.blueL}; font-size: 11px; font-weight: 850; }
+  .th-history-team { min-width: 0; overflow-wrap: anywhere; color: ${GC.blueL}; font-size: 15px; font-weight: 950; line-height: 1.2; }
   .th-history-row-mine .th-history-team { color: ${GC.gold}; }
-  .th-history-right { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; min-width: 0; }
-  .th-history-label { color: ${GC.gray}; font-size: 8px; font-weight: 800; white-space: nowrap; }
+  .th-history-right { display: inline-flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 6px; min-width: 0; }
+  .th-history-label { color: ${GC.gray}; font-size: 8px; font-weight: 800; line-height: 1.35; text-align: right; overflow-wrap: anywhere; }
   .th-history-row-mine .th-history-label { color: ${GC.gold}; }
   .th-history-mine { flex-shrink: 0; padding: 2px 5px; border: 1px solid ${GC.gold}66; border-radius: 4px; color: ${GC.gold}; font-size: 8px; font-weight: 900; }
   @media (max-width: 767px) {
@@ -65,11 +65,17 @@ const styles = `
     .th-panel-head { align-items: flex-start; flex-direction: column; gap: 3px; }
     .th-panel-title-en { display: block; margin: 3px 0 0; }
     .th-overview { grid-template-columns: minmax(0, 1fr); }
+    .th-history-list { grid-template-columns: minmax(0, 1fr); }
+    .th-history-row { grid-template-columns: 58px minmax(0, 1fr); align-items: start; gap: 7px 10px; padding: 12px 11px; }
+    .th-history-team { font-size: 14px; }
+    .th-history-right { grid-column: 2; justify-content: flex-start; }
+    .th-history-label { text-align: left; }
   }
   @media (prefers-reduced-motion: reduce) { .th-card, .th-history-row { transition: none !important; } }
 `;
 
 export default function TeamHonorsPanel() {
+  useProfileStore((s) => s.competition);
   const honorsView = useProfileStore.getState().competitionView().honorsView ?? {};
   const annualChampions = Array.isArray(honorsView.annualChampions) ? honorsView.annualChampions : [];
   const latestAnnualChampion = honorsView.latestAnnualChampion ?? null;

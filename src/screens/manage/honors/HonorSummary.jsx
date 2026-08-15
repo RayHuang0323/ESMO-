@@ -12,7 +12,7 @@ export default function HonorSummary({ count, annualChampions, myTeamId }) {
     <article className="th-card th-summary" data-has-honors={hasMine ? "true" : "false"}>
       <div className="th-summary-kicker">
         <span>亞洲年度冠軍</span>
-        <span className="th-summary-context">{hasMine ? "🏆 我方榮耀" : "我的榮譽"}</span>
+        <span className="th-summary-context">{hasMine ? "我方榮耀" : "我的榮譽"}</span>
       </div>
       <div className="th-summary-count" data-testid="honor-my-count" data-count={count}>
         <strong>{count}</strong><span>次</span>
