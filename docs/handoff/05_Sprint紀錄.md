@@ -9551,3 +9551,143 @@ B2 20／B3 13；integrity 20；o7 48／o7.1 27；
 3. **正則被 template literal 吃掉**：`/開始第 \d+ 賽季/` 寫在 template literal 裡，
    反斜線 d 被吃成 `d`，永遠找不到按鈕。改用 `[0-9]+`。
    ⚠ 同一段註解裡用反引號又提前關掉 template literal——**這輪踩了兩次**。
+
+---
+
+## Q7e 戰隊榮譽 UI（2026-08-16，已部署 main `b56c3ef`）
+
+Q7d 把年度冠軍寫成了世界歷史，但**沒有畫面**。本輪把它做出來：
+戰隊詳情頁的 **TEAM HONORS 獎盃銘板牆**。
+
+### 分工
+
+規格與驗收由 Claude 定，UI 實作交 Codex（`gpt-5.6-luna`／`xhigh`），
+Claude 獨立 review diff、重跑全套、**自己重做 mutation test**（不採信 Codex 的宣稱）。
+
+| commit | 內容 |
+|---|---|
+| `a01426e` | Q7e UI 規格（334 行） |
+| `a339bd8` | 第一輪結構實作（Codex）：8 檔 +526，純新增 |
+| `74c7448` | 視覺 Polish 附錄 |
+| `7f24ba7` | 第二輪視覺 polish（Codex）：2 檔 +16/−10 |
+| `b56c3ef` | honors subscription 修正 ＋ browser gate #15 |
+
+### 做了什麼
+
+`TeamScreen` 內新增面板（**不新增 Router／page**），五個元件：
+`TeamHonorsPanel` / `HonorSummary` / `LatestChampionCard` /
+`ChampionHistoryList` / `ChampionHistoryItem`。
+
+**資料層只動一行**：`honorsView` 投影加 `myTeamId`。
+UI 只讀 `competitionView().honorsView`——不碰 `s.team.id`、不排序、不算次數、
+不顯示 `earnedAtDay`。
+
+**Signature：獎盃銘板牆**。歷屆冠軍不是 card list，是刻在獎盃底座上的一排金屬銘板：
+`gap: 1px` ＋ `background: GC.line` 讓縫隙露出底色當**刻線**，
+row 去掉各自的 border 與圓角，改用 `inset 0 1px 0 GC.bg, inset 0 -1px 0 GC.line` 做**壓印**
+（不是外擴陰影）。Season 用既有 `MONO`，隊名 11px→15px 升為主視覺。
+**AI 冠軍鋼灰但完整可讀**（這是世界歷史，不是玩家的獎盃櫃），
+**玩家自己的用 `GC.gold` 刻痕 ＋ 左側金軸 ＋ `z-index` 抬一階**。
+
+⚠ **金色的紀律**：`data-has-honors` 由 **`hasMine`** 驅動，
+**不是** `annualChampions.length > 0`。「世界已有冠軍」≠「玩家有冠軍」。
+21 處 `GC.gold` 全部掛在 `-mine` 或 `data-has-honors="true"` 之下——**任何金色都追溯得到玩家**。
+
+### ⚠ 本輪最重要的一件事：8 條 gate 全綠，卻藏著一個真缺陷
+
+第二輪 Codex 依規格 §O 把 `getState()` 改成訂閱，寫的是：
+
+```js
+useProfileStore((s) => s.competition);
+```
+
+但 `honorsView` 讀的是 `get().honors`（`profileStore.js:1174`），
+而 **`honors` 是與 `competition` 平行的頂層 slice**（`:245`），
+`_recordHonors` 做的是 `set({ honors })`（`:698`）——**完全不碰 `competition`**。
+
+寫探針實測（不是只讀程式碼推論）：
+
+```
+set({honors}) 之後：
+  訂閱 s.competition 觸發重繪次數 = 0
+  訂閱 s.honors      觸發重繪次數 = 1
+```
+
+**Codex 回報「§K–P 均已完成」，與事實不符。**
+
+**為什麼 8 條 gate 抓不到**：它們每次都重新導頁，讀到的資料本來就是新的。
+⇒ 新增 **gate #15**：面板**已掛載**時直接 `setState({ honors })`，
+不導頁、不 reload，要求 DOM 追上。
+變異回 `s.competition` ⇒ `列數 1→1（view 2）`，store 兩筆、畫面一列——正是缺陷的形狀。
+
+**沒有加 `s.team?.id` 訂閱**：`team` 在執行期沒有任何寫入點
+（只有 DEFAULT `:155`／序列化 `:327`／`_hydrate` `:343`／reset `:1844`），
+唯一會改它的 `_hydrate` 同時也寫 `honors` ⇒ 已被涵蓋。多訂一條是沒有依據的冗餘。
+
+### Mutation test（Claude 自己做，每次先 grep 確認變異落地）
+
+| 變異 | 結果 |
+|---|---|
+| 玩家銘板判斷恆 `true` | 🔴 #4 |
+| `myAnnualChampionCount` +1 | 🔴 #5／#6／#7 |
+| 歷屆清單反排 | 🔴 #3／#9 |
+| 900px 固定寬元素 | 🔴 #11（`925/390`） |
+| 訂閱改回 `s.competition` | 🔴 **#15**（`列數 1→1（view 2）`） |
+| 完全移除訂閱 | 🔴 #15（同上） |
+
+⚠ **第一輪的 900px 變異第一次沒紅**——錨點字串 `<div className="th-overview` 不存在
+（實際是 template literal），`String.replace` **靜默 no-op**，差點被誤判成「gate 漏檢」。
+**變異沒讓 gate 變紅，通常代表變異無效，不是 gate 太弱。**
+
+### 全套回歸（Claude 獨立重跑，零下降）
+
+Q1 93／Q2a 112／Q2b 92／Q3 91／Q3.5 65／Q4 68／Q5 69／Q6 57；
+3a 29／3b 51／3c 69／3d 67／3f 43／3f.1 42／index_digest 13／live_session 20／safety 18；
+**Q7b 72／Q7d 59**；integrity 20／o7 48／o7.1 27；
+瀏覽器 gate：**team_honors 15**／asia_finals 15／circuit_points 21／career_final 12／default_scheme 15；
+`regress` 15/15、`regress2` 8/8、`build` `built in 11.01s`。
+
+⚠ **`check_moba_milestone_b2` 是既有紅燈**（斷言 `1.1` vs `2.2`），
+在沒有本 milestone 的主幹上就是紅的，**不是本輪回歸訊號**。
+
+### Q7e 收尾上線（2026-08-16）
+
+| 項目 | 值 |
+|---|---|
+| `main` | `8cc44e7` → **`b56c3ef`**（fast-forward，五筆，無 merge commit、無 force） |
+| 部署判準 | 正式站 asset 由 `index-C7ZfmrM6.js` 換成本次 build 的 **`index-BbJWig2A.js`** |
+
+⚠ `gh` CLI 不在 PATH，**無法讀 Actions 狀態**。
+改以 asset hash 比對判定部署生效——這比 workflow 狀態更可靠
+（本 repo 有過 workflow 顯示 failed 但實際部署成功的紀錄）。
+
+**正式站 smoke 12/12**（`prod_smoke_7e.mjs`，獨立 Chrome profile／port 9407／headless）。
+期望值一律從**注入的存檔 JSON** 在 Node 這側算出，再與正式站 DOM 逐值比對——不從畫面推畫面。
+
+- 世界無榮耀 ⇒ 空狀態正確，**沒有任何假 Season／假隊名**
+- 有 AI 冠軍但玩家 0 冠 ⇒ `data-count=0`、文字「0次」（不是空白也不是「—」）
+- AI 兩塊銘板完整可讀、皆非我方、隊名**不是金色**
+- 玩家奪冠 ⇒ `data-mine=true`，隊名與 Season 都是 `rgb(251, 191, 36)`（GC.gold）
+- Season 字體 `ui-monospace, Menlo, monospace`（MONO 刻印感）
+- 多季順序 **S2 → S1**，賽季／隊伍 id／隊名逐值等於存檔推導值
+- 最近冠軍卡逐值等於推導出的最新一筆；玩家多冠次數 2 = 期望 2
+- Mobile 390px **390/390 無水平溢出**，銘板仍完整可掃讀
+- 入口：更多功能 → 戰隊詳情可達，面板在該頁
+- 無 undefined／NaN，全程無未捕捉例外
+
+### ⚠ 正式站**沒驗到**的一項（照實記）
+
+使用者的 smoke 清單有一條「頁面保持開啟時直接更新 honors，UI 即時更新，不需 reload／導頁」。
+**正式站驗不了**：minified bundle 沒有任何 store handle
+（全專案只有 `window.__ESMO_RUNTIME_*` 等 battle runtime debug 掛勾，
+沒有 profile store 的入口），無法在頁內呼叫 `setState({ honors })`。
+React fiber 也取不到 zustand 的 `setState`（`useSyncExternalStore` 只拿得到 `subscribe`／`getSnapshot`，
+JS 無法反射進閉包）。
+
+⇒ 這條由 **gate #15 在 dev bundle 上驗**，並有兩個變異證明它有檢定力。
+**正式站本身未再驗一次**，交使用者實機確認。
+
+### 尚未做
+
+年度總決賽仍**沒有獎金**（榮耀與獎金分離，金額是產品決定）。
+榮耀只有一種類型（`asia_annual_champion`），**沒有泛化成 Award 系統**——那是另一個產品決定。
