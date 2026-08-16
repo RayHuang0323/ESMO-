@@ -523,8 +523,330 @@ node tools/regress.mjs / regress2.mjs / npm run build
 
 ---
 
-## L. 第二輪（本輪不做）
+## L. 第二輪（第一輪不做）
 
-視覺 signature 留到第二輪再交 Codex。方向候選（**先不定案**）：
-「賽季成績單」的紙本感／印章感、年度榮耀的燙金處理。
-**本輪先把資訊架構與資料正確性做對**，不 over-polish。
+視覺 signature 留到第二輪。第一輪先把資訊架構與資料正確性做對，不 over-polish。
+⇒ **第二輪規格見下方附錄**（2026-08-16 定案，signature 為「賽季成績單 SEASON REPORT」）。
+
+---
+---
+
+# 附錄：第二輪視覺 Polish 規格
+
+> 定案於 2026-08-16。**第一輪的資訊架構與資料正確性不得更動**——
+> 本附錄只談 typography、spacing、hierarchy、色彩層級。
+>
+> ⚠ 本輪**不改**：資料來源、`SeasonSeal`／`careerFinal`／Circuit Points／Honors 語意、
+> `profileStore.js`、rollover handler、以及 §V 列出的 browser contract。
+
+## Q. 設計限制（先讀，這決定了 signature 只能長什麼樣）
+
+`src/ui/theme.js` 是唯一色票來源，**全部家當只有這些**：
+
+```
+bg #0a0b0f   card #13151c   card2 #1a1d26   line rgba(255,255,255,0.08)
+gold #fbbf24   purp #a78bfa   blue #3b82f6   green #34d399   red #ef4444   gray #71717a
+FONT = system-ui   MONO = ui-monospace
+```
+
+⇒ **沒有 display face、沒有新色**。personality 不能靠字體或色彩取得，
+只能靠**字級對比、字距、留白節奏、線條權重、以及 MONO／FONT 的角色紀律**。
+
+⚠ **Q7e 已經用掉「刻線／壓印金屬質感」**（獎盃銘板牆）。
+第二輪**不得重複那套語彙**，否則兩個畫面會長得一樣，Q7e 的 signature 也被稀釋。
+
+## R. Signature：**封存線（The Seal Rule）**
+
+整份 Recap 只有**一個**要被記住的東西：頁首那條**封存線**。
+
+理由來自資料本身——賽季封存的真相物件就叫 `SeasonSeal`，欄位就叫 `sealedAtDay`。
+「這一季已經闔上了」不是形容詞，是 Store 裡的事實。⇒ 用**一條線**把它畫出來。
+
+| 元素 | 規則 |
+|---|---|
+| 眉標 | `SEASON REPORT`，9px，`letterSpacing: 0.28em`，`GC.gray`，900 |
+| 賽季標記 | `S{season}`，**`MONO`**，30px（手機 26），900，`letterSpacing: -0.02em`，近白 |
+| 封存戳記 | 與賽季標記**同一基線**：`已完成` ＋ `第 {sealedAtDay} 天封存`，10.5px `MONO`，`GC.gray` |
+| 戰隊名 | 23px（手機 20），900，`FONT`，純白，`overflowWrap: anywhere` |
+| **封存線** | **全頁唯一一條 2px 橫線**（其餘一律 1px `GC.line`），色 `rgba(255,255,255,0.14)`，橫跨標頭全寬 |
+| 一句摘要 | 封存線**之下**，15px（手機 14），800 |
+
+⚠ **封存線是全頁唯一的 2px 線。** 任何其他地方出現 2px 以上的線就破壞了這個 signature——
+那條線的意義是「這一季到此為止」，重複使用就變成裝飾。
+
+### R.1 允許的唯一一段動態
+
+封存線在掛載時 `transform: scaleX(0) → scaleX(1)`，`transformOrigin: left`，
+240ms `ease-out`。**只有這一段**。
+
+- 必須包在 `@media (prefers-reduced-motion: reduce)` 的保護下（該情境直接顯示完成狀態）
+- **不得**有進場動畫、數字滾動、卡片淡入、hover 位移
+- 動畫**不得**改變版面尺寸（`scaleX` 不觸發 reflow ⇒ 不會影響 gate #17）
+
+## S. 結構裝置：**層級階梯（Scope Ladder）**
+
+六個區塊**不是同權重**。它們有一條真實存在的遞降軸——**賽事層級**：
+
+```
+年度榮耀        年度最高榮耀      ← 一年只有一個
+亞洲年度總決賽   洲際冠軍賽
+亞洲巡迴        洲際巡迴（三站）
+官方聯賽        國內聯賽
+賽事獎金        結算
+```
+
+從「世界」收束到「你的帳戶」。⇒ 用**左緣線條權重**把它編碼：
+
+| 區塊 | 眉標（靜態文字，非推導資料） | 左緣線 | 標題字級 | 上方留白 |
+|---|---|---|---|---|
+| 年度榮耀 | `年度最高榮耀` | **3px `GC.gold`** | 15 | 26 |
+| 亞洲年度總決賽 | `洲際冠軍賽` | 2px `rgba(255,255,255,0.14)` | 13 | 22 |
+| 亞洲巡迴 | `洲際巡迴` | 1px `GC.line` | 13 | 20 |
+| 官方聯賽 | `國內聯賽` | 1px `GC.line` | 13 | 20 |
+| 賽事獎金 | `結算` | 無左緣線 | 11.5 | 16 |
+
+⚠ **這不是 01 / 02 / 03 編號。** 這些區塊不是流程步驟，順序編碼的是**重要性**不是次序，
+所以用**層級名稱**當眉標，不用序號。
+
+⚠ 玩家沒奪冠時 `RecapHonor` 不 render，階梯**從洲際冠軍賽開始**。
+各區塊的權重是**絕對值**（照上表），不隨是否奪冠重新分配 ⇒ 報告的形狀恆定，
+奪冠只是**多長出最上面那一階**。這樣才不會讓「沒奪冠」看起來像缺了東西。
+
+## T. 色彩紀律：**尺寸屬於標頭，顏色屬於榮耀**
+
+這是本輪最重要的一條，它同時滿足「頁首要有收束感」與「年度榮耀是唯一最高層級」：
+
+- **標頭拿走尺寸**：`S{season}` 是全頁最大的字。
+- **榮耀拿走顏色**：`GC.gold` 是全頁最強的訊號。
+
+⇒ 兩者在**不同軸**上競爭，不互相削弱。年度榮耀不需要比標頭大就已經是視覺焦點。
+
+### T.1 金色的使用上限
+
+`GC.gold` 在整個 `seasonRecap/` 只允許出現在**兩個地方**：
+
+1. `RecapHonor` 區塊內（左緣線、眉標、榮耀標題、隊名、極低透明度底色）
+2. `RecapHeader` 的一句摘要——**且僅當該句是「奪下亞洲年度冠軍」時**
+
+⚠ 沿用 Q7e 的紀律：**任何金色都必須追溯得到「這是玩家的」**。
+「世界已有冠軍」≠「玩家有冠軍」。
+⇒ `RecapHeader` 的摘要要新增 `data-champion="true|false"`（**唯一允許的新增屬性**），
+金色與它同步。gate 會驗這件事（§W）。
+
+**其餘顏色維持既有語意**，不得擴張：
+`GC.green` 只用於正向數值（積分、已取得資格、有獎金）；
+`GC.purp` 只用於 CTA；未取得資格用 `GC.gray` **不用 `GC.red`**（缺席不是錯誤，§I 狀態 C）。
+
+## U. 版面
+
+### U.1 Desktop（≥768px）
+
+```
+┌────────────────────────────────────────────────┐
+│  SEASON REPORT                                 │  ← 9px / 0.28em
+│                                                │
+│  S1        已完成 · 第 98 天封存                 │  ← 30px MONO ＋ 10.5px MONO
+│  德國海豹                                       │  ← 23px
+│  ══════════════════════════════════════════    │  ← 封存線（全頁唯一 2px）
+│  奪下亞洲年度冠軍                                │  ← 15px，奪冠時金色
+│                                                │
+│ ┃年度最高榮耀                                    │  ← 3px 金左緣
+│ ┃🏆 亞洲年度冠軍                                 │
+│ ┃  德國海豹                                     │
+│                                                │
+│ ┃洲際冠軍賽                                      │  ← 2px 左緣
+│ ┃ 資格            取得（第 1 種子）               │
+│ ┃ 最終名次        第 1 名                        │
+│ ┃ 世界冠軍        德國海豹（我方）                 │
+│                                                │
+│ │洲際巡迴                                        │  ← 1px 左緣
+│ │ 總排名          第 1 名 / 8 隊                  │
+│ │ 總積分          450 分                         │
+│ │  春季站 ······· 第 1 名 ······· 100 分          │
+│ │  夏季站 ······· 第 1 名 ······· 150 分          │
+│ │  秋季總站 ····· 第 1 名 ······· 200 分          │
+│ │ 年度總決賽資格   取得（前 4 名）                  │
+│                                                │
+│ │國內聯賽                                        │
+│ │ 最終名次        第 8 名 / 8 隊                  │
+│ │ 冠軍            暗影狼群                       │
+│ │ 常規賽名次       第 8 名                        │
+│ │ 本季 14 場：實際對戰 2 · 模擬 12                 │
+│                                                │
+│  結算                                           │  ← 無左緣線
+│  賽事獎金         無（前四名才有）                 │
+│  ────────────────────────────────────────      │
+│         ▶ 開始第 2 賽季                          │  ← 句點
+└────────────────────────────────────────────────┘
+```
+
+- **單欄、最大寬度收斂至 `maxWidth: 560px` 並置中**。成績單不是儀表板，
+  不要拉滿容器寬（第一輪漏了這條，`shell` 目前只有 `width:100%`）。
+- **區塊之間只用留白與左緣線分隔，不做浮起卡片**：不新增 `borderRadius`、
+  不新增 `box-shadow`、不給各區塊自己的 `background`
+  （唯一例外：`RecapHonor` 的極低透明度金色底）。
+- 三站那三列可用**點狀 leader**（`border-bottom: 1px dotted`）連接站名與數值——
+  這是成績單的語彙，不是裝飾。⚠ 手機下若造成擁擠則移除，不得為了 leader 犧牲可讀性。
+
+### U.2 Mobile（390px）
+
+| 項目 | 規則 |
+|---|---|
+| 欄數 | 單欄，順序與 Desktop **完全相同** |
+| 閱讀順序 | 先看到本季最重要成果（標頭摘要 → 年度榮耀），再向下讀完整成績，CTA 最後 |
+| 字級 | `S{season}` 30→26、戰隊名 23→20、摘要 15→14；**其餘不縮** |
+| 左緣線 | 權重不變（3/2/1px 不影響寬度） |
+| 標題列 | 眉標與標題**允許換行**，不得 ellipsis 吃掉 |
+| 三站 | 維持第一輪已驗過的三欄 `grid`（`minmax(0,1fr) minmax(60px,auto) minmax(52px,auto)`） |
+| CTA | `width: 100%`、位於最底、**字級不縮** |
+| 溢出 | **不得水平溢出**（量 app 捲動容器，不是 `document.body`） |
+
+⚠ `recapStyles.shell` 的 `minWidth` **必須維持 0**。
+mutation 5b 已證明改成 900 會讓 gate #17 紅——那條線是活的，別碰。
+
+⚠ `shell` 的 `overflow: hidden` 維持，但**不得拿它來遮蓋做壞的版面**：
+gate #18 會驗六個區塊都看得見。
+
+## V. ⚠ Browser contract：**這些絕對不能動**
+
+視覺調整最容易踩的地雷。以下 `data-testid` 與 `data-*` 是 **19 + 12 + 15 條斷言的錨點**，
+改名、刪除、或改變巢狀關係都會讓 gate 紅：
+
+| 元素 | 必須保留的屬性 |
+|---|---|
+| `season-recap` | `data-season` |
+| `recap-header` | `data-season`、`data-sealed-day` |
+| `recap-sealed-day` | `data-day` |
+| `recap-team-name` / `recap-summary` | （文字內容即斷言值）＋摘要新增 `data-champion` |
+| `recap-honor` | `data-season`、`data-team-id`、`data-honor-type` |
+| `recap-finals-qualification` | `data-qualified`、`data-seed` |
+| `recap-finals-player-rank` | `data-rank` |
+| `recap-finals-champion` | `data-team-id`、`data-player-champion` |
+| `recap-circuit` | `data-has-circuit`、`data-circuit-id` |
+| `recap-circuit-summary` | `data-rank`、`data-points`、`data-team-count` |
+| `recap-circuit-stops` / `recap-circuit-stop` | `data-stop-count` ／ `data-event-id`、`data-circuit-id`、`data-rank`、`data-points` |
+| `recap-circuit-qualification` | `data-qualified`、`data-slots` |
+| `recap-circuit-empty` / `recap-league-empty` | （存在性即斷言） |
+| `recap-league-rank` | `data-rank`、`data-team-count` |
+| `recap-league-champion` | `data-team-id` |
+| `recap-league-regular-rank` / `recap-league-rank-source` | `data-rank` ／ `data-rank-source` |
+| `recap-league-source-mix` | `data-total`、`data-engine`、`data-simulated`、`data-forfeited` |
+| `recap-prize` / `recap-prize-value` | `data-amount`、`data-settled` |
+| `recap-next-season` / `recap-next-season-cta` | （CTA 必須**在** `season-recap` 內且全 DOM 恰好一顆） |
+
+### V.1 ⚠ 最容易被視覺改動踩爛的一條
+
+`browser_check_career_final_ui` 與 `browser_check_asia_finals_ui` 用
+**`querySelector("span:last-child")`** 讀 `recap-league-rank`／`recap-league-champion`／
+`recap-finals-champion` 的**值**。
+
+⇒ **值必須維持是該節點的最後一個 `span` 子元素。**
+在值後面加圖示、加單位 `<span>`、或把值包進新的 wrapper，都會讓四條遷移過的斷言紅。
+要加裝飾就加在**值 span 內部**，不要加在它後面。
+
+## W. 第二輪 gate 與 mutation test
+
+**不新增 gate 條目**（維持 19 / 12 / 15），只在既有條目內補視覺紀律的斷言：
+
+- **#2** 追加：`recap-summary` 的 `data-champion` 與「本季 honors 有我方」一致。
+
+### W.1 必做 mutation（每個都先 grep 確認落地再相信紅燈）
+
+| # | 變異 | 必須紅 |
+|---|---|---|
+| 1 | 把任一 `data-testid` 改名 | 對應 gate 紅（證明 contract 是活的） |
+| 2 | 在 `recap-league-champion` 的值 span **後面**再加一個 span | `career_final` #1／#3 紅（§V.1） |
+| 3 | `shell.minWidth` 0 → 900 | `season_recap` #17 紅（回歸保護） |
+| 4 | 讓摘要**無條件**上金色（`data-champion` 恆 true） | `season_recap` #2 紅（金色紀律） |
+| 5 | 拿掉 `RecapHonor` 的左緣金線與底色 | **不要求紅**——純視覺，gate 本來就不該管；列在這裡是提醒**人眼**要看 |
+
+⚠ 第 5 項點出一件事：**視覺品質本身沒有自動化防護。**
+⇒ 第二輪交付**必須**附 Desktop 與 Mobile 390px 的 headed 截圖，人眼 review。
+
+### W.2 完整驗證（宣稱完成前必跑）
+
+```
+node tools/browser_check_season_recap_ui.mjs   # 19/19
+node tools/browser_check_career_final_ui.mjs   # 12/12
+node tools/browser_check_asia_finals_ui.mjs    # 15/15
+node tools/browser_check_team_honors_ui.mjs    # 15/15
+node tools/browser_check_circuit_points_ui.mjs # 21/21
+node tools/verify.mjs                          # 21/29（8 個既有紅燈見 05_Sprint紀錄）
+```
+
+## X. 明確不做
+
+- ❌ **不做紙本感／米色紙／襯線體／印章圖樣**。那是把亮色印刷品硬套進深色 UI，
+  而且會撞上目前 AI 設計最常見的那套預設（米色紙＋高對比襯線＋陶土色）。
+- ❌ **不做六張浮起卡片**（§1 明文禁止，且主幹已經到處都是 Panel）。
+- ❌ **不做大數字＋漸層 hero**。Recap 沒有單一英雄數字，硬造一個就是為了視覺而選資料。
+- ❌ **不做 01/02/03 章節編號**（§S：順序編碼的是重要性不是次序）。
+- ❌ **不重複 Q7e 的刻線／壓印金屬質感**（§Q）。
+- ❌ **不做失敗畫面**。沒奪冠不是失敗，不得有紅字、灰掉、降透明度、或「可惜」類文案。
+- ❌ **不新增資料、不自己推導結果**。摘要仍是 §C.1 那五句，一字不多。
+- ❌ **不新增色票**。`GC` 以外只允許既有色的 alpha 變體，且要在檔頭註明理由。
+
+## Y. 給 Codex 的實作提示詞
+
+```
+# STEP 0 — 工作樹護欄
+
+1. cd 到 Q7f worktree（q7b2）
+2. git log 必須包含 completion commit 104881e
+3. git status --short 必須乾淨
+4. 若 cwd 落在 D:/OneDrive/文件/GitHub/ESMO 主 repo，立即停止
+5. 任一護欄不符就回報，不要自行修
+
+# 任務：Q7f 第二輪視覺 Polish（signature：賽季成績單 SEASON REPORT）
+
+讀 docs/design/Q7f_賽季總結UI規格.md 的**附錄全文**（§Q–§X）。
+
+只改 src/screens/manage/seasonRecap/ 底下的檔案（含 recapStyles.js）。
+
+## 絕對不可以做的事
+
+- 不得改 src/platform/profileStore.js（一行都不行）
+- 不得改任何資料來源、truth 語意、rollover handler
+- 不得改 §V 列出的任何 data-testid / data-* 屬性
+- 不得破壞 §V.1 的 span:last-child 結構
+- 不得新增 Router / page / flow state
+- 不得新增色票（GC 以外只允許既有色的 alpha 變體，且檔頭註明理由）
+- 不得為了視覺去改摘要文案、名次、積分、資格判斷
+- 不得動 tools/ 底下任何 verifier
+
+## 必做
+
+- §R 的封存線（全頁唯一 2px）與 R.1 的唯一一段動態（含 reduced-motion 保護）
+- §S 的層級階梯（眉標＋左緣線權重，照表逐項）
+- §T 的色彩紀律：金色只出現在兩個地方，摘要新增 data-champion
+- §U 的 maxWidth 560 收斂、不做浮起卡片
+- §U.2 的手機字級與不溢出
+- §W.1 的四個 mutation（第 5 項是人眼項，不用自動化）
+
+## 驗證（宣稱完成前必跑，見 §W.2）
+
+完成後 commit，不 push、不 deploy。回報：
+① 護欄輸出　② git diff --stat　③ §V 的 contract 逐項確認未動
+④ 五支 browser gate 的數字　⑤ mutation 證據（改壞什麼、證明落地、是否紅、是否還原）
+⑥ Desktop 與 Mobile 390px 的 headed 截圖　⑦ 做不到的部分與原因
+```
+
+## Z. 設計自我批判（為什麼是這個方案，不是別的）
+
+方法論要求先產生方案再對照「這會不會是任何類似題目都會產出的預設答案」。
+以下是被否決的方向與理由：
+
+| 被否決的方向 | 為什麼否決 |
+|---|---|
+| 米色紙＋襯線體＋印章 | 目前 AI 設計三大預設之一；且與深色 UI／`GC` 正面衝突 |
+| 六張各自 elevation 的卡片 | 使用者 §1 明文禁止；主幹已經 Panel 過載 |
+| 大數字＋漸層 accent | 方法論點名的「模板答案」；Recap 沒有單一英雄數字 |
+| 01/02/03 章節編號 | 這些區塊不是流程；序號會謊稱有次序關係 |
+| 重複 Q7e 的壓印金屬感 | signature 已經花在那裡，重複會讓兩個畫面難以分辨 |
+| 整頁鍍金慶祝奪冠 | 使用者 §3 明文禁止；且會讓沒奪冠的版本看起來像壞掉 |
+
+**保留的一個風險**：把 `S{season}` 設成全頁最大的字（30px MONO），
+比戰隊名、比年度榮耀都大。直覺上會覺得該讓冠軍最大。
+理由是 §T——**這是一份記錄，記錄的身分是賽季**；榮耀靠**顏色**取得最高層級，
+標頭靠**尺寸**取得收束感，兩者在不同軸上，不互相削弱。
+若實作後人眼 review 覺得標頭壓過了榮耀，**先調標頭尺寸，不要往榮耀加金色**。
