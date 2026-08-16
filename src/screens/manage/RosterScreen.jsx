@@ -12,7 +12,7 @@ import React, { useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import {
   STAT_DEF, STAT_CATS, MOBA_ROLES, ROSTER_CAP,
-  calcPower, posFit, bestPositions, personalityById, CS_ROLE_BY_MOBA_ROLE,
+  calcPower, posFit, bestPositions, personalityById, CS_ROLE_BY_MOBA_ROLE, csSuitabilityOf,
 } from "../../data/playerModel.js";
 import { calculateLevelProgress } from "../../platform/progress/playerLevel.js";
 import { latestGrowth, growthLogOf } from "../../platform/progress/growthLog.js";
@@ -46,7 +46,6 @@ const CS_REP_KEYS = Object.freeze({
 });
 
 const csRoleOf = (p) => CS_ROLE_BY_MOBA_ROLE[p?.role] || "rifler";
-const fpsRoleLabel = (pos) => String(pos || "").replace(/^FPS/, "") || "未指定";
 
 function CsStatChips({ player, role }) {
   const keys = CS_REP_KEYS[role] || CS_REP_KEYS.rifler;
@@ -66,22 +65,22 @@ function CsStatChips({ player, role }) {
   );
 }
 
-function CsIdentity({ player, positions, compact = false }) {
+function CsIdentity({ player, positions }) {
   const role = csRoleOf(player);
-  const suitability = (positions?.fpsAll || []).slice(0, compact ? 1 : 3);
+  const suitability = csSuitabilityOf(positions).slice(0, 3);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: compact ? 2 : 4, minWidth: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
-        {!compact && <span style={{ color: "#fb923c", fontSize: 11, fontWeight: 800 }}>CS · {CS_ROLE_LABELS[role]}</span>}
-        {!compact && <span style={{ color: GC.gray, fontSize: 9 }}>自由 role identity</span>}
+        <span style={{ color: "#fb923c", fontSize: 11, fontWeight: 800 }}>{CS_ROLE_LABELS[role]}</span>
+        <span style={{ color: GC.gray, fontSize: 9 }}>自由 role identity</span>
       </div>
-      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+      {suitability.length > 0 && <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
         {suitability.map((item) => (
           <span key={item.pos} style={{ color: GC.gray, fontSize: 8, background: "rgba(255,255,255,0.05)", borderRadius: 5, padding: "2px 5px" }}>
-            {fpsRoleLabel(item.pos)} {item.fit}
+            {item.label} {item.fit}
           </span>
         ))}
-      </div>
+      </div>}
     </div>
   );
 }
@@ -187,7 +186,7 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
                   <span style={{ color: "white", fontSize: 13, fontWeight: 800 }}>{p.name}</span>
                   {/* S26【A】：選手等級直接讀 profileStore 持久化值（賽後升級即時反映） */}
                   <span style={{ color: GC.gold, fontSize: 9, fontWeight: 800, background: "rgba(251,191,36,0.12)", borderRadius: 5, padding: "1px 5px" }}>Lv.{p.lv ?? 1}</span>
-                  {isCsView ? <span style={{ color: "#fb923c", fontSize: 9, fontWeight: 700 }}>CS · {CS_ROLE_LABELS[csRole]}</span> : <span style={{ color: GC.gray, fontSize: 9 }}>{p.role}</span>}
+                  {isCsView ? <span style={{ color: "#fb923c", fontSize: 9, fontWeight: 700 }}>{CS_ROLE_LABELS[csRole]}</span> : <span style={{ color: GC.gray, fontSize: 9 }}>{p.role}</span>}
                   {personalityById(p.personality) && <span style={{ fontSize: 10 }}>{personalityById(p.personality).emoji}</span>}
                   {String(p.id).startsWith("r") && <span style={{ color: GC.green, fontSize: 7, fontWeight: 700 }}>🆕</span>}
                   {/* O2：可否出賽——顏色配文字，不只靠顏色 */}
@@ -214,7 +213,6 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
                 <div style={{ display: "flex", gap: 7, marginTop: 3, flexWrap: "wrap", minWidth: 0 }}>
                   {isCsView ? (
                     <>
-                      <CsIdentity player={p} positions={bestPositions(dp)} compact />
                       <CsStatChips player={dp} role={csRole} />
                     </>
                   ) : (
@@ -234,11 +232,10 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
                 </div>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ display: "flex", gap: 4, justifyContent: "flex-end", marginBottom: 2 }}>
-                  <span style={{ color: GC.purp, fontSize: 9, fontWeight: 700 }}>M{mp}</span>
-                  <span style={{ color: "#fb923c", fontSize: 9, fontWeight: 700 }}>{isCsView ? `FPS ${fp}` : `F${fp}`}</span>
+                  <div style={{ display: "flex", gap: 4, justifyContent: "flex-end", marginBottom: 2 }}>
+                  <span style={{ color: isCsView ? "#fb923c" : GC.purp, fontSize: 9, fontWeight: 700 }}>{isCsView ? `FPS ${fp}` : `MOBA ${mp}`}</span>
                 </div>
-                {isCsView && <div style={{ color: GC.gold, fontSize: 8, fontWeight: 700, marginBottom: 2 }}>潛力 {p.potential ?? 80}</div>}
+                <div style={{ color: GC.gold, fontSize: 8, fontWeight: 700, marginBottom: 2 }}>潛力 {p.potential ?? 80}</div>
                 {talentMode ? (
                   <span data-testid="talent-open" style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "rgba(167,139,250,0.16)", border: `1px solid ${GC.purp}66`, color: "#ddd6fe", fontSize: 9, fontWeight: 800, borderRadius: 6, padding: "3px 7px", whiteSpace: "nowrap" }}>
                     🌿 查看天賦{Number(p.talentPoints) > 0 ? ` · ${p.talentPoints}點` : ""}
@@ -276,7 +273,7 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
                 <div style={{ flex: 1 }}>
                   <div style={{ color: "white", fontSize: 17, fontWeight: 900 }}>{sel.name}</div>
                   {/* S26【C】：移除靜態英雄綁定（英雄只在 MOBA 流程顯示）；【A】改顯示持久化 XP */}
-                  <div style={{ color: GC.gray, fontSize: 10 }}>{detailMode === "CS" ? `CS · ${CS_ROLE_LABELS[csRole]}` : sel.role} · Lv.{lp.newLevel} · XP {lp.xpIntoLevel}/{lp.xpForNextLevel}</div>
+                  <div style={{ color: GC.gray, fontSize: 10 }}>{detailMode === "CS" ? CS_ROLE_LABELS[csRole] : sel.role} · Lv.{lp.newLevel} · XP {lp.xpIntoLevel}/{lp.xpForNextLevel}</div>
                   <div style={{ marginTop: 3, height: 3, width: 140, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden" }}>
                     <div style={{ height: "100%", width: `${Math.min(100, Math.round((lp.xpIntoLevel / lp.xpForNextLevel) * 100))}%`, background: `linear-gradient(90deg,${GC.blue},${GC.blueL})` }} />
                   </div>
@@ -302,12 +299,12 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
                 <div style={{ flex: 1, background: detailMode === "MOBA" ? "rgba(167,139,250,0.18)" : "rgba(167,139,250,0.12)", borderRadius: 8, padding: 7 }}>
                   <div style={{ color: GC.purp, fontSize: 8 }}>MOBA 戰力</div>
                   <div style={{ color: "white", fontSize: 15, fontWeight: 800 }}>{mp}</div>
-                  <div style={{ color: GC.gray, fontSize: 7 }}>適 {bp.moba.pos.replace("MOBA", "")}</div>
+                  <div style={{ color: GC.gray, fontSize: 7 }}>{detailMode === "MOBA" ? `適 ${bp.moba.pos.replace("MOBA", "")}` : "切換至 MOBA 查看適配"}</div>
                 </div>
                 <div style={{ flex: 1, background: detailMode === "CS" ? "rgba(251,146,60,0.2)" : "rgba(251,146,60,0.12)", borderRadius: 8, padding: 7 }}>
                   <div style={{ color: "#fb923c", fontSize: 8 }}>FPS 戰力</div>
                   <div style={{ color: "white", fontSize: 15, fontWeight: 800 }}>{fp}</div>
-                  <div style={{ color: GC.gray, fontSize: 7 }}>適 {bp.fps.pos.replace("FPS", "")}</div>
+                  <div style={{ color: GC.gray, fontSize: 7 }}>{detailMode === "CS" ? `角色 ${CS_ROLE_LABELS[csRole]}` : `適 ${bp.fps.pos.replace("FPS", "")}`}</div>
                 </div>
                 <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: 7 }}>
                   <div style={{ color: GC.gray, fontSize: 8 }}>狀態</div>
@@ -354,20 +351,22 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
                   )}
                 </div>
 
-                <div style={{ color: GC.gray, fontSize: 9, marginBottom: 5 }}>角色定位（切換看適配性）</div>
-                <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
-                  {MOBA_ROLES.map((rl) => {
-                    const fit = posFit(dsel, "MOBA" + rl);
-                    const isCur = sel.role === rl;
-                    return (
-                      <button key={rl} onClick={() => setPlayerRole(sel.id, rl)}
-                        style={{ flex: "1 1 30%", padding: "6px 4px", borderRadius: 8, border: `1px solid ${isCur ? GC.purp : "rgba(255,255,255,0.08)"}`, background: isCur ? `${GC.purp}22` : "transparent", cursor: "pointer", textAlign: "center" }}>
-                        <div style={{ color: isCur ? GC.purp : "#d4d4d8", fontSize: 10, fontWeight: 700 }}>{rl}</div>
-                        <div style={{ color: fit >= 75 ? GC.green : fit >= 60 ? GC.gold : GC.gray, fontSize: 8 }}>適配 {fit}</div>
-                      </button>
-                    );
-                  })}
-                </div>
+                {detailMode === "MOBA" && <>
+                  <div style={{ color: GC.gray, fontSize: 9, marginBottom: 5 }}>角色定位（切換看適配性）</div>
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
+                    {MOBA_ROLES.map((rl) => {
+                      const fit = posFit(dsel, "MOBA" + rl);
+                      const isCur = sel.role === rl;
+                      return (
+                        <button key={rl} onClick={() => setPlayerRole(sel.id, rl)}
+                          style={{ flex: "1 1 30%", padding: "6px 4px", borderRadius: 8, border: `1px solid ${isCur ? GC.purp : "rgba(255,255,255,0.08)"}`, background: isCur ? `${GC.purp}22` : "transparent", cursor: "pointer", textAlign: "center" }}>
+                          <div style={{ color: isCur ? GC.purp : "#d4d4d8", fontSize: 10, fontWeight: 700 }}>{rl}</div>
+                          <div style={{ color: fit >= 75 ? GC.green : fit >= 60 ? GC.gold : GC.gray, fontSize: 8 }}>適配 {fit}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>}
 
                 {/* Milestone O2：出賽狀態（等級進度／體力／連續出賽／傷停／可否出賽） */}
                 {(() => {

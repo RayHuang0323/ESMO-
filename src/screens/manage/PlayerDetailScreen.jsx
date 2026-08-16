@@ -16,7 +16,7 @@
 import React, { useEffect, useState } from "react";
 import { ChevronDown, Target, Smile, Battery, Star, Zap } from "lucide-react";
 import { useProfileStore } from "../../platform/profileStore.js";
-import { STAT_DEF, calcPower, bestPositions, personalityById, CS_ROLE_BY_MOBA_ROLE } from "../../data/playerModel.js";
+import { STAT_DEF, calcPower, bestPositions, personalityById, CS_ROLE_BY_MOBA_ROLE, csSuitabilityOf } from "../../data/playerModel.js";
 import { TIERS } from "../../data/recruitPool.js";
 import { calculateLevelProgress } from "../../platform/progress/playerLevel.js";
 import { getStatLayers } from "../../platform/talents/playerDerivedStats.js";
@@ -28,7 +28,6 @@ import ManageFrame from "./ManageFrame.jsx";
 const HIGH = 74;
 const CS_ROLE_LABELS = Object.freeze({ entry: "突破手", rifler: "步槍手", awp: "狙擊手", lurker: "游走手", igl: "指揮" });
 const csRoleOf = (player) => CS_ROLE_BY_MOBA_ROLE[player?.role] || "rifler";
-const fpsRoleLabel = (pos) => String(pos || "").replace(/^FPS/, "") || "未指定";
 const csHighlights = (player) => {
   const rows = STAT_DEF.map((def) => ({ def, value: Math.round(player.stats?.[def.key] ?? 50) })).sort((a, b) => b.value - a.value);
   return { strengths: rows.slice(0, 2), weaknesses: rows.slice(-2).reverse() };
@@ -111,6 +110,7 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
   const pow = calcPower(derivedPlayer, gameMode === "CS" ? "fps" : "moba");
   const csRole = csRoleOf(p);
   const highlights = csHighlights(derivedPlayer);
+  const csSuitability = csSuitabilityOf(bp);
   const data = STAT_DEF.map((s) => ({
     label: s.zh,
     bonus: layers.talentBonus[s.key] ?? 0,
@@ -131,10 +131,10 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
 
   const TAGS = [
     gameMode === "CS"
-      ? { label: `CS · ${CS_ROLE_LABELS[csRole]}`, color: "#fb923c", bg: "rgba(251,146,60,0.15)", border: "rgba(251,146,60,0.3)" }
+      ? { label: CS_ROLE_LABELS[csRole], color: "#fb923c", bg: "rgba(251,146,60,0.15)", border: "rgba(251,146,60,0.3)" }
       : { label: p.role, color: "#60a5fa", bg: "rgba(96,165,250,0.15)", border: "rgba(96,165,250,0.3)" },
     gameMode === "CS"
-      ? { label: `適 ${fpsRoleLabel(bp.fps.pos)}`, color: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)" }
+      ? { label: csSuitability[0] ? `適 ${csSuitability[0].label} ${csSuitability[0].fit}` : "CS role identity", color: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)" }
       : { label: `適 ${bp.moba.pos.replace("MOBA", "")}`, color: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)" },
     { label: p.status || "預備隊", color: "#34d399", bg: "rgba(52,211,153,0.12)", border: "rgba(52,211,153,0.28)" },
   ];
@@ -245,7 +245,7 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
 
             <div style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.25)", borderRadius: 10, padding: "6px 12px" }}>
               <Target size={11} style={{ color: "#60a5fa" }} />
-              <span style={{ color: gameMode === "CS" ? "#fb923c" : "#60a5fa", fontSize: 11, fontWeight: 800 }}>{gameMode === "CS" ? `CS · ${CS_ROLE_LABELS[csRole]}` : p.role}</span>
+              <span style={{ color: gameMode === "CS" ? "#fb923c" : "#60a5fa", fontSize: 11, fontWeight: 800 }}>{gameMode === "CS" ? CS_ROLE_LABELS[csRole] : p.role}</span>
             </div>
           </div>
 
@@ -256,8 +256,8 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
                 <span style={{ color: "#a1a1aa", fontSize: 9 }}>Learning {Math.round(layers.derived.learning ?? 50)}</span>
               </div>
               <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 6 }}>
-                {(bp.fpsAll || []).slice(0, 3).map((item) => (
-                  <span key={item.pos} style={{ color: "#d4d4d8", background: "rgba(255,255,255,0.06)", borderRadius: 6, padding: "3px 6px", fontSize: 9 }}>適 {fpsRoleLabel(item.pos)} {item.fit}</span>
+                {csSuitability.slice(0, 3).map((item) => (
+                  <span key={item.pos} style={{ color: "#d4d4d8", background: "rgba(255,255,255,0.06)", borderRadius: 6, padding: "3px 6px", fontSize: 9 }}>適 {item.label} {item.fit}</span>
                 ))}
               </div>
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 7, fontSize: 9 }}>

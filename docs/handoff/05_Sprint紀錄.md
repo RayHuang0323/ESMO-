@@ -7464,3 +7464,11 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - CS role 由既有 player model 推導為 gameplay identity，不是 roster slot；UI 與 verifier 明確允許 role 重複／缺少，賽前準備仍由既有流程從現役名單挑選本場選手。
 - 新增 `tools/check_roster_ui_r58.mjs` 並加入 `tools/verify.mjs`。focused、R56 roster、R57 matchup、progress25、Q7a、production build 低併發 `6/6 PASS`；desktop default 與 390px 窄視窗 DOM／overflow smoke PASS。真機觸控、FPS 與視覺體感未實測。
 - R58 verdict：**Go**；本地 commit 完成後不 push。
+
+## R58.1 MOBA / CS 選手名單資料與 UI 一致性修正（2026-08-17）
+
+- 以 R58 `af8498770127fab270ad361a694792151924b253` 為基線；本輪只修 `RosterScreen`、`PlayerDetailScreen`、`playerModel` 的 presentation helper 與 focused verifier，未改 16 項公式、招募、賽前選人、roster generation、Store、賽季／賽事。
+- 根因：CS 卡片多了一層 `CS ·` 與 suitability chip、potential 只在 CS 分支呈現、戰力同時顯示 M/F；modal 的 shared role/status 區塊未將 MOBA 五路 editor 限定在 MOBA mode，造成 CS mode 的 MOBA UI leakage。
+- 修正：MOBA／CS 卡片統一為 current-game power、Lv、current role、4 項代表能力、potential、roster status；CS 詳情只保留 current CS identity 與真實 canonical suitability。既有 model 沒有 Lurker suitability，因此明確不將 `FPS輔助` 映射為 Lurker。
+- 新增 `csSuitabilityOf()` 與 `tools/check_roster_ui_r581.mjs`，加入 `tools/verify.mjs`；R58.1 focused、R58 focused、production build、desktop／390×844 smoke、瀏覽器 error log、syntax 與 `git diff --check` PASS。
+- R58.1 verdict：**Go**；完成 local commit，不 push。

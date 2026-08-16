@@ -70,6 +70,7 @@ const SEGMENTS = [
   { id: "cs_roster_v1_r56", script: "tools/check_cs_roster_v1_r56.mjs", shape: /CS Roster v1 R56: PASS/, note: "CS formal AI teams and roster v1" },
   { id: "cs_matchup_acceptance_r57", script: "tools/check_cs_matchup_acceptance_r57.mjs", shape: /CS Matchup Acceptance R57: PASS/, note: "CS formal AI-team deterministic matchup acceptance" },
   { id: "roster_ui_r58", script: "tools/check_roster_ui_r58.mjs", shape: /Roster UI R58: PASS/, note: "MOBA / CS unified roster UI and free role identity" },
+  { id: "roster_ui_r581", script: "tools/check_roster_ui_r581.mjs", shape: /Roster UI R58\.1: PASS/, note: "MOBA / CS roster hierarchy and mode-specific role suitability" },
   { id: "cs_mapaware_measurement_r37", script: "tools/check_cs_mapaware_measurement_r37.mjs", shape: /CS Map Awareness Measurement \/ Calibration Readiness R37: PASS/, note: "CS Map Awareness spatial read-point measurement" },
   { id: "cs_clutch_measurement_r30", script: "tools/check_cs_clutch_measurement_r30.mjs", shape: /CS Clutch Measurement \/ Calibration Readiness R30: PASS/, note: "CS Clutch read-chain deterministic calibration-readiness measurement" },
   { id: "cs_resilience_measurement_r31", script: "tools/check_cs_resilience_measurement_r31.mjs", shape: /CS Resilience Measurement \/ Calibration Readiness R31: PASS/, note: "CS Resilience read-chain deterministic calibration-readiness measurement" },
