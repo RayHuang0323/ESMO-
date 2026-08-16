@@ -1,9 +1,12 @@
-// 戰隊發展 v1 focused verifier
+#!/usr/bin/env node
+// R59.1 focused verifier：戰隊發展路線、相容性與真實效果讀取點。
 import { readFileSync } from "node:fs";
 import {
   TEAM_DEVELOPMENT_CATEGORIES,
   TEAM_DEVELOPMENT_NODES,
+  teamDevelopmentLevelEffect,
   teamDevelopmentNodeById,
+  teamDevelopmentNodesByCategory,
   sanitizeTeamDevelopment,
   validateTeamDevelopmentState,
   applyTeamDevelopmentPurchase,
@@ -16,26 +19,38 @@ const ck = (label, ok) => {
 };
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
-ck("四個發展分類各自存在", TEAM_DEVELOPMENT_CATEGORIES.length === 4 && ["general", "moba", "cs", "management"].every((id) => TEAM_DEVELOPMENT_CATEGORIES.some((x) => x.id === id)));
-ck("v1 只建立少量代表節點", TEAM_DEVELOPMENT_NODES.length === 8 && TEAM_DEVELOPMENT_NODES.every((node) => node.maxRank === 1 && node.costPerRank === 1));
-ck("節點沒有直接玩家 stat effect", TEAM_DEVELOPMENT_NODES.every((node) => !node.effect?.stat && node.effect?.kind));
+ck("四個發展分類", TEAM_DEVELOPMENT_CATEGORIES.length === 4 && ["general", "moba", "cs", "management"].every((id) => TEAM_DEVELOPMENT_CATEGORIES.some((x) => x.id === id)));
+ck("20 個節點與每類五項", TEAM_DEVELOPMENT_NODES.length === 20 && TEAM_DEVELOPMENT_CATEGORIES.every((cat) => teamDevelopmentNodesByCategory(cat.id).length === 5));
+ck("基礎、進階、專精路線", TEAM_DEVELOPMENT_CATEGORIES.every((cat) => {
+  const tiers = teamDevelopmentNodesByCategory(cat.id).map((node) => node.tier);
+  return tiers.filter((tier) => tier === "base").length === 2 && tiers.filter((tier) => tier === "advanced").length === 2 && tiers.filter((tier) => tier === "specialty").length === 1;
+}));
+ck("三格等級與下一級說明", TEAM_DEVELOPMENT_NODES.every((node) => node.maxRank === 3 && node.costPerRank === 1 && node.levelEffects.length === 3 && teamDevelopmentLevelEffect(node, 0)));
+ck("效果不直接寫入選手能力", TEAM_DEVELOPMENT_NODES.every((node) => !node.effect?.stat));
 
 const migrated = sanitizeTeamDevelopment(null, 3);
-ck("舊存檔從 legacy pool 相容出發展點", migrated.availablePoints === 3 && migrated.spentPoints === 0 && validateTeamDevelopmentState(migrated).ok);
+ck("舊存檔初始化與狀態驗證", migrated.availablePoints === 3 && migrated.spentPoints === 0 && validateTeamDevelopmentState(migrated).ok);
 const dirty = sanitizeTeamDevelopment({ availablePoints: -4, ranks: { general_training_flow: 9, unknown: 3 } });
-ck("損壞 state 安全清洗", dirty.availablePoints === 0 && dirty.ranks.general_training_flow === 1 && !dirty.ranks.unknown && validateTeamDevelopmentState(dirty).ok);
+ck("舊資料清理與等級上限", dirty.availablePoints === 0 && dirty.ranks.general_training_flow === 3 && !dirty.ranks.unknown && validateTeamDevelopmentState(dirty).ok);
 
-const first = applyTeamDevelopmentPurchase(migrated, "general_training_flow", { now: 100 });
-ck("第一次投入只扣一點", first.receipt.success && first.nextState.availablePoints === 2 && first.nextState.spentPoints === 1 && first.nextState.ranks.general_training_flow === 1);
-const duplicate = applyTeamDevelopmentPurchase(first.nextState, "general_training_flow", { now: 101 });
-ck("滿級重複操作不再扣點", !duplicate.receipt.success && duplicate.nextState === null && duplicate.receipt.remainingPoints === 2);
+const level1 = applyTeamDevelopmentPurchase(migrated, "general_training_flow", { now: 100 });
+const level2 = applyTeamDevelopmentPurchase(level1.nextState, "general_training_flow", { now: 101 });
+const level3 = applyTeamDevelopmentPurchase(level2.nextState, "general_training_flow", { now: 102 });
+ck("Lv.0 到 Lv.3 逐級投入", level1.receipt.success && level2.receipt.success && level3.receipt.success && level3.nextState.availablePoints === 0 && level3.nextState.spentPoints === 3 && level3.nextState.ranks.general_training_flow === 3);
+const maxed = applyTeamDevelopmentPurchase(level3.nextState, "general_training_flow", { now: 103 });
+ck("完成後不可重複投入", !maxed.receipt.success && maxed.nextState === null && maxed.receipt.remainingPoints === 0);
+
 const blocked = applyTeamDevelopmentPurchase(migrated, "moba_draft_intel", { now: 100 });
-ck("前置條件確實阻擋", !blocked.receipt.success && /英雄研究室/.test(blocked.receipt.failureReason));
+ck("前置條件會阻擋升級", !blocked.receipt.success && /英雄研究室/.test(blocked.receipt.failureReason));
 const moba1 = applyTeamDevelopmentPurchase(migrated, "moba_hero_lab", { now: 100 });
-const moba2 = applyTeamDevelopmentPurchase(moba1.nextState, "moba_draft_intel", { now: 100 });
-ck("完成前置後可解鎖下一節點", moba1.receipt.success && moba2.receipt.success && moba2.nextState.ranks.moba_draft_intel === 1);
-const effects = teamDevelopmentEffects({ availablePoints: 0, ranks: { general_training_flow: 1, general_recovery: 1, management_scout_network: 1, moba_hero_lab: 1 } });
-ck("效率與資訊解鎖由同一 state 推導", effects.trainingDaysReduction === 1 && effects.dailyRecoveryBonus === 4 && effects.scoutDaysReduction === 1 && effects.unlocks.mobaResearch === "英雄研究");
+const moba2 = applyTeamDevelopmentPurchase(moba1.nextState, "moba_draft_intel", { now: 101 });
+ck("完成前置後可解鎖下一項", moba1.receipt.success && moba2.receipt.success && moba2.nextState.ranks.moba_draft_intel === 1);
+const mobaFuture = applyTeamDevelopmentPurchase(moba1.nextState, "moba_hero_lab", { now: 102 });
+ck("既有解鎖的後續等級不假裝生效", !mobaFuture.receipt.success && /規劃/.test(mobaFuture.receipt.failureReason));
+
+const effects = teamDevelopmentEffects({ availablePoints: 0, ranks: { general_training_flow: 3, general_recovery: 2, management_scout_network: 1, moba_hero_lab: 1, general_data_analysis: 3 } });
+ck("真實 consumer 依等級累計", effects.trainingDaysReduction === 3 && effects.dailyRecoveryBonus === 8 && effects.scoutDaysReduction === 1 && effects.unlocks.mobaResearch === "英雄研究支援");
+ck("規劃中節點不產生假效果", !effects.unlocks.generalDataAnalysis && Object.keys(effects.unlocks).length === 1);
 
 const repeatedA = applyTeamDevelopmentPurchase(migrated, "general_recovery", { now: 555 });
 const repeatedB = applyTeamDevelopmentPurchase(migrated, "general_recovery", { now: 555 });
@@ -46,14 +61,17 @@ const dashboard = read("src/screens/DashboardScreen.jsx");
 const shell = read("src/AppShell.jsx");
 const personal = read("src/screens/manage/PlayerTalentScreen.jsx");
 const training = read("src/screens/manage/TrainingScreen.jsx");
-ck("profileStore migration 與唯一 write hook", /PROFILE_SCHEMA_VERSION = 10/.test(store) && /teamDevelopment: sanitizeTeamDevelopment/.test(store) && /purchaseTeamDevelopment\(nodeId\)/.test(store));
-ck("戰隊發展效率接入訓練／恢復", /trainingDaysReduction/.test(store) && /recoveryBonus/.test(store));
-ck("首頁入口改為戰隊發展", /label="戰隊發展"/.test(dashboard) && /teamDevelopment/.test(dashboard) && /TeamDevelopmentScreen/.test(shell));
-ck("個人天賦改為被動特質相容檢視", /選手個人天賦/.test(personal) && /既有個人天賦資料/.test(personal) && !/確認投入/.test(personal) && !/purchasePlayerTalent/.test(personal));
-ck("訓練仍走既有流程", /assignTraining/.test(training) && /advanceTrainingDay/.test(training) && /StatGainList/.test(training));
+const development = read("src/screens/manage/TeamDevelopmentScreen.jsx");
+ck("profileStore migration 與 write hook", /PROFILE_SCHEMA_VERSION = 10/.test(store) && /teamDevelopment: sanitizeTeamDevelopment/.test(store) && /purchaseTeamDevelopment\(nodeId\)/.test(store));
+ck("訓練與恢復讀取戰隊效果", /trainingDaysReduction/.test(store) && /recoveryBonus/.test(store));
+ck("首頁入口與頁面路由", /teamDevelopment/.test(dashboard) && /TeamDevelopmentScreen/.test(shell));
+ck("個人天賦未被改成投資樹", /purchasePlayerTalent/.test(personal) === false && /PlayerTalent/.test(personal));
+ck("訓練流程維持既有入口", /assignTraining/.test(training) && /advanceTrainingDay/.test(training) && /StatGainList/.test(training));
+ck("GSAP 路線回饋與減少動態支援", /useGSAP/.test(development) && /gsap\.timeline/.test(development) && /gsap\.utils\.toArray/.test(development) && /prefers-reduced-motion/.test(development));
+ck("玩家用語與路線資訊", /下一級效果/.test(development) && /發展路線/.test(development) && !/consumer|reducer|schema|production/.test(development));
 
-// 以實際 Store hook 驗證投入會寫回俱樂部 state，但不會改寫選手能力。
-const { useProfileStore } = await import("../src/platform/profileStore.js?team_development_v1");
+// Store hook runtime check：確認升級只改俱樂部 state，並仍會被訓練讀取。
+const { useProfileStore } = await import("../src/platform/profileStore.js?team_development_v15");
 const liveStore = useProfileStore;
 const originalState = liveStore.getState();
 const originalTeamDevelopment = originalState.teamDevelopment;
@@ -63,14 +81,14 @@ liveStore.setState({ teamDevelopment: sanitizeTeamDevelopment({ availablePoints:
 const beforeStats = JSON.stringify(liveStore.getState().players.map((p) => ({ id: p.id, stats: p.stats, talentPoints: p.talentPoints })));
 const liveReceipt = liveStore.getState().purchaseTeamDevelopment("general_training_flow");
 const afterPurchase = liveStore.getState();
-ck("實際 Store 投入只寫回戰隊發展 state", liveReceipt.success && afterPurchase.teamDevelopment.availablePoints === 0 && afterPurchase.teamDevelopment.spentPoints === 1);
-ck("戰隊發展投入不直接改選手能力", beforeStats === JSON.stringify(afterPurchase.players.map((p) => ({ id: p.id, stats: p.stats, talentPoints: p.talentPoints }))));
+ck("Store 升級寫入俱樂部 state", liveReceipt.success && afterPurchase.teamDevelopment.availablePoints === 0 && afterPurchase.teamDevelopment.spentPoints === 1);
+ck("升級不改選手 stats", beforeStats === JSON.stringify(afterPurchase.players.map((p) => ({ id: p.id, stats: p.stats, talentPoints: p.talentPoints }))));
 liveStore.setState({
   teamDevelopment: sanitizeTeamDevelopment({ availablePoints: 1, ranks: { general_training_flow: 1 } }),
   players: originalPlayers.map((p) => p.id === firstPlayerId ? { ...p, training: null, energy: 100 } : p),
 });
 const assigned = liveStore.getState().assignTraining(firstPlayerId, "aim");
-ck("戰隊發展效率接入既有訓練排程", assigned && liveStore.getState().players.find((p) => p.id === firstPlayerId)?.training?.daysLeft === 1);
+ck("訓練讀取流程效果", assigned && liveStore.getState().players.find((p) => p.id === firstPlayerId)?.training?.daysLeft === 1);
 liveStore.setState({ teamDevelopment: originalTeamDevelopment, players: originalPlayers });
 
-console.log("Team Development v1: PASS");
+console.log("Team Development v1.5: PASS");

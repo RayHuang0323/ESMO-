@@ -7498,3 +7498,9 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 
 - `team_development_v1` focused verifier PASS，含實際 Store 投入、重複操作、訓練排程與 player stats 不變斷言。
 - `talent27` compatibility、`progress25`、growth、roster、CS、tactic gates、production build、syntax、`git diff --check` 與 browser desktop／390px smoke PASS；local-only，未 push。
+## R59.1 戰隊發展 v1.5（2026-08-17）
+
+- 將 R59 的 8 個節點擴充為通用、MOBA、CS、經營各 5 項，共 20 項；每類採基礎 2、進階 2、專精 1 的簡單前置路線。
+- 保留 `TeamDevelopmentState.v1` 與既有 ranks / points 相容格式。訓練、恢復、球探與既有賽前支援提示是目前真實讀取點；沒有讀取點的節點標示規劃中，不扣點、不產生假效果。
+- `TeamDevelopmentScreen` 改為長期路線總覽，加入分類投入程度、路線節點、Lv.0 / 3、三格進度與下一級效果。GSAP 僅用於 tab / card 進場、點數回饋與升級 pulse，支援 reduced-motion。
+- focused verifier：`tools/check_team_development_v1.mjs`（輸出 `Team Development v1.5: PASS`），runner segment：`team_development_v15`。
