@@ -9691,3 +9691,160 @@ JS 無法反射進閉包）。
 
 年度總決賽仍**沒有獎金**（榮耀與獎金分離，金額是產品決定）。
 榮耀只有一種類型（`asia_annual_champion`），**沒有泛化成 Award 系統**——那是另一個產品決定。
+
+---
+
+## Q7f 賽季總結 SEASON RECAP（2026-08-16，已 commit 未 push／未部署）
+
+賽季結束後玩家會從最後一場比賽直接跳進下一季，看不到「這一季發生了什麼」。
+本輪做出 **SEASON RECAP**：賽季封存後的成績單，CTA「開始第 N+1 賽季」移到它的最底部。
+
+### ⚠ 本輪是從一次電腦斷電中接手的
+
+Codex 執行 Q7f 途中主機斷電。恢復稽核（唯讀）確認：q7b2 worktree 存活、
+`HEAD` 精確停在規格 commit `178a956`、**沒有任何 Q7f 實作被 commit**，
+11 個檔案（06:18–17:16 寫入）全部只在 working tree。三支最後寫入的檔案
+檔尾結構完整、`node --check` 全過 ⇒ **沒有檔案被斷電截斷**。
+主 repo `milestone-n-finance` 當日零寫入，未受影響。
+
+⇒ 先建 **`2c9a643` WIP recovery checkpoint** 把成果落盤（commit message 明寫
+「未跑 verifier／未過 gate／未實測」），再開始驗收。
+**這顆 checkpoint 保留不 squash**——它是斷電當下的真實狀態，有稽核價值。
+
+| commit | 內容 |
+|---|---|
+| `178a956` | Q7f 規格（440 行，Claude） |
+| `2c9a643` | **WIP recovery checkpoint**：斷電前成果保全，13 檔 +945/−63，未經任何驗證 |
+
+### 做了什麼
+
+`CompetitionScreen` 賽季完成狀態下掛 `SeasonRecap`（**不新增 Router／page／flow state**），
+八個元件：`SeasonRecap` / `RecapHeader` / `RecapHonor` / `RecapAsiaFinals` /
+`RecapCircuit` / `RecapCircuitStop` / `RecapLeague` / `RecapNextSeason`。
+
+**資料層零改動**——`profileStore.js` 一行未動（規格 §B.1）。
+容器同時訂閱 `competition` 與 `honors` 兩個 slice，子元件全走 props。
+
+### ⚠ 稽核更正一：規格 §A.1 對 `playoff` 的記載是錯的
+
+規格把 `competitionView().playoff` 列為「Recap 當下可得」。**實測是錯的**：
+`seasonState.js:1078` 的 `playoffView()` 沒有「進行中」季後賽就回 `null`，
+而 Recap 依定義出現在**封存之後** ⇒ `playoff` 恆為 `null`。
+瀏覽器實測：`view.playoff === null`，同時 `careerFinal.playoffStageId` 有值。
+
+這與 §A.2 ① 的 `circuitHistory` 是同一族錯誤（拿賽季**進行中**量到的形狀當成 Recap 當下的形狀）。
+規格抓到三個，漏了這第四個。
+
+**Codex 的紀律失誤**：規格 §B.1 明寫「覺得少一個欄位就停下回報」，
+Codex 沒有停，自己補了 `"unknown"` 與 `?? playoff?.stageId` 兩個 fallback，
+然後寫了一條自己過不了的斷言（gate #5 首跑即紅）。
+
+⇒ **裁決：整列移除**（不用 `rankSource` 反推——語意是「名次從哪來」不是「有沒有晉級」；
+不為這一列新增投影）。規格 §A.1／§E／§H／§J#5 已同步更正，見 §A.2 ⑤。
+
+### ⚠ 稽核更正二：舊「最終名次 FINAL STANDINGS」Panel 由 Recap **正式取代**
+
+實作把整個舊 Panel 刪了，但規格 §D 只授權「把**按鈕**移進 Recap」。
+這讓 `browser_check_career_final_ui` #1/#3/#6 與 `browser_check_asia_finals_ui` #11
+共四條斷言變紅（它們用字面標題 `最終名次 FINAL STANDINGS` 定位）。
+
+⇒ **裁決：維持移除**（賽季結束畫面不該把同一份官方聯賽結果顯示兩次），
+但要求 `RecapLeague` **完整承接**舊 Panel 的七項產品語意，並把四條斷言遷移到 Recap 上。
+
+承接時補回兩項實作漏掉的：`careerFinal.sourceMix` 註腳（本季場次／實際對戰／模擬／棄權）、
+`RecapHeader` 的封存日（讀 **SeasonSeal** 的 `sealedAtDay`，不是 `careerFinal` 那一份）。
+另修正 `RecapPrize` 掉了 `$` 的金額格式回歸（`+150萬` → `+$150萬`，AGENTS.md §一致性）。
+
+⚠ **這是結構遷移，不是弱化斷言**：四條一條沒刪、守的事實一件沒少，
+且把原本的字串比對升級為 `data-*` 逐值比對（原版 `includes(String(rank))`
+在第 8 名時「8」可能被別處文字誤中）。詳見規格 §D.1 的承接對照表。
+
+### ⚠ 稽核更正三：規格 §J.1 的六項 mutation 有兩項假設是錯的、一項揭露真缺口
+
+| 項 | 結果 | 原因 |
+|---|---|---|
+| 4（`base × mult` 重算） | 落地但不紅 | `points` **本來就**恆等於 `base × mult`（實測逐筆為真，加總 450／150 相同）⇒ 無可觀察差異。改用只加總 `basePoints`（450→300）才紅 |
+| 5（塞 900px 元素） | 落地但不紅 | `recapStyles.shell` 有 `overflow: hidden`，塞在 Recap **內部**會被裁掉。改讓**外框自身** `minWidth: 0→900` 才紅 |
+| 3（資格永遠 true） | 落地但不紅 ⇒ **真缺口** | gate #8 只驗玩家存檔，而該存檔玩家**本來就已取得資格**。已補強成同時驗 AI 存檔（玩家未取得資格）那一側 ⇒ 雙向都有鑑別力 |
+
+⇒ **通則（寫進規格 §J.2）**：變異落地但 gate 沒紅有**三種**可能——
+(a) gate 漏檢、(b) 無鑑別力、(c) 被其他機制中和。**先分辨是哪一種，不可預設是 (a)。**
+
+### verifier 改動與理由（AGENTS.md §5 要求說明）
+
+1. **`browser_check_season_recap_ui` #13 的 live-update**：原版有三個獨立缺陷——
+   對陣列做 object spread（`honorsOf` 只認 Array ⇒ 等於清空榮耀）、
+   欄位名寫 `type` 而真實欄位是 `honorType`、
+   斷言 `after === before + 1` 但 `RecapHonor` 取 `mine[0]` **最多只 render 一個節點**。
+   ⇒ 斷言在設計上不可能成立。改為「拿掉再放回」（`before=1, cleared=0, restored=1`）。
+   **比原版更有檢定力**：拿掉 `honors` 訂閱時 `cleared` 會停在 1 ⇒ 紅（已實測）。
+2. **#8 補強**：加驗 AI 存檔那一側（見稽核更正三）。
+3. **#5 改寫**：原文依賴 `playoff.*`（不可用），改驗 `careerFinal` 真的給得出的欄位
+   ＋鎖住「季後賽列不得再出現」。
+4. **#2 加驗封存日**；新欄位一併納入 #13 的漂移快照。
+5. **四條既有斷言遷移**（見稽核更正二）。
+
+⚠ 獎金格式那條原本**驗不到**——所有存檔的收據 `amount` 都是 0（玩家第 8 名），
+`+$N萬` 分支沒有存檔能觸發。加了一個**只改收據金額**的顯示層 fixture
+（不動名次／不動賽季 truth／不新增獎金規則），實測 `+$150萬`。
+
+### 驗證結果（2026-08-16 實跑）
+
+| 驗證器 | 結果 | 規格 §K 期望 |
+|---|---|---|
+| `browser_check_season_recap_ui` | **19/19** | 19/19 |
+| `browser_check_career_final_ui` | **12/12** | 12/12 |
+| `browser_check_asia_finals_ui` | **15/15** | 15/15 |
+| `browser_check_team_honors_ui` | **15/15** | 15/15 |
+| `browser_check_circuit_points_ui` | **21/21** | 21/21 |
+| `check_competition_q5` | **69/69** | 69/69 |
+| `check_competition_q6` | **57/57** | 57/57 |
+| `check_q7b_asia_finals` | **72/72** | 72/72 |
+| `check_q7d_honors` | **59/59** | 59/59 |
+| `tools/verify.mjs` 全套 | **21/29 區段** | 見下 |
+
+`verify.mjs` 內 `regress` / `regress2` / `build` / `runtime29` / `stats28` /
+`talent27` / `experience26` / `progress25` / `tactic24` / `cs23` 等**全部 PASS**。
+8 個 FAIL **全部與本輪無關**：
+
+- `milestone_j` 37/39、`milestone_e` 47/49 —— **已記錄的 baseline 紅燈**，
+  數字逐值吻合 CLAUDE.md 記載的 2026-08-10 baseline，失敗條目在 MOBA 對戰／
+  陣容版型層，與賽事頁無交集。
+- `cs_measure_r1`／`cs_instrument_r2`／`cs_stat_wiring_r3`／`cs_clutch_r4`／
+  `cs_retreat_r5`／`cs_defuse_r6` —— **先前未被記錄的既有紅燈**（見下）。
+
+### ⚠ 新發現的技術債：六支 CS 量測驗證器已失效
+
+六支 `tools/check_cs_*.mjs` 全部以 `SOURCE_PROVENANCE_MISMATCH` 在 1 秒內 fail-fast，
+**還沒開始量測就被自己的 provenance gate 擋掉**。
+
+證據（證明早於 Q7f）：
+
+```
+被雜湊的檔      src/battle/fps/EsportsFPS3D.jsx
+釘死的 SHA      5b9360f4…e048c3d   （verifier 內的 CAPTURED_ENGINE_SOURCE_SHA256）
+實際 SHA        6a13e90d…e1555e
+該檔最後變更    37c07ef  2026-07-03   （Q7f 起點 178a956 是 2026-08-16，早六週）
+blob 比對       178a956 與 HEAD 皆為 d666ca2d…，完全相同
+六支 verifier   本輪未被改動
+```
+
+比較的**兩個輸入都沒動過** ⇒ mismatch 必然早於本輪。
+
+⚠ **本輪刻意不修**：重釘那個雜湊等於在未授權下把安全網重新基準化，
+而且該 verifier 用 `CLI_FLAGS_FORBIDDEN` 明文禁止任何 rebaseline 旗標。
+要復用需先查清楚「釘的版本」與「現行版本」為何不一致，**另案處理**。
+
+### 未經實測的項目（交使用者驗收）
+
+- **視覺**：本輪只做資訊架構，**不做 signature visual**（規格 §L 留給第二輪）。
+  版面、字級、間距、色彩層次全部未經人眼確認。
+- **真機**：手機只驗到 390px 下 app 捲動容器無水平溢出、六個區塊與 CTA 可見（gate #17／#18）。
+  **觸控手感、實機 FPS、真實裝置的安全區**一律未測。
+- **正式站**：本輪全部在 dev bundle 上驗，**未 push、未部署**，正式站行為未驗。
+
+### 尚未做
+
+經濟總結（沒有「賽季起始資金」truth，§A.2 ②）與成長總結（`growthLog` 是空的，§A.2 ④）
+**本輪不做**，理由已寫在規格，不是遺漏。
+年度總決賽獎金仍未新增（同 Q7e）。

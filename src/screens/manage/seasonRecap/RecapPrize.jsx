@@ -5,10 +5,12 @@ export default function RecapPrize({ award }) {
   const hasAward = award != null;
   const amount = award?.amount;
   const paid = hasAward && amount > 0;
+  //  ⚠ 金額格式沿用既有寫法「+$N萬」（AGENTS.md §一致性：金額一律帶 $）。
+  //    沒有獎金的名次誠實寫「無」，不寫 $0 假裝有發。
   const text = !hasAward
     ? "—"
     : amount > 0
-      ? `+${amount}萬`
+      ? `+$${amount}萬`
       : "無（前四名才有）";
 
   return (

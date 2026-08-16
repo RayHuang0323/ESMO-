@@ -89,23 +89,38 @@ const GOTO = `
   }
   await wait(700);
   const body = document.body.innerText;
-  const panel = (body.split("最終名次 FINAL STANDINGS")[1] || "").split("歷屆")[0];
+  //  ── Q7f 結構遷移（2026-08-16）────────────────────────────────────────
+  //  舊的「最終名次 FINAL STANDINGS」Panel 已由 Season Recap 的 RecapLeague
+  //  區塊**正式取代**（避免賽季結束畫面重複顯示同一份官方聯賽結果）。
+  //  ⚠ 這裡遷移的是 selector / DOM contract，**不是放寬斷言**：
+  //    原本靠切字串取得的三個事實（名次、隊數、冠軍）現在改成讀
+  //    data-* 與指定節點文字，比字串切割更嚴格（切字串會被相鄰區塊的文字污染）。
+  const recap = document.querySelector("[data-testid=season-recap]");
+  const league = document.querySelector("[data-testid=recap-league]");
+  const nodeText = (id) => {
+    const el = document.querySelector("[data-testid=" + id + "]");
+    return el ? el.innerText : null;
+  };
+  const rankNode = document.querySelector("[data-testid=recap-league-rank]");
+  const championNode = document.querySelector("[data-testid=recap-league-champion]");
   return {
     arrived: on(),
-    hasPanel: body.includes("最終名次 FINAL STANDINGS"),
-    panel,
+    //  hasPanel 語意遷移：賽季成績的呈現載體現在是 Recap 的官方聯賽區塊
+    hasPanel: !!recap && !!league,
+    panel: league ? league.innerText : "",
     hist: (body.split("歷屆成績 HISTORY")[1] || "").slice(0, 300),
-    //  ⚠ **結構化**讀出名次欄位的實際文字：抓「你的最終名次」後面第一個非空行。
-    //    這才是本檔的核心證據。
+    //  ⚠ **結構化**讀出名次欄位：改讀 recap-league-rank 的 data-rank 與可見文字。
     //    ⚠ 不能只掃全頁有沒有 undefined——React 把 undefined 渲染成**空白**，
     //      不是字串。實測過：把畫面改回直讀 final.playerRank，全頁掃描照樣綠
     //      （名次那格只是變成空的），連「包含 — 」也照樣綠（獎金那列有一個）。
-    rankText: (() => {
-      const lines = (panel || "").split(String.fromCharCode(10)).map((x) => x.trim());
-      const i = lines.findIndex((x) => x.includes("你的最終名次"));
-      if (i < 0) return null;
-      return lines.slice(i + 1).find((x) => x.length > 0) ?? "";
-    })(),
+    //    ⇒ 這裡同時保留 data-rank（機器值）與 rankValueText（玩家看到的字），
+    //      任一被拿掉或變成空白都會紅。
+    rankAttr: rankNode ? (rankNode.getAttribute("data-rank") ?? "") : null,
+    teamCountAttr: rankNode ? (rankNode.getAttribute("data-team-count") ?? "") : null,
+    rankValueText: rankNode ? (rankNode.querySelector("span:last-child")?.innerText ?? "") : null,
+    championText: championNode ? (championNode.querySelector("span:last-child")?.innerText ?? "") : null,
+    emptyNote: nodeText("recap-league-empty"),
+    rankText: rankNode ? (rankNode.getAttribute("data-rank") ?? "") : null,
     //  仍然保留：模板字串內插（例如歷屆成績那行「我 第 N 名」）真的會印出 undefined
     hasUndefined: /undefined|NaN/.test(body),
   };
@@ -130,10 +145,16 @@ try {
   await chrome.reload();
   await new Promise((r) => setTimeout(r, 3500));
   const uiOne = await chrome.evaluate(GOTO);
+  //  原本守三件事：①名次逐值　②「／ N 隊」總隊數　③冠軍隊名。
+  //  三件全部移植到 RecapLeague 的結構化節點，且比原版嚴格：
+  //  隊數改比 data-team-count（原版只檢查頁面文字含有那個子字串）。
   ck("1) **legacy 畫面照舊**：名次欄位就是那個名次，冠軍也對",
-    uiOne.hasPanel && uiOne.rankText === String(one.rank) &&
-    uiOne.panel.includes(`／ ${one.teams} 隊`) && uiOne.panel.includes(one.champion),
-    `名次欄位「${uiOne.rankText}」· ${one.champion}`);
+    uiOne.hasPanel &&
+    uiOne.rankAttr === String(one.rank) &&
+    uiOne.rankValueText === `第 ${one.rank} 名 / ${one.teams} 隊` &&
+    uiOne.teamCountAttr === String(one.teams) &&
+    uiOne.championText === one.champion,
+    JSON.stringify({ rankAttr: uiOne.rankAttr, rankValueText: uiOne.rankValueText, teamCountAttr: uiOne.teamCountAttr, championText: uiOne.championText }));
   ck("1b) **頁面沒有 undefined / NaN**", !uiOne.hasUndefined);
 
   // ── ② 多 Event ──────────────────────────────────────────────────────
@@ -151,10 +172,16 @@ try {
   await chrome.reload();
   await new Promise((r) => setTimeout(r, 3500));
   const uiMany = await chrome.evaluate(GOTO);
+  //  同 #1 的三件事，情境是多 Event（state.final 退化成 SeasonSeal，沒有 rows／
+  //  playerRank）。這一條的核心是「畫面讀的是 careerFinal 而不是 SeasonSeal」——
+  //  遷移後仍然守得住：SeasonSeal 給不出 playerRank，換過去會讓 data-rank 變空。
   ck("3) **多 Event 的名次欄位就是官方聯賽的名次**（不是空白、不是別的數字）",
-    uiMany.hasPanel && uiMany.rankText === String(many.rank) &&
-    uiMany.panel.includes(`／ ${many.teams} 隊`) && uiMany.panel.includes(many.champion),
-    `名次欄位「${uiMany.rankText}」· ${many.champion}`);
+    uiMany.hasPanel &&
+    uiMany.rankAttr === String(many.rank) &&
+    uiMany.rankValueText === `第 ${many.rank} 名 / ${many.teams} 隊` &&
+    uiMany.teamCountAttr === String(many.teams) &&
+    uiMany.championText === many.champion,
+    JSON.stringify({ rankAttr: uiMany.rankAttr, rankValueText: uiMany.rankValueText, teamCountAttr: uiMany.teamCountAttr, championText: uiMany.championText }));
   ck("4) **整頁沒有 undefined / NaN**（3f 量到的那個阻擋消失了）",
     !uiMany.hasUndefined);
 
@@ -165,9 +192,16 @@ try {
   await chrome.reload();
   await new Promise((r) => setTimeout(r, 3500));
   const uiNone = await chrome.evaluate(GOTO);
+  //  原本守三件事：①區塊在　②名次欄位是「—」而不是空白　③有說明文字。
+  //  三件全部移植；說明文字隨產品措辭遷移（「生涯主要賽事尚無資料」→
+  //  「尚無官方聯賽封存資料」），並額外鎖住 data-rank 必須是空字串而不是
+  //  消失或帶值——原版切字串驗不到這一層。
   ck("6) **名次欄位顯示「—」與說明**（不是空白，也不是 undefined）",
-    uiNone.hasPanel && uiNone.rankText === "—" &&
-    uiNone.panel.includes("生涯主要賽事尚無資料"), uiNone.panel.slice(0, 60).replace(/\n/g, " | "));
+    uiNone.hasPanel &&
+    uiNone.rankValueText === "—" &&
+    uiNone.rankAttr === "" &&
+    (uiNone.emptyNote ?? "").includes("尚無官方聯賽封存資料"),
+    JSON.stringify({ rankValueText: uiNone.rankValueText, rankAttr: uiNone.rankAttr, emptyNote: uiNone.emptyNote }));
   ck("7) **仍然沒有 undefined / NaN**", !uiNone.hasUndefined);
   ck("8) **沒有 crash**（賽事頁仍然到得了）", uiNone.arrived);
   ck("9) **全程無未捕捉例外**", chrome.pageErrors.length === 0,

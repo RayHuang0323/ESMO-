@@ -172,8 +172,15 @@ const RECAP_UI = PRELUDE + `
       attrs: attrs("recap-league-champion", ["teamId"]),
       text: node("recap-league-champion")?.querySelector("span:last-child")?.innerText ?? null,
     },
+    leagueRegularRank: attrs("recap-league-regular-rank", ["rank"]),
+    leagueRankSource: attrs("recap-league-rank-source", ["rankSource"]),
+    leagueSourceMix: attrs("recap-league-source-mix", ["total", "engine", "simulated", "forfeited"]),
+    leagueSourceMixText: node("recap-league-source-mix")?.innerText ?? null,
+    //  Q7f audit correction：季後賽晉級狀態已整列移除（playoff 在 Recap 當下恆為 null）
     leaguePlayoff: attrs("recap-league-playoff", ["qualified", "stageId"]),
+    sealedDay: attrs("recap-sealed-day", ["day"]),
     prize: attrs("recap-prize", ["amount", "settled"]),
+    prizeText: node("recap-prize-value")?.innerText ?? null,
     mobile: {
       width: window.innerWidth,
       overflow: {
@@ -219,24 +226,26 @@ const TRUTH = PRELUDE + `
 `;
 
 const LIVE_UPDATE = PRELUDE + `
+  //  注意：這段字串是 template literal，內文不可出現反引號。
+  //  這條是唯一能證明容器真的訂到 honors 的斷言（規格 J.1 第 6 項）。
+  //  導頁式檢查對它沒有檢定力——每次導頁都會重讀 store，訂錯 slice 也會綠。
+  //  honors 的真相是陣列（honors.js:58 honorsOf 只認 Array），
+  //  且榮耀的類型欄位是 honorType（值 "asia_annual_champion"），不是 type。
+  //  對陣列做 object spread 會得到純物件 ⇒ honorsOf 回 []，等於把榮耀清空。
+  //  RecapHonor 取的是 mine[0]，最多只 render 一個節點 ⇒ 不能斷言「數量 +1」。
+  //  改用「拿掉再放回」：掛載中的 Recap 必須跟著消失與復原。
   const before = document.querySelectorAll("[data-testid=recap-honor]").length;
-  const state = st();
-  const view = state.competitionView();
-  const myTeamId = view.honorsView?.myTeamId;
-  const season = view.final?.season;
-  const current = state.honors ?? {};
-  const annualChampions = Array.isArray(current.annualChampions) ? current.annualChampions : [];
-  const injected = {
-    season,
-    championTeamId: myTeamId,
-    championTeamName: "即時更新測試隊",
-    type: "annual_champion",
-    label: "年度冠軍",
-  };
-  profile.useProfileStore.setState({ honors: { ...current, annualChampions: [...annualChampions, injected] } });
+  const raw = st().honors;
+  profile.useProfileStore.setState({ honors: [] });
   await new Promise((resolve) => setTimeout(resolve, 500));
-  const after = document.querySelectorAll("[data-testid=recap-honor]").length;
-  return { before, after, mounted: !!document.querySelector("[data-testid=season-recap]") };
+  const cleared = document.querySelectorAll("[data-testid=recap-honor]").length;
+  profile.useProfileStore.setState({ honors: raw });
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const restored = document.querySelectorAll("[data-testid=recap-honor]").length;
+  return {
+    before, cleared, restored,
+    mounted: !!document.querySelector("[data-testid=season-recap]"),
+  };
 `;
 
 const injectSave = async (chrome, save) => {
@@ -260,8 +269,13 @@ const snapshotUi = (ui) => JSON.stringify({
   circuitQualification: ui.circuitQualification,
   leagueRank: ui.leagueRank,
   leagueChampion: ui.leagueChampion,
+  leagueRegularRank: ui.leagueRegularRank,
+  leagueRankSource: ui.leagueRankSource,
+  leagueSourceMix: ui.leagueSourceMix,
   leaguePlayoff: ui.leaguePlayoff,
+  sealedDay: ui.sealedDay,
   prize: ui.prize,
+  prizeText: ui.prizeText,
 });
 
 console.log("══ Q7f：Season Recap browser gate ══");
@@ -278,8 +292,14 @@ try {
   ck("1) 未完成賽季沒有 Recap", !uiInProgress.exists && !uiInProgress.header);
 
   const uiPlayer = await injectSave(chrome, playerSave);
-  ck("2) 完成賽季 Recap 出現，CTA 在 Recap 內且 DOM 恰好一顆",
-    uiPlayer.exists && uiPlayer.ctaCount === 1 && uiPlayer.overallCtaCount === 1 && uiPlayer.ctaInside);
+  //  ⚠ 封存日讀的是 SeasonSeal（view.final.sealedAtDay），不是 careerFinal 那一份。
+  const expectedSealedDay = uiPlayer.view?.final?.sealedAtDay ?? null;
+  ck("2) 完成賽季 Recap 出現、封存日逐值來自 SeasonSeal，CTA 在 Recap 內且 DOM 恰好一顆",
+    uiPlayer.exists && uiPlayer.ctaCount === 1 && uiPlayer.overallCtaCount === 1 && uiPlayer.ctaInside &&
+    (expectedSealedDay == null
+      ? uiPlayer.sealedDay === null
+      : uiPlayer.sealedDay?.day === String(expectedSealedDay)),
+    JSON.stringify({ sealedDay: uiPlayer.sealedDay, expectedSealedDay }));
 
   const playerView = uiPlayer.view;
   const playerRank = String(playerView.careerFinal?.playerRank ?? "");
@@ -293,11 +313,58 @@ try {
     uiPlayer.leagueChampion.attrs?.teamId === playerView.careerFinal?.championTeamId &&
     uiPlayer.leagueChampion.text === leagueChampionRow?.name);
 
-  const playerPlayoffQualified = (playerView.playoff?.qualified ?? [])
-    .some((entry) => entry.teamId === playerView.myTeamId);
-  ck("5) 季後賽狀態與 playoff qualified、stageId 逐值一致",
-    uiPlayer.leaguePlayoff?.qualified === String(playerPlayoffQualified) &&
-    uiPlayer.leaguePlayoff?.stageId === String(playerView.careerFinal?.playoffStageId ?? ""));
+  //  ── #5：Q7f audit correction ────────────────────────────────────────────
+  //  原斷言驗的是「季後賽晉級狀態」，但實測 `competitionView().playoff` 在 Recap
+  //  當下恆為 `null`（`playoffView()` 沒有進行中季後賽就回 null，而 Recap 依定義
+  //  在封存之後）⇒ 那一列沒有可靠 truth，已整列移除。這裡改驗**真的有 truth**的
+  //  三個欄位，並鎖住「季後賽列不得再出現」，避免有人日後用推測值把它補回來。
+  //  ⚠ 這不是放寬：移除的是無 truth 的欄位，補上的三項全是逐值比對。
+  const cf = playerView.careerFinal;
+  const expectedRegular = cf?.playerRegularRank;
+  const mix = cf?.sourceMix ?? null;
+  const regularOk = expectedRegular != null
+    ? uiPlayer.leagueRegularRank?.rank === String(expectedRegular)
+    : uiPlayer.leagueRankSource?.rankSource === String(cf?.rankSource ?? "");
+  const mixOk = mix
+    ? uiPlayer.leagueSourceMix?.total === String(mix.total ?? "") &&
+      uiPlayer.leagueSourceMix?.engine === String(mix.engine ?? "") &&
+      uiPlayer.leagueSourceMix?.simulated === String(mix.simulated ?? "") &&
+      uiPlayer.leagueSourceMix?.forfeited === String(mix.forfeited ?? "") &&
+      (uiPlayer.leagueSourceMixText ?? "").includes(`本季 ${mix.total} 場：實際對戰 ${mix.engine}`)
+    : uiPlayer.leagueSourceMix === null;
+  const expectedPrizeText = playerView.award == null
+    ? "—"
+    : (playerView.award.amount > 0 ? `+$${playerView.award.amount}萬` : "無（前四名才有）");
+  //  ⚠ 現有存檔的獎金收據 amount 全是 0（玩家第 8 名）⇒ 「+$N萬」那條分支
+  //    沒有任何存檔能觸發。這裡只改**收據金額**（顯示層 fixture，不動任何賽季
+  //    truth、不改名次、不新增獎金規則），把該分支實際跑出來，否則 P2 的
+  //    金額格式等於沒有被驗證過。
+  const PRIZE_AMOUNT = 150;
+  const PRIZE_SAVE = {
+    ...structuredClone(PLAYER_SEALED_SAVE),
+    processedCompetitionAwards: {
+      [PLAYER_CAREER_EVENT_FINAL.id]: {
+        ...(SAVE_AI_SEALED.processedCompetitionAwards?.[PLAYER_CAREER_EVENT_FINAL.id] ?? {}),
+        amount: PRIZE_AMOUNT,
+        settled: true,
+      },
+    },
+  };
+  const uiPrize = await injectSave(chrome, PRIZE_SAVE);
+  ck("5) 官聯補充欄位（常規賽名次/排名來源、場次組成）與獎金格式逐值來自 truth，季後賽列已移除",
+    regularOk && mixOk &&
+    uiPlayer.leaguePlayoff === null &&
+    uiPlayer.prizeText === expectedPrizeText &&
+    uiPrize.prizeText === `+$${PRIZE_AMOUNT}萬` &&
+    uiPrize.prize?.amount === String(PRIZE_AMOUNT) &&
+    uiPrize.leaguePlayoff === null,
+    JSON.stringify({
+      regularOk, mixOk,
+      playoffRowRemoved: uiPlayer.leaguePlayoff === null,
+      prizeText: uiPlayer.prizeText, expectedPrizeText,
+      paidPrizeText: uiPrize.prizeText,
+      playoffIsNull: playerView.playoff == null,
+    }));
 
   const playerCircuitId = playerView.circuitPoints?.playerEntries?.[0]?.circuitId;
   const playerCircuitRow = playerView.circuitPoints?.standings?.[playerCircuitId]?.rows
@@ -317,19 +384,31 @@ try {
         actual.points === String(expected.points);
     }));
 
-  const circuitQualification = (playerView.circuitPoints?.qualifications ?? [])
-    .find((item) => item.circuitId === playerCircuitId);
-  const playerCircuitQualified = (circuitQualification?.qualified ?? [])
-    .some((entry) => entry.teamId === playerView.myTeamId);
-  ck("8) 巡迴 Qualification 狀態逐值來自 circuitPoints qualifications",
-    uiPlayer.circuitQualification?.qualified === String(playerCircuitQualified));
+  const qualOf = (view) => {
+    const cid = view.circuitPoints?.playerEntries?.[0]?.circuitId;
+    const q = (view.circuitPoints?.qualifications ?? []).find((item) => item.circuitId === cid);
+    return (q?.qualified ?? []).some((entry) => entry.teamId === view.myTeamId);
+  };
+  const playerCircuitQualified = qualOf(playerView);
+  //  ⚠ 2026-08-16 補強：原本只驗玩家存檔，而該存檔裡玩家**本來就已取得資格**
+  //    ⇒「資格判斷永遠 true」這個錯誤不會被抓到（mutation 3a 實測全綠）。
+  //    AI 存檔裡玩家未取得資格，是現成的反向樣本 ⇒ 兩邊都驗，雙向都有鑑別力。
+  const uiAi = await injectSave(chrome, SAVE_AI_SEALED);
+  const aiCircuitQualified = qualOf(uiAi.view);
+  ck("8) 巡迴 Qualification 狀態逐值來自 circuitPoints qualifications（已取得／未取得兩側都驗）",
+    uiPlayer.circuitQualification?.qualified === String(playerCircuitQualified) &&
+    uiAi.circuitQualification?.qualified === String(aiCircuitQualified),
+    JSON.stringify({
+      player: { dom: uiPlayer.circuitQualification?.qualified, truth: playerCircuitQualified },
+      ai: { dom: uiAi.circuitQualification?.qualified, truth: aiCircuitQualified },
+    }));
 
   const playerFinalRow = playerView.asiaFinals?.final?.rows?.find((row) =>
     row.teamId === playerView.myTeamId);
   ck("9) 玩家參賽時年度總決賽名次逐值來自 asiaFinals.final",
     uiPlayer.finalsRank?.rank === String(playerFinalRow?.rank ?? ""));
 
-  const uiAi = await injectSave(chrome, SAVE_AI_SEALED);
+  //  uiAi 已在 #8 取得（見上），這裡沿用同一份快照，不重複注入。
   const aiView = uiAi.view;
   const aiChampionRow = aiView.asiaFinals?.final?.rows?.find((row) =>
     row.teamId === aiView.asiaFinals?.championTeamId);
@@ -358,7 +437,9 @@ try {
   const liveUpdate = await chrome.evaluate(LIVE_UPDATE);
   ck("13) reload 不漂移，且已掛載 Recap 會即時反映 honors mutation",
     beforeReload === snapshotUi(uiReloaded) &&
-    liveUpdate.mounted && liveUpdate.after === liveUpdate.before + 1);
+    liveUpdate.mounted &&
+    liveUpdate.before === 1 && liveUpdate.cleared === 0 && liveUpdate.restored === 1,
+    JSON.stringify(liveUpdate));
 
   const truthBefore = await chrome.evaluate(TRUTH);
   await chrome.evaluate("document.querySelector('[data-testid=season-recap]')?.getBoundingClientRect(); return true;");

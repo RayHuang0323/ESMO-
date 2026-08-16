@@ -105,8 +105,13 @@ const GOTO = `
       const circuit = Object.values(view.circuits ?? {}).find((item) => /:asia$/.test(item.id ?? ""));
       return view.circuitPoints?.standings?.[circuit?.id]?.rows?.find((row) => row.rank === 5)?.name ?? null;
     })(),
-    careerPanelText: [...document.querySelectorAll("div")].find((el) =>
-      el.innerText?.includes("最終名次 FINAL STANDINGS") && el.innerText.includes("你的最終名次"))?.innerText ?? "",
+    //  ── Q7f 結構遷移（2026-08-16）──────────────────────────────────────
+    //  舊的「最終名次 FINAL STANDINGS」Panel 已由 Season Recap 的 RecapLeague
+    //  正式取代。這裡守的產品事實不變：**官方聯賽區塊顯示的是 careerFinal
+    //  （官方聯賽），不是年度總決賽那一份**。selector 隨結構遷移，不是放寬。
+    careerPanelText: document.querySelector("[data-testid=recap-league]")?.innerText ?? "",
+    careerRankAttr: document.querySelector("[data-testid=recap-league-rank]")?.getAttribute("data-rank") ?? null,
+    careerChampionAttr: document.querySelector("[data-testid=recap-league-champion]")?.getAttribute("data-team-id") ?? null,
     overflow: { over: scrollContainer.scrollWidth > scrollContainer.clientWidth + 1, sw: scrollContainer.scrollWidth, cw: scrollContainer.clientWidth },
     width: window.innerWidth,
     hasBadText: /undefined|NaN/.test(document.body.innerText),
@@ -234,10 +239,18 @@ try {
     sealedFinal.rows.every((row) => uiSealed.placements.find((item) => item.teamId === row.teamId)?.text.includes(`${row.rank}`) && uiSealed.placements.find((item) => item.teamId === row.teamId)?.text.includes(row.name)));
 
   const careerChampion = uiSealed.careerFinal?.rows?.find((row) => row.teamId === uiSealed.careerFinal.championTeamId)?.name;
-  ck("11) 最終名次面板仍顯示官方聯賽 careerFinal，而不是年度冠軍面板",
+  //  原本守四件事：①生涯賽事與年度總決賽是不同 Event　②playerRank 有值
+  //  ③畫面顯示的名次是 careerFinal 的　④畫面顯示的冠軍是 careerFinal 的。
+  //  四件全部移植；③④ 從「文字包含」升級為 data-* 逐值比對——原版用 includes
+  //  比對數字，第 8 名時「8」可能被別處的文字誤中，遷移後不會。
+  ck("11) 官方聯賽區塊仍顯示 careerFinal，而不是年度總決賽那一份",
     uiSealed.careerEventId && uiSealed.annualEventId && uiSealed.careerEventId !== uiSealed.annualEventId &&
-    uiSealed.careerFinal?.playerRank != null && uiSealed.careerPanelText.includes(String(uiSealed.careerFinal.playerRank)) &&
-    !!careerChampion && uiSealed.careerPanelText.includes(careerChampion));
+    uiSealed.careerFinal?.playerRank != null &&
+    uiSealed.careerRankAttr === String(uiSealed.careerFinal.playerRank) &&
+    !!careerChampion &&
+    uiSealed.careerChampionAttr === uiSealed.careerFinal.championTeamId &&
+    uiSealed.careerPanelText.includes(careerChampion),
+    JSON.stringify({ careerRankAttr: uiSealed.careerRankAttr, careerChampionAttr: uiSealed.careerChampionAttr }));
 
   ck("12) 玩家未晉級時不顯示「你的名次」，賽事頁仍正常到達",
     uiSealed.arrived && !uiSealed.viewAsia.qualified.some((entry) => entry.teamId === uiSealed.viewAsia.playerTeamId) &&

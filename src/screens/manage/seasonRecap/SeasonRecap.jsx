@@ -48,11 +48,11 @@ export default function SeasonRecap({ onRoll }) {
 
   return (
     <div data-testid="season-recap" data-season={final.season} style={recapStyles.shell}>
-      <RecapHeader season={final.season} teamName={teamName} summary={summary} />
+      <RecapHeader season={final.season} teamName={teamName} summary={summary} sealedAtDay={final.sealedAtDay ?? null} />
       <RecapHonor season={final.season} honorsView={honorsView} />
       <RecapAsiaFinals asiaFinals={view.asiaFinals} myTeamId={myTeamId} />
       <RecapCircuit circuitPoints={view.circuitPoints} events={view.events} myTeamId={myTeamId} />
-      <RecapLeague careerFinal={careerFinal} playoff={view.playoff} myTeamId={myTeamId} />
+      <RecapLeague careerFinal={careerFinal} />
       <RecapPrize award={view.award} />
       <RecapNextSeason canRoll={canRoll} onClick={onRoll} />
     </div>
