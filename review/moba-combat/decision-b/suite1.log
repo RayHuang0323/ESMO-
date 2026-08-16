@@ -1,0 +1,16 @@
+=== build ===
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[32m✓ built in 18.51s[39m
+
+=== regress ===
+
+Node.js v24.18.0
+
+=== regress2 ===
+
+Node.js v24.18.0
+
+=== credibility ===
+
+Node.js v24.18.0

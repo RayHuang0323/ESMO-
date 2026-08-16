@@ -108,6 +108,12 @@ import {
 import {
   fixtureOutcomeInputFrom, isFixtureSession, fixtureIdOfSession,
 } from "./competition/fixtureResultBridge.js";
+import {
+  syncSeasonStateV2, activeEventAdapter,
+} from "./competition/seasonStateV2.js";
+import {
+  sealEventBoundary, sealSeasonBoundary,
+} from "./competition/seasonSealingV2.js";
 import { applyDailyRecovery, conditionSummary } from "./condition/playerCondition.js";
 import { createMatchEntryRequest, validateMatchEntryRequest } from "./contracts/matchEntry.js";
 import {
@@ -142,8 +148,9 @@ const KEY = "esmo.profile.v1";
  *  v7 = Milestone O1（csLineup CS 出賽陣容 + players[].rosterTier 名單分層；
  *       舊存檔缺欄 → csLineup 全空、rosterTier 由既有 status 推導，不把人踢出名單）；
  *  v8 = Milestone O4（matchmaking 配對票券；載入時把殘留的排隊中票券作廢，
- *       因為沒有伺服器會回應一張跨 session 的票）。 */
-export const PROFILE_SCHEMA_VERSION = 8;
+ *       因為沒有伺服器會回應一張跨 session 的票）；
+ *  v9 = Q7b（metadata-only SeasonState.v2 wrapper；legacy state / IDs 不變）。 */
+export const PROFILE_SCHEMA_VERSION = 9;
 const canLS = typeof localStorage !== "undefined";
 //  1 萬。定義搬到 economy/units.js（純邏輯模組不能 import 本檔），這裡 re-export
 //  讓既有 `import { WAN } from "platform/profileStore.js"` 的呼叫端不受影響。
@@ -230,6 +237,8 @@ const DEFAULT = {
   //  null = 這個存檔還沒有賽季；`ensureCompetitionSeason()` 會依 team.id 與
   //  meta.seasonSeed 決定性地建立，所以舊存檔載入後也拿得到同一份賽程。
   competition: null,
+  // 3b-M2: independent Circuit Points ledger. Event only stores a reference.
+  circuitPointsLedger: {},
   schemaVersion: PROFILE_SCHEMA_VERSION,
   processedMatchTransactions: {},// S25：冪等帳本 {transactionId: receipt}（防重複發獎）
   processedCompetitionAwards: {},// Q4：名次獎金冪等帳本 {finalStandingsId: receipt}
@@ -243,6 +252,8 @@ const DEFAULT = {
   //  ⚠ 刻意**不設上限**：一季一筆小物件，與那兩個存整張名次表的 history 不同，
   //    而榮耀一旦被裁掉就等於歷史被改寫。
   honors: [],
+  // Q7b: metadata-only Season -> MOBA Career Circuit -> League Event wrapper.
+  seasonStateV2: null,
   inbox: [
     { id: 1, type: "match",   from: "聯賽官方",         subject: "第 1 週賽程已公布",   text: "第 1 週賽程已公布，請確認出賽名單。", time: "剛剛", unread: true },
     { id: 2, type: "recruit", from: "球探部",           subject: "3 名新星進入觀察名單", text: "球探回報：3 名新星進入觀察名單，可前往招募查看。", time: "1 小時前", unread: true },
@@ -296,6 +307,8 @@ function normalizeMatchmaking(saved) {
   return {
     ticket, room, session,
     launch: src.launch ?? null,
+    // Q7b: the fixture binding is part of the live-session/resume contract.
+    fixtureAssignment: src.fixtureAssignment ?? null,
     //  O7：結果與結算帳本要保留——重整後重試結算必須認得出「已經算過了」
     lastResult: src.lastResult ?? null,
     settlements: src.settlements && typeof src.settlements === "object" ? src.settlements : {},
@@ -322,13 +335,24 @@ function normalizeEconomy(saved, days) {
  * ⚠ 一定要在合併完 `saved.team` **之後**才呼叫——否則會拿 DEFAULT 的隊名去
  *   推導，讓不同存檔算出同一個 id。
  */
+function seasonStateV2For(state) {
+  return syncSeasonStateV2({
+    seasonStateV2: state?.seasonStateV2,
+    legacyState: state?.competition,
+    competitionHistory: arr(state?.competitionHistory, []),
+    awardLedger: state?.processedCompetitionAwards,
+    meta: state?.meta,
+  });
+}
+
 function withIdentity(state) {
   const { team, meta } = ensureTeamIdentity({
     team: state.team,
     meta: state.meta,
     scenario: state.economy?.scenario ?? DEFAULT_SCENARIO,
   });
-  return { ...state, team, meta };
+  const next = { ...state, team, meta };
+  return { ...next, seasonStateV2: seasonStateV2For(next) };
 }
 
 const load = () => {
@@ -411,6 +435,10 @@ const load = () => {
       //  Q7a-3a：載入時補上 Circuit/Event 身分（`idScheme`）。
       //  ⚠ 只補欄位，**一個既有 id 都不改**；已升級過就原樣回傳同一個參考。
       competition: upgradeSeasonShape(saved.competition ?? null),
+      circuitPointsLedger: saved.circuitPointsLedger && typeof saved.circuitPointsLedger === "object"
+        ? saved.circuitPointsLedger
+        : {},
+      seasonStateV2: saved.seasonStateV2 ?? null,
       recruitment: saved.recruitment && typeof saved.recruitment === "object"
         && typeof saved.recruitment.signed === "object"
         ? { signed: saved.recruitment.signed }
@@ -477,8 +505,76 @@ function normalizeMsg(m, i) {
 export const useProfileStore = create((set, get) => ({
   ...load(),
 
-  save() { if (canLS) try { localStorage.setItem(KEY, JSON.stringify(get())); } catch {} },
-  reset() { if (canLS) localStorage.removeItem(KEY); set(DEFAULT); },
+  save() {
+    if (!canLS) return;
+    try {
+      const current = get();
+      const seasonStateV2 = seasonStateV2For(current);
+      if (JSON.stringify(seasonStateV2) !== JSON.stringify(current.seasonStateV2)) set({ seasonStateV2 });
+      localStorage.setItem(KEY, JSON.stringify({ ...get(), seasonStateV2 }));
+    } catch {}
+  },
+  reset() { if (canLS) localStorage.removeItem(KEY); set(withIdentity(DEFAULT)); },
+
+  // Keep legacy SeasonState.v1 authoritative while every write carries a
+  // deterministic SeasonState.v2 compatibility index.
+  _setCompetitionState(nextCompetition, extra = {}) {
+    const current = get();
+    const history = Object.prototype.hasOwnProperty.call(extra, "competitionHistory")
+      ? arr(extra.competitionHistory, [])
+      : arr(current.competitionHistory, []);
+    const { competitionHistory: ignored, ...rest } = extra;
+    const next = {
+      ...rest,
+      competition: nextCompetition,
+      competitionHistory: history,
+    };
+    set({
+      ...next,
+      seasonStateV2: seasonStateV2For({ ...current, ...next }),
+    });
+    return nextCompetition;
+  },
+  _syncSeasonStateV2() {
+    const current = get();
+    const seasonStateV2 = seasonStateV2For(current);
+    set({ seasonStateV2 });
+    return seasonStateV2;
+  },
+  sealCompetitionEvent({ eventId = null, pointsPolicy = null, allowUnscored = true, sealedAtDay = null } = {}) {
+    const current = get();
+    const result = sealEventBoundary({
+      seasonStateV2: current.seasonStateV2,
+      legacyState: current.competition,
+      profileState: current,
+      eventId,
+      pointsPolicy,
+      allowUnscored,
+      sealedAtDay: sealedAtDay ?? current.meta?.days ?? 1,
+    });
+    if (!result.ok) return result;
+    if (!result.nextState) return result;
+    set({
+      ...result.nextState,
+      competition: result.legacyState,
+      seasonStateV2: result.seasonStateV2,
+    });
+    get().save();
+    return result;
+  },
+  sealCompetitionSeason({ requiredEventIds = null } = {}) {
+    const result = sealSeasonBoundary({ seasonStateV2: get().seasonStateV2, requiredEventIds });
+    if (!result.ok || result.alreadySealed) return result;
+    set({ seasonStateV2: result.seasonStateV2 });
+    get().save();
+    return result;
+  },
+  activeCompetitionEvent() {
+    return activeEventAdapter({
+      seasonStateV2: get().seasonStateV2,
+      legacyState: get().competition,
+    });
+  },
 
   // ── Milestone E：先發指派（席位 b1–b5 → playerId）────────────────────────
   //   唯一寫入點。規則全部在 contracts/matchLineup.js（互換語意、去重、清洗），
@@ -670,7 +766,7 @@ export const useProfileStore = create((set, get) => ({
     //  ⚠ 這裡是**建立**路徑，所以只有全新的賽季會拿到；舊存檔已經有賽季，
     //    上面第一行就 return 了，永遠走不到這裡。
     const withCircuit = get()._withAsiaCircuit(made.state);
-    set({ competition: withCircuit });
+    get()._setCompetitionState(withCircuit);
     get().save();
     return { ok: true, state: withCircuit, created: true, errors: [] };
   },
@@ -716,13 +812,13 @@ export const useProfileStore = create((set, get) => ({
    * 沒有賽季（例如還沒建立）⇒ 不阻擋，行為與 Q3 之前完全相同。
    */
   _advanceCompetition(fromDay, days) {
-    const state = get().competition;
+    const state = get().activeCompetitionEvent().legacyState;
     if (!state?.schema) return { daysAdvanced: days, stoppedBy: null };
     const res = advanceSeasonDays({
       state, fromDay, days, playerRoster: get().players ?? [],
     });
     if (res.state !== state) {
-      set({ competition: res.state });
+      get()._setCompetitionState(res.state);
       //  ⚠ 一天都沒推進時 `advanceDay` 會提早 return（不動時鐘、不結算），
       //    但賽季狀態可能已經被 `sweepOverdue` 改過。這裡自己存檔，
       //    否則記憶體與存檔會不一致（重整後那些補判會消失又重算一次）。
@@ -743,7 +839,7 @@ export const useProfileStore = create((set, get) => ({
   startFixtureMatch(fixtureId, now = Date.now()) {
     const ensured = get().ensureCompetitionSeason();
     if (!ensured.ok) return { ok: false, errors: ensured.errors, reason: ensured.errors[0]?.message ?? null };
-    const state = get().competition;
+    const state = get().activeCompetitionEvent().legacyState;
     const fixture = fixtureById(state, fixtureId);
     if (!fixture) return { ok: false, errors: [{ code: "fixture", message: "找不到這場賽程" }], reason: "找不到這場賽程" };
 
@@ -803,8 +899,7 @@ export const useProfileStore = create((set, get) => ({
     const lit = allowRelaunch ? { ok: true, state } : applyLaunch(state, fixtureId);
     if (!lit.ok) return { ok: false, errors: lit.errors, reason: lit.errors[0]?.message ?? null };
 
-    set({
-      competition: lit.state,
+    get()._setCompetitionState(lit.state, {
       matchmaking: {
         ...(get().matchmaking ?? {}),
         //  ⚠ 賽程路徑沒有票券。舊票券要清掉，否則 pollMatchRoom 會拿一張
@@ -826,12 +921,11 @@ export const useProfileStore = create((set, get) => ({
    * ⚠ 只接受已經 `launched` 的場次，且同一場只能寫一次賽果（D11 不可變）。
    */
   completeFixtureMatch({ fixtureId, winner, score, duration, seed } = {}) {
-    const state = get().competition;
+    const state = get().activeCompetitionEvent().legacyState;
     if (!state?.schema) return { ok: false, errors: [{ code: "no_season", message: "目前沒有賽季" }] };
     const res = applyCompleted(state, { fixtureId, winner, score, duration, seed });
     if (!res.ok) return { ok: false, errors: res.errors };
-    set({
-      competition: res.state,
+    get()._setCompetitionState(res.state, {
       matchmaking: { ...(get().matchmaking ?? {}), fixtureAssignment: null },
     });
     get().save();
@@ -844,12 +938,11 @@ export const useProfileStore = create((set, get) => ({
    * MVP 的棄權只有敗場：不扣聲望、不罰款、不降級。
    */
   forfeitFixture(fixtureId, reason = "玩家棄權") {
-    const state = get().competition;
+    const state = get().activeCompetitionEvent().legacyState;
     if (!state?.schema) return { ok: false, errors: [{ code: "no_season", message: "目前沒有賽季" }] };
     const res = applyForfeit(state, { fixtureId, reason });
     if (!res.ok) return { ok: false, errors: res.errors };
-    set({
-      competition: res.state,
+    get()._setCompetitionState(res.state, {
       matchmaking: { ...(get().matchmaking ?? {}), fixtureAssignment: null },
     });
     get().save();
@@ -870,8 +963,34 @@ export const useProfileStore = create((set, get) => ({
    *   反過來就得先算一次名次才知道發多少，等於有兩份名次。
    */
   _sealSeasonIfFinished() {
-    let state = get().competition;
+    let state = get().activeCompetitionEvent().legacyState;
     if (!state?.schema) return { sealed: false, final: null, award: null };
+
+    // 3b-M2: route live completion through the Event then Season boundary.
+    {
+      const po2 = ensurePlayoffs(state);
+      if (po2.ok && po2.state !== state) {
+        state = po2.state;
+        get()._setCompetitionState(state);
+        get().save();
+      }
+      const can2 = canSealSeason(state);
+      if (!can2.ok && !can2.sealed) return { sealed: false, final: null, award: null, reason: can2.reason };
+      const event2 = get().activeCompetitionEvent().event;
+      const boundary2 = get().sealCompetitionEvent({
+        eventId: event2?.id ?? null,
+        allowUnscored: true,
+        sealedAtDay: Number(get().meta?.days) || 1,
+      });
+      if (!boundary2.ok) return { sealed: false, final: null, award: null, reason: boundary2.reason };
+      // The Season boundary owns the complete Event set. Do not narrow the
+      // requirement to whichever Event happened to be active: that would let
+      // a future multi-Event Season seal while another Event is still open.
+      const season2 = get().sealCompetitionSeason();
+      if (!season2.ok) return { sealed: false, final: boundary2.final ?? null, award: boundary2.awardReceipt ?? null, reason: season2.reason };
+      get().save();
+      return { sealed: true, final: boundary2.final ?? state.final ?? null, award: boundary2.awardReceipt ?? null };
+    }
 
     //  ── Q6：先確保季後賽排定／補齊，再談封存 ──────────────────────────
     //  掛在這裡的理由與 Q4 封存相同：三個觸發點（推進天數／打完／棄權）都會
@@ -880,7 +999,7 @@ export const useProfileStore = create((set, get) => ({
     const po = ensurePlayoffs(state);
     if (po.ok && po.state !== state) {
       state = po.state;
-      set({ competition: state });
+      get()._setCompetitionState(state);
       get().save();
       if (po.added > 0 && isRegularSeasonDone(state) && activePlayoffOf(state)) {
         const q = activePlayoffOf(state).qualification.qualified;
@@ -1017,7 +1136,21 @@ export const useProfileStore = create((set, get) => ({
       if (!res.ok) return { sealed: false, final: null, award: null, reason: res.errors?.[0]?.message ?? null };
       final = res.final;
       state = res.state;
-      set({ competition: state });
+      get()._setCompetitionState(state);
+      const champ = participantsOf(res.state).find((p) => p.id === final.championTeamId)?.name ?? "—";
+      get().pushInbox({
+        type: "match", from: "聯賽官方",
+        subject: `第 ${final.season} 賽季 結束 · ${champ} 奪冠`,
+        text: `第 ${final.season} 賽季常規賽與季後賽全部結束，${champ} 拿下冠軍。你的隊伍最終排名第 ${final.playerRank} 名（常規賽第 ${final.playerRegularRank} 名）。`,
+      });
+    }
+
+    //  名次獎金：純函式算，這裡只寫回。重複呼叫由 `processedCompetitionAwards` 擋住。
+    const settled = settleCompetitionAwardInState(get(), { final, day: Number(get().meta?.days) || 1 });
+    if (settled.nextState) {
+      set(settled.nextState);
+      get()._syncSeasonStateV2();
+      lastAward = settled.receipt ?? lastAward;
     }
     get().save();
     return { sealed: true, final, award: lastAward };
@@ -1040,7 +1173,7 @@ export const useProfileStore = create((set, get) => ({
    *      產生的也是同一份賽程，不會出現兩份不同的 S2。
    */
   rollToNextCompetitionSeason() {
-    const state = get().competition;
+    const state = get().activeCompetitionEvent().legacyState;
     const can = canRollSeason(state);
     if (!can.ok) return { ok: false, errors: [{ code: "cannot_roll", message: can.reason }], reason: can.reason };
 
@@ -1072,11 +1205,10 @@ export const useProfileStore = create((set, get) => ({
     const circuitHistory = arr(get().circuitHistory, []);
     const fresh = summaries.filter((s) => !circuitHistory.some((h) => h?.id === s.id && h?.season === s.season));
 
-    set({
-      //  新賽季也掛上巡迴賽（同一條規則：只在**建立**時掛）
-      competition: get()._withAsiaCircuit(res.state),
+    const nextHistory = already ? history : [res.archived, ...history].slice(0, 20);
+    get()._setCompetitionState(get()._withAsiaCircuit(res.state), {
       //  新的在前；上限 20 季（一季一筆、每筆 8 列，容量遠小於 replay 那類東西）
-      competitionHistory: already ? history : [res.archived, ...history].slice(0, 20),
+      competitionHistory: nextHistory,
       circuitHistory: fresh.length ? [...fresh, ...circuitHistory].slice(0, 20) : circuitHistory,
     });
     get().save();
@@ -1104,12 +1236,14 @@ export const useProfileStore = create((set, get) => ({
   },
   /** 賽事總覽（畫面唯一入口；不得自己算積分榜或自己找下一場）。 */
   competitionView() {
-    const state = get().competition;
+    const adapter = get().activeCompetitionEvent();
+    const state = adapter.legacyState;
     if (!state?.schema) {
       return {
         hasSeason: false, standings: null, next: null, today: null, progress: null, live: null,
         final: null, award: null, canRoll: { ok: false, reason: "目前沒有賽季", nextSeason: null },
         history: arr(get().competitionHistory, []),
+        activeEvent: null,
       };
     }
     const day = Number(get().meta?.days) || 1;
@@ -1123,6 +1257,8 @@ export const useProfileStore = create((set, get) => ({
       : nextPlayerFixture(state, day);
     return {
       hasSeason: true,
+      activeEvent: adapter.event,
+      seasonStateV2: get().seasonStateV2,
       season: state.season,
       competition: activeCompetitionOf(state),
       //  Q7a-3b：多賽事並存之後，畫面要拿得到整份集合
@@ -1685,7 +1821,7 @@ export const useProfileStore = create((set, get) => ({
    * 只由 `reportMatchResult` 呼叫；換算規則在 `fixtureResultBridge`（純函式）。
    */
   _writeFixtureResultFromMatch(result, session) {
-    const state = get().competition;
+    const state = get().activeCompetitionEvent().legacyState;
     const fixtureId = fixtureIdOfSession(session);
     if (!state?.schema || !fixtureId) return { ok: false, errors: [{ code: "no_fixture", message: "這場不是賽程比賽" }] };
     const fixture = fixtureById(state, fixtureId);

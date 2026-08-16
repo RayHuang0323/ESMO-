@@ -47,6 +47,8 @@ ESMO 是 **Web MOBA / 電競經營模擬遊戲**。目標不是程式實驗，�
 
 ## 5. Development Principles
 
+- **Repository-wide language rule**：所有回報、review finding、規劃、handoff 與最終摘要一律使用繁體中文；檔名、指令、程式碼與符號保留原格式。
+
 - **小步修改**，不任意大重構。
 - **不寫死**勝負、擊殺數、獎勵、result。
 - **不用 UI 假資料**掩蓋引擎缺資料——缺資料就補可靠來源或誠實標記。
@@ -67,10 +69,9 @@ ESMO 是 **Web MOBA / 電競經營模擬遊戲**。目標不是程式實驗，�
 ### ⚠⚠ 長 verifier 一律走 `tools/verify.mjs`（2026-08-09 更正）
 
 **本節原本寫「`runtime29` 跑它=跑完全部，約 10–15 分」——那是錯的。**
-直接跑 `check_moba_runtime29.mjs` 會展開 **63 個子行程**，不應作為日常入口；
-`check_moba_stats28.mjs` 直接跑曾量到約 **87 分鐘**。走 runner 的耗時依機器與負載而異；
-2026-08-10 Codex fresh integration run 為：全套 28 段約 27 分鐘、`stats28` 302 秒、
-`runtime29` 190 秒。這些是觀測值，不是 timeout 或效能 SLA。
+直接跑 `check_moba_runtime29.mjs` 會展開 **63 個子行程** ⇒ **跑不完**；
+`check_moba_stats28.mjs` 直接跑約 **87 分鐘**。實測對照（走 runner 後）：
+`experience26` 7 秒、`stats28` 226 秒、`runtime29` 47 秒。
 
 ```
 node tools/verify.mjs --list              # 區段清單與狀態
@@ -84,15 +85,13 @@ runner 對每個子行程設 `ESMO_VERIFY_FLAT=1` ⇒ fan-out 腳本跳過巢狀
 每段跑完即寫 `tools/.verify-state.json`，中斷可 `--resume`。
 
 **長驗證回報規則（不可妥協）**：
-1. **必須保留完整 stdout + stderr 與 checkpoint**（CI／terminal transcript 或 ignored 本機 log），
-   不得只記最後一行 assertion count；log／probe output 不得 commit。
+1. **必須保存完整 stdout + stderr log 與 checkpoint**，不得只記最後一行 assertion count。
 2. 這些腳本的 `ck()` 累積到最後才印 ⇒ **執行中 log 是 0 bytes 屬正常**，
    不得用 stdout byte 數判斷卡住或失敗。
 3. 被 timeout／中止／0 stdout／靠推論得到的結果，一律標
    **NOT RUN / TIMEOUT / SKIP，禁止標 PASS**。
-4. 既有紅燈必須先在乾淨 `main` 重現並具名，不得為了變綠而放寬門檻。
-   2026-08-10 baseline 為 `milestone_j` 37/39、`milestone_e` 47/49；本輪整合結果相同。
-   TD-19 replay 容量目前 PASS 但仍接近上限；TD-21 已以增加樣本數解決，兩者都不是現役紅燈。
+4. 既有紅燈（技術債）必須具名並附編號，不得為了變綠而放寬門檻：
+   目前為 `experience26` §17 replay 容量（TD-19）、`runtime29` §29 順序公平性（TD-21）。
 
 ### ⚠ 指標規則：exec summary counter 只作診斷，不作 gameplay outcome KPI
 

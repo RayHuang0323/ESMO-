@@ -1,0 +1,11 @@
+file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO-combat/src/LogicEngine.js:763
+      const O = this.tfObs[p.side];
+                          ^
+
+TypeError: Cannot read properties of undefined (reading 'blue')
+    at LogicEngine._joinV3 (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO-combat/src/LogicEngine.js:763:27)
+    at LogicEngine.tick (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO-combat/src/LogicEngine.js:3540:16)
+    at run (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO-combat/tools/check_moba_stats28.mjs:72:57)
+    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO-combat/tools/check_moba_stats28.mjs:141:19
+
+Node.js v24.18.0

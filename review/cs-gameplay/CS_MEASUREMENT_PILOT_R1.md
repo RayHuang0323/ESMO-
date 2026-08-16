@@ -1,7 +1,7 @@
 # CS Measurement Pilot R1
 
-日期：2026-08-10
-狀態：**PASS／基準已鎖定**
+日期：2026-08-10  
+狀態：**PASS／基準已鎖定**  
 階段判定：**Measurement 可繼續；Calibration 仍為 No-Go**
 
 ## 目的

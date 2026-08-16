@@ -10,12 +10,17 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
+import { csR10LegacySource } from "./cs_r10_legacy_source.mjs";
+import { CS_R11_REPAIRED_SOURCE_SHA256, csR11R10Source } from "./cs_r11_legacy_source.mjs";
+import { CS_R13_PLAYER_SMOKE_SOURCE_SHA256, csR13R12Source } from "./cs_r13_legacy_source.mjs";
+import { CS_R19_SEMANTIC_SOURCE_SHA256, csR15EvidenceSources as csR14EvidenceSources } from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
 const FPS_MODULE_ID = "/src/battle/fps/EsportsFPS3D.jsx";
 
-const DIGEST_SCHEMA = "CsGameplayDigest.v1";
+const LEGACY_DIGEST_SCHEMA_V1 = "CsGameplayDigest.v1";
+const DIGEST_SCHEMA = "CsGameplayDigest.v2";
 const SEED_GENERATION_VERSION = "CsMeasurementSeedSet.v1";
 const SEED_NAMESPACE = "ESMO:CsMeasurementPilot.v1:";
 const FIXED_SEEDS = Object.freeze([
@@ -25,11 +30,13 @@ const FIXED_SEEDS = Object.freeze([
   951543597, 2082574495, 474649321, 3950420867,
 ]);
 const EXPECTED_SEED_SET_SHA256 = "52414f0e6b09ba72b9223b5e76b6ad9d859e8b8ea6fe77dcc2a2a08876a74c6d";
-const CAPTURED_ENGINE_SOURCE_SHA256 = "5b9360f457c95034cdfdc9e864c04a761e1afdba01501c7e383bb9075e048c3d";
+const CAPTURED_ENGINE_SOURCE_SHA256 = "870678267543c8e502fac55c7a91a656a135f31fdfb0d673adc30c91c4d8f47b";
+const R10_ENGINE_SOURCE_SHA256 = "ba3305ea6cd92fe06df5ee3fd4eb3ca47e1385910672b1ec111f804da0859b8d";
 
 // Intentionally no --update/--rebaseline path. The first verifier run prints the
 // candidate; a human must inspect it and replace this literal explicitly.
-const EXPECTED_BASELINE_SUITE_V1 = "546a3e5753ceadfa28c64e7f322556ebbff32f0848eebe2c9b477a29f1a195c2";
+const LEGACY_EXPECTED_BASELINE_SUITE_V1 = "546a3e5753ceadfa28c64e7f322556ebbff32f0848eebe2c9b477a29f1a195c2";
+const EXPECTED_BASELINE_SUITE_V2 = "5e39e463148d2cd43bbd30b97c485858d75a5edf7f42a035f8f49e1d473293e9";
 
 const RETURN_MARKER = "return { EsportsFPS3D, buildMatchResult };";
 const RETURN_REPLACEMENT = "return { EsportsFPS3D, buildMatchResult, simulateFps, ROSTER, TACTICS_DB };";
@@ -203,6 +210,10 @@ function buildGameplayDocument(sim, scenario) {
 
   const document = {
     schema: DIGEST_SCHEMA,
+    metricSemantics: {
+      damageAccounting: "effectiveHpDamage.v1",
+      ratingFormula: "CsRating.v1",
+    },
     scenario: {
       seed: scenario.seed,
       mapKey: scenario.mapKey,
@@ -259,7 +270,7 @@ function buildGameplayDocument(sim, scenario) {
     })),
   };
 
-  gate(document.schema === "CsGameplayDigest.v1", "SCHEMA_MISMATCH", `actual=${document.schema}`);
+  gate(document.schema === "CsGameplayDigest.v2", "SCHEMA_MISMATCH", `actual=${document.schema}`);
   return document;
 }
 
@@ -354,10 +365,22 @@ async function main() {
 
   const originalSource = readFileSync(FPS_FILE, "utf8");
   const engineSourceSha256 = sha256(originalSource);
-  gate(engineSourceSha256 === CAPTURED_ENGINE_SOURCE_SHA256, "SOURCE_PROVENANCE_MISMATCH",
-    `expected=${CAPTURED_ENGINE_SOURCE_SHA256}\nactual=${engineSourceSha256}`);
-  gate(occurrences(originalSource, RETURN_MARKER) === 1, "RETURN_MARKER_COUNT");
-  gate(occurrences(originalSource, EXPORT_MARKER) === 1, "EXPORT_MARKER_COUNT");
+  const r14Sources = csR14EvidenceSources(originalSource);
+  gate(r14Sources || [CAPTURED_ENGINE_SOURCE_SHA256, R10_ENGINE_SOURCE_SHA256, CS_R11_REPAIRED_SOURCE_SHA256,
+    CS_R13_PLAYER_SMOKE_SOURCE_SHA256, CS_R19_SEMANTIC_SOURCE_SHA256].includes(engineSourceSha256), "SOURCE_PROVENANCE_MISMATCH",
+  `expected=${CAPTURED_ENGINE_SOURCE_SHA256}, ${R10_ENGINE_SOURCE_SHA256}, ${CS_R11_REPAIRED_SOURCE_SHA256}, ${CS_R13_PLAYER_SMOKE_SOURCE_SHA256}, or ${CS_R19_SEMANTIC_SOURCE_SHA256}\nactual=${engineSourceSha256}`);
+  const r12Source = r14Sources?.r12 ?? (engineSourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256
+    ? csR13R12Source(originalSource) : originalSource);
+  if (engineSourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256) {
+    gate(sha256(r12Source) === CS_R11_REPAIRED_SOURCE_SHA256, "R13_R12_ADAPTER_MISMATCH");
+  }
+  const r12SourceSha256 = sha256(r12Source);
+  const r10Source = r14Sources?.r10 ?? (r12SourceSha256 === CS_R11_REPAIRED_SOURCE_SHA256
+    ? csR11R10Source(r12Source) : r12Source);
+  const historicalSource = r14Sources?.r8 ?? ([R10_ENGINE_SOURCE_SHA256, CS_R11_REPAIRED_SOURCE_SHA256].includes(r12SourceSha256)
+    ? csR10LegacySource(r10Source) : r12Source);
+  gate(occurrences(historicalSource, RETURN_MARKER) === 1, "RETURN_MARKER_COUNT");
+  gate(occurrences(historicalSource, EXPORT_MARKER) === 1, "EXPORT_MARKER_COUNT");
 
   const regenerated = generatedSeeds();
   gate(canonicalJson(regenerated) === canonicalJson(FIXED_SEEDS), "SEED_GENERATION_MISMATCH");
@@ -394,13 +417,13 @@ async function main() {
           gate(code === originalSource, "VITE_SOURCE_MISMATCH");
           gate(occurrences(code, RETURN_MARKER) === 1, "TRANSFORM_RETURN_MARKER_COUNT");
           gate(occurrences(code, EXPORT_MARKER) === 1, "TRANSFORM_EXPORT_MARKER_COUNT");
-          const transformed = code
+          const transformed = historicalSource
             .replace(RETURN_MARKER, RETURN_REPLACEMENT)
             .replace(EXPORT_MARKER, EXPORT_REPLACEMENT);
           const restored = transformed
             .replace(RETURN_REPLACEMENT, RETURN_MARKER)
             .replace(EXPORT_REPLACEMENT, EXPORT_MARKER);
-          transformRestoredExactly = restored === code;
+          transformRestoredExactly = restored === historicalSource;
           gate(transformRestoredExactly, "TRANSFORM_NOT_EXPORT_ONLY");
           return { code: transformed, map: null };
         },
@@ -491,10 +514,11 @@ async function main() {
     console.log(`treatment pilot: ${JSON.stringify(pilotSummary(treatment))}`);
     console.log("statistics: not computed (no p-value; no significance gate)");
 
-    gate(EXPECTED_BASELINE_SUITE_V1 !== "__CAPTURE_MANUALLY__", "BASELINE_NOT_LOCKED",
+    console.log(`legacyBaselineSuite: ${LEGACY_DIGEST_SCHEMA_V1} ${LEGACY_EXPECTED_BASELINE_SUITE_V1}`);
+    gate(EXPECTED_BASELINE_SUITE_V2 !== "__CAPTURE_MANUALLY__", "BASELINE_NOT_LOCKED",
       `candidate=${baselineSuiteDigest}`);
-    gate(baselineSuiteDigest === EXPECTED_BASELINE_SUITE_V1, "GAMEPLAY_REGRESSION",
-      `schema=${DIGEST_SCHEMA}\nexpected=${EXPECTED_BASELINE_SUITE_V1}\nactual=${baselineSuiteDigest}`);
+    gate(baselineSuiteDigest === EXPECTED_BASELINE_SUITE_V2, "GAMEPLAY_REGRESSION",
+      `schema=${DIGEST_SCHEMA}\nexpected=${EXPECTED_BASELINE_SUITE_V2}\nactual=${baselineSuiteDigest}`);
 
     console.log("CS Measurement R1: PASS");
   } finally {

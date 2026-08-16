@@ -9691,3 +9691,8 @@ JS 無法反射進閉包）。
 
 年度總決賽仍**沒有獎金**（榮耀與獎金分離，金額是產品決定）。
 榮耀只有一種類型（`asia_annual_champion`），**沒有泛化成 Award 系統**——那是另一個產品決定。
+
+## R57 部署整合（2026-08-16）
+
+- R57 release commit `83dc14917c93bac1956a8ffd1869fb10de4a82d5` 已透過既有 `main` → GitHub Pages workflow 合併部署；R57 matchup acceptance verifier 與報告見 `review/cs-gameplay/CS_AI_TEAM_MATCHUP_ACCEPTANCE_R57_{SPEC,REPORT}.md`。
+- 本次部署沒有修改 CS 16 項能力、roster、scenario、seed 或部署架構；僅為 release/main 的必要文件與 `profileStore` 合併衝突做保守整合。

@@ -1,0 +1,77 @@
+START 23:21:11
+執行 5 個區段（逾時 45 分／段）
+
+▶ ability_p02          P0-2 能力→本場經驗速率 … ✅ PASS　121s
+▶ quality_p03          P0-3 能力→戰鬥品質（A/B 雙方皆真實能力） … ✅ PASS　151s
+▶ regress              回歸：15 seeds … ✅ PASS　35s
+▶ regress2             節奏門檻 … ✅ PASS　37s
+▶ build                production build … ✅ PASS　13s
+
+════════════════════════════════════════════════════════════════
+本次：5/5 通過
+累計：7/22 區段通過　（尚未執行 14：milestone_j_close, milestone_j, milestone_i_close, milestone_i, milestone_h, milestone_g, milestone_f, milestone_e, tactic24, cs23, progress25, talent27, growth_p0, growth_ui_p1）
+狀態檔：D:\OneDrive\文件\GitHub\ESMO-combat\tools\.verify-state.json　（--resume 續跑、--list 查看）
+exit=0
+=== credibility（不在 SEGMENTS，單獨跑）===
+
+══ §0 未做項目：留下證據，不假裝做了 ══
+✅ §0a 小兵掉血來源仍只有『兵對兵』與『塔打兵』（英雄無傷害通道）　⇒ 第三節需新增傷害通道，本輪未做
+✅ §0b 小兵仍使用單一射程（兵種未分射程）　⇒ 第二節未做，已還原
+✅ §0c 兵種欄位存在但戰鬥未使用（根因仍在，列為待辦）
+
+══ §1 越塔強殺判斷 ══
+✅ §1a v3 啟用越塔評估
+✅ §1b 評估參數齊備
+✅ §1c 預估擊殺時間過長 ⇒ 拒絕越塔　predicted_ttk_too_long
+✅ §1d 預估會在擊殺前死亡 ⇒ 拒絕越塔　would_die_before_kill
+✅ §1e 塔邊人數劣勢 ⇒ 拒絕越塔　outnumbered_at_tower
+✅ §1f 有把握、撐得住、走得掉、無人數劣勢 ⇒ 允許越塔　ok
+✅ §1g 圍攻（sieging）與有兵線（hasWave）不受越塔評估影響
+✅ §1h 實戰中越塔評估確實被觸發　24 次
+✅ §1i 低把握越塔確實被拒絕　擋下 15 次 {"predicted_ttk_too_long":11,"would_die_before_kill":2,"outnumbered_at_tower":2}
+✅ §1j 高把握越塔仍被允許（不是一律禁止）　允許 9 次
+
+══ §2 撤退與風險判斷 ══
+✅ §2a v3 啟用風險評估
+✅ §2b 風險分級實戰中出現多種結果　engage／trade／fighting／retreat
+✅ §2c 五級都有定義　engage／trade／fighting／retreat
+✅ §2d 風險評估輸出「hpR」　1
+✅ §2d 風險評估輸出「foesN」　0
+✅ §2d 風險評估輸出「alliesN」　0
+✅ §2d 風險評估輸出「incoming」　0
+✅ §2d 風險評估輸出「flank」　0
+✅ §2d 風險評估輸出「hasEscape」　true
+✅ §2d 風險評估輸出「escapeReady」　false
+✅ §2d 風險評估輸出「towerThreat」　0
+✅ §2e 殘血 ⇒ 立即撤退
+✅ §2f 滿血且周圍無敵人與塔 ⇒ 繼續交戰
+✅ §2g 素質影響沿用 P0-3 的 `retreatLate`（不新增能力模型）
+✅ §2h 風險評估沒有讀取任何個性欄位（個性尚未接線，不假裝）
+
+══ §3 放棄追擊 ══
+✅ §3a 追擊維持判定接上風險評估
+✅ §3b 只放棄、不製造新追擊（`_tryChaseV3` 未被改動）
+✅ §3c 只在「立即撤退」這一級才放棄（避免對局收不掉）
+✅ §3d 實戰中確實有放棄追擊　7 次
+
+══ §4 決定性 ══
+✅ §4a 同 seed ⇒ 逐值相同（5 seeds）　5/5
+
+══ §5 紅線：不改傷害、不新增素質、不假裝個性已接線 ══
+✅ §5a 傷害公式未被改動
+✅ §5b 越塔評估只是唯讀估算（沒有寫回任何傷害）
+✅ §5c 16 項素質未被增刪或改名
+✅ §5d `mapAware` 的正式中文是「視野意識」
+✅ §5e 個性資料未被增刪（仍是既有 10 種）　進攻型／防守型／冷靜型／熱血型／天才型／苦練型／指揮型／孤狼型／穩健型／創意型
+✅ §5f MOBA 引擎仍未讀取個性（如實反映，不假裝接線）
+✅ §5g 能力注入層也未讀個性
+✅ §5h P0-3 品質係數限幅未被動過
+
+══ §6 歷史規則集不受影響 ══
+✅ §6a v1 沒有新旗標
+✅ §6b v2 沒有新旗標
+✅ §6c 新行為只在 v3
+✅ §6d 未啟用時完全短路（`riskAssess` 為假 ⇒ 不放棄追擊）
+
+🟢 MOBA 戰鬥可信度：45/45 通過
+credibility exit=0

@@ -1,0 +1,8 @@
+執行 1 個區段（逾時 45 分／段）
+
+▶ runtime29            S29 執行期（flat：9 段委派；§29 順序公平性既有紅燈 TD-21） … ✅ PASS　98s
+
+════════════════════════════════════════════════════════════════
+本次：1/1 通過
+累計：1/22 區段通過　（尚未執行 21：milestone_j_close, milestone_j, milestone_i_close, milestone_i, milestone_h, milestone_g, milestone_f, milestone_e, tactic24, cs23, progress25, experience26, talent27, stats28, growth_p0, ability_p02, quality_p03, growth_ui_p1, regress, regress2, build）
+狀態檔：D:\OneDrive\文件\GitHub\ESMO-combat\tools\.verify-state.json　（--resume 續跑、--list 查看）

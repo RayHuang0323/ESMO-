@@ -8,6 +8,10 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
+import { csR10LegacySource } from "./cs_r10_legacy_source.mjs";
+import { CS_R11_REPAIRED_SOURCE_SHA256, csR11R10Source } from "./cs_r11_legacy_source.mjs";
+import { CS_R13_PLAYER_SMOKE_SOURCE_SHA256, csR13R12Source } from "./cs_r13_legacy_source.mjs";
+import { CS_R19_SEMANTIC_SOURCE_SHA256, csR15EvidenceSources as csR14EvidenceSources } from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
@@ -22,8 +26,10 @@ const FIXED_SEEDS = Object.freeze([
   951543597, 2082574495, 474649321, 3950420867,
 ]);
 const EXPECTED_SEED_SET_SHA256 = "52414f0e6b09ba72b9223b5e76b6ad9d859e8b8ea6fe77dcc2a2a08876a74c6d";
-const CAPTURED_ENGINE_SOURCE_SHA256 = "5b9360f457c95034cdfdc9e864c04a761e1afdba01501c7e383bb9075e048c3d";
+const CAPTURED_ENGINE_SOURCE_SHA256 = "870678267543c8e502fac55c7a91a656a135f31fdfb0d673adc30c91c4d8f47b";
+const R10_ENGINE_SOURCE_SHA256 = "ba3305ea6cd92fe06df5ee3fd4eb3ca47e1385910672b1ec111f804da0859b8d";
 const EXPECTED_RAND_CALLS = 21;
+const EXPECTED_EVENT_ONLY_SUITE_V1 = "1b4b139c50e7fe646a5b307a36ca83de26094bbdd8f617661054a9d47d0c836f";
 
 const SIGNATURE_MARKER = "function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){";
 const SIGNATURE_REPLACEMENT = "function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,__measure=null){";
@@ -37,7 +43,7 @@ const PT_REPLACEMENT = [
   PT_MARKER,
   '          __measure?.record("combat_trigger",{round:rnd+1,sec,tPlayerId:tp.id,cPlayerId:cp.id,tRole:tp.role,cRole:cp.role,distance:d,sniperInvolved,fireChance,tSkill:tSk,cSkill:cSk,pt:Pt,mapEdge:(MAP_EDGE[mapKey]??0.02),ecoEdge,flashPen,tacEdge,atLowerClamp:Pt===0.07,atUpperClamp:Pt===0.93});',
 ].join("\n");
-const DAMAGE_MARKER = '          df.hp-=dmg;at.dmgDealt=(at.dmgDealt||0)+dmg;roundDmg[at.id]=(roundDmg[at.id]||0)+dmg;at.flash=3;df.flash=3;at.state="ENGAGE";df.state="ENGAGE";at.shooting=df.hp<=0?1:2;';
+const DAMAGE_MARKER = '          const hpBefore=df.hp,effectiveDamage=Math.min(dmg,hpBefore);\n          df.hp-=dmg;at.dmgDealt=(at.dmgDealt||0)+effectiveDamage;roundDmg[at.id]=(roundDmg[at.id]||0)+effectiveDamage;at.flash=3;df.flash=3;at.state="ENGAGE";df.state="ENGAGE";at.shooting=df.hp<=0?1:2;';
 const DAMAGE_REPLACEMENT = [
   DAMAGE_MARKER,
   '          __measure?.record("combat_conversion",{round:rnd+1,sec,tPlayerId:tp.id,cPlayerId:cp.id,tWon:tw,attackerId:at.id,attackerSide:at.side,attackerRole:at.role,defenderId:df.id,defenderSide:df.side,defenderRole:df.role,pt:Pt,headshotChance:g.hs*(0.72+0.55*((at.stats?.acc||80)/100)),headshot:isHS,rolledDamage:dmg,hpBefore:df.hp+dmg,effectiveDamage:Math.min(dmg,df.hp+dmg),overkillDamage:Math.max(0,-df.hp),kill:df.hp<=0});',
@@ -243,13 +249,26 @@ async function main() {
     "No update, rebaseline, seed, or calibration flags are supported.");
   const originalSource = readFileSync(FPS_FILE, "utf8");
   const sourceSha256 = sha256(originalSource);
-  gate(sourceSha256 === CAPTURED_ENGINE_SOURCE_SHA256, "SOURCE_PROVENANCE_MISMATCH",
-    "expected=" + CAPTURED_ENGINE_SOURCE_SHA256 + "\nactual=" + sourceSha256);
-  for (const [name, marker] of TRANSFORMS) {
-    gate(occurrences(originalSource, marker) === 1, "MARKER_COUNT", "name=" + name);
+  const r14Sources = csR14EvidenceSources(originalSource);
+  gate(r14Sources || [CAPTURED_ENGINE_SOURCE_SHA256, R10_ENGINE_SOURCE_SHA256, CS_R11_REPAIRED_SOURCE_SHA256,
+    CS_R13_PLAYER_SMOKE_SOURCE_SHA256, CS_R19_SEMANTIC_SOURCE_SHA256].includes(sourceSha256), "SOURCE_PROVENANCE_MISMATCH",
+  "expected=" + CAPTURED_ENGINE_SOURCE_SHA256 + ", " + R10_ENGINE_SOURCE_SHA256 + ", "
+    + CS_R11_REPAIRED_SOURCE_SHA256 + ", " + CS_R13_PLAYER_SMOKE_SOURCE_SHA256 + ", or " + CS_R19_SEMANTIC_SOURCE_SHA256 + "\nactual=" + sourceSha256);
+  const r12Source = r14Sources?.r12 ?? (sourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256
+    ? csR13R12Source(originalSource) : originalSource);
+  if (sourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256) {
+    gate(sha256(r12Source) === CS_R11_REPAIRED_SOURCE_SHA256, "R13_R12_ADAPTER_MISMATCH");
   }
-  const originalRandTokens = randTokens(originalSource);
-  const originalRngTokens = rngTokens(originalSource);
+  const r12SourceSha256 = sha256(r12Source);
+  const r10Source = r14Sources?.r10 ?? (r12SourceSha256 === CS_R11_REPAIRED_SOURCE_SHA256
+    ? csR11R10Source(r12Source) : r12Source);
+  const historicalSource = r14Sources?.r8 ?? ([R10_ENGINE_SOURCE_SHA256, CS_R11_REPAIRED_SOURCE_SHA256].includes(r12SourceSha256)
+    ? csR10LegacySource(r10Source) : r12Source);
+  for (const [name, marker] of TRANSFORMS) {
+    gate(occurrences(historicalSource, marker) === 1, "MARKER_COUNT", "name=" + name);
+  }
+  const originalRandTokens = randTokens(historicalSource);
+  const originalRngTokens = rngTokens(historicalSource);
   gate(originalRandTokens.length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT",
     "expected=" + EXPECTED_RAND_CALLS + " actual=" + originalRandTokens.length);
   const regenerated = generatedSeeds();
@@ -286,7 +305,7 @@ async function main() {
           if (cleanId !== FPS_FILE.toLowerCase()) return null;
           transformSeen += 1;
           gate(code === originalSource, "VITE_SOURCE_MISMATCH");
-          let transformed = code;
+          let transformed = historicalSource;
           for (const [name, marker, replacement] of TRANSFORMS) {
             gate(occurrences(transformed, marker) === 1, "TRANSFORM_MARKER_COUNT", "name=" + name);
             transformed = transformed.replace(marker, replacement);
@@ -296,7 +315,7 @@ async function main() {
             gate(occurrences(restored, replacement) === 1, "REPLACEMENT_COUNT", "name=" + name);
             restored = restored.replace(replacement, marker);
           }
-          transformRestoredExactly = restored === code;
+          transformRestoredExactly = restored === historicalSource;
           transformedRngTokensMatch =
             canonicalJson(rngTokens(transformed)) === canonicalJson(originalRngTokens);
           gate(transformRestoredExactly, "TRANSFORM_NOT_EXACTLY_REVERSIBLE");
@@ -365,6 +384,12 @@ async function main() {
       seedSetSha256,
       suite,
     }));
+    const eventOnlySuiteDigest = sha256(canonicalJson({
+      schema: EVENT_SCHEMA,
+      seedGenerationVersion: SEED_GENERATION_VERSION,
+      seedSetSha256,
+      suite: suite.map(({ seed, eventDigest, counts }) => ({ seed, eventDigest, counts })),
+    }));
     const summary = {
       simulations: FIXED_SEEDS.length * 3,
       opportunities: totals.opportunities,
@@ -383,9 +408,14 @@ async function main() {
       targetT2Conversions: totals.targetConversions,
     };
     console.log("eventSuiteDigest: " + suiteDigest);
+    console.log("eventOnlySuiteDigest: " + eventOnlySuiteDigest);
     console.log("combat summary: " + JSON.stringify(summary));
     console.log("formal baseline: protected by separate cs_measure_r1 segment");
     console.log("statistics: not computed (no p-value; no significance gate)");
+    gate(EXPECTED_EVENT_ONLY_SUITE_V1 !== "__CAPTURE_MANUALLY__", "EVENT_ONLY_SUITE_NOT_LOCKED",
+      "candidate=" + eventOnlySuiteDigest);
+    gate(eventOnlySuiteDigest === EXPECTED_EVENT_ONLY_SUITE_V1, "COMBAT_EVENT_STREAM_REGRESSION",
+      "expected=" + EXPECTED_EVENT_ONLY_SUITE_V1 + "\nactual=" + eventOnlySuiteDigest);
     console.log("CS Instrumentation R2: PASS");
   } finally {
     if (vite) await vite.close();

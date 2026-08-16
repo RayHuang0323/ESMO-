@@ -60,7 +60,7 @@ node tools/regress2.mjs # 一律跑（若存在）
   node tools/verify.mjs --list                    # 區段清單與目前狀態
   node tools/verify.mjs --only=experience26       # 單段
   node tools/verify.mjs --resume                  # 只跑還沒通過的
-  node tools/verify.mjs                           # 全部（依機器／負載；2026-08-10 fresh run 約 27 分）
+  node tools/verify.mjs                           # 全部（約 90–120 分鐘）
   ```
 
   runner 會對每個子行程設 `ESMO_VERIFY_FLAT=1`，讓會 fan-out 的腳本跳過巢狀子驗證
@@ -73,9 +73,9 @@ node tools/regress2.mjs # 一律跑（若存在）
   flat 下 `runtime29` 35/35、`stats28` 21/21、`experience26` 29/29、`progress25` 33/33、
   `talent27` 37/37、`tactic24` 29、`cs23` 28、`regress` 結束率 15/15、
   `regress2` 節奏門檻 8/8。
-- **既有紅燈必須以乾淨 `main` baseline 為準**：2026-08-10 為 `milestone_j` 37/39、
-  `milestone_e` 47/49；本輪 integration fresh run 同形。TD-19 replay 容量目前 PASS 但仍是
-  近上限風險；TD-21 已以增加樣本數解決，兩者都不是現役紅燈。**不得為了變綠放寬門檻**。
+- **既有紅燈（技術債，非回歸訊號）**：`experience26` §17 replay 容量（**TD-19**）、
+  `runtime29` §29 順序公平性（**TD-21**，HEAD `3adf8f7` 即存在）。
+  這兩支會如實回報 FAIL，**不得為了讓它們變綠而放寬門檻**。
 - **已失效（S27 起即紅，非本次改動所致，勿當回歸訊號）**：`check_equiv06/07/08`
   （import 不存在的 `tools/src/LogicEngine.s05.js` fixture）、`check_hero08`、
   `check_mount09`（斷言 S09 時代的 AppShell 畫面清單）、`check_loop08`、`check_ux07`、

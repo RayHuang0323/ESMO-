@@ -122,6 +122,10 @@ function rayWallDist(ax,ay,dx,dy,walls,max){
 function segPtDist(ax,ay,bx,by,px,py){const dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy;if(l2<1e-6)return Math.hypot(px-ax,py-ay);let t=((px-ax)*dx+(py-ay)*dy)/l2;t=Math.max(0,Math.min(1,t));return Math.hypot(px-(ax+dx*t),py-(ay+dy*t));}
 // 煙霧阻斷視線：對槍連線若穿過煙團則無法交火
 const SMOKE_R=6;
+// R14 functional baseline only; balance calibration requires a separate Sprint.
+const HE_R=12,HE_MAX_DAMAGE=80,HE_ARMOR_SCALE=0.72;
+// R15 functional baseline only; balance calibration requires a separate Sprint.
+const MOLLY_R=4,MOLLY_TL=8,MOLLY_DAMAGE_PER_TICK=10;
 function smokeBlocks(a,b,smokes){if(!smokes||!smokes.length)return false;for(const s of smokes){if((s.tl??1)<=0)continue;if(segPtDist(a.x,a.y,b.x,b.y,s.pos.x,s.pos.y)<SMOKE_R)return true;}return false;}
 
 // ─── 地圖資料（walls = 碰撞 + 3D 建築）───────────────────────────────────
@@ -251,20 +255,21 @@ const POS_PROFILE={
 // FPS 全域素質權重（取自遊戲 FPS_WEIGHTS）
 const FPS_W={acc:1.4,rxn:1.3,str:1.3,pos:1.2,cou:1.1,vis:1.1,apm:1.0,tac:1.0,foc:1.0,dec:0.9,com:0.9,adp:0.8,res:0.8,coo:0.8,led:0.7,lrn:0.5};
 const _mechKeys=["acc","rxn","apm","pos","foc","str"],_mechW=_mechKeys.reduce((a,k)=>a+FPS_W[k],0);
-function posSkill(p){const prof=POS_PROFILE[p.role]||POS_PROFILE.rifler;const s=p.stats||{};let t=0;prof.forEach((k,i)=>t+=(s[k]||50)*(5-i));return t/15;} // 與遊戲 posFit 一致
+function posSkill(p,rawReflex=Number((p.stats||{}).rxn??50)){const prof=POS_PROFILE[p.role]||POS_PROFILE.rifler;const s=p.stats||{};let t=0;prof.forEach((k,i)=>t+=(k==="rxn"?rawReflex:(s[k]||50))*(5-i));return t/15;} // role-fit / positioning aptitude；rxn 保留 rawReflex
 // 對槍實力：機械對槍核心（FPS 權重）+ 武器契合 + 角色定位契合（5 項關鍵素質）+ 情境（呼應 fpsRoles 戰術）
 function combatSkill(p,opts){const s=p.stats;if(!s)return 80;const cls=GUNS[p.gun]?.cls;
-  const S=k=>persStat(p,k); // 個性調整後的有效素質
+  const rawReflex=Number(s.rxn??50),effectiveReflex=persStat(p,"rxn");
+  const S=k=>k==="rxn"?effectiveReflex:persStat(p,k); // live combat 使用 effectiveReflex；其他素質維持既有 effective read
   let mech=0;_mechKeys.forEach(k=>mech+=S(k)*FPS_W[k]);mech/=_mechW;
-  const wpn=cls==="狙擊"?(S("acc")*0.45+S("foc")*0.3+S("pos")*0.25):cls==="手槍"?(S("acc")*0.55+S("rxn")*0.45):(S("acc")*0.42+S("apm")*0.3+S("rxn")*0.28);
-  const role=posSkill(p); // 定位契合（用該位置關鍵素質）
+  const wpn=cls==="狙擊"?(S("acc")*0.45+S("foc")*0.3+S("pos")*0.25):cls==="手槍"?(S("acc")*0.55+effectiveReflex*0.45):(S("acc")*0.42+S("apm")*0.3+effectiveReflex*0.28);
+  const role=posSkill(p,rawReflex); // raw role-fit；live combat 另用 effectiveReflex
   let v=mech*0.5+wpn*0.28+role*0.14+S("vis")*0.04+S("dec")*0.04;
   if(opts){
     if(opts.holding)v+=S("pos")*0.05+S("foc")*0.05;            // 狙擊手/防守：主動架點
-    if(opts.entry)v+=S("cou")*0.06+S("rxn")*0.02;              // 突破手：首發突進
-    if(opts.lastAlive)v+=(S("str")-76)*0.22+(S("res")-76)*0.12; // 殘局（clutch=抗壓 + 韌性）
+    if(opts.entry)v+=S("cou")*0.06+effectiveReflex*0.02;        // 突破手：首發突進；effectiveReflex
+    if(opts.lastAlive)v+=(S("str")-76)*0.22;                      // 殘局主動勝負：由 Clutch 負責
     if(opts.lurk)v+=(S("vis")-76)*0.05+(S("pos")-76)*0.04;     // 自由人：埋伏陰人
-    if(opts.lowHP)v-=(100-S("str"))*0.05;
+    if(opts.lowHP)v-=(100-S("str"))*0.05-(S("res")-76)*0.12;   // 低血量穩定執行：Resilience 減少衰退
   }
   return v*formMul(p); // 士氣 / 體能狀態 影響整體發揮
 }
@@ -273,6 +278,87 @@ const ROLE_AGGR={entry:0.14,rifler:0.05,igl:0,support:-0.03,awp:-0.05,lurker:-0.
 // 各地圖 T 方結構平衡微調（校正回合勝率趨近 50%）
 const MAP_EDGE={dust2:-0.42,mirage:0.08,inferno:0.057};
 function aggr(p){const s=p.stats;if(!s)return 0.6;const base=(persStat(p,"cou")*0.5+persStat(p,"str")*0.22+persStat(p,"apm")*0.16+persStat(p,"pos")*0.12)/100;const pr=p.personality&&PERSONALITY[p.personality];return clamp(base+(ROLE_AGGR[p.role]||0)+(pr?pr.aggro:0),0.2,1.15);}
+const MAPAWARE_BASE_RANGE=28,MAPAWARE_VIS_RANGE=0.28;
+function mapAwareCanReadVisibleCandidate(p,distance,visibleCandidate){
+  if(!visibleCandidate)return false;
+  return distance<=MAPAWARE_BASE_RANGE+persStat(p,"vis")*MAPAWARE_VIS_RANGE;
+}
+const ADAPT_ROUTE_THRESHOLD=80;
+function adaptiveRouteGoal(p,target,N){
+  if(persStat(p,"adp")<ADAPT_ROUTE_THRESHOLD)return null;
+  const goal=p.side==="t"?N[target==="a"?"aConn":"car"]:N[target==="a"?"aSite":"bSite"];
+  return goal&&dist(p.pos,goal)>6?goal:null;
+}
+const TACTICAL_EXECUTION_THRESHOLD=90;
+function tacticalRouteKeys(p,tactic,tr,RKF){
+  const direct=tr[p.role];
+  const fallback=tr[RKF[p.role]]||tr.rifler||tr.entry||Object.values(tr)[0]||["tSpawn"];
+  return p.role==="igl"&&persStat(p,"tac")>=TACTICAL_EXECUTION_THRESHOLD&&direct?direct:tr[p.role]||fallback;
+}
+function adaptivePostPlantGoal(p,planted,c4pos){
+  if(!planted||p.side!=="t"||p.hp<48||p._adaptivePostPlant||persStat(p,"adp")<ADAPT_ROUTE_THRESHOLD)return null;
+  return c4pos&&dist(p.pos,c4pos)>10?c4pos:null;
+}
+function tacticalRetakeRoute(p,tactic,N,c4pos){
+  if(p.side!=="ct"||!c4pos||persStat(p,"tac")<TACTICAL_EXECUTION_THRESHOLD)return null;
+  const keys=tactic?.routes?.[p.role]||tactic?.routes?.rifler||tactic?.routes?.entry;if(!Array.isArray(keys)||keys.length<3)return null;
+  const staging=keys.slice(1,-1).map(key=>N[key]).find(node=>node&&dist(node,c4pos)>8);
+  return staging?[{...p.pos},{...staging},{...c4pos}]:null;
+}
+const COMMS_HANDOFF_THRESHOLD=88;
+function applyCommsHandoff(spotter,enemy,players,walls){
+  if(persStat(spotter,"com")<COMMS_HANDOFF_THRESHOLD)return null;
+  const candidates=players.filter(p=>p!==spotter&&!p.dead&&!p.reassigned&&p.side===spotter.side&&(dist(p.pos,enemy.pos)<50||dist(p.pos,spotter.pos)<45));
+  candidates.sort((a,b)=>((b.role==="support"?1:0)-(a.role==="support"?1:0))||dist(a.pos,enemy.pos)-dist(b.pos,enemy.pos));
+  const receiver=candidates[0];if(!receiver)return null;
+  receiver.route=[{...receiver.pos},{...enemy.pos}];receiver.routeIdx=0;receiver.routeT=0;receiver.state="ROTATE";
+  receiver.va=Math.atan2(enemy.pos.y-receiver.pos.y,enemy.pos.x-receiver.pos.x)*180/Math.PI;
+  return receiver;
+}
+const LEADERSHIP_EXECUTION_THRESHOLD=90;
+function leadershipRouteKeys(p,tactic,tr,RKF,roster){
+  const base=tacticalRouteKeys(p,tactic,tr,RKF);
+  if(p.role==="igl")return base;
+  const leader=roster.find(q=>q.side===p.side&&q.role==="igl"&&!q.dead);
+  return leader&&persStat(leader,"led")>=LEADERSHIP_EXECUTION_THRESHOLD&&tr[leader.role]?tr[leader.role]:base;
+}
+const SYNERGY_TRADE_THRESHOLD=90;
+function synergyTradeCandidate(attacker,victim,players,walls){
+  const candidates=players.filter(p=>p!==attacker&&!p.dead&&!p.reassigned&&p.side===attacker.side&&dist(p.pos,attacker.pos)<24&&dist(p.pos,victim.pos)<38&&!lineBlocked(p.pos,victim.pos,walls));
+  candidates.sort((a,b)=>((b.role==="support"?1:0)-(a.role==="support"?1:0))||dist(a.pos,attacker.pos)-dist(b.pos,attacker.pos));
+  return candidates[0]||null;
+}
+function leadershipFollowUpRoute(leader,teammate,goal){
+  if(!leader||!teammate||leader===teammate||leader.dead||teammate.dead||leader.side!==teammate.side||leader.role!=="igl"||persStat(leader,"led")<LEADERSHIP_EXECUTION_THRESHOLD||!goal)return null;
+  const next=Array.isArray(leader.route)&&leader.route.length>1?leader.route[Math.min(leader.routeIdx+1,leader.route.length-1)]:null;
+  const via=next&&dist(next,goal)>4?next:null;
+  if(dist(teammate.pos,goal)<=4)return null;
+  return via?[{...teammate.pos},{...via},{...goal}]:[{...teammate.pos},{...goal}];
+}
+function leadershipFollowUpAfterKill(victim,players,target,N){
+  const goal=victim.side==="t"?N[target==="a"?"aSite":"bSite"]:victim.pos;
+  const leader=players.find(p=>p.side===victim.side&&p.role==="igl"&&!p.dead&&!p.reassigned);
+  const teammates=players.filter(p=>p.side===victim.side&&p!==leader&&!p.dead&&!p.reassigned);
+  const teammate=teammates[teammates.length-1]||null;
+  const opportunity=Boolean(leader&&teammate&&goal);
+  const route=leadershipFollowUpRoute(leader,teammate,goal);
+  if(route){teammate.reassigned=true;teammate.route=route;teammate.routeIdx=0;teammate.routeT=0;teammate.state="ROTATE";}
+  return {opportunity,action:Boolean(route),leaderId:leader?.id??null,playerId:teammate?.id??null,leaderRole:leader?.role??null,role:teammate?.role??null,led:leader?persStat(leader,"led"):null};
+}
+function synergyCoverFollowUpRoute(attacker,partner,victim){
+  if(!attacker||!partner||!victim||attacker===partner||attacker.dead||partner.dead||victim.dead)return null;
+  const dx=victim.pos.x-partner.pos.x,dy=victim.pos.y-partner.pos.y,L=Math.hypot(dx,dy)||1;
+  const cover={x:clamp(partner.pos.x-dx/L*7,5,95),y:clamp(partner.pos.y-dy/L*7,5,95)};
+  return dist(attacker.pos,cover)>4?[{...attacker.pos},cover]:null;
+}
+function applyCommsBombAwareness(carrier,sitePos,players){
+  const candidates=players.filter(p=>p!==carrier&&!p.dead&&!p.reassigned&&dist(p.pos,carrier.pos)<50&&persStat(p,"com")>=COMMS_HANDOFF_THRESHOLD);
+  candidates.sort((a,b)=>((b.role==="support"?1:0)-(a.role==="support"?1:0))||persStat(b,"com")-persStat(a,"com")||dist(a.pos,sitePos)-dist(b.pos,sitePos));
+  const receiver=candidates[0];if(!receiver||!sitePos)return null;
+  receiver.route=[{...receiver.pos},{...sitePos}];receiver.routeIdx=0;receiver.routeT=0;receiver.state="ROTATE";
+  receiver.va=Math.atan2(sitePos.y-receiver.pos.y,sitePos.x-receiver.pos.x)*180/Math.PI;
+  return receiver;
+}
 // ── 戰術剋制關係（剪刀石頭布 + 站點對位）──────────────────────────────
 // 回傳「對 T 方有利」的對槍機率偏移（+ 利攻方 / − 利守方）。一回合內固定。
 // 類型剋制：T(rush/execute/default) × CT(default/stack/aggro)
@@ -370,7 +456,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
   // 持續性經濟：金錢、存活保留的槍/甲、連敗計數
   const econ={};RS.forEach(c=>econ[c.id]={money:800,gun:null,armor:false,helmet:false});
   // 跨回合累計的每位選手數據（給賽後 MatchResult / 成長機制 / 數據面板使用）
-  const agg={};RS.forEach(c=>agg[c.id]={id:c.id,name:c.name,side:c.side,role:c.fpsRole||c.role,roleKey:c.role,personality:c.personality,k:0,d:0,a:0,dmg:0,hs:0,entry:0,clutch:0,kastR:0,mvpR:0});
+  const agg={};RS.forEach(c=>agg[c.id]={id:c.id,name:c.name,side:c.side,role:c.fpsRole||c.role,roleKey:c.role,personality:c.personality,k:0,d:0,a:0,dmg:0,utilDmg:0,hs:0,entry:0,clutch:0,kastR:0,mvpR:0});
   let tLoss=0,ctLoss=0;
   for(let rnd=0;rnd<ROUNDS&&Math.max(ctScore,tScore)<8;rnd++){
     const tac={t:tacticT,ct:tacticCT};const target=tacticT.site;
@@ -383,7 +469,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
     const ARMOR=1000,NADE={flash:200,smoke:300,he:300,molly:400},sidePistol=s=>s==="t"?"glock":"usp";
     let planted=false,c4t=null,c4pos=null,smokes=[],tracers=[],muzzles=[];
     let mollys=[],throwables=[],droppedGuns=[],droppedBomb=null;
-    let roundEnd=null,firstKill=false,openKill=null,roundKills={},roundDmg={},roundDeaths={},roundAst={},doorStates={};
+    let roundEnd=null,firstKill=false,openKill=null,roundKills={},roundDmg={},roundUtilDmg={},roundDeaths={},roundAst={},throwerByNadeId={},doorStates={};
     let contactCalled=false,defuseCalled=false,defuseProg=0;
     map.doors.forEach((d,i)=>doorStates[i]=false);
     const ps=RS.map(c=>{
@@ -413,7 +499,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
       // 路線指派：戰術未定義該角色時，退回相近角色路線（避免指揮/輔助等留在出生點不參戰）
       const RKF={igl:"rifler",support:"rifler",lurker:"rifler",awp:"rifler",rifler:"entry",entry:"rifler"};
       const tr=tactic.routes||{};
-      const routeKeys=tr[c.role]||tr[RKF[c.role]]||tr.rifler||tr.entry||Object.values(tr)[0]||["tSpawn"];
+      const routeKeys=leadershipRouteKeys(c,tactic,tr,RKF,RS);
       const route=routeKeys.map(nk=>N[nk]).filter(Boolean);
       const hasBomb=c.side==="t"&&c.role==="entry";
       return{...c,pos:{...SPAWN[c.side==="ct"?"ct":"t"]},prevPos:{...SPAWN[c.side==="ct"?"ct":"t"]},
@@ -423,6 +509,28 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
     for(let sec=0;sec<115;sec+=2){
       const events=[],casts=[],comms=[],buyP=sec<12;const prog=buyP?0:clamp((sec-12)/90,0,1);
       const aliveT=ps.filter(p=>p.side==="t"&&!p.dead),aliveCT=ps.filter(p=>p.side==="ct"&&!p.dead);
+      const applyDamage=(at,df,damage,source="firearm",sourceId=null)=>{
+        if(!df._hitters)df._hitters=[];if(!df._hitters.includes(at.id))df._hitters.push(at.id);
+        const hpBefore=df.hp,effectiveDamage=Math.min(damage,hpBefore);
+        df.hp-=damage;at.dmgDealt=(at.dmgDealt||0)+effectiveDamage;roundDmg[at.id]=(roundDmg[at.id]||0)+effectiveDamage;
+        if(source==="he"||source==="molly")roundUtilDmg[at.id]=(roundUtilDmg[at.id]||0)+effectiveDamage;
+        return{hpBefore,effectiveDamage,killed:df.hp<=0};
+      };
+      const finalizeKill=(at,df,{weapon=at.gun,isHS=false,distance=Infinity,sourceId=null}={})=>{
+        df.dead=true;df.hp=0;at.k++;df.d++;if(isHS)at.hsCount++;at.money+=killReward(weapon);roundKills[at.id]=(roundKills[at.id]||0)+1;roundDeaths[df.id]=1;
+        const leadershipSecond=leadershipFollowUpAfterKill(df,ps,target,N);
+        (df._hitters||[]).forEach(id=>{if(id!==at.id){const ap=ps.find(x=>x.id===id);if(ap){ap.a++;roundAst[id]=(roundAst[id]||0)+1;}}});
+        if(!["glock","usp"].includes(df.gun))droppedGuns.push({id:`dg${fi}${df.id}`,gun:df.gun,pos:{...df.pos}});
+        if(df.hasBomb&&!planted){df.hasBomb=false;droppedBomb={pos:{...df.pos}};casts.push(`💣 炸彈掉落！`);}
+        const isFirst=!firstKill;firstKill=true;if(isFirst)openKill={id:at.id,side:at.side};
+        events.push({type:"kill",killerId:at.id,killer:at.name,killerSide:at.side,victim:df.name,gun:weapon,hs:isHS,pos:{...df.pos},firstKill:isFirst});
+        const rk=roundKills[at.id];
+        if(rk>=2){const ml={2:"雙殺",3:"三殺",4:"四殺",5:"團滅"};events.push({type:"multikill",player:at.name,side:at.side,count:rk,label:ml[Math.min(rk,5)]});highlights.push({fi,label:`${at.name} ${ml[Math.min(rk,5)]}`});}
+        if(weapon==="molly")casts.push(`🔥 ${at.name} 燃燒彈擊殺 ${df.name}`);else if(weapon==="he")casts.push(`💥 ${at.name} 高爆彈擊殺 ${df.name}！`);else if(isHS)casts.push(`💀 ${at.name} 爆頭擊殺 ${df.name}！`);else if(isFirst)casts.push(`🔫 ${at.name} 取得首殺，拿下開局優勢`);else if(distance<12)casts.push(`${at.name} 近距離擊殺 ${df.name}`);else if(GUNS[weapon]?.cls==="狙擊")casts.push(`🎯 ${at.name} 一槍狙掉 ${df.name}`);else if(rand()<0.4)casts.push(`${at.name} 擊殺 ${df.name}`);
+        if(rand()<0.4)comms.push({side:at.side,name:at.name,text:rk>=2?"清掉了，跟上！":isHS?"爆頭收掉":`收一個，剩 ${df.side==="t"?aliveT.length-1:aliveCT.length-1} 個`});
+        const sameTeam=ps.filter(x=>x.side===df.side&&!x.dead&&!x.reassigned);
+        if(sameTeam.length&&rand()<0.6){const taker=sameTeam[0];taker.reassigned=true;const goal=df.side==="t"?N[target==="a"?"aSite":"bSite"]:df.pos;if(goal){taker.route=[taker.pos,goal];taker.routeIdx=0;taker.routeT=0;casts.push(`🔄 ${taker.name} 接管 ${df.name} 的位置`);}}
+      };
       if(sec===12){
         const tIgl=ps.find(p=>p.side==="t"&&p.role==="igl")||aliveT[0];
         const cIgl=ps.find(p=>p.side==="ct"&&p.role==="igl")||aliveCT[0];
@@ -443,6 +551,8 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
          const near=en.length?en.reduce((a,b)=>dist(b.pos,p.pos)<dist(a.pos,p.pos)?b:a):null;
          const mates=(p.side==="t"?aliveT:aliveCT).length;
          if(near&&!buyP&&dist(near.pos,p.pos)<32&&p.hp<48&&aggr(p)<0.82&&mates>1){
+            const adaptiveGoal=adaptiveRouteGoal(p,target,N);
+            if(adaptiveGoal){p.route=[{...p.pos},{...adaptiveGoal}];p.routeIdx=0;p.routeT=0;p.state="ROTATE";return;}
            const dx=p.pos.x-near.pos.x,dy=p.pos.y-near.pos.y,L=Math.hypot(dx,dy)||1;
            p.pos=safeMove(p.pos,{x:p.pos.x+dx/L*3.2,y:p.pos.y+dy/L*3.2},walls,PLAYER_R);
            p.va=Math.atan2(near.pos.y-p.pos.y,near.pos.x-p.pos.x)*180/Math.PI;p.state="撤退";return;
@@ -485,7 +595,8 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
           const nt=p.nades[0];p.nades=p.nades.slice(1);
           const enemy=ps.find(e=>!e.dead&&e.side!==p.side&&dist(e.pos,p.pos)<30);
           const land=enemy?{x:lerp(p.pos.x,enemy.pos.x,0.85),y:lerp(p.pos.y,enemy.pos.y,0.85)}:{x:clamp(p.pos.x+(rand()-0.5)*14,5,95),y:clamp(p.pos.y+(rand()-0.5)*14,5,95)};
-          throwables.push({id:`nd${fi}${p.id}`,type:nt,side:p.side,from:{...p.pos},to:land,t:0,flying:true,detonate:false});
+          const nadeId=`nd${fi}${p.id}`;
+          throwables.push({id:nadeId,type:nt,side:p.side,from:{...p.pos},to:land,t:0,flying:true,detonate:false});throwerByNadeId[nadeId]=p.id;
           if(nt==="flash"&&enemy)enemy.flash=Math.max(enemy.flash,4);
           if(nt==="flash")casts.push(`⚡ ${p.name} 丟出閃光彈`);else if(nt==="he")casts.push(`💥 ${p.name} 高爆彈攻擊`);
         }
@@ -493,7 +604,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
       if(sec===18)(tacticT.smokes||[]).forEach(sk=>{const n=N[sk];if(n)smokes.push({id:`s${rnd}${sk}`,pos:{...n},tl:18,age:0});});
       if(sec===24)(tacticT.mollys||[]).forEach(mk=>{const n=N[mk];if(n)mollys.push({id:`m${rnd}${mk}`,pos:{...n},tl:8});});
       if(prog>0.15&&aliveT.length&&aliveCT.length){
-        let pairs=[];aliveT.forEach(tp=>aliveCT.forEach(cp=>{const d=dist(tp.pos,cp.pos);if(d<55&&!lineBlocked(tp.pos,cp.pos,walls)&&!smokeBlocks(tp.pos,cp.pos,smokes))pairs.push([tp,cp,d]);}));
+        let pairs=[];aliveT.forEach(tp=>aliveCT.forEach(cp=>{const d=dist(tp.pos,cp.pos);const visibleCandidate=d<55&&!lineBlocked(tp.pos,cp.pos,walls)&&!smokeBlocks(tp.pos,cp.pos,smokes);const mapAwareT=mapAwareCanReadVisibleCandidate(tp,d,visibleCandidate);const mapAwareCT=mapAwareCanReadVisibleCandidate(cp,d,visibleCandidate);if(visibleCandidate&&(mapAwareT||mapAwareCT))pairs.push([tp,cp,d,mapAwareT,mapAwareCT]);}));
         // 排序用「有效距離」：狙擊架點專長遠距 → 加權使其搶得到交火名額（避免狙擊整局零參與）
         const effD=pr=>pr[2]*((GUNS[pr[0].gun]?.cls==="狙擊"||GUNS[pr[1].gun]?.cls==="狙擊")?0.45:1);
         pairs.sort((a,b)=>effD(a)-effD(b));
@@ -503,7 +614,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
         const usedT=new Set(),usedCT=new Set();
         const maxEngage=Math.min(pairs.length,Math.max(2,Math.ceil((aliveT.length+aliveCT.length)/3)));
         let done=0;
-        for(const[tp,cp,d] of ordered){
+        for(const[tp,cp,d,mapAwareT,mapAwareCT] of ordered){
           const sniperInvolved=isSniperPair([tp,cp]);
           if(!sniperInvolved&&done>=maxEngage)break;
           if(tp.dead||cp.dead||usedT.has(tp.id)||usedCT.has(cp.id))continue;
@@ -511,7 +622,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
           fireChance*=(0.55+0.5*Math.max(aggr(tp),aggr(cp))); // 進攻性影響交火意願（雙方都龜縮→少對槍）
           if(rand()>=fireChance)continue;
           usedT.add(tp.id);usedCT.add(cp.id);if(!sniperInvolved)done++; // 狙擊不計入一般名額
-          if(!contactCalled){contactCalled=true;const spotter=cp;comms.push({side:spotter.side,name:spotter.name,text:`${nearCO(tp.pos)} 有人，${aliveT.length} 個！`});}
+          if(!contactCalled){contactCalled=true;const spotter=cp;comms.push({side:spotter.side,name:spotter.name,text:`${nearCO(tp.pos)} 有人，${aliveT.length} 個！`});const handoffReceiver=applyCommsHandoff(spotter,tp,ps,walls);}
           // 對槍勝負由雙方 16 項素質 + 武器 + 情境決定（非隨機）
           const tHold=(tp.state==="架槍"||tp.state==="HOLD"),cHold=(cp.state==="架槍"||cp.state==="HOLD");
           const tSk=combatSkill(tp,{holding:tHold,entry:tp.role==="entry"&&!tHold,lurk:tp.role==="lurker"&&tHold,lastAlive:aliveT.length===1,lowHP:tp.hp<40});
@@ -520,26 +631,22 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
           const flashPen=(tp.flash>0?-0.12:0)+(cp.flash>0?0.12:0);
           const Pt=clamp(0.5+(tSk-cSk)*0.013+(MAP_EDGE[mapKey]??0.02)+ecoEdge+flashPen+tacEdge,0.07,0.93); // 結構平衡 + 戰術剋制
           const tw=rand()<Pt;const at=tw?tp:cp,df=tw?cp:tp;
-          const g=GUNS[at.gun];const isHS=rand()<g.hs*(0.72+0.55*((at.stats?.acc||80)/100));let dmg=(g.dmg+Math.floor(rand()*40))*(isHS?2:1);
+          const attackerMapAware=tw?mapAwareT:mapAwareCT;if(!attackerMapAware)continue;
+          const synergyPartner=synergyTradeCandidate(at,df,ps,walls);
+          const synergyReady=Boolean(synergyPartner&&Math.max(persStat(at,"coo"),persStat(synergyPartner,"coo"))>=SYNERGY_TRADE_THRESHOLD);
+          const synergySecond=synergyReady?synergyCoverFollowUpRoute(at,synergyPartner,df):null;
+          if(synergyReady){
+            synergyPartner.va=Math.atan2(df.pos.y-synergyPartner.pos.y,df.pos.x-synergyPartner.pos.x)*180/Math.PI;synergyPartner.state="ENGAGE";synergyPartner.shooting=Math.max(synergyPartner.shooting,1);
+            if(synergySecond){at.route=synergySecond;at.routeIdx=0;at.routeT=0;at.state="ROTATE";}
+          }
+          const g=GUNS[at.gun],rawAccuracy=at.stats?.acc||80,effectiveAccuracy=at.stats?.acc!=null?persStat(at,"acc"):rawAccuracy;const isHS=rand()<g.hs*(0.72+0.55*(effectiveAccuracy/100));let dmg=(g.dmg+Math.floor(rand()*40))*(isHS?2:1);
           if(df.armor&&!isHS)dmg*=0.72; // 護甲減傷（非爆頭）
           dmg=Math.round(dmg);
-          if(!df._hitters)df._hitters=[];if(!df._hitters.includes(at.id))df._hitters.push(at.id);
-          df.hp-=dmg;at.dmgDealt=(at.dmgDealt||0)+dmg;roundDmg[at.id]=(roundDmg[at.id]||0)+dmg;at.flash=3;df.flash=3;at.state="ENGAGE";df.state="ENGAGE";at.shooting=df.hp<=0?1:2;
+          const {killed}=applyDamage(at,df,dmg);
+          at.flash=3;df.flash=3;at.state="ENGAGE";df.state="ENGAGE";at.shooting=killed?1:2;
           tracers.push({id:`tr${fi}${sec}${at.id}`,from:{...at.pos},to:{x:df.pos.x,y:df.pos.y},tl:2,color:at.side==="ct"?"#7dd3fc":"#fdba74",hit:true,sniper:g.cls==="狙擊"});
           muzzles.push({id:`mz${fi}${at.id}`,pos:{...at.pos},side:at.side,tl:2,big:g.cls==="狙擊",cls:g.cls,kill:df.hp<=0});
-          if(df.hp<=0){df.dead=true;df.hp=0;at.k++;df.d++;if(isHS)at.hsCount++;at.money+=killReward(at.gun);roundKills[at.id]=(roundKills[at.id]||0)+1;roundDeaths[df.id]=1;
-            (df._hitters||[]).forEach(id=>{if(id!==at.id){const ap=ps.find(x=>x.id===id);if(ap){ap.a++;roundAst[id]=(roundAst[id]||0)+1;}}}); // 助攻
-            if(!["glock","usp"].includes(df.gun))droppedGuns.push({id:`dg${fi}${df.id}`,gun:df.gun,pos:{...df.pos}});
-            if(df.hasBomb&&!planted){df.hasBomb=false;droppedBomb={pos:{...df.pos}};casts.push(`💣 炸彈掉落！`);}
-            const isFirst=!firstKill;firstKill=true;if(isFirst)openKill={id:at.id,side:at.side};
-            events.push({type:"kill",killerId:at.id,killer:at.name,killerSide:at.side,victim:df.name,gun:at.gun,hs:isHS,pos:{...df.pos},firstKill:isFirst});
-            const rk=roundKills[at.id];
-            if(rk>=2){const ml={2:"雙殺",3:"三殺",4:"四殺",5:"團滅"};events.push({type:"multikill",player:at.name,side:at.side,count:rk,label:ml[Math.min(rk,5)]});highlights.push({fi,label:`${at.name} ${ml[Math.min(rk,5)]}`});}
-            if(isHS)casts.push(`💀 ${at.name} 爆頭擊殺 ${df.name}！`);else if(isFirst)casts.push(`🔫 ${at.name} 取得首殺，拿下開局優勢`);else if(d<12)casts.push(`${at.name} 近距離擊殺 ${df.name}`);else if(g.cls==="狙擊")casts.push(`🎯 ${at.name} 一槍狙掉 ${df.name}`);else if(rand()<0.4)casts.push(`${at.name} 擊殺 ${df.name}`);
-            if(rand()<0.4)comms.push({side:at.side,name:at.name,text:rk>=2?"清掉了，跟上！":isHS?"爆頭收掉":`收一個，剩 ${df.side==="t"?aliveT.length-1:aliveCT.length-1} 個`});
-            const sameTeam=ps.filter(x=>x.side===df.side&&!x.dead&&!x.reassigned);
-            if(sameTeam.length&&rand()<0.6){const taker=sameTeam[0];taker.reassigned=true;const goal=df.side==="t"?N[target==="a"?"aSite":"bSite"]:df.pos;if(goal){taker.route=[taker.pos,goal];taker.routeIdx=0;taker.routeT=0;casts.push(`🔄 ${taker.name} 接管 ${df.name} 的位置`);}}
-          }else if(df.hp<35&&rand()<0.25){comms.push({side:df.side,name:df.name,text:"我殘血，先撤一下"});}
+          if(killed)finalizeKill(at,df,{weapon:at.gun,isHS,distance:d});else if(df.hp<35&&rand()<0.25){comms.push({side:df.side,name:df.name,text:"我殘血，先撤一下"});}
         }
       }
       if(!planted&&prog>0.4){
@@ -548,32 +655,42 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
           const endsNear=carrier.route.length&&dist(carrier.route[carrier.route.length-1],sitePos)<10;
           if(!endsNear&&dist(carrier.pos,sitePos)>8){const ap=N[target==="a"?"aConn":"car"];carrier.route=ap?[carrier.pos,ap,sitePos]:[carrier.pos,sitePos];carrier.routeIdx=0;carrier.routeT=0;}
           if(dist(carrier.pos,sitePos)<9){const ctNear=aliveCT.filter(cp=>dist(cp.pos,sitePos)<13&&!lineBlocked(carrier.pos,cp.pos,walls)).length;const canPlant=(ctNear===0&&rand()<0.55)||(ctNear<=1&&aliveT.length>aliveCT.length&&rand()<0.18);if(canPlant){planted=true;c4pos={...sitePos};c4t=20;carrier.hasBomb=false;carrier.state="安裝中";carrier.money+=300;casts.push(`💣 ${carrier.name} 安裝炸彈！`);highlights.push({fi,label:`R${rnd+1} 炸彈安裝`});
-            comms.push({side:"t",name:carrier.name,text:`包下了，${target==="a"?"A":"B"} 點，全員交叉！`});const cov=aliveT.find(x=>x.id!==carrier.id);if(cov)comms.push({side:"t",name:cov.name,text:"收到，我架槍"});
+            aliveT.filter(p=>p.id!==carrier.id&&!p.dead&&!p.reassigned).forEach(p=>{const adaptivePostPlant=adaptivePostPlantGoal(p,planted,c4pos);if(adaptivePostPlant){p._adaptivePostPlant=true;p.route=[{...p.pos},{...adaptivePostPlant}];p.routeIdx=0;p.routeT=0;p.state="ROTATE";}});
+            comms.push({side:"t",name:carrier.name,text:`包下了，${target==="a"?"A":"B"} 點，全員交叉！`});const bombAwareReceiver=applyCommsBombAwareness(carrier,c4pos,aliveT);if(bombAwareReceiver)comms.push({side:"t",name:bombAwareReceiver.name,text:"收到包點資訊，調整路線"});
             const cd=aliveCT[0];if(cd)comms.push({side:"ct",name:cd.name,text:`${target==="a"?"A":"B"} 響了，全員回防拆彈！`});
             // 炸彈安裝後：所有存活警察立刻往包點移動（回防 / 拆彈）
             const appr=target==="a"?N.aConn:N.bTop;
-            aliveCT.forEach(cp=>{cp.reassigned=false;cp.route=appr&&dist(cp.pos,appr)>6?[{...cp.pos},appr,{...c4pos}]:[{...cp.pos},{...c4pos}];cp.routeIdx=0;cp.routeT=0;cp.state="RETAKE";});}}
+            aliveCT.forEach(cp=>{const tacticalRoute=tacticalRetakeRoute(cp,tacticCT,N,c4pos);cp.reassigned=false;cp.route=tacticalRoute||(appr&&dist(cp.pos,appr)>6?[{...cp.pos},appr,{...c4pos}]:[{...cp.pos},{...c4pos}]);cp.routeIdx=0;cp.routeT=0;cp.state="RETAKE";});}}
         }
       }
       smokes=smokes.map(s=>({...s,tl:s.tl-1,age:(s.age||0)+1})).filter(s=>s.tl>0);
+      mollys.forEach((m,zoneIndex)=>{
+        const sourceId=String(m.id).startsWith("mnd")?String(m.id).slice(1):null;if(!sourceId)return;
+        const at=ps.find(pl=>pl.id===throwerByNadeId[sourceId]);if(!at)return;
+        ps.forEach(df=>{if(df.dead||df.side===at.side)return;const d=dist(df.pos,m.pos);if(d>=MOLLY_R||lineBlocked(m.pos,df.pos,walls))return;const {killed}=applyDamage(at,df,MOLLY_DAMAGE_PER_TICK,"molly",sourceId);if(killed)finalizeKill(at,df,{weapon:"molly",distance:d,sourceId});});
+      });
       mollys=mollys.map(m=>({...m,tl:m.tl-1})).filter(m=>m.tl>0);
       throwables=throwables.map(tw=>{if(tw.flying){tw.t+=0.25;if(tw.t>=1){tw.flying=false;tw.detonate=true;tw.boom=3;
         if(tw.type==="flash"){ps.forEach(pl=>{if(pl.dead)return;const d=dist(pl.pos,tw.to);if(d<24&&!lineBlocked(pl.pos,tw.to,walls)){const enemy=pl.side!==tw.side;pl.flash=Math.max(pl.flash,enemy?(d<12?6:4):(d<8?3:0));}});}
+        if(tw.type==="he"){const at=ps.find(pl=>pl.id===throwerByNadeId[tw.id]);if(at)ps.forEach(df=>{if(df.dead||df.side===tw.side)return;const d=dist(df.pos,tw.to);if(d>=HE_R||lineBlocked(tw.to,df.pos,walls))return;const rawDamage=Math.max(0,Math.round(HE_MAX_DAMAGE*(1-d/HE_R)));const damage=Math.round(rawDamage*(df.armor?HE_ARMOR_SCALE:1));if(damage<=0)return;const {killed}=applyDamage(at,df,damage,"he",tw.id);if(killed)finalizeKill(at,df,{weapon:"he",distance:d,sourceId:tw.id});});}
+        if(tw.type==="smoke")smokes.push({id:`s${tw.id}`,pos:{...tw.to},tl:18,age:0});
+        if(tw.type==="molly")mollys.push({id:`m${tw.id}`,pos:{...tw.to},tl:MOLLY_TL});
       }}else if(tw.detonate){tw.boom--;}return tw;}).filter(tw=>tw.flying||tw.boom>0);
       if(planted&&c4t!==null){c4t--;
         // 警察必須真的抵達包點且無匪徒壓制，才會累積拆彈進度（受專注力/決策影響）
-        const defuser=aliveCT.find(cp=>dist(cp.pos,c4pos)<6);
-        const contested=defuser&&aliveT.some(tp=>dist(tp.pos,c4pos)<9&&!lineBlocked(tp.pos,defuser.pos,walls));
+        const defuseAliveCT=ps.filter(p=>p.side==="ct"&&!p.dead),defuseAliveT=ps.filter(p=>p.side==="t"&&!p.dead);
+        const defuser=defuseAliveCT.find(cp=>dist(cp.pos,c4pos)<6);
+        const contested=defuser&&defuseAliveT.some(tp=>dist(tp.pos,c4pos)<9&&!lineBlocked(tp.pos,defuser.pos,walls));
         if(defuser&&!contested){defuser.state="拆彈中";defuser.va=Math.atan2(c4pos.y-defuser.pos.y,c4pos.x-defuser.pos.x)*180/Math.PI;
-          defuseProg+=defuser.stats?(0.45+defuser.stats.foc/250+defuser.stats.dec/300):0.7;
+          defuseProg+=defuser.stats?(0.45+persStat(defuser,"foc")/250+persStat(defuser,"dec")/300):0.7;
           if(!defuseCalled){defuseCalled=true;comms.push({side:"ct",name:defuser.name,text:"我拆，掩護我！"});}}
         if(defuseProg>=3.5)roundEnd={winner:"ct",how:"defuse"};
         else if(c4t<=0)roundEnd={winner:"t",how:"bomb"};
       }
       if(!roundEnd){
         if(aliveT.length===0&&!planted)roundEnd={winner:"ct",how:"elim"};
-        else if(aliveCT.length===0)roundEnd={winner:"t",how:planted?"bomb":"elim"};
-        else if(sec>=114)roundEnd={winner:planted?"t":"ct",how:planted?"bomb":"time"};
+        else if(aliveCT.length===0)roundEnd={winner:"t",how:"elim"};
+        else if(sec>=114)roundEnd={winner:planted?"t":"ct",how:"time"};
       }
       frames.push({fi,ts:rnd*120+sec,rnd,roundSec:sec,target,planted,buyP,c4t:c4t!==null?Math.ceil(c4t):null,c4pos:c4pos?{...c4pos}:null,
         players:ps.map(p=>({...p,pos:{...p.pos},prevPos:{...p.prevPos}})),
@@ -596,7 +713,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
       if(openKill)agg[openKill.id].entry++;                        // 開局擊殺
       RS.forEach(c=>{const p=ps.find(x=>x.id===c.id);const A=agg[c.id];
         A.k+=roundKills[c.id]||0;A.d+=roundDeaths[c.id]||0;A.a+=roundAst[c.id]||0;
-        A.dmg+=Math.round(roundDmg[c.id]||0);A.hs+=p?(p.hsCount||0):0;
+        A.dmg+=Math.round(roundDmg[c.id]||0);A.utilDmg+=Math.round(roundUtilDmg[c.id]||0);A.hs+=p?(p.hsCount||0):0;
         // KAST：本回合有 擊殺/助攻/存活 之一即算
         if((roundKills[c.id]||0)>0||(roundAst[c.id]||0)>0||!roundDeaths[c.id])A.kastR++;
         if(c.id===clutchId)A.clutch++;
@@ -624,7 +741,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
     const rating=Math.max(0,+(0.4+0.7*kpr+0.2*apr+0.0045*adr+0.003*kast-0.55*dpr).toFixed(3));
     return{id:A.id,name:A.name,side:A.side,role:A.role,roleKey:A.roleKey,personality:A.personality,
       k:A.k,d:A.d,a:A.a,adr:Math.round(adr),hs:A.hs,hsPct:A.k?Math.round(A.hs/A.k*100):0,
-      kast:Math.round(kast),mvpRounds:A.mvpR,clutches:A.clutch,entryKills:A.entry,utilDmg:0,rating};
+      kast:Math.round(kast),mvpRounds:A.mvpR,clutches:A.clutch,entryKills:A.entry,utilDmg:Math.round(A.utilDmg),rating};
   });
   const mvp=[...players].sort((a,b)=>b.rating-a.rating||b.k-a.k)[0]||null;
   return{frames,highlights,roundHist,ctScore,tScore,mapKey,players,mvp,rounds:_R};
@@ -1586,7 +1703,7 @@ function EsportsFPS3D({
               <div key={e.id} style={{display:"flex",alignItems:"center",gap:5,background:e.hs?"rgba(40,30,0,0.88)":"rgba(0,0,0,0.82)",border:`1px solid ${e.hs?C.gold:sideColor(e.killerSide)}77`,borderRadius:6,padding:"3px 8px",animation:"slideL 0.25s",fontSize:9}}>
                 <span style={{color:e.killerSide==="ct"?C.ctL:C.tL,fontWeight:800}}>{e.killer}</span>
                 {e.firstKill&&<span style={{color:C.gold,fontSize:7,fontWeight:900,border:`1px solid ${C.gold}`,borderRadius:3,padding:"0 2px"}}>FK</span>}
-                <span style={{color:e.hs?C.gold:"#aeb4be",fontSize:10}}>{GUNS[e.gun]?.cls==="狙擊"?"🎯":GUNS[e.gun]?.cls==="衝鋒"?"🧨":"🔫"}</span>
+                <span style={{color:e.hs?C.gold:"#aeb4be",fontSize:10}}>{e.gun==="molly"?"🔥":e.gun==="he"?"💥":GUNS[e.gun]?.cls==="狙擊"?"🎯":GUNS[e.gun]?.cls==="衝鋒"?"🧨":"🔫"}</span>
                 {e.hs&&<span title="爆頭" style={{fontSize:11,filter:"drop-shadow(0 0 3px #fbbf24)"}}>🗡️</span>}
                 <span style={{color:e.killerSide==="ct"?C.tL:C.ctL,fontWeight:600,opacity:0.85}}>{e.victim}</span>
               </div>

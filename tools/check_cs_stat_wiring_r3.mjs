@@ -8,12 +8,16 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
+import { csR10LegacySource } from "./cs_r10_legacy_source.mjs";
+import { CS_R11_REPAIRED_SOURCE_SHA256, csR11R10Source } from "./cs_r11_legacy_source.mjs";
+import { CS_R13_PLAYER_SMOKE_SOURCE_SHA256, csR13R12Source } from "./cs_r13_legacy_source.mjs";
+import { CS_R19_SEMANTIC_SOURCE_SHA256, csR15EvidenceSources as csR14EvidenceSources } from "./cs_r15_legacy_source.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
 const FPS_MODULE_ID = "/src/battle/fps/EsportsFPS3D.jsx";
 
-const DIGEST_SCHEMA = "CsStatWiringDigest.v1";
+const DIGEST_SCHEMA = "CsStatWiringDigest.v2";
 const SEED_GENERATION_VERSION = "CsMeasurementSeedSet.v1";
 const SEED_NAMESPACE = "ESMO:CsMeasurementPilot.v1:";
 const FIXED_SEEDS = Object.freeze([
@@ -23,12 +27,15 @@ const FIXED_SEEDS = Object.freeze([
   951543597, 2082574495, 474649321, 3950420867,
 ]);
 const EXPECTED_SEED_SET_SHA256 = "52414f0e6b09ba72b9223b5e76b6ad9d859e8b8ea6fe77dcc2a2a08876a74c6d";
-const CAPTURED_ENGINE_SOURCE_SHA256 = "5b9360f457c95034cdfdc9e864c04a761e1afdba01501c7e383bb9075e048c3d";
+const CAPTURED_ENGINE_SOURCE_SHA256 = "870678267543c8e502fac55c7a91a656a135f31fdfb0d673adc30c91c4d8f47b";
+const R10_ENGINE_SOURCE_SHA256 = "ba3305ea6cd92fe06df5ee3fd4eb3ca47e1385910672b1ec111f804da0859b8d";
 const EXPECTED_RAND_CALLS = 21;
 
 // Intentionally no update/rebaseline path. Capture once through the runner, inspect,
 // then replace this literal manually.
-const EXPECTED_WIRING_SUITE_V1 = "fe6b16dc81c356828e45181b186356b222e7b8de2311c8cadb689fdef3f1343e";
+const LEGACY_EXPECTED_WIRING_SUITE_V1 = "fe6b16dc81c356828e45181b186356b222e7b8de2311c8cadb689fdef3f1343e";
+const EXPECTED_WIRING_SUITE_V2 = "6501b46d7f8c37e78877e9cb9fb17f2e87520a5422f11f2d1880d7078ac29e00";
+const EXPECTED_TRAJECTORY_SUITE_V1 = "00fa99fee39a80d85d6fb713fee65c11081266bbd0c6a4dbd113f1720874f2f0";
 
 const RETURN_MARKER = "return { EsportsFPS3D, buildMatchResult };";
 const RETURN_REPLACEMENT = "return { EsportsFPS3D, buildMatchResult, simulateFps, ROSTER, TACTICS_DB };";
@@ -302,12 +309,32 @@ function buildWiringDocument(sim, scenario) {
   };
 }
 
+function buildMetricNeutralTrajectoryDocument(wiringDocument) {
+  return {
+    schema: "CsStatMetricNeutralTrajectory.v1",
+    scenario: wiringDocument.scenario,
+    result: {
+      tScore: wiringDocument.result.tScore,
+      ctScore: wiringDocument.result.ctScore,
+      roundCount: wiringDocument.result.roundCount,
+      players: wiringDocument.result.players.map(({ adr, mvpRounds, rating, ...player }) => player),
+    },
+    rounds: wiringDocument.rounds,
+    frames: wiringDocument.frames.map((frame) => ({
+      ...frame,
+      players: frame.players.map(({ dmgDealt, ...player }) => player),
+    })),
+  };
+}
+
 function buildDigests(sim, scenario) {
   const strictBefore = JSON.stringify(sim);
   const result = resultProjection(sim);
   const rounds = roundsProjection(sim);
   const wiringDocument = buildWiringDocument(sim, scenario);
-  gate(wiringDocument.schema === "CsStatWiringDigest.v1", "SCHEMA_MISMATCH");
+  const trajectoryDocument = buildMetricNeutralTrajectoryDocument(wiringDocument);
+  gate(wiringDocument.schema === "CsStatWiringDigest.v2", "SCHEMA_MISMATCH");
+  gate(trajectoryDocument.schema === "CsStatMetricNeutralTrajectory.v1", "TRAJECTORY_SCHEMA_MISMATCH");
   const playerResultDigests = Object.fromEntries(
     result.players.map((player) => [player.id, sha256(canonicalJson(player, { rejectUndefined: true }))]),
   );
@@ -316,6 +343,7 @@ function buildDigests(sim, scenario) {
     behaviorDigest: sha256(canonicalJson(wiringDocument, { gameplay: true, rejectUndefined: true })),
     resultDigest: sha256(canonicalJson(result, { rejectUndefined: true })),
     roundsDigest: sha256(canonicalJson(rounds, { rejectUndefined: true })),
+    trajectoryDigest: sha256(canonicalJson(trajectoryDocument, { gameplay: true, rejectUndefined: true })),
     playerResultDigests,
   };
   const strictAfter = JSON.stringify(sim);
@@ -349,6 +377,7 @@ function assertRepeat(first, second, label) {
   gate(first.behaviorDigest === second.behaviorDigest, "BEHAVIOR_NON_DETERMINISTIC", label);
   gate(first.resultDigest === second.resultDigest, "RESULT_NON_DETERMINISTIC", label);
   gate(first.roundsDigest === second.roundsDigest, "ROUNDS_NON_DETERMINISTIC", label);
+  gate(first.trajectoryDigest === second.trajectoryDigest, "TRAJECTORY_NON_DETERMINISTIC", label);
   gate(canonicalJson(first.playerResultDigests) === canonicalJson(second.playerResultDigests),
     "PLAYER_RESULT_NON_DETERMINISTIC", label);
 }
@@ -366,19 +395,35 @@ function treatmentView(mapKey, tTactic, ctTactic, roster) {
   };
 }
 
+function legacyRunProjection({ trajectoryDigest, ...run }) {
+  return run;
+}
+
 async function main() {
   gate(process.argv.slice(2).length === 0, "CLI_FLAGS_FORBIDDEN",
     "No update, rebaseline, seed, treatment, or calibration flags are supported.");
 
   const originalSource = readFileSync(FPS_FILE, "utf8");
   const sourceSha256 = sha256(originalSource);
-  gate(sourceSha256 === CAPTURED_ENGINE_SOURCE_SHA256, "SOURCE_PROVENANCE_MISMATCH",
-    `expected=${CAPTURED_ENGINE_SOURCE_SHA256}\nactual=${sourceSha256}`);
-  gate(occurrences(originalSource, RETURN_MARKER) === 1, "RETURN_MARKER_COUNT");
-  gate(occurrences(originalSource, EXPORT_MARKER) === 1, "EXPORT_MARKER_COUNT");
+  const r14Sources = csR14EvidenceSources(originalSource);
+  gate(r14Sources || [CAPTURED_ENGINE_SOURCE_SHA256, R10_ENGINE_SOURCE_SHA256, CS_R11_REPAIRED_SOURCE_SHA256,
+    CS_R13_PLAYER_SMOKE_SOURCE_SHA256, CS_R19_SEMANTIC_SOURCE_SHA256].includes(sourceSha256), "SOURCE_PROVENANCE_MISMATCH",
+  `expected=${CAPTURED_ENGINE_SOURCE_SHA256}, ${R10_ENGINE_SOURCE_SHA256}, ${CS_R11_REPAIRED_SOURCE_SHA256}, ${CS_R13_PLAYER_SMOKE_SOURCE_SHA256}, or ${CS_R19_SEMANTIC_SOURCE_SHA256}\nactual=${sourceSha256}`);
+  const r12Source = r14Sources?.r12 ?? (sourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256
+    ? csR13R12Source(originalSource) : originalSource);
+  if (sourceSha256 === CS_R13_PLAYER_SMOKE_SOURCE_SHA256) {
+    gate(sha256(r12Source) === CS_R11_REPAIRED_SOURCE_SHA256, "R13_R12_ADAPTER_MISMATCH");
+  }
+  const r12SourceSha256 = sha256(r12Source);
+  const r10Source = r14Sources?.r10 ?? (r12SourceSha256 === CS_R11_REPAIRED_SOURCE_SHA256
+    ? csR11R10Source(r12Source) : r12Source);
+  const historicalSource = r14Sources?.r8 ?? ([R10_ENGINE_SOURCE_SHA256, CS_R11_REPAIRED_SOURCE_SHA256].includes(r12SourceSha256)
+    ? csR10LegacySource(r10Source) : r12Source);
+  gate(occurrences(historicalSource, RETURN_MARKER) === 1, "RETURN_MARKER_COUNT");
+  gate(occurrences(historicalSource, EXPORT_MARKER) === 1, "EXPORT_MARKER_COUNT");
 
-  const originalRandTokens = randTokens(originalSource);
-  const originalRngTokens = rngTokens(originalSource);
+  const originalRandTokens = randTokens(historicalSource);
+  const originalRngTokens = rngTokens(historicalSource);
   gate(originalRandTokens.length === EXPECTED_RAND_CALLS, "RAND_CALL_COUNT",
     `expected=${EXPECTED_RAND_CALLS} actual=${originalRandTokens.length}`);
   gate(canonicalJson(generatedSeeds()) === canonicalJson(FIXED_SEEDS), "SEED_GENERATION_MISMATCH");
@@ -421,13 +466,13 @@ async function main() {
           gate(code === originalSource, "VITE_SOURCE_MISMATCH");
           gate(occurrences(code, RETURN_MARKER) === 1, "TRANSFORM_RETURN_MARKER_COUNT");
           gate(occurrences(code, EXPORT_MARKER) === 1, "TRANSFORM_EXPORT_MARKER_COUNT");
-          const transformed = code
+          const transformed = historicalSource
             .replace(RETURN_MARKER, RETURN_REPLACEMENT)
             .replace(EXPORT_MARKER, EXPORT_REPLACEMENT);
           const restored = transformed
             .replace(RETURN_REPLACEMENT, RETURN_MARKER)
             .replace(EXPORT_REPLACEMENT, EXPORT_MARKER);
-          transformRestoredExactly = restored === code;
+          transformRestoredExactly = restored === historicalSource;
           transformedRngTokensMatch =
             canonicalJson(rngTokens(transformed)) === canonicalJson(originalRngTokens);
           gate(transformRestoredExactly, "TRANSFORM_NOT_EXPORT_ONLY");
@@ -547,22 +592,41 @@ async function main() {
       schema: DIGEST_SCHEMA,
       seedGenerationVersion: SEED_GENERATION_VERSION,
       seedSetSha256,
-      baseline: baselineSuite,
-      treatments: treatmentSuite,
+      baseline: baselineSuite.map(legacyRunProjection),
+      treatments: treatmentSuite.map(({ statCase, runs }) => ({
+        statCase,
+        runs: runs.map(legacyRunProjection),
+      })),
       summaries,
     };
     const suiteDigest = sha256(canonicalJson(suitePayload, { rejectUndefined: true }));
+    const trajectorySuiteDigest = sha256(canonicalJson({
+      schema: "CsStatMetricNeutralTrajectory.v1",
+      seedGenerationVersion: SEED_GENERATION_VERSION,
+      seedSetSha256,
+      baseline: baselineSuite.map(({ seed, trajectoryDigest }) => ({ seed, trajectoryDigest })),
+      treatments: treatmentSuite.map(({ statCase, runs }) => ({
+        statCase,
+        runs: runs.map(({ seed, trajectoryDigest }) => ({ seed, trajectoryDigest })),
+      })),
+    }, { rejectUndefined: true }));
     const simulationCount = FIXED_SEEDS.length * 2 * (STAT_CASES.length + 1);
     console.log(`simulations: ${simulationCount}`);
     console.log(`wiringSuiteDigest: ${suiteDigest}`);
+    console.log(`trajectorySuiteDigest: ${trajectorySuiteDigest}`);
     console.log(`stat summaries: ${JSON.stringify(summaries)}`);
     console.log("statistics: not computed (no p-value; no significance gate)");
     console.log("formal gameplay baseline: protected by separate cs_measure_r1 segment");
 
-    gate(EXPECTED_WIRING_SUITE_V1 !== "__CAPTURE_MANUALLY__", "WIRING_SUITE_NOT_LOCKED",
+    console.log(`legacyWiringSuiteV1: ${LEGACY_EXPECTED_WIRING_SUITE_V1}`);
+    gate(EXPECTED_WIRING_SUITE_V2 !== "__CAPTURE_MANUALLY__", "WIRING_SUITE_NOT_LOCKED",
       `candidate=${suiteDigest}`);
-    gate(suiteDigest === EXPECTED_WIRING_SUITE_V1, "WIRING_MEASUREMENT_REGRESSION",
-      `expected=${EXPECTED_WIRING_SUITE_V1}\nactual=${suiteDigest}`);
+    gate(suiteDigest === EXPECTED_WIRING_SUITE_V2, "WIRING_MEASUREMENT_REGRESSION",
+      `expected=${EXPECTED_WIRING_SUITE_V2}\nactual=${suiteDigest}`);
+    gate(EXPECTED_TRAJECTORY_SUITE_V1 !== "__CAPTURE_MANUALLY__", "TRAJECTORY_SUITE_NOT_LOCKED",
+      `candidate=${trajectorySuiteDigest}`);
+    gate(trajectorySuiteDigest === EXPECTED_TRAJECTORY_SUITE_V1, "STAT_TRAJECTORY_REGRESSION",
+      `expected=${EXPECTED_TRAJECTORY_SUITE_V1}\nactual=${trajectorySuiteDigest}`);
 
     console.log("CS Stat Wiring R3: PASS");
   } finally {
