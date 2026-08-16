@@ -7445,4 +7445,13 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - 新增 `CsAiTeam.v1`：8 支 AI teams、40 名 players；完整 16 項 stat，主要競技區間 60–90，potential 與 current stat cap 一致，read-only、deterministic team/player ids，無 runtime RNG。Team styles 為高進攻、戰術型、AWP 核心、高協同、高穩定、高潛力新秀、防守／韌性型、頂級強隊。
 - 依 R56 產品規則修正暫存設計：role 是 player gameplay identity / tactical usage，不是 `f1–f5` 固定職缺。Roster 只用既有五席容器映射五名真實玩家；允許重複 role、缺少 role、自由組合。`fpsRoster` 僅新增 direct CS role 讀取，未改既有 MOBA→FPS fallback。
 - `tools/check_cs_roster_v1_r56.mjs` focused PASS：8 teams / 40 players、role composition variety、duplicate/optional role、role aggregate identity、team strength ordering、90+ / clamp / threshold、battle adapter、progress/save/idempotence、determinism 均通過；`tools/verify.mjs` 已加入 `cs_roster_v1_r56` segment。
+
+## R57 CS AI 隊伍實戰驗收（2026-08-16）
+
+- 先確認 R56 `7596fa2a75063c621762de3c4473f218c2b6795e` 已在 local / tracking / remote 一致；R57 不 push。沿用既有 `inferno / t_aexec / c_std` 與 R54 六組 fixed seeds，避免未上線的 style-to-tactic mapping 混入 roster acceptance。
+- 新增 `tools/check_cs_matchup_acceptance_r57.mjs`，加入 `tools/verify.mjs` segment；新增 `CS_AI_TEAM_MATCHUP_ACCEPTANCE_R57_SPEC.md` / `REPORT.md`。Verifier 以 Vite memory transform 觀察 `simulateFps()`，不修改 production simulator。
+- 10 類代表性 matchup 雙向執行，共 120 場，另 1 場 repeat。Focused PASS：Iron vs Neon `11/12`、Iron vs Flame `6/12`、Emerald vs Silver `5/12`、Flame vs Shadow `7/12`、Shadow vs Emerald `6/12`、Thunder vs Ice `7/12`；Neon aggregate `6/24`，沒有 0% / 100% suppression。
+- 全套 role evidence 使用 ADR×rounds damage proxy：Entry Kpm `5.61` / ADR `58.1`、Rifler `6.19` / `72.6`、AWP `11.27` / `106.6`、Lurker `5.49` / `55.7`、IGL `4.12` / `50.8`。AWP kill share `31.4%`、Entry kill share `0.9%`；AWP 核心、Entry 疊加、IGL/Lurker 價值均未構成 systemic imbalance。
+- route/team consumer runtime evidence：adaptive `5741`、tactical route `12500`、comms handoff `1250`、leadership follow-up `7767`、synergy trade `14276`、cover follow-up `454`；static RNG call sites `21`，fixed input / deterministic repeat PASS。Roster effective 90+ `58/640`、99 clamp `0`，threshold-sensitive counts 受控。
+- R56 roster gate、R54 acceptance、CS historical、progress/reward、Q7a、build、`/review`、syntax、`git diff --check` 低併發分批完成後，R57 verdict：**Go**。無 production balance patch；AI roster v1 通過 gameplay acceptance。後續優先 AI league／招募內容，UI roster page 另開 Sprint。
 - 低併發 gates：R46、R55、R54 PASS；CS historical `28/28`；MatchSquad `40/40`；competition Q2a `112/112`、Q2b `92/92`；progress/reward `33/33`；Q7a `18/18`；production build `2667 modules transformed`；syntax、manual `/review`、`git diff --check` PASS。R56 verdict：**Go**；下一步 AI teams 實戰驗收，再進招募內容或 UI roster page。
