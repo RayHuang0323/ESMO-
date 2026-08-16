@@ -11,7 +11,7 @@
 import React, { useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import {
-  STAT_DEF, STAT_CATS, MOBA_ROLES, ROSTER_CAP,
+  STAT_DEF, MOBA_ROLES, ROSTER_CAP,
   calcPower, posFit, bestPositions, personalityById, CS_ROLE_BY_MOBA_ROLE, csSuitabilityOf,
 } from "../../data/playerModel.js";
 import { calculateLevelProgress } from "../../platform/progress/playerLevel.js";
@@ -45,6 +45,8 @@ const CS_REP_KEYS = Object.freeze({
   igl: ["decision", "tacticalIQ", "comms", "leadership"],
 });
 
+const MOBA_REP_KEYS = Object.freeze(["reflex", "positioning", "decision", "synergy"]);
+
 const csRoleOf = (p) => CS_ROLE_BY_MOBA_ROLE[p?.role] || "rifler";
 
 function CsStatChips({ player, role }) {
@@ -65,16 +67,37 @@ function CsStatChips({ player, role }) {
   );
 }
 
+function MobaStatChips({ player }) {
+  return (
+    <div style={{ display: "flex", gap: 7, marginTop: 5, flexWrap: "wrap", minWidth: 0 }}>
+      {MOBA_REP_KEYS.map((key) => {
+        const def = STAT_DEF.find((s) => s.key === key);
+        const value = Math.round(player.stats?.[key] ?? 50);
+        return (
+          <span key={key} style={{ fontSize: 8 }}>
+            <span style={{ color: "#a1a1aa" }}>{def?.zh || key}</span>{" "}
+            <span style={{ color: value >= 80 ? GC.gold : value >= 65 ? GC.green : "#a1a1aa", fontWeight: 800 }}>{value}</span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 function CsIdentity({ player, positions }) {
   const role = csRoleOf(player);
-  const suitability = csSuitabilityOf(positions).slice(0, 3);
+  const suitability = csSuitabilityOf(positions)
+    .filter((item) => item.label !== CS_ROLE_LABELS[role])
+    .slice(0, 3);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+        <span style={{ color: GC.gray, fontSize: 8.5 }}>主要定位</span>
         <span style={{ color: "#fb923c", fontSize: 11, fontWeight: 800 }}>{CS_ROLE_LABELS[role]}</span>
-        <span style={{ color: GC.gray, fontSize: 9 }}>自由 role identity</span>
+        <span title="角色代表選手擅長的打法，不限制隊伍組成。" aria-label="角色代表選手擅長的打法，不限制隊伍組成。" style={{ color: GC.gray, fontSize: 10, cursor: "help" }}>ⓘ</span>
       </div>
-      {suitability.length > 0 && <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+      {suitability.length > 0 && <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
+        <span style={{ color: GC.gray, fontSize: 8.5 }}>其他適配</span>
         {suitability.map((item) => (
           <span key={item.pos} style={{ color: GC.gray, fontSize: 8, background: "rgba(255,255,255,0.05)", borderRadius: 5, padding: "2px 5px" }}>
             {item.label} {item.fit}
@@ -233,7 +256,7 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
                   <div style={{ display: "flex", gap: 4, justifyContent: "flex-end", marginBottom: 2 }}>
-                  <span style={{ color: isCsView ? "#fb923c" : GC.purp, fontSize: 9, fontWeight: 700 }}>{isCsView ? `FPS ${fp}` : `MOBA ${mp}`}</span>
+                  <span style={{ color: isCsView ? "#fb923c" : GC.purp, fontSize: 9, fontWeight: 700 }}>戰力 {isCsView ? fp : mp}</span>
                 </div>
                 <div style={{ color: GC.gold, fontSize: 8, fontWeight: 700, marginBottom: 2 }}>潛力 {p.potential ?? 80}</div>
                 {talentMode ? (
@@ -302,7 +325,7 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
                   <div style={{ color: GC.gray, fontSize: 7 }}>{detailMode === "MOBA" ? `適 ${bp.moba.pos.replace("MOBA", "")}` : "切換至 MOBA 查看適配"}</div>
                 </div>
                 <div style={{ flex: 1, background: detailMode === "CS" ? "rgba(251,146,60,0.2)" : "rgba(251,146,60,0.12)", borderRadius: 8, padding: 7 }}>
-                  <div style={{ color: "#fb923c", fontSize: 8 }}>FPS 戰力</div>
+                  <div style={{ color: "#fb923c", fontSize: 8 }}>CS 戰力</div>
                   <div style={{ color: "white", fontSize: 15, fontWeight: 800 }}>{fp}</div>
                   <div style={{ color: GC.gray, fontSize: 7 }}>{detailMode === "CS" ? `角色 ${CS_ROLE_LABELS[csRole]}` : `適 ${bp.fps.pos.replace("FPS", "")}`}</div>
                 </div>
@@ -313,17 +336,23 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
                 </div>
               </div>
 
-              {detailMode === "CS" && (
+              {detailMode === "MOBA" ? (
+                <div data-testid="roster-moba-summary" style={{ background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: 10, padding: "9px 10px", marginBottom: 12 }}>
+                  <div style={{ color: GC.gray, fontSize: 8.5 }}>代表能力</div>
+                  <MobaStatChips player={dsel} />
+                </div>
+              ) : (
                 <div data-testid="roster-cs-detail" style={{ background: "rgba(251,146,60,0.08)", border: "1px solid rgba(251,146,60,0.22)", borderRadius: 10, padding: "9px 10px", marginBottom: 12 }}>
                   <CsIdentity player={sel} positions={bp} />
+                  <div style={{ color: GC.gray, fontSize: 8.5, marginTop: 5 }}>代表能力</div>
                   <CsStatChips player={dsel} role={csRole} />
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 7, fontSize: 9 }}>
-                    <span style={{ color: GC.gray }}>強項 <b style={{ color: GC.green }}>{highlights.strengths.map((x) => `${x.def.zh} ${x.value}`).join("／")}</b></span>
-                    <span style={{ color: GC.gray }}>弱項 <b style={{ color: GC.gold }}>{highlights.weaknesses.map((x) => `${x.def.zh} ${x.value}`).join("／")}</b></span>
-                  </div>
-                  <div style={{ color: GC.gray, fontSize: 8.5, marginTop: 5 }}>CS role 是能力 identity，不是固定 roster slot；賽前準備仍從現役名單選出本場選手。</div>
                 </div>
               )}
+
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12, fontSize: 9 }}>
+                <span style={{ color: GC.gray }}>強項 <b style={{ color: GC.green }}>{highlights.strengths.map((x) => `${x.def.zh} ${x.value}`).join("／")}</b></span>
+                <span style={{ color: GC.gray }}>弱項 <b style={{ color: GC.gold }}>{highlights.weaknesses.map((x) => `${x.def.zh} ${x.value}`).join("／")}</b></span>
+              </div>
 
               <div style={{ display: "flex", gap: 10, marginBottom: 12, fontSize: 10 }}>
                 <span style={{ color: GC.gray }}>士氣 <span style={{ color: (sel.morale ?? 70) >= 85 ? GC.green : (sel.morale ?? 70) >= 65 ? "#d4d4d8" : GC.red, fontWeight: 700 }}>{sel.morale ?? 70}</span></span>
@@ -451,26 +480,6 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
                 </div>
               </div>
 
-              {/* 16 項能力（四分類） */}
-              {STAT_CATS.map((cat) => (
-                <div key={cat} style={{ marginBottom: 7 }}>
-                  <div style={{ color: GC.gray, fontSize: 9, fontWeight: 700, marginBottom: 3 }}>{cat}</div>
-                  {STAT_DEF.filter((s) => s.cat === cat).map((s) => {
-                    const v = dsel.stats?.[s.key] ?? 50;   // S27：derived（含天賦）
-                    const b = pers?.boost?.includes(s.key);
-                    const n = pers?.nerf?.includes(s.key);
-                    return (
-                      <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-                        <span style={{ color: b ? GC.gold : n ? GC.red : "#a1a1aa", fontSize: 9, width: 52, flexShrink: 0 }}>{s.zh}{b ? "↑" : n ? "↓" : ""}</span>
-                        <div style={{ flex: 1, height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
-                          <div style={{ height: "100%", width: `${v}%`, background: v >= 80 ? GC.gold : v >= 65 ? GC.green : "#60a5fa" }} />
-                        </div>
-                        <span style={{ color: "white", fontSize: 9, fontFamily: "monospace", width: 20, textAlign: "right" }}>{v}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
             </div>
           </div>
         );

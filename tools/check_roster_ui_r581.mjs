@@ -26,18 +26,20 @@ function main() {
   gate(!suitability.some((item) => item.label === "Lurker"), "NO_FABRICATED_LURKER");
 
   gate(rosterSource.includes('useProfileStore((s) => s.players) ?? []'), "ROSTER_SHARED_PROFILE_SOURCE");
-  gate(rosterSource.includes("{isCsView ? `FPS ${fp}` : `MOBA ${mp}`}"), "CURRENT_GAME_POWER");
+  gate(rosterSource.includes("戰力 {isCsView ? fp : mp}"), "CURRENT_GAME_POWER");
   gate(rosterSource.includes("潛力 {p.potential ?? 80}"), "POTENTIAL_BOTH_GAME_VIEWS");
   gate(rosterSource.includes("csSuitabilityOf(positions)"), "ROSTER_CS_SUITABILITY_SOURCE");
   gate(!rosterSource.includes("CS · {CS_ROLE_LABELS[csRole]}"), "NO_REDUNDANT_CS_PREFIX");
   gate(rosterSource.includes("detailMode === \"MOBA\" &&") && rosterSource.includes("MOBA_ROLES.map"), "MOBA_ROLE_EDITOR_GUARD");
   gate(rosterSource.includes('detailMode === "CS" ? `角色 ${CS_ROLE_LABELS[csRole]}`'), "CS_MODAL_ROLE_IDENTITY");
   gate(rosterSource.includes("切換至 MOBA 查看適配"), "NO_CS_MOBA_FIT_LEAKAGE");
+  gate(!rosterSource.includes("role identity") && !rosterSource.includes("roster slot"), "NO_DEVELOPER_ROLE_TERMS");
 
   gate(detailSource.includes('useProfileStore((s) => s.players) ?? []'), "DETAIL_SHARED_PROFILE_SOURCE");
   gate(detailSource.includes("csSuitabilityOf(bp)"), "DETAIL_CS_SUITABILITY_SOURCE");
   gate(!detailSource.includes("CS · ${CS_ROLE_LABELS[csRole]}"), "NO_DETAIL_CS_PREFIX");
-  gate(detailSource.includes("csSuitability[0] ? `適 ${csSuitability[0].label} ${csSuitability[0].fit}`"), "DETAIL_CANONICAL_CS_FIT");
+  gate(!detailSource.includes("CS role identity") && !detailSource.includes("FPS 戰力"), "DETAIL_PLAYER_LANGUAGE");
+  gate(detailSource.includes("csOtherSuitability") && detailSource.includes("其他適配"), "DETAIL_CANONICAL_CS_FIT");
 
   console.log("R58.1 roster hierarchy: MOBA / CS current-game power + shared potential/status: PASS");
   console.log("R58.1 detail modes: MOBA lane editor guarded; CS canonical suitability only: PASS");
