@@ -57,6 +57,19 @@ export const CS_ROLE_BY_MOBA_ROLE = Object.freeze({
   "輔助": "igl",
 });
 
+// UI 只顯示既有、語意明確的 CS suitability；沒有 Lurker profile 時不把
+// legacy FPS輔助 數值硬映射成 Lurker，避免用錯 role 名稱製造假資料。
+export const CS_FIT_ROLE_LABELS = Object.freeze({
+  "FPS突破手": "Entry",
+  "FPS步槍手": "Rifler",
+  "FPS狙擊手": "AWP",
+  "FPS指揮": "IGL",
+});
+
+export const csSuitabilityOf = (positions) => (positions?.fpsAll || [])
+  .filter((item) => CS_FIT_ROLE_LABELS[item.pos])
+  .map((item) => ({ ...item, label: CS_FIT_ROLE_LABELS[item.pos] }));
+
 /**
  * R46 第一版 CS 新秀能力分布基準。
  * bias 是相對於同一潛力／當前能力基線的 role-specific 偏移；cap 只限制
