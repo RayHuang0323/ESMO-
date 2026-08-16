@@ -52,7 +52,10 @@ export function toFpsRoster(players = [], csLineup = null) {
     //   引擎 sim 的 persStat 直讀 stats[key] → 天賦真的影響 CS 對戰輸入。
     //   無天賦時 derived === base（逐鍵相等）→ baseline 與 S26 一致。
     const short = toShortStats(getPlayerDerivedStats(p));
-    const role = MOBA2FPS[p.role] || ["entry", "rifler", "awp", "lurker", "igl"][i] || "rifler";
+    const directCsRole = ["entry", "rifler", "awp", "lurker", "igl"].includes(p.csRole)
+      ? p.csRole
+      : ["entry", "rifler", "awp", "lurker", "igl"].includes(p.role) ? p.role : null;
+    const role = directCsRole || MOBA2FPS[p.role] || ["entry", "rifler", "awp", "lurker", "igl"][i] || "rifler";
     const ovr = fpsOvr(short);
     return {
       id: "t" + (i + 1), name: p.name, side: "t", role, fpsRole: FPS_ROLE_ZH[role],

@@ -7438,3 +7438,11 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - 新增 `tools/check_cs_learning_lifecycle_r55.mjs`，並加入 `tools/verify.mjs`。Focused PASS：Learning 40 / 70 / 95 的 XP `50 / 53 / 56`；同條件方向單調、固定 recordedAt deterministic、save/load PASS、duplicate settlement idempotent、duplicate reward 由 transactionId 阻擋、match result digest 不變、simulator Learning read absent、new RNG `0`。
 - 低併發 gates：R46 distribution PASS；R47、R48、R49 六項、R50 兩項、R51 兩項、R52 四項、R53 integration PASS；CS historical `28/28`；progress/reward 在 flat mode `33/33`；Q7a `18/18`；production build `2667 modules transformed` PASS；manual `/review`、syntax、`git diff --check` PASS。既有 R39–R45 evidence 未因本輪不碰 simulator 而重跑；R43 OOM / R16-B SHA mismatch 保留為 inherited provenance warning，未 rebaseline。
 - R55 最終狀態：`Calibration Ready 4`、`Calibration Ready - Limited 11`、`Lifecycle Ready 1`，CS 16/16（100%）。Learning 現在只影響 match 完成後的 XP 吸收，跨既有 level-up / `growthLog` lifecycle 生效；R55 verdict：**Go**。下一步可製作正式 roster / AI 隊伍內容。
+## R56 CS 正式 AI 隊伍與 Roster v1（2026-08-16）
+
+- 先將 R55 `0f61b0c431cbd2524e40e795415d9bc2c251fb70` push 至 `origin/release/moba-combat-closure`，確認 local / tracking / remote 一致後開始 R56；R56 完成後不 push。
+- audit：既有 `platform/competition/aiTeams.js` 為 MOBA／聯賽 domain，保留 7 支既有 AI teams 與所有賽季／賽事契約；CS 正式內容改放 `src/data/csAiTeams.js`，避免跨 domain 大改。
+- 新增 `CsAiTeam.v1`：8 支 AI teams、40 名 players；完整 16 項 stat，主要競技區間 60–90，potential 與 current stat cap 一致，read-only、deterministic team/player ids，無 runtime RNG。Team styles 為高進攻、戰術型、AWP 核心、高協同、高穩定、高潛力新秀、防守／韌性型、頂級強隊。
+- 依 R56 產品規則修正暫存設計：role 是 player gameplay identity / tactical usage，不是 `f1–f5` 固定職缺。Roster 只用既有五席容器映射五名真實玩家；允許重複 role、缺少 role、自由組合。`fpsRoster` 僅新增 direct CS role 讀取，未改既有 MOBA→FPS fallback。
+- `tools/check_cs_roster_v1_r56.mjs` focused PASS：8 teams / 40 players、role composition variety、duplicate/optional role、role aggregate identity、team strength ordering、90+ / clamp / threshold、battle adapter、progress/save/idempotence、determinism 均通過；`tools/verify.mjs` 已加入 `cs_roster_v1_r56` segment。
+- 低併發 gates：R46、R55、R54 PASS；CS historical `28/28`；MatchSquad `40/40`；competition Q2a `112/112`、Q2b `92/92`；progress/reward `33/33`；Q7a `18/18`；production build `2667 modules transformed`；syntax、manual `/review`、`git diff --check` PASS。R56 verdict：**Go**；下一步 AI teams 實戰驗收，再進招募內容或 UI roster page。

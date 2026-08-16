@@ -67,6 +67,7 @@ const SEGMENTS = [
   { id: "cs_mapaware_semantics_r18b", script: "tools/check_cs_mapaware_semantics_r18b.mjs", shape: /CS MapAware Semantics \/ Read-Point Design R18-B: PASS/, note: "CS MapAware historical spatial read-point evidence" },
   { id: "cs_learning_measurement_r37", script: "tools/check_cs_learning_measurement_r37.mjs", shape: /CS Learning Measurement \/ Calibration Readiness R37: PASS/, note: "CS Learning cross-match lifecycle measurement" },
   { id: "cs_learning_lifecycle_r55", script: "tools/check_cs_learning_lifecycle_r55.mjs", shape: /CS Learning Lifecycle R55: PASS/, note: "CS Learning post-match XP absorption lifecycle" },
+  { id: "cs_roster_v1_r56", script: "tools/check_cs_roster_v1_r56.mjs", shape: /CS Roster v1 R56: PASS/, note: "CS formal AI teams and roster v1" },
   { id: "cs_mapaware_measurement_r37", script: "tools/check_cs_mapaware_measurement_r37.mjs", shape: /CS Map Awareness Measurement \/ Calibration Readiness R37: PASS/, note: "CS Map Awareness spatial read-point measurement" },
   { id: "cs_clutch_measurement_r30", script: "tools/check_cs_clutch_measurement_r30.mjs", shape: /CS Clutch Measurement \/ Calibration Readiness R30: PASS/, note: "CS Clutch read-chain deterministic calibration-readiness measurement" },
   { id: "cs_resilience_measurement_r31", script: "tools/check_cs_resilience_measurement_r31.mjs", shape: /CS Resilience Measurement \/ Calibration Readiness R31: PASS/, note: "CS Resilience read-chain deterministic calibration-readiness measurement" },
