@@ -7414,3 +7414,11 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - 相關 gate 以低併發分批完成：progress/reward `33/33`；Q4 `68/68`；Q5 `66/66`；Q6 `57/57`；Q7a `18/18`。既有可靠的 R16-A、R34–R38、R47–R51 historical/regression evidence 未因無 production diff 而無意義重跑；R43 先前 OOM failure 保留為獨立歷史風險，不阻擋本 Sprint。
 - production build PASS：Vite `2666 modules transformed`，`built in 9.87s`；僅有既存 large-chunk warning。`node --check` 通過 R52 verifier，JSX 由 focused Vite load 與 production build 覆蓋。
 - R52 verdict：**Go / Measurement Ready - Coverage Limited**。下一步僅是 coverage/calibration design；不可把本 Sprint 解讀成 balance calibration 完成或 Learning 功能完成。
+## R53 CS 16 項 Coverage Closure + 整合驗收（2026-08-16）
+
+- 先將 R52 `0e4d5676a45985b571f49878fb0593bddcaf16b8` push 至 `origin/release/moba-combat-closure`，確認 local / tracking / remote 一致後開始 R53。
+- Coverage closure 逐項重讀 R52 layer-aware evidence：Adaptability primary 56/55、secondary 1/1；TacticalIQ primary 161/161、retake secondary 0/0；Comms primary 30/30、bomb-awareness secondary 0/0；Synergy primary 279/279、secondary 279/260。四項限制均判定為 scenario / role / threshold observability，不是 consumer 缺失；不加 consumer、不換 seed、不改 scenario、不人工製造 opportunity。
+- 新增 `tools/check_cs_gameplay_identity_r53.mjs` 與 Stage3 spec/report；R53 focused verifier PASS，確認 16 unique canonical keys、全部 production consumer markers、R52/R46 evidence、RNG call sites 21 與 status counts。
+- R53 最終狀態：Calibration Ready 4、Calibration Ready - Limited 11、Measurement Ready - Coverage Limited 0、Deferred 0、Lifecycle 1。四個 R52 coverage-limited item 皆升為 Ready-Limited，但報告明確保留 secondary / cross-role / path caveat。
+- Relevant gates 低併發完成：R47/R48 PASS；R49 六項 PASS；R50 adaptability clean，tactical/comms 保留 legacy verifier 的 0/0 coverage warnings 並由 R52 layer-aware evidence 取代判定；R51 兩項 PASS；R52 四項 PASS；R46 distribution PASS；CS historical `cs23` 28/28；progress/reward 33/33；Q7a 18/18；R37 Learning measurement PASS。
+- `check_cs_learning_lifecycle_r16b.mjs` 因既有 R46 `fpsRoster.js` source SHA mismatch 退出；未 rebaseline historical evidence，列為 inherited provenance warning，不視為 R53 新 regression。R53 verdict：**Go**；下一步為第一版完整 CS roster / gameplay balance acceptance，Learning 另開 lifecycle Sprint。
