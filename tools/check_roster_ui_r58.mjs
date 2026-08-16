@@ -32,11 +32,12 @@ function main() {
   gate(rosterSource.includes("data-testid=\"roster-game-filter\"") && rosterSource.includes("data-testid=\"roster-status-filter\""), "FILTER_LAYERS");
   gate(rosterSource.includes("const players = useProfileStore((s) => s.players) ?? []") && rosterSource.includes("key={p.id}"), "SINGLE_PLAYER_IDENTITY");
   gate(rosterSource.includes("calcPower(dp, \"fps\")") && rosterSource.includes("CsStatChips") && rosterSource.includes("CS_ROLE_BY_MOBA_ROLE"), "CS_CARD_DATA_SOURCES");
-  gate(rosterSource.includes("data-testid=\"roster-cs-detail\"") && rosterSource.includes("STAT_DEF.map"), "ROSTER_DETAIL_CS_STATS");
-  gate(rosterSource.includes("不是固定 roster slot") && rosterSource.includes("賽前準備仍從現役名單選出本場選手"), "ROLE_AND_PREMATCH_COPY");
+  gate(rosterSource.includes("data-testid=\"roster-cs-detail\"") && rosterSource.includes("MobaStatChips") && !rosterSource.includes("STAT_CATS.map"), "SUMMARY_REPRESENTATIVE_STATS_ONLY");
+  gate(!rosterSource.includes("role identity") && !rosterSource.includes("roster slot") && rosterSource.includes("setDetailMode"), "PLAYER_LANGUAGE_AND_PREMATCH_COPY");
   gate(!rosterSource.includes("CS_SEATS") && !rosterSource.includes("每隊一定"), "NO_FIXED_CS_SLOTS");
 
   gate(detailSource.includes("data-testid=\"player-detail-game-mode\"") && detailSource.includes("data-testid=\"cs-profile-summary\""), "DETAIL_GAME_MODES");
+  gate(detailSource.includes("STAT_DEF.map") && detailSource.includes("data-testid={gameMode === \"CS\" ? \"cs-stat-grid\" : \"moba-stat-grid\"}"), "DETAIL_FULL_STATS");
   gate(detailSource.includes("data-testid={gameMode === \"CS\" ? \"cs-stat-grid\" : \"moba-stat-grid\"}"), "DETAIL_STAT_GRID");
   gate(detailSource.includes("calcPower(derivedPlayer, gameMode === \"CS\" ? \"fps\" : \"moba\")"), "DETAIL_MODE_POWER");
   gate(detailSource.includes("layers.derived.learning") && detailSource.includes("growthLogOf(p)"), "DETAIL_GROWTH_DATA");
@@ -47,7 +48,7 @@ function main() {
 
   console.log(`profile players: ${INITIAL_PLAYERS.length}; shared stats: ${STAT_DEF.length}/16; ids unique: PASS`);
   console.log(`game filters: 全部 / MOBA / CS; status filters: 全部 / 主力 / 預備隊 / 訓練中 / 閒置`);
-  console.log(`CS card/detail: FPS power + role identity + derived stats; full 16-stat detail: PASS`);
+  console.log(`CS card/detail: current-game power + player language + derived stats; full 16-stat detail: PASS`);
   console.log(`role composition: duplicate role accepted (${duplicateRoleTeam.key}); fixed CS slots: 0; pre-match path unchanged: PASS`);
   console.log("Roster UI R58: PASS");
 }

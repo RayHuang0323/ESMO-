@@ -7472,3 +7472,11 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - 修正：MOBA／CS 卡片統一為 current-game power、Lv、current role、4 項代表能力、potential、roster status；CS 詳情只保留 current CS identity 與真實 canonical suitability。既有 model 沒有 Lurker suitability，因此明確不將 `FPS輔助` 映射為 Lurker。
 - 新增 `csSuitabilityOf()` 與 `tools/check_roster_ui_r581.mjs`，加入 `tools/verify.mjs`；R58.1 focused、R58 focused、production build、desktop／390×844 smoke、瀏覽器 error log、syntax 與 `git diff --check` PASS。
 - R58.1 verdict：**Go**；完成 local commit，不 push。
+
+## R58.2 CS／MOBA 選手資訊架構與玩家用語整理（2026-08-17）
+
+- R58.2 scope 只涵蓋 `RosterScreen` 摘要 modal、`PlayerDetailScreen` 完整檔案與 UI verifier；不改 player schema、16 項公式、battle、賽事、招募、賽前選人、roster generation 或 Store。
+- 清除玩家不需要知道的 `role identity`、`roster slot`、`CS role 是能力 identity...` 與 `FPS 86`／`MOBA 85` 類 compact developer copy。改成 `主要定位`、`其他適配`、`戰力`、`潛力`、`強項`／`弱項`；CS role tooltip 為「角色代表選手擅長的打法，不限制隊伍組成。」
+- 摘要 modal 的責任收斂為快速選人：當前模式戰力、定位、3–4 項代表能力、強弱項、潛力、體力／狀態、出賽狀態、近期成長、名單分層與完整檔案入口；刪除原本共用 modal 底部的完整 16 項條圖。
+- 完整檔案保留 mode-specific role／suitability、完整 16 項 derived stats、個性／士氣／狀態、Level／XP／potential／talent 與 growthLog。MOBA 與 CS 仍共用同一 `profileStore.players`；mode 只切換 game-specific power、role、suitability、stats。
+- `tools/check_roster_ui_r582.mjs` 加入 `tools/verify.mjs`。R58/R58.1/R58.2 focused `3/3 PASS`；production build `2667 modules transformed`；syntax、`git diff --check`、manual `/review`、desktop 與有效 390×844 browser smoke、browser console error `[]` 均 PASS。R58.2 local-only，未 push。

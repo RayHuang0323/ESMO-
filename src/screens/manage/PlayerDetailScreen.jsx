@@ -111,6 +111,8 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
   const csRole = csRoleOf(p);
   const highlights = csHighlights(derivedPlayer);
   const csSuitability = csSuitabilityOf(bp);
+  const csOtherSuitability = csSuitability.filter((item) => item.label !== CS_ROLE_LABELS[csRole]).slice(0, 3);
+  const mobaOtherSuitability = bp.mobaAll.filter((item) => item.pos.replace("MOBA", "") !== p.role).slice(0, 1);
   const data = STAT_DEF.map((s) => ({
     label: s.zh,
     bonus: layers.talentBonus[s.key] ?? 0,
@@ -134,10 +136,10 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
       ? { label: CS_ROLE_LABELS[csRole], color: "#fb923c", bg: "rgba(251,146,60,0.15)", border: "rgba(251,146,60,0.3)" }
       : { label: p.role, color: "#60a5fa", bg: "rgba(96,165,250,0.15)", border: "rgba(96,165,250,0.3)" },
     gameMode === "CS"
-      ? { label: csSuitability[0] ? `適 ${csSuitability[0].label} ${csSuitability[0].fit}` : "CS role identity", color: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)" }
-      : { label: `適 ${bp.moba.pos.replace("MOBA", "")}`, color: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)" },
+      ? null
+      : { label: mobaOtherSuitability[0] ? `其他適配 ${mobaOtherSuitability[0].pos.replace("MOBA", "")} ${mobaOtherSuitability[0].fit}` : `主要定位 ${p.role}`, color: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)" },
     { label: p.status || "預備隊", color: "#34d399", bg: "rgba(52,211,153,0.12)", border: "rgba(52,211,153,0.28)" },
-  ];
+  ].filter(Boolean);
 
   return (
     <ManageFrame title="選手檔案" subtitle="PLAYER PROFILE" onBack={onBack}>
@@ -252,14 +254,19 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
           {gameMode === "CS" && (
             <div data-testid="cs-profile-summary" style={{ background: "rgba(251,146,60,0.08)", border: "1px solid rgba(251,146,60,0.22)", borderRadius: 12, padding: "10px 11px", marginBottom: 12 }}>
               <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ color: "#fed7aa", fontSize: 12, fontWeight: 900 }}>FPS 戰力 {calcPower(derivedPlayer, "fps")}</span>
-                <span style={{ color: "#a1a1aa", fontSize: 9 }}>Learning {Math.round(layers.derived.learning ?? 50)}</span>
+                <span style={{ color: "#fed7aa", fontSize: 12, fontWeight: 900 }}>CS 戰力 {calcPower(derivedPlayer, "fps")}</span>
+                <span style={{ color: "#a1a1aa", fontSize: 9 }}>學習力 {Math.round(layers.derived.learning ?? 50)}</span>
               </div>
-              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 6 }}>
-                {csSuitability.slice(0, 3).map((item) => (
-                  <span key={item.pos} style={{ color: "#d4d4d8", background: "rgba(255,255,255,0.06)", borderRadius: 6, padding: "3px 6px", fontSize: 9 }}>適 {item.label} {item.fit}</span>
+              <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", marginTop: 7 }}>
+                <span style={{ color: "#a1a1aa", fontSize: 9 }}>主要定位</span>
+                <span title="角色代表選手擅長的打法，不限制隊伍組成。" style={{ color: "#fed7aa", fontSize: 10, fontWeight: 800, cursor: "help" }}>{CS_ROLE_LABELS[csRole]} ⓘ</span>
+              </div>
+              {csOtherSuitability.length > 0 && <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap", marginTop: 6 }}>
+                <span style={{ color: "#a1a1aa", fontSize: 9 }}>其他適配</span>
+                {csOtherSuitability.map((item) => (
+                  <span key={item.pos} style={{ color: "#d4d4d8", background: "rgba(255,255,255,0.06)", borderRadius: 6, padding: "3px 6px", fontSize: 9 }}>{item.label} {item.fit}</span>
                 ))}
-              </div>
+              </div>}
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 7, fontSize: 9 }}>
                 <span style={{ color: "#a1a1aa" }}>強項 <b style={{ color: "#34d399" }}>{highlights.strengths.map((x) => `${x.def.zh} ${x.value}`).join("／")}</b></span>
                 <span style={{ color: "#a1a1aa" }}>弱項 <b style={{ color: "#fbbf24" }}>{highlights.weaknesses.map((x) => `${x.def.zh} ${x.value}`).join("／")}</b></span>
