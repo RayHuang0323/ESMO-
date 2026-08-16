@@ -17,6 +17,11 @@ import {
   teamRewardsFor, csPerfFactor, playerXpFor,
   CS_REWARD_FORMULA_VERSION, PLAYER_XP_FORMULA_VERSION,
 } from "../rewardFormulas.js";
+import {
+  CS_LEARNING_LIFECYCLE_FORMULA_VERSION,
+  learningAdjustedXp,
+  learningMultiplierFor,
+} from "../learningGrowth.js";
 
 /**
  * CsMatchResult.v1 → MatchProgressTransaction.v1
@@ -46,7 +51,10 @@ export function csResultToTransaction(cr, ctx = {}) {
     if (!me) continue;                       // 已離隊 → 不發
     const perf = csPerfFactor(p);
     const isMvp = mvpId != null && p.playerId === mvpId;
-    const xpGained = playerXpFor({ win, perf, isMvp });
+    const baseXp = playerXpFor({ win, perf, isMvp });
+    const learning = me.stats?.learning;
+    const learningMultiplier = learningMultiplierFor(learning);
+    const xpGained = learningAdjustedXp({ baseXp, learning });
     const prog = calculateLevelProgress(me.xp ?? 0, xpGained);
     playerProgress.push({
       playerId: p.playerId,
@@ -57,6 +65,7 @@ export function csResultToTransaction(cr, ctx = {}) {
         `評分 ${Number(p.rating ?? 0).toFixed(2)}`,
         ...(p.kast != null ? [`KAST ${Math.round(p.kast)}%`] : []),
         ...(isMvp ? ["MVP"] : []),
+        `Learning x${learningMultiplier.toFixed(3)}`,
       ],
     });
   }
@@ -65,6 +74,7 @@ export function csResultToTransaction(cr, ctx = {}) {
     matchId: cr.matchId,
     mode: "cs",
     sourceResultVersion: cr.schema,
+    recordedAt: ctx.recordedAt ?? Date.now(),
     teamRewards: { money: team.money, fans: team.fans, reputation: 0 },  // 聲望無經驗證公式 → 0
     playerProgress,
     unlocks: [],
@@ -72,7 +82,7 @@ export function csResultToTransaction(cr, ctx = {}) {
       winner: win ? "us" : "enemy",
       score: { us: cr.ourScore ?? 0, enemy: cr.enemyScore ?? 0 },
       rewardFormulaVersion: CS_REWARD_FORMULA_VERSION,
-      playerXpFormulaVersion: PLAYER_XP_FORMULA_VERSION,
+      playerXpFormulaVersion: `${PLAYER_XP_FORMULA_VERSION}+${CS_LEARNING_LIFECYCLE_FORMULA_VERSION}`,
       playerLevelFormulaVersion: PLAYER_LEVEL_FORMULA_VERSION,
     },
   });
