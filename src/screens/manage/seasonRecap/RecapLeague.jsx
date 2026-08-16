@@ -2,18 +2,23 @@ import React from "react";
 import { GC } from "../../../ui/theme.js";
 import { recapStyles } from "./recapStyles.js";
 
-//  ⚠ Q7f audit correction：**這裡不顯示季後賽晉級狀態**。
-//    規格 §A.1 記載 `competitionView().playoff` 在 Recap 當下可得，實測是錯的——
-//    `seasonState.js` 的 `playoffView()` 沒有「進行中」季後賽就回 `null`，而 Recap
-//    依定義出現在賽季封存之後 ⇒ `playoff` 恆為 `null`。
-//    不用 `careerFinal.rankSource` 反推（語意是「名次從哪來」，不是「有沒有晉級」），
-//    也不為這一列新增 Store 投影（§B.1）。⇒ 整列移除，寧可不顯示也不顯示推測值。
-export default function RecapLeague({ careerFinal }) {
+//  ⚠ Q7f audit correction（2026-08-16，第二次修正）：季後賽晉級狀態**要顯示**。
+//    前一版註解說「`playoff` 在 Recap 當下恆為 null」——**那個結論已撤回**。
+//    它源自一份不一致的合成存檔（HYBRID：把某存檔的 `final` 接到另一存檔的
+//    competition 上，那個 competition 的季後賽從沒打過）。以 canonical 的
+//    `s7b_season_sealed` 實測：`playoff` 非 null、`playoff.stageId ===
+//    careerFinal.playoffStageId`、`qualified` 四隊齊全、`done: true`。
+//    ⇒ 直接讀既有 `playoff` truth，不用 `rankSource` 反推、不新增 Store 投影。
+//    ⇒ `playoff` 為 null（季後賽從未產生）時整列不出現，不顯示推測值也不留空格。
+export default function RecapLeague({ careerFinal, playoff, myTeamId }) {
   const rows = Array.isArray(careerFinal?.rows) ? careerFinal.rows : [];
   const champion = careerFinal?.championTeamId
     ? (rows.find((row) => row?.teamId === careerFinal.championTeamId) ?? null)
     : null;
   const mix = careerFinal?.sourceMix ?? null;
+  const inPlayoff = playoff && myTeamId != null
+    ? (playoff.qualified ?? []).some((entry) => entry?.teamId === myTeamId)
+    : null;
 
   return (
     <section data-testid="recap-league" style={{ ...recapStyles.section, ...recapStyles.leagueSection }}>
@@ -43,6 +48,21 @@ export default function RecapLeague({ careerFinal }) {
             <span style={recapStyles.label}>冠軍</span>
             <span style={recapStyles.value}>{champion?.name || "—"}</span>
           </div>
+          {/*  季後賽：讀既有 playoff truth。⚠ 未晉級是**中性事實**，不是失敗——
+               用與其他列相同的字色，不上紅、不加警示、不降透明度。 */}
+          {playoff && (
+            <div
+              data-testid="recap-league-playoff"
+              data-qualified={inPlayoff == null ? "unknown" : String(inPlayoff)}
+              data-stage-id={playoff.stageId ?? ""}
+              style={recapStyles.row}
+            >
+              <span style={recapStyles.label}>季後賽</span>
+              <span style={{ ...recapStyles.value, ...(inPlayoff ? recapStyles.positive : {}) }}>
+                {inPlayoff == null ? "—" : inPlayoff ? "已進入" : "未進入"}
+              </span>
+            </div>
+          )}
           {careerFinal.playerRegularRank != null && (
             <div data-testid="recap-league-regular-rank" data-rank={careerFinal.playerRegularRank} style={{ ...recapStyles.row, ...recapStyles.rowLast }}>
               <span style={recapStyles.label}>常規賽名次</span>

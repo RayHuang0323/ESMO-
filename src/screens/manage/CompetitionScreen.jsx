@@ -20,6 +20,7 @@ import { useProfileStore } from "../../platform/profileStore.js";
 import { GC, MONO, chip } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
 import AsiaFinalsPanel from "./asiaFinals/AsiaFinalsPanel.jsx";
+import RecapNextSeason from "./seasonRecap/RecapNextSeason.jsx";
 import SeasonRecap from "./seasonRecap/SeasonRecap.jsx";
 
 const Panel = ({ title, right, children }) => (
@@ -394,9 +395,11 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
         </Panel>
       )}
 
-      {/*  Q7f：賽季完成後只在既有 canRoll.ok 允許時顯示 Recap。
-           CTA 已移進 Recap 最底部，仍呼叫同一個 rollSeason。 */}
-      {final && <SeasonRecap onRoll={rollSeason} />}
+      {/*  Q7f：賽季完成後只在既有 canRoll.ok 允許時顯示 Recap（判斷在元件內）。
+           ⚠ 第二輪起 CTA **不在 Recap 內**——它移到本頁最後（見檔尾），
+              讓「開始下一賽季」成為整頁真正最後一個主要操作。
+              rollover 規則與 handler 不變，DOM 仍只有一顆 CTA。 */}
+      {final && <SeasonRecap />}
 
       {/*  ── 歷屆成績（Q5）──────────────────────────────────────────────
            換季之後上一季的最終名次仍然查得到。這裡只讀已封存的快照，
@@ -457,6 +460,11 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
       )}
 
       {/* ── 我的下一場 ─────────────────────────────────────────────── */}
+      {/*  ⚠ Q7f 第二輪：賽季已封存且沒有任何待打場次時，這個面板只會顯示
+           「本季你的比賽都打完了。」——那是賽季**進行中**才有意義的提示，
+           在成績單旁邊出現只會稀釋「這一季結束了」。⇒ 該狀態下整塊隱藏。
+           仍有待打場次時照常顯示（封存後理論上不該有，但不替 Store 假設）。 */}
+      {!(final && canRoll?.ok && rows.length === 0) && (
       <Panel
         title={isToday ? "今日賽事" : "下一場賽事"}
         right={rows.length > 0 && (
@@ -543,6 +551,7 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
           );
         })}
       </Panel>
+      )}
 
       {/* ── 積分榜 ─────────────────────────────────────────────────── */}
       <Panel title={final ? "最終積分榜 STANDINGS" : "積分榜 STANDINGS"} right={<span style={{ fontSize: 9, color: GC.gray }}>{standings.rule.label}</span>}>
@@ -593,6 +602,18 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
           AI 之間的比賽會在你推進天數時自動模擬。
         </div>
       </Panel>
+
+      {/*  ── 開始下一賽季（Q7f 第二輪）─────────────────────────────────
+           ⚠ **整頁最後一個主要操作**。玩家要按到它，必須先捲過成績單與本季
+              全部補充資訊（季後賽對戰表／最終積分榜／賽季進度）——這才是
+              「Season Report 的句點」，不是只在 Recap 元件內部排最後。
+           ⚠ 條件與 `SeasonRecap` 內部完全一致（`final` ＋ `canRoll.ok`），
+              DOM 裡只會有這一顆 rollover CTA。
+           ⚠ Q5 規則不變：能不能換季由 Store 的 `canRoll` 判定，畫面不自己判；
+              `rollSeason` 仍是同一個 handler，不自動 rollover。 */}
+      {final && canRoll?.ok && (
+        <RecapNextSeason canRoll={canRoll} onClick={rollSeason} />
+      )}
     </ManageFrame>
   );
 }

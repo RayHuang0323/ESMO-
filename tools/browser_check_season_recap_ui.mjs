@@ -148,9 +148,39 @@ const RECAP_UI = PRELUDE + `
     ctaCount: recap?.querySelectorAll("[data-testid=recap-next-season-cta]").length ?? 0,
     overallCtaCount: document.querySelectorAll("[data-testid=recap-next-season-cta]").length,
     ctaInside: !!recap?.querySelector("[data-testid=recap-next-season-cta]"),
+    //  ── Q7f 第二輪：CTA 移出 Recap，成為整頁最後一個主要操作 ───────────
+    //  ⚠ 這不是放寬：原本只驗「在 Recap 內」，現在改驗**文件順序**——
+    //    CTA 必須排在成績單之後、且排在本季所有補充資訊（季後賽對戰表／
+    //    最終積分榜／賽季進度）之後。把 CTA 移回中間任何位置都會紅。
+    ctaOrder: (() => {
+      const cta = document.querySelector("[data-testid=recap-next-season-cta]");
+      if (!cta || !recap) return null;
+      const after = (el) => !!el && !!(el.compareDocumentPosition(cta) & Node.DOCUMENT_POSITION_FOLLOWING);
+      const panelWith = (text) => [...document.querySelectorAll("div")]
+        .find((el) => (el.innerText || "").trim().startsWith(text)) ?? null;
+      const standings = panelWith("最終積分榜 STANDINGS") ?? panelWith("積分榜 STANDINGS");
+      const progress = panelWith("賽季進度");
+      const playoffPanel = panelWith("季後賽 PLAYOFFS");
+      return {
+        afterRecap: after(recap),
+        afterStandings: standings ? after(standings) : null,
+        afterProgress: progress ? after(progress) : null,
+        afterPlayoffPanel: playoffPanel ? after(playoffPanel) : null,
+      };
+    })(),
+    //  ⚠ 規則是「**只剩**『本季比賽已全部完成』時才隱藏」，不是無條件隱藏——
+    //    仍有待打場次時該面板照常顯示（不替 Store 假設封存後一定沒場次）。
+    //    ⇒ 這裡只抓「空話面板」：標題是下一場/今日賽事、內容卻只有都打完了。
+    emptyNextFixturePanel: [...document.querySelectorAll("div")].some((el) => {
+      const t = (el.innerText || "").trim();
+      return (t.startsWith("下一場賽事") || t.startsWith("今日賽事"))
+        && t.includes("本季你的比賽都打完了");
+    }),
     header: attrs("recap-header", ["season"]),
     teamName: node("recap-team-name")?.innerText ?? null,
     summary: node("recap-summary")?.innerText ?? null,
+    //  Q7f 第二輪：金色只允許代表「玩家自己奪冠」。data-champion 是那條紀律的錨點。
+    summaryChampion: attrs("recap-summary", ["champion"]),
     honor: attrs("recap-honor", ["season", "teamId", "honorType"]),
     finalsQualification: attrs("recap-finals-qualification", ["qualified", "seed"]),
     finalsRank: attrs("recap-finals-player-rank", ["rank"]),
@@ -189,9 +219,13 @@ const RECAP_UI = PRELUDE + `
         cw: scrollContainer.clientWidth,
       },
     },
+    //  ⚠ recap-next-season 已移出 Recap（Q7f 第二輪）⇒ 要用整份文件找，
+    //    不能再限縮在 recap 內，否則這一條會因為結構搬家而假紅。
     mobileBlocks: ["recap-honor", "recap-asia-finals", "recap-circuit", "recap-league", "recap-prize", "recap-next-season"]
       .map((testid) => {
-        const el = node(testid);
+        const el = testid === "recap-next-season"
+          ? document.querySelector("[data-testid=recap-next-season]")
+          : node(testid);
         const rect = el?.getBoundingClientRect();
         return { testid, visible: !!el && rect.height > 0 && rect.width > 0 };
       }),
@@ -292,14 +326,32 @@ try {
   ck("1) 未完成賽季沒有 Recap", !uiInProgress.exists && !uiInProgress.header);
 
   const uiPlayer = await injectSave(chrome, playerSave);
+  //  ⚠ AI 存檔是 canonical 的「完整跑完並封存」樣本：它有真實 playoff，
+  //    而且賽季真的打完了（沒有待打場次）⇒ 「空話面板要隱藏」與「季後賽列
+  //    逐值正確」這兩件事只有在它身上才有鑑別力。HYBRID 是拼出來的，
+  //    封存了卻還有待打場次，不能拿來驗這兩件事。#5／#8／#10／#12 沿用同一份快照。
+  const uiAi = await injectSave(chrome, SAVE_AI_SEALED);
   //  ⚠ 封存日讀的是 SeasonSeal（view.final.sealedAtDay），不是 careerFinal 那一份。
   const expectedSealedDay = uiPlayer.view?.final?.sealedAtDay ?? null;
-  ck("2) 完成賽季 Recap 出現、封存日逐值來自 SeasonSeal，CTA 在 Recap 內且 DOM 恰好一顆",
-    uiPlayer.exists && uiPlayer.ctaCount === 1 && uiPlayer.overallCtaCount === 1 && uiPlayer.ctaInside &&
+  ck("2) 完成賽季 Recap 出現、封存日逐值來自 SeasonSeal，CTA 全 DOM 恰好一顆且排在本季所有內容之後",
+    uiPlayer.exists &&
+    uiPlayer.overallCtaCount === 1 &&
+    uiPlayer.ctaOrder?.afterRecap === true &&
+    uiPlayer.ctaOrder?.afterStandings !== false &&
+    uiPlayer.ctaOrder?.afterProgress !== false &&
+    uiPlayer.ctaOrder?.afterPlayoffPanel !== false &&
+    //  空話面板：在 canonical sealed 存檔上驗（HYBRID 仍有待打場次，驗不到）
+    uiAi.emptyNextFixturePanel === false &&
+    uiAi.overallCtaCount === 1 &&
+    uiAi.ctaOrder?.afterRecap === true &&
     (expectedSealedDay == null
       ? uiPlayer.sealedDay === null
       : uiPlayer.sealedDay?.day === String(expectedSealedDay)),
-    JSON.stringify({ sealedDay: uiPlayer.sealedDay, expectedSealedDay }));
+    JSON.stringify({
+      sealedDay: uiPlayer.sealedDay, expectedSealedDay,
+      player: { ctaCount: uiPlayer.overallCtaCount, ctaOrder: uiPlayer.ctaOrder },
+      ai: { ctaCount: uiAi.overallCtaCount, ctaOrder: uiAi.ctaOrder, emptyNextFixturePanel: uiAi.emptyNextFixturePanel },
+    }));
 
   const playerView = uiPlayer.view;
   const playerRank = String(playerView.careerFinal?.playerRank ?? "");
@@ -351,19 +403,35 @@ try {
     },
   };
   const uiPrize = await injectSave(chrome, PRIZE_SAVE);
-  ck("5) 官聯補充欄位（常規賽名次/排名來源、場次組成）與獎金格式逐值來自 truth，季後賽列已移除",
-    regularOk && mixOk &&
-    uiPlayer.leaguePlayoff === null &&
+  const aiPlayoff = uiAi.view.playoff ?? null;
+  const aiPlayoffRowOk = aiPlayoff == null
+    ? uiAi.leaguePlayoff === null
+    : uiAi.leaguePlayoff?.qualified === String(
+      (aiPlayoff.qualified ?? []).some((q) => q.teamId === uiAi.view.myTeamId))
+      && uiAi.leaguePlayoff?.stageId === String(aiPlayoff.stageId ?? "")
+      && uiAi.leaguePlayoff?.stageId === String(uiAi.view.careerFinal?.playoffStageId ?? "");
+  //  ⚠ 季後賽列：**2026-08-16 第二次修正，撤回「恆為 null」的結論**。
+  //    canonical 的 s7b_season_sealed 實測 playoff 非 null，且
+  //    playoff.stageId === careerFinal.playoffStageId。先前的 null 來自
+  //    HYBRID fixture（把某存檔的 final 接到另一存檔的 competition 上），
+  //    那不是玩家會遇到的狀態。
+  //    ⇒ 這裡驗**兩側**：playoff 存在時逐值比對；playoff 為 null 時整列不得出現
+  //      （不顯示推測值）。#8 那次的教訓：單側驗證沒有鑑別力。
+  const playoffRowOk = playerView.playoff == null
+    ? uiPlayer.leaguePlayoff === null
+    : uiPlayer.leaguePlayoff?.qualified === String(
+      (playerView.playoff.qualified ?? []).some((q) => q.teamId === playerView.myTeamId))
+      && uiPlayer.leaguePlayoff?.stageId === String(playerView.playoff.stageId ?? "");
+  ck("5) 官聯補充欄位（季後賽/常規賽名次/場次組成）與獎金格式逐值來自 truth（有無 playoff 兩側都驗）",
+    regularOk && mixOk && playoffRowOk && aiPlayoffRowOk &&
     uiPlayer.prizeText === expectedPrizeText &&
     uiPrize.prizeText === `+$${PRIZE_AMOUNT}萬` &&
-    uiPrize.prize?.amount === String(PRIZE_AMOUNT) &&
-    uiPrize.leaguePlayoff === null,
+    uiPrize.prize?.amount === String(PRIZE_AMOUNT),
     JSON.stringify({
-      regularOk, mixOk,
-      playoffRowRemoved: uiPlayer.leaguePlayoff === null,
-      prizeText: uiPlayer.prizeText, expectedPrizeText,
-      paidPrizeText: uiPrize.prizeText,
-      playoffIsNull: playerView.playoff == null,
+      regularOk, mixOk, playoffRowOk, aiPlayoffRowOk,
+      player: { playoffIsNull: playerView.playoff == null, dom: uiPlayer.leaguePlayoff },
+      ai: { playoffIsNull: aiPlayoff == null, dom: uiAi.leaguePlayoff, stageId: aiPlayoff?.stageId ?? null },
+      prizeText: uiPlayer.prizeText, expectedPrizeText, paidPrizeText: uiPrize.prizeText,
     }));
 
   const playerCircuitId = playerView.circuitPoints?.playerEntries?.[0]?.circuitId;
@@ -393,7 +461,7 @@ try {
   //  ⚠ 2026-08-16 補強：原本只驗玩家存檔，而該存檔裡玩家**本來就已取得資格**
   //    ⇒「資格判斷永遠 true」這個錯誤不會被抓到（mutation 3a 實測全綠）。
   //    AI 存檔裡玩家未取得資格，是現成的反向樣本 ⇒ 兩邊都驗，雙向都有鑑別力。
-  const uiAi = await injectSave(chrome, SAVE_AI_SEALED);
+  //  uiAi 已在 #5 取得，這裡沿用同一份快照（頁面此刻仍是 AI 存檔）。
   const aiCircuitQualified = qualOf(uiAi.view);
   ck("8) 巡迴 Qualification 狀態逐值來自 circuitPoints qualifications（已取得／未取得兩側都驗）",
     uiPlayer.circuitQualification?.qualified === String(playerCircuitQualified) &&
@@ -420,16 +488,25 @@ try {
 
   const playerHonor = (playerView.honorsView?.annualChampions ?? []).find((honor) =>
     honor.season === playerView.final?.season && honor.championTeamId === playerView.myTeamId);
-  ck("11) 玩家年度榮耀賽季與隊名逐值來自 honorsView",
+  //  ⚠ 第二輪追加：data-champion 必須與「本季 honors 有我方」一致（金色紀律的錨點）。
+  //    這一側驗「有奪冠 ⇒ true」，#12 驗「AI 奪冠 ⇒ false」，雙向都有鑑別力。
+  ck("11) 玩家年度榮耀賽季與隊名逐值來自 honorsView，且摘要標記為我方奪冠",
     !!uiPlayer.honor &&
     uiPlayer.honor.season === String(playerHonor?.season ?? "") &&
-    uiPlayer.honor.teamId === playerHonor?.championTeamId);
+    uiPlayer.honor.teamId === playerHonor?.championTeamId &&
+    uiPlayer.summaryChampion?.champion === String(!!playerHonor),
+    JSON.stringify({ champion: uiPlayer.summaryChampion?.champion, truth: !!playerHonor }));
 
-  ck("12) AI 冠軍顯示世界結果且沒有標成我方",
+  //  ⚠ 第二輪追加：AI 奪冠時摘要不得標成我方 ⇒ 金色不得出現。
+  const aiHonor = (aiView.honorsView?.annualChampions ?? []).find((honor) =>
+    honor.season === aiView.final?.season && honor.championTeamId === aiView.myTeamId);
+  ck("12) AI 冠軍顯示世界結果且沒有標成我方（摘要亦不得標為我方奪冠）",
     uiAi.finalsChampion.attrs?.teamId === aiView.asiaFinals?.championTeamId &&
     uiAi.finalsChampion.attrs?.playerChampion === "false" &&
     uiAi.finalsChampion.text === aiChampionRow?.name &&
-    aiView.asiaFinals?.championTeamId !== aiView.myTeamId);
+    aiView.asiaFinals?.championTeamId !== aiView.myTeamId &&
+    uiAi.summaryChampion?.champion === String(!!aiHonor),
+    JSON.stringify({ champion: uiAi.summaryChampion?.champion, truth: !!aiHonor }));
 
   const beforeReload = snapshotUi(uiPlayer);
   const savedPageErrors = chrome.pageErrors.length;

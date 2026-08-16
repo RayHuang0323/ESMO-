@@ -9848,3 +9848,100 @@ blob 比對       178a956 與 HEAD 皆為 d666ca2d…，完全相同
 經濟總結（沒有「賽季起始資金」truth，§A.2 ②）與成長總結（`growthLog` 是空的，§A.2 ④）
 **本輪不做**，理由已寫在規格，不是遺漏。
 年度總決賽獎金仍未新增（同 Q7e）。
+
+---
+
+## Q7f-2 賽季總結第二輪視覺 Polish（2026-08-16，已 commit 未 push／未部署）
+
+第一輪把資訊架構與資料正確性做對，第二輪做 signature 視覺與版面。
+規格為 Q7f 規格的**附錄 §Q–§Z**（`07ab746`），實作交 Codex（`gpt-5.6-luna`／`xhigh`），
+Claude 獨立 review diff、重跑全套、**自己重做 mutation**、並做 headed 截圖人眼 review。
+
+### Signature：封存線（The Seal Rule）
+
+頁首底下**全頁唯一一條 2px 橫線**。它不是從情緒板來的，是從資料來的——
+真相物件叫 `SeasonSeal`、欄位叫 `sealedAtDay`，「這一季已經闔上」是 Store 裡的事實。
+搭配 30px `MONO` 的 `S{season}` 與封存戳記，構成「一季正式結束」的收束感。
+240ms `scaleX(0→1)` 進場，含 `prefers-reduced-motion` 保護。**全輪只有這一段動態。**
+
+**結構裝置：層級階梯**。六個區塊有一條真實遞降軸——賽事層級：
+年度榮耀（年度最高）→ 洲際冠軍賽 → 洲際巡迴 → 國內聯賽 → 結算，
+從「世界」收束到「你的帳戶」。用**眉標的層級名稱 ＋ 左緣線權重**（3px 金／2px／1px／1px／無）
+編碼。**刻意不用 01/02/03 編號**——這些區塊不是流程步驟，順序編碼的是重要性不是次序。
+
+**色彩紀律：尺寸屬於標頭，顏色屬於榮耀。** 標頭拿走尺寸（`S1` 全頁最大字），
+榮耀拿走顏色（`GC.gold`）。兩者在**不同軸**上競爭，不互相削弱。
+金色上限兩處，並沿用 Q7e 的紀律：**任何金色都必須追溯得到「這是玩家的」**——
+`recap-summary` 新增 `data-champion`，gate 雙向驗（奪冠 ⇒ true、AI 奪冠 ⇒ false）。
+
+⚠ 限制決定了方案：`theme.js` 只有 9 個色、2 個字體角色、**沒有 display face**，
+personality 只能靠字級對比／字距／留白節奏／線條權重。
+且 Q7e 已用掉「刻線／壓印金屬感」，重複會讓兩個畫面難以分辨。
+
+### ⛔ 撤回一個第一輪的錯誤結論：`playoff` 不是恆為 null
+
+第一輪 §A.2 ⑤ 斷定「`competitionView().playoff` 在 Recap 當下**恆為** null」，
+並據此移除季後賽整列。**該結論已於本輪撤回**（規格 §A.2 ⑥，⑤ 保留不刪）。
+
+錯誤成因：當時只量了 browser gate 的 **HYBRID** 合成存檔，
+從**一個樣本**的 null 推論成全稱。以 canonical 的 `s7b_season_sealed` 實測：
+`playoff` 非 null、`stageId === careerFinal.playoffStageId`、`qualified` 四隊齊全、`done: true`。
+⇒ §J 原本的 #5 斷言本來就成立，它會紅是 fixture 內部不一致，不是產品拿不到資料。
+
+⇒ 使用者裁決：**季後賽列加回**，直接讀 `playoff.qualified` / `playoff.stageId`，
+不用 `rankSource` 反推、不改 `profileStore.js`；未晉級用中性語氣（不上紅）；
+`playoff` 為 null 時整列不出現。
+
+⚠ **教訓**：驗證「某欄位不可用」時，**樣本必須是 canonical 的生命週期狀態**。
+合成存檔的缺失反映的是 fixture，不是產品。
+
+### CTA 移到整頁最後
+
+人眼 review 發現 CTA 之後還有四個面板 ⇒「Season Report 的句點」只在元件內部成立。
+⇒ 修訂（規格 §D.2）：`SeasonRecap` 不再渲染 CTA，`RecapNextSeason` 改由
+`CompetitionScreen` 在**檔尾**渲染，條件與 Recap 內部一致（DOM 仍只有一顆）。
+「下一場賽事」面板在**只剩「本季你的比賽都打完了」**時隱藏。
+**沒有把任何面板塞進 `SeasonRecap`**，元件責任邊界不變；`rollSeason` handler 不變。
+
+### ⚠ 技術債：HYBRID fixture 不是 canonical player lifecycle state
+
+`browser_check_season_recap_ui` 的 `PLAYER_SEALED_SAVE`（下稱 HYBRID）是把
+`s7e_player_one` 的 `competition` 接上 `s7b_season_sealed` 的 `final` 拼出來的。
+它能跑，但**不是玩家會遇到的狀態**：
+
+- 已封存（`final != null`、`canRoll.ok`）卻**沒有季後賽**（`playoff === null`）
+- 已封存卻**還有待打場次**（`rows.length > 0`）
+
+它已經造成兩次誤判：① 讓第一輪誤判 `playoff` 恆為 null（見上）；
+② 讓本輪「封存時隱藏空話面板」的斷言驗不到東西（HYBRID 有待打場次 ⇒ 面板本來就該顯示）。
+
+**本輪不重做 fixture 系統**（範圍控制）。處置：
+
+- 需要「canonical sealed 狀態」的斷言，一律改用 `s7b_season_sealed`
+  （本輪 #2 的空話面板、#5 的季後賽列都已改成在它身上驗）
+- **未來**應建立由完整 season lifecycle 實際跑出來的 sealed fixture
+- HYBRID **保留**給 migration / fail-closed 這類特殊測試，
+  **不應再當正常 Recap baseline**
+
+### 消除重複述詞
+
+`seasonSummary()` 改回傳 `{ text, champion }`。先前「玩家本季奪冠」在
+`seasonSummary` 內算一次、元件本體 `isChampion` 又算一次——值雖一致，
+但那是兩份真相，改一邊忘另一邊金色就會與文字說法不符（AGENTS.md §UI：
+不得為了顯示另算一套數字）。現在摘要文字、`data-champion`、金色共用同一份判斷。
+
+### verifier 改動與理由
+
+1. **#2 語意遷移**：`ctaInside` → 文件順序（`compareDocumentPosition`），
+   CTA 須排在成績單／季後賽對戰表／最終積分榜／賽季進度全部之後，全 DOM 一顆，
+   且封存時不得殘留空話面板。**加強，非放寬**。
+2. **#5 恢復季後賽斷言且兩側都驗**：`playoff` 存在時逐值比對，為 null 時整列不得出現。
+3. **#11／#12 追加 `data-champion` 雙向驗證**（金色紀律）。
+4. **#18 修查找範圍**：`recap-next-season` 已移出 Recap，改用整份文件查找。
+
+### 未經實測的項目（交使用者驗收）
+
+- **真機**：只驗到 390px 下無水平溢出與區塊可見（gate #17／#18）；
+  觸控手感、實機 FPS、真實裝置安全區**未測**。
+- **動態**：封存線的 240ms 進場只在 headless 環境跑過，**未在真機上看過**。
+- **正式站**：全部在 dev bundle 上驗，**未 push、未部署**。

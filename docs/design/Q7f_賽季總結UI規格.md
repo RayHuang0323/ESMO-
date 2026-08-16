@@ -32,7 +32,7 @@
 | `competitionView().circuitPoints.slots` | ✅ | `4` |
 | `competitionView().asiaFinals` | ✅ | `{exists,eventId,name,qualified[{seed,teamId,name,points,championships,podiums}],bracket[],days,done,championTeamId,final(FinalStandings 含 rows),playerTeamId}` |
 | `competitionView().honorsView` | ✅ | `{all,annualChampions,latestAnnualChampion,myTeamId,myAnnualChampionCount}` |
-| `competitionView().playoff` | ❌ **本欄記載錯誤，見 A.2 ⑤** | ~~`{stageId,qualified[],bracket[],done,ok,order,championTeamId}`~~ Recap 當下恆為 `null` |
+| `competitionView().playoff` | ✅ **（A.2 ⑤ 曾誤判為不可用，已於 A.2 ⑥ 撤回）** | `{stageId,qualified[],bracket[],done,ok,order,championTeamId}` |
 | `competitionView().award` | ✅ | `{ok,settled,awardId,competitionId,season,teamId,rank,amount,fundsBefore,fundsAfter,sealedAtDay}` |
 | `competitionView().canRoll` | ✅ | `{ok:true, reason:null, nextSeason:2}` |
 | `competitionView().events` | ✅ | 各站 `name`／`tier`（Recap 顯示站名要用） |
@@ -106,6 +106,48 @@ export function playoffView(state) {
 **明確排除的兩條替代路**（2026-08-16 由使用者裁決）：
 不用 `careerFinal.rankSource` 反推（語意是「名次從哪來」，不是「有沒有晉級」）；
 不為這一列新增 `competitionView()` 投影或修改 `profileStore.js`（§B.1）。
+
+**⑥ ⛔ CORRECTION：⑤ 的結論已撤回（2026-08-16，第二輪驗收時）。**
+
+> ⚠ **⑤ 保留不刪**，因為它記錄了一個真實發生過的判斷錯誤與它的成因。
+> 以下是更正，不是覆寫。
+
+**⑤ 說「`playoff` 在 Recap 當下恆為 `null`」——那是錯的。**
+
+錯誤來源：⑤ 的量測用的是 browser gate 的 `PLAYER_SEALED_SAVE`（下稱 **HYBRID**），
+那是把 `s7e_player_one` 的 `competition` 接上 `s7b_season_sealed` 的 `final`
+拼出來的合成存檔。那份 competition 的季後賽**從來沒打過**，
+所以 `activePlayoffOf(state)` 為 falsy、`playoffView()` 回 `null`。
+⑤ 從**這一個樣本**的 null 推論成「Recap 時點恆為 null」——**以偏概全**。
+
+以 canonical 的 `s7b_season_sealed`（真的跑完並封存）實測：
+
+| 欄位 | `s7b_season_sealed`（canonical） | HYBRID（合成） |
+|---|---|---|
+| `final` 已封存 | ✅ | ✅ |
+| `canRoll.ok` | ✅ | ✅ |
+| `playoff` | **非 null** | null |
+| `playoff.stageId` | `stage:comp:moba:s1:official:regular:playoffs` | null |
+| `playoff.done` | `true` | — |
+| `playoff.qualified` | 四隊齊全 | — |
+| `careerFinal.playoffStageId` | 同上 | 同上 |
+| **`playoff.stageId === careerFinal.playoffStageId`** | **✅ true** | ❌ false |
+
+⇒ **§J 原本的驗收 #5（`playoff.stageId === careerFinal.playoffStageId`）本來就成立**，
+它當初會紅，根因是 HYBRID fixture 內部不一致，不是產品拿不到資料。
+
+**因此（2026-08-16 使用者裁決）：**
+
+- `RecapLeague` **加回季後賽列**，直接讀既有 `playoff.qualified` / `playoff.stageId`
+- **不用** `careerFinal.rankSource` 反推（語意是「名次從哪來」，不是「有沒有晉級」）
+- **不改** `profileStore.js`、不新增投影
+- 未晉級用**中性語氣**：與其他列相同字色，不上紅、不加警示、不降透明度
+- `playoff` 為 `null` 時（季後賽從未產生）**整列不出現**，不顯示推測值
+
+⚠ **教訓（比結論本身更重要）**：⑤ 的推理鏈是「函式在 X 條件下回 null」＋
+「一個樣本是 null」⇒「恆為 null」。前兩步都對，第三步是**過度概括**。
+**驗證「某欄位不可用」時，樣本必須是 canonical 的生命週期狀態**，
+不能用測試用的合成存檔——合成存檔的缺失反映的是 fixture，不是產品。
 
 ### A.3 既有「開始第 N+1 賽季」入口
 
@@ -219,6 +261,32 @@ export function playoffView(state) {
 | `careerFinal` 缺失時顯示「—」與說明 | `recap-league-rank` 顯示「—」＋ `recap-league-empty` 說明 |
 | 封存日 | `recap-sealed-day`（讀 **SeasonSeal** 的 `sealedAtDay`） |
 
+### D.2 ⚠ CTA 位置修訂（2026-08-16 第二輪，使用者裁決）
+
+§D 原本要求「CTA 移進 Recap 最底部」。第二輪人眼 review 發現：
+CTA 之後畫面還有**四個面板**（季後賽對戰表／下一場賽事／最終積分榜／賽季進度），
+所以「Season Report 的句點」只在 **Recap 元件內部**成立，**在整個畫面上不成立**。
+
+⇒ **修訂：CTA 移到整頁最後，成為已封存 `CompetitionScreen` 真正最後一個主要操作。**
+
+| 規則 | 內容 |
+|---|---|
+| 順序 | Season Recap 在上 → 本季補充資訊（季後賽對戰表／最終積分榜／賽季進度）→ **CTA 最後** |
+| 「下一場賽事」面板 | 封存狀態下**只剩「本季你的比賽都打完了」時隱藏**；仍有待打場次時照常顯示（不替 Store 假設封存後一定沒場次） |
+| 元件責任 | **不把舊面板塞進 `SeasonRecap`**。`SeasonRecap` 只做成績單；`RecapNextSeason` 元件不變，改由 `CompetitionScreen` 在檔尾渲染 |
+| 唯一性 | CTA 的渲染條件與 `SeasonRecap` 內部完全一致（`final` ＋ `canRoll.ok`）⇒ **DOM 只會有一顆** |
+| rollover | `rollSeason` handler 與 Q5 的「換季由 Store 判、畫面不自己判」**完全不變** |
+
+⚠ **§J #2 的 `ctaInside` 語意隨之遷移**：從「CTA 在 Recap 內」改為驗**文件順序**——
+CTA 必須排在成績單、季後賽對戰表、最終積分榜、賽季進度**全部之後**，
+且全 DOM 恰好一顆，另加「封存時不得殘留只寫『本季比賽都打完了』的空話面板」。
+用 `compareDocumentPosition` 判定。**這是加強不是放寬**：
+把 CTA 移回中間任何位置、或複製第二顆，都會讓 #2 紅（已用 mutation 驗證）。
+
+⚠ **§V 契約補充**：`recap-next-season` / `recap-next-season-cta` 已**不在** `season-recap` 內。
+任何以「在 Recap 內查找」為前提的斷言都要改用整份文件查找（`browser_check_season_recap_ui`
+的 #18 已同步修正）。
+
 ⇒ **既有 verifier 的 selector / DOM contract 隨產品結構遷移**，
 受影響的是 `browser_check_career_final_ui` 的 #1／#3／#6 與
 `browser_check_asia_finals_ui` 的 #11。四條斷言**一條都沒刪、守的事實一件都沒少**，
@@ -320,7 +388,7 @@ selector 內不得 `filter`/`map`/`sort`、不得回傳新物件。
 | `RecapHonor` | `honorsView.annualChampions.filter(h => h.season === final.season && h.championTeamId === me)` |
 | `RecapAsiaFinals` | `asiaFinals.qualified`（判資格＋種子）、`asiaFinals.final.rows.find(teamId === me).rank`（判名次）、`asiaFinals.championTeamId` ＋ `final.rows[0].name`（世界冠軍） |
 | `RecapCircuit` | `circuitPoints.playerEntries`（取 `circuitId`、各站 `eventId/rank/points`）、`circuitPoints.standings[circuitId].rows`（總排名／總積分／隊數）、`circuitPoints.slots`、`events[eventId].name`（站名） |
-| `RecapLeague` | `careerFinal.playerRank`、`careerFinal.rows.length`、`careerFinal.championTeamId`、`careerFinal.rankSource`、`careerFinal.playerRegularRank`、`careerFinal.sourceMix`　⚠ **不含 `playoff.*`**（A.2 ⑤） |
+| `RecapLeague` | `careerFinal.playerRank`、`careerFinal.rows.length`、`careerFinal.championTeamId`、`careerFinal.rankSource`、`careerFinal.playerRegularRank`、`careerFinal.sourceMix`、**`playoff.qualified`／`playoff.stageId`**（A.2 ⑥ 撤回 ⑤ 之後恢復；`playoff` 為 null 時整列不出現） |
 | `RecapPrize` | `award.amount`、`award.settled` |
 | `RecapNextSeason` | `canRoll.ok`、`canRoll.nextSeason`；`onClick` → 既有 `rollToNextCompetitionSeason()` |
 
@@ -385,7 +453,7 @@ C 的錯法是把「沒晉級」畫成錯誤狀態；D 的錯法是為了視覺�
 | 2 | 賽季**完成** ⇒ Recap 出現，且「開始第 N+1 賽季」在 Recap **內部**（不是外面另一顆） |
 | 3 | 官方聯賽名次**逐值等於** `careerFinal.playerRank`，隊數等於 `careerFinal.rows.length` |
 | 4 | 官方聯賽冠軍**逐值等於** `careerFinal.championTeamId` 對應的隊名 |
-| 5 | ⚠ **2026-08-16 改寫**（原文依賴 `playoff.*`，實測不可用，見 A.2 ⑤）：常規賽名次逐值等於 `careerFinal.playerRegularRank`（為 null 時改驗排名來源等於 `careerFinal.rankSource`）、場次組成四個數逐值等於 `careerFinal.sourceMix`、賽事獎金文字符合既有格式（`+$N萬`／「無（前四名才有）」／「—」），**且季後賽那一列不得存在** |
+| 5 | ⚠ **2026-08-16 兩次修訂**（先依 ⑤ 移除 `playoff.*`，再依 ⑥ 撤回並恢復）：**季後賽**——`playoff` 存在時 `data-qualified` 逐值等於 `playoff.qualified.some(q => q.teamId === me)`、`data-stage-id` 逐值等於 `playoff.stageId` 且等於 `careerFinal.playoffStageId`；`playoff` 為 null 時整列不得出現。**常規賽名次**逐值等於 `careerFinal.playerRegularRank`（為 null 時改驗排名來源等於 `careerFinal.rankSource`）。**場次組成**四個數逐值等於 `careerFinal.sourceMix`。**賽事獎金**文字符合既有格式（`+$N萬`／「無（前四名才有）」／「—」）。⚠ 季後賽兩側都要驗——**有 `playoff` 的樣本必須是 canonical sealed 存檔**，HYBRID 驗不到（A.2 ⑥） |
 | 6 | 巡迴總排名／總積分**逐值等於** `circuitPoints.standings[circuitId].rows` 裡我方那列的 `rank` / `points` |
 | 7 | **三站名次與得分逐筆等於** `circuitPoints.playerEntries`（站數、順序、`rank`、`points` 全部比對） |
 | 8 | Qualification 狀態與 `asiaFinals.qualified.some(q => q.teamId === me)` 一致 |
