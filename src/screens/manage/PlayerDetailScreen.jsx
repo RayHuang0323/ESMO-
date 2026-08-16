@@ -16,7 +16,7 @@
 import React, { useEffect, useState } from "react";
 import { ChevronDown, Target, Smile, Battery, Star, Zap } from "lucide-react";
 import { useProfileStore } from "../../platform/profileStore.js";
-import { STAT_DEF, calcPower, bestPositions, personalityById } from "../../data/playerModel.js";
+import { STAT_DEF, calcPower, bestPositions, personalityById, CS_ROLE_BY_MOBA_ROLE } from "../../data/playerModel.js";
 import { TIERS } from "../../data/recruitPool.js";
 import { calculateLevelProgress } from "../../platform/progress/playerLevel.js";
 import { getStatLayers } from "../../platform/talents/playerDerivedStats.js";
@@ -26,6 +26,13 @@ import { GrowthEntryRow, LevelXpBar } from "../../ui/GrowthUI.jsx";
 import ManageFrame from "./ManageFrame.jsx";
 
 const HIGH = 74;
+const CS_ROLE_LABELS = Object.freeze({ entry: "突破手", rifler: "步槍手", awp: "狙擊手", lurker: "游走手", igl: "指揮" });
+const csRoleOf = (player) => CS_ROLE_BY_MOBA_ROLE[player?.role] || "rifler";
+const fpsRoleLabel = (pos) => String(pos || "").replace(/^FPS/, "") || "未指定";
+const csHighlights = (player) => {
+  const rows = STAT_DEF.map((def) => ({ def, value: Math.round(player.stats?.[def.key] ?? 50) })).sort((a, b) => b.value - a.value);
+  return { strengths: rows.slice(0, 2), weaknesses: rows.slice(-2).reverse() };
+};
 const card = (extra = {}) => ({
   borderRadius: 18, border: "1px solid rgba(255,255,255,0.07)",
   background: "linear-gradient(148deg,#1e1b26 0%,#161319 100%)",
@@ -80,14 +87,13 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
   const players = useProfileStore((s) => s.players) ?? [];
   const team = useProfileStore((s) => s.team);
   const [mode, setMode] = useState("ability");     // "ability" | "potential"
+  const [gameMode, setGameMode] = useState("MOBA");
   const [dropOpen, setDropOpen] = useState(false);
 
   const p = players.find((x) => x.id === playerId) || players[0];
   if (!p) return <ManageFrame title="選手檔案" subtitle="PLAYER PROFILE" onBack={onBack}><div style={{ color: "#71717a", fontSize: 12, textAlign: "center", padding: 40 }}>名單中沒有選手</div></ManageFrame>;
 
   const pers = personalityById(p.personality);
-  const bp = bestPositions(p);
-  const pow = calcPower(p, "moba");
   const potential = p.potential ?? 80;
   // S26【A】：XP / 等級一律由持久化 xp 推導（與 Result receipt 同一把尺）
   const lp = calculateLevelProgress(p.xp ?? 0, 0);
@@ -100,6 +106,11 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
   //   有天賦加成的項目在標籤標 +N（綠），潛力模式維持單一天花板。
   const layers = getStatLayers(p);
   const talentState = getPlayerTalentState(p);
+  const derivedPlayer = { ...p, stats: layers.derived };
+  const bp = bestPositions(derivedPlayer);
+  const pow = calcPower(derivedPlayer, gameMode === "CS" ? "fps" : "moba");
+  const csRole = csRoleOf(p);
+  const highlights = csHighlights(derivedPlayer);
   const data = STAT_DEF.map((s) => ({
     label: s.zh,
     bonus: layers.talentBonus[s.key] ?? 0,
@@ -119,8 +130,12 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
   const energyColor = energy >= 70 ? "#34d399" : energy >= 40 ? "#fbbf24" : "#f87171";
 
   const TAGS = [
-    { label: p.role, color: "#60a5fa", bg: "rgba(96,165,250,0.15)", border: "rgba(96,165,250,0.3)" },
-    { label: `適 ${bp.moba.pos.replace("MOBA", "")}`, color: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)" },
+    gameMode === "CS"
+      ? { label: `CS · ${CS_ROLE_LABELS[csRole]}`, color: "#fb923c", bg: "rgba(251,146,60,0.15)", border: "rgba(251,146,60,0.3)" }
+      : { label: p.role, color: "#60a5fa", bg: "rgba(96,165,250,0.15)", border: "rgba(96,165,250,0.3)" },
+    gameMode === "CS"
+      ? { label: `適 ${fpsRoleLabel(bp.fps.pos)}`, color: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)" }
+      : { label: `適 ${bp.moba.pos.replace("MOBA", "")}`, color: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)" },
     { label: p.status || "預備隊", color: "#34d399", bg: "rgba(52,211,153,0.12)", border: "rgba(52,211,153,0.28)" },
   ];
 
@@ -131,7 +146,7 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
         <div style={card({ padding: "16px 14px 14px" })}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
             <div style={{ position: "relative" }}>
-              <AvatarRing size={96} stroke={4} pct={pow} ringColor="#a78bfa">
+              <AvatarRing size={96} stroke={4} pct={pow} ringColor={gameMode === "CS" ? "#fb923c" : "#a78bfa"}>
                 <div style={{ width: "100%", height: "100%", background: "linear-gradient(145deg,#4c1d95,#1e1b4b)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 900, color: "white", fontFamily: "'Courier New',monospace", letterSpacing: "-0.03em" }}>{initials}</div>
               </AvatarRing>
               <div style={{ position: "absolute", bottom: -4, left: "50%", transform: "translateX(-50%)", background: "linear-gradient(135deg,#7c3aed,#a78bfa)", borderRadius: 99, padding: "2px 9px", fontSize: 9, fontWeight: 900, color: "white", border: "2px solid #121113", whiteSpace: "nowrap", letterSpacing: "0.04em", boxShadow: "0 3px 10px rgba(124,58,237,0.5)" }}>Lv. {lp.newLevel}</div>
@@ -204,6 +219,11 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
 
         {/* SECTION 2：能力面板 */}
         <div style={card({ padding: "14px 13px 13px" })}>
+          <div data-testid="player-detail-game-mode" style={{ display: "flex", gap: 5, padding: 3, marginBottom: 12, background: "rgba(255,255,255,0.04)", borderRadius: 10 }}>
+            {["MOBA", "CS"].map((view) => (
+              <button key={view} onClick={() => setGameMode(view)} style={{ flex: 1, border: "none", borderRadius: 7, padding: "7px 8px", cursor: "pointer", background: gameMode === view ? (view === "CS" ? "rgba(251,146,60,0.2)" : "rgba(167,139,250,0.2)") : "transparent", color: gameMode === view ? (view === "CS" ? "#fed7aa" : "#c4b5fd") : "#71717a", fontSize: 11, fontWeight: 800 }}>{view}</button>
+            ))}
+          </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <div style={{ position: "relative" }}>
               <button onClick={() => setDropOpen((o) => !o)}
@@ -225,11 +245,29 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
 
             <div style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.25)", borderRadius: 10, padding: "6px 12px" }}>
               <Target size={11} style={{ color: "#60a5fa" }} />
-              <span style={{ color: "#60a5fa", fontSize: 11, fontWeight: 800 }}>{p.role}</span>
+              <span style={{ color: gameMode === "CS" ? "#fb923c" : "#60a5fa", fontSize: 11, fontWeight: 800 }}>{gameMode === "CS" ? `CS · ${CS_ROLE_LABELS[csRole]}` : p.role}</span>
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 8px", marginBottom: 12 }}>
+          {gameMode === "CS" && (
+            <div data-testid="cs-profile-summary" style={{ background: "rgba(251,146,60,0.08)", border: "1px solid rgba(251,146,60,0.22)", borderRadius: 12, padding: "10px 11px", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ color: "#fed7aa", fontSize: 12, fontWeight: 900 }}>FPS 戰力 {calcPower(derivedPlayer, "fps")}</span>
+                <span style={{ color: "#a1a1aa", fontSize: 9 }}>Learning {Math.round(layers.derived.learning ?? 50)}</span>
+              </div>
+              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 6 }}>
+                {(bp.fpsAll || []).slice(0, 3).map((item) => (
+                  <span key={item.pos} style={{ color: "#d4d4d8", background: "rgba(255,255,255,0.06)", borderRadius: 6, padding: "3px 6px", fontSize: 9 }}>適 {fpsRoleLabel(item.pos)} {item.fit}</span>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 7, fontSize: 9 }}>
+                <span style={{ color: "#a1a1aa" }}>強項 <b style={{ color: "#34d399" }}>{highlights.strengths.map((x) => `${x.def.zh} ${x.value}`).join("／")}</b></span>
+                <span style={{ color: "#a1a1aa" }}>弱項 <b style={{ color: "#fbbf24" }}>{highlights.weaknesses.map((x) => `${x.def.zh} ${x.value}`).join("／")}</b></span>
+              </div>
+            </div>
+          )}
+
+          <div data-testid={gameMode === "CS" ? "cs-stat-grid" : "moba-stat-grid"} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 8px", marginBottom: 12 }}>
             {[left, right].map((col, ci) => (
               <div key={ci} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <div style={{ color: "#3f3f46", fontSize: 8.5, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", paddingLeft: 10, marginBottom: 3 }}>{ci === 0 ? "屬性" : "數值"}</div>
