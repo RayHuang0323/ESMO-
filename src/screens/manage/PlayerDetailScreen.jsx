@@ -180,7 +180,7 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
             {onTalent && (
               <button onClick={() => onTalent(p.id)}
                 style={{ marginTop: 4, width: "100%", maxWidth: 320, background: talentState.availablePoints > 0 ? "linear-gradient(135deg,rgba(124,58,237,0.35),rgba(124,58,237,0.15))" : "rgba(255,255,255,0.05)", border: `1px solid ${talentState.availablePoints > 0 ? "#a78bfa" : "rgba(255,255,255,0.12)"}`, borderRadius: 10, padding: "9px 14px", color: talentState.availablePoints > 0 ? "#c4b5fd" : "#71717a", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
-                🌿 天賦　可用 {talentState.availablePoints} 點 · 已投入 {talentState.spentPoints} 點
+                ✦ 查看個人特質　既有投入 {talentState.spentPoints} 點
               </button>
             )}
           </div>

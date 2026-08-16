@@ -40,10 +40,10 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
 
   const players = profile.players ?? [];
   const inbox = profile.inbox ?? [];
-  // S25：天賦點徽章＝選手實際未花費天賦點總和（升級時由 applyMatchProgress 發放），
-  //   不再是 meta.talentPending 的靜態種子值 → 天賦點閉環在首頁看得見。
-  const talentTotal = players.reduce((s, p) => s + (Number.isFinite(p.talentPoints) ? p.talentPoints : 0), 0);
-  const T = { ...profile.team, ...profile.meta, gold: money(profile.finance.funds), players: players.length, mail: inbox.length, inbox: inbox.filter((m) => m.unread).length, talentPending: talentTotal };
+  // 戰隊發展點是俱樂部層投資資源；個人天賦點仍由舊玩家資料保留，
+  //   不再從首頁作為主要投資入口展示。
+  const developmentPoints = Math.max(0, Number(profile.teamDevelopment?.availablePoints) || 0);
+  const T = { ...profile.team, ...profile.meta, gold: money(profile.finance.funds), players: players.length, mail: inbox.length, inbox: inbox.filter((m) => m.unread).length, developmentPoints };
   const finBars = profile.finance.weekly9 ?? [6, 4, 5, 3, 2, 9, 5, 6, 4];
   //  Milestone N：本週收支預覽（唯讀；與週結算共用同一份計算，畫面不另算一套）
   const wk = profile.currentWeekPreview();
@@ -73,10 +73,8 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
   // Sprint21：八個經營模組已 Component 化 → 直接導頁；其餘 Legacy 模組維持誠實佔位。
   //  集中驗收修正（項目五）：「天賦」磚原本導向 `roster`——玩家點進去只看到
   //  一般選手名單，沒有任何天賦入口，流程就斷在那裡。
-  //  現在導向 `talentPick`（同一個 RosterScreen，但標題是「選擇要培養的選手」，
-  //  每張卡有「查看天賦」直達天賦樹）。**沒有第二套天賦系統**——
-  //  天賦樹仍是既有的 PlayerTalentScreen。
-  const NAV = { notify: "inbox", finance: "finance", sponsor: "sponsor", roster: "roster", team: "team", training: "training", recruit: "recruit", cs: "csPrep", talent: "talentPick", newgame: "newGame" };
+  //  `talentPick` 只保留給舊路由與舊存檔相容；首頁主要投資入口是 `teamDevelopment`。
+  const NAV = { notify: "inbox", finance: "finance", sponsor: "sponsor", roster: "roster", team: "team", training: "training", recruit: "recruit", cs: "csPrep", development: "teamDevelopment", talent: "talentPick", newgame: "newGame" };
   const sel = (id) => {
     if (id === "moba") return onMoba();
     if (id === "bracket") return onSeason();
@@ -105,7 +103,7 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
         <div style={{ padding: "0 14px", display: "flex", flexDirection: "column", gap: 10 }}>
           <Tile emoji="💬" label="收件匣" badge={T.inbox} color={GC.blue} onClick={() => sel("notify")} right={<span style={{ display: "flex", alignItems: "center", gap: 4, color: GC.gray, fontSize: 12 }}>✉️ {T.mail}</span>} />
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <Tile emoji="🌿" label="天賦" badge={T.talentPending} color={GC.purp} onClick={() => sel("talent")} />
+            <Tile emoji="🌱" label="戰隊發展" badge={T.developmentPoints} color={GC.green} onClick={() => sel("development")} />
             <Tile emoji="🛒" label="商店" color={GC.gold} onClick={() => sel("equip")} />
           </div>
           {/* Milestone N：本週財務（真實值，非種子）＋ 合約狀態 ─────────────

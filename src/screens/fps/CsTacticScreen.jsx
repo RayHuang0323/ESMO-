@@ -14,6 +14,8 @@
 import React, { useState } from "react";
 import { CS_TEAM_TACTICS, FPS_TACTIC_TYPE, TACTIC_TYPE_ZH } from "../../battle/fps/csPrepData.js";
 import { statZh } from "../../data/playerModel.js";
+import { useProfileStore } from "../../platform/profileStore.js";
+import { teamDevelopmentEffects } from "../../platform/development/teamDevelopment.js";
 import { GC, FONT } from "../../ui/theme.js";
 
 const ACC = "#fb923c";
@@ -21,6 +23,8 @@ const RISK_C = { "低": GC.green, "中": GC.gold, "高": GC.red };
 
 export default function CsTacticScreen({ mapName, onNext, onBack }) {
   const [sel, setSel] = useState(null);
+  const development = useProfileStore((s) => s.teamDevelopment);
+  const developmentEffects = teamDevelopmentEffects(development);
   const selT = CS_TEAM_TACTICS.find((t) => t.id === sel) || null;
 
   return (
@@ -32,6 +36,11 @@ export default function CsTacticScreen({ mapName, onNext, onBack }) {
           {mapName && <span style={{ marginLeft: "auto", background: `${ACC}22`, color: ACC, fontSize: 9, fontWeight: 700, borderRadius: 5, padding: "2px 8px" }}>🗺 {mapName}</span>}
         </div>
         <div style={{ color: GC.gray, fontSize: 10, marginBottom: 14 }}>配置團隊戰術，將實際影響攻防回合（引擎依戰術類型在該地圖執行對應打法）</div>
+        {(developmentEffects.unlocks.csMapResearch || developmentEffects.unlocks.csTeamPrep) && (
+          <div style={{ color: ACC, background: `${ACC}18`, border: `1px solid ${ACC}55`, borderRadius: 9, padding: "7px 10px", fontSize: 9.5, fontWeight: 800, marginBottom: 10 }}>
+            戰隊發展支援：{[developmentEffects.unlocks.csMapResearch, developmentEffects.unlocks.csTeamPrep].filter(Boolean).join("、")} 已啟用
+          </div>
+        )}
 
         <div style={{ color: ACC, fontSize: 12, fontWeight: 800, marginBottom: 8 }}>① 團隊戰術</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>

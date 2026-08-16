@@ -223,13 +223,14 @@ ck("   正式 UI 無重置鈕（__debugResetTalents 不出現在畫面）", (() 
   return !src("src/screens/manage/PlayerTalentScreen.jsx").includes("__debugResetTalents")
     && typeof __debugResetTalents === "function";
 })());
-ck("   UI 不直接改 stats/talentPoints（只呼叫 purchasePlayerTalent）", (() => {
+ck("   UI 不直接改 stats/talentPoints（只保留舊資料相容檢視）", (() => {
   const s = src("src/screens/manage/PlayerTalentScreen.jsx");
-  return s.includes("purchasePlayerTalent") && !s.includes("set({") && !s.includes(".talentPoints =") && !s.includes(".stats[");
+  return s.includes("選手個人天賦") && s.includes("既有個人天賦資料")
+    && !s.includes("purchasePlayerTalent") && !s.includes("set({") && !s.includes(".talentPoints =") && !s.includes(".stats[");
 })());
-ck("   防誤點：確認區 + 不可重置警語", (() => {
+ck("   個人天賦改為被動特質，不再提供能力加點", (() => {
   const s = src("src/screens/manage/PlayerTalentScreen.jsx");
-  return s.includes("確認投入") && s.includes("不可重置") && s.includes("confirmId");
+  return s.includes("被動特質") && s.includes("訓練中心") && !s.includes("確認投入") && !s.includes("confirmId");
 })());
 ck("   響應式：無固定 380/560、grid 有 min() 防護、無 transform scale", (() => {
   const s = src("src/screens/manage/PlayerTalentScreen.jsx");

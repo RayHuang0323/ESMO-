@@ -35,7 +35,8 @@ import RosterScreen from "./screens/manage/RosterScreen.jsx";
 import TrainingScreen from "./screens/manage/TrainingScreen.jsx";
 import RecruitScreen from "./screens/manage/RecruitScreen.jsx";
 import PlayerDetailScreen from "./screens/manage/PlayerDetailScreen.jsx";
-// ── Sprint27：選手天賦（入口在 PlayerDetail）──
+import TeamDevelopmentScreen from "./screens/manage/TeamDevelopmentScreen.jsx";
+// ── 舊版個人天賦相容檢視（入口在 PlayerDetail）──
 import PlayerTalentScreen from "./screens/manage/PlayerTalentScreen.jsx";
 //  Milestone Q3.5：聯賽（賽程 / 積分榜 / 出賽入口）
 import CompetitionScreen from "./screens/manage/CompetitionScreen.jsx";
@@ -118,9 +119,10 @@ export default function AppShell() {
            不再停在一般名單。天賦樹本身仍是既有的 PlayerTalentScreen（無第二套）。 */}
       {screen === "talentPick" && <RosterScreen purpose="talent" onBack={home} onPlayer={(id) => { setPlayerId(id); setScreen("playerTalent"); }} />}
       {screen === "training" && <TrainingScreen onBack={home} />}
+      {screen === "teamDevelopment" && <TeamDevelopmentScreen onBack={home} />}
       {screen === "recruit" && <RecruitScreen onBack={home} />}
       {screen === "playerDetail" && <PlayerDetailScreen playerId={playerId} onBack={go("roster")} onTalent={(id) => { setPlayerId(id); setScreen("playerTalent"); }} />}
-      {/* S27：選手天賦（唯一寫入口 = profileStore.purchasePlayerTalent；UI 只顯示 receipt） */}
+      {/* 舊版個人天賦路由保留供舊存檔與詳情流程使用；新的長期投資走戰隊發展。 */}
       {screen === "playerTalent" && <PlayerTalentScreen playerId={playerId} onBack={go("playerDetail")} />}
 
       {/* ── Sprint23：CS 完整流程（結果入 profileStore.csHistory，不入 seasonStore）──

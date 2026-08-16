@@ -21,6 +21,7 @@ import { MOBA_TACTICS, toEngineTactic, STANDARD_OPP_TACTIC } from "../../platfor
 import { useProfileStore } from "../../platform/profileStore.js";
 import { statZh } from "../../data/playerModel.js";
 import { fitScore, fitGrade } from "./tacticFit.js";
+import { teamDevelopmentEffects } from "../../platform/development/teamDevelopment.js";
 import { GC } from "../../ui/theme.js";
 
 const riskC = (r) => (r === "高" ? GC.red : r === "中" ? GC.gold : GC.green);
@@ -49,6 +50,8 @@ function engineEffects(t) {
 export default function TacticScreen({ onNext, onBack }) {
   const [sel, setSel] = useState("m1");
   const allPlayers = useProfileStore((s) => s.players) ?? [];
+  const development = useProfileStore((s) => s.teamDevelopment);
+  const developmentEffects = teamDevelopmentEffects(development);
   const starters = useMemo(() => allPlayers.filter((p) => p.status === "主力"), [allPlayers]);
   const cur = MOBA_TACTICS.find((t) => t.tacticId === sel);
   const curFit = fitScore(cur, starters);
@@ -58,6 +61,11 @@ export default function TacticScreen({ onNext, onBack }) {
   return (
     <Frame title="戰術" sub="TEAM STRATEGY · 8 套戰術 · 實際影響對戰" onBack={onBack} onNext={() => onNext && onNext(cur)} nextLabel="開始載入 →">
       <div style={{ width: "100%", maxWidth: 940, padding: "0 14px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+        {(developmentEffects.unlocks.mobaResearch || developmentEffects.unlocks.mobaDraftIntel) && (
+          <div style={{ color: GC.blueL, background: `${GC.blue}18`, border: `1px solid ${GC.blueL}44`, borderRadius: 9, padding: "7px 10px", fontSize: 9.5, fontWeight: 800 }}>
+            戰隊發展支援：{[developmentEffects.unlocks.mobaResearch, developmentEffects.unlocks.mobaDraftIntel].filter(Boolean).join("、")} 已啟用
+          </div>
+        )}
         {/* 戰術卡：auto-fill 響應式（手機 1 欄 / 平板 2-3 欄 / 桌機 4 欄），高度隨內容 */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(min(190px,100%),1fr))", gap: 8 }}>
           {MOBA_TACTICS.map((t) => {

@@ -81,6 +81,11 @@ import {
   sealEventBoundary, sealSeasonBoundary,
 } from "./competition/seasonSealingV2.js";
 import { applyDailyRecovery, conditionSummary } from "./condition/playerCondition.js";
+import {
+  sanitizeTeamDevelopment,
+  applyTeamDevelopmentPurchase,
+  teamDevelopmentEffects as teamDevelopmentEffectsOf,
+} from "./development/teamDevelopment.js";
 import { createMatchEntryRequest, validateMatchEntryRequest } from "./contracts/matchEntry.js";
 import {
   TICKET_STATES, createTicket, transitionTicket, isActiveTicket,
@@ -115,8 +120,9 @@ const KEY = "esmo.profile.v1";
  *       舊存檔缺欄 → csLineup 全空、rosterTier 由既有 status 推導，不把人踢出名單）；
  *  v8 = Milestone O4（matchmaking 配對票券；載入時把殘留的排隊中票券作廢，
  *       因為沒有伺服器會回應一張跨 session 的票）；
- *  v9 = Q7b（metadata-only SeasonState.v2 wrapper；legacy state / IDs 不變）。 */
-export const PROFILE_SCHEMA_VERSION = 9;
+ *  v9 = Q7b（metadata-only SeasonState.v2 wrapper；legacy state / IDs 不變）；
+ *  v10 = 戰隊發展 v1（俱樂部層 ranks；舊 meta.talentPending 只作一次性回退）。 */
+export const PROFILE_SCHEMA_VERSION = 10;
 const canLS = typeof localStorage !== "undefined";
 //  1 萬。定義搬到 economy/units.js（純邏輯模組不能 import 本檔），這裡 re-export
 //  讓既有 `import { WAN } from "platform/profileStore.js"` 的呼叫端不受影響。
@@ -177,6 +183,9 @@ const DEFAULT = {
     days: 8, week: deriveTime(8).week, season: deriveTime(8).season,
     achievement: 48, talentPending: 1,
   },
+  // 戰隊發展是俱樂部層點數，不與 players[].talentPoints 混用。
+  // 舊存檔第一次載入時由 meta.talentPending 提供相容的初始池。
+  teamDevelopment: sanitizeTeamDevelopment(null, 1),
   players: INITIAL_PLAYERS.map(migratePlayer),   // S25：種子名單也要有 xp/talentPoints
   // Milestone E：先發指派（引擎席位 b1–b5 → playerId）。預設 identity ⇒ 與 E 之前相同。
   lineup: { ...DEFAULT_LINEUP },
@@ -338,6 +347,9 @@ const load = () => {
         const t = deriveTime(m.days ?? DEFAULT.meta.days);
         return { ...m, days: t.day, week: t.week, season: t.season };
       })(),
+      // 戰隊發展 migration：有新 state 就只信它；缺欄位的舊存檔才回退
+      // legacy meta.talentPending。既有選手天賦點、rank、能力與歷史不動。
+      teamDevelopment: sanitizeTeamDevelopment(saved.teamDevelopment, saved.meta?.talentPending ?? DEFAULT.meta.talentPending),
       // S25 migration：舊存檔的 players[] 沒有 xp/talentPoints → 安全補齊（見 migratePlayer）
       players,
       // Milestone E migration：舊存檔沒有 lineup ⇒ 回退 identity（b1→b1…）⇒ 行為不變
@@ -543,6 +555,18 @@ export const useProfileStore = create((set, get) => ({
     get().save();
   },
 
+  // ── 戰隊發展 v1（俱樂部層；不寫入單一選手）────────────────────────────
+  getTeamDevelopmentEffects() {
+    return teamDevelopmentEffectsOf(get().teamDevelopment);
+  },
+  purchaseTeamDevelopment(nodeId) {
+    const result = applyTeamDevelopmentPurchase(get().teamDevelopment, nodeId, { now: Date.now() });
+    if (!result.receipt.success) return result.receipt;
+    set({ teamDevelopment: result.nextState });
+    get().save();
+    return result.receipt;
+  },
+
   // ── 收件匣（Legacy NotifyModule）─────────────────────────────────────
   pushInbox(msg) {
     const inbox = [{ id: uid(), time: "剛剛", unread: true, ...msg }, ...(get().inbox ?? [])].slice(0, 50);
@@ -577,7 +601,9 @@ export const useProfileStore = create((set, get) => ({
     const p = (get().players ?? []).find((x) => x.id === id);
     if (!c || !p || p.training) return false;
     if (c.id !== "rest" && (p.energy ?? 100) < c.energyCost) return false;
-    get()._patchPlayer(id, (x) => ({ ...x, training: { courseId, daysLeft: c.hours, totalDays: c.hours } }));
+    const effects = teamDevelopmentEffectsOf(get().teamDevelopment);
+    const days = c.id === "rest" ? c.hours : Math.max(1, c.hours - effects.trainingDaysReduction);
+    get()._patchPlayer(id, (x) => ({ ...x, training: { courseId, daysLeft: days, totalDays: days } }));
     return true;
   },
   cancelTraining(id) {
@@ -631,12 +657,13 @@ export const useProfileStore = create((set, get) => ({
       players: (cur.players ?? []).map((p) => {
         //  Milestone O2：每一天都要跑恢復——傷停天數 −1、沒排訓練的人回體力、
         //  連續幾天沒出賽就把連續出賽計數歸零。訓練與恢復不重複計算體力。
-        if (!p.training) return applyDailyRecovery(p);
+        const recoveryBonus = teamDevelopmentEffectsOf(cur.teamDevelopment).dailyRecoveryBonus;
+        if (!p.training) return applyDailyRecovery(p, { recoveryBonus });
         const daysLeft = p.training.daysLeft - 1;
-        if (daysLeft > 0) return applyDailyRecovery({ ...p, training: { ...p.training, daysLeft } });
+        if (daysLeft > 0) return applyDailyRecovery({ ...p, training: { ...p.training, daysLeft } }, { recoveryBonus });
         //  課程今天結算 ⇒ 體力由 applyCourse 決定，恢復只處理傷勢與計數
         const courseId = p.training.courseId;
-        const done = applyDailyRecovery(applyCourse(p, courseId), { skipEnergy: true });
+        const done = applyDailyRecovery(applyCourse(p, courseId), { skipEnergy: true, recoveryBonus });
 
         //  ── P1：擷取**實際**能力差值（applyCourse 前後逐項比對）──────────
         //  成長公式完全沒有被改動；這裡只是把它算完的結果讀出來。

@@ -18,6 +18,7 @@ import { useProfileStore, WAN } from "../../platform/profileStore.js";
 import { genProspects, TIERS, SCOUT_DAYS } from "../../data/recruitPool.js";
 import { STAT_DEF, STAT_CATS, MOBA_ROLES, ROSTER_CAP, bestPositions, personalityById } from "../../data/playerModel.js";
 import { makeRecruitmentId } from "../../platform/contracts/recruitment.js";
+import { teamDevelopmentEffects } from "../../platform/development/teamDevelopment.js";
 import { GC } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
 
@@ -32,6 +33,7 @@ export default function RecruitScreen({ onBack }) {
   //  Milestone O：已簽約狀態改讀**招募帳本**（冪等鍵 = 池 seed + 池內編號）。
   //  之前是比對「名字相同」——不同批新秀撞名就會被誤判成已簽約。
   const signedLedger = useProfileStore((s) => s.recruitment?.signed) ?? {};
+  const development = useProfileStore((s) => s.teamDevelopment);
   const [notice, setNotice] = useState(null);
 
   const [seed, setSeed] = useState(7);
@@ -42,6 +44,7 @@ export default function RecruitScreen({ onBack }) {
   const [scoutQueue, setScoutQueue] = useState({});   // {id:{level,daysLeft,totalDays}} 出勤中的球探
 
   const prospects = useMemo(() => genProspects(seed), [seed]);
+  const developmentEffects = teamDevelopmentEffects(development);
   const budgetWan = Math.floor(funds / WAN);
   const full = players.length >= ROSTER_CAP;
   const isSignedOf = (p) => !!signedLedger[makeRecruitmentId(seed, p.id)];
@@ -66,7 +69,8 @@ export default function RecruitScreen({ onBack }) {
 
   const dispatchScout = (p, depth) => {
     if (scoutQueue[p.id] || scoutOf(p) >= 2) return;
-    setScoutQueue((s) => ({ ...s, [p.id]: { level: depth, daysLeft: SCOUT_DAYS[depth], totalDays: SCOUT_DAYS[depth] } }));
+    const days = Math.max(1, SCOUT_DAYS[depth] - developmentEffects.scoutDaysReduction);
+    setScoutQueue((s) => ({ ...s, [p.id]: { level: depth, daysLeft: days, totalDays: days } }));
   };
   const advanceScoutDay = () => {
     setScoutQueue((queue) => {
@@ -88,6 +92,11 @@ export default function RecruitScreen({ onBack }) {
       <div style={{ color: GC.gray, fontSize: 10, marginBottom: 10 }}>
         {prospects.length} 名潛力新秀 · 派球探偵查（免費，需時間）才能看清能力 · 名單 {players.length}/{ROSTER_CAP}
       </div>
+      {developmentEffects.unlocks.academySupport && (
+        <div style={{ color: GC.purp, fontSize: 9.5, marginBottom: 10, borderLeft: `2px solid ${GC.purp}`, paddingLeft: 8 }}>
+          戰隊發展 · 青訓支援已啟用
+        </div>
+      )}
 
       {/* 球探出勤中 */}
       {Object.keys(scoutQueue).length > 0 && (
@@ -225,8 +234,8 @@ export default function RecruitScreen({ onBack }) {
                   <div style={{ textAlign: "center", color: GC.blue, fontSize: 11, fontWeight: 700, padding: 4 }}>🔍 球探出勤中 · 剩 {scoutQueue[sel.id].daysLeft} 天</div>
                 ) : (
                   <div style={{ display: "flex", gap: 6 }}>
-                    <button onClick={() => dispatchScout(sel, 1)} style={{ flex: 1, background: "rgba(96,165,250,0.15)", border: "none", borderRadius: 8, padding: 8, cursor: "pointer", color: GC.blue, fontSize: 10, fontWeight: 700 }}>淺層偵查 · {SCOUT_DAYS[1]} 天</button>
-                    <button onClick={() => dispatchScout(sel, 2)} style={{ flex: 1, background: "rgba(52,211,153,0.15)", border: "none", borderRadius: 8, padding: 8, cursor: "pointer", color: GC.green, fontSize: 10, fontWeight: 700 }}>深度偵查 · {SCOUT_DAYS[2]} 天</button>
+                    <button onClick={() => dispatchScout(sel, 1)} style={{ flex: 1, background: "rgba(96,165,250,0.15)", border: "none", borderRadius: 8, padding: 8, cursor: "pointer", color: GC.blue, fontSize: 10, fontWeight: 700 }}>淺層偵查 · {Math.max(1, SCOUT_DAYS[1] - developmentEffects.scoutDaysReduction)} 天</button>
+                    <button onClick={() => dispatchScout(sel, 2)} style={{ flex: 1, background: "rgba(52,211,153,0.15)", border: "none", borderRadius: 8, padding: 8, cursor: "pointer", color: GC.green, fontSize: 10, fontWeight: 700 }}>深度偵查 · {Math.max(1, SCOUT_DAYS[2] - developmentEffects.scoutDaysReduction)} 天</button>
                   </div>
                 )}
                 <div style={{ color: GC.gray, fontSize: 8, marginTop: 6 }}>

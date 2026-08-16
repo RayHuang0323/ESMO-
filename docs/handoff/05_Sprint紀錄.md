@@ -7480,3 +7480,21 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - 摘要 modal 的責任收斂為快速選人：當前模式戰力、定位、3–4 項代表能力、強弱項、潛力、體力／狀態、出賽狀態、近期成長、名單分層與完整檔案入口；刪除原本共用 modal 底部的完整 16 項條圖。
 - 完整檔案保留 mode-specific role／suitability、完整 16 項 derived stats、個性／士氣／狀態、Level／XP／potential／talent 與 growthLog。MOBA 與 CS 仍共用同一 `profileStore.players`；mode 只切換 game-specific power、role、suitability、stats。
 - `tools/check_roster_ui_r582.mjs` 加入 `tools/verify.mjs`。R58/R58.1/R58.2 focused `3/3 PASS`；production build `2667 modules transformed`；syntax、`git diff --check`、manual `/review`、desktop 與有效 390×844 browser smoke、browser console error `[]` 均 PASS。R58.2 local-only，未 push。
+
+## R59 戰隊發展系統 v1（2026-08-17，local-only）
+
+### Audit 與 migration
+
+- 舊首頁「天賦」實際導向單一選手的 `PlayerTalentScreen`，寫入 `players[].talentPoints`／`talents.ranks`，並透過 derived stats 影響 MOBA／CS；訓練則由 `assignTraining`、`advanceDay` 與 `growthLog` 負責。兩條鏈沒有被刪除或混寫。
+- 新增 `teamDevelopment` 根 state 與 pure reducer。profile schema 由 9 升至 10；舊存檔沒有該欄位時，使用 legacy `meta.talentPending` 建立一次性俱樂部發展點，保留所有個人資料與歷史。
+
+### v1 實作
+
+- 四分類：通用、MOBA、CS、經營；8 個單級代表節點。效果限於訓練天數、每日恢復、球探天數與資訊／玩法解鎖旗標，沒有第二套選手 stat 加點樹。
+- 首頁入口改成「戰隊發展」；`TeamDevelopmentScreen` 顯示可用／已投入點數、主要方向、分類 tabs、前置條件與投入確認。`PlayerTalentScreen` 改為被動個人特質與舊資料保留說明。
+- MOBA／CS Tactic 與 Recruit 只讀取解鎖旗標或效率效果；未改核心戰鬥、16 項 CS 公式、RNG、賽季／賽事與 roster。
+
+### 驗證
+
+- `team_development_v1` focused verifier PASS，含實際 Store 投入、重複操作、訓練排程與 player stats 不變斷言。
+- `talent27` compatibility、`progress25`、growth、roster、CS、tactic gates、production build、syntax、`git diff --check` 與 browser desktop／390px smoke PASS；local-only，未 push。
