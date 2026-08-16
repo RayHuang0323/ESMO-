@@ -7455,3 +7455,12 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - route/team consumer runtime evidence：adaptive `5741`、tactical route `12500`、comms handoff `1250`、leadership follow-up `7767`、synergy trade `14276`、cover follow-up `454`；static RNG call sites `21`，fixed input / deterministic repeat PASS。Roster effective 90+ `58/640`、99 clamp `0`，threshold-sensitive counts 受控。
 - R56 roster gate、R54 acceptance、CS historical、progress/reward、Q7a、build、`/review`、syntax、`git diff --check` 低併發分批完成後，R57 verdict：**Go**。無 production balance patch；AI roster v1 通過 gameplay acceptance。後續優先 AI league／招募內容，UI roster page 另開 Sprint。
 - 低併發 gates：R46、R55、R54 PASS；CS historical `28/28`；MatchSquad `40/40`；competition Q2a `112/112`、Q2b `92/92`；progress/reward `33/33`；Q7a `18/18`；production build `2667 modules transformed`；syntax、manual `/review`、`git diff --check` PASS。R56 verdict：**Go**；下一步 AI teams 實戰驗收，再進招募內容或 UI roster page。
+
+## R58 統一選手名單 UI v1（MOBA / CS）（2026-08-17）
+
+- 以 R57 `83dc14917c93bac1956a8ffd1869fb10de4a82d5` 的乾淨 worktree 為基線；未碰預設 `ESMO` worktree 的既有未提交內容。R58 只改 `RosterScreen`／`PlayerDetailScreen` 與 UI verifier，沒有複製 player data、改 stat formula、roster generation、battle、賽季／賽事或 Store。
+- `RosterScreen` 新增獨立的遊戲檢視列：`全部 / MOBA / CS`；原有 `全部 / 主力 / 預備隊 / 訓練中 / 閒置` 保持第二層狀態篩選。CS 檢視沿用同一份 `profileStore.players`、`p.id` 與 derived stats，只切換資訊呈現。
+- CS 卡片顯示 Lv、FPS 戰力、CS role identity、FPS 適配、狀態／體力／潛力與 4 項 role-representative stats；詳情 modal／完整選手檔案新增 MOBA／CS 切換、FPS 戰力、其他 role suitability、強弱項、Learning 與完整 16 項能力。
+- CS role 由既有 player model 推導為 gameplay identity，不是 roster slot；UI 與 verifier 明確允許 role 重複／缺少，賽前準備仍由既有流程從現役名單挑選本場選手。
+- 新增 `tools/check_roster_ui_r58.mjs` 並加入 `tools/verify.mjs`。focused、R56 roster、R57 matchup、progress25、Q7a、production build 低併發 `6/6 PASS`；desktop default 與 390px 窄視窗 DOM／overflow smoke PASS。真機觸控、FPS 與視覺體感未實測。
+- R58 verdict：**Go**；本地 commit 完成後不 push。
