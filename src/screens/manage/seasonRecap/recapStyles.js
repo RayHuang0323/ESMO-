@@ -1,72 +1,151 @@
 import { GC, MONO } from "../../../ui/theme.js";
 
+// Visual-only alpha variants reuse the existing GC/white semantic colors for
+// the seal line, the restrained champion wash, and report-style leaders.
+const SEAL_LINE = "rgba(255,255,255,0.14)";
+const HONOR_WASH = "rgba(251,191,36,0.08)";
+
 export const recapStyles = {
   shell: {
     width: "100%",
+    maxWidth: 560,
     minWidth: 0,
     boxSizing: "border-box",
-    background: GC.card,
-    border: `1px solid ${GC.line}`,
-    borderRadius: 12,
-    marginBottom: 10,
+    margin: "0 auto 10px",
     overflow: "hidden",
   },
   header: {
-    padding: "16px 15px 17px",
-    background: `linear-gradient(145deg, rgba(167,139,250,0.13), rgba(19,21,28,0.96) 58%)`,
+    minWidth: 0,
+    padding: "16px 0 0",
   },
   kicker: {
-    color: GC.purp,
+    color: GC.gray,
     fontSize: 9,
     fontWeight: 900,
-    letterSpacing: "0.2em",
+    letterSpacing: "0.28em",
   },
   headerMeta: {
-    marginTop: 7,
     display: "flex",
-    justifyContent: "space-between",
     alignItems: "baseline",
-    gap: 10,
+    flexWrap: "wrap",
+    gap: 12,
+    minWidth: 0,
+    marginTop: 9,
     color: GC.gray,
-    fontSize: 10,
+    fontSize: 10.5,
+    fontFamily: MONO,
+  },
+  headerSeason: {
+    color: "rgba(255,255,255,0.96)",
+    fontWeight: 900,
+    letterSpacing: "-0.02em",
+    lineHeight: 1,
+  },
+  sealStamp: {
+    display: "inline-flex",
+    alignItems: "baseline",
+    flexWrap: "wrap",
+    gap: 7,
+    minWidth: 0,
+    color: GC.gray,
+    fontFamily: MONO,
+    fontSize: 10.5,
+    lineHeight: 1.3,
   },
   team: {
-    marginTop: 13,
-    color: "#fff",
-    fontSize: 23,
+    minWidth: 0,
+    marginTop: 11,
+    color: "rgba(255,255,255,1)",
     fontWeight: 900,
     lineHeight: 1.15,
     overflowWrap: "anywhere",
   },
+  sealLine: {
+    width: "100%",
+    height: 2,
+    marginTop: 12,
+    background: SEAL_LINE,
+  },
   summary: {
-    marginTop: 8,
-    color: GC.gold,
-    fontSize: 15,
-    fontWeight: 900,
+    minWidth: 0,
+    marginTop: 11,
+    color: "rgba(255,255,255,0.86)",
+    fontWeight: 800,
     lineHeight: 1.35,
     overflowWrap: "anywhere",
   },
+  summaryChampion: {
+    color: GC.gold,
+  },
   section: {
     minWidth: 0,
-    padding: "14px 15px 15px",
-    borderTop: `1px solid ${GC.line}`,
+    boxSizing: "border-box",
+  },
+  honorSection: {
+    minWidth: 0,
+    boxSizing: "border-box",
+    marginTop: 26,
+    padding: "12px 12px 13px",
+    borderLeft: `3px solid ${GC.gold}`,
+    background: HONOR_WASH,
+  },
+  finalsSection: {
+    marginTop: 22,
+    paddingLeft: 12,
+    borderLeft: `2px solid ${SEAL_LINE}`,
+  },
+  circuitSection: {
+    marginTop: 20,
+    paddingLeft: 12,
+    borderLeft: `1px solid ${GC.line}`,
+  },
+  leagueSection: {
+    marginTop: 20,
+    paddingLeft: 12,
+    borderLeft: `1px solid ${GC.line}`,
+  },
+  prizeSection: {
+    marginTop: 16,
+  },
+  nextSeasonSection: {
+    marginTop: 16,
+    paddingTop: 16,
   },
   sectionTitle: {
-    display: "flex",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-    gap: 10,
     minWidth: 0,
-    color: "#f4f4f5",
+    color: "rgba(255,255,255,0.94)",
     fontSize: 13,
     fontWeight: 900,
     lineHeight: 1.3,
+    overflowWrap: "anywhere",
   },
-  sectionHint: {
-    color: GC.gray,
-    fontSize: 9,
-    fontWeight: 700,
-    textAlign: "right",
+  honorSectionTitle: {
+    color: GC.gold,
+    fontSize: 15,
+  },
+  smallSectionTitle: {
+    minWidth: 0,
+    color: "rgba(255,255,255,0.94)",
+    fontSize: 11.5,
+    fontWeight: 900,
+    lineHeight: 1.3,
+  },
+  honorTitle: {
+    minWidth: 0,
+    marginTop: 11,
+    color: GC.gold,
+    fontSize: 15,
+    fontWeight: 900,
+    lineHeight: 1.3,
+    overflowWrap: "anywhere",
+  },
+  honorTeam: {
+    minWidth: 0,
+    marginTop: 4,
+    color: GC.gold,
+    fontSize: 12,
+    fontWeight: 800,
+    lineHeight: 1.35,
     overflowWrap: "anywhere",
   },
   row: {
@@ -75,7 +154,7 @@ export const recapStyles = {
     alignItems: "start",
     gap: 12,
     minWidth: 0,
-    padding: "8px 0",
+    padding: "7px 0",
     borderBottom: `1px solid ${GC.line}`,
   },
   rowLast: {
@@ -90,7 +169,7 @@ export const recapStyles = {
   },
   value: {
     minWidth: 0,
-    color: "#e5e7eb",
+    color: "rgba(255,255,255,0.9)",
     fontSize: 11.5,
     fontWeight: 800,
     lineHeight: 1.4,
@@ -100,18 +179,18 @@ export const recapStyles = {
   monoValue: {
     fontFamily: MONO,
   },
+  mutedValue: {
+    color: GC.gray,
+  },
+  positive: {
+    color: GC.green,
+  },
   quiet: {
     marginTop: 9,
     color: GC.gray,
     fontSize: 11,
     lineHeight: 1.5,
     overflowWrap: "anywhere",
-  },
-  accent: {
-    color: GC.gold,
-  },
-  positive: {
-    color: GC.green,
   },
   stops: {
     display: "grid",
@@ -121,7 +200,7 @@ export const recapStyles = {
   },
   stop: {
     display: "grid",
-    gridTemplateColumns: "minmax(0, 1fr) minmax(60px, auto) minmax(52px, auto)",
+    gridTemplateColumns: "minmax(0,1fr) minmax(60px,auto) minmax(52px,auto)",
     alignItems: "start",
     gap: 8,
     minWidth: 0,
@@ -130,7 +209,7 @@ export const recapStyles = {
   },
   stopName: {
     minWidth: 0,
-    color: "#e5e7eb",
+    color: "rgba(255,255,255,0.9)",
     fontSize: 11,
     fontWeight: 800,
     lineHeight: 1.35,
@@ -153,15 +232,54 @@ export const recapStyles = {
     width: "100%",
     boxSizing: "border-box",
     margin: 0,
-    background: `linear-gradient(135deg, ${GC.purp}, #7c3aed)`,
+    background: GC.purp,
     border: "none",
-    borderRadius: 10,
+    borderRadius: 8,
     padding: "12px 10px",
-    color: "#fff",
+    color: GC.bg,
     fontSize: 13,
     fontWeight: 900,
     cursor: "pointer",
   },
 };
+
+export const recapCssText = `
+@keyframes recap-seal-line-in {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+[data-testid="season-recap"] .recap-seal-line {
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: recap-seal-line-in 240ms ease-out forwards;
+}
+
+[data-testid="season-recap"] .recap-header-season { font-size: 30px; }
+[data-testid="season-recap"] .recap-team-name { font-size: 23px; }
+[data-testid="season-recap"] .recap-summary { font-size: 15px; }
+
+[data-testid="season-recap"] .recap-stop-name {
+  border-bottom: 1px dotted ${GC.line};
+  padding-bottom: 2px;
+}
+
+@media (max-width: 767px) {
+  [data-testid="season-recap"] .recap-header-season { font-size: 26px; }
+  [data-testid="season-recap"] .recap-team-name { font-size: 20px; }
+  [data-testid="season-recap"] .recap-summary { font-size: 14px; }
+  [data-testid="season-recap"] .recap-stop-name {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-testid="season-recap"] .recap-seal-line {
+    animation: none;
+    transform: scaleX(1);
+  }
+}
+`;
 
 export const mergeStyles = (...styles) => Object.assign({}, ...styles);

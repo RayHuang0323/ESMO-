@@ -16,16 +16,15 @@ export default function RecapHonor({ season, honorsView }) {
       data-season={honor.season}
       data-team-id={honor.championTeamId}
       data-honor-type={honor.honorType ?? ""}
-      style={{ ...recapStyles.section, background: "rgba(251,191,36,0.08)" }}
+      style={recapStyles.honorSection}
     >
-      <div style={{ ...recapStyles.sectionTitle, color: recapStyles.accent.color }}>
-        <span>🏆 年度榮耀</span>
-        <span style={recapStyles.sectionHint}>本季最高榮耀</span>
+      <div style={{ ...recapStyles.sectionTitle, ...recapStyles.honorSectionTitle }}>
+        年度最高榮耀
       </div>
-      <div style={{ marginTop: 11, color: "#fff", fontSize: 18, fontWeight: 900, lineHeight: 1.3, overflowWrap: "anywhere" }}>
-        {honor.label || "亞洲年度冠軍"}
+      <div style={recapStyles.honorTitle}>
+        🏆 {honor.label || "亞洲年度冠軍"}
       </div>
-      <div style={{ marginTop: 4, color: recapStyles.accent.color, fontSize: 12, fontWeight: 800, overflowWrap: "anywhere" }}>
+      <div style={recapStyles.honorTeam}>
         {honor.championTeamName || "—"}
       </div>
     </section>

@@ -16,8 +16,8 @@ export default function RecapAsiaFinals({ asiaFinals, myTeamId }) {
   const championIsMine = asiaFinals.championTeamId === myTeamId;
 
   return (
-    <section data-testid="recap-asia-finals" style={recapStyles.section}>
-      <div style={recapStyles.sectionTitle}>亞洲年度總決賽</div>
+    <section data-testid="recap-asia-finals" style={{ ...recapStyles.section, ...recapStyles.finalsSection }}>
+      <div style={recapStyles.sectionTitle}>洲際冠軍賽</div>
       <div
         data-testid="recap-finals-qualification"
         data-qualified={myQualification ? "true" : "false"}
@@ -25,7 +25,7 @@ export default function RecapAsiaFinals({ asiaFinals, myTeamId }) {
         style={recapStyles.row}
       >
         <span style={recapStyles.label}>資格</span>
-        <span style={{ ...recapStyles.value, ...(myQualification ? recapStyles.accent : {}) }}>
+        <span style={{ ...recapStyles.value, ...(myQualification ? recapStyles.positive : recapStyles.mutedValue) }}>
           {myQualification
             ? `取得（第 ${myQualification.seed} 種子）`
             : "未取得年度總決賽資格"}

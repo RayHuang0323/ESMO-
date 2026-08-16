@@ -16,8 +16,8 @@ export default function RecapLeague({ careerFinal }) {
   const mix = careerFinal?.sourceMix ?? null;
 
   return (
-    <section data-testid="recap-league" style={recapStyles.section}>
-      <div style={recapStyles.sectionTitle}>官方聯賽</div>
+    <section data-testid="recap-league" style={{ ...recapStyles.section, ...recapStyles.leagueSection }}>
+      <div style={recapStyles.sectionTitle}>國內聯賽</div>
       {!careerFinal ? (
         //  ⚠ 承接舊「最終名次 FINAL STANDINGS」Panel 的語意（Q7f 起由 Recap 取代）：
         //    沒有生涯主賽事資料時，名次欄位要**明確顯示「—」並附說明**，

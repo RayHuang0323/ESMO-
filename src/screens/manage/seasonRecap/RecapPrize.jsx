@@ -14,7 +14,8 @@ export default function RecapPrize({ award }) {
       : "無（前四名才有）";
 
   return (
-    <section data-testid="recap-prize" data-amount={amount ?? ""} data-settled={award?.settled ? "true" : "false"} style={recapStyles.section}>
+    <section data-testid="recap-prize" data-amount={amount ?? ""} data-settled={award?.settled ? "true" : "false"} style={{ ...recapStyles.section, ...recapStyles.prizeSection }}>
+      <div style={recapStyles.smallSectionTitle}>結算</div>
       <div style={{ ...recapStyles.row, ...recapStyles.rowLast, paddingTop: 0, paddingBottom: 0 }}>
         <span style={recapStyles.label}>賽事獎金</span>
         <span data-testid="recap-prize-value" style={{ ...recapStyles.value, ...(paid ? recapStyles.positive : {}) }}>{text}</span>

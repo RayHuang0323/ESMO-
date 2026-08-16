@@ -1,6 +1,6 @@
 import React from "react";
 import { useProfileStore } from "../../../platform/profileStore.js";
-import { recapStyles } from "./recapStyles.js";
+import { recapCssText, recapStyles } from "./recapStyles.js";
 import RecapAsiaFinals from "./RecapAsiaFinals.jsx";
 import RecapCircuit from "./RecapCircuit.jsx";
 import RecapHeader from "./RecapHeader.jsx";
@@ -45,10 +45,19 @@ export default function SeasonRecap({ onRoll }) {
   const playerRow = careerFinal?.rows?.find((row) => row?.teamId === myTeamId) ?? null;
   const teamName = playerRow?.name ?? "—";
   const summary = seasonSummary({ final, careerFinal, asiaFinals: view.asiaFinals, honorsView, myTeamId });
+  const isChampion = (honorsView?.annualChampions ?? []).some((honor) =>
+    honor?.season === final.season && honor?.championTeamId === myTeamId);
 
   return (
     <div data-testid="season-recap" data-season={final.season} style={recapStyles.shell}>
-      <RecapHeader season={final.season} teamName={teamName} summary={summary} sealedAtDay={final.sealedAtDay ?? null} />
+      <style>{recapCssText}</style>
+      <RecapHeader
+        season={final.season}
+        teamName={teamName}
+        summary={summary}
+        sealedAtDay={final.sealedAtDay ?? null}
+        champion={isChampion}
+      />
       <RecapHonor season={final.season} honorsView={honorsView} />
       <RecapAsiaFinals asiaFinals={view.asiaFinals} myTeamId={myTeamId} />
       <RecapCircuit circuitPoints={view.circuitPoints} events={view.events} myTeamId={myTeamId} />

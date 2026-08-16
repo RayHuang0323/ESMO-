@@ -11,7 +11,7 @@ export default function RecapCircuitStop({ entry, eventName }) {
       data-points={entry?.points ?? ""}
       style={recapStyles.stop}
     >
-      <span style={recapStyles.stopName}>{eventName || entry?.eventId || "—"}</span>
+      <span className="recap-stop-name" style={recapStyles.stopName}>{eventName || entry?.eventId || "—"}</span>
       <span style={recapStyles.stopCell}>{entry?.rank != null ? `第 ${entry.rank} 名` : "—"}</span>
       <span style={{ ...recapStyles.stopCell, ...recapStyles.stopPoints }}>
         {entry?.points != null ? `${entry.points} 分` : "—"}
