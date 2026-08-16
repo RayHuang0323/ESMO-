@@ -67,7 +67,7 @@ ck("訓練與恢復讀取戰隊效果", /trainingDaysReduction/.test(store) && /
 ck("首頁入口與頁面路由", /teamDevelopment/.test(dashboard) && /TeamDevelopmentScreen/.test(shell));
 ck("個人天賦未被改成投資樹", /purchasePlayerTalent/.test(personal) === false && /PlayerTalent/.test(personal));
 ck("訓練流程維持既有入口", /assignTraining/.test(training) && /advanceTrainingDay/.test(training) && /StatGainList/.test(training));
-ck("GSAP 路線回饋與減少動態支援", /useGSAP/.test(development) && /gsap\.timeline/.test(development) && /gsap\.utils\.toArray/.test(development) && /prefers-reduced-motion/.test(development));
+ck("GSAP 路線回饋與減少動態支援", /useGSAP/.test(development) && /gsap\.timeline/.test(development) && /gsap\.utils\.toArray/.test(development) && /gsap\.set\(\[content, \.\.\.cards\], \{ autoAlpha: 1/.test(development) && /prefers-reduced-motion/.test(development));
 ck("玩家用語與路線資訊", /下一級效果/.test(development) && /發展路線/.test(development) && !/consumer|reducer|schema|production/.test(development));
 
 // Store hook runtime check：確認升級只改俱樂部 state，並仍會被訓練讀取。

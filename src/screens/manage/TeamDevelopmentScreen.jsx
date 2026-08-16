@@ -128,13 +128,16 @@ export default function TeamDevelopmentScreen({ onBack }) {
     if (!content) return;
     const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     const cards = gsap.utils.toArray("[data-development-card]", content);
+    // Revertable GSAP contexts can be interrupted while React replaces the
+    // cards. Establish a visible baseline before the next transition so a
+    // cancelled entrance never leaves the active category transparent.
+    gsap.set([content, ...cards], { autoAlpha: 1, y: 0 });
     if (reduced) {
-      gsap.set([content, ...cards], { clearProps: "all" });
       return;
     }
     const timeline = gsap.timeline({ defaults: { ease: "power2.out" } });
-    timeline.fromTo(content, { autoAlpha: 0, y: 8 }, { autoAlpha: 1, y: 0, duration: 0.22 })
-      .fromTo(cards, { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: 0.26, stagger: 0.035 }, "-=0.1");
+    timeline.fromTo(content, { y: 8 }, { y: 0, duration: 0.22, clearProps: "transform" })
+      .fromTo(cards, { y: 10 }, { y: 0, duration: 0.26, stagger: 0.035, clearProps: "transform" }, "-=0.1");
     return () => timeline.kill();
   }, { scope: rootRef, dependencies: [tab], revertOnUpdate: true });
 
