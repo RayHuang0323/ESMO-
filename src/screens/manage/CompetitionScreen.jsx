@@ -20,6 +20,7 @@ import { useProfileStore } from "../../platform/profileStore.js";
 import { GC, MONO, chip } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
 import AsiaFinalsPanel from "./asiaFinals/AsiaFinalsPanel.jsx";
+import SeasonRecap from "./seasonRecap/SeasonRecap.jsx";
 
 const Panel = ({ title, right, children }) => (
   <div style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 12, padding: "11px 13px", marginBottom: 10 }}>
@@ -393,66 +394,9 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
         </Panel>
       )}
 
-      {/*  ── 賽季結束：最終名次 ＋ 名次獎金（Milestone Q4）──────────────
-           賽季封存後才出現。**畫面不判斷賽季結不結束、也不算名次與獎金**——
-           `final` 是 Store 封存好的不可變快照，`award` 是既有的獎金收據，
-           這裡只是把兩份既有資料顯示出來。 */}
-      {final && (
-        <Panel
-          title="最終名次 FINAL STANDINGS"
-          right={<span style={{ fontSize: 9, fontWeight: 800, color: GC.gold }}>第 {final.season} 賽季 · 已封存</span>}
-        >
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 8, padding: "4px 0 8px" }}>
-            <span style={{ fontSize: 11, color: GC.gray }}>你的最終名次</span>
-            <span style={{ fontSize: 30, fontWeight: 900, color: GC.gold, fontFamily: MONO, lineHeight: 1 }}>
-              {careerFinal?.playerRank ?? "—"}
-            </span>
-            <span style={{ fontSize: 11, color: GC.gray }}>
-              {careerFinal ? `／ ${careerFinal.rows.length} 隊` : "（生涯主要賽事尚無資料）"}
-            </span>
-          </div>
-          {careerFinal && (
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "3px 0", borderTop: `1px solid ${GC.line}` }}>
-              <span style={{ color: GC.gray }}>🏆 冠軍</span>
-              <span style={{ fontWeight: 800, color: "#e5e7eb" }}>{nameOf(careerFinal.championTeamId ?? careerFinal.rows[0]?.teamId)}</span>
-            </div>
-          )}
-          {/*  Q6：名次由季後賽決定時，同時標出常規賽名次——兩個都是事實，
-               只顯示一個會讓「常規賽第 1 但季後賽輸了」看起來像資料錯誤。 */}
-          {careerFinal?.rankSource === "playoff" && careerFinal.playerRegularRank && (
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "3px 0" }}>
-              <span style={{ color: GC.gray }}>📋 常規賽名次</span>
-              <span style={{ fontWeight: 800, color: GC.gray2 ?? "#a1a1aa", fontFamily: MONO }}>第 {careerFinal.playerRegularRank} 名</span>
-            </div>
-          )}
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "3px 0" }}>
-            <span style={{ color: GC.gray }}>💰 名次獎金</span>
-            {/*  誠實顯示：沒有獎金的名次就寫「無」，不寫 $0 假裝有發 */}
-            <span style={{ fontWeight: 800, color: award?.amount > 0 ? GC.green : GC.gray, fontFamily: MONO }}>
-              {award ? (award.amount > 0 ? `+$${award.amount}萬` : "無（前四名才有）") : "—"}
-            </span>
-          </div>
-          {careerFinal?.sourceMix && (
-            <div style={{ fontSize: 9, color: GC.gray, marginTop: 7, paddingTop: 6, borderTop: `1px solid ${GC.line}` }}>
-              本季 {careerFinal.sourceMix.total} 場：實際對戰 {careerFinal.sourceMix.engine}
-              {careerFinal.sourceMix.simulated ? ` · 模擬 ${careerFinal.sourceMix.simulated}` : ""}
-              {careerFinal.sourceMix.forfeited ? ` · 棄權 ${careerFinal.sourceMix.forfeited}` : ""}
-              　·　第 {careerFinal.sealedAtDay} 天封存
-            </div>
-          )}
-          {/*  Q5：換季是**玩家自己按**的。封存與發獎自動（漏發是災難），
-               但換季會把這一頁換成新賽季的空賽程——玩家還沒看到成績就被收走不合理。
-               能不能換由 Store 的 `canRoll` 決定，畫面不自己判。 */}
-          {canRoll?.ok && (
-            <button
-              onClick={rollSeason}
-              style={{ width: "100%", marginTop: 10, background: `linear-gradient(135deg,${GC.purp},#7c3aed)`, border: "none", borderRadius: 10, padding: "11px 0", color: "#fff", fontSize: 13, fontWeight: 900, cursor: "pointer" }}
-            >
-              ▶ 開始第 {canRoll.nextSeason} 賽季
-            </button>
-          )}
-        </Panel>
-      )}
+      {/*  Q7f：賽季完成後只在既有 canRoll.ok 允許時顯示 Recap。
+           CTA 已移進 Recap 最底部，仍呼叫同一個 rollSeason。 */}
+      {final && <SeasonRecap onRoll={rollSeason} />}
 
       {/*  ── 歷屆成績（Q5）──────────────────────────────────────────────
            換季之後上一季的最終名次仍然查得到。這裡只讀已封存的快照，

@@ -63,6 +63,23 @@ const CHROME_CANDIDATES = [
   process.env.LOCALAPPDATA ? `${process.env.LOCALAPPDATA}\\Google\\Chrome\\Application\\chrome.exe` : null,
 ].filter(Boolean);
 
+function startChrome(exe, args) {
+  if (process.platform !== "win32") return spawn(exe, args, { stdio: "ignore" });
+  const quotePowerShell = (value) => "'" + String(value).replaceAll("'", "''") + "'";
+  const command = "$p = Start-Process -FilePath " + quotePowerShell(exe) +
+    " -ArgumentList @(" + args.map(quotePowerShell).join(",") + ") -PassThru; $p.Id";
+  const result = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", command], {
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  if (result.status !== 0) {
+    throw new Error(`Chrome 啟動失敗：${result.stderr || result.stdout || result.status}`);
+  }
+  const pid = Number(result.stdout.trim().split(/\s+/).pop());
+  if (!Number.isInteger(pid) || pid <= 0) throw new Error(`Chrome PID 無效：${result.stdout}`);
+  return { pid };
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function waitFor(fn, { timeoutMs = 30_000, everyMs = 250, what = "條件" } = {}) {
@@ -97,7 +114,13 @@ export async function startDevServer({ port, base = "/ESMO-/" } = {}) {
       `   請先關掉佔用 ${port} 的行程再跑。`);
   }
   const url = `http://localhost:${port}${base}`;
-  const proc = spawn("npx", ["vite", "--port", String(port), "--strictPort"], { shell: true, stdio: "ignore" });
+  const serverScript = [
+    "import { createServer } from \'vite\';",
+    "import react from \'@vitejs/plugin-react\';",
+    "const server = await createServer({ root: process.cwd(), configFile: false, base: process.argv[1] || \'/ESMO-/\', plugins: [react()] });",
+    "await server.listen(Number(process.argv[2]));",
+  ].join("\n");
+  const proc = spawn(process.execPath, ["--input-type=module", "-e", serverScript, base, String(port)], { stdio: "ignore" });
   await waitFor(async () => (await fetch(url)).ok, { timeoutMs: 90_000, what: `dev server ${url}` });
   return {
     url, proc,
@@ -148,7 +171,7 @@ export async function launchChrome({ url, port, headless = true }) {
   if (headless) args.push("--headless=new", "--disable-gpu");
   args.push(url);
 
-  const proc = spawn(exe, args, { stdio: "ignore" });
+  const proc = startChrome(exe, args);
   //  ⚠ 起手可能先抓到 about:blank 那個分頁（讀 localStorage 會 SecurityError），
   //    所以優先挑已經指向目標 URL 的 target。
   const target = await waitFor(async () => {
@@ -160,7 +183,10 @@ export async function launchChrome({ url, port, headless = true }) {
   const client = await attach(target.webSocketDebuggerUrl);
   client.close = async () => {
     try { client.ws.close(); } catch {}
-    try { proc.kill("SIGKILL"); } catch {}
+    try {
+      if (process.platform === "win32") spawnSync("taskkill", ["/pid", String(proc.pid), "/T", "/F"], { stdio: "ignore" });
+      else proc.kill("SIGKILL");
+    } catch {}
     await sleep(300);
     try { rmSync(userDataDir, { recursive: true, force: true }); } catch {}
   };
