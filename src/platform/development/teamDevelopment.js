@@ -61,9 +61,10 @@ export const TEAM_DEVELOPMENT_NODES = [
     levelEffects: rankEffects(["每日恢復 +4", "每日恢復 +8", "每日恢復 +12"]),
   }),
   NODE("general_data_analysis", "general", "advanced", "數據分析室", "整理選手與比賽資料，支援日後更精準的培養判斷。", "成長支援", {
-    future: true,
     prerequisites: [{ nodeId: "general_training_flow", minRank: 1 }],
-    levelEffects: [FUTURE("未來：開放訓練資料摘要"), FUTURE("未來：開放比賽資料比較"), FUTURE("未來：開放長期趨勢建議")],
+    activeLevelCap: 1,
+    effect: { kind: "unlock", flag: "dataAnalysis", label: "選手與比賽摘要" },
+    levelEffects: [LIVE("解鎖選手與比賽摘要"), FUTURE("未來：開放比賽資料比較"), FUTURE("未來：開放長期趨勢建議")],
   }),
   NODE("general_growth_support", "general", "advanced", "成長支援", "建立俱樂部層級的長期培養支援，協助規劃選手成長。", "成長支援", {
     future: true,
@@ -89,9 +90,10 @@ export const TEAM_DEVELOPMENT_NODES = [
     levelEffects: [LIVE("解鎖 Ban/Pick 情報提示"), FUTURE("未來：擴充對局資料整理"), FUTURE("未來：開放選擇比較")],
   }),
   NODE("moba_opponent_research", "moba", "advanced", "對手研究", "建立對手資料整理方向，支援未來的賽前判讀。", "MOBA 賽前", {
-    future: true,
+    activeLevelCap: 1,
+    effect: { kind: "unlock", flag: "mobaOpponentResearch", label: "對手選角摘要" },
     prerequisites: [{ nodeId: "moba_hero_lab", minRank: 1 }],
-    levelEffects: [FUTURE("未來：開放對手摘要"), FUTURE("未來：開放對位比較"), FUTURE("未來：開放對手趨勢")],
+    levelEffects: [LIVE("解鎖對手實際選角與類型摘要"), FUTURE("未來：開放對位比較"), FUTURE("未來：開放對手趨勢")],
   }),
   NODE("moba_tactical_prep", "moba", "advanced", "戰術準備", "把研究成果整理成比賽前可採用的戰術準備方向。", "MOBA 賽前", {
     future: true,
@@ -117,9 +119,10 @@ export const TEAM_DEVELOPMENT_NODES = [
     levelEffects: [LIVE("解鎖團隊磨合提示"), FUTURE("未來：擴充配合資料整理"), FUTURE("未來：開放隊伍組合比較")],
   }),
   NODE("cs_demo_analysis", "cs", "advanced", "Demo／對手分析", "建立 Demo 與對手資料整理方向，支援未來的賽前判讀。", "CS 賽前", {
-    future: true,
+    activeLevelCap: 1,
+    effect: { kind: "unlock", flag: "csDemoAnalysis", label: "地圖與對手情報" },
     prerequisites: [{ nodeId: "cs_map_lab", minRank: 1 }],
-    levelEffects: [FUTURE("未來：開放 Demo 摘要"), FUTURE("未來：開放對手比較"), FUTURE("未來：開放回合趨勢")],
+    levelEffects: [LIVE("解鎖地圖風格與對手筆記"), FUTURE("未來：開放對手比較"), FUTURE("未來：開放回合趨勢")],
   }),
   NODE("cs_tactical_prep", "cs", "advanced", "戰術準備", "把地圖與團隊資料整理成賽前可採用的戰術方向。", "CS 賽前", {
     future: true,
@@ -143,9 +146,10 @@ export const TEAM_DEVELOPMENT_NODES = [
     levelEffects: [LIVE("解鎖青訓支援提示"), FUTURE("未來：擴充青訓資料"), FUTURE("未來：開放培養路線比較")],
   }),
   NODE("management_contracts", "management", "advanced", "合約管理", "建立合約與續約資料的長期管理方向。", "經營", {
-    future: true,
+    activeLevelCap: 1,
+    effect: { kind: "unlock", flag: "contractSummary", label: "合約摘要" },
     prerequisites: [{ nodeId: "management_scout_network", minRank: 1 }],
-    levelEffects: [FUTURE("未來：開放合約摘要"), FUTURE("未來：擴充續約提醒"), FUTURE("未來：開放合約規劃")],
+    levelEffects: [LIVE("解鎖名單合約到期摘要"), FUTURE("未來：擴充續約提醒"), FUTURE("未來：開放合約規劃")],
   }),
   NODE("management_sponsorship", "management", "advanced", "贊助拓展", "建立贊助與俱樂部曝光的長期經營方向。", "經營", {
     future: true,

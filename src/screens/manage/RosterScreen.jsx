@@ -8,8 +8,9 @@
 //  Adapter（不造假）：選手＝profileStore.players；能力/戰力/適配＝playerModel
 //    純函數；英雄圖＝HeroPortrait（唯一入口）。改名 / 換定位寫回 Store。
 // ============================================================================
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
+import { teamDevelopmentEffects } from "../../platform/development/teamDevelopment.js";
 import {
   STAT_DEF, MOBA_ROLES, ROSTER_CAP,
   calcPower, posFit, bestPositions, personalityById, CS_ROLE_BY_MOBA_ROLE, csSuitabilityOf,
@@ -141,6 +142,8 @@ const statusColor = (st) => (st === "主力" ? GC.green : st === "閒置" ? GC.r
 export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "roster" }) {
   const talentMode = purpose === "talent";
   const players = useProfileStore((s) => s.players) ?? [];
+  const development = useProfileStore((s) => s.teamDevelopment);
+  const developmentEffects = teamDevelopmentEffects(development);
   const renamePlayer = useProfileStore((s) => s.renamePlayer);
   const setPlayerRole = useProfileStore((s) => s.setPlayerRole);
   const setPlayerStatus = useProfileStore((s) => s.setPlayerStatus);
@@ -161,6 +164,13 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
     return statusOf(p) === filter;
   });
   const isCsView = gameFilter === "CS";
+  const contractSummary = useMemo(() => {
+    const days = players.map((player) => Number(player.contract ?? 365)).filter(Number.isFinite);
+    return {
+      expiring: days.filter((value) => value <= 30).length,
+      soonest: days.length ? Math.min(...days) : null,
+    };
+  }, [players]);
 
   return (
     <ManageFrame
@@ -188,6 +198,22 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
           </div>
         </div>
       </div>
+
+      {developmentEffects.unlocks.contractSummary && (
+        <section data-testid="contract-summary" style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 7, background: GC.card, border: "1px solid " + GC.purp + "55", borderRadius: 11, padding: "9px 11px", marginBottom: 10 }}>
+          <div>
+            <div style={{ color: GC.purp, fontSize: 9, fontWeight: 900 }}>合約摘要</div>
+            <div style={{ color: GC.gray, fontSize: 8, marginTop: 3 }}>快速掌握名單的續約準備</div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ color: "#fff", fontSize: 13, fontWeight: 900 }}>{contractSummary.expiring} 人</div>
+            <div style={{ color: GC.gray, fontSize: 8 }}>30 天內到期</div>
+          </div>
+          <div style={{ gridColumn: "1 / -1", color: GC.gray, fontSize: 8.5 }}>
+            最早到期：<span style={{ color: "#fff", fontWeight: 800 }}>{contractSummary.soonest == null ? "尚無資料" : contractSummary.soonest + " 天"}</span>
+          </div>
+        </section>
+      )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
         {filtered.map((p) => {

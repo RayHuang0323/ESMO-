@@ -7504,3 +7504,11 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - 保留 `TeamDevelopmentState.v1` 與既有 ranks / points 相容格式。訓練、恢復、球探與既有賽前支援提示是目前真實讀取點；沒有讀取點的節點標示規劃中，不扣點、不產生假效果。
 - `TeamDevelopmentScreen` 改為長期路線總覽，加入分類投入程度、路線節點、Lv.0 / 3、三格進度與下一級效果。GSAP 僅用於 tab / card 進場、點數回饋與升級 pulse，支援 reduced-motion。
 - focused verifier：`tools/check_team_development_v1.mjs`（輸出 `Team Development v1.5: PASS`），runner segment：`team_development_v15`。
+
+## R60 戰隊發展真實效果 v1（2026-08-17）
+
+- Audit 先確認 R59.1 20 個節點的實際 consumer。安全落地 4 個資訊型效果：數據分析室、MOBA 對手研究、CS Demo／對手分析、合約管理。
+- 數據分析摘要直接使用既有 MOBA history、CS history、growthLog；MOBA 摘要使用 Ban/Pick state 的對手實際選角與英雄分類；CS 摘要使用既有地圖資料、對手筆記與先發 mapFit；合約摘要使用既有 profile contract days。沒有另算一套戰鬥或能力數值。
+- 驗證範圍包含：節點 effect projection、升級前後旗標、規劃中節點 inert、前置條件、重複投入、Store state、save/load round-trip、既有玩家 stats 不變與 source consumer markers。未改 CS 16 項、MOBA engine、RNG、roster、賽季／賽事。
+- 贊助、財務、MOBA／CS 戰術與完整跨場情報仍列規劃中；它們需要更完整的 production state、歷史資料庫或管理結算契約，R60 不用假效果填補。
+- 建立 docs/design/戰隊發展與選手長期系統Roadmap.md。年齡未做直接能力加減，未來應與 role 負荷、訓練／恢復、傷病、potential、合約價值與出賽時間放入共同 lifecycle transaction。

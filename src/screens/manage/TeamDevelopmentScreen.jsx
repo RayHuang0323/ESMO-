@@ -5,12 +5,16 @@ import React, { useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useProfileStore } from "../../platform/profileStore.js";
+import { useSeasonStore } from "../../platform/seasonStore.js";
+import { analytics as mobaAnalytics } from "../../platform/seasonData.js";
+import { growthLogOf } from "../../platform/progress/growthLog.js";
 import {
   TEAM_DEVELOPMENT_CATEGORIES,
   teamDevelopmentLevelEffect,
   teamDevelopmentNodeById,
   teamDevelopmentNodesByCategory,
   sanitizeTeamDevelopment,
+  teamDevelopmentEffects,
 } from "../../platform/development/teamDevelopment.js";
 import { GC, FONT, MONO } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
@@ -110,8 +114,18 @@ function DevelopmentRoute({ state, nodes, color }) {
 
 export default function TeamDevelopmentScreen({ onBack }) {
   const rawState = useProfileStore((s) => s.teamDevelopment);
+  const players = useProfileStore((s) => s.players) ?? [];
+  const csHistory = useProfileStore((s) => s.csHistory) ?? [];
+  const mobaHistory = useSeasonStore((s) => s.history) ?? [];
   const purchase = useProfileStore((s) => s.purchaseTeamDevelopment);
   const state = useMemo(() => sanitizeTeamDevelopment(rawState), [rawState]);
+  const effects = useMemo(() => teamDevelopmentEffects(state), [state]);
+  const dataAnalysis = useMemo(() => {
+    const moba = mobaAnalytics(mobaHistory);
+    const growthEntries = players.reduce((sum, player) => sum + growthLogOf(player).length, 0);
+    const csWins = csHistory.filter((match) => match?.winner === "us").length;
+    return { moba, growthEntries, csGames: csHistory.length, csWins };
+  }, [csHistory, mobaHistory, players]);
   const [tab, setTab] = useState("general");
   const [confirmId, setConfirmId] = useState(null);
   const [receipt, setReceipt] = useState(null);
@@ -196,6 +210,18 @@ export default function TeamDevelopmentScreen({ onBack }) {
             <DevelopmentRoute state={state} nodes={nodes} color={currentColor} />
           </div>
         </section>
+
+        {effects.unlocks.dataAnalysis && (
+          <section data-testid="team-development-data-analysis" style={{ background: GC.card, border: `1px solid ${GC.green}44`, borderRadius: 12, padding: "11px 12px", marginBottom: 10 }}>
+            <div style={{ color: GC.green, fontSize: 10, fontWeight: 900, letterSpacing: "0.12em" }}>數據分析摘要</div>
+            <div style={{ color: GC.gray, fontSize: 9, lineHeight: 1.5, marginTop: 3 }}>資料直接來自既有戰績與成長紀錄，協助安排下一步培養。</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 7, marginTop: 9 }}>
+              <div style={{ background: GC.card2, borderRadius: 8, padding: "7px 8px" }}><div style={{ color: GC.gray, fontSize: 8 }}>MOBA 已記錄場次</div><div style={{ color: "white", fontSize: 15, fontWeight: 900, fontFamily: MONO }}>{dataAnalysis.moba.games}</div><div style={{ color: GC.gray, fontSize: 8 }}>場均擊殺 {dataAnalysis.moba.avgKills.toFixed(1)}</div></div>
+              <div style={{ background: GC.card2, borderRadius: 8, padding: "7px 8px" }}><div style={{ color: GC.gray, fontSize: 8 }}>CS 訓練賽</div><div style={{ color: "white", fontSize: 15, fontWeight: 900, fontFamily: MONO }}>{dataAnalysis.csGames}</div><div style={{ color: GC.gray, fontSize: 8 }}>勝場 {dataAnalysis.csWins}</div></div>
+              <div style={{ background: GC.card2, borderRadius: 8, padding: "7px 8px", gridColumn: "1 / -1" }}><div style={{ color: GC.gray, fontSize: 8 }}>選手成長紀錄</div><div style={{ color: "white", fontSize: 15, fontWeight: 900, fontFamily: MONO }}>{dataAnalysis.growthEntries}</div><div style={{ color: GC.gray, fontSize: 8 }}>所有選手成長帳簿合計</div></div>
+            </div>
+          </section>
+        )}
 
         <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 3, marginBottom: 10 }}>
           {TEAM_DEVELOPMENT_CATEGORIES.map((item) => {

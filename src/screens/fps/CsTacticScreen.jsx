@@ -11,10 +11,11 @@
 //      本 Sprint 不恢復——不做沒有去處的假部署。
 //  對選手能力的提示：boost 欄位（Legacy 逐字）→ statZh 顯示。
 // ============================================================================
-import React, { useState } from "react";
-import { CS_TEAM_TACTICS, FPS_TACTIC_TYPE, TACTIC_TYPE_ZH } from "../../battle/fps/csPrepData.js";
+import React, { useMemo, useState } from "react";
+import { CS_TEAM_TACTICS, CS_MAPS, csMapByKey, mapFit, FPS_TACTIC_TYPE, TACTIC_TYPE_ZH } from "../../battle/fps/csPrepData.js";
 import { statZh } from "../../data/playerModel.js";
 import { useProfileStore } from "../../platform/profileStore.js";
+import { CS_SEATS } from "../../platform/contracts/matchSquad.js";
 import { teamDevelopmentEffects } from "../../platform/development/teamDevelopment.js";
 import { GC, FONT } from "../../ui/theme.js";
 
@@ -25,6 +26,14 @@ export default function CsTacticScreen({ mapName, onNext, onBack }) {
   const [sel, setSel] = useState(null);
   const development = useProfileStore((s) => s.teamDevelopment);
   const developmentEffects = teamDevelopmentEffects(development);
+  const players = useProfileStore((s) => s.players) ?? [];
+  const csLineup = useProfileStore((s) => s.csLineup);
+  const starters = useMemo(() => {
+    const byId = new Map(players.map((player) => [player.id, player]));
+    return CS_SEATS.map((seat) => byId.get(csLineup?.[seat])).filter(Boolean);
+  }, [csLineup, players]);
+  const map = useMemo(() => CS_MAPS.find((item) => item.name === mapName) ?? csMapByKey(mapName), [mapName]);
+  const mapFitResult = useMemo(() => mapFit(starters, map), [map, starters]);
   const selT = CS_TEAM_TACTICS.find((t) => t.id === sel) || null;
 
   return (
@@ -39,6 +48,23 @@ export default function CsTacticScreen({ mapName, onNext, onBack }) {
         {(developmentEffects.unlocks.csMapResearch || developmentEffects.unlocks.csTeamPrep) && (
           <div style={{ color: ACC, background: `${ACC}18`, border: `1px solid ${ACC}55`, borderRadius: 9, padding: "7px 10px", fontSize: 9.5, fontWeight: 800, marginBottom: 10 }}>
             戰隊發展支援：{[developmentEffects.unlocks.csMapResearch, developmentEffects.unlocks.csTeamPrep].filter(Boolean).join("、")} 已啟用
+          </div>
+        )}
+
+        {developmentEffects.unlocks.csDemoAnalysis && (
+          <div data-testid="cs-demo-analysis" style={{ color: "#fed7aa", background: ACC + "12", border: "1px solid " + ACC + "55", borderRadius: 9, padding: "9px 10px", fontSize: 9, lineHeight: 1.55, marginBottom: 10 }}>
+            <div style={{ color: ACC, fontSize: 10, fontWeight: 900 }}>地圖與對手情報</div>
+            {map ? (
+              <>
+                <div style={{ marginTop: 3 }}>{map.name} · {map.type} · 難度 {map.diff}</div>
+                <div style={{ color: GC.gray }}>地圖風格：{map.style}</div>
+                <div style={{ color: GC.gray }}>對手筆記：{map.oppNote}</div>
+                <div style={{ color: GC.gray }}>地圖提示：{map.desc}</div>
+                {mapFitResult.score != null && <div style={{ color: "#fff", marginTop: 3 }}>目前先發適配：{mapFitResult.score}（{mapFitResult.grade}）</div>}
+              </>
+            ) : (
+              <div style={{ color: GC.gray, marginTop: 3 }}>選定地圖後，這裡會顯示既有地圖資料與先發適配。</div>
+            )}
           </div>
         )}
 
