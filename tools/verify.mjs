@@ -75,6 +75,7 @@ const SEGMENTS = [
   { id: "roster_ui_r581", script: "tools/check_roster_ui_r581.mjs", shape: /Roster UI R58\.1: PASS/, note: "MOBA / CS roster hierarchy and mode-specific role suitability" },
   { id: "roster_ui_r582", script: "tools/check_roster_ui_r582.mjs", shape: /Roster UI R58\.2: PASS/, note: "Roster summary/detail information architecture and player language" },
   { id: "team_development_v15", script: "tools/check_team_development_v1.mjs", shape: /Team Development v1\.5: PASS/, note: "戰隊發展 v1.5 路線、migration、UI 與真實效果" },
+  { id: "player_ui_r62", script: "tools/check_r62_player_ui_fixture.mjs", shape: /R62 fixture: Roster \/ Recruit \/ Profile UI anchors: PASS/, note: "Player Profile career／contract／status UI foundation" },
   { id: "cs_mapaware_measurement_r37", script: "tools/check_cs_mapaware_measurement_r37.mjs", shape: /CS Map Awareness Measurement \/ Calibration Readiness R37: PASS/, note: "CS Map Awareness spatial read-point measurement" },
   { id: "cs_clutch_measurement_r30", script: "tools/check_cs_clutch_measurement_r30.mjs", shape: /CS Clutch Measurement \/ Calibration Readiness R30: PASS/, note: "CS Clutch read-chain deterministic calibration-readiness measurement" },
   { id: "cs_resilience_measurement_r31", script: "tools/check_cs_resilience_measurement_r31.mjs", shape: /CS Resilience Measurement \/ Calibration Readiness R31: PASS/, note: "CS Resilience read-chain deterministic calibration-readiness measurement" },

@@ -131,3 +131,20 @@ R59.1 保留四分類、20 個節點與既有 `TeamDevelopmentState.v1` 存檔�
 3. 選手生命週期與年齡模型設計審查。
 4. 士氣、出賽時間、團隊默契的事件與保存契約。
 5. 完整 AI league／轉會／贊助經濟。
+
+## R62 UI foundation 狀態（2026-08-17）
+
+### UI Foundation 已完成
+
+- Player Profile 的年齡欄位、 生涯階段 placeholder、合約摘要、統一狀態卡與 growthLog timeline presentation。
+- Roster／Recruit 與 Profile 共用同一份 Player identity；summary 仍維持快速決策責任，完整資料集中在 Profile。
+- Profile 的 MOBA／CS mode、Level／XP、potential、morale／status 與 CS 16 項能力檢視。
+
+### 未來需要 production system
+
+- age progression、aging／peak／decline、injury transaction、retirement。
+- salary、contract renewal、market value、transfer、free agent 與人事交易帳本。
+- morale、satisfaction、playtime、team chemistry、教練／設施的跨場 lifecycle consumer。
+- 加入隊伍、續約、轉會、傷病、回歸、巔峰與退役的真實 timeline event source。
+
+R62 只完成 UI foundation，不把 placeholder 或 deterministic fixture 計入 gameplay／management system 完成度。

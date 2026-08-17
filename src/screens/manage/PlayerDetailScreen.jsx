@@ -14,7 +14,7 @@
 //      故「潛力」模式顯示各項的成長上限（同一天花板）與成長空間，不編造逐項潛力。
 // ============================================================================
 import React, { useEffect, useState } from "react";
-import { ChevronDown, Target, Smile, Battery, Star, Zap } from "lucide-react";
+import { ChevronDown, Target, Smile, Battery } from "lucide-react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { STAT_DEF, calcPower, bestPositions, personalityById, CS_ROLE_BY_MOBA_ROLE, csSuitabilityOf } from "../../data/playerModel.js";
 import { TIERS } from "../../data/recruitPool.js";
@@ -23,6 +23,8 @@ import { getStatLayers } from "../../platform/talents/playerDerivedStats.js";
 import { getPlayerTalentState } from "../../platform/contracts/playerTalentState.js";
 import { growthLogOf } from "../../platform/progress/growthLog.js";
 import { GrowthEntryRow, LevelXpBar } from "../../ui/GrowthUI.jsx";
+import { CareerPanel, ContractPanel, StatusPanel } from "../../ui/PlayerProfileFoundation.jsx";
+import { PROFILE_TABS, agePresentationOf } from "../../ui/playerProfileFoundation.js";
 import ManageFrame from "./ManageFrame.jsx";
 
 const HIGH = 74;
@@ -87,6 +89,7 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
   const team = useProfileStore((s) => s.team);
   const [mode, setMode] = useState("ability");     // "ability" | "potential"
   const [gameMode, setGameMode] = useState("MOBA");
+  const [profileTab, setProfileTab] = useState("overview");
   const [dropOpen, setDropOpen] = useState(false);
 
   const p = players.find((x) => x.id === playerId) || players[0];
@@ -98,8 +101,8 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
   const lp = calculateLevelProgress(p.xp ?? 0, 0);
   const morale = p.morale ?? 70;
   const energy = p.energy ?? 100;
+  const age = agePresentationOf(p);
   const tier = TIERS.find((t) => potential >= t.min) ?? TIERS[TIERS.length - 1];
-  const stars = Math.max(1, Math.min(5, Math.round(potential / 20)));
 
   // S27：能力顯示 = derived stats（base + 天賦，clamp 1–99）；base 不被寫入。
   //   有天賦加成的項目在標籤標 +N（綠），潛力模式維持單一天花板。
@@ -161,7 +164,7 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
                 <span style={{ color: "white", fontSize: 17, fontWeight: 900, letterSpacing: "-0.02em", fontFamily: "'Courier New',monospace" }}>{p.name}</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                <span style={{ color: "#71717a", fontSize: 11, fontWeight: 600 }}>{p.age ?? "--"} 歲</span>
+                <span style={{ color: age.available ? "#71717a" : "#52525b", fontSize: 11, fontWeight: 600 }}>{age.available ? age.label : "年齡未啟用"}</span>
                 <div style={{ width: 3, height: 3, borderRadius: "50%", background: "#3f3f46" }} />
                 {/* S26【C】：移除靜態英雄綁定；【A】改顯示持久化 XP（與 Result receipt 同源） */}
                 <span style={{ color: "#71717a", fontSize: 11, fontWeight: 600 }}>XP {lp.xpIntoLevel}/{lp.xpForNextLevel}</span>
@@ -219,14 +222,61 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
           </div>
         </div>
 
-        {/* SECTION 2：能力面板 */}
-        <div style={card({ padding: "14px 13px 13px" })}>
-          <div data-testid="player-detail-game-mode" style={{ display: "flex", gap: 5, padding: 3, marginBottom: 12, background: "rgba(255,255,255,0.04)", borderRadius: 10 }}>
+        <nav data-testid="player-profile-tabs" aria-label="選手檔案分頁" style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 4, padding: 4, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12 }}>
+           {PROFILE_TABS.map((tab) => (
+             <button key={tab.id} data-testid={`player-profile-tab-${tab.id}`} aria-selected={profileTab === tab.id} onClick={() => setProfileTab(tab.id)} style={{ minHeight: 40, border: "none", borderRadius: 8, padding: "7px 5px", cursor: "pointer", background: profileTab === tab.id ? "rgba(167,139,250,0.2)" : "transparent", color: profileTab === tab.id ? "#e9d5ff" : "#71717a", fontSize: 10.5, fontWeight: 800 }}>{tab.label}</button>
+           ))}
+        </nav>
+
+        {/* SECTION 2：依資訊責任分頁，遊戲模式只切換遊戲資料，不切換 Player 身分。 */}
+        <div data-testid="player-profile-content" style={card({ padding: "14px 13px 13px" })}>
+           <div data-testid="player-detail-game-mode" style={{ display: "flex", gap: 5, padding: 3, marginBottom: 12, background: "rgba(255,255,255,0.04)", borderRadius: 10 }}>
             {["MOBA", "CS"].map((view) => (
               <button key={view} onClick={() => setGameMode(view)} style={{ flex: 1, minHeight: 40, border: "none", borderRadius: 7, padding: "7px 8px", cursor: "pointer", background: gameMode === view ? (view === "CS" ? "rgba(251,146,60,0.2)" : "rgba(167,139,250,0.2)") : "transparent", color: gameMode === view ? (view === "CS" ? "#fed7aa" : "#c4b5fd") : "#71717a", fontSize: 11, fontWeight: 800 }}>{view}</button>
-            ))}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+             ))}
+           </div>
+           {profileTab === "overview" && (
+             <div data-testid="player-profile-overview" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+               <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8 }}>
+                 <div style={{ background: gameMode === "CS" ? "rgba(251,146,60,0.1)" : "rgba(167,139,250,0.1)", borderRadius: 12, padding: "11px 12px" }}>
+                   <div style={{ color: "#a1a1aa", fontSize: 9 }}>目前遊戲戰力</div>
+                   <div style={{ color: gameMode === "CS" ? "#fed7aa" : "#ddd6fe", fontSize: 24, lineHeight: 1.1, fontWeight: 900, marginTop: 4 }}>{pow}</div>
+                   <div style={{ color: "#71717a", fontSize: 8.5, marginTop: 4 }}>{gameMode === "CS" ? "CS" : "MOBA"} · {gameMode === "CS" ? CS_ROLE_LABELS[csRole] : p.role}</div>
+                 </div>
+                 <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, padding: "11px 12px" }}>
+                   <div style={{ color: "#a1a1aa", fontSize: 9 }}>潛力</div>
+                   <div style={{ color: tier.color, fontSize: 24, lineHeight: 1.1, fontWeight: 900, marginTop: 4 }}>{potential}</div>
+                   <div style={{ color: "#71717a", fontSize: 8.5, marginTop: 4 }}>{tier.grade} · Lv.{lp.newLevel}</div>
+                 </div>
+               </div>
+               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                 {data.slice(0, 4).map((row) => <span key={row.label} style={{ color: "#a1a1aa", background: "rgba(255,255,255,0.04)", borderRadius: 999, padding: "5px 8px", fontSize: 9 }}>{row.label} <b style={{ color: row.value >= HIGH ? "#34d399" : "#f4f4f5" }}>{row.value}</b></span>)}
+               </div>
+               {gameMode === "CS" ? (
+                 <div data-testid="cs-profile-summary" style={{ background: "rgba(251,146,60,0.08)", border: "1px solid rgba(251,146,60,0.22)", borderRadius: 12, padding: "10px 11px" }}>
+                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                     <span style={{ color: "#fed7aa", fontSize: 12, fontWeight: 900 }}>CS 戰力 {pow}</span>
+                     <span style={{ color: "#a1a1aa", fontSize: 9 }}>學習力 {Math.round(layers.derived.learning ?? 50)}</span>
+                   </div>
+                   <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", marginTop: 7 }}>
+                     <span style={{ color: "#a1a1aa", fontSize: 9 }}>主要定位</span>
+                     <span title="角色代表選手擅長的打法，不限制隊伍組成。" style={{ color: "#fed7aa", fontSize: 10, fontWeight: 800, cursor: "help" }}>{CS_ROLE_LABELS[csRole]} ⓘ</span>
+                   </div>
+                   {csOtherSuitability.length > 0 && <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap", marginTop: 6 }}><span style={{ color: "#a1a1aa", fontSize: 9 }}>其他適配</span>{csOtherSuitability.map((item) => <span key={item.pos} style={{ color: "#d4d4d8", background: "rgba(255,255,255,0.06)", borderRadius: 6, padding: "3px 6px", fontSize: 9 }}>{item.label} {item.fit}</span>)}</div>}
+                 </div>
+               ) : (
+                 <div data-testid="moba-profile-summary" style={{ background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: 12, padding: "10px 11px" }}>
+                   <div style={{ color: "#a1a1aa", fontSize: 9 }}>主要定位</div>
+                   <div style={{ color: "#ddd6fe", fontSize: 13, fontWeight: 900, marginTop: 4 }}>{p.role}</div>
+                   {mobaOtherSuitability.length > 0 && <div style={{ color: "#a1a1aa", fontSize: 9, marginTop: 5 }}>其他適配　<span style={{ color: "#fbbf24", fontWeight: 800 }}>{mobaOtherSuitability[0].pos.replace("MOBA", "")} {mobaOtherSuitability[0].fit}</span></div>}
+                 </div>
+               )}
+               <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8 }}><StatusPanel player={p} compact /><ContractPanel player={p} compact /></div>
+             </div>
+           )}
+
+           {profileTab === "abilities" && <>
+           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
             <div style={{ position: "relative" }}>
               <button onClick={() => setDropOpen((o) => !o)}
                 style={{ display: "flex", alignItems: "center", gap: 6, minHeight: 40, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "6px 11px", cursor: "pointer", color: "white", fontSize: 12, fontWeight: 800 }}>
@@ -251,7 +301,7 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
             </div>
           </div>
 
-          {gameMode === "CS" && (
+           {gameMode === "CS" && (
             <div data-testid="cs-profile-summary" style={{ background: "rgba(251,146,60,0.08)", border: "1px solid rgba(251,146,60,0.22)", borderRadius: 12, padding: "10px 11px", marginBottom: 12 }}>
               <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
                 <span style={{ color: "#fed7aa", fontSize: 12, fontWeight: 900 }}>CS 戰力 {calcPower(derivedPlayer, "fps")}</span>
@@ -274,7 +324,7 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
             </div>
           )}
 
-          <div data-testid={gameMode === "CS" ? "cs-stat-grid" : "moba-stat-grid"} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 8px", marginBottom: 12 }}>
+           <div data-testid={gameMode === "CS" ? "cs-stat-grid" : "moba-stat-grid"} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 8px", marginBottom: 12 }}>
             {[left, right].map((col, ci) => (
               <div key={ci} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <div style={{ color: "#3f3f46", fontSize: 8.5, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", paddingLeft: 10, marginBottom: 3 }}>{ci === 0 ? "屬性" : "數值"}</div>
@@ -285,66 +335,22 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
             ))}
           </div>
 
-          <div style={{ height: 1, background: "rgba(255,255,255,0.05)", marginBottom: 12 }} />
+           </>}
 
-          {/* 底部：成長進度 */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.22)", borderRadius: 8, padding: "3px 8px", display: "flex", alignItems: "baseline", gap: 2 }}>
-                <span style={{ color: "#34d399", fontSize: 14, fontWeight: 900, lineHeight: 1 }}>{growthPct}</span>
-                <span style={{ color: "#34d399", fontSize: 9, fontWeight: 700 }}>%</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 3, flex: 1 }}>
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <Star key={s} size={11} style={{ color: s <= stars ? "#fbbf24" : "#27272a", fill: s <= stars ? "#fbbf24" : "none" }} />
-                ))}
-                <span style={{ color: tier.color, fontSize: 10, fontWeight: 700, marginLeft: 2 }}>{tier.grade}</span>
-              </div>
-              <span style={{ color: "#52525b", fontSize: 9, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>成長</span>
-            </div>
+           {profileTab === "growth" && <div data-testid="player-growth-panel" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}><div><div style={{ color: "#f4f4f5", fontSize: 13, fontWeight: 900 }}>最近在進步什麼？</div><div style={{ color: "#71717a", fontSize: 9, marginTop: 3 }}>只讀取已寫入選手檔案的成長紀錄</div></div><span style={{ color: "#34d399", fontSize: 16, fontWeight: 900 }}>{growthPct}%</span></div>
+             <ProgressBarFull value={growthPct} />
+             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, color: "#71717a", fontSize: 9 }}><span>目前平均 {avg}</span><span>潛力 {potential} · 成長空間 {Math.max(0, potential - avg)} 點</span></div>
+             <LevelXpBar level={lp.newLevel} into={lp.xpIntoLevel} need={lp.xpForNextLevel} pct={lp.xpForNextLevel > 0 ? (lp.xpIntoLevel / lp.xpForNextLevel) * 100 : 0} />
+             <div style={{ height: 1, background: "rgba(255,255,255,0.05)", margin: "4px 0" }} />
+             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}><span style={{ color: "#a1a1aa", fontSize: 11, fontWeight: 800 }}>成長紀錄</span><span style={{ color: "#52525b", fontSize: 8.5 }}>{growthLog.length ? `最近 ${growthLog.length} 筆` : "尚無紀錄"}</span></div>
+             {growthLog.length === 0 ? <div data-testid="player-growth-empty" style={{ color: "#52525b", fontSize: 10, textAlign: "center", padding: "14px 0", lineHeight: 1.7 }}>出賽或完成訓練後，這裡會記下實際的能力變化。</div> : <div>{growthLog.map((e, i) => <GrowthEntryRow key={e.id} entry={e} last={i === growthLog.length - 1} />)}</div>}
+           </div>}
 
-            <ProgressBarFull value={growthPct} />
+           {profileTab === "career" && <CareerPanel player={p} />}
 
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <Zap size={10} style={{ color: "#a78bfa" }} />
-                <span style={{ color: "#71717a", fontSize: 9 }}>目前平均 {avg} / 潛力 {potential}</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ color: "#52525b", fontSize: 9 }}>成長空間</span>
-                <span style={{ color: "#a1a1aa", fontSize: 9, fontWeight: 700 }}>{Math.max(0, potential - avg)} 點</span>
-              </div>
-            </div>
+           {profileTab === "overview" && <div data-testid="player-recent-growth-summary" style={{ color: "#71717a", fontSize: 9.5, lineHeight: 1.7, background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "9px 10px" }}>{growthLog.length ? `最近一筆：${growthLog[0].label || (growthLog[0].source === "training" ? "完成訓練" : "完成比賽")}，已記錄 ${growthLog.length} 筆成長。` : "尚無成長紀錄；完成訓練或比賽後會在成長分頁留下紀錄。"}</div>}
 
-            {/* 等級與經驗進度（與賽後 receipt 同一把尺：playerLevel） */}
-            <div style={{ marginTop: 4 }}>
-              <LevelXpBar level={lp.newLevel} into={lp.xpIntoLevel} need={lp.xpForNextLevel}
-                pct={lp.xpForNextLevel > 0 ? (lp.xpIntoLevel / lp.xpForNextLevel) * 100 : 0} />
-            </div>
-          </div>
-
-          {/* ── Milestone P1：近期成長紀錄 ────────────────────────────────
-              來源、週次、經驗、等級、能力差值全部來自結算當下寫下的帳簿。
-              重整後仍在（隨 profileStore 持久化），重送同一筆不會重複出現。 */}
-          <div style={{ height: 1, background: "rgba(255,255,255,0.05)", margin: "14px 0 10px" }} />
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-            <span style={{ color: "#a1a1aa", fontSize: 11, fontWeight: 800 }}>近期成長</span>
-            <span style={{ color: "#52525b", fontSize: 8.5, fontWeight: 600, letterSpacing: "0.08em" }}>
-              {growthLog.length > 0 ? `最近 ${growthLog.length} 筆` : "RECENT GROWTH"}
-            </span>
-          </div>
-          {growthLog.length === 0 ? (
-            <div style={{ color: "#52525b", fontSize: 10, textAlign: "center", padding: "14px 0", lineHeight: 1.7 }}>
-              尚無成長紀錄<br />
-              <span style={{ fontSize: 9 }}>出賽或完成訓練後，這裡會記下每一次實際的能力變化</span>
-            </div>
-          ) : (
-            <div style={{ minWidth: 0 }}>
-              {growthLog.map((e, i) => (
-                <GrowthEntryRow key={e.id} entry={e} last={i === growthLog.length - 1} />
-              ))}
-            </div>
-          )}
         </div>
       </div>
         <style>{`@media(max-width:400px){[data-player-detail-screen] [data-testid="cs-stat-grid"],[data-player-detail-screen] [data-testid="moba-stat-grid"]{grid-template-columns:1fr!important}[data-player-detail-screen] [data-testid="cs-stat-grid"]>div,[data-player-detail-screen] [data-testid="moba-stat-grid"]>div{min-width:0}[data-player-detail-screen] [data-testid="cs-profile-summary"]{padding:10px!important}}@media(prefers-reduced-motion:reduce){[data-player-detail-screen] *{scroll-behavior:auto!important;transition:none!important}}`}</style>

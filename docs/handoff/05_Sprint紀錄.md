@@ -7520,3 +7520,12 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - 新增 `tools/check_r61_ui_fixture.mjs`，驗證四分類 20 節點、Lv.0→3、prerequisite、planned inert、資訊 unlock、duplicate spend、save/load 與高頻路由 source markers。
 - 驗證：R61 fixture PASS；`check_team_development_v1` 28/28、Roster R58.2、Recruit 40/40、Finance 31/31、CS23 28/28、Q7a 18/18、production build PASS；`git diff --check` 與 JavaScript syntax PASS。progress25 執行逾 120 秒 timeout，保留既有紀錄，未降低 assertion 或 rebaseline。
 - Browser smoke 以 Chrome extension 模擬 CSS 320／360／390／430／1280px：首頁、Roster、MOBA／CS mode、摘要／完整檔案、Recruit、Team Development、CS prep、MOBA prep 均無水平溢出；真機 touch、safe-area、動畫效能仍列人工驗收。
+
+## R62 選手生涯／合約／狀態 UI Foundation（2026-08-17，local-only）
+
+- 本輪先 audit `data/players.js`、`profileStore` migration、`conditionSummary`、`growthLogOf`、Roster、Recruit 與 PlayerDetail。既有資料鏈完整，沒有另起 Player schema；`contract` 目前是剩餘天數摘要，不是合約交易 engine。
+- Player Profile 改為總覽／能力／成長／生涯四分頁。總覽保留快速決策欄位；能力保留 mode-specific stats（CS 完整 16 項）；成長讀 Level／XP／potential／growthLog；生涯只呈現既有 age／contract／condition，缺少的 lifecycle fields 顯示未啟用。
+- 新增 `PlayerProfileFoundation` presentation components、純 adapter 與 deterministic R62 fixture；時間線只使用 growthLog，不合成加入隊伍、續約、轉會、傷病、巔峰或退役事件。
+- Roster 保留快速卡片與摘要責任，只加真實 career stage badge guard；Recruit 保留既有招募決策欄位與 player identity，補 data anchor 與 mobile-friendly close target。未使用新 GSAP；沿用既有 reduced-motion shell。
+- 驗證：R62 fixture PASS、R58.1/R58.2、growth UI P1 `62/62`、R61 fixture、Recruit `40/40`、Team Development v1.5、production build、syntax、diff check PASS；瀏覽器模擬 viewport 320／360／390／430／1280px 無水平溢出。真機驗收未完成。
+- 未實作：age progression、peak／decline、injury lifecycle、retirement、salary／renewal／market／transfer／free agent、morale／satisfaction／playtime／chemistry transaction；這些列入後續 roadmap，沒有改 historical evidence 或 player lifecycle production logic。

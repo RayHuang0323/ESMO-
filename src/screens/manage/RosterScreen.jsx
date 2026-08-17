@@ -22,6 +22,7 @@ import { PlayerAvatar } from "../../ui/PlayerFace.jsx";
 import { withDerivedStats } from "../../platform/talents/playerDerivedStats.js";
 import { ROSTER_TIERS, tierOf } from "../../platform/contracts/matchSquad.js";
 import { conditionSummary } from "../../platform/condition/playerCondition.js";
+import { careerStageOf } from "../../ui/playerProfileFoundation.js";
 import { totalXpForLevel, xpRequiredForLevel } from "../../platform/progress/playerLevel.js";
 import { GC } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
@@ -227,6 +228,7 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
           const lvProg = levelProgressOf(p);
           const mp = calcPower(dp, "moba"), fp = calcPower(dp, "fps");
           const csRole = csRoleOf(p);
+          const career = careerStageOf(p);
           return (
             <button key={p.id} data-testid={`roster-player-${p.id}`} data-roster-card onClick={() => { if (talentMode) { onPlayer?.(p.id); return; } setDetailMode(isCsView ? "CS" : "MOBA"); setSelId(p.id); setEditName(false); }}
               style={{ display: "flex", alignItems: "center", gap: 11, background: GC.card, border: `1px solid ${p.id === selId ? GC.purp : "rgba(255,255,255,0.06)"}`, borderRadius: 13, padding: "11px 13px", cursor: "pointer", textAlign: "left", width: "100%", minWidth: 0 }}>
@@ -238,6 +240,7 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
                   <span style={{ color: GC.gold, fontSize: 9, fontWeight: 800, background: "rgba(251,191,36,0.12)", borderRadius: 5, padding: "1px 5px" }}>Lv.{p.lv ?? 1}</span>
                   {isCsView ? <span style={{ color: "#fb923c", fontSize: 9, fontWeight: 700 }}>{CS_ROLE_LABELS[csRole]}</span> : <span style={{ color: GC.gray, fontSize: 9 }}>{p.role}</span>}
                   {personalityById(p.personality) && <span style={{ fontSize: 10 }}>{personalityById(p.personality).emoji}</span>}
+                  {career.available && <span data-testid="roster-career-badge" style={{ color: GC.blueL, background: "rgba(96,165,250,0.12)", borderRadius: 5, padding: "1px 5px", fontSize: 8, fontWeight: 800 }}>{career.label}</span>}
                   {String(p.id).startsWith("r") && <span style={{ color: GC.green, fontSize: 7, fontWeight: 700 }}>🆕</span>}
                   {/* O2：可否出賽——顏色配文字，不只靠顏色 */}
                   <span style={{
