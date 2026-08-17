@@ -95,7 +95,8 @@ import { pollGateway, openRoom, pollRoom, openSession } from "./matchmaking/mock
 import {
   SESSION_STATES, CONNECTION_STATES, consumeLaunchToken, validateSession, cancelSession,
   sessionStateLabel, isSessionExpired, isSessionTerminal,
-  resumeSession, markDisconnected, abandonSession,
+  resumeSession, markDisconnected, abandonSession, createActiveMatch, patchActiveMatch, isActiveMatch,
+  ACTIVE_MATCH_SCHEMA,
 } from "./contracts/matchSession.js";
 import { createMatchResult, RESULT_SOURCES } from "./contracts/matchResult.js";
 import { settleMatchResultInState, settlementIdOf } from "./progress/settleMatchResult.js";
@@ -241,6 +242,12 @@ const DEFAULT = {
 };
 
 const arr = (v, d) => (Array.isArray(v) ? v : d);
+
+function activeLineupOf(state, mode) {
+  const source = mode === "cs" ? state.csLineup : state.lineup;
+  if (!source || typeof source !== "object") return null;
+  return Object.fromEntries(Object.entries(source).map(([seat, playerId]) => [seat, playerId ?? null]));
+}
 /**
  * Milestone N：economy 帳本的 migration。
  *
@@ -1407,7 +1414,8 @@ export const useProfileStore = create((set, get) => ({
   createMatchSession(now = Date.now()) {
     const mm = get().matchmaking ?? {};
     const cur = mm.session ?? null;
-    if (cur && cur.roomId === mm.room?.roomId && !isSessionTerminal(cur) && !isSessionExpired(cur, now)) {
+    if (cur && cur.roomId === mm.room?.roomId && !isSessionTerminal(cur)
+      && (isActiveMatch(cur) || !isSessionExpired(cur, now))) {
       return { ok: true, session: cur, errors: [], reused: true };
     }
     //  Q3：賽程房間走賽事閘道（沒有票券可用）。兩條路都呼叫同一個
@@ -1435,7 +1443,17 @@ export const useProfileStore = create((set, get) => ({
       room: mm.room ?? null, ticket: mm.ticket ?? null, now,
     });
     if (!r.ok) return { ok: false, launch: null, errors: r.errors };
-    set({ matchmaking: { ...mm, session: r.session, launch: r.launch } });
+    const activated = {
+      ...r.session,
+      activeMatch: createActiveMatch(r.session, {
+        lineup: activeLineupOf(get(), r.session.mode),
+        now,
+      }),
+    };
+    const nextSession = patchActiveMatch(activated, {
+      lineup: activeLineupOf(get(), r.session.mode),
+    }, now);
+    set({ matchmaking: { ...mm, session: nextSession, launch: r.launch } });
     get().save();
     return { ok: true, launch: r.launch, errors: [] };
   },
@@ -1457,7 +1475,10 @@ export const useProfileStore = create((set, get) => ({
     const mm = get().matchmaking ?? {};
     const r = resumeSession(mm.session ?? null, { room: mm.room ?? null, ticket: mm.ticket ?? null, now });
     if (!r.ok) return { ok: false, launch: null, errors: r.errors };
-    set({ matchmaking: { ...mm, session: r.session, launch: r.launch } });
+    const session = isActiveMatch(r.session)
+      ? patchActiveMatch(r.session, { status: "active", simulation: { status: "active" } }, now)
+      : r.session;
+    set({ matchmaking: { ...mm, session, launch: r.launch } });
     get().save();
     return { ok: true, launch: r.launch, errors: [] };
   },
@@ -1478,6 +1499,80 @@ export const useProfileStore = create((set, get) => ({
     set({ matchmaking: { ...mm, session: r.session } });
     get().save();
     return { ok: true, errors: [] };
+  },
+  /** R63：目前進行中的場次唯一恢復視圖，供首頁／賽前頁使用。 */
+  activeMatchView(now = Date.now()) {
+    const session = get().matchmaking?.session ?? null;
+    const active = session?.activeMatch ?? null;
+    if (session?.state === "launched" && active?.schema === ACTIVE_MATCH_SCHEMA
+      && ["active", "paused"].includes(active.status)) {
+      return {
+        kind: "active",
+        restoreable: true,
+        matchId: active.matchId,
+        sessionId: session.sessionId,
+        mode: session.mode,
+        opponent: active.opponent ?? session.opponent ?? null,
+        lineup: active.lineup ?? null,
+        seed: active.seed ?? session.seed ?? null,
+        startedAt: active.startedAt ?? session.launchedAt ?? session.createdAt ?? null,
+        status: active.status,
+        phase: active.phase ?? null,
+        config: active.config ?? null,
+        simulation: active.simulation ?? { status: active.status, timeSec: 0, snapshot: null, updatedAt: now },
+        updatedAt: active.updatedAt ?? now,
+      };
+    }
+    // 舊版 launched session 沒有 ActiveMatch snapshot：保留 session 供舊驗證鏈，
+    // 但 UI 不把它誤稱為可恢復的正常比賽。
+    if (session?.state === "launched") {
+      return { kind: "legacy", restoreable: false, sessionId: session.sessionId, mode: session.mode, status: "invalid" };
+    }
+    return null;
+  },
+  /** R63：更新賽前階段／戰術等非結果設定，仍寫回同一個 ActiveMatch。 */
+  setActiveMatchContext({ phase, config = undefined, now = Date.now() } = {}) {
+    const mm = get().matchmaking ?? {};
+    const session = mm.session ?? null;
+    if (!isActiveMatch(session)) return { ok: false, errors: [{ code: "no_active_match", message: "目前沒有可更新的進行中比賽" }] };
+    const nextConfig = config === undefined
+      ? session.activeMatch.config
+      : { ...(session.activeMatch.config ?? {}), ...config };
+    const next = patchActiveMatch(session, {
+      ...(phase === undefined ? {} : { phase }),
+      ...(config === undefined ? {} : { config: nextConfig }),
+      status: "active",
+      simulation: { status: "active" },
+    }, now);
+    set({ matchmaking: { ...mm, session: next } });
+    get().save();
+    return { ok: true, session: next };
+  },
+  /** R63：保存正式 simulator 的可恢復進度；snapshot 是該引擎的真實快照。 */
+  saveActiveMatchSnapshot({ mode = null, snapshot = null, simulationTimeSec = 0, phase = undefined, config = undefined, status = "active", now = Date.now() } = {}) {
+    const mm = get().matchmaking ?? {};
+    const session = mm.session ?? null;
+    if (!isActiveMatch(session)) return { ok: false, errors: [{ code: "no_active_match", message: "目前沒有可保存的進行中比賽" }] };
+    if (mode && session.mode !== mode) return { ok: false, errors: [{ code: "mode_mismatch", message: "比賽模式不符，拒絕保存進度" }] };
+    const nextConfig = config === undefined
+      ? session.activeMatch.config
+      : { ...(session.activeMatch.config ?? {}), ...config };
+    const next = patchActiveMatch(session, {
+      status: status === "paused" ? "paused" : "active",
+      ...(phase === undefined ? {} : { phase }),
+      ...(config === undefined ? {} : { config: nextConfig }),
+      simulation: {
+        status: status === "paused" ? "paused" : "active",
+        timeSec: Math.max(0, Number(simulationTimeSec) || 0),
+        snapshot: snapshot ?? null,
+      },
+    }, now);
+    set({ matchmaking: { ...mm, session: next } });
+    get().save();
+    return { ok: true, session: next };
+  },
+  pauseActiveMatch(payload = {}) {
+    return get().saveActiveMatchSnapshot({ ...payload, status: "paused" });
   },
   /**
    * 回報比賽結果並**單次結算**。
@@ -1562,7 +1657,8 @@ export const useProfileStore = create((set, get) => ({
       stateLabel: session ? sessionStateLabel(session.state) : "尚未建立場次",
       canLaunch: !!session && v.ok,
       blockedReason: session ? (v.ok ? null : v.errors[0]?.message ?? null) : null,
-      expired: isSessionExpired(session, now),
+      // R63：已正式啟動的 ActiveMatch 不受「尚未啟動 TTL」影響。
+      expired: !isActiveMatch(session) && isSessionExpired(session, now),
     };
   },
   /** 唯讀：房間狀態 ＋ 倒數 ＋ 能否進場（畫面不自己判規則）。 */

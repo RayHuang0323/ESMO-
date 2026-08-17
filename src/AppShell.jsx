@@ -58,6 +58,8 @@ import { heroById } from "./data/heroDatabase.js";
 
 export default function AppShell() {
   const [screen, setScreen] = useState("dashboard");
+  const [restoring, setRestoring] = useState(false);
+  const [restoreError, setRestoreError] = useState(null);
   const [draft, setDraft] = useState(null);     // S18/S19：BanPick 結果 {picks,bans}
   const [tactic, setTactic] = useState(null);   // S19：TacticScreen 選定戰術（純展示，不影響引擎）
   const [playerId, setPlayerId] = useState(null); // S21：PlayerDetail 目標選手
@@ -65,6 +67,62 @@ export default function AppShell() {
   const [csResult, setCsResult] = useState(null); // S23：CsMatchResult.v1（Match → Result 傳遞）
   const go = (s) => () => setScreen(s);
   const home = go("dashboard");
+
+  const resumeActiveMatch = ({ alreadyResumed = false } = {}) => {
+    setRestoreError(null);
+    const st = useProfileStore.getState();
+    const before = st.activeMatchView();
+    if (!before?.restoreable) {
+      setRestoreError("此場次無法恢復，請重新配對。");
+      return;
+    }
+    setRestoring(true);
+    const resumed = alreadyResumed ? { ok: true } : st.resumeMatchSession();
+    if (!resumed.ok) {
+      setRestoring(false);
+      setRestoreError(resumed.errors?.[0]?.message ?? "無法返回進行中的比賽");
+      return;
+    }
+    const view = useProfileStore.getState().activeMatchView();
+    const config = view?.config ?? {};
+    const phase = view?.phase ?? null;
+    const finish = () => {
+      if (view?.mode === "cs") {
+        const nextConfig = config.csConfig ?? config;
+        setCsConfig(nextConfig && Object.keys(nextConfig).length ? nextConfig : null);
+        if (phase === "map") setScreen("csMap");
+        else if (phase === "tactic") setScreen("csTactic");
+        else if (phase === "loading") setScreen("csLoading");
+        else setScreen("cs");
+      } else {
+        setDraft(config.draft ?? null);
+        setTactic(config.tactic ?? null);
+        if (phase === "tactic") setScreen("tactic");
+        else if (phase === "loading") setScreen("loading");
+        else if (phase === "battle") setScreen("battle");
+        else setScreen("banpick");
+      }
+      setRestoring(false);
+    };
+    // 給玩家一個短暫的「正在載入」狀態，也讓 localStorage restore 與畫面切換分開一幀。
+    setTimeout(finish, 120);
+  };
+  const enterMobaAfterPrep = () => {
+    const view = useProfileStore.getState().activeMatchView();
+    if (view?.restoreable && view.mode === "moba" && view.phase === "battle") {
+      resumeActiveMatch({ alreadyResumed: true });
+      return;
+    }
+    setScreen("matchmaking");
+  };
+  const enterCsAfterPrep = () => {
+    const view = useProfileStore.getState().activeMatchView();
+    if (view?.restoreable && view.mode === "cs" && view.phase === "battle") {
+      resumeActiveMatch({ alreadyResumed: true });
+      return;
+    }
+    setScreen("csMap");
+  };
 
   // ── Milestone E【E1】：對戰名單的唯一組裝點 ───────────────────────────────
   //   根因：本檔原本沒有把 roster 傳給 GameView ⇒ 3D 名牌／隊伍面板／記分板／
@@ -86,7 +144,7 @@ export default function AppShell() {
       {/* Q3.5：主畫面「🏆 賽事」改指向聯賽（不另建第二個入口）。
           Sprint09 的「賽季戰績」仍在 `season`，由 MenuScreen 進入——那是
           BattleResult 的統計頁，與聯賽是不同資料源，兩者刻意不合併。 */}
-      {screen === "dashboard" && <DashboardScreen onMoba={go("lineup")} onSeason={go("competition")} onNav={(t) => setScreen(t)} />}
+      {screen === "dashboard" && <DashboardScreen onMoba={go("lineup")} onSeason={go("competition")} onNav={(t) => setScreen(t)} onResumeActive={() => resumeActiveMatch()} />}
       {/* ⚠ 出賽要導到 `lineup`（賽前配置頁）而不是 `matchmaking`。
           `MatchmakingScreen` 是 Sprint11 的**純過場動畫**（寫死對手、假計時），
           真正的房間確認／場次簽發／一次性進場在 `LineupScreen` 的 `MatchPrepFrame`
@@ -94,16 +152,16 @@ export default function AppShell() {
       {/*  Q3.6：`onResume` 是「進行中的賽程對戰」的直接返回入口，導向與賽前頁
            那顆「返回進行中的對戰」**同一個目的地**（`matchmaking` 過場 → Ban/Pick）。
            出賽仍然必須走 `lineup`（真正跑 useMatchFlow 的賽前頁），兩者不可對調。 */}
-      {screen === "competition" && <CompetitionScreen onBack={home} onPlay={go("lineup")} onResume={go("matchmaking")} />}
+      {screen === "competition" && <CompetitionScreen onBack={home} onPlay={go("lineup")} onResume={() => resumeActiveMatch({ alreadyResumed: true })} />}
       {screen === "season" && <SeasonScreen onBack={home} />}
 
       {/* ── MOBA 賽前流程 ── */}
-      {screen === "lineup" && <LineupScreen onNext={go("matchmaking")} onBack={home} />}
-      {screen === "matchmaking" && <MatchmakingScreen onDone={go("banpick")} onBack={go("lineup")} />}
-      {screen === "banpick" && <BanPickScreen onNext={(d) => { setDraft(d); setScreen("tactic"); }} onBack={go("matchmaking")} onCodex={go("codex")} />}
+      {screen === "lineup" && <LineupScreen onNext={enterMobaAfterPrep} onBack={home} />}
+      {screen === "matchmaking" && <MatchmakingScreen onDone={() => { useProfileStore.getState().setActiveMatchContext({ phase: "banpick" }); setScreen("banpick"); }} onBack={go("lineup")} />}
+      {screen === "banpick" && <BanPickScreen onNext={(d) => { setDraft(d); useProfileStore.getState().setActiveMatchContext({ phase: "tactic", config: { draft: d } }); setScreen("tactic"); }} onBack={go("matchmaking")} onCodex={go("codex")} />}
       {screen === "codex" && <CodexScreen onBack={go("banpick")} />}
-      {screen === "tactic" && <TacticScreen onNext={(t) => { setTactic(t); setScreen("loading"); }} onBack={go("banpick")} />}
-      {screen === "loading" && <LoadingScreen draft={draft} tactic={tactic} roster={battleRoster} onDone={go("battle")} />}
+      {screen === "tactic" && <TacticScreen onNext={(t) => { setTactic(t); useProfileStore.getState().setActiveMatchContext({ phase: "loading", config: { tactic: t } }); setScreen("loading"); }} onBack={go("banpick")} />}
+      {screen === "loading" && <LoadingScreen draft={draft} tactic={tactic} roster={battleRoster} onDone={() => { useProfileStore.getState().setActiveMatchContext({ phase: "battle" }); setScreen("battle"); }} />}
       {screen === "battle" && <GameView autoStart draft={draft} tactic={tactic} roster={battleRoster} onContinue={home} />}
 
       {/* ── Sprint21 經營模組 ── */}
@@ -127,13 +185,24 @@ export default function AppShell() {
 
       {/* ── Sprint23：CS 完整流程（結果入 profileStore.csHistory，不入 seasonStore）──
             Dashboard → csPrep → csMap → csTactic → csLoading → cs(Match) → csResult → Dashboard */}
-      {screen === "csPrep" && <CsPrepScreen onNext={go("csMap")} onBack={home} />}
-      {screen === "csMap" && <CsMapSelectScreen onNext={(m) => { setCsConfig({ mapKey: m.key, mapName: m.name }); setScreen("csTactic"); }} onBack={go("csPrep")} />}
-      {screen === "csTactic" && <CsTacticScreen mapName={csConfig?.mapName} onNext={(t) => { setCsConfig((c) => ({ ...c, tacticId: t.id, tacticName: t.name, tacticType: t.type, tacticEmoji: t.emoji, seed: Math.floor(Math.random() * 100000) })); setScreen("csLoading"); }} onBack={go("csMap")} />}
-      {screen === "csLoading" && <CsLoadingScreen config={csConfig} onDone={go("cs")} />}
+      {screen === "csPrep" && <CsPrepScreen onNext={enterCsAfterPrep} onBack={home} />}
+      {screen === "csMap" && <CsMapSelectScreen onNext={(m) => { const next = { mapKey: m.key, mapName: m.name }; setCsConfig(next); useProfileStore.getState().setActiveMatchContext({ phase: "tactic", config: { csConfig: next } }); setScreen("csTactic"); }} onBack={go("csPrep")} />}
+      {screen === "csTactic" && <CsTacticScreen mapName={csConfig?.mapName} onNext={(t) => { const next = { ...csConfig, tacticId: t.id, tacticName: t.name, tacticType: t.type, tacticEmoji: t.emoji, seed: useProfileStore.getState().matchmaking?.launch?.seed ?? null }; setCsConfig(next); useProfileStore.getState().setActiveMatchContext({ phase: "loading", config: { csConfig: next } }); setScreen("csLoading"); }} onBack={go("csMap")} />}
+      {screen === "csLoading" && <CsLoadingScreen config={csConfig} onDone={() => { useProfileStore.getState().setActiveMatchContext({ phase: "battle" }); setScreen("cs"); }} />}
       {/* S25：CS 結算在「比賽完成邊界」做掉（不是 Result 掛載時）→ 跳過 Result 也不會漏發獎 */}
       {screen === "cs" && <CsMatchScreen config={csConfig} onFinish={(r) => { settleCsMatch(r); setCsResult(r); setScreen("csResult"); }} onBack={home} />}
       {screen === "csResult" && <CsResultScreen result={csResult} onDone={() => { setCsResult(null); setCsConfig(null); setScreen("dashboard"); }} />}
+
+      {restoring && (
+        <div data-testid="restoring-active-match" style={{ position: "absolute", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(5,8,14,0.82)", backdropFilter: "blur(5px)", color: "#e5e7eb", fontSize: 14, fontWeight: 800 }}>
+          正在載入比賽狀況…
+        </div>
+      )}
+      {restoreError && !restoring && (
+        <button type="button" onClick={() => setRestoreError(null)} style={{ position: "absolute", left: 12, right: 12, bottom: 12, zIndex: 210, border: "1px solid rgba(248,113,113,0.45)", borderRadius: 10, padding: "10px 12px", background: "rgba(127,29,29,0.92)", color: "#fee2e2", fontSize: 11, fontWeight: 800, textAlign: "left", cursor: "pointer" }}>
+          ⚠ {restoreError}
+        </button>
+      )}
 
       {/* S23 SHELL：流程 provenance 保留在 source，玩家畫面不再顯示開發標記。 */}
     </div>

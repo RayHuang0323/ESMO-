@@ -54,6 +54,8 @@ export const CONNECTION_STATES = Object.freeze({ connected: "connected", disconn
 
 /** 場次有效期（秒）。逾期未啟動就作廢，避免留下永遠可用的入場券。 */
 export const SESSION_TTL_SECONDS = 300;
+export const ACTIVE_MATCH_SCHEMA = "ActiveMatch.v1";
+export const ACTIVE_MATCH_STATUSES = Object.freeze(["active", "paused", "finished", "abandoned", "invalid"]);
 
 function hash8(input) {
   const s = typeof input === "string" ? input : JSON.stringify(input);
@@ -61,6 +63,57 @@ function hash8(input) {
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
   return h.toString(16).padStart(8, "0");
 }
+
+/**
+ * R63：正式啟動後的可恢復比賽資料。這是 MatchSession.v1 的相容擴充，
+ * 不是第二個 match store；場次生命週期仍由本檔的 state 管理。
+ */
+export function createActiveMatch(session, { lineup = null, config = null, now = 0 } = {}) {
+  return {
+    schema: ACTIVE_MATCH_SCHEMA,
+    matchId: `active:${session.sessionId}`,
+    mode: session.mode,
+    opponent: session.opponent ?? null,
+    lineup: lineup ?? null,
+    seed: session.seed,
+    startedAt: now || session.launchedAt || session.createdAt || 0,
+    status: "active",
+    phase: config?.phase ?? null,
+    config: config ?? null,
+    simulation: {
+      status: "active",
+      timeSec: 0,
+      snapshot: null,
+      updatedAt: now,
+    },
+    updatedAt: now,
+  };
+}
+
+export function patchActiveMatch(session, patch = {}, now = 0) {
+  if (!session?.activeMatch || session.activeMatch.schema !== ACTIVE_MATCH_SCHEMA) return session;
+  const current = session.activeMatch;
+  const nextSimulation = patch.simulation
+    ? { ...(current.simulation ?? {}), ...patch.simulation, updatedAt: now }
+    : current.simulation;
+  return {
+    ...session,
+    activeMatch: {
+      ...current,
+      ...patch,
+      ...(patch.simulation ? { simulation: nextSimulation } : {}),
+      updatedAt: now,
+    },
+    updatedAt: now,
+  };
+}
+
+export const isActiveMatch = (session) => (
+  session?.schema === SESSION_VERSION
+  && session.state === SESSION_STATES.launched
+  && ["active", "paused"].includes(session.activeMatch?.status)
+  && session.activeMatch?.schema === ACTIVE_MATCH_SCHEMA
+);
 
 /**
  * 由已確認的房間簽發場次。**應由 gateway 呼叫。**
@@ -121,6 +174,7 @@ export function createSession({ room, ticket, origin = null, assignment: assignm
       createdAt: now,
       expiresAt: now + ttlSeconds * 1000,
       launchedAt: null,
+      activeMatch: null,
       reason: null,
     },
   };
@@ -247,7 +301,8 @@ export function resumeSession(session, { room = null, ticket = null, now = 0 } =
   if (!session.issuedBy) errors.push({ code: "issuer", message: "場次未標明簽發者，拒絕恢復" });
   if (session.state === SESSION_STATES.created) errors.push({ code: "not_launched", message: "場次尚未啟動，請由進場流程開始" });
   if (session.state === SESSION_STATES.cancelled) errors.push({ code: "cancelled", message: session.reason ?? "場次已取消，無法恢復" });
-  if (session.state === SESSION_STATES.expired || isSessionExpired(session, now)) {
+  const resumableActive = isActiveMatch(session);
+  if (session.state === SESSION_STATES.expired || (!resumableActive && isSessionExpired(session, now))) {
     errors.push({ code: "expired", message: "場次已逾期，無法恢復" });
   }
   if (session.state === SESSION_STATES.completed) errors.push({ code: "completed", message: "本場比賽已結束，無法恢復" });
@@ -278,7 +333,14 @@ export function markDisconnected(session, now = 0) {
   if (!session || session.state !== SESSION_STATES.launched) {
     return { ok: false, session, errors: [{ code: "not_launched", message: "只有進行中的場次可以標記斷線" }] };
   }
-  return { ok: true, session: { ...session, connection: CONNECTION_STATES.disconnected, updatedAt: now }, errors: [] };
+  return {
+    ok: true,
+    session: patchActiveMatch({ ...session, connection: CONNECTION_STATES.disconnected }, {
+      status: "paused",
+      simulation: { status: "paused" },
+    }, now),
+    errors: [],
+  };
 }
 
 /** 放棄本場（不可再恢復）。 */
@@ -289,7 +351,14 @@ export function abandonSession(session, reason = "已放棄本場比賽", now = 
   if (session.state !== SESSION_STATES.launched) {
     return { ok: false, session, errors: [{ code: "not_launched", message: "只有進行中的場次可以放棄" }] };
   }
-  return { ok: true, session: { ...session, state: SESSION_STATES.abandoned, reason, abandonedAt: now }, errors: [] };
+  const next = { ...session, state: SESSION_STATES.abandoned, reason, abandonedAt: now };
+  return {
+    ok: true,
+    session: session.activeMatch
+      ? patchActiveMatch(next, { status: "abandoned", simulation: { status: "abandoned" } }, now)
+      : next,
+    errors: [],
+  };
 }
 
 /** 標記完成（附上結果與結算識別，形成追蹤鏈）。 */
@@ -297,16 +366,19 @@ export function completeSession(session, { matchId = null, resultId = null, sett
   if (!session || session.state !== SESSION_STATES.launched) {
     return { ok: false, session, errors: [{ code: "not_launched", message: "只有進行中的場次可以標記完成" }] };
   }
+  const next = {
+    ...session,
+    state: SESSION_STATES.completed,
+    matchId: matchId ?? session.matchId,
+    resultId: resultId ?? session.resultId,
+    settlementId: settlementId ?? session.settlementId,
+    completedAt: now,
+  };
   return {
     ok: true,
     errors: [],
-    session: {
-      ...session,
-      state: SESSION_STATES.completed,
-      matchId: matchId ?? session.matchId,
-      resultId: resultId ?? session.resultId,
-      settlementId: settlementId ?? session.settlementId,
-      completedAt: now,
-    },
+    session: session.activeMatch
+      ? patchActiveMatch(next, { status: "finished", simulation: { status: "finished" } }, now)
+      : next,
   };
 }

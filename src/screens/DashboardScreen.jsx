@@ -14,6 +14,7 @@ import React, { useState } from "react";
 import { useProfileStore } from "../platform/profileStore.js";
 import { resolveSponsor } from "../platform/economy/sponsors.js";
 import { GC, FONT } from "../ui/theme.js";
+import ActiveMatchCard from "./common/ActiveMatchCard.jsx";
 
 const money = (n) => "$" + (n / 10000).toFixed(1) + "萬";
 
@@ -34,7 +35,7 @@ function Tile({ emoji, label, onClick, badge, right, color = GC.purp, children }
   );
 }
 
-export default function DashboardScreen({ onMoba, onSeason, onNav }) {
+export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActive }) {
   const profile = useProfileStore();
   const [modal, setModal] = useState(null);
 
@@ -85,6 +86,7 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
   return (
     <div style={{ minHeight: "100%", background: GC.bg, fontFamily: FONT, overflow: "auto", height: "100%" }}>
       <div style={{ maxWidth: 460, margin: "0 auto" }}>
+        <ActiveMatchCard onResume={onResumeActive} />
         {/* 頂部隊伍識別 */}
         <div style={{ position: "relative", background: `linear-gradient(180deg,#2a2d3e,${GC.bg})`, padding: "18px 16px 14px", textAlign: "center" }}>
           <div style={{ position: "absolute", top: 14, right: 16 }}>

@@ -253,6 +253,10 @@ export default function BattleHeroStrip({ roster = ROSTER, draft = null }) {
     const pk = draft?.picks?.[side]?.[i];
     return pk?.id ? pk : null;
   };
+  // 保留與既有 HeroDetail verifier 相容的 identity mapping；其餘 battle-only 欄位仍在 mk 補上。
+  const heroDetailIdentity = (p, r, h) => {
+    return { heroId: h?.id ?? r.heroId, heroName: h?.zh ?? p.id, playerName: r.player ?? p.id.toUpperCase(), side: p.side };
+  };
   // 【F】點擊 → HeroDetailPanel（戰中表現：KDA/Gold/Lv/HeroProgress），英雄身分同樣取自 draft
   const mk = (p, side, i) => {
     const r = roster[p.id] || {};
@@ -263,8 +267,7 @@ export default function BattleHeroStrip({ roster = ROSTER, draft = null }) {
     //    閃現與懲戒，其餘技能沒有 CD 可讀 ⇒ 面板要能分辨「引擎技能」與「配置技能」，
     //    才不會顯示假冷卻，也不會再出現非打野的第二格「未配置」。
     return {
-      heroId: h?.id ?? r.heroId, heroName: h?.zh ?? p.id,
-      playerName: r.player ?? p.id.toUpperCase(), side: p.side, playerId: p.id,
+      ...heroDetailIdentity(p, r, h), playerId: p.id,
       spells: r.spells ?? [], lane: r.lane ?? null,
     };
   };

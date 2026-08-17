@@ -7529,3 +7529,13 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - Roster 保留快速卡片與摘要責任，只加真實 career stage badge guard；Recruit 保留既有招募決策欄位與 player identity，補 data anchor 與 mobile-friendly close target。未使用新 GSAP；沿用既有 reduced-motion shell。
 - 驗證：R62 fixture PASS、R58.1/R58.2、growth UI P1 `62/62`、R61 fixture、Recruit `40/40`、Team Development v1.5、production build、syntax、diff check PASS；瀏覽器模擬 viewport 320／360／390／430／1280px 無水平溢出。真機驗收未完成。
 - 未實作：age progression、peak／decline、injury lifecycle、retirement、salary／renewal／market／transfer／free agent、morale／satisfaction／playtime／chemistry transaction；這些列入後續 roadmap，沒有改 historical evidence 或 player lifecycle production logic。
+
+## R63 進行中比賽恢復／快速完成／速度控制（2026-08-17，local-only）
+
+- Audit 確認既有 `MatchSession.v1`、`profileStore`、MOBA `LogicEngine`、CS `simulateFps` 與 result transaction 可作為單一真相；R63 沒有建立第二套 simulator 或結算鏈。
+- `profileStore` 在既有 matchmaking session 內保存 `ActiveMatch.v1`。啟動後保存 matchId／mode／opponent／lineup／seed／startedAt；battle phase 會以 throttled snapshot 寫回 simulation time 與正式 config。卸載、返回、refresh 會 pause，完成與放棄則進 terminal。
+- AppShell、首頁與 MatchQueuePanel 加入 active match resume／abandon 入口；同模式賽前頁可返回，另一模式不會誤把 active session 當成可重新配對。正常 active 不受 legacy TTL 誤判，缺少 snapshot 的 legacy 狀態誠實顯示無法恢復。
+- MOBA `useLocalServer` 以同一顆引擎從保存時間 deterministic replay；CS `EsportsFPS3D` 以同一正式 frame stream 從保存 frame index 繼續。兩者皆可由目前狀態快速完成，不重新抽 seed、不建立簡化勝負公式。
+- 新增 `MatchSpeedControls` 統一 1x／2x／4x、active state、快速完成確認與 processing disabled；CS result id 改為由正式 simulation 輸入產生的 deterministic id，避免 normal／fast／restore 因時間戳或 Math.random 分歧。
+- 驗證：`check_r63_active_match` 13/13、O6 36/36、O7 48/48、O7.1 27/27、Q7a 18/18、CS23 28/28、MOBA recovery 21/21、MOBA pacing 25/25、MOBA controls 18/18、build PASS。MOBA presentation flat gate 仍有既有 Timeline 手機收合靜態失敗，與 R63 session／speed 變更無關；未修改 assertion。progress25 保留 inherited timeout／未完成紀錄，未 rebaseline。
+- Node／source verifier 無法證明真機 touch、safe-area、瀏覽器 refresh 體感與 FPS；需人工驗收 320／360／390／430 與 desktop。

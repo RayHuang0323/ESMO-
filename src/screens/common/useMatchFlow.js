@@ -122,7 +122,7 @@ export function useMatchFlow(mode = "moba", onEnterBattle = null) {
   //  這裡只是把結論帶給按鈕判定——本檔不判「算不算賽程」。
   const fixture = store.matchFixtureContext();
 
-  const act = primaryActionFor({ entryOk: entry.ok, view, room, session, fixture });
+  const act = primaryActionFor({ entryOk: entry.ok, view, room, session, mode, fixture });
   const statusText = flowStatusText({ entryOk: entry.ok, view, room, session, opponentName, fixture });
 
   //  ── 唯一的流程推進點 ────────────────────────────────────────────────

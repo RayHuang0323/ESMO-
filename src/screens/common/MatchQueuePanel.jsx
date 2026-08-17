@@ -127,7 +127,7 @@ export default function MatchQueuePanel({ mode = "moba", flow }) {
           <div style={{ color: C.gray2, fontSize: 10, lineHeight: 1.7 }}>
             上一場還沒有結束。可以回去打完，或放棄本場後重新配對。
           </div>
-          <button onClick={flow.abandon} data-testid="abandon-match"
+          <button onClick={() => { if (window.confirm("放棄後將無法恢復本場比賽。確定要放棄嗎？")) flow.abandon(); }} data-testid="abandon-match"
             style={{ marginTop: 7, width: "100%", background: "transparent", border: `1px solid ${C.line}`, borderRadius: 9, padding: "8px", cursor: "pointer", color: C.gray2, fontSize: 10.5, fontWeight: 700 }}>
             放棄本場
           </button>

@@ -5,6 +5,7 @@
 // ============================================================================
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import * as THREE from "three";
+import MatchSpeedControls from "../ui/MatchSpeedControls.jsx";
 
 // EsportsFPS3D 已內聯於本檔（見下方 __FPS3D_MODULE），以符合單一檔案 artifact 限制
 /* ═══════════════════════════════════════════════════════════════
@@ -749,15 +750,24 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
 
 // ── 組裝賽後結果（給主遊戲的 recordMatch / 賽後成長 / 數據面板）──────────
 // T = 我方（德國海豹）視角。fanGain/prizeGain/xpGain 由主遊戲填入。
+function stableResultId(sim, seed, tacticT, tacticCT) {
+  const input = JSON.stringify([
+    seed, sim.mapKey, tacticT?.id ?? tacticT?.name ?? null, tacticCT?.id ?? tacticCT?.name ?? null,
+    sim.ctScore, sim.tScore, sim.roundHist, sim.players.map((p) => [p.id, p.side, p.k, p.d, p.dmg, p.rating]),
+  ]);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < input.length; i++) { h ^= input.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return `cs_${h.toString(16).padStart(8, "0")}`;
+}
 function buildMatchResult(sim,opts={}){
-  const{tacticT,tacticCT,tName="德國海豹",ctName="Compulsary",date=null}=opts;
+  const{tacticT,tacticCT,tName="德國海豹",ctName="Compulsary",date=null,seed=0,matchId=null}=opts;
   const win=sim.tScore>sim.ctScore;
   const ourPlayers=sim.players.filter(p=>p.side==="t");
   const theirPlayers=sim.players.filter(p=>p.side==="ct");
   const ourMvp=[...ourPlayers].sort((a,b)=>b.rating-a.rating||b.k-a.k)[0]||null;
   const topFraggers=[...sim.players].sort((a,b)=>b.k-a.k).slice(0,3);
   return{
-    id:"cs_"+Date.now()+"_"+Math.floor(Math.random()*1e4),mode:"CS",map:sim.mapKey,date,
+    id:matchId ?? stableResultId(sim, seed, tacticT, tacticCT),mode:"CS",map:sim.mapKey,date,
     win,scoreT:sim.tScore,scoreCT:sim.ctScore,tName,ctName,
     tactic:{ours:tacticT?.name||null,theirs:tacticCT?.name||null,ourType:tacticT?.type||null,theirType:tacticCT?.type||null},
     players:sim.players,ourPlayers,theirPlayers,
@@ -1560,6 +1570,8 @@ function EsportsFPS3D({
   teamName:teamNameProp,      // 我方隊名
   oppName:oppNameProp,        // 對手隊名
   onComplete,                 // (matchResult)=>void：播放結束時觸發一次
+  resumeFrameIndex=0,         // R63：由 ActiveMatch snapshot 恢復同一份正式 frames
+  onProgress=null,             // R63：回報目前 frame，外層負責節流保存
   embedded=false,             // 嵌入主遊戲：隱藏內建選圖/選戰術面板
 }={}){
   // 名稱覆寫（嵌入時）
@@ -1599,13 +1611,14 @@ function EsportsFPS3D({
   const tacticT=lib.t[Math.min(tIdx,lib.t.length-1)],tacticCT=lib.ct[Math.min(ctIdx,lib.ct.length-1)];
   const sim=useMemo(()=>simulateFps(mapKey,tacticT,tacticCT,seed,effectiveRoster),[mapKey,tIdx,ctIdx,seed,effectiveRoster]);
   // 賽後結果（給主遊戲）；播放到最後一格時透過 onComplete 回傳一次
-  const matchResult=useMemo(()=>buildMatchResult(sim,{tacticT,tacticCT,tName:T_NAME,ctName:CT_NAME}),[sim]);
+  const matchResult=useMemo(()=>buildMatchResult(sim,{tacticT,tacticCT,tName:T_NAME,ctName:CT_NAME,seed}),[sim,seed]);
   const completedRef=useRef(null);
   useEffect(()=>{completedRef.current=null;},[matchResult]); // 換場後重置觸發旗標
 
   const [fIdx,setFIdx]=useState(0);
   const [playing,setPlaying]=useState(true);
   const [speed,setSpeed]=useState(1);
+  const [quickFinishing,setQuickFinishing]=useState(false);
   const [selected,setSelected]=useState(null);
   const [showLabels,setShowLabels]=useState(true);
   const [showRoutes,setShowRoutes]=useState(false);
@@ -1634,7 +1647,18 @@ function EsportsFPS3D({
     advance:()=>setFIdx(fi=>{if(fi>=total-1){setPlaying(false);return fi;}return fi+1;})};
 
   // 切換比賽/地圖 → 重置
-  useEffect(()=>{setFIdx(0);setSelected(null);setFeed([]);setCasts([]);setComms([]);setMultiKill(null);setRoundOverlay(null);prevRndRef.current=0;prevPlantedRef.current=false;seekNonce.current++;setPlaying(true);},[sim]);
+  useEffect(()=>{setFIdx(clamp(Number(resumeFrameIndex) || 0, 0, Math.max(0, sim.frames.length - 1)));setSelected(null);setFeed([]);setCasts([]);setComms([]);setMultiKill(null);setRoundOverlay(null);prevRndRef.current=0;prevPlantedRef.current=false;seekNonce.current++;setQuickFinishing(false);setPlaying(true);},[sim,resumeFrameIndex]);
+
+  // R63：只保存可重建的 frame 游標與該 frame 的真實比分／時間，不複製 simulator。
+  useEffect(()=>{
+    if(!frame||!onProgress)return;
+    onProgress({
+      frameIndex:fIdx,
+      totalFrames:total,
+      simulationTimeSec:Number(frame.ts)||0,
+      snapshot:{frameIndex:fIdx,totalFrames:total,simulationTimeSec:Number(frame.ts)||0,rnd:frame.rnd,ctScore:frame.ctScore,tScore:frame.tScore},
+    });
+  },[fIdx,frame,total,onProgress]);
 
   // 依 fIdx 觸發擊殺播報 / 多殺 / 回合結算
   useEffect(()=>{
@@ -1663,11 +1687,13 @@ function EsportsFPS3D({
   const seek=useCallback(v=>{setFIdx(clamp(v,0,total-1));seekNonce.current++;},[total]);
   const selP=selected?frame?.players.find(p=>p.id===selected):null;
   const matchOver=Math.max(sim.ctScore,sim.tScore)>=8&&fIdx>=total-1;
+  const quickFinish=useCallback(()=>{if(matchOver)return;setQuickFinishing(true);setPlaying(false);setFIdx(total-1);},[matchOver,total]);
   // 播放結束 → 回傳賽後結果給主遊戲（每場僅一次）
   useEffect(()=>{
     if(matchOver&&onComplete&&completedRef.current!==matchResult.id){
       completedRef.current=matchResult.id;onComplete(matchResult);
     }
+    if(matchOver)setQuickFinishing(false);
   },[matchOver,onComplete,matchResult]);
 
   if(!frame)return null;
@@ -1815,9 +1841,8 @@ function EsportsFPS3D({
               <span style={{color:C.gray2,fontSize:8}}>{fIdx+1}/{total} 格</span>
             </div>
           </div>
-          <div style={{display:"flex",gap:2,background:"rgba(255,255,255,0.05)",borderRadius:7,padding:2}}>
-            {[1,2,4].map(s=>(<button key={s} onClick={()=>setSpeed(s)} style={{padding:"4px 6px",borderRadius:5,border:"none",cursor:"pointer",background:speed===s?C.ct:"transparent",color:speed===s?"#06121f":C.gray,fontSize:9,fontWeight:800}}>{s}×</button>))}
-          </div>
+          <MatchSpeedControls rates={[1,2,4]} rate={speed} onRate={setSpeed} onQuickFinish={quickFinish}
+            quickFinishPending={quickFinishing} compact accent={C.ct} testId="cs-match-speed-controls" />
         </div>
 
         {/* 工具列（賽前戰術已設定；地名常駐顯示；地圖隨機進入） */}
