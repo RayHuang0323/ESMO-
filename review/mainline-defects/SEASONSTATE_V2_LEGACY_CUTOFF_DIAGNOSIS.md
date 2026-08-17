@@ -1,10 +1,16 @@
 # 主線缺陷診斷：SeasonState v2 adapter 切斷既有 legacy competition
 
 > 建立日期：2026-08-18
-> 狀態：**已定位現象與可疑機制，尚未定案 root cause。本文件只做診斷與調查計畫，不含修正。**
+> 狀態：**Root cause 已證明（見 §9）。** 初版的「尚未定案」已由第二輪調查取代。
 > 撰寫者：Claude（Q7f 整合驗證時發現）
 >
-> ⚠ **本文件不修改任何程式碼。** `profileStore.js` / `seasonStateV2.js` 未被更動。
+> ⚠ 本文件本身不含修正。調查全程未修改 `profileStore.js` / `seasonStateV2.js`。
+>
+> **⚠⚠ 嚴重度已上修：不只舊存檔，全新建立的存檔同樣失效。**
+> 已部署的 R58.2 正式站，**所有玩家（新舊皆然）的賽事頁應為空白**。詳見 §9.3。
+>
+> **§1–§7 保留為初版原文**（含當時尚未證實的推測），§8 為狀態，
+> **§9 是第二輪調查的結論與更正**。舊內容不刪除，只由 §9 更正。
 
 ---
 
@@ -254,3 +260,155 @@ adapter 的 fallback 只在 `sealedEvents.length === 1` 時生效。
 | production code | **本次調查未修改任何一行** |
 
 Q7f 不應在主線賽事頁失效的情況下部署上去——那會讓 Q7f 看起來像是壞掉的那一方。
+
+---
+
+# 9. 第二輪調查：Root cause 已證明（2026-08-18）
+
+> 本節**更正** §2／§3／§4／§7 的部分內容。原文保留，不刪除。
+> 全程未修改 production code。
+
+## 9.0 步驟 0 完成：交互作用已排除
+
+從 `origin/main` (03a2fbc) 建立**純 main worktree**
+（`hotfix/seasonstate-v2-legacy-compat`，零 Q7f 程式碼），
+跑 Q7f 從未改過的 `browser_check_circuit_points_ui` ⇒ **失敗形狀與 merge 後完全相同**。
+
+⇒ §5「Q7f 不是來源」由推論升級為**實測結論**。
+
+## 9.1 Root cause：`wrapLegacySeasonState` 讀的是已淘汰的 legacy 路徑
+
+`src/platform/competition/seasonStateV2.js:141-150`：
+
+```js
+const legacyCompetition = objectOf(legacyState?.competition);   // ← v1 時代的直接屬性
+if (!legacyState?.schema || !legacyCompetition?.id) {
+  return createEmptySeasonStateV2({ … });   // ← active: null，零 event
+}
+```
+
+現行 legacy 賽季狀態（`src/platform/competition/seasonState.js:170-207` 的
+`createSeasonState`）建立的是：
+
+```js
+competitions: { [id]: { competition, stage, playoff, expectsPlayoff } },
+activeEventId: …
+```
+
+**沒有直接的 `competition` 屬性。** 正式存取方式是
+`activeCompetitionOf(state) = activeEntryOf(state)?.competition`。
+
+⇒ 守衛**永遠**觸發。§7 步驟 1–3 的四個候選中，答案是
+**「migration 沒建立 Event」，起因是讀取路徑過時**——
+不是 active pointer 沒建、不是 ID mapping 不一致、
+不是 compatibility 判斷過嚴、也不是 hydrate/sync 順序錯（sync 有跑，是輸入判定失敗）。
+
+### 失效鏈（逐環實測）
+
+```
+legacyState.competition   undefined
+  → 守衛觸發，空 v2        active null / gameModes 0 / events 0
+  → activeEventOf()        null
+  → adapter fallback       需「恰好一個 sealed event」，空 v2 有 0 個 ⇒ 不適用
+  → compatible             false
+  → legacyState: null
+  → competitionView()      hasSeason false / final null / canRoll.ok false
+  → 畫面                   「尚未建立賽季。」
+```
+
+## 9.2 ⚠ 更正 §2 重現條件：**全新存檔同樣失效**
+
+§2 原文寫「任何在 v2 遷移之前建立的存檔」。**那個限定是錯的。**
+
+純 main 實測，`startNewGame` ＋ `ensureCompetitionSeason` 的**全新存檔**：
+
+| 量測項 | 新建當下 | 存檔後重載 |
+|---|---|---|
+| `legacy.hasDirectCompetition` | **false** | **false** |
+| `legacy.competitionsCount` | 1 | 1 |
+| `v2.active` / `gameModes` / `events` | `null` / 0 / 0 | `null` / 0 / 0 |
+| `adapter.legacyStateIsNull` | **true** | **true** |
+| `view.hasSeason` | **false** | **false** |
+
+畫面層實測：`reachedCompetition: false`、`saysNoSeason: true`，
+body 開頭為 `聯賽 | COMPETITION | 賽季 | 尚未建立賽季。`
+
+⇒ **剛建立完賽季的全新遊戲，賽事頁顯示「尚未建立賽季。」**
+
+### 各存檔情境彙整
+
+| | 情境 | 結果 |
+|---|---|---|
+| D | v2-native 新存檔 | ❌ 壞（新建與重載皆然） |
+| E | 舊 single-event legacy | 唯一符合 migration 期望的形狀，**Q7a-3b 之後已不再產生** |
+| F | 舊 multi-event legacy（`s7e_player_one`） | ❌ 壞 |
+| G | 已封存未 rollover（`s7b_season_sealed`） | ❌ 壞 |
+| H | rollover 後 | **無法測**——`canRoll.ok` 為 false，rollover 入口本身消失 |
+
+## 9.3 ⚠ 更正 §4 影響範圍：正式站風險為**所有新舊賽季**
+
+§4 原文的影響清單正確，但**受影響對象**要上修：
+
+- 原述：既有存檔的玩家
+- **實際：所有玩家。** 新開遊戲、既有存檔、已封存賽季，全部走同一條失效鏈。
+
+⇒ 已部署的 **R58.2 正式站，賽事頁應為全面失效**。
+本文件**未在正式站實測**（§7 步驟 5 仍待執行），但三條獨立證據
+（純 main gate 失敗、純函式探針、瀏覽器實測）都指向同一結論。
+
+## 9.4 第二層獨立問題：`sealed_without_final`
+
+**修好讀取路徑並不足夠。** 對照組實測（同一份 `s7b_season_sealed` 資料，
+人工補上 v1 的直接 `competition` 屬性）：
+
+```
+migration 成功：gameModes 1, events 1(status=sealed), active 已設定
+三個 id 逐值相符：
+  active.gameMode/circuitId/eventId  ===  實際 gameMode/circuit.id/event.id
+但 validateSeasonStateV2 → ok: false
+  errors: [{ code: "sealed_without_final",
+             message: "sealed event requires a final reference" }]
+→ activeEventOf() 第 2 行 `if (!validateSeasonStateV2(normalized).ok) return null`
+→ 仍然回 null，adapter 仍然拒絕
+```
+
+成因：多 Event 賽季封存物件是 **SeasonSeal（沒有 `id`）**，
+`awardEnvelopeOf()` 開頭 `const sourceRef = sourceRefOf(final, "final"); if (!sourceRef) return null;`
+⇒ `final` 為 null，但 event 仍依 `legacyState.final ? sealed : active` 標成 `sealed`
+⇒ 觸發 `sealed_without_final`（`seasonStateV2.js` 驗證條件：
+`event.status === EVENT_STATUS.sealed && !event.final`）。
+
+⇒ **這是與 9.1 各自獨立的第二個缺陷**，必須一併處理才能真正修好 v2 migration。
+
+## 9.5 Rollback 位置
+
+`src/platform/profileStore.js` 的 `competitionView()` 開頭兩行是**唯一的行為切換點**：
+
+```js
+const adapter = get().activeCompetitionEvent();
+const state = adapter.legacyState;      // ← 改回 get().competition 即回到 v2 之前的行為
+```
+
+- **v2 是唯讀投影，沒有任何資料寫入依賴它**（main 自述設計，且本輪未發現反例）
+- ⇒ **回退不需要資料遷移、不會遺失或改寫任何存檔**
+- ⇒ 這是可用的**緊急止血**手段；代價是 v2 wiring 暫時失效
+
+## 9.6 是否需要一次性 migration 腳本
+
+**不需要。** `seasonStateV2` 在**每次 load 與 save 都會重新推導**
+（`profileStore.js` 的 `withIdentity()` → `seasonStateV2For()`）。
+⇒ 修好 migration 之後，既有存檔載入時即自動修復，
+前提是修正後能對多 Event 賽季（含已封存）產出**通過驗證**的 v2。
+
+## 9.7 後續工作（獨立於本次緊急處置）
+
+**完整的 v2 migration 修復另列為獨立工作項**，不併入緊急 hotfix：
+
+1. `wrapLegacySeasonState` 改用正式 accessor（`activeCompetitionOf` 等），
+   並支援多 Event 賽季（現行只建一個 league event）
+2. 修正 sealed event 的 `final` reference 建構，讓 SeasonSeal 也能通過驗證
+3. 補齊 v2 對多 Event／巡迴／年度總決賽的表達
+4. **把 `browser_check_*` 納入 `tools/verify.mjs`**（§6 的系統性缺口）——
+   否則同類缺陷會再次無聲通過。至少涵蓋：賽事頁可到達、
+   `competitionView().hasSeason` 為真、既有存檔可載入；
+   並以 mutation 驗證（強制 `legacyState = null` 時必須紅）
