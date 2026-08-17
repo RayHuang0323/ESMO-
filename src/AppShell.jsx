@@ -135,7 +135,7 @@ export default function AppShell() {
       {screen === "cs" && <CsMatchScreen config={csConfig} onFinish={(r) => { settleCsMatch(r); setCsResult(r); setScreen("csResult"); }} onBack={home} />}
       {screen === "csResult" && <CsResultScreen result={csResult} onDone={() => { setCsResult(null); setCsConfig(null); setScreen("dashboard"); }} />}
 
-      <div style={{ position: "absolute", bottom: 6, right: 12, color: "rgba(147,197,253,0.45)", fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", pointerEvents: "none", zIndex: 20 }}>ESMO 主幹 · S23 SHELL</div>
+      {/* S23 SHELL：流程 provenance 保留在 source，玩家畫面不再顯示開發標記。 */}
     </div>
   );
 }

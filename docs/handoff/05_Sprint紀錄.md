@@ -7512,3 +7512,11 @@ non-fast-forward merge `q7a/safety-preconditions`，保留 Q7a safety 與 Q7b mi
 - 驗證範圍包含：節點 effect projection、升級前後旗標、規劃中節點 inert、前置條件、重複投入、Store state、save/load round-trip、既有玩家 stats 不變與 source consumer markers。未改 CS 16 項、MOBA engine、RNG、roster、賽季／賽事。
 - 贊助、財務、MOBA／CS 戰術與完整跨場情報仍列規劃中；它們需要更完整的 production state、歷史資料庫或管理結算契約，R60 不用假效果填補。
 - 建立 docs/design/戰隊發展與選手長期系統Roadmap.md。年齡未做直接能力加減，未來應與 role 負荷、訓練／恢復、傷病、potential、合約價值與出賽時間放入共同 lifecycle transaction。
+
+## R61 核心 UI / Mobile Product Polish（2026-08-17，local-only）
+
+- 先完成高頻玩家畫面 audit：首頁、Roster、摘要 modal、完整檔案、Recruit、Team Development、CS 賽前準備與 MOBA 入口。問題集中在共用返回操作尺寸、窄版資訊擁擠、CS 16 項 stat 閱讀密度，以及戰隊發展路線缺少目前／下一步摘要。
+- `ManageFrame`、`RosterScreen`、`PlayerDetailScreen` 與 `TeamDevelopmentScreen` 完成 focused fix；保留既有 GC／FONT／MONO、MOBA／CS mode hierarchy、GSAP tab／升級 feedback 與 reduced-motion，不改 Store、battle 或資料 schema。
+- 新增 `tools/check_r61_ui_fixture.mjs`，驗證四分類 20 節點、Lv.0→3、prerequisite、planned inert、資訊 unlock、duplicate spend、save/load 與高頻路由 source markers。
+- 驗證：R61 fixture PASS；`check_team_development_v1` 28/28、Roster R58.2、Recruit 40/40、Finance 31/31、CS23 28/28、Q7a 18/18、production build PASS；`git diff --check` 與 JavaScript syntax PASS。progress25 執行逾 120 秒 timeout，保留既有紀錄，未降低 assertion 或 rebaseline。
+- Browser smoke 以 Chrome extension 模擬 CSS 320／360／390／430／1280px：首頁、Roster、MOBA／CS mode、摘要／完整檔案、Recruit、Team Development、CS prep、MOBA prep 均無水平溢出；真機 touch、safe-area、動畫效能仍列人工驗收。

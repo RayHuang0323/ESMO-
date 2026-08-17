@@ -143,7 +143,7 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
 
   return (
     <ManageFrame title="選手檔案" subtitle="PLAYER PROFILE" onBack={onBack}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div data-player-detail-screen style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
         {/* SECTION 1：識別 */}
         <div style={card({ padding: "16px 14px 14px" })}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
@@ -223,13 +223,13 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
         <div style={card({ padding: "14px 13px 13px" })}>
           <div data-testid="player-detail-game-mode" style={{ display: "flex", gap: 5, padding: 3, marginBottom: 12, background: "rgba(255,255,255,0.04)", borderRadius: 10 }}>
             {["MOBA", "CS"].map((view) => (
-              <button key={view} onClick={() => setGameMode(view)} style={{ flex: 1, border: "none", borderRadius: 7, padding: "7px 8px", cursor: "pointer", background: gameMode === view ? (view === "CS" ? "rgba(251,146,60,0.2)" : "rgba(167,139,250,0.2)") : "transparent", color: gameMode === view ? (view === "CS" ? "#fed7aa" : "#c4b5fd") : "#71717a", fontSize: 11, fontWeight: 800 }}>{view}</button>
+              <button key={view} onClick={() => setGameMode(view)} style={{ flex: 1, minHeight: 40, border: "none", borderRadius: 7, padding: "7px 8px", cursor: "pointer", background: gameMode === view ? (view === "CS" ? "rgba(251,146,60,0.2)" : "rgba(167,139,250,0.2)") : "transparent", color: gameMode === view ? (view === "CS" ? "#fed7aa" : "#c4b5fd") : "#71717a", fontSize: 11, fontWeight: 800 }}>{view}</button>
             ))}
           </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
             <div style={{ position: "relative" }}>
               <button onClick={() => setDropOpen((o) => !o)}
-                style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "6px 11px", cursor: "pointer", color: "white", fontSize: 12, fontWeight: 800 }}>
+                style={{ display: "flex", alignItems: "center", gap: 6, minHeight: 40, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "6px 11px", cursor: "pointer", color: "white", fontSize: 12, fontWeight: 800 }}>
                 {mode === "ability" ? "能力" : "潛力"}
                 <ChevronDown size={12} style={{ color: "#71717a", transform: dropOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
               </button>
@@ -347,6 +347,7 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
           )}
         </div>
       </div>
+        <style>{`@media(max-width:400px){[data-player-detail-screen] [data-testid="cs-stat-grid"],[data-player-detail-screen] [data-testid="moba-stat-grid"]{grid-template-columns:1fr!important}[data-player-detail-screen] [data-testid="cs-stat-grid"]>div,[data-player-detail-screen] [data-testid="moba-stat-grid"]>div{min-width:0}[data-player-detail-screen] [data-testid="cs-profile-summary"]{padding:10px!important}}@media(prefers-reduced-motion:reduce){[data-player-detail-screen] *{scroll-behavior:auto!important;transition:none!important}}`}</style>
     </ManageFrame>
   );
 }

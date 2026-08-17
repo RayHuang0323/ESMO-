@@ -67,6 +67,17 @@ function routeNodeState(state, node) {
   return { rank, status, color: status === "future" ? GC.gray : info.color, info };
 }
 
+const currentEffectOf = (node, rank) => rank > 0 ? teamDevelopmentLevelEffect(node, rank - 1) : null;
+
+function nextRouteNode(state, nodes) {
+  const actionable = nodes.find((node) => ["available", "upgrade"].includes(nodeStatus(state, node)));
+  if (actionable) return { node: actionable, status: "actionable" };
+  const locked = nodes.find((node) => nodeStatus(state, node) === "locked");
+  if (locked) return { node: locked, status: "locked" };
+  const planned = nodes.find((node) => nodeStatus(state, node) === "future");
+  return planned ? { node: planned, status: "future" } : { node: null, status: "complete" };
+}
+
 function ProgressCells({ rank, color }) {
   return (
     <div aria-label={`目前等級 ${rank} / 3`} style={{ display: "flex", gap: 4, flex: 1 }}>
@@ -108,6 +119,40 @@ function DevelopmentRoute({ state, nodes, color }) {
           </React.Fragment>
         );
       })}
+    </div>
+  );
+}
+
+function RouteSummary({ state, nodes, color }) {
+  const unlocked = nodes
+    .map((node) => ({ node, rank: state.ranks[node.id] ?? 0, effect: currentEffectOf(node, state.ranks[node.id] ?? 0) }))
+    .filter((item) => item.rank > 0 && item.effect?.status === "live");
+  const next = nextRouteNode(state, nodes);
+  const nextRank = next.node ? state.ranks[next.node.id] ?? 0 : 0;
+  const nextEffect = next.node ? teamDevelopmentLevelEffect(next.node, nextRank) : null;
+  const nextLabel = next.status === "actionable" ? "下一個可發展" : next.status === "locked" ? "下一個節點（先完成前置）" : next.status === "future" ? "下一個節點（規劃中）" : "目前路線已完成可用階段";
+  return (
+    <div data-testid="development-route-summary" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(190px,100%),1fr))", gap: 7, marginTop: 10 }}>
+      <div style={{ background: GC.card, border: `1px solid ${color}33`, borderRadius: 9, padding: "8px 9px", minWidth: 0 }}>
+        <div style={{ color, fontSize: 8.5, fontWeight: 900 }}>已解鎖效果</div>
+        {unlocked.length ? unlocked.slice(0, 3).map(({ node, rank, effect }) => (
+          <div key={node.id} data-development-current-effect={node.id} style={{ marginTop: 5, minWidth: 0 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, minWidth: 0 }}>
+              <span style={{ color: "#e5e7eb", fontSize: 8.5, overflowWrap: "anywhere" }}>{node.name}</span>
+              <span style={{ color: GC.green, fontSize: 8, fontFamily: MONO, whiteSpace: "nowrap" }}>Lv.{rank}</span>
+            </div>
+            <div style={{ color: GC.green, fontSize: 8, lineHeight: 1.4, marginTop: 2 }}>{effect.text}</div>
+          </div>
+        )) : <div style={{ color: GC.gray, fontSize: 8.5, lineHeight: 1.45, marginTop: 5 }}>完成節點後，這裡會列出目前已啟用的支援。</div>}
+      </div>
+      <div data-development-next-node style={{ background: GC.card, border: `1px solid ${color}33`, borderRadius: 9, padding: "8px 9px", minWidth: 0 }}>
+        <div style={{ color, fontSize: 8.5, fontWeight: 900 }}>{nextLabel}</div>
+        {next.node ? <>
+          <div style={{ color: "#e5e7eb", fontSize: 10, fontWeight: 900, marginTop: 5, overflowWrap: "anywhere" }}>{next.node.name}</div>
+          <div style={{ color: nextEffect?.status === "live" ? GC.green : GC.gray, fontSize: 8.5, lineHeight: 1.45, marginTop: 2 }}>{nextEffect?.text ?? "完成前置條件後查看下一級效果"}</div>
+          <div style={{ color: GC.gray, fontSize: 8, marginTop: 3 }}>影響：{next.node.scope}</div>
+        </> : <div style={{ color: GC.gray, fontSize: 8.5, marginTop: 5 }}>目前沒有下一個可投入節點。</div>}
+      </div>
     </div>
   );
 }
@@ -208,6 +253,7 @@ export default function TeamDevelopmentScreen({ onBack }) {
               <span style={{ color: GC.gray, fontSize: 8.5 }}>由基礎走向專精</span>
             </div>
             <DevelopmentRoute state={state} nodes={nodes} color={currentColor} />
+            <RouteSummary state={state} nodes={nodes} color={currentColor} />
           </div>
         </section>
 
@@ -252,6 +298,7 @@ export default function TeamDevelopmentScreen({ onBack }) {
               const statusKey = nodeStatus(state, node);
               const status = STATUS[statusKey];
               const selected = confirmId === node.id;
+              const currentEffect = currentEffectOf(node, rank);
               const nextEffect = teamDevelopmentLevelEffect(node, rank);
               const c = currentColor;
               const canPurchase = statusKey === "available" || statusKey === "upgrade";
@@ -274,8 +321,12 @@ export default function TeamDevelopmentScreen({ onBack }) {
                   </div>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginTop: 9 }}>
                     <div style={{ minWidth: 0 }}>
+                      {currentEffect?.status === "live" && <div data-development-current-effect={node.id} style={{ marginBottom: 5 }}>
+                        <div style={{ color: GC.gray, fontSize: 8 }}>已解鎖效果</div>
+                        <div style={{ color: GC.green, fontSize: 9.5, lineHeight: 1.45, marginTop: 2 }}>{currentEffect.text}</div>
+                      </div>}
                       <div style={{ color: GC.gray, fontSize: 8 }}>下一級效果</div>
-                      <div style={{ color: nextEffect?.status === "live" ? "#e5e7eb" : GC.gray, fontSize: 9.5, lineHeight: 1.45, marginTop: 2 }}>{nextEffect ? nextEffect.text : "已完成全部階段"}</div>
+                      <div data-development-next-effect={node.id} style={{ color: nextEffect?.status === "live" ? "#e5e7eb" : GC.gray, fontSize: 9.5, lineHeight: 1.45, marginTop: 2 }}>{nextEffect ? nextEffect.text : "已完成全部階段"}</div>
                       {nextEffect && <span style={{ color: nextEffect.status === "live" ? GC.green : GC.gray, fontSize: 7.5, fontWeight: 800 }}>{nextEffect.status === "live" ? "目前可生效" : "尚未開放"}</span>}
                     </div>
                     <span style={{ color: c, fontSize: 8.5, fontWeight: 900, whiteSpace: "nowrap" }}>影響：{node.scope}</span>

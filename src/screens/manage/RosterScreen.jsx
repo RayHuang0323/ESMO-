@@ -180,12 +180,13 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
         ? <span style={{ background: "rgba(167,139,250,0.15)", color: GC.purp, fontSize: 11, fontWeight: 800, borderRadius: 8, padding: "4px 10px", whiteSpace: "nowrap" }}>可用天賦點 {players.reduce((t, p) => t + (Number(p.talentPoints) || 0), 0)}</span>
         : <span style={{ background: players.length >= ROSTER_CAP ? "rgba(239,68,68,0.15)" : "rgba(96,165,250,0.15)", color: players.length >= ROSTER_CAP ? GC.red : GC.blue, fontSize: 11, fontWeight: 800, borderRadius: 8, padding: "4px 10px", whiteSpace: "nowrap" }}>{players.length} / {ROSTER_CAP} 人</span>}
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 12 }}>
+      <div data-roster-screen style={{ minWidth: 0 }}>
+      <div data-roster-filters style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
           <span style={{ color: GC.gray, fontSize: 9, fontWeight: 800, width: 42, flexShrink: 0 }}>遊戲</span>
           <div data-testid="roster-game-filter" style={{ display: "flex", gap: 5, overflowX: "auto", minWidth: 0 }}>
             {GAME_FILTERS.map((f) => (
-              <button key={f} data-testid={`roster-game-${f}`} onClick={() => setGameFilter(f)} style={{ flexShrink: 0, padding: "5px 12px", borderRadius: 99, border: `1px solid ${gameFilter === f ? (f === "CS" ? "#fb923c" : GC.gold) : "transparent"}`, cursor: "pointer", background: gameFilter === f ? (f === "CS" ? "rgba(251,146,60,0.18)" : GC.gold) : "rgba(255,255,255,0.06)", color: gameFilter === f ? (f === "CS" ? "#fed7aa" : "#0a0b0f") : GC.gray, fontSize: 11, fontWeight: 700 }}>{f}</button>
+              <button key={f} data-testid={`roster-game-${f}`} onClick={() => setGameFilter(f)} style={{ flexShrink: 0, minHeight: 40, padding: "5px 12px", borderRadius: 99, border: `1px solid ${gameFilter === f ? (f === "CS" ? "#fb923c" : GC.gold) : "transparent"}`, cursor: "pointer", background: gameFilter === f ? (f === "CS" ? "rgba(251,146,60,0.18)" : GC.gold) : "rgba(255,255,255,0.06)", color: gameFilter === f ? (f === "CS" ? "#fed7aa" : "#0a0b0f") : GC.gray, fontSize: 11, fontWeight: 700 }}>{f}</button>
             ))}
           </div>
         </div>
@@ -193,7 +194,7 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
           <span style={{ color: GC.gray, fontSize: 9, fontWeight: 800, width: 42, flexShrink: 0 }}>狀態</span>
           <div data-testid="roster-status-filter" style={{ display: "flex", gap: 5, overflowX: "auto", minWidth: 0 }}>
             {FILTERS.map((f) => (
-              <button key={f} onClick={() => setFilter(f)} style={{ flexShrink: 0, padding: "5px 12px", borderRadius: 99, border: "none", cursor: "pointer", background: filter === f ? GC.gold : "rgba(255,255,255,0.06)", color: filter === f ? "#0a0b0f" : GC.gray, fontSize: 11, fontWeight: 700 }}>{f}</button>
+              <button key={f} onClick={() => setFilter(f)} style={{ flexShrink: 0, minHeight: 40, padding: "5px 12px", borderRadius: 99, border: "none", cursor: "pointer", background: filter === f ? GC.gold : "rgba(255,255,255,0.06)", color: filter === f ? "#0a0b0f" : GC.gray, fontSize: 11, fontWeight: 700 }}>{f}</button>
             ))}
           </div>
         </div>
@@ -227,10 +228,10 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
           const mp = calcPower(dp, "moba"), fp = calcPower(dp, "fps");
           const csRole = csRoleOf(p);
           return (
-            <button key={p.id} data-testid={`roster-player-${p.id}`} onClick={() => { if (talentMode) { onPlayer?.(p.id); return; } setDetailMode(isCsView ? "CS" : "MOBA"); setSelId(p.id); setEditName(false); }}
-              style={{ display: "flex", alignItems: "center", gap: 11, background: GC.card, border: `1px solid ${p.id === selId ? GC.purp : "rgba(255,255,255,0.06)"}`, borderRadius: 13, padding: "11px 13px", cursor: "pointer", textAlign: "left", width: "100%" }}>
-              <PlayerAvatar player={p} size={46} ring={c} />
-              <div style={{ flex: 1, minWidth: 0 }}>
+            <button key={p.id} data-testid={`roster-player-${p.id}`} data-roster-card onClick={() => { if (talentMode) { onPlayer?.(p.id); return; } setDetailMode(isCsView ? "CS" : "MOBA"); setSelId(p.id); setEditName(false); }}
+              style={{ display: "flex", alignItems: "center", gap: 11, background: GC.card, border: `1px solid ${p.id === selId ? GC.purp : "rgba(255,255,255,0.06)"}`, borderRadius: 13, padding: "11px 13px", cursor: "pointer", textAlign: "left", width: "100%", minWidth: 0 }}>
+              <div data-roster-card-avatar style={{ flexShrink: 0 }}><PlayerAvatar player={p} size={46} ring={c} /></div>
+              <div data-roster-card-summary style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                   <span style={{ color: "white", fontSize: 13, fontWeight: 800 }}>{p.name}</span>
                   {/* S26【A】：選手等級直接讀 profileStore 持久化值（賽後升級即時反映） */}
@@ -280,7 +281,7 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
                   </span>
                 </div>
               </div>
-              <div style={{ textAlign: "right", flexShrink: 0 }}>
+              <div data-roster-card-meta style={{ textAlign: "right", flexShrink: 0, minWidth: 0 }}>
                   <div style={{ display: "flex", gap: 4, justifyContent: "flex-end", marginBottom: 2 }}>
                   <span style={{ color: isCsView ? "#fb923c" : GC.purp, fontSize: 9, fontWeight: 700 }}>戰力 {isCsView ? fp : mp}</span>
                 </div>
@@ -315,8 +316,8 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
         // S26【A】：XP 進度由持久化 xp 推導（playerLevel 唯一刻度），與 Result receipt 同源
         const lp = calculateLevelProgress(sel.xp ?? 0, 0);
         return (
-          <div onClick={() => setSelId(null)} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.82)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(4px)" }}>
-            <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: 430, width: "100%", background: GC.card2, borderRadius: 16, padding: 18, border: `1px solid ${detailMode === "CS" ? "#fb923c" : GC.purp}`, maxHeight: "88vh", overflowY: "auto" }}>
+              <div data-roster-modal onClick={() => setSelId(null)} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.82)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(4px)" }}>
+            <div data-roster-modal-body onClick={(e) => e.stopPropagation()} style={{ maxWidth: 430, width: "100%", background: GC.card2, borderRadius: 16, padding: 18, border: `1px solid ${detailMode === "CS" ? "#fb923c" : GC.purp}`, maxHeight: "88vh", overflowY: "auto" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
                 <PlayerAvatar player={sel} size={60} ring={condColor} radius={14} />
                 <div style={{ flex: 1 }}>
@@ -328,21 +329,21 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
                   </div>
                   {pers && <div style={{ marginTop: 3, fontSize: 10 }}>{pers.emoji} <span style={{ color: GC.purp, fontWeight: 700 }}>{pers.zh}</span></div>}
                 </div>
-                <button onClick={() => setSelId(null)} style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "none", cursor: "pointer", color: "#a1a1aa", fontSize: 14 }}>✕</button>
+                <button aria-label="關閉選手摘要" onClick={() => setSelId(null)} style={{ width: 40, height: 40, minWidth: 40, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "none", cursor: "pointer", color: "#a1a1aa", fontSize: 17 }}>✕</button>
               </div>
 
               {onPlayer && (
                 <button onClick={() => onPlayer(sel.id)}
-                  style={{ width: "100%", background: "rgba(167,139,250,0.15)", border: `1px solid ${GC.purp}44`, borderRadius: 9, padding: "8px", cursor: "pointer", color: GC.purp, fontSize: 11, fontWeight: 800, marginBottom: 12 }}>
+                  style={{ width: "100%", minHeight: 42, background: "rgba(167,139,250,0.15)", border: `1px solid ${GC.purp}44`, borderRadius: 9, padding: "8px", cursor: "pointer", color: GC.purp, fontSize: 11, fontWeight: 800, marginBottom: 12 }}>
                   📋 開啟完整選手檔案
                 </button>
               )}
 
               <div data-testid="roster-detail-game-mode" style={{ display: "flex", gap: 5, marginBottom: 12, padding: 3, background: "rgba(255,255,255,0.04)", borderRadius: 9 }}>
                 {["MOBA", "CS"].map((view) => (
-                  <button key={view} onClick={() => setDetailMode(view)} style={{ flex: 1, border: "none", borderRadius: 7, padding: "6px 8px", cursor: "pointer", background: detailMode === view ? (view === "CS" ? "rgba(251,146,60,0.2)" : "rgba(167,139,250,0.2)") : "transparent", color: detailMode === view ? (view === "CS" ? "#fed7aa" : GC.purp) : GC.gray, fontSize: 10, fontWeight: 800 }}>{view}</button>
+                  <button key={view} onClick={() => setDetailMode(view)} style={{ flex: 1, minHeight: 40, border: "none", borderRadius: 7, padding: "6px 8px", cursor: "pointer", background: detailMode === view ? (view === "CS" ? "rgba(251,146,60,0.2)" : "rgba(167,139,250,0.2)") : "transparent", color: detailMode === view ? (view === "CS" ? "#fed7aa" : GC.purp) : GC.gray, fontSize: 10, fontWeight: 800 }}>{view}</button>
                 ))}
-              </div>
+        </div>
 
               <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
                 <div style={{ flex: 1, background: detailMode === "MOBA" ? "rgba(167,139,250,0.18)" : "rgba(167,139,250,0.12)", borderRadius: 8, padding: 7 }}>
@@ -510,6 +511,8 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
           </div>
         );
       })()}
+      <style>{`@media(max-width:400px){[data-roster-screen] [data-roster-card]{align-items:flex-start;flex-wrap:wrap;gap:8px;padding:10px!important}[data-roster-screen] [data-roster-card-summary]{flex:1 1 calc(100% - 64px)}[data-roster-screen] [data-roster-card-meta]{width:100%;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;text-align:left!important;padding-top:7px;border-top:1px solid rgba(255,255,255,.06)}[data-roster-screen] [data-roster-card-meta]>div:first-child{text-align:left!important}[data-roster-screen] [data-roster-card-meta]>span{justify-self:start}[data-roster-modal]{align-items:flex-start;padding:10px}[data-roster-modal-body]{max-height:calc(100vh - 20px);padding:14px!important}}@media(prefers-reduced-motion:reduce){[data-roster-screen] *{scroll-behavior:auto!important;transition:none!important}}`}</style>
+      </div>
     </ManageFrame>
   );
 }
