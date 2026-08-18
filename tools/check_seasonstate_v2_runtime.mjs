@@ -129,6 +129,44 @@ ck("[v2]", "H2. active 指向不存在的 Event 時必須 fail closed（C6/C10�
     return a.legacyState == null;
   })());
 
+//  ⚠ H1/H2 改的是 **v2 側**，那會先讓 validate 失敗（`duplicate_competition`／
+//    `final_competition_mismatch`）⇒ `activeEventOf` 回 null ⇒ adapter 因為
+//    「找不到 event」而拒絕，**scope 檢查根本沒被執行到**。
+//    要單獨驗 scope 檢查，必須改 **legacy 側**：v2 保持合法、event 找得到，
+//    此時唯一能拒絕的就是 scope 比對本身。
+const scopeBroken = (() => {
+  const moved = JSON.parse(JSON.stringify(freshLegacy));
+  const aid = moved.activeEventId;
+  if (moved.events?.[aid]) moved.events[aid].rankingCompetitionId = "comp:__legacy_moved__";
+  return moved;
+})();
+const scopeV2 = V2.wrapLegacySeasonState({ legacyState: freshLegacy, competitionHistory: [], awardLedger: {} });
+
+ck("[v2]", "H3. legacy scope 變動時 adapter 必須 fail closed（純 scope 檢查，v2 仍合法）",
+  V2.validateSeasonStateV2(V2.normalizeSeasonStateV2(scopeV2)).ok === true
+  && !!V2.activeEventOf(scopeV2)
+  && V2.activeEventAdapter({ seasonStateV2: scopeV2, legacyState: scopeBroken }).legacyState == null,
+  j({ v2Valid: V2.validateSeasonStateV2(V2.normalizeSeasonStateV2(scopeV2)).ok,
+      eventFound: !!V2.activeEventOf(scopeV2) }));
+
+//  ⚠ 這一條證明 `competitionView()` **真的經過 adapter**。若它直接讀
+//    `get().competition`，fail-closed 就不會傳導到畫面——那正是 scope safety
+//    被繞過而沒人發現的形狀。
+ck("[v2]", "H4. adapter fail closed 時 competitionView 必須跟著沒有賽季（證明 view 走 adapter）",
+  await (async () => {
+    const S = await fresh("v2rt-scopeview");
+    S.getState().startNewGame("standard");
+    S.getState().ensureCompetitionSeason();
+    const good = S.getState().competitionView().hasSeason;
+    const broken = JSON.parse(JSON.stringify(S.getState().competition));
+    const aid = broken.activeEventId;
+    if (broken.events?.[aid]) broken.events[aid].rankingCompetitionId = "comp:__legacy_moved__";
+    S.setState({ competition: broken });          // 只換 legacy，不動 v2 sidecar
+    const after = S.getState().competitionView().hasSeason;
+    return good === true && after === false;
+  })(),
+  "健康時 hasSeason=true；legacy scope 移位後必須變 false");
+
 // ── B. save → reload（C11）──────────────────────────────────────────────
 st1().save();
 const savedRaw = raw;

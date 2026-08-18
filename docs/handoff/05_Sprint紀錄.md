@@ -9776,3 +9776,42 @@ I rollover S1→S2（CTA 消失、畫面更新）／J 無新的 Competition runt
 - **`tools/verify.mjs` 不含任何 browser gate**：賽事頁全空仍會全綠，
   這是本案能潛伏 60+ 個 sprint 的原因。補上 browser gate 是後續必做。
 - **Q7f 尚未整合**（`origin/q7a/3b-multi-event` = `ed8cc84`，已驗證但未部署）。
+
+---
+
+## Competition Release Gate（2026-08-19）
+
+`tools/check_competition_release_gate.mjs` —— Competition / Season / Event /
+Ranking / Honors / Season Recap 相關改動在 **merge / deploy 前的正式入口**。
+Claude、Codex、任何人都用同一支。9 個區段：`v2_runtime`、`v2_sealing_m2`、
+`circuit_points`、`multi_event`、`career_final`、`asia_finals`、`team_honors`、
+`q6`、`build`。使用時機與行為見 `docs/ai/跨模型交接流程.md` §10。
+
+### 它補的是什麼洞
+
+**`tools/verify.mjs` 不含任何 browser gate。** 賽事頁可以整頁失效，
+29 個區段仍會全綠——2026-08-18 的 P0 事故（整條賽事生命週期死亡）
+能潛伏 60+ 個 sprint，這就是原因。
+
+⇒ 本輪**不把 browser gate 粗暴塞進 `verify.mjs`**（那會讓每次全跑都多出十幾分鐘
+的瀏覽器測試），而是另立獨立入口，由「改到 Competition 就必跑」的規則銜接。
+
+### 設計上的兩個刻意選擇
+
+1. **不在第一個 FAIL 就中止**——全部跑完，一次看到完整故障面。
+   排查時最耗時的是「修一個、再跑一次、又發現一個」。
+2. **除了 exit code 還驗輸出形狀**（寫死通過數）。
+   `exit 0` 但沒印出預期通過行一樣算 FAIL ⇒ 腳本提早 return 會被抓到。
+   代價是新增斷言必須同步更新——那是刻意的摩擦。
+
+### ⚠ 兩件不得誤讀的事
+
+1. **Release Gate 全綠 ≠ Competition 已完成。**
+   **Multi-Event SeasonState v2 sealing 仍未完成**，封存目前走 legacy path，
+   `P0_V2_SEALING_BOUNDARY = false` 必須保留。Release Gate 覆蓋的是
+   「現況不得退化」。缺口見
+   `review/mainline-defects/MULTI_EVENT_SEALING_COMPLETION_TODO.md`。
+2. **`check_season_state_v2_migration_q7b` 刻意未納入。**
+   它自己讀 `made.state.competition.id`（Q7a-3b 起不存在），
+   **在乾淨 main 上就崩潰**，與它要防守的缺陷同源。
+   修好該 verifier 自身是獨立工作項，**本輪未修**。

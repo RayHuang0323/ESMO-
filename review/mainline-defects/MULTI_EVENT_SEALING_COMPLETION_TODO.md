@@ -105,8 +105,21 @@ const P0_V2_SEALING_BOUNDARY = false;
 4. 最後把旗標翻成 `true`，並確認全套 gate 仍綠
 5. 移除本文件與 `_sealSeasonIfFinished` 內的停用註解
 
+## ⚠ 不得因 Release Gate 全綠而誤判本項已完成
+
+2026-08-19 起有 `tools/check_competition_release_gate.mjs`（9 區段，merge/deploy 前必跑）。
+它覆蓋的是**現況不得退化**，**不是** v2 已全部到位：
+
+- Release Gate 內的封存驗證（`q6`、`v2_sealing_m2`）走的是 **legacy sealing path**
+- `P0_V2_SEALING_BOUNDARY = false` 期間，3b-M2 boundary **根本不會被執行**
+  ⇒ Release Gate 綠，只證明 legacy 封存沒壞，**不證明 v2 sealing 可用**
+- 本文件 1–5 項全部解決、旗標翻成 `true` 之後，才需要重跑 Release Gate 確認
+
+⇒ **判定本項完成的標準是旗標為 `true` 且全綠，不是 Release Gate 綠。**
+
 ## 相關文件
 
 - `review/mainline-defects/SEASONSTATE_V2_LEGACY_CUTOFF_DIAGNOSIS.md` —— root cause 與 P0
 - `review/mainline-defects/SEASONSTATE_V2_RUNTIME_CONTRACT.md` —— C1–C12 契約
 - `review/mainline-defects/SEASONSTATE_V2_CODEX_HANDOFF.md` —— 原始設計意圖與歷史
+- `docs/ai/跨模型交接流程.md` §10 —— Competition Release Gate 的使用時機與涵蓋範圍
