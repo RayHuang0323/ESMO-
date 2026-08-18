@@ -412,3 +412,52 @@ const state = adapter.legacyState;      // ← 改回 get().competition 即回�
    否則同類缺陷會再次無聲通過。至少涵蓋：賽事頁可到達、
    `competitionView().hasSeason` 為真、既有存檔可載入；
    並以 mutation 驗證（強制 `legacyState = null` 時必須紅）
+
+---
+
+# 10. P0 Competition Runtime Recovery：已知代價（2026-08-18）
+
+> 本節記錄**已實施的緊急處置**與它明確承擔的風險。
+> 這不是 v2 的最終架構，是為了讓正式站恢復可玩而刻意做的暫時回退。
+
+## 10.1 代價聲明
+
+> **P0 Hotfix 暫時撤回 SeasonState v2 的 runtime scope safety 與 sealing boundary，
+> legacy competition 恢復為 gameplay truth 的直接 runtime 路徑。
+> 這是刻意的 production recovery，不是 v2 的最終架構。
+> 完整 v2 migration / scope safety / sealing semantics 必須在後續獨立修復。**
+
+## 10.2 實際改動（僅 `profileStore.js`）
+
+| 位置 | 改動 |
+|---|---|
+| `_advanceCompetition` / `startFixtureMatch` / `completeFixtureMatch` / `forfeitFixture` / `_sealSeasonIfFinished` / `rollToNextCompetitionSeason` / `competitionView` / `_writeFixtureResultFromMatch` | 資料源 `get().activeCompetitionEvent().legacyState` → `get().competition`（8 處） |
+| `_sealSeasonIfFinished` 內的 3b-M2 boundary 區塊 | 以 `const P0_V2_SEALING_BOUNDARY = false;` 門控；**區塊內容一行未改**，改回 `true` 即完全復原 |
+
+**未改動**：`seasonStateV2.js`、`seasonSealingV2.js`、`seasonState.js`、任何 Competition UI、任何 verifier。
+`activeCompetitionEvent()` 本身保留，仍供 `competitionView().activeEvent` 與 Event 查詢使用。
+
+## 10.3 明確承擔的風險
+
+1. **多 Event scope 檢查暫時失效。** Codex 交接文件 §9 明確警告不要移除
+   `ceb5b6f`／`6f498065` 建立的 fail-closed scope safety。本次確實移除了它。
+   ⚠ 但差別要講清楚：那道閘門在 `03a2fbc` 上**擋掉的是全部**，不是錯誤 scope——
+   v2 永遠建不出 Event（§9.1）⇒ 它已經不是安全網，是永久封鎖。
+   回退不是拆掉運作中的保護，是暫時打開一道卡死的門。
+2. **v2 sealing boundary 暫時不執行。** 封存改回 Q4/Q5/Q6 的 legacy 實作
+   （Codex §5.3 確認該段程式碼完整保留）。多 Event 的 Season boundary 檢查
+   （「另一個 Event 還開著就不能封 Season」）在 P0 期間沒有作用。
+3. **`seasonStateV2` 仍會在 load/save 時計算並落盤**，但 runtime 不再讀它。
+   ⇒ 它變成純粹的旁路資料，不影響玩法，也不會因為錯誤而阻斷功能。
+4. **本回退不改變任何存檔內容。** 實測：注入存檔後進出賽事頁，
+   localStorage 逐位元組相同；fixtures／outcomes／competitions／events／
+   players／資金／榮耀／獎金收據全部保留。
+
+## 10.4 後續必做（獨立於 P0）
+
+§9.7 的四項不變，並追加：
+
+5. 修好 v2 migration 後，**把這兩處 wiring 改回去**並移除
+   `P0_V2_SEALING_BOUNDARY` 旗標，恢復 scope safety 與 sealing boundary。
+6. 在改回去之前，先補上能證明「v2 真的建得出 active Event」的 verifier，
+   否則會再次把整條 runtime 鎖死。

@@ -812,7 +812,8 @@ export const useProfileStore = create((set, get) => ({
    * 沒有賽季（例如還沒建立）⇒ 不阻擋，行為與 Q3 之前完全相同。
    */
   _advanceCompetition(fromDay, days) {
-    const state = get().activeCompetitionEvent().legacyState;
+    //  ⚠ P0 HOTFIX 2026-08-18：暫時回退 v2 wiring（理由見 `competitionView()` 檔內說明）
+    const state = get().competition;
     if (!state?.schema) return { daysAdvanced: days, stoppedBy: null };
     const res = advanceSeasonDays({
       state, fromDay, days, playerRoster: get().players ?? [],
@@ -839,7 +840,8 @@ export const useProfileStore = create((set, get) => ({
   startFixtureMatch(fixtureId, now = Date.now()) {
     const ensured = get().ensureCompetitionSeason();
     if (!ensured.ok) return { ok: false, errors: ensured.errors, reason: ensured.errors[0]?.message ?? null };
-    const state = get().activeCompetitionEvent().legacyState;
+    //  ⚠ P0 HOTFIX 2026-08-18：暫時回退 v2 wiring（理由見 `competitionView()` 檔內說明）
+    const state = get().competition;
     const fixture = fixtureById(state, fixtureId);
     if (!fixture) return { ok: false, errors: [{ code: "fixture", message: "找不到這場賽程" }], reason: "找不到這場賽程" };
 
@@ -921,7 +923,8 @@ export const useProfileStore = create((set, get) => ({
    * ⚠ 只接受已經 `launched` 的場次，且同一場只能寫一次賽果（D11 不可變）。
    */
   completeFixtureMatch({ fixtureId, winner, score, duration, seed } = {}) {
-    const state = get().activeCompetitionEvent().legacyState;
+    //  ⚠ P0 HOTFIX 2026-08-18：暫時回退 v2 wiring（理由見 `competitionView()` 檔內說明）
+    const state = get().competition;
     if (!state?.schema) return { ok: false, errors: [{ code: "no_season", message: "目前沒有賽季" }] };
     const res = applyCompleted(state, { fixtureId, winner, score, duration, seed });
     if (!res.ok) return { ok: false, errors: res.errors };
@@ -938,7 +941,8 @@ export const useProfileStore = create((set, get) => ({
    * MVP 的棄權只有敗場：不扣聲望、不罰款、不降級。
    */
   forfeitFixture(fixtureId, reason = "玩家棄權") {
-    const state = get().activeCompetitionEvent().legacyState;
+    //  ⚠ P0 HOTFIX 2026-08-18：暫時回退 v2 wiring（理由見 `competitionView()` 檔內說明）
+    const state = get().competition;
     if (!state?.schema) return { ok: false, errors: [{ code: "no_season", message: "目前沒有賽季" }] };
     const res = applyForfeit(state, { fixtureId, reason });
     if (!res.ok) return { ok: false, errors: res.errors };
@@ -963,11 +967,27 @@ export const useProfileStore = create((set, get) => ({
    *   反過來就得先算一次名次才知道發多少，等於有兩份名次。
    */
   _sealSeasonIfFinished() {
-    let state = get().activeCompetitionEvent().legacyState;
+    //  ⚠ P0 HOTFIX 2026-08-18：暫時回退 v2 wiring（理由見 `competitionView()` 檔內說明）
+    let state = get().competition;
     if (!state?.schema) return { sealed: false, final: null, award: null };
 
+    //  ⚠ P0 HOTFIX 2026-08-18：暫時停用 3b-M2 的 v2 sealing boundary。
+    //
+    //  這個區塊靠 `seasonStateV2` 的 active Event 決定要封哪個 Event，但 v2 sidecar
+    //  永遠建不出 Event——`wrapLegacySeasonState()` 讀的是已淘汰的
+    //  `legacyState.competition`（Q7a-3b 之後改成 `competitions{}` map）⇒ 守衛必定
+    //  觸發、v2 為空骨架 ⇒ `event2` 為 null ⇒ `sealCompetitionEvent()` 失敗 ⇒
+    //  在此提早 return，下方 Q4/Q5/Q6 的既有 legacy 封存實作**永遠到不了**，
+    //  賽季因此無法封存（實測：打完一季後 `final` 仍是 undefined）。
+    //
+    //  ⚠ 這是**暫時 rollback，不是刪除**：把下面的旗標改回 `true` 即完全復原
+    //    3b-M2 行為。區塊內容一行未改，`seasonSealingV2.js`／`seasonStateV2.js` 未動。
+    //  ⚠ 已知代價：v2 的 sealing boundary（多 Event scope 檢查）暫時失效。
+    //    完整修復見 review/mainline-defects/SEASONSTATE_V2_LEGACY_CUTOFF_DIAGNOSIS.md
+    const P0_V2_SEALING_BOUNDARY = false;
+
     // 3b-M2: route live completion through the Event then Season boundary.
-    {
+    if (P0_V2_SEALING_BOUNDARY) {
       const po2 = ensurePlayoffs(state);
       if (po2.ok && po2.state !== state) {
         state = po2.state;
@@ -1173,7 +1193,8 @@ export const useProfileStore = create((set, get) => ({
    *      產生的也是同一份賽程，不會出現兩份不同的 S2。
    */
   rollToNextCompetitionSeason() {
-    const state = get().activeCompetitionEvent().legacyState;
+    //  ⚠ P0 HOTFIX 2026-08-18：暫時回退 v2 wiring（理由見 `competitionView()` 檔內說明）
+    const state = get().competition;
     const can = canRollSeason(state);
     if (!can.ok) return { ok: false, errors: [{ code: "cannot_roll", message: can.reason }], reason: can.reason };
 
@@ -1236,8 +1257,26 @@ export const useProfileStore = create((set, get) => ({
   },
   /** 賽事總覽（畫面唯一入口；不得自己算積分榜或自己找下一場）。 */
   competitionView() {
+    //  ⚠ HOTFIX（2026-08-18）：資料源暫時改回 legacy competition。
+    //
+    //  原本是 `const state = adapter.legacyState;`。`activeEventAdapter` 在 v2 投影
+    //  找不到對應 event 時回傳 `legacyState: null`，於是整個賽事總覽退化成
+    //  「目前沒有賽季」——**即使 legacy competition 的資料完整存在**。
+    //
+    //  而 v2 投影**永遠**建不出 event：`wrapLegacySeasonState` 的守衛讀
+    //  `legacyState.competition.id`，那是單一賽制時代的屬性；Q7a-3b 之後賽季狀態
+    //  存的是 `competitions` map ＋ `activeEventId`（正式取法是 `activeCompetitionOf`）。
+    //  ⇒ 守衛必定觸發、v2 為空骨架、adapter 必定切斷 legacy。
+    //  新舊存檔皆然：剛建立完賽季的全新遊戲也會顯示「尚未建立賽季。」
+    //
+    //  這是**回退 wiring**，不是修 v2：`seasonStateV2` 完全保留、`seasonStateV2.js`
+    //  一行未改、沒有新增任何 fallback。v2 是唯讀投影（load／save 時重新推導），
+    //  沒有資料寫入依賴它 ⇒ 本改動不影響任何存檔內容。
+    //
+    //  完整修復（migration 讀取路徑 ＋ sealed event 的 final reference）另案處理，
+    //  診斷與後續工作見 `review/mainline-defects/SEASONSTATE_V2_LEGACY_CUTOFF_DIAGNOSIS.md`。
     const adapter = get().activeCompetitionEvent();
-    const state = adapter.legacyState;
+    const state = get().competition;
     if (!state?.schema) {
       return {
         hasSeason: false, standings: null, next: null, today: null, progress: null, live: null,
@@ -1821,7 +1860,8 @@ export const useProfileStore = create((set, get) => ({
    * 只由 `reportMatchResult` 呼叫；換算規則在 `fixtureResultBridge`（純函式）。
    */
   _writeFixtureResultFromMatch(result, session) {
-    const state = get().activeCompetitionEvent().legacyState;
+    //  ⚠ P0 HOTFIX 2026-08-18：暫時回退 v2 wiring（理由見 `competitionView()` 檔內說明）
+    const state = get().competition;
     const fixtureId = fixtureIdOfSession(session);
     if (!state?.schema || !fixtureId) return { ok: false, errors: [{ code: "no_fixture", message: "這場不是賽程比賽" }] };
     const fixture = fixtureById(state, fixtureId);
