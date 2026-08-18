@@ -35,16 +35,11 @@ const j = (v) => JSON.stringify(v);
 const fresh = async (label) => (await import(`../src/platform/profileStore.js?${label}`)).useProfileStore;
 const eventsOfV2 = (v2) => (v2?.gameModes ?? []).flatMap((m) => (m.circuits ?? []).flatMap((c) => c.events ?? []));
 
-// 讀既有存檔（fixture 路徑集中在一處，方便後續改為 repo 內資產）
-const FIXTURE_DIRS = [
-  new URL("../review/fixtures/", import.meta.url),
-  new URL("../../", import.meta.url),
-];
+// Fixtures live in the repo. No repo-external fallback: a missing fixture is
+// a real failure, not something to go hunting for in a scratch directory.
+const FIXTURES = new URL("../review/fixtures/competition/", import.meta.url);
 const loadFixture = (name) => {
-  for (const dir of FIXTURE_DIRS) {
-    try { return JSON.parse(readFileSync(new URL(name, dir), "utf8")); } catch { /* 下一個 */ }
-  }
-  return null;
+  try { return JSON.parse(readFileSync(new URL(name, FIXTURES), "utf8")); } catch { return null; }
 };
 
 // ── A. 全新遊戲建立 Season ──────────────────────────────────────────────

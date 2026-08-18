@@ -16,7 +16,7 @@ const { startDevServer, launchChrome, RESOLVE_APP_MODULES } = await import("./br
 const VITE_PORT = 5347;
 const CDP_PORT = 9367;
 const HEADLESS = !process.argv.includes("--headed");
-const loadSave = (name) => JSON.parse(readFileSync(new URL(`../../${name}`, import.meta.url), "utf8"));
+const loadSave = (name) => JSON.parse(readFileSync(new URL(`../review/fixtures/competition/${name}`, import.meta.url), "utf8"));
 const SAVE_NONE = loadSave("s7d_incomplete.json");
 const SAVE_AI_ONE = loadSave("s7d_s1_champion.json");
 let pass = 0;

@@ -17,7 +17,7 @@ const VITE_PORT = 5337;
 const CDP_PORT = 9357;
 const HEADLESS = !process.argv.includes("--headed");
 
-const loadSave = (name) => JSON.parse(readFileSync(new URL(`../../${name}`, import.meta.url), "utf8"));
+const loadSave = (name) => JSON.parse(readFileSync(new URL(`../review/fixtures/competition/${name}`, import.meta.url), "utf8"));
 const SAVE_READY = loadSave("s7b_finals_ready.json");
 const SAVE_SEMIS = loadSave("s7b_finals_semis_done.json");
 const SAVE_SEALED = loadSave("s7b_season_sealed.json");
