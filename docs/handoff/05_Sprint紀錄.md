@@ -9696,3 +9696,83 @@ JS 無法反射進閉包）。
 
 - R57 release commit `83dc14917c93bac1956a8ffd1869fb10de4a82d5` 已透過既有 `main` → GitHub Pages workflow 合併部署；R57 matchup acceptance verifier 與報告見 `review/cs-gameplay/CS_AI_TEAM_MATCHUP_ACCEPTANCE_R57_{SPEC,REPORT}.md`。
 - 本次部署沒有修改 CS 16 項能力、roster、scenario、seed 或部署架構；僅為 release/main 的必要文件與 `profileStore` 合併衝突做保守整合。
+
+---
+
+## P0 Competition Runtime Recovery 部署（2026-08-18，已部署正式站）
+
+`main` = `08df8ec`，正式站 bundle `assets/index-DxuOAjHL.js`，
+GitHub Actions `Deploy Vite site to GitHub Pages`（push `main` 觸發）。
+
+### 為什麼需要這個 hotfix
+
+R58.2（`03a2fbc`）上**整條賽事生命週期是死的**——不是畫面空白，是功能全失：
+無法推進天數、開始比賽、完成比賽、棄權、封存賽季、換季。
+純 main worktree 實測：全新遊戲建立賽季後，賽事頁顯示「尚未建立賽季。」。
+
+根因是一個過期的存取路徑：`wrapLegacySeasonState()` 守衛讀
+`legacyState.competition.id`，那是單一賽制時代的屬性；Q7a-3b 之後改成
+`competitions{}` map（正式取法 `activeCompetitionOf()`）⇒ 守衛必定觸發、
+v2 sidecar 永遠是空骨架、adapter 依設計 `legacyState: null`，
+8 個 runtime call sites 同時失去資料源。
+
+**Q7f 不是來源**：以 `origin/main` 建立的獨立 worktree（零 Q7f 程式碼）
+跑 Q7f 從未改過的 `browser_check_circuit_points_ui`，失敗形狀完全相同。
+
+### 改動
+
+僅 `src/platform/profileStore.js`（＋診斷文件）：
+
+- 8 個 runtime call sites：`get().activeCompetitionEvent().legacyState` → `get().competition`
+- `_sealSeasonIfFinished()` 的 3b-M2 boundary 區塊：以
+  `const P0_V2_SEALING_BOUNDARY = false;` 門控，**區塊內容一行未改**，
+  改回 `true` 即完全復原；下方 Q4/Q5/Q6 legacy 封存實作重新成為執行路徑。
+
+`seasonStateV2.js`／`seasonSealingV2.js`／`seasonState.js` 零改動，
+未新增 fallback、未改 UI、未清理 dead code、未動 v2 migration。
+
+### ⚠ 已知代價
+
+> P0 Hotfix 暫時撤回 SeasonState v2 的 runtime scope safety 與 sealing boundary，
+> legacy competition 恢復為 gameplay truth 的直接 runtime 路徑。
+> 這是刻意的 production recovery，不是 v2 的最終架構。
+> 完整 v2 migration / scope safety / sealing semantics 必須在後續獨立修復。
+
+Codex 交接文件 §9 警告不要移除 fail-closed scope safety，本次確實移除了。
+差別在於：那道閘門在 `03a2fbc` 上擋掉的是**全部**而非錯誤 scope
+⇒ 這是暫時打開一道卡死的門，不是拆掉運作中的鎖。
+
+### 驗證
+
+本地 gate：`circuit_points 21/21`、`career_final 12/12`、`asia_finals 15/15`、
+`team_honors 15/15`、`multi_event 8/8`、`q6 20/20`、build 通過。
+（`career_final` 與 `q6` 在啟用 legacy sealing 前是 6/12 與 10/20。）
+
+完整生命週期實測：新遊戲 → 推進 → 開賽／完賽／棄權 → 封存成功
+（`final` 產生、`careerFinalRank` 有值）→ rollover `S1 → S2`、S1 進歷史。
+
+**存檔零遺失**：`s7e_player_one`（fixtures 144／outcomes 88／competitions 5／
+events 5／players 5／funds 1,200,000／honors 1）與 `s7b_season_sealed`
+（fixtures 148／outcomes 148／awards 1）全部保留；進出賽事頁前後
+localStorage 逐位元組相同。
+
+**Mutation（證明 gate 有鑑別力）**：旗標翻回 `true` ⇒ `q6` 20/20→10/20、
+`career_final` 12/12→6/12；`competitionView` 改回 `adapter.legacyState` ⇒
+`circuit_points` 21/21→7/21、`multi_event` 8/8→3/8。兩者皆還原，檔案逐位元組相同。
+
+### 正式站 smoke（10/10）
+
+A 不再顯示「尚未建立賽季」／B 全新賽季可進入 CompetitionScreen／
+C 巡迴積分可見／D Career Final／E Asia Finals／F Team Honors／
+G 賽季封存／H canRoll（CTA「▶ 開始第 2 賽季」出現）／
+I rollover S1→S2（CTA 消失、畫面更新）／J 無新的 Competition runtime error。
+
+### 尚未做（刻意）
+
+- **SeasonState v2 正式修復**：migration 讀取路徑、sealed Event 的 final
+  reference（`sealed_without_final`）、scope safety 與 sealing boundary 復原，
+  全部列為獨立後續工作，見
+  `review/mainline-defects/SEASONSTATE_V2_LEGACY_CUTOFF_DIAGNOSIS.md` §9.7／§10.4。
+- **`tools/verify.mjs` 不含任何 browser gate**：賽事頁全空仍會全綠，
+  這是本案能潛伏 60+ 個 sprint 的原因。補上 browser gate 是後續必做。
+- **Q7f 尚未整合**（`origin/q7a/3b-multi-event` = `ed8cc84`，已驗證但未部署）。
