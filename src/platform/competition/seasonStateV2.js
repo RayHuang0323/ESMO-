@@ -137,18 +137,11 @@ function awardEnvelopeOf(final, awardLedger = {}) {
   return { sourceRef, awardReceiptRef, awardSummary };
 }
 
-export function wrapLegacySeasonState({ legacyState, competitionHistory = [], awardLedger = {} } = {}) {
+// Pre-Q7a-3b shape: exactly one top-level Competition, no Event map. This is
+// the original wrapper kept verbatim in behaviour so old saves and the
+// existing M2 sealing verifier keep migrating the way they always did.
+function wrapLegacySingleCompetition({ legacyState, awardLedger = {}, history = [] } = {}) {
   const legacyCompetition = objectOf(legacyState?.competition);
-  const history = historyRefs(competitionHistory);
-  if (!legacyState?.schema || !legacyCompetition?.id) {
-    return createEmptySeasonStateV2({
-      season: legacyState?.season,
-      seed: legacyState?.seed,
-      startDay: legacyState?.startDay,
-      history,
-    });
-  }
-
   const season = emptySeason({
     season: legacyState.season,
     seed: legacyState.seed,
@@ -166,14 +159,23 @@ export function wrapLegacySeasonState({ legacyState, competitionHistory = [], aw
     kind: "league",
     legacyStateSchema: legacyState.schema,
     legacyStatePath: "competition",
-    // Exactly one reference slot. The Competition object itself stays in v1.
     competitionRef: {
       schema: legacyCompetition.schema ?? "Competition.v1",
       id: legacyCompetition.id,
       path: "competition",
     },
-    stageIds: stageIdsOf(legacyState),
-    playoffRef: playoffRefOf(legacyState),
+    stageIds: [
+      legacyState?.stage?.id,
+      legacyState?.playoff?.stage?.id,
+      legacyState?.playoff?.qualification?.id,
+    ].filter((id) => id != null),
+    playoffRef: objectOf(legacyState?.playoff)
+      ? {
+        id: legacyState.playoff.id ?? null,
+        stageId: legacyState.playoff.stage?.id ?? null,
+        qualificationId: legacyState.playoff.qualification?.id ?? null,
+      }
+      : null,
     fixtureIds: idsOf(legacyState.fixtures),
     outcomeIds: idsOf(legacyState.outcomes),
     finalId: legacyState.final?.id ?? null,
@@ -197,15 +199,162 @@ export function wrapLegacySeasonState({ legacyState, competitionHistory = [], aw
     points: null,
     pointsStatus: "not_started",
   };
-
   return {
     schema: SEASON_STATE_V2_SCHEMA,
     version: 2,
     status: SEASON_STATUS.active,
     season,
     active: { gameMode: "moba", circuitId, eventId },
-    // Exactly one MOBA career circuit/event is introduced by this migration.
     gameModes: [{ gameMode: "moba", circuits: [circuit] }],
+    history,
+  };
+}
+
+export function wrapLegacySeasonState({ legacyState, competitionHistory = [], awardLedger = {} } = {}) {
+  const history = historyRefs(competitionHistory);
+  const emptyFor = () => createEmptySeasonStateV2({
+    season: legacyState?.season,
+    seed: legacyState?.seed,
+    startDay: legacyState?.startDay,
+    history,
+  });
+
+  // The legacy season state has held its Competitions in a map since Q7a-3b;
+  // there is no top-level `competition` property to read. Events are the unit
+  // this projection mirrors, one v2 Event per legacy Event, and each Event
+  // resolves its own Competition through `rankingCompetitionId`.
+  const legacyEvents = objectOf(legacyState?.events) ?? {};
+  const legacyCompetitions = objectOf(legacyState?.competitions) ?? {};
+  const eventIds = Object.keys(legacyEvents);
+  if (!legacyState?.schema) return emptyFor();
+  // Pre-Q7a-3b saves have no Event map and carry a single top-level
+  // Competition. Migration has to keep understanding that shape, so the
+  // original single-Event wrapper stays as the path for it.
+  if (!eventIds.length) {
+    return objectOf(legacyState?.competition)?.id
+      ? wrapLegacySingleCompetition({ legacyState, awardLedger, history })
+      : emptyFor();
+  }
+
+  const season = emptySeason({
+    season: legacyState.season,
+    seed: legacyState.seed,
+    startDay: legacyState.startDay,
+  });
+  const fixtures = Array.isArray(legacyState.fixtures) ? legacyState.fixtures : [];
+  const outcomes = Array.isArray(legacyState.outcomes) ? legacyState.outcomes : [];
+  // Single Event keeps the legacy equivalence where the Season final and the
+  // Event final are the same object. Multi Event never borrows the Season
+  // seal: that object carries no id and is only a sealing marker.
+  const onlyOneEvent = eventIds.length === 1;
+
+  const buildEvent = (eventId) => {
+    const legacyEvent = objectOf(legacyEvents[eventId]);
+    const competitionId = stringOrNull(legacyEvent?.rankingCompetitionId)
+      ?? stringOrNull((legacyEvent?.competitionIds ?? [])[0]);
+    const entry = competitionId ? objectOf(legacyCompetitions[competitionId]) : null;
+    const competition = objectOf(entry?.competition);
+    // No Competition means no scope. Skip rather than bind to a neighbour.
+    if (!competition?.id) return null;
+
+    const stageIds = [
+      entry?.stage?.id,
+      entry?.playoff?.stage?.id,
+      entry?.playoff?.qualification?.id,
+    ].filter((id) => id != null);
+    const stageSet = new Set(stageIds);
+    const eventFixtures = fixtures.filter((fixture) => stageSet.has(fixture?.stageId));
+    const eventFixtureIds = idsOf(eventFixtures);
+    const fixtureIdSet = new Set(eventFixtureIds);
+    const eventOutcomes = outcomes.filter((outcome) => fixtureIdSet.has(outcome?.fixtureId));
+
+    const legacyFinal = legacyEvent?.final ?? (onlyOneEvent ? (legacyState.final ?? null) : null);
+    const final = awardEnvelopeOf(legacyFinal, awardLedger);
+
+    return {
+      schema: EVENT_V2_SCHEMA,
+      id: eventId,
+      circuitId: legacyEvent?.circuitId ?? circuitIdOf(season.id, legacyEvent?.gameMode ?? "moba", "career"),
+      gameMode: legacyEvent?.gameMode ?? "moba",
+      kind: legacyEvent?.eventKey ?? "league",
+      legacyStateSchema: legacyState.schema,
+      legacyStatePath: `competitions.${competition.id}`,
+      // Exactly one reference slot. The Competition object itself stays in v1.
+      competitionRef: {
+        schema: competition.schema ?? "Competition.v1",
+        id: competition.id,
+        path: `competitions.${competition.id}.competition`,
+      },
+      stageIds,
+      playoffRef: entry?.playoff
+        ? {
+          id: entry.playoff.id ?? null,
+          stageId: entry.playoff.stage?.id ?? null,
+          qualificationId: entry.playoff.qualification?.id ?? null,
+        }
+        : null,
+      fixtureIds: eventFixtureIds,
+      outcomeIds: idsOf(eventOutcomes),
+      finalId: legacyFinal?.id ?? null,
+      // Status is per Event. One season can hold a running league next to
+      // sealed circuit stops, so the Season final cannot answer this.
+      status: legacyFinal ? EVENT_STATUS.sealed : EVENT_STATUS.active,
+      sealedAtDay: legacyFinal?.sealedAtDay ?? null,
+      prizePolicyRef: legacyEvent?.prizePolicy ? legacyPrizePolicyRefFor(competition.id) : null,
+      pointsPolicyRef: null,
+      pointsSettlementRef: null,
+      pointsStatus: legacyFinal ? POINTS_STATUS.policyRequired : POINTS_STATUS.notStarted,
+      // Final is reference-only: never embed FinalStandings.rows here.
+      final,
+    };
+  };
+
+  const events = eventIds.map(buildEvent).filter((event) => event != null);
+  if (!events.length) return emptyFor();
+
+  // Group by the legacy circuit ids the Events already carry. The validator
+  // requires event.circuitId to equal its circuit, so this mirrors rather
+  // than renames.
+  const gameModes = [];
+  for (const event of events) {
+    let mode = gameModes.find((item) => item.gameMode === event.gameMode);
+    if (!mode) { mode = { gameMode: event.gameMode, circuits: [] }; gameModes.push(mode); }
+    let circuit = mode.circuits.find((item) => item.id === event.circuitId);
+    if (!circuit) {
+      circuit = {
+        schema: CIRCUIT_V2_SCHEMA,
+        id: event.circuitId,
+        seasonId: season.id,
+        gameMode: event.gameMode,
+        ladderId: "career",
+        eventIds: [],
+        events: [],
+        points: null,
+        pointsStatus: "not_started",
+      };
+      mode.circuits.push(circuit);
+    }
+    circuit.eventIds.push(event.id);
+    circuit.events.push(event);
+  }
+
+  // `activeEventId` is the legacy focus pointer; `careerEventId` is the career
+  // main line and must never stand in for it. A sealed Season has no active
+  // Event by contract, so the pointer is dropped rather than pointed at a
+  // finished Event.
+  const sealedSeason = legacyState.final != null;
+  const focusId = stringOrNull(legacyState.activeEventId);
+  const focus = focusId ? events.find((event) => event.id === focusId) ?? null : null;
+
+  return {
+    schema: SEASON_STATE_V2_SCHEMA,
+    version: 2,
+    status: sealedSeason ? SEASON_STATUS.sealed : SEASON_STATUS.active,
+    season,
+    active: (sealedSeason || !focus)
+      ? null
+      : { gameMode: focus.gameMode, circuitId: focus.circuitId, eventId: focus.id },
+    gameModes,
     history,
   };
 }
@@ -599,11 +748,30 @@ export function migrateSeasonStateV2({
     // Do not auto-repair a bad scope. Preserve the value so the adapter fails
     // closed and a caller can surface the validator error instead of rebinding.
     if (!validateSeasonStateV2(normalized).ok) return seasonStateV2;
-    if (legacyState?.schema && legacyState?.competition?.id) {
+    const legacyEventMap = objectOf(legacyState?.events) ?? {};
+    const hasLegacyScope = Object.keys(legacyEventMap).length > 0
+      || objectOf(legacyState?.competition)?.id != null;
+    if (legacyState?.schema && hasLegacyScope) {
       const expectedSeasonId = seasonIdOf(legacyState.season);
       // A new legacy season is the one supported rollover boundary: rebuild
       // the metadata wrapper for that new season without touching its IDs.
       if (normalized.season?.id !== expectedSeasonId || normalized.gameModes.length === 0) {
+        return wrapLegacySeasonState({ legacyState, competitionHistory, awardLedger });
+      }
+      // Staleness, not corruption. The projection is derived, so when the
+      // legacy Event set or any Event final has moved on — a circuit gets
+      // attached, a season seals — the stored wrapper is simply out of date
+      // and is rebuilt. Deterministic and idempotent: same legacy in, same
+      // wrapper out. Scope conflicts are handled separately below.
+      const usesEventMap = Object.keys(legacyEventMap).length > 0;
+      const signature = (map) => JSON.stringify(Object.keys(map).sort().map((id) => [id, map[id] ?? null]));
+      const legacySignature = signature(Object.fromEntries(
+        Object.entries(legacyEventMap).map(([id, ev]) => [id, ev?.final?.id ?? null])));
+      const indexedSignature = signature(Object.fromEntries(
+        (normalized.gameModes ?? [])
+          .flatMap((mode) => (mode.circuits ?? []).flatMap((circuit) => circuit.events ?? []))
+          .map((event) => [event.id, event.finalId ?? null])));
+      if (usesEventMap && legacySignature !== indexedSignature) {
         return wrapLegacySeasonState({ legacyState, competitionHistory, awardLedger });
       }
       // A valid v2 save may intentionally have no active Event; preserve it.
@@ -611,7 +779,13 @@ export function migrateSeasonStateV2({
       const indexedEvent = activeEventOf(normalized);
       // Within one season, a competition mismatch is corruption, not a cue to
       // rebind the Event. Keep the value and let the adapter fail closed.
-      if (!indexedEvent || indexedEvent.competitionRef?.id !== legacyState.competition.id) return seasonStateV2;
+      // Scope is compared against the Competition that this Event points at in
+      // the legacy state, not a top-level property that no longer exists.
+      const activeLegacyEvent = objectOf(legacyEventMap[indexedEvent?.id]);
+      const activeLegacyCompetitionId = stringOrNull(activeLegacyEvent?.rankingCompetitionId)
+        ?? stringOrNull((activeLegacyEvent?.competitionIds ?? [])[0])
+        ?? (usesEventMap ? null : stringOrNull(objectOf(legacyState?.competition)?.id));
+      if (!indexedEvent || indexedEvent.competitionRef?.id !== activeLegacyCompetitionId) return seasonStateV2;
       // Final IDs are immutable references. A conflicting stored ID is
       // corruption, not a stale index that migration may silently replace.
       if (indexedEvent.finalId != null && legacyState.final?.id != null && indexedEvent.finalId !== legacyState.final.id) return seasonStateV2;
@@ -731,12 +905,26 @@ export function activeEventAdapter({ seasonStateV2, legacyState } = {}) {
   const validation = validateSeasonStateV2(normalized);
   let event = validation.ok ? activeEventOf(normalized) : null;
   if (validation.ok && !event && normalized?.active == null) {
-    const sealedEvents = (normalized.gameModes ?? [])
-      .flatMap((mode) => (mode.circuits ?? []).flatMap((circuit) => circuit.events ?? []))
-      .filter((candidate) => candidate?.status === EVENT_STATUS.sealed);
-    if (sealedEvents.length === 1) event = sealedEvents[0];
+    // A sealed Season has no active Event by contract, yet the old callers
+    // still need one scoped Event to reach the legacy state. Resolve it from
+    // the legacy focus pointer, which is an explicit value rather than a
+    // guess, and let the scope check below reject it if it does not match.
+    const focusId = stringOrNull(legacyState?.activeEventId);
+    if (focusId) event = eventById(normalized, focusId) ?? null;
+    if (!event) {
+      // Retained for older v2 shapes that predate the focus lookup.
+      const sealedEvents = (normalized.gameModes ?? [])
+        .flatMap((mode) => (mode.circuits ?? []).flatMap((circuit) => circuit.events ?? []))
+        .filter((candidate) => candidate?.status === EVENT_STATUS.sealed);
+      if (sealedEvents.length === 1) event = sealedEvents[0];
+    }
   }
-  const legacyCompetitionId = legacyState?.competition?.id ?? null;
+  // Scope is checked against the Competition that this very Event points at in
+  // the legacy state, not against a top-level property that no longer exists.
+  const legacyEventEntry = objectOf(objectOf(legacyState?.events)?.[event?.id]);
+  const legacyCompetitionId = stringOrNull(legacyEventEntry?.rankingCompetitionId)
+    ?? stringOrNull((legacyEventEntry?.competitionIds ?? [])[0])
+    ?? null;
   const compatible = !!event
     && !!event.competitionRef?.id
     && event.competitionRef.id === legacyCompetitionId;
