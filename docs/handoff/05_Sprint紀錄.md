@@ -10043,3 +10043,91 @@ failed 0/10          （exit 0）
 未 push、未 deploy、未整合 Q7f、未 reset／checkout／clean、未修改上一節任何既有文字。
 `seasonSealingV2.js` 的 `legacyState.competition` 舊形狀假設**仍在**（上一節已列，屬
 Multi-Event sealing 範圍）⇒ 本輪一樣沒動。**gate 全綠代表現有行為沒有回歸，不代表 v2 完成。**
+
+---
+
+## SeasonState v2 最終驗證閉環：mutation 4 ＋ browser harness（2026-08-19）
+
+本節接續 Codex 對 HEAD `5e7e0c6` 的最後交叉驗證。**沒有修改 production code**；
+只補 verifier／browser runner，並把所有暫時 production mutation 還原。
+
+### Mutation 4 原本為何抓不到
+
+`setActiveEvent` 若從 `_setCompetitionState(...)` 退化成裸 `set({ competition })`，但仍緊接
+`save()`，舊 gate 仍會綠。原因是 `save()` 自己會重新計算 SeasonState v2 sidecar；舊 gate
+只在 `setActiveEvent` 返回後與 reload 後取樣，看到的已是被 `save()` 補平的狀態，無法證明
+legacy 與 sidecar 是不是在同一次正式寫入裡完成。
+
+`check_seasonstate_v2_active_focus.mjs` 新增 runtime 斷言：暫時包住 store 的同一個 `save`
+action，並在 original save **尚未執行前**取樣 legacy `activeEventId`、v2
+`active.eventId`、`activeCompetitionEvent().event.id`。三者此時就必須全為 Event B。
+這不是 source 字串掃描，也沒有阻止真正的 save；總數由 30 增為 **31**。
+
+Mutation 先以 `rg` 證明裸 `set({ competition }) + save()` 已落地：
+
+```
+正式 `_setCompetitionState`：31/31 PASS
+裸 `set({ competition })`：  30/31 FAIL
+  save 入口：legacy=B、v2=A、adapter=A
+  save 返回：原本的 post-save／reload 斷言仍全綠
+還原後：                    31/31 PASS
+```
+
+這個結果同時證明新斷言抓的是正式寫入時序，而不是讓後續投影／reload 無法工作。
+
+### Browser harness root cause 與修正
+
+先獨立重現 `multi_event`：Vite 5316 正常回 HTTP 200，但 Chrome/CDP 9338 已消失；
+Chrome target 退出後，共用 CDP `pending` Promise 沒有 close/error reject，也沒有 command
+timeout，因此在第 1 條業務斷言前永久等待，最後只能由 900 秒外層 timeout 殺掉。
+
+fail-fast 診斷取得 Chrome 151 stderr：Windows sandbox／GPU 子行程以
+`0xC0000022`（Access Denied）退出；不是 Playwright（本 repo 使用零依賴 raw CDP），
+也沒有本次 `errno=1455`／commit-limit 訊號。修正如下：
+
+- Vite 改成目前 Node 直接啟動本地 Vite CLI，不再走 `npx + shell:true` 的四層行程樹。
+- CDP pending command 加 timeout，WebSocket close/error 立即 reject；Chrome 啟動失敗會保留
+  stderr 末段、回收 Chrome 與獨立 profile。
+- Chrome 151 的 testing-only sandbox／Graphite cache 旗標只套在 gate 自己的 headless
+  profile，且只造訪本機 Vite；不影響日常 Chrome，也不改 business assertion。
+- `q6` 移除內嵌的第二份無 timeout CDP client，改走同一個共用 harness；
+  `multi_event` 明確 `await server.stop()`。
+- Release Gate 改監看六支腳本真正使用的 12 個 Vite／CDP port；逐段保存完整 log、耗時與
+  失敗原因。若 runner 必須代收新 listener，該段仍判 FAIL；第一段失敗也不會中止後續。
+- Windows build 改由靜態 `cmd.exe /d /s /c "npm run build"` 啟動；Node 24 直接
+  `spawnSync("npm.cmd")` 會回 `EINVAL`，那次 build 根本未開始，不能誤判 production。
+
+### 六支 browser gate 獨立結果
+
+| gate | 結果 | 實際耗時 |
+|---|---:|---:|
+| `circuit_points` | 21/21 PASS | 46.4s |
+| `multi_event` | 8/8 PASS | 16.7s |
+| `career_final` | 12/12 PASS | 30.0s |
+| `asia_finals` | 15/15 PASS | 48.5s |
+| `team_honors` | 15/15 PASS | 30.0s |
+| `q6` | 20/20 PASS | 27.3s |
+
+每支都進入業務斷言；不是只看 Chrome 能不能開。
+
+### 完整 Competition Release Gate（最終 run）
+
+```
+v2_runtime        PASS   0.4s
+v2_active_focus   PASS   0.4s   31/31
+v2_sealing_m2     PASS   0.2s   24/24
+circuit_points    PASS  50.8s   21/21
+multi_event       PASS  17.6s    8/8
+career_final      PASS  31.7s   12/12
+asia_finals       PASS  52.2s   15/15
+team_honors       PASS  45.2s   15/15
+q6                PASS  27.5s   20/20
+build             PASS  11.4s
+passed 10/10，failed 0/10，exit 0
+port 清理：無殘留
+```
+
+完整 stdout/stderr 與 `summary.json` 位於該次 runner 印出的系統 temp log directory；
+逐檔已核對非空，且都有預期 assertion shape。最終 `src/platform/profileStore.js` 與
+`src/platform/competition/seasonStateV2.js` diff 均為 0。Multi-Event sealing、Q7f、
+q7b migration verifier debt 均未碰。

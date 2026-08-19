@@ -13,12 +13,7 @@
 //
 //  執行：`node tools/browser_check_q6.mjs`（會自己起 vite、自己開 Chrome、自己收）。
 // ============================================================================
-import { RESOLVE_APP_MODULES } from "./browser/cdp.mjs";
-import { spawn, spawnSync } from "node:child_process";
-import { createServer } from "node:net";
-import { mkdtempSync, rmSync, existsSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { launchChrome, startDevServer, RESOLVE_APP_MODULES } from "./browser/cdp.mjs";
 
 const VITE_PORT = 5311;
 const CDP_PORT = 9333;
@@ -27,12 +22,6 @@ const CDP_PORT = 9333;
 //    本檔驗的是**官方聯賽的季後賽**，巡迴賽對它只是雜訊。
 const BASE = `http://localhost:${VITE_PORT}/ESMO-/?asiaCircuit=0`;
 
-const CHROME_CANDIDATES = [
-  "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-  "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-  process.env.LOCALAPPDATA ? `${process.env.LOCALAPPDATA}\\Google\\Chrome\\Application\\chrome.exe` : null,
-].filter(Boolean);
-
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let pass = 0, fail = 0;
 const ck = (name, ok, detail = "") => {
@@ -40,97 +29,21 @@ const ck = (name, ok, detail = "") => {
   else { fail++; console.log(`❌ ${name}${detail ? "　" + detail : ""}`); }
 };
 
-// ── CDP：最小驅動（只用到 Runtime.evaluate 與 Page.navigate）──────────────
-class Cdp {
-  constructor(ws) { this.ws = ws; this.id = 0; this.waiting = new Map(); }
-  static async attach(port) {
-    for (let i = 0; i < 60; i++) {
-      try {
-        const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
-        const page = list.find((t) => t.type === "page" && t.webSocketDebuggerUrl);
-        if (page) {
-          const ws = new WebSocket(page.webSocketDebuggerUrl);
-          await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
-          const c = new Cdp(ws);
-          ws.onmessage = (ev) => {
-            const m = JSON.parse(ev.data);
-            if (m.id && c.waiting.has(m.id)) { c.waiting.get(m.id)(m); c.waiting.delete(m.id); }
-          };
-          return c;
-        }
-      } catch { /* Chrome 還沒起來 */ }
-      await sleep(500);
-    }
-    throw new Error("CDP 連不上");
-  }
-  send(method, params = {}) {
-    const id = ++this.id;
-    return new Promise((res) => { this.waiting.set(id, res); this.ws.send(JSON.stringify({ id, method, params })); });
-  }
-  async eval(expr) {
-    const r = await this.send("Runtime.evaluate", {
-      expression: `(async () => { ${expr} })()`, awaitPromise: true, returnByValue: true,
-    });
-    if (r.result?.exceptionDetails) throw new Error(JSON.stringify(r.result.exceptionDetails).slice(0, 400));
-    return r.result?.result?.value;
-  }
-  async goto(url) { await this.send("Page.navigate", { url }); await sleep(1200); }
-}
-
-const procs = [];
-//  ⚠ `shell: true` 之下 `p.kill()` 只殺得到 shell，真正的 vite 會活下來繼續佔
-//    port ⇒ 每跑一次就漏一個。實測一度有 7 個殘留 dev server 還在監聽，而下一次
-//    跑時 `--strictPort` 讓新 vite 直接結束、readiness 的 fetch 卻對**舊的那一個**
-//    成功 ⇒ 驗證器靜默地測到別的 worktree 的原始碼。所以收工要殺整棵行程樹。
-const cleanup = () => {
-  for (const p of procs) {
-    try {
-      if (process.platform === "win32") spawnSync("taskkill", ["/pid", String(p.pid), "/T", "/F"], { stdio: "ignore" });
-      else p.kill();
-    } catch { /* 已經死了就算了 */ }
-  }
-};
-process.on("exit", cleanup);
-
-/** port 現在有沒有人在聽（用「綁得起來嗎」判定，不猜）。 */
-const isPortFree = (port) => new Promise((resolve) => {
-  const s = createServer();
-  s.once("error", () => resolve(false));
-  s.once("listening", () => s.close(() => resolve(true)));
-  s.listen(port, "127.0.0.1");
-});
-
-let userDataDir = null;
+let dev = null;
+let chromeClient = null;
 try {
   // ── ① 起獨立 vite ────────────────────────────────────────────────────
   console.log(`\n▶ 起 vite（port ${VITE_PORT}）`);
-  //  ⚠ port 有人佔就直接失敗，不重試、不換 port：連上不是自己起的 server
-  //    等於靜默地測到別的原始碼（見上方 cleanup 的說明）。
-  if (!(await isPortFree(VITE_PORT))) {
-    throw new Error(`port ${VITE_PORT} 已經有人在聽（多半是上一次跑剩下的 dev server）。請先關掉它再跑。`);
-  }
-  procs.push(spawn("npx", ["vite", "--port", String(VITE_PORT), "--strictPort"], { shell: true, stdio: "ignore" }));
-  for (let i = 0; i < 60; i++) { try { if ((await fetch(BASE)).ok) break; } catch {} await sleep(500); }
+  dev = await startDevServer({ port: VITE_PORT });
 
   // ── ② 起獨立 Chrome（獨立 profile、關掉背景節流）─────────────────────
-  const chrome = CHROME_CANDIDATES.find((p) => existsSync(p));
-  if (!chrome) throw new Error(`找不到 Chrome：${CHROME_CANDIDATES.join(" / ")}`);
-  userDataDir = mkdtempSync(join(tmpdir(), "esmo-q6-chrome-"));
-  console.log(`▶ 起獨立 Chrome（profile: ${userDataDir}）`);
-  procs.push(spawn(chrome, [
-    `--remote-debugging-port=${CDP_PORT}`,
-    `--user-data-dir=${userDataDir}`,
-    "--headless=new", "--no-first-run", "--no-default-browser-check",
-    //  ⚠ 這三個是重點：沒有它們，背景視窗的計時器會被節流到 1/秒，
-    //    跑一整季要等三十分鐘（前幾輪就是這樣才需要人工把分頁點到前景）。
-    "--disable-background-timer-throttling", "--disable-renderer-backgrounding",
-    "--disable-backgrounding-occluded-windows",
-    "--window-size=1280,900", BASE,
-  ], { stdio: "ignore" }));
-
-  const cdp = await Cdp.attach(CDP_PORT);
-  await cdp.send("Runtime.enable");
-  await cdp.send("Page.enable");
+  console.log("▶ 起獨立 Chrome（共用 CDP harness）");
+  chromeClient = await launchChrome({ url: BASE, port: CDP_PORT, headless: true });
+  const cdp = {
+    send: (...args) => chromeClient.send(...args),
+    eval: (expr) => chromeClient.evaluate(expr),
+    goto: async (url) => { await chromeClient.navigate(url); await sleep(1200); },
+  };
   await cdp.goto(BASE);
   await sleep(6000);
 
@@ -259,8 +172,8 @@ try {
   fail++;
   console.log(`\n❌ 執行失敗：${e.message}`);
 } finally {
-  cleanup();
-  if (userDataDir) { try { rmSync(userDataDir, { recursive: true, force: true }); } catch {} }
+  try { if (chromeClient) await chromeClient.close(); }
+  finally { if (dev) await dev.stop(); }
 }
 
 console.log(`\n${pass}/${pass + fail} 通過`);

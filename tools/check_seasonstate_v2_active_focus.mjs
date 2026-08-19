@@ -143,11 +143,37 @@ ck("2) 每個 v2 Event 的 fixture／outcome index 只含**自己賽制**的場�
   }),
   j([EVENT_A, EVENT_B].map((id) => v2EventOf(store().seasonStateV2, id)?.fixtureIds.length ?? null)));
 
-// ── 2) setActiveEvent A → B：三方指標必須一起動 ──────────────────────────
-const sw = store().setActiveEvent(EVENT_B);
+// ── 2) setActiveEvent A → B：三方指標必須在 save 補救前一起動 ─────────────
+//  `save()` 本身會重建／刷新 v2 sidecar。因此只看 setActiveEvent 返回後，抓不到
+//  「先裸 set legacy、再靠 save 修好」的錯誤路徑。這裡暫時包住同一個 runtime
+//  action，在 original save 尚未執行前取樣；不檢查 source 字串，也不阻止真正存檔。
+const originalSave = store().save;
+let saveEntry = null;
+useProfileStore.setState({
+  save: (...args) => {
+    const beforeSave = store();
+    saveEntry = {
+      legacyEventId: beforeSave.competition?.activeEventId ?? null,
+      v2EventId: beforeSave.seasonStateV2?.active?.eventId ?? null,
+      adapterEventId: beforeSave.activeCompetitionEvent()?.event?.id ?? null,
+    };
+    return originalSave(...args);
+  },
+});
+let sw;
+try {
+  sw = store().setActiveEvent(EVENT_B);
+} finally {
+  useProfileStore.setState({ save: originalSave });
+}
 ck("3) setActiveEvent(A → B) 成功", sw.ok === true, j({ errors: sw.errors }));
 ck("4) legacy activeEventId === B", store().competition.activeEventId === EVENT_B,
   store().competition.activeEventId);
+ck("4a) **進入 save() 當下** legacy／v2／adapter 已全數對位 B（不是靠 save 補救）",
+  saveEntry?.legacyEventId === EVENT_B
+  && saveEntry?.v2EventId === EVENT_B
+  && saveEntry?.adapterEventId === EVENT_B,
+  j(saveEntry));
 ck("5) **v2 active.eventId === legacy activeEventId**（B）",
   store().seasonStateV2?.active?.eventId === EVENT_B,
   j({ v2: store().seasonStateV2?.active?.eventId ?? null, legacy: store().competition.activeEventId }));

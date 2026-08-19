@@ -18,8 +18,10 @@
 //    node tools/check_competition_release_gate.mjs --list
 // ============================================================================
 import { spawnSync, execSync } from "node:child_process";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -41,7 +43,7 @@ const GATES = [
     //    index refresh 必須 **Event-scoped**（更新該 Event、鄰居零污染）。
     //    兩者都在 2026-08-19 的交叉驗證中被實測為紅。
     id: "v2_active_focus", script: "tools/check_seasonstate_v2_active_focus.mjs",
-    shape: /SeasonState v2 active focus: 30\/30 PASS/,
+    shape: /SeasonState v2 active focus: 31\/31 PASS/,
     note: "v2 聚焦指標一致性 ＋ Event-scoped index refresh",
     timeout: 300_000,
   },
@@ -53,27 +55,27 @@ const GATES = [
   },
   {
     id: "circuit_points", script: "tools/browser_check_circuit_points_ui.mjs",
-    shape: /21\/21 通過/, note: "巡迴積分 UI", timeout: 900_000,
+    shape: /21\/21 通過/, note: "巡迴積分 UI", timeout: 900_000, ports: [5319, 9341],
   },
   {
     id: "multi_event", script: "tools/browser_check_multi_event_ui.mjs",
-    shape: /8\/8 通過/, note: "多 Event UI 與 focus 切換", timeout: 900_000,
+    shape: /8\/8 通過/, note: "多 Event UI 與 focus 切換", timeout: 900_000, ports: [5316, 9338],
   },
   {
     id: "career_final", script: "tools/browser_check_career_final_ui.mjs",
-    shape: /12\/12 通過/, note: "生涯主要賽事最終名次", timeout: 900_000,
+    shape: /12\/12 通過/, note: "生涯主要賽事最終名次", timeout: 900_000, ports: [5325, 9347],
   },
   {
     id: "asia_finals", script: "tools/browser_check_asia_finals_ui.mjs",
-    shape: /15\/15 通過/, note: "亞洲年度總決賽 UI", timeout: 900_000,
+    shape: /15\/15 通過/, note: "亞洲年度總決賽 UI", timeout: 900_000, ports: [5337, 9357],
   },
   {
     id: "team_honors", script: "tools/browser_check_team_honors_ui.mjs",
-    shape: /15\/15 通過/, note: "戰隊榮譽 UI", timeout: 900_000,
+    shape: /15\/15 通過/, note: "戰隊榮譽 UI", timeout: 900_000, ports: [5347, 9367],
   },
   {
     id: "q6", script: "tools/browser_check_q6.mjs",
-    shape: /20\/20 通過/, note: "季後賽／封存／換季 生命週期", timeout: 900_000,
+    shape: /20\/20 通過/, note: "季後賽／封存／換季 生命週期", timeout: 900_000, ports: [5311, 9333],
   },
   {
     id: "build", cmd: "npm", args: ["run", "build"],
@@ -111,49 +113,102 @@ if (!selected.length) {
   process.exit(2);
 }
 
-// 這些 port 是各 browser gate 自己開的 dev server / CDP。跑完不該留下。
-const WATCHED_PORTS = [5173, 5391, 5393, 5395, 5397, 5399, 5401, 5403, 5405, 5407, 5411, 5421, 5431, 5441, 5451];
-const portsInUse = () => {
+// 這些 port 是各 browser gate **目前實際使用的** dev server / CDP。
+const WATCHED_PORTS = [...new Set(GATES.flatMap((gate) => gate.ports ?? []))];
+const listenersByPort = (ports = WATCHED_PORTS) => {
+  const wanted = new Set(ports);
+  const found = new Map();
   try {
     const out = execSync("netstat -ano -p tcp", { encoding: "utf8", timeout: 20_000 });
-    return WATCHED_PORTS.filter((p) => new RegExp(`[:.]${p}\\s+.*LISTENING`, "i").test(out));
-  } catch { return []; }
+    for (const line of out.split(/\r?\n/)) {
+      const fields = line.trim().split(/\s+/);
+      if (fields[0]?.toUpperCase() !== "TCP" || fields[3]?.toUpperCase() !== "LISTENING") continue;
+      const port = Number(fields[1]?.match(/:(\d+)$/)?.[1]);
+      const pid = Number(fields[4]);
+      if (!wanted.has(port) || !Number.isInteger(pid)) continue;
+      if (!found.has(port)) found.set(port, new Set());
+      found.get(port).add(pid);
+    }
+  } catch {}
+  return found;
+};
+const portsInUse = (ports = WATCHED_PORTS) => [...listenersByPort(ports).keys()].sort((a, b) => a - b);
+const sleepSync = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
+/** 只回收「本 gate 開始前不存在、結束後卻監聽指定 port」的 PID。 */
+const cleanupNewListeners = (ports, beforeOwners) => {
+  const killed = [];
+  for (const [port, pids] of listenersByPort(ports)) {
+    const existed = beforeOwners.get(port) ?? new Set();
+    for (const pid of pids) {
+      if (existed.has(pid)) continue;
+      const killedRun = spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { encoding: "utf8" });
+      killed.push({ port, pid, ok: killedRun.status === 0 });
+    }
+  }
+  if (killed.length) sleepSync(500);
+  const residual = [];
+  for (const [port, pids] of listenersByPort(ports)) {
+    const existed = beforeOwners.get(port) ?? new Set();
+    for (const pid of pids) if (!existed.has(pid)) residual.push({ port, pid });
+  }
+  return { killed, residual };
 };
 
 const before = portsInUse();
 const results = [];
+const logDir = mkdtempSync(join(tmpdir(), "esmo-competition-gate-"));
 
 console.log("══ Competition Release Gate ══");
 console.log(`區段 ${selected.length} 個。任一 FAIL 都會讓整體 exit 非 0，但**不會提前中止**。\n`);
+console.log(`完整 stdout/stderr：${logDir}\n`);
 
 try {
   for (const gate of selected) {
     const label = `${gate.id.padEnd(16)} ${gate.note}`;
     process.stdout.write(`▶ ${label} … `);
     const started = Date.now();
+    const gateBefore = listenersByPort(gate.ports ?? []);
+    const collisions = [...gateBefore.keys()];
     const run = gate.cmd
-      ? spawnSync(gate.cmd, gate.args, { cwd: ROOT, encoding: "utf8", timeout: gate.timeout, shell: true })
-      : spawnSync("node", [gate.script], { cwd: ROOT, encoding: "utf8", timeout: gate.timeout });
-    const secs = Math.round((Date.now() - started) / 1000);
+      ? process.platform === "win32" && gate.cmd === "npm"
+        // Node 24 在 Windows 直接 spawnSync("npm.cmd") 會回 EINVAL；用靜態 cmd
+        // 入口執行既有 npm script，不開 `shell:true`，也不拼接外部輸入。
+        ? spawnSync(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", "npm run build"],
+          { cwd: ROOT, encoding: "utf8", timeout: gate.timeout, shell: false })
+        : spawnSync(gate.cmd, gate.args, { cwd: ROOT, encoding: "utf8", timeout: gate.timeout, shell: false })
+      : spawnSync(process.execPath, [gate.script], { cwd: ROOT, encoding: "utf8", timeout: gate.timeout });
+    const elapsedMs = Date.now() - started;
+    const secs = (elapsedMs / 1000).toFixed(1);
     const out = `${run.stdout ?? ""}${run.stderr ?? ""}`;
-    const timedOut = run.error?.code === "ETIMEDOUT" || run.signal != null;
+    writeFileSync(join(logDir, `${gate.id}.log`), out, "utf8");
+    const timedOut = run.error?.code === "ETIMEDOUT";
+    const signaled = run.signal != null;
     const exitOk = run.status === 0;
     const shapeOk = gate.shape.test(out);
-    const ok = exitOk && shapeOk && !timedOut;
+    const cleanup = cleanupNewListeners(gate.ports ?? [], gateBefore);
+    const cleanupOk = cleanup.killed.length === 0 && cleanup.residual.length === 0;
+    const ok = exitOk && shapeOk && !timedOut && !signaled && cleanupOk;
+    let reason = null;
 
     console.log(`${ok ? "✅ PASS" : "❌ FAIL"}　${secs}s`);
     if (!ok) {
-      const why = timedOut ? `逾時（${gate.timeout / 1000}s）`
-        : !exitOk ? `exit=${run.status}`
+      const status = Number.isInteger(run.status) ? `${run.status} (0x${(run.status >>> 0).toString(16).toUpperCase()})` : String(run.status);
+      reason = collisions.length ? `啟動前 port collision：${collisions.join(", ")}`
+        : timedOut ? `逾時（${gate.timeout / 1000}s）`
+        : signaled ? `signal=${run.signal}`
+        : !exitOk ? `exit=${status}${run.error ? `；${run.error.message}` : ""}`
+        : cleanup.killed.length ? `gate 未自行 cleanup；runner 回收 ${cleanup.killed.map((x) => `${x.port}/PID ${x.pid}`).join(", ")}`
+        : cleanup.residual.length ? `cleanup 後仍殘留 ${cleanup.residual.map((x) => `${x.port}/PID ${x.pid}`).join(", ")}`
         : "輸出形狀不符（exit 0 但沒印出預期的通過行）";
-      console.log(`      原因：${why}`);
+      console.log(`      原因：${reason}`);
       const red = out.split("\n").filter((l) => l.startsWith("❌")).slice(0, 4);
       for (const l of red) console.log(`      ${l.slice(0, 120)}`);
       if (!red.length) {
         for (const l of out.trim().split("\n").slice(-4)) console.log(`      | ${l.slice(0, 120)}`);
       }
     }
-    results.push({ id: gate.id, ok });
+    results.push({ id: gate.id, ok, elapsedMs, reason });
   }
 } finally {
   const leaked = portsInUse().filter((p) => !before.includes(p));
@@ -167,6 +222,7 @@ try {
 
 const passed = results.filter((r) => r.ok).length;
 const failed = results.length - passed;
+writeFileSync(join(logDir, "summary.json"), `${JSON.stringify({ generatedAt: new Date().toISOString(), results }, null, 2)}\n`, "utf8");
 console.log("");
 console.log("════════════════════════════════════════");
 for (const r of results) console.log(`  ${r.ok ? "PASS" : "FAIL"}  ${r.id}`);

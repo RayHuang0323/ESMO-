@@ -156,7 +156,7 @@ const APP = server.url + "?asiaCircuit=0";
       chrome.pageErrors.slice(0, 2).join(" | ") || "(無)");
   } finally {
     await chrome.close();
-    server.stop();
+    await server.stop();
   }
   console.log(`\n${pass}/${pass + fail} 通過`);
   process.exit(fail === 0 ? 0 : 1);

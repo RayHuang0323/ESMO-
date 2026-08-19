@@ -11,9 +11,8 @@
 //  ⚠ 反節流那三個旗標是必要的，不是保險：沒有它們，背景視窗的計時器會被節流到
 //    每秒一次，跑一整季要等三十分鐘（`browser_check_q6.mjs` 的實測教訓）。
 //
-//  ⚠ 既有的 `tools/browser_check_q6.mjs` 內嵌了一份自己的 CDP client。本檔是把
-//    同一套東西抽成共用模組給後續的驗證用；**沒有回頭改 q6**——那是一支正在
-//    綠燈的 gate，為了整併去動它不划算。合併成一套列為技術債（見 08）。
+//  `tools/browser_check_q6.mjs` 也走這個共用 client，避免其中一份缺少 close/error
+//  handling 時，Chrome 已退出但 gate 仍永久等待 pending command。
 // ============================================================================
 /**
  * 頁面端前導程式：取得**與 `settleMatchBoundary` 閉包裡同一個** profileStore。
@@ -55,7 +54,11 @@ import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:net";
 import { mkdtempSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const VITE_CLI = resolve(ROOT, "node_modules/vite/bin/vite.js");
 
 const CHROME_CANDIDATES = [
   "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
@@ -64,6 +67,52 @@ const CHROME_CANDIDATES = [
 ].filter(Boolean);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const exited = (proc) => proc.exitCode != null || proc.signalCode != null;
+
+async function waitForExit(proc, timeoutMs = 5_000) {
+  if (exited(proc)) return true;
+  return await new Promise((resolveExit) => {
+    const timer = setTimeout(() => {
+      proc.off("exit", onExit);
+      resolveExit(false);
+    }, timeoutMs);
+    const onExit = () => {
+      clearTimeout(timer);
+      resolveExit(true);
+    };
+    proc.once("exit", onExit);
+  });
+}
+
+/** 先正常終止；Windows 若仍未退出才對**該 PID 的行程樹**做最後回收。 */
+async function stopProcess(proc) {
+  if (!proc || exited(proc)) return;
+  try { proc.kill(); } catch {}
+  if (await waitForExit(proc)) return;
+  try {
+    if (process.platform === "win32") {
+      spawnSync("taskkill", ["/pid", String(proc.pid), "/T", "/F"], { stdio: "ignore" });
+    } else {
+      proc.kill("SIGKILL");
+    }
+  } catch {}
+  await waitForExit(proc, 2_000);
+}
+
+async function removeProfile(path) {
+  // Browser.close 回來時，Chrome 的 crashpad／renderer 偶爾還握著檔案數百毫秒。
+  // 等它們真正放手；若 10 秒後仍在，讓 gate 明確失敗而不是靜默漏 profile。
+  let lastError = null;
+  for (let attempt = 0; attempt < 20; attempt++) {
+    try {
+      rmSync(path, { recursive: true, force: true, maxRetries: 2, retryDelay: 100 });
+      if (!existsSync(path)) return;
+    } catch (error) { lastError = error; }
+    await sleep(500);
+  }
+  throw new Error(`Chrome 測試 profile 無法清除：${path}${lastError ? `（${lastError.message}）` : ""}`);
+}
 
 async function waitFor(fn, { timeoutMs = 30_000, everyMs = 250, what = "條件" } = {}) {
   const until = Date.now() + timeoutMs;
@@ -88,8 +137,8 @@ export async function startDevServer({ port, base = "/ESMO-/" } = {}) {
   //     要測的程式碼（同一個 commit 一下 24/24 一下 19/24 就是這樣來的）。
   //     所以 port 有人佔就直接 throw，不猜、不重試、不換 port。
   //
-  //  ② **收工要殺整棵行程樹**。`shell: true` 之下 `proc.kill()` 只殺得到 shell，
-  //     真正的 vite 會活下來繼續佔 port ⇒ 每跑一次就漏一個，下一次就踩 ①。
+  //  ② **不要透過 npx shell 起 Vite**。直接以目前 Node 執行 Vite CLI，讓 `proc`
+  //     就是實際 listener owner；收工可以先正常終止，不必每次都強殺 shell tree。
   if (!(await isPortFree(port))) {
     throw new Error(
       `port ${port} 已經有人在聽。多半是上一次跑剩下的 dev server。\n` +
@@ -97,15 +146,26 @@ export async function startDevServer({ port, base = "/ESMO-/" } = {}) {
       `   請先關掉佔用 ${port} 的行程再跑。`);
   }
   const url = `http://localhost:${port}${base}`;
-  const proc = spawn("npx", ["vite", "--port", String(port), "--strictPort"], { shell: true, stdio: "ignore" });
-  await waitFor(async () => (await fetch(url)).ok, { timeoutMs: 90_000, what: `dev server ${url}` });
+  const proc = spawn(process.execPath, [VITE_CLI, "--port", String(port), "--strictPort"], {
+    cwd: ROOT, stdio: "ignore", windowsHide: true,
+  });
+  try {
+    await waitFor(async () => {
+      if (exited(proc)) throw new Error(`Vite 提前退出（exit=${proc.exitCode}, signal=${proc.signalCode}）`);
+      return (await fetch(url)).ok;
+    }, { timeoutMs: 90_000, what: `dev server ${url}` });
+  } catch (error) {
+    await stopProcess(proc);
+    throw error;
+  }
+  let stopped = false;
   return {
     url, proc,
-    stop: () => {
-      try {
-        if (process.platform === "win32") spawnSync("taskkill", ["/pid", String(proc.pid), "/T", "/F"], { stdio: "ignore" });
-        else proc.kill();
-      } catch { /* 已經死了就算了 */ }
+    stop: async () => {
+      if (stopped) return;
+      stopped = true;
+      await stopProcess(proc);
+      await waitFor(() => isPortFree(port), { timeoutMs: 10_000, what: `dev server port ${port} 釋放` });
     },
   };
 }
@@ -134,35 +194,61 @@ function isPortFree(port) {
 export async function launchChrome({ url, port, headless = true }) {
   const exe = CHROME_CANDIDATES.find((p) => existsSync(p));
   if (!exe) throw new Error(`找不到 Chrome：${CHROME_CANDIDATES.join(" / ")}`);
+  if (!(await isPortFree(port))) {
+    throw new Error(`Chrome CDP port ${port} 已經有人在聽；拒絕連到非本次 gate 的瀏覽器`);
+  }
   const userDataDir = mkdtempSync(join(tmpdir(), "esmo-cdp-"));
   const args = [
     `--remote-debugging-port=${port}`,
     `--user-data-dir=${userDataDir}`,
     "--no-first-run", "--no-default-browser-check", "--disable-extensions",
-    "--disable-background-networking", "--disable-sync", "--disable-features=Translate",
+    "--disable-background-networking", "--disable-sync",
+    //  Chrome 151 / Windows：即使 headless + --disable-gpu，Graphite 的 GPU
+    //  persistent cache 仍會啟動；cache file lock 失敗會讓 GPU process 直接 crash。
+    //  Browser gate 只需 DOM/layout，不依賴 GPU，因此在獨立測試 profile 關閉此 cache。
+    "--disable-features=Translate,SkiaGraphiteUsePersistentCache,GpuPersistentCache",
     //  ⚠ 反節流：headless 的背景視窗會把計時器壓到 1/秒
     "--disable-background-timer-throttling", "--disable-renderer-backgrounding",
     "--disable-backgrounding-occluded-windows",
     "--window-size=1280,900",
   ];
-  if (headless) args.push("--headless=new", "--disable-gpu");
+  //  本機 Chrome 151 的 Windows sandbox 子行程會以 0xC0000022 退出；Chromium
+  //  明確把這兩個 switch 定位為 testing-only。只套在 gate 自己的 headless profile，
+  //  且只造訪本機 Vite，不套到 Ray 的日常 Chrome。
+  if (headless) args.push("--headless=new", "--disable-gpu", "--disable-gpu-sandbox", "--no-sandbox");
   args.push(url);
 
-  const proc = spawn(exe, args, { stdio: "ignore" });
-  //  ⚠ 起手可能先抓到 about:blank 那個分頁（讀 localStorage 會 SecurityError），
-  //    所以優先挑已經指向目標 URL 的 target。
-  const target = await waitFor(async () => {
-    const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
-    const pages = list.filter((t) => t.type === "page" && t.webSocketDebuggerUrl);
-    return pages.find((t) => t.url?.startsWith(url)) ?? pages[0];
-  }, { timeoutMs: 30_000, what: "Chrome page target" });
+  let stderrTail = "";
+  const proc = spawn(exe, args, { stdio: ["ignore", "ignore", "pipe"], windowsHide: true });
+  proc.stderr.setEncoding("utf8");
+  proc.stderr.on("data", (chunk) => { stderrTail = `${stderrTail}${chunk}`.slice(-4_000); });
 
-  const client = await attach(target.webSocketDebuggerUrl);
+  let client;
+  try {
+    //  ⚠ 起手可能先抓到 about:blank 那個分頁（讀 localStorage 會 SecurityError），
+    //    所以優先挑已經指向目標 URL 的 target。
+    const target = await waitFor(async () => {
+      if (exited(proc)) throw new Error(`Chrome 提前退出（exit=${proc.exitCode}, signal=${proc.signalCode}）`);
+      const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
+      const pages = list.filter((t) => t.type === "page" && t.webSocketDebuggerUrl);
+      return pages.find((t) => t.url?.startsWith(url)) ?? pages[0];
+    }, { timeoutMs: 30_000, what: "Chrome page target" });
+    client = await attach(target.webSocketDebuggerUrl);
+  } catch (error) {
+    await stopProcess(proc);
+    await removeProfile(userDataDir);
+    const detail = stderrTail.trim() ? `\nChrome stderr（末段）：${stderrTail.trim()}` : "";
+    throw new Error(`${error.message}${detail}`);
+  }
+
+  let closed = false;
   client.close = async () => {
+    if (closed) return;
+    closed = true;
+    try { await client.send("Browser.close", {}, 5_000); } catch {}
     try { client.ws.close(); } catch {}
-    try { proc.kill("SIGKILL"); } catch {}
-    await sleep(300);
-    try { rmSync(userDataDir, { recursive: true, force: true }); } catch {}
+    await stopProcess(proc);
+    await removeProfile(userDataDir);
   };
   return client;
 }
@@ -181,8 +267,18 @@ async function attach(wsUrl) {
   const consoleLines = [];
   const pageErrors = [];
 
+  const rejectPending = (error) => {
+    for (const p of pending.values()) p.reject(error);
+    pending.clear();
+  };
+
+  ws.addEventListener("close", () => rejectPending(new Error("CDP WebSocket 已關閉（Chrome／renderer 可能已退出）")));
+  ws.addEventListener("error", () => rejectPending(new Error("CDP WebSocket 發生錯誤")));
+
   ws.addEventListener("message", (ev) => {
-    const msg = JSON.parse(ev.data);
+    let msg;
+    try { msg = JSON.parse(ev.data); }
+    catch (error) { rejectPending(new Error(`CDP 回應不是有效 JSON：${error.message}`)); return; }
     if (msg.id != null) {
       const p = pending.get(msg.id);
       if (!p) return;
@@ -193,10 +289,22 @@ async function attach(wsUrl) {
     for (const h of listeners.get(msg.method) ?? []) h(msg.params);
   });
 
-  const send = (method, params = {}) => new Promise((resolve, reject) => {
+  const send = (method, params = {}, timeoutMs = 60_000) => new Promise((resolve, reject) => {
     const id = ++seq;
-    pending.set(id, { resolve, reject });
-    ws.send(JSON.stringify({ id, method, params }));
+    const timer = setTimeout(() => {
+      pending.delete(id);
+      reject(new Error(`CDP ${method} 逾時（${timeoutMs}ms）`));
+    }, timeoutMs);
+    pending.set(id, {
+      resolve: (value) => { clearTimeout(timer); resolve(value); },
+      reject: (error) => { clearTimeout(timer); reject(error); },
+    });
+    try { ws.send(JSON.stringify({ id, method, params })); }
+    catch (error) {
+      const p = pending.get(id);
+      pending.delete(id);
+      p?.reject(error);
+    }
   });
   const on = (method, handler) => {
     if (!listeners.has(method)) listeners.set(method, []);
@@ -219,7 +327,7 @@ async function attach(wsUrl) {
     const r = await send("Runtime.evaluate", {
       expression: `(async () => { ${expression} })()`,
       awaitPromise: true, returnByValue: true,
-    });
+    }, 840_000);
     if (r.exceptionDetails) {
       const d = r.exceptionDetails;
       throw new Error(`頁面例外：${d.exception?.description ?? d.text}`);
