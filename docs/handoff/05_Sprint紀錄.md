@@ -10131,3 +10131,112 @@ port 清理：無殘留
 逐檔已核對非空，且都有預期 assertion shape。最終 `src/platform/profileStore.js` 與
 `src/platform/competition/seasonStateV2.js` diff 均為 0。Multi-Event sealing、Q7f、
 q7b migration verifier debt 均未碰。
+
+---
+
+## Team Development / 天賦系統 Recovery Audit（2026-08-20，只稽核，未 merge／未部署）
+
+起因：正式站部署較舊 main 之後，首頁又出現舊的「天賦」入口與舊 0/3 天賦樹。
+本輪**只做稽核與保護**，沒有 cherry-pick、沒有 merge、沒有部署，
+也沒有動 profileStore／SeasonState v2／Competition runtime／Q7f。
+
+### 先釐清基準（實際 git，不依文件描述）
+
+| ref | commit | 說明 |
+|---|---|---|
+| `origin/main` | `690c485` | **正式站基準**（deploy 來源） |
+| 本地 `main` | `044b98e` | ⚠ **落後 `origin/main` 92 個 commit**，是過期 ref，不可當基準 |
+| P0.6A staging | `65e3506` | branch `recovery/team-development-ui-stage`；**parent 是 `f9026d1`**（本 SeasonState v2 分支上的 commit） |
+| 完整版 | `84b6058` | `release/moba-combat-closure` |
+
+> ⚠ 兩點容易被誤讀：**本地 `main` 不是 current main**；
+> 而 `65e3506` 並非 cherry-pick R59–R62，而是在 v2 分支的 `f9026d1` 上**重新 staging**。
+> R59–R63 六顆 commit（`f7faf61`／`7060bbb`／`5419eac`／`616404c`／`a274f49`／`86ec645`／`84b6058`）
+> **沒有一顆是 `origin/main` 或 `65e3506` 的祖先**。
+
+### 功能對照（實測檔案／內容，非文件描述）
+
+| 功能 | 來源 commit | 在 `65e3506` | 在 `origin/main` | 已部署 |
+|---|---|---|---|---|
+| `TeamDevelopmentScreen` | R59 `f7faf61` | ✅ | ❌ 檔案不存在 | ❌ |
+| 首頁「戰隊發展」入口 | R59／R59.1 | ✅ `<Tile label="戰隊發展">`＋`development: "teamDevelopment"` | ❌ 是 `<Tile label="天賦">`＋`talent: "talentPick"` | ❌ |
+| 舊「天賦」入口 | S27 `e5bb645` | 僅 legacy（`talentPick` 保留、非主要磚） | ⚠ **仍是首頁主要磚** | ⚠ 是 |
+| 4 分類 / 20 節點 | R59 | ✅ 4×5＝20（與 release **blob 完全相同**） | ❌ | ❌ |
+| Lv.0/3 | R59 | ✅ `maxRank ?? 3` | ❌ | ❌ |
+| prerequisite／下一級效果 | R59 | ✅ `prerequisites`＋`levelEffects` | ❌ | ❌ |
+| planned（規劃中）狀態 | R59 | ✅ `future`＋`activeLevelCap` | ❌ | ❌ |
+| GSAP／reduced-motion | R59.1 | ✅ `useGSAP`＋三處 `prefers-reduced-motion` | ❌ | ❌ |
+| R61 responsive/touch target | R61 `a274f49` | ✅ ManageFrame `minWidth: 40`＋`aria-label="返回"` | ❌ | ❌ |
+| R62 Player Profile 四分頁 | R62 `86ec645` | ✅ overview/abilities/growth/career | ❌ | ❌ |
+| Roster／Recruit mobile fixture | R61 | ✅ UI 部分 | ❌ | ❌ |
+| **R60 效果接線** | R60 `616404c` | ❌ **刻意移除** | ❌ | ❌ |
+| **teamDevelopment persistence** | R59 | ❌ | ❌ | ❌ |
+
+### 邊界：P0.6A UI Recovery ≠ 完整 R59–R62
+
+四項獨立證據：
+
+1. `PROFILE_SCHEMA_VERSION`：`origin/main` = **9**、`65e3506` = **9**、release `84b6058` = **10**。
+2. `profileStore.js` 內 `teamDevelopment` 出現次數：`origin/main` **0**、`65e3506` **0**、release **9**。
+3. `65e3506` 的 `TeamDevelopmentScreen` 比 release 版**多了防護**
+   （`typeof purchase !== "function"` ／ `canPurchase` 前置判斷）——因為
+   `s.purchaseTeamDevelopment` 在那棵樹上根本不存在，整個畫面是唯讀外殼。
+4. `65e3506` 的 `RosterScreen` / `RecruitScreen` 相對 release **刪掉了 R60 效果**
+   （合約摘要解鎖、球探天數縮減、青訓支援）。
+
+再加一項自證：`65e3506` 自帶的 `check_team_development_v1.mjs` 在該樹上實跑，
+前 16 條 PASS，第 17 條 `profileStore migration 與 write hook` **FAIL**
+（要求 `PROFILE_SCHEMA_VERSION = 10` ＋ `teamDevelopment: sanitizeTeamDevelopment`
+＋ `purchaseTeamDevelopment(nodeId)`）。同樹 `check_r61_ui_fixture` 與
+`check_r62_player_ui_fixture` 皆 PASS。
+
+**R60 consumer 實測**（`teamDevelopmentEffects` / `hasTeamDevelopment` 的使用者）：
+
+| 樹 | consumer |
+|---|---|
+| release `84b6058` | BanPickScreen、TacticScreen（MOBA 備戰）、CsTacticScreen（CS 備戰）、RosterScreen、RecruitScreen、profileStore |
+| `65e3506` | **無任何 gameplay consumer**（只有領域模組＋自己的畫面＋兩支 verifier） |
+| `origin/main` | 完全沒有 |
+
+### 「天賦」回歸可由 git history 直接證明
+
+`origin/main:src/screens/DashboardScreen.jsx`：
+
+```
+108:  <Tile emoji="🌿" label="天賦" badge={T.talentPending} … onClick={() => sel("talent")} />
+ 79:  const NAV = { … talent: "talentPick", … }      ← 沒有 development 鍵
+```
+
+`65e3506` / `84b6058` 同一檔：
+
+```
+103/108:  <Tile emoji="🌱" label="戰隊發展" badge={T.developmentPoints} … onClick={() => sel("development")} />
+ 74/78:   const NAV = { … development: "teamDevelopment", talent: "talentPick", … }
+```
+
+⇒ 截圖中的「天賦」回歸**不是幻覺、也不是快取**，而是 `origin/main` 的原始碼本來就長這樣。
+
+### 新增 focused verifier
+
+`tools/check_team_development_recovery.mjs`——只驗版本契約，不做 E2E，
+**刻意不 import** `teamDevelopment.js`（必須能在該模組不存在的樹上跑完並如實回報，
+而不是自己 crash）。支援 `--root=<worktree>` 做跨樹稽核。三段輸出分離，
+`Persistence Integration` 與 `Gameplay Consumers` **永遠不會被印成 PASS**。
+
+實測三方判別：
+
+```
+origin/main 這棵樹   UI Recovery: NOT PRESENT   Persistence: NOT YET   Consumers: NOT YET   exit 1
+65e3506              UI Recovery: PASS 14/14    Persistence: NOT YET   Consumers: NOT YET   exit 0
+release 84b6058      UI Recovery: PASS 14/14    Persistence: INTEGRATED  Consumers: INTEGRATED  exit 0
+```
+
+契約條文寫在 `docs/ai/跨模型交接流程.md` §11。
+
+### 本輪未做（刻意）
+
+未 cherry-pick `65e3506`、未 merge、未 deploy、未改 `profileStore`、
+未動 SeasonState v2 / Competition runtime / Q7f。
+下一步選項（**等使用者決定**）：A 只恢復 `65e3506`（UI-only）／
+B 建立完整 Recovery Release（含 R59 persistence＋R60 consumer）／
+C 現況已足夠。稽核結論傾向 **B**，理由見回報。
