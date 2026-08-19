@@ -1869,7 +1869,11 @@ export const useProfileStore = create((set, get) => ({
     if (!state?.schema) return { ok: false, errors: [{ code: "no_season", message: "目前沒有賽季" }] };
     if (!state.events?.[eventId]) return { ok: false, errors: [{ code: "no_event", message: "找不到這個賽事" }] };
     if (state.activeEventId === eventId) return { ok: true, errors: [] };
-    set({ competition: { ...state, activeEventId: eventId } });
+    //  ⚠ 走 `_setCompetitionState` 而不是裸 `set`：v2 的 `active` 是這個指標的
+    //    投影，兩者必須在**同一次寫入**裡一起動。先前這裡直接 `set`，v2 側要等
+    //    `save()` 才有機會追上——而當時 migration 根本不會重新對位 ⇒
+    //    `activeCompetitionEvent().event` 一直停在舊 Event，存檔重載也一樣。
+    get()._setCompetitionState({ ...state, activeEventId: eventId });
     get().save();
     return { ok: true, errors: [] };
   },

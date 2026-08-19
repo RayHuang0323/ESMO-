@@ -473,27 +473,101 @@ function normalizeEvent(event) {
   return normalized;
 }
 
+function allEventsOf(seasonStateV2) {
+  return (seasonStateV2?.gameModes ?? [])
+    .flatMap((mode) => (mode?.circuits ?? []).flatMap((circuit) => circuit?.events ?? []));
+}
+
+// The legacy indexes that belong to **one** Event, resolved the same way
+// `buildEvent` resolves them at wrap time.
+//
+// ⚠ Pre-Q7a-3b saves keep a single top-level Competition and own every
+//   fixture. Since Q7a-3b, Events live in a map and each one reaches its own
+//   Competition through `rankingCompetitionId`; `legacyState.competition` does
+//   not exist in that shape, so it can neither scope an index nor be the thing
+//   an index is compared against. Reading it froze every Event index — and had
+//   the comparison passed, it would have handed one Event every other Event's
+//   fixtures.
+//
+// Returns null when the Event has no resolvable Competition: that is missing
+// scope, not an empty index.
+function legacyIndexesFor(legacyState, eventId) {
+  const legacyEvents = objectOf(legacyState?.events) ?? {};
+  const eventIds = Object.keys(legacyEvents);
+  if (!eventIds.length) {
+    const competitionId = stringOrNull(objectOf(legacyState?.competition)?.id);
+    if (!competitionId) return null;
+    return {
+      competitionId,
+      stageIds: stageIdsOf(legacyState),
+      playoffRef: playoffRefOf(legacyState),
+      fixtureIds: idsOf(legacyState?.fixtures),
+      outcomeIds: idsOf(legacyState?.outcomes),
+      finalId: legacyState?.final?.id ?? null,
+    };
+  }
+  const legacyEvent = objectOf(legacyEvents[eventId]);
+  if (!legacyEvent) return null;
+  const competitionId = stringOrNull(legacyEvent.rankingCompetitionId)
+    ?? stringOrNull((legacyEvent.competitionIds ?? [])[0]);
+  const entry = competitionId ? objectOf(objectOf(legacyState?.competitions)?.[competitionId]) : null;
+  if (!entry) return null;
+  // Stage ids scope the fixtures, fixtures scope the outcomes — the same chain
+  // `buildEvent` walks, so refresh and wrap cannot drift apart.
+  const stageIds = stageIdsOf(entry);
+  const stageSet = new Set(stageIds);
+  const fixtureIds = idsOf((Array.isArray(legacyState?.fixtures) ? legacyState.fixtures : [])
+    .filter((fixture) => stageSet.has(fixture?.stageId)));
+  const fixtureIdSet = new Set(fixtureIds);
+  const outcomeIds = idsOf((Array.isArray(legacyState?.outcomes) ? legacyState.outcomes : [])
+    .filter((outcome) => fixtureIdSet.has(outcome?.fixtureId)));
+  // Single Event keeps the legacy equivalence where the Season final and the
+  // Event final are the same object; multi Event never borrows the Season seal.
+  const finalId = legacyEvent.final?.id
+    ?? (eventIds.length === 1 ? (legacyState?.final?.id ?? null) : null)
+    ?? null;
+  return { competitionId, stageIds, playoffRef: playoffRefOf(entry), fixtureIds, outcomeIds, finalId };
+}
+
 // Legacy gameplay writes may append playoff fixtures/outcomes after the v2
-// wrapper was first created. Refresh only the deterministic ID indexes for the
-// already-bound Competition; never change Event/Circuit/Competition scope or
-// any sealing/settlement reference.
+// wrapper was first created. Refresh only the deterministic ID indexes, each
+// Event against its own Competition; never change Event/Circuit/Competition
+// scope or any sealing/settlement reference.
 function refreshLegacyIndexes(seasonStateV2, legacyState) {
   const active = seasonStateV2?.active;
   if (!active) return seasonStateV2;
-  const canonicalStageIds = stageIdsOf(legacyState);
-  const canonicalFixtureIds = idsOf(legacyState.fixtures);
-  const canonicalOutcomeIds = idsOf(legacyState.outcomes);
   const prefixOnly = (stored, canonical) => {
     const old = Array.isArray(stored) ? stored : [];
     return old.length <= canonical.length && old.every((id, index) => id === canonical[index]);
   };
   const bound = activeEventOf(seasonStateV2);
-  if (!bound || !prefixOnly(bound.stageIds, canonicalStageIds)
-    || !prefixOnly(bound.fixtureIds, canonicalFixtureIds)
-    || !prefixOnly(bound.outcomeIds, canonicalOutcomeIds)) {
-    // Legacy writes may append IDs (for example, playoff fixtures), but an
-    // existing mismatch is corruption. Never repair/rebind it during load.
-    return null;
+  if (!bound) return null;
+  const usesEventMap = Object.keys(objectOf(legacyState?.events) ?? {}).length > 0;
+  // The single Competition shape holds exactly one Event, so "the bound Event"
+  // and "every Event" are the same set there and its scope stays verbatim.
+  // ⚠ With an Event map, refreshing only the focused Event would tie index
+  //   freshness to what the player happens to be *looking at* — the same class
+  //   of defect as a stale active pointer.
+  const targets = usesEventMap ? allEventsOf(seasonStateV2) : [bound];
+  const canonicalById = new Map();
+  for (const event of targets) {
+    const canonical = legacyIndexesFor(legacyState, event.id);
+    if (!canonical) {
+      // Missing scope for the bound Event fails closed; for any other Event,
+      // leave its stored index untouched rather than rebind it to a neighbour.
+      if (event.id === bound.id) return null;
+      continue;
+    }
+    // Scope is compared, never rewritten: a mismatch is corruption.
+    if (event.competitionRef?.id !== canonical.competitionId) return null;
+    if (!prefixOnly(event.stageIds, canonical.stageIds)
+      || !prefixOnly(event.fixtureIds, canonical.fixtureIds)
+      || !prefixOnly(event.outcomeIds, canonical.outcomeIds)) {
+      // Legacy writes may append IDs (for example, playoff fixtures), but an
+      // existing mismatch is corruption. Never repair/rebind it during load.
+      return null;
+    }
+    canonicalById.set(event.id, canonical);
   }
   return {
     ...seasonStateV2,
@@ -502,16 +576,17 @@ function refreshLegacyIndexes(seasonStateV2, legacyState) {
       circuits: (mode.circuits ?? []).map((circuit) => ({
         ...circuit,
         events: (circuit.events ?? []).map((event) => {
-          if (event.id !== active.eventId || event.competitionRef?.id !== legacyState?.competition?.id) return event;
+          const canonical = canonicalById.get(event.id);
+          if (!canonical) return event;
           return {
             ...event,
-            stageIds: canonicalStageIds,
-            playoffRef: playoffRefOf(legacyState),
-            fixtureIds: canonicalFixtureIds,
-            outcomeIds: canonicalOutcomeIds,
+            stageIds: canonical.stageIds,
+            playoffRef: canonical.playoffRef,
+            fixtureIds: canonical.fixtureIds,
+            outcomeIds: canonical.outcomeIds,
             // A missing legacy index may be filled from canonical state; an
             // existing finalId is never rebound to a different FinalStandings.
-            finalId: event.finalId ?? legacyState.final?.id ?? null,
+            finalId: event.finalId ?? canonical.finalId ?? null,
           };
         }),
       })),
@@ -732,6 +807,31 @@ export function isSeasonStateV2(value) {
   return validateSeasonStateV2(normalizeSeasonStateV2(value)).ok;
 }
 
+// `active` is the projection of the legacy focus pointer (`activeEventId`),
+// which `setActiveEvent` moves at runtime. The pointer is **derived**, so a
+// legacy focus that has moved on is staleness in an index — not a scope
+// conflict, and not something a stored wrapper may outvote.
+//
+// ⚠ Without this, switching Event kept v2 `active`, `activeEventAdapter` and
+//   therefore `competitionView().activeEvent` on the previous Event while the
+//   standings and next fixture already followed the new one, and the split
+//   survived save/reload.
+function realignActivePointer(seasonStateV2, legacyState) {
+  // A sealed Season has no active Event by contract: whatever sealing left
+  // behind stands, and the focus pointer does not resurrect it.
+  if (legacyState?.final != null) return seasonStateV2;
+  const focusId = stringOrNull(legacyState?.activeEventId);
+  if (!focusId || seasonStateV2?.active?.eventId === focusId) return seasonStateV2;
+  const focus = allEventsOf(seasonStateV2).find((event) => event.id === focusId);
+  // An unknown focus id is not scope to invent. Keep the stored pointer so the
+  // scope check downstream can still fail closed on it.
+  if (!focus) return seasonStateV2;
+  return {
+    ...seasonStateV2,
+    active: { gameMode: focus.gameMode, circuitId: focus.circuitId, eventId: focus.id },
+  };
+}
+
 /**
  * Migrate or resynchronise the wrapper. Rebuilding this index is deterministic
  * and therefore idempotent; all legacy IDs are read, never generated anew.
@@ -774,9 +874,13 @@ export function migrateSeasonStateV2({
       if (usesEventMap && legacySignature !== indexedSignature) {
         return wrapLegacySeasonState({ legacyState, competitionHistory, awardLedger });
       }
+      // Legacy owns the focus pointer, so realign before anything reads the
+      // active Event: the scope check below must judge the Event the player is
+      // actually on, not the one the stored wrapper was written with.
+      const aligned = usesEventMap ? realignActivePointer(normalized, legacyState) : normalized;
       // A valid v2 save may intentionally have no active Event; preserve it.
-      if (normalized.active == null) return normalized;
-      const indexedEvent = activeEventOf(normalized);
+      if (aligned.active == null) return aligned;
+      const indexedEvent = activeEventOf(aligned);
       // Within one season, a competition mismatch is corruption, not a cue to
       // rebind the Event. Keep the value and let the adapter fail closed.
       // Scope is compared against the Competition that this Event points at in
@@ -789,7 +893,7 @@ export function migrateSeasonStateV2({
       // Final IDs are immutable references. A conflicting stored ID is
       // corruption, not a stale index that migration may silently replace.
       if (indexedEvent.finalId != null && legacyState.final?.id != null && indexedEvent.finalId !== legacyState.final.id) return seasonStateV2;
-      const refreshed = refreshLegacyIndexes(normalized, legacyState);
+      const refreshed = refreshLegacyIndexes(aligned, legacyState);
       if (!refreshed) return seasonStateV2;
       if (legacyState?.final?.id && refreshed.active) {
         const currentEvent = activeEventOf(refreshed);

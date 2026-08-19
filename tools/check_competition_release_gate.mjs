@@ -34,6 +34,18 @@ const GATES = [
     timeout: 300_000,
   },
   {
+    //  ⚠ 與 v2_runtime 分開的理由：v2_runtime 每一條都從**乾淨載入**開始，
+    //    證明不了「載入之後又發生了什麼」。這一支守的正是那兩件事——
+    //    玩家切換聚焦 Event（v2 `active` 必須跟著 legacy `activeEventId` 走，
+    //    存檔重載後仍然一致），以及 legacy 事後追加 fixture／outcome 之後的
+    //    index refresh 必須 **Event-scoped**（更新該 Event、鄰居零污染）。
+    //    兩者都在 2026-08-19 的交叉驗證中被實測為紅。
+    id: "v2_active_focus", script: "tools/check_seasonstate_v2_active_focus.mjs",
+    shape: /SeasonState v2 active focus: 30\/30 PASS/,
+    note: "v2 聚焦指標一致性 ＋ Event-scoped index refresh",
+    timeout: 300_000,
+  },
+  {
     id: "v2_sealing_m2", script: "tools/check_season_state_v2_sealing_m2.mjs",
     shape: /SeasonState v2 M2 sealing: 24\/24 PASS/,
     note: "3b-M2 Event/Season sealing boundary（legacy sealing regression）",

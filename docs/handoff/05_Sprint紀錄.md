@@ -9815,3 +9815,231 @@ Claude、Codex、任何人都用同一支。9 個區段：`v2_runtime`、`v2_sea
    它自己讀 `made.state.competition.id`（Q7a-3b 起不存在），
    **在乾淨 main 上就崩潰**，與它要防守的缺陷同源。
    修好該 verifier 自身是獨立工作項，**本輪未修**。
+
+---
+
+## SeasonState v2 —— 聚焦指標與 Event-scoped index（2026-08-19，Codex 交叉驗證 FAIL 後的修正）
+
+Codex 對 `4d13f24` 做獨立交叉驗證，判定 **FAIL**，提出兩個 contract blocker。
+Claude 先**不照描述修**，自己寫探針重現，兩條都證實為真。
+
+### 重現（`s7e_player_one.json`，5 Event 存檔，實測輸出）
+
+```
+── setActiveEvent A → B ──
+after : legacy.activeEventId = event:circuit:moba:s1:asia:spring
+after : v2.active.eventId    = event:circuit:moba:s1:legacy:regular   ← 沒跟上
+after : adapter.event.id     = event:circuit:moba:s1:legacy:regular   ← 沒跟上
+reload: v2.active.eventId    = event:circuit:moba:s1:legacy:regular   ← 存檔重載仍錯
+
+── legacy 追加一場 fixture 之後 ──
+legacy fixture appended, exists = true
+v2 Event A fixtureIds 56 → 56       ← index 完全凍結
+legacyState.competition is undefined (multi-event shape)
+```
+
+### Root cause（兩個，互相獨立）
+
+1. **`refreshLegacyIndexes` 拿一個不存在的屬性當 scope。**
+   它以 `event.competitionRef?.id !== legacyState?.competition?.id` 決定要不要更新，
+   但 `legacyState.competition` **自 Q7a-3b 起在多 Event 形狀下根本不存在**
+   （Competition 改成 `competitions{}` map，Event 各自用 `rankingCompetitionId` 找）。
+   ⇒ 比對永遠不成立、每個 Event 的 index 永遠凍結。
+   而且它取的是 `idsOf(legacyState.fixtures)`——**全季**場次；
+   假如比對反而成立，結果是把別的 Event 的場次灌進同一個 Event。
+   **兩種失敗都源於同一個假設：「active Event 擁有全季的 fixtures」。**
+
+2. **v2 `active` 沒有任何地方會跟著 legacy 焦點重新對位。**
+   `migrateSeasonStateV2` 只有兩個會改 `active` 的出口：整份重建（觸發條件是
+   **Event 集合或 final id 的 signature 變了**）與封存。`setActiveEvent` 只動
+   `activeEventId`，signature 逐字不變 ⇒ 走不到重建，`active` 就留在舊 Event。
+   `setActiveEvent` 又是裸 `set({ competition })`，連 sidecar 都沒重算。
+   ⇒ 畫面上積分榜／下一場（讀 legacy `activeEventId`）已經換了，
+   `activeEvent`／adapter（讀 v2 `active`）還停在舊的，存檔重載後依然分裂。
+
+### 修改位置
+
+| 檔案 | 改動 |
+|---|---|
+| `src/platform/competition/seasonStateV2.js` | 新增 `legacyIndexesFor(legacyState, eventId)`：**逐 Event** 解析 scope，走 `rankingCompetitionId → competitions[id] → stage → fixtures → outcomes`，與 `buildEvent` 同一條鏈（refresh 與 wrap 不會分岔）。舊形狀（無 Event map、有頂層 `competition`）保留原語意逐字不變。 |
+| 同上 | `refreshLegacyIndexes` 改為對**每個** Event 各自比對／更新；scope 只比對不改寫，不符即 `null`（fail closed）。多 Event 時不再只更新「畫面正在看的那個」——index 新鮮度不得綁畫面焦點。 |
+| 同上 | 新增 `realignActivePointer`：`active` 是 legacy `activeEventId` 的投影，legacy 權威 ⇒ 焦點移動是**索引過期**而非 scope 衝突，重新對位。已封存賽季維持「沒有 active Event」的契約，不復活。 |
+| 同上 | `migrateSeasonStateV2` 在 scope 檢查**之前**先對位（`aligned`），後續 `activeEventOf` / `refreshLegacyIndexes` 都吃對位後的值。 |
+| `src/platform/profileStore.js` | `setActiveEvent` 改走 `_setCompetitionState`（legacy competition 的唯一寫入點）⇒ v2 sidecar 與 legacy 指標同一次寫入一起動，不必等 `save()`。 |
+
+**沒有動**：R59–R65、Team Development、R63 ActiveMatch、Q7f、Multi-Event sealing、
+Season／Competition 規則。封存語意一行未改（`v2_sealing_m2` 24/24 未變）。
+
+### 新 verifier：`tools/check_seasonstate_v2_active_focus.mjs`（30/30）
+
+為什麼另立一支而不是加進 `v2_runtime`：`v2_runtime` 每一條都從**乾淨載入**開始，
+只要 wrap 對就會綠——它證明不了「載入之後又發生了什麼」。這支專門守那個區間：
+多 Event 賽季 → 切 A→B → v2 active／adapter／`competitionView` 三方一致 →
+save → reload → 仍一致 → 對 B 追加 fixture＋outcome → 只有 B 的 index 動、A 逐值不變 →
+反向對非聚焦的 A 追加、A 也會更新（證明 refresh 不綁畫面焦點）→
+切回去、非法 Event 被擋 → 真實 5 Event 存檔重跑同一組性質。
+
+### Mutation（Claude 自己做，每次先 grep 確認變異落地）
+
+| 變異 | 結果 |
+|---|---|
+| `realignActivePointer` 的 focus 查找恆 `null`（破壞 active pointer sync） | 🔴 **30/30 → 19/30**（#5/#6/#8/#9/#11/#13/#14/#16/#24/#28/#29） |
+| index lookup 改回 `legacyState.competition` ＋ 全季 fixtures | 🔴 **30/30 → 15/30**（再加 #18/#19/#21/#22） |
+
+兩次都先 `grep` 確認變異字串真的在檔案裡（**變異沒讓 gate 變紅，通常代表變異無效**），
+跑完由備份還原，還原後 30/30。
+
+### Release Gate
+
+`tools/check_competition_release_gate.mjs` 新增區段 **`v2_active_focus`**
+（`shape: /SeasonState v2 active focus: 30\/30 PASS/`），9 段 → **10 段**。
+上面兩個 case 因此正式納入 merge/deploy 前的必跑集合。
+
+### 仍然存在的 `legacyState.competition` 路徑（照實記）
+
+- `seasonSealingV2.js:196`（`sealEventV2` 的 scope gate）與 `:200`
+  （`sameIds(event.fixtureIds, ids(legacyState.fixtures))` 比全季集合）
+  —— **仍是舊形狀假設**。屬 Multi-Event sealing 範圍，本輪刻意未動
+  （`P0_V2_SEALING_BOUNDARY = false`，封存走 legacy path，所以尚未爆）。
+  見 `review/mainline-defects/MULTI_EVENT_SEALING_COMPLETION_TODO.md`。
+- `seasonStateV2.js` 的 `wrapLegacySingleCompetition`／`hasLegacyScope`／
+  `activeLegacyCompetitionId` fallback —— 都**明確以「沒有 Event map」為前提**，
+  是 pre-Q7a-3b 存檔的遷移路徑，正確。
+- `activeEventAdapter` 回傳值裡的 `competition` 欄位在多 Event 形狀恆為 `null`，
+  **全 repo 無任何消費者**（消費的只有 `.legacyState` 與 `.event`）⇒ 死欄位，非 runtime path。
+
+### 驗證輸出（照實貼，含未通過項）
+
+```
+Competition Release Gate（10 段）
+  PASS  v2_runtime          [legacy] 9/9   [v2] 27/27
+  PASS  v2_active_focus     30/30
+  PASS  v2_sealing_m2       24/24
+  PASS  circuit_points      21/21
+  FAIL  multi_event         ← 見下（環境）
+  PASS  career_final        12/12
+  PASS  asia_finals         15/15
+  PASS  team_honors         15/15
+  PASS  q6                  20/20
+  FAIL  build               ← 見下（環境）
+  passed 8/10
+
+其他 node verifier（單獨重跑，全綠）
+  3a 29/29　3b 51/51　3c 69/69　3d 67/67　3f 43/43　3f.1 42/42
+  index_digest 13/13　live_session 20/20　safety 18/18
+  Q7b 72/72　Q7d 59/59
+```
+
+### ⚠ 兩項**未完成驗證**（環境阻塞，非本次改動所致）
+
+`npm run build` 與 `browser_check_multi_event_ui` 在本機**跑不完**：
+
+```
+runtime: VirtualAlloc of 5152768 bytes failed with errno=1455
+fatal error: out of memory
+```
+
+`errno=1455` = `ERROR_COMMITMENT_LIMIT`。實測系統 commit **44.5 GB / 上限 45.9 GB**
+（Chrome 7.8 GB、ChatGPT 4.6 GB、Evernote 2.0 GB、codex 1.1 GB…），
+另有其他 worktree 遺留的 vite dev server orphan（8/16–8/17，約 1 GB）。
+`--minify=false`、`ESBUILD_MAX_THREADS=1` 都一樣死在同一處；
+`transforming... ✓ 2682 modules transformed` 已通過，死在 `rendering chunks` 的 esbuild 子行程。
+`multi_event` 同因：Chrome ＋ dev server 起不來，連第 1 條「進得了賽事頁」都紅
+（gate 內 18s 就 FAIL；單獨重跑 10 分鐘無任何輸出，卡在 `startDevServer`／`launchChrome`）。
+
+⇒ **這兩項在記憶體釋放後必須重跑，未跑過之前不得宣稱本輪完成。**
+
+---
+
+## Crash Recovery ——「環境阻塞」兩項紅燈的結案（2026-08-19，同一輪的後續）
+
+**接續上一節，不取代它。** 上一節結尾留下的兩項未完成驗證（`build`、`multi_event`），
+在環境當機、記憶體釋放後**重新執行完畢**。上一節的紅燈紀錄與失敗證據**逐字保留**，
+這一節只記錄它們後來變成什麼。
+
+### 事件順序（照實記）
+
+1. 上一節的修正做完、mutation 做完並還原、`v2_active_focus` 30/30。
+2. 重跑 Release Gate 時系統 commit 記憶體耗盡 ⇒ `build` 與 `multi_event` 紅，gate 8/10。
+3. **環境／視窗當機**，session 中斷。上一節的最後一段就是在這個時點寫下的。
+4. 復原後先做 Crash Recovery Audit（不 reset、不 checkout、不 clean、不重寫已存在成果），
+   再重跑完整 10 段 Release Gate。
+
+### Crash Recovery Audit 結果
+
+| 項目 | 結果 |
+|---|---|
+| worktree / branch | `ESMO-worktrees/seasonstate-v2-runtime`／`fix/seasonstate-v2-runtime-completion` |
+| HEAD | `4d13f24`（第六階段 Release Gate 那一筆，當機**前**就已 commit） |
+| git 中斷狀態 | 無 MERGE_HEAD／rebase／cherry-pick 殘留；stash 只有 2026-08-10 別 branch 的舊項目 |
+| 未提交成果 | 上一節的 5 個檔案完好，`node --check` 三支全過（**未被當機截斷**） |
+
+### Release Gate 重跑（10 段全綠，實測輸出）
+
+```
+══ Competition Release Gate ══
+▶ v2_runtime       SeasonState v2 runtime compatibility … ✅ PASS　1s
+▶ v2_active_focus  v2 聚焦指標一致性 ＋ Event-scoped index refresh … ✅ PASS　0s
+▶ v2_sealing_m2    3b-M2 Event/Season sealing boundary … ✅ PASS　0s
+▶ circuit_points   巡迴積分 UI … ✅ PASS　70s
+▶ multi_event      多 Event UI 與 focus 切換 … ✅ PASS　24s
+▶ career_final     生涯主要賽事最終名次 … ✅ PASS　41s
+▶ asia_finals      亞洲年度總決賽 UI … ✅ PASS　63s
+▶ team_honors      戰隊榮譽 UI … ✅ PASS　57s
+▶ q6               季後賽／封存／換季 生命週期 … ✅ PASS　34s
+▶ build            production build … ✅ PASS　23s
+
+port 清理：✅ 無殘留
+passed 10/10
+failed 0/10          （exit 0）
+```
+
+**`multi_event` PASS、`build` PASS** ⇒ 上一節那兩項紅燈**結案**。
+
+### 兩項紅燈的定性：環境，不是產品 regression
+
+判定依據不是「重跑就綠了」，而是三件事同時成立：
+
+- **失敗訊號本身就是環境層的**：`VirtualAlloc … errno=1455` =
+  `ERROR_COMMITMENT_LIMIT`，是 Windows **commit 記憶體上限**，
+  不是斷言失敗、不是 exit code 非 0 的邏輯錯誤。
+  `build` 死在 `rendering chunks` 的 esbuild 子行程，而 `transforming ✓ 2682 modules`
+  已經走完 ⇒ 程式碼本身編得過。
+- **`multi_event` 當時連第 1 條斷言都沒跑到**（卡在 `startDevServer`／`launchChrome`），
+  失敗發生在受測程式碼**執行之前**。
+- **產品碼在兩次執行之間一行未改**：重跑前後 `git diff --stat` 逐字相同
+  （4 檔 +275/-22），沒有「為了讓它變綠而動過什麼」。
+
+記憶體實測對照（同一台機器）：
+
+| | commit 使用／上限 | 結果 |
+|---|---|---|
+| 當機前 | 44.5 GB / 45.9 GB | `build`、`multi_event` OOM |
+| 復原後 | 約 13 GB 已用（limit 39.69 GB，free virtual 26.6 GB） | 10/10 PASS |
+
+> ⚠ 留給後人的判讀規則：`errno=1455` 與「browser gate 在第 1 條斷言前就紅」
+> **不得當成回歸訊號**。先看記憶體，再看 diff 有沒有動過產品碼。
+
+### mutation 殘留：無（四項獨立證據）
+
+1. 第六階段 commit `4d13f24` 的檔案清單中 **`src/` 檔案數 = 0**
+   （mutation 全部發生在產品碼上 ⇒ 版本層面即證明已還原）。
+2. 上一節記載的兩個變異字串實測皆不存在：`legacyState?.competition?.id` 零命中；
+   `realignActivePointer` 的 focus 查找（`seasonStateV2.js:825`）完整未被改成恆 `null`。
+3. 全 repo（含 ignored）無 `*.bak`／`*.orig`／`*.rej`／`*mutation*` 殘檔。
+4. 未提交 diff **逐行審過**，全部是帶註解的有意修正，
+   無早退／反轉條件／恆 null 型變異；三個改動檔 `node --check` 全過。
+
+### 執行環境殘留：無
+
+- `node`／`esbuild`／`chromedriver` 行程：**0 個**（gate 跑完後再驗一次，仍 0）。
+- 監看 port（5173、5391–5451）：gate 自己的 `finally` 回報「✅ 無殘留」；
+  另以 `Get-NetTCPConnection` 獨立複驗 5000–5999，只剩 `svchost:5040`
+  （Windows 系統服務，gate 執行**前**就在，非本次產生）。
+- 沒有遺留 dev server / browser session。
+
+### 本節**沒有**做的事
+
+未 push、未 deploy、未整合 Q7f、未 reset／checkout／clean、未修改上一節任何既有文字。
+`seasonSealingV2.js` 的 `legacyState.competition` 舊形狀假設**仍在**（上一節已列，屬
+Multi-Event sealing 範圍）⇒ 本輪一樣沒動。**gate 全綠代表現有行為沒有回歸，不代表 v2 完成。**
