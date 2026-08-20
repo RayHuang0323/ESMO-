@@ -69,6 +69,7 @@ export function primaryActionFor({ entryOk, view, room, session, mode = null, fi
   const retry = inFixture
     ? { key: "refixture", label: "重新進入本場賽事", disabled: false, tone: "go" }
     : { key: "requeue", label: "重新配對", disabled: false, tone: "neutral" };
+  const restoreable = session?.restoreable === true;
 
   //  ① 終局：票券或房間作廢 ⇒ 重新來過（**實際作廢並重新排隊**，不是回到起點）
   if (st === TICKET_STATES.rejected || st === TICKET_STATES.cancelled
@@ -81,12 +82,17 @@ export function primaryActionFor({ entryOk, view, room, session, mode = null, fi
   //    （一場沒打完的比賽），舊版只顯示停用的「進入 Ban/Pick…」⇒ **永久卡死**，
   //    而且一次性 launchToken 已經用掉，再按也沒用。
   //    O6 早就備好 `resumeSession`／`abandonSession`，只是 UI 從來沒接。
-  if (session?.state === "launched" && (!mode || !session?.session?.mode || session.session.mode === mode)) {
-    return { key: "resume", label: "返回進行中的比賽", disabled: false, tone: "go" };
+  if (session?.state === "launched" && restoreable
+    && (!mode || !session?.session?.mode || session.session.mode === mode)) {
+    return { key: "resume", label: "返回進行中的對戰", disabled: false, tone: "go" };
   }
-  if (session?.state === "launched" && mode && session?.session?.mode && session.session.mode !== mode) {
-    return { key: "blocked", label: "另一個模式有進行中的比賽", disabled: true, tone: "off" };
+  if (session?.state === "launched" && restoreable
+    && mode && session?.session?.mode && session.session.mode !== mode) {
+    return { key: "blocked", label: "另一個模式有進行中的對戰", disabled: true, tone: "off" };
   }
+  // launched 但沒有有效 ActiveMatch 是舊／損壞的可恢復資料，不得再送進 resume。
+  // 一般配對走 requeue；賽程走既有 refixture，保留同一場對手與 fixture 身分。
+  if (session?.state === "launched") return retry;
   //  ③ 場次已進入終局（打完／放棄／取消／逾期）⇒ 可以重新配對
   //  ⚠ 少了這一條一樣會卡死：放棄本場之後 room 仍是 `confirmed`，
   //    按鈕會落到下面「雙方已確認，準備進場…」的停用分支，玩家還是動不了。
@@ -140,7 +146,10 @@ export function flowStatusText({ entryOk, view, room, session, opponentName, fix
     if (inFixture) return "本場賽事還沒打完，可以重新進入（對手不會換）";
     return session.state === "completed" ? "上一場已結束，可以開始新的配對" : "已放棄上一場，可以重新配對";
   }
-  if (session?.state === "launched") return "你有一場進行中的對戰";
+  if (session?.state === "launched" && session?.restoreable) return "你有一場進行中的對戰";
+  if (session?.state === "launched") {
+    return inFixture ? "本場賽事資料無法恢復，可以重新進入本場" : "上一場對戰資料無法恢復，請重新配對";
+  }
   if (session?.canLaunch) return "雙方已確認，正在進入 Ban/Pick";
   if (room?.state === "ready_check") {
     return room.usReady ? "你已確認，等待對手確認" : "對手已就緒，請確認進入對戰";

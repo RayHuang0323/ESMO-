@@ -2033,6 +2033,9 @@ export const useProfileStore = create((set, get) => ({
       stateLabel: session ? sessionStateLabel(session.state) : "尚未建立場次",
       canLaunch: !!session && v.ok,
       blockedReason: session ? (v.ok ? null : v.errors[0]?.message ?? null) : null,
+      // R63：只有同一個 MatchSession 內的有效 ActiveMatch 才能顯示 resume。
+      // launched 但缺 snapshot／狀態已失效的 legacy session 不得誤導 UI 進入 resume。
+      restoreable: isActiveMatch(session),
       // R63：已正式啟動的 ActiveMatch 不受「尚未啟動 TTL」影響。
       expired: !isActiveMatch(session) && isSessionExpired(session, now),
     };

@@ -10278,3 +10278,10 @@ C 現況已足夠。稽核結論傾向 **B**，理由見回報。
 - `check_team_development_v1.mjs` 原有一條 assertion 錯把「不得讓個人天賦取代 Team Development」寫成「不得存在 `purchasePlayerTalent`」。已改為同時檢查 legacy action／screen 保留、Team Development primary 與 route marker；這是依共同 contract 修正工具檢查，不是降低 assertion 或 rebaseline。
 - Competition 的 legacy competition 仍是 gameplay truth；SeasonState v2 是 metadata／reference projection。未新增第二套 gameplay truth、fail-open scope fallback、`activeEventId`／`careerEventId` 混用或 `SeasonSeal`／`FinalStandings` 混用；wrong scope fail closed、missing／stale sidecar deterministic rebuild、active focus 即時同步、multi-event index 仍為 Event-scoped。
 - 已知邊界不列為本輪 blocker：`P0_V2_SEALING_BOUNDARY = false` 的 multi-event sealing、`check_season_state_v2_migration_q7b` 既有 debt、Q7f 尚未整合，以及 R64／R65。browser gate 也不等同真機觸控／FPS／視覺體感實測。
+
+## P0.6B ActiveMatch TTL／UI boundary repair（2026-08-20）
+
+- Deterministic matrix：`created` 超過 300 秒拒絕；`launched + ActiveMatch.v1` 超過 300 秒仍以相同 `matchId`／`sessionId`／`seed`／`lineup` resume；completed／abandoned／cancelled／invalid 仍拒絕。
+- Causal bug 是 UI action gate，不是 `resumeSession()` 已存在的 ActiveMatch TTL exception：任何 `launched` session 都曾被提供 resume，包括沒有有效 ActiveMatch snapshot 的 legacy session。
+- 新增 store-owned `restoreable` view，`primaryActionFor()` 只對有效 ActiveMatch 顯示 resume；invalid launched data 沿用既有 requeue／same-fixture refixture。沒有降低 assertion 或 rebaseline。
+- Focused evidence：TTL regression `9/9`、R63 `13/13`、Competition × ActiveMatch `19/19`、matchmaking flow `97/97`、Competition Release Gate `10/10`、browser product-presence `12/12`、build PASS。
