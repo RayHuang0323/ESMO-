@@ -59,7 +59,7 @@ const mmss = (sec) => {
  * @returns {{key:string, label:string, disabled:boolean, tone:string}}
  *   key ∈ enqueue | blocked | queued | waiting | confirm | launching | requeue | refixture
  */
-export function primaryActionFor({ entryOk, view, room, session, fixture = null }) {
+export function primaryActionFor({ entryOk, view, room, session, mode = null, fixture = null }) {
   const st = view?.state ?? TICKET_STATES.idle;
   //  Q3.6：賽程區間內，「重新來過」＝重新進入**同一場賽程**，不是重新配對。
   //  一般配對會換掉對手（瀏覽器實測配到隨機隊伍），而賽程的對手是賽程決定的。
@@ -81,8 +81,11 @@ export function primaryActionFor({ entryOk, view, room, session, fixture = null 
   //    （一場沒打完的比賽），舊版只顯示停用的「進入 Ban/Pick…」⇒ **永久卡死**，
   //    而且一次性 launchToken 已經用掉，再按也沒用。
   //    O6 早就備好 `resumeSession`／`abandonSession`，只是 UI 從來沒接。
-  if (session?.state === "launched") {
-    return { key: "resume", label: "返回進行中的對戰", disabled: false, tone: "go" };
+  if (session?.state === "launched" && (!mode || !session?.session?.mode || session.session.mode === mode)) {
+    return { key: "resume", label: "返回進行中的比賽", disabled: false, tone: "go" };
+  }
+  if (session?.state === "launched" && mode && session?.session?.mode && session.session.mode !== mode) {
+    return { key: "blocked", label: "另一個模式有進行中的比賽", disabled: true, tone: "off" };
   }
   //  ③ 場次已進入終局（打完／放棄／取消／逾期）⇒ 可以重新配對
   //  ⚠ 少了這一條一樣會卡死：放棄本場之後 room 仍是 `confirmed`，

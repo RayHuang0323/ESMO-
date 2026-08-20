@@ -15,6 +15,7 @@
 import React, { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { useProfileStore, WAN } from "../../platform/profileStore.js";
+import { teamDevelopmentEffects } from "../../platform/development/teamDevelopment.js";
 import { genProspects, TIERS, SCOUT_DAYS } from "../../data/recruitPool.js";
 import { STAT_DEF, STAT_CATS, MOBA_ROLES, ROSTER_CAP, bestPositions, personalityById } from "../../data/playerModel.js";
 import { makeRecruitmentId } from "../../platform/contracts/recruitment.js";
@@ -32,6 +33,8 @@ export default function RecruitScreen({ onBack }) {
   //  Milestone O：已簽約狀態改讀**招募帳本**（冪等鍵 = 池 seed + 池內編號）。
   //  之前是比對「名字相同」——不同批新秀撞名就會被誤判成已簽約。
   const signedLedger = useProfileStore((s) => s.recruitment?.signed) ?? {};
+  const development = useProfileStore((s) => s.teamDevelopment);
+  const developmentEffects = teamDevelopmentEffects(development);
   const [notice, setNotice] = useState(null);
 
   const [seed, setSeed] = useState(7);
@@ -66,7 +69,8 @@ export default function RecruitScreen({ onBack }) {
 
   const dispatchScout = (p, depth) => {
     if (scoutQueue[p.id] || scoutOf(p) >= 2) return;
-    setScoutQueue((s) => ({ ...s, [p.id]: { level: depth, daysLeft: SCOUT_DAYS[depth], totalDays: SCOUT_DAYS[depth] } }));
+    const days = Math.max(1, SCOUT_DAYS[depth] - developmentEffects.scoutDaysReduction);
+    setScoutQueue((s) => ({ ...s, [p.id]: { level: depth, daysLeft: days, totalDays: days } }));
   };
   const advanceScoutDay = () => {
     setScoutQueue((queue) => {
@@ -167,7 +171,7 @@ export default function RecruitScreen({ onBack }) {
           const potShow = sc >= 2 ? p.potential : sc >= 1 ? `${decade}~${decade + 9}` : "???";
           const tierShow = sc >= 1 ? p.tier.grade : "?";
           return (
-            <button key={p.id} onClick={() => setSelId(p.id)}
+            <button key={p.id} data-testid="recruit-player-card" data-player-id={p.id} onClick={() => setSelId(p.id)}
               style={{ display: "flex", alignItems: "center", gap: 11, background: GC.card, border: `1px solid ${sc >= 1 ? p.tier.color + "33" : "rgba(255,255,255,0.06)"}`, borderRadius: 13, padding: "11px 13px", cursor: "pointer", textAlign: "left", width: "100%" }}>
               <div style={{ width: 42, height: 42, borderRadius: 11, background: sc >= 1 ? `linear-gradient(135deg,${p.tier.color},#0a0b0f)` : "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14, fontWeight: 900, color: "#fff" }}>{tierShow}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -205,7 +209,7 @@ export default function RecruitScreen({ onBack }) {
         const inQueue = Boolean(scoutQueue[sel.id]);
         const decade = Math.floor(sel.potential / 10) * 10;
         return (
-          <div onClick={() => setSelId(null)} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.82)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(4px)" }}>
+          <div data-testid="recruit-player-detail" data-player-id={sel.id} onClick={() => setSelId(null)} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.82)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(4px)" }}>
             <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: 380, width: "100%", background: GC.card2, borderRadius: 16, padding: 18, border: `1px solid ${sc >= 1 ? sel.tier.color : GC.line}`, maxHeight: "88vh", overflowY: "auto" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
                 <div style={{ width: 50, height: 50, borderRadius: 13, background: sc >= 1 ? `linear-gradient(135deg,${sel.tier.color},#0a0b0f)` : "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 900, color: "#fff" }}>{sc >= 1 ? sel.tier.grade : "?"}</div>
@@ -214,7 +218,7 @@ export default function RecruitScreen({ onBack }) {
                   <div style={{ color: GC.gray, fontSize: 10 }}>{sel.role} · {sel.age}歲 · 潛力 {sc >= 2 ? sel.potential : sc >= 1 ? `${decade}~${decade + 9}` : "???"}</div>
                   {sc >= 1 && <div style={{ color: sel.tier.color, fontSize: 9, fontWeight: 700, marginTop: 2 }}>{sel.tier.label}</div>}
                 </div>
-                <button onClick={() => setSelId(null)} style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "none", cursor: "pointer", color: "#a1a1aa", fontSize: 14 }}>✕</button>
+                <button aria-label="關閉候選選手詳情" onClick={() => setSelId(null)} style={{ width: 40, height: 40, minWidth: 40, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "none", cursor: "pointer", color: "#a1a1aa", fontSize: 14 }}>✕</button>
               </div>
 
               {/* 球探派遣 */}

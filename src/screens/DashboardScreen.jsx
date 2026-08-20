@@ -14,6 +14,7 @@ import React, { useState } from "react";
 import { useProfileStore } from "../platform/profileStore.js";
 import { resolveSponsor } from "../platform/economy/sponsors.js";
 import { GC, FONT } from "../ui/theme.js";
+import ActiveMatchCard from "./common/ActiveMatchCard.jsx";
 
 const money = (n) => "$" + (n / 10000).toFixed(1) + "萬";
 
@@ -24,7 +25,7 @@ function Tile({ emoji, label, onClick, badge, right, color = GC.purp, children }
       style={{ position: "relative", display: "flex", flexDirection: "row", alignItems: "center", gap: 10, background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 14, padding: "15px 16px", cursor: "pointer", textAlign: "left", width: "100%", transition: "all 0.18s", minHeight: 56 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, width: "100%" }}>
         <div style={{ position: "relative", fontSize: 20, color: color }}>{emoji}
-          {badge > 0 && <span style={{ position: "absolute", top: -7, right: -8, background: GC.red, color: "white", fontSize: 8, fontWeight: 800, borderRadius: 99, minWidth: 14, height: 14, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>{badge}</span>}
+          {badge > 0 && <span style={{ position: "absolute", top: -7, right: 0, background: GC.red, color: "white", fontSize: 8, fontWeight: 800, borderRadius: 99, minWidth: 14, height: 14, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>{badge}</span>}
         </div>
         <span style={{ color: "white", fontSize: 15, fontWeight: 700, flex: 1 }}>{label}</span>
         {right}
@@ -34,16 +35,16 @@ function Tile({ emoji, label, onClick, badge, right, color = GC.purp, children }
   );
 }
 
-export default function DashboardScreen({ onMoba, onSeason, onNav }) {
+export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActive }) {
   const profile = useProfileStore();
   const [modal, setModal] = useState(null);
 
   const players = profile.players ?? [];
   const inbox = profile.inbox ?? [];
-  // S25：天賦點徽章＝選手實際未花費天賦點總和（升級時由 applyMatchProgress 發放），
-  //   不再是 meta.talentPending 的靜態種子值 → 天賦點閉環在首頁看得見。
-  const talentTotal = players.reduce((s, p) => s + (Number.isFinite(p.talentPoints) ? p.talentPoints : 0), 0);
-  const T = { ...profile.team, ...profile.meta, gold: money(profile.finance.funds), players: players.length, mail: inbox.length, inbox: inbox.filter((m) => m.unread).length, talentPending: talentTotal };
+  // 戰隊發展點是俱樂部層投資資源；個人天賦點仍由舊玩家資料保留，
+  //   不再從首頁作為主要投資入口展示。
+  const developmentPoints = Math.max(0, Number(profile.teamDevelopment?.availablePoints) || 0);
+  const T = { ...profile.team, ...profile.meta, gold: money(profile.finance.funds), players: players.length, mail: inbox.length, inbox: inbox.filter((m) => m.unread).length, developmentPoints };
   const finBars = profile.finance.weekly9 ?? [6, 4, 5, 3, 2, 9, 5, 6, 4];
   //  Milestone N：本週收支預覽（唯讀；與週結算共用同一份計算，畫面不另算一套）
   const wk = profile.currentWeekPreview();
@@ -70,13 +71,8 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
   //  N3：「開新局」是三種財務情境（新手／一般／頂級）的唯一入口。
   const more = [{ id: "team", n: "戰隊詳情", i: "🛡" }, { id: "training", n: "訓練中心", i: "📅" }, { id: "newgame", n: "開新局", i: "🎬" }, { id: "dash", n: "儀表板", i: "📊" }, { id: "sponsor", n: "贊助商", i: "🤝" }];
 
-  // Sprint21：八個經營模組已 Component 化 → 直接導頁；其餘 Legacy 模組維持誠實佔位。
-  //  集中驗收修正（項目五）：「天賦」磚原本導向 `roster`——玩家點進去只看到
-  //  一般選手名單，沒有任何天賦入口，流程就斷在那裡。
-  //  現在導向 `talentPick`（同一個 RosterScreen，但標題是「選擇要培養的選手」，
-  //  每張卡有「查看天賦」直達天賦樹）。**沒有第二套天賦系統**——
-  //  天賦樹仍是既有的 PlayerTalentScreen。
-  const NAV = { notify: "inbox", finance: "finance", sponsor: "sponsor", roster: "roster", team: "team", training: "training", recruit: "recruit", cs: "csPrep", talent: "talentPick", newgame: "newGame" };
+  // 舊 talentPick 路由仍保留給相容流程；首頁主要投資入口改為戰隊發展。
+  const NAV = { notify: "inbox", finance: "finance", sponsor: "sponsor", roster: "roster", team: "team", training: "training", recruit: "recruit", cs: "csPrep", development: "teamDevelopment", talent: "talentPick", newgame: "newGame" };
   const sel = (id) => {
     if (id === "moba") return onMoba();
     if (id === "bracket") return onSeason();
@@ -87,11 +83,12 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
   return (
     <div style={{ minHeight: "100%", background: GC.bg, fontFamily: FONT, overflow: "auto", height: "100%" }}>
       <div style={{ maxWidth: 460, margin: "0 auto" }}>
+        <ActiveMatchCard onResume={onResumeActive} />
         {/* 頂部隊伍識別 */}
         <div style={{ position: "relative", background: `linear-gradient(180deg,#2a2d3e,${GC.bg})`, padding: "18px 16px 14px", textAlign: "center" }}>
           <div style={{ position: "absolute", top: 14, right: 16 }}>
             <div style={{ width: 38, height: 38, borderRadius: "50%", background: `linear-gradient(135deg,${GC.gold},#d97706)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, border: `2px solid ${GC.gold}` }}>🐱</div>
-            <span style={{ position: "absolute", bottom: -4, right: -4, background: GC.bg, color: GC.gold, fontSize: 8, fontWeight: 800, borderRadius: 99, padding: "1px 4px", border: `1px solid ${GC.gold}` }}>{T.achievement}</span>
+            <span style={{ position: "absolute", bottom: -4, right: 0, background: GC.bg, color: GC.gold, fontSize: 8, fontWeight: 800, borderRadius: 99, padding: "1px 4px", border: `1px solid ${GC.gold}` }}>{T.achievement}</span>
           </div>
           <div style={{ width: 72, height: 72, margin: "0 auto 8px", borderRadius: 18, background: "linear-gradient(135deg,#4a4d5e,#2a2d3e)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 38, border: `2px solid ${GC.purp}66` }}>{T.emoji}</div>
           <h1 style={{ color: "white", fontSize: 24, fontWeight: 900, margin: 0 }}>{T.name}</h1>
@@ -105,7 +102,7 @@ export default function DashboardScreen({ onMoba, onSeason, onNav }) {
         <div style={{ padding: "0 14px", display: "flex", flexDirection: "column", gap: 10 }}>
           <Tile emoji="💬" label="收件匣" badge={T.inbox} color={GC.blue} onClick={() => sel("notify")} right={<span style={{ display: "flex", alignItems: "center", gap: 4, color: GC.gray, fontSize: 12 }}>✉️ {T.mail}</span>} />
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <Tile emoji="🌿" label="天賦" badge={T.talentPending} color={GC.purp} onClick={() => sel("talent")} />
+            <Tile emoji="🌱" label="戰隊發展" badge={T.developmentPoints} color={GC.green} onClick={() => sel("development")} />
             <Tile emoji="🛒" label="商店" color={GC.gold} onClick={() => sel("equip")} />
           </div>
           {/* Milestone N：本週財務（真實值，非種子）＋ 合約狀態 ─────────────

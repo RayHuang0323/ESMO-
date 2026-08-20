@@ -10240,3 +10240,41 @@ release 84b6058      UI Recovery: PASS 14/14    Persistence: INTEGRATED  Consume
 下一步選項（**等使用者決定**）：A 只恢復 `65e3506`（UI-only）／
 B 建立完整 Recovery Release（含 R59 persistence＋R60 consumer）／
 C 現況已足夠。稽核結論傾向 **B**，理由見回報。
+
+## P0.6B Full Product Recovery（2026-08-20，Codex implementation-owned）
+
+### Recovery strategy
+
+- 以目前 SeasonState v2 branch 為唯一 production 基線，先稽核 `5e7e0c6`、`3a81108`、`65e3506`、`84b6058` 與 `ba5644b`／`d42190e` 的差異，再做 selective integration。
+- 未 cherry-pick 整顆歷史 release、未整檔覆蓋 `profileStore.js`；保留 Competition／SeasonState v2 既有 contract，R64／R65／Q7f 不在本輪。
+
+### 恢復內容
+
+- R59／R59.1：Team Development 4 類 × 5 節點的 v1.5 product layer、schema v10、migration、save／reload persistence；訓練天數、每日回復與招募 scout 天數由同一份 teamDevelopment state 驅動。
+- R60：MOBA Ban/Pick opponent research、MOBA Tactic data analysis、CS Tactic demo analysis、Roster contract summary、Recruit scout reduction 五個真實 consumer；沒有以 UI 假資料代替 gameplay source。
+- R61：Team Development route／homepage primary、升級流程與既有 PlayerTalent legacy compatibility 同時保留。
+- R62：Player Profile foundation；Roster 摘要 modal 可進入完整檔案，完整檔案保留 mode-specific tabs 與既有 player identity。
+- R63：ActiveMatch.v1 queue／launch／pause／resume／snapshot 與競賽入口整合；Competition fixture resume、settlement idempotence 與 legacy competition gameplay truth 均保留。
+
+### Verifier 與 Gate 結果
+
+| Gate | 結果 |
+|---|---|
+| Team Development recovery contract | PASS；persistence 與五個 consumers 均為 INTEGRATED |
+| Team Development v1.5 | PASS `29/29` |
+| R61 UI fixture／R62 Player fixture | PASS |
+| R63 focused | PASS `13/13` |
+| R63 × Competition combined | PASS `19/19` |
+| SeasonState active-focus | PASS `31/31` |
+| Competition Release Gate | PASS `10/10`，exit `0`；watched ports／harness cleanup 通過 |
+| P0.6B browser product-presence | PASS `12/12`；Team Development 升級 reload、Player Profile、Competition、ActiveMatch resume、390／360 overflow 均通過 |
+| production build／syntax／`git diff --check` | PASS |
+
+`tools/verify.mjs` 已加入上述 recovery gate 的可重跑入口；本輪 selected recovery runner 為 `7/7`。Release Gate 完整 logs 保留於 `C:\Users\ifikn\AppData\Local\Temp\esmo-competition-gate-vORuhp`。
+
+### Contract review、衝突與邊界
+
+- Team Development 保持首頁主要入口；`PlayerTalentScreen`／`talentPick` 僅作 legacy compatibility／detail，不移除既有 `purchasePlayerTalent`。
+- `check_team_development_v1.mjs` 原有一條 assertion 錯把「不得讓個人天賦取代 Team Development」寫成「不得存在 `purchasePlayerTalent`」。已改為同時檢查 legacy action／screen 保留、Team Development primary 與 route marker；這是依共同 contract 修正工具檢查，不是降低 assertion 或 rebaseline。
+- Competition 的 legacy competition 仍是 gameplay truth；SeasonState v2 是 metadata／reference projection。未新增第二套 gameplay truth、fail-open scope fallback、`activeEventId`／`careerEventId` 混用或 `SeasonSeal`／`FinalStandings` 混用；wrong scope fail closed、missing／stale sidecar deterministic rebuild、active focus 即時同步、multi-event index 仍為 Event-scoped。
+- 已知邊界不列為本輪 blocker：`P0_V2_SEALING_BOUNDARY = false` 的 multi-event sealing、`check_season_state_v2_migration_q7b` 既有 debt、Q7f 尚未整合，以及 R64／R65。browser gate 也不等同真機觸控／FPS／視覺體感實測。

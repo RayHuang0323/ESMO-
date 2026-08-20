@@ -11,6 +11,7 @@
 // ============================================================================
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
+import { teamDevelopmentEffects } from "../../platform/development/teamDevelopment.js";
 import { selectOpponentName, selectTeamName } from "../../platform/matchTeamNames.js";
 import { seatPlayers as seatPlayersOf, SEAT_CODE } from "../../platform/contracts/matchLineup.js";
 import { heroTags } from "../../data/heroClassification.js";
@@ -215,6 +216,8 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
   //    玩家看不出衝突。現在改用可解釋評分 + 窮舉最佳解（5! = 120 種，決定性）。
   const storePlayers = useProfileStore((s) => s.players);
   const storeLineup = useProfileStore((s) => s.lineup);
+  const development = useProfileStore((s) => s.teamDevelopment);
+  const developmentEffects = teamDevelopmentEffects(development);
   //  Q3.5-fix：選角階段要指名道姓——玩家從賽事頁看到的是「某某戰隊」，
   //  進來卻只寫「對手」，中間斷了一截。名字來自本場指派單（唯一來源見
   //  `platform/matchTeamNames.js`），沒有場次就退回中性的「對手／我方」。
@@ -296,6 +299,19 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
   const cur = step < SEQ.length ? SEQ[step] : null;
   const done = step >= SEQ.length;
   const isMyTurn = cur && cur.team === "blue";
+  const opponentReport = useMemo(() => {
+    const picksByArchetype = picks.red.reduce((counts, champ) => {
+      counts[champ.arch] = (counts[champ.arch] ?? 0) + 1;
+      return counts;
+    }, {});
+    const tags = [...new Set(picks.red.flatMap((champ) => [...analyzeChamp(champ)]))];
+    return {
+      picks: picks.red,
+      bans: bans.red,
+      archetypes: Object.entries(picksByArchetype).sort((a, b) => b[1] - a[1]),
+      tags,
+    };
+  }, [bans.red, picks.red]);
   const pool = CHAMPIONS_100.filter((c) => !usedRef.current.has(c.id));
   //  Hotfix2：畫面上實際列出的英雄 ＝ 定位頁籤 ∩ 關鍵字。
   //    關鍵字比對中文名、英文名、id、稱號與預設路線——玩家記得哪個就打哪個。
@@ -523,6 +539,26 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
             收合狀態成本極低，放回上方讓它一直在首屏，英雄格仍從首屏開始。 */}
         <DraftPlanPanel plan={draftPlan} loadout={planLoadout}
           open={planOpen} onToggle={() => setPlanOpen((v) => !v)} needs={compNeeds} laneByHero={laneByHero} picks={picks.blue} />
+
+        {developmentEffects.unlocks.mobaOpponentResearch && (
+          <div data-testid="moba-opponent-research" style={{ background: GC2.card, border: "1px solid rgba(96,165,250,0.35)", borderRadius: 10, padding: "9px 11px", marginBottom: 10 }}>
+            <div style={{ color: GC2.blue, fontSize: 10, fontWeight: 900 }}>對手研究 · {oppName ?? "對手"}</div>
+            {opponentReport.picks.length > 0 ? (
+              <>
+                <div style={{ color: "#e5e7eb", fontSize: 9, marginTop: 4 }}>
+                  已選英雄：{opponentReport.picks.map((champ) => champ.zh).join("、")}
+                </div>
+                <div style={{ color: GC2.gray, fontSize: 8.5, lineHeight: 1.5, marginTop: 3 }}>
+                  類型：{opponentReport.archetypes.map(([name, count]) => name + " ×" + count).join("、") || "尚未形成"}
+                  {opponentReport.tags.length > 0 ? " · 特徵：" + opponentReport.tags.join("、") : ""}
+                  {opponentReport.bans.length > 0 ? " · 禁用 " + opponentReport.bans.length + " 名" : ""}
+                </div>
+              </>
+            ) : (
+              <div style={{ color: GC2.gray, fontSize: 8.5, lineHeight: 1.5, marginTop: 4 }}>對手完成選角後，這裡會顯示本局實際資料。</div>
+            )}
+          </div>
+        )}
 
         {/*  ── Hotfix1：輪到你選人時，英雄格排在最前面 ──────────────────────
             「選擇你的英雄」不可以被上方資訊推走——它是這一頁唯一需要操作的東西。

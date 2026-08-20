@@ -13,18 +13,19 @@ export default function ManageFrame({ title, subtitle, onBack, right, children }
   return (
     <div style={{ height: "100%", overflow: "auto", background: GC.bg, fontFamily: FONT }}>
       <div style={{ maxWidth: 460, margin: "0 auto", padding: "12px 12px 30px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, minWidth: 0, marginBottom: 12 }}>
           <button
             onClick={onBack}
-            style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.06)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+            aria-label="返回"
+            style={{ width: 40, height: 40, minWidth: 40, borderRadius: "50%", background: "rgba(255,255,255,0.06)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
           >
-            <ChevronLeft size={15} style={{ color: "#a1a1aa" }} />
+            <ChevronLeft size={18} style={{ color: "#a1a1aa" }} />
           </button>
-          <div style={{ textAlign: "center" }}>
+          <div style={{ textAlign: "center", minWidth: 0, flex: 1 }}>
             <div style={{ color: "white", fontSize: 14, fontWeight: 900 }}>{title}</div>
             {subtitle && <div style={{ color: "#3f3f46", fontSize: 9, fontWeight: 600, letterSpacing: "0.1em" }}>{subtitle}</div>}
           </div>
-          <div style={{ minWidth: 32, display: "flex", justifyContent: "flex-end" }}>{right}</div>
+          <div style={{ minWidth: 40, display: "flex", justifyContent: "flex-end", flexShrink: 0 }}>{right}</div>
         </div>
         {children}
       </div>

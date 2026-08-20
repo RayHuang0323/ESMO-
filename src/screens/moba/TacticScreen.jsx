@@ -19,6 +19,7 @@ import React, { useMemo, useState } from "react";
 import { Frame } from "./LineupScreen.jsx";
 import { MOBA_TACTICS, toEngineTactic, STANDARD_OPP_TACTIC } from "../../platform/contracts/MobaTacticConfig.js";
 import { useProfileStore } from "../../platform/profileStore.js";
+import { teamDevelopmentEffects } from "../../platform/development/teamDevelopment.js";
 import { statZh } from "../../data/playerModel.js";
 import { fitScore, fitGrade } from "./tacticFit.js";
 import { GC } from "../../ui/theme.js";
@@ -49,6 +50,8 @@ function engineEffects(t) {
 export default function TacticScreen({ onNext, onBack }) {
   const [sel, setSel] = useState("m1");
   const allPlayers = useProfileStore((s) => s.players) ?? [];
+  const development = useProfileStore((s) => s.teamDevelopment);
+  const developmentEffects = teamDevelopmentEffects(development);
   const starters = useMemo(() => allPlayers.filter((p) => p.status === "主力"), [allPlayers]);
   const cur = MOBA_TACTICS.find((t) => t.tacticId === sel);
   const curFit = fitScore(cur, starters);
@@ -78,6 +81,14 @@ export default function TacticScreen({ onNext, onBack }) {
             );
           })}
         </div>
+
+        {developmentEffects.unlocks.dataAnalysis && (
+          <div data-testid="moba-data-analysis" style={{ background: GC.card, border: `1px solid ${GC.green}44`, borderRadius: 10, padding: "9px 11px", color: GC.gray, fontSize: 9, lineHeight: 1.5 }}>
+            <div style={{ color: GC.green, fontSize: 10, fontWeight: 900 }}>數據分析摘要</div>
+            <div style={{ marginTop: 3 }}>目前戰術適配：{curFG.g}{curFit != null ? `（${curFit}）` : ""} · 先發人數 {starters.length}</div>
+            <div>已選戰術的引擎效果與適配資料會沿用既有唯一計算來源。</div>
+          </div>
+        )}
 
         {/* 詳解：全寬、自然換行、無固定高度 */}
         <div style={{ background: GC.card, border: `1px solid ${GC.blueL}44`, borderRadius: 12, padding: "12px 16px", minWidth: 0 }}>

@@ -47,8 +47,32 @@ export function useLocalServer() {
   const ffRef = useRef(null);          // S29B3：fastForward 的分塊排程
   const lastTick = useRef(0);
   const rateRef = useRef(DEFAULT_RATE);
+  const activeMatchRef = useRef(null);
+  const lastPersistAt = useRef(0);
   const [playing, setPlaying] = useState(false);
   const [rate, setRateState] = useState(DEFAULT_RATE);
+  const [fastForwarding, setFastForwarding] = useState(false);
+
+  const persistActiveSnapshot = useCallback(({ status = "active", force = false } = {}) => {
+    const eng = engineRef.current;
+    const info = activeMatchRef.current;
+    if (!eng || !info?.sessionId) return;
+    const now = Date.now();
+    if (!force && now - lastPersistAt.current < 1400) return;
+    lastPersistAt.current = now;
+    const st = useProfileStore.getState();
+    const payload = {
+      mode: info.mode,
+      snapshot: eng.snapshot(),
+      simulationTimeSec: eng.t,
+      phase: "battle",
+      config: info.config,
+      status,
+      now,
+    };
+    if (status === "paused") st.pauseActiveMatch(payload);
+    else st.saveActiveMatchSnapshot(payload);
+  }, []);
 
   const stop = useCallback(() => {
     clearInterval(intervalRef.current); cancelAnimationFrame(rafRef.current);
@@ -68,6 +92,7 @@ export function useLocalServer() {
   const fastForward = useCallback(() => {
     const eng = engineRef.current;
     if (!eng || eng.over || ffRef.current) return;
+    setFastForwarding(true);
     clearInterval(intervalRef.current); intervalRef.current = null;   // 停正常節拍
     const step = () => {
       let sincePush = 0;
@@ -77,12 +102,13 @@ export function useLocalServer() {
         if (sincePush >= 2 && !eng.over) { useGameStore.getState().pushFrame(eng.snapshot()); sincePush = 0; }
       }
       useGameStore.getState().pushFrame(eng.snapshot());
+      persistActiveSnapshot({ status: "active", force: true });
       lastTick.current = performance.now();
-      if (eng.over || eng.t > 5400) { ffRef.current = null; stop(); return; }   // 5400s = 安全上限
+      if (eng.over || eng.t > 5400) { ffRef.current = null; setFastForwarding(false); stop(); return; }   // 5400s = 安全上限
       ffRef.current = setTimeout(step, 0);
     };
     step();
-  }, [stop]);
+  }, [persistActiveSnapshot, stop]);
 
   /** 切換播放倍率：只重排 setInterval 的間隔，**不碰引擎、不碰 dt** ⇒ 結果不變。 */
   const setRate = useCallback((next) => {
@@ -102,6 +128,7 @@ export function useLocalServer() {
 
   const start = useCallback((opts = {}) => {
     stop();
+    setFastForwarding(false);
     const { pushFrame, subTRef } = useGameStore.getState();
     const loadout = useHeroProgressStore.getState().getLoadout();   // Sprint08：下場沿用
     //  ── Milestone O7：權威 seed ─────────────────────────────────────────
@@ -195,13 +222,35 @@ export function useLocalServer() {
         meta: { tacticId: opts.tactic.tacticId, tacticName: opts.tactic.name, version: MOBA_TACTIC_VERSION, opponentTacticId: STANDARD_OPP_TACTIC.tacticId },
       });
     }
+    const activeConfig = {
+      phase: "battle",
+      draft: opts.draft ?? null,
+      tactic: opts.tactic ?? null,
+    };
+    activeMatchRef.current = {
+      sessionId: opts.sessionId ?? null,
+      mode: opts.mode ?? null,
+      config: activeConfig,
+    };
+    if (opts.sessionId) {
+      useProfileStore.getState().setActiveMatchContext({ phase: "battle", config: activeConfig });
+    }
     engineRef.current = eng;
+    // R63：恢復不是重開新局。以同一 seed／同一正式設定 deterministic replay 到
+    // 上次保存的模擬時間，再由同一顆 engine 繼續 tick。
+    const resumeTimeSec = Math.max(0, Number(opts.resumeTimeSec) || 0);
+    let replayGuard = 0;
+    while (!eng.over && eng.t < resumeTimeSec && replayGuard < 12000) {
+      eng.tick(DT_SIM);
+      replayGuard += 1;
+    }
     const boot = eng.snapshot(); pushFrame(boot); pushFrame(boot); // prev == snapshot
     lastTick.current = performance.now();
 
     intervalRef.current = setInterval(() => {
       eng.tick(DT_SIM);                    // ⚠ dt 恆為 DT_SIM，與 playbackRate 無關
       useGameStore.getState().pushFrame(eng.snapshot());
+      persistActiveSnapshot({ status: "active" });
       lastTick.current = performance.now();
       if (eng.over) stop();
     }, tickMsFor(rateRef.current));
@@ -214,10 +263,20 @@ export function useLocalServer() {
     };
     rafRef.current = requestAnimationFrame(loop);
     setPlaying(true);
-  }, [stop]);
+  }, [persistActiveSnapshot, stop]);
 
-  useEffect(() => () => stop(), [stop]);
-  return { playing, start, stop, fastForward, engineRef, rate, setRate, rates: PLAYBACK_RATES };
+  const pause = useCallback(() => {
+    persistActiveSnapshot({ status: "paused", force: true });
+    stop();
+  }, [persistActiveSnapshot, stop]);
+
+  useEffect(() => () => {
+    // Battle view 卸載＝玩家離開或 refresh；完成後 session 已是 terminal，
+    // 這個寫入會自然 no-op，不會覆蓋 finished result。
+    persistActiveSnapshot({ status: "paused", force: true });
+    stop();
+  }, [persistActiveSnapshot, stop]);
+  return { playing, start, stop, pause, fastForward, fastForwarding, engineRef, rate, setRate, rates: PLAYBACK_RATES };
 }
 
 // ── 多人版（示意）──────────────────────────────────────────────────────────

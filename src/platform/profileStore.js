@@ -115,6 +115,11 @@ import {
   sealEventBoundary, sealSeasonBoundary,
 } from "./competition/seasonSealingV2.js";
 import { applyDailyRecovery, conditionSummary } from "./condition/playerCondition.js";
+import {
+  sanitizeTeamDevelopment,
+  applyTeamDevelopmentPurchase,
+  teamDevelopmentEffects as teamDevelopmentEffectsOf,
+} from "./development/teamDevelopment.js";
 import { createMatchEntryRequest, validateMatchEntryRequest } from "./contracts/matchEntry.js";
 import {
   TICKET_STATES, createTicket, transitionTicket, isActiveTicket,
@@ -124,7 +129,8 @@ import { pollGateway, openRoom, pollRoom, openSession } from "./matchmaking/mock
 import {
   SESSION_STATES, CONNECTION_STATES, consumeLaunchToken, validateSession, cancelSession,
   sessionStateLabel, isSessionExpired, isSessionTerminal,
-  resumeSession, markDisconnected, abandonSession,
+  resumeSession, markDisconnected, abandonSession, createActiveMatch, patchActiveMatch, isActiveMatch,
+  ACTIVE_MATCH_SCHEMA,
 } from "./contracts/matchSession.js";
 import { createMatchResult, RESULT_SOURCES } from "./contracts/matchResult.js";
 import { settleMatchResultInState, settlementIdOf } from "./progress/settleMatchResult.js";
@@ -149,8 +155,9 @@ const KEY = "esmo.profile.v1";
  *       舊存檔缺欄 → csLineup 全空、rosterTier 由既有 status 推導，不把人踢出名單）；
  *  v8 = Milestone O4（matchmaking 配對票券；載入時把殘留的排隊中票券作廢，
  *       因為沒有伺服器會回應一張跨 session 的票）；
- *  v9 = Q7b（metadata-only SeasonState.v2 wrapper；legacy state / IDs 不變）。 */
-export const PROFILE_SCHEMA_VERSION = 9;
+ *  v9 = Q7b（metadata-only SeasonState.v2 wrapper；legacy state / IDs 不變）；
+ *  v10 = 戰隊發展 v1（俱樂部層 ranks；舊 meta.talentPending 只作一次性回退）。 */
+export const PROFILE_SCHEMA_VERSION = 10;
 const canLS = typeof localStorage !== "undefined";
 //  1 萬。定義搬到 economy/units.js（純邏輯模組不能 import 本檔），這裡 re-export
 //  讓既有 `import { WAN } from "platform/profileStore.js"` 的呼叫端不受影響。
@@ -211,6 +218,9 @@ const DEFAULT = {
     days: 8, week: deriveTime(8).week, season: deriveTime(8).season,
     achievement: 48, talentPending: 1,
   },
+  // 戰隊發展是俱樂部層點數，不與 players[].talentPoints 混用。
+  // 舊存檔第一次載入時由 meta.talentPending 提供相容的初始池。
+  teamDevelopment: sanitizeTeamDevelopment(null, 1),
   players: INITIAL_PLAYERS.map(migratePlayer),   // S25：種子名單也要有 xp/talentPoints
   // Milestone E：先發指派（引擎席位 b1–b5 → playerId）。預設 identity ⇒ 與 E 之前相同。
   lineup: { ...DEFAULT_LINEUP },
@@ -275,6 +285,12 @@ const DEFAULT = {
 };
 
 const arr = (v, d) => (Array.isArray(v) ? v : d);
+
+function activeLineupOf(state, mode) {
+  const source = mode === "cs" ? state.csLineup : state.lineup;
+  if (!source || typeof source !== "object") return null;
+  return Object.fromEntries(Object.entries(source).map(([seat, playerId]) => [seat, playerId ?? null]));
+}
 /**
  * Milestone N：economy 帳本的 migration。
  *
@@ -381,6 +397,9 @@ const load = () => {
         const t = deriveTime(m.days ?? DEFAULT.meta.days);
         return { ...m, days: t.day, week: t.week, season: t.season };
       })(),
+      // 戰隊發展 migration：有新 state 就只信它；缺欄位的舊存檔才回退
+      // legacy meta.talentPending。既有選手天賦點、rank、能力與歷史不動。
+      teamDevelopment: sanitizeTeamDevelopment(saved.teamDevelopment, saved.meta?.talentPending ?? DEFAULT.meta.talentPending),
       // S25 migration：舊存檔的 players[] 沒有 xp/talentPoints → 安全補齊（見 migratePlayer）
       players,
       // Milestone E migration：舊存檔沒有 lineup ⇒ 回退 identity（b1→b1…）⇒ 行為不變
@@ -598,6 +617,18 @@ export const useProfileStore = create((set, get) => ({
     get().save();
   },
 
+  // ── 戰隊發展 v1（俱樂部層；不寫入單一選手）────────────────────────────
+  getTeamDevelopmentEffects() {
+    return teamDevelopmentEffectsOf(get().teamDevelopment);
+  },
+  purchaseTeamDevelopment(nodeId) {
+    const result = applyTeamDevelopmentPurchase(get().teamDevelopment, nodeId, { now: Date.now() });
+    if (!result.receipt.success) return result.receipt;
+    set({ teamDevelopment: result.nextState });
+    get().save();
+    return result.receipt;
+  },
+
   // ── 收件匣（Legacy NotifyModule）─────────────────────────────────────
   pushInbox(msg) {
     const inbox = [{ id: uid(), time: "剛剛", unread: true, ...msg }, ...(get().inbox ?? [])].slice(0, 50);
@@ -632,7 +663,9 @@ export const useProfileStore = create((set, get) => ({
     const p = (get().players ?? []).find((x) => x.id === id);
     if (!c || !p || p.training) return false;
     if (c.id !== "rest" && (p.energy ?? 100) < c.energyCost) return false;
-    get()._patchPlayer(id, (x) => ({ ...x, training: { courseId, daysLeft: c.hours, totalDays: c.hours } }));
+    const effects = teamDevelopmentEffectsOf(get().teamDevelopment);
+    const days = c.id === "rest" ? c.hours : Math.max(1, c.hours - effects.trainingDaysReduction);
+    get()._patchPlayer(id, (x) => ({ ...x, training: { courseId, daysLeft: days, totalDays: days } }));
     return true;
   },
   cancelTraining(id) {
@@ -686,12 +719,13 @@ export const useProfileStore = create((set, get) => ({
       players: (cur.players ?? []).map((p) => {
         //  Milestone O2：每一天都要跑恢復——傷停天數 −1、沒排訓練的人回體力、
         //  連續幾天沒出賽就把連續出賽計數歸零。訓練與恢復不重複計算體力。
-        if (!p.training) return applyDailyRecovery(p);
+        const recoveryBonus = teamDevelopmentEffectsOf(cur.teamDevelopment).dailyRecoveryBonus;
+        if (!p.training) return applyDailyRecovery(p, { recoveryBonus });
         const daysLeft = p.training.daysLeft - 1;
-        if (daysLeft > 0) return applyDailyRecovery({ ...p, training: { ...p.training, daysLeft } });
+        if (daysLeft > 0) return applyDailyRecovery({ ...p, training: { ...p.training, daysLeft } }, { recoveryBonus });
         //  課程今天結算 ⇒ 體力由 applyCourse 決定，恢復只處理傷勢與計數
         const courseId = p.training.courseId;
-        const done = applyDailyRecovery(applyCourse(p, courseId), { skipEnergy: true });
+        const done = applyDailyRecovery(applyCourse(p, courseId), { skipEnergy: true, recoveryBonus });
 
         //  ── P1：擷取**實際**能力差值（applyCourse 前後逐項比對）──────────
         //  成長公式完全沒有被改動；這裡只是把它算完的結果讀出來。
@@ -812,7 +846,7 @@ export const useProfileStore = create((set, get) => ({
    * 沒有賽季（例如還沒建立）⇒ 不阻擋，行為與 Q3 之前完全相同。
    */
   _advanceCompetition(fromDay, days) {
-    const state = get().activeCompetitionEvent().legacyState;
+    const state = get().competition;
     if (!state?.schema) return { daysAdvanced: days, stoppedBy: null };
     const res = advanceSeasonDays({
       state, fromDay, days, playerRoster: get().players ?? [],
@@ -839,7 +873,7 @@ export const useProfileStore = create((set, get) => ({
   startFixtureMatch(fixtureId, now = Date.now()) {
     const ensured = get().ensureCompetitionSeason();
     if (!ensured.ok) return { ok: false, errors: ensured.errors, reason: ensured.errors[0]?.message ?? null };
-    const state = get().activeCompetitionEvent().legacyState;
+    const state = get().competition;
     const fixture = fixtureById(state, fixtureId);
     if (!fixture) return { ok: false, errors: [{ code: "fixture", message: "找不到這場賽程" }], reason: "找不到這場賽程" };
 
@@ -921,7 +955,7 @@ export const useProfileStore = create((set, get) => ({
    * ⚠ 只接受已經 `launched` 的場次，且同一場只能寫一次賽果（D11 不可變）。
    */
   completeFixtureMatch({ fixtureId, winner, score, duration, seed } = {}) {
-    const state = get().activeCompetitionEvent().legacyState;
+    const state = get().competition;
     if (!state?.schema) return { ok: false, errors: [{ code: "no_season", message: "目前沒有賽季" }] };
     const res = applyCompleted(state, { fixtureId, winner, score, duration, seed });
     if (!res.ok) return { ok: false, errors: res.errors };
@@ -938,7 +972,7 @@ export const useProfileStore = create((set, get) => ({
    * MVP 的棄權只有敗場：不扣聲望、不罰款、不降級。
    */
   forfeitFixture(fixtureId, reason = "玩家棄權") {
-    const state = get().activeCompetitionEvent().legacyState;
+    const state = get().competition;
     if (!state?.schema) return { ok: false, errors: [{ code: "no_season", message: "目前沒有賽季" }] };
     const res = applyForfeit(state, { fixtureId, reason });
     if (!res.ok) return { ok: false, errors: res.errors };
@@ -1191,7 +1225,7 @@ export const useProfileStore = create((set, get) => ({
    *      產生的也是同一份賽程，不會出現兩份不同的 S2。
    */
   rollToNextCompetitionSeason() {
-    const state = get().activeCompetitionEvent().legacyState;
+    const state = get().competition;
     const can = canRollSeason(state);
     if (!can.ok) return { ok: false, errors: [{ code: "cannot_roll", message: can.reason }], reason: can.reason };
 
@@ -1736,7 +1770,8 @@ export const useProfileStore = create((set, get) => ({
   createMatchSession(now = Date.now()) {
     const mm = get().matchmaking ?? {};
     const cur = mm.session ?? null;
-    if (cur && cur.roomId === mm.room?.roomId && !isSessionTerminal(cur) && !isSessionExpired(cur, now)) {
+    if (cur && cur.roomId === mm.room?.roomId && !isSessionTerminal(cur)
+      && (isActiveMatch(cur) || !isSessionExpired(cur, now))) {
       return { ok: true, session: cur, errors: [], reused: true };
     }
     //  Q3：賽程房間走賽事閘道（沒有票券可用）。兩條路都呼叫同一個
@@ -1764,7 +1799,17 @@ export const useProfileStore = create((set, get) => ({
       room: mm.room ?? null, ticket: mm.ticket ?? null, now,
     });
     if (!r.ok) return { ok: false, launch: null, errors: r.errors };
-    set({ matchmaking: { ...mm, session: r.session, launch: r.launch } });
+    const activated = {
+      ...r.session,
+      activeMatch: createActiveMatch(r.session, {
+        lineup: activeLineupOf(get(), r.session.mode),
+        now,
+      }),
+    };
+    const nextSession = patchActiveMatch(activated, {
+      lineup: activeLineupOf(get(), r.session.mode),
+    }, now);
+    set({ matchmaking: { ...mm, session: nextSession, launch: r.launch } });
     get().save();
     return { ok: true, launch: r.launch, errors: [] };
   },
@@ -1786,7 +1831,10 @@ export const useProfileStore = create((set, get) => ({
     const mm = get().matchmaking ?? {};
     const r = resumeSession(mm.session ?? null, { room: mm.room ?? null, ticket: mm.ticket ?? null, now });
     if (!r.ok) return { ok: false, launch: null, errors: r.errors };
-    set({ matchmaking: { ...mm, session: r.session, launch: r.launch } });
+    const session = isActiveMatch(r.session)
+      ? patchActiveMatch(r.session, { status: "active", simulation: { status: "active" } }, now)
+      : r.session;
+    set({ matchmaking: { ...mm, session, launch: r.launch } });
     get().save();
     return { ok: true, launch: r.launch, errors: [] };
   },
@@ -1807,6 +1855,80 @@ export const useProfileStore = create((set, get) => ({
     set({ matchmaking: { ...mm, session: r.session } });
     get().save();
     return { ok: true, errors: [] };
+  },
+  /** R63：目前進行中的場次唯一恢復視圖，供首頁／賽前頁使用。 */
+  activeMatchView(now = Date.now()) {
+    const session = get().matchmaking?.session ?? null;
+    const active = session?.activeMatch ?? null;
+    if (session?.state === "launched" && active?.schema === ACTIVE_MATCH_SCHEMA
+      && ["active", "paused"].includes(active.status)) {
+      return {
+        kind: "active",
+        restoreable: true,
+        matchId: active.matchId,
+        sessionId: session.sessionId,
+        mode: session.mode,
+        opponent: active.opponent ?? session.opponent ?? null,
+        lineup: active.lineup ?? null,
+        seed: active.seed ?? session.seed ?? null,
+        startedAt: active.startedAt ?? session.launchedAt ?? session.createdAt ?? null,
+        status: active.status,
+        phase: active.phase ?? null,
+        config: active.config ?? null,
+        simulation: active.simulation ?? { status: active.status, timeSec: 0, snapshot: null, updatedAt: now },
+        updatedAt: active.updatedAt ?? now,
+      };
+    }
+    // 舊版 launched session 沒有 ActiveMatch snapshot：保留 session 供舊驗證鏈，
+    // 但 UI 不把它誤稱為可恢復的正常比賽。
+    if (session?.state === "launched") {
+      return { kind: "legacy", restoreable: false, sessionId: session.sessionId, mode: session.mode, status: "invalid" };
+    }
+    return null;
+  },
+  /** R63：更新賽前階段／戰術等非結果設定，仍寫回同一個 ActiveMatch。 */
+  setActiveMatchContext({ phase, config = undefined, now = Date.now() } = {}) {
+    const mm = get().matchmaking ?? {};
+    const session = mm.session ?? null;
+    if (!isActiveMatch(session)) return { ok: false, errors: [{ code: "no_active_match", message: "目前沒有可更新的進行中比賽" }] };
+    const nextConfig = config === undefined
+      ? session.activeMatch.config
+      : { ...(session.activeMatch.config ?? {}), ...config };
+    const next = patchActiveMatch(session, {
+      ...(phase === undefined ? {} : { phase }),
+      ...(config === undefined ? {} : { config: nextConfig }),
+      status: "active",
+      simulation: { status: "active" },
+    }, now);
+    set({ matchmaking: { ...mm, session: next } });
+    get().save();
+    return { ok: true, session: next };
+  },
+  /** R63：保存正式 simulator 的可恢復進度；snapshot 是該引擎的真實快照。 */
+  saveActiveMatchSnapshot({ mode = null, snapshot = null, simulationTimeSec = 0, phase = undefined, config = undefined, status = "active", now = Date.now() } = {}) {
+    const mm = get().matchmaking ?? {};
+    const session = mm.session ?? null;
+    if (!isActiveMatch(session)) return { ok: false, errors: [{ code: "no_active_match", message: "目前沒有可保存的進行中比賽" }] };
+    if (mode && session.mode !== mode) return { ok: false, errors: [{ code: "mode_mismatch", message: "比賽模式不符，拒絕保存進度" }] };
+    const nextConfig = config === undefined
+      ? session.activeMatch.config
+      : { ...(session.activeMatch.config ?? {}), ...config };
+    const next = patchActiveMatch(session, {
+      status: status === "paused" ? "paused" : "active",
+      ...(phase === undefined ? {} : { phase }),
+      ...(config === undefined ? {} : { config: nextConfig }),
+      simulation: {
+        status: status === "paused" ? "paused" : "active",
+        timeSec: Math.max(0, Number(simulationTimeSec) || 0),
+        snapshot: snapshot ?? null,
+      },
+    }, now);
+    set({ matchmaking: { ...mm, session: next } });
+    get().save();
+    return { ok: true, session: next };
+  },
+  pauseActiveMatch(payload = {}) {
+    return get().saveActiveMatchSnapshot({ ...payload, status: "paused" });
   },
   /**
    * 回報比賽結果並**單次結算**。
@@ -1846,7 +1968,7 @@ export const useProfileStore = create((set, get) => ({
    * 只由 `reportMatchResult` 呼叫；換算規則在 `fixtureResultBridge`（純函式）。
    */
   _writeFixtureResultFromMatch(result, session) {
-    const state = get().activeCompetitionEvent().legacyState;
+    const state = get().competition;
     const fixtureId = fixtureIdOfSession(session);
     if (!state?.schema || !fixtureId) return { ok: false, errors: [{ code: "no_fixture", message: "這場不是賽程比賽" }] };
     const fixture = fixtureById(state, fixtureId);
@@ -1911,7 +2033,8 @@ export const useProfileStore = create((set, get) => ({
       stateLabel: session ? sessionStateLabel(session.state) : "尚未建立場次",
       canLaunch: !!session && v.ok,
       blockedReason: session ? (v.ok ? null : v.errors[0]?.message ?? null) : null,
-      expired: isSessionExpired(session, now),
+      // R63：已正式啟動的 ActiveMatch 不受「尚未啟動 TTL」影響。
+      expired: !isActiveMatch(session) && isSessionExpired(session, now),
     };
   },
   /** 唯讀：房間狀態 ＋ 倒數 ＋ 能否進場（畫面不自己判規則）。 */

@@ -12,7 +12,7 @@
 //  相容：無 config（不經賽前流程）時退回 Sprint22 行為（seed 掛載隨機、地圖自選），
 //    此時結果仍走契約與入史（訓練賽）。
 // ============================================================================
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import EsportsFPS3D from "../../battle/fps/EsportsFPS3D.jsx";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { toFpsRoster, CS_MAP_KEYS } from "../../battle/fps/fpsRoster.js";
@@ -23,14 +23,43 @@ import { GC, FONT } from "../../ui/theme.js";
 export default function CsMatchScreen({ config, onFinish, onBack }) {
   const players = useProfileStore((s) => s.players) ?? [];
   const team = useProfileStore((s) => s.team);
+  const launch = useProfileStore((s) => s.matchmaking?.launch ?? null);
+  const activeSnapshot = useProfileStore((s) => s.matchmaking?.session?.activeMatch?.simulation?.snapshot ?? null);
   // seed / 地圖：賽前流程有給就用（決定性重播鍵）；否則沿 Sprint22 掛載時決定一次
-  const [seed] = useState(() => config?.seed ?? ((Date.now() & 0xffff) | 1));
+  const [seed] = useState(() => launch?.seed ?? config?.seed ?? ((Date.now() & 0xffff) | 1));
   const mapKey = config?.mapKey ?? CS_MAP_KEYS[seed % CS_MAP_KEYS.length];
   const mapName = config?.mapName ?? csMapByKey(mapKey)?.name ?? mapKey;
   //  Milestone O1：以**出賽陣容**建立引擎名單（誰上場不再看陣列順序）
   const csLineup = useProfileStore((s) => s.csLineup);
   const roster = useMemo(() => toFpsRoster(players, csLineup), [players, csLineup]);
   const [result, setResult] = useState(null); // 引擎原生 MatchResult
+  const progressRef = useRef({ frameIndex: Number(activeSnapshot?.frameIndex) || 0, totalFrames: 0, simulationTimeSec: Number(activeSnapshot?.simulationTimeSec) || 0, snapshot: activeSnapshot });
+  const lastProgressSave = useRef(0);
+  const saveProgress = useCallback((progress, { paused = false, force = false } = {}) => {
+    if (progress) progressRef.current = progress;
+    const now = Date.now();
+    if (!force && now - lastProgressSave.current < 1200) return;
+    lastProgressSave.current = now;
+    const p = progressRef.current;
+    const st = useProfileStore.getState();
+    st.saveActiveMatchSnapshot({
+      mode: "cs",
+      snapshot: p.snapshot,
+      simulationTimeSec: p.simulationTimeSec,
+      phase: "battle",
+      config: { csConfig: { ...config, seed } },
+      status: paused ? "paused" : "active",
+      now,
+    });
+  }, [config, seed]);
+  const handleProgress = useCallback((progress) => saveProgress(progress), [saveProgress]);
+  const handleBack = useCallback(() => {
+    saveProgress(progressRef.current, { paused: true, force: true });
+    onBack?.();
+  }, [onBack, saveProgress]);
+  useEffect(() => () => {
+    saveProgress(progressRef.current, { paused: true, force: true });
+  }, [saveProgress]);
 
   const csResult = useMemo(() => (result ? toCsMatchResult(result, {
     seed, mapKey, mapName,
@@ -42,7 +71,7 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
     <div style={{ position: "relative", height: "100%", overflow: "auto", background: "#070a10", fontFamily: FONT }}>
       {/* Match Header：返回 + 對戰卡 + 地圖/戰術（不遮引擎自己的比分列） */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", flexWrap: "wrap" }}>
-        <button onClick={onBack} style={{ background: "rgba(255,255,255,0.08)", border: `1px solid ${GC.line}`, borderRadius: 8, padding: "5px 12px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>← 離開</button>
+        <button onClick={handleBack} data-testid="leave-active-match" style={{ background: "rgba(255,255,255,0.08)", border: `1px solid ${GC.line}`, borderRadius: 8, padding: "5px 12px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>← 暫停並離開</button>
         <span style={{ color: "#e8ebf0", fontSize: 13, fontWeight: 800 }}>{team?.name ?? "德國海豹"} <span style={{ color: "#8a8f9c", fontWeight: 600 }}>vs</span> Compulsary</span>
         <span style={{ background: "rgba(251,146,60,0.14)", border: "1px solid rgba(251,146,60,0.4)", color: "#fdba74", fontSize: 9, fontWeight: 700, borderRadius: 5, padding: "1px 7px" }}>🗺 {mapName}</span>
         {config?.tacticName && <span style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GC.line}`, color: "#c8cdd6", fontSize: 9, fontWeight: 700, borderRadius: 5, padding: "1px 7px" }}>戰術「{config.tacticName}」</span>}
@@ -54,7 +83,8 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
         </div>
       )}
 
-      <EsportsFPS3D embedded roster={roster ?? undefined} mapKey={mapKey} seed={seed} tactic={config?.tacticId ?? undefined} tacticType={config?.tacticType ?? undefined} teamName={team?.name} onComplete={setResult} />
+      <EsportsFPS3D embedded roster={roster ?? undefined} mapKey={mapKey} seed={seed} tactic={config?.tacticId ?? undefined} tacticType={config?.tacticType ?? undefined} teamName={team?.name} onComplete={setResult}
+        resumeFrameIndex={Number(activeSnapshot?.frameIndex) || 0} onProgress={handleProgress} />
 
       {/* 終局：引擎真實 MatchResult → CS 契約 → 賽後戰報（入史在 CsResultScreen） */}
       {csResult && (

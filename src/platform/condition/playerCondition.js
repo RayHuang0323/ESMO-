@@ -146,14 +146,15 @@ export function applyMatchWear(player, key) {
  * ⚠ 「今天有沒有出賽」目前沒有逐日紀錄，所以用 `restDays` 累計：
  *   出賽時歸零（applyMatchWear 之後由呼叫端重置），每過一天 +1。
  */
-export function applyDailyRecovery(player, { skipEnergy = false } = {}) {
+export function applyDailyRecovery(player, { skipEnergy = false, recoveryBonus = 0 } = {}) {
   const injuryDays = Math.max(0, injuryDaysOf(player) - 1);
   const restDays = num(player?.restDays) + 1;
   const training = player?.training ?? null;
   //  有排訓練的人不在這裡回體力（避免與 applyCourse 重複計算）
   //  skipEnergy：當天剛由 applyCourse 結算過課程 ⇒ 體力已經動過，不再重複加
+  const bonus = Number.isFinite(Number(recoveryBonus)) ? Math.max(0, Number(recoveryBonus)) : 0;
   const energy = (training || skipEnergy) ? num(player?.energy ?? 100)
-    : clamp(num(player?.energy ?? 100) + CONDITION.restPerDay, 0, 100);
+    : clamp(num(player?.energy ?? 100) + CONDITION.restPerDay + bonus, 0, 100);
   const matchStreak = restDays >= CONDITION.streakDecayDays ? 0 : matchStreakOf(player);
   return {
     ...player,

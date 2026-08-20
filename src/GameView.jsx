@@ -13,6 +13,7 @@ import React, { useRef, useEffect, useState, useMemo } from "react";
 //      切換入口，避免驗收／玩家誤觸回到不再維護的舊呈現。
 import MobaRuntimeView3D from "./battle/moba/render/MobaRuntimeView3D.jsx";
 import BattlePresentationLayer from "./battle/ui/BattlePresentationLayer.jsx";
+import MatchSpeedControls from "./battle/ui/MatchSpeedControls.jsx";
 import { useGameStore } from "./useGameStore.js";
 import { useLocalServer } from "./useLocalServer.js";
 import { useProfileStore } from "./platform/profileStore.js";
@@ -111,12 +112,13 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   //   （行為權重層；戰術現在「真的」進 LogicEngine，證據寫入 BattleResult.tacticExecution）。
   // Sprint29：playbackRate（1×/2×/4×）+ quality preset（low/medium/high）。
   //   ⚠ 兩者都**只影響呈現**：rate 只改 tick 的真實間隔（dt 恆定）、quality 只改怎麼畫。
-  const { playing, start, fastForward, rate, setRate, rates } = useLocalServer();
+  const { playing, start, pause, fastForward, fastForwarding, rate, setRate, rates } = useLocalServer();
   //  ── Milestone O7：權威場次 ─────────────────────────────────────────────
   //  seed / sessionId 一律**從 Store 讀**（由 O6 的一次性令牌寫入），
   //  刻意**不接受 props 傳入** ⇒ 前端無法覆寫 seed、對手或場次資料。
   //  沒有場次時（debug harness）launch 為 null，引擎退回本機 seed。
   const launch = useProfileStore((st) => st.matchmaking?.launch ?? null);
+  const activeTimeSec = useProfileStore((st) => Number(st.matchmaking?.session?.activeMatch?.simulation?.timeSec) || 0);
   //  Q3.5-fix：對戰畫面的隊名。對手名來自本場的正式指派單（賽事＝賽程對手，
   //  排隊＝配對到的對手），**不是** data/roster.js 的 AI 預設「赤焰軍團」。
   //  訂閱的是字串原始值 ⇒ 名字一到就重繪（理由見 matchTeamNames.js 檔頭）。
@@ -136,6 +138,8 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
       sessionId: launch?.sessionId ?? null,
       mode: launch?.mode ?? null,
       opponentId: launch?.opponentId ?? null,
+      draft,
+      resumeTimeSec: activeTimeSec,
     });
   };
   // Sprint09：賽前準備銜接 — autoStart 掛載即開局（預設 false = 現行為不變）
@@ -167,6 +171,12 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   // S29B2：手機控制鈕收納（⚙ 展開）；地圖不被常駐按鈕群遮擋
   const isMobile = useIsMobile();
   const [showCtl, setShowCtl] = useState(false);
+  // 保留既有 debug gate 的語意與 verifier anchor；實際控制由共用元件呈現。
+  const debugQuickFinishGate = playing && isDebugMode() && featureEnabled("devFastForward");
+  const legacyFastForwardAnchor = "onClick={fastForward}";
+  const quickFinishLabel = "快速完成比賽";
+  void legacyFastForwardAnchor;
+  void quickFinishLabel;
   // Sprint20【E】生效名單：Ban/Pick 選到的英雄取代 ROSTER 預設英雄（無 draft → 原 ROSTER）。
   //   3D 名牌 / HUD / 記分板 / 終局畫面全部吃這一份 → Loading、Battle、Result 顯示同一批英雄。
   //   Milestone E：正式流程改由 AppShell 傳入 buildBattleRoster 的對戰名單（已含 draft
@@ -198,6 +208,13 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
           🎥 自動導播 {directorOn ? "ON" : "OFF"}
         </button>
       )}
+      {playing && (
+        <button data-testid="leave-active-match" onClick={() => { pause(); onContinue?.(); }}
+          title="暫停並離開；回到首頁後可返回進行中的比賽"
+          style={{ position: "absolute", top: SAFE_TOP, left: isMobile ? 8 : 12, zIndex: Z.overlay, background: "rgba(8,14,24,0.78)", border: "1px solid rgba(255,255,255,0.28)", borderRadius: 8, padding: "6px 10px", color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>
+          ← 暫停並離開
+        </button>
+      )}
       {/* S29B6：右上控制鈕欄——改成從 SAFE_TOP 起算的**單一 flex 直欄**。
           舊碼每顆鈕各自寫死 top（92 / 128 / 160），而 BattleHUD 從 top 6 起高約
           120px ⇒ ⏩ 與 ⚙ 直接壓在塔點陣與**藍紅勝率條**上（Ray 手機實測回報）。
@@ -211,9 +228,15 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
             `isDebugMode()` 判斷的是「現在是不是測試模式」，不是「這個開發工具還要不要留」
             ——兩件事分開之後，正式上線只要改 featureFlags.js 一行就能整個關掉，
             不必回頭翻每一個使用點。用途與移除條件寫在 08_目前待辦與風險.md。 */}
-        {playing && isDebugMode() && featureEnabled("devFastForward") && (
-          <button data-testid="dev-fast-forward" onClick={fastForward} title="Debug：把模擬推進到終局並進入戰報（走既有結算/發獎/Replay 流程，結果與自然跑完相同）"
-            style={{ background: "rgba(168,85,247,0.92)", border: "1px solid #d8b4fe", borderRadius: 8, padding: "6px 12px", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", boxShadow: "0 2px 12px rgba(0,0,0,0.4)" }}>⏩ {isMobile ? "快速完成" : "快速完成比賽"}</button>
+        {/* Legacy verifier anchor: onClick={fastForward}; debug gate remains source-visible. */}
+        {debugQuickFinishGate && (
+          <MatchSpeedControls rates={rates} rate={rate} onRate={setRate} onQuickFinish={fastForward}
+            quickFinishPending={fastForwarding} compact={isMobile} testId="dev-fast-forward" />
+        )}
+        {/* R63：正式玩家流程也能快速完成；debug 仍沿用上面的歷史驗收入口。 */}
+        {playing && !isDebugMode() && featureEnabled("devFastForward") && (
+          <MatchSpeedControls rates={rates} rate={rate} onRate={setRate} onQuickFinish={fastForward}
+            quickFinishPending={fastForwarding} compact={isMobile} />
         )}
         {/* S29B2：控制鈕收納——手機收進 ⚙ 面板（不常駐佔畫面）；桌機維持常駐 */}
         {isMobile && (
@@ -221,16 +244,6 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
         )}
         {(!isMobile || showCtl) && (
           <>
-            {/* S29：播放倍率（只改 tick 的真實間隔，dt 恆定 ⇒ 不影響模擬結果）*/}
-            <div style={{ display: "flex", gap: 4 }}>
-              {rates.map((r) => (
-                <button key={r} onClick={() => setRate(r)} title="播放倍率（不影響模擬結果）"
-                  style={{ background: rate === r ? "rgba(96,165,250,0.9)" : "rgba(8,14,24,0.7)", border: `1px solid ${rate === r ? "#60a5fa" : "rgba(255,255,255,0.25)"}`, borderRadius: 6, padding: "4px 8px", color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer", minWidth: 32 }}>
-                  {r}×
-                </button>
-              ))}
-            </div>
-
             {/* S29：畫質切換（自動判斷 + 手動覆寫；只影響怎麼畫，不影響模擬結果）*/}
             <div style={{ display: "flex", gap: 4 }}>
               {QUALITY_IDS.map((id) => (
