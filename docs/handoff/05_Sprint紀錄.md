@@ -10430,3 +10430,70 @@ dialog」。CDP harness 可以自己接 `Page.javascriptDialogOpening`，因此�
 
 ⚠ 過程中我第一次把這條判成 UNVERIFIED，是**我的斷言寫錯**（regex 找
 「返回比賽」，實際按鈕文字是「返回進行中的比賽」），不是產品缺陷。
+
+## Q7 Season / Competition MVP — Manual Save Acceptance：**CLOSED**（2026-08-20）
+
+先前所有「賽季結束」的證據都建立在合成 fixture 上。這一輪補的正是唯一沒被覆蓋的
+路徑：**Ray 的真實舊存檔，用真實 gameplay action，從賽季中段一路走到封存與換季。**
+
+### 方法（重要：不是注入 sealed fixture）
+
+- 存檔來源：Ray 自己在正式站匯出的 `esmo.profile.v1`（130,509 codepoints）。
+  他在 Console 只跑 `getItem` → Blob → 下載，**沒有任何寫入**。
+- 執行環境：獨立 `--user-data-dir` 的測試 Chrome，打**正式站**
+  `https://rayhuang0323.github.io/ESMO-/`。Ray 的瀏覽器與存檔全程未被改動。
+- 存檔**只在最開頭注入一次**（起始狀態，非結果狀態）。之後每一次狀態變化都由
+  畫面上的正式操作產生：
+  - **訓練中心 → 指派「休息調整」→ ⏭️ 推進訓練日**（未指派訓練時該鍵是 no-op）
+  - **賽事頁 → 棄權 → 確定棄權**（二次確認）
+  - AI 之間的場次由推進天數時自動模擬——這是既有產品行為，不是測試捷徑。
+
+### 走完的 lifecycle
+
+| | 起始 | 結束 |
+|---|---|---|
+| 遊戲日 | 第 12 天 | 第 109 天 |
+| 賽季 | S1 進行中 | S2（S1 已封存於第 103 天） |
+| 場次 | 0 / 140 | **148 / 148** |
+| Event | 4 | **5**（亞洲年度總決賽於賽季中依規則自動產生） |
+| 已封存 Event | 0 | 5 |
+| 我方場次 | — | 35 場全部以 `棄權` 結算 |
+| competitionHistory | 0 筆 | 1 筆 |
+
+亞洲年度總決賽跑出真實對戰表：準決賽第 101 天、決賽第 103 天，寒冰守衛奪冠，
+比分 27:17 / 23:17——全部由 lifecycle 產生，沒有任何一格是注入的。
+
+### 結果：22/22 PASS
+
+- **① 舊存檔載入**：隊名／天數／賽季／schema 逐值等於檔案，`final` 為 null。
+- **② 賽事頁**正常；**③ standings 8 隊、巡迴 0/3 站**起始狀態正確。
+- **④ 自然封存**：`final.season = 1`、`sealedAtDay = 103`。
+- **⑤ Recap 由真實 lifecycle 產生**：`S1 · 德國海豹 · 第 1 賽季完賽`。
+- **⑥ 資料逐值對得上封存物件**：
+  - 國內聯賽 第 8 名 / 8 隊 · 冠軍烈焰鳳凰（＝ `careerFinal` 的 rows／playerRank／championTeamId）
+  - 年度榮耀：存檔 honors 有 1 筆但**冠軍是 AI**，⇒ RecapHonor 不 render、
+    摘要 `data-champion="false"`。這正是規格要的（金色只代表我方奪冠）。
+  - 亞洲年度總決賽：`qualified=false`、無我方名次、世界冠軍寒冰守衛。
+  - 巡迴：3 站與存檔 `pointsLog` 我方筆數一致，第 8 名 68 分。
+  - 獎金：「無（前四名才有）」與收據一致（有收據、金額 0）。
+- **⑦ 無 undefined／NaN**（Recap 內與整頁）。
+- **⑧ CTA 全 DOM 恰好一顆**且在 Recap 之後；390 mobile 無水平溢出、CTA 可見。
+- **⑨ rollover**：S1 → S2、`final` 清空、Recap 與 CTA 一起消失、S1 進入 history。
+- **⑩ reload 後仍 S2**，history 仍在，schema 仍為 10。
+- **⑪ Team Development**：`TeamDevelopmentState.v1` 的 version／點數／ranks
+  在整季推進前後**逐值不變**，主入口仍進得去。ActiveMatch session 停在 `completed`，
+  未被賽季流程污染。
+- **⑫ 全程 0 個 runtime error。**
+
+截圖：`review/q7-manual-save-acceptance/`。
+
+### 一個過程中的自我修正
+
+第一版的棄權迴圈只數點擊次數，`outcomes` 其實沒有變——因為棄權有二次確認
+（「確定棄權」）。當時 log 顯示「已棄權 67」卻 `outcomes` 卡在 3，是假的進度。
+改成以 `outcomes` 實際增加為準才是真的。教訓：**驗收計數要數狀態變化，不要數操作次數。**
+
+### 結論
+
+**Q7 Season / Competition MVP：CLOSED。**
+舊存檔相容性是先前唯一未覆蓋的一層，現在有真實 lifecycle 的實跑證據。
