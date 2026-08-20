@@ -10361,3 +10361,72 @@ Chrome 原生 confirmation dialog），**不因本輪改變**。
 
 `review/fixtures/competition/README.md` 的「已知未收口」清空：
 Q7f gate 是最後一支讀 repo 外存檔的 gate，改路徑後 `tools/` 底下已無此類依賴。
+
+## Q7f Season Recap 部署（2026-08-20，main `5608588`）
+
+上一節（`integration/q7f-season-recap`）完成整合後，本節是**正式部署**的紀錄。
+
+### 兩次 remote 前進與處置
+
+Push 前 `origin/main` 兩度前進（都是 Ray 自己的 Sprint 63 MOBA result layout 線）：
+`4256ab3` → `98bea05`（21:58）→ `76564a0`（22:08）。ff-only push 被 remote 正確拒絕。
+
+**沒有 force、沒有 rebase main。** 處置是把 `integration/q7f-season-recap`
+rebase 到 `76564a0` 上（`01d9e03` → `5608588`），main 仍保持線性、仍走 ff-only：
+
+- 新舊兩顆 main commit 與 Q7f 的檔案清單**零重疊**（`comm -12` 空）。
+- rebase 前後 Q7f 自己的 diffstat 逐檔相同（`diff` 兩份 `--stat` 無輸出）。
+- integration branch 用 `--force-with-lease` 更新，**只動那條 branch**。
+- 本地 main 用 `git reset --keep`（非 `--hard`）對齊 remote 後再 ff-only merge。
+
+### 部署前驗證（在 `5608588` 的樹上實跑）
+
+| 項目 | 結果 |
+|---|---|
+| Competition Release Gate（11 區段） | **11/11 PASS**，exit 0 |
+| `check_moba_result_layout`（main 新併入的 verifier） | **49/49 PASS** |
+| `check_team_development_v1` / `_recovery` | PASS / PASS（含「首頁主要入口磚為戰隊發展」「不再以天賦為主磚」） |
+| R60 五個 consumers | BanPick／MOBA Tactic／CS Tactic／Roster／Recruit 全部「已接線」，INTEGRATED |
+| `check_r63_active_match` / `_ttl` / `_competition_integration` | 13/13 · 9/9 · 19/19 |
+| `check_r61_ui_fixture` / `check_r62_player_ui_fixture` | PASS / PASS |
+| production build | ✓ built in 14.8s |
+
+### 部署
+
+- Pages run `32380723889`（`5608588`）→ **completed / success**。
+- 正式站 `index.html` 指向 `assets/index-DNslv2Fh.js`，與本地 build 的 bundle
+  檔名逐字相同；`Content-Length: 2935300`，`Last-Modified: 2026-08-20 14:33:27 GMT`。
+
+### Production smoke（`https://rayhuang0323.github.io/ESMO-/`，21/21 通過）
+
+存檔由 repo fixture 整包注入 `localStorage`（正式站是 minified bundle，叫不到模組——
+沿用既有做法）。截圖在 `review/q7f-production-smoke/`。
+
+- **Q7f**：Recap 出現（S1 · 德國海豹 · 奪下亞洲年度冠軍）；年度榮耀逐值；
+  亞洲年度總決賽 qualified/rank 1/冠軍德國海豹（我方）；亞洲巡迴 第 1 名 450 分 3 站；
+  國內聯賽 第 8 名 / 8 隊 · 暗影狼群；獎金欄位有值；CTA 全 DOM 恰好一顆且在 Recap
+  之後、可見；Recap 內無 undefined／NaN。
+- **playoff row**：canonical `s7b_season_sealed` 上逐值帶出
+  `stage:comp:moba:s1:official:regular:playoffs`——Q7f 第二輪撤回「恆為 null」那個
+  結論在正式站得到印證。
+- **rollover**：按 CTA 後 Recap 與 CTA 一起消失，賽季 S1 → S2 且已落盤。
+- **跨工作線**：首頁主磚是「戰隊發展」、無舊「天賦」主磚、戰隊發展進得去、
+  賽事頁正常、MOBA 賽前配置入口正常、**全程 0 個新 app error**。
+- **390 mobile**：Recap 出現、`scrollWidth === clientWidth === 390`（無水平溢出）、CTA 可見。
+
+### ActiveMatch valid resume：UNVERIFIED → **VERIFIED**
+
+原本記為 acceptance debt，成因是「browser tool 接不了 Chrome 原生 confirmation
+dialog」。CDP harness 可以自己接 `Page.javascriptDialogOpening`，因此本輪順帶驗了：
+
+- 正式站建立新的 MOBA session 至 `state: launched` 且帶有效 ActiveMatch snapshot。
+- reload 後畫面提供「返回進行中的比賽」，**按下去真的回到同一場**（vs 赤焰軍團 選角階段）。
+- `sessionId: session:moba:7d23aac8`、`seed: 48648` 在 reload 與 resume 前後逐值一致。
+- **原生 dialog 出現 0 次** ⇒ 當初記錄的阻塞條件在現行版本上已不成立。
+
+⚠ 誠實範圍：這一份樣本是 **Ban/Pick 階段**的 launched session（`matchId` 尚為 null）。
+「戰鬥進行到一半再 resume」沒有被這一輪走到，仍屬未實測。
+本輪**沒有修改任何 ActiveMatch production code**。
+
+⚠ 過程中我第一次把這條判成 UNVERIFIED，是**我的斷言寫錯**（regex 找
+「返回比賽」，實際按鈕文字是「返回進行中的比賽」），不是產品缺陷。
