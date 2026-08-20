@@ -213,6 +213,29 @@ Major 四強席次**直接取聯賽 standings 前四**，不建積分帳本—�
 | `activeCompetitionEvent()` | `profileStore.js` | → 加 mode 參數 |
 | `_syncSeasonStateV2()` | `profileStore.js` | → per-mode 同步 |
 
+### 3.3b M0 實作紀錄（2026-08-21 落地）
+
+實作與規格一致，但有四點是規格寫的時候沒有預見的，記在這裡以免下一個人重推一次：
+
+1. **預設值寫成常數而非字面值。** 實際簽章是 `competitionView(mode = DEFAULT_GAME_MODE)`，
+   其中 `const DEFAULT_GAME_MODE = "moba"`。兩支 contract verifier 的 marker 一併釘住這兩者
+   ——比原本的 `competitionView()` 更嚴（同時證明投影存在且預設仍是 moba）。
+2. **別名的寫入用轉接層，不逐一改呼叫端。** `routeCompetitionWrite()` 把任何帶
+   `competition` / `competitionHistory` 的 `set()` 導回 `competitionByMode`，別名再投影回來
+   （同一個參考）。理由：profileStore 內有 20 幾個 `set({ competition })`，逐一改**漏一處
+   就是第二份 truth**；轉接層讓「分岔」在結構上不可能發生。
+3. **`useProfileStore.setState` 必須一起包。** zustand 的 store-level `setState` 繞得過
+   creator 內的 `set`，而既有至少 6 支 browser gate 正是直接用它寫 `{ competition: state }`
+   （`tools/browser_check_career_final_ui.mjs` 等）。不包這一層，Release Gate 會在瀏覽器階段才紅。
+4. **未知 mode 一律丟例外，不靜默回退 moba。** 靜默回退會把 CS 的寫入倒進 MOBA 賽季，
+   是最難查的一種錯；規格 §3.2 規則 5 因此由**執行期**強制，不只靠 verifier。
+
+**已知代價（誠實揭露）**：`competition` / `competitionHistory` 別名**留在持久化 payload 裡**，
+因為既有至少 5 支 verifier / browser gate 直接讀 `JSON.parse(localStorage…).competition`
+（`tools/browser_check_q6_prod.mjs` 等）。實測一份 S1 冠軍存檔：總量 235,212 bytes，
+其中別名重複 108,457 bytes（約 46%）。**這是相容性換來的，不是疏忽。**
+要拿掉必須先把那些讀取端改成讀 canonical，屬獨立工作項，不綁在 M0。
+
 ### 3.4 不得倒退
 
 CS Season 的任何工作**不得**修改下列既有語義。要改必須先更新本規格與共同契約：

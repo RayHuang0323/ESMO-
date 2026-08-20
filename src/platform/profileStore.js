@@ -156,8 +156,69 @@ const KEY = "esmo.profile.v1";
  *  v8 = Milestone O4（matchmaking 配對票券；載入時把殘留的排隊中票券作廢，
  *       因為沒有伺服器會回應一張跨 session 的票）；
  *  v9 = Q7b（metadata-only SeasonState.v2 wrapper；legacy state / IDs 不變）；
- *  v10 = 戰隊發展 v1（俱樂部層 ranks；舊 meta.talentPending 只作一次性回退）。 */
-export const PROFILE_SCHEMA_VERSION = 10;
+ *  v10 = 戰隊發展 v1（俱樂部層 ranks；舊 meta.talentPending 只作一次性回退）；
+ *  v11 = CS Season M0（賽季狀態改為 keyed by gameMode：`competitionByMode`／
+ *        `competitionHistoryByMode` 為唯一 canonical runtime structure，
+ *        `competition`／`competitionHistory` 降為 **唯讀別名** → `.moba`。
+ *        純新增：v10 存檔載入時把 `competition` 搬進 `.moba`，`.cs` 為 null，
+ *        **不建立任何 CS 賽季**）。 */
+export const PROFILE_SCHEMA_VERSION = 11;
+
+//  ── CS Season M0：多遊戲賽季鍵 ────────────────────────────────────────────
+//  規格：docs/design/CS_賽事系統架構規格.md §3。硬性規則只有三條：
+//    1. `competitionByMode` 是唯一 canonical runtime structure。
+//    2. `competition` 只讀不寫；它永遠是 `competitionByMode.moba` 的**同一個參考**。
+//    3. 舊 API 一律 `mode = "moba"` 預設 ⇒ 既有呼叫端一行都不用改。
+//  新的 CS code **必須 explicit 傳 "cs"**；傳錯字串一律丟例外，不靜默回退成
+//  moba——靜默回退會把 CS 的寫入倒進 MOBA 賽季，那是最難查的一種錯。
+export const GAME_MODES = Object.freeze(["moba", "cs"]);
+const DEFAULT_GAME_MODE = "moba";
+const assertGameMode = (mode) => {
+  if (!GAME_MODES.includes(mode)) {
+    throw new Error(`profileStore: unknown gameMode "${mode}"（只接受 ${GAME_MODES.join(" / ")}）`);
+  }
+  return mode;
+};
+/** 把 canonical 的 `.moba` 投影成既有的兩個別名欄位（唯一產生別名的地方）。 */
+const withCompetitionAliases = (state) => ({
+  ...state,
+  competition: state.competitionByMode?.moba ?? null,
+  competitionHistory: arr(state.competitionHistoryByMode?.moba, []),
+});
+/**
+ * 把一次 `set()` 的 partial 導回 canonical。
+ *
+ * ⚠ 這是**唯一**讓別名與 canonical 不會分岔的機制：既有 20 幾個
+ *   `set({ competition: ... })` 呼叫端一行都不用改，寫入卻一律落在
+ *   `competitionByMode.moba`，別名只是投影回來的同一個參考。
+ *   逐一改呼叫端的風險（漏改一處就是第二份 truth）比這層轉接高得多。
+ */
+const routeCompetitionWrite = (current, partial) => {
+  if (!partial || typeof partial !== "object") return partial;
+  const touchesAlias =
+    Object.prototype.hasOwnProperty.call(partial, "competition") ||
+    Object.prototype.hasOwnProperty.call(partial, "competitionHistory");
+  const touchesCanonical =
+    Object.prototype.hasOwnProperty.call(partial, "competitionByMode") ||
+    Object.prototype.hasOwnProperty.call(partial, "competitionHistoryByMode");
+  if (!touchesAlias && !touchesCanonical) return partial;   // 快路徑：其餘寫入零成本
+
+  let byMode = partial.competitionByMode ?? current.competitionByMode ?? { moba: null, cs: null };
+  let historyByMode =
+    partial.competitionHistoryByMode ?? current.competitionHistoryByMode ?? { moba: [], cs: [] };
+  if (touchesAlias && Object.prototype.hasOwnProperty.call(partial, "competition")) {
+    byMode = { ...byMode, moba: partial.competition ?? null };
+  }
+  if (touchesAlias && Object.prototype.hasOwnProperty.call(partial, "competitionHistory")) {
+    historyByMode = { ...historyByMode, moba: arr(partial.competitionHistory, []) };
+  }
+  return withCompetitionAliases({
+    ...partial,
+    competitionByMode: byMode,
+    competitionHistoryByMode: historyByMode,
+  });
+};
+
 const canLS = typeof localStorage !== "undefined";
 //  1 萬。定義搬到 economy/units.js（純邏輯模組不能 import 本檔），這裡 re-export
 //  讓既有 `import { WAN } from "platform/profileStore.js"` 的呼叫端不受影響。
@@ -246,13 +307,22 @@ const DEFAULT = {
   //  Milestone Q3：賽季狀態（賽事／賽段／56 場賽程／賽果）。
   //  null = 這個存檔還沒有賽季；`ensureCompetitionSeason()` 會依 team.id 與
   //  meta.seasonSeed 決定性地建立，所以舊存檔載入後也拿得到同一份賽程。
+  //  ⚠ v11 起 canonical 是下面的 `competitionByMode`；這一欄是**唯讀別名**
+  //    （永遠 === `competitionByMode.moba`），保留是為了讓既有呼叫端與
+  //    既有 verifier／存檔格式一行都不用改。不要直接改它。
   competition: null,
+  //  v11（CS Season M0）：賽季狀態 keyed by gameMode。**唯一 canonical 結構。**
+  //  cs 為 null＝尚無 CS 賽季；CS 賽季的建立是 M1 的工作，M0 不建立任何東西。
+  competitionByMode: { moba: null, cs: null },
   // 3b-M2: independent Circuit Points ledger. Event only stores a reference.
   circuitPointsLedger: {},
   schemaVersion: PROFILE_SCHEMA_VERSION,
   processedMatchTransactions: {},// S25：冪等帳本 {transactionId: receipt}（防重複發獎）
   processedCompetitionAwards: {},// Q4：名次獎金冪等帳本 {finalStandingsId: receipt}
-  competitionHistory: [],        // Q5：歷屆已封存賽季（FinalStandings[]，新的在前）
+  //  Q5：歷屆已封存賽季（FinalStandings[]，新的在前）。
+  //  ⚠ v11 起同樣是**唯讀別名** → `competitionHistoryByMode.moba`。
+  competitionHistory: [],
+  competitionHistoryByMode: { moba: [], cs: [] },
   //  Q7a-3d：歷屆巡迴賽摘要（CircuitSeasonSummary[]，新的在前）。
   //  ⚠ 與 competitionHistory 分開存：一個是「聯賽最終名次」，一個是「巡迴總成績」，
   //    合在一起就得在讀的時候分辨每一筆是哪一種，那是自找的麻煩。
@@ -367,7 +437,10 @@ function withIdentity(state) {
     meta: state.meta,
     scenario: state.economy?.scenario ?? DEFAULT_SCENARIO,
   });
-  const next = { ...state, team, meta };
+  //  ⚠ v11：別名投影**必須**在 `seasonStateV2For` 之前。後者讀的是
+  //    `state.competition`（MOBA legacy state），載入路徑只填了 canonical，
+  //    少了這一步 v2 wrapper 會拿 undefined 去建，整個賽事頁會空掉。
+  const next = routeCompetitionWrite(state, { ...state, team, meta });
   return { ...next, seasonStateV2: seasonStateV2For(next) };
 }
 
@@ -422,7 +495,14 @@ const load = () => {
       //  Milestone Q5 migration：舊存檔沒有歷屆賽季 ⇒ 空陣列。
       //  ⚠ 刻意**不從現有 competition.final 回填**：那一季還沒換季，
       //    它仍然是「當前賽季」，回填會讓同一季同時出現在當前與歷史兩個地方。
-      competitionHistory: arr(saved.competitionHistory, []),
+      //  v11 migration：canonical 是 `competitionHistoryByMode`。v11 存檔直接用；
+      //  v10（及更舊）存檔把既有 `competitionHistory` 搬進 `.moba`，`.cs` 為空。
+      //  ⚠ 別名欄位（`competitionHistory`）在本物件組完之後由
+      //    `withCompetitionAliases()` 統一投影，不在這裡各寫一次。
+      competitionHistoryByMode: {
+        moba: arr(saved.competitionHistoryByMode?.moba ?? saved.competitionHistory, []),
+        cs: arr(saved.competitionHistoryByMode?.cs, []),
+      },
       //  Q7a-3d migration：舊存檔沒有巡迴摘要 ⇒ 空陣列。
       //  ⚠ 刻意**不從現有 competition 回填**：那一季還沒換季，它的積分仍然
       //    活在當前賽季裡，回填會讓同一季同時出現在當前與歷史兩個地方。
@@ -453,7 +533,14 @@ const load = () => {
       //    突然多出一整季賽程。改由 `ensureCompetitionSeason()` 在真的要用到時建立。
       //  Q7a-3a：載入時補上 Circuit/Event 身分（`idScheme`）。
       //  ⚠ 只補欄位，**一個既有 id 都不改**；已升級過就原樣回傳同一個參考。
-      competition: upgradeSeasonShape(saved.competition ?? null),
+      //  v11 migration：canonical 是 `competitionByMode`。v11 存檔直接用；
+      //  v10（及更舊）存檔把既有 `competition` 搬進 `.moba`。
+      //  ⚠ `.cs` 一律不從任何東西回填——舊存檔本來就沒有 CS 賽季，
+      //    憑空補一季比留 null 糟得多（見 Q3 migration 同一條理由）。
+      competitionByMode: {
+        moba: upgradeSeasonShape(saved.competitionByMode?.moba ?? saved.competition ?? null),
+        cs: upgradeSeasonShape(saved.competitionByMode?.cs ?? null),
+      },
       circuitPointsLedger: saved.circuitPointsLedger && typeof saved.circuitPointsLedger === "object"
         ? saved.circuitPointsLedger
         : {},
@@ -521,7 +608,13 @@ function normalizeMsg(m, i) {
   };
 }
 
-export const useProfileStore = create((set, get) => ({
+export const useProfileStore = create((rawSet, get) => {
+  //  v11：所有寫入的單一轉接點。既有呼叫端仍然寫 `set({ competition })`，
+  //  真正落地的是 `competitionByMode.moba`，別名再投影回來（同一個參考）。
+  //  ⚠ 本檔沒有 functional 形式的 `set((s) => ...)`（已確認），所以只處理物件形式；
+  //    真的要新增 functional 寫法時，這裡必須一併支援，否則會繞過轉接。
+  const set = (partial) => rawSet(routeCompetitionWrite(get(), partial));
+  return {
   ...load(),
 
   save() {
@@ -554,7 +647,12 @@ export const useProfileStore = create((set, get) => ({
     });
     return nextCompetition;
   },
-  _syncSeasonStateV2() {
+  _syncSeasonStateV2(mode = DEFAULT_GAME_MODE) {
+    assertGameMode(mode);
+    //  v11：v2 wrapper 只存在於 MOBA（見 `activeCompetitionEvent` 的說明）。
+    //  對 cs 呼叫是 no-op，回 null——刻意不丟例外：M1 之後的共用路徑
+    //  （例如 advanceDay 對兩個 instance 都結算）會對兩個 mode 都呼叫一次。
+    if (mode !== "moba") return null;
     const current = get();
     const seasonStateV2 = seasonStateV2For(current);
     set({ seasonStateV2 });
@@ -588,10 +686,22 @@ export const useProfileStore = create((set, get) => ({
     get().save();
     return result;
   },
-  activeCompetitionEvent() {
+  activeCompetitionEvent(mode = DEFAULT_GAME_MODE) {
+    assertGameMode(mode);
+    if (mode !== "moba") {
+      //  ⚠ `seasonStateV2` 是 **MOBA Career Circuit 專屬**的 metadata wrapper
+      //    （Q7b 起就是這個語義）。不得把 CS 賽季塞進去求一個 Event——
+      //    那會讓 MOBA 的封存／換季規則開始管到 CS。CS 直接回 canonical state，
+      //    Event 層留 null，等 M1 決定 CS 自己要不要 Event 結構。
+      const legacyState = get().competitionByMode?.[mode] ?? null;
+      return {
+        ok: true, errors: [], seasonStateV2: null, active: null,
+        event: null, competitionRef: null, legacyState, competition: null,
+      };
+    }
     return activeEventAdapter({
       seasonStateV2: get().seasonStateV2,
-      legacyState: get().competition,
+      legacyState: get().competitionByMode?.moba ?? null,
     });
   },
 
@@ -784,8 +894,18 @@ export const useProfileStore = create((set, get) => ({
    *   上一季）是 Q4 的工作，本輪刻意不做——沒有 `FinalStandings` 之前換季會
    *   把上一季的成績直接丟掉。
    */
-  ensureCompetitionSeason() {
-    const cur = get().competition;
+  ensureCompetitionSeason(mode = DEFAULT_GAME_MODE) {
+    assertGameMode(mode);
+    //  v11：canonical 讀取一律走 `competitionByMode[mode]`。
+    //  ⚠ CS 賽季的**建立**是 M1 的工作。M0 刻意在這裡就停下來回 not-implemented，
+    //    而不是讓它掉進下面的 MOBA 建立路徑——那會用 MOBA 的隊伍池與賽制
+    //    生出一季假的 CS 聯賽，塞進 `competitionByMode.cs`，是最糟的失敗模式。
+    if (mode !== "moba") {
+      const existing = get().competitionByMode?.[mode] ?? null;
+      if (existing?.schema) return { ok: true, state: existing, created: false, errors: [] };
+      return { ok: false, state: null, created: false, errors: [`${mode} 賽季建立尚未實作（CS Season M1）`] };
+    }
+    const cur = get().competitionByMode?.moba ?? null;
     if (cur?.schema) return { ok: true, state: cur, created: false, errors: [] };
     const made = createSeasonState({
       playerTeam: get().team,
@@ -1287,7 +1407,8 @@ export const useProfileStore = create((set, get) => ({
     return { inFixture: !!fixtureId, fixtureId };
   },
   /** 賽事總覽（畫面唯一入口；不得自己算積分榜或自己找下一場）。 */
-  competitionView() {
+  competitionView(mode = DEFAULT_GAME_MODE) {
+    assertGameMode(mode);
     //  ⚠ 資料源刻意經過 adapter，不是直接讀 `get().competition`。
     //    adapter 會確認目前 v2 active Event 的 scope 與 legacy 一致，
     //    不一致就回 `legacyState: null`（fail closed），不會猜另一個 Competition。
@@ -1295,13 +1416,14 @@ export const useProfileStore = create((set, get) => ({
     //      因為當時 v2 投影永遠建不出 Event（migration 讀已淘汰的
     //      `legacyState.competition`）⇒ scope gate 變成永久封鎖。
     //      migration 修好之後（Stage 5.1）此處恢復為 adapter。
-    const adapter = get().activeCompetitionEvent();
+    const adapter = get().activeCompetitionEvent(mode);
     const state = adapter.legacyState;
     if (!state?.schema) {
       return {
         hasSeason: false, standings: null, next: null, today: null, progress: null, live: null,
         final: null, award: null, canRoll: { ok: false, reason: "目前沒有賽季", nextSeason: null },
-        history: arr(get().competitionHistory, []),
+        //  v11：歷史也要跟著 mode 走，否則 `competitionView("cs")` 會回 MOBA 的歷屆名次。
+        history: arr(get().competitionHistoryByMode?.[mode], []),
         activeEvent: null,
       };
     }
@@ -1427,7 +1549,8 @@ export const useProfileStore = create((set, get) => ({
       //  （那會在賽季末顯示「第 95 / 84 天」——賽季錨在建立當天，不是第 1 天）。
       ...seasonDayOf(state, day),
       //  Q5：歷屆已封存賽季（新的在前）＋ 能不能開下一季
-      history: arr(get().competitionHistory, []),
+      //  v11：同樣依 mode 取（`mode = "moba"` 時逐值等於既有的別名讀法）。
+      history: arr(get().competitionHistoryByMode?.[mode], []),
       canRoll: canRollSeason(state),
       //  Q6：季後賽（沒排定 ⇒ null）。畫面只顯示，不自己判晉級或勝敗。
       playoff: playoffView(state),
@@ -2303,4 +2426,17 @@ export const useProfileStore = create((set, get) => ({
     get().save();                            // ⚠ M O 之前漏了這一行：招募不會被保存
     return receipt;
   },
-}));
+  };
+});
+
+//  ── v11：把 store 外部的 `setState` 也導回 canonical ──────────────────────
+//  ⚠ zustand 的 `useProfileStore.setState` 是 store 自己的 set，**繞得過**上面
+//    creator 內那一層轉接。既有至少 6 支 browser gate 直接用它寫
+//    `{ competition: state }`（tools/browser_check_career_final_ui.mjs 等）。
+//    不包這一層，那些寫入只會落在別名上 ⇒ canonical 與別名當場分岔，
+//    正是 §3.2 規則 2 要擋的「第二份 truth」。
+const rawSetState = useProfileStore.setState;
+useProfileStore.setState = (partial, replace) => {
+  const resolved = typeof partial === "function" ? partial(useProfileStore.getState()) : partial;
+  return rawSetState(routeCompetitionWrite(useProfileStore.getState(), resolved), replace);
+};

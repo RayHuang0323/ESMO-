@@ -10525,3 +10525,77 @@ dialog」。CDP harness 可以自己接 `Page.javascriptDialogOpening`，因此�
   `talentPick`／「天賦」降級時必須 RED。
 - 下一階段 R64 由 Codex implementation-owned；R65 在 R64 stable／deployed 前 frozen。其他 AI
   先更新交接／handoff，不得平行覆蓋同一責任區。
+
+---
+
+## CS Season M0 — schema v11 / competitionByMode multi-mode foundation（2026-08-21）
+
+分支 `feat/m0-schema-v11`（自 `plan/cs-season-architecture` `97de229`）。
+本節在一次電腦當機後接續：當機發生在 `7e84fea`（只記錄 CS round-system ownership lock 的
+文件 commit）之後、M0 實作開始之前，**沒有任何未提交的 M0 程式碼遺失**（audit 見下）。
+
+### Crash recovery audit（動工前）
+
+- `feat/m0-schema-v11` HEAD = `7e84fea`，working tree 除了 6 個 **0 bytes** 的殘留檔
+  （`Claude`、`Codex`、`所有`、`交接細節見`、`前置：雙方都先讀`、`跨模型硬規則見`，
+  時間戳 01:24–01:26）之外乾淨；那是一條 shell 指令被中文句子拆成多個重導向目標的產物，
+  **不含任何內容**。依指示未刪除，留給使用者處置。
+- 無 `index.lock`、無 `MERGE_HEAD` / `rebase-merge` / `CHERRY_PICK_HEAD`，無中斷的 git 操作。
+- reflog 只有三筆（branch 建立 → commit → amend），沒有遺失的 commit。
+- 當機前殘留 process：**無**。現存 node 皆為 Codex CLI 與其 MCP server，
+  chrome / node 啟動時間全部晚於重開機，沒有卡住的 vite / verifier。
+
+### 完成項
+
+- `PROFILE_SCHEMA_VERSION` 10 → **11**；`competitionByMode = { moba, cs }` 與
+  `competitionHistoryByMode = { moba, cs }` 成為唯一 canonical runtime structure。
+- `competition` / `competitionHistory` 降為**唯讀別名**（永遠是 canonical 的同一個參考）。
+  別名的寫入由 `routeCompetitionWrite()` 導回 canonical，**既有 20 幾個
+  `set({ competition })` 呼叫端一行都沒改**；`useProfileStore.setState` 也一起包
+  （6 支 browser gate 走的正是那條繞道）。
+- v10（及更舊）存檔遷移為**純新增**：`competition` 搬進 `.moba`，`.cs` 為 `null`。
+  **M0 結束時 CS 仍然沒有任何賽季。**
+- 四支 API 加 mode 參數、預設 `"moba"`：`competitionView`、`ensureCompetitionSeason`、
+  `activeCompetitionEvent`、`_syncSeasonStateV2`。未知 mode **丟例外**，不靜默回退。
+- `ensureCompetitionSeason("cs")` 明確回 `ok:false`（未實作，屬 M1），
+  刻意不掉進 MOBA 建立路徑生一季假的 CS 聯賽。
+- 新增 `tools/check_cs_schema_v11.mjs`（40 條，含 mutation sentinel）。
+
+### 未完成／不在本輪範圍
+
+- M1（CS 聯賽 lifecycle）、M2（玩家實際出戰）一律未開始，依指示不碰 R64 / R65。
+- CS battle runtime（round / half / overtime、`simulateFps` 回合語義、CS scoreboard）
+  由 Codex 持有，本輪**一個檔案都沒動**（已逐檔核對）。
+
+### 已知風險／代價（誠實揭露）
+
+- **持久化 payload 變大約 46%**：別名必須留在存檔裡，因為既有至少 5 支 verifier /
+  browser gate 直接讀 `JSON.parse(localStorage…).competition`。實測一份 S1 冠軍存檔
+  總量 235,212 bytes、其中別名重複 108,457 bytes。要拿掉必須先改那些讀取端，屬獨立工作項。
+- **兩個 verifier marker 隨升版更新，兩者都變嚴**：`check_home_team_contract.mjs` 的
+  `PROFILE_SCHEMA_VERSION = 10` 字串比它要守的契約（§12「至少 v10」）更嚴，改為數值 ≥ 10
+  並補上實質斷言 `sanitizeTeamDevelopment` 仍在載入路徑上；兩支 contract 的
+  `competitionView()` marker 改為釘住 `competitionView(mode = DEFAULT_GAME_MODE)`
+  ＋ `DEFAULT_GAME_MODE = "moba"`。理由記在 `docs/ai/跨模型交接流程.md` §13。
+- **未經瀏覽器實測的項目**：本輪沒有手動在瀏覽器裡開舊存檔走一遍賽事頁。
+  自動化的覆蓋來自 Competition Release Gate 的 7 支 browser gate（皆綠），
+  但「玩家拿自己的真實存檔載入」這件事仍建議由使用者實測一次。
+
+### 驗證（全部實跑，輸出貼在下方）
+
+```
+node tools/check_cs_schema_v11.mjs        CS schema v11 migration: 40/40 PASS
+node tools/check_cs_season_contract.mjs   CS Season / Competition contract: 48/48 PASS
+node tools/check_home_team_contract.mjs   Home / Team responsibility contract: 40/40 PASS
+npm run build                             ✓ built in 13.69s
+
+node tools/check_competition_release_gate.mjs
+  PASS v2_runtime / v2_active_focus / v2_sealing_m2 / circuit_points / multi_event
+  PASS career_final / asia_finals / team_honors / q6 / season_recap / build
+  passed 11/11   failed 0/11   port 清理：✅ 無殘留
+```
+
+`check_cs_season_contract` 由 43 → 48 條（新增 §⑧ schema v11 五條結構錨點），
+`check_cs_schema_v11` 為本輪新增。**刻意不把它加進 Competition Release Gate**：
+規格 §3.4 把「Release Gate 的 11 個區段與其硬編碼通過數」列為不得倒退，
+加成 12 區段會動到那個數字。它改由 `docs/ai/跨模型交接流程.md` §13 登記為 M0 的守門 verifier。

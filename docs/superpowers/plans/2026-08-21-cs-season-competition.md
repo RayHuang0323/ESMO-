@@ -56,7 +56,7 @@
   - `competition`（getter）→ `competitionByMode.moba`
   - `competitionHistory`（getter）→ `competitionHistoryByMode.moba`
 
-- [ ] **Step 1: 寫失敗測試** — 建 `tools/check_cs_schema_v11.mjs`，斷言：v10 存檔載入後 `competitionByMode.moba` 逐值等於原 `competition`；`competitionByMode.cs === null`；`competition` 別名讀得到同一個物件；寫入只發生在 `competitionByMode`。
+- [x] **Step 1: 寫失敗測試** — 建 `tools/check_cs_schema_v11.mjs`，斷言：v10 存檔載入後 `competitionByMode.moba` 逐值等於原 `competition`；`competitionByMode.cs === null`；`competition` 別名讀得到同一個物件；寫入只發生在 `competitionByMode`。
 
 ```js
 // tools/check_cs_schema_v11.mjs（節錄）
@@ -71,11 +71,23 @@ ck("competition 別名指向 moba instance", st.competition === st.competitionBy
 ck("schemaVersion 升到 11", st.schemaVersion === 11);
 ```
 
-- [ ] **Step 2: 跑測試確認失敗** — `node tools/check_cs_schema_v11.mjs` → 預期 FAIL（`competitionByMode` undefined）。
-- [ ] **Step 3: 實作遷移** — initial state 改為 `competitionByMode: { moba: null, cs: null }`；`load()` 遇到 v10 存檔時把 `saved.competition` 搬進 `.moba`；`competition` 改為 getter；`PROFILE_SCHEMA_VERSION = 11`。
-- [ ] **Step 4: 跑測試確認通過**。
-- [ ] **Step 5: 跑既有回歸** — `node tools/check_competition_release_gate.mjs` 必須 **11/11**。這是本 task 真正的驗收：遷移不得動到 Q7f。
-- [ ] **Step 6: Commit** — `git commit -m "feat: key season state by game mode with read-through aliases"`
+- [x] **Step 2: 跑測試確認失敗** — `node tools/check_cs_schema_v11.mjs` → 預期 FAIL（`competitionByMode` undefined）。
+- [x] **Step 3: 實作遷移** — initial state 改為 `competitionByMode: { moba: null, cs: null }`；`load()` 遇到 v10 存檔時把 `saved.competition` 搬進 `.moba`；`competition` 改為 getter；`PROFILE_SCHEMA_VERSION = 11`。
+- [x] **Step 4: 跑測試確認通過**。
+- [x] **Step 5: 跑既有回歸** — `node tools/check_competition_release_gate.mjs` 必須 **11/11**。這是本 task 真正的驗收：遷移不得動到 Q7f。
+- [x] **Step 6: Commit** — `git commit -m "feat: key season state by game mode with read-through aliases"`
+
+> **與計畫的兩處偏差（2026-08-21 實作時記錄，不是事後合理化）**
+>
+> 1. **Step 1/2 的順序沒有照做。** 實際是先實作再補 verifier，然後才回頭證明它在
+>    改動前是紅的——把 `git show HEAD:src/platform/profileStore.js` 取出成暫存模組跑一次，
+>    實測 `schemaVersion = 10`、`competitionByMode === undefined`、`competitionView("dota")`
+>    不丟例外，⇒ §1／§3 的斷言在改動前確實全紅。**red 步驟是補做的，不是原生的。**
+> 2. **`competition` 沒有做成 getter。** zustand 的 `set()` 是 `Object.assign` 語義，
+>    getter 在第一次 `set({ competition })` 之後就會被**求值後的純值**覆蓋，
+>    等於別名當場退化成第二份 truth。改用寫入轉接（`routeCompetitionWrite`）＋
+>    投影別名，達成同樣的契約（別名永遠是 canonical 的同一個參考）且對呼叫端零改動。
+>    細節與 `useProfileStore.setState` 也必須包的理由見規格 §3.3b。
 
 ### Task M0-2: 既有 API 加 mode 參數
 
@@ -85,12 +97,12 @@ ck("schemaVersion 升到 11", st.schemaVersion === 11);
 **Interfaces:**
 - Produces: `competitionView(mode = "moba")`、`ensureCompetitionSeason(mode = "moba")`、`activeCompetitionEvent(mode = "moba")`
 
-- [ ] **Step 1: 寫失敗測試** — 在 `check_cs_schema_v11.mjs` 追加：`competitionView()` 與 `competitionView("moba")` 回傳逐值相同；`competitionView("cs")` 在無 CS 賽季時回 `hasSeason: false`。
-- [ ] **Step 2: 跑測試確認失敗**。
-- [ ] **Step 3: 實作** — 四支 API 加 `mode` 參數，內部一律讀 `competitionByMode[mode]`。
-- [ ] **Step 4: 跑測試確認通過**。
-- [ ] **Step 5: 跑 Release Gate 確認 11/11**（預設參數證明既有呼叫端不受影響）。
-- [ ] **Step 6: Commit** — `git commit -m "feat: parameterise competition selectors by game mode"`
+- [x] **Step 1: 寫失敗測試** — 在 `check_cs_schema_v11.mjs` 追加：`competitionView()` 與 `competitionView("moba")` 回傳逐值相同；`competitionView("cs")` 在無 CS 賽季時回 `hasSeason: false`。
+- [x] **Step 2: 跑測試確認失敗**。
+- [x] **Step 3: 實作** — 四支 API 加 `mode` 參數，內部一律讀 `competitionByMode[mode]`。
+- [x] **Step 4: 跑測試確認通過**。
+- [x] **Step 5: 跑 Release Gate 確認 11/11**（預設參數證明既有呼叫端不受影響）。
+- [x] **Step 6: Commit** — `git commit -m "feat: parameterise competition selectors by game mode"`
 
 ---
 

@@ -156,7 +156,21 @@ check("FinalStandings contract remains present", (text.get("finalStandings") ?? 
 check("ActiveMatch contract remains v1",
   has("matchSession", 'ACTIVE_MATCH_SCHEMA = "ActiveMatch.v1"'));
 check("profileStore keeps the competition and active match projections",
-  has("profileStore", "competitionView()") && has("profileStore", "activeMatchView"));
+  has("profileStore", "competitionView(mode = DEFAULT_GAME_MODE)") && has("profileStore", "activeMatchView"));
+
+// ── ⑧ schema v11：keyed by gameMode（M0 落地後的結構性錨點）──────────────
+//  這一組守的是「別名不得變回第二份 truth」。marker 從 M0 起就在 profileStore 裡，
+//  往後 M1–M4 任何一次改寫把 canonical 拿掉，這裡就會紅。
+check("profileStore declares the canonical keyed-by-gameMode structure",
+  has("profileStore", "competitionByMode") && has("profileStore", "competitionHistoryByMode"));
+check("profileStore routes alias writes back into canonical (no dual write)",
+  has("profileStore", "routeCompetitionWrite") && has("profileStore", "withCompetitionAliases"));
+check("profileStore also routes the external zustand setState",
+  /useProfileStore\.setState\s*=/.test(text.get("profileStore") ?? ""));
+check("profileStore rejects an unknown game mode instead of silently defaulting",
+  has("profileStore", "assertGameMode") && has("profileStore", "unknown gameMode"));
+check("profileStore keeps the v10 -> v11 migration a pure addition",
+  has("profileStore", "saved.competitionByMode?.moba ?? saved.competition"));
 
 // ── ⑦ Mutation sentinel ────────────────────────────────────────────────
 //  證明本檔真的有鑑別力：把「多遊戲命名」拿掉之後，④ 那組必須轉紅。

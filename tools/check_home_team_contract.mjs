@@ -108,7 +108,20 @@ check("Match Prep keeps the shared frame", has("matchPrepFrame", "MatchEntryPane
 check("Match Prep keeps its single primary action", has("matchPrepAction", "primaryActionFor"));
 check("Match Prep source panels remain present", has("matchEntryPanel", "export") && has("matchQueuePanel", "export"));
 
-check("Team Development schema is v10 and persisted by profileStore", has("profileStore", "PROFILE_SCHEMA_VERSION = 10") && has("profileStore", "teamDevelopment") && has("profileStore", "purchaseTeamDevelopment"));
+//  ⚠ 2026-08-21（CS Season M0）：原本寫死 `PROFILE_SCHEMA_VERSION = 10`，
+//    但共同契約寫的是「profile schema **至少**為 v10」（跨模型交接流程.md），
+//    寫死等號比它要守的契約更嚴，任何純新增的升版都會誤紅。
+//    改成「數值 ≥ 10」＝ 忠實編碼契約，並補上**實質**斷言：v10 的
+//    teamDevelopment 遷移路徑（`sanitizeTeamDevelopment`）必須還在載入路徑上。
+//    後者才是升版真正可能弄壞的東西，比版本號字串強。
+const schemaVersionNumber = Number(
+  (text.get("profileStore") ?? "").match(/PROFILE_SCHEMA_VERSION\s*=\s*(\d+)/)?.[1] ?? NaN,
+);
+check("Team Development schema is at least v10 and persisted by profileStore",
+  Number.isFinite(schemaVersionNumber) && schemaVersionNumber >= 10
+  && has("profileStore", "sanitizeTeamDevelopment")
+  && has("profileStore", "teamDevelopment") && has("profileStore", "purchaseTeamDevelopment"),
+  `PROFILE_SCHEMA_VERSION = ${schemaVersionNumber}`);
 check("Team Development canonical module remains present", has("teamDevelopment", "teamDevelopmentNodeById") && has("teamDevelopment", "teamDevelopmentEffects"));
 for (const [key, label] of [["banPick", "MOBA Ban/Pick"], ["mobaTactic", "MOBA Tactic"], ["csTactic", "CS Tactic"], ["roster", "Roster"], ["recruit", "Recruit"]]) {
   check("R60 consumer marker remains in " + label, has(key, "teamDevelopment") || has(key, "戰隊發展"));
@@ -121,7 +134,13 @@ check("profileStore keeps ActiveMatch view projection", has("profileStore", "act
 check("Competition contract remains canonical", has("competitionContract", "COMPETITION_VERSION") && has("competitionContract", "validateCompetition"));
 check("SeasonState v2 validation and event-scoped index remain present", has("seasonStateV2", "validateSeasonStateV2") && has("seasonStateV2", "buildSeasonStateV2Indexes"));
 check("SeasonState active focus remains explicit", has("seasonState", "activeEventId"));
-check("profileStore keeps Competition view and v2 sync", has("profileStore", "competitionView()") && has("profileStore", "_syncSeasonStateV2"));
+//  ⚠ 2026-08-21（CS Season M0）：v11 起 `competitionView` 帶 mode 參數
+//    （規格 §3.3）。marker 跟著改成**釘住預設值**——比原本的 `competitionView()`
+//    更嚴：它同時證明投影還在、而且既有呼叫端拿到的仍然是 moba。
+check("profileStore keeps Competition view (moba-defaulted) and v2 sync",
+  has("profileStore", "competitionView(mode = DEFAULT_GAME_MODE)")
+  && has("profileStore", 'const DEFAULT_GAME_MODE = "moba"')
+  && has("profileStore", "_syncSeasonStateV2"));
 
 const mutatedDashboard = dashboard
   .replace('development: "teamDevelopment"', 'development: "talentPick"')
