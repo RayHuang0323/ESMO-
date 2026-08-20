@@ -10498,6 +10498,36 @@ dialog」。CDP harness 可以自己接 `Page.javascriptDialogOpening`，因此�
 **Q7 Season / Competition MVP：CLOSED。**
 舊存檔相容性是先前唯一未覆蓋的一層，現在有真實 lifecycle 的實跑證據。
 
+## P0.6B Home Command Center / Team Overview contract（2026-08-20，docs + tools only）
+
+### Scope
+
+- 本輪只補共同產品契約與 static verifier，不開始 R64／R65，不修改 `src`，不 cherry-pick、
+  merge、push 或 deploy。
+- 基準固定為 production stable `76564a052075e9fe35ee592e2172f9fa0a3a8570`。既有
+  `2b1c43d`（R64）與 `de27f0a`（R65）只作 reference。
+
+### Contract
+
+- Home Command Center（`dashboard`）負責「現在最需要處理什麼」：ActiveMatch、Competition、
+  Team Development、近期事件／提醒的摘要與入口；只讀既有 store／selectors，不新增 gameplay truth。
+- Team Overview（`team`／現行 `TeamScreen.jsx`）負責「整支戰隊現在是什麼狀態」：戰隊身份、
+  整體狀態、分部／近期表現、精簡陣容與 Team Development 摘要。完整名單留 Roster，個人
+  深入資料留 Player Profile，本場出賽／陣容決策留 Match Prep。
+- 不可倒退 Team Development primary、schema v10、R60 consumers、ActiveMatch.v1、Competition／
+  SeasonState v2、Player Profile 四分頁與 Roster／Match Prep 資訊責任。R64／R65 不得整檔覆蓋
+  高衝突檔案，後續一律從 current baseline selective integration。
+
+### Verifier／ownership
+
+- `node tools/check_home_team_contract.mjs` 檢查五個 route／責任 marker、兩個關鍵入口與上述
+  runtime contract marker；內建 memory-only mutation sentinel，Team Development primary 被舊版
+  `talentPick`／「天賦」降級時必須 RED。
+- 下一階段 R64 由 Codex implementation-owned；R65 在 R64 stable／deployed 前 frozen。其他 AI
+  先更新交接／handoff，不得平行覆蓋同一責任區。
+
+---
+
 ## CS 終局完成邊界修復（2026-08-21）
 
 ### Audit 結論
@@ -10546,3 +10576,348 @@ CS 引擎原本的產品規則是 first-to-8，不是 first-to-7：`37c07ef` 起
 - `check_cs_match_completion.mjs` 由 `31/31` 擴充為 `34/34 PASS`，新增 regulation opening `$800`，並以 rule fixture 與 live simulator 確認 halftime `$800` pistol、第一組 OT／換邊後／下一組 OT 均 `$12,500` non-pistol。
 - CS23 `28/28`、R54 PASS、R56 PASS、R57 PASS（120 matches，deterministic repeat=1）、`verify.mjs --only=cs_match_completion` `1/1`、Vite build（2702 modules）均 PASS。
 - browser `3/3 PASS`：desktop 1920×1080 natural、desktop 1366×768 Quick Finish、390×844 mobile Quick Finish；均到 `1002/1002`、無水平溢位、console/page error `0`。390px 仍是 CDP emulation，非真機觸控／FPS 驗收。
+
+## CS Season M0 — schema v11 / competitionByMode multi-mode foundation（2026-08-21）
+
+分支 `feat/m0-schema-v11`（自 `plan/cs-season-architecture` `97de229`）。
+本節在一次電腦當機後接續：當機發生在 `7e84fea`（只記錄 CS round-system ownership lock 的
+文件 commit）之後、M0 實作開始之前，**沒有任何未提交的 M0 程式碼遺失**（audit 見下）。
+
+### Crash recovery audit（動工前）
+
+- `feat/m0-schema-v11` HEAD = `7e84fea`，working tree 除了 6 個 **0 bytes** 的殘留檔
+  （`Claude`、`Codex`、`所有`、`交接細節見`、`前置：雙方都先讀`、`跨模型硬規則見`，
+  時間戳 01:24–01:26）之外乾淨；那是一條 shell 指令被中文句子拆成多個重導向目標的產物，
+  **不含任何內容**。依指示未刪除，留給使用者處置。
+- 無 `index.lock`、無 `MERGE_HEAD` / `rebase-merge` / `CHERRY_PICK_HEAD`，無中斷的 git 操作。
+- reflog 只有三筆（branch 建立 → commit → amend），沒有遺失的 commit。
+- 當機前殘留 process：**無**。現存 node 皆為 Codex CLI 與其 MCP server，
+  chrome / node 啟動時間全部晚於重開機，沒有卡住的 vite / verifier。
+
+### 完成項
+
+- `PROFILE_SCHEMA_VERSION` 10 → **11**；`competitionByMode = { moba, cs }` 與
+  `competitionHistoryByMode = { moba, cs }` 成為唯一 canonical runtime structure。
+- `competition` / `competitionHistory` 降為**唯讀別名**（永遠是 canonical 的同一個參考）。
+  別名的寫入由 `routeCompetitionWrite()` 導回 canonical，**既有 20 幾個
+  `set({ competition })` 呼叫端一行都沒改**；`useProfileStore.setState` 也一起包
+  （6 支 browser gate 走的正是那條繞道）。
+- v10（及更舊）存檔遷移為**純新增**：`competition` 搬進 `.moba`，`.cs` 為 `null`。
+  **M0 結束時 CS 仍然沒有任何賽季。**
+- 四支 API 加 mode 參數、預設 `"moba"`：`competitionView`、`ensureCompetitionSeason`、
+  `activeCompetitionEvent`、`_syncSeasonStateV2`。未知 mode **丟例外**，不靜默回退。
+- `ensureCompetitionSeason("cs")` 明確回 `ok:false`（未實作，屬 M1），
+  刻意不掉進 MOBA 建立路徑生一季假的 CS 聯賽。
+- 新增 `tools/check_cs_schema_v11.mjs`（40 條，含 mutation sentinel）。
+
+### 未完成／不在本輪範圍
+
+- M1（CS 聯賽 lifecycle）、M2（玩家實際出戰）一律未開始，依指示不碰 R64 / R65。
+- CS battle runtime（round / half / overtime、`simulateFps` 回合語義、CS scoreboard）
+  由 Codex 持有，本輪**一個檔案都沒動**（已逐檔核對）。
+
+### 已知風險／代價（誠實揭露）
+
+- **持久化 payload 變大約 46%**：別名必須留在存檔裡，因為既有至少 5 支 verifier /
+  browser gate 直接讀 `JSON.parse(localStorage…).competition`。實測一份 S1 冠軍存檔
+  總量 235,212 bytes、其中別名重複 108,457 bytes。要拿掉必須先改那些讀取端，屬獨立工作項。
+- **兩個 verifier marker 隨升版更新，兩者都變嚴**：`check_home_team_contract.mjs` 的
+  `PROFILE_SCHEMA_VERSION = 10` 字串比它要守的契約（§12「至少 v10」）更嚴，改為數值 ≥ 10
+  並補上實質斷言 `sanitizeTeamDevelopment` 仍在載入路徑上；兩支 contract 的
+  `competitionView()` marker 改為釘住 `competitionView(mode = DEFAULT_GAME_MODE)`
+  ＋ `DEFAULT_GAME_MODE = "moba"`。理由記在 `docs/ai/跨模型交接流程.md` §13。
+- **未經瀏覽器實測的項目**：本輪沒有手動在瀏覽器裡開舊存檔走一遍賽事頁。
+  自動化的覆蓋來自 Competition Release Gate 的 7 支 browser gate（皆綠），
+  但「玩家拿自己的真實存檔載入」這件事仍建議由使用者實測一次。
+
+### 驗證（全部實跑，輸出貼在下方）
+
+```
+node tools/check_cs_schema_v11.mjs        CS schema v11 migration: 40/40 PASS
+node tools/check_cs_season_contract.mjs   CS Season / Competition contract: 48/48 PASS
+node tools/check_home_team_contract.mjs   Home / Team responsibility contract: 40/40 PASS
+npm run build                             ✓ built in 13.69s
+
+node tools/check_competition_release_gate.mjs
+  PASS v2_runtime / v2_active_focus / v2_sealing_m2 / circuit_points / multi_event
+  PASS career_final / asia_finals / team_honors / q6 / season_recap / build
+  passed 11/11   failed 0/11   port 清理：✅ 無殘留
+```
+
+`check_cs_season_contract` 由 43 → 48 條（新增 §⑧ schema v11 五條結構錨點），
+`check_cs_schema_v11` 為本輪新增。**刻意不把它加進 Competition Release Gate**：
+規格 §3.4 把「Release Gate 的 11 個區段與其硬編碼通過數」列為不得倒退，
+加成 12 區段會動到那個數字。它改由 `docs/ai/跨模型交接流程.md` §13 登記為 M0 的守門 verifier。
+
+### M0 closure：真實存檔的瀏覽器 smoke（2026-08-21）
+
+隔離 Chrome（`launchChrome` 每次開全新 temp user-data-dir）＋ 本機 Vite，
+種入 Ray 匯出的**真實 v10 存檔**（`schemaVersion=10`、德國海豹 `team:97987358`、
+第 12 天、5 名選手、$1,970,000、140 場賽程、`teamDevelopment.ranks.general_training_flow=1`），
+真 reload 走完整 document 生命週期，讓 App 自己跑 v10 → v11 遷移。
+
+```
+M0 real-save smoke: 20/20 PASS
+  真實 v10 存檔在瀏覽器正常載入            rootChildren=1 buttons=16
+  schema 升到 11                            schemaVersion=11
+  competitionByMode.moba 正常               fixtures=140 digest=49,598 bytes
+  competitionByMode.cs 為 null
+  competition 別名與 canonical 同一參考
+  玩家資料逐值保留                          team/players/funds/days 全同
+  Team Development 資料逐值保留             availablePoints=0 spent=1 ranks={general_training_flow:1}
+  competitionView() 積分榜 8 列、進度存在
+  賽事頁在真實 UI 開得起來（渲染出積分榜）
+  戰隊發展頁在真實 UI 開得起來              development-route-summary 出現
+  ensureCompetitionSeason("cs") 不建立賽季、cs 仍 null
+  competitionView("cs") 為空且不回 MOBA 歷史
+  碰 cs 之後 moba 與 seasonStateV2 逐值不變
+  未知 mode 在真實 runtime 丟例外
+  save 後 payload 帶 canonical、cs=null、別名仍在   180,203 bytes
+  save → reload 後 13 個比對欄位全部相同
+  reload 後 cs 仍 null、別名仍指向 canonical
+  reload 後賽事頁仍然開得起來
+  console error = 0（總 12 行，warning 0）
+  page uncaught exception = 0
+```
+
+- 依指示**未跑完整賽季**（Q7 lifecycle 已由 Release Gate 的 `q6` / `season_recap` 驗過）。
+- smoke 腳本是一次性的，放在 scratchpad **不進 repo**：它依賴 worktree 外的
+  `C:\Users\ifikn\Downloads\esmo-save.json`，而 repo 慣例明文禁止 verifier 往 worktree 外找 fixture。
+- 過程中修掉一條**腳本自己的**錯誤斷言（`raw.competitionByMode?.cs ?? "missing"` 把合法的
+  `null` 也吃成 "missing"）。產品行為從頭到尾正確：同一輪的 reload 檢查直接讀取，量到的就是 `null`。
+- 當機殘留的 6 個 0-byte 檔案已刪除（刪除前逐一確認 size=0 且 untracked）。
+- payload duplication 已記為相容性技術債，見 `08_目前待辦與風險.md`，M0 不重構。
+
+---
+
+## CS Season M1 — CS 聯賽 lifecycle（2026-08-21）
+
+分支 `feat/m0-schema-v11`，基線是 M0 stable `563b27a` ＋ closure `5d7cafb`。
+**M1 只做 lifecycle：建立 → AI 模擬／玩家棄權 → 封存。玩家實際下場打 CS 屬 M2，本輪沒有接。**
+
+### 開工前的 checkpoint 核對（不是照單全收）
+
+Codex 提供的 CS battle stable checkpoint `codex/cs-mr12` @ `bc2ea5a`
+（Sprint CS-MR12：MR12 / first-to-13 / halftime / OT MR3）逐項核對過：
+
+- SHA 存在，且是該分支的 tip。
+- 相對 merge-base `7c43a45` 只動了 `src/battle/fps/EsportsFPS3D.jsx`、
+  `tools/check_cs_match_completion.mjs`、`tools/browser_check_cs_completion.mjs`、
+  `tools/check_cs_matchup_acceptance_r57.mjs`、`tools/verify.mjs` 與四份文件。
+- 使用者宣稱未被修改的六個檔案逐一核對為 **unchanged**：`CsMatchResult.js`、
+  `settleCsMatch.js`、`competition.js`、`seasonState.js`、`regularSeason.js`、`profileStore.js`。
+  ⇒ 與 M1 的變更面**零重疊**。
+
+**M1 沒有 cherry-pick `bc2ea5a`，也不依賴它的程式碼**——只把它記為外部參考。
+
+### 完成項
+
+- `ensureCompetitionSeason("cs")` 建得出 CS 官方聯賽：8 隊雙循環、56 場、玩家 14 場，
+  id 帶 `comp:cs:` / `fx:cs:` 命名空間，決定性（同存檔重載逐場相同）。
+- `advanceDay` 同時結算兩個項目；共用 `meta.days`，採「先試算、取兩者交集、再落地」。
+  **只有一個賽季時完全走舊路徑，一次都不多算。**
+- CS 的 AI vs AI 由既有 `simulateFixture` 模擬；玩家賽程可 `forfeitFixture`，
+  **fixture 自己認得出屬於哪個項目**，呼叫端不必傳 mode。
+- CS 整季走得到封存，產出 8 列 FinalStandings 與 `playerRank`。
+- 新增 `tools/check_cs_season_lifecycle.mjs`（47 條，含兩個 mutation sentinel）。
+
+### ⛔ Ownership lock 遵守情況
+
+Codex 的 CS battle runtime（round / half / overtime / `simulateFps` / scoreboard）
+**本輪一個檔案都沒動**。Season 層對 CS 比分只寫**地圖數**（BO1 ⇒ `1:0`），
+不寫回合數、不貼從擊殺差推導的局勢標籤，並另立模擬器版本
+`fixtureSim.cs1+teamStrength.v1`。這三條由 `check_cs_season_contract.mjs` §⑩ 守住。
+
+### 需要使用者裁示的一項內容決定
+
+**CS 聯賽排除了 Neon Comets。** `csAiTeams.js` 有 8 支 AI，8 ＋ 玩家 ＝ 9 是奇數，
+雙循環排不出來，規格 D3 又寫死 8 隊。實作採語意規則「排除 `strengthBand === "developing"`」
+（目前唯一符合的就是 Neon Comets，資料上標為「高潛力新秀」）；
+排掉唯一的 elite（Iron Vanguard）會讓聯賽沒有頭號強隊，更糟。
+內容池分布一變 `csLeagueParticipants()` 會直接丟例外，不會靜默排出奇數隊。
+**正解是把 CS 聯賽擴到 10 隊或讓新秀隊經 Major／升降級進來（M3 之後）。**
+
+### 未完成／不在本輪範圍
+
+- M2（玩家實際出戰 CS）、M3（年度 Major）、M4（Recap／換季）一律未開始。
+- CS **沒有獎金政策**、**沒有季後賽**、**沒有寫進 honors**、**沒有換季**。
+  這四項都是刻意留白，理由與 M3 該補什麼寫在規格 §3.3c 第 2、6 點與程式碼註解裡。
+- 未碰 R64／R65。
+
+### 兩個 era-scoped 舊斷言隨 M1 更新（兩者都變嚴）
+
+- `check_competition_q2a.mjs` `8h)`：原本 grep `regularSeason.js` 有沒有字串 `"cs"`
+  ——Q2a 時代的範圍標記。改成行為斷言「不傳 gameMode 時，賽事／賽段／每一場賽程與 id
+  都不得出現 cs」。
+- `check_competition_q4.mjs` §6：造「沒有賽季的舊存檔」時只 `delete saved.competition`，
+  而 v11 起那只是別名 ⇒ 賽季仍會從 canonical 讀回來，6b/6c 誤紅。改成連
+  `competitionByMode` 一起刪。**斷言一字未改，修的是 fixture 的構造。**
+  這正是 M0 記下的 payload duplication 技術債第一次真的咬人。
+
+### 未經瀏覽器實測
+
+CS 賽事目前**沒有任何 UI**（M4 才做），所以本輪沒有瀏覽器 smoke。
+自動化覆蓋來自 Competition Release Gate 的 7 支 browser gate（守的是 MOBA 沒被弄壞）。
+
+### 驗證（全部實跑）
+
+```
+node tools/check_cs_season_lifecycle.mjs   CS Season M1 lifecycle: 49/49 PASS   ← 本輪新增
+node tools/check_cs_schema_v11.mjs         CS schema v11 migration: 41/41 PASS
+node tools/check_cs_season_contract.mjs    CS Season / Competition contract: 59/59 PASS
+node tools/check_home_team_contract.mjs    Home / Team responsibility contract: 40/40 PASS
+npm run build                              ✓ built in 23.11s
+
+MOBA regression（賽事線）
+  check_competition_q1    93/93     check_competition_q2a   112/112
+  check_competition_q2b   92/92     check_competition_q3     91/91
+  check_competition_q35   65/65     check_competition_q4     68/68
+  check_competition_q5    69/69     check_competition_q6     57/57
+MOBA regression（戰鬥線）
+  tools/regress.mjs   結束率 15/15、平均時長 22.5 分、0 殺場 0、撤退鎖死 0
+  tools/regress2.mjs  節奏門檻 8/8 通過
+
+node tools/check_competition_release_gate.mjs
+  PASS v2_runtime / v2_active_focus / v2_sealing_m2 / circuit_points / multi_event
+  PASS career_final / asia_finals / team_honors / q6 / season_recap / build
+  passed 11/11   failed 0/11   port 清理：✅ 無殘留
+```
+
+`check_cs_season_contract` 由 48 → 59 條（新增 §⑨ M1 結構錨點 7 條、
+§⑩ ownership lock 4 條）。`check_cs_season_lifecycle` 為本輪新增。
+兩支都**不加進 Competition Release Gate**：規格 §3.4 把「Release Gate 的 11 個區段
+與其硬編碼通過數」列為不得倒退，加區段會動到那個數字。改由
+`docs/ai/跨模型交接流程.md` §13 登記為 M0／M1 的守門 verifier。
+
+---
+
+## CS Season M1 修正 — 參賽資格改為明文設定（2026-08-21，使用者退回後）
+
+M1 的 lifecycle 本身被接受，但參賽名單的**兩個契約觀念寫錯了**，使用者退回重做。
+
+### 錯在哪（照實記，不要再犯）
+
+1. **把 scheduler 的限制寫成產品規則。** 第一版的註解寫「8 支 AI ＋ 玩家 ＝ 9 隊是奇數，
+   雙循環排不出來」。**這是錯的**：奇數隊在賽制上可以用輪空（bye）排循環賽，
+   目前排不出來只是 `scheduleGenerator.js` 還沒實作——那支檔案自己的錯誤訊息就寫得很清楚
+   （「循環賽**目前**不支援奇數隊（需要輪空機制）」）。隊數是**產品決策**，不是賽制的性質。
+2. **拿 `strengthBand` 當參賽資格。** 第一版寫成
+   `CS_AI_TEAMS.filter((t) => t.strengthBand !== "developing")`。`strengthBand` 是
+   **實力描述**、是內容平衡的產物；用它當資格條件，日後有人把某隊調強或調弱，
+   本季的聯賽名單就會**默默改變**。參賽資格不該被實力數值決定。
+
+### 產品決策（使用者裁示）
+
+- CS MVP 頂級聯賽維持 **8 隊總數**：玩家 ＋ 7 支 AI。
+- **Neon Comets 定位為 development / challenger**：本季不參加頂級聯賽，也不直接進 Major。
+- 未來 Qualifier／升降級／擴充到 10 隊時再納入。
+
+### 改法
+
+新增 `src/platform/competition/csSeasonConfig.js`——**明文的 participant eligibility**：
+
+- `CS_LEAGUE_SEASONS[season].aiTeamKeys`：逐季列出參賽 AI 的 key，**不從任何欄位推導**。
+- `CS_TEAM_STATUS`：`league` / `development`。定位與實力無關——
+  一支 development 隊可以很強，一支 league 隊也可以很弱。
+- **玩家席位不在設定裡**：CS 賽季是玩家的賽季，「玩家在不在名單裡」不該有第二種可能。
+- 席次不符 ⇒ `csLeagueAiTeamsFor()` 直接丟例外，不靜默排出錯誤隊數。
+- `CS_MAJOR_QUALIFICATION = { source: "league_standings", topN: 4 }` ＋ 純函式
+  `csMajorQualifiers(standings)`：只從該季**聯賽積分榜**取前四，不做外卡、不補位、
+  不接受額外隊伍清單 ⇒ 不在聯賽裡的隊伍**結構上**進不了 Major。
+  （Major 的賽制與對戰表仍是 M3，這裡只定義資格從哪裡來。）
+
+`regularSeason.js` 退回成純組裝：不再做任何條件篩選，參賽者向設定要。
+
+⚠ **未修改 Codex 的 CS battle runtime**（本輪連 `src/battle/` 都沒有進去）。
+
+### 新增 focused verifier
+
+`tools/check_cs_league_eligibility.mjs`（31/31），五組對應使用者指定的驗收點：
+
+```
+§1 CS League 總數固定 8              6 條（含席次守衛的 mutation）
+§2 玩家一定存在                       4 條（換玩家隊仍佔第一席）
+§3 Major 只從聯賽 standings 前四晉級   7 條（空榜 ⇒ 0 席；兩隊 ⇒ 2 席，不補位）
+§4 Neon Comets 本季不在 League/Major   8 條（含整季 56 場都沒有它的場次）
+§5 strengthBand 不得決定 eligibility   6 條
+```
+
+§5 的 mutation sentinel 是這一支的重點：memory-only 把 Neon Comets 翻成 `elite`、
+把 Shadow Wolves 翻成 `developing`，然後比較兩種規則——
+**設定規則的答案不變，舊的 band 規則會換掉整份聯賽名單**。
+`check_cs_season_contract.mjs` 另加反向斷言：資格相關的兩個檔案**都不得**出現
+`strengthBand`，且「奇數隊」的限制必須留在 `scheduleGenerator.js` 自己身上。
+
+### 驗證（全部實跑）
+
+```
+node tools/check_cs_league_eligibility.mjs  CS league eligibility: 31/31 PASS   ← 本輪新增
+node tools/check_cs_season_lifecycle.mjs    CS Season M1 lifecycle: 50/50 PASS
+node tools/check_cs_season_contract.mjs     CS Season / Competition contract: 62/62 PASS
+node tools/check_cs_schema_v11.mjs          CS schema v11 migration: 41/41 PASS
+node tools/check_home_team_contract.mjs     Home / Team responsibility contract: 40/40 PASS
+npm run build                               ✓ built in 31.80s
+
+MOBA regression（賽事線）q1 93/93、q2a 112/112、q2b 92/92、q3 91/91、
+                          q35 65/65、q4 68/68、q5 69/69、q6 57/57
+
+node tools/check_competition_release_gate.mjs
+  11 區段全 PASS   passed 11/11   failed 0/11   port 清理：✅ 無殘留
+```
+
+`check_cs_season_contract` 由 59 → 62 條（§⑨ 改寫為設定導向，新增
+「資格不得讀 strengthBand」與「奇數隊限制必須留在 scheduleGenerator」兩條反向斷言）。
+`check_cs_season_lifecycle` 由 49 → 50 條（資格細節移交新的 focused verifier）。
+
+**本輪未進入 `src/battle/`**，Codex 的 CS battle runtime 一個檔案都沒動。
+未開始 M2。
+
+---
+
+## CS Cross-AI integration base（2026-08-21）
+
+Codex 的 CS battle runtime 與 Claude 的 CS Season 平台第一次匯流。
+分支 `integration/cs-cross-ai`，**只建 local commit，未 push、未 deploy**。
+
+### Integration strategy
+
+以 `origin/main` `651fedd`（Codex CS MR12 / halftime / OT economy）為 production base
+開新分支，再把 Claude 的 `6def26f`（M0 ＋ M1）**merge** 進來。
+
+**選 merge 而不是 cherry-pick 的理由**：兩側從共同祖先 `7c43a45` 分岔之後
+**各自只動自己的責任區**——Codex 動 `src/battle/fps/`＋兩支 CS completion verifier，
+Claude 動 `src/platform/competition/`＋`profileStore.js`＋CS Season verifier。
+`git merge` 因此是零程式碼衝突的，而且保留兩條真實歷史；
+cherry-pick 會把 7 顆 commit 重寫成新 SHA，之後誰也對不回原本的那條線。
+
+### Conflict files（全部語意合併，沒有任何一份選邊）
+
+| 檔案 | 衝突性質 | 解法 |
+|---|---|---|
+| `docs/handoff/00_目前專案狀態.md` | 雙方各自追加章節 | 保留雙方，P0.6B(08-20) → Codex CS(08-21) |
+| `docs/handoff/05_Sprint紀錄.md` | 同上 | 保留雙方，P0.6B → Codex CS → Claude CS Season |
+| `docs/handoff/06_目前主幹架構.md` | 同上 | 保留雙方，P0.6B → Codex CS runtime contract |
+| `docs/handoff/08_目前待辦與風險.md` | 同上 | 保留雙方，P0.6B → Codex closure → schema v11 技術債 |
+
+四份都是「兩邊在檔尾追加不同章節」，**內容零重疊**。
+`05` 與 `08` 另外把我方區塊**拆開**，讓 Codex 的 08-21 章節插在
+P0.6B(08-20) 與 Claude 的 CS Season(08-21) 之間 ⇒ 讀起來是真正的時間序。
+
+⚠ **`tools/verify.mjs` 沒有衝突**（Codex 在裡面註冊了 `check_cs_match_completion`，
+Claude 從未動過它），因此原樣保留 main 的版本。Claude 的 CS Season verifier
+**刻意不加進去**：那是 CS gameplay R 系列的 runner，屬 Codex 的責任區。
+要不要合併成單一 runner 是獨立工作項，需要雙方同意，本輪不擅自決定。
+
+### 保留驗證
+
+- **Codex battle runtime 完整保留**：`EsportsFPS3D.jsx`、`check_cs_match_completion.mjs`、
+  `browser_check_cs_completion.mjs`、`check_cs_matchup_acceptance_r57.mjs`、`verify.mjs`
+  逐檔比對 `git diff 651fedd -- <file>` **全部為空**。
+- **Claude M0/M1 完整保留**：`PROFILE_SCHEMA_VERSION = 11`、`competitionByMode`、
+  `csSeasonConfig.js`、四支 CS Season verifier 全部到位且全綠。
+
+### 未做
+
+- 未碰 R64／R65。
+- **未開始 M2**（玩家實際出戰 CS）。
+- 未 push、未 deploy。

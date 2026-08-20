@@ -354,9 +354,20 @@ console.log("══ Milestone Q2a：AI 隊伍 / 賽事契約 / 賽程 ══\n")
   ck("8e) **沒有 Standings**（Q2b 的事）", !/[Ss]tandings\b/.test(all.replace(/standingsRule/g, "")));
   ck("8f) **沒有碰 Battle Engine**", !/LogicEngine|useLocalServer|battleStore/.test(all));
   ck("8g) **沒有碰 Shop／Ranking**", !/[Ss]hop|Entitlement|RankingKey|\bMMR\b/.test(all));
-  ck("8h) **沒有 CS 賽事**（Q2a 只做 MOBA 常規賽）", (() => {
-    const rs = read("src/platform/competition/regularSeason.js");
-    return !/["']cs["']/.test(rs);
+  //  ⚠ 2026-08-21（CS Season M1）：原本這一條是 grep `regularSeason.js` 有沒有
+  //    出現字串 `"cs"`——那是 Q2a 時代的**範圍標記**（當時 CS 聯賽根本不存在）。
+  //    M1 依規格把 CS 官方聯賽加進同一個組裝器，這個 grep 因此必然轉紅。
+  //
+  //    改成**行為**斷言，而且比 grep 嚴格：不傳 gameMode 時，整個產出
+  //    （賽事／賽段／每一場賽程）都不得出現 cs。grep 只證明「檔案裡沒這個字」，
+  //    這一條證明的是「預設路徑真的建不出 CS」——後者才是要守的東西。
+  //    下面 8i 是同一個意圖的既有行為版本，一併保留。
+  ck("8h) 不指定項目時，產出的每一層都不是 CS（CS 只在明確傳 cs 時出現）", (() => {
+    const d = buildRegularSeason({ playerTeam: PLAYER_TEAM, season: 1, seasonSeed: SEASON_SEED });
+    return d.competition.gameMode !== "cs" && d.stage.gameMode !== "cs"
+      && d.fixtures.every((f) => f.gameMode !== "cs")
+      && !d.competition.id.includes(":cs:")
+      && d.fixtures.every((f) => !f.id.startsWith("fx:cs:"));
   })());
 
   //  ★ 行為證明：契約層允許 cs，但 Q2a 的組裝入口預設只建 MOBA

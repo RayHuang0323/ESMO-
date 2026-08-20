@@ -1,0 +1,423 @@
+# CS Season / Competition 架構規格
+
+> **狀態**：規劃定稿，**尚未實作**。本檔是 CS 賽季／賽事的產品與架構單一事實來源。
+> **Architecture owner**：Claude Code。
+> **基線**：`main` production lineage ＋ Home/Team 共同責任契約（本分支 `plan/cs-season-architecture`）。
+> **日期**：2026-08-21。
+
+---
+
+## 0. 這份規格要回答的問題
+
+MOBA 的 Season / Competition MVP 已完成、部署並以真實存檔驗收（22/22，`review/q7-manual-save-acceptance/`）。
+現在要決定 CS 的賽季／賽事怎麼做。
+
+**結論先講：CS 不需要自己的賽季系統。** 需要的是把 CS 接上既有的 Competition Platform，
+再補一段 CS 目前完全沒有的 match lifecycle。理由見 §1。
+
+---
+
+## 1. 先確認地基：哪些東西已經是現成的
+
+在寫任何新東西之前，先量測既有資產。以下每一條都在 `7c43a45` 的樹上實際查證過。
+
+### 1.1 Competition 契約本來就是多遊戲的
+
+`src/platform/contracts/competition.js`：
+
+| 事實 | 位置 | 意義 |
+|---|---|---|
+| `createCompetition({ gameMode })` 驗 `moba \| cs` | `competition.js:105-110` | CS 賽事是**合法輸入**，不是新型別 |
+| id 命名 `comp:${gameMode}:s${season}:${organizerId}:${tier}` | `competition.js:113` | 兩個項目的賽事**不可能撞 id** |
+| `seasonId: season:${gameMode}:s${season}` | `competition.js:119` | 賽季本來就以 gameMode 分名 |
+| Fixture id `fx:${stage.gameMode}:...` | `competition.js:253` | 賽程場次同上 |
+| `STAGE_FORMATS` 已宣告 `swiss / single_elim / double_elim` | `competition.js:31-38` | 淘汰賽是**已宣告未實作**，不是缺漏 |
+| `createFixture({ matchFormat })`，註解「項目專屬設定原樣攜帶，**共用層不解讀**」 | `competition.js:234, 261-263` | BO 系列與地圖池的掛載點早就留好 |
+| `stageIds` / `qualifications`（Stage Graph） | `competition.js:132-133` | 多階段賽事的骨架已在 |
+
+⇒ **Competition 契約一行都不用改。** CS 只是第二個消費者。
+
+### 1.2 賽果橋已經是項目中立的
+
+```
+BattleResult.v2 → outcomeFromBattleResult() → createMatchResult() → MatchResult.v1
+                                                                      ↓
+                                              fixtureOutcomeInputFrom() → FixtureOutcome
+```
+
+- `fixtureOutcomeInputFrom()` 的簽名**只收 `MatchResult.v1`**，`fixtureResultBridge.js:24-26`
+  明寫「本檔**不接受 BattleResult**，簽名上就拿不到——這是刻意的」。
+- `createMatchResult({ session, outcome })` 以 `session.mode` 參數化：
+  `resultId: result:${session.mode}:${hash}`（`matchResult.js:87`）。
+
+⇒ CS 缺的**不是橋，是橋頭那一小段**：`CsMatchResult.v1 → { winner: "us"|"opponent", score:{us,opponent} }`，
+也就是 MOBA `outcomeFromBattleResult()` 的 CS 對應物。這是整個 MVP 裡最小的一塊。
+
+### 1.3 已經可用的 CS 資產
+
+| 資產 | 位置 | 狀態 |
+|---|---|---|
+| `matchEntry("cs")`（讀 `csLineup`） | `profileStore.js:1573-1585` | 可用 |
+| `enqueueMatch("cs")` | `profileStore.js:1600` | 可用 |
+| `teamStrength(roster, "cs")` | `teamStrength.js:43` | 可用 |
+| `simulateFixture()` 讀 `fixture.gameMode` | `simulateFixture.js:98-99` | **AI vs AI 自動模擬對 CS 免費** |
+| 8 支 `CsAiTeam.v1`（含 tier / strengthBand / 5 roles） | `src/data/csAiTeams.js` | **現成的聯賽參賽隊伍池** |
+| `CsMatchResult.v1` 契約 | `contracts/CsMatchResult.js` | 可用 |
+| `csProgressAdapter` / `settleCsMatch` | `platform/progress/` | 可用（選手成長） |
+| 賽前流程 `csPrep → csMap → csTactic → csLoading → cs → csResult` | `AppShell.jsx:187-193` | **含地圖選擇畫面** |
+| `setActiveMatchContext({ phase })` CS 已在呼叫 | `AppShell.jsx:188-190` | CS **已有 ActiveMatch context** |
+
+### 1.4 真正的缺口：CS 沒有 match lifecycle
+
+`CsPrepScreen.jsx` **完全沒有** matchmaking / fixture / origin 的引用。CS 今天的路徑是：
+
+```
+CsMatchScreen.onFinish → settleCsMatch(r) → csHistory[]
+```
+
+`profileStore.js:232` 的註解寫得很清楚：`csHistory` 是「CS **訓練賽**紀錄」。
+
+CS 沒有 `matchmaking.session`、沒有 `matchRoom`、沒有 fixture origin、沒有 `launched` 狀態
+（⇒ 沒有「快輸中離規避敗場」的保護）、沒有 `FixtureOutcome` 入口。
+
+**這才是 MVP 的主要工作量，不是賽季系統本身。**
+
+---
+
+## 2. 決策紀錄
+
+以下八項是 2026-08-21 grilling 的產出。每一項都記錄「決定」與「為什麼不選另一邊」。
+
+### D1 — Season truth 的形狀：**keyed by gameMode**
+
+```
+profileStore.competitionByMode = {
+  moba: SeasonState,   // 現有
+  cs:   SeasonState,   // 新增
+}
+```
+
+**同一套 canonical engine，各自持有 instance。** schema、lifecycle、Event、Fixture、
+FinalStandings、SeasonSeal、verifier 全部共用。
+
+- ❌ **不建立** `csSeasonStore`。
+- ❌ **不複製** CS 專屬的 Season truth。
+- ❌ **不採用**「兩個項目塞進同一個 SeasonState instance」。
+
+**為什麼不塞同一個 instance**：`state.final`（SeasonSeal）、`careerEventId`、`season`、
+`startDay`、`canRollSeason` 全部是 **season-global**。硬塞兩個項目會讓 MOBA 的封存與換季
+綁死 CS 的封存與換季——那不是「平台共用」，是「強迫共用同一個 lifecycle」。
+
+**這個選擇幾乎不用改 engine**：`startDay` 是 per-state（`seasonState.js:189`）、
+`rollToNextSeason({ state, startDay })` 吃 state（`seasonState.js:902`）、
+`seasonDayOf(state, currentDay)` 吃 state（`seasonState.js:937`）。
+engine 本來就沒有「全域只有一個賽季」的假設——**只有 store slice 有**。
+
+### D2 — CS 必須接 MatchSession / ActiveMatch
+
+不接的話 CS 賽事只能模擬結算，玩家永遠不能親自打自己的聯賽場次，而且拿不到
+`launched` 狀態的中離保護。
+
+可以分兩步降風險，但 **M1 只是技術 milestone；真正的 CS Season MVP 至少要完成 M2**。
+
+### D3 — 賽事結構：MVP 兩層
+
+| 層 | 賽制 | 參賽 | 來源 |
+|---|---|---|---|
+| CS 官方聯賽 | `round_robin` | 8 隊（`csAiTeams.js` ＋ 玩家） | 已實作的賽制 |
+| 年度 Major | `single_elim` | 聯賽 standings 前 4 | 需實作 `single_elim` 產生器 |
+
+**Qualifier / Regional / 更複雜的巡迴資格延後。** 真實 CS 的 Major 需要 Qualifier，
+是因為有幾百支隊伍要篩到 24 支；這裡只有 8 支固定隊伍。
+先做 Qualifier 等於為一個還不存在的問題寫規則。
+
+### D4 — BO 系列與地圖 Ban/Pick
+
+**一個 Fixture = 一個 series = 一個 FixtureOutcome。**
+
+- `matchFormat = { series: "bo1" | "bo3", mapPool: string[], veto: null }`，共用層原樣攜帶不解讀。
+- `FixtureOutcome.score` 記**地圖數**（例如 `2:1`），**不是回合數**。
+- **Season 層永遠不知道地圖是什麼。** 地圖 veto 屬 Match Prep（沿用既有 `csMap` 畫面），
+  每張地圖的個別結果存在 MatchSession / ActiveMatch snapshot，不進 SeasonState。
+
+**MVP 做 BO1（聯賽）＋ BO3（Major）。BO5 延後。**
+
+⚠ **誠實揭露**：`csPrepData.js` 的 `CS_MAPS` 只有**三張現役地圖**（key 對齊引擎
+`EsportsFPS3D.jsx` 的 `MAPS`）。三張池下：
+- BO5 **蓋不出來**。
+- BO3 的 veto 近乎裝飾（ban 一張、剩兩張選一張）。
+⇒ MVP 的 BO3 就是「**打滿三張、先拿兩張者勝**」，文件要照實這樣寫，不假裝有 veto 博弈。
+要做真正的 veto，前置是把引擎地圖池擴到 7 張——**那是另一條工作線，不綁在 CS Season MVP 裡**。
+
+### D5 — 共用 calendar、分離 lifecycle
+
+- `meta.days` **共用**（全域遊戲日）。
+- 推進一天時**兩個 instance 都結算**（`todayPending` 已支援同日多場）。
+- 各自 `startDay` 錨定、各自 `canRollSeason`、各自 rollover。
+- **接受兩個項目賽季編號不同步**（MOBA 可能已 S3、CS 還在 S1）。
+  那正是 D1 換來的東西；若又要求同步，等於把耦合偷渡回來。
+
+### D6 — Ranking 的責任切分
+
+現有三個模組是三種不同的東西，**不要合併**：
+
+| 模組 | 責任 | CS MVP |
+|---|---|---|
+| `standings.js` | 單一 Competition 內的積分榜 | ✅ 使用 |
+| `circuitPoints.js` | 跨 Event 的積分帳本 → 晉級資格 | ⏸ 延後 |
+| `honors.js` | 生涯榮耀 | ✅ 使用（Major 冠軍寫一筆） |
+
+Major 四強席次**直接取聯賽 standings 前四**，不建積分帳本——`circuitPoints` 的價值在
+「跨多站累積」，CS MVP 只有一個聯賽，用它等於為單一資料點做帳本。
+**跨賽季全球 Ranking 不進 MVP**（目前沒有任何消費者）。
+
+### D7 — 第三款遊戲：先文件化，不抽介面
+
+**現在只寫契約文件，不抽程式介面**（rule of three：MOBA 已有、CS 進行中、第三款不存在）。
+現在抽會抽出一個只有兩個實作者、其中一個還沒寫完的假抽象。見 §4。
+
+### D8 — schema v11：雙讀相容，低風險加法
+
+見 §3。核心原則：**不為了 CS Season 改寫剛封版的 MOBA Q7f lifecycle / Recap / Release Gate。**
+
+---
+
+## 3. schema v11 遷移契約
+
+### 3.1 結構變更
+
+| v10（現行） | v11（新） | 相容策略 |
+|---|---|---|
+| `competition: SeasonState \| null` | `competitionByMode: { moba, cs }` | `competition` 降為 **read alias** → `competitionByMode.moba` |
+| `competitionHistory: FinalStandings[]` | `competitionHistoryByMode: { moba, cs }` | `competitionHistory` 降為 **read alias** → `.moba` |
+
+### 3.2 硬性規則
+
+1. **`competitionByMode` 是唯一 canonical runtime structure。**
+2. **`competition` 只讀不寫。** 不得雙寫，不得形成第二份 truth。
+   寫入路徑一律走 `competitionByMode[mode]`。
+3. `competitionHistory` 同上。
+4. **舊 API 保留 `mode = "moba"` 預設**，讓 Q7f / gate fixtures / Release Gate 11 區段
+   **一行都不用改就仍然綠**。
+5. **所有新 CS code 必須 explicit 傳 `mode: "cs"`**，不得依賴 default。
+   （verifier 會檢查這一條，見 §6。）
+6. 升版是**純新增**：v10 存檔載入時把 `competition` 搬進 `competitionByMode.moba`，
+   `competitionByMode.cs` 為 `null`（尚無 CS 賽季 ⇒ `ensureCompetitionSeason("cs")` 時才建）。
+
+### 3.3 受影響的既有 API（全部加 mode 參數、預設 moba）
+
+| API | 位置 | 變更 |
+|---|---|---|
+| `competitionView()` | `profileStore.js:1290` | → `competitionView(mode = "moba")` |
+| `ensureCompetitionSeason()` | `profileStore.js:787` | → `ensureCompetitionSeason(mode = "moba")` |
+| `activeCompetitionEvent()` | `profileStore.js` | → 加 mode 參數 |
+| `_syncSeasonStateV2()` | `profileStore.js` | → per-mode 同步 |
+
+### 3.3b M0 實作紀錄（2026-08-21 落地）
+
+實作與規格一致，但有四點是規格寫的時候沒有預見的，記在這裡以免下一個人重推一次：
+
+1. **預設值寫成常數而非字面值。** 實際簽章是 `competitionView(mode = DEFAULT_GAME_MODE)`，
+   其中 `const DEFAULT_GAME_MODE = "moba"`。兩支 contract verifier 的 marker 一併釘住這兩者
+   ——比原本的 `competitionView()` 更嚴（同時證明投影存在且預設仍是 moba）。
+2. **別名的寫入用轉接層，不逐一改呼叫端。** `routeCompetitionWrite()` 把任何帶
+   `competition` / `competitionHistory` 的 `set()` 導回 `competitionByMode`，別名再投影回來
+   （同一個參考）。理由：profileStore 內有 20 幾個 `set({ competition })`，逐一改**漏一處
+   就是第二份 truth**；轉接層讓「分岔」在結構上不可能發生。
+3. **`useProfileStore.setState` 必須一起包。** zustand 的 store-level `setState` 繞得過
+   creator 內的 `set`，而既有至少 6 支 browser gate 正是直接用它寫 `{ competition: state }`
+   （`tools/browser_check_career_final_ui.mjs` 等）。不包這一層，Release Gate 會在瀏覽器階段才紅。
+4. **未知 mode 一律丟例外，不靜默回退 moba。** 靜默回退會把 CS 的寫入倒進 MOBA 賽季，
+   是最難查的一種錯；規格 §3.2 規則 5 因此由**執行期**強制，不只靠 verifier。
+
+**已知代價（誠實揭露）**：`competition` / `competitionHistory` 別名**留在持久化 payload 裡**，
+因為既有至少 5 支 verifier / browser gate 直接讀 `JSON.parse(localStorage…).competition`
+（`tools/browser_check_q6_prod.mjs` 等）。實測一份 S1 冠軍存檔：總量 235,212 bytes，
+其中別名重複 108,457 bytes（約 46%）。**這是相容性換來的，不是疏忽。**
+要拿掉必須先把那些讀取端改成讀 canonical，屬獨立工作項，不綁在 M0。
+
+**真實存檔實測（2026-08-21 M0 closure smoke）**：Ray 匯出的 v10 存檔
+138,751 bytes → v11 載入後 `save()` 為 180,203 bytes（**+30%**）。
+償還條件與風險評估記在 `docs/handoff/08_目前待辦與風險.md`。
+
+### 3.3c M1 實作紀錄（2026-08-21 落地）
+
+M1 交付 CS 聯賽 lifecycle（建立 → AI 模擬／玩家棄權 → 封存），**玩家實際下場屬 M2**。
+六個規格沒寫、但實作必須決定的點，記在這裡：
+
+1. **CS 聯賽是 8 隊：玩家 ＋ 7 支明文列舉的 AI。參賽資格寫在
+   `src/platform/competition/csSeasonConfig.js`。**
+
+   產品決策（2026-08-21 使用者裁示）：CS MVP 頂級聯賽維持 8 隊總數；
+   Neon Comets 定位為 **development / challenger**，本季不參加頂級聯賽、
+   也不直接進 Major；未來 Qualifier／升降級／擴充到 10 隊時再納入。
+
+   ⚠ **兩個必須避免的契約錯誤（第一版都犯了，已修正）**：
+
+   - **不得**把「9 隊不能排循環賽」寫成產品規則。奇數隊在賽制上**可以**用
+     輪空（bye）排循環賽；目前排不出來只是 `scheduleGenerator.js` 還沒實作，
+     那條限制留在排程器自己的錯誤訊息裡（「循環賽**目前**不支援奇數隊
+     （需要輪空機制）」），不是賽制的性質。**隊數是產品決策。**
+   - **不得**用 `strengthBand === "developing"` 當參賽資格。`strengthBand` 是
+     **實力描述**（elite / upper / middle / developing），是內容平衡的產物。
+     拿它當資格條件的話，日後有人為了平衡調整某隊強弱，本季的聯賽名單就會
+     **默默改變**——參賽資格不該被實力數值決定。
+
+   ⇒ 實作改為明文的 participant eligibility：`CS_LEAGUE_SEASONS[season].aiTeamKeys`
+   逐季列出參賽 AI 的 key，`CS_TEAM_STATUS` 區分 `league` / `development`，
+   玩家席位**不在設定裡**（CS 賽季是玩家的賽季，「玩家在不在」不該有第二種可能）。
+   席次不符時 `csLeagueAiTeamsFor()` 直接丟例外，不靜默排出錯誤隊數。
+   守門：`node tools/check_cs_league_eligibility.mjs`（31/31），
+   含 mutation sentinel 證明「翻轉 strengthBand 不會改變名單，
+   但舊的 band 規則會」。
+
+   **Major 的席位**：`CS_MAJOR_QUALIFICATION = { source: "league_standings", topN: 4 }`，
+   由純函式 `csMajorQualifiers(standings)` 從**該季聯賽積分榜**取前四，
+   不做外卡、不補位、不接受額外隊伍清單 ⇒ 不在聯賽裡的隊伍**結構上**進不了 Major。
+   （Major 的賽制與對戰表仍是 M3；這裡只定義資格從哪裡來。）
+2. **CS 聯賽 `expectsPlayoff: false`、Event `prizePolicy: null`。**
+   前者：CS 的年度 Major 是 M3，宣告 `true` 會讓 CS 賽季**永遠封不了**
+   （封存判定會等一個不存在的季後賽）。
+   後者：CS 的獎金級距、贊助連動與經濟平衡都還沒定義。沿用 `LEGACY_PRIZE_POLICY`
+   等於讓 CS 直接用 MOBA 的獎金表發錢 —— 發錯的錢收不回來。**CS M1 一毛錢都不發。**
+3. **⛔ CS 的 Season 比分是「地圖數」，不是回合數。** BO1 ⇒ 勝方 `1:0`。
+   這同時是規格 D4 與 ownership lock 的要求：CS 單場的 round / half / overtime
+   是 Codex 的責任區，Season 層寫出 `13:7` 之類的東西就是在**發明 CS 回合語義**。
+   連「一面倒／鏖戰／超長局」都不貼 —— 那三個標籤是從**擊殺差**推的，CS 沒跑那個模型。
+4. **CS 有自己的模擬器版本 `fixtureSim.cs1+teamStrength.v1`。**
+   比分投影不同就必須分版，否則一筆 `1:0` 的 CS 賽果會宣稱自己是 `fixtureSim.v1`
+   算的 —— 那個版本的比分語義是擊殺數。稽核欄位一旦說謊就再也回推不了。
+5. **CS 的賽程種子加鹽**：`seedForSeason(seasonSeed, "${season}:cs")`。
+   不加鹽時兩個項目會拿到逐場相同的輪次順序，玩家每天同時有一場 MOBA 一場 CS。
+   MOBA 的 `seedForSeason(seasonSeed, season)` 逐值不變，既有賽程一場都沒換位置。
+6. **封存走一條獨立的短路徑 `_sealCsSeasonIfFinished`，不是 MOBA 那條的參數化版本。**
+   MOBA 那條掛的是 Q4/Q5/Q6/Q7a/Q7b/Q7d 累積的內容（季後賽補排、巡迴積分、
+   年度總決賽、生涯榮耀、名次獎金、以「聯賽官方」名義發的收件匣），CS 在 M1 一項都還沒定義。
+   ⚠ **共用的是純函式，不是編排**：`canSealSeason` / `applySealEvent` / `applySealSeason`
+   與 MOBA 完全同一支 ⇒ 「賽季怎麼算結束、名次怎麼產生」仍然只有一份規則。
+   M3 要補：年度 Major（`single_elim` ＋ `expectsPlayoff: true`）、CS 獎金政策、CS 冠軍寫進 honors。
+
+**共用日曆的實作**（規格 D5）：`_advanceCompetition` 在兩個賽季都存在時採
+「先試算、取兩者交集、再落地」——任一項目有未收尾的比賽日，`meta.days` 就停在那裡。
+只有一個賽季時（今天所有既有存檔）**完全走舊路徑，一次都不多算**。
+
+**外部參考**：CS battle runtime 的 stable checkpoint 為 `codex/cs-mr12` @ `bc2ea5a`
+（MR12 / first-to-13 / halftime / OT MR3）。**M1 沒有 cherry-pick 它，也不依賴它的程式碼**——
+M1 完全不接玩家實際 CS 對戰。核對過：該 checkpoint 只動 `EsportsFPS3D.jsx`
+與兩支 CS completion verifier，與 M1 的變更面零重疊。
+
+### 3.4 不得倒退
+
+CS Season 的任何工作**不得**修改下列既有語義。要改必須先更新本規格與共同契約：
+
+- `SeasonState` 的 Event / Fixture / Outcome 生命週期
+- `FinalStandings` 的 rows / playerRank / championTeamId / rankSource / sourceMix
+- `SeasonSeal` 的封存語義與 `sealedAtDay`
+- `careerEventId` 指向「該項目的生涯主賽事」這件事
+- `canRollSeason` / `rollToNextSeason` 的換季規則
+- Q7f Season Recap 的六個區塊與 CTA 位置
+- Competition Release Gate 的 11 個區段與其硬編碼通過數
+
+---
+
+## 3.5 ⛔ Temporary ownership lock：CS 單場對戰內部規則
+
+**Codex 正在處理 CS 單場對戰內部的局數／回合／比分規則。**
+在 Codex 提供 **CS round-system stable checkpoint SHA** 之前，本規格的實作
+**不得修改或重新定義**：CS 單張地圖勝負局數、round / half / overtime 規則、
+`simulateFps` 的回合與比分語義、`CsMatchResult` 的既有單場比分產生邏輯、
+CS battle scoreboard 與 round lifecycle。
+
+⇒ 本規格的責任範圍收斂為 **Competition / Season / Fixture / BO series orchestration**。
+BO3 的 Season contract **只消費「每張地圖的最終勝負」**，不重算、不覆蓋、不推導
+Codex 的 map-level result。變異點 #1 `outcomeFromCsResult()` 只做座標轉換。
+
+⚠ **M0 不得碰任何 CS battle runtime**；M0 的變更面只有 `profileStore.js` 與 schema verifier。
+完整條文見 `docs/ai/跨模型交接流程.md` §13。
+
+---
+
+## 4. Discipline Variation Points（給第三款遊戲）
+
+**這一節是文件，不是介面。** 第三款遊戲要接上 Competition Platform，需要提供這六件事。
+現在把它們逐一命名並指出檔案位置；等第三款真的來了再考慮抽成介面。
+
+| # | 變異點 | MOBA 的實作 | CS 待建 | 第三款要提供 |
+|---|---|---|---|---|
+| 1 | **結果 → 賽程賽果** | `outcomeFromBattleResult()`（`BattleResult.v2`） | `outcomeFromCsResult()`（`CsMatchResult.v1`） | `outcomeFrom<X>Result()` → `{winner:"us"\|"opponent", score:{us,opponent}, durationSec, seed}` |
+| 2 | **出賽席位** | `ENGINE_SEATS` / `lineup` | `CS_SEATS` / `csLineup` | 席位常數 ＋ store 欄位 |
+| 3 | **戰力權重** | `teamStrength(roster,"moba")` | `teamStrength(roster,"cs")` | `teamStrength.js` 加一組權重 |
+| 4 | **matchFormat schema** | `null`（BO1 隱含） | `{series, mapPool, veto}` | 自訂，共用層不解讀 |
+| 5 | **AI 隊伍池** | `aiTeams.js` | `csAiTeams.js`（`CsAiTeam.v1`，8 隊） | `<x>AiTeams.js` |
+| 6 | **賽前流程** | `lineup → BanPick → Tactic` | `csPrep → csMap → csTactic` | 自訂畫面序列 ＋ `setActiveMatchContext` |
+
+平台側**不需要**為第三款改動的東西：Competition / Stage / Fixture 契約、
+`MatchResult.v1`、`fixtureOutcomeInputFrom()`、`simulateFixture()`、`standings.js`、
+`circuitPoints.js`、`honors.js`、SeasonState engine、SeasonState v2 投影。
+
+---
+
+## 5. CS 賽事模型（MVP）
+
+```
+CS Season S1（competitionByMode.cs，錨在建立當天）
+│
+├─ Event: CS 官方聯賽（careerEventId for cs）
+│    Competition: comp:cs:s1:official:regular
+│    Stage: round_robin, 8 隊（玩家 ＋ 7 支 CsAiTeam）
+│    Fixture: matchFormat = { series: "bo1", mapPool: CS_MAPS }
+│    → FinalStandings（玩家名次、冠軍、sourceMix）
+│
+└─ Event: CS 年度 Major
+     Competition: comp:cs:s1:official:major
+     Stage: single_elim, 4 隊（聯賽 standings 前四）
+     Fixture: matchFormat = { series: "bo3", mapPool: CS_MAPS, veto: null }
+     → FinalStandings ＋ honors（冠軍寫一筆 CS 年度冠軍）
+     → SeasonSeal（CS S1 封存）→ canRollSeason("cs") → S2
+```
+
+**非目標（MVP 明確不做）**：Qualifier、Regional、跨區、BO5、真正的地圖 veto 博弈、
+跨賽季全球 Ranking、CS 巡迴積分帳本、CS 轉會市場連動。
+
+---
+
+## 6. Shared Contract Verifier 計畫
+
+新增 `tools/check_cs_season_contract.mjs`（靜態、唯讀，不 import React / Vite / zustand），
+守下列不變式。**不得為了讓它變綠而修改契約**——見共同契約 §13。
+
+| 檢查 | 為什麼 |
+|---|---|
+| 共同契約宣告 CS architecture owner ＝ Claude Code | ownership 不能只存在於對話 |
+| 共同契約宣告 Competition / Season 核心為 protected contract | 防 Codex 在別的 session 誤改 |
+| **不存在** `csSeasonStore` / `csCompetition` slice | 第二套 truth 的結構性封鎖 |
+| `competition.js` 仍驗 `moba \| cs` 且 id 仍含 gameMode | 多遊戲命名不得退化 |
+| `fixtureResultBridge` 仍只收 `MatchResult.v1` | 不得從戰鬥資料重算第二份真相 |
+| `MatchResult.v1` 仍以 `session.mode` 參數化 | 項目中立性 |
+| SeasonSeal / FinalStandings / careerEventId 語義錨點仍在 | 不得倒退 |
+| 高衝突檔案標記 implementation owner | 跨 session 協作 |
+| mutation sentinel：把 `competitionByMode` 改回單一 `competition` 必須被抓到 | 證明 verifier 真的有鑑別力 |
+
+整合前必須跑：
+
+```
+node tools/check_cs_season_contract.mjs
+node tools/check_home_team_contract.mjs
+node tools/check_competition_release_gate.mjs     # 11/11，不得退化
+```
+
+---
+
+## 7. Implementation Ownership（roadmap 預留）
+
+| 階段 | Owner | 說明 |
+|---|---|---|
+| CS Season / Competition **architecture** | **Claude Code** | 本規格、schema v11 契約、verifier、milestone 拆分 |
+| CS Season **core implementation** | Claude Code | store / engine / bridge，屬 protected contract |
+| CS Season **UI 階段** | Claude Code 統籌，**Codex 執行前端實作** | UI 階段開始前**另建** UI contract 與 implementation prompt |
+| UI 技法 | 可用 `frontend-design`、GSAP 等 skills | 呈現層可以華麗，不得影響功能邏輯 |
+
+**Codex 在 UI 階段的邊界**：只能讀取既有 selectors / adapters / store API；
+不得自行新增第二套 `csSeasonStore` / `csCompetition` truth；
+不得修改 SeasonState / Event / FinalStandings / SeasonSeal 的既有語義，除非先更新共同契約。
+詳見 `docs/ai/跨模型交接流程.md` §13。
