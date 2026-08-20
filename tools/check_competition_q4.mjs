@@ -312,6 +312,15 @@ function seasonStateHas() { return readCode("src/platform/competition/seasonStat
   const saved = JSON.parse(LS ?? "{}");
   delete saved.processedCompetitionAwards;
   delete saved.competition;
+  //  ⚠ 2026-08-21（schema v11）：`competition` 自 v11 起只是**別名**，
+  //    canonical 是 `competitionByMode`。只刪別名的話，載入時仍會從
+  //    `competitionByMode.moba` 把賽季讀回來 ⇒ 這個 fixture 就不再是
+  //    「沒有賽季的舊存檔」，6b/6c 會誤紅。
+  //    這是修**fixture 的構造**，不是放寬斷言：底下三條要驗的仍然是
+  //    「沒有賽季的存檔不得憑空封存、發獎或讓 view 炸掉」，一字未改。
+  //    （這正是 M0 記在 08_目前待辦與風險.md 的 payload duplication 技術債：
+  //      任何直接操作持久化 `.competition` 的地方都要一併認得 canonical。）
+  delete saved.competitionByMode;
   LS = JSON.stringify(saved);
 
   const fresh = (await import("../src/platform/profileStore.js?q4migration=1")).useProfileStore;

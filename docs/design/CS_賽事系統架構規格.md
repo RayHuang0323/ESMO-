@@ -240,6 +240,50 @@ Major 四強席次**直接取聯賽 standings 前四**，不建積分帳本—�
 138,751 bytes → v11 載入後 `save()` 為 180,203 bytes（**+30%**）。
 償還條件與風險評估記在 `docs/handoff/08_目前待辦與風險.md`。
 
+### 3.3c M1 實作紀錄（2026-08-21 落地）
+
+M1 交付 CS 聯賽 lifecycle（建立 → AI 模擬／玩家棄權 → 封存），**玩家實際下場屬 M2**。
+六個規格沒寫、但實作必須決定的點，記在這裡：
+
+1. **CS 聯賽是 8 隊：玩家 ＋ 7 支 AI，排除 `strengthBand === "developing"`。**
+   `csAiTeams.js` 有 **8 支** AI（它是 R56 為 CS battle matchup 建的內容池，不是為聯賽建的），
+   8 ＋ 玩家 ＝ 9 是奇數，雙循環排不出來。規則寫成**語意的**而非 `slice(0, 7)`：
+   目前唯一的 developing 隊是 Neon Comets（資料上就標成「高潛力新秀」）。
+   ⚠ 排掉唯一的 elite（Iron Vanguard）會讓聯賽沒有頭號強隊 ⇒ 不採用。
+   ⚠ **這是為了湊 8 隊的內容決定，規格沒有寫死。** 正解是把 CS 聯賽擴到 10 隊，
+   或讓新秀隊透過 Major／升降級進來（M3 之後）。內容池分布一變，
+   `csLeagueParticipants()` 會**直接丟例外**，不會靜默排出奇數隊。
+2. **CS 聯賽 `expectsPlayoff: false`、Event `prizePolicy: null`。**
+   前者：CS 的年度 Major 是 M3，宣告 `true` 會讓 CS 賽季**永遠封不了**
+   （封存判定會等一個不存在的季後賽）。
+   後者：CS 的獎金級距、贊助連動與經濟平衡都還沒定義。沿用 `LEGACY_PRIZE_POLICY`
+   等於讓 CS 直接用 MOBA 的獎金表發錢 —— 發錯的錢收不回來。**CS M1 一毛錢都不發。**
+3. **⛔ CS 的 Season 比分是「地圖數」，不是回合數。** BO1 ⇒ 勝方 `1:0`。
+   這同時是規格 D4 與 ownership lock 的要求：CS 單場的 round / half / overtime
+   是 Codex 的責任區，Season 層寫出 `13:7` 之類的東西就是在**發明 CS 回合語義**。
+   連「一面倒／鏖戰／超長局」都不貼 —— 那三個標籤是從**擊殺差**推的，CS 沒跑那個模型。
+4. **CS 有自己的模擬器版本 `fixtureSim.cs1+teamStrength.v1`。**
+   比分投影不同就必須分版，否則一筆 `1:0` 的 CS 賽果會宣稱自己是 `fixtureSim.v1`
+   算的 —— 那個版本的比分語義是擊殺數。稽核欄位一旦說謊就再也回推不了。
+5. **CS 的賽程種子加鹽**：`seedForSeason(seasonSeed, "${season}:cs")`。
+   不加鹽時兩個項目會拿到逐場相同的輪次順序，玩家每天同時有一場 MOBA 一場 CS。
+   MOBA 的 `seedForSeason(seasonSeed, season)` 逐值不變，既有賽程一場都沒換位置。
+6. **封存走一條獨立的短路徑 `_sealCsSeasonIfFinished`，不是 MOBA 那條的參數化版本。**
+   MOBA 那條掛的是 Q4/Q5/Q6/Q7a/Q7b/Q7d 累積的內容（季後賽補排、巡迴積分、
+   年度總決賽、生涯榮耀、名次獎金、以「聯賽官方」名義發的收件匣），CS 在 M1 一項都還沒定義。
+   ⚠ **共用的是純函式，不是編排**：`canSealSeason` / `applySealEvent` / `applySealSeason`
+   與 MOBA 完全同一支 ⇒ 「賽季怎麼算結束、名次怎麼產生」仍然只有一份規則。
+   M3 要補：年度 Major（`single_elim` ＋ `expectsPlayoff: true`）、CS 獎金政策、CS 冠軍寫進 honors。
+
+**共用日曆的實作**（規格 D5）：`_advanceCompetition` 在兩個賽季都存在時採
+「先試算、取兩者交集、再落地」——任一項目有未收尾的比賽日，`meta.days` 就停在那裡。
+只有一個賽季時（今天所有既有存檔）**完全走舊路徑，一次都不多算**。
+
+**外部參考**：CS battle runtime 的 stable checkpoint 為 `codex/cs-mr12` @ `bc2ea5a`
+（MR12 / first-to-13 / halftime / OT MR3）。**M1 沒有 cherry-pick 它，也不依賴它的程式碼**——
+M1 完全不接玩家實際 CS 對戰。核對過：該 checkpoint 只動 `EsportsFPS3D.jsx`
+與兩支 CS completion verifier，與 M1 的變更面零重疊。
+
 ### 3.4 不得倒退
 
 CS Season 的任何工作**不得**修改下列既有語義。要改必須先更新本規格與共同契約：

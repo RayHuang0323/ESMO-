@@ -10638,3 +10638,104 @@ M0 real-save smoke: 20/20 PASS
   `null` 也吃成 "missing"）。產品行為從頭到尾正確：同一輪的 reload 檢查直接讀取，量到的就是 `null`。
 - 當機殘留的 6 個 0-byte 檔案已刪除（刪除前逐一確認 size=0 且 untracked）。
 - payload duplication 已記為相容性技術債，見 `08_目前待辦與風險.md`，M0 不重構。
+
+---
+
+## CS Season M1 — CS 聯賽 lifecycle（2026-08-21）
+
+分支 `feat/m0-schema-v11`，基線是 M0 stable `563b27a` ＋ closure `5d7cafb`。
+**M1 只做 lifecycle：建立 → AI 模擬／玩家棄權 → 封存。玩家實際下場打 CS 屬 M2，本輪沒有接。**
+
+### 開工前的 checkpoint 核對（不是照單全收）
+
+Codex 提供的 CS battle stable checkpoint `codex/cs-mr12` @ `bc2ea5a`
+（Sprint CS-MR12：MR12 / first-to-13 / halftime / OT MR3）逐項核對過：
+
+- SHA 存在，且是該分支的 tip。
+- 相對 merge-base `7c43a45` 只動了 `src/battle/fps/EsportsFPS3D.jsx`、
+  `tools/check_cs_match_completion.mjs`、`tools/browser_check_cs_completion.mjs`、
+  `tools/check_cs_matchup_acceptance_r57.mjs`、`tools/verify.mjs` 與四份文件。
+- 使用者宣稱未被修改的六個檔案逐一核對為 **unchanged**：`CsMatchResult.js`、
+  `settleCsMatch.js`、`competition.js`、`seasonState.js`、`regularSeason.js`、`profileStore.js`。
+  ⇒ 與 M1 的變更面**零重疊**。
+
+**M1 沒有 cherry-pick `bc2ea5a`，也不依賴它的程式碼**——只把它記為外部參考。
+
+### 完成項
+
+- `ensureCompetitionSeason("cs")` 建得出 CS 官方聯賽：8 隊雙循環、56 場、玩家 14 場，
+  id 帶 `comp:cs:` / `fx:cs:` 命名空間，決定性（同存檔重載逐場相同）。
+- `advanceDay` 同時結算兩個項目；共用 `meta.days`，採「先試算、取兩者交集、再落地」。
+  **只有一個賽季時完全走舊路徑，一次都不多算。**
+- CS 的 AI vs AI 由既有 `simulateFixture` 模擬；玩家賽程可 `forfeitFixture`，
+  **fixture 自己認得出屬於哪個項目**，呼叫端不必傳 mode。
+- CS 整季走得到封存，產出 8 列 FinalStandings 與 `playerRank`。
+- 新增 `tools/check_cs_season_lifecycle.mjs`（47 條，含兩個 mutation sentinel）。
+
+### ⛔ Ownership lock 遵守情況
+
+Codex 的 CS battle runtime（round / half / overtime / `simulateFps` / scoreboard）
+**本輪一個檔案都沒動**。Season 層對 CS 比分只寫**地圖數**（BO1 ⇒ `1:0`），
+不寫回合數、不貼從擊殺差推導的局勢標籤，並另立模擬器版本
+`fixtureSim.cs1+teamStrength.v1`。這三條由 `check_cs_season_contract.mjs` §⑩ 守住。
+
+### 需要使用者裁示的一項內容決定
+
+**CS 聯賽排除了 Neon Comets。** `csAiTeams.js` 有 8 支 AI，8 ＋ 玩家 ＝ 9 是奇數，
+雙循環排不出來，規格 D3 又寫死 8 隊。實作採語意規則「排除 `strengthBand === "developing"`」
+（目前唯一符合的就是 Neon Comets，資料上標為「高潛力新秀」）；
+排掉唯一的 elite（Iron Vanguard）會讓聯賽沒有頭號強隊，更糟。
+內容池分布一變 `csLeagueParticipants()` 會直接丟例外，不會靜默排出奇數隊。
+**正解是把 CS 聯賽擴到 10 隊或讓新秀隊經 Major／升降級進來（M3 之後）。**
+
+### 未完成／不在本輪範圍
+
+- M2（玩家實際出戰 CS）、M3（年度 Major）、M4（Recap／換季）一律未開始。
+- CS **沒有獎金政策**、**沒有季後賽**、**沒有寫進 honors**、**沒有換季**。
+  這四項都是刻意留白，理由與 M3 該補什麼寫在規格 §3.3c 第 2、6 點與程式碼註解裡。
+- 未碰 R64／R65。
+
+### 兩個 era-scoped 舊斷言隨 M1 更新（兩者都變嚴）
+
+- `check_competition_q2a.mjs` `8h)`：原本 grep `regularSeason.js` 有沒有字串 `"cs"`
+  ——Q2a 時代的範圍標記。改成行為斷言「不傳 gameMode 時，賽事／賽段／每一場賽程與 id
+  都不得出現 cs」。
+- `check_competition_q4.mjs` §6：造「沒有賽季的舊存檔」時只 `delete saved.competition`，
+  而 v11 起那只是別名 ⇒ 賽季仍會從 canonical 讀回來，6b/6c 誤紅。改成連
+  `competitionByMode` 一起刪。**斷言一字未改，修的是 fixture 的構造。**
+  這正是 M0 記下的 payload duplication 技術債第一次真的咬人。
+
+### 未經瀏覽器實測
+
+CS 賽事目前**沒有任何 UI**（M4 才做），所以本輪沒有瀏覽器 smoke。
+自動化覆蓋來自 Competition Release Gate 的 7 支 browser gate（守的是 MOBA 沒被弄壞）。
+
+### 驗證（全部實跑）
+
+```
+node tools/check_cs_season_lifecycle.mjs   CS Season M1 lifecycle: 49/49 PASS   ← 本輪新增
+node tools/check_cs_schema_v11.mjs         CS schema v11 migration: 41/41 PASS
+node tools/check_cs_season_contract.mjs    CS Season / Competition contract: 59/59 PASS
+node tools/check_home_team_contract.mjs    Home / Team responsibility contract: 40/40 PASS
+npm run build                              ✓ built in 23.11s
+
+MOBA regression（賽事線）
+  check_competition_q1    93/93     check_competition_q2a   112/112
+  check_competition_q2b   92/92     check_competition_q3     91/91
+  check_competition_q35   65/65     check_competition_q4     68/68
+  check_competition_q5    69/69     check_competition_q6     57/57
+MOBA regression（戰鬥線）
+  tools/regress.mjs   結束率 15/15、平均時長 22.5 分、0 殺場 0、撤退鎖死 0
+  tools/regress2.mjs  節奏門檻 8/8 通過
+
+node tools/check_competition_release_gate.mjs
+  PASS v2_runtime / v2_active_focus / v2_sealing_m2 / circuit_points / multi_event
+  PASS career_final / asia_finals / team_honors / q6 / season_recap / build
+  passed 11/11   failed 0/11   port 清理：✅ 無殘留
+```
+
+`check_cs_season_contract` 由 48 → 59 條（新增 §⑨ M1 結構錨點 7 條、
+§⑩ ownership lock 4 條）。`check_cs_season_lifecycle` 為本輪新增。
+兩支都**不加進 Competition Release Gate**：規格 §3.4 把「Release Gate 的 11 個區段
+與其硬編碼通過數」列為不得倒退，加區段會動到那個數字。改由
+`docs/ai/跨模型交接流程.md` §13 登記為 M0／M1 的守門 verifier。

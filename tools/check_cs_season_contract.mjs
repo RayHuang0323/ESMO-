@@ -32,6 +32,7 @@ const files = Object.freeze({
   finalStandings: "src/platform/contracts/finalStandings.js",
   csMatchResult: "src/platform/contracts/CsMatchResult.js",
   seasonState: "src/platform/competition/seasonState.js",
+  regularSeason: "src/platform/competition/regularSeason.js",
   seasonStateV2: "src/platform/competition/seasonStateV2.js",
   fixtureBridge: "src/platform/competition/fixtureResultBridge.js",
   simulateFixture: "src/platform/competition/simulateFixture.js",
@@ -171,6 +172,43 @@ check("profileStore rejects an unknown game mode instead of silently defaulting"
   has("profileStore", "assertGameMode") && has("profileStore", "unknown gameMode"));
 check("profileStore keeps the v10 -> v11 migration a pure addition",
   has("profileStore", "saved.competitionByMode?.moba ?? saved.competition"));
+
+// ── ⑨ CS Season M1：CS 聯賽 lifecycle 的結構性錨點 ──────────────────────
+check("regular season assembly builds the CS league from the CS AI pool",
+  has("regularSeason", "csLeagueParticipants") && has("regularSeason", "CS_AI_TEAMS"));
+check("CS league keeps eight participants and a semantic exclusion rule",
+  has("regularSeason", "CS_LEAGUE_TEAM_COUNT = 8") && has("regularSeason", 'strengthBand !== "developing"'));
+check("CS league refuses to build a wrong-sized field instead of failing quietly",
+  has("regularSeason", "CS_LEAGUE_AI_COUNT") && /throw new Error/.test(text.get("regularSeason") ?? ""));
+check("simulation rosters follow the season's own game mode",
+  has("seasonState", "gameModeOf") && has("seasonState", "CS_AI_TEAMS"));
+check("CS season declares no playoff and no prize policy in M1",
+  has("seasonState", 'expectsPlayoff: gameMode !== "cs"') &&
+  has("seasonState", 'gameMode === "cs" ? null : LEGACY_PRIZE_POLICY'));
+check("profileStore seals each discipline through its own path",
+  has("profileStore", "_sealCsSeasonIfFinished") && has("profileStore", "_setCompetitionStateFor"));
+check("profileStore resolves a fixture's discipline instead of guessing moba",
+  has("profileStore", "_modeOfFixture") && has("profileStore", "不猜 moba"));
+
+// ── ⑩ ⛔ Ownership lock：Season 層不得發明 CS 回合語義 ───────────────────
+//  Codex 擁有 CS 單場的 round / half / overtime / scoreboard。Season 層只認識
+//  **地圖數**。這一組守的是「M2 以後有人為了讓畫面好看，在 Season 層編出回合比分」。
+check("CS season scores are map counts, not rounds",
+  has("simulateFixture", 'fixture.gameMode === "cs"') &&
+  has("simulateFixture", "{ a: 1, b: 0 }"));
+check("CS simulation is versioned apart from the MOBA kill model",
+  has("simulateFixture", "CS_SIMULATOR_VERSION") && has("simulateFixture", "simulatorVersionFor"));
+//  ⚠ 只看**程式碼**，不看註解。本檔與 simulateFixture.js 的註解**必須**寫得出
+//    「MR12 / first-to-13 是 Codex 的責任區」——那是在說明這條 lock，不是違反它。
+//    連註解一起 grep 會讓「把規則寫清楚」變成紅燈，那是反效果的守衛。
+const codeOnly = (key) => (text.get(key) ?? "")
+  .replace(/\/\*[\s\S]*?\*\//g, "")
+  .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+check("season layer invents no CS round vocabulary in code",
+  !/\b(MR12|firstTo13|roundsWon|halfTime|overtimeRounds)\b/i.test(codeOnly("simulateFixture")) &&
+  !/\b(MR12|firstTo13|roundsWon)\b/i.test(codeOnly("seasonState")));
+check("season layer still refuses to recompute Codex map-level results",
+  has("handoff", "不得自行重算") && has("handoff", "map-level result"));
 
 // ── ⑦ Mutation sentinel ────────────────────────────────────────────────
 //  證明本檔真的有鑑別力：把「多遊戲命名」拿掉之後，④ 那組必須轉紅。

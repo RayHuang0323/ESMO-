@@ -121,7 +121,7 @@ ck("schemaVersion 升到 11", st.schemaVersion === 11);
 - Consumes: `csAiTeams.js` 的 `CS_AI_TEAM_COUNT = 8`、`CsAiTeam.v1`
 - Produces: `ensureCompetitionSeason("cs")` → `competitionByMode.cs` 為合法 SeasonState，`gameMode === "cs"`，8 位參賽者，14 場玩家賽程
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 ```js
 const st = useProfileStore.getState();
@@ -134,10 +134,10 @@ ck("賽事 id 帶 cs 命名空間", activeCompetitionOf(cs).id.startsWith("comp:
 ck("MOBA instance 完全未被影響", st.competitionByMode.moba === null);
 ```
 
-- [ ] **Step 2: 跑測試確認失敗**。
-- [ ] **Step 3: 實作** — `buildRegularSeason({ gameMode: "cs" })` 從 `csAiTeams.js` 取 7 支 AI ＋ 玩家；`createCompetition({ gameMode: "cs", tier: "regular" })`。
-- [ ] **Step 4: 跑測試確認通過**。
-- [ ] **Step 5: Commit** — `git commit -m "feat: build a CS regular season from the CS AI pool"`
+- [x] **Step 2: 跑測試確認失敗**。
+- [x] **Step 3: 實作** — `buildRegularSeason({ gameMode: "cs" })` 從 `csAiTeams.js` 取 7 支 AI ＋ 玩家；`createCompetition({ gameMode: "cs", tier: "regular" })`。
+- [x] **Step 4: 跑測試確認通過**。
+- [x] **Step 5: Commit** — `git commit -m "feat: build a CS regular season from the CS AI pool"`
 
 ### Task M1-2: CS 賽程模擬與棄權
 
@@ -149,11 +149,11 @@ ck("MOBA instance 完全未被影響", st.competitionByMode.moba === null);
 - Consumes: `simulateFixture()`（已讀 `fixture.gameMode`，免費支援 CS）
 - Produces: `advanceDay(n)` 同時推進 `competitionByMode.moba` 與 `.cs`
 
-- [ ] **Step 1: 寫失敗測試** — 斷言：`advanceDay` 後 CS 的 AI 對戰產生 outcome；`forfeitFixture(csFixtureId)` 記為敗場；MOBA instance 的 outcome 數不受影響。
-- [ ] **Step 2: 跑測試確認失敗**。
-- [ ] **Step 3: 實作** — `advanceDay` 迴圈改為 `for (const mode of ["moba", "cs"])`。
-- [ ] **Step 4: 跑測試確認通過**。
-- [ ] **Step 5: Commit** — `git commit -m "feat: settle both disciplines when the day advances"`
+- [x] **Step 1: 寫失敗測試** — 斷言：`advanceDay` 後 CS 的 AI 對戰產生 outcome；`forfeitFixture(csFixtureId)` 記為敗場；MOBA instance 的 outcome 數不受影響。
+- [x] **Step 2: 跑測試確認失敗**。
+- [x] **Step 3: 實作** — `advanceDay` 迴圈改為 `for (const mode of ["moba", "cs"])`。
+- [x] **Step 4: 跑測試確認通過**。
+- [x] **Step 5: Commit** — `git commit -m "feat: settle both disciplines when the day advances"`
 
 ### Task M1-3: CS 賽季封存
 
@@ -164,12 +164,30 @@ ck("MOBA instance 完全未被影響", st.competitionByMode.moba === null);
 **Interfaces:**
 - Produces: CS 全部賽程完成 → `competitionByMode.cs.final` 為 SeasonSeal；`competitionHistoryByMode.cs` 得到一筆 FinalStandings
 
-- [ ] **Step 1: 寫失敗測試** — 全部 CS 賽程棄權後，斷言 `final` 非 null、`careerFinal.rows.length === 8`、`playerRank` 有值、MOBA 的 `final` 仍為 null。
-- [ ] **Step 2: 跑測試確認失敗**。
-- [ ] **Step 3: 實作** — `_sealSeasonIfFinished(mode)`，只封存該 instance。
-- [ ] **Step 4: 跑測試確認通過**。
-- [ ] **Step 5: 跑 Release Gate 11/11 ＋ `npm run build`**。
-- [ ] **Step 6: Commit** — `git commit -m "feat: seal each discipline's season independently"`
+- [x] **Step 1: 寫失敗測試** — 全部 CS 賽程棄權後，斷言 `final` 非 null、`careerFinal.rows.length === 8`、`playerRank` 有值、MOBA 的 `final` 仍為 null。
+- [x] **Step 2: 跑測試確認失敗**。
+- [x] **Step 3: 實作** — `_sealSeasonIfFinished(mode)`，只封存該 instance。
+- [x] **Step 4: 跑測試確認通過**。
+- [x] **Step 5: 跑 Release Gate 11/11 ＋ `npm run build`**。
+- [x] **Step 6: Commit** — `git commit -m "feat: seal each discipline's season independently"`
+
+> **M1 與計畫的三處偏差（2026-08-21 實作時記錄）**
+>
+> 1. **`competitionHistoryByMode.cs` 在封存時**不會**拿到 FinalStandings。**
+>    計畫的 Produces 這樣寫，但 MOBA 的既有語義是「封存寫 `Event.final` 與
+>    `state.final`，**歷史是換季（`rollToNextSeason`）才寫的**」。照計畫寫等於
+>    給 CS 一套與 MOBA 不同的 history 語義 —— 違反 §3.4「不得修改 SeasonState
+>    既有語義」與 D1「同一套 canonical engine」。CS 的換季屬 M1 之後。
+>    驗收改為斷言 `tryCareerFinalStandingsOf(cs)` 有 8 列、`playerRank` 有值
+>    （與計畫 M1-3 Step 1 的斷言完全一致）。
+> 2. **`buildRegularSeason` 的「取 7 支 AI」計畫沒有說取哪 7 支。**
+>    `csAiTeams.js` 實際有 8 支。實作採語意規則（排除 `strengthBand === "developing"`，
+>    目前是 Neon Comets），並在數量不對時**丟例外**。這是規格沒寫死的內容決定，
+>    完整理由與替代方案見規格 §3.3c 第 1 點。**這一條需要使用者裁示是否沿用。**
+> 3. **`advanceDay` 不是單純 `for (const mode of ["moba", "cs"])`。**
+>    兩個賽季共用 `meta.days`，各推各的會讓同一個日曆對兩個賽季說不同的話。
+>    實作改為「先試算、取兩者交集、再落地」；只有一個賽季時完全走舊路徑，
+>    一次都不多算（既有存檔的推進效能逐值不變）。
 
 ---
 

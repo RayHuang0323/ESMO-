@@ -32,6 +32,22 @@ import { teamStrength, TEAM_STRENGTH_VERSION } from "./teamStrength.js";
  */
 export const SIMULATOR_VERSION = `fixtureSim.v1+${TEAM_STRENGTH_VERSION}`;
 
+/**
+ * CS 的模擬器版本（CS Season M1）。
+ *
+ * ⚠ **刻意與 MOBA 分開，不是為了好看。** 兩者的比分投影不同（MOBA 記擊殺數、
+ *   CS 記地圖數），若共用同一個版本字串，一筆 `1:0` 的 CS 賽果會宣稱自己是
+ *   `fixtureSim.v1` 算的——那個版本的比分語義是擊殺數。稽核欄位一旦說謊，
+ *   之後沒有人能從賽果回推它當初是怎麼算的。
+ * ⚠ 分版也順帶把亂數流分開（版本字串進 hash）⇒ CS 與 MOBA 的賽果互不平移。
+ *   CS 沒有任何既有賽果，所以這不影響任何歷史資料。
+ */
+export const CS_SIMULATOR_VERSION = `fixtureSim.cs1+${TEAM_STRENGTH_VERSION}`;
+
+/** 依項目取模擬器版本。MOBA 逐字不變。 */
+export const simulatorVersionFor = (gameMode) =>
+  (gameMode === "cs" ? CS_SIMULATOR_VERSION : SIMULATOR_VERSION);
+
 /** 模型參數。集中在一處，調整時只改這裡。 */
 export const SIM_PARAMS = Object.freeze({
   //  實力差 → 勝率的敏感度。差 `scale` 分約等於 73% 勝率
@@ -105,7 +121,8 @@ export function simulateFixture({ fixture, rosters, seed, params = SIM_PARAMS } 
   }
 
   //  ② 決定性亂數流：fixtureId + seed + 模擬器版本
-  const rng = mkRng(hash32(`${fixture.id}|${seed}|${SIMULATOR_VERSION}`));
+  const simulatorVersion = simulatorVersionFor(fixture.gameMode);
+  const rng = mkRng(hash32(`${fixture.id}|${seed}|${simulatorVersion}`));
 
   //  ③ 勝負
   const pA = winRateFor(sA, sB, params);
@@ -119,7 +136,15 @@ export function simulateFixture({ fixture, rosters, seed, params = SIM_PARAMS } 
   const marginSpan = params.marginMax - params.marginMin;
   const margin = Math.round(params.marginMin + (0.45 + 0.55 * dominance) * rng() * marginSpan);
   const winnerKills = loserKills + margin;
-  const score = aWins ? { a: winnerKills, b: loserKills } : { a: loserKills, b: winnerKills };
+  //  ── ⛔ CS 的比分是**地圖數**，不是回合數 ──────────────────────────────
+  //  規格 D4：`FixtureOutcome.score` 記地圖數，**Season 層永遠不知道地圖裡發生什麼**。
+  //  更硬的一條是 ownership lock：CS 單張地圖的回合／半場／加時比分是 Codex 的
+  //  責任區（MR12 / first-to-13 / OT MR3）。這裡若寫出 `13:7` 之類的東西，
+  //  就是 Season 層在**發明 CS 回合語義**——正是 lock 要擋的事。
+  //  M1 的 CS 聯賽是 BO1 ⇒ 勝方 1 張地圖、敗方 0 張。就這樣，一個數字都不多編。
+  const score = fixture.gameMode === "cs"
+    ? (aWins ? { a: 1, b: 0 } : { a: 0, b: 1 })
+    : (aWins ? { a: winnerKills, b: loserKills } : { a: loserKills, b: winnerKills });
 
   //  ⑤ 時長：勢均力敵打得久
   const duration = Math.round(
@@ -128,16 +153,22 @@ export function simulateFixture({ fixture, rosters, seed, params = SIM_PARAMS } 
 
   //  ⑥ 摘要：純標籤，**沒有數值語意**（不得被誤當成 Combat Analytics 資料）
   const highlights = [];
-  if (margin >= 14) highlights.push("一面倒");
-  else if (margin <= 5) highlights.push("鏖戰");
-  if (duration >= 36 * 60) highlights.push("超長局");
+  //  ⚠ 「一面倒」／「鏖戰」是從**擊殺差**推出來的標籤。CS 的比分是地圖數，
+  //    那個擊殺模型在 CS 完全沒被使用 ⇒ 貼這兩個標籤等於拿一個沒跑過的
+  //    數字下結論。CS 只保留與勝率有關的「爆冷」。
+  //    CS 的局勢標籤要等 Codex 的 map-level result 進來（M2 之後）才有依據。
+  if (fixture.gameMode !== "cs") {
+    if (margin >= 14) highlights.push("一面倒");
+    else if (margin <= 5) highlights.push("鏖戰");
+    if (duration >= 36 * 60) highlights.push("超長局");
+  }
   if (!aWins && pA > 0.65) highlights.push("爆冷");
   if (aWins && pA < 0.35) highlights.push("爆冷");
 
   const made = createFixtureOutcome({
     fixture,
     resultSource: RESULT_SOURCES.simulated,
-    simulatorVersion: SIMULATOR_VERSION,
+    simulatorVersion,
     winner,
     score,
     duration,

@@ -647,6 +647,38 @@ export const useProfileStore = create((rawSet, get) => {
     });
     return nextCompetition;
   },
+  /**
+   * 依項目寫回賽季狀態（CS Season M1）。
+   *
+   * MOBA 一律轉給既有的 `_setCompetitionState`——那條路徑同時維護
+   * SeasonState.v2 wrapper，**一個字都沒改**。
+   * CS 直接寫 canonical 的 `competitionByMode.cs`：v2 wrapper 是 MOBA Career
+   * Circuit 專屬的 metadata 投影（M0 §3.3b），把 CS 塞進去會讓 MOBA 的封存與
+   * 換季規則開始管到 CS。
+   */
+  _setCompetitionStateFor(mode, nextCompetition, extra = {}) {
+    assertGameMode(mode);
+    if (mode === "moba") return get()._setCompetitionState(nextCompetition, extra);
+    const current = get();
+    set({
+      ...extra,
+      competitionByMode: { ...(current.competitionByMode ?? { moba: null, cs: null }), [mode]: nextCompetition },
+    });
+    return nextCompetition;
+  },
+  /** 依項目讀賽季狀態。呼叫端不要自己 `get().competitionByMode[mode]`，走這一支。 */
+  _competitionStateOf(mode = DEFAULT_GAME_MODE) {
+    assertGameMode(mode);
+    return get().competitionByMode?.[mode] ?? null;
+  },
+  /** 這個 fixture 屬於哪個項目。找不到回 null，**不猜 moba**。 */
+  _modeOfFixture(fixtureId) {
+    for (const mode of GAME_MODES) {
+      const state = get().competitionByMode?.[mode];
+      if (state?.schema && fixtureById(state, fixtureId)) return mode;
+    }
+    return null;
+  },
   _syncSeasonStateV2(mode = DEFAULT_GAME_MODE) {
     assertGameMode(mode);
     //  v11：v2 wrapper 只存在於 MOBA（見 `activeCompetitionEvent` 的說明）。
@@ -873,7 +905,8 @@ export const useProfileStore = create((rawSet, get) => {
     get().save();
     //  Q6：**時鐘更新之後**才排季後賽／封存，否則「封存日」會記成推進前的舊日子
     //  （季後賽最後一場常常是 AI vs AI 在推進中被模擬掉，這個時間差會變成常態）。
-    get()._sealSeasonIfFinished();
+    //  CS Season M1：兩個項目各自封存、互不等待（規格 D5：共用日曆、分離 lifecycle）。
+    for (const mode of GAME_MODES) get()._sealSeasonIfFinished(mode);
     //  舊呼叫端只看 receipts（陣列），行為不變；訓練頁改讀 `.trained`。
     receipts.trained = trained;
     //  Q3：既有呼叫端不讀這兩個屬性也完全不受影響（同 `.trained` 的手法）。
@@ -901,9 +934,25 @@ export const useProfileStore = create((rawSet, get) => {
     //    而不是讓它掉進下面的 MOBA 建立路徑——那會用 MOBA 的隊伍池與賽制
     //    生出一季假的 CS 聯賽，塞進 `competitionByMode.cs`，是最糟的失敗模式。
     if (mode !== "moba") {
-      const existing = get().competitionByMode?.[mode] ?? null;
+      const existing = get()._competitionStateOf(mode);
       if (existing?.schema) return { ok: true, state: existing, created: false, errors: [] };
-      return { ok: false, state: null, created: false, errors: [`${mode} 賽季建立尚未實作（CS Season M1）`] };
+      //  ── CS Season M1：CS 官方聯賽 ────────────────────────────────────
+      //  與 MOBA 走**同一支** `createSeasonState`、同一套賽制、同一個決定性
+      //  種子推導。差別只有參賽者來源與 lifecycle 旗標，兩者都在被呼叫的
+      //  純函式裡依 gameMode 決定（`regularSeason.js` / `seasonState.js`）。
+      //  ⚠ 這裡刻意**不掛**亞洲巡迴賽（`_withAsiaCircuit`）：那是 MOBA 的
+      //    Q7a 內容，CS 的跨站巡迴屬於 M3 之後，硬掛等於憑空生出 CS 巡迴賽。
+      const made = createSeasonState({
+        playerTeam: get().team,
+        season: Number(get().meta?.season) || 1,
+        seasonSeed: get().meta?.seasonSeed,
+        gameMode: mode,
+        startDay: Number(get().meta?.days) || 1,
+      });
+      if (!made.ok) return { ok: false, state: null, created: false, errors: made.errors };
+      get()._setCompetitionStateFor(mode, made.state);
+      get().save();
+      return { ok: true, state: made.state, created: true, errors: [] };
     }
     const cur = get().competitionByMode?.moba ?? null;
     if (cur?.schema) return { ok: true, state: cur, created: false, errors: [] };
@@ -966,13 +1015,39 @@ export const useProfileStore = create((rawSet, get) => {
    * 沒有賽季（例如還沒建立）⇒ 不阻擋，行為與 Q3 之前完全相同。
    */
   _advanceCompetition(fromDay, days) {
-    const state = get().competition;
-    if (!state?.schema) return { daysAdvanced: days, stoppedBy: null };
+    //  ── CS Season M1：兩個項目共用同一個遊戲日曆（規格 D5）──────────────
+    //  `meta.days` 是全域的，所以「這 n 天能不能走完」必須是**兩個項目的交集**：
+    //  任一項目有還沒收尾的比賽日，日曆就得停在那裡。
+    //
+    //  ⚠ 不能各推各的：先把 MOBA 推 7 天、再把 CS 推 3 天，CS 就會停在第 3 天
+    //    而 MOBA 已經走到第 7 天——同一個 `meta.days` 對兩個賽季說了不同的話。
+    //  ⚠ 兩個賽季都存在時採「先試算、取交集、再落地」。試算是純函式且
+    //    `advanceSeasonDays` 對同一起點決定性 ⇒ 落地那一次算出的是試算的前綴。
+    //    只有一個賽季時（今天所有存檔）**完全走舊路徑，一次都不多算**。
+    const live = GAME_MODES.filter((m) => get().competitionByMode?.[m]?.schema);
+    if (live.length === 0) return { daysAdvanced: days, stoppedBy: null };
+    if (live.length > 1) {
+      const roster = get().players ?? [];
+      let effective = days;
+      let stoppedBy = null;
+      for (const mode of live) {
+        const probe = advanceSeasonDays({ state: get().competitionByMode[mode], fromDay, days, playerRoster: roster });
+        if (probe.daysAdvanced < effective) { effective = probe.daysAdvanced; stoppedBy = probe.stoppedBy; }
+      }
+      for (const mode of live) {
+        const state = get().competitionByMode[mode];
+        const res = advanceSeasonDays({ state, fromDay, days: effective, playerRoster: roster });
+        if (res.state !== state) { get()._setCompetitionStateFor(mode, res.state); get().save(); }
+      }
+      return { daysAdvanced: effective, stoppedBy };
+    }
+    const only = live[0];
+    const state = get().competitionByMode[only];
     const res = advanceSeasonDays({
       state, fromDay, days, playerRoster: get().players ?? [],
     });
     if (res.state !== state) {
-      get()._setCompetitionState(res.state);
+      get()._setCompetitionStateFor(only, res.state);
       //  ⚠ 一天都沒推進時 `advanceDay` 會提早 return（不動時鐘、不結算），
       //    但賽季狀態可能已經被 `sweepOverdue` 改過。這裡自己存檔，
       //    否則記憶體與存檔會不一致（重整後那些補判會消失又重算一次）。
@@ -1092,16 +1167,20 @@ export const useProfileStore = create((rawSet, get) => {
    * MVP 的棄權只有敗場：不扣聲望、不罰款、不降級。
    */
   forfeitFixture(fixtureId, reason = "玩家棄權") {
-    const state = get().competition;
+    //  CS Season M1：棄權哪一場由 **fixture 自己**決定屬於哪個項目，
+    //  不由呼叫端多傳一個 mode。呼叫端只知道「我要棄權這一場」，
+    //  多一個參數就多一個傳錯的機會（傳錯 ⇒ 對另一個項目的賽季動手）。
+    const mode = get()._modeOfFixture(fixtureId) ?? DEFAULT_GAME_MODE;
+    const state = get()._competitionStateOf(mode);
     if (!state?.schema) return { ok: false, errors: [{ code: "no_season", message: "目前沒有賽季" }] };
     const res = applyForfeit(state, { fixtureId, reason });
     if (!res.ok) return { ok: false, errors: res.errors };
-    get()._setCompetitionState(res.state, {
+    get()._setCompetitionStateFor(mode, res.state, {
       matchmaking: { ...(get().matchmaking ?? {}), fixtureAssignment: null },
     });
     get().save();
     //  Q4：棄權也是一種收尾 ⇒ 最後一場被棄權掉，賽季一樣結束了
-    const sealed = get()._sealSeasonIfFinished();
+    const sealed = get()._sealSeasonIfFinished(mode);
     return { ok: true, outcome: res.outcome, sealed, errors: [] };
   },
   /**
@@ -1116,7 +1195,9 @@ export const useProfileStore = create((rawSet, get) => {
    * ⚠ 順序固定：先封存（產生不可變名次）→ 再依那份名次發獎。
    *   反過來就得先算一次名次才知道發多少，等於有兩份名次。
    */
-  _sealSeasonIfFinished() {
+  _sealSeasonIfFinished(mode = DEFAULT_GAME_MODE) {
+    assertGameMode(mode);
+    if (mode !== "moba") return get()._sealCsSeasonIfFinished(mode);
     //  ⚠ 仍走 legacy sealing 路徑（見下方旗標說明）。資料源刻意維持
     //    `get().competition`：3b-M2 boundary 未啟用時，這是已驗證正常的組合。
     let state = get().competition;
@@ -1328,6 +1409,62 @@ export const useProfileStore = create((rawSet, get) => {
     return { sealed: true, final, award: lastAward };
   },
   /**
+   * CS 賽季封存（CS Season M1）。**刻意是一條短路徑，不是 MOBA 那條的參數化版本。**
+   *
+   * ── 為什麼不共用 `_sealSeasonIfFinished` 的主體 ────────────────────────
+   * 那條路徑上掛的是 Q4/Q5/Q6/Q7a/Q7b/Q7d 累積下來的 MOBA 內容：季後賽補排、
+   * 亞洲巡迴積分、年度總決賽、生涯榮耀、名次獎金、以「聯賽官方」名義發的收件匣。
+   * **CS 在 M1 一項都還沒有定義。** 把 mode 穿進去只有兩種結果：要嘛在 CS 上
+   * 跑一遍 MOBA 的內容（憑空發獎金、憑空生出年度總決賽），要嘛在那條函式裡
+   * 插滿 `if (mode === "cs")` ——後者正是 M0 花力氣避開的那種改法，
+   * 而它會動到剛封版的 Q7f 路徑。
+   *
+   * ⚠ **共用的是純函式，不是編排**：`canSealSeason` / `applySealEvent` /
+   *   `applySealSeason` 與 MOBA 完全同一支。所以「賽季怎麼算結束、名次怎麼產生」
+   *   只有一份規則，沒有第二套 Season truth。
+   *
+   * ⚠ M3 要補的東西寫在這裡，不要靠記憶：年度 Major（`single_elim` ＋
+   *   `expectsPlayoff: true`）、CS 獎金政策、CS 冠軍寫進 honors。
+   */
+  _sealCsSeasonIfFinished(mode) {
+    assertGameMode(mode);
+    let state = get()._competitionStateOf(mode);
+    if (!state?.schema) return { sealed: false, final: null, award: null };
+
+    const day = Number(get().meta?.days) || 1;
+    //  ① 先封 Event（產生不可變的 FinalStandings）
+    for (const eid of sealableEventIds(state)) {
+      const r = applySealEvent(state, eid, day);
+      if (!r.ok) continue;
+      state = r.state;
+      get()._setCompetitionStateFor(mode, state);
+      //  ⚠ 獎金：CS 的 Event 沒有 `prizePolicy`（見 seasonState.js 的說明）
+      //    ⇒ 這裡**完全不碰錢**。不是忘了寫，是還沒有規則可以照。
+      const champ = participantsOf(state).find((p) => p.id === r.final.championTeamId)?.name ?? "—";
+      get().pushInbox({
+        type: "match", from: "CS 聯賽官方",
+        subject: `CS 第 ${r.final.season} 賽季 結束 · ${champ} 奪冠`,
+        text: `CS 第 ${r.final.season} 賽季常規賽全部結束，${champ} 拿下冠軍。`
+          + `你的隊伍最終排名第 ${r.final.playerRank} 名。年度 Major 尚未開放。`,
+      });
+    }
+
+    //  ② 再封賽季
+    const can = canSealSeason(state);
+    if (!can.ok && !can.sealed) return { sealed: false, final: null, award: null, reason: can.reason };
+    let final = state.final ?? null;
+    if (!final) {
+      const res = applySealSeason(state, day);
+      if (!res.ok) return { sealed: false, final: null, award: null, reason: res.errors?.[0]?.message ?? null };
+      final = res.final;
+      state = res.state;
+      get()._setCompetitionStateFor(mode, state);
+    }
+    get().save();
+    //  `award` 恆為 null：CS M1 沒有獎金。回傳形狀與 MOBA 一致，讓呼叫端不必分辨。
+    return { sealed: true, final, award: null };
+  },
+  /**
    * 換到下一個賽季（Milestone Q5）。**玩家主動按的**——不自動換。
    *
    * ── 為什麼不自動 ──────────────────────────────────────────────────────
@@ -1439,7 +1576,10 @@ export const useProfileStore = create((rawSet, get) => {
     return {
       hasSeason: true,
       activeEvent: adapter.event,
-      seasonStateV2: get().seasonStateV2,
+      //  ⚠ CS Season M1：v2 wrapper 是 MOBA 專屬的。這裡若無條件回
+      //    `get().seasonStateV2`，`competitionView("cs")` 會把 **MOBA 的**
+      //    賽季投影交給畫面——兩個項目的資料在同一個 view 物件裡混在一起。
+      seasonStateV2: mode === "moba" ? get().seasonStateV2 : null,
       season: state.season,
       competition: activeCompetitionOf(state),
       //  Q7a-3b：多賽事並存之後，畫面要拿得到整份集合

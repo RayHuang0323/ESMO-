@@ -131,13 +131,24 @@ ck("competitionView(\"cs\").history 不會回 MOBA 的歷屆名次",
 
 ck("ensureCompetitionSeason() 預設就是 moba（已有賽季 ⇒ created:false）",
   eq(s3().ensureCompetitionSeason(), s3().ensureCompetitionSeason("moba")));
+
+//  ⚠ 2026-08-21（M1）：這三條原本斷言的是「CS 賽季建立尚未實作」——那是 M0
+//    的鷹架，M1 已經把它實作出來，所以斷言必須**改標的**，不是放寬。
+//    M0 真正要守的東西沒有變，而且更值得守：**建立 CS 賽季不得動到 MOBA。**
+//    （「載入 v10 存檔不會憑空生出 CS 賽季」那條仍在 §1，未動。）
+const mobaSnapshotBeforeCs = JSON.stringify(s3().competitionByMode.moba);
+const v2SnapshotBeforeCs = JSON.stringify(s3().seasonStateV2);
 const csEnsure = s3().ensureCompetitionSeason("cs");
-ck("ensureCompetitionSeason(\"cs\") 在 M0 明確回未實作，不偷建賽季",
-  csEnsure.ok === false && csEnsure.state === null && csEnsure.created === false);
-ck("ensureCompetitionSeason(\"cs\") 之後 cs slot 仍是 null",
-  s3().competitionByMode.cs === null);
-ck("activeCompetitionEvent(\"cs\") 回空狀態，不借用 MOBA 的 v2 wrapper",
-  s3().activeCompetitionEvent("cs").legacyState === null &&
+ck("ensureCompetitionSeason(\"cs\") 會建立 CS 賽季（M1 起）",
+  csEnsure.ok === true && csEnsure.created === true && !!s3().competitionByMode.cs?.schema);
+ck("建立 CS 賽季之後 MOBA instance 與 v2 wrapper 逐值不變",
+  JSON.stringify(s3().competitionByMode.moba) === mobaSnapshotBeforeCs &&
+  JSON.stringify(s3().seasonStateV2) === v2SnapshotBeforeCs);
+ck("competition 別名仍然指向 moba，沒有被 CS 搶走",
+  s3().competition === s3().competitionByMode.moba &&
+  s3().competition !== s3().competitionByMode.cs);
+ck("activeCompetitionEvent(\"cs\") 拿到的是 CS 自己的 state，且不借用 MOBA 的 v2 wrapper",
+  s3().activeCompetitionEvent("cs").legacyState === s3().competitionByMode.cs &&
   s3().activeCompetitionEvent("cs").seasonStateV2 === null);
 const v2Before = s3().seasonStateV2;
 ck("_syncSeasonStateV2(\"cs\") 是 no-op（v2 wrapper 是 MOBA 專屬）",

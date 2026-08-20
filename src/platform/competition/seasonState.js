@@ -33,6 +33,7 @@ import { upgradeCompetitionIdentity } from "../contracts/circuit.js";
 import { buildRegularSeason, SEASON_DAYS } from "./regularSeason.js";
 import { simulateFixture, simSeedFor } from "./simulateFixture.js";
 import { AI_TEAMS } from "./aiTeams.js";
+import { CS_AI_TEAMS } from "../../data/csAiTeams.js";
 import { computeStandings, outcomeSourceMix, TIEBREAKERS } from "./standings.js";
 import { createFinalStandings } from "../contracts/finalStandings.js";
 import {
@@ -192,7 +193,11 @@ export function createSeasonState({ playerTeam, season = 1, seasonSeed, gameMode
       //  ⚠ `expectsPlayoff`：這個賽制**預期**有季後賽。常規賽聯賽有（Q6），
       //    盃賽／資格賽可能沒有。少了這個宣告，封存判定只能二選一：
       //    要嘛聯賽在季後賽排出來之前就封存，要嘛沒有季後賽的賽事永遠封不了。
-      competitions: { [up.competition.id]: { competition: up.competition, stage: built.stage, playoff: null, expectsPlayoff: true } },
+      //  ⚠ CS Season M1：CS 聯賽 `expectsPlayoff: false`。CS 的年度 Major 是 M3
+      //    的工作，M1 還沒有季後賽賽制——宣告 true 會讓 CS 賽季**永遠封不了**
+      //    （封存判定會等一個不存在的季後賽，見 asiaCircuit.js:21 同一個坑）。
+      //    MOBA 一個字都沒改。
+      competitions: { [up.competition.id]: { competition: up.competition, stage: built.stage, playoff: null, expectsPlayoff: gameMode !== "cs" } },
       circuits: up.circuit ? { [up.circuit.id]: up.circuit } : {},
       events: up.event
         ? { [up.event.id]: {
@@ -201,7 +206,11 @@ export function createSeasonState({ playerTeam, season = 1, seasonSeed, gameMode
             //  Event 只有一個 Competition ⇒ 可以自動指定（產品規則）
             rankingCompetitionId: up.competition.id,
             //  legacy 的 MOBA 聯賽沿用既有名次獎金；其他 Event 預設沒有獎金
-            prizePolicy: LEGACY_PRIZE_POLICY,
+            //  ⚠ CS 聯賽 M1 **刻意沒有獎金政策**：CS 的獎金級距、贊助連動與
+            //    經濟平衡都還沒定義。給它 `LEGACY_PRIZE_POLICY` 等於讓 CS
+            //    直接沿用 MOBA 的獎金表發錢——那是憑空發明經濟規則，
+            //    比暫時不發錢糟得多（發錯的錢收不回來）。CS 獎金屬 M3 之後。
+            prizePolicy: gameMode === "cs" ? null : LEGACY_PRIZE_POLICY,
           } }
         : {},
       activeEventId: up.event?.id ?? null,
@@ -477,10 +486,18 @@ export const participantsOf = (state) => activeStageOf(state)?.participants ?? [
  */
 export function rostersFor(state, playerRoster = []) {
   const out = {};
-  for (const t of AI_TEAMS) out[t.id] = t.roster;
+  //  CS Season M1：AI 名單依這個賽季的項目取。**兩個池都是既有內容資料**
+  //  （`AI_TEAMS` / `CS_AI_TEAMS`），這裡不生成、不改寫任何 roster。
+  //  ⚠ 只放這一季用得到的池：把兩個池都倒進來會讓某一季的模擬有機會
+  //    抓到另一個項目的隊伍，那是靜默的跨項目污染。
+  const pool = gameModeOf(state) === "cs" ? CS_AI_TEAMS : AI_TEAMS;
+  for (const t of pool) out[t.id] = t.roster;
   if (state?.playerTeamId) out[state.playerTeamId] = playerRoster;
   return out;
 }
+
+/** 這個賽季是哪個項目的（讀主賽制，與 `activeEntryOf` 同一個來源）。 */
+export const gameModeOf = (state) => activeCompetitionOf(state)?.gameMode ?? "moba";
 
 export const fixtureById = (state, id) => (state?.fixtures ?? []).find((f) => f.id === id) ?? null;
 
