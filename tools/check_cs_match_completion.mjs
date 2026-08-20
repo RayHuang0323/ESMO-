@@ -1,108 +1,198 @@
 #!/usr/bin/env node
-// CS completion regression guard：first-to-8 的最多 15 回合邊界。
+// CS MR12 / first-to-13 completion regression guard.
 //
-// 這支 verifier 不重跑昂貴的 WebGL frame simulation；它以 production source
-// 的正式 predicates 加上一個固定回合 fixture，重現「6:6 / R13 / 最後一格」
-// 的卡死，並驗證 natural playback 與 Quick Finish 走同一個完成邊界。
-// 真實 engine / browser smoke 另由 build 與瀏覽器 gate 驗證。
-import fs from "node:fs";
+// The rule fixtures use the same production rule-state helpers that drive the
+// FPS simulator. The live simulator is also loaded once through Vite to verify
+// halftime metadata, team identity/currentSide separation, result completion,
+// and same-seed determinism without changing gameplay balance.
+import { readFileSync, rmSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { createServer } from "vite";
 
-const fps = fs.readFileSync("src/battle/fps/EsportsFPS3D.jsx", "utf8");
-const csScreen = fs.readFileSync("src/screens/fps/CsMatchScreen.jsx", "utf8");
-const appShell = fs.readFileSync("src/AppShell.jsx", "utf8");
-const csContract = fs.readFileSync("src/platform/contracts/CsMatchResult.js", "utf8");
-const settle = fs.readFileSync("src/platform/progress/settleCsMatch.js", "utf8");
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const FPS_FILE = resolve(ROOT, "src/battle/fps/EsportsFPS3D.jsx");
+const FPS_MODULE_ID = "/src/battle/fps/EsportsFPS3D.jsx";
+const RETURN_MARKER = "return { EsportsFPS3D, buildMatchResult };";
+const EXPORT_MARKER = "export { EsportsFPS3D, buildMatchResult };";
+const TEST_API_NAME = "__CS_MR12_COMPLETION_TEST_API__";
 
 let pass = 0;
 let fail = 0;
 const ck = (name, ok, detail = "") => {
   if (ok) {
-    pass++;
+    pass += 1;
     console.log(`✅ ${name}${detail ? `　${detail}` : ""}`);
   } else {
-    fail++;
+    fail += 1;
     console.log(`❌ ${name}${detail ? `　${detail}` : ""}`);
   }
 };
+const repeat = (value, count) => Array.from({ length: count }, () => value);
+const all800 = (money) => Object.values(money ?? {}).every((value) => value === 800);
+const teamIds = (record) => Object.keys(record ?? {}).sort().join(",");
 
-const WIN_SCORE = 8;
-const LEGACY_MAX_ROUNDS = 13;
-const FIXED_MAX_ROUNDS = 15;
-
-function play(winners, maxRounds) {
-  let t = 0;
-  let ct = 0;
-  let rounds = 0;
-  while (rounds < maxRounds && Math.max(t, ct) < WIN_SCORE) {
-    const winner = winners[rounds];
-    if (!winner) break;
-    if (winner === "t") t++;
-    else if (winner === "ct") ct++;
-    else throw new Error(`fixture winner 無效：${winner}`);
-    rounds++;
-  }
-  return { t, ct, rounds, over: Math.max(t, ct) >= WIN_SCORE };
+function gate(ok, code, detail = "") {
+  if (!ok) throw new Error(`[${code}]${detail ? ` ${detail}` : ""}`);
 }
 
-function atFinalFrame(score, frameIndex, totalFrames) {
-  return Math.max(score.t, score.ct) >= WIN_SCORE && frameIndex >= totalFrames - 1;
+async function loadApi(source) {
+  let seen = 0;
+  const tempRoot = mkdtempSync(join(tmpdir(), "esmo-cs-mr12-completion-"));
+  let vite = null;
+  try {
+    vite = await createServer({
+      root: ROOT,
+      configFile: false,
+      envFile: false,
+      appType: "custom",
+      logLevel: "error",
+      cacheDir: join(tempRoot, "vite-cache"),
+      optimizeDeps: { noDiscovery: true, include: [] },
+      server: { middlewareMode: true },
+      plugins: [{
+        name: "cs-mr12-completion-memory-transform",
+        enforce: "pre",
+        transform(code, id) {
+          if (resolve(id.split("?")[0]).toLowerCase() !== FPS_FILE.toLowerCase()) return null;
+          seen += 1;
+          gate(code === source, "VITE_SOURCE_MISMATCH");
+          const returned = source.replace(
+            RETURN_MARKER,
+            "return { EsportsFPS3D, buildMatchResult, simulateFps, ROSTER, TACTICS_DB, createCsRuleState, beginCsRound, finishCsRound };",
+          );
+          gate(returned !== source, "RETURN_MARKER_MISSING");
+          const transformed = returned.replace(
+            EXPORT_MARKER,
+            `const ${TEST_API_NAME} = Object.freeze({
+  simulateFps: __FPS3D_MODULE.simulateFps,
+  buildMatchResult: __FPS3D_MODULE.buildMatchResult,
+  ROSTER: __FPS3D_MODULE.ROSTER,
+  TACTICS_DB: __FPS3D_MODULE.TACTICS_DB,
+  createCsRuleState: __FPS3D_MODULE.createCsRuleState,
+  beginCsRound: __FPS3D_MODULE.beginCsRound,
+  finishCsRound: __FPS3D_MODULE.finishCsRound,
+});
+export { EsportsFPS3D, buildMatchResult, ${TEST_API_NAME} };`,
+          );
+          gate(transformed !== returned, "EXPORT_MARKER_MISSING");
+          return { code: transformed, map: null };
+        },
+      }],
+    });
+    const loaded = await vite.ssrLoadModule(`${FPS_MODULE_ID}?cs-mr12=completion`);
+    gate(seen === 1, "TRANSFORM_LOAD_COUNT", String(seen));
+    gate(loaded[TEST_API_NAME], "TEST_API_MISSING");
+    return loaded[TEST_API_NAME];
+  } finally {
+    if (vite) await vite.close();
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
 }
 
-// 前 12 局各 6 勝；R13～R15 以可合法形成 8:7 的順序收尾。
-const boundaryWinners = [
-  ...Array(6).fill("t"),
-  ...Array(6).fill("ct"),
-  "t", "ct", "t",
-];
-const afterTwelve = play(boundaryWinners, 12);
-const legacy = play(boundaryWinners, LEGACY_MAX_ROUNDS);
-const fixed = play(boundaryWinners, FIXED_MAX_ROUNDS);
-const totalFrames = 633;
-
-ck("6:6 邊界在前 12 局可重現", afterTwelve.t === 6 && afterTwelve.ct === 6 && afterTwelve.rounds === 12);
-ck("Legacy R13 最後一格確實卡在 7:6 且不完成",
-  legacy.t === 7 && legacy.ct === 6 && legacy.rounds === 13
-  && !atFinalFrame(legacy, totalFrames - 1, totalFrames));
-ck("修復後最多 15 局可完成合法 8:7",
-  fixed.t === 8 && fixed.ct === 7 && fixed.rounds === 15 && fixed.over);
-ck("最後 frame 能完成正式 matchOver",
-  atFinalFrame(fixed, totalFrames - 1, totalFrames));
-
-// Source contract：只改回合上限；勝利條件、最後 frame 條件、Quick Finish 與 once guard 保留。
-ck("production simulation 上限為 15 回合", /const ROUNDS=15;/.test(fps));
-ck("production 仍是 first-to-8", /ROUNDS&&Math\.max\(ctScore,tScore\)<8/.test(fps));
-ck("自然播放與 Quick Finish 共用同一個 matchOver predicate",
-  /const matchOver=Math\.max\(sim\.ctScore,sim\.tScore\)>=8&&fIdx>=total-1;/.test(fps)
-  && /setFIdx\(total-1\)/.test(fps));
-ck("Quick Finish 會停止播放並跳到最後 frame",
-  /setQuickFinishing\(true\);setPlaying\(false\);setFIdx\(total-1\)/.test(fps));
-ck("onComplete 仍以 matchResult.id exactly-once guard 保護",
-  /completedRef\.current!==matchResult\.id/.test(fps)
-  && /completedRef\.current=matchResult\.id;onComplete\(matchResult\)/.test(fps));
-
-// Quick Finish 與 natural playback 都只改 frame cursor；兩者必須得到同一正式結果。
-const natural = atFinalFrame(fixed, totalFrames - 1, totalFrames);
-const quick = atFinalFrame(fixed, totalFrames - 1, totalFrames);
-ck("natural playback / Quick Finish 完成結果一致", natural === quick && natural === true);
-
-let callbackCount = 0;
-let completedId = null;
-const onCompleteOnce = (over, id) => {
-  if (over && completedId !== id) {
-    completedId = id;
-    callbackCount++;
+function playSchedule(api, winners, captureNext = false) {
+  const state = api.createCsRuleState();
+  const starts = [];
+  for (const winner of winners) {
+    const start = api.beginCsRound(state);
+    if (!start.legal) break;
+    starts.push({ ...start, round: state.roundsPlayed + 1 });
+    api.finishCsRound(state, winner);
+    if (state.completed) break;
   }
-};
-onCompleteOnce(natural, "cs-boundary");
-onCompleteOnce(quick, "cs-boundary");
-onCompleteOnce(true, "cs-boundary");
-ck("boundary completion callback exactly once", callbackCount === 1);
+  let nextStart = null;
+  if (captureNext && !state.completed) {
+    nextStart = api.beginCsRound(state);
+    if (nextStart.legal) starts.push({ ...nextStart, round: state.roundsPlayed + 1 });
+  }
+  return { state, starts, nextStart };
+}
 
-ck("正式 CsMatchResult contract 仍是 CS 唯一結果入口",
-  csContract.includes("CS_RESULT_SCHEMA") && csContract.includes("toCsMatchResult")
-  && csScreen.includes("toCsMatchResult"));
-ck("正式 settlement path 仍由 settleCsMatch 驅動",
-  appShell.includes("settleCsMatch(r)") && settle.includes("settleCsMatch"));
+function sourceChecks(source) {
+  ck("production constants are MR12 / first-to-13 / OT MR3",
+    source.includes("CS_REGULATION_ROUNDS_PER_HALF=12")
+    && source.includes("CS_REGULATION_WIN_SCORE=13")
+    && source.includes("CS_OT_GROUP_ROUNDS=6")
+    && source.includes("CS_OT_GROUP_WIN_ROUNDS=4"));
+  ck("team identity and currentSide are separate production fields",
+    source.includes("teamId") && source.includes("currentSideByTeam") && source.includes("teamIdentityByPlayer"));
+  ck("legal completion is simulator.completed plus final frame",
+    source.includes("const matchOver=Boolean(sim.completed)&&fIdx>=total-1;"));
+  ck("Quick Finish seeks the same final frame",
+    source.includes("setQuickFinishing(true);setPlaying(false);setFIdx(total-1)") && source.includes("setFIdx(total-1)"));
+  ck("onComplete is exactly-once guarded",
+    source.includes("completedRef.current!==matchResult.id") && source.includes("completedRef.current=matchResult.id;onComplete(matchResult)"));
+  ck("raw MatchResult exposes completed and stable winner",
+    source.includes("completed:sim.completed,winner:sim.winner") && source.includes("winner:sim.winner"));
+}
 
-console.log(`\nCS completion regression: ${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
-process.exit(fail ? 1 : 0);
+async function main() {
+  const source = readFileSync(FPS_FILE, "utf8");
+  const api = await loadApi(source);
+  ck("production simulator test API loads", typeof api.simulateFps === "function" && typeof api.buildMatchResult === "function");
+
+  const us = "us";
+  const enemy = "enemy";
+  const regulationTwelveZero = playSchedule(api, repeat(us, 12), true);
+  const regulationThirteenZero = playSchedule(api, repeat(us, 13));
+  const regulationThirteenEleven = playSchedule(api, [...repeat(us, 12), ...repeat(enemy, 11), us]);
+  const regulationTwelveTwelve = playSchedule(api, [...repeat(us, 12), ...repeat(enemy, 12)], true);
+  const otThreeThree = playSchedule(api, [...repeat(us, 12), ...repeat(enemy, 12), ...repeat(us, 3), ...repeat(enemy, 3)], true);
+  const otSixteenThirteen = playSchedule(api, [...repeat(us, 12), ...repeat(enemy, 12), us, enemy, us, us, us]);
+  const otSixteenFourteen = playSchedule(api, [...repeat(us, 12), ...repeat(enemy, 12), us, enemy, us, enemy, us, us]);
+  const otNextGroup = playSchedule(api, [...repeat(us, 12), ...repeat(enemy, 12), ...repeat(us, 3), ...repeat(enemy, 3), ...repeat(us, 4)]);
+
+  ck("12:0 does not complete", !regulationTwelveZero.state.completed && regulationTwelveZero.state.roundsPlayed === 12);
+  ck("13:0 completes normally", regulationThirteenZero.state.completed && regulationThirteenZero.state.winner === us && regulationThirteenZero.state.roundsPlayed === 13);
+  ck("12:11 reaches 13:11", regulationThirteenEleven.state.completed && regulationThirteenEleven.state.score[us] === 13 && regulationThirteenEleven.state.score[enemy] === 11);
+  const halftimeBefore = regulationTwelveZero.starts.find((start) => start.round === 1);
+  const halftimeAfter = regulationTwelveZero.nextStart;
+  ck("halftime preserves stable team identity", halftimeBefore?.currentSideByTeam[us] === "t" && halftimeAfter?.currentSideByTeam[us] === "ct" && teamIds(halftimeBefore?.currentSideByTeam) === teamIds(halftimeAfter?.currentSideByTeam));
+  ck("halftime swaps T / CT currentSide", halftimeAfter?.economyResetReason === "halftime" && halftimeAfter.currentSideByTeam[us] === "ct" && halftimeAfter.currentSideByTeam[enemy] === "t");
+  ck("12:12 enters overtime", !regulationTwelveTwelve.state.completed && regulationTwelveTwelve.state.score[us] === 12 && regulationTwelveTwelve.state.score[enemy] === 12 && regulationTwelveTwelve.nextStart?.phase === "overtime");
+  ck("first OT group starts with economy reset", regulationTwelveTwelve.nextStart?.otGroup === 1 && regulationTwelveTwelve.nextStart?.economyResetReason === "ot-group-1");
+  const otRoundFour = otThreeThree.starts.find((start) => start.phase === "overtime" && start.otGroup === 1 && start.roundInPhase === 4);
+  ck("OT swaps side after 3 rounds", otRoundFour?.currentSideByTeam[us] === "t" && otRoundFour?.currentSideByTeam[enemy] === "ct");
+  ck("OT 3:3 does not complete the match", !otThreeThree.state.completed && otThreeThree.state.score[us] === 15 && otThreeThree.state.score[enemy] === 15 && otThreeThree.state.otGroup === 2);
+  ck("next OT group resets economy", otThreeThree.nextStart?.otGroup === 2 && otThreeThree.nextStart?.economyResetReason === "ot-group-2");
+  ck("16:13 is a legal OT result", otSixteenThirteen.state.completed && otSixteenThirteen.state.score[us] === 16 && otSixteenThirteen.state.score[enemy] === 13 && otSixteenThirteen.state.winner === us);
+  ck("16:14 is a legal OT result", otSixteenFourteen.state.completed && otSixteenFourteen.state.score[us] === 16 && otSixteenFourteen.state.score[enemy] === 14 && otSixteenFourteen.state.winner === us);
+  ck("15:15 starts the next OT group", !otThreeThree.state.completed && otThreeThree.nextStart?.otGroup === 2 && otThreeThree.nextStart?.roundInPhase === 1);
+  ck("next OT group can produce the stable winner", otNextGroup.state.completed && otNextGroup.state.score[us] === 19 && otNextGroup.state.score[enemy] === 15 && otNextGroup.state.winner === us);
+
+  const map = api.TACTICS_DB.inferno;
+  const tTactic = map.t.find((item) => item.id === "t_aexec");
+  const ctTactic = map.ct.find((item) => item.id === "c_std");
+  const simA = api.simulateFps("inferno", tTactic, ctTactic, 424242, api.ROSTER);
+  const simB = api.simulateFps("inferno", tTactic, ctTactic, 424242, api.ROSTER);
+  const firstRound = simA.roundHist[0];
+  const secondHalfRound = simA.roundHist.find((round) => round.phase === "regulation" && round.half === "second");
+  const finalFrame = simA.frames.at(-1);
+  ck("production simulator returns completed / winner", simA.completed === true && (simA.winner === us || simA.winner === enemy));
+  ck("production players carry stable team identity", simA.players.length === 10 && simA.players.every((player) => player.teamId === us || player.teamId === enemy));
+  ck("production halftime swaps currentSide without changing identity", firstRound?.teamIdentityByPlayer && secondHalfRound?.teamIdentityByPlayer && JSON.stringify(firstRound.teamIdentityByPlayer) === JSON.stringify(secondHalfRound.teamIdentityByPlayer) && firstRound.currentSideByTeam[us] !== secondHalfRound.currentSideByTeam[us]);
+  ck("production halftime resets economy to $800", secondHalfRound?.economyResetReason === "halftime" && all800(secondHalfRound.startMoneyByPlayer));
+  ck("production second half starts pistol round", secondHalfRound?.buyTypeByTeam?.[us] === "pistol" && secondHalfRound?.buyTypeByTeam?.[enemy] === "pistol");
+  ck("tactic ownership remains stable across halftime", firstRound?.tacticOwnerByTeam?.[us] === secondHalfRound?.tacticOwnerByTeam?.[us] && firstRound?.tacticOwnerByTeam?.[enemy] === secondHalfRound?.tacticOwnerByTeam?.[enemy]);
+  ck("final frame is a legal completed terminal", finalFrame?.completed === true && finalFrame?.winner === simA.winner && finalFrame.tScore === simA.tScore && finalFrame.ctScore === simA.ctScore && Math.max(simA.tScore, simA.ctScore) >= 13);
+  ck("same seed produces identical simulation", JSON.stringify(simA) === JSON.stringify(simB));
+  const resultA = api.buildMatchResult(simA, { tacticT: tTactic, tacticCT: ctTactic, seed: 424242 });
+  const resultB = api.buildMatchResult(simB, { tacticT: tTactic, tacticCT: ctTactic, seed: 424242 });
+  ck("MatchResult winner mapping is stable-team based and deterministic", resultA.winner === simA.winner && resultA.win === (simA.winner === us) && resultA.id === resultB.id && resultA.scoreT === simA.tScore && resultA.scoreCT === simA.ctScore);
+
+  sourceChecks(source);
+  const csScreen = readFileSync(resolve(ROOT, "src/screens/fps/CsMatchScreen.jsx"), "utf8");
+  const appShell = readFileSync(resolve(ROOT, "src/AppShell.jsx"), "utf8");
+  const contract = readFileSync(resolve(ROOT, "src/platform/contracts/CsMatchResult.js"), "utf8");
+  const settle = readFileSync(resolve(ROOT, "src/platform/progress/settleCsMatch.js"), "utf8");
+  ck("Replay / MatchResult / CsMatchResult keep one legal completion path", csScreen.includes("toCsMatchResult") && contract.includes("CS_RESULT_SCHEMA") && appShell.includes("settleCsMatch(r)") && settle.includes("settleCsMatch"));
+
+  console.log(`\nCS MR12 completion: ${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
+  process.exit(fail ? 1 : 0);
+}
+
+main().catch((error) => {
+  console.error(error.stack || error.message);
+  process.exitCode = 1;
+});

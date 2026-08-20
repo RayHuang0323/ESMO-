@@ -10514,3 +10514,21 @@ CS 引擎原本的產品規則是 first-to-8，不是 first-to-7：`37c07ef` 起
 
 - `tools/browser_check_cs_completion.mjs` 以隔離 Chrome／本機 Vite 走正式 Dashboard → CS 賽前 → 選圖 → 戰術 → 對戰 → CsMatchResult 流程：1920×1080 自然 4×播放 PASS、1366×768 Quick Finish PASS、390×844 Quick Finish PASS。
 - 三個 scenario 均由 `407/407` 最後 frame 進入正式賽後報告；桌面與 390px 均無水平溢位，console/page error 均為 0。Vite／Chrome 已由 harness finally 清理；390px 為 CDP device emulation，仍不等同真機觸控／FPS。
+
+## CS MR12 單張地圖正式化 v1（2026-08-21）
+
+### Scope
+
+- 只修改 FPS 單張 map runtime、FPS-only completion／matchup verifier 與 browser verifier timeout；沒有改一般傷害、AI、武器、地圖、戰術數值或一般經濟公式。
+- `EsportsFPS3D.jsx` 以 stable team identity 作 score、tactic ownership、economy 與 winner truth；`currentSide` 只代表該回合 T／CT。
+- `tools/check_cs_match_completion.mjs` 覆蓋 MR12、halftime、OT MR3、economy reset、final-frame completion、Quick Finish、exactly-once callback、MatchResult mapping 與 same-seed determinism。
+
+### Result
+
+- completion `31/31 PASS`；CS23 `28/28`；R54、R56、R57 PASS（R57：10 pairs × 2 orientations × 6 seeds = 120 matches，deterministic repeat=1）。
+- `npm.cmd run build` PASS（Vite 2702 modules transformed）。browser `3/3 PASS`：1920×1080 natural、1366×768 Quick Finish、390×844 Quick Finish；三者 `1002/1002`，DOM 無水平溢位，console/page error `0`。
+- R10 仍停在既有 `R48_LEGACY_R47_SHA` mismatch，沒有改 legacy source gate 或 rebaseline。
+
+### Contract / ownership
+
+- `CsMatchResult`、`settleCsMatch` 與 Competition／FixtureOutcome contract 未修改；沒有觸碰 SeasonState、Competition、Event、Fixture、Ranking、亞洲賽季、BO1／BO3、Claude branch 或 MOBA。

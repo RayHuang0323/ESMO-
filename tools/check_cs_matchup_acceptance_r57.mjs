@@ -68,7 +68,17 @@ function gate(ok, code, detail = "") {
 }
 function json(value) { return JSON.stringify(value); }
 function sha(value) { return createHash("sha256").update(value).digest("hex"); }
-function digest(value) { return sha(json(value)); }
+function digestMatch(result, roster) {
+  const hash = createHash("sha256");
+  const { frames, ...summary } = result;
+  hash.update(json({ result: summary, roster }));
+  hash.update("|frames|");
+  for (const frame of frames ?? []) {
+    hash.update(json(frame));
+    hash.update("|");
+  }
+  return hash.digest("hex");
+}
 function round(value, digits = 2) {
   const factor = 10 ** digits;
   return Math.round(value * factor) / factor;
@@ -315,7 +325,7 @@ async function main() {
       addInto(roleRows, observed.roleRows);
       for (const [name, count] of Object.entries(observed.eventCounts)) eventTotals[name] = (eventTotals[name] ?? 0) + count;
     }
-    const digestValue = digest({ result, roster });
+    const digestValue = digestMatch(result, roster);
     resultDigests.push(digestValue);
     if (includeInSummary) {
       totalMatches += 1;

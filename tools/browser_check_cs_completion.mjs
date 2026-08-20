@@ -140,9 +140,9 @@ const runScenario = async (dev, scenario) => {
       await chrome.evaluate(`document.querySelector('[data-testid="match-speed-4"]')?.click(); return true;`);
       await waitFor(chrome, `![...document.querySelectorAll("button")].some((node) => (node.innerText || "").includes("查看賽後戰報"))`, 3_000, `${scenario.label} natural playback started`);
       // At 4x the engine intentionally advances about two frames/second;
-      // a 400+ frame match therefore needs more than three minutes in CPU
-      // headless Chrome. This is a harness timeout, not a product shortcut.
-      await waitFor(chrome, `[...document.querySelectorAll("button")].some((node) => (node.innerText || "").includes("查看賽後戰報"))`, 300_000, `${scenario.label} natural playback result`);
+      // MR12 plus OT can exceed 1,000 replay frames and needs several minutes
+      // in CPU headless Chrome. This is a harness timeout, not a product shortcut.
+      await waitFor(chrome, `[...document.querySelectorAll("button")].some((node) => (node.innerText || "").includes("查看賽後戰報"))`, 600_000, `${scenario.label} natural playback result`);
     } else {
       await chrome.evaluate(`window.confirm = () => true; return true;`);
       await chrome.evaluate(`document.querySelector('[data-testid="quick-finish-match"]')?.click(); return true;`);

@@ -440,8 +440,84 @@ const TACTICS_DB={
 const TAC_TYPE={execute:{label:"執行",color:"#ef4444"},default:{label:"標準",color:"#5b7fb0"},stack:{label:"堆人",color:"#fbbf24"},aggro:{label:"前壓",color:"#f59e0b"},retake:{label:"回防",color:"#a78bfa"},rush:{label:"強攻",color:"#ec4899"}};
 
 // ─── 模擬引擎（資料/策略核心；已修正曳光彈生命週期）─────────────────────
+const CS_TEAM_US="us",CS_TEAM_ENEMY="enemy";
+const CS_REGULATION_ROUNDS_PER_HALF=12;
+const CS_REGULATION_ROUNDS=CS_REGULATION_ROUNDS_PER_HALF*2;
+const CS_REGULATION_WIN_SCORE=13;
+const CS_OT_GROUP_ROUNDS=6;
+const CS_OT_HALF_ROUNDS=3;
+const CS_OT_GROUP_WIN_ROUNDS=4;
+
+function csRosterTeamId(player){
+  return player?.teamId??player?.teamIdentity??(player?.side==="t"?CS_TEAM_US:CS_TEAM_ENEMY);
+}
+function csTeamAtSide(sideByTeam,side){return sideByTeam[CS_TEAM_US]===side?CS_TEAM_US:CS_TEAM_ENEMY;}
+function cloneCsSides(sideByTeam){return{[CS_TEAM_US]:sideByTeam[CS_TEAM_US],[CS_TEAM_ENEMY]:sideByTeam[CS_TEAM_ENEMY]};}
+function swapCsSides(state,reason,afterRound){
+  const before=cloneCsSides(state.currentSideByTeam);
+  state.currentSideByTeam={
+    [CS_TEAM_US]:before[CS_TEAM_US]==="t"?"ct":"t",
+    [CS_TEAM_ENEMY]:before[CS_TEAM_ENEMY]==="t"?"ct":"t",
+  };
+  state.sideChanges.push({reason,afterRound,before,after:cloneCsSides(state.currentSideByTeam)});
+}
+function createCsRuleState(){
+  return{
+    phase:"regulation",roundsPlayed:0,regulationRounds:0,otGroup:0,otRound:0,
+    score:{[CS_TEAM_US]:0,[CS_TEAM_ENEMY]:0},
+    otScore:{[CS_TEAM_US]:0,[CS_TEAM_ENEMY]:0},
+    currentSideByTeam:{[CS_TEAM_US]:"t",[CS_TEAM_ENEMY]:"ct"},
+    completed:false,winner:null,halftimeApplied:false,pendingEconomyReset:"match-start",
+    sideChanges:[],economyResets:[],
+  };
+}
+function beginCsRound(state){
+  if(state.completed)return{legal:false};
+  if(state.phase==="regulation"&&state.regulationRounds===CS_REGULATION_ROUNDS_PER_HALF&&!state.halftimeApplied){
+    swapCsSides(state,"halftime",state.regulationRounds);
+    state.halftimeApplied=true;state.pendingEconomyReset="halftime";
+  }
+  if(state.phase==="regulation"&&state.regulationRounds===CS_REGULATION_ROUNDS){
+    state.phase="overtime";state.otGroup=1;state.otRound=0;
+    state.otScore={[CS_TEAM_US]:0,[CS_TEAM_ENEMY]:0};state.pendingEconomyReset="ot-group-1";
+  }
+  const economyResetReason=state.pendingEconomyReset;state.pendingEconomyReset=null;
+  const roundInPhase=state.phase==="regulation"?state.regulationRounds+1:state.otRound+1;
+  const roundInHalf=state.phase==="regulation"
+    ?(state.regulationRounds%CS_REGULATION_ROUNDS_PER_HALF)+1
+    :(state.otRound%CS_OT_HALF_ROUNDS)+1;
+  const half=state.phase==="regulation"
+    ?(state.regulationRounds<CS_REGULATION_ROUNDS_PER_HALF?"first":"second")
+    :(state.otRound<CS_OT_HALF_ROUNDS?"first":"second");
+  if(economyResetReason)state.economyResets.push({reason:economyResetReason,round:state.roundsPlayed+1,phase:state.phase,otGroup:state.otGroup,currentSideByTeam:cloneCsSides(state.currentSideByTeam)});
+  return{
+    legal:true,phase:state.phase,half,roundInPhase,roundInHalf,otGroup:state.otGroup,
+    currentSideByTeam:cloneCsSides(state.currentSideByTeam),economyResetReason,
+  };
+}
+function finishCsRound(state,winnerTeam){
+  if(![CS_TEAM_US,CS_TEAM_ENEMY].includes(winnerTeam))throw new Error(`CS winner team 無效：${winnerTeam}`);
+  if(state.completed)throw new Error("CS match 已完成，不能再結算回合");
+  state.roundsPlayed++;
+  state.score[winnerTeam]++;
+  if(state.phase==="regulation"){
+    state.regulationRounds++;
+    if(state.score[winnerTeam]>=CS_REGULATION_WIN_SCORE){state.completed=true;state.winner=winnerTeam;}
+    return state;
+  }
+  state.otRound++;state.otScore[winnerTeam]++;
+  if(state.otRound%CS_OT_HALF_ROUNDS===0)swapCsSides(state,"overtime-side-swap",state.roundsPlayed);
+  if(state.otScore[winnerTeam]>=CS_OT_GROUP_WIN_ROUNDS){state.completed=true;state.winner=winnerTeam;return state;}
+  if(state.otRound>=CS_OT_GROUP_ROUNDS){
+    if(state.otScore[CS_TEAM_US]!==state.otScore[CS_TEAM_ENEMY])throw new Error("CS OT group 非平手卻未完成");
+    state.otGroup++;state.otRound=0;state.otScore={[CS_TEAM_US]:0,[CS_TEAM_ENEMY]:0};state.pendingEconomyReset=`ot-group-${state.otGroup}`;
+  }
+  return state;
+}
+
 function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
-  const RS=roster||ROSTER; // 可注入即時名單（含訓練/成長後素質、自訂對手）
+  const RS=(roster||ROSTER).map(c=>({...c})); // 可注入即時名單（複製後套用每回合 currentSide，不回寫輸入）
+  const originalTacticCT=tacticCT;
   const map=MAPS[mapKey];const rand=mkRng(seed);
   // 碰撞用牆面：建築（含可進入的室內）。地圖小型散件（木箱/油桶/沙包）為低矮裝飾、不阻擋走位，
   // 大型可阻擋設施（車輛）才納入碰撞，避免破壞既有路線平衡。
@@ -453,30 +529,60 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
   const callouts=map.callouts||[];
   const nearCO=pos=>{let best=null,bd=1e9;for(const c of callouts){const d=Math.hypot(c.x-pos.x,c.y-pos.y);if(d<bd){bd=d;best=c;}}return best?best.l:(pos.x<35?"左路":pos.x>65?"右路":"中路");};
   const frames=[],highlights=[],roundHist=[];
-  // CS 訓練賽是 first-to-8；13 回合不足以涵蓋 6:6 後的決勝空間。
-  // 最多 15 回合仍保留既有先到 8 分即停的行為，不改任何回合內 RNG／平衡。
-  const ROUNDS=15;let ctScore=0,tScore=0,fi=0;
-  // 持續性經濟：金錢、存活保留的槍/甲、連敗計數
+  // 正式 CS 單張地圖：MR12、先到 13；OT 為每組 MR3（6 局，先到 4）。
+  // team identity 永遠由 rosterTeamById 決定；p.side 只代表該回合 currentSide。
+  const ROUNDS=CS_REGULATION_ROUNDS;let ctScore=0,tScore=0,fi=0,rnd=0;
+  const rosterTeamById=new Map(RS.map(c=>[c.id,csRosterTeamId(c)]));
+  const teamOfRosterId=id=>rosterTeamById.get(id)??CS_TEAM_US;
+  const ruleState=createCsRuleState();
   const econ={};RS.forEach(c=>econ[c.id]={money:800,gun:null,armor:false,helmet:false});
+  const economyEvents=[];
+  const resetEconomy=reason=>{
+    RS.forEach(c=>{econ[c.id]={money:800,gun:null,armor:false,helmet:false};});
+    lossStreak[CS_TEAM_US]=0;lossStreak[CS_TEAM_ENEMY]=0;
+    economyEvents.push({reason,round:ruleState.roundsPlayed+1,phase:ruleState.phase,otGroup:ruleState.otGroup,startMoneyByPlayer:Object.fromEntries(RS.map(c=>[c.id,800]))});
+  };
+  const lossStreak={[CS_TEAM_US]:0,[CS_TEAM_ENEMY]:0};
   // 跨回合累計的每位選手數據（給賽後 MatchResult / 成長機制 / 數據面板使用）
-  const agg={};RS.forEach(c=>agg[c.id]={id:c.id,name:c.name,side:c.side,role:c.fpsRole||c.role,roleKey:c.role,personality:c.personality,k:0,d:0,a:0,dmg:0,utilDmg:0,hs:0,entry:0,clutch:0,kastR:0,mvpR:0});
-  let tLoss=0,ctLoss=0;
-  for(let rnd=0;rnd<ROUNDS&&Math.max(ctScore,tScore)<8;rnd++){
-    const tac={t:tacticT,ct:tacticCT};const target=tacticT.site;
-    const tacEdge=tacticEdge(tacticT,tacticCT); // 戰術剋制（攻守站點 + 類型剪刀石頭布），本回合固定
+  const agg={};RS.forEach(c=>agg[c.id]={id:c.id,name:c.name,teamId:teamOfRosterId(c.id),side:c.side,role:c.fpsRole||c.role,roleKey:c.role,personality:c.personality,k:0,d:0,a:0,dmg:0,utilDmg:0,hs:0,entry:0,clutch:0,kastR:0,mvpR:0});
+  while(!ruleState.completed){
+    const roundPlan=beginCsRound(ruleState);if(!roundPlan.legal)break;
+    if(roundPlan.economyResetReason)resetEconomy(roundPlan.economyResetReason);
+    tScore=ruleState.score[CS_TEAM_US];ctScore=ruleState.score[CS_TEAM_ENEMY];
+    const sideByTeam=roundPlan.currentSideByTeam;
+    RS.forEach(c=>{const teamId=teamOfRosterId(c.id);c.teamId=teamId;c.teamIdentity=teamId;c.side=sideByTeam[teamId];});
+    const attackTeam=csTeamAtSide(sideByTeam,"t"),defenseTeam=csTeamAtSide(sideByTeam,"ct");
+    const opponentTactic=originalTacticCT;
+    const attackTactic=attackTeam===CS_TEAM_US?tacticT:opponentTactic;
+    const defenseTactic=defenseTeam===CS_TEAM_US?tacticT:opponentTactic;
+    const tacticCT=defenseTactic;
+    const tac={t:attackTactic,ct:defenseTactic};const target=attackTactic.site;
+    const tacEdge=tacticEdge(attackTactic,defenseTactic); // 戰術 ownership 隨 stable team，攻守角色由 currentSide 決定
     // ── 賽前經濟決策（全買 / 強起 / 省錢 / 手槍局）──
-    const teamAvg=side=>RS.filter(c=>c.side===side).reduce((s,c)=>s+econ[c.id].money,0)/5;
-    const decideBuy=(side,my,en)=>{if(rnd===0)return"pistol";const m=teamAvg(side),behind=en-my;if(m>=4200)return"full";if(m<2200)return"eco";if(behind>=2&&m>=2700)return"force";if(m>=3700)return"full";return"eco";};
+    const teamAvg=side=>RS.filter(c=>sideByTeam[teamOfRosterId(c.id)]===side).reduce((s,c)=>s+econ[c.id].money,0)/5;
+    const pistolRound=Boolean(roundPlan.economyResetReason);
+    const decideBuy=(side,my,en)=>{if(pistolRound)return"pistol";const m=teamAvg(side),behind=en-my;if(m>=4200)return"full";if(m<2200)return"eco";if(behind>=2&&m>=2700)return"force";if(m>=3700)return"full";return"eco";};
     const buyT=decideBuy("t",tScore,ctScore),buyCT=decideBuy("ct",ctScore,tScore);
     const ecoT=buyT==="eco"||buyT==="pistol",ecoCT=buyCT==="eco"||buyCT==="pistol";
     const ARMOR=1000,NADE={flash:200,smoke:300,he:300,molly:400},sidePistol=s=>s==="t"?"glock":"usp";
+    const roundRoster=RS.map(c=>({...c,teamId:teamOfRosterId(c.id),teamIdentity:teamOfRosterId(c.id),side:sideByTeam[teamOfRosterId(c.id)]}));
+    const startMoneyByPlayer=Object.fromEntries(RS.map(c=>[c.id,econ[c.id].money]));
+    const buyTypeByTeam={[attackTeam]:buyT,[defenseTeam]:buyCT};
+    const roundFrameStart=fi;
+    const roundMeta={round:rnd+1,phase:roundPlan.phase,half:roundPlan.half,roundInPhase:roundPlan.roundInPhase,roundInHalf:roundPlan.roundInHalf,otGroup:roundPlan.otGroup,
+      currentSideByTeam:cloneCsSides(sideByTeam),economyReset:Boolean(roundPlan.economyResetReason),economyResetReason:roundPlan.economyResetReason,
+      startMoneyByPlayer,buyTypeByTeam,
+      teamIdentityByPlayer:Object.fromEntries(RS.map(c=>[c.id,teamOfRosterId(c.id)])),
+      tacticOwnerByTeam:{[CS_TEAM_US]:tacticT?.id??tacticT?.name??null,[CS_TEAM_ENEMY]:originalTacticCT?.id??originalTacticCT?.name??null}};
     let planted=false,c4t=null,c4pos=null,smokes=[],tracers=[],muzzles=[];
     let mollys=[],throwables=[],droppedGuns=[],droppedBomb=null;
     let roundEnd=null,firstKill=false,openKill=null,roundKills={},roundDmg={},roundUtilDmg={},roundDeaths={},roundAst={},throwerByNadeId={},doorStates={};
     let contactCalled=false,defuseCalled=false,defuseProg=0;
     map.doors.forEach((d,i)=>doorStates[i]=false);
-    const ps=RS.map(c=>{
-      const e=econ[c.id];const buy=c.side==="t"?buyT:buyCT;const tactic=tac[c.side];const sp=sidePistol(c.side);
+    const ps=RS.map(rosterPlayer=>{
+      const teamId=teamOfRosterId(rosterPlayer.id),side=sideByTeam[teamId];
+      const c={...rosterPlayer,teamId,teamIdentity:teamId,side};
+      const e=econ[c.id];const buy=side==="t"?buyT:buyCT;const tactic=tac[side];const sp=sidePistol(side);
       let gun=e.gun,armor=e.armor,helmet=e.helmet,money=e.money,nades=[];
       if(buy==="pistol"){
         gun=sp;
@@ -490,10 +596,10 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
         if(!armor&&money>=ARMOR&&rand()<0.25){armor=true;helmet=true;money-=ARMOR;}
         if(gun===sp&&money>=300&&rand()<0.35){gun="p250";money-=300;}
       }else{ // full / force：負擔得起就買最好的，否則退階
-        const legal=(ROLE_GUNS[c.role]||["ak"]).filter(g=>c.side==="t"?g!=="m4"&&g!=="m4a4":g!=="ak");
+        const legal=(ROLE_GUNS[c.role]||["ak"]).filter(g=>side==="t"?g!=="m4"&&g!=="m4a4":g!=="ak");
         let bought=null;
         for(const g of legal){const cost=COST[g]??2700;if(money>=cost){bought=g;money-=cost;break;}}
-        if(!bought)for(const g of (c.side==="t"?["galil","mp9","tec9"]:["famas","mp9","p250"])){if(money>=(COST[g]||0)){bought=g;money-=COST[g]||0;break;}}
+        if(!bought)for(const g of (side==="t"?["galil","mp9","tec9"]:["famas","mp9","p250"])){if(money>=(COST[g]||0)){bought=g;money-=COST[g]||0;break;}}
         if(bought)gun=bought;else if(!gun)gun=sp;
         if(!armor&&money>=ARMOR){armor=true;helmet=true;money-=ARMOR;}
         for(const n of ["flash","smoke","he","molly"]){if(money>=NADE[n]&&rand()<0.7){nades.push(n);money-=NADE[n];}}
@@ -504,9 +610,9 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
       const tr=tactic.routes||{};
       const routeKeys=leadershipRouteKeys(c,tactic,tr,RKF,RS);
       const route=routeKeys.map(nk=>N[nk]).filter(Boolean);
-      const hasBomb=c.side==="t"&&c.role==="entry";
-      return{...c,pos:{...SPAWN[c.side==="ct"?"ct":"t"]},prevPos:{...SPAWN[c.side==="ct"?"ct":"t"]},
-        hp:100,armor,helmet,money,gun,k:0,d:0,a:0,hsCount:0,dmgDealt:0,dead:false,state:"BUY",va:c.side==="ct"?225:45,flash:0,
+      const hasBomb=side==="t"&&c.role==="entry";
+      return{...c,teamId,teamIdentity:teamId,side,pos:{...SPAWN[side==="ct"?"ct":"t"]},prevPos:{...SPAWN[side==="ct"?"ct":"t"]},
+        hp:100,armor,helmet,money,gun,k:0,d:0,a:0,hsCount:0,dmgDealt:0,dead:false,state:"BUY",va:side==="ct"?225:45,flash:0,
         route,routeIdx:0,routeT:0,hasBomb,reassigned:false,picking:0,shooting:0,nades,pistol:sp,buyType:buy};
     });
     for(let sec=0;sec<115;sec+=2){
@@ -537,8 +643,8 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
       if(sec===12){
         const tIgl=ps.find(p=>p.side==="t"&&p.role==="igl")||aliveT[0];
         const cIgl=ps.find(p=>p.side==="ct"&&p.role==="igl")||aliveCT[0];
-        if(tIgl)comms.push({side:"t",name:tIgl.name,text:tacticT.site==="a"?"預設打 A，控好中路跟我節奏":"下 B！香蕉壓上，記得丟煙"});
-        if(cIgl)comms.push({side:"ct",name:cIgl.name,text:tacticCT.site==="a"?"A 雙人守，注意中路 timing":"B 留一個，其餘抓資訊"});
+        if(tIgl)comms.push({side:"t",name:tIgl.name,text:attackTactic.site==="a"?"預設打 A，控好中路跟我節奏":"下 B！香蕉壓上，記得丟煙"});
+        if(cIgl)comms.push({side:"ct",name:cIgl.name,text:defenseTactic.site==="a"?"A 雙人守，注意中路 timing":"B 留一個，其餘抓資訊"});
       }
       // 先老化上一 tick 的槍火，讓本 tick 新生的曳光彈/槍口閃光能存入快照
       tracers=tracers.map(t=>({...t,tl:t.tl-1})).filter(t=>t.tl>0);
@@ -604,8 +710,8 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
           if(nt==="flash")casts.push(`⚡ ${p.name} 丟出閃光彈`);else if(nt==="he")casts.push(`💥 ${p.name} 高爆彈攻擊`);
         }
       });
-      if(sec===18)(tacticT.smokes||[]).forEach(sk=>{const n=N[sk];if(n)smokes.push({id:`s${rnd}${sk}`,pos:{...n},tl:18,age:0});});
-      if(sec===24)(tacticT.mollys||[]).forEach(mk=>{const n=N[mk];if(n)mollys.push({id:`m${rnd}${mk}`,pos:{...n},tl:8});});
+      if(sec===18)(attackTactic.smokes||[]).forEach(sk=>{const n=N[sk];if(n)smokes.push({id:`s${rnd}${sk}`,pos:{...n},tl:18,age:0});});
+      if(sec===24)(attackTactic.mollys||[]).forEach(mk=>{const n=N[mk];if(n)mollys.push({id:`m${rnd}${mk}`,pos:{...n},tl:8});});
       if(prog>0.15&&aliveT.length&&aliveCT.length){
         let pairs=[];aliveT.forEach(tp=>aliveCT.forEach(cp=>{const d=dist(tp.pos,cp.pos);const visibleCandidate=d<55&&!lineBlocked(tp.pos,cp.pos,walls)&&!smokeBlocks(tp.pos,cp.pos,smokes);const mapAwareT=mapAwareCanReadVisibleCandidate(tp,d,visibleCandidate);const mapAwareCT=mapAwareCanReadVisibleCandidate(cp,d,visibleCandidate);if(visibleCandidate&&(mapAwareT||mapAwareCT))pairs.push([tp,cp,d,mapAwareT,mapAwareCT]);}));
         // 排序用「有效距離」：狙擊架點專長遠距 → 加權使其搶得到交火名額（避免狙擊整局零參與）
@@ -699,19 +805,27 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
         players:ps.map(p=>({...p,pos:{...p.pos},prevPos:{...p.prevPos}})),
         smokes:smokes.map(s=>({...s})),mollys:mollys.map(m=>({...m})),tracers:tracers.map(t=>({...t})),muzzles:muzzles.map(m=>({...m})),
         throwables:throwables.map(tw=>({...tw,from:{...tw.from},to:{...tw.to}})),droppedGuns:droppedGuns.map(g=>({...g})),droppedBomb:droppedBomb?{...droppedBomb}:null,doorStates:{...doorStates},
-        events,casts,comms,ctScore,tScore,roundHist:[...roundHist],ecoT,ecoCT});
+        events,casts,comms,ctScore,tScore,roundHist:[...roundHist],ecoT,ecoCT,phase:roundPlan.phase,half:roundPlan.half,otGroup:roundPlan.otGroup,
+        roundInPhase:roundPlan.roundInPhase,currentSideByTeam:cloneCsSides(sideByTeam),roundStart:fi===roundFrameStart?roundMeta:null});
       fi++;if(roundEnd)break;
     }
     if(!roundEnd)roundEnd={winner:"ct",how:"time"};
-    if(roundEnd.winner==="ct")ctScore++;else tScore++;
+    const winnerSide=roundEnd.winner;
+    const winnerTeam=csTeamAtSide(sideByTeam,winnerSide);
+    finishCsRound(ruleState,winnerTeam);
+    ctScore=ruleState.score[CS_TEAM_ENEMY];tScore=ruleState.score[CS_TEAM_US];
     const _rnds=rnd+1;
-    const _rs=ps.map(p=>({name:p.name,side:p.side,role:p.fpsRole||p.role,k:roundKills[p.id]||0,d:roundDeaths[p.id]||0,a:roundAst[p.id]||0,dmg:Math.round(roundDmg[p.id]||0),adr:Math.round((p.dmgDealt||0)/_rnds),tk:p.k,td:p.d,ta:p.a})).sort((a,b)=>(b.k*100+b.dmg)-(a.k*100+a.dmg));
-    roundHist.push({winner:roundEnd.winner,how:roundEnd.how,mvp:_rs[0]&&(_rs[0].k>0||_rs[0].dmg>0)?_rs[0]:null,top:_rs.slice(0,4),tS:tScore,cS:ctScore});
+    const _rs=ps.map(p=>({name:p.name,side:p.side,teamId:p.teamId,role:p.fpsRole||p.role,k:roundKills[p.id]||0,d:roundDeaths[p.id]||0,a:roundAst[p.id]||0,dmg:Math.round(roundDmg[p.id]||0),adr:Math.round((p.dmgDealt||0)/_rnds),tk:p.k,td:p.d,ta:p.a})).sort((a,b)=>(b.k*100+b.dmg)-(a.k*100+a.dmg));
+    roundHist.push({...roundMeta,winner:winnerTeam===CS_TEAM_US?"t":"ct",winnerTeam,winnerSide,how:roundEnd.how,
+      mvp:_rs[0]&&(_rs[0].k>0||_rs[0].dmg>0)?_rs[0]:null,top:_rs.slice(0,4),tS:tScore,cS:ctScore,
+      nextCurrentSideByTeam:cloneCsSides(ruleState.currentSideByTeam),completed:ruleState.completed});
+    const finalFrame=frames[frames.length-1];
+    if(finalFrame){finalFrame.ctScore=ctScore;finalFrame.tScore=tScore;finalFrame.roundHist=[...roundHist];finalFrame.completed=ruleState.completed;finalFrame.winner=ruleState.winner;}
     // ── 跨回合累計每位選手數據 ──
     {
-      const wn=roundEnd.winner;
+      const wn=winnerSide;
       const mvpName=_rs[0]&&(_rs[0].k>0||_rs[0].dmg>0)?_rs[0].name:null;
-      const winSurv=ps.filter(x=>x.side===wn&&!x.dead);           // 勝方殘存者
+       const winSurv=ps.filter(x=>x.teamId===winnerTeam&&!x.dead); // 勝方殘存者（stable team）
       const clutchId=(winSurv.length===1&&(roundKills[winSurv[0].id]||0)>=1)?winSurv[0].id:null; // 1打多殘局
       if(openKill)agg[openKill.id].entry++;                        // 開局擊殺
       RS.forEach(c=>{const p=ps.find(x=>x.id===c.id);const A=agg[c.id];
@@ -724,30 +838,35 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
       });
     }
     // ── 回合經濟結算（勝負獎金、連敗補助、種包補助、存活保留武器）──
-    const winner=roundEnd.winner;
-    if(winner==="t"){tLoss=0;ctLoss=Math.min(ctLoss+1,5);}else{ctLoss=0;tLoss=Math.min(tLoss+1,5);}
+    const winner=winnerSide;
+    if(winnerTeam===CS_TEAM_US){lossStreak[CS_TEAM_US]=0;lossStreak[CS_TEAM_ENEMY]=Math.min(lossStreak[CS_TEAM_ENEMY]+1,5);}
+    else{lossStreak[CS_TEAM_ENEMY]=0;lossStreak[CS_TEAM_US]=Math.min(lossStreak[CS_TEAM_US]+1,5);}
     const LB=[1400,1900,2400,2900,3400];
     RS.forEach(c=>{const e=econ[c.id];const p=ps.find(x=>x.id===c.id);
       e.money=p?p.money:e.money;                       // 帶入本回合剩餘（含擊殺獎勵）
-      const won=c.side===winner;
-      e.money+= won?3250:(LB[Math.min((c.side==="t"?tLoss:ctLoss),5)-1]||1400);
-      if(c.side==="t"&&planted&&!won)e.money+=800;      // 種包補助
+      const teamId=teamOfRosterId(c.id),won=teamId===winnerTeam;
+      e.money+= won?3250:(LB[Math.min(lossStreak[teamId],5)-1]||1400);
+      if(c.side==="t"&&planted&&!won)e.money+=800; // 種包補助歸屬當回合攻方 team
       e.money=clamp(Math.round(e.money),0,16000);
       if(p&&!p.dead){e.gun=p.gun;e.armor=p.armor;e.helmet=p.helmet;} // 存活保留
       else{e.gun=null;e.armor=false;e.helmet=false;}
     });
+    rnd++;
   }
   // ── 賽後每位選手綜合數據 ──
   const _R=Math.max(1,ctScore+tScore);
   const players=RS.map(c=>{const A=agg[c.id];
     const kpr=A.k/_R,dpr=A.d/_R,apr=A.a/_R,adr=A.dmg/_R,kast=A.kastR/_R*100;
     const rating=Math.max(0,+(0.4+0.7*kpr+0.2*apr+0.0045*adr+0.003*kast-0.55*dpr).toFixed(3));
-    return{id:A.id,name:A.name,side:A.side,role:A.role,roleKey:A.roleKey,personality:A.personality,
+     return{id:A.id,name:A.name,side:ruleState.currentSideByTeam[A.teamId],teamId:A.teamId,teamIdentity:A.teamId,role:A.role,roleKey:A.roleKey,personality:A.personality,
       k:A.k,d:A.d,a:A.a,adr:Math.round(adr),hs:A.hs,hsPct:A.k?Math.round(A.hs/A.k*100):0,
       kast:Math.round(kast),mvpRounds:A.mvpR,clutches:A.clutch,entryKills:A.entry,utilDmg:Math.round(A.utilDmg),rating};
   });
   const mvp=[...players].sort((a,b)=>b.rating-a.rating||b.k-a.k)[0]||null;
-  return{frames,highlights,roundHist,ctScore,tScore,mapKey,players,mvp,rounds:_R};
+  return{frames,highlights,roundHist,ctScore,tScore,mapKey,players,mvp,rounds:_R,
+    completed:ruleState.completed,winner:ruleState.winner,phase:ruleState.phase,regulationRounds:ruleState.regulationRounds,
+    overtimeGroups:ruleState.otGroup,sideChanges:ruleState.sideChanges,economyEvents,halftime:ruleState.sideChanges.find(x=>x.reason==="halftime")??null,
+    currentSideByTeam:cloneCsSides(ruleState.currentSideByTeam)};
 }
 
 // ── 組裝賽後結果（給主遊戲的 recordMatch / 賽後成長 / 數據面板）──────────
@@ -755,7 +874,8 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
 function stableResultId(sim, seed, tacticT, tacticCT) {
   const input = JSON.stringify([
     seed, sim.mapKey, tacticT?.id ?? tacticT?.name ?? null, tacticCT?.id ?? tacticCT?.name ?? null,
-    sim.ctScore, sim.tScore, sim.roundHist, sim.players.map((p) => [p.id, p.side, p.k, p.d, p.dmg, p.rating]),
+    sim.completed, sim.winner, sim.ctScore, sim.tScore, sim.roundHist,
+    sim.players.map((p) => [p.id, p.teamId ?? csRosterTeamId(p), p.side, p.k, p.d, p.dmg, p.rating]),
   ]);
   let h = 0x811c9dc5;
   for (let i = 0; i < input.length; i++) { h ^= input.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
@@ -763,18 +883,19 @@ function stableResultId(sim, seed, tacticT, tacticCT) {
 }
 function buildMatchResult(sim,opts={}){
   const{tacticT,tacticCT,tName="德國海豹",ctName="Compulsary",date=null,seed=0,matchId=null}=opts;
-  const win=sim.tScore>sim.ctScore;
-  const ourPlayers=sim.players.filter(p=>p.side==="t");
-  const theirPlayers=sim.players.filter(p=>p.side==="ct");
+  const win=sim.winner===CS_TEAM_US||(sim.winner==null&&sim.tScore>sim.ctScore);
+  const ourPlayers=sim.players.filter(p=>(p.teamId??csRosterTeamId(p))===CS_TEAM_US);
+  const theirPlayers=sim.players.filter(p=>(p.teamId??csRosterTeamId(p))===CS_TEAM_ENEMY);
   const ourMvp=[...ourPlayers].sort((a,b)=>b.rating-a.rating||b.k-a.k)[0]||null;
   const topFraggers=[...sim.players].sort((a,b)=>b.k-a.k).slice(0,3);
   return{
     id:matchId ?? stableResultId(sim, seed, tacticT, tacticCT),mode:"CS",map:sim.mapKey,date,
-    win,scoreT:sim.tScore,scoreCT:sim.ctScore,tName,ctName,
+    completed:sim.completed,winner:sim.winner,win,scoreT:sim.tScore,scoreCT:sim.ctScore,tName,ctName,
     tactic:{ours:tacticT?.name||null,theirs:tacticCT?.name||null,ourType:tacticT?.type||null,theirType:tacticCT?.type||null},
     players:sim.players,ourPlayers,theirPlayers,
     mvp:sim.mvp,ourMvp,topFraggers,
-    rounds:sim.roundHist,roundCount:sim.rounds,
+    rounds:sim.roundHist,roundCount:sim.rounds,regulationRounds:sim.regulationRounds,overtimeGroups:sim.overtimeGroups,
+    sideChanges:sim.sideChanges,economyEvents:sim.economyEvents,halftime:sim.halftime,
     fanGain:0,prizeGain:0,xpGain:0,
   };
 }
@@ -1443,10 +1564,9 @@ function fadeOccluders(st,frame,W){
    HUD 子元件
    ═══════════════════════════════════════════════════════════════════════ */
 function ScoreBar({frame,sim,fIdx}){
-  const tScore=frame.tScore+(frame.roundHist.filter(r=>r.winner==="t").length>frame.tScore?0:0); // 顯示當前已贏局數
   const ct=frame.ctScore,t=frame.tScore;
   const timer=frame.buyP?"購買":(frame.planted?`💣 ${(frame.c4t??0)*2}s`:fmtT(115-frame.roundSec));
-  const pip=(r,i)=>(<div key={i} style={{width:9,height:11,borderRadius:2,background:r?(r.winner==="ct"?"rgba(56,189,248,0.7)":"rgba(251,146,60,0.7)"):"rgba(255,255,255,0.07)",border:`0.5px solid ${r?(r.winner==="ct"?C.ct:C.t):"transparent"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:6}}>{r?(r.how==="bomb"?"💣":r.how==="defuse"?"✂":r.how==="time"?"⏱":""):""}</div>);
+  const pip=(r,i)=>{const side=r?.winnerSide??(r?.winner==="ct"?"ct":"t");return(<div key={i} style={{width:9,height:11,borderRadius:2,background:r?(side==="ct"?"rgba(56,189,248,0.7)":"rgba(251,146,60,0.7)"):"rgba(255,255,255,0.07)",border:`0.5px solid ${r?(side==="ct"?C.ct:C.t):"transparent"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:6}}>{r?(r.how==="bomb"?"💣":r.how==="defuse"?"✂":r.how==="time"?"⏱":""):""}</div>);};
   return(
     <div style={{display:"flex",flexDirection:"column",gap:5}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -1467,7 +1587,7 @@ function ScoreBar({frame,sim,fIdx}){
           <span style={{color:C.ctL,fontSize:13,fontWeight:800,letterSpacing:"0.02em"}}>{CT_NAME}</span>
         </div>
       </div>
-      <div style={{display:"flex",gap:2,justifyContent:"center"}}>{Array.from({length:15}).map((_,i)=>pip(frame.roundHist[i],i))}</div>
+      <div style={{display:"flex",gap:2,rowGap:2,justifyContent:"center",flexWrap:"wrap",maxWidth:310,margin:"0 auto"}}>{Array.from({length:Math.max(24,frame.roundHist.length)}).map((_,i)=>pip(frame.roundHist[i],i))}</div>
     </div>
   );
 }
@@ -1511,12 +1631,13 @@ function PlayerRow({p,selected,onClick}){
 }
 
 function RoundOverlay({result,frame,onClose}){
-  const winSide=result.winner;
+  const winSide=result.winnerSide??(result.winner==="ct"?"ct":"t");
+  const winTeam=result.winnerTeam??(result.winner==="t"?CS_TEAM_US:CS_TEAM_ENEMY);
   return(
     <div style={{position:"absolute",inset:0,zIndex:60,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(4,6,12,0.55)",backdropFilter:"blur(3px)",animation:"fadeIn 0.25s"}} onClick={onClose}>
       <div style={{background:"rgba(13,17,25,0.96)",border:`1px solid ${winSide==="ct"?C.ct:C.t}66`,borderRadius:14,padding:"16px 20px",minWidth:260,boxShadow:"0 20px 60px rgba(0,0,0,0.6)"}}>
         <div style={{textAlign:"center",marginBottom:10}}>
-          <div style={{color:winSide==="ct"?C.ctL:C.tL,fontSize:22,fontWeight:900,letterSpacing:"0.05em"}}>{winSide==="ct"?CT_NAME:T_NAME} 拿下回合</div>
+          <div style={{color:winSide==="ct"?C.ctL:C.tL,fontSize:22,fontWeight:900,letterSpacing:"0.05em"}}>{winTeam===CS_TEAM_US?T_NAME:CT_NAME} 拿下回合</div>
           <div style={{color:C.gray,fontSize:10,marginTop:2}}>{result.how==="bomb"?"💣 炸彈引爆":result.how==="defuse"?"✂️ 成功拆彈":result.how==="elim"?"☠️ 全員淘汰":"⏱️ 時間結束"} · R{frame.rnd+1}</div>
         </div>
         <div style={{display:"flex",gap:10,justifyContent:"center",alignItems:"center"}}>
@@ -1688,7 +1809,7 @@ function EsportsFPS3D({
 
   const seek=useCallback(v=>{setFIdx(clamp(v,0,total-1));seekNonce.current++;},[total]);
   const selP=selected?frame?.players.find(p=>p.id===selected):null;
-  const matchOver=Math.max(sim.ctScore,sim.tScore)>=8&&fIdx>=total-1;
+  const matchOver=Boolean(sim.completed)&&fIdx>=total-1;
   const quickFinish=useCallback(()=>{if(matchOver)return;setQuickFinishing(true);setPlaying(false);setFIdx(total-1);},[matchOver,total]);
   // 播放結束 → 回傳賽後結果給主遊戲（每場僅一次）
   useEffect(()=>{
