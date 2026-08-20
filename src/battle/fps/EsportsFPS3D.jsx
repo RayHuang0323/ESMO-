@@ -444,9 +444,14 @@ const CS_TEAM_US="us",CS_TEAM_ENEMY="enemy";
 const CS_REGULATION_ROUNDS_PER_HALF=12;
 const CS_REGULATION_ROUNDS=CS_REGULATION_ROUNDS_PER_HALF*2;
 const CS_REGULATION_WIN_SCORE=13;
+const CS_REGULATION_START_MONEY=800;
 const CS_OT_GROUP_ROUNDS=6;
 const CS_OT_HALF_ROUNDS=3;
 const CS_OT_GROUP_WIN_ROUNDS=4;
+const CS_OT_START_MONEY=12500;
+
+function csEconomyResetMoney(reason){return reason?.startsWith("ot-group-")?CS_OT_START_MONEY:CS_REGULATION_START_MONEY;}
+function csIsPistolReset(reason){return reason==="match-start"||reason==="halftime";}
 
 function csRosterTeamId(player){
   return player?.teamId??player?.teamIdentity??(player?.side==="t"?CS_TEAM_US:CS_TEAM_ENEMY);
@@ -535,12 +540,13 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
   const rosterTeamById=new Map(RS.map(c=>[c.id,csRosterTeamId(c)]));
   const teamOfRosterId=id=>rosterTeamById.get(id)??CS_TEAM_US;
   const ruleState=createCsRuleState();
-  const econ={};RS.forEach(c=>econ[c.id]={money:800,gun:null,armor:false,helmet:false});
+  const econ={};RS.forEach(c=>econ[c.id]={money:CS_REGULATION_START_MONEY,gun:null,armor:false,helmet:false});
   const economyEvents=[];
   const resetEconomy=reason=>{
-    RS.forEach(c=>{econ[c.id]={money:800,gun:null,armor:false,helmet:false};});
+    const resetMoney=csEconomyResetMoney(reason);
+    RS.forEach(c=>{econ[c.id]={money:resetMoney,gun:null,armor:false,helmet:false};});
     lossStreak[CS_TEAM_US]=0;lossStreak[CS_TEAM_ENEMY]=0;
-    economyEvents.push({reason,round:ruleState.roundsPlayed+1,phase:ruleState.phase,otGroup:ruleState.otGroup,startMoneyByPlayer:Object.fromEntries(RS.map(c=>[c.id,800]))});
+    economyEvents.push({reason,round:ruleState.roundsPlayed+1,phase:ruleState.phase,otGroup:ruleState.otGroup,resetMoney,pistolRound:csIsPistolReset(reason),startMoneyByPlayer:Object.fromEntries(RS.map(c=>[c.id,resetMoney]))});
   };
   const lossStreak={[CS_TEAM_US]:0,[CS_TEAM_ENEMY]:0};
   // 跨回合累計的每位選手數據（給賽後 MatchResult / 成長機制 / 數據面板使用）
@@ -560,7 +566,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
     const tacEdge=tacticEdge(attackTactic,defenseTactic); // 戰術 ownership 隨 stable team，攻守角色由 currentSide 決定
     // ── 賽前經濟決策（全買 / 強起 / 省錢 / 手槍局）──
     const teamAvg=side=>RS.filter(c=>sideByTeam[teamOfRosterId(c.id)]===side).reduce((s,c)=>s+econ[c.id].money,0)/5;
-    const pistolRound=Boolean(roundPlan.economyResetReason);
+    const pistolRound=csIsPistolReset(roundPlan.economyResetReason);
     const decideBuy=(side,my,en)=>{if(pistolRound)return"pistol";const m=teamAvg(side),behind=en-my;if(m>=4200)return"full";if(m<2200)return"eco";if(behind>=2&&m>=2700)return"force";if(m>=3700)return"full";return"eco";};
     const buyT=decideBuy("t",tScore,ctScore),buyCT=decideBuy("ct",ctScore,tScore);
     const ecoT=buyT==="eco"||buyT==="pistol",ecoCT=buyCT==="eco"||buyCT==="pistol";
@@ -569,9 +575,10 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
     const startMoneyByPlayer=Object.fromEntries(RS.map(c=>[c.id,econ[c.id].money]));
     const buyTypeByTeam={[attackTeam]:buyT,[defenseTeam]:buyCT};
     const roundFrameStart=fi;
+    const economyResetMoney=roundPlan.economyResetReason?csEconomyResetMoney(roundPlan.economyResetReason):null;
     const roundMeta={round:rnd+1,phase:roundPlan.phase,half:roundPlan.half,roundInPhase:roundPlan.roundInPhase,roundInHalf:roundPlan.roundInHalf,otGroup:roundPlan.otGroup,
       currentSideByTeam:cloneCsSides(sideByTeam),economyReset:Boolean(roundPlan.economyResetReason),economyResetReason:roundPlan.economyResetReason,
-      startMoneyByPlayer,buyTypeByTeam,
+      economyResetMoney,pistolRound,startMoneyByPlayer,buyTypeByTeam,
       teamIdentityByPlayer:Object.fromEntries(RS.map(c=>[c.id,teamOfRosterId(c.id)])),
       tacticOwnerByTeam:{[CS_TEAM_US]:tacticT?.id??tacticT?.name??null,[CS_TEAM_ENEMY]:originalTacticCT?.id??originalTacticCT?.name??null}};
     let planted=false,c4t=null,c4pos=null,smokes=[],tracers=[],muzzles=[];

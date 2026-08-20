@@ -10532,3 +10532,17 @@ CS 引擎原本的產品規則是 first-to-8，不是 first-to-7：`37c07ef` 起
 ### Contract / ownership
 
 - `CsMatchResult`、`settleCsMatch` 與 Competition／FixtureOutcome contract 未修改；沒有觸碰 SeasonState、Competition、Event、Fixture、Ranking、亞洲賽季、BO1／BO3、Claude branch 或 MOBA。
+
+## CS MR12 OT 經濟規則更正（2026-08-21）
+
+### Root cause / minimal fix
+
+- 追查後確認上一版 `resetEconomy(reason)` 對所有帶有 reset reason 的回合都寫入 `$800`，`pistolRound` 也以「是否有 reset reason」判定；所以 OT 原本是 `$800 + pistol`。
+- 本次只在 `src/battle/fps/EsportsFPS3D.jsx` 增加 regulation／OT 起始資金常數與 reason classifier：`match-start`／`halftime` 為 `$800 + pistol`，`ot-group-*` 為 `$12,500 + non-pistol`。
+- OT period 的 6 局、3 局換邊、3:3 下一組、stable team identity／score／winner 及原本 loss-streak／一般經濟公式均保留；沒有改傷害、AI、武器或賽事 contract。
+
+### Verification
+
+- `check_cs_match_completion.mjs` 由 `31/31` 擴充為 `34/34 PASS`，新增 regulation opening `$800`，並以 rule fixture 與 live simulator 確認 halftime `$800` pistol、第一組 OT／換邊後／下一組 OT 均 `$12,500` non-pistol。
+- CS23 `28/28`、R54 PASS、R56 PASS、R57 PASS（120 matches，deterministic repeat=1）、`verify.mjs --only=cs_match_completion` `1/1`、Vite build（2702 modules）均 PASS。
+- browser `3/3 PASS`：desktop 1920×1080 natural、desktop 1366×768 Quick Finish、390×844 mobile Quick Finish；均到 `1002/1002`、無水平溢位、console/page error `0`。390px 仍是 CDP emulation，非真機觸控／FPS 驗收。
