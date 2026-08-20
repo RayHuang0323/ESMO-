@@ -10599,3 +10599,42 @@ node tools/check_competition_release_gate.mjs
 `check_cs_schema_v11` 為本輪新增。**刻意不把它加進 Competition Release Gate**：
 規格 §3.4 把「Release Gate 的 11 個區段與其硬編碼通過數」列為不得倒退，
 加成 12 區段會動到那個數字。它改由 `docs/ai/跨模型交接流程.md` §13 登記為 M0 的守門 verifier。
+
+### M0 closure：真實存檔的瀏覽器 smoke（2026-08-21）
+
+隔離 Chrome（`launchChrome` 每次開全新 temp user-data-dir）＋ 本機 Vite，
+種入 Ray 匯出的**真實 v10 存檔**（`schemaVersion=10`、德國海豹 `team:97987358`、
+第 12 天、5 名選手、$1,970,000、140 場賽程、`teamDevelopment.ranks.general_training_flow=1`），
+真 reload 走完整 document 生命週期，讓 App 自己跑 v10 → v11 遷移。
+
+```
+M0 real-save smoke: 20/20 PASS
+  真實 v10 存檔在瀏覽器正常載入            rootChildren=1 buttons=16
+  schema 升到 11                            schemaVersion=11
+  competitionByMode.moba 正常               fixtures=140 digest=49,598 bytes
+  competitionByMode.cs 為 null
+  competition 別名與 canonical 同一參考
+  玩家資料逐值保留                          team/players/funds/days 全同
+  Team Development 資料逐值保留             availablePoints=0 spent=1 ranks={general_training_flow:1}
+  competitionView() 積分榜 8 列、進度存在
+  賽事頁在真實 UI 開得起來（渲染出積分榜）
+  戰隊發展頁在真實 UI 開得起來              development-route-summary 出現
+  ensureCompetitionSeason("cs") 不建立賽季、cs 仍 null
+  competitionView("cs") 為空且不回 MOBA 歷史
+  碰 cs 之後 moba 與 seasonStateV2 逐值不變
+  未知 mode 在真實 runtime 丟例外
+  save 後 payload 帶 canonical、cs=null、別名仍在   180,203 bytes
+  save → reload 後 13 個比對欄位全部相同
+  reload 後 cs 仍 null、別名仍指向 canonical
+  reload 後賽事頁仍然開得起來
+  console error = 0（總 12 行，warning 0）
+  page uncaught exception = 0
+```
+
+- 依指示**未跑完整賽季**（Q7 lifecycle 已由 Release Gate 的 `q6` / `season_recap` 驗過）。
+- smoke 腳本是一次性的，放在 scratchpad **不進 repo**：它依賴 worktree 外的
+  `C:\Users\ifikn\Downloads\esmo-save.json`，而 repo 慣例明文禁止 verifier 往 worktree 外找 fixture。
+- 過程中修掉一條**腳本自己的**錯誤斷言（`raw.competitionByMode?.cs ?? "missing"` 把合法的
+  `null` 也吃成 "missing"）。產品行為從頭到尾正確：同一輪的 reload 檢查直接讀取，量到的就是 `null`。
+- 當機殘留的 6 個 0-byte 檔案已刪除（刪除前逐一確認 size=0 且 untracked）。
+- payload duplication 已記為相容性技術債，見 `08_目前待辦與風險.md`，M0 不重構。
