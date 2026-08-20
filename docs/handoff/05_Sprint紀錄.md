@@ -10497,3 +10497,20 @@ dialog」。CDP harness 可以自己接 `Page.javascriptDialogOpening`，因此�
 
 **Q7 Season / Competition MVP：CLOSED。**
 舊存檔相容性是先前唯一未覆蓋的一層，現在有真實 lifecycle 的實跑證據。
+
+## CS 終局完成邊界修復（2026-08-21）
+
+### Audit 結論
+
+CS 引擎原本的產品規則是 first-to-8，不是 first-to-7：`37c07ef` 起的模擬迴圈以最高分 `<8` 為繼續條件，`matchOver` 也以最高分 `>=8` 為完成條件；既有 `check_cs23` fixture 使用 8:3／5:8，CS reward margin 也以 8 為滿分基準。`ROUNDS=13` 是上限遺漏，無法覆蓋 6:6 之後最多三局的 first-to-8 決勝空間。
+
+### 實作與防回歸
+
+- `src/battle/fps/EsportsFPS3D.jsx`：只將 simulation 上限改為 15；不動任何回合內程式、RNG call site、傷害、經濟、AI、槍械、地圖、戰術或結果契約。
+- `tools/check_cs_match_completion.mjs`：以固定 6:6 fixture 重現舊 R13 最後 frame 7:6 不完成，並驗證修復後 8:7、natural／Quick Finish 共用 `matchOver`、`onComplete` exactly once、CsMatchResult／settlement chain。
+- `tools/verify.mjs` 新增 `cs_match_completion` segment；未降低既有 assertion、未 rebaseline。
+
+### Browser smoke closure（2026-08-21）
+
+- `tools/browser_check_cs_completion.mjs` 以隔離 Chrome／本機 Vite 走正式 Dashboard → CS 賽前 → 選圖 → 戰術 → 對戰 → CsMatchResult 流程：1920×1080 自然 4×播放 PASS、1366×768 Quick Finish PASS、390×844 Quick Finish PASS。
+- 三個 scenario 均由 `407/407` 最後 frame 進入正式賽後報告；桌面與 390px 均無水平溢位，console/page error 均為 0。Vite／Chrome 已由 harness finally 清理；390px 為 CDP device emulation，仍不等同真機觸控／FPS。

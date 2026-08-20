@@ -453,7 +453,9 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
   const callouts=map.callouts||[];
   const nearCO=pos=>{let best=null,bd=1e9;for(const c of callouts){const d=Math.hypot(c.x-pos.x,c.y-pos.y);if(d<bd){bd=d;best=c;}}return best?best.l:(pos.x<35?"左路":pos.x>65?"右路":"中路");};
   const frames=[],highlights=[],roundHist=[];
-  const ROUNDS=13;let ctScore=0,tScore=0,fi=0;
+  // CS 訓練賽是 first-to-8；13 回合不足以涵蓋 6:6 後的決勝空間。
+  // 最多 15 回合仍保留既有先到 8 分即停的行為，不改任何回合內 RNG／平衡。
+  const ROUNDS=15;let ctScore=0,tScore=0,fi=0;
   // 持續性經濟：金錢、存活保留的槍/甲、連敗計數
   const econ={};RS.forEach(c=>econ[c.id]={money:800,gun:null,armor:false,helmet:false});
   // 跨回合累計的每位選手數據（給賽後 MatchResult / 成長機制 / 數據面板使用）
