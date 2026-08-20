@@ -78,7 +78,7 @@ const SORTS = {
   dmg: (p) => p.dmg || 0, heal: (p) => p.heal || 0, td: (p) => p.twrDmg || 0, part: (p, snap) => participation(p, snap),
 };
 
-export default function BattleScoreboard({ roster = null, blueName = "德國海豹", blueEmoji = "🦭", redName = "赤焰軍團", redEmoji = "🔥" }) {
+export default function BattleScoreboard({ roster = null, blueName = "德國海豹", blueEmoji = "🦭", redName = "赤焰軍團", redEmoji = "🔥", style = null }) {
   const snap = useGameStore((s) => s.snapshot);
   const mvp = useBattleStore((s) => s.mvp);
   const [sortKey, setSortKey] = useState("rtg");
@@ -111,7 +111,7 @@ export default function BattleScoreboard({ roster = null, blueName = "德國海�
   );
 
   return (
-    <div style={{ background: "rgba(8,14,24,0.92)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: "10px 4px 4px", width: 452, fontFamily: "system-ui,sans-serif" }}>
+    <div style={{ background: "rgba(8,14,24,0.92)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: "10px 4px 4px", width: 452, fontFamily: "system-ui,sans-serif", ...style }}>
       <Head />
       <Team players={side("blue")} color={GC.blueL} label={blueName} emoji={blueEmoji} />
       <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "2px 8px 8px" }} />

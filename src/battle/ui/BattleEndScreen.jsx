@@ -136,12 +136,14 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
   );
 
   return (
-    <div style={{ position: "absolute", inset: 0, zIndex: 14, display: "flex", flexDirection: "column", alignItems: "center",
-      justifyContent: "center", gap: 11, background: "rgba(4,8,16,0.8)", backdropFilter: "blur(5px)", overflow: "auto", padding: 14, fontFamily: "system-ui,sans-serif" }}>
+    <div data-testid="battle-end-screen" style={{ position: "absolute", inset: 0, zIndex: 14, display: "flex", flexDirection: "column", alignItems: "center",
+      // Result content is taller than the fixed battle viewport on narrow/short screens.
+      // Start the scrollable overlay at the top so flex centering cannot hide both ends.
+      justifyContent: "flex-start", gap: 11, background: "rgba(4,8,16,0.8)", backdropFilter: "blur(5px)", overflow: "auto", overflowX: "hidden", padding: 14, boxSizing: "border-box", fontFamily: "system-ui,sans-serif" }}>
       <style>{KEYFRAMES}</style>
 
       {/* Victory/Defeat Banner + 掃光 */}
-      <div style={{ animation: "esmoEndPop 0.7s cubic-bezier(0.2,0.9,0.3,1.2) both", textAlign: "center", position: "relative", overflow: "hidden", padding: "4px 34px" }}>
+      <div style={{ animation: "esmoEndPop 0.7s cubic-bezier(0.2,0.9,0.3,1.2) both", textAlign: "center", position: "relative", overflow: "hidden", maxWidth: "100%", boxSizing: "border-box", flexShrink: 0, padding: "4px 34px" }}>
         <div style={{ fontSize: 56, fontWeight: 900, letterSpacing: "0.14em", color: titleColor, animation: "esmoGlow 2.2s infinite" }}>{title}</div>
         <div style={{ position: "absolute", top: 0, left: 0, width: "30%", height: "100%", background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent)", animation: "esmoSweep 1.6s 0.4s ease both" }} />
         <div style={{ fontSize: 13.5, fontWeight: 800, color: sideC(win), marginTop: 1, fontFamily: MONO }}>
@@ -150,7 +152,7 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
       </div>
 
       {phase >= 1 && (
-        <div style={{ display: "flex", gap: 11, alignItems: "flex-start", flexWrap: "wrap", justifyContent: "center", animation: "esmoEndRise 0.5s ease both" }}>
+        <div style={{ display: "flex", gap: 11, alignItems: "flex-start", flexWrap: "wrap", justifyContent: "center", width: "100%", maxWidth: "100%", minWidth: 0, boxSizing: "border-box", flexShrink: 0, animation: "esmoEndRise 0.5s ease both" }}>
           {/* 左欄：MVP + 六榜 */}
           <div style={{ display: "flex", flexDirection: "column", gap: 9, width: 226 }}>
             {mvp && (
@@ -168,7 +170,7 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
             )}
             <Panel title="最佳數據">
               {stats.map((s2, i) => (
-                <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "2px 0" }}>
+                <div key={`${s2.id}-${s2.label}-${i}`} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "2px 0" }}>
                   <span style={{ color: "rgba(255,255,255,0.7)" }}>{s2.icon} {s2.label}</span>
                   <span style={{ fontFamily: MONO, fontWeight: 800, color: sideC(s2.side) }}>{roster?.[s2.id]?.player ?? s2.id.toUpperCase()} {s2.val}</span>
                 </div>
@@ -177,20 +179,21 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
           </div>
 
           {/* 中欄：完整記分板 */}
-          <BattleScoreboard roster={roster} blueName={blueName} redName={redName} />
+          <BattleScoreboard roster={roster} blueName={blueName} redName={redName}
+            style={{ width: "min(452px, 100%)", maxWidth: "100%", minWidth: 0, boxSizing: "border-box" }} />
 
           {/* 成長欄：本場 EXP / 升級 / 能力提升 / Mastery（Sprint08【F】）*/}
           {lastDetail && (
             <div style={{ display: "flex", flexDirection: "column", gap: 9, width: 250 }}>
               <Panel title="英雄成長（點擊看 Hero Page）">
-                {lastDetail.filter((d) => d.playerId.startsWith(homeSide === "blue" ? "b" : "r")).map((d) => {
+                {lastDetail.filter((d) => d.playerId.startsWith(homeSide === "blue" ? "b" : "r")).map((d, i) => {
                   const r = roster?.[d.playerId];
                   const h = progress[d.heroId];
                   const up = d.levelsGained > 0;
                   const dTough = (d.attrsAfter.toughMult / d.attrsBefore.toughMult - 1) * 100;
                   const dPower = (d.attrsAfter.powerMult / d.attrsBefore.powerMult - 1) * 100;
                   return (
-                    <div key={d.playerId} onClick={() => setHeroPage({ heroId: d.heroId, heroName: heroById(d.heroId)?.zh ?? r?.hero ?? d.heroId, playerName: r?.player ?? d.playerId.toUpperCase(), side: homeSide, playerId: d.playerId })}
+                    <div key={`${d.playerId}-${d.heroId}-${d.levelBefore}-${i}`} onClick={() => setHeroPage({ heroId: d.heroId, heroName: heroById(d.heroId)?.zh ?? r?.hero ?? d.heroId, playerName: r?.player ?? d.playerId.toUpperCase(), side: homeSide, playerId: d.playerId })}
                       style={{ cursor: "pointer", pointerEvents: "auto", padding: "4px 6px", borderRadius: 7, marginBottom: 2, background: up ? "rgba(250,204,21,0.1)" : "rgba(255,255,255,0.03)", border: up ? "1px solid rgba(250,204,21,0.35)" : "1px solid transparent" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11.5, gap: 6 }}>
                         <span style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0, fontWeight: 800, color: "#e5e7eb" }}>
@@ -230,7 +233,7 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
               return (
                 <Panel title={`戰術執行 · ${result.tactic.tacticName}`}>
                   {rows.map((r) => (
-                    <div key={r.key} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "2px 0" }}>
+                    <div key={`${r.key}-${r.label}`} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "2px 0" }}>
                       <span style={{ color: "rgba(255,255,255,0.7)" }}>{r.hit ? "✅" : "▫️"} {r.label}</span>
                       <span style={{ fontFamily: MONO, fontWeight: 800, color: r.hit ? "#86efac" : "rgba(255,255,255,0.55)" }}>{r.val}<span style={{ color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>/{r.goal}</span></span>
                     </div>
@@ -258,7 +261,7 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
               return (
                 <Panel title={`能力／天賦執行 · ${rows.length} 人注入`}>
                   {rows.map((r) => (
-                    <div key={r.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "2px 0" }}>
+                    <div key={`stats-${r.id}`} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "2px 0" }}>
                       <span style={{ color: "rgba(255,255,255,0.7)", fontFamily: MONO }}>{r.name}</span>
                       <span style={{ fontFamily: MONO, fontWeight: 800, color: "rgba(255,255,255,0.8)" }}>
                         <span style={{ color: "#93c5fd" }}>撤{r.ex.retreats ?? 0}</span>
@@ -291,7 +294,7 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
               return (
                 <Panel title="🛠 戰鬥品質（P0-3 · 僅測試模式）">
                   {rows.map((r) => (
-                    <div key={r.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, padding: "2px 0", gap: 6, flexWrap: "wrap" }}>
+                    <div key={`quality-${r.id}`} style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, padding: "2px 0", gap: 6, flexWrap: "wrap" }}>
                       <span style={{ color: "rgba(255,255,255,0.7)", fontFamily: MONO }}>{r.name}</span>
                       <span style={{ fontFamily: MONO, fontWeight: 800 }}>
                         <span style={{ color: "#86efac" }}>補刀 {rate(r.ex.csHit, r.ex.csAttempt)}</span>
@@ -316,8 +319,8 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
             <Panel title="金錢差走勢（🔵領先在上）"><GoldGraph series={series} /></Panel>
             <Panel title="推塔進度"><TowerGraph series={series} /></Panel>
             <Panel title="戰報摘要">
-              {highlights.map((ev) => (
-                <div key={ev.id} style={{ display: "flex", gap: 5, fontSize: 10.5, lineHeight: 1.45 }}>
+              {highlights.map((ev, i) => (
+                <div key={`${ev.id ?? ev.type}-${ev.t ?? "unknown"}-${ev.side ?? "unknown"}-${i}`} style={{ display: "flex", gap: 5, fontSize: 10.5, lineHeight: 1.45 }}>
                   <span>{ICON[ev.type] || "•"}</span>
                   <span style={{ color: "rgba(255,255,255,0.4)", fontFamily: MONO }}>{fmtT(ev.t)}</span>
                   <span style={{ color: sideC(ev.side) }}>{ev.text}</span>
@@ -331,7 +334,7 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
       {heroPage && <HeroDetailPanel {...heroPage} onClose={() => setHeroPage(null)} />}
 
       {phase >= 1 && (
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", animation: "esmoEndRise 0.5s 0.15s ease both" }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%", maxWidth: "100%", minWidth: 0, boxSizing: "border-box", flexShrink: 0, animation: "esmoEndRise 0.5s 0.15s ease both" }}>
           {/* S26：觀看重播 —— 只有「這一場」的重播存在才可點；不存在 → 明確標示不可用，
               不白畫面、不重新模擬另一場。以 overlay 開啟（不走 AppShell 路由：
               離開 battle 畫面會使 GameView 重掛載 → autoStart 直接開新的一場）。 */}
@@ -345,7 +348,7 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
             </span>
           )}
           {onContinue && (
-            <button onClick={onContinue} style={{ background: "linear-gradient(135deg,#3b82f6,#1d4ed8)", border: "1px solid #93c5fd", borderRadius: 10, padding: "10px 30px", color: "#fff", fontWeight: 900, fontSize: 14, cursor: "pointer" }}>
+            <button data-testid="battle-result-continue" onClick={onContinue} style={{ background: "linear-gradient(135deg,#3b82f6,#1d4ed8)", border: "1px solid #93c5fd", borderRadius: 10, padding: "10px 30px", color: "#fff", fontWeight: 900, fontSize: 14, cursor: "pointer" }}>
               查看賽後結算 →
             </button>
           )}
