@@ -78,17 +78,19 @@ const GATES = [
     shape: /20\/20 通過/, note: "季後賽／封存／換季 生命週期", timeout: 900_000, ports: [5311, 9333],
   },
   {
+    //  Q7f：賽季總結。守的是「這一季結束了」那一頁本身——榮耀／年度總決賽／
+    //  巡迴／官方聯賽／獎金五個區塊逐值來自既有 truth，CTA 全 DOM 恰好一顆
+    //  且排在本季所有內容之後，換季後 Recap 與 CTA 一起消失。
+    id: "season_recap", script: "tools/browser_check_season_recap_ui.mjs",
+    shape: /19\/19 通過/, note: "賽季總結 Season Recap UI", timeout: 900_000, ports: [5399, 9399],
+  },
+  {
     id: "build", cmd: "npm", args: ["run", "build"],
     shape: /built in/, note: "production build", timeout: 600_000,
   },
 ];
 
 // ── 尚未納入 ───────────────────────────────────────────────────────────────
-//
-//  `browser_check_season_recap_ui`（Q7f 賽季總結，19/19）
-//    Q7f 分支 `q7a/3b-multi-event` 尚未整合進 main ⇒ 本分支沒有這支腳本。
-//    整合時只需在上面的 GATES 加一列，並把它的 fixture 路徑從 `../../`
-//    改成 `review/fixtures/competition/`（見該目錄 README）。
 //
 //  `check_season_state_v2_migration_q7b`（verify.mjs 期望 35/35）
 //    ⚠ **已知 verifier debt，刻意不納入。**

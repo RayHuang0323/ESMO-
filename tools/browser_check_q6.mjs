@@ -118,7 +118,14 @@ try {
   // ── ⑤ 畫面真的看得到 ────────────────────────────────────────────────
   //  ⚠ 導航要**確認到站**再讀：第一版只是「點一下、等 1.5 秒、讀畫面」，
   //    結果讀到的是主畫面（點沒點到分不出來）。改成重試到畫面出現「聯賽」為止。
-  const ui = await cdp.eval(`
+  //  ── Q7f 結構遷移（2026-08-20 整合）──────────────────────────────────
+  //  舊的「最終名次 FINAL STANDINGS」Panel 已由 Season Recap 的 RecapLeague
+  //  區塊正式取代 ⇒ 2c／2d 不能再比對那兩個字串。
+  //  ⚠ 這是遷移，不是放寬：原版只驗「頁面文字含有這兩段字」，遷移後改成讀
+  //    `recap-league-*` 的 data-* 與指定節點文字，並與本檔已經算好的 truth
+  //    （`r.playerRank`／`r.champion`／`r.top4[0]`）**逐值比對**。
+  //    字串版連冠軍是誰都沒驗，這一版驗得到。
+  const uiRead = await cdp.eval(`
     const wait = (ms) => new Promise(r => setTimeout(r, ms));
     const onCompetition = () => /聯賽/.test(document.body.innerText) && /積分榜|最終名次/.test(document.body.innerText);
     for (let i = 0; i < 12 && !onCompetition(); i++) {
@@ -128,12 +135,30 @@ try {
       if (back) { back.click(); await wait(900); }
       else await wait(500);
     }
-    return document.body.innerText.replace(/\\n/g,'|').slice(0, 520);
+    const rankNode = document.querySelector('[data-testid=recap-league-rank]');
+    const championNode = document.querySelector('[data-testid=recap-league-champion]');
+    const regularNode = document.querySelector('[data-testid=recap-league-regular-rank]');
+    return {
+      text: document.body.innerText.replace(/\\n/g,'|').slice(0, 520),
+      hasRecap: !!document.querySelector('[data-testid=season-recap]'),
+      rankAttr: rankNode ? (rankNode.getAttribute('data-rank') ?? '') : null,
+      championTeamId: championNode ? (championNode.getAttribute('data-team-id') ?? '') : null,
+      championText: championNode ? (championNode.querySelector('span:last-child')?.innerText ?? '') : null,
+      regularRankAttr: regularNode ? (regularNode.getAttribute('data-rank') ?? '') : null,
+    };
   `);
+  const ui = uiRead.text;
   ck("2a) 賽事頁看得到季後賽區塊", /季後賽 PLAYOFFS/.test(ui));
   ck("2b) 看得到四場對戰（含季軍戰與決賽）", /準決賽 ①/.test(ui) && /季軍戰/.test(ui) && /決賽/.test(ui));
-  ck("2c) 看得到最終名次與冠軍", /最終名次 FINAL STANDINGS/.test(ui) && /🏆 冠軍/.test(ui));
-  ck("2d) 同時看得到常規賽名次（不是只留一個數字）", /常規賽名次/.test(ui));
+  ck("2c) 賽季總結看得到最終名次與冠軍（逐值比對 careerFinal）",
+    uiRead.hasRecap &&
+    uiRead.rankAttr === String(r.playerRank) &&
+    uiRead.championTeamId === r.champion &&
+    uiRead.championText === r.top4[0],
+    JSON.stringify({ rankAttr: uiRead.rankAttr, championTeamId: uiRead.championTeamId, championText: uiRead.championText }));
+  ck("2d) 同時看得到常規賽名次（不是只留一個數字）",
+    /常規賽名次/.test(ui) && uiRead.regularRankAttr === String(r.playerRegularRank),
+    `data-rank=${uiRead.regularRankAttr}`);
   console.log(`   畫面：${ui.slice(0, 200)}`);
 
   // ── ⑥ Q5 換季仍然正常 ───────────────────────────────────────────────

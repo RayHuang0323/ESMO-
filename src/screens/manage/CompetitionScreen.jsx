@@ -20,6 +20,8 @@ import { useProfileStore } from "../../platform/profileStore.js";
 import { GC, MONO, chip } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
 import AsiaFinalsPanel from "./asiaFinals/AsiaFinalsPanel.jsx";
+import RecapNextSeason from "./seasonRecap/RecapNextSeason.jsx";
+import SeasonRecap from "./seasonRecap/SeasonRecap.jsx";
 
 const Panel = ({ title, right, children }) => (
   <div style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 12, padding: "11px 13px", marginBottom: 10 }}>
@@ -55,13 +57,14 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
     );
   }
 
-  const { standings, next, nextDay, today, progress, participants, live, final, award } = view;
+  const { standings, next, nextDay, today, progress, participants, live, final } = view;
   //  ── Q7a-3f.1：生涯成績與賽季封存物件是**兩件事** ──────────────────────
   //  `final` 是**賽季**封存物件：單 Event 時是 FinalStandings，
   //  多 Event 時是 `SeasonSeal.v1`（**沒有** rows／playerRank／championTeamId）。
-  //  玩家要看的「我這一季第幾名」在**生涯主要賽事**的封存名次裡 ⇒ 讀 `careerFinal`。
-  //  ⚠ 指不到生涯賽事時是 `null`（舊存檔的曖昧情形），畫面顯示「—」，**不猜**。
-  const careerFinal = view.careerFinal ?? null;
+  //  玩家要看的「我這一季第幾名」在**生涯主要賽事**的封存名次裡（`view.careerFinal`）。
+  //  ⚠ Q7f 起那份資料與名次獎金收據（`view.award`）都由 `SeasonRecap` 自己從
+  //    同一個 `competitionView()` 讀，本檔不再轉手——轉手只會多出一條會漂移的路徑。
+  //    這裡留 `final` 是因為本檔仍要用它判斷「賽季是否已封存」。
   //  Q5：賽季進度改用**賽季相對天數**（`seasonDay`），不再拿絕對遊戲日對 84
   const { seasonDay, seasonDays, history, canRoll, playoff } = view;
   //  Q7a-3b.5：同季多個 Event。**只有兩個以上才出現切換列**——
@@ -393,66 +396,11 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
         </Panel>
       )}
 
-      {/*  ── 賽季結束：最終名次 ＋ 名次獎金（Milestone Q4）──────────────
-           賽季封存後才出現。**畫面不判斷賽季結不結束、也不算名次與獎金**——
-           `final` 是 Store 封存好的不可變快照，`award` 是既有的獎金收據，
-           這裡只是把兩份既有資料顯示出來。 */}
-      {final && (
-        <Panel
-          title="最終名次 FINAL STANDINGS"
-          right={<span style={{ fontSize: 9, fontWeight: 800, color: GC.gold }}>第 {final.season} 賽季 · 已封存</span>}
-        >
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 8, padding: "4px 0 8px" }}>
-            <span style={{ fontSize: 11, color: GC.gray }}>你的最終名次</span>
-            <span style={{ fontSize: 30, fontWeight: 900, color: GC.gold, fontFamily: MONO, lineHeight: 1 }}>
-              {careerFinal?.playerRank ?? "—"}
-            </span>
-            <span style={{ fontSize: 11, color: GC.gray }}>
-              {careerFinal ? `／ ${careerFinal.rows.length} 隊` : "（生涯主要賽事尚無資料）"}
-            </span>
-          </div>
-          {careerFinal && (
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "3px 0", borderTop: `1px solid ${GC.line}` }}>
-              <span style={{ color: GC.gray }}>🏆 冠軍</span>
-              <span style={{ fontWeight: 800, color: "#e5e7eb" }}>{nameOf(careerFinal.championTeamId ?? careerFinal.rows[0]?.teamId)}</span>
-            </div>
-          )}
-          {/*  Q6：名次由季後賽決定時，同時標出常規賽名次——兩個都是事實，
-               只顯示一個會讓「常規賽第 1 但季後賽輸了」看起來像資料錯誤。 */}
-          {careerFinal?.rankSource === "playoff" && careerFinal.playerRegularRank && (
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "3px 0" }}>
-              <span style={{ color: GC.gray }}>📋 常規賽名次</span>
-              <span style={{ fontWeight: 800, color: GC.gray2 ?? "#a1a1aa", fontFamily: MONO }}>第 {careerFinal.playerRegularRank} 名</span>
-            </div>
-          )}
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "3px 0" }}>
-            <span style={{ color: GC.gray }}>💰 名次獎金</span>
-            {/*  誠實顯示：沒有獎金的名次就寫「無」，不寫 $0 假裝有發 */}
-            <span style={{ fontWeight: 800, color: award?.amount > 0 ? GC.green : GC.gray, fontFamily: MONO }}>
-              {award ? (award.amount > 0 ? `+$${award.amount}萬` : "無（前四名才有）") : "—"}
-            </span>
-          </div>
-          {careerFinal?.sourceMix && (
-            <div style={{ fontSize: 9, color: GC.gray, marginTop: 7, paddingTop: 6, borderTop: `1px solid ${GC.line}` }}>
-              本季 {careerFinal.sourceMix.total} 場：實際對戰 {careerFinal.sourceMix.engine}
-              {careerFinal.sourceMix.simulated ? ` · 模擬 ${careerFinal.sourceMix.simulated}` : ""}
-              {careerFinal.sourceMix.forfeited ? ` · 棄權 ${careerFinal.sourceMix.forfeited}` : ""}
-              　·　第 {careerFinal.sealedAtDay} 天封存
-            </div>
-          )}
-          {/*  Q5：換季是**玩家自己按**的。封存與發獎自動（漏發是災難），
-               但換季會把這一頁換成新賽季的空賽程——玩家還沒看到成績就被收走不合理。
-               能不能換由 Store 的 `canRoll` 決定，畫面不自己判。 */}
-          {canRoll?.ok && (
-            <button
-              onClick={rollSeason}
-              style={{ width: "100%", marginTop: 10, background: `linear-gradient(135deg,${GC.purp},#7c3aed)`, border: "none", borderRadius: 10, padding: "11px 0", color: "#fff", fontSize: 13, fontWeight: 900, cursor: "pointer" }}
-            >
-              ▶ 開始第 {canRoll.nextSeason} 賽季
-            </button>
-          )}
-        </Panel>
-      )}
+      {/*  Q7f：賽季完成後只在既有 canRoll.ok 允許時顯示 Recap（判斷在元件內）。
+           ⚠ 第二輪起 CTA **不在 Recap 內**——它移到本頁最後（見檔尾），
+              讓「開始下一賽季」成為整頁真正最後一個主要操作。
+              rollover 規則與 handler 不變，DOM 仍只有一顆 CTA。 */}
+      {final && <SeasonRecap />}
 
       {/*  ── 歷屆成績（Q5）──────────────────────────────────────────────
            換季之後上一季的最終名次仍然查得到。這裡只讀已封存的快照，
@@ -513,6 +461,11 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
       )}
 
       {/* ── 我的下一場 ─────────────────────────────────────────────── */}
+      {/*  ⚠ Q7f 第二輪：賽季已封存且沒有任何待打場次時，這個面板只會顯示
+           「本季你的比賽都打完了。」——那是賽季**進行中**才有意義的提示，
+           在成績單旁邊出現只會稀釋「這一季結束了」。⇒ 該狀態下整塊隱藏。
+           仍有待打場次時照常顯示（封存後理論上不該有，但不替 Store 假設）。 */}
+      {!(final && canRoll?.ok && rows.length === 0) && (
       <Panel
         title={isToday ? "今日賽事" : "下一場賽事"}
         right={rows.length > 0 && (
@@ -599,6 +552,7 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
           );
         })}
       </Panel>
+      )}
 
       {/* ── 積分榜 ─────────────────────────────────────────────────── */}
       <Panel title={final ? "最終積分榜 STANDINGS" : "積分榜 STANDINGS"} right={<span style={{ fontSize: 9, color: GC.gray }}>{standings.rule.label}</span>}>
@@ -649,6 +603,18 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
           AI 之間的比賽會在你推進天數時自動模擬。
         </div>
       </Panel>
+
+      {/*  ── 開始下一賽季（Q7f 第二輪）─────────────────────────────────
+           ⚠ **整頁最後一個主要操作**。玩家要按到它，必須先捲過成績單與本季
+              全部補充資訊（季後賽對戰表／最終積分榜／賽季進度）——這才是
+              「Season Report 的句點」，不是只在 Recap 元件內部排最後。
+           ⚠ 條件與 `SeasonRecap` 內部完全一致（`final` ＋ `canRoll.ok`），
+              DOM 裡只會有這一顆 rollover CTA。
+           ⚠ Q5 規則不變：能不能換季由 Store 的 `canRoll` 判定，畫面不自己判；
+              `rollSeason` 仍是同一個 handler，不自動 rollover。 */}
+      {final && canRoll?.ok && (
+        <RecapNextSeason canRoll={canRoll} onClick={rollSeason} />
+      )}
     </ManageFrame>
   );
 }

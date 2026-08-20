@@ -10285,3 +10285,79 @@ C 現況已足夠。稽核結論傾向 **B**，理由見回報。
 - Causal bug 是 UI action gate，不是 `resumeSession()` 已存在的 ActiveMatch TTL exception：任何 `launched` session 都曾被提供 resume，包括沒有有效 ActiveMatch snapshot 的 legacy session。
 - 新增 store-owned `restoreable` view，`primaryActionFor()` 只對有效 ActiveMatch 顯示 resume；invalid launched data 沿用既有 requeue／same-fixture refixture。沒有降低 assertion 或 rebaseline。
 - Focused evidence：TTL regression `9/9`、R63 `13/13`、Competition × ActiveMatch `19/19`、matchmaking flow `97/97`、Competition Release Gate `10/10`、browser product-presence `12/12`、build PASS。
+
+## Q7f Season Recap 整合進 main 線（2026-08-20，`integration/q7f-season-recap`）
+
+Q7f 在 `q7a/3b-multi-event` 上做完後被凍結（commit `ed8cc84`），期間 main 前進了
+70+ 個 commit（SeasonState v2、Competition Release Gate、Team Development R59–R62、
+R63 ActiveMatch）。本輪把 Q7f 的**產品行為**移植到現行 main 架構上，
+**不整顆 cherry-pick**、不用 Q7f 舊檔覆蓋主幹。
+
+### 基線
+
+- 從 `origin/main` 開新 worktree／branch。⚠ 使用者指定的 `7c8d7b9`（P0.6B）
+  當時已不是 main HEAD——main 已前進到 `4256ab3`（Sprint 63 ActiveMatch TTL repair），
+  且 `7c8d7b9` 是它的祖先。基線取 `4256ab3`（嚴格超集），
+  以免把 profileStore / matchPrepAction 的最新 contract 退回去。
+- 基線證據：在乾淨的 `ESMO-acceptance`（HEAD `4256ab3`、working tree clean）
+  實跑 Competition Release Gate **10/10 PASS**，exit 0。
+
+### Q7f 舊 diff 的取捨（17 檔中只有 15 檔仍需要）
+
+| Q7f 舊 diff | 處置 | 理由 |
+|---|---|---|
+| `seasonRecap/*`（10 個新檔） | 全數採用 | 純新增，無衝突 |
+| `CompetitionScreen.jsx` | 全數採用 | main 自 merge-base 起**沒動過**這一檔 |
+| `browser_check_career_final_ui.mjs` | 全數採用 | 同上，main 沒動過 |
+| `browser_check_asia_finals_ui.mjs` | **三方合併** | 兩側都改：Q7f 改 selector（結構遷移）、main 改 fixture 路徑。兩者不重疊，都保留 |
+| `browser_check_season_recap_ui.mjs` | 採用＋改路徑 | fixture 由 repo 外 `../../` 改讀 `review/fixtures/competition/` |
+| `tools/browser/cdp.mjs` | **整段丟棄** | Q7f 當時修的問題（npx shell 起 vite、殺不掉行程樹）main 已用更完整的做法解決：Vite CLI 直起、`stopProcess`／`removeProfile`、CDP timeout 與 pending reject、Chrome 151 sandbox 旗標。Q7f 版是舊解法，套上去等於退回 |
+| `docs/handoff/05_Sprint紀錄.md` | 不移植舊文 | 舊分支的 sprint 文字與現行主幹脈絡已脫節，改寫本節 |
+
+### 唯一的跨工作線回歸：`browser_check_q6` 2c／2d
+
+整合後 Release Gate 抓到 `q6` 紅一條。**不是 main 的既有紅燈**——基線 10/10 全綠，
+是 Q7f 造成的：`2c` 斷言 `最終名次 FINAL STANDINGS` 與 `🏆 冠軍` 兩段字串，
+那個 Panel 正是 Q7f 用 `RecapLeague` 取代掉的。Q7f 當時已為 `career_final`／
+`asia_finals` 做過同樣的 selector 遷移，**漏掉 q6**——因為 Release Gate 是 Q7f
+凍結之後才建立的，那條分支上沒有任何東西會去跑 q6。
+
+修法沿用同一套紀律：改讀 `recap-league-*` 的 `data-*` 與指定節點文字，
+並與本檔已算好的 truth（`r.playerRank`／`r.champion`／`r.top4[0]`／
+`r.playerRegularRank`）**逐值比對**。原版連冠軍是誰都沒驗，遷移後驗得到 ⇒
+這是收緊，不是放寬。
+
+### 一次判斷失誤與撤回
+
+先前把 `RecapLeague` 的區塊標題 `國內聯賽` 改成 `官方聯賽`（理由：全 repo 只有
+這一處用「國內」）。查規格 §S 後**撤回**：那四個標題（`洲際冠軍賽`／`洲際巡迴`／
+`國內聯賽`／`結算`）是刻意設計的**層級階梯眉標**，編碼的是賽事層級由「世界」
+收束到「你的帳戶」，不是賽事本名。現行檔案與 `ed8cc84` 逐字相同。
+教訓：動一個看起來像筆誤的字串前，先查它有沒有規格。
+
+### 驗證（全部實跑，輸出見下）
+
+| 項目 | 結果 |
+|---|---|
+| Competition Release Gate（基線 `4256ab3`，10 區段） | **10/10 PASS** |
+| Competition Release Gate（整合後，11 區段，新增 `season_recap`） | **11/11 PASS** |
+| `browser_check_season_recap_ui` | **19/19 通過** |
+| `browser_check_q6`（遷移後） | **20/20 通過** |
+| `check_team_development_v1` / `_recovery` | PASS / PASS |
+| `check_r63_active_match` | 13/13 |
+| `check_r63_active_match_ttl` | 9/9 |
+| `check_r63_competition_integration` | 19/19 |
+| `check_r61_ui_fixture` / `check_r62_player_ui_fixture` | PASS / PASS |
+| `npm run build` | ✓ built in 21s |
+| 瀏覽器 desktop 1280 / mobile 390 | 兩份存檔各截圖，`review/q7f-season-recap/`，pageErrors 0 |
+
+Team Development／schema v10／R60 consumers／R63 ActiveMatch／SeasonState v2／
+profileStore 一律**未改動**（`git diff --name-only origin/main` 不含這些檔）。
+本輪沒有為了 Q7f 動任何 ActiveMatch production code；ActiveMatch valid resume
+仍是 Codex 記錄的 UNVERIFIED（正式站 session 逾期＋browser tool 接不了
+Chrome 原生 confirmation dialog），**不因本輪改變**。
+
+### 已收口
+
+`review/fixtures/competition/README.md` 的「已知未收口」清空：
+Q7f gate 是最後一支讀 repo 外存檔的 gate，改路徑後 `tools/` 底下已無此類依賴。

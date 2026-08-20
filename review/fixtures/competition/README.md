@@ -47,6 +47,11 @@
 
 ## 已知未收口
 
-Q7f 的 `browser_check_season_recap_ui` 仍讀 repo 外的 `../../`。
-該分支（`q7a/3b-multi-event`）目前凍結，**整合時要一併改成本目錄**。
-記錄於 `docs/ai/跨模型交接流程.md` §9。
+（目前無。）
+
+### 已收口
+
+- Q7f 的 `browser_check_season_recap_ui` 曾讀 repo 外的 `../../`。
+  2026-08-20 隨 Q7f 整合改讀本目錄，並納入 Competition Release Gate（區段 `season_recap`）。
+  至此 `tools/` 底下**沒有任何 gate 讀 repo 外的存檔**。
+  原記錄於 `docs/ai/跨模型交接流程.md` §9。
