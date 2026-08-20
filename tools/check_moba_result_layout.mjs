@@ -18,6 +18,7 @@ const VITE_PORT = 5361;
 const CDP_PORT = 9381;
 const suppliedUrl = process.argv.find((arg) => arg.startsWith("--url="))?.slice(6) ?? null;
 const requestedViewport = process.argv.find((arg) => arg.startsWith("--viewport="))?.slice(11) ?? null;
+const productionMode = Boolean(suppliedUrl);
 const APP = (suppliedUrl ?? `http://localhost:${VITE_PORT}/ESMO-/`).replace(/\/?$/, "/");
 const allViewports = [
   { label: "desktop-1920x1080", width: 1920, height: 1080, mobile: false },
@@ -213,7 +214,7 @@ try {
     await waitFor(chrome, "document.querySelector('[data-testid=\\\"quick-finish-match\\\"]')", 30_000, `${viewport.label} battle controls`);
     await sleep(2_000);
     const productionFrame = await useProductionBattleHeight(chrome);
-    const liveSnapshot = await readLiveSnapshot(chrome);
+    const liveSnapshot = productionMode ? { ts: null, over: false, players: null } : await readLiveSnapshot(chrome);
 
     const battleState = await chrome.evaluate(`return {
       canvas: document.querySelectorAll('canvas').length,
@@ -223,22 +224,36 @@ try {
     };`);
     battleState.simTs = liveSnapshot.ts;
     battleState.productionFrame = productionFrame;
-    ck(`${viewport.label} battle layer mounts`, battleState.canvas > 0 && battleState.hud && !battleState.resultBeforeFinish && liveSnapshot.ts > 0,
+    ck(`${viewport.label} battle layer mounts`, battleState.canvas > 0 && battleState.hud && !battleState.resultBeforeFinish && (productionMode || liveSnapshot.ts > 0),
       JSON.stringify({ ...battleState, liveSnapshot }));
 
-    const paused = await pauseBattle(chrome);
-    ck(`${viewport.label} battle pause boundary is available`, paused);
-    await sleep(250);
-    const terminal = await enterTerminalBoundary(chrome);
-    ck(`${viewport.label} live battle snapshot enters terminal boundary`, terminal.ok, JSON.stringify(terminal));
+    if (productionMode) {
+      const clicked = await chrome.evaluate(`
+        window.confirm = () => true;
+        const button = document.querySelector('[data-testid="quick-finish-match"]');
+        if (!button || button.disabled) return false;
+        button.click();
+        return true;
+      `);
+      ck(`${viewport.label} production real quick-finish enters transition`, clicked);
+    } else {
+      const paused = await pauseBattle(chrome);
+      ck(`${viewport.label} battle pause boundary is available`, paused);
+      await sleep(250);
+      const terminal = await enterTerminalBoundary(chrome);
+      ck(`${viewport.label} live battle snapshot enters terminal boundary`, terminal.ok, JSON.stringify(terminal));
+    }
     try {
       await waitFor(chrome,
         "document.querySelector('[data-testid=\\\"battle-end-screen\\\"]')",
-        15_000,
+        productionMode ? 420_000 : 15_000,
         `${viewport.label} result overlay`
       );
     } catch (error) {
-      const diagnostic = await chrome.evaluate(`
+      const diagnostic = productionMode ? await chrome.evaluate(`return {
+        body: (document.body.innerText || '').slice(-500),
+        url: location.href,
+      };`).catch((diagnosticError) => ({ diagnosticError: diagnosticError.message })) : await chrome.evaluate(`
         const resourceUrl = (name) => performance.getEntriesByType('resource')
           .map((entry) => entry.name)
           .find((url) => url.endsWith('/src/' + name)) ??
