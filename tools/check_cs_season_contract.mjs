@@ -34,6 +34,7 @@ const files = Object.freeze({
   seasonState: "src/platform/competition/seasonState.js",
   regularSeason: "src/platform/competition/regularSeason.js",
   csSeasonConfig: "src/platform/competition/csSeasonConfig.js",
+  csPrepScreen: "src/screens/fps/CsPrepScreen.jsx",
   scheduleGenerator: "src/platform/competition/scheduleGenerator.js",
   seasonStateV2: "src/platform/competition/seasonStateV2.js",
   fixtureBridge: "src/platform/competition/fixtureResultBridge.js",
@@ -223,6 +224,25 @@ check("CS simulation is versioned apart from the MOBA kill model",
 check("season layer invents no CS round vocabulary in code",
   !/\b(MR12|firstTo13|roundsWon|halfTime|overtimeRounds)\b/i.test(codeOnly("simulateFixture")) &&
   !/\b(MR12|firstTo13|roundsWon)\b/i.test(codeOnly("seasonState")));
+// ── ⑪ CS Season M2：玩家實際出戰的結構性錨點 ────────────────────────────
+check("fixture entry resolves the discipline from the fixture itself",
+  has("profileStore", "_modeOfFixture(fixtureId) ?? DEFAULT_GAME_MODE"));
+check("fixture result write-back is discipline-resolved, not session-mode-guessed",
+  has("profileStore", "不可以**改用 `session.mode` 判斷"));
+//  ⛔ M2 最重要的一條：玩家實打的 CS 賽果進賽程時，比分**必須**換成地圖數。
+//  `MatchResult.v1` 對 CS 帶的是 Codex 的回合比分（13:7），照抄就是把回合語義
+//  搬進賽季層。橋接只讀 `winner`，一個回合數都不搬。
+check("the CS fixture bridge projects maps, never rounds",
+  has("fixtureBridge", 'fixture.gameMode === "cs"')
+  && has("fixtureBridge", "playerWon ? 1 : 0")
+  && has("fixtureBridge", "一個回合數都沒有被搬進來"));
+check("the CS fixture bridge reads nothing but the winner Codex decided",
+  !/ourScore|enemyScore|scoreT|scoreCT|roundCount/.test(codeOnly("fixtureBridge")));
+check("player CS entry goes through the shared fixture action, not a second flow",
+  has("csPrepScreen", "startFixtureMatch") && !has("csPrepScreen", "completeFixtureMatch"));
+check("CS season is never created behind the player's back",
+  has("csPrepScreen", 'ensureCompetitionSeason("cs")') && has("csPrepScreen", "賽季**不自動建立**"));
+
 check("season layer still refuses to recompute Codex map-level results",
   has("handoff", "不得自行重算") && has("handoff", "map-level result"));
 

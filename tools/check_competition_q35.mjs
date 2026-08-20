@@ -349,8 +349,23 @@ const settle = (br, matchId) => settleMatchThroughSession({
   //  ⚠ 必須是 `lineup`（真正跑 useMatchFlow 的賽前頁），不是 `matchmaking`
   //    ——後者是 Sprint11 的純過場動畫，導過去場次不會簽發，賽果寫不回賽程。
   //    這是瀏覽器實測抓到的接線錯誤。
-  ck("4c) 出賽導向真正的賽前流程頁（不是純過場動畫）",
-    /onPlay=\{go\("lineup"\)\}/.test(shell) && !/onPlay=\{go\("matchmaking"\)\}/.test(shell));
+  //  ⚠ 2026-08-21（CS Season M2）：原本 grep 的是字面 `onPlay={go("lineup")}`。
+  //    M2 起賽程可能是 CS 的，導向要依**指派單的項目**決定
+  //    （MOBA → `lineup`、CS → `csPrep`），所以那個字面不再成立。
+  //    改成涵蓋兩個項目、且比原版更嚴的版本：導向函式必須存在、
+  //    它的兩個目的地都必須是真正跑 `useMatchFlow` 的賽前頁，
+  //    而且 `matchmaking`（純過場動畫）**依然**不得是 onPlay 的目的地。
+  ck("4c) 出賽導向真正的賽前流程頁（不是純過場動畫）", (() => {
+    if (!/onPlay=\{enterFixturePrep\}/.test(shell)) return false;
+    const fn = shell.match(/const enterFixturePrep[\s\S]*?\n  \};/)?.[0] ?? "";
+    if (!fn) return false;
+    const destinations = [...fn.matchAll(/setScreen\(([\s\S]*?)\);/g)].map((m) => m[1]).join(" ");
+    return /"lineup"/.test(destinations) && /"csPrep"/.test(destinations)
+      && !/matchmaking/.test(destinations)
+      && !/onPlay=\{go\("matchmaking"\)\}/.test(shell);
+  })());
+  ck("4c1) CS 賽前頁同樣跑真正的賽前流程框架",
+    /useMatchFlow|MatchPrepFrame/.test(readCode("src/screens/fps/CsPrepScreen.jsx")));
   ck("4c2) 那一頁確實跑 useMatchFlow（房間確認／場次／一次性進場）",
     /useMatchFlow|MatchPrepFrame/.test(readCode("src/screens/moba/LineupScreen.jsx")));
   ck("4d) 畫面只透過 Store 出口取資料",

@@ -10921,3 +10921,94 @@ Claude 從未動過它），因此原樣保留 main 的版本。Claude 的 CS Se
 - 未碰 R64／R65。
 - **未開始 M2**（玩家實際出戰 CS）。
 - 未 push、未 deploy。
+
+---
+
+## CS Season M2 — 玩家實際出戰 CS League Fixture（2026-08-21）
+
+分支 `integration/cs-cross-ai`，基線是 Cross-AI stable `28c3583`。
+**只建 local commit，未 push、未 deploy。M3 未開始。**
+
+### 接線方式：沒有新增任何一條流程
+
+整條鏈是既有零件依 `fixture.gameMode` 分流。Audit 時發現閘道層本來就是
+mode-aware 的（`issueFor` 驗 `fixture.gameMode === entryRequest.mode`、
+`matchEntry("cs")` 用 `csLineup`、`CsPrepScreen` 早就用共用的 `MatchPrepFrame`、
+`settleCsMatch` 早就走 `settleMatchThroughSession` 這條唯一結算邊界），
+真正的缺口只有三個 store action 寫死 `get().competition`，以及比分投影。
+
+實際改動四處：
+
+1. `startFixtureMatch` / `completeFixtureMatch` / `_writeFixtureResultFromMatch`
+   → 由 `_modeOfFixture(fixtureId)` 解析項目。
+2. `fixtureResultBridge` → CS 的 `FixtureOutcome.score` 投影成**地圖數**。
+3. `AppShell` → `onPlay` 依指派單的項目導向（MOBA `lineup` / CS `csPrep`）。
+4. `CsPrepScreen` → 加一個**暫用**的聯賽進場區塊（M4 應取代）。
+
+### ⛔ Codex protected runtime
+
+**沒有碰。** 本輪連 `src/battle/` 都沒有進去。對 Codex 責任區的唯一互動是
+「讀 `CsMatchResult.winner`」——那是他已經判好的單圖勝負。
+`MatchResult.v1` 對 CS 帶的回合比分（13:7）**一個數字都沒有被搬進賽程**。
+契約 §⑪ 加了反向斷言：`fixtureResultBridge.js` 的程式碼不得出現
+`ourScore` / `enemyScore` / `scoreT` / `scoreCT` / `roundCount`。
+
+### 兩件實測後修正的認知（第一版斷言寫錯，照實記）
+
+1. **「同一場不可重複 launch」≠「同一場不准再按」。** 既有規則（Q3.6）是
+   重新進入同一場**允許**（`refixture`），但不得換 seed／對手、不得產生第二場；
+   有**進行中的場次**時，別的賽程才會被擋。第一版把正常的重新進場當成缺陷。
+2. **中離規避不了敗場，機制是「日曆被擋住」不是「逾期補判」。**
+   有未收尾的玩家賽程時 `advanceDay` 一天都推不動
+   （`stoppedBy.code = "player_fixture"`，訊息「請先出賽或棄權」）。
+   唯二出路是打完或明確棄權。這比我原本假設的機制**更強**。
+
+### 發現並記錄的既有缺口（非本輪造成，未修）
+
+`startFixtureMatch` 的併發守衛判的是「有沒有進行中的**場次**」。在
+「房間已開、場次未簽出」的空窗期切去另一場賽程不會被擋，前一場留在 `launched`。
+**不構成規避敗場的漏洞**（日曆仍會被擋住），但兩場同時 `launched` 是不乾淨的狀態。
+MOBA 同樣成立且早於本輪。詳見 `08_目前待辦與風險.md`；修它會改到共用的進場守衛，
+屬獨立工作項。
+
+### 未做
+
+- M3（年度 Major / BO3）未開始；CS 仍只有 BO1 聯賽。
+- 未碰 R64／R65。
+- **未經瀏覽器實測**：本輪沒有跑 CS 的 browser gate。自動化覆蓋來自
+  55 條 store 層斷言 ＋ Release Gate 的 7 支 MOBA browser gate。
+  真正在瀏覽器裡打一場 CS 聯賽賽程，建議由使用者或 M4 的 UI 驗收一併做。
+
+### 驗證（全部實跑）
+
+```
+node tools/check_cs_season_m2.mjs           CS Season M2 player fixture: 55/55 PASS  ← 本輪新增
+node tools/check_cs_season_lifecycle.mjs    CS Season M1 lifecycle: 50/50 PASS
+node tools/check_cs_league_eligibility.mjs  CS league eligibility: 31/31 PASS
+node tools/check_cs_schema_v11.mjs          CS schema v11 migration: 41/41 PASS
+node tools/check_cs_season_contract.mjs     CS Season / Competition contract: 68/68 PASS
+node tools/check_home_team_contract.mjs     Home / Team responsibility contract: 40/40 PASS
+
+Codex 側   check_cs_match_completion 34/34 · check_cs23 28/28
+
+ActiveMatch / 重複結算（既有 R63 gate，直接覆蓋 M2 的要求）
+  check_r63_active_match          13/13
+  check_r63_active_match_ttl       9/9
+  check_r63_competition_integration 19/19（含 duplicate result 不產生第二筆 outcome／settlement）
+
+MOBA regression  q1 93/93 · q2a 112/112 · q2b 92/92 · q3 91/91 · q35 66/66
+                 q4 68/68 · q5 69/69 · q6 57/57
+                 regress 15/15 · regress2 8/8
+
+node tools/check_competition_release_gate.mjs   passed 11/11  failed 0/11  無殘留 port
+npm run build                                   ✓ built in 9.40s
+```
+
+`check_cs_season_contract` 由 62 → 68 條（新增 §⑪ M2 六條，含
+「橋接不得讀 Codex 回合欄位」的反向斷言）。`check_cs_season_m2` 為本輪新增。
+
+⚠ **又一個 era-scoped marker 隨 M2 更新**：`check_competition_q35.mjs` 的 `4c)`
+原本 grep 字面 `onPlay={go("lineup")}`。M2 起導向要依項目決定，那個字面不再成立。
+改成**更嚴**的版本：導向函式必須存在、兩個目的地必須是 `lineup` 與 `csPrep`、
+且 `matchmaking`（純過場動畫）依然不得是 onPlay 的目的地；另加 `4c1)`
+確認 CS 賽前頁同樣跑真正的賽前流程框架。q35 因此由 65 → 66 條。

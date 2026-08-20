@@ -68,6 +68,19 @@ export default function AppShell() {
   const go = (s) => () => setScreen(s);
   const home = go("dashboard");
 
+  //  CS Season M2：從賽事頁按「出賽」之後，要去哪個賽前流程由**剛簽出的指派單**
+  //  決定，不寫死 MOBA。指派單帶的是賽程場次本身的 `gameMode` ⇒ CS 的聯賽場次
+  //  進 CS 賽前流程（csPrep → csMap → csTactic → csLoading → cs），
+  //  MOBA 維持 `lineup`，一行行為都沒變。
+  //  ⚠ 讀指派單而不是讀畫面狀態：畫面不知道剛剛開的是哪一場。
+  const enterFixturePrep = () => {
+    const assignment = useProfileStore.getState().matchmaking?.fixtureAssignment ?? null;
+    //  `assignment.mode` 來自 `origin.mode`，而 origin 是從 `fixture.gameMode` 產生的
+    //  （`competitionGateway.fixtureOriginInput`）⇒ 這就是那一場賽程的項目。
+    const mode = assignment?.mode ?? assignment?.origin?.mode ?? null;
+    setScreen(mode === "cs" ? "csPrep" : "lineup");
+  };
+
   const resumeActiveMatch = ({ alreadyResumed = false } = {}) => {
     setRestoreError(null);
     const st = useProfileStore.getState();
@@ -151,7 +164,7 @@ export default function AppShell() {
       {/*  Q3.6：`onResume` 是「進行中的賽程對戰」的直接返回入口，導向與賽前頁
            那顆「返回進行中的對戰」**同一個目的地**（`matchmaking` 過場 → Ban/Pick）。
            出賽仍然必須走 `lineup`（真正跑 useMatchFlow 的賽前頁），兩者不可對調。 */}
-      {screen === "competition" && <CompetitionScreen onBack={home} onPlay={go("lineup")} onResume={() => resumeActiveMatch({ alreadyResumed: true })} />}
+      {screen === "competition" && <CompetitionScreen onBack={home} onPlay={enterFixturePrep} onResume={() => resumeActiveMatch({ alreadyResumed: true })} />}
       {screen === "season" && <SeasonScreen onBack={home} />}
 
       {/* ── MOBA 賽前流程 ── */}

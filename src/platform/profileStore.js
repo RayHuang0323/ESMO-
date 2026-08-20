@@ -1066,9 +1066,15 @@ export const useProfileStore = create((rawSet, get) => {
    * **完全走既有那幾支 action**，這裡不複製任何一步。
    */
   startFixtureMatch(fixtureId, now = Date.now()) {
-    const ensured = get().ensureCompetitionSeason();
+    //  ── CS Season M2：出戰哪一個項目由 **fixture 自己**決定 ────────────────
+    //  與 `forfeitFixture` 同一條規則：呼叫端只知道「我要打這一場」。
+    //  多一個 mode 參數就多一個傳錯的機會，而傳錯的後果是對另一個項目的賽季動手。
+    //  ⚠ 找不到這個 fixture 時**不猜**，退回預設項目讓下面的查找自然失敗，
+    //    回「找不到這場賽程」——不要在這裡編出一個賽季來。
+    const mode = get()._modeOfFixture(fixtureId) ?? DEFAULT_GAME_MODE;
+    const ensured = get().ensureCompetitionSeason(mode);
     if (!ensured.ok) return { ok: false, errors: ensured.errors, reason: ensured.errors[0]?.message ?? null };
-    const state = get().competition;
+    const state = get()._competitionStateOf(mode);
     const fixture = fixtureById(state, fixtureId);
     if (!fixture) return { ok: false, errors: [{ code: "fixture", message: "找不到這場賽程" }], reason: "找不到這場賽程" };
 
@@ -1128,7 +1134,7 @@ export const useProfileStore = create((rawSet, get) => {
     const lit = allowRelaunch ? { ok: true, state } : applyLaunch(state, fixtureId);
     if (!lit.ok) return { ok: false, errors: lit.errors, reason: lit.errors[0]?.message ?? null };
 
-    get()._setCompetitionState(lit.state, {
+    get()._setCompetitionStateFor(mode, lit.state, {
       matchmaking: {
         ...(get().matchmaking ?? {}),
         //  ⚠ 賽程路徑沒有票券。舊票券要清掉，否則 pollMatchRoom 會拿一張
@@ -1150,16 +1156,19 @@ export const useProfileStore = create((rawSet, get) => {
    * ⚠ 只接受已經 `launched` 的場次，且同一場只能寫一次賽果（D11 不可變）。
    */
   completeFixtureMatch({ fixtureId, winner, score, duration, seed } = {}) {
-    const state = get().competition;
+    //  CS Season M2：與 `forfeitFixture` / `startFixtureMatch` 同一條規則——
+    //  由 fixture 決定寫進哪一個項目的賽季。
+    const mode = get()._modeOfFixture(fixtureId) ?? DEFAULT_GAME_MODE;
+    const state = get()._competitionStateOf(mode);
     if (!state?.schema) return { ok: false, errors: [{ code: "no_season", message: "目前沒有賽季" }] };
     const res = applyCompleted(state, { fixtureId, winner, score, duration, seed });
     if (!res.ok) return { ok: false, errors: res.errors };
-    get()._setCompetitionState(res.state, {
+    get()._setCompetitionStateFor(mode, res.state, {
       matchmaking: { ...(get().matchmaking ?? {}), fixtureAssignment: null },
     });
     get().save();
     //  Q4：這可能就是本季最後一場（玩家親自打完的那一場）
-    const sealed = get()._sealSeasonIfFinished();
+    const sealed = get()._sealSeasonIfFinished(mode);
     return { ok: true, outcome: res.outcome, sealed, errors: [] };
   },
   /**
@@ -2231,8 +2240,13 @@ export const useProfileStore = create((rawSet, get) => {
    * 只由 `reportMatchResult` 呼叫；換算規則在 `fixtureResultBridge`（純函式）。
    */
   _writeFixtureResultFromMatch(result, session) {
-    const state = get().competition;
     const fixtureId = fixtureIdOfSession(session);
+    //  CS Season M2：賽果回寫哪一個項目，同樣由 fixture 決定。
+    //  ⚠ **不可以**改用 `session.mode` 判斷。session 的 mode 是「這場打的是哪種
+    //    遊戲」，fixture 的歸屬是「這場算哪一個賽季的成績」——多賽事並存之後
+    //    兩者不保證同義（例如未來的邀請賽）。以 fixture 為準才是賽季的真相。
+    const mode = fixtureId ? get()._modeOfFixture(fixtureId) : null;
+    const state = mode ? get()._competitionStateOf(mode) : null;
     if (!state?.schema || !fixtureId) return { ok: false, errors: [{ code: "no_fixture", message: "這場不是賽程比賽" }] };
     const fixture = fixtureById(state, fixtureId);
     if (!fixture) return { ok: false, errors: [{ code: "fixture", message: "找不到對應的賽程場次" }] };

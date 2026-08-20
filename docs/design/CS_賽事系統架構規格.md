@@ -306,6 +306,58 @@ M1 交付 CS 聯賽 lifecycle（建立 → AI 模擬／玩家棄權 → 封存�
 M1 完全不接玩家實際 CS 對戰。核對過：該 checkpoint 只動 `EsportsFPS3D.jsx`
 與兩支 CS completion verifier，與 M1 的變更面零重疊。
 
+### 3.3d M2 實作紀錄（2026-08-21 落地）
+
+M2 交付**玩家實際出戰 CS League Fixture**（BO1）。Major / BO3 仍留 M3。
+
+**接線方式：沒有新增任何一條流程。** 整條鏈是既有零件依 `fixture.gameMode` 分流：
+
+```
+CS League Fixture
+  → startFixtureMatch()（既有；由 fixture 決定項目）
+  → issueFor()（既有；本來就驗 fixture.gameMode === entryRequest.mode）
+  → matchEntry("cs")（既有；用 csLineup）
+  → 房間 → createMatchSession → launchMatchSession（既有）
+  → CS Prep / Map / Tactic / Loading（既有畫面，本來就用共用 MatchPrepFrame）
+  → Codex MR12 battle runtime（**只消費**）
+  → toCsMatchResult()（Codex 契約）
+  → settleCsMatch → settleMatchThroughSession → reportMatchResult（既有唯一結算邊界）
+  → fixtureOutcomeInputFrom()（**唯一新增行為：CS 比分投影成地圖數**）
+  → completeFixtureMatch → FixtureOutcome → standings
+```
+
+實際改動只有四處：
+
+1. `startFixtureMatch` / `completeFixtureMatch` / `_writeFixtureResultFromMatch`
+   由 `get().competition`（寫死 MOBA）改為 `_modeOfFixture(fixtureId)` 解析。
+   ⚠ **回寫時刻意不看 `session.mode`**：session 的 mode 是「這場打的是哪種遊戲」，
+   fixture 的歸屬是「這場算哪一個賽季的成績」——多賽事並存之後兩者不保證同義。
+2. `fixtureResultBridge`：CS 的 `FixtureOutcome.score` 投影成**地圖數**（BO1 ⇒ `1:0`）。
+   `MatchResult.v1` 對 CS 帶的是 Codex 的**回合比分**（例如 13:7），照抄就是把
+   回合語義搬進賽季層——正是 ownership lock 要擋的事。橋接只讀 `winner`。
+3. `AppShell`：`onPlay` 由寫死 `lineup` 改為依**指派單的項目**導向
+   （MOBA → `lineup`、CS → `csPrep`）。
+4. `CsPrepScreen`：加一個**暫用**的聯賽進場區塊（開季／出戰今日賽程）。
+   ⚠ 這不是 CS Season UI。完整賽事頁屬 M4、由 Codex 執行，屆時應**取代**它。
+
+**兩件實測後修正的認知**（第一版斷言寫錯，照實記下）：
+
+- **「同一場不可重複 launch」不等於「同一場不准再按」。** 既有規則（Q3.6）是
+  重新進入同一場**允許**（`refixture` / `allowRelaunch`），但不得換 seed 或對手、
+  不得產生第二場；有**進行中的場次**時，別的賽程才會被擋。
+- **中離規避不了敗場，機制不是「逾期補判」而是「日曆被擋住」。**
+  有未收尾的玩家賽程時 `advanceDay` 一天都推不動
+  （`stoppedBy.code = "player_fixture"`，訊息「請先出賽或棄權」）。
+  唯二出路是回去打完或明確棄權，兩條都不會讓敗場消失。
+
+**已知既有缺口（非本輪造成，已記入 `08_目前待辦與風險.md`）**：
+`startFixtureMatch` 的併發守衛看的是「有沒有進行中的**場次**」。在
+「房間已開、場次還沒簽出」的空窗期切去另一場賽程不會被擋，前一場會留在
+`launched`。因為日曆會被那一場擋住，所以**不構成規避敗場的漏洞**，
+但兩場同時 `launched` 仍是不乾淨的狀態。
+
+守門：`node tools/check_cs_season_m2.mjs`（55/55）。
+
 ### 3.4 不得倒退
 
 CS Season 的任何工作**不得**修改下列既有語義。要改必須先更新本規格與共同契約：

@@ -67,6 +67,18 @@ export function fixtureOutcomeInputFrom({ result, fixture, playerTeamId } = {}) 
   const opponentTeamId = playerIsSideA ? fixture.sideB : fixture.sideA;
   const playerWon = result.winner === "us";
 
+  //  ── ⛔ CS：賽程比分是**地圖數**，不是 MatchResult 帶來的回合數 ──────────
+  //  規格 D4：`FixtureOutcome.score` 記地圖數，Season 層不認識地圖裡的事。
+  //  `MatchResult.v1` 對 CS 帶的是 Codex 引擎的**回合比分**（例如 13:7）——
+  //  那是 CS battle runtime 的責任區（MR12 / halftime / OT）。原樣抄進賽程
+  //  等於讓賽季層把回合語義當成自己的比分，正是 ownership lock 要擋的事。
+  //  ⚠ 這裡**不重算任何東西**：只讀 `result.winner`（Codex 已經判好的單圖勝負），
+  //    BO1 ⇒ 勝方 1 張地圖、敗方 0 張。一個回合數都沒有被搬進來。
+  //    BO3 的多地圖累計屬 M3，本函式不預先假設。
+  const isCs = fixture.gameMode === "cs";
+  const usScore = isCs ? (playerWon ? 1 : 0) : result.score.us;
+  const oppScore = isCs ? (playerWon ? 0 : 1) : result.score.opponent;
+
   return {
     ok: true,
     errors: [],
@@ -75,8 +87,8 @@ export function fixtureOutcomeInputFrom({ result, fixture, playerTeamId } = {}) 
       winner: playerWon ? playerTeamId : opponentTeamId,
       //  score.a 永遠對應 sideA ⇒ 客場時 us/opponent 要對調
       score: playerIsSideA
-        ? { a: result.score.us, b: result.score.opponent }
-        : { a: result.score.opponent, b: result.score.us },
+        ? { a: usScore, b: oppScore }
+        : { a: oppScore, b: usScore },
       //  時長與種子照抄正式賽果，不四捨五入、不重算
       duration: result.durationSec,
       seed: result.seed,

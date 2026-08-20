@@ -212,7 +212,7 @@ ck("MOBA instance 完全未被影響", st.competitionByMode.moba === null);
 
 ⚠ 這一支**只換座標，一個數字都不重算**——與 `fixtureResultBridge.js` 同一紀律。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 ```js
 const cs = { schema: "CsMatchResult.v1", winner: "us", ourScore: 13, enemyScore: 7, durationSec: 2100, seed: 42 };
@@ -222,10 +222,10 @@ ck("比分照抄", out.score.us === 13 && out.score.opponent === 7);
 ck("拒收 BattleResult", outcomeFromCsResult({ schema: "BattleResult.v2" }).ok === false);
 ```
 
-- [ ] **Step 2: 跑測試確認失敗**。
-- [ ] **Step 3: 實作** — 純函式，簽名上只收 `CsMatchResult.v1`，schema 不符即回 `{ ok: false }`。
-- [ ] **Step 4: 跑測試確認通過**。
-- [ ] **Step 5: Commit** — `git commit -m "feat: translate CS results into the neutral match outcome"`
+- [x] **Step 2: 跑測試確認失敗**。
+- [x] **Step 3: 實作** — 純函式，簽名上只收 `CsMatchResult.v1`，schema 不符即回 `{ ok: false }`。
+- [x] **Step 4: 跑測試確認通過**。
+- [x] **Step 5: Commit** — `git commit -m "feat: translate CS results into the neutral match outcome"`
 
 ### Task M2-2: CS 賽程 → MatchSession
 
@@ -239,11 +239,11 @@ ck("拒收 BattleResult", outcomeFromCsResult({ schema: "BattleResult.v2" }).ok 
 - Consumes: `outcomeFromCsResult()`、`createMatchResult({ session, outcome })`、`fixtureOutcomeInputFrom()`
 - Produces: CS fixture 可 `launched` → `completed`，產生 `FixtureOutcome`
 
-- [ ] **Step 1: 寫失敗測試** — 斷言：`startFixtureMatch(csFixtureId)` 產生 `session.mode === "cs"` 且 `origin.kind === "fixture"`；完賽後 CS fixture 狀態為 `completed`；`csHistory` **不再**是賽程賽果的唯一去處。
-- [ ] **Step 2: 跑測試確認失敗**。
-- [ ] **Step 3: 實作** — CS 賽前流程接 fixture origin；`CsMatchScreen.onFinish` 依 `isFixtureSession(session)` 分流：賽程場次走 `completeFixtureMatch`，訓練賽維持 `settleCsMatch`。
-- [ ] **Step 4: 跑測試確認通過**。
-- [ ] **Step 5: Commit** — `git commit -m "feat: route CS fixtures through the shared match session"`
+- [x] **Step 1: 寫失敗測試** — 斷言：`startFixtureMatch(csFixtureId)` 產生 `session.mode === "cs"` 且 `origin.kind === "fixture"`；完賽後 CS fixture 狀態為 `completed`；`csHistory` **不再**是賽程賽果的唯一去處。
+- [x] **Step 2: 跑測試確認失敗**。
+- [x] **Step 3: 實作** — CS 賽前流程接 fixture origin；`CsMatchScreen.onFinish` 依 `isFixtureSession(session)` 分流：賽程場次走 `completeFixtureMatch`，訓練賽維持 `settleCsMatch`。
+- [x] **Step 4: 跑測試確認通過**。
+- [x] **Step 5: Commit** — `git commit -m "feat: route CS fixtures through the shared match session"`
 
 ### Task M2-3: CS ActiveMatch resume
 
@@ -254,12 +254,30 @@ ck("拒收 BattleResult", outcomeFromCsResult({ schema: "BattleResult.v2" }).ok 
 **Interfaces:**
 - Consumes: `ActiveMatch.v1`（`contracts/matchSession.js`）、`activeMatchView()`
 
-- [ ] **Step 1: 寫失敗測試** — 斷言：CS `launched` session ＋ 有效 ActiveMatch snapshot ⇒ `primaryActionFor()` 回 resume；legacy／invalid ⇒ 不顯示 resume（與 R63 TTL 契約一致）。
-- [ ] **Step 2: 跑測試確認失敗**。
-- [ ] **Step 3: 實作** — CS 各階段呼叫 `setActiveMatchContext`（已部分存在，補齊 fixture 情境）。
-- [ ] **Step 4: 跑測試確認通過**。
-- [ ] **Step 5: 跑 `node tools/check_r63_active_match_ttl.mjs` 確認 9/9 未退化**。
-- [ ] **Step 6: Commit** — `git commit -m "feat: let a CS fixture match be resumed like a MOBA one"`
+- [x] **Step 1: 寫失敗測試** — 斷言：CS `launched` session ＋ 有效 ActiveMatch snapshot ⇒ `primaryActionFor()` 回 resume；legacy／invalid ⇒ 不顯示 resume（與 R63 TTL 契約一致）。
+- [x] **Step 2: 跑測試確認失敗**。
+- [x] **Step 3: 實作** — CS 各階段呼叫 `setActiveMatchContext`（已部分存在，補齊 fixture 情境）。
+- [x] **Step 4: 跑測試確認通過**。
+- [x] **Step 5: 跑 `node tools/check_r63_active_match_ttl.mjs` 確認 9/9 未退化**。
+- [x] **Step 6: Commit** — `git commit -m "feat: let a CS fixture match be resumed like a MOBA one"`
+
+> **M2 與計畫的三處偏差（2026-08-21 實作時記錄）**
+>
+> 1. **`setActiveMatchContext` 不必補齊。** 計畫寫「CS 各階段呼叫
+>    `setActiveMatchContext`（已部分存在，補齊 fixture 情境）」——實測 AppShell
+>    的 CS 流程**每一階段本來就在呼叫**（map / tactic / loading / battle），
+>    而 fixture 綁定掛在 session 的 `origin` 上、不在 context 裡。
+>    ⇒ 這一步實際上不需要改任何東西，resume 直接就回同一場。
+> 2. **CS 比分投影是計畫沒寫、但必要的行為。** `MatchResult.v1` 對 CS 帶的是
+>    Codex 的回合比分（13:7），沿用既有 `fixtureOutcomeInputFrom` 會把回合數
+>    直接寫進 `FixtureOutcome`。橋接因此新增 CS 分支，只讀 `winner`，
+>    投影成地圖數（規格 D4 ＋ ownership lock）。這是 M2 **唯一新增的行為**。
+> 3. **加了一個暫用的 UI 進場口。** 計畫沒提入場點，但沒有入口就談不上
+>    「玩家實際出戰」。`CsPrepScreen` 加了一個小區塊（開季／出戰今日賽程）。
+>    ⚠ 它**不是** CS Season UI，M4 做完整賽事頁時應取代它。
+>
+> 另有兩條斷言在實測後被修正（第一版寫錯，理由見規格 §3.3d）：
+> 「同一場不可重複 launch」的實際規則、以及「中離不得規避敗場」的實際機制。
 
 ---
 
