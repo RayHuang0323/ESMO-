@@ -227,6 +227,23 @@ CS Season 的任何工作**不得**修改下列既有語義。要改必須先更
 
 ---
 
+## 3.5 ⛔ Temporary ownership lock：CS 單場對戰內部規則
+
+**Codex 正在處理 CS 單場對戰內部的局數／回合／比分規則。**
+在 Codex 提供 **CS round-system stable checkpoint SHA** 之前，本規格的實作
+**不得修改或重新定義**：CS 單張地圖勝負局數、round / half / overtime 規則、
+`simulateFps` 的回合與比分語義、`CsMatchResult` 的既有單場比分產生邏輯、
+CS battle scoreboard 與 round lifecycle。
+
+⇒ 本規格的責任範圍收斂為 **Competition / Season / Fixture / BO series orchestration**。
+BO3 的 Season contract **只消費「每張地圖的最終勝負」**，不重算、不覆蓋、不推導
+Codex 的 map-level result。變異點 #1 `outcomeFromCsResult()` 只做座標轉換。
+
+⚠ **M0 不得碰任何 CS battle runtime**；M0 的變更面只有 `profileStore.js` 與 schema verifier。
+完整條文見 `docs/ai/跨模型交接流程.md` §13。
+
+---
+
 ## 4. Discipline Variation Points（給第三款遊戲）
 
 **這一節是文件，不是介面。** 第三款遊戲要接上 Competition Platform，需要提供這六件事。

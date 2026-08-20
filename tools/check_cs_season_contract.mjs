@@ -79,6 +79,18 @@ check("handoff forbids editing the contract just to go green",
 check("handoff keeps R65 frozen and separates CS from R64",
   has("handoff", "不解凍 R65") && has("handoff", "不同責任區"));
 
+// ── (1b) Temporary ownership lock: CS round system is Codex-owned ────────
+check("handoff records the temporary CS round-system ownership lock",
+  has("handoff", "Temporary ownership lock") && has("handoff", "CS round-system stable checkpoint"));
+check("lock names the CS battle runtime files Claude must not touch",
+  has("handoff", "EsportsFPS3D.jsx") && has("handoff", "check_cs_match_completion.mjs"));
+check("lock confines Claude to season-level orchestration",
+  has("handoff", "BO series orchestration"));
+check("lock forbids recomputing Codex map-level results",
+  has("handoff", "不得自行重算") && has("handoff", "map-level result"));
+check("lock states M0 must not touch CS battle runtime",
+  has("handoff", "不得碰上述任何 CS battle runtime"));
+
 // ── ② 規格與計畫存在且互相指認 ──────────────────────────────────────────
 check("spec exists and declares Claude Code as architecture owner",
   has("spec", "Architecture owner") && has("spec", "Claude Code"));
