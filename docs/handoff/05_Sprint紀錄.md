@@ -10497,3 +10497,31 @@ dialog」。CDP harness 可以自己接 `Page.javascriptDialogOpening`，因此�
 
 **Q7 Season / Competition MVP：CLOSED。**
 舊存檔相容性是先前唯一未覆蓋的一層，現在有真實 lifecycle 的實跑證據。
+
+## P0.6B Home Command Center / Team Overview contract（2026-08-20，docs + tools only）
+
+### Scope
+
+- 本輪只補共同產品契約與 static verifier，不開始 R64／R65，不修改 `src`，不 cherry-pick、
+  merge、push 或 deploy。
+- 基準固定為 production stable `76564a052075e9fe35ee592e2172f9fa0a3a8570`。既有
+  `2b1c43d`（R64）與 `de27f0a`（R65）只作 reference。
+
+### Contract
+
+- Home Command Center（`dashboard`）負責「現在最需要處理什麼」：ActiveMatch、Competition、
+  Team Development、近期事件／提醒的摘要與入口；只讀既有 store／selectors，不新增 gameplay truth。
+- Team Overview（`team`／現行 `TeamScreen.jsx`）負責「整支戰隊現在是什麼狀態」：戰隊身份、
+  整體狀態、分部／近期表現、精簡陣容與 Team Development 摘要。完整名單留 Roster，個人
+  深入資料留 Player Profile，本場出賽／陣容決策留 Match Prep。
+- 不可倒退 Team Development primary、schema v10、R60 consumers、ActiveMatch.v1、Competition／
+  SeasonState v2、Player Profile 四分頁與 Roster／Match Prep 資訊責任。R64／R65 不得整檔覆蓋
+  高衝突檔案，後續一律從 current baseline selective integration。
+
+### Verifier／ownership
+
+- `node tools/check_home_team_contract.mjs` 檢查五個 route／責任 marker、兩個關鍵入口與上述
+  runtime contract marker；內建 memory-only mutation sentinel，Team Development primary 被舊版
+  `talentPick`／「天賦」降級時必須 RED。
+- 下一階段 R64 由 Codex implementation-owned；R65 在 R64 stable／deployed 前 frozen。其他 AI
+  先更新交接／handoff，不得平行覆蓋同一責任區。
