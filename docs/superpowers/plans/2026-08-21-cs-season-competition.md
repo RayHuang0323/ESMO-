@@ -1,0 +1,323 @@
+# CS Season / Competition Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** 讓 CS 擁有完整的賽季／賽事生命週期（聯賽 → Major → 封存 → 換季），共用既有 Competition Platform，不建立第二套 Season truth。
+
+**Architecture:** `profileStore.competitionByMode = { moba, cs }`——同一套 canonical engine，依 gameMode 各持一個 SeasonState instance。`competition` 降為 `competitionByMode.moba` 的唯讀別名，舊 API 保留 `mode = "moba"` 預設，讓 Q7f / Release Gate 11 區段一行都不用改。CS 的比賽接上既有 MatchSession / ActiveMatch / MatchResult.v1 → FixtureOutcome 鏈路。
+
+**Tech Stack:** React 18 + Vite 5 + zustand。無測試框架 ⇒ 驗證＝`node tools/check_*.mjs` ＋ `npm run build` ＋ browser gate（CDP）。
+
+**Spec:** `docs/design/CS_賽事系統架構規格.md`
+
+## Global Constraints
+
+- `competitionByMode` 是唯一 canonical runtime structure；`competition` **只讀不寫**，不得雙寫。
+- 所有新 CS code **必須 explicit 傳 `mode: "cs"`**，不得依賴 `mode = "moba"` 預設。
+- **不得**修改 `SeasonState` / `Event` / `FinalStandings` / `SeasonSeal` / `careerEventId` / `canRollSeason` 的既有語義。要改先更新 `docs/design/CS_賽事系統架構規格.md` 與 `docs/ai/跨模型交接流程.md` §13。
+- **不得**為了讓 verifier 變綠而降低 assertion 或 rebaseline。
+- 每個 milestone 結束都要跑：`node tools/check_cs_season_contract.mjs`、`node tools/check_home_team_contract.mjs`、`node tools/check_competition_release_gate.mjs`（**必須 11/11**）、`npm run build`。
+- 一個 Fixture = 一個 series = 一個 FixtureOutcome；`score` 記地圖數，Season 層不認識地圖。
+- 回覆使用繁體中文；程式碼、commit message、檔名用英文。
+
+---
+
+## Milestone 對照表
+
+| Milestone | 交付 | 可驗收？ |
+|---|---|---|
+| **M0** | schema v11 雙讀相容遷移（無 CS 內容） | ✅ 既有 11 區段仍 11/11 |
+| **M1** | CS 聯賽 lifecycle，僅模擬／棄權 | ✅ CS S1 可自然走到封存 |
+| **M2** | 玩家實際出戰 CS 賽程（MatchSession / ActiveMatch / resume） | ✅ **CS Season MVP 的最低完成線** |
+| **M3** | 年度 Major（`single_elim` ＋ BO3） | ✅ CS 封存需經 Major |
+| **M4** | CS Season Recap ＋ 換季（UI 階段，Codex 執行） | ✅ 真實存檔驗收 |
+
+⚠ **M1 只是技術 milestone。真正的 CS Season MVP 至少要完成 M2。**
+
+---
+
+## M0 — schema v11 雙讀相容遷移
+
+**目標**：把 store 從「單一 competition」改成「keyed by gameMode」，且**既有行為逐值不變**。
+這個 milestone 結束時 CS 仍然沒有任何賽季——它證明的是「遷移沒有弄壞 MOBA」。
+
+### Task M0-1: v11 遷移 ＋ 唯讀別名
+
+**Files:**
+- Modify: `src/platform/profileStore.js`（`PROFILE_SCHEMA_VERSION`、initial state、`load()`、`save()`）
+- Test: `tools/check_cs_schema_v11.mjs`（新建）
+
+**Interfaces:**
+- Consumes: 既有 `upgradeSeasonShape()`、`arr()`
+- Produces:
+  - `PROFILE_SCHEMA_VERSION = 11`
+  - `competitionByMode: { moba: SeasonState|null, cs: SeasonState|null }`
+  - `competitionHistoryByMode: { moba: FinalStandings[], cs: FinalStandings[] }`
+  - `competition`（getter）→ `competitionByMode.moba`
+  - `competitionHistory`（getter）→ `competitionHistoryByMode.moba`
+
+- [ ] **Step 1: 寫失敗測試** — 建 `tools/check_cs_schema_v11.mjs`，斷言：v10 存檔載入後 `competitionByMode.moba` 逐值等於原 `competition`；`competitionByMode.cs === null`；`competition` 別名讀得到同一個物件；寫入只發生在 `competitionByMode`。
+
+```js
+// tools/check_cs_schema_v11.mjs（節錄）
+import { useProfileStore } from "../src/platform/profileStore.js";
+const v10 = JSON.parse(readFileSync("review/fixtures/competition/s7e_player_one.json", "utf8"));
+localStorage.setItem("esmo.profile.v1", JSON.stringify(v10));
+const st = useProfileStore.getState();
+ck("v10 存檔升版後 moba instance 逐值相同",
+  JSON.stringify(st.competitionByMode.moba) === JSON.stringify(v10.competition));
+ck("cs instance 初始為 null", st.competitionByMode.cs === null);
+ck("competition 別名指向 moba instance", st.competition === st.competitionByMode.moba);
+ck("schemaVersion 升到 11", st.schemaVersion === 11);
+```
+
+- [ ] **Step 2: 跑測試確認失敗** — `node tools/check_cs_schema_v11.mjs` → 預期 FAIL（`competitionByMode` undefined）。
+- [ ] **Step 3: 實作遷移** — initial state 改為 `competitionByMode: { moba: null, cs: null }`；`load()` 遇到 v10 存檔時把 `saved.competition` 搬進 `.moba`；`competition` 改為 getter；`PROFILE_SCHEMA_VERSION = 11`。
+- [ ] **Step 4: 跑測試確認通過**。
+- [ ] **Step 5: 跑既有回歸** — `node tools/check_competition_release_gate.mjs` 必須 **11/11**。這是本 task 真正的驗收：遷移不得動到 Q7f。
+- [ ] **Step 6: Commit** — `git commit -m "feat: key season state by game mode with read-through aliases"`
+
+### Task M0-2: 既有 API 加 mode 參數
+
+**Files:**
+- Modify: `src/platform/profileStore.js:787`（`ensureCompetitionSeason`）、`:1290`（`competitionView`）、`activeCompetitionEvent`、`_syncSeasonStateV2`
+
+**Interfaces:**
+- Produces: `competitionView(mode = "moba")`、`ensureCompetitionSeason(mode = "moba")`、`activeCompetitionEvent(mode = "moba")`
+
+- [ ] **Step 1: 寫失敗測試** — 在 `check_cs_schema_v11.mjs` 追加：`competitionView()` 與 `competitionView("moba")` 回傳逐值相同；`competitionView("cs")` 在無 CS 賽季時回 `hasSeason: false`。
+- [ ] **Step 2: 跑測試確認失敗**。
+- [ ] **Step 3: 實作** — 四支 API 加 `mode` 參數，內部一律讀 `competitionByMode[mode]`。
+- [ ] **Step 4: 跑測試確認通過**。
+- [ ] **Step 5: 跑 Release Gate 確認 11/11**（預設參數證明既有呼叫端不受影響）。
+- [ ] **Step 6: Commit** — `git commit -m "feat: parameterise competition selectors by game mode"`
+
+---
+
+## M1 — CS 聯賽 lifecycle（模擬／棄權）
+
+**目標**：CS S1 可以從建立走到封存，全程不需要玩家實際下場。
+
+### Task M1-1: CS 賽季建立
+
+**Files:**
+- Modify: `src/platform/competition/regularSeason.js`（`buildRegularSeason` 支援 cs 隊伍池）
+- Modify: `src/platform/profileStore.js`（`ensureCompetitionSeason("cs")`）
+- Test: `tools/check_cs_season_lifecycle.mjs`（新建）
+
+**Interfaces:**
+- Consumes: `csAiTeams.js` 的 `CS_AI_TEAM_COUNT = 8`、`CsAiTeam.v1`
+- Produces: `ensureCompetitionSeason("cs")` → `competitionByMode.cs` 為合法 SeasonState，`gameMode === "cs"`，8 位參賽者，14 場玩家賽程
+
+- [ ] **Step 1: 寫失敗測試**
+
+```js
+const st = useProfileStore.getState();
+st.startNewGame("standard");
+st.ensureCompetitionSeason("cs");
+const cs = st.competitionByMode.cs;
+ck("CS 賽季建立且 gameMode 正確", cs?.schema && activeCompetitionOf(cs).gameMode === "cs");
+ck("8 位參賽者", participantsOf(cs).length === 8);
+ck("賽事 id 帶 cs 命名空間", activeCompetitionOf(cs).id.startsWith("comp:cs:s1:"));
+ck("MOBA instance 完全未被影響", st.competitionByMode.moba === null);
+```
+
+- [ ] **Step 2: 跑測試確認失敗**。
+- [ ] **Step 3: 實作** — `buildRegularSeason({ gameMode: "cs" })` 從 `csAiTeams.js` 取 7 支 AI ＋ 玩家；`createCompetition({ gameMode: "cs", tier: "regular" })`。
+- [ ] **Step 4: 跑測試確認通過**。
+- [ ] **Step 5: Commit** — `git commit -m "feat: build a CS regular season from the CS AI pool"`
+
+### Task M1-2: CS 賽程模擬與棄權
+
+**Files:**
+- Modify: `src/platform/profileStore.js`（`advanceDay` 對兩個 instance 都結算）
+- Test: `tools/check_cs_season_lifecycle.mjs`
+
+**Interfaces:**
+- Consumes: `simulateFixture()`（已讀 `fixture.gameMode`，免費支援 CS）
+- Produces: `advanceDay(n)` 同時推進 `competitionByMode.moba` 與 `.cs`
+
+- [ ] **Step 1: 寫失敗測試** — 斷言：`advanceDay` 後 CS 的 AI 對戰產生 outcome；`forfeitFixture(csFixtureId)` 記為敗場；MOBA instance 的 outcome 數不受影響。
+- [ ] **Step 2: 跑測試確認失敗**。
+- [ ] **Step 3: 實作** — `advanceDay` 迴圈改為 `for (const mode of ["moba", "cs"])`。
+- [ ] **Step 4: 跑測試確認通過**。
+- [ ] **Step 5: Commit** — `git commit -m "feat: settle both disciplines when the day advances"`
+
+### Task M1-3: CS 賽季封存
+
+**Files:**
+- Modify: `src/platform/profileStore.js`（`_sealSeasonIfFinished` per-mode）
+- Test: `tools/check_cs_season_lifecycle.mjs`
+
+**Interfaces:**
+- Produces: CS 全部賽程完成 → `competitionByMode.cs.final` 為 SeasonSeal；`competitionHistoryByMode.cs` 得到一筆 FinalStandings
+
+- [ ] **Step 1: 寫失敗測試** — 全部 CS 賽程棄權後，斷言 `final` 非 null、`careerFinal.rows.length === 8`、`playerRank` 有值、MOBA 的 `final` 仍為 null。
+- [ ] **Step 2: 跑測試確認失敗**。
+- [ ] **Step 3: 實作** — `_sealSeasonIfFinished(mode)`，只封存該 instance。
+- [ ] **Step 4: 跑測試確認通過**。
+- [ ] **Step 5: 跑 Release Gate 11/11 ＋ `npm run build`**。
+- [ ] **Step 6: Commit** — `git commit -m "feat: seal each discipline's season independently"`
+
+---
+
+## M2 — 玩家實際出戰（CS Season MVP 的最低完成線）
+
+### Task M2-1: CsMatchResult → MatchResult 橋頭
+
+**Files:**
+- Create: `src/platform/competition/csResultBridge.js`
+- Test: `tools/check_cs_result_bridge.mjs`（新建）
+
+**Interfaces:**
+- Consumes: `CsMatchResult.v1`（`contracts/CsMatchResult.js`）
+- Produces: `outcomeFromCsResult(csResult, { playerTeamId })` → `{ winner: "us"|"opponent", score: { us, opponent }, durationSec, seed }`
+
+⚠ 這一支**只換座標，一個數字都不重算**——與 `fixtureResultBridge.js` 同一紀律。
+
+- [ ] **Step 1: 寫失敗測試**
+
+```js
+const cs = { schema: "CsMatchResult.v1", winner: "us", ourScore: 13, enemyScore: 7, durationSec: 2100, seed: 42 };
+const out = outcomeFromCsResult(cs);
+ck("勝負照抄不重算", out.winner === "us");
+ck("比分照抄", out.score.us === 13 && out.score.opponent === 7);
+ck("拒收 BattleResult", outcomeFromCsResult({ schema: "BattleResult.v2" }).ok === false);
+```
+
+- [ ] **Step 2: 跑測試確認失敗**。
+- [ ] **Step 3: 實作** — 純函式，簽名上只收 `CsMatchResult.v1`，schema 不符即回 `{ ok: false }`。
+- [ ] **Step 4: 跑測試確認通過**。
+- [ ] **Step 5: Commit** — `git commit -m "feat: translate CS results into the neutral match outcome"`
+
+### Task M2-2: CS 賽程 → MatchSession
+
+**Files:**
+- Modify: `src/platform/profileStore.js:915`（`startFixtureMatch` 已呼叫 `matchEntry(fixture.gameMode)`，確認 CS 路徑）
+- Modify: `src/screens/fps/CsPrepScreen.jsx`（接收 fixture origin）
+- Modify: `src/AppShell.jsx:192`（CS 完賽改走 fixture 結算而非直接 `settleCsMatch`）
+- Test: `tools/check_cs_active_match.mjs`（新建）
+
+**Interfaces:**
+- Consumes: `outcomeFromCsResult()`、`createMatchResult({ session, outcome })`、`fixtureOutcomeInputFrom()`
+- Produces: CS fixture 可 `launched` → `completed`，產生 `FixtureOutcome`
+
+- [ ] **Step 1: 寫失敗測試** — 斷言：`startFixtureMatch(csFixtureId)` 產生 `session.mode === "cs"` 且 `origin.kind === "fixture"`；完賽後 CS fixture 狀態為 `completed`；`csHistory` **不再**是賽程賽果的唯一去處。
+- [ ] **Step 2: 跑測試確認失敗**。
+- [ ] **Step 3: 實作** — CS 賽前流程接 fixture origin；`CsMatchScreen.onFinish` 依 `isFixtureSession(session)` 分流：賽程場次走 `completeFixtureMatch`，訓練賽維持 `settleCsMatch`。
+- [ ] **Step 4: 跑測試確認通過**。
+- [ ] **Step 5: Commit** — `git commit -m "feat: route CS fixtures through the shared match session"`
+
+### Task M2-3: CS ActiveMatch resume
+
+**Files:**
+- Modify: `src/screens/common/matchPrepAction.js`（確認 CS 路徑）
+- Test: `tools/check_cs_active_match.mjs`
+
+**Interfaces:**
+- Consumes: `ActiveMatch.v1`（`contracts/matchSession.js`）、`activeMatchView()`
+
+- [ ] **Step 1: 寫失敗測試** — 斷言：CS `launched` session ＋ 有效 ActiveMatch snapshot ⇒ `primaryActionFor()` 回 resume；legacy／invalid ⇒ 不顯示 resume（與 R63 TTL 契約一致）。
+- [ ] **Step 2: 跑測試確認失敗**。
+- [ ] **Step 3: 實作** — CS 各階段呼叫 `setActiveMatchContext`（已部分存在，補齊 fixture 情境）。
+- [ ] **Step 4: 跑測試確認通過**。
+- [ ] **Step 5: 跑 `node tools/check_r63_active_match_ttl.mjs` 確認 9/9 未退化**。
+- [ ] **Step 6: Commit** — `git commit -m "feat: let a CS fixture match be resumed like a MOBA one"`
+
+---
+
+## M3 — 年度 Major（single_elim ＋ BO3）
+
+### Task M3-1: single_elim 賽程產生器
+
+**Files:**
+- Modify: `src/platform/competition/scheduleGenerator.js`
+- Modify: `src/platform/contracts/competition.js:39`（`IMPLEMENTED_FORMATS` 加入 `single_elim`）
+- Test: `tools/check_single_elim.mjs`（新建）
+
+**Interfaces:**
+- Produces: `buildSingleElim({ participants, stage })` → 4 隊 ⇒ 2 準決賽 ＋ 季軍戰 ＋ 決賽（與 `playoffs.js` 既有 `playoffKey` 命名一致：`sf1 / sf2 / bronze / final`）
+
+- [ ] **Step 1: 寫失敗測試** — 斷言 4 隊產生 4 場、`playoffKey` 齊全、種子順序為 standings 前四。
+- [ ] **Step 2: 跑測試確認失敗**。
+- [ ] **Step 3: 實作**。
+- [ ] **Step 4: 跑測試確認通過**。
+- [ ] **Step 5: Commit** — `git commit -m "feat: generate a four-team single elimination bracket"`
+
+### Task M3-2: BO3 series
+
+**Files:**
+- Modify: `src/platform/competition/scheduleGenerator.js`（Major fixture 帶 `matchFormat`）
+- Test: `tools/check_cs_series.mjs`（新建）
+
+**Interfaces:**
+- Produces: Major fixture 的 `matchFormat = { series: "bo3", mapPool: CS_MAPS.map(m => m.key), veto: null }`；`FixtureOutcome.score` 記**地圖數**
+
+⚠ 三張地圖池下 BO3 ＝ 打滿三張、先拿兩張者勝。**不假裝有 veto 博弈**（規格 §D4）。
+
+- [ ] **Step 1: 寫失敗測試** — 斷言：一個 BO3 series 只產生**一個** Fixture 與**一個** FixtureOutcome；`score` 為地圖數（如 `2:1`）而非回合數；SeasonState 內**找不到任何地圖識別碼**。
+- [ ] **Step 2: 跑測試確認失敗**。
+- [ ] **Step 3: 實作**。
+- [ ] **Step 4: 跑測試確認通過**。
+- [ ] **Step 5: Commit** — `git commit -m "feat: score a CS series by maps won, not rounds"`
+
+### Task M3-3: Major → honors ＋ CS 封存
+
+**Files:**
+- Modify: `src/platform/competition/honors.js`（CS 年度冠軍 honorType）
+- Modify: `src/platform/profileStore.js`（CS 封存需經 Major）
+- Test: `tools/check_cs_season_lifecycle.mjs`
+
+- [ ] **Step 1: 寫失敗測試** — 斷言：Major 完成後 `honors` 多一筆 CS 年度冠軍；CS `final` 才出現；MOBA honors 不受影響。
+- [ ] **Step 2: 跑測試確認失敗**。
+- [ ] **Step 3: 實作**。
+- [ ] **Step 4: 跑測試確認通過**。
+- [ ] **Step 5: 跑全套 ＋ `npm run build`**。
+- [ ] **Step 6: Commit** — `git commit -m "feat: crown a CS annual champion and seal the season"`
+
+---
+
+## M4 — CS Season Recap ＋ 換季（UI 階段）
+
+> **Owner**：Claude Code 統籌，**Codex 執行前端實作**。
+> UI 階段開始前**另建** UI contract 與 implementation prompt（見規格 §7）。
+> Codex 只能讀既有 selectors / adapters / store API。
+
+### Task M4-1: CS Recap 呈現層
+
+**Files:**
+- Create: `src/screens/manage/seasonRecap/`（CS 變體，**沿用既有元件不重寫**）
+- Modify: CS 賽事頁
+
+**Interfaces:**
+- Consumes: `competitionView("cs")` 的 `final` / `careerFinal` / `honorsView` / `award` / `canRoll`
+
+⚠ Q7f 的六個區塊與 CTA 位置是**已定稿契約**，CS 版沿用其結構；差異只在 CS 沒有巡迴區塊、
+亞洲年度總決賽區塊換成 Major。**不得重新設計已固定的 Recap 契約。**
+
+- [ ] **Step 1: 寫 browser gate** — `tools/browser_check_cs_season_recap_ui.mjs`，fixture 放 `review/fixtures/competition/`。
+- [ ] **Step 2: 跑 gate 確認失敗**。
+- [ ] **Step 3: 實作呈現層**。
+- [ ] **Step 4: 跑 gate 確認通過**。
+- [ ] **Step 5: 把 `cs_season_recap` 加入 Competition Release Gate（區段數 11 → 12）**。
+- [ ] **Step 6: Commit**。
+
+### Task M4-2: 真實存檔驗收
+
+- [ ] **Step 1: 用真實存檔跑 CS 完整 lifecycle**（方法同 `review/q7-manual-save-acceptance/`：只在最開頭注入起始存檔，之後全用正式 gameplay action）。
+- [ ] **Step 2: 驗收 12 項**（載入 / 賽事頁 / standings / 自然封存 / Recap / 資料合理 / 無 undefined / CTA 一顆 / rollover / reload / Team Development / console 無 error）。
+- [ ] **Step 3: 確認 MOBA 完全未受影響**（MOBA Release Gate 仍 11/11、MOBA 賽季仍可獨立換季）。
+- [ ] **Step 4: 記錄到 `docs/handoff/05_Sprint紀錄.md`**。
+- [ ] **Step 5: Commit**。
+
+---
+
+## Self-Review
+
+**Spec coverage**：規格 §D1→M0；§D2→M2；§D3→M1/M3；§D4→M3-2；§D5→M1-2；§D6→M1-3/M3-3；§D7→文件（無 task，刻意）；§D8→M0；§5 賽事模型→M1/M3；§6 verifier→本輪已交付；§7 ownership→M4 標註。
+
+**Placeholder scan**：無 TBD / TODO；每個 code step 都有實際斷言或明確檔案位置。
+
+**Type consistency**：`competitionByMode` / `competitionHistoryByMode` / `competitionView(mode)` / `outcomeFromCsResult()` 在 M0→M3 各 task 間名稱一致；`playoffKey` 沿用 `playoffs.js` 既有的 `sf1/sf2/bronze/final`。
+
+**已知風險**：M2-2 要改 `AppShell.jsx` 的 CS 分流，那是高衝突檔案（共同契約 §12 列管）——實作前先確認沒有其他工作線同時在改。
