@@ -39,7 +39,9 @@ const {
   activeCompetitionOf, participantsOf, fixtureById, isPlayerFixture,
   outcomeFor, tryCareerFinalStandingsOf,
 } = await import("../src/platform/competition/seasonState.js");
-const { CS_LEAGUE_AI_TEAMS, CS_LEAGUE_TEAM_COUNT } = await import("../src/platform/competition/regularSeason.js");
+const { CS_LEAGUE_TEAM_COUNT } = await import("../src/platform/competition/regularSeason.js");
+const { csLeagueConfigFor, csTeamStatusFor, CS_TEAM_STATUS } =
+  await import("../src/platform/competition/csSeasonConfig.js");
 const { CS_AI_TEAMS } = await import("../src/data/csAiTeams.js");
 const { SIMULATOR_VERSION, CS_SIMULATOR_VERSION } = await import("../src/platform/competition/simulateFixture.js");
 
@@ -73,11 +75,20 @@ ck("8 位參賽者", participantsOf(cs()).length === CS_LEAGUE_TEAM_COUNT,
 ck("參賽者含玩家本人，其餘 7 支為 CS AI",
   participantsOf(cs()).filter((p) => !p.isAi).length === 1 &&
   participantsOf(cs()).filter((p) => p.isAi).length === 7);
-ck("聯賽名單排除 developing 隊伍，且沒有排掉 elite",
-  CS_LEAGUE_AI_TEAMS.every((t) => t.strengthBand !== "developing") &&
-  CS_LEAGUE_AI_TEAMS.some((t) => t.strengthBand === "elite") &&
-  CS_AI_TEAMS.length - CS_LEAGUE_AI_TEAMS.length === 1,
-  `排除：${CS_AI_TEAMS.filter((t) => !CS_LEAGUE_AI_TEAMS.includes(t)).map((t) => t.name).join(",")}`);
+//  ⚠ 參賽資格由 `csSeasonConfig.js` 的明文名單決定，**不是**從 strengthBand
+//    之類的實力欄位推導。完整的資格契約（含 Major、development 隊、
+//    band 不得影響資格）由 `tools/check_cs_league_eligibility.mjs` 專責守；
+//    這裡只確認 lifecycle 真的照設定組隊。
+ck("實際參賽的 AI 就是設定列出的那 7 支，一支不多一支不少", (() => {
+  const configured = new Set(csLeagueConfigFor(1).aiTeamKeys.map((k) => CS_AI_TEAMS.find((t) => t.key === k)?.id));
+  const actualAi = participantsOf(cs()).filter((p) => p.isAi).map((p) => p.id);
+  return actualAi.length === configured.size && actualAi.every((id) => configured.has(id));
+})());
+ck("沒有 development 定位的隊伍出現在聯賽裡",
+  participantsOf(cs()).filter((p) => p.isAi).every((p) => {
+    const team = CS_AI_TEAMS.find((t) => t.id === p.id);
+    return team && csTeamStatusFor(team.key, 1) === CS_TEAM_STATUS.league;
+  }));
 ck("建立 CS 賽季不會建立 MOBA 賽季",
   s1().competitionByMode.moba === beforeMoba && s1().competitionByMode.moba === null);
 ck("MOBA 的別名仍然指向 canonical（M0 的不變式沒被 M1 破壞）",

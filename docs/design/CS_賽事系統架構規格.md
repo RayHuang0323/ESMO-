@@ -245,14 +245,36 @@ Major 四強席次**直接取聯賽 standings 前四**，不建積分帳本—�
 M1 交付 CS 聯賽 lifecycle（建立 → AI 模擬／玩家棄權 → 封存），**玩家實際下場屬 M2**。
 六個規格沒寫、但實作必須決定的點，記在這裡：
 
-1. **CS 聯賽是 8 隊：玩家 ＋ 7 支 AI，排除 `strengthBand === "developing"`。**
-   `csAiTeams.js` 有 **8 支** AI（它是 R56 為 CS battle matchup 建的內容池，不是為聯賽建的），
-   8 ＋ 玩家 ＝ 9 是奇數，雙循環排不出來。規則寫成**語意的**而非 `slice(0, 7)`：
-   目前唯一的 developing 隊是 Neon Comets（資料上就標成「高潛力新秀」）。
-   ⚠ 排掉唯一的 elite（Iron Vanguard）會讓聯賽沒有頭號強隊 ⇒ 不採用。
-   ⚠ **這是為了湊 8 隊的內容決定，規格沒有寫死。** 正解是把 CS 聯賽擴到 10 隊，
-   或讓新秀隊透過 Major／升降級進來（M3 之後）。內容池分布一變，
-   `csLeagueParticipants()` 會**直接丟例外**，不會靜默排出奇數隊。
+1. **CS 聯賽是 8 隊：玩家 ＋ 7 支明文列舉的 AI。參賽資格寫在
+   `src/platform/competition/csSeasonConfig.js`。**
+
+   產品決策（2026-08-21 使用者裁示）：CS MVP 頂級聯賽維持 8 隊總數；
+   Neon Comets 定位為 **development / challenger**，本季不參加頂級聯賽、
+   也不直接進 Major；未來 Qualifier／升降級／擴充到 10 隊時再納入。
+
+   ⚠ **兩個必須避免的契約錯誤（第一版都犯了，已修正）**：
+
+   - **不得**把「9 隊不能排循環賽」寫成產品規則。奇數隊在賽制上**可以**用
+     輪空（bye）排循環賽；目前排不出來只是 `scheduleGenerator.js` 還沒實作，
+     那條限制留在排程器自己的錯誤訊息裡（「循環賽**目前**不支援奇數隊
+     （需要輪空機制）」），不是賽制的性質。**隊數是產品決策。**
+   - **不得**用 `strengthBand === "developing"` 當參賽資格。`strengthBand` 是
+     **實力描述**（elite / upper / middle / developing），是內容平衡的產物。
+     拿它當資格條件的話，日後有人為了平衡調整某隊強弱，本季的聯賽名單就會
+     **默默改變**——參賽資格不該被實力數值決定。
+
+   ⇒ 實作改為明文的 participant eligibility：`CS_LEAGUE_SEASONS[season].aiTeamKeys`
+   逐季列出參賽 AI 的 key，`CS_TEAM_STATUS` 區分 `league` / `development`，
+   玩家席位**不在設定裡**（CS 賽季是玩家的賽季，「玩家在不在」不該有第二種可能）。
+   席次不符時 `csLeagueAiTeamsFor()` 直接丟例外，不靜默排出錯誤隊數。
+   守門：`node tools/check_cs_league_eligibility.mjs`（31/31），
+   含 mutation sentinel 證明「翻轉 strengthBand 不會改變名單，
+   但舊的 band 規則會」。
+
+   **Major 的席位**：`CS_MAJOR_QUALIFICATION = { source: "league_standings", topN: 4 }`，
+   由純函式 `csMajorQualifiers(standings)` 從**該季聯賽積分榜**取前四，
+   不做外卡、不補位、不接受額外隊伍清單 ⇒ 不在聯賽裡的隊伍**結構上**進不了 Major。
+   （Major 的賽制與對戰表仍是 M3；這裡只定義資格從哪裡來。）
 2. **CS 聯賽 `expectsPlayoff: false`、Event `prizePolicy: null`。**
    前者：CS 的年度 Major 是 M3，宣告 `true` 會讓 CS 賽季**永遠封不了**
    （封存判定會等一個不存在的季後賽）。

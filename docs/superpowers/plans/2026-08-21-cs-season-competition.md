@@ -181,9 +181,16 @@ ck("MOBA instance 完全未被影響", st.competitionByMode.moba === null);
 >    驗收改為斷言 `tryCareerFinalStandingsOf(cs)` 有 8 列、`playerRank` 有值
 >    （與計畫 M1-3 Step 1 的斷言完全一致）。
 > 2. **`buildRegularSeason` 的「取 7 支 AI」計畫沒有說取哪 7 支。**
->    `csAiTeams.js` 實際有 8 支。實作採語意規則（排除 `strengthBand === "developing"`，
->    目前是 Neon Comets），並在數量不對時**丟例外**。這是規格沒寫死的內容決定，
->    完整理由與替代方案見規格 §3.3c 第 1 點。**這一條需要使用者裁示是否沿用。**
+>    `csAiTeams.js` 實際有 8 支。**已由使用者裁示（2026-08-21）並修正實作**：
+>    CS MVP 頂級聯賽維持 8 隊，Neon Comets 定位為 development / challenger，
+>    本季不打頂級聯賽也不直接進 Major，未來 Qualifier／升降級／擴充 10 隊時再納入。
+>    ⚠ 第一版的兩個契約錯誤已一併修掉，**不要再犯**：
+>    ① 把「9 隊不能排循環賽」寫成產品規則（實際是 `scheduleGenerator.js`
+>       還沒實作輪空，隊數是產品決策）；
+>    ② 用 `strengthBand === "developing"` 當參賽資格（那是實力描述，
+>       調整平衡會默默改變聯賽名單）。
+>    改為明文的 participant eligibility：`src/platform/competition/csSeasonConfig.js`。
+>    詳見規格 §3.3c 第 1 點，守門 `tools/check_cs_league_eligibility.mjs`。
 > 3. **`advanceDay` 不是單純 `for (const mode of ["moba", "cs"])`。**
 >    兩個賽季共用 `meta.days`，各推各的會讓同一個日曆對兩個賽季說不同的話。
 >    實作改為「先試算、取兩者交集、再落地」；只有一個賽季時完全走舊路徑，

@@ -33,6 +33,8 @@ const files = Object.freeze({
   csMatchResult: "src/platform/contracts/CsMatchResult.js",
   seasonState: "src/platform/competition/seasonState.js",
   regularSeason: "src/platform/competition/regularSeason.js",
+  csSeasonConfig: "src/platform/competition/csSeasonConfig.js",
+  scheduleGenerator: "src/platform/competition/scheduleGenerator.js",
   seasonStateV2: "src/platform/competition/seasonStateV2.js",
   fixtureBridge: "src/platform/competition/fixtureResultBridge.js",
   simulateFixture: "src/platform/competition/simulateFixture.js",
@@ -56,6 +58,13 @@ const checks = [];
 const check = (name, condition, detail = "") =>
   checks.push({ name, ok: Boolean(condition), detail });
 const has = (key, marker) => (text.get(key) ?? "").includes(marker);
+//  ⚠ 只看**程式碼**，不看註解。這些檔案的註解**必須**寫得出「MR12 /
+//    first-to-13 是 Codex 的責任區」、「strengthBand 不是參賽資格」——
+//    那是在說明規則，不是違反它。連註解一起 grep 會讓「把規則寫清楚」
+//    變成紅燈，那是反效果的守衛。
+const codeOnly = (key) => (text.get(key) ?? "")
+  .replace(/\/\*[\s\S]*?\*\//g, "")
+  .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 
 // ── ① Ownership markers（不能只存在於對話裡）─────────────────────────────
 check("handoff §13 exists", has("handoff", "## 13. CS Season / Competition"));
@@ -174,12 +183,25 @@ check("profileStore keeps the v10 -> v11 migration a pure addition",
   has("profileStore", "saved.competitionByMode?.moba ?? saved.competition"));
 
 // ── ⑨ CS Season M1：CS 聯賽 lifecycle 的結構性錨點 ──────────────────────
-check("regular season assembly builds the CS league from the CS AI pool",
-  has("regularSeason", "csLeagueParticipants") && has("regularSeason", "CS_AI_TEAMS"));
-check("CS league keeps eight participants and a semantic exclusion rule",
-  has("regularSeason", "CS_LEAGUE_TEAM_COUNT = 8") && has("regularSeason", 'strengthBand !== "developing"'));
+check("regular season assembly builds the CS league from the season config",
+  has("regularSeason", "csLeagueParticipants") && has("regularSeason", "csLeagueAiTeamsFor"));
+check("CS league eligibility is an explicit roster, not a derived one",
+  has("csSeasonConfig", "aiTeamKeys") && has("csSeasonConfig", "CS_TEAM_STATUS")
+  && has("csSeasonConfig", "development"));
+//  ⚠ 反向斷言：參賽資格的兩個檔案**都不得**讀 strengthBand。
+//    `strengthBand` 是實力描述；用它決定誰能參賽，等於讓內容平衡默默改變賽制。
+//    （2026-08-21 的第一版就是這樣寫的，使用者退回，已改為明文設定。）
+check("league eligibility never reads a strength descriptor",
+  !/strengthBand/.test(codeOnly("csSeasonConfig")) && !/strengthBand/.test(codeOnly("regularSeason")));
 check("CS league refuses to build a wrong-sized field instead of failing quietly",
-  has("regularSeason", "CS_LEAGUE_AI_COUNT") && /throw new Error/.test(text.get("regularSeason") ?? ""));
+  /throw new Error/.test(text.get("csSeasonConfig") ?? "") && has("csSeasonConfig", "teamCount"));
+check("Major seats come only from the league standings",
+  has("csSeasonConfig", "CS_MAJOR_QUALIFICATION") && has("csSeasonConfig", "league_standings")
+  && has("csSeasonConfig", "csMajorQualifiers"));
+//  ⚠ 隊數是**產品決策**，不是排程器的限制。奇數隊可以用輪空排循環賽，
+//    只是排程器還沒實作 —— 那條限制要留在排程器自己身上，不得被寫成產品規則。
+check("the odd-field limit stays a scheduler limitation, not a product rule",
+  has("scheduleGenerator", "目前不支援奇數隊"));
 check("simulation rosters follow the season's own game mode",
   has("seasonState", "gameModeOf") && has("seasonState", "CS_AI_TEAMS"));
 check("CS season declares no playoff and no prize policy in M1",
@@ -198,12 +220,6 @@ check("CS season scores are map counts, not rounds",
   has("simulateFixture", "{ a: 1, b: 0 }"));
 check("CS simulation is versioned apart from the MOBA kill model",
   has("simulateFixture", "CS_SIMULATOR_VERSION") && has("simulateFixture", "simulatorVersionFor"));
-//  ⚠ 只看**程式碼**，不看註解。本檔與 simulateFixture.js 的註解**必須**寫得出
-//    「MR12 / first-to-13 是 Codex 的責任區」——那是在說明這條 lock，不是違反它。
-//    連註解一起 grep 會讓「把規則寫清楚」變成紅燈，那是反效果的守衛。
-const codeOnly = (key) => (text.get(key) ?? "")
-  .replace(/\/\*[\s\S]*?\*\//g, "")
-  .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 check("season layer invents no CS round vocabulary in code",
   !/\b(MR12|firstTo13|roundsWon|halfTime|overtimeRounds)\b/i.test(codeOnly("simulateFixture")) &&
   !/\b(MR12|firstTo13|roundsWon)\b/i.test(codeOnly("seasonState")));

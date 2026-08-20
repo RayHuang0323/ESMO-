@@ -10739,3 +10739,86 @@ node tools/check_competition_release_gate.mjs
 兩支都**不加進 Competition Release Gate**：規格 §3.4 把「Release Gate 的 11 個區段
 與其硬編碼通過數」列為不得倒退，加區段會動到那個數字。改由
 `docs/ai/跨模型交接流程.md` §13 登記為 M0／M1 的守門 verifier。
+
+---
+
+## CS Season M1 修正 — 參賽資格改為明文設定（2026-08-21，使用者退回後）
+
+M1 的 lifecycle 本身被接受，但參賽名單的**兩個契約觀念寫錯了**，使用者退回重做。
+
+### 錯在哪（照實記，不要再犯）
+
+1. **把 scheduler 的限制寫成產品規則。** 第一版的註解寫「8 支 AI ＋ 玩家 ＝ 9 隊是奇數，
+   雙循環排不出來」。**這是錯的**：奇數隊在賽制上可以用輪空（bye）排循環賽，
+   目前排不出來只是 `scheduleGenerator.js` 還沒實作——那支檔案自己的錯誤訊息就寫得很清楚
+   （「循環賽**目前**不支援奇數隊（需要輪空機制）」）。隊數是**產品決策**，不是賽制的性質。
+2. **拿 `strengthBand` 當參賽資格。** 第一版寫成
+   `CS_AI_TEAMS.filter((t) => t.strengthBand !== "developing")`。`strengthBand` 是
+   **實力描述**、是內容平衡的產物；用它當資格條件，日後有人把某隊調強或調弱，
+   本季的聯賽名單就會**默默改變**。參賽資格不該被實力數值決定。
+
+### 產品決策（使用者裁示）
+
+- CS MVP 頂級聯賽維持 **8 隊總數**：玩家 ＋ 7 支 AI。
+- **Neon Comets 定位為 development / challenger**：本季不參加頂級聯賽，也不直接進 Major。
+- 未來 Qualifier／升降級／擴充到 10 隊時再納入。
+
+### 改法
+
+新增 `src/platform/competition/csSeasonConfig.js`——**明文的 participant eligibility**：
+
+- `CS_LEAGUE_SEASONS[season].aiTeamKeys`：逐季列出參賽 AI 的 key，**不從任何欄位推導**。
+- `CS_TEAM_STATUS`：`league` / `development`。定位與實力無關——
+  一支 development 隊可以很強，一支 league 隊也可以很弱。
+- **玩家席位不在設定裡**：CS 賽季是玩家的賽季，「玩家在不在名單裡」不該有第二種可能。
+- 席次不符 ⇒ `csLeagueAiTeamsFor()` 直接丟例外，不靜默排出錯誤隊數。
+- `CS_MAJOR_QUALIFICATION = { source: "league_standings", topN: 4 }` ＋ 純函式
+  `csMajorQualifiers(standings)`：只從該季**聯賽積分榜**取前四，不做外卡、不補位、
+  不接受額外隊伍清單 ⇒ 不在聯賽裡的隊伍**結構上**進不了 Major。
+  （Major 的賽制與對戰表仍是 M3，這裡只定義資格從哪裡來。）
+
+`regularSeason.js` 退回成純組裝：不再做任何條件篩選，參賽者向設定要。
+
+⚠ **未修改 Codex 的 CS battle runtime**（本輪連 `src/battle/` 都沒有進去）。
+
+### 新增 focused verifier
+
+`tools/check_cs_league_eligibility.mjs`（31/31），五組對應使用者指定的驗收點：
+
+```
+§1 CS League 總數固定 8              6 條（含席次守衛的 mutation）
+§2 玩家一定存在                       4 條（換玩家隊仍佔第一席）
+§3 Major 只從聯賽 standings 前四晉級   7 條（空榜 ⇒ 0 席；兩隊 ⇒ 2 席，不補位）
+§4 Neon Comets 本季不在 League/Major   8 條（含整季 56 場都沒有它的場次）
+§5 strengthBand 不得決定 eligibility   6 條
+```
+
+§5 的 mutation sentinel 是這一支的重點：memory-only 把 Neon Comets 翻成 `elite`、
+把 Shadow Wolves 翻成 `developing`，然後比較兩種規則——
+**設定規則的答案不變，舊的 band 規則會換掉整份聯賽名單**。
+`check_cs_season_contract.mjs` 另加反向斷言：資格相關的兩個檔案**都不得**出現
+`strengthBand`，且「奇數隊」的限制必須留在 `scheduleGenerator.js` 自己身上。
+
+### 驗證（全部實跑）
+
+```
+node tools/check_cs_league_eligibility.mjs  CS league eligibility: 31/31 PASS   ← 本輪新增
+node tools/check_cs_season_lifecycle.mjs    CS Season M1 lifecycle: 50/50 PASS
+node tools/check_cs_season_contract.mjs     CS Season / Competition contract: 62/62 PASS
+node tools/check_cs_schema_v11.mjs          CS schema v11 migration: 41/41 PASS
+node tools/check_home_team_contract.mjs     Home / Team responsibility contract: 40/40 PASS
+npm run build                               ✓ built in 31.80s
+
+MOBA regression（賽事線）q1 93/93、q2a 112/112、q2b 92/92、q3 91/91、
+                          q35 65/65、q4 68/68、q5 69/69、q6 57/57
+
+node tools/check_competition_release_gate.mjs
+  11 區段全 PASS   passed 11/11   failed 0/11   port 清理：✅ 無殘留
+```
+
+`check_cs_season_contract` 由 59 → 62 條（§⑨ 改寫為設定導向，新增
+「資格不得讀 strengthBand」與「奇數隊限制必須留在 scheduleGenerator」兩條反向斷言）。
+`check_cs_season_lifecycle` 由 49 → 50 條（資格細節移交新的 focused verifier）。
+
+**本輪未進入 `src/battle/`**，Codex 的 CS battle runtime 一個檔案都沒動。
+未開始 M2。
