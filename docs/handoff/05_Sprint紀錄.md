@@ -11459,3 +11459,61 @@ npm run build    ✓ built in 11.88s
 ```
 
 ⚠ **已知紅、非本輪造成**：`check_season_state_v2_migration_q7b.mjs`（M3-1 已實證）。
+
+---
+
+## CS Season M4-A.1 — Browser Closure ＋ 選圖過濾　2026-08-22
+
+**分支**：`integration/cs-cross-ai`（起點 `a3efdcf`）
+**完整紀錄**：`review/cs-m4a/browser_closure_2026-08-22.md`
+
+### Browser closure：7 / 7 PASS
+
+三張地圖**都是 Codex 的 CS 引擎真的跑完的**（Dust II 勝 → Mirage 敗 → Inferno 勝），
+注入起始存檔之後全程走正式 gameplay action。
+
+1. Map 1 結束後回 **csMap**（`phase = map/active`）
+2. series 1:0 → 1:1 → **2:1**（`dust2:us` / `mirage:opponent` / `inferno:us`）
+3. next map 正確（1:0→mirage、1:1→inferno）
+4. reload 保留 1:0、phase 仍 `map`、同一 fixture
+5. **中離重進仍 1:0**（M4-A.1 的主修正，`fx:cs:90b3ba4a` 未變）
+6. 最終 `status=decided winner=us`，fixture `completed`
+7. **FixtureOutcome 只有一筆**：`winner=玩家 score=2:1 src=engine`
+
+附帶在同一輪確認：中間地圖不寫賽程（打完兩張仍 `launched` + 0 筆賽果）、
+賽程收尾後 series 帳本清空、bracket 推進到 bronze/final、
+⛔ 賽季層最大比分 = 2、無 round/half/overtime 欄位、
+`matchFormat.mapPool` 之外無地圖識別碼、賽季狀態內無 `MatchSeries`／`seriesByFixture`。
+
+### 一併做掉的最小修正：已完成地圖不可再選
+
+`CsMapSelectScreen` 先前三張圖全開放選，玩家可以在同一個 BO3 裡重挑打過的圖。
+資料層本來就守得住（`recordSeriesMap` 以 matchId 冪等、仍是 first-to-2），
+所以這是**呈現層**修正：打過的卡片 `disabled` ＋ 標「已打 · 我方勝／對手勝」，
+另加一條 series banner（`BO3 1:1 · 第 3/3 張 · 先拿 2 張者勝`）。
+
+⚠ 名單來源是 **store 的 series 狀態**，不是畫面自己記——重整之後畫面狀態就沒了。
+⚠ banner **只顯示地圖數**，一個回合數字都不顯示（那是 Codex 的責任區）。
+
+### ⚠ 一個失敗的嘗試，記下來免得有人重走
+
+為了不必請人切前景，本輪試過用 `MessageChannel` 取代 `requestAnimationFrame`
+（背景分頁的 rAF/`setTimeout` 被 Chrome 節流，MessageChannel 不會）。
+
+**可行但有害**：短地圖（Mirage 956 格）跑得完，但決勝圖（Inferno 1375 格）
+會變成**不讓出的忙迴圈**，把事件迴圈餓死 —— 連讀 localStorage 都做不到，
+navigate 也搶不回控制權，最後只能關掉分頁重開。存檔沒壞，但等於白花時間。
+
+⇒ **CS browser gate 目前必須由人把分頁切到前景。** 不要再嘗試替代 frame pump。
+
+另一個容易誤判的點：CS 對戰**打完不會自動跳賽後頁**，要按
+「📊 查看賽後戰報 · 領取獎勵」才會結算。第一次遇到會誤以為是計時器被節流。
+
+### 驗證
+
+```
+node tools/check_cs_playable_series.mjs   99/99
+node tools/check_competition_q35.mjs      66/66   （動到 CS 畫面，特別複跑）
+npm run build                             ✓ built in 10.36s
+browser closure                           7/7 PASS（見上）
+```
