@@ -49,7 +49,8 @@ const { csMajorQualifiers, CS_MAJOR_QUALIFICATION } =
   await import("../src/platform/competition/csSeasonConfig.js");
 const { PLAYOFF_MATCHES } = await import("../src/platform/competition/playoffs.js");
 const { isFixtureTerminal } = await import("../src/platform/contracts/competition.js");
-const { CS_SIMULATOR_VERSION } = await import("../src/platform/competition/simulateFixture.js");
+const { CS_SIMULATOR_VERSION, CS_SERIES_SIMULATOR_VERSION } =
+  await import("../src/platform/competition/simulateFixture.js");
 
 let bootSeq = 0;
 const freshStore = async () => {
@@ -203,12 +204,24 @@ ck("Major 比分兩側都 ≤ 2（地圖數，不是回合數）",
   scores.map((sc) => `${sc.a}:${sc.b}`).join(" "));
 ck("Major 比分沒有出現任何回合量級的數字（>2）",
   scores.every((sc) => Number(sc.a) <= 2 && Number(sc.b) <= 2));
-ck("Major 賽果的模擬器版本是 CS 專屬版",
-  majorOutcomes.every((o) => o.simulatorVersion === CS_SIMULATOR_VERSION),
+//  ⚠ M3-2 起 Major 是 BO3 ⇒ 賽果用 series 專屬的模擬器版本，不再是 BO1 的 cs1。
+//    兩者都是「CS 專屬」，但投影公式不同就必須分版（見 simulateFixture.js 檔頭）。
+ck("Major 賽果的模擬器版本是 CS series 專屬版（BO3）",
+  majorOutcomes.every((o) => o.simulatorVersion === CS_SERIES_SIMULATOR_VERSION),
   majorOutcomes[0]?.simulatorVersion);
-const majorJson = JSON.stringify({ fixtures: majorFx3, outcomes: majorOutcomes });
-ck("Major 的 SeasonState 內容找不到任何地圖識別碼",
-  !/\b(dust|mirage|inferno|nuke|overpass|ancient|anubis|vertigo|train)\b/i.test(majorJson));
+ck("Major 沒有沿用 CS 聯賽（BO1）的模擬器版本",
+  CS_SERIES_SIMULATOR_VERSION !== CS_SIMULATOR_VERSION
+  && majorOutcomes.every((o) => o.simulatorVersion !== CS_SIMULATOR_VERSION));
+//  ⚠ M3-2 起 fixture 的 `matchFormat.mapPool` 會列出地圖 key。**那是賽制設定，
+//    不是賽果**：它宣告「這個 series 可以用哪幾張圖」，不是「哪張圖發生了什麼」。
+//    ownership lock 擋的是後者 —— 所以檢查對象縮到**賽果**，並額外釘住
+//    「地圖 key 只准出現在 mapPool 裡」，避免它從別的欄位滲進賽季狀態。
+const MAP_RE = /\b(dust2?|mirage|inferno|nuke|overpass|ancient|anubis|vertigo|train)\b/i;
+ck("Major 的**賽果**裡找不到任何地圖識別碼",
+  !MAP_RE.test(JSON.stringify(majorOutcomes)));
+ck("地圖識別碼只出現在 matchFormat.mapPool（賽制設定），沒有滲進賽程的其他欄位",
+  majorFx3.every((f) => !MAP_RE.test(JSON.stringify({ ...f, matchFormat: null }))),
+  `mapPool=${(majorFx3[0]?.matchFormat?.mapPool ?? []).join(",")}`);
 ck("Major 的 SeasonState 內容沒有 round / half / overtime 語義欄位",
   !/"(round(s|sPlayed|Score)?|half|halftime|overtime|otGroup|roundWins)"\s*:/i
     .test(JSON.stringify(majorOutcomes)),

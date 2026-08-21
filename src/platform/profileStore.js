@@ -1080,6 +1080,20 @@ export const useProfileStore = create((rawSet, get) => {
     const fixture = fixtureById(state, fixtureId);
     if (!fixture) return { ok: false, errors: [{ code: "fixture", message: "找不到這場賽程" }], reason: "找不到這場賽程" };
 
+    //  ── ⛔ CS Season M3-2：BO3 series 還不能由玩家出戰 ────────────────────
+    //  擋在**進場**而不是結算，是刻意的。若放玩家打完再由橋接拒絕，那一場會卡在
+    //  `launched`：日曆被擋住（`advanceDay` 回 `player_fixture`），而玩家既結算
+    //  不了也不能重來 —— 那是 soft-lock，比擋在門口糟得多。
+    //  擋在這裡的話賽程維持 `scheduled`，玩家仍可棄權或讓它逾期補判，日曆走得動。
+    //  ⚠ 這是**暫時的**：M4 要做跨三張地圖的 series 流程（地圖結果累計住在
+    //    MatchSession / ActiveMatch，不進 SeasonState）。做出來之後這一道要拿掉。
+    const series = fixture.gameMode === "cs" ? (fixture.matchFormat?.series ?? null) : null;
+    if (series) {
+      const message = `年度 Major 是 ${series}（先拿兩張地圖），玩家出戰 series 的流程尚未實作。`
+        + "你可以棄權這一場，或等它逾期補判。";
+      return { ok: false, errors: [{ code: "series_not_playable", message }], reason: message };
+    }
+
     //  ── 一次只能有一場進行中的對戰（Q7a 安全前提）────────────────────
     //  產品規則：賽程與賽事可以並存、同一天也可以有多場，但**玩家隊伍同一時間
     //  只能有一個進行中的 battle session**，打完並結算後才能進下一場。

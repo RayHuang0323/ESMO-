@@ -11117,3 +11117,110 @@ M3-2（BO3 series）**本輪刻意未動**：Major fixture 目前沒有 `matchFo
 `{ series: "bo3", mapPool: CS_MAPS, veto: null }` 並讓比分變成 `2:0` / `2:1`。
 結構上已經備好 —— 一個 Fixture ＝ 一個 series ＝ 一筆 FixtureOutcome 的不變式
 在本輪就成立，M3-2 只需要改比分的產生，不必動賽事結構。
+
+---
+
+## CS Season M3-2 — BO3 series 語義　2026-08-22
+
+**分支**：`integration/cs-cross-ai`（起點：M3-1 checkpoint `b3a8d9b`）
+**規格**：`docs/design/CS_賽事系統架構規格.md` D4
+**計畫**：`docs/superpowers/plans/2026-08-21-cs-season-competition.md` M3-2
+
+### 做了什麼
+
+年度 Major 的每一場正式成為一個 **BO3 series**：fixture 帶
+`matchFormat = { series: "bo3", mapPool: <引擎現役三張圖>, veto: null }`，
+賽果的 `score` 是**地圖數**（2:0 / 2:1），先拿兩張者勝。
+賽季層看到的仍然只有「誰贏了這個 series、拿下幾張圖」。
+
+| 檔案 | 動作 |
+|---|---|
+| `csMajor.js` | 新增 `CS_MAJOR_SERIES` / `CS_MAJOR_MAPS_TO_WIN` / `CS_MAJOR_MATCH_FORMAT` |
+| `playoffs.js` | `ensurePlayoffFixtures` 加選用 `matchFormat`（預設 null ⇒ MOBA 季後賽逐值不變）|
+| `seasonState.js` | `ensureCsMajor` 把 `CS_MAJOR_MATCH_FORMAT` 掛到 Major 的每一場 |
+| `simulateFixture.js` | 新增 series 分支與 `CS_SERIES_SIMULATOR_VERSION`；`simulatorVersionFor` 加 `matchFormat` 參數 |
+| `fixtureResultBridge.js` | BO3 fail-closed（`series_incomplete`）|
+| `profileStore.js` | `startFixtureMatch` 對 BO3 fail-closed（`series_not_playable`）|
+| `tools/check_cs_series.mjs` | 新增，46/46 |
+| `tools/check_cs_major.mjs` | 三條斷言隨 BO3 更新，70 → 72 |
+
+### BO3 比分怎麼產生
+
+**逐張地圖擲，擲到有人先拿滿兩張。** 每張地圖用同一個 `pA`（由 roster 的 16 項
+能力推出的隊伍實力差），沒有第二套模型、**沒有任何回合概念**。
+
+⚠ **勝方由地圖決定，不另外擲一次「誰贏這個 series」。** 分開擲的話，series 比分
+與勝方會各有各的來源，可能互相矛盾（2:1 卻標成另一隊贏）。
+
+⚠ **`fixtureSim.cs1.bo3` 是新版本，不是就地升版 `cs1`。** 投影公式不同就必須分版：
+BO1 的 `1:0` 是「一場定勝負」，BO3 的 `2:1` 是「打了三張、拿下兩張」，
+同一個版本字串說不了這兩件事。而且版本字串會進亂數流的 hash ——
+就地升版會讓既有的 CS 聯賽賽果**全部平移**。
+
+**已用基線實證**：在 `b3a8d9b` 開臨時 worktree 跑完整個 CS 聯賽，把 56 場的
+`[fixtureId, winner, score, resultSource, simulatorVersion, duration]` 落成 JSON，
+與本輪逐位元比對 ⇒ **IDENTICAL**。單場路徑的亂數消耗順序（roll → loserKills →
+margin → duration）刻意保持不變，就是為了這個。
+
+### 玩家出戰 BO3：兩道 fail-closed
+
+一場 `MatchResult.v1` 只代表**一張地圖**，拿它結算一個 series 只有兩種寫法，
+兩種都是錯的：記成 `1:0`（宣稱 BO3 打完了卻只打一張）、或記成 `2:0`
+（憑空發明一張沒打的地圖）。所以**明確拒絕，不猜**：
+
+1. `startFixtureMatch` 擋在**進場**（`series_not_playable`）
+2. `fixtureOutcomeInputFrom` 擋在**結算**（`series_incomplete`）
+
+⚠ 擋在進場是關鍵。若放玩家打完再由橋接拒絕，那一場會卡在 `launched`：
+日曆被擋住（`advanceDay` 回 `player_fixture`），玩家既結算不了也不能重來 ——
+**soft-lock**，比擋在門口糟得多。擋在進場則賽程維持 `scheduled`，
+玩家仍可棄權或讓它逾期補判。
+
+### 兩條刻意沒動的既有契約
+
+1. **棄權仍記 `0:0`**（`FORFEIT_SCORE`，MOBA / CS 共用）。一張地圖都沒打，
+   兩邊都是 0 才是誠實的；編一個 `2:0` 出來等於宣稱有人贏了兩張圖。
+2. **CS 聯賽仍是 BO1**（`matchFormat` 為 null）。規格 D4 明文「MVP 做 BO1（聯賽）
+   ＋ BO3（Major）」。
+
+### mapPool 為什麼不違反 ownership lock
+
+`matchFormat.mapPool` 會列出 `dust2 / mirage / inferno`。那是**賽制設定**，
+不是賽果：它宣告「這個 series 可以用哪幾張圖」，不是「哪張圖裡發生了什麼」。
+lock 擋的是後者。`check_cs_major.mjs` 因此把地圖識別碼的檢查對象縮到**賽果**，
+並另加一條「地圖 key 只准出現在 mapPool，不得從別的欄位滲進賽季狀態」。
+
+### 驗證（全部實跑）
+
+```
+node tools/check_cs_series.mjs                   46/46   ← 本輪新增
+node tools/check_cs_major.mjs                    72/72   (M3-1，70 → 72)
+node tools/check_cs_season_contract.mjs          68/68
+node tools/check_cs_schema_v11.mjs               41/41   (M0)
+node tools/check_cs_season_lifecycle.mjs         51/51   (M1)
+node tools/check_cs_season_m2.mjs                55/55   (M2)
+node tools/check_cs_league_eligibility.mjs       31/31
+node tools/check_home_team_contract.mjs          40/40
+node tools/check_cs_match_completion.mjs         34/34   (Codex CS-MR12)
+node tools/check_r63_active_match_ttl.mjs         9/9
+node tools/check_competition_release_gate.mjs   11/11
+MOBA regression  q1 93/93 · q2a 112/112 · q2b 92/92 · q3 91/91 · q35 66/66
+                 q4 68/68 · q5 69/69 · q6 57/57
+SeasonState v2   runtime 36/36 · active_focus 31/31 · sealing_m2 24/24
+regress 15/15 · regress2 8/8
+npm run build    ✓ built in 11.91s
+基線比對         CS 聯賽 56 場賽果 vs b3a8d9b ⇒ IDENTICAL
+```
+
+⚠ **已知紅、非本輪造成**：`check_season_state_v2_migration_q7b.mjs`（讀 Q7a-3b
+已移除的頂層 `state.competition`）。M3-1 已在 `06a7e89` 實證為既有技術債。
+
+⚠ **未經瀏覽器實測**：Major 仍然沒有 UI。本輪新增的兩道 fail-closed 訊息
+也沒有在畫面上看過。
+
+### 下一步
+
+M4：CS 賽事頁與 **series 流程**。玩家出戰 BO3 需要跨三張地圖的流程，
+地圖結果累計住在 MatchSession / ActiveMatch（**不進 SeasonState**，規格 D4）。
+做出來之後，上面那兩道 fail-closed 要一起拿掉。
+M3-3（Major → honors ＋ CS 獎金）仍未做。

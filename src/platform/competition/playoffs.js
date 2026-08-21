@@ -125,9 +125,12 @@ const loserOfMatch = (fixtures, outcomes, key) => {
  * @param {Array}  p.fixtures     **季後賽既有的**場次（不含常規賽）
  * @param {Array}  p.outcomes     全部賽果（用來查準決賽勝敗）
  * @param {number} p.baseDay      季後賽第一天（賽季日）
+ * @param {object} [p.matchFormat] 項目專屬設定，原樣掛到每一場（共用層不解讀）。
+ *   預設 `null` ⇒ **MOBA 季後賽的場次逐值不變**。CS 年度 Major 傳
+ *   `CS_MAJOR_MATCH_FORMAT`（bo3），讓對戰表的每一場都是一個 series。
  * @returns {{ok:boolean, added:Array, errors:Array}}
  */
-export function ensurePlayoffFixtures({ stage, qualification, fixtures = [], outcomes = [], baseDay } = {}) {
+export function ensurePlayoffFixtures({ stage, qualification, fixtures = [], outcomes = [], baseDay, matchFormat = null } = {}) {
   const q = qualification?.qualified ?? [];
   if (q.length !== PLAYOFF_SLOTS) return { ok: false, added: [], errors: [{ code: "qualified", message: "晉級名單不完整" }] };
   const seed = (n) => q.find((x) => x.seed === n)?.teamId ?? null;
@@ -135,7 +138,7 @@ export function ensurePlayoffFixtures({ stage, qualification, fixtures = [], out
   const added = [];
 
   const make = (key, round, day, sideA, sideB) => {
-    const made = createFixture({ stage, round, day, sideA, sideB });
+    const made = createFixture({ stage, round, day, sideA, sideB, matchFormat });
     if (!made.ok) return made.errors;
     //  `playoffKey` 是本檔自己的標記（sf1／sf2／bronze／final），
     //  讓「這是哪一場」不必靠日期或順序去猜。

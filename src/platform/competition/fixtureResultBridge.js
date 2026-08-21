@@ -60,6 +60,22 @@ export function fixtureOutcomeInputFrom({ result, fixture, playerTeamId } = {}) 
   if (result && (typeof result.score?.us !== "number" || typeof result.score?.opponent !== "number")) {
     errors.push({ code: "score", message: "正式賽果缺少比分" });
   }
+  //  ── ⛔ CS Season M3-2：一場 MatchResult 結算不了一個 series ──────────────
+  //  BO3 的 `FixtureOutcome.score` 是**地圖數**（2:0 / 2:1）。一場 `MatchResult.v1`
+  //  只代表**一張地圖** ⇒ 拿它產生 series 比分只有兩種寫法，兩種都是錯的：
+  //    · 記成 `1:0` —— 那是 BO1 的比分，等於宣稱一個 BO3 打完了卻只打了一張
+  //    · 記成 `2:0` —— 憑空發明另外一張根本沒打的地圖
+  //  ⇒ **fail-closed**。玩家出戰 BO3 需要一個跨三張地圖的 series 流程
+  //    （地圖結果累計住在 MatchSession / ActiveMatch，**不進 SeasonState**，規格 D4），
+  //    那是 M4 的工作。在它做出來之前，這條路徑明確拒絕，不猜。
+  const series = fixture?.gameMode === "cs" ? (fixture?.matchFormat?.series ?? null) : null;
+  if (series) {
+    errors.push({
+      code: "series_incomplete",
+      message: `這場是 ${series} series（先拿兩張地圖），一場對戰的結果結算不了整個 series。`
+        + "玩家出戰年度 Major 的 series 流程尚未實作。",
+    });
+  }
   if (errors.length) return { ok: false, input: null, errors };
 
   //  玩家在這場是主隊還是客隊——**唯一**要判斷的事

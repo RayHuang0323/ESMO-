@@ -40,7 +40,7 @@ import {
   createQualification, createPlayoffStage, ensurePlayoffFixtures,
   playoffOrder, playoffBracket, PLAYOFF_STAGE_KEY, PLAYOFF_MATCHES,
 } from "./playoffs.js";
-import { buildCsMajor, isCsMajorEntry } from "./csMajor.js";
+import { buildCsMajor, isCsMajorEntry, CS_MAJOR_MATCH_FORMAT } from "./csMajor.js";
 
 export const SEASON_STATE_VERSION = "SeasonState.v2";
 export const SEASON_STATE_VERSION_V1 = "SeasonState.v1";
@@ -1179,6 +1179,9 @@ export function ensureCsMajor(state) {
     fixtures: csMajorFixturesOf(next),
     outcomes: next.outcomes ?? [],
     baseDay: entry.playoff.baseDay,
+    //  CS Season M3-2：Major 的每一場都是一個 BO3 series（規格 D4）。
+    //  共用層原樣攜帶不解讀；讀它的只有 CS 自己的比分投影與賽前流程。
+    matchFormat: CS_MAJOR_MATCH_FORMAT,
   });
   if (!made.ok) return { ok: false, state, added: 0, errors: made.errors };
   if (made.added.length) next = { ...next, fixtures: [...next.fixtures, ...made.added] };

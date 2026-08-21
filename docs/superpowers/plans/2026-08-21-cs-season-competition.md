@@ -328,11 +328,24 @@ ck("拒收 BattleResult", outcomeFromCsResult({ schema: "BattleResult.v2" }).ok 
 
 ⚠ 三張地圖池下 BO3 ＝ 打滿三張、先拿兩張者勝。**不假裝有 veto 博弈**（規格 §D4）。
 
-- [ ] **Step 1: 寫失敗測試** — 斷言：一個 BO3 series 只產生**一個** Fixture 與**一個** FixtureOutcome；`score` 為地圖數（如 `2:1`）而非回合數；SeasonState 內**找不到任何地圖識別碼**。
-- [ ] **Step 2: 跑測試確認失敗**。
-- [ ] **Step 3: 實作**。
-- [ ] **Step 4: 跑測試確認通過**。
-- [ ] **Step 5: Commit** — `git commit -m "feat: score a CS series by maps won, not rounds"`
+- [x] **Step 1: 寫失敗測試** — 斷言：一個 BO3 series 只產生**一個** Fixture 與**一個** FixtureOutcome；`score` 為地圖數（如 `2:1`）而非回合數；SeasonState 內**找不到任何地圖識別碼**。
+- [x] **Step 2: 跑測試確認失敗**。
+- [x] **Step 3: 實作**。
+- [x] **Step 4: 跑測試確認通過**。
+- [x] **Step 5: Commit** — `git commit -m "feat: score a CS series by maps won, not rounds"`
+
+> **M3-2 完成後的實作決策（2026-08-22）**
+>
+> 1. **`matchFormat` 掛在 `ensurePlayoffFixtures`，不在 `scheduleGenerator.js`。**
+>    Major 的對戰表根本不經過 `generateSchedule()`（M3-1 的決策），所以帶
+>    `matchFormat` 的地方也在對戰表產生器。上面的 Files 欄寫錯了對象。
+> 2. **新增 `CS_SERIES_SIMULATOR_VERSION`（`fixtureSim.cs1.bo3`），不就地升版 `cs1`。**
+>    版本字串會進亂數流的 hash，就地升版會讓既有的 CS 聯賽賽果全部平移。
+>    已用基線 worktree 逐位元證實 56 場聯賽賽果 IDENTICAL。
+> 3. **玩家出戰 BO3 兩道 fail-closed。** 一場 MatchResult 只代表一張地圖，
+>    結算不了一個 series。擋在**進場**（而非結算）是為了避免賽程卡在 `launched`
+>    造成日曆 soft-lock。series 流程屬 M4。
+> 4. **棄權仍記 `0:0`**（共用的 `FORFEIT_SCORE`），不改成 `2:0`。
 
 ### Task M3-3: Major → honors ＋ CS 封存
 

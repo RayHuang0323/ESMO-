@@ -38,6 +38,9 @@ import { createCompetition } from "../contracts/competition.js";
 import { createEvent, ID_SCHEMES } from "../contracts/circuit.js";
 import { createQualification, createPlayoffStage, PLAYOFF_SLOTS } from "./playoffs.js";
 import { csMajorQualifiers, CS_MAJOR_QUALIFICATION } from "./csSeasonConfig.js";
+//  ⚠ 只取現役地圖的 key 清單。`csPrepData.js` 是純資料（沒有任何 import），
+//    所以平台層引用它不會把賽前畫面的相依性拖進賽季狀態。
+import { CS_MAPS } from "../../battle/fps/csPrepData.js";
 
 /** Major 的層級標籤（`competition.id` 的最後一段）。 */
 export const CS_MAJOR_TIER = "major";
@@ -50,6 +53,35 @@ export const CS_MAJOR_SLOTS = PLAYOFF_SLOTS;
 
 /** Major 接在最後一場聯賽之後的第幾天（＋2 留一天喘息，與 MOBA 季後賽同慣例）。 */
 export const CS_MAJOR_DAY_GAP = 2;
+
+// ── CS Season M3-2：BO3 series ──────────────────────────────────────────────
+//
+//  規格 D4：**一個 Fixture ＝ 一個 series ＝ 一個 FixtureOutcome**，
+//  `FixtureOutcome.score` 記**地圖數**（2:0 / 2:1）。
+//
+//  ⚠ **誠實揭露（規格 D4 已寫明）**：引擎現役地圖只有三張，所以三張池下的
+//    BO3 就是「打滿三張、先拿兩張者勝」，veto 近乎裝飾（ban 一張、剩兩張選一張）。
+//    因此 `veto` 明文寫 `null`，**不假裝有 ban/pick 博弈**。要做真正的 veto，
+//    前置是把引擎地圖池擴到 7 張——那是另一條工作線，不綁在 CS Season MVP 裡。
+
+/** Major 的 BO 制。 */
+export const CS_MAJOR_SERIES = "bo3";
+
+/** BO3 ＝ 先拿兩張地圖。`ceil(3 / 2)`，寫成常數是為了讓斷言有東西可指。 */
+export const CS_MAJOR_MAPS_TO_WIN = 2;
+
+/**
+ * Major 場次的 `matchFormat`。**共用層原樣攜帶、不解讀**（契約 Q2a 就這樣寫的）——
+ * 唯一會讀它的是 CS 自己的模擬投影與賽前流程。
+ *
+ * ⚠ `mapPool` 直接取引擎的現役地圖 key，**不另抄一份清單**。抄一份的話，
+ *   哪天引擎加了地圖，賽制設定會安靜地停在舊的三張。
+ */
+export const CS_MAJOR_MATCH_FORMAT = Object.freeze({
+  series: CS_MAJOR_SERIES,
+  mapPool: Object.freeze(CS_MAPS.map((m) => m.key)),
+  veto: null,
+});
 
 /** 規格 §5 明文的 id：`comp:cs:s{season}:official:major`。 */
 export const csMajorCompetitionId = (season = 1) => `comp:cs:s${season}:official:${CS_MAJOR_TIER}`;
