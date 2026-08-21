@@ -1749,6 +1749,7 @@ function EsportsFPS3D({
   const [playing,setPlaying]=useState(true);
   const [speed,setSpeed]=useState(1);
   const [quickFinishing,setQuickFinishing]=useState(false);
+  const [quickCompleted,setQuickCompleted]=useState(false);
   const [selected,setSelected]=useState(null);
   const [showLabels,setShowLabels]=useState(true);
   const [showRoutes,setShowRoutes]=useState(false);
@@ -1777,7 +1778,7 @@ function EsportsFPS3D({
     advance:()=>setFIdx(fi=>{if(fi>=total-1){setPlaying(false);return fi;}return fi+1;})};
 
   // 切換比賽/地圖 → 重置
-  useEffect(()=>{setFIdx(clamp(Number(resumeFrameIndex) || 0, 0, Math.max(0, sim.frames.length - 1)));setSelected(null);setFeed([]);setCasts([]);setComms([]);setMultiKill(null);setRoundOverlay(null);prevRndRef.current=0;prevPlantedRef.current=false;seekNonce.current++;setQuickFinishing(false);setPlaying(true);},[sim,resumeFrameIndex]);
+  useEffect(()=>{setFIdx(clamp(Number(resumeFrameIndex) || 0, 0, Math.max(0, sim.frames.length - 1)));setSelected(null);setFeed([]);setCasts([]);setComms([]);setMultiKill(null);setRoundOverlay(null);prevRndRef.current=0;prevPlantedRef.current=false;seekNonce.current++;setQuickFinishing(false);setQuickCompleted(false);setPlaying(true);},[sim,resumeFrameIndex]);
 
   // R63：只保存可重建的 frame 游標與該 frame 的真實比分／時間，不複製 simulator。
   useEffect(()=>{
@@ -1817,14 +1818,20 @@ function EsportsFPS3D({
   const seek=useCallback(v=>{setFIdx(clamp(v,0,total-1));seekNonce.current++;},[total]);
   const selP=selected?frame?.players.find(p=>p.id===selected):null;
   const matchOver=Boolean(sim.completed)&&fIdx>=total-1;
-  const quickFinish=useCallback(()=>{if(matchOver)return;setQuickFinishing(true);setPlaying(false);setFIdx(total-1);},[matchOver,total]);
-  // 播放結束 → 回傳賽後結果給主遊戲（每場僅一次）
+  const completeOnce=useCallback(()=>{
+    if(!onComplete||completedRef.current===matchResult.id)return false;
+    completedRef.current=matchResult.id;onComplete(matchResult);return true;
+  },[matchResult,onComplete]);
+  // Quick Finish 直接交付 simulator 已計算好的 MatchResult；不把 completion 綁在 final frame seek/render。
+  const quickFinish=useCallback(()=>{
+    if(matchOver||quickCompleted||completedRef.current===matchResult.id)return;
+    setQuickFinishing(true);setPlaying(false);setQuickCompleted(true);
+    completeOnce();setQuickFinishing(false);
+  },[matchOver,quickCompleted,matchResult,completeOnce]);
+  // Natural playback 到達合法終局時沿用同一個 exactly-once completion gate。
   useEffect(()=>{
-    if(matchOver&&onComplete&&completedRef.current!==matchResult.id){
-      completedRef.current=matchResult.id;onComplete(matchResult);
-    }
-    if(matchOver)setQuickFinishing(false);
-  },[matchOver,onComplete,matchResult]);
+    if(matchOver){completeOnce();setQuickFinishing(false);}
+  },[matchOver,completeOnce]);
 
   if(!frame)return null;
   const tType=TAC_TYPE[tacticT.type]||TAC_TYPE.default,cType=TAC_TYPE[tacticCT.type]||TAC_TYPE.default;
@@ -1974,6 +1981,11 @@ function EsportsFPS3D({
           <MatchSpeedControls rates={[1,2,4]} rate={speed} onRate={setSpeed} onQuickFinish={quickFinish}
             quickFinishPending={quickFinishing} compact accent={C.ct} testId="cs-match-speed-controls" />
         </div>
+        {quickCompleted&&!matchOver&&(
+          <button data-testid="cs-quick-finish-terminal-seek" onClick={()=>seek(total-1)} style={{width:"100%",marginTop:5,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.ct}66`,background:`${C.ct}18`,color:C.ctL,fontSize:10,fontWeight:800,cursor:"pointer"}}>
+            查看終局畫面（最後一格）
+          </button>
+        )}
 
         {/* 工具列（賽前戰術已設定；地名常駐顯示；地圖隨機進入） */}
         <div style={{display:"flex",gap:6,marginTop:7}}>

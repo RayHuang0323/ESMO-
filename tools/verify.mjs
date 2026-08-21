@@ -100,7 +100,7 @@ const SEGMENTS = [
   { id: "milestone_e", script: "tools/check_moba_milestone_e.mjs", shape: /49\/49 通過/, note: "E" },
   { id: "tactic24", script: "tools/check_moba_tactic24.mjs", shape: /29\/29 通過/, note: "S24 戰術" },
   { id: "cs23", script: "tools/check_cs23.mjs", shape: /28\/28 通過/, note: "S23 CS 流程" },
-  { id: "cs_match_completion", script: "tools/check_cs_match_completion.mjs", shape: /CS MR12 completion: 34\/34 PASS/, note: "CS MR12／halftime／OT／final-frame completion regression" },
+  { id: "cs_match_completion", script: "tools/check_cs_match_completion.mjs", shape: /CS MR12 completion: 36\/36 PASS/, note: "CS MR12／halftime／OT／Quick Finish completion regression" },
   { id: "cs_measure_r1", script: "tools/check_cs_measurement_r1.mjs", shape: /CS Measurement R1: PASS/, note: "CS gameplay 決定性量測 pilot" },
   { id: "cs_instrument_r2", script: "tools/check_cs_instrumentation_r2.mjs", shape: /CS Instrumentation R2: PASS/, note: "CS combat opportunity→conversion 旁路量測" },
   { id: "cs_stat_wiring_r3", script: "tools/check_cs_stat_wiring_r3.mjs", shape: /CS Stat Wiring R3: PASS/, note: "CS 16 項素質 paired wiring measurement" },

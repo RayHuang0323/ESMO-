@@ -10546,3 +10546,25 @@ CS 引擎原本的產品規則是 first-to-8，不是 first-to-7：`37c07ef` 起
 - `check_cs_match_completion.mjs` 由 `31/31` 擴充為 `34/34 PASS`，新增 regulation opening `$800`，並以 rule fixture 與 live simulator 確認 halftime `$800` pistol、第一組 OT／換邊後／下一組 OT 均 `$12,500` non-pistol。
 - CS23 `28/28`、R54 PASS、R56 PASS、R57 PASS（120 matches，deterministic repeat=1）、`verify.mjs --only=cs_match_completion` `1/1`、Vite build（2702 modules）均 PASS。
 - browser `3/3 PASS`：desktop 1920×1080 natural、desktop 1366×768 Quick Finish、390×844 mobile Quick Finish；均到 `1002/1002`、無水平溢位、console/page error `0`。390px 仍是 CDP emulation，非真機觸控／FPS 驗收。
+
+## CS MR12 Quick Finish targeted debugging（2026-08-22）
+
+### Root cause
+
+- Production symptom was a synchronous UI stall rather than a thrown error：Quick Finish 的舊流程 `setPlaying(false)` 後直接 `setFIdx(total - 1)`，使 final frame、replay／animation／R3F 更新及 progress snapshot effect 在同一個 terminal transition 中處理；MR12 frame 數增加後，main thread 可能被長時間佔滿，`matchOver`／`onComplete` 因而無法及時完成。
+- 舊 verifier 主要檢查 simulator、source shape 與 deterministic result，且原本把 `setFIdx(total - 1)` 當成 Quick Finish 必要行為；它沒有對 UI terminal transition 設定 bounded completion timing，也沒有覆蓋 midgame／OT Quick Finish 的 browser path。
+
+### Minimal fix
+
+- `src/battle/fps/EsportsFPS3D.jsx` 的 Quick Finish 現在直接使用同一次 `simulateFps()` 產生的 `matchResult`，由 `completeOnce()` 呼叫既有 `onComplete(matchResult)`；不重算 winner／score，不跳過 `MatchResult`，且 Natural completion 也共用同一個 exactly-once gate。
+- Quick Finish 不再自動 seek final frame；完成後提供明確 terminal seek 控制，讓 Replay final frame 仍可查看。MR12、halftime、OT、economy、damage、AI、weapon balance 與其他模式均未修改。
+
+### Verification
+
+- `tools/check_cs_match_completion.mjs`：`36/36 PASS`，包含 regulation、halftime、接近 `12:12`、OT seed `7`（`31:28`）、same-seed Natural／Quick Finish winner／score／player stats fingerprint 與 exactly-once。
+- `tools/browser_check_cs_completion.mjs`：新增 production preview、midgame、timing 與 terminal-seek coverage；production build browser regression 的 desktop natural、desktop opening Quick Finish、desktop midgame Quick Finish、390px Quick Finish 均 PASS，無 console/page error，無水平溢位。Quick Finish 確認至 Result 約 `60–115ms`（依 scenario／viewport）。
+- 390px 僅為 browser emulation，未宣稱真機觸控、FPS 或視覺體感完成。
+
+### Git boundary
+
+- 本次只建立 local commit，依使用者要求不 push、不 deploy；是否重新部署留待 review 後另行決定。
