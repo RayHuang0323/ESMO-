@@ -10568,3 +10568,22 @@ CS 引擎原本的產品規則是 first-to-8，不是 first-to-7：`37c07ef` 起
 ### Git boundary
 
 - 本次只建立 local commit，依使用者要求不 push、不 deploy；是否重新部署留待 review 後另行決定。
+
+## CS MR12／Quick Finish docs-only closure（2026-08-22）
+
+### Closure result
+
+- CS 6:6 卡死已修復；MR12／halftime／OT 已完成；Quick Finish freeze 已修復。
+- Production Natural playback PASS；production opening Quick Finish PASS。
+- OT 1,000 deterministic seeds distribution 正常，沒有證據顯示結構性長 OT。
+- gameplay deployment SHA：`d9832478c8aaccc1d2f23eb3fb5a2245672547fe`。
+
+### Non-blocking production acceptance residual
+
+- midgame Quick Finish production smoke：尚未補，標記為 non-blocking residual，不是 gameplay bug。
+- 390px Quick Finish production smoke：尚未補，標記為 non-blocking residual，不是 gameplay bug。
+
+### Git boundary
+
+- 本節是 docs-only closure；沒有新增或修改 gameplay、verifier、config、MR12、OT、經濟、AI、傷害、武器或 Competition／Season。
+- push 後的 `origin/main` SHA 為本輪 closure SHA；gameplay deployment lineage 仍以 `d9832478c8aaccc1d2f23eb3fb5a2245672547fe` 為準。
