@@ -110,6 +110,8 @@ import {
 import {
   fixtureOutcomeInputFrom, isFixtureSession, fixtureIdOfSession,
 } from "./competition/fixtureResultBridge.js";
+//  CS Season M4-A：BO3 series 狀態掛在 MatchSession，**不進 SeasonState**（規格 D4）
+import { createMatchSeries, seriesFormatOf, seriesView } from "./contracts/matchSeries.js";
 import {
   syncSeasonStateV2, activeEventAdapter,
 } from "./competition/seasonStateV2.js";
@@ -1080,19 +1082,9 @@ export const useProfileStore = create((rawSet, get) => {
     const fixture = fixtureById(state, fixtureId);
     if (!fixture) return { ok: false, errors: [{ code: "fixture", message: "找不到這場賽程" }], reason: "找不到這場賽程" };
 
-    //  ── ⛔ CS Season M3-2：BO3 series 還不能由玩家出戰 ────────────────────
-    //  擋在**進場**而不是結算，是刻意的。若放玩家打完再由橋接拒絕，那一場會卡在
-    //  `launched`：日曆被擋住（`advanceDay` 回 `player_fixture`），而玩家既結算
-    //  不了也不能重來 —— 那是 soft-lock，比擋在門口糟得多。
-    //  擋在這裡的話賽程維持 `scheduled`，玩家仍可棄權或讓它逾期補判，日曆走得動。
-    //  ⚠ 這是**暫時的**：M4 要做跨三張地圖的 series 流程（地圖結果累計住在
-    //    MatchSession / ActiveMatch，不進 SeasonState）。做出來之後這一道要拿掉。
-    const series = fixture.gameMode === "cs" ? (fixture.matchFormat?.series ?? null) : null;
-    if (series) {
-      const message = `年度 Major 是 ${series}（先拿兩張地圖），玩家出戰 series 的流程尚未實作。`
-        + "你可以棄權這一場，或等它逾期補判。";
-      return { ok: false, errors: [{ code: "series_not_playable", message }], reason: message };
-    }
+    //  ⚠ CS Season M4-A：M3-2 的 `series_not_playable` 擋門在這裡**正式解除**。
+    //    BO3 現在走得完：series 狀態掛在 `MatchSession.series`（見
+    //    `contracts/matchSeries.js`），由 `createMatchSession` 開場時建立。
 
     //  ── 一次只能有一場進行中的對戰（Q7a 安全前提）────────────────────
     //  產品規則：賽程與賽事可以並存、同一天也可以有多場，但**玩家隊伍同一時間
@@ -2102,9 +2094,31 @@ export const useProfileStore = create((rawSet, get) => {
       ? openSessionForFixture({ room: mm.room, assignment: mm.fixtureAssignment ?? null, now })
       : openSession({ room: mm.room ?? null, ticket: mm.ticket ?? null, now });
     if (!made.ok) return { ok: false, session: null, errors: made.errors };
-    set({ matchmaking: { ...mm, session: made.session } });
+    //  ── CS Season M4-A：series 場次開場時建立 series 狀態 ─────────────────
+    //  ⚠ 賽制來自 **fixture 的 `matchFormat`**，不是呼叫端說了算：一個 BO3
+    //    是不是 BO3，由賽程決定（M3-2 掛上去的），不由進場流程宣稱。
+    //  ⚠ 只在**新開**場次時建立。上面 `reused` 那條分支會原樣回傳既有場次 ⇒
+    //    重整或重新進場**不會**把打到 1:0 的 series 洗回 0:0。
+    const session = get()._withSeriesForFixture(made.session);
+    set({ matchmaking: { ...mm, session } });
     get().save();
-    return { ok: true, session: made.session, errors: [], reused: false };
+    return { ok: true, session, errors: [], reused: false };
+  },
+  /**
+   * 內部：這個場次若對應一場 series 賽程，就掛上初始 series 狀態。
+   * 不是 series（MOBA、CS 聯賽 BO1）⇒ **原樣回傳同一個物件參考**。
+   */
+  _withSeriesForFixture(session) {
+    const fixtureId = fixtureIdOfSession(session);
+    if (!fixtureId) return session;
+    const mode = get()._modeOfFixture(fixtureId);
+    const state = mode ? get()._competitionStateOf(mode) : null;
+    const fixture = state?.schema ? fixtureById(state, fixtureId) : null;
+    const format = fixture?.matchFormat ?? null;
+    if (!seriesFormatOf(format)) return session;
+    const made = createMatchSeries(format);
+    if (!made.ok) return session;
+    return { ...session, series: made.series };
   },
   /**
    * 使用一次性令牌啟動比賽。**這是對戰入口的唯一許可**。
@@ -2300,11 +2314,28 @@ export const useProfileStore = create((rawSet, get) => {
     if (!state?.schema || !fixtureId) return { ok: false, errors: [{ code: "no_fixture", message: "這場不是賽程比賽" }] };
     const fixture = fixtureById(state, fixtureId);
     if (!fixture) return { ok: false, errors: [{ code: "fixture", message: "找不到對應的賽程場次" }] };
+    //  ── CS Season M4-A：series 的賽程比分來自 series，不是這一張地圖 ───────
+    //  ⚠ 這裡讀的是**結算之後**的場次：`settleMatchResultInState` 已經把剛打完
+    //    那一張圖記進 `session.series` 了。讀傳進來的 `session` 參數會少一張圖。
+    const liveSeries = get().matchmaking?.session?.series ?? null;
     const mapped = fixtureOutcomeInputFrom({
-      result, fixture, playerTeamId: state.playerTeamId,
+      result, fixture, playerTeamId: state.playerTeamId, series: liveSeries,
     });
-    if (!mapped.ok) return { ok: false, errors: mapped.errors };
+    if (!mapped.ok) {
+      //  ⚠ series 還沒打完**不是錯誤**，是正常的中間狀態：一個 BO3 打完第一張
+      //    圖時本來就不該寫賽程賽果。回傳形狀維持一致，但明確標出來，
+      //    讓呼叫端（與日後的驗證器）分得出「還沒到時候」與「真的失敗了」。
+      const pending = mapped.errors.some((e) => e.code === "series_in_progress");
+      return { ok: false, seriesInProgress: pending, errors: mapped.errors };
+    }
     return get().completeFixtureMatch(mapped.input);
+  },
+  /**
+   * 目前進行中的 series 視圖（畫面用；CS Season M4-A）。
+   * 沒有 series 場次 ⇒ null。**不含任何 map runtime 細節**（見 matchSeries.js）。
+   */
+  activeSeriesView() {
+    return seriesView(get().matchmaking?.session?.series ?? null);
   },
   /**
    * 切換賽事頁聚焦的 Event（Q7a-3b.5）。

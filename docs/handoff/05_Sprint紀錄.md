@@ -11224,3 +11224,134 @@ M4：CS 賽事頁與 **series 流程**。玩家出戰 BO3 需要跨三張地圖�
 地圖結果累計住在 MatchSession / ActiveMatch（**不進 SeasonState**，規格 D4）。
 做出來之後，上面那兩道 fail-closed 要一起拿掉。
 M3-3（Major → honors ＋ CS 獎金）仍未做。
+
+---
+
+## CS Season M4-A — Playable BO3 Series　2026-08-22
+
+**分支**：`integration/cs-cross-ai`（起點：M3-2 checkpoint `62d425b`）
+**規格**：`docs/design/CS_賽事系統架構規格.md` D4
+
+### 做了什麼
+
+玩家現在**真的打得完**年度 Major 的 BO3。三張地圖各自走完既有的
+CS MatchSession / ActiveMatch / MatchResult / S25 入帳，整個 series 只產生
+**一筆** FixtureOutcome（2:0 / 2:1）。M3-2 的 `series_not_playable` /
+`series_incomplete` 兩道 fail-closed 在完整流程成立之後才移除。
+
+| 檔案 | 動作 |
+|---|---|
+| `contracts/matchSeries.js` | 新增。`MatchSeries.v1`：已完成地圖／每張 winner／地圖勝場／下一張 |
+| `contracts/matchResult.js` | 衝突偵測對 series 改以**單張地圖**為範圍 |
+| `progress/settleMatchResult.js` | 記地圖、series 未決勝就不收場次 |
+| `competition/fixtureResultBridge.js` | series 比分由 `seriesScore()` 產生 |
+| `profileStore.js` | 開場建 series、`activeSeriesView()`、解除進場擋門 |
+| `AppShell.jsx` | csResult 之後若 series 未決勝 ⇒ 回選圖打下一張 |
+| `tools/check_cs_playable_series.mjs` | 新增，75/75 |
+
+### series state 放哪：`MatchSession.series`
+
+規格 D4 說得很直接：賽季層只認 series 的最終結果。「第一張圖誰贏、下一張打哪張」
+是**對戰流程的狀態**，不是賽季的事實。放進 SeasonState 會讓賽季狀態開始長出
+地圖層級欄位 —— 正是 ownership lock 要擋的方向。
+
+它累積的**只有四樣**：已完成的地圖（第幾張／哪張圖／誰贏／matchId／resultId）、
+雙方地圖勝場、下一張是第幾張、下一張是哪張圖。
+**沒有**回合、半場、加時、單圖比分。每張地圖的 `winner` 是**直接抄** Codex
+判好的單圖勝負，不從任何比分推導。
+
+### 兩個非做不可的契約調整
+
+1. **衝突偵測改成 map-scoped（只對 series）。** 原本的規則是「同一個 sessionId
+   出現兩份不同內容的結果 ⇒ conflict」。一個 BO3 會**正當地**回報三份不同結果，
+   所以對 series 而言正確的定義是「**同一張地圖**被回報了兩種結果」。
+   ⚠ **非 series 的場次一個字都沒放寬**（`check_authoritative_o7` 仍 48/48）。
+   判斷依據是 `session.series`——「這是不是 series」是**場次**的性質；
+   讓送進來的結果自己宣稱的話，偽造一個欄位就能繞過衝突偵測。
+
+2. **`completeSession` 不在第一張圖就收場次。** series 未決勝時場次維持
+   `launched`，ActiveMatch 標成 `paused` 且 `phase` 退回 `map`。
+   ⚠ 不能留在 `active`：那會讓首頁的「返回比賽」把玩家丟回一場已經打完的圖。
+
+### 三張地圖怎麼串
+
+`csPrep → csMap → csTactic → csLoading → cs → csResult` 打完一張之後，
+`CsResultScreen.onDone` 問 store 的 `activeSeriesView()`：未決勝就呼叫
+`resumeActiveMatch()`，恢復出來的 `phase` 是 `map` ⇒ 直接落回選圖畫面打下一張。
+決勝了才回首頁。
+
+⚠ 判斷來源是 **store 的 series 狀態**，不是畫面自己數打了幾張——畫面狀態重整
+就沒了，series 跟著場次一起存檔。
+
+### resume 怎麼處理
+
+**沒有新機制**：跨地圖與重整走的是**同一條** `resumeMatchSession()`。
+場次從來沒有結束、令牌早就用掉，所以恢復不會消耗第二張令牌，
+`sessionId` 與 `origin.fixtureId` 都不變。verifier §7 逐條驗過：重載後
+series 進度逐值不變、sessionId 相同、fixture 相同、`phase` 是 `map`、
+`nextMapIndex` 是 1，然後**跨重載把 series 打完**仍然只寫一筆賽果。
+
+### 冪等
+
+`recordSeriesMap` 以 `matchId` 冪等。這不是附帶性質：重整或重送時
+`settleMatchResultInState` 對「已入帳」的結果仍會走完整條路徑，
+少了那道冪等，重整一次 Result 畫面就會把 2:0 變成 3:0。
+另有一道獨立的守門：**已決勝的 series 拒收第三張地圖**——否則一個已經用
+2:0 寫進賽季的 series 會被續寫成 2:1。
+
+### 中途離開不能規避敗場
+
+機制與 M2 對 CS 聯賽中離**完全相同**，series 沒有在上面開洞：未收尾的玩家
+賽程會把日曆擋死（`pendingPlayerFixtureOn`）⇒ 玩家繞不過去，只能回去打完或
+明確棄權，兩條路都留下結果。verifier §8 實測：中離後推進日曆會被
+`stoppedBy.code = "player_fixture"` 擋在這一場，期間不生任何賽果；
+棄權之後日曆才走得動，而結果是敗場。
+
+### ⛔ Codex ownership：完全沒有碰
+
+`EsportsFPS3D.jsx`、`check_cs_match_completion.mjs`、`verify.mjs` 一個字都沒改。
+verifier 刻意讓每張地圖帶著 `13:7` / `7:13` 的**單圖回合比分**走完全程，
+再斷言賽季層拿到的是 `2:0` / `2:1`，SeasonState 裡找不到任何回合量級的數字。
+
+### 兩支既有 verifier 的 era-scoped marker 隨行為更新（換更嚴，不是放寬）
+
+- `check_cs_series.mjs` §8：`series_incomplete` → `series_missing`
+  （沒帶 series 就算不出地圖數，一律不猜。拒絕的性質沒放寬。）
+- `check_cs_season_contract.mjs`：「橋接只記地圖數」那條原本 grep 一段被改寫的
+  註解字面。改成同時要求 **BO1 的 `1:0`** 與 **series 的 `seriesScore(series)`**，
+  另加三條新的：series 勝方不得抄最後一張地圖、未決勝／缺 series 要 fail-closed、
+  **series 狀態不得出現在 seasonState.js**。該支由 68 → 71 條。
+
+### 驗證（全部實跑）
+
+```
+node tools/check_cs_playable_series.mjs          75/75   ← 本輪新增
+node tools/check_cs_series.mjs (M3-2)            46/46
+node tools/check_cs_major.mjs (M3-1)             72/72
+node tools/check_cs_season_m2.mjs (M2)           55/55
+node tools/check_cs_season_lifecycle.mjs (M1)    51/51
+node tools/check_cs_schema_v11.mjs (M0)          41/41
+node tools/check_cs_season_contract.mjs          71/71   (68 → 71)
+node tools/check_cs_match_completion.mjs         34/34   (Codex CS-MR12)
+node tools/check_cs_league_eligibility.mjs       31/31
+node tools/check_home_team_contract.mjs          40/40
+node tools/check_competition_release_gate.mjs   11/11
+── 共用契約（本輪動到 matchResult / matchSession 結算路徑，特別加驗）──
+check_authoritative_o7        48/48    check_result_flow_o71    27/27
+check_match_session_o6        36/36    check_match_room_o5      45/45
+check_match_entry_o3          35/35    check_matchmaking_flow_acceptance 97/97
+check_progress25              PASS     check_fixture_result_integrity 20/20
+check_cs23                    28/28    check_r63_active_match_ttl 9/9
+MOBA regression  q1 93/93 · q2a 112/112 · q2b 92/92 · q3 91/91 · q35 66/66
+                 q4 68/68 · q5 69/69 · q6 57/57
+SeasonState v2   runtime 36/36 · active_focus 31/31 · sealing_m2 24/24
+regress 15/15 · regress2 8/8
+npm run build    ✓ built in 11.09s
+```
+
+⚠ **已知紅、非本輪造成**：`check_season_state_v2_migration_q7b.mjs`
+（讀 Q7a-3b 已移除的頂層 `state.competition`），M3-1 已實證為既有技術債。
+
+⚠ **未經瀏覽器實測**：verifier 沒有跑 CS 引擎本身（要 WebGL），走的是
+`CsMatchResult.v1 → settleCsMatch → reportMatchResult` 這條正式路徑。
+「打完一張圖之後畫面真的回到選圖」這一步**只在程式碼層驗過，沒有在瀏覽器看過**。

@@ -28,6 +28,7 @@
 // ============================================================================
 import { RESULT_SOURCES as MATCH_RESULT_SOURCES } from "../contracts/matchResult.js";
 import { involvesTeam } from "../contracts/competition.js";
+import { isSeriesDecided, seriesScore } from "../contracts/matchSeries.js";
 
 /**
  * 由正式賽果換算賽程賽果的輸入。
@@ -36,11 +37,13 @@ import { involvesTeam } from "../contracts/competition.js";
  * @param {object} p.result       MatchResult.v1（**必須已經正式成立**）
  * @param {object} p.fixture      Fixture.v1
  * @param {string} p.playerTeamId 玩家隊伍 id（Q1 的不可變識別碼）
+ * @param {object} [p.series]     `MatchSession.series`（M4-A）。BO3 之類的 series
+ *   場次**必須**帶：賽程比分要由整個 series 的地圖數決定，不是這一張地圖。
  * @returns {{ok:boolean, input:object|null, errors:Array}}
  *   input = { fixtureId, winner, score:{a,b}, duration, seed } —— 直接餵給
  *   `applyCompleted()`／`completeFixtureMatch()`
  */
-export function fixtureOutcomeInputFrom({ result, fixture, playerTeamId } = {}) {
+export function fixtureOutcomeInputFrom({ result, fixture, playerTeamId, series = null } = {}) {
   const errors = [];
   if (!result || result.schema !== "MatchResult.v1") {
     errors.push({ code: "result", message: "缺少正式賽果（MatchResult.v1）" });
@@ -60,20 +63,28 @@ export function fixtureOutcomeInputFrom({ result, fixture, playerTeamId } = {}) 
   if (result && (typeof result.score?.us !== "number" || typeof result.score?.opponent !== "number")) {
     errors.push({ code: "score", message: "正式賽果缺少比分" });
   }
-  //  ── ⛔ CS Season M3-2：一場 MatchResult 結算不了一個 series ──────────────
+  //  ── CS Season M4-A：series 的賽程比分來自 series，不是這一張地圖 ─────────
   //  BO3 的 `FixtureOutcome.score` 是**地圖數**（2:0 / 2:1）。一場 `MatchResult.v1`
-  //  只代表**一張地圖** ⇒ 拿它產生 series 比分只有兩種寫法，兩種都是錯的：
-  //    · 記成 `1:0` —— 那是 BO1 的比分，等於宣稱一個 BO3 打完了卻只打了一張
-  //    · 記成 `2:0` —— 憑空發明另外一張根本沒打的地圖
-  //  ⇒ **fail-closed**。玩家出戰 BO3 需要一個跨三張地圖的 series 流程
-  //    （地圖結果累計住在 MatchSession / ActiveMatch，**不進 SeasonState**，規格 D4），
-  //    那是 M4 的工作。在它做出來之前，這條路徑明確拒絕，不猜。
-  const series = fixture?.gameMode === "cs" ? (fixture?.matchFormat?.series ?? null) : null;
-  if (series) {
+  //  只代表**一張地圖**，所以 series 的賽程賽果不能由它單獨產生：
+  //    · 記成 `1:0` ⇒ 宣稱一個 BO3 打完了卻只打了一張
+  //    · 記成 `2:0` ⇒ 憑空發明另外一張根本沒打的地圖
+  //  ⇒ 這條路徑改成**讀 `series`**（`MatchSession.series`，M3-2 起的 fail-closed
+  //    在這裡正式解除）。series 還沒分出勝負 ⇒ 不寫賽程，回 `series_in_progress`。
+  //
+  //  ⚠ 本函式仍然**一個數字都不重算**：地圖數是 `series.wins` 直接來的，
+  //    而 `series.wins` 是逐張抄 Codex 判好的單圖勝負累加出來的。
+  const needsSeries = fixture?.gameMode === "cs" ? (fixture?.matchFormat?.series ?? null) : null;
+  if (needsSeries && !series) {
     errors.push({
-      code: "series_incomplete",
-      message: `這場是 ${series} series（先拿兩張地圖），一場對戰的結果結算不了整個 series。`
-        + "玩家出戰年度 Major 的 series 流程尚未實作。",
+      code: "series_missing",
+      message: `這場是 ${needsSeries} series，但這一份賽果沒有帶 series 狀態，無法結算。`,
+    });
+  }
+  if (needsSeries && series && !isSeriesDecided(series)) {
+    const sc = seriesScore(series);
+    errors.push({
+      code: "series_in_progress",
+      message: `${needsSeries} 還沒打完（目前 ${sc.us}:${sc.opponent}），賽程賽果要等 series 分出勝負才寫入。`,
     });
   }
   if (errors.length) return { ok: false, input: null, errors };
@@ -81,19 +92,25 @@ export function fixtureOutcomeInputFrom({ result, fixture, playerTeamId } = {}) 
   //  玩家在這場是主隊還是客隊——**唯一**要判斷的事
   const playerIsSideA = fixture.sideA === playerTeamId;
   const opponentTeamId = playerIsSideA ? fixture.sideB : fixture.sideA;
-  const playerWon = result.winner === "us";
 
   //  ── ⛔ CS：賽程比分是**地圖數**，不是 MatchResult 帶來的回合數 ──────────
   //  規格 D4：`FixtureOutcome.score` 記地圖數，Season 層不認識地圖裡的事。
   //  `MatchResult.v1` 對 CS 帶的是 Codex 引擎的**回合比分**（例如 13:7）——
   //  那是 CS battle runtime 的責任區（MR12 / halftime / OT）。原樣抄進賽程
   //  等於讓賽季層把回合語義當成自己的比分，正是 ownership lock 要擋的事。
-  //  ⚠ 這裡**不重算任何東西**：只讀 `result.winner`（Codex 已經判好的單圖勝負），
-  //    BO1 ⇒ 勝方 1 張地圖、敗方 0 張。一個回合數都沒有被搬進來。
-  //    BO3 的多地圖累計屬 M3，本函式不預先假設。
+  //
+  //  ⚠ 兩種 CS 都**不重算任何東西**：
+  //    · BO1（聯賽）：只讀 `result.winner`（Codex 判好的單圖勝負）⇒ 1:0。
+  //    · series（Major）：只讀 `series.wins`，而那是逐張抄單圖勝負累加的 ⇒ 2:0 / 2:1。
+  //    兩條路都沒有一個回合數被搬進來。
   const isCs = fixture.gameMode === "cs";
-  const usScore = isCs ? (playerWon ? 1 : 0) : result.score.us;
-  const oppScore = isCs ? (playerWon ? 0 : 1) : result.score.opponent;
+  const seriesDone = !!needsSeries && isSeriesDecided(series);
+  //  ⚠ series 的勝方是**整個 series 的勝方**，不是最後一張地圖的勝方。
+  //    2:1 的最後一張圖可能是敗方贏的——照抄那一張會把冠軍判給輸的隊。
+  const playerWon = seriesDone ? series.winner === "us" : result.winner === "us";
+  const sc = seriesDone ? seriesScore(series) : null;
+  const usScore = seriesDone ? sc.us : (isCs ? (playerWon ? 1 : 0) : result.score.us);
+  const oppScore = seriesDone ? sc.opponent : (isCs ? (playerWon ? 0 : 1) : result.score.opponent);
 
   return {
     ok: true,

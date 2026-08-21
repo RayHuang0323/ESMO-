@@ -20,7 +20,8 @@
 // ============================================================================
 import { applyProgressToState } from "./applyMatchProgress.js";
 import { validateMatchResult, isSameResult } from "../contracts/matchResult.js";
-import { completeSession } from "../contracts/matchSession.js";
+import { completeSession, patchActiveMatch } from "../contracts/matchSession.js";
+import { recordSeriesMap, isSeriesDecided } from "../contracts/matchSeries.js";
 
 function hash8(input) {
   const s = typeof input === "string" ? input : JSON.stringify(input);
@@ -160,10 +161,58 @@ export function settleMatchResultInState(state, { result, session, transaction, 
     errors: [],
   };
 
-  //  ④ 標記場次完成（形成 session → matchId → resultId → settlementId 的鏈）
-  const done = session ? completeSession(session, {
-    matchId: result.matchId, resultId: result.resultId, settlementId, now,
-  }) : { ok: false, session: null };
+  //  ── ④ 場次收尾 ────────────────────────────────────────────────────────
+  //
+  //  CS Season M4-A：**一個 series 的場次不會在第一張地圖打完就結束。**
+  //  這一張的勝負先記進 `session.series`，只有在 series 分出勝負（先拿兩張）
+  //  之後才標記場次完成。中間的每一張圖仍然各自走完 S25 入帳與追蹤鏈——
+  //  沒有第二套結算，也沒有把三張圖的獎勵攢到最後一起發。
+  //
+  //  ⚠ `recordSeriesMap` 以 matchId 冪等。這一段在重整／重送時會被重跑
+  //    （`alreadyApplied` 仍會走到這裡），少了那道冪等，重整一次就會多算一勝。
+  //  ⚠ 地圖的 `winner` 直接抄 `result.winner`（Codex 判好的單圖勝負），
+  //    **不從 `result.score` 推導**——那是回合比分，是 ownership lock 的另一邊。
+  let sessionAfterMap = session;
+  let seriesDecided = true;                    // 非 series ⇒ 一場就是全部
+  if (session?.series) {
+    const rec = recordSeriesMap(session.series, {
+      matchId: result.matchId,
+      winner: result.winner,
+      mapKey: session.activeMatch?.config?.csConfig?.mapKey ?? null,
+      resultId: result.resultId,
+    });
+    if (rec.ok) {
+      sessionAfterMap = { ...session, series: rec.series, updatedAt: now };
+      seriesDecided = rec.decided;
+    }
+    else {
+      //  `rec.ok === false`（例如已決勝的 series 又收到一張圖）⇒ series 原封不動。
+      //  ⚠ 收尾與否要看 series **目前的實際狀態**，不能預設 true：那會讓一筆
+      //    被拒絕的地圖結果把一個還沒打完的 series 提早收掉。
+      seriesDecided = isSeriesDecided(session.series);
+    }
+  }
+
+  //  形成 session → matchId → resultId → settlementId 的鏈
+  const done = sessionAfterMap
+    ? (seriesDecided
+      ? completeSession(sessionAfterMap, {
+        matchId: result.matchId, resultId: result.resultId, settlementId, now,
+      })
+      //  series 還沒打完：場次維持 `launched`，但這一張圖的對戰已經結束
+      //  ⇒ ActiveMatch 標成 `paused` 並把階段退回選圖，讓玩家接著打下一張。
+      //  ⚠ 不能留在 `active`：那會讓首頁的「返回比賽」把玩家丟回一場已經打完的圖。
+      : {
+        ok: true,
+        session: sessionAfterMap.activeMatch
+          ? patchActiveMatch(sessionAfterMap, {
+            status: "paused",
+            phase: "map",
+            simulation: { status: "paused", timeSec: 0, snapshot: null },
+          }, now)
+          : sessionAfterMap,
+      })
+    : { ok: false, session: null };
 
   const nextState = {
     //  applied.nextState 可能為 null（S25 已套用過）⇒ 那就只更新結算帳本

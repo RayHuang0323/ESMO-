@@ -203,7 +203,18 @@ export default function AppShell() {
       {screen === "csLoading" && <CsLoadingScreen config={csConfig} onDone={() => { useProfileStore.getState().setActiveMatchContext({ phase: "battle" }); setScreen("cs"); }} />}
       {/* S25：CS 結算在「比賽完成邊界」做掉（不是 Result 掛載時）→ 跳過 Result 也不會漏發獎 */}
       {screen === "cs" && <CsMatchScreen config={csConfig} onFinish={(r) => { settleCsMatch(r); setCsResult(r); setScreen("csResult"); }} onBack={home} />}
-      {screen === "csResult" && <CsResultScreen result={csResult} onDone={() => { setCsResult(null); setCsConfig(null); setScreen("dashboard"); }} />}
+      {/*  CS Season M4-A：BO3 的中間地圖打完之後不回首頁，接著打下一張。
+            ⚠ 判斷來源是 **store 的 series 狀態**，不是畫面自己數打了幾張——
+              畫面狀態重整就沒了，而 series 跟著場次一起存檔。
+            ⚠ 走 `resumeActiveMatch()` 而不是另開一場：場次根本沒有結束，
+              令牌也早就用掉了。恢復回來的 `phase` 是 `map` ⇒ 直接落在選圖畫面。 */}
+      {screen === "csResult" && <CsResultScreen result={csResult} onDone={() => {
+        const series = useProfileStore.getState().activeSeriesView();
+        setCsResult(null);
+        setCsConfig(null);
+        if (series && !series.decided) { resumeActiveMatch(); return; }
+        setScreen("dashboard");
+      }} />}
 
       {/* S23 SHELL：流程 provenance 保留在 source，玩家畫面不再顯示開發標記。 */}
       {restoring && (

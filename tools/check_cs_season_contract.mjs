@@ -29,6 +29,7 @@ const files = Object.freeze({
   competition: "src/platform/contracts/competition.js",
   matchResult: "src/platform/contracts/matchResult.js",
   matchSession: "src/platform/contracts/matchSession.js",
+  matchSeries: "src/platform/contracts/matchSeries.js",
   finalStandings: "src/platform/contracts/finalStandings.js",
   csMatchResult: "src/platform/contracts/CsMatchResult.js",
   seasonState: "src/platform/competition/seasonState.js",
@@ -232,10 +233,24 @@ check("fixture result write-back is discipline-resolved, not session-mode-guesse
 //  ⛔ M2 最重要的一條：玩家實打的 CS 賽果進賽程時，比分**必須**換成地圖數。
 //  `MatchResult.v1` 對 CS 帶的是 Codex 的回合比分（13:7），照抄就是把回合語義
 //  搬進賽季層。橋接只讀 `winner`，一個回合數都不搬。
+//  ⚠ M4-A 起橋接有**兩條** CS 路徑（BO1 與 series），所以這一條跟著變嚴：
+//    兩條都必須是地圖數，而 series 那條的地圖數只准來自 `seriesScore(series)`。
+//    （原本 grep 的字面註解在 M4-A 改寫了。era-scoped marker 的處理原則是
+//      換成**更嚴**的版本，不是拿掉——同 M2 對 q35 `4c)` 的處理。）
 check("the CS fixture bridge projects maps, never rounds",
   has("fixtureBridge", 'fixture.gameMode === "cs"')
-  && has("fixtureBridge", "playerWon ? 1 : 0")
-  && has("fixtureBridge", "一個回合數都沒有被搬進來"));
+  && has("fixtureBridge", "playerWon ? 1 : 0")                    // BO1 ⇒ 1:0
+  && has("fixtureBridge", "seriesScore(series)")                  // series ⇒ 地圖數
+  && has("fixtureBridge", "沒有一個回合數被搬進來"));
+check("the CS series bridge takes the winner from the series, not the last map",
+  has("fixtureBridge", 'series.winner === "us"')
+  && has("fixtureBridge", "不是最後一張地圖的勝方"));
+check("the CS series bridge fails closed when the series is unfinished or missing",
+  has("fixtureBridge", "series_in_progress") && has("fixtureBridge", "series_missing"));
+//  ⛔ M4-A：series 狀態住在 MatchSession，**不得**出現在賽季層（規格 D4）
+check("series state lives on the session, never in SeasonState",
+  !/MatchSeries|nextMapKey|mapsToWin/.test(codeOnly("seasonState"))
+  && has("matchSeries", "不是** SeasonState"));
 check("the CS fixture bridge reads nothing but the winner Codex decided",
   !/ourScore|enemyScore|scoreT|scoreCT|roundCount/.test(codeOnly("fixtureBridge")));
 check("player CS entry goes through the shared fixture action, not a second flow",

@@ -237,9 +237,14 @@ ck("Major 積分榜的淨勝分是地圖差（不會出現回合量級的數字�
   (majorStandings.rows ?? []).every((r) => Math.abs(r.diff ?? 0) <= 4),
   (majorStandings.rows ?? []).map((r) => r.diff).join(","));
 
-// ── §8 玩家出戰 BO3：fail-closed ─────────────────────────────────────────
-console.log("\n§8 玩家出戰 BO3：fail-closed");
-//  ⚠ 一張地圖結算不了一個 BO3。M3-2 **不假裝可以**：兩道都明確拒絕。
+// ── §8 一場 MatchResult 結算不了一個 series ──────────────────────────────
+console.log("\n§8 一場 MatchResult 結算不了一個 series");
+//  ⚠ M4-A 起玩家**打得了** BO3（series 狀態住在 `MatchSession.series`），
+//    所以 M3-2 的 `series_incomplete` 已由更精確的兩個原因取代：
+//      · 沒帶 series 狀態 ⇒ `series_missing`
+//      · series 還沒分出勝負 ⇒ `series_in_progress`
+//    **拒絕的性質沒有放寬**：少了 series 就是算不出地圖數，一律不猜。
+//    完整的 series lifecycle 由 `check_cs_playable_series.mjs` 守。
 const majorFixture = majorFx[0];
 const bridged = fixtureOutcomeInputFrom({
   result: {
@@ -249,8 +254,8 @@ const bridged = fixtureOutcomeInputFrom({
   fixture: { ...majorFixture, sideA: cs.playerTeamId },
   playerTeamId: cs.playerTeamId,
 });
-ck("橋接拒絕用一場 MatchResult 結算一個 BO3 series",
-  bridged.ok === false && bridged.errors.some((e) => e.code === "series_incomplete"),
+ck("沒有 series 狀態時，橋接拒絕結算 BO3（fail-closed 未放寬）",
+  bridged.ok === false && bridged.errors.some((e) => e.code === "series_missing"),
   bridged.errors?.[0]?.message ?? "（沒有拒絕）");
 ck("橋接對 BO1 的 CS 聯賽場次仍然正常運作（既有行為未變）",
   fixtureOutcomeInputFrom({

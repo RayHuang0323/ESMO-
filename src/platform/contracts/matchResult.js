@@ -131,11 +131,26 @@ export function validateMatchResult(result, { session = null, known = null } = {
       errors.push({ code: "roster_mismatch", message: "結果的隊伍版本與場次不符" });
     }
   }
-  //  同一場送不同結果 ⇒ 衝突
-  if (known && known.sessionId === result.sessionId && known.contentHash !== result.contentHash) {
+  //  ── 同一場送不同結果 ⇒ 衝突 ──────────────────────────────────────────
+  //  ⚠ CS Season M4-A：一個 **series** 的場次會**正當地**回報多份不同的結果——
+  //    一個 BO3 有三張地圖，每張是獨立的一場對戰，各自有 matchId。
+  //    對 series 而言，「衝突」的正確定義是**同一張地圖**被回報了兩種結果。
+  //
+  //  ⚠ 非 series 的場次**規則一個字都沒放寬**：一個場次仍然只准有一份結果，
+  //    第二份不同內容的一律拒絕（MOBA 與 CS 聯賽走的都是這條）。
+  //  ⚠ 這裡刻意讀 `session?.series` 而不是看結果自己帶了什麼：
+  //    「這是不是一個 series」是**場次**的性質。讓送進來的結果自己宣稱的話，
+  //    偽造一個 series 欄位就能繞過衝突偵測。
+  const seriesScoped = !!session?.series;
+  const sameTarget = seriesScoped
+    ? (known?.sessionId === result.sessionId && known?.matchId === result.matchId)
+    : (known?.sessionId === result.sessionId);
+  if (known && sameTarget && known.contentHash !== result.contentHash) {
     errors.push({
       code: "conflict",
-      message: `本場已回報過不同的結果（既有 ${known.resultId}，新收到 ${result.resultId}），拒絕受理`,
+      message: seriesScoped
+        ? `本 series 的這張地圖已回報過不同的結果（既有 ${known.resultId}，新收到 ${result.resultId}），拒絕受理`
+        : `本場已回報過不同的結果（既有 ${known.resultId}，新收到 ${result.resultId}），拒絕受理`,
     });
   }
   return { ok: errors.length === 0, errors };
