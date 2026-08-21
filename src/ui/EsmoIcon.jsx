@@ -11,6 +11,10 @@ import {
   ChevronRight,
   DollarSign,
   FileText,
+  Gamepad2,
+  Home,
+  MessageCircle,
+  MoreHorizontal,
   Package,
   Search,
   Star,
@@ -18,6 +22,7 @@ import {
   Trophy,
   Users,
   Zap,
+  X,
 } from "lucide-react";
 
 const ICONS = {
@@ -26,8 +31,12 @@ const ICONS = {
   award: Award,
   chart: BarChart2,
   chevron: ChevronRight,
+  close: X,
   finance: DollarSign,
+  home: Home,
   inbox: Bell,
+  message: MessageCircle,
+  more: MoreHorizontal,
   note: FileText,
   package: Package,
   search: Search,
@@ -36,6 +45,7 @@ const ICONS = {
   trophy: Trophy,
   users: Users,
   signal: Zap,
+  compete: Gamepad2,
 };
 
 export function EsmoIcon({ name, size = 18, strokeWidth = 1.8, title, className = "" }) {

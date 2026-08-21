@@ -10,7 +10,7 @@ gsap.registerPlugin(useGSAP);
  * are reverted by useGSAP, and reduced-motion keeps the final visual state
  * without movement.
  */
-export function useDashboardMotion(rootRef) {
+export function useDashboardMotion(rootRef, isMobile = false) {
   useGSAP(() => {
     const root = rootRef.current;
     if (!root) return undefined;
@@ -19,12 +19,14 @@ export function useDashboardMotion(rootRef) {
     const progressNodes = root.querySelectorAll("[data-dashboard-progress]");
     const pulseNodes = root.querySelectorAll("[data-dashboard-pulse]");
     const ambientNodes = root.querySelectorAll("[data-dashboard-ambient]");
+    const mobileNav = root.querySelector("[data-dashboard-mobile-nav]");
     const media = gsap.matchMedia();
 
     media.add("(prefers-reduced-motion: reduce)", () => {
       gsap.set(revealNodes, { autoAlpha: 1, y: 0 });
       gsap.set(progressNodes, { scaleX: 1, transformOrigin: "left center" });
       gsap.set(ambientNodes, { x: 0, y: 0, rotation: 0 });
+      if (mobileNav) gsap.set(mobileNav, { autoAlpha: 1, y: 0 });
     });
 
     media.add("(prefers-reduced-motion: no-preference)", () => {
@@ -34,6 +36,9 @@ export function useDashboardMotion(rootRef) {
         { autoAlpha: 0, y: 14 },
         { autoAlpha: 1, y: 0, duration: 0.48, stagger: 0.055, clearProps: "transform" },
       );
+      if (mobileNav) {
+        intro.fromTo(mobileNav, { autoAlpha: 0, y: 8 }, { autoAlpha: 1, y: 0, duration: 0.34, clearProps: "transform" }, "-=0.16");
+      }
 
       progressNodes.forEach((node) => {
         gsap.fromTo(
@@ -73,5 +78,5 @@ export function useDashboardMotion(rootRef) {
     });
 
     return () => media.revert();
-  }, { scope: rootRef, dependencies: [], revertOnUpdate: true });
+  }, { scope: rootRef, dependencies: [isMobile], revertOnUpdate: true });
 }

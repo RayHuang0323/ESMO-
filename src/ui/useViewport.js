@@ -7,6 +7,24 @@ import { useEffect, useState } from "react";
 
 export const MOBILE_MAX = 700;   // px；≤700 視為手機/窄視窗（涵蓋 320/360/390/430）
 
+export const HOME_MOBILE_MAX = 520;
+
+export function isHomeMobileViewport() {
+  if (typeof window === "undefined") return false;
+  return (window.innerWidth ?? 1280) <= HOME_MOBILE_MAX;
+}
+
+export function useIsHomeMobile() {
+  const [mobile, setMobile] = useState(() => isHomeMobileViewport());
+  useEffect(() => {
+    const onR = () => setMobile(isHomeMobileViewport());
+    window.addEventListener("resize", onR);
+    window.addEventListener("orientationchange", onR);
+    return () => { window.removeEventListener("resize", onR); window.removeEventListener("orientationchange", onR); };
+  }, []);
+  return mobile;
+}
+
 export function isMobileViewport() {
   if (typeof window === "undefined") return false;
   const w = window.innerWidth ?? 1280;
