@@ -67,7 +67,9 @@ import {
   canSealSeason, applySealSeason,
   canRollSeason, rollToNextSeason, seasonDayOf,
   ensurePlayoffs, playoffView, isRegularSeasonDone,
+  ensureCsMajor, csMajorEntryOf, csMajorFixturesOf,
 } from "./competition/seasonState.js";
+import { CS_MAJOR_EVENT_KEY } from "./competition/csMajor.js";
 //  Milestone Q4：名次獎金。錢的第三個入口（唯一新增的一個），純函式在 economy/。
 import { settleCompetitionAwardInState } from "./economy/competitionAward.js";
 //  ── Milestone Q7a-3c：巡迴積分與晉級資格 ────────────────────────────────
@@ -1441,21 +1443,55 @@ export const useProfileStore = create((rawSet, get) => {
     if (!state?.schema) return { sealed: false, final: null, award: null };
 
     const day = Number(get().meta?.days) || 1;
+
+    //  ── CS Season M3-1：封存之前先補齊年度 Major ──────────────────────────
+    //  掛在這裡的理由與 MOBA 的 `ensurePlayoffs` 完全相同：三個觸發點
+    //  （推進天數／打完／棄權）都會經過這一支，而「聯賽最後一場收尾」與
+    //  「準決賽收尾」都是需要補排的時機。`ensureCsMajor` 冪等 ⇒ 呼叫幾次都一樣。
+    //
+    //  ⚠ 順序不能反。先封存再補 Major 的話，聯賽收尾的那一拍
+    //    `canSealSeason` 會看到「只有一個 Event 而且它封好了」⇒ **整季提早封存**，
+    //    Major 就再也長不出來（`ensureCsMajor` 遇到 `state.final` 會停手）。
+    const major = ensureCsMajor(state);
+    if (major.ok && major.state !== state) {
+      state = major.state;
+      get()._setCompetitionStateFor(mode, state);
+      get().save();
+      if (major.added > 0 && csMajorFixturesOf(state).length === 2) {
+        const q = csMajorEntryOf(state).playoff.qualification.qualified;
+        get().pushInbox({
+          type: "match", from: "CS 聯賽官方",
+          subject: `CS 第 ${state.season} 賽季 年度 Major 對戰表公布`,
+          text: `聯賽結束，積分榜前四晉級年度 Major：${q.map((x) => `${x.seed}. ${x.name}`).join("、")}。`,
+        });
+      }
+    }
+
     //  ① 先封 Event（產生不可變的 FinalStandings）
     for (const eid of sealableEventIds(state)) {
       const r = applySealEvent(state, eid, day);
       if (!r.ok) continue;
+      const isMajor = state.events[eid]?.eventKey === CS_MAJOR_EVENT_KEY;
       state = r.state;
       get()._setCompetitionStateFor(mode, state);
       //  ⚠ 獎金：CS 的 Event 沒有 `prizePolicy`（見 seasonState.js 的說明）
       //    ⇒ 這裡**完全不碰錢**。不是忘了寫，是還沒有規則可以照。
+      //  ⚠ 冠軍名字仍從**聯賽**參賽者查（`participantsOf` 讀的是主賽制）。
+      //    Major 的四強都在聯賽名單裡 ⇒ 查得到；不必為此改讀取來源。
       const champ = participantsOf(state).find((p) => p.id === r.final.championTeamId)?.name ?? "—";
-      get().pushInbox({
-        type: "match", from: "CS 聯賽官方",
-        subject: `CS 第 ${r.final.season} 賽季 結束 · ${champ} 奪冠`,
-        text: `CS 第 ${r.final.season} 賽季常規賽全部結束，${champ} 拿下冠軍。`
-          + `你的隊伍最終排名第 ${r.final.playerRank} 名。年度 Major 尚未開放。`,
-      });
+      get().pushInbox(isMajor
+        ? {
+          type: "match", from: "CS 聯賽官方",
+          subject: `CS 第 ${r.final.season} 賽季 年度 Major · ${champ} 奪冠`,
+          text: `年度 Major 結束，${champ} 拿下本季 CS 年度冠軍。`
+            + `${r.final.playerRank ? `你的隊伍在 Major 排名第 ${r.final.playerRank} 名。` : "你的隊伍沒有取得 Major 參賽資格。"}`,
+        }
+        : {
+          type: "match", from: "CS 聯賽官方",
+          subject: `CS 第 ${r.final.season} 賽季 聯賽結束 · ${champ} 奪冠`,
+          text: `CS 第 ${r.final.season} 賽季常規賽全部結束，${champ} 拿下聯賽冠軍。`
+            + `你的隊伍最終排名第 ${r.final.playerRank} 名。接下來是年度 Major。`,
+        });
     }
 
     //  ② 再封賽季

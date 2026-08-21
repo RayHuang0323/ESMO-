@@ -11012,3 +11012,108 @@ npm run build                                   ✓ built in 9.40s
 改成**更嚴**的版本：導向函式必須存在、兩個目的地必須是 `lineup` 與 `csPrep`、
 且 `matchmaking`（純過場動畫）依然不得是 onPlay 的目的地；另加 `4c1)`
 確認 CS 賽前頁同樣跑真正的賽前流程框架。q35 因此由 65 → 66 條。
+
+---
+
+## CS Season M3-1 — 年度 Major（single_elim lifecycle）　2026-08-21
+
+**分支**：`integration/cs-cross-ai`（起點：cross-AI checkpoint `06a7e89`）
+**規格**：`docs/design/CS_賽事系統架構規格.md` D3 / D4 / §5
+**計畫**：`docs/superpowers/plans/2026-08-21-cs-season-competition.md` M3-1
+
+### 做了什麼
+
+CS 官方聯賽打完之後，**年度 Major 會自己長出來**：積分榜前四晉級、排成四隊單淘汰
+（sf1 / sf2 / bronze / final）、AI 可完整打完、冠軍決定 Major 自己的 FinalStandings，
+之後 CS 賽季才封得起來。CS 一季因此從一個 Event 變成**兩個 Event**（聯賽 ＋ Major）。
+
+| 檔案 | 動作 |
+|---|---|
+| `src/platform/competition/csMajor.js` | 新增。Major 的 Event / Competition / Stage / 晉級名單組裝 |
+| `src/platform/competition/seasonState.js` | 新增 `ensureCsMajor` / `csMajorEntryOf` / `csMajorFixturesOf` / `isCsMajorDone` |
+| `src/platform/competition/playoffs.js` | `createPlayoffStage` 加選用 `key` 參數（預設值不變 ⇒ MOBA stage.id 逐字不變） |
+| `src/platform/profileStore.js` | `_sealCsSeasonIfFinished` 在封存前先 `ensureCsMajor`；聯賽／Major 兩種收件匣文案 |
+| `tools/check_cs_major.mjs` | 新增，70/70 |
+| `tools/check_cs_season_lifecycle.mjs` | 兩條斷言隨「CS 變成兩個 Event」更新（見下） |
+
+### 三個關鍵設計決策
+
+1. **不重寫對戰表產生器，共用 `playoffs.js`。** Major 與 MOBA 季後賽在賽制上是
+   同一件事（4 隊單淘汰），配對規則、分兩輪產生、冠亞季殿順序全部沿用 Q6 驗過的
+   那一套。`csMajor.js` 只負責 `playoffs.js` 不該知道的三件事：席位從哪張榜來、
+   它是獨立的 Event、排在聯賽之後的哪幾天。
+   ⚠ **計畫原本寫的 `buildSingleElim()` ＋ `IMPLEMENTED_FORMATS` 加 `single_elim`
+   兩項都沒有做**，理由見下方「與計畫的偏差」。
+
+2. **Major 賽制條目的 `stage` 與 `playoff` 指向同一個賽段。** 聯賽是「循環賽 ＋
+   季後賽」⇒ 兩個賽段；**Major 整個賽制就是一張對戰表** ⇒ 同一個。這不是把資料
+   存兩份，而是照實宣告「這個賽制從頭到尾都是淘汰賽」，並且**免費拿到正確的封存
+   行為**：`canSealEvent` 對宣告 `expectsPlayoff` 的賽制要求 `isPlayoffDoneOf`
+   （四場都在、都收尾）。少了它，只排出兩場準決賽、兩場都打完的當下 `remaining`
+   就是 0 ⇒ Major 會**用半張對戰表封存**，季軍戰與決賽還沒打就先發冠軍。
+   verifier 有一條專門守這個窗口。
+
+3. **晉級規則只有一份，而且用交叉比對釘死。** 席位由
+   `csMajorQualifiers()`（`csSeasonConfig.js`，M1 就寫好的純函式）決定；
+   `createQualification()` 只提供 `Qualification.v1` 的**形狀**。兩者逐值比對，
+   **不一致就整個失敗**，不挑一個信 —— 否則日後改了設定卻沒生效會完全無聲。
+
+### ⛔ Codex ownership lock：完全沒有碰
+
+`EsportsFPS3D.jsx`、`check_cs_match_completion.mjs`、`verify.mjs` **一個字都沒改**。
+Major 的比分走既有的 CS 投影（`fixtureSim.cs1`，地圖數），verifier §3 逐筆驗
+「兩側都 ≤ 2」「沒有地圖識別碼」「沒有 round / half / overtime 語義欄位」。
+`check_cs_match_completion` 仍 34/34。
+
+### 與計畫的偏差（兩項，都是刻意的）
+
+1. **沒有新增 `buildSingleElim()` 到 `scheduleGenerator.js`。** 那會變成第二套
+   單淘汰產生器，與 `playoffs.js` 重複 —— 違反「不建第二套」。
+2. **沒有把 `single_elim` 加進 `IMPLEMENTED_FORMATS`。** 那個常數的語意是
+   「`generateSchedule()` 排得出來的賽制」，而 `generateSchedule()` 仍然只會排
+   循環賽（Major 根本不經過它）。加進去等於讓常數說謊。
+
+### M1 verifier 的兩條斷言隨行為更新（不是放寬）
+
+CS 現在有兩個 Event ⇒ 賽季層封存物是 `SeasonSeal.v1`，它**依設計沒有 `id`**
+（多 Event 的賽季不再產生單一總名次）。原本的
+「CS 的 final 沒有出現在名次獎金帳本裡」讀 `csFinal.id` ⇒ `undefined` ⇒ 轉紅。
+改成檢查**每一個 Event 的 FinalStandings id**（那才是獎金結算真正的冪等鍵），
+並新增一條「兩個 Event 的賽季用 SeasonSeal.v1 封存」。M1 由 50 → 51 條。
+
+### 驗證（全部實跑）
+
+```
+node tools/check_cs_major.mjs                    70/70   ← 本輪新增
+node tools/check_cs_season_contract.mjs          68/68
+node tools/check_cs_schema_v11.mjs               41/41   (M0)
+node tools/check_cs_season_lifecycle.mjs         51/51   (M1，50 → 51)
+node tools/check_cs_season_m2.mjs                55/55   (M2)
+node tools/check_cs_league_eligibility.mjs       31/31
+node tools/check_home_team_contract.mjs          40/40
+node tools/check_cs_match_completion.mjs         34/34   (Codex CS-MR12)
+node tools/check_r63_active_match_ttl.mjs         9/9
+node tools/check_competition_release_gate.mjs   11/11
+MOBA regression  q1 93/93 · q2a 112/112 · q2b 92/92 · q3 91/91 · q35 66/66
+                 q4 68/68 · q5 69/69 · q6 57/57（季後賽路徑未動）
+SeasonState v2   runtime 36/36 · active_focus 31/31 · sealing_m2 24/24
+regress 15/15 · regress2 8/8
+npm run build    ✓ built in 9.51s
+```
+
+⚠ **已知紅、非本輪造成**：`check_season_state_v2_migration_q7b.mjs` 以
+`TypeError: Cannot read properties of undefined (reading 'id')` 失敗，因為它讀
+Q7a-3b 就已移除的頂層 `state.competition`。已在 checkpoint `06a7e89` 開臨時
+worktree 實跑確認**錯誤逐字相同** ⇒ 既有技術債，不是 M3-1 的回歸訊號。
+
+⚠ **未經瀏覽器實測**：Major 目前**沒有任何 UI 入口**。玩家看得到的只有兩封
+收件匣信（對戰表公布、Major 冠軍）。CS 賽事頁屬 M4。若玩家自己打進四強，
+出戰入口沿用既有 fixture 流程（M2 已接），但**沒有在瀏覽器實測過**。
+
+### 下一步
+
+M3-2（BO3 series）**本輪刻意未動**：Major fixture 目前沒有 `matchFormat`，
+比分是 BO1 語義的地圖數（`1:0`）。M3-2 要做的是掛上
+`{ series: "bo3", mapPool: CS_MAPS, veto: null }` 並讓比分變成 `2:0` / `2:1`。
+結構上已經備好 —— 一個 Fixture ＝ 一個 series ＝ 一筆 FixtureOutcome 的不變式
+在本輪就成立，M3-2 只需要改比分的產生，不必動賽事結構。

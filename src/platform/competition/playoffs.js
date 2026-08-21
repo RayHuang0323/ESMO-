@@ -74,8 +74,13 @@ export function createQualification({ standings, stage, toStageId, slots = PLAYO
  * @param {object} p.competition
  * @param {object} p.qualification  `createQualification()` 的輸出
  * @param {object} p.dayRange       { from, to } 賽季日區間（接在常規賽之後）
+ * @param {string} [p.key]         賽段 key（`stage.id` 由它推導）。
+ *   預設 `playoffs` ⇒ **MOBA 既有存檔的 stage.id 逐字不變**。
+ *   CS 年度 Major 傳 `major`：那個賽制**整個就是**這張對戰表，不是某個聯賽的
+ *   季後賽，叫 `stage:comp:cs:s1:official:major:playoffs` 會讓 id 自己說謊。
+ *   ⚠ 只有 id 與可讀性受影響——對戰表的產生規則一個字都沒有分岔。
  */
-export function createPlayoffStage({ competition, qualification, dayRange } = {}) {
+export function createPlayoffStage({ competition, qualification, dayRange, key = PLAYOFF_STAGE_KEY } = {}) {
   const q = qualification?.qualified ?? [];
   if (q.length !== PLAYOFF_SLOTS) {
     return { ok: false, stage: null, errors: [{ code: "qualified", message: `季後賽需要正好 ${PLAYOFF_SLOTS} 支晉級隊伍` }] };
@@ -85,7 +90,7 @@ export function createPlayoffStage({ competition, qualification, dayRange } = {}
     format: STAGE_FORMATS.single_elim,
     participants: q.map(({ teamId, name, tag, isAi }) => ({ id: teamId, name, tag, isAi })),
     legs: 1,
-    key: PLAYOFF_STAGE_KEY,
+    key,
     dayRange,
   });
   if (!made.ok) return { ok: false, stage: null, errors: made.errors };

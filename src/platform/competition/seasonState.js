@@ -40,6 +40,7 @@ import {
   createQualification, createPlayoffStage, ensurePlayoffFixtures,
   playoffOrder, playoffBracket, PLAYOFF_STAGE_KEY, PLAYOFF_MATCHES,
 } from "./playoffs.js";
+import { buildCsMajor, isCsMajorEntry } from "./csMajor.js";
 
 export const SEASON_STATE_VERSION = "SeasonState.v2";
 export const SEASON_STATE_VERSION_V1 = "SeasonState.v1";
@@ -1089,6 +1090,99 @@ export function isPlayoffDoneOf(state, cid) {
 
 export function isPlayoffDone(state) {
   return isPlayoffDoneOf(state, activeEntryOf(state)?.competition?.id);
+}
+
+// ── CS Season M3-1：年度 Major ────────────────────────────────────────────
+//
+//  Major 與 MOBA 季後賽在**賽制上是同一件事**（4 隊單淘汰），所以對戰表的產生
+//  完全共用 `playoffs.js`。差別只有三點，全部由 `csMajor.js` 決定：
+//  席位來自哪一張榜、它是獨立的 Event、排在聯賽之後的哪幾天。
+//
+//  ⚠ 這裡刻意**不做成 `ensurePlayoffs` 的參數化版本**。那條路徑上掛的是
+//    MOBA 的季後賽語意（季後賽是**聯賽自己的**後段，住在同一個賽制條目裡）；
+//    Major 是**另一個 Competition**。硬塞成同一支只會讓兩邊都變難讀。
+//    共用的是純函式（`createQualification` / `createPlayoffStage` /
+//    `ensurePlayoffFixtures` / `playoffOrder`），不是編排。
+
+/** 這一季的年度 Major 賽制條目（沒有就回 null）。 */
+export const csMajorEntryOf = (state) => competitionEntries(state).find(isCsMajorEntry) ?? null;
+
+/** Major 的對戰表場次。 */
+export const csMajorFixturesOf = (state) =>
+  (state?.fixtures ?? []).filter((f) => f.stageId === csMajorEntryOf(state)?.stage?.id);
+
+/** Major 打完了嗎（四場都在、而且都收尾）。 */
+export function isCsMajorDone(state) {
+  const entry = csMajorEntryOf(state);
+  if (!entry) return false;
+  return isPlayoffDoneOf(state, entry.competition.id);
+}
+
+/**
+ * CS 聯賽結束 ⇒ 產生年度 Major 與它的對戰表。**冪等、可重複呼叫。**
+ *
+ * 第一次呼叫建立 Event / Competition / 賽段與兩場準決賽；準決賽都收尾後再呼叫，
+ * 才補得出季軍戰與決賽（決賽對手要等準決賽打完——見 `playoffs.js` 檔頭）。
+ *
+ * ⚠ 只對 **CS** 賽季作用。MOBA 傳進來原樣回傳（連物件參考都不換），
+ *   所以 Q6 的季後賽路徑一個字都沒被動到。
+ * ⚠ 聯賽沒打完就呼叫 ⇒ 什麼都不做。四強席位來自**完整的**聯賽積分榜，
+ *   還沒打完就排等於用不完整的名次決定晉級。
+ */
+export function ensureCsMajor(state) {
+  if (!state?.schema) return { ok: false, state, added: 0, errors: [{ code: "no_season", message: "目前沒有賽季" }] };
+  if (gameModeOf(state) !== "cs") return { ok: true, state, added: 0, errors: [] };
+  if (state.final) return { ok: true, state, added: 0, errors: [] };          // 已封存，不再動
+  if (!isRegularSeasonDone(state)) return { ok: true, state, added: 0, errors: [] };
+
+  let next = state;
+  //  ① 還沒有 Major ⇒ 依聯賽積分榜建立它
+  if (!csMajorEntryOf(next)) {
+    const leagueEntry = activeEntryOf(next);
+    const circuit = Object.values(next.circuits ?? {})[0] ?? null;
+    const built = buildCsMajor({
+      circuit,
+      leagueStage: leagueEntry?.stage ?? null,
+      standings: seasonStandings(next),
+      season: next.season,
+      lastLeagueDay: Math.max(...regularFixturesOf(next).map((f) => f.day), 1),
+    });
+    if (!built.ok) return { ok: false, state, added: 0, errors: built.errors };
+
+    next = {
+      ...next,
+      competitions: {
+        ...next.competitions,
+        [built.competition.id]: {
+          competition: built.competition,
+          //  ⚠ `stage` 與 `playoff.stage` 是**同一個賽段**：Major 整個賽制就是
+          //    這張對戰表。理由與後果（半張對戰表不得封存）見 `csMajor.js` 檔頭。
+          stage: built.stage,
+          playoff: { stage: built.stage, qualification: built.qualification, baseDay: built.baseDay },
+          expectsPlayoff: true,
+        },
+      },
+      circuits: circuit
+        ? { ...next.circuits, [circuit.id]: { ...circuit, eventIds: [...(circuit.eventIds ?? []), built.event.id] } }
+        : next.circuits,
+      events: { ...next.events, [built.event.id]: built.event },
+      //  ⚠ `activeEventId` / `careerEventId` **刻意不動**。前者是畫面聚焦，
+      //    後者是生涯主線——兩個都不該因為多了一個賽事就被系統換掉。
+    };
+  }
+
+  //  ② 補出現在排得出來的場次
+  const entry = csMajorEntryOf(next);
+  const made = ensurePlayoffFixtures({
+    stage: entry.stage,
+    qualification: entry.playoff.qualification,
+    fixtures: csMajorFixturesOf(next),
+    outcomes: next.outcomes ?? [],
+    baseDay: entry.playoff.baseDay,
+  });
+  if (!made.ok) return { ok: false, state, added: 0, errors: made.errors };
+  if (made.added.length) next = { ...next, fixtures: [...next.fixtures, ...made.added] };
+  return { ok: true, state: next, added: made.added.length, errors: [] };
 }
 
 /** 季後賽對戰表（畫面用）。 */

@@ -293,11 +293,29 @@ ck("拒收 BattleResult", outcomeFromCsResult({ schema: "BattleResult.v2" }).ok 
 **Interfaces:**
 - Produces: `buildSingleElim({ participants, stage })` → 4 隊 ⇒ 2 準決賽 ＋ 季軍戰 ＋ 決賽（與 `playoffs.js` 既有 `playoffKey` 命名一致：`sf1 / sf2 / bronze / final`）
 
-- [ ] **Step 1: 寫失敗測試** — 斷言 4 隊產生 4 場、`playoffKey` 齊全、種子順序為 standings 前四。
-- [ ] **Step 2: 跑測試確認失敗**。
-- [ ] **Step 3: 實作**。
-- [ ] **Step 4: 跑測試確認通過**。
-- [ ] **Step 5: Commit** — `git commit -m "feat: generate a four-team single elimination bracket"`
+- [x] **Step 1: 寫失敗測試** — 斷言 4 隊產生 4 場、`playoffKey` 齊全、種子順序為 standings 前四。
+- [x] **Step 2: 跑測試確認失敗**。
+- [x] **Step 3: 實作**。
+- [x] **Step 4: 跑測試確認通過**。
+- [x] **Step 5: Commit** — `git commit -m "feat: generate a four-team single elimination bracket"`
+
+> **M3-1 完成後的實作決策（2026-08-21）**——上面的 Files / Interfaces 是動工前寫的，
+> 有兩項實際上**刻意沒做**，這裡照實記下：
+>
+> 1. **沒有新增 `buildSingleElim()`，也沒有動 `scheduleGenerator.js`。**
+>    `playoffs.js` 已經是一台驗過的「4 隊單淘汰」機器（Q6 用了一整個 milestone）。
+>    再寫一支等於第二套單淘汰產生器。實際做法：新增 `src/platform/competition/csMajor.js`
+>    只負責 `playoffs.js` 不該知道的事（席位來自哪張榜、獨立 Event、排在哪幾天），
+>    配對規則一條都不重寫。測試檔名因此是 `tools/check_cs_major.mjs` 而非 `check_single_elim.mjs`。
+> 2. **沒有把 `single_elim` 加進 `IMPLEMENTED_FORMATS`。** 那個常數的語意是
+>    「`generateSchedule()` 排得出來的賽制」，而 Major 根本不經過 `generateSchedule()`。
+>    加進去等於讓常數說謊，下一個人照它去排單淘汰會拿到 `odd_participants` 之類的錯。
+>
+> 另外兩件計畫沒寫、但實作必須決定的事：
+> - **Major 賽制條目的 `stage` 與 `playoff` 是同一個賽段。** Major 整個賽制就是一張
+>   對戰表。這同時讓 `canSealEvent` 的 `expectsPlayoff` 守住「不得用半張對戰表封存」。
+> - **CS 一季從此有兩個 Event** ⇒ 賽季封存物變成 `SeasonSeal.v1`（依設計沒有 `id`）。
+>   `check_cs_season_lifecycle.mjs` 有兩條斷言隨之更新（50 → 51 條）。
 
 ### Task M3-2: BO3 series
 

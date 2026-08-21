@@ -37,7 +37,7 @@ const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 const {
   activeCompetitionOf, participantsOf, fixtureById, isPlayerFixture,
-  outcomeFor, tryCareerFinalStandingsOf,
+  outcomeFor, tryCareerFinalStandingsOf, eventFinalOf,
 } = await import("../src/platform/competition/seasonState.js");
 const { CS_LEAGUE_TEAM_COUNT } = await import("../src/platform/competition/regularSeason.js");
 const { csLeagueConfigFor, csTeamStatusFor, CS_TEAM_STATUS } =
@@ -261,8 +261,21 @@ ck("MOBA 賽季完全沒有被建立或封存", s5().competitionByMode.moba === 
 const awardKeys = Object.keys(s5().processedCompetitionAwards ?? {});
 ck("CS 封存沒有發名次獎金（獎金帳本沒有新增任何一筆）",
   awardKeys.length === awardsBefore, `帳本 ${awardsBefore} → ${awardKeys.length} 筆`);
-ck("CS 的 final 沒有出現在名次獎金帳本裡",
-  !!csFinal?.id && !awardKeys.includes(csFinal.id), `finalId=${csFinal?.id}`);
+//  ⚠ M3-1 起 CS 一季有**兩個 Event**（聯賽 ＋ 年度 Major）⇒ 賽季層的封存物是
+//    `SeasonSeal.v1`，它**依設計沒有 `id`**（多 Event 的賽季不再產生單一總名次，
+//    見 seasonState.js 的 `applySealSeason`）。所以「有沒有被當成獎金鍵」要看的
+//    是**每一個 Event 的 FinalStandings id**，那才是獎金結算真正會用的冪等鍵。
+const csFinalIds = [
+  csFinal?.id,
+  ...Object.keys(s5().competitionByMode.cs?.events ?? {})
+    .map((id) => eventFinalOf(s5().competitionByMode.cs, id)?.id),
+].filter(Boolean);
+ck("CS 的每一份 final 都沒有出現在名次獎金帳本裡",
+  csFinalIds.length >= 2 && csFinalIds.every((id) => !awardKeys.includes(id)),
+  `檢查 ${csFinalIds.length} 份：${csFinalIds.join(" / ")}`);
+ck("兩個 Event 的賽季用 SeasonSeal.v1 封存（沒有第二份總名次）",
+  csFinal?.schema === "SeasonSeal.v1" && (csFinal?.eventIds ?? []).length === 2,
+  `${csFinal?.schema} · ${(csFinal?.eventIds ?? []).length} 個 Event`);
 ck("財務變動只來自週結算，沒有任何賽事獎金交易",
   (s5().finance.transactions ?? []).every((t) => !String(t.id ?? "").startsWith("award-")),
   `funds ${fundsBefore} → ${s5().finance.funds}（12 次週結算）`);
