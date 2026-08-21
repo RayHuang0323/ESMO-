@@ -360,6 +360,120 @@ ck("跨重載打完 series ⇒ 賽程收尾，且只有一筆賽果",
   && isFixtureTerminal(fixtureById(csF, F.fixtureId)),
   `receipt.ok=${rF.receipt?.ok}`);
 
+// ── §7b M4-A.1：series 進度必須跨 session 存活 ───────────────────────────
+console.log("\n§7b 中離重進不得洗掉已完成的地圖（M4-A.1）");
+//  ⚠ 這是 M4-A 留下的 gameplay integrity 缺口：`startFixtureMatch` 對還沒收尾的
+//    賽程允許重新進場，而重新進場會**重簽一個新場次**。進度若只掛在場次上，
+//    落後的一方中離再進場就能把輸掉的那張圖擦掉。
+/** 中離 → 重新進場，回傳重進之後的場次。 */
+const reenter = (ctx) => {
+  ctx.st().abandonMatchSession("玩家中途離開");
+  let clock = 900000;
+  const again = ctx.st().startFixtureMatch(ctx.fixtureId, clock);
+  ctx.st().pollMatchRoom(clock); clock += 1000;
+  ctx.st().confirmMatchReady(clock);
+  for (let i = 0; i < 10; i++) { clock += 1500; ctx.st().pollMatchRoom(clock); }
+  clock += 1000;
+  ctx.st().createMatchSession(clock);
+  clock += 1000;
+  ctx.st().launchMatchSession(clock);
+  return { again, session: ctx.st().matchmaking.session };
+};
+
+//  ① 0:1 中離 → 重進仍 0:1
+const R1 = majorSeriesStore({ mapWinners: ["opponent"] });
+const sidR1 = R1.st().matchmaking.session.sessionId;
+ck("前置：輸掉第一張，series 是 0:1",
+  eq(seriesScore(R1.st().matchmaking.session.series), { us: 0, opponent: 1 }));
+const re1 = reenter(R1);
+ck("0:1 中離重進仍然是 0:1（洗不掉輸掉的那張圖）",
+  eq(seriesScore(re1.session.series), { us: 0, opponent: 1 }),
+  `${seriesScore(re1.session.series).us}:${seriesScore(re1.session.series).opponent}`);
+ck("重進之後已完成的地圖仍在（連 matchId 都逐值相同）",
+  eq(re1.session.series.maps, R1.st().matchmaking.seriesByFixture[R1.fixtureId].maps),
+  `${re1.session.series.maps.length} 張`);
+ck("重進之後下一張仍然是第 1 張（不會退回第 0 張）",
+  re1.session.series.nextMapIndex === 1, `nextMapKey=${re1.session.series.nextMapKey}`);
+ck("重進**確實**換了一個新場次（證明進度不是靠場次活下來的）",
+  re1.session.sessionId !== sidR1 || re1.again.ok === true,
+  `${sidR1} → ${re1.session.sessionId}`);
+ck("重進之後仍是同一場 fixture identity",
+  re1.session.origin?.fixtureId === R1.fixtureId, re1.session.origin?.fixtureId);
+//  已完成的地圖不可重算：同一個 matchId 再送一次不會多一張
+const dupMap = settleCsMatch(makeCsResult({
+  id: `csmap:${R1.fixtureId}:0`, win: false, mapKey: CS_MAJOR_MATCH_FORMAT.mapPool[0], seed: 7,
+}));
+ck("重進之後重送第一張圖的結果，series 仍是 0:1（已完成的地圖不可重算）",
+  eq(seriesScore(R1.st().matchmaking.session.series), { us: 0, opponent: 1 }),
+  `${seriesScore(R1.st().matchmaking.session.series).us}:${seriesScore(R1.st().matchmaking.session.series).opponent}`);
+
+//  ② 1:1 中離 → 重進仍 1:1，且打完第三張只寫一筆賽果
+const R2 = majorSeriesStore({ mapWinners: ["us", "opponent"] });
+ck("前置：一勝一敗，series 是 1:1",
+  eq(seriesScore(R2.st().matchmaking.session.series), { us: 1, opponent: 1 }));
+const re2 = reenter(R2);
+ck("1:1 中離重進仍然是 1:1",
+  eq(seriesScore(re2.session.series), { us: 1, opponent: 1 }),
+  `${seriesScore(re2.session.series).us}:${seriesScore(re2.session.series).opponent}`);
+ck("重進之後下一張是第 2 張（決勝圖）",
+  re2.session.series.nextMapIndex === 2, `nextMapKey=${re2.session.series.nextMapKey}`);
+//  打完決勝圖 ⇒ 2:1，且只有一筆賽果
+settleCsMatch(makeCsResult({
+  id: `csmap:${R2.fixtureId}:2`, win: true, mapKey: CS_MAJOR_MATCH_FORMAT.mapPool[2], seed: 9,
+}));
+const csR2 = R2.st().competitionByMode.cs;
+const outR2 = (csR2.outcomes ?? []).filter((o) => o.fixtureId === R2.fixtureId);
+ck("跨中離打完 series ⇒ 2:1", eq(seriesScore(R2.st().matchmaking.session.series), { us: 2, opponent: 1 }));
+ck("跨中離打完 series ⇒ 只寫一筆 FixtureOutcome", outR2.length === 1, `${outR2.length} 筆`);
+const playerIsAR2 = fixtureById(csR2, R2.fixtureId).sideA === csR2.playerTeamId;
+ck("跨中離的 FixtureOutcome 比分仍是 2:1",
+  playerIsAR2 ? eq(outR2[0]?.score, { a: 2, b: 1 }) : eq(outR2[0]?.score, { a: 1, b: 2 }),
+  `${outR2[0]?.score.a}:${outR2[0]?.score.b}`);
+ck("賽程收尾之後 series 帳本被清掉（不留給下一季重用）",
+  !R2.st().matchmaking.seriesByFixture?.[R2.fixtureId],
+  `帳本剩 ${Object.keys(R2.st().matchmaking.seriesByFixture ?? {}).length} 筆`);
+
+//  ③ 帳本本身的邊界
+ck("series 帳本以 fixtureId 為鍵（不是以 sessionId）",
+  Object.keys(R1.st().matchmaking.seriesByFixture ?? {}).every((k) => k.startsWith("fx:")),
+  Object.keys(R1.st().matchmaking.seriesByFixture ?? {}).join(","));
+ck("⛔ series 帳本不在 SeasonState 裡",
+  !JSON.stringify(R1.st().competitionByMode.cs).includes("seriesByFixture"));
+ck("BO1 的 CS 聯賽賽程不會在帳本裡留下任何東西",
+  !Object.keys(R1.st().matchmaking.seriesByFixture ?? {}).some((k) =>
+    regularFixturesOf(R1.st().competitionByMode.cs).some((f) => f.id === k)));
+
+// ── §7c M4-A.1：對戰畫面卸載時的遲到快照不得把玩家丟回已打完的地圖 ────────
+console.log("\n§7c 遲到的 battle 快照不得覆寫「選下一張圖」");
+//  ⚠ 2026-08-22 瀏覽器實測抓到的真缺陷：`CsMatchScreen` 卸載時 force-save 一筆
+//    `phase:"battle"` 的快照，時序上永遠比結算晚 ⇒ 玩家按「返回」被丟回**已經
+//    打完的那張地圖**重打，而重打會產生新的 matchId，有機會被記成第二張。
+const P = majorSeriesStore({ mapWinners: ["us"] });
+const amAfter = P.st().matchmaking.session.activeMatch;
+ck("打完一張圖之後，階段是「選下一張圖」", amAfter?.phase === "map", String(amAfter?.phase));
+ck("打完一張圖之後，上一張的快照已被清掉", amAfter?.simulation?.snapshot === null);
+//  模擬對戰畫面卸載時那筆 force-save
+const late = P.st().saveActiveMatchSnapshot({
+  mode: "cs", snapshot: { frameIndex: 1214 }, simulationTimeSec: 900,
+  phase: "battle", status: "paused",
+});
+const amLate = P.st().matchmaking.session.activeMatch;
+ck("遲到的 battle 快照被忽略", late.ignored === true);
+ck("階段仍然是「選下一張圖」（沒有被拖回 battle）", amLate?.phase === "map", String(amLate?.phase));
+ck("上一張圖的快照沒有被寫回來", amLate?.simulation?.snapshot === null);
+ck("activeMatchView 給畫面的階段也是 map（玩家會落在選圖頁）",
+  P.st().activeMatchView()?.phase === "map", String(P.st().activeMatchView()?.phase));
+//  ⚠ 這一道只擋 series 翻頁後的遲到寫入，正常的比賽進度保存不得受影響
+const Q = majorSeriesStore({ mapWinners: [] });
+const okSave = Q.st().saveActiveMatchSnapshot({
+  mode: "cs", snapshot: { frameIndex: 12 }, simulationTimeSec: 30,
+  phase: "battle", status: "active",
+});
+ck("series 還沒打完第一張時，battle 快照照常保存（沒有誤擋）",
+  okSave.ok === true && !okSave.ignored
+  && Q.st().matchmaking.session.activeMatch.phase === "battle",
+  String(Q.st().matchmaking.session.activeMatch.phase));
+
 console.log("\n§8 中途離開不能規避敗場");
 const G = majorSeriesStore({ mapWinners: ["opponent"] });
 const csG0 = G.st().competitionByMode.cs;

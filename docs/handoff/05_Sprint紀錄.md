@@ -11355,3 +11355,107 @@ npm run build    ✓ built in 11.09s
 ⚠ **未經瀏覽器實測**：verifier 沒有跑 CS 引擎本身（要 WebGL），走的是
 `CsMatchResult.v1 → settleCsMatch → reportMatchResult` 這條正式路徑。
 「打完一張圖之後畫面真的回到選圖」這一步**只在程式碼層驗過，沒有在瀏覽器看過**。
+
+---
+
+## CS Season M4-A.1 — series 跨 session 存活（gameplay integrity fix）　2026-08-22
+
+**分支**：`integration/cs-cross-ai`（起點：M4-A checkpoint `b98dd44`）
+
+### 兩個缺陷，都是**瀏覽器實測**抓到的
+
+M4-A 的 verifier 全綠（75/75），但實際在瀏覽器把 Major BO3 打一遍之後，
+抓到兩個 Node verifier 看不到的問題。這一輪是 focused fix。
+
+#### ① 中離重進會把 series 洗回 0:0（本輪的主目標，M4-A 交接時已列為風險 ①）
+
+`startFixtureMatch` 對還沒收尾的賽程允許重新進場（Q3.5 的房間逾時路徑），
+而重新進場會**重簽一個新場次**。M4-A 把 series 掛在 `MatchSession.series` 上
+⇒ 新場次＝新 series ⇒ **輸掉第一張圖之後中離再進場，就能把那張圖擦掉重打。**
+
+#### ② 打完一張圖之後，玩家被丟回**已經打完的那張地圖**重打
+
+`CsMatchScreen` 有一個卸載 effect：
+
+```js
+useEffect(() => () => { saveProgress(progressRef.current, { paused: true, force: true }); }, [saveProgress]);
+```
+
+而 `saveProgress` **永遠寫死 `phase: "battle"`**。它在結算之後才跑
+（onFinish → settleCsMatch → setScreen("csResult") → 舊畫面卸載），
+所以那一筆永遠比結算晚，把結算設好的 `phase: "map"` 與「已清空的快照」一起蓋回去。
+結果：按「返回」時 `resumeActiveMatch()` 讀到 `phase: "battle"`，把玩家送回 Dust II
+重打一次——**而重打會產生新的 matchId，有機會被記成 series 的第二張圖。**
+
+⚠ 這一條 M4-A 的 verifier 抓不到，因為它是**畫面卸載時序**造成的，
+Node 測試沒有 React 卸載這一拍。
+
+### 修法
+
+| 檔案 | 動作 |
+|---|---|
+| `profileStore.js` | 新增 `matchmaking.seriesByFixture`：series 進度以 **fixtureId** 為鍵 |
+| `profileStore.js` | `seriesLedgerCarryingOver()`：清掉場次**之前**先把進度轉進帳本 |
+| `profileStore.js` | `_clearSeriesForFixture()`：賽程收尾（完賽／棄權）就清掉 |
+| `profileStore.js` | `saveActiveMatchSnapshot` 擋掉 series 翻頁後遲到的 `phase:"battle"` 回寫 |
+| `settleMatchResult.js` | 結算時把 series 同步寫進 fixture 帳本 |
+| `check_cs_playable_series.mjs` | 新增 §7b（跨 session）與 §7c（遲到快照），75 → 99 |
+
+**series 進度放哪：`matchmaking.seriesByFixture[fixtureId]`。**
+
+選它的理由是**生命週期對得上**：它比場次活得久（場次會被重簽），
+又比賽季狀態早死（賽程一收尾就清掉）。這正是使用者指定的
+「fixture-scoped runtime context」。
+
+⚠ **仍然不在 SeasonState**（規格 D4）。`matchmaking` 是 match runtime，
+不是賽季事實。verifier 有一條專門斷言 `seriesByFixture` 不出現在賽季狀態裡。
+
+⚠ **帳本是權威，場次是投影**：`_withSeriesForFixture` 先查帳本，查到就沿用，
+查不到才開新的並立刻寫進帳本（「開場 → 中離 → 重進」中間那段也必須有帳本，
+否則重進一樣會開新的）。
+
+### Browser smoke（實測，非程式碼推論）
+
+環境註記：MCP 開的分頁在背景時 `document.visibilityState === "hidden"`，
+Chrome 會把 `requestAnimationFrame` 與 `setTimeout` 一起節流 ⇒ CS 引擎跑不動。
+**必須由人把該分頁切到前景**才跑得起來（本輪由使用者操作）。這一點寫下來，
+下一個要做 CS browser gate 的人不必再查一次。
+
+實測走到的：
+
+1. 注入起始存檔 → Major fixture 在 localStorage 裡帶 `matchFormat.series = "bo3"`
+2. CS 賽前頁出現「今日有你的聯賽賽程 · 出戰今日聯賽賽程」
+   ⇒ M3-2 的 `series_not_playable` 擋門確實已解除
+3. 出戰 → 房間確認 → 選 Dust II → 戰術 → **Codex 引擎真的打完一張圖**（13:10 勝）
+4. 打完之後：`series.wins = 1:0`、`maps = ["dust2:us"]`、`nextMapKey = "mirage"`、
+   `nextMapIndex = 1`、賽程仍 `launched`、**0 筆 FixtureOutcome**（中間地圖不寫賽程）
+   ⇒ M4-A 的核心行為在真實瀏覽器成立
+5. **抓到缺陷 ②**：按「返回」被送回 Dust II 重打（`1/1025 格`、R1、0:0）
+6. 修好之後重測 **缺陷 ①**：中離 → 重新進場 ⇒ series 仍是 **0:1**、
+   `maps = ["dust2:opponent"]`、`next=mirage`、同一場 `fx:cs:90b3ba4a`
+   （截圖：`review/cs-m4a/browser_reentry_series_preserved.jpg`）
+
+⚠ **缺陷 ② 的修正只有 Node verifier 驗過（§7c 6 條），沒有在瀏覽器複測**——
+複測需要再完整跑一張圖，而那需要人一直把視窗留在前景。
+
+### 驗證（全部實跑）
+
+```
+node tools/check_cs_playable_series.mjs          99/99   (M4-A 75 → 99)
+node tools/check_cs_series.mjs (M3-2)            46/46
+node tools/check_cs_major.mjs (M3-1)             72/72
+node tools/check_cs_season_m2.mjs (M2)           55/55
+node tools/check_cs_season_lifecycle.mjs (M1)    51/51
+node tools/check_cs_schema_v11.mjs (M0)          41/41
+node tools/check_cs_season_contract.mjs          71/71
+node tools/check_cs_match_completion.mjs         34/34   (Codex CS-MR12)
+node tools/check_competition_release_gate.mjs   11/11
+共用契約  authoritative_o7 48/48 · result_flow_o71 27/27 · match_session_o6 36/36
+         matchmaking_flow 97/97 · progress25 PASS · fixture_result_integrity 20/20
+         cs23 28/28 · r63_active_match_ttl 9/9
+MOBA     q1 93/93 · q2a 112/112 · q2b 92/92 · q3 91/91 · q35 66/66
+         q4 68/68 · q5 69/69 · q6 57/57 · seasonstate_v2_runtime 36/36
+npm run build    ✓ built in 11.88s
+```
+
+⚠ **已知紅、非本輪造成**：`check_season_state_v2_migration_q7b.mjs`（M3-1 已實證）。

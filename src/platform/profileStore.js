@@ -377,6 +377,23 @@ function activeLineupOf(state, mode) {
  * Milestone O4：配對票券的 migration。
  * 排隊中的票跨 session 沒有意義 ⇒ 作廢；終局狀態原樣保留。
  */
+/**
+ * CS Season M4-A.1：重新進場前，把還掛在**即將被丟棄的場次**上的 series 進度
+ * 轉進以 fixtureId 為鍵的帳本。
+ *
+ * ⚠ 帳本是權威：已經有紀錄就原樣保留，不被一個舊場次覆寫。
+ * ⚠ 只認 fixtureId 對得上的場次，對不上一律不搬——不猜。
+ */
+function seriesLedgerCarryingOver(state, fixtureId) {
+  const mm = state.matchmaking ?? {};
+  const ledger = mm.seriesByFixture ?? {};
+  if (!fixtureId || ledger[fixtureId]) return ledger;
+  const prev = mm.session ?? null;
+  const prevFixtureId = prev?.origin?.kind === "fixture" ? (prev.origin.fixtureId ?? null) : null;
+  if (!prev?.series?.schema || prevFixtureId !== fixtureId) return ledger;
+  return { ...ledger, [fixtureId]: prev.series };
+}
+
 function normalizeMatchmaking(saved) {
   const src = saved && typeof saved === "object" ? saved : {};
   const t = src.ticket && typeof src.ticket === "object" ? src.ticket : null;
@@ -403,6 +420,13 @@ function normalizeMatchmaking(saved) {
     lastResult: src.lastResult ?? null,
     settlements: src.settlements && typeof src.settlements === "object" ? src.settlements : {},
     lastSettlementError: src.lastSettlementError ?? null,
+    //  ── CS Season M4-A.1：series 進度以 **fixture** 為鍵，不是以場次為鍵 ──
+    //  一個 BO3 的進度必須比場次活得久：玩家中離之後重新進場會**重簽一個新場次**，
+    //  進度若只掛在場次上就會跟著歸零 ⇒ 輸掉第一張圖之後中離就能重擲。
+    //  ⚠ 這裡是 **match runtime** 的帳本，不是賽季狀態：它跟著賽程場次生、
+    //    跟著賽程收尾死（`completeFixtureMatch` / `forfeitFixture` 會清掉）。
+    //    規格 D4 擋的是「series 進 SeasonState」，不是「series 要跨場次」。
+    seriesByFixture: src.seriesByFixture && typeof src.seriesByFixture === "object" ? src.seriesByFixture : {},
   };
 }
 function normalizeEconomy(saved, days) {
@@ -1152,6 +1176,13 @@ export const useProfileStore = create((rawSet, get) => {
         room: room.room,
         session: null,
         launch: null,
+        //  ── CS Season M4-A.1：清掉場次**之前**先把 series 進度接住 ────────
+        //  重新進場會把 `session` 設成 null，所以進度必須在這一行之前就轉移到
+        //  以 fixtureId 為鍵的帳本裡，否則新場次會開一個 0:0 的 series ——
+        //  那正是「輸掉第一張圖之後中離就能重擲」的漏洞。
+        //  ⚠ 只在帳本**還沒有**這一場時才回填（帳本才是權威；這是給
+        //    M4-A.1 之前建立的存檔、進度只掛在場次上的情況用的）。
+        seriesByFixture: seriesLedgerCarryingOver(get(), fixtureId),
       },
     });
     get().save();
@@ -1174,6 +1205,8 @@ export const useProfileStore = create((rawSet, get) => {
     get()._setCompetitionStateFor(mode, res.state, {
       matchmaking: { ...(get().matchmaking ?? {}), fixtureAssignment: null },
     });
+    //  CS Season M4-A.1：賽程收尾 ⇒ 它的 series 進度沒有存在的理由了
+    get()._clearSeriesForFixture(fixtureId);
     get().save();
     //  Q4：這可能就是本季最後一場（玩家親自打完的那一場）
     const sealed = get()._sealSeasonIfFinished(mode);
@@ -1195,6 +1228,8 @@ export const useProfileStore = create((rawSet, get) => {
     get()._setCompetitionStateFor(mode, res.state, {
       matchmaking: { ...(get().matchmaking ?? {}), fixtureAssignment: null },
     });
+    //  CS Season M4-A.1：棄權也是收尾 ⇒ 一併清掉 series 進度
+    get()._clearSeriesForFixture(fixtureId);
     get().save();
     //  Q4：棄權也是一種收尾 ⇒ 最後一場被棄權掉，賽季一樣結束了
     const sealed = get()._sealSeasonIfFinished(mode);
@@ -2100,13 +2135,26 @@ export const useProfileStore = create((rawSet, get) => {
     //  ⚠ 只在**新開**場次時建立。上面 `reused` 那條分支會原樣回傳既有場次 ⇒
     //    重整或重新進場**不會**把打到 1:0 的 series 洗回 0:0。
     const session = get()._withSeriesForFixture(made.session);
-    set({ matchmaking: { ...mm, session } });
+    //  ⚠ 新開的 series 要**立刻**落進 fixture 帳本。等到第一張圖打完才寫的話，
+    //    「開場 → 中離 → 重進」中間那段沒有帳本，重進就會再開一個新的。
+    const fixtureId = fixtureIdOfSession(session);
+    const ledger = session.series && fixtureId
+      ? { ...(mm.seriesByFixture ?? {}), [fixtureId]: session.series }
+      : (mm.seriesByFixture ?? {});
+    set({ matchmaking: { ...mm, session, seriesByFixture: ledger } });
     get().save();
     return { ok: true, session, errors: [], reused: false };
   },
   /**
-   * 內部：這個場次若對應一場 series 賽程，就掛上初始 series 狀態。
+   * 內部：這個場次若對應一場 series 賽程，就掛上 series 狀態。
    * 不是 series（MOBA、CS 聯賽 BO1）⇒ **原樣回傳同一個物件參考**。
+   *
+   * ── CS Season M4-A.1：**先找既有進度，找不到才開新的** ────────────────────
+   * 這是「中離不能洗掉已完成地圖」的關鍵。`startFixtureMatch` 對還沒收尾的賽程
+   * 允許重新進場（Q3.5 的房間逾時路徑），重新進場會**重簽一個新場次** ——
+   * 若 series 只跟著場次走，1:0 落後的一方只要中離再進場就能把那張圖擦掉。
+   * 進度因此以 **fixtureId** 為鍵存在 `matchmaking.seriesByFixture`，
+   * 它比場次活得久，也比場次早死（賽程一收尾就清掉）。
    */
   _withSeriesForFixture(session) {
     const fixtureId = fixtureIdOfSession(session);
@@ -2116,9 +2164,28 @@ export const useProfileStore = create((rawSet, get) => {
     const fixture = state?.schema ? fixtureById(state, fixtureId) : null;
     const format = fixture?.matchFormat ?? null;
     if (!seriesFormatOf(format)) return session;
+
+    //  ① 這一場賽程已經打到一半 ⇒ 沿用既有進度，**不重新開一個 series**
+    const kept = get().matchmaking?.seriesByFixture?.[fixtureId] ?? null;
+    if (kept?.schema) return { ...session, series: kept };
+
+
+    //  ② 真的是第一次進場 ⇒ 開新的，並立刻記進 fixture 帳本
     const made = createMatchSeries(format);
     if (!made.ok) return session;
     return { ...session, series: made.series };
+  },
+  /**
+   * 內部：賽程收尾（打完或棄權）⇒ 清掉它的 series 進度。
+   * ⚠ 一定要清：留著的話，同一個 fixtureId 若日後又出現（換季後的決定性 id 重用），
+   *   會沿用一份上一季的地圖進度。
+   */
+  _clearSeriesForFixture(fixtureId) {
+    const mm = get().matchmaking ?? {};
+    if (!fixtureId || !mm.seriesByFixture?.[fixtureId]) return;
+    const next = { ...mm.seriesByFixture };
+    delete next[fixtureId];
+    set({ matchmaking: { ...mm, seriesByFixture: next } });
   },
   /**
    * 使用一次性令牌啟動比賽。**這是對戰入口的唯一許可**。
@@ -2246,6 +2313,21 @@ export const useProfileStore = create((rawSet, get) => {
     const session = mm.session ?? null;
     if (!isActiveMatch(session)) return { ok: false, errors: [{ code: "no_active_match", message: "目前沒有可保存的進行中比賽" }] };
     if (mode && session.mode !== mode) return { ok: false, errors: [{ code: "mode_mismatch", message: "比賽模式不符，拒絕保存進度" }] };
+    //  ── ⛔ CS Season M4-A.1：series 翻頁之後，來自「上一張圖」的快照不得回寫 ──
+    //  `CsMatchScreen` 卸載時會 force-save 一筆 `phase: "battle"` 的快照
+    //  （`useEffect(() => () => saveProgress(..., { force: true }))`），
+    //  而那一筆**永遠比結算晚**。結算已經把階段推到「選下一張圖」並清掉快照，
+    //  這筆遲到的寫入會把兩者一起蓋回去 ⇒ 玩家按「返回」時被丟回一場**已經打完
+    //  的地圖**重打一次，而重打會產生新的 matchId，有機會被記成 series 的第二張。
+    //  （2026-08-22 於瀏覽器實測抓到：Map 1 打完 2:0 之後又被送回 Dust II。）
+    //  ⚠ 只擋 series 已經翻頁的情況；MOBA 與 CS 聯賽 BO1 一個字都沒變。
+    //  ⚠ 正常的「選完圖進戰鬥」走的是 `setActiveMatchContext`，不是本函式 ⇒ 不受影響。
+    const seriesAwaitingNextMap = session.series?.status === "in_progress"
+      && (session.series.maps?.length ?? 0) > 0
+      && session.activeMatch?.phase === "map";
+    if (seriesAwaitingNextMap && phase === "battle") {
+      return { ok: true, ignored: true, session, errors: [] };
+    }
     const nextConfig = config === undefined
       ? session.activeMatch.config
       : { ...(session.activeMatch.config ?? {}), ...config };

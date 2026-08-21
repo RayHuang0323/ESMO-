@@ -214,6 +214,16 @@ export function settleMatchResultInState(state, { result, session, transaction, 
       })
     : { ok: false, session: null };
 
+  //  ── CS Season M4-A.1：series 進度同步寫進 **fixture 帳本** ────────────────
+  //  場次會被重簽（中離之後重新進場），fixture 不會。進度存在 fixture 這一側，
+  //  「中離就能把輸掉的那張圖擦掉」那條路才真的被堵死。
+  //  ⚠ 這是 match runtime 的帳本，**不是 SeasonState**（規格 D4 擋的是後者）。
+  const fixtureId = sessionAfterMap?.origin?.kind === "fixture"
+    ? (sessionAfterMap.origin.fixtureId ?? null) : null;
+  const seriesLedger = (fixtureId && sessionAfterMap?.series)
+    ? { ...(mm.seriesByFixture ?? {}), [fixtureId]: sessionAfterMap.series }
+    : (mm.seriesByFixture ?? {});
+
   const nextState = {
     //  applied.nextState 可能為 null（S25 已套用過）⇒ 那就只更新結算帳本
     ...(applied.nextState ?? {}),
@@ -222,6 +232,7 @@ export function settleMatchResultInState(state, { result, session, transaction, 
       session: done.ok ? done.session : (mm.session ?? null),
       lastResult: result,
       settlements: { ...ledger, [settlementId]: receipt },
+      seriesByFixture: seriesLedger,
       lastSettlementError: null,
     },
   };
