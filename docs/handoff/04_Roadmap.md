@@ -478,3 +478,29 @@ jungleResourceShare / vision.*。對手戰術無來源 → 固定中性 standard
    chat / caster event）——需 Ray 核准後才能改 Contract。
 5. 轉會市場 / 合約談判（NegotiationModule）、天賦 / 商店 / 經營儀表板。
 6. bundle 瘦身：動態 import 切分 CS 路徑 + 英雄圖改 public/ 靜態檔（已 1.9MB）。
+
+---
+
+## ESMO UI Migration 狀態（2026-08-22）
+
+### 已正式上線
+
+- 首頁／Mobile Home
+- 戰隊名單（Roster）
+- 選手完整資料（Player Profile）
+- UI release main SHA：`fb0c70fe480d633657c7b77154197c4f190b0d38`
+- 正式站：<https://rayhuang0323.github.io/ESMO-/>
+
+### Codex UI Migration 暫停
+
+Codex UI Migration 目前暫停開新 Sprint。Claude Code 另一工作線正在處理：
+
+- Command Deck
+- Competition Hub
+- CS Season 賽事入口／IA 重整
+
+待上述工作正式進入 `main` 並穩定後，再重新 audit 最新 `main`，確認 UI ownership
+與下一個 UI Migration Sprint。
+
+本階段不修改 `AppShell`、`GameRouter`、`Store`、`contracts`、CS、Season、Competition，
+也不碰 Claude Code 正在處理的 Command Deck／Competition Hub 工作線。
