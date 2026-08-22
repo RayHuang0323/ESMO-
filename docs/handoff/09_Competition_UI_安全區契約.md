@@ -1,8 +1,18 @@
 # Competition / Season UI 安全區契約
 
-> 建立：2026-08-23（UI-4A）／更新：UI-4B
+> 建立：2026-08-23（UI-4A）／更新：UI-4B ／ **結案：2026-08-23 併入 `main`**
 > 對象：**所有會 merge 或 commit 到本 repo 的 AI 工作線與人**（Codex、Claude、其他）
-> 目的：這一區有一條正在進行的 UI 工作線。**在它併入 `main` 之前，其他人不要改這裡。**
+>
+> ## ✅ 紅區已解除
+>
+> Competition Hub 工作線（UI-1 → UI-4B）已經整合進 `main`。
+> **底下第二節的紅區不再是「請勿觸碰」，而是「請重新取得 ownership」**：
+> 這些檔案現在是 `main` 的一部分，任何人都可以在最新 `main` 上動它們——
+> 但因為它們彼此高度耦合（入口／路由／兩個賽事頁／共用元件／驗證標記），
+> 動之前請先宣告你要動哪幾個，並在動完後跑第七節那份 gate 清單。
+>
+> 仍然有效的是：**第五節的 `data-testid` 清單**、**第六節的架構紅線**、
+> **第七節的 gate 清單**。那三節與合併與否無關，是這一區的長期契約。
 
 ---
 
@@ -23,9 +33,10 @@ Store / contracts / CS / Season / Competition。**本檔是那段話的檔案級
 
 ---
 
-## 二、🔴 紅區：請完全不要動（Claude Competition 線持有）
+## 二、🟠 高耦合區：可以動，但請先宣告（原紅區）
 
-改到這些檔案，幾乎一定會與這條線衝突。
+已隨 Competition Hub 一起進入 `main`。這些檔案彼此高度耦合，
+**平行修改的合併成本遠高於一般檔案**——不是不能動，是動之前要讓別人知道。
 
 | 檔案 | 這條線在它身上做了什麼 |
 |---|---|
@@ -35,15 +46,19 @@ Store / contracts / CS / Season / Competition。**本檔是那段話的檔案級
 | `src/screens/competition/**`（整個目錄） | UI-4A 新建共用元件；UI-4B 再加共用外框與 `competition.css` |
 | `src/screens/fps/CsPrepScreen.jsx` | UI-3 移除了 `CsLeagueFixtureEntry`（賽季責任搬走） |
 
-### ⚠ 已知的既存衝突（尚未解決）
+### ⚠ 待重新移植：`78f7479`
 
-本地分支 `milestone-n-finance` 上的 commit `78f7479`
-（"Fix CS roster identity and lineup role semantics"，2026-08-23）也改了
-`src/screens/fps/CsPrepScreen.jsx`。那個 commit 建立在**落後 `main` 兩百多個
-commit 的基底**上，且尚未推送。
+本地分支 `milestone-n-finance` 上的 `78f7479`
+（"Fix CS roster identity and lineup role semantics"）也改了
+`src/screens/fps/CsPrepScreen.jsx`，且建立在**落後 `main` 兩百多個 commit 的基底**上。
 
-> 這兩邊合併時 `CsPrepScreen.jsx` **必定衝突**。
-> 合併方向由 Ray 決定，任何一條線都不要自行解。
+**它沒有被併進來**，而且不該用 merge 處理：那個基底上的 `CsPrepScreen`
+還帶著已經被移除的 `CsLeagueFixtureEntry`，直接 merge 會把 CS 賽季入口
+倒回賽前頁。
+
+> 正確做法：**在最新 `main` 上重新移植**那份 CS roster / lineup 語意修正
+> （`fpsIdentity.js` / `fpsRoster.js` / `matchSquad.js` / `CsPrepScreen` 的
+> 席位部分），不要 merge 舊分支。
 
 ---
 
@@ -138,9 +153,23 @@ node tools/browser_check_cs_fixture_natural_finish.mjs --only=bo3
 
 ---
 
-## 八、這份契約什麼時候失效
+## 八、現況與下一步
 
-Competition 線（UI-1 → UI-4B，branch `ui/competition-mode-awareness`）**併入
-`main` 之後**，紅區解除。屆時請重新 audit 最新 `main`，再決定下一輪的 UI ownership。
+**Competition Hub 已於 2026-08-23 併入 `main`**（merge commit：`cdeb5a3`，
+帶入 8 個 checkpoint：`882517f` → `fa9d13e`）。紅區解除，改為第二節的高耦合區。
 
-在那之前，如果你的工作**必須**動到紅區，請先停下來告訴 Ray，不要自行解衝突。
+### 需要 rebase 或重新移植的分支
+
+任何 fork 自 `fb0c70f` 或更早、且動到下列檔案的分支，都需要先對齊最新 `main`：
+
+- `src/AppShell.jsx`（路由表換成賽事中心的殼、移除 `csHub` 孤兒路由）
+- `src/screens/fps/CsPrepScreen.jsx`（已移除 `CsLeagueFixtureEntry`）
+- `src/screens/manage/CompetitionScreen.jsx`（接受 `mode`／改用共用元件與外框）
+- `src/screens/fps/CsCompetitionHubScreen.jsx`（成為 CS 賽季主入口）
+
+已知需要處理的：`milestone-n-finance`（`78f7479`，見第二節）。
+
+### 之後動這一區的規矩
+
+紅區雖然解除，第五節的標記清單、第六節的架構紅線、第七節的 gate 清單**繼續有效**。
+要動這一區，請先宣告範圍，動完跑完整 gate 清單。
