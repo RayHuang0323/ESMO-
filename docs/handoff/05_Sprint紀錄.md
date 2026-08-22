@@ -11973,3 +11973,71 @@ MOBA／CS = Practice「打一場」，賽事 = Career／Season「打一季」，
   本輪刻意不接線，接線是 UI-2 的殼。
 - 未經瀏覽器手動實測 `mode="cs"` 的畫面（沒有入口可以到達）；
   自動 gate 只覆蓋 MOBA 路徑。
+
+---
+
+## UI-2 — Competition Hub navigation shell（2026-08-23）
+
+本輪縮小為 **navigation shell / composition checkpoint**：只做接線與殼，
+不做共用元件重構、不搬 `CsLeagueFixtureEntry`、不碰 profileStore 與 Season semantics。
+
+### 前置稽核
+
+- `origin/main` 仍是 `fb0c70f`（`git ls-remote` 核對），本 branch 1 ahead / 0 behind。
+- **AppShell 無新衝突**：最近 5 個動到 `AppShell` 的 commit 都是已併入 main 的 CS Season
+  工作；兩個 dirty worktree 都不是活躍 lane ——
+  主 worktree 的 `AppShell` 髒污是**純 CRLF**（`--ignore-all-space` 後為空），
+  `.sprints/codex-ui-migration-roster-profile-post-cs` 是**已併入 `fb0c70f`** 的
+  Roster lane 舊暫存，且沒碰 `AppShell`。
+
+### 修改範圍
+
+| 檔案 | 動作 |
+|---|---|
+| `src/screens/manage/CompetitionHubScreen.jsx` | **新增**，約 100 行，純殼 |
+| `src/AppShell.jsx` | 最小接線（+21 −5） |
+| `tools/browser_check_competition_hub_shell.mjs` | **新增** 畫面 gate |
+
+殼只做一件事：決定現在看哪一個項目的賽事。
+`[MOBA]` → `CompetitionScreen mode="moba"`（UI-1 已接受 mode）、
+`[CS]` → **既有的** `CsCompetitionHubScreen`（一行都沒改）。
+
+- **不複製 CS Hub**：CS 分頁掛的就是那個元件本身。
+- **不重算**：殼連 Store 都不碰，積分榜／對戰表／晉級線各自從 `competitionView(mode)` 讀。
+- **不建立賽季**：殼沒有任何 action；`CsCompetitionHubScreen` 本身全唯讀且自帶
+  `cs-hub-no-season` 空狀態 ⇒ 點進 CS 分頁不會替玩家開季。
+- 兩個子畫面各自保留自己的頁首與返回鍵，殼**不加第三層頁首**，只放分頁列。
+- 分頁列做成可橫捲的 rail ＋ 資料驅動的 `TABS`：加第三款遊戲是「陣列多一筆」，
+  不必重排版面（呼應藍圖的擴充規則）。
+- 分頁狀態是**畫面狀態**：不寫 Store、不存檔，reload 回到預設 MOBA。
+
+`AppShell` 另外加了一個 `csRecapFrom`（純畫面狀態）：CS 成績單現在有兩個入口
+（CS 賽前頁的 `csHub`、賽事中心的 CS 分頁），記住來源，返回才不會把玩家丟到另一邊。
+
+### 驗證（全部實跑）
+
+- `node tools/browser_check_competition_hub_shell.mjs` → **18/18 通過**，涵蓋要求的七項：
+  首頁「賽事」→ Hub、預設 MOBA、切 CS、切回 MOBA、
+  **查看 CS 不會自動建立賽季**（Store 斷言 `competitionByMode.cs` 前後皆為 null，
+  且 MOBA fixtures 56 → 56 未動）、已有 CS 賽季時階段條與 8 列積分榜真的畫出來、
+  reload 後回到預設分頁且 Store 逐值相同、全程無未捕捉例外。
+- `node tools/check_competition_release_gate.mjs` → **11/11、exit 0**。
+  ⚠ 其中七項是瀏覽器實跑，且它們都是**從首頁「賽事」磚進場**——現在會先經過殼再落到
+  MOBA 分頁。它們全綠本身就是「MOBA 路徑沒被殼改變」的證據。
+- `node tools/check_cs_competition_hub.mjs` → **31/31 PASS**
+- `node tools/check_cs_season_contract.mjs` → exit 0（含 "CS season is never created
+  behind the player's back"）
+- `node tools/check_home_team_contract.mjs` → exit 0
+- `npm run build` → `✓ built in 12.77s`，exit 0
+
+### 未完成 / 已知限制
+
+- 四個 MOBA-only 區塊（`AsiaFinalsPanel`／`SeasonRecap`／賽事切換列／`circuitHistory`）
+  仍只在 MOBA 分頁出現，維持 UI-1 的處置，本輪刻意不強行 by-mode 化。
+- **共用元件尚未抽出**：MOBA 與 CS 兩個分頁仍是兩套版面語彙
+  （`ManageFrame` + `Panel` vs `recapStyles`）。`StandingsTable` / `StageBar` /
+  `FixtureList` 的共用化是 UI-4。
+- CS 出賽入口仍在 CS 賽前頁（`CsLeagueFixtureEntry` 未搬，屬 UI-3）；
+  賽事中心的 CS 分頁目前是唯讀的「我在哪裡」，不是出賽點。
+- 手機寬度未逐一實測；分頁列已用可橫捲 rail ＋ 32px 觸控高度，但 Hub 的
+  響應式規則屬 UI-10。
