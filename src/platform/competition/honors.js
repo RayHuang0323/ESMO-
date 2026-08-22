@@ -31,19 +31,25 @@
 //  純函式：不 import React / zustand / localStorage / 亂數 / 時鐘。
 // ============================================================================
 import { asiaFinalsEventOf } from "./asiaFinals.js";
+import { CS_MAJOR_EVENT_KEY } from "./csMajor.js";
 
 export const HONOR_VERSION = "Honor.v1";
 
 /**
- * 榮耀類型。**目前只有一種**——刻意不做泛化的 Award 系統
- * （那是另一個產品決定，不是這一輪該順手發明的東西）。
+ * 榮耀類型。**仍然刻意不做泛化的 Award 系統**——每一種榮耀都明文列舉，
+ * 因為「這筆榮耀從哪個賽事來」必須看得出來，不能靠欄位組合去猜。
  */
 export const HONOR_TYPES = Object.freeze({
   asiaAnnualChampion: "asia_annual_champion",
+  //  CS Season M3-3：CS 的年度冠軍。**刻意是另一個類型**，不是把上面那個
+  //  參數化成「某某年度冠軍」——兩者的來源賽事不同（亞洲總決賽 vs 年度 Major）。
+  //  合成一個類型之後，「這筆榮耀是怎麼來的」就只剩 gameMode 可以猜。
+  csAnnualChampion: "cs_annual_champion",
 });
 
 export const HONOR_LABELS = Object.freeze({
   [HONOR_TYPES.asiaAnnualChampion]: "亞洲年度冠軍",
+  [HONOR_TYPES.csAnnualChampion]: "CS 年度冠軍",
 });
 
 /**
@@ -67,8 +73,29 @@ export const honorsOf = (honors) => (Array.isArray(honors) ? honors : []);
  * @returns {object|null} 榮耀紀錄；還不該產生就回 `null`
  */
 export function annualChampionHonorOf(state, finalOf) {
-  const ev = asiaFinalsEventOf(state);
-  if (!ev) return null;                                  // 這一季沒有年度總決賽
+  return honorFromEvent(state, asiaFinalsEventOf(state), HONOR_TYPES.asiaAnnualChampion, finalOf);
+}
+
+/**
+ * CS 年度冠軍榮耀（CS Season M3-3）。來源是**年度 Major 的 `Event.final`**。
+ *
+ * ⚠ 與亞洲總決賽那條走**同一支** `honorFromEvent`：界線 ①（唯一來源是
+ *   Event.final、不從 bracket 勝方重新推導）對兩者是同一份規則，不是兩份。
+ * ⚠ Major 沒封存就沒有冠軍——打完決賽但 Event 還沒封存也不算。
+ */
+export function csAnnualChampionHonorOf(state, finalOf) {
+  if (state?.schema && gameModeOfState(state) !== "cs") return null;
+  const ev = Object.values(state?.events ?? {}).find((e) => e?.eventKey === CS_MAJOR_EVENT_KEY) ?? null;
+  return honorFromEvent(state, ev, HONOR_TYPES.csAnnualChampion, finalOf);
+}
+
+/** 這一份賽季狀態是哪個項目的（不 import 賽季層，就地推導）。 */
+const gameModeOfState = (state) =>
+  Object.values(state?.competitions ?? {})[0]?.competition?.gameMode ?? "moba";
+
+/** 由一個**已封存的** Event 產生一筆年度冠軍榮耀。兩種榮耀共用這一份規則。 */
+function honorFromEvent(state, ev, honorType, finalOf) {
+  if (!ev) return null;                                  // 這一季沒有這個賽事
   const final = typeof finalOf === "function" ? finalOf(state, ev.id) : (ev.final ?? null);
   //  ⚠ **沒有封存就沒有冠軍。** 打完決賽但 Event 還沒封存也不算——
   //    與畫面同一條線（Q7c 的 gate #8 守的就是這件事）。
@@ -81,9 +108,9 @@ export function annualChampionHonorOf(state, finalOf) {
 
   return {
     schema: HONOR_VERSION,
-    id: honorIdFor(HONOR_TYPES.asiaAnnualChampion, gameMode, season),
-    honorType: HONOR_TYPES.asiaAnnualChampion,
-    label: HONOR_LABELS[HONOR_TYPES.asiaAnnualChampion],
+    id: honorIdFor(honorType, gameMode, season),
+    honorType,
+    label: HONOR_LABELS[honorType],
     season,
     gameMode,
     eventId: ev.id,
@@ -108,12 +135,19 @@ export function annualChampionHonorOf(state, finalOf) {
  *   （否則每次結算都會讓畫面白重繪）。
  */
 export function recordPendingHonors(state, honors, finalOf) {
-  const list = honorsOf(honors);
-  const made = annualChampionHonorOf(state, finalOf);
-  if (!made) return { honors: list, added: [] };
-  if (list.some((h) => h?.id === made.id)) return { honors: list, added: [] };
-  //  新的在前（與其他歷史一致的閱讀順序）
-  return { honors: [made, ...list], added: [made] };
+  let list = honorsOf(honors);
+  const added = [];
+  //  ⚠ 逐個產生器跑一遍。同一份賽季狀態只會命中其中一個（MOBA 沒有 Major、
+  //    CS 沒有亞洲總決賽），但**不靠這件事**——每一筆都各自查 id 是否已存在。
+  for (const produce of [annualChampionHonorOf, csAnnualChampionHonorOf]) {
+    const made = produce(state, finalOf);
+    if (!made) continue;
+    if (list.some((h) => h?.id === made.id)) continue;
+    //  新的在前（與其他歷史一致的閱讀順序）
+    list = [made, ...list];
+    added.push(made);
+  }
+  return { honors: list, added };
 }
 
 // ── 查詢（全部即時推導，不落盤索引）──────────────────────────────────────

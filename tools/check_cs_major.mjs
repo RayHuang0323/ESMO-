@@ -136,8 +136,16 @@ ck("Major Event 掛在聯賽同一條 circuit 上",
   majorEvent?.circuitId);
 ck("Major Event 的 rankingCompetitionId 指向 Major 自己",
   majorEvent?.rankingCompetitionId === major1?.competition?.id);
-ck("Major Event 沒有獎金政策（CS 獎金屬 M3-3，M3-1 一毛錢都不發）",
-  majorEvent?.prizePolicy === null, String(majorEvent?.prizePolicy));
+//  ⚠ M3-3 起 Major **有**獎金政策（M3-1 時是 null，那條斷言已隨行為更新）。
+//    換成更嚴的版本：政策要在、要是 CS 自己那一份、而且**不得**是 MOBA 的 legacy。
+ck("Major Event 有 CS 自己的獎金政策", !!majorEvent?.prizePolicy,
+  JSON.stringify(majorEvent?.prizePolicy));
+ck("Major 的獎金政策指向 CS 的表，不是 MOBA 的 legacy",
+  majorEvent?.prizePolicy?.table === "cs_major"
+  && majorEvent?.prizePolicy?.table !== S.LEGACY_PRIZE_POLICY.table,
+  `${majorEvent?.prizePolicy?.table} vs legacy=${S.LEGACY_PRIZE_POLICY.table}`);
+ck("CS 聯賽的 Event 仍然沒有獎金政策（它是通往 Major 的資格賽）",
+  Object.values(cs1.events).find((e) => e.eventKey !== CS_MAJOR_EVENT_KEY)?.prizePolicy === null);
 ck("Major 的 competition 掛在 Major Event 底下",
   major1?.competition?.eventId === majorEvent?.id);
 ck("生涯主線 Event 仍然是聯賽，沒有被 Major 換掉",

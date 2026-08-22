@@ -64,6 +64,12 @@ export const CS_MAJOR_DAY_GAP = 2;
 //    因此 `veto` 明文寫 `null`，**不假裝有 ban/pick 博弈**。要做真正的 veto，
 //    前置是把引擎地圖池擴到 7 張——那是另一條工作線，不綁在 CS Season MVP 裡。
 
+/**
+ * Major 的名次獎金政策（CS Season M3-3）。
+ * `table` 由 `economy/economyConfig.js` 的 `prizeTableFor()` 解析成實際的表。
+ */
+export const CS_MAJOR_PRIZE_POLICY = Object.freeze({ kind: "rank_table", table: "cs_major" });
+
 /** Major 的 BO 制。 */
 export const CS_MAJOR_SERIES = "bo3";
 
@@ -176,10 +182,13 @@ export function buildCsMajor({ circuit, leagueStage, standings, season = 1, last
       competitionIds: [comp.competition.id],
       //  Event 只有一個 Competition ⇒ 名次來源可以自動指定
       rankingCompetitionId: comp.competition.id,
-      //  ⚠ **CS 沒有獎金政策**（見 seasonState.js 對 CS 聯賽的同一段說明）。
-      //    給它 MOBA 的名次獎金表等於憑空發明 CS 的經濟規則——發錯的錢收不回來。
-      //    CS 獎金屬 M3-3 之後。
-      prizePolicy: null,
+      //  ── CS Season M3-3：Major 是 CS **唯一**發名次獎金的賽事 ─────────────
+      //  M1 起 CS 一毛都不發，就是在等這個決定被真正做出來（見 `CS_MAJOR_PRIZE`
+      //  的產品說明）。用的是 CS 自己的表，**不是** MOBA 那一份。
+      //  ⚠ CS 聯賽仍然 `prizePolicy: null` —— 它是通往 Major 的資格賽，
+      //    而玩家同一條日曆上還跑著 MOBA 賽季，兩個項目都按聯賽發會讓一季的
+      //    名次收入直接翻倍。那是經濟平衡的變更，不由賽事結構這一層決定。
+      prizePolicy: CS_MAJOR_PRIZE_POLICY,
     },
   };
 }

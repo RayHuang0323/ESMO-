@@ -11517,3 +11517,95 @@ node tools/check_competition_q35.mjs      66/66   （動到 CS 畫面，特別�
 npm run build                             ✓ built in 10.36s
 browser closure                           7/7 PASS（見上）
 ```
+
+---
+
+## CS Season M3-3 — CS 年度冠軍榮耀 ＋ CS 獎金政策　2026-08-22
+
+**分支**：`integration/cs-cross-ai`（起點 `bdd0ab2`）
+
+補上 M1 就寫在 `_sealCsSeasonIfFinished` 註解裡、一路欠到現在的兩件事。
+
+| 檔案 | 動作 |
+|---|---|
+| `economy/economyConfig.js` | 新增 `CS_MAJOR_PRIZE`、`PRIZE_TABLES`、`prizeTableFor()` |
+| `competition/csMajor.js` | 新增 `CS_MAJOR_PRIZE_POLICY`；Major Event 掛上它 |
+| `competition/honors.js` | 新增 `cs_annual_champion` 類型與 `csAnnualChampionHonorOf()` |
+| `profileStore.js` | CS 封存路徑接上獎金結算與 `_recordHonors` |
+| `tools/check_cs_major_honors_award.mjs` | 新增，45/45 |
+
+### ① CS 年度冠軍寫進生涯榮耀
+
+新增 `HONOR_TYPES.csAnnualChampion`，來源是**年度 Major 的 `Event.final`**。
+
+⚠ **刻意是另一個 honorType，不是把亞洲年度冠軍參數化。** 兩者的來源賽事不同
+（亞洲總決賽 vs 年度 Major）；合成一個類型之後，「這筆榮耀怎麼來的」就只剩
+`gameMode` 可以猜。
+
+⚠ **規則只有一份**：兩種榮耀共用新抽出的 `honorFromEvent()`，
+所以 honors.js 檔頭那三條界線（唯一來源是 Event.final、一季一項一筆、
+世界歷史不是玩家獎盃櫃）對 CS 一字不差地成立。`recordPendingHonors` 改成
+逐個產生器跑一遍，各自以 id 判重 —— 不靠「MOBA 沒有 Major」這種巧合。
+
+實測：玩家整季棄權 ⇒ 冠軍是 AI，榮耀照樣寫（世界歷史），
+`teamHonorCount(玩家) === 0`。
+
+### ② CS 獎金政策：只有 Major 發，而且用自己的表
+
+**產品決定（2026-08-22）**，寫在 `CS_MAJOR_PRIZE` 的註解裡：
+
+1. **只有年度 Major 發，CS 聯賽不發。** 聯賽是通往 Major 的資格賽；玩家同一條
+   日曆上還跑著 MOBA 賽季，兩個項目都按聯賽發等於把一季的名次收入直接翻倍
+   —— 那是經濟平衡的變更，不該由這一輪順手決定。
+2. **級距約為 MOBA 年度賽事的六成**（80/45/25/12 → **50/28/15/8**）。
+   Major 只有四隊、一年一次，位階與 MOBA 年度賽事相當；打六折是因為它是玩家的
+   **第二**個項目，兩份年度獎金不該單純相加。
+3. 只列前四名 —— Major 就四隊。
+
+⚠ **這是第一版基準，不是校正過的數字**（與 `COMPETITION_PRIZE` 同樣的保留）。
+分成獨立常數的意義就在這裡：日後調 CS 不必動到 MOBA。
+
+**順手修好一個既有的空洞**：`Event.prizePolicy.table` 在 M3-3 之前是**裝飾用的**
+—— 結算端永遠拿預設表，legacy 政策寫 `table: "default"` 也沒人讀。
+新增 `prizeTableFor()` 讓它真的選表，MOBA 走 `default` 逐值不變。
+⚠ fail-closed 的方向是**回預設表**而不是不發：認不得的政策代表有人加了新賽事
+卻忘了註冊表，發既有級距的錢是可回溯的錯，漏發是玩家看不見也追不回來的錯。
+
+### 兩支既有 verifier 的 era-scoped marker 隨行為更新（換更嚴，不是放寬）
+
+- `check_cs_major.mjs`：「Major Event 沒有獎金政策」→ 政策要在、要指向
+  `cs_major`、**且不得是 MOBA 的 legacy**，另加一條「CS 聯賽仍然沒有政策」。72 → 74。
+- `check_cs_season_lifecycle.mjs`：「CS 封存沒有發名次獎金」→
+  「只為 Major 建立一筆帳本鍵」＋「⛔ 聯賽的 final 不在帳本裡」；
+  「財務沒有獎金交易」改寫成「**玩家沒進 Major** ⇒ 沒有獎金交易」
+  （後者才是這個情境真正在驗的事）。51 → 53。
+
+### 驗證（全部實跑）
+
+```
+node tools/check_cs_major_honors_award.mjs       45/45   ← 本輪新增
+node tools/check_cs_major.mjs (M3-1)             74/74   (72 → 74)
+node tools/check_cs_season_lifecycle.mjs (M1)    53/53   (51 → 53)
+node tools/check_cs_playable_series.mjs (M4-A)   99/99
+node tools/check_cs_series.mjs (M3-2)            46/46
+node tools/check_cs_season_m2.mjs (M2)           55/55
+node tools/check_cs_schema_v11.mjs (M0)          41/41
+node tools/check_cs_season_contract.mjs          71/71
+node tools/check_cs_match_completion.mjs         34/34   (Codex CS-MR12)
+node tools/check_competition_release_gate.mjs   11/11
+榮耀／賽事  q7d_honors 59/59 · q7b_asia_finals 72/72 · q7a_3c 69/69
+           q7a_3b 51/51 · q7a_3d 67/67 · q7a_safety 18/18
+經濟        finance_n 32/32 · n2 35/35 · n3 40/40 · progress25 PASS
+MOBA        q1 93/93 · q2a 112/112 · q2b 92/92 · q3 91/91 · q35 66/66
+            q4 68/68 · q5 69/69 · q6 57/57
+共用契約    authoritative_o7 48/48
+npm run build   ✓ built in 12.69s
+```
+
+⚠ **兩支既有紅燈，皆非本輪造成**（已用 `bdd0ab2` 的臨時 worktree 逐條比對確認）：
+- `check_season_state_v2_migration_q7b.mjs`（M3-1 已實證）
+- `check_q7a_3f1_career_final.mjs` **40/42**，紅的是 `4b)` careerEventId 推導與
+  `7a)` 畫面直讀封存物件 —— 基線同樣 40/42、同樣那兩條。
+
+⚠ **未經瀏覽器實測**：M3-3 沒有任何 UI。玩家看得到的只有收件匣的冠軍信與
+資金變動；「CS 年度冠軍」在生涯榮耀頁怎麼顯示屬 Recap UI（未做）。

@@ -354,14 +354,27 @@ ck("拒收 BattleResult", outcomeFromCsResult({ schema: "BattleResult.v2" }).ok 
 - Modify: `src/platform/profileStore.js`（CS 封存需經 Major）
 - Test: `tools/check_cs_season_lifecycle.mjs`
 
-- [ ] **Step 1: 寫失敗測試** — 斷言：Major 完成後 `honors` 多一筆 CS 年度冠軍；CS `final` 才出現；MOBA honors 不受影響。
-- [ ] **Step 2: 跑測試確認失敗**。
-- [ ] **Step 3: 實作**。
-- [ ] **Step 4: 跑測試確認通過**。
-- [ ] **Step 5: 跑全套 ＋ `npm run build`**。
-- [ ] **Step 6: Commit** — `git commit -m "feat: crown a CS annual champion and seal the season"`
+- [x] **Step 1: 寫失敗測試** — 斷言：Major 完成後 `honors` 多一筆 CS 年度冠軍；CS `final` 才出現；MOBA honors 不受影響。
+- [x] **Step 2: 跑測試確認失敗**。
+- [x] **Step 3: 實作**。
+- [x] **Step 4: 跑測試確認通過**。
+- [x] **Step 5: 跑全套 ＋ `npm run build`**。
+- [x] **Step 6: Commit** — `git commit -m "feat: crown a CS annual champion and seal the season"`
 
 ---
+
+> **M3-3 完成後的實作決策（2026-08-22）**
+>
+> 1. **`cs_annual_champion` 是新的 honorType，不是把亞洲年度冠軍參數化。**
+>    兩者來源賽事不同；合成一個之後「這筆榮耀怎麼來的」只剩 gameMode 可以猜。
+>    規則仍只有一份：兩者共用抽出的 `honorFromEvent()`。
+> 2. **只有年度 Major 發獎金，CS 聯賽不發。** 聯賽是資格賽，而玩家同一條日曆上
+>    還跑著 MOBA 賽季——兩個項目都按聯賽發會讓一季名次收入翻倍，那是經濟平衡
+>    的變更，不由這一輪決定。
+> 3. **`CS_MAJOR_PRIZE` = 50/28/15/8**（約 MOBA 年度賽事的六成），獨立常數，
+>    第一版基準、未校正。
+> 4. **順手補上 `prizeTableFor()`**：`Event.prizePolicy.table` 在此之前是裝飾用的
+>    （結算端永遠拿預設表）。MOBA 走 `default` 逐值不變。
 
 ## M4 — CS Season Recap ＋ 換季（UI 階段）
 

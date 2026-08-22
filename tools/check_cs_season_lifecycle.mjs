@@ -258,9 +258,20 @@ ck("MOBA 賽季完全沒有被建立或封存", s5().competitionByMode.moba === 
 //    薪資與營運成本本來就會讓資金變動（實測 1,200,000 → 353,000）。
 //    那是既有的經濟系統在運作，與獎金無關。要證明「沒發獎金」只能看
 //    名次獎金自己的冪等帳本，以及 CS 的 final 有沒有出現在裡面。
+//  ⚠ M3-3 起 CS **開始發獎金**，但只有年度 Major 發（聯賽是資格賽，仍是 null）。
+//    M1 原本的「一毛都不發」已隨行為更新為更精確的版本：帳本只准多 Major 那一筆。
 const awardKeys = Object.keys(s5().processedCompetitionAwards ?? {});
-ck("CS 封存沒有發名次獎金（獎金帳本沒有新增任何一筆）",
-  awardKeys.length === awardsBefore, `帳本 ${awardsBefore} → ${awardKeys.length} 筆`);
+const csEvents5 = s5().competitionByMode.cs?.events ?? {};
+const majorEid5 = Object.keys(csEvents5).find((id) => csEvents5[id].eventKey === "major");
+const leagueEid5 = Object.keys(csEvents5).find((id) => id !== majorEid5);
+const majorFinalId5 = eventFinalOf(s5().competitionByMode.cs, majorEid5)?.id ?? null;
+const leagueFinalId5 = eventFinalOf(s5().competitionByMode.cs, leagueEid5)?.id ?? null;
+ck("CS 封存只為年度 Major 建立一筆獎金帳本鍵",
+  awardKeys.length === awardsBefore + 1, `帳本 ${awardsBefore} → ${awardKeys.length} 筆`);
+ck("那一筆的鍵就是 Major 的 FinalStandings id",
+  !!majorFinalId5 && awardKeys.includes(majorFinalId5), majorFinalId5);
+ck("⛔ CS 聯賽的 final **不在**獎金帳本裡（聯賽不發名次獎金）",
+  !!leagueFinalId5 && !awardKeys.includes(leagueFinalId5), leagueFinalId5);
 //  ⚠ M3-1 起 CS 一季有**兩個 Event**（聯賽 ＋ 年度 Major）⇒ 賽季層的封存物是
 //    `SeasonSeal.v1`，它**依設計沒有 `id`**（多 Event 的賽季不再產生單一總名次，
 //    見 seasonState.js 的 `applySealSeason`）。所以「有沒有被當成獎金鍵」要看的
@@ -270,13 +281,16 @@ const csFinalIds = [
   ...Object.keys(s5().competitionByMode.cs?.events ?? {})
     .map((id) => eventFinalOf(s5().competitionByMode.cs, id)?.id),
 ].filter(Boolean);
-ck("CS 的每一份 final 都沒有出現在名次獎金帳本裡",
-  csFinalIds.length >= 2 && csFinalIds.every((id) => !awardKeys.includes(id)),
+ck("賽季層的 SeasonSeal 本身沒有被當成獎金鍵（獎金是 Event 層的事）",
+  csFinalIds.length >= 2 && !awardKeys.includes(csFinal?.id ?? "__none__"),
   `檢查 ${csFinalIds.length} 份：${csFinalIds.join(" / ")}`);
 ck("兩個 Event 的賽季用 SeasonSeal.v1 封存（沒有第二份總名次）",
   csFinal?.schema === "SeasonSeal.v1" && (csFinal?.eventIds ?? []).length === 2,
   `${csFinal?.schema} · ${(csFinal?.eventIds ?? []).length} 個 Event`);
-ck("財務變動只來自週結算，沒有任何賽事獎金交易",
+//  ⚠ 玩家整季棄權 ⇒ 聯賽第 8 名 ⇒ 進不了四強 ⇒ 不在 Major 的名次表裡
+//    ⇒ 一毛獎金都拿不到。這一條驗的是「沒進 Major 就沒有錢」，
+//    不是「CS 永遠不發錢」（M3-3 起後者已經不成立）。
+ck("玩家沒進 Major ⇒ 財務上沒有任何賽事獎金交易",
   (s5().finance.transactions ?? []).every((t) => !String(t.id ?? "").startsWith("award-")),
   `funds ${fundsBefore} → ${s5().finance.funds}（12 次週結算）`);
 ck("CS 封存沒有寫進 MOBA 的歷屆名次",

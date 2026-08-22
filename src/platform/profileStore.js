@@ -51,7 +51,7 @@ import { WAN as WAN_UNIT } from "./economy/units.js";
 import { deriveTime } from "./economy/timeline.js";
 import { advanceDaysInState, buildWeekLines, recentForm } from "./economy/weeklySettlement.js";
 import { forecastWeeks } from "./economy/forecast.js";
-import { DEFAULT_SCENARIO, SCENARIOS, scenarioById } from "./economy/economyConfig.js";
+import { DEFAULT_SCENARIO, SCENARIOS, scenarioById, prizeTableFor } from "./economy/economyConfig.js";
 import { seedFormLogFromCsHistory } from "./economy/formLog.js";
 import { newGameFinancials } from "./economy/newGame.js";
 import { ensureTeamIdentity } from "./identity/teamIdentity.js";
@@ -1509,14 +1509,34 @@ export const useProfileStore = create((rawSet, get) => {
     }
 
     //  ① 先封 Event（產生不可變的 FinalStandings）
+    let csAward = null;
     for (const eid of sealableEventIds(state)) {
       const r = applySealEvent(state, eid, day);
       if (!r.ok) continue;
-      const isMajor = state.events[eid]?.eventKey === CS_MAJOR_EVENT_KEY;
+      const ev = state.events[eid];
+      const isMajor = ev?.eventKey === CS_MAJOR_EVENT_KEY;
       state = r.state;
       get()._setCompetitionStateFor(mode, state);
-      //  ⚠ 獎金：CS 的 Event 沒有 `prizePolicy`（見 seasonState.js 的說明）
-      //    ⇒ 這裡**完全不碰錢**。不是忘了寫，是還沒有規則可以照。
+
+      //  ── CS Season M3-3：名次獎金 ─────────────────────────────────────
+      //  ⚠ 規則與 MOBA 那條**同一句**：只有宣告了 `prizePolicy` 的 Event 才發，
+      //    沒有政策的不得被迫生出一筆 0 元的假獎金（產品規則 7）。
+      //    CS 只有 Major 有政策；聯賽是資格賽，仍然一毛都不發。
+      //  ⚠ 用的是**政策指定的表**（`prizeTableFor`），不是預設的 MOBA 表。
+      //  ⚠ 收據掛在 Event 上，**不寫進 final** —— final 是不可變快照。
+      if (ev?.prizePolicy) {
+        const settled = settleCompetitionAwardInState(get(), {
+          final: r.final, day, prizeTable: prizeTableFor(ev.prizePolicy),
+        });
+        if (settled.nextState) set(settled.nextState);
+        csAward = settled.receipt ?? csAward;
+        state = {
+          ...state,
+          events: { ...state.events, [eid]: { ...state.events[eid], award: settled.receipt ?? null } },
+        };
+        get()._setCompetitionStateFor(mode, state);
+      }
+
       //  ⚠ 冠軍名字仍從**聯賽**參賽者查（`participantsOf` 讀的是主賽制）。
       //    Major 的四強都在聯賽名單裡 ⇒ 查得到；不必為此改讀取來源。
       const champ = participantsOf(state).find((p) => p.id === r.final.championTeamId)?.name ?? "—";
@@ -1535,20 +1555,27 @@ export const useProfileStore = create((rawSet, get) => {
         });
     }
 
+    //  ── CS Season M3-3：年度冠軍寫進生涯榮耀 ──────────────────────────────
+    //  ⚠ 掛在**封存之後、賽季封存之前**：榮耀的唯一來源是 Major 的
+    //    `Event.final`，那份東西上面那個迴圈才剛產生。
+    //  ⚠ 走的是與 MOBA **同一支** `_recordHonors`（內部 `recordPendingHonors`
+    //    以 id 冪等）⇒ 「一季一個項目一筆」只有一份規則。
+    get()._recordHonors(state);
+
     //  ② 再封賽季
     const can = canSealSeason(state);
-    if (!can.ok && !can.sealed) return { sealed: false, final: null, award: null, reason: can.reason };
+    if (!can.ok && !can.sealed) return { sealed: false, final: null, award: csAward, reason: can.reason };
     let final = state.final ?? null;
     if (!final) {
       const res = applySealSeason(state, day);
-      if (!res.ok) return { sealed: false, final: null, award: null, reason: res.errors?.[0]?.message ?? null };
+      if (!res.ok) return { sealed: false, final: null, award: csAward, reason: res.errors?.[0]?.message ?? null };
       final = res.final;
       state = res.state;
       get()._setCompetitionStateFor(mode, state);
     }
     get().save();
-    //  `award` 恆為 null：CS M1 沒有獎金。回傳形狀與 MOBA 一致，讓呼叫端不必分辨。
-    return { sealed: true, final, award: null };
+    //  `award` 是 Major 的名次獎金收據（沒發就是 null）。形狀與 MOBA 一致。
+    return { sealed: true, final, award: csAward };
   },
   /**
    * 換到下一個賽季（Milestone Q5）。**玩家主動按的**——不自動換。

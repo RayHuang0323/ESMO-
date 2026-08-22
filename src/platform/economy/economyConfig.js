@@ -107,6 +107,48 @@ export const COMPETITION_PRIZE = Object.freeze({
   byRank: Object.freeze({ 1: 80, 2: 45, 3: 25, 4: 12 }),
 });
 
+/**
+ * CS 年度 Major 的名次獎金（CS Season M3-3）。
+ *
+ * ── 為什麼**不**沿用上面那一份 ────────────────────────────────────────────
+ * 沿用等於讓 CS 直接用 MOBA 的獎金表發錢。那不是省事，是**憑空發明 CS 的
+ * 經濟規則**——而發錯的錢收不回來。M1 起 CS 一路是「一毛都不發」，
+ * 就是在等這個決定被真正做出來。
+ *
+ * ── 這一版的產品決定（2026-08-22）─────────────────────────────────────────
+ * ① **只有年度 Major 發，CS 聯賽不發。** 聯賽是通往 Major 的資格賽；
+ *    玩家同一條日曆上還跑著 MOBA 賽季，兩個項目都按聯賽發等於把一季的
+ *    名次收入直接翻倍——那是經濟平衡的變更，不該由這一輪順手決定。
+ * ② **級距約為 MOBA 年度賽事的六成**（80/45/25/12 → 50/28/15/8）。
+ *    Major 只有四隊、一年一次，位階與 MOBA 年度賽事相當；打六折是因為
+ *    它是玩家的**第二**個項目，不該讓兩份年度獎金單純相加。
+ * ③ 只列前四名——Major 就四隊，第五名不存在。
+ *
+ * ⚠ **這是第一版基準，不是校正過的數字。** 與 `COMPETITION_PRIZE` 同樣的保留：
+ *   費率、轉會、合約都還沒校正，名次獎金要成為主要收入來源是**之後**的決策。
+ *   分成獨立常數的意義就在這裡——日後調 CS 不必動到 MOBA。
+ */
+export const CS_MAJOR_PRIZE = Object.freeze({
+  currency: "funds",
+  byRank: Object.freeze({ 1: 50, 2: 28, 3: 15, 4: 8 }),
+});
+
+/**
+ * `Event.prizePolicy.table` → 實際的獎金表。
+ *
+ * ⚠ 這個欄位在 M3-3 之前是**裝飾用的**：結算端永遠拿預設表，
+ *   所以 legacy 政策寫 `table: "default"` 也沒人讀。現在它真的選表了。
+ * ⚠ **fail-closed 的方向是「回預設表」而不是「不發」**：認不得的政策代表
+ *   有人加了新賽事卻忘了註冊表，這時發既有級距的錢是可回溯的錯，
+ *   而漏發獎金是玩家看不見、也追不回來的錯。
+ */
+export const PRIZE_TABLES = Object.freeze({
+  default: COMPETITION_PRIZE,
+  cs_major: CS_MAJOR_PRIZE,
+});
+
+export const prizeTableFor = (policy) => PRIZE_TABLES[policy?.table] ?? COMPETITION_PRIZE;
+
 /** 名次 → 獎金（沒有獎金的名次回 0）。**查獎金的唯一出口。** */
 export const prizeForRank = (rank, table = COMPETITION_PRIZE) => {
   const r = Math.trunc(Number(rank));
