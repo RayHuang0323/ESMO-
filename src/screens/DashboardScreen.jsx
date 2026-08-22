@@ -1,78 +1,646 @@
-// ============================================================================
-//  screens/DashboardScreen.jsx — Legacy MainMenu 首頁 Component 化（Sprint16）
-//  Presentation：完整對齊 Legacy EsportsGame.jsx MainMenu（截圖9/12）——
-//    頂部隊伍識別(成就徽章/頭像/隊名) → Lv/XP條 → 收件匣大磚 →
-//    天賦+商店 → 財務(9柱圖)+贊助 → 選手+招募 → MOBA/CS/賽事 → 更多功能。
-//    卡片順序/間距/UX 一律保留 Legacy，不重新設計。
-//  Architecture（Adapter）：資料改吃新 Store — profileStore
-//    （隊伍/Lv/XP/財務/贊助/收件匣/選手）。
-//  Sprint21：八個經營磚（收件匣/財務/贊助/選手/招募/戰隊/訓練）不再開假 Modal，
-//    改導向已 Component 化的 Legacy 模組頁（onNav）。贊助改讀 activeSponsor。
-//  差異（誠實）：icon 以 emoji 替代 lucide。
-// ============================================================================
-import React, { useState } from "react";
+// Dashboard — ESMO Design System v1 first production surface.
+//
+// This screen is a presentation adapter only.  Navigation callbacks and
+// profileStore selectors stay the same as the previous Home; no route, Store
+// schema, contract, or battle logic is introduced here.
+import React, { useMemo, useRef, useState } from "react";
 import { useProfileStore } from "../platform/profileStore.js";
-import { resolveSponsor } from "../platform/economy/sponsors.js";
-import { GC, FONT } from "../ui/theme.js";
 import ActiveMatchCard from "./common/ActiveMatchCard.jsx";
+import { resolveSponsor } from "../platform/economy/sponsors.js";
+import { GC } from "../ui/theme.js";
+import { ESMO_CSS_VARS } from "../ui/designSystem.js";
+import EsmoIcon from "../ui/EsmoIcon.jsx";
+import { useIsHomeMobile } from "../ui/useViewport.js";
+import { useDashboardMotion } from "./dashboard/useDashboardMotion.js";
+import { useMobileSheetMotion } from "./dashboard/useMobileSheetMotion.js";
+import "./dashboard/dashboard.css";
 
-const money = (n) => "$" + (n / 10000).toFixed(1) + "萬";
+const numberOf = (value, fallback = 0) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+};
 
-// Legacy Tile（icon 以 emoji 字串替代 lucide 元件）
-function Tile({ emoji, label, onClick, badge, right, color = GC.purp, children }) {
+const money = (value) => `$${(numberOf(value) / 10000).toFixed(1)}萬`;
+const signedMoney = (value) => `${numberOf(value) >= 0 ? "+" : "−"}${money(Math.abs(numberOf(value)))}`;
+const compactWan = (value) => `${numberOf(value).toFixed(2).replace(/\.?(0+)$/, "")}萬`;
+const formatFans = (value) => {
+  const fans = numberOf(value);
+  return fans >= 10000 ? `${(fans / 10000).toFixed(1).replace(/\.0$/, "")}萬` : fans.toLocaleString("zh-Hant");
+};
+
+const NAV = {
+  notify: "inbox",
+  finance: "finance",
+  sponsor: "sponsor",
+  roster: "roster",
+  team: "team",
+  training: "training",
+  recruit: "recruit",
+  cs: "csPrep",
+  talent: "talentPick",
+  development: "teamDevelopment",
+  newgame: "newGame",
+};
+
+const MODE_CONFIG = {
+  moba: { name: "MOBA", kicker: "MAIN STAGE", meta: "5v5 · 即時對戰", icon: "signal", color: GC.purp, action: "進入賽前" },
+  cs: { name: "CS", kicker: "TACTICAL UNIT", meta: "訓練賽 · 戰術準備", icon: "target", color: GC.gold, action: "開始準備" },
+  bracket: { name: "賽事", kicker: "SEASON CIRCUIT", meta: "賽程 · 排名 · 目標", icon: "trophy", color: GC.gold, action: "查看賽程" },
+};
+
+function IconBadge({ name, accent = GC.green, size = 17 }) {
   return (
-    <button onClick={onClick} onMouseEnter={(e) => { e.currentTarget.style.borderColor = color + "88"; e.currentTarget.style.background = GC.card2; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = GC.line; e.currentTarget.style.background = GC.card; }}
-      style={{ position: "relative", display: "flex", flexDirection: "row", alignItems: "center", gap: 10, background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 14, padding: "15px 16px", cursor: "pointer", textAlign: "left", width: "100%", transition: "all 0.18s", minHeight: 56 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, width: "100%" }}>
-        <div style={{ position: "relative", fontSize: 20, color: color }}>{emoji}
-          {badge > 0 && <span style={{ position: "absolute", top: -7, right: 0, background: GC.red, color: "white", fontSize: 8, fontWeight: 800, borderRadius: 99, minWidth: 14, height: 14, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>{badge}</span>}
-        </div>
-        <span style={{ color: "white", fontSize: 15, fontWeight: 700, flex: 1 }}>{label}</span>
-        {right}
+    <span className="esmo-icon-badge" style={{ "--accent": accent }}>
+      <EsmoIcon name={name} size={size} />
+    </span>
+  );
+}
+
+function SectionHeading({ label, title, note }) {
+  return (
+    <div className="esmo-section-heading">
+      <div>
+        <div className="esmo-section-label">{label}</div>
+        <h2 className="esmo-section-heading__title">{title}</h2>
       </div>
-      {children}
+      {note && <div className="esmo-section-heading__note">{note}</div>}
+    </div>
+  );
+}
+
+function TeamHero({ team, meta, unread, xpPercent, onInbox }) {
+  const achievement = numberOf(team.achievement ?? meta.achievement);
+  const level = numberOf(team.lv ?? meta.lv);
+  const xp = numberOf(team.xp ?? meta.xp);
+  const xpMax = numberOf(team.xpMax ?? meta.xpMax, 1);
+  const week = numberOf(meta.week, 1);
+  const days = numberOf(meta.days, 0);
+  const fans = formatFans(meta.fans);
+
+  return (
+    <header className="esmo-hero" data-dashboard-reveal>
+      <div className="esmo-hero__ambient" data-dashboard-ambient />
+      <div className="esmo-hero__topline">
+        <div className="esmo-hero__eyebrow">
+          <span className="esmo-pulse" data-dashboard-pulse />
+          TEAM COMMAND CENTER
+        </div>
+        <button className="esmo-status-action" type="button" onClick={onInbox} aria-label="開啟收件匣">
+          <EsmoIcon name="inbox" size={15} />
+          <span className="esmo-status-action__label">收件匣</span>
+          {unread > 0 && <span className="esmo-status-action__count">{unread}</span>}
+        </button>
+      </div>
+
+      <div className="esmo-hero__main">
+        <div className="esmo-hero__copy">
+          <div className="esmo-hero__identity">
+            <div className="esmo-hero__crest" aria-label={`${team.name ?? "戰隊"} 隊徽`}>
+              {team.emoji ?? "◆"}
+              <span className="esmo-hero__crest-badge">{achievement}</span>
+            </div>
+            <div className="esmo-hero__copy">
+              <div className="esmo-hero__kicker">{team.tag ?? "ESMO SQUAD"}</div>
+              <h1 className="esmo-hero__title">{team.name ?? "未命名戰隊"}</h1>
+              <p className="esmo-hero__subtitle">這是你的戰隊總部。掌握本週節奏，先處理最重要的決策，再把隊伍送上舞台。</p>
+              <div className="esmo-hero__meta-row">
+                <span className="esmo-hero__meta"><strong>第 {week} 週</strong></span>
+                <span className="esmo-hero__meta"><strong>{fans}</strong> 支持者</span>
+                <span className="esmo-hero__meta"><strong>{days}</strong> 天營運</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="esmo-hero__aside">
+          <div>
+            <div className="esmo-hero__funds-label">OPERATING FUNDS</div>
+            <div className="esmo-hero__funds-value">{money(team.gold ?? 0)}</div>
+            <div className="esmo-hero__funds-note">可用資金 · 由財務模組提供</div>
+          </div>
+          <div className="esmo-hero__stats">
+            <div className="esmo-stat"><div className="esmo-stat__label">LEVEL</div><div className="esmo-stat__value">Lv. {level}</div></div>
+            <div className="esmo-stat"><div className="esmo-stat__label">XP</div><div className="esmo-stat__value">{compactWan(xp)}</div></div>
+            <div className="esmo-stat"><div className="esmo-stat__label">BADGE</div><div className="esmo-stat__value">#{achievement}</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div className="esmo-hero__xp">
+        <div className="esmo-hero__xp-topline">
+          <span>TEAM GROWTH / XP</span>
+          <strong>{compactWan(xp)} / {compactWan(xpMax)}</strong>
+        </div>
+        <div className="esmo-hero__xp-track" aria-label={`戰隊 XP ${Math.round(xpPercent)}%`}>
+          <div className="esmo-hero__xp-fill" data-dashboard-progress style={{ transform: `scaleX(${Math.max(0, Math.min(1, xpPercent / 100))})` }} />
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function ActiveMatchSection({ hasActiveMatch, onResumeActive }) {
+  if (!hasActiveMatch) return null;
+  return (
+    <section className="esmo-section" data-dashboard-reveal>
+      <SectionHeading label="PRIORITY ACTION" title="目前對戰" note="掌握當前比賽節奏" />
+      <ActiveMatchCard compact onResume={onResumeActive} />
+    </section>
+  );
+}
+
+function NextActions({ actions }) {
+  return (
+    <section className="esmo-section" data-dashboard-reveal>
+      <SectionHeading label="NEXT ACTIONS" title="接下來做什麼" note="把注意力留給真正重要的事" />
+      <div className="esmo-action-grid">
+        {actions.map((item, index) => (
+          <button
+            key={item.id}
+            className="esmo-card esmo-interactive esmo-action-card"
+            type="button"
+            onClick={item.onClick}
+            style={{ "--accent": item.accent }}
+          >
+            <div className="esmo-action-card__top">
+              <IconBadge name={item.icon} accent={item.accent} />
+              {item.badge !== undefined && <span className="esmo-action-card__badge">{item.badge}</span>}
+            </div>
+            <div className="esmo-action-card__title">{index === 0 ? "01 · " : ""}{item.title}</div>
+            <div className="esmo-action-card__detail">{item.detail}</div>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function FinanceStatus({ wk, fc, finBars, onOpen }) {
+  const netPositive = numberOf(wk.net) >= 0;
+  const maxBar = Math.max(...finBars.map((value) => numberOf(value)), 1);
+  return (
+    <article className="esmo-card esmo-status-card esmo-status-card--finance" data-dashboard-reveal>
+      <div className="esmo-status-card__title">
+        <span><IconBadge name="chart" accent={GC.green} size={15} />本週財務</span>
+        <span className="esmo-status-card__label">第 {wk.week} 週</span>
+      </div>
+      <div className="esmo-status-card__value">{signedMoney(wk.net)} <small>淨額</small></div>
+      <div className="esmo-status-card__detail">第 {wk.dayOfWeek}/7 天 · {wk.scenarioName ?? "目前情境"}</div>
+      <div className="esmo-finance-summary">
+        <div className="esmo-finance-summary__item"><div className="esmo-finance-summary__label">收入</div><div className="esmo-finance-summary__value" style={{ "--tone": GC.green }}>+{money(wk.income)}</div></div>
+        <div className="esmo-finance-summary__item"><div className="esmo-finance-summary__label">支出</div><div className="esmo-finance-summary__value" style={{ "--tone": GC.red }}>−{money(wk.expense)}</div></div>
+        <div className="esmo-finance-summary__item"><div className="esmo-finance-summary__label">趨勢</div><div className="esmo-finance-summary__value" style={{ "--tone": netPositive ? GC.green : GC.red }}>{netPositive ? "穩定" : "留意"}</div></div>
+      </div>
+      <div className="esmo-mini-chart" aria-label="近九週收支節奏">
+        {finBars.map((value, index) => (
+          <div key={`${value}-${index}`} className="esmo-mini-chart__bar" style={{ height: `${Math.max(9, numberOf(value) / maxBar * 100)}%` }} />
+        ))}
+      </div>
+      <div className="esmo-chart-caption"><span>近 9 週節奏</span><span>{fc.weeks?.length ?? 0} 週預測可用</span></div>
+      <button className="esmo-status-card__link" type="button" onClick={onOpen}>開啟完整財務 <EsmoIcon name="chevron" size={13} /></button>
+    </article>
+  );
+}
+
+function ClubStatus({ profile, players, developmentPoints, wk, fc, finBars, sponsor, onFinance, onSponsor, onRoster }) {
+  const weeksLeft = numberOf(profile.activeSponsor?.weeksLeft);
+  const sponsorTone = sponsor ? (weeksLeft <= 2 ? GC.gold : GC.green) : GC.gray;
+  return (
+    <section className="esmo-section">
+      <SectionHeading label="CLUB STATUS" title="戰隊狀態" note="同一份經營資料的快速讀本" />
+      <div className="esmo-status-grid">
+        <FinanceStatus wk={wk} fc={fc} finBars={finBars} onOpen={onFinance} />
+
+        <article className="esmo-card esmo-status-card" data-dashboard-reveal>
+          <div className="esmo-status-card__title"><span><IconBadge name="users" accent={GC.blue} size={15} />選手狀態</span><span className="esmo-status-card__label">ROSTER</span></div>
+          <div className="esmo-status-card__value">{players.length} <small>名選手</small></div>
+          <div className="esmo-status-card__detail">營運第 {numberOf(profile.meta?.days)} 天 · {developmentPoints > 0 ? `還有 ${developmentPoints} 點戰隊發展` : "目前沒有待分配戰隊發展"}</div>
+          <button className="esmo-status-card__link" type="button" onClick={onRoster}>查看名單 <EsmoIcon name="chevron" size={13} /></button>
+        </article>
+
+        <article className="esmo-card esmo-status-card" data-dashboard-reveal>
+          <div className="esmo-status-card__title"><span><IconBadge name="users" accent={sponsorTone} size={15} />贊助狀態</span><span className="esmo-status-card__label">PARTNER</span></div>
+          <div className="esmo-sponsor-mark" style={{ "--sponsor-accent": sponsor?.color ?? GC.gold }}>{sponsor?.emoji ?? "—"}</div>
+          <div className="esmo-sponsor-status">
+            {sponsor ? <><strong>{sponsor.name}</strong><br />合約剩 {weeksLeft} 週{weeksLeft <= 2 ? " · 即將到期" : ""}</> : "目前沒有進行中的贊助合約"}
+          </div>
+          <button className="esmo-status-card__link" type="button" onClick={onSponsor}>{sponsor ? "管理合作" : "尋找合作"} <EsmoIcon name="chevron" size={13} /></button>
+        </article>
+      </div>
+    </section>
+  );
+}
+
+function Compete({ modes, onSelect }) {
+  return (
+    <section className="esmo-section" data-dashboard-reveal>
+      <SectionHeading label="COMPETE" title="把隊伍送上舞台" note="三種玩法，共用同一個 ESMO 品牌" />
+      <div className="esmo-mode-grid">
+        {modes.map((mode) => (
+          <button key={mode.id} className="esmo-card esmo-interactive esmo-mode-card" type="button" onClick={() => onSelect(mode.id)} style={{ "--mode-accent": mode.color }}>
+            <div className="esmo-mode-card__top">
+              <div className="esmo-mode-card__eyebrow">{mode.kicker}</div>
+              <span className="esmo-mode-card__icon"><EsmoIcon name={mode.icon} size={20} /></span>
+            </div>
+            <div className="esmo-mode-card__title">{mode.name}</div>
+            <div className="esmo-mode-card__meta">{mode.meta}</div>
+            <div className="esmo-mode-card__footer">
+              <span>{mode.action}</span>
+              <span className="esmo-mode-card__audience"><EsmoIcon name="users" size={12} /> {mode.audience}</span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Utility({ items, onSelect }) {
+  return (
+    <section className="esmo-section" data-dashboard-reveal>
+      <SectionHeading label="UTILITY" title="管理工具" note="需要時再來，不搶主要決策的焦點" />
+      <div className="esmo-utility-grid">
+        {items.map((item) => (
+          <button key={item.id} className="esmo-card esmo-interactive esmo-utility-card" type="button" onClick={() => onSelect(item.id)}>
+            <span className="esmo-utility-card__icon"><EsmoIcon name={item.icon} size={18} /></span>
+            <span className="esmo-utility-card__label">{item.label}</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MobileTeamHeader({ team, meta, unread, xpPercent, onInbox }) {
+  const achievement = numberOf(team.achievement ?? meta.achievement);
+  const level = numberOf(team.lv ?? meta.lv);
+  const xp = numberOf(team.xp ?? meta.xp);
+  const xpMax = numberOf(team.xpMax ?? meta.xpMax, 1);
+  const week = numberOf(meta.week, 1);
+
+  return (
+    <header className="esmo-mobile-header" data-dashboard-reveal>
+      <div className="esmo-mobile-header__top">
+        <div className="esmo-mobile-header__identity">
+          <div className="esmo-mobile-header__crest" aria-label={`${team.name ?? "ESMO Team"} crest`}>
+            {team.emoji ?? "◈"}
+            <span className="esmo-mobile-header__crest-badge">{achievement}</span>
+          </div>
+          <div className="esmo-mobile-header__copy">
+            <div className="esmo-mobile-header__kicker">{team.tag ?? "ESMO SQUAD"}</div>
+            <h1>{team.name ?? "ESMO TEAM"}</h1>
+            <div className="esmo-mobile-header__meta">
+              <span>Lv. {level}</span>
+              <span>W{week}</span>
+              <span>{formatFans(meta.fans)} 支持者</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="esmo-mobile-header__actions">
+          <div className="esmo-mobile-header__funds">
+            <span>資金</span>
+            <strong>{money(team.gold ?? 0)}</strong>
+          </div>
+          <button className="esmo-mobile-header__inbox" type="button" onClick={onInbox} aria-label="開啟收件匣">
+            <EsmoIcon name="inbox" size={18} />
+            {unread > 0 && <span>{unread}</span>}
+          </button>
+        </div>
+      </div>
+
+      <div className="esmo-mobile-header__xp">
+        <div className="esmo-mobile-header__xp-label">
+          <span>XP</span>
+          <strong>{compactWan(xp)} / {compactWan(xpMax)}</strong>
+        </div>
+        <div className="esmo-mobile-header__xp-track" aria-label={`Team XP ${Math.round(xpPercent)}%`}>
+          <div className="esmo-mobile-header__xp-fill" data-dashboard-progress style={{ transform: `scaleX(${Math.max(0, Math.min(1, xpPercent / 100))})` }} />
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function MobilePrimaryAction({ activeMatchView, onResumeActive, action }) {
+  if (activeMatchView) {
+    return (
+      <section className="esmo-mobile-primary esmo-mobile-primary--active" data-dashboard-reveal>
+        <div className="esmo-mobile-primary__eyebrow">
+          <span><span className="esmo-mobile-primary__live-dot" /> LIVE</span>
+        </div>
+        <ActiveMatchCard compact onResume={onResumeActive} />
+      </section>
+    );
+  }
+
+  return (
+    <button
+      className="esmo-mobile-primary esmo-mobile-primary--next esmo-interactive"
+      type="button"
+      onClick={action.onClick}
+      style={{ "--accent": action.accent }}
+      data-dashboard-reveal
+    >
+      <div className="esmo-mobile-primary__top">
+        <span className="esmo-mobile-primary__eyebrow">下一個行動</span>
+        {action.badge !== undefined && <span className="esmo-mobile-primary__badge">{action.badge}</span>}
+      </div>
+      <div className="esmo-mobile-primary__title-row">
+        <IconBadge name={action.icon} accent={action.accent} size={19} />
+        <strong>{action.title}</strong>
+      </div>
+      <p>{action.detail}</p>
+      <span className="esmo-mobile-primary__cta">開啟行動 <EsmoIcon name="chevron" size={14} /></span>
     </button>
   );
 }
 
+function MobileQuickActions({ items }) {
+  return (
+    <section className="esmo-mobile-section" data-dashboard-reveal>
+      <div className="esmo-mobile-section__heading">
+        <div>
+          <span className="esmo-mobile-section__label">快捷行動</span>
+          <h2>現在可以做的事</h2>
+        </div>
+      </div>
+      <div className="esmo-mobile-quick-grid">
+        {items.map((item) => (
+          <button
+            key={item.id}
+            className="esmo-mobile-quick esmo-interactive"
+            type="button"
+            onClick={item.onClick}
+            style={{ "--accent": item.accent }}
+          >
+            <IconBadge name={item.icon} accent={item.accent} size={16} />
+            <span className="esmo-mobile-quick__copy">
+              <strong>{item.title}</strong>
+              <small>{item.detail}</small>
+            </span>
+            <EsmoIcon name="chevron" size={14} />
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MobileClubSnapshot({ players, developmentPoints, wk, sponsor, profile, onSelect }) {
+  const weeksLeft = numberOf(profile.activeSponsor?.weeksLeft);
+  const rows = [
+    {
+      id: "finance",
+      icon: "finance",
+      accent: numberOf(wk.net) >= 0 ? GC.green : GC.red,
+      label: "財務",
+      value: signedMoney(wk.net),
+      note: `W${numberOf(wk.week, 1)} 淨額`,
+    },
+    {
+      id: "roster",
+      icon: "users",
+      accent: GC.blue,
+      label: "選手",
+      value: `${players.length} 人`,
+      note: developmentPoints > 0 ? `${developmentPoints} 點待分配` : "目前穩定",
+    },
+    {
+      id: "sponsor",
+      icon: "award",
+      accent: sponsor ? (weeksLeft <= 2 ? GC.gold : GC.green) : GC.gray,
+      label: "贊助",
+      value: sponsor?.name ?? "無",
+      note: sponsor ? `剩 ${weeksLeft} 週` : "尋找合作夥伴",
+    },
+  ];
+
+  return (
+    <section className="esmo-mobile-section" data-dashboard-reveal>
+      <div className="esmo-mobile-section__heading">
+        <div>
+          <span className="esmo-mobile-section__label">戰隊快照</span>
+          <h2>戰隊狀態</h2>
+        </div>
+      </div>
+      <div className="esmo-mobile-snapshot-grid">
+        {rows.map((row) => (
+          <button
+            key={row.id}
+            className="esmo-mobile-snapshot esmo-interactive"
+            type="button"
+            onClick={() => onSelect(row.id)}
+            style={{ "--accent": row.accent }}
+          >
+            <span className="esmo-mobile-snapshot__icon"><EsmoIcon name={row.icon} size={16} /></span>
+            <span className="esmo-mobile-snapshot__label">{row.label}</span>
+            <strong>{row.value}</strong>
+            <small>{row.note}</small>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MobileCompeteRail({ modes, onSelect }) {
+  return (
+    <section className="esmo-mobile-section" data-dashboard-reveal>
+      <div className="esmo-mobile-section__heading">
+        <div>
+          <span className="esmo-mobile-section__label">競技</span>
+          <h2>選擇模式</h2>
+        </div>
+        <span className="esmo-mobile-section__note">左右滑動</span>
+      </div>
+      <div className="esmo-mobile-compete-rail" aria-label="競技模式">
+        {modes.map((mode) => (
+          <button
+            key={mode.id}
+            className="esmo-mobile-compete-card esmo-interactive"
+            type="button"
+            onClick={() => onSelect(mode.id)}
+            style={{ "--mode-accent": mode.color }}
+          >
+            <div className="esmo-mobile-compete-card__top">
+              <span>{mode.kicker}</span>
+              <EsmoIcon name={mode.icon} size={20} />
+            </div>
+            <strong>{mode.name}</strong>
+            <p>{mode.meta}</p>
+            <span className="esmo-mobile-compete-card__cta">{mode.action} <EsmoIcon name="chevron" size={13} /></span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MobileNavSheet({ type, modes, onSelect, onClose }) {
+  const sheetRef = useRef(null);
+  const closeStartedRef = useRef(false);
+  const animateClose = useMobileSheetMotion(sheetRef, onClose);
+  const closeSheet = () => {
+    if (closeStartedRef.current) return;
+    closeStartedRef.current = true;
+    animateClose();
+  };
+  const groups = {
+    team: [
+      { id: "team", label: "戰隊總覽", icon: "award" },
+      { id: "roster", label: "選手名單", icon: "users" },
+      { id: "development", label: "戰隊發展", icon: "award" },
+      { id: "training", label: "訓練安排", icon: "signal" },
+      { id: "recruit", label: "招募選手", icon: "arrowUp" },
+      { id: "talent", label: "選手天賦", icon: "star" },
+    ],
+    compete: modes.map((mode) => ({ id: mode.id, label: mode.name, detail: mode.meta, icon: mode.icon, accent: mode.color })),
+    more: [
+      { id: "finance", label: "財務", detail: "收支與預測", icon: "finance" },
+      { id: "sponsor", label: "贊助", detail: "合作合約", icon: "users" },
+      { id: "equip", label: "商店", detail: "物品與升級", icon: "package" },
+      { id: "newgame", label: "新遊戲", detail: "重新開始", icon: "arrowUp" },
+      { id: "dash", label: "完整儀表板", detail: "完整總覽", icon: "chart" },
+    ],
+  };
+  const titles = { team: "戰隊", compete: "競技", more: "更多" };
+  const items = groups[type] ?? [];
+
+  return (
+    <div ref={sheetRef} className={`esmo-mobile-sheet-backdrop esmo-mobile-sheet-backdrop--${type}`} data-dashboard-mobile-sheet role="presentation" onClick={closeSheet}>
+      <div className={`esmo-mobile-sheet esmo-mobile-sheet--${type}`} role="dialog" aria-modal="true" aria-labelledby="esmo-mobile-sheet-title" onClick={(event) => event.stopPropagation()}>
+        <div className="esmo-mobile-sheet__top">
+          <div>
+            <span className="esmo-mobile-section__label">遊戲選單</span>
+            <h2 id="esmo-mobile-sheet-title">{titles[type]}</h2>
+          </div>
+          <button className="esmo-mobile-sheet__close" type="button" onClick={closeSheet} aria-label="關閉選單">
+            <EsmoIcon name="close" size={18} />
+          </button>
+        </div>
+        <div className="esmo-mobile-sheet__list">
+          {items.map((item) => (
+            <button key={item.id} className="esmo-mobile-sheet__item" type="button" onClick={() => { onSelect(item.id); closeSheet(); }} style={{ "--accent": item.accent ?? GC.green }}>
+              <span className="esmo-mobile-sheet__item-icon" style={{ "--accent": item.accent ?? GC.green }}><EsmoIcon name={item.icon} size={17} /></span>
+              <span><strong>{item.label}</strong>{item.detail && <small>{item.detail}</small>}</span>
+              <EsmoIcon name="chevron" size={15} />
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MobileBottomNav({ sheet, onTab }) {
+  const tabs = [
+    { id: "home", label: "首頁", icon: "home" },
+    { id: "team", label: "戰隊", icon: "users" },
+    { id: "compete", label: "競技", icon: "compete" },
+    { id: "messages", label: "訊息", icon: "message" },
+    { id: "more", label: "更多", icon: "more" },
+  ];
+
+  return (
+    <nav className="esmo-mobile-nav" data-dashboard-mobile-nav aria-label="行動導覽">
+      {tabs.map((tab) => {
+        const active = tab.id === "home" ? !sheet : tab.id === sheet;
+        return (
+          <button key={tab.id} className={`esmo-mobile-nav__item${active ? " is-active" : ""}`} type="button" onClick={() => onTab(tab.id)} aria-current={active ? "page" : undefined}>
+            <EsmoIcon name={tab.icon} size={19} />
+            <span>{tab.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+function MobileHome({ team, meta, finance, unread, xpPercent, activeMatchView, onResumeActive, primaryAction, quickActions, profile, players, developmentPoints, wk, sponsor, modes, onSelect }) {
+  const [sheet, setSheet] = useState(null);
+  const scrollRef = useRef(null);
+
+  const onTab = (tab) => {
+    if (tab === "home") {
+      setSheet(null);
+      scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    if (tab === "messages") {
+      onSelect("notify");
+      return;
+    }
+    setSheet((current) => current === tab ? null : tab);
+  };
+
+  return (
+    <div className="esmo-mobile-home">
+      <div className="esmo-mobile-home__scroll" ref={scrollRef}>
+        <div className="esmo-mobile-home__brandline">
+          <span><EsmoIcon name="signal" size={13} /> ESMO / COMMAND DECK</span>
+          <span>W{numberOf(meta.week, 1)}</span>
+        </div>
+        <MobileTeamHeader team={{ ...team, gold: finance.funds }} meta={meta} unread={unread} xpPercent={xpPercent} onInbox={() => onSelect("notify")} />
+        <main className="esmo-mobile-home__content">
+          <MobilePrimaryAction activeMatchView={activeMatchView} onResumeActive={onResumeActive} action={primaryAction} />
+          <MobileQuickActions items={quickActions} />
+          <MobileClubSnapshot players={players} developmentPoints={developmentPoints} wk={wk} sponsor={sponsor} profile={profile} onSelect={onSelect} />
+          <MobileCompeteRail modes={modes} onSelect={onSelect} />
+        </main>
+      </div>
+
+      <MobileBottomNav sheet={sheet} onTab={onTab} />
+      {sheet && <MobileNavSheet type={sheet} modes={modes} onSelect={onSelect} onClose={() => setSheet(null)} />}
+    </div>
+  );
+}
+
 export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActive }) {
+  const rootRef = useRef(null);
   const profile = useProfileStore();
   const [modal, setModal] = useState(null);
+  const isHomeMobile = useIsHomeMobile();
+  useDashboardMotion(rootRef, isHomeMobile);
 
+  const team = profile.team ?? {};
+  const meta = profile.meta ?? {};
+  const finance = profile.finance ?? {};
   const players = profile.players ?? [];
   const inbox = profile.inbox ?? [];
-  // 戰隊發展點是俱樂部層投資資源；個人天賦點仍由舊玩家資料保留，
-  //   不再從首頁作為主要投資入口展示。
+  const unread = inbox.filter((message) => message.unread).length;
   const developmentPoints = Math.max(0, Number(profile.teamDevelopment?.availablePoints) || 0);
-  const T = { ...profile.team, ...profile.meta, gold: money(profile.finance.funds), players: players.length, mail: inbox.length, inbox: inbox.filter((m) => m.unread).length, developmentPoints };
-  const finBars = profile.finance.weekly9 ?? [6, 4, 5, 3, 2, 9, 5, 6, 4];
-  //  Milestone N：本週收支預覽（唯讀；與週結算共用同一份計算，畫面不另算一套）
   const wk = profile.currentWeekPreview();
-  //  N2：未來四週現金預測（含贊助到期造成的收入斷崖）與資金警告等級
   const fc = profile.cashForecast();
   const sponsor = profile.activeSponsor ? resolveSponsor(profile.activeSponsor.id) : null;
-  //  UI 修正（Q3.5）：「賽事」磚原本掛一個「🌙」的標籤——那既不是狀態也不是
-  //    ⚠ 註解不要寫獎盃 emoji：q35 §4b 用「原始檔裡的獎盃只能出現一次」
-  //      來擋「多開一個賽事入口」，註解裡多寫一顆就會誤判。
-  //    提示，玩家看不出這裡有沒有事要做。Q3.5 之後這裡是聯賽的入口，最該講的
-  //    就是「今天要不要出賽」。值全部來自既有的 `competitionView()`，
-  //    畫面不自己判賽程規則（與 CompetitionScreen 同一個出口，沒有第二份）。
+  const finBars = finance.weekly9 ?? [6, 4, 5, 3, 2, 9, 5, 6, 4];
+  const xp = numberOf(team.xp ?? meta.xp);
+  const xpMax = Math.max(1, numberOf(team.xpMax ?? meta.xpMax, 1));
+  const xpPercent = Math.max(0, Math.min(100, xp / xpMax * 100));
+  const activeMatchView = typeof profile.activeMatchView === "function" ? profile.activeMatchView() : null;
   const comp = profile.competitionView();
   const bracketBadge = !comp.hasSeason ? "進入聯賽"
     : comp.today ? "🔴 今日有賽事"
     : comp.next ? `下一場 第 ${comp.nextDay} 天`
     : "本季已完賽";
-  const modes = [
-    { id: "moba", name: "MOBA", emoji: "⚔️", fans: "2041", color: GC.purp, badge: "3 小時內", on: true },
-    { id: "cs", name: "CS", emoji: "🎯", fans: "0", color: "#fb923c", badge: "訓練賽", on: true }, // S23：接 CS 完整流程（Prep→Map→Tactic→Loading→Match→Result）
 
-    { id: "bracket", name: "賽事", emoji: "🏆", fans: "0", color: GC.green, badge: bracketBadge, on: true },
-  ];
-  //  N3：「開新局」是三種財務情境（新手／一般／頂級）的唯一入口。
-  const more = [{ id: "team", n: "戰隊詳情", i: "🛡" }, { id: "training", n: "訓練中心", i: "📅" }, { id: "newgame", n: "開新局", i: "🎬" }, { id: "dash", n: "儀表板", i: "📊" }, { id: "sponsor", n: "贊助商", i: "🤝" }];
+  const modeItems = useMemo(() => [
+    { id: "moba", ...MODE_CONFIG.moba, audience: "2,041" },
+    { id: "cs", ...MODE_CONFIG.cs, audience: "訓練" },
+    { id: "bracket", ...MODE_CONFIG.bracket, meta: `賽程 · ${bracketBadge}`, audience: "賽季" },
+  ], [bracketBadge]);
 
-  // 舊 talentPick 路由仍保留給相容流程；首頁主要投資入口改為戰隊發展。
-  const NAV = { notify: "inbox", finance: "finance", sponsor: "sponsor", roster: "roster", team: "team", training: "training", recruit: "recruit", cs: "csPrep", development: "teamDevelopment", talent: "talentPick", newgame: "newGame" };
+  const utilityItems = useMemo(() => [
+    { id: "team", label: "戰隊詳情", icon: "award" },
+    { id: "training", label: "訓練中心", icon: "signal" },
+    { id: "recruit", label: "招募", icon: "arrowUp" },
+    { id: "newgame", label: "開新局", icon: "arrowUp" },
+    { id: "equip", label: "商店", icon: "package" },
+    { id: "dash", label: "儀表板", icon: "chart" },
+    { id: "sponsor", label: "贊助商", icon: "users" },
+    { id: "talent", label: "天賦", icon: "star" },
+  ], []);
+
   const sel = (id) => {
     if (id === "moba") return onMoba();
     if (id === "bracket") return onSeason();
@@ -80,142 +648,90 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
     setModal({ type: "legacy", name: { equip: "商店", dash: "經營儀表板" }[id] || id });
   };
 
+  const priority = fc.level !== "ok"
+    ? { id: "finance", icon: "alert", accent: fc.level === "danger" ? GC.red : GC.gold, title: "處理資金提醒", detail: fc.level === "danger" ? `預測第 ${fc.bankruptWeek} 週資金見底` : "本週淨額為負，先看現金預測", badge: "!", onClick: () => sel("finance") }
+    : unread > 0
+      ? { id: "notify", icon: "inbox", accent: GC.blue, title: "處理收件匣", detail: `${unread} 則未讀訊息等待決定`, badge: unread, onClick: () => sel("notify") }
+      : developmentPoints > 0
+        ? { id: "development", icon: "award", accent: GC.green, title: "分配戰隊發展點", detail: `${developmentPoints} 點可以投入團隊成長`, badge: developmentPoints, onClick: () => sel("development") }
+        : { id: "recruit", icon: "arrowUp", accent: GC.green, title: "開始招募", detail: "看看球探部帶回的下一位候選人", onClick: () => sel("recruit") };
+
+  const candidateActions = [
+    { id: "notify", icon: "inbox", accent: GC.blue, title: "收件匣", detail: unread > 0 ? `${unread} 則未讀訊息` : "目前沒有未讀訊息", badge: unread || undefined, onClick: () => sel("notify") },
+    { id: "development", icon: "award", accent: GC.green, title: "戰隊發展", detail: developmentPoints > 0 ? `${developmentPoints} 點可投入團隊成長` : "查看團隊投資與成長", onClick: () => sel("development") },
+    { id: "roster", icon: "users", accent: GC.blue, title: "選手狀態", detail: `${players.length} 名選手 · 名單管理`, onClick: () => sel("roster") },
+    { id: "training", icon: "signal", accent: GC.green, title: "訓練中心", detail: "安排本週訓練節奏", onClick: () => sel("training") },
+    { id: "recruit", icon: "arrowUp", accent: GC.green, title: "球探招募", detail: "擴充下一個可用選手", onClick: () => sel("recruit") },
+  ];
+  const actions = [priority, ...candidateActions.filter((item) => item.id !== priority.id)].slice(0, 4);
+  const mobileQuickActions = [
+    candidateActions.find((item) => item.id === "development"),
+    candidateActions.find((item) => item.id === "training"),
+    candidateActions.find((item) => item.id === "roster"),
+    candidateActions.find((item) => item.id === "recruit"),
+  ].filter(Boolean);
+
   return (
-    <div style={{ minHeight: "100%", background: GC.bg, fontFamily: FONT, overflow: "auto", height: "100%" }}>
-      <div style={{ maxWidth: 460, margin: "0 auto" }}>
-        <ActiveMatchCard onResume={onResumeActive} />
-        {/* 頂部隊伍識別 */}
-        <div style={{ position: "relative", background: `linear-gradient(180deg,#2a2d3e,${GC.bg})`, padding: "18px 16px 14px", textAlign: "center" }}>
-          <div style={{ position: "absolute", top: 14, right: 16 }}>
-            <div style={{ width: 38, height: 38, borderRadius: "50%", background: `linear-gradient(135deg,${GC.gold},#d97706)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, border: `2px solid ${GC.gold}` }}>🐱</div>
-            <span style={{ position: "absolute", bottom: -4, right: 0, background: GC.bg, color: GC.gold, fontSize: 8, fontWeight: 800, borderRadius: 99, padding: "1px 4px", border: `1px solid ${GC.gold}` }}>{T.achievement}</span>
+    <div ref={rootRef} className="esmo-dashboard" style={ESMO_CSS_VARS}>
+      {isHomeMobile ? (
+        <MobileHome
+          team={team}
+          meta={meta}
+          finance={finance}
+          unread={unread}
+          xpPercent={xpPercent}
+          activeMatchView={activeMatchView}
+          onResumeActive={onResumeActive}
+          primaryAction={priority}
+          quickActions={mobileQuickActions}
+          profile={profile}
+          players={players}
+          developmentPoints={developmentPoints}
+          wk={wk}
+          sponsor={sponsor}
+          modes={modeItems}
+          onSelect={sel}
+        />
+      ) : (
+      <div className="esmo-dashboard__canvas">
+        <div className="esmo-dashboard__topbar" data-dashboard-reveal>
+          <div className="esmo-dashboard__brand">
+            <span className="esmo-dashboard__brand-mark"><EsmoIcon name="signal" size={17} strokeWidth={2.2} /></span>
+            <span className="esmo-dashboard__brand-copy"><span className="esmo-dashboard__brand-name">ESMO</span><span className="esmo-dashboard__brand-caption">modern esports management</span></span>
           </div>
-          <div style={{ width: 72, height: 72, margin: "0 auto 8px", borderRadius: 18, background: "linear-gradient(135deg,#4a4d5e,#2a2d3e)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 38, border: `2px solid ${GC.purp}66` }}>{T.emoji}</div>
-          <h1 style={{ color: "white", fontSize: 24, fontWeight: 900, margin: 0 }}>{T.name}</h1>
+          <span className="esmo-dashboard__brand-caption">WEEK {numberOf(meta.week, 1)}</span>
         </div>
-        {/* 等級 XP 條 */}
-        <div style={{ padding: "0 16px", marginTop: 4, marginBottom: 14 }}>
-          <div style={{ height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden", marginBottom: 6 }}><div style={{ height: "100%", width: `${T.xp / T.xpMax * 100}%`, background: `linear-gradient(90deg,${GC.green},${GC.gold})` }} /></div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "white", fontSize: 13, fontWeight: 800 }}>Lv. {T.lv}</span><span style={{ color: GC.gray, fontSize: 12 }}>{T.xp}萬/{T.xpMax}萬 XP</span></div>
-        </div>
-        {/* 主功能磚 */}
-        <div style={{ padding: "0 14px", display: "flex", flexDirection: "column", gap: 10 }}>
-          <Tile emoji="💬" label="收件匣" badge={T.inbox} color={GC.blue} onClick={() => sel("notify")} right={<span style={{ display: "flex", alignItems: "center", gap: 4, color: GC.gray, fontSize: 12 }}>✉️ {T.mail}</span>} />
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <Tile emoji="🌱" label="戰隊發展" badge={T.developmentPoints} color={GC.green} onClick={() => sel("development")} />
-            <Tile emoji="🛒" label="商店" color={GC.gold} onClick={() => sel("equip")} />
-          </div>
-          {/* Milestone N：本週財務（真實值，非種子）＋ 合約狀態 ─────────────
-              收入／支出／淨額全部來自 currentWeekPreview()（= 週結算會用的同一份
-              計算），不在畫面另算一套。合約剩餘週數來自 activeSponsor.weeksLeft，
-              它現在每週真的會遞減。 */}
-          <button onClick={() => sel("finance")} style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 14, padding: "12px 14px", cursor: "pointer", textAlign: "left", width: "100%" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 9 }}>
-              <span style={{ fontSize: 15 }}>📅</span>
-              <span style={{ color: "white", fontSize: 13, fontWeight: 700 }}>本週財務</span>
-              {/*  Q5：拿掉 S 號。`meta.season` 是**經濟週期**（12 週一輪，由 days 導出），
-                   與賽事賽季（錨在建立當天）本來就會逐季偏移，兩個 S 並排會互相矛盾。
-                   全案唯一顯示的「賽季」在賽事頁；這裡只講週期。 */}
-              <span style={{ color: GC.gray, fontSize: 10 }}>第 {wk.week} 週・第 {wk.dayOfWeek}/7 天</span>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
-              {[
-                { k: "收入", v: wk.income, c: GC.green, sign: "+" },
-                { k: "支出", v: wk.expense, c: GC.red, sign: "−" },
-                { k: "淨額", v: Math.abs(wk.net), c: wk.net >= 0 ? GC.green : GC.red, sign: wk.net >= 0 ? "+" : "−" },
-              ].map((x) => (
-                <div key={x.k} style={{ background: GC.card2, borderRadius: 9, padding: "7px 8px" }}>
-                  <div style={{ color: GC.gray, fontSize: 9, marginBottom: 2 }}>{x.k}</div>
-                  <div style={{ color: x.c, fontSize: 13, fontWeight: 800 }}>{x.sign}{money(x.v)}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ color: GC.gray, fontSize: 9 }}>
-              合約狀態：{sponsor
-                ? <span style={{ color: profile.activeSponsor?.weeksLeft <= 2 ? GC.gold : GC.green, fontWeight: 700 }}>
-                    {sponsor.name} · 剩 {profile.activeSponsor?.weeksLeft ?? 0} 週{profile.activeSponsor?.weeksLeft <= 2 ? "（即將到期）" : ""}
-                  </span>
-                : <span>無合約中的贊助商</span>}
-              <span style={{ marginLeft: 8 }}>· 近期戰績 {Math.round((wk.form ?? 0.5) * 100)}%</span>
-              <span style={{ marginLeft: 8 }}>· {wk.scenarioName}</span>
-            </div>
-            {/* 首頁只做摘要＋入口：資金警告在這裡露一個提示，詳細的四週現金預測
-                在財務頁與本週收支集中呈現（避免首頁塞第二張大卡）。 */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
-              {fc.level !== "ok" && (
-                <span style={{
-                  fontSize: 9, fontWeight: 800, borderRadius: 6, padding: "2px 7px",
-                  background: fc.level === "danger" ? "rgba(248,113,113,0.18)" : "rgba(251,191,36,0.18)",
-                  color: fc.level === "danger" ? GC.red : GC.gold,
-                }}>
-                  {fc.level === "danger" ? `⚠ 第 ${fc.bankruptWeek} 週資金見底` : "⚠ 本週淨額為負"}
-                </span>
-              )}
-              <span style={{ marginLeft: "auto", color: GC.gray, fontSize: 9 }}>財務頁看未來 {fc.weeks.length} 週預測 ›</span>
-            </div>
-          </button>
-          {/* 財務 + 贊助 */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <button onClick={() => sel("finance")} style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 14, padding: "13px 14px", cursor: "pointer", textAlign: "left" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}><span style={{ fontSize: 17, color: GC.green }}>💲</span><span style={{ color: "white", fontSize: 14, fontWeight: 700 }}>財務</span><span style={{ marginLeft: "auto", background: "rgba(52,211,153,0.15)", color: GC.green, fontSize: 10, fontWeight: 700, borderRadius: 6, padding: "2px 6px" }}>{T.gold}</span></div>
-              <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 48 }}>{finBars.map((v, i) => (<div key={i} style={{ flex: 1, height: `${v * 10}%`, background: i % 2 ? GC.red : GC.green, borderRadius: 2, opacity: 0.85 }} />))}</div>
-              <div style={{ color: GC.gray, fontSize: 8, textAlign: "center", marginTop: 3 }}>近 9 週收支</div>
-            </button>
-            <button onClick={() => sel("sponsor")} style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 14, padding: "13px 14px", cursor: "pointer", textAlign: "left" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}><span style={{ fontSize: 17, color: GC.gold }}>🤝</span><span style={{ color: "white", fontSize: 14, fontWeight: 700 }}>贊助</span></div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 60 }}><div style={{ width: 60, height: 60, borderRadius: "50%", background: `radial-gradient(circle,${sponsor ? sponsor.color + "44" : "#1a2a3a"},#0a0b0f)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, border: `2px solid ${sponsor ? sponsor.color : "#2a4a5a"}` }}>{sponsor?.emoji ?? "🤝"}</div></div>
-              <div style={{ color: GC.gray, fontSize: 8, textAlign: "center", marginTop: 3 }}>
-                {sponsor ? `${sponsor.name} · 剩 ${profile.activeSponsor?.weeksLeft ?? 0} 週` : "無贊助商"}
-              </div>
-            </button>
-          </div>
-          {/* 選手 + 招募 */}
-          <Tile emoji="👥" label="選手" color={GC.blue} onClick={() => sel("roster")} right={<div style={{ display: "flex", gap: 6 }}><span style={{ display: "flex", alignItems: "center", gap: 3, background: GC.card2, color: "white", fontSize: 11, fontWeight: 700, borderRadius: 7, padding: "3px 8px" }}>👥 {T.players}</span><span style={{ display: "flex", alignItems: "center", gap: 3, background: GC.card2, color: GC.gold, fontSize: 11, fontWeight: 700, borderRadius: 7, padding: "3px 8px" }}>🕐 {T.days}天</span></div>} />
-          <Tile emoji="➕" label="招募" color={GC.green} onClick={() => sel("recruit")} />
-        </div>
-        {/* 底部遊戲模式卡片 */}
-        <div style={{ padding: "16px 14px 24px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-          {modes.map((m) => (
-            <button key={m.id} onClick={() => sel(m.id)} onMouseEnter={(e) => (e.currentTarget.style.borderColor = m.color)} onMouseLeave={(e) => (e.currentTarget.style.borderColor = m.color + "33")}
-              style={{ background: `linear-gradient(180deg,${m.color}11,${GC.card})`, border: `1px solid ${m.color}33`, borderRadius: 12, padding: "14px 8px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, transition: "all 0.18s" }}>
-              <span style={{ fontSize: 22, color: m.color }}>{m.emoji}</span>
-              <span style={{ color: "white", fontSize: 13, fontWeight: 800 }}>{m.name}</span>
-              <span style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(0,0,0,0.3)", color: GC.gray, fontSize: 9, borderRadius: 6, padding: "2px 7px" }}>👁 {m.fans}</span>
-              <span style={{ color: m.color, fontSize: 8.5, fontWeight: 600 }}>{m.badge}</span>
-            </button>
-          ))}
-        </div>
-        {/* 更多功能入口 */}
-        <div style={{ padding: "0 14px 28px" }}>
-          <div style={{ color: GC.gray, fontSize: 10, fontWeight: 700, marginBottom: 8, letterSpacing: "0.05em" }}>更多功能</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-            {more.map((x) => (
-              <button key={x.id} onClick={() => sel(x.id)} onMouseEnter={(e) => (e.currentTarget.style.borderColor = GC.purp + "66")} onMouseLeave={(e) => (e.currentTarget.style.borderColor = GC.line)}
-                style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 10, padding: "11px 6px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-                <span style={{ fontSize: 16, color: GC.gray }}>{x.i}</span><span style={{ color: "#d4d4d8", fontSize: 9.5, fontWeight: 600 }}>{x.n}</span>
-              </button>
-            ))}
-          </div>
+
+        <TeamHero team={{ ...team, gold: finance.funds }} meta={meta} unread={unread} xpPercent={xpPercent} onInbox={() => sel("notify")} />
+
+        <div className="esmo-dashboard__layout">
+          <main className="esmo-dashboard__main-column">
+            <ActiveMatchSection hasActiveMatch={Boolean(activeMatchView)} onResumeActive={onResumeActive} />
+            <NextActions actions={actions} />
+            <ClubStatus profile={profile} players={players} developmentPoints={developmentPoints} wk={wk} fc={fc} finBars={finBars} onFinance={() => sel("finance")} onSponsor={() => sel("sponsor")} onRoster={() => sel("roster")} />
+          </main>
+
+          <aside className="esmo-dashboard__rail">
+            <Compete modes={modeItems} onSelect={sel} />
+            <Utility items={utilityItems} onSelect={sel} />
+            <div className="esmo-footer-note">ESMO GLOBAL / COMMAND DECK v1</div>
+          </aside>
         </div>
       </div>
+      )}
+
       {modal && <Modal modal={modal} onClose={() => setModal(null)} />}
     </div>
   );
 }
 
-// ── 尚未 Component 化的 Legacy 模組：誠實佔位，不以假資料充數 ──────────
-//   Sprint21 已恢復：收件匣 / 財務 / 贊助 / 戰隊 / 名單 / 訓練 / 招募 / 選手檔案
-//   Sprint22 已接：CS（CsMatchScreen + EsportsFPS3D）
-//   仍待恢復：天賦(TalentModule) / 商店(EquipModule) / 經營儀表板(DashModule)
 function Modal({ modal, onClose }) {
   return (
-    <div onClick={onClose} style={{ position: "absolute", inset: 0, zIndex: 30, background: "rgba(4,8,16,0.72)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 340, maxHeight: "80%", overflow: "auto", background: GC.card, border: `1px solid ${GC.blue}59`, borderRadius: 14, padding: "16px 18px" }}>
-        <div style={{ fontSize: 16, fontWeight: 900, color: "#e5e7eb", marginBottom: 10 }}>{modal.name}</div>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", lineHeight: 1.7 }}>
-          <b style={{ color: GC.gold }}>{modal.name}</b> 為 Legacy 模組，尚未 Component 化至主幹。待其 Adapter 接入 Store 後於此顯示真資料，目前不以假資料佔位。
-        </div>
-        <button onClick={onClose} style={{ marginTop: 14, width: "100%", background: "rgba(255,255,255,0.08)", border: `1px solid ${GC.line}`, borderRadius: 8, padding: "8px", color: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer" }}>關閉</button>
+    <div className="esmo-modal-backdrop" role="presentation" onClick={onClose}>
+      <div className="esmo-modal" role="dialog" aria-modal="true" aria-labelledby="esmo-modal-title" onClick={(event) => event.stopPropagation()}>
+        <h2 className="esmo-modal__title" id="esmo-modal-title">{modal.name}</h2>
+        <p className="esmo-modal__body"><strong>{modal.name}</strong> 為目前尚未 Component 化的 Legacy 模組。首頁保留入口與誠實狀態，不用假資料冒充已完成的功能。</p>
+        <button className="esmo-modal__close" type="button" onClick={onClose}>關閉</button>
       </div>
     </div>
   );

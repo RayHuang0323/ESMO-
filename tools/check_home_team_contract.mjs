@@ -67,11 +67,23 @@ function routeMarker(screen, component) {
   ));
 }
 
+//  ⚠ 2026-08-22 integration：main 的 Mobile Home v2 把首頁改成資料驅動，
+//    磚不再是 JSX 屬性（`label="戰隊發展"`）而是物件。原本的 marker grep 那個字面，
+//    改版後必然轉紅 —— 但**契約本身沒有被違反**，壞掉的只是它的形狀。
+//
+//  改版後首頁有兩種面，而契約只管前者：
+//    · **主要動作面**（`priority` / `candidateActions`）用 `title:`
+//    · **次級導覽清單**（`groups` / `utilityItems`）用 `label:`
+//  所以 marker 跟著分辨這兩種形狀，而不是放寬成「出現這幾個字就算過」——
+//  次級清單裡的 `label: "天賦"` 依契約本來就允許（那是導覽入口，
+//  不是首頁的主要投資動線）。
 function dashboardContract(source) {
+  const primary = (zh) =>
+    source.includes(`title: "${zh}"`) || source.includes(`label="${zh}"`);
   return {
     primaryRoute: source.includes('development: "teamDevelopment"'),
-    primaryLabel: source.includes('label="戰隊發展"'),
-    legacyPrimaryLabel: source.includes('label="天賦"'),
+    primaryLabel: primary("戰隊發展"),
+    legacyPrimaryLabel: primary("天賦"),
   };
 }
 
@@ -142,9 +154,13 @@ check("profileStore keeps Competition view (moba-defaulted) and v2 sync",
   && has("profileStore", 'const DEFAULT_GAME_MODE = "moba"')
   && has("profileStore", "_syncSeasonStateV2"));
 
+//  ⚠ 兩種實作形狀都要變異，否則 sentinel 會在改版後變成 no-op：
+//    Mobile Home v2 的主要動作面用 `title:`，舊版用 JSX 屬性 `label=`。
+//    只變異其中一種的話，另一種還在，`primaryLabel` 仍為 true ⇒ sentinel 失去鑑別力。
 const mutatedDashboard = dashboard
   .replace('development: "teamDevelopment"', 'development: "talentPick"')
-  .replace('label="戰隊發展"', 'label="天賦"');
+  .replaceAll('title: "戰隊發展"', 'title: "天賦"')
+  .replaceAll('label="戰隊發展"', 'label="天賦"');
 const mutatedDashboardContract = dashboardContract(mutatedDashboard);
 check(
   "mutation sentinel catches Team Development route / label downgrade",

@@ -11812,3 +11812,49 @@ npm run build   ✓ built in 11.14s
 
 ⚠ **兩支既有紅燈，皆非本輪造成**（M3-3 已用基線 worktree 逐條確認）：
 `check_season_state_v2_migration_q7b.mjs`、`check_q7a_3f1_career_final.mjs` 40/42。
+
+---
+
+<!-- merge 接縫：以上為 integration/cs-cross-ai 的 CS Season M0→M4-C；
+     以下為 origin/main 的 Codex CS-MR12 段落。兩側都是各自新增，無互相改寫。 -->
+
+## CS MR12 Quick Finish targeted debugging（2026-08-22）
+
+### Root cause
+
+- Production symptom was a synchronous UI stall rather than a thrown error：Quick Finish 的舊流程 `setPlaying(false)` 後直接 `setFIdx(total - 1)`，使 final frame、replay／animation／R3F 更新及 progress snapshot effect 在同一個 terminal transition 中處理；MR12 frame 數增加後，main thread 可能被長時間佔滿，`matchOver`／`onComplete` 因而無法及時完成。
+- 舊 verifier 主要檢查 simulator、source shape 與 deterministic result，且原本把 `setFIdx(total - 1)` 當成 Quick Finish 必要行為；它沒有對 UI terminal transition 設定 bounded completion timing，也沒有覆蓋 midgame／OT Quick Finish 的 browser path。
+
+### Minimal fix
+
+- `src/battle/fps/EsportsFPS3D.jsx` 的 Quick Finish 現在直接使用同一次 `simulateFps()` 產生的 `matchResult`，由 `completeOnce()` 呼叫既有 `onComplete(matchResult)`；不重算 winner／score，不跳過 `MatchResult`，且 Natural completion 也共用同一個 exactly-once gate。
+- Quick Finish 不再自動 seek final frame；完成後提供明確 terminal seek 控制，讓 Replay final frame 仍可查看。MR12、halftime、OT、economy、damage、AI、weapon balance 與其他模式均未修改。
+
+### Verification
+
+- `tools/check_cs_match_completion.mjs`：`36/36 PASS`，包含 regulation、halftime、接近 `12:12`、OT seed `7`（`31:28`）、same-seed Natural／Quick Finish winner／score／player stats fingerprint 與 exactly-once。
+- `tools/browser_check_cs_completion.mjs`：新增 production preview、midgame、timing 與 terminal-seek coverage；production build browser regression 的 desktop natural、desktop opening Quick Finish、desktop midgame Quick Finish、390px Quick Finish 均 PASS，無 console/page error，無水平溢位。Quick Finish 確認至 Result 約 `60–115ms`（依 scenario／viewport）。
+- 390px 僅為 browser emulation，未宣稱真機觸控、FPS 或視覺體感完成。
+
+### Git boundary
+
+- 本次只建立 local commit，依使用者要求不 push、不 deploy；是否重新部署留待 review 後另行決定。
+
+## CS MR12／Quick Finish docs-only closure（2026-08-22）
+
+### Closure result
+
+- CS 6:6 卡死已修復；MR12／halftime／OT 已完成；Quick Finish freeze 已修復。
+- Production Natural playback PASS；production opening Quick Finish PASS。
+- OT 1,000 deterministic seeds distribution 正常，沒有證據顯示結構性長 OT。
+- gameplay deployment SHA：`d9832478c8aaccc1d2f23eb3fb5a2245672547fe`。
+
+### Non-blocking production acceptance residual
+
+- midgame Quick Finish production smoke：尚未補，標記為 non-blocking residual，不是 gameplay bug。
+- 390px Quick Finish production smoke：尚未補，標記為 non-blocking residual，不是 gameplay bug。
+
+### Git boundary
+
+- 本節是 docs-only closure；沒有新增或修改 gameplay、verifier、config、MR12、OT、經濟、AI、傷害、武器或 Competition／Season。
+- push 後的 `origin/main` SHA 為本輪 closure SHA；gameplay deployment lineage 仍以 `d9832478c8aaccc1d2f23eb3fb5a2245672547fe` 為準。

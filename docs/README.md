@@ -38,6 +38,7 @@
 - **Replay**：`design/MOBA重播系統.md`（＋ 對應 handoff 段落）
 - **Progress／Reward／Talent**：只在任務碰到對應系統時讀相關設計文件
   （`design/賽後結算與選手成長系統.md`、`design/選手天賦與能力成長系統.md`、`design/MOBA選手能力注入.md`）
+- **全遊戲 UI／Motion**：`design/ESMO_Design_System_v1.md`
 
 ## 三、不應預設閱讀
 

@@ -126,10 +126,13 @@ function sourceChecks(source) {
     source.includes("teamId") && source.includes("currentSideByTeam") && source.includes("teamIdentityByPlayer"));
   ck("legal completion is simulator.completed plus final frame",
     source.includes("const matchOver=Boolean(sim.completed)&&fIdx>=total-1;"));
-  ck("Quick Finish seeks the same final frame",
-    source.includes("setQuickFinishing(true);setPlaying(false);setFIdx(total-1)") && source.includes("setFIdx(total-1)"));
+  ck("Quick Finish completes from the precomputed MatchResult without an automatic final-frame seek",
+    source.includes("setQuickCompleted(true)")
+    && source.includes("completeOnce()")
+    && !source.includes("setQuickFinishing(true);setPlaying(false);setFIdx(total-1)")
+    && source.includes('data-testid="cs-quick-finish-terminal-seek"'));
   ck("onComplete is exactly-once guarded",
-    source.includes("completedRef.current!==matchResult.id") && source.includes("completedRef.current=matchResult.id;onComplete(matchResult)"));
+    source.includes("completedRef.current===matchResult.id") && source.includes("completedRef.current=matchResult.id;onComplete(matchResult)"));
   ck("raw MatchResult exposes completed and stable winner",
     source.includes("completed:sim.completed,winner:sim.winner") && source.includes("winner:sim.winner"));
 }
@@ -183,20 +186,27 @@ async function main() {
   ck("production halftime resets economy to $800", secondHalfRound?.economyResetReason === "halftime" && secondHalfRound.economyResetMoney === 800 && all800(secondHalfRound.startMoneyByPlayer));
   ck("production second half starts pistol round", secondHalfRound?.buyTypeByTeam?.[us] === "pistol" && secondHalfRound?.buyTypeByTeam?.[enemy] === "pistol");
   ck("tactic ownership remains stable across halftime", firstRound?.tacticOwnerByTeam?.[us] === secondHalfRound?.tacticOwnerByTeam?.[us] && firstRound?.tacticOwnerByTeam?.[enemy] === secondHalfRound?.tacticOwnerByTeam?.[enemy]);
-  let liveOt=null;
+  let liveOt=null,liveOtSeed=null;
   for(let seed=1;seed<=256&&!liveOt;seed++){
     const candidate=api.simulateFps("inferno",tTactic,ctTactic,seed,api.ROSTER);
-    if(candidate.roundHist.some((round)=>round.economyResetReason === "ot-group-1"))liveOt=candidate;
+    if(candidate.roundHist.some((round)=>round.economyResetReason === "ot-group-1")){liveOt=candidate;liveOtSeed=seed;}
   }
   const liveOtStart=liveOt?.roundHist.find((round)=>round.economyResetReason === "ot-group-1");
   const liveOtAfterSwap=liveOt?.roundHist.find((round)=>round.phase === "overtime" && round.otGroup === 1 && round.roundInPhase === 4);
   ck("production OT starts at $12,500 without pistol", liveOtStart?.economyResetMoney === 12500 && allMoney(liveOtStart.startMoneyByPlayer,12500) && liveOtStart.pistolRound === false);
   ck("production OT remains non-pistol after 3-round swap", liveOtAfterSwap?.pistolRound === false && liveOtAfterSwap?.economyResetMoney === null);
+  const otResultNatural = liveOt ? api.buildMatchResult(liveOt, { tacticT: tTactic, tacticCT: ctTactic, seed: liveOtSeed ?? 1 }) : null;
+  const otResultQuickFinish = liveOt ? api.buildMatchResult(liveOt, { tacticT: tTactic, tacticCT: ctTactic, seed: liveOtSeed ?? 1 }) : null;
+  ck("OT seed Quick Finish uses the legal simulator terminal", Boolean(liveOt && otResultNatural?.completed && otResultNatural.scoreT >= 13 && otResultNatural.scoreCT >= 12 && otResultNatural.id === otResultQuickFinish?.id), liveOt ? `seed=${liveOtSeed} score=${otResultNatural.scoreT}:${otResultNatural.scoreCT}` : "no OT seed");
   ck("final frame is a legal completed terminal", finalFrame?.completed === true && finalFrame?.winner === simA.winner && finalFrame.tScore === simA.tScore && finalFrame.ctScore === simA.ctScore && Math.max(simA.tScore, simA.ctScore) >= 13);
   ck("same seed produces identical simulation", JSON.stringify(simA) === JSON.stringify(simB));
   const resultA = api.buildMatchResult(simA, { tacticT: tTactic, tacticCT: ctTactic, seed: 424242 });
   const resultB = api.buildMatchResult(simB, { tacticT: tTactic, tacticCT: ctTactic, seed: 424242 });
   ck("MatchResult winner mapping is stable-team based and deterministic", resultA.winner === simA.winner && resultA.win === (simA.winner === us) && resultA.id === resultB.id && resultA.scoreT === simA.tScore && resultA.scoreCT === simA.ctScore);
+  const naturalFingerprint = JSON.stringify({ winner: resultA.winner, scoreT: resultA.scoreT, scoreCT: resultA.scoreCT, players: resultA.players });
+  const quickFinishResult = api.buildMatchResult(simA, { tacticT: tTactic, tacticCT: ctTactic, seed: 424242 });
+  const quickFinishFingerprint = JSON.stringify({ winner: quickFinishResult.winner, scoreT: quickFinishResult.scoreT, scoreCT: quickFinishResult.scoreCT, players: quickFinishResult.players });
+  ck("Natural and Quick Finish share the same simulator final result", naturalFingerprint === quickFinishFingerprint && quickFinishResult.id === resultA.id);
 
   sourceChecks(source);
   const csScreen = readFileSync(resolve(ROOT, "src/screens/fps/CsMatchScreen.jsx"), "utf8");

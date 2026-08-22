@@ -16,6 +16,7 @@ const VITE_PORT = 5362;
 const CDP_PORT = 9382;
 const APP = `http://localhost:${VITE_PORT}/ESMO-/`;
 const onlyScenario = process.argv.find((arg) => arg.startsWith("--only="))?.slice(7) ?? null;
+const externalServer = process.argv.includes("--external-server");
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const waitFor = async (chrome, expression, timeoutMs, what) => {
@@ -73,6 +74,7 @@ const readViewport = (chrome) => chrome.evaluate(`return {
   bodyOverflow: document.body.scrollWidth > window.innerWidth + 1,
   controls: Boolean(document.querySelector('[data-testid="cs-match-speed-controls"]')),
   quickFinish: Boolean(document.querySelector('[data-testid="quick-finish-match"]')),
+  terminalSeek: Boolean(document.querySelector('[data-testid="cs-quick-finish-terminal-seek"]')),
   resultAction: [...document.querySelectorAll("button")].some((node) =>
     (node.innerText || "").includes("查看賽後戰報")),
   reportAction: [...document.querySelectorAll("button")].some((node) =>
@@ -144,9 +146,34 @@ const runScenario = async (dev, scenario) => {
       // in CPU headless Chrome. This is a harness timeout, not a product shortcut.
       await waitFor(chrome, `[...document.querySelectorAll("button")].some((node) => (node.innerText || "").includes("查看賽後戰報"))`, 600_000, `${scenario.label} natural playback result`);
     } else {
+      if (scenario.midgame) {
+        const midgame = await chrome.evaluate(`
+          const input = document.querySelector('input[type="range"]');
+          if (!input) return { ok: false };
+          const max = Number(input.max || 0);
+          const value = Math.max(1, Math.floor(max / 2));
+          const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+          setValue?.call(input, String(value));
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+          return { ok: true, value, max };
+        `);
+        if (!midgame?.ok) throw new Error(`${scenario.label} mid-game seek unavailable`);
+        await waitFor(chrome, `document.body.innerText.includes("${midgame.value + 1}/${midgame.max + 1} 格")`, 5_000, `${scenario.label} mid-game seek`);
+      }
+      const quickFinishStartedAt = Date.now();
       await chrome.evaluate(`window.confirm = () => true; return true;`);
       await chrome.evaluate(`document.querySelector('[data-testid="quick-finish-match"]')?.click(); return true;`);
       await waitFor(chrome, `[...document.querySelectorAll("button")].some((node) => (node.innerText || "").includes("查看賽後戰報"))`, 20_000, `${scenario.label} Quick Finish result`);
+      const quickFinishMs = Date.now() - quickFinishStartedAt;
+      const terminal = await readViewport(chrome);
+      if (!terminal.terminalSeek) throw new Error(`${scenario.label} terminal seek missing after Quick Finish: ${JSON.stringify(terminal)}`);
+      scenario.terminalSeekAvailable = terminal.terminalSeek;
+      const totalFrames = Number(terminal.frameText?.match(/\/(\d+)/)?.[1] ?? 0);
+      if (!totalFrames) throw new Error(`${scenario.label} terminal frame count missing: ${JSON.stringify(terminal)}`);
+      await chrome.evaluate(`document.querySelector('[data-testid="cs-quick-finish-terminal-seek"]')?.click(); return true;`);
+      await waitFor(chrome, `document.body.innerText.includes("${totalFrames}/${totalFrames} 格")`, 5_000, `${scenario.label} terminal frame seek`);
+      scenario.quickFinishMs = quickFinishMs;
     }
 
     const result = await readViewport(chrome);
@@ -163,7 +190,7 @@ const runScenario = async (dev, scenario) => {
     }
     const errors = browserErrorSummary(chrome, consoleStart, pageErrorStart);
     if (errors.console.length || errors.page.length) throw new Error(`${scenario.label} console errors: ${JSON.stringify(errors)}`);
-    console.log(`PASS ${scenario.label} :: battle=${JSON.stringify(battle)} result=${JSON.stringify(result)} report=${JSON.stringify(report)}`);
+    console.log(`PASS ${scenario.label} :: quickFinishMs=${scenario.quickFinishMs ?? "n/a"} terminalSeekAvailable=${scenario.terminalSeekAvailable ?? "n/a"} battle=${JSON.stringify(battle)} result=${JSON.stringify(result)} report=${JSON.stringify(report)}`);
     return true;
   } finally {
     if (chrome) await chrome.close();
@@ -174,10 +201,11 @@ let dev = null;
 let failures = 0;
 let scenarioCount = 0;
 try {
-  dev = await startDevServer({ port: VITE_PORT });
+  if (!externalServer) dev = await startDevServer({ port: VITE_PORT });
   const scenarios = [
     { label: "desktop-1920x1080-natural", width: 1920, height: 1080, mobile: false, natural: true },
     { label: "desktop-1366x768-quick-finish", width: 1366, height: 768, mobile: false, natural: false },
+    { label: "desktop-1366x768-quick-finish-midgame", width: 1366, height: 768, mobile: false, natural: false, midgame: true },
     { label: "mobile-390x844-quick-finish", width: 390, height: 844, mobile: true, natural: false },
   ].filter((scenario) => !onlyScenario || scenario.label === onlyScenario);
   scenarioCount = scenarios.length;
