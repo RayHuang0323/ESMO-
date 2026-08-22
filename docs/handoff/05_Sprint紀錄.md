@@ -11858,3 +11858,45 @@ npm run build   ✓ built in 11.14s
 
 - 本節是 docs-only closure；沒有新增或修改 gameplay、verifier、config、MR12、OT、經濟、AI、傷害、武器或 Competition／Season。
 - push 後的 `origin/main` SHA 為本輪 closure SHA；gameplay deployment lineage 仍以 `d9832478c8aaccc1d2f23eb3fb5a2245672547fe` 為準。
+
+## CS Season Product MVP Production Release（2026-08-22）
+
+### Release 事實
+
+| 項目 | 值 |
+|---|---|
+| branch / HEAD | `main` `6e07439`（＝ `origin/main`，working tree clean） |
+| 來源 | `integration/cs-cross-ai` `f91509c` **fast-forward** 進 main，之後補 roster unlisted 修復 `6e07439` |
+| Actions run | `32576935125` — `Deploy Vite site to GitHub Pages`，**completed / success**，2026-08-22T13:50:29Z |
+| 正式站 | <https://rayhuang0323.github.io/ESMO-/>，HTTP 200 |
+
+### 部署前 gate（全部實跑）
+
+- `node tools/check_competition_release_gate.mjs` → **passed 11/11、failed 0/11**
+  （v2_runtime／v2_active_focus／v2_sealing_m2／circuit_points／multi_event／career_final／
+  asia_finals／team_honors／q6／season_recap／build）
+- `node tools/check_cs_match_completion.mjs` → **36/36 PASS**
+- `node tools/check_home_team_contract.mjs` → **40/40 PASS**
+- `node tools/check_roster_unlisted_lineup.mjs` → **25/25 PASS**
+- `npm run build` → `✓ built in 15.74s`，exit 0
+
+### 正式站 smoke（8/8 PASS）
+
+Home、CS 賽前入口、CS 賽事中心、聯賽 standings、Major bracket、Season Recap、
+Roster unlisted 操作、MOBA 入口全部正常；console 無 runtime error。
+逐項證據見 `08_目前待辦與風險.md` 首節的表。
+
+其中 Roster unlisted 是這次 release 最後一個 blocker 的正式站複驗：
+把先發 `Kaiser` 設成「未登錄」後 —— 不 crash、`lineup.b1` 變成 `null`、
+`rosterTier` 為 `unlisted`，**reload 後仍然離開先發**，MOBA 賽前配置頁該席位顯示「未指派」。
+`normalizeLineup` 的 pass-2 遷移回填對舊存檔仍然照舊（`check_roster_unlisted_lineup` §5 守著）。
+
+### 本輪邊界
+
+- 依使用者要求：**不修任何 smoke 過程中新發現的小問題**；本輪沒有發現 P0／P1，因此也沒有 hotfix。
+- CS 單場 round／half／OT／scoreboard／`simulateFps`（MR12）屬 Codex ownership，未修改。
+- 本節之後只做 docs 更新（00／04／05／08）＋ commit／push，沒有再動任何 gameplay 或 contract。
+
+### 結論
+
+**CS Season Product MVP 正式 CLOSED、正式上線。** production SHA `6e07439`。

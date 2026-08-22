@@ -1,5 +1,38 @@
 # 04 Roadmap
 
+## 🚀 CS Season Product MVP 正式上線（2026-08-22）
+
+**狀態：✅ 已部署、已在正式站 smoke 通過、正式 CLOSED。**
+
+| 項目 | 值 |
+|---|---|
+| production SHA | **`6e07439`**（main，fast-forward 自 `integration/cs-cross-ai` `f91509c`） |
+| Actions run | `32576935125` — build ✅／deploy ✅ |
+| 正式站 | <https://rayhuang0323.github.io/ESMO-/>（HTTP 200） |
+| 部署日 | 2026-08-22 |
+
+| Milestone | 內容 | verifier |
+|---|---|---|
+| M0 | schema v11 `competitionByMode.{moba,cs}`（`competition` 降為唯讀 alias） | `cs_season_contract` 71/71 |
+| M1–M2 | CS 聯賽 lifecycle（賽程／standings／封存） | `cs_season_lifecycle` 53/53 |
+| M3-1 | CS 年度 Major：Top 4 晉級 ＋ 4 隊單淘汰 | `cs_major` 74/74 |
+| M3-2 | **BO3 series 語義**（先拿 2 張地圖；1 Fixture = 1 FixtureOutcome） | `cs_series` 46/46 |
+| M3-3 | CS 年度冠軍 honors ＋ CS 名次獎金政策（`cs_major` prize table） | `cs_major_honors_award` 45/45 |
+| M4-A | **可實際遊玩的 BO3**（每張地圖走既有 CS MatchSession；series 掛 fixture-scoped ledger） | `cs_playable_series` 99/99 ＋ 瀏覽器 7/7 |
+| M4-B | CS Season Recap ＋ rollover ＋ real-save lifecycle | `cs_season_recap_lifecycle` 64/64 |
+| M4-C | CS 賽事中心（Competition Hub，唯讀；手機版可讀） | `cs_competition_hub` 31/31 |
+
+**Release gate：** `check_competition_release_gate` **11/11**、`check_cs_match_completion` **36/36**、
+`check_home_team_contract` **40/40**、`check_roster_unlisted_lineup` **25/25**、build exit 0。
+
+**跨模型邊界：** CS 單場 round／half／overtime／scoreboard／`simulateFps`（MR12）屬 Codex ownership，
+本產品線完全未修改；Season 層只認 series outcome（地圖勝場數），不解讀單張地圖的 round score。
+
+### 下一階段（尚未開始）
+
+- CS／MOBA 雙賽制的賽季曆整合（同一年度內兩條賽事線的排程與衝突規則）。
+- CS Major 之外的次級賽事（Minor／資格賽）——目前 roadmap 上尚未排期。
+
 ## MOBA Combat AI 封版（2026-08-10）
 
 **狀態：✅ 已封版。** Release Gate 8/8 全綠（首次），combat credibility 45/45。
