@@ -46,7 +46,10 @@ import { totalXpForLevel, levelFromTotalXp } from "./progress/playerLevel.js";
 import { makeGrowthEntry, appendGrowth, GROWTH_SOURCES, GROWTH_LOG_CAP } from "./progress/growthLog.js";
 import { sanitizeTalents } from "./contracts/playerTalentState.js";
 import { applyTalentPurchase } from "./talents/purchasePlayerTalent.js";
-import { DEFAULT_LINEUP, normalizeLineup, assignSeat } from "./contracts/matchLineup.js";
+//  ⚠ `ENGINE_SEATS` 是 `setRosterTier` 在用的（把移出名單的人從 MOBA 五席清掉）。
+//    它一直缺在這一行 ⇒ 那條路徑一被執行就 `ReferenceError`。對稱的 `CS_SEATS`
+//    從 `matchSquad.js` 進來是好的，漏的只有這一個。**只補 import，不動任何邏輯。**
+import { DEFAULT_LINEUP, ENGINE_SEATS, normalizeLineup, assignSeat } from "./contracts/matchLineup.js";
 import { WAN as WAN_UNIT } from "./economy/units.js";
 import { deriveTime } from "./economy/timeline.js";
 import { advanceDaysInState, buildWeekLines, recentForm } from "./economy/weeklySettlement.js";
