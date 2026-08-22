@@ -2069,3 +2069,29 @@
     font-size: 11px;
   }
 }
+
+/* ── 首頁 IA 去重：待辦為空時的誠實狀態 ─────────────────────────────────
+   「接下來做什麼」以前永遠是滿的（固定塞常用捷徑），所以它與「戰隊狀態」
+   講同一件事。現在沒事就說沒事——這兩個 class 就是那個「沒事」的樣子。 */
+
+.esmo-action-empty {
+  padding: 18px 20px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--esmo-muted);
+}
+
+.esmo-mobile-primary--calm {
+  display: block;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: var(--esmo-surface);
+  border: 1px solid var(--esmo-line);
+}
+
+.esmo-mobile-primary--calm p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--esmo-muted);
+}

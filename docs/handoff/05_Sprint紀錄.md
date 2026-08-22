@@ -12485,3 +12485,77 @@ CS 晉級線仍畫在 `csMajorLine.topN`，兩邊皆無 body 橫向捲動。
 - 修法限於 `src/battle/fps`：`effectiveRoster` 同時餵給 `simulateFps` 與 `FpsScene3D`，pool 依 map / roster identity 重建；identity miss 與 authoritative death 分開處理。
 - 新增 `tools/check_cs_a2_renderer_identity.mjs`，涵蓋 substitution、rematch、map transition、BO3 Map 1→2→3 與 death / identity miss contract。
 - 舊 `78f7479` 未直接 cherry-pick；未搬回舊 `CsPrepScreen.jsx` 或 Competition / Season 接線。
+---
+
+## Home IA — 首頁重複入口與資訊架構去重（2026-08-23）
+
+只動首頁的**入口與呈現**。未改路由、未刪功能本體、未碰 Competition Hub／Training
+邏輯／Store contract／Player progression。基底：`main` @ `29eb712`。
+
+### 根因
+
+「接下來做什麼」以前是**固定五張常用捷徑取四張**，所以永遠是滿的——不管有沒有事。
+結果它與「戰隊狀態」在講同一件事（選手／財務／贊助），而「現在要處理什麼」這個
+責任反而沒有人扛。手機更嚴重：`roster` 同時出現在快捷行動、戰隊快照、戰隊 sheet
+**三個地方**；競技 rail 與競技 sheet 的內容一字不差。
+
+### 移除的重複入口（功能與路由都保留）
+
+| 入口 | 桌機 | 手機 | 保留在哪 |
+|---|---|---|---|
+| 天賦 | Utility 移除 | 戰隊 sheet 移除 | 選手詳情頁的天賦入口；`talentPick`／`playerTalent` 路由不動 |
+| 贊助商 | Utility 移除 | 更多 sheet 移除 | 戰隊狀態／戰隊快照的贊助摘要卡（本來就能直接進贊助頁） |
+| 儀表板 | Utility 移除 | 更多 sheet 移除 | — （指向未接線的舊版密集儀表板，首頁本身就是儀表板） |
+| 選手狀態 | Next Actions 移除固定卡 | 快捷行動移除固定卡 | 戰隊狀態／戰隊快照的摘要 |
+| 訓練中心／球探招募 | Next Actions 移除固定卡 | 快捷行動移除固定卡 | Utility／戰隊 sheet |
+| 競技 sheet | — | 底部 nav「競技」改為**捲到競技 rail** | 競技 rail（三個模式入口） |
+
+`NAV.talent` 一併移除（首頁不再有指向它的入口）。**商店佔位保留**——Shop Domain
+在設計文件是第二階段的正式規劃，誠實佔位是專案既有慣例。
+
+### Next Actions 的最終條件
+
+只放**有訊號才成立**的待辦，訊號全部來自既有資料，這裡不新增任何規則：
+
+| 待辦 | 訊號來源 |
+|---|---|
+| 處理資金提醒 | `cashForecast().level !== "ok"` |
+| 處理收件匣 | `inbox[].unread` |
+| 戰隊發展 | `teamDevelopment.availablePoints > 0` |
+| 選手傷停／體力過低 | `isInjured` / `isExhausted`（`platform/condition` 既有判定） |
+
+沒有待辦時顯示「目前沒有急需處理的事項。」，不硬塞捷徑。
+
+**桌機與手機吃同一份 `todos`**：桌機 `todos.slice(0,4)`，手機第一張當主要行動、
+其餘進「其他待辦」（空就整段不渲染）。兩邊不會再各自長出一套「該顯示什麼」的規則。
+
+### 驗收
+
+**新增 `tools/browser_check_home_ia.mjs`（21/21，1280 與 390 各一輪）**
+
+驗的是「同一件事出現幾次」與「沒事時會不會硬塞」，不驗像素也不驗文案細節。
+核心是一條不變式：**待辦卡片數 === 成立的訊號數**（＝沒有填充物），
+兩個寬度都在「零待辦」與「有傷停」兩種狀態下各驗一次。
+
+⚠ 為了湊出「零待辦」必須把週淨額弄成正的——那是測試佈置的難處，不是產品缺陷：
+每個情境第一週的淨額本來就是負的，資金待辦**正確地**會觸發。最後是用
+elite 情境 ＋ 撥款 ＋ 簽贊助 ＋ 清空名單才讓四個訊號一起歸零。
+
+| Gate | 結果 |
+|---|---|
+| `browser_check_home_ia`（新增） | **21/21** |
+| `check_home_team_contract` | **40/40** |
+| `check_competition_shared_ui` | 28/28 |
+| `check_competition_visual_shell` | 22/22 |
+| `check_cs_competition_hub` | 31/31 |
+| `check_cs_season_contract` | 73/73 |
+| `npm run build` | ✓ |
+
+Competition Hub 未受影響（四支 Competition gate 全綠）。
+
+### 其他 legacy 殘留（本輪未處理，記錄備查）
+
+- `src/platform/DashboardScreen.jsx`：舊版密集儀表板，**沒有任何地方 render**。
+  這次移除的「儀表板」入口本來就只會開佔位 modal。檔案留著，未刪。
+- `src/screens/MenuScreen.jsx`：同樣無引用點（早在 Competition 線的 audit 就記過）。
+- 兩者都不是首頁的入口問題，屬「未接線的舊畫面」，建議另一輪一起裁決。

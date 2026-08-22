@@ -13,6 +13,8 @@ import EsmoIcon from "../ui/EsmoIcon.jsx";
 import { useIsHomeMobile } from "../ui/useViewport.js";
 import { useDashboardMotion } from "./dashboard/useDashboardMotion.js";
 import { useMobileSheetMotion } from "./dashboard/useMobileSheetMotion.js";
+//  「有選手需要處理嗎」用既有的判定，不在首頁另訂體力／傷停門檻。
+import { isInjured, isExhausted } from "../platform/condition/playerCondition.js";
 import "./dashboard/dashboard.css";
 
 const numberOf = (value, fallback = 0) => {
@@ -28,6 +30,10 @@ const formatFans = (value) => {
   return fans >= 10000 ? `${(fans / 10000).toFixed(1).replace(/\.0$/, "")}萬` : fans.toLocaleString("zh-Hant");
 };
 
+//  ⚠ `talent`（舊版個人天賦）刻意**不在首頁的導覽表裡**。
+//    長期投資的動線是「戰隊發展」；個人天賦樹仍然存在，入口在選手詳情頁
+//    （PlayerDetail → 天賦），路由 `talentPick` / `playerTalent` 也都保留給
+//    舊存檔與該流程使用。這裡移除的是**首頁的重複入口**，不是功能。
 const NAV = {
   notify: "inbox",
   finance: "finance",
@@ -37,7 +43,6 @@ const NAV = {
   training: "training",
   recruit: "recruit",
   cs: "csPrep",
-  talent: "talentPick",
   development: "teamDevelopment",
   newgame: "newGame",
 };
@@ -150,6 +155,17 @@ function ActiveMatchSection({ hasActiveMatch, onResumeActive }) {
 }
 
 function NextActions({ actions }) {
+  //  沒事就說沒事。硬塞功能捷徑會讓這一區失去「有事才看這裡」的意義。
+  if (!actions.length) {
+    return (
+      <section className="esmo-section" data-dashboard-reveal>
+        <SectionHeading label="NEXT ACTIONS" title="接下來做什麼" note="把注意力留給真正重要的事" />
+        <div className="esmo-card esmo-action-empty" data-testid="home-actions-empty">
+          目前沒有急需處理的事項。
+        </div>
+      </section>
+    );
+  }
   return (
     <section className="esmo-section" data-dashboard-reveal>
       <SectionHeading label="NEXT ACTIONS" title="接下來做什麼" note="把注意力留給真正重要的事" />
@@ -337,6 +353,16 @@ function MobilePrimaryAction({ activeMatchView, onResumeActive, action }) {
     );
   }
 
+  //  沒有待辦時不要硬擠一張卡出來——手機的第一屏更禁不起假的「主要行動」。
+  if (!action) {
+    return (
+      <section className="esmo-mobile-primary esmo-mobile-primary--calm" data-dashboard-reveal data-testid="home-actions-empty">
+        <div className="esmo-mobile-primary__eyebrow">目前狀況</div>
+        <p>目前沒有急需處理的事項。</p>
+      </section>
+    );
+  }
+
   return (
     <button
       className="esmo-mobile-primary esmo-mobile-primary--next esmo-interactive"
@@ -360,12 +386,15 @@ function MobilePrimaryAction({ activeMatchView, onResumeActive, action }) {
 }
 
 function MobileQuickActions({ items }) {
+  //  只有在「主要行動之外還有別的待辦」時才出現。沒有就整段不渲染，
+  //  不要留一個空標題佔著第一屏。
+  if (!items.length) return null;
   return (
     <section className="esmo-mobile-section" data-dashboard-reveal>
       <div className="esmo-mobile-section__heading">
         <div>
-          <span className="esmo-mobile-section__label">快捷行動</span>
-          <h2>現在可以做的事</h2>
+          <span className="esmo-mobile-section__label">其他待辦</span>
+          <h2>還需要處理</h2>
         </div>
       </div>
       <div className="esmo-mobile-quick-grid">
@@ -447,9 +476,9 @@ function MobileClubSnapshot({ players, developmentPoints, wk, sponsor, profile, 
   );
 }
 
-function MobileCompeteRail({ modes, onSelect }) {
+function MobileCompeteRail({ modes, onSelect, sectionRef = null }) {
   return (
-    <section className="esmo-mobile-section" data-dashboard-reveal>
+    <section ref={sectionRef} className="esmo-mobile-section" data-testid="home-compete-rail" data-dashboard-reveal>
       <div className="esmo-mobile-section__heading">
         <div>
           <span className="esmo-mobile-section__label">競技</span>
@@ -481,7 +510,7 @@ function MobileCompeteRail({ modes, onSelect }) {
   );
 }
 
-function MobileNavSheet({ type, modes, onSelect, onClose }) {
+function MobileNavSheet({ type, onSelect, onClose }) {
   const sheetRef = useRef(null);
   const closeStartedRef = useRef(false);
   const animateClose = useMobileSheetMotion(sheetRef, onClose);
@@ -490,6 +519,11 @@ function MobileNavSheet({ type, modes, onSelect, onClose }) {
     closeStartedRef.current = true;
     animateClose();
   };
+  //  ⚠ 這裡與桌機的管理工具是同一份責任，所以移除的入口要一致：
+  //      選手天賦     → 個人天賦樹的入口在選手詳情頁
+  //      贊助         → 戰隊快照的贊助列本來就能直接進贊助頁
+  //      完整儀表板   → 指向未接線的舊版畫面
+  //  「競技」不再有 sheet：它的內容與競技 rail 一字不差（見 `onTab`）。
   const groups = {
     team: [
       { id: "team", label: "戰隊總覽", icon: "award" },
@@ -497,18 +531,14 @@ function MobileNavSheet({ type, modes, onSelect, onClose }) {
       { id: "development", label: "戰隊發展", icon: "award" },
       { id: "training", label: "訓練安排", icon: "signal" },
       { id: "recruit", label: "招募選手", icon: "arrowUp" },
-      { id: "talent", label: "選手天賦", icon: "star" },
     ],
-    compete: modes.map((mode) => ({ id: mode.id, label: mode.name, detail: mode.meta, icon: mode.icon, accent: mode.color })),
     more: [
       { id: "finance", label: "財務", detail: "收支與預測", icon: "finance" },
-      { id: "sponsor", label: "贊助", detail: "合作合約", icon: "users" },
       { id: "equip", label: "商店", detail: "物品與升級", icon: "package" },
       { id: "newgame", label: "新遊戲", detail: "重新開始", icon: "arrowUp" },
-      { id: "dash", label: "完整儀表板", detail: "完整總覽", icon: "chart" },
     ],
   };
-  const titles = { team: "戰隊", compete: "競技", more: "更多" };
+  const titles = { team: "戰隊", more: "更多" };
   const items = groups[type] ?? [];
 
   return (
@@ -567,6 +597,8 @@ function MobileBottomNav({ sheet, onTab }) {
 function MobileHome({ team, meta, finance, unread, xpPercent, activeMatchView, onResumeActive, primaryAction, quickActions, profile, players, developmentPoints, wk, sponsor, modes, onSelect }) {
   const [sheet, setSheet] = useState(null);
   const scrollRef = useRef(null);
+  //  底部 nav 的「競技」要捲到這一段，所以需要它的位置。
+  const competeRef = useRef(null);
 
   const onTab = (tab) => {
     if (tab === "home") {
@@ -576,6 +608,13 @@ function MobileHome({ team, meta, finance, unread, xpPercent, activeMatchView, o
     }
     if (tab === "messages") {
       onSelect("notify");
+      return;
+    }
+    //  「競技」以前會開一個 sheet，內容與底下的競技 rail 一字不差——同一份東西
+    //  在同一個畫面列兩次。現在改成捲到 rail：入口只有一個，路由完全沒動。
+    if (tab === "compete") {
+      setSheet(null);
+      competeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
     setSheet((current) => current === tab ? null : tab);
@@ -593,12 +632,12 @@ function MobileHome({ team, meta, finance, unread, xpPercent, activeMatchView, o
           <MobilePrimaryAction activeMatchView={activeMatchView} onResumeActive={onResumeActive} action={primaryAction} />
           <MobileQuickActions items={quickActions} />
           <MobileClubSnapshot players={players} developmentPoints={developmentPoints} wk={wk} sponsor={sponsor} profile={profile} onSelect={onSelect} />
-          <MobileCompeteRail modes={modes} onSelect={onSelect} />
+          <MobileCompeteRail modes={modes} onSelect={onSelect} sectionRef={competeRef} />
         </main>
       </div>
 
       <MobileBottomNav sheet={sheet} onTab={onTab} />
-      {sheet && <MobileNavSheet type={sheet} modes={modes} onSelect={onSelect} onClose={() => setSheet(null)} />}
+      {sheet && <MobileNavSheet type={sheet} onSelect={onSelect} onClose={() => setSheet(null)} />}
     </div>
   );
 }
@@ -637,46 +676,82 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
     { id: "bracket", ...MODE_CONFIG.bracket, meta: `賽程 · ${bracketBadge}`, audience: "賽季" },
   ], [bracketBadge]);
 
+  //  管理工具＝不需要天天看、但需要時要進得去的功能。
+  //  ⚠ 移掉的三個都是**重複或已無產品責任**的入口，功能本體與路由都還在：
+  //      贊助商 → 戰隊狀態的「贊助狀態」摘要卡本來就能直接進贊助頁
+  //      天賦   → 已由「戰隊發展」取代；個人天賦樹入口在選手詳情
+  //      儀表板 → 指向未接線的舊版密集儀表板，而首頁本身就是儀表板
   const utilityItems = useMemo(() => [
     { id: "team", label: "戰隊詳情", icon: "award" },
     { id: "training", label: "訓練中心", icon: "signal" },
     { id: "recruit", label: "招募", icon: "arrowUp" },
     { id: "newgame", label: "開新局", icon: "arrowUp" },
     { id: "equip", label: "商店", icon: "package" },
-    { id: "dash", label: "儀表板", icon: "chart" },
-    { id: "sponsor", label: "贊助商", icon: "users" },
-    { id: "talent", label: "天賦", icon: "star" },
   ], []);
 
   const sel = (id) => {
     if (id === "moba") return onMoba();
     if (id === "bracket") return onSeason();
     if (NAV[id] && onNav) return onNav(NAV[id]);
-    setModal({ type: "legacy", name: { equip: "商店", dash: "經營儀表板" }[id] || id });
+    setModal({ type: "legacy", name: { equip: "商店" }[id] || id });
   };
 
-  const priority = fc.level !== "ok"
-    ? { id: "finance", icon: "alert", accent: fc.level === "danger" ? GC.red : GC.gold, title: "處理資金提醒", detail: fc.level === "danger" ? `預測第 ${fc.bankruptWeek} 週資金見底` : "本週淨額為負，先看現金預測", badge: "!", onClick: () => sel("finance") }
-    : unread > 0
-      ? { id: "notify", icon: "inbox", accent: GC.blue, title: "處理收件匣", detail: `${unread} 則未讀訊息等待決定`, badge: unread, onClick: () => sel("notify") }
-      : developmentPoints > 0
-        ? { id: "development", icon: "award", accent: GC.green, title: "分配戰隊發展點", detail: `${developmentPoints} 點可以投入團隊成長`, badge: developmentPoints, onClick: () => sel("development") }
-        : { id: "recruit", icon: "arrowUp", accent: GC.green, title: "開始招募", detail: "看看球探部帶回的下一位候選人", onClick: () => sel("recruit") };
+  //  ── 接下來做什麼＝真正需要處理的事 ──────────────────────────────────────
+  //  這一區以前是「固定五張常用捷徑取四張」，所以永遠都是滿的——不管有沒有事。
+  //  結果是它與「戰隊狀態」講同一件事（選手／財務／贊助），而「現在要處理什麼」
+  //  這個責任反而沒有人扛。
+  //
+  //  現在只放**有訊號才成立**的待辦，沒事就誠實顯示沒事。
+  //  ⚠ 每一條的訊號都來自既有資料，這裡不新增任何規則：
+  //      資金警告   `cashForecast().level`
+  //      未讀訊息   `inbox[].unread`
+  //      發展點     `teamDevelopment.availablePoints`
+  //      選手問題   `isInjured` / `isExhausted`（`platform/condition` 的既有判定）
+  //  訓練中心／球探招募／選手名單**不再固定塞進來**——它們是「需要時才去」的
+  //  管理功能，入口在管理工具與戰隊分頁。
+  const needsAttention = players.filter((p) => isInjured(p) || isExhausted(p));
+  const injuredCount = players.filter((p) => isInjured(p)).length;
 
-  const candidateActions = [
-    { id: "notify", icon: "inbox", accent: GC.blue, title: "收件匣", detail: unread > 0 ? `${unread} 則未讀訊息` : "目前沒有未讀訊息", badge: unread || undefined, onClick: () => sel("notify") },
-    { id: "development", icon: "award", accent: GC.green, title: "戰隊發展", detail: developmentPoints > 0 ? `${developmentPoints} 點可投入團隊成長` : "查看團隊投資與成長", onClick: () => sel("development") },
-    { id: "roster", icon: "users", accent: GC.blue, title: "選手狀態", detail: `${players.length} 名選手 · 名單管理`, onClick: () => sel("roster") },
-    { id: "training", icon: "signal", accent: GC.green, title: "訓練中心", detail: "安排本週訓練節奏", onClick: () => sel("training") },
-    { id: "recruit", icon: "arrowUp", accent: GC.green, title: "球探招募", detail: "擴充下一個可用選手", onClick: () => sel("recruit") },
-  ];
-  const actions = [priority, ...candidateActions.filter((item) => item.id !== priority.id)].slice(0, 4);
-  const mobileQuickActions = [
-    candidateActions.find((item) => item.id === "development"),
-    candidateActions.find((item) => item.id === "training"),
-    candidateActions.find((item) => item.id === "roster"),
-    candidateActions.find((item) => item.id === "recruit"),
-  ].filter(Boolean);
+  const todos = [];
+  if (fc.level !== "ok") {
+    todos.push({
+      id: "finance", icon: "alert", accent: fc.level === "danger" ? GC.red : GC.gold,
+      title: "處理資金提醒",
+      detail: fc.level === "danger" ? `預測第 ${fc.bankruptWeek} 週資金見底` : "本週淨額為負，先看現金預測",
+      badge: "!", onClick: () => sel("finance"),
+    });
+  }
+  if (unread > 0) {
+    todos.push({
+      id: "notify", icon: "inbox", accent: GC.blue,
+      title: "處理收件匣", detail: `${unread} 則未讀訊息等待決定`,
+      badge: unread, onClick: () => sel("notify"),
+    });
+  }
+  if (developmentPoints > 0) {
+    //  ⚠ `title: "戰隊發展"` 是首頁主要投資動線的契約字面（check_home_team_contract）。
+    todos.push({
+      id: "development", icon: "award", accent: GC.green,
+      title: "戰隊發展", detail: `${developmentPoints} 點可以投入團隊成長`,
+      badge: developmentPoints, onClick: () => sel("development"),
+    });
+  }
+  if (needsAttention.length > 0) {
+    todos.push({
+      id: "condition", icon: "alert", accent: injuredCount > 0 ? GC.red : GC.gold,
+      title: injuredCount > 0 ? "選手傷停" : "選手體力過低",
+      detail: injuredCount > 0
+        ? `${injuredCount} 人傷停中${needsAttention.length > injuredCount ? `、${needsAttention.length - injuredCount} 人體力過低` : ""}`
+        : `${needsAttention.length} 人體力低到不能出賽`,
+      badge: needsAttention.length, onClick: () => sel("roster"),
+    });
+  }
+
+  //  手機：第一張放最重要的那件事，其餘進快捷清單。兩邊吃**同一份 `todos`**，
+  //  所以 Desktop 與 Mobile 不會再各自長出一套「該顯示什麼」的規則。
+  const priority = todos[0] ?? null;
+  const actions = todos.slice(0, 4);
+  const mobileQuickActions = todos.slice(1, 4);
 
   return (
     <div ref={rootRef} className="esmo-dashboard" style={ESMO_CSS_VARS}>
