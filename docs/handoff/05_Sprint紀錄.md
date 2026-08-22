@@ -12202,3 +12202,89 @@ Codex ownership），而本輪的指示是「以驗收為主，不改架構、�
 - `check_cs_season_contract` / `check_home_team_contract` /
   `check_cs_competition_hub` / `check_cs_season_m2` → 全部 exit 0
 - `npm run build` → `✓ built in 12.23s`
+
+---
+
+## UI-3.5 後續 — 正式 CS 賽程「自然完賽」驗收工具（2026-08-23）
+
+UI-3.5 留下一個未驗證的缺口：Quick Finish 在瀏覽器裡完成正式賽程時會鎖死主執行緒，
+於是「玩家實際打完一場正式 CS 賽程」從來沒有被走過。本節把那條路**用玩家真正會走的
+方式**走完，並把它固化成一支工具。**`src` 零改動。**
+
+### `tools/browser_check_cs_fixture_natural_finish.mjs`
+
+**慢速／手動驗收工具，單次約 6–10 分鐘，不納入每次都跑的 default Release Gate。**
+
+對戰是用 4 倍速**真的播完**的（不快轉、不模擬），所以慢是本質，不是可以優化掉的。
+建議在動到以下任何一項之後手動跑一次：
+
+> CS Battle ／ Result ／ ActiveMatch ／ MatchSession ／ BO3 ／ Competition fixture lifecycle
+
+兩條流程：
+
+| 指令 | 覆蓋 |
+|---|---|
+| `--only=bo1` | CS 聯賽 BO1：自然完賽 → 結算 → FixtureOutcome 寫入 → 場次收尾 |
+| `--only=bo3` | 年度 Major BO3 第一張：自然完賽 → 結算 → 回選圖頁且 **series ledger 正常續接** |
+
+### 實測結果（兩條皆通過）
+
+**BO1**（`fx:cs:cd668e2b`，第 6 天）
+
+```
+natural-end：自然結束（357s，687/687 格）
+click-report → result-screen：結算完成（3s）
+結算前：fixtureStatus=launched  outcomeCount=0  assignment=true   activePhase=battle
+結算後：fixtureStatus=completed outcomeCount=1  assignment=false  activePhase=null
+        resultSource=engine  score=0:1  activeRestoreable=false
+        settlements 0→1  processedTx 0→1  csHistory 0→1
+console error：無　page error：無
+```
+
+**BO3 第一張**（`fx:cs:d031c11d`，第 86 天，前置 14 勝打進 Major）
+
+```
+natural-end：自然結束（632s，1221/1221 格）
+result-screen：結算完成（3s）　back-to-map：回到選圖頁（2s）
+series 橫幅：BO3 1 : 0 第 2 / 3 張 · 先拿 2 張者勝
+fixtureStatus=launched  outcomeCount=0  assignment=true  activePhase=map
+seriesByFixture=1  settlements 0→1  processedTx 0→1  csHistory 0→1
+console error：無　page error：無
+```
+
+BO3 中場的每個值都是**該有的樣子**：series 未決 ⇒ 賽程仍 `launched`、賽程賽果尚未
+寫入（要等整個 series 決出）、指派單還在、phase 轉 `map`。第一張地圖各只記一次，
+**無重複 settle、無重複 FixtureOutcome**。
+
+### 結論：玩家路徑正常
+
+`settleCsMatch` 只花 3 秒。結算、fixture 收尾、series ledger、ActiveMatch 收尾
+**全部不在問題範圍內**——這一點由「自然完賽走的是同一個 `matchResult`、同一支
+`completeOnce()`、同一條 `settleCsMatch`」直接證實。
+
+### ⚠ 驗收工具層未解問題（**不是玩家 blocker**，本輪不處理）
+
+Quick Finish 在這支新工具的驅動方式下會鎖死頁面主執行緒；但既有的
+`browser_check_cs_completion` 跑同一顆按鈕是 **~90ms 通過**（重跑兩次皆
+`quickFinishMs=88 / 98`，1/1 PASS）。兩邊都可穩定重現。
+
+已排除的假設：
+
+1. **不是 fixture 特有** —— 練習賽在新工具下也一樣鎖死。
+   （UI-3.5 當時「Quick Finish 在正式 fixture 上鎖死」的定調**是錯的歸因**：
+   拿「新工具跑 fixture」對比「舊工具跑練習賽」，同時換了兩個變數。此處更正。）
+2. **不是視窗大小** —— 補上 `Emulation.setDeviceMetricsOverride` 後仍鎖死。
+3. **不是探測方式** —— 純選擇器的輕探測（無 `innerText`）也回不來
+   ⇒ 頁面是真的卡住，不是探測造成的假象。
+4. **不是賽前頁連點** —— 改成每個 action 只按一次（`enqueue → confirm`）仍鎖死。
+
+差異點尚未找到。定性為**驗收工具層的未解問題**：Quick Finish 有
+`devFastForward` ＋ `isDebugMode()` 雙重閘門，玩家碰不到；玩家路徑（自然完賽）
+已由本工具證實完全正常。新工具因此**刻意完全不碰 Quick Finish**。
+
+### 驗證
+
+- `node --check` 通過；未知 `--only` 值被擋下（exit 2）
+- 改名後啟動實跑：伺服器起得來、Chrome 起得來、建季 → 賽事中心出戰 → 賽前頁
+  → 選圖 → 對戰 → 進入自然播放，全部正常
+- `src` 零改動（`git status` 只有本工具與本文件）
