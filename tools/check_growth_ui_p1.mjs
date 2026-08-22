@@ -11,6 +11,7 @@
 //  §1 成長帳簿的純邏輯（去重、上限、不得產生假成長、成長前→後可還原）
 //  §2 比賽結算：一次結算一筆；重送同一 receipt 不重複加入
 //  §3 訓練結算：訓練一次只加一次；日誌值＝實際套用值（不是課程定義）
+//  §3v1.1 Training v1.1：推進日、1/2/3 日課程、取消、多人、成長修正因子
 //  §4 邊界情況：無升級但有成長／有升級但能力已達上限
 //  §5 持久化：重整（存檔往返）後紀錄仍在
 //  §6 UI 未定義識別字掃描（build 抓不到的白畫面 bug）
@@ -27,6 +28,15 @@ const traverse = _traverse.default ?? _traverse;
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => fs.readFileSync(resolve(ROOT, p), "utf8");
 
+// 讓本 verifier 能測到既有 profileStore 的實際 save/load 邊界；不是第二套
+// persistence，也不改產品 runtime。每次 verifier process 都使用全新的記憶體儲存。
+const verifyStorage = new Map();
+globalThis.localStorage = {
+  getItem: (key) => verifyStorage.has(key) ? verifyStorage.get(key) : null,
+  setItem: (key, value) => verifyStorage.set(key, String(value)),
+  removeItem: (key) => verifyStorage.delete(key),
+};
+
 let pass = 0, fail = 0;
 const ck = (name, ok, detail = "") => {
   if (ok) { pass++; console.log(`✅ ${name}${detail ? "　" + detail : ""}`); }
@@ -36,7 +46,7 @@ const ck = (name, ok, detail = "") => {
 const G = await import("../src/platform/progress/growthLog.js");
 const { applyProgressToState } = await import("../src/platform/progress/applyMatchProgress.js");
 const { useProfileStore } = await import("../src/platform/profileStore.js");
-const { TRAINING_COURSES, courseById } = await import("../src/data/playerModel.js");
+const { TRAINING_COURSES, courseById, calculateCourse } = await import("../src/data/playerModel.js");
 const { createMatchProgressTransaction } = await import("../src/platform/contracts/matchProgressTransaction.js");
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -213,6 +223,120 @@ console.log("\n══ §3 訓練結算：一次訓練只加一次 ══");
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+console.log("\n══ §3v1.1 訓練推進與成長修正因子 ══");
+{
+  const st = useProfileStore.getState();
+  st.reset?.();
+  const players = useProfileStore.getState().players;
+  const one = players[0];
+  const two = players[1];
+  const three = players[2];
+  const cancel = players[3];
+  const oneCourse = courseById("vod");       // 1 天
+  const twoCourse = courseById("mental");    // 2 天
+  const threeCourse = courseById("mechanics"); // 3 天
+  const energyBefore = Object.fromEntries(players.map((p) => [p.id, p.energy]));
+
+  ck("§3v1.1a 1／2／3 日課程指派成功",
+    useProfileStore.getState().assignTraining(one.id, oneCourse.id) &&
+    useProfileStore.getState().assignTraining(two.id, twoCourse.id) &&
+    useProfileStore.getState().assignTraining(three.id, threeCourse.id),
+    `${oneCourse.hours}/${twoCourse.hours}/${threeCourse.hours} 天`);
+  const assigned = useProfileStore.getState().players;
+  ck("§3v1.1b 初始剩餘天數正確",
+    assigned.find((p) => p.id === one.id)?.training?.daysLeft === 1 &&
+    assigned.find((p) => p.id === two.id)?.training?.daysLeft === 2 &&
+    assigned.find((p) => p.id === three.id)?.training?.daysLeft === 3);
+
+  const cancelStats = { ...cancel.stats };
+  ck("§3v1.1c 取消課程清除訓練且不改能力",
+    useProfileStore.getState().assignTraining(cancel.id, "aim") === true &&
+    (useProfileStore.getState().cancelTraining(cancel.id),
+      useProfileStore.getState().players.find((p) => p.id === cancel.id)?.training === null &&
+      JSON.stringify(useProfileStore.getState().players.find((p) => p.id === cancel.id)?.stats) === JSON.stringify(cancelStats)));
+
+  useProfileStore.getState().advanceDay(1);
+  const day1 = useProfileStore.getState().players;
+  ck("§3v1.1d 第一天：1 日完成、2／3 日各前進一天",
+    day1.find((p) => p.id === one.id)?.training === null &&
+    day1.find((p) => p.id === two.id)?.training?.daysLeft === 1 &&
+    day1.find((p) => p.id === three.id)?.training?.daysLeft === 2);
+  const oneDone = day1.find((p) => p.id === one.id);
+  ck("§3v1.1e 1 日課程只扣一次體力並有實際成長紀錄",
+    oneDone.energy === energyBefore[one.id] - oneCourse.energyCost &&
+    G.growthLogOf(oneDone).length === 1 && G.growthLogOf(oneDone)[0].total > 0);
+
+  useProfileStore.getState().advanceDay(1);
+  const day2 = useProfileStore.getState().players;
+  ck("§3v1.1f 第二天：2 日完成、3 日剩一天",
+    day2.find((p) => p.id === two.id)?.training === null &&
+    day2.find((p) => p.id === three.id)?.training?.daysLeft === 1);
+  useProfileStore.getState().advanceDay(1);
+  const day3 = useProfileStore.getState().players;
+  ck("§3v1.1g 第三天：3 日課程完成且各自只寫一筆",
+    day3.find((p) => p.id === three.id)?.training === null &&
+    G.growthLogOf(day3.find((p) => p.id === two.id)).length === 1 &&
+    G.growthLogOf(day3.find((p) => p.id === three.id)).length === 1);
+
+  const base = {
+    ...one,
+    potential: 95,
+    energy: 100,
+    stats: { ...one.stats, mapAware: 50, adaptability: 50, learning: 70 },
+  };
+  const course = courseById("vod");
+  const young = calculateCourse({ ...base, age: 20 }, course.id);
+  const mature = calculateCourse({ ...base, age: 28 }, course.id);
+  const old = calculateCourse({ ...base, age: 40 }, course.id);
+  const highLearning = calculateCourse({ ...base, stats: { ...base.stats, learning: 95 } }, course.id);
+  const lowLearning = calculateCourse({ ...base, stats: { ...base.stats, learning: 45 } }, course.id);
+  const fit = calculateCourse({ ...base, energy: 100 }, course.id);
+  const tired = calculateCourse({ ...base, energy: 20 }, course.id);
+  const lowPotential = calculateCourse({
+    ...base, potential: 65, stats: { ...base.stats, mapAware: 60, adaptability: 60 },
+  }, course.id);
+  const gain = (r) => r.totalGain;
+  ck("§3v1.1h 年齡曲線平滑且方向正確", gain(young) > gain(mature) && gain(mature) > gain(old), `${gain(young)}>${gain(mature)}>${gain(old)}`);
+  ck("§3v1.1i learning 溫和影響成長", gain(highLearning) > gain(lowLearning) && gain(highLearning) / Math.max(0.1, gain(lowLearning)) < 1.5,
+    `${gain(highLearning)} vs ${gain(lowLearning)}`);
+  ck("§3v1.1j condition／stamina 會影響效率但不歸零", gain(fit) > gain(tired) && gain(tired) > 0,
+    `${gain(fit)} vs ${gain(tired)}`);
+  ck("§3v1.1k 潛力空間會減速且不超過 potential",
+    gain(lowPotential) <= gain(mature) &&
+    Object.values(lowPotential.statChanges).every((c) => c.after <= 65),
+    `lowPotential=${gain(lowPotential)}`);
+
+  // The UI calls the public alias rather than the lower-level multi-day helper.
+  // Keep this path explicit so a reducer regression cannot hide behind a passing
+  // direct advanceDay() test.
+  st.reset();
+  const aliasPlayer = structuredClone(useProfileStore.getState().players[0]);
+  const aliasCourse = courseById("mental");
+  const aliasBefore = {
+    focus: aliasPlayer.stats.focus,
+    energy: aliasPlayer.energy,
+  };
+  useProfileStore.getState().assignTraining(aliasPlayer.id, aliasCourse.id);
+  const aliasAssigned = useProfileStore.getState().players.find((p) => p.id === aliasPlayer.id);
+  ck("§3v1.1l: advanceTrainingDay reproducer starts at 2 days", aliasAssigned.training?.daysLeft === 2);
+  useProfileStore.getState().advanceTrainingDay();
+  const aliasMid = useProfileStore.getState().players.find((p) => p.id === aliasPlayer.id);
+  ck("§3v1.1m: advanceTrainingDay reduces 2 days to 1", aliasMid.training?.daysLeft === 1);
+  useProfileStore.getState().advanceTrainingDay();
+  const aliasDone = useProfileStore.getState().players.find((p) => p.id === aliasPlayer.id);
+  ck("§3v1.1n: advanceTrainingDay completes the course", aliasDone.training == null);
+  ck("§3v1.1o: alias path applies a real stat gain", aliasDone.stats.focus > aliasBefore.focus);
+  ck("§3v1.1p: alias path charges the course cost once", aliasDone.energy === aliasBefore.energy - aliasCourse.energyCost);
+  ck("§3v1.1q: alias path writes one completion log", aliasDone.growthLog?.filter((entry) => entry.source === "training").length === 1);
+  const reloadedModule = await import(`../src/platform/profileStore.js?training-reload=${Date.now()}`);
+  const reloadedAlias = reloadedModule.useProfileStore.getState().players.find((p) => p.id === aliasPlayer.id);
+  ck("§3v1.1r: localStorage reload preserves completed training state",
+    reloadedAlias?.training == null &&
+    reloadedAlias?.stats.focus === aliasDone.stats.focus &&
+    reloadedAlias?.growthLog.length === aliasDone.growthLog.length);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 console.log("\n══ §4 邊界：無升級有成長／有升級但能力已達上限 ══");
 {
   //  (a) 有經驗但沒升級 ⇒ 仍要記錄（玩家該看到「這場有拿經驗但能力沒漲」）
@@ -384,10 +508,14 @@ console.log("\n══ §8 P0 系列演算未被本輪改動 ══");
   ck("§8d S28 傷害式紅線仍然成立",
     /const dmgAmt = p\.power \* dt \* R\.dmgK/.test(eng));
 
-  //  訓練成長公式（applyCourse）也不得被改
+  //  Training v1.1 calculator 是唯一成長規則來源；不得回到舊版固定下限公式。
   const pm = read("src/data/playerModel.js");
-  ck("§8e 訓練成長公式沒被動過",
-    /const gain = Math\.max\(0\.5, c\.gain \* \(room \/ 40\)\)/.test(pm));
+  const tc = read("src/data/trainingCalculator.js");
+  ck("§8e Training v1.1 calculator 與 applyCourse 同源",
+    /calculateTrainingResult/.test(pm) &&
+    /ageEfficiency|learningEfficiency|conditionEfficiency/.test(tc) &&
+    /potentialSpace/.test(tc) &&
+    !/Math\.max\(0\.5, c\.gain \* \(room \/ 40\)\)/.test(pm));
 
   //  成長帳簿本身不得含任何成長公式
   const glog = read("src/platform/progress/growthLog.js");

@@ -15,6 +15,7 @@
 //    Roster / Team / Training / Recruit / PlayerDetail 五個 Legacy 模組全部
 //    以 16 項能力為基礎，缺這層就只能造假資料 → Sprint21 先補這層。
 // ============================================================================
+import { calculateTrainingResult } from "./trainingCalculator.js";
 
 /** 16 項能力：4 分類 × 4 項（Legacy STAT_DEF 逐字） */
 export const STAT_DEF = [
@@ -214,32 +215,36 @@ export const TRAINING_COURSES = [
 ];
 export const courseById = (id) => TRAINING_COURSES.find((c) => c.id === id) || null;
 
+/** 以與 applyCourse 相同的純規則計算預估／實際 TrainingResult。 */
+export const calculateCourse = (player, courseId) =>
+  calculateTrainingResult(player, courseById(courseId));
+
 /**
- * 訓練完成結算（Legacy advanceTrainingDay 逐字純函數化）：
- *   成長量 = max(0.5, gain × (潛力剩餘空間 / 40))，上限 min(潛力, 99)。
- *   回傳新的 player（不變更輸入）。
+ * 訓練完成結算（Training v1.1）：
+ *   基礎成長 × 潛力空間 × 年齡 × learning × 狀態。
+ *   回傳新的 player（不變更輸入）；Store 另負責推進日曆與寫入成長帳簿。
  */
 export function applyCourse(player, courseId) {
   const c = courseById(courseId);
-  if (!c) return player;
+  const result = calculateTrainingResult(player, c);
+  if (!result.completed) return player;
   if (c.id === "rest") {
     return {
       ...player, training: null,
-      energy: Math.min(100, (player.energy ?? 50) + 30),
-      condition: "正常",
+      energy: result.energyAfter,
+      condition: conditionFor(result.energyAfter),
       morale: Math.min(100, (player.morale ?? 70) + 5),
     };
   }
   const stats = { ...(player.stats || {}) };
-  const pot = player.potential ?? 80;
-  for (const sk of c.stats) {
-    const cur = stats[sk] ?? 50;
-    const room = Math.max(0, pot - cur);
-    const gain = Math.max(0.5, c.gain * (room / 40));
-    stats[sk] = Math.min(pot, Math.min(99, Math.round((cur + gain) * 10) / 10));
-  }
-  const energy = Math.max(0, Math.min(100, (player.energy ?? 100) - c.energyCost));
-  return { ...player, training: null, stats, energy, condition: conditionFor(energy) };
+  for (const [key, change] of Object.entries(result.statChanges)) stats[key] = change.after;
+  return {
+    ...player,
+    training: null,
+    stats,
+    energy: result.energyAfter,
+    condition: conditionFor(result.energyAfter),
+  };
 }
 
 /** 贊助商（Legacy SPONSORS 逐字；weekly/signBonus 單位為「萬」） */

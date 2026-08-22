@@ -12559,3 +12559,15 @@ Competition Hub 未受影響（四支 Competition gate 全綠）。
   這次移除的「儀表板」入口本來就只會開佔位 modal。檔案留著，未刪。
 - `src/screens/MenuScreen.jsx`：同樣無引用點（早在 Competition 線的 audit 就記過）。
 - 兩者都不是首頁的入口問題，屬「未接線的舊畫面」，建議另一輪一起裁決。
+## Training v1.1 Integration Pass（2026-08-23）
+
+以正式主幹 `29eb712` 建立獨立 integration worktree，selective integrate
+Training v1.1 checkpoint `1257176`。保留 Competition Hub／Season IA、CS／MOBA
+賽季資料流與既有 Match 邊界；未以舊 branch 整檔覆蓋最新主幹。
+
+- 新增 `trainingCalculator` 純規則層；訓練頁預估與 `applyCourse` 共用同一份 `TrainingResult`。
+- 成長公式為課程基礎成長 × 潛力空間 × 年齡 × learning × condition；開發版快速推進與
+  `meta.days` 遊戲世界日曆定義保留。
+- Training / Growth UI verifier 擴充至 80/80，Recruit salary contract 直接使用 canonical
+  salary API 驗證 threshold crossing；未修改 production salary formula。
+- 正式線上 server-authoritative schedule 與真實時間 timer 留待第二階段，不在本輪實作。

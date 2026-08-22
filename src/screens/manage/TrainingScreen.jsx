@@ -12,7 +12,7 @@
 import React, { useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import {
-  STAT_DEF, TRAINING_COURSES, courseById, calcPower, bestPositions, personalityById, statZh,
+  STAT_DEF, TRAINING_COURSES, courseById, calculateCourse, calcPower, bestPositions, personalityById, statZh,
 } from "../../data/playerModel.js";
 import { StatGainList } from "../../ui/GrowthUI.jsx";
 import { PlayerAvatar } from "../../ui/PlayerFace.jsx";
@@ -21,6 +21,11 @@ import { GC } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
 
 const condColorOf = (c) => (c === "精神飽滿" ? GC.green : c === "正常" ? "#d4d4d8" : c === "疲勞" ? GC.gold : GC.red);
+const gainText = (result) => {
+  const parts = Object.entries(result?.gains ?? {})
+    .map(([key, value]) => `${statZh(key)} +${Number(value).toFixed(1)}`);
+  return parts.length ? parts.join("、") : "本次無能力成長";
+};
 
 export default function TrainingScreen({ onBack }) {
   const players = useProfileStore((s) => s.players) ?? [];
@@ -172,7 +177,8 @@ export default function TrainingScreen({ onBack }) {
               {TRAINING_COURSES.map((c) => {
                 const isRest = c.id === "rest";
                 const canDo = isRest || (sel.energy ?? 100) >= c.energyCost;
-                const sn = c.stats.map(statZh).join("/");
+                // 預估與完成時 applyCourse 使用同一個純 calculator，不在 UI 重算。
+                const preview = calculateCourse(sel, c.id);
                 return (
                   <button key={c.id} onClick={() => { if (canDo) assign(sel, c.id); }}
                     style={{ background: canDo ? GC.card : "rgba(255,255,255,0.02)", border: `1px solid ${canDo ? (isRest ? GC.green : GC.purp) + "33" : "rgba(255,255,255,0.04)"}`, borderRadius: 10, padding: 10, cursor: canDo ? "pointer" : "not-allowed", opacity: canDo ? 1 : 0.5, textAlign: "left" }}>
@@ -180,7 +186,12 @@ export default function TrainingScreen({ onBack }) {
                       <span style={{ fontSize: 14 }}>{c.emoji}</span>
                       <span style={{ color: "white", fontSize: 11, fontWeight: 700 }}>{c.name}</span>
                     </div>
-                    {!isRest && <div style={{ color: GC.gray, fontSize: 8, marginBottom: 2 }}>提升：{sn}</div>}
+                    {!isRest && <>
+                      <div style={{ color: GC.green, fontSize: 8, marginBottom: 2 }}>預估成長：{gainText(preview)}</div>
+                      <div style={{ color: GC.gray, fontSize: 7.5, marginBottom: 2 }}>
+                        效率 {Math.round((preview.efficiency ?? 0) * 100)}% · {(preview.reasons ?? []).join("／")}
+                      </div>
+                    </>}
                     <div style={{ color: isRest ? GC.green : GC.gray, fontSize: 8 }}>{isRest ? `休息 ${c.hours}天 · 體力+30` : `${c.hours}天 · 耗體力 ${c.energyCost}`}</div>
                   </button>
                 );

@@ -180,22 +180,77 @@ console.log("══ Milestone O：選手招募與隊伍養成 ══\n");
     }
     return g;
   };
-  //  高潛力新秀：練起來會跨過薪資公式的能力門檻（綜合 60）⇒ 週薪確實會漲
+  const salaryOf = (p) => teamWeeklySalary([p]).total;
+  //  Case A：在 current-main 的課程集合中找出一個能力提升但沒有跨過
+  //  canonical salary 計算／四捨五入門檻的決定性案例。這裡不複製 salary
+  // 公式，也不硬編薪資值；候選人的 before / after 都直接走 production API。
+  const stableGrowth = (() => {
+    const courses = TRAINING_COURSES.filter((c) => c.id !== "rest");
+    for (const candidate of [...POOL].sort((a, b) => a.id - b.id)) {
+      const state = applyRecruitmentToState(
+        mkState({ finance: { funds: 900 * WAN, transactions: [] } }),
+        txFor(candidate),
+      ).nextState;
+      let current = state.players[0];
+      for (let step = 0; step < courses.length * 2; step++) {
+        const course = courses[step % courses.length];
+        const next = runCourse(current, course.id);
+        const beforeOverall = overallOf(current);
+        const afterOverall = overallOf(next);
+        const beforeSalary = salaryOf(current);
+        const afterSalary = salaryOf(next);
+        if (afterOverall > beforeOverall && afterSalary === beforeSalary) {
+          return { candidate, course, step: step + 1, beforeOverall, afterOverall, beforeSalary, afterSalary };
+        }
+        current = next;
+      }
+    }
+    return null;
+  })();
+  ck("6d) Case A：能力提升但未跨薪資門檻 → 週薪可維持不變",
+    !!stableGrowth && stableGrowth.afterOverall > stableGrowth.beforeOverall && stableGrowth.afterSalary === stableGrowth.beforeSalary,
+    stableGrowth
+      ? `第 ${stableGrowth.step} 次「${stableGrowth.course.name}」｜綜合 ${stableGrowth.beforeOverall.toFixed(2)} → ${stableGrowth.afterOverall.toFixed(2)}｜週薪 ${stableGrowth.beforeSalary} → ${stableGrowth.afterSalary} 萬`
+      : "current-main 課程序列未觀測到 salary-stable growth");
+
   const star = [...POOL].sort((a, b) => b.potential - a.potential)[0];
   const starState = applyRecruitmentToState(mkState({ finance: { funds: 900 * WAN, transactions: [] } }), txFor(star)).nextState;
   const starRookie = starState.players[0];
   const starGrown = trainToCap(starRookie);
-  const g0 = teamWeeklySalary([starRookie]).total, g1 = teamWeeklySalary([starGrown]).total;
-  ck("6d) 高潛力新秀練起來 → 週薪確實上漲（養成有經濟意義）",
-    g1 > g0, `潛力 ${star.potential}｜綜合 ${overallOf(starRookie).toFixed(2)} → ${overallOf(starGrown).toFixed(2)}｜週薪 ${g0} → ${g1} 萬`);
+
+  //  Case B：同一個決定性新秀與固定課程序列，找出第一次由 production salary
+  //  API 觀測到週薪上升的課程；verifier 不複製 salary formula 或硬編 expected value。
+  const salaryCrossing = (start) => {
+    const courses = TRAINING_COURSES.filter((c) => c.id !== "rest");
+    let current = start;
+    for (let step = 0; step < courses.length * 16; step++) {
+      const course = courses[step % courses.length];
+      const next = runCourse(current, course.id);
+      const beforeSalary = salaryOf(current);
+      const afterSalary = salaryOf(next);
+      const beforeOverall = overallOf(current);
+      const afterOverall = overallOf(next);
+      if (afterOverall > beforeOverall && afterSalary > beforeSalary) {
+        return { course, step: step + 1, beforeOverall, afterOverall, beforeSalary, afterSalary };
+      }
+      current = next;
+    }
+    return null;
+  };
+  const caseB = salaryCrossing(starRookie);
+  ck("6e) Case B：跨 canonical 薪資門檻 → 週薪必須上升",
+    !!caseB && caseB.afterOverall > caseB.beforeOverall && caseB.afterSalary > caseB.beforeSalary,
+    caseB
+      ? `第 ${caseB.step} 次「${caseB.course.name}」｜綜合 ${caseB.beforeOverall.toFixed(2)} → ${caseB.afterOverall.toFixed(2)}｜週薪 ${caseB.beforeSalary} → ${caseB.afterSalary} 萬`
+      : "固定課程序列未觀測到 canonical salary crossing");
   //  ⚠ 低潛力新秀是另一回事，而且是**刻意的**：薪資公式的加項門檻是
   //    綜合 60 / 等級 30，潛力低的新秀就算練到潛力上限也跨不過去 ⇒ 永遠是下限 1.0 萬。
   //    這不是 bug（便宜的人本來就便宜），但養成他們不會反映在薪資上。
   const lowGrown = trainToCap(rookie);
-  ck("6e) 低潛力新秀練到頂仍在薪資下限（刻意：便宜的人本來就便宜）",
+  ck("6f) 低潛力新秀練到頂仍在薪資下限（刻意：便宜的人本來就便宜）",
     teamWeeklySalary([lowGrown]).total === teamWeeklySalary([rookie]).total,
     `潛力 ${rookie.potential}｜綜合 ${overallOf(lowGrown).toFixed(2)}｜週薪維持 ${teamWeeklySalary([lowGrown]).total} 萬`);
-  ck("6f) 能力不會超過潛力上限（既有規則仍生效，長期練也不破表）",
+  ck("6g) 能力不會超過潛力上限（既有規則仍生效，長期練也不破表）",
     Object.values(lowGrown.stats).every((v) => v <= rookie.potential) &&
     Object.values(starGrown.stats).every((v) => v <= star.potential),
     `低潛力 ${rookie.potential}／高潛力 ${star.potential} 皆未破表`);
