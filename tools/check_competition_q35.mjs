@@ -368,8 +368,12 @@ const settle = (br, matchId) => settleMatchThroughSession({
     /useMatchFlow|MatchPrepFrame/.test(readCode("src/screens/fps/CsPrepScreen.jsx")));
   ck("4c2) 那一頁確實跑 useMatchFlow（房間確認／場次／一次性進場）",
     /useMatchFlow|MatchPrepFrame/.test(readCode("src/screens/moba/LineupScreen.jsx")));
+  //  ⚠ UI-1 起這一頁接受 `mode` / `gameMode`，讀取是 `competitionView(gm)`。
+  //    這條要驗的是「**經過 Store 出口**取資料」，不是「呼叫時不帶參數」——
+  //    寫死空括號會把一個正確的參數化改動判成違規。放寬成「有呼叫這個出口」；
+  //    「畫面不自己算」那一半仍由 §4e–4g 守著。
   ck("4d) 畫面只透過 Store 出口取資料",
-    /competitionView\(\)/.test(screen) && /startFixtureMatch/.test(screen) &&
+    /competitionView\(/.test(screen) && /startFixtureMatch/.test(screen) &&
     /forfeitFixture/.test(screen) && /ensureCompetitionSeason/.test(screen));
   ck("4e) **畫面不自己算積分榜／不自己排名次**",
     !/computeStandings|seasonStandings|\.sort\(/.test(screen));

@@ -98,8 +98,10 @@ export default function CompetitionHubScreen({ onBack, onPlay, onResume, onCsRec
         )}
         {mode === "cs" && (
           //  ⚠ 就是既有的那一個元件，沒有包裝、沒有複製、沒有第二套資料流。
-          //    出賽仍走 CS 賽前頁、成績單仍走 `csRecap` —— 本檔不新增任何路徑。
-          <CsCompetitionHubScreen onBack={onBack} onRecap={onCsRecap} />
+          //  UI-3：`onPlay` / `onResume` 與 MOBA 分頁**收到的是同一組 handler**
+          //  ——出戰簽完指派單就交還既有的 CS 賽前流程（選圖／戰術在那裡），
+          //    沒有第二條 MatchSession／Battle pipeline。
+          <CsCompetitionHubScreen onBack={onBack} onRecap={onCsRecap} onPlay={onPlay} onResume={onResume} />
         )}
       </div>
     </div>

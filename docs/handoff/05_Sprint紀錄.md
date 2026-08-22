@@ -12041,3 +12041,86 @@ MOBA／CS = Practice「打一場」，賽事 = Career／Season「打一季」，
   賽事中心的 CS 分頁目前是唯讀的「我在哪裡」，不是出賽點。
 - 手機寬度未逐一實測；分頁列已用可橫捲 rail ＋ 32px 觸控高度，但 Hub 的
   響應式規則屬 UI-10。
+
+---
+
+## UI-3 — Competition Hub 成為 CS Season 主入口（2026-08-23）
+
+決策：選 (b)。開季與出戰**一起**搬到賽事中心，CS 賽前頁回歸單場責任。
+
+### 前置稽核
+
+- `origin/main` 前進到 `e9996a7`「Docs: record ESMO UI migration pause and backlog」，
+  **純 docs、未動 src/tools**，已 merge 進本分支（`263ebbd`），無衝突。
+- 該 commit 由 Ray 撰寫，明確記載：Codex UI Migration 暫停開新 Sprint，
+  **Claude Code 這條線（Command Deck／Competition Hub／CS Season 賽事入口／IA 重整）繼續**，
+  且 Codex 暫停期間不碰 `AppShell`／`GameRouter`／Store／contracts／CS／Season／Competition。
+  ⇒ 本區域的 ownership 現在是文件化的，衝突面歸零。
+
+### 修改範圍
+
+| 檔案 | 動作 |
+|---|---|
+| `src/screens/fps/CsCompetitionHubScreen.jsx` | 加開季／出戰／返回三個 action（+66 −6） |
+| `src/screens/fps/CsPrepScreen.jsx` | **移除 90 行** `CsLeagueFixtureEntry`，回歸單場賽前 |
+| `src/AppShell.jsx` | 移除 `csHub` 孤兒路由與 `csRecapFrom`；csPrep 收斂為 `{onNext,onBack}` |
+| `src/screens/manage/CompetitionHubScreen.jsx` | 把 `onPlay`／`onResume` 傳給 CS 分頁 |
+| `tools/check_cs_season_contract.mjs` | 兩條斷言跟著責任搬家，並**加強** |
+| `tools/check_competition_q35.mjs` | 修正 UI-1 造成的字面失效（見下） |
+| `tools/browser_check_competition_hub_shell.mjs` | 擴充到 27 條 |
+
+賽事中心現在**只有三個 action**，全部掛 onClick：`ensureCompetitionSeason("cs")`、
+`startFixtureMatch(fixtureId)`、`resumeMatchSession()`。
+出戰只簽指派單，接著交還 `csPrep → csMap → csTactic → battle`——
+選圖／戰術／陣容仍在賽前流程，**沒有第二條 MatchSession／Battle pipeline**。
+
+M2 當初就把 `CsLeagueFixtureEntry` 標成「暫用入口……完整的 CS 賽事頁上線之後
+應該被它取代，而不是兩個入口並存」。UI-3 執行的就是那句話。
+
+### ⚠ 兩支 verifier 把責任釘在舊檔案上，斷言跟著責任走
+
+1. `check_cs_season_contract`：`has("csPrepScreen", 'ensureCompetitionSeason("cs")')`
+   —— 搬家後必然轉紅。改成驗賽事中心，並**加兩條更強的**：
+   賽前頁不得再有 `startFixtureMatch`／`ensureCompetitionSeason`；
+   賽事中心**不得有任何 `useEffect`**（開季只能掛 onClick，掛載不得建季）。
+2. `check_competition_q35` §4d：寫死字面 `competitionView()`，而 **UI-1** 已改成
+   `competitionView(gm)`。**這是 UI-1 造成的紅燈，當時的 gate 清單沒有這一支，
+   我沒跑到。** 意圖（畫面只透過 Store 出口取資料）仍成立 ⇒ 放寬為 `competitionView(`；
+   「畫面不自己算」那一半仍由 §4e–4g 守著。66/66。
+
+### ⚠ verifier 抓到一個 build 抓不到的真 bug
+
+移除 `csRecapFrom` state 時漏了 `AppShell.jsx:181` 還在呼叫 `setCsRecapFrom`。
+`npm run build` 過、瀏覽器 gate 27/27 也過——因為那條路只有**賽季封存後點成績單**
+才會走到。`check_acceptance_fix_p1` §7a（未定義識別字掃描）把它抓出來（80/81）。
+修正後 81/81。
+
+### testid 去向
+
+- **功能標記跟著搬**：`cs-league-open-season`、`cs-league-play` 現在在賽事中心。
+- **新增**：`cs-hub-today`（帶 `data-state=live|today|none`）、`cs-league-resume`、`cs-hub-error`。
+- **隨區塊退場**：`cs-league-entry` / `cs-league-hub` / `cs-league-sealed` / `cs-league-recap`
+  —— 已確認 `tools/` 與 `src/` 沒有任何一處引用它們；賽事中心的成績單入口是既有的
+  `cs-hub-recap-btn`。
+
+### 驗證（全部實跑）
+
+- `browser_check_competition_hub_shell` → **27/27**。含：未開季顯示「開始 CS 賽季」CTA、
+  **按前 `cs=null` → 按後 `cs=present`（56 場賽程）**、只是查看仍然不建季、
+  賽前頁不再有開季／導航（`entry=false open=false hub=false`）、
+  今日有賽程時 `data-state=today` 並給出「出戰」、
+  按下出戰簽出 `origin.kind=fixture / mode=cs` 且**落在既有 CS 賽前流程**、
+  reload 後回預設 MOBA 分頁且 Store 逐值相同、全程無未捕捉例外。
+- release gate **11/11**、`check_cs_competition_hub` **31/31**、
+  `check_cs_season_m2` **55/55**、`check_cs23` **28/28**、
+  `check_matchmaking_flow_acceptance` **97/97**、`check_r61_ui_fixture` PASS、
+  `check_acceptance_fix_p1` **81/81**、`check_competition_q35` **66/66**、
+  `check_cs_season_contract` exit 0、`check_home_team_contract` exit 0、
+  `npm run build` `✓ built in 10.94s`。
+
+### 未完成 / 已知限制
+
+- **BO3 續戰、ActiveMatch 恢復、賽季封存後的成績單** 未在瀏覽器逐項實測；
+  這三條走的都是既有程式碼路徑（未修改），但賽事中心是新的進入點。
+- Hub 的 CS 分頁與 MOBA 分頁仍是兩套版面語彙，共用元件抽取是 UI-4。
+- 手機寬度未實測。

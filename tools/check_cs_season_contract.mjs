@@ -36,6 +36,8 @@ const files = Object.freeze({
   regularSeason: "src/platform/competition/regularSeason.js",
   csSeasonConfig: "src/platform/competition/csSeasonConfig.js",
   csPrepScreen: "src/screens/fps/CsPrepScreen.jsx",
+  //  UI-3：CS 賽季的入口責任（開季／今日賽程出戰）從賽前頁搬到賽事中心。
+  csHubScreen: "src/screens/fps/CsCompetitionHubScreen.jsx",
   scheduleGenerator: "src/platform/competition/scheduleGenerator.js",
   seasonStateV2: "src/platform/competition/seasonStateV2.js",
   fixtureBridge: "src/platform/competition/fixtureResultBridge.js",
@@ -253,10 +255,20 @@ check("series state lives on the session, never in SeasonState",
   && has("matchSeries", "不是** SeasonState"));
 check("the CS fixture bridge reads nothing but the winner Codex decided",
   !/ourScore|enemyScore|scoreT|scoreCT|roundCount/.test(codeOnly("fixtureBridge")));
+//  ⚠ UI-3：這兩條的**意圖沒有變**，變的是誰擁有那個責任。開季與今日賽程出戰
+//    從 CS 賽前頁搬到了賽事中心（`CsCompetitionHubScreen`）。斷言跟著責任走，
+//    不跟著檔名走——否則就得為了讓 gate 保持綠色，在賽前頁留一段死程式碼。
 check("player CS entry goes through the shared fixture action, not a second flow",
-  has("csPrepScreen", "startFixtureMatch") && !has("csPrepScreen", "completeFixtureMatch"));
+  has("csHubScreen", "startFixtureMatch") && !has("csHubScreen", "completeFixtureMatch"));
+check("CS league entry has moved out of the single-match prep screen",
+  !has("csPrepScreen", "startFixtureMatch") && !has("csPrepScreen", "ensureCompetitionSeason"));
 check("CS season is never created behind the player's back",
-  has("csPrepScreen", 'ensureCompetitionSeason("cs")') && has("csPrepScreen", "賽季**不自動建立**"));
+  has("csHubScreen", 'ensureCompetitionSeason("cs")') && has("csHubScreen", "只在 onClick"));
+//  ⚠ 這一條才是真正擋住「偷偷開季」的斷言：開季必須掛在 onClick 上。
+//    賽事中心只要出現任何 useEffect，就可能在**掛載時**建出一整季賽程——
+//    玩家什麼都沒按就多了一季。所以本檔直接禁止該畫面有 useEffect。
+check("the competition hub cannot create a season on mount (no useEffect at all)",
+  !/useEffect/.test(codeOnly("csHubScreen")));
 
 check("season layer still refuses to recompute Codex map-level results",
   has("handoff", "不得自行重算") && has("handoff", "map-level result"));

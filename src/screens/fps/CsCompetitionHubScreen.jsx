@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { GC, FONT, MONO } from "../../ui/theme.js";
 import { recapStyles, csRecapStyles, recapCssText } from "../manage/seasonRecap/recapStyles.js";
@@ -12,10 +12,23 @@ import CsRecapBracket from "../manage/seasonRecap/CsRecapBracket.jsx";
 //  這一頁補的就是那段空白：目前排名、在不在晉級線內、下一場打誰、
 //  Major 產生了沒、對戰表打到哪、整季走到哪一段。
 //
-//  ── ⚠ 全唯讀 ─────────────────────────────────────────────────────────────
-//  本檔**沒有任何 action**：不出賽、不棄權、不換季、不建賽季。
-//  出賽仍走 CS 賽前頁（`startFixtureMatch`），成績單仍走 `csRecap`。
-//  多一個入口就多一條會漂移的路徑。
+//  ── UI-3：這裡現在是 CS 賽季的**主入口** ─────────────────────────────────
+//  M4-C 時本檔是全唯讀的，開季與出戰住在 CS 賽前頁的 `CsLeagueFixtureEntry`。
+//  那個安排讓玩家得先點「CS 練習賽」才找得到「CS 官方聯賽」——點「賽事」永遠
+//  看不到 CS 賽季。UI-3 把那兩個責任搬到這裡，CS 賽前頁回歸單場賽前責任。
+//
+//  本檔現在**只有三個 action**，而且都必須是玩家按下去才發生：
+//    · `ensureCompetitionSeason("cs")`  開季（⚠ 只在 onClick，見下）
+//    · `startFixtureMatch(fixtureId)`   今日賽程出戰 → 交還既有 CS 賽前流程
+//    · `resumeMatchSession()`           返回進行中的那一場
+//
+//  ⚠ **開季永遠不得自動發生。** 這一支真的會建出一整季 CS 聯賽，所以它
+//    只能掛在 onClick 上——本檔沒有、也不得有任何呼叫它的 `useEffect`。
+//    單純查看賽事中心必須什麼都不改變。（`check_cs_season_contract` 守著）
+//
+//  ⚠ **本檔不承擔單場設定。** 選圖、戰術、陣容仍然是 CS 賽前流程的事：
+//    出戰只做「簽指派單」然後把玩家交回 `csPrep → csMap → csTactic → battle`，
+//    沒有第二條 MatchSession／Battle pipeline。
 //
 //  ── ⚠ 不建立第二套計算 ───────────────────────────────────────────────────
 //  排名／勝敗／積分  ← `view.standings`（`computeStandings` 的輸出）
@@ -99,11 +112,38 @@ function StandingRow({ row, isMe, inLine }) {
   );
 }
 
-export default function CsCompetitionHubScreen({ onBack, onRecap }) {
+export default function CsCompetitionHubScreen({ onBack, onRecap, onPlay, onResume }) {
   //  訂閱 canonical 切片，再取一份一致的唯讀快照（同 Recap 的做法）
   const byMode = useProfileStore((s) => s.competitionByMode);
   void byMode;
+  //  UI-3：有沒有一場賽程對戰進行中。訂閱它 ⇒ 出戰之後這一頁立刻換成「返回」。
+  const fixtureCtx = useProfileStore((s) => s.matchmaking?.fixtureAssignment ?? null);
+  const [err, setErr] = useState(null);
   const view = useProfileStore.getState().competitionView("cs");
+
+  //  ⚠ 三個 action 全部只掛 onClick。本檔沒有任何 useEffect，也不得有——
+  //    開季必須是玩家的明確動作，查看不得改變任何東西。
+  const openSeason = () => {
+    setErr(null);
+    const r = useProfileStore.getState().ensureCompetitionSeason("cs");
+    if (!r.ok) setErr(r.errors?.[0]?.message ?? String(r.errors?.[0] ?? "無法開啟 CS 聯賽"));
+  };
+  const play = (fixtureId) => {
+    setErr(null);
+    const r = useProfileStore.getState().startFixtureMatch(fixtureId);
+    if (!r.ok) { setErr(r.reason ?? r.errors?.[0]?.message ?? "無法出賽"); return; }
+    onPlay?.();
+  };
+  const resume = () => {
+    setErr(null);
+    const r = useProfileStore.getState().resumeMatchSession();
+    if (!r.ok) { setErr(r.errors?.[0]?.message ?? "無法返回比賽"); return; }
+    onResume?.();
+  };
+
+  const errLine = err
+    ? <div data-testid="cs-hub-error" style={{ color: "#f87171", fontSize: 10.5, marginTop: 8 }}>{err}</div>
+    : null;
 
   const frame = (children) => (
     <div style={{ height: "100%", overflow: "auto", background: GC.bg, fontFamily: FONT, padding: "12px 12px 30px" }}>
@@ -118,10 +158,21 @@ export default function CsCompetitionHubScreen({ onBack, onRecap }) {
     </div>
   );
 
+  //  ── 未開季：這一頁就是開季的地方 ────────────────────────────────────────
+  //  ⚠ 文案要說清楚按下去會發生什麼（排定一整季賽程），而不是只寫「開始」。
+  //    一整季賽程是個大動作，玩家按之前該知道自己在答應什麼。
   if (!view.hasSeason) {
     return frame(
-      <div data-testid="cs-hub-no-season" style={{ ...recapStyles.quiet, marginTop: 14 }}>
-        還沒有 CS 賽季。到 CS 賽前準備頁開啟本季聯賽。
+      <div data-testid="cs-hub-no-season">
+        <div style={{ ...recapStyles.quiet, marginTop: 14 }}>
+          還沒有 CS 賽季。開季會排定一整季的官方聯賽賽程，之後每到比賽日就能出戰。
+        </div>
+        <section style={{ ...recapStyles.section, ...recapStyles.nextSeasonSection }}>
+          <button data-testid="cs-league-open-season" onClick={openSeason} style={recapStyles.cta}>
+            開始 CS 賽季
+          </button>
+        </section>
+        {errLine}
       </div>,
     );
   }
@@ -153,6 +204,40 @@ export default function CsCompetitionHubScreen({ onBack, onRecap }) {
       </div>
 
       <StageBar stage={view.csStage} />
+
+      {/*  ── 今日賽程（UI-3）─────────────────────────────────────────────
+           整頁最重要的一個動作，所以放在階段條正下方、積分榜之前。
+           ⚠ 賽季封存後不出現：那時候今天不會再有賽程，主要動作是看成績單。
+           ⚠ 出戰只做「簽指派單」，接著由 `onPlay` 把玩家交回既有的 CS 賽前流程
+             （選圖／戰術／陣容都在那裡）。本頁不做任何單場設定。
+           ⚠ 能不能出戰、能不能返回都由 Store 判，這裡只把失敗原因顯示出來。 */}
+      {!view.final && (
+        <section data-testid="cs-hub-today" data-state={fixtureCtx ? "live" : view.today ? "today" : "none"}
+          style={{ ...recapStyles.section, marginTop: 14, paddingLeft: 12, borderLeft: `2px solid ${ACC}` }}>
+          {fixtureCtx ? (
+            <>
+              <div style={{ ...recapStyles.quiet, marginBottom: 8 }}>本場聯賽賽程進行中。</div>
+              <button data-testid="cs-league-resume" onClick={resume} style={recapStyles.cta}>
+                返回進行中的對戰
+              </button>
+            </>
+          ) : view.today ? (
+            <>
+              <div data-testid="cs-league-today" style={{ ...recapStyles.value, marginBottom: 8, fontWeight: 900 }}>
+                今日有你的聯賽賽程
+              </div>
+              <button data-testid="cs-league-play" onClick={() => play(view.today.id)} style={recapStyles.cta}>
+                出戰今日聯賽賽程
+              </button>
+            </>
+          ) : (
+            <div style={recapStyles.quiet}>
+              今天沒有你的聯賽賽程{view.next ? `（下一場：第 ${view.nextDay} 天）` : ""}。
+            </div>
+          )}
+          {errLine}
+        </section>
+      )}
 
       {/* ── CS 官方聯賽 ─────────────────────────────────────────────── */}
       <section data-testid="cs-hub-league" style={{ ...recapStyles.section, marginTop: 22, paddingLeft: 12, borderLeft: `2px solid ${ACC}` }}>

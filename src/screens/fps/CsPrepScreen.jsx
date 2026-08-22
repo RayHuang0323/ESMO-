@@ -90,97 +90,12 @@ function CsBenchSheet({ seat, players, lineup, onClose }) {
   );
 }
 
-/**
- * CS Season M2：**聯賽賽程的進場入口。**
- *
- * ⚠ 這是 M2 的**暫用入口**，不是 CS Season UI。完整的 CS 賽事頁（積分榜、
- *   賽程表、賽季總結）是 M4 的工作、由 Codex 執行；那一版上線之後，
- *   這個區塊應該被它取代，而不是兩個入口並存。
- *
- * ⚠ 賽季**不自動建立**。沿用既有規則（見 `ensureCompetitionSeason` 的註解）：
- *   在玩家沒有預期的情況下突然多出一整季賽程，比多按一顆按鈕糟得多。
- *
- * 進場走的是既有的 `startFixtureMatch()`——與 MOBA 賽事頁同一支，
- * 對手／seed 由賽程決定，**沒有第二條賽事流程**。
- */
-function CsLeagueFixtureEntry({ onRecap, onHub }) {
-  const [err, setErr] = useState(null);
-  //  訂閱 canonical：賽季一建立、賽果一寫入就重繪
-  const csSeason = useProfileStore((s) => s.competitionByMode?.cs ?? null);
-  const fixtureCtx = useProfileStore((s) => s.matchmaking?.fixtureAssignment ?? null);
-  const view = useProfileStore.getState().competitionView("cs");
+//  UI-3：CS 賽季的責任（開季／今日賽程出戰／賽事中心導航）已經搬到
+//  `CsCompetitionHubScreen`（首頁「賽事」→ CS 分頁）。M2 當初就把這個區塊
+//  標成「暫用入口…完整的 CS 賽事頁上線之後應該被它取代，而不是兩個入口並存」，
+//  這裡執行的就是那句話。本檔回歸單場 CS 賽前責任：陣容、戰力、歷史。
 
-  const openSeason = () => {
-    setErr(null);
-    const r = useProfileStore.getState().ensureCompetitionSeason("cs");
-    if (!r.ok) setErr(r.errors?.[0]?.message ?? String(r.errors?.[0] ?? "無法開啟 CS 聯賽"));
-  };
-  const play = (fixtureId) => {
-    setErr(null);
-    const r = useProfileStore.getState().startFixtureMatch(fixtureId);
-    if (!r.ok) setErr(r.reason ?? r.errors?.[0]?.message ?? "無法出賽");
-  };
-
-  const box = (children) => (
-    <div data-testid="cs-league-entry" style={{ background: GC.card, borderRadius: 10, padding: 10, marginBottom: 10 }}>
-      <div style={{ color: GC.gray, fontSize: 11, fontWeight: 700, marginBottom: 6 }}>CS 官方聯賽</div>
-      {children}
-      {err && <div style={{ color: "#f87171", fontSize: 10, marginTop: 6 }}>{err}</div>}
-    </div>
-  );
-  const btn = (label, onClick, testid) => (
-    <button data-testid={testid} onClick={onClick} style={{ width: "100%", padding: "9px", borderRadius: 9, border: "none", cursor: "pointer", background: ACC, color: "#fff", fontSize: 12, fontWeight: 800 }}>{label}</button>
-  );
-  //  CS Season M4-C：賽事中心（唯讀）。賽季一存在就進得去，不論封存與否——
-  //  「我現在第幾名、下一場打誰」在賽季**進行中**才最需要看得到。
-  const hubBtn = (
-    <button data-testid="cs-league-hub" onClick={() => onHub?.()}
-      style={{ width: "100%", marginTop: 6, padding: "8px", borderRadius: 9, border: `1px solid ${ACC}55`, cursor: "pointer", background: "transparent", color: ACC, fontSize: 11, fontWeight: 800 }}>
-      📊 賽事中心
-    </button>
-  );
-
-  if (!csSeason?.schema) return box(btn("開啟本季 CS 聯賽", openSeason, "cs-league-open-season"));
-  //  ── CS Season M4-B2：賽季封存了 ⇒ 這裡的主要動作是看成績單、開下一季 ──
-  //  ⚠ 判斷讀的是 `view.final`（賽季封存物），不是自己數場次。
-  //    封存之後今天不會再有賽程，下面那些分支對玩家已經沒有意義。
-  if (view.final) {
-    return box(
-      <>
-        <div data-testid="cs-league-sealed" style={{ color: "#e4e4e7", fontSize: 11, marginBottom: 6 }}>
-          CS 第 {view.season} 賽季已結束
-        </div>
-        {btn("查看賽季成績單", () => onRecap?.(), "cs-league-recap")}
-        {hubBtn}
-      </>,
-    );
-  }
-  //  已經有一場進行中的賽程對戰 ⇒ 這裡不再給第二顆進場鍵；
-  //  返回那一場由 MatchPrepFrame 的主按鈕負責（「返回進行中的對戰」）。
-  if (fixtureCtx) {
-    return box(<><div style={{ color: GC.gray, fontSize: 10 }}>本場聯賽賽程進行中，請用下方主按鈕返回。</div>{hubBtn}</>);
-  }
-  const fixture = view.today ?? null;
-  if (!fixture) {
-    return box(
-      <>
-        <div style={{ color: GC.gray, fontSize: 10 }}>
-          今天沒有你的聯賽賽程{view.next ? `（下一場：第 ${view.next.day} 天）` : ""}。
-        </div>
-        {hubBtn}
-      </>,
-    );
-  }
-  return box(
-    <>
-      <div data-testid="cs-league-today" style={{ color: "#e4e4e7", fontSize: 11, marginBottom: 6 }}>今日有你的聯賽賽程</div>
-      {btn("出戰今日聯賽賽程", () => play(fixture.id), "cs-league-play")}
-      {hubBtn}
-    </>,
-  );
-}
-
-export default function CsPrepScreen({ onNext, onBack, onRecap, onHub }) {
+export default function CsPrepScreen({ onNext, onBack }) {
   const players = useProfileStore((s) => s.players) ?? [];
   const csHistory = useProfileStore((s) => s.csHistory) ?? [];
   const csLineup = useProfileStore((s) => s.csLineup);
@@ -265,7 +180,6 @@ export default function CsPrepScreen({ onNext, onBack, onRecap, onHub }) {
         onAutoFill={() => autoFillLineup("cs")}
         aboveSeats={(
           <>
-            <CsLeagueFixtureEntry onRecap={onRecap} onHub={onHub} />
             <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
               {[{ k: "prep", l: "⚙️ 出戰" }, { k: "history", l: "📜 歷史" }].map((t) => (
                 <button key={t.k} onClick={() => setTab(t.k)} style={{ flex: 1, padding: "8px", borderRadius: 9, border: "none", cursor: "pointer", background: tab === t.k ? ACC : GC.card, color: tab === t.k ? "#fff" : GC.gray, fontSize: 11, fontWeight: 700 }}>{t.l}</button>
