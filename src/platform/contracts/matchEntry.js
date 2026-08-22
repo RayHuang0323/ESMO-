@@ -31,6 +31,7 @@
 //  純函式：不 import React / zustand / localStorage。
 // ============================================================================
 import { validateSquad, seatsOf, seatLaneOf, tierOf, MATCH_SQUAD_VERSION } from "./matchSquad.js";
+import { fpsRoleOf, FPS_ROLE_ZH } from "../../battle/fps/fpsRoster.js";
 
 export const MATCH_ENTRY_VERSION = "MatchEntryRequest.v1";
 
@@ -90,11 +91,13 @@ export function createMatchEntryRequest({ mode = "moba", seats = {}, players = [
   //  陣容快照：只有身分與編制。**沒有任何能力數值**——伺服器自己查。
   const squad = required.map((seat) => {
     const me = byId.get(seats[seat]);
+    const fpsRole = mode === "cs" ? fpsRoleOf(me) : null;
     return {
       seat,
       playerId: me.id,
       //  位置：選手的定位與該席位期望的定位（伺服器可據此重算符合度，不必信任前端判斷）
-      role: me.role ?? null,
+      role: mode === "cs" ? fpsRole : (me.role ?? null),
+      fpsRole: mode === "cs" ? (FPS_ROLE_ZH[fpsRole] ?? fpsRole) : null,
       seatRole: seatLaneOf(mode, seat) ?? null,
       tier: tierOf(me),
     };

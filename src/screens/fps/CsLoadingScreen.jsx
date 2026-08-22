@@ -13,7 +13,8 @@
 import React, { useEffect, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { FPS_WEIGHTS, statZh } from "../../data/playerModel.js";
-import { MOBA2FPS, FPS_ROLE_ZH } from "../../battle/fps/fpsRoster.js";
+import { CS_SEATS } from "../../platform/contracts/matchSquad.js";
+import { FPS_ROLE_ZH, fpsRoleOf } from "../../battle/fps/fpsRoster.js";
 import PlayerFace from "../../ui/PlayerFace.jsx";
 import { GC, FONT, MONO } from "../../ui/theme.js";
 
@@ -34,7 +35,9 @@ function keyStat(p) {
 export default function CsLoadingScreen({ config, onDone }) {
   const players = useProfileStore((s) => s.players) ?? [];
   const team = useProfileStore((s) => s.team);
-  const starters = players.filter((p) => p.status === "主力").slice(0, 5);
+  const csLineup = useProfileStore((s) => s.csLineup);
+  const byId = new Map(players.map((p) => [p.id, p]));
+  const starters = CS_SEATS.map((seat) => byId.get(csLineup?.[seat])).filter(Boolean);
   const [pct, setPct] = useState(0);
 
   useEffect(() => {
@@ -64,7 +67,7 @@ export default function CsLoadingScreen({ config, onDone }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {starters.map((p) => {
               const ks = keyStat(p);
-              const fpsRole = FPS_ROLE_ZH[MOBA2FPS[p.role]] || "步槍手";
+              const fpsRole = FPS_ROLE_ZH[fpsRoleOf(p)] || "步槍手";
               return (
                 <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 9 }}>
                   <PlayerFace player={p} size={28} />

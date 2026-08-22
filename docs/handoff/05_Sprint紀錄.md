@@ -6005,3 +6005,13 @@ Pages 後端**已經把內容發佈出去**，只是沒在 `actions/deploy-pages
 
 本機 dev server 上這九項已經人工驗過（見上方「集中驗收修正包」一節），
 但那是修正 worktree 的 dev build，不等於正式環境。
+
+## CS-A：FPS Correctness & Lineup Integrity（2026-08-23，已完成本機驗證）
+
+- 根因：simulation 使用 `effectiveRoster`，renderer 卻從 module-level `ACTIVE_ROSTER`
+  建 pool，且 pool effect 只依賴 `mapKey`；名單變更時 frame identity 與 entity pool 可能脫節。
+- 修正：`FpsScene3D` 直接接收同一份 `effectiveRoster`，map／roster 變更都重建 pool；
+  `fpsIdentity.js` 區分「死亡」與「找不到 identity」。
+- CS lineup 改為 `slot 1–5` 中性席位；FPS role 屬於選手，可重複，不再由 MOBA lane 或席位推導。
+- 驗證：`check_cs_a_fps_correctness` 10/10、`check_cs23` 28/28、`check_squad_o1` 40/40。
+  真機視覺／FPS／觸控尚未驗收。

@@ -19,10 +19,10 @@
 // ============================================================================
 import React, { useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
-import { CS_SEATS, CS_SEAT_LANE_ZH } from "../../platform/contracts/matchSquad.js";
+import { CS_SEATS, CS_SEAT_LABEL } from "../../platform/contracts/matchSquad.js";
 import MatchPrepFrame, { SquadSeatRow } from "../common/MatchPrepFrame.jsx";
 import { calcPower, bestPositions, personalityById } from "../../data/playerModel.js";
-import { MOBA2FPS, FPS_ROLE_ZH } from "../../battle/fps/fpsRoster.js";
+import { FPS_ROLE_ZH, fpsRoleOf, csLineupAdvisories } from "../../battle/fps/fpsRoster.js";
 import PlayerFace from "../../ui/PlayerFace.jsx";
 import { GC } from "../../ui/theme.js";
 
@@ -31,19 +31,20 @@ const COND_C = { "精神飽滿": GC.green, "正常": "#d4d4d8", "疲勞": GC.gol
 const MONO = "'Courier New',monospace";
 
 //  五個 CS 席位的呈現差異（**只允許到這裡為止**：名稱、圖示、色彩）
-const SEAT_STYLE = {
+const SEAT_VISUAL_STYLE = {
   f1: { code: "ENTRY", emoji: "⚔️", color: "#f97316" },
   f2: { code: "LURKER", emoji: "🕶", color: "#22c55e" },
   f3: { code: "RIFLER", emoji: "🔫", color: "#a855f7" },
   f4: { code: "AWP", emoji: "🎯", color: "#eab308" },
   f5: { code: "IGL", emoji: "🧠", color: "#14b8a6" },
 };
+const SLOT_CODE = Object.freeze({ f1: "SLOT 1", f2: "SLOT 2", f3: "SLOT 3", f4: "SLOT 4", f5: "SLOT 5" });
 
 /** 指派先發（與 MOBA 的 BenchSheet 同一個 store action，不另建流程）。 */
 function CsBenchSheet({ seat, players, lineup, onClose }) {
   const setCsSeat = useProfileStore((s) => s.setCsSeat);
   const list = (players ?? []).filter((p) => p && typeof p.id === "string");
-  const want = CS_SEAT_LANE_ZH[seat];
+  const slotLabel = CS_SEAT_LABEL[seat] ?? seat;
   return (
     <div style={{ position: "absolute", inset: 0, zIndex: 45 }}>
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)" }} />
@@ -51,8 +52,8 @@ function CsBenchSheet({ seat, players, lineup, onClose }) {
         <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 4px" }}><div style={{ width: 36, height: 4, borderRadius: 99, background: "rgba(255,255,255,0.12)" }} /></div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 18px 12px" }}>
           <div>
-            <div style={{ color: "white", fontSize: 15, fontWeight: 900 }}>指派先發 · {SEAT_STYLE[seat]?.code}</div>
-            <div style={{ color: "#52525b", fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", marginTop: 2 }}>{want} · 席位 {seat}</div>
+            <div style={{ color: "white", fontSize: 15, fontWeight: 900 }}>指派先發 · {SLOT_CODE[seat]}</div>
+            <div style={{ color: "#52525b", fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", marginTop: 2 }}>{slotLabel} · 席位 {seat}</div>
           </div>
           <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", color: GC.gray, fontSize: 13 }}>✕</button>
         </div>
@@ -75,8 +76,8 @@ function CsBenchSheet({ seat, players, lineup, onClose }) {
                     <span style={{ marginLeft: 5, fontSize: 9, fontWeight: 800, color: "#93c5fd", background: "rgba(59,130,246,0.14)", borderRadius: 5, padding: "1px 5px", fontFamily: "system-ui" }}>Lv.{p.lv ?? 1}</span>
                   </div>
                   <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.45)" }}>
-                    {FPS_ROLE_ZH[MOBA2FPS[p.role]] ?? "步槍手"} · CS 戰力 {calcPower(p, "fps")}
-                    {at && at !== seat && <span style={{ color: "#fbbf24" }}> · 目前 {SEAT_STYLE[at]?.code}（點擊將互換）</span>}
+                    {FPS_ROLE_ZH[fpsRoleOf(p)] ?? "步槍手"} · CS 戰力 {calcPower(p, "fps")}
+                    {at && at !== seat && <span style={{ color: "#fbbf24" }}> · 目前 {SLOT_CODE[at]}（點擊將互換）</span>}
                   </div>
                 </div>
                 <span style={{ fontSize: 10, fontWeight: 800, color: isHere ? GC.green : GC.gray, flexShrink: 0 }}>{isHere ? "先發中" : "指派"}</span>
@@ -101,10 +102,11 @@ export default function CsPrepScreen({ onNext, onBack }) {
   const byId = new Map(players.map((p) => [p.id, p]));
   const seated = CS_SEATS.map((seat) => byId.get(csLineup?.[seat])).filter(Boolean);
   const myPow = seated.length ? Math.round(seated.reduce((t, p) => t + calcPower(p, "fps"), 0) / seated.length) : 0;
+  const advisories = csLineupAdvisories(seated);
 
   //  ⚠ 五個席位一定都算進來（**不 filter**）——缺員要看得見是哪一席。
   const seats = CS_SEATS.map((seat) => {
-    const st = SEAT_STYLE[seat];
+    const st = SEAT_VISUAL_STYLE[seat];
     const p = byId.get(csLineup?.[seat]) ?? null;
     const pow = p ? calcPower(p, "fps") : null;
     const cond = p?.condition || "正常";
@@ -113,7 +115,7 @@ export default function CsPrepScreen({ onNext, onBack }) {
     return (
       <SquadSeatRow
         key={seat}
-        code={st.code} label={`${st.code} · ${CS_SEAT_LANE_ZH[seat]}`} emoji={st.emoji} color={st.color}
+        code={SLOT_CODE[seat]} label={`${SLOT_CODE[seat]} · ${CS_SEAT_LABEL[seat]}`} emoji={st.emoji} color={st.color}
         seated={!!p} playerName={p?.name} playerLv={p?.lv}
         onSwap={() => setBench(seat)}
         avatar={p ? (
@@ -121,7 +123,7 @@ export default function CsPrepScreen({ onNext, onBack }) {
         ) : null}
         subLine={p ? (
           <div style={{ display: "flex", gap: 5, marginTop: 2, flexWrap: "wrap", minWidth: 0 }}>
-            <span style={{ background: `${ACC}22`, color: ACC, fontSize: 8, fontWeight: 700, borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap" }}>{FPS_ROLE_ZH[MOBA2FPS[p.role]] || "步槍手"}</span>
+            <span style={{ background: `${ACC}22`, color: ACC, fontSize: 8, fontWeight: 700, borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap" }}>{FPS_ROLE_ZH[fpsRoleOf(p)] || "步槍手"}</span>
             <span style={{ color: GC.gray, fontSize: 8, whiteSpace: "nowrap" }}>適配 {bestPositions(p).fps.fit}</span>
             <span style={{ color: cc, fontSize: 8, whiteSpace: "nowrap" }}>{cond}</span>
             {pers && <span style={{ fontSize: 8 }}>{pers.emoji}</span>}
@@ -189,7 +191,8 @@ export default function CsPrepScreen({ onNext, onBack }) {
         seats={seats}
         belowSeats={(
           <div style={{ color: GC.gray, fontSize: 9, marginTop: 4, marginBottom: 8, lineHeight: 1.7 }}>
-            數字為該選手 CS 戰力 · 定位由路線對應（無英雄、無技能）· 🔁 指派先發（持久化）
+            數字為該選手 CS 戰力 · FPS 角色是選手特性，不綁定 SLOT · 🔁 指派先發（持久化）
+            {advisories.length > 0 && <div style={{ marginTop: 4, color: GC.gold }}>陣容分析：{advisories.join(" · ")}</div>}
           </div>
         )}
       />

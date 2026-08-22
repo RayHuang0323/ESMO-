@@ -17,6 +17,9 @@
 import { ROSTER } from "./roster.js";
 import { heroById } from "./heroDatabase.js";
 
+// CS role is a player attribute, independent from the MOBA lane and lineup slot.
+const INITIAL_CS_ROLE = Object.freeze({ b1: "entry", b2: "lurker", b3: "rifler", b4: "awp", b5: "igl" });
+
 // Legacy INITIAL_ROSTER 的經營欄位，依路線索引（逐字保留數值）
 const SEED_BY_LANE = {
   "上路": { lv: 38, potential: 90, age: 23, personality: "aggressive", morale: 92, energy: 85, condition: "精神飽滿", contract: 365, salary: 8,
@@ -44,7 +47,8 @@ export const INITIAL_PLAYERS = Object.entries(ROSTER)
       id: pid,                 // 與 ROSTER / BattleResult.players[].id 同一組 id
       name: r.player,          // 身分來自 ROSTER（唯一來源）
       heroId: r.heroId,        // 綁定英雄同上
-      role: lane,              // 定位＝英雄路線（可在 Roster 頁改）
+      role: lane,              // MOBA lane used by the MOBA flow only.
+      csRole: INITIAL_CS_ROLE[pid] ?? null,
       status: "主力",
       training: null,
       ...seed,

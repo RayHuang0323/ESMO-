@@ -2,7 +2,7 @@
 //  battle/fps/fpsRoster.js — CS/FPS 名單 Adapter（Sprint22）
 //
 //  身分：Legacy EsportsGame.jsx「3D CS 對戰轉接層」(line145-167) 的逐字抽取：
-//    STAT_L2S / toShortStats / MOBA2FPS / FPS_ROLE_ZH / FPS_W_S / fpsOvr /
+//    STAT_L2S / toShortStats / FPS_ROLE_ZH / FPS_W_S / fpsOvr /
 //    toFpsRoster / CS_MAP_KEYS。
 //
 //  ⚠ 這不是第二套選手資料，也不是第二套能力模型：
@@ -16,14 +16,51 @@
 
 import { getPlayerDerivedStats } from "../../platform/talents/playerDerivedStats.js";
 import { CS_SEATS } from "../../platform/contracts/matchSquad.js";
+import { bestPositions } from "../../data/playerModel.js";
 
 /** 長鍵(playerModel STAT_DEF) → 短鍵(3D 引擎)；Legacy STAT_L2S 逐字 */
 export const STAT_L2S = { reflex: "rxn", accuracy: "acc", apm: "apm", positioning: "pos", mapAware: "vis", tacticalIQ: "tac", decision: "dec", adaptability: "adp", courage: "cou", clutch: "str", focus: "foc", resilience: "res", comms: "com", leadership: "led", synergy: "coo", learning: "lrn" };
 export const toShortStats = (stats = {}) => { const o = {}; for (const k in STAT_L2S) o[STAT_L2S[k]] = stats[k] ?? 50; return o; };
 
-/** MOBA 路線 → FPS 定位（Legacy MOBA2FPS 逐字；與引擎內建德國海豹對位一致） */
-export const MOBA2FPS = { "上路": "entry", "打野": "lurker", "中路": "rifler", "下路": "awp", "輔助": "igl" };
+export const FPS_ROLE_KEYS = Object.freeze(["entry", "rifler", "awp", "lurker", "igl", "support"]);
 export const FPS_ROLE_ZH = { entry: "突破手", rifler: "步槍手", awp: "狙擊手", lurker: "游走手", igl: "指揮", support: "輔助" };
+
+const FPS_ROLE_ALIAS = Object.freeze({
+  entry: "entry", rifler: "rifler", awp: "awp", lurker: "lurker", igl: "igl", support: "support",
+  "突破手": "entry", "步槍手": "rifler", "狙擊手": "awp", "游走手": "lurker", "指揮": "igl", "輔助": "support",
+});
+const FPS_POSITION_ROLE = Object.freeze({
+  "FPS突破手": "entry", "FPS步槍手": "rifler", "FPS狙擊手": "awp", "FPS指揮": "igl", "FPS輔助": "support",
+});
+
+/** Normalize an explicit player-level CS role; lineup seats never participate. */
+export function normalizeFpsRole(value) {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  return FPS_ROLE_ALIAS[normalized] ?? FPS_ROLE_ALIAS[normalized.toLowerCase()] ?? null;
+}
+
+/**
+ * Return the player's own FPS role. Legacy records without csRole use the
+ * existing player-model FPS suitability as a compatibility fallback; MOBA
+ * lane and lineup index are deliberately not consulted.
+ */
+export function fpsRoleOf(player) {
+  const explicit = normalizeFpsRole(player?.csRole ?? player?.fpsRoleKey ?? player?.fpsRole);
+  if (explicit) return explicit;
+  const inferred = FPS_POSITION_ROLE[bestPositions(player)?.fps?.pos];
+  return inferred ?? "rifler";
+}
+
+export function csLineupAdvisories(players = []) {
+  const roles = players.map(fpsRoleOf);
+  const advisories = [];
+  if (!roles.includes("awp")) advisories.push("缺乏主要狙擊手");
+  if (!roles.includes("igl")) advisories.push("無明確 IGL");
+  if (roles.filter((r) => r === "entry").length >= 3) advisories.push("突破手偏多");
+  if (roles.filter((r) => r === "rifler").length >= 3) advisories.push("步槍火力充足");
+  return advisories;
+}
 
 /** FPS 綜合戰力（Legacy FPS_W_S / fpsOvr 逐字；HUD 展示用，不進引擎演算法） */
 const FPS_W_S = { acc: 1.4, rxn: 1.3, str: 1.3, pos: 1.2, cou: 1.1, vis: 1.1, apm: 1.0, tac: 1.0, foc: 1.0, dec: 0.9, com: 0.9, adp: 0.8, res: 0.8, coo: 0.8, led: 0.7, lrn: 0.5 };
@@ -51,10 +88,10 @@ export function toFpsRoster(players = [], csLineup = null) {
     //   引擎 sim 的 persStat 直讀 stats[key] → 天賦真的影響 CS 對戰輸入。
     //   無天賦時 derived === base（逐鍵相等）→ baseline 與 S26 一致。
     const short = toShortStats(getPlayerDerivedStats(p));
-    const role = MOBA2FPS[p.role] || ["entry", "rifler", "awp", "lurker", "igl"][i] || "rifler";
+    const role = fpsRoleOf(p);
     const ovr = fpsOvr(short);
     return {
-      id: "t" + (i + 1), name: p.name, side: "t", role, fpsRole: FPS_ROLE_ZH[role],
+      id: p.id, name: p.name, side: "t", role, fpsRole: FPS_ROLE_ZH[role],
       moba: ovr, fps: ovr, sta: p.energy ?? 82, personality: p.personality || "steady",
       morale: p.morale, condition: p.condition, stats: short, _gid: p.id,
     };

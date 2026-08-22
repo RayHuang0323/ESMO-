@@ -5,6 +5,7 @@
 // ============================================================================
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import * as THREE from "three";
+import { checkFpsRendererIdentity } from "./fpsIdentity.js";
 
 // EsportsFPS3D 已內聯於本檔（見下方 __FPS3D_MODULE），以符合單一檔案 artifact 限制
 /* ═══════════════════════════════════════════════════════════════
@@ -237,7 +238,6 @@ const ROSTER=[
 ];
 // 渲染層使用的「當前名單」：嵌入主遊戲時由元件設為即時名單（自訂對手 / 成長後素質）。
 // 僅影響 3D 模型的 id/side/名牌建立；逐格座標與狀態仍由模擬產生的 frame.players 驅動。
-let ACTIVE_ROSTER=ROSTER;
 const ovr=p=>p.fps||Math.round(((p.stats?(p.stats.acc+p.stats.rxn+p.stats.apm+p.stats.pos)/4:80)));
 // 各 FPS 定位的 5 項關鍵素質（取自 esmo 遊戲的 POSITION_PROFILE，權重 5→1）
 const POS_PROFILE={
@@ -704,7 +704,7 @@ function makeBigLetter(letter,color){
 /* ═══════════════════════════════════════════════════════════════════════
    FpsScene3D — Three.js 渲染層
    ═══════════════════════════════════════════════════════════════════════ */
-function FpsScene3D({mapKey,liveRef,onSelectPlayer,onRecenterRef}){
+function FpsScene3D({mapKey,roster,liveRef,onSelectPlayer,onRecenterRef}){
   const mountRef=useRef(null);
   const stateRef=useRef(null); // 保存 three 物件，跨 effect 共用
 
@@ -953,7 +953,7 @@ function FpsScene3D({mapKey,liveRef,onSelectPlayer,onRecenterRef}){
     });
 
     // ── 選手（10 名，固定池）──
-    st.players=ACTIVE_ROSTER.map(p=>{
+    st.players=roster.map(p=>{
       const col=new THREE.Color(p.side==="ct"?0x39a9e6:0xf08a3c);
       const g=new THREE.Group();g.userData.pid=p.id;g.userData.side=p.side;
       // 地面光環
@@ -1042,7 +1042,7 @@ function FpsScene3D({mapKey,liveRef,onSelectPlayer,onRecenterRef}){
 
     st.mapReady=true;st.seekNonce=-1;st.subT=0;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[mapKey]);
+  },[mapKey,roster]);
 
   return <div ref={mountRef} style={{position:"absolute",inset:0,touchAction:"none"}}/>;
 }
@@ -1057,6 +1057,10 @@ function updateDynamic(st,frame,nf,sub,live,W){
   // 選手
   const fmap={};frame.players.forEach(p=>fmap[p.id]=p);
   const nmap={};(nf?nf.players:[]).forEach(p=>nmap[p.id]=p);
+  st.identity=checkFpsRendererIdentity({
+    framePlayers: frame.players,
+    rendererEntities: st.players.map(P=>({id:P.id,side:P.side})),
+  });
   st.players.forEach(P=>{
     const p=fmap[P.id];if(!p){P.g.visible=false;return;}
     P.g.visible=true;
@@ -1450,13 +1454,12 @@ function EsportsFPS3D({
   const [mapKey,setMapKey]=useState(mapKeyProp||"inferno");
   useEffect(()=>{if(mapKeyProp&&mapKeyProp!==mapKey)setMapKey(mapKeyProp);},[mapKeyProp]);
   const lib=useMemo(()=>TACTICS_DB[mapKey],[mapKey]);
-  // 即時名單：有傳入我方+對手則合併，否則用內建 ROSTER；同步設為渲染用 ACTIVE_ROSTER
+  // 即時名單：同一份有效名單同時提供模擬與 renderer。
   const effectiveRoster=useMemo(()=>{
     const bt=ROSTER.filter(p=>p.side==="t"),bc=ROSTER.filter(p=>p.side==="ct");
     const tSide=(rosterProp&&rosterProp.length)?rosterProp.map(p=>({...p,side:"t"})):bt;
     const ctSide=(oppProp&&oppProp.length)?oppProp.map(p=>({...p,side:"ct"})):bc;
-    const rs=[...tSide,...ctSide];
-    ACTIVE_ROSTER=rs;return rs;
+     return [...tSide,...ctSide];
   },[rosterProp,oppProp]);
   // 解析我方戰術索引（id 字串 / 物件 / 數字）
   const resolveTIdx=()=>{
@@ -1567,7 +1570,7 @@ function EsportsFPS3D({
 
         {/* 3D 戰術畫面 */}
         <div style={{position:"relative",width:"100%",paddingBottom:"118%",borderRadius:14,overflow:"hidden",border:`1px solid ${C.line}`,boxShadow:"0 10px 50px rgba(0,0,0,0.7)",background:"#05070c"}}>
-          <FpsScene3D mapKey={mapKey} liveRef={liveRef} onSelectPlayer={setSelected} onRecenterRef={recenter}/>
+          <FpsScene3D mapKey={mapKey} roster={effectiveRoster} liveRef={liveRef} onSelectPlayer={setSelected} onRecenterRef={recenter}/>
 
           {/* LIVE */}
           <div style={{position:"absolute",top:9,left:"50%",transform:"translateX(-50%)",zIndex:20,display:"flex",alignItems:"center",gap:4,pointerEvents:"none"}}>

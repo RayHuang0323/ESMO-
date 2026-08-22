@@ -43,18 +43,16 @@ export function tierOf(player) {
 }
 export const isEligible = (player) => ROSTER_TIERS[tierOf(player)].eligible;
 
-/** CS 席位（對齊 battle/fps/fpsRoster.js 的 MOBA2FPS 對位）。 */
+/** CS neutral lineup seats; FPS role belongs to each player, not to a seat. */
 export const CS_SEATS = Object.freeze(["f1", "f2", "f3", "f4", "f5"]);
-export const CS_SEAT_ROLE = Object.freeze({
-  f1: "entry", f2: "lurker", f3: "rifler", f4: "awp", f5: "igl",
+export const CS_SEAT_LABEL = Object.freeze({
+  f1: "slot 1", f2: "slot 2", f3: "slot 3", f4: "slot 4", f5: "slot 5",
 });
-/** CS 席位期望的來源路線（＝ MOBA2FPS 的反查；位置符合度用）。 */
-export const CS_SEAT_LANE_ZH = Object.freeze({
-  f1: "上路", f2: "打野", f3: "中路", f4: "下路", f5: "輔助",
-});
+// Compatibility export for older read-only tooling; values are neutral slot labels, never FPS roles.
+export const CS_SEAT_ROLE = CS_SEAT_LABEL;
 
 export const seatsOf = (mode) => (mode === "cs" ? CS_SEATS : ENGINE_SEATS);
-export const seatLaneOf = (mode, seat) => (mode === "cs" ? CS_SEAT_LANE_ZH[seat] : SEAT_LANE_ZH[seat]);
+export const seatLaneOf = (mode, seat) => (mode === "cs" ? null : SEAT_LANE_ZH[seat]);
 
 /**
  * 驗證一份出賽陣容。
@@ -113,7 +111,7 @@ export function validateSquad({ mode = "moba", seats = {}, players = [], strictR
     filled++;
     //  位置符合度：預設只警告（讓玩家能刻意換位），strictRole 時升級為阻擋
     const want = seatLaneOf(mode, seat);
-    if (want && me.role && me.role !== want) {
+    if (mode !== "cs" && want && me.role && me.role !== want) {
       const item = {
         code: "role_mismatch", seat, playerId: pid,
         message: `${me.name} 的定位是${me.role}，被放在${seatLabel(mode, seat)}（期望${want}）`,
@@ -169,7 +167,7 @@ export function validateSquadSubmission(sub, players = []) {
 
 /** 席位顯示名（錯誤訊息用）。 */
 function seatLabel(mode, seat) {
-  if (mode === "cs") return `${CS_SEAT_LANE_ZH[seat] ?? seat}（${CS_SEAT_ROLE[seat] ?? "?"}）`;
+  if (mode === "cs") return CS_SEAT_LABEL[seat] ?? seat;
   return SEAT_LANE_ZH[seat] ?? seat;
 }
 
@@ -207,7 +205,7 @@ export function autoFillSquad({ mode = "moba", seats = {}, players = [] } = {}) 
     const pick = pool
       .filter((p) => !used.has(p.id))
       .sort((a, b) => rank(a) - rank(b)
-        || (b.role === want ? 1 : 0) - (a.role === want ? 1 : 0)
+        || (want && b.role === want ? 1 : 0) - (want && a.role === want ? 1 : 0)
         || String(a.id).localeCompare(String(b.id)))[0];
     if (!pick) continue;
     out[seat] = pick.id;

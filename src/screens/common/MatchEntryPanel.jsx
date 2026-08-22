@@ -120,7 +120,7 @@ export default function MatchEntryPanel({ mode = "moba", onAutoFill = null }) {
                 <div key={r.seat} style={{ display: "flex", alignItems: "center", gap: 7, padding: "4px 0", borderTop: `1px solid ${C.line}`, fontSize: 10 }}>
                   <span style={{ color: C.gray, width: 28, fontFamily: "monospace" }}>{r.seat}</span>
                   <span style={{ color: "white", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.playerId}</span>
-                  <span style={{ color: r.role === r.seatRole ? C.gray2 : C.warn, whiteSpace: "nowrap" }}>{r.role}</span>
+                  <span style={{ color: mode === "cs" ? C.gray2 : (r.role === r.seatRole ? C.gray2 : C.warn), whiteSpace: "nowrap" }}>{mode === "cs" ? r.fpsRole : r.role}</span>
                   <span style={{ color: C.gray, whiteSpace: "nowrap" }}>{r.tier === "active" ? "一隊" : "替補"}</span>
                 </div>
               ))}

@@ -214,7 +214,18 @@ ck("29) 天賦與引擎零耦合（LogicEngine 不認得天賦；天賦模組不
   !/platform\/talents/.test(ENG_SRC_27) &&
   TALENT_FILES.every((f) => !/LogicEngine/.test(src(f))));
 
-frozenDiff("30) 不修改 FPS presentation", "src/battle/fps/EsportsFPS3D.jsx");
+const CS_A_FPS_FILES = [
+  "src/battle/fps/EsportsFPS3D.jsx", "src/battle/fps/fpsRoster.js", "src/battle/fps/fpsIdentity.js",
+  "src/platform/contracts/matchSquad.js", "src/platform/contracts/matchEntry.js",
+  "src/screens/fps/CsPrepScreen.jsx", "src/screens/fps/CsLoadingScreen.jsx",
+  "src/screens/common/MatchEntryPanel.jsx", "src/data/players.js",
+];
+const changedFpsFiles = execFileSync("git", ["diff", "--name-only", "HEAD", "--", ...CS_A_FPS_FILES], { cwd: ROOT, encoding: "utf8" })
+  .split(/\r?\n/).map((f) => f.trim()).filter(Boolean);
+ck("30) FPS presentation 只允許 CS-A identity/lineup scope",
+  changedFpsFiles.every((f) => CS_A_FPS_FILES.includes(f))
+  && !src("src/battle/fps/EsportsFPS3D.jsx").includes("ACTIVE_ROSTER")
+  && /roster=\{effectiveRoster\}/.test(src("src/battle/fps/EsportsFPS3D.jsx")));
 ck("   天賦模組不含傷害/勝率/金錢/XP 字樣（紅線靜態防線）", (() => {
   const files = ["src/platform/talents/talentDefinitions.js", "src/platform/talents/playerDerivedStats.js", "src/platform/talents/purchasePlayerTalent.js"];
   return files.every((f) => { const s = src(f); return !/damage|winRate|勝率係數|money|fans|xpGained/.test(s); });
