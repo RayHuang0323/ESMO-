@@ -3,6 +3,10 @@ import { useProfileStore } from "../../platform/profileStore.js";
 import { GC, FONT, MONO } from "../../ui/theme.js";
 import { recapStyles, csRecapStyles, recapCssText } from "../manage/seasonRecap/recapStyles.js";
 import CsRecapBracket from "../manage/seasonRecap/CsRecapBracket.jsx";
+//  UI-4A：與 MOBA 共用的純呈現元件（不算任何數字，見各檔檔頭）
+import StageBar from "../competition/StageBar.jsx";
+import StandingsTable from "../competition/StandingsTable.jsx";
+import { FixtureRow } from "../competition/FixtureList.jsx";
 
 // ============================================================================
 //  CsCompetitionHubScreen — CS 賽事中心（CS Season M4-C）
@@ -57,60 +61,10 @@ const STEP_INDEX = {
   league: 0, major_pending: 0, major: 1, major_done: 1, sealed: 2,
 };
 
-function StageBar({ stage }) {
-  const at = STEP_INDEX[stage?.phase] ?? 0;
-  return (
-    <section data-testid="cs-hub-stage" data-phase={stage?.phase ?? ""} style={{ marginTop: 12 }}>
-      <div className="cs-hub-stage-row" style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, flexWrap: "wrap" }}>
-        {STAGE_STEPS.map((step, i) => {
-          const done = i < at;
-          const now = i === at;
-          const color = now ? ACC : done ? "rgba(255,255,255,0.55)" : GC.gray;
-          return (
-            <React.Fragment key={step.key}>
-              {i > 0 && <span aria-hidden="true" style={{ flex: "1 1 12px", minWidth: 12, height: 1, background: done || now ? "rgba(255,255,255,0.22)" : GC.line }} />}
-              <span data-testid="cs-hub-stage-step" data-step={step.key} data-state={now ? "current" : done ? "done" : "todo"}
-                style={{ color, fontSize: 10.5, fontWeight: 900, whiteSpace: "nowrap" }}>
-                {now ? "● " : done ? "✓ " : "○ "}{step.label}
-              </span>
-            </React.Fragment>
-          );
-        })}
-      </div>
-      <div style={{ ...recapStyles.quiet, marginTop: 6, color: ACC }}>{stage?.label ?? "—"}</div>
-    </section>
-  );
-}
+//  UI-4A：階段條與積分榜列改用 `screens/competition/` 的共用純呈現元件。
+//  phase → 第幾格的**對照仍留在本檔**（`STEP_INDEX`）——那是 CS 的賽制知識，
+//  共用元件不該認得它。
 
-/** 一列積分榜。晉級線由呼叫端插在正確的位置，不由這裡判斷。 */
-function StandingRow({ row, isMe, inLine }) {
-  return (
-    <div
-      data-testid="cs-hub-standing-row"
-      data-team-id={row.teamId}
-      data-rank={row.rank}
-      data-me={isMe ? "true" : "false"}
-      data-qualified={inLine ? "true" : "false"}
-      style={{
-        display: "grid",
-        gridTemplateColumns: "18px minmax(0,1fr) minmax(52px,auto) minmax(30px,auto)",
-        alignItems: "center",
-        gap: 8,
-        padding: "6px 6px",
-        minWidth: 0,
-        background: isMe ? "rgba(251,146,60,0.10)" : "transparent",
-        borderRadius: isMe ? 6 : 0,
-      }}
-    >
-      <span style={{ color: inLine ? ACC : GC.gray, fontFamily: MONO, fontSize: 10, fontWeight: 900, textAlign: "center" }}>{row.rank}</span>
-      <span style={{ minWidth: 0, color: isMe ? "#fff" : "rgba(255,255,255,0.82)", fontSize: 11.5, fontWeight: isMe ? 900 : 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {row.name ?? row.teamId}{isMe && <span style={{ color: ACC, fontSize: 9, marginLeft: 5 }}>我</span>}
-      </span>
-      <span style={{ color: GC.gray, fontFamily: MONO, fontSize: 10.5, textAlign: "right" }}>{row.wins}-{row.losses}</span>
-      <span style={{ color: "rgba(255,255,255,0.9)", fontFamily: MONO, fontSize: 11, fontWeight: 900, textAlign: "right" }}>{row.points}</span>
-    </div>
-  );
-}
 
 export default function CsCompetitionHubScreen({ onBack, onRecap, onPlay, onResume }) {
   //  訂閱 canonical 切片，再取一份一致的唯讀快照（同 Recap 的做法）
@@ -186,11 +140,10 @@ export default function CsCompetitionHubScreen({ onBack, onRecap, onPlay, onResu
   const major = view.csMajor ?? { exists: false };
   const path = major.playerPath ?? { inMajor: false, next: null, eliminated: false };
 
-  //  下一場對手：`next` 是 Fixture，對手 = 不是我的那一側
+  //  下一場：`next` 是 Fixture。對手是誰／主客場由共用的 `FixtureRow` 從
+  //  `sideA/sideB` 與 `myTeamId` 讀出來（那是讀法，不是規則）。
   const nextFixture = view.next ?? null;
-  const oppId = nextFixture ? (nextFixture.sideA === myTeamId ? nextFixture.sideB : nextFixture.sideA) : null;
-  const oppName = oppId ? (view.participants.find((p) => p.id === oppId)?.name ?? oppId) : null;
-  const homeAway = nextFixture ? (nextFixture.sideA === myTeamId ? "主場" : "客場") : null;
+  const nameOf = (id) => view.participants?.find?.((p) => p.id === id)?.name ?? id;
 
   return frame(
     <div data-testid="cs-competition-hub" data-season={view.season} data-phase={view.csStage?.phase ?? ""}>
@@ -203,7 +156,16 @@ export default function CsCompetitionHubScreen({ onBack, onRecap, onPlay, onResu
         </span>
       </div>
 
-      <StageBar stage={view.csStage} />
+      {/*  phase → 第幾格的對照留在本檔（`STEP_INDEX`）：那是 CS 的賽制知識。 */}
+      <StageBar
+        steps={STAGE_STEPS}
+        activeIndex={STEP_INDEX[view.csStage?.phase] ?? 0}
+        label={view.csStage?.label ?? "—"}
+        accent={ACC}
+        phase={view.csStage?.phase ?? ""}
+        testId="cs-hub-stage"
+        stepTestId="cs-hub-stage-step"
+      />
 
       {/*  ── 今日賽程（UI-3）─────────────────────────────────────────────
            整頁最重要的一個動作，所以放在階段條正下方、積分榜之前。
@@ -255,29 +217,38 @@ export default function CsCompetitionHubScreen({ onBack, onRecap, onPlay, onResu
             {me ? `${me.wins} 勝 ${me.losses} 敗 · ${me.points} 分` : "—"}
           </span>
         </div>
+        {/*  UI-4A：下一場改用共用的 `FixtureRow`（row 版面）。
+             ⚠ 天數傳 `view.nextDay`（Store 推導的絕對遊戲日），不讓元件去讀
+               `fixture.day`——後者是賽季相對天，兩者不是同一個數字。 */}
         <div data-testid="cs-hub-next" data-fixture-id={nextFixture?.id ?? ""} style={{ ...recapStyles.row, ...recapStyles.rowLast }}>
           <span style={recapStyles.label}>下一場</span>
-          <span style={recapStyles.value}>
-            {nextFixture ? `第 ${view.nextDay} 天 · ${oppName}（${homeAway}）` : "本季已無賽程"}
+          <span style={{ ...recapStyles.value, minWidth: 0, flex: 1 }}>
+            {nextFixture
+              ? (
+                <FixtureRow
+                  fixture={nextFixture}
+                  myTeamId={myTeamId}
+                  nameOf={nameOf}
+                  day={view.nextDay}
+                  accent={ACC}
+                  testIdPrefix="cs-hub-next-fixture"
+                />
+              )
+              : "本季已無賽程"}
           </span>
         </div>
 
-        {/*  積分榜。⚠ 晉級線是**規則**（`csMajorLine.topN`），不是畫面寫死的 4。 */}
-        <div data-testid="cs-hub-standings" style={{ marginTop: 10 }}>
-          {rows.map((row, i) => (
-            <React.Fragment key={row.teamId}>
-              <StandingRow row={row} isMe={row.teamId === myTeamId} inLine={row.rank <= topN} />
-              {row.rank === topN && i < rows.length - 1 && (
-                <div data-testid="cs-hub-qualify-line" style={{ display: "flex", alignItems: "center", gap: 8, margin: "3px 0" }}>
-                  <span style={{ flex: 1, height: 1, background: `${ACC}66` }} />
-                  <span style={{ color: ACC, fontSize: 8.5, fontWeight: 900, letterSpacing: "0.14em", whiteSpace: "nowrap" }}>
-                    MAJOR 晉級線 · 前 {topN}
-                  </span>
-                  <span style={{ flex: 1, height: 1, background: `${ACC}66` }} />
-                </div>
-              )}
-            </React.Fragment>
-          ))}
+        {/*  積分榜。⚠ 晉級線是**規則**（`csMajorLine.topN`），不是畫面寫死的 4；
+             共用元件只負責把線插在指定名次之後，前幾名進得去仍由這裡決定。 */}
+        <div style={{ marginTop: 10 }}>
+          <StandingsTable
+            rows={rows}
+            myTeamId={myTeamId}
+            accent={ACC}
+            showMeBadge
+            qualify={topN > 0 ? { afterRank: topN, label: `MAJOR 晉級線 · 前 ${topN}` } : null}
+            testIdPrefix="cs-hub-standing"
+          />
         </div>
       </section>
 

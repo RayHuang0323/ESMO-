@@ -43,6 +43,9 @@ import { useProfileStore } from "../../platform/profileStore.js";
 import { GC, MONO, chip } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
 import AsiaFinalsPanel from "./asiaFinals/AsiaFinalsPanel.jsx";
+//  UI-4A：與 CS 賽事中心共用的純呈現元件（不算任何數字，見各檔檔頭）
+import StandingsTable from "../competition/StandingsTable.jsx";
+import { FixtureRow } from "../competition/FixtureList.jsx";
 import RecapNextSeason from "./seasonRecap/RecapNextSeason.jsx";
 import SeasonRecap from "./seasonRecap/SeasonRecap.jsx";
 
@@ -528,22 +531,20 @@ export default function CompetitionScreen({ onBack, onPlay, onResume, mode, game
              由 Store 判（會回「請先打完或放棄那一場」並顯示在上方錯誤列），
              畫面不自己判規則。 */}
         {rows.map((focus, idx) => {
-          const oppId = focus.sideA === myId ? focus.sideB : focus.sideA;
-          const home = focus.sideA === myId;
           const isLive = live?.fixtureId === focus.id;
           return (
           <div key={focus.id} style={idx > 0 ? { marginTop: 10, paddingTop: 10, borderTop: `1px solid ${GC.line}` } : undefined}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "6px 0 10px" }}>
-              <div style={{ textAlign: "right", flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 900, color: "#e5e7eb" }}>{nameOf(myId)}</div>
-                <div style={{ fontSize: 9, color: GC.gray }}>{home ? "主場" : "客場"}</div>
-              </div>
-              <div style={{ fontSize: 11, color: GC.gray, fontFamily: MONO }}>VS</div>
-              <div style={{ textAlign: "left", flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 900, color: "#e5e7eb" }}>{nameOf(oppId)}</div>
-                <div style={{ fontSize: 9, color: GC.gray }}>{home ? "客場" : "主場"}</div>
-              </div>
-            </div>
+            {/*  UI-4A：對戰卡改用與 CS 共用的 `FixtureRow`（versus 版面）。
+                 對手是誰、主場還客場由它從 `sideA/sideB` 與 `myId` 讀出來；
+                 出賽／棄權那組按鈕仍留在本檔——那是 MOBA 這一頁的動作，不是共用呈現。 */}
+            <FixtureRow
+              layout="versus"
+              fixture={focus}
+              myTeamId={myId}
+              nameOf={nameOf}
+              accent={GC.purp}
+              testIdPrefix="moba-competition-fixture"
+            />
             {isToday ? (
               //  UI 修正：棄權是**不可逆**的（fixture 進 forfeited 就是終局，
               //  Q3 的 issueFor 永遠不會再簽發）。舊版的二次確認就地把「棄權」
@@ -603,42 +604,34 @@ export default function CompetitionScreen({ onBack, onPlay, onResume, mode, game
 
       {/* ── 積分榜 ─────────────────────────────────────────────────── */}
       <Panel title={final ? "最終積分榜 STANDINGS" : "積分榜 STANDINGS"} right={<span style={{ fontSize: 9, color: GC.gray }}>{standings.rule.label}</span>}>
-        <div style={{ display: "grid", gridTemplateColumns: "18px 1fr 46px 30px 34px", fontSize: 8.5, color: GC.gray, fontWeight: 800, paddingBottom: 4, borderBottom: `1px solid ${GC.line}` }}>
-          <span>#</span><span>隊伍</span><span style={{ textAlign: "center" }}>勝敗</span><span style={{ textAlign: "center" }}>分</span><span style={{ textAlign: "right" }}>淨勝</span>
-        </div>
-        {standings.rows.map((r) => (
-          <div
-            key={r.teamId}
-            style={{
-              display: "grid", gridTemplateColumns: "18px 1fr 46px 30px 34px", fontSize: 11.5,
-              padding: "4px 0", alignItems: "center",
-              color: r.teamId === myId ? GC.gold : "rgba(255,255,255,0.82)",
-              fontWeight: r.teamId === myId ? 900 : 600,
-            }}
-          >
-            <span style={{ fontFamily: MONO, color: GC.gray }}>{r.rank}</span>
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {r.name}{tagOf(r.teamId) && <span style={{ fontSize: 8.5, color: GC.gray, marginLeft: 4 }}>{tagOf(r.teamId)}</span>}
-            </span>
-            <span style={{ fontFamily: MONO, textAlign: "center" }}>{r.wins}-{r.losses}</span>
-            <span style={{ fontFamily: MONO, textAlign: "center" }}>{r.points}</span>
-            <span style={{ fontFamily: MONO, textAlign: "right", color: r.scoreDiff > 0 ? GC.green : r.scoreDiff < 0 ? GC.redL : GC.gray }}>
-              {r.scoreDiff > 0 ? "+" : ""}{r.scoreDiff}
-            </span>
-          </div>
-        ))}
-        {/* 誠實標示：有多少場不是玩家實打的 */}
-        {(() => {
-          const me = standings.rows.find((r) => r.teamId === myId);
-          if (!me || !me.played) return null;
-          return (
-            <div style={{ fontSize: 9, color: GC.gray, marginTop: 7, paddingTop: 6, borderTop: `1px solid ${GC.line}` }}>
-              你已出賽 {me.played} 場：實際對戰 {me.engineGames}
-              {me.forfeitedGames ? ` · 棄權 ${me.forfeitedGames}` : ""}
-              {me.simulatedGames ? ` · 模擬 ${me.simulatedGames}` : ""}
-            </div>
-          );
-        })()}
+        {/*  UI-4A：改用與 CS 共用的 `StandingsTable`。名次／勝敗／積分／淨勝分
+             全部是 `competitionView("moba").standings.rows` 原樣傳進去的，
+             **這裡與元件裡都不重算**。MOBA 的特色（表頭、淨勝分欄、隊伍 tag、
+             金色高亮、來源分佈註腳）由 props 表達，不是把 CS 的樣子套過來。
+             ⚠ 季後賽晉級線目前**刻意不畫**：季後賽名額是由 `playoff.qualified`
+               在常規賽結束後才產生的事實，不是積分榜上的即時規則。要畫的話得先
+               有一個「現在前幾名進得去」的 canonical 來源，那不在本輪範圍。 */}
+        <StandingsTable
+          rows={standings.rows}
+          myTeamId={myId}
+          accent={GC.purp}
+          showHeader
+          showScoreDiff
+          tagOf={tagOf}
+          testIdPrefix="moba-competition-standing"
+          footer={(() => {
+            //  誠實標示：有多少場不是玩家實打的
+            const me = standings.rows.find((r) => r.teamId === myId);
+            if (!me || !me.played) return null;
+            return (
+              <div style={{ fontSize: 9, color: GC.gray, marginTop: 7, paddingTop: 6, borderTop: `1px solid ${GC.line}` }}>
+                你已出賽 {me.played} 場：實際對戰 {me.engineGames}
+                {me.forfeitedGames ? ` · 棄權 ${me.forfeitedGames}` : ""}
+                {me.simulatedGames ? ` · 模擬 ${me.simulatedGames}` : ""}
+              </div>
+            );
+          })()}
+        />
       </Panel>
 
       {/* ── 賽季進度 ───────────────────────────────────────────────── */}

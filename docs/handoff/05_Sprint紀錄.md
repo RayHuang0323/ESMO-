@@ -12288,3 +12288,98 @@ Quick Finish 在這支新工具的驅動方式下會鎖死頁面主執行緒；�
 - 改名後啟動實跑：伺服器起得來、Chrome 起得來、建季 → 賽事中心出戰 → 賽前頁
   → 選圖 → 對戰 → 進入自然播放，全部正常
 - `src` 零改動（`git status` 只有本工具與本文件）
+
+---
+
+## UI-4A — Competition 共用呈現元件（2026-08-23）
+
+把 MOBA 與 CS 賽事頁裡**真正相同**的資訊裝置抽成純呈現元件。不做完整 UI-4 重構。
+
+### 前置稽核
+
+- `origin/main` 仍是 `e9996a7`，本分支 0 behind / 6 ahead。
+- 主 worktree（`milestone-n-finance`）有實質未提交改動於 `profileStore` /
+  `matchmaking` / `matchSession` / `matchRoom` / `featureFlags`——**本 session 開始前就存在**，
+  且在落後兩百多 commit 的 stale 基底上，不是 UI-4A 要碰的檔案。
+  `AppShell.jsx` 與 `CompetitionScreen.jsx` 在那裡是純 CRLF 假 diff。
+- ⚠ **既存衝突**：`milestone-n-finance` 上的 `78f7479`（今日，未推）也改了
+  `CsPrepScreen.jsx`，與 UI-3 移除 `CsLeagueFixtureEntry` 必定衝突。已記入
+  `09_Competition_UI_安全區契約.md`，**未自行解**。
+
+### 新增三個共用元件（`src/screens/competition/`）
+
+| 元件 | 界線 |
+|---|---|
+| `StageBar.jsx` | **不認得任何 phase 字串**。呼叫端傳 `steps` / `activeIndex` / `label` |
+| `StandingsTable.jsx` | 不排序、不累加、不判晉級。晉級線位置由 `qualify.afterRank` 指定 |
+| `FixtureList.jsx` | 匯出 `FixtureRow`（`versus` / `row` 兩種版面）＋ `readFixture()` |
+
+三者都不 import Store、不呼叫 `competitionView`。
+
+### 改用共用元件的地方
+
+**CS 賽事中心**：階段條（原本是本檔內的 `StageBar`）、積分榜列（原本是本檔內的
+`StandingRow` ＋ 手寫晉級線）、下一場（改用 `FixtureRow` row 版面）。
+本檔內的兩個元件複本已刪除（−54 行）。
+
+**MOBA 聯賽頁**：積分榜（含表頭、淨勝分欄、隊伍 tag、來源分佈註腳）、
+今日／下一場的對戰卡（改用 `FixtureRow` versus 版面）。
+
+### 刻意沒有共用的部分（以及原因）
+
+- **phase → 第幾格的對照**留在 CS 這一側（`STEP_INDEX`）：那是 CS 的賽制知識。
+  共用元件一旦認得它，第三款遊戲進來就得改共用元件。
+- **出賽／棄權按鈕**留在 MOBA 頁：那是該頁的動作，不是共用呈現。
+- **兩種 fixture 版面都保留**（`versus` / `row`）：硬統一等於用「共用」的名義把
+  各自的資訊密度抹平。共用的是「怎麼讀一場 fixture」，不是「長什麼樣子」。
+- **MOBA 季後賽晉級線不畫**：季後賽名額是常規賽結束後由 `playoff.qualified`
+  產生的事實，不是積分榜上的即時規則；要畫得先有 canonical 來源，不在本輪。
+- **Major 對戰表**仍是既有的 `CsRecapBracket`，**巡迴積分／歷屆巡迴／亞洲總決賽**
+  仍是 MOBA 專屬區塊——沒有為了共用而動它們。
+
+### ⚠ 一個差點造成數字不一致的地方
+
+`view.nextDay` 是 `absoluteDayOf(state, next)`（絕對遊戲日），**不等於**
+`fixture.day`（賽季相對天）。若讓 `FixtureRow` 自己讀 `fixture.day`，CS 的
+「下一場 第 N 天」就會顯示成另一個數字。⇒ `FixtureRow` 加了 `day` prop，
+由呼叫端傳入 Store 已推導好的天數。
+
+### 驗收
+
+**新增兩支 gate**
+
+- `check_competition_shared_ui`（靜態，28/28）：守純呈現界線——不 import Store、
+  不排序、不算規則、不認得賽制字串；既有 `data-testid` 沒弄丟；項目特色沒被抹平。
+  含 mutation sentinel（把 `activeIndex` 換成自己讀 phase ⇒ §2 轉紅）。
+- `browser_check_competition_shared_ui`（畫面，15/15）：**積分榜逐列與
+  `competitionView(mode).standings.rows` 對答案**——隊伍、名次、勝敗、積分、
+  淨勝分全部逐值比對；CS 晉級線畫在 `csMajorLine.topN` 指定的名次；
+  1280 與 390 兩個寬度都驗，且**無 body 橫向捲動**。
+
+**全部 gate**
+
+| Gate | 結果 |
+|---|---|
+| `check_competition_release_gate` | **11/11**、exit 0 |
+| `browser_check_competition_hub_shell` | **27/27**（UI-2／UI-3 行為零變化） |
+| `browser_check_competition_shared_ui` | **15/15**（新增） |
+| `check_competition_shared_ui` | **28/28**（新增） |
+| `check_cs_competition_hub` | 31/31 |
+| `check_cs_season_contract` | 73/73 |
+| `check_home_team_contract` | 40/40 |
+| `check_competition_q35` | 66/66 |
+| `npm run build` | ✓ built in 9.78s |
+
+### 未完成 / 已知限制
+
+- **手機版表格仍不理想**：390px 下 MOBA 五欄仍偏擠。本輪的底線是「不比改造前更差」
+  （已驗證無橫向捲動），真正的響應式處理（欄位取捨／橫捲容器）屬 UI-10。
+- **兩頁的外框語彙仍不同**：MOBA 是 `ManageFrame` + `Panel`，CS 是 `recapStyles`。
+  本輪只抽資訊裝置，沒動外框。
+- 未新增任何全域 designSystem token（依指示）。共用元件用的是既有 `theme.js` 的 GC。
+
+### 另外產出：`docs/handoff/09_Competition_UI_安全區契約.md`
+
+給其他工作線的檔案級邊界：紅區（本線持有，勿動）／黃區（可改但 additive）／
+綠區（本線完全沒碰，`git diff` 驗證過），加上不得弄丟的 `data-testid` 清單、
+五條架構紅線、動這區之前要跑的 gate 清單，以及契約失效條件（本線併入 `main` 後解除）。
