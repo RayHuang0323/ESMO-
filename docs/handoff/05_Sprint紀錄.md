@@ -11900,3 +11900,76 @@ Roster unlisted 操作、MOBA 入口全部正常；console 無 runtime error。
 ### 結論
 
 **CS Season Product MVP 正式 CLOSED、正式上線。** production SHA `6e07439`。
+
+---
+
+## UI-1 — CompetitionScreen mode-awareness（2026-08-22）
+
+依已核准的 UI architecture reference《ESMO Command Deck 藍圖》執行。產品決策：
+MOBA／CS = Practice「打一場」，賽事 = Career／Season「打一季」，Competition Hub
+最上層依 `gameMode` 分 MOBA／CS。本輪**只做 UI-0 + UI-1**，不做 Hub 殼（UI-2）。
+
+### 基線（UI-0）
+
+- worktree `ESMO-worktrees/ui1-competition-mode`，branch `ui/competition-mode-awareness`
+- 從 `origin/main` @ `fb0c70f`（"Sprint 01: integrate roster and player profile UI
+  after CS release"）建立。**不以落後 225 個 commit 的 `milestone-n-finance` 為基線。**
+- Codex Roster／Player Profile lane 狀態：`codex/ui-migration-roster-profile` 的內容
+  （`RosterScreen` / `PlayerDetailScreen` / `ui/PlayerUi.jsx` / `ui/playerUi.css` /
+  `usePlayerUiMotion.js`，+1130 −90）**已於 `fb0c70f` 落地 main**（走 rebase，
+  所以該分支本身不是 main 的 ancestor）。本輪未碰這五個檔。
+- 基線 gate：release gate 第一次跑是 10/11，`q6` 因 **port 5311 被上一輪殘留的
+  `srv.mjs` 佔用**而失敗（環境，非程式）。收掉該 process 後單跑 `check_competition_q6`
+  = **57/57、exit 0** ⇒ 真實基線為全綠。
+
+### 原本的 MOBA hardcode（都在畫面層，Store 早就是 by-mode）
+
+| 位置 | 原本 | 為什麼是 hardcode |
+|---|---|---|
+| `competitionView()` | 不帶參數 | `DEFAULT_GAME_MODE = "moba"` |
+| `useProfileStore((s) => s.competition)` | 讀別名 | 別名＝`competitionByMode.moba` 的投影 |
+| `getState().competition?.playerTeamId` | 讀別名 | 同上 |
+| `ensureCompetitionSeason()` | 不帶參數 | 同樣預設 moba |
+| `rollToNextCompetitionSeason()` | 只有 MOBA | CS 的對應是 `rollToNextCsSeason()` |
+
+### 修改範圍
+
+**只有 `src/screens/manage/CompetitionScreen.jsx`（+59 −12）。**
+接受 `mode` / `gameMode`，預設 `"moba"`；所有讀取帶著 `gm` 走。
+
+三個區塊在非 moba 模式刻意不渲染，並在原地註明原因與解除條件：
+`AsiaFinalsPanel`、`SeasonRecap`（兩者內部自己呼叫 moba 預設的 `competitionView()`）、
+賽事切換列（`setActiveEvent()` 在 Store 讀 `get().competition` 別名）、
+歷屆巡迴（`circuitHistory` 是全域 MOBA 切片）。
+
+### ⚠ 一個差點踩到的產品契約
+
+`ensureCompetitionSeason("cs")` **會真的建出一整季 CS 聯賽**（CS Season M1 已實作）。
+若照原樣把 `useEffect` 改成帶 `gm`，開啟 CS 賽事頁就會**替玩家偷開一季**，
+直接違反「CS 賽季不自動建立」（`check_cs_season_contract` 有守）。
+⇒ 自動建季只留給 MOBA；非 moba 沒有賽季時顯示既有空狀態，開季仍在 CS 賽前頁。
+
+### 驗證（全部實跑）
+
+- **UI-1 等價性檢查（暫時腳本，未入庫）**：12/12 PASS。含 populated 情境
+  （140 場賽程、8 列積分榜）下 `competitionView()` 與 `competitionView("moba")`
+  **deepStrictEqual**、`s.competition` 與 `competitionByMode.moba` **同一個參考**、
+  建立 MOBA 賽季不污染 cs 切片、未知 gameMode 會 throw 而非默默退回 moba。
+- `node tools/check_competition_release_gate.mjs` → **passed 11/11、failed 0/11**
+  （含 circuit_points／multi_event／career_final／asia_finals／team_honors／
+  season_recap／q6 七項**瀏覽器實跑**，它們真的渲染本檔）
+- `node tools/check_cs_season_contract.mjs` → exit 0（含 "CS season is never
+  created behind the player's back"）
+- `node tools/check_home_team_contract.mjs` → exit 0（含 "profileStore keeps
+  Competition view (moba-defaulted)"）
+- `npm run build` → `✓ built in 11.04s`，exit 0
+
+### 未完成 / 已知限制
+
+- CS 分頁目前只有 standings／賽程／下一場／進度／季後賽／歷屆會正確跟著 mode 走；
+  上述三個 MOBA-only 區塊要跨項目共用，得先把 `setActiveEvent` / `AsiaFinalsPanel` /
+  `SeasonRecap` / `circuitHistory` by-mode 化 —— 屬 UI-2。
+- **尚無呼叫端傳 `mode="cs"`**：AppShell 仍只掛 `<CompetitionScreen>`（moba 預設）。
+  本輪刻意不接線，接線是 UI-2 的殼。
+- 未經瀏覽器手動實測 `mode="cs"` 的畫面（沒有入口可以到達）；
+  自動 gate 只覆蓋 MOBA 路徑。

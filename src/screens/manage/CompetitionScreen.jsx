@@ -14,6 +14,29 @@
 //  按「出賽」＝ `startFixtureMatch()`（簽指派單 ＋ 開房 ＋ 場次轉 launched），
 //  然後跳到既有的賽前頁。從那一刻起，雙方確認 → 場次 → Ban/Pick → 對戰 →
 //  結算，走的都是既有的 `useMatchFlow`，這裡沒有第二條流程。
+//
+//  ── UI-1：這個畫面是哪一個項目的？由呼叫端決定 ───────────────────────────
+//  本檔原本把「MOBA」寫死在畫面層：`competitionView()` 不帶參數 ⇒ 預設 moba，
+//  訂閱的又是 `s.competition`（`competitionByMode.moba` 的唯讀別名）。
+//  Store 早就是 by-mode 的（`competitionByMode: { moba, cs }`），寫死的只有這裡。
+//
+//  現在接受 `mode` / `gameMode`（預設 `"moba"`），所有讀取都帶著它走：
+//    · `competitionView(gameMode)`          積分榜／賽程／進度／季後賽／歷屆
+//    · `competitionByMode[gameMode]`        canonical 切片（moba 時與舊別名同一個參考）
+//    · `ensureCompetitionSeason(gameMode)`  **只有 moba 會自動呼叫**，理由見下
+//
+//  ⚠ 賽季建立只自動做 MOBA 的。`ensureCompetitionSeason("cs")` 真的會建出一整季
+//    CS 聯賽，而 CS 的產品契約是「賽季**不自動建立**」——開季按鈕在 CS 賽前頁，
+//    由玩家自己按。掛載一個畫面就偷偷開一季，是這裡最糟的失敗模式。
+//    ⇒ 非 moba 模式沒有賽季時誠實顯示空狀態，不代玩家開季。
+//
+//  ⚠ 有三個區塊**目前只對 MOBA 成立**，非 moba 模式刻意不渲染：
+//      · `AsiaFinalsPanel` / `SeasonRecap` —— 它們內部自己呼叫 `competitionView()`
+//        （moba 預設）。本輪不改那兩個檔 ⇒ 掛在 CS 頁上會顯示 MOBA 的資料。
+//      · 賽事切換列 —— `setActiveEvent()` 在 Store 裡讀的是 `get().competition`
+//        （moba 別名），在 CS 頁按下去會寫到 MOBA 的賽季。
+//      · 歷屆巡迴 `circuitHistory` —— 全域切片，內容是 MOBA 亞洲巡迴賽的結論。
+//    要跨項目共用得先把它們 by-mode 化，那屬 UI-2 的殼，不在本輪。
 // ============================================================================
 import React, { useEffect, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
@@ -33,9 +56,20 @@ const Panel = ({ title, right, children }) => (
   </div>
 );
 
-export default function CompetitionScreen({ onBack, onPlay, onResume }) {
+/** 沒有賽季時的標題。moba 維持既有的「聯賽」，不因為多了參數就改文案。 */
+const FALLBACK_TITLE = { moba: "聯賽", cs: "CS 聯賽" };
+
+export default function CompetitionScreen({ onBack, onPlay, onResume, mode, gameMode }) {
+  //  `gameMode` 與 `mode` 是同一件事的兩個名字（Store 用 gameMode，畫面層習慣 mode）。
+  //  兩個都沒給就是 "moba" ⇒ 既有呼叫端 `<CompetitionScreen onBack … />` 行為不變。
+  const gm = gameMode ?? mode ?? "moba";
+  const isMoba = gm === "moba";
+
   //  訂閱原始值 ⇒ 賽季一變就重繪（不訂閱函式本身：那是正式驗收踩過的坑）
-  const competition = useProfileStore((s) => s.competition);
+  //  ⚠ 改讀 canonical 的 `competitionByMode[gm]` 而不是 `s.competition`。
+  //    moba 時兩者是**同一個物件參考**（別名就是從 canonical 投影出來的），
+  //    所以 zustand 的 Object.is 比較結果一模一樣 ⇒ 重繪時機零變化。
+  const competition = useProfileStore((s) => s.competitionByMode?.[gm] ?? null);
   const days = useProfileStore((s) => s.meta?.days ?? 1);
   const ensureCompetitionSeason = useProfileStore((s) => s.ensureCompetitionSeason);
 
@@ -44,12 +78,13 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
 
   //  沒有賽季就在這裡建（決定性：只由 team.id 與 meta.seasonSeed 決定）。
   //  刻意不在載入存檔時建——那會讓每個舊存檔莫名多出一整季賽程。
-  useEffect(() => { ensureCompetitionSeason(); }, [ensureCompetitionSeason]);
+  //  ⚠ 只有 MOBA。CS 的開季是玩家的明確動作（見檔頭），畫面掛載不得代勞。
+  useEffect(() => { if (isMoba) ensureCompetitionSeason("moba"); }, [ensureCompetitionSeason, isMoba]);
 
-  const view = useProfileStore.getState().competitionView();
+  const view = useProfileStore.getState().competitionView(gm);
   if (!view.hasSeason) {
     return (
-      <ManageFrame title="聯賽" subtitle="COMPETITION" onBack={onBack}>
+      <ManageFrame title={FALLBACK_TITLE[gm] ?? "聯賽"} subtitle="COMPETITION" onBack={onBack}>
         <Panel title="賽季">
           <div style={{ fontSize: 12, color: GC.gray }}>尚未建立賽季。</div>
         </Panel>
@@ -86,16 +121,20 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
   const cp = view.circuitPoints ?? null;
   const pointCircuits = Object.values(view.circuits ?? {}).filter((c) => c?.pointsPolicy);
   //  歷屆巡迴摘要：換季時封存的結論（Store 切片，不是重算出來的）
-  const circuitHistory = useProfileStore.getState().circuitHistory ?? [];
+  //  ⚠ `circuitHistory` 是全域切片、內容是 MOBA 亞洲巡迴賽 ⇒ 只給 moba 讀。
+  const circuitHistory = isMoba ? (useProfileStore.getState().circuitHistory ?? []) : [];
   const POINTS_TONE = { settled: GC.green, not_started: GC.gray, policy_required: GC.red };
   const POINTS_LABEL = { settled: "已結算", not_started: "未結算", policy_required: "缺積分政策" };
 
+  //  換季：兩個項目各有自己的 rollover（賽季編號、參賽者、封存物件都不同）。
+  //  能不能換季仍由 Store 的 `canRoll` 判定，這裡只負責選對那一支。
   const rollSeason = () => {
     setErr(null);
-    const r = useProfileStore.getState().rollToNextCompetitionSeason();
+    const store = useProfileStore.getState();
+    const r = isMoba ? store.rollToNextCompetitionSeason() : store.rollToNextCsSeason();
     if (!r.ok) setErr(r.reason ?? "無法開始下一賽季");
   };
-  const myId = useProfileStore.getState().competition?.playerTeamId;
+  const myId = useProfileStore.getState().competitionByMode?.[gm]?.playerTeamId;
   const nameOf = (id) => participants.find((p) => p.id === id)?.name ?? id;
   const tagOf = (id) => participants.find((p) => p.id === id)?.tag ?? "";
 
@@ -141,14 +180,19 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
       onBack={onBack}
       right={<span style={{ ...{ fontSize: 9, fontWeight: 800, color: GC.gray } }}>{progress.playerCompleted}/{progress.playerTotal} 場</span>}
     >
-      <AsiaFinalsPanel />
+      {/*  ⚠ 亞洲年度總決賽是 MOBA 的 Q7a 內容，而且 `AsiaFinalsPanel` 內部自己
+           呼叫 `competitionView()`（moba 預設）⇒ 掛在 CS 頁上會顯示 MOBA 的資料。 */}
+      {isMoba && <AsiaFinalsPanel />}
       {/* ── Q7a-3b.5：同季多個 Event 的切換列 ────────────────────────────
            ⚠ 切換**只影響畫面聚焦**（`setActiveEvent`），不參與任何規則：
              積分榜、季後賽排定、封存與獎金都不讀 `activeEventId`。
            ⚠ 只有兩個以上 Event 才渲染；單一 Event 時整段不存在，
              legacy 畫面維持現況。
-           ⚠ 橫向捲動 ＋ 每張卡最小寬度 ⇒ 手機上也點得到、看得完。 */}
-      {multiEvent && (
+           ⚠ 橫向捲動 ＋ 每張卡最小寬度 ⇒ 手機上也點得到、看得完。
+           ⚠ 只給 moba：`setActiveEvent()` 在 Store 裡讀的是 `get().competition`
+             （moba 別名），在 CS 頁按下去會把聚焦寫到 MOBA 的賽季。要跨項目
+             得先讓那支 action 接受 gameMode——屬 UI-2，不在本輪。 */}
+      {isMoba && multiEvent && (
         <Panel
           title="本季賽事 EVENTS"
           right={<span style={{ fontSize: 9, fontWeight: 800, color: GC.gray }}>{eventViews.length} 項</span>}
@@ -400,7 +444,10 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
            ⚠ 第二輪起 CTA **不在 Recap 內**——它移到本頁最後（見檔尾），
               讓「開始下一賽季」成為整頁真正最後一個主要操作。
               rollover 規則與 handler 不變，DOM 仍只有一顆 CTA。 */}
-      {final && <SeasonRecap />}
+      {/*  ⚠ 只給 moba：`SeasonRecap` 內部自己從 `competitionView()`（moba 預設）
+           讀生涯名次與獎金收據。CS 的賽季成績單是既有的 `CsSeasonRecapScreen`，
+           入口仍在 CS 賽前頁，本輪不搬。 */}
+      {isMoba && final && <SeasonRecap />}
 
       {/*  ── 歷屆成績（Q5）──────────────────────────────────────────────
            換季之後上一季的最終名次仍然查得到。這裡只讀已封存的快照，
