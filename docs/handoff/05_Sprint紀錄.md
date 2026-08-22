@@ -12124,3 +12124,81 @@ M2 當初就把 `CsLeagueFixtureEntry` 標成「暫用入口……完整的 CS �
   這三條走的都是既有程式碼路徑（未修改），但賽事中心是新的進入點。
 - Hub 的 CS 分頁與 MOBA 分頁仍是兩套版面語彙，共用元件抽取是 UI-4。
 - 手機寬度未實測。
+
+---
+
+## UI-3.5 — Competition Hub 成為入口後的 CS Season lifecycle 驗收（2026-08-23）
+
+驗收輪，**`src` 零改動**。新增一支畫面 gate：`tools/browser_check_ui35_cs_lifecycle.mjs`。
+
+### 結果：22/23
+
+| 條 | 結果 |
+|---|---|
+| §2 ActiveMatch 恢復 | **9/9 全過** |
+| §3 賽季封存 → 成績單 | **7/7 全過** |
+| §1 BO3 續戰 | **6/7**；最後一步 BLOCKED（見下） |
+
+- **§2**：從賽事中心出戰 → 進 battle → 重整（等同離開）→ 賽事中心改顯示
+  `cs-league-resume`（`data-state=live`，且不再給第二顆出戰）→ 恢復回**同一個
+  session 與同一個 fixture**，`launched` 狀態的賽程始終只有一場。
+- **§3**：整季封存（`SeasonSeal.v1`）→ Hub 的 CS 分頁出現成績單入口且不再顯示
+  今日賽程 → 成績單的 Major 對戰表四場 BO3 比分正確（`2:1 / 0:2 / 2:0 / 2:0`，
+  勝方皆 2 張）→ 換季 CTA「開始 CS 第 2 賽季」在 → **無未捕捉例外**
+  （UI-3 那個 `setCsRecapFrom` 的 undefined identifier 確認已消失）→
+  返回回到賽事中心，沒有孤兒 route。
+- **§1**：已驗證的部分全綠 —— Hub 出戰 Major → 簽出指派單與房間 → 落在既有 CS
+  賽前頁 → 選圖頁認得「BO3 0:0 第 1/3 張」→ series 掛在 MatchSession
+  （`mapsToWin: 2`）→ 進得了對戰畫面。**只有「完成第一張地圖」被擋住。**
+
+### ⚠ 發現一個既有 bug（不在本輪修復範圍）
+
+**現象**：從賽事中心出戰**正式 fixture** 的 CS 比賽，按下 Quick Finish 之後
+頁面主執行緒被鎖死 ≥843 秒（測到 CDP 逾時為止，未觀察到結束）。
+
+**鑑別（三組實測）**：
+
+| 情境 | Quick Finish |
+|---|---|
+| 練習賽（`browser_check_cs_completion`） | **88ms**，1/1 PASS |
+| 聯賽 BO1 fixture（`matchFormat: null`、無 series） | **鎖死 843s** |
+| 年度 Major BO3 fixture | **鎖死 840s** |
+
+派發點擊本身 26ms 就返回；卡住的是**之後每一個唯讀輪詢** ⇒ 是頁面主執行緒被鎖死，
+不是測試工具的問題。**與 BO3 無關**，兩種 fixture 都會。
+
+**不是 UI-1/2/3 造成的**：`git diff fb0c70f..HEAD` 對
+`src/platform/progress/`、`src/platform/competition/`、`src/battle/fps/`、
+`src/battle/ui/`、`CsMatchScreen`、`CsResultScreen`、`useLocalServer.js`
+的改動是**零**，AppShell 的 `settleCsMatch` / `onFinish` 接線也沒變。
+
+**為什麼一直沒被發現**：`browser_check_cs_completion` 只跑**練習賽**；
+`check_cs_season_m2`（55/55）在 **Node** 裡跑 fixture，不進瀏覽器也不跑引擎。
+**「在瀏覽器裡完成一場正式 fixture」從來沒有被任何 gate 覆蓋過。**
+
+**未修復的理由**：根因未定位；範圍在 CS 對戰／賽果收尾（依 `05` 既有紀錄屬
+Codex ownership），而本輪的指示是「以驗收為主，不改架構、不重構、不改 Store contract」。
+列為待處理，建議在 UI-4 之前由負責 CS 的工作線處理。
+
+### 本 gate 的兩個刻意設計
+
+1. **順序是 §2 → §3 → §1。** 主執行緒一旦被 Quick Finish 鎖死，同一個 Chrome 裡
+   後面所有檢查都跑不了。把會卡的那條放最後，前兩條才拿得到結果
+   （第一版把 §1 放最前面，結果 §2／§3 從來沒執行過）。
+2. **§1 的最後一步有 150s 上限**（`withDeadline`），逾時回報 BLOCKED 而不是拖垮整支。
+
+### 過程中修正的三個測試自身錯誤（非產品問題）
+
+- 在 `startFixtureMatch` 之後立刻讀 `matchmaking.session` —— 場次是賽前流程**確認後**
+  才建立的，當下必為 null。
+- 用 `N : M` 的同一行正則驗 BO3 比分 —— 對戰表每一列的地圖數是獨立元素；
+  正確做法是讀該列的 `data-score="a:b"` 與 `data-done`。
+- 用 `/下一賽季/` 找換季 CTA —— 實際文字是「開始 CS 第 N 賽季」（`cs-recap-roll`）。
+
+### Gates（本輪 `src` 零改動，全部重跑確認）
+
+- `browser_check_ui35_cs_lifecycle` → **22/23**（唯一紅燈是上述 BLOCKED）
+- `check_competition_release_gate` → **11/11、exit 0**
+- `check_cs_season_contract` / `check_home_team_contract` /
+  `check_cs_competition_hub` / `check_cs_season_m2` → 全部 exit 0
+- `npm run build` → `✓ built in 12.23s`
