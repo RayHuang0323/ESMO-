@@ -69,7 +69,7 @@ const GOTO = `
   //    改用這一頁必然存在、且與聚焦無關的區塊。
   const on = () => /積分榜 STANDINGS/.test(document.body.innerText);
   for (let i = 0; i < 14 && !on(); i++) {
-    const tile = [...document.querySelectorAll("button")].find((b) => /🏆/.test(b.innerText) && /賽事/.test(b.innerText));
+    const tile = [...document.querySelectorAll("button")].find((b) => b.dataset?.testid === "home-mode-bracket") || [...document.querySelectorAll("button")].find((b) => /賽事/.test(b.innerText) && /🏆|SEASON CIRCUIT/.test(b.innerText));
     if (tile) { tile.click(); await wait(1000); continue; }
     await wait(400);
   }

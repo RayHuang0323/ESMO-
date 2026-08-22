@@ -119,8 +119,7 @@ const RECAP_UI = PRELUDE + `
     for (let i = 0; i < 20; i++) {
       if (document.querySelector("[data-testid=season-recap]") ||
           document.querySelector("div").innerText.includes("STANDINGS")) return true;
-      const tile = [...document.querySelectorAll("button")].find((button) =>
-        button.innerText.includes("賽事") && button.innerText.includes("🏆"));
+      const tile = [...document.querySelectorAll("button")].find((b) => b.dataset?.testid === "home-mode-bracket") || [...document.querySelectorAll("button")].find((b) => /賽事/.test(b.innerText) && /🏆|SEASON CIRCUIT/.test(b.innerText));
       if (tile) { tile.click(); await wait(850); continue; }
       await wait(350);
     }

@@ -83,7 +83,7 @@ const GOTO = `
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const on = () => /積分榜 STANDINGS/.test(document.body.innerText);
   for (let i = 0; i < 18 && !on(); i++) {
-    const tile = [...document.querySelectorAll("button")].find((b) => /🏆/.test(b.innerText) && /賽事/.test(b.innerText));
+    const tile = [...document.querySelectorAll("button")].find((b) => b.dataset?.testid === "home-mode-bracket") || [...document.querySelectorAll("button")].find((b) => /賽事/.test(b.innerText) && /🏆|SEASON CIRCUIT/.test(b.innerText));
     if (tile) { tile.click(); await wait(900); continue; }
     await wait(400);
   }

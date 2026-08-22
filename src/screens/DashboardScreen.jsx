@@ -237,7 +237,10 @@ function Compete({ modes, onSelect }) {
       <SectionHeading label="COMPETE" title="把隊伍送上舞台" note="三種玩法，共用同一個 ESMO 品牌" />
       <div className="esmo-mode-grid">
         {modes.map((mode) => (
-          <button key={mode.id} className="esmo-card esmo-interactive esmo-mode-card" type="button" onClick={() => onSelect(mode.id)} style={{ "--mode-accent": mode.color }}>
+          //  ⚠ `data-testid` 是**穩定的入口識別**，不是樣式。browser gate 以前靠
+          //    「innerText 含 🏆」找這張磚，Home v2 改用 icon 元件之後那個判斷
+          //    必然失效。標記綁 `mode.id`，之後改文案、換圖示都不會再弄壞驗證。
+          <button key={mode.id} data-testid={`home-mode-${mode.id}`} className="esmo-card esmo-interactive esmo-mode-card" type="button" onClick={() => onSelect(mode.id)} style={{ "--mode-accent": mode.color }}>
             <div className="esmo-mode-card__top">
               <div className="esmo-mode-card__eyebrow">{mode.kicker}</div>
               <span className="esmo-mode-card__icon"><EsmoIcon name={mode.icon} size={20} /></span>
@@ -458,6 +461,7 @@ function MobileCompeteRail({ modes, onSelect }) {
         {modes.map((mode) => (
           <button
             key={mode.id}
+            data-testid={`home-mode-${mode.id}`}
             className="esmo-mobile-compete-card esmo-interactive"
             type="button"
             onClick={() => onSelect(mode.id)}
@@ -521,7 +525,10 @@ function MobileNavSheet({ type, modes, onSelect, onClose }) {
         </div>
         <div className="esmo-mobile-sheet__list">
           {items.map((item) => (
-            <button key={item.id} className="esmo-mobile-sheet__item" type="button" onClick={() => { onSelect(item.id); closeSheet(); }} style={{ "--accent": item.accent ?? GC.green }}>
+            //  ⚠ 與模式磚同一個理由：手機版的入口住在 sheet 裡、標籤也與桌面不同
+            //    （桌面「戰隊詳情」、手機「戰隊總覽」）。給穩定標記，驗證才不必
+            //    同時記住兩套文案。
+            <button key={item.id} data-testid={`home-sheet-${item.id}`} className="esmo-mobile-sheet__item" type="button" onClick={() => { onSelect(item.id); closeSheet(); }} style={{ "--accent": item.accent ?? GC.green }}>
               <span className="esmo-mobile-sheet__item-icon" style={{ "--accent": item.accent ?? GC.green }}><EsmoIcon name={item.icon} size={17} /></span>
               <span><strong>{item.label}</strong>{item.detail && <small>{item.detail}</small>}</span>
               <EsmoIcon name="chevron" size={15} />
@@ -547,7 +554,7 @@ function MobileBottomNav({ sheet, onTab }) {
       {tabs.map((tab) => {
         const active = tab.id === "home" ? !sheet : tab.id === sheet;
         return (
-          <button key={tab.id} className={`esmo-mobile-nav__item${active ? " is-active" : ""}`} type="button" onClick={() => onTab(tab.id)} aria-current={active ? "page" : undefined}>
+          <button key={tab.id} data-testid={`home-nav-${tab.id}`} className={`esmo-mobile-nav__item${active ? " is-active" : ""}`} type="button" onClick={() => onTab(tab.id)} aria-current={active ? "page" : undefined}>
             <EsmoIcon name={tab.icon} size={19} />
             <span>{tab.label}</span>
           </button>

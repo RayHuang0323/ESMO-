@@ -129,7 +129,7 @@ try {
     const wait = (ms) => new Promise(r => setTimeout(r, ms));
     const onCompetition = () => /聯賽/.test(document.body.innerText) && /積分榜|最終名次/.test(document.body.innerText);
     for (let i = 0; i < 12 && !onCompetition(); i++) {
-      const tile = [...document.querySelectorAll('button')].find(b => /🏆/.test(b.innerText) && /賽事/.test(b.innerText));
+      const tile = [...document.querySelectorAll("button")].find((b) => b.dataset?.testid === "home-mode-bracket") || [...document.querySelectorAll("button")].find((b) => /賽事/.test(b.innerText) && /🏆|SEASON CIRCUIT/.test(b.innerText));
       if (tile) { tile.click(); await wait(1200); continue; }
       const back = [...document.querySelectorAll('button')].find(x => /^←$/.test(x.innerText.trim()) || x.innerText.trim() === '');
       if (back) { back.click(); await wait(900); }
