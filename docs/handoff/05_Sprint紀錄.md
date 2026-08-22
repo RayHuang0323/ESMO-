@@ -12383,3 +12383,98 @@ Quick Finish 在這支新工具的驅動方式下會鎖死頁面主執行緒；�
 給其他工作線的檔案級邊界：紅區（本線持有，勿動）／黃區（可改但 additive）／
 綠區（本線完全沒碰，`git diff` 驗證過），加上不得弄丟的 `data-testid` 清單、
 五條架構紅線、動這區之前要跑的 gate 清單，以及契約失效條件（本線併入 `main` 後解除）。
+
+---
+
+## UI-4B — Competition Hub 共用視覺外框（2026-08-23）
+
+讓 MOBA 與 CS 兩個賽事分頁**看起來屬於同一套 ESMO Competition UI**。
+不是功能重構——優先 composition ＋ CSS migration，沒有大幅重寫兩個畫面。
+
+### 前置稽核
+
+- `origin/main` 仍是 `e9996a7`，本分支 0 behind / 7 ahead、tree clean。
+- 紅區四個檔案近兩天只有本線自己的 commit；無其他 worktree 有未提交改動。
+- `78f7479`（`CsPrepScreen`）仍**只在** `milestone-n-finance`。
+  依指示：**本輪完全不碰 CsPrep、不 merge、不解那條舊分支的衝突。**
+
+### 新增（`src/screens/competition/`）
+
+| 檔案 | 內容 |
+|---|---|
+| `competition.css` | 全部收在 `.esmo-comp` 底下的共用視覺語言 |
+| `CompetitionFrame.jsx` | 捲動容器＋寬度上限＋頁首（返回／eyebrow／標題／賽季副標／右側資訊） |
+| `CompetitionPanel.jsx` | 共用卡片（含 accent 左緣條版本） |
+
+### 兩頁現在共用什麼
+
+背景與卡片層級、border／radius、間距節奏（`--comp-gap` / `--comp-pad`）、
+字級階層（eyebrow 9px/0.2em、標題 17px、quiet 10px）、空狀態樣式、
+**賽季標頭**（`S{n} · 第 x / y 天`）、responsive 容器（`--comp-max: 560px`）。
+
+⚠ **賽季標頭本來是兩份**：MOBA 在 `ManageFrame` 的 subtitle，CS 在內文自己排一組
+kicker + 大字 + 印章。同一個事實兩種長相、兩處會各自漂移。現在收成頁首一個 slot，
+玩家在兩個分頁看到的是同一個東西。CS 內文那一組已移除，`cs-hub-day` 標記跟著搬到頁首。
+
+### 項目差異怎麼表達
+
+**只靠一個 CSS 變數 `--comp-accent`**，由 `CompetitionFrame` 在最外層 inline 設定
+（MOBA `GC.purp` 紫／CS `#fb923c` 橘）。底下所有需要強調色的地方都讀它
+⇒ 換一個項目＝換一個變數，不是換一套 CSS。
+
+### 刻意保持不同（沒有為了統一而抹平）
+
+- **MOBA**：紫 accent、巡迴積分／歷屆巡迴、亞洲總決賽、季後賽對戰表、
+  五欄積分榜（含淨勝分）、出賽／棄權的二次確認流程、賽季進度。
+- **CS**：橘 accent、League → Major 階段條、Major 晉級線、`CsRecapBracket`
+  對戰表（仍靠 `recapCssText`，本輪不動）、BO1／BO3 標記、開季／出戰 CTA。
+- **兩頁的資訊順序沒有強制一致**：MOBA 先事件切換再巡迴積分，CS 先階段條再今日賽程。
+  順序反映各自的賽制敘事，統一它等於把兩個項目的節奏抹掉。
+- **Circuit 與 Major 沒有做成同一種 widget**（依指示）。
+
+### 遷移方式（刻意最小）
+
+- MOBA：`const Panel = CompetitionPanel;` 一行——底下十幾個 `<Panel title right>`
+  呼叫點**一行都沒動**。外框 `ManageFrame` → `CompetitionFrame`，兩個呼叫點。
+- CS：`frame()` 的內容換成 `<CompetitionFrame>`，其餘 render 不動。
+
+### 驗收
+
+**新增 `check_competition_visual_shell`（22/22）** —— 刻意**不做像素級斷言**
+（改一個 padding 就紅，卻擋不住「兩頁又各自長出一套外框」）。驗的是結構契約：
+共用外框由 CSS 檔驅動而非又一份 inline style；兩頁都真的用了它且各傳自己的 accent；
+兩頁不再各自持有外框／卡片定義；樣式沒有汙染全域或 Home 的 `dashboard.css`；
+項目特色仍在。含 mutation sentinel（外框不再吐 `--comp-accent` ⇒ §2 轉紅）。
+
+**全部 gate**
+
+| Gate | 結果 |
+|---|---|
+| `check_competition_release_gate` | **11/11** |
+| `browser_check_competition_shared_ui` | **15/15**（1280 / 390） |
+| `browser_check_competition_hub_shell` | **27/27** |
+| `check_competition_visual_shell` | **22/22**（新增） |
+| `check_competition_shared_ui` | 28/28 |
+| `check_cs_competition_hub` | 31/31 |
+| `check_cs_season_contract` | 73/73 |
+| `check_home_team_contract` | 40/40 |
+| `check_competition_q35` | 66/66 |
+| `npm run build` | ✓ built in 10.84s |
+
+**功能與資料變化：0。** 兩個寬度下 MOBA 與 CS 積分榜逐列與
+`competitionView(mode).standings.rows` 對答案（隊伍／名次／勝敗／積分／淨勝分），
+CS 晉級線仍畫在 `csMajorLine.topN`，兩邊皆無 body 橫向捲動。
+
+### 未完成 / 已知限制
+
+- **MOBA 內容寬度由 460 → 560**（與 CS 對齊）。五欄積分榜在 390 下仍偏擠；
+  底線「不比改造前更差」已驗證（無橫向捲動），真正的手機深度優化仍留 UI-10。
+- **CS 內文仍大量使用 `recapStyles`**：那些是 Recap 與 Major 對戰表共用的樣式，
+  本輪只換外框，沒有把內文 token 一起遷移。
+- 未新增任何全域 `designSystem` token（依指示）。
+
+### 安全區契約同步更新
+
+`09_Competition_UI_安全區契約.md`：`cs-hub-day` 加入不可弄丟的標記清單；
+新增第 6 條架構紅線（樣式收在 `.esmo-comp`、不動全域、差異只靠 `--comp-accent`）；
+新 verifier 加入「動這區之前要跑」清單；綠區宣稱以 `git diff` 重新驗證仍為空。

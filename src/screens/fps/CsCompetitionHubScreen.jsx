@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { GC, FONT, MONO } from "../../ui/theme.js";
 import { recapStyles, csRecapStyles, recapCssText } from "../manage/seasonRecap/recapStyles.js";
+//  UI-4B：Competition 區域共用外框
+import CompetitionFrame from "../competition/CompetitionFrame.jsx";
 import CsRecapBracket from "../manage/seasonRecap/CsRecapBracket.jsx";
 //  UI-4A：與 MOBA 共用的純呈現元件（不算任何數字，見各檔檔頭）
 import StageBar from "../competition/StageBar.jsx";
@@ -99,17 +101,23 @@ export default function CsCompetitionHubScreen({ onBack, onRecap, onPlay, onResu
     ? <div data-testid="cs-hub-error" style={{ color: "#f87171", fontSize: 10.5, marginTop: 8 }}>{err}</div>
     : null;
 
+  //  UI-4B：外框改用 Competition 區域共用的 `CompetitionFrame`，與 MOBA 分頁同一套。
+  //  ⚠ `recapCssText` 仍要注入：Major 對戰表（`CsRecapBracket`）與其餘 recap 樣式
+  //    仍靠它，那是 CS 的特色區塊，本輪不動。
   const frame = (children) => (
-    <div style={{ height: "100%", overflow: "auto", background: GC.bg, fontFamily: FONT, padding: "12px 12px 30px" }}>
-      <div style={{ maxWidth: 560, margin: "0 auto" }}>
-        <style>{recapCssText}</style>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-          <button onClick={onBack} style={{ background: "rgba(255,255,255,0.08)", border: `1px solid ${GC.line}`, borderRadius: 8, padding: "5px 10px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>←</button>
-          <h2 style={{ color: "white", fontSize: 17, fontWeight: 900, margin: 0 }}>CS 賽事中心</h2>
-        </div>
-        {children}
-      </div>
-    </div>
+    <CompetitionFrame
+      accent={ACC}
+      eyebrow="CS COMPETITION"
+      title="CS 賽事中心"
+      subtitle={view.hasSeason
+        ? `S${view.season} · 第 ${view.seasonDay ?? "—"} / ${view.seasonDays ?? "—"} 天`
+        : null}
+      subtitleTestId="cs-hub-day"
+      onBack={onBack}
+    >
+      <style>{recapCssText}</style>
+      {children}
+    </CompetitionFrame>
   );
 
   //  ── 未開季：這一頁就是開季的地方 ────────────────────────────────────────
@@ -147,14 +155,8 @@ export default function CsCompetitionHubScreen({ onBack, onRecap, onPlay, onResu
 
   return frame(
     <div data-testid="cs-competition-hub" data-season={view.season} data-phase={view.csStage?.phase ?? ""}>
-      {/*  標頭：賽季與賽季日（沿用 Recap 的 kicker / mono 語言）*/}
-      <div style={recapStyles.kicker}>CS COMPETITION</div>
-      <div style={{ ...recapStyles.headerMeta, marginTop: 7 }}>
-        <span style={{ ...recapStyles.headerSeason, fontFamily: MONO, fontSize: 24 }}>S{view.season}</span>
-        <span data-testid="cs-hub-day" style={recapStyles.sealStamp}>
-          第 {view.seasonDay ?? "—"} / {view.seasonDays ?? "—"} 天
-        </span>
-      </div>
+      {/*  UI-4B：賽季標頭（S{n} · 第 x / y 天）已經搬到共用的 `CompetitionFrame`
+           頁首，與 MOBA 分頁看到的是同一個東西。這裡不再自己排一組。 */}
 
       {/*  phase → 第幾格的對照留在本檔（`STEP_INDEX`）：那是 CS 的賽制知識。 */}
       <StageBar

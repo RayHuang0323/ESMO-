@@ -1,6 +1,6 @@
 # Competition / Season UI 安全區契約
 
-> 建立：2026-08-23（UI-4A）
+> 建立：2026-08-23（UI-4A）／更新：UI-4B
 > 對象：**所有會 merge 或 commit 到本 repo 的 AI 工作線與人**（Codex、Claude、其他）
 > 目的：這一區有一條正在進行的 UI 工作線。**在它併入 `main` 之前，其他人不要改這裡。**
 
@@ -8,7 +8,7 @@
 
 ## 一、為什麼需要這份契約
 
-Claude Code 這條線從 UI-1 到 UI-4A 做了一件跨多個檔案的事：
+Claude Code 這條線從 UI-1 到 UI-4B 做了一件跨多個檔案的事：
 
 > 把「賽事」從一個只有 MOBA 的頁面，改成 **MOBA / CS 共用的 Competition Hub**，
 > 並把 CS 賽季的入口從 CS 練習賽頁搬進去。
@@ -32,7 +32,7 @@ Store / contracts / CS / Season / Competition。**本檔是那段話的檔案級
 | `src/screens/manage/CompetitionScreen.jsx` | UI-1 接受 `mode`／`gameMode`；UI-4A 改用共用元件 |
 | `src/screens/fps/CsCompetitionHubScreen.jsx` | UI-3 成為 CS 賽季主入口（開季／出戰／返回）；UI-4A 改用共用元件 |
 | `src/screens/manage/CompetitionHubScreen.jsx` | UI-2 新建：賽事中心的殼與 MOBA／CS 分頁 |
-| `src/screens/competition/**`（整個目錄） | UI-4A 新建：`StageBar` / `StandingsTable` / `FixtureList` |
+| `src/screens/competition/**`（整個目錄） | UI-4A 新建共用元件；UI-4B 再加共用外框與 `competition.css` |
 | `src/screens/fps/CsPrepScreen.jsx` | UI-3 移除了 `CsLeagueFixtureEntry`（賽季責任搬走） |
 
 ### ⚠ 已知的既存衝突（尚未解決）
@@ -64,7 +64,7 @@ commit 的基底**上，且尚未推送。
 
 ## 四、🟢 綠區：這條線不碰，請自由使用
 
-Competition 線從 UI-1 到 UI-4A **完全沒有改動**下列範圍，可安心進行：
+Competition 線從 UI-1 到 UI-4B **完全沒有改動**下列範圍，可安心進行：
 
 - `src/screens/DashboardScreen.jsx`、`src/screens/dashboard/**`（Home／Mobile Home）
 - `src/screens/manage/RosterScreen.jsx`、`PlayerDetailScreen.jsx`、`src/ui/PlayerUi.*`
@@ -86,6 +86,7 @@ Competition 線從 UI-1 到 UI-4A **完全沒有改動**下列範圍，可安心
 | 標記 | 誰在讀 |
 |---|---|
 | `competition-hub-tabs` / `competition-hub-tab-{moba,cs}` / `competition-hub-panel` | UI-2 殼的 browser gate |
+| `cs-hub-day`（賽季副標，UI-4B 起在共用頁首上） | CS 賽事中心 |
 | `cs-hub-stage` / `cs-hub-stage-step` | CS 賽事中心 gate、共用元件 gate |
 | `cs-hub-standing-row`（含 `data-team-id/rank/me/qualified`） | CS 賽事中心 gate、資料一致性 gate |
 | `cs-hub-qualify-line` / `cs-hub-standings` | 資料一致性 gate |
@@ -107,6 +108,10 @@ Competition 線從 UI-1 到 UI-4A **完全沒有改動**下列範圍，可安心
    `competitionView(mode)` 提供；`src/screens/competition/**` 的元件是純呈現層，
    不排序、不累加、不判晉級。（`check_competition_shared_ui` 守著）
 5. **不建第二份**：standings、fixture list、season state 各只有一份。
+6. **Competition 的樣式收在 `.esmo-comp` 底下**：不動 `:root` / `body` / `*`，
+   不改 Home 的 `dashboard.css`，不新增全域 `designSystem` token。
+   項目差異只透過 `--comp-accent` 一個變數表達。
+   （`check_competition_visual_shell` 守著）
 
 ---
 
@@ -115,6 +120,7 @@ Competition 線從 UI-1 到 UI-4A **完全沒有改動**下列範圍，可安心
 ```
 node tools/check_competition_release_gate.mjs      # 11 項（含 build 與 7 個瀏覽器檢查）
 node tools/check_competition_shared_ui.mjs         # 共用元件的純呈現界線
+node tools/check_competition_visual_shell.mjs      # 共用視覺外框的結構契約
 node tools/browser_check_competition_shared_ui.mjs # 積分榜逐列與 Store 對答案
 node tools/browser_check_competition_hub_shell.mjs # 賽事中心殼與 CS 入口
 node tools/check_cs_competition_hub.mjs
@@ -134,7 +140,7 @@ node tools/browser_check_cs_fixture_natural_finish.mjs --only=bo3
 
 ## 八、這份契約什麼時候失效
 
-Competition 線（UI-1 → UI-4A，branch `ui/competition-mode-awareness`）**併入
+Competition 線（UI-1 → UI-4B，branch `ui/competition-mode-awareness`）**併入
 `main` 之後**，紅區解除。屆時請重新 audit 最新 `main`，再決定下一輪的 UI ownership。
 
 在那之前，如果你的工作**必須**動到紅區，請先停下來告訴 Ray，不要自行解衝突。

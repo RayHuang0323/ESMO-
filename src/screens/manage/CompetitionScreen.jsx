@@ -41,7 +41,10 @@
 import React, { useEffect, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { GC, MONO, chip } from "../../ui/theme.js";
-import ManageFrame from "./ManageFrame.jsx";
+//  UI-4B：賽事頁的外框改用 Competition 區域共用的 `CompetitionFrame`
+//  （不再走經營模組的 `ManageFrame`）——賽事中心兩個分頁要看起來是同一套 UI。
+import CompetitionFrame from "../competition/CompetitionFrame.jsx";
+import CompetitionPanel from "../competition/CompetitionPanel.jsx";
 import AsiaFinalsPanel from "./asiaFinals/AsiaFinalsPanel.jsx";
 //  UI-4A：與 CS 賽事中心共用的純呈現元件（不算任何數字，見各檔檔頭）
 import StandingsTable from "../competition/StandingsTable.jsx";
@@ -49,15 +52,10 @@ import { FixtureRow } from "../competition/FixtureList.jsx";
 import RecapNextSeason from "./seasonRecap/RecapNextSeason.jsx";
 import SeasonRecap from "./seasonRecap/SeasonRecap.jsx";
 
-const Panel = ({ title, right, children }) => (
-  <div style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 12, padding: "11px 13px", marginBottom: 10 }}>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-      <div style={{ fontSize: 9, letterSpacing: "0.2em", color: GC.gray, fontWeight: 900 }}>{title}</div>
-      {right}
-    </div>
-    {children}
-  </div>
-);
+//  UI-4B：卡片改用與 CS 共用的 `CompetitionPanel`。
+//  簽名一致（title / right / children），所以底下十幾個 `<Panel …>` 呼叫點
+//  一行都不用動——共用的是外框，不是把這一頁重寫一遍。
+const Panel = CompetitionPanel;
 
 /** 沒有賽季時的標題。moba 維持既有的「聯賽」，不因為多了參數就改文案。 */
 const FALLBACK_TITLE = { moba: "聯賽", cs: "CS 聯賽" };
@@ -87,11 +85,11 @@ export default function CompetitionScreen({ onBack, onPlay, onResume, mode, game
   const view = useProfileStore.getState().competitionView(gm);
   if (!view.hasSeason) {
     return (
-      <ManageFrame title={FALLBACK_TITLE[gm] ?? "聯賽"} subtitle="COMPETITION" onBack={onBack}>
+      <CompetitionFrame eyebrow="COMPETITION" title={FALLBACK_TITLE[gm] ?? "聯賽"} accent={GC.purp} onBack={onBack}>
         <Panel title="賽季">
-          <div style={{ fontSize: 12, color: GC.gray }}>尚未建立賽季。</div>
+          <div className="esmo-comp__empty">尚未建立賽季。</div>
         </Panel>
-      </ManageFrame>
+      </CompetitionFrame>
     );
   }
 
@@ -177,11 +175,13 @@ export default function CompetitionScreen({ onBack, onPlay, onResume, mode, game
   const rows = isToday ? todayList : (next ? [next] : []);
 
   return (
-    <ManageFrame
+    <CompetitionFrame
+      eyebrow="COMPETITION"
       title={view.focusedEventName ?? "聯賽"}
       subtitle={`S${view.season} · 第 ${seasonDay} / ${seasonDays} 天`}
+      accent={GC.purp}
       onBack={onBack}
-      right={<span style={{ ...{ fontSize: 9, fontWeight: 800, color: GC.gray } }}>{progress.playerCompleted}/{progress.playerTotal} 場</span>}
+      right={<>{progress.playerCompleted}/{progress.playerTotal} 場</>}
     >
       {/*  ⚠ 亞洲年度總決賽是 MOBA 的 Q7a 內容，而且 `AsiaFinalsPanel` 內部自己
            呼叫 `competitionView()`（moba 預設）⇒ 掛在 CS 頁上會顯示 MOBA 的資料。 */}
@@ -655,6 +655,6 @@ export default function CompetitionScreen({ onBack, onPlay, onResume, mode, game
       {final && canRoll?.ok && (
         <RecapNextSeason canRoll={canRoll} onClick={rollSeason} />
       )}
-    </ManageFrame>
+    </CompetitionFrame>
   );
 }
