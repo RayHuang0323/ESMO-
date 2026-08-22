@@ -39,13 +39,15 @@ import TeamDevelopmentScreen from "./screens/manage/TeamDevelopmentScreen.jsx";
 // ── 舊版個人天賦相容檢視（入口在 PlayerDetail）──
 import PlayerTalentScreen from "./screens/manage/PlayerTalentScreen.jsx";
 //  Milestone Q3.5：聯賽（賽程 / 積分榜 / 出賽入口）
-import CompetitionScreen from "./screens/manage/CompetitionScreen.jsx";
+//  UI-2：首頁「賽事」改開賽事中心的殼（MOBA / CS 分頁）。殼底下掛的還是
+//  這一支 `CompetitionScreen`（mode="moba"）與既有的 `CsCompetitionHubScreen`，
+//  沒有第二套賽事畫面。
+import CompetitionHubScreen from "./screens/manage/CompetitionHubScreen.jsx";
 // ── Sprint22：CS 對戰（EsportsFPS3D 引擎 + fpsRoster Adapter）──
 // ── Sprint23：CS 完整流程 Prep → Map → Tactic → Loading → Match → Result ──
 import CsMatchScreen from "./screens/fps/CsMatchScreen.jsx";
 import CsPrepScreen from "./screens/fps/CsPrepScreen.jsx";
 import CsSeasonRecapScreen from "./screens/fps/CsSeasonRecapScreen.jsx";
-import CsCompetitionHubScreen from "./screens/fps/CsCompetitionHubScreen.jsx";
 import CsMapSelectScreen from "./screens/fps/CsMapSelectScreen.jsx";
 import CsTacticScreen from "./screens/fps/CsTacticScreen.jsx";
 import CsLoadingScreen from "./screens/fps/CsLoadingScreen.jsx";
@@ -166,7 +168,19 @@ export default function AppShell() {
       {/*  Q3.6：`onResume` 是「進行中的賽程對戰」的直接返回入口，導向與賽前頁
            那顆「返回進行中的對戰」**同一個目的地**（`matchmaking` 過場 → Ban/Pick）。
            出賽仍然必須走 `lineup`（真正跑 useMatchFlow 的賽前頁），兩者不可對調。 */}
-      {screen === "competition" && <CompetitionScreen onBack={home} onPlay={enterFixturePrep} onResume={() => resumeActiveMatch({ alreadyResumed: true })} />}
+      {/*  UI-2：同一個 `competition` 路由，換成賽事中心的殼。首頁那顆磚
+           （`onSeason`）一行都沒動 —— 它本來就指向這裡。
+           ⚠ `onPlay` / `onResume` 原封不動往下傳：正式賽程出賽仍然走
+             `startFixtureMatch` → `enterFixturePrep` → 既有 MOBA／CS 賽前流程，
+             沒有第二條 MatchSession／Battle pipeline。 */}
+      {screen === "competition" && (
+        <CompetitionHubScreen
+          onBack={home}
+          onPlay={enterFixturePrep}
+          onResume={() => resumeActiveMatch({ alreadyResumed: true })}
+          onCsRecap={go("csRecap")}
+        />
+      )}
       {screen === "season" && <SeasonScreen onBack={home} />}
 
       {/* ── MOBA 賽前流程 ── */}
@@ -199,11 +213,14 @@ export default function AppShell() {
 
       {/* ── Sprint23：CS 完整流程（結果入 profileStore.csHistory，不入 seasonStore）──
             Dashboard → csPrep → csMap → csTactic → csLoading → cs(Match) → csResult → Dashboard */}
-      {screen === "csPrep" && <CsPrepScreen onNext={enterCsAfterPrep} onBack={home} onRecap={go("csRecap")} onHub={go("csHub")} />}
-      {/*  CS Season M4-B2：CS 賽季成績單。換季 CTA 在該頁最後。 */}
-      {screen === "csRecap" && <CsSeasonRecapScreen onBack={go("csHub")} />}
-      {/*  CS Season M4-C：賽事中心（全唯讀）。出賽仍走 csPrep，成績單仍走 csRecap。 */}
-      {screen === "csHub" && <CsCompetitionHubScreen onBack={go("csPrep")} onRecap={go("csRecap")} />}
+      {/*  UI-3：CS 賽前頁回歸單場賽前責任（陣容／戰力／歷史）。開季、今日賽程出戰、
+           賽事中心導航都搬到賽事中心的 CS 分頁，這裡不再需要 `onRecap` / `onHub`。 */}
+      {screen === "csPrep" && <CsPrepScreen onNext={enterCsAfterPrep} onBack={home} />}
+      {/*  CS Season M4-B2：CS 賽季成績單。換季 CTA 在該頁最後。
+           UI-3：唯一入口是賽事中心的 CS 分頁 ⇒ 返回就回到那裡。 */}
+      {screen === "csRecap" && <CsSeasonRecapScreen onBack={go("competition")} />}
+      {/*  UI-3：獨立的 `csHub` 路由已移除——賽事中心的 CS 分頁掛的就是同一個元件，
+           而且是唯一入口。留一個到不了的第二路由只會讓後續開發誤判擁有者。 */}
       {screen === "csMap" && <CsMapSelectScreen onNext={(m) => { const next = { mapKey: m.key, mapName: m.name }; setCsConfig(next); useProfileStore.getState().setActiveMatchContext({ phase: "tactic", config: { csConfig: next } }); setScreen("csTactic"); }} onBack={go("csPrep")} />}
       {screen === "csTactic" && <CsTacticScreen mapName={csConfig?.mapName} onNext={(t) => { const next = { ...csConfig, tacticId: t.id, tacticName: t.name, tacticType: t.type, tacticEmoji: t.emoji, seed: useProfileStore.getState().matchmaking?.launch?.seed ?? null }; setCsConfig(next); useProfileStore.getState().setActiveMatchContext({ phase: "loading", config: { csConfig: next } }); setScreen("csLoading"); }} onBack={go("csMap")} />}
       {screen === "csLoading" && <CsLoadingScreen config={csConfig} onDone={() => { useProfileStore.getState().setActiveMatchContext({ phase: "battle" }); setScreen("cs"); }} />}

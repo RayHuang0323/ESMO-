@@ -1,0 +1,196 @@
+/* ============================================================================
+   screens/competition/competition.css — Competition 區域的共用視覺語言（UI-4B）
+
+   ── 範圍 ─────────────────────────────────────────────────────────────────
+   全部收在 `.esmo-comp` 底下，**不動任何全域 token**。
+   Home 的 `dashboard.css` 與 `ui/designSystem.js` 由另一條線持有，本檔不碰。
+
+   ── 項目差異怎麼表達 ─────────────────────────────────────────────────────
+   只靠一個變數：`--comp-accent`（MOBA 紫／CS 橘），由 `CompetitionFrame`
+   在最外層 inline 設定。底下所有需要強調色的地方都讀它，所以「換一個項目」
+   等於換一個變數，不是換一套 CSS。
+
+   ── 為什麼用 CSS 檔而不是繼續 inline style ───────────────────────────────
+   這一區要共用的是**節奏**（間距、圓角、字級階層、卡片層級）。那種東西寫成
+   inline style 就會變成每個畫面各自抄一份數字，然後慢慢漂移——這正是 UI-4A
+   之前兩頁的狀況。收進 CSS 之後，改一次節奏兩頁同時跟上。
+   ============================================================================ */
+
+.esmo-comp {
+  /* 版面節奏：兩頁共用 */
+  --comp-max: 560px;
+  --comp-pad: 12px;
+  --comp-gap: 10px;
+  --comp-radius: 12px;
+  --comp-radius-sm: 8px;
+
+  /* 顏色階層：沿用既有 GC 調色，不新增全域 token */
+  --comp-bg: #0a0b0f;
+  --comp-card: #13151c;
+  --comp-line: rgba(255, 255, 255, 0.08);
+  --comp-text: #e5e7eb;
+  --comp-muted: #71717a;
+
+  /* 由呼叫端覆寫（MOBA 紫 / CS 橘） */
+  --comp-accent: #a78bfa;
+
+  height: 100%;
+  overflow: auto;
+  background: var(--comp-bg);
+  color: var(--comp-text);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* 捲軸隱藏：與既有 ManageFrame 的行為一致 */
+.esmo-comp::-webkit-scrollbar,
+.esmo-comp *::-webkit-scrollbar { display: none; }
+
+.esmo-comp__inner {
+  max-width: var(--comp-max);
+  margin: 0 auto;
+  padding: var(--comp-pad) var(--comp-pad) 30px;
+  min-width: 0;
+}
+
+/* ── 頁首 / 賽季標頭 ─────────────────────────────────────────────────── */
+
+.esmo-comp__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+  min-width: 0;
+}
+
+.esmo-comp__back {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--comp-line);
+  color: var(--comp-text);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+.esmo-comp__back:hover { border-color: var(--comp-accent); background: rgba(255, 255, 255, 0.1); }
+.esmo-comp__back:focus-visible { outline: 2px solid var(--comp-accent); outline-offset: 2px; }
+
+.esmo-comp__head-copy { flex: 1; min-width: 0; }
+
+.esmo-comp__eyebrow {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  color: var(--comp-accent);
+  text-transform: uppercase;
+}
+
+.esmo-comp__title {
+  margin: 3px 0 0;
+  font-size: 17px;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.esmo-comp__subtitle {
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--comp-muted);
+}
+
+.esmo-comp__head-right {
+  flex-shrink: 0;
+  align-self: center;
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--comp-muted);
+  text-align: right;
+}
+
+/* ── 卡片 / 區塊 ─────────────────────────────────────────────────────── */
+
+.esmo-comp__panel {
+  background: var(--comp-card);
+  border: 1px solid var(--comp-line);
+  border-radius: var(--comp-radius);
+  padding: 11px 13px;
+  margin-bottom: var(--comp-gap);
+  min-width: 0;
+}
+
+/* 需要強調時，左緣一條 accent 條（CS 官方聯賽、今日賽程都用這個） */
+.esmo-comp__panel--accent {
+  border-left: 2px solid var(--comp-accent);
+  padding-left: 12px;
+}
+
+.esmo-comp__panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  min-width: 0;
+}
+
+.esmo-comp__panel-title {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  color: var(--comp-muted);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.esmo-comp__panel-right {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--comp-muted);
+}
+
+/* ── 資料區塊的基本 typography ───────────────────────────────────────── */
+
+.esmo-comp__quiet {
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--comp-muted);
+}
+
+.esmo-comp__empty {
+  font-size: 12px;
+  color: var(--comp-muted);
+  padding: 4px 0;
+}
+
+/* 寬內容（對戰表、橫向卡列）自己捲，頁面 body 永遠不橫捲 */
+.esmo-comp__scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  min-width: 0;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────── */
+
+@media (max-width: 520px) {
+  .esmo-comp { --comp-pad: 10px; --comp-gap: 8px; }
+  .esmo-comp__title { font-size: 16px; }
+  .esmo-comp__panel { padding: 10px 11px; }
+  /* 頁首右側資訊在窄螢幕改到標題下方，避免把標題擠成一行一個字 */
+  .esmo-comp__header { flex-wrap: wrap; }
+  .esmo-comp__head-right { align-self: flex-start; width: 100%; text-align: left; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .esmo-comp__back { transition: none; }
+}

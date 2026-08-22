@@ -1,8 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { GC, FONT, MONO } from "../../ui/theme.js";
 import { recapStyles, csRecapStyles, recapCssText } from "../manage/seasonRecap/recapStyles.js";
+//  UI-4B：Competition 區域共用外框
+import CompetitionFrame from "../competition/CompetitionFrame.jsx";
 import CsRecapBracket from "../manage/seasonRecap/CsRecapBracket.jsx";
+//  UI-4A：與 MOBA 共用的純呈現元件（不算任何數字，見各檔檔頭）
+import StageBar from "../competition/StageBar.jsx";
+import StandingsTable from "../competition/StandingsTable.jsx";
+import { FixtureRow } from "../competition/FixtureList.jsx";
 
 // ============================================================================
 //  CsCompetitionHubScreen — CS 賽事中心（CS Season M4-C）
@@ -12,10 +18,23 @@ import CsRecapBracket from "../manage/seasonRecap/CsRecapBracket.jsx";
 //  這一頁補的就是那段空白：目前排名、在不在晉級線內、下一場打誰、
 //  Major 產生了沒、對戰表打到哪、整季走到哪一段。
 //
-//  ── ⚠ 全唯讀 ─────────────────────────────────────────────────────────────
-//  本檔**沒有任何 action**：不出賽、不棄權、不換季、不建賽季。
-//  出賽仍走 CS 賽前頁（`startFixtureMatch`），成績單仍走 `csRecap`。
-//  多一個入口就多一條會漂移的路徑。
+//  ── UI-3：這裡現在是 CS 賽季的**主入口** ─────────────────────────────────
+//  M4-C 時本檔是全唯讀的，開季與出戰住在 CS 賽前頁的 `CsLeagueFixtureEntry`。
+//  那個安排讓玩家得先點「CS 練習賽」才找得到「CS 官方聯賽」——點「賽事」永遠
+//  看不到 CS 賽季。UI-3 把那兩個責任搬到這裡，CS 賽前頁回歸單場賽前責任。
+//
+//  本檔現在**只有三個 action**，而且都必須是玩家按下去才發生：
+//    · `ensureCompetitionSeason("cs")`  開季（⚠ 只在 onClick，見下）
+//    · `startFixtureMatch(fixtureId)`   今日賽程出戰 → 交還既有 CS 賽前流程
+//    · `resumeMatchSession()`           返回進行中的那一場
+//
+//  ⚠ **開季永遠不得自動發生。** 這一支真的會建出一整季 CS 聯賽，所以它
+//    只能掛在 onClick 上——本檔沒有、也不得有任何呼叫它的 `useEffect`。
+//    單純查看賽事中心必須什麼都不改變。（`check_cs_season_contract` 守著）
+//
+//  ⚠ **本檔不承擔單場設定。** 選圖、戰術、陣容仍然是 CS 賽前流程的事：
+//    出戰只做「簽指派單」然後把玩家交回 `csPrep → csMap → csTactic → battle`，
+//    沒有第二條 MatchSession／Battle pipeline。
 //
 //  ── ⚠ 不建立第二套計算 ───────────────────────────────────────────────────
 //  排名／勝敗／積分  ← `view.standings`（`computeStandings` 的輸出）
@@ -44,84 +63,78 @@ const STEP_INDEX = {
   league: 0, major_pending: 0, major: 1, major_done: 1, sealed: 2,
 };
 
-function StageBar({ stage }) {
-  const at = STEP_INDEX[stage?.phase] ?? 0;
-  return (
-    <section data-testid="cs-hub-stage" data-phase={stage?.phase ?? ""} style={{ marginTop: 12 }}>
-      <div className="cs-hub-stage-row" style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, flexWrap: "wrap" }}>
-        {STAGE_STEPS.map((step, i) => {
-          const done = i < at;
-          const now = i === at;
-          const color = now ? ACC : done ? "rgba(255,255,255,0.55)" : GC.gray;
-          return (
-            <React.Fragment key={step.key}>
-              {i > 0 && <span aria-hidden="true" style={{ flex: "1 1 12px", minWidth: 12, height: 1, background: done || now ? "rgba(255,255,255,0.22)" : GC.line }} />}
-              <span data-testid="cs-hub-stage-step" data-step={step.key} data-state={now ? "current" : done ? "done" : "todo"}
-                style={{ color, fontSize: 10.5, fontWeight: 900, whiteSpace: "nowrap" }}>
-                {now ? "● " : done ? "✓ " : "○ "}{step.label}
-              </span>
-            </React.Fragment>
-          );
-        })}
-      </div>
-      <div style={{ ...recapStyles.quiet, marginTop: 6, color: ACC }}>{stage?.label ?? "—"}</div>
-    </section>
-  );
-}
+//  UI-4A：階段條與積分榜列改用 `screens/competition/` 的共用純呈現元件。
+//  phase → 第幾格的**對照仍留在本檔**（`STEP_INDEX`）——那是 CS 的賽制知識，
+//  共用元件不該認得它。
 
-/** 一列積分榜。晉級線由呼叫端插在正確的位置，不由這裡判斷。 */
-function StandingRow({ row, isMe, inLine }) {
-  return (
-    <div
-      data-testid="cs-hub-standing-row"
-      data-team-id={row.teamId}
-      data-rank={row.rank}
-      data-me={isMe ? "true" : "false"}
-      data-qualified={inLine ? "true" : "false"}
-      style={{
-        display: "grid",
-        gridTemplateColumns: "18px minmax(0,1fr) minmax(52px,auto) minmax(30px,auto)",
-        alignItems: "center",
-        gap: 8,
-        padding: "6px 6px",
-        minWidth: 0,
-        background: isMe ? "rgba(251,146,60,0.10)" : "transparent",
-        borderRadius: isMe ? 6 : 0,
-      }}
-    >
-      <span style={{ color: inLine ? ACC : GC.gray, fontFamily: MONO, fontSize: 10, fontWeight: 900, textAlign: "center" }}>{row.rank}</span>
-      <span style={{ minWidth: 0, color: isMe ? "#fff" : "rgba(255,255,255,0.82)", fontSize: 11.5, fontWeight: isMe ? 900 : 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {row.name ?? row.teamId}{isMe && <span style={{ color: ACC, fontSize: 9, marginLeft: 5 }}>我</span>}
-      </span>
-      <span style={{ color: GC.gray, fontFamily: MONO, fontSize: 10.5, textAlign: "right" }}>{row.wins}-{row.losses}</span>
-      <span style={{ color: "rgba(255,255,255,0.9)", fontFamily: MONO, fontSize: 11, fontWeight: 900, textAlign: "right" }}>{row.points}</span>
-    </div>
-  );
-}
 
-export default function CsCompetitionHubScreen({ onBack, onRecap }) {
+export default function CsCompetitionHubScreen({ onBack, onRecap, onPlay, onResume }) {
   //  訂閱 canonical 切片，再取一份一致的唯讀快照（同 Recap 的做法）
   const byMode = useProfileStore((s) => s.competitionByMode);
   void byMode;
+  //  UI-3：有沒有一場賽程對戰進行中。訂閱它 ⇒ 出戰之後這一頁立刻換成「返回」。
+  const fixtureCtx = useProfileStore((s) => s.matchmaking?.fixtureAssignment ?? null);
+  const [err, setErr] = useState(null);
   const view = useProfileStore.getState().competitionView("cs");
 
+  //  ⚠ 三個 action 全部只掛 onClick。本檔沒有任何 useEffect，也不得有——
+  //    開季必須是玩家的明確動作，查看不得改變任何東西。
+  const openSeason = () => {
+    setErr(null);
+    const r = useProfileStore.getState().ensureCompetitionSeason("cs");
+    if (!r.ok) setErr(r.errors?.[0]?.message ?? String(r.errors?.[0] ?? "無法開啟 CS 聯賽"));
+  };
+  const play = (fixtureId) => {
+    setErr(null);
+    const r = useProfileStore.getState().startFixtureMatch(fixtureId);
+    if (!r.ok) { setErr(r.reason ?? r.errors?.[0]?.message ?? "無法出賽"); return; }
+    onPlay?.();
+  };
+  const resume = () => {
+    setErr(null);
+    const r = useProfileStore.getState().resumeMatchSession();
+    if (!r.ok) { setErr(r.errors?.[0]?.message ?? "無法返回比賽"); return; }
+    onResume?.();
+  };
+
+  const errLine = err
+    ? <div data-testid="cs-hub-error" style={{ color: "#f87171", fontSize: 10.5, marginTop: 8 }}>{err}</div>
+    : null;
+
+  //  UI-4B：外框改用 Competition 區域共用的 `CompetitionFrame`，與 MOBA 分頁同一套。
+  //  ⚠ `recapCssText` 仍要注入：Major 對戰表（`CsRecapBracket`）與其餘 recap 樣式
+  //    仍靠它，那是 CS 的特色區塊，本輪不動。
   const frame = (children) => (
-    <div style={{ height: "100%", overflow: "auto", background: GC.bg, fontFamily: FONT, padding: "12px 12px 30px" }}>
-      <div style={{ maxWidth: 560, margin: "0 auto" }}>
-        <style>{recapCssText}</style>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-          <button onClick={onBack} style={{ background: "rgba(255,255,255,0.08)", border: `1px solid ${GC.line}`, borderRadius: 8, padding: "5px 10px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>←</button>
-          <h2 style={{ color: "white", fontSize: 17, fontWeight: 900, margin: 0 }}>CS 賽事中心</h2>
-        </div>
-        {children}
-      </div>
-    </div>
+    <CompetitionFrame
+      accent={ACC}
+      eyebrow="CS COMPETITION"
+      title="CS 賽事中心"
+      subtitle={view.hasSeason
+        ? `S${view.season} · 第 ${view.seasonDay ?? "—"} / ${view.seasonDays ?? "—"} 天`
+        : null}
+      subtitleTestId="cs-hub-day"
+      onBack={onBack}
+    >
+      <style>{recapCssText}</style>
+      {children}
+    </CompetitionFrame>
   );
 
+  //  ── 未開季：這一頁就是開季的地方 ────────────────────────────────────────
+  //  ⚠ 文案要說清楚按下去會發生什麼（排定一整季賽程），而不是只寫「開始」。
+  //    一整季賽程是個大動作，玩家按之前該知道自己在答應什麼。
   if (!view.hasSeason) {
     return frame(
-      <div data-testid="cs-hub-no-season" style={{ ...recapStyles.quiet, marginTop: 14 }}>
-        還沒有 CS 賽季。到 CS 賽前準備頁開啟本季聯賽。
+      <div data-testid="cs-hub-no-season">
+        <div style={{ ...recapStyles.quiet, marginTop: 14 }}>
+          還沒有 CS 賽季。開季會排定一整季的官方聯賽賽程，之後每到比賽日就能出戰。
+        </div>
+        <section style={{ ...recapStyles.section, ...recapStyles.nextSeasonSection }}>
+          <button data-testid="cs-league-open-season" onClick={openSeason} style={recapStyles.cta}>
+            開始 CS 賽季
+          </button>
+        </section>
+        {errLine}
       </div>,
     );
   }
@@ -135,24 +148,60 @@ export default function CsCompetitionHubScreen({ onBack, onRecap }) {
   const major = view.csMajor ?? { exists: false };
   const path = major.playerPath ?? { inMajor: false, next: null, eliminated: false };
 
-  //  下一場對手：`next` 是 Fixture，對手 = 不是我的那一側
+  //  下一場：`next` 是 Fixture。對手是誰／主客場由共用的 `FixtureRow` 從
+  //  `sideA/sideB` 與 `myTeamId` 讀出來（那是讀法，不是規則）。
   const nextFixture = view.next ?? null;
-  const oppId = nextFixture ? (nextFixture.sideA === myTeamId ? nextFixture.sideB : nextFixture.sideA) : null;
-  const oppName = oppId ? (view.participants.find((p) => p.id === oppId)?.name ?? oppId) : null;
-  const homeAway = nextFixture ? (nextFixture.sideA === myTeamId ? "主場" : "客場") : null;
+  const nameOf = (id) => view.participants?.find?.((p) => p.id === id)?.name ?? id;
 
   return frame(
     <div data-testid="cs-competition-hub" data-season={view.season} data-phase={view.csStage?.phase ?? ""}>
-      {/*  標頭：賽季與賽季日（沿用 Recap 的 kicker / mono 語言）*/}
-      <div style={recapStyles.kicker}>CS COMPETITION</div>
-      <div style={{ ...recapStyles.headerMeta, marginTop: 7 }}>
-        <span style={{ ...recapStyles.headerSeason, fontFamily: MONO, fontSize: 24 }}>S{view.season}</span>
-        <span data-testid="cs-hub-day" style={recapStyles.sealStamp}>
-          第 {view.seasonDay ?? "—"} / {view.seasonDays ?? "—"} 天
-        </span>
-      </div>
+      {/*  UI-4B：賽季標頭（S{n} · 第 x / y 天）已經搬到共用的 `CompetitionFrame`
+           頁首，與 MOBA 分頁看到的是同一個東西。這裡不再自己排一組。 */}
 
-      <StageBar stage={view.csStage} />
+      {/*  phase → 第幾格的對照留在本檔（`STEP_INDEX`）：那是 CS 的賽制知識。 */}
+      <StageBar
+        steps={STAGE_STEPS}
+        activeIndex={STEP_INDEX[view.csStage?.phase] ?? 0}
+        label={view.csStage?.label ?? "—"}
+        accent={ACC}
+        phase={view.csStage?.phase ?? ""}
+        testId="cs-hub-stage"
+        stepTestId="cs-hub-stage-step"
+      />
+
+      {/*  ── 今日賽程（UI-3）─────────────────────────────────────────────
+           整頁最重要的一個動作，所以放在階段條正下方、積分榜之前。
+           ⚠ 賽季封存後不出現：那時候今天不會再有賽程，主要動作是看成績單。
+           ⚠ 出戰只做「簽指派單」，接著由 `onPlay` 把玩家交回既有的 CS 賽前流程
+             （選圖／戰術／陣容都在那裡）。本頁不做任何單場設定。
+           ⚠ 能不能出戰、能不能返回都由 Store 判，這裡只把失敗原因顯示出來。 */}
+      {!view.final && (
+        <section data-testid="cs-hub-today" data-state={fixtureCtx ? "live" : view.today ? "today" : "none"}
+          style={{ ...recapStyles.section, marginTop: 14, paddingLeft: 12, borderLeft: `2px solid ${ACC}` }}>
+          {fixtureCtx ? (
+            <>
+              <div style={{ ...recapStyles.quiet, marginBottom: 8 }}>本場聯賽賽程進行中。</div>
+              <button data-testid="cs-league-resume" onClick={resume} style={recapStyles.cta}>
+                返回進行中的對戰
+              </button>
+            </>
+          ) : view.today ? (
+            <>
+              <div data-testid="cs-league-today" style={{ ...recapStyles.value, marginBottom: 8, fontWeight: 900 }}>
+                今日有你的聯賽賽程
+              </div>
+              <button data-testid="cs-league-play" onClick={() => play(view.today.id)} style={recapStyles.cta}>
+                出戰今日聯賽賽程
+              </button>
+            </>
+          ) : (
+            <div style={recapStyles.quiet}>
+              今天沒有你的聯賽賽程{view.next ? `（下一場：第 ${view.nextDay} 天）` : ""}。
+            </div>
+          )}
+          {errLine}
+        </section>
+      )}
 
       {/* ── CS 官方聯賽 ─────────────────────────────────────────────── */}
       <section data-testid="cs-hub-league" style={{ ...recapStyles.section, marginTop: 22, paddingLeft: 12, borderLeft: `2px solid ${ACC}` }}>
@@ -170,29 +219,38 @@ export default function CsCompetitionHubScreen({ onBack, onRecap }) {
             {me ? `${me.wins} 勝 ${me.losses} 敗 · ${me.points} 分` : "—"}
           </span>
         </div>
+        {/*  UI-4A：下一場改用共用的 `FixtureRow`（row 版面）。
+             ⚠ 天數傳 `view.nextDay`（Store 推導的絕對遊戲日），不讓元件去讀
+               `fixture.day`——後者是賽季相對天，兩者不是同一個數字。 */}
         <div data-testid="cs-hub-next" data-fixture-id={nextFixture?.id ?? ""} style={{ ...recapStyles.row, ...recapStyles.rowLast }}>
           <span style={recapStyles.label}>下一場</span>
-          <span style={recapStyles.value}>
-            {nextFixture ? `第 ${view.nextDay} 天 · ${oppName}（${homeAway}）` : "本季已無賽程"}
+          <span style={{ ...recapStyles.value, minWidth: 0, flex: 1 }}>
+            {nextFixture
+              ? (
+                <FixtureRow
+                  fixture={nextFixture}
+                  myTeamId={myTeamId}
+                  nameOf={nameOf}
+                  day={view.nextDay}
+                  accent={ACC}
+                  testIdPrefix="cs-hub-next-fixture"
+                />
+              )
+              : "本季已無賽程"}
           </span>
         </div>
 
-        {/*  積分榜。⚠ 晉級線是**規則**（`csMajorLine.topN`），不是畫面寫死的 4。 */}
-        <div data-testid="cs-hub-standings" style={{ marginTop: 10 }}>
-          {rows.map((row, i) => (
-            <React.Fragment key={row.teamId}>
-              <StandingRow row={row} isMe={row.teamId === myTeamId} inLine={row.rank <= topN} />
-              {row.rank === topN && i < rows.length - 1 && (
-                <div data-testid="cs-hub-qualify-line" style={{ display: "flex", alignItems: "center", gap: 8, margin: "3px 0" }}>
-                  <span style={{ flex: 1, height: 1, background: `${ACC}66` }} />
-                  <span style={{ color: ACC, fontSize: 8.5, fontWeight: 900, letterSpacing: "0.14em", whiteSpace: "nowrap" }}>
-                    MAJOR 晉級線 · 前 {topN}
-                  </span>
-                  <span style={{ flex: 1, height: 1, background: `${ACC}66` }} />
-                </div>
-              )}
-            </React.Fragment>
-          ))}
+        {/*  積分榜。⚠ 晉級線是**規則**（`csMajorLine.topN`），不是畫面寫死的 4；
+             共用元件只負責把線插在指定名次之後，前幾名進得去仍由這裡決定。 */}
+        <div style={{ marginTop: 10 }}>
+          <StandingsTable
+            rows={rows}
+            myTeamId={myTeamId}
+            accent={ACC}
+            showMeBadge
+            qualify={topN > 0 ? { afterRank: topN, label: `MAJOR 晉級線 · 前 ${topN}` } : null}
+            testIdPrefix="cs-hub-standing"
+          />
         </div>
       </section>
 

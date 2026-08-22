@@ -14,28 +14,63 @@
 //  按「出賽」＝ `startFixtureMatch()`（簽指派單 ＋ 開房 ＋ 場次轉 launched），
 //  然後跳到既有的賽前頁。從那一刻起，雙方確認 → 場次 → Ban/Pick → 對戰 →
 //  結算，走的都是既有的 `useMatchFlow`，這裡沒有第二條流程。
+//
+//  ── UI-1：這個畫面是哪一個項目的？由呼叫端決定 ───────────────────────────
+//  本檔原本把「MOBA」寫死在畫面層：`competitionView()` 不帶參數 ⇒ 預設 moba，
+//  訂閱的又是 `s.competition`（`competitionByMode.moba` 的唯讀別名）。
+//  Store 早就是 by-mode 的（`competitionByMode: { moba, cs }`），寫死的只有這裡。
+//
+//  現在接受 `mode` / `gameMode`（預設 `"moba"`），所有讀取都帶著它走：
+//    · `competitionView(gameMode)`          積分榜／賽程／進度／季後賽／歷屆
+//    · `competitionByMode[gameMode]`        canonical 切片（moba 時與舊別名同一個參考）
+//    · `ensureCompetitionSeason(gameMode)`  **只有 moba 會自動呼叫**，理由見下
+//
+//  ⚠ 賽季建立只自動做 MOBA 的。`ensureCompetitionSeason("cs")` 真的會建出一整季
+//    CS 聯賽，而 CS 的產品契約是「賽季**不自動建立**」——開季按鈕在 CS 賽前頁，
+//    由玩家自己按。掛載一個畫面就偷偷開一季，是這裡最糟的失敗模式。
+//    ⇒ 非 moba 模式沒有賽季時誠實顯示空狀態，不代玩家開季。
+//
+//  ⚠ 有三個區塊**目前只對 MOBA 成立**，非 moba 模式刻意不渲染：
+//      · `AsiaFinalsPanel` / `SeasonRecap` —— 它們內部自己呼叫 `competitionView()`
+//        （moba 預設）。本輪不改那兩個檔 ⇒ 掛在 CS 頁上會顯示 MOBA 的資料。
+//      · 賽事切換列 —— `setActiveEvent()` 在 Store 裡讀的是 `get().competition`
+//        （moba 別名），在 CS 頁按下去會寫到 MOBA 的賽季。
+//      · 歷屆巡迴 `circuitHistory` —— 全域切片，內容是 MOBA 亞洲巡迴賽的結論。
+//    要跨項目共用得先把它們 by-mode 化，那屬 UI-2 的殼，不在本輪。
 // ============================================================================
 import React, { useEffect, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { GC, MONO, chip } from "../../ui/theme.js";
-import ManageFrame from "./ManageFrame.jsx";
+//  UI-4B：賽事頁的外框改用 Competition 區域共用的 `CompetitionFrame`
+//  （不再走經營模組的 `ManageFrame`）——賽事中心兩個分頁要看起來是同一套 UI。
+import CompetitionFrame from "../competition/CompetitionFrame.jsx";
+import CompetitionPanel from "../competition/CompetitionPanel.jsx";
 import AsiaFinalsPanel from "./asiaFinals/AsiaFinalsPanel.jsx";
+//  UI-4A：與 CS 賽事中心共用的純呈現元件（不算任何數字，見各檔檔頭）
+import StandingsTable from "../competition/StandingsTable.jsx";
+import { FixtureRow } from "../competition/FixtureList.jsx";
 import RecapNextSeason from "./seasonRecap/RecapNextSeason.jsx";
 import SeasonRecap from "./seasonRecap/SeasonRecap.jsx";
 
-const Panel = ({ title, right, children }) => (
-  <div style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 12, padding: "11px 13px", marginBottom: 10 }}>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-      <div style={{ fontSize: 9, letterSpacing: "0.2em", color: GC.gray, fontWeight: 900 }}>{title}</div>
-      {right}
-    </div>
-    {children}
-  </div>
-);
+//  UI-4B：卡片改用與 CS 共用的 `CompetitionPanel`。
+//  簽名一致（title / right / children），所以底下十幾個 `<Panel …>` 呼叫點
+//  一行都不用動——共用的是外框，不是把這一頁重寫一遍。
+const Panel = CompetitionPanel;
 
-export default function CompetitionScreen({ onBack, onPlay, onResume }) {
+/** 沒有賽季時的標題。moba 維持既有的「聯賽」，不因為多了參數就改文案。 */
+const FALLBACK_TITLE = { moba: "聯賽", cs: "CS 聯賽" };
+
+export default function CompetitionScreen({ onBack, onPlay, onResume, mode, gameMode }) {
+  //  `gameMode` 與 `mode` 是同一件事的兩個名字（Store 用 gameMode，畫面層習慣 mode）。
+  //  兩個都沒給就是 "moba" ⇒ 既有呼叫端 `<CompetitionScreen onBack … />` 行為不變。
+  const gm = gameMode ?? mode ?? "moba";
+  const isMoba = gm === "moba";
+
   //  訂閱原始值 ⇒ 賽季一變就重繪（不訂閱函式本身：那是正式驗收踩過的坑）
-  const competition = useProfileStore((s) => s.competition);
+  //  ⚠ 改讀 canonical 的 `competitionByMode[gm]` 而不是 `s.competition`。
+  //    moba 時兩者是**同一個物件參考**（別名就是從 canonical 投影出來的），
+  //    所以 zustand 的 Object.is 比較結果一模一樣 ⇒ 重繪時機零變化。
+  const competition = useProfileStore((s) => s.competitionByMode?.[gm] ?? null);
   const days = useProfileStore((s) => s.meta?.days ?? 1);
   const ensureCompetitionSeason = useProfileStore((s) => s.ensureCompetitionSeason);
 
@@ -44,16 +79,17 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
 
   //  沒有賽季就在這裡建（決定性：只由 team.id 與 meta.seasonSeed 決定）。
   //  刻意不在載入存檔時建——那會讓每個舊存檔莫名多出一整季賽程。
-  useEffect(() => { ensureCompetitionSeason(); }, [ensureCompetitionSeason]);
+  //  ⚠ 只有 MOBA。CS 的開季是玩家的明確動作（見檔頭），畫面掛載不得代勞。
+  useEffect(() => { if (isMoba) ensureCompetitionSeason("moba"); }, [ensureCompetitionSeason, isMoba]);
 
-  const view = useProfileStore.getState().competitionView();
+  const view = useProfileStore.getState().competitionView(gm);
   if (!view.hasSeason) {
     return (
-      <ManageFrame title="聯賽" subtitle="COMPETITION" onBack={onBack}>
+      <CompetitionFrame eyebrow="COMPETITION" title={FALLBACK_TITLE[gm] ?? "聯賽"} accent={GC.purp} onBack={onBack}>
         <Panel title="賽季">
-          <div style={{ fontSize: 12, color: GC.gray }}>尚未建立賽季。</div>
+          <div className="esmo-comp__empty">尚未建立賽季。</div>
         </Panel>
-      </ManageFrame>
+      </CompetitionFrame>
     );
   }
 
@@ -86,16 +122,20 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
   const cp = view.circuitPoints ?? null;
   const pointCircuits = Object.values(view.circuits ?? {}).filter((c) => c?.pointsPolicy);
   //  歷屆巡迴摘要：換季時封存的結論（Store 切片，不是重算出來的）
-  const circuitHistory = useProfileStore.getState().circuitHistory ?? [];
+  //  ⚠ `circuitHistory` 是全域切片、內容是 MOBA 亞洲巡迴賽 ⇒ 只給 moba 讀。
+  const circuitHistory = isMoba ? (useProfileStore.getState().circuitHistory ?? []) : [];
   const POINTS_TONE = { settled: GC.green, not_started: GC.gray, policy_required: GC.red };
   const POINTS_LABEL = { settled: "已結算", not_started: "未結算", policy_required: "缺積分政策" };
 
+  //  換季：兩個項目各有自己的 rollover（賽季編號、參賽者、封存物件都不同）。
+  //  能不能換季仍由 Store 的 `canRoll` 判定，這裡只負責選對那一支。
   const rollSeason = () => {
     setErr(null);
-    const r = useProfileStore.getState().rollToNextCompetitionSeason();
+    const store = useProfileStore.getState();
+    const r = isMoba ? store.rollToNextCompetitionSeason() : store.rollToNextCsSeason();
     if (!r.ok) setErr(r.reason ?? "無法開始下一賽季");
   };
-  const myId = useProfileStore.getState().competition?.playerTeamId;
+  const myId = useProfileStore.getState().competitionByMode?.[gm]?.playerTeamId;
   const nameOf = (id) => participants.find((p) => p.id === id)?.name ?? id;
   const tagOf = (id) => participants.find((p) => p.id === id)?.tag ?? "";
 
@@ -135,20 +175,27 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
   const rows = isToday ? todayList : (next ? [next] : []);
 
   return (
-    <ManageFrame
+    <CompetitionFrame
+      eyebrow="COMPETITION"
       title={view.focusedEventName ?? "聯賽"}
       subtitle={`S${view.season} · 第 ${seasonDay} / ${seasonDays} 天`}
+      accent={GC.purp}
       onBack={onBack}
-      right={<span style={{ ...{ fontSize: 9, fontWeight: 800, color: GC.gray } }}>{progress.playerCompleted}/{progress.playerTotal} 場</span>}
+      right={<>{progress.playerCompleted}/{progress.playerTotal} 場</>}
     >
-      <AsiaFinalsPanel />
+      {/*  ⚠ 亞洲年度總決賽是 MOBA 的 Q7a 內容，而且 `AsiaFinalsPanel` 內部自己
+           呼叫 `competitionView()`（moba 預設）⇒ 掛在 CS 頁上會顯示 MOBA 的資料。 */}
+      {isMoba && <AsiaFinalsPanel />}
       {/* ── Q7a-3b.5：同季多個 Event 的切換列 ────────────────────────────
            ⚠ 切換**只影響畫面聚焦**（`setActiveEvent`），不參與任何規則：
              積分榜、季後賽排定、封存與獎金都不讀 `activeEventId`。
            ⚠ 只有兩個以上 Event 才渲染；單一 Event 時整段不存在，
              legacy 畫面維持現況。
-           ⚠ 橫向捲動 ＋ 每張卡最小寬度 ⇒ 手機上也點得到、看得完。 */}
-      {multiEvent && (
+           ⚠ 橫向捲動 ＋ 每張卡最小寬度 ⇒ 手機上也點得到、看得完。
+           ⚠ 只給 moba：`setActiveEvent()` 在 Store 裡讀的是 `get().competition`
+             （moba 別名），在 CS 頁按下去會把聚焦寫到 MOBA 的賽季。要跨項目
+             得先讓那支 action 接受 gameMode——屬 UI-2，不在本輪。 */}
+      {isMoba && multiEvent && (
         <Panel
           title="本季賽事 EVENTS"
           right={<span style={{ fontSize: 9, fontWeight: 800, color: GC.gray }}>{eventViews.length} 項</span>}
@@ -400,7 +447,10 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
            ⚠ 第二輪起 CTA **不在 Recap 內**——它移到本頁最後（見檔尾），
               讓「開始下一賽季」成為整頁真正最後一個主要操作。
               rollover 規則與 handler 不變，DOM 仍只有一顆 CTA。 */}
-      {final && <SeasonRecap />}
+      {/*  ⚠ 只給 moba：`SeasonRecap` 內部自己從 `competitionView()`（moba 預設）
+           讀生涯名次與獎金收據。CS 的賽季成績單是既有的 `CsSeasonRecapScreen`，
+           入口仍在 CS 賽前頁，本輪不搬。 */}
+      {isMoba && final && <SeasonRecap />}
 
       {/*  ── 歷屆成績（Q5）──────────────────────────────────────────────
            換季之後上一季的最終名次仍然查得到。這裡只讀已封存的快照，
@@ -481,22 +531,20 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
              由 Store 判（會回「請先打完或放棄那一場」並顯示在上方錯誤列），
              畫面不自己判規則。 */}
         {rows.map((focus, idx) => {
-          const oppId = focus.sideA === myId ? focus.sideB : focus.sideA;
-          const home = focus.sideA === myId;
           const isLive = live?.fixtureId === focus.id;
           return (
           <div key={focus.id} style={idx > 0 ? { marginTop: 10, paddingTop: 10, borderTop: `1px solid ${GC.line}` } : undefined}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "6px 0 10px" }}>
-              <div style={{ textAlign: "right", flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 900, color: "#e5e7eb" }}>{nameOf(myId)}</div>
-                <div style={{ fontSize: 9, color: GC.gray }}>{home ? "主場" : "客場"}</div>
-              </div>
-              <div style={{ fontSize: 11, color: GC.gray, fontFamily: MONO }}>VS</div>
-              <div style={{ textAlign: "left", flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 900, color: "#e5e7eb" }}>{nameOf(oppId)}</div>
-                <div style={{ fontSize: 9, color: GC.gray }}>{home ? "客場" : "主場"}</div>
-              </div>
-            </div>
+            {/*  UI-4A：對戰卡改用與 CS 共用的 `FixtureRow`（versus 版面）。
+                 對手是誰、主場還客場由它從 `sideA/sideB` 與 `myId` 讀出來；
+                 出賽／棄權那組按鈕仍留在本檔——那是 MOBA 這一頁的動作，不是共用呈現。 */}
+            <FixtureRow
+              layout="versus"
+              fixture={focus}
+              myTeamId={myId}
+              nameOf={nameOf}
+              accent={GC.purp}
+              testIdPrefix="moba-competition-fixture"
+            />
             {isToday ? (
               //  UI 修正：棄權是**不可逆**的（fixture 進 forfeited 就是終局，
               //  Q3 的 issueFor 永遠不會再簽發）。舊版的二次確認就地把「棄權」
@@ -556,42 +604,34 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
 
       {/* ── 積分榜 ─────────────────────────────────────────────────── */}
       <Panel title={final ? "最終積分榜 STANDINGS" : "積分榜 STANDINGS"} right={<span style={{ fontSize: 9, color: GC.gray }}>{standings.rule.label}</span>}>
-        <div style={{ display: "grid", gridTemplateColumns: "18px 1fr 46px 30px 34px", fontSize: 8.5, color: GC.gray, fontWeight: 800, paddingBottom: 4, borderBottom: `1px solid ${GC.line}` }}>
-          <span>#</span><span>隊伍</span><span style={{ textAlign: "center" }}>勝敗</span><span style={{ textAlign: "center" }}>分</span><span style={{ textAlign: "right" }}>淨勝</span>
-        </div>
-        {standings.rows.map((r) => (
-          <div
-            key={r.teamId}
-            style={{
-              display: "grid", gridTemplateColumns: "18px 1fr 46px 30px 34px", fontSize: 11.5,
-              padding: "4px 0", alignItems: "center",
-              color: r.teamId === myId ? GC.gold : "rgba(255,255,255,0.82)",
-              fontWeight: r.teamId === myId ? 900 : 600,
-            }}
-          >
-            <span style={{ fontFamily: MONO, color: GC.gray }}>{r.rank}</span>
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {r.name}{tagOf(r.teamId) && <span style={{ fontSize: 8.5, color: GC.gray, marginLeft: 4 }}>{tagOf(r.teamId)}</span>}
-            </span>
-            <span style={{ fontFamily: MONO, textAlign: "center" }}>{r.wins}-{r.losses}</span>
-            <span style={{ fontFamily: MONO, textAlign: "center" }}>{r.points}</span>
-            <span style={{ fontFamily: MONO, textAlign: "right", color: r.scoreDiff > 0 ? GC.green : r.scoreDiff < 0 ? GC.redL : GC.gray }}>
-              {r.scoreDiff > 0 ? "+" : ""}{r.scoreDiff}
-            </span>
-          </div>
-        ))}
-        {/* 誠實標示：有多少場不是玩家實打的 */}
-        {(() => {
-          const me = standings.rows.find((r) => r.teamId === myId);
-          if (!me || !me.played) return null;
-          return (
-            <div style={{ fontSize: 9, color: GC.gray, marginTop: 7, paddingTop: 6, borderTop: `1px solid ${GC.line}` }}>
-              你已出賽 {me.played} 場：實際對戰 {me.engineGames}
-              {me.forfeitedGames ? ` · 棄權 ${me.forfeitedGames}` : ""}
-              {me.simulatedGames ? ` · 模擬 ${me.simulatedGames}` : ""}
-            </div>
-          );
-        })()}
+        {/*  UI-4A：改用與 CS 共用的 `StandingsTable`。名次／勝敗／積分／淨勝分
+             全部是 `competitionView("moba").standings.rows` 原樣傳進去的，
+             **這裡與元件裡都不重算**。MOBA 的特色（表頭、淨勝分欄、隊伍 tag、
+             金色高亮、來源分佈註腳）由 props 表達，不是把 CS 的樣子套過來。
+             ⚠ 季後賽晉級線目前**刻意不畫**：季後賽名額是由 `playoff.qualified`
+               在常規賽結束後才產生的事實，不是積分榜上的即時規則。要畫的話得先
+               有一個「現在前幾名進得去」的 canonical 來源，那不在本輪範圍。 */}
+        <StandingsTable
+          rows={standings.rows}
+          myTeamId={myId}
+          accent={GC.purp}
+          showHeader
+          showScoreDiff
+          tagOf={tagOf}
+          testIdPrefix="moba-competition-standing"
+          footer={(() => {
+            //  誠實標示：有多少場不是玩家實打的
+            const me = standings.rows.find((r) => r.teamId === myId);
+            if (!me || !me.played) return null;
+            return (
+              <div style={{ fontSize: 9, color: GC.gray, marginTop: 7, paddingTop: 6, borderTop: `1px solid ${GC.line}` }}>
+                你已出賽 {me.played} 場：實際對戰 {me.engineGames}
+                {me.forfeitedGames ? ` · 棄權 ${me.forfeitedGames}` : ""}
+                {me.simulatedGames ? ` · 模擬 ${me.simulatedGames}` : ""}
+              </div>
+            );
+          })()}
+        />
       </Panel>
 
       {/* ── 賽季進度 ───────────────────────────────────────────────── */}
@@ -615,6 +655,6 @@ export default function CompetitionScreen({ onBack, onPlay, onResume }) {
       {final && canRoll?.ok && (
         <RecapNextSeason canRoll={canRoll} onClick={rollSeason} />
       )}
-    </ManageFrame>
+    </CompetitionFrame>
   );
 }
