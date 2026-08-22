@@ -12,6 +12,7 @@ import { ESMO_CSS_VARS } from "../ui/designSystem.js";
 import EsmoIcon from "../ui/EsmoIcon.jsx";
 import { useIsHomeMobile } from "../ui/useViewport.js";
 import { useDashboardMotion } from "./dashboard/useDashboardMotion.js";
+import { useMobileSheetMotion } from "./dashboard/useMobileSheetMotion.js";
 import "./dashboard/dashboard.css";
 
 const numberOf = (value, fallback = 0) => {
@@ -291,14 +292,14 @@ function MobileTeamHeader({ team, meta, unread, xpPercent, onInbox }) {
             <div className="esmo-mobile-header__meta">
               <span>Lv. {level}</span>
               <span>W{week}</span>
-              <span>{formatFans(meta.fans)} fans</span>
+              <span>{formatFans(meta.fans)} 支持者</span>
             </div>
           </div>
         </div>
 
         <div className="esmo-mobile-header__actions">
           <div className="esmo-mobile-header__funds">
-            <span>FUNDS</span>
+            <span>資金</span>
             <strong>{money(team.gold ?? 0)}</strong>
           </div>
           <button className="esmo-mobile-header__inbox" type="button" onClick={onInbox} aria-label="開啟收件匣">
@@ -310,7 +311,7 @@ function MobileTeamHeader({ team, meta, unread, xpPercent, onInbox }) {
 
       <div className="esmo-mobile-header__xp">
         <div className="esmo-mobile-header__xp-label">
-          <span>TEAM XP</span>
+          <span>XP</span>
           <strong>{compactWan(xp)} / {compactWan(xpMax)}</strong>
         </div>
         <div className="esmo-mobile-header__xp-track" aria-label={`Team XP ${Math.round(xpPercent)}%`}>
@@ -326,8 +327,7 @@ function MobilePrimaryAction({ activeMatchView, onResumeActive, action }) {
     return (
       <section className="esmo-mobile-primary esmo-mobile-primary--active" data-dashboard-reveal>
         <div className="esmo-mobile-primary__eyebrow">
-          <span><span className="esmo-mobile-primary__live-dot" /> LIVE DECISION</span>
-          <span>RETURN TO MATCH</span>
+          <span><span className="esmo-mobile-primary__live-dot" /> LIVE</span>
         </div>
         <ActiveMatchCard compact onResume={onResumeActive} />
       </section>
@@ -343,7 +343,7 @@ function MobilePrimaryAction({ activeMatchView, onResumeActive, action }) {
       data-dashboard-reveal
     >
       <div className="esmo-mobile-primary__top">
-        <span className="esmo-mobile-primary__eyebrow">NOW / NEXT ACTION</span>
+        <span className="esmo-mobile-primary__eyebrow">下一個行動</span>
         {action.badge !== undefined && <span className="esmo-mobile-primary__badge">{action.badge}</span>}
       </div>
       <div className="esmo-mobile-primary__title-row">
@@ -351,7 +351,7 @@ function MobilePrimaryAction({ activeMatchView, onResumeActive, action }) {
         <strong>{action.title}</strong>
       </div>
       <p>{action.detail}</p>
-      <span className="esmo-mobile-primary__cta">OPEN ACTION <EsmoIcon name="chevron" size={14} /></span>
+      <span className="esmo-mobile-primary__cta">開啟行動 <EsmoIcon name="chevron" size={14} /></span>
     </button>
   );
 }
@@ -361,10 +361,9 @@ function MobileQuickActions({ items }) {
     <section className="esmo-mobile-section" data-dashboard-reveal>
       <div className="esmo-mobile-section__heading">
         <div>
-          <span className="esmo-mobile-section__label">QUICK ACTIONS</span>
-          <h2>短指令</h2>
+          <span className="esmo-mobile-section__label">快捷行動</span>
+          <h2>現在可以做的事</h2>
         </div>
-        <span className="esmo-mobile-section__note">4 SHORTCUTS</span>
       </div>
       <div className="esmo-mobile-quick-grid">
         {items.map((item) => (
@@ -397,7 +396,7 @@ function MobileClubSnapshot({ players, developmentPoints, wk, sponsor, profile, 
       accent: numberOf(wk.net) >= 0 ? GC.green : GC.red,
       label: "財務",
       value: signedMoney(wk.net),
-      note: `W${numberOf(wk.week, 1)} net`,
+      note: `W${numberOf(wk.week, 1)} 淨額`,
     },
     {
       id: "roster",
@@ -421,10 +420,9 @@ function MobileClubSnapshot({ players, developmentPoints, wk, sponsor, profile, 
     <section className="esmo-mobile-section" data-dashboard-reveal>
       <div className="esmo-mobile-section__heading">
         <div>
-          <span className="esmo-mobile-section__label">CLUB SNAPSHOT</span>
+          <span className="esmo-mobile-section__label">戰隊快照</span>
           <h2>戰隊狀態</h2>
         </div>
-        <span className="esmo-mobile-section__note">AT A GLANCE</span>
       </div>
       <div className="esmo-mobile-snapshot-grid">
         {rows.map((row) => (
@@ -451,10 +449,10 @@ function MobileCompeteRail({ modes, onSelect }) {
     <section className="esmo-mobile-section" data-dashboard-reveal>
       <div className="esmo-mobile-section__heading">
         <div>
-          <span className="esmo-mobile-section__label">COMPETE</span>
-          <h2>選擇賽場</h2>
+          <span className="esmo-mobile-section__label">競技</span>
+          <h2>選擇模式</h2>
         </div>
-        <span className="esmo-mobile-section__note">SWIPE →</span>
+        <span className="esmo-mobile-section__note">左右滑動</span>
       </div>
       <div className="esmo-mobile-compete-rail" aria-label="競技模式">
         {modes.map((mode) => (
@@ -480,44 +478,52 @@ function MobileCompeteRail({ modes, onSelect }) {
 }
 
 function MobileNavSheet({ type, modes, onSelect, onClose }) {
+  const sheetRef = useRef(null);
+  const closeStartedRef = useRef(false);
+  const animateClose = useMobileSheetMotion(sheetRef, onClose);
+  const closeSheet = () => {
+    if (closeStartedRef.current) return;
+    closeStartedRef.current = true;
+    animateClose();
+  };
   const groups = {
     team: [
-      { id: "team", label: "戰隊總覽", detail: "Team overview", icon: "award" },
-      { id: "roster", label: "選手名單", detail: "Roster", icon: "users" },
-      { id: "development", label: "戰隊發展", detail: "Development", icon: "award" },
-      { id: "training", label: "訓練安排", detail: "Training", icon: "signal" },
-      { id: "recruit", label: "招募選手", detail: "Recruit", icon: "arrowUp" },
-      { id: "talent", label: "選手天賦", detail: "Talent", icon: "star" },
+      { id: "team", label: "戰隊總覽", icon: "award" },
+      { id: "roster", label: "選手名單", icon: "users" },
+      { id: "development", label: "戰隊發展", icon: "award" },
+      { id: "training", label: "訓練安排", icon: "signal" },
+      { id: "recruit", label: "招募選手", icon: "arrowUp" },
+      { id: "talent", label: "選手天賦", icon: "star" },
     ],
     compete: modes.map((mode) => ({ id: mode.id, label: mode.name, detail: mode.meta, icon: mode.icon, accent: mode.color })),
     more: [
-      { id: "finance", label: "財務", detail: "Finance", icon: "finance" },
-      { id: "sponsor", label: "贊助", detail: "Sponsor", icon: "users" },
-      { id: "equip", label: "商店", detail: "Shop", icon: "package" },
-      { id: "newgame", label: "新遊戲", detail: "New game", icon: "arrowUp" },
-      { id: "dash", label: "完整儀表板", detail: "Legacy utility", icon: "chart" },
+      { id: "finance", label: "財務", detail: "收支與預測", icon: "finance" },
+      { id: "sponsor", label: "贊助", detail: "合作合約", icon: "users" },
+      { id: "equip", label: "商店", detail: "物品與升級", icon: "package" },
+      { id: "newgame", label: "新遊戲", detail: "重新開始", icon: "arrowUp" },
+      { id: "dash", label: "完整儀表板", detail: "完整總覽", icon: "chart" },
     ],
   };
   const titles = { team: "戰隊", compete: "競技", more: "更多" };
   const items = groups[type] ?? [];
 
   return (
-    <div className="esmo-mobile-sheet-backdrop" role="presentation" onClick={onClose}>
-      <div className="esmo-mobile-sheet" role="dialog" aria-modal="true" aria-labelledby="esmo-mobile-sheet-title" onClick={(event) => event.stopPropagation()}>
+    <div ref={sheetRef} className={`esmo-mobile-sheet-backdrop esmo-mobile-sheet-backdrop--${type}`} data-dashboard-mobile-sheet role="presentation" onClick={closeSheet}>
+      <div className={`esmo-mobile-sheet esmo-mobile-sheet--${type}`} role="dialog" aria-modal="true" aria-labelledby="esmo-mobile-sheet-title" onClick={(event) => event.stopPropagation()}>
         <div className="esmo-mobile-sheet__top">
           <div>
-            <span className="esmo-mobile-section__label">MOBILE MENU</span>
+            <span className="esmo-mobile-section__label">遊戲選單</span>
             <h2 id="esmo-mobile-sheet-title">{titles[type]}</h2>
           </div>
-          <button className="esmo-mobile-sheet__close" type="button" onClick={onClose} aria-label="關閉選單">
+          <button className="esmo-mobile-sheet__close" type="button" onClick={closeSheet} aria-label="關閉選單">
             <EsmoIcon name="close" size={18} />
           </button>
         </div>
         <div className="esmo-mobile-sheet__list">
           {items.map((item) => (
-            <button key={item.id} className="esmo-mobile-sheet__item" type="button" onClick={() => { onSelect(item.id); onClose(); }}>
+            <button key={item.id} className="esmo-mobile-sheet__item" type="button" onClick={() => { onSelect(item.id); closeSheet(); }} style={{ "--accent": item.accent ?? GC.green }}>
               <span className="esmo-mobile-sheet__item-icon" style={{ "--accent": item.accent ?? GC.green }}><EsmoIcon name={item.icon} size={17} /></span>
-              <span><strong>{item.label}</strong><small>{item.detail}</small></span>
+              <span><strong>{item.label}</strong>{item.detail && <small>{item.detail}</small>}</span>
               <EsmoIcon name="chevron" size={15} />
             </button>
           ))}
@@ -537,7 +543,7 @@ function MobileBottomNav({ sheet, onTab }) {
   ];
 
   return (
-    <nav className="esmo-mobile-nav" data-dashboard-mobile-nav aria-label="Mobile game navigation">
+    <nav className="esmo-mobile-nav" data-dashboard-mobile-nav aria-label="行動導覽">
       {tabs.map((tab) => {
         const active = tab.id === "home" ? !sheet : tab.id === sheet;
         return (
@@ -573,7 +579,7 @@ function MobileHome({ team, meta, finance, unread, xpPercent, activeMatchView, o
       <div className="esmo-mobile-home__scroll" ref={scrollRef}>
         <div className="esmo-mobile-home__brandline">
           <span><EsmoIcon name="signal" size={13} /> ESMO / COMMAND DECK</span>
-          <span>WEEK {numberOf(meta.week, 1)}</span>
+          <span>W{numberOf(meta.week, 1)}</span>
         </div>
         <MobileTeamHeader team={{ ...team, gold: finance.funds }} meta={meta} unread={unread} xpPercent={xpPercent} onInbox={() => onSelect("notify")} />
         <main className="esmo-mobile-home__content">
@@ -662,7 +668,7 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
     candidateActions.find((item) => item.id === "development"),
     candidateActions.find((item) => item.id === "training"),
     candidateActions.find((item) => item.id === "roster"),
-    candidateActions.find((item) => item.id === "notify"),
+    candidateActions.find((item) => item.id === "recruit"),
   ].filter(Boolean);
 
   return (

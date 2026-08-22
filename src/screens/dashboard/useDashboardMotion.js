@@ -25,7 +25,7 @@ export function useDashboardMotion(rootRef, isMobile = false) {
     media.add("(prefers-reduced-motion: reduce)", () => {
       gsap.set(revealNodes, { autoAlpha: 1, y: 0 });
       gsap.set(progressNodes, { scaleX: 1, transformOrigin: "left center" });
-      gsap.set(ambientNodes, { x: 0, y: 0, rotation: 0 });
+      if (ambientNodes.length) gsap.set(ambientNodes, { x: 0, y: 0, rotation: 0 });
       if (mobileNav) gsap.set(mobileNav, { autoAlpha: 1, y: 0 });
     });
 
@@ -60,20 +60,22 @@ export function useDashboardMotion(rootRef, isMobile = false) {
         }));
       });
 
-      const ambient = gsap.to(ambientNodes, {
-        x: 8,
-        y: -5,
-        rotation: 1.2,
-        duration: 8,
-        repeat: -1,
-        yoyo: true,
-        ease: "sine.inOut",
-      });
+      const ambient = ambientNodes.length
+        ? gsap.to(ambientNodes, {
+          x: 8,
+          y: -5,
+          rotation: 1.2,
+          duration: 8,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+        })
+        : null;
 
       return () => {
         intro.kill();
         pulses.forEach((tween) => tween.kill());
-        ambient.kill();
+        ambient?.kill();
       };
     });
 
