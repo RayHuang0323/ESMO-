@@ -61,6 +61,13 @@ export function normalizeLineup(lineup = null, players = null) {
     : null;
   const known = list ? new Set(list.map((p) => p.id)) : null;
   const exists = (id) => typeof id === "string" && id.length > 0 && (!known || known.has(id));
+  //  ⚠ **明確**被移出名單的人。判準只認寫死的 `rosterTier === "unlisted"`，
+  //    刻意**不呼叫 `tierOf()`**：那一支對沒有 `rosterTier` 的舊存檔會由
+  //    `status` 推導，而推導的結果只可能是 active／bench，永遠不會是 unlisted
+  //    ⇒ 這裡直接讀欄位，語義與 `tierOf` 逐一致，又不必 import `matchSquad.js`
+  //    （那一支 import 本檔，反向 import 會形成循環）。
+  const unlisted = new Set(
+    (list ?? []).filter((p) => p.rosterTier === "unlisted").map((p) => p.id));
 
   const used = new Set();
   const out = {};
@@ -72,8 +79,16 @@ export function normalizeLineup(lineup = null, players = null) {
   }
   // pass 2：空席位回填同名選手（b3 → b3）——舊存檔沒有 lineup 時，這一步讓
   //   結果等於 DEFAULT_LINEUP，行為與 Milestone E 之前完全相同。
+  //
+  //   ⚠ **但不回填明確 unlisted 的人。** 這一段是**遷移**用的回填，不是
+  //     「先發應該是誰」的規則。預設名單的選手 id 正好就是席位名（b1..b5），
+  //     所以玩家把某人移出名單、`setRosterTier` 清空席位之後，這裡會立刻把
+  //     同一個人補回原位 —— 移出等於沒有發生。
+  //   ⚠ 兩者要分辨的是**來源**，不是結果：舊存檔的選手沒有 `rosterTier`，
+  //     不在 `unlisted` 裡 ⇒ 回填照舊，遷移行為逐值不變。
   for (const seat of ENGINE_SEATS) {
     if (out[seat]) continue;
+    if (unlisted.has(seat)) continue;
     if (exists(seat) && !used.has(seat)) { out[seat] = seat; used.add(seat); }
   }
   return out;
