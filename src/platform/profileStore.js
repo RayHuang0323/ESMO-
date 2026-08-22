@@ -70,6 +70,8 @@ import {
   ensureCsMajor, csMajorEntryOf, csMajorFixturesOf, isCsMajorDone,
 } from "./competition/seasonState.js";
 import { CS_MAJOR_EVENT_KEY } from "./competition/csMajor.js";
+//  CS Season M4-C：晉級線的規則只有一份，畫面不得自己切前四
+import { CS_MAJOR_QUALIFICATION, csMajorQualifiers } from "./competition/csSeasonConfig.js";
 //  Milestone Q4：名次獎金。錢的第三個入口（唯一新增的一個），純函式在 economy/。
 import { settleCompetitionAwardInState } from "./economy/competitionAward.js";
 //  ── Milestone Q7a-3c：巡迴積分與晉級資格 ────────────────────────────────
@@ -1849,6 +1851,52 @@ export const useProfileStore = create((rawSet, get) => {
           //  獎金收據掛在 Event 上（不可變的 final 裡沒有它）
           award: ev.award ?? null,
           playerTeamId: state.playerTeamId,
+          //  ── CS Season M4-C：玩家在對戰表裡的處境 ─────────────────────
+          //  ⚠ 這是對既有 `bracket` 的**過濾**，不是第二套對戰表：
+          //    「還沒打的那一場」與「已經被淘汰了」都只由 bracket 的既有欄位
+          //    （sideA/sideB/done/winner）讀出來，沒有新的勝負判斷。
+          playerPath: (() => {
+            const me = state.playerTeamId;
+            const mine = (playoffBracket({
+              fixtures, outcomes: state.outcomes ?? [],
+              participants: entry?.stage?.participants ?? [],
+            })).filter((t) => t.exists && (t.sideA === me || t.sideB === me));
+            if (!mine.length) return { inMajor: false, next: null, eliminated: false };
+            const next = mine.find((t) => !t.done) ?? null;
+            //  淘汰 ＝ 打過的場次裡輸過，而且沒有下一場
+            const lost = mine.some((t) => t.done && t.winner && t.winner !== me);
+            return { inMajor: true, next, eliminated: !next && lost };
+          })(),
+        };
+      })(),
+      //  ── CS Season M4-C：賽季目前走到哪一段 ──────────────────────────────
+      //  ⚠ 純粹由既有判定推導，畫面不得自己數場次：
+      //    `isRegularSeasonDone`（聯賽打完沒）、`csMajorEntryOf`（Major 排了沒）、
+      //    `isCsMajorDone`（Major 打完沒）、`state.final`（賽季封存沒）。
+      //  ⚠ 只給階段，不給進度百分比——那會變成第二套「賽季走多遠」的算法
+      //    （既有的 `seasonProgress` 才是那個出口）。
+      csStage: (() => {
+        if (state.final) return { phase: "sealed", label: "賽季結算" };
+        const major = csMajorEntryOf(state);
+        if (major) {
+          return isCsMajorDone(state)
+            ? { phase: "major_done", label: "年度 Major 已結束" }
+            : { phase: "major", label: "年度 Major 進行中" };
+        }
+        return isRegularSeasonDone(state)
+          ? { phase: "major_pending", label: "聯賽結束，年度 Major 待產生" }
+          : { phase: "league", label: "聯賽進行中" };
+      })(),
+      //  ── CS Season M4-C：Major 晉級線 ────────────────────────────────────
+      //  ⚠ **規則只有一份**：名額與名單都來自 `csSeasonConfig.js` 的
+      //    `CS_MAJOR_QUALIFICATION` / `csMajorQualifiers()` —— 與 Major 真正
+      //    產生時用的是同一支。畫面不得自己切前四，也不得寫死 4。
+      csMajorLine: (() => {
+        const league = tryEventStandingsOf(state, state.careerEventId ?? null)
+          ?? seasonStandings(state);
+        return {
+          topN: CS_MAJOR_QUALIFICATION.topN,
+          qualifiers: csMajorQualifiers(league),
         };
       })(),
       //  ── Q7c：亞洲年度總決賽（唯讀資料投影）──────────────────────────

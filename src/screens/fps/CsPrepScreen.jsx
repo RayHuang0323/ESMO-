@@ -103,7 +103,7 @@ function CsBenchSheet({ seat, players, lineup, onClose }) {
  * 進場走的是既有的 `startFixtureMatch()`——與 MOBA 賽事頁同一支，
  * 對手／seed 由賽程決定，**沒有第二條賽事流程**。
  */
-function CsLeagueFixtureEntry({ onRecap }) {
+function CsLeagueFixtureEntry({ onRecap, onHub }) {
   const [err, setErr] = useState(null);
   //  訂閱 canonical：賽季一建立、賽果一寫入就重繪
   const csSeason = useProfileStore((s) => s.competitionByMode?.cs ?? null);
@@ -131,6 +131,14 @@ function CsLeagueFixtureEntry({ onRecap }) {
   const btn = (label, onClick, testid) => (
     <button data-testid={testid} onClick={onClick} style={{ width: "100%", padding: "9px", borderRadius: 9, border: "none", cursor: "pointer", background: ACC, color: "#fff", fontSize: 12, fontWeight: 800 }}>{label}</button>
   );
+  //  CS Season M4-C：賽事中心（唯讀）。賽季一存在就進得去，不論封存與否——
+  //  「我現在第幾名、下一場打誰」在賽季**進行中**才最需要看得到。
+  const hubBtn = (
+    <button data-testid="cs-league-hub" onClick={() => onHub?.()}
+      style={{ width: "100%", marginTop: 6, padding: "8px", borderRadius: 9, border: `1px solid ${ACC}55`, cursor: "pointer", background: "transparent", color: ACC, fontSize: 11, fontWeight: 800 }}>
+      📊 賽事中心
+    </button>
+  );
 
   if (!csSeason?.schema) return box(btn("開啟本季 CS 聯賽", openSeason, "cs-league-open-season"));
   //  ── CS Season M4-B2：賽季封存了 ⇒ 這裡的主要動作是看成績單、開下一季 ──
@@ -143,29 +151,36 @@ function CsLeagueFixtureEntry({ onRecap }) {
           CS 第 {view.season} 賽季已結束
         </div>
         {btn("查看賽季成績單", () => onRecap?.(), "cs-league-recap")}
+        {hubBtn}
       </>,
     );
   }
   //  已經有一場進行中的賽程對戰 ⇒ 這裡不再給第二顆進場鍵；
   //  返回那一場由 MatchPrepFrame 的主按鈕負責（「返回進行中的對戰」）。
-  if (fixtureCtx) return box(<div style={{ color: GC.gray, fontSize: 10 }}>本場聯賽賽程進行中，請用下方主按鈕返回。</div>);
+  if (fixtureCtx) {
+    return box(<><div style={{ color: GC.gray, fontSize: 10 }}>本場聯賽賽程進行中，請用下方主按鈕返回。</div>{hubBtn}</>);
+  }
   const fixture = view.today ?? null;
   if (!fixture) {
     return box(
-      <div style={{ color: GC.gray, fontSize: 10 }}>
-        今天沒有你的聯賽賽程{view.next ? `（下一場：第 ${view.next.day} 天）` : ""}。
-      </div>,
+      <>
+        <div style={{ color: GC.gray, fontSize: 10 }}>
+          今天沒有你的聯賽賽程{view.next ? `（下一場：第 ${view.next.day} 天）` : ""}。
+        </div>
+        {hubBtn}
+      </>,
     );
   }
   return box(
     <>
       <div data-testid="cs-league-today" style={{ color: "#e4e4e7", fontSize: 11, marginBottom: 6 }}>今日有你的聯賽賽程</div>
       {btn("出戰今日聯賽賽程", () => play(fixture.id), "cs-league-play")}
+      {hubBtn}
     </>,
   );
 }
 
-export default function CsPrepScreen({ onNext, onBack, onRecap }) {
+export default function CsPrepScreen({ onNext, onBack, onRecap, onHub }) {
   const players = useProfileStore((s) => s.players) ?? [];
   const csHistory = useProfileStore((s) => s.csHistory) ?? [];
   const csLineup = useProfileStore((s) => s.csLineup);
@@ -250,7 +265,7 @@ export default function CsPrepScreen({ onNext, onBack, onRecap }) {
         onAutoFill={() => autoFillLineup("cs")}
         aboveSeats={(
           <>
-            <CsLeagueFixtureEntry onRecap={onRecap} />
+            <CsLeagueFixtureEntry onRecap={onRecap} onHub={onHub} />
             <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
               {[{ k: "prep", l: "⚙️ 出戰" }, { k: "history", l: "📜 歷史" }].map((t) => (
                 <button key={t.k} onClick={() => setTab(t.k)} style={{ flex: 1, padding: "8px", borderRadius: 9, border: "none", cursor: "pointer", background: tab === t.k ? ACC : GC.card, color: tab === t.k ? "#fff" : GC.gray, fontSize: 11, fontWeight: 700 }}>{t.l}</button>

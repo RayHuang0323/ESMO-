@@ -11713,3 +11713,102 @@ browser acceptance   通過（見上）
 
 ⚠ **兩支既有紅燈，皆非本輪造成**（M3-3 已用基線 worktree 逐條確認）：
 `check_season_state_v2_migration_q7b.mjs`、`check_q7a_3f1_career_final.mjs` 40/42。
+
+---
+
+## CS Season M4-C — CS 賽事中心（Competition Hub）　2026-08-22
+
+**分支**：`integration/cs-cross-ai`（起點 `f603c9c`）
+**性質**：**全唯讀 UI**。沒有動任何 Competition / Season / Fixture / BO3 / Battle 規則。
+
+### 補的是哪一段空白
+
+M4-B 的成績單只在**賽季封存後**出現。賽季**進行中**玩家看不到自己第幾名、
+在不在晉級線內、下一場打誰、Major 產生了沒、對戰表打到哪。這一頁補那段。
+
+### 讀模型（唯讀衍生，不新建計算）
+
+擴充既有的 `competitionView("cs")`，新增兩個欄位與一個投影子欄位：
+
+| 欄位 | 來源 |
+|---|---|
+| `view.csStage` | 由 `isRegularSeasonDone` / `csMajorEntryOf` / `isCsMajorDone` / `state.final` 推導出 `league` → `major_pending` → `major` → `major_done` → `sealed` |
+| `view.csMajorLine` | `CS_MAJOR_QUALIFICATION.topN` ＋ `csMajorQualifiers(聯賽積分榜)` —— **與 Major 真正產生時同一支** |
+| `view.csMajor.playerPath` | 對既有 `bracket` 的**過濾**：我的下一場／已遭淘汰。沒有新的勝負判斷 |
+
+⚠ `csStage` **刻意不給進度百分比** —— 那會變成第二套「賽季走多遠」的算法
+（既有的 `seasonProgress` 才是那個出口）。
+
+### UI
+
+新增 `CsCompetitionHubScreen`，入口在 CS 賽前頁的「📊 賽事中心」（賽季一存在就進得去）。
+
+| 沿用（約 70%） | CS 特色（約 30%） |
+|---|---|
+| `recapStyles` 全部 token（section / row / label / value / quiet / kicker / cta）| **階段條** League → Major → 賽季結算 |
+| **`CsRecapBracket` 整個重用**（M4-B 做的那個對戰表）| **積分榜上的晉級線分隔** |
+| `recapCssText`（含對戰表的窄版斷點）| 我的那一列橘底highlight |
+
+⚠ **沒有第二個 bracket**：Major 的對戰表直接把 M4-B 的元件搬過來用，
+連 `data-testid` 都一樣，所以 M4-B 的斷言在這一頁同樣適用。
+
+⚠ **晉級線是規則不是版面**：分隔線畫在第 `csMajorLine.topN` 名之後，
+畫面不寫死 4。設定改了分隔線就跟著移動。
+
+⚠ **全頁沒有任何 action**：不出賽、不棄權、不換季、不建賽季。
+出賽仍走 CS 賽前頁，成績單仍走 `csRecap`。多一個入口就多一條會漂移的路徑。
+
+### 手機版怎麼處理
+
+**沒有硬縮桌面 bracket。** 三件事：
+
+1. 對戰表在 `max-width: 520px` **改單欄堆疊**（M4-B 就寫好的斷點）。
+   兩欄的意義是讀出「準決賽 → 決賽」的流向；欄寬不夠時流向讀不出來，
+   堆疊反而清楚 —— 所以是換版面，不是縮字。
+2. 積分榜本來就是**縱向列表**（`18px / 1fr / 52px / 30px` 四欄 grid），
+   隊名 `ellipsis`，在 390px 下不溢位。
+3. 階段條 `flex-wrap`，窄螢幕自動折行。
+
+**實測**：把 app 外框壓到 390px，`documentElement` 與 hub 內**所有子元素**
+的 `scrollWidth` 都沒有超過 `clientWidth` ⇒ **零水平溢位**。
+
+⚠ **誠實揭露**：MCP 擴充的 render viewport 固定在 1280，改視窗大小不會傳導進去，
+所以「媒體查詢在真手機上觸發」這件事**沒有在真實 390px viewport 下驗過**，
+驗的是「內容塞得進 390px」＋「斷點規則存在於樣式表」。
+
+### Browser smoke（實測兩個階段）
+
+- **聯賽進行中**（第 36/84 天）：階段條 `● 聯賽`、我的排名第 8/8、戰績 0-5、
+  下一場「第 36 天 · Iron Vanguard（主場）」、積分榜 8 列、
+  `MAJOR 晉級線 · 前 4` 分隔線畫在第 4 名之後、Major 顯示「尚未產生」＋前四預覽
+- **Major 進行中**（第 84/84 天）：階段條 `✓ 聯賽 ● 年度 Major`、
+  對戰表四場（未完賽的比分顯示「—」，不補 0）、我的處境「未取得參賽資格」
+
+截圖：`review/cs-m4a/browser_hub_league_stage.jpg`、`browser_hub_major_stage.jpg`
+
+### 驗證（全部實跑）
+
+```
+node tools/check_cs_competition_hub.mjs          31/31   ← 本輪新增
+node tools/check_cs_season_recap_lifecycle.mjs   64/64   (M4-B)
+node tools/check_cs_major_honors_award.mjs       45/45   (M3-3)
+node tools/check_cs_playable_series.mjs          99/99   (M4-A)
+node tools/check_cs_series.mjs                   46/46   (M3-2)
+node tools/check_cs_major.mjs                    74/74   (M3-1)
+node tools/check_cs_season_m2.mjs                55/55   (M2)
+node tools/check_cs_season_lifecycle.mjs         53/53   (M1)
+node tools/check_cs_schema_v11.mjs               41/41   (M0)
+node tools/check_cs_season_contract.mjs          71/71
+node tools/check_cs_league_eligibility.mjs       31/31
+node tools/check_home_team_contract.mjs          40/40
+node tools/check_cs_match_completion.mjs         34/34   (Codex CS-MR12)
+node tools/check_competition_release_gate.mjs   11/11
+MOBA  q1 93/93 · q2a 112/112 · q2b 92/92 · q3 91/91 · q35 66/66
+      q4 68/68 · q5 69/69 · q6 57/57
+其他  q7d_honors 59/59 · q7b_asia_finals 72/72 · authoritative_o7 48/48
+      r63_active_match_ttl 9/9
+npm run build   ✓ built in 11.14s
+```
+
+⚠ **兩支既有紅燈，皆非本輪造成**（M3-3 已用基線 worktree 逐條確認）：
+`check_season_state_v2_migration_q7b.mjs`、`check_q7a_3f1_career_final.mjs` 40/42。

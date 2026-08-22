@@ -45,6 +45,7 @@ import CompetitionScreen from "./screens/manage/CompetitionScreen.jsx";
 import CsMatchScreen from "./screens/fps/CsMatchScreen.jsx";
 import CsPrepScreen from "./screens/fps/CsPrepScreen.jsx";
 import CsSeasonRecapScreen from "./screens/fps/CsSeasonRecapScreen.jsx";
+import CsCompetitionHubScreen from "./screens/fps/CsCompetitionHubScreen.jsx";
 import CsMapSelectScreen from "./screens/fps/CsMapSelectScreen.jsx";
 import CsTacticScreen from "./screens/fps/CsTacticScreen.jsx";
 import CsLoadingScreen from "./screens/fps/CsLoadingScreen.jsx";
@@ -198,9 +199,11 @@ export default function AppShell() {
 
       {/* ── Sprint23：CS 完整流程（結果入 profileStore.csHistory，不入 seasonStore）──
             Dashboard → csPrep → csMap → csTactic → csLoading → cs(Match) → csResult → Dashboard */}
-      {screen === "csPrep" && <CsPrepScreen onNext={enterCsAfterPrep} onBack={home} onRecap={go("csRecap")} />}
+      {screen === "csPrep" && <CsPrepScreen onNext={enterCsAfterPrep} onBack={home} onRecap={go("csRecap")} onHub={go("csHub")} />}
       {/*  CS Season M4-B2：CS 賽季成績單。換季 CTA 在該頁最後。 */}
-      {screen === "csRecap" && <CsSeasonRecapScreen onBack={go("csPrep")} />}
+      {screen === "csRecap" && <CsSeasonRecapScreen onBack={go("csHub")} />}
+      {/*  CS Season M4-C：賽事中心（全唯讀）。出賽仍走 csPrep，成績單仍走 csRecap。 */}
+      {screen === "csHub" && <CsCompetitionHubScreen onBack={go("csPrep")} onRecap={go("csRecap")} />}
       {screen === "csMap" && <CsMapSelectScreen onNext={(m) => { const next = { mapKey: m.key, mapName: m.name }; setCsConfig(next); useProfileStore.getState().setActiveMatchContext({ phase: "tactic", config: { csConfig: next } }); setScreen("csTactic"); }} onBack={go("csPrep")} />}
       {screen === "csTactic" && <CsTacticScreen mapName={csConfig?.mapName} onNext={(t) => { const next = { ...csConfig, tacticId: t.id, tacticName: t.name, tacticType: t.type, tacticEmoji: t.emoji, seed: useProfileStore.getState().matchmaking?.launch?.seed ?? null }; setCsConfig(next); useProfileStore.getState().setActiveMatchContext({ phase: "loading", config: { csConfig: next } }); setScreen("csLoading"); }} onBack={go("csMap")} />}
       {screen === "csLoading" && <CsLoadingScreen config={csConfig} onDone={() => { useProfileStore.getState().setActiveMatchContext({ phase: "battle" }); setScreen("cs"); }} />}
