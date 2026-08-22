@@ -34,12 +34,21 @@ const PRELUDE = `
 const TEAM_UI = `
   ${PRELUDE}
   const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  //  ⚠ 桌面與手機是**兩條真實的使用者路徑**，不是同一條的縮放版：
+  //    桌面 —— 右欄 Utility 直接有「戰隊詳情」
+  //    手機 —— 底部導覽「戰隊」開 sheet，裡面是「戰隊總覽」
+  //    以前只走桌面那條，390px 下永遠到不了 TeamScreen ⇒ 面板當然量不到。
+  //    這裡兩條都走，並優先用穩定的 data-testid（文案改了也不會壞）。
   const enterTeam = async () => {
     for (let i = 0; i < 20; i++) {
       const panel = document.querySelector('[data-testid="team-honors-panel"]');
       if (panel) return true;
-      const button = [...document.querySelectorAll("button")].find((el) => el.innerText.includes("戰隊詳情"));
-      if (button) { button.click(); await wait(450); continue; }
+      const byId = document.querySelector('[data-testid="home-sheet-team"]');
+      if (byId) { byId.click(); await wait(450); continue; }
+      const desktop = [...document.querySelectorAll("button")].find((el) => el.innerText.includes("戰隊詳情"));
+      if (desktop) { desktop.click(); await wait(450); continue; }
+      const mobileTab = document.querySelector('[data-testid="home-nav-team"]');
+      if (mobileTab) { mobileTab.click(); await wait(450); continue; }
       await wait(250);
     }
     return !!document.querySelector('[data-testid="team-honors-panel"]');
@@ -323,8 +332,11 @@ try {
     uiMobile.width <= 400 && !uiMobile.overflow.over && uiMobile.overflow.sw === uiMobile.overflow.cw,
     `${uiMobile.overflow.sw}/${uiMobile.overflow.cw}`);
 
+  //  ⚠ 這一條原本沒有 detail，紅了看不出是三個條件的哪一個壞。其他每一條都有，
+  //    補上是為了下次一眼看得出來 —— 判準一個字都沒放寬。
   ck("12) Mobile 下摘要、最近冠軍、歷屆清單都看得到",
-    uiMobile.hasSummary && !!uiMobile.latest && uiMobile.rows.length === uiMobile.view.annualChampions.length);
+    uiMobile.hasSummary && !!uiMobile.latest && uiMobile.rows.length === uiMobile.view.annualChampions.length,
+    `hasSummary=${uiMobile.hasSummary} latest=${uiMobile.latest ? "有" : "無"} rows=${uiMobile.rows.length}/${uiMobile.view.annualChampions.length}`);
 
   ck("13) 全程無 uncaught exception，面板沒有 undefined／NaN",
     chrome.pageErrors.length === 0 && !uiNone.hasBadText && !uiAiOne.hasBadText &&
