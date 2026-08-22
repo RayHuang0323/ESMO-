@@ -67,7 +67,7 @@ import {
   canSealSeason, applySealSeason,
   canRollSeason, rollToNextSeason, seasonDayOf,
   ensurePlayoffs, playoffView, isRegularSeasonDone,
-  ensureCsMajor, csMajorEntryOf, csMajorFixturesOf,
+  ensureCsMajor, csMajorEntryOf, csMajorFixturesOf, isCsMajorDone,
 } from "./competition/seasonState.js";
 import { CS_MAJOR_EVENT_KEY } from "./competition/csMajor.js";
 //  Milestone Q4：名次獎金。錢的第三個入口（唯一新增的一個），純函式在 economy/。
@@ -99,7 +99,7 @@ import {
 //    而且那兩個 history 都只在**換季**時寫入，年度冠軍在封存當下就產生了。
 import {
   recordPendingHonors, annualChampionsOf, latestAnnualChampion,
-  teamHonorCount, honorsOf, HONOR_TYPES,
+  teamHonorCount, honorsOf, HONOR_TYPES, honorsByType,
 } from "./competition/honors.js";
 import { playoffBracket, playoffOrder } from "./competition/playoffs.js";
 import { asiaCircuitEnabled } from "../featureFlags.js";
@@ -1594,6 +1594,62 @@ export const useProfileStore = create((rawSet, get) => {
    *   ③ 新賽季 id 由 `season` 與 `seasonSeed` 決定性推導 ⇒ 就算真的跑兩次，
    *      產生的也是同一份賽程，不會出現兩份不同的 S2。
    */
+  /**
+   * CS 換季（CS Season M4-B1）。**與 `_sealCsSeasonIfFinished` 同一條紀律：
+   * 刻意是一條短路徑，不是 MOBA 那條的參數化版本。**
+   *
+   * MOBA 的換季掛著巡迴摘要封存（`summarizeAllCircuits`）與亞洲巡迴的重建
+   * （`_withAsiaCircuit`）—— CS 兩者都沒有。把 mode 穿進去只會在那條函式裡
+   * 插滿 `if (mode === "cs")`，而它是 Q5/Q7a/Q7d 累積下來的路徑。
+   *
+   * ⚠ **共用的是純函式，不是編排**：`canRollSeason` / `rollToNextSeason`
+   *   與 MOBA 完全同一支 ⇒ 「換季怎麼算數、新賽季長什麼樣」只有一份規則。
+   * ⚠ 換季前補一次 `_recordHonors`：與 MOBA 同理由——賽季早就封存、之後沒再
+   *   推進天數就直接按換季的存檔，榮耀要在來源消失前補上。冪等。
+   */
+  rollToNextCsSeason() {
+    const mode = "cs";
+    const state = get()._competitionStateOf(mode);
+    const can = canRollSeason(state);
+    if (!can.ok) return { ok: false, errors: [{ code: "cannot_roll", message: can.reason }], reason: can.reason };
+
+    get()._recordHonors(state);
+
+    const res = rollToNextSeason({
+      state,
+      playerTeam: get().team,
+      seasonSeed: get().meta?.seasonSeed,
+      startDay: Number(get().meta?.days) || 1,
+    });
+    if (!res.ok) return { ok: false, errors: res.errors, reason: res.errors?.[0]?.message ?? null };
+
+    //  ⚠ 歷屆成績存的是**生涯主賽事**（CS 聯賽）的最終名次，不是 SeasonSeal。
+    //    與 MOBA 同一條規則（`rollToNextSeason` 已經挑好了），這裡只負責入庫。
+    const history = arr(get().competitionHistoryByMode?.cs, []);
+    const already = history.some((h) => h?.id === res.archived?.id);
+    const nextHistory = already ? history : [res.archived, ...history].slice(0, 20);
+
+    //  ⚠ **series 進度不得跨季**：`seriesByFixture` 是以 fixtureId 為鍵的
+    //    match runtime 帳本，而 fixture id 是決定性推導的 ⇒ 新賽季可能出現
+    //    同樣的 id。上一季殘留的進度會被新賽季的同名場次撿去用。
+    //    正常情況下賽程收尾就清掉了，這裡是最後一道（棄權補判、中離未收尾等）。
+    const mm = get().matchmaking ?? {};
+    get()._setCompetitionStateFor(mode, res.state, {
+      competitionHistoryByMode: {
+        ...(get().competitionHistoryByMode ?? {}),
+        cs: nextHistory,
+      },
+      matchmaking: { ...mm, seriesByFixture: {} },
+    });
+    get().save();
+    get().pushInbox({
+      type: "match", from: "CS 聯賽官方",
+      subject: `CS 第 ${res.state.season} 賽季 開賽`,
+      text: `CS 第 ${res.state.season} 賽季聯賽賽程已公布，共 ${res.state.fixtures.length} 場。`
+        + "上一季的最終名次已存入歷屆成績。",
+    });
+    return { ok: true, season: res.state.season, archived: res.archived, errors: [] };
+  },
   rollToNextCompetitionSeason() {
     const state = get().competition;
     const can = canRollSeason(state);
@@ -1751,6 +1807,48 @@ export const useProfileStore = create((rawSet, get) => {
           myAnnualChampionCount: teamHonorCount(honors, myTeamId, {
             honorType: HONOR_TYPES.asiaAnnualChampion,
           }),
+          //  ── CS Season M4-B1：CS 年度冠軍（同一份 `honors[]`，不是第二套）──
+          //  ⚠ 一樣是即時推導。畫面要顯示「我拿過幾座 CS 年度冠軍」只能讀這裡。
+          csAnnualChampions: honorsByType(honors, HONOR_TYPES.csAnnualChampion),
+          latestCsAnnualChampion: honorsByType(honors, HONOR_TYPES.csAnnualChampion)[0] ?? null,
+          myCsAnnualChampionCount: teamHonorCount(honors, myTeamId, {
+            honorType: HONOR_TYPES.csAnnualChampion,
+          }),
+        };
+      })(),
+      //  ── CS Season M4-B1：年度 Major 的唯讀投影 ──────────────────────────
+      //  ⚠ 形狀刻意與下面的 `asiaFinals` 對齊：兩者在產品上是同一個位階
+      //    （某個項目的年度冠軍賽），畫面因此可以共用同一套讀法。
+      //  ⚠ 這裡只**串接**既有 accessor 與 playoff 純函式：資格、對戰表、勝方、
+      //    日期、最終名次、獎金收據全部有既有出口，畫面不得自己算。
+      //  ⚠ **不是第二套真相**：`final` 來自 `eventFinalOf`、`award` 來自
+      //    Event 上那張收據、`champion` 來自 `playoffOrder` —— 與封存當下用的
+      //    是同一批函式。
+      csMajor: (() => {
+        const ev = Object.values(state.events ?? {}).find((e) => e?.eventKey === CS_MAJOR_EVENT_KEY) ?? null;
+        if (!ev) return { exists: false, reason: "本季還沒有年度 Major" };
+        const entry = state.competitions[ev.rankingCompetitionId];
+        const fixtures = (state.fixtures ?? []).filter((f) => f.stageId === entry?.stage?.id);
+        const order = playoffOrder({ fixtures, outcomes: state.outcomes ?? [] });
+        return {
+          exists: true,
+          eventId: ev.id,
+          name: ev.name,
+          //  晉級四強（種子順序＝聯賽名次）
+          qualified: entry?.playoff?.qualification?.qualified ?? [],
+          bracket: playoffBracket({
+            fixtures, outcomes: state.outcomes ?? [],
+            participants: entry?.stage?.participants ?? [],
+          }),
+          //  ⚠ 賽制設定原樣傳遞（BO3／地圖池），畫面不得自己寫死 "BO3"
+          matchFormat: fixtures[0]?.matchFormat ?? null,
+          days: Object.fromEntries(fixtures.map((f) => [f.playoffKey, absoluteDayOf(state, f)])),
+          done: isCsMajorDone(state),
+          championTeamId: order.championTeamId,
+          final: eventFinalOf(state, ev.id),
+          //  獎金收據掛在 Event 上（不可變的 final 裡沒有它）
+          award: ev.award ?? null,
+          playerTeamId: state.playerTeamId,
         };
       })(),
       //  ── Q7c：亞洲年度總決賽（唯讀資料投影）──────────────────────────

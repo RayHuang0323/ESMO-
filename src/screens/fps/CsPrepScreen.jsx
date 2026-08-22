@@ -103,7 +103,7 @@ function CsBenchSheet({ seat, players, lineup, onClose }) {
  * 進場走的是既有的 `startFixtureMatch()`——與 MOBA 賽事頁同一支，
  * 對手／seed 由賽程決定，**沒有第二條賽事流程**。
  */
-function CsLeagueFixtureEntry() {
+function CsLeagueFixtureEntry({ onRecap }) {
   const [err, setErr] = useState(null);
   //  訂閱 canonical：賽季一建立、賽果一寫入就重繪
   const csSeason = useProfileStore((s) => s.competitionByMode?.cs ?? null);
@@ -133,6 +133,19 @@ function CsLeagueFixtureEntry() {
   );
 
   if (!csSeason?.schema) return box(btn("開啟本季 CS 聯賽", openSeason, "cs-league-open-season"));
+  //  ── CS Season M4-B2：賽季封存了 ⇒ 這裡的主要動作是看成績單、開下一季 ──
+  //  ⚠ 判斷讀的是 `view.final`（賽季封存物），不是自己數場次。
+  //    封存之後今天不會再有賽程，下面那些分支對玩家已經沒有意義。
+  if (view.final) {
+    return box(
+      <>
+        <div data-testid="cs-league-sealed" style={{ color: "#e4e4e7", fontSize: 11, marginBottom: 6 }}>
+          CS 第 {view.season} 賽季已結束
+        </div>
+        {btn("查看賽季成績單", () => onRecap?.(), "cs-league-recap")}
+      </>,
+    );
+  }
   //  已經有一場進行中的賽程對戰 ⇒ 這裡不再給第二顆進場鍵；
   //  返回那一場由 MatchPrepFrame 的主按鈕負責（「返回進行中的對戰」）。
   if (fixtureCtx) return box(<div style={{ color: GC.gray, fontSize: 10 }}>本場聯賽賽程進行中，請用下方主按鈕返回。</div>);
@@ -152,7 +165,7 @@ function CsLeagueFixtureEntry() {
   );
 }
 
-export default function CsPrepScreen({ onNext, onBack }) {
+export default function CsPrepScreen({ onNext, onBack, onRecap }) {
   const players = useProfileStore((s) => s.players) ?? [];
   const csHistory = useProfileStore((s) => s.csHistory) ?? [];
   const csLineup = useProfileStore((s) => s.csLineup);
@@ -237,7 +250,7 @@ export default function CsPrepScreen({ onNext, onBack }) {
         onAutoFill={() => autoFillLineup("cs")}
         aboveSeats={(
           <>
-            <CsLeagueFixtureEntry />
+            <CsLeagueFixtureEntry onRecap={onRecap} />
             <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
               {[{ k: "prep", l: "⚙️ 出戰" }, { k: "history", l: "📜 歷史" }].map((t) => (
                 <button key={t.k} onClick={() => setTab(t.k)} style={{ flex: 1, padding: "8px", borderRadius: 9, border: "none", cursor: "pointer", background: tab === t.k ? ACC : GC.card, color: tab === t.k ? "#fff" : GC.gray, fontSize: 11, fontWeight: 700 }}>{t.l}</button>

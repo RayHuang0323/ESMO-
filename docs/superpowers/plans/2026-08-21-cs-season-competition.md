@@ -394,20 +394,20 @@ ck("拒收 BattleResult", outcomeFromCsResult({ schema: "BattleResult.v2" }).ok 
 ⚠ Q7f 的六個區塊與 CTA 位置是**已定稿契約**，CS 版沿用其結構；差異只在 CS 沒有巡迴區塊、
 亞洲年度總決賽區塊換成 Major。**不得重新設計已固定的 Recap 契約。**
 
-- [ ] **Step 1: 寫 browser gate** — `tools/browser_check_cs_season_recap_ui.mjs`，fixture 放 `review/fixtures/competition/`。
-- [ ] **Step 2: 跑 gate 確認失敗**。
-- [ ] **Step 3: 實作呈現層**。
-- [ ] **Step 4: 跑 gate 確認通過**。
-- [ ] **Step 5: 把 `cs_season_recap` 加入 Competition Release Gate（區段數 11 → 12）**。
-- [ ] **Step 6: Commit**。
+- [x] **Step 1: 寫 browser gate** — `tools/browser_check_cs_season_recap_ui.mjs`，fixture 放 `review/fixtures/competition/`。
+- [x] **Step 2: 跑 gate 確認失敗**。
+- [x] **Step 3: 實作呈現層**。
+- [x] **Step 4: 跑 gate 確認通過**。
+- [x] **Step 5: 把 `cs_season_recap` 加入 Competition Release Gate（區段數 11 → 12）**。
+- [x] **Step 6: Commit**。
 
 ### Task M4-2: 真實存檔驗收
 
-- [ ] **Step 1: 用真實存檔跑 CS 完整 lifecycle**（方法同 `review/q7-manual-save-acceptance/`：只在最開頭注入起始存檔，之後全用正式 gameplay action）。
-- [ ] **Step 2: 驗收 12 項**（載入 / 賽事頁 / standings / 自然封存 / Recap / 資料合理 / 無 undefined / CTA 一顆 / rollover / reload / Team Development / console 無 error）。
-- [ ] **Step 3: 確認 MOBA 完全未受影響**（MOBA Release Gate 仍 11/11、MOBA 賽季仍可獨立換季）。
-- [ ] **Step 4: 記錄到 `docs/handoff/05_Sprint紀錄.md`**。
-- [ ] **Step 5: Commit**。
+- [x] **Step 1: 用真實存檔跑 CS 完整 lifecycle**（方法同 `review/q7-manual-save-acceptance/`：只在最開頭注入起始存檔，之後全用正式 gameplay action）。
+- [x] **Step 2: 驗收 12 項**（載入 / 賽事頁 / standings / 自然封存 / Recap / 資料合理 / 無 undefined / CTA 一顆 / rollover / reload / Team Development / console 無 error）。
+- [x] **Step 3: 確認 MOBA 完全未受影響**（MOBA Release Gate 仍 11/11、MOBA 賽季仍可獨立換季）。
+- [x] **Step 4: 記錄到 `docs/handoff/05_Sprint紀錄.md`**。
+- [x] **Step 5: Commit**。
 
 ---
 
@@ -420,3 +420,21 @@ ck("拒收 BattleResult", outcomeFromCsResult({ schema: "BattleResult.v2" }).ok 
 **Type consistency**：`competitionByMode` / `competitionHistoryByMode` / `competitionView(mode)` / `outcomeFromCsResult()` 在 M0→M3 各 task 間名稱一致；`playoffKey` 沿用 `playoffs.js` 既有的 `sf1/sf2/bronze/final`。
 
 **已知風險**：M2-2 要改 `AppShell.jsx` 的 CS 分流，那是高衝突檔案（共同契約 §12 列管）——實作前先確認沒有其他工作線同時在改。
+
+> **M4 完成後的實作決策（2026-08-22）**
+>
+> M4 實際拆成 **M4-A（可玩的 BO3）→ M4-A.1（跨 session series 修正）→
+> M4-B（Recap／換季／real-save lifecycle）** 三輪，而不是計畫原本寫的
+> 「M4-1 Recap 呈現層 ＋ M4-2 真實存檔驗收」兩步。原因：M3-2 把 Major 做成 BO3
+> 之後，玩家**根本打不了**（一場 MatchResult 結算不了一個 series），
+> 所以呈現層之前必須先補上可玩性。
+>
+> 1. **Recap read model 擴充既有的 `competitionView(mode)`**，不另開 recap store。
+>    新增 `view.csMajor`（形狀對齊既有的 `asiaFinals`）與三個 CS 榮耀欄位。
+> 2. **UI 共用 MOBA 的四個 Recap 元件**（Header / League / Prize / Honor），
+>    只有**對戰表**是新版面 —— 那是 MOBA Recap 沒有對應呈現的唯一一段。
+>    `RecapHonor` 加一個 `champions` prop 就共用，不複製第二份。
+> 3. **CS 換季走短路徑 `rollToNextCsSeason()`**，與 `_sealCsSeasonIfFinished`
+>    同一條紀律；共用的是 `canRollSeason` / `rollToNextSeason` 兩支純函式。
+> 4. **入口暫時掛在 CS 賽前頁**（賽季封存後改成「查看賽季成績單」）。
+>    完整的 CS 賽事頁仍未做 —— 賽季**進行中**看不到 Major 對戰表，列在風險文件。

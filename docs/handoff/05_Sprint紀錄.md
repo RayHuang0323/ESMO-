@@ -11609,3 +11609,107 @@ npm run build   ✓ built in 12.69s
 
 ⚠ **未經瀏覽器實測**：M3-3 沒有任何 UI。玩家看得到的只有收件匣的冠軍信與
 資金變動；「CS 年度冠軍」在生涯榮耀頁怎麼顯示屬 Recap UI（未做）。
+
+---
+
+## CS Season M4-B — Recap ／ rollover ／ real-save lifecycle　2026-08-22
+
+**分支**：`integration/cs-cross-ai`（起點 `25f09df`）
+
+### M4-B1 — Recap read model（唯讀，不建第二套真相）
+
+擴充**既有的** `competitionView(mode)`，不另開一支 recap store：
+
+| 新增 | 內容 |
+|---|---|
+| `view.csMajor` | Major 的唯讀投影：晉級四強／對戰表／matchFormat／日期／完賽／冠軍／`final`／`award` |
+| `view.honorsView.csAnnualChampions` 等三項 | CS 年度冠軍（同一份 `honors[]` 即時推導）|
+| `rollToNextCsSeason()` | CS 換季（短路徑，見下）|
+
+⚠ `csMajor` 的形狀刻意與既有的 `asiaFinals` **對齊**——兩者在產品上是同一個位階
+（某個項目的年度冠軍賽），畫面因此可以共用同一套讀法。
+
+⚠ **沒有任何計算發生在投影裡**：`bracket` 來自 `playoffBracket`、`championTeamId`
+來自 `playoffOrder`、`final` 來自 `eventFinalOf`、`award` 是 Event 上那張收據 ——
+全部是封存當下用的同一批函式。
+
+⚠ **CS 換季是短路徑**，與 `_sealCsSeasonIfFinished` 同一條紀律：MOBA 的換季掛著
+巡迴摘要封存與亞洲巡迴重建，CS 兩者都沒有。共用的是純函式
+（`canRollSeason` / `rollToNextSeason`），不是編排。
+
+### M4-B2 — UI
+
+新增 `CsSeasonRecap`（成績單）＋ `CsSeasonRecapScreen`（外框與換季 CTA），
+入口在 CS 賽前頁：賽季封存後該區塊改成「查看賽季成績單」。
+
+**資訊架構與 MOBA Recap 刻意相同**：標頭 → 最高榮耀 → 本季賽事 → 聯賽名次 → 結算。
+玩家在兩個項目之間切換時不必重新學怎麼讀這一頁。
+
+| 沿用 MOBA | CS 專屬 |
+|---|---|
+| `recapStyles`（全部版面 token）| `csRecapStyles`（只有對戰表）|
+| `RecapHeader`、`RecapLeague`、`RecapPrize` 原封不動 | `CsRecapBracket`（signature）|
+| `RecapHonor` —— 加一個 `champions` prop 就共用 | 「我的 Major 成績」一列 |
+| `recapCssText`（同一份樣式表，加上 CS scope）| 對戰表的窄螢幕單欄斷點 |
+
+**為什麼只有對戰表是新版面**：其他每一段在 MOBA Recap 都有對應呈現，
+只有淘汰賽對戰表沒有 —— MOBA 那邊的季後賽在 Recap 裡只是一行「已進入／未進入」。
+而對戰表正是 CS 賽事真正的樣子（誰在哪一輪淘汰了誰、幾比幾），
+所以版面的力氣全部花在那裡，其餘保持安靜。
+
+⚠ **對戰表只顯示地圖數**。`2 : 1` 是拿下幾張圖；單圖的回合／半場／加時是 Codex
+的責任區，本頁不讀、不算、不顯示（規格 D4 ／ ownership lock）。
+賽制標籤讀 fixture 的 `matchFormat`，**不寫死 "BO3"**。
+
+### M4-B3 — real-save acceptance
+
+`tools/check_cs_season_recap_lifecycle.mjs`（新增，**64/64**）走完整條：
+S1 → 聯賽 → 前四晉級 → Major(BO3) → Major FinalStandings → honor／award
+→ SeasonSeal → Recap read model → 換季 → S2 → reload。
+
+守到的八組：Recap 來自 canonical、Major 投影正確、換季（歷史對／榮耀不重複／
+獎金不重複）、S2 乾淨、⛔ `seriesByFixture` 不跨季、不污染 MOBA、
+ActiveMatch/MatchSession 無殘留、reload 一致。
+
+⚠ **`seriesByFixture` 不跨季是真的風險，不是形式檢查**：fixture id 是決定性推導的，
+新賽季可能出現同一個 id ⇒ 上一季殘留的地圖進度會被新賽季的同名場次撿去用。
+`rollToNextCsSeason` 因此把帳本清空（賽程收尾時本來就會清，這是最後一道）。
+
+### Browser acceptance（實測）
+
+注入「S1 已封存」的存檔後全部走正式操作：
+CS 賽前頁 →「查看賽季成績單」→ 成績單 →「開始 CS 第 2 賽季」→ reload。
+
+- 成績單完整渲染：`S1 · 第 88 天封存`、聯賽第 8 名、
+  **Major 對戰表四場**（準決賽 1/2、決賽、季軍戰，比分 2:1 / 2:0 / 0:2）、
+  `🏆 Shadow Wolves 奪下年度 Major`、`比分為拿下的地圖數 · BO3 先拿 2 張者勝`、
+  聯賽名次與場次組成、`賽事獎金 無（前四名才有）`（玩家第 8 名，誠實顯示）
+- 換季：S1 → S2、歷史 1 筆、**榮耀 1 → 1**、**獎金帳本 1 → 1**、
+  series 帳本清空、MOBA 仍 `null`、S2 有 0 筆賽果與 1 個 Event
+- reload：以上全部逐值一致；成績單按鈕正確消失（S2 未封存）
+
+截圖：`review/cs-m4a/browser_cs_season_recap.jpg`
+
+### 驗證（全部實跑）
+
+```
+node tools/check_cs_season_recap_lifecycle.mjs   64/64   ← 本輪新增
+node tools/check_cs_major_honors_award.mjs       45/45   (M3-3)
+node tools/check_cs_playable_series.mjs          99/99   (M4-A)
+node tools/check_cs_series.mjs                   46/46   (M3-2)
+node tools/check_cs_major.mjs                    74/74   (M3-1)
+node tools/check_cs_season_m2.mjs                55/55   (M2)
+node tools/check_cs_season_lifecycle.mjs         53/53   (M1)
+node tools/check_cs_schema_v11.mjs               41/41   (M0)
+node tools/check_cs_season_contract.mjs          71/71
+node tools/check_cs_match_completion.mjs         34/34   (Codex CS-MR12)
+node tools/check_competition_release_gate.mjs   11/11
+MOBA  q1 93/93 · q2a 112/112 · q2b 92/92 · q3 91/91 · q35 66/66
+      q4 68/68 · q5 69/69 · q6 57/57
+榮耀  q7d_honors 59/59 · q7b_asia_finals 72/72 · q7a_3b 51/51
+npm run build   ✓ built in 12.20s
+browser acceptance   通過（見上）
+```
+
+⚠ **兩支既有紅燈，皆非本輪造成**（M3-3 已用基線 worktree 逐條確認）：
+`check_season_state_v2_migration_q7b.mjs`、`check_q7a_3f1_career_final.mjs` 40/42。
