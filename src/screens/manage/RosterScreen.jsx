@@ -8,7 +8,7 @@
 //  Adapter（不造假）：選手＝profileStore.players；能力/戰力/適配＝playerModel
 //    純函數；英雄圖＝HeroPortrait（唯一入口）。改名 / 換定位寫回 Store。
 // ============================================================================
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { teamDevelopmentEffects } from "../../platform/development/teamDevelopment.js";
 import {
@@ -24,8 +24,13 @@ import { ROSTER_TIERS, tierOf } from "../../platform/contracts/matchSquad.js";
 import { conditionSummary } from "../../platform/condition/playerCondition.js";
 import { totalXpForLevel, xpRequiredForLevel } from "../../platform/progress/playerLevel.js";
 import { careerStageOf } from "../../ui/playerProfileFoundation.js";
+import { ESMO_CSS_VARS } from "../../ui/designSystem.js";
+import { useIsMobile } from "../../ui/useViewport.js";
+import { GamePageHeader, PlayerListRow, ProgressBar, StatTile, StatusBadge } from "../../ui/PlayerUi.jsx";
+import "../../ui/playerUi.css";
 import { GC } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
+import { usePlayerUiMotion } from "./usePlayerUiMotion.js";
 
 const FILTERS = ["全部", "主力", "預備隊", "訓練中", "閒置"];
 const GAME_FILTERS = ["全部", "MOBA", "CS"];
@@ -133,6 +138,7 @@ const levelProgressOf = (p) => {
 };
 const statusOf = (p) => ((p.energy ?? 100) < 30 ? "閒置" : p.status === "主力" ? "主力" : p.status || "預備隊");
 const statusColor = (st) => (st === "主力" ? GC.green : st === "閒置" ? GC.red : st === "訓練中" ? GC.gold : GC.gray);
+const statusToneOf = (st) => (st === "主力" ? "positive" : st === "閒置" ? "danger" : st === "訓練中" ? "warning" : "neutral");
 
 /**
  * @param {"roster"|"talent"} [purpose] 集中驗收修正（項目五）：
@@ -155,6 +161,9 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
   const [detailMode, setDetailMode] = useState("MOBA");
   const [editName, setEditName] = useState(false);
   const [nameInput, setNameInput] = useState("");
+  const rootRef = useRef(null);
+  const isMobile = useIsMobile();
+  usePlayerUiMotion(rootRef, { mobile: isMobile, selectedId: selId, mode: detailMode });
 
   const sel = players.find((p) => p.id === selId) || null;
   const filtered = players.filter((p) => {
@@ -181,24 +190,42 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
         ? <span style={{ background: "rgba(167,139,250,0.15)", color: GC.purp, fontSize: 11, fontWeight: 800, borderRadius: 8, padding: "4px 10px", whiteSpace: "nowrap" }}>可用天賦點 {players.reduce((t, p) => t + (Number(p.talentPoints) || 0), 0)}</span>
         : <span style={{ background: players.length >= ROSTER_CAP ? "rgba(239,68,68,0.15)" : "rgba(96,165,250,0.15)", color: players.length >= ROSTER_CAP ? GC.red : GC.blue, fontSize: 11, fontWeight: 800, borderRadius: 8, padding: "4px 10px", whiteSpace: "nowrap" }}>{players.length} / {ROSTER_CAP} 人</span>}
     >
-      <div data-roster-screen style={{ minWidth: 0 }}>
-      <div data-roster-filters style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
-          <span style={{ color: GC.gray, fontSize: 9, fontWeight: 800, width: 42, flexShrink: 0 }}>遊戲</span>
-          <div data-testid="roster-game-filter" style={{ display: "flex", gap: 5, overflowX: "auto", minWidth: 0 }}>
+      <div
+        ref={rootRef}
+        data-roster-screen
+        data-mode={isCsView ? "CS" : "MOBA"}
+        className="player-ui-screen player-ui-roster"
+        style={{ ...ESMO_CSS_VARS, "--player-accent": isCsView ? GC.gold : GC.purp }}
+      >
+      <GamePageHeader
+        eyebrow={talentMode ? "TALENT / PLAYER PICK" : "ROSTER / TEAM SIGNAL"}
+        title={talentMode ? "選擇要培養的選手" : "選手名單"}
+        detail={`${players.length} / ${ROSTER_CAP} 人 · ${filtered.length} 人符合目前篩選`}
+        icon="users"
+        actions={<StatusBadge label={isCsView ? "CS VIEW" : "MOBA VIEW"} tone={isCsView ? "tactical" : "info"} icon="compete" />}
+      />
+      <div data-roster-filters className="player-ui-roster__filters">
+        <div className="player-ui-filter-group">
+          <span className="player-ui-filter-group__label">遊戲</span>
+          <div data-testid="roster-game-filter" className="player-ui-filter-track">
             {GAME_FILTERS.map((f) => (
-              <button key={f} data-testid={`roster-game-${f}`} onClick={() => setGameFilter(f)} style={{ flexShrink: 0, minHeight: 40, padding: "5px 12px", borderRadius: 99, border: `1px solid ${gameFilter === f ? (f === "CS" ? "#fb923c" : GC.gold) : "transparent"}`, cursor: "pointer", background: gameFilter === f ? (f === "CS" ? "rgba(251,146,60,0.18)" : GC.gold) : "rgba(255,255,255,0.06)", color: gameFilter === f ? (f === "CS" ? "#fed7aa" : "#0a0b0f") : GC.gray, fontSize: 11, fontWeight: 700 }}>{f}</button>
+              <button key={f} data-testid={`roster-game-${f}`} className="player-ui-filter-button" aria-pressed={gameFilter === f} onClick={() => setGameFilter(f)}>{f}</button>
             ))}
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
-          <span style={{ color: GC.gray, fontSize: 9, fontWeight: 800, width: 42, flexShrink: 0 }}>狀態</span>
-          <div data-testid="roster-status-filter" style={{ display: "flex", gap: 5, overflowX: "auto", minWidth: 0 }}>
+        <div className="player-ui-filter-group">
+          <span className="player-ui-filter-group__label">狀態</span>
+          <div data-testid="roster-status-filter" className="player-ui-filter-track">
             {FILTERS.map((f) => (
-              <button key={f} onClick={() => setFilter(f)} style={{ flexShrink: 0, minHeight: 40, padding: "5px 12px", borderRadius: 99, border: "none", cursor: "pointer", background: filter === f ? GC.gold : "rgba(255,255,255,0.06)", color: filter === f ? "#0a0b0f" : GC.gray, fontSize: 11, fontWeight: 700 }}>{f}</button>
+              <button key={f} className="player-ui-filter-button" aria-pressed={filter === f} onClick={() => setFilter(f)}>{f}</button>
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="player-ui-profile-summary-grid player-ui-roster-summary-strip" data-player-ui-reveal>
+        <StatTile label="目前顯示" value={filtered.length} detail={`共 ${players.length} 名選手`} tone="info" />
+        <StatTile label="合約提醒" value={contractSummary.expiring} detail={contractSummary.soonest == null ? "尚無到期資料" : `最近 ${contractSummary.soonest} 天`} tone={contractSummary.expiring > 0 ? "warning" : "positive"} />
       </div>
 
       {developmentEffects.unlocks.contractSummary && (
@@ -217,7 +244,7 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
         </section>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+      <div className="player-ui-roster__list">
         {filtered.map((p) => {
           const st = statusOf(p);
           const c = statusColor(st);
@@ -230,10 +257,10 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
           const csRole = csRoleOf(p);
           const career = careerStageOf(p);
           return (
-            <button key={p.id} data-testid={`roster-player-${p.id}`} data-roster-card onClick={() => { if (talentMode) { onPlayer?.(p.id); return; } setDetailMode(isCsView ? "CS" : "MOBA"); setSelId(p.id); setEditName(false); }}
-              style={{ display: "flex", alignItems: "center", gap: 11, background: GC.card, border: `1px solid ${p.id === selId ? GC.purp : "rgba(255,255,255,0.06)"}`, borderRadius: 13, padding: "11px 13px", cursor: "pointer", textAlign: "left", width: "100%", minWidth: 0 }}>
-              <div data-roster-card-avatar style={{ flexShrink: 0 }}><PlayerAvatar player={p} size={46} ring={c} /></div>
-              <div data-roster-card-summary style={{ flex: 1, minWidth: 0 }}>
+            <PlayerListRow key={p.id} data-testid={`roster-player-${p.id}`} data-roster-card selected={p.id === selId} onClick={() => { if (talentMode) { onPlayer?.(p.id); return; } setDetailMode(isCsView ? "CS" : "MOBA"); setSelId(p.id); setEditName(false); }}
+              >
+              <div data-roster-card-avatar className="player-ui-list-row__avatar"><PlayerAvatar player={p} size={46} ring={c} /></div>
+              <div data-roster-card-summary className="player-ui-list-row__body">
                 <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                   <span style={{ color: "white", fontSize: 13, fontWeight: 800 }}>{p.name}</span>
                   {/* S26【A】：選手等級直接讀 profileStore 持久化值（賽後升級即時反映） */}
@@ -284,7 +311,7 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
                   </span>
                 </div>
               </div>
-              <div data-roster-card-meta style={{ textAlign: "right", flexShrink: 0, minWidth: 0 }}>
+              <div data-roster-card-meta className="player-ui-list-row__trailing">
                   <div style={{ display: "flex", gap: 4, justifyContent: "flex-end", marginBottom: 2 }}>
                   <span style={{ color: isCsView ? "#fb923c" : GC.purp, fontSize: 9, fontWeight: 700 }}>戰力 {isCsView ? fp : mp}</span>
                 </div>
@@ -297,13 +324,13 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
                   <span style={{ background: `${c}22`, color: c, fontSize: 8, fontWeight: 700, borderRadius: 5, padding: "2px 6px" }}>{st}</span>
                 )}
               </div>
-            </button>
+            </PlayerListRow>
           );
         })}
       </div>
 
       {!talentMode && players.length < ROSTER_CAP && (
-        <div onClick={onRecruit} style={{ textAlign: "center", color: GC.gray, fontSize: 10, marginTop: 14, padding: 12, border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 12, cursor: onRecruit ? "pointer" : "default" }}>
+        <div className="player-ui-empty-action" role={onRecruit ? "button" : undefined} tabIndex={onRecruit ? 0 : undefined} onClick={onRecruit} style={{ textAlign: "center", color: GC.gray, fontSize: 10, marginTop: 14, padding: 12, border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 12, cursor: onRecruit ? "pointer" : "default" }}>
           還可招募 {ROSTER_CAP - players.length} 名選手 · 到「球探招募」挖掘新星
         </div>
       )}
@@ -319,32 +346,30 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
         // S26【A】：XP 進度由持久化 xp 推導（playerLevel 唯一刻度），與 Result receipt 同源
         const lp = calculateLevelProgress(sel.xp ?? 0, 0);
         return (
-          <div data-roster-modal onClick={() => setSelId(null)} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.82)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(4px)" }}>
-            <div data-roster-modal-body onClick={(e) => e.stopPropagation()} style={{ maxWidth: 430, width: "100%", background: GC.card2, borderRadius: 16, padding: 18, border: `1px solid ${detailMode === "CS" ? "#fb923c" : GC.purp}`, maxHeight: "88vh", overflowY: "auto" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+          <div data-roster-modal data-player-ui-reveal className="player-ui-roster__modal" onClick={() => setSelId(null)}>
+            <div data-roster-modal-body data-player-ui-modal-body className="player-ui-roster__modal-body" onClick={(e) => e.stopPropagation()}>
+              <div className="player-ui-modal-header">
                 <PlayerAvatar player={sel} size={60} ring={condColor} radius={14} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ color: "white", fontSize: 17, fontWeight: 900 }}>{sel.name}</div>
+                <div className="player-ui-modal-header__identity">
+                  <div className="player-ui-modal-header__name">{sel.name}</div>
                   {/* S26【C】：移除靜態英雄綁定（英雄只在 MOBA 流程顯示）；【A】改顯示持久化 XP */}
-                  <div style={{ color: GC.gray, fontSize: 10 }}>{detailMode === "CS" ? CS_ROLE_LABELS[csRole] : sel.role} · Lv.{lp.newLevel} · XP {lp.xpIntoLevel}/{lp.xpForNextLevel}</div>
-                  <div style={{ marginTop: 3, height: 3, width: 140, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${Math.min(100, Math.round((lp.xpIntoLevel / lp.xpForNextLevel) * 100))}%`, background: `linear-gradient(90deg,${GC.blue},${GC.blueL})` }} />
-                  </div>
+                  <div className="player-ui-modal-header__detail">{detailMode === "CS" ? CS_ROLE_LABELS[csRole] : sel.role} · Lv.{lp.newLevel} · XP {lp.xpIntoLevel}/{lp.xpForNextLevel}</div>
+                  <ProgressBar label="EXP" value={lp.xpForNextLevel > 0 ? (lp.xpIntoLevel / lp.xpForNextLevel) * 100 : 0} detail={`${lp.xpIntoLevel}/${lp.xpForNextLevel}`} accent={GC.gold} compact />
                   {pers && <div style={{ marginTop: 3, fontSize: 10 }}>{pers.emoji} <span style={{ color: GC.purp, fontWeight: 700 }}>{pers.zh}</span></div>}
                 </div>
-                <button aria-label="關閉選手摘要" onClick={() => setSelId(null)} style={{ width: 40, height: 40, minWidth: 40, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "none", cursor: "pointer", color: "#a1a1aa", fontSize: 17 }}>✕</button>
+                <button type="button" aria-label="關閉選手摘要" className="player-ui-close-button" onClick={() => setSelId(null)}>✕</button>
               </div>
 
               {onPlayer && (
                 <button onClick={() => onPlayer(sel.id)}
-                  style={{ width: "100%", minHeight: 42, background: "rgba(167,139,250,0.15)", border: `1px solid ${GC.purp}44`, borderRadius: 9, padding: "8px", cursor: "pointer", color: GC.purp, fontSize: 11, fontWeight: 800, marginBottom: 12 }}>
+                  type="button" className="player-ui-primary-action">
                   📋 開啟完整選手檔案
                 </button>
               )}
 
-              <div data-testid="roster-detail-game-mode" style={{ display: "flex", gap: 5, marginBottom: 12, padding: 3, background: "rgba(255,255,255,0.04)", borderRadius: 9 }}>
+              <div data-testid="roster-detail-game-mode" className="player-ui-mode-switch" style={{ marginBottom: 12 }}>
                 {["MOBA", "CS"].map((view) => (
-                  <button key={view} onClick={() => setDetailMode(view)} style={{ flex: 1, minHeight: 40, border: "none", borderRadius: 7, padding: "6px 8px", cursor: "pointer", background: detailMode === view ? (view === "CS" ? "rgba(251,146,60,0.2)" : "rgba(167,139,250,0.2)") : "transparent", color: detailMode === view ? (view === "CS" ? "#fed7aa" : GC.purp) : GC.gray, fontSize: 10, fontWeight: 800 }}>{view}</button>
+                  <button key={view} type="button" aria-pressed={detailMode === view} onClick={() => setDetailMode(view)}>{view}</button>
                 ))}
               </div>
 
