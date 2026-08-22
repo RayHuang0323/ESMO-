@@ -12478,3 +12478,10 @@ CS 晉級線仍畫在 `csMajorLine.topN`，兩邊皆無 body 橫向捲動。
 `09_Competition_UI_安全區契約.md`：`cs-hub-day` 加入不可弄丟的標記清單；
 新增第 6 條架構紅線（樣式收在 `.esmo-comp`、不動全域、差異只靠 `--comp-accent`）；
 新 verifier 加入「動這區之前要跑」清單；綠區宣稱以 `git diff` 重新驗證仍為空。
+
+## CS-A2 FPS Renderer Identity / Lifecycle Mainline Fix（2026-08-23）
+
+- 基於最新 `origin/main@29eb712` 重新確認：舊的 `ACTIVE_ROSTER` + `[mapKey]` renderer pool lifecycle 仍會讓 frame identity 與 3D entity 脫鉤。
+- 修法限於 `src/battle/fps`：`effectiveRoster` 同時餵給 `simulateFps` 與 `FpsScene3D`，pool 依 map / roster identity 重建；identity miss 與 authoritative death 分開處理。
+- 新增 `tools/check_cs_a2_renderer_identity.mjs`，涵蓋 substitution、rematch、map transition、BO3 Map 1→2→3 與 death / identity miss contract。
+- 舊 `78f7479` 未直接 cherry-pick；未搬回舊 `CsPrepScreen.jsx` 或 Competition / Season 接線。
