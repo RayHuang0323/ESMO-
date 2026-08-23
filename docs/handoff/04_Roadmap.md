@@ -528,8 +528,8 @@ Codex UI Migration 目前暫停開新 Sprint。Claude Code 另一工作線正在
 | **F1** | **Sponsor eligibility** ＋ **fan source weighting** | ✅ **已實作**。`reqFans` 0/100k/150k/170k/185k/200k；權重 練習 1.0 ／ 聯賽 5.0 ／ Major 8.5。`check_fan_system` 21/21、browser smoke 17/17 |
 | **F2** | **Season / Major / Champion fan awards** | ✅ **已實作**（branch `feature/fan-f2-season-awards`）。聯賽奪冠 12,000／Major 奪冠 20,000；`check_fan_system` 48/48。⚠ **兩個待決策**：頂階變快（2.4 季）、CS 聯賽拿不到賽季粉絲（見 08） |
 | **F2.1** | **Competition Fan Award Policy** | ✅ **已上線**（`main @ e155b27`，2026-08-23 部署成功）。新增 `fanPolicy` 與 `prizePolicy` 平行 ⇒ CS 聯賽、MOBA 巡迴站／年度總決賽都拿得到賽季粉絲且不發現金；policy-less Event 仍 fail-closed。**TD-28 CLOSED**。`check_fan_system` 66/66 |
-| **F3** | ⏸ **延後為 Fan v1.1 — Sponsor pricing**（粉絲級距 × `weekly`） | 不在 v1 範圍 |
-| **F4** | 既有 UI 整合 ＋ 移除假 `audience` ＋ 移除 perk 文案 | ✅ **已實作**（branch `feature/fan-f4-ui`）。Home 本季成長／Sponsor 差多少／賽季總結支持者成長／賽季粉絲獎勵；假 audience 與 perk 文案已清除。`check_fan_ui_f4` **35/35**、browser **29/29**。**零 balance 改動**。未建 Fan Center |
+| **F3** | ⏸ **DEFERRED — Sponsor pricing**（粉絲級距 × `weekly`） | 不在 v1 範圍。**延後理由**：F4 的「還差 N」已把階梯變成持續可見的進度條，粉絲不再只是一次性閘門；且可達性④⑤已貼邊（頂階良好 3.0 對下限 3、一般 7.8 對上限 8），加價碼倍率會直接改變現金流。**等玩家實玩驗證 F1–F4 的存在感之後再決定。** |
+| **F4** | 既有 UI 整合 ＋ 移除假 `audience` ＋ 移除 perk 文案 | ✅ **CLOSED**（`main @ 4b01bd4`，已部署）。Home 本季成長／Sponsor 差多少／賽季總結支持者成長／賽季粉絲獎勵；假 audience 與 perk 文案已清除。`check_fan_ui_f4` **35/35**、browser **29/29**。**零 balance 改動**。未建 Fan Center |
 | **F5** | `check_fan_system.mjs` | **基礎 contract verifier（含第 8 條）從 F1 同步開始** |
 
 **執行順序：`F0 → F1 → F5 基礎 → F2 → F4 → playtest → 再決定 F3`**
