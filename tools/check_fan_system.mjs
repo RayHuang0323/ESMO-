@@ -446,7 +446,13 @@ function mkFinal({ tier = "regular", rank = 1, teams = 8, champion = false, seas
     }
   };
   ["src/screens", "src/ui"].forEach(walkUI);
-  const snapWriters = uiFiles.filter((q) => /fansAtSeasonStart\s*[:=]/.test(codeOnly(raw(q))));
+  //  ⚠ F4 起畫面**合法地讀**快照（賽季總結要顯示本季成長）。
+  //    這一條守的是「view / recap 不得**修改**它」，不是「不得提到它」——
+  //    原本的 `[:=]` 會把 JSX 的 `fansAtSeasonStart={...}`（傳值）誤判成寫入。
+  const snapWriters = uiFiles.filter((q) => {
+    const c = codeOnly(raw(q)).split(String.fromCharCode(10)).join(" ");
+    return /\.fansAtSeasonStart\s*=[^=]/.test(c) || /fansAtSeasonStart\s*:/.test(c);
+  });
   ck("13e) view / recap 不修改快照", snapWriters.length === 0, snapWriters.join(", ") || "(乾淨)");
 }
 

@@ -3,6 +3,7 @@
 // This screen is a presentation adapter only.  Navigation callbacks and
 // profileStore selectors stay the same as the previous Home; no route, Store
 // schema, contract, or battle logic is introduced here.
+import { formatFans, seasonFanGrowth } from "../platform/fans/fanPresentation.js";
 import React, { useMemo, useRef, useState } from "react";
 import { useProfileStore } from "../platform/profileStore.js";
 import ActiveMatchCard from "./common/ActiveMatchCard.jsx";
@@ -25,10 +26,8 @@ const numberOf = (value, fallback = 0) => {
 const money = (value) => `$${(numberOf(value) / 10000).toFixed(1)}萬`;
 const signedMoney = (value) => `${numberOf(value) >= 0 ? "+" : "−"}${money(Math.abs(numberOf(value)))}`;
 const compactWan = (value) => `${numberOf(value).toFixed(2).replace(/\.?(0+)$/, "")}萬`;
-const formatFans = (value) => {
-  const fans = numberOf(value);
-  return fans >= 10000 ? `${(fans / 10000).toFixed(1).replace(/\.0$/, "")}萬` : fans.toLocaleString("zh-Hant");
-};
+//  ⚠ 粉絲格式化改用**全站共用**的那一支（`platform/fans/fanPresentation.js`），
+//    避免 Home / 戰隊詳情 / 賽季總結各寫一種寫法。
 
 //  ⚠ `talent`（舊版個人天賦）刻意**不在首頁的導覽表裡**。
 //    長期投資的動線是「戰隊發展」；個人天賦樹仍然存在，入口在選手詳情頁
@@ -73,7 +72,7 @@ function SectionHeading({ label, title, note }) {
   );
 }
 
-function TeamHero({ team, meta, unread, xpPercent, onInbox }) {
+function TeamHero({ team, meta, unread, xpPercent, onInbox, fansAtSeasonStart }) {
   const achievement = numberOf(team.achievement ?? meta.achievement);
   const level = numberOf(team.lv ?? meta.lv);
   const xp = numberOf(team.xp ?? meta.xp);
@@ -81,6 +80,8 @@ function TeamHero({ team, meta, unread, xpPercent, onInbox }) {
   const week = numberOf(meta.week, 1);
   const days = numberOf(meta.days, 0);
   const fans = formatFans(meta.fans);
+  //  F4：本季粉絲成長。舊存檔沒有基準 ⇒ `hasBaseline: false` ⇒ 只顯示總數。
+  const fanGrowth = seasonFanGrowth({ fans: meta.fans, fansAtSeasonStart });
 
   return (
     <header className="esmo-hero" data-dashboard-reveal>
@@ -110,7 +111,16 @@ function TeamHero({ team, meta, unread, xpPercent, onInbox }) {
               <p className="esmo-hero__subtitle">這是你的戰隊總部。掌握本週節奏，先處理最重要的決策，再把隊伍送上舞台。</p>
               <div className="esmo-hero__meta-row">
                 <span className="esmo-hero__meta"><strong>第 {week} 週</strong></span>
-                <span className="esmo-hero__meta"><strong>{fans}</strong> 支持者</span>
+                <span className="esmo-hero__meta" data-testid="home-fans">
+                  <strong>{fans}</strong> 支持者
+                  {/*  F4：本季成長只在**拿得到基準**時顯示。舊存檔沒有 snapshot
+                       ⇒ 只顯示總數，不顯示 +0／—／未知（見 seasonFanGrowth）。 */}
+                  {fanGrowth.hasBaseline && (
+                    <span className="esmo-hero__meta-delta" data-testid="home-fans-delta">
+                      本季 +{fanGrowth.delta.toLocaleString("zh-Hant")}
+                    </span>
+                  )}
+                </span>
                 <span className="esmo-hero__meta"><strong>{days}</strong> 天營運</span>
               </div>
             </div>
@@ -263,9 +273,9 @@ function Compete({ modes, onSelect }) {
             </div>
             <div className="esmo-mode-card__title">{mode.name}</div>
             <div className="esmo-mode-card__meta">{mode.meta}</div>
+            {/*  F4：`audience` 已移除（假資料）。footer 只留真正的行動標籤。 */}
             <div className="esmo-mode-card__footer">
               <span>{mode.action}</span>
-              <span className="esmo-mode-card__audience"><EsmoIcon name="users" size={12} /> {mode.audience}</span>
             </div>
           </button>
         ))}
@@ -311,7 +321,9 @@ function MobileTeamHeader({ team, meta, unread, xpPercent, onInbox }) {
             <div className="esmo-mobile-header__meta">
               <span>Lv. {level}</span>
               <span>W{week}</span>
-              <span>{formatFans(meta.fans)} 支持者</span>
+              {/*  F4：手機頁首刻意**只顯示總數**（不加本季成長）——這一列是三欄的
+                   緊湊資訊列，塞第四個數字會擠壞。成長在桌機 hero 與賽季總結看得到。 */}
+              <span data-testid="home-fans">{formatFans(meta.fans)} 支持者</span>
             </div>
           </div>
         </div>
@@ -671,9 +683,12 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
     : "本季已完賽";
 
   const modeItems = useMemo(() => [
-    { id: "moba", ...MODE_CONFIG.moba, audience: "2,041" },
-    { id: "cs", ...MODE_CONFIG.cs, audience: "訓練" },
-    { id: "bracket", ...MODE_CONFIG.bracket, meta: `賽程 · ${bracketBadge}`, audience: "賽季" },
+    //  F4：移除假的 `audience`。那是寫死的數字，不是任何真實資料。
+    //  ⚠ **刻意不改接 `meta.fans`**：Fans（戰隊支持者）≠ Audience（單場觀眾），
+    //    目前沒有 attendance system，拿粉絲冒充觀眾比留白更糟。
+    { id: "moba", ...MODE_CONFIG.moba },
+    { id: "cs", ...MODE_CONFIG.cs },
+    { id: "bracket", ...MODE_CONFIG.bracket, meta: `賽程 · ${bracketBadge}` },
   ], [bracketBadge]);
 
   //  管理工具＝不需要天天看、但需要時要進得去的功能。
@@ -784,7 +799,7 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
           <span className="esmo-dashboard__brand-caption">WEEK {numberOf(meta.week, 1)}</span>
         </div>
 
-        <TeamHero team={{ ...team, gold: finance.funds }} meta={meta} unread={unread} xpPercent={xpPercent} onInbox={() => sel("notify")} />
+        <TeamHero team={{ ...team, gold: finance.funds }} meta={meta} unread={unread} xpPercent={xpPercent} fansAtSeasonStart={comp.fansAtSeasonStart ?? null} onInbox={() => sel("notify")} />
 
         <div className="esmo-dashboard__layout">
           <main className="esmo-dashboard__main-column">

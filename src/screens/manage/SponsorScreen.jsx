@@ -17,6 +17,7 @@ import { SPONSORS } from "../../data/playerModel.js";
 //  N3.1：目前合作中的贊助可能是**開局扶持方案**（不在市集目錄裡），
 //  所以解析要用統一入口；下方市集列表仍然只列 SPONSORS。
 import { resolveSponsor, sponsorEligibility } from "../../platform/economy/sponsors.js";
+import { sponsorRequirementView } from "../../platform/fans/fanPresentation.js";
 import { GC } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
 
@@ -35,12 +36,15 @@ export default function SponsorScreen({ onBack }) {
   const active = activeRef ? { ...resolveSponsor(activeRef.id), ...activeRef } : null;
   //  F1：資格**不在畫面計算**——與 `signSponsor` 共用同一份規則，
   //  避免畫面說「條件達標」而 Store 拒簽（見 `economy/sponsors.js`）。
-  const qualifies = (sp) => sponsorEligibility(sp, { fans, wins }).ok;
+  //  ⚠ 資格判定**完全**交給 `sponsorEligibility()`；畫面只排版，不重算。
+  //    `sponsorRequirementView()` 也只是把它的結果整理成「差在哪」的形狀。
+  const reqViewOf = (sp) => sponsorRequirementView(sp, sponsorEligibility(sp, { fans, wins }));
+  const qualifies = (sp) => reqViewOf(sp).ok;
 
   return (
     <ManageFrame title="贊助商" subtitle="SPONSORS" onBack={onBack}>
       <div style={{ color: GC.gray, fontSize: 10, marginBottom: 14 }}>
-        目前粉絲 {fans.toLocaleString()} · 戰績 {wins} 勝 · 條件達標才能簽約
+        目前粉絲 <strong style={{ color: "white" }}>{fans.toLocaleString()}</strong> · 戰績 {wins} 勝 · 粉絲與勝場都達標才能簽約
       </div>
 
       {active ? (
@@ -53,9 +57,15 @@ export default function SponsorScreen({ onBack }) {
               <div style={{ color: GC.gray, fontSize: 9, marginTop: 2 }}>每週收入 +${active.weekly}萬 · 剩 {active.weeksLeft} 週</div>
             </div>
           </div>
+          {/*  Fan System F4：移除「特殊加成」。`SPONSORS[].perk` 從來沒有 gameplay
+               實作（「訓練效果 +15%」等全是純文案），留著等於對玩家承諾不存在的效果。
+               裁決 A 已凍結：**F4 移除文案、v1 不補實作**。
+               ⚠ schema 上的 `perk` 欄位**沒有刪**，只是畫面不再 consume。 */}
           <div style={{ marginTop: 12, background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "7px 10px" }}>
-            <div style={{ color: GC.gray, fontSize: 8 }}>特殊加成</div>
-            <div style={{ color: GC.gold, fontSize: 10, fontWeight: 700 }}>{active.perk}</div>
+            <div style={{ color: GC.gray, fontSize: 8 }}>合約狀態</div>
+            <div style={{ color: GC.green, fontSize: 10, fontWeight: 700 }}>
+              合作中 · 剩 {active.weeksLeft} 週 · 每週 +${active.weekly}萬
+            </div>
           </div>
         </div>
       ) : (
@@ -67,7 +77,9 @@ export default function SponsorScreen({ onBack }) {
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {SPONSORS.map((sp) => {
-          const ok = qualifies(sp);
+          //  F4：一次算好，卡片與狀態列共用（不要對同一個 sponsor 算兩次）
+          const rq = reqViewOf(sp);
+          const ok = rq.ok;
           const isActive = active?.id === sp.id;
           return (
             <button key={sp.id} onClick={() => setSel(sp)}
@@ -80,7 +92,25 @@ export default function SponsorScreen({ onBack }) {
                   {isActive && <span style={{ color: GC.green, fontSize: 8 }}>合作中</span>}
                 </div>
                 <div style={{ color: GC.gray, fontSize: 9, marginTop: 2 }}>每週 +${sp.weekly}萬 · 簽約金 ${sp.signBonus}萬 · {sp.weeks}週</div>
-                <div style={{ color: ok ? GC.green : GC.red, fontSize: 8, marginTop: 2 }}>{ok ? "✓ 條件達標" : `需 ${sp.reqFans.toLocaleString()} 粉絲 / ${sp.reqWins}勝`}</div>
+                {/*  F4：不要只說「鎖定」——玩家要看得出**差在哪**。
+                     粉絲與勝場各一條，達標打勾、未達標寫還差多少。
+                     ⚠ 全部取自 `sponsorEligibility()` 的結果，畫面不重算。 */}
+                <div data-testid="sponsor-req" data-sponsor={sp.id}
+                  data-fans-ok={rq.fansOk ? "true" : "false"} data-wins-ok={rq.winsOk ? "true" : "false"}
+                  data-blocked-by={rq.blockedBy}
+                  style={{ display: "flex", flexWrap: "wrap", gap: "2px 8px", marginTop: 3 }}>
+                  <span style={{ color: rq.fansOk ? GC.green : GC.red, fontSize: 8, fontWeight: 700 }}>
+                    {rq.fansOk
+                      ? `粉絲 ✓ ${rq.reqFans.toLocaleString()}`
+                      : `粉絲 還差 ${rq.fansShort.toLocaleString()}`}
+                  </span>
+                  <span style={{ color: rq.winsOk ? GC.green : GC.red, fontSize: 8, fontWeight: 700 }}>
+                    {rq.winsOk ? `勝場 ✓ ${rq.reqWins}` : `勝場 還差 ${rq.winsShort}`}
+                  </span>
+                  <span style={{ color: rq.ok ? GC.green : GC.gray, fontSize: 8 }}>
+                    {rq.ok ? "· 可簽約" : "· 尚未解鎖"}
+                  </span>
+                </div>
               </div>
               <span style={{ color: GC.gold, fontSize: 11, fontWeight: 800, fontFamily: "monospace" }}>${sp.weekly}/週</span>
             </button>
@@ -99,7 +129,11 @@ export default function SponsorScreen({ onBack }) {
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
-              {[["簽約金", `$${sel.signBonus}萬`], ["每週收入", `$${sel.weekly}萬`], ["合約期", `${sel.weeks} 週`], ["總收益", `約 $${sel.signBonus + sel.weekly * sel.weeks}萬`], ["特殊加成", sel.perk]].map(([k, v]) => (
+              {[["簽約金", `$${sel.signBonus}萬`], ["每週收入", `$${sel.weekly}萬`], ["合約期", `${sel.weeks} 週`],
+                ["總收益", `約 $${sel.signBonus + sel.weekly * sel.weeks}萬`],
+                //  F4：原本這裡是 `sel.perk`（假效果）。換成真實的門檻資訊。
+                ["粉絲門檻", sel.reqFans.toLocaleString()],
+                ["勝場門檻", `${sel.reqWins} 勝`]].map(([k, v]) => (
                 <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
                   <span style={{ color: GC.gray }}>{k}</span><span style={{ color: "white", fontWeight: 700 }}>{v}</span>
                 </div>

@@ -5,6 +5,7 @@ import RecapHeader from "./RecapHeader.jsx";
 import RecapHonor from "./RecapHonor.jsx";
 import RecapLeague from "./RecapLeague.jsx";
 import RecapPrize from "./RecapPrize.jsx";
+import RecapFans from "./RecapFans.jsx";
 import CsRecapBracket from "./CsRecapBracket.jsx";
 
 // ============================================================================
@@ -53,6 +54,10 @@ export default function CsSeasonRecap() {
   void honors;
 
   const view = useProfileStore.getState().competitionView("cs");
+  //  F4：粉絲是戰隊層資料；開季快照住在**CS 的**賽季狀態裡。
+  //  ⚠ 一定要用 `competitionView("cs")` 的快照，不能拿 MOBA 那一份 ——
+  //    兩個項目的賽季各自獨立，混用會讓 CS 的「本季成長」算成 MOBA 的區間。
+  const meta = useProfileStore.getState().meta ?? {};
   const final = view.final;
   if (!final) return null;
 
@@ -106,6 +111,7 @@ export default function CsSeasonRecap() {
            CS 的生涯主賽事是聯賽，而聯賽沒有獎金政策（它是資格賽）⇒
            `view.award` 恆為 null。錢在 Major 那一邊。 */}
       <RecapPrize award={csMajor?.award ?? null} />
+      <RecapFans fans={meta.fans} fansAtSeasonStart={view.fansAtSeasonStart ?? null} />
     </div>
   );
 }

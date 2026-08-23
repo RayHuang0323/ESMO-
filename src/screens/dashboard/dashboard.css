@@ -355,6 +355,17 @@
   font-weight: 800;
 }
 
+/*  Fan System F4：本季支持者成長。
+    ⚠ 刻意做成同一個 meta 項目裡的小字，不另開一格——Home 的資訊密度
+      在 Home IA 那一輪剛整理過，不該因為粉絲又擠回來。 */
+.esmo-hero__meta-delta {
+  margin-left: 6px;
+  font-size: 0.82em;
+  font-weight: 700;
+  color: var(--esmo-accent, #34d399);
+  white-space: nowrap;
+}
+
 .esmo-hero__meta strong {
   color: var(--esmo-text);
   font-size: 12px;

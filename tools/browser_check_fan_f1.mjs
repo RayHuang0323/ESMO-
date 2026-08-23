@@ -57,7 +57,14 @@ async function readSponsorScreen(chrome) {
       opened,
       onSponsor: joined.includes("SPONSORS") || joined.includes("目前粉絲"),
       qualified: txt.filter((l) => l.includes("條件達標")).length,
-      lockedLines: txt.filter((l) => l.includes("需 ") && l.includes("粉絲")),
+      //  ⚠ F4 改了卡片文案（「需 X 粉絲 / Y勝」→「粉絲 還差 N」「勝場 還差 N」）。
+      //    改讀 F4 加的 data 屬性 ⇒ 這支 smoke 不再綁在任何一版文案上。
+      lockedLines: txt.filter((l) => l.includes("還差") && l.includes("粉絲")),
+      reqRows: [...document.querySelectorAll('[data-testid="sponsor-req"]')].map((n) => ({
+        id: n.dataset.sponsor, fansOk: n.dataset.fansOk === "true",
+        winsOk: n.dataset.winsOk === "true", blockedBy: n.dataset.blockedBy,
+        text: (n.innerText || "").replace(/\s+/g, " ").trim(),
+      })),
       fansLine: txt.find((l) => l.includes("目前粉絲")) ?? null,
       overflow: document.body.scrollWidth > window.innerWidth + 1,
       scrollW: document.body.scrollWidth, innerW: window.innerWidth,
@@ -90,11 +97,12 @@ async function main() {
       ck(`${vp.label}｜贊助頁進得去`, low.opened && low.onSponsor, low.fansLine ?? "(找不到贊助頁)");
       ck(`${vp.label}｜顯示 canonical 粉絲數`,
         (low.fansLine ?? "").includes("128,000"), low.fansLine ?? "-");
-      ck(`${vp.label}｜粉絲 128k 時仍有贊助被鎖住（門檻真的在擋人）`,
-        low.lockedLines.length > 0, `${low.lockedLines.length} 個鎖住`);
-      ck(`${vp.label}｜門檻數字有千分位（不是「需 150000粉絲」）`,
-        low.lockedLines.length > 0 && low.lockedLines.every((l) => /\d{1,3},\d{3}/.test(l)),
-        low.lockedLines[0] ?? "-");
+      const fansBlockedLow = low.reqRows.filter((r) => !r.fansOk);
+      ck(`${vp.label}｜粉絲 128k 時仍有贊助被粉絲擋住（門檻真的在擋人）`,
+        fansBlockedLow.length > 0, `${fansBlockedLow.length} / ${low.reqRows.length} 個被粉絲擋`);
+      ck(`${vp.label}｜門檻數字有千分位（不是「還差 22000」）`,
+        fansBlockedLow.length > 0 && fansBlockedLow.every((r) => /\d{1,3},\d{3}/.test(r.text)),
+        fansBlockedLow[0]?.text ?? "-");
       ck(`${vp.label}｜無 body 橫向捲動`, !low.overflow, `body ${low.scrollW} / 視窗 ${low.innerW}`);
 
       // ── 粉絲拉高：同樣的畫面應該解鎖更多 ────────────────────────────────
@@ -124,9 +132,13 @@ async function main() {
       ck(`${vp.label}｜粉絲拉高後畫面讀到新值（資料→畫面這條線是通的）`,
         high.onSponsor && (high.fansLine ?? "").includes("9,000,000"),
         high.fansLine ?? "-");
+      //  ⚠ 900 萬粉絲時**粉絲那一維全部達標**，所以「還差 N 粉絲」自然歸零。
+      //    要驗的是**勝場**仍在擋 ⇒ 量 `winsOk`，不是量鎖住的行數。
+      const winsBlockedHigh = high.reqRows.filter((r) => !r.winsOk);
+      const fansBlockedHigh = high.reqRows.filter((r) => !r.fansOk);
       ck(`${vp.label}｜reqWins 仍是獨立閘門（0 勝時粉絲再多也不全開）`,
-        high.lockedLines.length > 0,
-        `900 萬粉絲 / 0 勝 ⇒ 仍有 ${high.lockedLines.length} 個被勝場擋住`);
+        winsBlockedHigh.length > 0 && fansBlockedHigh.length === 0,
+        `900 萬粉絲 / 0 勝 ⇒ 粉絲擋 ${fansBlockedHigh.length} 個、勝場擋 ${winsBlockedHigh.length} 個`);
     }
 
     const errs = chrome.consoleLines.filter((l) => l.startsWith("[error]"));

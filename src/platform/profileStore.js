@@ -1805,6 +1805,7 @@ export const useProfileStore = create((rawSet, get) => {
       return {
         hasSeason: false, standings: null, next: null, today: null, progress: null, live: null,
         final: null, award: null, canRoll: { ok: false, reason: "目前沒有賽季", nextSeason: null },
+        fansAtSeasonStart: null,
         //  v11：歷史也要跟著 mode 走，否則 `competitionView("cs")` 會回 MOBA 的歷屆名次。
         history: arr(get().competitionHistoryByMode?.[mode], []),
         activeEvent: null,
@@ -1822,6 +1823,10 @@ export const useProfileStore = create((rawSet, get) => {
     return {
       hasSeason: true,
       activeEvent: adapter.event,
+      //  F4：開季粉絲快照（F2 建立）。畫面用它算「本季成長」。
+      //  ⚠ 舊存檔沒有這個欄位 ⇒ `null`，那是**合法狀態**（見
+      //    `fans/fanPresentation.js → seasonFanGrowth`）。**不得回填。**
+      fansAtSeasonStart: state.fansAtSeasonStart ?? null,
       //  ⚠ CS Season M1：v2 wrapper 是 MOBA 專屬的。這裡若無條件回
       //    `get().seasonStateV2`，`competitionView("cs")` 會把 **MOBA 的**
       //    賽季投影交給畫面——兩個項目的資料在同一個 view 物件裡混在一起。

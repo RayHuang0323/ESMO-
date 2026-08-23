@@ -7,6 +7,7 @@ import RecapHeader from "./RecapHeader.jsx";
 import RecapHonor from "./RecapHonor.jsx";
 import RecapLeague from "./RecapLeague.jsx";
 import RecapPrize from "./RecapPrize.jsx";
+import RecapFans from "./RecapFans.jsx";
 
 //  ⚠ 回傳 { text, champion }：摘要文字、data-champion、金色三者**共用同一份判斷**。
 //    先前把「玩家本季奪冠」在這裡算一次、又在元件本體算一次——值雖然一致，
@@ -44,6 +45,9 @@ export default function SeasonRecap() {
   void honors;
 
   const view = useProfileStore.getState().competitionView();
+  //  F4：粉絲是**戰隊層**資料（`meta.fans`），不住在賽季狀態裡；
+  //  開季快照才住在賽季狀態（`view.fansAtSeasonStart`）。兩者一起交給 RecapFans。
+  const meta = useProfileStore.getState().meta ?? {};
   const final = view.final;
   const canRoll = view.canRoll;
   if (!final || !canRoll?.ok) return null;
@@ -70,6 +74,7 @@ export default function SeasonRecap() {
       <RecapCircuit circuitPoints={view.circuitPoints} events={view.events} myTeamId={myTeamId} />
       <RecapLeague careerFinal={careerFinal} playoff={view.playoff} myTeamId={myTeamId} />
       <RecapPrize award={view.award} />
+      <RecapFans fans={meta.fans} fansAtSeasonStart={view.fansAtSeasonStart ?? null} />
     </div>
   );
 }

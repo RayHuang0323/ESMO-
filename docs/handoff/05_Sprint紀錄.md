@@ -13264,3 +13264,116 @@ F2.1 讓帳本同時裝 fan-only 收據，五條用「帳本筆數／成員」�
 未改 fan 數值、`reqFans`、`economyConfig`、三支凍結契約、battle / map contract。
 未新增第三條 fan write path、未新增第二本帳本、未建第二套 CS award path。
 **未開始 F4。**
+
+---
+
+## Fan System F4 — UI / Player Feedback Integration（2026-08-23）
+
+branch `feature/fan-f4-ui`，基準 `origin/main @ c9beb10`。**未 push。**
+**只做呈現，零 balance 改動。**
+
+### UI Audit（改動前的現況）
+
+| 位置 | 原本顯示 | 資料來源 | 真實？ | F4 處置 |
+|---|---|---|---|---|
+| Home hero | `12.8萬 支持者` | `meta.fans` | ✅ | **保留**＋加本季成長 |
+| Home 手機頁首 | `12.8萬 支持者` | `meta.fans` | ✅ | 保留（只加 testid） |
+| Home mode card | `👁 2,041`／`訓練`／`賽季` | **寫死** | ❌ | **移除** |
+| SponsorScreen 頁首 | `目前粉絲 128,000` | `meta.fans` | ✅ | 保留、加粗數字 |
+| SponsorScreen 卡片 | `需 185,000 粉絲 / 15勝` | `sponsorEligibility` | ✅ | **拆成粉絲／勝場兩條，寫出還差多少** |
+| SponsorScreen 現役卡 | `特殊加成：訓練效果 +15%` | `SPONSORS[].perk` | ❌ **無實作** | **移除**，換成合約狀態 |
+| SponsorScreen 詳情 | `特殊加成 <perk>` | 同上 | ❌ | **換成粉絲／勝場門檻** |
+| RewardReceiptPanel | `粉絲 +N` | 結算收據 | ✅ | 保留（F0 已做） |
+| MobaFlowScreens | `粉絲 +fanGain` | 結算值 | ✅ | 保留（F0 已做） |
+| TeamScreen | `粉絲 128,000` | `meta.fans` | ✅ | 保留 |
+| Season Recap | **沒有粉絲資訊** | — | — | **新增本季成長** |
+| RecapPrize | 只有獎金 | 收據 | ✅ | **加賽季粉絲獎勵（讀收據）** |
+| `platform/DashboardScreen.jsx` | `粉絲 128k` | `meta.fans` | ✅ | **未路由**（AppShell 用 `screens/`），不動 |
+
+### 做了什麼
+
+**新增 `platform/fans/fanPresentation.js`（純函式 read-model）**
+
+`formatFans()`／`seasonFanGrowth()`／`sponsorRequirementView()`。
+**不算任何粉絲數值**，只做相減與格式化；資格判定仍完全交給 `sponsorEligibility()`。
+
+**Home**
+- hero 的支持者旁加「本季 +N」（只在拿得到基準時）
+- **移除三張 mode card 的假 `audience`**——**刻意不改接 `meta.fans`**（Fans ≠ 觀眾）
+- 手機頁首**只顯示總數**：那是三欄緊湊列，塞第四個數字會擠壞
+
+**Sponsor**
+- 卡片拆成粉絲／勝場兩條，各自標「✓ 達標」或「還差 N」，並標 `data-blocked-by`
+- **移除所有假 perk 文案**（現役卡換成合約狀態，詳情換成門檻資訊）
+
+**Season Recap（新元件 `RecapFans.jsx`）**
+- 有快照 ⇒ 起點／目前／本季成長
+- `null` ⇒ **只顯示總數** ＋「本季成長統計將從下一賽季開始」
+- MOBA 與 CS 各用**自己的** `competitionView(mode).fansAtSeasonStart`
+- `RecapPrize` 加「賽季支持者獎勵」，**讀收據的 `fans`**，不查 `seasonFanAward` 表
+
+### 抓到並修好的一個真 bug
+
+`seasonFanGrowth()` 第一版用 `Number.isFinite(Number(v))` 判斷基準，
+而 **`Number(null) === 0`** ⇒ 舊存檔會被當成「起點 0」，賽季總結顯示假的
+**「本季 +143,000」**。這正是 F0 `sanitizeFans()` 踩過的同一個坑。
+已改成在 `Number()` **之前**擋掉 `null` / `undefined` / 布林 / 空字串。
+`check_fan_ui_f4` §12 就是為這條而寫。
+
+### 更新了兩條既有斷言的量測方式（原意保留）
+
+| gate | 原本 | 改成 | 為什麼 |
+|---|---|---|---|
+| `check_fan_system` §13e | 掃到 `fansAtSeasonStart` 就算違規 | 只抓**賦值** | F4 起畫面**合法地讀**它；標籤講的是「不**修改**快照」 |
+| `browser_check_fan_f1` ×3 | 比對卡片文案 | 改讀 `data-fans-ok` / `data-wins-ok` | F4 改了文案；測試不該綁在任何一版措辭上 |
+
+`browser_check_fan_f1` 一度 17→11，改用 data 屬性後回到 **17/17**，
+而且從此不會再因為文案調整而假紅。
+
+### 驗證（全部實跑）
+
+| 項目 | 結果 |
+|---|---|
+| `check_fan_ui_f4`（新增） | **35/35** |
+| `browser_check_fan_ui_f4`（新增，1280＋390） | **29/29** |
+| `check_fan_system` | 66/66 |
+| `check_fan_f0` | 33/33 |
+| `browser_check_fan_f1` | 17/17 |
+| `home_team_contract` / `competition_shared_ui` | PASS ／ 28/28 |
+| `result_flow_o71` / `growth_ui_p1` | 27/27 ／ 80/80 |
+| `progress25` / `finance_n3` / `talent27` | 33 ／ 40 ／ 37 |
+| `competition_q1/q3/q4/q5/q6` | 93/91/68/69/57 |
+| `cs_season_contract` / `cs_season_lifecycle` / `cs_major` | PASS ／ 54/54 ／ 74/74 |
+| `regress` / `regress2` | 15/15 ／ 8/8 |
+| `npm run build` | ✓ built in 10.12s |
+
+**Mutation sentinel（四個都有鑑別力）**
+
+| 注入 | 結果 |
+|---|---|
+| Sponsor UI 自己算 eligibility | 35 → 34 |
+| fake audience 接回 Home | 35 → 33 |
+| old-save null 顯示 +0 | 35 → 34 |
+| perk text 接回 SponsorScreen | 35 → 34 |
+
+### Browser smoke 的一個取捨（誠實揭露）
+
+原本想在 smoke 裡真的把一季打完再看 Recap，但 `advanceDay()` 會停在
+玩家自己的比賽日（`stoppedBy`）——那是先前證實過的兔子洞。
+改成**用 app 自己的 React 把 `RecapFans` 掛到獨立 root**，用真實 props 驗真實 DOM，
+另外用 Store 直接驗「讀 view 五次不回填快照」。
+⇒ 「畫面長怎樣」與「會不會偷改存檔」都有證據，但**沒有**打過一整季的端到端證明。
+
+### 產品用語 review
+
+- Home / 戰隊詳情：**支持者**；Result：**粉絲**；Sponsor：**目前粉絲／還差 N**
+- 「聲望」已完全從玩家可見文字消失（`reputation` schema 欄位保留）
+- Home 沒有新增卡片；粉絲資訊是既有元素上的小字
+
+### 沒有做
+
+未動 `fanGain` / `fanSourceWeight` / `seasonFanAward` / `reqFans` / `economyConfig`
+（`git diff` 五份全部零改動，verifier §19/20 守著）。
+未動 `SeasonState` / `seasonStateV2` / `seasonSealingV2` / `awardPolicy`。
+未建 Fan Center。未刪 `SPONSORS[].perk` schema。
+**未開始 F3 / Fan v1.1。**
