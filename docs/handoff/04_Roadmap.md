@@ -535,6 +535,28 @@ Codex UI Migration 目前暫停開新 Sprint。Claude Code 另一工作線正在
 
 `playtest` 是真的關卡：F3 要不要做，取決於玩家在 F1–F4 之後有沒有真的感覺到粉絲的存在。
 
+### Fan Contract Addendum（2026-08-23 凍結）
+
+長期 Sponsor 關係分三層，**只有 A 層在 Fan v1 落地**：
+
+| 層 | 決定什麼 | 時間性 | 狀態 |
+|---|---|---|---|
+| **A** Fans | Sponsor 基本品牌資格 / eligibility | 永久累積 | ✅ F1 實作 |
+| **B** Season Performance | 續約、特殊 Sponsor 條件、賽季型合作 | 每季重新評估 | ⏸ 記錄方向，不實作 |
+| **C** Form / Hype | 短期熱度推導值 | 會消退 | ⏸ 記錄方向，不實作 |
+
+> **「Fans 決定品牌有多大；當季成績決定現在有多值得合作。」**
+
+Fans 是**永久品牌資產**：不歸零、不每日衰退、跨賽季累積。
+但**永久 Fans ≠ 永久享有所有 Sponsor 商業利益**——品牌讓你有資格上談判桌，
+談到什麼要看當季。
+
+🔒 **F1 不得偷塞 B / C 層**（會讓 playtest 無法歸因）。
+🔒 **不得新增永久 reputation 欄位**（`meta.reputation` 已於 F0 deprecated）。
+🔒 **比賽獎金仍由競技成績決定**，不得變成「粉絲越多獎金越高」。
+
+完整契約：`docs/design/粉絲系統架構.md` §〇之三。
+
 ### F1 的驗收目標（裁決 B）
 
 `0 / 100k / 180k / 300k / 500k / 800k` **只是 calibration baseline，不是最終 balance**。
