@@ -247,14 +247,34 @@ export function applyCourse(player, courseId) {
   };
 }
 
-/** 贊助商（Legacy SPONSORS 逐字；weekly/signBonus 單位為「萬」） */
+/**
+ * 贊助商（Legacy SPONSORS 逐字；weekly/signBonus 單位為「萬」）。
+ *
+ * ⚠ **`reqFans` 於 Fan System F1（2026-08-23）重新校準**，其餘欄位維持 Legacy 原值。
+ *   舊值是 0/500/800/1500/2000/3000，而 `DEFAULT.meta.fans` 種子是 128,000
+ *   ⇒ 六個門檻從開局第一秒就全部達標，粉絲對贊助的影響等於零。
+ *   裁決 2 保留 128k 量級（不動舊存檔）⇒ 修法是把門檻放大到同一個數量級。
+ *
+ *   新值**不是照抄某組基準**，是從可達性反推的（裁決 B）：
+ *     · 玩家一季只打 **14 場**正式聯賽（8 隊雙循環；全聯盟 56 場不是玩家的場數）
+ *     · 一季粉絲收入 ≈ 保守 6.4k ／ 一般 9.7k ／ 良好 20.5k
+ *     · ⇒ 中階 ~1 個良好賽季、頂階 ~3.5 個良好賽季
+ *   完整推導與可重跑的證據：`node tools/fan_calibration.mjs`。
+ *
+ * 🔒 **第二階（redbull）的 `reqFans` 必須 ≤ 起始 fans**，否則開局只簽得起
+ *   `local`（週收 6 萬），而扶持贊助 8 週到期後是 −11.7 萬／週 ⇒ 死亡螺旋。
+ *   由 `tools/check_fan_system.mjs` 守住，不靠人記得。
+ *
+ * ⚠ `reqWins` 是另一道獨立閘門，**F1 不動**。
+ * ⚠ 本陣列**不是**依 `reqFans` 排序，任何依賴陣列順序的實作都是錯的。
+ */
 export const SPONSORS = [
-  { id: "mamimoth", name: "MAMIMOTH 能量飲",  emoji: "🐘", tier: "頂級", weekly: 25, signBonus: 80,  weeks: 12, reqFans: 2000, reqWins: 15, color: "#ef4444", perk: "選手體力恢復 +10%" },
-  { id: "vortex",   name: "Vortex 電競椅",    emoji: "🪑", tier: "頂級", weekly: 20, signBonus: 60,  weeks: 10, reqFans: 1500, reqWins: 10, color: "#a78bfa", perk: "訓練效果 +15%" },
-  { id: "hyperx",   name: "HyperX 外設",      emoji: "🎧", tier: "中級", weekly: 15, signBonus: 40,  weeks: 8,  reqFans: 800,  reqWins: 5,  color: "#fbbf24", perk: "選手士氣 +5" },
-  { id: "redbull",  name: "紅牛運動",         emoji: "🐂", tier: "中級", weekly: 12, signBonus: 30,  weeks: 8,  reqFans: 500,  reqWins: 3,  color: "#3b82f6", perk: "比賽獎金 +10%" },
+  { id: "mamimoth", name: "MAMIMOTH 能量飲",  emoji: "🐘", tier: "頂級", weekly: 25, signBonus: 80,  weeks: 12, reqFans: 185_000, reqWins: 15, color: "#ef4444", perk: "選手體力恢復 +10%" },
+  { id: "vortex",   name: "Vortex 電競椅",    emoji: "🪑", tier: "頂級", weekly: 20, signBonus: 60,  weeks: 10, reqFans: 170_000, reqWins: 10, color: "#a78bfa", perk: "訓練效果 +15%" },
+  { id: "hyperx",   name: "HyperX 外設",      emoji: "🎧", tier: "中級", weekly: 15, signBonus: 40,  weeks: 8,  reqFans: 150_000,  reqWins: 5,  color: "#fbbf24", perk: "選手士氣 +5" },
+  { id: "redbull",  name: "紅牛運動",         emoji: "🐂", tier: "中級", weekly: 12, signBonus: 30,  weeks: 8,  reqFans: 100_000,  reqWins: 3,  color: "#3b82f6", perk: "比賽獎金 +10%" },
   { id: "local",    name: "在地網咖",         emoji: "🖥️", tier: "入門", weekly: 6,  signBonus: 10,  weeks: 6,  reqFans: 0,    reqWins: 0,  color: "#71717a", perk: "無特殊加成" },
-  { id: "crypto",   name: "加密貨幣交易所",   emoji: "₿",  tier: "頂級", weekly: 35, signBonus: 100, weeks: 6,  reqFans: 3000, reqWins: 20, color: "#f59e0b", perk: "高風險高報酬" },
+  { id: "crypto",   name: "加密貨幣交易所",   emoji: "₿",  tier: "頂級", weekly: 35, signBonus: 100, weeks: 6,  reqFans: 200_000, reqWins: 20, color: "#f59e0b", perk: "高風險高報酬" },
 ];
 export const sponsorById = (id) => SPONSORS.find((s) => s.id === id) || null;
 

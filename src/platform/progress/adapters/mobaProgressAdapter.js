@@ -19,6 +19,7 @@ import {
   teamRewardsFor, mobaPerfFactor, playerXpFor,
   MOBA_REWARD_FORMULA_VERSION, PLAYER_XP_FORMULA_VERSION,
 } from "../rewardFormulas.js";
+import { fanWeightForOrigin } from "../fanSourceWeight.js";
 
 /** 我方固定為藍隊（與 roster.js / draftRoster 一致）。 */
 const HOME = "blue";
@@ -63,7 +64,12 @@ export function mobaResultToTransaction(br, ctx = {}) {
   // ── 團隊獎勵（Legacy updateEconomy 逐字；marginF 用 Legacy 非 CS 分支的語意）──
   //    Legacy deriveMatchContext：非 CS ⇒ margin = win ? 3 : 0 → marginF = 3/8 或 0。
   const marginF = win ? 3 / 8 : 0;
-  const team = teamRewardsFor({ win, marginF, streak: ctx.streak ?? 0, fansNow: ctx.fansNow ?? 0 });
+  //  F1：來源權重（練習 < 聯賽 < Major）。origin 由呼叫端從**現役場次**取得；
+  //  拿不到就是練習賽（保守方向，見 fanSourceWeight.js）。契約欄位一個都沒加。
+  const team = teamRewardsFor({
+    win, marginF, streak: ctx.streak ?? 0, fansNow: ctx.fansNow ?? 0,
+    fanSourceWeight: fanWeightForOrigin(ctx.origin ?? null),
+  });
 
   // ── 選手 XP（只給「我方且在名單裡」的選手；引擎的紅隊/示範選手不入帳）──
   const ours = (br.players ?? []).filter((p) => p.side === HOME);

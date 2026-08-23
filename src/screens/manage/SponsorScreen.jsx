@@ -16,7 +16,7 @@ import { standings } from "../../platform/seasonData.js";
 import { SPONSORS } from "../../data/playerModel.js";
 //  N3.1：目前合作中的贊助可能是**開局扶持方案**（不在市集目錄裡），
 //  所以解析要用統一入口；下方市集列表仍然只列 SPONSORS。
-import { resolveSponsor } from "../../platform/economy/sponsors.js";
+import { resolveSponsor, sponsorEligibility } from "../../platform/economy/sponsors.js";
 import { GC } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
 
@@ -33,7 +33,9 @@ export default function SponsorScreen({ onBack }) {
   const wins = blue.wins ?? 0;
 
   const active = activeRef ? { ...resolveSponsor(activeRef.id), ...activeRef } : null;
-  const qualifies = (sp) => fans >= sp.reqFans && wins >= sp.reqWins;
+  //  F1：資格**不在畫面計算**——與 `signSponsor` 共用同一份規則，
+  //  避免畫面說「條件達標」而 Store 拒簽（見 `economy/sponsors.js`）。
+  const qualifies = (sp) => sponsorEligibility(sp, { fans, wins }).ok;
 
   return (
     <ManageFrame title="贊助商" subtitle="SPONSORS" onBack={onBack}>
@@ -78,7 +80,7 @@ export default function SponsorScreen({ onBack }) {
                   {isActive && <span style={{ color: GC.green, fontSize: 8 }}>合作中</span>}
                 </div>
                 <div style={{ color: GC.gray, fontSize: 9, marginTop: 2 }}>每週 +${sp.weekly}萬 · 簽約金 ${sp.signBonus}萬 · {sp.weeks}週</div>
-                <div style={{ color: ok ? GC.green : GC.red, fontSize: 8, marginTop: 2 }}>{ok ? "✓ 條件達標" : `需 ${sp.reqFans}粉絲 / ${sp.reqWins}勝`}</div>
+                <div style={{ color: ok ? GC.green : GC.red, fontSize: 8, marginTop: 2 }}>{ok ? "✓ 條件達標" : `需 ${sp.reqFans.toLocaleString()} 粉絲 / ${sp.reqWins}勝`}</div>
               </div>
               <span style={{ color: GC.gold, fontSize: 11, fontWeight: 800, fontFamily: "monospace" }}>${sp.weekly}/週</span>
             </button>
@@ -111,7 +113,7 @@ export default function SponsorScreen({ onBack }) {
                 簽約 · 立即獲得 ${sel.signBonus}萬
               </button>
             ) : (
-              <div style={{ textAlign: "center", color: GC.red, fontSize: 11, padding: 8 }}>條件未達標（需 {sel.reqFans} 粉絲 / {sel.reqWins} 勝）</div>
+              <div style={{ textAlign: "center", color: GC.red, fontSize: 11, padding: 8 }}>條件未達標（需 {sel.reqFans.toLocaleString()} 粉絲 / {sel.reqWins} 勝）</div>
             )}
           </div>
         </div>

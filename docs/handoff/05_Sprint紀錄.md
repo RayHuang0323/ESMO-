@@ -12681,3 +12681,151 @@ branch `feature/fan-f0-sanitize`，基準 `origin/main @ ae9295e`。規格：`do
 - Local 與 production Practice → Mirage → Battle smoke 均確認 BLUE／RED 各 5 人可見，auto-camera recovery 正常，console uncaught error 為 0；alive-off-camera local runtime snapshot 為空。
 - CS-C2A rigged presentation gate 在目前正式 main 不適用（N/A）；本輪未帶入 C2A／C2B、人物資產或其他視覺工作。
 - P0 已達成 **CLOSED ON PRODUCTION**。既有 R63 ActiveMatch 12/13 fast-finish assertion 仍為獨立既有紅燈，本輪未修改。
+
+---
+
+## Fan System F1 — Sponsor eligibility ＋ fan source weighting（2026-08-23）
+
+branch `feature/fan-f1-eligibility`，基準 `origin/main @ ab627ec`。
+規格：`docs/design/粉絲系統架構.md`（§〇之二 裁決 B、§〇之三 Addendum、§4.1、§4.2）。
+
+### 做了什麼
+
+**1. Sponsor eligibility 收斂成一份規則**
+
+F1 之前同一條規則寫在兩個地方——`profileStore.signSponsor()` 與
+`SponsorScreen.jsx` 的 `const qualifies = (sp) => fans >= sp.reqFans && wins >= sp.reqWins`。
+`reqFans` 全部達標時看不出來；粉絲**真的**開始擋人之後，這就是玩家會踩到的 bug
+（畫面說「條件達標」而 Store 拒簽）。
+
+新增 `economy/sponsors.js → sponsorEligibility(sponsor, { fans, wins })`，
+Store 判定與畫面顯示都用它，**畫面不自己算**。回傳 `{ ok, fansOk, winsOk, fansShort, winsShort }`
+——只回報「夠不夠」，**不回報「值多少」**（價碼分級是 Fan v1.1）。
+
+**2. `reqFans` 重新校準（從可達性反推，不是照抄 baseline）**
+
+| 贊助商 | tier | 週收 | 舊 | **新** |
+|---|---|---|---|---|
+| 在地網咖 | 入門 | 6 萬 | 0 | **0** |
+| 紅牛運動 | 中級 | 12 萬 | 500 | **100,000** |
+| HyperX 外設 | 中級 | 15 萬 | 800 | **150,000** |
+| Vortex 電競椅 | 頂級 | 20 萬 | 1,500 | **170,000** |
+| MAMIMOTH 能量飲 | 頂級 | 25 萬 | 2,000 | **185,000** |
+| 加密貨幣交易所 | 頂級 | 35 萬 | 3,000 | **200,000** |
+
+`reqWins`（0/3/5/10/15/20）**未動**——它是另一道獨立閘門。
+
+**3. Fan source weighting（練習 < 聯賽 < Major）**
+
+新增純模組 `platform/progress/fanSourceWeight.js`：
+
+- `FAN_SOURCE_WEIGHT` = 練習 **1.0** ／ 聯賽 **5.0** ／ Major **8.5**
+- `fanSourceFromOrigin(origin)`：`kind: "ticket"` ⇒ 練習；`kind: "fixture"` ⇒ 依
+  `competitionId` 最後一段的 tier 決定聯賽或 Major
+- `tier` 對應：`regular`/`qualifier` → 聯賽；`major`/`championship` → Major
+  （**championship 併進 major 桶，F1 不發明第四級**）
+- 拿不到 origin ⇒ 練習賽倍率（**保守方向**，避免「查不到就當大賽算」的反向漏洞）
+
+接線方式：
+- `teamRewardsFor({ ..., fanSourceWeight = 1 })` ——**只乘粉絲，不乘獎金**
+  （Addendum §5：獎金由競技成績決定）。預設 1 ⇒ 既有呼叫端逐值不變。
+- 兩個 adapter 收 `ctx.origin`，共用同一支 `fanWeightForOrigin`（沒有第二套公式）
+- 兩個呼叫端（`useBattleFeed` / `settleCsMatch`）從 `store.matchmaking.session.origin` 取
+
+🔒 **契約零改動**：`BattleResult.v2` / `CsMatchResult.v1` / `MatchProgressTransaction.v1`
+一個位元都沒動（`check_talent27` §26–28 仍全綠）。來源資訊本來就在 `MatchOrigin.v1` 裡。
+
+### 校準證據（`node tools/fan_calibration.mjs` 可重跑）
+
+**關鍵事實：玩家一季只打 14 場正式聯賽**（8 隊雙循環）。
+全聯盟 56 場**不是**玩家的場數——這兩個數字差 4 倍，用錯會讓整條階梯算錯。
+
+單場 fanGain（勝場，marginF=0.4）：
+
+| 來源 | 連勝 0 | 連勝 3 | 體感目標 | |
+|---|---|---|---|---|
+| 練習 | 176 | 251 | 數百 | ✅ |
+| 聯賽 | 880 | 1,255 | 800–1500 | ✅ |
+| Major | 1,496 | 2,134 | 1500–2500 | ✅ |
+
+每季粉絲收入：**保守 6,433 ／ 一般 9,723 ／ 良好 20,494**
+
+各階可達季數：
+
+| 贊助商 | reqFans | 保守 | 一般 | 良好 |
+|---|---|---|---|---|
+| 在地網咖 | 0 | 開局 | 開局 | 開局 |
+| 紅牛運動 | 100,000 | 開局 | 開局 | 開局 |
+| HyperX | 150,000 | 3.4 | 2.3 | **1.1** |
+| Vortex | 170,000 | 6.5 | 4.3 | 2.0 |
+| MAMIMOTH | 185,000 | 8.9 | 5.9 | 2.8 |
+| 加密貨幣 | 200,000 | 11.2 | **7.4** | **3.5** |
+
+驗收標準（裁決 B）六條全過：
+① 開局即有可維持財務的正式贊助（紅牛 100k ≤ 起始 128k、週收 12 萬 > 支出 17.7 萬 − 基礎營收 6 萬）
+② 第一個 Fan-gated 升級第一季走完 44%（一般情境）
+③ 中階 1.1 個良好賽季
+④ 頂階 3.5 個良好賽季（落在 3–5）
+⑤ 一般情境 7.4 季碰頂階（< 8，不落在被否決的 8–15 區間）
+🔒 hard constraint：第二階 100,000 ≤ 起始 128,000
+
+> 保守情境（40% 勝率）需要 11.2 季才到頂階——**刻意不設門檻**：
+> 打不贏的隊伍拿不到頂級贊助是正確的產品行為，不是校準失敗。
+
+### 驗證（全部實跑）
+
+| 項目 | 結果 |
+|---|---|
+| `check_fan_system`（新增） | **21/21** |
+| `check_fan_f0` | 33/33 |
+| `check_progress25` | 33/33 |
+| `check_finance_n3` / `check_finance_n` | 40/40 ／ 32/32 |
+| `check_home_team_contract` | PASS |
+| `check_authoritative_o7` | 48/48 |
+| `check_competition_q1` / `q3` / `q4` | 93/93 ／ 91/91 ／ 68/68 |
+| `check_cs_season_contract` | PASS |
+| `check_result_flow_o71` | 27/27 |
+| `check_growth_loop_p0` / `check_growth_ui_p1` | 25/25 ／ 80/80 |
+| `regress` / `regress2` | 15/15 ／ 8/8 |
+| `browser_check_fan_f1`（新增） | **17/17**（1280 ＋ 390） |
+| `npm run build` | ✓ built in 12.47s |
+
+**Mutation sentinel（三個都有鑑別力）**
+
+| 注入的錯誤 | 結果 |
+|---|---|
+| 權重順序反轉（practice 9.9 / major 0.5） | 21 → **19**（§3a、§3b 紅） |
+| `reqFans` 第二階調到 900,000 | 21 → **20**（§4 紅） |
+| 把 `perk` 接進 `trainingCalculator` | 21 → **20**（§5 紅） |
+
+三者還原後皆回到 21/21。
+
+### 過程中修正的兩個我方錯誤（不是產品缺陷）
+
+**(a) browser smoke 第一版斷言錯了。** 我假設「粉絲拉到 900 萬 ⇒ 贊助全解鎖」，
+實際仍有 5 個鎖住——因為 **`reqWins` 是獨立閘門**，0 勝的新局本來就簽不了。
+產品行為正確，是我的期待錯了。改成驗「粉絲那一維真的翻轉」
+（HyperX 需 150,000：128k ⇒ 差 22,000 不合格；900 萬 ⇒ 合格），並加一條
+明確斷言 reqWins 仍在擋人。
+
+**(b) 靜態掃描一律先剝註解。** 這個 repo 的註解裡大量出現 fans / perk / reputation，
+不剝註解的 grep 會把「我們刻意不做這件事」的說明判成「做了這件事」。
+`check_fan_system` 內建 `codeOnly()`，同時剝掉註解與字串字面值。
+
+### 沒有做（F1 邊界）
+
+- 未碰 `economyConfig`（**不需要**，見下）
+- 未做 Season Performance（B 層）、Form / Hype（C 層）
+- 未做 Sponsor pricing（v1.1）、未碰 Sponsor perk（另案）
+- 未新增任何永久 reputation / hype 欄位
+- 未讓粉絲影響獎金、選手數值、勝率、battle engine
+- 未做 fans decay、未建 Fan Center
+- 未改三支凍結契約檔
+- **未開始 F2 / F3 / F4**
+
+### economyConfig：不需要動
+
+裁決 B 的目標①要求「開局 8 週內有可維持基本財務的正式 Sponsor 路徑」。
+把第二階訂在 100,000（≤ 起始 128,000）之後，開局即可簽紅牛（週收 12 萬），
+`6 + 12 = 18 萬 > 支出 17.7 萬` ⇒ 週淨額轉正，**不需要調整任何經濟參數**。
+風險 R9（F1 可能牽動 economyConfig）**未觸發**。

@@ -17,6 +17,7 @@ import {
   teamRewardsFor, csPerfFactor, playerXpFor,
   CS_REWARD_FORMULA_VERSION, PLAYER_XP_FORMULA_VERSION,
 } from "../rewardFormulas.js";
+import { fanWeightForOrigin } from "../fanSourceWeight.js";
 import {
   CS_LEARNING_LIFECYCLE_FORMULA_VERSION,
   learningAdjustedXp,
@@ -40,7 +41,12 @@ export function csResultToTransaction(cr, ctx = {}) {
   //    只有 marginF 依 CS 的比分語意（回合差 / 8）——這正是兩款遊戲不失衡的關鍵。
   const margin = Math.abs((cr.ourScore ?? 0) - (cr.enemyScore ?? 0));
   const marginF = Math.min(margin / 8, 1);
-  const team = teamRewardsFor({ win, marginF, streak: ctx.streak ?? 0, fansNow: ctx.fansNow ?? 0 });
+  //  F1：來源權重（練習 < 聯賽 < Major）。origin 由呼叫端從**現役場次**取得；
+  //  拿不到就是練習賽（保守方向，見 fanSourceWeight.js）。契約欄位一個都沒加。
+  const team = teamRewardsFor({
+    win, marginF, streak: ctx.streak ?? 0, fansNow: ctx.fansNow ?? 0,
+    fanSourceWeight: fanWeightForOrigin(ctx.origin ?? null),
+  });
 
   // ── 選手 XP ──
   const mvpId = cr.mvp?.playerId ?? null;

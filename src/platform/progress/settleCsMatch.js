@@ -32,6 +32,8 @@ export function settleCsMatch(csResult) {
     players: store.players ?? [],
     streak: csWinStreak(hist),
     fansNow: store.meta?.fans ?? 0,
+    //  F1 粉絲來源權重：與 MOBA 同一支 `fanWeightForOrigin`，不另寫一套。
+    origin: store.matchmaking?.session?.origin ?? null,
   });
   if (!tx) return { ok: false, applied: false, alreadyApplied: false, errors: ["無法建立 transaction"] };
 

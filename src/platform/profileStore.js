@@ -40,6 +40,7 @@ import { INITIAL_PLAYERS } from "../data/players.js";
 import {
   ROSTER_CAP, sponsorById, courseById, applyCourse, conditionFor,
 } from "../data/playerModel.js";
+import { sponsorEligibility } from "./economy/sponsors.js";
 import { CS_RESULT_SCHEMA } from "./contracts/CsMatchResult.js";
 import { applyProgressToState, findReceipt } from "./progress/applyMatchProgress.js";
 import { totalXpForLevel, levelFromTotalXp } from "./progress/playerLevel.js";
@@ -2829,7 +2830,9 @@ export const useProfileStore = create((rawSet, get) => {
   signSponsor(sponsorId, ctx = { fans: 0, wins: 0 }) {
     const sp = sponsorById(sponsorId);
     if (!sp || get().activeSponsor) return false;
-    if ((ctx.fans ?? 0) < sp.reqFans || (ctx.wins ?? 0) < sp.reqWins) return false;
+    //  F1：資格判定收斂到 `economy/sponsors.js → sponsorEligibility()`——
+    //  畫面與 Store 用同一份規則，不再各寫一次（見該函式的說明）。
+    if (!sponsorEligibility(sp, { fans: ctx.fans ?? 0, wins: ctx.wins ?? 0 }).ok) return false;
     const week = get().meta.week ?? 1;
     set({
       activeSponsor: { id: sp.id, weeksLeft: sp.weeks, signedWeek: week },

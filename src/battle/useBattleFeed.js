@@ -76,6 +76,9 @@ export function useBattleFeed(draft = null, { roster = null, tacticId = null } =
           lineup: profile.lineup ?? null,
           streak: blueWinStreak(season.history ?? []),   // MOBA 自己的連勝（不讀 CS）
           fansNow: profile.meta?.fans ?? 0,
+          //  F1 粉絲來源權重：origin 取自**現役場次**（MatchOrigin.v1）。
+          //  沒有場次（debug harness / 舊流程）⇒ null ⇒ 當練習賽算，不會多發。
+          origin: profile.matchmaking?.session?.origin ?? null,
         });
         //  ── Milestone O7.1：改走**唯一結算邊界** ────────────────────────
         //  有場次 ⇒ reportMatchResult（場次綁定／防重送／防衝突／追蹤鏈）；

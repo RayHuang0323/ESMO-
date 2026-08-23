@@ -52,5 +52,46 @@ export function resolveSponsor(id) {
   return SPONSORS.find((s) => s.id === id) ?? STARTER_SPONSORS[id] ?? null;
 }
 
+/**
+ * 贊助資格判定（Fan System F1）——**唯一的資格規則**。
+ *
+ * ── 為什麼要有這一支 ──────────────────────────────────────────────────────
+ * F1 之前，同一條規則寫在兩個地方：
+ *   · `profileStore.signSponsor()`：`ctx.fans < sp.reqFans || ctx.wins < sp.reqWins` → 拒絕
+ *   · `SponsorScreen.jsx`：`const qualifies = (sp) => fans >= sp.reqFans && wins >= sp.reqWins`
+ * 兩份實作只要有一份改了，畫面就會說「條件達標」而 Store 拒簽（或反過來）。
+ * `reqFans` 全部達標的時候看不出來；F1 讓粉絲**真的**擋人之後，這就是會被玩家踩到的 bug。
+ *
+ * 所以資格集中在這裡：Store 判定用它，畫面顯示也用它，**畫面不自己算**。
+ *
+ * ⚠ 只回報「夠不夠」，不回報「值多少」——價碼分級是 Fan v1.1（裁決 3）。
+ * ⚠ `fans` 必須是 canonical 的 `meta.fans`，呼叫端不得自己另算一份粉絲數。
+ *
+ * @param {object} sponsor  SPONSORS 之一（扶持方案沒有門檻，一律視為不可主動簽）
+ * @param {{fans:number, wins:number}} ctx
+ * @returns {{ok:boolean, fansOk:boolean, winsOk:boolean, fansShort:number, winsShort:number}}
+ */
+export function sponsorEligibility(sponsor, ctx = {}) {
+  const deny = { ok: false, fansOk: false, winsOk: false, fansShort: 0, winsShort: 0 };
+  if (!sponsor) return deny;
+  //  扶持方案是開局贈與，不走資格判定，也不可主動簽。
+  if (isStarterSponsor(sponsor.id)) return deny;
+
+  const fans = Number.isFinite(ctx.fans) ? ctx.fans : 0;
+  const wins = Number.isFinite(ctx.wins) ? ctx.wins : 0;
+  const reqFans = Number.isFinite(sponsor.reqFans) ? sponsor.reqFans : 0;
+  const reqWins = Number.isFinite(sponsor.reqWins) ? sponsor.reqWins : 0;
+
+  const fansOk = fans >= reqFans;
+  const winsOk = wins >= reqWins;
+  return {
+    ok: fansOk && winsOk,
+    fansOk,
+    winsOk,
+    fansShort: Math.max(0, reqFans - fans),
+    winsShort: Math.max(0, reqWins - wins),
+  };
+}
+
 /** 這個 id 是不是開局扶持方案（市集不顯示、不可主動簽）。 */
 export const isStarterSponsor = (id) => !!STARTER_SPONSORS[id];

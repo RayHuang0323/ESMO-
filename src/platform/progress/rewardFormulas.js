@@ -41,7 +41,7 @@ const fin = (v, d = 0) => (Number.isFinite(v) ? v : d);
  * 比分語意算出來 → 保證「打一場 CS ≠ 打十場 MOBA」。
  * @returns {{ money:number, fans:number, prizeWan:number }} money 單位為「元」
  */
-export function teamRewardsFor({ win, marginF, streak, fansNow }) {
+export function teamRewardsFor({ win, marginF, streak, fansNow, fanSourceWeight = 1 }) {
   const eco = updateEconomy(
     {
       record: { streak: fin(streak, 0) },
@@ -53,10 +53,15 @@ export function teamRewardsFor({ win, marginF, streak, fansNow }) {
     },
     { win, marginF: clamp(fin(marginF, 0), 0, 1) }
   );
+  //  F1：來源權重**只乘粉絲**（練習 < 聯賽 < Major）。
+  //  ⚠ `prizeGain` 刻意不乘——獎金由競技成績決定，不由品牌或來源加碼
+  //    （Fan Contract Addendum §5）。把權重也套到獎金上，等於偷偷改了經濟平衡。
+  //  ⚠ 權重預設 1 ⇒ 沒有傳 `fanSourceWeight` 的既有呼叫端行為**逐值不變**。
+  const w = Number.isFinite(fanSourceWeight) && fanSourceWeight > 0 ? fanSourceWeight : 1;
   return {
     prizeWan: eco.prizeGain,          // Legacy 以「萬」計價
     money: eco.prizeGain * 10_000,    // profileStore.finance 以「元」存放
-    fans: eco.fanGain,
+    fans: Math.round(eco.fanGain * w),
   };
 }
 
