@@ -12673,3 +12673,11 @@ branch `feature/fan-f0-sanitize`，基準 `origin/main @ ae9295e`。規格：`do
 - Identity bug：CS-A2 已關閉；`effectiveRoster`、authoritative frame 與 renderer entity identity 維持一致，identity miss 不再當作死亡。
 - Camera viewport bug：P0 runtime 證明自動導播的 duel／hotspot framing 會讓整隊存活玩家落在 viewport 外；已加入 DEV visibility snapshot、alive-offscreen 診斷與 overview recovery。
 - 本次以最新 `origin/main` 的 primitive FPS renderer 做最小 forward-port，未帶入尚未整合的 C2A rigged pipeline；不修改 Simulation、MR12、Competition、Training 或 Fan F0。
+
+## CS-P0 Visibility Final Integration / Deploy（2026-08-23）
+
+- `origin/main@ab627ec` 與 candidate `68125dd` 無新的 FPS semantic conflict；以最小整合方式正式推送至 `origin/main@68125dd`。
+- 本次 P0 的 production root cause 是 auto-camera duel／hotspot framing 將存活玩家置於 viewport 外；不是 identity、death lifecycle 或 renderer entity missing。
+- Local 與 production Practice → Mirage → Battle smoke 均確認 BLUE／RED 各 5 人可見，auto-camera recovery 正常，console uncaught error 為 0；alive-off-camera local runtime snapshot 為空。
+- CS-C2A rigged presentation gate 在目前正式 main 不適用（N/A）；本輪未帶入 C2A／C2B、人物資產或其他視覺工作。
+- P0 已達成 **CLOSED ON PRODUCTION**。既有 R63 ActiveMatch 12/13 fast-finish assertion 仍為獨立既有紅燈，本輪未修改。
