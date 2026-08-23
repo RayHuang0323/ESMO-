@@ -12667,3 +12667,9 @@ branch `feature/fan-f0-sanitize`，基準 `origin/main @ ae9295e`。規格：`do
 - 未物理刪除 `reputation` 欄位、未做任何 save schema migration
 - 未建 `check_fan_system.mjs`（F5 從 F1 才開始；`check_fan_f0` 的斷言屆時併進去）
 - **未開始 F1**
+
+## CS-P0 Renderer Visibility Integration（2026-08-23）
+
+- Identity bug：CS-A2 已關閉；`effectiveRoster`、authoritative frame 與 renderer entity identity 維持一致，identity miss 不再當作死亡。
+- Camera viewport bug：P0 runtime 證明自動導播的 duel／hotspot framing 會讓整隊存活玩家落在 viewport 外；已加入 DEV visibility snapshot、alive-offscreen 診斷與 overview recovery。
+- 本次以最新 `origin/main` 的 primitive FPS renderer 做最小 forward-port，未帶入尚未整合的 C2A rigged pipeline；不修改 Simulation、MR12、Competition、Training 或 Fan F0。

@@ -7,6 +7,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import * as THREE from "three";
 import MatchSpeedControls from "../ui/MatchSpeedControls.jsx";
 import { checkFpsRendererIdentity } from "./fpsIdentity.js";
+import { checkFpsRuntimeVisibility, resolveFpsPresentationVisibility, summarizeFpsTeamVisibility } from "./fpsVisibilityDiagnostics.js";
 
 // EsportsFPS3D 已內聯於本檔（見下方 __FPS3D_MODULE），以符合單一檔案 artifact 限制
 /* ═══════════════════════════════════════════════════════════════
@@ -990,7 +991,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
     const camera=new THREE.PerspectiveCamera(42,1,0.1,600);
     // 球座標運鏡（phi 自天頂、theta 方位）
     const cam={theta:-Math.PI*0.62,phi:Math.PI*0.30,radius:88,tgt:new THREE.Vector3(0,3,0),
-               dTheta:-Math.PI*0.62,dPhi:Math.PI*0.30,dRadius:88,dTgt:new THREE.Vector3(0,3,0),autoFollow:true};
+               dTheta:-Math.PI*0.62,dPhi:Math.PI*0.30,dRadius:88,dTgt:new THREE.Vector3(0,3,0),autoFollow:true,overview:true};
 
     // ── 光照 ──
     scene.add(new THREE.AmbientLight(0x4a5878,0.55));
@@ -1019,7 +1020,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
     const fxGroup=new THREE.Group();scene.add(fxGroup);         // 槍火/煙/火/投擲/炸彈
 
     stateRef.current={renderer,scene,camera,cam,sun,tex,sphereGeo,beamGeo,worldGroup,routeGroup,playerGroup,fxGroup,
-      players:[],pools:{},raycastTargets:[],running:true,lastT:0,time:0,disposables:[]};
+      players:[],pools:{},raycastTargets:[],running:true,lastT:0,time:0,cameraRecoveryCount:0,disposables:[]};
 
     // ── 互動：拖曳旋轉 / 滾輪縮放 / 觸控 ──
     const el=renderer.domElement;let drag=null,pinch=null;
@@ -1084,7 +1085,13 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
       const sub=live.playing?clamp(st.subT,0,1):0;
       if(frame)updateDynamic(st,frame,nf,sub,live,W);
       updateCamera(st,frame,sub,dt,W);
+      if(frame&&import.meta.env?.DEV)publishFpsVisibilityDiagnostics(st,frame,fIdx);
       renderer.render(scene,camera);
+      if(import.meta.env?.DEV&&typeof document!=="undefined"){
+        const canvas=renderer.domElement;
+        canvas.dataset.esmoFpsVisibilityFrame=String(fIdx);
+        canvas.dataset.esmoFpsVisibility=st.visibilitySnapshot?.check?.ok?"ok":"violation";
+      }
     };
     st_start();
     function st_start(){const st=stateRef.current;st.running=true;st.raf=requestAnimationFrame(animate);}
@@ -1103,6 +1110,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
   // ── 依地圖重建靜態世界 + 重置選手/特效池 ──
   useEffect(()=>{
     const st=stateRef.current;if(!st)return;
+    st.cam.autoFollow=true;st.cam.overview=true;st.cam._ovBase=null;st.cameraRecoveryCount=0;
     const {scene,worldGroup,playerGroup,fxGroup,routeGroup,tex,sphereGeo}=st;
     const map=MAPS[mapKey];
     st.wallRects=map.walls.filter(w=>(w.hgt||7)>=5).map(w=>({x0:W.vx(w.x),z0:W.vz(w.y),x1:W.vx(w.x+w.w),z1:W.vz(w.y+w.h)}));
@@ -1307,6 +1315,70 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
 
 // ── 每幀更新：選手 + 特效（插值）──
 const _q=new THREE.Quaternion(),_vA=new THREE.Vector3(),_vB=new THREE.Vector3(),_dir=new THREE.Vector3(),_xAxis=new THREE.Vector3(1,0,0);
+
+function allFinite(values){return values.every((value)=>Number.isFinite(Number(value)));}
+function nodeVisibleThroughParents(node){
+  let current=node?.parent;
+  while(current){if(current.visible===false)return false;current=current.parent;}
+  return true;
+}
+function materialSnapshot(node){
+  let renderable=0,visibleRenderable=0,materialVisible=0,minOpacity=1,maxOpacity=0,frustumCulled=0;
+  node?.traverse?.((object)=>{
+    if(!object.isMesh&&!object.isLine&&!object.isSprite)return;
+    renderable+=1;if(object.visible)visibleRenderable+=1;if(object.frustumCulled)frustumCulled+=1;
+    const materials=Array.isArray(object.material)?object.material:[object.material];
+    materials.filter(Boolean).forEach((material)=>{
+      const opacity=Number.isFinite(Number(material.opacity))?Number(material.opacity):1;
+      minOpacity=Math.min(minOpacity,opacity);maxOpacity=Math.max(maxOpacity,opacity);
+      if(object.visible&&opacity>0)materialVisible+=1;
+    });
+  });
+  return {renderable,visibleRenderable,materialVisible,minOpacity,maxOpacity,frustumCulled};
+}
+function buildFpsVisibilitySnapshot(st,frame,frameIndex){
+  const frameById=new Map((frame?.players||[]).map((player)=>[player.id,player]));
+  const sceneVisible=st.scene?.visible!==false,playerGroupVisible=st.playerGroup?.visible!==false;
+  const cameraMatrix=new THREE.Matrix4().multiplyMatrices(st.camera.projectionMatrix,st.camera.matrixWorldInverse);
+  const frustum=new THREE.Frustum().setFromProjectionMatrix(cameraMatrix);
+  const players=st.players.map((P)=>{
+    const authoritative=frameById.get(P.id)||null,riggedActive=P.rigged?.mode==="rigged",activeRoot=riggedActive?P.rigged?.root:P.body;
+    P.g.updateWorldMatrix(true,true);activeRoot?.updateWorldMatrix?.(true,true);
+    const worldPosition=new THREE.Vector3();P.g.getWorldPosition(worldPosition);
+    const renderables=materialSnapshot(activeRoot),bounds=activeRoot?new THREE.Box3().setFromObject(activeRoot):new THREE.Box3();
+    const sphere=bounds.isEmpty()?null:bounds.getBoundingSphere(new THREE.Sphere()),inCameraFrustum=Boolean(sphere&&frustum.intersectsSphere(sphere));
+    const projected=worldPosition.clone().project(st.camera);
+    const inCameraViewport=allFinite([projected.x,projected.y,projected.z])&&projected.x>=-1&&projected.x<=1&&projected.y>=-1&&projected.y<=1&&projected.z>=-1&&projected.z<=1;
+    const occludedByWall=Boolean(st.wallRects?.some((rect)=>segHitsRect(st.camera.position.x,st.camera.position.z,worldPosition.x,worldPosition.z,rect)));
+    const matrixFinite=allFinite(P.g.matrixWorld.elements),transform={
+      position:{x:P.g.position.x,y:P.g.position.y,z:P.g.position.z},rotation:{x:P.g.rotation.x,y:P.g.rotation.y,z:P.g.rotation.z},
+      scale:{x:P.g.scale.x,y:P.g.scale.y,z:P.g.scale.z},
+    };
+    const identityMiss=Boolean(P.identityMiss||!authoritative);
+    const resolved=resolveFpsPresentationVisibility({entityExists:true,identityMiss,rootVisible:P.g.visible!==false,parentVisible:nodeVisibleThroughParents(P.g),sceneVisible,playerGroupVisible,primitiveBodyVisible:P.body?.visible!==false,riggedRootVisible:P.rigged?.root?.visible===true,riggedActive,transform});
+    return {
+      id:P.id,team:authoritative?.side||P.side,authoritativePresent:Boolean(authoritative),authoritativeAlive:authoritative?!authoritative.dead:null,
+      framePosition:authoritative?.pos?{x:authoritative.pos.x,y:authoritative.pos.y}:null,entityExists:true,entityType:riggedActive?"rigged":"primitive",
+      rootVisible:P.g.visible!==false,parentVisible:nodeVisibleThroughParents(P.g),bodyVisible:P.body?.visible===true,riggedRootVisible:P.rigged?.root?.visible===true,
+      presentationVisible:resolved.presentationVisible,visibilityReason:resolved.reason,identityMiss,scale:transform.scale,worldPosition:{x:worldPosition.x,y:worldPosition.y,z:worldPosition.z},
+      transformFinite:matrixFinite&&resolved.transformOk&&allFinite([worldPosition.x,worldPosition.y,worldPosition.z]),matrixWorldFinite:matrixFinite,
+      frustumCulled:renderables.frustumCulled,inCameraFrustum,inCameraViewport,screenNdc:{x:projected.x,y:projected.y,z:projected.z},occludedByWall,
+      renderableCount:renderables.renderable,visibleRenderableCount:renderables.visibleRenderable,materialVisible:renderables.materialVisible>0,materialOpacity:{min:renderables.minOpacity,max:renderables.maxOpacity},
+      deathPresentation:Boolean(authoritative?.dead),animationState:null,fallbackMode:"primitive",riggedActive,occlusion:{mode:"wall-fade-only",wallFadeActive:Boolean(st.fadeWalls?.some((wall)=>wall.cur<0.99)),playerFadeApplied:false},
+    };
+  });
+  const teams=summarizeFpsTeamVisibility(players),check=checkFpsRuntimeVisibility({players,requireCameraViewport:true});
+  return {frameIndex,round:frame?.rnd??null,identity:st.identity||null,scene:{visible:sceneVisible,playerGroupVisible},camera:{position:{x:st.camera.position.x,y:st.camera.position.y,z:st.camera.position.z},near:st.camera.near,far:st.camera.far,recoveryCount:st.cameraRecoveryCount||0},teams,check,players};
+}
+function publishFpsVisibilityDiagnostics(st,frame,frameIndex){
+  if(!import.meta.env?.DEV||typeof document==="undefined")return;
+  const snapshot=buildFpsVisibilitySnapshot(st,frame,frameIndex);st.visibilitySnapshot=snapshot;
+  const canvas=st.renderer.domElement;canvas.dataset.esmoFpsVisibility=snapshot.check.ok?"ok":"violation";
+  canvas.dataset.esmoFpsBlueAuthoritative=String(snapshot.teams.blue.authoritative);canvas.dataset.esmoFpsBlueEntities=String(snapshot.teams.blue.entities);canvas.dataset.esmoFpsBlueVisible=String(snapshot.teams.blue.visiblePresentation);canvas.dataset.esmoFpsBlueAlive=String(snapshot.teams.blue.alive);
+  canvas.dataset.esmoFpsRedAuthoritative=String(snapshot.teams.red.authoritative);canvas.dataset.esmoFpsRedEntities=String(snapshot.teams.red.entities);canvas.dataset.esmoFpsRedVisible=String(snapshot.teams.red.visiblePresentation);canvas.dataset.esmoFpsRedAlive=String(snapshot.teams.red.alive);
+  canvas.dataset.esmoFpsVisibilityFrame=String(frameIndex);canvas.dataset.esmoFpsVisibilityJson=JSON.stringify(snapshot);
+  if(typeof window!=="undefined")window.__ESMO_FPS_VISIBILITY__=snapshot;
+}
 function updateDynamic(st,frame,nf,sub,live,W){
   const time=st.time;const showLabels=live.showLabels!==false;
   // 地名顯隱
@@ -1501,6 +1573,23 @@ function camBlocked(rects,tgt,radius,phi,theta){
   const sz=radius*Math.sin(phi)*Math.cos(theta)+tgt.z;
   for(const r of rects){if(segHitsRect(sx,sz,tgt.x,tgt.z,r))return true;}return false;
 }
+function allAliveOutsideCameraViewport(st,frame,W){
+  const alive=(frame?.players||[]).filter((player)=>!player.dead);
+  if(!alive.length)return false;
+  return alive.some((player)=>{
+    const point=new THREE.Vector3(W.vx(player.pos.x),0,W.vz(player.pos.y)).project(st.camera);
+    return !allFinite([point.x,point.y,point.z])||point.x<-1||point.x>1||point.y<-1||point.y>1||point.z<-1||point.z>1;
+  });
+}
+function snapOverviewToAlive(st,frame,W){
+  const alive=(frame?.players||[]).filter((player)=>!player.dead);if(!alive.length)return;
+  const cx=alive.reduce((sum,player)=>sum+player.pos.x,0)/alive.length,cy=alive.reduce((sum,player)=>sum+player.pos.y,0)/alive.length;
+  const wcx=W.vx(cx),wcz=W.vz(cy);let maxd=0;
+  alive.forEach((player)=>{maxd=Math.max(maxd,Math.hypot(W.vx(player.pos.x)-wcx,W.vz(player.pos.y)-wcz));});
+  const cam=st.cam;cam.autoFollow=true;cam.overview=true;cam.dTgt.set(wcx,3,wcz);cam.dRadius=clamp(maxd*2.1+48,78,160);cam.dPhi=1.16;
+  if(cam._ovBase==null)cam._ovBase=cam.dTheta;cam.dTheta=cam._ovBase;cam.tgt.copy(cam.dTgt);cam.radius=cam.dRadius;cam.phi=cam.dPhi;cam.theta=cam.dTheta;
+  _vA.setFromSphericalCoords(cam.radius,cam.phi,cam.theta).add(cam.tgt);st.camera.position.copy(_vA);st.camera.lookAt(cam.tgt);st.camera.updateMatrixWorld();
+}
 function updateCamera(st,frame,sub,dt,W){
   const cam=st.cam;const ch=st._chase;const rects=st.wallRects||[];
   const chasing=ch&&ch.alive;
@@ -1563,6 +1652,11 @@ function updateCamera(st,frame,sub,dt,W){
   st.camera.lookAt(cam.tgt);
   if(chasing&&ch.shooting){const sh=0.14;st.camera.position.x+=(Math.random()-0.5)*sh;st.camera.position.y+=(Math.random()-0.5)*sh;st.camera.position.z+=(Math.random()-0.5)*sh;} // 開火後座抖動
   fadeOccluders(st,frame,W);
+  if(cam.autoFollow&&!chasing&&allAliveOutsideCameraViewport(st,frame,W)){
+    st.cameraRecoveryCount=(st.cameraRecoveryCount||0)+1;
+    snapOverviewToAlive(st,frame,W);
+    fadeOccluders(st,frame,W);
+  }
 }
 // 建物擋住視線時自動半透明，方便縱觀對戰全局
 function fadeOccluders(st,frame,W){
