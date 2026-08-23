@@ -230,16 +230,14 @@ ck("⑥ 一冠不得跳完整個 Sponsor 階梯",
   (champLeague + champMajor) < (top.reqFans - START_FANS) * 0.5,
   `雙冠 ${n(champLeague + champMajor)} vs 全程 ${n(top.reqFans - START_FANS)}`);
 
-console.log("\n── ⚠ F2 賽季獎勵的實際覆蓋範圍（不是每個賽事都會發）──");
-console.log("  `settleCompetitionAwardInState()` 只在 Event **有 prizePolicy** 時才被呼叫，");
-console.log("  而 SeasonState.v2 有明文不變式 `award_without_policy`：");
-console.log("  「award receipt requires a prize policy reference」（seasonStateV2.js）。");
-console.log("  ⇒ 沒有獎金政策的賽事**拿不到賽季粉絲**，且不得為此解閘（會破 V2 契約）。\n");
-console.log("    ✅ MOBA 聯賽（LEGACY_PRIZE_POLICY）        → 名次粉絲會發");
-console.log("    ✅ CS Major（CS_MAJOR_PRIZE_POLICY）        → 名次粉絲會發");
-console.log("    ❌ CS 聯賽（prizePolicy: null）             → **拿不到**");
-console.log("    ❌ MOBA 亞洲巡迴站／年度總決賽（null）      → **拿不到**\n");
-console.log("  ⇒ 上面的情境數字代表「名次會被結算的玩家」（MOBA 聯賽玩家）。");
-console.log("    純 CS 玩家目前只有 Major 那一段拿得到賽季粉絲。**這是待決策的缺口，不是已完成的設計。**");
+console.log("\n── F2.1 起：賽季獎勵的覆蓋範圍（TD-28 已解）──");
+console.log("  結算的合法性由 **award policy** 決定，而 F2.1 補上了缺的那一種：");
+console.log("    prizePolicy → 現金／賽事獎金　　fanPolicy → 只有粉絲、沒有現金\n");
+console.log("    ✅ MOBA 聯賽（prizePolicy）           → 名次粉絲 ＋ 獎金");
+console.log("    ✅ CS Major（prizePolicy）            → 名次粉絲 ＋ 獎金");
+console.log("    ✅ CS 聯賽（fanPolicy）               → 名次粉絲，**一毛錢都不發**");
+console.log("    ✅ MOBA 巡迴站／年度總決賽（fanPolicy）→ 名次粉絲，**一毛錢都不發**\n");
+console.log("  ⚠ 兩種政策都沒有的 Event **仍然不得產生 award receipt**（fail-closed 未鬆動）。");
+console.log("  ⇒ 情境數字現在對 MOBA 與 CS 玩家都成立。");
 
 console.log("\n（保守情境刻意不設驗收門檻：40% 勝率的隊伍拿不到頂級贊助是正確的產品行為。）");

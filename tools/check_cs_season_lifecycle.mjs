@@ -266,12 +266,27 @@ const majorEid5 = Object.keys(csEvents5).find((id) => csEvents5[id].eventKey ===
 const leagueEid5 = Object.keys(csEvents5).find((id) => id !== majorEid5);
 const majorFinalId5 = eventFinalOf(s5().competitionByMode.cs, majorEid5)?.id ?? null;
 const leagueFinalId5 = eventFinalOf(s5().competitionByMode.cs, leagueEid5)?.id ?? null;
-ck("CS 封存只為年度 Major 建立一筆獎金帳本鍵",
-  awardKeys.length === awardsBefore + 1, `帳本 ${awardsBefore} → ${awardKeys.length} 筆`);
+//  ⚠ **F2.1 起帳本同時裝 fan-only 收據**（`fanPolicy`）。CS 聯賽仍然沒有
+//    `prizePolicy` ⇒ **一毛錢都不發**，但它的名次會發粉絲，所以現在也在帳本裡。
+//    下面三條因此改成量各自標籤真正宣稱的東西：
+//      · 兩個 Event 都進帳本（聯賽 fan-only ＋ Major 有獎金）
+//      · Major 那一筆有現金、聯賽那一筆**現金為 0**
+//    「聯賽不發名次獎金」的原意（不發錢）被保留且驗得更準——
+//    原本只看「有沒有在帳本裡」，那在 fan 收據出現後已經量不到錢了。
+ck("CS 封存為兩個 Event 各建立一筆帳本鍵（聯賽 fan-only ＋ Major 獎金）",
+  awardKeys.length === awardsBefore + 2, `帳本 ${awardsBefore} → ${awardKeys.length} 筆`);
 ck("那一筆的鍵就是 Major 的 FinalStandings id",
   !!majorFinalId5 && awardKeys.includes(majorFinalId5), majorFinalId5);
-ck("⛔ CS 聯賽的 final **不在**獎金帳本裡（聯賽不發名次獎金）",
-  !!leagueFinalId5 && !awardKeys.includes(leagueFinalId5), leagueFinalId5);
+ck("⛔ CS 聯賽**一毛獎金都不發**（fan-only：收據在帳本，但 amount 為 0）", (() => {
+  const led = s5().processedCompetitionAwards ?? {};
+  const lg = leagueFinalId5 ? led[leagueFinalId5] : null;
+  return !!lg && lg.amount === 0;
+})(), `聯賽收據 amount = ${(s5().processedCompetitionAwards ?? {})[leagueFinalId5]?.amount}`);
+ck("⛔ CS 聯賽的粉絲有發（F2.1：fan-only 政策生效）", (() => {
+  const led = s5().processedCompetitionAwards ?? {};
+  const lg = leagueFinalId5 ? led[leagueFinalId5] : null;
+  return !!lg && Number(lg.fans) > 0;
+})(), `聯賽收據 fans = ${(s5().processedCompetitionAwards ?? {})[leagueFinalId5]?.fans}`);
 //  ⚠ M3-1 起 CS 一季有**兩個 Event**（聯賽 ＋ 年度 Major）⇒ 賽季層的封存物是
 //    `SeasonSeal.v1`，它**依設計沒有 `id`**（多 Event 的賽季不再產生單一總名次，
 //    見 seasonState.js 的 `applySealSeason`）。所以「有沒有被當成獎金鍵」要看的

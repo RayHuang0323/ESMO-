@@ -36,6 +36,7 @@ import { createPlayoffStage, ensurePlayoffFixtures, PLAYOFF_MATCHES, PLAYOFF_SLO
 //    那會讓「本檔不重算資格」變成一句口號而不是事實（§紅線有守衛掃這件事）。
 import { circuitQualificationOf } from "./circuitPoints.js";
 import { ASIA_CIRCUIT_KEY, asiaCircuitIdFor } from "./asiaCircuit.js";
+import { FAN_AWARD_POLICY } from "./awardPolicy.js";
 
 export const ASIA_FINALS_KEY = "asia-finals";
 export const ASIA_FINALS_EVENT_KEY = "annual";
@@ -193,6 +194,9 @@ export function ensureAsiaFinals(state, { participants = [] } = {}) {
           //  ⚠ **沒有獎金**。沿用既有名次獎金表等於替年度總決賽訂一份金額，
           //    那是產品決定，本輪不做（三站巡迴賽同樣沒有獎金）。
           prizePolicy: null,
+          //  F2.1：年度總決賽沒有獎金政策（本輪不訂金額），
+          //  但它是全年最高舞台 ⇒ 給 fan-only 政策，名次才拿得到粉絲。
+          fanPolicy: FAN_AWARD_POLICY,
           final: null,
         },
       },

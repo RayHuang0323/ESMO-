@@ -78,6 +78,7 @@ import { CS_MAJOR_EVENT_KEY } from "./competition/csMajor.js";
 import { CS_MAJOR_QUALIFICATION, csMajorQualifiers } from "./competition/csSeasonConfig.js";
 //  Milestone Q4：名次獎金。錢的第三個入口（唯一新增的一個），純函式在 economy/。
 import { settleCompetitionAwardInState } from "./economy/competitionAward.js";
+import { hasAwardPolicy, NO_PRIZE_TABLE } from "./competition/awardPolicy.js";
 //  ── Milestone Q7a-3c：巡迴積分與晉級資格 ────────────────────────────────
 //  ⚠ 刻意**不住在 seasonState**：Q5 §7d 明文擋住賽季層出現積分玩法，而那條
 //    斷言仍然對——賽季層管賽程與名次，積分是另一個生命週期。積分結算與**獎金
@@ -1407,15 +1408,25 @@ export const useProfileStore = create((rawSet, get) => {
       set({ competition: state });
 
       const ev = state.events[eid];
-      if (ev.prizePolicy) {
-        const settled = settleCompetitionAwardInState(get(), { final: r.final, day });
+      //  ── F2.1：任一種獎勵政策都要結算 ────────────────────────────────
+      //  `prizePolicy` 發現金，`fanPolicy` 只發粉絲。沒有政策 ⇒ 完全不結算
+      //  （fail-closed 邊界不變）。fan-only 時傳空獎金表 ⇒ 金額恆 0、不寫交易。
+      //  ⚠ `events[eid].award` 是**獎金**收據，仍然只在有 `prizePolicy` 時才寫——
+      //    否則會變成 q7a_3b 明文禁止的「0 元假收據」。粉絲收據住在帳本裡。
+      if (hasAwardPolicy(ev)) {
+        const settled = settleCompetitionAwardInState(get(), {
+          final: r.final, day,
+          ...(ev.prizePolicy ? {} : { prizeTable: NO_PRIZE_TABLE }),
+        });
         if (settled.nextState) set(settled.nextState);
-        lastAward = settled.receipt ?? lastAward;
-        state = {
-          ...state,
-          events: { ...state.events, [eid]: { ...state.events[eid], award: settled.receipt ?? null } },
-        };
-        set({ competition: state });
+        if (ev.prizePolicy) {
+          lastAward = settled.receipt ?? lastAward;
+          state = {
+            ...state,
+            events: { ...state.events, [eid]: { ...state.events[eid], award: settled.receipt ?? null } },
+          };
+          set({ competition: state });
+        }
       }
 
       const champ = participantsOf(state).find((p) => p.id === r.final.championTeamId)?.name ?? "—";
@@ -1581,17 +1592,22 @@ export const useProfileStore = create((rawSet, get) => {
       //    CS 只有 Major 有政策；聯賽是資格賽，仍然一毛都不發。
       //  ⚠ 用的是**政策指定的表**（`prizeTableFor`），不是預設的 MOBA 表。
       //  ⚠ 收據掛在 Event 上，**不寫進 final** —— final 是不可變快照。
-      if (ev?.prizePolicy) {
+      //  F2.1：與 MOBA 同一條規則。CS 聯賽有 `fanPolicy` 沒有 `prizePolicy`
+      //  ⇒ 名次拿得到粉絲，但一毛錢都不發（CS 獎金級距仍未定義）。
+      if (hasAwardPolicy(ev)) {
         const settled = settleCompetitionAwardInState(get(), {
-          final: r.final, day, prizeTable: prizeTableFor(ev.prizePolicy),
+          final: r.final, day,
+          prizeTable: ev.prizePolicy ? prizeTableFor(ev.prizePolicy) : NO_PRIZE_TABLE,
         });
         if (settled.nextState) set(settled.nextState);
-        csAward = settled.receipt ?? csAward;
-        state = {
-          ...state,
-          events: { ...state.events, [eid]: { ...state.events[eid], award: settled.receipt ?? null } },
-        };
-        get()._setCompetitionStateFor(mode, state);
+        if (ev.prizePolicy) {
+          csAward = settled.receipt ?? csAward;
+          state = {
+            ...state,
+            events: { ...state.events, [eid]: { ...state.events[eid], award: settled.receipt ?? null } },
+          };
+          get()._setCompetitionStateFor(mode, state);
+        }
       }
 
       //  ⚠ 冠軍名字仍從**聯賽**參賽者查（`participantsOf` 讀的是主賽制）。

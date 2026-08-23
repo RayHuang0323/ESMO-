@@ -13148,3 +13148,119 @@ branch `feature/fan-f2-season-awards`，接在 `ca29db1` 之後。**未 push。*
 `reqWins`、`economyConfig`、fan award 表、Competition contract、三支凍結契約全部零改動。
 **TD-28（CS 聯賽 fan-only award blocker）維持未解，本輪不修。**
 **未開始 F4，未 push。**
+
+---
+
+## Fan System F2.1 — Competition Fan Award Policy（2026-08-23）
+
+branch `feature/fan-f2-1-award-policy`，基準 `origin/main @ 5804849`。**未 push。**
+**TD-28 已解決。**
+
+### Audit 先講：真正的限制在哪
+
+TD-28 的表面症狀是「CS 聯賽拿不到賽季粉絲」，根因有三層：
+
+1. **runtime 是 v1，不是 v2。** `seasonSealingV2` 的**寫入側刻意停用**（2026-08-19 裁決，
+   多 Event sealing ownership 未定義）。實際結算走 `profileStore._sealSeasonIfFinished` /
+   `_sealCsSeasonIfFinished`，閘門是 v1 的 `ev.prizePolicy`。
+   ⇒ **兩層都要動**，只改 v2 不會有任何效果。
+2. **`awardReceiptRef` 是推導的，不是寫的。** `seasonStateV2.js → awardEnvelopeOf()`
+   直接看 `processedCompetitionAwards[final.id]` 有沒有 entry 來生 ref
+   ⇒ 「粉絲寫進帳本但不寫 ref」在架構上做不到。
+3. **不變式是刻意的。** `seasonStateV2.js` 明文寫著
+   「Arbitrary v2 events never infer a policy from a receipt」，只有一個 M1 舊存檔的相容特例。
+
+**結論：不是要繞過契約，是契約少了一種政策。** F2.1 補上它。
+
+### 做了什麼
+
+**新增純模組 `platform/competition/awardPolicy.js`（零 import）**
+
+| 匯出 | 用途 |
+|---|---|
+| `FAN_AWARD_POLICY` | `{ kind: "fan_award", table: "none" }` — 只有粉絲、沒有現金 |
+| `NO_PRIZE_TABLE` | 空獎金表 ⇒ 任何名次都是 0 |
+| `hasAwardPolicy(event)` | 任一政策即需結算（**唯一判定出口**） |
+| `isFanAwardPolicy(policy)` | 型別判定 |
+| `fanPolicyRefFor(competitionId)` | v2 的 fan policy reference |
+
+零 import 是刻意的：v1（`seasonState` / `asiaCircuit` / `asiaFinals`）與 v2
+（`seasonStateV2`）兩層都要用它，放在任何一邊都會製造迴圈。
+
+**v1（runtime）層**
+
+- CS 聯賽：`fanPolicy: FAN_AWARD_POLICY`（`prizePolicy` **維持 null**）
+- MOBA 亞洲巡迴站、年度總決賽：`fanPolicy: FAN_AWARD_POLICY`
+- `profileStore` 兩條封存路徑：閘門從 `ev.prizePolicy` 改為 `hasAwardPolicy(ev)`；
+  fan-only 時傳 `NO_PRIZE_TABLE` ⇒ 金額恆 0、不寫交易
+- ⚠ `events[eid].award` **仍只在有 `prizePolicy` 時才寫**——那一欄是**獎金**收據，
+  q7a_3b 明文禁止「0 元假收據」。粉絲收據住在帳本裡。
+
+**v2（投影／驗證）層**
+
+- `syncSeasonStateV2`：`fanPolicyRef: legacyEvent?.fanPolicy ? fanPolicyRefFor(...) : null`
+- `normalizeEvent`：新增 `fanPolicyRef`，**刻意沒有任何 inference 分支**
+- 單一 Event 相容 adapter：舊存檔不可能有 `fanPolicy` ⇒ 一律 null
+- 驗證器：`!prizePolicyRef && !fanPolicyRef && awardReceiptRef` → `award_without_policy`
+  ⇒ **放寬的是「哪一種政策算數」，不是「可以沒有政策」**
+
+### 更新了五條既有斷言（原意保留，量測改對）
+
+F2.1 讓帳本同時裝 fan-only 收據，五條用「帳本筆數／成員」當代理的斷言因此量錯了。
+它們的**標籤講的都是「不發獎金」**，所以改成量金額：
+
+| gate | 原斷言 | 改成 |
+|---|---|---|
+| `q4 3b` | 帳本筆數 `=== 1` | 帳本**位置**（原意就是位置，筆數是順手寫的） |
+| `q4 3d3` | 帳本筆數 `=== 1` | **重複封存五次筆數不增加**（真正的冪等） |
+| `q7b 9f` | 帳本筆數 `<= 1` | 年終賽收據 **amount === 0**（真正的「沒發獎金」） |
+| `cs_lifecycle` | 只建立一筆帳本鍵 | 兩個 Event 各一筆（聯賽 fan-only ＋ Major 獎金） |
+| `cs_lifecycle` | CS 聯賽**不在**帳本裡 | CS 聯賽 **amount === 0** ＋ **fans > 0**（新增一條） |
+
+覆蓋率沒有下降：`cs_season_lifecycle` 從 53 → **54**。
+
+### 驗證（全部實跑）
+
+| 項目 | 結果 |
+|---|---|
+| `check_fan_system`（48 → **66**） | **66/66** |
+| `check_fan_f0` | 33/33 |
+| `competition_q1/q3/q4/q5/q6` | 93 / 91 / 68 / 69 / 57 |
+| `cs_season_contract` | PASS |
+| `cs_season_lifecycle` | **54/54** |
+| `cs_major` | 74/74 |
+| `competition_shared_ui` | 28/28 |
+| `season_state_v2_sealing_m2` | 24/24 |
+| `q7a_3b_multi_event` / `q7b_asia_finals` / `q7a_3c_circuit_points` / `q7d_honors` | 51 / 72 / 69 / 59 |
+| `cs_schema_v11` | **41/41**（舊存檔 migration 未破壞） |
+| `finance_n3` / `progress25` / `talent27` | 40 / 33 / 37 |
+| `regress` / `regress2` | 15/15 ／ 8/8 |
+| `npm run build` | ✓ built in 10.74s |
+
+**Mutation sentinel（三個都有鑑別力）**
+
+| 注入的錯誤 | 結果 |
+|---|---|
+| 拿掉 `fanPolicyRef` 正規化 | 66 → **65** |
+| 把 policy-less Event 放行 | 66 → **64**（§14i、§14j 紅） |
+| fan-only 偷發現金 | 66 → **64**（§14b、§14l 紅） |
+
+### 修正的一個我方誤判
+
+`14d` 第一版用 `/gameMode === "cs"/` 比對原始碼，紅了——因為 `codeOnly()`
+會把字串字面值清空，`gameMode === "cs"` 變成 `gameMode === ""`。
+改成比對三元判斷式的**結構**（`? FAN_AWARD_POLICY : null`）。
+
+### Schema 與相容性
+
+- **沒有 schema version bump。** `SeasonState.v2` / `Event` 只多一個可選欄位，
+  預設 `null`，驗證器不拒絕未知欄位。
+- **舊存檔**：沒有 `fanPolicy` ⇒ `fanPolicyRef: null` ⇒ 行為與 F2.1 之前**逐值相同**。
+- **不自動補**：`fanPolicyRef` 沒有任何 inference 分支，不會從收據反推。
+- **M1 migration 未動**：獎金那條 legacy inference 分支一個字都沒改（`cs_schema_v11` 41/41）。
+
+### 沒有做
+
+未改 fan 數值、`reqFans`、`economyConfig`、三支凍結契約、battle / map contract。
+未新增第三條 fan write path、未新增第二本帳本、未建第二套 CS award path。
+**未開始 F4。**

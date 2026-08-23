@@ -29,6 +29,7 @@ import { seedForSeason } from "../identity/teamIdentity.js";
 import { leagueParticipants } from "./aiTeams.js";
 import { DEFAULT_POINTS_POLICY } from "./circuitPoints.js";
 import { SEASON_DAYS } from "./regularSeason.js";
+import { FAN_AWARD_POLICY } from "./awardPolicy.js";
 
 /** 這條巡迴賽的 key（`circuit.id` 由它推導）。 */
 export const ASIA_CIRCUIT_KEY = "asia";
@@ -156,6 +157,9 @@ function buildStop({ circuit, stop, participants, seasonSeed, season, playerTeam
       //  ⚠ **沒有獎金**。巡迴賽給的是積分，不是錢——這也正好讓
       //    「沒有 prizePolicy 的 Event 不得被迫生出假獎金」走一次真實情境。
       prizePolicy: null,
+      //  F2.1：沒有獎金，但**是正式賽事** ⇒ 名次該有粉絲。
+      //  fan-only 政策不發任何現金（空獎金表），所以上面那句仍然成立。
+      fanPolicy: FAN_AWARD_POLICY,
       final: null,
     },
     entry: {

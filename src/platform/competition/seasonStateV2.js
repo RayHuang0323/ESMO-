@@ -5,6 +5,8 @@
 // Season -> Circuit -> Event references; it never copies or reorders gameplay
 // data and it never creates a CS event.
 
+import { fanPolicyRefFor } from "./awardPolicy.js";
+
 export const SEASON_STATE_V2_SCHEMA = "SeasonState.v2";
 export const SEASON_STATE_V1_SCHEMA = "SeasonState.v1";
 export const SEASON_V2_SCHEMA = "Season.v1";
@@ -151,6 +153,11 @@ function wrapLegacySingleCompetition({ legacyState, awardLedger = {}, history = 
   const eventId = eventIdOf(circuitId, "league");
   const final = awardEnvelopeOf(legacyState.final, awardLedger);
   const prizePolicyRef = legacyPrizePolicyRefFor(legacyCompetition.id);
+  //  F2.1：這條是**舊存檔的單一賽事**相容路徑。舊存檔不可能有 `fanPolicy`
+  //  （F2.1 才出現）⇒ 一律 null，不亂補。行為與 F2.1 之前逐值相同。
+  const fanPolicyRef = legacyState?.events
+    ? null
+    : (legacyState?.fanPolicy ? fanPolicyRefFor(legacyCompetition.id) : null);
   const event = {
     schema: EVENT_V2_SCHEMA,
     id: eventId,
@@ -182,6 +189,7 @@ function wrapLegacySingleCompetition({ legacyState, awardLedger = {}, history = 
     status: legacyState.final ? EVENT_STATUS.sealed : EVENT_STATUS.active,
     sealedAtDay: legacyState.final?.sealedAtDay ?? null,
     prizePolicyRef,
+    fanPolicyRef,
     pointsPolicyRef: null,
     pointsSettlementRef: null,
     pointsStatus: legacyState.final ? POINTS_STATUS.policyRequired : POINTS_STATUS.notStarted,
@@ -301,6 +309,9 @@ export function wrapLegacySeasonState({ legacyState, competitionHistory = [], aw
       status: legacyFinal ? EVENT_STATUS.sealed : EVENT_STATUS.active,
       sealedAtDay: legacyFinal?.sealedAtDay ?? null,
       prizePolicyRef: legacyEvent?.prizePolicy ? legacyPrizePolicyRefFor(competition.id) : null,
+      //  F2.1：fan-only 政策與獎金政策平行投影。兩者都沒有 ⇒ 兩個 ref 都是 null
+      //  ⇒ 下方 `award_without_policy` 仍然擋住憑空產生的收據（fail-closed 不變）。
+      fanPolicyRef: legacyEvent?.fanPolicy ? fanPolicyRefFor(competition.id) : null,
       pointsPolicyRef: null,
       pointsSettlementRef: null,
       pointsStatus: legacyFinal ? POINTS_STATUS.policyRequired : POINTS_STATUS.notStarted,
@@ -435,6 +446,11 @@ function normalizeEvent(event) {
     : (finalEnvelope?.awardReceiptRef && source.legacyStateSchema === SEASON_STATE_V1_SCHEMA
       ? legacyPrizePolicyRefFor(competitionRef?.id)
       : null);
+  //  F2.1：fan policy 只由既有欄位正規化而來。
+  //  ⚠ **刻意沒有任何 inference 分支**——「never infer a policy from a receipt」
+  //    對 fan 政策一樣適用。獎金那支的 inference 是 M1 舊存檔的相容特例，
+  //    fan 政策沒有舊存檔可相容（F2.1 才出現），所以不需要、也不該有。
+  const fanPolicyRef = source.fanPolicyRef != null ? normalizeRef(source.fanPolicyRef) : null;
   const normalized = {
     schema: EVENT_V2_SCHEMA,
     id: source.id ?? null,
@@ -461,6 +477,7 @@ function normalizeEvent(event) {
     status: source.status ?? (finalEnvelope ? EVENT_STATUS.sealed : EVENT_STATUS.active),
     sealedAtDay: source.sealedAtDay ?? null,
     prizePolicyRef,
+    fanPolicyRef,
     pointsPolicyRef: source.pointsPolicyRef != null ? normalizeRef(source.pointsPolicyRef) : null,
     pointsSettlementRef: source.pointsSettlementRef != null ? normalizeRef(source.pointsSettlementRef) : null,
     pointsStatus: source.pointsStatus ?? (source.pointsSettlementRef ? POINTS_STATUS.settled : (finalEnvelope ? POINTS_STATUS.policyRequired : POINTS_STATUS.notStarted)),
@@ -731,8 +748,12 @@ function validateCanonical(value) {
         if (event.pointsSettlementRef && event.pointsSettlementRef.competitionId != null && event.pointsSettlementRef.competitionId !== event.competitionRef?.id) {
           errors.push({ code: "points_competition_mismatch", message: "pointsSettlementRef competition scope mismatch" });
         }
-        if (!event.prizePolicyRef && event.final?.awardReceiptRef) {
-          errors.push({ code: "award_without_policy", message: "award receipt requires a prize policy reference" });
+        //  F2.1：收據的合法性由**任一種**獎勵政策背書。
+        //  · `prizePolicyRef` → 現金獎金　· `fanPolicyRef` → fan-only 品牌獎勵
+        //  兩者都沒有 ⇒ 仍然拒絕。這是放寬「哪一種政策算數」，
+        //  **不是**打開「沒有政策也可以有收據」——安全邊界一模一樣。
+        if (!event.prizePolicyRef && !event.fanPolicyRef && event.final?.awardReceiptRef) {
+          errors.push({ code: "award_without_policy", message: "award receipt requires a prize or fan policy reference" });
         }
         if (event.circuitId !== circuit.id) errors.push({ code: "event_circuit_mismatch", message: "Event 與 Circuit scope 不一致" });
         if (event.gameMode !== mode.gameMode) errors.push({ code: "event_mode_mismatch", message: "Event 與 gameMode scope 不一致" });

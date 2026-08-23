@@ -30,6 +30,7 @@ import {
   createFixtureOutcome, createForfeitOutcome, RESULT_SOURCES, validateFixtureOutcome,
 } from "../contracts/fixtureOutcome.js";
 import { upgradeCompetitionIdentity } from "../contracts/circuit.js";
+import { FAN_AWARD_POLICY } from "./awardPolicy.js";
 import { buildRegularSeason, SEASON_DAYS } from "./regularSeason.js";
 import { simulateFixture, simSeedFor } from "./simulateFixture.js";
 import { AI_TEAMS } from "./aiTeams.js";
@@ -68,6 +69,7 @@ export const SEASON_STATE_VERSION_V1 = "SeasonState.v1";
  * ⚠ legacy 的 MOBA 聯賽用 default 政策 ⇒ 舊存檔的發放時點與金額都不變。
  */
 export const LEGACY_PRIZE_POLICY = Object.freeze({ kind: "rank_table", table: "default" });
+
 
 /** 這個賽季裡的所有賽制條目（{competition, stage, playoff}）。 */
 export const competitionEntries = (state) => Object.values(state?.competitions ?? {});
@@ -222,6 +224,10 @@ export function createSeasonState({ playerTeam, season = 1, seasonSeed, gameMode
             //    直接沿用 MOBA 的獎金表發錢——那是憑空發明經濟規則，
             //    比暫時不發錢糟得多（發錯的錢收不回來）。CS 獎金屬 M3 之後。
             prizePolicy: gameMode === "cs" ? null : LEGACY_PRIZE_POLICY,
+            //  F2.1：CS 聯賽仍然**沒有獎金政策**（獎金級距未定義，不得憑空發明），
+            //  但它是 CS 的主賽季 ⇒ 給它 fan-only 政策，名次才拿得到粉絲。
+            //  MOBA 聯賽已有 prizePolicy，不需要再給一份（避免兩種政策並存的歧義）。
+            fanPolicy: gameMode === "cs" ? FAN_AWARD_POLICY : null,
           } }
         : {},
       activeEventId: up.event?.id ?? null,

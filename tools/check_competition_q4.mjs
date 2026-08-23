@@ -181,9 +181,12 @@ const finishWholeSeason = (maxSteps = 200) => {
 
   //  帳本
   const ledger = st().processedCompetitionAwards ?? {};
+  //  ⚠ F2.1 起帳本同時裝 fan-only 收據（巡迴賽站有 `fanPolicy`）⇒ 筆數不再是 1。
+  //    這一條的重點本來就是**帳本掛在哪裡**，不是有幾筆；筆數只是當時順手寫的。
   ck("3b) 帳本掛在 **profileStore 頂層**（不在 matchmaking 之下）",
-    Object.keys(ledger).length === 1 && !!ledger[final.id] &&
-    (st().matchmaking?.processedCompetitionAwards ?? null) === null);
+    !!ledger[final.id] &&
+    (st().matchmaking?.processedCompetitionAwards ?? null) === null,
+    `帳本 ${Object.keys(ledger).length} 筆`);
 
   //  交易帳本
   const txs = st().finance?.transactions ?? [];
@@ -200,11 +203,17 @@ const finishWholeSeason = (maxSteps = 200) => {
   //  ── 冪等：重複結算 ──
   const fundsBefore = st().finance.funds;
   const txCountBefore = (st().finance.transactions ?? []).length;
+  const ledgerCountBefore = Object.keys(st().processedCompetitionAwards ?? {}).length;
   for (let i = 0; i < 5; i++) st()._sealSeasonIfFinished();
   ck("3d) **重複結算五次，一毛都沒多發**", st().finance.funds === fundsBefore,
     `${fundsBefore} → ${st().finance.funds}`);
   ck("3d2) 也沒有多出交易紀錄", (st().finance.transactions ?? []).length === txCountBefore);
-  ck("3d3) 帳本仍然只有一筆", Object.keys(st().processedCompetitionAwards ?? {}).length === 1);
+  //  ⚠ 改成量**冪等**本身：重複封存五次，帳本筆數不得增加。
+  //    原本寫死 `=== 1`，在 fan-only 收據出現後會誤判成回歸——
+  //    而它真正要證明的是「重複結算不會長出新帳本鍵」。
+  ck("3d3) 重複結算五次，帳本筆數沒有增加",
+    Object.keys(st().processedCompetitionAwards ?? {}).length === ledgerCountBefore,
+    `${ledgerCountBefore} → ${Object.keys(st().processedCompetitionAwards ?? {}).length} 筆`);
 
   //  純函式層的冪等（不經 store）
   const again = settleCompetitionAwardInState(st(), { final });

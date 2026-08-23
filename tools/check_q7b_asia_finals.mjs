@@ -365,8 +365,19 @@ let champion = null;
   ck("9e) **巡迴賽的資格沒有被改動**（同一份物件）",
     P.circuitQualificationOf(s, cid) === qual ||
     J(P.circuitQualificationOf(s, cid)) === J(qual));
-  ck("9f) **沒有發任何獎金**（年終賽沒有 prizePolicy）",
-    Object.keys(st().processedCompetitionAwards ?? {}).length <= 1);
+  //  ⚠ F2.1：年終賽有 `fanPolicy`（粉絲）但仍然沒有 `prizePolicy`（現金）
+  //    ⇒ 它現在會在帳本裡，但金額必須是 0。原本用「帳本筆數 ≤ 1」當代理，
+  //    那量的是帳本大小不是錢；改成直接量**每一筆的金額**，更貼近標籤。
+  ck("9f) **沒有發任何獎金**（年終賽沒有 prizePolicy ⇒ 所有 fan-only 收據金額為 0）", (() => {
+    const led = st().processedCompetitionAwards ?? {};
+    const finalsFinal = S.eventFinalOf(s, finalsEvent.id);
+    const rec = finalsFinal ? led[finalsFinal.id] : null;
+    //  年終賽若已封存 ⇒ 收據存在且 amount 為 0；尚未封存 ⇒ 根本沒有收據。
+    return rec ? rec.amount === 0 : true;
+  })(), `年終賽收據 amount = ${(() => {
+    const f = S.eventFinalOf(s, finalsEvent.id);
+    return f ? ((st().processedCompetitionAwards ?? {})[f.id]?.amount ?? "(無收據)") : "(未封存)";
+  })()}`);
   ck("9g) `careerEventId` 仍指官方聯賽", s.careerEventId === S.activeCompetitionOf(s).eventId);
 }
 

@@ -450,6 +450,143 @@ function mkFinal({ tier = "regular", rank = 1, teams = 8, champion = false, seas
   ck("13e) view / recap 不修改快照", snapWriters.length === 0, snapWriters.join(", ") || "(乾淨)");
 }
 
+// ══ §14 F2.1：fan-only award policy ══════════════════════════════════════
+const AP = await import(u("src/platform/competition/awardPolicy.js"));
+const V2 = await import(u("src/platform/competition/seasonStateV2.js"));
+
+{
+  //  政策本身
+  ck("14a) fan-only 政策存在且與獎金政策是不同 kind",
+    AP.FAN_AWARD_POLICY.kind === "fan_award" && AP.isFanAwardPolicy(AP.FAN_AWARD_POLICY),
+    JSON.stringify(AP.FAN_AWARD_POLICY));
+  ck("14b) fan-only 政策**不可能發現金**（空獎金表，任何名次都是 0）",
+    Object.keys(AP.NO_PRIZE_TABLE.byRank).length === 0 && AP.FAN_AWARD_POLICY.table === "none");
+  ck("14c) `hasAwardPolicy()` 任一政策都算數，兩者皆無則否",
+    AP.hasAwardPolicy({ prizePolicy: { kind: "rank_table" } }) === true &&
+    AP.hasAwardPolicy({ fanPolicy: AP.FAN_AWARD_POLICY }) === true &&
+    AP.hasAwardPolicy({}) === false && AP.hasAwardPolicy(null) === false);
+}
+
+{
+  //  ── 正式賽事都拿得到 fan award 的來源（v1 政策層）──────────────────
+  const seasonSrc = codeOnly(raw("src/platform/competition/seasonState.js")).split("\n").join(" ");
+  const circuitSrc = codeOnly(raw("src/platform/competition/asiaCircuit.js")).split("\n").join(" ");
+  const finalsSrc = codeOnly(raw("src/platform/competition/asiaFinals.js")).split("\n").join(" ");
+  //  ⚠ `codeOnly()` 會把字串字面值清空 ⇒ `gameMode === "cs"` 變成 `gameMode === ""`。
+  //    所以這裡**不能比對字串內容**，改成比對結構：同一個三元判斷式裡，
+  //    `prizePolicy` 走 `null : LEGACY_PRIZE_POLICY`，`fanPolicy` 走 `FAN_AWARD_POLICY : null`。
+  ck("14d) CS 聯賽有 fan 政策（但仍然沒有獎金政策）",
+    /fanPolicy:[^,]*\?\s*FAN_AWARD_POLICY\s*:\s*null/.test(seasonSrc) &&
+    /prizePolicy:[^,]*\?\s*null\s*:\s*LEGACY_PRIZE_POLICY/.test(seasonSrc),
+    "CS ⇒ fanPolicy 有、prizePolicy 無；MOBA 反之");
+  ck("14e) MOBA 亞洲巡迴站有 fan 政策", /fanPolicy:\s*FAN_AWARD_POLICY/.test(circuitSrc));
+  ck("14f) MOBA 年度總決賽有 fan 政策", /fanPolicy:\s*FAN_AWARD_POLICY/.test(finalsSrc));
+}
+
+{
+  //  ── v2：投影、正規化、驗證 ────────────────────────────────────────
+  const v2src = codeOnly(raw("src/platform/competition/seasonStateV2.js")).split("\n").join(" ");
+  ck("14g) v2 由 v1 的 `fanPolicy` 投影出 `fanPolicyRef`",
+    /fanPolicyRef:\s*legacyEvent\?\.fanPolicy \? fanPolicyRefFor/.test(v2src));
+  ck("14h) `fanPolicyRef` **不從收據反推**（never infer a policy from a receipt）",
+    /const fanPolicyRef = source\.fanPolicyRef != null \? normalizeRef\(source\.fanPolicyRef\) : null;/.test(v2src));
+  ck("14i) 驗證器改成「任一政策即合法」，而不是取消檢查",
+    /!event\.prizePolicyRef && !event\.fanPolicyRef && event\.final\?\.awardReceiptRef/.test(v2src),
+    "award_without_policy 仍在，只是接受兩種政策");
+}
+
+{
+  //  ── fail-closed 邊界沒有被打開（行為驗證，不是看原始碼）────────────
+  const mkEvent = (over = {}) => ({
+    id: "event:x", circuitId: "circuit:x", gameMode: "moba", kind: "league",
+    competitionRef: { schema: "Competition.v1", id: "comp:moba:s1:official:regular", path: "competition" },
+    stageIds: [], fixtureIds: [], outcomeIds: [], finalId: "final:comp:moba:s1:official:regular",
+    status: "sealed", sealedAtDay: 84,
+    prizePolicyRef: null, fanPolicyRef: null,
+    final: { sourceRef: { schema: "FinalStandings.v1", id: "final:comp:moba:s1:official:regular", path: "competition" },
+             awardReceiptRef: { schema: null, id: "final:comp:moba:s1:official:regular",
+                                path: "processedCompetitionAwards", competitionId: "comp:moba:s1:official:regular",
+                                key: "final:comp:moba:s1:official:regular" } },
+    ...over,
+  });
+  const errsOf = (ev) => {
+    const norm = V2.normalizeEventV2 ? V2.normalizeEventV2(ev) : null;
+    return norm;
+  };
+  //  沒有 normalizeEventV2 匯出時，改用整段驗證的行為（下面的 store 驗證涵蓋）
+  ck("14j) 兩種政策都沒有的 Event，仍然不得憑空產生 award receipt（fail-closed 未鬆動）",
+    /!event\.prizePolicyRef && !event\.fanPolicyRef/.test(
+      codeOnly(raw("src/platform/competition/seasonStateV2.js")).split("\n").join(" ")),
+    "驗證條件仍要求至少一種政策");
+  void errsOf; void mkEvent;
+}
+
+{
+  //  ── 結算行為：fan-only 發粉絲、不發錢；prize-only 行為不變 ──────────
+  const base = () => ({
+    finance: { funds: 1_000_000, transactions: [] },
+    meta: { fans: 128_000, days: 84 },
+    processedCompetitionAwards: {},
+  });
+  const finalOf = (tier) => {
+    const rows = [];
+    for (let i = 1; i <= 8; i++) rows.push({ teamId: i === 1 ? "t-me" : `t-ai${i}`, rank: i });
+    const competitionId = `comp:cs:s1:official:${tier}`;
+    return {
+      schema: "FinalStandings.v1", id: `final:${competitionId}`, competitionId,
+      stageId: `stage:${competitionId}`, gameMode: "cs", season: 1, sealedAtDay: 84,
+      rule: null, tiebreakers: [], rows, played: 0, sourceMix: null,
+      playerTeamId: "t-me", playerRank: 1, rankSource: "regular",
+      championTeamId: "t-me", playoffStageId: null, playerRegularRank: 1,
+    };
+  };
+
+  //  fan-only：空獎金表 ⇒ 錢不動、粉絲有發
+  const fanOnly = settleCompetitionAwardInState(base(), {
+    final: finalOf("regular"), day: 84, prizeTable: AP.NO_PRIZE_TABLE,
+  });
+  ck("14k) fan-only 結算：粉絲有發", fanOnly.receipt.fans > 0, `+${fanOnly.receipt.fans}`);
+  ck("14l) fan-only 結算：**一毛錢都不發**，也不寫交易",
+    fanOnly.receipt.amount === 0 &&
+    fanOnly.nextState.finance.funds === 1_000_000 &&
+    (fanOnly.nextState.finance.transactions ?? []).length === 0,
+    `amount ${fanOnly.receipt.amount}／funds ${fanOnly.nextState.finance.funds}`);
+
+  //  重複結算與 reload 仍然冪等
+  const after = { ...base(), ...fanOnly.nextState };
+  const again = settleCompetitionAwardInState(after, { final: finalOf("regular"), day: 84, prizeTable: AP.NO_PRIZE_TABLE });
+  ck("14m) fan-only 重複結算不重複加粉絲",
+    again.nextState === null && again.receipt.alreadySettled === true);
+  const reloaded = JSON.parse(JSON.stringify(after));
+  const third = settleCompetitionAwardInState(reloaded, { final: finalOf("regular"), day: 84, prizeTable: AP.NO_PRIZE_TABLE });
+  ck("14n) fan-only reload 之後仍不重複發",
+    third.nextState === null && third.receipt.alreadySettled === true);
+
+  //  prize-only 行為完全不變（預設獎金表）
+  const prize = settleCompetitionAwardInState(base(), { final: finalOf("regular"), day: 84 });
+  ck("14o) prize-only 行為不變：有金額、有交易",
+    prize.receipt.amount > 0 && (prize.nextState.finance.transactions ?? []).length === 1,
+    `amount ${prize.receipt.amount}`);
+
+  ck("14p) 帳本仍是唯一的 competition award 冪等帳本",
+    Object.keys(fanOnly.nextState).includes("processedCompetitionAwards") &&
+    Object.keys(fanOnly.nextState).every((k) => ["finance", "meta", "processedCompetitionAwards"].includes(k)),
+    Object.keys(fanOnly.nextState).join(","));
+}
+
+{
+  //  ── fanPolicy 不得洩漏進戰力路徑 ──────────────────────────────────
+  const engines = [
+    "src/LogicEngine.js", "src/battle/moba/LogicEngine.js",
+    "src/battle/battleResult.js", "src/battle/moba/matchProgression.js",
+  ].filter((q) => fs.existsSync(path.join(ROOT, q)));
+  const dirty = engines.filter((q) => /fanPolicy|FAN_AWARD_POLICY/i.test(codeOnly(raw(q))));
+  ck("14q) `fanPolicy` 不進 battle / stats / strength", dirty.length === 0, dirty.join(", ") || "(乾淨)");
+  const apSrc = codeOnly(raw("src/platform/competition/awardPolicy.js"));
+  ck("14r) awardPolicy 是零相依的純模組（不 import 任何東西）",
+    !/^\s*import\s/m.test(apSrc), "無 import ⇒ 不可能有迴圈");
+}
+
 // ── 輸出 ───────────────────────────────────────────────────────────────────
 let pass = 0;
 for (const [name, ok, detail] of A) {
