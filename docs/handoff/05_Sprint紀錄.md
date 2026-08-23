@@ -12965,3 +12965,131 @@ F2 加了第二條收入來源，任何有感的賽季獎勵都會把它壓到 3
 未碰 `economyConfig`、未調 `reqFans`、未改 F1 的來源權重、未做 UI（所以沒有 browser smoke）、
 未動三支凍結契約、未做 Season Performance / Form-Hype / pricing / perk / decay / Fan Center。
 **未開始 F3 / F4。**
+
+---
+
+## Fan System F2 closure — reqFans 微調 ＋ CS 聯賽 award blocker audit（2026-08-23）
+
+branch `feature/fan-f2-season-awards`，接在 F2（`c772bb2`）之後。**未 push。**
+
+### A. Sponsor reqFans 微調
+
+| 贊助商 | 舊（F1） | **新** |
+|---|---|---|
+| 在地網咖 入門 | 0 | 0 |
+| 紅牛運動 中級 | 100,000 | 100,000 |
+| HyperX 中級 | 150,000 | 150,000 |
+| Vortex 頂級 | 170,000 | **180,000** |
+| MAMIMOTH 頂級 | 185,000 | **205,000** |
+| 加密貨幣 頂級 | 200,000 | **235,000** |
+
+`reqWins` 未動、`economyConfig` 未動。
+
+**重跑 `node tools/fan_calibration.mjs`：**
+
+| 贊助商 | reqFans | 保守 | 一般 | 良好 |
+|---|---|---|---|---|
+| 紅牛運動 | 100,000 | 開局 | 開局 | 開局 |
+| HyperX | 150,000 | 3.1 | 1.9 | **0.7** |
+| Vortex | 180,000 | 7.4 | 4.4 | 1.7 |
+| MAMIMOTH | 205,000 | 10.9 | 6.6 | 2.5 |
+| 加密貨幣 | 235,000 | 15.2 | **9.1** | **3.5** |
+
+| 驗收標準 | 結果 |
+|---|---|
+| 🔒 開局財務生存（第二階 ≤ 起始 fans、週收 12 萬 > 支出 17.7 − 基礎營收 6） | ✅ 紅牛 100,000 ≤ 128,000 |
+| ② 第一個 Fan-gated upgrade 第一季明顯接近 | ✅ 一般情境走完 **53%** |
+| ③ 中階 1–2 successful seasons | ✅ HyperX 良好 **0.7 季** |
+| ④ 頂階 3–5 good seasons | ✅ 加密貨幣 良好 **3.5 季**（正中目標） |
+| ⑤ 不接受 8–15 seasons | ⚠ **看用哪個情境衡量**（見下） |
+
+**⑤ 的判定取決於「哪一種玩法」**
+
+- 以 **good play（良好）** 衡量：**3.5 季** ✅
+- 以 **normal play（一般）** 衡量：**9.1 季**，落在被否決的 8–15 區間 ❌
+
+F1 當時這條寫的是「**正常玩法**不需要 8–15 季」，校準器因此把 ⑤ 綁在「一般」情境上；
+本輪的指示寫的是「不接受 **good play** 8–15 seasons」。兩種讀法結論相反。
+
+**依指示未再自行大改階梯**——這一條需要你裁定要用哪個情境當標準。
+若要讓一般情境也 < 8 季，頂階大約要壓到 **≤ 220,000**（`128,000 + 8 × 11,723 ≈ 221,784`），
+但那會讓良好情境掉到 3.0 季（仍在 3–5 的下緣）。
+
+### B. CS League competition award blocker — **Audit only，未實作**
+
+**問題**：`settleCompetitionAwardInState()` 只在 Event 有 `prizePolicy` 時被呼叫
+⇒ CS 聯賽（刻意 `prizePolicy: null`）與 MOBA 巡迴站／年度總決賽拿不到賽季粉絲。
+
+**Audit 結果：現有契約下沒有最小、向後相容的做法。** 三條證據：
+
+**① `awardReceiptRef` 是從帳本推導的，躲不掉**
+
+`seasonStateV2.js → awardEnvelopeOf(final, awardLedger)`：
+
+```
+const receipt = objectOf(awardLedger?.[final.id]);
+const awardReceiptRef = receipt ? { …, path: "processedCompetitionAwards", … } : null;
+```
+
+只要 `processedCompetitionAwards` 有這場的 entry，envelope 就會生出 `awardReceiptRef`。
+所以「粉絲寫進帳本但不寫 ref」做不到——**ref 不是另外寫的，是推導的**。
+
+**② 這個不變式是刻意的，原始碼寫得很明白**
+
+`seasonStateV2.js:428-437` 的註解：
+
+> An older M1 v2 save may already contain the legacy award receipt but not the
+> explicit policy reference. That one compatibility case can be recovered because
+> the event is still bound to SeasonState.v1.
+> **Arbitrary v2 events never infer a policy from a receipt.**
+
+驗證器 `seasonStateV2.js:734`：
+
+```
+if (!event.prizePolicyRef && event.final?.awardReceiptRef)
+  errors.push({ code: "award_without_policy", … });
+```
+
+**③ 「給 CS 聯賽一份空獎金政策」會撞掉四支 gate**
+
+| gate | 斷言 |
+|---|---|
+| `check_cs_major.mjs:148` | CS 非 Major 的 Event `prizePolicy === null` |
+| `check_cs_major_honors_award.mjs:121` | `leagueEvent.prizePolicy === null` |
+| `check_cs_season_lifecycle.mjs:107` | CS 第一個 Event `prizePolicy === null` |
+| `check_q7b_asia_finals.mjs:159` | 年度總決賽「**沒有獎金政策**（本輪不訂金額）」 |
+
+而且它直接違反已記錄的產品決策：**「CS 獎金級距、贊助連動與經濟平衡都還沒定義，
+給它政策等於憑空發明經濟規則」**（`seasonState.js:214` 的原註記）。
+
+**結論：任何做法都要擴充 award policy 模型本身**——
+`Event.v2` / `SeasonState.v2` 是版本化契約（`EVENT_V2_SCHEMA` / `SEASON_STATE_V2_SCHEMA`），
+新增一種「非現金獎勵政策」屬於改 Competition architecture。
+**依指示 STOP，未實作。**
+
+#### 兩個候選方案（供裁定，皆未動工）
+
+| | 方案 | 代價 |
+|---|---|---|
+| **B-1** | 在 Event 上新增 **`fanPolicyRef`**，與 `prizePolicyRef` 平行；`awardEnvelopeOf` 依政策種類決定要不要生 `awardReceiptRef`；驗證器改成「有任一種政策即合法」 | `Event` / `SeasonState.v2` schema 變更 ＋ 驗證器與 envelope 推導同步改。**乾淨但是契約層工作** |
+| **B-2** | 把 `prizePolicyRef` 廣義化成 **award policy**，新增一種 `cash: false` 的政策 | 四支 gate 要改，且「CS 有政策」與既有產品決策衝突。**不建議** |
+
+**建議 B-1，獨立一輪處理**，不要塞進 F4。
+
+在此之前的覆蓋現況維持不變：MOBA 聯賽 ✅／CS Major ✅／CS 聯賽 ❌／MOBA 巡迴站與總決賽 ❌。
+
+### 驗證（全部實跑）
+
+`check_fan_system` **48/48**、`fan_f0` 33/33、
+`competition_q1/q3/q4/q5/q6` 93/91/68/69/57、
+`cs_season_contract` PASS、`cs_season_lifecycle` 53/53、`cs_major` 74/74、
+`competition_shared_ui` 28/28、`season_state_v2_sealing_m2` 24/24、
+`finance_n3` 40/40、`progress25` 33/33、
+`regress` 15/15、`regress2` 8/8、
+`browser_check_fan_f1` **17/17**（新門檻在 Sponsor UI 上顯示正常）、
+build ✓ built in 10.78s。
+
+### 沒有做
+
+未改 `reqWins`、`economyConfig`、三支凍結契約、Competition architecture、
+`Event` / `SeasonState.v2` schema。**未開始 F4，未 push。**
