@@ -26,6 +26,7 @@
 // ============================================================================
 import { COMPETITION_PRIZE, prizeForRank } from "./economyConfig.js";
 import { validateFinalStandings, rowOfTeam } from "../contracts/finalStandings.js";
+import { seasonFanAwardOf } from "./seasonFanAward.js";
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
@@ -81,6 +82,18 @@ export function settleCompetitionAwardInState(state, { final, day = null, prizeT
   const fundsBefore = num(finance.funds);
   const fundsAfter = fundsBefore + amount;
 
+  //  ── Fan System F2：賽季粉絲獎勵 ───────────────────────────────────────
+  //  刻意掛在**這一個**已經存在的結算點上，沿用同一把冪等鍵（`FinalStandings.id`）。
+  //  另開一支 `settleSeasonFans()` 會變成第三個 fan write path，
+  //  也會多一本要各自維護的帳本——Fan v1 明文只准兩個寫入點：
+  //  `applyMatchProgress` 與**本檔**。
+  //  ⚠ 粉絲與獎金**分開計算、一起入帳**：金額由 `prizeTable` 決定（競技成績），
+  //    粉絲由 `seasonFanAwardOf()` 決定（品牌成長）。兩者互不換算。
+  const meta = state?.meta ?? {};
+  const fanAward = seasonFanAwardOf(final);
+  const fansBefore = num(meta.fans);
+  const fansAfter = fansBefore + fanAward.fans;
+
   const receipt = {
     ok: true,
     settled: true,
@@ -93,6 +106,16 @@ export function settleCompetitionAwardInState(state, { final, day = null, prizeT
     amount,
     fundsBefore,
     fundsAfter,
+    //  F2：粉絲的入帳明細。拆成名次／冠軍兩段，讓收據看得出「這 12,000 是怎麼來的」。
+    fans: fanAward.fans,
+    fansBefore,
+    fansAfter,
+    fanAward: {
+      tier: fanAward.tier,
+      placementFans: fanAward.placementFans,
+      championFans: fanAward.championFans,
+      isChampion: fanAward.isChampion,
+    },
     sealedAtDay: final.sealedAtDay,
     errors: [],
   };
@@ -118,6 +141,9 @@ export function settleCompetitionAwardInState(state, { final, day = null, prizeT
       funds: fundsAfter,
       transactions: [...tx, ...(finance.transactions ?? [])].slice(0, 60),
     },
+    //  ⚠ 只在真的有粉絲可發時才動 `meta`——沒得發就不要無謂地換掉 meta 參考。
+    //    冪等由上面的帳本檢查保證：重複結算在這一行之前就 return 了。
+    ...(fanAward.fans > 0 ? { meta: { ...meta, fans: fansAfter } } : {}),
     processedCompetitionAwards: { ...ledger, [awardId]: receipt },
   };
 

@@ -154,4 +154,90 @@ ck("🔒 hard constraint：第二個可用 Sponsor reqFans ≤ 起始 fans",
   second.reqFans <= START_FANS,
   `${second.name} ${n(second.reqFans)} ≤ ${n(START_FANS)}`);
 
+const { seasonFanAwardOf } = await import(u("src/platform/economy/seasonFanAward.js"));
+
+/**
+ * F2：把賽季名次獎勵接進情境。
+ * ⚠ 用**真的** `seasonFanAwardOf()`，不複製一份獎勵表。
+ */
+function mkFinal({ tier, rank, teams, champion, mode = "cs" }) {
+  const rows = [];
+  for (let i = 1; i <= teams; i++) rows.push({ teamId: i === rank ? "t-me" : `t-ai${i}`, rank: i });
+  const competitionId = `comp:${mode}:s1:official:${tier}`;
+  return {
+    schema: "FinalStandings.v1", id: `final:${competitionId}`, competitionId,
+    rows, playerTeamId: "t-me", playerRank: rank,
+    championTeamId: champion ? "t-me" : "t-ai1",
+  };
+}
+
+/** 每個情境「一季的賽季結果」——名次 ＋ 有沒有進 Major ＋ 有沒有奪冠。 */
+const SEASON_RESULT = {
+  保守: { league: { tier: "regular", rank: 7, teams: 8, champion: false }, major: null },
+  一般: { league: { tier: "regular", rank: 4, teams: 8, champion: false }, major: null },
+  良好: { league: { tier: "regular", rank: 2, teams: 8, champion: false },
+          major: { tier: "major", rank: 2, teams: 4, champion: false } },
+};
+
+console.log("\n── F2：賽季名次粉絲獎勵 ──");
+const awardPer = {};
+for (const s of SCENARIOS) {
+  const r = SEASON_RESULT[s.key];
+  const lg = seasonFanAwardOf(mkFinal(r.league));
+  const mj = r.major ? seasonFanAwardOf(mkFinal(r.major)) : { fans: 0 };
+  awardPer[s.key] = lg.fans + mj.fans;
+  const detail = `聯賽第 ${r.league.rank} 名 ${lg.fans}` + (r.major ? ` ＋ Major 第 ${r.major.rank} 名 ${mj.fans}` : "");
+  console.log(`  ${s.key}  ${n(awardPer[s.key]).padStart(7)} ／季   ${detail}`);
+}
+//  奪冠情境另外列出來（不進基準情境——每季都奪冠不是「表現良好」，是「表現卓越」）
+const champLeague = seasonFanAwardOf(mkFinal({ tier: "regular", rank: 1, teams: 8, champion: true })).fans;
+const champMajor = seasonFanAwardOf(mkFinal({ tier: "major", rank: 1, teams: 4, champion: true })).fans;
+console.log(`  （參考）聯賽奪冠 ${n(champLeague)}　Major 奪冠 ${n(champMajor)}　雙冠 ${n(champLeague + champMajor)}`);
+
+console.log("\n── F2 後：每季粉絲總收入（比賽 ＋ 賽季獎勵）──");
+const totalPer = {};
+for (const s of SCENARIOS) {
+  totalPer[s.key] = perSeason[s.key] + awardPer[s.key];
+  const pct = Math.round((awardPer[s.key] / totalPer[s.key]) * 100);
+  console.log(`  ${s.key}  ${n(perSeason[s.key]).padStart(7)} ＋ ${n(awardPer[s.key]).padStart(6)} = ${n(totalPer[s.key]).padStart(7)} ／季（獎勵佔 ${pct}%）`);
+}
+
+console.log("\n── F2 後：各 Sponsor 需要幾季 ──");
+const head2 = "  贊助商".padEnd(22) + "reqFans".padStart(9) + "   " + SCENARIOS.map((s) => s.key.padStart(7)).join("");
+console.log(head2);
+console.log("  " + "─".repeat(head2.length - 2));
+for (const sp of ladder) {
+  const need = sp.reqFans - START_FANS;
+  const cells = SCENARIOS.map((s) => (need <= 0 ? "開局".padStart(7) : `${(need / totalPer[s.key]).toFixed(1)}季`.padStart(7))).join("");
+  console.log(`  ${(sp.name + " " + sp.tier).padEnd(20)}${n(sp.reqFans).padStart(9)}   ${cells}`);
+}
+
+console.log("\n── F2 後：驗收標準（目標未變）──");
+const seasonsF2 = (sp, key) => (sp.reqFans - START_FANS) / totalPer[key];
+ck("③ 中階約 1–2 個成功賽季",
+  seasonsF2(mid, "良好") <= 2.0, `${mid.name} 良好 ${seasonsF2(mid, "良好").toFixed(1)} 季`);
+ck("④ 頂階約 3–5 個表現良好的賽季",
+  seasonsF2(top, "良好") >= 3.0 && seasonsF2(top, "良好") <= 5.0,
+  `${top.name} 良好 ${seasonsF2(top, "良好").toFixed(1)} 季`);
+ck("⑤ 正常玩法不需要 8–15 季才碰頂階",
+  seasonsF2(top, "一般") < 8.0, `${top.name} 一般 ${seasonsF2(top, "一般").toFixed(1)} 季`);
+ck("② 第一個 Fan-gated 升級，第一季看得到明顯進度",
+  totalPer["一般"] / (mid.reqFans - START_FANS) >= 0.30,
+  `一般情境第一季走完 ${Math.round(100 * totalPer["一般"] / (mid.reqFans - START_FANS))}%`);
+ck("⑥ 一冠不得跳完整個 Sponsor 階梯",
+  (champLeague + champMajor) < (top.reqFans - START_FANS) * 0.5,
+  `雙冠 ${n(champLeague + champMajor)} vs 全程 ${n(top.reqFans - START_FANS)}`);
+
+console.log("\n── ⚠ F2 賽季獎勵的實際覆蓋範圍（不是每個賽事都會發）──");
+console.log("  `settleCompetitionAwardInState()` 只在 Event **有 prizePolicy** 時才被呼叫，");
+console.log("  而 SeasonState.v2 有明文不變式 `award_without_policy`：");
+console.log("  「award receipt requires a prize policy reference」（seasonStateV2.js）。");
+console.log("  ⇒ 沒有獎金政策的賽事**拿不到賽季粉絲**，且不得為此解閘（會破 V2 契約）。\n");
+console.log("    ✅ MOBA 聯賽（LEGACY_PRIZE_POLICY）        → 名次粉絲會發");
+console.log("    ✅ CS Major（CS_MAJOR_PRIZE_POLICY）        → 名次粉絲會發");
+console.log("    ❌ CS 聯賽（prizePolicy: null）             → **拿不到**");
+console.log("    ❌ MOBA 亞洲巡迴站／年度總決賽（null）      → **拿不到**\n");
+console.log("  ⇒ 上面的情境數字代表「名次會被結算的玩家」（MOBA 聯賽玩家）。");
+console.log("    純 CS 玩家目前只有 Major 那一段拿得到賽季粉絲。**這是待決策的缺口，不是已完成的設計。**");
+
 console.log("\n（保守情境刻意不設驗收門檻：40% 勝率的隊伍拿不到頂級贊助是正確的產品行為。）");

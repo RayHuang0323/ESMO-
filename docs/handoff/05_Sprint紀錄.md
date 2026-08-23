@@ -12829,3 +12829,139 @@ Store 判定與畫面顯示都用它，**畫面不自己算**。回傳 `{ ok, fa
 把第二階訂在 100,000（≤ 起始 128,000）之後，開局即可簽紅牛（週收 12 萬），
 `6 + 12 = 18 萬 > 支出 17.7 萬` ⇒ 週淨額轉正，**不需要調整任何經濟參數**。
 風險 R9（F1 可能牽動 economyConfig）**未觸發**。
+
+---
+
+## Fan System F2 — Season / Major / Champion fan awards（2026-08-23）
+
+branch `feature/fan-f2-season-awards`，基準 `origin/main @ 14766f1`。**未 push。**
+規格：`docs/design/粉絲系統架構.md`。
+
+### 做了什麼
+
+**1. 賽季名次粉絲獎勵（新純模組 `platform/economy/seasonFanAward.js`）**
+
+`seasonFanAwardOf(final)` 只吃 `FinalStandings.v1`，回傳名次粉絲 ＋ 冠軍粉絲。
+
+| 層級 | 名次表（第 1 名起） | 冠軍加碼 |
+|---|---|---|
+| `regular` 聯賽 | 6000 / 4000 / 2800 / 2000 / 1200 / 900 / 600 / 400 | +6000 |
+| `major` | 10000 / 6000 / 4000 / 3000 | +10000 |
+| `championship` 年度總決賽 | 12000 / 7500 / 5000 / 3500 | +12000 |
+| `qualifier`（尚無生產者） | 1500 / 900 / 600 / 400 | +800 |
+
+- 聯賽奪冠 = 6000 ＋ 6000 = **12,000**（約 10k 級別的跳升）
+- Major 奪冠 = 10000 ＋ 10000 = **20,000**
+- 雙冠 32,000 vs 全程 72,000 ⇒ **一冠不跳完整階梯**（44%）
+- 冠軍以 `championTeamId` 判定，不是 `rank === 1`（季後賽重排後契約另有一欄）
+- **MOBA / CS 共用同一支**——兩者的賽季結果都是 `FinalStandings.v1`
+- 不碰 CS 的 map / series internals（verifier §10b 守著）
+
+**2. 唯一結算點，不新增帳本**
+
+粉絲掛在既有的 `settleCompetitionAwardInState()` 上，沿用同一把冪等鍵
+（`FinalStandings.id`）與同一本帳本（`processedCompetitionAwards`）。
+Fan v1 的兩個 write path 維持不變：`applyMatchProgress` 與 `settleCompetitionAward`。
+
+**3. `fansAtSeasonStart` 快照**
+
+接在 **`createSeasonState()`**——它是唯一的建季原語，`rollToNextSeason()` 內部也呼叫它
+⇒ 建季與換季四條路徑自動都拿得到，不會漏。
+舊存檔沒有這個欄位 ⇒ `null`，**刻意不回填**（回填等於編一個當時不存在的數字）。
+
+### ⚠ 一個被 SeasonState.v2 契約擋下來的改動（重要）
+
+`settleCompetitionAwardInState()` 只在 Event **有 `prizePolicy`** 時才被呼叫。
+但 CS 聯賽刻意 `prizePolicy: null`（獎金級距未定義）⇒ **CS 賽季名次拿不到粉絲**。
+
+我嘗試「只解開粉絲那一側」（無政策時傳空獎金表，錢的行為逐值不變），
+結果 `check_competition_q4` 從 68/68 掉到中途拋錯。根因是
+`seasonStateV2.js` 有明文不變式：
+
+```
+award_without_policy — "award receipt requires a prize policy reference"
+```
+
+**沒有獎金政策的 Event 不得存在 award receipt**，這是 SeasonState.v2 的契約，
+不只是 `events[eid].award` 那一欄。依規則**停止擴 scope、完整還原**，q4 回到 68/68。
+
+**實際覆蓋範圍**：
+
+| 賽事 | 賽季粉絲 |
+|---|---|
+| MOBA 聯賽（`LEGACY_PRIZE_POLICY`） | ✅ 會發 |
+| CS Major（`CS_MAJOR_PRIZE_POLICY`） | ✅ 會發 |
+| CS 聯賽（`prizePolicy: null`） | ❌ **拿不到** |
+| MOBA 亞洲巡迴站／年度總決賽（`null`） | ❌ **拿不到** |
+
+**這是待決策的缺口，不是已完成的設計。** 要補上需要在 V2 契約層把
+「粉絲獎勵」與「獎金收據」拆成兩個概念——那是獨立一輪的工作。
+
+### 校準結果：⚠ 頂階變太快，未自行調整
+
+`node tools/fan_calibration.mjs`（直接 import 產品模組）：
+
+| 情境 | 比賽 | ＋ 賽季獎勵 | ＝ 每季 |
+|---|---|---|---|
+| 保守 | 6,433 | 600 | 7,033 |
+| 一般 | 9,723 | 2,000 | 11,723 |
+| 良好 | 20,494 | 10,000 | 30,494 |
+
+| 贊助商 | reqFans | 保守 | 一般 | 良好 |
+|---|---|---|---|---|
+| HyperX | 150,000 | 3.1 | 1.9 | **0.7** |
+| Vortex | 170,000 | 6.0 | 3.6 | 1.4 |
+| MAMIMOTH | 185,000 | 8.1 | 4.9 | 1.9 |
+| 加密貨幣 | 200,000 | 10.2 | 6.1 | **2.4** |
+
+| 驗收標準 | 結果 |
+|---|---|
+| ② 第一季看得到明顯進度 | ✅ 一般情境走完 53% |
+| ③ 中階 1–2 個成功賽季 | ✅ 0.7 季（偏快但在範圍下緣） |
+| ④ **頂階 3–5 個良好賽季** | ❌ **2.4 季，低於 3 季下限** |
+| ⑤ 正常玩法不需 8–15 季 | ✅ 一般 6.1 季 |
+| ⑥ 一冠不跳完整階梯 | ✅ 雙冠 32,000 / 全程 72,000 |
+
+**依指示未自行調整 `reqFans`，也未動 `economyConfig`。**
+
+原因是結構性的：F1 的階梯是**只有比賽粉絲**時校準出來的（頂階 3.5 季）。
+F2 加了第二條收入來源，任何有感的賽季獎勵都會把它壓到 3 季以下。
+
+**建議（未套用）**：把階梯依新的每季收入重算，維持相同的季數目標——
+頂階 ≈ 128,000 + 3.5 × 30,494 ≈ **235,000**；中階 ≈ 128,000 + 1.5 × 30,494 ≈ **175,000**。
+
+### 驗證（全部實跑）
+
+| 項目 | 結果 |
+|---|---|
+| `check_fan_system`（擴充至 48 條） | **48/48** |
+| `check_fan_f0` | 33/33 |
+| `check_competition_q1/q3/q4/q5/q6` | 93 / 91 / 68 / 69 / 57 |
+| `check_cs_season_contract` / `cs_season_lifecycle` / `cs_major` | PASS / 53/53 / 74/74 |
+| `check_competition_shared_ui` | 28/28 |
+| `check_q7a_3b_multi_event` / `q7b_asia_finals` / `season_state_v2_sealing_m2` | 51/51 / 72/72 / 24/24 |
+| `check_progress25` / `finance_n3` / `result_flow_o71` / `growth_loop_p0` | 33 / 40 / 27 / 25 |
+| `check_talent27` | 37/37 |
+| `regress` / `regress2` | 15/15 ／ 8/8 |
+| `npm run build` | ✓ built in 13.98s |
+
+**Mutation sentinel（三個都有鑑別力）**
+
+| 注入的錯誤 | 結果 |
+|---|---|
+| 拿掉重複結算保護 | 48 → **46**（§11b、§11c 紅） |
+| 冠軍 / Major 權重反轉 | 48 → **46**（§9b、§9d 紅） |
+| 加入第三個 fan write path | 48 → **46**（§12b-2、§12b-3 紅） |
+
+### 修正的一個我方誤判
+
+第一版 §12a 斷言「`meta.fans` 只有兩個寫入點」把 `profileStore` 判成違規。
+實查後那兩處是 **DEFAULT 種子**與 **F0 的 `sanitizeFans()` 載入清洗**——都不是發放。
+斷言改成守「沒有第三處會讓粉絲**增加**」（用 `fansAfter` / `fansBefore +` 偵測加法），
+這才是「不得有第三個 fan write path」的真正語意。
+
+### 沒有做
+
+未碰 `economyConfig`、未調 `reqFans`、未改 F1 的來源權重、未做 UI（所以沒有 browser smoke）、
+未動三支凍結契約、未做 Season Performance / Form-Hype / pricing / perk / decay / Fan Center。
+**未開始 F3 / F4。**

@@ -526,7 +526,7 @@ Codex UI Migration 目前暫停開新 Sprint。Claude Code 另一工作線正在
 |---|---|---|
 | **F0** | `meta.fans` sanitize ＋ `reputation` **deprecated**（非物理刪除） | 前置，不含玩法 |
 | **F1** | **Sponsor eligibility** ＋ **fan source weighting** | ✅ **已實作**。`reqFans` 0/100k/150k/170k/185k/200k；權重 練習 1.0 ／ 聯賽 5.0 ／ Major 8.5。`check_fan_system` 21/21、browser smoke 17/17 |
-| **F2** | **Season / Major / Champion fan awards**（走既有 `settleCompetitionAward` 冪等路徑） | 賽季第一次影響粉絲 |
+| **F2** | **Season / Major / Champion fan awards** | ✅ **已實作**（branch `feature/fan-f2-season-awards`）。聯賽奪冠 12,000／Major 奪冠 20,000；`check_fan_system` 48/48。⚠ **兩個待決策**：頂階變快（2.4 季）、CS 聯賽拿不到賽季粉絲（見 08） |
 | **F3** | ⏸ **延後為 Fan v1.1 — Sponsor pricing**（粉絲級距 × `weekly`） | 不在 v1 範圍 |
 | **F4** | 既有 UI 整合（Home / Sponsor / Match Result / Season Recap / Team Overview）＋ **移除假 `audience`** ＋ **移除 perk 文案** | 不建 Fan Center |
 | **F5** | `check_fan_system.mjs` | **基礎 contract verifier（含第 8 條）從 F1 同步開始** |

@@ -257,6 +257,199 @@ const START_FANS = useProfileStore.getState().meta.fans;
     "profileStore.signSponsor");
 }
 
+// ══ §9 賽季獎勵：層級順序（冠軍 > Major 名次 > 一般名次）════════════════
+const { seasonFanAwardOf, SEASON_FAN_AWARD } = await import(u("src/platform/economy/seasonFanAward.js"));
+const { settleCompetitionAwardInState } = await import(u("src/platform/economy/competitionAward.js"));
+
+/** 造一份最小但合法的 FinalStandings.v1（不經賽程產生器，測的是 award 本身）。 */
+function mkFinal({ tier = "regular", rank = 1, teams = 8, champion = false, season = 1, mode = "moba" } = {}) {
+  const rows = [];
+  for (let i = 1; i <= teams; i++) {
+    rows.push({ teamId: i === rank ? "t-me" : `t-ai${i}`, name: `T${i}`, rank: i,
+                wins: 0, losses: 0, points: 0, scoreFor: 0, scoreAgainst: 0, diff: 0, played: 0 });
+  }
+  const competitionId = `comp:${mode}:s${season}:official:${tier}`;
+  return {
+    schema: "FinalStandings.v1",
+    id: `final:${competitionId}`,
+    competitionId, stageId: `stage:${competitionId}`, gameMode: mode, season,
+    sealedAtDay: 84, rule: null, tiebreakers: [], rows, played: 0, sourceMix: null,
+    playerTeamId: "t-me", playerRank: rank,
+    rankSource: "regular",
+    championTeamId: champion ? "t-me" : "t-ai1",
+    playoffStageId: null, playerRegularRank: rank,
+  };
+}
+
+{
+  const leagueMid = seasonFanAwardOf(mkFinal({ tier: "regular", rank: 5 })).fans;
+  const leagueTop = seasonFanAwardOf(mkFinal({ tier: "regular", rank: 1 })).fans;
+  const majorTop = seasonFanAwardOf(mkFinal({ tier: "major", rank: 1 })).fans;
+  const leagueChamp = seasonFanAwardOf(mkFinal({ tier: "regular", rank: 1, champion: true })).fans;
+  const majorChamp = seasonFanAwardOf(mkFinal({ tier: "major", rank: 1, champion: true })).fans;
+
+  ck("9a) 高名次 > 一般名次（同一層級內名次要有感）",
+    leagueTop > leagueMid, `第 1 名 ${leagueTop} > 第 5 名 ${leagueMid}`);
+  ck("9b) Major 名次 > 一般聯賽名次",
+    majorTop > leagueTop, `Major ${majorTop} > 聯賽 ${leagueTop}`);
+  ck("9c) 冠軍 > 同層級的純名次（冠軍要有跳升）",
+    leagueChamp > leagueTop && majorChamp > majorTop,
+    `聯賽 ${leagueTop}→${leagueChamp}／Major ${majorTop}→${majorChamp}`);
+  ck("9d) 冠軍 > Major 名次 > 一般名次（三級全序）",
+    leagueChamp > majorTop && majorTop > leagueMid,
+    `${leagueMid} < ${majorTop} < ${leagueChamp}`);
+  ck("9e) 名次表逐級遞減（不會出現「名次越差給越多」）", (() => {
+    for (const t of Object.values(SEASON_FAN_AWARD)) {
+      for (let i = 1; i < t.placement.length; i++) if (t.placement[i] > t.placement[i - 1]) return false;
+    }
+    return true;
+  })());
+  ck("9f) 玩家不在名次裡 ⇒ 不發（AI 專屬賽事）",
+    seasonFanAwardOf({ ...mkFinal({}), playerTeamId: null, playerRank: null }).fans === 0);
+  ck("9g) 一般名次不得壓過整季比賽的 fanGain（名次是點綴不是主餐）",
+    leagueMid < 6000, `第 5 名 ${leagueMid} < 保守情境一季比賽 ~6,433`);
+}
+
+// ══ §10 MOBA / CS 共用同一支 award calculator ════════════════════════════
+{
+  const a = seasonFanAwardOf(mkFinal({ mode: "moba", tier: "regular", rank: 2, champion: true }));
+  const b = seasonFanAwardOf(mkFinal({ mode: "cs", tier: "regular", rank: 2, champion: true }));
+  ck("10a) 同名次同層級，MOBA 與 CS 逐值相同（沒有 CS 專用賽季粉絲邏輯）",
+    a.fans === b.fans && a.tier === b.tier, `${a.fans} vs ${b.fans}`);
+
+  const code = codeOnly(raw("src/platform/economy/seasonFanAward.js"));
+  ck("10b) award calculator 不知道 CS 的地圖細節（不碰 map / series internals）",
+    !/\bmap\b|series|scoreT|scoreCT|CS_MAPS/i.test(code));
+  ck("10c) award calculator 是純函式（不 import Store / React / 亂數）",
+    !/zustand|profileStore|react|Math\.random|Date\.now/i.test(code));
+}
+
+// ══ §11 賽季結算：冪等、單一帳本、只動粉絲不動戰力 ═══════════════════
+{
+  const base = {
+    finance: { funds: 1_000_000, transactions: [] },
+    meta: { fans: 128_000, days: 84 },
+    processedCompetitionAwards: {},
+  };
+  const final = mkFinal({ tier: "regular", rank: 1, champion: true });
+  const first = settleCompetitionAwardInState(base, { final, day: 84 });
+  ck("11a) 賽季粉絲真的入帳",
+    !!first.nextState && first.nextState.meta.fans === 128_000 + first.receipt.fans,
+    `+${first.receipt.fans} ⇒ ${first.nextState?.meta?.fans}`);
+
+  const after = { ...base, ...first.nextState };
+  const second = settleCompetitionAwardInState(after, { final, day: 84 });
+  ck("11b) 同一份 FinalStandings 重複結算不重複加粉絲",
+    second.nextState === null && second.receipt.alreadySettled === true,
+    `nextState=${second.nextState}`);
+
+  //  reload：把狀態序列化再吃回來（模擬存檔往返），仍不得重發
+  const reloaded = JSON.parse(JSON.stringify(after));
+  const third = settleCompetitionAwardInState(reloaded, { final, day: 84 });
+  ck("11c) reload（序列化往返）之後仍不重複發",
+    third.nextState === null && third.receipt.alreadySettled === true);
+
+  ck("11d) 冪等鍵仍是 FinalStandings.id，帳本仍是 processedCompetitionAwards",
+    Object.keys(first.nextState.processedCompetitionAwards)[0] === final.id,
+    Object.keys(first.nextState.processedCompetitionAwards).join(","));
+
+  ck("11e) 賽季結算不碰選手、不碰戰力（nextState 只有 finance / meta / 帳本）",
+    Object.keys(first.nextState).every((k) => ["finance", "meta", "processedCompetitionAwards"].includes(k)),
+    Object.keys(first.nextState).join(","));
+
+  const lastPlace = settleCompetitionAwardInState(
+    { ...base, processedCompetitionAwards: {} },
+    { final: mkFinal({ tier: "regular", rank: 8 }), day: 84 });
+  ck("11f) 有名次就有粉絲（後段班也給下限，不是 0）",
+    lastPlace.receipt.fans > 0, `第 8 名 ${lastPlace.receipt.fans}`);
+
+  ck("11g) 粉絲不變成獎金：receipt 的 amount 與 fans 是兩個獨立欄位",
+    typeof first.receipt.amount === "number" && typeof first.receipt.fans === "number"
+    && first.receipt.amount !== first.receipt.fans);
+}
+
+// ══ §12 fans 寫入點仍只有兩個 ════════════════════════════════════════════
+{
+  const scan = ["src/platform", "src/battle", "src/screens", "src/ui", "src/data"];
+  const files = [];
+  const walk = (d) => {
+    const abs = path.join(ROOT, d);
+    if (!fs.existsSync(abs)) return;
+    for (const e of fs.readdirSync(abs, { withFileTypes: true })) {
+      const q = `${d}/${e.name}`;
+      if (e.isDirectory()) walk(q);
+      else if (/\.(js|jsx)$/.test(e.name) && !/EsportsGame\.jsx|App\.jsx/.test(e.name)) files.push(q);
+    }
+  };
+  scan.forEach(walk);
+
+  const flat = (q) => codeOnly(raw(q)).split("\n").join(" ");
+  const writers = files.filter((q) => /meta\s*:\s*\{[^}]*\bfans\s*:/.test(flat(q)));
+
+  //  ⚠ 「寫入」不等於「發放」。profileStore 有兩處合法的**非發放**寫入：
+  //     · `DEFAULT.meta` 的種子值（宣告）
+  //     · 載入路徑的 `sanitizeFans()`（F0 壞值清洗；只會讓數字變合法，不會變多）
+  //    所以真正要守的是「沒有第三處會讓粉絲**增加**」，不是「沒有第三處提到 fans」。
+  const AWARD_WRITERS = [
+    "src/platform/progress/applyMatchProgress.js",   // ① 單場
+    "src/platform/economy/competitionAward.js",      // ② 賽季名次
+  ];
+  const NON_AWARD_OK = ["src/platform/profileStore.js"];   // 種子 ＋ 清洗
+
+  const extra = writers.filter((q) => !AWARD_WRITERS.includes(q) && !NON_AWARD_OK.includes(q));
+  ck("12a) `meta.fans` 沒有第三處寫入點", extra.length === 0, extra.join(", ") || writers.join(" ＋ "));
+  ck("12b) 兩個發放點都在（沒有被誤刪）",
+    AWARD_WRITERS.every((q) => writers.includes(q)), writers.join(" ＋ "));
+
+  //  發放 = 在既有值上做加法。這一條才是真正的「不得有第三個 fan write path」。
+  const adders = files.filter((q) => /fansAfter|fansBefore\s*\+/.test(flat(q)));
+  const extraAdders = adders.filter((q) => !AWARD_WRITERS.includes(q));
+  ck("12b-2) 只有那兩個發放點會**增加**粉絲（第三條加法路徑會被抓到）",
+    extraAdders.length === 0, extraAdders.join(", ") || adders.join(" ＋ "));
+
+  //  profileStore 必須維持「非發放」性質
+  ck("12b-3) profileStore 只有種子與清洗，沒有粉絲加法",
+    !/fansAfter|fansBefore/.test(flat("src/platform/profileStore.js"))
+    && /sanitizeFans/.test(flat("src/platform/profileStore.js")),
+    "DEFAULT 種子 ＋ sanitizeFans");
+
+  const screenWriters = files.filter((q) => /^src\/(screens|ui)\//.test(q))
+    .filter((q) => /setState\s*\([^)]*fans|meta\.fans\s*=/.test(flat(q)));
+  ck("12c) 畫面 / Recap 不寫 fans", screenWriters.length === 0, screenWriters.join(", ") || "(乾淨)");
+}
+
+// ══ §13 fansAtSeasonStart 快照 ═══════════════════════════════════════════
+{
+  const seasonSrc = codeOnly(raw("src/platform/competition/seasonState.js")).replace(/\n/g, " ");
+  ck("13a) 快照建立在唯一的建季原語 `createSeasonState` 裡",
+    /fansAtSeasonStart/.test(seasonSrc) && /createSeasonState\(\{[^)]*fansAtStart/.test(seasonSrc),
+    "seasonState.js");
+  ck("13b) `rollToNextSeason` 轉傳 ⇒ 換季會建立新快照",
+    /rollToNextSeason\(\{[^)]*fansAtStart/.test(seasonSrc));
+
+  const storeSrc = codeOnly(raw("src/platform/profileStore.js"));
+  const wired = (storeSrc.match(/fansAtStart\s*:/g) ?? []).length;
+  ck("13c) 四條建季／換季路徑都傳了快照（2 建季 ＋ 2 換季）",
+    wired === 4, `${wired} 處`);
+
+  ck("13d) 沒有另建 fan history log",
+    !/fanHistory|fansLog|fanLedger/i.test(storeSrc) && !/fanHistory|fansLog|fanLedger/i.test(seasonSrc));
+
+  const uiFiles = [];
+  const walkUI = (d) => {
+    const abs = path.join(ROOT, d);
+    if (!fs.existsSync(abs)) return;
+    for (const e of fs.readdirSync(abs, { withFileTypes: true })) {
+      const q = `${d}/${e.name}`;
+      if (e.isDirectory()) walkUI(q);
+      else if (/\.jsx?$/.test(e.name)) uiFiles.push(q);
+    }
+  };
+  ["src/screens", "src/ui"].forEach(walkUI);
+  const snapWriters = uiFiles.filter((q) => /fansAtSeasonStart\s*[:=]/.test(codeOnly(raw(q))));
+  ck("13e) view / recap 不修改快照", snapWriters.length === 0, snapWriters.join(", ") || "(乾淨)");
+}
+
 // ── 輸出 ───────────────────────────────────────────────────────────────────
 let pass = 0;
 for (const [name, ok, detail] of A) {

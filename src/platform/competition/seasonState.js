@@ -169,7 +169,7 @@ export { SEASON_DAYS };
  * @param {number} p.season      meta.season
  * @param {number} p.seasonSeed  meta.seasonSeed
  */
-export function createSeasonState({ playerTeam, season = 1, seasonSeed, gameMode = "moba", startDay = 1 } = {}) {
+export function createSeasonState({ playerTeam, season = 1, seasonSeed, gameMode = "moba", startDay = 1, fansAtStart = null } = {}) {
   const built = buildRegularSeason({ playerTeam, season, seasonSeed, gameMode });
   if (!built.ok) return { ok: false, state: null, errors: built.errors };
   //  Q7a-3a：新建的賽季也走同一條身分升級路徑，讓新舊存檔的形狀一致。
@@ -189,6 +189,16 @@ export function createSeasonState({ playerTeam, season = 1, seasonSeed, gameMode
       //  第 1–7 天的場次一建立就是「過期」⇒ 下次推進會被補判棄權，
       //  玩家連看都沒看到就先輸幾場。實測在瀏覽器抓到的。
       startDay: Math.max(1, Math.floor(Number(startDay) || 1)),
+      //  ── Fan System F2：開季粉絲快照 ─────────────────────────────────
+      //  用途：F4 的賽季總結顯示「本季支持者成長 = 現在的粉絲 − 這個數字」。
+      //  ⚠ 放在**賽季狀態裡**，不另建 fan history log——賽季狀態本來就是
+      //    「一季建立一次、換季整個換掉」，快照的生命週期與它完全相同。
+      //  ⚠ 由呼叫端傳入（本檔是純函式，讀不到 Store）。`createSeasonState` 是
+      //    **唯一**的建季原語（`rollToNextSeason` 內部也呼叫它）⇒ 建季與換季
+      //    兩條路自動都拿得到，不會漏一條。
+      //  ⚠ 舊存檔沒有這個欄位 ⇒ `null`。**刻意不回填**：回填等於編一個
+      //    當時根本不存在的數字，那比誠實地說「這一季沒有起點」更糟。
+      fansAtSeasonStart: Number.isFinite(Number(fansAtStart)) ? Math.max(0, Math.floor(Number(fansAtStart))) : null,
       playerTeamId: playerTeam.id,
       //  Q7a-3b：賽制放進 map，頂層不再有單數的 competition / stage / playoff
       //  ⚠ `expectsPlayoff`：這個賽制**預期**有季後賽。常規賽聯賽有（Q6），
@@ -917,7 +927,7 @@ export function canRollSeason(state) {
  * @returns {{ok:boolean, state:object|null, archived:object|null, errors:Array}}
  *   `archived` = 上一季的 FinalStandings（呼叫端負責存進歷史）
  */
-export function rollToNextSeason({ state, playerTeam, seasonSeed, startDay } = {}) {
+export function rollToNextSeason({ state, playerTeam, seasonSeed, startDay, fansAtStart = null } = {}) {
   const can = canRollSeason(state);
   if (!can.ok) return { ok: false, state: null, archived: null, errors: [{ code: "cannot_roll", message: can.reason }] };
 
@@ -927,6 +937,8 @@ export function rollToNextSeason({ state, playerTeam, seasonSeed, startDay } = {
     seasonSeed,
     gameMode: activeCompetitionOf(state)?.gameMode ?? "moba",
     startDay,
+    //  F2：換季 = 新的一季開始 ⇒ 建立**新的**快照（不繼承上一季的）
+    fansAtStart,
   });
   if (!made.ok) return { ok: false, state: null, archived: null, errors: made.errors };
 

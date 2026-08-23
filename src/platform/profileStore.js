@@ -1029,6 +1029,8 @@ export const useProfileStore = create((rawSet, get) => {
         seasonSeed: get().meta?.seasonSeed,
         gameMode: mode,
         startDay: Number(get().meta?.days) || 1,
+        //  F2：開季粉絲快照（見 seasonState.js）
+        fansAtStart: get().meta?.fans ?? null,
       });
       if (!made.ok) return { ok: false, state: null, created: false, errors: made.errors };
       get()._setCompetitionStateFor(mode, made.state);
@@ -1041,6 +1043,8 @@ export const useProfileStore = create((rawSet, get) => {
       playerTeam: get().team,
       season: Number(get().meta?.season) || 1,
       seasonSeed: get().meta?.seasonSeed,
+      //  F2：開季粉絲快照（見 seasonState.js）
+      fansAtStart: get().meta?.fans ?? null,
       //  賽季從「建立當天」開始算（預設新局是第 8 天，不是第 1 天）。
       //  少了這一行，第 1–7 天的場次一建立就過期，玩家會先被判負幾場。
       startDay: Number(get().meta?.days) || 1,
@@ -1673,6 +1677,8 @@ export const useProfileStore = create((rawSet, get) => {
       playerTeam: get().team,
       seasonSeed: get().meta?.seasonSeed,
       startDay: Number(get().meta?.days) || 1,
+      //  F2：換季建立新的開季快照
+      fansAtStart: get().meta?.fans ?? null,
     });
     if (!res.ok) return { ok: false, errors: res.errors, reason: res.errors?.[0]?.message ?? null };
 
@@ -1720,6 +1726,8 @@ export const useProfileStore = create((rawSet, get) => {
       seasonSeed: get().meta?.seasonSeed,
       //  新賽季錨在**換季當下**這一天（與 `ensureCompetitionSeason` 同一條規則）
       startDay: Number(get().meta?.days) || 1,
+      //  F2：換季建立新的開季快照
+      fansAtStart: get().meta?.fans ?? null,
     });
     if (!res.ok) return { ok: false, errors: res.errors, reason: res.errors?.[0]?.message ?? null };
 
