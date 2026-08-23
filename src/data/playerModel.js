@@ -274,7 +274,7 @@ export const SPONSORS = [
   { id: "hyperx",   name: "HyperX 外設",      emoji: "🎧", tier: "中級", weekly: 15, signBonus: 40,  weeks: 8,  reqFans: 150_000,  reqWins: 5,  color: "#fbbf24", perk: "選手士氣 +5" },
   { id: "redbull",  name: "紅牛運動",         emoji: "🐂", tier: "中級", weekly: 12, signBonus: 30,  weeks: 8,  reqFans: 100_000,  reqWins: 3,  color: "#3b82f6", perk: "比賽獎金 +10%" },
   { id: "local",    name: "在地網咖",         emoji: "🖥️", tier: "入門", weekly: 6,  signBonus: 10,  weeks: 6,  reqFans: 0,    reqWins: 0,  color: "#71717a", perk: "無特殊加成" },
-  { id: "crypto",   name: "加密貨幣交易所",   emoji: "₿",  tier: "頂級", weekly: 35, signBonus: 100, weeks: 6,  reqFans: 235_000, reqWins: 20, color: "#f59e0b", perk: "高風險高報酬" },
+  { id: "crypto",   name: "加密貨幣交易所",   emoji: "₿",  tier: "頂級", weekly: 35, signBonus: 100, weeks: 6,  reqFans: 220_000, reqWins: 20, color: "#f59e0b", perk: "高風險高報酬" },
 ];
 export const sponsorById = (id) => SPONSORS.find((s) => s.id === id) || null;
 

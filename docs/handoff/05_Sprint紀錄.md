@@ -13093,3 +13093,58 @@ build ✓ built in 10.78s。
 
 未改 `reqWins`、`economyConfig`、三支凍結契約、Competition architecture、
 `Event` / `SeasonState.v2` schema。**未開始 F4，未 push。**
+
+---
+
+## Fan System F2 最終 closure — Crypto 門檻 235k → 220k（2026-08-23）
+
+branch `feature/fan-f2-season-awards`，接在 `ca29db1` 之後。**未 push。**
+
+只改一個數字：`crypto` 的 `reqFans` **235,000 → 220,000**。
+其餘 `0 / 100,000 / 150,000 / 180,000 / 205,000` 不動；
+`reqWins`、`economyConfig`、fan award 表、Competition contract 全部不動。
+
+### 校準結果：六條驗收標準**全過**
+
+| 贊助商 | reqFans | 保守 | 一般 | 良好 |
+|---|---|---|---|---|
+| 紅牛運動 | 100,000 | 開局 | 開局 | 開局 |
+| HyperX | 150,000 | 3.1 | 1.9 | **0.7** |
+| Vortex | 180,000 | 7.4 | 4.4 | 1.7 |
+| MAMIMOTH | 205,000 | 10.9 | 6.6 | 2.5 |
+| 加密貨幣 | **220,000** | 13.1 | **7.8** | **3.0** |
+
+| 標準 | 結果 |
+|---|---|
+| 🔒 開局財務生存 | ✅ 紅牛 100,000 ≤ 128,000 |
+| ② 第一季 Fan-gated upgrade 有明顯進度 | ✅ 一般走完 **53%** |
+| ③ 中階 1–2 successful seasons | ✅ **0.7 季** |
+| ④ 頂階 good play 3–5 seasons | ✅ **3.0 季** |
+| ⑤ 一般玩法頂階 < 8 seasons | ✅ **7.8 季** |
+| ⑥ 一冠不跳完整階梯 | ✅ 雙冠 32,000 / 全程 92,000 |
+
+⚠ **④ 與 ⑤ 都貼著邊界**（3.0 對下限 3、7.8 對上限 8）。
+之後任何動到 `fanGain`、來源權重或賽季獎勵的改動，都會立刻把其中一條推出範圍
+⇒ **改那些東西時必須重跑 `node tools/fan_calibration.mjs`**。
+
+其他 Sponsor 節奏未被破壞：中階與兩個中間頂階的季數與上一輪相同，只有頂端往下移。
+
+### 順手修掉一個會誤導人的輸出
+
+`fan_calibration.mjs` 現在有兩組驗收檢查。上面那組是 F1 時代的（**只算比賽粉絲、
+不含賽季獎勵**），⑤ 在那裡永遠會紅。已把標題改成
+「**F1 基準：僅比賽粉絲（歷史對照，不是現行驗收）**」並加註
+「現行驗收以下方『F2 後』那一組為準」——否則下一個人會照著紅燈去調階梯。
+
+### 驗證（全部實跑）
+
+`check_fan_system` 48/48、`check_fan_f0` 33/33、`finance_n3` 40/40、`progress25` 33/33、
+`competition_q1/q3/q4/q5/q6` 93/91/68/69/57、`cs_season_contract` PASS、
+`cs_major` 74/74、`season_state_v2_sealing_m2` 24/24、
+`regress` 15/15、`regress2` 8/8、`browser_check_fan_f1` **17/17**、build ✓ 11.86s。
+
+### 未做
+
+`reqWins`、`economyConfig`、fan award 表、Competition contract、三支凍結契約全部零改動。
+**TD-28（CS 聯賽 fan-only award blocker）維持未解，本輪不修。**
+**未開始 F4，未 push。**

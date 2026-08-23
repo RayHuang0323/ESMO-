@@ -127,7 +127,9 @@ for (const sp of ladder) {
   console.log(`  ${(sp.name + " " + sp.tier).padEnd(20)}${String(sp.weekly + "萬").padEnd(6)}${n(sp.reqFans).padStart(9)}   ${cells}`);
 }
 
-console.log("\n── 驗收標準檢查（裁決 B）──");
+console.log("\n── F1 基準：僅比賽粉絲（歷史對照，不是現行驗收）──");
+console.log("  ⚠ 這一組不含 F2 的賽季名次獎勵⇒ ⑤ 在這裡會紅是正常的。");
+console.log("    現行驗收以下方「F2 後」那一組為準。");
 const second = ladder[1];
 const mid = ladder.find((s) => s.tier === "中級" && s.reqFans > START_FANS);
 const tops = ladder.filter((s) => s.tier === "頂級");
