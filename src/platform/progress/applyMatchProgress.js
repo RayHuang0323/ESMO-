@@ -50,13 +50,18 @@ export function applyProgressToState(state, tx) {
   const finance = state.finance ?? {};
   const meta = state.meta ?? {};
 
-  // 3) 團隊金錢 / 4) 粉絲・聲望
+  // 3) 團隊金錢 / 4) 粉絲
+  //
+  //  ⚠ **聲望（`reputation`）自 Fan System F0 起不再由結算寫入。**
+  //    契約 `teamRewards.reputation` 仍然存在（schema 不動、舊存檔仍可讀），
+  //    但兩個 adapter 本來就一律送 0，且從來沒有經驗證的公式 ⇒ 它不是產品輸出。
+  //    這裡刻意**不再累加、不再寫回 meta、也不放進收據**：
+  //    下面的 `{ ...meta, fans: fansAfter }` 會原樣帶過既有的 `meta.reputation`，
+  //    所以對真實存檔而言狀態逐值相同。見 TD-22 與 `docs/design/粉絲系統架構.md` §4.4。
   const moneyBefore = num(finance.funds);
   const fansBefore = num(meta.fans);
-  const repBefore = num(meta.reputation);
   const moneyAfter = moneyBefore + num(tx.teamRewards.money);
   const fansAfter = fansBefore + num(tx.teamRewards.fans);
-  const repAfter = repBefore + num(tx.teamRewards.reputation);
 
   // 5–7) 選手 XP / 升級 / 天賦點
   //    ⚠ 以 Store 的**現值**重算，不盲信 transaction 裡的 previousXp
@@ -171,10 +176,11 @@ export function applyProgressToState(state, tx) {
     matchId: tx.matchId,
     mode: tx.mode,
     recordedAt: tx.recordedAt,
+    //  ⚠ 收據不再帶 `reputation`（F0 deprecated）。它永遠是 0，而畫面把 0 顯示成
+    //    「聲望 —」——一個永遠不會動的欄位比沒有這個欄位更誤導。
     team: {
       money: moneyAfter - moneyBefore,
       fans: fansAfter - fansBefore,
-      reputation: repAfter - repBefore,
       moneyBefore, moneyAfter, fansBefore, fansAfter,
     },
     players: playerReceipts,
@@ -189,7 +195,8 @@ export function applyProgressToState(state, tx) {
   const nextState = {
     players: nextPlayers,
     finance: { ...finance, funds: moneyAfter, transactions: nextTransactions },
-    meta: { ...meta, fans: fansAfter, reputation: repAfter },
+    //  `reputation` 由 spread 原樣帶過（F0 deprecated：不再由結算寫入）。
+    meta: { ...meta, fans: fansAfter },
     processedMatchTransactions: { ...processed, [tx.transactionId]: receipt },
     //  Milestone N3：把這一場的勝負追加到**統一賽績紀錄**（MOBA 與 CS 一視同仁），
     //  供經濟層的贊助績效獎金使用。勝負直接取自契約既有的 metadata.winner，

@@ -95,7 +95,7 @@ export function mobaResultToTransaction(br, ctx = {}) {
     matchId: mobaMatchId(br),
     mode: "moba",
     sourceResultVersion: br.schema,
-    teamRewards: { money: team.money, fans: team.fans, reputation: 0 },  // 聲望無經驗證公式 → 0
+    teamRewards: { money: team.money, fans: team.fans, reputation: 0 },  // reputation：F0 起 deprecated，欄位保留、恆 0（TD-22）
     playerProgress,
     unlocks: [],
     metadata: {

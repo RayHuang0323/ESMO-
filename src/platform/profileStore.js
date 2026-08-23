@@ -283,6 +283,11 @@ const DEFAULT = {
   },
   //  Milestone N：week / season 一律由 days 導出（唯一計數）。種子 days = 8
   //  ⇒ week 2、season 1。舊種子寫死 week: 1 與 days: 8 不一致，這裡一併修正。
+  //  ⚠ `reputation` 自 Fan System F0（2026-08-23）起為 **deprecated**：
+  //    欄位保留（舊存檔仍可讀、schema 不動），但**不再是產品輸出**——
+  //    新功能不得依賴它、settlement 不再寫入、UI 不再顯示。
+  //    物理刪除留給未來一次正式的 save schema cleanup。見 TD-22 與
+  //    `docs/design/粉絲系統架構.md` §4.4。種子值 47 刻意不動（改了等於動 schema）。
   meta: {
     fans: 128_000, reputation: 47, players: INITIAL_PLAYERS.length,
     days: 8, week: deriveTime(8).week, season: deriveTime(8).season,
@@ -364,6 +369,42 @@ const DEFAULT = {
 };
 
 const arr = (v, d) => (Array.isArray(v) ? v : d);
+
+/**
+ * Fan System F0：`meta.fans` 的載入清洗。
+ *
+ * ── 為什麼需要這支 ────────────────────────────────────────────────────────
+ * 載入原本只做 `{ ...DEFAULT.meta, ...saved.meta }`，完全沒有檢查。壞掉的存檔
+ * （`null` / `NaN` / `Infinity` / 負數 / `"abc"`）會一路流進 UI 與贊助資格判定。
+ * 目前不痛，是因為 `SPONSORS[].reqFans` 全部達標 ⇒ **沒有人在依賴這個數字做判斷**；
+ * F1 讓粉絲真的擋住贊助之後，壞值就會變成可觸發的 bug。先把入口關起來。
+ *
+ * ── 規則（刻意分成兩種壞法，不是一律回 DEFAULT）──────────────────────────
+ *   · 合法值（有限、非負）→ **原樣保留**（`0` 是合法的）。這是最重要的一條：
+ *     裁決 2 說舊存檔 `fans` 保持原值、不做尺度 migration。
+ *   · 數字字串（`"128000"`）→ 取其數值。型別錯了但意圖明確，且與 repo 既有的
+ *     `num()`（`Number(v)` + `Number.isFinite`）一致。
+ *   · 有限負數 → **夾到 0**。有數字在那裡代表原本有意圖，只是溢位或減過頭；
+ *     夾到最近的合法值是最小的介入，不憑空發粉絲。
+ *   · 其他（`undefined` / `null` / `NaN` / `±Infinity` / `"abc"` / 物件）
+ *     → 回退 `DEFAULT.meta.fans`。這種值**無法還原**，而回退 0 會讓玩家只簽得起
+ *     最低階贊助（見 `economy/sponsors.js` 的開局現金流）⇒ 等於把壞存檔判死刑。
+ *     回退到「新局的起點」既不憑空加值，也不讓人卡死。
+ *   · 小數 → `Math.floor`。無條件捨去，不會因為清洗而多出粉絲。
+ *
+ * ⚠ 這裡**只清洗，不換算尺度**。128,000 量級是產品裁決，不得在此改動。
+ * ⚠ `undefined` 一定要處理：`{ ...{fans:1}, ...{fans:undefined} }` 會得到
+ *   `{ fans: undefined }`——顯式的 undefined 會蓋掉 DEFAULT，spread 擋不住。
+ * ⚠ `null` 要在 `Number()` 之前擋掉：`Number(null) === 0` 會把「沒有值」
+ *   悄悄變成「零粉絲」，那是兩件不同的事。
+ */
+function sanitizeFans(v, fallback) {
+  if (v === null || v === undefined || typeof v === "boolean") return fallback;
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  if (n < 0) return 0;
+  return Math.floor(n);
+}
 
 function activeLineupOf(state, mode) {
   const source = mode === "cs" ? state.csLineup : state.lineup;
@@ -498,10 +539,16 @@ const load = () => {
       },
       //  Milestone N：載入時強制由 days 重新導出 week / season。
       //  舊存檔可能存著與 days 對不上的 week（舊版是各自遞增的），以 days 為準。
+      //  Fan System F0：`fans` 在這裡清洗（見 `sanitizeFans`）。
+      //  只擋壞值，**不換算尺度**——舊存檔的合法 `fans` 一律原樣帶過。
       meta:    (() => {
         const m = { ...DEFAULT.meta, ...saved.meta };
         const t = deriveTime(m.days ?? DEFAULT.meta.days);
-        return { ...m, days: t.day, week: t.week, season: t.season };
+        return {
+          ...m,
+          fans: sanitizeFans(m.fans, DEFAULT.meta.fans),
+          days: t.day, week: t.week, season: t.season,
+        };
       })(),
       // 戰隊發展 migration：有新 state 就只信它；缺欄位的舊存檔才回退
       // legacy meta.talentPending。既有選手天賦點、rank、能力與歷史不動。

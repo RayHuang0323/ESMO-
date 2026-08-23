@@ -175,7 +175,11 @@ export function MobaMatchReport({ result, battleConfig, heroImg, onNext, onRemat
           )}
           {/* 賽後收益（recordMatch 真實值） */}
           <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-            {[["聲望", r.fanGain != null ? `+${r.fanGain}` : "–", C.purp], ["獎金", r.prizeGain != null ? `+$${r.prizeGain}萬` : "–", C.green], ["經驗", r.xpGain != null ? `+${r.xpGain}` : "–", C.gold]].map(([label, val, color]) => (
+            {/*  Fan System F0：這一格的值一直都是 `r.fanGain`，標籤卻寫「聲望」——
+                 顯示的是粉絲，掛的是聲望的名字。聲望在 F0 已 deprecated（永遠 0、
+                 不再由結算寫入），留著這個標籤會讓玩家以為聲望在動。標籤改成「粉絲」，
+                 值不變 ⇒ 這是**改名不是改數**。 */}
+            {[["粉絲", r.fanGain != null ? `+${r.fanGain}` : "–", C.purp], ["獎金", r.prizeGain != null ? `+$${r.prizeGain}萬` : "–", C.green], ["經驗", r.xpGain != null ? `+${r.xpGain}` : "–", C.gold]].map(([label, val, color]) => (
               <div key={label} style={{ flex: 1, background: C.card2, borderRadius: 10, padding: "8px 4px", textAlign: "center" }}>
                 <div style={{ color, fontSize: 15, fontWeight: 900 }}>{val}</div>
                 <div style={{ color: C.gray, fontSize: 9, marginTop: 2 }}>{label}</div>

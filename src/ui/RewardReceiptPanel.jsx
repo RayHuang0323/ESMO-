@@ -51,11 +51,13 @@ export default function RewardReceiptPanel({ receipt, accent = GC.gold }) {
       </div>
 
       {/* 團隊獎勵 */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 8 }}>
+      {/*  Fan System F0：移除「聲望」格。它從來沒有公式，收據裡永遠是 0 ⇒ 永遠顯示
+           「聲望 —」。一個永遠不會動的欄位，比沒有這個欄位更誤導玩家。
+           `reputation` 欄位本身保留在 save schema 裡（deprecated，見 TD-22）。 */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 }}>
         {[
           ["獎金", t.money > 0 ? `+$${wan(t.money)}` : "—", GC.green],
           ["粉絲", t.fans > 0 ? `+${t.fans}` : "—", accent],
-          ["聲望", t.reputation > 0 ? `+${t.reputation}` : "—", GC.gray],
         ].map(([k, v, c]) => (
           <div key={k} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "6px 4px", textAlign: "center" }}>
             <div style={{ color: GC.gray, fontSize: 8, fontWeight: 700 }}>{k}</div>

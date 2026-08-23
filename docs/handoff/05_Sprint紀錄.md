@@ -12571,3 +12571,99 @@ Training v1.1 checkpoint `1257176`。保留 Competition Hub／Season IA、CS／M
 - Training / Growth UI verifier 擴充至 80/80，Recruit salary contract 直接使用 canonical
   salary API 驗證 threshold crossing；未修改 production salary formula。
 - 正式線上 server-authoritative schedule 與真實時間 timer 留待第二階段，不在本輪實作。
+
+---
+
+## Fan System F0 — fans sanitize ＋ reputation deprecated（2026-08-23）
+
+branch `feature/fan-f0-sanitize`，基準 `origin/main @ ae9295e`。規格：`docs/design/粉絲系統架構.md`。
+
+### 做了什麼
+
+**1. `meta.fans` 載入清洗**
+
+`profileStore.js` 新增 `sanitizeFans(v, fallback)`，接在唯一的存檔水合點
+（`load()` 裡的 `meta:` IIFE）。規則刻意分成兩種壞法：
+
+| 輸入 | 結果 | 為什麼 |
+|---|---|---|
+| 有限非負數（含 `0`） | **原樣保留** | 裁決 2：舊存檔不做尺度 migration |
+| 數字字串 `"128000"` | 取其數值 | 型別錯但意圖明確，與既有 `num()` 一致 |
+| 有限負數 | 夾到 `0` | 有數字代表原本有意圖，只是溢位；夾到最近的合法值是最小介入 |
+| `undefined` / `null` / `NaN` / `±Infinity` / 非數字字串 / 物件 / 布林 | 回退 `DEFAULT.meta.fans` | 這種值**無法還原**；回退 0 會讓玩家只簽得起最低階贊助 ⇒ 等於把壞存檔判死刑 |
+| 小數 | `Math.floor` | 清洗不得讓粉絲變多 |
+
+⚠ 只清洗，**不換算尺度**。128,000 量級未動。
+⚠ `null` 在 `Number()` 之前擋掉——`Number(null) === 0` 會把「沒有值」悄悄變成「零粉絲」。
+⚠ 顯式 `undefined` 必須處理：`{ ...{fans:1}, ...{fans:undefined} }` 得到 `{fans: undefined}`，spread 擋不住。
+
+**2. `reputation` deprecated（非刪除）**
+
+- `applyMatchProgress`：不再累加、不再寫回 `meta`、**收據不再帶 `team.reputation`**。
+  `{ ...meta, fans: fansAfter }` 的 spread 會原樣帶過既有 `meta.reputation`
+  ⇒ 對真實存檔**狀態逐值相同**（兩個 adapter 本來就一律送 0）。
+- `RewardReceiptPanel`：移除「聲望」格，網格 3 欄 → 2 欄。它永遠顯示「聲望 —」，
+  一個永遠不會動的欄位比沒有這個欄位更誤導。
+- `MobaFlowScreens`：那一格的值一直是 `r.fanGain`，標籤卻寫「聲望」——**顯示的是粉絲，
+  掛的是聲望的名字**。標籤改成「粉絲」，值不變（改名不是改數）。
+- 欄位、種子值 47、契約 schema **全部不動**；舊存檔仍讀得到 `meta.reputation`。
+
+### 驗證（全部實跑）
+
+| 項目 | 結果 |
+|---|---|
+| `node tools/check_fan_f0.mjs`（新增） | **33/33** |
+| `verify.mjs --only=progress25,experience26,talent27,stats28,cs23,tactic24` | **6/6 PASS**（talent27 見下方「被 gate 擋下來的改動」） |
+| `check_progress25` | 34/34 |
+| `check_authoritative_o7` | 48/48 |
+| `check_fixture_result_integrity` | 20/20 |
+| `check_result_flow_o71` | 27/27 |
+| `check_growth_loop_p0` | 25/25 |
+| `check_finance_n3` | 40/40 |
+| `check_condition_o2` | 30/30 |
+| `node tools/regress.mjs` | 結束率 15/15、0 殺場 0、撤退鎖死 0 |
+| `node tools/regress2.mjs` | 節奏門檻 **8/8** |
+| `npm run build` | ✓ built in 17.20s |
+
+**Mutation sentinel（證明 gate 有鑑別力）**
+
+- 把 `sanitizeFans` 改成 identity ⇒ **33 → 24**（9 條紅）
+- 把 `reputation` 寫回 settlement ⇒ **33 → 32**（§4a 紅）
+- 兩者還原後都回到 33/33
+
+### 過程中發現的兩件事（非本次改動造成）
+
+**(a) Edit/Write 工具在 Windows 上把檔案寫成 CRLF，而 repo 是 LF。**
+12 行的改動一度顯示成 230 行的 diff（`applyMatchProgress.js` 230 個 CR、
+`MobaFlowScreens.jsx` 240 個、`RewardReceiptPanel.jsx` 120 個）。
+已全部 `sed -i 's/\r$//'` 正規化回 LF，`git diff` 與 `--ignore-cr-at-eol` 現在數字相同。
+**任何在 Windows 上用工具改這個 repo 的人都要注意這件事**，否則 review 會看到假的大 diff。
+
+**(b) `useBattleFeed.js` 讀 `profile.meta.fans` 是合法的。**
+它在**賽後**把 `fansNow` 餵給 `teamRewardsFor()`（獎勵公式），
+沒有進模擬、沒有進 stats、沒有進勝率。`check_fan_f0` §6b 把這個例外明確寫成斷言，
+避免日後有人「順手清乾淨」而拆掉獎勵。
+
+
+### 一個被 gate 擋下來的改動（保留紀錄）
+
+原本想在 `contracts/matchProgressTransaction.js` 的 `reputation` 欄位旁加一行 deprecated 註解，
+被 **`check_talent27` §28「不修改 MatchProgressTransaction.v1（git diff 零改變）」** 擋下（36/37 紅）。
+
+那道 gate 是**對的**：契約檔用 `git diff --quiet` 守成逐位元凍結，
+連註解都不讓改——這正是裁決 5「不物理刪除欄位、schema 不動」在程式碼層的保險。
+
+**處置**：還原該檔（現在相對 HEAD 零改變），deprecated 說明改放在
+`applyMatchProgress.js`、兩個 adapter、TD-22 與 `docs/design/粉絲系統架構.md` §4.4。
+還原後 `talent27` **37/37**。
+
+⚠ **給 F1 / F5 的提醒**：`BattleResult.v2`、`CsMatchResult.v1`、`MatchProgressTransaction.v1`
+三支契約檔都在 `check_talent27` §26–28 的逐位元凍結下。任何需要動它們的想法，
+**先確認是不是真的要改契約**，不要順手改註解。
+### 沒有做
+
+- 未改 `SPONSORS[].reqFans`、未改 `fanGain`、未做 Practice/League/Major 權重
+- 未改 Sponsor pricing、Training v1.1、Competition / Season、`economyConfig`
+- 未物理刪除 `reputation` 欄位、未做任何 save schema migration
+- 未建 `check_fan_system.mjs`（F5 從 F1 才開始；`check_fan_f0` 的斷言屆時併進去）
+- **未開始 F1**
