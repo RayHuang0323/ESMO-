@@ -504,3 +504,43 @@ Codex UI Migration 目前暫停開新 Sprint。Claude Code 另一工作線正在
 
 本階段不修改 `AppShell`、`GameRouter`、`Store`、`contracts`、CS、Season、Competition，
 也不碰 Claude Code 正在處理的 Command Deck／Competition Hub 工作線。
+
+---
+
+## Fan System v1（2026-08-23 產品核准，尚未開工）
+
+**規格：`docs/design/粉絲系統架構.md`。基準 `main @ 564986f`。**
+
+定位是**「接通既有設計」**，不是新增第二套系統。repo 裡已經有粉絲數（`meta.fans` 種子 128,000）、
+公式（`matchRecorder` 的 `fanGain`）、門檻（`SPONSORS[].reqFans`）、共用發放點
+（`teamRewardsFor` → `applyMatchProgress`）與冪等帳本——**缺的只有把門檻校準到正確的數量級、
+來源權重、一條賽季來源**。
+
+目前 `reqFans` 是 0/500/800/1500/2000/3000 而種子是 128,000 ⇒ **粉絲門檻從開局第一秒就全部達標**，
+這條玩法是死的。修法不是把 fans 改小（會逼出大規模存檔 migration），而是把 `reqFans` 改大到同一尺度。
+
+### Milestone
+
+| | 內容 | 產出 |
+|---|---|---|
+| **F0** | `meta.fans` sanitize ＋ `reputation` **deprecated**（非物理刪除） | 前置，不含玩法 |
+| **F1** | **Sponsor eligibility** ＋ **fan source weighting**（`reqFans` / `fanGain` 校準到 128k 尺度） | **粉絲第一次有後果** |
+| **F2** | **Season / Major / Champion fan awards**（走既有 `settleCompetitionAward` 冪等路徑） | 賽季第一次影響粉絲 |
+| **F3** | ⏸ **延後為 Fan v1.1 — Sponsor pricing**（粉絲級距 × `weekly`） | 不在 v1 範圍 |
+| **F4** | 既有 UI 整合（Home / Sponsor / Match Result / Season Recap / Team Overview）＋ 假 `audience` 移除 | 不建 Fan Center |
+| **F5** | `check_fan_system.mjs` | **基礎 contract verifier 從 F1 同步開始** |
+
+**執行順序：`F0 → F1 → F5 基礎 → F2 → F4 → playtest → 再決定 F3`**
+
+`playtest` 是真的關卡：F3 要不要做，取決於玩家在 F1–F4 之後有沒有真的感覺到粉絲的存在。
+
+### 範圍邊界（本案不動）
+
+Competition Hub、Training 邏輯、Player progression、MatchSession / ActiveMatch、
+`reqWins` 閘門、`STARTER_SPONSORS`、`economyConfig` 既有費率。
+**不新增第四個金錢入口**（維持 `applyMatchProgress` / `weeklySettlement` / `settleCompetitionAward` 三個）。
+
+### 為什麼價碼倍率被切到 v1.1
+
+`economyConfig` 自帶「待轉會與合約系統完成後再校正」註記。把粉絲與現金流平衡同時綁死，
+會變成兩個都調不準。**v1 先讓粉絲擋門，看玩家有沒有感覺；有感覺再談價碼。**
