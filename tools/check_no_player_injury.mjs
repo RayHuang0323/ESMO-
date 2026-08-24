@@ -15,7 +15,7 @@
 //       全部必須原封不動。Season vNext（老化・巔峰・衰退・退休）另案設計，
 //       它要能站在這些欄位上，所以這裡把它們一起釘住。
 //
-//  §1 產生面（3）    §2 出賽資格（4）   §3 每日推進（1）
+//  §1 產生面（4）    §2 出賽資格（6：MOBA / CS 各一套）   §3 每日推進（1）
 //  §4 保留面（6）    §5 UI 與寫入路徑（3）  §6 舊存檔（3）
 //  §7 mutation sentinel A–D（把規則改回去 ⇒ 這支 gate 必須變紅）
 //
@@ -182,6 +182,18 @@ const oldSaveCanPlay = (mod) => mod.matchFitness({ id: "a", name: "A", age: 27, 
   ck("6) auto lineup 不因 injury skip player（五席全部填滿）",
     Object.values(filled).filter(Boolean).length === 5,
     JSON.stringify(filled));
+
+  //  §16/17：MOBA 與 CS 兩套名單都不得回歸。CS 走自己的席位（f1–f5）與角色對位，
+  //  是另一條 validateSquad 路徑，必須各驗一次——只驗 MOBA 會漏掉 CS。
+  const vCs = squad.validateSquad({ mode: "cs", seats: csSeats, players: HURT_CS });
+  ck("5b) CS roster 不回歸（整隊帶傷停資料仍通過 CS 陣容驗證）",
+    vCs.ok && !vCs.errors.some((e) => RE_INJURY_ID.test(e.code ?? "")),
+    vCs.errors.map((e) => e.code).join(",") || "無錯誤");
+
+  const filledCs = squad.autoFillSquad({ mode: "cs", seats: {}, players: HURT_CS });
+  ck("6c) CS auto lineup 不因 injury skip player（五席全部填滿）",
+    Object.values(filledCs).filter(Boolean).length === 5,
+    JSON.stringify(filledCs));
 
   //  對照組：exhausted 仍然要被跳過（不能因為拆受傷就讓疲勞失去意義）
   const tired = MOBA_ROLES.map((r, i) => mkPlayer(`t${i + 1}`, r, { energy: cond.CONDITION.unfitBelow - 1 }));
