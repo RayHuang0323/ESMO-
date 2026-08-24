@@ -31,6 +31,28 @@ export const FEATURE_FLAGS = Object.freeze({
   devFastForward: true,
 
   /**
+   * 訓練中心的「🛠 DEV 快速恢復／快速推進」面板。
+   *
+   * 用途：**開發測試便利功能，不是正式遊戲設計。** 手測與驗收時不必一天一天
+   * 按過去，也不必為了讓某人可出賽而繞一圈指派休息課。
+   *
+   * 行為：推進 1／3 天走**既有的** `profileStore.advanceDay()`——同一個時鐘、
+   *   同一套週結算與賽季日曆規則；推不動時（例如今天有還沒收尾的比賽）
+   *   **照實顯示原因，不強推**。「全隊恢復至可出賽」的目標體力由
+   *   `platform/condition` 的 `CONDITION.restPerDay` 反覆疊加、以
+   *   `isMatchFit()` 判定何時停 ⇒ **沒有硬寫任何體力數字，也沒有第二套恢復公式**。
+   *
+   * ⚠ 正式玩法**沒有**因此被放寬：condition / fatigue / exhausted / 輪休規則
+   *   一律照舊，這個面板只是同一組規則的快轉鍵。
+   *
+   * 關閉方式：把這一行改成 `false`（單一位置，畫面不必動）。
+   * 移除方式：刪掉 `src/debug/DevQuickRecovery.jsx`、`TrainingScreen` 的一個
+   *   import 與一行 JSX，再刪這個旗標。**正式商業上線前必須做**
+   *   （release checklist 見 `docs/handoff/08_目前待辦與風險.md`）。
+   */
+  devQuickRecovery: true,
+
+  /**
    * 亞洲巡迴賽（Q7a-3d）：新賽季會多出一條巡迴賽、三站 Event、巡迴積分與晉級資格。
    *
    * **預設開啟（Q7a-3f.2）**。翻面之前先做完四件事，不是直接改一行：

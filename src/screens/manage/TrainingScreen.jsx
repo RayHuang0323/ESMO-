@@ -19,6 +19,8 @@ import { PlayerAvatar } from "../../ui/PlayerFace.jsx";
 import { withDerivedStats } from "../../platform/talents/playerDerivedStats.js";
 import { GC } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
+//  ⚠ DEV 專用，正式模式不會渲染任何東西。移除時連同下方那一行 JSX 一起刪。
+import DevQuickRecovery from "../../debug/DevQuickRecovery/index.jsx";
 
 const condColorOf = (c) => (c === "精神飽滿" ? GC.green : c === "正常" ? "#d4d4d8" : c === "疲勞" ? GC.gold : GC.red);
 const gainText = (result) => {
@@ -78,6 +80,7 @@ export default function TrainingScreen({ onBack }) {
       title="訓練中心" subtitle="TRAINING" onBack={onBack}
       right={<span style={{ background: "rgba(167,139,250,0.15)", color: GC.purp, fontSize: 11, fontWeight: 800, borderRadius: 8, padding: "4px 10px", whiteSpace: "nowrap" }}>第 {meta.week ?? 1} 週</span>}
     >
+      <DevQuickRecovery />
       <div style={{ color: GC.gray, fontSize: 10, marginBottom: 12 }}>指派訓練後需推進天數才完成，訓練期間選手無法操作</div>
 
       <button onClick={advance}

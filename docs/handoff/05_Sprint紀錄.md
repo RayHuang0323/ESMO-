@@ -13486,3 +13486,81 @@ save/reload 不 crash。
 未重新設計 fatigue。未動 Fan balance / Sponsor / `economyConfig` / Competition award policy /
 `SeasonState v2` / Training v1.1 成長公式 / age formula。未物理刪除任何 schema 欄位。
 未 push、未 deploy。
+
+
+## DEV Quick Recovery（2026-08-25，延伸 `feature/remove-player-injury`）
+
+同一條分支收尾，不另開 Sprint。**未 merge、未 push。**
+
+> **DEV Quick Recovery 是開發測試便利功能，不是正式遊戲設計。**
+> 正式商業上線前必須關閉或移除（release checklist 見 `08_目前待辦與風險.md`）。
+
+### Audit：既有的 day progression / recovery / dev diagnostics
+
+| 面向 | 既有實作 |
+|---|---|
+| 唯一時鐘 | `profileStore.advanceDay(n)`：先問 `_advanceCompetition`（賽季日曆能推幾天），再 `advanceDaysInState`（每日恢復＋跨週結算）。`advanceTrainingDay()` = `advanceDay(1)` 薄包裝 |
+| 生產 UI 唯一入口 | `TrainingScreen` 的「⏭️ 推進訓練日」，且 `advance()` 要求 `training.length > 0` |
+| 每日恢復 | `applyDailyRecovery()` 沒排訓練者 +`restPerDay`(8)；休息課完成 +30 |
+| 不可出賽門檻 | `CONDITION.unfitBelow` = 15 |
+| DEV 基礎設施 | `ui/debugMode.js → isDebugMode()` ＋ `featureFlags.js → featureEnabled()` 的**兩層閘門慣例**；既有先例 `devFastForward`（GameView）與 `test-funds-panel`（FinanceScreen） |
+
+⇒ 本輪**沿用兩層閘門慣例**，不發明第三種 dev gate。
+
+### 正式玩法 soft-lock audit：**沒有 soft-lock**（實跑證明）
+
+用真的 Store 跑最壞情境（全隊體力 0、資金 0、沒人在訓練）：
+
+1. 「休息調整」`energyCost: 0`、1 天，**UI 與 Store 都明確豁免體力檢查**
+   （`c.id !== "rest" && ...`）⇒ 0 體力照樣指派得動，免費。
+2. 推進日期不收費、不被資金擋（實測 funds 0 仍可推進）。
+3. 第 1 天：休息者 0 → **30**（可出賽）；其餘每日自然恢復 0 → 8。
+4. 第 2 天：其餘 8 → **16** > 門檻 15 ⇒ **全隊可出賽**。
+5. 被比賽日擋住時 `CompetitionScreen` 有正式棄權按鈕（二次確認，只記敗場）。
+
+⇒ **玩家 2 天就能免費脫困，DEV 工具沒有在掩蓋任何死局。**
+由 `check_dev_quick_recovery` §6 每次重跑，不靠文字宣稱。
+
+### 做了什麼
+
+| 檔案 | 改動 |
+|---|---|
+| `src/debug/DevQuickRecovery/logic.js` | **新增**。純規則：兩層閘門 `devQuickRecoveryEnabled()`、恢復目標 `energyToMatchFit()`。拆成 .js（不是 .jsx）**是為了讓 verifier 能直接 import 實跑**——JSX 在 Node 裡 import 不了，閘門若寫在 .jsx 就只能字串比對，那擋不住「行為改了但字面沒改」 |
+| `src/debug/DevQuickRecovery/index.jsx` | **新增**。面板本體：推進 1／3 天、全隊恢復至可出賽 |
+| `src/featureFlags.js` | **新增旗標** `devQuickRecovery`（＋移除步驟寫在註解裡） |
+| `src/screens/manage/TrainingScreen.jsx` | **1 個 import ＋ 1 行 JSX**，沒有其他改動 |
+
+三個原則寫死在檔頭並由 gate 守住：
+① 不另寫第二套日期／恢復邏輯 ② 不寫死體力數字 ③ 不放寬正式玩法。
+
+**推進**走既有 `advanceDay()`；賽程未收尾一樣被擋，**照實顯示原因不強推**
+（DEV 工具是快轉鍵，不是規則豁免權）。
+**恢復目標**從現值起反覆疊加 `CONDITION.restPerDay`，以 `isMatchFit()` 判定何時停 ⇒
+0 體力的目標是 **16**（剛好跨過門檻 15），**不是一鍵滿血**。門檻日後調整會自動跟著調整。
+
+### 驗證
+
+- `tools/check_dev_quick_recovery.mjs` **29/29**，含 4 個 mutation sentinel：
+  **S-A** 拿掉 `isDebugMode()` 那層 ⇒ 紅｜**S-B** 恢復目標寫死 ⇒ 紅｜
+  **S-C** 面板自己算日期 ⇒ 紅｜**S-D** 改掉 Training 年齡係數 ⇒ 紅
+- `tools/browser_check_dev_quick_recovery.mjs` **32/32**，跑**兩種 server**：
+  - **Part A** `vite preview`（build 產物，`import.meta.env.DEV = false`）⇒
+    正式／預設模式**面板與所有 DEV 字樣完全不存在**
+  - **Part B** `vite dev` ⇒ Desktop 1366 ＋ Mobile 390 各驗一輪：
+    恢復後 5/5 可出賽（體力 16）、推進 1 天 +1、推進 3 天 +3、
+    體力照既有 +8/天回復、Match Prep 五席填滿、無橫向捲動、console error 0
+
+### 一個查出來的既有機制（不是本輪造成，也沒有動它）
+
+`autoFillSquad` 會先跑 `normalizeLineup` 的 **identity 回填**：種子選手的 id 剛好
+叫 `b1`–`b5`，與 MOBA 席位同名 ⇒ 即使全員 exhausted 也會被原樣回填進席位，
+**不經過 `isMatchFit` 候選池**。但 `validateSquad` 仍逐席回報 `exhausted`，
+所以**打不開比賽**，產品行為是對的。gate 因此分兩條驗：閘門一條、候選池一條
+（候選池那條刻意用不與席位同名的 id，否則測不到）。
+
+### 沒有做
+
+未實作「低體力硬上但能力下降」（未來正式玩法可考慮，本輪明確不做）。
+未改 recovery balance、condition threshold、Training v1.1、age、Fan、economy、SeasonState。
+未清舊存檔 `injuryDays`；injury removal 既有行為完全不變。
+未開始 Season vNext。未 push、未 deploy。
