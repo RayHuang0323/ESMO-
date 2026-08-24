@@ -13430,7 +13430,7 @@ branch `feature/fan-f4-ui`，基準 `origin/main @ c9beb10`。**未 push。**
 
 ### 新 verifier
 
-`tools/check_no_player_injury.mjs` — **27/27**，含 4 個 mutation sentinel：
+`tools/check_no_player_injury.mjs` — **29/29**，含 4 個 mutation sentinel（MOBA / CS 名單各驗一套）：
 
 - **S-A** 重新把 `injuryDays > 0` 當成不可出賽 ⇒ 紅
 - **S-B** 重新加入 injury roll ⇒ 紅
@@ -13473,7 +13473,7 @@ save/reload 不 crash。
 
 ### 驗證（全部實跑，輸出見上）
 
-- `check_no_player_injury` **27/27**、`browser_check_no_injury_ui` **46/46**
+- `check_no_player_injury` **29/29**、`browser_check_no_injury_ui` **46/46**
 - `verify.mjs --only=progress25,talent27,growth_p0,growth_ui_p1,regress,regress2,build`
   → **7/7 PASS**（與改動前 baseline 相同）
 - 23 支 node gate 中 **21 PASS**；2 支紅的（`check_team_development_recovery`、
