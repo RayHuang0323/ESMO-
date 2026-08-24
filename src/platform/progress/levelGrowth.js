@@ -26,6 +26,8 @@
 //  純函式：不 import React / zustand / localStorage。
 // ============================================================================
 import { POSITION_PROFILE, MOBA_ROLES } from "../../data/playerModel.js";
+//  Season vNext V0A：年齡與學習能力的係數一律向 PCGM 要，本檔不自己放曲線常數。
+import { careerGrowthFactor, GROWTH_SOURCES } from "./careerGrowth.js";
 
 /** 成長費率。要調手感只改這裡。 */
 export const LEVEL_GROWTH = Object.freeze({
@@ -64,20 +66,34 @@ export function growthKeysFor(player) {
 /**
  * 計算升級帶來的能力成長。
  *
- * @param {object} player       選手（需要 stats / potential / role）
+ * ── Season vNext V0A ──────────────────────────────────────────────────────
+ * 成長量再乘上 PCGM 係數（年齡 × 學習能力 × 來源）。在此之前本函式**完全不認年齡**，
+ * 34 歲老將靠打比賽的成長與 18 歲新人一模一樣。
+ *
+ * ⚠ 係數乘在 `perStatCap` 的 clamp **之前** ⇒ 上限保護仍然是最後一道，
+ *   PCGM 只可能讓成長**變少**，不可能突破既有上限。
+ * ⚠ 舊存檔沒有 `age` / `learning` 時，兩個係數都回中性值 1.0
+ *   ⇒ 既有 fixture 與存檔逐位元不變。
+ *
+ * @param {object} player       選手（需要 stats / potential / role；PCGM 另讀 age / stats.learning）
  * @param {number} levelsGained 升了幾級（≤0 ⇒ 無成長）
+ * @param {object} [opts]
+ * @param {string} [opts.source] 成長來源（`GROWTH_SOURCES`，預設 `formal`）
+ *   ⚠ 第三參數為**選配**——既有的兩參數呼叫端行為不變。
  * @returns {{stats:object, gains:object, total:number}}
  *   · stats  成長後的完整 stats（未變動的項目原樣保留）
  *   · gains  只含**實際有變動**的項目與增量（可直接顯示「成長前後差異」）
  *   · total  本次成長總點數（四捨五入後的實得，可能小於理論值——被上限吃掉）
  */
-export function applyLevelGrowth(player, levelsGained) {
+export function applyLevelGrowth(player, levelsGained, { source = GROWTH_SOURCES.formal } = {}) {
   const levels = Math.max(0, Math.floor(num(levelsGained)));
   const base = { ...(player?.stats ?? {}) };
   if (levels <= 0) return { stats: base, gains: {}, total: 0 };
 
   const potential = num(player?.potential) || 80;
   const cap = Math.min(potential, LEVEL_GROWTH.hardCap);
+  //  PCGM：年齡 × 學習能力 × 來源。整名選手一個係數，不逐項重算。
+  const pcgm = careerGrowthFactor({ source, player });
   const keys = growthKeysFor(player);
   const gains = {};
 
@@ -94,8 +110,9 @@ export function applyLevelGrowth(player, levelsGained) {
     if (weight <= 0) continue;
     //  潛力空間係數：離上限越近，成長越慢（線性收斂到 0）
     const room = clamp((cap - cur) / LEVEL_GROWTH.roomFull, 0, 1);
+    //  V0A：PCGM 係數乘在 clamp 之前 ⇒ 上限保護仍是最後一道
     const perLevel = clamp(
-      LEVEL_GROWTH.pointsPerLevel * (weight / LEVEL_GROWTH.weightSum) * room,
+      LEVEL_GROWTH.pointsPerLevel * (weight / LEVEL_GROWTH.weightSum) * room * pcgm,
       0,
       LEVEL_GROWTH.perStatCap,
     );

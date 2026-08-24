@@ -265,6 +265,11 @@ gain = base(source)
 > **為什麼 Major 不會變成「最高效率刷能力」**：
 > 不是靠降低它的 base，而是**它的場次本來就被日曆鎖死**（14 場/年）。刷不了。
 >
+> ⚠ **V0A 實作發現的前置條件（TD-35）**：`MatchProgressTransaction` **不帶 `MatchOrigin`**
+> ⇒ 結算層分不出聯賽與自由對戰。**在 MatchOrigin 接進契約之前，`sourceBase` 不得差異化**——
+> 現在調高 `formal` 等於自由對戰一起調高，會直接製造 §11-G1 要擋的刷分 exploit。
+> 因此 V0A 的四個 `sourceBase` **一律 1.0（刻意的，不是還沒填）**。
+>
 > **年度來源比例 target（已裁決）**：Training 40% / Formal 35% / Ranked 15% / Practice 10%
 >
 > ⚠ **這是「一個 Career Year 結算下來的來源佔比」，不是公式常數。**
@@ -649,7 +654,7 @@ Career Clock 共用、Off-season 對兩個 mode 一致、`competitionByMode` 維
 
 | # | Sprint | 交付 |
 |---|---|---|
-| **V0A** | **Player Career Growth Model** | 統一 PCGM 公式；`levelGrowth` 接上共用 `ageFactor`；`potentialSpace` 加 `floorRate`；Block growth budget |
+| **V0A** | **Player Career Growth Model** ✅ **已完成 2026-08-25** | 統一 PCGM 入口 `progress/careerGrowth.js`；`levelGrowth` 接上共用 `ageFactor` / `learningFactor`；`applyMatchProgress` 明示 source。<br>⚠ **`floorRate` 與 Block budget 不在 V0A**：`floorRate` 會改變 Training v1.1 的輸出值（屬 Foundation calibration，見 TD-33）；Block budget 要等 V2 才有 Block 可言 |
 | **V0B** | **Prospect Growth Space** | `genProspects` 的成長空間重建（現況中位 8.4 點） |
 
 > 🔒 **Foundation Gate（硬性）**

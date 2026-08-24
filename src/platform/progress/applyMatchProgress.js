@@ -23,6 +23,7 @@ import { appendFormEntry } from "../economy/formLog.js";
 import { deriveTime } from "../economy/timeline.js";
 import { applyMatchWear } from "../condition/playerCondition.js";
 import { applyLevelGrowth } from "./levelGrowth.js";
+import { GROWTH_SOURCES } from "./careerGrowth.js";
 import { makeGrowthEntry, appendGrowth } from "./growthLog.js";
 
 /**
@@ -93,7 +94,13 @@ export function applyProgressToState(state, tx) {
     //  成長是 (選手, 升幾級) 的決定性函式，沿用定位權重與潛力上限，
     //  寫回 `stats`（基礎值）⇒ 天賦加成仍疊在上面，不重複計算。
     //  冪等由既有的 transactionId 保證：同一場再結算不會二次成長。
-    const growth = applyLevelGrowth(me, levelsGained);
+    //  Season vNext V0A：明示成長來源。
+    //  ⚠ 目前**所有**賽後結算都標成 `formal`——`MatchProgressTransaction` 沒有帶
+    //    `MatchOrigin`，這一層分不出「聯賽」與「自由對戰」。所以 `sourceBase` 也
+    //    一律 1.0（見 careerGrowth.js 的 PCGM_PARAMS 註解）：現在就把 formal 調高，
+    //    等於自由對戰一起調高 ⇒ 直接製造出「刷自由對戰＝刷正式賽成長」的 exploit。
+    //    差異化 base 的前置條件是把 MatchOrigin 接進結算契約，那是獨立一輪。
+    const growth = applyLevelGrowth(me, levelsGained, { source: GROWTH_SOURCES.formal });
 
     const wear = applyMatchWear({
       ...me,

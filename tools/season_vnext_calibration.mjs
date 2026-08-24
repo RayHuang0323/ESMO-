@@ -37,6 +37,7 @@ const schedule = await imp("src/platform/competition/scheduleGenerator.js");
 const regular = await imp("src/platform/competition/regularSeason.js");
 const cond = await imp("src/platform/condition/playerCondition.js");
 const recruit = await imp("src/data/recruitPool.js");
+const pcgm = await imp("src/platform/progress/careerGrowth.js");
 
 const DAYS_PER_WEEK = 7;
 const PLAYER_FIXTURES = 14;
@@ -238,6 +239,33 @@ for (const n of [1, 2, 3, 5, 10, 20, 50]) {
     + `${String(r1(n / (1 + Math.log(Math.max(1, n))))).padStart(9)}   ${String(Math.min(n, 3)).padStart(13)}`);
 }
 line("  ⚠ 1/(1+lnN) 在 N 大時反而超過 √N（50 場時 10.2 > 7.1）⇒ 不是好的防刷曲線。");
+
+// ── ⑦ V0A：PCGM 係數本身（與 prospect pool 無關）─────────────────────────
+line("\n【⑦ V0A：PCGM 係數本身（只看公式，不看新秀池）】");
+line("   age  年齡係數   learning  學習係數   合成係數");
+for (const [age, lrn] of [[18, 90], [20, 80], [24, 70], [28, 60], [32, 50], [36, 40]]) {
+  const b = pcgm.careerGrowthBreakdown({ player: { age, stats: { learning: lrn } } });
+  line(`  ${String(age).padStart(4)}  ${String(b.age).padStart(7)}   ${String(lrn).padStart(7)}  ${String(b.learning).padStart(8)}   ${Math.round(b.total * 1000) / 1000}`);
+}
+line(`  ⇒ 年齡相對差距：18 歲 vs 36 歲 = ${Math.round(pcgm.ageFactor(18) / pcgm.ageFactor(36) * 100) / 100}×`);
+line(`  ⇒ learning 相對差距：90 vs 40 = ${Math.round(pcgm.learningFactor(90) / pcgm.learningFactor(40) * 100) / 100}×`);
+line("  ⚠ sourceBase 目前四個來源**一律 1.0**（見 careerGrowth.js 的 PCGM_PARAMS 註解）：");
+line("     applyMatchProgress 拿不到 MatchOrigin，分不出聯賽與自由對戰 ⇒");
+line("     現在調高 formal 等於自由對戰一起調高，會直接製造刷分 exploit。");
+
+// ── ⑧ V0A：用真實 prospect pool 跑一個 Career Year ────────────────────────
+line("\n【⑧ V0A：接上 PCGM 之後，實際跑一個 Career Year（12 週）】");
+line("  選手                  成長空間   年成長   其中訓練   其中比賽");
+for (const a of ARCHETYPES) {
+  const s1 = simYear(a, 12);
+  line(`  ${a.name.padEnd(20)}  ${String(r1(a.potential - a._start)).padStart(6)} 點  `
+    + `${String(s1.total).padStart(6)}   ${String(s1.fromTraining).padStart(7)}   ${String(s1.fromFormal).padStart(7)}`);
+}
+line("  ⚠ **Expected pending V0B**：新秀成長空間中位仍只有 8.4 點（TD-32 未修）。");
+line("     這裡的年成長仍然關不掉潛力空間——那是 **V0B 的問題，不是 V0A**。");
+line("     V0A 只負責讓成長**認年齡與學習能力**；空間多大由 V0B 決定。");
+line("  ⚠ **潛力漸近線（TD-33）也未修**：floorRate 會改變 Training v1.1 的輸出值，");
+line("     屬 Foundation calibration，不在 V0A 範圍。");
 
 line("\n══════════════════════════════════════════════════════════════════");
 line("  ⚠ 全部 PROPOSED / NOT FROZEN。核准前不得寫進產品碼或標為 FINAL。");

@@ -681,8 +681,15 @@ injury 也不得再成為出賽資格條件。
 
 **Foundation（兩者都完成並共同 calibration 通過才能往下）**
 
-- **V0A** Player Career Growth Model
-- **V0B** Prospect Growth Space
+- **V0A** Player Career Growth Model — ✅ **已完成 2026-08-25**
+  （`progress/careerGrowth.js` 為 PCGM 單一入口；比賽成長現在認年齡與 learning；
+   `trainingCalculator.js` 零 diff；`check_pcgm_v0a` 24/24）
+- **V0B** Prospect Growth Space — ⏳ **未開始（NEXT）**
+
+> ⚠ **FOUNDATION_COMPLETE = NO。** V0A 只是 Foundation 的一半。
+> 另外 V0A 實作時發現 **TD-35**：`MatchProgressTransaction` 不帶 `MatchOrigin`
+> ⇒ 結算分不出聯賽與自由對戰 ⇒ **`sourceBase` 暫時一律 1.0**，
+> 「年度來源比例 40/35/15/10」在 MatchOrigin 接進契約之前**達不到**。
 - 🔒 **Foundation Gate**：兩者**不得各自宣告完成**。
   成長速度是「公式 × 成長空間」的乘積——只修一邊，另一邊會讓結果看起來更糟，
   分開驗收兩邊都會得到錯誤結論。

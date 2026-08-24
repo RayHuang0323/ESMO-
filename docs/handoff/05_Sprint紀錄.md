@@ -13708,3 +13708,110 @@ V4 Lifecycle → V5 Off-season → V6 AI turnover → V7 Online Event contract
 未鎖定任何 balance 常數（全部留給 Foundation calibration）。
 未實作 Ranked（含本地假對手）、Live Event 本體、Multi-Title 第二分部、
 Club DNA、Personality 影響戰術執行、Coach / Staff / Legacy。
+
+
+## Season vNext V0A — Player Career Growth Model（2026-08-25）
+
+分支 `feature/remove-player-injury`。**未 push。**
+Plan：`docs/superpowers/plans/2026-08-25-v0a-player-career-growth-model.md`
+
+> ⚠ **FOUNDATION_COMPLETE = NO。** V0A 只是 Foundation 的一半，
+> **V0B Prospect Growth Space 尚未執行**，兩者要跑共同 calibration 才算 Foundation 完成。
+
+### 解決的結構性不一致
+
+主幹有**兩條**永久成長路徑，但只有一條認年齡：
+
+| 路徑 | age？ |
+|---|---|
+| Training v1.1 `calculateTrainingResult` | ✅ |
+| 比賽升級 `applyLevelGrowth` | ❌ **完全沒有** |
+
+⇒ 34 歲老將靠打比賽的成長，與 18 歲新人**一模一樣**。V0A 把兩條接到同一組係數上。
+
+### 做法：re-export，不是搬家
+
+`platform/progress/careerGrowth.js` 是 PCGM 的**單一入口**，
+**原樣 re-export** `trainingCalculator.js` 的三個 efficiency 函式（**同一個 function reference**）。
+
+**為什麼不搬過來**：把曲線搬進 PCGM 會讓 `trainingCalculator.js` 出現 diff，
+於是「Training v1.1 有沒有回歸」變成要靠比對才能回答的問題。
+改成 re-export ⇒ **`trainingCalculator.js` 零 diff，無回歸由「檔案沒被改」直接成立**。
+
+gate §G 用兩條把它釘死：
+① **reference identity**（`careerGrowth.ageFactor === trainingCalculator.ageEfficiency`）
+② **單向依賴**（`trainingCalculator` 不得 import `careerGrowth`）
+
+### 修改的 authoritative path
+
+| 檔案 | 改動 |
+|---|---|
+| `platform/progress/careerGrowth.js` | **新增**。PCGM 單一入口：`GROWTH_SOURCES`、`PCGM_PARAMS`、`careerGrowthFactor()` |
+| `platform/progress/levelGrowth.js` | `applyLevelGrowth(player, levels, { source })` — **第三參數選配**，係數乘在 `perStatCap` clamp **之前** |
+| `platform/progress/applyMatchProgress.js` | 明示 `source: GROWTH_SOURCES.formal` |
+
+`data/trainingCalculator.js` **零 diff**（gate §F2 用 `git diff origin/main` 驗）。
+
+### 🔴 V0A 實作時發現的前置條件（TD-35）
+
+`MatchProgressTransaction` **不帶 `MatchOrigin`** ⇒ 結算層**分不出聯賽與自由對戰**。
+
+⇒ 設計文件 §5.1 的「Formal base 高於 Training」**做不到**：
+現在調高 `formal` 等於**自由對戰一起調高**，直接製造「刷自由對戰＝刷正式賽成長」的 exploit
+（正是 §11-G1 要擋的東西）。
+
+**因此 V0A 的 `sourceBase` 四個來源一律 1.0——刻意的，不是還沒填。**
+差異化 base 的前置條件是把 `MatchOrigin` 接進結算契約，屬**契約變更、獨立一輪**。
+
+### Calibration
+
+**只看公式本身**（與新秀池無關）
+
+| age | 年齡係數 | learning | 學習係數 | 合成 |
+|---|---|---|---|---|
+| 18 | 1.08 | 90 | 1.07 | **1.156** |
+| 24 | 1.04 | 70 | 1.00 | 1.040 |
+| 28 | 1.00 | 60 | 0.965 | 0.965 |
+| 36 | 0.88 | 40 | 0.90 | **0.792** |
+
+年齡相對差距 **1.23×**（18 vs 36）｜learning 相對差距 **1.19×**（90 vs 40）｜
+最好與最差合計 **1.46×**
+
+**用真實 prospect pool 跑一個 Career Year（12 週）**
+
+| 選手 | 成長空間 | 年成長 | 其中訓練 | 其中比賽 |
+|---|---|---|---|---|
+| 典型新人 19–21歲 | 25 點 | 50.8 | 44.2 | 6.6 |
+| 高潛天才 ≤21歲 | 34.2 點 | 61.9 | 53.5 | 8.4 |
+| 即戰力 21+歲 低潛 | 8 點 | 20.4 | 18.7 | 1.7 |
+| 超新星 ≤17歲 | 16 點 | 40.0 | 35.1 | 4.9 |
+
+### 哪些失真是 V0A 的問題、哪些必須等 V0B
+
+| 現象 | 歸屬 |
+|---|---|
+| 比賽成長不認年齡 | ✅ **V0A 已解決** |
+| 比賽成長不認 learning | ✅ **V0A 已解決** |
+| 新秀成長空間中位只有 8.4 點 | ⏳ **Expected pending V0B**（TD-32） |
+| 潛力是漸近線，永遠到不了 | ⏳ **Foundation calibration**（TD-33，`floorRate` 會改 Training 輸出值） |
+| 比賽只貢獻 ~13% 成長 | ⏳ **等 TD-35**（MatchOrigin 未接進契約，不能差異化 sourceBase） |
+
+⚠ **沒有為了讓 gate 變綠而扭曲 V0A 公式。** 上面三個「未解決」是照實標記的。
+
+### Gate
+
+- **新增 `tools/check_pcgm_v0a.mjs` — 24/24**，含 3 個 mutation sentinel：
+  S-A 拿掉 PCGM 乘法 ⇒ §A/§C 紅｜S-B 動到共用曲線 ⇒ §F Training golden 紅｜
+  S-C 把 re-export 換成包一層 ⇒ §G1 紅
+- 既有回歸：`growth_loop_p0` 25/25、`growth_ui_p1` 80/80、`progress25` 34/34、
+  `talent27`、`condition_o2` 29/29、`no_player_injury` 29/29、`dev_quick_recovery` 29/29、
+  `squad_o1` 40/40、`match_entry_o3` 35/35、`matchmaking_o4` 48/48、`fan_system` 66/66、
+  `fan_ui_f4` 35/35、`cs_season_lifecycle` 54/54、`competition_q4` 68/68、`competition_q6` 57/57、
+  `finance_n3` 40/40、`cs23` 28/28、`r62_player_ui_fixture` — **全綠**
+- `verify.mjs --only=progress25,talent27,growth_p0,growth_ui_p1,regress,regress2,build` — **7/7**
+
+### 沒有做
+
+未做 V0B（`recruitPool` 零改動）、Career Clock、age +1、lifecycle、decline、retirement。
+未建 fake Ranked / server / 新 UI。未新增玩家可見的 Practice 永久成長。
+未鎖任何 balance 常數（`PCGM_PARAMS` 全部標為 provisional）。未 push、未 deploy。
