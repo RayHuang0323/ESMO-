@@ -13564,3 +13564,78 @@ save/reload 不 crash。
 未改 recovery balance、condition threshold、Training v1.1、age、Fan、economy、SeasonState。
 未清舊存檔 `injuryDays`；injury removal 既有行為完全不變。
 未開始 Season vNext。未 push、未 deploy。
+
+
+## 上線紀錄：Injury Removal ＋ DEV Quick Recovery（2026-08-25）
+
+### 整合方式
+
+**Fast-forward，沒有 merge、沒有 squash。** `origin/main` 從 push 前到 push 後都沒有被
+其他人推進（`git ls-remote` 伺服器真值兩次都是 `a886e39`），`merge-base` 就等於
+`origin/main`，`HEAD..origin/main` 為 0 ⇒ 純 fast-forward：
+
+```
+a886e39..b80e13c  HEAD -> main
+  1631418  Retire player injury as a gameplay state, and keep age intact
+  3a6d4e9  Cover the CS roster path in the injury gate, not just MOBA
+  10302ba  Correct the injury gate count in the docs after adding CS coverage
+  b80e13c  Add a DEV-only quick recovery panel, and prove the real game never needs it
+```
+
+### Push 前的「零改動」硬證
+
+不只跑 gate，另外用 `git diff --name-only origin/main..HEAD -- <path>` 逐區確認**檔案數為 0**：
+`platform/economy`、`platform/competition`、`platform/fans`、`data/playerModel.js`、
+`data/trainingCalculator.js`、`data/players.js`、`SponsorScreen`、`CompetitionScreen`、
+`rewardFormulas`、`levelGrowth`、`hero/` —— **全部零改動**。
+本輪真正碰到的 `src/` 檔只有 14 個，全在 injury removal ＋ DEV 工具的範圍內。
+
+### Deploy
+
+GitHub Actions run **#162 → success**（`https://github.com/RayHuang0323/ESMO-/actions/runs/32770751063`）。
+
+⚠ 依既有教訓（「紅的 deploy job 不等於站上是舊的」），**不論 job 顏色一律驗 bundle**：
+
+| 項目 | 部署前 | 部署後 |
+|---|---|---|
+| entry bundle | `assets/index-B20kZ-y6.js` | **`assets/index-Dmu1wOFE.js`** |
+| 「傷停」出現次數 | 3 | **0** |
+| 「受傷」出現次數 | — | 4（**全部是英雄技能描述的戰鬥掉血**，逐條看過，不在範圍內） |
+| index.html / entry / 5 個 lazy chunk | — | 全部 HTTP 200 |
+
+### 正式站 smoke：`tools/browser_check_prod_injury_dev.mjs` **52/52**
+
+打的是 build 產物 ⇒ 全程只能走 UI 與 localStorage（不能 import Store）；
+用獨立 Chrome profile，**沒有碰到既有的正式站存檔**。
+
+- **Phase 1（正式／預設造訪，無參數）**，Desktop 1366 ＋ Mobile 390：
+  Home 無傷停 UI／Roster 舊 injury player（injuryDays 6）顯示「可出賽」／
+  低體力 player 仍「不可出賽」／Profile 年齡 27 歲＋可出賽＋體力 66／
+  Training v1.1 課程格與預估成長正常／Match Prep injury 不再擋出賽（5 席填滿）／
+  **DEV Quick Recovery 完全不可見**／無橫向捲動
+- **Phase 2（`?debug=1`）**：DEV 工具可用／推進 1 天 9→10／推進 3 天 10→13／
+  「恢復至可出賽」0,0,0,0,0 → **16,16,16,16,16**（>= authoritative 門檻 15，且沒有滿血）
+- console page error = 0、uncaught error = 0
+
+### 過程中查到的既有瑕疵（記錄，未修）
+
+正式站 smoke 第一次跑 47/52，五個紅燈同一個根因，而且是**測試腳本的佈置汙染**：
+佈置階段用 `?debug=1` 觸發存檔，之後用 `?debug=0` 想關掉，但**旗標沒有被清掉**。
+
+根因是 `ui/debugMode.js` 的既有行為：清除 `esmo_debug` 是 **render 時的副作用**，
+只有真的呼叫 `isDebugMode()` 的元件才會執行；**首頁沒有任何元件會呼叫它**
+⇒ 首頁的 `?debug=0` 形同無效。已登記為 **TD-31**。
+
+⚠ 對上線的實際意義：**關閉 dev 工具不可以依賴 `?debug=0`**，要改 `featureFlags` 的旗標。
+Release checklist 寫的就是旗標，不是網址參數。
+
+腳本已改成直接把旗標從 localStorage 拿掉來模擬「從未開過 debug 的瀏覽器」——
+那才是「正式／預設造訪」真正的定義。改完 **52/52**。
+
+### 結案狀態
+
+- **Player Injury Removal = CLOSED**
+- **DEV Quick Recovery = CLOSED / DEVELOPMENT-ONLY**（TD-30 清理債務保留）
+- **Season vNext Design = READY**（可以開始**設計**，本輪不實作）
+
+未開始：Season vNext 實作、「低體力硬上但能力下降」、fatigue 重新設計。

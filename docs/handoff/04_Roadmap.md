@@ -601,7 +601,13 @@ MatchSession / ActiveMatch、`reqWins` 閘門、`STARTER_SPONSORS`、`economyCon
 
 # 選手健康與生命週期（2026-08-25 產品裁決）
 
-## 已定案：ESMO 不採用選手隨機受傷／傷停機制
+## 已定案並已上線：ESMO 不採用選手隨機受傷／傷停機制
+
+> ✅ **2026-08-25 上線**：`b80e13c` fast-forward 進 main（Actions run #162 success）。
+> 正式站 bundle 由 `index-B20kZ-y6.js` 換成 `index-Dmu1wOFE.js`，其中「傷停」出現 **0 次**
+> （剩下的 4 個「受傷」是英雄技能描述的戰鬥掉血，不在範圍內）。
+> 正式站 smoke **52/52**（Desktop 1366 ＋ Mobile 390）。
+> **Player Injury Removal = CLOSED。**
 
 Milestone O2 曾實作一整套受傷（賽後決定性抽籤 → `injuryDays` → 每日 −1 →
 傷停中不可出賽 → 名單／首頁／選手頁顯示）。**2026-08-25 裁決取消**，
