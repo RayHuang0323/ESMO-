@@ -634,11 +634,21 @@ injury 也不得再成為出賽資格條件。
 ⚠ **連續出賽 → 受傷機率** 這條連結已永久移除；
 **連續出賽 → 疲勞 → 體力下降 → 需要輪換** 這條保留。
 
-## Season vNext — 設計提案已完成（2026-08-25），**尚未核准、尚未實作**
+## Season vNext — 設計已裁決（2026-08-25），**READY FOR IMPLEMENTATION**
 
 > 完整設計：`docs/design/Season_vNext_長期生涯與競賽框架.md`
 > 量測腳本：`tools/season_vnext_calibration.mjs`
-> **狀態：PROPOSED / NOT FROZEN。Q2（Multi-Title）與 Q3（線上範圍）待使用者最終裁決。**
+>
+> **已裁決（FINAL）**
+> · **Q2 Multi-Title Club = Opt-in / Later**——玩家不被迫同時經營 MOBA + CS；
+>   第二分部**必須同時帶成本與收益**，不得成為「不開就吃虧」的 mandatory bonus
+> · **Q3 Online = Contract only**——不做 server / real matchmaking，
+>   **也不做本地 fake Ranked**；但 Career / Growth contract 必須允許未來 AI 與真人 Match 共用
+> · **Career Year = 12 週 / 84 天 = MVP baseline**（**不是永久 balance freeze**）
+> · **Live Event 不因玩家參與而額外懲罰 Career Time**（Career Calendar 預留 Event Window）
+>
+> **仍未鎖定**：所有 balance 常數，由 V0A + V0B 的共同 calibration 決定。
+> 設計文件只鎖**產品驗收目標**，不鎖公式數值。
 
 ### 設計階段翻出來的三件事（會改變優先序）
 
@@ -667,7 +677,35 @@ injury 也不得再成為出賽資格條件。
 
 ---
 
-## Season vNext 實作邊界（核准前一律不做）
+### Implementation Roadmap（已裁決）
+
+**Foundation（兩者都完成並共同 calibration 通過才能往下）**
+
+- **V0A** Player Career Growth Model
+- **V0B** Prospect Growth Space
+- 🔒 **Foundation Gate**：兩者**不得各自宣告完成**。
+  成長速度是「公式 × 成長空間」的乘積——只修一邊，另一邊會讓結果看起來更糟，
+  分開驗收兩邊都會得到錯誤結論。
+
+**成長產品驗收目標**（19–21 歲、正常高潛力新人，正常玩法）
+
+| Career Year | 目標 |
+|---|---|
+| Year 1 | 明顯進步，可以進輪換 |
+| Year 2 左右 | 有機會成為穩定主力 |
+| Year 3–4 | 好選手接近成熟／巔峰 |
+
+**年度來源比例 target**：Training 40% / Formal 35% / Ranked 15% / Practice 10%
+——這是**年度結算的來源佔比，不是公式常數**。
+
+**Foundation 之後**
+
+V1 Career Clock → V2 Time Block → V3 大顆時間操作 → V4 Lifecycle →
+V5 Off-season → V6 AI turnover → V7 Online Event contract
+
+---
+
+## Season vNext 實作邊界（一律不做）
 
 下列全部**留待 Season vNext 另行設計**，不得因為「受傷被移除了」而誤以為
 選手生命週期也被取消：

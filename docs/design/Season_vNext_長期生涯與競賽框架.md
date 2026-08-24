@@ -1,9 +1,13 @@
 # ESMO Season vNext — 長期生涯與競賽框架（設計提案）
 
-> **狀態：PROPOSED / NOT FROZEN — 待使用者裁決。**
-> 本文件不含任何已核准的 balance 數值。所有數字都標示為提案值，
-> **核准前不得寫進產品碼、不得標為 FINAL/FROZEN**。
-> 本輪只做設計，**沒有修改任何 `src/` 產品碼**。
+> **狀態：設計已裁決（2026-08-25）— READY FOR IMPLEMENTATION。**
+>
+> · **Q2 / Q3 已 FINAL**（見 §13）
+> · **Career Year = 12 週 / 84 天 = MVP baseline，不是永久 balance freeze**
+> · 其餘 balance 數值仍為 **PROPOSED / NOT FROZEN**，由 V0A+V0B 的 calibration 決定
+> · **公式常數一律不在本文件鎖定**——本文件只鎖**產品驗收目標**
+>
+> 本輪只做設計，**沒有修改任何 `src/` 產品碼**，也未開始 implementation。
 >
 > 日期：2026-08-25　基準 commit：`c7fa423`（＝ `origin/main`）
 > 量測腳本：`tools/season_vnext_calibration.mjs`（設計工具，非 verifier、不進 CI）
@@ -170,7 +174,9 @@ XP 曲線 / `genProspects` 分佈。
 
 **Career Clock = `meta.days`，已經存在，不新建。**
 
-- **Career Year = 12 週 = 84 天**（提案）
+- **Career Year = 12 週 = 84 天 — MVP baseline（已裁決）**
+  ⚠ **不是永久 balance freeze**：baseline 是為了對齊既有常數先動起來，
+  實際長度可在 V0A+V0B calibration 之後重新檢討。
 - `meta.careerYear` 由 `meta.days` 導出，與 `meta.season` 同源，**不另存計數**
 - **age 只在 Career Year 邊界 +1**，由 `advanceDay` 跨過邊界時觸發
 - **MOBA / CS 共用同一個 clock** ⇒ 結構上不可能重複老化
@@ -259,8 +265,12 @@ gain = base(source)
 > **為什麼 Major 不會變成「最高效率刷能力」**：
 > 不是靠降低它的 base，而是**它的場次本來就被日曆鎖死**（14 場/年）。刷不了。
 >
-> **目標比例（提案）**：Training 40% / Formal 35% / Ranked 15% / Practice 10%
-> ——把現況的 89% : 11% 拉回來。
+> **年度來源比例 target（已裁決）**：Training 40% / Formal 35% / Ranked 15% / Practice 10%
+>
+> ⚠ **這是「一個 Career Year 結算下來的來源佔比」，不是公式常數。**
+> `base(source)` 要調成多少才能達到這個佔比，由 V0A+V0B 的 calibration 決定，
+> **不在本文件鎖定**。驗收看的是年度佔比落在 target 附近，不是某個係數等於某個值。
+> 現況是 89% : 11%，這個 target 的用意是把它拉回來。
 
 ### 5.2 統一 age factor
 
@@ -384,7 +394,7 @@ Quick 花時間不花信譽｜Ranked 花 Rating 風險｜Event 花**現實**時�
 
 | 支柱 | 建議 | 理由 |
 |---|---|---|
-| **A. Multi-Title Club** | **Opt-in，Later** | 地基已在（`players`/`finance`/`meta` 共用、`competitionByMode` 分離）；但強制會逼玩家玩不喜歡的模式 |
+| **A. Multi-Title Club** | **Opt-in / Later（Q2 FINAL）** | 地基已在（`players`/`finance`/`meta` 共用、`competitionByMode` 分離）；玩家不被迫同時經營兩個項目。**第二分部必須同時帶成本與收益，不得成為「不開就吃虧」的 mandatory bonus** |
 | **B. Club DNA** | **Later，且必須可見** | 隱藏 buff 是設計陷阱（見 §11-12） |
 | **C. Personality / Style** | **Later，且必須可預測** | 隨機懲罰是設計陷阱（見 §11-13） |
 | **D. Legacy（轉教練）** | **Not Now，只留欄位** | 需要 Coach/Staff 系統，本輪明確不做 |
@@ -419,9 +429,11 @@ Quick 花時間不花信譽｜Ranked 花 Rating 風險｜Event 花**現實**時�
 ### G4. Live Event 狂打導致老化過快
 - **風險**：真人 Event 是 real-time 排定的，玩家不能控制頻率 ⇒ **勤奮參與 = 老得快 = 懲罰參與**
 - **exploit**：一個週末打 5 個 Event = 5–10 Career Days
-- **解法**：**Career Calendar 為 Event 預留窗口**。打排定窗口內的 Event = 用掉那個窗口，
-  **不額外消耗天數**；超出窗口的 Event 只給 Rating / 獎金，**不給永久成長也不消耗時間**
-- **值得**：✅ 契約 MVP 必做；真人 Event 本體 Later
+- **解法（已裁決採納）**：**Career Calendar 為 Event 預留 Event Window**。
+  打排定窗口內的 Event = 用掉那個窗口，**不額外消耗 Career Time**；
+  超出窗口的 Event 只給 Rating / 獎金，**不給永久成長也不消耗時間**。
+  ⇒ **Live Event 不因玩家參與而額外懲罰 Career Time。** 勤奮參與不會老得比較快。
+- **值得**：✅ 契約 MVP 必做；真人 Event 本體 Not Now
 
 ### G5. 強者雪球
 - **風險**：贏 → 獎金/Fans → 更好選手 → 更容易贏
@@ -502,6 +514,9 @@ Quick 花時間不花信譽｜Ranked 花 Rating 風險｜Event 花**現實**時�
 
 ### MVP（Season vNext v1）
 
+0. **Foundation（V0A + V0B，共同 calibration）**：PCGM ＋ 新秀成長空間。
+   驗收看**產品目標**（Year1 可輪換 / Year2 穩定主力 / Year3–4 接近巔峰）與
+   **年度來源佔比 40/35/15/10**，**不鎖公式常數**
 1. **Career Clock**：`meta.careerYear` 由 `meta.days` 導出；age 只在年邊界 +1
 2. **Time Block**：Practice / Competitive / Event Block 消耗 Career Day
 3. **PCGM v1**：統一公式 + 統一 `ageFactor` + Block growth budget
@@ -515,76 +530,72 @@ Quick 花時間不花信譽｜Ranked 花 Rating 風險｜Event 花**現實**時�
 
 ### Later
 
-- Ranked（本地假對手先行）與排行榜
-- Live Event（Swiss / Playoff / Final）
-- Multi-Title Club（opt-in 第二分部 + 託管）
-- Club DNA（可見版）
-- Personality 影響戰術執行（可歸因版）
+- Multi-Title Club（opt-in 第二分部；**必須同時帶成本與收益**）
+- Club DNA（**可見版**——做不到可見就不要做）
+- Personality 影響戰術執行（**可歸因版**——做不到可歸因就不要做）
+
+> ⚠ **Ranked 與 Live Event 已從 Later 移除**（Q3 FINAL）：
+> 本輪連**本地 fake Ranked** 都不做。它們在契約上是一層，但**沒有實作排期**。
 
 ### Not Now
 
 - 真人連線 / 伺服器 / matchmaking / 反作弊
+- **本地 fake Ranked implementation**（Q3 FINAL 明確排除）
+- **Live Event 本體**（Swiss / Playoff / Final 的實作；只保留 Event Window 契約）
 - Coach / Staff / Legacy 轉職
 - 轉會市場 / 合約談判
 - 跨俱樂部世界模擬
 
 ---
 
-## 13. Q2 / Q3 — 待使用者最終裁決
+## 13. Q2 / Q3 — **已裁決（FINAL）**
 
-### Q2：Multi-Title Club
+### Q2 FINAL：Multi-Title Club = **Opt-in / Later**
 
-**1. 推薦方案**：**Opt-in 分部**（開局選一個項目；達成條件後可開第二分部，可託管）
+**裁決**
+- 玩家**不被迫**同時經營 MOBA + CS
+- 第二分部**未來必須同時帶來成本與收益**
+- **不能成為「不開就吃虧」的 mandatory bonus**
 
-**2. 為什麼**：地基已經在了——`players` / `finance` / `meta` 共用、`competitionByMode` 分離。
-強制雙分部要新建的不是架構，是**玩家的義務**，那不是架構問題而是體驗問題。
+**為什麼這條裁決直接回應了 grilling**
 
-**3. 玩家體驗優點**：品牌與資金的成長有第二個出口；喜歡的人可以擴張，不喜歡的人完全不受影響。
+G14 的反對意見是：「即使是 opt-in，只要第二分部有明顯收益，玩家就會覺得不開是懲罰
+——那就是變相強制。」裁決把它變成**設計約束**而不是善意期待：
+第二分部**必須帶成本**（薪資、設施、注意力），所以它是一個**權衡**，不是一個 bonus。
 
-**4. 長期架構優點**：`competitionByMode` 已經是 keyed by mode 的 canonical 結構；
-Career Clock 共用 ⇒ 不必為第二分部另建時間軸。**幾乎沒有新架構成本。**
+⇒ 這條約束要能被驗證。實作時的判準（提案）：
+**開了第二分部的存檔，在同等操作品質下，第一分部的競技成績不得系統性優於沒開的存檔。**
+若做不到這條，就不要開放第二分部。
 
-**5. 最大風險**：**財務耦合會讓一個分部的失敗拖垮另一個**。
-玩家會學到「不要開第二分部」，功能等於白做。
+**MVP 邊界**：MVP **不做** Multi-Title，但**不得擋住它**——
+Career Clock 共用、Off-season 對兩個 mode 一致、`competitionByMode` 維持 keyed by mode。
 
-**6. grilling 的反對意見**（G14）：即使是 opt-in，只要第二分部有明顯收益，
-玩家就會覺得**不開是懲罰**——那就是變相強制。託管是解法，但託管做得太好又會讓玩家不想親自玩。
+### Q3 FINAL：Online = **Contract only**
 
-**7. 不採用會失去什麼**：ESMO 最容易與其他競品區隔的一條線。
-「同一個俱樂部、兩個項目、共用品牌」是市面少見的定位。
+**裁決**
+- 本輪**不做** server / real matchmaking / **也不做 fake Ranked implementation**
+- 但 **Career / Growth contract 必須允許未來 AI 與真人 Match 共用**
 
-**8. MVP / Later / Not Now**：**Later**。
-MVP 只要**不擋住它**（Career Clock 共用、Off-season 對兩個 mode 一致）即可。
+> ⚠ 這比我原本的提案更嚴格：我原本建議「本地假對手先行的 Ranked」列為 Later，
+> **裁決是連 fake Ranked 都不做**。設計文件其餘各節提到 Ranked 之處，
+> 一律理解為「契約上的一層，本輪不實作」。
 
-### Q3：線上真人對戰範圍
+**「AI 與真人共用」對契約的具體要求**
 
-**1. 推薦方案**：**只定契約，不實作連線**（vNext 仍是單機；Ranked / Event 用本地對手）
+成長與生涯路徑**不得知道對手是誰**。也就是：
 
-**2. 為什麼**：repo **目前完全沒有伺服器**——`matchmaking/mockGateway.js` 是本地模擬、
-`matchSession` 是本地契約、Ranked / Rating / 排行榜**一個都不存在**。
-連線是獨立的大工程，塞進生涯設計會把兩件事都做壞。
+1. `PCGM` 的輸入只有 `source`（Training / Practice / Ranked / Formal）、選手狀態與 Block 額度，
+   **不含「對手是 AI 還是真人」**
+2. `EventTimeBlock` 的 `careerDaysConsumed` 只由 Event Window 決定，
+   **不因對手類型而不同**
+3. 未來接上真人時，只換 **match 來源 gateway**，
+   **生涯層一行都不用改**——這是本輪唯一要買的保險
 
-**3. 玩家體驗優點**：玩家**現在**就能感受到四層模式的差別，不必等伺服器。
-
-**4. 長期架構優點**：`EventTimeBlock` 與 `ServerTime ↔ CareerTime` 的分界先定死 ⇒
-未來接伺服器時**不必重寫生涯層**。這正是本輪最該買的保險。
-
-**5. 最大風險**：契約定錯方向而沒有真實連線來驗證。
-特別是「Event Block 消耗幾天」在沒有真人 Event 的情況下**驗不出來**。
-
-**6. grilling 的反對意見**（G4）：Event Block 的老化速率是**唯一無法用單機驗證**的參數。
-先定契約等於先押注。緩解：契約只鎖「`careerDaysConsumed` 與 `matchesPlayed` 無關」
-這條**不變式**，具體天數留成設定值。
-
-**7. 不採用會失去什麼**：若完全不定契約，未來接連線時生涯層要重寫；
-若現在就做連線，vNext 會延期並且生涯設計被連線工程淹沒。
-
-**8. MVP / Later / Not Now**：
-契約 **MVP**｜本地 Ranked **Later**｜真人連線 **Not Now**
-
-> **Q2 與 Q3 均標記為「待使用者最終裁決」。**
+**MVP 邊界**：只定契約與不變式。**不實作任何連線，也不實作本地 Ranked。**
 
 ---
+
+> **Q2 / Q3 已 FINAL，不再是待裁決項。**
 
 ## 14. 需要新增或修改的 contract / docs
 
@@ -624,49 +635,80 @@ MVP 只要**不擋住它**（Career Clock 共用、Off-season 對兩個 mode 一
 
 ---
 
-## 15. 建議 Sprint 拆法
+## 15. Implementation Roadmap（已裁決）
 
-> ⚠ **這是 Sprint 層級的拆法，不是可執行的 implementation plan。**
-> 完整的逐步驟計畫（含測試碼）要等設計核准、Q2/Q3 裁決之後才寫——
-> 為一份可能會變的設計寫上百行 TDD 步驟是浪費。
+> ⚠ 這是 Sprint 層級的拆法。**完整的逐步驟 plan（含測試碼）在每個 Sprint 開工前才寫**——
+> 一次寫完九個 Sprint 的細節，前面幾個 calibration 出來就會全部作廢。
 >
-> 每個 Sprint 的收尾條件都比照本專案既有慣例：**gate 全綠 ＋ 瀏覽器實測 ＋ 文件更新**。
+> 每個 Sprint 的收尾條件比照本專案既有慣例：**gate 全綠 ＋ 瀏覽器實測 ＋ 文件更新**。
 
-### 拆法原則
+### Foundation（**兩者都完成並共同 calibration 後**才能往下）
 
-**成長模型必須排在年齡之前。** 模擬已證明反過來做會失敗（§2）。
-每個 Sprint 都要能**獨立交付可驗證的東西**，不做「三個 Sprint 之後才看得到效果」的鋪陳。
+| # | Sprint | 交付 |
+|---|---|---|
+| **V0A** | **Player Career Growth Model** | 統一 PCGM 公式；`levelGrowth` 接上共用 `ageFactor`；`potentialSpace` 加 `floorRate`；Block growth budget |
+| **V0B** | **Prospect Growth Space** | `genProspects` 的成長空間重建（現況中位 8.4 點） |
 
-| # | Sprint | 交付 | 為什麼排這個位置 | 主要風險 |
-|---|---|---|---|---|
-| **V0** | **Growth Model 重建** | 統一 PCGM 公式；`levelGrowth` 接上共用 `ageFactor`；`potentialSpace` 加 `floorRate` | **必須第一個做**——§2.2/2.3 不修，後面全部沒有意義 | 會改變 Training v1.1 輸出值 ⇒ golden fixture 與相關 gate 要同步更新 |
-| **V1** | **新秀成長空間** | `genProspects` 中位成長空間 8.4 → 20–30 點 | V0 之後才知道新空間該多大 | 動到既有招募平衡與一批 `check_cs_*` fixture |
-| **V2** | **Career Clock** | `meta.careerYear` 導出；age 只在年邊界 +1；rollover 不碰 age | 成長修好之後，年齡才有東西可以作用 | **sentinel 必做**：把 age 掛回 rollover ⇒ gate 紅 |
-| **V3** | **Time Block ＋ 防刷** | Practice / Competitive Block 消耗 Career Day；Block growth budget | 補 TD-34 的凍齡洞 | 會改變玩家既有的操作節奏，要瀏覽器實測 |
-| **V4** | **大顆時間操作** | 推進到下一場 / 推進一週 / 跳到 Off-season | §2.4 的硬傷；沒有它，V2/V3 體感上到不了 | 與賽程未收尾的既有阻擋規則互動 |
-| **V5** | **Lifecycle stage** | derived stage 接上既有 `careerStageOf` placeholder | 需要 V0–V2 的 `closedRatio` 與 age | 純呈現層改動小，但判定規則要有 gate |
-| **V6** | **Off-season ＋ soft-lock 防護** | 八步序列；退休預告；可負擔新秀保證 | 需要 V2 的年邊界 | **必須實跑 verifier**（本輪 injury sprint 的 soft-lock 證明是範本） |
-| **V7** | **AI turnover** | AI roster 逐年決定性重生成 | 需要 V6 的 Off-season 掛載點 | 維持「AI 不進 `players[]`」的既有邊界 |
-| **V8** | **EventTimeBlock contract** | 只定契約與不變式，不實作連線 | 可與 V2–V4 並行 | 唯一無法用單機驗證的參數（見 §13 Q3-5） |
+> 🔒 **Foundation Gate（硬性）**
+> V0A 與 V0B **不得各自宣告完成**。兩者都落地之後要跑一次**共同 calibration**，
+> 通過下面的「成長產品驗收目標」才算 Foundation 完成。
+>
+> **為什麼必須綁在一起**：成長速度是「公式 × 成長空間」的乘積。
+> 只修公式（V0A）會讓 8.4 點的空間更快被關閉 ⇒ 看起來更糟；
+> 只修空間（V0B）會讓漸近線的尾巴更長 ⇒ 也更糟。
+> **分開驗收，兩邊都會得到錯誤結論。**
+
+### 成長產品驗收目標（已裁決）
+
+以**19–21 歲、正常高潛力**新人為基準，在**正常玩法**下：
+
+| Career Year | 目標 |
+|---|---|
+| **Year 1** | **明顯進步，可以進輪換** |
+| **Year 2 左右** | **有機會成為穩定主力** |
+| **Year 3–4** | **好選手接近成熟／巔峰** |
+
+規則：
+- **不鎖具體公式數值**——`base`、`floorRate`、`roomFull`、新秀空間分佈全部由 calibration 決定
+- **年度來源比例 target**：Training 40% / Formal 35% / Ranked 15% / Practice 10%
+  ——這是**年度結算的來源佔比**，不是公式常數
+- 驗收看的是**上面三行產品目標**與**年度佔比**，不是某個係數等於某個值
+- Career Year 12 週 / 84 天是 **MVP baseline**，calibration 之後可重新檢討
+
+### Foundation 之後
+
+| # | Sprint | 交付 | 為什麼排這個位置 |
+|---|---|---|---|
+| **V1** | **Career Clock** | `meta.careerYear` 導出；age 只在年邊界 +1；rollover 不碰 age | 成長修好之後，年齡才有東西可以作用 |
+| **V2** | **Time Block** | Practice / Competitive / Event Block 消耗 Career Day；Block growth budget 上線 | 補 TD-34 的凍齡洞 |
+| **V3** | **大顆時間操作** | 推進到下一場 / 推進一週 / 跳到 Off-season | §2.4 的硬傷；沒有它，V1/V2 體感上到不了 |
+| **V4** | **Lifecycle** | derived stage 接上既有 `careerStageOf` placeholder；體能／心智分離的 decline | 需要 V0A/V0B 的 `closedRatio` 與 V1 的 age |
+| **V5** | **Off-season** | 八步序列；退休預告；soft-lock 防護 | 需要 V1 的年邊界與 V4 的 stage |
+| **V6** | **AI turnover** | AI roster 逐年決定性重生成 | 需要 V5 的 Off-season 掛載點 |
+| **V7** | **Online Event contract** | `EventTimeBlock.v1` ＋ Event Window；**只定契約，不實作連線、不實作本地 Ranked** | 可與 V1–V3 並行 |
 
 ### 每個 Sprint 的 gate（提案）
 
 | Sprint | 新增 gate | 必跑既有 gate |
 |---|---|---|
-| V0 | `check_growth_model`（四來源共用一個公式；sentinel：拆成兩套 ⇒ 紅） | `growth_ui_p1`、`growth_p0`、`progress25`、`talent27` |
-| V1 | `check_rookie_headroom`（中位成長空間下限） | `check_recruit_o`、`check_cs_roster_v1_r56` |
-| V2 | `check_career_clock`（sentinel：age 掛回 rollover ⇒ 紅） | `check_competition_q3/q4/q5/q6`、`cs_season_lifecycle` |
-| V3 | `check_time_block`（sentinel：Block 不消耗天數 ⇒ 紅） | `check_condition_o2`、`check_no_player_injury` |
-| V4 | `browser_check_time_controls` | `browser_check_home_ia` |
-| V5 | `check_player_lifecycle` | `check_r62_player_ui_fixture` |
-| V6 | `check_offseason_no_softlock`（**實跑**） | `check_finance_n3`、`check_fan_system` |
-| V7 | `check_ai_turnover`（決定性） | `check_competition_release_gate` |
-| V8 | `check_event_time_block`（不變式：天數 ≠ 場次的函式） | — |
+| V0A | `check_growth_model`（四來源共用一個公式；sentinel：拆成兩套 ⇒ 紅） | `growth_ui_p1`、`growth_p0`、`progress25`、`talent27` |
+| V0B | `check_rookie_headroom`（中位成長空間下限） | `check_recruit_o`、`check_cs_roster_v1_r56` |
+| **Foundation Gate** | `check_growth_acceptance`（**三行產品目標 ＋ 年度來源佔比**） | 上面兩組全跑 |
+| V1 | `check_career_clock`（**sentinel：age 掛回 rollover ⇒ 紅**） | `check_competition_q3/q4/q5/q6`、`cs_season_lifecycle` |
+| V2 | `check_time_block`（sentinel：Block 不消耗天數 ⇒ 紅） | `check_condition_o2`、`check_no_player_injury` |
+| V3 | `browser_check_time_controls` | `browser_check_home_ia` |
+| V4 | `check_player_lifecycle` | `check_r62_player_ui_fixture` |
+| V5 | `check_offseason_no_softlock`（**實跑**） | `check_finance_n3`、`check_fan_system` |
+| V6 | `check_ai_turnover`（決定性） | `check_competition_release_gate` |
+| V7 | `check_event_time_block`（不變式：**天數 ≠ 場次的函式**、**成長不知道對手是 AI 還是真人**） | — |
 
 ### 不在任何 Sprint 內（明確不做）
 
-真人連線 / 伺服器 / matchmaking / 反作弊、Coach / Staff / Legacy 轉職、
-轉會市場 / 合約談判、跨俱樂部世界模擬。
+- 真人連線 / server / matchmaking / 反作弊
+- **本地 fake Ranked implementation**（Q3 FINAL 明確排除）
+- Multi-Title 第二分部（Q2 FINAL：Later；MVP 只要不擋住）
+- Club DNA / Personality 影響戰術執行
+- Coach / Staff / Legacy 轉職、轉會市場、跨俱樂部世界模擬
 
 ---
 
@@ -681,5 +723,14 @@ MVP 只要**不擋住它**（Career Clock 共用、Off-season 對兩個 mode 一
 
 **因此 Season vNext v1 的第一優先不是 aging，是 Growth Model 重建。**
 
-⚠ 本文件全部 **PROPOSED / NOT FROZEN**。
-Q2、Q3 **待使用者最終裁決**。核准前不進行任何 implementation。
+### 裁決後的狀態（2026-08-25）
+
+- **Q2 / Q3 已 FINAL**
+- **Career Year 12 週 / 84 天 = MVP baseline**（不是永久 balance freeze）
+- **Live Event 不因玩家參與而額外懲罰 Career Time**（Event Window，已採納 grilling G4）
+- **成長產品驗收目標已鎖定**；**公式常數未鎖**，由 V0A+V0B calibration 決定
+- Roadmap 已改為 **V0A / V0B Foundation → Foundation Gate → V1–V7**
+
+**READY FOR IMPLEMENTATION：是。** 第一個 Sprint 是 **V0A（Player Career Growth Model）**。
+
+⚠ 仍未鎖定的：所有 balance 常數。它們**不得**在 calibration 之前被寫死或標為 FINAL。

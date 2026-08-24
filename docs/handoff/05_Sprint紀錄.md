@@ -13639,3 +13639,72 @@ Release checklist 寫的就是旗標，不是網址參數。
 - **Season vNext Design = READY**（可以開始**設計**，本輪不實作）
 
 未開始：Season vNext 實作、「低體力硬上但能力下降」、fatigue 重新設計。
+
+
+## Season vNext Design Sprint（2026-08-25）— 設計已裁決
+
+分支 `feature/remove-player-injury`。**docs-only，`src/` 零改動，未開始 implementation。**
+完整設計：`docs/design/Season_vNext_長期生涯與競賽框架.md`（16 節）
+量測腳本：`tools/season_vnext_calibration.mjs`（設計工具，非 verifier、不進 CI）
+
+### 這一輪最重要的事：題目被模擬改掉了
+
+原本的題目是「加上年齡與世代交替」。用主幹真正在跑的函式（`calculateTrainingResult`、
+`applyLevelGrowth`、`dayForRound`、XP 曲線、`genProspects`）實跑量測之後，
+**那樣做會失敗**：
+
+1. **新秀沒有成長空間**——`genProspects` 的新秀入行時主能力已達潛力的 **87.6%（中位）**，
+   成長空間 min 1.6 / **中位 8.4** / max 34.2 點。一半的新秀一輩子只能長 8 點以內。
+2. **成長是漸近線**——12 個 Career Year 後典型新人只關閉 **64.6%** 潛力空間，
+   高潛天才更只有 **50.3%**。玩家會看到「潛力 92，一輩子停在 70」。
+3. **正式賽事只貢獻 10.6% 的成長**（訓練 89.4%）⇒
+   「League/Tournament = 正式生涯成果」在數字上是假的。
+
+⇒ **「19–21 歲新人幾年變成熟主力」的答案是：現行模型下永遠不會。**
+⇒ **Season vNext 的第一優先不是 aging，是 Growth Model 重建。**
+
+已登記為 **TD-32**（新秀空間）、**TD-33**（漸近線）、**TD-34**（凍齡洞：世界時間只靠訓練推進，
+打比賽完全不推進日曆——**現在就已經存在的 exploit**）。
+
+### Grilling：17 條（brief 的 14 條 + 模擬翻出的 3 條）
+
+三條翻轉了原本的判斷：
+
+- **G1**：擔心的是 Practice 無限刷，但 **Practice 現在根本沒有永久成長路徑，那個 exploit 不存在**。
+  真正的洞是**無限訓練**——不需要任何比賽，貢獻 89% 的成長。防刷範圍要比原設想大。
+- **G2**：「不打 Season 凍齡」**現況 100% 成立**，不是未來風險。
+- **G4**：Live Event 消耗 Career Time 等於**懲罰參與**（真人 Event 是 real-time 排定的，
+  玩家控制不了頻率）。⇒ **已裁決採納**：Career Calendar 預留 **Event Window**，
+  窗口內不額外消耗 Career Time。
+
+### 裁決（FINAL）
+
+| 項目 | 裁決 |
+|---|---|
+| **Q2 Multi-Title Club** | **Opt-in / Later。** 玩家不被迫同時經營 MOBA + CS；第二分部**必須同時帶成本與收益**，不得成為「不開就吃虧」的 mandatory bonus |
+| **Q3 Online** | **Contract only。** 不做 server / real matchmaking，**也不做本地 fake Ranked**；但 Career / Growth contract **必須允許未來 AI 與真人 Match 共用**（成長路徑**不得知道對手是誰**） |
+| **Career Year** | **12 週 / 84 天 = MVP baseline，不是永久 balance freeze** |
+| **Live Event** | 不因玩家參與而額外懲罰 Career Time；Career Calendar 預留 Event Window |
+
+### Implementation Roadmap（已裁決）
+
+**Foundation**：**V0A** Player Career Growth Model ＋ **V0B** Prospect Growth Space
+
+🔒 **Foundation Gate**：兩者**不得各自宣告完成**，要跑**共同 calibration**。
+理由：成長速度是「公式 × 成長空間」的乘積——只修公式會讓 8.4 點的空間更快被關閉、
+只修空間會讓漸近線的尾巴更長，**分開驗收兩邊都會得到錯誤結論**。
+
+**成長產品驗收目標**（19–21 歲、正常高潛力新人）：
+Year 1 明顯進步可進輪換｜Year 2 左右有機會成為穩定主力｜Year 3–4 好選手接近成熟／巔峰。
+**不鎖公式數值**；**年度來源比例 target** Training 40 / Formal 35 / Ranked 15 / Practice 10
+是**年度佔比，不是公式常數**。
+
+**Foundation 之後**：V1 Career Clock → V2 Time Block → V3 大顆時間操作 →
+V4 Lifecycle → V5 Off-season → V6 AI turnover → V7 Online Event contract
+
+### 沒有做
+
+未修改任何 `src/` 產品碼。未開始任何 implementation。
+未鎖定任何 balance 常數（全部留給 Foundation calibration）。
+未實作 Ranked（含本地假對手）、Live Event 本體、Multi-Title 第二分部、
+Club DNA、Personality 影響戰術執行、Coach / Staff / Legacy。
