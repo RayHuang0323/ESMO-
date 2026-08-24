@@ -172,11 +172,18 @@ console.log("══ Milestone O4：配對票券與等待狀態 ══\n");
   const q = queuedTicket();
   const entry = entryOf("moba", mobaSeats);
   const need = waitSecondsFor(q);
-  //  排隊中有人受傷
-  const hurt = PLAYERS.map((p) => (p.id === "s2" ? { ...p, injuryDays: 3 } : p));
-  const r1 = pollGateway({ ticket: q, entryRequest: entry, players: hurt, now: T0 + need * 1000 });
-  ck("6) 排隊中有人受傷 → 拒絕並附中文原因",
-    r1.decision === "rejected" && /傷停/.test(r1.reason), r1.reason);
+  //  排隊中有人體力掉到門檻以下
+  //  ⚠ 舊版這裡用的是「排隊中有人受傷」。**選手隨機受傷／傷停已被產品取消**，
+  //    情境改用仍然成立的疲勞規則；另外補一條反向斷言，確保舊存檔的傷停資料
+  //    不會把人踢出隊列。守門見 `tools/check_no_player_injury.mjs`。
+  const tired = PLAYERS.map((p) => (p.id === "s2" ? { ...p, energy: 3 } : p));
+  const r1 = pollGateway({ ticket: q, entryRequest: entry, players: tired, now: T0 + need * 1000 });
+  ck("6) 排隊中有人體力過低 → 拒絕並附中文原因",
+    r1.decision === "rejected" && /體力/.test(r1.reason), r1.reason);
+  const legacyHurt = PLAYERS.map((p) => (p.id === "s2" ? { ...p, injuryDays: 3, injured: true } : p));
+  const r1b = pollGateway({ ticket: queuedTicket(), entryRequest: entry, players: legacyHurt, now: T0 + need * 1000 });
+  ck("6a) 排隊中的舊傷停資料**不會**造成拒絕",
+    r1b.decision !== "rejected", `${r1b.decision}${r1b.reason ? " / " + r1b.reason : ""}`);
   //  排隊中有人被改成未登錄
   const unl = PLAYERS.map((p) => (p.id === "s4" ? { ...p, rosterTier: "unlisted" } : p));
   const r2 = pollGateway({ ticket: q, entryRequest: entry, players: unl, now: T0 + need * 1000 });
@@ -187,7 +194,7 @@ console.log("══ Milestone O4：配對票券與等待狀態 ══\n");
   const r3 = pollGateway({ ticket: q, entryRequest: entry, players: gone, now: T0 + need * 1000 });
   ck("6c) 排隊中有人離隊 → 拒絕", r3.decision === "rejected", r3.reason);
   ck("6d) 拒絕發生在等待期間也一樣（不必等時間到）",
-    pollGateway({ ticket: q, entryRequest: entry, players: hurt, now: T0 + 1000 }).decision === "rejected");
+    pollGateway({ ticket: q, entryRequest: entry, players: tired, now: T0 + 1000 }).decision === "rejected");
 }
 
 // ── 7) MOBA 與 CS 共用同一套流程 ───────────────────────────────────────

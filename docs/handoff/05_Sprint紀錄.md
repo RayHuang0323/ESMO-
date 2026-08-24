@@ -13377,3 +13377,112 @@ branch `feature/fan-f4-ui`，基準 `origin/main @ c9beb10`。**未 push。**
 未動 `SeasonState` / `seasonStateV2` / `seasonSealingV2` / `awardPolicy`。
 未建 Fan Center。未刪 `SPONSORS[].perk` schema。
 **未開始 F3 / Fan v1.1。**
+
+
+## 移除選手受傷系統（2026-08-25）
+
+分支 `feature/remove-player-injury`，基底 `origin/main` **a886e39**（Fan F4 closure）。
+獨立 worktree `D:\OneDrive\文件\GitHub\ESMO-injury`，未 merge、未 push。
+
+> ⚠ **開工時的 audit 意外**：主 worktree 當時在 `milestone-n-finance`，該分支
+> **落後 origin/main 258 個 commit**（只領先 2 個），而且工作區有別人未提交的
+> `matchmaking` / `profileStore` WIP。本輪需要的 Fan F0/F2/F4、CS Season、
+> SeasonState v2 全都只在 main 上。**因此基底選 `origin/main` 而不是當前 HEAD**，
+> 並另開 worktree，完全不碰那份 WIP。
+
+### 產品決策
+
+**ESMO 不採用選手隨機受傷／傷停機制。** Milestone O2 的整套受傷 gameplay 移除。
+**年齡與選手生命週期完整保留**——這不是「順手一起刪」的一輪。
+
+### Audit：原本的 injury 責任鏈（先查再動，沒有只刪畫面）
+
+```
+賽後結算 applyMatchProgress
+   → applyMatchWear()  ← 決定性抽籤產生 injured / injuryDays（唯一產生點）
+   → profileStore.players[].injuryDays（唯一保存點）
+   → advanceDay → applyDailyRecovery()  ← 每日 −1（唯一倒數點）
+   → matchFitness() code:"injured"      ← 唯一阻擋點
+        ├→ matchSquad.validateSquad()   （陣容驗證 / 出賽申請 / 排隊重驗都走這裡）
+        └→ matchSquad.autoFillSquad()   （auto lineup 用同一個 isMatchFit）
+   → UI：Dashboard 待辦卡／Roster 徽章與詳情／statusPresentationOf()／StatusPanel
+```
+
+**關鍵發現**：`matchFitness` 是不可出賽判定的唯一來源，`validateSquad` 與
+`autoFillSquad` 都引用它。因此拿掉 `injured` 分支之後，**陣容驗證、出賽申請、
+排隊重驗、auto lineup 四條路徑同時停止因傷阻擋，`matchSquad.js` 一行邏輯都不用改**。
+這正是 O2 當初「規則只有一份」設計的回報。
+
+### 改了什麼
+
+| 檔案 | 改動 |
+|---|---|
+| `platform/condition/playerCondition.js` | 移除 `CONDITION.injury`、`deterministicRoll`、`injuryDaysOf`、`isInjured`；`applyMatchWear` 回傳縮成 `{player, drained}`；`matchFitness` 只剩 `exhausted`；`applyDailyRecovery` 不再倒數；`conditionSummary` 不再帶傷病欄位 |
+| `platform/progress/applyMatchProgress.js` | 收據 `condition` 不再帶 `injured` / `injuryDays` |
+| `platform/contracts/matchSquad.js` / `matchEntry.js` / `matchmaking/mockGateway.js` / `profileStore.js` | **只有註解**（邏輯自動跟著 helper 走） |
+| `screens/DashboardScreen.jsx` | 待辦卡只剩體力訊號；不再 import `isInjured` |
+| `screens/manage/RosterScreen.jsx` | 移除「傷停 N 天」徽章與詳情列；說明文字改成「連續出賽會加重體力消耗」 |
+| `ui/playerProfileFoundation.js` | `statusPresentationOf` 移除 `injured` 分支；`unavailable` 的 detail 改成「體力不足，需要休息」 |
+| `ui/PlayerProfileFoundation.jsx` | `status.injured` → `!status.canPlay` |
+
+`src/screens` + `src/ui` + `src/platform` 三區的 injury 識別字與玩家可見傷病字面
+**現在是 0**（註解裡的「為什麼不做」是刻意保留的，見下）。
+
+### 新 verifier
+
+`tools/check_no_player_injury.mjs` — **27/27**，含 4 個 mutation sentinel：
+
+- **S-A** 重新把 `injuryDays > 0` 當成不可出賽 ⇒ 紅
+- **S-B** 重新加入 injury roll ⇒ 紅
+- **S-C** 把 Training age factor 拿掉 ⇒ 紅
+- **S-D** UI 重新顯示「傷停」 ⇒ 紅
+
+A/B/C 的做法是**把變異後的原始碼寫成臨時模組再 import**，拿同一個判準函式去測變異版
+（而不是另寫一套斷言）⇒ sentinel 與正式檢查不可能各自漂移。
+
+`tools/browser_check_no_injury_ui.mjs` — **46/46**（Desktop 1366 / Mobile 390）。
+
+**掃描器刻意忽略註解**（用 `@babel/parser` 把註解塗白再掃）。理由寫在檔內：
+要擋的是「還在用的識別字」與「會被渲染的字面」，把註解一起擋掉只會逼人刪掉
+「為什麼不做受傷」的說明——那正好是最該留給下一個人的東西。S-D 因此注入的是
+**會被渲染的字串**，不是註解。
+
+### 既有 verifier 的處置（只改真正的舊產品契約）
+
+| gate | 處置 | 結果 |
+|---|---|---|
+| `check_condition_o2` | 受傷機率／傷勢倒數／傷停閘門三組斷言改成**反向斷言**（舊存檔資料不擋出賽、不倒數）；疲勞側一條都沒放寬 | 30/30 → **29/29** |
+| `check_match_entry_o3` | 「傷停中」阻擋案例移除，`hurt1` fixture 改名 `legacyhurt1` 並保留（反向驗證）；6e 情境改用體力，加 6e2 反向斷言 | **35/35** |
+| `check_matchmaking_o4` | 排隊中「受傷」改「體力過低」，加 6a 反向斷言 | 47/47 → **48/48** |
+| `check_r62_player_ui_fixture` | `STATUS_INJURY_MAPPING` → `STATUS_UNAVAILABLE_MAPPING` + `STATUS_LEGACY_INJURY_IGNORED` | **PASS** |
+| `browser_check_home_ia` | `MAKE_INJURED` → `MAKE_EXHAUSTED`（該選手仍帶舊 `injuryDays`），加一條「不出現傷停字樣」 | 21/21 → **23/23** |
+| `check_fixture_result_browser` / `browser_check_fixture_integrity` | `healRoster` 腳手架不再清 `injuryDays`，改用 `isMatchFit` 計數 | **24/24** / **26/26** |
+
+⚠ 這些**都是 A 類**（已取消的產品契約）。疲勞 / roster 契約一條都沒動，
+而且每一處都補上了反向斷言 ⇒ 鑑別力不減反增。
+
+### 舊存檔
+
+`migratePlayer` 以 `{...p}` 展開，不認得也不刪除未知欄位 ⇒ 舊存檔的
+`injuryDays` / `injured` / `injuryUntil` / `injuryRisk` **原樣保留、完全不讀**。
+**沒有做 migration，也刻意不做**（登記為 TD-29，留給未來一次正式的 schema cleanup）。
+
+deterministic fixture（node 與瀏覽器各驗一次）：`age 27 / energy 66 / injuryDays 6 /
+injured true` → 載入後 age 仍 27、體力仍 66、**可出賽**、不顯示傷停、不倒數、
+save/reload 不 crash。
+
+### 驗證（全部實跑，輸出見上）
+
+- `check_no_player_injury` **27/27**、`browser_check_no_injury_ui` **46/46**
+- `verify.mjs --only=progress25,talent27,growth_p0,growth_ui_p1,regress,regress2,build`
+  → **7/7 PASS**（與改動前 baseline 相同）
+- 23 支 node gate 中 **21 PASS**；2 支紅的（`check_team_development_recovery`、
+  `check_acceptance_fix_p1` §6b）**改動前就是同樣的紅、同樣的訊息**，與受傷無關
+- `npm run build` ✅
+
+### 沒有做
+
+未開始 Season vNext。未實作退休、年齡增長、巔峰／衰退、新人生成、AI 換血、off-season。
+未重新設計 fatigue。未動 Fan balance / Sponsor / `economyConfig` / Competition award policy /
+`SeasonState v2` / Training v1.1 成長公式 / age formula。未物理刪除任何 schema 欄位。
+未 push、未 deploy。

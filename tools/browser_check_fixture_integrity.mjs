@@ -40,14 +40,16 @@ const ck = (name, ok, detail = "") => {
 const INSTALL = `
   ${RESOLVE_APP_MODULES}
 
-  //  ⚠ 測試腳手架，不是被測對象：打完一場會有選手傷停／體力下降（真實機制），
+  //  ⚠ 測試腳手架，不是被測對象：打完一場選手體力會下降（真實機制），
   //    會擋住下一場的出賽資格。等同於玩家休養幾天再出賽。
+  //    （舊版還會把 injuryDays 清零——選手傷病已被產品取消，沒有東西要清了。）
+  const cond = await import(B + "/src/platform/condition/playerCondition.js");
   function healRoster() {
     profile.useProfileStore.setState({
-      players: (S().players ?? []).map((p) => ({ ...p, injuryDays: 0, energy: Math.max(90, Number(p.energy) || 0) })),
+      players: (S().players ?? []).map((p) => ({ ...p, energy: Math.max(90, Number(p.energy) || 0) })),
     });
     S().save();
-    return (S().players ?? []).filter((p) => (Number(p.injuryDays) || 0) > 0).length;
+    return (S().players ?? []).filter((p) => !cond.isMatchFit(p)).length;
   }
 
   //  推進日曆直到出現「今天輪到玩家打」的賽程（AI 場次由推進日曆自動模擬）

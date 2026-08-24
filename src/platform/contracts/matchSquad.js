@@ -19,7 +19,8 @@
 //  純函式：不 import React / zustand / localStorage。
 // ============================================================================
 import { ENGINE_SEATS, SEAT_LANE_ZH, normalizeLineup } from "./matchLineup.js";
-//  Milestone O2：傷停與體力過低同樣不可出賽（門檻與判定在 condition 層，不在這裡重寫）
+//  Milestone O2：體力過低不可出賽（門檻與判定在 condition 層，不在這裡重寫）。
+//  ⚠ 選手傷病已被產品取消 ⇒ 資格判定只剩體力與名單分層，這裡不需要也不得補回。
 import { matchFitness, isMatchFit } from "../condition/playerCondition.js";
 
 export const MATCH_SQUAD_VERSION = "MatchSquad.v1";
@@ -104,7 +105,7 @@ export function validateSquad({ mode = "moba", seats = {}, players = [], strictR
       });
       continue;
     }
-    //  O2：傷停／體力過低 ⇒ 阻擋（理由由 condition 層產生，這裡不重寫規則）
+    //  O2：體力過低 ⇒ 阻擋（理由由 condition 層產生，這裡不重寫規則）
     const fit = matchFitness(me);
     if (!fit.ok) {
       errors.push({ code: fit.code, seat, playerId: pid, message: `${seatLabel(mode, seat)}：${fit.message}` });

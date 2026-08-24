@@ -82,10 +82,12 @@ export function applyProgressToState(state, tx) {
     const talentGained = levelsGained * TALENT_POINTS_PER_LEVEL;
     const prevTalent = Math.max(0, num(me.talentPoints));
 
-    //  Milestone O2：出賽損耗（體力／連續出賽／受傷）只對**實際出賽的人**套用。
+    //  Milestone O2：出賽損耗（體力／連續出賽）只對**實際出賽的人**套用。
     //  這裡就是那個唯一入口——tx.playerProgress 是 adapter 依實際陣容產生的名單，
     //  替補與未登錄根本不會出現在其中，所以不可能誤拿出賽獎勵或損耗。
-    //  受傷判定以 `${transactionId}:${playerId}` 決定性推導 ⇒ 伺服器可獨立重算。
+    //  損耗完全決定性（沒有亂數、沒有時鐘）⇒ 伺服器可拿同一張交易單獨立重算。
+    //  ⚠ 這裡**不產生任何傷病狀態**——選手隨機傷病已被產品取消，見
+    //    `platform/condition/playerCondition.js` 檔頭與 `tools/check_no_player_injury.mjs`。
     //  Milestone P0：**升級 → 基礎能力成長**。
     //  在此之前升級只發天賦點，玩家不手動花掉就完全不影響實力。
     //  成長是 (選手, 升幾級) 的決定性函式，沿用定位權重與潛力上限，
@@ -145,8 +147,6 @@ export function applyProgressToState(state, tx) {
         energyAfter: wear.player.energy,
         drained: wear.drained,
         matchStreak: wear.player.matchStreak,
-        injured: wear.injured,
-        injuryDays: wear.injuryDays,
       },
       reasons: pp.reasons ?? [],
     });

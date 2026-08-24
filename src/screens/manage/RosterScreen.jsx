@@ -275,7 +275,7 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
                     background: cond.canPlay ? "rgba(52,211,153,0.14)" : "rgba(248,113,113,0.14)",
                     color: cond.canPlay ? GC.green : GC.red,
                   }}>
-                    {cond.injured ? `傷停 ${cond.injuryDays}天` : cond.canPlay ? "可出賽" : "不可出賽"}
+                    {cond.canPlay ? "可出賽" : "不可出賽"}
                   </span>
                 </div>
                 {/* O2：經驗進度 ＋ 體力（疲勞）兩條細軸 */}
@@ -452,7 +452,7 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
                   </div>
                 </>}
 
-                {/* Milestone O2：出賽狀態（等級進度／體力／連續出賽／傷停／可否出賽） */}
+                {/* Milestone O2：出賽狀態（等級進度／體力／連續出賽／可否出賽） */}
                 {(() => {
                   const cond = conditionSummary(sel);
                   const lp = levelProgressOf(sel);
@@ -489,11 +489,10 @@ export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "r
                       </div>
                       <div style={{ display: "flex", gap: 10, marginTop: 7, flexWrap: "wrap" }}>
                         <span style={{ color: GC.gray, fontSize: 9 }}>連續出賽 <b style={{ color: cond.matchStreak >= 3 ? GC.gold : "white" }}>{cond.matchStreak}</b> 場</span>
-                        <span style={{ color: GC.gray, fontSize: 9 }}>傷停 <b style={{ color: cond.injured ? GC.red : "white" }}>{cond.injuryDays}</b> 天</span>
                         <span style={{ color: GC.gray, fontSize: 9 }}>近期出賽 <b style={{ color: "white" }}>{cond.recentMatches}</b> 場</span>
                       </div>
                       <div style={{ color: GC.gray, fontSize: 8, marginTop: 6, lineHeight: 1.6 }}>
-                        連續出賽會加重體力消耗與受傷風險；安排休息或訓練日可恢復。
+                        連續出賽會加重體力消耗；安排休息或訓練日可恢復。
                       </div>
 
                       {/* Milestone P1：最近三筆成長（完整 10+ 筆在選手詳情頁） */}

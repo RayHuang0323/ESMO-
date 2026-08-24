@@ -941,7 +941,7 @@ export const useProfileStore = create((rawSet, get) => {
     n = effective;
     const { nextState, receipts } = advanceDaysInState(get(), n, (cur) => ({
       players: (cur.players ?? []).map((p) => {
-        //  Milestone O2：每一天都要跑恢復——傷停天數 −1、沒排訓練的人回體力、
+        //  Milestone O2：每一天都要跑恢復——沒排訓練的人回體力、
         //  連續幾天沒出賽就把連續出賽計數歸零。訓練與恢復不重複計算體力。
         const recoveryBonus = teamDevelopmentEffectsOf(cur.teamDevelopment).dailyRecoveryBonus;
         if (!p.training) return applyDailyRecovery(p, { recoveryBonus });
@@ -2217,7 +2217,7 @@ export const useProfileStore = create((rawSet, get) => {
   },
   /**
    * 輪詢閘道（本機 mock）。queued 才有作用。
-   * 每次輪詢都會用**當下的名單**重新驗證資格 ⇒ 排隊中受傷或被改成未登錄會被拒絕。
+   * 每次輪詢都會用**當下的名單**重新驗證資格 ⇒ 排隊中體力掉到門檻以下或被改成未登錄會被拒絕。
    */
   pollMatchmaking(now = Date.now()) {
     const ticket = get().matchmaking?.ticket ?? null;

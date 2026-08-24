@@ -7,7 +7,10 @@
 //  驗的是「這張申請單能不能交給伺服器」的五件事：
 //    ① 由既有陣容產生，MOBA 與 CS 都能產
 //    ② **只送身分，不送數值**——遞迴掃描整張單，任何能力／體力／傷害欄位都要被拒
-//    ③ 驗證涵蓋：存在／重複／位置／未登錄／傷停／體力／陣容完整
+//    ③ 驗證涵蓋：存在／重複／位置／未登錄／體力／陣容完整
+//      ⚠ 舊版還有一條「傷停」。**選手隨機受傷／傷停已被產品取消**，因此這裡改成
+//        反向斷言：帶著舊存檔傷停資料的選手照樣通過驗證。守門見
+//        `tools/check_no_player_injury.mjs`。
 //    ④ 失敗時**不產生申請單**，且理由可直接顯示
 //    ⑤ 成功時 transactionId 與陣容快照**決定性**，可供伺服器去重與重播
 // ============================================================================
@@ -37,7 +40,8 @@ const STARTERS = LANES.map((lane, i) => mkPlayer(`s${i + 1}`, lane));
 const EXTRA = [
   mkPlayer("bench1", "中路", { rosterTier: "bench" }),
   mkPlayer("unl1", "上路", { rosterTier: "unlisted" }),
-  mkPlayer("hurt1", "打野", { injuryDays: 3 }),
+  //  舊存檔殘留的傷停資料。留在 fixture 裡是刻意的：它必須**不**影響任何驗證結果。
+  mkPlayer("legacyhurt1", "打野", { injuryDays: 3, injured: true }),
   mkPlayer("tired1", "下路", { energy: CONDITION.unfitBelow - 1 }),
 ];
 const ALL = [...STARTERS, ...EXTRA];
@@ -90,14 +94,13 @@ console.log("══ Milestone O3：出賽申請與驗證契約 ══\n");
     ["stats", "power", "energy", "dmg", "rating", "lv", "xp"].every((k) => FORBIDDEN_VALUE_KEYS.includes(k)));
 }
 
-// ── 3) 驗證涵蓋七種情況 ─────────────────────────────────────────────────
+// ── 3) 驗證涵蓋各種阻擋情況 ─────────────────────────────────────────────
 {
   const cases = [
     ["缺人（陣容不完整）", { ...mobaSeats, b3: null }, "empty_seat"],
     ["選手不存在", { ...mobaSeats, b2: "ghost" }, "unknown_player"],
     ["同一人重複佔席", { ...mobaSeats, b4: "s1" }, "duplicate_player"],
     ["未登錄名單", { ...mobaSeats, b1: "unl1" }, "ineligible"],
-    ["傷停中", { ...mobaSeats, b2: "hurt1" }, "injured"],
     ["體力不足", { ...mobaSeats, b4: "tired1" }, "exhausted"],
   ];
   for (const [label, seats, code] of cases) {
@@ -168,12 +171,18 @@ console.log("══ Milestone O3：出賽申請與驗證契約 ══\n");
   tampered.squad[0].playerId = "bench1";
   ck("6d) 換掉陣容卻沿用舊 id → 拒絕",
     !validateMatchEntryRequest(tampered, ALL).ok);
-  //  伺服器以自己的名單重驗出賽資格（客戶端說可以不算數）
-  const nowHurt = ALL.map((p) => (p.id === "s2" ? { ...p, injuryDays: 2 } : p));
-  const hv = validateMatchEntryRequest(req, nowHurt);
+  //  伺服器以自己的名單重驗出賽資格（客戶端說可以不算數）。
+  //  ⚠ 這裡用「排隊後體力掉下去」當情境——舊版用的是「排隊後受傷」，
+  //    但受傷已被產品取消，拿它當情境等於驗一個不存在的規則。
+  const nowTired = ALL.map((p) => (p.id === "s2" ? { ...p, energy: CONDITION.unfitBelow - 1 } : p));
+  const hv = validateMatchEntryRequest(req, nowTired);
   ck("6e) 伺服器以自己的資料重驗資格（客戶端送單時還健康也擋得下）",
-    !hv.ok && hv.errors.some((e) => e.code === "injured"),
-    hv.errors.find((e) => e.code === "injured")?.message);
+    !hv.ok && hv.errors.some((e) => e.code === "exhausted"),
+    hv.errors.find((e) => e.code === "exhausted")?.message);
+  //  反向：帶著舊傷停資料的名單**不得**被擋
+  const legacyRoster = ALL.map((p) => (p.id === "s2" ? { ...p, injuryDays: 5, injured: true } : p));
+  ck("6e2) 舊存檔的傷停資料不會讓已送出的申請失效",
+    validateMatchEntryRequest(req, legacyRoster).ok);
   ck("6f) schema / mode 竄改會被擋",
     !validateMatchEntryRequest({ ...req, schema: "x" }, ALL).ok &&
     !validateMatchEntryRequest({ ...req, mode: "pvp" }, ALL).ok);

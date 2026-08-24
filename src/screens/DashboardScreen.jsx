@@ -14,8 +14,8 @@ import EsmoIcon from "../ui/EsmoIcon.jsx";
 import { useIsHomeMobile } from "../ui/useViewport.js";
 import { useDashboardMotion } from "./dashboard/useDashboardMotion.js";
 import { useMobileSheetMotion } from "./dashboard/useMobileSheetMotion.js";
-//  「有選手需要處理嗎」用既有的判定，不在首頁另訂體力／傷停門檻。
-import { isInjured, isExhausted } from "../platform/condition/playerCondition.js";
+//  「有選手需要處理嗎」用既有的判定，不在首頁另訂體力門檻。
+import { isExhausted } from "../platform/condition/playerCondition.js";
 import "./dashboard/dashboard.css";
 
 const numberOf = (value, fallback = 0) => {
@@ -721,11 +721,11 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
   //      資金警告   `cashForecast().level`
   //      未讀訊息   `inbox[].unread`
   //      發展點     `teamDevelopment.availablePoints`
-  //      選手問題   `isInjured` / `isExhausted`（`platform/condition` 的既有判定）
+  //      選手問題   `isExhausted`（`platform/condition` 的既有判定）
+  //                 ⚠ 選手傷病已被產品取消 ⇒ 這裡只剩體力訊號，不得再加回傷停條件。
   //  訓練中心／球探招募／選手名單**不再固定塞進來**——它們是「需要時才去」的
   //  管理功能，入口在管理工具與戰隊分頁。
-  const needsAttention = players.filter((p) => isInjured(p) || isExhausted(p));
-  const injuredCount = players.filter((p) => isInjured(p)).length;
+  const needsAttention = players.filter((p) => isExhausted(p));
 
   const todos = [];
   if (fc.level !== "ok") {
@@ -753,11 +753,9 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
   }
   if (needsAttention.length > 0) {
     todos.push({
-      id: "condition", icon: "alert", accent: injuredCount > 0 ? GC.red : GC.gold,
-      title: injuredCount > 0 ? "選手傷停" : "選手體力過低",
-      detail: injuredCount > 0
-        ? `${injuredCount} 人傷停中${needsAttention.length > injuredCount ? `、${needsAttention.length - injuredCount} 人體力過低` : ""}`
-        : `${needsAttention.length} 人體力低到不能出賽`,
+      id: "condition", icon: "alert", accent: GC.gold,
+      title: "選手體力過低",
+      detail: `${needsAttention.length} 人體力低到不能出賽`,
       badge: needsAttention.length, onClick: () => sel("roster"),
     });
   }

@@ -54,7 +54,7 @@ export function StatusPanel({ player, compact = false }) {
         </div>
         <span style={{ color: "#f4f4f5", fontSize: 12, fontWeight: 900, fontFamily: MONO }}>{status.energy}%</span>
       </div>
-      {status.injured && <div style={{ color: GC.red, fontSize: 9, marginTop: 8 }}>{status.reason}</div>}
+      {!status.canPlay && status.reason && <div style={{ color: GC.red, fontSize: 9, marginTop: 8 }}>{status.reason}</div>}
     </section>
   );
 }

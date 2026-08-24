@@ -122,15 +122,17 @@ const INSTALL = `
     };
   }
 
-  //  ⚠ 測試腳手架，**不是被測對象**：A 打完後會有選手傷停、體力下降（真實機制），
-  //    那會擋住第二場的出賽資格。這裡把名單復原，等同於玩家休養幾天再出賽。
-  //    被測的是結算，不是傷病系統。
+  //  ⚠ 測試腳手架，**不是被測對象**：A 打完後選手體力會下降（真實機制），
+  //    那會擋住第二場的出賽資格。這裡把體力補回來，等同於玩家休養幾天再出賽。
+  //    被測的是結算，不是狀態系統。
+  //    （舊版還會把 injuryDays 清零——選手傷病已被產品取消，沒有東西要清了。）
+  const cond = await import(B + "/src/platform/condition/playerCondition.js");
   function healRoster() {
     profile.useProfileStore.setState({
-      players: (S().players ?? []).map((p) => ({ ...p, injuryDays: 0, energy: Math.max(90, Number(p.energy) || 0) })),
+      players: (S().players ?? []).map((p) => ({ ...p, energy: Math.max(90, Number(p.energy) || 0) })),
     });
     S().save();
-    return (S().players ?? []).filter((p) => (Number(p.injuryDays) || 0) > 0).length;
+    return (S().players ?? []).filter((p) => !cond.isMatchFit(p)).length;
   }
 
   window.__T = { S, startSession, playBattle, settle, persisted, healRoster };
@@ -227,11 +229,11 @@ async function main() {
     //    §3 的 B 與 A 是同一個 sessionId）。推進天數才是真的第二場。
     const pre = await chrome.evaluate(`
       window.__T.S().advanceDay(4);
-      const injured = window.__T.healRoster();
-      return { day: window.__T.S().meta?.days ?? null, injured };
+      const unfit = window.__T.healRoster();
+      return { day: window.__T.S().meta?.days ?? null, unfit };
     `);
     ck("3pre) 腳手架：推進到第 " + pre.day + " 天並讓名單復原（換一天 ⇒ 真的是另一場）",
-      pre.injured === 0, `仍傷停 ${pre.injured} 人`);
+      pre.unfit === 0, `仍不可出賽 ${pre.unfit} 人`);
     const B = await chrome.evaluate(`return window.__T.startSession(${T0 + 900_000});`);
     ck("3) 啟動第二個場次 B（**與 A 是不同場次、不同 seed**）",
       B?.ok === true && B.state === "launched" && B.sessionId !== A.sessionId && B.seed !== A.seed,

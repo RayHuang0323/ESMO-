@@ -595,3 +595,50 @@ MatchSession / ActiveMatch、`reqWins` 閘門、`STARTER_SPONSORS`、`economyCon
 
 `economyConfig` 自帶「待轉會與合約系統完成後再校正」註記。把粉絲與現金流平衡同時綁死，
 會變成兩個都調不準。**v1 先讓粉絲擋門，看玩家有沒有感覺；有感覺再談價碼。**
+
+
+---
+
+# 選手健康與生命週期（2026-08-25 產品裁決）
+
+## 已定案：ESMO 不採用選手隨機受傷／傷停機制
+
+Milestone O2 曾實作一整套受傷（賽後決定性抽籤 → `injuryDays` → 每日 −1 →
+傷停中不可出賽 → 名單／首頁／選手頁顯示）。**2026-08-25 裁決取消**，
+整套 gameplay 已移除（branch `feature/remove-player-injury`）。
+
+不得再由任何來源產生 `injured` / `injuryDays` / 傷停：
+比賽、體力低、連續出賽、隨機 roll、訓練，一律不行。
+injury 也不得再成為出賽資格條件。
+
+守門：`tools/check_no_player_injury.mjs`（含 4 個 mutation sentinel）。
+舊存檔的欄位相容處置見 `docs/09_技術債務清單.md` TD-29。
+
+## 明確保留（不在移除範圍內）
+
+| 保留 | 為什麼 |
+|---|---|
+| **年齡 `age`** | Training v1.1 的年齡係數在用；也是 Season vNext 的地基 |
+| **體力 / condition** | 輪換策略的唯一來源 |
+| **疲勞 / `exhausted`** | 仍是合法的不可出賽原因（體力 < `CONDITION.unfitBelow`） |
+| **連續出賽 `matchStreak`** | 仍加重體力消耗 ⇒ 輪換仍有意義 |
+| **輪換需求** | 由體力與連續出賽共同構成 |
+| **訓練 / Training v1.1** | 成長公式**零語意變更**（含年齡係數） |
+
+⚠ **連續出賽 → 受傷機率** 這條連結已永久移除；
+**連續出賽 → 疲勞 → 體力下降 → 需要輪換** 這條保留。
+
+## Season vNext（尚未規劃，本輪一律不實作）
+
+下列全部**留待 Season vNext 另行設計**，不得因為「受傷被移除了」而誤以為
+選手生命週期也被取消：
+
+- 每年 / 每季的年齡推進
+- 成長期 / 巔峰期 / 衰退期曲線
+- 退休
+- 新人生成
+- AI roster turnover（AI 戰隊換血）
+- Off-season
+
+這些要站在**現在保留下來的** `age` / `potential` / `learning` / `growthLog` 上，
+所以那些欄位與公式在本輪一條都沒有動，並由 `check_no_player_injury` 反向釘住。

@@ -60,23 +60,18 @@ export function contractPresentationOf(player) {
   };
 }
 
+//  選手狀態的唯一權威。畫面（Roster / Profile / Dashboard）一律讀這裡，
+//  不得自己組第二套狀態字串。
+//  ⚠ 狀態只有三種來源：可否出賽（體力）、是否在訓練、體力分級。
+//    選手傷病已被產品取消 ⇒ 這裡不得再出現第四種「傷停」狀態。
 export function statusPresentationOf(player) {
   const summary = conditionSummary(player);
-  if (summary.injured) {
-    return {
-      ...summary,
-      key: "injured",
-      label: "傷停中",
-      detail: `還需 ${summary.injuryDays} 天`,
-      tone: "danger",
-    };
-  }
   if (!summary.canPlay) {
     return {
       ...summary,
       key: "unavailable",
       label: "暫不可出賽",
-      detail: "需要休息",
+      detail: "體力不足，需要休息",
       tone: "danger",
     };
   }

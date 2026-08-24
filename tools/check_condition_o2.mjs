@@ -7,12 +7,20 @@
 //  驗的是這個閉環的五個要害：
 //    ① **只有實際出賽的選手**拿到經驗與損耗；替補／未登錄一律零
 //    ② MOBA 與 CS 都依實際陣容的 playerId 回寫
-//    ③ 連續出賽有代價（體力遞減加速、受傷風險上升），休息／訓練可恢復
-//    ④ 體力過低或傷停 ⇒ 出賽閘門擋下並說明理由
-//    ⑤ 成長與受傷**完全決定性** ⇒ 伺服器可獨立重算，不必信任前端提交的數值
+//    ③ 連續出賽有代價（體力遞減加速），休息／訓練可恢復
+//    ④ 體力過低 ⇒ 出賽閘門擋下並說明理由
+//    ⑤ 成長與損耗**完全決定性** ⇒ 伺服器可獨立重算，不必信任前端提交的數值
+//
+//  ── 已移除的舊斷言（產品決策，不是放寬標準）────────────────────────────
+//  O2 原本還驗「受傷機率隨連續出賽上升」「傷停 ⇒ 不可出賽」「每天消化一天傷勢」。
+//  **選手隨機受傷／傷停已被產品取消**，那幾條驗的是一個不再存在的產品契約，
+//  留著只會把「已刪除的功能」變成必須維護的規格。它們在此處改為**反向斷言**：
+//  舊存檔的傷停資料存在時，既不擋出賽、也不倒數。
+//  完整守門（含 mutation sentinel）在 `tools/check_no_player_injury.mjs`。
+//  ⚠ 疲勞側的斷言一條都沒有放寬——體力代價、恢復、閘門全部照舊。
 // ============================================================================
 import {
-  CONDITION, conditionText, deterministicRoll, applyMatchWear, applyDailyRecovery,
+  CONDITION, conditionText, applyMatchWear, applyDailyRecovery,
   matchFitness, isMatchFit, conditionSummary,
 } from "../src/platform/condition/playerCondition.js";
 import { applyProgressToState } from "../src/platform/progress/applyMatchProgress.js";
@@ -134,13 +142,12 @@ console.log("══ Milestone O2：出賽與養成回饋 ══\n");
   ck("3b) 連續出賽計數累加", p.matchStreak === 4, `streak=${p.matchStreak}`);
   ck("3c) 連打四場後體力顯著下降",
     p.energy <= 100 - CONDITION.matchEnergyCost * 4, `energy=${p.energy}`);
-  //  受傷機率隨連續出賽上升（用同一組 key 比較兩種 streak 的 chance）
-  const lowStreak = applyMatchWear(mkPlayer("y", "中路", { matchStreak: 0 }), "same-key");
-  const highStreak = applyMatchWear(mkPlayer("y", "中路", { matchStreak: 5 }), "same-key");
-  ck("3d) 受傷機率隨連續出賽上升",
-    highStreak.chance > lowStreak.chance, `${lowStreak.chance.toFixed(3)} → ${highStreak.chance.toFixed(3)}`);
-  ck("3e) 受傷機率有上限（不會必定受傷）",
-    applyMatchWear(mkPlayer("z", "中路", { matchStreak: 99, energy: 20 }), "k").chance <= CONDITION.injury.max);
+  //  連續出賽只有體力代價，沒有任何機率性後果（舊的受傷抽籤已被產品取消）
+  ck("3d) 連續出賽只影響體力，不產生任何機率性狀態",
+    (() => {
+      const w = applyMatchWear(mkPlayer("z", "中路", { matchStreak: 99, energy: 20 }), "k");
+      return Object.keys(w).join(",") === "player,drained";
+    })());
   //  恢復
   const rested = applyDailyRecovery(p);
   ck("3f) 休息一天回體力，連續出賽計數歸零",
@@ -149,40 +156,48 @@ console.log("══ Milestone O2：出賽與養成回饋 ══\n");
   const training = applyDailyRecovery({ ...p, training: { courseId: "aim", daysLeft: 2 } });
   ck("3g) 有排訓練的人不重複回體力（避免與 applyCourse 雙算）",
     training.energy === p.energy);
-  const hurt = applyDailyRecovery({ ...p, injuryDays: 3 });
-  ck("3h) 每天消化一天傷勢", hurt.injuryDays === 2);
+  //  舊存檔可能帶著 injuryDays。每日推進讀得到、但完全不理它（不倒數、不清零）。
+  const legacy = applyDailyRecovery({ ...p, injuryDays: 3 });
+  ck("3h) 舊存檔的傷停欄位原封不動（不再倒數）", legacy.injuryDays === 3, `injuryDays=${legacy.injuryDays}`);
 }
 
 // ── 4) 不可出賽時，閘門要擋下並說明理由 ────────────────────────────────
 {
   const tired = mkPlayer("t1", "中路", { energy: CONDITION.unfitBelow - 1 });
-  const hurt = mkPlayer("t2", "中路", { injuryDays: 3 });
+  //  「舊存檔帶著傷停資料」的對照組——它必須**不**影響任何判定。
+  const legacyHurt = mkPlayer("t2", "中路", { injuryDays: 3, injured: true });
   ck("4) 體力過低 → 不可出賽且有理由",
     !isMatchFit(tired) && matchFitness(tired).code === "exhausted",
     matchFitness(tired).message);
-  ck("4b) 傷停 → 不可出賽且有理由",
-    !isMatchFit(hurt) && matchFitness(hurt).code === "injured",
-    matchFitness(hurt).message);
+  ck("4b) 舊存檔的傷停資料**不再**造成不可出賽",
+    isMatchFit(legacyHurt) && matchFitness(legacyHurt).code === null,
+    JSON.stringify(matchFitness(legacyHurt)));
   ck("4c) 體力剛好在門檻上仍可出賽（邊界不誤擋）",
     isMatchFit(mkPlayer("t3", "中路", { energy: CONDITION.unfitBelow })));
   //  陣容閘門
-  const roster = [...STARTERS.slice(1), hurt];
+  const roster = [...STARTERS.slice(1), legacyHurt];
   const seats = { ...LINEUP, b1: "t2" };
-  const v = validateSquad({ mode: "moba", seats, players: [...roster, hurt] });
-  ck("4d) 陣容含傷停選手 → 出賽被擋，理由可直接顯示",
-    !v.ok && v.errors.some((e) => e.code === "injured"),
-    v.errors.find((e) => e.code === "injured")?.message);
-  ck("4e) 自動填入不會選到不可出賽的人",
-    !Object.values(autoFillSquad({ mode: "moba", seats: {}, players: [...STARTERS, hurt, tired] }))
-      .some((id) => id === "t1" || id === "t2"));
-  ck("4f) 狀態摘要可直接給畫面用",
-    (() => { const c = conditionSummary(hurt); return c.canPlay === false && c.injured === true && typeof c.reason === "string"; })());
+  const v = validateSquad({ mode: "moba", seats, players: [...roster, legacyHurt] });
+  ck("4d) 陣容含舊傷停資料的選手 → 照樣可以出賽",
+    v.ok && v.errors.length === 0, v.errors.map((e) => e.code).join(",") || "無錯誤");
+  //  體力過低的人仍然要被跳過；帶著舊傷停資料的人**必須**被選得到。
+  const filled = Object.values(autoFillSquad({ mode: "moba", seats: {}, players: [...STARTERS, legacyHurt, tired] }));
+  ck("4e) 自動填入仍會跳過體力過低的人", !filled.some((id) => id === "t1"), filled.join(","));
+  ck("4f) 狀態摘要可直接給畫面用（且不含任何傷病欄位）",
+    (() => {
+      const c = conditionSummary(legacyHurt);
+      return c.canPlay === true && c.reason === null
+        && !Object.keys(c).some((k) => /injur/i.test(k));
+    })(), Object.keys(conditionSummary(legacyHurt)).join(","));
 }
 
 // ── 5) 決定性：伺服器可獨立重算 ────────────────────────────────────────
 {
-  ck("5) 同一個 key 的判定永遠相同",
-    deterministicRoll("abc") === deterministicRoll("abc") && deterministicRoll("abc") !== deterministicRoll("abd"));
+  //  舊版用 `deterministicRoll` 做受傷抽籤，那個抽籤已隨受傷一起移除。
+  //  決定性本身仍是硬需求（伺服器要能重算），改由損耗本身直接證明。
+  ck("5) 損耗不含亂數也不含時鐘（同輸入 → 同輸出）",
+    JSON.stringify(applyMatchWear(mkPlayer("d0", "中路"), "abc"))
+      === JSON.stringify(applyMatchWear(mkPlayer("d0", "中路"), "abc")));
   const a = applyMatchWear(mkPlayer("d1", "中路"), "tx:1:p1");
   const b = applyMatchWear(mkPlayer("d1", "中路"), "tx:1:p1");
   ck("5b) 同一場比賽對同一位選手重播 → 逐欄相同（無亂數、無時鐘）",
@@ -216,8 +231,8 @@ console.log("══ Milestone O2：出賽與養成回饋 ══\n");
 
 console.log("\n── 設定摘要 ──────────────────────────────────────────────────");
 console.log(`   單場體力 −${CONDITION.matchEnergyCost}（連續每多一場再 −${CONDITION.streakEnergyStep}）｜每日恢復 +${CONDITION.restPerDay}`);
-console.log(`   不可出賽門檻 體力 < ${CONDITION.unfitBelow}｜傷停 ${CONDITION.injury.minDays}–${CONDITION.injury.maxDays} 天`);
-console.log(`   受傷機率 基礎 ${CONDITION.injury.base} / 低體力 ${CONDITION.injury.lowEnergy} / 每連場 +${CONDITION.injury.perStreak}（上限 ${CONDITION.injury.max}）`);
+console.log(`   不可出賽門檻 體力 < ${CONDITION.unfitBelow}（唯一的體力面阻擋）`);
+console.log("   選手隨機受傷／傷停：**產品已取消**，舊存檔欄位只讀不用（見 check_no_player_injury）");
 
 console.log(`\n${pass}/${pass + fail} 通過`);
 process.exit(fail === 0 ? 0 : 1);

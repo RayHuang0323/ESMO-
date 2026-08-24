@@ -51,18 +51,22 @@ const FRESH_CALM = `
 `;
 
 /**
- * 製造一個「選手傷停」的情境。
- * ⚠ 上面的佈置把名單清空了（為了讓週淨額轉正），所以這裡是**放一名傷停選手回去**，
- *   不是去 map 一個空陣列。傷停與否仍由既有的 `isInjured`（injuryDays > 0）判定。
+ * 製造一個「選手體力過低」的情境。
+ * ⚠ 上面的佈置把名單清空了（為了讓週淨額轉正），所以這裡是**放一名選手回去**，
+ *   不是去 map 一個空陣列。體力過低與否仍由既有的 `isExhausted` 判定。
+ * ⚠ 舊版這裡放的是「傷停選手」。**選手隨機受傷／傷停已被產品取消** ⇒ 首頁的選手
+ *   待辦只剩體力訊號。這名選手刻意仍帶著舊存檔的 `injuryDays`，用來反向確認
+ *   它既不再產生待辦、也不會讓畫面出現傷停字樣。
  */
-const MAKE_INJURED = `
+const MAKE_EXHAUSTED = `
   ${RESOLVE_APP_MODULES}
+  const cond = await import(B + "/src/platform/condition/playerCondition.js");
   const st = () => profile.useProfileStore.getState();
-  const players = [{ id: "t-injured", name: "測試選手", role: "top", lv: 1, xp: 0,
-                     energy: 100, injuryDays: 3 }];
+  const players = [{ id: "t-tired", name: "測試選手", role: "top", lv: 1, xp: 0,
+                     energy: cond.CONDITION.unfitBelow - 1, injuryDays: 3, injured: true }];
   profile.useProfileStore.setState({ players });
   st().save();
-  return { injured: players.filter((p) => (p.injuryDays ?? 0) > 0).length };
+  return { exhausted: players.filter((p) => cond.isExhausted(p)).length };
 `;
 
 /** 數同一個目的地在首頁出現幾次（用按鈕文字近似，因為入口本來就是按鈕）。 */
@@ -155,7 +159,7 @@ async function main() {
           (s.cashForecast()?.level !== "ok" ? 1 : 0) +
           ((s.inbox ?? []).filter((m) => m.unread).length > 0 ? 1 : 0) +
           ((s.teamDevelopment?.availablePoints ?? 0) > 0 ? 1 : 0) +
-          (players.some((p) => cond.isInjured(p) || cond.isExhausted(p)) ? 1 : 0);
+          (players.some((p) => cond.isExhausted(p)) ? 1 : 0);
         const cards = document.querySelectorAll('.esmo-action-card, .esmo-mobile-quick').length
           + (document.querySelector('.esmo-mobile-primary--next') ? 1 : 0);
         const emptyCard = !!document.querySelector('[data-testid="home-actions-empty"]');
@@ -173,16 +177,19 @@ async function main() {
       }
 
       //  有事時：待辦要浮上來
-      await chrome.evaluate(MAKE_INJURED);
+      await chrome.evaluate(MAKE_EXHAUSTED);
       await chrome.reload();
       await sleep(1500);
-      const injured = await chrome.evaluate(`return {
+      const tired = await chrome.evaluate(`return {
         empty: !!document.querySelector('[data-testid="home-actions-empty"]'),
         text: (document.body.innerText||"").replace(/\\s+/g," "),
       };`);
-      ck(`${vp.label}｜選手傷停時，待辦浮上來（空狀態消失）`,
-        !injured.empty && /選手傷停/.test(injured.text),
-        injured.text.slice(0, 90));
+      ck(`${vp.label}｜選手體力過低時，待辦浮上來（空狀態消失）`,
+        !tired.empty && /選手體力過低/.test(tired.text),
+        tired.text.slice(0, 90));
+      ck(`${vp.label}｜舊存檔的傷停資料不會讓首頁出現傷停字樣`,
+        !/傷停|受傷|療傷/.test(tired.text),
+        (tired.text.match(/傷停|受傷|療傷/g) ?? []).join("") || "(乾淨)");
 
       const overflow = await chrome.evaluate(`return document.body.scrollWidth > window.innerWidth + 1;`);
       ck(`${vp.label}｜無 body 橫向捲動`, !overflow);

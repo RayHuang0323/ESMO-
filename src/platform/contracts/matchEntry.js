@@ -17,7 +17,7 @@
 //
 //  ② **隊伍版本（rosterVersion）**
 //     由「名單成員 id ＋ 名單分層 ＋ 陣容指派」決定性推導的雜湊。
-//     它**不含任何能力數值** ⇒ 練功、升級、受傷都不會改變版本；
+//     它**不含任何能力數值** ⇒ 練功、升級、狀態變化都不會改變版本；
 //     只有「換人、改分層、改陣容」才會。伺服器用它偵測「客戶端拿舊名單送單」。
 //
 //  ③ **決定性 transactionId ＋ 陣容快照**
@@ -55,7 +55,7 @@ export function stableHash(input) {
  * 隊伍版本：由**身分與編制**推導，不含任何能力數值。
  *
  * 輸入只有：名單成員 id（排序）、各自的名單分層、以及該模式的席位指派。
- * ⇒ 練功／升級／受傷**不會**改變版本；換人／改分層／改陣容才會。
+ * ⇒ 練功／升級／狀態變化**不會**改變版本；換人／改分層／改陣容才會。
  * 伺服器可用它判斷「這張申請單是不是基於過期的名單」。
  */
 export function rosterVersionOf(players = [], seats = {}, mode = "moba") {
@@ -163,7 +163,7 @@ export function validateMatchEntryRequest(req, players = []) {
   }
   if (errors.length) return { ok: false, errors };
 
-  //  ③ 用伺服器自己的名單重驗陣容（存在／重複／位置／未登錄／傷停／體力）
+  //  ③ 用伺服器自己的名單重驗陣容（存在／重複／位置／未登錄／體力）
   const v = validateSquad({ mode: req.mode, seats, players });
   if (!v.ok) return { ok: false, errors: v.errors };
 

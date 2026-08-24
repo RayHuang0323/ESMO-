@@ -44,7 +44,11 @@ function main() {
   const veteran = { ...basePlayer, id: "fixture-veteran", age: 31, career: { stage: "veteran" } };
   const expiring = { ...basePlayer, id: "fixture-expiring", contract: 14 };
   const tired = { ...basePlayer, id: "fixture-tired", energy: 20 };
-  const unavailable = { ...basePlayer, id: "fixture-unavailable", energy: 72, injuryDays: 3 };
+  //  ⚠ 舊版這裡靠 injuryDays 造出「不可出賽」。**選手隨機受傷／傷停已被產品取消** ⇒
+  //    不可出賽現在只可能來自體力。另外保留一個「舊存檔仍帶傷停資料」的樣本，
+  //    用來反向確認它不再影響狀態呈現。守門見 `tools/check_no_player_injury.mjs`。
+  const unavailable = { ...basePlayer, id: "fixture-unavailable", energy: 8 };
+  const legacyInjured = { ...basePlayer, id: "fixture-legacy-injured", energy: 72, injuryDays: 3, injured: true };
 
   gate(STAT_DEF.length === 16, "CS_STAT_COUNT", String(STAT_DEF.length));
   gate(PROFILE_TABS.map((tab) => tab.id).join(",") === "overview,abilities,growth,career", "PROFILE_TAB_ORDER");
@@ -59,7 +63,11 @@ function main() {
   gate(!contractPresentationOf(basePlayer).available && contractPresentationOf(basePlayer).label === "未啟用", "CONTRACT_PLACEHOLDER");
 
   gate(statusPresentationOf(basePlayer).key === "精神飽滿" && statusPresentationOf(tired).key === "疲勞", "STATUS_ENERGY_MAPPING");
-  gate(statusPresentationOf(unavailable).key === "injured" && !statusPresentationOf(unavailable).canPlay, "STATUS_INJURY_MAPPING");
+  gate(statusPresentationOf(unavailable).key === "unavailable" && !statusPresentationOf(unavailable).canPlay, "STATUS_UNAVAILABLE_MAPPING");
+  gate(statusPresentationOf(legacyInjured).canPlay
+    && !/injur/i.test(statusPresentationOf(legacyInjured).key)
+    && !/傷停|受傷/.test(`${statusPresentationOf(legacyInjured).label}${statusPresentationOf(legacyInjured).detail}`),
+    "STATUS_LEGACY_INJURY_IGNORED");
   gate(statusPresentationOf({ ...basePlayer, training: { courseId: "focus" } }).key === "developing", "STATUS_TRAINING_MAPPING");
 
   const timeline = careerTimelineOf(rookie);
