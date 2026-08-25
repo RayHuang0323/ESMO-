@@ -687,7 +687,11 @@ injury 也不得再成為出賽資格條件。
 - **V0B** Prospect Growth Space — ✅ **已完成 2026-08-25**
   （原型化生成：養成型／一般／即戰力／超新星；成長空間中位 8.4 → 15.8 點；
    釘住率 41.5% → 0.4%；招募等級只提升資訊品質不讓新人變強；`check_prospect_growth_space_v0b` 31/31）
-- **V0C** Match Origin / Growth Source Attribution — ⏳ **未開始（NEXT）**
+- **V0C** Match Origin / Growth Source Attribution — ✅ **已完成 2026-08-25**
+  （`progress/matchSource.js` 三層來源；`metadata.matchSource` 附加欄位；
+   MOBA/CS 共用同一支分類；`check_match_source_v0c` 21/21；TD-35 已解）
+- **Foundation Calibration Gate** — ⏳ **未開始（NEXT）**
+  （四個來源 base 仍一律 1.0；TD-33 漸近線 / `floorRate`；40/35/15/10 年度佔比）
 
 > ⚠ **FOUNDATION_COMPLETE = NO。** Foundation 現在是 V0A ✅ → V0B ✅ → **V0C** → Foundation Calibration Gate。
 > 另外 V0A 實作時發現 **TD-35**：`MatchProgressTransaction` 不帶 `MatchOrigin`

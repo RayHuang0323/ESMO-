@@ -85,7 +85,7 @@ export function growthKeysFor(player) {
  *   · gains  只含**實際有變動**的項目與增量（可直接顯示「成長前後差異」）
  *   · total  本次成長總點數（四捨五入後的實得，可能小於理論值——被上限吃掉）
  */
-export function applyLevelGrowth(player, levelsGained, { source = GROWTH_SOURCES.formal } = {}) {
+export function applyLevelGrowth(player, levelsGained, { source = GROWTH_SOURCES.official } = {}) {
   const levels = Math.max(0, Math.floor(num(levelsGained)));
   const base = { ...(player?.stats ?? {}) };
   if (levels <= 0) return { stats: base, gains: {}, total: 0 };

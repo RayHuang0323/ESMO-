@@ -14077,3 +14077,101 @@ Multi-Title / Coach / TD-35。未動 `trainingCalculator.js` 與 `careerGrowth.j
 未開始 V0C。未做世界時間／老化／退休／線上 Ranked。未新增青訓中心。
 UI 只有 V0B 既有的一行接線，**沒有新增畫面**。
 未動 `trainingCalculator.js` / `careerGrowth.js` / `levelGrowth.js`。未 push、未 deploy。
+
+
+## Season vNext V0C — Match Source 契約（2026-08-25）
+
+分支 `feature/remove-player-injury`。**未 push、未開始 Foundation Calibration。**
+
+> ⚠ **FOUNDATION_COMPLETE = NO。** V0A ✅ → V0B ✅ → V0C ✅ → **Foundation Calibration Gate**。
+
+### Audit：來源其實一路都在，只是被丟掉了
+
+| 事實 | 位置 |
+|---|---|
+| `MatchOrigin.v1` 有 `kind: ticket / fixture` | `contracts/matchOrigin.js` |
+| **MOBA 與 CS 都已經把 origin 傳進 adapter** | `useBattleFeed.js` / `settleCsMatch.js` 的 `origin: store.matchmaking?.session?.origin` |
+| adapter 只把它換算成一個 **Fan 倍率**就丟掉 | `mobaProgressAdapter.js:71 fanWeightForOrigin(ctx.origin)` |
+| `MatchProgressTransaction.metadata` 是**白名單**，沒有來源欄位 | `matchProgressTransaction.js` |
+
+⇒ **「粉絲分得出來、成長分不出來」**。這就是 TD-35 的實際形狀——
+不是資訊不存在，是它沒有被帶進權威紀錄。
+
+**另一個分類落差**：`fanSourceWeight.js` 的三桶是 practice / league / major，
+其中 **`ticket`（一般比賽）被歸進 practice**。對粉絲曲線是對的，
+但對產品定位是錯的——**快速練習**與**競技比賽**是兩層不同的東西。
+
+### 做了什麼（最小必要，四個檔）
+
+| 檔案 | 改動 |
+|---|---|
+| `platform/progress/matchSource.js` | **新增**（17 行實碼）。`MATCH_SOURCE = practice / competitive / official` ＋ `matchSourceFromOrigin()`。純函式，不讀 UI / route / stage / Store |
+| `contracts/matchProgressTransaction.js` | metadata 白名單**附加一欄** `matchSource`（`?? null`，舊交易單仍合法） |
+| 兩個 adapter | 用**同一支**分類把來源寫進交易單（MOBA / CS 共用，不是兩套） |
+| `applyMatchProgress.js` | 讀 `tx.metadata.matchSource` 交給 `applyLevelGrowth` |
+| `careerGrowth.js` | `GROWTH_SOURCES` 對齊三層（`formal`/`ranked` → `official`/`competitive`） |
+
+**`fanSourceWeight.js` 一個位元都沒動**（對 `origin/main` 零 diff）⇒ 粉絲行為逐值不變。
+兩支分類器分桶可以不同（Fan 需要 league/major），但 gate §X1 釘住
+**「這場是不是正式季賽」永遠一致**，不得分歧。
+
+### 三種模式的定位與完成度
+
+| 層 | 定位 | 現況 |
+|---|---|---|
+| **快速練習 practice** | 試新人／陣容／戰術，不應成為永久成長來源 | **只有契約**。入口未實作；目前只有「拿不到 origin」會落到這裡（保守預設） |
+| **競技比賽 competitive** | **今天的「一般比賽」就是這一層**。未來長出評分／牌位／排行榜 | **已可辨識**（`kind: ticket`） |
+| **正式季賽 official** | 正式排名／獎金／Fans／榮譽／生涯成果 | **已可辨識**（`kind: fixture`，含 Major 與年度總決賽） |
+
+### 成長倍率
+
+四個來源的 `sourceBase` **一律 1.0** ⇒ 本輪**行為逐值不變**，
+只是從「分不出來」變成「**分得出來且可獨立控制**」。
+數值（含 40/35/15/10 年度佔比）留給 **Foundation Calibration**。
+
+> V0A 時 base 必須是 1.0 是因為**分不出來**（調高正式賽等於自由對戰一起調高）。
+> **那個阻礙現在解除了**；本輪不動數值是產品要求，不是技術限制。
+
+### 快速練習的實作評估
+
+`MATCH_FLOWS` 已是 keyed by gameType，MOBA / CS 各有完整
+`prep → matching → (draft) → tactic → battle → result`。
+**快速練習不需要新流程**，只需要：
+① 一個進入方式 ② 一個 `MatchOrigin` 的新 kind（或 ticket 的子型別）
+③ 結算時 `matchSource = practice`。
+
+⇒ **值得一個獨立小 Sprint**（建議 V0D）。但要先想清楚
+「不給永久成長的話，玩家為什麼要打」——否則會做出一個沒人用的模式。
+
+### Gate
+
+- **`check_match_source_v0c` 21/21**（新增），含 2 個 sentinel
+  （把一般比賽併回練習 ⇒ §S2 紅｜結算不再讀來源 ⇒ §W1 紅）
+- `check_pcgm_v0a` 24/24、`check_prospect_growth_space_v0b` 43/43
+- `fan_system` 66/66、`fan_ui_f4` 35/35、`fan_f0` 33/33（**粉絲零影響**）
+- `authoritative_o7` 48/48、`result_flow_o71` 27/27（結算邊界未被破壞）
+- `competition_q4` 68/68、`competition_q6` 57/57、`cs_season_lifecycle` 54/54（季賽未被污染）
+- `progress25` 34/34、`growth_loop_p0` 25/25、`growth_ui_p1` 80/80、`condition_o2` 29/29、
+  `no_player_injury` 29/29、`cs23` 28/28、`recruit_o` 41/41、`cs_distribution_r46`、
+  `finance_n3` 40/40、`squad_o1` 40/40、`match_entry_o3` 35/35、`matchmaking_o4` 48/48 — 全綠
+- `verify.mjs`（含 **build**）— 7/7
+
+### 兩處 gate 斷言被刻意改寫（不是為了變綠）
+
+1. **`check_pcgm_v0a` H1**：來源名稱 `formal`/`ranked` → `official`/`competitive`。
+   V0A 是在三層定位敲定**之前**取的名字，V0C 定案後對齊。**是對齊，不是放寬。**
+2. **`check_prospect_growth_space_v0b` F3**：原本鎖 `careerGrowth.js` 對 V0A commit 零 diff。
+   那是**跨 sprint 的凍結**，撐不過下一輪的正當改動。改成鎖真正該保護的
+   `trainingCalculator.js` 對 `origin/main` 零 diff（行為面另有 F1 golden fixture）。
+
+> ⚠ `check_talent27` §28（`git diff --quiet HEAD -- matchProgressTransaction.js`）
+> 在**未提交**時必然紅——它偵測的是「你還沒 commit」，不是「契約被破壞」。
+> 這正是 talent27 自己註解裡承認的缺陷（它為此移除過 LogicEngine 那一條）。
+> commit 後即恢復綠燈。
+
+### 沒有做
+
+未實作快速練習入口、完整 Ranked、真人連線、Live Event、server / matchmaking。
+未做 Career Clock / 年齡增加 / 老化 / 退休。
+未動 `BattleResult.v2`、`CsMatchResult.v1`、`fanSourceWeight.js`、`trainingCalculator.js`。
+未鎖任何 balance 數值。未 push、未 deploy。

@@ -222,15 +222,19 @@ console.log("\n§F V0A 與 Training v1.1 完全未動");
   ck("F2) V0A 的 PCGM 仍與 Training 共用同一個 function reference",
     careerGrowth.ageFactor === training.ageEfficiency
       && careerGrowth.learningFactor === training.learningEfficiency);
-  ck("F3) V0B 沒有動 trainingCalculator / careerGrowth / levelGrowth",
+  //  ⚠ 這一條原本也鎖 `careerGrowth.js`（對 V0A 的 commit 比對）。
+  //    那是**跨 sprint 的凍結**，撐不過下一輪的正當改動——V0C 把來源名稱
+  //    （`formal`/`ranked` → `official`/`competitive`）對齊到 `matchSource.js` 時
+  //    必然會動它。凍結一個後續 sprint 有責任維護的檔案，只會逼人放寬 gate。
+  //    真正該保護的是 **Training v1.1 的行為**：`trainingCalculator.js` 逐位元不動
+  //    （F1 的 golden fixture 再從行為面驗一次）。
+  ck("F3) `trainingCalculator.js` 對 main 零改動（Training v1.1 是 protected behavior）",
     (() => {
       try {
-        for (const f of ["src/data/trainingCalculator.js", "src/platform/progress/careerGrowth.js"]) {
-          execFileSync("git", ["diff", "--quiet", "daf6cf2", "--", f], { cwd: ROOT });
-        }
+        execFileSync("git", ["diff", "--quiet", "origin/main", "--", "src/data/trainingCalculator.js"], { cwd: ROOT });
         return true;
       } catch { return false; }
-    })(), "對 V0A 的 commit daf6cf2 比對");
+    })(), "對 origin/main 比對");
 }
 
 // ── §T 變化度：相關性與特殊個體 ────────────────────────────────────────────
@@ -406,5 +410,5 @@ try {
 
 console.log(`\n${fail === 0 ? "✅" : "❌"} check_prospect_growth_space_v0b：${pass}/${pass + fail} 通過`);
 console.log("   metric 口徑：A StartingCore／B PotentialCeiling／C AbsoluteSpace／D SpaceRatio／E MainStatGrowth／F AllStatGrowth");
-console.log("   **FOUNDATION_COMPLETE = NO**（V0C Match Origin / Growth Source Attribution 尚未執行）。");
+console.log("   **FOUNDATION_COMPLETE = NO**（Foundation Calibration Gate 尚未執行）。");
 process.exit(fail === 0 ? 0 : 1);

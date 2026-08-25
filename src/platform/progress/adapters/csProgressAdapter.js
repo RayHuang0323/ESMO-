@@ -18,6 +18,8 @@ import {
   CS_REWARD_FORMULA_VERSION, PLAYER_XP_FORMULA_VERSION,
 } from "../rewardFormulas.js";
 import { fanWeightForOrigin } from "../fanSourceWeight.js";
+//  V0C：成長用的來源分類。與 Fan 分桶不同，但讀同一份 MatchOrigin。
+import { matchSourceFromOrigin } from "../matchSource.js";
 import {
   CS_LEARNING_LIFECYCLE_FORMULA_VERSION,
   learningAdjustedXp,
@@ -85,6 +87,8 @@ export function csResultToTransaction(cr, ctx = {}) {
     playerProgress,
     unlocks: [],
     metadata: {
+      //  V0C：這場的來源（practice / competitive / official），交給 PCGM 用。
+      matchSource: matchSourceFromOrigin(ctx.origin ?? null),
       winner: win ? "us" : "enemy",
       score: { us: cr.ourScore ?? 0, enemy: cr.enemyScore ?? 0 },
       rewardFormulaVersion: CS_REWARD_FORMULA_VERSION,

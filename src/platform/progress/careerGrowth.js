@@ -38,19 +38,22 @@ import {
 } from "../../data/trainingCalculator.js";
 
 /**
- * 永久成長的來源。
+ * 永久成長的來源。**與 `progress/matchSource.js` 的三層對齊，不是第二套詞彙。**
  *
- * ⚠ **這是契約，不是功能清單。** `training` 與 `formal` 目前真的有 write path；
- * `ranked` 與 `practice` **尚未存在**，列在這裡只是為了讓未來接上時
- * 不必改動 PCGM 的形狀。`tools/check_pcgm_v0a.mjs` §H 會驗
- * 「沒有任何 write path 使用 ranked / practice」——
- * 也就是說，**列名不等於已實作**，而且 gate 會擋住偷偷實作。
+ * ⚠ V0A 時這裡叫 `formal` / `ranked`，那是在三層定位敲定**之前**先取的名字。
+ *   V0C 把比賽層級定案（快速練習／競技比賽／正式季賽）之後改成現在這組——
+ *   是**對齊**，不是新增概念。
+ *
+ * · `training`    訓練課程（既有）
+ * · `practice`    快速練習——**入口尚未實作**，目前只有「拿不到 origin」會落到這裡
+ * · `competitive` 競技比賽——**今天的「一般比賽」就是這一層**
+ * · `official`    正式季賽（Competition / Season，含 Major）
  */
 export const GROWTH_SOURCES = Object.freeze({
   training: "training",
-  formal: "formal",
-  ranked: "ranked",
   practice: "practice",
+  competitive: "competitive",
+  official: "official",
 });
 
 /**
@@ -64,22 +67,21 @@ export const PCGM_PARAMS = Object.freeze({
   /**
    * 各來源的基礎倍率。
    *
-   * ⚠ **V0A 一律 1.0，這是刻意的，不是還沒填。**
+   * ⚠ **一律 1.0，這是刻意的，不是還沒填。**
    *
-   * 設計文件 §5.1 的目標是讓 Formal 的 base 高於 Training，好讓正式賽事
-   * 真的成為生涯成果。但 `applyMatchProgress` **拿不到 `MatchOrigin`**——
-   * 它收到的 `MatchProgressTransaction` 沒有「這場是聯賽還是自由對戰」這個資訊。
-   * 現在就把 `formal` 調高，等於**自由對戰也一起調高** ⇒ 直接製造出
-   * 「刷自由對戰 = 刷正式賽成長」的 exploit，正好是設計文件 §11-G1 要擋的東西。
+   * V0A 時它們必須是 1.0，因為結算**分不出來源**（TD-35）：調高正式賽等於
+   * 自由對戰一起調高，會直接做出「刷自由對戰＝刷正式賽成長」的漏洞。
+   * **V0C 已經把來源接進交易單，那個阻礙解除了**——四個來源現在
+   * **可以獨立控制**。
    *
-   * ⇒ 差異化 base 的**前置條件**是把 `MatchOrigin` 接進結算契約。
-   *   那是獨立一輪的契約變更，不塞進 V0A。
+   * 但本輪仍不動數值：產品要求是「先讓不同來源可以獨立控制，不要急著鎖最終倍率」。
+   * 真正的取值（含 40/35/15/10 的年度來源佔比）留給 **Foundation Calibration**。
    */
   sourceBase: Object.freeze({
     [GROWTH_SOURCES.training]: 1.0,
-    [GROWTH_SOURCES.formal]: 1.0,
-    [GROWTH_SOURCES.ranked]: 1.0,
     [GROWTH_SOURCES.practice]: 1.0,
+    [GROWTH_SOURCES.competitive]: 1.0,
+    [GROWTH_SOURCES.official]: 1.0,
   }),
 });
 
@@ -113,7 +115,7 @@ export const learningOf = (player) => player?.stats?.learning ?? player?.learnin
  * @param {number} [p.budgetFactor]  Block 額度係數（V2 之前恆為 1）
  * @returns {number} 乘在各路徑既有成長量上的係數
  */
-export function careerGrowthFactor({ source = GROWTH_SOURCES.formal, player = null, budgetFactor = 1 } = {}) {
+export function careerGrowthFactor({ source = GROWTH_SOURCES.official, player = null, budgetFactor = 1 } = {}) {
   const base = num(PCGM_PARAMS.sourceBase[source], 1);
   const age = ageFactor(player?.age);
   const learning = learningFactor(learningOf(player));
@@ -122,7 +124,7 @@ export function careerGrowthFactor({ source = GROWTH_SOURCES.formal, player = nu
 }
 
 /** 逐項拆解（verifier 與未來的成長帳簿用；畫面不自己算一套）。 */
-export function careerGrowthBreakdown({ source = GROWTH_SOURCES.formal, player = null, budgetFactor = 1 } = {}) {
+export function careerGrowthBreakdown({ source = GROWTH_SOURCES.official, player = null, budgetFactor = 1 } = {}) {
   return {
     source,
     base: num(PCGM_PARAMS.sourceBase[source], 1),

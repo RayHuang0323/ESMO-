@@ -81,6 +81,11 @@ export function createMatchProgressTransaction({
       rewardFormulaVersion: metadata.rewardFormulaVersion ?? null,
       playerXpFormulaVersion: metadata.playerXpFormulaVersion ?? null,
       playerLevelFormulaVersion: metadata.playerLevelFormulaVersion ?? null,
+      //  Season vNext V0C：這場比賽的來源（practice / competitive / official）。
+      //  ⚠ **附加欄位，不是必填**——舊交易單沒有它仍然合法（`?? null`）。
+      //    加在這裡而不是靠呼叫端猜，是因為交易單才是權威且可重算的紀錄：
+      //    來源必須跟著它一起被稽核、一起冪等，而不是結算當下才由畫面決定。
+      matchSource: metadata.matchSource ?? null,
     },
   };
 }

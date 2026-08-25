@@ -219,10 +219,13 @@ const sharesSameCurves = (c, t) =>
 // ── §H 沒有新產品功能 ──────────────────────────────────────────────────────
 console.log("\n§H 沒有 Ranked / Live Event 新產品功能");
 {
-  ck("H1) source 契約存在且涵蓋四層（僅可擴充，不是實作）",
-    career ? ["training", "formal", "ranked", "practice"].every((k) => k in (career.GROWTH_SOURCES ?? {})) : false,
+  //  ⚠ 名稱在 V0C 對齊過：`formal`/`ranked` → `official`/`competitive`。
+  //    V0A 是在三層定位敲定**之前**取的名字，V0C 把比賽層級定案後改成現在這組。
+  //    這是**對齊**，不是新增概念，所以斷言跟著改而不是放寬。
+  ck("H1) source 契約存在且涵蓋四層（與 matchSource.js 同一組詞彙）",
+    career ? ["training", "practice", "competitive", "official"].every((k) => k in (career.GROWTH_SOURCES ?? {})) : false,
     career ? Object.keys(career.GROWTH_SOURCES ?? {}).join(",") : "");
-  ck("H2) 沒有任何 write path 使用 ranked / practice（尚未存在的來源）",
+  ck("H2) 沒有任何 write path 直接指定 practice（快速練習入口尚未實作）",
     (() => {
       const hits = [];
       const walk = (dir) => {
@@ -231,7 +234,7 @@ console.log("\n§H 沒有 Ranked / Live Event 新產品功能");
           if (e.isDirectory()) { walk(rel); continue; }
           if (!/\.(js|jsx)$/.test(e.name)) continue;
           if (rel.endsWith("careerGrowth.js")) continue;      // 契約定義處本來就會提到
-          if (/GROWTH_SOURCES\.(ranked|practice)/.test(read(rel))) hits.push(rel);
+          if (/GROWTH_SOURCES\.practice/.test(read(rel))) hits.push(rel);
         }
       };
       walk("src");
@@ -291,6 +294,6 @@ try {
 }
 
 console.log(`\n${fail === 0 ? "✅" : "❌"} check_pcgm_v0a：${pass}/${pass + fail} 通過`);
-console.log("   V0A = PCGM foundation。**FOUNDATION_COMPLETE = NO**（V0B Prospect Growth Space 尚未執行）。");
+console.log("   V0A = PCGM foundation。**FOUNDATION_COMPLETE = NO**（Foundation Calibration Gate 尚未執行）。");
 console.log("   所有 balance 常數為 provisional / calibration parameter，未鎖定。");
 process.exit(fail === 0 ? 0 : 1);
