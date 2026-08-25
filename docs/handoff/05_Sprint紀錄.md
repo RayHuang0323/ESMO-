@@ -13639,3 +13639,23 @@ Release checklist 寫的就是旗標，不是網址參數。
 - **Season vNext Design = READY**（可以開始**設計**，本輪不實作）
 
 未開始：Season vNext 實作、「低體力硬上但能力下降」、fatigue 重新設計。
+## CS P0 Visual Stability — Final Integration + Regression Hardening（2026-08-25）
+
+- Owner Android final acceptance：四項 PASS，狀態 `OWNER_ACCEPTED`。
+- Semantic forward-port 至最新 `origin/main`，保留 effectiveRoster identity、whole-team camera recovery、StableCanvasRegion、atomic live fIdx sync。
+- 建立 `PLAYER_IDENTITY_VISIBILITY`、`CAMERA_RECOVERY`、`STABLE_CANVAS_GEOMETRY`、`RAF_FIDX_FRAME_COHERENCE` 四項長期 contract。
+- 新增 `docs/handoff/10_CS_P0_視覺穩定性與防回歸契約.md` 與 `docs/handoff/09_技術債務清單.md`；debug capture / overlay / detector / temporary isolation 已清理。
+- Required gates 與 180 秒 browser long-run 結果記錄於本節後續驗證紀錄。
+## CS P0 Final Verification Record（2026-08-25）
+
+- integration base：`origin/main=c7fa423ff8b7886a8f5ee184157a55265de7f764`
+- verified candidate：`7eb136e93fae16fae133a08240f59c032d224489`
+- merge-base：`14766f157916610d44333f3312a470b015765636`
+- Owner Android final acceptance：四項 PASS，狀態 `OWNER_ACCEPTED`
+- browser long-run：180000 ms；Home → Practice → Mirage → Battle；samples 1710；Canvas `430×507`；StableCanvasRegion shifts `0`
+- RAF/FPS：fIdx transitions `442`；stale mismatch `0`；duplicate RAF `0`；duplicate render `0`
+- Camera：recovery `9`；rapid recovery loop `0`
+- visibility：10/10 authoritative players，兩隊 5v5；browser/page errors `0`
+- release gates：Renderer visibility `24/24`、CS-A2 `10/10`、C2A `13/13`、C2B `14/14`、CS23 `28/28`、Camera `8/8`、RAF coherence `7/7`、StableCanvas geometry `5/5`、production build PASS。
+
+本次只整合 CS P0 視覺穩定性與防回歸契約；未開始 C2C、R63 fast-finish、balance 或其他功能 Sprint。

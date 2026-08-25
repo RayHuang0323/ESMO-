@@ -83,3 +83,7 @@
 - 詳細設計只留在 `docs/design/`。
 - `handoff/00` 與 `handoff/08` 必須維持**精簡且最新**。
 - 過時文件應標記為歷史或移至 `_archive`，但**不要一次大量搬動**既有文件。
+## CS P0 Visual Stability
+
+- `handoff/10_CS_P0_視覺穩定性與防回歸契約.md`：CS FPS P0 四項事故的 root cause、production contract、eliminated hypotheses 與 required gates。
+- `handoff/09_技術債務清單.md`：CS P0 closure 與 residual debt boundary。
