@@ -474,8 +474,13 @@ console.log("\n══ §7 UI 不重算：畫面層沒有成長公式 ══");
 
   //  訓練頁不得再從課程定義推斷「提升了哪幾項」
   const tsrc = read("src/screens/manage/TrainingScreen.jsx");
-  ck("§7b 訓練頁不再用課程定義猜提升項目（改讀 advanceDay 的實際結果）",
-    !/c\.stats\.map\(statZh\)\.join\("、"\)/.test(tsrc) && /res\?\.trained/.test(tsrc));
+  //  ⚠ 2026-08-27（V1）：後半段從 `res?.trained` 放寬成「有讀到 `.trained`」。
+  //    V1 把推進改走具名入口 `advanceWorldDays`，回傳形狀變成
+  //    `{ ok, daysAdvanced, receipts }` ⇒ 訓練頁讀的是 `res.receipts?.trained`。
+  //    **讀的仍是同一份真實結算差值**，本條要守的意圖沒有變。
+  //    這是刻意的期望變更；前半段「不得用課程定義猜」逐字未動。
+  ck("§7b 訓練頁不再用課程定義猜提升項目（改讀實際結算結果）",
+    !/c\.stats\.map\(statZh\)\.join\("、"\)/.test(tsrc) && /\.trained\b/.test(tsrc));
 
   //  結算面板必須讀 receipt 的 growth，而不是自己算
   const rsrc = read("src/ui/RewardReceiptPanel.jsx");

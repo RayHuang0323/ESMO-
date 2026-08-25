@@ -144,7 +144,13 @@ export function primaryActionFor({ entryOk, view, room, session, mode = null, fi
 export function flowStatusText({ entryOk, view, room, session, opponentName, fixture = null, practice = null }) {
   const st = view?.state ?? TICKET_STATES.idle;
   //  V0D：練習全程都要講清楚「這場不算數」，否則玩家會誤以為在打正式比賽。
+  //  ⚠ 判斷順序必須與下面正式流程一致：**場次狀態優先於房間狀態**。
+  //    第一版把 `room === "confirmed"` 排在前面，於是「已經進場、可以返回對戰」
+  //    的情況會顯示成「正在準備場次」——底部按鈕寫「返回進行中的對戰」，
+  //    上面卻說還在準備，瀏覽器 smoke 實測到這個矛盾。
   if (practice?.inPractice) {
+    if (session?.state === "launched" && session?.restoreable) return "快速練習：你有一場進行中的練習";
+    if (session?.state && SESSION_TERMINAL.includes(session.state)) return "快速練習：上一場已結束，可以重新開始";
     if (session?.canLaunch) return "快速練習：正在進入對戰（本場不影響戰績與數值）";
     if (room?.state === "ready_check") return "快速練習：準備就緒（本場不影響戰績與數值）";
     if (room?.state === "confirmed") return "快速練習：正在準備場次";

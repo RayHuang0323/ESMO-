@@ -19,6 +19,8 @@ import { PlayerAvatar } from "../../ui/PlayerFace.jsx";
 import { withDerivedStats } from "../../platform/talents/playerDerivedStats.js";
 import { GC } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
+//  V1：推進世界時間一律走具名入口＋白名單理由（見 platform/time/worldClock.js）。
+import { ADVANCE_REASONS } from "../../platform/time/worldClock.js";
 //  ⚠ DEV 專用，正式模式不會渲染任何東西。移除時連同下方那一行 JSX 一起刪。
 import DevQuickRecovery from "../../debug/DevQuickRecovery/index.jsx";
 
@@ -34,7 +36,7 @@ export default function TrainingScreen({ onBack }) {
   const meta = useProfileStore((s) => s.meta);
   const assignTraining = useProfileStore((s) => s.assignTraining);
   const cancelTraining = useProfileStore((s) => s.cancelTraining);
-  const advanceTrainingDay = useProfileStore((s) => s.advanceTrainingDay);
+  const advanceWorldDays = useProfileStore((s) => s.advanceWorldDays);
   const [selId, setSelId] = useState(null);
   const [log, setLog] = useState([]);
 
@@ -52,15 +54,22 @@ export default function TrainingScreen({ onBack }) {
   };
 
   const advance = () => {
-    if (training.length === 0) { push("無選手在訓練中"); return; }
-    //  Milestone P1：日誌改讀**實際結算結果**。
+    //  ── Season vNext V1：這裡**不再**因為「沒有人在訓練」就拒絕推進 ──────
+    //  舊版第一行是 `if (training.length === 0) { push("無選手在訓練中"); return; }`，
+    //  而這顆按鈕是正式 UI **唯一**推得動 `meta.days` 的地方
+    //  ⇒ 玩家不指派訓練，世界就完全停住（TD-34，實測比記載的更嚴重）。
+    //  推進世界時間是俱樂部層級的事，不是訓練功能的副作用。
+    //  ⚠ 改走具名入口 `advanceWorldDays`（理由 `training`）——同一個時鐘、
+    //    同一套週結算與賽季日曆，只是「誰推的」現在留得下來。
+    //
+    //  Milestone P1：日誌讀**實際結算結果**。
     //  ⚠ 舊版是照課程定義猜「→ 專注、抗壓 提升」——那是猜的：課程說要練兩項，
     //    但選手若已頂到潛力上限，實際可能一項都沒漲，畫面卻還是照喊「提升」。
-    //    現在 `advanceDay` 會回傳每位完成訓練者的真實差值，這裡只負責顯示。
-    const res = advanceTrainingDay();
-    const trained = res?.trained ?? [];
+    const res = advanceWorldDays(1, { reason: ADVANCE_REASONS.training });
+    if (!res.ok) { push(res.reason ?? "今天推不動（可能有比賽尚未收尾）"); return; }
+    const trained = res.receipts?.trained ?? [];
     if (trained.length === 0) {
-      push(`訓練日推進 · ${training.length} 人訓練中`);
+      push(training.length > 0 ? `訓練日推進 · ${training.length} 人訓練中` : "推進一天 · 目前沒有人在訓練");
       return;
     }
     for (const t of trained) {
@@ -85,7 +94,7 @@ export default function TrainingScreen({ onBack }) {
 
       <button onClick={advance}
         style={{ width: "100%", background: training.length > 0 ? `linear-gradient(135deg,${GC.purp},#7c3aed)` : GC.card, border: training.length > 0 ? "none" : "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: 13, cursor: "pointer", color: training.length > 0 ? "#fff" : GC.gray, fontSize: 14, fontWeight: 800, marginBottom: 14 }}>
-        ⏭️ 推進訓練日{training.length > 0 ? `（${training.length} 人訓練中）` : ""}
+        ⏭️ {training.length > 0 ? `推進訓練日（${training.length} 人訓練中）` : "推進一天"}
       </button>
 
       {/* 訓練進行中 */}

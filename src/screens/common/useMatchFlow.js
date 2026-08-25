@@ -29,6 +29,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { TICKET_STATES } from "../../platform/contracts/matchmaking.js";
+import { SESSION_TERMINAL } from "../../platform/contracts/matchSession.js";
 import { selectOpponentName } from "../../platform/matchTeamNames.js";
 import { primaryActionFor, flowStatusText, flowStepOf } from "./matchPrepAction.js";
 
@@ -214,11 +215,21 @@ export function useMatchFlow(mode = "moba", onEnterBattle = null) {
     waitedSec: view.waitedSec,
     canCancel: live,
     err, run, cancel, abandon, tick,
-    //  V0D：快速練習。`canStartPractice` 只在「閒置且陣容就緒」時為真——
-    //  流程已經在跑的時候不該讓玩家再開一場（Store 也會擋，這裡先不給按）。
+    //  V0D：快速練習。只在「**閒置**且陣容就緒」時為真。
+    //
+    //  ⚠ 「閒置」必須看**還活著沒有**，不是「有沒有值」。第一版寫成
+    //    `!sessionState && !roomState`，於是打完任何一場之後，殘留的終局場次
+    //    （completed / expired…）會讓按鈕**永遠不再出現**——瀏覽器 smoke 實測到，
+    //    等於這個功能只有全新存檔看得到。
+    //  ⚠ `ROOM_TERMINAL` 不能直接用：它把 `confirmed` 也算終局（房間任務完成），
+    //    但那時候流程正要進場，絕不是閒置。這裡只認真正停下來的兩種。
+    //  ⚠ `refixture` 排除掉：畫面正在請玩家「重新進入本場賽事」時不該同時勸他去練習——
+    //    開練習會清掉 `fixtureAssignment`，那條回去的路就沒了。
     practice, startPractice,
     canStartPractice: entry.ok && !live && !practice.inPractice
-      && !sessionState && !roomState && !fixture.inFixture,
+      && !(roomState && !["cancelled", "expired"].includes(roomState))
+      && !(sessionState && !SESSION_TERMINAL.includes(sessionState))
+      && act.key !== "refixture",
     canAbandon: sessionState === "launched",
     //  內部識別：**只給 debug 區用**，正式畫面不得顯示
     internals: {

@@ -741,11 +741,27 @@ injury 也不得再成為出賽資格條件。
   > 不推進日曆、不碰賽季。它的產品價值是「試新人／試陣容／試位置／試戰術」，
   > **刻意沒有任何可累積的收益**——所以不存在「刷練習比較划算」這種問題。
 
-V1 Career Clock → V2 Time Block → V3 大顆時間操作 → V4 Lifecycle →
+- **V1** 世界時間基礎 — ✅ **已完成 2026-08-27**
+  （`platform/time/worldClock.js` 世界時間契約：推進理由白名單、活動→時間成本表、
+   生涯年度邊界；`advanceWorldDays(n,{reason})` 具名入口 ＋ `worldTimeView()` 單一讀取點；
+   訓練中心解除「沒人訓練就不能推進」；首頁新增世界時間卡；
+   `check_world_time_v1` 46/46）
+  > **原本的樣子**：正式 UI 唯一推得動 `meta.days` 的是訓練中心那顆按鈕，
+  > 而它第一行就 `if (training.length === 0) return` ⇒ **不指派訓練，世界完全停住**。
+  > TD-34 記的是「只靠訓練推進」，實測比記載更嚴重。
+  >
+  > **生涯年度 = 84 天（7 × 12）已可靠建立**，由 `careerYearOf` 命名、
+  > 與 `deriveTime` 同源、且**不受賽事容器影響**（賽季狀態機完全不寫 `meta`）。
+  > 這是未來年齡系統可以直接用的邊界——**本輪不動選手年齡**。
+
+V2 Time Block → V3 大顆時間操作 → V4 Lifecycle →
 V5 Off-season → V6 AI turnover → V7 Online Event contract
 
-> **NEXT = V1 Career Clock。** 它是「老將可以被長期磨到上限」（Foundation
-> Calibration 未解項）與 TD-34（世界時間只靠訓練推進）的共同根本解法。
+> **NEXT = V2 Time Block。** 兩件事在等它：
+> ① **一般競技比賽的時間成本**（`WORLD_TIME_COST.competitive` 目前是
+> `null`＝明確未定案，不是 0）——TD-34 的後半、「凍齡刷素質」的洞還在。
+> ② **老將可以被長期磨到上限**（Foundation Calibration 未解項）需要
+> Career Clock 真的推動年齡，而年齡推進要先有 Block 才有合理的觸發點。
 
 ---
 

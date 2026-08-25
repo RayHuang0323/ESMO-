@@ -14463,3 +14463,130 @@ Live Event、第二個 Result 畫面、青訓中心。
 未動 `BattleResult.v2`、`CsMatchResult.v1`、`fanSourceWeight.js`、
 `LEVEL_GROWTH` 常數、`potentialSpace` 曲線、體力經濟（`CONDITION`）。
 未 push、未 deploy。
+
+---
+
+## Season vNext V1：世界時間基礎（2026-08-27）
+
+**分支** `feature/remove-player-injury`｜**起點** `4652c00`（V0D 完成）
+
+### 開場：V0D 瀏覽器 smoke（抓到兩個真缺陷）
+
+本機 dev server（`localhost:5173`）實測 MOBA / CS 快速練習入口。
+
+**通過**：MOBA 練習走完 賽前 → 尋找對手 → 雙方確認 → 對戰卡（對手「黑曜守望」與
+gate 的決定性結果一致）；狀態列全程顯示「本場不影響戰績與數值」；
+**練習前後存檔逐值不變**（`days 86 / fans 128180 / funds 70000 / xp / energy` 全同）；
+CS 賽前頁也有練習按鈕；跨模式保護生效（「另一個模式有進行中的對戰」）；
+390px 無水平溢出（按鈕 351px，文字不換行）。
+
+**抓到並修好兩個缺陷（gate 原本抓不到）**：
+
+1. **練習按鈕打過一場之後就永遠不再出現。**
+   `canStartPractice` 寫成 `!sessionState && !roomState`——**有沒有值**，
+   而不是**還活著沒有**。殘留的終局場次（`completed` / `expired`）於是永久擋住入口，
+   等於這個功能只有全新存檔看得到。改成看終局集合。
+   ⚠ `ROOM_TERMINAL` 不能直接用：它把 `confirmed` 也算終局（房間任務完成），
+   但那時候流程正要進場。
+2. **狀態文案自相矛盾**：底部寫「返回進行中的對戰」，上面卻說「正在準備場次」。
+   練習分支把 `room === "confirmed"` 排在場次狀態前面。改成與正式流程同一個順序。
+
+兩者都補進 gate（§U8／§U9／§U10），`check_practice_match_v0d` 67 → **70/70**。
+
+⚠ **未在瀏覽器打完整場練習**：MOBA 3D 場景在本機兩度把 renderer 卡到無回應
+（既有效能特性，非本輪造成）。結算面由 gate §E 的 store 端到端覆蓋。
+
+---
+
+### V1 Audit：世界時間卡在哪
+
+`meta.days` 的**寫入點全 repo 只有兩處**，而且都在同一條路上
+（`weeklySettlement.advanceDaysInState` ← `advanceDay`；`_startNewGame`）
+⇒ **單一時鐘本來就成立**。問題完全在**入口**：
+
+| `advanceDay` 的呼叫端 | 性質 |
+|---|---|
+| `TrainingScreen`「推進訓練日」 | **正式 UI 唯一入口** |
+| `DevQuickRecovery` | DEV-only，上線前移除（TD-30） |
+
+而那個唯一入口第一行是 `if (training.length === 0) { push("無選手在訓練中"); return; }`
+
+⇒ **沒有人在訓練，世界就完全停住。不是慢，是零。**
+TD-34 記的是「只靠訓練推進」，**實測比記載更嚴重**。
+
+**已經正確、本輪只需釘住的部分**（沒有動它們）：
+
+| 事項 | 現況 |
+|---|---|
+| MOBA / CS 共用一條時間 | ✅ `_advanceCompetition` 對兩個項目取**交集**，並明文禁止各推各的 |
+| 賽季 rollover 不影響世界時間 | ✅ 賽季狀態機**完全不寫 `meta`**（結構上不可能） |
+| 快速練習不推進時間 | ✅ 練習路徑從不呼叫 `advanceDay` |
+| 賽程 ↔ 世界日期 | ✅ 唯一換算點 `absoluteDayOf = startDay + fixture.day − 1` |
+| 同一天重複結算 | ✅ 週結算冪等鍵是**累計週次**（跨賽季不重置） |
+
+**84 天年度邊界**：專案裡有**兩個同長但不同錨**的「賽季」——
+`deriveTime().season`（世界年度，錨在第 1 天）與 `seasonState` 的賽事賽季
+（`SEASON_DAYS = 84`，錨在**建立當天**）。`seasonState` 註解自己承認兩者
+「本來就會逐季偏移」。未來的年齡系統必須用**世界年度**。
+
+### 改了什麼
+
+1. **`src/platform/time/worldClock.js`（新，37 行實碼，純契約）**
+   - `CAREER_YEAR`：**由 `timeline.js` 常數推導**（84 = 7 × 12），不重寫一次
+   - `ADVANCE_REASONS` / `PRODUCTION_REASONS`：推進理由白名單，DEV **不算**正式推進權
+   - `WORLD_TIME_COST`：訓練 1／休息 1／**練習 0**／**正式季賽 0**／
+     **一般競技 `null`（明確未定案）**
+   - `careerYearOf(days)`：**直接沿用 `deriveTime`**，不自己算年度
+2. **`profileStore.advanceWorldDays(n, { reason })`**：具名公開入口。
+   理由不在白名單 ⇒ **拒絕推進**並回中文原因。`advanceDay` 保留為實作。
+3. **`profileStore.worldTimeView()`**：世界時間的單一讀取點
+   （`day / week / careerYear / dayOfYear / daysPerYear / nextFixtureDay`）。
+4. **`TrainingScreen`**：拿掉「沒有人在訓練就 return」的早退；沒人訓練時按鈕改成「推進一天」。
+5. **`DashboardScreen`**：新增**世界時間卡**（`reason: rest`），
+   顯示生涯年度 / 本年度第幾天 / 下一場賽程在第幾天，**不依賴任何前置條件**。
+
+### 實測結果（gate §E 端到端）
+
+```
+E1 不明理由 ⇒ 拒絕，且 meta.days 未動
+E2 rest 理由推得動         day 8 → 9    ← 沒有人在訓練也一樣
+E3 training 理由照常        day 9 → 12   （實推 3）
+E4 快速練習跑完整條流程     day 12 → 12  ← 逐值不變
+E5 worldTimeView 與 meta.days 一致（week 2｜年度 1 第 12 天）
+```
+
+### 刻意留白
+
+**一般競技比賽的時間成本是 `null`（明確未定案），不是 0。**
+產品要求「不要簡單做成打一場 = +1 天」，真正的成本要等 V2 Time Block。
+用 `null` 而不是 0，是為了讓之後的人分得出「決定不消耗」與「還沒決定」——
+gate §A5 與 sentinel M-B 專門守這一條。
+
+⇒ **TD-34 只解掉前半**（世界不會被凍住）；後半（比賽不消耗時間 ⇒ 凍齡刷素質）
+仍未解，已在技術債清單分開記載。
+
+### Gate / build
+
+- **`check_world_time_v1` 46/46**（新增，含端到端 §E 與 4 個 mutation sentinel）
+- `practice_match_v0d` **70/70**（本輪 +3）、`foundation_calibration` 58/58
+- 賽事／賽季未受影響：`competition_q1` 93/93、`q3` 91/91、`q4` 68/68、`q6` 57/57、
+  `cs_season_lifecycle` 54/54、`cs_season_m2` 55/55、`cs_season_contract` PASS
+- `authoritative_o7` 48/48、`fan_system` 66/66、`dev_quick_recovery` 29/29、
+  `flow09` PASS、`dash10` PASS
+- `verify.mjs --only=progress25,talent27,growth_p0,growth_ui_p1,regress,regress2,build` — **7/7**
+
+**一處斷言被刻意改寫**：`check_growth_ui_p1` §7b 後半從 `res?.trained` 放寬成
+「有讀到 `.trained`」。V1 把推進改走 `advanceWorldDays`，回傳形狀變成
+`{ ok, daysAdvanced, receipts }` ⇒ 訓練頁讀 `res.receipts?.trained`，
+**讀的仍是同一份真實結算差值**，該條要守的意圖沒變；前半段
+「不得用課程定義猜」逐字未動。
+
+⚠ **未經瀏覽器實測**：首頁世界時間卡的實際外觀與點擊、訓練中心新文案。
+端到端是在 Node 跑 store 流程。
+
+### 沒有做
+
+未做選手 age +1、衰退、退休、Off-season、Ranked、真人連線、Time Block。
+未動 `meta.days` 的寫入點、`advanceDay` 的 D15 規則（比賽日沒收尾就走不出去）、
+`absoluteDayOf`、賽季狀態機、`fanSourceWeight.js`。
+未 push、未 deploy。

@@ -16,6 +16,8 @@ import { useDashboardMotion } from "./dashboard/useDashboardMotion.js";
 import { useMobileSheetMotion } from "./dashboard/useMobileSheetMotion.js";
 //  「有選手需要處理嗎」用既有的判定，不在首頁另訂體力門檻。
 import { isExhausted } from "../platform/condition/playerCondition.js";
+//  V1：推進世界時間一律走具名入口＋白名單理由（見 platform/time/worldClock.js）。
+import { ADVANCE_REASONS } from "../platform/time/worldClock.js";
 import "./dashboard/dashboard.css";
 
 const numberOf = (value, fallback = 0) => {
@@ -228,6 +230,53 @@ function FinanceStatus({ wk, fc, finBars, onOpen }) {
   );
 }
 
+/**
+ * 世界時間卡（Season vNext V1）。
+ *
+ * ── 為什麼首頁要有這張卡 ──────────────────────────────────────────────────
+ * V1 之前，正式 UI **唯一**推得動 `meta.days` 的地方是訓練中心那顆按鈕，
+ * 而那顆按鈕還要求「真的有人在訓練」⇒ 玩家不指派訓練，世界就完全停住。
+ * 時間是**俱樂部層級**的東西，不是訓練功能的副作用，所以入口在首頁。
+ *
+ * ⚠ **這不是第二個時鐘**：它呼叫 `advanceWorldDays`（→ `advanceDay`），
+ *   與訓練中心同一條路、同一套週結算與賽季日曆。
+ * ⚠ 顯示的時間一律來自 `worldTimeView()`，**不自己從 `meta.days` 算週次或年度**。
+ * ⚠ 這個入口**不依賴任何前置條件**——那正是它存在的理由。
+ *   唯一擋得住它的是既有的 D15 規則（比賽日沒收尾就走不出去），
+ *   那時會照實顯示原因，而不是靜靜地什麼都不做。
+ */
+function WorldTimeStatus() {
+  const advanceWorldDays = useProfileStore((s) => s.advanceWorldDays);
+  const days = useProfileStore((s) => s.meta?.days);
+  const worldTimeView = useProfileStore((s) => s.worldTimeView);
+  const [note, setNote] = React.useState(null);
+  const t = worldTimeView();
+
+  const advance = (n) => {
+    const res = advanceWorldDays(n, { reason: ADVANCE_REASONS.rest });
+    setNote(res.ok
+      ? (res.daysAdvanced < n ? `推進 ${res.daysAdvanced} 天後停下：${res.reason ?? "有比賽尚未收尾"}` : null)
+      : (res.reason ?? "今天推不動"));
+  };
+
+  return (
+    <article className="esmo-card esmo-status-card" data-dashboard-reveal data-testid="home-world-time">
+      <div className="esmo-status-card__title">
+        <span><IconBadge name="chevron" accent={GC.purp} size={15} />世界時間</span>
+        <span className="esmo-status-card__label">CLOCK</span>
+      </div>
+      <div className="esmo-status-card__value">{numberOf(days)} <small>天</small></div>
+      <div className="esmo-status-card__detail">
+        第 {t.careerYear} 生涯年度 · 第 {t.dayOfYear}/{t.daysPerYear} 天 · 第 {t.week} 週
+        {t.nextFixtureDay ? ` · 下一場賽程在第 ${t.nextFixtureDay} 天` : " · 目前沒有排定的賽程"}
+      </div>
+      {note && <div className="esmo-status-card__detail" style={{ color: GC.gold }}>{note}</div>}
+      <button className="esmo-status-card__link" type="button" data-testid="home-advance-day"
+        onClick={() => advance(1)}>推進一天 <EsmoIcon name="chevron" size={13} /></button>
+    </article>
+  );
+}
+
 function ClubStatus({ profile, players, developmentPoints, wk, fc, finBars, sponsor, onFinance, onSponsor, onRoster }) {
   const weeksLeft = numberOf(profile.activeSponsor?.weeksLeft);
   const sponsorTone = sponsor ? (weeksLeft <= 2 ? GC.gold : GC.green) : GC.gray;
@@ -235,6 +284,7 @@ function ClubStatus({ profile, players, developmentPoints, wk, fc, finBars, spon
     <section className="esmo-section">
       <SectionHeading label="CLUB STATUS" title="戰隊狀態" note="同一份經營資料的快速讀本" />
       <div className="esmo-status-grid">
+        <WorldTimeStatus />
         <FinanceStatus wk={wk} fc={fc} finBars={finBars} onOpen={onFinance} />
 
         <article className="esmo-card esmo-status-card" data-dashboard-reveal>

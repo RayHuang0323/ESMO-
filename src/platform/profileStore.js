@@ -142,6 +142,10 @@ import {
   issuePracticeMatch, openRoomForPractice, openSessionForPractice, isPracticeAssignment,
 } from "./matchmaking/practiceGateway.js";
 import { ORIGIN_KINDS } from "./contracts/matchOrigin.js";
+//  V1：世界時間契約（推進理由白名單、活動→時間成本、生涯年度邊界）。
+import {
+  ADVANCE_REASONS, isAdvanceReason, careerYearOf, CAREER_YEAR,
+} from "./time/worldClock.js";
 import {
   SESSION_STATES, CONNECTION_STATES, consumeLaunchToken, validateSession, cancelSession,
   sessionStateLabel, isSessionExpired, isSessionTerminal,
@@ -1003,6 +1007,74 @@ export const useProfileStore = create((rawSet, get) => {
   },
   /** 舊名保留：訓練頁與 Legacy 呼叫端沿用，行為 = 推進一天（含週結算）。 */
   advanceTrainingDay() { return get().advanceDay(1); },
+  // ── Season vNext V1：世界時間的具名入口 ──────────────────────────────
+  /**
+   * 推進世界時間。**這是正式的公開入口**；`advanceDay` 是它的實作。
+   *
+   * ── 為什麼要多一層 ────────────────────────────────────────────────────
+   * `advanceDay` 一直是唯一的時鐘，但「誰有權推進」只是慣例，沒有任何地方
+   * 檢查得到。實測的後果是：正式 UI 只有訓練中心推得動它，而那顆按鈕還要求
+   * **真的有人在訓練** ⇒ 玩家不訓練，世界就完全停住（TD-34，比記載更嚴重）。
+   *
+   * 這一層做兩件事：
+   *   ① 把推進理由變成**可驗證的白名單**（`worldClock.ADVANCE_REASONS`）
+   *   ② 讓「誰推的」留在回傳值裡，之後接 Time Block 時不必回頭考古
+   *
+   * ⚠ **不是第二個時鐘**：它呼叫的就是 `advanceDay`，
+   *   `meta.days` 的寫入點仍然只有週結算那一處。
+   * ⚠ 既有的 D15 規則完全沒動：走得進比賽日，但比賽沒收尾就走不出去
+   *   ⇒ 回傳的 `daysAdvanced` 可能小於 `n`，`stoppedBy` 帶中文原因。
+   *   這是刻意的，不是凍結——**不自動判棄權**（規格 D15 否決過）。
+   *
+   * @param {number} n
+   * @param {{reason:string}} opts `worldClock.ADVANCE_REASONS` 之一
+   * @returns {{ok:boolean, daysAdvanced:number, stoppedBy:object|null,
+   *            receipts:object[], reason:string|null}}
+   */
+  advanceWorldDays(n = 1, { reason = null } = {}) {
+    if (!isAdvanceReason(reason)) {
+      return {
+        ok: false, daysAdvanced: 0, stoppedBy: null, receipts: [],
+        reason: `不明的時間推進來源「${reason}」，世界時間未推進`,
+      };
+    }
+    const days = Math.max(1, Math.floor(Number(n) || 1));
+    const receipts = get().advanceDay(days);
+    return {
+      ok: (receipts.daysAdvanced ?? 0) > 0,
+      daysAdvanced: receipts.daysAdvanced ?? 0,
+      stoppedBy: receipts.stoppedBy ?? null,
+      receipts,
+      reason: receipts.stoppedBy?.message ?? null,
+    };
+  },
+  /**
+   * 世界時間的**單一讀取點**。畫面不得自己從 `meta.days` 算週次或年度——
+   * 那正是專案裡「兩份時間各自漂移」踩過的坑（S23 team.lv/xp）。
+   */
+  worldTimeView() {
+    const days = Number(get().meta?.days) || 1;
+    const t = deriveTime(days);
+    const y = careerYearOf(days);
+    return {
+      day: days,
+      week: t.week,
+      dayOfWeek: t.dayOfWeek,
+      careerYear: y.year,
+      dayOfYear: y.dayOfYear,
+      daysPerYear: CAREER_YEAR.daysPerYear,
+      //  ⚠ 賽程日一律經 `absoluteDayOf`（賽季狀態機的唯一換算點），不讀 `fixture.day`。
+      nextFixtureDay: (() => {
+        for (const mode of GAME_MODES) {
+          const st = get().competitionByMode?.[mode];
+          if (!st?.schema) continue;
+          const f = nextPlayerFixture(st, days);
+          if (f) return absoluteDayOf(st, f);
+        }
+        return null;
+      })(),
+    };
+  },
   // ── Milestone Q3：賽事系統 ────────────────────────────────────────────
   /**
    * 確保這個存檔有賽季。**唯一的建立點**。

@@ -403,6 +403,38 @@ ck("U5) 入口在 **MOBA / CS 共用的** `MatchPrepFrame`（兩邊不各做一�
 ck("U6) 按鈕有明示「不影響戰績與數值」（玩家看得懂它是測試場）",
   /快速練習/.test(read(P_FRAME)) && /不影響/.test(read(P_FRAME)));
 
+//  ⚠ U8／U9 是**瀏覽器 smoke 實測抓到的兩個缺陷**，補進 gate 以免回歸。
+//    兩個都不是邏輯錯，是「條件寫得太粗」——單元檢查全綠但玩家看到的是壞的。
+ck("U8) 『可以開練習』看的是**還活著沒有**，不是『有沒有值』",
+  (() => {
+    const s = codeOnly(read(P_FLOW));
+    //  第一版寫成 `!sessionState && !roomState` ⇒ 打完任何一場之後，
+    //  殘留的終局場次（completed / expired…）會讓按鈕**永遠不再出現**。
+    if (/canStartPractice[\s\S]{0,200}?!sessionState\s*&&\s*!roomState/.test(s)) return false;
+    return /canStartPractice/.test(s) && /SESSION_TERMINAL/.test(s);
+  })(),
+  "終局的房間／場次不得擋住練習入口");
+
+ck("U9) 練習的狀態文案：場次狀態優先於房間狀態（不得自相矛盾）",
+  (() => {
+    //  第一版把 room==="confirmed" 排在前面 ⇒ 已經可以「返回進行中的對戰」時，
+    //  上面卻顯示「正在準備場次」。
+    const t = action.flowStatusText({
+      entryOk: true, view: {}, room: { state: "confirmed" },
+      session: { state: "launched", restoreable: true },
+      practice: { inPractice: true },
+    });
+    return /進行中/.test(t) && !/正在準備場次/.test(t);
+  })(),
+  action.flowStatusText({
+    entryOk: true, view: {}, room: { state: "confirmed" },
+    session: { state: "launched", restoreable: true }, practice: { inPractice: true },
+  }));
+
+ck("U10) 練習流程全程都標示「不影響戰績與數值」或等義說明",
+  ["ready_check", "waiting"].every((st) => /不影響戰績與數值|快速練習/.test(
+    action.flowStatusText({ entryOk: true, view: {}, room: { state: st }, session: null, practice: { inPractice: true } }))));
+
 ck("U7) 沒有為快速練習新增第二個 Result 畫面",
   (() => {
     const files = fs.readdirSync(resolve(ROOT, "src/screens/common"));
