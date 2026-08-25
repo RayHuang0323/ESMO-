@@ -3,7 +3,9 @@ import { launchChrome, startDevServer } from "./browser/cdp.mjs";
 
 const VITE_PORT = 5373;
 const CDP_PORT = 9393;
-const APP = `http://localhost:${VITE_PORT}/ESMO-/`;
+const EXTERNAL_APP = process.env.CS_P0_APP_URL || null;
+const PRODUCTION_SMOKE = process.env.CS_P0_PRODUCTION_SMOKE === "1";
+const APP = EXTERNAL_APP || `http://localhost:${VITE_PORT}/ESMO-/`;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function waitFor(chrome, expression, timeoutMs, label) {
@@ -69,7 +71,7 @@ async function enterMirageBattle(chrome) {
 let dev = null;
 let chrome = null;
 try {
-  dev = await startDevServer({ port: VITE_PORT });
+  if (!EXTERNAL_APP) dev = await startDevServer({ port: VITE_PORT });
   chrome = await launchChrome({ url: APP, port: CDP_PORT, headless: true });
   await chrome.send("Emulation.setDeviceMetricsOverride", { width: 1366, height: 768, deviceScaleFactor: 1, mobile: false });
   await chrome.navigate(APP);
@@ -112,25 +114,34 @@ try {
     };
   `);
   if (!evidence?.canvas || evidence.canvas.width < 1 || evidence.canvas.height < 1) throw new Error(`Battle canvas invalid: ${JSON.stringify(evidence?.canvas)}`);
-  if (!evidence.contract || evidence.contract.fidxTransitions < 1) throw new Error(`RAF contract missing transitions: ${JSON.stringify(evidence.contract)}`);
-  if (evidence.contract.staleMismatch !== 0) throw new Error(`RAF_FIDX_COHERENCE mismatch: ${JSON.stringify(evidence.contract)}`);
-  if (evidence.contract.duplicateRaf !== 0 || evidence.contract.duplicateRender !== 0) throw new Error(`duplicate RAF/render: ${JSON.stringify(evidence.contract)}`);
-  if (!evidence.scene || evidence.scene.rapidCameraRecoveryCount !== 0) throw new Error(`CAMERA_RECOVERY loop: ${JSON.stringify(evidence.scene)}`);
+  if (!PRODUCTION_SMOKE) {
+    if (!evidence.contract || evidence.contract.fidxTransitions < 1) throw new Error(`RAF contract missing transitions: ${JSON.stringify(evidence.contract)}`);
+    if (evidence.contract.staleMismatch !== 0) throw new Error(`RAF_FIDX_COHERENCE mismatch: ${JSON.stringify(evidence.contract)}`);
+    if (evidence.contract.duplicateRaf !== 0 || evidence.contract.duplicateRender !== 0) throw new Error(`duplicate RAF/render: ${JSON.stringify(evidence.contract)}`);
+    if (!evidence.scene || evidence.scene.rapidCameraRecoveryCount !== 0) throw new Error(`CAMERA_RECOVERY loop: ${JSON.stringify(evidence.scene)}`);
+  }
   if (evidence.samples.length < Math.max(100, Math.floor(longRunMs / 200))) throw new Error(`insufficient geometry samples: ${evidence.samples.length}`);
   const base = evidence.samples[0]?.stable;
   const geometryShifts = evidence.samples.filter((sample) => !base || !sample.stable || ["x", "y", "width", "height"].some((key) => Math.abs(sample.stable[key] - base[key]) > 0.01));
   if (geometryShifts.length) throw new Error(`STABLE_CANVAS_GEOMETRY shift: ${JSON.stringify(geometryShifts.slice(0, 3))}`);
-  const visibility = evidence.visibility;
-  if (!visibility?.check?.ok || visibility.teams?.blue?.authoritative !== 5 || visibility.teams?.red?.authoritative !== 5) throw new Error(`visibility contract failed: ${JSON.stringify(visibility)}`);
+  if (!PRODUCTION_SMOKE) {
+    const visibility = evidence.visibility;
+    if (!visibility?.check?.ok || visibility.teams?.blue?.authoritative !== 5 || visibility.teams?.red?.authoritative !== 5) throw new Error(`visibility contract failed: ${JSON.stringify(visibility)}`);
+  }
   const errors = {
     console: chrome.consoleLines.filter((line) => line.startsWith("[error]")),
     page: chrome.pageErrors,
   };
   if (errors.console.length || errors.page.length) throw new Error(`blocking browser errors: ${JSON.stringify(errors)}`);
-  console.log(`PASS Home -> Practice -> Mirage -> Battle canvas=${JSON.stringify(evidence.canvas)}`);
-  console.log(`PASS CS P0 long-run=${longRunMs}ms samples=${evidence.samples.length} stableGeometryShifts=${geometryShifts.length}`);
-  console.log(`PASS fIdx transitions=${evidence.contract.fidxTransitions} staleMismatch=${evidence.contract.staleMismatch} duplicateRaf=${evidence.contract.duplicateRaf} duplicateRender=${evidence.contract.duplicateRender}`);
-  console.log(`PASS cameraRecovery=${evidence.scene.cameraRecoveryCount} rapidRecovery=${evidence.scene.rapidCameraRecoveryCount} browserErrors=${errors.console.length + errors.page.length}`);
+  if (PRODUCTION_SMOKE) {
+    console.log(`PASS production smoke Home -> Practice -> Mirage -> Battle canvas=${JSON.stringify(evidence.canvas)}`);
+    console.log(`PASS production geometry samples=${evidence.samples.length} stableGeometryShifts=${geometryShifts.length} browserErrors=0`);
+  } else {
+    console.log(`PASS Home -> Practice -> Mirage -> Battle canvas=${JSON.stringify(evidence.canvas)}`);
+    console.log(`PASS CS P0 long-run=${longRunMs}ms samples=${evidence.samples.length} stableGeometryShifts=${geometryShifts.length}`);
+    console.log(`PASS fIdx transitions=${evidence.contract.fidxTransitions} staleMismatch=${evidence.contract.staleMismatch} duplicateRaf=${evidence.contract.duplicateRaf} duplicateRender=${evidence.contract.duplicateRender}`);
+    console.log(`PASS cameraRecovery=${evidence.scene.cameraRecoveryCount} rapidRecovery=${evidence.scene.rapidCameraRecoveryCount} browserErrors=${errors.console.length + errors.page.length}`);
+  }
 } finally {
   if (chrome) await chrome.close();
   if (dev) await dev.stop();

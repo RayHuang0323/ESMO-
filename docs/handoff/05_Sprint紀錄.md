@@ -13659,3 +13659,10 @@ Release checklist 寫的就是旗標，不是網址參數。
 - release gates：Renderer visibility `24/24`、CS-A2 `10/10`、C2A `13/13`、C2B `14/14`、CS23 `28/28`、Camera `8/8`、RAF coherence `7/7`、StableCanvas geometry `5/5`、production build PASS。
 
 本次只整合 CS P0 視覺穩定性與防回歸契約；未開始 C2C、R63 fast-finish、balance 或其他功能 Sprint。
+### Production HTTPS smoke（2026-08-25）
+
+- URL：`https://rayhuang0323.github.io/ESMO-/`
+- Home → Practice → Mirage → Battle：PASS
+- Canvas：`430×507`
+- 30 秒 production smoke geometry samples：`246`；StableCanvasRegion shifts：`0`
+- browser/page errors：`0`
