@@ -684,9 +684,12 @@ injury 也不得再成為出賽資格條件。
 - **V0A** Player Career Growth Model — ✅ **已完成 2026-08-25**
   （`progress/careerGrowth.js` 為 PCGM 單一入口；比賽成長現在認年齡與 learning；
    `trainingCalculator.js` 零 diff；`check_pcgm_v0a` 24/24）
-- **V0B** Prospect Growth Space — ⏳ **未開始（NEXT）**
+- **V0B** Prospect Growth Space — ✅ **已完成 2026-08-25**
+  （原型化生成：養成型／一般／即戰力／超新星；成長空間中位 8.4 → 15.8 點；
+   釘住率 41.5% → 0.4%；招募等級只提升資訊品質不讓新人變強；`check_prospect_growth_space_v0b` 31/31）
+- **V0C** Match Origin / Growth Source Attribution — ⏳ **未開始（NEXT）**
 
-> ⚠ **FOUNDATION_COMPLETE = NO。** V0A 只是 Foundation 的一半。
+> ⚠ **FOUNDATION_COMPLETE = NO。** Foundation 現在是 V0A ✅ → V0B ✅ → **V0C** → Foundation Calibration Gate。
 > 另外 V0A 實作時發現 **TD-35**：`MatchProgressTransaction` 不帶 `MatchOrigin`
 > ⇒ 結算分不出聯賽與自由對戰 ⇒ **`sourceBase` 暫時一律 1.0**，
 > 「年度來源比例 40/35/15/10」在 MatchOrigin 接進契約之前**達不到**。

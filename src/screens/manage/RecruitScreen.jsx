@@ -44,7 +44,11 @@ export default function RecruitScreen({ onBack }) {
   const [selId, setSelId] = useState(null);
   const [scoutQueue, setScoutQueue] = useState({});   // {id:{level,daysLeft,totalDays}} 出勤中的球探
 
-  const prospects = useMemo(() => genProspects(seed), [seed]);
+  //  V0B：球探網絡等級只提高**初始已知程度**（資訊品質），不改任何新秀能力。
+  //  `management_scout_network` 每階 amount 為 1 ⇒ scoutDaysReduction 的數值即等級。
+  const prospects = useMemo(
+    () => genProspects(seed, { scoutNetworkRank: developmentEffects.scoutDaysReduction }),
+    [seed, developmentEffects.scoutDaysReduction]);
   const budgetWan = Math.floor(funds / WAN);
   const full = players.length >= ROSTER_CAP;
   const isSignedOf = (p) => !!signedLedger[makeRecruitmentId(seed, p.id)];

@@ -85,11 +85,13 @@ const pickBy = (fn, label) => {
   const found = pool.find(fn);
   return found ? mkFrom(found, label) : null;
 };
+//  V0B 之後新秀帶著 `archetype` 欄位 ⇒ 直接照原型抽，不再用年齡／潛力區間去猜。
+//  （用區間猜的舊版在 V0B 改變分佈之後只挑得到一個原型，整張表等於空的。）
 const ARCHETYPES = [
-  pickBy((p) => p.age >= 19 && p.age <= 21 && p.potential >= 78 && p.potential <= 86, "典型新人 19–21歲"),
-  pickBy((p) => p.age >= 18 && p.age <= 21 && p.potential >= 90, "高潛天才 ≤21歲"),
-  pickBy((p) => p.age >= 21 && p.potential < 70, "即戰力 21+歲 低潛"),
-  pickBy((p) => p.age <= 17 && p.potential >= 85, "超新星 ≤17歲"),
+  pickBy((p) => p.archetype === "standard" && p.age >= 19, "一般新人 19–21歲"),
+  pickBy((p) => p.archetype === "developmental", "養成型"),
+  pickBy((p) => p.archetype === "readymade", "即戰力"),
+  pickBy((p) => p.archetype === "superstar", "超新星"),
 ].filter(Boolean);
 
 line("\n【代表性選手（自新秀池實抽，非合成）】");
@@ -266,6 +268,42 @@ line("     這裡的年成長仍然關不掉潛力空間——那是 **V0B 的�
 line("     V0A 只負責讓成長**認年齡與學習能力**；空間多大由 V0B 決定。");
 line("  ⚠ **潛力漸近線（TD-33）也未修**：floorRate 會改變 Training v1.1 的輸出值，");
 line("     屬 Foundation calibration，不在 V0A 範圍。");
+
+// ── ⑨ V0A + V0B joint calibration：Year 0–4 ───────────────────────────────
+//  ⚠ metric 口徑（不得混用分母）：
+//     Year 0 = **StartingCore**（定位 5 項主能力平均，metric A）
+//     Year 1–4 = **MainStat 潛力空間關閉率**（metric E / C）
+line("\n【⑨ V0A + V0B joint calibration：Year 0–4】");
+line("  Year 0 = StartingCore（metric A）｜Year 1–4 = MainStat 空間關閉率（metric E/C）");
+line("  原型                起始  空間   Y1     Y2     Y3     Y4");
+for (const a of ARCHETYPES) {
+  let p = { ...a, stats: { ...a.stats } };
+  const cells = [];
+  for (let y = 1; y <= 4; y++) {
+    const s1 = simYear(p, 12);
+    p = { ...s1.player, _start: a._start, age: p.age + 1 };
+    cells.push(pct(closed(p)));
+  }
+  line(`  ${a.name.padEnd(18)}  ${String(r1(a._start)).padStart(4)}  ${String(r1(a.potential - a._start)).padStart(4)}  `
+    + cells.map((c) => c.padStart(6)).join(" "));
+}
+line("  產品目標：Y1 明顯進步可進輪換｜Y2 左右有機會穩定主力｜Y3–4 好選手接近成熟");
+
+// ── ⑩ 招募等級對新人池的影響（低 / 中 / 高）───────────────────────────────
+line("\n【⑩ 招募等級（球探網絡）對新人池的影響】");
+line("  rank  已知(lv≥1)  完全揭露(lv2)  平均起始  平均空間  平均潛力");
+for (const rank of [0, 1, 3]) {
+  const pool2 = [7, 46, 99].flatMap((s) => recruit.genProspects(s, { scoutNetworkRank: rank }));
+  const known = pool2.filter((p) => p.scoutLv >= 1).length / pool2.length;
+  const full = pool2.filter((p) => p.scoutLv >= 2).length / pool2.length;
+  const core = pool2.reduce((s, p) => s + avgMain(p), 0) / pool2.length;
+  const space = pool2.reduce((s, p) => s + (p.potential - avgMain(p)), 0) / pool2.length;
+  const pot = pool2.reduce((s, p) => s + p.potential, 0) / pool2.length;
+  line(`  ${String(rank).padStart(4)}  ${pct(known).padStart(9)}  ${pct(full).padStart(12)}  `
+    + `${String(r1(core)).padStart(8)}  ${String(r1(space)).padStart(8)}  ${String(r1(pot)).padStart(8)}`);
+}
+line("  ⇒ **起始／空間／潛力三欄在三個等級完全相同**——招募等級只改變資訊，不讓新人變強。");
+line("  ⇒ 提高的是「發現優質人才的機率與判斷可靠度」（已知比例），而且永遠不會全開。");
 
 line("\n══════════════════════════════════════════════════════════════════");
 line("  ⚠ 全部 PROPOSED / NOT FROZEN。核准前不得寫進產品碼或標為 FINAL。");

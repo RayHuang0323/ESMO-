@@ -13815,3 +13815,146 @@ gate §G 用兩條把它釘死：
 未做 V0B（`recruitPool` 零改動）、Career Clock、age +1、lifecycle、decline、retirement。
 未建 fake Ranked / server / 新 UI。未新增玩家可見的 Practice 永久成長。
 未鎖任何 balance 常數（`PCGM_PARAMS` 全部標為 provisional）。未 push、未 deploy。
+
+
+## Season vNext V0B — Prospect Growth Space（2026-08-25）
+
+分支 `feature/remove-player-injury`。**未 push。**
+
+> ⚠ **FOUNDATION_COMPLETE = NO。** Foundation 已改為
+> **V0A ✅ → V0B ✅ → V0C（Match Origin / Growth Source Attribution）→ Foundation Calibration Gate**。
+
+### 根因（先查清楚才改，沒有先改數字）
+
+「新秀入行時主能力已達潛力 87.6%、空間中位只有 8.4 點」的原因**不是潛力設太低**，
+而是**生成時被兩個東西夾死**：
+
+```js
+// genCsProfiledStat（改動前）
+const baseline = 40 + current * 0.58;          // ← +40 的地板
+const generationCap = Math.max(1, potential - 2);  // ← 天花板
+```
+
+`potential` 的範圍是 **42–96**，而 baseline 有 **+40 的地板**
+⇒ 潛力 42–70 的新秀 baseline 直接衝破天花板，**出生就被釘在 `potential − 2`**。
+
+實測（40 人 × 6 seed）：
+
+| 潛力分層 | 人數 | 主能力被釘住 | 平均剩餘空間 |
+|---|---|---|---|
+| 42–55 | 9 | **73%** | 3.9 點 |
+| 56–70 | 16 | 54% | 7.4 點 |
+| 71–85 | 10 | 14% | 17.6 點 |
+| 86–96 | 5 | **0%** | 20.5 點 |
+
+⇒ 整體主能力 **41.5% 被釘住**，30/40 名新秀至少有一項貼住天花板。
+那個 `+40` 是 R46 為了讓 CS gameplay 素質落在可玩區間設的地板，
+與「potential 最低只有 42」直接衝突。
+
+### 修法：成長空間變成**直接生成的量**
+
+```
+archetype → core（起始能力）+ room（成長空間）
+potential = min(96, core + room)
+```
+
+空間不再是「潛力 − 起始」的**殘值**，因此**不可能再被 clamp 擠掉**。
+
+| 原型 | 權重 | 年齡 | 起始 core | 空間 room |
+|---|---|---|---|---|
+| 養成型 developmental | 30% | 16–19 | 34–50 | 22–38 |
+| 一般 standard | 40% | 17–21 | 42–58 | 12–24 |
+| 即戰力 readymade | 25% | 20–23 | 52–68 | 7–15 |
+| 超新星 superstar | 5% | 16–18 | 54–64 | 26–36 |
+
+另外新增 `spreadScale = clamp(room/24, 0.3, 1)`：**空間小的人能力集中（像成品）、
+空間大的人參差（像半成品）**。這同時解決一個技術問題——若振幅不隨 room 縮小，
+小 room 的新秀又會被 `generationCap` 夾住。
+
+### 結果
+
+| 指標 | 改動前 | 改動後 |
+|---|---|---|
+| 成長空間中位（metric C） | 8.4 點 | **15.8 點** |
+| 主能力釘住率 | 41.5% | **0.4%** |
+| 潛力範圍／中位 | 42–96 / ~69 | 54–96 / **71** |
+| 超新星比例 | — | **3.8%**（稀有） |
+
+原型分化（6 seed 共 240 人）：
+養成型 起始 44.4/空間 27.6｜一般 50.9/17.1｜即戰力 60.3/10.7｜超新星 59.7/29.4
+
+> ⚠ **A 級以上比例由約 31% 降到 12%**。這是**刻意的**：改動前高潛力很便宜，
+> 因為起始能力本來就貼著潛力；現在高潛力代表真正要投資。
+> 這屬 legitimate expectation change，不是回歸。
+
+### 招募等級（本輪追加 Audit）
+
+**現況**：唯一真效果是 `management_scout_network` → `scoutDaysReduction`（球探報告 −1 天/階）。
+它**完全不影響**新人池的品質、數量、潛力或 learning。
+`general_scout_support` 是 FUTURE 節點（無 effect）。
+`scoutLv` 遮蔽的是：潛力（0=「???」／1=十位數區間／2=精確值）、tier、個性、特質、能力值。
+
+**🔴 V0B 帶來的風險**：新增的 `archetype` / `growthSpace` 欄位**等於潛力的直接讀數**。
+目前 UI 沒渲染它們，但只要有人渲染，球探系統就整個失效。
+⇒ gate §R5 明文守住「招募 UI 不得渲染這兩個欄位」。
+
+**依設計原則實作**（招募等級不讓新人變強，只提高發現與判斷）：
+`genProspects(seed, { scoutNetworkRank })` 只把**初始已知程度** `scoutLv` 往上抬。
+
+⚠ 第一版用「rank 3 ⇒ +2」，結果 rank 3 時**每一位新秀都完全揭露**，
+**球探系統整個失去意義**。改成**依名次的部分揭露**（rank N ⇒ N/4 的新秀 +1）：
+
+| rank | 已知(lv≥1) | 完全揭露(lv2) | 平均起始 | 平均空間 | 平均潛力 |
+|---|---|---|---|---|---|
+| 0 | 66.7% | 33.3% | 52.4 | 18.0 | 70.4 |
+| 1 | 76.7% | 40.8% | 52.4 | 18.0 | 70.4 |
+| 3 | 94.2% | 58.3% | 52.4 | 18.0 | 70.4 |
+
+**起始／空間／潛力三欄完全相同** ⇒ 招募等級只改資訊，不改能力。
+rank 0 與改動前**逐位元相同**（舊存檔與既有呼叫端不受影響）。
+
+### V0A + V0B joint calibration（Year 0–4）
+
+> metric 口徑：Year 0 = **StartingCore（A）**；Year 1–4 = **MainStat 空間關閉率（E/C）**
+
+| 原型 | 起始 | 空間 | Y1 | Y2 | Y3 | Y4 |
+|---|---|---|---|---|---|---|
+| 一般新人 19–21歲 | 51.6 | 12.4 | 23.7% | 35.5% | 45.5% | 51.6% |
+| 養成型 | 49.0 | 32.0 | 24.3% | 36.8% | 47.6% | 55.0% |
+| 即戰力 | 67.8 | 12.2 | 13.3% | 18.0% | 24.1% | 27.9% |
+| 超新星 | 63.2 | 27.8 | 11.2% | 15.7% | 21.1% | 24.4% |
+
+**⚠ 距離產品目標（Y3–4 接近成熟）還有明顯落差，且我沒有為了讓數字好看而扭曲 V0B。**
+
+### 哪些已解決、哪些仍在等
+
+| 項目 | 狀態 |
+|---|---|
+| 新秀沒有成長空間（TD-32） | ✅ **V0B 已解決**（8.4 → 15.8 點） |
+| 出生就貼住潛力 | ✅ **V0B 已解決**（41.5% → 0.4%） |
+| 四種原型無分化 | ✅ **V0B 已解決** |
+| 招募等級對新人池毫無影響 | ✅ **V0B 已補**（只補資訊，不補能力） |
+| **成長曲線關不掉空間（Y4 僅 24–55%）** | ⏳ **Expected pending Foundation Calibration**（TD-33 漸近線 / `floorRate`——會改變 Training v1.1 輸出值，不在 V0A/V0B 範圍） |
+| **來源比例 40/35/15/10** | ⏳ **Expected pending V0C / TD-35**（`MatchProgressTransaction` 不帶 `MatchOrigin`，分不出聯賽與自由對戰） |
+| **課程 → 主能力覆蓋率隨定位而異** | ⚠ **新發現**：下路／輔助的主能力被訓練課程覆蓋得比中路少，MainStat 關閉率因此偏低。屬課程表設計，記錄待評估 |
+
+### Gate
+
+- **`check_prospect_growth_space_v0b` 31/31**（新增），含 3 個 sentinel：
+  壓回小空間 ⇒ §B 紅｜原型套同一組參數 ⇒ §A 紅｜招募等級直接加強新人 ⇒ §R1 紅
+- `check_cs_distribution_r46` **PASS**（R46 的 role identity／spread／HIGH_90／AGGR 全數維持）
+- `check_recruit_o` 41/41、`check_pcgm_v0a` 24/24、`growth_loop_p0` 25/25、
+  `growth_ui_p1` 80/80、`progress25` 34/34、`condition_o2` 29/29、`no_player_injury` 29/29、
+  `dev_quick_recovery` 29/29、`cs_roster_v1_r56`、`cs23` 28/28、`finance_n3` 40/40、
+  `squad_o1` 40/40、`roster_ui_r58/581/582`、`cs_matchup_acceptance_r57`、`r62_player_ui_fixture` — 全綠
+- `verify.mjs --only=progress25,talent27,growth_p0,growth_ui_p1,regress,regress2,build` — **7/7**
+
+⚠ **第三支 pre-existing red**：`check_team_development_v1` → `FAIL profileStore migration 與 write hook`。
+在 **V0A 的 commit（daf6cf2）** 與 **乾淨 main 基準（`ESMO-acceptance` @ a886e39）** 上都紅同一句
+⇒ 與本輪無關，未處理。
+
+### 沒有做
+
+未做 V0C / Career Clock / aging / off-season / AI turnover / Ranked / Live Event /
+Multi-Title / Coach / TD-35。未動 `trainingCalculator.js` 與 `careerGrowth.js`。
+未鎖任何 balance 常數。未 push、未 deploy。
