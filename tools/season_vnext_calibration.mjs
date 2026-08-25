@@ -61,7 +61,9 @@ line(`  每場 XP 勝 ${rewards.BASE_XP_WIN} / 負 ${rewards.BASE_XP_LOSS}｜升
 line(`  體力：每場 −${cond.CONDITION.matchEnergyCost}、每日 +${cond.CONDITION.restPerDay}、不可出賽 <${cond.CONDITION.unfitBelow}`);
 
 // ── 新秀的真實分佈（不要自己編一個假的起始值）────────────────────────────
-const pool = recruit.genProspects(7);
+//  ⚠ 用多個 seed 取樣：超新星只佔約 4%，單一 40 人池經常抽不到，
+//    整張原型表會缺一列——那不是「沒有超新星」，是樣本太小。
+const pool = [7, 46, 99, 2026, 4242].flatMap((s) => recruit.genProspects(s));
 const mainKeysOf = (p) => levelGrowth.growthKeysFor(p) ?? STAT_KEYS.slice(0, 5);
 const avgMain = (p) => { const k = mainKeysOf(p); return k.reduce((s, x) => s + (p.stats[x] ?? 50), 0) / k.length; };
 const ratios = pool.map((p) => avgMain(p) / p.potential).sort((a, b) => a - b);
@@ -302,8 +304,10 @@ for (const rank of [0, 1, 3]) {
   line(`  ${String(rank).padStart(4)}  ${pct(known).padStart(9)}  ${pct(full).padStart(12)}  `
     + `${String(r1(core)).padStart(8)}  ${String(r1(space)).padStart(8)}  ${String(r1(pot)).padStart(8)}`);
 }
-line("  ⇒ **起始／空間／潛力三欄在三個等級完全相同**——招募等級只改變資訊，不讓新人變強。");
-line("  ⇒ 提高的是「發現優質人才的機率與判斷可靠度」（已知比例），而且永遠不會全開。");
+line("  ⇒ 起始／空間／潛力**幾乎不動**（rank 0→3 各僅 +0.2/+0.8/+1.0，遠小於自身標準差）");
+line("     ——招募等級改的是**機率與資訊**，不是把每個人的能力調高。");
+line("  ⇒ 真正大幅提高的是「已知比例」（61.7% → 90.8%）與稀有人才出現率；");
+line("     且兩端永遠都在：rank 0 仍挖得到天才，rank 3 仍以普通新秀為主、也不會全部揭露。");
 
 line("\n══════════════════════════════════════════════════════════════════");
 line("  ⚠ 全部 PROPOSED / NOT FROZEN。核准前不得寫進產品碼或標為 FINAL。");

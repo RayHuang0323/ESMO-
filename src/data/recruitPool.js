@@ -57,20 +57,77 @@ const mkRng = (s) => { let x = s; return () => { x = (x * 1103515245 + 12345) & 
  *   不得標為 FINAL。
  */
 export const PROSPECT_ARCHETYPES = Object.freeze([
-  { id: "developmental", label: "養成型", weight: 30, age: [16, 19], core: [34, 50], room: [22, 38] },
-  { id: "standard",      label: "一般",   weight: 40, age: [17, 21], core: [42, 58], room: [12, 24] },
-  { id: "readymade",     label: "即戰力", weight: 25, age: [20, 23], core: [52, 68], room: [7, 15] },
-  { id: "superstar",     label: "超新星", weight: 5,  age: [16, 18], core: [54, 64], room: [26, 36] },
+  { id: "developmental", label: "養成型", weight: 30, age: [15, 19], core: [34, 50], room: [22, 38] },
+  { id: "standard",      label: "一般",   weight: 40, age: [16, 21], core: [42, 58], room: [12, 24] },
+  { id: "readymade",     label: "即戰力", weight: 25, age: [19, 23], core: [52, 68], room: [7, 15] },
+  { id: "superstar",     label: "超新星", weight: 5,  age: [15, 18], core: [54, 64], room: [26, 36] },
 ]);
-const ARCHETYPE_WEIGHT_SUM = PROSPECT_ARCHETYPES.reduce((s, a) => s + a.weight, 0);
 
-/** 依權重抽一個原型（決定性：只消耗一個 rng token）。 */
-function pickArchetype(r) {
-  let t = r() * ARCHETYPE_WEIGHT_SUM;
-  for (const a of PROSPECT_ARCHETYPES) { t -= a.weight; if (t <= 0) return a; }
+/**
+ * 特殊個體（twist）。**這是機率權重，不是規格表。**
+ *
+ * ── 為什麼需要 ───────────────────────────────────────────────────────────
+ * 只有四個原型時，人才市場會變成「看標籤買人」：每個養成型長得都一樣。
+ * 量測證實過頭了——320 名新秀裡**晚熟型 0 人、高潛高成長 0 人**。
+ * twist 讓玩家偶爾遇到「這年紀怎麼已經這麼強」或「原本不起眼結果成明星」。
+ *
+ * ⚠ 刻意保持**少數**：加起來約 26%，其餘七成多是普通新秀。
+ *   twist 也刻意**有代價**（早熟換空間、晚熟換即戰力），不是純粹的免費加值。
+ */
+export const PROSPECT_TWISTS = Object.freeze([
+  { id: "prodigy",   label: "早熟",     weight: 5, d: { core: +10, room: -6, age: -2 } },
+  { id: "lateBloom", label: "晚熟",     weight: 5, d: { core: -8,  room: +12, age: +2 } },
+  { id: "quickLearn",label: "領悟力強", weight: 6, d: { learning: +22 } },
+  { id: "slowBurn",  label: "大器晚成", weight: 6, d: { learning: -22, room: +6 } },
+  { id: "hiddenGem", label: "璞玉",     weight: 4, d: { core: -10, room: +14 } },
+]);
+const TWIST_WEIGHT_SUM = PROSPECT_TWISTS.reduce((s, t) => s + t.weight, 0);
+
+/**
+ * 依權重抽一個原型。`bias` 讓招募等級**適度**提高稀有原型的出現率。
+ *
+ * ⚠ **兩端永遠都在**：rank 0 仍抽得到超新星，rank 3 仍大量出現一般／即戰力。
+ *   招募等級改的是**機率**，不是保證，也不放大任何人的能力。
+ */
+function pickArchetype(r, superstarBias = 0) {
+  const w = PROSPECT_ARCHETYPES.map((a) =>
+    (a.id === "superstar" ? a.weight + superstarBias
+      : a.id === "developmental" ? a.weight + superstarBias * 0.5
+        : a.weight));
+  const sum = w.reduce((x, y) => x + y, 0);
+  let t = r() * sum;
+  for (let i = 0; i < PROSPECT_ARCHETYPES.length; i++) { t -= w[i]; if (t <= 0) return PROSPECT_ARCHETYPES[i]; }
   return PROSPECT_ARCHETYPES[PROSPECT_ARCHETYPES.length - 1];
 }
+
+/** 抽 twist；`chanceScale` 讓招募等級**適度**提高特殊個體的出現率。回傳 null = 普通新秀。 */
+function pickTwist(r, chanceScale = 1) {
+  const total = TWIST_WEIGHT_SUM * chanceScale;
+  const roll = r() * 100;
+  if (roll >= total) return null;
+  let t = roll;
+  for (const tw of PROSPECT_TWISTS) { t -= tw.weight * chanceScale; if (t <= 0) return tw; }
+  return null;
+}
+
 const pick = (r, [lo, hi]) => lo + Math.floor(r() * (hi - lo + 1));
+const clampN = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+/**
+ * Learning（成長速度）**獨立生成**。
+ *
+ * ── 為什麼不能沿用其餘素質的產生器 ───────────────────────────────────────
+ * 改動前 learning 走 `genProspectStat`（＝ `core + 雜訊`）⇒ 與起始能力相關係數
+ * **0.87**，等於「起始能力的複製品」；而且與成長空間 **−0.49**——
+ * **空間最大的人學得最慢**，正好是最不有趣的組合。
+ *
+ * 現在：與 potential **弱**正相關（天賦高的人略容易學），主要由獨立亂數決定，
+ * **與起始能力無關**。值域刻意涵蓋 `learningEfficiency` 的整個作用帶
+ * （它以 70 為中性、0.90–1.10 封頂），否則「長得快 / 長得慢」看不出差別。
+ */
+function genLearning(r, potential) {
+  return clampN(Math.round(58 + (potential - 70) * 0.25 + (r() * 46 - 21)), 25, 95);
+}
 
 /**
  * 一項成熟 CS 素質（R46 的 role bias 與 cap 完全保留）。
@@ -144,22 +201,32 @@ export const scoutInfoBonusFor = (rank, index = 0) =>
 export function genProspects(seed = 7, { scoutNetworkRank = 0 } = {}) {
   const r = mkRng(seed);
   const scoutRank = Math.max(0, Math.floor(scoutNetworkRank));
+  //  招募等級對**人才市場**的影響，刻意「適度」：只動機率，不動任何人的能力。
+  //  ⚠ 兩端都必須保留——rank 0 仍挖得到天才，rank 3 仍會遇到普通新秀。
+  const superstarBias = scoutRank * 1.2;      // 超新星權重 5 → 8.6（rank 3）
+  const twistScale = 1 + scoutRank * 0.12;    // 特殊個體 26% → 約 35%（rank 3）
   return Array.from({ length: 40 }, (_, i) => {
     const role = ROLES[Math.floor(r() * 5)];
     //  V0B：先決定原型，再由原型決定起始能力與成長空間。
     //  `potential = core + room` ⇒ 空間是生成出來的，不是相減的殘值。
-    const arch = pickArchetype(r);
-    const core = pick(r, arch.core);
-    const room = pick(r, arch.room);
+    const arch = pickArchetype(r, superstarBias);
+    const twist = pickTwist(r, twistScale);
+    const d = twist?.d ?? {};
+    //  twist 是**帶代價的偏移**（早熟換空間、晚熟換即戰力），不是免費加值。
+    const core = clampN(pick(r, arch.core) + (d.core ?? 0), 20, 78);
+    const room = clampN(pick(r, arch.room) + (d.room ?? 0), 5, 42);
     const potential = Math.min(96, core + room);
     const current = core;                       // 保留既有欄位；現在它真的是「起始能力」
-    const age = pick(r, arch.age);
+    const age = clampN(pick(r, arch.age) + (d.age ?? 0), 15, 24);
     const tier = TIERS.find((t) => potential >= t.min);
+    const learning = clampN(genLearning(r, potential) + (d.learning ?? 0), 25, 95);
     const stats = {};
     for (const s of STAT_DEF) {
-      stats[s.key] = CS_CALIBRATION_STAT_SET.has(s.key)
-        ? genCsProfiledStat(r, role, core, room, potential, s.key)
-        : genProspectStat(r, core, room, potential);
+      //  ⚠ learning 走**自己的**產生器（與起始能力無關），其餘素質照舊。
+      stats[s.key] = s.key === "learning" ? learning
+        : CS_CALIBRATION_STAT_SET.has(s.key)
+          ? genCsProfiledStat(r, role, core, room, potential, s.key)
+          : genProspectStat(r, core, room, potential);
     }
     for (const k of ROLE_BOOST[role] || []) {
       // 仍消耗 legacy roleBoost 的亂數 token，保持後續 personality / cost /
@@ -187,6 +254,7 @@ export function genProspects(seed = 7, { scoutNetworkRank = 0 } = {}) {
       name: FNAMES[i % FNAMES.length] + (i >= FNAMES.length ? String(i) : ""),
       role, potential, current, age, tier, stats,
       archetype: arch.id, archetypeLabel: arch.label, growthSpace: room,
+      twist: twist?.id ?? null, twistLabel: twist?.label ?? null,
       personality: pers.id, traits, cost, scoutLv, competing,
     };
   });

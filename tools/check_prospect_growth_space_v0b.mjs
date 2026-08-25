@@ -162,12 +162,22 @@ function notBornAtCeiling(pool) {
 // ── §C 合法性 ──────────────────────────────────────────────────────────────
 console.log("\n§C 合法性（潛力上限、硬上限、整數）");
 {
-  ck("C1) 所有能力 ≤ 自己的 potential", ALL.every((p) => Object.values(p.stats).every((v) => v <= p.potential)));
+  //  ⚠ **learning 刻意不受 potential 限制。**
+  //    potential 是「能力能長到多高」，learning 是「長得多快」——兩者是不同軸。
+  //    低潛力的快學者是產品明確要的組合（他只是很快就撞到自己較低的天花板）。
+  //    把 learning 也夾在 potential 下，等於又把兩者綁回同一件事。
+  //    ⚠ R46 的 POTENTIAL_CAP 只檢查 CS calibration 九項，不含 learning，兩者不衝突。
+  ck("C1) 除 learning 外，所有能力 ≤ 自己的 potential",
+    ALL.every((p) => Object.entries(p.stats).every(([k, v]) => k === "learning" || v <= p.potential)));
+  ck("C1b) learning 可以超過 potential（低潛快成長是刻意允許的組合）",
+    ALL.some((p) => p.stats.learning > p.potential),
+    `${ALL.filter((p) => p.stats.learning > p.potential).length}/${ALL.length} 名`);
   ck("C2) 所有能力在 1–99 且為整數", ALL.every((p) => Object.values(p.stats).every((v) => Number.isInteger(v) && v >= 1 && v <= 99)));
   ck("C3) potential 在合法範圍且 tier 對得上",
     ALL.every((p) => p.potential >= 1 && p.potential <= 99
       && p.tier === recruit.TIERS.find((t) => p.potential >= t.min)));
-  ck("C4) 年齡在新秀區間", ALL.every((p) => p.age >= 16 && p.age <= 23),
+  //  年齡下緣延伸到 15（電競可以更早開始培養）；twist 的偏移由 clampN 夾在 15–24。
+  ck("C4) 年齡在新秀區間（15–24）", ALL.every((p) => p.age >= 15 && p.age <= 24),
     `${Math.min(...ALL.map((p) => p.age))}–${Math.max(...ALL.map((p) => p.age))}`);
 }
 
@@ -223,24 +233,119 @@ console.log("\n§F V0A 與 Training v1.1 完全未動");
     })(), "對 V0A 的 commit daf6cf2 比對");
 }
 
+// ── §T 變化度：相關性與特殊個體 ────────────────────────────────────────────
+console.log("\n§T 人才市場的變化度（不是規格表）");
+
+const mainOf = startingCore;
+const learnOf = (p) => p.stats.learning;
+const spaceOf = absoluteSpace;
+function corr(list, f, g) {
+  const n = list.length;
+  const mf = list.reduce((s, p) => s + f(p), 0) / n;
+  const mg = list.reduce((s, p) => s + g(p), 0) / n;
+  let c = 0, vf = 0, vg = 0;
+  for (const p of list) { const a = f(p) - mf, b = g(p) - mg; c += a * b; vf += a * a; vg += b * b; }
+  return c / Math.sqrt(vf * vg);
+}
+
+/** 「learning 是獨立的一軸，不是起始能力的複製品」的判準。 */
+const learningIsIndependent = (pool) => Math.abs(corr(pool, learnOf, mainOf)) < 0.25;
+{
+  ck("T1) learning 與起始能力**脫鉤**（|r| < 0.25；改動前 0.87）",
+    learningIsIndependent(ALL), `r = ${r1(corr(ALL, learnOf, mainOf) * 100) / 100}`);
+
+  ck("T2) learning 不再與成長空間負相關（改動前 −0.49，等於空間大的人學最慢）",
+    corr(ALL, learnOf, spaceOf) > -0.2, `r = ${r1(corr(ALL, learnOf, spaceOf) * 100) / 100}`);
+
+  ck("T3) learning 值域涵蓋 `learningEfficiency` 的整個作用帶",
+    (() => { const v = ALL.map(learnOf); return Math.min(...v) <= 35 && Math.max(...v) >= 85; })(),
+    `${Math.min(...ALL.map(learnOf))}–${Math.max(...ALL.map(learnOf))}（改動前 29–71）`);
+
+  ck("T4) 年齡不再幾乎決定成長空間（|r| < 0.5；改動前 −0.63）",
+    Math.abs(corr(ALL, (p) => p.age, spaceOf)) < 0.5, `r = ${r1(corr(ALL, (p) => p.age, spaceOf) * 100) / 100}`);
+
+  ck("T5) 四種有故事性的組合都真的存在",
+    (() => {
+      const late = ALL.filter((p) => p.age >= 21 && spaceOf(p) >= 25).length;
+      const fastHi = ALL.filter((p) => p.potential >= 85 && learnOf(p) >= 75).length;
+      const slowHi = ALL.filter((p) => p.potential >= 85 && learnOf(p) <= 50).length;
+      const youngReady = ALL.filter((p) => p.age <= 17 && mainOf(p) >= 60).length;
+      return late > 0 && fastHi > 0 && slowHi > 0 && youngReady > 0;
+    })(),
+    (() => {
+      const c = (f) => ALL.filter(f).length;
+      return `晚熟${c((p) => p.age >= 21 && spaceOf(p) >= 25)}｜高潛高成長${c((p) => p.potential >= 85 && learnOf(p) >= 75)}`
+        + `｜高潛慢成長${c((p) => p.potential >= 85 && learnOf(p) <= 50)}｜年輕即戰力${c((p) => p.age <= 17 && mainOf(p) >= 60)}`;
+    })());
+
+  ck("T6) 特殊個體是少數（20–40%），大多數仍是普通新秀",
+    (() => { const t = ALL.filter((p) => p.twist).length / ALL.length; return t >= 0.2 && t <= 0.4; })(),
+    `${r1(ALL.filter((p) => p.twist).length / ALL.length * 100)}% 帶 twist`);
+
+  ck("T7) 年紀大的新秀有補償優勢（起始能力較高，不是純劣勢）",
+    (() => {
+      const old = ALL.filter((p) => p.age >= 21), young = ALL.filter((p) => p.age <= 17);
+      return old.length > 0 && young.length > 0 && meanOf(old, mainOf) > meanOf(young, mainOf);
+    })(),
+    `≥21歲 起始${r1(meanOf(ALL.filter((p) => p.age >= 21), mainOf))}｜≤17歲 起始${r1(meanOf(ALL.filter((p) => p.age <= 17), mainOf))}`);
+
+  ck("T8) 潛力最高不等於永遠最佳（存在高潛但慢成長的人）",
+    ALL.some((p) => p.potential >= 85 && learnOf(p) <= 50));
+}
+
 // ── §R 招募等級（球探網絡）──────────────────────────────────────────────────
 console.log("\n§R 招募等級：只提高資訊品質，不讓新人變強");
 
-/** 「招募等級不改變新人能力」的判準——sentinel 會拿同一個判準去測變異版。 */
-function scoutRankDoesNotBuffPlayers(mod) {
-  const strip = (list) => list.map((p) => { const { scoutLv, ...rest } = p; return rest; });
-  const lo = strip(mod.genProspects(7, { scoutNetworkRank: 0 }));
-  const hi = strip(mod.genProspects(7, { scoutNetworkRank: 3 }));
-  return JSON.stringify(lo) === JSON.stringify(hi);
+//  ⚠ **這一節的斷言在 2026-08-25 被刻意改寫過。**
+//  V0B 第一版斷言「招募等級**完全不**改變新人池」。後續產品指示修正為：
+//  招募等級應「適度提高優質或特殊人才的出現機率」，同時
+//  「低等級仍有小機率挖到天才，高等級也仍可能遇到普通新人」。
+//  ⇒ 舊斷言變成 legitimate expectation change，改為驗**有界的**影響，
+//    而不是零影響。**不是為了讓 gate 變綠而放寬。**
+
+/** 「招募等級只動機率、不放大能力」的判準——sentinel 會拿同一個判準去測變異版。 */
+function scoutRankIsProbabilityOnly(mod) {
+  const stat = (rank) => {
+    const all = [7, 46, 99, 2026].flatMap((s) => mod.genProspects(s, { scoutNetworkRank: rank }));
+    const core = all.reduce((x, p) => x + startingCore(p), 0) / all.length;
+    const lrn = all.reduce((x, p) => x + p.stats.learning, 0) / all.length;
+    const sd = (fn, m) => Math.sqrt(all.reduce((x, p) => x + (fn(p) - m) ** 2, 0) / all.length);
+    return { core, lrn, coreSd: sd(startingCore, core), lrnSd: sd((p) => p.stats.learning, lrn) };
+  };
+  const lo = stat(0), hi = stat(3);
+  //  判準用「位移 / 該特質自身的標準差」，不是百分比。
+  //  ⚠ 百分比會誤判：learning 的值域是 25–95，平均動 1.5 點就是 2.6%，
+  //    但那在自身分佈裡不到 0.1 個標準差——那不是「人才池膨脹」。
+  //    真正要擋的是「整池被系統性抬高」，用效應量（effect size）量才對。
+  return Math.abs(hi.core - lo.core) / lo.coreSd < 0.15
+    && Math.abs(hi.lrn - lo.lrn) / lo.lrnSd < 0.15;
 }
 const knownRatio = (rank) => {
   const pool = [7, 46, 99].flatMap((s) => recruit.genProspects(s, { scoutNetworkRank: rank }));
   return pool.filter((p) => p.scoutLv >= 1).length / pool.length;
 };
 {
-  ck("R1) 招募等級**不改變**任何新人的年齡／能力／潛力／成長空間／learning",
-    scoutRankDoesNotBuffPlayers(recruit),
-    "除 scoutLv 之外逐位元相同");
+  ck("R1) 招募等級只動機率——平均起始能力與 learning 的位移 < 0.15 個標準差",
+    scoutRankIsProbabilityOnly(recruit),
+    (() => {
+      const m = (rank) => { const a = [7, 46, 99, 2026].flatMap((x) => recruit.genProspects(x, { scoutNetworkRank: rank })); return [r1(a.reduce((x, p) => x + startingCore(p), 0) / a.length), r1(a.reduce((x, p) => x + p.stats.learning, 0) / a.length)]; };
+      return `rank0 起始${m(0)[0]}/L${m(0)[1]}｜rank3 起始${m(3)[0]}/L${m(3)[1]}`;
+    })());
+
+  ck("R1b) 招募等級**適度**提高稀有人才出現率（超新星上升但仍 ≤12%）",
+    (() => {
+      const rate = (rank) => { const a = [7, 46, 99, 2026, 4242].flatMap((x) => recruit.genProspects(x, { scoutNetworkRank: rank })); return a.filter((p) => p.archetype === "superstar").length / a.length; };
+      return rate(3) > rate(0) && rate(3) <= 0.12;
+    })(),
+    (() => { const rate = (rank) => { const a = [7, 46, 99, 2026, 4242].flatMap((x) => recruit.genProspects(x, { scoutNetworkRank: rank })); return r1(a.filter((p) => p.archetype === "superstar").length / a.length * 100); }; return `rank0 ${rate(0)}%｜rank3 ${rate(3)}%`; })());
+
+  ck("R1c) **兩端都在**：rank 0 仍挖得到天才，rank 3 仍有大量普通新秀",
+    (() => {
+      const lo = [7, 46, 99, 2026, 4242].flatMap((x) => recruit.genProspects(x, { scoutNetworkRank: 0 }));
+      const hi = [7, 46, 99, 2026, 4242].flatMap((x) => recruit.genProspects(x, { scoutNetworkRank: 3 }));
+      return lo.some((p) => p.potential >= 90)
+        && hi.filter((p) => p.archetype === "standard" || p.archetype === "readymade").length / hi.length >= 0.55;
+    })());
 
   ck("R2) 招募等級越高，初始已知的新秀越多（發現與判斷可靠度）",
     knownRatio(0) < knownRatio(1) && knownRatio(1) <= knownRatio(3),
@@ -274,19 +379,25 @@ async function mutated(relPath, mutate, tag) {
 try {
   //  A：把成長空間改回「潛力的殘值」⇒ 又會被 clamp 擠掉
   const A = await mutated(P_POOL,
-    (s) => s.replace("const room = pick(r, arch.room);", "const room = 2;"), "A-noroom");
+    (s) => s.replace("const room = clampN(pick(r, arch.room) + (d.room ?? 0), 5, 42);", "const room = 2;"), "A-noroom");
   const poolA = [7, 46, 99].flatMap((s) => A.genProspects(s));
   ck("S-A) 把成長空間壓回極小 ⇒ §B 變紅", notBornAtCeiling(poolA) === false);
 
   //  B：讓所有原型用同一組參數 ⇒ 分化消失
   const B = await mutated(P_POOL,
-    (s) => s.replace("const arch = pickArchetype(r);", "const arch = PROSPECT_ARCHETYPES[1];"), "B-flat");
+    (s) => s.replace("const arch = pickArchetype(r, superstarBias);", "const arch = PROSPECT_ARCHETYPES[1];"), "B-flat");
   const poolB = [7, 46, 99].flatMap((s) => B.genProspects(s));
   ck("S-B) 四種原型套用同一組參數 ⇒ §A 分化判準變紅", archetypesAreDifferentiated(poolB) === false);
   //  C：讓招募等級直接加強新人 ⇒ §R1 必須變紅
   const C = await mutated(P_POOL,
-    (s) => s.replace("const core = pick(r, arch.core);", "const core = pick(r, arch.core) + scoutRank * 5;"), "C-buff");
-  ck("S-C) 讓招募等級直接加強新人能力 ⇒ §R1 變紅", scoutRankDoesNotBuffPlayers(C) === false);
+    (s) => s.replace("const core = clampN(pick(r, arch.core) + (d.core ?? 0), 20, 78);",
+      "const core = clampN(pick(r, arch.core) + (d.core ?? 0) + scoutRank * 5, 20, 78);"), "C-buff");
+  ck("S-C) 讓招募等級直接加強新人能力 ⇒ §R1 變紅", scoutRankIsProbabilityOnly(C) === false);
+  //  D：把 learning 綁回起始能力（改動前的行為）⇒ §T1 必須變紅
+  const D = await mutated(P_POOL,
+    (s) => s.replace('stats[s.key] = s.key === "learning" ? learning', 'stats[s.key] = false ? learning'), "D-lrnbind");
+  ck("S-D) 把 learning 綁回起始能力 ⇒ §T1 變紅",
+    learningIsIndependent([7, 46, 99, 2026].flatMap((x) => D.genProspects(x))) === false);
 } catch (e) {
   ck("S-*) sentinel 可執行", false, String(e.message).slice(0, 170));
 } finally {

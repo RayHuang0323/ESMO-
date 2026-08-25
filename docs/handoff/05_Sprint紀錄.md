@@ -13958,3 +13958,122 @@ rank 0 與改動前**逐位元相同**（舊存檔與既有呼叫端不受影響
 未做 V0C / Career Clock / aging / off-season / AI turnover / Ranked / Live Event /
 Multi-Title / Coach / TD-35。未動 `trainingCalculator.js` 與 `careerGrowth.js`。
 未鎖任何 balance 常數。未 push、未 deploy。
+
+
+## Season vNext V0B.1 — 新人模型補強與校準（2026-08-25）
+
+分支 `feature/remove-player-injury`。**未 push、未開始 V0C。**
+
+> ⚠ **FOUNDATION_COMPLETE = NO。** V0A ✅ → V0B ✅ → **V0C** → Foundation Calibration Gate。
+
+### Audit：V0B 之後仍存在的四個問題（先量測才動手）
+
+320 名新秀（8 seed）實測：
+
+| 問題 | 證據 |
+|---|---|
+| **Learning 是起始能力的複製品** | 相關係數 **0.87**；且 Learning ↔ 成長空間 **−0.49**——**空間最大的人學得最慢** |
+| **Learning 值域太窄** | 29–71（中位 50）⇒ `learningEfficiency` 的作用帶（0.90–1.10）幾乎只用到下半，等於沒有差別 |
+| **沒有特殊個體** | 晚熟型 **0 人**、高潛高成長 **0 人**、高潛慢成長 1 人 |
+| **越年輕越好** | 年齡 ↔ 成長空間 **−0.63**，且年齡下緣只到 16 |
+
+根因：`learning` 走的是 `genProspectStat`（＝ `core + 雜訊`），與其餘素質同一個產生器；
+四個原型是**互不重疊的硬區間**，沒有任何離群機制。
+
+### 改了什麼
+
+**① Learning 獨立生成**（`genLearning`）
+與 potential **弱**正相關（每點潛力 +0.25），主要來自獨立亂數，**與起始能力無關**。
+值域 25–95，刻意涵蓋 `learningEfficiency` 的整個作用帶。
+
+**② 特殊個體 twist**（`PROSPECT_TWISTS`，機率權重不是規格表）
+
+| twist | 權重 | 偏移（**有代價**，不是免費加值） |
+|---|---|---|
+| 早熟 prodigy | 5 | core +10 / room −6 / age −2 |
+| 晚熟 lateBloom | 5 | core −8 / room +12 / age +2 |
+| 領悟力強 quickLearn | 6 | learning +22 |
+| 大器晚成 slowBurn | 6 | learning −22 / room +6 |
+| 璞玉 hiddenGem | 4 | core −10 / room +14 |
+
+合計約 26%，其餘七成多是普通新秀。
+
+**③ 年齡下緣延伸到 15**（各原型 −1，twist 可再偏移，clamp 15–24）
+
+**④ 招募等級改為「適度」影響人才市場**（依本輪產品指示修正 V0B 的原設計）
+`superstarBias = rank × 1.2`、`twistScale = 1 + rank × 0.12`——**只動機率，不動能力**。
+
+### 結果
+
+| 指標 | 改前 | 改後 |
+|---|---|---|
+| Learning ↔ 起始能力 | **0.87** | **−0.03** |
+| Learning ↔ 成長空間 | −0.49 | −0.006 |
+| Learning 值域 | 29–71 | **25–95** |
+| 年齡 ↔ 成長空間 | −0.63 | **−0.39** |
+| 年齡範圍 | 16–23 | **15–23** |
+| 晚熟型 | 0 | 5 |
+| 高潛高成長 | 0 | 2 |
+| 高潛慢成長 | 1 | 3 |
+| 年輕即戰力 | 8 | 9 |
+| 帶 twist 比例 | — | **25%** |
+
+**年紀大的新秀有補償優勢**（≥21 歲起始 57.3 vs ≤17 歲 50.7）⇒ 不是「越年輕越好」。
+
+### 招募等級現在的價值
+
+| rank | 已知(lv≥1) | 完全揭露 | 超新星率 | 平均起始 | 平均空間 | 平均潛力 |
+|---|---|---|---|---|---|---|
+| 0 | 61.7% | 34.2% | 4.0% | 52.6 | 18.4 | 71.0 |
+| 1 | 68.3% | 44.2% | 5.8% | 52.6 | 19.0 | 71.6 |
+| 3 | 90.8% | 56.7% | 8.0% | 52.8 | 19.2 | 72.0 |
+
+- **主要價值＝資訊**：已知比例 61.7% → 90.8%
+- **次要價值＝機率**：超新星 4% → 8%、特殊個體 26% → 32%
+- **不是全面膨脹**：平均起始 +0.2、潛力 +1.0，**位移 < 0.15 個標準差**
+- **兩端都在**：rank 0 仍挖得到潛力 ≥90 的天才；rank 3 仍有 65% 是普通原型，且**不會全部揭露**（完全揭露僅 56.7%）
+
+### V0A + V0B joint calibration（Year 0–4）
+
+> metric：Year 0 = **StartingCore (A)**；Year 1–4 = **MainStat 空間關閉率 (E/C)**
+
+| 原型 | 起始 | 空間 | Y1 | Y2 | Y3 | Y4 |
+|---|---|---|---|---|---|---|
+| 一般新人 19–21歲 | 50.0 | 15.0 | 20.4% | 29.6% | 37.5% | 42.4% |
+| 養成型 | 52.6 | 30.4 | 27.8% | 41.6% | 53.4% | **60.9%** |
+| 即戰力 | 68.2 | 10.8 | 10.9% | 15.6% | 20.7% | 23.7% |
+| 超新星 | 55.4 | 28.6 | 20.1% | 29.3% | 37.1% | 41.5% |
+
+**仍未達「Y3–4 接近成熟」。沒有為了湊結果而改新人生成。**
+
+### 留給後續
+
+| 項目 | 歸屬 |
+|---|---|
+| 成長曲線關不掉空間 | **TD-33 漸近線 / `floorRate`** — Foundation Calibration Gate（會改 Training v1.1 輸出值） |
+| 來源比例 40/35/15/10 | **TD-35 / V0C** — `MatchProgressTransaction` 不帶 `MatchOrigin` |
+| 訓練課程對主能力的覆蓋率隨定位而異 | 課程表設計，待評估 |
+| `learning` 可超過 `potential` | **刻意允許**（低潛快成長是產品要的組合）；gate C1 已排除 learning |
+
+### Gate
+
+- **`check_prospect_growth_space_v0b` 43/43**，含 4 個 sentinel
+  （壓縮空間 / 原型扁平化 / 招募等級加強能力 / **把 learning 綁回起始能力**）
+- `check_cs_distribution_r46` PASS、`check_recruit_o` 41/41、`check_pcgm_v0a` 24/24、
+  `growth_loop_p0` 25/25、`growth_ui_p1` 80/80、`progress25` 34/34、
+  `cs_learning_lifecycle_r55`、`cs_roster_v1_r56`、`cs_matchup_acceptance_r57`、
+  `cs23` 28/28、`condition_o2` 29/29、`no_player_injury` 29/29、`finance_n3` 40/40、
+  `squad_o1` 40/40、`roster_ui_r58`、`r62_player_ui_fixture` — 全綠
+- `verify.mjs`（progress25/talent27/growth_p0/growth_ui_p1/regress/regress2/**build**）— **7/7**
+
+⚠ **pre-existing red 增加到 5 支**（全部在乾淨 main `a886e39` 就紅，與本輪無關）：
+`check_team_development_recovery`、`check_acceptance_fix_p1` §6b、`check_team_development_v1`、
+**`check_cs_learning_measurement_r37`**、**`check_cs_learning_lifecycle_r16b`**
+（後兩支加上 `check_cs_gameplay_measurement_r49`、`check_cs_team_identity_consumers_r48`
+同屬 `R48_LEGACY_R47_SHA` 家族——`tools/cs_r15_legacy_source.mjs` 的歷史原始碼雜湊已過期）。
+
+### 沒有做
+
+未開始 V0C。未做世界時間／老化／退休／線上 Ranked。未新增青訓中心。
+UI 只有 V0B 既有的一行接線，**沒有新增畫面**。
+未動 `trainingCalculator.js` / `careerGrowth.js` / `levelGrowth.js`。未 push、未 deploy。
