@@ -209,32 +209,33 @@ console.log("\n§E 既有 recruit / MOBA / CS 契約不破");
 // ── §F V0A / Training v1.1 不被破壞 ────────────────────────────────────────
 console.log("\n§F V0A 與 Training v1.1 完全未動");
 {
-  ck("F1) Training v1.1 golden fixture 逐項相符",
+  //  ⚠ 2026-08-25 Foundation Calibration 更新過這組期望值（v1.1 → v1.2）。
+  //    **刻意的期望變更**，理由見 `trainingCalculator.js` 檔頭。
+  //    V0B 要守的是「新秀成長空間的改動沒有順手改到訓練成長量」，
+  //    而成長量（1.9 / 1.9 / 3.8）在那次校準中逐值未動。
+  ck("F1) Training golden fixture 逐項相符",
     (() => {
       const g = training.calculateTrainingResult(
         { id: "golden", name: "Golden", age: 27, potential: 90, energy: 66, learning: 70,
           stats: { focus: 60, mechanics: 60, learning: 70 } },
         playerModel.courseById("aim"));
-      return training.TRAINING_FORMULA_VERSION === "training-growth.v1.1"
+      return training.TRAINING_FORMULA_VERSION === "training-growth.v1.2"
         && g.gains.accuracy === 1.9 && g.gains.reflex === 1.9 && g.totalGain === 3.8
-        && g.efficiency === 0.948 && g.modifiers.age === 1.01 && g.energyAfter === 51;
+        && g.efficiency === 0.962 && g.modifiers.age === 0.995 && g.energyAfter === 51;
     })());
   ck("F2) V0A 的 PCGM 仍與 Training 共用同一個 function reference",
     careerGrowth.ageFactor === training.ageEfficiency
       && careerGrowth.learningFactor === training.learningEfficiency);
-  //  ⚠ 這一條原本也鎖 `careerGrowth.js`（對 V0A 的 commit 比對）。
-  //    那是**跨 sprint 的凍結**，撐不過下一輪的正當改動——V0C 把來源名稱
-  //    （`formal`/`ranked` → `official`/`competitive`）對齊到 `matchSource.js` 時
-  //    必然會動它。凍結一個後續 sprint 有責任維護的檔案，只會逼人放寬 gate。
-  //    真正該保護的是 **Training v1.1 的行為**：`trainingCalculator.js` 逐位元不動
-  //    （F1 的 golden fixture 再從行為面驗一次）。
-  ck("F3) `trainingCalculator.js` 對 main 零改動（Training v1.1 是 protected behavior）",
-    (() => {
-      try {
-        execFileSync("git", ["diff", "--quiet", "origin/main", "--", "src/data/trainingCalculator.js"], { cwd: ROOT });
-        return true;
-      } catch { return false; }
-    })(), "對 origin/main 比對");
+  //  ⚠ 這一條原本鎖 `careerGrowth.js`（對 V0A 的 commit 比對），V0C 時已經因為
+  //    **跨 sprint 凍結撐不過下一輪正當改動**而改鎖 `trainingCalculator.js`。
+  //    2026-08-25 同一個理由第二次成立：Foundation Calibration 依 TD-33 的規劃
+  //    就是被指定來改訓練曲線的那一輪，凍結必然失效。
+  //    ⇒ **退休這條凍結**，改成守一件不會隨校準漂移的事：新秀生成與訓練規則
+  //      仍然是兩個互不 import 的層（V0B 不得把新秀邏輯塞進 Training）。
+  ck("F3) 新秀生成與訓練規則仍是兩層：recruitPool 不 import trainingCalculator，反之亦然",
+    !/^\s*import[^;]*trainingCalculator/m.test(read("src/data/recruitPool.js"))
+      && !/^\s*import[^;]*recruitPool/m.test(read("src/data/trainingCalculator.js")),
+    "凍結整個檔案撐不過校準；分層關係才是真正該守的不變量");
 }
 
 // ── §T 變化度：相關性與特殊個體 ────────────────────────────────────────────

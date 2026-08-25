@@ -65,23 +65,38 @@ export const GROWTH_SOURCES = Object.freeze({
  */
 export const PCGM_PARAMS = Object.freeze({
   /**
-   * 各來源的基礎倍率。
+   * 各來源的基礎倍率（Foundation Calibration 取值，大樣本 Year 0–4 實測）。
    *
-   * ⚠ **一律 1.0，這是刻意的，不是還沒填。**
+   * · `official` **3.0** — 正式季賽。一個 Career Year 的場次由賽程決定
+   *   （14 場，玩家改不了）⇒ 結構上刷不了，所以可以放心加重。
+   *   改動前正式賽只佔年度成長的 14.9%，「正式賽事是生涯成果」在數字上不成立；
+   *   3.0 之後約 24%，訓練從 85.1% 降到 76%（訓練本身**沒有被削弱**，
+   *   是比賽這一側被補起來）。
    *
-   * V0A 時它們必須是 1.0，因為結算**分不出來源**（TD-35）：調高正式賽等於
-   * 自由對戰一起調高，會直接做出「刷自由對戰＝刷正式賽成長」的漏洞。
-   * **V0C 已經把來源接進交易單，那個阻礙解除了**——四個來源現在
-   * **可以獨立控制**。
+   * · `competitive` **1.0** — 一般／競技比賽。玩家自己排隊，**能刷**，
+   *   體力是唯一天花板（實測上限約 21 場／年）。實測：
+   *     1.0 ⇒ 純刷競技 Y4 關閉 70%＜認真訓練 75%（有價值，但不是最佳解）
+   *     1.5 ⇒ 純刷競技 81%＞認真訓練 75%（刷比賽變成最佳養成法 ❌）
+   *   1.0 就是那條分界線，不是隨手填的中性值。
    *
-   * 但本輪仍不動數值：產品要求是「先讓不同來源可以獨立控制，不要急著鎖最終倍率」。
-   * 真正的取值（含 40/35/15/10 的年度來源佔比）留給 **Foundation Calibration**。
+   * · `practice` **1.0** — ⚠ **不要因為「練習賽不該有成長」就調低。**
+   *   快速練習的入口**尚未實作**；目前唯一會落到 practice 的是
+   *   「交易單沒帶 origin」（舊存檔／debug harness）。現在調低 = 把**資料遺失**
+   *   變成一個看不見的成長懲罰，而且和 1.0 相比也不會產生任何 exploit
+   *   （practice ≤ official，沒有人有動機去弄掉 origin）。
+   *   真正的快速練習拿到 explicit origin 之後才能分開，見 TD-36。
+   *
+   * · `training` **1.0** — ⚠ **這一格目前是宣告性的，沒有 write path 讀它。**
+   *   `trainingCalculator.js` 依 V0A §G 的單向依賴規則**不得** import 本檔，
+   *   所以訓練的校準槓桿是課程表與 `potentialSpace` / `ageEfficiency` 曲線，
+   *   不是這個值。保留它是為了契約完整（四層來源都在），
+   *   `check_foundation_calibration.mjs` §S1 釘住這一點。
    */
   sourceBase: Object.freeze({
     [GROWTH_SOURCES.training]: 1.0,
     [GROWTH_SOURCES.practice]: 1.0,
     [GROWTH_SOURCES.competitive]: 1.0,
-    [GROWTH_SOURCES.official]: 1.0,
+    [GROWTH_SOURCES.official]: 3.0,
   }),
 });
 

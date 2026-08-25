@@ -21,6 +21,11 @@
 //
 //  ⚠ **本檔不改任何產品碼、不是 gate、不進 CI**、沒有 exit 1。
 //    所有數值 **PROPOSED / NOT FROZEN**，核准前不得寫進產品碼。
+//
+//  ⚠⚠ **2026-08-25 起本檔是歷史文件。** 它量的是 Foundation Calibration
+//    **之前**的世界（Career Year 要多長、成長為什麼太慢）。校準已完成，
+//    要看現況請跑 **`node tools/foundation_calibration.mjs`**。
+//    本檔仍可執行，但檔內所有「現況 / 基準」敘述都是校準前的數字。
 // ============================================================================
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";

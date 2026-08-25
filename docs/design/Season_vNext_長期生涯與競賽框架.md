@@ -9,6 +9,14 @@
 >
 > 本輪只做設計，**沒有修改任何 `src/` 產品碼**，也未開始 implementation。
 >
+> ---
+> 📌 **2026-08-25 追記：Foundation 已完成（`FOUNDATION_COMPLETE = YES`）。**
+> V0A ✅ → V0B ✅ → V0C ✅ → **Foundation Calibration Gate ✅**。
+> 本文件的 §5.3 與 §5.1（年度來源比例）已加註**實作與設計不同之處**，
+> 兩處都保留原提案並說明為什麼改。
+> **現況數字一律以 `node tools/foundation_calibration.mjs` 的輸出為準**，
+> 不以本文件的設計期數字為準。判定跑 `tools/check_foundation_calibration.mjs`。
+>
 > 日期：2026-08-25　基準 commit：`c7fa423`（＝ `origin/main`）
 > 量測腳本：`tools/season_vnext_calibration.mjs`（設計工具，非 verifier、不進 CI）
 
@@ -269,12 +277,25 @@ gain = base(source)
 > ⇒ 結算層分不出聯賽與自由對戰。**在 MatchOrigin 接進契約之前，`sourceBase` 不得差異化**——
 > 現在調高 `formal` 等於自由對戰一起調高，會直接製造 §11-G1 要擋的刷分 exploit。
 > 因此 V0A 的四個 `sourceBase` **一律 1.0（刻意的，不是還沒填）**。
+> ✅ **TD-35 已由 V0C 解決**，`sourceBase` 自 2026-08-25 起可獨立控制。
 >
-> **年度來源比例 target（已裁決）**：Training 40% / Formal 35% / Ranked 15% / Practice 10%
+> **年度來源比例 target（設計初稿）**：Training 40% / Formal 35% / Ranked 15% / Practice 10%
 >
 > ⚠ **這是「一個 Career Year 結算下來的來源佔比」，不是公式常數。**
-> `base(source)` 要調成多少才能達到這個佔比，由 V0A+V0B 的 calibration 決定，
-> **不在本文件鎖定**。驗收看的是年度佔比落在 target 附近，不是某個係數等於某個值。
+>
+> ✅ **2026-08-25 Foundation Calibration 實測結果：Training 78.1% / 正式季賽 21.9% /
+> 競技 ≈ 0% / 快速練習 0%。target 沒有達成，且經裁量後刻意不追。** 三個理由：
+>
+> 1. **快速練習入口未實作** ⇒ 它的 0% 是正確的，不是失衡。
+> 2. **Ranked 不做**（Q3 FINAL：契約 only，不做本地 fake Ranked）⇒ 那 15% 沒有承接者。
+> 3. **競技比賽因體力經濟幾乎排不進場**（TD-38）：認真訓練的選手一年只打得到 0.8 場。
+>    唯一能湊比例的手段是調高 `sourceBase.competitive`，而實測 base 1.5 時
+>    純刷競技（21 場/年）的 Year 4 關閉率會**反超**認真訓練（81% vs 75%）
+>    ⇒ 直接做出 §11-G1 要擋的刷分最佳解。
+>
+> ⇒ **比例是結果，不是目標。** 要改比例得先改結構（快速練習入口 ＋ 體力經濟），
+> 不是改倍率。驗收改看**產品體感**（Year 1–4 關閉率）與**防刷不變量**
+> （純刷 < 認真訓練），由 `tools/check_foundation_calibration.mjs` §Y／§X 判定。
 > 現況是 89% : 11%，這個 target 的用意是把它拉回來。
 
 ### 5.2 統一 age factor
@@ -286,9 +307,25 @@ PCGM 要求所有永久成長路徑共用同一個 `ageFactor()`（沿用 `train
 
 ### 5.3 潛力空間必須可到達
 
-- 現況：`potentialSpace = min(1, room / 40)` ⇒ 漸近線
-- 提案：`potentialSpace = clamp(room / roomFull, floorRate, 1)`，`floorRate ≈ 0.15`
-  ⇒ 保證最低成長率，潛力**可以真的到達**
+- 設計時的現況：`potentialSpace = min(1, room / 40)` ⇒ 漸近線
+- 設計時的提案：`clamp(room / roomFull, floorRate, 1)`，`floorRate ≈ 0.15`
+
+> ✅ **2026-08-25 Foundation Calibration 已實作，但沒有採用 `floorRate`。**
+>
+> 實作時發現 `floorRate` 有兩個問題：① 它讓**已經頂到上限**的選手還在慢慢長
+> （上限變軟）；② 它是一個與剩餘空間無關的常數項，會**抹平潛力空間的差異**。
+>
+> 改採**冪次曲線**：`potentialSpaceFactor(room, ref) = (min(1, room/ref))^gamma`，
+> **gamma = 0.6**。room = 0 時仍**恰好是 0**（上限仍是硬的），
+> 但 `dr/dt ∝ r^0.6` 是**有限時間收斂**——數學上會真的走完，不是逼近。
+> 實測：從 60 練到上限 80 需 30 次課程（線性時走不完）。
+>
+> 另外發現一個設計時沒看到的原因：`ref = 40` 是 V0B **之前**的世界留下來的，
+> 而 V0B 之後新秀主能力空間中位數只有 **17.4 點** ⇒ 節流閥入行即只開 43.5%。
+> 曲線改形狀後打開到 60.7%，`ref` 本身**未動**。
+>
+> 落地位置：`src/platform/progress/potentialSpace.js`（leaf，零 import，
+> `trainingCalculator` 與 `levelGrowth` 共用同一份）。**TD-33 已解。**
 
 ### 5.4 新秀成長空間必須加大
 

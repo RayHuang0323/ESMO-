@@ -199,16 +199,24 @@ console.log("\n§4 工具隔離與可移除性");
 // ── §5 正式規則零改動 ──────────────────────────────────────────────────────
 console.log("\n§5 正式規則零改動");
 
-/** 「Training v1.1 沒被動過」的判準——sentinel D 會拿它去測變異版。 */
+/**
+ * 「Training 沒被 DEV 工具動過」的判準——sentinel D 會拿它去測變異版。
+ *
+ * ⚠ 2026-08-25 Foundation Calibration 更新過這組期望值（v1.1 → v1.2）。
+ *   **這是刻意的期望變更，不是把紅燈調綠**：那一輪重新校準年齡／learning 曲線，
+ *   並把潛力空間曲線改成與 `levelGrowth` 共用（理由見 `trainingCalculator.js` 檔頭）。
+ *   本檢查要守的是「**DEV 快速恢復**不得改到正式訓練規則」，
+ *   而成長量（1.9 / 1.9 / 3.8）在那次校準中逐值未動。
+ */
 function trainingUnchanged(mod, playerModel) {
   const golden = mod.calculateTrainingResult(
     { id: "golden", name: "Golden", age: 27, potential: 90, energy: 66, learning: 70,
       stats: { focus: 60, mechanics: 60, learning: 70 } },
     playerModel.courseById("aim"));
-  return mod.TRAINING_FORMULA_VERSION === "training-growth.v1.1"
+  return mod.TRAINING_FORMULA_VERSION === "training-growth.v1.2"
     && golden.gains.accuracy === 1.9 && golden.gains.reflex === 1.9
-    && golden.totalGain === 3.8 && golden.efficiency === 0.948
-    && golden.modifiers.age === 1.01 && golden.modifiers.condition === 0.939
+    && golden.totalGain === 3.8 && golden.efficiency === 0.962
+    && golden.modifiers.age === 0.995 && golden.modifiers.condition === 0.939
     && golden.energyAfter === 51;
 }
 

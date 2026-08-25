@@ -14175,3 +14175,153 @@ UI 只有 V0B 既有的一行接線，**沒有新增畫面**。
 未做 Career Clock / 年齡增加 / 老化 / 退休。
 未動 `BattleResult.v2`、`CsMatchResult.v1`、`fanSourceWeight.js`、`trainingCalculator.js`。
 未鎖任何 balance 數值。未 push、未 deploy。
+
+---
+
+## Season vNext Foundation Calibration（2026-08-25）
+
+**分支** `feature/remove-player-injury`｜**起點** `bb8e8b3`（V0C 完成）
+**本輪不是加功能，是把既有成長系統調到合理的生命週期。**
+
+### 為什麼要有這一輪
+
+V0A（成長認年齡）／V0B（新秀有成長空間）／V0C（分得出比賽來源）都做完之後，
+實測仍然是**一般新人 Year 4 只關閉 42.4% 潛力空間**，而且成長 **85.1% 來自訓練**。
+先 Audit + 大樣本模擬找真因，才動參數——沒有先猜倍率。
+
+### Audit 找到五個彼此獨立的根因
+
+| # | 根因 | 實測 |
+|---|---|---|
+| RC1 | **除數與真實空間不匹配** | training 把剩餘空間除以 40、levelGrowth 除以 25，但 V0B 之後新秀主能力空間中位數只有 **17.4 點** ⇒ 節流閥入行即只開 **43.5%**，且只會再往下掉。那個 40 是 V0B **之前**的世界留下來的 |
+| RC2 | **線性收斂 = 指數逼近** | 每多關 10% 潛力所需努力持續放大（10%→3 步、90%→57 步）⇒ 尾巴是漸近線，永遠走不完。**這就是 TD-33** |
+| RC3 | **升級頻率隨等級衰減** | 比賽成長掛在升級上，`xpRequiredForLevel` 隨等級線性增加 ⇒ Y1 升 3 級、Y6 升不到 1 級。比賽這條路**自己會枯掉** |
+| RC4 | **三項能力完全練不到** | `courage` / `resilience` / `leadership` 不在任何課程裡。上路有 **46.7%（w4+w3）** 的定位權重落在練不到的能力上；中路／下路是 0% |
+| RC5 | **收斂系統會抹平速率差** | 年齡與 learning 只乘在**速率**上。當所有人終究逼近自己的上限，速率差在 4 年尺度被壓成 6pp（age 17 vs 36）與 4pp（learning 25 vs 95）⇒ 形同不存在 |
+
+### 改了什麼（每一項對應一個 RC）
+
+1. **`src/platform/progress/potentialSpace.js`（新，leaf，零 import）** — RC1 + RC2
+   把「剩餘空間 → 係數」抽成 `trainingCalculator` 與 `levelGrowth` **共用的一份定義**
+   （改動前兩邊各寫一份線性除法，除數還不同），形狀改為 `(room/ref)^gamma`，**gamma = 0.6**。
+   **為什麼不是 TD-33 原本規劃的 `floorRate`**：平坦下限會讓已頂到上限的人還在長，
+   等於蓋掉問題並抹平潛力差異。gamma < 1 在 room = 0 時仍**恰好是 0**（上限仍是硬的），
+   但 `dr/dt ∝ r^0.6` 是**有限時間收斂** ⇒ TD-33 是被**曲線形狀**解掉的，不是被下限蓋掉的。
+2. **`sourceBase.official` 1.0 → 3.0** — RC3
+   正式季賽一年 14 場、由賽程決定，**結構上刷不了**，所以可以放心加重。
+   `competitive` 維持 **1.0**（玩家自己排隊，能刷）。
+3. **年齡曲線陡峭化** — RC5
+   `≤20 → 1.10`；`21–28 → 1.10 − (a−20)×0.015`；`≥29 → max(0.20, 0.98 − (a−28)×0.11)`。
+   **20–28 歲幾乎不動**（age 24 前後都是 1.04）⇒ 既有陣容與 AI 隊（多在 21–26 歲）不受影響。
+   34 歲的成長效率降到 20 歲的 **29%**。⚠ 這**不是衰退**：能力不會下降，只是還能進步多少收斂。
+4. **learning 幅度加寬** — RC5：`0.90–1.10` → `0.80–1.22`，中性點 70 → 65（新秀 learning 中位約 59.5）。
+5. **新增「心志鍛鍊」課程** — RC4：`["resilience","courage","leadership"]`，`gain: 1.3`。
+   每小時產出 1.95，**略低於**一般 2 項課程（2.0）——廣度換效率，不會變成「排它就對了」。
+   10 個定位現在全是 **5/5 覆蓋**。
+6. **`TRAINING_FORMULA_VERSION` v1.1 → v1.2**（曲線改了就不能還叫 v1.1）。
+
+### 產品結果（大樣本 280+ 新秀 × 10 seed）
+
+| 原型 | 起始 | 空間 | Y1 | Y2 | Y3 | Y4 |
+|---|---|---|---|---|---|---|
+| 養成型 | 45.8 | 27.6 | 36.9% | 50.8% | 63.4% | **69.2%** |
+| 一般新人 | 52.3 | 16.8 | 46.0% | 59.7% | 71.6% | **76.5%** |
+| 即戰力 | 61.6 | 9.7 | 56.2% | 69.9% | 80.2% | **83.7%** |
+| 超新星 | 63.7 | 26.9 | 38.3% | 52.6% | 65.5% | **71.3%** |
+
+改動前一般新人是 20.4 / 29.6 / 37.5 / **42.4%**。
+四種原型 Year 4 相差 14.5pp ⇒ **沒有被校準成同一條曲線**。
+
+**來源分帳**：訓練 78.1%／正式季賽 21.9%（改動前 85.1% / 14.9%）。
+
+### 防刷與公平驗證
+
+- **純刷競技 Year 4 = 48%**，認真訓練 = 76.5% ⇒ 刷比賽**不是**最佳養成法。
+  實測 `competitive` base 1.5 時純刷會反超（81% vs 75%）⇒ **1.0 是分界線，不是隨手填的中性值**。
+- **正式季賽刷不了**：場次由賽程決定，與玩家意圖無關。
+- **職業公平**：四年絕對主能力成長 下路 11.5 ／ 打野 12 ／ 輔助 13.8 ／ 中路 14.4 ／ 上路 15.2，最差是最佳的 75.7%。
+  ⚠ 關閉率的排序與成長點數不同，那是**指標**造成的（空間小的定位天生容易關閉），不是不公平。
+- **年齡**：Year 4 關閉率 20 歲 85.0% vs 34 歲 34.7%（改動前只差 6pp）。
+- **learning**：Year 4 87.2% vs 78.4%（改動前只差 4pp）。
+- **高潛力不會過快滿能力**：潛力 96 的 Year 4 關閉率（64.7%）**低於**潛力 60（89.6%），
+  但 Year 8 主能力 86.9 vs 59.6 ⇒ 潛力決定**能長多少**，年齡與 learning 決定**多快長完**。
+
+### Match Source fallback audit（本輪要求的前置檢查）
+
+**正常路徑不會掉 origin。** `createSession` 是唯一的場次工廠，兩個生產者
+（`mockGateway.openSession` 票券／`competitionGateway.openSessionForFixture` 賽程）都經過它，
+而它在拿不到來源時**硬性拒絕發出場次**（`code: "ticket"`）⇒ 只要 session 存在就一定有 origin。
+殘餘的無 origin 路徑只有 **debug harness**（根本沒有 session）。
+
+⇒ 因此 `sourceBase.practice` **維持 1.0**：目前 practice 是「拿不到來源」的退路，
+調低它等於把**資料遺失**變成看不見的成長懲罰。建議未來讓真正的快速練習用
+**explicit practice origin**，並把 fallback 與 practice 分開 —— 見 **TD-36**（V0D 的前置條件）。
+
+### 四處 gate 斷言被刻意改寫（是期望變更，不是把紅燈調綠）
+
+1. **四支 gate 的 Training golden fixture**（`check_pcgm_v0a` F1、`check_prospect_growth_space_v0b` F1、
+   `check_no_player_injury` §14、`check_dev_quick_recovery` §5）：v1.1 → v1.2。
+   ⚠ **成長量逐值未動**（accuracy/reflex 各 +1.9、totalGain 3.8）；變的只有係數本身
+   （age 1.01 → 0.995、learning 1 → 1.03）與由它們導出的 efficiency。
+   每一處都在檔內標明理由與「這是刻意的期望變更」。
+2. **`check_pcgm_v0a` F2**（`trainingCalculator.js` 對 origin/main 零 diff）→ **退休**。
+   那是跨 sprint 凍結，而 V0A 檔頭本來就寫明「floorRate 屬 Foundation calibration，見 TD-33」
+   ⇒ 這一輪就是被指定來改它的。改成守 V0A 真正在乎的：
+   **efficiency 仍恰好是 age × learning × condition**（合成形狀沒被換掉）。
+3. **`check_prospect_growth_space_v0b` F3**（同一條凍結，V0C 時已經從 `careerGrowth.js` 搬到
+   `trainingCalculator.js`）→ **第二次因同一個理由失效，退休**。
+   改成守分層關係：`recruitPool` 與 `trainingCalculator` 互不 import。
+4. **`check_match_source_v0c` W4**（「本輪倍率一律 1.0」）→ 那是 **V0C 自己的 scope 宣告**，
+   Foundation Calibration 執行後必然失效。改成驗證 V0C 真正的交付：
+   **倍率確實分開生效**（official ≠ competitive 時成長係數真的不同）。
+
+另外修掉兩個**假紅**：`check_pcgm_v0a` G2 與新 gate 的 F4 原本用裸關鍵字 `careerGrowth` 掃
+`trainingCalculator.js`，會掃到檔內「本檔不得 import careerGrowth」那句**註解本身**
+⇒ 變成「把理由寫下來就變紅」。改成只掃 import 敘述。
+`check_no_player_injury` 的 sentinel 也修了：臨時模組必須寫在**原檔旁邊**，
+否則 `trainingCalculator.js` 的相對 import 會解析失敗，sentinel 測到的是「會不會當掉」。
+
+### Gate / build
+
+- **`check_foundation_calibration` 57/57**（新增，含 4 個 mutation sentinel）
+- `pcgm_v0a` 24/24、`prospect_growth_space_v0b` 43/43、`match_source_v0c` 21/21
+- `no_player_injury` 29/29、`dev_quick_recovery` 29/29、`recruit_o` PASS
+- 粉絲零影響：`fan_system` 66/66、`fan_ui_f4` 35/35、`fan_f0` 33/33
+- 結算邊界未破：`authoritative_o7` 48/48、`result_flow_o71` 27/27
+- 季賽未污染：`competition_q4` 68/68、`competition_q6` 57/57、`cs_season_lifecycle` PASS、`cs_season_contract` PASS
+- `verify.mjs --only=progress25,talent27,growth_p0,growth_ui_p1,regress,regress2,build` — **7/7**
+
+**先前就紅、與本輪無關**（逐一確認失敗原因不是成長曲線）：
+`team_development_recovery`（首頁磚／talentPick 路由）、`team_development_v1`（profileStore migration）、
+`acceptance_fix_p1` §6b（首頁天賦導向）、`cs_learning_measurement_r37` 與 `cs_learning_lifecycle_r16b`
+（`R48_LEGACY_R47_SHA` 陳舊雜湊）。
+⚠ 後兩支另外硬鎖 `playerModel.js` 的 SHA，而該檔在 **HEAD（本輪之前）就已經對不上**
+（`b02237b6…` vs 期望 `9d6f07f8…`）⇒ 那組鎖已永久失效，登記為 **TD-37**。
+
+### 簡短 grilling（自我壓力測試）
+
+- **Q：gamma 只是把成長調快，跟加 floor 有什麼實質差別？**
+  A：floor 讓 room = 0 時仍有成長（上限變軟）；gamma 在 room = 0 時**恰好是 0**，上限仍是硬的。
+  差別在 room → 0 的**趨近方式**：線性是指數逼近（走不完），`r^0.6` 是有限時間收斂（會走完）。
+  §C7 用真的 `calculateTrainingResult` 反覆上課驗證它真的到頂。
+- **Q：official = 3.0 會不會讓正式賽變成雪球？**
+  A：不會，因為場次是**賽程給的**（14 場），贏球不會多打，輸球不會少打。
+  XP 的勝負差只有 50 vs 20，且 `perStatCap` 在 PCGM 之後仍夾住單項每級上限（§F2 驗證）。
+- **Q：陡峭 age 曲線算不算偷做衰退系統？**
+  A：不算。能力**不會下降**，只有「還能再進步多少」隨年齡收斂，而那個係數本來就存在。
+  真正的 aging / decline / retirement 仍未實作（V1）。
+- **Q：老將問題解決了嗎？**
+  A：**沒有根本解決。** 只把 34 歲壓到 20 歲的 29%；玩家仍可長期持有老將慢慢練到上限。
+  根本解法是 aging / decline，不是把年齡係數再調更陡。已寫進報告 §⑦。
+- **Q：加課程會不會破壞既有訓練平衡？**
+  A：新課程每小時產出 1.95，低於一般課程的 2.0（§P3 釘住「最高不得超過第二名 1.15 倍」）。
+  它補的是**原本一門都沒有**的三項能力，不是在已覆蓋的能力上加碼。
+
+### 沒有做
+
+未實作快速練習入口／UI、完整 Ranked、真人連線、Live Event、server / matchmaking。
+未做 Career Clock / 年齡 +1 / 老化 / 衰退 / 退休。
+未動 `BattleResult.v2`、`CsMatchResult.v1`、`fanSourceWeight.js`、`matchSource.js`、
+`LEVEL_GROWTH` 的四個費率常數（`pointsPerLevel 3.0` / `roomFull 25` / `perStatCap 1.5` / `hardCap 99`）。
+未動體力經濟（`CONDITION`）——TD-38 記錄了為什麼那是下一輪的事。
+未 push、未 deploy。

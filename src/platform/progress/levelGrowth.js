@@ -28,6 +28,9 @@
 import { POSITION_PROFILE, MOBA_ROLES } from "../../data/playerModel.js";
 //  Season vNext V0A：年齡與學習能力的係數一律向 PCGM 要，本檔不自己放曲線常數。
 import { careerGrowthFactor, GROWTH_SOURCES } from "./careerGrowth.js";
+//  Foundation Calibration：潛力剩餘空間的曲線與 Training 共用同一份定義
+//  （改動前兩邊各寫一份線性除法，而且除數不同：40 vs 25）。
+import { potentialSpaceFactor } from "./potentialSpace.js";
 
 /** 成長費率。要調手感只改這裡。 */
 export const LEVEL_GROWTH = Object.freeze({
@@ -108,8 +111,10 @@ export function applyLevelGrowth(player, levelsGained, { source = GROWTH_SOURCES
     //  權重：有定位用 5/4/3/2/1；沒定位則平均
     const weight = keys ? (LEVEL_GROWTH.weights[i] ?? 0) : LEVEL_GROWTH.weightSum / targets.length;
     if (weight <= 0) continue;
-    //  潛力空間係數：離上限越近，成長越慢（線性收斂到 0）
-    const room = clamp((cap - cur) / LEVEL_GROWTH.roomFull, 0, 1);
+    //  潛力空間係數：離上限越近，成長越慢；room = 0 時仍然恰好是 0（上限是硬的）。
+    //  ⚠ 曲線形狀由 `potentialSpace.js` 決定，Training 用的是同一個函式——
+    //    改動前兩條路徑各自寫死線性除法（40 / 25），無法一起校準。
+    const room = potentialSpaceFactor(cap - cur, LEVEL_GROWTH.roomFull);
     //  V0A：PCGM 係數乘在 clamp 之前 ⇒ 上限保護仍是最後一道
     const perLevel = clamp(
       LEVEL_GROWTH.pointsPerLevel * (weight / LEVEL_GROWTH.weightSum) * room * pcgm,

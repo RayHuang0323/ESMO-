@@ -110,7 +110,11 @@ async function importMutated(relPath, mutate, tag) {
   const src = read(relPath);
   const mutated = mutate(src);
   if (mutated === src) throw new Error(`sentinel ${tag}：變異沒有套用（錨點已改，請更新 sentinel）`);
-  const tmp = resolve(ROOT, `tools/.sentinel-${tag}.mjs`);
+  //  ⚠ 必須寫在**原檔旁邊**，不能一律丟進 tools/。被變異的檔案可能有相對 import
+  //    （`trainingCalculator.js` 自 Foundation Calibration 起 import
+  //    `../platform/progress/potentialSpace.js`），放錯目錄會變成模組找不到，
+  //    sentinel 測到的就成了「會不會當掉」而不是「變異有沒有被抓到」。
+  const tmp = resolve(ROOT, `${dirname(resolve(ROOT, relPath))}/.sentinel-${tag}.mjs`);
   fs.writeFileSync(tmp, mutated, "utf8");
   TMP.push(tmp);
   return import(pathToFileURL(tmp).href);
@@ -250,16 +254,24 @@ function trainingIsAgeSensitive(mod) {
     typeof training.ageEfficiency === "function" && trainingIsAgeSensitive(training),
     `18:${training.ageEfficiency(18)} 27:${training.ageEfficiency(27)} 36:${training.ageEfficiency(36)}`);
 
-  //  §14 Training v1.1 零語意變更：版本字串 ＋ golden fixture（本輪之前跑出來的實值）
+  //  §14 Training 對「移除受傷」零語意變更：版本字串 ＋ golden fixture。
+  //
+  //  ⚠ 2026-08-25 Foundation Calibration 更新過這組期望值，**這是刻意的期望變更**，
+  //    不是把紅燈調綠：那一輪重新校準了年齡與 learning 曲線，並把潛力空間曲線
+  //    改成與 `levelGrowth` 共用（版本 v1.1 → v1.2，理由見 trainingCalculator.js 檔頭）。
+  //  ⚠ 本檢查真正要守的是「**移除受傷**沒有改到訓練成長」，而那一項**逐值未動**：
+  //    accuracy / reflex 各 +1.9、totalGain 3.8 與 v1.1 完全相同。
+  //    變的只有係數本身（age 1.01 → 0.995、learning 1 → 1.03）與由它們導出的
+  //    efficiency，與受傷無關。
   const golden = training.calculateTrainingResult(
     { id: "golden", name: "Golden", age: 27, potential: 90, energy: 66, learning: 70,
       stats: { focus: 60, mechanics: 60, learning: 70 } },
     playerModel.courseById("aim"));
-  ck("14) Training v1.1 行為未改（版本字串 ＋ golden fixture 逐項相符）",
-    training.TRAINING_FORMULA_VERSION === "training-growth.v1.1"
+  ck("14) Training 成長行為未因移除受傷而改變（版本字串 ＋ golden fixture 逐項相符）",
+    training.TRAINING_FORMULA_VERSION === "training-growth.v1.2"
       && golden.gains.accuracy === 1.9 && golden.gains.reflex === 1.9
-      && golden.totalGain === 3.8 && golden.efficiency === 0.948
-      && golden.modifiers.age === 1.01 && golden.modifiers.learning === 1 && golden.modifiers.condition === 0.939
+      && golden.totalGain === 3.8 && golden.efficiency === 0.962
+      && golden.modifiers.age === 0.995 && golden.modifiers.learning === 1.03 && golden.modifiers.condition === 0.939
       && golden.energyAfter === 51,
     JSON.stringify({ g: golden.gains, t: golden.totalGain, e: golden.efficiency, m: golden.modifiers }));
 

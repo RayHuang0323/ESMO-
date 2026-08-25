@@ -649,6 +649,12 @@ injury 也不得再成為出賽資格條件。
 >
 > **仍未鎖定**：所有 balance 常數，由 V0A + V0B 的共同 calibration 決定。
 > 設計文件只鎖**產品驗收目標**，不鎖公式數值。
+>
+> 📌 **2026-08-25 更新**：Foundation Calibration 已執行，balance 常數現在**有取值了**
+> （gamma 0.6、`sourceBase.official` 3.0、年齡與 learning 曲線）。
+> 但它們仍是**校準參數，不是 FINAL freeze**——改任何一個都要連同
+> `node tools/foundation_calibration.mjs` 的輸出一起看，並由
+> `tools/check_foundation_calibration.mjs` 的產品驗收線（§Y／§X）判定。
 
 ### 設計階段翻出來的三件事（會改變優先序）
 
@@ -690,27 +696,37 @@ injury 也不得再成為出賽資格條件。
 - **V0C** Match Origin / Growth Source Attribution — ✅ **已完成 2026-08-25**
   （`progress/matchSource.js` 三層來源；`metadata.matchSource` 附加欄位；
    MOBA/CS 共用同一支分類；`check_match_source_v0c` 21/21；TD-35 已解）
-- **Foundation Calibration Gate** — ⏳ **未開始（NEXT）**
-  （四個來源 base 仍一律 1.0；TD-33 漸近線 / `floorRate`；40/35/15/10 年度佔比）
+- **Foundation Calibration Gate** — ✅ **已完成 2026-08-25**
+  （`progress/potentialSpace.js` 共用冪次曲線 gamma = 0.6 ⇒ TD-33 解；
+   `sourceBase.official` 3.0、`competitive` 1.0；年齡曲線陡峭化、learning 加寬；
+   新增「心志鍛鍊」課程補上三項練不到的能力；`check_foundation_calibration` 57/57）
 
-> ⚠ **FOUNDATION_COMPLETE = NO。** Foundation 現在是 V0A ✅ → V0B ✅ → **V0C** → Foundation Calibration Gate。
-> 另外 V0A 實作時發現 **TD-35**：`MatchProgressTransaction` 不帶 `MatchOrigin`
-> ⇒ 結算分不出聯賽與自由對戰 ⇒ **`sourceBase` 暫時一律 1.0**，
-> 「年度來源比例 40/35/15/10」在 MatchOrigin 接進契約之前**達不到**。
-- 🔒 **Foundation Gate**：兩者**不得各自宣告完成**。
-  成長速度是「公式 × 成長空間」的乘積——只修一邊，另一邊會讓結果看起來更糟，
-  分開驗收兩邊都會得到錯誤結論。
+> ✅ **FOUNDATION_COMPLETE = YES**（2026-08-25）。
+> Foundation 路徑：V0A ✅ → V0B ✅ → V0C ✅ → **Foundation Calibration Gate ✅**。
+- 🔒 **Foundation Gate**：四者**不得各自宣告完成**。
+  成長速度是「公式 × 成長空間 × 來源」的乘積——只修一邊，另一邊會讓結果看起來更糟，
+  分開驗收都會得到錯誤結論。這也是實際發生的事：V0A/V0B/V0C 各自綠燈之後，
+  一般新人 Year 4 仍只有 42.4%，要到四者一起校準才進到 76.5%。
 
 **成長產品驗收目標**（19–21 歲、正常高潛力新人，正常玩法）
 
-| Career Year | 目標 |
-|---|---|
-| Year 1 | 明顯進步，可以進輪換 |
-| Year 2 左右 | 有機會成為穩定主力 |
-| Year 3–4 | 好選手接近成熟／巔峰 |
+| Career Year | 目標 | 實測（一般新人 / 即戰力 / 養成型） |
+|---|---|---|
+| Year 1 | 明顯進步，可以進輪換 | ✅ 46.0% / 56.2% / 36.9% |
+| Year 2 左右 | 有機會成為穩定主力 | ✅ 59.7% / 69.9% / 50.8% |
+| Year 3–4 | 好選手接近成熟／巔峰 | ✅ 76.5% / 83.7% / 69.2% |
 
-**年度來源比例 target**：Training 40% / Formal 35% / Ranked 15% / Practice 10%
-——這是**年度結算的來源佔比，不是公式常數**。
+（改動前分別是 20.4% / 29.6% / 42.4%。量測：`node tools/foundation_calibration.mjs`）
+
+**年度來源比例**：實測 Training **78.1%** / 正式季賽 **21.9%** / 競技 ≈ 0% / 快速練習 0%。
+
+> ⚠ 原訂 target「Training 40 / Formal 35 / Ranked 15 / Practice 10」**沒有達成，且刻意不追**。
+> 那組數字是 Season vNext 設計初稿的早期參考值，前提是四層比賽都已存在。
+> 現況：快速練習**入口未實作**（0% 是正確的），Ranked **不做**（Q3 FINAL：契約 only），
+> 而競技比賽因為體力經濟幾乎排不進場（**TD-38**）。
+> ⇒ 在快速練習與體力經濟落地之前，強行湊比例只能靠把 `competitive` 倍率調高，
+> 而實測那會直接做出「刷比賽＝最佳養成法」（base 1.5 時純刷 81% > 認真訓練 75%）。
+> **比例是結果，不是目標**；要改比例得先改結構。
 
 **Foundation 之後**
 

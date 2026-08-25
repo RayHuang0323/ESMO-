@@ -140,9 +140,20 @@ const settlementUsesSource = (src) =>
       .every((k) => typeof career.PCGM_PARAMS?.sourceBase?.[k] === "number") : false,
     JSON.stringify(career.PCGM_PARAMS?.sourceBase ?? {}));
 
-  ck("W4) 本輪倍率一律 1.0（分得出來即可，數值留給 Foundation Calibration）",
-    Object.values(career.PCGM_PARAMS?.sourceBase ?? {}).every((v) => v === 1.0),
-    "不在 V0C 鎖 balance");
+  //  ⚠ W4 原本是「本輪倍率一律 1.0」——那是 **V0C 自己的 scope 宣告**
+  //    （「只做分得出來，數值留給 Foundation Calibration」），
+  //    Foundation Calibration 執行之後它就必然失效，不是回歸。
+  //    ⇒ 退休那條宣告，改成驗證 V0C 真正的交付：**倍率確實是分開生效的**。
+  //      如果來源沒接進結算，official 調高也不會有任何差別 ⇒ 這條會變紅。
+  ck("W4) 來源倍率確實分開生效（official ≠ competitive 時，成長係數真的不同）",
+    (() => {
+      const p = { age: 24, stats: { learning: 70 } };
+      const o = career.careerGrowthFactor({ source: "official", player: p });
+      const c = career.careerGrowthFactor({ source: "competitive", player: p });
+      const base = career.PCGM_PARAMS?.sourceBase ?? {};
+      return base.official !== base.competitive ? o !== c : o === c;
+    })(),
+    JSON.stringify(career.PCGM_PARAMS?.sourceBase ?? {}));
 }
 
 // ── §X 與 Fan 分類不分歧 ───────────────────────────────────────────────────
@@ -240,5 +251,5 @@ try {
 
 console.log(`\n${fail === 0 ? "✅" : "❌"} check_match_source_v0c：${pass}/${pass + fail} 通過`);
 console.log("   三層來源：practice（快速練習，尚未實作入口）／competitive（今日的一般比賽）／official（正式季賽）");
-console.log("   ⚠ 倍率一律 1.0 —— 本輪只做「分得出來」，數值留給 Foundation Calibration。");
+console.log(`   來源倍率（Foundation Calibration 取值）：${JSON.stringify(career.PCGM_PARAMS?.sourceBase ?? {})}`);
 process.exit(fail === 0 ? 0 : 1);

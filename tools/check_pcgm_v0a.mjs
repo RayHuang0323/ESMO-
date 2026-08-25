@@ -172,27 +172,43 @@ console.log("\n§E 同一 MatchResult 重複結算不重複成長");
 // ── §F Training v1.1 無回歸 ────────────────────────────────────────────────
 console.log("\n§F Training v1.1 完全保留");
 
-/** golden fixture：V0A 之前跑出來的實值，逐項比對。 */
+/**
+ * golden fixture：逐項比對訓練結果。
+ *
+ * ⚠ 2026-08-25 Foundation Calibration 更新過這組期望值（v1.1 → v1.2）。
+ *   **這是刻意的期望變更**，不是把紅燈調綠——V0A 檔頭本來就寫明
+ *   「不加 floorRate，那屬 Foundation calibration，見 TD-33」，
+ *   那一輪就是被指定來改這些曲線的。變更內容見 `trainingCalculator.js` 檔頭。
+ *   V0A 真正要守的東西（PCGM 與 Training **共用同一個 function reference**、
+ *   依賴單向）由 §G 保證，與這裡的數值無關。
+ */
 function trainingUnchanged(mod) {
   const g = mod.calculateTrainingResult(
     { id: "golden", name: "Golden", age: 27, potential: 90, energy: 66, learning: 70,
       stats: { focus: 60, mechanics: 60, learning: 70 } },
     playerModel.courseById("aim"));
-  return mod.TRAINING_FORMULA_VERSION === "training-growth.v1.1"
+  return mod.TRAINING_FORMULA_VERSION === "training-growth.v1.2"
     && g.gains.accuracy === 1.9 && g.gains.reflex === 1.9 && g.totalGain === 3.8
-    && g.efficiency === 0.948 && g.modifiers.age === 1.01
-    && g.modifiers.learning === 1 && g.modifiers.condition === 0.939 && g.energyAfter === 51;
+    && g.efficiency === 0.962 && g.modifiers.age === 0.995
+    && g.modifiers.learning === 1.03 && g.modifiers.condition === 0.939 && g.energyAfter === 51;
 }
 {
-  ck("F1) Training v1.1 golden fixture 逐項相符", trainingUnchanged(training));
-  ck("F2) `trainingCalculator.js` 沒有被本 Sprint 改動（git diff 對 origin/main 為空）",
+  ck("F1) Training golden fixture 逐項相符", trainingUnchanged(training));
+
+  //  ⚠ F2 原本是「`trainingCalculator.js` 對 origin/main 零 diff」。
+  //    那條在 V0A 是對的（V0A 刻意不碰這個檔，所以「沒動過」就是最強的無回歸證明），
+  //    但它是一條**跨 sprint 凍結**——Foundation Calibration 依 TD-33 的規劃
+  //    必須改這個檔，凍結就必然失效。**退休它、不是放寬它**，
+  //    改成守 V0A 真正在乎的那件事：Training 的合成方式沒有被改成別的形狀。
+  ck("F2) Training 的合成方式未變：efficiency 仍恰好是 age × learning × condition",
     (() => {
-      try {
-        execFileSync("git", ["diff", "--quiet", "origin/main", "--", P_TRAINING], { cwd: ROOT });
-        return true;
-      } catch { return false; }
+      const g = training.calculateTrainingResult(
+        { id: "shape", age: 24, potential: 90, energy: 80, stats: { accuracy: 50, reflex: 50, learning: 55 } },
+        playerModel.courseById("aim"));
+      const { age, learning, condition } = g.modifiers;
+      return Math.abs(g.efficiency - Math.round(age * learning * condition * 1000) / 1000) < 1e-9;
     })(),
-    "共用係數的做法是 re-export，不是搬家 ⇒ 這個檔應該一個字都沒動");
+    "V0A 要保護的是形狀與共用關係（§G），不是某一組數值");
 }
 
 // ── §G 共用而非重寫（結構上不可能分岔）──────────────────────────────────
@@ -207,9 +223,12 @@ const sharesSameCurves = (c, t) =>
   ck("G1) PCGM 的三個係數 === trainingCalculator 的同一個 function reference",
     sharesSameCurves(career, training),
     career ? "同一個 reference ⇒ 不可能各自漂移" : "careerGrowth.js 不存在");
+  //  ⚠ 只看 **import 敘述**。`trainingCalculator.js` 的檔頭註解裡就寫著
+  //    「本檔不得 import careerGrowth」，用裸關鍵字掃會掃到那句說明本身
+  //    ⇒ 變成「把理由寫下來就變紅」的假紅，正好與目的相反。
   ck("G2) 依賴是單向的：trainingCalculator 不得 import careerGrowth",
-    !/careerGrowth/.test(read(P_TRAINING)),
-    "反向依賴會讓 PCGM 的改動悄悄改到 Training v1.1");
+    !/^\s*import[^;]*from\s+["'][^"']*careerGrowth[^"']*["']/m.test(read(P_TRAINING)),
+    "反向依賴會讓 PCGM 的改動悄悄改到 Training");
   ck("G3) levelGrowth 向 careerGrowth 要係數（而不是自己複製一份曲線）",
     /from "\.\/careerGrowth\.js"/.test(read(P_LEVEL))
       && !/1\.08|0\.0035|0\.0018/.test(read(P_LEVEL)),
@@ -279,8 +298,9 @@ try {
 
   //  ⚠ 錨點必須打在 golden fixture **真的會走到**的那一段：golden 是 27 歲，
   //    走的是 `a <= 28` 那條曲線，改 `a <= 20` 的回傳值對它毫無影響。
+  //  ⚠ 2026-08-25：Foundation Calibration 把該段係數從 0.01 改成 0.015，錨點跟著更新。
   const T = await mutated(P_TRAINING,
-    (s) => s.replace("return round3(1.08 - (a - 20) * 0.01);", "return round3(1.08 - (a - 20) * 0.02);"), "T-curve");
+    (s) => s.replace("return round3(1.10 - (a - 20) * 0.015);", "return round3(1.10 - (a - 20) * 0.03);"), "T-curve");
   ck("S-B) 動到共用曲線 ⇒ §F Training golden fixture 變紅", trainingUnchanged(T) === false);
 
   const C = await mutated(P_CAREER, (s) => s.replace("export const ageFactor = ageEfficiency;",
