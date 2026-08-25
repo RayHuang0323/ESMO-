@@ -121,9 +121,12 @@ export function useMatchFlow(mode = "moba", onEnterBattle = null) {
   //  Q3.6：這條流程綁在哪一場賽程。判定在 Store（`matchFixtureContext`），
   //  這裡只是把結論帶給按鈕判定——本檔不判「算不算賽程」。
   const fixture = store.matchFixtureContext();
+  //  V0D：這條流程是不是快速練習。判定同樣在 Store（`matchPracticeContext`，
+  //  只讀 `MatchOrigin`）——本檔不判「算不算練習」，也不看畫面名稱。
+  const practice = store.matchPracticeContext();
 
-  const act = primaryActionFor({ entryOk: entry.ok, view, room, session, mode, fixture });
-  const statusText = flowStatusText({ entryOk: entry.ok, view, room, session, opponentName, fixture });
+  const act = primaryActionFor({ entryOk: entry.ok, view, room, session, mode, fixture, practice });
+  const statusText = flowStatusText({ entryOk: entry.ok, view, room, session, opponentName, fixture, practice });
 
   //  ── 唯一的流程推進點 ────────────────────────────────────────────────
   const run = () => {
@@ -162,6 +165,27 @@ export function useMatchFlow(mode = "moba", onEnterBattle = null) {
       if (!r.ok) setErr(r.reason ?? r.errors?.[0]?.message ?? "無法重新進入本場賽事");
       return;
     }
+    //  V0D：練習流程的退路 ＝ 重開一場練習。
+    //  ⚠ 絕對不能落到 `requeue`——那會把一場測試變成一場真的競技比賽。
+    if (act.key === "repractice") {
+      launchedFor.current = null;
+      startPractice();
+      return;
+    }
+  };
+
+  /**
+   * V0D：開始一場快速練習（次要動作）。
+   *
+   * ⚠ 這**不是**第二條配對流程：它呼叫既有的 store action `startPracticeMatch`，
+   *   之後的輪詢／確認／簽發場次／自動進場全部由上面那幾個 effect 接手，
+   *   與一般比賽走同一條。
+   */
+  const startPractice = () => {
+    setErr(null);
+    launchedFor.current = null;
+    const r = useProfileStore.getState().startPracticeMatch(mode);
+    if (!r.ok) setErr(r.reason ?? r.errors?.[0]?.message ?? "無法開始快速練習");
   };
 
   /** 放棄進行中的對戰（次要動作）。放棄後場次進入終局，可重新配對。 */
@@ -190,6 +214,11 @@ export function useMatchFlow(mode = "moba", onEnterBattle = null) {
     waitedSec: view.waitedSec,
     canCancel: live,
     err, run, cancel, abandon, tick,
+    //  V0D：快速練習。`canStartPractice` 只在「閒置且陣容就緒」時為真——
+    //  流程已經在跑的時候不該讓玩家再開一場（Store 也會擋，這裡先不給按）。
+    practice, startPractice,
+    canStartPractice: entry.ok && !live && !practice.inPractice
+      && !sessionState && !roomState && !fixture.inFixture,
     canAbandon: sessionState === "launched",
     //  內部識別：**只給 debug 區用**，正式畫面不得顯示
     internals: {

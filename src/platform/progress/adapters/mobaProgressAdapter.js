@@ -21,7 +21,7 @@ import {
 } from "../rewardFormulas.js";
 import { fanWeightForOrigin } from "../fanSourceWeight.js";
 //  V0C：成長用的來源分類。與 Fan 分桶不同，但讀同一份 MatchOrigin。
-import { matchSourceFromOrigin } from "../matchSource.js";
+import { matchSourceFromOrigin, isPracticeSource } from "../matchSource.js";
 
 /** 我方固定為藍隊（與 roster.js / draftRoster 一致）。 */
 const HOME = "blue";
@@ -66,11 +66,16 @@ export function mobaResultToTransaction(br, ctx = {}) {
   // ── 團隊獎勵（Legacy updateEconomy 逐字；marginF 用 Legacy 非 CS 分支的語意）──
   //    Legacy deriveMatchContext：非 CS ⇒ margin = win ? 3 : 0 → marginF = 3/8 或 0。
   const marginF = win ? 3 / 8 : 0;
+  //  V0C/V0D：這場的成長來源。**只讀 origin**，不看畫面、不看路由。
+  const matchSource = matchSourceFromOrigin(ctx.origin ?? null);
+  const practice = isPracticeSource(matchSource);
   //  F1：來源權重（練習 < 聯賽 < Major）。origin 由呼叫端從**現役場次**取得；
-  //  拿不到就是練習賽（保守方向，見 fanSourceWeight.js）。契約欄位一個都沒加。
+  //  拿不到就是練習賽權重（保守方向，見 fanSourceWeight.js）。契約欄位一個都沒加。
+  //  ⚠ V0D：快速練習的歸零**不在這裡判**——交給 `teamRewardsFor` 唯一那一處。
   const team = teamRewardsFor({
     win, marginF, streak: ctx.streak ?? 0, fansNow: ctx.fansNow ?? 0,
     fanSourceWeight: fanWeightForOrigin(ctx.origin ?? null),
+    matchSource,
   });
 
   // ── 選手 XP（只給「我方且在名單裡」的選手；引擎的紅隊/示範選手不入帳）──
@@ -79,13 +84,18 @@ export function mobaResultToTransaction(br, ctx = {}) {
     ? ours.reduce((s, p) => s + (Number.isFinite(p.rating) ? p.rating : 0), 0) / ours.length
     : 0;
 
+  //  ── V0D：快速練習送**空的**選手名單 ────────────────────────────────────
+  //  這不只是「XP 給 0」。`playerProgress` 為空 ⇒ `applyMatchProgress` 的選手
+  //  迴圈根本不會跑 ⇒ 不發 XP、不升級、不發天賦點、不寫成長帳簿，
+  //  而且**不會呼叫 `applyMatchWear`** ⇒ 不扣體力、不動連續出賽計數。
+  //  「練習不消耗正式體力」因此是結構上的結果，不需要在結算裡加任何分支。
   const playerProgress = [];
-  for (const p of ours) {
+  for (const p of practice ? [] : ours) {
     const me = playerForSeat(p.id);
     if (!me) continue;                       // 不在經營名單（引擎預設陣容）→ 不發 XP，不虛構選手
     const perf = mobaPerfFactor(p, meanRating);
     const isMvp = br.mvpId === p.id;
-    const xpGained = playerXpFor({ win, perf, isMvp });
+    const xpGained = playerXpFor({ win, perf, isMvp, matchSource });
     const prog = calculateLevelProgress(me.xp ?? 0, xpGained);
     playerProgress.push({
       playerId: me.id,                       // Milestone E：真正上場的選手（非席位 id）
@@ -107,8 +117,8 @@ export function mobaResultToTransaction(br, ctx = {}) {
     playerProgress,
     unlocks: [],
     metadata: {
-      //  V0C：這場的來源（practice / competitive / official），交給 PCGM 用。
-      matchSource: matchSourceFromOrigin(ctx.origin ?? null),
+      //  V0C：這場的來源（unknown / practice / competitive / official），交給 PCGM 用。
+      matchSource,
       winner: win ? "us" : "enemy",
       score: { us: br.score?.blue ?? 0, enemy: br.score?.red ?? 0 },
       rewardFormulaVersion: MOBA_REWARD_FORMULA_VERSION,

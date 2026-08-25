@@ -27,15 +27,20 @@
 import { ORIGIN_KINDS } from "../contracts/matchOrigin.js";
 
 /**
- * 比賽來源。**唯一來源**——呼叫端不得自創第四種。
+ * 比賽來源。**唯一來源**——呼叫端不得自創第五種。
  *
- * · `practice`    快速練習。試新人／陣容／戰術。**入口尚未實作**，
- *                 目前只有「拿不到 origin」會落到這裡（保守預設）。
+ * · `unknown`     **查不到來源**。舊存檔／debug harness／沒有場次的流程。
+ *                 ⚠ V0D 之前這一格是 `practice`，而那正是 TD-36：
+ *                 「資料遺失」與「玩家真的在打練習賽」被當成同一件事，
+ *                 於是 `practice` 的倍率永遠動不了——調低它就等於默默懲罰資料遺失。
+ * · `practice`    **快速練習**（V0D）。由**明確的 practice origin** 產生，
+ *                 純測試場：不給成長、不給獎勵、不計戰績。
  * · `competitive` 競技比賽。**今天的「一般比賽」就是這一層**，
  *                 未來會長出評分／牌位／排行榜。
  * · `official`    正式季賽。既有的 Competition / Season（含 Major、年度總決賽）。
  */
 export const MATCH_SOURCE = Object.freeze({
+  unknown: "unknown",
   practice: "practice",
   competitive: "competitive",
   official: "official",
@@ -44,21 +49,34 @@ export const MATCH_SOURCE = Object.freeze({
 /**
  * `MatchOrigin.v1` → 比賽來源。
  *
- * · 沒有 origin（debug harness／舊存檔／舊流程）⇒ **practice**。
- *   **保守而不是慷慨**：查不到來源時給最低的一層，
- *   避免「查不到就當正式賽算」的反向漏洞。
+ * · 沒有 origin（debug harness／舊存檔／舊流程）⇒ **unknown**。
+ *   ⚠ **不是 practice。** 這是 V0D 修掉的 TD-36：把「查不到」歸成「練習賽」，
+ *   等於讓資料遺失去承擔練習賽的產品規則。`unknown` 的倍率恆為中性 1.0
+ *   （見 `careerGrowth.js`），既不慷慨也不懲罰。
+ *   它仍然低於 `official` ⇒ 沒有人有動機去弄掉 origin 換成長。
+ * · `kind: "practice"`（快速練習）⇒ practice。
  * · `kind: "ticket"`（玩家自己排隊配對）⇒ competitive。
  * · `kind: "fixture"`（賽程排定）⇒ official。
  *   ⚠ 這裡**不再細分** league / major——成長不需要那一層，
  *     粉絲才需要，而那由 `fanSourceWeight` 自己處理。
  */
 export function matchSourceFromOrigin(origin) {
-  if (!origin || typeof origin !== "object") return MATCH_SOURCE.practice;
+  if (!origin || typeof origin !== "object") return MATCH_SOURCE.unknown;
   if (origin.kind === ORIGIN_KINDS.fixture) return MATCH_SOURCE.official;
   if (origin.kind === ORIGIN_KINDS.ticket) return MATCH_SOURCE.competitive;
-  return MATCH_SOURCE.practice;
+  if (origin.kind === ORIGIN_KINDS.practice) return MATCH_SOURCE.practice;
+  return MATCH_SOURCE.unknown;
 }
 
-/** 認不得的字串一律回 practice（與上面同一個保守方向）。 */
+/** 認不得的字串一律回 unknown（與上面同一個方向：查不到 ≠ 練習賽）。 */
 export const normalizeMatchSource = (v) =>
-  (v && MATCH_SOURCE[v]) ? MATCH_SOURCE[v] : MATCH_SOURCE.practice;
+  (v && MATCH_SOURCE[v]) ? MATCH_SOURCE[v] : MATCH_SOURCE.unknown;
+
+/**
+ * 這場是不是**明確的**快速練習。
+ *
+ * ⚠ 產品規則（0 成長／0 獎勵／不計戰績）一律走這一支判定，
+ *   呼叫端不得自己比對字串——否則 `unknown` 與 `practice` 遲早會被混為一談，
+ *   那正是 TD-36 的形狀。
+ */
+export const isPracticeSource = (v) => normalizeMatchSource(v) === MATCH_SOURCE.practice;

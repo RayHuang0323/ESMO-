@@ -40,10 +40,11 @@ export function flowStepOf({ view, room, session }) {
 
 /**
  * 「上一次沒成功，這是你的退路」這一類主動作的 key。
- * 一般配對是 `requeue`（重新排隊、會換對手），賽程是 `refixture`（重進同一場、不換對手）。
+ * 一般配對是 `requeue`（重新排隊、會換對手），賽程是 `refixture`（重進同一場、不換對手），
+ * 快速練習是 `repractice`（重開一場練習）。
  * 畫面要判斷「現在是不是在給退路」時一律用這一份，不要再各自列舉字串。
  */
-export const RETRY_ACTION_KEYS = Object.freeze(["requeue", "refixture"]);
+export const RETRY_ACTION_KEYS = Object.freeze(["requeue", "refixture", "repractice"]);
 
 const mmss = (sec) => {
   const s = Math.max(0, Number(sec) || 0);
@@ -59,16 +60,25 @@ const mmss = (sec) => {
  * @returns {{key:string, label:string, disabled:boolean, tone:string}}
  *   key ∈ enqueue | blocked | queued | waiting | confirm | launching | requeue | refixture
  */
-export function primaryActionFor({ entryOk, view, room, session, mode = null, fixture = null }) {
+export function primaryActionFor({ entryOk, view, room, session, mode = null, fixture = null, practice = null }) {
   const st = view?.state ?? TICKET_STATES.idle;
   //  Q3.6：賽程區間內，「重新來過」＝重新進入**同一場賽程**，不是重新配對。
   //  一般配對會換掉對手（瀏覽器實測配到隨機隊伍），而賽程的對手是賽程決定的。
   //  ⚠ 這不是第二條賽事流程：它呼叫的是既有的 `startFixtureMatch()`
   //    （出賽用的同一支，內建 `allowRelaunch`）。
   const inFixture = !!fixture?.inFixture;
-  const retry = inFixture
-    ? { key: "refixture", label: "重新進入本場賽事", disabled: false, tone: "go" }
-    : { key: "requeue", label: "重新配對", disabled: false, tone: "neutral" };
+  //  ⚠⚠ V0D：快速練習的退路**必須回到練習**。
+  //    少了這一條，一場失敗的練習（房間逾時／取消／放棄）會落到 `requeue`
+  //    ⇒ 呼叫 `enqueueMatch` ⇒ 開出一張真的票券
+  //    ⇒ **玩家以為還在測試，實際上打的是一場正式競技比賽**，
+  //      而那一場會真的發錢、發粉絲、發 XP、計戰績。
+  //    這是本輪 grilling 抓到最危險的一條路徑。
+  const inPractice = !!practice?.inPractice;
+  const retry = inPractice
+    ? { key: "repractice", label: "重新開始快速練習", disabled: false, tone: "neutral" }
+    : inFixture
+      ? { key: "refixture", label: "重新進入本場賽事", disabled: false, tone: "go" }
+      : { key: "requeue", label: "重新配對", disabled: false, tone: "neutral" };
   const restoreable = session?.restoreable === true;
 
   //  ① 終局：票券或房間作廢 ⇒ 重新來過（**實際作廢並重新排隊**，不是回到起點）
@@ -131,8 +141,16 @@ export function primaryActionFor({ entryOk, view, room, session, mode = null, fi
 /**
  * 玩家看得懂的流程狀態句（正式畫面用；不含票券／房間／場次等內部詞彙）。
  */
-export function flowStatusText({ entryOk, view, room, session, opponentName, fixture = null }) {
+export function flowStatusText({ entryOk, view, room, session, opponentName, fixture = null, practice = null }) {
   const st = view?.state ?? TICKET_STATES.idle;
+  //  V0D：練習全程都要講清楚「這場不算數」，否則玩家會誤以為在打正式比賽。
+  if (practice?.inPractice) {
+    if (session?.canLaunch) return "快速練習：正在進入對戰（本場不影響戰績與數值）";
+    if (room?.state === "ready_check") return "快速練習：準備就緒（本場不影響戰績與數值）";
+    if (room?.state === "confirmed") return "快速練習：正在準備場次";
+    if (room?.state === "waiting") return "快速練習：正在準備對手";
+    return "快速練習：本場不影響戰績與數值，可以重新開始";
+  }
   //  Q3.6：賽程區間內的終局訊息要說清楚「對手不會換」，否則玩家會以為
   //  逾時＝這場聯賽沒了（實測就是這個誤解讓人去按重新配對）。
   const inFixture = !!fixture?.inFixture;

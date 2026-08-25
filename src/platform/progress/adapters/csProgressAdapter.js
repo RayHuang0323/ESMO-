@@ -19,7 +19,7 @@ import {
 } from "../rewardFormulas.js";
 import { fanWeightForOrigin } from "../fanSourceWeight.js";
 //  V0C：成長用的來源分類。與 Fan 分桶不同，但讀同一份 MatchOrigin。
-import { matchSourceFromOrigin } from "../matchSource.js";
+import { matchSourceFromOrigin, isPracticeSource } from "../matchSource.js";
 import {
   CS_LEARNING_LIFECYCLE_FORMULA_VERSION,
   learningAdjustedXp,
@@ -43,23 +43,32 @@ export function csResultToTransaction(cr, ctx = {}) {
   //    只有 marginF 依 CS 的比分語意（回合差 / 8）——這正是兩款遊戲不失衡的關鍵。
   const margin = Math.abs((cr.ourScore ?? 0) - (cr.enemyScore ?? 0));
   const marginF = Math.min(margin / 8, 1);
+  //  V0C/V0D：這場的成長來源。**只讀 origin**，不看畫面、不看路由。
+  //  ⚠ 與 MOBA adapter 用的是**同一支**分類與同一支獎勵公式，不是第二套規則。
+  const matchSource = matchSourceFromOrigin(ctx.origin ?? null);
+  const practice = isPracticeSource(matchSource);
   //  F1：來源權重（練習 < 聯賽 < Major）。origin 由呼叫端從**現役場次**取得；
-  //  拿不到就是練習賽（保守方向，見 fanSourceWeight.js）。契約欄位一個都沒加。
+  //  拿不到就是練習賽權重（保守方向，見 fanSourceWeight.js）。契約欄位一個都沒加。
+  //  ⚠ V0D：快速練習的歸零**不在這裡判**——交給 `teamRewardsFor` 唯一那一處。
   const team = teamRewardsFor({
     win, marginF, streak: ctx.streak ?? 0, fansNow: ctx.fansNow ?? 0,
     fanSourceWeight: fanWeightForOrigin(ctx.origin ?? null),
+    matchSource,
   });
 
   // ── 選手 XP ──
+  //  ⚠ V0D：快速練習送**空的**選手名單（與 MOBA adapter 同一條規則）。
+  //    `playerProgress` 為空 ⇒ 結算的選手迴圈不會跑 ⇒ 不發 XP／不升級／
+  //    不發天賦點／不寫成長帳簿，也**不會呼叫 `applyMatchWear`** ⇒ 不扣體力。
   const mvpId = cr.mvp?.playerId ?? null;
   const playerProgress = [];
-  for (const p of cr.players ?? []) {
+  for (const p of practice ? [] : (cr.players ?? [])) {
     if (!p.playerId) continue;               // 引擎示範陣容（非真實選手）→ 不發 XP
     const me = byId.get(p.playerId);
     if (!me) continue;                       // 已離隊 → 不發
     const perf = csPerfFactor(p);
     const isMvp = mvpId != null && p.playerId === mvpId;
-    const baseXp = playerXpFor({ win, perf, isMvp });
+    const baseXp = playerXpFor({ win, perf, isMvp, matchSource });
     const learning = me.stats?.learning;
     const learningMultiplier = learningMultiplierFor(learning);
     const xpGained = learningAdjustedXp({ baseXp, learning });
@@ -88,7 +97,7 @@ export function csResultToTransaction(cr, ctx = {}) {
     unlocks: [],
     metadata: {
       //  V0C：這場的來源（practice / competitive / official），交給 PCGM 用。
-      matchSource: matchSourceFromOrigin(ctx.origin ?? null),
+      matchSource,
       winner: win ? "us" : "enemy",
       score: { us: cr.ourScore ?? 0, enemy: cr.enemyScore ?? 0 },
       rewardFormulaVersion: CS_REWARD_FORMULA_VERSION,

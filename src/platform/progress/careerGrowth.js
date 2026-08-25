@@ -45,12 +45,15 @@ import {
  *   是**對齊**，不是新增概念。
  *
  * · `training`    訓練課程（既有）
- * · `practice`    快速練習——**入口尚未實作**，目前只有「拿不到 origin」會落到這裡
+ * · `unknown`     **查不到來源**（舊存檔／debug harness）。V0D 之前這一格不存在，
+ *                 查不到會被歸成 `practice`——那正是 TD-36
+ * · `practice`    快速練習（V0D 起有明確入口與明確 origin）
  * · `competitive` 競技比賽——**今天的「一般比賽」就是這一層**
  * · `official`    正式季賽（Competition / Season，含 Major）
  */
 export const GROWTH_SOURCES = Object.freeze({
   training: "training",
+  unknown: "unknown",
   practice: "practice",
   competitive: "competitive",
   official: "official",
@@ -79,12 +82,17 @@ export const PCGM_PARAMS = Object.freeze({
    *     1.5 ⇒ 純刷競技 81%＞認真訓練 75%（刷比賽變成最佳養成法 ❌）
    *   1.0 就是那條分界線，不是隨手填的中性值。
    *
-   * · `practice` **1.0** — ⚠ **不要因為「練習賽不該有成長」就調低。**
-   *   快速練習的入口**尚未實作**；目前唯一會落到 practice 的是
-   *   「交易單沒帶 origin」（舊存檔／debug harness）。現在調低 = 把**資料遺失**
-   *   變成一個看不見的成長懲罰，而且和 1.0 相比也不會產生任何 exploit
-   *   （practice ≤ official，沒有人有動機去弄掉 origin）。
-   *   真正的快速練習拿到 explicit origin 之後才能分開，見 TD-36。
+   * · `practice` **0.0** — 快速練習是**純測試場**：試新人／試陣容／試戰術，
+   *   不給任何永久成長。V0D 起它由**明確的 practice origin** 產生，所以可以安全歸零。
+   *   ⚠ 這是**雙保險的第二層**：練習的交易單本來就送空的 `playerProgress`
+   *   （見兩支 adapter）⇒ 結構上就沒有東西可發；這個 0 是防止未來有人把
+   *   `playerProgress` 加回去時默默開始發成長。
+   *
+   * · `unknown` **1.0** — ⚠ **不要調低。** 這一格代表「查不到來源」
+   *   （舊存檔／debug harness／沒有場次的流程），不是一種產品模式。
+   *   調低它等於把**資料遺失**變成一個看不見的成長懲罰——那正是 TD-36 的形狀，
+   *   V0D 就是為了把它與 `practice` 分開才新增這一格。
+   *   它仍然 ≤ `official` ⇒ 沒有人有動機去弄掉 origin 換成長。
    *
    * · `training` **1.0** — ⚠ **這一格目前是宣告性的，沒有 write path 讀它。**
    *   `trainingCalculator.js` 依 V0A §G 的單向依賴規則**不得** import 本檔，
@@ -94,7 +102,8 @@ export const PCGM_PARAMS = Object.freeze({
    */
   sourceBase: Object.freeze({
     [GROWTH_SOURCES.training]: 1.0,
-    [GROWTH_SOURCES.practice]: 1.0,
+    [GROWTH_SOURCES.unknown]: 1.0,
+    [GROWTH_SOURCES.practice]: 0.0,
     [GROWTH_SOURCES.competitive]: 1.0,
     [GROWTH_SOURCES.official]: 3.0,
   }),

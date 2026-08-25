@@ -14325,3 +14325,141 @@ V0A（成長認年齡）／V0B（新秀有成長空間）／V0C（分得出比�
 `LEVEL_GROWTH` 的四個費率常數（`pointsPerLevel 3.0` / `roomFull 25` / `perStatCap 1.5` / `hardCap 99`）。
 未動體力經濟（`CONDITION`）——TD-38 記錄了為什麼那是下一輪的事。
 未 push、未 deploy。
+
+---
+
+## TD-36 + V0D 快速練習模式（2026-08-26）
+
+**分支** `feature/remove-player-injury`｜**起點** `2519dfa`（Foundation Calibration 完成）
+**本輪只做快速練習。** 未碰 Career Clock、年齡、老化、退休、Ranked、真人連線。
+
+### Audit：既有流程可以整條重用
+
+一般比賽（MOBA / CS 共用）的管線是：
+
+```
+matchEntry(mode) → 來源（票券 or 賽程）→ createAssignment → createRoom
+  → pollMatchRoom → confirmMatchReady → createSession → launchMatchSession
+  → Battle（MOBA: draft→tactic→battle／CS: tactic→battle）
+  → adapter → settleMatchThroughSession → applyMatchProgress
+```
+
+**可重用度 100%。** `competitionGateway`（賽程）早就證明**多一個 origin 生產者
+不需要動管線**——它自己 `createAssignment` / `createRoom` / `createSession`，
+之後全部走既有的。快速練習照抄這個形狀即可。
+
+Audit 同時抓到**三個必須改的分派點**，其中第三個是這一輪最危險的一條：
+
+| 位置 | 原本 | 不改的後果 |
+|---|---|---|
+| `pollMatchRoom` | `isFixtureRoom = kind === "fixture"` | 練習房間不是 fixture ⇒ 走票券檢查 ⇒ 沒有票券 ⇒ **開房當下就被判定「票券已失效」而關閉** |
+| `createMatchSession` | `kind === "fixture" ? 賽事閘道 : openSession({ticket})` | 練習落到 `openSession`，沒有票券 ⇒ `createSession` 拒發場次 |
+| `primaryActionFor` 的 retry | 非賽程一律 `requeue` → `enqueueMatch` | ⚠⚠ **練習失敗後按「重新來過」會開出一張真票券** ⇒ 玩家以為還在測試，實際上打的是一場正式競技比賽，而那場會真的發錢、發粉絲、發 XP、計戰績 |
+
+前兩個改成**依 origin kind 判斷**（不是「是不是 fixture」），第三個新增 `repractice`。
+
+### 改了什麼
+
+1. **`ORIGIN_KINDS.practice`（第三種來源）** ＋ `originFromPractice(entryRequest)`。
+   `originId` 由申請單的 `transactionId` 推導 ⇒ 決定性。
+   `validateOrigin` 的「不得帶賽事欄位」從 `kind === ticket` 擴成 `kind !== fixture`。
+2. **TD-36：`MATCH_SOURCE.unknown`（第四層）**。
+   `matchSourceFromOrigin(null)` 從 `practice` 改回 **`unknown`**；
+   `sourceBase`：`unknown = 1.0`（永遠中性）、**`practice = 0`**。
+   ⇒ 「查不到來源」與「明確是練習」從此是兩件事，practice 的倍率終於動得了。
+3. **獎勵歸零寫在唯一的獎勵公式檔**（`rewardFormulas.js`）：
+   `teamRewardsFor` 對練習來源**早退**回 0 錢 0 粉絲（不進 `updateEconomy`，
+   連 streak 副作用都碰不到）；`playerXpFor` 回 0 XP。
+   ⚠ **adapter 不自己判**——兩支各寫一次必然漂移，gate §Z4 釘住這件事。
+4. **兩支 adapter 對練習送空的 `playerProgress`**。這不只是「XP 給 0」：
+   名單為空 ⇒ 結算的選手迴圈根本不跑 ⇒ 不發 XP／不升級／不發天賦點／
+   不寫成長帳簿，而且**不會呼叫 `applyMatchWear`** ⇒ **不扣體力**。
+   「練習不消耗正式體力」因此是結構上的結果，**結算裡沒有加任何分支**。
+5. **`matchmaking/practiceGateway.js`（新，56 行實碼）**：第三個 origin 生產者。
+   對手取自既有 `MOCK_OPPONENTS`（不另建 AI 隊），對手與 seed 決定性推導。
+   **練習不繞過出賽資格**：陣容不合法就簽不出來。
+6. **`profileStore.startPracticeMatch(mode)`** ＋ `matchPracticeContext()`。
+   前者對照 `startFixtureMatch`（含「已有進行中的對戰就擋下」）；
+   後者只讀 `MatchOrigin`，讓 UI 不必猜。
+7. **不計戰績**：`useBattleFeed` 跳過 `recordResult` 與 `recordBattleResult`（英雄熟練度），
+   `settleCsMatch` 跳過 `recordCsMatch`。⚠ **Replay 刻意不跳過**——能回看剛剛試的
+   陣容正是快速練習的用途。
+8. **UI：一顆次要按鈕**「🧪 快速練習 · 不影響戰績與數值」，
+   放在 **MOBA / CS 共用的** `MatchPrepFrame` 底部，只在閒置且陣容就緒時出現
+   ⇒ 兩個模式自動都有，兩邊不各做一顆。流程文案全程標示「本場不影響戰績與數值」。
+
+### 產品規則落點（為什麼放在那裡）
+
+| 規則 | 落點 | 為什麼不放別處 |
+|---|---|---|
+| 不給錢／粉絲 | `rewardFormulas.teamRewardsFor` | 唯一的獎勵公式所在地；放 adapter 會變兩份 |
+| 不給 XP | `rewardFormulas.playerXpFor` | XP = 0 ⇒ 不升級 ⇒ 不發天賦點 ⇒ 不觸發 `applyLevelGrowth` |
+| 不給永久成長 | adapter 空名單 ＋ `sourceBase.practice = 0` | **雙保險**：交易單裡沒東西可發（結構），就算有也乘 0（數值） |
+| 不扣體力 | 空名單 ⇒ `applyMatchWear` 不被呼叫 | 這是選「空名單」而非「XP 0 的名單」的**主要理由**——結算不必加分支 |
+| 不計戰績 | `useBattleFeed` / `settleCsMatch` 各一處 | 判斷來自 `matchPracticeContext`（只讀 origin），不看畫面 |
+| 不污染賽季 | 天然成立 | 練習來源不是 `fixture` ⇒ `completeFixtureMatch` 永遠不會被觸發 |
+
+**「不消耗正式體力」是裁量後採用的**：TD-38 已量到訓練與比賽搶同一份體力，
+若練習也扣體力，玩家每試一次陣容就要付出訓練效率的代價 ⇒ 「試新人／試戰術」
+這個用途會直接死掉。純測試場不該有機會成本。
+
+### 端到端實跑（gate §E，不是只有單元檢查）
+
+`startPracticeMatch` → 輪詢房間 → 雙方確認 → 簽發場次 → 啟動 → 交易單 →
+`settleMatchThroughSession`，然後逐值比對存檔：
+
+```
+room.origin.kind = practice      | ticket = null
+session.issuedBy = practice-gateway
+交易單: matchSource=practice, money=0, fans=0, playerProgress=0
+結算 viaSession = true           ← 走的是權威路徑，不是無場次退路
+場次狀態 = completed             ← 玩家不會卡在一場打不完的練習
+資金 1200000 → 1200000  ✅ 未變
+粉絲  128000 →  128000  ✅ 未變
+選手 xp / 體力 / 天賦點 / 連續出賽  ✅ 逐值未變
+```
+
+### Gate / build
+
+- **`check_practice_match_v0d` 67/67**（新增，含端到端 §E 與 4 個 mutation sentinel）
+- `foundation_calibration` 58/58、`match_source_v0c` 21/21、`pcgm_v0a` 24/24、
+  `prospect_growth_space_v0b` 43/43
+- **進場管線未破**：`match_entry_o3` 35/35、`matchmaking_o4` 48/48、`match_room_o5` 45/45、
+  `match_session_o6` 36/36、`matchmaking_flow_acceptance` 97/97、
+  `authoritative_o7` 48/48、`result_flow_o71` 27/27
+- **賽事未污染**：`competition_q1` 93/93、`q3` 91/91、`q4` 68/68、`q6` 57/57、
+  `cs_season_lifecycle` 54/54
+- **粉絲零影響**：`fan_system` 66/66、`fan_ui_f4` 35/35、`fan_f0` 33/33
+  （`fanSourceWeight.js` 對 HEAD 零 diff）
+- `no_player_injury` 29/29、`dev_quick_recovery` 29/29、`recruit_o` 41/41、`flow09` PASS
+- `verify.mjs --only=progress25,talent27,growth_p0,growth_ui_p1,regress,regress2,build` — **7/7**
+
+⚠ **未經瀏覽器實測**：新按鈕的實際外觀與點擊行為、練習流程在 320px 的排版、
+以及「重新開始快速練習」在真實 UI 上的表現。端到端是在 Node 跑 store 流程，
+不是瀏覽器。這幾項留給使用者或 verifier 檢查。
+
+### 四處 gate 斷言被刻意改寫（都是期望變更，不是把紅燈調綠）
+
+1. **`check_match_source_v0c` S3／判準函式**（`null ⇒ practice`）→ `null ⇒ unknown`。
+   那正是 TD-36 記下來要修的東西，V0C 本來就把第四層與數值留給後續。
+2. **`check_foundation_calibration` S4／R5／R6**（`practice === competitive`、
+   `null ⇒ practice`）→ 改成 `practice = 0` ＋ 新增 **S4b**（`unknown` 中性）。
+   守則沒變（**殘餘的無 origin 路徑必須行為中性**），只是承接者換人。
+3. **`check_competition_q1` §3**（「只有兩種來源，不得自創第三種」）→
+   改成「來源種類就是契約定義的那幾種」。它真正要守的是**呼叫端不得自創**，
+   不是「永遠只能有兩種」——Q1 檔頭自己就寫著 fixture 當時「尚無生產者」。
+4. **`check_fan_ui_f4` §19/20**：`src/data/playerModel.js` **從檔案級凍結移出**。
+   那條要守的是 `SPONSORS[].reqFans`，但該檔同時放 `TRAINING_COURSES` /
+   `POSITION_PROFILE` / `STAT_DEF` ⇒ 整檔凍結會被任何不相干的改動觸發
+   （Foundation Calibration 新增一門課就踩到了）。
+   **不是放寬**：`reqFans` 改由既有的 §19b **逐值斷言**守住，那比檔案比對更精準。
+   ⚠ 這一條是**上一輪 commit 的延遲效應**（`origin/main...HEAD` 只看已提交歷史），
+   不是 V0D 造成的。
+
+### 沒有做
+
+未做 Career Clock、年齡 +1、老化、衰退、退休、Ranked／牌位／評分、真人連線、
+Live Event、第二個 Result 畫面、青訓中心。
+未動 `BattleResult.v2`、`CsMatchResult.v1`、`fanSourceWeight.js`、
+`LEVEL_GROWTH` 常數、`potentialSpace` 曲線、體力經濟（`CONDITION`）。
+未 push、未 deploy。

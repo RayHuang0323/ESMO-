@@ -65,13 +65,21 @@ const majorOrigin = { schema: origin.ORIGIN_VERSION, kind: origin.ORIGIN_KINDS.f
 // ── §S 來源分類 ────────────────────────────────────────────────────────────
 console.log("\n§S 來源分類（三層，MOBA / CS 共用一份）");
 
-/** 「三層分得出來」的判準——sentinel 會拿同一個判準去測變異版。 */
+/**
+ * 「來源分得出來」的判準——sentinel 會拿同一個判準去測變異版。
+ *
+ * ⚠ 2026-08-26（V0D / TD-36）：最後一行原本是 `null ⇒ practice`。
+ *   那正是 TD-36 記下來要修的東西——把「查不到來源」與「玩家真的在打練習賽」
+ *   當成同一件事，於是 `practice` 的倍率永遠動不了。
+ *   V0D 讓退路變成 `unknown`，`practice` 改由**明確的 practice origin** 產生。
+ *   **這是刻意的期望變更**，V0C 本來就把數值與第四層留給後續。
+ */
 function classifiesThreeTiers(mod) {
   if (!mod) return false;
   return mod.matchSourceFromOrigin(ticketOrigin) === mod.MATCH_SOURCE.competitive
     && mod.matchSourceFromOrigin(leagueOrigin) === mod.MATCH_SOURCE.official
     && mod.matchSourceFromOrigin(majorOrigin) === mod.MATCH_SOURCE.official
-    && mod.matchSourceFromOrigin(null) === mod.MATCH_SOURCE.practice;
+    && mod.matchSourceFromOrigin(null) === mod.MATCH_SOURCE.unknown;
 }
 {
   ck("S1) 三層來源存在且語意明確（practice / competitive / official）",
@@ -82,10 +90,13 @@ function classifiesThreeTiers(mod) {
     classifiesThreeTiers(ms),
     ms ? `ticket→${ms.matchSourceFromOrigin(ticketOrigin)}｜league→${ms.matchSourceFromOrigin(leagueOrigin)}｜major→${ms.matchSourceFromOrigin(majorOrigin)}` : "");
 
-  ck("S3) 沒有 origin ⇒ practice（保守，不是慷慨）",
-    ms ? ms.matchSourceFromOrigin(null) === ms.MATCH_SOURCE.practice
-      && ms.matchSourceFromOrigin(undefined) === ms.MATCH_SOURCE.practice
-      && ms.matchSourceFromOrigin({}) === ms.MATCH_SOURCE.practice : false);
+  //  ⚠ V0D / TD-36：退路從 `practice` 改成 `unknown`（理由見上面的判準函式）。
+  //    方向沒有變——查不到來源時仍然給一個**不會多發**的層級，
+  //    只是不再拿「快速練習」這個產品模式去承擔資料遺失。
+  ck("S3) 沒有 origin ⇒ unknown（查不到 ≠ 練習賽；TD-36 已解）",
+    ms ? ms.matchSourceFromOrigin(null) === ms.MATCH_SOURCE.unknown
+      && ms.matchSourceFromOrigin(undefined) === ms.MATCH_SOURCE.unknown
+      && ms.matchSourceFromOrigin({}) === ms.MATCH_SOURCE.unknown : false);
 
   //  ⚠ 只掃**程式碼**，不掃註解。本檔的註解本來就寫著「不得靠 route / stage 猜」，
   //    連註解一起掃會掃到自己那句話——那會逼人刪掉說明，正好與目的相反。

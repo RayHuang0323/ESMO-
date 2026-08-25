@@ -722,7 +722,8 @@ injury 也不得再成為出賽資格條件。
 
 > ⚠ 原訂 target「Training 40 / Formal 35 / Ranked 15 / Practice 10」**沒有達成，且刻意不追**。
 > 那組數字是 Season vNext 設計初稿的早期參考值，前提是四層比賽都已存在。
-> 現況：快速練習**入口未實作**（0% 是正確的），Ranked **不做**（Q3 FINAL：契約 only），
+> 現況：快速練習**刻意 0%**（V0D 已上入口，但它是純測試場，設計上就不給成長），
+> Ranked **不做**（Q3 FINAL：契約 only），
 > 而競技比賽因為體力經濟幾乎排不進場（**TD-38**）。
 > ⇒ 在快速練習與體力經濟落地之前，強行湊比例只能靠把 `competitive` 倍率調高，
 > 而實測那會直接做出「刷比賽＝最佳養成法」（base 1.5 時純刷 81% > 認真訓練 75%）。
@@ -730,8 +731,21 @@ injury 也不得再成為出賽資格條件。
 
 **Foundation 之後**
 
+- **V0D** 快速練習模式 ＋ TD-36 — ✅ **已完成 2026-08-26**
+  （第三種 `MatchOrigin`：`practice`；第三個生產者 `matchmaking/practiceGateway.js`，
+   與另外兩個閘道共用同一條管線；`MATCH_SOURCE.unknown` 把「查不到來源」
+   與「明確是練習」分開 ⇒ TD-36 已解、`sourceBase.practice` 可以歸零；
+   入口是 MOBA / CS 共用 `MatchPrepFrame` 的一顆次要按鈕；
+   `check_practice_match_v0d` 67/67）
+  > 快速練習＝**純測試場**：不給成長、不給錢、不給粉絲、不計戰績、不扣體力、
+  > 不推進日曆、不碰賽季。它的產品價值是「試新人／試陣容／試位置／試戰術」，
+  > **刻意沒有任何可累積的收益**——所以不存在「刷練習比較划算」這種問題。
+
 V1 Career Clock → V2 Time Block → V3 大顆時間操作 → V4 Lifecycle →
 V5 Off-season → V6 AI turnover → V7 Online Event contract
+
+> **NEXT = V1 Career Clock。** 它是「老將可以被長期磨到上限」（Foundation
+> Calibration 未解項）與 TD-34（世界時間只靠訓練推進）的共同根本解法。
 
 ---
 

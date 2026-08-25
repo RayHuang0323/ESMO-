@@ -146,13 +146,17 @@ ck("S2) 正式季賽 > 競技比賽（場次由賽程決定，刷不了 ⇒ 可�
 ck("S3) 競技比賽維持 1.0：玩家自己排隊能刷，倍率不得高於訓練",
   SB.competitive === 1.0 && SB.competitive <= SB.training);
 
-//  ⚠ 這一條不是「還沒調」。快速練習**入口尚未實作**，
-//    目前唯一會落到 practice 的是「交易單沒帶 origin」（舊存檔／debug harness）。
-//    現在把 practice 調低 = 把**資料遺失**變成一個看不見的成長懲罰。
-//    真正該有 explicit practice origin 之後才能分開，見 TD-36。
-ck("S4) practice 仍等於 competitive：目前它是『拿不到來源』的退路，不是產品模式",
-  SB.practice === SB.competitive,
-  `practice=${SB.practice} —— 快速練習有 explicit origin 之前不得調低（TD-36）`);
+//  ⚠ 2026-08-26 更新（V0D / TD-36）：這一條原本斷言 `practice === competitive`，
+//    理由是「快速練習沒有入口，practice 只是拿不到 origin 的退路，調低它等於
+//    懲罰資料遺失」。V0D 已經把兩者分開——`unknown` 接手了退路，
+//    `practice` 只由**明確的 practice origin** 產生 ⇒ 那個顧慮消失，可以歸零。
+//    **這是刻意的期望變更**，不是把紅燈調綠；原本那條的理由現在由 S4b 承接。
+ck("S4) practice 為 0：快速練習是純測試場，不給永久成長",
+  SB.practice === 0, `practice=${SB.practice}`);
+
+ck("S4b) `unknown` 維持中性 1.0：資料遺失不得變成隱形懲罰（TD-36 的實際守則）",
+  SB.unknown === 1.0 && SB.unknown === SB.competitive,
+  `unknown=${SB.unknown} competitive=${SB.competitive}`);
 
 ck("S5) careerGrowthFactor 真的把 source base 乘進去",
   (() => {
@@ -428,15 +432,16 @@ ck("R3) 兩條 authoritative 結算路徑都從 session 讀 origin（不猜畫�
 ck("R4) 結算不從 route / 畫面名稱 / stage 推來源",
   !/location|window\.location|screenName|routeName|STAGE_/.test(codeOnly(read(P_CSSETTLE))));
 
-//  ⚠ 這一條是 §S4 的另一面。目前 `practice` 唯一的來路是「拿不到 origin」，
-//    所以 practice 的倍率必須是中性的——否則資料遺失會變成隱形懲罰。
+//  ⚠ 2026-08-26 更新（V0D / TD-36）：這兩條原本斷言「無 origin ⇒ practice」，
+//    而那正是 TD-36 記下來要修的東西。V0D 之後退路是 `unknown`，
+//    守則不變、承接者換人：**殘餘的無 origin 路徑必須行為中性。**
 ck("R5) 殘餘的無 origin 路徑（debug harness）是**行為中性**的，不是隱形懲罰",
-  career.PCGM_PARAMS.sourceBase[matchSource.MATCH_SOURCE.practice]
+  career.PCGM_PARAMS.sourceBase[matchSource.MATCH_SOURCE.unknown]
     === career.PCGM_PARAMS.sourceBase[matchSource.MATCH_SOURCE.competitive]);
 
-ck("R6) 無 origin 仍然分類為 practice（保守方向沒有被本輪改掉）",
-  matchSource.matchSourceFromOrigin(null) === matchSource.MATCH_SOURCE.practice
-  && matchSource.matchSourceFromOrigin(undefined) === matchSource.MATCH_SOURCE.practice);
+ck("R6) 無 origin 分類為 unknown，**不再等同於快速練習**（TD-36 已解）",
+  matchSource.matchSourceFromOrigin(null) === matchSource.MATCH_SOURCE.unknown
+  && matchSource.matchSourceFromOrigin(undefined) === matchSource.MATCH_SOURCE.unknown);
 
 // ════════════════════════════════════════════════════════════════════════════
 //  §M mutation sentinel：把改動還原，對應的檢查必須自己變紅

@@ -137,6 +137,11 @@ import {
   canEnterMatch as canEnterMatchOf, waitedSeconds, stateLabel,
 } from "./contracts/matchmaking.js";
 import { pollGateway, openRoom, pollRoom, openSession } from "./matchmaking/mockGateway.js";
+//  V0D：快速練習是**第三個 origin 生產者**（與賽程閘道平行），不是第三條管線。
+import {
+  issuePracticeMatch, openRoomForPractice, openSessionForPractice, isPracticeAssignment,
+} from "./matchmaking/practiceGateway.js";
+import { ORIGIN_KINDS } from "./contracts/matchOrigin.js";
 import {
   SESSION_STATES, CONNECTION_STATES, consumeLaunchToken, validateSession, cancelSession,
   sessionStateLabel, isSessionExpired, isSessionTerminal,
@@ -1789,6 +1794,20 @@ export const useProfileStore = create((rawSet, get) => {
     const fixtureId = fa?.origin?.fixtureId ?? null;
     return { inFixture: !!fixtureId, fixtureId };
   },
+  /**
+   * V0D：目前這條流程是不是**快速練習**。
+   *
+   * ⚠ 判斷一律讀 `MatchOrigin`（房間／場次／指派單三者任一即可），
+   *   **不得靠畫面名稱或路由猜**——那正是 V0C 明文禁止的事。
+   *   畫面要判斷「現在在練習」就吃這一份，不要各自比對 kind 字串。
+   */
+  matchPracticeContext() {
+    const mm = get().matchmaking ?? {};
+    const kindOf = (x) => x?.origin?.kind ?? null;
+    const inPractice = [mm.session, mm.room, mm.practiceAssignment]
+      .some((x) => kindOf(x) === ORIGIN_KINDS.practice);
+    return { inPractice };
+  },
   /** 賽事總覽（畫面唯一入口；不得自己算積分榜或自己找下一場）。 */
   competitionView(mode = DEFAULT_GAME_MODE) {
     assertGameMode(mode);
@@ -2289,6 +2308,60 @@ export const useProfileStore = create((rawSet, get) => {
     get().save();
     return true;
   },
+  // ── Season vNext V0D：快速練習 ───────────────────────────────────────
+  /**
+   * 開始一場快速練習。**純測試場**：不給成長、不給錢、不給粉絲、
+   * 不計戰績、不扣體力、不推進日曆。
+   *
+   * ⚠ 這**不是**第二條進場流程。它與 `startFixtureMatch` 的形狀完全相同：
+   *   簽發指派單 → 開房 → 交給既有的 poll / confirm / session / launch。
+   *   之後的 Battle / Result / 結算一行都不分岔。
+   *
+   * ⚠ 練習**不繞過出賽資格**：陣容不合法就開不了。「試新人」是把新人排進
+   *   陣容，不是無視陣容規則。
+   */
+  startPracticeMatch(mode = DEFAULT_GAME_MODE, now = Date.now()) {
+    //  ── 一次只能有一場進行中的對戰（與 startFixtureMatch 同一條規則）──────
+    //  少了這一條，玩家可以在一場正式賽進行中開一場練習，
+    //  而下面的 `set()` 會把 `session` 換掉 ⇒ 正式賽那一場**無聲消失**。
+    const mmNow = get().matchmaking ?? {};
+    const cur = mmNow.session ?? null;
+    const liveSession = !!cur && !isSessionTerminal(cur) &&
+      (cur.state === SESSION_STATES.launched || !isSessionExpired(cur, now));
+    if (liveSession) {
+      const opp = cur.opponent?.name ?? null;
+      const message = `你有一場進行中的對戰${opp ? `（對手：${opp}）` : ""}，請先打完或放棄那一場`;
+      return { ok: false, errors: [{ code: "live_session", message }], reason: message };
+    }
+
+    const entry = get().matchEntry(mode);
+    const issued = issuePracticeMatch({
+      entryRequest: entry.request,
+      players: get().players ?? [],
+      now,
+    });
+    if (!issued.ok) return { ok: false, errors: issued.errors, reason: issued.reason };
+
+    const room = openRoomForPractice({ assignment: issued.assignment, now });
+    if (!room.ok) return { ok: false, errors: room.errors, reason: room.errors[0]?.message ?? null };
+
+    set({
+      matchmaking: {
+        ...mmNow,
+        //  ⚠ 練習路徑沒有票券，也不屬於任何賽程。兩者都要清掉，
+        //    否則 `pollMatchRoom` 會拿不相干的票券來判定這個房間該不該關，
+        //    `matchFixtureContext` 也會誤判成「還在某場賽程裡」。
+        ticket: null,
+        fixtureAssignment: null,
+        practiceAssignment: issued.assignment,
+        room: room.room,
+        session: null,
+        launch: null,
+      },
+    });
+    get().save();
+    return { ok: true, errors: [], reason: null, assignment: issued.assignment, room: room.room };
+  },
   // ── Milestone O5：比賽房間與雙方確認 ─────────────────────────────────
   /**
    * 開房（由 mock gateway 簽發 roomId 與簽發者；客戶端不得自己造房間）。
@@ -2324,11 +2397,14 @@ export const useProfileStore = create((rawSet, get) => {
     const ticket = mm.ticket ?? null;
     if (!room || isRoomTerminal(room)) return { changed: false, room };
     //  Q3：賽程來源的房間**沒有票券**（`room.ticketId` 依契約為 null）。
-    //  下面那道票券檢查是給排隊路徑用的，套到賽程房間會一開就把它關掉。
-    //  賽程房間的有效性由賽程狀態決定，不由票券決定。
-    const isFixtureRoom = room.origin?.kind === "fixture";
+    //  下面那道票券檢查是給排隊路徑用的，套到沒有票券的房間會一開就把它關掉。
+    //  ⚠ V0D：判斷改成「**這是不是票券房間**」，而不是「是不是賽程房間」。
+    //    原本的寫法是「非 fixture ⇒ 檢查票券」，快速練習房間（第三種來源）
+    //    會直接落進去 ⇒ 沒有票券 ⇒ 開房當下就被判定「票券已失效」而關閉。
+    //    以後再多一種非票券來源也自動被涵蓋。
+    const isTicketRoom = room.origin?.kind === ORIGIN_KINDS.ticket;
     //  票券失效（被取消／被拒絕／換了新票）⇒ 房間不得繼續
-    if (!isFixtureRoom && (!ticket || ticket.state !== TICKET_STATES.matched || room.ticketId !== ticket.ticketId)) {
+    if (isTicketRoom && (!ticket || ticket.state !== TICKET_STATES.matched || room.ticketId !== ticket.ticketId)) {
       const dead = transitionRoom(room, ROOM_STATES.cancelled, { now, reason: "票券已失效，房間關閉" });
       if (dead.ok) { set({ matchmaking: { ...mm, room: dead.room } }); get().save(); }
       return { changed: dead.ok, room: dead.room ?? room };
@@ -2376,11 +2452,15 @@ export const useProfileStore = create((rawSet, get) => {
       && (isActiveMatch(cur) || !isSessionExpired(cur, now))) {
       return { ok: true, session: cur, errors: [], reused: true };
     }
-    //  Q3：賽程房間走賽事閘道（沒有票券可用）。兩條路都呼叫同一個
-    //  `contracts/matchSession.js` 的 `createSession`，不是兩套場次。
-    const made = mm.room?.origin?.kind === "fixture"
+    //  依**來源種類**分派到三個閘道之一。⚠ 三條路都呼叫同一個
+    //  `contracts/matchSession.js` 的 `createSession`，**不是三套場次**——
+    //  它們是三個伺服器實作對同一份契約，之後的 launch/battle/result 完全共用。
+    const kind = mm.room?.origin?.kind ?? null;
+    const made = kind === ORIGIN_KINDS.fixture
       ? openSessionForFixture({ room: mm.room, assignment: mm.fixtureAssignment ?? null, now })
-      : openSession({ room: mm.room ?? null, ticket: mm.ticket ?? null, now });
+      : kind === ORIGIN_KINDS.practice
+        ? openSessionForPractice({ room: mm.room, assignment: mm.practiceAssignment ?? null, now })
+        : openSession({ room: mm.room ?? null, ticket: mm.ticket ?? null, now });
     if (!made.ok) return { ok: false, session: null, errors: made.errors };
     //  ── CS Season M4-A：series 場次開場時建立 series 狀態 ─────────────────
     //  ⚠ 賽制來自 **fixture 的 `matchFormat`**，不是呼叫端說了算：一個 BO3

@@ -194,6 +194,25 @@ export default function MatchPrepFrame({
             }}>
             {act.label}
           </button>
+
+          {/*  V0D：快速練習。**次要按鈕**，只在閒置且陣容就緒時出現。
+               ⚠ 它與上面那顆共用同一條流程——按下去之後的配對／確認／進場
+               全部走既有的 effect；MOBA 與 CS 因為共用本元件而自動都有，
+               不需要在兩邊各做一顆。 */}
+          {flow.canStartPractice && (
+            <button onClick={flow.startPractice}
+              data-testid="prep-start-practice"
+              style={{
+                width: "100%", borderRadius: 12, padding: "11px 12px",
+                fontSize: 12.5, fontWeight: 800, cursor: "pointer",
+                maxWidth: "100%", boxSizing: "border-box",
+                background: "rgba(255,255,255,0.06)", color: "#a1a1aa",
+                border: `1px dashed ${GC.line}`,
+              }}>
+              🧪 快速練習 · 不影響戰績與數值
+            </button>
+          )}
+
           {err && <div style={{ color: "#f87171", fontSize: 10.5, marginTop: 6 }}>⚠ {err}</div>}
         </div>
       </div>

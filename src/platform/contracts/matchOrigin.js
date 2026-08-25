@@ -26,15 +26,25 @@
 
 export const ORIGIN_VERSION = "MatchOrigin.v1";
 
-/** 來源種類。**唯一來源**——呼叫端不得自創第三種。 */
+/**
+ * 來源種類。**唯一來源**——呼叫端不得自創第四種。
+ *
+ * · `ticket`   玩家自己排隊配到的（O4 既有路徑）
+ * · `fixture`  賽程排定的（Competition）
+ * · `practice` 快速練習（V0D）。**純測試場**：不給成長、不給獎勵、不計戰績。
+ *              它是**第三個生產者**，不是第三條管線——見
+ *              `matchmaking/practiceGateway.js`，之後的 Room / Session /
+ *              Launch / Battle / Result / 結算全部共用既有那一條。
+ */
 export const ORIGIN_KINDS = Object.freeze({
   ticket: "ticket",
   fixture: "fixture",
+  practice: "practice",
 });
 
 /** 中文顯示名（畫面與錯誤訊息共用，避免兩套說法）。 */
 export function originKindLabel(kind) {
-  return ({ ticket: "排隊配對", fixture: "賽程排定" })[kind] ?? kind;
+  return ({ ticket: "排隊配對", fixture: "賽程排定", practice: "快速練習" })[kind] ?? kind;
 }
 
 /** FNV-1a → 8 位十六進位（與 matchEntry / matchmaking 同一套決定性雜湊手法）。 */
@@ -111,6 +121,39 @@ export function originFromFixture(fixture, entryRequest) {
 }
 
 /**
+ * 由快速練習建立來源（V0D）。
+ *
+ * ⚠ 練習**沒有票券也沒有賽程**，但仍然要有一份出賽申請單——
+ *   「試陣容」也要先有一套合法陣容，否則就成了繞過出賽資格的後門。
+ *   `originId` 由申請單的 `transactionId` 推導 ⇒ 同一套陣容在同一天
+ *   得到同一場練習（決定性；對手與 seed 也因此固定）。
+ *
+ * ⚠ 練習來源與票券來源同一條規則：**不得帶任何賽事欄位**。
+ */
+export function originFromPractice(entryRequest) {
+  if (!entryRequest?.transactionId) {
+    return { ok: false, origin: null, errors: [{ code: "entry", message: "缺少出賽申請單，無法建立快速練習來源" }] };
+  }
+  return {
+    ok: true,
+    errors: [],
+    origin: {
+      schema: ORIGIN_VERSION,
+      kind: ORIGIN_KINDS.practice,
+      originId: `practice:${entryRequest.transactionId}`,
+      mode: entryRequest.mode,
+      entryTransactionId: entryRequest.transactionId,
+      rosterVersion: entryRequest.rosterVersion ?? null,
+      teamId: entryRequest.teamId ?? null,
+      //  賽事專屬欄位在練習來源一律為 null
+      competitionId: null,
+      stageId: null,
+      fixtureId: null,
+    },
+  };
+}
+
+/**
  * 驗證來源。
  *
  * 與 `validateAssignment` 同一條界線：來源只說「這場比賽從哪來」，
@@ -130,9 +173,12 @@ export function validateOrigin(o) {
     if (!o.stageId) errors.push({ code: "stage", message: "賽程來源缺少賽段識別碼" });
     if (o.fixtureId !== o.originId) errors.push({ code: "fixture_id", message: "賽程來源的 fixtureId 必須等於 originId" });
   }
-  if (o.kind === ORIGIN_KINDS.ticket) {
+  //  ⚠ V0D：這一條原本只套在 `ticket`。練習來源同樣不是賽事來源，
+  //    規則一樣 ⇒ 改成「不是 fixture 就不得帶賽事欄位」，
+  //    以後再多一種非賽事來源也自動被涵蓋。
+  if (o.kind && o.kind !== ORIGIN_KINDS.fixture) {
     if (o.competitionId || o.stageId || o.fixtureId) {
-      errors.push({ code: "ticket_origin_leak", message: "票券來源不得帶賽事欄位" });
+      errors.push({ code: "ticket_origin_leak", message: `${originKindLabel(o.kind)}來源不得帶賽事欄位` });
     }
   }
 
