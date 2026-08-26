@@ -13882,3 +13882,18 @@ Release checklist 寫的就是旗標，不是網址參數。
 - C3 保留既有 P0／C2C contract。最新 Battle runtime 為 A Site `65`、Mid `72`、Connector `56` meshes；environment `193 meshes / 2,996 triangles / 21 material families`；10/10 rigged、Blue／Red 5v5。
 - Static gates：Renderer `24/24`、CS-A2 `10/10`、C2A `13/13`、C2B `14/14`、CS23 `28/28`、Camera `8/8`、RAF `7/7`、StableCanvas `5/5`、C2C `9/9`、C3 `18/18`，全 PASS。Production build、Battle smoke、180 秒 long-run 亦 PASS；long-run `1,727` samples、geometry shifts `0`、stale mismatch `0`、duplicate RAF/render `0`、camera recovery `9`、rapid recovery `0`、browser errors `0`。
 - Pages workflow `33006989567`（head `cfd7d68`）success；正式站 production Battle smoke PASS（canvas `430x507`、三個 camera preset controls 可用、console/page errors `0`）。C3 正式標記為 `C3_CLOSED / OWNER_ACCEPTED`；下一階段不在本 Sprint 開工。
+## Sprint CS-C4B｜兩張 CS 地圖環境完成（2026-08-27）
+
+- **目標**：以 Mirage C3/C4A 已驗證的 environment production method 完成 Dust II 與 Inferno，保持 map-specific identity，不複製 Mirage placement/造型。
+- **完成**：Dust II 沙岩／塵土／藍綠導視，完成 A/B Site、Mid、Long、B Tunnel、Catwalk、spawns 與 connectors；Inferno 陶土／紅瓦／橄欖綠，完成 A/B Site、Banana、Arch、Apartments、B Top、Pit/Cemetery、spawns 與 connectors。
+- **保護**：environment 僅掛入 presentation group；未改 `map.walls`、raycast/gameplay、weapon stats、MatchSession、Competition、Training 或 C2C character/animation。
+- **效能**：Mirage 333/4,736、Dust II 235/3,134、Inferno 288/3,998 environment mesh/estimated triangles；各圖使用 geometry cache 與有限 material family。
+- **驗證**：Renderer 24/24、CS-A2 10/10、C2A 13/13、C2B 14/14、CS23 28/28、Camera 8/8、RAF 7/7、StableCanvas 5/5、C2C 9/9、C3 18/18、C4A 13/13、C4B 20/20；browser map 3/3、production build、desktop/mobile smoke、180 秒 long-run 全 PASS。
+- **狀態**：`C4B_TWO_MAPS_READY_FOR_OWNER_ACCEPTANCE`；未 merge、未 push、未 deploy；下一階段 C5 不啟動。
+
+## CS-C4B / C4 正式收尾（Owner accepted）
+
+- 狀態：`OWNER_ACCEPTED / CLOSED`
+- 以最新 `origin/main` 為基線整合已驗收的 Mirage、Dust II、Inferno environment；只保留必要的 C4B source、verifier、Owner Review 與 handoff 變更。
+- 完成完整 regression、production build、Battle/browser smoke、390px smoke、三圖 map/camera/character visibility 與 180 秒 long-run 後才進行 main push、Pages deploy。
+- 未開始 C5，未變更 gameplay、weapon stats、Competition、Training、Season 或無關 technical debt。

@@ -6,6 +6,8 @@ const CDP_PORT = 9393;
 const EXTERNAL_APP = process.env.CS_P0_APP_URL || null;
 const PRODUCTION_SMOKE = process.env.CS_P0_PRODUCTION_SMOKE === "1";
 const MATCH_SPEED = process.env.CS_P0_MATCH_SPEED || "4";
+const VIEWPORT_WIDTH = Number(process.env.CS_P0_VIEWPORT_WIDTH || 1366);
+const VIEWPORT_HEIGHT = Number(process.env.CS_P0_VIEWPORT_HEIGHT || 768);
 const APP = EXTERNAL_APP || `http://localhost:${VITE_PORT}/ESMO-/`;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -85,7 +87,7 @@ let chrome = null;
 try {
   if (!EXTERNAL_APP) dev = await startDevServer({ port: VITE_PORT });
   chrome = await launchChrome({ url: APP, port: CDP_PORT, headless: true });
-  await chrome.send("Emulation.setDeviceMetricsOverride", { width: 1366, height: 768, deviceScaleFactor: 1, mobile: false });
+  await chrome.send("Emulation.setDeviceMetricsOverride", { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT, deviceScaleFactor: 1, mobile: VIEWPORT_WIDTH <= 600 });
   await chrome.navigate(APP);
   await enterMirageBattle(chrome);
   await chrome.evaluate(`document.querySelector('[data-testid="match-speed-${MATCH_SPEED}"]')?.click(); return true;`);

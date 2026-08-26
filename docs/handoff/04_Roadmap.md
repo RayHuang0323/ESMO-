@@ -656,3 +656,15 @@ injury 也不得再成為出賽資格條件。
 
 這些要站在**現在保留下來的** `age` / `potential` / `learning` / `growthLog` 上，
 所以那些欄位與公式在本輪一條都沒有動，並由 `check_no_player_injury` 反向釘住。
+## CS-C4B｜兩張地圖環境完成（2026-08-27）
+
+- 狀態：`C4B_TWO_MAPS_READY_FOR_OWNER_ACCEPTANCE`。
+- 已把 Mirage C3/C4A 的 environment production framework 延伸到 Dust II 與 Inferno；三張地圖共享 presentation framework，但保留 map-specific visual identity，避免未來把所有地圖做成同一張換色。
+- Owner review：`http://127.0.0.1:5412/ESMO-/artifacts/cs-c4b/two-maps/owner-review.html`。
+- 下一階段：C5（僅列 roadmap，不在本輪實作）；開始前應先完成 C4B Owner acceptance，並另行定義 C5 範圍。
+
+## CS-C4B / C4 正式關閉
+
+- `C4B_TWO_MAPS = OWNER_ACCEPTED / CLOSED`
+- Mirage、Dust II、Inferno 三張地圖已完成共用 environment production framework 的正式整合與部署驗證，同時保留各自 visual identity。
+- 下一階段建議：C5（另行定義範圍後開始）；本次不實作 C5。
