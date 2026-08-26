@@ -145,7 +145,10 @@ import { ORIGIN_KINDS } from "./contracts/matchOrigin.js";
 //  V1：世界時間契約（推進理由白名單、活動→時間成本、生涯年度邊界）。
 import {
   ADVANCE_REASONS, isAdvanceReason, careerYearOf, CAREER_YEAR,
+  COMPETITIVE_BLOCK, competitiveBlockOf,
 } from "./time/worldClock.js";
+//  V2：跨生涯年度時把年齡往前推。觸發點只有 `advanceDay`（唯一時鐘）。
+import { applyCareerYearRollover, careerYearNotice } from "./time/careerYearRollover.js";
 import {
   SESSION_STATES, CONNECTION_STATES, consumeLaunchToken, validateSession, cancelSession,
   sessionStateLabel, isSessionExpired, isSessionTerminal,
@@ -989,7 +992,20 @@ export const useProfileStore = create((rawSet, get) => {
         return { ...done, growthLog: appendGrowth(p.growthLog, entry) };
       }),
     }));
-    set(nextState);
+    //  ── Season vNext V2：跨生涯年度 ⇒ age +1 ────────────────────────────
+    //  ⚠ **折進 `nextState`，在同一個 `set()` 裡完成**。分兩次寫會出現
+    //    「時間已經走了、年齡還沒走」的中間狀態，而那正是 `advanceDay`
+    //    檔頭承諾過的「錢、合約、帳本、時間一次寫完」要避免的事。
+    //  ⚠ 觸發點只有這裡。賽季 rollover **不得**推動年齡——兩個項目各換一次季
+    //    就會把年齡推兩次，而不打季賽的人永遠不老。
+    //  ⚠ 跨越用**年度編號差**，不是「天數差 / 84」：Day 84 → 85 跨 1 個年度，
+    //    但 (85−84)/84 = 0。詳見 careerYearRollover.js。
+    const rolled = applyCareerYearRollover(nextState, {
+      fromDay,
+      toDay: Number(nextState.meta?.days) || fromDay,
+    });
+    set(rolled.state);
+    if (rolled.yearsCrossed > 0) get().pushInbox(careerYearNotice(rolled));
     //  收件匣通知（合約到期／即將到期）由這裡發：pushInbox 會用 Date.now 產 id，
     //  屬於不決定性的部分，所以純 reducer 只回傳 notices，不自己寫 inbox。
     for (const r of receipts) for (const note of r.notices ?? []) get().pushInbox(note);
@@ -1873,6 +1889,22 @@ export const useProfileStore = create((rawSet, get) => {
    *   **不得靠畫面名稱或路由猜**——那正是 V0C 明文禁止的事。
    *   畫面要判斷「現在在練習」就吃這一份，不要各自比對 kind 字串。
    */
+  /**
+   * V2：今天的競技時間區塊還剩幾格。**畫面與流程的單一讀取點。**
+   *
+   * ⚠ 區塊掛在 `meta`（俱樂部層級），**不是每個項目一份**——
+   *   否則切到另一個模式就能再拿一份配額。
+   */
+  competitiveBlockView() {
+    return competitiveBlockOf(get().meta?.competitiveBlock ?? null, Number(get().meta?.days) || 1);
+  },
+  /** 測試／驗證用：直接設定今天用掉幾格。正式流程一律由結算扣。 */
+  _setCompetitiveBlockUsed(used) {
+    const day = Number(get().meta?.days) || 1;
+    set({ meta: { ...(get().meta ?? {}), competitiveBlock: { day, used: Math.max(0, Math.floor(Number(used) || 0)) } } });
+    get().save();
+    return get().competitiveBlockView();
+  },
   matchPracticeContext() {
     const mm = get().matchmaking ?? {};
     const kindOf = (x) => x?.origin?.kind ?? null;
@@ -2289,6 +2321,22 @@ export const useProfileStore = create((rawSet, get) => {
     const cur = get().matchmaking?.ticket ?? null;
     if (isActiveTicket(cur)) {
       return { ok: false, ticket: cur, errors: [{ code: "already_queued", message: `已有一張進行中的票券（${stateLabel(cur.state)}），請先取消` }] };
+    }
+    //  ── Season vNext V2：競技時間區塊 ─────────────────────────────────────
+    //  一個世界日只有 N 場競技容量。打滿了要再打，就得自己推進日曆
+    //  ⇒ 刷 XP 必然要付出世界時間，但競技比賽**本身一天都不加**
+    //    （所以愛打的人不會比不打的人老得快）。
+    //  ⚠ 檢查在排隊、扣格子在結算：排了又取消不該白白吃掉一格。
+    //  ⚠ 快速練習走的是 `startPracticeMatch`，**不經過這裡**，不吃容量。
+    const block = get().competitiveBlockView();
+    if (block.remaining <= 0) {
+      return {
+        ok: false, ticket: null,
+        errors: [{
+          code: "competitive_block_full",
+          message: `今天的競技場次已用滿（${block.used}/${block.capacity} 場），推進一天之後可以再打`,
+        }],
+      };
     }
     const entry = get().matchEntry(mode);
     if (!entry.ok) return { ok: false, ticket: null, errors: entry.errors };

@@ -64,24 +64,75 @@ export const isAdvanceReason = (r) => typeof r === "string" && r in ADVANCE_REAS
 export const isProductionAdvance = (r) => PRODUCTION_REASONS.includes(r);
 
 /**
- * 活動 → 消耗幾天世界時間。
+ * 活動 → **額外**消耗幾天世界時間。
  *
- * ⚠ `competitive: null` 是**明確未定案**，不是漏填也不是 0。
- *   產品要求「一般競技比賽未來要能合理消耗時間，但不要簡單做成打一場 = +1 天」
- *   ⇒ 真正的成本要等 V2 Time Block 才有 Block 可言。用 `null` 而不是 0，
- *   是為了讓之後的人分得出「決定不消耗」與「還沒決定」。
+ * ⚠ `competitive: 0` 是 **V2 決定的結果**，不是「還沒填」。
+ *   V1 時這一格是 `null`（明確未定案）。V2 實跑比較過四種做法：
+ *
+ *     做法                  凍齡？  一年打 100 場額外老幾天   需要新增什麼
+ *     A 每場 +1 天           擋住    +100 天（年度的 119%）   比賽結算要**寫時鐘**
+ *     B 每 N 場自動 +1 天     有界    +33 天（39%）           比賽結算要**寫時鐘**
+ *     C 每日容量 N 場         擋住    **+0 天**               一個「今天用了幾格」的計數器
+ *     D 競技點數條           有界    +0 天                   一條與體力平行的新資源
+ *
+ *   A / B 讓「愛打競技的人老得特別快」（實測一年多老 84 天），而且**都要在比賽
+ *   結算裡推時鐘 ⇒ 第二個時間推進者**，違反 V1 立的規則。D 要再養一條與體力
+ *   平行的疲勞資源。⇒ **選 C**：時間不是「一場比賽的價格」，而是
+ *   「**一個世界日裡能做多少事**」，成本落在 `COMPETITIVE_BLOCK` 而不是這裡。
  *
  * ⚠ `official: 0` 不是「正式賽不重要」：賽程日是**日曆帶到**的
  *   （`absoluteDayOf` = 賽季起始日 + 賽程日 − 1），不是比賽去推日曆。
- *   反過來做會讓賽程與世界日期互相追著跑。
+ *   反過來做會讓賽程與世界日期互相追著跑，而且一個 BO3 會重複加天。
  */
 export const WORLD_TIME_COST = Object.freeze({
   training: 1,
   rest: 1,
   practice: 0,
   official: 0,
-  competitive: null,
+  competitive: 0,
 });
+
+/**
+ * 一般競技比賽的**時間區塊**（V2）。
+ *
+ * 「一個世界日 = 一個競技時段，時段裡有 N 場容量。」
+ * 打滿之後要再打，就得自己推進日曆（走 V1 的 `advanceWorldDays`）
+ * ⇒ 刷 XP 必然要付出世界時間，但**不會比不打的人老得快**。
+ *
+ * ⚠ `matchesPerDay` 是**唯一**的容量常數，balance 之後只改這一處。
+ *   目前 3：一個世界日的競技量約等於一次訓練時段，
+ *   而體力天花板本來就在 5 場／日 ⇒ 容量會先於體力生效（配額才有意義）。
+ * ⚠ 這不是第二條疲勞：它不消耗體力、也不被體力消耗，兩者各自獨立生效。
+ * ⚠ V3「大顆時間操作」可以把一個區塊拉長成多天，屆時只需要改這裡的語意，
+ *   不必動結算或時鐘。
+ */
+export const COMPETITIVE_BLOCK = Object.freeze({
+  matchesPerDay: 3,
+});
+
+/**
+ * 今天的競技容量還剩多少。
+ *
+ * ⚠ **跨日自動歸零**：容量是「(哪一天, 用了幾格)」的推導結果，
+ *   不需要在 `advanceDay` 裡寫重置程式——少一個會忘記維護的地方。
+ * ⚠ 舊存檔沒有這個欄位 ⇒ 視為「今天還沒用過」，不阻擋任何人。
+ *
+ * @param {{day:number, used:number}|null} stored `meta.competitiveBlock`
+ * @param {number} day 目前的 `meta.days`
+ */
+export function competitiveBlockOf(stored, day) {
+  const today = Math.max(1, Math.floor(Number(day) || 1));
+  const used = stored && Number(stored.day) === today
+    ? Math.max(0, Math.floor(Number(stored.used) || 0))
+    : 0;
+  const capacity = COMPETITIVE_BLOCK.matchesPerDay;
+  return {
+    day: today,
+    used: Math.min(used, capacity),
+    capacity,
+    remaining: Math.max(0, capacity - used),
+  };
+}
 
 /** 這個活動會不會消耗世界時間。未定案一律先當成不消耗（保守）。 */
 export const consumesWorldTime = (kind) => (Number(WORLD_TIME_COST[kind]) || 0) > 0;

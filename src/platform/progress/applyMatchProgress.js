@@ -24,7 +24,9 @@ import { deriveTime } from "../economy/timeline.js";
 import { applyMatchWear } from "../condition/playerCondition.js";
 import { applyLevelGrowth } from "./levelGrowth.js";
 import { GROWTH_SOURCES } from "./careerGrowth.js";
-import { normalizeMatchSource } from "./matchSource.js";
+import { normalizeMatchSource, MATCH_SOURCE } from "./matchSource.js";
+//  V2：競技時間區塊。只有一般競技佔容量，練習與正式季賽都不佔。
+import { competitiveBlockOf } from "../time/worldClock.js";
 import { makeGrowthEntry, appendGrowth } from "./growthLog.js";
 
 /**
@@ -68,6 +70,9 @@ export function applyProgressToState(state, tx) {
   // 5–7) 選手 XP / 升級 / 天賦點
   //    ⚠ 以 Store 的**現值**重算，不盲信 transaction 裡的 previousXp
   //      （transaction 可能是在別的狀態下建立的；receipt 必須反映真實差額）。
+  //  V0C/V2：這場的來源。**在迴圈外算一次**——快速練習送的是空的 playerProgress，
+  //  迴圈根本不會跑，來源卻仍然要拿得到（V2 的競技容量就掛在它上面）。
+  const matchSourceOfTx = normalizeMatchSource(tx.metadata?.matchSource);
   const byId = new Map(players.map((p) => [p.id, p]));
   const playerReceipts = [];
   const patched = new Map();
@@ -100,8 +105,7 @@ export function applyProgressToState(state, tx) {
     //    這是**保守**方向：查不到來源時給最低的一層，不會誤發成正式賽成長。
     //  ⚠ 目前四個來源的 base 仍一律 1.0 ⇒ 本輪**行為逐值不變**，
     //    只是從「分不出來」變成「分得出來且可獨立控制」。
-    const matchSource = normalizeMatchSource(tx.metadata?.matchSource);
-    const growth = applyLevelGrowth(me, levelsGained, { source: matchSource });
+    const growth = applyLevelGrowth(me, levelsGained, { source: matchSourceOfTx });
 
     const wear = applyMatchWear({
       ...me,
@@ -200,11 +204,24 @@ export function applyProgressToState(state, tx) {
     metadata: tx.metadata,
   };
 
+  //  ── Season vNext V2：競技時間區塊扣一格 ───────────────────────────────
+  //  只有**一般競技**佔容量：快速練習是純測試場；正式季賽的時間由日曆承擔
+  //  （一個 BO3 也只佔賽程上的那一天，不會重複加天）。
+  //  ⚠ 扣在**唯一結算入口**裡 ⇒ 直接繼承 `processedMatchTransactions` 的冪等：
+  //    同一場再結算不會扣第二格。
+  //  ⚠ 這裡**不寫時鐘**。競技比賽一天都不加，只是用掉今天的容量——
+  //    那正是不採「每場 +1 天」的理由（比較表見 `time/worldClock.js`）。
+  const dayNow = num(meta.days) || 1;
+  const blockNow = competitiveBlockOf(meta.competitiveBlock ?? null, dayNow);
+  const nextBlock = matchSourceOfTx === MATCH_SOURCE.competitive
+    ? { day: dayNow, used: blockNow.used + 1 }
+    : { day: dayNow, used: blockNow.used };
+
   const nextState = {
     players: nextPlayers,
     finance: { ...finance, funds: moneyAfter, transactions: nextTransactions },
     //  `reputation` 由 spread 原樣帶過（F0 deprecated：不再由結算寫入）。
-    meta: { ...meta, fans: fansAfter },
+    meta: { ...meta, fans: fansAfter, competitiveBlock: nextBlock },
     processedMatchTransactions: { ...processed, [tx.transactionId]: receipt },
     //  Milestone N3：把這一場的勝負追加到**統一賽績紀錄**（MOBA 與 CS 一視同仁），
     //  供經濟層的贊助績效獎金使用。勝負直接取自契約既有的 metadata.winner，

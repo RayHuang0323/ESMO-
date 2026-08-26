@@ -14590,3 +14590,114 @@ gate §A5 與 sentinel M-B 專門守這一條。
 未動 `meta.days` 的寫入點、`advanceDay` 的 D15 規則（比賽日沒收尾就走不出去）、
 `absoluteDayOf`、賽季狀態機、`fanSourceWeight.js`。
 未 push、未 deploy。
+
+---
+
+## Season vNext V2：時間區塊與年度邊界（2026-08-26）
+
+**分支** `feature/remove-player-injury`｜**起點** `e876b98`（V1 完成）
+
+本輪解兩件事：① 一般競技比賽如何合理消耗 Career Time；② 跨 84 天年度邊界時，
+年齡由哪條 authoritative path 觸發。
+
+### Audit + 模擬：四種 Time Block 做法
+
+先實跑比較（`tools/timeblock_calibration.mjs`），**沒有先硬定「打一場 = 1 天」**：
+
+| 做法 | 凍齡？ | 一年打 100 場**額外**老幾天 | 需要新增什麼 |
+|---|---|---|---|
+| A 每場 +1 天 | 擋住 | **+100 天**（年度的 119%） | 比賽結算要**寫時鐘** |
+| B 每 N 場自動 +1 天 | 有界 | +33 天（39%） | 比賽結算要**寫時鐘** |
+| **C 每日容量 N 場** | **擋住** | **+0 天** | 一個「今天用了幾格」的計數器 |
+| D 競技點數條 | 有界 | +0 天 | 一條與體力平行的新資源 |
+
+**兩個玩家都推進 84 天，一個狂打競技、一個完全不打**：
+A／B 的狂打者多走 **84 天**；C／D **一天都不差**。
+
+⇒ **選 C。** 三個理由：
+1. A／B 讓「愛打競技的人老得特別快」——正是產品明文要避免的。
+2. A／B **都要在比賽結算裡推時鐘 ⇒ 第二個時間推進者**，違反 V1 立的規則。
+   C 結構上不可能違反：它**完全不寫時鐘**。
+3. D 可行，但要再養一條與體力平行的疲勞資源 ⇒ 兩套疲勞、兩處要調。
+
+**核心轉念**：時間不是「一場比賽的價格」，而是「**一個世界日裡能做多少事**」。
+
+### 改了什麼
+
+1. **`worldClock.COMPETITIVE_BLOCK.matchesPerDay = 3`**（唯一容量常數）。
+   `WORLD_TIME_COST.competitive` 從 V1 的 `null`（明確未定案）**定案為 `0`**——
+   成本不在每一場，在每日容量。
+   ⚠ 3 的依據：體力天花板本來就在 5 場／日 ⇒ 容量會**先於**體力生效，配額才有意義。
+2. **`competitiveBlockOf(stored, day)`**（純函式）：跨日**讀取時自動歸零**，
+   不需要在 `advanceDay` 裡寫重置程式——少一個會忘記維護的地方。
+   舊存檔沒有欄位 ⇒ 視為「今天還沒用過」，不擋任何人。
+3. **檢查在排隊、扣格子在結算**：`enqueueMatch` 擋（排了又取消不該白吃一格）、
+   `applyMatchProgress` 扣（唯一結算入口 ⇒ 直接繼承 `processedMatchTransactions` 的冪等，
+   同一場再結算不會扣第二格）。
+   容量掛在 **`meta`（俱樂部層級）**，不是每個項目一份 ⇒ 切 MOBA/CS 拿不到第二份。
+4. **`platform/time/careerYearRollover.js`（新，21 行實碼，純函式）**：
+   `careerYearsCrossed(from, to)` 用**年度編號差**，不是「天數差 / 84」
+   （後者在邊界會錯：Day 84→85 是 (85−84)/84 = 0）。
+   `applyCareerYearRollover(state, {fromDay, toDay})` 是純 reducer。
+5. **age +1 已接上**：`advanceDay` 在 **同一個 `set()`** 裡折進 `nextState`
+   （分兩次寫會出現「時間走了但年齡沒走」）。觸發點**只有這裡**——
+   賽季 rollover 不得推動年齡（兩個項目各換一次季就會推兩次）。
+
+### Audit 順手抓到的既有正確行為（只釘住，沒有動）
+
+`applyMatchProgress` 裡 `matchSource` 原本算在**選手迴圈內**——而快速練習送的是
+**空的 `playerProgress`**，迴圈根本不會跑。V2 的容量掛在來源上，所以把它**提到迴圈外**
+算一次。這不是修 bug（V0C 時迴圈內就夠用），是 V2 的新需求逼出來的正確位置。
+
+### gate 抓到一個真 bug
+
+`applyCareerYearRollover` 第一版寫 `if (!Number.isFinite(Number(p?.age))) return p;`
+——**`Number(null)` 是 0（有限）**，於是 `age: null` 的舊存檔會被悄悄變成 1 歲。
+gate §G5 抓到，已改成先擋 `null` / `undefined`。
+
+### 攻擊面（全部通過）
+
+| 攻擊 | 結果 |
+|---|---|
+| 狂打競技能不能凍齡 | ❌ 不推日曆時**一天最多 3 場**，之後排不進去 |
+| 狂打競技會不會老太快 | ❌ 競技比賽**一天都不加**（`WORLD_TIME_COST.competitive === 0`） |
+| 切 MOBA / CS 各拿一份配額 | ❌ 配額掛 `meta`，兩邊都被擋 |
+| BO3／多場正式賽重複推日 | ❌ 正式季賽不吃配額、不加天，時間由賽程日曆承擔 |
+| 跨 Day 84 age +2 | ❌ 用年度編號差，84→85 恰好 1 |
+| 快速練習誤觸年度推進／吃配額 | ❌ 兩者都沒發生（實跑驗證） |
+
+### 端到端（gate §E）
+
+```
+day 83 → 84   年度內推進 ⇒ 年齡不動
+day 84 → 85   跨年度 ⇒ 年度 1 → 2；全隊 23,21,24,22,20 → 24,22,25,23,21（各 +1）
+worldTimeView 與 meta.days 一致
+```
+
+### Gate / build
+
+- **`check_time_block_v2` 47/47**（新增，含端到端 §E 與 3 個 mutation sentinel）
+- `world_time_v1` 46/46、`practice_match_v0d` 70/70、`foundation_calibration` 58/58
+- 結算與進場未受影響：`progress25` PASS、`matchmaking_o4` 48/48、
+  `matchmaking_flow_acceptance` 97/97、`authoritative_o7` 48/48、`result_flow_o71` 27/27
+- 賽事未污染：`competition_q1` 93/93、`q4` 68/68、`q6` 57/57、`cs_season_lifecycle` 54/54
+- `fan_system` 66/66、`no_player_injury` 29/29、`dev_quick_recovery` 29/29、`recruit_o` 41/41
+- `verify.mjs --only=progress25,talent27,growth_p0,growth_ui_p1,regress,regress2,build` — **7/7**
+
+⚠ build 第一次跑出現一次失敗、單跑與重跑都通過（`built in 9.87s`，exit 0）——
+判定為 OneDrive 寫檔競態（專案守則已知的既有現象），不是本輪改動。
+
+**一處斷言被刻意改寫**：`check_world_time_v1` §A5 與 sentinel M-B。
+V1 斷言 `competitive === null`（明確未定案），而**V2 就是來定案的那一輪**
+⇒ 留白必然失效。改成「每種活動都已定案，且**定案與否看得出來**」，
+sentinel 方向也跟著反過來（從「未定案不得被填成 0」變成「已定案不得被退回 null」）。
+V1 真正要守的那件事沒有變。
+
+⚠ **未經瀏覽器實測**：配額用滿時賽前頁的提示文案、首頁世界時間卡跨年度後的顯示。
+
+### 沒有做
+
+未做能力衰退、退休、生涯階段效果、Off-season、**AI 隊伍老化**（V6 AI turnover）。
+未動 `meta.days` 的寫入點（仍只有兩處）、`advanceDay` 的 D15 規則、
+`absoluteDayOf`、賽季狀態機、`fanSourceWeight.js`。
+未 push、未 deploy。

@@ -754,14 +754,29 @@ injury 也不得再成為出賽資格條件。
   > 與 `deriveTime` 同源、且**不受賽事容器影響**（賽季狀態機完全不寫 `meta`）。
   > 這是未來年齡系統可以直接用的邊界——**本輪不動選手年齡**。
 
-V2 Time Block → V3 大顆時間操作 → V4 Lifecycle →
+- **V2** 時間區塊與年度邊界 — ✅ **已完成 2026-08-26**
+  （一般競技改用**每日容量** `COMPETITIVE_BLOCK.matchesPerDay = 3`，
+   `WORLD_TIME_COST.competitive` 由 V1 的 `null` 定案為 **0**——不加天；
+   `careerYearRollover.js` 建立年度跨越事件，**age +1 已接上**；
+   `check_time_block_v2` 47/47）
+  > **為什麼不是「打一場 +1 天」**：實跑四種做法（`tools/timeblock_calibration.mjs`），
+  > 每場加天與每 N 場加天都讓愛打競技的人一年多老 33–100 天，而且**都要在比賽結算裡
+  > 寫時鐘 ⇒ 第二個時間推進者**。每日容量一天都不加，且結構上不可能寫到時鐘。
+  > ⇒ 刷 XP 必然要付出世界時間，但競技玩家**不會老得比較快**。
+  >
+  > **TD-34 兩半皆已解**：世界不會被凍住（V1）＋ 凍齡刷素質的洞補上（V2）。
+
+V3 大顆時間操作 → V4 Lifecycle →
 V5 Off-season → V6 AI turnover → V7 Online Event contract
 
-> **NEXT = V2 Time Block。** 兩件事在等它：
-> ① **一般競技比賽的時間成本**（`WORLD_TIME_COST.competitive` 目前是
-> `null`＝明確未定案，不是 0）——TD-34 的後半、「凍齡刷素質」的洞還在。
-> ② **老將可以被長期磨到上限**（Foundation Calibration 未解項）需要
-> Career Clock 真的推動年齡，而年齡推進要先有 Block 才有合理的觸發點。
+> **NEXT = V4 Lifecycle（年齡與生涯階段）。**
+> 年齡現在**真的會動**了（跨 84 天 +1），但目前只影響成長效率
+> （`ageEfficiency`）——沒有衰退、沒有巔峰期、沒有退休。
+> 「老將可以被長期磨到上限」（Foundation Calibration 未解項）要到那一輪才真正解決。
+>
+> ⚠ **V3「大顆時間操作」可以往後排。** 它是操作便利性（一次推一週／推到下一場），
+> 不是缺口——`advanceWorldDays(n)` 本來就吃任意天數，V3 只是給它更好的入口。
+> 而 V4 擋著一個**已知會失效的產品前提**，優先序較高。
 
 ---
 

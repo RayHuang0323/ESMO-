@@ -14,12 +14,14 @@
 //  本輪不新增第二個時鐘，只補上三件事：
 //   ① **誰有權推進**：`advanceWorldDays(n, { reason })` 具名入口 ＋ 理由白名單
 //   ② **哪些活動屬於世界時間**：`WORLD_TIME_COST` 宣告表
-//      （練習 0、正式賽 0、訓練 1、一般競技**明確未定案**）
+//      （練習 0、正式賽 0、訓練 1；一般競技當時**明確未定案**）
 //   ③ **不可能被凍結**：正式入口不得依賴任何前置條件
 //  以及把既有但沒被釘住的東西鎖起來：賽程↔世界日期的唯一換算、84 天年度邊界。
 //
-//  ⚠ **本輪不做**：age +1、衰退、退休、Off-season、Ranked、真人連線。
-//  ⚠ 一般競技比賽的時間成本**刻意留白**——標成 `null`（明確未定），不是填 0。
+//  ⚠ **V1 當時不做**：age +1、衰退、退休、Off-season、Ranked、真人連線。
+//  ⚠ 2026-08-26：一般競技的時間成本**已由 V2 定案**——不加天，改由每日容量
+//    （`COMPETITIVE_BLOCK`）承擔。§A5 與 sentinel M-B 已同步更新，理由寫在該處。
+//    age +1 也已由 V2 接上，守在 `check_time_block_v2.mjs`。
 //
 //  §C 單一時鐘  §O 推進權  §A 活動歸屬  §F 不可凍結  §S 賽程對齊
 //  §Y 年度邊界  §D 不重複推進／不重複結算  §N 邊界  §M sentinel
@@ -161,12 +163,19 @@ ck("A4) 訓練與休息**消耗**世界時間",
   !!clock && clock.consumesWorldTime("training") === true
   && clock.consumesWorldTime("rest") === true);
 
-//  ⚠ 這一條是刻意的留白，不是漏填。產品要求「不要過早鎖死每種活動消耗幾天」。
-ck("A5) 一般競技比賽的成本是**明確未定案**（null），不是被填成 0",
-  !!clock && clock.WORLD_TIME_COST.competitive === null
-  && clock.isWorldTimeCostDecided("competitive") === false
-  && clock.isWorldTimeCostDecided("practice") === true,
-  "未定案必須看得出來，否則之後沒人知道那個 0 是決定還是遺漏");
+//  ⚠ 2026-08-26（V2）：這一條原本斷言 `competitive === null`（明確未定案）——
+//    V1 刻意留白，因為產品要求「不要過早鎖死每種活動消耗幾天」。
+//    **V2 就是來定案的那一輪**，所以留白必然失效。**這是刻意的期望變更。**
+//    定案的內容是「**不加天**，成本改由每日容量 `COMPETITIVE_BLOCK` 承擔」，
+//    理由與四種做法的實跑比較見 `worldClock.js` 的 `WORLD_TIME_COST` 註解。
+//    V1 真正要守的「未定案必須看得出來」這件事本身沒有變——
+//    `isWorldTimeCostDecided` 還在，只是 competitive 現在回 true。
+ck("A5) 每種活動的時間成本都已定案，且『定案與否』看得出來",
+  !!clock && clock.WORLD_TIME_COST.competitive === 0
+  && clock.isWorldTimeCostDecided("competitive") === true
+  && clock.isWorldTimeCostDecided("practice") === true
+  && clock.isWorldTimeCostDecided("不存在的活動") === false,
+  "competitive 的成本不在每一場，在每日容量（V2）");
 
 ck("A6) 表裡的四種活動與 `MATCH_SOURCE` / 訓練對得起來（不是第二套詞彙）",
   (async () => true) && (() => {
@@ -365,12 +374,14 @@ try {
   ck("M-A) 讓練習消耗時間 ⇒ §A2 變紅",
     A.consumesWorldTime("practice") !== false);
 
-  //  B：把 competitive 從 null 填成 0 ⇒ §A5 變紅（未定案被偷偷變成已定案）
-  //  ⚠ 錨點必須帶結尾逗號。檔頭註解裡就有 `competitive: null` 這串字，
+  //  B：把 competitive 退回 null（未定案）⇒ §A5 變紅
+  //  ⚠ 2026-08-26（V2）：方向反過來了。V1 時是「未定案不得被偷偷填成 0」，
+  //    V2 定案之後改成「**已定案不得被退回未定案**」——同一條界線的另一面。
+  //  ⚠ 錨點必須帶結尾逗號：檔頭註解裡就有 `competitive: 0` 這串字，
   //    不帶逗號會改到**註解**，程式碼原封不動 ⇒ sentinel 假綠。
-  const B = await mutated(P_CLOCK, (s) => s.replace(/competitive:\s*null,/, "competitive: 0,"), "B-decided");
-  ck("M-B) 把未定案填成 0 ⇒ §A5 變紅",
-    B.isWorldTimeCostDecided("competitive") !== false);
+  const B = await mutated(P_CLOCK, (s) => s.replace(/competitive:\s*0,/, "competitive: null,"), "B-decided");
+  ck("M-B) 把已定案退回 null ⇒ §A5 變紅",
+    B.isWorldTimeCostDecided("competitive") !== true);
 
   //  C：把年度長度脫離 timeline 常數 ⇒ §Y1／§Y2 變紅
   //  ⚠ 錨點打在**唯一算年度長度的那一行**。第一版打在 `weeksPerYear` 上，
@@ -396,5 +407,5 @@ try {
 
 console.log(`\n${fail === 0 ? "✅" : "❌"} check_world_time_v1：${pass}/${pass + fail} 通過`);
 console.log(`   世界時間：唯一來源 meta.days｜生涯年度 ${clock?.CAREER_YEAR?.daysPerYear ?? "?"} 天（${timeline.DAYS_PER_WEEK} × ${timeline.WEEKS_PER_SEASON}）`);
-console.log(`   ⚠ 一般競技比賽的時間成本**刻意未定案**，留給 V2 Time Block。本輪不動選手年齡。`);
+console.log(`   ⚠ 一般競技比賽的時間成本已由 V2 定案：不加天，改由每日容量承擔（見 check_time_block_v2）。`);
 process.exit(fail === 0 ? 0 : 1);
