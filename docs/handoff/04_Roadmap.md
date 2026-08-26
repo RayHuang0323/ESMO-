@@ -890,3 +890,28 @@ V4 之後 **TD-40 的時效缺口才會關閉**——在那之前，快轉的代
 
 `check_time_block_v3` 由 67 → **69**（新增 §B10／§B11）。
 CLAUDE.md 已新增「Season vNext 時間線」現役 verifier 段落。
+
+### V4 Audit / Plan（2026-08-26）：**READY_TO_IMPLEMENT，未實作**
+
+設計：`docs/design/Season_vNext_V4_選手生涯階段與年齡效果.md`
+
+**Audit 的關鍵發現**：年齡在主幹上的足跡**只有一個函式** `ageEfficiency(age)`
+（訓練與 PCGM 共用同一支）。它**不影響**比賽表現（`LogicEngine` 讀 `.age` **0 次**）、
+不影響週薪、不影響身價；`careerStageOf` 是一個**已接好兩個畫面、但永遠沒有值**的 placeholder。
+
+⇒ 「老將維持高能力」的精確形狀是：35 歲綜合 85 與 22 歲綜合 85 在遊戲**觀察得到的每個面向**
+上完全相同，只差在進步比較慢——而那對已經練滿的人等於零影響。**換血沒有驅動力。**
+
+**V4 裁決：改變價值，不改變能力。** 老將 = 貴、練不動、賣不掉，但現在就是強。
+
+| # | 交付 |
+|---|---|
+| V4-1 | `careerStage` 變成真的（**推導不落盤**，主軸 age，`closedRatio` 只分 rookie/growth） |
+| V4-2 | 週薪加入年齡項（持有成本，費率進既有 `economyConfig.SALARY`） |
+| V4-3 | 身價（`players[].salary`）加入年齡折舊 |
+
+**明確不做**：能力衰退、退休、Off-season（→ V5）、AI 老化（→ V6）。
+
+⚠ Audit 的反向結論：退休／Off-season／AI 老化**不是 V4 的前置**，
+它們是**「做衰退」的前置**——所以 V4 不做衰退就一個都不必碰。
+衰退若硬塞進 V4，會連帶把 V5＋V6 一起拉進來，且與剛校準完的 V0A/V0B 成長曲線打架。
