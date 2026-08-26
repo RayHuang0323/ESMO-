@@ -737,6 +737,19 @@
   font-weight: 900;
 }
 
+/*  V3：世界時間卡的多顆快轉按鈕。橫排、可換行，窄螢幕不會擠出卡片外。
+    ⚠ 按鈕本身沿用 `.esmo-status-card__link`，這裡只負責排列，不改視覺語彙。 */
+.esmo-worldtime-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.esmo-worldtime-actions .esmo-status-card__link {
+  margin-top: 12px;
+}
+
 .esmo-finance-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

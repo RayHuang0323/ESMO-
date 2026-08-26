@@ -149,6 +149,8 @@ import {
 } from "./time/worldClock.js";
 //  V2：跨生涯年度時把年齡往前推。觸發點只有 `advanceDay`（唯一時鐘）。
 import { applyCareerYearRollover, careerYearNotice } from "./time/careerYearRollover.js";
+//  V3：快速推進的**規劃器**。它一天都不推，只回答「下一站在第幾天」。
+import { nextStopOf, planAdvance, MAX_FAST_FORWARD_DAYS } from "./time/fastForward.js";
 import {
   SESSION_STATES, CONNECTION_STATES, consumeLaunchToken, validateSession, cancelSession,
   sessionStateLabel, isSessionExpired, isSessionTerminal,
@@ -1090,6 +1092,44 @@ export const useProfileStore = create((rawSet, get) => {
         return null;
       })(),
     };
+  },
+  // ── Season vNext V3：快速推進 ────────────────────────────────────────
+  /**
+   * 下一個值得停下來的日子。**畫面的單一讀取點**——畫面不自己算。
+   *
+   * ⚠ 賽程日直接取自 `worldTimeView().nextFixtureDay`（已經是兩個項目取過
+   *   交集的絕對天數）⇒ 規劃器不必、也不得再掃一次賽程。
+   */
+  nextStopView() {
+    const t = get().worldTimeView();
+    return nextStopOf({ day: t.day, nextFixtureDay: t.nextFixtureDay });
+  },
+  /**
+   * 推進到下一站。**薄包裝**：規劃器算出天數，推進仍然走 `advanceWorldDays`。
+   *
+   * ── 為什麼要有這一支 ──────────────────────────────────────────────────
+   * 玩家要的是「幫我跳到下一件事」，不是「幫我按 28 次」。但**不能**因此變成
+   * 第二個時鐘：本函式自己一天都不推，只決定要請 V1 的入口推幾天。
+   *
+   * ⚠ **規劃器提案，引擎裁決。** 引擎的 D15 規則（走得進比賽日，但比賽沒收尾
+   *   就走不出去）永遠優先 ⇒ `daysAdvanced` 仍可能小於規劃的天數。
+   * ⚠ 規劃 0 天時**照實回報**，不自己改成 1 硬推——那是「自動出賽／自動棄權」
+   *   的入口，規格 D15 否決過（玩家會因手滑丟掉整季）。
+   *
+   * @returns {{ok, daysAdvanced, stoppedBy, receipts, reason, plannedDays, stop}}
+   */
+  advanceToNextStop({ maxDays = MAX_FAST_FORWARD_DAYS } = {}) {
+    const t = get().worldTimeView();
+    const plan = planAdvance({ day: t.day, nextFixtureDay: t.nextFixtureDay }, { maxDays });
+    if (plan.days <= 0) {
+      return {
+        ok: false, daysAdvanced: 0, stoppedBy: null, receipts: [],
+        reason: `第 ${t.day} 天有你的比賽，請先出賽或棄權`,
+        plannedDays: 0, stop: plan.stop,
+      };
+    }
+    const res = get().advanceWorldDays(plan.days, { reason: ADVANCE_REASONS.schedule });
+    return { ...res, plannedDays: plan.days, stop: plan.stop };
   },
   // ── Milestone Q3：賽事系統 ────────────────────────────────────────────
   /**

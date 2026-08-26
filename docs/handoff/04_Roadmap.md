@@ -853,3 +853,27 @@ V3（大顆時間操作）不碰本輪任何一條不變式，且快轉的代價
 
 真人連線 / 伺服器 / 真實 matchmaking / 反作弊、本地 fake Ranked、
 定時賽事本體、任何 `online` / `event` 的**生產者**（只定契約形狀）。
+
+### Season vNext V3 — 時間快速推進：**已完成（2026-08-26）**
+
+交付 `src/platform/time/fastForward.js`（規劃器，31 行實碼）、
+`profileStore.nextStopView()` / `advanceToNextStop()`、首頁世界時間卡三顆入口。
+守門 `tools/check_time_block_v3.mjs` **67/67**（含 4 個 mutation sentinel）。
+
+**核心形狀**：規劃器**提案**（只回答「該推幾天」），V1 的 `advanceWorldDays` **裁決**
+（真正推進）。沒有新增第二個時鐘，`meta.days` 的寫入點仍然只有一處。
+
+**Design Sprint 指定的兩個缺口已補**：
+- ✅ §I7 競技容量不得跨日累積（**TD-42 已解**）——掃 1–90 天恆等於上限
+- ✅ §W 多週結算冪等——一次跳 3 週 = 恰好 3 次，與逐日推進四項逐值相同
+
+**上限 28 天**：一次快轉必須 ≤ 一個生涯年度（84 天），否則可能一次跨兩個年度邊界，
+而 age +1 的通知只會出現一次。
+
+⚠ **未經瀏覽器實測**：世界時間卡的三顆按鈕與「下一站」顯示（見 `05_Sprint紀錄.md`）。
+
+### 下一個：V4 Lifecycle
+
+前置條件已齊備：V0A/V0B 的 `closedRatio`、V1 的世界時間、V2 的 age +1、V3 的快轉。
+V4 之後 **TD-40 的時效缺口才會關閉**——在那之前，快轉的代價只有「成長變慢」
+（`ageEfficiency`），沒有能力下降與選手離隊。

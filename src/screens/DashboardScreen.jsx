@@ -18,6 +18,8 @@ import { useMobileSheetMotion } from "./dashboard/useMobileSheetMotion.js";
 import { isExhausted } from "../platform/condition/playerCondition.js";
 //  V1：推進世界時間一律走具名入口＋白名單理由（見 platform/time/worldClock.js）。
 import { ADVANCE_REASONS } from "../platform/time/worldClock.js";
+//  V3：快轉級距讀自契約，畫面不自己寫死天數。
+import { FAST_FORWARD_STEPS } from "../platform/time/fastForward.js";
 import "./dashboard/dashboard.css";
 
 const numberOf = (value, fallback = 0) => {
@@ -247,17 +249,26 @@ function FinanceStatus({ wk, fc, finBars, onOpen }) {
  */
 function WorldTimeStatus() {
   const advanceWorldDays = useProfileStore((s) => s.advanceWorldDays);
+  const advanceToNextStop = useProfileStore((s) => s.advanceToNextStop);
+  const nextStopView = useProfileStore((s) => s.nextStopView);
   const days = useProfileStore((s) => s.meta?.days);
   const worldTimeView = useProfileStore((s) => s.worldTimeView);
   const [note, setNote] = React.useState(null);
   const t = worldTimeView();
+  const stop = nextStopView();
 
-  const advance = (n) => {
-    const res = advanceWorldDays(n, { reason: ADVANCE_REASONS.rest });
-    setNote(res.ok
-      ? (res.daysAdvanced < n ? `推進 ${res.daysAdvanced} 天後停下：${res.reason ?? "有比賽尚未收尾"}` : null)
-      : (res.reason ?? "今天推不動"));
+  //  ⚠ 推進結果一律照實顯示。「推不動」與「推了一半停下」是兩件不同的事，
+  //    合併成「什麼都沒發生」正是 V1 檔頭說要避免的靜默失敗。
+  const report = (res, wanted) => {
+    if (!res.ok) { setNote(res.reason ?? "今天推不動"); return; }
+    setNote(res.daysAdvanced < wanted
+      ? `推進 ${res.daysAdvanced} 天後停下：${res.reason ?? "有比賽尚未收尾"}`
+      : `已推進 ${res.daysAdvanced} 天`);
   };
+
+  const advance = (n) => report(advanceWorldDays(n, { reason: ADVANCE_REASONS.rest }), n);
+  //  ⚠ 走 Store 的 `advanceToNextStop`——規劃與推進都不在畫面裡。
+  const advanceNext = () => { const r = advanceToNextStop(); report(r, r.plannedDays ?? 0); };
 
   return (
     <article className="esmo-card esmo-status-card" data-dashboard-reveal data-testid="home-world-time">
@@ -270,9 +281,24 @@ function WorldTimeStatus() {
         第 {t.careerYear} 生涯年度 · 第 {t.dayOfYear}/{t.daysPerYear} 天 · 第 {t.week} 週
         {t.nextFixtureDay ? ` · 下一場賽程在第 ${t.nextFixtureDay} 天` : " · 目前沒有排定的賽程"}
       </div>
+      {stop && (
+        <div className="esmo-status-card__detail" data-testid="home-next-stop">
+          下一站：{stop.label}（還有 {stop.daysAway} 天）
+        </div>
+      )}
       {note && <div className="esmo-status-card__detail" style={{ color: GC.gold }}>{note}</div>}
-      <button className="esmo-status-card__link" type="button" data-testid="home-advance-day"
-        onClick={() => advance(1)}>推進一天 <EsmoIcon name="chevron" size={13} /></button>
+      <div className="esmo-worldtime-actions">
+        {/*  ⚠ 級距讀自 `FAST_FORWARD_STEPS`（契約），畫面不自己寫死天數。 */}
+        {FAST_FORWARD_STEPS.map((n) => (
+          <button key={n} className="esmo-status-card__link" type="button"
+            data-testid={n === 1 ? "home-advance-day" : "home-advance-days"}
+            onClick={() => advance(n)}>
+            推進 {n} 天 <EsmoIcon name="chevron" size={13} />
+          </button>
+        ))}
+        <button className="esmo-status-card__link" type="button" data-testid="home-advance-next"
+          onClick={advanceNext}>前往下一站 <EsmoIcon name="chevron" size={13} /></button>
+      </div>
     </article>
   );
 }

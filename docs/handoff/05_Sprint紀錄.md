@@ -14857,3 +14857,106 @@ V3 不碰本輪任何一條不變式；快轉的代價已經存在（`ageEfficie
 
 docs-only ⇒ 不影響任何 gate。修改的四份既有文件**全部只追加、零刪除**
 （逐檔 diff 驗證：`少了 0 行`）。
+
+## Season vNext V3 — 時間快速推進（2026-08-26）
+
+分支 `season/vnext`，基準 `91ec289`。**未開始 V4 Lifecycle、衰退、退休、Off-season 或任何真人功能。**
+
+### 這一輪解什麼
+
+V1 解凍世界時間、V2 立了每日競技容量與年度邊界，但玩家仍然只能一天一天按。
+設計文件 §2.4 量過：**17 年生涯要按 556 次**推進 ⇒ V1/V2 修好的東西，玩家體感上到不了。
+
+### Audit 的結論：引擎本來就對，缺的是上層與測試
+
+開工前先讀了 `advanceDay` / `advanceDaysInState` / `advanceSeasonDays`，發現：
+
+- `advanceDaysInState` 是**逐日迴圈**，訓練、每日恢復、週結算本來就沿路照跑
+- 週結算的冪等鍵本來就是**累計週次**
+- `advanceSeasonDays` 本來就會停在玩家自己的賽程日（D15：走得進、走不出去）
+- `applyCareerYearRollover` 本來就折進同一個 `set()`
+- `competitiveBlockOf` 本來就跨日歸零 ⇒ 容量不會囤積
+
+⇒ **V3 不需要動引擎**，要做的是：① 規劃器 ② 畫面入口 ③ **把上面這些「碰巧正確」的行為釘住**。
+
+### 交付
+
+| 項目 | 內容 |
+|---|---|
+| `src/platform/time/fastForward.js`（新增，**31 行實碼**） | 規劃器。`STOP_REASONS` / `MAX_FAST_FORWARD_DAYS = 28` / `FAST_FORWARD_STEPS = [1, 7]` / `nextStopOf()` / `planAdvance()` |
+| `profileStore.nextStopView()`（新增） | 畫面的單一讀取點，賽程日取自既有 `worldTimeView().nextFixtureDay` |
+| `profileStore.advanceToNextStop()`（新增） | **薄包裝**：規劃器算天數，推進仍走 `advanceWorldDays` |
+| `DashboardScreen` 世界時間卡 | 推進 1 天 / 推進 7 天 / 前往下一站；顯示「下一站」與停下原因 |
+| `tools/check_time_block_v3.mjs`（新增） | **67/67**，含 4 個 mutation sentinel |
+
+### 兩條設計規則
+
+**① 規劃器提案，引擎裁決。**
+引擎的 D15 規則永遠優先，規劃器只能提出**更保守**的天數
+⇒ 結構上不可能讓玩家越過引擎會擋的東西。兩層獨立擋比賽日。
+
+**② 規劃器不得自己掃賽程。**
+專案已有唯一的賽程查找（`nextPlayerFixture` + `absoluteDayOf`，兩項目取交集由
+`worldTimeView()` 負責）。規劃器再寫一份就是第二套賽程邏輯，兩套遲早會對
+「下一場在第幾天」給出不同答案 ⇒ `fastForward.js` 只收 `{ day, nextFixtureDay }`
+兩個數字，由 §B5 釘住（不得出現 `seasonState` / `.fixtures` / `absoluteDayOf`）。
+
+### 補上 Design Sprint 指定的兩個缺口
+
+**缺口 ① §I7 競技容量不得跨日累積**（TD-42）
+掃 1–90 天，容量恆等於上限；跳過一整個生涯年度也不累積。
+端到端：用滿今天 3 格後跳 7 天 ⇒ remaining 仍是 3，**不是 21**。
+sentinel M-A：把跨日重置改成 `<=` ⇒ §I7-2 變紅。
+
+**缺口 ② §W 多週快速推進的結算冪等**
+一次跳 3 週 ⇒ **恰好 3 次**週結算；與「跳 21 次一天」比對
+**結算次數、天數、資金、`lastSettledWeek` 四項逐值相同**；
+跳 6 週 ⇒ 6 個相異週鍵；已結算的週不會被回頭補算。
+sentinel M-B：把跨週判定改成 `>=` ⇒ §W1 變紅。
+
+⚠ 這兩組**在實作前就已經是綠的**——這正是重點：行為一直正確，但沒有任何測試釘住它。
+V3 讓天數可以被大量跳過，這兩個洞才真的有人會踩到。
+
+### 為什麼快轉有 28 天上限
+
+一次快轉必須 ≤ 一個生涯年度（84 天），否則玩家可能一次跨過**兩個**年度邊界，
+而 age +1 的通知只會出現一次 ⇒ **有人會在毫無提示下老兩歲**。
+28 天 = 4 週：夠長到不必一直按，短到每次最多只結算 4 次週結算，玩家還讀得完。
+sentinel M-D：拿掉上限 ⇒ §A7 變紅。
+
+### 公平契約（91ec289）全部維持
+
+§P 逐條驗過：快轉不碰 ServerTime（規劃器無任何真實時間來源）｜
+快速練習仍 0 世界時間｜一般競技仍 0 加天｜
+**本輪未建立** `online` / `event` 的 origin kind，`MATCH_SOURCE` 仍是 4 層。
+
+### 不會自動做的事
+
+規劃器全檔不含 `forfeit` / `startFixtureMatch` / `autoPlay` / `setLineup`（§B7）。
+站在自己的比賽日上 ⇒ `planAdvance` 回 **0 天**，`advanceToNextStop` 照實回報
+「請先出賽或棄權」，**不自己改成 1 硬推**——那是規格 D15 否決過的入口
+（玩家會因手滑丟掉整季）。
+
+### Gates
+
+`check_time_block_v3` **67/67**（新增）｜`check_time_block_v2` 47/47｜
+`check_world_time_v1` 46/46｜`check_practice_match_v0d` 70/70｜
+`check_match_source_v0c` 21/21｜`check_pcgm_v0a` 24/24｜
+`check_prospect_growth_space_v0b` 43/43｜`check_foundation_calibration` 58/58｜
+`check_no_player_injury` 29/29｜`check_competition_q3` 91/91｜`q4` 68/68｜
+`q5` 69/69｜`q6` 57/57｜`check_competition_release_gate` 11/11｜
+`regress` 結束率 15/15｜`regress2` 節奏門檻 8/8｜`check_dash10` PASS｜`check_flow09` PASS｜
+`npm run build` ✓ built in 9.37s
+
+### ⚠ 未經瀏覽器實測
+
+本輪改了 `DashboardScreen` 的世界時間卡（三顆按鈕 + 下一站顯示 + `dashboard.css`
+新增 `.esmo-worldtime-actions`）。build 過、`check_dash10` / `check_flow09` 綠、
+gate §U 以 testid 驗過入口存在，但**沒有在瀏覽器裡實際點過**：
+按鈕排版在窄螢幕的換行、以及「前往下一站」在真有賽程時的停下訊息，
+需要人工或 browser gate 確認。
+
+### 沒有做
+
+V4 Lifecycle / 衰退 / 退休 / Off-season / AI turnover；
+真人競技 / 定時賽事 / Ranked / 連線 / server（連契約生產者都沒建）。
