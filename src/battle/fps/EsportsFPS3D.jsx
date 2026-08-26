@@ -1027,7 +1027,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
     const playerGroup=new THREE.Group();scene.add(playerGroup); // 10 名選手
     const fxGroup=new THREE.Group();scene.add(fxGroup);         // 槍火/煙/火/投擲/炸彈
 
-    stateRef.current={renderer,scene,camera,cam,sun,tex,sphereGeo,beamGeo,worldGroup,routeGroup,playerGroup,fxGroup,
+    stateRef.current={renderer,scene,camera,cam,sun,tex,sphereGeo,beamGeo,worldGroup,routeGroup,playerGroup,fxGroup,liveRef,
       players:[],pools:{},raycastTargets:[],running:true,lastT:0,time:0,cameraRecoveryCount:0,rapidCameraRecoveryCount:0,lastCameraRecoveryAt:null,disposables:[]};
 
     // ── 互動：拖曳旋轉 / 滾輪縮放 / 觸控 ──
@@ -1051,17 +1051,17 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
       else onMove(e);};
     el.addEventListener("contextmenu",e=>e.preventDefault());
     // 點擊選取選手
-    const ray=new THREE.Raycaster();const ndc=new THREE.Vector2();let downPt=null;
-    const onClickDown=e=>{const p=e.touches?e.touches[0]:e;downPt={x:p.clientX,y:p.clientY};};
+    const ray=new THREE.Raycaster();const ndc=new THREE.Vector2();let downPt=null;let clickTarget=null;
+    const onClickDown=e=>{if(e.target!==el)return;const p=e.touches?e.touches[0]:e;clickTarget=el;downPt={x:p.clientX,y:p.clientY};};
     const onClickUp=e=>{
-      if(!downPt)return;const p=e.changedTouches?e.changedTouches[0]:e;
-      if(Math.hypot(p.clientX-downPt.x,p.clientY-downPt.y)>6){downPt=null;return;}
+      if(!downPt||e.target!==clickTarget){downPt=null;clickTarget=null;return;}const p=e.changedTouches?e.changedTouches[0]:e;
+      if(Math.hypot(p.clientX-downPt.x,p.clientY-downPt.y)>6){downPt=null;clickTarget=null;return;}
       const r=el.getBoundingClientRect();ndc.x=((p.clientX-r.left)/r.width)*2-1;ndc.y=-((p.clientY-r.top)/r.height)*2+1;
       ray.setFromCamera(ndc,camera);
       const hits=ray.intersectObjects(stateRef.current.raycastTargets,true);
       if(hits.length){let o=hits[0].object;while(o&&!o.userData.pid)o=o.parent;if(o&&o.userData.pid){onSelectPlayer&&onSelectPlayer(o.userData.pid);}}
       else onSelectPlayer&&onSelectPlayer(null);
-      downPt=null;
+      downPt=null;clickTarget=null;
     };
     el.addEventListener("mousedown",e=>{onDown(e);onClickDown(e);});
     window.addEventListener("mousemove",onMove);
@@ -1093,7 +1093,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
       if(p0Contract){p0Contract.rafFrames+=1;if(p0Contract.lastAuthoritativeFidx!=null&&p0Contract.lastAuthoritativeFidx!==fIdx)p0Contract.staleMismatch+=1;}
       const frame=sim.frames[fIdx];const nf=sim.frames[Math.min(fIdx+1,total-1)];const pf=sim.frames[Math.max(0,fIdx-1)];
       const sub=live.playing?clamp(st.subT,0,1):0;
-      if(frame){updateDynamic(st,frame,nf,pf,sub,live,W,dt);}
+      if(frame){updateDynamic(st,frame,nf,pf,sub,live,W,dt,fIdx);}
       updateCamera(st,frame,sub,dt,W);
       if(frame&&import.meta.env?.DEV){publishFpsVisibilityDiagnostics(st,frame,fIdx);}
       renderer.render(scene,camera);
@@ -1460,7 +1460,7 @@ function publishFpsVisibilityDiagnostics(st,frame,frameIndex){
   canvas.dataset.esmoFpsVisibilityFrame=String(frameIndex);canvas.dataset.esmoFpsVisibilityJson=JSON.stringify(snapshot);
   if(typeof window!=="undefined")window.__ESMO_FPS_VISIBILITY__=snapshot;
 }
-function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0){
+function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null){
   const time=st.time;const showLabels=live.showLabels!==false;
   // 地名顯隱
   if(st.calloutSprites)st.calloutSprites.forEach(s=>{s.visible=showLabels;});
@@ -1496,7 +1496,7 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0){
     let x=p.pos.x,y=p.pos.y,va=p.va;
     if(np&&sameRound&&!p.dead&&!np.dead){x=lerp(p.pos.x,np.pos.x,sub);y=lerp(p.pos.y,np.pos.y,sub);va=lerpAngle(p.va,np.va,sub);}
     P.g.position.set(W.vx(x),0,W.vz(y));
-    P.rigged?.update?.({player:p,previousPlayer:pp,nextPlayer:np,frameRound:frame.rnd,previousFrameRound:pf?.rnd,dt});
+    P.rigged?.update?.({player:p,previousPlayer:pp,nextPlayer:np,frameRound:frame.rnd,previousFrameRound:pf?.rnd,frameIndex,dt});
     const riggedActive=P.rigged?.mode==="rigged";
     const riggedMode=P.rigged?.mode||"fallback";
     P.body.visible=!riggedActive;
@@ -1533,7 +1533,7 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0){
       const overlayMaterials=[P.nameSpr?.material,...(P.hpGroup?.children||[]).flatMap((child)=>Array.isArray(child.material)?child.material:[child.material])].filter(Boolean);
       overlayMaterials.forEach((material)=>{material.depthTest=primitiveOccludedByWall;material.depthWrite=false;});
     }
-    if(P.rigged?.root)P.rigged.root.rotation.y=-va*Math.PI/180;
+    P.rigged?.setFacingDegrees?.(va);
     const sel=live.selected===P.id;
     if(p.dead){
       P.body.visible=!riggedActive;P.hpGroup.visible=false;P.nameSpr.visible=false;P.selBeam.visible=false;
@@ -1738,10 +1738,14 @@ function updateCamera(st,frame,sub,dt,W){
     const va=faceDeg*Math.PI/180;
     cam.dTheta=Math.atan2(-Math.cos(va),-Math.sin(va))+(cam.chaseYaw||0);
     const close=ch.enemy&&ch.enemy.d<24;
-    cam.dPhi=clamp((close?1.0:0.92)+(cam.chasePitch||0),0.2,1.45);
-    cam.dRadius=close?22:27;            // 比過去更遠
-    const fwd=close?7:11;               // 目標前移到選手前方
-    cam.dTgt.set(W.vx(ch.x+Math.cos(va)*fwd),3.0,W.vz(ch.y+Math.sin(va)*fwd));
+    cam.dPhi=clamp((close?1.16:1.10)+(cam.chasePitch||0),0.2,1.45);
+    // Focus is a character read, not an overview crop: keep the selected
+    // operator at torso height and within a short, stable shoulder distance.
+    // The old 22/27 radius plus an 7/11-unit forward target made the player
+    // read as a tiny marker even though chase state was active.
+    cam.dRadius=close?7.5:9.5;
+    const fwd=close?1.7:2.2;
+    cam.dTgt.set(W.vx(ch.x+Math.cos(va)*fwd),1.08,W.vz(ch.y+Math.sin(va)*fwd));
   }else if(cam.autoFollow&&frame){
     const alive=frame.players.filter(p=>!p.dead);
     if(cam.overview&&alive.length){
@@ -1872,7 +1876,7 @@ function PlayerRow({p,selected,onClick}){
   if(nf.includes("molly"))eq.push("🔥");
   if(p.side==="ct"&&p.armor)eq.push("🔧");
   return(
-    <button onClick={()=>onClick(p.id)} style={{display:"flex",alignItems:"center",gap:6,width:"100%",textAlign:"left",
+    <button data-esmo-fps-player-card={p.id} onClick={()=>onClick(p.id)} style={{display:"flex",alignItems:"center",gap:6,width:"100%",textAlign:"left",
       background:selected?`${col}1f`:"rgba(255,255,255,0.025)",border:`1px solid ${selected?col+"99":"transparent"}`,borderRadius:8,padding:"5px 7px",cursor:"pointer",opacity:p.dead?0.45:1,position:"relative",overflow:"hidden"}}>
       <div style={{position:"absolute",left:0,top:0,bottom:0,width:3,background:col}}/>
       <div style={{width:18,height:18,borderRadius:5,background:`${col}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,flexShrink:0}}>{p.dead?"💀":ROLE_ZH[p.role]?.[0]||"●"}</div>
@@ -2044,7 +2048,13 @@ function EsportsFPS3D({
     advance:()=>{const from=liveRef.current.fIdx;if(from>=total-1){liveRef.current.playing=false;setPlaying(false);return from;}const next=from+1;publishFpsFrame(next,"playback");return next;}};
 
   // 切換比賽/地圖 → 重置
-  useEffect(()=>{publishFpsFrame(clamp(Number(resumeFrameIndex) || 0, 0, Math.max(0, sim.frames.length - 1)),"reset");setSelected(null);setFeed([]);setCasts([]);setComms([]);setMultiKill(null);setRoundOverlay(null);prevRndRef.current=0;prevPlantedRef.current=false;seekNonce.current++;setQuickFinishing(false);setQuickCompleted(false);setPlaying(true);},[sim,resumeFrameIndex]);
+  // A persisted active-match snapshot updates resumeFrameIndex while Battle is
+  // running. That is progress persistence, not a new Battle mount: rerunning
+  // this initializer on every snapshot used to clear PlayerRow selection and
+  // tear down the close-up chase roughly once per save interval. Initialize
+  // only when the authoritative simulation changes; the initial prop value is
+  // still used to resume the newly entered simulation.
+  useEffect(()=>{publishFpsFrame(clamp(Number(resumeFrameIndex) || 0, 0, Math.max(0, sim.frames.length - 1)),"reset");setSelected(null);setFeed([]);setCasts([]);setComms([]);setMultiKill(null);setRoundOverlay(null);prevRndRef.current=0;prevPlantedRef.current=false;seekNonce.current++;setQuickFinishing(false);setQuickCompleted(false);setPlaying(true);},[sim]);
 
   // R63：只保存可重建的 frame 游標與該 frame 的真實比分／時間，不複製 simulator。
   useEffect(()=>{

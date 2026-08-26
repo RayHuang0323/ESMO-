@@ -11,7 +11,10 @@ export const FPS_CHARACTER_ASSET_MANIFEST = Object.freeze({
   character: assetUrl("assets/fps/c2a/esmo-fps-character.glb"),
   animationLibrary: assetUrl("assets/fps/c2a/esmo-fps-animation-library.glb"),
   targetHeight: 1.82,
-  orientationOffset: -Math.PI / 2,
+  // The checked-in CC0 character faces native +Z (the Eyes/Eyebrows bind
+  // bounds sit on +Z). Rotate +Z onto the renderer's authoritative +X front.
+  // The previous negative sign turned the body 180deg away from movement.
+  orientationOffset: Math.PI / 2,
   clips: Object.freeze({
     idle: "Idle_Loop",
     walk: "Walk_Loop",

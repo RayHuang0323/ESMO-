@@ -3,6 +3,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
 import { FPS_CHARACTER_ASSET_MANIFEST } from "./fpsCharacterAssets.js";
 import { deriveFpsAnimationState, FPS_PRESENTATION_STATES } from "./fpsAnimationState.js";
+import { C2C_HERO_ART_MANIFEST, createC2cHeroPresentation, isC2cHeroRequested } from "./fpsC2cHero.js";
 
 let assetPromise = null;
 
@@ -52,13 +53,38 @@ function prepareCharacterRoot(scene) {
     }
   });
 
-  const bounds = new THREE.Box3().setFromObject(root);
+  const bounds = measureSkinnedBindBounds(root) || new THREE.Box3().setFromObject(root);
   const height = Math.max(0.01, bounds.max.y - bounds.min.y);
   const scale = FPS_CHARACTER_ASSET_MANIFEST.targetHeight / height;
   root.scale.setScalar(scale);
   root.position.y = -bounds.min.y * scale;
   root.rotation.y = FPS_CHARACTER_ASSET_MANIFEST.orientationOffset;
   return root;
+}
+
+// Box3.setFromObject only sees the source geometry's bind-space bounds.  This
+// asset's skeleton has a materially different bind transform, so normalize
+// from sampled skinned vertices once at load time to keep the character's
+// world height honest in the Mirage environment.
+function measureSkinnedBindBounds(root) {
+  if (!root) return null;
+  root.updateWorldMatrix?.(true, true);
+  const bounds = new THREE.Box3();
+  const point = new THREE.Vector3();
+  let sampled = false;
+  root.traverse((object) => {
+    if (!object.isSkinnedMesh || !object.geometry?.attributes?.position || !object.applyBoneTransform) return;
+    const position = object.geometry.attributes.position;
+    const stride = Math.max(1, Math.floor(position.count / 10_000));
+    for (let index = 0; index < position.count; index += stride) {
+      point.fromBufferAttribute(position, index);
+      object.applyBoneTransform(index, point);
+      object.localToWorld(point);
+      bounds.expandByPoint(point);
+      sampled = true;
+    }
+  });
+  return sampled && !bounds.isEmpty() ? bounds : null;
 }
 
 function setTeamAccent(root, side) {
@@ -84,12 +110,28 @@ function setLoop(action, loop) {
   return action;
 }
 
+function measurePresentationBounds(root) {
+  if (!root) return null;
+  root.updateWorldMatrix?.(true, true);
+  const bounds = new THREE.Box3().setFromObject(root);
+  if (bounds.isEmpty()) return null;
+  const size = bounds.getSize(new THREE.Vector3());
+  return {
+    min: bounds.min.toArray(),
+    max: bounds.max.toArray(),
+    width: Number(size.x.toFixed(4)),
+    height: Number(size.y.toFixed(4)),
+    depth: Number(size.z.toFixed(4)),
+  };
+}
+
 function publishDiagnostic(controller, remove = false) {
   if (typeof window === "undefined") return;
   const current = window.__ESMO_FPS_C2A__ || { rigged: 0, fallback: 0, failed: 0, players: {} };
   if (remove) delete current.players[controller.id];
   else current.players[controller.id] = {
     mode: controller.mode,
+    loadError: controller.loadError || null,
     identityMiss: controller.identityMiss,
     animation: controller.animationState,
     skeleton: controller.skeletonCount,
@@ -97,6 +139,29 @@ function publishDiagnostic(controller, remove = false) {
     mixer: Boolean(controller.mixer),
     round: controller.lastRound,
     currentClip: controller.currentAction,
+    fireTimer: Number(controller.fireTimer.toFixed(4)),
+    hitTimer: Number(controller.hitTimer.toFixed(4)),
+    hitFrame: controller.lastHitFrame,
+    currentClipTime: controller.currentAction
+      ? Number((controller.actions.get(controller.currentAction)?.time || 0).toFixed(4))
+      : 0,
+    artMode: controller.artMode,
+    c2cHero: controller.c2cHero,
+    weaponType: controller.c2c?.weaponType || null,
+    weaponFamily: controller.c2c?.weaponFamily || controller.c2c?.weaponType || null,
+    weaponFamilyMap: controller.c2c?.weaponFamilyMap || null,
+    variationId: controller.c2c?.variationId || null,
+    variationLabel: controller.c2c?.variationLabel || null,
+    equipmentModules: controller.c2c?.equipmentModules || [],
+    artTriangles: controller.c2c?.triangleCount || 0,
+    artMaterials: controller.c2c?.materialCount || 0,
+    facingDegrees: controller.facingDegrees,
+    orientationOffset: FPS_CHARACTER_ASSET_MANIFEST.orientationOffset,
+    rootScale: controller.model?.scale?.toArray?.() || controller.root.scale.toArray(),
+    riggedRootScale: controller.root.scale.toArray(),
+    baseBounds: controller.baseBounds,
+    normalizedBounds: controller.normalizedBounds,
+    currentBounds: controller.currentBounds,
   };
   current.rigged = Object.values(current.players).filter((player) => player.mode === "rigged").length;
   current.fallback = Object.values(current.players).filter((player) => player.mode === "fallback").length;
@@ -129,10 +194,29 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true } = 
     disposed: false,
     fireTimer: 0,
     hitTimer: 0,
+    lastFireSignature: null,
+    lastHitSignature: null,
+    lastHitFrame: null,
     deathTriggered: false,
     lastRound: null,
     lastPlayer: player || null,
     model: null,
+    c2c: null,
+    c2cHero: false,
+    artMode: "c2a-base",
+    facingDegrees: null,
+    normalizedBounds: null,
+    baseBounds: null,
+    currentBounds: null,
+    boundsSampleFrame: 0,
+    setFacingDegrees(degrees) {
+      if (!Number.isFinite(Number(degrees))) return;
+      controller.facingDegrees = Number(degrees);
+      // The child model already carries orientationOffset from the loader.
+      // Apply only the authoritative world yaw here; keeping this in the
+      // presentation controller prevents callers from reaching into the rig.
+      riggedRoot.rotation.y = -controller.facingDegrees * Math.PI / 180;
+    },
     resolveClip(name) {
       if (controller.actions.has(name)) return name;
       const fallback = FPS_CHARACTER_ASSET_MANIFEST.clipFallbacks?.[name];
@@ -158,20 +242,36 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true } = 
       controller.animationState = FPS_PRESENTATION_STATES.IDLE;
       controller.fireTimer = 0;
       controller.hitTimer = 0;
+      controller.lastFireSignature = null;
+      controller.lastHitSignature = null;
+      controller.lastHitFrame = null;
       controller.deathTriggered = false;
       controller.identityMiss = false;
       controller.lastRound = round;
       riggedRoot.visible = controller.mode === "rigged";
     },
-    update({ player: current, previousPlayer, nextPlayer, frameRound, previousFrameRound, dt = 0 } = {}) {
+    update({ player: current, previousPlayer, nextPlayer, frameRound, previousFrameRound, frameIndex = null, dt = 0 } = {}) {
       if (controller.disposed || !current) return;
       controller.lastPlayer = current;
+      controller.c2c?.update({ player: current });
       if (!controller.mixer) return;
       if (Number.isFinite(frameRound)) {
         if (controller.lastRound == null) controller.lastRound = frameRound;
         else if (frameRound !== controller.lastRound) controller.resetForRound(frameRound);
       }
       const animation = deriveFpsAnimationState({ player: current, previousPlayer, nextPlayer });
+      const eventFrame = Number.isFinite(Number(frameIndex)) ? Number(frameIndex) : "unknown";
+      const fireSignature = animation.fireEvent
+        ? `${eventFrame}:${current.shooting}:${previousPlayer?.shooting ?? 0}`
+        : null;
+      const hitSignature = animation.hitEvent
+        ? `${eventFrame}:${current.hp}:${previousPlayer?.hp ?? ""}`
+        : null;
+      const fireEvent = Boolean(animation.fireEvent && fireSignature !== controller.lastFireSignature);
+      const hitEvent = Boolean(animation.hitEvent && hitSignature !== controller.lastHitSignature);
+      controller.lastFireSignature = fireSignature;
+      controller.lastHitSignature = hitSignature;
+      if (animation.hitEvent) controller.lastHitFrame = eventFrame;
       controller.animationState = animation.deathEvent
         ? FPS_PRESENTATION_STATES.DEATH
         : animation.hitEvent
@@ -190,10 +290,10 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true } = 
       } else if (!controller.deathTriggered) {
         controller.fireTimer = Math.max(0, controller.fireTimer - dt);
         controller.hitTimer = Math.max(0, controller.hitTimer - dt);
-        if (animation.hitEvent) {
+        if (hitEvent) {
           controller.hitTimer = 0.32;
           controller._switch(FPS_CHARACTER_ASSET_MANIFEST.clips.hit, true, 0.05);
-        } else if (animation.fireEvent) {
+        } else if (fireEvent) {
           controller.fireTimer = 0.24;
           controller._switch(FPS_CHARACTER_ASSET_MANIFEST.clips.fire, true, 0.04);
         } else if (controller.hitTimer <= 0 && controller.fireTimer <= 0) {
@@ -208,6 +308,9 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true } = 
         }
       }
       controller.mixer.update(Math.min(0.05, Math.max(0, dt)));
+      controller.c2c?.syncAnchors?.();
+      controller.boundsSampleFrame += 1;
+      if (controller.boundsSampleFrame % 30 === 0) controller.currentBounds = measurePresentationBounds(riggedRoot);
       publishDiagnostic(controller);
     },
     setIdentityMiss() {
@@ -220,10 +323,12 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true } = 
       controller.disposed = true;
       controller.actions.forEach((action) => action.stop());
       controller.mixer?.stopAllAction();
+      controller.c2c?.dispose?.();
       riggedRoot.traverse((object) => {
-        if (object.userData?.esmoC2aOwned) object.geometry?.dispose?.();
+        if (object.userData?.esmoC2aOwned || object.userData?.esmoC2cOwned) object.geometry?.dispose?.();
         const materials = Array.isArray(object.material) ? object.material : [object.material];
         materials.filter((material) => material?.userData?.esmoC2aOwned).forEach((material) => material.dispose?.());
+        materials.filter((material) => material?.userData?.esmoC2cOwned).forEach((material) => material.dispose?.());
       });
       parent?.remove(riggedRoot);
       publishDiagnostic(controller, true);
@@ -236,12 +341,19 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true } = 
   loadFpsCharacterAssets().then(({ character, animationLibrary }) => {
     if (controller.disposed) return;
     const model = prepareCharacterRoot(character.scene);
+    controller.baseBounds = measurePresentationBounds(model);
     setTeamAccent(model, player?.side);
+    if (isC2cHeroRequested(player)) {
+      controller.c2c = createC2cHeroPresentation({ root: model, player });
+      controller.c2cHero = Boolean(controller.c2c);
+      controller.artMode = controller.c2cHero ? C2C_HERO_ART_MANIFEST.id : "c2a-base";
+    }
     const clips = clipMap(animationLibrary);
     const mixer = new THREE.AnimationMixer(model);
     const actions = new Map();
     clips.forEach((clip, name) => actions.set(name, mixer.clipAction(clip)));
     controller.model = model;
+    controller.normalizedBounds = measurePresentationBounds(model);
     controller.mixer = mixer;
     controller.actions = actions;
     controller.skeletonCount = model.getObjectsByProperty("isBone", true).length;
@@ -256,6 +368,9 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true } = 
     } else {
       controller._switch(FPS_CHARACTER_ASSET_MANIFEST.clips.idle);
     }
+    controller.model.updateWorldMatrix(true, true);
+    controller.c2c?.syncAnchors?.();
+    controller.currentBounds = measurePresentationBounds(riggedRoot);
     publishDiagnostic(controller);
   }).catch((error) => {
     if (controller.disposed) return;
