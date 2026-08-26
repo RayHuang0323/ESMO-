@@ -1009,3 +1009,28 @@ CS AI 老化（前置：CS AI 目前**沒有年齡欄位**）、合約／續約�
 
 另外兩條：`RetirementIntent` 的出賽比例只能小幅修正（不得免疫）；
 `AiGeneration` 必須保證跨年度的 **identity continuity**（不得每年整隊重生成）。
+
+### V5-2 年度能力漂移 × MOBA AI 世代交替：**已完成（2026-08-27）**
+
+交付 `progress/ageDrift.js`（63 行，玩家與 AI **共用**）、`aiTeams.aiRosterAt`、
+`seasonState.rostersFor` 接線。守門 `check_age_drift_v5` **46/46**（3 sentinel）。
+
+**老化時鐘 = raw age + 決定性個體 profile**（由 `player.id` 雜湊，±3 年，**不讀能力**）
+⇒ 「能力下降不能讓時鐘倒退」是結構保證。**不使用** V4 的 `effectiveAge`。
+
+15 年長跑：玩家操作 −21%、戰術／團隊反升、綜合只掉 1.4，`learning` 逐值不變；
+AI 平均年齡 24→30 後開始換血並循環，戰力 −2.2%，identity 每年保 4–5 人。
+
+**開工前自檢修掉 V5-1 一個 bug**：年度封存跑在 age +1 之後，
+導致第 1 年度記成 23.0 歲（該年度結束時其實是 22.0）。已改為封存在 rollover 之前。
+
+### ⚠ V5-3 開工前的第一個 calibration 項目
+
+`careerSim` **沒有經過漂移路徑**（引用數 0）⇒ Foundation Calibration 的 58/58
+**不能**當成「成長+漂移一起仍達標」的證據。直接量測的結果：
+
+`Y1 38.2→41.9%｜Y2 59.6→66.7%｜Y3 67.9→76.2%｜Y4 73.1→81.4%`
+
+判定為**合理的 lifecycle 變化**（19–21 歲落在緩升區段，目標變容易不是變難）⇒ 未 rebaseline。
+但這是真實的平衡位移（Y4 +8.3pp），且**青年期緩升可能與訓練成長重複計算**
+（與 `learning` 被排除是同一類問題）⇒ V5-3 開工前先處理。

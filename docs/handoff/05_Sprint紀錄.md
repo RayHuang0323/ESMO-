@@ -15311,3 +15311,123 @@ V5-2 的 aging clock 必須以 **raw age** 為基底 ＋ 決定性個體 profile
 ### 沒有做
 
 能力衰退（V5-2）、退休與補位（V5-3）、AI 換血、合約、新秀補位、Off-season 專屬畫面。
+
+## Season vNext V5-2 — 年度能力漂移 × MOBA AI 世代交替（2026-08-27）
+
+基準 `10c1305`。**兩件事同一輪交付**——只有玩家會老、AI 永遠 19–27 歲，等於單方面懲罰玩家。
+
+### 開工前的 V5-1 自檢：抓到一個語意 bug
+
+第 N 生涯年度的封存 snapshot 應代表**該年度結束時**的狀態。實測：
+
+```
+第 1 年度結束時（day 84）平均 22.0 歲
+跨到 day 85 之後       平均 23.0 歲
+封存紀錄卻寫著          averageAge 23   ← 錯
+```
+
+原因：封存跑在 `applyCareerYearRollover`（age +1）**之後**。
+我在 V5-1 的註解裡把理由寫反了（寫成「否則會記著前一年的年齡」）。
+**最小修正**：封存移到 rollover 之前，兩者仍折在同一個 `set()`。
+由 `check_offseason_v5` §E4b 釘住（開局五人第 1 年度必須是 22.0）。
+
+### 交付
+
+| 項目 | 內容 |
+|---|---|
+| `src/platform/progress/ageDrift.js`（新增，**63 行實碼**） | `AGE_DRIFT_VERSION` / `DRIFT`（四分類參數）/ `DRIFT_EXCLUDED` / `agingProfileOf` / `agingAgeOf` / `applyAgeDrift` |
+| `aiTeams.aiRosterAt(team, careerYear)`（新增） | AI 逐年老化 + 逐人替換，決定性、不落盤 |
+| `seasonState.rostersFor(state, roster, careerYear)` | MOBA AI 改用**當年**的 roster；CS 維持原樣（沒有年齡欄位） |
+| `profileStore.advanceDay` | 年度邊界補上 `abilityDrift` 步驟（跨 k 年就補 k 年） |
+| `offSeason.IMPLEMENTED_STEPS` | 追加 `abilityDrift` / `worldSync` |
+| `tools/check_age_drift_v5.mjs`（新增） | **46/46**，含 3 個 mutation sentinel |
+
+### 老化時鐘：raw age + 決定性個體 profile
+
+紅線是「不得用 V4 的 `effectiveAge`」，理由已在 V5 設計 §13.1 量化過
+（33 歲掉 10 點能力 ⇒ `effectiveAge` 倒退 2.25 年 ⇒ 衰退自我熄火）。
+
+```
+profile.offsetYears = 由 player.id 雜湊導出，±3 年，**一個能力欄位都不讀**
+agingAge            = raw age + offsetYears
+```
+
+⇒ 「能力下降不能讓時鐘倒退」是**結構保證**：時鐘的輸入裡根本沒有能力。
+§C2／§C4 正面驗（掃 20–40 歲、能力 90→40），sentinel M-C 反面驗
+（讓 profile 讀 potential ⇒ 立刻變紅）。
+
+### 漂移方向（用主幹既有的四分類，不另寫清單）
+
+| 類別 | 緩升到 | 每年升 | 起衰 | 每年衰 |
+|---|---|---|---|---|
+| 操作 | 23 | 1.0 | **29** | 1.6 |
+| 戰術 | 31 | 0.7 | 36 | 0.8 |
+| 心理 | 30 | 0.4 | 39 | 0.5 |
+| 團隊 | 33 | 0.6 | **41** | 0.4 |
+
+`learning` **完全排除**（§P5 掃 20 年逐值不變；sentinel M-A 讓它參與 ⇒ 變紅）。
+衰退有 **3 年斜坡**，單項單年跌幅硬上限 **2.5 點** ⇒ 不會一年崩壞。
+
+### 15 年長跑：玩家（22 → 37 歲，潛力 88、起始 72）
+
+```
+年齡  操作  戰術  心理  團隊  綜合  learning
+  22  72.0  72.0  72.0  72.0  72.0    72
+  28  71.1  76.2  74.4  74.7  74.1    72
+  31  66.5  76.9  74.4  76.0  73.5    72
+  37  56.9  74.9  74.4  76.0  70.6    72
+```
+
+⇒ **操作 −21%，戰術／心理／團隊反而升，綜合只掉 1.4。**
+老將不是變廢，是換一種強法：手速掉了，視野與領導更好。
+對操作型定位（打野）影響明顯，對團隊型定位（輔助）幾乎無損——
+**不同定位有不同生涯長度**，這是設計意圖。
+
+### 15 年長跑：AI
+
+```
+年度   1    5    7    8   11   13   15
+年齡  24.0 28.0 30.0 28.6 25.6 24.4 23.8
+戰力  98.3 99.7 99.7 98.9 98.1 97.7 96.1
+交集  5/5  5/5  5/5  4/5  4/5  4/5  4/5
+```
+
+⇒ 平均年齡升到 30 後開始換血，之後在 23.8–28.6 循環（**世代週期真的出現了**）。
+戰力 98.3 → 96.1（**−2.2%**，遠在 ±20% band 內）。
+identity 每年保 **4–5 人**，任一年最多換 2 人 ⇒ **不是每年生一隊陌生人**。
+
+### ⚠ Foundation Calibration 58/58 是**假綠**——我沒有當成證據
+
+`tools/lib/careerSim.mjs` 對 `ageDrift` 的引用數是 **0** ⇒ calibration 的模擬迴圈
+**根本沒有經過漂移路徑**。它綠只證明「成長本身沒被動到」，
+**不能**證明「成長 + 漂移疊加後 Year 1–4 產品目標仍成立」（V5 設計的 D2）。
+
+⇒ 所以我直接量了（19–21 歲新秀 30 名、4 年、正常玩法）：
+
+| | Y1 | Y2 | Y3 | Y4 |
+|---|---|---|---|---|
+| 不含漂移 | 38.2% | 59.6% | 67.9% | 73.1% |
+| **含漂移** | **41.9%** | **66.7%** | **76.2%** | **81.4%** |
+
+**判定：合理的 lifecycle 變化，不是回歸。** 理由：19–21 歲的 `agingAge` 遠低於任何
+起衰年齡，落在**緩升**區段 ⇒ 漂移對他們是加分。目標變得**更容易**達成，沒有任何一項變差
+⇒ **不需要 rebaseline**（使用者指定要判斷而不是直接 rebaseline）。
+
+⚠ 但這是一個**真實的平衡位移**，Y4 關閉率 +8.3pp。而且它有一個設計疑慮：
+**青年期的「緩升」與訓練成長可能重複計算**（訓練本來就在長能力）——
+與 `learning` 被排除的理由是同一類問題。
+⇒ 列為 **V5-3 開工前的第一個 calibration 項目**，本輪**刻意不調**（數值未 freeze）。
+
+### Gates
+
+`check_age_drift_v5` **46/46**（新增，3 sentinel）｜`check_offseason_v5` **45/45**（+1）｜
+`check_player_lifecycle_v4` 44/44｜`check_time_block_v3` 69/69｜`v2` 47/47｜`v1` 46/46｜
+`check_foundation_calibration` 58/58（見上，假綠已另行實測）｜`check_pcgm_v0a` 24/24｜
+`check_prospect_growth_space_v0b` 43/43｜`check_no_player_injury` 29/29｜`check_finance_n3` 40/40｜
+`check_competition_q2b` 92/92｜`q3` 91/91｜`q4` 68/68｜`q5` 69/69｜`q6` 57/57｜
+`release_gate` 11/11｜`browser_check_time_controls` 21/21｜`browser_check_home_ia` 23/23｜
+`regress` 15/15｜`regress2` 8/8｜`dash10`／`flow09` PASS｜`npm run build` ✓ 9.42s
+
+### 沒有做
+
+退休意向、真正退休、青訓補位、合約、CS AI 老化（`csAiTeams` 沒有年齡欄位 ⇒ V6）、V5-3。

@@ -24,6 +24,8 @@
 // ============================================================================
 import { STAT_DEF, PERSONALITY } from "../../data/playerModel.js";
 import { deriveTeamId } from "../identity/teamIdentity.js";
+//  V5-2：AI 與玩家**共用同一支**年度漂移（原則公平，資料模型不必相同）。
+import { applyAgeDrift, agingAgeOf } from "../progress/ageDrift.js";
 
 /** 聯賽參賽總數（玩家 1 + AI 7）。規格 D13。 */
 export const LEAGUE_TEAM_COUNT = 8;
@@ -148,4 +150,54 @@ export function leagueParticipants(playerTeam) {
     isAi: false,
   };
   return [me, ...AI_TEAMS.map((t) => ({ id: t.id, name: t.name, tag: t.tag, emoji: t.emoji, isAi: true }))];
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  Season vNext V5-2：AI 世代交替
+//
+//  ── 為什麼是「逐年推導」而不是「每年重生成」──────────────────────────────
+//  `AI_TEAMS` 是模組層級的凍結常數（固定 seed、載入時算一次）。要讓它老化，
+//  最省事的做法是「每年用新 seed 重跑 `buildAiTeams`」——**那是錯的**：
+//  它滿足戰力 band，但每年會生出一整隊陌生人，世界完全沒有連續性。
+//
+//  ⇒ 本檔改成：**基礎 roster 固定，逐年套用老化與必要替換**。
+//    · 既有人繼續變老（與玩家**共用同一支** `applyAgeDrift`）
+//    · 只有到齡者退出，由同隊實力錨點生成的新人補上
+//    · 新人的 id 帶世代後綴 ⇒ identity 跨年度可驗證（相鄰兩年交集比例）
+//
+//  ⚠ 仍然**不進 `players[]`、不落盤**（規格 D9 的邊界不動）。
+//  ⚠ 本輪**不做**玩家側的退休意向／青訓補位——那是 V5-3。這裡的離隊是
+//    AI 世界模擬的一部分，與玩家的退休系統是兩件事。
+// ════════════════════════════════════════════════════════════════════════════
+
+/** AI 選手的離隊門檻（**老化時鐘**，不是 raw age ⇒ 個體差異自動產生）。 */
+export const AI_DEPARTURE = Object.freeze({ agingAgeFrom: 34 });
+
+/**
+ * 第 `careerYear` 年的 AI roster。**決定性推導，不落盤。**
+ *
+ * 第 1 年 = 既有 base roster（逐值不變 ⇒ 舊行為不回歸）。
+ *
+ * @param {object} team `AI_TEAMS` 之一
+ * @param {number} careerYear 1 起算
+ */
+export function aiRosterAt(team, careerYear = 1) {
+  const target = Math.max(1, Math.floor(Number(careerYear) || 1));
+  let roster = team?.roster ?? [];
+  for (let y = 2; y <= target; y++) {
+    //  ① 全隊老一歲，並套用與玩家同一支漂移
+    roster = roster.map((p) => applyAgeDrift({ ...p, age: (Number(p.age) || 20) + 1 }, { years: 1 }));
+    //  ② 到齡者退出，由同隊實力錨點生成的新人補上（**逐人替換，不整隊重來**）
+    roster = roster.map((p, i) => {
+      if (agingAgeOf(p) < AI_DEPARTURE.agingAgeFrom) return p;
+      const rng = mkRng(hash32(`${team.key}|${y}|${i}|gen`));
+      const fresh = makeAiPlayer({
+        teamKey: team.key, teamId: team.id, index: i,
+        role: MOBA_ROLES[i] ?? p.role, strength: team.strength, rng,
+      });
+      //  ⚠ 世代後綴讓「同一個位置的不同人」有不同 id ⇒ identity continuity 驗得出來。
+      return { ...fresh, id: `${fresh.id}:y${y}`, age: 19 + Math.floor(rng() * 3) };
+    });
+  }
+  return roster;
 }

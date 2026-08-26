@@ -254,6 +254,18 @@ const viewOf = () => (typeof S().offSeasonView === "function" ? S().offSeasonVie
       return again.sealed.length === 0;
     })());
 
+  //  ⚠ V5-2 自檢抓到的語意 bug：封存原本跑在 rollover **之後**，
+  //    於是第 1 年度的紀錄寫著第 2 年的年齡（22.0 被記成 23.0）。
+  //    第 N 年度的 snapshot 必須代表「**該年度結束時**」，而 age +1 是跨進 N+1 才發生的。
+  ck("E4b) **封存的是「該年度結束時」的狀態**（不是 age +1 之後）",
+    (() => {
+      const first = off.sealedYearsOf(S().meta)[0];
+      if (!first) return false;
+      //  開局五人 23/21/24/22/20 ⇒ 第 1 年度結束時平均 22.0（跨完年才是 23.0）
+      return first.careerYear === 1 && first.averageAge === 22;
+    })(),
+    (() => { const f = off.sealedYearsOf(S().meta)[0]; return f ? `第 ${f.careerYear} 年度平均 ${f.averageAge} 歲` : "無紀錄"; })());
+
   ck("E5) 快轉**不會被年度邊界卡住**（V5-1 沒有決策，不得擋路）",
     (() => {
       const d0 = S().meta.days;

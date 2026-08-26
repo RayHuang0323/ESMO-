@@ -153,6 +153,8 @@ import { applyCareerYearRollover, careerYearNotice } from "./time/careerYearRoll
 import { nextStopOf, planAdvance, MAX_FAST_FORWARD_DAYS } from "./time/fastForward.js";
 //  V5-1：生涯年度邊界。冪等鍵是**年度編號**，重讀存檔不會重複封存。
 import { sealCareerYears, offSeasonViewOf } from "./time/offSeason.js";
+//  V5-2：年度能力漂移。老化時鐘 = raw age + 決定性個體 profile（**不吃當前能力**）。
+import { applyAgeDrift } from "./progress/ageDrift.js";
 import {
   SESSION_STATES, CONNECTION_STATES, consumeLaunchToken, validateSession, cancelSession,
   sessionStateLabel, isSessionExpired, isSessionTerminal,
@@ -1008,22 +1010,28 @@ export const useProfileStore = create((rawSet, get) => {
     //    就會把年齡推兩次，而不打季賽的人永遠不老。
     //  ⚠ 跨越用**年度編號差**，不是「天數差 / 84」：Day 84 → 85 跨 1 個年度，
     //    但 (85−84)/84 = 0。詳見 careerYearRollover.js。
-    const rolled = applyCareerYearRollover(nextState, {
-      fromDay,
-      toDay: Number(nextState.meta?.days) || fromDay,
-    });
     //  ── Season vNext V5-1：年度封存 ──────────────────────────────────────
-    //  ⚠ **折進同一個 `set()`**（跟 rollover 同一段）。分兩次寫會出現
-    //    「年齡走了但年度沒封存」的中間狀態——正是 V2 檔頭承諾要避免的事。
-    //  ⚠ 順序是 **rollover 之後**：封存紀錄裡的平均年齡要是「跨完年之後」的，
-    //    否則第 N 年的紀錄會寫著第 N−1 年的年齡。
+    //  ⚠ **順序是 rollover 之前**（V5-2 自檢修正）。第 N 生涯年度的封存紀錄要
+    //    代表「**該年度結束時**」的狀態——而 age +1 是跨進第 N+1 年才發生的事。
+    //    先 rollover 再封存的話，第 1 年的紀錄會寫著第 2 年的年齡
+    //    （實測：開局五人第 1 年度結束時平均 22.0 歲，卻被記成 23.0）。
+    //  ⚠ 兩者仍**折進同一個 `set()`**。分兩次寫會出現「年齡走了但年度沒封存」
+    //    的中間狀態——正是 V2 檔頭承諾要避免的事。
     //  ⚠ 這是 `sealCareerYears` 在整個 Store 裡的**唯一呼叫點**。賽季 rollover
     //    不得觸發它——兩個項目各換一次季就會把年度封存兩次。
-    const boundary = sealCareerYears(rolled.state, {
-      fromDay,
-      toDay: Number(rolled.state.meta?.days) || fromDay,
-    });
-    set(boundary.state);
+    const toDay = Number(nextState.meta?.days) || fromDay;
+    const boundary = sealCareerYears(nextState, { fromDay, toDay });
+    const rolled = applyCareerYearRollover(boundary.state, { fromDay, toDay });
+    //  ── Season vNext V5-2：年度能力漂移 ─────────────────────────────────
+    //  ⚠ 跑在 rollover **之後**：漂移的老化時鐘要用**跨完年的年齡**。
+    //  ⚠ 老化時鐘是 `raw age + 決定性個體 profile`，**不是** V4 的 `effectiveAge`
+    //    ——後者吃當前能力，一旦開始扣能力，時鐘會往回走（實測倒退 2.25 年），
+    //    衰退就會自我熄火。詳見 `progress/ageDrift.js` 檔頭。
+    //  ⚠ 跨 k 年就補 k 年的漂移（`years: yearsCrossed`）⇒ 快轉與逐日推進逐值相同。
+    const aged = rolled.yearsCrossed > 0
+      ? { ...rolled.state, players: (rolled.state.players ?? []).map((p) => applyAgeDrift(p, { years: rolled.yearsCrossed })) }
+      : rolled.state;
+    set(aged);
     if (rolled.yearsCrossed > 0) get().pushInbox(careerYearNotice(rolled));
     //  收件匣通知（合約到期／即將到期）由這裡發：pushInbox 會用 Date.now 產 id，
     //  屬於不決定性的部分，所以純 reducer 只回傳 notices，不自己寫 inbox。

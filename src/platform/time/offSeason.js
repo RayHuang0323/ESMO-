@@ -41,8 +41,11 @@ export const OFF_SEASON_STEPS = Object.freeze([
   "decisionWindow",       //  決策視窗
 ]);
 
-/** 本輪**真正會執行**的步驟。不假裝九步都做了。 */
-export const IMPLEMENTED_STEPS = Object.freeze(["sealYear", "ageRollover"]);
+/**
+ * **真正會執行**的步驟。不假裝九步都做了。
+ * V5-1：`sealYear` / `ageRollover`　V5-2 追加：`abilityDrift` / `worldSync`
+ */
+export const IMPLEMENTED_STEPS = Object.freeze(["sealYear", "ageRollover", "abilityDrift", "worldSync"]);
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 

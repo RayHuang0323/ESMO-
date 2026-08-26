@@ -33,7 +33,9 @@ import { upgradeCompetitionIdentity } from "../contracts/circuit.js";
 import { FAN_AWARD_POLICY } from "./awardPolicy.js";
 import { buildRegularSeason, SEASON_DAYS } from "./regularSeason.js";
 import { simulateFixture, simSeedFor } from "./simulateFixture.js";
-import { AI_TEAMS } from "./aiTeams.js";
+import { AI_TEAMS, aiRosterAt } from "./aiTeams.js";
+//  V5-2：AI roster 依生涯年度取用。世界年度一律由 worldClock 導出，不自己算。
+import { careerYearOf } from "../time/worldClock.js";
 import { CS_AI_TEAMS } from "../../data/csAiTeams.js";
 import { computeStandings, outcomeSourceMix, TIEBREAKERS } from "./standings.js";
 import { createFinalStandings } from "../contracts/finalStandings.js";
@@ -501,14 +503,21 @@ export const participantsOf = (state) => activeStageOf(state)?.participants ?? [
  * ⚠ 這是 Q2b 紅線的延續：實力一律由 roster 的 16 項能力推導，
  *   `AI_TEAMS[].strength` 不進模擬。
  */
-export function rostersFor(state, playerRoster = []) {
+export function rostersFor(state, playerRoster = [], careerYear = 1) {
   const out = {};
   //  CS Season M1：AI 名單依這個賽季的項目取。**兩個池都是既有內容資料**
   //  （`AI_TEAMS` / `CS_AI_TEAMS`），這裡不生成、不改寫任何 roster。
   //  ⚠ 只放這一季用得到的池：把兩個池都倒進來會讓某一季的模擬有機會
   //    抓到另一個項目的隊伍，那是靜默的跨項目污染。
   const pool = gameModeOf(state) === "cs" ? CS_AI_TEAMS : AI_TEAMS;
-  for (const t of pool) out[t.id] = t.roster;
+  //  ── Season vNext V5-2：MOBA AI 用「當年」的 roster ────────────────────
+  //  ⚠ 只有 MOBA。`CS_AI_TEAMS` 是手寫能力表、**完全沒有年齡欄位**，
+  //    套不上同一條路 ⇒ CS AI 老化列 V6（設計文件 §5.4）。
+  //  ⚠ `aiRosterAt` 是決定性推導、不落盤：既有人繼續老化，只替換必要新人
+  //    ⇒ identity 跨年度延續，不是每年生一隊陌生人。
+  const year = Math.max(1, Math.floor(Number(careerYear) || 1));
+  const isMoba = gameModeOf(state) !== "cs";
+  for (const t of pool) out[t.id] = isMoba ? aiRosterAt(t, year) : t.roster;
   if (state?.playerTeamId) out[state.playerTeamId] = playerRoster;
   return out;
 }
@@ -600,7 +609,8 @@ function withOutcome(state, outcome) {
  * 玩家的場次**不模擬**——那要玩家自己打（或自己棄權）。
  */
 export function simulateAiFixturesOn(state, day, playerRoster = []) {
-  const rosters = rostersFor(state, playerRoster);
+  //  V5-2：AI roster 依**世界時間的生涯年度**取用（`day` 是絕對世界日）。
+  const rosters = rostersFor(state, playerRoster, careerYearOf(day).year);
   let next = state;
   const produced = [];
   for (const f of fixturesOn(state, day)) {
