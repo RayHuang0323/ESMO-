@@ -15036,3 +15036,103 @@ Roadmap 本來就把它列為 V3 的收尾條件。用專案既有的 `tools/bro
 `_backup_20260826_CLAUDE.md`（`_backup_*` 已在 `.gitignore`）。
 
 ### V3 = CLOSED
+
+## Season vNext V4 — 生涯階段與年齡效果（2026-08-26）
+
+基準 `ec02940`。核准範圍含使用者的兩點調整：**不做老將週薪溢價**、**退役不由 age 推導**。
+
+### 交付
+
+| 項目 | 內容 |
+|---|---|
+| `src/platform/progress/careerStage.js`（新增，**52 行實碼**） | 五個階段的推導。`CAREER_STAGES` / `STAGE_BANDS` / `MATURITY` / `maturityOf` / `effectiveCareerAgeOf` / `careerStageOf` |
+| `src/platform/economy/marketValue.js`（新增，**24 行實碼**） | `MARKET` / `ageMultiplier` / `marketValueOf` |
+| `src/ui/playerProfileFoundation.js` | `careerStageOf` 改讀推導模組（**簽章不變**）；新增 `marketValuePresentationOf` |
+| `src/ui/PlayerProfileFoundation.jsx` | 生涯分頁新增「市場價值」格；階段與市場價值都加了 testid |
+| `tools/careerstage_calibration.mjs`（新增） | 量測工具，**不進 CI** |
+| `tools/check_player_lifecycle_v4.mjs`（新增） | **44/44**，含 3 個 mutation sentinel |
+
+### Calibration 先行（常數全部來自實跑，不是猜的）
+
+| 量測 | 值 | 用途 |
+|---|---|---|
+| 同齡期望 maturity | 15:0.67 → 21:0.90 → 24:0.95 → 27+:0.97 | `MATURITY.expected` 表 |
+| 青年期（≤21）殘差跨度 | **0.22** | `perMaturity` = 2×2/0.22 ≈ **18**（兩端差 ±2 年） |
+| 30 歲殘差跨度 | **0.06** | 偏移**自己淡出**，不必為年長選手寫特例 |
+| 單次課程最大 Δmaturity | **0.01** | ×18 ⇒ effectiveAge 最多動 **0.18 年**，最窄區間 4 年 ⇒ 跳不了階 |
+| `ageEfficiency` 轉折點 | **29 歲** | 巔峰期結束 & 折價起點的共同錨 |
+
+⚠ Calibration 推翻了一個原本的假設：`maturity` 在 24 歲之後就飽和（同齡 p10–p90 只剩 0.05）。
+**用固定中性點會讓 15 歲的人一律吃到滿格負偏移** ⇒ 改成與**同齡期望值**比。
+
+### 階段判定
+
+```
+maturity     = 定位主能力平均 / 潛力        （沿用既有 levelGrowth.growthKeysFor）
+offset       = clamp(18 × (maturity − 同齡期望值), ±2.5 年)
+effectiveAge = age + offset
+階段區間      新秀 <20｜成長期 20–24｜巔峰期 24–29｜成熟期 29–33｜老將 ≥33
+```
+
+**早熟／晚熟沒有存在選手身上**（`PROSPECT_TWISTS` 是生成時的 delta），
+所以偏移讀「這名選手現在實際走到哪」，不是出生標籤。效果一樣：
+同樣 19 歲，空間剩 1 點的是**成長期**，空間剩 20 點的還是**新秀**。
+
+### 市場價值
+
+`(底 + 綜合能力項 + 未實現潛力項) × ageMultiplier(age)`
+- 未實現潛力（潛力 − 綜合能力）就是**年輕高潛的資產溢價來源**
+- `ageMultiplier`：28 歲（含）前為 1，之後**等比**遞減（每年 7%）至下限 0.25
+  ⚠ 等比不是等差——等差在接近下限時相鄰年份會掉 20%+，玩家會看到斷崖（§V6 釘住）
+
+實跑（潛力 80、空間 2、同能力）：
+`20 歲 成長期 $132.6萬｜24–28 歲 巔峰期 $132.6萬｜29 歲 成熟期 $123.3萬｜33 歲 老將 $92.2萬｜38 歲 $64.2萬`
+
+新秀池：`17 歲潛力 83 ⇒ $118.1萬` vs `22 歲潛力 60 ⇒ $51.4萬` ⇒ 年輕高潛確實更值錢。
+
+### 本輪明確不動的東西（由 §A 反向釘住）
+
+| 不變式 | 驗法 |
+|---|---|
+| 不改任何能力值 | 兩支模組都沒有寫 `stats` 的痕跡 |
+| 年齡仍不影響比賽結果 | `LogicEngine` 讀 `.age` 次數仍為 **0** |
+| **週薪逐值不變** | 22 歲與 38 歲同能力 ⇒ 週薪相同 |
+| 週結算仍不讀 `players[].salary` | 市場價值與週薪是兩條不相交的路徑 |
+| 階段不落盤 | Store 不得出現 `careerStage:` / `marketValue:` |
+| `ageEfficiency` 逐值不變 | `1.1,1.1,1.04,0.98,0.87,0.54,0.32,0.2` |
+
+### 一個 sentinel 的發現
+
+M-B 原本想用「放大 `perMaturity`」證明 §J1（不跳階）會變紅，**結果破不了**——
+偏移會在上限飽和，前後兩邊都貼在 ±2.5，差值反而是 0。
+⇒ 改成雙重變異，並照實寫明：**上限同時保護 §R4 與 §J1，兩個常數一起放掉才會出事**。
+不假裝單一常數就守得住。
+
+### 已知取捨（刻意）
+
+一名 20 歲、能力已經接近潛力上限的選手仍會被標為**成長期**而不是巔峰期
+（偏移上限 ±2.5 年，20 + 2.5 = 22.5 < 24）。這是「**age 為主軸**」的直接後果，
+也符合電競的實際說法（20 歲天才通常仍被視為還在成長）。**不視為缺陷。**
+
+### Gates
+
+`check_player_lifecycle_v4` **44/44**（新增）｜`check_finance_n` 32/32｜`n2` 35/35｜
+`n3` 40/40｜`n31` 31/31｜`check_recruit_o` 41/41｜`check_pcgm_v0a` 24/24｜
+`check_prospect_growth_space_v0b` 43/43｜`check_foundation_calibration` 58/58｜
+`check_no_player_injury` 29/29｜`check_time_block_v2` 47/47｜`check_time_block_v3` 69/69｜
+`check_r62_player_ui_fixture` PASS｜`check_home_team_contract` PASS｜
+`regress` 15/15｜`regress2` 8/8｜`check_dash10` PASS｜`check_flow09` PASS｜
+`npm run build` ✓ built in 11.54s
+
+⚠ `check_team_development_recovery` **VIOLATED**——**既有紅燈，非本輪造成**。
+違反的兩條是「首頁主要入口磚為戰隊發展」與「talentPick 路由仍保留給相容流程」，
+與 V4 無關。已用臨時 worktree 在 **V4 之前的 `03f473c` 實跑確認為完全相同的兩條違反**。
+
+### ⚠ 未經瀏覽器實測
+
+生涯分頁新增的「市場價值」格與階段標籤（`player-career-stage` / `player-market-value`）
+已由 Node gate §U 以真實選手驗過取得的值，但**沒有在瀏覽器裡打開選手頁看過版面**。
+
+### 沒有做
+
+能力衰退、退休、Off-season、AI 老化、選手離隊；週薪一個位元都沒動。

@@ -915,3 +915,28 @@ CLAUDE.md 已新增「Season vNext 時間線」現役 verifier 段落。
 ⚠ Audit 的反向結論：退休／Off-season／AI 老化**不是 V4 的前置**，
 它們是**「做衰退」的前置**——所以 V4 不做衰退就一個都不必碰。
 衰退若硬塞進 V4，會連帶把 V5＋V6 一起拉進來，且與剛校準完的 V0A/V0B 成長曲線打架。
+
+### Season vNext V4 — 生涯階段與年齡效果：**已完成（2026-08-26）**
+
+交付 `progress/careerStage.js`（52 行）、`economy/marketValue.js`（24 行）、
+UI 接線、`tools/careerstage_calibration.mjs`（量測，不進 CI）。
+守門 `tools/check_player_lifecycle_v4.mjs` **44/44**（含 3 個 sentinel）。
+
+**年齡現在有兩個出口，都不碰能力**：既有的 `ageEfficiency`（成長效率）
+＋ 新的 `careerStage`（看得見）與 `marketValue`（有代價）。
+
+**核准範圍內的兩點調整都已照做**：
+- ❌ **不做**老將週薪溢價——`weeklySalaryOf` 逐值不變（Audit 已證明不需同步調整：
+  `weeklySettlement` 自 N2 起不讀 `players[].salary`，兩條路徑不相交）
+- ❌ **退役不由 age 推導**——`CAREER_STAGES` 只有五個，不含 `retired`
+
+**仍然不做**：能力衰退、退休、Off-season、AI 老化、選手離隊。
+
+### 下一步：V5 之前，建議先做「退役／離隊」的設計裁決
+
+V4 讓年齡**看得見**也**有代價**，但老將目前仍然：能力不會下降、不會離隊。
+⇒ 換血的驅動力只有「市場價值下降 + 練不動」，還缺「他總有一天會走」。
+
+⚠ 順序上的 audit 結論仍然成立：**能力衰退需要 Off-season（不能在週三突然掉）
+與 AI 老化（否則只有玩家的世界會老）** ⇒ V5 應該把
+「退役事件 + Off-season 階段 + AI turnover」當成**一包**設計，不要拆開做。

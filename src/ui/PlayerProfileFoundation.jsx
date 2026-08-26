@@ -5,6 +5,7 @@ import {
   careerStageOf,
   contractPresentationOf,
   careerTimelineOf,
+  marketValuePresentationOf,
   statusPresentationOf,
 } from "./playerProfileFoundation.js";
 
@@ -83,6 +84,7 @@ export function ContractPanel({ player, compact = false }) {
 export function CareerPanel({ player }) {
   const age = agePresentationOf(player);
   const stage = careerStageOf(player);
+  const marketValue = marketValuePresentationOf(player);
   const timeline = careerTimelineOf(player);
   return (
     <div data-testid="player-career-foundation" style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
@@ -95,10 +97,16 @@ export function CareerPanel({ player }) {
           </div>
           <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: "9px 10px" }}>
             <div style={{ color: GC.gray, fontSize: 8.5 }}>生涯階段</div>
-            <div style={{ color: stage.available ? "#f4f4f5" : GC.gray, fontSize: 13, fontWeight: 900, marginTop: 4 }}>{stage.label}</div>
+            <div data-testid="player-career-stage" style={{ color: stage.available ? "#f4f4f5" : GC.gray, fontSize: 13, fontWeight: 900, marginTop: 4 }}>{stage.label}</div>
+          </div>
+          {/*  V4：市場價值＝身價／轉會用的資產價值，**不是週薪**。
+              年輕高潛的未實現潛力本身就是資產；過了巔峰逐年折價。 */}
+          <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: "9px 10px" }}>
+            <div style={{ color: GC.gray, fontSize: 8.5 }}>市場價值</div>
+            <div data-testid="player-market-value" style={{ color: marketValue.available ? "#f4f4f5" : GC.gray, fontSize: 13, fontWeight: 900, marginTop: 4 }}>{marketValue.label}</div>
           </div>
         </div>
-        <div style={{ color: GC.gray, fontSize: 9.5, lineHeight: 1.7, marginTop: 9 }}>這裡只顯示已建立的選手資料；年齡變化、巔峰與退役規則尚未啟用。</div>
+        <div style={{ color: GC.gray, fontSize: 9.5, lineHeight: 1.7, marginTop: 9 }}>生涯階段與市場價值由年齡與能力**即時推導**，不另存一份。年齡目前只影響成長效率與市場價值，**不影響比賽表現，也不影響週薪**。</div>
       </section>
       <ContractPanel player={player} />
       <StatusPanel player={player} />
