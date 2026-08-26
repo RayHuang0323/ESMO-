@@ -13826,3 +13826,22 @@ Release checklist 寫的就是旗標，不是網址參數。
 - C2C 9/9、Renderer 24/24、CS-A2 10/10、C2A 13/13、C2B 14/14、CS23 28/28、Camera 8/8、RAF 7/7、StableCanvas 5/5、production build 與 production Battle smoke PASS。
 - 180 秒 long-run：1544 samples、324 fIdx transitions、StableCanvas shifts 0、stale fIdx 0、duplicate RAF/render 0、camera recovery 9、rapid recovery 0、browser errors 0。
 - `C2C_READY_FOR_FINAL_OWNER_ACCEPTANCE`；未 merge、未 push、未 deploy、未開始 C3。
+
+## CS-C2C 正式關閉／main integration／Pages deploy（2026-08-27）
+
+### Release boundary
+
+- 以最新 `origin/main` `07a86c7` 為基線，`feature/cs-c2c-character-art` fast-forward 併入乾淨 `main`，無內容衝突；本輪未重做 C2C，也未開始 C3。
+- C2C art 與 owner evidence release commit：`964d80b`；只包含已驗收的 tactical character presentation、weapon readability、runtime evidence 與更新後 captures。
+
+### Final verification
+
+- Static／P0：C2C `9/9`、Renderer `24/24`、CS-A2 `10/10`、C2A `13/13`、C2B `14/14`、CS23 `28/28`、Camera `8/8`、RAF `7/7`、StableCanvas `5/5`，全部 PASS。
+- Production build PASS；production Battle smoke PASS；main runtime PASS：hit `Hit_Chest → Walk_Loop → fire/death`、兩次角色卡 focus 穩定追蹤、10/10 rigged、Blue 5／Red 5、browser errors 0。
+- 180 秒 long-run PASS：`1644` samples、`338` fIdx transitions、StableCanvas shifts `0`、stale mismatch `0`、duplicate RAF/render `0`、camera recovery `9`、rapid recovery `0`、browser errors `0`。
+
+### Deployment
+
+- `git push origin main`：`07a86c7..964d80b` 成功。
+- GitHub Pages run `32997810398`（head `964d80b`）success；正式站 <https://rayhuang0323.github.io/ESMO-/> HTTP 200，entry bundle 已核對為本 release build。
+- C2C status：`C2C_CLOSED`；C3 status：`NOT_STARTED`。Minor debt 只保留 stylized low-poly fidelity 與 Android 真機視覺／FPS／觸控／熱節流驗收。
