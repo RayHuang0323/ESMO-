@@ -164,6 +164,23 @@ ck("B9) 沒有賽程時，下一站是**生涯年度邊界**（跨年會 age +1�
   })(),
   ff ? JSON.stringify(ff.nextStopOf(at(clock.CAREER_YEAR.daysPerYear - 2, null))) : "");
 
+//  ⚠ B10／B11 是**瀏覽器實測抓到的缺陷**（2026-08-26 V3 closure）：
+//    站在自己的比賽日上時，卡片顯示「下一站：第 85 天進入第 2 生涯年度（還有 36 天）」
+//    ——但玩家一步都走不了。畫面在說謊，而且說的正好是最會誤導人的那個方向。
+ck("B10) **今天就是比賽日** ⇒ 下一站是今天（`daysAway` 0），不得跳到遙遠的年度邊界",
+  !!ff && (() => {
+    const s = ff.nextStopOf(at(10, 10));
+    return s && s.code === ff.STOP_REASONS.playerFixture && s.day === 10 && s.daysAway === 0;
+  })(),
+  ff ? JSON.stringify(ff.nextStopOf(at(10, 10))) : "");
+
+ck("B11) 同一格 `planAdvance` 回 0 天，且 `stop` 仍指向那場比賽（不得回下下一站）",
+  !!ff && (() => {
+    const p = ff.planAdvance(at(10, 10));
+    return p.days === 0 && p.stop?.code === ff.STOP_REASONS.playerFixture && p.stop?.daysAway === 0;
+  })(),
+  ff ? JSON.stringify(ff.planAdvance(at(10, 10))) : "");
+
 // ════════════════════════════════════════════════════════════════════════════
 //  §C 不是第二個時鐘
 // ════════════════════════════════════════════════════════════════════════════

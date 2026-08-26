@@ -877,3 +877,16 @@ V3（大顆時間操作）不碰本輪任何一條不變式，且快轉的代價
 前置條件已齊備：V0A/V0B 的 `closedRatio`、V1 的世界時間、V2 的 age +1、V3 的快轉。
 V4 之後 **TD-40 的時效缺口才會關閉**——在那之前，快轉的代價只有「成長變慢」
 （`ageEfficiency`），沒有能力下降與選手離隊。
+
+### V3 Closure（2026-08-26）：**V3 = CLOSED**
+
+瀏覽器實測補完，新增 `tools/browser_check_time_controls.mjs`（**21/21**，
+桌面 1280 ＋ 真 390px media query ＋ 比賽日必須擋住）。抓到並修掉兩個真缺陷：
+
+1. **手機完全沒有推進世界時間的入口** —— 手機版不渲染 `ClubStatus`，
+   TD-34 在手機上一直還活著。修法：`WorldTimeStatus` 放進 `MobileHome` 主要動作之後。
+2. **站在比賽日上時「下一站」指向 36 天後的年度邊界** —— 但玩家一步都走不了。
+   修法：`nextStopOf` 改為含今天，`daysAway` 0 顯示「就是今天」。
+
+`check_time_block_v3` 由 67 → **69**（新增 §B10／§B11）。
+CLAUDE.md 已新增「Season vNext 時間線」現役 verifier 段落。

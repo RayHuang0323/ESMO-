@@ -68,11 +68,19 @@ export function nextStopOf({ day, nextFixtureDay = null } = {}) {
   const today = dayOf(day);
   const stops = [];
 
-  //  ⚠ 只認**未來**的賽程。已經過去而仍未收尾的場次由賽季自己的補判處理，
+  //  ⚠ **含今天**（`>=` 不是 `>`）。站在自己的比賽日上時，下一站就是「今天」，
+  //    `daysAway` 為 0。瀏覽器實測抓到的缺陷正是這裡：只認未來的賽程時，
+  //    比賽日當天的卡片會顯示「下一站：第 85 天進入第 2 生涯年度（還有 36 天）」
+  //    ——但玩家其實**一步都走不了**，畫面等於在說謊。
+  //  ⚠ 但**不認過去**的賽程。已經過去而仍未收尾的場次由賽季自己的補判處理，
   //    規劃器不得因為一個過期的數字就把玩家鎖在原地。
   const fx = Number(nextFixtureDay);
-  if (Number.isFinite(fx) && fx > today) {
-    stops.push({ day: fx, code: STOP_REASONS.playerFixture, label: `第 ${fx} 天有你的比賽` });
+  if (Number.isFinite(fx) && fx >= today) {
+    stops.push({
+      day: fx,
+      code: STOP_REASONS.playerFixture,
+      label: fx === today ? "今天有你的比賽" : `第 ${fx} 天有你的比賽`,
+    });
   }
 
   //  年度邊界：本年度剩下的天數走完，下一天就是新年度的第 1 天。
@@ -95,10 +103,11 @@ export function nextStopOf({ day, nextFixtureDay = null } = {}) {
  */
 export function planAdvance({ day, nextFixtureDay = null } = {}, { maxDays = MAX_FAST_FORWARD_DAYS } = {}) {
   const today = dayOf(day);
-  const fx = Number(nextFixtureDay);
-  if (Number.isFinite(fx) && fx === today) return { days: 0, stop: nextStopOf({ day: today, nextFixtureDay: null }) };
-
   const stop = nextStopOf({ day: today, nextFixtureDay });
+  //  下一站就是今天 ⇒ 一天都不規劃，並且**照實回傳那個 stop**。
+  //  ⚠ 這裡不可以改成回傳「下下一站」——玩家會看到一個他根本走不到的日子。
+  if (stop && stop.daysAway <= 0) return { days: 0, stop };
+
   const cap = Math.max(1, Math.min(Math.floor(Number(maxDays) || MAX_FAST_FORWARD_DAYS), MAX_FAST_FORWARD_DAYS));
   const want = stop ? stop.daysAway : cap;
   return { days: Math.max(0, Math.min(want, cap)), stop };

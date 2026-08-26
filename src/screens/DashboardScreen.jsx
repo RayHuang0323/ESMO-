@@ -282,8 +282,10 @@ function WorldTimeStatus() {
         {t.nextFixtureDay ? ` · 下一場賽程在第 ${t.nextFixtureDay} 天` : " · 目前沒有排定的賽程"}
       </div>
       {stop && (
+        //  ⚠ `daysAway === 0` 要說「就是今天」，不能顯示「還有 0 天」——
+        //    那一格正是玩家**走不動**的時候，訊息必須讓他知道要先處理今天的事。
         <div className="esmo-status-card__detail" data-testid="home-next-stop">
-          下一站：{stop.label}（還有 {stop.daysAway} 天）
+          下一站：{stop.label}{stop.daysAway > 0 ? `（還有 ${stop.daysAway} 天）` : "（就是今天）"}
         </div>
       )}
       {note && <div className="esmo-status-card__detail" style={{ color: GC.gold }}>{note}</div>}
@@ -718,6 +720,15 @@ function MobileHome({ team, meta, finance, unread, xpPercent, activeMatchView, o
         <MobileTeamHeader team={{ ...team, gold: finance.funds }} meta={meta} unread={unread} xpPercent={xpPercent} onInbox={() => onSelect("notify")} />
         <main className="esmo-mobile-home__content">
           <MobilePrimaryAction activeMatchView={activeMatchView} onResumeActive={onResumeActive} action={primaryAction} />
+          {/*  ── V3：手機也必須推得動世界時間 ──────────────────────────────
+              手機版不渲染 `ClubStatus`，所以在 V3 之前，**整個手機介面沒有任何
+              推進世界時間的入口**——玩家只剩訓練中心那顆按鈕，而那顆按鈕要求
+              「真的有人在訓練」。也就是說 V1 修掉的 TD-34（不指派訓練，世界完全
+              停住）在手機上一直還活著，瀏覽器實測才抓到。
+              ⚠ 放在主要動作之後、快捷動作之前：時間是每天都要按的東西，
+                不是「需要時才進的功能」，不能收進分頁 sheet 裡。
+              ⚠ 與桌面共用**同一個** `WorldTimeStatus` 元件 ⇒ 不會有兩套時間 UI。 */}
+          <WorldTimeStatus />
           <MobileQuickActions items={quickActions} />
           <MobileClubSnapshot players={players} developmentPoints={developmentPoints} wk={wk} sponsor={sponsor} profile={profile} onSelect={onSelect} />
           <MobileCompeteRail modes={modes} onSelect={onSelect} sectionRef={competeRef} />

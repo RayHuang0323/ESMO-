@@ -39,6 +39,17 @@ node tools/regress2.mjs # 一律跑（若存在）
   `check_moba_experience26` `check_progress25` `check_moba_tactic24` `check_cs23`
   `check_flow09` `check_dash10`
 
+- **Season vNext 時間線（2026-08-26 V3 起；動到世界時間／快轉／週結算就必跑）**：
+  `check_world_time_v1`（46）`check_time_block_v2`（47）**`check_time_block_v3`（69）**
+  ＋瀏覽器 **`browser_check_time_controls`**（21）
+  ⚠ `check_time_block_v3` 是**快轉**的守門，釘住三件很容易被「順手」改壞的事：
+  ① 競技每日容量**不得跨日累積**（掃 1–90 天）② 多週推進的**結算冪等**
+  （跳 3 週＝恰好 3 次，且與跳 21 次一天在天數／資金／`lastSettledWeek` 逐值相同）
+  ③ 規劃器不得自己掃賽程（否則會出現第二套賽程邏輯）。
+  ⚠ `browser_check_time_controls` 驗**桌面＋390px 真 media query**與「比賽日必須擋住、
+  不得自動棄權」。手機沒有世界時間入口的缺陷就是它抓到的。
+  ⚠ 這幾支都是**秒級**，不走 `verify.mjs`，直接 `node tools/<name>.mjs` 即可。
+
   ### ⚠⚠ 長 verifier 一律走 `tools/verify.mjs`，**禁止直接執行巢狀腳本**
 
   **本段先前的敘述是錯的**（原文：「跑 runtime29 一支就等於跑完全部，44/44，單跑約

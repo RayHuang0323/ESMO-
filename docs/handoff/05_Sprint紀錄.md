@@ -14960,3 +14960,79 @@ gate §U 以 testid 驗過入口存在，但**沒有在瀏覽器裡實際點過*
 
 V4 Lifecycle / 衰退 / 退休 / Off-season / AI turnover；
 真人競技 / 定時賽事 / Ranked / 連線 / server（連契約生產者都沒建）。
+
+## Season vNext V3 Closure — 瀏覽器實測與兩個真缺陷（2026-08-26）
+
+基準 `329130f`。V3 的 Node gate 早就全綠，但**沒有人在瀏覽器裡按過那三顆按鈕**。
+這一輪把它補完，並抓到**兩個 Node gate 抓不到的缺陷**。
+
+### 新增 `tools/browser_check_time_controls.mjs`（21/21）
+
+Roadmap 本來就把它列為 V3 的收尾條件。用專案既有的 `tools/browser/cdp.mjs`，
+以 `Emulation.setDeviceMetricsOverride` 取得**真正的 390px viewport**
+（觸發真的 media query，不是把視窗拉窄——實測 window resize 在本機根本改不動 innerWidth）。
+
+§D 桌面 1280｜§M 手機 390｜§F 有正式賽程時必須停住
+
+### 缺陷 ①：手機**完全沒有**推進世界時間的入口
+
+手機版不渲染 `ClubStatus`，而世界時間卡在它裡面。實測掃過首頁、戰隊、更多三個分頁
+（`home-nav-home` / `home-nav-team` / `home-nav-more`），`home-world-time` **一處都沒有**。
+
+⇒ 手機玩家只剩訓練中心那顆按鈕，而它要求「真的有人在訓練」
+⇒ **V1 修掉的 TD-34（不指派訓練，世界完全停住）在手機上一直還活著。**
+
+**修法**：把**同一個** `WorldTimeStatus` 元件放進 `MobileHome` 的主要動作之後、
+快捷動作之前。時間是每天都要按的東西，不是「需要時才進的功能」，不能收進 sheet。
+共用同一個元件 ⇒ 不會有兩套時間 UI。
+由 §M2–M6 釘住（卡片在、三顆按鈕可見、不溢出、無橫向捲動、按得動）。
+
+### 缺陷 ②：站在比賽日上時，「下一站」在說謊
+
+`nextStopOf` 原本只認 `fx > today` 的賽程。所以站在自己的比賽日上時，卡片顯示
+**「下一站：第 85 天進入第 2 生涯年度（還有 36 天）」**——但玩家其實**一步都走不了**。
+畫面指向一個他根本到不了的日子，而且正好是最會誤導人的方向。
+
+**修法**：改成 `fx >= today`，當天的 label 是「今天有你的比賽」、`daysAway` 為 0；
+`planAdvance` 在 `daysAway <= 0` 時回 0 天並**照實回傳那個 stop**（不得回下下一站）；
+畫面把 `daysAway === 0` 顯示成「就是今天」而不是「還有 0 天」。
+由 Node gate §B10／§B11 與 browser gate §F2 釘住。
+
+### 一個測試教訓（不是產品缺陷）
+
+實測中一度以為「比賽日按推進 7 天沒有任何反應」。實際是**我用了過期的座標**——
+前一次操作讓卡片多了一行提示，按鈕整體下移，點擊落在文字上。
+用新鮮座標重測後三顆按鈕都正確擋下並顯示原因。
+⇒ 這也是 browser gate 用 `data-testid` 點擊、不用固定座標的理由。
+
+### 實測結果
+
+| 情境 | 結果 |
+|---|---|
+| 桌面 推進 1 天 | 第 1 → 2 天 |
+| 桌面 推進 7 天 | 第 2 → 9 天 |
+| 桌面 前往下一站 | 第 9 → 37 天（推 28 天，剛好卡在上限） |
+| 390px viewport | innerW 390，卡片寬 362，按鈕 82/82/97px，不溢出、無橫向捲動 |
+| 390px 按鈕 | 第 37 → 38 天，按得動 |
+| 快轉到賽程日 | 賽程日 43，停在 43，**一天都沒多走** |
+| 比賽日 三顆按鈕 | 全部不動，全部顯示「請先出賽或棄權」 |
+| 自動棄權 | **0 場**（共 140 場） |
+| 頁面例外 | 0 |
+
+### Gates
+
+`browser_check_time_controls` **21/21**（新增）｜`check_time_block_v3` **69/69**（+2）｜
+`check_time_block_v2` 47/47｜`check_world_time_v1` 46/46｜`check_practice_match_v0d` 70/70｜
+`check_match_source_v0c` 21/21｜`check_pcgm_v0a` 24/24｜`check_prospect_growth_space_v0b` 43/43｜
+`check_foundation_calibration` 58/58｜`check_no_player_injury` 29/29｜
+`check_competition_q3` 91/91｜`q6` 57/57｜`check_competition_release_gate` 11/11｜
+`browser_check_home_ia` 23/23｜`regress` 15/15｜`regress2` 8/8｜`check_dash10` PASS｜
+`check_flow09` PASS｜`npm run build` ✓ built in 10.80s
+
+### CLAUDE.md
+
+新增「Season vNext 時間線」現役 verifier 段落（v1／v2／v3 ＋ browser gate），
+並註明這幾支是秒級、不走 `verify.mjs`。改動前已依規則備份為
+`_backup_20260826_CLAUDE.md`（`_backup_*` 已在 `.gitignore`）。
+
+### V3 = CLOSED
