@@ -33,11 +33,19 @@ export const DRIFT_EXCLUDED = Object.freeze(["learning"]);
 
 export const DRIFT = Object.freeze({
   //  每一類：緩升到幾歲（老化時鐘）、每年升多少、幾歲開始衰、每年衰多少
+  //
+  //  ⚠ **正向 drift 刻意極小，而且操作是 0。** 職責分工：
+  //      Training / Match Growth = 選手**主要**成長來源
+  //      Age Drift              = 自然成熟／老化變化
+  //    V5-2 首版的正向值（操作 1.0 / 戰術 0.7 / 心理 0.4 / 團隊 0.6）與訓練**重複計算**：
+  //    實測完全不訓練的 19 歲，5 年純靠 aging 主能力就 +2.6～+3.2（其中操作 +2～+5），
+  //    等於訓練成長的 11%。⇒ 操作歸零（手速不會因為「長大」而變快，那是練出來的），
+  //    其餘三類縮到只剩「成熟感」的量級。
   categories: Object.freeze({
-    操作: Object.freeze({ riseUntil: 23, risePerYear: 1.0, declineFrom: 29, declinePerYear: 1.6 }),
-    戰術: Object.freeze({ riseUntil: 31, risePerYear: 0.7, declineFrom: 36, declinePerYear: 0.8 }),
-    心理: Object.freeze({ riseUntil: 30, risePerYear: 0.4, declineFrom: 39, declinePerYear: 0.5 }),
-    團隊: Object.freeze({ riseUntil: 33, risePerYear: 0.6, declineFrom: 41, declinePerYear: 0.4 }),
+    操作: Object.freeze({ riseUntil: 0, risePerYear: 0, declineFrom: 29, declinePerYear: 1.6 }),
+    戰術: Object.freeze({ riseUntil: 31, risePerYear: 0.25, declineFrom: 36, declinePerYear: 0.8 }),
+    心理: Object.freeze({ riseUntil: 30, risePerYear: 0.15, declineFrom: 39, declinePerYear: 0.5 }),
+    團隊: Object.freeze({ riseUntil: 33, risePerYear: 0.2, declineFrom: 41, declinePerYear: 0.4 }),
   }),
   /** 衰退斜坡：進入衰退後要幾年才跌到全速。 */
   rampYears: 3,

@@ -184,6 +184,33 @@ ck("P5) **`learning` 逐值不變**（掃 20 年）",
     return driftYears(p0, 20).stats.learning === p0.stats.learning;
   })());
 
+//  ⚠ P5b／P5c 是 V5-3 前的 calibration 加上的：正向 drift 曾經與訓練**重複計算**
+//    （不訓練的 19 歲 5 年純靠 aging 主能力 +2.6～+3.2，其中操作 +2～+5）。
+//    職責分工是：Training / Match Growth 才是主要成長來源，Age Drift 只做自然成熟。
+ck("P5b) **操作不因 aging 額外成長**（手速是練出來的，不是長大就會）",
+  !!drift && drift.DRIFT.categories["操作"].risePerYear === 0,
+  !!drift ? `操作 risePerYear ${drift.DRIFT.categories["操作"].risePerYear}` : "");
+
+ck("P5c) **完全不訓練的年輕人不得只靠 aging 明顯變強**（5 年主能力增幅 < 1.5）",
+  !!drift && (() => {
+    let worst = 0;
+    for (const age of [19, 22]) {
+      for (const role of ["上路", "打野", "中路", "輔助"]) {
+        const p0 = { ...mk({ id: `dc-${age}-${role}`, age, at: 62, potential: 88 }), role };
+        let p = p0;
+        for (let i = 0; i < 5; i++) p = drift.applyAgeDrift({ ...p, age: p.age + 1 });
+        const mk5 = Object.keys(p0.stats).reduce((s, k) => s + p.stats[k] - p0.stats[k], 0) / 16;
+        worst = Math.max(worst, mk5);
+      }
+    }
+    return worst < 1.5;
+  })(),
+  !!drift ? (() => {
+    const p0 = { ...mk({ id: "dc-19-中路", age: 19, at: 62, potential: 88 }), role: "中路" };
+    let p = p0; for (let i = 0; i < 5; i++) p = drift.applyAgeDrift({ ...p, age: p.age + 1 });
+    return `19 歲中路 5 年純 aging 平均 +${(Object.keys(p0.stats).reduce((s, k) => s + p.stats[k] - p0.stats[k], 0) / 16).toFixed(2)}`;
+  })() : "");
+
 ck("P6) 年輕人（巔峰之前）不會因為漂移而變弱",
   !!drift && (() => {
     const p0 = mk({ id: "yng", age: 20, at: 60, potential: 90 });

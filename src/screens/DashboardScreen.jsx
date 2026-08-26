@@ -252,12 +252,14 @@ function WorldTimeStatus() {
   const advanceToNextStop = useProfileStore((s) => s.advanceToNextStop);
   const nextStopView = useProfileStore((s) => s.nextStopView);
   const offSeasonView = useProfileStore((s) => s.offSeasonView);
+  const retirementView = useProfileStore((s) => s.retirementView);
   const days = useProfileStore((s) => s.meta?.days);
   const worldTimeView = useProfileStore((s) => s.worldTimeView);
   const [note, setNote] = React.useState(null);
   const t = worldTimeView();
   const stop = nextStopView();
   const offSeason = offSeasonView();
+  const retirement = retirementView();
 
   //  ⚠ 推進結果一律照實顯示。「推不動」與「推了一半停下」是兩件不同的事，
   //    合併成「什麼都沒發生」正是 V1 檔頭說要避免的靜默失敗。
@@ -296,6 +298,14 @@ function WorldTimeStatus() {
         <div className="esmo-status-card__detail" data-testid="home-offseason">
           第 {offSeason.latest.careerYear} 生涯年度已封存
           （當時 {offSeason.latest.rosterCount} 人{offSeason.latest.averageAge != null ? `．平均 ${offSeason.latest.averageAge} 歲` : ""}）
+        </div>
+      )}
+      {/*  V5-3：這是 Off-season 目前唯一、也是真正的決策提示——
+          有人宣布退役意向，玩家有一整個生涯年度可以決定要不要現在就簽接班人。 */}
+      {retirement.pendingCount > 0 && (
+        <div className="esmo-status-card__detail" data-testid="home-retirement-intent" style={{ color: GC.gold }}>
+          {retirement.pendingCount} 名選手宣布這可能是最後一年
+          （{retirement.pending.map((p) => `${p.name}．${p.age} 歲`).join("、")}）— 你有一年可以找接班人
         </div>
       )}
       {note && <div className="esmo-status-card__detail" style={{ color: GC.gold }}>{note}</div>}

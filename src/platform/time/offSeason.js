@@ -45,7 +45,7 @@ export const OFF_SEASON_STEPS = Object.freeze([
  * **真正會執行**的步驟。不假裝九步都做了。
  * V5-1：`sealYear` / `ageRollover`　V5-2 追加：`abilityDrift` / `worldSync`
  */
-export const IMPLEMENTED_STEPS = Object.freeze(["sealYear", "ageRollover", "abilityDrift", "worldSync"]);
+export const IMPLEMENTED_STEPS = Object.freeze(["sealYear", "ageRollover", "abilityDrift", "departureIntent", "departureResolve", "worldSync"]);
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 

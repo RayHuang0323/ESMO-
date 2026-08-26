@@ -155,6 +155,8 @@ import { nextStopOf, planAdvance, MAX_FAST_FORWARD_DAYS } from "./time/fastForwa
 import { sealCareerYears, offSeasonViewOf } from "./time/offSeason.js";
 //  V5-2：年度能力漂移。老化時鐘 = raw age + 決定性個體 profile（**不吃當前能力**）。
 import { applyAgeDrift } from "./progress/ageDrift.js";
+//  V5-3：退休意向 → 退休／延役 → 名單地板補位。沒有宣布過意向的人永遠不會退休。
+import { evaluateIntents, resolveRetirements, retirementViewOf } from "./progress/retirement.js";
 import {
   SESSION_STATES, CONNECTION_STATES, consumeLaunchToken, validateSession, cancelSession,
   sessionStateLabel, isSessionExpired, isSessionTerminal,
@@ -1020,6 +1022,8 @@ export const useProfileStore = create((rawSet, get) => {
     //  ⚠ 這是 `sealCareerYears` 在整個 Store 裡的**唯一呼叫點**。賽季 rollover
     //    不得觸發它——兩個項目各換一次季就會把年度封存兩次。
     const toDay = Number(nextState.meta?.days) || fromDay;
+    const departures = [], intents = [];
+    let promotedCount = 0;
     const boundary = sealCareerYears(nextState, { fromDay, toDay });
     const rolled = applyCareerYearRollover(boundary.state, { fromDay, toDay });
     //  ── Season vNext V5-2：年度能力漂移 ─────────────────────────────────
@@ -1031,8 +1035,38 @@ export const useProfileStore = create((rawSet, get) => {
     const aged = rolled.yearsCrossed > 0
       ? { ...rolled.state, players: (rolled.state.players ?? []).map((p) => applyAgeDrift(p, { years: rolled.yearsCrossed })) }
       : rolled.state;
-    set(aged);
+    //  ── Season vNext V5-3：離隊結算 → 離隊意向 → 名單地板 ────────────────
+    //  ⚠ 只在**真的封存了新年度**時跑（`boundary.sealed`）⇒ 直接繼承 V5-1 的
+    //    冪等：同一個年度邊界重跑、重讀存檔，都不可能退休兩批。
+    //  ⚠ 順序是「先結算去年的意向，再評估今年的新意向」——反過來會讓人
+    //    **同一年宣布、同一年就走**，預告就形同虛設。
+    //  ⚠ 這是 `resolveRetirements` 在整個 Store 裡的**唯一呼叫點**。
+    let after = aged;
+    for (const entry of boundary.sealed) {
+      const resolved = resolveRetirements(after, { careerYear: entry.careerYear });
+      const evaluated = evaluateIntents(resolved.state, { careerYear: entry.careerYear });
+      after = evaluated.state;
+      for (const id of resolved.retired) departures.push({ id, careerYear: entry.careerYear });
+      for (const id of evaluated.declared) intents.push({ id, careerYear: entry.careerYear });
+      promotedCount += resolved.promoted.length;
+    }
+    set(after);
     if (rolled.yearsCrossed > 0) get().pushInbox(careerYearNotice(rolled));
+    //  ⚠ 退休預告一定要讓玩家看得到——那正是「有時間找接班人」的產品意義。
+    for (const d of departures) {
+      const name = aged.players?.find((p) => p.id === d.id)?.name ?? d.id;
+      get().pushInbox({ type: "roster", from: "戰隊管理處", subject: `${name} 正式退役`,
+        text: `${name} 在第 ${d.careerYear} 生涯年度結束後正式退役。` });
+    }
+    for (const it of intents) {
+      const name = after.players?.find((p) => p.id === it.id)?.name ?? it.id;
+      get().pushInbox({ type: "roster", from: "選手本人", subject: `${name}：這可能是我的最後一年`,
+        text: `${name} 表達了退役意向。他仍會打完下一個生涯年度——你有一整年可以找接班人。` });
+    }
+    if (promotedCount > 0) {
+      get().pushInbox({ type: "roster", from: "青訓營", subject: `青訓補位 ${promotedCount} 人`,
+        text: `可出賽人數低於門檻，${promotedCount} 名青訓選手已提前上調一軍。他們還很生澀。` });
+    }
     //  收件匣通知（合約到期／即將到期）由這裡發：pushInbox 會用 Date.now 產 id，
     //  屬於不決定性的部分，所以純 reducer 只回傳 notices，不自己寫 inbox。
     for (const r of receipts) for (const note of r.notices ?? []) get().pushInbox(note);
@@ -1126,6 +1160,8 @@ export const useProfileStore = create((rawSet, get) => {
    *   等 V5-3 有了「離隊意向 vs 找接班人」的決策，才會變成真的停下來的地方。
    */
   offSeasonView() { return offSeasonViewOf(get()); },
+  /** 退休意向名單。**畫面的單一讀取點**——這就是 Off-season 的決策依據。 */
+  retirementView() { return retirementViewOf(get()); },
   // ── Season vNext V3：快速推進 ────────────────────────────────────────
   /**
    * 下一個值得停下來的日子。**畫面的單一讀取點**——畫面不自己算。

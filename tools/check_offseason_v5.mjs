@@ -311,12 +311,16 @@ ck("N1) **不改任何能力值**（模組沒有寫 stats 的痕跡）",
 
 //  ⚠ 這裡要禁的是**行為**，不是**宣告**。九步序列本來就會提到後續的掛載點名稱，
 //    用「檔案裡不准出現這個詞」去擋會連「宣告我還沒做這件事」都一起擋掉。
-//    ⇒ 改成兩條精確的：離隊步驟不得被列為已實作，且沒有任何移除選手的程式碼。
-ck("N2) **離隊相關步驟不得被列為已實作**",
-  !!off && !off.IMPLEMENTED_STEPS.some((s) => /departure/i.test(s)),
+//
+//  ⚠ **邊界會隨 Sprint 前進**：`departureIntent` / `departureResolve` 在 V5-1 時
+//    刻意未實作，V5-3 正式實作了它們 ⇒ 這一條改成釘住**V5-3 之後仍未實作**的那三步。
+//    （這是範圍推進，不是回歸。）
+ck("N2) **尚未實作的步驟仍然誠實標示**（不假裝九步都做了）",
+  !!off && ["lifecycleEvaluation", "talentMarket", "decisionWindow"]
+    .every((s) => !off.IMPLEMENTED_STEPS.includes(s)),
   !!off ? `已實作：${off.IMPLEMENTED_STEPS.join("／")}` : "");
 
-ck("N2b) **沒有任何移除選手 / 標記離隊的程式碼**",
+ck("N2b) **本檔自己不移除選手**（離隊由 `progress/retirement.js` 負責，職責不混）",
   !!off && !/players\s*\.\s*filter|splice|delete\s+\w*[Pp]layer|retired\s*:|departed\s*:/.test(offSrc));
 
 ck("N3) **不動 AI roster**",
