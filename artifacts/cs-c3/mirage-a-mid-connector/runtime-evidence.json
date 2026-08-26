@@ -97,16 +97,16 @@
     "bufferHeight": 507
   },
   "renderer": {
-    "calls": 1104,
-    "triangles": 24190,
-    "geometries": 1166,
-    "textures": 43,
+    "calls": 1106,
+    "triangles": 24214,
+    "geometries": 1168,
+    "textures": 44,
     "players": 10,
     "rigged": 10,
     "mixers": 10
   },
   "visibility": {
-    "frameIndex": 6,
+    "frameIndex": 7,
     "round": 0,
     "identity": {
       "ok": true,
@@ -157,9 +157,9 @@
     },
     "camera": {
       "position": {
-        "x": -72.89383332887584,
-        "y": 77.59898023454649,
-        "z": -1.9276019983659154
+        "x": -71.88345970499583,
+        "y": 77.63348264284599,
+        "z": -3.3550709474200637
       },
       "near": 0.1,
       "far": 600,
@@ -346,8 +346,8 @@
         "authoritativePresent": true,
         "authoritativeAlive": true,
         "framePosition": {
-          "x": 34.60116643816786,
-          "y": 86.39076609755752
+          "x": 37.93422017904623,
+          "y": 83.29856467761023
         },
         "entityExists": true,
         "entityType": "rigged",
@@ -359,15 +359,15 @@
         "screenBodyReadable": true,
         "screenBodyFootprint": {
           "present": true,
-          "widthPx": 10.582,
-          "heightPx": 13.276,
+          "widthPx": 11.59,
+          "heightPx": 13.649,
           "inViewport": true,
           "depthVisible": true,
           "ndcBounds": {
-            "x0": 0.505,
-            "x1": 0.554,
-            "y0": -0.277,
-            "y1": -0.224,
+            "x0": 0.524,
+            "x1": 0.578,
+            "y0": -0.287,
+            "y1": -0.233,
             "z0": 0.998,
             "z1": 0.998
           },
@@ -384,7 +384,7 @@
           },
           "rotation": {
             "x": 0,
-            "y": 0.832,
+            "y": 0.795,
             "z": 0
           },
           "scale": {
@@ -394,14 +394,14 @@
           },
           "bounds": {
             "min": {
-              "x": -13.096,
+              "x": -12.608,
               "y": 0.01,
-              "z": 32.506
+              "z": 31.149
             },
             "max": {
-              "x": -11.361,
+              "x": -10.836,
               "y": 1.83,
-              "z": 34.384
+              "z": 32.99
             }
           },
           "boundsFinite": true
@@ -412,12 +412,12 @@
           "matrixFinite": true,
           "position": {
             "x": 0,
-            "y": -0.035,
+            "y": 0.005,
             "z": 0
           },
           "rotation": {
             "x": 0,
-            "y": 0.832,
+            "y": 0.795,
             "z": 0
           },
           "scale": {
@@ -427,20 +427,20 @@
           },
           "bounds": {
             "min": {
-              "x": -12.934,
-              "y": 0.085,
-              "z": 26.12
+              "x": -12.424,
+              "y": 0.125,
+              "z": 25.005
             },
             "max": {
-              "x": -5.521,
-              "y": 1.575,
-              "z": 34.144
+              "x": -4.74,
+              "y": 1.615,
+              "z": 32.771
             }
           },
           "boundsFinite": true
         },
         "bodyTransformFinite": true,
-        "bodyFacingDegrees": -46.78722331445942,
+        "bodyFacingDegrees": -47.7825607698807,
         "bodyRenderable": true,
         "primitiveBodyVisible": false,
         "primitiveBodyRenderable": true,
@@ -487,9 +487,9 @@
           "z": 1
         },
         "worldPosition": {
-          "x": -12.375587166168437,
+          "x": -11.865141966404742,
           "y": 0,
-          "z": 33.58598479959434
+          "z": 32.21201863297115
         },
         "transformFinite": true,
         "matrixWorldFinite": true,
@@ -497,9 +497,9 @@
         "inCameraFrustum": true,
         "inCameraViewport": true,
         "screenNdc": {
-          "x": 0.5289170878742123,
-          "y": -0.2642755280263169,
-          "z": 0.9983835719889602
+          "x": 0.5485347639922687,
+          "y": -0.27590023809673647,
+          "z": 0.9983760320079363
         },
         "occludedByWall": true,
         "renderableCount": 116,
@@ -525,8 +525,8 @@
         "authoritativePresent": true,
         "authoritativeAlive": true,
         "framePosition": {
-          "x": 33.1337045769946,
-          "y": 87.07280721121448
+          "x": 34.82928842725293,
+          "y": 82.0264283163549
         },
         "entityExists": true,
         "entityType": "rigged",
@@ -538,15 +538,15 @@
         "screenBodyReadable": true,
         "screenBodyFootprint": {
           "present": true,
-          "widthPx": 12.004,
-          "heightPx": 13.298,
+          "widthPx": 12.793,
+          "heightPx": 13.745,
           "inViewport": true,
           "depthVisible": true,
           "ndcBounds": {
-            "x0": 0.507,
-            "x1": 0.563,
-            "y0": -0.337,
-            "y1": -0.284,
+            "x0": 0.511,
+            "x1": 0.57,
+            "y0": -0.351,
+            "y1": -0.297,
             "z0": 0.998,
             "z1": 0.998
           },
@@ -573,14 +573,14 @@
           },
           "bounds": {
             "min": {
-              "x": -15.758,
-              "y": 0.005,
-              "z": 31.123
+              "x": -15.185,
+              "y": 0.01,
+              "z": 29.266
             },
             "max": {
-              "x": -14.814,
+              "x": -14.182,
               "y": 1.83,
-              "z": 33.427
+              "z": 31.571
             }
           },
           "boundsFinite": true
@@ -591,7 +591,7 @@
           "matrixFinite": true,
           "position": {
             "x": 0,
-            "y": 0.029,
+            "y": -0.025,
             "z": 0
           },
           "rotation": {
@@ -606,20 +606,20 @@
           },
           "bounds": {
             "min": {
-              "x": -15.835,
-              "y": 0.149,
-              "z": 22.97
+              "x": -15.192,
+              "y": 0.095,
+              "z": 21.115
             },
             "max": {
-              "x": -11.903,
-              "y": 1.639,
-              "z": 32.996
+              "x": -11.257,
+              "y": 1.585,
+              "z": 31.14
             }
           },
           "boundsFinite": true
         },
         "bodyTransformFinite": true,
-        "bodyFacingDegrees": -70.72504673689446,
+        "bodyFacingDegrees": -70.58950408576665,
         "bodyRenderable": true,
         "primitiveBodyVisible": false,
         "primitiveBodyRenderable": true,
@@ -666,9 +666,9 @@
           "z": 1
         },
         "worldPosition": {
-          "x": -15.328316091628587,
+          "x": -14.68507129232379,
           "y": 0,
-          "z": 32.49548923463213
+          "z": 30.639307610055596
         },
         "transformFinite": true,
         "matrixWorldFinite": true,
@@ -676,9 +676,9 @@
         "inCameraFrustum": true,
         "inCameraViewport": true,
         "screenNdc": {
-          "x": 0.533543725839013,
-          "y": -0.32592994125610275,
-          "z": 0.9983389661234789
+          "x": 0.5376811384901321,
+          "y": -0.3380510521116167,
+          "z": 0.9983310869890204
         },
         "occludedByWall": true,
         "renderableCount": 116,
@@ -704,8 +704,8 @@
         "authoritativePresent": true,
         "authoritativeAlive": true,
         "framePosition": {
-          "x": 34.72882439737519,
-          "y": 86.82792083141138
+          "x": 37.19768666905911,
+          "y": 82.50125571084756
         },
         "entityExists": true,
         "entityType": "rigged",
@@ -717,15 +717,15 @@
         "screenBodyReadable": true,
         "screenBodyFootprint": {
           "present": true,
-          "widthPx": 11.494,
-          "heightPx": 13.245,
+          "widthPx": 12.161,
+          "heightPx": 13.661,
           "inViewport": true,
           "depthVisible": true,
           "ndcBounds": {
-            "x0": 0.492,
-            "x1": 0.545,
-            "y0": -0.29,
-            "y1": -0.238,
+            "x0": 0.502,
+            "x1": 0.558,
+            "y0": -0.304,
+            "y1": -0.25,
             "z0": 0.998,
             "z1": 0.998
           },
@@ -742,7 +742,7 @@
           },
           "rotation": {
             "x": 0,
-            "y": 0.975,
+            "y": 0.963,
             "z": 0
           },
           "scale": {
@@ -752,14 +752,14 @@
           },
           "bounds": {
             "min": {
-              "x": -13.66,
-              "y": 0.005,
-              "z": 31.686
+              "x": -13.099,
+              "y": 0.01,
+              "z": 30.012
             },
             "max": {
-              "x": -12.193,
+              "x": -11.628,
               "y": 1.83,
-              "z": 33.765
+              "z": 32.082
             }
           },
           "boundsFinite": true
@@ -770,12 +770,12 @@
           "matrixFinite": true,
           "position": {
             "x": 0,
-            "y": -0.011,
+            "y": 0.035,
             "z": 0
           },
           "rotation": {
             "x": 0,
-            "y": 0.975,
+            "y": 0.963,
             "z": 0
           },
           "scale": {
@@ -785,20 +785,20 @@
           },
           "bounds": {
             "min": {
-              "x": -13.582,
-              "y": 0.109,
-              "z": 24.548
+              "x": -13.014,
+              "y": 0.155,
+              "z": 22.937
             },
             "max": {
-              "x": -7.299,
-              "y": 1.599,
-              "z": 33.451
+              "x": -6.635,
+              "y": 1.645,
+              "z": 31.774
             }
           },
           "boundsFinite": true
         },
         "bodyTransformFinite": true,
-        "bodyFacingDegrees": -56.2588965521152,
+        "bodyFacingDegrees": -55.80420340412941,
         "bodyRenderable": true,
         "primitiveBodyVisible": false,
         "primitiveBodyRenderable": true,
@@ -845,9 +845,9 @@
           "z": 1
         },
         "worldPosition": {
-          "x": -13.031794079093928,
+          "x": -12.463273720851333,
           "y": 0,
-          "z": 32.90341923380399
+          "z": 31.225656842907426
         },
         "transformFinite": true,
         "matrixWorldFinite": true,
@@ -855,9 +855,9 @@
         "inCameraFrustum": true,
         "inCameraViewport": true,
         "screenNdc": {
-          "x": 0.517628334315274,
-          "y": -0.28006857480044045,
-          "z": 0.9983721460020271
+          "x": 0.5279370842117633,
+          "y": -0.29226051468465497,
+          "z": 0.998364200900776
         },
         "occludedByWall": true,
         "renderableCount": 116,
@@ -883,8 +883,8 @@
         "authoritativePresent": true,
         "authoritativeAlive": true,
         "framePosition": {
-          "x": 33.953567554784705,
-          "y": 86.31493226913524
+          "x": 36.88986362229243,
+          "y": 82.7052247230607
         },
         "entityExists": true,
         "entityType": "rigged",
@@ -896,15 +896,15 @@
         "screenBodyReadable": true,
         "screenBodyFootprint": {
           "present": true,
-          "widthPx": 11.541,
-          "heightPx": 13.281,
+          "widthPx": 12.208,
+          "heightPx": 13.675,
           "inViewport": true,
           "depthVisible": true,
           "ndcBounds": {
-            "x0": 0.5,
-            "x1": 0.553,
-            "y0": -0.296,
-            "y1": -0.244,
+            "x0": 0.512,
+            "x1": 0.569,
+            "y0": -0.307,
+            "y1": -0.253,
             "z0": 0.998,
             "z1": 0.998
           },
@@ -921,7 +921,7 @@
           },
           "rotation": {
             "x": 0,
-            "y": 0.97,
+            "y": 0.963,
             "z": 0
           },
           "scale": {
@@ -931,14 +931,14 @@
           },
           "bounds": {
             "min": {
-              "x": -14.014,
-              "y": 0.005,
-              "z": 31.827
+              "x": -13.327,
+              "y": 0.01,
+              "z": 30.292
             },
             "max": {
-              "x": -12.539,
+              "x": -11.854,
               "y": 1.83,
-              "z": 33.9
+              "z": 32.362
             }
           },
           "boundsFinite": true
@@ -949,12 +949,12 @@
           "matrixFinite": true,
           "position": {
             "x": 0,
-            "y": -0.033,
+            "y": -0.003,
             "z": 0
           },
           "rotation": {
             "x": 0,
-            "y": 0.97,
+            "y": 0.963,
             "z": 0
           },
           "scale": {
@@ -964,20 +964,20 @@
           },
           "bounds": {
             "min": {
-              "x": -13.933,
-              "y": 0.087,
-              "z": 24.712
+              "x": -13.241,
+              "y": 0.117,
+              "z": 23.219
             },
             "max": {
-              "x": -7.612,
-              "y": 1.577,
-              "z": 33.589
+              "x": -6.858,
+              "y": 1.607,
+              "z": 32.054
             }
           },
           "boundsFinite": true
         },
         "bodyTransformFinite": true,
-        "bodyFacingDegrees": -55.17430204277301,
+        "bodyFacingDegrees": -55.623870916900415,
         "bodyRenderable": true,
         "primitiveBodyVisible": false,
         "primitiveBodyRenderable": true,
@@ -1024,9 +1024,9 @@
           "z": 1
         },
         "worldPosition": {
-          "x": -13.383065097182431,
+          "x": -12.690269345947641,
           "y": 0,
-          "z": 33.04074703946834
+          "z": 31.505663355533144
         },
         "transformFinite": true,
         "matrixWorldFinite": true,
@@ -1034,9 +1034,9 @@
         "inCameraFrustum": true,
         "inCameraViewport": true,
         "screenNdc": {
-          "x": 0.5256242308824289,
-          "y": -0.2859210174321253,
-          "z": 0.998367911864435
+          "x": 0.5384871781156503,
+          "y": -0.29508556357807925,
+          "z": 0.9983621579367703
         },
         "occludedByWall": true,
         "renderableCount": 113,
@@ -1062,8 +1062,8 @@
         "authoritativePresent": true,
         "authoritativeAlive": true,
         "framePosition": {
-          "x": 34.30397875011247,
-          "y": 86.32981266395345
+          "x": 36.77483259626074,
+          "y": 82.95325941676867
         },
         "entityExists": true,
         "entityType": "rigged",
@@ -1075,15 +1075,15 @@
         "screenBodyReadable": true,
         "screenBodyFootprint": {
           "present": true,
-          "widthPx": 11.566,
-          "heightPx": 13.278,
+          "widthPx": 12.25,
+          "heightPx": 13.68,
           "inViewport": true,
           "depthVisible": true,
           "ndcBounds": {
-            "x0": 0.507,
-            "x1": 0.561,
-            "y0": -0.296,
-            "y1": -0.244,
+            "x0": 0.522,
+            "x1": 0.579,
+            "y0": -0.308,
+            "y1": -0.254,
             "z0": 0.998,
             "z1": 0.998
           },
@@ -1100,7 +1100,7 @@
           },
           "rotation": {
             "x": 0,
-            "y": 0.972,
+            "y": 0.964,
             "z": 0
           },
           "scale": {
@@ -1110,14 +1110,14 @@
           },
           "bounds": {
             "min": {
-              "x": -14.085,
-              "y": 0.005,
-              "z": 32.052
+              "x": -13.464,
+              "y": 0.01,
+              "z": 30.588
             },
             "max": {
-              "x": -12.612,
+              "x": -11.994,
               "y": 1.83,
-              "z": 34.127
+              "z": 32.659
             }
           },
           "boundsFinite": true
@@ -1128,12 +1128,12 @@
           "matrixFinite": true,
           "position": {
             "x": 0,
-            "y": 0.033,
+            "y": -0.019,
             "z": 0
           },
           "rotation": {
             "x": 0,
-            "y": 0.972,
+            "y": 0.964,
             "z": 0
           },
           "scale": {
@@ -1143,20 +1143,20 @@
           },
           "bounds": {
             "min": {
-              "x": -14.005,
-              "y": 0.153,
-              "z": 24.93
+              "x": -13.38,
+              "y": 0.101,
+              "z": 23.508
             },
             "max": {
-              "x": -7.696,
-              "y": 1.643,
-              "z": 33.815
+              "x": -7.008,
+              "y": 1.591,
+              "z": 32.351
             }
           },
           "boundsFinite": true
         },
         "bodyTransformFinite": true,
-        "bodyFacingDegrees": -55.52112810970517,
+        "bodyFacingDegrees": -55.681632010290365,
         "bodyRenderable": true,
         "primitiveBodyVisible": false,
         "primitiveBodyRenderable": true,
@@ -1203,9 +1203,9 @@
           "z": 1
         },
         "worldPosition": {
-          "x": -13.45483326873876,
+          "x": -12.828849196723105,
           "y": 0,
-          "z": 33.267110041094526
+          "z": 31.80210235931365
         },
         "transformFinite": true,
         "matrixWorldFinite": true,
@@ -1213,9 +1213,9 @@
         "inCameraFrustum": true,
         "inCameraViewport": true,
         "screenNdc": {
-          "x": 0.5328157695779596,
-          "y": -0.28606397375701365,
-          "z": 0.9983678084380903
+          "x": 0.5484692786125157,
+          "y": -0.29615434635202414,
+          "z": 0.9983613850351963
         },
         "occludedByWall": true,
         "renderableCount": 118,
@@ -1241,7 +1241,7 @@
         "authoritativePresent": true,
         "authoritativeAlive": true,
         "framePosition": {
-          "x": 74.1726286619236,
+          "x": 74.51418948467476,
           "y": 53.71449257012866
         },
         "entityExists": true,
@@ -1254,15 +1254,15 @@
         "screenBodyReadable": true,
         "screenBodyFootprint": {
           "present": true,
-          "widthPx": 9.155,
-          "heightPx": 10.984,
+          "widthPx": 8.162,
+          "heightPx": 11.304,
           "inViewport": true,
           "depthVisible": true,
           "ndcBounds": {
-            "x0": -0.554,
-            "x1": -0.511,
-            "y0": 0.167,
-            "y1": 0.21,
+            "x0": -0.501,
+            "x1": -0.463,
+            "y0": 0.162,
+            "y1": 0.206,
             "z0": 0.999,
             "z1": 0.999
           },
@@ -1279,7 +1279,7 @@
           },
           "rotation": {
             "x": 0,
-            "y": 1.466,
+            "y": 1.47,
             "z": 0
           },
           "scale": {
@@ -1289,12 +1289,12 @@
           },
           "bounds": {
             "min": {
-              "x": 24.03,
-              "y": 0.01,
-              "z": 2.291
+              "x": 24.261,
+              "y": -0.047,
+              "z": 2.181
             },
             "max": {
-              "x": 24.938,
+              "x": 25.041,
               "y": 1.83,
               "z": 4.656
             }
@@ -1307,12 +1307,12 @@
           "matrixFinite": true,
           "position": {
             "x": 0,
-            "y": -0.029,
+            "y": -0.013,
             "z": 0
           },
           "rotation": {
             "x": 0,
-            "y": 1.466,
+            "y": 1.47,
             "z": 0
           },
           "scale": {
@@ -1322,20 +1322,20 @@
           },
           "bounds": {
             "min": {
-              "x": 24.044,
-              "y": 0.091,
-              "z": -6.329
+              "x": 24.217,
+              "y": 0.107,
+              "z": -6.334
             },
             "max": {
-              "x": 25.618,
-              "y": 1.581,
-              "z": 4.144
+              "x": 25.743,
+              "y": 1.597,
+              "z": 4.143
             }
           },
           "boundsFinite": true
         },
         "bodyTransformFinite": true,
-        "bodyFacingDegrees": -83.48556506872802,
+        "bodyFacingDegrees": -84.02000680093978,
         "bodyRenderable": true,
         "primitiveBodyVisible": false,
         "primitiveBodyRenderable": true,
@@ -1382,7 +1382,7 @@
           "z": 1
         },
         "worldPosition": {
-          "x": 24.48244140620004,
+          "x": 24.654327330581907,
           "y": 0,
           "z": 3.7144925701286624
         },
@@ -1392,9 +1392,9 @@
         "inCameraFrustum": true,
         "inCameraViewport": true,
         "screenNdc": {
-          "x": -0.529396068879985,
-          "y": 0.17489039402064865,
-          "z": 0.9987013006804945
+          "x": -0.47601906601608934,
+          "y": 0.1702199414494329,
+          "z": 0.9986986485372017
         },
         "occludedByWall": true,
         "renderableCount": 129,
@@ -1420,7 +1420,7 @@
         "authoritativePresent": true,
         "authoritativeAlive": true,
         "framePosition": {
-          "x": 73.78782832418453,
+          "x": 74.38555126684263,
           "y": 53.35
         },
         "entityExists": true,
@@ -1433,15 +1433,15 @@
         "screenBodyReadable": true,
         "screenBodyFootprint": {
           "present": true,
-          "widthPx": 8.365,
-          "heightPx": 11.296,
+          "widthPx": 7.195,
+          "heightPx": 11.315,
           "inViewport": true,
           "depthVisible": true,
           "ndcBounds": {
-            "x0": -0.563,
-            "x1": -0.525,
-            "y0": 0.163,
-            "y1": 0.208,
+            "x0": -0.51,
+            "x1": -0.476,
+            "y0": 0.158,
+            "y1": 0.202,
             "z0": 0.999,
             "z1": 0.999
           },
@@ -1458,7 +1458,7 @@
           },
           "rotation": {
             "x": 0,
-            "y": 1.46,
+            "y": 1.465,
             "z": 0
           },
           "scale": {
@@ -1468,12 +1468,12 @@
           },
           "bounds": {
             "min": {
-              "x": 23.949,
-              "y": -0.047,
-              "z": 1.818
+              "x": 24.075,
+              "y": -0.048,
+              "z": 1.816
             },
             "max": {
-              "x": 24.724,
+              "x": 24.874,
               "y": 1.83,
               "z": 4.292
             }
@@ -1486,12 +1486,12 @@
           "matrixFinite": true,
           "position": {
             "x": 0,
-            "y": 0.005,
+            "y": -0.035,
             "z": 0
           },
           "rotation": {
             "x": 0,
-            "y": 1.46,
+            "y": 1.465,
             "z": 0
           },
           "scale": {
@@ -1501,20 +1501,20 @@
           },
           "bounds": {
             "min": {
-              "x": 23.889,
-              "y": 0.125,
-              "z": -6.688
+              "x": 24.075,
+              "y": 0.085,
+              "z": -6.693
             },
             "max": {
-              "x": 25.518,
-              "y": 1.615,
-              "z": 3.782
+              "x": 25.651,
+              "y": 1.575,
+              "z": 3.78
             }
           },
           "boundsFinite": true
         },
         "bodyTransformFinite": true,
-        "bodyFacingDegrees": -82.81318185910615,
+        "bodyFacingDegrees": -83.7561914553464,
         "bodyRenderable": true,
         "primitiveBodyVisible": false,
         "primitiveBodyRenderable": true,
@@ -1561,7 +1561,7 @@
           "z": 1
         },
         "worldPosition": {
-          "x": 24.32999291932255,
+          "x": 24.51361256587218,
           "y": 0,
           "z": 3.3500000000000014
         },
@@ -1571,9 +1571,9 @@
         "inCameraFrustum": true,
         "inCameraViewport": true,
         "screenNdc": {
-          "x": -0.5379324005612421,
-          "y": 0.17157419164755675,
-          "z": 0.998698901467377
+          "x": -0.48456767048991994,
+          "y": 0.16706935522311966,
+          "z": 0.9986963701574285
         },
         "occludedByWall": true,
         "renderableCount": 128,
@@ -1599,7 +1599,7 @@
         "authoritativePresent": true,
         "authoritativeAlive": true,
         "framePosition": {
-          "x": 73.37844208092045,
+          "x": 74.26279326399543,
           "y": 53.35
         },
         "entityExists": true,
@@ -1612,15 +1612,15 @@
         "screenBodyReadable": true,
         "screenBodyFootprint": {
           "present": true,
-          "widthPx": 7.524,
-          "heightPx": 11.36,
+          "widthPx": 7.325,
+          "heightPx": 11.199,
           "inViewport": true,
           "depthVisible": true,
           "ndcBounds": {
-            "x0": -0.563,
-            "x1": -0.528,
-            "y0": 0.16,
-            "y1": 0.205,
+            "x0": -0.509,
+            "x1": -0.475,
+            "y0": 0.157,
+            "y1": 0.201,
             "z0": 0.999,
             "z1": 0.999
           },
@@ -1637,7 +1637,7 @@
           },
           "rotation": {
             "x": 0,
-            "y": 1.456,
+            "y": 1.463,
             "z": 0
           },
           "scale": {
@@ -1647,12 +1647,12 @@
           },
           "bounds": {
             "min": {
-              "x": 23.745,
-              "y": -0.048,
+              "x": 23.99,
+              "y": -0.05,
               "z": 1.817
             },
             "max": {
-              "x": 24.545,
+              "x": 24.744,
               "y": 1.83,
               "z": 4.292
             }
@@ -1665,12 +1665,12 @@
           "matrixFinite": true,
           "position": {
             "x": 0,
-            "y": -0.026,
+            "y": 0.029,
             "z": 0
           },
           "rotation": {
             "x": 0,
-            "y": 1.456,
+            "y": 1.463,
             "z": 0
           },
           "scale": {
@@ -1680,20 +1680,20 @@
           },
           "bounds": {
             "min": {
-              "x": 23.739,
-              "y": 0.094,
-              "z": -6.683
+              "x": 23.974,
+              "y": 0.149,
+              "z": -6.69
             },
             "max": {
-              "x": 25.41,
-              "y": 1.584,
-              "z": 3.783
+              "x": 25.579,
+              "y": 1.639,
+              "z": 3.781
             }
           },
           "boundsFinite": true
         },
         "bodyTransformFinite": true,
-        "bodyFacingDegrees": -82.16952522193424,
+        "bodyFacingDegrees": -83.56222551005413,
         "bodyRenderable": true,
         "primitiveBodyVisible": false,
         "primitiveBodyRenderable": true,
@@ -1740,7 +1740,7 @@
           "z": 1
         },
         "worldPosition": {
-          "x": 24.180592821528606,
+          "x": 24.414027108590133,
           "y": 0,
           "z": 3.3500000000000014
         },
@@ -1750,9 +1750,9 @@
         "inCameraFrustum": true,
         "inCameraViewport": true,
         "screenNdc": {
-          "x": -0.5373714079047966,
-          "y": 0.1696324849412786,
-          "z": 0.9986974966772963
+          "x": -0.48417730908912915,
+          "y": 0.16576870968530952,
+          "z": 0.9986954295818427
         },
         "occludedByWall": true,
         "renderableCount": 127,
@@ -1778,7 +1778,7 @@
         "authoritativePresent": true,
         "authoritativeAlive": true,
         "framePosition": {
-          "x": 73.56808934207045,
+          "x": 74.28943128112674,
           "y": 54.220498883577406
         },
         "entityExists": true,
@@ -1791,15 +1791,15 @@
         "screenBodyReadable": true,
         "screenBodyFootprint": {
           "present": true,
-          "widthPx": 7.472,
-          "heightPx": 11.344,
+          "widthPx": 7.28,
+          "heightPx": 11.189,
           "inViewport": true,
           "depthVisible": true,
           "ndcBounds": {
-            "x0": -0.541,
-            "x1": -0.506,
-            "y0": 0.164,
-            "y1": 0.209,
+            "x0": -0.487,
+            "x1": -0.453,
+            "y0": 0.16,
+            "y1": 0.204,
             "z0": 0.999,
             "z1": 0.999
           },
@@ -1816,7 +1816,7 @@
           },
           "rotation": {
             "x": 0,
-            "y": 1.46,
+            "y": 1.466,
             "z": 0
           },
           "scale": {
@@ -1826,14 +1826,14 @@
           },
           "bounds": {
             "min": {
-              "x": 23.787,
-              "y": -0.048,
-              "z": 2.687
+              "x": 24.011,
+              "y": -0.05,
+              "z": 2.688
             },
             "max": {
-              "x": 24.586,
+              "x": 24.765,
               "y": 1.83,
-              "z": 5.163
+              "z": 5.162
             }
           },
           "boundsFinite": true
@@ -1844,12 +1844,12 @@
           "matrixFinite": true,
           "position": {
             "x": 0,
-            "y": 0.029,
+            "y": 0.012,
             "z": 0
           },
           "rotation": {
             "x": 0,
-            "y": 1.46,
+            "y": 1.466,
             "z": 0
           },
           "scale": {
@@ -1859,20 +1859,20 @@
           },
           "bounds": {
             "min": {
-              "x": 23.782,
-              "y": 0.149,
-              "z": -5.817
+              "x": 23.997,
+              "y": 0.132,
+              "z": -5.823
             },
             "max": {
-              "x": 25.414,
-              "y": 1.639,
-              "z": 4.652
+              "x": 25.569,
+              "y": 1.622,
+              "z": 4.65
             }
           },
           "boundsFinite": true
         },
         "bodyTransformFinite": true,
-        "bodyFacingDegrees": -82.64419636836837,
+        "bodyFacingDegrees": -83.75483340820576,
         "bodyRenderable": true,
         "primitiveBodyVisible": false,
         "primitiveBodyRenderable": true,
@@ -1919,7 +1919,7 @@
           "z": 1
         },
         "worldPosition": {
-          "x": 24.222382547891456,
+          "x": 24.435341681264404,
           "y": 0,
           "z": 4.220498883577406
         },
@@ -1929,9 +1929,9 @@
         "inCameraFrustum": true,
         "inCameraViewport": true,
         "screenNdc": {
-          "x": -0.515763594080175,
-          "y": 0.17337909430212234,
-          "z": 0.9987002072821729
+          "x": -0.4625205391377044,
+          "y": 0.16919390416565527,
+          "z": 0.9986979065474811
         },
         "occludedByWall": true,
         "renderableCount": 125,
@@ -1958,7 +1958,7 @@
         "authoritativeAlive": true,
         "framePosition": {
           "x": 75.36442027678294,
-          "y": 50.22521443827927
+          "y": 44.808490318392415
         },
         "entityExists": true,
         "entityType": "rigged",
@@ -1970,15 +1970,15 @@
         "screenBodyReadable": true,
         "screenBodyFootprint": {
           "present": true,
-          "widthPx": 9.38,
-          "heightPx": 11.036,
+          "widthPx": 9.893,
+          "heightPx": 11.196,
           "inViewport": true,
           "depthVisible": true,
           "ndcBounds": {
-            "x0": -0.771,
-            "x1": -0.727,
-            "y0": 0.148,
-            "y1": 0.191,
+            "x0": -0.768,
+            "x1": -0.722,
+            "y0": 0.133,
+            "y1": 0.177,
             "z0": 0.999,
             "z1": 0.999
           },
@@ -1995,7 +1995,7 @@
           },
           "rotation": {
             "x": 0,
-            "y": 1.465,
+            "y": 1.456,
             "z": 0
           },
           "scale": {
@@ -2005,14 +2005,14 @@
           },
           "bounds": {
             "min": {
-              "x": 24.977,
-              "y": 0.005,
-              "z": -6.123
+              "x": 24.871,
+              "y": 0.01,
+              "z": -8.118
             },
             "max": {
-              "x": 25.819,
+              "x": 25.826,
               "y": 1.83,
-              "z": -3.746
+              "z": -5.744
             }
           },
           "boundsFinite": true
@@ -2023,12 +2023,12 @@
           "matrixFinite": true,
           "position": {
             "x": 0,
-            "y": -0.011,
+            "y": -0.03,
             "z": 0
           },
           "rotation": {
             "x": 0,
-            "y": 1.465,
+            "y": 1.456,
             "z": 0
           },
           "scale": {
@@ -2038,20 +2038,20 @@
           },
           "bounds": {
             "min": {
-              "x": 24.926,
-              "y": 0.109,
-              "z": -14.731
+              "x": 24.924,
+              "y": 0.09,
+              "z": -16.72
             },
             "max": {
-              "x": 26.505,
-              "y": 1.599,
-              "z": -4.258
+              "x": 26.593,
+              "y": 1.58,
+              "z": -6.253
             }
           },
           "boundsFinite": true
         },
         "bodyTransformFinite": true,
-        "bodyFacingDegrees": -84.86148002038662,
+        "bodyFacingDegrees": -83.84827265362588,
         "bodyRenderable": true,
         "primitiveBodyVisible": false,
         "primitiveBodyRenderable": true,
@@ -2098,9 +2098,9 @@
           "z": 1
         },
         "worldPosition": {
-          "x": 25.364420276782937,
+          "x": 25.365568478570864,
           "y": 0,
-          "z": -4.6880251746640695
+          "z": -6.686551162324918
         },
         "transformFinite": true,
         "matrixWorldFinite": true,
@@ -2108,9 +2108,9 @@
         "inCameraFrustum": true,
         "inCameraViewport": true,
         "screenNdc": {
-          "x": -0.7444278329495517,
-          "y": 0.15530791040739994,
-          "z": 0.9986871331037699
+          "x": -0.7416639722990551,
+          "y": 0.14160892959251042,
+          "z": 0.9986779581811782
         },
         "occludedByWall": true,
         "renderableCount": 131,
@@ -2137,9 +2137,9 @@
     "recovery": 1,
     "rapid": 0,
     "position": [
-      -72.89383332887584,
-      77.59898023454649,
-      -1.9276019983659154
+      -71.88345970499583,
+      77.63348264284599,
+      -3.3550709474200637
     ]
   },
   "browserErrors": {
@@ -2147,7 +2147,7 @@
     "page": []
   },
   "capture": {
-    "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO\\worktrees\\cs-c3-environment-slice\\artifacts\\cs-c3\\mirage-a-mid-connector\\battle-runtime-mirage-a-mid-connector.png",
+    "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO\\worktrees\\cs-c3-release\\artifacts\\cs-c3\\mirage-a-mid-connector\\battle-runtime-mirage-a-mid-connector.png",
     "rect": {
       "x": 460.5,
       "y": 0,
@@ -2159,7 +2159,7 @@
   "viewCaptures": {
     "high": {
       "capture": {
-        "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO\\worktrees\\cs-c3-environment-slice\\artifacts\\cs-c3\\mirage-a-mid-connector\\owner-high.png",
+        "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO\\worktrees\\cs-c3-release\\artifacts\\cs-c3\\mirage-a-mid-connector\\owner-high.png",
         "rect": {
           "x": 460.5,
           "y": 0,
@@ -2267,7 +2267,7 @@
               "visibleBodies": 5,
               "sceneBodies": 5,
               "bodyVisibleFlags": 5,
-              "readableBodies": 2,
+              "readableBodies": 1,
               "visiblePresentation": 5,
               "alive": 5,
               "dead": 0,
@@ -2287,7 +2287,7 @@
             "visibleBodies": 5,
             "sceneBodies": 5,
             "bodyVisibleFlags": 5,
-            "readableBodies": 2,
+            "readableBodies": 1,
             "visiblePresentation": 5,
             "alive": 5,
             "dead": 0,
@@ -2351,7 +2351,7 @@
                 "visibleBodies": 5,
                 "sceneBodies": 5,
                 "bodyVisibleFlags": 5,
-                "readableBodies": 2,
+                "readableBodies": 1,
                 "visiblePresentation": 5,
                 "alive": 5,
                 "dead": 0,
@@ -2371,7 +2371,7 @@
               "visibleBodies": 5,
               "sceneBodies": 5,
               "bodyVisibleFlags": 5,
-              "readableBodies": 2,
+              "readableBodies": 1,
               "visiblePresentation": 5,
               "alive": 5,
               "dead": 0,
@@ -2432,15 +2432,15 @@
             "screenBodyReadable": false,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 7.597,
-              "heightPx": 8.801,
+              "widthPx": 7.519,
+              "heightPx": 8.803,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.249,
-                "x1": 0.284,
-                "y0": -0.504,
-                "y1": -0.47,
+                "x0": 0.275,
+                "x1": 0.31,
+                "y0": -0.444,
+                "y1": -0.409,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -2457,7 +2457,7 @@
               },
               "rotation": {
                 "x": 0,
-                "y": 0.532,
+                "y": 0.569,
                 "z": 0
               },
               "scale": {
@@ -2467,14 +2467,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": -9.929,
-                  "y": -0.047,
-                  "z": 24.372
+                  "x": -7.034,
+                  "y": -0.05,
+                  "z": 23.018
                 },
                 "max": {
-                  "x": -7.73,
+                  "x": -4.884,
                   "y": 1.83,
-                  "z": 25.823
+                  "z": 24.548
                 }
               },
               "boundsFinite": true
@@ -2485,12 +2485,12 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": -0.02,
+                "y": -0.01,
                 "z": 0
               },
               "rotation": {
                 "x": 0,
-                "y": 0.532,
+                "y": 0.569,
                 "z": 0
               },
               "scale": {
@@ -2500,14 +2500,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": -9.602,
-                  "y": 0.1,
-                  "z": 20.087
+                  "x": -6.726,
+                  "y": 0.11,
+                  "z": 18.469
                 },
                 "max": {
-                  "x": -0.323,
-                  "y": 1.59,
-                  "z": 25.753
+                  "x": 2.366,
+                  "y": 1.6,
+                  "z": 24.456
                 }
               },
               "boundsFinite": true
@@ -2560,9 +2560,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": -9.062648102293295,
+              "x": -6.181959861620335,
               "y": 0,
-              "z": 25.209972190304597
+              "z": 23.909022654065794
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -2570,9 +2570,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.2647846417277195,
-              "y": -0.49369890851773207,
-              "z": 0.9987365564973495
+              "x": 0.29141760150271295,
+              "y": -0.43353739187860846,
+              "z": 0.9987506194581757
             },
             "occludedByWall": true,
             "renderableCount": 116,
@@ -2611,15 +2611,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 8.778,
-              "heightPx": 10.012,
+              "widthPx": 9.236,
+              "heightPx": 10.347,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.187,
-                "x1": 0.227,
-                "y0": -0.526,
-                "y1": -0.487,
+                "x0": 0.201,
+                "x1": 0.244,
+                "y0": -0.516,
+                "y1": -0.475,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -2636,7 +2636,7 @@
               },
               "rotation": {
                 "x": 0,
-                "y": 1.283,
+                "y": 1.323,
                 "z": 0
               },
               "scale": {
@@ -2646,14 +2646,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": -11.796,
-                  "y": -0.045,
+                  "x": -10.985,
+                  "y": 0.01,
                   "z": 22.78
                 },
                 "max": {
-                  "x": -10.933,
+                  "x": -10.147,
                   "y": 1.83,
-                  "z": 25.106
+                  "z": 25.109
                 }
               },
               "boundsFinite": true
@@ -2664,12 +2664,12 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": 0.034,
+                "y": -0.013,
                 "z": 0
               },
               "rotation": {
                 "x": 0,
-                "y": 1.283,
+                "y": 1.323,
                 "z": 0
               },
               "scale": {
@@ -2679,14 +2679,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": -11.877,
-                  "y": 0.154,
-                  "z": 14.484
+                  "x": -11.086,
+                  "y": 0.107,
+                  "z": 14.378
                 },
                 "max": {
-                  "x": -8.446,
-                  "y": 1.644,
-                  "z": 24.655
+                  "x": -8.051,
+                  "y": 1.597,
+                  "z": 24.644
                 }
               },
               "boundsFinite": true
@@ -2739,7 +2739,7 @@
               "z": 1
             },
             "worldPosition": {
-              "x": -11.38326380612638,
+              "x": -10.60287078349743,
               "y": 0,
               "z": 24.167817450564158
             },
@@ -2749,9 +2749,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.206464579677956,
-              "y": -0.5112283489922377,
-              "z": 0.998732458930525
+              "x": 0.22001012300979567,
+              "y": -0.5000428238000907,
+              "z": 0.998735073585397
             },
             "occludedByWall": true,
             "renderableCount": 116,
@@ -2790,15 +2790,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 8.81,
-              "heightPx": 10.025,
+              "widthPx": 9.407,
+              "heightPx": 10.576,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.246,
-                "x1": 0.287,
-                "y0": -0.429,
-                "y1": -0.389,
+                "x0": 0.236,
+                "x1": 0.279,
+                "y0": -0.379,
+                "y1": -0.338,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -2815,7 +2815,7 @@
               },
               "rotation": {
                 "x": 0,
-                "y": 0.968,
+                "y": 0.971,
                 "z": 0
               },
               "scale": {
@@ -2825,14 +2825,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": -6.879,
-                  "y": -0.045,
-                  "z": 21.318
+                  "x": -5.368,
+                  "y": 0.01,
+                  "z": 19.273
                 },
                 "max": {
-                  "x": -5.398,
+                  "x": -3.882,
                   "y": 1.83,
-                  "z": 23.384
+                  "z": 21.324
                 }
               },
               "boundsFinite": true
@@ -2843,12 +2843,12 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": -0.032,
+                "y": 0.03,
                 "z": 0
               },
               "rotation": {
                 "x": 0,
-                "y": 0.968,
+                "y": 0.971,
                 "z": 0
               },
               "scale": {
@@ -2858,14 +2858,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": -6.797,
-                  "y": 0.088,
-                  "z": 14.206
+                  "x": -5.287,
+                  "y": 0.15,
+                  "z": 12.131
                 },
                 "max": {
-                  "x": -0.462,
-                  "y": 1.578,
-                  "z": 23.073
+                  "x": 1.027,
+                  "y": 1.64,
+                  "z": 21.012
                 }
               },
               "boundsFinite": true
@@ -2918,9 +2918,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": -6.246822689579091,
+              "x": -4.737108781640337,
               "y": 0,
-              "z": 22.52505853614339
+              "z": 20.464324970716476
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -2928,9 +2928,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.2663345848854666,
-              "y": -0.4140704310628707,
-              "z": 0.9987551699270243
+              "x": 0.25649961185962705,
+              "y": -0.36314301820290507,
+              "z": 0.9987670743844256
             },
             "occludedByWall": true,
             "renderableCount": 116,
@@ -2969,15 +2969,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 8.844,
-              "heightPx": 10.019,
+              "widthPx": 9.444,
+              "heightPx": 10.578,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.25,
-                "x1": 0.291,
-                "y0": -0.446,
-                "y1": -0.406,
+                "x0": 0.24,
+                "x1": 0.284,
+                "y0": -0.398,
+                "y1": -0.356,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -2994,7 +2994,7 @@
               },
               "rotation": {
                 "x": 0,
-                "y": 0.969,
+                "y": 0.971,
                 "z": 0
               },
               "scale": {
@@ -3004,14 +3004,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": -7.328,
-                  "y": -0.045,
-                  "z": 22.016
+                  "x": -5.891,
+                  "y": 0.01,
+                  "z": 20.054
                 },
                 "max": {
-                  "x": -5.849,
+                  "x": -4.406,
                   "y": 1.83,
-                  "z": 24.082
+                  "z": 22.105
                 }
               },
               "boundsFinite": true
@@ -3022,12 +3022,12 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": -0.013,
+                "y": -0.017,
                 "z": 0
               },
               "rotation": {
                 "x": 0,
-                "y": 0.969,
+                "y": 0.971,
                 "z": 0
               },
               "scale": {
@@ -3037,14 +3037,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": -7.247,
-                  "y": 0.107,
-                  "z": 14.899
+                  "x": -5.811,
+                  "y": 0.103,
+                  "z": 12.91
                 },
                 "max": {
-                  "x": -0.918,
-                  "y": 1.597,
-                  "z": 23.771
+                  "x": 0.501,
+                  "y": 1.593,
+                  "z": 21.793
                 }
               },
               "boundsFinite": true
@@ -3097,9 +3097,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": -6.696539873781646,
+              "x": -5.2604376573655,
               "y": 0,
-              "z": 23.222643087374223
+              "z": 21.24525438603567
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -3107,9 +3107,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.27074366297384167,
-              "y": -0.4306256987721498,
-              "z": 0.9987513000764244
+              "x": 0.261035908437186,
+              "y": -0.3816774024731531,
+              "z": 0.9987627419085425
             },
             "occludedByWall": true,
             "renderableCount": 113,
@@ -3148,15 +3148,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 8.874,
-              "heightPx": 10.013,
+              "widthPx": 9.477,
+              "heightPx": 10.58,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.254,
-                "x1": 0.295,
-                "y0": -0.46,
-                "y1": -0.421,
+                "x0": 0.244,
+                "x1": 0.288,
+                "y0": -0.414,
+                "y1": -0.373,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -3173,7 +3173,7 @@
               },
               "rotation": {
                 "x": 0,
-                "y": 0.969,
+                "y": 0.971,
                 "z": 0
               },
               "scale": {
@@ -3183,14 +3183,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": -7.737,
-                  "y": -0.045,
-                  "z": 22.627
+                  "x": -6.354,
+                  "y": 0.01,
+                  "z": 20.738
                 },
                 "max": {
-                  "x": -6.258,
+                  "x": -4.869,
                   "y": 1.83,
-                  "z": 24.693
+                  "z": 22.789
                 }
               },
               "boundsFinite": true
@@ -3201,12 +3201,12 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": 0.031,
+                "y": -0.006,
                 "z": 0
               },
               "rotation": {
                 "x": 0,
-                "y": 0.969,
+                "y": 0.971,
                 "z": 0
               },
               "scale": {
@@ -3216,14 +3216,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": -7.656,
-                  "y": 0.151,
-                  "z": 15.509
+                  "x": -6.274,
+                  "y": 0.114,
+                  "z": 13.593
                 },
                 "max": {
-                  "x": -1.329,
-                  "y": 1.641,
-                  "z": 24.382
+                  "x": 0.037,
+                  "y": 1.604,
+                  "z": 22.477
                 }
               },
               "boundsFinite": true
@@ -3276,9 +3276,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": -7.105075788760033,
+              "x": -5.72364400357997,
               "y": 0,
-              "z": 23.834053715592617
+              "z": 21.92892824850415
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -3286,9 +3286,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.2743804466617838,
-              "y": -0.4454051673857211,
-              "z": 0.9987478453249528
+              "x": 0.2649421445834683,
+              "y": -0.39805807718084113,
+              "z": 0.9987589128696553
             },
             "occludedByWall": true,
             "renderableCount": 118,
@@ -3324,22 +3324,22 @@
             "bodyVisible": true,
             "sceneBodyPresent": true,
             "sceneBodyVisibleFlag": true,
-            "screenBodyReadable": true,
+            "screenBodyReadable": false,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 8.539,
-              "heightPx": 10.34,
+              "widthPx": 6.926,
+              "heightPx": 9.394,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.308,
-                "x1": 0.347,
-                "y0": 0.328,
-                "y1": 0.369,
+                "x0": 0.264,
+                "x1": 0.296,
+                "y0": 0.37,
+                "y1": 0.407,
                 "z0": 0.999,
                 "z1": 0.999
               },
-              "readable": true
+              "readable": false
             },
             "bodyTransform": {
               "exists": true,
@@ -3352,7 +3352,7 @@
               },
               "rotation": {
                 "x": 0,
-                "y": 1.472,
+                "y": 1.47,
                 "z": 0
               },
               "scale": {
@@ -3362,14 +3362,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 25.17,
-                  "y": 0.01,
-                  "z": -6.463
+                  "x": 25.458,
+                  "y": -0.044,
+                  "z": -9.58
                 },
                 "max": {
-                  "x": 26.061,
+                  "x": 26.33,
                   "y": 1.83,
-                  "z": -4.099
+                  "z": -7.201
                 }
               },
               "boundsFinite": true
@@ -3380,12 +3380,12 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": -0.004,
+                "y": -0.025,
                 "z": 0
               },
               "rotation": {
                 "x": 0,
-                "y": 1.472,
+                "y": 1.47,
                 "z": 0
               },
               "scale": {
@@ -3395,14 +3395,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 25.156,
-                  "y": 0.116,
-                  "z": -15.091
+                  "x": 25.41,
+                  "y": 0.095,
+                  "z": -18.191
                 },
                 "max": {
-                  "x": 26.663,
-                  "y": 1.606,
-                  "z": -4.613
+                  "x": 26.938,
+                  "y": 1.585,
+                  "z": -7.714
                 }
               },
               "boundsFinite": true
@@ -3455,9 +3455,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 25.592958658399652,
+              "x": 25.847334215398647,
               "y": 0,
-              "z": -5.040744704832036
+              "z": -8.142531595642218
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -3465,9 +3465,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.3245912231925275,
-              "y": 0.3400074582647379,
-              "z": 0.9989314382196129
+              "x": 0.2807457707518522,
+              "y": 0.37848941405105235,
+              "z": 0.9989404335087441
             },
             "occludedByWall": true,
             "renderableCount": 129,
@@ -3506,15 +3506,15 @@
             "screenBodyReadable": false,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 7.55,
-              "heightPx": 9.777,
+              "widthPx": 7.206,
+              "heightPx": 9.694,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.395,
-                "x1": 0.43,
-                "y0": 0.258,
-                "y1": 0.296,
+                "x0": 0.35,
+                "x1": 0.384,
+                "y0": 0.297,
+                "y1": 0.335,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -3531,7 +3531,7 @@
               },
               "rotation": {
                 "x": 0,
-                "y": 1.482,
+                "y": 1.479,
                 "z": 0
               },
               "scale": {
@@ -3541,14 +3541,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 24.949,
-                  "y": -0.039,
-                  "z": -0.688
+                  "x": 25.163,
+                  "y": -0.048,
+                  "z": -3.762
                 },
                 "max": {
-                  "x": 25.68,
+                  "x": 25.89,
                   "y": 1.83,
-                  "z": 1.784
+                  "z": -1.29
                 }
               },
               "boundsFinite": true
@@ -3559,12 +3559,12 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": 0.03,
+                "y": -0.033,
                 "z": 0
               },
               "rotation": {
                 "x": 0,
-                "y": 1.482,
+                "y": 1.479,
                 "z": 0
               },
               "scale": {
@@ -3574,14 +3574,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 24.91,
-                  "y": 0.15,
-                  "z": -9.216
+                  "x": 25.096,
+                  "y": 0.087,
+                  "z": -12.288
                 },
                 "max": {
-                  "x": 26.314,
-                  "y": 1.64,
-                  "z": 1.268
+                  "x": 26.529,
+                  "y": 1.577,
+                  "z": -1.806
                 }
               },
               "boundsFinite": true
@@ -3634,9 +3634,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 25.342618556806016,
+              "x": 25.53013253452346,
               "y": 0,
-              "z": 0.843594881323682
+              "z": -2.2304726286722385
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -3644,9 +3644,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.4128354854161954,
-              "y": 0.26824083277296557,
-              "z": 0.9989146625247949
+              "x": 0.3673253435043389,
+              "y": 0.30657737843208765,
+              "z": 0.9989236238238103
             },
             "occludedByWall": true,
             "renderableCount": 128,
@@ -3685,15 +3685,15 @@
             "screenBodyReadable": false,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 7.546,
-              "heightPx": 9.777,
+              "widthPx": 7.198,
+              "heightPx": 9.695,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.394,
-                "x1": 0.429,
-                "y0": 0.259,
-                "y1": 0.297,
+                "x0": 0.348,
+                "x1": 0.382,
+                "y0": 0.299,
+                "y1": 0.337,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -3710,7 +3710,7 @@
               },
               "rotation": {
                 "x": 0,
-                "y": 1.482,
+                "y": 1.479,
                 "z": 0
               },
               "scale": {
@@ -3720,14 +3720,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 24.949,
-                  "y": -0.039,
-                  "z": -0.754
+                  "x": 25.176,
+                  "y": -0.048,
+                  "z": -3.908
                 },
                 "max": {
-                  "x": 25.68,
+                  "x": 25.903,
                   "y": 1.83,
-                  "z": 1.719
+                  "z": -1.436
                 }
               },
               "boundsFinite": true
@@ -3738,12 +3738,12 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": -0.035,
+                "y": 0.018,
                 "z": 0
               },
               "rotation": {
                 "x": 0,
-                "y": 1.482,
+                "y": 1.479,
                 "z": 0
               },
               "scale": {
@@ -3753,14 +3753,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 24.91,
-                  "y": 0.085,
-                  "z": -9.282
+                  "x": 25.109,
+                  "y": 0.138,
+                  "z": -12.434
                 },
                 "max": {
-                  "x": 26.316,
-                  "y": 1.575,
-                  "z": 1.202
+                  "x": 26.541,
+                  "y": 1.628,
+                  "z": -1.952
                 }
               },
               "boundsFinite": true
@@ -3813,9 +3813,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 25.342968987157732,
+              "x": 25.54276023800999,
               "y": 0,
-              "z": 0.7780090310195149
+              "z": -2.3764985203859865
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -3823,9 +3823,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.411803638563282,
-              "y": 0.26902269397981865,
-              "z": 0.9989148452875335
+              "x": 0.36523364751125265,
+              "y": 0.30842780684424687,
+              "z": 0.9989240563677972
             },
             "occludedByWall": true,
             "renderableCount": 127,
@@ -3864,15 +3864,15 @@
             "screenBodyReadable": false,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 7.594,
-              "heightPx": 9.774,
+              "widthPx": 7.241,
+              "heightPx": 9.692,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.407,
-                "x1": 0.442,
-                "y0": 0.249,
-                "y1": 0.288,
+                "x0": 0.36,
+                "x1": 0.393,
+                "y0": 0.291,
+                "y1": 0.329,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -3889,7 +3889,7 @@
               },
               "rotation": {
                 "x": 0,
-                "y": 1.484,
+                "y": 1.482,
                 "z": 0
               },
               "scale": {
@@ -3899,14 +3899,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 24.961,
-                  "y": -0.039,
-                  "z": 0.05
+                  "x": 25.19,
+                  "y": -0.048,
+                  "z": -3.184
                 },
                 "max": {
-                  "x": 25.692,
+                  "x": 25.917,
                   "y": 1.83,
-                  "z": 2.523
+                  "z": -0.712
                 }
               },
               "boundsFinite": true
@@ -3917,12 +3917,12 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": 0.004,
+                "y": 0.025,
                 "z": 0
               },
               "rotation": {
                 "x": 0,
-                "y": 1.484,
+                "y": 1.482,
                 "z": 0
               },
               "scale": {
@@ -3932,14 +3932,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 24.923,
-                  "y": 0.124,
-                  "z": -8.479
+                  "x": 25.124,
+                  "y": 0.145,
+                  "z": -11.713
                 },
                 "max": {
-                  "x": 26.303,
-                  "y": 1.614,
-                  "z": 2.006
+                  "x": 26.53,
+                  "y": 1.635,
+                  "z": -1.229
                 }
               },
               "boundsFinite": true
@@ -3992,9 +3992,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 25.35483018225885,
+              "x": 25.5572667230513,
               "y": 0,
-              "z": 1.5824322644117288
+              "z": -1.6531160604595598
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -4002,9 +4002,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.42472060398015504,
-              "y": 0.25960179124642935,
-              "z": 0.9989126431192122
+              "x": 0.3767650414130413,
+              "y": 0.30010989410841643,
+              "z": 0.9989221120271707
             },
             "occludedByWall": true,
             "renderableCount": 125,
@@ -4043,15 +4043,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 7.382,
-              "heightPx": 10.136,
+              "widthPx": 7.817,
+              "heightPx": 10.242,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.138,
-                "x1": 0.173,
-                "y0": 0.468,
-                "y1": 0.508,
+                "x0": 0.109,
+                "x1": 0.145,
+                "y0": 0.498,
+                "y1": 0.538,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -4078,14 +4078,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 25.743,
-                  "y": -0.045,
-                  "z": -18.235
+                  "x": 26.083,
+                  "y": 0.01,
+                  "z": -20.609
                 },
                 "max": {
-                  "x": 26.605,
+                  "x": 26.961,
                   "y": 1.83,
-                  "z": -15.864
+                  "z": -18.25
                 }
               },
               "boundsFinite": true
@@ -4096,7 +4096,7 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": 0.019,
+                "y": -0.035,
                 "z": 0
               },
               "rotation": {
@@ -4111,14 +4111,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 25.733,
-                  "y": 0.139,
-                  "z": -26.816
+                  "x": 26.05,
+                  "y": 0.085,
+                  "z": -29.201
                 },
                 "max": {
-                  "x": 27.613,
-                  "y": 1.629,
-                  "z": -16.368
+                  "x": 27.935,
+                  "y": 1.575,
+                  "z": -18.753
                 }
               },
               "boundsFinite": true
@@ -4171,9 +4171,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 26.181554526158095,
+              "x": 26.499239413504398,
               "y": 0,
-              "z": -16.80780924955915
+              "z": -19.19330759955933
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -4181,9 +4181,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.15555818730561655,
-              "y": 0.4794724483599819,
-              "z": 0.9989640386393148
+              "x": 0.12520927558549938,
+              "y": 0.5090219601487144,
+              "z": 0.9989709459390295
             },
             "occludedByWall": true,
             "renderableCount": 131,
@@ -4208,7 +4208,7 @@
     },
     "overview": {
       "capture": {
-        "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO\\worktrees\\cs-c3-environment-slice\\artifacts\\cs-c3\\mirage-a-mid-connector\\owner-overview.png",
+        "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO\\worktrees\\cs-c3-release\\artifacts\\cs-c3\\mirage-a-mid-connector\\owner-overview.png",
         "rect": {
           "x": 460.5,
           "y": 0,
@@ -4481,15 +4481,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 8.632,
-              "heightPx": 11.547,
+              "widthPx": 11.061,
+              "heightPx": 13.558,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.311,
-                "x1": 0.351,
-                "y0": -0.249,
-                "y1": -0.204,
+                "x0": 0.298,
+                "x1": 0.349,
+                "y0": -0.224,
+                "y1": -0.171,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -4516,14 +4516,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 1.537,
-                  "y": -0.047,
-                  "z": 14.695
+                  "x": 2.325,
+                  "y": 0.01,
+                  "z": 13.275
                 },
                 "max": {
-                  "x": 2.819,
+                  "x": 3.583,
                   "y": 1.83,
-                  "z": 16.878
+                  "z": 15.462
                 }
               },
               "boundsFinite": true
@@ -4534,7 +4534,7 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": -0.007,
+                "y": -0.035,
                 "z": 0
               },
               "rotation": {
@@ -4549,14 +4549,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 1.555,
-                  "y": 0.113,
-                  "z": 7.101
+                  "x": 2.342,
+                  "y": 0.085,
+                  "z": 5.683
                 },
                 "max": {
-                  "x": 6.964,
-                  "y": 1.603,
-                  "z": 16.516
+                  "x": 7.748,
+                  "y": 1.575,
+                  "z": 15.099
                 }
               },
               "boundsFinite": true
@@ -4609,9 +4609,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 2.0923776719023692,
+              "x": 2.87964731382268,
               "y": 0,
-              "z": 15.982399554899189
+              "z": 14.566101599341295
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -4619,9 +4619,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.33125564643964284,
-              "y": -0.24029802492134053,
-              "z": 0.9985522340087227
+              "x": 0.3193583674656149,
+              "y": -0.20831566541563037,
+              "z": 0.9985663060144908
             },
             "occludedByWall": false,
             "renderableCount": 116,
@@ -4660,15 +4660,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 9.089,
-              "heightPx": 12.46,
+              "widthPx": 9.847,
+              "heightPx": 13.133,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.259,
-                "x1": 0.301,
-                "y0": -0.536,
-                "y1": -0.487,
+                "x0": 0.265,
+                "x1": 0.31,
+                "y0": -0.535,
+                "y1": -0.483,
                 "z0": 0.998,
                 "z1": 0.998
               },
@@ -4685,7 +4685,7 @@
               },
               "rotation": {
                 "x": 0,
-                "y": 1.422,
+                "y": 1.381,
                 "z": 0
               },
               "scale": {
@@ -4695,12 +4695,12 @@
               },
               "bounds": {
                 "min": {
-                  "x": -8.746,
+                  "x": -8.487,
                   "y": -0.05,
-                  "z": 22.648
+                  "z": 22.657
                 },
                 "max": {
-                  "x": -7.94,
+                  "x": -7.662,
                   "y": 1.83,
                   "z": 25.112
                 }
@@ -4713,12 +4713,12 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": 0.027,
+                "y": 0.025,
                 "z": 0
               },
               "rotation": {
                 "x": 0,
-                "y": 1.422,
+                "y": 1.381,
                 "z": 0
               },
               "scale": {
@@ -4728,14 +4728,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": -8.847,
-                  "y": 0.147,
-                  "z": 14.18
+                  "x": -8.585,
+                  "y": 0.145,
+                  "z": 14.25
                 },
                 "max": {
-                  "x": -6.822,
-                  "y": 1.637,
-                  "z": 24.613
+                  "x": -6.143,
+                  "y": 1.635,
+                  "z": 24.626
                 }
               },
               "boundsFinite": true
@@ -4788,7 +4788,7 @@
               "z": 1
             },
             "worldPosition": {
-              "x": -8.39338560886739,
+              "x": -8.118768841359866,
               "y": 0,
               "z": 24.167817450564158
             },
@@ -4798,9 +4798,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.2817787235434674,
-              "y": -0.5249753131694392,
-              "z": 0.9984269780706309
+              "x": 0.28754231495499044,
+              "y": -0.5207573618874387,
+              "z": 0.9984288339385434
             },
             "occludedByWall": false,
             "renderableCount": 116,
@@ -4839,15 +4839,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 9.741,
-              "heightPx": 12.787,
+              "widthPx": 9.779,
+              "heightPx": 12.774,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.21,
-                "x1": 0.255,
-                "y0": -0.193,
-                "y1": -0.143,
+                "x0": 0.203,
+                "x1": 0.248,
+                "y0": -0.161,
+                "y1": -0.11,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -4874,14 +4874,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 0.889,
-                  "y": -0.009,
-                  "z": 10.168
+                  "x": 1.824,
+                  "y": 0.01,
+                  "z": 8.801
                 },
                 "max": {
-                  "x": 2.364,
+                  "x": 3.302,
                   "y": 1.83,
-                  "z": 12.233
+                  "z": 10.86
                 }
               },
               "boundsFinite": true
@@ -4892,7 +4892,7 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": -0.035,
+                "y": -0.004,
                 "z": 0
               },
               "rotation": {
@@ -4907,14 +4907,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 0.968,
-                  "y": 0.085,
-                  "z": 3.03
+                  "x": 1.904,
+                  "y": 0.116,
+                  "z": 1.658
                 },
                 "max": {
-                  "x": 7.27,
-                  "y": 1.575,
-                  "z": 11.92
+                  "x": 8.206,
+                  "y": 1.606,
+                  "z": 10.548
                 }
               },
               "boundsFinite": true
@@ -4967,9 +4967,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 1.5182400036224948,
+              "x": 2.4540373952941437,
               "y": 0,
-              "z": 11.372136235461355
+              "z": 9.999978436132324
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -4977,9 +4977,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.2326950357761305,
-              "y": -0.17841970363921733,
-              "z": 0.9985794600204199
+              "x": 0.22543508752928398,
+              "y": -0.14614615408445603,
+              "z": 0.9985936601476935
             },
             "occludedByWall": true,
             "renderableCount": 116,
@@ -5018,15 +5018,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 9.826,
-              "heightPx": 12.848,
+              "widthPx": 9.867,
+              "heightPx": 12.839,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.216,
-                "x1": 0.261,
-                "y0": -0.221,
-                "y1": -0.17,
+                "x0": 0.209,
+                "x1": 0.255,
+                "y0": -0.189,
+                "y1": -0.138,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -5053,14 +5053,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 0.108,
-                  "y": -0.009,
-                  "z": 11.313
+                  "x": 1.006,
+                  "y": 0.01,
+                  "z": 10.001
                 },
                 "max": {
-                  "x": 1.583,
+                  "x": 2.483,
                   "y": 1.83,
-                  "z": 13.378
+                  "z": 12.06
                 }
               },
               "boundsFinite": true
@@ -5071,7 +5071,7 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": 0.001,
+                "y": -0.035,
                 "z": 0
               },
               "rotation": {
@@ -5086,14 +5086,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 0.187,
-                  "y": 0.121,
-                  "z": 4.175
+                  "x": 1.086,
+                  "y": 0.085,
+                  "z": 2.858
                 },
                 "max": {
-                  "x": 6.489,
-                  "y": 1.611,
-                  "z": 13.065
+                  "x": 7.388,
+                  "y": 1.575,
+                  "z": 11.748
                 }
               },
               "boundsFinite": true
@@ -5146,9 +5146,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 0.7376061666684492,
+              "x": 1.63594194193697,
               "y": 0,
-              "z": 12.517244155750163
+              "z": 11.199974726149264
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -5156,9 +5156,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.23885126121338113,
-              "y": -0.2057548431806935,
-              "z": 0.9985674327576649
+              "x": 0.2317832895496707,
+              "y": -0.17433777945988646,
+              "z": 0.9985812560373957
             },
             "occludedByWall": true,
             "renderableCount": 113,
@@ -5197,15 +5197,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 9.901,
-              "heightPx": 12.901,
+              "widthPx": 9.945,
+              "heightPx": 12.896,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.221,
-                "x1": 0.267,
-                "y0": -0.245,
-                "y1": -0.194,
+                "x0": 0.214,
+                "x1": 0.261,
+                "y0": -0.214,
+                "y1": -0.163,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -5232,14 +5232,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": -0.575,
-                  "y": -0.009,
-                  "z": 12.315
+                  "x": 0.29,
+                  "y": 0.01,
+                  "z": 11.051
                 },
                 "max": {
-                  "x": 0.9,
+                  "x": 1.768,
                   "y": 1.83,
-                  "z": 14.38
+                  "z": 13.11
                 }
               },
               "boundsFinite": true
@@ -5250,7 +5250,7 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": 0.021,
+                "y": 0.03,
                 "z": 0
               },
               "rotation": {
@@ -5265,14 +5265,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": -0.496,
-                  "y": 0.141,
-                  "z": 5.177
+                  "x": 0.37,
+                  "y": 0.15,
+                  "z": 3.908
                 },
                 "max": {
-                  "x": 5.806,
-                  "y": 1.631,
-                  "z": 14.067
+                  "x": 6.672,
+                  "y": 1.64,
+                  "z": 12.798
                 }
               },
               "boundsFinite": true
@@ -5325,9 +5325,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 0.054481022792870704,
+              "x": 0.9200597751881148,
               "y": 0,
-              "z": 13.519218391290444
+              "z": 12.249974793849049
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -5335,9 +5335,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.24430633710409533,
-              "y": -0.2299834901584563,
-              "z": 0.9985567723290631
+              "x": 0.2374118005317746,
+              "y": -0.19933798310327144,
+              "z": 0.9985702561294678
             },
             "occludedByWall": true,
             "renderableCount": 118,
@@ -5376,15 +5376,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 8.628,
-              "heightPx": 11.228,
+              "widthPx": 6.691,
+              "heightPx": 10.178,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
                 "x0": 0.125,
-                "x1": 0.166,
-                "y0": 0.49,
-                "y1": 0.534,
+                "x1": 0.156,
+                "y0": 0.491,
+                "y1": 0.531,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -5401,7 +5401,7 @@
               },
               "rotation": {
                 "x": 0,
-                "y": 1.74,
+                "y": 2.594,
                 "z": 0
               },
               "scale": {
@@ -5411,14 +5411,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 26.669,
-                  "y": 0.01,
-                  "z": -22.604
+                  "x": 25.969,
+                  "y": -0.049,
+                  "z": -22.086
                 },
                 "max": {
-                  "x": 27.635,
+                  "x": 28.099,
                   "y": 1.83,
-                  "z": -20.246
+                  "z": -20.699
                 }
               },
               "boundsFinite": true
@@ -5429,12 +5429,12 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": 0.011,
+                "y": -0.032,
                 "z": 0
               },
               "rotation": {
                 "x": 0,
-                "y": 1.74,
+                "y": 2.594,
                 "z": 0
               },
               "scale": {
@@ -5444,14 +5444,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 25.452,
-                  "y": 0.131,
-                  "z": -31.152
+                  "x": 18.6,
+                  "y": 0.088,
+                  "z": -26.615
                 },
                 "max": {
-                  "x": 27.612,
-                  "y": 1.621,
-                  "z": -20.732
+                  "x": 27.761,
+                  "y": 1.578,
+                  "z": -20.748
                 }
               },
               "boundsFinite": true
@@ -5504,9 +5504,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 27.151465774562126,
+              "x": 27.220058520455794,
               "y": 0,
-              "z": -21.18411940078425
+              "z": -21.292069504297892
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -5514,9 +5514,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.1440458817973813,
-              "y": 0.4993536248189531,
-              "z": 0.9988776753595924
+              "x": 0.143532948231502,
+              "y": 0.5010709507936226,
+              "z": 0.9988784309705415
             },
             "occludedByWall": true,
             "renderableCount": 129,
@@ -5555,15 +5555,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 6.865,
-              "heightPx": 10.265,
+              "widthPx": 8.823,
+              "heightPx": 11.538,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.202,
-                "x1": 0.234,
-                "y0": 0.432,
-                "y1": 0.473,
+                "x0": 0.172,
+                "x1": 0.213,
+                "y0": 0.451,
+                "y1": 0.497,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -5590,14 +5590,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 26.261,
-                  "y": -0.047,
-                  "z": -17.212
+                  "x": 26.39,
+                  "y": 0.01,
+                  "z": -19.247
                 },
                 "max": {
-                  "x": 27.19,
+                  "x": 27.325,
                   "y": 1.83,
-                  "z": -14.832
+                  "z": -16.873
                 }
               },
               "boundsFinite": true
@@ -5608,7 +5608,7 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": 0.035,
+                "y": -0.002,
                 "z": 0
               },
               "rotation": {
@@ -5623,14 +5623,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 26.226,
-                  "y": 0.155,
-                  "z": -25.824
+                  "x": 26.427,
+                  "y": 0.118,
+                  "z": -27.865
                 },
                 "max": {
-                  "x": 27.725,
-                  "y": 1.645,
-                  "z": -15.346
+                  "x": 27.926,
+                  "y": 1.608,
+                  "z": -17.387
                 }
               },
               "boundsFinite": true
@@ -5683,9 +5683,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 26.662029608662692,
+              "x": 26.862824859724668,
               "y": 0,
-              "z": -15.773003336368504
+              "z": -17.81417700495723
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -5693,9 +5693,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.21953746003870936,
-              "y": 0.4385636653783823,
-              "z": 0.9988509282191965
+              "x": 0.1910033935294964,
+              "y": 0.46190362893178954,
+              "z": 0.9988611976335494
             },
             "occludedByWall": true,
             "renderableCount": 128,
@@ -5734,15 +5734,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 6.865,
-              "heightPx": 10.272,
+              "widthPx": 8.786,
+              "heightPx": 11.519,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.195,
-                "x1": 0.227,
-                "y0": 0.438,
-                "y1": 0.479,
+                "x0": 0.165,
+                "x1": 0.206,
+                "y0": 0.457,
+                "y1": 0.503,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -5769,14 +5769,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 26.317,
-                  "y": -0.047,
-                  "z": -17.713
+                  "x": 26.457,
+                  "y": 0.01,
+                  "z": -19.802
                 },
                 "max": {
-                  "x": 27.254,
+                  "x": 27.392,
                   "y": 1.83,
-                  "z": -15.332
+                  "z": -17.427
                 }
               },
               "boundsFinite": true
@@ -5787,7 +5787,7 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": -0.03,
+                "y": -0.02,
                 "z": 0
               },
               "rotation": {
@@ -5802,14 +5802,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 26.29,
-                  "y": 0.09,
-                  "z": -26.326
+                  "x": 26.494,
+                  "y": 0.1,
+                  "z": -28.421
                 },
                 "max": {
-                  "x": 27.78,
-                  "y": 1.58,
-                  "z": -15.847
+                  "x": 27.984,
+                  "y": 1.59,
+                  "z": -17.942
                 }
               },
               "boundsFinite": true
@@ -5862,9 +5862,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 26.725617044909583,
+              "x": 26.92985968428995,
               "y": 0,
-              "z": -16.273675672120255
+              "z": -18.368744304769137
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -5872,9 +5872,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.2127381642709402,
-              "y": 0.444451540724216,
-              "z": 0.9988535188415617
+              "x": 0.18352457731978766,
+              "y": 0.4683031100972398,
+              "z": 0.9988640133587574
             },
             "occludedByWall": true,
             "renderableCount": 127,
@@ -5913,15 +5913,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 6.853,
-              "heightPx": 10.257,
+              "widthPx": 8.802,
+              "heightPx": 11.524,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.201,
-                "x1": 0.233,
-                "y0": 0.434,
-                "y1": 0.475,
+                "x0": 0.17,
+                "x1": 0.211,
+                "y0": 0.454,
+                "y1": 0.5,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -5948,14 +5948,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 26.35,
-                  "y": -0.047,
-                  "z": -17.348
+                  "x": 26.479,
+                  "y": 0.01,
+                  "z": -19.491
                 },
                 "max": {
-                  "x": 27.279,
+                  "x": 27.414,
                   "y": 1.83,
-                  "z": -14.967
+                  "z": -17.117
                 }
               },
               "boundsFinite": true
@@ -5966,7 +5966,7 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": -0.011,
+                "y": 0.032,
                 "z": 0
               },
               "rotation": {
@@ -5981,14 +5981,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 26.316,
-                  "y": 0.109,
-                  "z": -25.964
+                  "x": 26.518,
+                  "y": 0.152,
+                  "z": -28.113
                 },
                 "max": {
-                  "x": 27.769,
-                  "y": 1.599,
-                  "z": -15.483
+                  "x": 27.971,
+                  "y": 1.642,
+                  "z": -17.632
                 }
               },
               "boundsFinite": true
@@ -6041,9 +6041,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 26.750762484024833,
+              "x": 26.952428322546396,
               "y": 0,
-              "z": -15.908328682448762
+              "z": -18.057864432372057
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -6051,9 +6051,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.21887801213377808,
-              "y": 0.440821499699494,
-              "z": 0.9988519216498901
+              "x": 0.1887038169810792,
+              "y": 0.4652691346420086,
+              "z": 0.9988626784316049
             },
             "occludedByWall": true,
             "renderableCount": 125,
@@ -6092,15 +6092,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 7.394,
-              "heightPx": 10.953,
+              "widthPx": 7.444,
+              "heightPx": 10.925,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.016,
-                "x1": 0.05,
-                "y0": 0.579,
-                "y1": 0.622,
+                "x0": 0.004,
+                "x1": 0.039,
+                "y0": 0.589,
+                "y1": 0.632,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -6127,14 +6127,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 27.464,
-                  "y": -0.009,
-                  "z": -30.925
+                  "x": 27.586,
+                  "y": 0.01,
+                  "z": -31.842
                 },
                 "max": {
-                  "x": 28.348,
+                  "x": 28.483,
                   "y": 1.83,
-                  "z": -28.559
+                  "z": -29.48
                 }
               },
               "boundsFinite": true
@@ -6145,7 +6145,7 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": 0.029,
+                "y": -0.017,
                 "z": 0
               },
               "rotation": {
@@ -6160,14 +6160,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 27.451,
-                  "y": 0.149,
-                  "z": -39.509
+                  "x": 27.577,
+                  "y": 0.103,
+                  "z": -40.43
                 },
                 "max": {
-                  "x": 29.338,
-                  "y": 1.639,
-                  "z": -29.062
+                  "x": 29.464,
+                  "y": 1.593,
+                  "z": -29.983
                 }
               },
               "boundsFinite": true
@@ -6220,9 +6220,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 27.900193954101553,
+              "x": 28.025667368392803,
               "y": 0,
-              "z": -29.50231570769853
+              "z": -30.423128332946785
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -6230,9 +6230,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.03310671845826409,
-              "y": 0.588609060932106,
-              "z": 0.9989169471028667
+              "x": 0.02188469766282608,
+              "y": 0.598553615725356,
+              "z": 0.998921322634709
             },
             "occludedByWall": true,
             "renderableCount": 131,
@@ -6257,7 +6257,7 @@
     },
     "tactical": {
       "capture": {
-        "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO\\worktrees\\cs-c3-environment-slice\\artifacts\\cs-c3\\mirage-a-mid-connector\\owner-tactical.png",
+        "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO\\worktrees\\cs-c3-release\\artifacts\\cs-c3\\mirage-a-mid-connector\\owner-tactical.png",
         "rect": {
           "x": 460.5,
           "y": 0,
@@ -6277,7 +6277,7 @@
         ]
       },
       "visibility": {
-        "frameIndex": 14,
+        "frameIndex": 15,
         "round": 0,
         "identity": {
           "ok": true,
@@ -6517,8 +6517,8 @@
             "authoritativePresent": true,
             "authoritativeAlive": true,
             "framePosition": {
-              "x": 56.533639883338545,
-              "y": 57.884868893544564
+              "x": 58.849412892321034,
+              "y": 53.59493785406316
             },
             "entityExists": true,
             "entityType": "rigged",
@@ -6530,15 +6530,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 8.62,
-              "heightPx": 12.152,
+              "widthPx": 10.519,
+              "heightPx": 13.129,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.219,
-                "x1": 0.259,
-                "y0": 0.088,
-                "y1": 0.136,
+                "x0": 0.176,
+                "x1": 0.225,
+                "y0": 0.12,
+                "y1": 0.172,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -6565,14 +6565,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 7.538,
-                  "y": -0.004,
-                  "z": 3.713
+                  "x": 8.845,
+                  "y": 0.01,
+                  "z": 1.283
                 },
                 "max": {
-                  "x": 8.823,
+                  "x": 10.099,
                   "y": 1.83,
-                  "z": 5.894
+                  "z": 3.472
                 }
               },
               "boundsFinite": true
@@ -6583,7 +6583,7 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": 0.026,
+                "y": -0.035,
                 "z": 0
               },
               "rotation": {
@@ -6598,20 +6598,20 @@
               },
               "bounds": {
                 "min": {
-                  "x": 7.555,
-                  "y": 0.146,
-                  "z": -3.888
+                  "x": 8.862,
+                  "y": 0.085,
+                  "z": -6.311
                 },
                 "max": {
-                  "x": 12.953,
-                  "y": 1.636,
-                  "z": 5.532
+                  "x": 14.261,
+                  "y": 1.575,
+                  "z": 3.109
                 }
               },
               "boundsFinite": true
             },
             "bodyTransformFinite": true,
-            "bodyFacingDegrees": -61.65337377108957,
+            "bodyFacingDegrees": -61.655069451315576,
             "bodyRenderable": true,
             "primitiveBodyVisible": false,
             "primitiveBodyRenderable": true,
@@ -6658,9 +6658,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 8.091807752432437,
+              "x": 9.399387436804496,
               "y": 0,
-              "z": 4.998388793629452
+              "z": 2.575529838505915
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -6668,9 +6668,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.24073566771919272,
-              "y": 0.09559272650347503,
-              "z": 0.9985509486944496
+              "x": 0.1992354858071365,
+              "y": 0.1310762651272007,
+              "z": 0.9985780332756458
             },
             "occludedByWall": true,
             "renderableCount": 116,
@@ -6696,8 +6696,8 @@
             "authoritativePresent": true,
             "authoritativeAlive": true,
             "framePosition": {
-              "x": 43.27494672504222,
-              "y": 74.16781745056416
+              "x": 44.25089003434271,
+              "y": 68.1362641964652
             },
             "entityExists": true,
             "entityType": "rigged",
@@ -6709,15 +6709,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 9.703,
-              "heightPx": 14.461,
+              "widthPx": 11.654,
+              "heightPx": 14.58,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.429,
-                "x1": 0.474,
-                "y0": -0.262,
-                "y1": -0.205,
+                "x0": 0.341,
+                "x1": 0.395,
+                "y0": -0.221,
+                "y1": -0.164,
                 "z0": 0.998,
                 "z1": 0.998
               },
@@ -6734,7 +6734,7 @@
               },
               "rotation": {
                 "x": 0,
-                "y": 1.326,
+                "y": 1.319,
                 "z": 0
               },
               "scale": {
@@ -6744,14 +6744,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": -6.418,
-                  "y": -0.05,
-                  "z": 18.617
+                  "x": -5.878,
+                  "y": -0.008,
+                  "z": 15.319
                 },
                 "max": {
-                  "x": -5.628,
+                  "x": -4.992,
                   "y": 1.83,
-                  "z": 21.051
+                  "z": 17.656
                 }
               },
               "boundsFinite": true
@@ -6762,12 +6762,12 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": -0.005,
+                "y": 0.024,
                 "z": 0
               },
               "rotation": {
                 "x": 0,
-                "y": 1.326,
+                "y": 1.319,
                 "z": 0
               },
               "scale": {
@@ -6777,20 +6777,20 @@
               },
               "bounds": {
                 "min": {
-                  "x": -6.551,
-                  "y": 0.115,
-                  "z": 10.312
+                  "x": -5.941,
+                  "y": 0.144,
+                  "z": 6.934
                 },
                 "max": {
-                  "x": -3.546,
-                  "y": 1.605,
-                  "z": 20.585
+                  "x": -2.867,
+                  "y": 1.634,
+                  "z": 17.192
                 }
               },
               "boundsFinite": true
             },
             "bodyTransformFinite": true,
-            "bodyFacingDegrees": -76.49032337269401,
+            "bodyFacingDegrees": -75.7096182731722,
             "bodyRenderable": true,
             "primitiveBodyVisible": false,
             "primitiveBodyRenderable": true,
@@ -6837,9 +6837,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": -6.068389819294936,
+              "x": -5.456428006189867,
               "y": 0,
-              "z": 20.109486843543607
+              "z": 16.71433779742118
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -6847,9 +6847,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.4548019828487882,
-              "y": -0.25264140356035397,
-              "z": 0.9982851416206132
+              "x": 0.3669234442821604,
+              "y": -0.20775111441248542,
+              "z": 0.9983194063734676
             },
             "occludedByWall": true,
             "renderableCount": 116,
@@ -6875,8 +6875,8 @@
             "authoritativePresent": true,
             "authoritativeAlive": true,
             "framePosition": {
-              "x": 56.85307641594273,
-              "y": 56.02747598749187
+              "x": 59.52802038263353,
+              "y": 50.10340012917738
             },
             "entityExists": true,
             "entityType": "rigged",
@@ -6888,15 +6888,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 8.455,
-              "heightPx": 12.222,
+              "widthPx": 9.892,
+              "heightPx": 12.354,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.155,
-                "x1": 0.194,
-                "y0": 0.117,
-                "y1": 0.165,
+                "x0": 0.107,
+                "x1": 0.153,
+                "y0": 0.155,
+                "y1": 0.204,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -6913,7 +6913,7 @@
               },
               "rotation": {
                 "x": 0,
-                "y": 1.051,
+                "y": 1.034,
                 "z": 0
               },
               "scale": {
@@ -6923,14 +6923,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 8.08,
-                  "y": -0.047,
-                  "z": 0.767
+                  "x": 9.441,
+                  "y": 0.01,
+                  "z": -1.963
                 },
                 "max": {
-                  "x": 9.401,
+                  "x": 10.809,
                   "y": 1.83,
-                  "z": 2.93
+                  "z": 0.157
                 }
               },
               "boundsFinite": true
@@ -6941,12 +6941,12 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": -0.017,
+                "y": -0.003,
                 "z": 0
               },
               "rotation": {
                 "x": 0,
-                "y": 1.051,
+                "y": 1.034,
                 "z": 0
               },
               "scale": {
@@ -6956,20 +6956,20 @@
               },
               "bounds": {
                 "min": {
-                  "x": 8.112,
-                  "y": 0.103,
-                  "z": -6.721
+                  "x": 9.484,
+                  "y": 0.117,
+                  "z": -9.401
                 },
                 "max": {
-                  "x": 13.736,
-                  "y": 1.593,
-                  "z": 2.579
+                  "x": 15.259,
+                  "y": 1.607,
+                  "z": -0.186
                 }
               },
               "boundsFinite": true
             },
             "bodyTransformFinite": true,
-            "bodyFacingDegrees": -62.829383728762615,
+            "bodyFacingDegrees": -58.934304127919276,
             "bodyRenderable": true,
             "primitiveBodyVisible": false,
             "primitiveBodyRenderable": true,
@@ -7016,9 +7016,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 8.652912463930662,
+              "x": 10.027261386156859,
               "y": 0,
-              "z": 2.0414615462249017
+              "z": -0.7253225609112803
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -7026,9 +7026,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.1769503371032565,
-              "y": 0.12567802354206312,
-              "z": 0.9985739127984272
+              "x": 0.12980936259792356,
+              "y": 0.16362481762151948,
+              "z": 0.9986028775822464
             },
             "occludedByWall": true,
             "renderableCount": 116,
@@ -7054,8 +7054,8 @@
             "authoritativePresent": true,
             "authoritativeAlive": true,
             "framePosition": {
-              "x": 55.8589557278896,
-              "y": 55.800019971665655
+              "x": 58.56298580455704,
+              "y": 51.15992740920191
             },
             "entityExists": true,
             "entityType": "rigged",
@@ -7067,15 +7067,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 8.423,
-              "heightPx": 12.243,
+              "widthPx": 9.956,
+              "heightPx": 12.548,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.158,
-                "x1": 0.197,
-                "y0": 0.099,
-                "y1": 0.148,
+                "x0": 0.117,
+                "x1": 0.164,
+                "y0": 0.138,
+                "y1": 0.187,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -7092,7 +7092,7 @@
               },
               "rotation": {
                 "x": 0,
-                "y": 0.992,
+                "y": 0.982,
                 "z": 0
               },
               "scale": {
@@ -7102,14 +7102,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 7.063,
-                  "y": -0.047,
-                  "z": 1.445
+                  "x": 8.583,
+                  "y": 0.01,
+                  "z": -1.006
                 },
                 "max": {
-                  "x": 8.497,
+                  "x": 10.047,
                   "y": 1.83,
-                  "z": 3.546
+                  "z": 1.058
                 }
               },
               "boundsFinite": true
@@ -7120,12 +7120,12 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": 0.03,
+                "y": -0.035,
                 "z": 0
               },
               "rotation": {
                 "x": 0,
-                "y": 0.992,
+                "y": 0.982,
                 "z": 0
               },
               "scale": {
@@ -7135,20 +7135,20 @@
               },
               "bounds": {
                 "min": {
-                  "x": 7.13,
-                  "y": 0.15,
-                  "z": -5.776
+                  "x": 8.656,
+                  "y": 0.085,
+                  "z": -8.205
                 },
                 "max": {
-                  "x": 13.264,
-                  "y": 1.64,
-                  "z": 3.223
+                  "x": 14.873,
+                  "y": 1.575,
+                  "z": 0.74
                 }
               },
               "boundsFinite": true
             },
             "bodyTransformFinite": true,
-            "bodyFacingDegrees": -57.927265138896104,
+            "bodyFacingDegrees": -56.33251939168028,
             "bodyRenderable": true,
             "primitiveBodyVisible": false,
             "primitiveBodyRenderable": true,
@@ -7195,9 +7195,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 7.678362364975314,
+              "x": 9.205460660991541,
               "y": 0,
-              "z": 2.677933691011873
+              "z": 0.1936031143393251
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -7205,9 +7205,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.17947978109255588,
-              "y": 0.10830524563873684,
-              "z": 0.9985606521589315
+              "x": 0.14054769489445518,
+              "y": 0.14661093206757989,
+              "z": 0.9985898908852421
             },
             "occludedByWall": true,
             "renderableCount": 113,
@@ -7233,8 +7233,8 @@
             "authoritativePresent": true,
             "authoritativeAlive": true,
             "framePosition": {
-              "x": 54.98909838120866,
-              "y": 56.28263403809304
+              "x": 57.59454367590065,
+              "y": 52.46133269159224
             },
             "entityExists": true,
             "entityType": "rigged",
@@ -7246,15 +7246,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 8.488,
-              "heightPx": 12.326,
+              "widthPx": 10.078,
+              "heightPx": 12.699,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": 0.17,
-                "x1": 0.21,
-                "y0": 0.079,
-                "y1": 0.128,
+                "x0": 0.136,
+                "x1": 0.183,
+                "y0": 0.115,
+                "y1": 0.165,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -7281,14 +7281,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 6.113,
-                  "y": -0.047,
-                  "z": 2.493
+                  "x": 7.584,
+                  "y": 0.01,
+                  "z": 0.361
                 },
                 "max": {
-                  "x": 7.584,
+                  "x": 9.067,
                   "y": 1.83,
-                  "z": 4.572
+                  "z": 2.414
                 }
               },
               "boundsFinite": true
@@ -7299,7 +7299,7 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": -0.013,
+                "y": 0.029,
                 "z": 0
               },
               "rotation": {
@@ -7314,20 +7314,20 @@
               },
               "bounds": {
                 "min": {
-                  "x": 6.192,
-                  "y": 0.107,
-                  "z": -4.631
+                  "x": 7.663,
+                  "y": 0.149,
+                  "z": -6.789
                 },
                 "max": {
-                  "x": 12.494,
-                  "y": 1.597,
-                  "z": 4.259
+                  "x": 13.965,
+                  "y": 1.639,
+                  "z": 2.101
                 }
               },
               "boundsFinite": true
             },
             "bodyTransformFinite": true,
-            "bodyFacingDegrees": -55.71306682310257,
+            "bodyFacingDegrees": -55.71310960726631,
             "bodyRenderable": true,
             "primitiveBodyVisible": false,
             "primitiveBodyRenderable": true,
@@ -7374,9 +7374,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 6.742172247742197,
+              "x": 8.213594957312246,
               "y": 0,
-              "z": 3.711471427099937
+              "z": 1.5533914686434187
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -7384,9 +7384,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": 0.192140971182933,
-              "y": 0.08804502861475953,
-              "z": 0.9985451875374671
+              "x": 0.159663906103868,
+              "y": 0.12381817237129,
+              "z": 0.9985724931742297
             },
             "occludedByWall": true,
             "renderableCount": 118,
@@ -7412,8 +7412,8 @@
             "authoritativePresent": true,
             "authoritativeAlive": true,
             "framePosition": {
-              "x": 77.6022523051026,
-              "y": 28.46569345826803
+              "x": 77.60854490714692,
+              "y": 28.710659151916143
             },
             "entityExists": true,
             "entityType": "rigged",
@@ -7425,15 +7425,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 6.673,
-              "heightPx": 10.934,
+              "widthPx": 6.504,
+              "heightPx": 11.005,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": -0.098,
-                "x1": -0.067,
-                "y0": 0.473,
-                "y1": 0.516,
+                "x0": -0.097,
+                "x1": -0.066,
+                "y0": 0.471,
+                "y1": 0.514,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -7450,7 +7450,7 @@
               },
               "rotation": {
                 "x": 0,
-                "y": -2.204,
+                "y": -2.22,
                 "z": 0
               },
               "scale": {
@@ -7460,14 +7460,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 26.655,
-                  "y": -0.048,
-                  "z": -22.216
+                  "x": 26.553,
+                  "y": -0.05,
+                  "z": -22.043
                 },
                 "max": {
-                  "x": 28.26,
+                  "x": 28.198,
                   "y": 1.83,
-                  "z": -20.113
+                  "z": -19.971
                 }
               },
               "boundsFinite": true
@@ -7478,12 +7478,12 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": -0.107,
+                "y": -0.106,
                 "z": 0
               },
               "rotation": {
                 "x": 0,
-                "y": -2.204,
+                "y": -2.22,
                 "z": 0
               },
               "scale": {
@@ -7493,20 +7493,20 @@
               },
               "bounds": {
                 "min": {
-                  "x": 21.571,
-                  "y": 0.013,
-                  "z": -21.921
+                  "x": 21.371,
+                  "y": 0.014,
+                  "z": -21.756
                 },
                 "max": {
-                  "x": 28.16,
-                  "y": 1.503,
-                  "z": -13.229
+                  "x": 28.089,
+                  "y": 1.504,
+                  "z": -13.159
                 }
               },
               "boundsFinite": true
             },
             "bodyTransformFinite": true,
-            "bodyFacingDegrees": 125.31915367787089,
+            "bodyFacingDegrees": 126.73234624983465,
             "bodyRenderable": true,
             "primitiveBodyVisible": false,
             "primitiveBodyRenderable": true,
@@ -7553,9 +7553,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 27.60648628238812,
+              "x": 27.534454775187157,
               "y": 0,
-              "z": -21.369481374760834
+              "z": -21.2037570643863
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -7563,9 +7563,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": -0.08601196487363082,
-              "y": 0.4806210614313457,
-              "z": 0.9988448407808816
+              "x": -0.08367910053913855,
+              "y": 0.4790593330280789,
+              "z": 0.9988436487137603
             },
             "occludedByWall": true,
             "renderableCount": 129,
@@ -7591,8 +7591,8 @@
             "authoritativePresent": true,
             "authoritativeAlive": true,
             "framePosition": {
-              "x": 77.13565024044189,
-              "y": 28.760318924121073
+              "x": 77.39158461947846,
+              "y": 29.026301549654185
             },
             "entityExists": true,
             "entityType": "rigged",
@@ -7604,15 +7604,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 6.458,
-              "heightPx": 10.972,
+              "widthPx": 6.724,
+              "heightPx": 11.039,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": -0.095,
-                "x1": -0.065,
+                "x0": -0.092,
+                "x1": -0.06,
                 "y0": 0.468,
-                "y1": 0.511,
+                "y1": 0.512,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -7629,7 +7629,7 @@
               },
               "rotation": {
                 "x": 0,
-                "y": -2.2,
+                "y": -2.215,
                 "z": 0
               },
               "scale": {
@@ -7639,14 +7639,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 26.396,
-                  "y": -0.048,
-                  "z": -21.909
+                  "x": 26.512,
+                  "y": -0.049,
+                  "z": -21.761
                 },
                 "max": {
-                  "x": 27.958,
+                  "x": 28.115,
                   "y": 1.83,
-                  "z": -19.775
+                  "z": -19.658
                 }
               },
               "boundsFinite": true
@@ -7657,12 +7657,12 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": -0.12,
+                "y": -0.109,
                 "z": 0
               },
               "rotation": {
                 "x": 0,
-                "y": -2.2,
+                "y": -2.215,
                 "z": 0
               },
               "scale": {
@@ -7672,20 +7672,20 @@
               },
               "bounds": {
                 "min": {
-                  "x": 21.306,
-                  "y": 0,
-                  "z": -21.611
+                  "x": 21.329,
+                  "y": 0.011,
+                  "z": -21.472
                 },
                 "max": {
-                  "x": 27.861,
-                  "y": 1.49,
-                  "z": -12.896
+                  "x": 28.009,
+                  "y": 1.501,
+                  "z": -12.847
                 }
               },
               "boundsFinite": true
             },
             "bodyTransformFinite": true,
-            "bodyFacingDegrees": 125.33814585222109,
+            "bodyFacingDegrees": 126.3649750582399,
             "bodyRenderable": true,
             "primitiveBodyVisible": false,
             "primitiveBodyRenderable": true,
@@ -7732,9 +7732,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 27.30785568737666,
+              "x": 27.45451318154788,
               "y": 0,
-              "z": -21.06071466628897
+              "z": -20.91975388196056
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -7742,9 +7742,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": -0.0836645225356276,
-              "y": 0.47620804665632915,
-              "z": 0.9988414723271808
+              "x": -0.07914347268759098,
+              "y": 0.4767744881076647,
+              "z": 0.9988419046918794
             },
             "occludedByWall": true,
             "renderableCount": 128,
@@ -7770,8 +7770,8 @@
             "authoritativePresent": true,
             "authoritativeAlive": true,
             "framePosition": {
-              "x": 77.41068052420493,
-              "y": 28.051528677224262
+              "x": 77.69644043877523,
+              "y": 28.29634104635091
             },
             "entityExists": true,
             "entityType": "rigged",
@@ -7783,13 +7783,13 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 6.46,
-              "heightPx": 10.94,
+              "widthPx": 6.769,
+              "heightPx": 11.015,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": -0.105,
-                "x1": -0.075,
+                "x0": -0.103,
+                "x1": -0.071,
                 "y0": 0.475,
                 "y1": 0.518,
                 "z0": 0.999,
@@ -7808,7 +7808,7 @@
               },
               "rotation": {
                 "x": 0,
-                "y": -2.193,
+                "y": -2.208,
                 "z": 0
               },
               "scale": {
@@ -7818,14 +7818,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 26.699,
-                  "y": -0.048,
-                  "z": -22.635
+                  "x": 26.783,
+                  "y": -0.049,
+                  "z": -22.485
                 },
                 "max": {
-                  "x": 28.249,
+                  "x": 28.374,
                   "y": 1.83,
-                  "z": -20.492
+                  "z": -20.373
                 }
               },
               "boundsFinite": true
@@ -7836,12 +7836,12 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": -0.11,
+                "y": -0.122,
                 "z": 0
               },
               "rotation": {
                 "x": 0,
-                "y": -2.193,
+                "y": -2.208,
                 "z": 0
               },
               "scale": {
@@ -7851,20 +7851,20 @@
               },
               "bounds": {
                 "min": {
-                  "x": 21.659,
-                  "y": 0.01,
-                  "z": -22.334
+                  "x": 21.646,
+                  "y": -0.002,
+                  "z": -22.192
                 },
                 "max": {
-                  "x": 28.155,
-                  "y": 1.5,
-                  "z": -13.577
+                  "x": 28.272,
+                  "y": 1.488,
+                  "z": -13.527
                 }
               },
               "boundsFinite": true
             },
             "bodyTransformFinite": true,
-            "bodyFacingDegrees": 124.84253530760265,
+            "bodyFacingDegrees": 126.00424930021019,
             "bodyRenderable": true,
             "primitiveBodyVisible": false,
             "primitiveBodyRenderable": true,
@@ -7911,9 +7911,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 27.602954082723556,
+              "x": 27.71802755407424,
               "y": 0,
-              "z": -21.78374932020887
+              "z": -21.640560831590165
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -7921,9 +7921,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": -0.09406368962142893,
-              "y": 0.4828492960691463,
-              "z": 0.9988465415921398
+              "x": -0.0898963149419951,
+              "y": 0.4831132397398708,
+              "z": 0.9988467430603151
             },
             "occludedByWall": true,
             "renderableCount": 127,
@@ -7949,8 +7949,8 @@
             "authoritativePresent": true,
             "authoritativeAlive": true,
             "framePosition": {
-              "x": 77.16060617651137,
-              "y": 28.018037518301792
+              "x": 76.874485892791,
+              "y": 28.048731205282863
             },
             "entityExists": true,
             "entityType": "rigged",
@@ -7962,15 +7962,15 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 6.501,
-              "heightPx": 10.963,
+              "widthPx": 6.792,
+              "heightPx": 11.028,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": -0.117,
+                "x0": -0.118,
                 "x1": -0.086,
-                "y0": 0.47,
-                "y1": 0.513,
+                "y0": 0.468,
+                "y1": 0.511,
                 "z0": 0.999,
                 "z1": 0.999
               },
@@ -7987,7 +7987,7 @@
               },
               "rotation": {
                 "x": 0,
-                "y": -2.189,
+                "y": -2.196,
                 "z": 0
               },
               "scale": {
@@ -7997,14 +7997,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 26.069,
-                  "y": -0.048,
-                  "z": -22.814
+                  "x": 25.933,
+                  "y": -0.049,
+                  "z": -22.73
                 },
                 "max": {
-                  "x": 27.611,
+                  "x": 27.5,
                   "y": 1.83,
-                  "z": -20.667
+                  "z": -20.602
                 }
               },
               "boundsFinite": true
@@ -8015,12 +8015,12 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": -0.133,
+                "y": -0.134,
                 "z": 0
               },
               "rotation": {
                 "x": 0,
-                "y": -2.189,
+                "y": -2.196,
                 "z": 0
               },
               "scale": {
@@ -8030,20 +8030,20 @@
               },
               "bounds": {
                 "min": {
-                  "x": 21.053,
-                  "y": -0.013,
-                  "z": -22.511
+                  "x": 20.882,
+                  "y": -0.014,
+                  "z": -22.431
                 },
                 "max": {
-                  "x": 27.52,
-                  "y": 1.477,
-                  "z": -13.734
+                  "x": 27.405,
+                  "y": 1.476,
+                  "z": -13.692
                 }
               },
               "boundsFinite": true
             },
             "bodyTransformFinite": true,
-            "bodyFacingDegrees": 125.06442946571777,
+            "bodyFacingDegrees": 125.59989800586008,
             "bodyRenderable": true,
             "primitiveBodyVisible": false,
             "primitiveBodyRenderable": true,
@@ -8090,9 +8090,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 26.968090143610112,
+              "x": 26.85220878707237,
               "y": 0,
-              "z": -21.961310234412995
+              "z": -21.880589049141427
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -8100,9 +8100,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": -0.10526025452734221,
-              "y": 0.47804344913265145,
-              "z": 0.9988428732896925
+              "x": -0.10512250646770091,
+              "y": 0.4765433174082063,
+              "z": 0.9988417282393094
             },
             "occludedByWall": true,
             "renderableCount": 125,
@@ -8128,8 +8128,8 @@
             "authoritativePresent": true,
             "authoritativeAlive": true,
             "framePosition": {
-              "x": 77.95310842659345,
-              "y": 17.705500871104952
+              "x": 77.74428888563412,
+              "y": 17.68276222820314
             },
             "entityExists": true,
             "entityType": "rigged",
@@ -8141,14 +8141,14 @@
             "screenBodyReadable": true,
             "screenBodyFootprint": {
               "present": true,
-              "widthPx": 6.211,
-              "heightPx": 10.722,
+              "widthPx": 6.962,
+              "heightPx": 10.622,
               "inViewport": true,
               "depthVisible": true,
               "ndcBounds": {
-                "x0": -0.307,
-                "x1": -0.278,
-                "y0": 0.531,
+                "x0": -0.302,
+                "x1": -0.27,
+                "y0": 0.532,
                 "y1": 0.574,
                 "z0": 0.999,
                 "z1": 0.999
@@ -8166,7 +8166,7 @@
               },
               "rotation": {
                 "x": 0,
-                "y": 3.292,
+                "y": -2.08,
                 "z": 0
               },
               "scale": {
@@ -8176,14 +8176,14 @@
               },
               "bounds": {
                 "min": {
-                  "x": 26.294,
-                  "y": -0.048,
-                  "z": -32.652
+                  "x": 27.001,
+                  "y": -0.049,
+                  "z": -33.145
                 },
                 "max": {
-                  "x": 28.751,
+                  "x": 28.337,
                   "y": 1.83,
-                  "z": -31.87
+                  "z": -30.885
                 }
               },
               "boundsFinite": true
@@ -8194,12 +8194,12 @@
               "matrixFinite": true,
               "position": {
                 "x": 0,
-                "y": -0.114,
+                "y": -0.106,
                 "z": 0
               },
               "rotation": {
                 "x": 0,
-                "y": 3.292,
+                "y": -2.08,
                 "z": 0
               },
               "scale": {
@@ -8209,20 +8209,20 @@
               },
               "bounds": {
                 "min": {
-                  "x": 17.816,
-                  "y": 0.006,
-                  "z": -32.764
+                  "x": 22.785,
+                  "y": 0.014,
+                  "z": -32.789
                 },
                 "max": {
-                  "x": 28.258,
-                  "y": 1.496,
-                  "z": -30.798
+                  "x": 28.311,
+                  "y": 1.504,
+                  "z": -23.436
                 }
               },
               "boundsFinite": true
             },
             "bodyTransformFinite": true,
-            "bodyFacingDegrees": -82.24045063435449,
+            "bodyFacingDegrees": 119.6274279453546,
             "bodyRenderable": true,
             "primitiveBodyVisible": false,
             "primitiveBodyRenderable": true,
@@ -8269,9 +8269,9 @@
               "z": 1
             },
             "worldPosition": {
-              "x": 27.812604198458956,
+              "x": 27.771570002291227,
               "y": 0,
-              "z": -32.30979882477153
+              "z": -32.2530700134656
             },
             "transformFinite": true,
             "matrixWorldFinite": true,
@@ -8279,9 +8279,9 @@
             "inCameraFrustum": true,
             "inCameraViewport": true,
             "screenNdc": {
-              "x": -0.28883786895077823,
-              "y": 0.5403684340759988,
-              "z": 0.998890445943963
+              "x": -0.2883262751010951,
+              "y": 0.5397262970048621,
+              "z": 0.9988899558008061
             },
             "occludedByWall": true,
             "renderableCount": 131,

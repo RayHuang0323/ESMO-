@@ -33,6 +33,12 @@
 - CS／MOBA 雙賽制的賽季曆整合（同一年度內兩條賽事線的排程與衝突規則）。
 - CS Major 之外的次級賽事（Minor／資格賽）——目前 roadmap 上尚未排期。
 
+### C3 正式收尾後的下一個候選階段（尚未開始）
+
+- **C4 — Mirage 全圖環境擴展與多地圖環境品質**：把目前已驗收的 A Site／Mid／Connector environment kit，以逐區 vertical slice 方式延伸到 Mirage 其餘區域，再評估其他地圖；補齊地標、建築立面、材質層次與路線可讀性。
+- C4 必須沿用 Player identity、Camera recovery、StableCanvasRegion、RAF_FIDX_COHERENCE、C2C character／animation 與現有 gameplay authority；每個區域都要先跑 renderer／camera／RAF／geometry／C2C gates、Battle smoke、build 與長跑，再進 Owner acceptance。
+- **本輪只記錄 roadmap 候選，不實作 C4。**
+
 ## MOBA Combat AI 封版（2026-08-10）
 
 **狀態：✅ 已封版。** Release Gate 8/8 全綠（首次），combat credibility 45/45。
