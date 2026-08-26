@@ -151,6 +151,8 @@ import {
 import { applyCareerYearRollover, careerYearNotice } from "./time/careerYearRollover.js";
 //  V3：快速推進的**規劃器**。它一天都不推，只回答「下一站在第幾天」。
 import { nextStopOf, planAdvance, MAX_FAST_FORWARD_DAYS } from "./time/fastForward.js";
+//  V5-1：生涯年度邊界。冪等鍵是**年度編號**，重讀存檔不會重複封存。
+import { sealCareerYears, offSeasonViewOf } from "./time/offSeason.js";
 import {
   SESSION_STATES, CONNECTION_STATES, consumeLaunchToken, validateSession, cancelSession,
   sessionStateLabel, isSessionExpired, isSessionTerminal,
@@ -308,6 +310,10 @@ const DEFAULT = {
     fans: 128_000, reputation: 47, players: INITIAL_PLAYERS.length,
     days: 8, week: deriveTime(8).week, season: deriveTime(8).season,
     achievement: 48, talentPending: 1,
+    //  V5-1：年度封存紀錄。冪等鍵是年度編號（見 `time/offSeason.js`）。
+    //  舊存檔沒有這一欄 ⇒ 載入時由 `{ ...DEFAULT.meta, ...saved.meta }` 補上空紀錄，
+    //  等同「什麼都還沒封存」，不會回頭補封過去的年度。
+    offSeason: { years: {}, lastSealedYear: 0 },
   },
   // 戰隊發展是俱樂部層點數，不與 players[].talentPoints 混用。
   // 舊存檔第一次載入時由 meta.talentPending 提供相容的初始池。
@@ -1006,7 +1012,18 @@ export const useProfileStore = create((rawSet, get) => {
       fromDay,
       toDay: Number(nextState.meta?.days) || fromDay,
     });
-    set(rolled.state);
+    //  ── Season vNext V5-1：年度封存 ──────────────────────────────────────
+    //  ⚠ **折進同一個 `set()`**（跟 rollover 同一段）。分兩次寫會出現
+    //    「年齡走了但年度沒封存」的中間狀態——正是 V2 檔頭承諾要避免的事。
+    //  ⚠ 順序是 **rollover 之後**：封存紀錄裡的平均年齡要是「跨完年之後」的，
+    //    否則第 N 年的紀錄會寫著第 N−1 年的年齡。
+    //  ⚠ 這是 `sealCareerYears` 在整個 Store 裡的**唯一呼叫點**。賽季 rollover
+    //    不得觸發它——兩個項目各換一次季就會把年度封存兩次。
+    const boundary = sealCareerYears(rolled.state, {
+      fromDay,
+      toDay: Number(rolled.state.meta?.days) || fromDay,
+    });
+    set(boundary.state);
     if (rolled.yearsCrossed > 0) get().pushInbox(careerYearNotice(rolled));
     //  收件匣通知（合約到期／即將到期）由這裡發：pushInbox 會用 Date.now 產 id，
     //  屬於不決定性的部分，所以純 reducer 只回傳 notices，不自己寫 inbox。
@@ -1093,6 +1110,14 @@ export const useProfileStore = create((rawSet, get) => {
       })(),
     };
   },
+  // ── Season vNext V5-1：生涯年度邊界 ─────────────────────────────────
+  /**
+   * 年度封存狀態。**畫面的單一讀取點**——畫面不自己從 `meta.offSeason` 挖紀錄。
+   *
+   * ⚠ V5-1 的邊界**不擋路**：目前沒有任何決策要玩家做，所以快轉照樣穿過去。
+   *   等 V5-3 有了「離隊意向 vs 找接班人」的決策，才會變成真的停下來的地方。
+   */
+  offSeasonView() { return offSeasonViewOf(get()); },
   // ── Season vNext V3：快速推進 ────────────────────────────────────────
   /**
    * 下一個值得停下來的日子。**畫面的單一讀取點**——畫面不自己算。

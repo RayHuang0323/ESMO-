@@ -251,11 +251,13 @@ function WorldTimeStatus() {
   const advanceWorldDays = useProfileStore((s) => s.advanceWorldDays);
   const advanceToNextStop = useProfileStore((s) => s.advanceToNextStop);
   const nextStopView = useProfileStore((s) => s.nextStopView);
+  const offSeasonView = useProfileStore((s) => s.offSeasonView);
   const days = useProfileStore((s) => s.meta?.days);
   const worldTimeView = useProfileStore((s) => s.worldTimeView);
   const [note, setNote] = React.useState(null);
   const t = worldTimeView();
   const stop = nextStopView();
+  const offSeason = offSeasonView();
 
   //  ⚠ 推進結果一律照實顯示。「推不動」與「推了一半停下」是兩件不同的事，
   //    合併成「什麼都沒發生」正是 V1 檔頭說要避免的靜默失敗。
@@ -286,6 +288,14 @@ function WorldTimeStatus() {
         //    那一格正是玩家**走不動**的時候，訊息必須讓他知道要先處理今天的事。
         <div className="esmo-status-card__detail" data-testid="home-next-stop">
           下一站：{stop.label}{stop.daysAway > 0 ? `（還有 ${stop.daysAway} 天）` : "（就是今天）"}
+        </div>
+      )}
+      {/*  V5-1：年度封存只是**狀態顯示**，不是決策點——所以它不擋快轉，也沒有專屬頁。
+          等 V5-3 有了「離隊意向 vs 找接班人」的決策，這裡才會變成真的停下來的地方。 */}
+      {offSeason.latest && (
+        <div className="esmo-status-card__detail" data-testid="home-offseason">
+          第 {offSeason.latest.careerYear} 生涯年度已封存
+          （當時 {offSeason.latest.rosterCount} 人{offSeason.latest.averageAge != null ? `．平均 ${offSeason.latest.averageAge} 歲` : ""}）
         </div>
       )}
       {note && <div className="esmo-status-card__detail" style={{ color: GC.gold }}>{note}</div>}

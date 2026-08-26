@@ -15227,3 +15227,87 @@ Legacy `EsportsGame.jsx:186` 的 `agePlayerOneSeason` 已經做過體能／心�
 ### 沒有做
 
 `src/` 零改動；未實作任何序列、漂移、退休或 AI 老化；所有數值未定（留給 calibration）。
+
+## Season vNext V5-1 — Off-season / 生涯年度邊界（2026-08-27）
+
+基準 `da59230`。**只做骨架：不改能力、不退休、不動 AI、不動合約、不補新秀。**
+
+### 交付
+
+| 項目 | 內容 |
+|---|---|
+| `src/platform/time/offSeason.js`（新增，**64 行實碼**） | `OFF_SEASON_VERSION` / `OFF_SEASON_STEPS`（九步）/ `IMPLEMENTED_STEPS`（本輪兩步）/ `sealCareerYears` / `sealedYearsOf` / `isYearSealed` / `offSeasonViewOf` |
+| `profileStore.advanceDay` | 年度封存**折進與 rollover 同一個 `set()`**；`sealCareerYears` 全 Store **只有一個呼叫點** |
+| `profileStore.offSeasonView()` | 畫面的單一讀取點 |
+| `DEFAULT.meta.offSeason` | `{ years: {}, lastSealedYear: 0 }`；舊存檔由既有的 `{...DEFAULT.meta, ...saved.meta}` 自動補上 |
+| `DashboardScreen` 世界時間卡 | 一行狀態顯示「第 N 生涯年度已封存（當時 X 人．平均 Y 歲）」 |
+| `tools/check_offseason_v5.mjs`（新增） | **44/44**，含 2 個 mutation sentinel |
+
+### 邊界怎麼運作
+
+```
+advanceDay(n)
+  → advanceDaysInState（逐日：訓練／恢復／週結算）
+  → applyCareerYearRollover（age +1）
+  → sealCareerYears（年度封存）        ← V5-1 新增
+  → set(...)                           ← 三者同一個 set，沒有中間狀態
+```
+
+**冪等鍵是年度編號**，照抄週結算已驗證的形狀（`settledWeeks[week]` + `lastSettledWeek`）。
+年度編號是世界時間的**推導值**，不是計數器 ⇒ 重整／重讀存檔／重複呼叫都不可能封存兩次。
+
+### 實作時發現的一個坑
+
+`sealedOnDay` 原本想寫「實際封存那一天」（也就是傳進來的 `toDay`）。
+那會讓「一次跳 10 天跨過邊界」與「逐日跨過邊界」寫下**不同的數字**（89 vs 85）
+⇒ **V3 好不容易立起來的「快轉＝逐日」保證會在這裡破功。**
+⇒ 改成推導值 `該年度最後一天 + 1`，與怎麼走到那裡無關。由 §F1 釘住。
+
+### 玩家目前看得到什麼
+
+首頁世界時間卡多一行：`第 1 生涯年度已封存（當時 5 人．平均 23.4 歲）`。
+**沒有 Off-season 專屬頁面**（§U2 反向釘住 `OffSeasonScreen.jsx` 不存在）。
+
+⚠ **邊界刻意不擋快轉**。V5-1 沒有任何決策要玩家做，而 V5 設計文件 §6 自己立的規則是
+「多一個沒有決策的畫面比沒有畫面更糟」。等 V5-3 有了「離隊意向 vs 找接班人」，
+才會變成真的停下來的地方。由 §E5 釘住「快轉不得被年度邊界卡住」。
+
+### 一個 gate 自我修正
+
+`§N2` 原本寫成「檔案裡不准出現 retire / intent」。那把**宣告未來掛載點**也一起擋掉了
+（九步序列本來就要提到後續步驟的名字）。
+⇒ 改成兩條精確的：**離隊步驟不得列入 `IMPLEMENTED_STEPS`**、
+**沒有任何移除選手／標記離隊的程式碼**。禁的是行為，不是宣告。
+
+### Gates
+
+`check_offseason_v5` **44/44**（新增）｜`check_time_block_v3` 69/69｜`check_time_block_v2` 47/47｜
+`check_world_time_v1` 46/46｜`check_player_lifecycle_v4` 44/44｜`check_practice_match_v0d` 70/70｜
+`check_foundation_calibration` 58/58｜`check_no_player_injury` 29/29｜`check_finance_n3` 40/40｜
+`check_competition_q3` 91/91｜`q5` 69/69｜`q6` 57/57｜`check_competition_release_gate` 11/11｜
+`browser_check_time_controls` **21/21**｜`browser_check_home_ia` **23/23**｜
+`regress` 15/15｜`regress2` 8/8｜`check_dash10` PASS｜`check_flow09` PASS｜
+`npm run build` ✓ built in 12.80s
+
+### V5-2 前置三條已正式記錄
+
+寫進 `docs/design/Season_vNext_V5_休賽期與世代交替.md` **§13**，其中第一條
+**推翻了該文件 §3.2 的原始提案**：
+
+**① 衰退時鐘不得用 V4 的 `effectiveAge`（AD-1～AD-4）**
+實測確認使用者指出的回饋迴圈是真的：33 歲、潛力 80 的選手，
+主能力 78 → `effectiveAge` **33.09**；掉 5 點 → **31.96**；再掉 5 點 → **30.84**。
+⇒ 掉 10 點能力讓衰退時鐘**倒退 2.25 年**，衰退會自我熄火且不再單調。
+V5-2 的 aging clock 必須以 **raw age** 為基底 ＋ 決定性個體 profile，
+且**不得**以當前能力為輸入。V4 的 `effectiveAge` 繼續作為 `careerStage` 的描述性推導。
+
+**② `RetirementIntent.v1`：出賽比例只能小幅修正（RI-1～RI-3）**
+不得存在「持續讓他出賽就永遠不會宣布意向」的組合——延緩可以，免疫不行。
+
+**③ `AiGeneration.v1`：跨年度 identity continuity（AG-1～AG-4）**
+只要求戰力 band **不夠**——每年整隊重生成也能滿足 band，但世界會變成每年換一批陌生人。
+必須是既有人繼續老化、離開者退出、只替換必要新人，且**交集比例可驗證**。
+
+### 沒有做
+
+能力衰退（V5-2）、退休與補位（V5-3）、AI 換血、合約、新秀補位、Off-season 專屬畫面。
