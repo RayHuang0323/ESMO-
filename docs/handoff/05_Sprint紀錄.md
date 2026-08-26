@@ -13881,4 +13881,4 @@ Release checklist 寫的就是旗標，不是網址參數。
 - Owner 已正式接受 C3 vertical slice。本輪只做 release closeout，不增加新的 C3 美術內容；以最新 `origin/main @ 1a1428819fe9e5b96eddc15950142272f47b4d75` 整合已驗收 C3 `aac1ac4`，fast-forward、無衝突。
 - C3 保留既有 P0／C2C contract。最新 Battle runtime 為 A Site `65`、Mid `72`、Connector `56` meshes；environment `193 meshes / 2,996 triangles / 21 material families`；10/10 rigged、Blue／Red 5v5。
 - Static gates：Renderer `24/24`、CS-A2 `10/10`、C2A `13/13`、C2B `14/14`、CS23 `28/28`、Camera `8/8`、RAF `7/7`、StableCanvas `5/5`、C2C `9/9`、C3 `18/18`，全 PASS。Production build、Battle smoke、180 秒 long-run 亦 PASS；long-run `1,727` samples、geometry shifts `0`、stale mismatch `0`、duplicate RAF/render `0`、camera recovery `9`、rapid recovery `0`、browser errors `0`。
-- 下一階段不在本 Sprint 開工；待 production smoke 通過後補記 Pages run、final main SHA 與 `C3_CLOSED / OWNER_ACCEPTED`。
+- Pages workflow `33006989567`（head `cfd7d68`）success；正式站 production Battle smoke PASS（canvas `430x507`、三個 camera preset controls 可用、console/page errors `0`）。C3 正式標記為 `C3_CLOSED / OWNER_ACCEPTED`；下一階段不在本 Sprint 開工。

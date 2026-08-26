@@ -35,6 +35,8 @@
 
 ### C3 正式收尾後的下一個候選階段（尚未開始）
 
+- C3 Mirage vertical slice 已正式 `C3_CLOSED / OWNER_ACCEPTED`；release head `cfd7d68` 的 Pages workflow `33006989567` success，production smoke PASS。
+
 - **C4 — Mirage 全圖環境擴展與多地圖環境品質**：把目前已驗收的 A Site／Mid／Connector environment kit，以逐區 vertical slice 方式延伸到 Mirage 其餘區域，再評估其他地圖；補齊地標、建築立面、材質層次與路線可讀性。
 - C4 必須沿用 Player identity、Camera recovery、StableCanvasRegion、RAF_FIDX_COHERENCE、C2C character／animation 與現有 gameplay authority；每個區域都要先跑 renderer／camera／RAF／geometry／C2C gates、Battle smoke、build 與長跑，再進 Owner acceptance。
 - **本輪只記錄 roadmap 候選，不實作 C4。**
