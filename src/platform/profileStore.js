@@ -157,6 +157,8 @@ import { sealCareerYears, offSeasonViewOf } from "./time/offSeason.js";
 import { applyAgeDrift } from "./progress/ageDrift.js";
 //  V5-3：退休意向 → 退休／延役 → 名單地板補位。沒有宣布過意向的人永遠不會退休。
 import { evaluateIntents, resolveRetirements, retirementViewOf } from "./progress/retirement.js";
+//  V6-2：合約每天倒數，但**到期只在年度邊界結算**（不讓選手在星期三突然消失）。
+import { tickContracts, resolveContractExpiries, renewContract, contractViewOf } from "./progress/contract.js";
 import {
   SESSION_STATES, CONNECTION_STATES, consumeLaunchToken, validateSession, cancelSession,
   sessionStateLabel, isSessionExpired, isSessionTerminal,
@@ -963,7 +965,7 @@ export const useProfileStore = create((rawSet, get) => {
     //    而且猜不到潛力上限造成的實際差異。這裡收的是套用前後的真實 diff。
     const trained = [];
     n = effective;
-    const { nextState, receipts } = advanceDaysInState(get(), n, (cur) => ({
+    let { nextState, receipts } = advanceDaysInState(get(), n, (cur) => ({
       players: (cur.players ?? []).map((p) => {
         //  Milestone O2：每一天都要跑恢復——沒排訓練的人回體力、
         //  連續幾天沒出賽就把連續出賽計數歸零。訓練與恢復不重複計算體力。
@@ -1022,7 +1024,11 @@ export const useProfileStore = create((rawSet, get) => {
     //  ⚠ 這是 `sealCareerYears` 在整個 Store 裡的**唯一呼叫點**。賽季 rollover
     //    不得觸發它——兩個項目各換一次季就會把年度封存兩次。
     const toDay = Number(nextState.meta?.days) || fromDay;
-    const departures = [], intents = [];
+    //  ── V6-2：合約隨世界時間倒數 ─────────────────────────────────────────
+    //  ⚠ 一次減 `effective` 天 ≡ 逐日各減 1 天 ⇒ 快轉與逐日推進逐值相同。
+    //  ⚠ 這裡**只倒數，不動名單**——到期離隊是下面年度邊界的事。
+    nextState = tickContracts(nextState, { days: effective }).state;
+    const departures = [], intents = [], expiries = [];
     let promotedCount = 0;
     const boundary = sealCareerYears(nextState, { fromDay, toDay });
     const rolled = applyCareerYearRollover(boundary.state, { fromDay, toDay });
@@ -1045,7 +1051,11 @@ export const useProfileStore = create((rawSet, get) => {
     for (const entry of boundary.sealed) {
       const resolved = resolveRetirements(after, { careerYear: entry.careerYear });
       const evaluated = evaluateIntents(resolved.state, { careerYear: entry.careerYear });
-      after = evaluated.state;
+      //  ⚠ **退休先於合約到期**：已經退役的人不在名單裡，不會被結算第二次。
+      const expired = resolveContractExpiries(evaluated.state, { careerYear: entry.careerYear });
+      after = expired.state;
+      for (const id of expired.departed) expiries.push({ id, careerYear: entry.careerYear });
+      promotedCount += expired.promoted.length;
       for (const id of resolved.retired) departures.push({ id, careerYear: entry.careerYear });
       for (const id of evaluated.declared) intents.push({ id, careerYear: entry.careerYear });
       promotedCount += resolved.promoted.length;
@@ -1062,6 +1072,11 @@ export const useProfileStore = create((rawSet, get) => {
       const name = after.players?.find((p) => p.id === it.id)?.name ?? it.id;
       get().pushInbox({ type: "roster", from: "選手本人", subject: `${name}：這可能是我的最後一年`,
         text: `${name} 表達了退役意向。他仍會打完下一個生涯年度——你有一整年可以找接班人。` });
+    }
+    for (const e of expiries) {
+      const name = aged.players?.find((p) => p.id === e.id)?.name ?? e.id;
+      get().pushInbox({ type: "roster", from: "戰隊管理處", subject: `${name} 合約到期離隊`,
+        text: `${name} 的合約在第 ${e.careerYear} 生涯年度結束時到期，未續約，已離開球隊。` });
     }
     if (promotedCount > 0) {
       get().pushInbox({ type: "roster", from: "青訓營", subject: `青訓補位 ${promotedCount} 人`,
@@ -1162,6 +1177,17 @@ export const useProfileStore = create((rawSet, get) => {
   offSeasonView() { return offSeasonViewOf(get()); },
   /** 退休意向名單。**畫面的單一讀取點**——這就是 Off-season 的決策依據。 */
   retirementView() { return retirementViewOf(get()); },
+  /** 合約狀態（即將到期／已到期）。**畫面的單一讀取點**。 */
+  contractView() { return contractViewOf(get()); },
+  /**
+   * 續約。**明碼標價，沒有談判**——續約金與 V4 的市場價值同源。
+   * ⚠ 宣布過退役意向的人不得續約（退休優先於合約）。
+   */
+  renewPlayerContract(playerId) {
+    const r = renewContract(get(), playerId, { careerYear: careerYearOf(Number(get().meta?.days) || 1).year });
+    if (r.ok) { set({ players: r.state.players }); get().save(); }
+    return { ok: r.ok, cost: r.cost, reason: r.reason };
+  },
   // ── Season vNext V3：快速推進 ────────────────────────────────────────
   /**
    * 下一個值得停下來的日子。**畫面的單一讀取點**——畫面不自己算。

@@ -15631,3 +15631,71 @@ MOBA 用 `strength ± 8`（高變異）——兩者都在 band 內，是設計�
 
 玩家 Lifecycle 未重做；Training / PCGM 未動；沒有第二套 aging engine；
 沒有碰真人 Ranked / ServerTime；合約（V6-2）與轉會市場（V6-3）未開始。
+
+## V6-2 — 合約生命週期（2026-08-27）
+
+基準 `28f0d4b`。
+
+### 現況：欄位早就在，只是沒有人動它
+
+`players[].contract`（天）從 Legacy 就存在（開局五人 365/280/400/350/300），
+`ui/playerProfileFoundation.contractPresentationOf` 也早就在顯示它、在 ≤30 天標 `attention`。
+**但全 repo 沒有任何地方讓它倒數。** V6-2 只是把那條線接上，並定義到期會發生什麼。
+
+### 關鍵裁決：每天倒數，但**到期只在年度邊界結算**
+
+日中生效等於「選手在某個星期三突然不見」，正是紅線要擋的事；
+而且退休本來就只在年度邊界發生——**兩件事放同一個點，先後才定義得出來**。
+
+⇒ **優先順序：退休先於合約到期。**
+已經退役的人不在名單裡，不會被合約再結算一次（§P3）；
+宣布過退役意向的人**不得續約**（§P1）——他要離開這個運動，不只是離開這支隊。
+§P2 直接檢查 Store 原始碼裡 `resolveRetirements` 的呼叫位置在 `resolveContractExpiries` 之前。
+
+### 交付
+
+| 項目 | 內容 |
+|---|---|
+| `src/platform/progress/contract.js`（新增，**79 行實碼**） | `CONTRACT` 常數／`contractStatusOf`／`tickContracts`／`resolveContractExpiries`／`renewContract`／`renewCostOf`／`contractViewOf` |
+| `profileStore.advanceDay` | 合約隨 `effective` 天倒數；年度邊界在退休之後結算到期 |
+| `profileStore.contractView()` / `renewPlayerContract()` | 畫面讀取點與續約動作 |
+| 收件匣 | 合約到期離隊通知 |
+| `tools/check_contract_v6.mjs`（新增） | **38/38**，含 2 個 mutation sentinel |
+
+### 續約：明碼標價，沒有談判
+
+續約金 = **V4 市場價值 × 0.5** ⇒ 與既有估值直接接軌，年輕高潛比較貴、老將比較便宜
+（實測 22 歲 106.6 萬 vs 36 歲 60.5 萬）。
+§R4 反向釘住「模組裡不得出現出價／還價／議價」——本輪不做談判 AI。
+
+### 名單地板
+
+沿用 V5-3 的做法：**離隊照發生**，人數不足時由免費補位頂上。
+15 年長跑：到期離隊 15 人、補位 15 人、**最終仍是 5 人，任何一年都沒有低於地板**。
+
+### 實作時抓到的一個真 bug
+
+補位迴圈原本寫成 `for (let i = 0; i < CONTRACT.rosterFloor - kept.length; i++)`——
+`kept.length` 每補一個就增加，上界跟著縮短 ⇒ **只補到一半**
+（實測「離隊 5｜補位 3｜最終 3 人」）。缺額改成先算好再跑迴圈。
+
+### 兩個 gate 自我修正
+
+- **§F3** 原本用「12 人合約全部到期」來驗「人數充足時不補人」——
+  但全部到期之後當然缺人，前提本身就錯。改成「2 人到期、10 人合約還很長」。
+- **§N3** 原本寫「檔案裡不准出現 `stats[...] =`」，那會把**生成補位新人**時
+  寫他自己的能力也一起擋掉（與 V5-1 §N2 同一類教訓）。
+  改成實測「既有選手的能力逐值不變」。
+
+### Gates
+
+`check_contract_v6` **38/38**（新增，2 sentinel）｜`check_cs_ai_lifecycle_v6` 32/32｜
+`check_retirement_v5` 39/39｜`check_age_drift_v5` 48/48｜`check_offseason_v5` 45/45｜
+`check_player_lifecycle_v4` 44/44｜`check_time_block_v3` 69/69｜`v2` 47/47｜
+`check_finance_n` 32/32｜`n2` 35/35｜`n3` 40/40｜`check_recruit_o` 41/41｜
+`check_foundation_calibration` 58/58｜`release_gate` 11/11｜
+`regress` 15/15｜`regress2` 8/8｜`dash10`／`flow09` PASS｜`npm run build` ✓ 10.47s
+
+### 沒有做
+
+轉會市場（V6-3）、談判 AI、Off-season 專屬畫面。
