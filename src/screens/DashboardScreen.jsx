@@ -48,6 +48,8 @@ const NAV = {
   cs: "csPrep",
   development: "teamDevelopment",
   newgame: "newGame",
+  //  V6-3：休賽期。只有真的有年度決策時，首頁才會出現這個入口。
+  offSeason: "offSeason",
 };
 
 const MODE_CONFIG = {
@@ -247,12 +249,13 @@ function FinanceStatus({ wk, fc, finBars, onOpen }) {
  *   唯一擋得住它的是既有的 D15 規則（比賽日沒收尾就走不出去），
  *   那時會照實顯示原因，而不是靜靜地什麼都不做。
  */
-function WorldTimeStatus() {
+function WorldTimeStatus({ onOffSeason }) {
   const advanceWorldDays = useProfileStore((s) => s.advanceWorldDays);
   const advanceToNextStop = useProfileStore((s) => s.advanceToNextStop);
   const nextStopView = useProfileStore((s) => s.nextStopView);
   const offSeasonView = useProfileStore((s) => s.offSeasonView);
   const retirementView = useProfileStore((s) => s.retirementView);
+  const offSeasonSessionView = useProfileStore((s) => s.offSeasonSessionView);
   const days = useProfileStore((s) => s.meta?.days);
   const worldTimeView = useProfileStore((s) => s.worldTimeView);
   const [note, setNote] = React.useState(null);
@@ -260,6 +263,7 @@ function WorldTimeStatus() {
   const stop = nextStopView();
   const offSeason = offSeasonView();
   const retirement = retirementView();
+  const session = offSeasonSessionView();
 
   //  ⚠ 推進結果一律照實顯示。「推不動」與「推了一半停下」是兩件不同的事，
   //    合併成「什麼都沒發生」正是 V1 檔頭說要避免的靜默失敗。
@@ -300,6 +304,14 @@ function WorldTimeStatus() {
           （當時 {offSeason.latest.rosterCount} 人{offSeason.latest.averageAge != null ? `．平均 ${offSeason.latest.averageAge} 歲` : ""}）
         </div>
       )}
+      {/*  V6-3：休賽期開著時，這是**唯一**能往前走的路——世界時間被擋住了，
+          出口是休賽期畫面上的「完成休賽期」（永遠成功、永遠免費）。 */}
+      {session.open && (
+        <button className="esmo-status-card__link" type="button" style={{ color: GC.gold, fontWeight: 900 }}
+          data-testid="home-offseason-enter" onClick={onOffSeason}>
+          休賽期尚未結束：{session.total} 項決策待處理 <EsmoIcon name="chevron" size={13} />
+        </button>
+      )}
       {/*  V5-3：這是 Off-season 目前唯一、也是真正的決策提示——
           有人宣布退役意向，玩家有一整個生涯年度可以決定要不要現在就簽接班人。 */}
       {retirement.pendingCount > 0 && (
@@ -325,14 +337,14 @@ function WorldTimeStatus() {
   );
 }
 
-function ClubStatus({ profile, players, developmentPoints, wk, fc, finBars, sponsor, onFinance, onSponsor, onRoster }) {
+function ClubStatus({ profile, players, developmentPoints, wk, fc, finBars, sponsor, onFinance, onSponsor, onRoster, onOffSeason }) {
   const weeksLeft = numberOf(profile.activeSponsor?.weeksLeft);
   const sponsorTone = sponsor ? (weeksLeft <= 2 ? GC.gold : GC.green) : GC.gray;
   return (
     <section className="esmo-section">
       <SectionHeading label="CLUB STATUS" title="戰隊狀態" note="同一份經營資料的快速讀本" />
       <div className="esmo-status-grid">
-        <WorldTimeStatus />
+        <WorldTimeStatus onOffSeason={onOffSeason} />
         <FinanceStatus wk={wk} fc={fc} finBars={finBars} onOpen={onFinance} />
 
         <article className="esmo-card esmo-status-card" data-dashboard-reveal>
@@ -704,7 +716,7 @@ function MobileBottomNav({ sheet, onTab }) {
   );
 }
 
-function MobileHome({ team, meta, finance, unread, xpPercent, activeMatchView, onResumeActive, primaryAction, quickActions, profile, players, developmentPoints, wk, sponsor, modes, onSelect }) {
+function MobileHome({ team, meta, finance, unread, xpPercent, activeMatchView, onResumeActive, primaryAction, quickActions, profile, players, developmentPoints, wk, sponsor, modes, onSelect, onOffSeason }) {
   const [sheet, setSheet] = useState(null);
   const scrollRef = useRef(null);
   //  底部 nav 的「競技」要捲到這一段，所以需要它的位置。
@@ -748,7 +760,7 @@ function MobileHome({ team, meta, finance, unread, xpPercent, activeMatchView, o
               ⚠ 放在主要動作之後、快捷動作之前：時間是每天都要按的東西，
                 不是「需要時才進的功能」，不能收進分頁 sheet 裡。
               ⚠ 與桌面共用**同一個** `WorldTimeStatus` 元件 ⇒ 不會有兩套時間 UI。 */}
-          <WorldTimeStatus />
+          <WorldTimeStatus onOffSeason={onOffSeason} />
           <MobileQuickActions items={quickActions} />
           <MobileClubSnapshot players={players} developmentPoints={developmentPoints} wk={wk} sponsor={sponsor} profile={profile} onSelect={onSelect} />
           <MobileCompeteRail modes={modes} onSelect={onSelect} sectionRef={competeRef} />
@@ -877,6 +889,7 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
     <div ref={rootRef} className="esmo-dashboard" style={ESMO_CSS_VARS}>
       {isHomeMobile ? (
         <MobileHome
+          onOffSeason={() => sel("offSeason")}
           team={team}
           meta={meta}
           finance={finance}
@@ -910,7 +923,7 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
           <main className="esmo-dashboard__main-column">
             <ActiveMatchSection hasActiveMatch={Boolean(activeMatchView)} onResumeActive={onResumeActive} />
             <NextActions actions={actions} />
-            <ClubStatus profile={profile} players={players} developmentPoints={developmentPoints} wk={wk} fc={fc} finBars={finBars} onFinance={() => sel("finance")} onSponsor={() => sel("sponsor")} onRoster={() => sel("roster")} />
+            <ClubStatus profile={profile} players={players} developmentPoints={developmentPoints} wk={wk} fc={fc} finBars={finBars} onFinance={() => sel("finance")} onSponsor={() => sel("sponsor")} onRoster={() => sel("roster")} onOffSeason={() => sel("offSeason")} />
           </main>
 
           <aside className="esmo-dashboard__rail">

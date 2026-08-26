@@ -158,7 +158,11 @@ import { applyAgeDrift } from "./progress/ageDrift.js";
 //  V5-3：退休意向 → 退休／延役 → 名單地板補位。沒有宣布過意向的人永遠不會退休。
 import { evaluateIntents, resolveRetirements, retirementViewOf } from "./progress/retirement.js";
 //  V6-2：合約每天倒數，但**到期只在年度邊界結算**（不讓選手在星期三突然消失）。
-import { tickContracts, resolveContractExpiries, renewContract, contractViewOf } from "./progress/contract.js";
+import { tickContracts, resolveContractExpiries, renewContract, contractViewOf,
+  renewCostOf, ensureRosterFloor } from "./progress/contract.js";
+//  V6-3：休賽期會期。**只在真的有決策時開**，完成後同一年不再開。
+import { openSession as openOffSeason, completeSession as completeOffSeasonSession,
+  sessionOf as offSeasonSessionOf, offSeasonSessionViewOf } from "./time/offSeasonSession.js";
 import {
   SESSION_STATES, CONNECTION_STATES, consumeLaunchToken, validateSession, cancelSession,
   sessionStateLabel, isSessionExpired, isSessionTerminal,
@@ -1060,7 +1064,13 @@ export const useProfileStore = create((rawSet, get) => {
       for (const id of evaluated.declared) intents.push({ id, careerYear: entry.careerYear });
       promotedCount += resolved.promoted.length;
     }
-    set(after);
+    //  ── V6-3：年度決策收成一個會期 ───────────────────────────────────────
+    //  ⚠ **只在真的有決策時才開**（`openSession` 自己判斷）⇒ 沒事的年度不會
+    //    多卡一道空殼畫面，這是 V5 設計 §6 立的產品判準。
+    const opened = boundary.sealed.length
+      ? openOffSeason(after, { careerYear: boundary.sealed[boundary.sealed.length - 1].careerYear })
+      : { state: after, opened: false };
+    set(opened.state);
     if (rolled.yearsCrossed > 0) get().pushInbox(careerYearNotice(rolled));
     //  ⚠ 退休預告一定要讓玩家看得到——那正是「有時間找接班人」的產品意義。
     for (const d of departures) {
@@ -1124,6 +1134,15 @@ export const useProfileStore = create((rawSet, get) => {
    *            receipts:object[], reason:string|null}}
    */
   advanceWorldDays(n = 1, { reason = null } = {}) {
+    //  ── V6-3：休賽期是真的停下來的地方 ───────────────────────────────────
+    //  ⚠ 這是本專案第一個**會擋住時間**的狀態，所以它必須有出口：
+    //    `completeOffSeason()` 永遠成功、永遠免費 ⇒ 破產或全部放走也走得下去。
+    if (offSeasonSessionOf(get())) {
+      return {
+        ok: false, daysAdvanced: 0, stoppedBy: null, receipts: [],
+        reason: "休賽期尚未結束——請先處理續約與補強，或直接完成休賽期",
+      };
+    }
     if (!isAdvanceReason(reason)) {
       return {
         ok: false, daysAdvanced: 0, stoppedBy: null, receipts: [],
@@ -1179,14 +1198,55 @@ export const useProfileStore = create((rawSet, get) => {
   retirementView() { return retirementViewOf(get()); },
   /** 合約狀態（即將到期／已到期）。**畫面的單一讀取點**。 */
   contractView() { return contractViewOf(get()); },
+  /** 休賽期會期狀態。**畫面的單一讀取點**。 */
+  offSeasonSessionView() { return offSeasonSessionViewOf(get()); },
+  /**
+   * 完成休賽期。**永遠成功、永遠免費**——這是唯一的安全出口。
+   * ⚠ 不得在這裡自動續約或自動花錢：那是玩家的決定。
+   */
+  completeOffSeason() {
+    const r = completeOffSeasonSession(get());
+    if (r.completed) { set({ meta: r.state.meta }); get().save(); }
+    return { ok: r.completed };
+  },
+  /**
+   * 放走一名選手。**免費**——放走不該扣錢。
+   * ⚠ 放到低於名單地板時由**共用的** `ensureRosterFloor` 補位 ⇒ 不會卡死。
+   */
+  releasePlayer(playerId) {
+    const players = (get().players ?? []).filter((p) => p.id !== playerId);
+    if (players.length === (get().players ?? []).length) return { ok: false, reason: "找不到這名選手" };
+    const name = (get().players ?? []).find((p) => p.id === playerId)?.name ?? playerId;
+    const year = careerYearOf(Number(get().meta?.days) || 1).year;
+    const filled = ensureRosterFloor({ ...get(), players }, { careerYear: year });
+    set({ players: filled.state.players });
+    get().pushInbox({ type: "roster", from: "戰隊管理處", subject: `${name} 離隊`,
+      text: `${name} 已離開球隊。${filled.promoted.length ? `可出賽人數不足，${filled.promoted.length} 名青訓選手已上調一軍。` : ""}` });
+    get().save();
+    return { ok: true, promoted: filled.promoted.length };
+  },
   /**
    * 續約。**明碼標價，沒有談判**——續約金與 V4 的市場價值同源。
    * ⚠ 宣布過退役意向的人不得續約（退休優先於合約）。
    */
   renewPlayerContract(playerId) {
+    const p = (get().players ?? []).find((x) => x.id === playerId);
+    if (!p) return { ok: false, cost: 0, reason: "找不到這名選手" };
+    //  ⚠ 續約與補強**共用同一份俱樂部預算**——這就是「留老將 vs 簽新人 vs 保留資金」
+    //    真的成為取捨的原因。錢不夠就據實拒絕，不得扣成負數。
+    const cost = renewCostOf(p);
+    const costCash = Math.round(cost * WAN);
+    const funds = Number(get().finance?.funds) || 0;
+    if (costCash > funds) {
+      return { ok: false, cost, reason: `資金不足：續約 ${p.name ?? p.id} 需要 $${cost}萬` };
+    }
     const r = renewContract(get(), playerId, { careerYear: careerYearOf(Number(get().meta?.days) || 1).year });
-    if (r.ok) { set({ players: r.state.players }); get().save(); }
-    return { ok: r.ok, cost: r.cost, reason: r.reason };
+    if (!r.ok) return { ok: false, cost, reason: r.reason };
+    set({ players: r.state.players, finance: { ...get().finance, funds: funds - costCash } });
+    get().pushInbox({ type: "roster", from: "戰隊管理處", subject: `${p.name ?? p.id} 完成續約`,
+      text: `${p.name ?? p.id} 續約成功，支出 $${cost}萬。` });
+    get().save();
+    return { ok: true, cost, reason: null };
   },
   // ── Season vNext V3：快速推進 ────────────────────────────────────────
   /**
@@ -1197,7 +1257,7 @@ export const useProfileStore = create((rawSet, get) => {
    */
   nextStopView() {
     const t = get().worldTimeView();
-    return nextStopOf({ day: t.day, nextFixtureDay: t.nextFixtureDay });
+    return nextStopOf({ day: t.day, nextFixtureDay: t.nextFixtureDay, offSeasonOpen: !!offSeasonSessionOf(get()) });
   },
   /**
    * 推進到下一站。**薄包裝**：規劃器算出天數，推進仍然走 `advanceWorldDays`。
@@ -1215,11 +1275,13 @@ export const useProfileStore = create((rawSet, get) => {
    */
   advanceToNextStop({ maxDays = MAX_FAST_FORWARD_DAYS } = {}) {
     const t = get().worldTimeView();
-    const plan = planAdvance({ day: t.day, nextFixtureDay: t.nextFixtureDay }, { maxDays });
+    const plan = planAdvance({ day: t.day, nextFixtureDay: t.nextFixtureDay, offSeasonOpen: !!offSeasonSessionOf(get()) }, { maxDays });
     if (plan.days <= 0) {
       return {
         ok: false, daysAdvanced: 0, stoppedBy: null, receipts: [],
-        reason: `第 ${t.day} 天有你的比賽，請先出賽或棄權`,
+        reason: offSeasonSessionOf(get())
+          ? "休賽期尚未結束——請先處理續約與補強，或直接完成休賽期"
+          : `第 ${t.day} 天有你的比賽，請先出賽或棄權`,
         plannedDays: 0, stop: plan.stop,
       };
     }

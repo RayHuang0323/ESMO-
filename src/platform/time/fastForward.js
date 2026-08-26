@@ -39,6 +39,9 @@ import { careerYearOf } from "./worldClock.js";
 export const STOP_REASONS = Object.freeze({
   playerFixture: "player_fixture",
   careerYear: "career_year",
+  //  V6-3：休賽期是本專案第一個**真的會擋住時間**的狀態——
+  //  因為到 V6-2 為止，年度邊界已經長出真實決策（續約／放走／補強）。
+  offSeason: "off_season",
 });
 
 /**
@@ -64,8 +67,12 @@ const dayOf = (v) => Math.max(1, Math.floor(Number(v) || 1));
  *        絕對天數；`null` = 目前沒有排定的玩家賽事。
  * @returns {{day:number, code:string, label:string, daysAway:number}|null}
  */
-export function nextStopOf({ day, nextFixtureDay = null } = {}) {
+export function nextStopOf({ day, nextFixtureDay = null, offSeasonOpen = false } = {}) {
   const today = dayOf(day);
+  //  ⚠ 休賽期開著就是**現在**要處理，不必比較誰比較近。
+  if (offSeasonOpen) {
+    return { day: today, code: STOP_REASONS.offSeason, label: "休賽期尚未結束", daysAway: 0 };
+  }
   const stops = [];
 
   //  ⚠ **含今天**（`>=` 不是 `>`）。站在自己的比賽日上時，下一站就是「今天」，
@@ -101,9 +108,9 @@ export function nextStopOf({ day, nextFixtureDay = null } = {}) {
  *
  * @returns {{days:number, stop:object|null}}
  */
-export function planAdvance({ day, nextFixtureDay = null } = {}, { maxDays = MAX_FAST_FORWARD_DAYS } = {}) {
+export function planAdvance({ day, nextFixtureDay = null, offSeasonOpen = false } = {}, { maxDays = MAX_FAST_FORWARD_DAYS } = {}) {
   const today = dayOf(day);
-  const stop = nextStopOf({ day: today, nextFixtureDay });
+  const stop = nextStopOf({ day: today, nextFixtureDay, offSeasonOpen });
   //  下一站就是今天 ⇒ 一天都不規劃，並且**照實回傳那個 stop**。
   //  ⚠ 這裡不可以改成回傳「下下一站」——玩家會看到一個他根本走不到的日子。
   if (stop && stop.daysAway <= 0) return { days: 0, stop };

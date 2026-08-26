@@ -15699,3 +15699,99 @@ MOBA 用 `strength ± 8`（高變異）——兩者都在 band 內，是設計�
 ### 沒有做
 
 轉會市場（V6-3）、談判 AI、Off-season 專屬畫面。
+
+## V6-3 — 正式 Off-season 經營流程（2026-08-27）
+
+基準 `024b52e`。把散落的年度決策收成一個**會停下來**的休賽期。
+
+### 為什麼現在才做這個畫面
+
+V5 設計 §6 立過判準：**Off-season 至少要有一個「會影響下一年、且不可逆」的決策；
+做不到就不要做畫面**。到 V6-2 為止已經有三個：
+① 有人宣布最後一年 ⇒ 要不要現在簽接班人
+② 有人合約即將到期 ⇒ 續約還是放走
+③ 續約要花錢 ⇒ 和補強搶同一份預算
+⇒ 判準過了，畫面才存在。
+
+### 交付
+
+| 項目 | 內容 |
+|---|---|
+| `src/platform/time/offSeasonSession.js`（新增，**58 行實碼**） | `pendingDecisionsOf` / `openSession` / `completeSession` / `sessionOf` / `offSeasonSessionViewOf` |
+| `contract.ensureRosterFloor`（抽出） | **全專案唯一一份名單地板**——合約到期與玩家主動放走共用 |
+| `profileStore` | `releasePlayer`（免費）／`renewPlayerContract`（扣錢）／`completeOffSeason`（免費出口）／`offSeasonSessionView` |
+| `fastForward` | 新增 `STOP_REASONS.offSeason`；休賽期開著時 `planAdvance` 回 0 天 |
+| `advanceWorldDays` | 休賽期開著時**擋住世界時間**並說明原因 |
+| `src/screens/manage/OffSeasonScreen.jsx`（新增） | 六個區塊：年度摘要／退役／合約／補強／預算／完成 |
+| `tools/check_offseason_session_v6.mjs`（新增） | **39/39**，含 2 sentinel |
+| `tools/browser_check_offseason.mjs`（新增） | **18/18**，桌面 + 真 390px |
+
+### 一次年度結束的完整流程
+
+```
+Career Year 結束（advanceDay 跨過邊界）
+  → 年度封存（V5-1）→ age +1（V2）→ 能力漂移（V5-2）
+  → 退休結算 → 退休意向評估（V5-3）→ 合約到期結算（V6-2）→ 名單地板補位
+  → **若有待處理決策** ⇒ 開啟休賽期會期
+  → 世界時間被擋住；首頁出現「休賽期尚未結束：N 項決策待處理」
+  → 玩家進畫面：續約（扣錢）／放走（免費）／補強（走既有 signProspect）
+  → 「完成休賽期」（永遠成功、永遠免費）
+  → 世界時間又走得動，進入下一年度
+```
+
+### 三個系統怎麼互相影響
+
+- **退休 → 合約**：宣布過退役意向的人**不得續約**（他要離開這個運動）。
+  退休結算跑在合約之前 ⇒ 已退役的人不會再被合約結算一次。
+- **合約 → 財務**：續約金 = V4 市場價值 × 0.5，從**同一份俱樂部預算**扣
+  ⇒ 留老將 vs 簽新人 vs 保留資金成為真的取捨。
+- **退休 + 合約 → 補強**：兩者都會造成空缺，而補強要花錢
+  ⇒ 「現在就簽接班人，還是賭他明年延役」有了成本。
+
+### 安全出口
+
+「完成休賽期」**永遠成功、永遠免費**；放走／到期造成人數不足時，
+由**共用的** `ensureRosterFloor` 免費補位。實測連續放走 20 次，人數始終 ≥ 5。
+⇒ 破產、全部放走、什麼都不做，都走得下去。**不得永久卡死**是結構保證。
+
+### Browser smoke（桌面 + 真 390px）
+
+```
+D1 跨過邊界 ⇒ 休賽期自動開啟（待處理 2 項）
+D2 休賽期開著時世界時間被擋住
+D5 六個區塊都在
+F1 續約後資金 $9992萬 → $9913萬（續約 $79萬）
+F2 放走不扣錢 $9913萬 → $9913萬
+F3 補人後 $9913萬 → $9795萬（簽約 $118萬）
+F4 完成後世界時間又走得動（推進 7 天）
+M1–M4 390px：六個區塊都在、無橫向捲動、按鈕都在
+```
+
+### 實作時抓到的三個問題
+
+1. **gate 無窮迴圈**：`while (players.length > 1)` 連續放走——但地板會自動補回 5 人，
+   條件永遠成立。（諷刺的是那正好證明地板有效。）改成有界地連放 20 次。
+2. **browser 佈置順序錯**：先設短合約再推到第 84 天 ⇒ 那些合約在路上就先到期離隊了，
+   到休賽期反而「沒有決策」。改成**先推到邊界前、再設短合約**。
+3. **`NAV` 少一個 route**：首頁按鈕點了沒反應——`sel()` 走 `NAV` 對照表，
+   而 `offSeason` 不在表裡。
+
+### 兩個 gate 的邊界推進（不是回歸）
+
+- `check_time_block_v3` §N1 原本釘住「規劃器不得知道 Off-season」——那是 **V3 當時**的邊界。
+  V6-3 讓休賽期成為第一個真的會擋住時間的停止理由 ⇒ 改成釘住「規劃器仍不**實作**衰退／退休」。
+- `check_offseason_v5` §U2 原本釘住「沒有 Off-season 專屬畫面檔」——那是 **V5-1 當時**的邊界。
+  改成釘住**判準本身**：畫面可以存在，但必須由 `offSeasonSession` 判斷「真的有決策」才進得去。
+
+### Gates
+
+`check_offseason_session_v6` **39/39**｜`browser_check_offseason` **18/18**（皆新增）｜
+`check_contract_v6` 38/38｜`check_cs_ai_lifecycle_v6` 32/32｜`check_retirement_v5` 39/39｜
+`check_age_drift_v5` 48/48｜`check_offseason_v5` 45/45｜`check_time_block_v3` 69/69｜
+`check_player_lifecycle_v4` 44/44｜`check_finance_n3` 40/40｜`check_recruit_o` 41/41｜
+`check_foundation_calibration` 58/58｜`release_gate` 11/11｜
+`regress` 15/15｜`regress2` 8/8｜`dash10`／`flow09` PASS｜`npm run build` ✓ 9.56s
+
+### 沒有做
+
+Coach / Mentor、AI 轉會市場 / bidding、談判 AI、Ranked / ServerTime。

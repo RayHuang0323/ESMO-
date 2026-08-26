@@ -97,6 +97,27 @@ function academyPlayer(seedKey, index) {
 }
 
 /**
+ * 名單地板：不足就用**免費、明顯較弱**的青訓補到 `rosterFloor`。
+ *
+ * ⚠ **全專案只有這一份地板實作**。合約到期、玩家主動放走都走這裡——
+ *   兩套地板遲早會對「幾個人算夠」給出不同答案。
+ * ⚠ 缺額**先算好**：把 `rosterFloor - players.length` 寫在迴圈條件裡，
+ *   會邊補邊縮短上界（補一個、缺額少一個）⇒ 只補到一半。
+ */
+export function ensureRosterFloor(state, { careerYear = 1 } = {}) {
+  const players = [...(state?.players ?? [])];
+  const promoted = [];
+  const short = Math.max(0, CONTRACT.rosterFloor - players.length);
+  for (let i = 0; i < short; i++) {
+    const fresh = academyPlayer(`c${careerYear}`, i);
+    promoted.push(fresh.id);
+    players.push(fresh);
+  }
+  if (!promoted.length) return { state, promoted: [] };
+  return { state: { ...state, players }, promoted };
+}
+
+/**
  * 年度邊界：合約已經歸零的人離隊，然後補足名單地板。**純 reducer、冪等。**
  *
  * ⚠ 必須跑在退休結算**之後**——已經退役的人不在名單裡，不會被結算第二次。
@@ -107,17 +128,9 @@ export function resolveContractExpiries(state, { careerYear = 1 } = {}) {
     if (contractStatusOf(p) === "expired") departed.push(p.id);
     else kept.push(p);
   }
-  const promoted = [];
-  //  ⚠ 缺額要**先算好**。把 `CONTRACT.rosterFloor - kept.length` 直接寫在迴圈條件裡
-  //    會邊補邊縮短上界（補一個、缺額少一個）⇒ 只補到一半。
-  const short = Math.max(0, CONTRACT.rosterFloor - kept.length);
-  for (let i = 0; i < short; i++) {
-    const fresh = academyPlayer(`c${careerYear}`, i);
-    promoted.push(fresh.id);
-    kept.push(fresh);
-  }
-  if (!departed.length && !promoted.length) return { state, departed: [], promoted: [] };
-  return { state: { ...state, players: kept }, departed, promoted };
+  const filled = ensureRosterFloor({ ...state, players: kept }, { careerYear });
+  if (!departed.length && !filled.promoted.length) return { state, departed: [], promoted: [] };
+  return { state: filled.state, departed, promoted: filled.promoted };
 }
 
 /**

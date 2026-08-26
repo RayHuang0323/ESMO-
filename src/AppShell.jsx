@@ -17,6 +17,8 @@
 // ============================================================================
 import React, { useMemo, useState } from "react";
 import DashboardScreen from "./screens/DashboardScreen.jsx";
+//  V6-3：休賽期。只有真的有年度決策時才進得來（見 offSeasonSession）。
+import OffSeasonScreen from "./screens/manage/OffSeasonScreen.jsx";
 import SeasonScreen from "./screens/SeasonScreen.jsx";
 import LineupScreen from "./screens/moba/LineupScreen.jsx";
 import MatchmakingScreen from "./screens/moba/MatchmakingScreen.jsx";
@@ -206,6 +208,7 @@ export default function AppShell() {
       {screen === "talentPick" && <RosterScreen purpose="talent" onBack={home} onPlayer={(id) => { setPlayerId(id); setScreen("playerTalent"); }} />}
       {screen === "training" && <TrainingScreen onBack={home} />}
       {screen === "teamDevelopment" && <TeamDevelopmentScreen onBack={home} />}
+      {screen === "offSeason" && <OffSeasonScreen onBack={home} />}
       {screen === "recruit" && <RecruitScreen onBack={home} />}
       {screen === "playerDetail" && <PlayerDetailScreen playerId={playerId} onBack={go("roster")} onTalent={(id) => { setPlayerId(id); setScreen("playerTalent"); }} />}
       {/* 舊版個人天賦路由保留供舊存檔與詳情流程使用；新的長期投資走戰隊發展。 */}

@@ -480,8 +480,12 @@ ck("U4) 畫面會顯示停下來的原因（不是靜靜地什麼都不做）",
 // ════════════════════════════════════════════════════════════════════════════
 console.log("\n【§N 本輪邊界】");
 
-ck("N1) 沒有做能力衰退 / 退休 / 生涯階段 / Off-season",
-  !!ff && !/decline|retire|offSeason|lifecycleStage|衰退|退休/i.test(read(P_FF)));
+//  ⚠ **邊界隨 Sprint 前進**：V3 當時規劃器完全不知道休賽期這回事。
+//    V6-3 讓休賽期成為第一個真的會擋住時間的停止理由 ⇒ 規劃器**認得**它
+//    是正當的範圍推進。這一條改成釘住規劃器仍然不**實作**生涯後期那些系統。
+ck("N1) 規劃器仍然不實作能力衰退 / 退休 / 生涯階段（只認得停止理由）",
+  !!ff && !/decline|retire|lifecycleStage|衰退|退休/i.test(read(P_FF))
+  && !/applyAgeDrift|resolveRetirements|careerStageOf/.test(read(P_FF)));
 
 ck("N2) 沒有做真人連線 / matchmaking server / Ranked",
   !!ff && !/server|ranked|matchmakingServer|online/i.test(codeOnly(read(P_FF))));

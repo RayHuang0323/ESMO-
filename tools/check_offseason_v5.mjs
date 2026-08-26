@@ -351,8 +351,22 @@ const dash = read(P_DASH);
 ck("U1) 首頁看得到「上一個年度已封存」的狀態",
   /offSeasonView|home-offseason/.test(dash));
 
-ck("U2) **沒有做大型空殼頁**（本輪沒有 Off-season 專屬畫面檔）",
-  !fs.existsSync(resolve(ROOT, "src/screens/manage/OffSeasonScreen.jsx")));
+//  ⚠ **邊界隨 Sprint 前進**：V5-1 時「沒有 Off-season 畫面」是正確的邊界——
+//    那時沒有任何決策，而 V5 設計 §6 的判準是「沒有決策就不要做畫面」。
+//    V6-3 之後畫面存在，是**因為判準達成了**（續約／放走／補強三個真決策）。
+//    ⇒ 這一條改成釘住**判準本身**：畫面可以存在，但必須由
+//      `offSeasonSession` 判斷「真的有決策」才進得去，不得無條件顯示。
+ck("U2) 有畫面就必須由**真的有決策**把關（不得是無條件的空殼頁）",
+  (() => {
+    const screen = resolve(ROOT, "src/screens/manage/OffSeasonScreen.jsx");
+    if (!fs.existsSync(screen)) return true;                    // 沒有畫面也合格
+    const sess = resolve(ROOT, "src/platform/time/offSeasonSession.js");
+    if (!fs.existsSync(sess)) return false;                     // 有畫面卻沒有把關 ⇒ 紅
+    const src = fs.readFileSync(sess, "utf8");
+    //  會期只在 `pending.total > 0` 時開——這就是判準的落地處。
+    return /pending\.total <= 0/.test(src)
+      && /data-testid="home-offseason-enter"/.test(read("src/screens/DashboardScreen.jsx"));
+  })());
 
 // ════════════════════════════════════════════════════════════════════════════
 //  §X mutation sentinel
