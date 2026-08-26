@@ -13845,3 +13845,12 @@ Release checklist 寫的就是旗標，不是網址參數。
 - `git push origin main`：`07a86c7..964d80b` 成功。
 - GitHub Pages run `32997810398`（head `964d80b`）success；正式站 <https://rayhuang0323.github.io/ESMO-/> HTTP 200，entry bundle 已核對為本 release build。
 - C2C status：`C2C_CLOSED`；C3 status：`NOT_STARTED`。Minor debt 只保留 stylized low-poly fidelity 與 Android 真機視覺／FPS／觸控／熱節流驗收。
+
+## CS-C3 Mirage 地圖／環境品質 vertical slice（2026-08-27）
+
+- 基線為 C2C CLOSED main `1a1428819fe9e5b96eddc15950142272f47b4d75`；在 `feature/cs-c3-environment-slice` 獨立 worktree 實作，範圍鎖定 Mirage `A Site + Mid + Connector`。
+- 只新增 `fpsMapEnvironment.js` decoration layer 與 owner/runtime verifier；沒有修改 gameplay balance、Competition、Training、weapon stats、collision、route 或 `StableCanvasRegion`。
+- 三區新增可讀地標與環境 detail：PBR-style Standard materials、concrete/asphalt/wood/metal/glass、facade/window/door、awning、arch、curbs、cover、crates/pallets、lamps、pipes、zone labels；環境 summary 為 102 meshes／1,494 triangles。
+- Static gates 全 PASS：Renderer 24/24、CS-A2 10/10、C2A 13/13、C2B 14/14、CS23 28/28、Camera 8/8、RAF 7/7、StableCanvas 5/5、C2C 9/9、C3 14/14。
+- Production build PASS（2742 modules）；Battle runtime smoke PASS（10/10 rigged、Blue/Red 5v5、三區可見、browser errors 0）；180 秒 long-run PASS（1733 samples、StableCanvas shifts 0、stale fIdx 0、duplicate RAF/render 0、rapid recovery 0、browser errors 0）。
+- Owner preview：`http://127.0.0.1:5395/ESMO-/artifacts/cs-c3/mirage-a-mid-connector/owner-review.html`。狀態：`C3_VERTICAL_SLICE_READY_FOR_OWNER_ACCEPTANCE`；未 merge、未 push、未 deploy。

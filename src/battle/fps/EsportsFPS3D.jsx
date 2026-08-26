@@ -10,6 +10,7 @@ import { checkFpsRendererIdentity } from "./fpsIdentity.js";
 import { checkFpsRuntimeVisibility, evaluateFpsCameraRecovery, isFpsBodyScreenReadable, resolveFpsPresentationVisibility, summarizeFpsTeamVisibility } from "./fpsVisibilityDiagnostics.js";
 import { createFpsCharacterRenderer } from "./presentation/FpsCharacterRenderer.js";
 import { getRiggedCharacterLimit } from "./presentation/fpsCharacterAssets.js";
+import { createC3MirageEnvironment } from "./presentation/fpsMapEnvironment.js";
 
 // EsportsFPS3D 已內聯於本檔（見下方 __FPS3D_MODULE），以符合單一檔案 artifact 限制
 /* ═══════════════════════════════════════════════════════════════
@@ -1147,6 +1148,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
     st.players.forEach((player)=>player.rigged?.dispose?.());
     clear(worldGroup);clear(playerGroup);clear(fxGroup);clear(routeGroup);
     st.raycastTargets=[];
+    st.c3Environment=createC3MirageEnvironment({group:worldGroup,mapKey,W});
 
     // 地板
     if(st.floorTex)st.floorTex.dispose?.();

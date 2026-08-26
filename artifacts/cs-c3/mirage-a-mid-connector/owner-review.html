@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ESMO CS-C3 Mirage Vertical Slice — Owner Review</title>
+    <style>
+      :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #0b1015; color: #e8edf2; }
+      body { max-width: 1120px; margin: 0 auto; padding: 28px; }
+      h1 { margin: 0 0 8px; font-size: 25px; }
+      p { color: #aab5bf; }
+      .status { display: inline-block; padding: 6px 10px; border: 1px solid #4da3a6; border-radius: 999px; color: #9fe1d8; font-weight: 800; letter-spacing: .04em; }
+      figure { margin: 24px 0; padding: 16px; border: 1px solid #283541; border-radius: 14px; background: #111922; }
+      img { display: block; max-width: 100%; height: auto; margin: 0 auto; border-radius: 8px; background: #070b0f; }
+      figcaption { margin-top: 12px; color: #aab5bf; font-size: 13px; }
+      .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+      .card { padding: 14px; border: 1px solid #283541; border-radius: 10px; background: #111922; }
+      .card strong { display: block; color: #f3c875; margin-bottom: 5px; }
+      a { color: #8fd4e3; }
+      @media (max-width: 700px) { body { padding: 16px; } .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <span class="status">C3_VERTICAL_SLICE_READY_FOR_OWNER_ACCEPTANCE</span>
+    <h1>Mirage — A Site / Mid / Connector</h1>
+    <p>Authored environment overlay on the existing Mirage map. Visual decoration only; collision, route data, weapon stats and gameplay simulation are unchanged.</p>
+    <figure>
+      <img src="./battle-runtime-mirage-a-mid-connector.png" alt="Battle runtime preview of the Mirage A Site, Mid and Connector vertical slice">
+      <figcaption>Battle runtime capture from the C3 feature worktree. The slice adds readable zone pads, route landmarks, facades, windows, door frames, awning, cover, crates, pallets, pipe runs and lamps.</figcaption>
+    </figure>
+    <div class="grid">
+      <div class="card"><strong>A SITE</strong>Concrete plant pad, marked edge, plant console, cover, crate stack, pallet, utility pipe, lamp and facade details.</div>
+      <div class="card"><strong>MID</strong>Paved lane, curbs, awning, market crates, pallet, paired cover, route band and facade details.</div>
+      <div class="card"><strong>CONNECTOR</strong>Threshold pad, arch frame, paired cover, utility stack, pipe run, lamp and window details.</div>
+    </div>
+    <p>Runtime evidence: <a href="./runtime-evidence.json">runtime-evidence.json</a></p>
+  </body>
+</html>
