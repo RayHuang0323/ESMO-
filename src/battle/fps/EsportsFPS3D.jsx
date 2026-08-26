@@ -7,7 +7,9 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import * as THREE from "three";
 import MatchSpeedControls from "../ui/MatchSpeedControls.jsx";
 import { checkFpsRendererIdentity } from "./fpsIdentity.js";
-import { checkFpsRuntimeVisibility, resolveFpsPresentationVisibility, summarizeFpsTeamVisibility } from "./fpsVisibilityDiagnostics.js";
+import { checkFpsRuntimeVisibility, evaluateFpsCameraRecovery, isFpsBodyScreenReadable, resolveFpsPresentationVisibility, summarizeFpsTeamVisibility } from "./fpsVisibilityDiagnostics.js";
+import { createFpsCharacterRenderer } from "./presentation/FpsCharacterRenderer.js";
+import { getRiggedCharacterLimit } from "./presentation/fpsCharacterAssets.js";
 
 // EsportsFPS3D 已內聯於本檔（見下方 __FPS3D_MODULE），以符合單一檔案 artifact 限制
 /* ═══════════════════════════════════════════════════════════════
@@ -35,6 +37,10 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const ease=t=>t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
 const mkRng=s=>{let x=s|0;return()=>{x=(x*1664525+1013904223)&0xffffffff;return(x>>>0)/0xffffffff;};};
 const fmtT=s=>`${Math.floor(s/60).toString().padStart(2,"0")}:${(Math.floor(Math.max(0,s))%60).toString().padStart(2,"0")}`;
+function getFpsP0Contract(){
+  if(!import.meta.env?.DEV||typeof window==="undefined")return null;
+  return window.__ESMO_FPS_P0_CONTRACT__||(window.__ESMO_FPS_P0_CONTRACT__={version:1,fidxTransitions:0,staleMismatch:0,rafFrames:0,duplicateRaf:0,duplicateRender:0,lastAuthoritativeFidx:null});
+}
 // 角度插值（取最短路徑，輸入/輸出皆為度）
 function lerpAngle(a,b,t){let d=((b-a)%360+540)%360-180;return a+d*t;}
 // 穩定雜湊（用於平滑的待機微動，避免亂數造成瞬移）
@@ -985,6 +991,8 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
     mount.appendChild(renderer.domElement);
     renderer.domElement.style.display="block";renderer.domElement.style.width="100%";renderer.domElement.style.height="100%";renderer.domElement.style.cursor="grab";
 
+    // 真機驗證用的 DEV-only overlay。它只讀 renderer / visibility diagnostics，
+    // 不參與 simulation，也不會在 production 或未帶 query flag 時建立。
     const scene=new THREE.Scene();
     scene.fog=new THREE.Fog(0x070b12,150,360);
 
@@ -1020,7 +1028,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
     const fxGroup=new THREE.Group();scene.add(fxGroup);         // 槍火/煙/火/投擲/炸彈
 
     stateRef.current={renderer,scene,camera,cam,sun,tex,sphereGeo,beamGeo,worldGroup,routeGroup,playerGroup,fxGroup,
-      players:[],pools:{},raycastTargets:[],running:true,lastT:0,time:0,cameraRecoveryCount:0,disposables:[]};
+      players:[],pools:{},raycastTargets:[],running:true,lastT:0,time:0,cameraRecoveryCount:0,rapidCameraRecoveryCount:0,lastCameraRecoveryAt:null,disposables:[]};
 
     // ── 互動：拖曳旋轉 / 滾輪縮放 / 觸控 ──
     const el=renderer.domElement;let drag=null,pinch=null;
@@ -1069,7 +1077,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
     const resize=()=>{const w=mount.clientWidth||1,h=mount.clientHeight||1;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();};
     resize();const ro=new ResizeObserver(resize);ro.observe(mount);
 
-    // ── 主迴圈：播放時鐘 + 插值 + 渲染 ──
+      // ── 主迴圈：播放時鐘 + 插值 + 渲染 ──
     const animate=t=>{
       const st=stateRef.current;if(!st||!st.running)return;
       st.raf=requestAnimationFrame(animate);
@@ -1081,16 +1089,26 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
       if(st.subT==null)st.subT=0;
       if(live.playing){st.subT+=dt*live.speed*0.5;while(st.subT>=1){st.subT-=1;live.advance&&live.advance();}}
       const fIdx=Math.min(live.fIdx,total-1);
-      const frame=sim.frames[fIdx];const nf=sim.frames[Math.min(fIdx+1,total-1)];
+      const p0Contract=getFpsP0Contract();
+      if(p0Contract){p0Contract.rafFrames+=1;if(p0Contract.lastAuthoritativeFidx!=null&&p0Contract.lastAuthoritativeFidx!==fIdx)p0Contract.staleMismatch+=1;}
+      const frame=sim.frames[fIdx];const nf=sim.frames[Math.min(fIdx+1,total-1)];const pf=sim.frames[Math.max(0,fIdx-1)];
       const sub=live.playing?clamp(st.subT,0,1):0;
-      if(frame)updateDynamic(st,frame,nf,sub,live,W);
+      if(frame){updateDynamic(st,frame,nf,pf,sub,live,W,dt);}
       updateCamera(st,frame,sub,dt,W);
-      if(frame&&import.meta.env?.DEV)publishFpsVisibilityDiagnostics(st,frame,fIdx);
+      if(frame&&import.meta.env?.DEV){publishFpsVisibilityDiagnostics(st,frame,fIdx);}
       renderer.render(scene,camera);
       if(import.meta.env?.DEV&&typeof document!=="undefined"){
         const canvas=renderer.domElement;
         canvas.dataset.esmoFpsVisibilityFrame=String(fIdx);
         canvas.dataset.esmoFpsVisibility=st.visibilitySnapshot?.check?.ok?"ok":"violation";
+        canvas.dataset.esmoFpsPlayers=String(st.players.length);
+        canvas.dataset.esmoFpsRigged=String(st.players.filter((player)=>player.rigged?.mode==="rigged").length);
+        canvas.dataset.esmoFpsFallback=String(st.players.filter((player)=>!player.rigged||player.rigged.mode!=="rigged").length);
+        canvas.dataset.esmoFpsMixers=String(st.players.filter((player)=>player.rigged?.mixer).length);
+        canvas.dataset.esmoFpsRenderCalls=String(renderer.info.render.calls);
+        canvas.dataset.esmoFpsTriangles=String(renderer.info.render.triangles);
+        canvas.dataset.esmoFpsGeometries=String(renderer.info.memory.geometries);
+        canvas.dataset.esmoFpsTextures=String(renderer.info.memory.textures);
       }
     };
     st_start();
@@ -1099,8 +1117,10 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
     return()=>{
       const st=stateRef.current;if(st)st.running=false;
       cancelAnimationFrame(st?.raf);
+      st?.players?.forEach((player)=>player.rigged?.dispose?.());
       ro.disconnect();
       window.removeEventListener("mousemove",onMove);
+      if(typeof window!=="undefined")delete window.__ESMO_FPS_P0_CONTRACT__;
       try{mount.removeChild(renderer.domElement);}catch(e){}
       renderer.dispose();
     };
@@ -1124,6 +1144,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
       mm.forEach(m=>{if(!m)return;if(m.map&&!SHARED.has(m.map))m.map.dispose?.();m.dispose?.();});
     };
     const clear=g=>{for(let i=g.children.length-1;i>=0;i--){const c=g.children[i];c.traverse(disp);g.remove(c);}};
+    st.players.forEach((player)=>player.rigged?.dispose?.());
     clear(worldGroup);clear(playerGroup);clear(fxGroup);clear(routeGroup);
     st.raycastTargets=[];
 
@@ -1218,7 +1239,8 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
     });
 
     // ── 選手（10 名，固定池）──
-    st.players=roster.map(p=>{
+    const riggedLimit=getRiggedCharacterLimit(roster);
+    st.players=roster.map((p,playerIndex)=>{
       const col=new THREE.Color(p.side==="ct"?0x39a9e6:0xf08a3c);
       const g=new THREE.Group();g.userData.pid=p.id;g.userData.side=p.side;
       // 地面光環
@@ -1253,10 +1275,12 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
       const mag=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.3,0.12),polyMat);mag.position.set(0.56,0.74,0.04);mag.rotation.z=0.18;gun.add(mag);
       const sight=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.09,0.05),metalMat);sight.position.set(0.62,1.0,0.04);gun.add(sight);
       body.add(gun);
+      const bodyParts={torso,head,helm,limbs:body.children.slice(3,7),weapon:gun};
       // 架槍視線（沿瞄準方向的細光線，顯示選手正在架住的角度）
       const aimMat=new THREE.MeshBasicMaterial({color:p.side==="ct"?0x7dd3fc:0xfdba74,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false});aimMat.__keep=true;
       const aimLine=new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.02,9,6),aimMat);aimLine.rotation.z=Math.PI/2;aimLine.position.set(1.1+4.5,0.95,0.04);body.add(aimLine);
       g.add(body);
+      const rigged=createFpsCharacterRenderer({parent:g,player:p,enabled:playerIndex<riggedLimit});
       // 選中柱
       const beamMat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.0,blending:THREE.AdditiveBlending,depthWrite:false});beamMat.__keep=true;
       const selBeam=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.14,7,8),beamMat);selBeam.position.y=3.5;g.add(selBeam);
@@ -1277,7 +1301,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
 
       playerGroup.add(g);
       g.traverse(o=>{o.frustumCulled=false;if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(mm=>{mm.fog=false;});}}); // 選手不受霧/視錐裁切影響，避免拉遠/縮放/邊緣時消失
-      return {id:p.id,side:p.side,role:p.role,col,g,body,torso,torsoMat,head,gun,ring,ringMat,disc,selBeam,beamMat,hpGroup,hpFill,nameSpr,dead,deadMat,aimLine,aimMat};
+      return {id:p.id,side:p.side,role:p.role,col,g,body,bodyParts,torso,torsoMat,head,gun,ring,ringMat,disc,selBeam,beamMat,hpGroup,hpFill,nameSpr,dead,deadMat,aimLine,aimMat,rigged};
     });
     st.raycastTargets=st.players.map(p=>p.g);
 
@@ -1336,34 +1360,88 @@ function materialSnapshot(node){
   });
   return {renderable,visibleRenderable,materialVisible,minOpacity,maxOpacity,frustumCulled};
 }
+function bodyPartSnapshot(nodes){
+  const list=(Array.isArray(nodes)?nodes:[nodes]).filter(Boolean);
+  const renderables=list.map(materialSnapshot);
+  return {
+    exists:list.length>0,
+    visible:list.length>0&&list.every((node)=>node.visible!==false&&nodeVisibleThroughParents(node)),
+    renderable:renderables.reduce((sum,snapshot)=>sum+snapshot.renderable,0),
+    visibleRenderable:renderables.reduce((sum,snapshot)=>sum+snapshot.visibleRenderable,0),
+    materialVisible:renderables.reduce((sum,snapshot)=>sum+snapshot.materialVisible,0),
+  };
+}
+function nodeTransformSnapshot(node){
+  if(!node)return {exists:false,visible:false,matrixFinite:false,position:null,rotation:null,scale:null,bounds:null};
+  node.updateWorldMatrix?.(true,true);
+  const matrix=node.matrixWorld?.elements||[];
+  const bounds=new THREE.Box3().setFromObject(node);
+  const finiteBounds=!bounds.isEmpty()&&allFinite([bounds.min.x,bounds.min.y,bounds.min.z,bounds.max.x,bounds.max.y,bounds.max.z]);
+  return {
+    exists:true,visible:node.visible!==false,matrixFinite:allFinite(matrix),
+    position:{x:diagRound(node.position.x),y:diagRound(node.position.y),z:diagRound(node.position.z)},
+    rotation:{x:diagRound(node.rotation.x),y:diagRound(node.rotation.y),z:diagRound(node.rotation.z)},
+    scale:{x:diagRound(node.scale.x),y:diagRound(node.scale.y),z:diagRound(node.scale.z)},
+    bounds:finiteBounds?{min:{x:diagRound(bounds.min.x),y:diagRound(bounds.min.y),z:diagRound(bounds.min.z)},max:{x:diagRound(bounds.max.x),y:diagRound(bounds.max.y),z:diagRound(bounds.max.z)}}:null,
+    boundsFinite:finiteBounds,
+  };
+}
+function projectBodyScreenFootprint(node,camera,canvas){
+  const bounds=new THREE.Box3();let renderables=0;
+  node?.traverse?.((object)=>{
+    if(!object.isMesh&&!object.isLine&&!object.isSprite)return;
+    if(object.visible===false||!nodeVisibleThroughParents(object))return;
+    const materials=Array.isArray(object.material)?object.material:[object.material];
+    if(!materials.some((material)=>material&&Number(material.opacity??1)>0))return;
+    const objectBounds=new THREE.Box3().setFromObject(object);
+    if(objectBounds.isEmpty())return;
+    bounds.union(objectBounds);renderables+=1;
+  });
+  if(!renderables||bounds.isEmpty())return {present:false,widthPx:0,heightPx:0,inViewport:false,readable:false,depthVisible:false,ndcBounds:null};
+  const {min,max}=bounds;
+  const corners=[];
+  for(const x of [min.x,max.x])for(const y of [min.y,max.y])for(const z of [min.z,max.z])corners.push(new THREE.Vector3(x,y,z).project(camera));
+  const finite=corners.filter((point)=>allFinite([point.x,point.y,point.z]));
+  if(!finite.length)return {present:true,widthPx:0,heightPx:0,inViewport:false,readable:false,depthVisible:false,ndcBounds:null};
+  const canvasWidth=canvas?.clientWidth||1,canvasHeight=canvas?.clientHeight||1;
+  const xs=finite.map((point)=>(point.x+1)*0.5*canvasWidth),ys=finite.map((point)=>(1-point.y)*0.5*canvasHeight);
+  const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+  const widthPx=Math.max(0,maxX-minX),heightPx=Math.max(0,maxY-minY);
+  const depthVisible=finite.some((point)=>point.z>=-1&&point.z<=1);
+  const inViewport=depthVisible&&maxX>=0&&minX<=canvasWidth&&maxY>=0&&minY<=canvasHeight;
+  const footprint={present:true,widthPx:diagRound(widthPx),heightPx:diagRound(heightPx),inViewport,depthVisible,ndcBounds:{x0:diagRound(Math.min(...finite.map((point)=>point.x))),x1:diagRound(Math.max(...finite.map((point)=>point.x))),y0:diagRound(Math.min(...finite.map((point)=>point.y))),y1:diagRound(Math.max(...finite.map((point)=>point.y))),z0:diagRound(Math.min(...finite.map((point)=>point.z))),z1:diagRound(Math.max(...finite.map((point)=>point.z)))}};
+  return {...footprint,readable:isFpsBodyScreenReadable(footprint)};
+}
+function diagRound(value){return Number.isFinite(Number(value))?Number(Number(value).toFixed(3)):null;}
 function buildFpsVisibilitySnapshot(st,frame,frameIndex){
   const frameById=new Map((frame?.players||[]).map((player)=>[player.id,player]));
   const sceneVisible=st.scene?.visible!==false,playerGroupVisible=st.playerGroup?.visible!==false;
+  st.camera.updateMatrixWorld();
   const cameraMatrix=new THREE.Matrix4().multiplyMatrices(st.camera.projectionMatrix,st.camera.matrixWorldInverse);
   const frustum=new THREE.Frustum().setFromProjectionMatrix(cameraMatrix);
   const players=st.players.map((P)=>{
     const authoritative=frameById.get(P.id)||null,riggedActive=P.rigged?.mode==="rigged",activeRoot=riggedActive?P.rigged?.root:P.body;
     P.g.updateWorldMatrix(true,true);activeRoot?.updateWorldMatrix?.(true,true);
     const worldPosition=new THREE.Vector3();P.g.getWorldPosition(worldPosition);
-    const renderables=materialSnapshot(activeRoot),bounds=activeRoot?new THREE.Box3().setFromObject(activeRoot):new THREE.Box3();
+    const primitiveBody=materialSnapshot(P.body),activeBody=materialSnapshot(activeRoot),sceneBodyPresent=activeBody.renderable>0,sceneBodyVisibleFlag=Boolean(activeRoot&&activeRoot.visible!==false),bodyVisible=Boolean(activeRoot&&activeRoot.visible!==false&&nodeVisibleThroughParents(activeRoot)&&activeBody.visibleRenderable>0&&activeBody.materialVisible>0),primitiveBodyVisible=Boolean(P.body&&P.body.visible!==false&&nodeVisibleThroughParents(P.body)&&primitiveBody.visibleRenderable>0&&primitiveBody.materialVisible>0),bodyParts={torso:bodyPartSnapshot(P.bodyParts?.torso),head:bodyPartSnapshot(P.bodyParts?.head),limbs:bodyPartSnapshot(P.bodyParts?.limbs),weapon:bodyPartSnapshot(P.bodyParts?.weapon)},screenBodyFootprint=projectBodyScreenFootprint(activeRoot,st.camera,st.renderer?.domElement),bounds=activeRoot?new THREE.Box3().setFromObject(activeRoot):new THREE.Box3();
     const sphere=bounds.isEmpty()?null:bounds.getBoundingSphere(new THREE.Sphere()),inCameraFrustum=Boolean(sphere&&frustum.intersectsSphere(sphere));
     const projected=worldPosition.clone().project(st.camera);
     const inCameraViewport=allFinite([projected.x,projected.y,projected.z])&&projected.x>=-1&&projected.x<=1&&projected.y>=-1&&projected.y<=1&&projected.z>=-1&&projected.z<=1;
     const occludedByWall=Boolean(st.wallRects?.some((rect)=>segHitsRect(st.camera.position.x,st.camera.position.z,worldPosition.x,worldPosition.z,rect)));
-    const matrixFinite=allFinite(P.g.matrixWorld.elements),transform={
+    const bodyTransform=nodeTransformSnapshot(activeRoot),primitiveTransform=nodeTransformSnapshot(P.body),matrixFinite=allFinite(P.g.matrixWorld.elements),transform={
       position:{x:P.g.position.x,y:P.g.position.y,z:P.g.position.z},rotation:{x:P.g.rotation.x,y:P.g.rotation.y,z:P.g.rotation.z},
       scale:{x:P.g.scale.x,y:P.g.scale.y,z:P.g.scale.z},
     };
     const identityMiss=Boolean(P.identityMiss||!authoritative);
-    const resolved=resolveFpsPresentationVisibility({entityExists:true,identityMiss,rootVisible:P.g.visible!==false,parentVisible:nodeVisibleThroughParents(P.g),sceneVisible,playerGroupVisible,primitiveBodyVisible:P.body?.visible!==false,riggedRootVisible:P.rigged?.root?.visible===true,riggedActive,transform});
+    const resolved=resolveFpsPresentationVisibility({entityExists:true,identityMiss,rootVisible:P.g.visible!==false,parentVisible:nodeVisibleThroughParents(P.g),sceneVisible,playerGroupVisible,primitiveBodyVisible,riggedRootVisible:P.rigged?.root?.visible===true,riggedActive,transform});
     return {
       id:P.id,team:authoritative?.side||P.side,authoritativePresent:Boolean(authoritative),authoritativeAlive:authoritative?!authoritative.dead:null,
       framePosition:authoritative?.pos?{x:authoritative.pos.x,y:authoritative.pos.y}:null,entityExists:true,entityType:riggedActive?"rigged":"primitive",
-      rootVisible:P.g.visible!==false,parentVisible:nodeVisibleThroughParents(P.g),bodyVisible:P.body?.visible===true,riggedRootVisible:P.rigged?.root?.visible===true,
+      rootVisible:P.g.visible!==false,parentVisible:nodeVisibleThroughParents(P.g),bodyVisible,sceneBodyPresent,sceneBodyVisibleFlag,screenBodyReadable:screenBodyFootprint.readable,screenBodyFootprint,bodyTransform,primitiveTransform,bodyTransformFinite:bodyTransform.matrixFinite&&bodyTransform.boundsFinite,bodyFacingDegrees:authoritative?.va??null,bodyRenderable:activeBody.renderable>0,primitiveBodyVisible,primitiveBodyRenderable:primitiveBody.renderable>0,bodyRenderableCount:activeBody.renderable,visibleBodyRenderableCount:activeBody.visibleRenderable,bodyMaterialVisible:activeBody.materialVisible>0,bodyParts,riggedRootVisible:P.rigged?.root?.visible===true,
       presentationVisible:resolved.presentationVisible,visibilityReason:resolved.reason,identityMiss,scale:transform.scale,worldPosition:{x:worldPosition.x,y:worldPosition.y,z:worldPosition.z},
       transformFinite:matrixFinite&&resolved.transformOk&&allFinite([worldPosition.x,worldPosition.y,worldPosition.z]),matrixWorldFinite:matrixFinite,
-      frustumCulled:renderables.frustumCulled,inCameraFrustum,inCameraViewport,screenNdc:{x:projected.x,y:projected.y,z:projected.z},occludedByWall,
-      renderableCount:renderables.renderable,visibleRenderableCount:renderables.visibleRenderable,materialVisible:renderables.materialVisible>0,materialOpacity:{min:renderables.minOpacity,max:renderables.maxOpacity},
+      frustumCulled:activeBody.frustumCulled,inCameraFrustum,inCameraViewport,screenNdc:{x:projected.x,y:projected.y,z:projected.z},occludedByWall,
+      renderableCount:activeBody.renderable,visibleRenderableCount:activeBody.visibleRenderable,materialVisible:activeBody.materialVisible>0,materialOpacity:{min:activeBody.minOpacity,max:activeBody.maxOpacity},
       deathPresentation:Boolean(authoritative?.dead),animationState:null,fallbackMode:"primitive",riggedActive,occlusion:{mode:"wall-fade-only",wallFadeActive:Boolean(st.fadeWalls?.some((wall)=>wall.cur<0.99)),playerFadeApplied:false},
     };
   });
@@ -1373,13 +1451,16 @@ function buildFpsVisibilitySnapshot(st,frame,frameIndex){
 function publishFpsVisibilityDiagnostics(st,frame,frameIndex){
   if(!import.meta.env?.DEV||typeof document==="undefined")return;
   const snapshot=buildFpsVisibilitySnapshot(st,frame,frameIndex);st.visibilitySnapshot=snapshot;
+  if(typeof window!=="undefined")window.__ESMO_FPS_SCENE__=st;
   const canvas=st.renderer.domElement;canvas.dataset.esmoFpsVisibility=snapshot.check.ok?"ok":"violation";
-  canvas.dataset.esmoFpsBlueAuthoritative=String(snapshot.teams.blue.authoritative);canvas.dataset.esmoFpsBlueEntities=String(snapshot.teams.blue.entities);canvas.dataset.esmoFpsBlueVisible=String(snapshot.teams.blue.visiblePresentation);canvas.dataset.esmoFpsBlueAlive=String(snapshot.teams.blue.alive);
-  canvas.dataset.esmoFpsRedAuthoritative=String(snapshot.teams.red.authoritative);canvas.dataset.esmoFpsRedEntities=String(snapshot.teams.red.entities);canvas.dataset.esmoFpsRedVisible=String(snapshot.teams.red.visiblePresentation);canvas.dataset.esmoFpsRedAlive=String(snapshot.teams.red.alive);
+  canvas.dataset.esmoFpsBlueAuthoritative=String(snapshot.teams.blue.authoritative);canvas.dataset.esmoFpsBlueEntities=String(snapshot.teams.blue.entities);canvas.dataset.esmoFpsBlueVisible=String(snapshot.teams.blue.visiblePresentation);canvas.dataset.esmoFpsBlueBody=String(snapshot.teams.blue.visibleBodies);canvas.dataset.esmoFpsBlueAlive=String(snapshot.teams.blue.alive);
+  canvas.dataset.esmoFpsBlueSceneBodies=String(snapshot.teams.blue.sceneBodies);canvas.dataset.esmoFpsBlueReadableBodies=String(snapshot.teams.blue.readableBodies);
+  canvas.dataset.esmoFpsRedAuthoritative=String(snapshot.teams.red.authoritative);canvas.dataset.esmoFpsRedEntities=String(snapshot.teams.red.entities);canvas.dataset.esmoFpsRedVisible=String(snapshot.teams.red.visiblePresentation);canvas.dataset.esmoFpsRedBody=String(snapshot.teams.red.visibleBodies);canvas.dataset.esmoFpsRedAlive=String(snapshot.teams.red.alive);
+  canvas.dataset.esmoFpsRedSceneBodies=String(snapshot.teams.red.sceneBodies);canvas.dataset.esmoFpsRedReadableBodies=String(snapshot.teams.red.readableBodies);
   canvas.dataset.esmoFpsVisibilityFrame=String(frameIndex);canvas.dataset.esmoFpsVisibilityJson=JSON.stringify(snapshot);
   if(typeof window!=="undefined")window.__ESMO_FPS_VISIBILITY__=snapshot;
 }
-function updateDynamic(st,frame,nf,sub,live,W){
+function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0){
   const time=st.time;const showLabels=live.showLabels!==false;
   // 地名顯隱
   if(st.calloutSprites)st.calloutSprites.forEach(s=>{s.visible=showLabels;});
@@ -1387,6 +1468,7 @@ function updateDynamic(st,frame,nf,sub,live,W){
   // 選手
   const fmap={};frame.players.forEach(p=>fmap[p.id]=p);
   const nmap={};(nf?nf.players:[]).forEach(p=>nmap[p.id]=p);
+  const pmap={};(pf?pf.players:[]).forEach(p=>pmap[p.id]=p);
   const identity=checkFpsRendererIdentity({
     framePlayers:frame.players,
     rendererEntities:st.players.map(P=>({id:P.id,side:P.side})),
@@ -1402,32 +1484,75 @@ function updateDynamic(st,frame,nf,sub,live,W){
       // Identity miss is not authoritative death. Keep the last presentation
       // state visible as a recoverable diagnostic instead of silently hiding it.
       P.identityMiss=true;P.g.userData.identityMiss=true;P.g.visible=true;
-      P.body.visible=true;P.disc.visible=true;P.deadMat.opacity=0;P.selBeam.visible=false;
+      P.body.visible=P.rigged?.mode!=="rigged";P.disc.visible=true;P.deadMat.opacity=0;P.selBeam.visible=false;
       P.nameSpr.visible=showLabels;
+      P.rigged?.setIdentityMiss?.();
       return;
     }
     P.identityMiss=false;P.g.userData.identityMiss=false;
     P.g.visible=true;
+    const pp=pmap[P.id];
     const np=nmap[P.id];const sameRound=nf&&frame&&nf.rnd===frame.rnd;
     let x=p.pos.x,y=p.pos.y,va=p.va;
     if(np&&sameRound&&!p.dead&&!np.dead){x=lerp(p.pos.x,np.pos.x,sub);y=lerp(p.pos.y,np.pos.y,sub);va=lerpAngle(p.va,np.va,sub);}
     P.g.position.set(W.vx(x),0,W.vz(y));
+    P.rigged?.update?.({player:p,previousPlayer:pp,nextPlayer:np,frameRound:frame.rnd,previousFrameRound:pf?.rnd,dt});
+    const riggedActive=P.rigged?.mode==="rigged";
+    const riggedMode=P.rigged?.mode||"fallback";
+    P.body.visible=!riggedActive;
+    // Primitive characters keep a fixed world-space size. The P0 overview
+    // camera can legitimately move farther out to protect whole-team framing,
+    // which made the fallback silhouette unreadably small while labels/rings
+    // remained distance-scaled overlays. This is presentation-only scaling;
+    // it does not affect simulation positions, collision, or identity.
+    const primitiveReadabilityScale=!riggedActive&&st.cam.overview
+      ?clamp(st.camera.position.distanceTo(P.g.position)/44,1,3.0):1;
+    P.body.scale.setScalar(primitiveReadabilityScale);
+    // Keep billboard overlays above the enlarged fallback silhouette. Their
+    // original fixed heights were correct at scale 1, but overlapped the
+    // torso/head once overview readability scaling was enabled.
+    P.hpGroup.position.y=2.8*primitiveReadabilityScale;
+    P.nameSpr.position.y=3.4*primitiveReadabilityScale;
+    // The fallback character is a spectator presentation, not a gameplay
+    // collider. In the overview camera, blockout roofs/props can occlude an
+    // otherwise valid player body while its ring/label remains visible. Only
+    // the actually occluded primitive body gets a reversible depth override;
+    // rigged characters and non-occluded/manual views keep normal depth.
+    const primitiveOccludedByWall=Boolean(!riggedActive&&st.cam.overview&&st.wallRects?.some((rect)=>segHitsRect(st.camera.position.x,st.camera.position.z,P.g.position.x,P.g.position.z,rect)));
+    const primitiveDepthMode=primitiveOccludedByWall?"spectator-readable":"world-depth";
+    const desiredPlayerGroupOrder=st.cam.overview?100:0;
+    if(st.playerGroup.renderOrder!==desiredPlayerGroupOrder)st.playerGroup.renderOrder=desiredPlayerGroupOrder;
+    if(P._primitiveDepthMode!==primitiveDepthMode){
+      P._primitiveDepthMode=primitiveDepthMode;
+      P.body.traverse((object)=>{
+        if(!object.isMesh)return;
+        object.renderOrder=primitiveOccludedByWall?100:0;
+        const materials=Array.isArray(object.material)?object.material:[object.material];
+        materials.filter(Boolean).forEach((material)=>{material.depthTest=!primitiveOccludedByWall;material.depthWrite=true;});
+      });
+      const overlayMaterials=[P.nameSpr?.material,...(P.hpGroup?.children||[]).flatMap((child)=>Array.isArray(child.material)?child.material:[child.material])].filter(Boolean);
+      overlayMaterials.forEach((material)=>{material.depthTest=primitiveOccludedByWall;material.depthWrite=false;});
+    }
+    if(P.rigged?.root)P.rigged.root.rotation.y=-va*Math.PI/180;
     const sel=live.selected===P.id;
     if(p.dead){
-      P.body.visible=false;P.hpGroup.visible=false;P.nameSpr.visible=false;P.selBeam.visible=false;
+      P.body.visible=!riggedActive;P.hpGroup.visible=false;P.nameSpr.visible=false;P.selBeam.visible=false;
       P.deadMat.opacity=0.8;P.ringMat.opacity=0.0;P.disc.visible=false;
       P.dead.scale.setScalar(clamp(st.cam.radius/55,0.85,2.0)); // 死亡地面 X，遠看清楚
     }else{
-      P.body.visible=true;P.disc.visible=true;P.deadMat.opacity=0;
+      P.body.visible=!riggedActive;P.disc.visible=true;P.deadMat.opacity=0;
       // 轉向（+X 對齊視角方向）
       P.body.rotation.y=-va*Math.PI/180;
       // 移動/掃視微動（呼吸感）
       const moving=p.state==="ROTATE"||p.state==="EXECUTE";
-      const bob=Math.sin(time*(moving?9:3)+P.id.charCodeAt(2))*0.025*(moving?1.4:0.6);
+      // Use a hash-derived phase: legal short IDs such as "t1" have no
+      // character at index 2, and charCodeAt(2) would poison the body matrix.
+      const motionSeed=hsh(P.id)%997;
+      const bob=Math.sin(time*(moving?9:3)+motionSeed)*0.025*(moving?1.4:0.6);
       // 架槍：靜止持槍狀態下身體微蹲、視線光束顯現（看得出在架住角度）
       const aiming=p.state==="架槍"||p.state==="ENGAGE"||(!moving&&p.state==="HOLD");
       P.body.position.y=bob-(aiming?0.12:0);
-      if(P.aimMat){const fire=p.shooting>0;P.aimMat.opacity=aiming?(fire?0.85:0.34+0.12*Math.sin(time*6+P.id.charCodeAt(2))):0;P.aimLine.visible=aiming;}
+      if(P.aimMat){const fire=p.shooting>0;P.aimMat.opacity=aiming?(fire?0.85:0.34+0.12*Math.sin(time*6+motionSeed)):0;P.aimLine.visible=aiming;}
       // 血量 → 環/身體色 + 血條
       const hpR=clamp(p.hp/100,0,1);
       P.ringMat.opacity=sel?1:0.8;
@@ -1438,8 +1563,9 @@ function updateDynamic(st,frame,nf,sub,live,W){
       if(P._prevHp==null)P._prevHp=p.hp;
       if(p.hp<P._prevHp-0.5)P._dmg=1;P._prevHp=p.hp;
       const dmg=P._dmg||0;
-      P.hpGroup.scale.setScalar(clamp(dCam/26,1.0,4.2)*(1+0.4*dmg)); // 近看也夠大、遠看放大
-      if(P.nameSpr.userData.base){const ns=clamp(dCam/46,0.5,3.2),b=P.nameSpr.userData.base;P.nameSpr.scale.set(b.x*ns,b.y*ns,1);} // 名牌不再近看爆大
+      const fallbackOverlayScale=riggedActive?1:0.5;
+      P.hpGroup.scale.setScalar(clamp(dCam/26,1.0,4.2)*(1+0.4*dmg)*fallbackOverlayScale); // 近看也夠大、遠看放大
+      if(P.nameSpr.userData.base){const ns=clamp(dCam/46,0.5,3.2)*fallbackOverlayScale,b=P.nameSpr.userData.base;P.nameSpr.scale.set(b.x*ns,b.y*ns,1);} // 名牌不再近看爆大
       P.hpFill.scale.x=Math.max(0.02,hpR);P.hpFill.position.x=-(1.3*(1-hpR))/2;
       P.hpFill.material.color.setHex(dmg>0.12?0xffffff:(hpR>0.5?0x34d399:hpR>0.25?0xfbbf24:0xf87171));
       if(!P._emBase&&P.torsoMat.emissive)P._emBase=P.torsoMat.emissive.clone();
@@ -1482,9 +1608,14 @@ function updateDynamic(st,frame,nf,sub,live,W){
   {const it=usePool(st.pools.muzzle);let lit=0;
    (frame.muzzles||[]).forEach(mz=>{const s=it.next();if(!s)return;
      s.position.set(W.vx(mz.pos.x),0.95,W.vz(mz.pos.y));
-     const sc=(mz.big?1.7:1.0)*(0.8+0.5*Math.random());s.scale.set(sc,sc,1);
-     s.material.opacity=0.9*(0.6+0.4*Math.random());s.material.color.setHex(mz.side==="ct"?0xbfe6ff:0xffd9a0);s.visible=true;
-     if(lit<st.flashLights.length){const L=st.flashLights[lit++];L.position.set(W.vx(mz.pos.x),1.2,W.vz(mz.pos.y));L.intensity=3.5*(0.7+0.5*Math.random());L.visible=true;}
+     // One authoritative muzzle event can be presented for several render
+     // frames. Randomising every render frame made the sprite and point light
+     // intensity jump independently, which appeared as periodic mobile
+     // flicker. Derive a stable variation from the event identity instead.
+     const muzzleSeed=(hsh(mz.id||`${mz.side}:${mz.pos.x}:${mz.pos.y}`)%1000)/1000;
+     const sc=(mz.big?1.7:1.0)*(0.95+0.2*muzzleSeed);s.scale.set(sc,sc,1);
+     s.material.opacity=0.9*(0.82+0.14*muzzleSeed);s.material.color.setHex(mz.side==="ct"?0xbfe6ff:0xffd9a0);s.visible=true;
+     if(lit<st.flashLights.length){const L=st.flashLights[lit++];L.position.set(W.vx(mz.pos.x),1.2,W.vz(mz.pos.y));L.intensity=3.5*(0.88+0.18*muzzleSeed);L.visible=true;}
    });it.done();
    for(let k=lit;k<st.flashLights.length;k++)st.flashLights[k].visible=false;}
 
@@ -1508,7 +1639,8 @@ function updateDynamic(st,frame,nf,sub,live,W){
        const a=j*0.9+time*2;const rr=1.6*(j%3)/2+0.3;
        s.position.set(cx+Math.cos(a)*rr,0.5+Math.abs(Math.sin(time*6+j))*1.1,cz+Math.sin(a)*rr);
        const sc=1.1+0.6*Math.abs(Math.sin(time*8+j*1.3));s.scale.set(sc,sc*1.4,1);
-       s.material.opacity=(0.55+0.35*Math.random())*fade;s.visible=true;
+       const fireSeed=(hsh(m0.id||`${m0.pos.x}:${m0.pos.y}:${j}`)%1000)/1000;
+       s.material.opacity=(0.7+0.18*fireSeed)*fade;s.visible=true;
      }
    });for(;i<arr.length;i++)arr[i].visible=false;}
 
@@ -1549,7 +1681,7 @@ function updateDynamic(st,frame,nf,sub,live,W){
   if(selId){const a=frame.players.find(p=>p.id===selId);const b=nf?.players.find(p=>p.id===selId);
     if(a){const px=b?lerp(a.pos.x,b.pos.x,sub):a.pos.x,py=b?lerp(a.pos.y,b.pos.y,sub):a.pos.y;
       let ne=null,nd=1e9;for(const e of frame.players){if(e.dead||e.side===a.side)continue;const d=Math.hypot(e.pos.x-px,e.pos.y-py);if(d<nd){nd=d;ne=e;}}
-      st._chase={x:px,y:py,va:a.va,alive:!a.dead,side:a.side,state:a.state,shooting:a.shooting>0,enemy:ne&&nd<55?{x:ne.pos.x,y:ne.pos.y,d:nd}:null};}else st._chase=null;}
+      st._chase={id:a.id,x:px,y:py,va:a.va,alive:!a.dead,side:a.side,state:a.state,shooting:a.shooting>0,enemy:ne&&nd<55?{x:ne.pos.x,y:ne.pos.y,d:nd}:null};}else st._chase=null;}
   else st._chase=null;
 
   // 路線疊加（顯示全部路線 或 僅高亮選中選手）
@@ -1573,20 +1705,23 @@ function camBlocked(rects,tgt,radius,phi,theta){
   const sz=radius*Math.sin(phi)*Math.cos(theta)+tgt.z;
   for(const r of rects){if(segHitsRect(sx,sz,tgt.x,tgt.z,r))return true;}return false;
 }
-function allAliveOutsideCameraViewport(st,frame,W){
+function inspectAliveCameraViewport(st,frame,W){
   const alive=(frame?.players||[]).filter((player)=>!player.dead);
-  if(!alive.length)return false;
-  return alive.some((player)=>{
+  return evaluateFpsCameraRecovery(alive.map((player)=>{
     const point=new THREE.Vector3(W.vx(player.pos.x),0,W.vz(player.pos.y)).project(st.camera);
-    return !allFinite([point.x,point.y,point.z])||point.x<-1||point.x>1||point.y<-1||point.y>1||point.z<-1||point.z>1;
-  });
+    const inCameraViewport=allFinite([point.x,point.y,point.z])&&point.x>=-1&&point.x<=1&&point.y>=-1&&point.y<=1&&point.z>=-1&&point.z<=1;
+    return {id:player.id,side:player.side,alive:true,inCameraViewport};
+  }));
+}
+function allAliveOutsideCameraViewport(st,frame,W){
+  return inspectAliveCameraViewport(st,frame,W).shouldRecover;
 }
 function snapOverviewToAlive(st,frame,W){
   const alive=(frame?.players||[]).filter((player)=>!player.dead);if(!alive.length)return;
   const cx=alive.reduce((sum,player)=>sum+player.pos.x,0)/alive.length,cy=alive.reduce((sum,player)=>sum+player.pos.y,0)/alive.length;
   const wcx=W.vx(cx),wcz=W.vz(cy);let maxd=0;
   alive.forEach((player)=>{maxd=Math.max(maxd,Math.hypot(W.vx(player.pos.x)-wcx,W.vz(player.pos.y)-wcz));});
-  const cam=st.cam;cam.autoFollow=true;cam.overview=true;cam.dTgt.set(wcx,3,wcz);cam.dRadius=clamp(maxd*2.1+48,78,160);cam.dPhi=1.16;
+  const cam=st.cam;cam.autoFollow=true;cam.overview=true;cam.dTgt.set(wcx,3,wcz);cam.dRadius=clamp(maxd*2.1+48,78,160);cam.dPhi=0.82;
   if(cam._ovBase==null)cam._ovBase=cam.dTheta;cam.dTheta=cam._ovBase;cam.tgt.copy(cam.dTgt);cam.radius=cam.dRadius;cam.phi=cam.dPhi;cam.theta=cam.dTheta;
   _vA.setFromSphericalCoords(cam.radius,cam.phi,cam.theta).add(cam.tgt);st.camera.position.copy(_vA);st.camera.lookAt(cam.tgt);st.camera.updateMatrixWorld();
 }
@@ -1615,8 +1750,14 @@ function updateCamera(st,frame,sub,dt,W){
       const wcx=W.vx(cx),wcz=W.vz(cy);
       let maxd=0;for(const p of alive)maxd=Math.max(maxd,Math.hypot(W.vx(p.pos.x)-wcx,W.vz(p.pos.y)-wcz));
       cam.dTgt.set(wcx,3,wcz);
-      cam.dRadius=lerp(cam.dRadius,clamp(maxd*1.5+36,60,120),0.03); // 半徑框住全部角色（平滑）
-      cam.dPhi=lerp(cam.dPhi,1.16,0.03);
+      // Frame the full character footprint, not only the ground-point
+      // centroid. The old margin kept labels/rings in view while bodies at
+      // the edge slipped out of the mobile viewport or behind the map.
+      cam.dRadius=lerp(cam.dRadius,clamp(maxd*2.1+48,78,160),0.03);
+      // Keep the tactical overview high enough to see character bodies over
+      // blockout rooftops. The previous low angle kept ground markers and
+      // labels readable but visually occluded the primitive silhouettes.
+      cam.dPhi=lerp(cam.dPhi,0.82,0.03);
       if(cam._ovBase==null)cam._ovBase=cam.dTheta;
       cam.dTheta=cam._ovBase+Math.sin((st.time||0)*0.06)*0.5; // 緩和左右換角度，不追單一對槍避免晃動
     }else{
@@ -1634,8 +1775,8 @@ function updateCamera(st,frame,sub,dt,W){
       // 2) 團戰熱點 → 否則炸彈點 → 否則存活質心（全景）
       let hot=null,best=0;
       for(const a of alive){const near=alive.filter(b=>dist(a.pos,b.pos)<16);const en=near.filter(b=>b.side!==a.side);if(near.length>=3&&en.length>=1){const sc=near.length*10+en.length*5;if(sc>best){best=sc;const cx=near.reduce((s,p)=>s+p.pos.x,0)/near.length,cy=near.reduce((s,p)=>s+p.pos.y,0)/near.length;hot={x:cx,y:cy};}}}
-      if(!hot&&frame.planted&&frame.c4pos)hot=frame.c4pos;
-      if(!hot&&alive.length){const cx=alive.reduce((s,p)=>s+p.pos.x,0)/alive.length,cy=alive.reduce((s,p)=>s+p.pos.y,0)/alive.length;hot={x:cx,y:cy};}
+      if(!hot&&frame.planted&&frame.c4pos)hot={...frame.c4pos,kind:"bomb"};
+      if(!hot&&alive.length){const cx=alive.reduce((s,p)=>s+p.pos.x,0)/alive.length,cy=alive.reduce((s,p)=>s+p.pos.y,0)/alive.length;hot={x:cx,y:cy,kind:"centroid"};}
       if(hot){cam.dTgt.set(W.vx(hot.x),3,W.vz(hot.y));cam.dRadius=lerp(cam.dRadius,best>0?60:80,0.04);cam.dPhi=lerp(cam.dPhi,best>0?1.0:1.18,0.04);}
     }
     }
@@ -1652,8 +1793,14 @@ function updateCamera(st,frame,sub,dt,W){
   st.camera.lookAt(cam.tgt);
   if(chasing&&ch.shooting){const sh=0.14;st.camera.position.x+=(Math.random()-0.5)*sh;st.camera.position.y+=(Math.random()-0.5)*sh;st.camera.position.z+=(Math.random()-0.5)*sh;} // 開火後座抖動
   fadeOccluders(st,frame,W);
-  if(cam.autoFollow&&!chasing&&allAliveOutsideCameraViewport(st,frame,W)){
+  const recovery=cam.autoFollow&&!chasing?inspectAliveCameraViewport(st,frame,W):null;
+  if(recovery?.shouldRecover){
     st.cameraRecoveryCount=(st.cameraRecoveryCount||0)+1;
+    if(import.meta.env?.DEV&&typeof performance!=="undefined"){
+      const now=performance.now();
+      if(st.lastCameraRecoveryAt!=null&&now-st.lastCameraRecoveryAt<=2500)st.rapidCameraRecoveryCount=(st.rapidCameraRecoveryCount||0)+1;
+      st.lastCameraRecoveryAt=now;
+    }
     snapOverviewToAlive(st,frame,W);
     fadeOccluders(st,frame,W);
   }
@@ -1676,7 +1823,7 @@ function fadeOccluders(st,frame,W){
     const target=occ?0.14:1.0;
     fw.cur+=(target-fw.cur)*0.18;
     const fade=fw.cur,tr=fade<0.985;
-    for(const mm of fw.mats){mm.m.opacity=mm.base*fade;mm.m.transparent=tr||mm.base<1;mm.m.depthWrite=!tr;}
+    for(const mm of fw.mats){mm.m.opacity=mm.base*fade;mm.m.transparent=tr||mm.base<1;mm.m.depthWrite=!tr;mm.m.depthTest=!tr;}
   }
 }
 
@@ -1887,11 +2034,17 @@ function EsportsFPS3D({
 
   // liveRef：傳給 3D 場景的即時資料（避免每幀 React 重繪）
   const liveRef=useRef({});
+  const publishFpsFrame=(next,reason)=>{
+    liveRef.current.fIdx=next;
+    const p0Contract=getFpsP0Contract();
+    if(p0Contract){p0Contract.fidxTransitions+=1;p0Contract.lastAuthoritativeFidx=next;p0Contract.lastReason=reason;}
+    setFIdx(next);
+  };
   liveRef.current={sim,fIdx,playing,speed,selected,showLabels,showRoutes,seekNonce:seekNonce.current,
-    advance:()=>setFIdx(fi=>{if(fi>=total-1){setPlaying(false);return fi;}return fi+1;})};
+    advance:()=>{const from=liveRef.current.fIdx;if(from>=total-1){liveRef.current.playing=false;setPlaying(false);return from;}const next=from+1;publishFpsFrame(next,"playback");return next;}};
 
   // 切換比賽/地圖 → 重置
-  useEffect(()=>{setFIdx(clamp(Number(resumeFrameIndex) || 0, 0, Math.max(0, sim.frames.length - 1)));setSelected(null);setFeed([]);setCasts([]);setComms([]);setMultiKill(null);setRoundOverlay(null);prevRndRef.current=0;prevPlantedRef.current=false;seekNonce.current++;setQuickFinishing(false);setQuickCompleted(false);setPlaying(true);},[sim,resumeFrameIndex]);
+  useEffect(()=>{publishFpsFrame(clamp(Number(resumeFrameIndex) || 0, 0, Math.max(0, sim.frames.length - 1)),"reset");setSelected(null);setFeed([]);setCasts([]);setComms([]);setMultiKill(null);setRoundOverlay(null);prevRndRef.current=0;prevPlantedRef.current=false;seekNonce.current++;setQuickFinishing(false);setQuickCompleted(false);setPlaying(true);},[sim,resumeFrameIndex]);
 
   // R63：只保存可重建的 frame 游標與該 frame 的真實比分／時間，不複製 simulator。
   useEffect(()=>{
@@ -1928,7 +2081,7 @@ function EsportsFPS3D({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[fIdx]);
 
-  const seek=useCallback(v=>{setFIdx(clamp(v,0,total-1));seekNonce.current++;},[total]);
+  const seek=useCallback(v=>{publishFpsFrame(clamp(v,0,total-1),"seek");seekNonce.current++;},[total,publishFpsFrame]);
   const selP=selected?frame?.players.find(p=>p.id===selected):null;
   const matchOver=Boolean(sim.completed)&&fIdx>=total-1;
   const completeOnce=useCallback(()=>{
@@ -1959,8 +2112,13 @@ function EsportsFPS3D({
         </div>
 
         {/* 3D 戰術畫面 */}
-        <div style={{position:"relative",width:"100%",paddingBottom:"118%",borderRadius:14,overflow:"hidden",border:`1px solid ${C.line}`,boxShadow:"0 10px 50px rgba(0,0,0,0.7)",background:"#05070c"}}>
-          <FpsScene3D mapKey={mapKey} roster={effectiveRoster} liveRef={liveRef} onSelectPlayer={setSelected} onRecenterRef={recenter}/>
+        <div style={{position:"relative",width:"100%",paddingBottom:"118%",overflow:"visible",background:"#05070c"}}>
+          <div data-esmo-fps-stable-canvas-region="1" style={{position:"absolute",inset:0,zIndex:0,contain:"layout paint",isolation:"isolate",overflow:"visible"}}>
+            <div data-esmo-fps-canvas-layer="1" style={{position:"absolute",inset:0,zIndex:0}}>
+              <FpsScene3D mapKey={mapKey} roster={effectiveRoster} liveRef={liveRef} onSelectPlayer={setSelected} onRecenterRef={recenter}/>
+            </div>
+            <div data-esmo-fps-frame-decoration="1" aria-hidden="true" style={{position:"absolute",inset:0,zIndex:10,pointerEvents:"none",borderRadius:14,border:`1px solid ${C.line}`,boxShadow:"0 10px 50px rgba(0,0,0,0.7)"}} />
+          </div>
 
           {/* LIVE */}
           <div style={{position:"absolute",top:9,left:"50%",transform:"translateX(-50%)",zIndex:20,display:"flex",alignItems:"center",gap:4,pointerEvents:"none"}}>
