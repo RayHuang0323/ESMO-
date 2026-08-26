@@ -13854,3 +13854,24 @@ Release checklist 寫的就是旗標，不是網址參數。
 - Static gates 全 PASS：Renderer 24/24、CS-A2 10/10、C2A 13/13、C2B 14/14、CS23 28/28、Camera 8/8、RAF 7/7、StableCanvas 5/5、C2C 9/9、C3 14/14。
 - Production build PASS（2742 modules）；Battle runtime smoke PASS（10/10 rigged、Blue/Red 5v5、三區可見、browser errors 0）；180 秒 long-run PASS（1733 samples、StableCanvas shifts 0、stale fIdx 0、duplicate RAF/render 0、rapid recovery 0、browser errors 0）。
 - Owner preview：`http://127.0.0.1:5395/ESMO-/artifacts/cs-c3/mirage-a-mid-connector/owner-review.html`。狀態：`C3_VERTICAL_SLICE_READY_FOR_OWNER_ACCEPTANCE`；未 merge、未 push、未 deploy。
+
+## CS-C3 第二輪：Mirage 有感環境與全場視角強化（2026-08-27）
+
+### Owner feedback → 修正
+
+- 原問題不是缺少零碎 props，而是 A Site／Mid／Connector 的大型視覺層級、材質對比與地標不足，且基線色調偏暗。這輪保留第一輪 environment owner，只補連續場景結構與可讀性，不重做整張地圖。
+- 三區新增 courtyard／plaza 邊界、facade band、柱列／parapet、門窗／遮棚、屋頂設備、入口框架、路面分格／標線、bollard、架空線、直式地標；Mirage floor、fog、exposure、ambient／hemisphere／rim／zone fill 調亮，降低地面 vignette。
+- 新增三個 Battle camera preset：高位上帝、中高位全場總覽、側上方戰術總覽。高位模式讓既有牆體保留輪廓但淡化，並隱藏 C3 薄 façade structure；不是改 collision，也不建立第二套地圖真相。
+- Owner review 頁面改為全中文說明、區域名稱、功能／驗收說明與視角切換按鈕；Battle 本身也有三個可操作的相機按鈕。
+
+### 驗收結果
+
+- Browser runtime：A Site 65、Mid 72、Connector 56 meshes；environment 193 meshes／2,996 estimated triangles／21 material families；10/10 rigged，Blue／Red 5v5；三個視角切換與 viewport visibility check 全 PASS。
+- Static gates：Renderer 24/24、CS-A2 10/10、C2A 13/13、C2B 14/14、CS23 28/28、Camera recovery 8/8、RAF 7/7、StableCanvas 5/5、C2C 9/9、C3 18/18 全 PASS。
+- Production build：PASS，2742 modules transformed；Battle smoke：PASS；180 秒 long-run：PASS，1,704 samples、StableCanvas shift 0、stale mismatch 0、duplicate RAF/render 0、camera recovery 9、rapid recovery 0、browser errors 0。
+
+### Git boundary / handoff
+
+- 本輪只在 `feature/cs-c3-environment-slice` worktree；未 merge、未 push、未 deploy，未開始 C4。
+- 狀態：`C3_VERTICAL_SLICE_READY_FOR_OWNER_ACCEPTANCE`。
+- Owner preview：`http://127.0.0.1:5395/ESMO-/artifacts/cs-c3/mirage-a-mid-connector/owner-review.html`。
