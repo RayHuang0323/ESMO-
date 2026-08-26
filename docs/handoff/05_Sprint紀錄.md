@@ -15548,3 +15548,86 @@ V5-3 正當地實作了它們 ⇒ 該條改為釘住 **V5-3 之後仍未實作**
 ### 沒有做
 
 合約／續約／談判、轉會市場、CS AI 老化、Off-season 專屬畫面。
+
+## V6-1 — CS AI Lifecycle parity（2026-08-27）
+
+基準 `7e97fc9`。目標：把 CS AI 接上**與 MOBA 完全相同**的世代老化核心。
+
+### ⚠ 先更正一個 audit 誤判
+
+V5 設計文件 §5.4 與 `seasonState` 的註解都寫著
+「`csAiTeams` 是手寫能力表，**完全沒有年齡欄位** ⇒ CS AI 老化列 V6」。
+
+**那是錯的。** 當時 grep `age` 被 `courage` / `damage` 淹沒，我讀成 0 筆。
+實測：CS AI **40 名選手全部都有 `age`**（藍圖裡就寫著 `age: 22` 等），
+範圍 **18–28**、平均 **23.1**、缺值 **0**。
+
+⇒ V6-1 **不需要「建立年齡資料」**，只需要接線。已同步修掉 `seasonState` 裡那段錯註解。
+
+### 交付
+
+| 項目 | 內容 |
+|---|---|
+| `csAiTeams.csAiRosterAt(team, careerYear)` | 逐年老化 + 逐人替換，決定性、不落盤 |
+| `csAiTeams.csAiLineupAt(team, careerYear)` | 換人後重算先發（`team.lineup` 會指到已不存在的 id） |
+| `seasonState.rostersFor` | CS 也改用**當年** roster；MOBA 那一側不動 |
+| `tools/check_cs_ai_lifecycle_v6.mjs`（新增） | **32/32**，含 2 個 mutation sentinel |
+
+### 共用核心，不共用資料模型
+
+- **共用**：`progress/ageDrift.applyAgeDrift` ＋ `competition/aiTeams.AI_DEPARTURE`
+  ⇒ 玩家 / MOBA AI / CS AI 三邊的老化原則**逐位元相同**。
+  §C4 反向釘住「CS 檔內不得出現 `declineFrom` / `risePerYear` 等曲線常數」
+  ⇒ **結構上不可能有第二套 aging engine**。
+- **不共用**：CS 有自己的定位（entry/rifler/awp/lurker/igl）與 `lineup` 結構。
+
+### 補新人為什麼用「base roster 的同定位錨點」
+
+MOBA 的新人由 `makeAiPlayer(strength)` 生成，因為那邊本來就有隊伍強度錨點。
+CS 沒有——隊伍特色寫在藍圖的 `overallBias` / `statBias` / `roleBias` 裡，
+而那些欄位**沒有掛在 team 物件上**。
+
+⇒ 改用**第 1 年 base roster 中同定位選手的能力**當錨點：隊伍特色已經烘焙在裡面，
+不必把藍圖內部曝露出去，也不會因為老將已經衰退而把新人一起拉低。
+
+### 15 年長跑
+
+```
+CS AI（前 4 隊）
+shadowwolf      Y1 齡22.4 力77.6 → Y7 齡28.4 力78.1 → Y15 齡25.4 力77.9
+emeralddragon   Y1 齡23.4 力77.2 → Y7 齡29.4 力77.2 → Y15 齡23.0 力78.4
+flamephoenix    Y1 齡23.0 力78.4 → Y7 齡29.0 力78.7 → Y15 齡27.8 力78.3
+thunderbear     Y1 齡23.0 力76.2 → Y7 齡29.0 力76.4 → Y15 齡22.8 力76.6
+
+MOBA AI（對照）
+shadowwolf      Y1 齡24.0 力98.3 → Y7 齡30.0 力98.3 → Y15 齡23.8 力95.1
+flamephoenix    Y1 齡23.8 力94.4 → Y7 齡29.8 力93.3 → Y15 齡24.6 力89.8
+
+換血與 lineup：15 年換血 3–5 人｜**lineup 失效 0 年**
+全 8 隊戰力最大偏移：**1.8%**（門檻 20%）
+```
+
+⇒ **兩個項目都會老、都會換世代、都不凍結**。
+年齡在 22–29 之間循環，戰力穩定：CS 偏移 1.8%、MOBA 最多約 5%。
+CS 比 MOBA 穩，是因為 CS 新人用 base roster 錨點（低變異），
+MOBA 用 `strength ± 8`（高變異）——兩者都在 band 內，是設計差異不是缺陷。
+
+### Gates
+
+`check_cs_ai_lifecycle_v6` **32/32**（新增，2 sentinel）｜`check_cs23` 28/28｜
+`check_cs_roster_v1_r56` PASS｜`check_cs_season_lifecycle` PASS｜`check_cs_season_m2` PASS｜
+`check_cs_league_eligibility` PASS｜`check_cs_major` PASS｜`check_cs_season_contract` PASS｜
+`check_age_drift_v5` 48/48｜`check_retirement_v5` 39/39｜`check_offseason_v5` 45/45｜
+`check_player_lifecycle_v4` 44/44｜`check_time_block_v3` 69/69｜`check_foundation_calibration` 58/58｜
+`check_competition_q3` 91/91｜`q6` 57/57｜`release_gate` 11/11｜
+`regress` 15/15｜`regress2` 8/8｜`dash10`／`flow09` PASS｜`npm run build` ✓ 9.99s
+
+⚠ `check_cs_team_identity_consumers_r48` **FAIL — 既有紅燈（TD-37），非本輪造成**。
+它卡在 `R48_LEGACY_R47_SHA`，雜湊的是 **FPS 引擎檔**（`src/battle/fps/EsportsFPS3D.jsx`），
+而本輪 `src/battle/fps/` 的改動數是 **0**（只動了 `csAiTeams.js` / `seasonState.js` / 新 gate）。
+那個 SHA 鎖在 origin/main 的 CS-P0 改過 FPS 引擎之後就永久對不上了。
+
+### 沒有做
+
+玩家 Lifecycle 未重做；Training / PCGM 未動；沒有第二套 aging engine；
+沒有碰真人 Ranked / ServerTime；合約（V6-2）與轉會市場（V6-3）未開始。

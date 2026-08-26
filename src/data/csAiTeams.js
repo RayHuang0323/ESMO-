@@ -239,3 +239,92 @@ export const CS_AI_TEAMS = buildCsAiTeams();
 export const csAiTeamById = (id) => CS_AI_TEAMS.find((team) => team.id === id) ?? null;
 export const csAiTeamByKey = (key) => CS_AI_TEAMS.find((team) => team.key === key) ?? null;
 export const csAiLineupFor = (team) => team?.lineup ? { ...team.lineup } : lineupFor(team?.roster ?? []);
+
+// ════════════════════════════════════════════════════════════════════════════
+//  V6-1：CS AI 世代交替
+//
+//  ── 一個要更正的前提 ──────────────────────────────────────────────────────
+//  V5 設計文件寫「`csAiTeams` 完全沒有年齡欄位」。**那句話是錯的**——
+//  grep `age` 被 `courage` / `damage` 淹沒導致誤判。實測 40 名選手**全部都有 age**
+//  （18–28 歲、平均 23.1）⇒ V6-1 不需要「建立年齡資料」，只要接上既有的老化核心。
+//
+//  ── 與 MOBA 的關係：共用核心，不共用資料模型 ─────────────────────────────
+//  · **共用**：`progress/ageDrift.applyAgeDrift` 與 `competition/aiTeams.AI_DEPARTURE`
+//    ⇒ 兩個項目的老化原則**逐位元相同**，沒有第二套 aging engine
+//  · **不共用**：CS 有自己的定位（entry/rifler/awp/lurker/igl）與 `lineup` 結構，
+//    而且 roster 是手寫藍圖不是強度錨點生成 ⇒ 補新人的做法必然不同（見下）
+//
+//  ── 補新人為什麼用「base roster 的同定位錨點」──────────────────────────────
+//  MOBA 的新人由 `makeAiPlayer(strength)` 生成，因為那邊本來就有隊伍強度錨點。
+//  CS 沒有——它的隊伍特色寫在藍圖的 bias 裡，而那些 bias **沒有掛在 team 物件上**。
+//  ⇒ 改用**第 1 年 base roster 中同定位選手的能力**當錨點：隊伍特色已經烘焙在裡面，
+//    不必把藍圖內部欄位曝露出去，也不會因為老將已經衰退而把新人一起拉低。
+//
+//  ⚠ 不落盤、不進 `players[]`（規格 D9 的邊界不動）。
+// ════════════════════════════════════════════════════════════════════════════
+import { applyAgeDrift, agingAgeOf } from "../platform/progress/ageDrift.js";
+import { AI_DEPARTURE } from "../platform/competition/aiTeams.js";
+
+const csHash32 = (input) => {
+  const s = String(input);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h >>> 0;
+};
+const csRand = (key) => (csHash32(key) % 10_000) / 10_000;
+
+/** 第 1 年 base roster 裡同定位選手的能力錨點（隊伍特色已烘焙在其中）。 */
+function anchorStatsFor(team, role) {
+  const same = (team?.roster ?? []).filter((p) => (p.csRole ?? p.role) === role);
+  const pool = same.length ? same : (team?.roster ?? []);
+  return Object.fromEntries(STAT_KEYS.map((key) => [
+    key, pool.reduce((s, p) => s + (Number(p.stats?.[key]) || 50), 0) / Math.max(1, pool.length),
+  ]));
+}
+
+/** 決定性生成一名接班人：同定位錨點 ± 個體差異，年輕。 */
+function csNewcomer(team, teamId, index, role, year) {
+  const anchor = anchorStatsFor(team, role);
+  const stats = Object.fromEntries(STAT_KEYS.map((key) => [
+    key, clamp(anchor[key] - 4 + csRand(`${team.key}|${year}|${index}|${key}`) * 8),
+  ]));
+  const age = 19 + Math.floor(csRand(`${team.key}|${year}|${index}|age`) * 3);
+  return Object.freeze({
+    id: `cs:${team.key}:p${index + 1}:y${year}`,
+    teamId,
+    name: `${team.tag} 新血${index + 1}`,
+    role, csRole: role,
+    age,
+    potential: clamp(Math.max(...Object.values(stats)) + 6, 60, 99),
+    lv: 18, xp: 0, talentPoints: 0,
+    personality: "passionate", morale: 70, energy: 100,
+    condition: "正常", status: "主力", rosterTier: "active",
+    talents: { ranks: {} }, growthLog: [],
+    stats: Object.freeze(stats),
+    readOnly: true,
+  });
+}
+
+/**
+ * 第 `careerYear` 年的 CS AI roster。**決定性推導，不落盤。**
+ * 第 1 年 = 既有 base roster（逐值不變 ⇒ 舊行為不回歸）。
+ */
+export function csAiRosterAt(team, careerYear = 1) {
+  const target = Math.max(1, Math.floor(Number(careerYear) || 1));
+  let roster = team?.roster ?? [];
+  for (let y = 2; y <= target; y++) {
+    //  ① 全隊老一歲，套用**與 MOBA、與玩家同一支**漂移
+    roster = roster.map((p) => applyAgeDrift({ ...p, age: (Number(p.age) || 22) + 1 }, { years: 1 }));
+    //  ② 到齡者退出，同定位接班人補上（**逐人替換，不整隊重來**）
+    roster = roster.map((p, i) => (agingAgeOf(p) < AI_DEPARTURE.agingAgeFrom
+      ? p
+      : csNewcomer(team, team.id, i, p.csRole ?? p.role, y)));
+  }
+  return roster;
+}
+
+/**
+ * 第 `careerYear` 年的先發名單。
+ * ⚠ 換人之後 `team.lineup` 會指到已經不存在的 id ⇒ 一律由當年的 roster 重算。
+ */
+export const csAiLineupAt = (team, careerYear = 1) => lineupFor(csAiRosterAt(team, careerYear));

@@ -1062,3 +1062,17 @@ AI 平均年齡 24→30 後開始換血並循環，戰力 −2.2%，identity 每
 
 CS AI 老化（`csAiTeams` 沒有年齡欄位）、合約／續約／慰留談判、轉會市場、
 老將的機制價值（導師／Coach）、Off-season 專屬畫面（等決策夠多再做）。
+
+### V6-1 CS AI Lifecycle parity：**已完成（2026-08-27）**
+
+⚠ 先更正一個 audit 誤判：V5 文件說「CS AI 完全沒有年齡欄位」是**錯的**
+（grep 被 `courage`/`damage` 淹沒）。實測 40 名 CS AI **全部都有 age**（18–28，平均 23.1）
+⇒ V6-1 只需要接線，不需要建資料。錯註解已同步修掉。
+
+交付 `csAiRosterAt` / `csAiLineupAt`、`seasonState` 接線、`check_cs_ai_lifecycle_v6` **32/32**。
+
+**共用核心**：CS 與 MOBA 共用 `applyAgeDrift` 與 `AI_DEPARTURE`；
+gate §C4 反向釘住「CS 檔內不得出現任何漂移曲線常數」⇒ 結構上不可能有第二套引擎。
+
+15 年長跑：兩邊年齡都在 22–29 循環、都有換血（CS 3–5 人）、
+**CS lineup 失效 0 年**、全 8 隊戰力最大偏移 **1.8%**（MOBA 最多約 5%）。

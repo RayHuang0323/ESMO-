@@ -36,7 +36,7 @@ import { simulateFixture, simSeedFor } from "./simulateFixture.js";
 import { AI_TEAMS, aiRosterAt } from "./aiTeams.js";
 //  V5-2：AI roster 依生涯年度取用。世界年度一律由 worldClock 導出，不自己算。
 import { careerYearOf } from "../time/worldClock.js";
-import { CS_AI_TEAMS } from "../../data/csAiTeams.js";
+import { CS_AI_TEAMS, csAiRosterAt } from "../../data/csAiTeams.js";
 import { computeStandings, outcomeSourceMix, TIEBREAKERS } from "./standings.js";
 import { createFinalStandings } from "../contracts/finalStandings.js";
 import {
@@ -510,14 +510,17 @@ export function rostersFor(state, playerRoster = [], careerYear = 1) {
   //  ⚠ 只放這一季用得到的池：把兩個池都倒進來會讓某一季的模擬有機會
   //    抓到另一個項目的隊伍，那是靜默的跨項目污染。
   const pool = gameModeOf(state) === "cs" ? CS_AI_TEAMS : AI_TEAMS;
-  //  ── Season vNext V5-2：MOBA AI 用「當年」的 roster ────────────────────
-  //  ⚠ 只有 MOBA。`CS_AI_TEAMS` 是手寫能力表、**完全沒有年齡欄位**，
-  //    套不上同一條路 ⇒ CS AI 老化列 V6（設計文件 §5.4）。
-  //  ⚠ `aiRosterAt` 是決定性推導、不落盤：既有人繼續老化，只替換必要新人
+  //  ── V5-2 / V6-1：兩個項目都用「當年」的 roster ────────────────────────
+  //  ⚠ V5-2 的註解曾寫「CS_AI_TEAMS 完全沒有年齡欄位」——**那是誤判**
+  //    （grep `age` 被 `courage` / `damage` 淹沒）。實測 CS AI 40 名選手
+  //    全部都有 age（18–28）⇒ V6-1 已把它接上**同一套**世代交替。
+  //  ⚠ 兩支都是決定性推導、不落盤：既有人繼續老化，只替換必要新人
   //    ⇒ identity 跨年度延續，不是每年生一隊陌生人。
   const year = Math.max(1, Math.floor(Number(careerYear) || 1));
+  //  V6-1：CS 也接上同一套世代交替（`csAiTeams` 本來就有年齡資料，
+  //  V5 文件說「沒有」是誤判）⇒ 兩個項目都不再凍結在第 1 年。
   const isMoba = gameModeOf(state) !== "cs";
-  for (const t of pool) out[t.id] = isMoba ? aiRosterAt(t, year) : t.roster;
+  for (const t of pool) out[t.id] = isMoba ? aiRosterAt(t, year) : csAiRosterAt(t, year);
   if (state?.playerTeamId) out[state.playerTeamId] = playerRoster;
   return out;
 }
