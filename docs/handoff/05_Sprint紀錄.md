@@ -16070,65 +16070,58 @@ main 的 CS 線改了 **5** 個檔。⇒ 與本次 release 無關，照既有技
 
 ---
 
+---
+
 ## Release Closure 補記：正式站 smoke（2026-08-27）
 
-Release 本身已於 `e37abe5` 完成並上線，這一節只補記**上線後的正式站 smoke 結果**。
+Release 本身已於 `e37abe5` 完成並上線，這一節補記**上線後的正式站 smoke**。
 
-### 工具
+### 工具：`tools/browser_check_prod_season_vnext.mjs`
 
-新增 `tools/browser_check_prod_season_vnext.mjs`——直接打正式站
-`https://rayhuang0323.github.io/ESMO-/` 的 smoke。與其他 browser gate 不同的是：
+直接打正式站 `https://rayhuang0323.github.io/ESMO-/`。與其他 browser gate 不同：
 
 - **正式站只能走 UI ＋ localStorage**（TD-31）。`RESOLVE_APP_MODULES` 匯入 `/src/...`，
   那只在 dev server 存在，打包後的 bundle 沒有那些路徑。所以這一支不讀 Store、
   不呼叫 action，一律用 `data-testid` 點擊。
 - 這也是刻意的：正式站要驗的是「玩家真的按得到」，不是「函式回傳正確」。
 
-### 結果：21/24
-
-**通過（21）**
+### 結果：30/30 全綠
 
 | 區塊 | 內容 |
 |---|---|
 | §H 首頁 | 無白屏、世界時間卡、三個玩法入口、下一站文字 |
 | §T 世界時間 | 推進 1 天（8→9）、推進 7 天（9→16）、前往下一站（16→44，推 28 天）|
-| §Y 跨年度 | 推過第 84 天到第 113 天；年度封存顯示「第 1 生涯年度已封存（當時 5 人．平均 22 歲）」|
-| §O 休賽期 | 沒有決策時不多卡一道空殼畫面 |
-| §N 玩法入口 | MOBA 662 字／CS 475 字／賽事 678 字，皆無白屏 |
+| §Y 跨年度 | 佈置成功（day 79 改短 2 份合約＋補資金）、推過第 84 天、年度封存「第 1 生涯年度已封存（當時 5 人．平均 22 歲）」、休賽期開出「2 項決策待處理」|
+| §O 休賽期 | 進得去、六區塊 6/6、續約＋補強真的扣錢（$9992萬 → $9913萬 → $9795萬）、完成後回首頁、世界時間又走得動（85→92 天）|
+| §P 選手 | 生涯分頁到得了、生涯階段「成長期」、市場價值「$157.9萬」、無白屏、名單頁徽章也有值 |
+| §N 玩法入口 | MOBA 662 字／CS 475 字／賽事 676 字，皆無白屏 |
 | §M 手機 390px | viewport 生效、無白屏、看得到世界時間卡、無橫向捲動、底部四個分頁 4/4 |
 | §C Console | 無 page-origin uncaught error |
 
-**未通過（3）：P1／P2／P3 — 選手生涯分頁 / 生涯階段 / 市場價值**
+### 過程中踩到的三個坑（都是腳本問題，不是產品缺陷）
 
-⚠ **這三條是 smoke 腳本的導航問題，不是產品缺陷。** 判定依據：
+寫在這裡是因為**下次要在正式站佈置情境，一定會再踩一次**。
 
-1. 同樣的功能在 dev server 上由 `check_player_lifecycle_v4`（44/44）與
-   `browser_check_offseason`（18/18）驗過，是綠的。
-2. 正式站探測顯示名單頁本身**正常**：`roster-player-b1`～`b5` 與
-   `roster-career-badge` 都在，badge 實際顯示「成長期」——**生涯階段在正式站是有值的**。
-3. 斷點在「名單 → 選手詳情」這一跳：`RosterScreen.jsx:363` 的
-   「📋 開啟完整選手檔案」按鈕**沒有 data-testid**，腳本只能比文字，一斷整條鏈全紅。
+1. **正式站首次載入時 localStorage 是全空的。** 存檔要推進過天數才寫得出來，
+   所以「一開場就 patch 合約」是 no-op——這是第一版量不到休賽期的真正原因。
+   正確順序：先用「推進 7 天」爬到第 78 天左右 → 才 patch → reload → 再跨年。
+   （順序反了合約會在路上就到期，休賽期反而沒東西可決策；
+   `browser_check_offseason` 第一版栽過同一個坑，見該檔 `SETUP` 註解。）
 
-### 待辦（下次接手）
+2. **`finance.funds` 的單位是「元」不是「萬」。** `OffSeasonScreen.jsx:118` 的
+   afford 判定是 `cost * 10000 <= funds`。開局 $35萬 買不起 ~$79萬 的續約報價，
+   按鈕會是 `disabled`——**那是正確行為**。腳本現在會把 `disabled` 一起記下來，
+   紅的時候才分得出「壞了」還是「錢不夠」。
 
-- [ ] 修 smoke 腳本 §P：改走
-      `查看名單` → `[data-testid^="roster-player-"]` → `開啟完整選手檔案`
-      → `player-profile-tab-career` → 讀 `player-career-stage` / `player-market-value`。
-      （這三個 testid 都已存在於 `src/ui/PlayerProfileFoundation.jsx:100,106` 與
-      `src/screens/manage/PlayerDetailScreen.jsx:227`。）
-- [ ] 修 smoke 腳本 §Y：正式站**首次載入時 localStorage 是全空的**（存檔要推進過天數才寫），
-      所以「一開場就 patch 合約」是 no-op，這是 Y3 量不到休賽期的原因。
-      正確順序：先用「推進 7 天」爬到第 78 天左右 → 才 patch `contract: 40` → reload
-      → 再「前往下一站」跨年。順序反了合約會在路上就到期，休賽期反而沒東西可決策
-      （`browser_check_offseason` 第一版栽過同一個坑，見該檔 `SETUP` 註解）。
-- [ ] 上述兩點修完後重跑，把結果補進本節。
+3. **整條導航鏈都比文字，一斷就全紅、還看不出斷在哪。** 現在 §P 每一跳都留痕跡
+   （`roster` / `opened` / `tabs` / `panel`），紅的時候直接指出是哪一跳掉的。
 
 ### 技術債
 
-- **TD-38（新）**：`RosterScreen.jsx:363`「開啟完整選手檔案」缺 `data-testid`，
+- **TD-38（新）**：`RosterScreen.jsx:363`「📋 開啟完整選手檔案」缺 `data-testid`，
   讓「名單 → 選手詳情」這條主要路徑在瀏覽器 gate 裡只能靠比文字。
   建議補上 `data-testid="roster-open-detail"`。**本輪不改**——Release 已上線，
-  不為了測試便利在 release 後動 src。
+  不為了測試便利在 release 後動 `src/`。
 
 ### 沿用的既有 waiver
 

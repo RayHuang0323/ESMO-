@@ -50,6 +50,24 @@ node tools/regress2.mjs # 一律跑（若存在）
   不得自動棄權」。手機沒有世界時間入口的缺陷就是它抓到的。
   ⚠ 這幾支都是**秒級**，不走 `verify.mjs`，直接 `node tools/<name>.mjs` 即可。
 
+- **Season vNext 生涯線（2026-08-27 V6 結案；動到年齡／衰退／退休／合約／休賽期就必跑）**：
+  `check_player_lifecycle_v4`（44）`check_offseason_v5`（45）`check_age_drift_v5`（48）
+  `check_retirement_v5`（39）`check_cs_ai_lifecycle_v6`（32）`check_contract_v6`（38）
+  `check_offseason_session_v6`（39）＋瀏覽器 **`browser_check_offseason`**（18）
+  ⚠ 這條線的共同紅線是**推導不落盤**：`careerYearOf` `careerStageOf` `marketValueOf`
+  `aiRosterAt` `csAiRosterAt` 全是純推導，`players[]` 不得存第二份。
+  ⚠ 老化時鐘是 **raw age ＋ 由 `player.id` hash 出來的固定個體偏移**，
+  **不得**改用 V4 的 `effectiveAge`——那會讓「能力衰退 → 時鐘變年輕」形成迴圈。
+  ⚠ 退休一律**兩段式**：第 N 年宣告意向、第 N+1 年才結算；沒有意向就永遠不會退休。
+  ⚠ 休賽期會**擋住世界時間**，所以 `completeOffSeason()` 必須永遠成功、永遠免費，
+  否則存檔會被卡死。
+
+- **正式站 smoke（部署後才跑）**：**`browser_check_prod_season_vnext`**（30）
+  ⚠ 打的是**線上網址**，不是 dev server。因此**只能走 UI ＋ localStorage**（TD-31）：
+  `RESOLVE_APP_MODULES` 匯入 `/src/...`，打包後的 bundle 沒有那些路徑。
+  ⚠ 要在正式站佈置情境，記住兩件事：① **首次載入時 localStorage 是全空的**，
+  存檔要推進過天數才寫得出來 ② **`finance.funds` 的單位是「元」不是「萬」**。
+
   ### ⚠⚠ 長 verifier 一律走 `tools/verify.mjs`，**禁止直接執行巢狀腳本**
 
   **本段先前的敘述是錯的**（原文：「跑 runtime29 一支就等於跑完全部，44/44，單跑約
