@@ -16067,3 +16067,70 @@ CS / Training / Progress / Finance、regress 15/15、regress2 8/8、
 `check_cs_team_identity_consumers_r48` 卡在 `R48_LEGACY_R47_SHA`，
 雜湊對象是 FPS 引擎檔。Season vNext 對 `src/battle/fps/` 的改動數是 **0**；
 main 的 CS 線改了 **5** 個檔。⇒ 與本次 release 無關，照既有技術債規則保留。
+
+---
+
+## Release Closure 補記：正式站 smoke（2026-08-27）
+
+Release 本身已於 `e37abe5` 完成並上線，這一節只補記**上線後的正式站 smoke 結果**。
+
+### 工具
+
+新增 `tools/browser_check_prod_season_vnext.mjs`——直接打正式站
+`https://rayhuang0323.github.io/ESMO-/` 的 smoke。與其他 browser gate 不同的是：
+
+- **正式站只能走 UI ＋ localStorage**（TD-31）。`RESOLVE_APP_MODULES` 匯入 `/src/...`，
+  那只在 dev server 存在，打包後的 bundle 沒有那些路徑。所以這一支不讀 Store、
+  不呼叫 action，一律用 `data-testid` 點擊。
+- 這也是刻意的：正式站要驗的是「玩家真的按得到」，不是「函式回傳正確」。
+
+### 結果：21/24
+
+**通過（21）**
+
+| 區塊 | 內容 |
+|---|---|
+| §H 首頁 | 無白屏、世界時間卡、三個玩法入口、下一站文字 |
+| §T 世界時間 | 推進 1 天（8→9）、推進 7 天（9→16）、前往下一站（16→44，推 28 天）|
+| §Y 跨年度 | 推過第 84 天到第 113 天；年度封存顯示「第 1 生涯年度已封存（當時 5 人．平均 22 歲）」|
+| §O 休賽期 | 沒有決策時不多卡一道空殼畫面 |
+| §N 玩法入口 | MOBA 662 字／CS 475 字／賽事 678 字，皆無白屏 |
+| §M 手機 390px | viewport 生效、無白屏、看得到世界時間卡、無橫向捲動、底部四個分頁 4/4 |
+| §C Console | 無 page-origin uncaught error |
+
+**未通過（3）：P1／P2／P3 — 選手生涯分頁 / 生涯階段 / 市場價值**
+
+⚠ **這三條是 smoke 腳本的導航問題，不是產品缺陷。** 判定依據：
+
+1. 同樣的功能在 dev server 上由 `check_player_lifecycle_v4`（44/44）與
+   `browser_check_offseason`（18/18）驗過，是綠的。
+2. 正式站探測顯示名單頁本身**正常**：`roster-player-b1`～`b5` 與
+   `roster-career-badge` 都在，badge 實際顯示「成長期」——**生涯階段在正式站是有值的**。
+3. 斷點在「名單 → 選手詳情」這一跳：`RosterScreen.jsx:363` 的
+   「📋 開啟完整選手檔案」按鈕**沒有 data-testid**，腳本只能比文字，一斷整條鏈全紅。
+
+### 待辦（下次接手）
+
+- [ ] 修 smoke 腳本 §P：改走
+      `查看名單` → `[data-testid^="roster-player-"]` → `開啟完整選手檔案`
+      → `player-profile-tab-career` → 讀 `player-career-stage` / `player-market-value`。
+      （這三個 testid 都已存在於 `src/ui/PlayerProfileFoundation.jsx:100,106` 與
+      `src/screens/manage/PlayerDetailScreen.jsx:227`。）
+- [ ] 修 smoke 腳本 §Y：正式站**首次載入時 localStorage 是全空的**（存檔要推進過天數才寫），
+      所以「一開場就 patch 合約」是 no-op，這是 Y3 量不到休賽期的原因。
+      正確順序：先用「推進 7 天」爬到第 78 天左右 → 才 patch `contract: 40` → reload
+      → 再「前往下一站」跨年。順序反了合約會在路上就到期，休賽期反而沒東西可決策
+      （`browser_check_offseason` 第一版栽過同一個坑，見該檔 `SETUP` 註解）。
+- [ ] 上述兩點修完後重跑，把結果補進本節。
+
+### 技術債
+
+- **TD-38（新）**：`RosterScreen.jsx:363`「開啟完整選手檔案」缺 `data-testid`，
+  讓「名單 → 選手詳情」這條主要路徑在瀏覽器 gate 裡只能靠比文字。
+  建議補上 `data-testid="roster-open-detail"`。**本輪不改**——Release 已上線，
+  不為了測試便利在 release 後動 src。
+
+### 沿用的既有 waiver
+
+- **TD-37 / `check_cs_team_identity_consumers_r48`**：既有已知紅燈，與 Season vNext 無關，
+  照既有 waiver 處理，本次 release 未擴大處理。
