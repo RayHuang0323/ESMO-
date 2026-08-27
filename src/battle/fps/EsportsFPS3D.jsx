@@ -10,6 +10,7 @@ import { checkFpsRendererIdentity } from "./fpsIdentity.js";
 import { checkFpsRuntimeVisibility, evaluateFpsCameraRecovery, isFpsBodyScreenReadable, resolveFpsPresentationVisibility, summarizeFpsTeamVisibility } from "./fpsVisibilityDiagnostics.js";
 import { createFpsCharacterRenderer } from "./presentation/FpsCharacterRenderer.js";
 import { getRiggedCharacterLimit } from "./presentation/fpsCharacterAssets.js";
+import { createC3MirageEnvironment } from "./presentation/fpsMapEnvironment.js";
 
 // EsportsFPS3D 已內聯於本檔（見下方 __FPS3D_MODULE），以符合單一檔案 artifact 限制
 /* ═══════════════════════════════════════════════════════════════
@@ -36,6 +37,21 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const ease=t=>t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
 const mkRng=s=>{let x=s|0;return()=>{x=(x*1664525+1013904223)&0xffffffff;return(x>>>0)/0xffffffff;};};
+// C3 第二輪的全場視角：只改相機目標，不改模擬座標、碰撞或玩家身份。
+const FPS_CAMERA_PRESETS=Object.freeze({
+  high:{label:"高位上帝視角",radius:132,phi:0.39,theta:-0.76,target:[0,2.8,0]},
+  overview:{label:"中高位全場總覽",radius:116,phi:0.60,theta:-0.72,target:[0,2.8,0]},
+  tactical:{label:"側上方戰術總覽",radius:104,phi:0.82,theta:-1.03,target:[-4,2.6,2]},
+});
+function setFpsCameraPreset(st,name){
+  const preset=FPS_CAMERA_PRESETS[name];const cam=st?.cam;
+  if(!preset||!cam)return false;
+  cam.viewPreset=name;cam.autoFollow=true;cam.overview=true;cam._ovBase=null;cam.chaseYaw=0;cam.chasePitch=0;
+  cam.dTheta=preset.theta;cam.dPhi=preset.phi;cam.dRadius=preset.radius;cam.dTgt.set(...preset.target);
+  cam.tgt.copy(cam.dTgt);cam.theta=cam.dTheta;cam.phi=cam.dPhi;cam.radius=cam.dRadius;
+  if(st.camera){_vA.setFromSphericalCoords(cam.radius,cam.phi,cam.theta).add(cam.tgt);st.camera.position.copy(_vA);st.camera.lookAt(cam.tgt);st.camera.updateMatrixWorld();}
+  return true;
+}
 const fmtT=s=>`${Math.floor(s/60).toString().padStart(2,"0")}:${(Math.floor(Math.max(0,s))%60).toString().padStart(2,"0")}`;
 function getFpsP0Contract(){
   if(!import.meta.env?.DEV||typeof window==="undefined")return null;
@@ -156,7 +172,7 @@ const MAPS={
     sites:{a:{x:84,y:17},b:{x:16,y:58}},spawns:{ct:{x:80,y:56},t:{x:28,y:92}},
     nodes:{tSpawn:{x:28,y:92},longEntry:{x:46,y:82},long:{x:66,y:68},longCorner:{x:82,y:44},aRamp:{x:84,y:33},aSite:{x:84,y:17},pit:{x:94,y:30},shortA:{x:68,y:32},catwalk:{x:60,y:42},mid:{x:42,y:64},midDoors:{x:50,y:50},xbox:{x:42,y:48},lower:{x:22,y:82},bTunnel:{x:14,y:66},bDoors:{x:26,y:54},bSite:{x:16,y:58},ctSpawn:{x:80,y:58},ctMid:{x:66,y:56}},
     callouts:[{x:28,y:96,l:"T 出生"},{x:80,y:62,l:"CT 出生"},{x:88,y:13,l:"A 點"},{x:14,y:52,l:"B 點"},{x:64,y:72,l:"長道"},{x:42,y:70,l:"中路"},{x:14,y:72,l:"隧道"},{x:94,y:36,l:"坑"},{x:60,y:38,l:"貓道"},{x:50,y:46,l:"中門"},{x:84,y:29,l:"A 坡"},{x:26,y:50,l:"B 門"}]},
-  mirage:{name:"Mirage",floor:"#2d2414",accent:"#c8a05a",accent2:"#9a7a40",
+  mirage:{name:"Mirage",floor:"#5b5449",floorVignette:0.24,accent:"#b9a47e",accent2:"#87775d",
     walls:[
       {x:60,y:8,w:16,h:11,hgt:9,win:1},{x:80,y:12,w:10,h:12,hgt:8,win:1},{x:54,y:22,w:8,h:14,hgt:7,roof:"pitch"},
       {x:40,y:30,w:9,h:10,hgt:6,win:1},{x:46,y:46,w:10,h:8,hgt:5},{x:30,y:42,w:8,h:12,hgt:6,roof:"pitch"},
@@ -931,7 +947,8 @@ function makeFloorTexture(map){
   x.strokeStyle="rgba(255,255,255,0.035)";x.lineWidth=1;
   for(let i=0;i<=S;i+=S/20){x.beginPath();x.moveTo(i,0);x.lineTo(i,S);x.moveTo(0,i);x.lineTo(S,i);x.stroke();}
   // 邊緣暗角
-  const g=x.createRadialGradient(S/2,S/2,S*0.32,S/2,S/2,S*0.72);g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(1,"rgba(0,0,0,0.55)");
+  const vignette=Number.isFinite(Number(map.floorVignette))?Number(map.floorVignette):0.55;
+  const g=x.createRadialGradient(S/2,S/2,S*0.32,S/2,S/2,S*0.72);g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(1,`rgba(0,0,0,${vignette})`);
   x.fillStyle=g;x.fillRect(0,0,S,S);
   const tex=new THREE.CanvasTexture(cv);tex.encoding=THREE.sRGBEncoding;tex.anisotropy=4;return tex;
 }
@@ -968,7 +985,7 @@ function makeBigLetter(letter,color){
 /* ═══════════════════════════════════════════════════════════════════════
    FpsScene3D — Three.js 渲染層
    ═══════════════════════════════════════════════════════════════════════ */
-function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
+function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCameraPresetRef}){
   const mountRef=useRef(null);
   const stateRef=useRef(null); // 保存 three 物件，跨 effect 共用
 
@@ -999,17 +1016,17 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
     const camera=new THREE.PerspectiveCamera(42,1,0.1,600);
     // 球座標運鏡（phi 自天頂、theta 方位）
     const cam={theta:-Math.PI*0.62,phi:Math.PI*0.30,radius:88,tgt:new THREE.Vector3(0,3,0),
-               dTheta:-Math.PI*0.62,dPhi:Math.PI*0.30,dRadius:88,dTgt:new THREE.Vector3(0,3,0),autoFollow:true,overview:true};
+               dTheta:-Math.PI*0.62,dPhi:Math.PI*0.30,dRadius:88,dTgt:new THREE.Vector3(0,3,0),autoFollow:true,overview:true,viewPreset:null};
 
     // ── 光照 ──
-    scene.add(new THREE.AmbientLight(0x4a5878,0.55));
-    const hemi=new THREE.HemisphereLight(0x9fb4d8,0x2a2418,0.7);scene.add(hemi);
-    const sun=new THREE.DirectionalLight(0xfff0d0,1.55);
+    const ambient=new THREE.AmbientLight(0x718394,0.68);scene.add(ambient);
+    const hemi=new THREE.HemisphereLight(0xc6d9e4,0x4c463d,0.88);scene.add(hemi);
+    const sun=new THREE.DirectionalLight(0xfff4dc,1.72);
     sun.position.set(46,80,30);sun.castShadow=true;
     sun.shadow.mapSize.set(2048,2048);
     const sc=sun.shadow.camera;sc.left=-70;sc.right=70;sc.top=70;sc.bottom=-70;sc.near=10;sc.far=220;sun.shadow.bias=-0.0004;sun.shadow.normalBias=0.5;
     scene.add(sun);
-    const rim=new THREE.DirectionalLight(0x4060a0,0.4);rim.position.set(-40,30,-50);scene.add(rim);
+    const rim=new THREE.DirectionalLight(0x6390b0,0.5);rim.position.set(-40,30,-50);scene.add(rim);
 
     // ── 共用幾何/紋理 ──
     const tex={
@@ -1027,15 +1044,16 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
     const playerGroup=new THREE.Group();scene.add(playerGroup); // 10 名選手
     const fxGroup=new THREE.Group();scene.add(fxGroup);         // 槍火/煙/火/投擲/炸彈
 
-    stateRef.current={renderer,scene,camera,cam,sun,tex,sphereGeo,beamGeo,worldGroup,routeGroup,playerGroup,fxGroup,
+    stateRef.current={renderer,scene,camera,cam,ambient,hemi,sun,rim,tex,sphereGeo,beamGeo,worldGroup,routeGroup,playerGroup,fxGroup,liveRef,
       players:[],pools:{},raycastTargets:[],running:true,lastT:0,time:0,cameraRecoveryCount:0,rapidCameraRecoveryCount:0,lastCameraRecoveryAt:null,disposables:[]};
+    stateRef.current.setCameraPreset=(name)=>setFpsCameraPreset(stateRef.current,name);
 
     // ── 互動：拖曳旋轉 / 滾輪縮放 / 觸控 ──
     const el=renderer.domElement;let drag=null,pinch=null;
     const panBy=(dx,dy,s,th,tx,tz)=>{const sinT=Math.sin(th),cosT=Math.cos(th),rx=cosT,rz=-sinT,fx=-sinT,fz=-cosT;cam.dTgt.x=clamp(tx-dx*s*rx-dy*s*fx,-74,74);cam.dTgt.z=clamp(tz-dx*s*rz-dy*s*fz,-74,74);};
     const onDown=e=>{const p=e.touches?e.touches[0]:e;const wantPan=(!e.touches)&&(e.button===2||e.shiftKey);
       const chasing=!!(stateRef.current._chase&&stateRef.current._chase.alive);
-      if(!chasing){cam.autoFollow=false;cam.overview=false;}
+      if(!chasing){cam.autoFollow=false;cam.overview=false;cam.viewPreset=null;}
       drag=wantPan?{pan:true,x:p.clientX,y:p.clientY,tx:cam.dTgt.x,tz:cam.dTgt.z,th:cam.dTheta,r:cam.dRadius}:{pan:false,x:p.clientX,y:p.clientY,th:cam.dTheta,ph:cam.dPhi,chasing,cy:cam.chaseYaw||0,cp:cam.chasePitch||0};
       el.style.cursor=wantPan?"move":"grabbing";};
     const onMove=e=>{if(!drag)return;const p=e.touches?e.touches[0]:e;
@@ -1043,25 +1061,25 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
       else if(drag.chasing){cam.chaseYaw=drag.cy-(p.clientX-drag.x)*0.006;cam.chasePitch=clamp(drag.cp-(p.clientY-drag.y)*0.005,-0.55,0.78);} // 追焦時：單指環繞選手
       else{cam.dTheta=drag.th-(p.clientX-drag.x)*0.0055;cam.dPhi=clamp(drag.ph-(p.clientY-drag.y)*0.0055,0.1,1.5);}};
     const onUp=()=>{drag=null;pinch=null;el.style.cursor="grab";};
-    const onWheel=e=>{e.preventDefault();cam.autoFollow=false;cam.dRadius=clamp(cam.dRadius*(e.deltaY>0?1.1:0.9),18,200);};
-    const onTouchStart=e=>{cam.autoFollow=false;if(e.touches.length===2){drag=null;const[a,b]=e.touches;pinch={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),r:cam.dRadius,cx:(a.clientX+b.clientX)/2,cy:(a.clientY+b.clientY)/2,tx:cam.dTgt.x,tz:cam.dTgt.z,th:cam.dTheta};}else onDown(e);};
+    const onWheel=e=>{e.preventDefault();cam.autoFollow=false;cam.viewPreset=null;cam.dRadius=clamp(cam.dRadius*(e.deltaY>0?1.1:0.9),18,200);};
+    const onTouchStart=e=>{cam.autoFollow=false;cam.viewPreset=null;if(e.touches.length===2){drag=null;const[a,b]=e.touches;pinch={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),r:cam.dRadius,cx:(a.clientX+b.clientX)/2,cy:(a.clientY+b.clientY)/2,tx:cam.dTgt.x,tz:cam.dTgt.z,th:cam.dTheta};}else onDown(e);};
     const onTouchMove=e=>{e.preventDefault();
       if(e.touches.length===2&&pinch){const[a,b]=e.touches;const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);cam.dRadius=clamp(pinch.r*pinch.d/Math.max(1,d),18,200);
         const cx=(a.clientX+b.clientX)/2,cy=(a.clientY+b.clientY)/2;panBy(cx-pinch.cx,cy-pinch.cy,cam.dRadius*0.0018,pinch.th,pinch.tx,pinch.tz);}
       else onMove(e);};
     el.addEventListener("contextmenu",e=>e.preventDefault());
     // 點擊選取選手
-    const ray=new THREE.Raycaster();const ndc=new THREE.Vector2();let downPt=null;
-    const onClickDown=e=>{const p=e.touches?e.touches[0]:e;downPt={x:p.clientX,y:p.clientY};};
+    const ray=new THREE.Raycaster();const ndc=new THREE.Vector2();let downPt=null;let clickTarget=null;
+    const onClickDown=e=>{if(e.target!==el)return;const p=e.touches?e.touches[0]:e;clickTarget=el;downPt={x:p.clientX,y:p.clientY};};
     const onClickUp=e=>{
-      if(!downPt)return;const p=e.changedTouches?e.changedTouches[0]:e;
-      if(Math.hypot(p.clientX-downPt.x,p.clientY-downPt.y)>6){downPt=null;return;}
+      if(!downPt||e.target!==clickTarget){downPt=null;clickTarget=null;return;}const p=e.changedTouches?e.changedTouches[0]:e;
+      if(Math.hypot(p.clientX-downPt.x,p.clientY-downPt.y)>6){downPt=null;clickTarget=null;return;}
       const r=el.getBoundingClientRect();ndc.x=((p.clientX-r.left)/r.width)*2-1;ndc.y=-((p.clientY-r.top)/r.height)*2+1;
       ray.setFromCamera(ndc,camera);
       const hits=ray.intersectObjects(stateRef.current.raycastTargets,true);
       if(hits.length){let o=hits[0].object;while(o&&!o.userData.pid)o=o.parent;if(o&&o.userData.pid){onSelectPlayer&&onSelectPlayer(o.userData.pid);}}
       else onSelectPlayer&&onSelectPlayer(null);
-      downPt=null;
+      downPt=null;clickTarget=null;
     };
     el.addEventListener("mousedown",e=>{onDown(e);onClickDown(e);});
     window.addEventListener("mousemove",onMove);
@@ -1071,7 +1089,8 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
     el.addEventListener("touchmove",onTouchMove,{passive:false});
     el.addEventListener("touchend",e=>{onUp();onClickUp(e);});
 
-    if(onRecenterRef)onRecenterRef.current=()=>{cam.autoFollow=true;cam.overview=true;cam._ovBase=null;cam.chaseYaw=0;cam.chasePitch=0;};
+    if(onRecenterRef)onRecenterRef.current=()=>{cam.autoFollow=true;cam.overview=true;cam.viewPreset=null;cam._ovBase=null;cam.chaseYaw=0;cam.chasePitch=0;};
+    if(onCameraPresetRef)onCameraPresetRef.current=(name)=>setFpsCameraPreset(stateRef.current,name);
 
     // ── 尺寸自適應 ──
     const resize=()=>{const w=mount.clientWidth||1,h=mount.clientHeight||1;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();};
@@ -1093,7 +1112,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
       if(p0Contract){p0Contract.rafFrames+=1;if(p0Contract.lastAuthoritativeFidx!=null&&p0Contract.lastAuthoritativeFidx!==fIdx)p0Contract.staleMismatch+=1;}
       const frame=sim.frames[fIdx];const nf=sim.frames[Math.min(fIdx+1,total-1)];const pf=sim.frames[Math.max(0,fIdx-1)];
       const sub=live.playing?clamp(st.subT,0,1):0;
-      if(frame){updateDynamic(st,frame,nf,pf,sub,live,W,dt);}
+      if(frame){updateDynamic(st,frame,nf,pf,sub,live,W,dt,fIdx);}
       updateCamera(st,frame,sub,dt,W);
       if(frame&&import.meta.env?.DEV){publishFpsVisibilityDiagnostics(st,frame,fIdx);}
       renderer.render(scene,camera);
@@ -1120,6 +1139,8 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
       st?.players?.forEach((player)=>player.rigged?.dispose?.());
       ro.disconnect();
       window.removeEventListener("mousemove",onMove);
+      if(onRecenterRef)onRecenterRef.current=null;
+      if(onCameraPresetRef)onCameraPresetRef.current=null;
       if(typeof window!=="undefined")delete window.__ESMO_FPS_P0_CONTRACT__;
       try{mount.removeChild(renderer.domElement);}catch(e){}
       renderer.dispose();
@@ -1130,9 +1151,17 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
   // ── 依地圖重建靜態世界 + 重置選手/特效池 ──
   useEffect(()=>{
     const st=stateRef.current;if(!st)return;
-    st.cam.autoFollow=true;st.cam.overview=true;st.cam._ovBase=null;st.cameraRecoveryCount=0;
+    st.cam.autoFollow=true;st.cam.overview=true;st.cam.viewPreset=null;st.cam._ovBase=null;st.cameraRecoveryCount=0;
     const {scene,worldGroup,playerGroup,fxGroup,routeGroup,tex,sphereGeo}=st;
     const map=MAPS[mapKey];
+    const isMirage=mapKey==="mirage";
+    st.renderer.toneMappingExposure=isMirage?1.18:1.08;
+    st.renderer.setClearColor(isMirage?0x1b252a:0x05070c,1);
+    scene.fog.color.set(isMirage?0x46504d:0x070b12);
+    scene.fog.near=isMirage?190:150;scene.fog.far=isMirage?390:360;
+    st.ambient.color.set(isMirage?0x8093a0:0x4a5878);st.ambient.intensity=isMirage?0.78:0.55;
+    st.hemi.color.set(isMirage?0xd3e5e7:0x9fb4d8);st.hemi.groundColor.set(isMirage?0x5a554b:0x2a2418);st.hemi.intensity=isMirage?1.02:0.7;
+    st.sun.intensity=isMirage?1.82:1.55;st.rim.intensity=isMirage?0.58:0.4;
     st.wallRects=map.walls.filter(w=>(w.hgt||7)>=5).map(w=>({x0:W.vx(w.x),z0:W.vz(w.y),x1:W.vx(w.x+w.w),z1:W.vz(w.y+w.h)}));
     st.mapWalls=map.walls;
 
@@ -1147,6 +1176,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
     st.players.forEach((player)=>player.rigged?.dispose?.());
     clear(worldGroup);clear(playerGroup);clear(fxGroup);clear(routeGroup);
     st.raycastTargets=[];
+    st.c3Environment=createC3MirageEnvironment({group:worldGroup,mapKey,W});
 
     // 地板
     if(st.floorTex)st.floorTex.dispose?.();
@@ -1163,12 +1193,12 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef}){
     const getFacade=(cols,rows,door,variant)=>{
       const key=cols+"_"+rows+"_"+door+"_"+variant;if(facadeCache[key])return facadeCache[key];
       const cw=80,ch=88,W2=cols*cw,H2=rows*ch+ch,cv=document.createElement("canvas");cv.width=W2;cv.height=H2;const x=cv.getContext("2d");
-      const base=variant===0?"#b8945c":variant===1?"#a9854c":"#c3a065";x.fillStyle=base;x.fillRect(0,0,W2,H2);
+      const base=isMirage?(variant===0?"#c4b18d":variant===1?"#aa9879":"#d2c19d"):(variant===0?"#b8945c":variant===1?"#a9854c":"#c3a065");x.fillStyle=base;x.fillRect(0,0,W2,H2);
       x.fillStyle="rgba(0,0,0,0.05)";for(let yy=0;yy<H2;yy+=22)x.fillRect(0,yy,W2,2);
       for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const wx=c*cw+cw*0.24,wy=r*ch+ch*0.2,ww=cw*0.52,wh=ch*0.54;
-        x.fillStyle="#5a4322";x.fillRect(wx-5,wy-5,ww+10,wh+10);
-        const lit=((r*7+c*3+variant*5)%5===0);x.fillStyle=lit?"#ffd382":"#28323e";x.fillRect(wx,wy,ww,wh);
-        x.strokeStyle="#37290f";x.lineWidth=3;x.beginPath();x.moveTo(wx+ww/2,wy);x.lineTo(wx+ww/2,wy+wh);x.moveTo(wx,wy+wh/2);x.lineTo(wx+ww,wy+wh/2);x.stroke();
+        x.fillStyle=isMirage?"#77684f":"#5a4322";x.fillRect(wx-5,wy-5,ww+10,wh+10);
+        const lit=((r*7+c*3+variant*5)%5===0);x.fillStyle=lit?"#ffe0a0":isMirage?"#3d5960":"#28323e";x.fillRect(wx,wy,ww,wh);
+        x.strokeStyle=isMirage?"#4d432f":"#37290f";x.lineWidth=3;x.beginPath();x.moveTo(wx+ww/2,wy);x.lineTo(wx+ww/2,wy+wh);x.moveTo(wx,wy+wh/2);x.lineTo(wx+ww,wy+wh/2);x.stroke();
         if(lit){x.fillStyle="rgba(255,214,130,0.22)";x.fillRect(wx-3,wy-3,ww+6,wh+6);}}
       const by=rows*ch;x.fillStyle="rgba(0,0,0,0.14)";x.fillRect(0,by,W2,3);
       if(door){const dw=cw*0.66,dh=ch*0.84,dx=W2/2-dw/2,dy=by+ch-dh;x.fillStyle="#48341a";x.fillRect(dx-6,dy-6,dw+12,dh+8);x.fillStyle="#231a0c";x.fillRect(dx,dy,dw,dh);x.fillStyle="#160f07";x.fillRect(dx+5,dy+5,dw-10,dh-5);x.fillStyle="#c9a24a";x.fillRect(dx+dw*0.7,dy+dh*0.5,5,8);}
@@ -1460,7 +1490,7 @@ function publishFpsVisibilityDiagnostics(st,frame,frameIndex){
   canvas.dataset.esmoFpsVisibilityFrame=String(frameIndex);canvas.dataset.esmoFpsVisibilityJson=JSON.stringify(snapshot);
   if(typeof window!=="undefined")window.__ESMO_FPS_VISIBILITY__=snapshot;
 }
-function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0){
+function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null){
   const time=st.time;const showLabels=live.showLabels!==false;
   // 地名顯隱
   if(st.calloutSprites)st.calloutSprites.forEach(s=>{s.visible=showLabels;});
@@ -1496,7 +1526,7 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0){
     let x=p.pos.x,y=p.pos.y,va=p.va;
     if(np&&sameRound&&!p.dead&&!np.dead){x=lerp(p.pos.x,np.pos.x,sub);y=lerp(p.pos.y,np.pos.y,sub);va=lerpAngle(p.va,np.va,sub);}
     P.g.position.set(W.vx(x),0,W.vz(y));
-    P.rigged?.update?.({player:p,previousPlayer:pp,nextPlayer:np,frameRound:frame.rnd,previousFrameRound:pf?.rnd,dt});
+    P.rigged?.update?.({player:p,previousPlayer:pp,nextPlayer:np,frameRound:frame.rnd,previousFrameRound:pf?.rnd,frameIndex,dt});
     const riggedActive=P.rigged?.mode==="rigged";
     const riggedMode=P.rigged?.mode||"fallback";
     P.body.visible=!riggedActive;
@@ -1533,7 +1563,7 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0){
       const overlayMaterials=[P.nameSpr?.material,...(P.hpGroup?.children||[]).flatMap((child)=>Array.isArray(child.material)?child.material:[child.material])].filter(Boolean);
       overlayMaterials.forEach((material)=>{material.depthTest=primitiveOccludedByWall;material.depthWrite=false;});
     }
-    if(P.rigged?.root)P.rigged.root.rotation.y=-va*Math.PI/180;
+    P.rigged?.setFacingDegrees?.(va);
     const sel=live.selected===P.id;
     if(p.dead){
       P.body.visible=!riggedActive;P.hpGroup.visible=false;P.nameSpr.visible=false;P.selBeam.visible=false;
@@ -1721,7 +1751,7 @@ function snapOverviewToAlive(st,frame,W){
   const cx=alive.reduce((sum,player)=>sum+player.pos.x,0)/alive.length,cy=alive.reduce((sum,player)=>sum+player.pos.y,0)/alive.length;
   const wcx=W.vx(cx),wcz=W.vz(cy);let maxd=0;
   alive.forEach((player)=>{maxd=Math.max(maxd,Math.hypot(W.vx(player.pos.x)-wcx,W.vz(player.pos.y)-wcz));});
-  const cam=st.cam;cam.autoFollow=true;cam.overview=true;cam.dTgt.set(wcx,3,wcz);cam.dRadius=clamp(maxd*2.1+48,78,160);cam.dPhi=0.82;
+  const cam=st.cam;cam.autoFollow=true;cam.overview=true;cam.viewPreset=null;cam.dTgt.set(wcx,3,wcz);cam.dRadius=clamp(maxd*2.1+48,78,160);cam.dPhi=0.82;
   if(cam._ovBase==null)cam._ovBase=cam.dTheta;cam.dTheta=cam._ovBase;cam.tgt.copy(cam.dTgt);cam.radius=cam.dRadius;cam.phi=cam.dPhi;cam.theta=cam.dTheta;
   _vA.setFromSphericalCoords(cam.radius,cam.phi,cam.theta).add(cam.tgt);st.camera.position.copy(_vA);st.camera.lookAt(cam.tgt);st.camera.updateMatrixWorld();
 }
@@ -1738,13 +1768,22 @@ function updateCamera(st,frame,sub,dt,W){
     const va=faceDeg*Math.PI/180;
     cam.dTheta=Math.atan2(-Math.cos(va),-Math.sin(va))+(cam.chaseYaw||0);
     const close=ch.enemy&&ch.enemy.d<24;
-    cam.dPhi=clamp((close?1.0:0.92)+(cam.chasePitch||0),0.2,1.45);
-    cam.dRadius=close?22:27;            // 比過去更遠
-    const fwd=close?7:11;               // 目標前移到選手前方
-    cam.dTgt.set(W.vx(ch.x+Math.cos(va)*fwd),3.0,W.vz(ch.y+Math.sin(va)*fwd));
+    cam.dPhi=clamp((close?1.16:1.10)+(cam.chasePitch||0),0.2,1.45);
+    // Focus is a character read, not an overview crop: keep the selected
+    // operator at torso height and within a short, stable shoulder distance.
+    // The old 22/27 radius plus an 7/11-unit forward target made the player
+    // read as a tiny marker even though chase state was active.
+    cam.dRadius=close?7.5:9.5;
+    const fwd=close?1.7:2.2;
+    cam.dTgt.set(W.vx(ch.x+Math.cos(va)*fwd),1.08,W.vz(ch.y+Math.sin(va)*fwd));
   }else if(cam.autoFollow&&frame){
     const alive=frame.players.filter(p=>!p.dead);
-    if(cam.overview&&alive.length){
+    if(cam.viewPreset&&FPS_CAMERA_PRESETS[cam.viewPreset]){
+      // Preset 以地圖中心為錨點，讓高位視角穩定展示區域層次；若真的失去
+      // 全部存活選手，下面既有 recovery 會清掉 preset 並回到存活質心。
+      const preset=FPS_CAMERA_PRESETS[cam.viewPreset];
+      cam.dTgt.set(...preset.target);cam.dRadius=preset.radius;cam.dPhi=preset.phi;cam.dTheta=preset.theta;
+    }else if(cam.overview&&alive.length){
       // 全景追蹤：以存活質心為中心框住全部選手，鏡頭緩和擺動換角度（穩定不晃）
       const cx=alive.reduce((s,p)=>s+p.pos.x,0)/alive.length,cy=alive.reduce((s,p)=>s+p.pos.y,0)/alive.length;
       const wcx=W.vx(cx),wcz=W.vz(cy);
@@ -1809,6 +1848,8 @@ function updateCamera(st,frame,sub,dt,W){
 function fadeOccluders(st,frame,W){
   if(!st.fadeWalls||!st.fadeWalls.length||!frame)return;
   const cam=st.camera.position,tgt=st.cam.tgt;const ch=st._chase;const chasing=ch&&ch.alive;
+  const preset=st.cam.viewPreset;
+  const elevated=preset==="high"||preset==="overview"||preset==="tactical";
   const foci=[[tgt.x,tgt.z]];
   if(chasing){foci.push([W.vx(ch.x),W.vz(ch.y)]);
     const dx=tgt.x-cam.x,dz=tgt.z-cam.z,l=Math.hypot(dx,dz)||1;foci.push([tgt.x+dx/l*24,tgt.z+dz/l*24]);} // 前方下槍線焦點
@@ -1820,10 +1861,22 @@ function fadeOccluders(st,frame,W){
     // 相機緊貼或位於建物範圍內 → 直接淡出（進屋/貼牆時不擋畫面）
     if(cam.x>r.x0-margin&&cam.x<r.x1+margin&&cam.z>r.z0-margin&&cam.z<r.z1+margin)occ=true;
     if(!occ)for(const f of foci){if(segHitsRect(cam.x,cam.z,f[0],f[1],r)){occ=true;break;}}
-    const target=occ?0.14:1.0;
+    // 高位 preset 讓建築保留輪廓，但把玩家與交戰線放到可讀層；
+    // 一般導播／追焦仍沿用原本的遮擋契約。
+    const target=elevated?(occ?(preset==="high"?0.1:0.16):(preset==="high"?0.28:0.48)):(occ?0.14:1.0);
     fw.cur+=(target-fw.cur)*0.18;
     const fade=fw.cur,tr=fade<0.985;
     for(const mm of fw.mats){mm.m.opacity=mm.base*fade;mm.m.transparent=tr||mm.base<1;mm.m.depthWrite=!tr;mm.m.depthTest=!tr;}
+  }
+  // C3 façade 是裝飾層，不是碰撞牆。高位上帝視角隱藏會遮住全場的薄 façade
+  // 結構，保留地面、標誌、掩體與燈具；離開高位後立即恢復。
+  const env=st.c3Environment?.group;
+  if(env){
+    const hideStructure=preset==="high";
+    env.traverse((object)=>{
+      if(!object.userData?.c3Environment||object.userData.c3Occluder!=="structure")return;
+      object.visible=!hideStructure;
+    });
   }
 }
 
@@ -1872,7 +1925,7 @@ function PlayerRow({p,selected,onClick}){
   if(nf.includes("molly"))eq.push("🔥");
   if(p.side==="ct"&&p.armor)eq.push("🔧");
   return(
-    <button onClick={()=>onClick(p.id)} style={{display:"flex",alignItems:"center",gap:6,width:"100%",textAlign:"left",
+    <button data-esmo-fps-player-card={p.id} onClick={()=>onClick(p.id)} style={{display:"flex",alignItems:"center",gap:6,width:"100%",textAlign:"left",
       background:selected?`${col}1f`:"rgba(255,255,255,0.025)",border:`1px solid ${selected?col+"99":"transparent"}`,borderRadius:8,padding:"5px 7px",cursor:"pointer",opacity:p.dead?0.45:1,position:"relative",overflow:"hidden"}}>
       <div style={{position:"absolute",left:0,top:0,bottom:0,width:3,background:col}}/>
       <div style={{width:18,height:18,borderRadius:5,background:`${col}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,flexShrink:0}}>{p.dead?"💀":ROLE_ZH[p.role]?.[0]||"●"}</div>
@@ -2025,6 +2078,8 @@ function EsportsFPS3D({
   const fidc=useRef(0);
   const seekNonce=useRef(0);
   const recenter=useRef(null);
+  const cameraPresetRef=useRef(null);
+  const [cameraPreset,setCameraPreset]=useState(null);
 
   const total=sim.frames.length;
   const frame=sim.frames[Math.min(fIdx,total-1)];
@@ -2044,7 +2099,13 @@ function EsportsFPS3D({
     advance:()=>{const from=liveRef.current.fIdx;if(from>=total-1){liveRef.current.playing=false;setPlaying(false);return from;}const next=from+1;publishFpsFrame(next,"playback");return next;}};
 
   // 切換比賽/地圖 → 重置
-  useEffect(()=>{publishFpsFrame(clamp(Number(resumeFrameIndex) || 0, 0, Math.max(0, sim.frames.length - 1)),"reset");setSelected(null);setFeed([]);setCasts([]);setComms([]);setMultiKill(null);setRoundOverlay(null);prevRndRef.current=0;prevPlantedRef.current=false;seekNonce.current++;setQuickFinishing(false);setQuickCompleted(false);setPlaying(true);},[sim,resumeFrameIndex]);
+  // A persisted active-match snapshot updates resumeFrameIndex while Battle is
+  // running. That is progress persistence, not a new Battle mount: rerunning
+  // this initializer on every snapshot used to clear PlayerRow selection and
+  // tear down the close-up chase roughly once per save interval. Initialize
+  // only when the authoritative simulation changes; the initial prop value is
+  // still used to resume the newly entered simulation.
+  useEffect(()=>{publishFpsFrame(clamp(Number(resumeFrameIndex) || 0, 0, Math.max(0, sim.frames.length - 1)),"reset");setSelected(null);setFeed([]);setCasts([]);setComms([]);setMultiKill(null);setRoundOverlay(null);prevRndRef.current=0;prevPlantedRef.current=false;seekNonce.current++;setQuickFinishing(false);setQuickCompleted(false);setPlaying(true);},[sim]);
 
   // R63：只保存可重建的 frame 游標與該 frame 的真實比分／時間，不複製 simulator。
   useEffect(()=>{
@@ -2115,7 +2176,7 @@ function EsportsFPS3D({
         <div style={{position:"relative",width:"100%",paddingBottom:"118%",overflow:"visible",background:"#05070c"}}>
           <div data-esmo-fps-stable-canvas-region="1" style={{position:"absolute",inset:0,zIndex:0,contain:"layout paint",isolation:"isolate",overflow:"visible"}}>
             <div data-esmo-fps-canvas-layer="1" style={{position:"absolute",inset:0,zIndex:0}}>
-              <FpsScene3D mapKey={mapKey} roster={effectiveRoster} liveRef={liveRef} onSelectPlayer={setSelected} onRecenterRef={recenter}/>
+              <FpsScene3D mapKey={mapKey} roster={effectiveRoster} liveRef={liveRef} onSelectPlayer={setSelected} onRecenterRef={recenter} onCameraPresetRef={cameraPresetRef}/>
             </div>
             <div data-esmo-fps-frame-decoration="1" aria-hidden="true" style={{position:"absolute",inset:0,zIndex:10,pointerEvents:"none",borderRadius:14,border:`1px solid ${C.line}`,boxShadow:"0 10px 50px rgba(0,0,0,0.7)"}} />
           </div>
@@ -2175,7 +2236,7 @@ function EsportsFPS3D({
           <button onClick={()=>{if(!audioRef.current)audioRef.current=makeAudio();if(audioRef.current){audioRef.current.resume();if(!soundOn)audioRef.current.roundStart();}setSoundOn(s=>!s);}} title={soundOn?"音效開":"音效關"} style={{position:"absolute",top:8,right:8,zIndex:25,width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center",background:soundOn?"rgba(56,189,248,0.22)":"rgba(13,17,25,0.85)",border:`1px solid ${soundOn?C.ct+"88":C.line}`,borderRadius:"50%",cursor:"pointer",fontSize:15,backdropFilter:"blur(6px)"}}>{soundOn?"🔊":"🔇"}</button>
 
           {/* 重新置中 */}
-          <button onClick={()=>{setSelected(null);recenter.current&&recenter.current();}} style={{position:"absolute",bottom:8,right:8,zIndex:25,display:"flex",alignItems:"center",gap:4,background:"rgba(13,17,25,0.85)",border:`1px solid ${C.line}`,borderRadius:20,padding:"6px 12px",cursor:"pointer",color:"#cfd4dc",fontSize:10,fontWeight:700,backdropFilter:"blur(6px)"}}>
+          <button onClick={()=>{setSelected(null);setCameraPreset(null);recenter.current&&recenter.current();}} style={{position:"absolute",bottom:8,right:8,zIndex:25,display:"flex",alignItems:"center",gap:4,background:"rgba(13,17,25,0.85)",border:`1px solid ${C.line}`,borderRadius:20,padding:"6px 12px",cursor:"pointer",color:"#cfd4dc",fontSize:10,fontWeight:700,backdropFilter:"blur(6px)"}}>
             <span style={{fontSize:11}}>◎</span> 重新置中
           </button>
 
@@ -2264,6 +2325,13 @@ function EsportsFPS3D({
           <div style={{flex:1,display:"flex",alignItems:"center",gap:6,padding:"0 4px",color:C.gray2,fontSize:8.5}}>
             <span style={{color:C.t,fontWeight:800}}>{lib.t[tIdx]?.name}</span><span style={{opacity:0.5}}>vs</span><span style={{color:C.ct,fontWeight:800}}>{lib.ct[ctIdx]?.name}</span><span style={{opacity:0.55}}>· 賽前戰術</span>
           </div>
+        </div>
+        {/* C3 全場導播視角：切換只改相機，不改戰鬥資料或幾何契約 */}
+        <div data-testid="cs-camera-presets" style={{display:"flex",alignItems:"center",gap:5,marginTop:6,padding:"5px 6px",background:"rgba(13,17,25,0.78)",border:`1px solid ${C.line}`,borderRadius:9}}>
+          <span style={{color:C.gray2,fontSize:8,fontWeight:800,whiteSpace:"nowrap"}}>戰場視角</span>
+          {[['high','高位上帝'],['overview','全場總覽'],['tactical','側上方戰術']].map(([mode,label])=>(
+            <button key={mode} data-testid={`cs-camera-preset-${mode}`} onClick={()=>{setCameraPreset(mode);cameraPresetRef.current?.(mode);}} style={{flex:1,minWidth:0,padding:"5px 4px",borderRadius:6,border:`1px solid ${cameraPreset===mode?C.ct+"99":C.line}`,background:cameraPreset===mode?`${C.ct}22`:"rgba(255,255,255,0.04)",color:cameraPreset===mode?C.ctL:"#cfd4dc",fontSize:8,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap"}}>{label}</button>
+          ))}
         </div>
 
         {/* 雙隊名單 */}

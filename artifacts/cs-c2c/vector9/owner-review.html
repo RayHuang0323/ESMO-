@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ESMO CS-C2C Final Tactical Readability Owner Review</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, "Noto Sans TC", system-ui, sans-serif; background: #071015; color: #eef7f8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: radial-gradient(circle at 50% -8%, #1d3540 0, #0a151b 42%, #05090c 100%); }
+    main { width: min(1180px, calc(100% - 28px)); margin: auto; padding: 38px 0 64px; }
+    .eyebrow { color: #78dbf5; letter-spacing: .14em; font-size: 12px; font-weight: 900; }
+    h1 { margin: 10px 0 14px; font-size: clamp(36px, 6vw, 68px); line-height: .96; letter-spacing: -.045em; }
+    .lede { max-width: 860px; color: #b9cbd1; font-size: 16px; line-height: 1.7; }
+    .verdict { margin: 22px 0; padding: 16px 18px; border: 1px solid #3e6877; border-radius: 14px; background: rgba(23, 49, 59, .82); color: #dff8ff; font-weight: 800; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 30px; }
+    .chip { border: 1px solid #334b55; border-radius: 999px; padding: 7px 11px; background: #101c22; color: #cedde1; font-size: 12px; }
+    .blue { border-color: #367fa7; color: #8bd9ff; }
+    .red { border-color: #997353; color: #f2bc86; }
+    h2 { margin: 34px 0 14px; font-size: 22px; }
+    .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+    .weapon-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+    figure { margin: 0; overflow: hidden; border: 1px solid #263d47; border-radius: 14px; background: #0b1318; }
+    img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; background: #030608; }
+    figcaption { padding: 11px 13px 13px; font-size: 12px; font-weight: 850; letter-spacing: .05em; }
+    .wide { grid-column: span 2; }
+    .wide img { aspect-ratio: 16 / 9; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0 14px; }
+    a { display: inline-flex; align-items: center; min-height: 46px; padding: 0 17px; border-radius: 10px; color: #061015; background: #8ce4ff; font-weight: 900; text-decoration: none; }
+    a.secondary { color: #d6e5e9; background: #152329; border: 1px solid #38515a; }
+    .note { max-width: 900px; color: #94a9b0; font-size: 13px; line-height: 1.65; }
+    @media (max-width: 760px) { .grid, .weapon-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .wide { grid-column: span 2; } }
+    @media (max-width: 430px) { main { width: calc(100% - 18px); padding-top: 26px; } .grid { gap: 9px; } figcaption { padding: 9px; font-size: 10px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">ESMO ORIGINAL · CS-C2C OWNER REVIEW</div>
+    <h1>Final Tactical<br />Readability</h1>
+    <p class="lede">完整 tactical shirt、雙段袖、褲腰、thigh／calf 褲管、gloves、boots 與 neck gaiter 持續由既有 65-bone skeleton 驅動；本輪再補強傳統 CS 警匪裝備語言、五種個體 profile，以及五類槍枝的獨立輪廓。底層驗證模型只保留 rig／animation，肌肉 mesh 不參與渲染。</p>
+    <div class="verdict">Owner 判讀題：角色現在是完整穿衣、陣營明確、武器一眼可分的戰術人物；不是裸體灰模掛方塊，也不是太空人／生化人。</div>
+    <div class="meta">
+      <span class="chip">10/10 RIGGED</span>
+      <span class="chip">5 VISUAL PROFILES</span>
+      <span class="chip">2560 ADDED TRIANGLES / 8 MATERIALS</span>
+      <span class="chip">5 DISTINCT WEAPON SILHOUETTES</span>
+      <span class="chip">BASE MUSCLE MESH HIDDEN</span>
+      <span class="chip blue">BLUE · POLICE / COUNTER-TERROR UNIFORM</span>
+      <span class="chip red">RED · IRREGULAR CLOTHING / LIGHT CHEST RIG</span>
+    </div>
+    <h2>Blue · Counter-Terror / Police</h2>
+    <section class="grid" aria-label="Blue tactical clothing views">
+      <figure><img src="./blue-front.png" alt="Blue front" /><figcaption>BLUE · FRONT</figcaption></figure>
+      <figure><img src="./blue-quarter45.png" alt="Blue 45 degree" /><figcaption>BLUE · 45°</figcaption></figure>
+      <figure><img src="./blue-side.png" alt="Blue side" /><figcaption>BLUE · SIDE</figcaption></figure>
+      <figure><img src="./blue-back.png" alt="Blue back" /><figcaption>BLUE · BACK</figcaption></figure>
+    </section>
+    <h2>Red · Irregular Armed Unit</h2>
+    <section class="grid" aria-label="Red tactical clothing views">
+      <figure><img src="./red-front.png" alt="Red front" /><figcaption>RED · FRONT</figcaption></figure>
+      <figure><img src="./red-quarter45.png" alt="Red 45 degree" /><figcaption>RED · 45°</figcaption></figure>
+      <figure><img src="./red-side.png" alt="Red side" /><figcaption>RED · SIDE</figcaption></figure>
+      <figure><img src="./red-back.png" alt="Red back" /><figcaption>RED · BACK</figcaption></figure>
+    </section>
+    <h2>Weapon Family · Silhouette Read</h2>
+    <section class="weapon-grid" aria-label="Five distinct weapon family views">
+      <figure><img src="./pistol.png" alt="Pistol silhouette" /><figcaption>PISTOL · COMPACT SLIDE / GRIP</figcaption></figure>
+      <figure><img src="./smg.png" alt="SMG silhouette" /><figcaption>SMG · WIRE STOCK / LONG MAG</figcaption></figure>
+      <figure><img src="./rifle.png" alt="Rifle silhouette" /><figcaption>RIFLE · SERVICE STOCK / CURVED MAG</figcaption></figure>
+      <figure><img src="./sniper.png" alt="Sniper silhouette" /><figcaption>SNIPER · LARGE SCOPE / LONG BARREL</figcaption></figure>
+      <figure><img src="./shotgun.png" alt="Shotgun silhouette" /><figcaption>SHOTGUN · PUMP / TUBE / SHELLS</figcaption></figure>
+    </section>
+    <h2>Battle Runtime</h2>
+    <section class="grid" aria-label="Lineup and Battle evidence">
+      <figure class="wide"><img src="./lineup.png" alt="Ten player Blue and Red lineup" /><figcaption>10-PLAYER LINEUP · BLUE 5 / RED 5</figcaption></figure>
+      <figure class="wide"><img src="./weapon-lineup.png" alt="Ten player five-family weapon lineup" /><figcaption>10-PLAYER WEAPON LINEUP · FIVE FAMILIES PER TEAM</figcaption></figure>
+      <figure class="wide"><img src="./gameplay-focus.png" alt="Actual Battle gameplay view" /><figcaption>ACTUAL BATTLE GAMEPLAY VIEW</figcaption></figure>
+    </section>
+    <div class="actions">
+      <a href="../../../?fpsRigged=all&amp;fpsC2cHero=all">開啟 Practice → Mirage → Battle</a>
+      <a class="secondary" href="./runtime-evidence.json" target="_blank" rel="noreferrer">Battle runtime evidence</a>
+      <a class="secondary" href="./lineup.png" target="_blank" rel="noreferrer">原尺寸 lineup</a>
+    </div>
+    <p class="note">10 人差異由 assault／support／marksman／lurker／utility profile 決定：Blue 使用 helmet rail、comms bridge、monocular、low brim、utility camera；Red 使用 balaclava、heavy head wrap、field cap、hood peak、bandana，另搭配不同 sleeves、carrier、pouches、packs、knees 與 weapon family。正式結果：C2C 9/9、Renderer 24/24、CS-A2 10/10、C2A 13/13、C2B 14/14、CS23 28/28、Camera 8/8、RAF 7/7、StableCanvas 5/5、production build、production Battle smoke 均通過。180 秒 long-run：1544 samples、324 fIdx transitions、geometry shift 0、stale fIdx 0、duplicate RAF/render 0、rapid recovery 0、browser error 0。</p>
+  </main>
+</body>
+</html>

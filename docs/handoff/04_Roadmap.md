@@ -33,6 +33,14 @@
 - CS／MOBA 雙賽制的賽季曆整合（同一年度內兩條賽事線的排程與衝突規則）。
 - CS Major 之外的次級賽事（Minor／資格賽）——目前 roadmap 上尚未排期。
 
+### C3 正式收尾後的下一個候選階段（尚未開始）
+
+- C3 Mirage vertical slice 已正式 `C3_CLOSED / OWNER_ACCEPTED`；release head `cfd7d68` 的 Pages workflow `33006989567` success，production smoke PASS。
+
+- **C4 — Mirage 全圖環境擴展與多地圖環境品質**：把目前已驗收的 A Site／Mid／Connector environment kit，以逐區 vertical slice 方式延伸到 Mirage 其餘區域，再評估其他地圖；補齊地標、建築立面、材質層次與路線可讀性。
+- C4 必須沿用 Player identity、Camera recovery、StableCanvasRegion、RAF_FIDX_COHERENCE、C2C character／animation 與現有 gameplay authority；每個區域都要先跑 renderer／camera／RAF／geometry／C2C gates、Battle smoke、build 與長跑，再進 Owner acceptance。
+- **本輪只記錄 roadmap 候選，不實作 C4。**
+
 ## MOBA Combat AI 封版（2026-08-10）
 
 **狀態：✅ 已封版。** Release Gate 8/8 全綠（首次），combat credibility 45/45。
@@ -1124,3 +1132,15 @@ V0A/V0B 成長 → V1 世界時間 → V2 年度邊界 → V3 快轉 → V4 生�
 
 真人競技 / 定時賽事（V4 已定契約，仍是 Not Now）、Coach / Mentor / 導師加成、
 完整 AI 轉會市場與談判、Club DNA / Personality。
+## CS-C4B｜兩張地圖環境完成（2026-08-27）
+
+- 狀態：`C4B_TWO_MAPS_READY_FOR_OWNER_ACCEPTANCE`。
+- 已把 Mirage C3/C4A 的 environment production framework 延伸到 Dust II 與 Inferno；三張地圖共享 presentation framework，但保留 map-specific visual identity，避免未來把所有地圖做成同一張換色。
+- Owner review：`http://127.0.0.1:5412/ESMO-/artifacts/cs-c4b/two-maps/owner-review.html`。
+- 下一階段：C5（僅列 roadmap，不在本輪實作）；開始前應先完成 C4B Owner acceptance，並另行定義 C5 範圍。
+
+## CS-C4B / C4 正式關閉
+
+- `C4B_TWO_MAPS = OWNER_ACCEPTED / CLOSED`
+- Mirage、Dust II、Inferno 三張地圖已完成共用 environment production framework 的正式整合與部署驗證，同時保留各自 visual identity。
+- 下一階段建議：C5（另行定義範圍後開始）；本次不實作 C5。

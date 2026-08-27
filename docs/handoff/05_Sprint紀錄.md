@@ -15795,3 +15795,239 @@ M1–M4 390px：六個區塊都在、無橫向捲動、按鈕都在
 ### 沒有做
 
 Coach / Mentor、AI 轉會市場 / bidding、談判 AI、Ranked / ServerTime。
+- URL：`https://rayhuang0323.github.io/ESMO-/`
+- Home → Practice → Mirage → Battle：PASS
+- Canvas：`430×507`
+- 30 秒 production smoke geometry samples：`246`；StableCanvasRegion shifts：`0`
+- browser/page errors：`0`
+
+## CS-C2C — ESMO Original Tactical Character Art Upgrade（2026-08-25）
+
+### Scope / strategy
+
+- 從最新 `origin/main=07a86c740ac9302b9ec2e2ba3889a06684a7e2c0` 建立獨立 `feature/cs-c2c-character-art` worktree；沒有沿用 P0 debug worktree，也沒有 wholesale copy。
+- 先完成一名 `Vector-9 / Signalbreaker` vertical slice，不直接替換 10 人。
+- 沿用既有 65-bone skeleton、AnimationMixer、fpsAnimationState 與 renderer identity pool；新增內容只在 `fpsC2cHero.js` 的 procedural mesh/material/attachments。
+
+### Result
+
+- tactical presentation：plate carrier、lower carrier、helmet／visor、headset／comms、shoulder patch、gloves、boots、utility pouches、rifle／pistol presentation。
+- neutral graphite／polymer／fabric／metal 主體，Team Blue / Red 只使用局部 accents。
+- `fpsC2cHero=1` 只啟用 t1；`fpsC2cHero=all` 才啟用全 roster；未帶 query 維持 C2A base。
+- runtime diagnostic：824 added triangles、8 materials、65 bones；static C2C verifier **8/8 PASS**。
+- browser vertical slice：Home → Practice → Mirage → Battle、C2C mode、10/10 visibility、5v5、camera rapid recovery 0、browser/page errors 0；四視角 capture 改用 CDP surface screenshot。
+
+### Regression boundary
+
+- 保留 PLAYER_IDENTITY_VISIBILITY、CAMERA_RECOVERY、STABLE_CANVAS_GEOMETRY、RAF_FIDX_FRAME_COHERENCE；C2C 沒有讀寫 simulation、fIdx、result 或 weapon stats。
+- C2A／C2B existing rigged path 未被替換；10-player productization 留待 Owner art acceptance 後再決定。
+- 詳細 asset/license、挂點、budget、known limitations 與 AI handoff：`docs/handoff/11_CS_C2C_原創戰術角色美術與Rig呈現.md`。
+
+### Git boundary
+
+- 本輪未 commit、未 merge、未 push、未 deploy；停止於 `C2C_READY_FOR_OWNER_ART_ACCEPTANCE`。
+
+## CS-C2C Phase 2：Tactical Equipment Polish + 10-Player Productization（2026-08-25）
+
+### Scope / implementation
+
+- 依 Owner `C2C_ART_DIRECTION = ACCEPTED_WITH_REVISION`，保留 accepted body／proportion／silhouette，僅增加 clothing layering、可重用 equipment modules、rifle／pistol presentation correction 與 visual-only variation profiles。
+- `fpsC2cHero.js` 沿用既有 65-bone skeleton、AnimationMixer、fpsAnimationState 與 renderer identity pool；t1～t5／ct1～ct5 共用 builder、clips、materials 與 mounts。
+- Visual profiles：`assault`、`support`、`marksman`、`lurker`、`utility`；這些只控制裝備組合，不建立新的 gameplay role、simulation state 或 weapon stats。
+- C2C added geometry：`1244` triangles、`8` materials；full-buy 10-player sample：`1075` calls、`165876` triangles、`1199` geometries、`79` textures、10 rigged／10 mixers。
+
+### Verification
+
+- C2C vertical browser：Home → Practice → Mirage → Battle，10/10 visibility、Blue 5／Red 5、五 variation、rifle full-buy frame、pistol group、browser errors 0。
+- 390×844 DPR2 viewport：PASS；180 秒 C2C all-player long-run：1063 samples、StableCanvasRegion shifts 0、stale mismatch 0、duplicate RAF／render 0、rapid recovery 0、errors 0。
+- P0 gates：Renderer visibility 24/24、CS-A2 10/10、C2A 13/13、C2B 14/14、CS23 28/28、Camera 8/8、RAF coherence 7/7、StableCanvas geometry 5/5；production build PASS。
+- `browser_check_cs_camera_recovery.mjs` 的 geometry sample floor 改為依 long-run duration 取 `max(300, floor(longRunMs / 300))`，因 10-player headless WebGL timer cadence 會合併 100ms samples；不是放寬 geometry invariant，180 秒實測仍取得 700 samples 且 shift 0。
+
+### Git boundary
+
+- 本輪未 commit、未 merge、未 push、未 deploy；停止於 `C2C_10_PLAYER_READY_FOR_OWNER_ACCEPTANCE`，等待 Owner 透過單一 HTTPS preview 做最終美術／Android smoothness acceptance。
+
+## CS-C2C Revision：Owner acceptance revisions（2026-08-25）
+
+### Owner findings addressed
+
+- Character world scale：正式 Battle path 由 skinned vertex bounds 正規化至 `targetHeight=1.82m`，避免角色因 bind-space skeleton bounds 高估而大於 Mirage 建築比例。
+- Locomotion facing：保留 authoritative `va` 與 `-va` root yaw；修正 GLB local front `-Z` 與 C2C authored `+X` 的 presentation axis mismatch。
+- Variation／team language：Blue 5／Red 5 使用五種視覺 archetype 與 CT-like disciplined／T-like irregular equipment language，不建立 gameplay role。
+- Weapon presentation：完成 pistol／SMG／rifle／sniper／shotgun family mapping，依 authoritative gun family 切換 presentation geometry。
+
+### Evidence boundary
+
+- C2C browser slice：10/10 rigged、10/10 mixers、5 variations、Blue 5／Red 5、browser errors 0；review artifacts 已包含 front／45°／side／back／gameplay／silhouette、lineup 與五種 weapon family。
+- C2C static gate：scale normalization、bone-position-and-rotation-only anchor、front-axis correction、centralized facing setter 與四條 P0 source contracts PASS。
+- 這些證據可進入 `C2C_READY_FOR_FINAL_OWNER_ACCEPTANCE`；Android 最終視覺／比例／跑向／流暢度仍只能由 Owner 真機做一次 acceptance，Node 不替代真機。
+
+### Git boundary
+
+- 本 revision 未 commit、未 merge、未 push、未 deploy；不開始 C3。
+
+## CS-C2C Visual readability refinement（2026-08-26）
+
+- Owner 觀察第一版仍有暗色 mannequin／裸體感與裝備浮層；本次只修 presentation，不重做 accepted body、skeleton、clips、simulation 或 weapon stats。
+- `fpsC2cHero.js` 改為正常 depth test／depth write、bone position + rotation only（不繼承非均勻 scale）、移除重複計算 bone height 的 mount offsets，並縮回 plate carrier／rear pack、提高 fabric／polymer／helmet 材質區分。
+- 新增 RoundedBox edge treatment 與更清楚 helmet/headset layering；review capture 改為較近 framing，方便 Owner 肉眼判斷。
+- C2C static gate 重新維持 `9/9 PASS`；browser 10-player slice 仍為 `10/10 rigged`、`10/10 mixers`、`5 variations`、`8 materials`、browser errors `0`。正式 build／P0 regression gates 需在本輪 integration 前再次執行。
+
+### Git boundary
+
+- 本輪仍未 commit、未 merge、未 push、未 deploy；等待同一 HTTPS preview 的最終 art acceptance。
+
+## CS-C2C Visual readability refinement — latest（2026-08-26）
+
+### Owner feedback addressed
+
+- Owner 指出第一版偏暗、像生化人裸體 mannequin，且裝備像浮在身體外；本輪保持 accepted body／比例／65-bone skeleton／AnimationMixer，只調整 presentation layer。
+- `fpsC2cHero.js` 以 continuous clothing shell 先建立上衣／褲裝，再疊 plate carrier／pouches；所有 procedural material 恢復正常 depth test／depth write，mount 只同步 bone position／rotation，不繼承非均勻 scale。
+- helmet／visor、fabric／polymer／armor 的中間色階重新分層，背包／plate carrier 縮小並以 RoundedBox soften edge；不改 simulation、fIdx、weapon stats 或 P0 layout。
+
+### Verification
+
+- C2C static `9/9`；browser vertical slice `Home → Practice → Mirage → Battle`：10/10 rigged、10/10 mixers、5 variations、1,648 C2C triangles／8 materials、browser errors 0。
+- P0／regression gates：Renderer `24/24`、CS-A2 `10/10`、C2A `13/13`、C2B `14/14`、CS23 `28/28`、Camera `8/8`、RAF `7/7`、StableCanvas `5/5`；production build PASS。
+- 180 秒 P0 long-run：`979` samples、StableCanvas shifts `0`、stale mismatch `0`、duplicate RAF/render `0`、rapid recovery `0`、browser errors `0`。
+- 仍未宣稱 Android art PASS；只等待同一 Owner preview 的 final visual／1–2 分鐘 smoothness acceptance。
+
+### Git boundary
+
+- 本輪未 commit、未 merge、未 push、未 deploy；不開始 C3。
+
+## CS-C2C Crash recovery final check（2026-08-26）
+
+### Recovery 與修正
+
+- Recovery audit：C2C source、服裝／裝備層、glove／boot bone mounts、review captures 與既有 verifier 都完整保留，無當機造成的檔案遺失；未重做 C2C。
+- 正式倒跑 root cause：validation GLB 原生 face axis 是 `+Z`，舊 model `orientationOffset=-PI/2` 使身體、C2C kit 與 weapon 整體朝向 locomotion 反面。改為 model `+PI/2`；C2C authored `+X` mount 保持 `-PI/2`，由既有 centralized `setFacingDegrees(-va)` 接 simulation `va`。
+- Blue 增加低輪廓硬盔、窄 visor／lower-face mask、雙耳 headset、制式識別與對稱 carrier；Red 改布質 head／face wrap、單耳通訊、斜背帶、輕型不對稱 chest rig／utility bag，並以不對稱袖口、cargo pocket／knee layout 與 Blue 形成結構差異。
+- Base skinned layer 改為隊伍 fabric tone，連同 combat top、完整 tactical pants、vest、gloves、boots、helmet／headset、pouches、radio／pack，避免裸身／生化測試模型閱讀感。
+
+### Verification
+
+- Battle smoke：Home → Practice → Mirage → Battle；10/10 rigged、10/10 mixers、Blue 5／Red 5 structural checks PASS、1,580 C2C triangles／8 materials、browser errors `0`。
+- Battle facing：17 frame samples／34 running samples；root body→movement avg `0.8859`，kit／weapon→movement avg `0.7487`；永久 gate threshold 全通過。
+- Gates：Renderer `24/24`、CS-A2 `10/10`、C2A `13/13`、C2B `14/14`、CS23 `28/28`、Camera `8/8`、RAF `7/7`、StableCanvas `5/5`、C2C `9/9`；production build PASS。
+- 180 秒 long-run：1,456 samples、417 fIdx transitions、StableCanvas shifts `0`、stale mismatch `0`、duplicate RAF/render `0`、rapid recovery `0`、browser errors `0`。
+- 未 commit、未 merge、未 push、未 deploy；不開始 C3。Android 真機視覺／流暢度仍由 Owner 最終驗收。
+## CS-C2C Final polish continuation（2026-08-26）
+
+### Audit / minimal changes
+
+- Crash recovery audit 沒有找到 source、verifier 或 artifact 遺失；不重做 C2C，沿用 shared rig、modular kit 與五個 visual profiles。
+- Art 只做最後 readable tactical pass：降低 carrier／上層裝備體積與科幻 slab 感，保留完整衣物、護具、頭盔／耳機、手套、靴子、pouch、radio、pack 與武器族群；Blue／Red 以不同 PPE 結構區分，不只是換色。
+- Hit root cause 是 RAF 同一 fIdx 重複觸發 one-shot action；以事件 signature latch 修正，`Hit_Chest` 可前進並退出至 `Walk_Loop`，不影響 idle／walk／run／fire／death。
+- Focus root cause 是 persistence `resumeFrameIndex` 令 `[sim,resumeFrameIndex]` initializer 反覆清除選角；改為 `[sim]`，並將 chase target 收斂到短距離 torso target。capture tool 只固定 viewport，不改產品 runtime state。
+
+### Verification
+
+- `tools/browser_check_cs_c2c_vertical_slice.mjs`：Home → Practice → Mirage → Battle、10/10 rigged、5v5、hit reaction time/timer progression、退出至 locomotion、兩次 DOM PlayerRow focus stable、close button、rapid recovery 0、browser errors 0；`artifacts/cs-c2c/vector9/runtime-evidence.json` 已更新。
+- P0 / CS gates：C2C 9/9、Renderer 24/24、CS-A2 10/10、C2A 13/13、C2B 14/14、CS23 28/28、Camera 8/8、RAF 7/7、StableCanvas 5/5；production build PASS。
+- 180 秒 long-run `exit=0`：1688 samples、StableCanvasRegion shifts 0、stale fIdx 0、duplicate RAF/render 0、camera recovery 9、rapid recovery 0、browser errors 0。
+
+### Boundary
+
+`C2C_READY_FOR_FINAL_OWNER_ACCEPTANCE`。未 merge、未 push、未 deploy、未開始 C3；Android 真機視覺／FPS／觸控仍需 Owner 實機驗收。
+
+## CS-C2C Clothing silhouette correction（2026-08-27）
+
+### Audit / art correction
+
+- Clothing silhouette audit 確認根因不是裝備數量不足，而是 superhero validation body 仍可見，腹肌／四肢肌肉被當成衣服；局部 rigid boxes 又只遮住胸口，造成裸體人形掛方塊與太空人讀感。
+- `fpsC2cHero.js` 改為隱藏原始 render mesh、保留 skeleton／mixer，並以 bone-endpoint dynamic segments、joint shells 與 tapered shells 建立連續 combat top、sleeves、pants、gloves、boots、neck／waist／knee／cuff 結構。
+- vest／carrier、pouches、radio、antenna、backpack、utility、helmet／hood、headset 全部成為 torso／head 的合理子層；Blue 與 Red 使用不同頭部、carrier、通訊、背帶與衣褲結構，不是 palette swap。
+
+### Runtime / verification
+
+- Formal Battle vertical slice：10/10 rigged、5 profiles、Blue 5／Red 5、339 moving／174 running samples；body／kit／weapon alignment PASS。Hit one-shot 正常前進並退出至 `Walk_Loop`；兩次 PlayerRow focus 在取樣窗內 selection／chase id 穩定、角色可見、close button true、rapid recovery 0。
+- Gates：C2C `9/9`、Renderer `24/24`、CS-A2 `10/10`、C2A `13/13`、C2B `14/14`、CS23 `28/28`、Camera `8/8`、RAF `7/7`、StableCanvas `5/5`、production build PASS。
+- 180 秒 long-run：`exit=0`、`1750` samples、geometry shifts 0、stale fIdx 0、duplicate RAF/render 0、camera recovery 9、rapid recovery 0、browser errors 0。
+- Owner evidence 已更新 Blue／Red Front、45、Side、Back、10-player lineup 與 Battle gameplay。狀態維持 `C2C_READY_FOR_FINAL_OWNER_ACCEPTANCE`；未 merge、未 push、未 deploy、未開始 C3。
+
+## CS-C2C Final tactical readability polish（2026-08-27）
+
+### Art-only changes
+
+- Weapon root cause：五類 weapon 雖有不同長度，但共用 box-heavy language，且掛在 bone-length normalized clothing torso，實際再縮約 0.4 倍。改為 dedicated fixed-scale torso-follow mount，仍只讀同一 skeleton transforms；五類槍新增各自辨識零件與比例，不改 `player.gun`、stats 或 economy。
+- 10-player root cause：profile metadata 已存在，但 `helmet`／`vest`／`sleeves` 多數未驅動實際 geometry。現已將五 profile 落實成雙方不同 headgear、carrier、sleeve cuff、chest／rear equipment 與 knee combinations。
+- Owner capture 曾使用不存在的 `Rifle_Aim_Neutral`，造成不相干 clip fallback；capture 改用正式 runtime 已存在的 `Pistol_Aim_Neutral` 共用 aim clip。產品 animation system 未修改。
+
+### Verification
+
+- C2C runtime：10/10 rigged、五 profile、Blue 5／Red 5 專屬 profile nodes，339 moving／173 running samples；body／kit／weapon facing PASS。Hit `Hit_Chest → Walk_Loop → fire/death` PASS；兩次 focus selection／chase stable、visible、close button true、rapid recovery 0。
+- C2C 9/9、Renderer 24/24、CS-A2 10/10、C2A 13/13、C2B 14/14、CS23 28/28、Camera 8/8、RAF 7/7、StableCanvas 5/5、production build 與 production Battle smoke PASS。
+- 180 秒 long-run：1544 samples、324 fIdx transitions、StableCanvas shifts 0、stale fIdx 0、duplicate RAF/render 0、camera recovery 9、rapid recovery 0、browser errors 0。
+- `C2C_READY_FOR_FINAL_OWNER_ACCEPTANCE`；未 merge、未 push、未 deploy、未開始 C3。
+
+## CS-C2C 正式關閉／main integration／Pages deploy（2026-08-27）
+
+### Release boundary
+
+- 以最新 `origin/main` `07a86c7` 為基線，`feature/cs-c2c-character-art` fast-forward 併入乾淨 `main`，無內容衝突；本輪未重做 C2C，也未開始 C3。
+- C2C art 與 owner evidence release commit：`964d80b`；只包含已驗收的 tactical character presentation、weapon readability、runtime evidence 與更新後 captures。
+
+### Final verification
+
+- Static／P0：C2C `9/9`、Renderer `24/24`、CS-A2 `10/10`、C2A `13/13`、C2B `14/14`、CS23 `28/28`、Camera `8/8`、RAF `7/7`、StableCanvas `5/5`，全部 PASS。
+- Production build PASS；production Battle smoke PASS；main runtime PASS：hit `Hit_Chest → Walk_Loop → fire/death`、兩次角色卡 focus 穩定追蹤、10/10 rigged、Blue 5／Red 5、browser errors 0。
+- 180 秒 long-run PASS：`1644` samples、`338` fIdx transitions、StableCanvas shifts `0`、stale mismatch `0`、duplicate RAF/render `0`、camera recovery `9`、rapid recovery `0`、browser errors `0`。
+
+### Deployment
+
+- `git push origin main`：`07a86c7..964d80b` 成功。
+- GitHub Pages run `32997810398`（head `964d80b`）success；正式站 <https://rayhuang0323.github.io/ESMO-/> HTTP 200，entry bundle 已核對為本 release build。
+- C2C status：`C2C_CLOSED`；C3 status：`NOT_STARTED`。Minor debt 只保留 stylized low-poly fidelity 與 Android 真機視覺／FPS／觸控／熱節流驗收。
+
+## CS-C3 Mirage 地圖／環境品質 vertical slice（2026-08-27）
+
+- 基線為 C2C CLOSED main `1a1428819fe9e5b96eddc15950142272f47b4d75`；在 `feature/cs-c3-environment-slice` 獨立 worktree 實作，範圍鎖定 Mirage `A Site + Mid + Connector`。
+- 只新增 `fpsMapEnvironment.js` decoration layer 與 owner/runtime verifier；沒有修改 gameplay balance、Competition、Training、weapon stats、collision、route 或 `StableCanvasRegion`。
+- 三區新增可讀地標與環境 detail：PBR-style Standard materials、concrete/asphalt/wood/metal/glass、facade/window/door、awning、arch、curbs、cover、crates/pallets、lamps、pipes、zone labels；環境 summary 為 102 meshes／1,494 triangles。
+- Static gates 全 PASS：Renderer 24/24、CS-A2 10/10、C2A 13/13、C2B 14/14、CS23 28/28、Camera 8/8、RAF 7/7、StableCanvas 5/5、C2C 9/9、C3 14/14。
+- Production build PASS（2742 modules）；Battle runtime smoke PASS（10/10 rigged、Blue/Red 5v5、三區可見、browser errors 0）；180 秒 long-run PASS（1733 samples、StableCanvas shifts 0、stale fIdx 0、duplicate RAF/render 0、rapid recovery 0、browser errors 0）。
+- Owner preview：`http://127.0.0.1:5395/ESMO-/artifacts/cs-c3/mirage-a-mid-connector/owner-review.html`。狀態：`C3_VERTICAL_SLICE_READY_FOR_OWNER_ACCEPTANCE`；未 merge、未 push、未 deploy。
+
+## CS-C3 第二輪：Mirage 有感環境與全場視角強化（2026-08-27）
+
+### Owner feedback → 修正
+
+- 原問題不是缺少零碎 props，而是 A Site／Mid／Connector 的大型視覺層級、材質對比與地標不足，且基線色調偏暗。這輪保留第一輪 environment owner，只補連續場景結構與可讀性，不重做整張地圖。
+- 三區新增 courtyard／plaza 邊界、facade band、柱列／parapet、門窗／遮棚、屋頂設備、入口框架、路面分格／標線、bollard、架空線、直式地標；Mirage floor、fog、exposure、ambient／hemisphere／rim／zone fill 調亮，降低地面 vignette。
+- 新增三個 Battle camera preset：高位上帝、中高位全場總覽、側上方戰術總覽。高位模式讓既有牆體保留輪廓但淡化，並隱藏 C3 薄 façade structure；不是改 collision，也不建立第二套地圖真相。
+- Owner review 頁面改為全中文說明、區域名稱、功能／驗收說明與視角切換按鈕；Battle 本身也有三個可操作的相機按鈕。
+
+### 驗收結果
+
+- Browser runtime：A Site 65、Mid 72、Connector 56 meshes；environment 193 meshes／2,996 estimated triangles／21 material families；10/10 rigged，Blue／Red 5v5；三個視角切換與 viewport visibility check 全 PASS。
+- Static gates：Renderer 24/24、CS-A2 10/10、C2A 13/13、C2B 14/14、CS23 28/28、Camera recovery 8/8、RAF 7/7、StableCanvas 5/5、C2C 9/9、C3 18/18 全 PASS。
+- Production build：PASS，2742 modules transformed；Battle smoke：PASS；180 秒 long-run：PASS，1,704 samples、StableCanvas shift 0、stale mismatch 0、duplicate RAF/render 0、camera recovery 9、rapid recovery 0、browser errors 0。
+
+### Git boundary / handoff
+
+- 本輪只在 `feature/cs-c3-environment-slice` worktree；未 merge、未 push、未 deploy，未開始 C4。
+- 狀態：`C3_VERTICAL_SLICE_READY_FOR_OWNER_ACCEPTANCE`。
+- Owner preview：`http://127.0.0.1:5395/ESMO-/artifacts/cs-c3/mirage-a-mid-connector/owner-review.html`。
+
+## CS-C3 正式收尾驗證（2026-08-27）
+
+- Owner 已正式接受 C3 vertical slice。本輪只做 release closeout，不增加新的 C3 美術內容；以最新 `origin/main @ 1a1428819fe9e5b96eddc15950142272f47b4d75` 整合已驗收 C3 `aac1ac4`，fast-forward、無衝突。
+- C3 保留既有 P0／C2C contract。最新 Battle runtime 為 A Site `65`、Mid `72`、Connector `56` meshes；environment `193 meshes / 2,996 triangles / 21 material families`；10/10 rigged、Blue／Red 5v5。
+- Static gates：Renderer `24/24`、CS-A2 `10/10`、C2A `13/13`、C2B `14/14`、CS23 `28/28`、Camera `8/8`、RAF `7/7`、StableCanvas `5/5`、C2C `9/9`、C3 `18/18`，全 PASS。Production build、Battle smoke、180 秒 long-run 亦 PASS；long-run `1,727` samples、geometry shifts `0`、stale mismatch `0`、duplicate RAF/render `0`、camera recovery `9`、rapid recovery `0`、browser errors `0`。
+- Pages workflow `33006989567`（head `cfd7d68`）success；正式站 production Battle smoke PASS（canvas `430x507`、三個 camera preset controls 可用、console/page errors `0`）。C3 正式標記為 `C3_CLOSED / OWNER_ACCEPTED`；下一階段不在本 Sprint 開工。
+## Sprint CS-C4B｜兩張 CS 地圖環境完成（2026-08-27）
+
+- **目標**：以 Mirage C3/C4A 已驗證的 environment production method 完成 Dust II 與 Inferno，保持 map-specific identity，不複製 Mirage placement/造型。
+- **完成**：Dust II 沙岩／塵土／藍綠導視，完成 A/B Site、Mid、Long、B Tunnel、Catwalk、spawns 與 connectors；Inferno 陶土／紅瓦／橄欖綠，完成 A/B Site、Banana、Arch、Apartments、B Top、Pit/Cemetery、spawns 與 connectors。
+- **保護**：environment 僅掛入 presentation group；未改 `map.walls`、raycast/gameplay、weapon stats、MatchSession、Competition、Training 或 C2C character/animation。
+- **效能**：Mirage 333/4,736、Dust II 235/3,134、Inferno 288/3,998 environment mesh/estimated triangles；各圖使用 geometry cache 與有限 material family。
+- **驗證**：Renderer 24/24、CS-A2 10/10、C2A 13/13、C2B 14/14、CS23 28/28、Camera 8/8、RAF 7/7、StableCanvas 5/5、C2C 9/9、C3 18/18、C4A 13/13、C4B 20/20；browser map 3/3、production build、desktop/mobile smoke、180 秒 long-run 全 PASS。
+- **狀態**：`C4B_TWO_MAPS_READY_FOR_OWNER_ACCEPTANCE`；未 merge、未 push、未 deploy；下一階段 C5 不啟動。
+
+## CS-C4B / C4 正式收尾（Owner accepted）
+
+- 狀態：`OWNER_ACCEPTED / CLOSED`
+- 以最新 `origin/main` 為基線整合已驗收的 Mirage、Dust II、Inferno environment；只保留必要的 C4B source、verifier、Owner Review 與 handoff 變更。
+- 完成完整 regression、production build、Battle/browser smoke、390px smoke、三圖 map/camera/character visibility 與 180 秒 long-run 後才進行 main push、Pages deploy。
+- 未開始 C5，未變更 gameplay、weapon stats、Competition、Training、Season 或無關 technical debt。

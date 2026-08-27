@@ -1,0 +1,2630 @@
+{
+  "version": "cs-c2c-runtime-evidence.v1",
+  "capturedAt": "2026-08-26T18:00:18.719Z",
+  "app": "http://127.0.0.1:5387/ESMO-/?fpsRigged=all&fpsC2cHero=all",
+  "orientation": {
+    "frameSamples": 35,
+    "movingSamples": 339,
+    "runningSamples": 182,
+    "rootBody": {
+      "count": 350,
+      "min": 1,
+      "avg": 1,
+      "max": 1
+    },
+    "rootKit": {
+      "count": 350,
+      "min": 0.814,
+      "avg": 0.9034,
+      "max": 0.9968
+    },
+    "rootWeapon": {
+      "count": 350,
+      "min": 0.765,
+      "avg": 0.8708,
+      "max": 0.9873
+    },
+    "runBodyMotion": {
+      "count": 182,
+      "min": -0.9544,
+      "avg": 0.9307,
+      "max": 1
+    },
+    "runKitMotion": {
+      "count": 182,
+      "min": -0.7923,
+      "avg": 0.7725,
+      "max": 0.9499
+    },
+    "runWeaponMotion": {
+      "count": 182,
+      "min": -0.7476,
+      "avg": 0.7287,
+      "max": 0.922
+    }
+  },
+  "hitReaction": {
+    "candidate": {
+      "frameIndex": 21,
+      "id": "t1",
+      "previousHp": 100,
+      "hp": 45,
+      "round": 0
+    },
+    "samples": [
+      {
+        "id": "t1",
+        "frame": 21,
+        "playing": false,
+        "currentClip": "Hit_Chest",
+        "currentClipTime": 0.0499,
+        "hitTimer": 0.32,
+        "hitFrame": 21,
+        "animation": "hit"
+      },
+      {
+        "id": "t1",
+        "frame": 21,
+        "playing": false,
+        "currentClip": "Hit_Chest",
+        "currentClipTime": 0.1499,
+        "hitTimer": 0.22,
+        "hitFrame": 21,
+        "animation": "hit"
+      },
+      {
+        "id": "t1",
+        "frame": 21,
+        "playing": true,
+        "currentClip": "Hit_Chest",
+        "currentClipTime": 0.2999,
+        "hitTimer": 0.07,
+        "hitFrame": 21,
+        "animation": "hit"
+      },
+      {
+        "id": "t1",
+        "frame": 21,
+        "playing": true,
+        "currentClip": "Walk_Loop",
+        "currentClipTime": 0.15,
+        "hitTimer": 0,
+        "hitFrame": 21,
+        "animation": "hit"
+      },
+      {
+        "id": "t1",
+        "frame": 22,
+        "playing": true,
+        "currentClip": "Pistol_Shoot",
+        "currentClipTime": 0.05,
+        "hitTimer": 0,
+        "hitFrame": 21,
+        "animation": "fire"
+      },
+      {
+        "id": "t1",
+        "frame": 22,
+        "playing": true,
+        "currentClip": "Walk_Loop",
+        "currentClipTime": 0.1999,
+        "hitTimer": 0,
+        "hitFrame": 21,
+        "animation": "fire"
+      },
+      {
+        "id": "t1",
+        "frame": 23,
+        "playing": true,
+        "currentClip": "Death01",
+        "currentClipTime": 0.05,
+        "hitTimer": 0,
+        "hitFrame": 21,
+        "animation": "death"
+      }
+    ],
+    "hitSamples": 3,
+    "timeProgress": true,
+    "timerProgress": true,
+    "exitsHit": true
+  },
+  "focusCamera": {
+    "method": "player-card-dom-click",
+    "ids": [
+      "t2",
+      "t4"
+    ],
+    "first": {
+      "ok": true,
+      "id": "t2",
+      "text": "埋 Nacht 🔫P250 ⚡🌫 $0 0/0/0 K / D / A"
+    },
+    "second": {
+      "ok": true,
+      "id": "t4",
+      "text": "狙 Blitz 🔫Deagle $100 0/0/0 K / D / A"
+    },
+    "firstSamples": [
+      {
+        "id": "t2",
+        "selected": "t2",
+        "chase": {
+          "id": "t2",
+          "alive": true
+        },
+        "radius": 24.714213420184922,
+        "dRadius": 9.5,
+        "rapidRecovery": 0,
+        "visible": true,
+        "ndc": {
+          "x": 0.1418647562310908,
+          "y": -0.5533674381701247,
+          "z": 0.9902952700029714
+        },
+        "canvas": {
+          "width": 430,
+          "height": 507
+        }
+      },
+      {
+        "id": "t2",
+        "selected": "t2",
+        "chase": {
+          "id": "t2",
+          "alive": true
+        },
+        "radius": 13.644458124737689,
+        "dRadius": 9.5,
+        "rapidRecovery": 0,
+        "visible": true,
+        "ndc": {
+          "x": 0.0363167739872634,
+          "y": -0.594155110292507,
+          "z": 0.9825282848598864
+        },
+        "canvas": {
+          "width": 430,
+          "height": 507
+        }
+      },
+      {
+        "id": "t2",
+        "selected": "t2",
+        "chase": {
+          "id": "t2",
+          "alive": true
+        },
+        "radius": 9.925973014652367,
+        "dRadius": 9.5,
+        "rapidRecovery": 0,
+        "visible": true,
+        "ndc": {
+          "x": -0.005306228647778144,
+          "y": -0.6315170433279645,
+          "z": 0.9763821668692647
+        },
+        "canvas": {
+          "width": 430,
+          "height": 507
+        }
+      },
+      {
+        "id": "t2",
+        "selected": "t2",
+        "chase": {
+          "id": "t2",
+          "alive": true
+        },
+        "radius": 9.560563290797784,
+        "dRadius": 9.5,
+        "rapidRecovery": 0,
+        "visible": true,
+        "ndc": {
+          "x": -0.00723972369494384,
+          "y": -0.6369644364537189,
+          "z": 0.9755417389520336
+        },
+        "canvas": {
+          "width": 430,
+          "height": 507
+        }
+      },
+      {
+        "id": "t2",
+        "selected": "t2",
+        "chase": {
+          "id": "t2",
+          "alive": true
+        },
+        "radius": 9.507729652284718,
+        "dRadius": 9.5,
+        "rapidRecovery": 0,
+        "visible": true,
+        "ndc": {
+          "x": -0.0016403232772472735,
+          "y": -0.6381925018841806,
+          "z": 0.9754102043811358
+        },
+        "canvas": {
+          "width": 430,
+          "height": 507
+        }
+      },
+      {
+        "id": "t2",
+        "selected": "t2",
+        "chase": {
+          "id": "t2",
+          "alive": true
+        },
+        "radius": 9.50088559175658,
+        "dRadius": 9.5,
+        "rapidRecovery": 0,
+        "visible": true,
+        "ndc": {
+          "x": -0.0009139073950839916,
+          "y": -0.6383742808019512,
+          "z": 0.9753927883253425
+        },
+        "canvas": {
+          "width": 430,
+          "height": 507
+        }
+      }
+    ],
+    "secondSamples": [
+      {
+        "id": "t4",
+        "selected": "t4",
+        "chase": {
+          "id": "t4",
+          "alive": true
+        },
+        "radius": 7.78462868798366,
+        "dRadius": 7.5,
+        "rapidRecovery": 0,
+        "visible": true,
+        "ndc": {
+          "x": -0.11259577351603356,
+          "y": -0.02355196307682107,
+          "z": 0.9807792919295915
+        },
+        "canvas": {
+          "width": 430,
+          "height": 507
+        }
+      },
+      {
+        "id": "t4",
+        "selected": "t4",
+        "chase": {
+          "id": "t4",
+          "alive": true
+        },
+        "radius": 7.550250710848127,
+        "dRadius": 7.5,
+        "rapidRecovery": 0,
+        "visible": true,
+        "ndc": {
+          "x": -0.07149894218783671,
+          "y": -0.4636617070456327,
+          "z": 0.9728640419813899
+        },
+        "canvas": {
+          "width": 430,
+          "height": 507
+        }
+      },
+      {
+        "id": "t4",
+        "selected": "t4",
+        "chase": {
+          "id": "t4",
+          "alive": true
+        },
+        "radius": 7.504633373017816,
+        "dRadius": 7.5,
+        "rapidRecovery": 0,
+        "visible": true,
+        "ndc": {
+          "x": -0.05652704994087026,
+          "y": -0.5926335400653052,
+          "z": 0.9705078969829326
+        },
+        "canvas": {
+          "width": 430,
+          "height": 507
+        }
+      },
+      {
+        "id": "t4",
+        "selected": "t4",
+        "chase": {
+          "id": "t4",
+          "alive": true
+        },
+        "radius": 7.500476224348999,
+        "dRadius": 7.5,
+        "rapidRecovery": 0,
+        "visible": true,
+        "ndc": {
+          "x": -0.03819728249072498,
+          "y": -0.6136160801870755,
+          "z": 0.9701320734785606
+        },
+        "canvas": {
+          "width": 430,
+          "height": 507
+        }
+      },
+      {
+        "id": "t4",
+        "selected": "t4",
+        "chase": {
+          "id": "t4",
+          "alive": true
+        },
+        "radius": 7.500039443201491,
+        "dRadius": 7.5,
+        "rapidRecovery": 0,
+        "visible": true,
+        "ndc": {
+          "x": 0.04042733684227833,
+          "y": -0.6469850583026917,
+          "z": 0.9695541897937761
+        },
+        "canvas": {
+          "width": 430,
+          "height": 507
+        }
+      }
+    ],
+    "firstStable": true,
+    "secondStable": true,
+    "beforeRapid": 0,
+    "afterRapid": 0,
+    "closeButton": true
+  },
+  "renderer": {
+    "calls": 1081,
+    "triangles": 29966,
+    "geometries": 1252,
+    "textures": 45,
+    "players": 10,
+    "rigged": 10,
+    "mixers": 10
+  },
+  "visibility": {
+    "frameIndex": 91,
+    "round": 2,
+    "identity": {
+      "ok": true,
+      "complete": true,
+      "identityMiss": false,
+      "frameIds": [
+        "t1",
+        "t2",
+        "t3",
+        "t4",
+        "t5",
+        "ct1",
+        "ct2",
+        "ct3",
+        "ct4",
+        "ct5"
+      ],
+      "rendererIds": [
+        "t1",
+        "t2",
+        "t3",
+        "t4",
+        "t5",
+        "ct1",
+        "ct2",
+        "ct3",
+        "ct4",
+        "ct5"
+      ],
+      "missingRenderer": [],
+      "missingFrame": [],
+      "duplicateFrameIds": [],
+      "duplicateRendererIds": [],
+      "invalidFrameIds": [],
+      "invalidRendererIds": [],
+      "frameSides": {
+        "t": 5,
+        "ct": 5
+      },
+      "rendererSides": {
+        "t": 5,
+        "ct": 5
+      }
+    },
+    "scene": {
+      "visible": true,
+      "playerGroupVisible": true
+    },
+    "camera": {
+      "position": {
+        "x": -72.29147960220448,
+        "y": 85.35912353339712,
+        "z": -9.271284177617524
+      },
+      "near": 0.1,
+      "far": 600,
+      "recoveryCount": 2
+    },
+    "teams": {
+      "total": 10,
+      "teams": {
+        "t": {
+          "authoritative": 5,
+          "entities": 5,
+          "visibleRoots": 5,
+          "visibleBodies": 5,
+          "sceneBodies": 5,
+          "bodyVisibleFlags": 5,
+          "readableBodies": 5,
+          "visiblePresentation": 5,
+          "alive": 5,
+          "dead": 0,
+          "finiteTransforms": 5,
+          "finiteBodyTransforms": 5,
+          "inCameraFrustum": 5,
+          "inCameraViewport": 5,
+          "occludedByWall": 5,
+          "identityMisses": 0,
+          "hiddenReasons": {}
+        },
+        "ct": {
+          "authoritative": 5,
+          "entities": 5,
+          "visibleRoots": 5,
+          "visibleBodies": 5,
+          "sceneBodies": 5,
+          "bodyVisibleFlags": 5,
+          "readableBodies": 5,
+          "visiblePresentation": 5,
+          "alive": 5,
+          "dead": 0,
+          "finiteTransforms": 5,
+          "finiteBodyTransforms": 5,
+          "inCameraFrustum": 5,
+          "inCameraViewport": 5,
+          "occludedByWall": 5,
+          "identityMisses": 0,
+          "hiddenReasons": {}
+        }
+      },
+      "blue": {
+        "authoritative": 5,
+        "entities": 5,
+        "visibleRoots": 5,
+        "visibleBodies": 5,
+        "sceneBodies": 5,
+        "bodyVisibleFlags": 5,
+        "readableBodies": 5,
+        "visiblePresentation": 5,
+        "alive": 5,
+        "dead": 0,
+        "finiteTransforms": 5,
+        "finiteBodyTransforms": 5,
+        "inCameraFrustum": 5,
+        "inCameraViewport": 5,
+        "occludedByWall": 5,
+        "identityMisses": 0,
+        "hiddenReasons": {}
+      },
+      "red": {
+        "authoritative": 5,
+        "entities": 5,
+        "visibleRoots": 5,
+        "visibleBodies": 5,
+        "sceneBodies": 5,
+        "bodyVisibleFlags": 5,
+        "readableBodies": 5,
+        "visiblePresentation": 5,
+        "alive": 5,
+        "dead": 0,
+        "finiteTransforms": 5,
+        "finiteBodyTransforms": 5,
+        "inCameraFrustum": 5,
+        "inCameraViewport": 5,
+        "occludedByWall": 5,
+        "identityMisses": 0,
+        "hiddenReasons": {}
+      },
+      "ok": true
+    },
+    "check": {
+      "ok": true,
+      "summary": {
+        "total": 10,
+        "teams": {
+          "t": {
+            "authoritative": 5,
+            "entities": 5,
+            "visibleRoots": 5,
+            "visibleBodies": 5,
+            "sceneBodies": 5,
+            "bodyVisibleFlags": 5,
+            "readableBodies": 5,
+            "visiblePresentation": 5,
+            "alive": 5,
+            "dead": 0,
+            "finiteTransforms": 5,
+            "finiteBodyTransforms": 5,
+            "inCameraFrustum": 5,
+            "inCameraViewport": 5,
+            "occludedByWall": 5,
+            "identityMisses": 0,
+            "hiddenReasons": {}
+          },
+          "ct": {
+            "authoritative": 5,
+            "entities": 5,
+            "visibleRoots": 5,
+            "visibleBodies": 5,
+            "sceneBodies": 5,
+            "bodyVisibleFlags": 5,
+            "readableBodies": 5,
+            "visiblePresentation": 5,
+            "alive": 5,
+            "dead": 0,
+            "finiteTransforms": 5,
+            "finiteBodyTransforms": 5,
+            "inCameraFrustum": 5,
+            "inCameraViewport": 5,
+            "occludedByWall": 5,
+            "identityMisses": 0,
+            "hiddenReasons": {}
+          }
+        },
+        "blue": {
+          "authoritative": 5,
+          "entities": 5,
+          "visibleRoots": 5,
+          "visibleBodies": 5,
+          "sceneBodies": 5,
+          "bodyVisibleFlags": 5,
+          "readableBodies": 5,
+          "visiblePresentation": 5,
+          "alive": 5,
+          "dead": 0,
+          "finiteTransforms": 5,
+          "finiteBodyTransforms": 5,
+          "inCameraFrustum": 5,
+          "inCameraViewport": 5,
+          "occludedByWall": 5,
+          "identityMisses": 0,
+          "hiddenReasons": {}
+        },
+        "red": {
+          "authoritative": 5,
+          "entities": 5,
+          "visibleRoots": 5,
+          "visibleBodies": 5,
+          "sceneBodies": 5,
+          "bodyVisibleFlags": 5,
+          "readableBodies": 5,
+          "visiblePresentation": 5,
+          "alive": 5,
+          "dead": 0,
+          "finiteTransforms": 5,
+          "finiteBodyTransforms": 5,
+          "inCameraFrustum": 5,
+          "inCameraViewport": 5,
+          "occludedByWall": 5,
+          "identityMisses": 0,
+          "hiddenReasons": {}
+        },
+        "ok": true
+      },
+      "aliveHidden": [],
+      "aliveBodyHidden": [],
+      "identityMisses": [],
+      "nonFiniteTransforms": [],
+      "nonFiniteBodyTransforms": [],
+      "aliveOffCamera": [],
+      "wholeTeamOffCamera": []
+    },
+    "players": [
+      {
+        "id": "t1",
+        "team": "t",
+        "authoritativePresent": true,
+        "authoritativeAlive": true,
+        "framePosition": {
+          "x": 56.533639883338545,
+          "y": 57.884868893544564
+        },
+        "entityExists": true,
+        "entityType": "rigged",
+        "rootVisible": true,
+        "parentVisible": true,
+        "bodyVisible": true,
+        "sceneBodyPresent": true,
+        "sceneBodyVisibleFlag": true,
+        "screenBodyReadable": true,
+        "screenBodyFootprint": {
+          "present": true,
+          "widthPx": 9.855,
+          "heightPx": 10.284,
+          "inViewport": true,
+          "depthVisible": true,
+          "ndcBounds": {
+            "x0": 0.368,
+            "x1": 0.414,
+            "y0": -0.189,
+            "y1": -0.148,
+            "z0": 0.999,
+            "z1": 0.999
+          },
+          "readable": true
+        },
+        "bodyTransform": {
+          "exists": true,
+          "visible": true,
+          "matrixFinite": true,
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 1.076,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bounds": {
+            "min": {
+              "x": 6.423,
+              "y": -0.004,
+              "z": 5.777
+            },
+            "max": {
+              "x": 7.708,
+              "y": 1.83,
+              "z": 7.959
+            }
+          },
+          "boundsFinite": true
+        },
+        "primitiveTransform": {
+          "exists": true,
+          "visible": false,
+          "matrixFinite": true,
+          "position": {
+            "x": 0,
+            "y": -0.034,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 1.076,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bounds": {
+            "min": {
+              "x": 6.44,
+              "y": 0.086,
+              "z": -1.824
+            },
+            "max": {
+              "x": 11.839,
+              "y": 1.576,
+              "z": 7.596
+            }
+          },
+          "boundsFinite": true
+        },
+        "bodyTransformFinite": true,
+        "bodyFacingDegrees": -61.65337377108957,
+        "bodyRenderable": true,
+        "primitiveBodyVisible": false,
+        "primitiveBodyRenderable": true,
+        "bodyRenderableCount": 116,
+        "visibleBodyRenderableCount": 113,
+        "bodyMaterialVisible": true,
+        "bodyParts": {
+          "torso": {
+            "exists": true,
+            "visible": false,
+            "renderable": 1,
+            "visibleRenderable": 1,
+            "materialVisible": 1
+          },
+          "head": {
+            "exists": true,
+            "visible": false,
+            "renderable": 1,
+            "visibleRenderable": 1,
+            "materialVisible": 1
+          },
+          "limbs": {
+            "exists": true,
+            "visible": false,
+            "renderable": 4,
+            "visibleRenderable": 4,
+            "materialVisible": 4
+          },
+          "weapon": {
+            "exists": true,
+            "visible": false,
+            "renderable": 6,
+            "visibleRenderable": 6,
+            "materialVisible": 6
+          }
+        },
+        "riggedRootVisible": true,
+        "presentationVisible": true,
+        "visibilityReason": "visible",
+        "identityMiss": false,
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "worldPosition": {
+          "x": 6.977341991859589,
+          "y": 0,
+          "z": 7.062918106379932
+        },
+        "transformFinite": true,
+        "matrixWorldFinite": true,
+        "frustumCulled": 116,
+        "inCameraFrustum": true,
+        "inCameraViewport": true,
+        "screenNdc": {
+          "x": 0.398156852364083,
+          "y": -0.18272383496083203,
+          "z": 0.9986144704578077
+        },
+        "occludedByWall": true,
+        "renderableCount": 116,
+        "visibleRenderableCount": 113,
+        "materialVisible": true,
+        "materialOpacity": {
+          "min": 1,
+          "max": 1
+        },
+        "deathPresentation": false,
+        "animationState": null,
+        "fallbackMode": "primitive",
+        "riggedActive": true,
+        "occlusion": {
+          "mode": "wall-fade-only",
+          "wallFadeActive": true,
+          "playerFadeApplied": false
+        }
+      },
+      {
+        "id": "t2",
+        "team": "t",
+        "authoritativePresent": true,
+        "authoritativeAlive": true,
+        "framePosition": {
+          "x": 43.27494672504222,
+          "y": 74.16781745056416
+        },
+        "entityExists": true,
+        "entityType": "rigged",
+        "rootVisible": true,
+        "parentVisible": true,
+        "bodyVisible": true,
+        "sceneBodyPresent": true,
+        "sceneBodyVisibleFlag": true,
+        "screenBodyReadable": true,
+        "screenBodyFootprint": {
+          "present": true,
+          "widthPx": 12.838,
+          "heightPx": 11.211,
+          "inViewport": true,
+          "depthVisible": true,
+          "ndcBounds": {
+            "x0": 0.86,
+            "x1": 0.92,
+            "y0": -0.43,
+            "y1": -0.386,
+            "z0": 0.998,
+            "z1": 0.998
+          },
+          "readable": true
+        },
+        "bodyTransform": {
+          "exists": true,
+          "visible": true,
+          "matrixFinite": true,
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 1.332,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bounds": {
+            "min": {
+              "x": -6.965,
+              "y": -0.049,
+              "z": 21.503
+            },
+            "max": {
+              "x": -6.16,
+              "y": 1.83,
+              "z": 23.954
+            }
+          },
+          "boundsFinite": true
+        },
+        "primitiveTransform": {
+          "exists": true,
+          "visible": false,
+          "matrixFinite": true,
+          "position": {
+            "x": 0,
+            "y": 0.02,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 1.332,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bounds": {
+            "min": {
+              "x": -7.019,
+              "y": 0.14,
+              "z": 13.199
+            },
+            "max": {
+              "x": -4.08,
+              "y": 1.63,
+              "z": 23.486
+            }
+          },
+          "boundsFinite": true
+        },
+        "bodyTransformFinite": true,
+        "bodyFacingDegrees": -76.49032337269401,
+        "bodyRenderable": true,
+        "primitiveBodyVisible": false,
+        "primitiveBodyRenderable": true,
+        "bodyRenderableCount": 116,
+        "visibleBodyRenderableCount": 113,
+        "bodyMaterialVisible": true,
+        "bodyParts": {
+          "torso": {
+            "exists": true,
+            "visible": false,
+            "renderable": 1,
+            "visibleRenderable": 1,
+            "materialVisible": 1
+          },
+          "head": {
+            "exists": true,
+            "visible": false,
+            "renderable": 1,
+            "visibleRenderable": 1,
+            "materialVisible": 1
+          },
+          "limbs": {
+            "exists": true,
+            "visible": false,
+            "renderable": 4,
+            "visibleRenderable": 4,
+            "materialVisible": 4
+          },
+          "weapon": {
+            "exists": true,
+            "visible": false,
+            "renderable": 6,
+            "visibleRenderable": 6,
+            "materialVisible": 6
+          }
+        },
+        "riggedRootVisible": true,
+        "presentationVisible": true,
+        "visibilityReason": "visible",
+        "identityMiss": false,
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "worldPosition": {
+          "x": -6.538062536895808,
+          "y": 0,
+          "z": 23.012171847078804
+        },
+        "transformFinite": true,
+        "matrixWorldFinite": true,
+        "frustumCulled": 116,
+        "inCameraFrustum": true,
+        "inCameraViewport": true,
+        "screenNdc": {
+          "x": 0.8996591348707474,
+          "y": -0.42029726897794956,
+          "z": 0.9984582162420013
+        },
+        "occludedByWall": true,
+        "renderableCount": 116,
+        "visibleRenderableCount": 113,
+        "materialVisible": true,
+        "materialOpacity": {
+          "min": 1,
+          "max": 1
+        },
+        "deathPresentation": false,
+        "animationState": null,
+        "fallbackMode": "primitive",
+        "riggedActive": true,
+        "occlusion": {
+          "mode": "wall-fade-only",
+          "wallFadeActive": true,
+          "playerFadeApplied": false
+        }
+      },
+      {
+        "id": "t3",
+        "team": "t",
+        "authoritativePresent": true,
+        "authoritativeAlive": true,
+        "framePosition": {
+          "x": 56.85307641594273,
+          "y": 56.02747598749187
+        },
+        "entityExists": true,
+        "entityType": "rigged",
+        "rootVisible": true,
+        "parentVisible": true,
+        "bodyVisible": true,
+        "sceneBodyPresent": true,
+        "sceneBodyVisibleFlag": true,
+        "screenBodyReadable": true,
+        "screenBodyFootprint": {
+          "present": true,
+          "widthPx": 9.669,
+          "heightPx": 10.223,
+          "inViewport": true,
+          "depthVisible": true,
+          "ndcBounds": {
+            "x0": 0.31,
+            "x1": 0.355,
+            "y0": -0.183,
+            "y1": -0.143,
+            "z0": 0.999,
+            "z1": 0.999
+          },
+          "readable": true
+        },
+        "bodyTransform": {
+          "exists": true,
+          "visible": true,
+          "matrixFinite": true,
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 1.084,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bounds": {
+            "min": {
+              "x": 6.817,
+              "y": -0.004,
+              "z": 3.602
+            },
+            "max": {
+              "x": 8.087,
+              "y": 1.83,
+              "z": 5.791
+            }
+          },
+          "boundsFinite": true
+        },
+        "primitiveTransform": {
+          "exists": true,
+          "visible": false,
+          "matrixFinite": true,
+          "position": {
+            "x": 0,
+            "y": 0.002,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 1.084,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bounds": {
+            "min": {
+              "x": 6.83,
+              "y": 0.122,
+              "z": -4.03
+            },
+            "max": {
+              "x": 12.161,
+              "y": 1.612,
+              "z": 5.424
+            }
+          },
+          "boundsFinite": true
+        },
+        "bodyTransformFinite": true,
+        "bodyFacingDegrees": -62.829383728762615,
+        "bodyRenderable": true,
+        "primitiveBodyVisible": false,
+        "primitiveBodyRenderable": true,
+        "bodyRenderableCount": 116,
+        "visibleBodyRenderableCount": 113,
+        "bodyMaterialVisible": true,
+        "bodyParts": {
+          "torso": {
+            "exists": true,
+            "visible": false,
+            "renderable": 1,
+            "visibleRenderable": 1,
+            "materialVisible": 1
+          },
+          "head": {
+            "exists": true,
+            "visible": false,
+            "renderable": 1,
+            "visibleRenderable": 1,
+            "materialVisible": 1
+          },
+          "limbs": {
+            "exists": true,
+            "visible": false,
+            "renderable": 4,
+            "visibleRenderable": 4,
+            "materialVisible": 4
+          },
+          "weapon": {
+            "exists": true,
+            "visible": false,
+            "renderable": 6,
+            "visibleRenderable": 6,
+            "materialVisible": 6
+          }
+        },
+        "riggedRootVisible": true,
+        "presentationVisible": true,
+        "visibilityReason": "visible",
+        "identityMiss": false,
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "worldPosition": {
+          "x": 7.365595679960684,
+          "y": 0,
+          "z": 4.892423053038819
+        },
+        "transformFinite": true,
+        "matrixWorldFinite": true,
+        "frustumCulled": 116,
+        "inCameraFrustum": true,
+        "inCameraViewport": true,
+        "screenNdc": {
+          "x": 0.33995713526207816,
+          "y": -0.17692316446689701,
+          "z": 0.9986182856117323
+        },
+        "occludedByWall": true,
+        "renderableCount": 116,
+        "visibleRenderableCount": 113,
+        "materialVisible": true,
+        "materialOpacity": {
+          "min": 1,
+          "max": 1
+        },
+        "deathPresentation": false,
+        "animationState": null,
+        "fallbackMode": "primitive",
+        "riggedActive": true,
+        "occlusion": {
+          "mode": "wall-fade-only",
+          "wallFadeActive": true,
+          "playerFadeApplied": false
+        }
+      },
+      {
+        "id": "t4",
+        "team": "t",
+        "authoritativePresent": true,
+        "authoritativeAlive": true,
+        "framePosition": {
+          "x": 55.8589557278896,
+          "y": 55.800019971665655
+        },
+        "entityExists": true,
+        "entityType": "rigged",
+        "rootVisible": true,
+        "parentVisible": true,
+        "bodyVisible": true,
+        "sceneBodyPresent": true,
+        "sceneBodyVisibleFlag": true,
+        "screenBodyReadable": true,
+        "screenBodyFootprint": {
+          "present": true,
+          "widthPx": 10.536,
+          "heightPx": 11.387,
+          "inViewport": true,
+          "depthVisible": true,
+          "ndcBounds": {
+            "x0": 0.308,
+            "x1": 0.357,
+            "y0": -0.2,
+            "y1": -0.155,
+            "z0": 0.999,
+            "z1": 0.999
+          },
+          "readable": true
+        },
+        "bodyTransform": {
+          "exists": true,
+          "visible": true,
+          "matrixFinite": true,
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 1.006,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bounds": {
+            "min": {
+              "x": 5.771,
+              "y": -0.004,
+              "z": 3.675
+            },
+            "max": {
+              "x": 7.194,
+              "y": 1.83,
+              "z": 5.784
+            }
+          },
+          "boundsFinite": true
+        },
+        "primitiveTransform": {
+          "exists": true,
+          "visible": false,
+          "matrixFinite": true,
+          "position": {
+            "x": 0,
+            "y": -0.035,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 1.006,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bounds": {
+            "min": {
+              "x": 5.83,
+              "y": 0.085,
+              "z": -3.616
+            },
+            "max": {
+              "x": 11.849,
+              "y": 1.575,
+              "z": 5.455
+            }
+          },
+          "boundsFinite": true
+        },
+        "bodyTransformFinite": true,
+        "bodyFacingDegrees": -57.927265138896104,
+        "bodyRenderable": true,
+        "primitiveBodyVisible": false,
+        "primitiveBodyRenderable": true,
+        "bodyRenderableCount": 113,
+        "visibleBodyRenderableCount": 110,
+        "bodyMaterialVisible": true,
+        "bodyParts": {
+          "torso": {
+            "exists": true,
+            "visible": false,
+            "renderable": 1,
+            "visibleRenderable": 1,
+            "materialVisible": 1
+          },
+          "head": {
+            "exists": true,
+            "visible": false,
+            "renderable": 1,
+            "visibleRenderable": 1,
+            "materialVisible": 1
+          },
+          "limbs": {
+            "exists": true,
+            "visible": false,
+            "renderable": 4,
+            "visibleRenderable": 4,
+            "materialVisible": 4
+          },
+          "weapon": {
+            "exists": true,
+            "visible": false,
+            "renderable": 6,
+            "visibleRenderable": 6,
+            "materialVisible": 6
+          }
+        },
+        "riggedRootVisible": true,
+        "presentationVisible": true,
+        "visibilityReason": "visible",
+        "identityMiss": false,
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "worldPosition": {
+          "x": 6.377047890579078,
+          "y": 0,
+          "z": 4.910978236697609
+        },
+        "transformFinite": true,
+        "matrixWorldFinite": true,
+        "frustumCulled": 113,
+        "inCameraFrustum": true,
+        "inCameraViewport": true,
+        "screenNdc": {
+          "x": 0.342980022947826,
+          "y": -0.19317724857144297,
+          "z": 0.9986075951522712
+        },
+        "occludedByWall": true,
+        "renderableCount": 113,
+        "visibleRenderableCount": 110,
+        "materialVisible": true,
+        "materialOpacity": {
+          "min": 1,
+          "max": 1
+        },
+        "deathPresentation": false,
+        "animationState": null,
+        "fallbackMode": "primitive",
+        "riggedActive": true,
+        "occlusion": {
+          "mode": "wall-fade-only",
+          "wallFadeActive": true,
+          "playerFadeApplied": false
+        }
+      },
+      {
+        "id": "t5",
+        "team": "t",
+        "authoritativePresent": true,
+        "authoritativeAlive": true,
+        "framePosition": {
+          "x": 54.98909838120866,
+          "y": 56.28263403809304
+        },
+        "entityExists": true,
+        "entityType": "rigged",
+        "rootVisible": true,
+        "parentVisible": true,
+        "bodyVisible": true,
+        "sceneBodyPresent": true,
+        "sceneBodyVisibleFlag": true,
+        "screenBodyReadable": true,
+        "screenBodyFootprint": {
+          "present": true,
+          "widthPx": 9.409,
+          "heightPx": 10.935,
+          "inViewport": true,
+          "depthVisible": true,
+          "ndcBounds": {
+            "x0": 0.333,
+            "x1": 0.377,
+            "y0": -0.215,
+            "y1": -0.172,
+            "z0": 0.999,
+            "z1": 0.999
+          },
+          "readable": true
+        },
+        "bodyTransform": {
+          "exists": true,
+          "visible": true,
+          "matrixFinite": true,
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.972,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bounds": {
+            "min": {
+              "x": 4.859,
+              "y": -0.004,
+              "z": 4.34
+            },
+            "max": {
+              "x": 6.344,
+              "y": 1.83,
+              "z": 6.411
+            }
+          },
+          "boundsFinite": true
+        },
+        "primitiveTransform": {
+          "exists": true,
+          "visible": false,
+          "matrixFinite": true,
+          "position": {
+            "x": 0,
+            "y": 0.026,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.972,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bounds": {
+            "min": {
+              "x": 4.938,
+              "y": 0.146,
+              "z": -2.792
+            },
+            "max": {
+              "x": 11.24,
+              "y": 1.636,
+              "z": 6.098
+            }
+          },
+          "boundsFinite": true
+        },
+        "bodyTransformFinite": true,
+        "bodyFacingDegrees": -55.71306682310257,
+        "bodyRenderable": true,
+        "primitiveBodyVisible": false,
+        "primitiveBodyRenderable": true,
+        "bodyRenderableCount": 118,
+        "visibleBodyRenderableCount": 115,
+        "bodyMaterialVisible": true,
+        "bodyParts": {
+          "torso": {
+            "exists": true,
+            "visible": false,
+            "renderable": 1,
+            "visibleRenderable": 1,
+            "materialVisible": 1
+          },
+          "head": {
+            "exists": true,
+            "visible": false,
+            "renderable": 1,
+            "visibleRenderable": 1,
+            "materialVisible": 1
+          },
+          "limbs": {
+            "exists": true,
+            "visible": false,
+            "renderable": 4,
+            "visibleRenderable": 4,
+            "materialVisible": 4
+          },
+          "weapon": {
+            "exists": true,
+            "visible": false,
+            "renderable": 6,
+            "visibleRenderable": 6,
+            "materialVisible": 6
+          }
+        },
+        "riggedRootVisible": true,
+        "presentationVisible": true,
+        "visibilityReason": "visible",
+        "identityMiss": false,
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "worldPosition": {
+          "x": 5.488301699671645,
+          "y": 0,
+          "z": 5.550472700103498
+        },
+        "transformFinite": true,
+        "matrixWorldFinite": true,
+        "frustumCulled": 118,
+        "inCameraFrustum": true,
+        "inCameraViewport": true,
+        "screenNdc": {
+          "x": 0.36230314414918696,
+          "y": -0.2078002632192566,
+          "z": 0.998597977462078
+        },
+        "occludedByWall": true,
+        "renderableCount": 118,
+        "visibleRenderableCount": 115,
+        "materialVisible": true,
+        "materialOpacity": {
+          "min": 1,
+          "max": 1
+        },
+        "deathPresentation": false,
+        "animationState": null,
+        "fallbackMode": "primitive",
+        "riggedActive": true,
+        "occlusion": {
+          "mode": "wall-fade-only",
+          "wallFadeActive": true,
+          "playerFadeApplied": false
+        }
+      },
+      {
+        "id": "ct1",
+        "team": "ct",
+        "authoritativePresent": true,
+        "authoritativeAlive": true,
+        "framePosition": {
+          "x": 77.6022523051026,
+          "y": 28.46569345826803
+        },
+        "entityExists": true,
+        "entityType": "rigged",
+        "rootVisible": true,
+        "parentVisible": true,
+        "bodyVisible": true,
+        "sceneBodyPresent": true,
+        "sceneBodyVisibleFlag": true,
+        "screenBodyReadable": true,
+        "screenBodyFootprint": {
+          "present": true,
+          "widthPx": 8.246,
+          "heightPx": 10.845,
+          "inViewport": true,
+          "depthVisible": true,
+          "ndcBounds": {
+            "x0": -0.335,
+            "x1": -0.296,
+            "y0": 0.101,
+            "y1": 0.144,
+            "z0": 0.999,
+            "z1": 0.999
+          },
+          "readable": true
+        },
+        "bodyTransform": {
+          "exists": true,
+          "visible": true,
+          "matrixFinite": true,
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": -2.192,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bounds": {
+            "min": {
+              "x": 26.702,
+              "y": -0.049,
+              "z": -22.339
+            },
+            "max": {
+              "x": 28.249,
+              "y": 1.83,
+              "z": -20.195
+            }
+          },
+          "boundsFinite": true
+        },
+        "primitiveTransform": {
+          "exists": true,
+          "visible": false,
+          "matrixFinite": true,
+          "position": {
+            "x": 0,
+            "y": -0.106,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": -2.192,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bounds": {
+            "min": {
+              "x": 21.664,
+              "y": 0.014,
+              "z": -22.037
+            },
+            "max": {
+              "x": 28.156,
+              "y": 1.504,
+              "z": -13.277
+            }
+          },
+          "boundsFinite": true
+        },
+        "bodyTransformFinite": true,
+        "bodyFacingDegrees": 125.31915367787089,
+        "bodyRenderable": true,
+        "primitiveBodyVisible": false,
+        "primitiveBodyRenderable": true,
+        "bodyRenderableCount": 129,
+        "visibleBodyRenderableCount": 126,
+        "bodyMaterialVisible": true,
+        "bodyParts": {
+          "torso": {
+            "exists": true,
+            "visible": false,
+            "renderable": 1,
+            "visibleRenderable": 1,
+            "materialVisible": 1
+          },
+          "head": {
+            "exists": true,
+            "visible": false,
+            "renderable": 1,
+            "visibleRenderable": 1,
+            "materialVisible": 1
+          },
+          "limbs": {
+            "exists": true,
+            "visible": false,
+            "renderable": 4,
+            "visibleRenderable": 4,
+            "materialVisible": 4
+          },
+          "weapon": {
+            "exists": true,
+            "visible": false,
+            "renderable": 6,
+            "visibleRenderable": 6,
+            "materialVisible": 6
+          }
+        },
+        "riggedRootVisible": true,
+        "presentationVisible": true,
+        "visibilityReason": "visible",
+        "identityMiss": false,
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "worldPosition": {
+          "x": 27.603457967654293,
+          "y": 0,
+          "z": -21.487371114828992
+        },
+        "transformFinite": true,
+        "matrixWorldFinite": true,
+        "frustumCulled": 129,
+        "inCameraFrustum": true,
+        "inCameraViewport": true,
+        "screenNdc": {
+          "x": -0.32295495865971635,
+          "y": 0.11127672167948051,
+          "z": 0.9988078373071546
+        },
+        "occludedByWall": true,
+        "renderableCount": 129,
+        "visibleRenderableCount": 126,
+        "materialVisible": true,
+        "materialOpacity": {
+          "min": 1,
+          "max": 1
+        },
+        "deathPresentation": false,
+        "animationState": null,
+        "fallbackMode": "primitive",
+        "riggedActive": true,
+        "occlusion": {
+          "mode": "wall-fade-only",
+          "wallFadeActive": true,
+          "playerFadeApplied": false
+        }
+      },
+      {
+        "id": "ct2",
+        "team": "ct",
+        "authoritativePresent": true,
+        "authoritativeAlive": true,
+        "framePosition": {
+          "x": 77.13565024044189,
+          "y": 28.760318924121073
+        },
+        "entityExists": true,
+        "entityType": "rigged",
+        "rootVisible": true,
+        "parentVisible": true,
+        "bodyVisible": true,
+        "sceneBodyPresent": true,
+        "sceneBodyVisibleFlag": true,
+        "screenBodyReadable": true,
+        "screenBodyFootprint": {
+          "present": true,
+          "widthPx": 9.195,
+          "heightPx": 11.457,
+          "inViewport": true,
+          "depthVisible": true,
+          "ndcBounds": {
+            "x0": -0.328,
+            "x1": -0.286,
+            "y0": 0.093,
+            "y1": 0.139,
+            "z0": 0.999,
+            "z1": 0.999
+          },
+          "readable": true
+        },
+        "bodyTransform": {
+          "exists": true,
+          "visible": true,
+          "matrixFinite": true,
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": -2.191,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bounds": {
+            "min": {
+              "x": 26.284,
+              "y": -0.049,
+              "z": -22.04
+            },
+            "max": {
+              "x": 27.829,
+              "y": 1.83,
+              "z": -19.896
+            }
+          },
+          "boundsFinite": true
+        },
+        "primitiveTransform": {
+          "exists": true,
+          "visible": false,
+          "matrixFinite": true,
+          "position": {
+            "x": 0,
+            "y": -0.109,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": -2.191,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bounds": {
+            "min": {
+              "x": 21.254,
+              "y": 0.011,
+              "z": -21.739
+            },
+            "max": {
+              "x": 27.737,
+              "y": 1.501,
+              "z": -12.973
+            }
+          },
+          "boundsFinite": true
+        },
+        "bodyTransformFinite": true,
+        "bodyFacingDegrees": 125.33814585222109,
+        "bodyRenderable": true,
+        "primitiveBodyVisible": false,
+        "primitiveBodyRenderable": true,
+        "bodyRenderableCount": 128,
+        "visibleBodyRenderableCount": 125,
+        "bodyMaterialVisible": true,
+        "bodyParts": {
+          "torso": {
+            "exists": true,
+            "visible": false,
+            "renderable": 1,
+            "visibleRenderable": 1,
+            "materialVisible": 1
+          },
+          "head": {
+            "exists": true,
+            "visible": false,
+            "renderable": 1,
+            "visibleRenderable": 1,
+            "materialVisible": 1
+          },
+          "limbs": {
+            "exists": true,
+            "visible": false,
+            "renderable": 4,
+            "visibleRenderable": 4,
+            "materialVisible": 4
+          },
+          "weapon": {
+            "exists": true,
+            "visible": false,
+            "renderable": 6,
+            "visibleRenderable": 6,
+            "materialVisible": 6
+          }
+        },
+        "riggedRootVisible": true,
+        "presentationVisible": true,
+        "visibilityReason": "visible",
+        "identityMiss": false,
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "worldPosition": {
+          "x": 27.184687267465293,
+          "y": 0,
+          "z": -21.188718804826784
+        },
+        "transformFinite": true,
+        "matrixWorldFinite": true,
+        "frustumCulled": 128,
+        "inCameraFrustum": true,
+        "inCameraViewport": true,
+        "screenNdc": {
+          "x": -0.3165361677000769,
+          "y": 0.10590954617209515,
+          "z": 0.9988043072668391
+        },
+        "occludedByWall": true,
+        "renderableCount": 128,
+        "visibleRenderableCount": 125,
+        "materialVisible": true,
+        "materialOpacity": {
+          "min": 1,
+          "max": 1
+        },
+        "deathPresentation": false,
+        "animationState": null,
+        "fallbackMode": "primitive",
+        "riggedActive": true,
+        "occlusion": {
+          "mode": "wall-fade-only",
+          "wallFadeActive": true,
+          "playerFadeApplied": false
+        }
+      },
+      {
+        "id": "ct3",
+        "team": "ct",
+        "authoritativePresent": true,
+        "authoritativeAlive": true,
+        "framePosition": {
+          "x": 77.41068052420493,
+          "y": 28.051528677224262
+        },
+        "entityExists": true,
+        "entityType": "rigged",
+        "rootVisible": true,
+        "parentVisible": true,
+        "bodyVisible": true,
+        "sceneBodyPresent": true,
+        "sceneBodyVisibleFlag": true,
+        "screenBodyReadable": true,
+        "screenBodyFootprint": {
+          "present": true,
+          "widthPx": 8.307,
+          "heightPx": 10.824,
+          "inViewport": true,
+          "depthVisible": true,
+          "ndcBounds": {
+            "x0": -0.345,
+            "x1": -0.306,
+            "y0": 0.099,
+            "y1": 0.142,
+            "z0": 0.999,
+            "z1": 0.999
+          },
+          "readable": true
+        },
+        "bodyTransform": {
+          "exists": true,
+          "visible": true,
+          "matrixFinite": true,
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": -2.183,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bounds": {
+            "min": {
+              "x": 26.575,
+              "y": -0.049,
+              "z": -22.757
+            },
+            "max": {
+              "x": 28.104,
+              "y": 1.83,
+              "z": -20.602
+            }
+          },
+          "boundsFinite": true
+        },
+        "primitiveTransform": {
+          "exists": true,
+          "visible": false,
+          "matrixFinite": true,
+          "position": {
+            "x": 0,
+            "y": -0.123,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": -2.183,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bounds": {
+            "min": {
+              "x": 21.602,
+              "y": -0.003,
+              "z": -22.451
+            },
+            "max": {
+              "x": 28.017,
+              "y": 1.487,
+              "z": -13.638
+            }
+          },
+          "boundsFinite": true
+        },
+        "bodyTransformFinite": true,
+        "bodyFacingDegrees": 124.84253530760265,
+        "bodyRenderable": true,
+        "primitiveBodyVisible": false,
+        "primitiveBodyRenderable": true,
+        "bodyRenderableCount": 127,
+        "visibleBodyRenderableCount": 124,
+        "bodyMaterialVisible": true,
+        "bodyParts": {
+          "torso": {
+            "exists": true,
+            "visible": false,
+            "renderable": 1,
+            "visibleRenderable": 1,
+            "materialVisible": 1
+          },
+          "head": {
+            "exists": true,
+            "visible": false,
+            "renderable": 1,
+            "visibleRenderable": 1,
+            "materialVisible": 1
+          },
+          "limbs": {
+            "exists": true,
+            "visible": false,
+            "renderable": 4,
+            "visibleRenderable": 4,
+            "materialVisible": 4
+          },
+          "weapon": {
+            "exists": true,
+            "visible": false,
+            "renderable": 6,
+            "visibleRenderable": 6,
+            "materialVisible": 6
+          }
+        },
+        "riggedRootVisible": true,
+        "presentationVisible": true,
+        "visibilityReason": "visible",
+        "identityMiss": false,
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "worldPosition": {
+          "x": 27.465432123836607,
+          "y": 0,
+          "z": -21.901565272851073
+        },
+        "transformFinite": true,
+        "matrixWorldFinite": true,
+        "frustumCulled": 127,
+        "inCameraFrustum": true,
+        "inCameraViewport": true,
+        "screenNdc": {
+          "x": -0.33287379166619036,
+          "y": 0.10940595563872749,
+          "z": 0.9988066068872558
+        },
+        "occludedByWall": true,
+        "renderableCount": 127,
+        "visibleRenderableCount": 124,
+        "materialVisible": true,
+        "materialOpacity": {
+          "min": 1,
+          "max": 1
+        },
+        "deathPresentation": false,
+        "animationState": null,
+        "fallbackMode": "primitive",
+        "riggedActive": true,
+        "occlusion": {
+          "mode": "wall-fade-only",
+          "wallFadeActive": true,
+          "playerFadeApplied": false
+        }
+      },
+      {
+        "id": "ct4",
+        "team": "ct",
+        "authoritativePresent": true,
+        "authoritativeAlive": true,
+        "framePosition": {
+          "x": 77.16060617651137,
+          "y": 28.018037518301792
+        },
+        "entityExists": true,
+        "entityType": "rigged",
+        "rootVisible": true,
+        "parentVisible": true,
+        "bodyVisible": true,
+        "sceneBodyPresent": true,
+        "sceneBodyVisibleFlag": true,
+        "screenBodyReadable": true,
+        "screenBodyFootprint": {
+          "present": true,
+          "widthPx": 8.328,
+          "heightPx": 10.848,
+          "inViewport": true,
+          "depthVisible": true,
+          "ndcBounds": {
+            "x0": -0.347,
+            "x1": -0.308,
+            "y0": 0.095,
+            "y1": 0.137,
+            "z0": 0.999,
+            "z1": 0.999
+          },
+          "readable": true
+        },
+        "bodyTransform": {
+          "exists": true,
+          "visible": true,
+          "matrixFinite": true,
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": -2.185,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bounds": {
+            "min": {
+              "x": 26.213,
+              "y": -0.049,
+              "z": -22.83
+            },
+            "max": {
+              "x": 27.746,
+              "y": 1.83,
+              "z": -20.678
+            }
+          },
+          "boundsFinite": true
+        },
+        "primitiveTransform": {
+          "exists": true,
+          "visible": false,
+          "matrixFinite": true,
+          "position": {
+            "x": 0,
+            "y": -0.134,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": -2.185,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bounds": {
+            "min": {
+              "x": 21.227,
+              "y": -0.014,
+              "z": -22.525
+            },
+            "max": {
+              "x": 27.657,
+              "y": 1.476,
+              "z": -13.722
+            }
+          },
+          "boundsFinite": true
+        },
+        "bodyTransformFinite": true,
+        "bodyFacingDegrees": 125.06442946571777,
+        "bodyRenderable": true,
+        "primitiveBodyVisible": false,
+        "primitiveBodyRenderable": true,
+        "bodyRenderableCount": 125,
+        "visibleBodyRenderableCount": 122,
+        "bodyMaterialVisible": true,
+        "bodyParts": {
+          "torso": {
+            "exists": true,
+            "visible": false,
+            "renderable": 1,
+            "visibleRenderable": 1,
+            "materialVisible": 1
+          },
+          "head": {
+            "exists": true,
+            "visible": false,
+            "renderable": 1,
+            "visibleRenderable": 1,
+            "materialVisible": 1
+          },
+          "limbs": {
+            "exists": true,
+            "visible": false,
+            "renderable": 4,
+            "visibleRenderable": 4,
+            "materialVisible": 4
+          },
+          "weapon": {
+            "exists": true,
+            "visible": false,
+            "renderable": 6,
+            "visibleRenderable": 6,
+            "materialVisible": 6
+          }
+        },
+        "riggedRootVisible": true,
+        "presentationVisible": true,
+        "visibilityReason": "visible",
+        "identityMiss": false,
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "worldPosition": {
+          "x": 27.10578553015054,
+          "y": 0,
+          "z": -21.976081571272633
+        },
+        "transformFinite": true,
+        "matrixWorldFinite": true,
+        "frustumCulled": 125,
+        "inCameraFrustum": true,
+        "inCameraViewport": true,
+        "screenNdc": {
+          "x": -0.33516266597375044,
+          "y": 0.10472285904578434,
+          "z": 0.9988035267718857
+        },
+        "occludedByWall": true,
+        "renderableCount": 125,
+        "visibleRenderableCount": 122,
+        "materialVisible": true,
+        "materialOpacity": {
+          "min": 1,
+          "max": 1
+        },
+        "deathPresentation": false,
+        "animationState": null,
+        "fallbackMode": "primitive",
+        "riggedActive": true,
+        "occlusion": {
+          "mode": "wall-fade-only",
+          "wallFadeActive": true,
+          "playerFadeApplied": false
+        }
+      },
+      {
+        "id": "ct5",
+        "team": "ct",
+        "authoritativePresent": true,
+        "authoritativeAlive": true,
+        "framePosition": {
+          "x": 77.95310842659345,
+          "y": 17.705500871104952
+        },
+        "entityExists": true,
+        "entityType": "rigged",
+        "rootVisible": true,
+        "parentVisible": true,
+        "bodyVisible": true,
+        "sceneBodyPresent": true,
+        "sceneBodyVisibleFlag": true,
+        "screenBodyReadable": true,
+        "screenBodyFootprint": {
+          "present": true,
+          "widthPx": 9.17,
+          "heightPx": 10.269,
+          "inViewport": true,
+          "depthVisible": true,
+          "ndcBounds": {
+            "x0": -0.611,
+            "x1": -0.568,
+            "y0": 0.104,
+            "y1": 0.145,
+            "z0": 0.999,
+            "z1": 0.999
+          },
+          "readable": true
+        },
+        "bodyTransform": {
+          "exists": true,
+          "visible": true,
+          "matrixFinite": true,
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 1.964,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bounds": {
+            "min": {
+              "x": 27.254,
+              "y": -0.049,
+              "z": -33.72
+            },
+            "max": {
+              "x": 28.421,
+              "y": 1.83,
+              "z": -31.391
+            }
+          },
+          "boundsFinite": true
+        },
+        "primitiveTransform": {
+          "exists": true,
+          "visible": false,
+          "matrixFinite": true,
+          "position": {
+            "x": 0,
+            "y": -0.105,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 1.964,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "bounds": {
+            "min": {
+              "x": 24.046,
+              "y": 0.015,
+              "z": -41.656
+            },
+            "max": {
+              "x": 28.432,
+              "y": 1.505,
+              "z": -31.785
+            }
+          },
+          "boundsFinite": true
+        },
+        "bodyTransformFinite": true,
+        "bodyFacingDegrees": -82.24045063435449,
+        "bodyRenderable": true,
+        "primitiveBodyVisible": false,
+        "primitiveBodyRenderable": true,
+        "bodyRenderableCount": 131,
+        "visibleBodyRenderableCount": 128,
+        "bodyMaterialVisible": true,
+        "bodyParts": {
+          "torso": {
+            "exists": true,
+            "visible": false,
+            "renderable": 1,
+            "visibleRenderable": 1,
+            "materialVisible": 1
+          },
+          "head": {
+            "exists": true,
+            "visible": false,
+            "renderable": 1,
+            "visibleRenderable": 1,
+            "materialVisible": 1
+          },
+          "limbs": {
+            "exists": true,
+            "visible": false,
+            "renderable": 4,
+            "visibleRenderable": 4,
+            "materialVisible": 4
+          },
+          "weapon": {
+            "exists": true,
+            "visible": false,
+            "renderable": 6,
+            "visibleRenderable": 6,
+            "materialVisible": 6
+          }
+        },
+        "riggedRootVisible": true,
+        "presentationVisible": true,
+        "visibilityReason": "visible",
+        "identityMiss": false,
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "worldPosition": {
+          "x": 27.913098602545645,
+          "y": 0,
+          "z": -32.298855852875036
+        },
+        "transformFinite": true,
+        "matrixWorldFinite": true,
+        "frustumCulled": 131,
+        "inCameraFrustum": true,
+        "inCameraViewport": true,
+        "screenNdc": {
+          "x": -0.5758530107085922,
+          "y": 0.11307918382642043,
+          "z": 0.9988090228029592
+        },
+        "occludedByWall": true,
+        "renderableCount": 131,
+        "visibleRenderableCount": 128,
+        "materialVisible": true,
+        "materialOpacity": {
+          "min": 1,
+          "max": 1
+        },
+        "deathPresentation": false,
+        "animationState": null,
+        "fallbackMode": "primitive",
+        "riggedActive": true,
+        "occlusion": {
+          "mode": "wall-fade-only",
+          "wallFadeActive": true,
+          "playerFadeApplied": false
+        }
+      }
+    ]
+  },
+  "scene": {
+    "recovery": 2,
+    "rapid": 0
+  },
+  "art": {
+    "mode": "esmo-c2c-vector-9-hero",
+    "heroCount": 10,
+    "triangles": 2560,
+    "materials": 8,
+    "variations": [
+      "assault",
+      "support",
+      "marksman",
+      "lurker",
+      "utility"
+    ]
+  },
+  "captures": {
+    "lineup": {
+      "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO-worktrees\\codex-cs-p0-main-release\\artifacts\\cs-c2c\\vector9\\lineup.png",
+      "rect": {
+        "x": 460.5,
+        "y": 0,
+        "width": 430,
+        "height": 507.390625,
+        "dpr": 1
+      },
+      "source": "Page.captureScreenshot"
+    },
+    "weaponLineup": {
+      "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO-worktrees\\codex-cs-p0-main-release\\artifacts\\cs-c2c\\vector9\\weapon-lineup.png",
+      "rect": {
+        "x": 460.5,
+        "y": 0,
+        "width": 430,
+        "height": 507.390625,
+        "dpr": 1
+      },
+      "source": "Page.captureScreenshot"
+    },
+    "gameplay": {
+      "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO-worktrees\\codex-cs-p0-main-release\\artifacts\\cs-c2c\\vector9\\gameplay-focus.png",
+      "rect": {
+        "x": 460.5,
+        "y": 0,
+        "width": 430,
+        "height": 507.390625,
+        "dpr": 1
+      },
+      "source": "Page.captureScreenshot"
+    },
+    "redFront": {
+      "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO-worktrees\\codex-cs-p0-main-release\\artifacts\\cs-c2c\\vector9\\red-front.png",
+      "rect": {
+        "x": 460.5,
+        "y": 0,
+        "width": 430,
+        "height": 507.390625,
+        "dpr": 1
+      },
+      "source": "Page.captureScreenshot"
+    },
+    "redQuarter45": {
+      "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO-worktrees\\codex-cs-p0-main-release\\artifacts\\cs-c2c\\vector9\\red-quarter45.png",
+      "rect": {
+        "x": 460.5,
+        "y": 0,
+        "width": 430,
+        "height": 507.390625,
+        "dpr": 1
+      },
+      "source": "Page.captureScreenshot"
+    },
+    "redSide": {
+      "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO-worktrees\\codex-cs-p0-main-release\\artifacts\\cs-c2c\\vector9\\red-side.png",
+      "rect": {
+        "x": 460.5,
+        "y": 0,
+        "width": 430,
+        "height": 507.390625,
+        "dpr": 1
+      },
+      "source": "Page.captureScreenshot"
+    },
+    "redBack": {
+      "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO-worktrees\\codex-cs-p0-main-release\\artifacts\\cs-c2c\\vector9\\red-back.png",
+      "rect": {
+        "x": 460.5,
+        "y": 0,
+        "width": 430,
+        "height": 507.390625,
+        "dpr": 1
+      },
+      "source": "Page.captureScreenshot"
+    },
+    "blueFront": {
+      "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO-worktrees\\codex-cs-p0-main-release\\artifacts\\cs-c2c\\vector9\\blue-front.png",
+      "rect": {
+        "x": 460.5,
+        "y": 0,
+        "width": 430,
+        "height": 507.390625,
+        "dpr": 1
+      },
+      "source": "Page.captureScreenshot"
+    },
+    "blueQuarter45": {
+      "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO-worktrees\\codex-cs-p0-main-release\\artifacts\\cs-c2c\\vector9\\blue-quarter45.png",
+      "rect": {
+        "x": 460.5,
+        "y": 0,
+        "width": 430,
+        "height": 507.390625,
+        "dpr": 1
+      },
+      "source": "Page.captureScreenshot"
+    },
+    "blueSide": {
+      "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO-worktrees\\codex-cs-p0-main-release\\artifacts\\cs-c2c\\vector9\\blue-side.png",
+      "rect": {
+        "x": 460.5,
+        "y": 0,
+        "width": 430,
+        "height": 507.390625,
+        "dpr": 1
+      },
+      "source": "Page.captureScreenshot"
+    },
+    "blueBack": {
+      "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO-worktrees\\codex-cs-p0-main-release\\artifacts\\cs-c2c\\vector9\\blue-back.png",
+      "rect": {
+        "x": 460.5,
+        "y": 0,
+        "width": 430,
+        "height": 507.390625,
+        "dpr": 1
+      },
+      "source": "Page.captureScreenshot"
+    },
+    "rifle": {
+      "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO-worktrees\\codex-cs-p0-main-release\\artifacts\\cs-c2c\\vector9\\rifle.png",
+      "rect": {
+        "x": 460.5,
+        "y": 0,
+        "width": 430,
+        "height": 507.390625,
+        "dpr": 1
+      },
+      "source": "Page.captureScreenshot"
+    },
+    "pistol": {
+      "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO-worktrees\\codex-cs-p0-main-release\\artifacts\\cs-c2c\\vector9\\pistol.png",
+      "rect": {
+        "x": 460.5,
+        "y": 0,
+        "width": 430,
+        "height": 507.390625,
+        "dpr": 1
+      },
+      "source": "Page.captureScreenshot"
+    },
+    "smg": {
+      "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO-worktrees\\codex-cs-p0-main-release\\artifacts\\cs-c2c\\vector9\\smg.png",
+      "rect": {
+        "x": 460.5,
+        "y": 0,
+        "width": 430,
+        "height": 507.390625,
+        "dpr": 1
+      },
+      "source": "Page.captureScreenshot"
+    },
+    "sniper": {
+      "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO-worktrees\\codex-cs-p0-main-release\\artifacts\\cs-c2c\\vector9\\sniper.png",
+      "rect": {
+        "x": 460.5,
+        "y": 0,
+        "width": 430,
+        "height": 507.390625,
+        "dpr": 1
+      },
+      "source": "Page.captureScreenshot"
+    },
+    "shotgun": {
+      "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO-worktrees\\codex-cs-p0-main-release\\artifacts\\cs-c2c\\vector9\\shotgun.png",
+      "rect": {
+        "x": 460.5,
+        "y": 0,
+        "width": 430,
+        "height": 507.390625,
+        "dpr": 1
+      },
+      "source": "Page.captureScreenshot"
+    },
+    "silhouette": {
+      "filename": "D:\\OneDrive\\文件\\GitHub\\ESMO-worktrees\\codex-cs-p0-main-release\\artifacts\\cs-c2c\\vector9\\silhouette.png",
+      "rect": {
+        "x": 460.5,
+        "y": 0,
+        "width": 430,
+        "height": 507.390625,
+        "dpr": 1
+      },
+      "source": "Page.captureScreenshot"
+    }
+  }
+}

@@ -200,6 +200,7 @@ export async function launchChrome({ url, port, headless = true }) {
   const userDataDir = mkdtempSync(join(tmpdir(), "esmo-cdp-"));
   const args = [
     `--remote-debugging-port=${port}`,
+    "--remote-debugging-address=127.0.0.1",
     `--user-data-dir=${userDataDir}`,
     "--no-first-run", "--no-default-browser-check", "--disable-extensions",
     "--disable-background-networking", "--disable-sync",
