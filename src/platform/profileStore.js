@@ -182,6 +182,8 @@ import {
   ROOM_STATES, transitionRoom, confirmSide, canEnterRoom, roomStateLabel,
   remainingSeconds, isRoomTerminal,
 } from "./contracts/matchRoom.js";
+//  TD-44：「這條流程還在跑嗎」的唯一判定，與 `canStartPracticeFrom` 共用同一份。
+import { matchFlowIdleFrom } from "./contracts/matchFlowIdle.js";
 import { createRecruitmentTransaction } from "./contracts/recruitment.js";
 import { applyRecruitmentToState } from "./recruit/applyRecruitment.js";
 import {
@@ -2117,12 +2119,36 @@ export const useProfileStore = create((rawSet, get) => {
     get().save();
     return get().competitiveBlockView();
   },
+  /**
+   *  這條流程與「快速練習」的關係。**兩個欄位問的是兩件事，不要混用。**
+   *
+   *  · `inPractice`（原意，**不得**改）：這條流程的來源是不是練習。
+   *    ⚠ 結算端讀的是這一個，而且**讀取時機在場次已經 completed 之後**——
+   *      `progress/settleCsMatch.js` 第 4 步（入史）就在 `settleMatchThroughSession`
+   *      之後。若把終局判定加進 `inPractice`，練習賽會突然開始寫 CS 戰績，
+   *      直接打破「快速練習零永久影響」。`battle/useBattleFeed.js` 同理。
+   *
+   *  · `activePractice`（TD-44 新增）：**現在**還在練習流程裡嗎。
+   *    賽前頁的層級橫幅、主按鈕退路、「快速練習」次要按鈕讀這一個。
+   *    練習打完（場次終局）之後為 false ⇒ 回得到一般對戰。
+   *
+   *  ⚠ `activePractice` 只看**現役流程**（場次優先於房間）的來源，**不看**
+   *    `practiceAssignment`。殘留的 assignment 沒有被任何流程清掉，若把它算進去，
+   *    玩家按「重新配對」開一場真的競技比賽時，橫幅會寫「快速練習」——
+   *    那是比 TD-44 更危險的反向誤導（以為在測試，其實在打正式的）。
+   */
   matchPracticeContext() {
     const mm = get().matchmaking ?? {};
     const kindOf = (x) => x?.origin?.kind ?? null;
     const inPractice = [mm.session, mm.room, mm.practiceAssignment]
       .some((x) => kindOf(x) === ORIGIN_KINDS.practice);
-    return { inPractice };
+    const flowKind = kindOf(mm.session) ?? kindOf(mm.room) ?? null;
+    const { idle } = matchFlowIdleFrom({
+      roomState: mm.room?.state ?? null,
+      sessionState: mm.session?.state ?? null,
+    });
+    const activePractice = flowKind === ORIGIN_KINDS.practice && !idle;
+    return { inPractice, activePractice };
   },
   /** 賽事總覽（畫面唯一入口；不得自己算積分榜或自己找下一場）。 */
   competitionView(mode = DEFAULT_GAME_MODE) {

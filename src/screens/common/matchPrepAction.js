@@ -18,6 +18,7 @@
 // ============================================================================
 import { TICKET_STATES } from "../../platform/contracts/matchmaking.js";
 import { SESSION_TERMINAL } from "../../platform/contracts/matchSession.js";
+import { matchFlowIdleFrom } from "../../platform/contracts/matchFlowIdle.js";
 
 /** 四步流程的階段代碼（畫面用來畫步驟指示器）。 */
 export const FLOW_STEPS = Object.freeze([
@@ -73,7 +74,12 @@ export function primaryActionFor({ entryOk, view, room, session, mode = null, fi
   //    ⇒ **玩家以為還在測試，實際上打的是一場正式競技比賽**，
   //      而那一場會真的發錢、發粉絲、發 XP、計戰績。
   //    這是本輪 grilling 抓到最危險的一條路徑。
-  const inPractice = !!practice?.inPractice;
+  //  ⚠ TD-44：這裡要問的是「**現在**還在練習流程裡嗎」，不是「這條流程的來源
+  //    是不是練習」。練習打完之後場次是終局，退路必須回到一般對戰的「重新配對」，
+  //    否則賽前頁永遠停在練習、回不去一般對戰。
+  //    ⚠ `?? inPractice` 是給只傳舊欄位的呼叫端（既有 gate fixture）用的相容路徑，
+  //      正式流程一律由 `matchPracticeContext()` 兩個欄位都傳。
+  const inPractice = practice?.activePractice ?? !!practice?.inPractice;
   const retry = inPractice
     ? { key: "repractice", label: "重新開始快速練習", disabled: false, tone: "neutral" }
     : inFixture
@@ -148,7 +154,10 @@ export function flowStatusText({ entryOk, view, room, session, opponentName, fix
   //    第一版把 `room === "confirmed"` 排在前面，於是「已經進場、可以返回對戰」
   //    的情況會顯示成「正在準備場次」——底部按鈕寫「返回進行中的對戰」，
   //    上面卻說還在準備，瀏覽器 smoke 實測到這個矛盾。
-  if (practice?.inPractice) {
+  //  ⚠ TD-44：同 `primaryActionFor`——問的是「現在還在練習裡嗎」。
+  //    練習打完之後這一段要讓位給下面的一般流程文案，否則畫面會一直說
+  //    「快速練習：上一場已結束」，但按鈕已經是一般對戰的「重新配對」。
+  if (practice?.activePractice ?? practice?.inPractice) {
     if (session?.state === "launched" && session?.restoreable) return "快速練習：你有一場進行中的練習";
     if (session?.state && SESSION_TERMINAL.includes(session.state)) return "快速練習：上一場已結束，可以重新開始";
     if (session?.canLaunch) return "快速練習：正在進入對戰（本場不影響戰績與數值）";
@@ -220,8 +229,9 @@ export function canStartPracticeFrom({
   entryOk = false, live = false, inPractice = false,
   roomState = null, sessionState = null, actKey = null,
 } = {}) {
-  const sessionOver = !!sessionState && SESSION_TERMINAL.includes(sessionState);
-  const sessionIdle = !sessionState || sessionOver;
-  const roomIdle = !roomState || ["cancelled", "expired"].includes(roomState) || sessionOver;
-  return !!entryOk && !live && !inPractice && roomIdle && sessionIdle && actKey !== "refixture";
+  //  ⚠ TD-44：這裡本來自己算終局，算得對；`matchPracticeContext()` 那邊沒算，
+  //    算錯了。判定已抽到 `contracts/matchFlowIdle.js` 由兩邊共用——
+  //    **不要在這裡再長回一份**。
+  const { idle } = matchFlowIdleFrom({ roomState, sessionState });
+  return !!entryOk && !live && !inPractice && idle && actKey !== "refixture";
 }

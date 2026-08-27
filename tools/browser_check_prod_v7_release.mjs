@@ -19,14 +19,15 @@
 //  §H 首頁　§D 一般對戰（名稱／容量／收益）　§P 快速練習（零永久影響）
 //  §O 俱樂部目標　§N 既有玩法入口　§M 手機 390　§C console
 //
-//  ── 已知缺陷（會印成 ⚠，不計分）─────────────────────────────────────────
-//  **TD-44**：打完一場快速練習之後，MOBA 與 CS 的賽前頁都永久停在 practice
-//  層級，主按鈕只剩「重新開始快速練習」，一般對戰的名稱與今日容量再也看不到；
-//  重整與推進 8 天都清不掉。根因是 `matchPracticeContext().inPractice` 只看
-//  origin 種類，沒有像 `canStartPracticeFrom` 那樣把**終局場次**視為閒置
-//  （殘留 `session=completed/practice` ＋ `room=confirmed/practice`）。
-//  ⚠ 這在 `4652c00`（2026-08-25）就存在，**早於本次 release**；V7A 的層級橫幅
-//    只是讓它變得看得見。修它要動流程狀態機，另開一輪。
+//  ── TD-44（2026-08-28 由本檔第一次跑抓到，已修）──────────────────────────
+//  症狀：打完一場快速練習之後，MOBA 與 CS 的賽前頁都永久停在 practice 層級，
+//  主按鈕只剩「重新開始快速練習」，一般對戰的名稱與今日容量再也看不到。
+//  根因：`matchPracticeContext().inPractice` 只看 origin 種類，沒有像
+//  `canStartPracticeFrom` 那樣把**終局場次**視為閒置。
+//  修法：終局判定抽到 `contracts/matchFlowIdle.js` 兩邊共用，並把
+//  `inPractice`（來源，結算端用）與 `activePractice`（現在，賽前頁用）拆開。
+//  ⇒ **P7–P10 就是它的迴歸測試**；紅了就是 TD-44 復發。
+//  gate：`check_td44_practice_exit` ＋ `browser_check_td44_practice_exit`。
 // ============================================================================
 import { launchChrome } from "./browser/cdp.mjs";
 
@@ -36,9 +37,6 @@ const HEADLESS = !process.argv.includes("--headed");
 
 let pass = 0, fail = 0;
 const ck = (n, ok, d = "") => { ok ? pass++ : fail++; console.log(`${ok ? "✅" : "❌"} ${n}${d ? "　" + d : ""}`); };
-//  已知缺陷的觀測點：印出來、不計分。用意是**每次跑都把它攤在眼前**，
-//  而不是因為「這輪不修」就從輸出裡消失。
-const warn = (n, d = "") => console.log(`⚠ ${n}${d ? "　" + d : ""}`);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ── 讀存檔：正式站唯一看得到「永久影響」的窗口 ──────────────────────────
@@ -357,15 +355,19 @@ async function main() {
       S2.blockUsed === 1 && S2.block === S1.block, `competitiveBlock ${S1.block} → ${S2.block}`);
 
     const prep3 = await goPrep(chrome);
-    //  ⚠ 重複進入走的是**主按鈕**（`repractice`／「重新開始快速練習」），不是那顆
-    //    次要的 `prep-start-practice`——後者依 `canStartPracticeFrom` 只在**閒置且
-    //    不在練習中**時出現。第一版斷言挑錯按鈕，把正確行為判成紅的。
-    ck("P7) 快速練習**可以重複進入**（主按鈕變成「重新開始快速練習」）",
-      prep3.actionKey === "repractice", `${prep3.actionKey}／${prep3.actionLabel}`);
-
-    //  ── 已知缺陷（TD-44）：練習狀態黏住，出不去 ──────────────────────────
-    warn("W1) TD-44：打完練習之後賽前頁**回不到一般對戰**（既有缺陷，非本次 release 引入）",
-      `tier=${prep3.tier}／${prep3.name}｜容量顯示 ${prep3.capacity ?? "（無）"}｜主按鈕 ${prep3.actionKey}`);
+    //  ── TD-44：打完練習之後必須回得到一般對戰 ───────────────────────────
+    //  ⚠ 這三條在 2026-08-28 的第一次正式站 smoke 是**紅的**（當時以 W1 印出、
+    //    不計分），根因是 `matchPracticeContext().inPractice` 沒有把終局場次
+    //    視為閒置。修正之後升級成正式檢查——它們紅了就是 TD-44 復發。
+    ck("P7) TD-44：回賽前頁**回得到一般對戰**（層級與名稱都回來）",
+      prep3.tier === "competitive" && prep3.name === "一般對戰", `${prep3.tier}／${prep3.name}`);
+    ck("P8) TD-44：**今日容量重新看得見**（練習後仍是 1/3）",
+      /1\/3/.test(prep3.capacity ?? ""), prep3.capacity ?? "（無）");
+    ck("P9) TD-44：主按鈕回到一般對戰（不再卡在「重新開始快速練習」）",
+      prep3.actionKey !== "repractice", `${prep3.actionKey}／${prep3.actionLabel}`);
+    //  ⚠ 重複進入現在走**次要按鈕**：流程已閒置 ⇒ `canStartPracticeFrom` 讓
+    //    `prep-start-practice` 回來；主按鈕則回到一般對戰的「重新配對」。
+    ck("P10) 快速練習**可以重複進入**（次要按鈕回來了）", prep3.practiceBtn === true);
 
     // ══ §O 俱樂部目標 ═════════════════════════════════════════════════════
     console.log("\n【§O 俱樂部目標（V7B Retention v1）】");
@@ -472,8 +474,7 @@ async function main() {
   }
 
   console.log(`\n${"═".repeat(60)}`);
-  console.log("⚠ 已知缺陷 TD-44（練習狀態黏住）以 W1 印出，不計分——見檔頭說明。");
-  console.log(`V7 正式站 smoke：${pass} / ${pass + fail} 通過`);
+    console.log(`V7 正式站 smoke：${pass} / ${pass + fail} 通過`);
   if (fail) { console.log(`❌ ${fail} 項未通過`); process.exit(1); }
   console.log("✅ 全數通過");
 }

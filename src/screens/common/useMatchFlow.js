@@ -134,7 +134,10 @@ export function useMatchFlow(mode = "moba", onEnterBattle = null) {
   //  ── V7A：這條流程屬於哪一個對戰層級 ────────────────────────────────────
   //  ⚠ 名稱與說明**不在畫面裡寫死**，一律取自 `progress/matchSource.js`
   //    ——那也是「這場算哪一層」的唯一判定所在。分開寫遲早會分歧。
-  const tierKey = matchTierOf({ inFixture: !!fixture?.inFixture, inPractice: !!practice?.inPractice });
+  //  ⚠ TD-44：橫幅問的是「**現在**是不是練習」⇒ 用 `activePractice`。
+  //    用 `inPractice`（來源是不是練習）的話，練習打完之後殘留的終局場次
+  //    會讓橫幅永遠停在「快速練習」，一般對戰的名稱與今日容量再也不出現。
+  const tierKey = matchTierOf({ inFixture: !!fixture?.inFixture, inPractice: !!practice?.activePractice });
   const tier = { key: tierKey, ...MATCH_TIER_LABELS[tierKey] };
   //  一般對戰才有每日容量；另外兩層不吃容量（練習是測試場、季賽由日曆承擔）。
   const block = store.competitiveBlockView();
@@ -235,7 +238,8 @@ export function useMatchFlow(mode = "moba", onEnterBattle = null) {
     //  （純函式，可單元驗證），本檔只負責把當下的原始值遞進去。
     practice, startPractice,
     canStartPractice: canStartPracticeFrom({
-      entryOk: entry.ok, live, inPractice: practice.inPractice,
+      //  TD-44：同上——擋這顆按鈕的條件是「正在練習中」，不是「來源是練習」。
+      entryOk: entry.ok, live, inPractice: practice.activePractice,
       roomState, sessionState, actKey: act.key,
     }),
     canAbandon: sessionState === "launched",
