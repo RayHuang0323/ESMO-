@@ -1144,3 +1144,45 @@ V0A/V0B 成長 → V1 世界時間 → V2 年度邊界 → V3 快轉 → V4 生�
 - `C4B_TWO_MAPS = OWNER_ACCEPTED / CLOSED`
 - Mirage、Dust II、Inferno 三張地圖已完成共用 environment production framework 的正式整合與部署驗證，同時保留各自 visual identity。
 - 下一階段建議：C5（另行定義範圍後開始）；本次不實作 C5。
+
+---
+
+# 🚀 Season vNext = RELEASED（2026-08-27）
+
+**V0A～V6 = CLOSED。** 選手生涯循環全線上線。
+
+⚠ 本檔前面那個「## Season vNext 實作邊界（一律不做）」章節已由本次 release **取代**——
+那是受傷移除那一輪留下的邊界宣告，當時 Season vNext 尚未規劃。現在它全部做完了。
+
+### Release Gate 結果
+
+| 群組 | 結果 |
+|---|---|
+| Season vNext V0A–V6（15 支） | ✅ **663 項全綠** |
+| Competition Q1–Q6 + shared UI | ✅ 93／112／92／91／68／69／57 |
+| Competition Release Gate | ✅ **11/11** |
+| CS / Training / Progress / Finance | ✅ `cs23` 28／`talent27`／`progress25`／`finance_n`~`n31` 32/35/40/31／`recruit_o` 41／`condition_o2` 29／`no_player_injury` 29 |
+| regress / regress2 | ✅ 結束率 15/15／節奏門檻 8/8 |
+| Browser smoke | ✅ `time_controls` 21/21・`offseason` 18/18・`home_ia` 23/23 |
+| production build | ✅ |
+
+⚠ **兩次假紅燈已查明並排除**：
+- `check_competition_release_gate` 一度 10/11（`career_final` undici 錯誤）——單獨重跑 **12/12**，
+  乾淨重跑整體 **11/11**。成因是背景 verifier 併行搶 CDP port。
+- `check_progress25` 一度 33/34（第 16 項「tactic24 仍全綠」）——直接跑 `tactic24` 是 **29/29 exit 0**，
+  重跑 `progress25` 也是 exit 0。成因是巢狀子行程逾時。
+
+### 已知 waiver / 技術債（不在本次 release 擴大處理）
+
+| 項目 | 狀態 |
+|---|---|
+| **TD-37** `check_cs_team_identity_consumers_r48` | 既有永久紅燈。SHA 鎖雜湊 **FPS 引擎**；Season vNext 對 `src/battle/fps/` 改動為 **0**，動它的是 main 的 CS-C2C/C3/C4B 線。依既有技術債規則處理。 |
+| **TD-39** 定價／模擬可能吃不同能力 | V7 線上契約之前必須處理 |
+| **TD-40** V3–V5 之間快轉代價不足 | V5 落地後已大幅緩解（漂移＋退休），保留追蹤 |
+| **TD-41** 快轉＋訓練是通往天花板的主要途徑 | 生涯側平衡，留待 balance 輪次 |
+| `check_team_development_recovery` | 既有紅燈（首頁入口磚／talentPick 路由），與 Season vNext 無關 |
+
+### V7 之後（本次不做）
+
+真人競技／定時賽事（V4 已定契約，仍是 Not Now）、Coach / Mentor / 導師加成、
+完整 AI 轉會市場與談判、Club DNA / Personality。

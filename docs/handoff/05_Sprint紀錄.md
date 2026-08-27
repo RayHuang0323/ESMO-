@@ -16031,3 +16031,39 @@ Coach / Mentor、AI 轉會市場 / bidding、談判 AI、Ranked / ServerTime。
 - 以最新 `origin/main` 為基線整合已驗收的 Mirage、Dust II、Inferno environment；只保留必要的 C4B source、verifier、Owner Review 與 handoff 變更。
 - 完成完整 regression、production build、Battle/browser smoke、390px smoke、三圖 map/camera/character visibility 與 180 秒 long-run 後才進行 main push、Pages deploy。
 - 未開始 C5，未變更 gameplay、weapon stats、Competition、Training、Season 或無關 technical debt。
+
+## Season vNext Release Closure（2026-08-27）— **RELEASED**
+
+`season/vnext` 合併 `origin/main`（CS-C2C/C3/C4B 十個 commit）後整合進 main。
+
+### 合併：零程式碼重疊
+
+main 只動 `src/battle/fps/*`（CS 角色美術與地圖環境），Season vNext 動
+platform / progress / data / screens ⇒ **交集為空**。
+
+四份 handoff 文件衝突。第一次看起來比實際嚴重得多：git 對 04_Roadmap 報**整檔衝突**，
+因為我方是 **CRLF**、main 是 **LF**，每一行都被判定為不同。
+把換行符正規化後再跑三方合併 ⇒ 只剩**每檔 1 個真實衝突**（雙方各自在檔尾追加）。
+兩邊都保留、只移除標記，事後逐檔對兩個 parent 比對：**零行遺失**。
+
+一個差異值得指名而非隱藏：main 把標題「Season vNext 實作邊界（一律不做）」
+改寫為「Season vNext（尚未規劃，本輪一律不實作）」。段落本體逐字相同且都在，
+我方保留自己的標題文字。該標題無論哪個版本現在都已過時——這次 release 就是它的反例，
+已在 Roadmap 標明取代關係。
+
+### Release Gate
+
+Season vNext V0A–V6 十五支 **663 項全綠**；Competition Q1–Q6、Release Gate 11/11、
+CS / Training / Progress / Finance、regress 15/15、regress2 8/8、
+三支 browser smoke（21/21・18/18・23/23）、production build 全部通過。
+
+**兩次假紅燈已查明**：`career_final` 的 undici 錯誤來自背景 verifier 搶 CDP port
+（單獨重跑 12/12、乾淨重跑整體 11/11）；`progress25` 第 16 項是巢狀子行程逾時
+（`tactic24` 直接跑 29/29 exit 0，`progress25` 重跑 exit 0）。
+⇒ **無 Season vNext 回歸。**
+
+### TD-37 依既有規則處理，不擴大
+
+`check_cs_team_identity_consumers_r48` 卡在 `R48_LEGACY_R47_SHA`，
+雜湊對象是 FPS 引擎檔。Season vNext 對 `src/battle/fps/` 的改動數是 **0**；
+main 的 CS 線改了 **5** 個檔。⇒ 與本次 release 無關，照既有技術債規則保留。
