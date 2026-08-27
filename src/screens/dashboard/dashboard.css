@@ -930,6 +930,8 @@
   place-items: center;
   color: var(--esmo-text);
   background: rgba(19, 21, 28, 0.72);
+  /*  V7B：可領取徽章用 absolute 定位在卡片右上角 ⇒ 卡片必須是定位參考點。 */
+  position: relative;
 }
 
 .esmo-utility-card__icon {

@@ -50,6 +50,8 @@ const NAV = {
   newgame: "newGame",
   //  V6-3：休賽期。只有真的有年度決策時，首頁才會出現這個入口。
   offSeason: "offSeason",
+  //  V7B：俱樂部目標（日／週／季）。
+  objectives: "objectives",
 };
 
 const MODE_CONFIG = {
@@ -400,9 +402,20 @@ function Utility({ items, onSelect }) {
       <SectionHeading label="UTILITY" title="管理工具" note="需要時再來，不搶主要決策的焦點" />
       <div className="esmo-utility-grid">
         {items.map((item) => (
-          <button key={item.id} className="esmo-card esmo-interactive esmo-utility-card" type="button" onClick={() => onSelect(item.id)}>
+          <button key={item.id} className="esmo-card esmo-interactive esmo-utility-card" type="button"
+            data-testid={`home-utility-${item.id}`} onClick={() => onSelect(item.id)}>
             <span className="esmo-utility-card__icon"><EsmoIcon name={item.icon} size={18} /></span>
             <span className="esmo-utility-card__label">{item.label}</span>
+            {/*  V7B：**唯一**的聚合徽章。規格明文擋掉「十幾個紅點任務」⇒
+                 這裡只顯示一個總數，不做逐項紅點。 */}
+            {item.badge > 0 && (
+              <span data-testid={`home-utility-badge-${item.id}`}
+                style={{
+                  position: "absolute", top: 6, right: 8, minWidth: 16, textAlign: "center",
+                  background: "#34d399", color: "#04180f", borderRadius: 99,
+                  fontSize: 9, fontWeight: 900, padding: "1px 5px", lineHeight: 1.5,
+                }}>{item.badge}</span>
+            )}
           </button>
         ))}
       </div>
@@ -655,6 +668,10 @@ function MobileNavSheet({ type, onSelect, onClose }) {
       { id: "recruit", label: "招募選手", icon: "arrowUp" },
     ],
     more: [
+      //  ⚠ V7B：手機版**不渲染** `Utility`，所以桌面那個「俱樂部目標」磚在手機上
+      //    完全不存在——瀏覽器實測抓到（手機 390 進不去目標頁）。入口必須在
+      //    這裡也有一份，否則這個功能對手機玩家等於沒做。
+      { id: "objectives", label: "俱樂部目標", detail: "今日／本週／本季", icon: "award" },
       { id: "finance", label: "財務", detail: "收支與預測", icon: "finance" },
       { id: "equip", label: "商店", detail: "物品與升級", icon: "package" },
       { id: "newgame", label: "新遊戲", detail: "重新開始", icon: "arrowUp" },
@@ -815,13 +832,17 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
   //      贊助商 → 戰隊狀態的「贊助狀態」摘要卡本來就能直接進贊助頁
   //      天賦   → 已由「戰隊發展」取代；個人天賦樹入口在選手詳情
   //      儀表板 → 指向未接線的舊版密集儀表板，而首頁本身就是儀表板
+  //  V7B：可領取的目標數。**只取一個總數**——首頁不做逐項提示。
+  //  ⚠ 目標與進度全部由 `retentionView()` 推導，首頁不自己算。
+  const objectiveBadge = (typeof profile.retentionView === "function" ? profile.retentionView().claimable : 0) || 0;
   const utilityItems = useMemo(() => [
     { id: "team", label: "戰隊詳情", icon: "award" },
     { id: "training", label: "訓練中心", icon: "signal" },
     { id: "recruit", label: "招募", icon: "arrowUp" },
+    { id: "objectives", label: "俱樂部目標", icon: "award", badge: objectiveBadge },
     { id: "newgame", label: "開新局", icon: "arrowUp" },
     { id: "equip", label: "商店", icon: "package" },
-  ], []);
+  ], [objectiveBadge]);
 
   const sel = (id) => {
     if (id === "moba") return onMoba();
@@ -853,6 +874,15 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
       title: "處理資金提醒",
       detail: fc.level === "danger" ? `預測第 ${fc.bankruptWeek} 週資金見底` : "本週淨額為負，先看現金預測",
       badge: "!", onClick: () => sel("finance"),
+    });
+  }
+  //  V7B：有目標可以領才出現。⚠ 沒得領就完全不渲染——這一區的規則是
+  //  「有訊號才成立」，塞一個永遠都在的「去看目標」就退回成固定捷徑了。
+  if (objectiveBadge > 0) {
+    todos.push({
+      id: "objectives", icon: "award", accent: GC.gold,
+      title: "領取目標獎勵", detail: `${objectiveBadge} 個目標已完成，可領取俱樂部點數`,
+      badge: objectiveBadge, onClick: () => sel("objectives"),
     });
   }
   if (unread > 0) {

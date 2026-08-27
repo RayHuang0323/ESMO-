@@ -185,3 +185,43 @@ export function flowStatusText({ entryOk, view, room, session, opponentName, fix
   if (st === TICKET_STATES.queued || st === TICKET_STATES.validating) return "正在尋找對手…";
   return entryOk ? "陣容已就緒，可以開始配對" : "請先補滿出賽陣容";
 }
+
+/**
+ * 「快速練習」這顆次要按鈕現在該不該出現。**唯一判定處**（V7A 由 hook 搬出來）。
+ *
+ * 條件是「陣容就緒 **且流程是閒置的**」。閒置的定義踩過兩次坑，兩次都是
+ * 瀏覽器實測才抓到，所以規則寫在這裡並由 `check_general_match_v7a` §U 釘住：
+ *
+ *   ① 「閒置」要看**還活著沒有**，不是「有沒有值」。第一版寫成
+ *      `!sessionState && !roomState`，於是打完任何一場之後，殘留的終局場次
+ *      （completed / abandoned…）會讓按鈕**永遠不再出現**——等於這個功能
+ *      只有全新存檔看得到。
+ *   ② 房間**不能**直接套 `ROOM_TERMINAL`：它把 `confirmed` 也算終局（房間任務
+ *      確實完成了），但簽場次的那一刻流程正要進場，絕不是閒置。
+ *      ⇒ 只認 `cancelled` / `expired`……**但這樣又漏了一個殘留狀態**：
+ *      打完一場之後房間停在 `confirmed`、場次是 `completed`，按鈕一樣消失，
+ *      要先按「重新配對」才回得來。
+ *   ⇒ 結論：**場次已經走到終局時**，殘留的 `confirmed` 房間視為閒置。
+ *     判斷必須綁在場次上——`sessionState` 是 null 而房間是 `confirmed` 時，
+ *     流程正要進場，那才是真的不閒置。
+ *
+ * ⚠ `refixture` 排除掉：畫面正在請玩家「重新進入本場賽事」時不該同時勸他去練習——
+ *   開練習會清掉 `fixtureAssignment`，那條回去的路就沒了。
+ *
+ * @param {object} p
+ * @param {boolean} p.entryOk      陣容是否就緒
+ * @param {boolean} p.live         票券／房間是否還在活躍狀態
+ * @param {boolean} p.inPractice   目前是否已經在練習流程裡
+ * @param {string|null} p.roomState
+ * @param {string|null} p.sessionState
+ * @param {string|null} p.actKey   主按鈕目前的 key
+ */
+export function canStartPracticeFrom({
+  entryOk = false, live = false, inPractice = false,
+  roomState = null, sessionState = null, actKey = null,
+} = {}) {
+  const sessionOver = !!sessionState && SESSION_TERMINAL.includes(sessionState);
+  const sessionIdle = !sessionState || sessionOver;
+  const roomIdle = !roomState || ["cancelled", "expired"].includes(roomState) || sessionOver;
+  return !!entryOk && !live && !inPractice && roomIdle && sessionIdle && actKey !== "refixture";
+}

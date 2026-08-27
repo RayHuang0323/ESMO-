@@ -57,6 +57,13 @@ import { advanceDaysInState, buildWeekLines, recentForm } from "./economy/weekly
 import { forecastWeeks } from "./economy/forecast.js";
 import { DEFAULT_SCENARIO, SCENARIOS, scenarioById, prizeTableFor } from "./economy/economyConfig.js";
 import { seedFormLogFromCsHistory } from "./economy/formLog.js";
+//  ── Season vNext V7B：Retention Foundation（日／週／季目標）───────────────
+//  ⚠ 純函式層在 `retention/`；本層只負責「讀狀態 → 呼叫 → 寫回」，
+//    不在 Store 裡放任何目標規則。
+import {
+  emptyRetention, normalizeRetention, retentionViewOf, claimObjective as claimObjectiveIn,
+  recordTrainingActivity, recordScoutActivity, coordsOf,
+} from "./retention/retentionState.js";
 import { newGameFinancials } from "./economy/newGame.js";
 import { ensureTeamIdentity } from "./identity/teamIdentity.js";
 //  ── Milestone Q3：賽事系統。規則全在 competition/ 的純函式裡，
@@ -378,6 +385,9 @@ const DEFAULT = {
   //  ⚠ 刻意**不設上限**：一季一筆小物件，與那兩個存整張名次表的 history 不同，
   //    而榮耀一旦被裁掉就等於歷史被改寫。
   honors: [],
+  //  V7B：Retention Foundation。目標清單本身是**推導**出來的，這裡只存
+  //  俱樂部點數、計數器、去重集合與領取紀錄（見 `retention/retentionState.js`）。
+  retention: emptyRetention(),
   // Q7b: metadata-only Season -> MOBA Career Circuit -> League Event wrapper.
   seasonStateV2: null,
   inbox: [
@@ -628,6 +638,8 @@ const load = () => {
       // Sprint10 的 sponsors[] 假名單已退場；舊存檔沒有 activeSponsor → null（尚未簽約）
       activeSponsor: saved.activeSponsor ?? DEFAULT.activeSponsor,
       scouted: saved.scouted && typeof saved.scouted === "object" ? saved.scouted : {},
+      //  V7B：舊存檔沒有 retention ⇒ 空的（不回填任何歷史進度，那是編造）。
+      retention: normalizeRetention(saved.retention),
       csHistory: arr(saved.csHistory, []),   // S23：舊存檔沒有 → 空（向下相容）
       //  Milestone N migration：舊存檔沒有 economy ⇒ 空帳本。
       //  ⚠ 刻意**不補結算過去的週**：那會在載入當下憑空扣一大筆薪資，
@@ -920,6 +932,9 @@ export const useProfileStore = create((rawSet, get) => {
     const effects = teamDevelopmentEffectsOf(get().teamDevelopment);
     const days = c.id === "rest" ? c.hours : Math.max(1, c.hours - effects.trainingDaysReduction);
     get()._patchPlayer(id, (x) => ({ ...x, training: { courseId, daysLeft: days, totalDays: days } }));
+    //  V7B：日目標「安排訓練」。記在**指派**這一刻，不是課程結束那一刻——
+    //  玩家今天做的事是「安排」，課程要跑好幾天，記在結束會讓今天的格子點不亮。
+    set({ retention: recordTrainingActivity(normalizeRetention(get().retention), get()._retentionCoords()) });
     return true;
   },
   cancelTraining(id) {
@@ -3313,8 +3328,69 @@ export const useProfileStore = create((rawSet, get) => {
 
   // ── 球探招募（Legacy RecruitModule）─────────────────────────────────
   setScouted(prospectId, level) {
-    set({ scouted: { ...(get().scouted ?? {}), [prospectId]: level } });
+    //  V7B：日目標「球探回報」。只在**偵查等級真的往上走**時記一次，
+    //  否則對同一個人重複點就能刷滿今天的格子。
+    const prev = Number((get().scouted ?? {})[prospectId]) || 0;
+    const next = { ...(get().scouted ?? {}), [prospectId]: level };
+    const advanced = (Number(level) || 0) > prev;
+    set({
+      scouted: next,
+      ...(advanced ? { retention: recordScoutActivity(normalizeRetention(get().retention), get()._retentionCoords()) } : {}),
+    });
     get().save();
+  },
+  // ── Season vNext V7B：Retention Foundation ──────────────────────────
+  /**
+   * 三個尺度的時間座標。**唯一讀取點**——呼叫端不得自己算週或年。
+   * ⚠ 年度一律取自 `careerYearOf`，與休賽期／生涯年度用的是同一條時間。
+   */
+  _retentionCoords() {
+    const days = Number(get().meta?.days) || 1;
+    return coordsOf({ days, day: days, week: deriveTime(days).week, year: careerYearOf(days).year });
+  },
+  /**
+   * 目標總覽。**畫面唯一入口**：不得自己抽目標、自己算進度、自己判可不可領。
+   *
+   * ⚠ 賽季目標的名次與巡迴積分是**從賽季狀態推導**的，不是計數器——
+   *   賽季自己已經有帳本，再存一份必然漂移。這裡只負責把它們讀出來。
+   * ⚠ 沒有賽季時一律回 null / 0（fail-open 成「尚未開賽」），不猜。
+   */
+  retentionView(mode = DEFAULT_GAME_MODE) {
+    const teamId = get().team?.id ?? "team";
+    let leagueRank = null;
+    let circuitPoints = 0;
+    try {
+      const cv = get().competitionView(mode);
+      if (cv?.hasSeason) {
+        //  ⚠ 玩家隊伍的身分以**賽季狀態**的 `playerTeamId` 為準，不是 `team.id`：
+        //    後者在落盤前會隨天數改變（見 `check_cs23` 的身分規則），
+        //    拿它去比對積分榜會在某些天查不到自己。
+        const myId = get()._competitionStateOf?.(mode)?.playerTeamId ?? get().team?.id ?? null;
+        //  ⚠ 名次直接讀 `row.rank`（`computeStandings` 的權威欄位），
+        //    不用陣列索引——那是第二套排序假設。
+        const mine = (cv.standings?.rows ?? []).find((r) => r.teamId === myId);
+        if (mine && Number.isFinite(Number(mine.rank))) leagueRank = Number(mine.rank);
+        for (const st of Object.values(cv.circuitPoints?.standings ?? {})) {
+          const row = (st?.rows ?? []).find((r) => r.teamId === myId);
+          if (row) circuitPoints = Math.max(circuitPoints, Number(row.points) || 0);
+        }
+      }
+    } catch { /*  賽季尚未建立／投影失敗 ⇒ 維持「尚未開賽」，不讓目標頁跟著壞掉 */ }
+    return retentionViewOf(get().retention, {
+      coords: get()._retentionCoords(), teamId, leagueRank, circuitPoints,
+    });
+  },
+  /**
+   * 領取一個目標的獎勵。
+   * @returns {{ok:boolean, gained:number, reason:string|null, clubPoints:number}}
+   */
+  claimRetentionObjective(objectiveId, mode = DEFAULT_GAME_MODE) {
+    const view = get().retentionView(mode);
+    const r = claimObjectiveIn(get().retention, objectiveId, view);
+    if (!r.ok) return { ok: false, gained: 0, reason: r.reason, clubPoints: view.clubPoints };
+    set({ retention: r.retention });
+    get().save();
+    return { ok: true, gained: r.gained, reason: null, clubPoints: r.retention.clubPoints };
   },
   // ── CS 訓練賽入史（Sprint23）────────────────────────────────────────
   /**

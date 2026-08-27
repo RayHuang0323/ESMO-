@@ -24,9 +24,12 @@ import { deriveTime } from "../economy/timeline.js";
 import { applyMatchWear } from "../condition/playerCondition.js";
 import { applyLevelGrowth } from "./levelGrowth.js";
 import { GROWTH_SOURCES } from "./careerGrowth.js";
-import { normalizeMatchSource, MATCH_SOURCE } from "./matchSource.js";
+import { normalizeMatchSource, isPracticeSource, MATCH_SOURCE, MATCH_TIER_LABELS } from "./matchSource.js";
 //  V2：競技時間區塊。只有一般競技佔容量，練習與正式季賽都不佔。
-import { competitiveBlockOf } from "../time/worldClock.js";
+import { competitiveBlockOf, careerYearOf } from "../time/worldClock.js";
+//  V7B：日／週／季目標的比賽側記錄。**掛在這裡是刻意的**——本檔是全專案
+//  唯一的結算入口，掛在別處就會漏掉某一種來源（那正是 TD-35 的形狀）。
+import { recordMatchActivity, coordsOf, normalizeRetention } from "../retention/retentionState.js";
 import { makeGrowthEntry, appendGrowth } from "./growthLog.js";
 
 /**
@@ -166,14 +169,20 @@ export function applyProgressToState(state, tx) {
 
   const nextPlayers = players.map((p) => patched.get(p.id) ?? p);
 
-  // 財務流水（讓「近期交易」看得到這筆獎金；money 為 0 就不記帳）
+  // 財務流水（讓「近期交易」看得到這筆收入；money 為 0 就不記帳）
+  //
+  //  ⚠ V7A：一般對戰的這筆錢**不叫「獎金」**。帳本裡的「獎金」是賽季名次獎金
+  //    （`economy/competitionAward.js`），玩家看到「MOBA 勝利獎金」會以為
+  //    自己剛拿了賽事獎金——而一般對戰依規格**不得**產生任何正式賽季獎金。
+  //    層級名稱取自 `MATCH_TIER_LABELS`，不在這裡另寫一組詞。
+  const tierName = MATCH_TIER_LABELS[matchSourceOfTx]?.name ?? MATCH_TIER_LABELS[MATCH_SOURCE.unknown].name;
   const nextTransactions = num(tx.teamRewards.money) > 0
     ? [{
         id: `${tx.mode}-${tx.matchId}`,
         date: fmtDate(tx.recordedAt),
         type: "income",
         cat: "prize",
-        label: `${tx.mode === "cs" ? "CS" : "MOBA"} ${tx.metadata.winner === "us" ? "勝利" : "參賽"}獎金`,
+        label: `${tx.mode === "cs" ? "CS" : "MOBA"} ${tierName}${tx.metadata.winner === "us" ? "勝利" : "參賽"}收入`,
         amount: num(tx.teamRewards.money),
         color: "#34d399",
       }, ...(finance.transactions ?? [])].slice(0, 30)
@@ -217,9 +226,33 @@ export function applyProgressToState(state, tx) {
     ? { day: dayNow, used: blockNow.used + 1 }
     : { day: dayNow, used: blockNow.used };
 
+  //  ── V7B：日／週／季目標的比賽側記錄 ──────────────────────────────────
+  //  ⚠ 直接繼承 `processedMatchTransactions` 的冪等：同一場再結算走不到這裡
+  //    （上面已經以 `alreadyApplied` 提早回傳）⇒ 不會重複計數。
+  //  ⚠ 出賽名單取自 `tx.playerProgress`（adapter 依**實際陣容**產生的名單），
+  //    不是 `state.players` ——後者是整份名單，會把沒上場的人也算成出賽。
+  //    快速練習的 `playerProgress` 是空的 ⇒ 練習不算輪替、不算青訓，符合 V0D。
+  //  ⚠ 年度座標一律取自 `careerYearOf`，不自己用天數除——同一條時間不得有兩種年度。
+  const retentionCoords = coordsOf({
+    day: dayNow,
+    week: deriveTime(dayNow).week,
+    year: careerYearOf(dayNow).year,
+  });
+  const appeared = (tx.playerProgress ?? []).map((pp) => {
+    const p = byId.get(pp.playerId);
+    return { id: pp.playerId, age: p?.age ?? null };
+  });
+  const nextRetention = recordMatchActivity(normalizeRetention(state.retention), {
+    matchSource: matchSourceOfTx,
+    win: tx.metadata?.winner === "us",
+    income: num(tx.teamRewards.money),
+    appeared,
+  }, retentionCoords);
+
   const nextState = {
     players: nextPlayers,
     finance: { ...finance, funds: moneyAfter, transactions: nextTransactions },
+    retention: nextRetention,
     //  `reputation` 由 spread 原樣帶過（F0 deprecated：不再由結算寫入）。
     meta: { ...meta, fans: fansAfter, competitiveBlock: nextBlock },
     processedMatchTransactions: { ...processed, [tx.transactionId]: receipt },
@@ -229,12 +262,23 @@ export function applyProgressToState(state, tx) {
     //  N3 之前只有 CS 的紀錄進得了績效，MOBA 打再多都不影響收入。
     //  ⚠ 本檔刻意不提及 CS 的歷史清單識別字：check_progress25 §11 以字串比對
     //    確保 MOBA 路徑不碰它，連註解都算。要講那件事請寫在 economy/formLog.js。
-    economy: appendFormEntry(state.economy, {
-      id: tx.transactionId,
-      mode: tx.mode,
-      win: tx.metadata?.winner === "us",
-      week: deriveTime(meta.days ?? 1).week,
-    }),
+    //
+    //  ⚠⚠ V7A：**快速練習不得進這份紀錄。**
+    //    `formLog` → `recentForm()` → 週結算的贊助績效獎金 ⇒ 它是一條**永久的
+    //    金錢影響**，只是繞了一週才付款。V0D 把練習的錢／粉絲／XP 都歸了零，
+    //    卻漏掉這一條：實測一場練習勝利仍會寫進 `formLog`，於是「零永久影響」
+    //    在贊助收入這一側不成立（練習刷勝率 ⇒ 週收入變高）。
+    //    判定走 `isPracticeSource`，不自己比對字串——那是 TD-36 的形狀。
+    //    ⚠ `unknown`（舊存檔／debug harness）**照舊記錄**：它不是一種產品模式，
+    //      排除它等於讓資料遺失變成一個看不見的收入懲罰。
+    economy: isPracticeSource(matchSourceOfTx)
+      ? (state.economy ?? {})
+      : appendFormEntry(state.economy, {
+        id: tx.transactionId,
+        mode: tx.mode,
+        win: tx.metadata?.winner === "us",
+        week: deriveTime(meta.days ?? 1).week,
+      }),
   };
 
   return { nextState, receipt };

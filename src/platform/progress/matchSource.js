@@ -80,3 +80,41 @@ export const normalizeMatchSource = (v) =>
  *   那正是 TD-36 的形狀。
  */
 export const isPracticeSource = (v) => normalizeMatchSource(v) === MATCH_SOURCE.practice;
+
+/**
+ * 三個對戰層級的**玩家可見名稱與一句話說明**。V7A 立。
+ *
+ * ── 為什麼放在這裡 ────────────────────────────────────────────────────────
+ * 「這場算哪一層」的唯一判定已經在本檔（`matchSourceFromOrigin`）。
+ * 名稱若另外寫在畫面裡，遲早會出現「分類說是競技、畫面寫練習」的分歧——
+ * 那正是 V0D 那條 `repractice` 事故的形狀（玩家以為在測試，實際在打正式競技）。
+ * ⇒ 名稱與分類同源。**MOBA / CS 共用這一份**，兩邊不得各寫一套。
+ *
+ * ⚠ `note` 是**契約的一句話摘要**，不是行銷文案。改動這裡等於改動玩家對
+ *   「這一層會不會影響正式賽季」的認知，必須與實際行為一致：
+ *     practice    → 0 成長 0 獎勵 0 戰績（V0D §Z ＋ V7A 的 formLog 補漏）
+ *     competitive → 有成長有收益、吃每日容量、**不進賽季任何帳本**（V7A）
+ *     official    → 進排名／巡迴積分／晉級／冠軍（Q 系列）
+ * ⚠ `unknown` 不是產品層級，只在舊存檔／debug 出現 ⇒ 給中性名稱，不下承諾。
+ */
+export const MATCH_TIER_LABELS = Object.freeze({
+  [MATCH_SOURCE.unknown]: Object.freeze({ name: "對戰", note: "" }),
+  [MATCH_SOURCE.practice]: Object.freeze({ name: "快速練習", note: "不影響戰績與數值" }),
+  [MATCH_SOURCE.competitive]: Object.freeze({ name: "一般對戰", note: "累積成長與收益，不計入正式賽季" }),
+  [MATCH_SOURCE.official]: Object.freeze({ name: "生涯季賽", note: "計入排名、巡迴積分與冠軍" }),
+});
+
+/**
+ * 賽前畫面用的層級判定。
+ *
+ * ⚠ 吃的是 Store 既有的兩份**流程上下文**（`matchFixtureContext` /
+ *   `matchPracticeContext`），它們自己都是讀 `MatchOrigin` 得來的
+ *   ⇒ 本函式沒有「靠畫面猜」的成分，只是把兩個布林折成同一組層級詞彙。
+ * ⚠ 兩者同時為真是不可能的狀態（開練習會清掉 `fixtureAssignment`）；
+ *   真的發生時以 practice 優先——寧可少承諾，不可多承諾。
+ */
+export function matchTierOf({ inFixture = false, inPractice = false } = {}) {
+  if (inPractice) return MATCH_SOURCE.practice;
+  if (inFixture) return MATCH_SOURCE.official;
+  return MATCH_SOURCE.competitive;
+}

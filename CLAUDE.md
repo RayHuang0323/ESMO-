@@ -62,6 +62,18 @@ node tools/regress2.mjs # 一律跑（若存在）
   ⚠ 休賽期會**擋住世界時間**，所以 `completeOffSeason()` 必須永遠成功、永遠免費，
   否則存檔會被卡死。
 
+- **對戰層級與 Retention（2026-08-27 V7A/V7B；動到比賽來源、每日容量、目標系統就必跑）**：
+  `check_general_match_v7a`（55）`check_retention_v7b`（58）
+  ＋瀏覽器 **`browser_check_general_match_and_objectives`**（30）
+  ⚠ 三個對戰層級的**名稱與分類同源**，都住在 `progress/matchSource.js`
+  （`MATCH_TIER_LABELS` / `matchTierOf`）。畫面不得自己寫一份文案。
+  ⚠ **一般對戰不得寫進賽季任何帳本**（排名／巡迴積分／晉級／冠軍／賽季獎金／榮譽）。
+  賽程回寫唯一的呼叫點被 `isFixtureSession` 守住，別處不得再開一個。
+  ⚠ **快速練習是零永久影響**，包含延後生效的那條：不得進 `economy.formLog`
+  （formLog → `recentForm()` → 週結算的贊助績效獎金）。
+  ⚠ Retention 的日／週／年一律綁**世界時間**（`meta.days`），**永久排除 ServerTime**；
+  目標清單是決定性推導，**不落盤**；日常目標**不得**給任何永久戰力。
+
 - **正式站 smoke（部署後才跑）**：**`browser_check_prod_season_vnext`**（30）
   ⚠ 打的是**線上網址**，不是 dev server。因此**只能走 UI ＋ localStorage**（TD-31）：
   `RESOLVE_APP_MODULES` 匯入 `/src/...`，打包後的 bundle 沒有那些路徑。

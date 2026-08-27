@@ -31,7 +31,8 @@ import { useProfileStore } from "../../platform/profileStore.js";
 import { TICKET_STATES } from "../../platform/contracts/matchmaking.js";
 import { SESSION_TERMINAL } from "../../platform/contracts/matchSession.js";
 import { selectOpponentName } from "../../platform/matchTeamNames.js";
-import { primaryActionFor, flowStatusText, flowStepOf } from "./matchPrepAction.js";
+import { primaryActionFor, flowStatusText, flowStepOf, canStartPracticeFrom } from "./matchPrepAction.js";
+import { matchTierOf, MATCH_TIER_LABELS } from "../../platform/progress/matchSource.js";
 
 /**
  * @param {"moba"|"cs"} mode
@@ -48,6 +49,10 @@ export function useMatchFlow(mode = "moba", onEnterBattle = null) {
   const oppReady = useProfileStore((s) => !!s.matchmaking?.room?.confirmations?.opponent);
   const sessionId = useProfileStore((s) => s.matchmaking?.session?.sessionId ?? null);
   const sessionState = useProfileStore((s) => s.matchmaking?.session?.state ?? null);
+  //  V7A：今天的競技容量也要能觸發重繪（打完一場「今日 1/3」要立刻變成 2/3）。
+  //  ⚠ 一樣只訂閱**原始值**：容量本身是推導出來的，訂閱推導函式會踩到本檔開頭
+  //    那個「選擇器函式身分不變 ⇒ 永不重繪」的坑。
+  const blockSig = useProfileStore((s) => `${s.meta?.days ?? 0}:${s.meta?.competitiveBlock?.day ?? 0}:${s.meta?.competitiveBlock?.used ?? 0}`);
   //  陣容改動也要讓主按鈕跟著變（補滿第五人後按鈕要立刻可按）
   const lineupSig = useProfileStore((s) => JSON.stringify(mode === "cs" ? s.csLineup : s.lineup));
   const playerSig = useProfileStore((s) => (s.players ?? []).length);
@@ -125,6 +130,14 @@ export function useMatchFlow(mode = "moba", onEnterBattle = null) {
   //  V0D：這條流程是不是快速練習。判定同樣在 Store（`matchPracticeContext`，
   //  只讀 `MatchOrigin`）——本檔不判「算不算練習」，也不看畫面名稱。
   const practice = store.matchPracticeContext();
+
+  //  ── V7A：這條流程屬於哪一個對戰層級 ────────────────────────────────────
+  //  ⚠ 名稱與說明**不在畫面裡寫死**，一律取自 `progress/matchSource.js`
+  //    ——那也是「這場算哪一層」的唯一判定所在。分開寫遲早會分歧。
+  const tierKey = matchTierOf({ inFixture: !!fixture?.inFixture, inPractice: !!practice?.inPractice });
+  const tier = { key: tierKey, ...MATCH_TIER_LABELS[tierKey] };
+  //  一般對戰才有每日容量；另外兩層不吃容量（練習是測試場、季賽由日曆承擔）。
+  const block = store.competitiveBlockView();
 
   const act = primaryActionFor({ entryOk: entry.ok, view, room, session, mode, fixture, practice });
   const statusText = flowStatusText({ entryOk: entry.ok, view, room, session, opponentName, fixture, practice });
@@ -215,21 +228,16 @@ export function useMatchFlow(mode = "moba", onEnterBattle = null) {
     waitedSec: view.waitedSec,
     canCancel: live,
     err, run, cancel, abandon, tick,
-    //  V0D：快速練習。只在「**閒置**且陣容就緒」時為真。
-    //
-    //  ⚠ 「閒置」必須看**還活著沒有**，不是「有沒有值」。第一版寫成
-    //    `!sessionState && !roomState`，於是打完任何一場之後，殘留的終局場次
-    //    （completed / expired…）會讓按鈕**永遠不再出現**——瀏覽器 smoke 實測到，
-    //    等於這個功能只有全新存檔看得到。
-    //  ⚠ `ROOM_TERMINAL` 不能直接用：它把 `confirmed` 也算終局（房間任務完成），
-    //    但那時候流程正要進場，絕不是閒置。這裡只認真正停下來的兩種。
-    //  ⚠ `refixture` 排除掉：畫面正在請玩家「重新進入本場賽事」時不該同時勸他去練習——
-    //    開練習會清掉 `fixtureAssignment`，那條回去的路就沒了。
+    //  V7A：對戰層級（名稱／說明）與今天的競技容量。畫面只顯示，不自己判。
+    tier, fixture, block, blockSig,
+    //  V0D／V7A：快速練習這顆次要按鈕。**規則不在這裡**——它踩過兩次
+    //  「什麼叫閒置」的坑，所以搬進 `matchPrepAction.canStartPracticeFrom`
+    //  （純函式，可單元驗證），本檔只負責把當下的原始值遞進去。
     practice, startPractice,
-    canStartPractice: entry.ok && !live && !practice.inPractice
-      && !(roomState && !["cancelled", "expired"].includes(roomState))
-      && !(sessionState && !SESSION_TERMINAL.includes(sessionState))
-      && act.key !== "refixture",
+    canStartPractice: canStartPracticeFrom({
+      entryOk: entry.ok, live, inPractice: practice.inPractice,
+      roomState, sessionState, actKey: act.key,
+    }),
     canAbandon: sessionState === "launched",
     //  內部識別：**只給 debug 區用**，正式畫面不得顯示
     internals: {

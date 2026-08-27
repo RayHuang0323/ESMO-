@@ -16127,3 +16127,142 @@ Release 本身已於 `e37abe5` 完成並上線，這一節補記**上線後的�
 
 - **TD-37 / `check_cs_team_identity_consumers_r48`**：既有已知紅燈，與 Season vNext 無關，
   照既有 waiver 處理，本次 release 未擴大處理。
+
+---
+
+## V7A 一般對戰收口 ＋ V7B Retention Foundation v1（2026-08-27）
+
+Season vNext 已於 `e37abe5` 上線（見上一節）。本輪做兩件事：把「一般對戰」這一層
+的產品契約收乾淨，然後立起 Retention v1。**不 push、不 deploy。**
+
+### 一、V7A：一般對戰收口（GENERAL_MATCH_CLOSED）
+
+#### 先做 Audit，不先改程式
+
+規格說「如果一般對戰現況本來就符合，不要為了有做事而改程式」。所以先實測。
+結論：**邏輯側本來就符合，唯一的真缺陷在快速練習那一側**。
+
+| 規格要求 | 實測結果 |
+|---|---|
+| 少量實戰成長 | ✅ competitive base 1.0＜official 3.0；實測 XP +120 |
+| 合理的一般生涯收益 | ✅ 實測錢 +33 萬、粉絲 +173 |
+| 每日容量限制 | ✅ 3 場／日，排隊時檢查、結算時扣格，跨日推導歸零 |
+| 不影響正式聯賽排名 | ✅ 賽程回寫唯一呼叫點被 `isFixtureSession` 守住 |
+| 不影響巡迴積分／晉級／冠軍 | ✅ 三者都只由賽事結果推導，沒有比賽來源的寫入路徑 |
+| 不影響正式賽季獎金 | ✅ 名次獎金在 `economy/competitionAward.js`，與比賽結算是兩條路 |
+| 不影響正式榮譽 | ✅ `honors.js` 只吃賽事決賽，不吃 `MatchResult` |
+| MOBA / CS 共用同一模式契約 | ✅ 兩支 adapter 都走 `matchSourceFromOrigin` |
+
+#### 找到並修掉的真缺陷：快速練習不是「零永久影響」
+
+`applyMatchProgress` 的 `appendFormEntry` 原本是**無條件**的
+⇒ 一場快速練習的勝負會寫進 `economy.formLog`
+⇒ `recentForm()` ⇒ 週結算的**贊助績效獎金**
+⇒ **練習其實有永久金錢影響**，只是繞了一週才付款。
+
+V0D 把練習的錢／粉絲／XP 都歸了零，唯獨漏掉這條**延後生效**的路。
+實測（`tools/` 外的一次性 probe）：練習結算後 `formLog.length === 1`。
+
+修法：在**唯一結算入口**用 `isPracticeSource` 擋掉，一處。
+⚠ `unknown`（舊存檔／debug harness）**照舊記錄**——排除它等於讓資料遺失
+變成看不見的收入懲罰，那是 TD-36 的形狀。
+實測修後：練習 `formLog.length === 0`、一般對戰仍是 1。
+
+#### UI 名稱與說明
+
+改動前，**一般對戰在整個 UI 裡沒有名字**：底部只寫「確認陣容並開始配對」，
+沒有一處說這一場會給成長與收益但不計入正式賽季，也沒有一處顯示今天還剩幾場
+——每日容量只有在「已經打滿」時以錯誤訊息現身。
+
+- 三層的玩家可見名稱與說明收進 `progress/matchSource.js`
+  （`MATCH_TIER_LABELS` ＋ `matchTierOf`），**與分類同源**，MOBA / CS 共用一份
+- 賽前頁加上層級橫幅（`prep-tier-banner`）：層級名稱／一句話契約／今日 N/3
+- 帳本裡一般對戰那筆錢改名為「MOBA 一般對戰勝利收入」
+  ——「獎金」在本專案專指賽季名次獎金，混用會讓玩家以為拿到了賽事獎金
+
+#### 瀏覽器實測抓到的第二個真缺陷
+
+**打完任何一場競技之後，「快速練習」按鈕就消失了。**
+`canStartPractice` 只把 `cancelled` / `expired` 當閒置，但打完一場之後房間會停在
+`confirmed`（房間任務確實完成了）⇒ 條件永遠不成立，要先按「重新配對」才回得來。
+這正是 `useMatchFlow` 註解裡記過的同一個坑換了一個殘留狀態。
+修法：**場次已走到終局時**，殘留的 `confirmed` 房間視為閒置。
+順手把整條規則從 hook 搬進 `matchPrepAction.canStartPracticeFrom`（純函式）——
+它已經踩過兩次「什麼叫閒置」的坑，不該每次都要起一個 dev server 才驗得到。
+現在由 `check_general_match_v7a` §U8–U15 以**單元**方式釘死（8 條）。
+
+### 二、V7B：Retention Foundation v1
+
+完整設計見 **`docs/design/Retention_v1_設計.md`**。摘要：
+
+- **三個尺度**：今日 3 個（10–20 分鐘）／本週 3 個（正常玩就完成大部分）／
+  賽季 4 個（**都不需要冠軍**）
+- **時間綁世界時間，不是真實時間**。沒有 ServerTime，也不會有——
+  真實時間會讓離線流失進度、讓掛機變成玩法。綁世界時間之後「今天的目標
+  只有你自己推得動」⇒ 沒有時限焦慮，也刷不動（推一天要付老化與合約的代價）
+- **獎勵只有俱樂部點數**，出口是**純展示**的俱樂部聲望等級。
+  日常目標不得產生永久戰力（否則每天點一點會變成最有效率的養成路徑）
+- **推導不落盤**：目標清單是 `(尺度前綴, teamId)` 的決定性函式，存檔只有
+  點數／計數器／去重集合／領取紀錄。所有 key 帶尺度前綴 ⇒ 過期自動失效
+- **寫入點只有既有的三個**：`applyMatchProgress`（唯一結算入口）／
+  `assignTraining`／`setScouted`。沒有第二條管線
+- **不做逐項紅點**：首頁只有一個聚合數字
+
+新檔：`src/platform/retention/retentionObjectives.js`、`retentionState.js`、
+`src/screens/manage/ObjectivesScreen.jsx`。
+
+#### 瀏覽器實測抓到的第三個缺口
+
+**手機版進不去目標頁。** 手機首頁不渲染 `Utility`，所以桌面那個磚在 390px
+根本不存在。已補進底部「更多」sheet，並在有東西可領時於「還需要處理」多一張卡。
+
+### 三、驗證
+
+| 項目 | 結果 |
+|---|---|
+| `check_general_match_v7a`（新） | 55/55 |
+| `check_retention_v7b`（新） | 58/58 |
+| `browser_check_general_match_and_objectives`（新） | **28/30**（最後一次完整跑完的結果，見下方）|
+| `check_match_source_v0c` / `check_practice_match_v0d` / `check_pcgm_v0a` | 全綠 |
+| `check_progress25` / `check_dash10` / `check_flow09` | 全綠 |
+| `check_offseason_session_v6` / `check_time_block_v3` | 全綠 |
+| `regress.mjs` / `regress2.mjs` | exit 0；節奏門檻 8/8 |
+| `npm run build` | ⚠ **本輪最後一版沒跑成功**（見下方「未驗證項」）|
+
+#### ⚠ 未驗證項（本機記憶體不足，**不是**改動造成的）
+
+這台機器在本輪後半段可用實體記憶體掉到 1.3–1.9 GB（另一個 session 正在
+`worktrees/cs-c5a-gunplay-impact` 跑東西，加上使用者的 Chrome 佔 4.4 GB）。
+於是有兩項**跑不完**，必須由後續 session 或使用者補跑：
+
+| 未驗證項 | 症狀 | 補跑指令 |
+|---|---|---|
+| `npm run build` 最終版 | 連續 7 次 `fatal error: out of memory` / `exit=134` | `npm run build` |
+| `browser_check_general_match_and_objectives` 最終版 | Vite `exit=134`；或第一個 `Runtime.evaluate` 卡 14 分鐘逾時 | `node tools/browser_check_general_match_and_objectives.mjs` |
+
+**目前有的證據（不等於 build 綠，但不是零）**：
+
+1. `npm run build` 在本輪**前半段成功三次**（22.65s / 12.01s / 12.38s）。
+   最後一次成功已涵蓋除了「`canStartPracticeFrom` 抽出成純函式」以外的所有 `src/` 改動。
+2. 11 個改過的 `src/` 檔**逐檔通過 `esbuild.transformSync`**（JSX 與 JS 都測）。
+3. `useMatchFlow.js` / `matchPrepAction.js` 在 Node 裡**以真的 ES module 載入成功**；
+   `check_general_match_v7a` §U8–U15 直接 import 並**執行** `canStartPracticeFrom`。
+4. `browser_check_general_match_and_objectives` 最後一次跑完是 **28/30**，
+   兩條紅正是 D9/D10（練習按鈕消失）——**那個缺陷隨後已修**，並改由 §U8–U15
+   以單元方式驗證。修完之後的確認跑因記憶體不足未能完成。
+
+⚠ 前半段也出現過同樣成因的假紅（`WebAssembly.Memory.grow` 失敗、Vite exit=134），
+乾淨重跑即通過。**判讀規則：連續兩次同樣的紅才當成真訊號。**
+
+### 四、技術債
+
+- **TD-42（新）**：Retention v1 的俱樂部點數**沒有兌換出口**（只有純展示的聲望等級）。
+  兌換球探情報／青訓名額／商業解鎖要接三個既有系統，各自是獨立產品決定 ⇒ v2。
+- **TD-43（新）**：週目標少一個「不同戰術」。`MatchProgressTransaction.metadata`
+  是白名單，要加 `tacticId` 得動被凍結的契約 ⇒ 另開一輪。
+- **TD-38**（沿用）：`RosterScreen.jsx:363` 缺 `data-testid`，本輪同樣不動。
+- **TD-37**（沿用 waiver）：`check_cs_team_identity_consumers_r48`，與本輪無關。
+
+### 五、狀態
+
+**GENERAL_MATCH_CLOSED = YES**　**RETENTION_V1 = SHIPPED（未 push、未部署）**

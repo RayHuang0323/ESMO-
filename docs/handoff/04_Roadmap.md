@@ -1186,3 +1186,40 @@ V0A/V0B 成長 → V1 世界時間 → V2 年度邊界 → V3 快轉 → V4 生�
 
 真人競技／定時賽事（V4 已定契約，仍是 Not Now）、Coach / Mentor / 導師加成、
 完整 AI 轉會市場與談判、Club DNA / Personality。
+
+---
+
+## V7A / V7B（2026-08-27，本機完成，未 push）
+
+### V7A 一般對戰收口 — **GENERAL_MATCH_CLOSED = YES**
+
+一般對戰的正式定位 ＝ **日常低壓力實戰**。
+
+| | 保留 | 禁止影響 |
+|---|---|---|
+| | 少量實戰成長（1.0，官方賽 3.0）| 正式聯賽排名 |
+| | 一般生涯收益（錢／粉絲）| 巡迴積分、晉級、Championship |
+| | 每日容量 3 場 | 正式賽季獎金、冠軍與正式榮譽 |
+
+Audit 結論：**邏輯側本來就符合**，只補了兩個真缺陷與一組 UI 名稱。
+gate：`check_general_match_v7a`（47）＋ `browser_check_general_match_and_objectives`。
+
+- 快速練習曾經**有永久金錢影響**（`formLog` → 贊助績效獎金），已修
+- 打完一場之後「快速練習」按鈕會消失，已修
+- 一般對戰在 UI 裡本來**沒有名字**，已補層級橫幅與今日容量
+
+### V7B Retention Foundation v1 — **已實作**
+
+設計：`docs/design/Retention_v1_設計.md`。gate：`check_retention_v7b`（58）。
+
+日／週／季三個尺度，綁**世界時間**（永久排除 ServerTime）。獎勵只有俱樂部點數，
+出口是純展示的聲望等級。日常目標**不得**直接給永久戰力。
+
+### 下一步的候選（尚未排序，未開工）
+
+| 候選 | 為什麼 |
+|---|---|
+| **Retention v2：點數兌換出口**（TD-42）| v1 的點數目前只換得到聲望等級 |
+| **不同戰術週目標**（TD-43）| 要動被凍結的 `MatchProgressTransaction` metadata 白名單 |
+| **Foundation Calibration** | PCGM 數值仍標記 provisional |
+| **TD-39 定價／模擬能力來源不一致** | V7 線上契約之前必須處理 |
