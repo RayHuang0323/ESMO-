@@ -1189,12 +1189,15 @@ V0A/V0B 成長 → V1 世界時間 → V2 年度邊界 → V3 快轉 → V4 生�
 
 ---
 
-## V7A / V7B（2026-08-27，本機完成並全數驗證通過，未 push）
+## V7A / V7B（2026-08-28，**已上線**）
 
-> 2026-08-27 補跑：`npm run build` ✅（14.68s）、`browser_check_general_match_and_objectives` ✅ **30/30**。
-> **GENERAL_MATCH_CLOSED = YES**、**RETENTION_V1_COMPLETE = YES**。
+> **V7A = RELEASED　V7B Retention v1 = RELEASED**（2026-08-28）
+> production `5f92343`｜Actions run `33090060630` build ✅／deploy ✅｜<https://rayhuang0323.github.io/ESMO-/>
+> 本機 gate 全綠（`v7a` 55、`v7b` 58、`v0c` 21、`v0d` 70、`v0a` 24、regress2 8/8、build ✅）；
+> dev 瀏覽器驗收 **30/30**；正式站 smoke `browser_check_prod_v7_release` **41/41**。
+> ⚠ 已知缺陷 **TD-44**（打完練習之後賽前頁回不到一般對戰）——`4652c00` 就存在，非本次引入，以 W1 印出不計分。
 
-### V7A 一般對戰收口 — **GENERAL_MATCH_CLOSED = YES**
+### V7A 一般對戰收口 — **RELEASED（GENERAL_MATCH_CLOSED = YES）**
 
 一般對戰的正式定位 ＝ **日常低壓力實戰**。
 
@@ -1211,7 +1214,7 @@ gate：`check_general_match_v7a`（47）＋ `browser_check_general_match_and_obj
 - 打完一場之後「快速練習」按鈕會消失，已修
 - 一般對戰在 UI 裡本來**沒有名字**，已補層級橫幅與今日容量
 
-### V7B Retention Foundation v1 — **RETENTION_V1_COMPLETE = YES**
+### V7B Retention Foundation v1 — **RELEASED（RETENTION_V1_COMPLETE = YES）**
 
 設計：`docs/design/Retention_v1_設計.md`。gate：`check_retention_v7b`（58）。
 

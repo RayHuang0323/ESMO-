@@ -16282,3 +16282,75 @@ V0D 把練習的錢／粉絲／XP 都歸了零，唯獨漏掉這條**延後生�
 **GENERAL_MATCH_CLOSED = YES**　**RETENTION_V1_COMPLETE = YES**
 
 仍**未 push、未部署**；正式站驗收仍待另開一輪。
+
+### 七、正式站 Release（2026-08-28）
+
+**V7A = RELEASED　V7B Retention v1 = RELEASED**
+
+| | |
+|---|---|
+| 整合方式 | fast-forward（`origin/main` 停在 `516613f`，未前進 ⇒ 無 merge commit、無衝突） |
+| production SHA | `5f92343` |
+| Actions run | `33090060630`　build ✅／deploy ✅ |
+| 正式站 | <https://rayhuang0323.github.io/ESMO-/> |
+| bundle 核對 | 線上 `assets/index-CMdirWWl.js` 與本機 build 的 sha256 **逐位元組相同** |
+
+⚠ local `main` 分支被 `ESMO-worktrees/codex-cs-p0-main-release` 佔用（停在舊的 `1a14288`），
+所以整合走 `git push origin season/vnext:main`，沒有動那個 worktree。它的 `main` 仍是舊的。
+
+#### Release gate（推之前，全在 `5f92343` 上跑）
+
+| Gate | 結果 |
+|---|---|
+| `check_general_match_v7a` | 55/55 |
+| `check_retention_v7b` | 58/58 |
+| `check_match_source_v0c` | 21/21 |
+| `check_practice_match_v0d` | 70/70 |
+| `check_pcgm_v0a` | 24/24 |
+| `check_progress25` / `check_dash10` / `check_flow09` | exit 0 |
+| `check_offseason_session_v6` | 39/39 |
+| `check_time_block_v3` | exit 0 |
+| `regress.mjs` | exit 0（結束率 15/15、中位 22.5 分） |
+| `regress2.mjs` | 節奏門檻 8/8 |
+| `npm run build` | ✅ `built in 11.89s` |
+
+#### 正式站 smoke — **41/41**（新 gate）
+
+新增 `tools/browser_check_prod_v7_release.mjs`。**dev gate 不能直接拿來跑正式站**：
+`browser_check_general_match_and_objectives` 靠 `RESOLVE_APP_MODULES` 匯入 `/src/...`
+呼叫 Store action 推流程，正式站是打包後的 bundle，沒有那些路徑（TD-31）。
+這一支改成**全部點 UI**——包含 Ban/Pick 一個一個選英雄、按「快速完成」——
+一場約 1–2 分鐘，兩場（一般對戰＋快速練習）跑完整支約 12 分鐘。
+
+涵蓋：首頁無白屏／三個玩法入口／一般對戰名稱與今日 N/3／打得完且**有收益**
+（$120萬→$128萬、粉絲 +45、選手數值有變、交易 0→1）／容量 0/3→1/3／
+快速練習打得完且**零永久收益**（資金・財務・粉絲・聲望・formLog・贊助・選手數值・戰績・容量九項逐一比對存檔）／
+可重複進入／目標頁日 3 週 3 季 4／手動領取 ◆0→◆10 且重整後還在／
+MOBA・CS・賽事入口無白屏／390px 無橫向捲動／console 無 page-origin uncaught error。
+
+#### ⚠ 寫這支 gate 時吃到的三個假紅（記下來，免得下次重踩）
+
+1. **Ban/Pick 是輪流制**。第一版 idle 等 1.8 秒、budget 只有 90 步，
+   結果額度全花在等 AI，英雄池只從 100 掉到 88 就用完 ⇒ D6 假紅。
+2. **選角之後還有兩關**：分路確認頁（`confirm-draft`，有 testid）與
+   **戰術頁**（「開始載入 →」，**沒有** testid）。第一版漏了戰術頁，
+   整支停在那裡空轉 90 秒然後 STUCK。
+3. **P7 挑錯按鈕**。重複進入練習走的是**主按鈕** `repractice`，不是次要的
+   `prep-start-practice`——後者依 `canStartPracticeFrom` 只在「閒置且不在練習中」時出現。
+
+⚠ 另外：`processedMatchTransactions` 不保證是陣列，寫死 `.length` 會兩邊都拿到
+`undefined`，比較永遠不成立、紅得沒有資訊。
+
+### 八、技術債
+
+- **TD-44（新，已登錄到 `docs/09_技術債務清單.md`）**：打完一場快速練習之後，
+  MOBA **與 CS** 的賽前頁都永久停在 `tier=practice`，主按鈕只剩「重新開始快速練習」，
+  一般對戰的名稱與今日容量再也看不到；重整、推 1 天、再推 7 天都清不掉。
+  根因是 `matchPracticeContext().inPractice` 沒有像 `canStartPracticeFrom()` 那樣
+  把**終局場次**視為閒置。**`4652c00`（2026-08-25）就存在，早於本次 release 的基準
+  `516613f`** ⇒ 不是本輪回歸；V7A 的層級橫幅只是讓它看得見。
+  正式站 smoke 以 **W1** 印出、不計分。
+- **TD-42／TD-43**（本輪第六節登記的那兩個）維持原樣，不擴大處理、不阻擋 release。
+  ⚠ 其中 TD-42 與 `docs/09_技術債務清單.md` 既有的 TD-42 撞號，已在該檔加註，
+  留待下一輪整理技術債時重編。
+- **TD-37／TD-38** 沿用既有處理，本輪不動。
