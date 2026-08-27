@@ -16266,3 +16266,19 @@ V0D 把練習的錢／粉絲／XP 都歸了零，唯獨漏掉這條**延後生�
 ### 五、狀態
 
 **GENERAL_MATCH_CLOSED = YES**　**RETENTION_V1 = SHIPPED（未 push、未部署）**
+
+### 六、補跑驗證（2026-08-27，本機記憶體釋放後）
+
+上面「三、驗證」表裡的兩個 ⚠ 未驗證項，已在記憶體釋放後於同一個 commit（`f98764d`，
+工作區乾淨、無新改動）補跑完成：
+
+| 補跑項 | 結果 |
+|---|---|
+| `npm run build` | ✅ `✓ built in 14.68s`（2760 modules transformed） |
+| `browser_check_general_match_and_objectives` | ✅ **30 / 30**（含先前紅的 D9／D10，以及 C1 無未捕捉錯誤） |
+
+⇒ 「本機記憶體不足」的假紅判讀確認成立：程式碼本身沒有問題，兩項紅都是環境造成。
+
+**GENERAL_MATCH_CLOSED = YES**　**RETENTION_V1_COMPLETE = YES**
+
+仍**未 push、未部署**；正式站驗收仍待另開一輪。

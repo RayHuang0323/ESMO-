@@ -1189,7 +1189,10 @@ V0A/V0B 成長 → V1 世界時間 → V2 年度邊界 → V3 快轉 → V4 生�
 
 ---
 
-## V7A / V7B（2026-08-27，本機完成，未 push）
+## V7A / V7B（2026-08-27，本機完成並全數驗證通過，未 push）
+
+> 2026-08-27 補跑：`npm run build` ✅（14.68s）、`browser_check_general_match_and_objectives` ✅ **30/30**。
+> **GENERAL_MATCH_CLOSED = YES**、**RETENTION_V1_COMPLETE = YES**。
 
 ### V7A 一般對戰收口 — **GENERAL_MATCH_CLOSED = YES**
 
@@ -1208,7 +1211,7 @@ gate：`check_general_match_v7a`（47）＋ `browser_check_general_match_and_obj
 - 打完一場之後「快速練習」按鈕會消失，已修
 - 一般對戰在 UI 裡本來**沒有名字**，已補層級橫幅與今日容量
 
-### V7B Retention Foundation v1 — **已實作**
+### V7B Retention Foundation v1 — **RETENTION_V1_COMPLETE = YES**
 
 設計：`docs/design/Retention_v1_設計.md`。gate：`check_retention_v7b`（58）。
 
