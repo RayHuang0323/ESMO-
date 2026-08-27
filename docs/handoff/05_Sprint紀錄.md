@@ -16354,3 +16354,88 @@ MOBA・CS・賽事入口無白屏／390px 無橫向捲動／console 無 page-ori
   ⚠ 其中 TD-42 與 `docs/09_技術債務清單.md` 既有的 TD-42 撞號，已在該檔加註，
   留待下一輪整理技術債時重編。
 - **TD-37／TD-38** 沿用既有處理，本輪不動。
+
+## TD-44 修正（2026-08-28）— **TD-44 = CLOSED**
+
+production `b1830b3`｜Actions run build ✅／deploy ✅｜線上 bundle 與本機 build 同一個 hash。
+**本輪只修 TD-44，沒有開任何新功能。**
+
+### 一、根因
+
+`matchPracticeContext().inPractice` 只看 `origin.kind`，**沒有算終局**。
+練習打完之後殘留 `session=completed/practice` ＋ `room=confirmed/practice`
+⇒ 「還在練習中」永遠為真 ⇒ MOBA 與 CS 的賽前頁都停在 practice 層級。
+
+同一個問題 `canStartPracticeFrom()` 早就算對了（它知道「場次終局時，殘留的
+`confirmed` 房間要視為閒置」），只是那份判定沒有被共用。
+
+### 二、共用 predicate 怎麼收斂
+
+新增 `src/platform/contracts/matchFlowIdle.js` → `matchFlowIdleFrom({roomState, sessionState})`
+回傳 `{sessionOver, sessionIdle, roomIdle, idle}`，**兩邊共用**：
+
+- `matchPrepAction.canStartPracticeFrom()`：三行自算的終局改成呼叫共用判定（行為不變）。
+- `profileStore.matchPracticeContext()`：用同一份算出 `activePractice`。
+
+⚠ 房間刻意**不套** `ROOM_TERMINAL`——那份清單把 `confirmed` 也算終局，
+但簽場次的那一刻流程正要進場，絕不是閒置。房間自己只認 `cancelled`／`expired`；
+殘留的 `confirmed` 要不要算閒置，**綁在場次上**。
+
+### 三、**為什麼不能只改一個旗標**（本輪最重要的判斷）
+
+`inPractice` 有兩類需求相反的消費者：
+
+| 消費者 | 問的問題 | 讀取時機 |
+|---|---|---|
+| `battle/useBattleFeed.js`、`progress/settleCsMatch.js` | 這一場的**來源**是不是練習 | ⚠ `settleCsMatch` 第 4 步在 `settleMatchThroughSession` **之後**——那時場次已 `completed` |
+| 賽前頁（橫幅／主按鈕退路／次要按鈕） | **現在**還在練習流程裡嗎 | 隨時 |
+
+⇒ 把終局判定直接加進 `inPractice`，**練習賽會立刻開始寫 CS 戰績**，
+直接打破「快速練習零永久影響」。所以拆成兩個欄位：
+`inPractice`（原意，不動）＋ `activePractice`（新，賽前頁用）。
+gate §A 四條就是在守這件事（結算端不得改讀 `activePractice`）。
+
+⚠ 另一個守衛：`activePractice` 只看**現役流程**（場次優先於房間）的來源，
+**不看** `practiceAssignment`——沒有任何流程會清掉它，算進去的話，玩家按
+「重新配對」開一場真的競技比賽時橫幅會寫「快速練習」，那是比 TD-44
+更危險的**反向**誤導（以為在測試，其實在打正式的）。gate §C8 釘住。
+
+### 四、驗證
+
+| 項目 | 結果 |
+|---|---|
+| `check_td44_practice_exit`（新） | **46/46** |
+| `browser_check_td44_practice_exit`（新，MOBA ＋ CS） | **33/33** |
+| `check_general_match_v7a` | 55/55（未動） |
+| `check_retention_v7b` | 58/58（未動） |
+| `check_practice_match_v0d` | 70/70（未動） |
+| `check_match_source_v0c` / `check_pcgm_v0a` | 21/21／24/24 |
+| `check_progress25`／`dash10`／`flow09`／`offseason_session_v6`／`time_block_v3`／`cs23` | exit 0 |
+| `regress` / `regress2` | exit 0 |
+| `browser_check_general_match_and_objectives` | 30/30（未動） |
+| `npm run build` | ✅ `built in 13.21s` |
+| **正式站 smoke** `browser_check_prod_v7_release` | **44/44**（原 41 ＋ TD-44 的 P7–P10） |
+
+**瀏覽器實測（MOBA 與 CS 各走一遍完整路徑）**：
+一般對戰頁（一般對戰｜今日 0/3）→ 快速練習 → 完成（`session=completed/practice`）
+→ 回賽前頁 → **名稱回到「一般對戰」** → **容量回到 0/3** → 主按鈕回到「重新配對」
+→ **仍能再次開始快速練習** → reload 仍正常 → 推 1 天仍正常
+→ 再開一場練習層級**確實回到 practice**（沒有修過頭）。
+
+### 五、mutation sentinel
+
+- **M-A（真 sentinel）**：把共用判定的 `|| sessionOver` 拿掉，寫成暫存模組再 import 回來
+  ⇒ §I9（completed ＋ confirmed 應為閒置）真的變成 `false`。不是只證明「字串換得掉」。
+- **M-B**：把橫幅改回讀 `inPractice` ⇒ §U1 的正則不再命中。
+- **M-C**：把 `practiceAssignment` 算進現役流程 ⇒ §C8 的反向誤導守衛抓得到。
+
+### 六、寫 gate 時吃到的兩個假紅
+
+1. `settleMatchThroughSession({transaction: null})` 會直接以 `no_transaction` 退回，
+   場次永遠停在 `launched` ⇒ A3 假紅。交易一律由**該模式自己的 adapter** 產生。
+2. 樣板字串裡的註解**不得出現反引號**——會提早結束字串，整支 SyntaxError。
+
+### 七、本輪未動
+
+一般對戰收益與容量、快速練習零永久影響、正式季賽、match flow 整體結構，全部沒動。
+TD-42／TD-43 維持原樣（含既有的 TD-42 撞號，仍留待下一輪重編）。

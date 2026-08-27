@@ -1195,7 +1195,10 @@ V0A/V0B 成長 → V1 世界時間 → V2 年度邊界 → V3 快轉 → V4 生�
 > production `5f92343`｜Actions run `33090060630` build ✅／deploy ✅｜<https://rayhuang0323.github.io/ESMO-/>
 > 本機 gate 全綠（`v7a` 55、`v7b` 58、`v0c` 21、`v0d` 70、`v0a` 24、regress2 8/8、build ✅）；
 > dev 瀏覽器驗收 **30/30**；正式站 smoke `browser_check_prod_v7_release` **41/41**。
-> ⚠ 已知缺陷 **TD-44**（打完練習之後賽前頁回不到一般對戰）——`4652c00` 就存在，非本次引入，以 W1 印出不計分。
+> ✅ **TD-44 = CLOSED**（2026-08-28，`b1830b3`）：打完練習之後賽前頁回得到一般對戰了。
+> 終局判定抽成 `contracts/matchFlowIdle.js` 共用；`inPractice`／`activePractice` 拆開。
+> gate `check_td44_practice_exit` 46/46、`browser_check_td44_practice_exit` 33/33（MOBA ＋ CS）、
+> 正式站 smoke **44/44**。
 
 ### V7A 一般對戰收口 — **RELEASED（GENERAL_MATCH_CLOSED = YES）**
 
