@@ -29,8 +29,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { TICKET_STATES } from "../../platform/contracts/matchmaking.js";
+import { SESSION_TERMINAL } from "../../platform/contracts/matchSession.js";
 import { selectOpponentName } from "../../platform/matchTeamNames.js";
-import { primaryActionFor, flowStatusText, flowStepOf } from "./matchPrepAction.js";
+import { primaryActionFor, flowStatusText, flowStepOf, canStartPracticeFrom } from "./matchPrepAction.js";
+import { matchTierOf, MATCH_TIER_LABELS } from "../../platform/progress/matchSource.js";
 
 /**
  * @param {"moba"|"cs"} mode
@@ -47,6 +49,10 @@ export function useMatchFlow(mode = "moba", onEnterBattle = null) {
   const oppReady = useProfileStore((s) => !!s.matchmaking?.room?.confirmations?.opponent);
   const sessionId = useProfileStore((s) => s.matchmaking?.session?.sessionId ?? null);
   const sessionState = useProfileStore((s) => s.matchmaking?.session?.state ?? null);
+  //  V7A：今天的競技容量也要能觸發重繪（打完一場「今日 1/3」要立刻變成 2/3）。
+  //  ⚠ 一樣只訂閱**原始值**：容量本身是推導出來的，訂閱推導函式會踩到本檔開頭
+  //    那個「選擇器函式身分不變 ⇒ 永不重繪」的坑。
+  const blockSig = useProfileStore((s) => `${s.meta?.days ?? 0}:${s.meta?.competitiveBlock?.day ?? 0}:${s.meta?.competitiveBlock?.used ?? 0}`);
   //  陣容改動也要讓主按鈕跟著變（補滿第五人後按鈕要立刻可按）
   const lineupSig = useProfileStore((s) => JSON.stringify(mode === "cs" ? s.csLineup : s.lineup));
   const playerSig = useProfileStore((s) => (s.players ?? []).length);
@@ -121,9 +127,23 @@ export function useMatchFlow(mode = "moba", onEnterBattle = null) {
   //  Q3.6：這條流程綁在哪一場賽程。判定在 Store（`matchFixtureContext`），
   //  這裡只是把結論帶給按鈕判定——本檔不判「算不算賽程」。
   const fixture = store.matchFixtureContext();
+  //  V0D：這條流程是不是快速練習。判定同樣在 Store（`matchPracticeContext`，
+  //  只讀 `MatchOrigin`）——本檔不判「算不算練習」，也不看畫面名稱。
+  const practice = store.matchPracticeContext();
 
-  const act = primaryActionFor({ entryOk: entry.ok, view, room, session, mode, fixture });
-  const statusText = flowStatusText({ entryOk: entry.ok, view, room, session, opponentName, fixture });
+  //  ── V7A：這條流程屬於哪一個對戰層級 ────────────────────────────────────
+  //  ⚠ 名稱與說明**不在畫面裡寫死**，一律取自 `progress/matchSource.js`
+  //    ——那也是「這場算哪一層」的唯一判定所在。分開寫遲早會分歧。
+  //  ⚠ TD-44：橫幅問的是「**現在**是不是練習」⇒ 用 `activePractice`。
+  //    用 `inPractice`（來源是不是練習）的話，練習打完之後殘留的終局場次
+  //    會讓橫幅永遠停在「快速練習」，一般對戰的名稱與今日容量再也不出現。
+  const tierKey = matchTierOf({ inFixture: !!fixture?.inFixture, inPractice: !!practice?.activePractice });
+  const tier = { key: tierKey, ...MATCH_TIER_LABELS[tierKey] };
+  //  一般對戰才有每日容量；另外兩層不吃容量（練習是測試場、季賽由日曆承擔）。
+  const block = store.competitiveBlockView();
+
+  const act = primaryActionFor({ entryOk: entry.ok, view, room, session, mode, fixture, practice });
+  const statusText = flowStatusText({ entryOk: entry.ok, view, room, session, opponentName, fixture, practice });
 
   //  ── 唯一的流程推進點 ────────────────────────────────────────────────
   const run = () => {
@@ -162,6 +182,27 @@ export function useMatchFlow(mode = "moba", onEnterBattle = null) {
       if (!r.ok) setErr(r.reason ?? r.errors?.[0]?.message ?? "無法重新進入本場賽事");
       return;
     }
+    //  V0D：練習流程的退路 ＝ 重開一場練習。
+    //  ⚠ 絕對不能落到 `requeue`——那會把一場測試變成一場真的競技比賽。
+    if (act.key === "repractice") {
+      launchedFor.current = null;
+      startPractice();
+      return;
+    }
+  };
+
+  /**
+   * V0D：開始一場快速練習（次要動作）。
+   *
+   * ⚠ 這**不是**第二條配對流程：它呼叫既有的 store action `startPracticeMatch`，
+   *   之後的輪詢／確認／簽發場次／自動進場全部由上面那幾個 effect 接手，
+   *   與一般比賽走同一條。
+   */
+  const startPractice = () => {
+    setErr(null);
+    launchedFor.current = null;
+    const r = useProfileStore.getState().startPracticeMatch(mode);
+    if (!r.ok) setErr(r.reason ?? r.errors?.[0]?.message ?? "無法開始快速練習");
   };
 
   /** 放棄進行中的對戰（次要動作）。放棄後場次進入終局，可重新配對。 */
@@ -190,6 +231,17 @@ export function useMatchFlow(mode = "moba", onEnterBattle = null) {
     waitedSec: view.waitedSec,
     canCancel: live,
     err, run, cancel, abandon, tick,
+    //  V7A：對戰層級（名稱／說明）與今天的競技容量。畫面只顯示，不自己判。
+    tier, fixture, block, blockSig,
+    //  V0D／V7A：快速練習這顆次要按鈕。**規則不在這裡**——它踩過兩次
+    //  「什麼叫閒置」的坑，所以搬進 `matchPrepAction.canStartPracticeFrom`
+    //  （純函式，可單元驗證），本檔只負責把當下的原始值遞進去。
+    practice, startPractice,
+    canStartPractice: canStartPracticeFrom({
+      //  TD-44：同上——擋這顆按鈕的條件是「正在練習中」，不是「來源是練習」。
+      entryOk: entry.ok, live, inPractice: practice.activePractice,
+      roomState, sessionState, actKey: act.key,
+    }),
     canAbandon: sessionState === "launched",
     //  內部識別：**只給 debug 區用**，正式畫面不得顯示
     internals: {

@@ -245,11 +245,18 @@ const FP = await import(u("src/platform/fans/fanPresentation.js"));
 
 // ══ §10 balance diff guard：F4 不得動任何粉絲數值 ═════════════════════════
 {
+  //  ⚠ 2026-08-26：`src/data/playerModel.js` **從檔案級凍結移出**。
+  //    這條要守的是 `SPONSORS[].reqFans`，但 playerModel.js 同時也放
+  //    `TRAINING_COURSES` / `POSITION_PROFILE` / `STAT_DEF` 等與粉絲無關的東西
+  //    ⇒ 整檔凍結會被任何不相干的改動觸發（Foundation Calibration 新增一門
+  //    訓練課程就踩到了），變成「阻力」而不是「保護」。
+  //    **這不是放寬**：`reqFans` 改由下面 19b 的**逐值斷言**守住，
+  //    那比檔案比對更精準——連「用別的路徑改到數值」都抓得到，
+  //    而檔案比對只知道「有人動過這個檔」。
   const BALANCE = [
     "src/platform/data/matchRecorder.js",          // fanGain
     "src/platform/progress/fanSourceWeight.js",    // 來源權重
     "src/platform/economy/seasonFanAward.js",      // 賽季獎勵表
-    "src/data/playerModel.js",                     // reqFans
     "src/platform/economy/economyConfig.js",
   ];
   let changed = [];
@@ -258,8 +265,8 @@ const FP = await import(u("src/platform/fans/fanPresentation.js"));
       { cwd: ROOT, encoding: "utf8" });
     changed = out.split("\n").map((s) => s.trim()).filter(Boolean);
   } catch { changed = ["(git diff 失敗，無法確認)"]; }
-  ck("19/20) balance guard：fanGain / 來源權重 / 賽季獎勵 / reqFans / economyConfig 零改動",
-    changed.length === 0, changed.join(", ") || "(五份全部未動)");
+  ck("19/20) balance guard：fanGain / 來源權重 / 賽季獎勵 / economyConfig 零改動（reqFans 見 19b）",
+    changed.length === 0, changed.join(", ") || "(四份全部未動)");
 
   //  再直接驗一次數值本身，避免有人用別的路徑改到
   const { SPONSORS } = await import(u("src/data/playerModel.js"));

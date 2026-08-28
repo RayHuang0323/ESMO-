@@ -111,10 +111,17 @@ console.log("══ Milestone Q1：隊伍身分 / 賽季種子 / 比賽來源 �
 
 // ── 3) MatchOrigin.v1：契約形狀與兩種來源 ───────────────────────────────
 {
-  ck("3) 只有兩種來源，不得自創第三種",
-    Object.keys(ORIGIN_KINDS).sort().join() === "fixture,ticket");
-  ck("3b) 兩種來源都有中文顯示名",
-    originKindLabel("ticket") === "排隊配對" && originKindLabel("fixture") === "賽程排定");
+  //  ⚠ 2026-08-26（V0D）：這一條原本是「只有兩種來源，不得自創第三種」。
+  //    它真正要守的是**呼叫端不得自創來源種類**，不是「永遠只能有兩種」——
+  //    來源本來就是可擴充的契約（Q1 檔頭自己就寫著 fixture 當時「尚無生產者」）。
+  //    V0D 依產品需求新增第三種 `practice`（快速練習），每一種都有工廠、驗證與中文名。
+  //    **這是刻意的期望變更**：從硬編兩種改成「與契約自己的定義一致」。
+  ck("3) 來源種類就是契約定義的那幾種，呼叫端不得自創",
+    Object.keys(ORIGIN_KINDS).sort().join() === "fixture,practice,ticket",
+    Object.keys(ORIGIN_KINDS).join(","));
+  ck("3b) 每一種來源都有中文顯示名（畫面與錯誤訊息不出現內部字串）",
+    originKindLabel("ticket") === "排隊配對" && originKindLabel("fixture") === "賽程排定"
+    && originKindLabel("practice") === "快速練習");
 
   const q = queuedOf();
   const to = originFromTicket(q).origin;

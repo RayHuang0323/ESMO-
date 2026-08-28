@@ -39,6 +39,47 @@ node tools/regress2.mjs # 一律跑（若存在）
   `check_moba_experience26` `check_progress25` `check_moba_tactic24` `check_cs23`
   `check_flow09` `check_dash10`
 
+- **Season vNext 時間線（2026-08-26 V3 起；動到世界時間／快轉／週結算就必跑）**：
+  `check_world_time_v1`（46）`check_time_block_v2`（47）**`check_time_block_v3`（69）**
+  ＋瀏覽器 **`browser_check_time_controls`**（21）
+  ⚠ `check_time_block_v3` 是**快轉**的守門，釘住三件很容易被「順手」改壞的事：
+  ① 競技每日容量**不得跨日累積**（掃 1–90 天）② 多週推進的**結算冪等**
+  （跳 3 週＝恰好 3 次，且與跳 21 次一天在天數／資金／`lastSettledWeek` 逐值相同）
+  ③ 規劃器不得自己掃賽程（否則會出現第二套賽程邏輯）。
+  ⚠ `browser_check_time_controls` 驗**桌面＋390px 真 media query**與「比賽日必須擋住、
+  不得自動棄權」。手機沒有世界時間入口的缺陷就是它抓到的。
+  ⚠ 這幾支都是**秒級**，不走 `verify.mjs`，直接 `node tools/<name>.mjs` 即可。
+
+- **Season vNext 生涯線（2026-08-27 V6 結案；動到年齡／衰退／退休／合約／休賽期就必跑）**：
+  `check_player_lifecycle_v4`（44）`check_offseason_v5`（45）`check_age_drift_v5`（48）
+  `check_retirement_v5`（39）`check_cs_ai_lifecycle_v6`（32）`check_contract_v6`（38）
+  `check_offseason_session_v6`（39）＋瀏覽器 **`browser_check_offseason`**（18）
+  ⚠ 這條線的共同紅線是**推導不落盤**：`careerYearOf` `careerStageOf` `marketValueOf`
+  `aiRosterAt` `csAiRosterAt` 全是純推導，`players[]` 不得存第二份。
+  ⚠ 老化時鐘是 **raw age ＋ 由 `player.id` hash 出來的固定個體偏移**，
+  **不得**改用 V4 的 `effectiveAge`——那會讓「能力衰退 → 時鐘變年輕」形成迴圈。
+  ⚠ 退休一律**兩段式**：第 N 年宣告意向、第 N+1 年才結算；沒有意向就永遠不會退休。
+  ⚠ 休賽期會**擋住世界時間**，所以 `completeOffSeason()` 必須永遠成功、永遠免費，
+  否則存檔會被卡死。
+
+- **對戰層級與 Retention（2026-08-27 V7A/V7B；動到比賽來源、每日容量、目標系統就必跑）**：
+  `check_general_match_v7a`（55）`check_retention_v7b`（58）
+  ＋瀏覽器 **`browser_check_general_match_and_objectives`**（30）
+  ⚠ 三個對戰層級的**名稱與分類同源**，都住在 `progress/matchSource.js`
+  （`MATCH_TIER_LABELS` / `matchTierOf`）。畫面不得自己寫一份文案。
+  ⚠ **一般對戰不得寫進賽季任何帳本**（排名／巡迴積分／晉級／冠軍／賽季獎金／榮譽）。
+  賽程回寫唯一的呼叫點被 `isFixtureSession` 守住，別處不得再開一個。
+  ⚠ **快速練習是零永久影響**，包含延後生效的那條：不得進 `economy.formLog`
+  （formLog → `recentForm()` → 週結算的贊助績效獎金）。
+  ⚠ Retention 的日／週／年一律綁**世界時間**（`meta.days`），**永久排除 ServerTime**；
+  目標清單是決定性推導，**不落盤**；日常目標**不得**給任何永久戰力。
+
+- **正式站 smoke（部署後才跑）**：**`browser_check_prod_season_vnext`**（30）
+  ⚠ 打的是**線上網址**，不是 dev server。因此**只能走 UI ＋ localStorage**（TD-31）：
+  `RESOLVE_APP_MODULES` 匯入 `/src/...`，打包後的 bundle 沒有那些路徑。
+  ⚠ 要在正式站佈置情境，記住兩件事：① **首次載入時 localStorage 是全空的**，
+  存檔要推進過天數才寫得出來 ② **`finance.funds` 的單位是「元」不是「萬」**。
+
   ### ⚠⚠ 長 verifier 一律走 `tools/verify.mjs`，**禁止直接執行巢狀腳本**
 
   **本段先前的敘述是錯的**（原文：「跑 runtime29 一支就等於跑完全部，44/44，單跑約

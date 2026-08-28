@@ -50,6 +50,68 @@ function FlowSteps({ step, accent }) {
   );
 }
 
+const TIER_TONE = {
+  practice: { fg: "#a1a1aa", bg: "rgba(255,255,255,0.05)", icon: "🧪" },
+  competitive: { fg: "#60a5fa", bg: "rgba(96,165,250,0.10)", icon: "⚔️" },
+  official: { fg: GC.gold, bg: "rgba(250,204,21,0.10)", icon: "🏆" },
+  unknown: { fg: "#71717a", bg: "rgba(255,255,255,0.04)", icon: "•" },
+};
+
+/**
+ *  V7A：**這一場算哪一層**。賽前頁最上面的一條，MOBA / CS 共用。
+ *
+ *  ── 為什麼要有這條 ────────────────────────────────────────────────────────
+ *  改動前，一般對戰在整個 UI 裡**沒有名字**：底部只寫「確認陣容並開始配對」，
+ *  沒有任何一處告訴玩家這一場會給成長與收益、但**不計入正式賽季**，
+ *  也沒有一處顯示今天還剩幾場——每日容量只有在「已經打滿」時以錯誤訊息現身。
+ *  ⇒ 玩家要打滿一次才知道有這個限制，而「會不會影響季賽」永遠只能用猜的。
+ *
+ *  ⚠ 名稱與說明**全部取自 `flow.tier`**（源頭是 `progress/matchSource.js`），
+ *    本元件不寫死任何一層的文案，也不自己判斷層級。
+ *  ⚠ 容量只在一般對戰顯示：另外兩層不吃容量，顯示「0/3」會是假的。
+ */
+function TierBanner({ flow }) {
+  const tier = flow?.tier;
+  if (!tier) return null;
+  const tone = TIER_TONE[tier.key] ?? TIER_TONE.unknown;
+  const isCompetitive = tier.key === "competitive";
+  const block = flow.block ?? null;
+  const full = isCompetitive && block && block.remaining <= 0;
+  return (
+    <div data-testid="prep-tier-banner" data-tier={tier.key}
+      style={{
+        display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0,
+        background: tone.bg, border: `1px solid ${tone.fg}33`, borderRadius: 10,
+        padding: "7px 10px", marginBottom: 10,
+      }}>
+      <span style={{ fontSize: 12 }}>{tone.icon}</span>
+      <span data-testid="prep-tier-name" style={{ color: tone.fg, fontSize: 12, fontWeight: 900, whiteSpace: "nowrap" }}>
+        {tier.name}
+      </span>
+      {isCompetitive && block && (
+        <span data-testid="prep-tier-capacity"
+          style={{
+            fontSize: 9.5, fontWeight: 800, borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap",
+            background: full ? "rgba(248,113,113,0.16)" : "rgba(255,255,255,0.07)",
+            color: full ? "#f87171" : "#a1a1aa",
+          }}>
+          今日 {block.used}/{block.capacity} 場
+        </span>
+      )}
+      {tier.note && (
+        <span data-testid="prep-tier-note" style={{ color: "#71717a", fontSize: 10, flex: "1 1 100%", minWidth: 0 }}>
+          {tier.note}
+        </span>
+      )}
+      {full && (
+        <span style={{ color: "#f87171", fontSize: 10, flex: "1 1 100%", minWidth: 0 }}>
+          今天的一般對戰已用滿，推進一天之後可以再打
+        </span>
+      )}
+    </div>
+  );
+}
+
 const TONE_STYLE = {
   go: (accent) => ({ background: `linear-gradient(135deg,${accent},${accent}bb)`, color: "#fff", border: "none" }),
   warn: () => ({ background: "linear-gradient(135deg,#fbbf24,#d97706)", color: "#0a0b0f", border: "none" }),
@@ -161,6 +223,11 @@ export default function MatchPrepFrame({
           </div>
         </div>
 
+        {/*  V7A：這一場算哪一層（一般對戰／快速練習／生涯季賽）＋今日容量。
+             放在流程指示器**之前**：玩家該先知道「這一場算什麼」，
+             才輪到「現在走到第幾步」。 */}
+        <TierBanner flow={flow} />
+
         {/*  四步流程指示器：玩家只需要理解這四步 */}
         <FlowSteps step={flow.step} accent={accent} />
 
@@ -194,6 +261,25 @@ export default function MatchPrepFrame({
             }}>
             {act.label}
           </button>
+
+          {/*  V0D：快速練習。**次要按鈕**，只在閒置且陣容就緒時出現。
+               ⚠ 它與上面那顆共用同一條流程——按下去之後的配對／確認／進場
+               全部走既有的 effect；MOBA 與 CS 因為共用本元件而自動都有，
+               不需要在兩邊各做一顆。 */}
+          {flow.canStartPractice && (
+            <button onClick={flow.startPractice}
+              data-testid="prep-start-practice"
+              style={{
+                width: "100%", borderRadius: 12, padding: "11px 12px",
+                fontSize: 12.5, fontWeight: 800, cursor: "pointer",
+                maxWidth: "100%", boxSizing: "border-box",
+                background: "rgba(255,255,255,0.06)", color: "#a1a1aa",
+                border: `1px dashed ${GC.line}`,
+              }}>
+              🧪 快速練習 · 不影響戰績與數值
+            </button>
+          )}
+
           {err && <div style={{ color: "#f87171", fontSize: 10.5, marginTop: 6 }}>⚠ {err}</div>}
         </div>
       </div>

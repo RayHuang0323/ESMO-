@@ -62,7 +62,14 @@ export function useBattleFeed(draft = null, { roster = null, tacticId = null } =
           },
         });
         bs.setResult(result);                                        // → EndScreen（禁止重新統計）
-        useHeroProgressStore.getState().recordBattleResult(result);  // → Hero Progress
+        //  ── V0D：快速練習是純測試場 ────────────────────────────────────
+        //  ⚠ 判斷只讀 `MatchOrigin`（`matchPracticeContext`），**不看畫面也不看路由**。
+        //  練習不寫任何永久紀錄：不進英雄熟練度、不進賽季戰績。
+        //  Replay **刻意不跳過**——能回看剛剛試的陣容正是快速練習的用途。
+        const isPractice = useProfileStore.getState().matchPracticeContext().inPractice;
+        if (!isPractice) {
+          useHeroProgressStore.getState().recordBattleResult(result);  // → Hero Progress
+        }
 
         // ── Sprint25：賽後結算（此處＝比賽完成邊界，不是 Result Screen 掛載）──
         //    刻意放在引擎終局而不是 BattleEndScreen：玩家就算直接離開 Result 畫面，
@@ -103,7 +110,10 @@ export function useBattleFeed(draft = null, { roster = null, tacticId = null } =
           tacticMeta: result.tactic ?? null,
         });
 
-        useSeasonStore.getState().recordResult(result);              // → Season / History / Analytics
+        //  V0D：練習不計戰績（同上，判斷來自 `matchPracticeContext`）。
+        if (!isPractice) {
+          useSeasonStore.getState().recordResult(result);            // → Season / History / Analytics
+        }
       }
     });
     return () => unsub();

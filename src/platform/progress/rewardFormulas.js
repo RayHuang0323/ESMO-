@@ -18,6 +18,9 @@
 //    · 不依比賽長度放大獎勵 → 公式完全不含 duration。
 // ============================================================================
 import { updateEconomy } from "../data/matchRecorder.js";
+//  V0D：「快速練習不發任何獎勵」的規則放在**這裡**，不放在 adapter。
+//  本檔是唯一的獎勵公式所在地；兩支 adapter 各判一次就會漂移。
+import { isPracticeSource } from "./matchSource.js";
 
 export const MOBA_REWARD_FORMULA_VERSION = "moba-reward.v1";   // = Legacy updateEconomy（逐字重用）
 export const CS_REWARD_FORMULA_VERSION = "cs-reward.v1";       // = Legacy updateEconomy（逐字重用）
@@ -41,7 +44,13 @@ const fin = (v, d = 0) => (Number.isFinite(v) ? v : d);
  * 比分語意算出來 → 保證「打一場 CS ≠ 打十場 MOBA」。
  * @returns {{ money:number, fans:number, prizeWan:number }} money 單位為「元」
  */
-export function teamRewardsFor({ win, marginF, streak, fansNow, fanSourceWeight = 1 }) {
+export function teamRewardsFor({ win, marginF, streak, fansNow, fanSourceWeight = 1, matchSource = null }) {
+  //  V0D：快速練習是純測試場 ⇒ **0 獎金、0 粉絲**。
+  //  ⚠ 早退在 `updateEconomy` **之前**：不是「算完再乘 0」，是根本不進經濟公式，
+  //    連 streak 這類副作用都碰不到。
+  //  ⚠ `matchSource` 沒傳（既有呼叫端）⇒ `isPracticeSource(null)` 為 false
+  //    ⇒ 行為逐值不變。
+  if (isPracticeSource(matchSource)) return { prizeWan: 0, money: 0, fans: 0 };
   const eco = updateEconomy(
     {
       record: { streak: fin(streak, 0) },
@@ -110,7 +119,11 @@ export function csPerfFactor(player) {
  *   → 勝 37–68（+MVP 10）、負 15–27 ⇒ 贏一定比輸多，MVP 只是小幅領先。
  *   ⚠ 不含 duration / roundCount：比賽拖長不會放大獎勵（§8）。
  */
-export function playerXpFor({ win, perf, isMvp }) {
+export function playerXpFor({ win, perf, isMvp, matchSource = null }) {
+  //  V0D：快速練習不給 XP ⇒ 不升級 ⇒ 不發天賦點 ⇒ 不觸發 `applyLevelGrowth`。
+  //  這是「練習不給永久成長」最上游的一道；下游還有兩道
+  //  （adapter 送空的 playerProgress、`sourceBase.practice = 0`）。
+  if (isPracticeSource(matchSource)) return 0;
   const base = win ? BASE_XP_WIN : BASE_XP_LOSS;
   const p = clamp(fin(perf, 1), PERF_MIN, PERF_MAX);
   const xp = Math.round(base * p) + (isMvp ? MVP_BONUS_XP : 0);

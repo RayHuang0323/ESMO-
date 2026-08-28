@@ -18,6 +18,7 @@
 // ============================================================================
 import { TICKET_STATES } from "../../platform/contracts/matchmaking.js";
 import { SESSION_TERMINAL } from "../../platform/contracts/matchSession.js";
+import { matchFlowIdleFrom } from "../../platform/contracts/matchFlowIdle.js";
 
 /** 四步流程的階段代碼（畫面用來畫步驟指示器）。 */
 export const FLOW_STEPS = Object.freeze([
@@ -40,10 +41,11 @@ export function flowStepOf({ view, room, session }) {
 
 /**
  * 「上一次沒成功，這是你的退路」這一類主動作的 key。
- * 一般配對是 `requeue`（重新排隊、會換對手），賽程是 `refixture`（重進同一場、不換對手）。
+ * 一般配對是 `requeue`（重新排隊、會換對手），賽程是 `refixture`（重進同一場、不換對手），
+ * 快速練習是 `repractice`（重開一場練習）。
  * 畫面要判斷「現在是不是在給退路」時一律用這一份，不要再各自列舉字串。
  */
-export const RETRY_ACTION_KEYS = Object.freeze(["requeue", "refixture"]);
+export const RETRY_ACTION_KEYS = Object.freeze(["requeue", "refixture", "repractice"]);
 
 const mmss = (sec) => {
   const s = Math.max(0, Number(sec) || 0);
@@ -59,16 +61,30 @@ const mmss = (sec) => {
  * @returns {{key:string, label:string, disabled:boolean, tone:string}}
  *   key ∈ enqueue | blocked | queued | waiting | confirm | launching | requeue | refixture
  */
-export function primaryActionFor({ entryOk, view, room, session, mode = null, fixture = null }) {
+export function primaryActionFor({ entryOk, view, room, session, mode = null, fixture = null, practice = null }) {
   const st = view?.state ?? TICKET_STATES.idle;
   //  Q3.6：賽程區間內，「重新來過」＝重新進入**同一場賽程**，不是重新配對。
   //  一般配對會換掉對手（瀏覽器實測配到隨機隊伍），而賽程的對手是賽程決定的。
   //  ⚠ 這不是第二條賽事流程：它呼叫的是既有的 `startFixtureMatch()`
   //    （出賽用的同一支，內建 `allowRelaunch`）。
   const inFixture = !!fixture?.inFixture;
-  const retry = inFixture
-    ? { key: "refixture", label: "重新進入本場賽事", disabled: false, tone: "go" }
-    : { key: "requeue", label: "重新配對", disabled: false, tone: "neutral" };
+  //  ⚠⚠ V0D：快速練習的退路**必須回到練習**。
+  //    少了這一條，一場失敗的練習（房間逾時／取消／放棄）會落到 `requeue`
+  //    ⇒ 呼叫 `enqueueMatch` ⇒ 開出一張真的票券
+  //    ⇒ **玩家以為還在測試，實際上打的是一場正式競技比賽**，
+  //      而那一場會真的發錢、發粉絲、發 XP、計戰績。
+  //    這是本輪 grilling 抓到最危險的一條路徑。
+  //  ⚠ TD-44：這裡要問的是「**現在**還在練習流程裡嗎」，不是「這條流程的來源
+  //    是不是練習」。練習打完之後場次是終局，退路必須回到一般對戰的「重新配對」，
+  //    否則賽前頁永遠停在練習、回不去一般對戰。
+  //    ⚠ `?? inPractice` 是給只傳舊欄位的呼叫端（既有 gate fixture）用的相容路徑，
+  //      正式流程一律由 `matchPracticeContext()` 兩個欄位都傳。
+  const inPractice = practice?.activePractice ?? !!practice?.inPractice;
+  const retry = inPractice
+    ? { key: "repractice", label: "重新開始快速練習", disabled: false, tone: "neutral" }
+    : inFixture
+      ? { key: "refixture", label: "重新進入本場賽事", disabled: false, tone: "go" }
+      : { key: "requeue", label: "重新配對", disabled: false, tone: "neutral" };
   const restoreable = session?.restoreable === true;
 
   //  ① 終局：票券或房間作廢 ⇒ 重新來過（**實際作廢並重新排隊**，不是回到起點）
@@ -131,8 +147,25 @@ export function primaryActionFor({ entryOk, view, room, session, mode = null, fi
 /**
  * 玩家看得懂的流程狀態句（正式畫面用；不含票券／房間／場次等內部詞彙）。
  */
-export function flowStatusText({ entryOk, view, room, session, opponentName, fixture = null }) {
+export function flowStatusText({ entryOk, view, room, session, opponentName, fixture = null, practice = null }) {
   const st = view?.state ?? TICKET_STATES.idle;
+  //  V0D：練習全程都要講清楚「這場不算數」，否則玩家會誤以為在打正式比賽。
+  //  ⚠ 判斷順序必須與下面正式流程一致：**場次狀態優先於房間狀態**。
+  //    第一版把 `room === "confirmed"` 排在前面，於是「已經進場、可以返回對戰」
+  //    的情況會顯示成「正在準備場次」——底部按鈕寫「返回進行中的對戰」，
+  //    上面卻說還在準備，瀏覽器 smoke 實測到這個矛盾。
+  //  ⚠ TD-44：同 `primaryActionFor`——問的是「現在還在練習裡嗎」。
+  //    練習打完之後這一段要讓位給下面的一般流程文案，否則畫面會一直說
+  //    「快速練習：上一場已結束」，但按鈕已經是一般對戰的「重新配對」。
+  if (practice?.activePractice ?? practice?.inPractice) {
+    if (session?.state === "launched" && session?.restoreable) return "快速練習：你有一場進行中的練習";
+    if (session?.state && SESSION_TERMINAL.includes(session.state)) return "快速練習：上一場已結束，可以重新開始";
+    if (session?.canLaunch) return "快速練習：正在進入對戰（本場不影響戰績與數值）";
+    if (room?.state === "ready_check") return "快速練習：準備就緒（本場不影響戰績與數值）";
+    if (room?.state === "confirmed") return "快速練習：正在準備場次";
+    if (room?.state === "waiting") return "快速練習：正在準備對手";
+    return "快速練習：本場不影響戰績與數值，可以重新開始";
+  }
   //  Q3.6：賽程區間內的終局訊息要說清楚「對手不會換」，否則玩家會以為
   //  逾時＝這場聯賽沒了（實測就是這個誤解讓人去按重新配對）。
   const inFixture = !!fixture?.inFixture;
@@ -160,4 +193,45 @@ export function flowStatusText({ entryOk, view, room, session, opponentName, fix
   }
   if (st === TICKET_STATES.queued || st === TICKET_STATES.validating) return "正在尋找對手…";
   return entryOk ? "陣容已就緒，可以開始配對" : "請先補滿出賽陣容";
+}
+
+/**
+ * 「快速練習」這顆次要按鈕現在該不該出現。**唯一判定處**（V7A 由 hook 搬出來）。
+ *
+ * 條件是「陣容就緒 **且流程是閒置的**」。閒置的定義踩過兩次坑，兩次都是
+ * 瀏覽器實測才抓到，所以規則寫在這裡並由 `check_general_match_v7a` §U 釘住：
+ *
+ *   ① 「閒置」要看**還活著沒有**，不是「有沒有值」。第一版寫成
+ *      `!sessionState && !roomState`，於是打完任何一場之後，殘留的終局場次
+ *      （completed / abandoned…）會讓按鈕**永遠不再出現**——等於這個功能
+ *      只有全新存檔看得到。
+ *   ② 房間**不能**直接套 `ROOM_TERMINAL`：它把 `confirmed` 也算終局（房間任務
+ *      確實完成了），但簽場次的那一刻流程正要進場，絕不是閒置。
+ *      ⇒ 只認 `cancelled` / `expired`……**但這樣又漏了一個殘留狀態**：
+ *      打完一場之後房間停在 `confirmed`、場次是 `completed`，按鈕一樣消失，
+ *      要先按「重新配對」才回得來。
+ *   ⇒ 結論：**場次已經走到終局時**，殘留的 `confirmed` 房間視為閒置。
+ *     判斷必須綁在場次上——`sessionState` 是 null 而房間是 `confirmed` 時，
+ *     流程正要進場，那才是真的不閒置。
+ *
+ * ⚠ `refixture` 排除掉：畫面正在請玩家「重新進入本場賽事」時不該同時勸他去練習——
+ *   開練習會清掉 `fixtureAssignment`，那條回去的路就沒了。
+ *
+ * @param {object} p
+ * @param {boolean} p.entryOk      陣容是否就緒
+ * @param {boolean} p.live         票券／房間是否還在活躍狀態
+ * @param {boolean} p.inPractice   目前是否已經在練習流程裡
+ * @param {string|null} p.roomState
+ * @param {string|null} p.sessionState
+ * @param {string|null} p.actKey   主按鈕目前的 key
+ */
+export function canStartPracticeFrom({
+  entryOk = false, live = false, inPractice = false,
+  roomState = null, sessionState = null, actKey = null,
+} = {}) {
+  //  ⚠ TD-44：這裡本來自己算終局，算得對；`matchPracticeContext()` 那邊沒算，
+  //    算錯了。判定已抽到 `contracts/matchFlowIdle.js` 由兩邊共用——
+  //    **不要在這裡再長回一份**。
+  const { idle } = matchFlowIdleFrom({ roomState, sessionState });
+  return !!entryOk && !live && !inPractice && idle && actKey !== "refixture";
 }

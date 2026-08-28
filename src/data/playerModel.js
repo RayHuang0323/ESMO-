@@ -211,6 +211,15 @@ export const TRAINING_COURSES = [
   //  `POSITION_PROFILE` 也不含它（⇒ 升級成長分配不到），玩家只能靠天賦 team_3。
   //  補一門「版本研究」把它接回可培養的循環，順帶帶戰術理解（研究版本＝理解戰術）。
   { id: "meta",        name: "版本研究",     emoji: "📚", stats: ["learning", "tacticalIQ"],  gain: 2, energyCost: 8,  hours: 2 },
+  //  2026-08-25（Foundation Calibration）：`courage` / `resilience` / `leadership`
+  //  原本**沒有任何課程練得到**——和上面「學習力」是同一類問題，但影響更不對稱：
+  //  `POSITION_PROFILE` 會把成長權重分配給它們，所以上路有 **46.7%（w4+w3）**
+  //  的定位權重落在練不到的能力上，打野 13.3%、輔助／指揮 26.7%，
+  //  中路與下路則是 0% ⇒ 純粹因為課程表的缺口造成職業不公平。
+  //  三項都是心志／領導面的特質，合成一門課；`gain` 取 1.3 讓每小時產出
+  //  （1.3×3/2 = 1.95）**略低於**一般 2 項課程（2.0），廣度換一點效率，
+  //  才不會變成「排這門就對了」。
+  { id: "mentality",   name: "心志鍛鍊",     emoji: "🛡️", stats: ["resilience", "courage", "leadership"], gain: 1.3, energyCost: 10, hours: 2 },
   { id: "rest",        name: "休息調整",     emoji: "😴", stats: [],                           gain: 0, energyCost: 0,  hours: 1 },
 ];
 export const courseById = (id) => TRAINING_COURSES.find((c) => c.id === id) || null;

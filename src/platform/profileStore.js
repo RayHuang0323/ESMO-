@@ -57,6 +57,13 @@ import { advanceDaysInState, buildWeekLines, recentForm } from "./economy/weekly
 import { forecastWeeks } from "./economy/forecast.js";
 import { DEFAULT_SCENARIO, SCENARIOS, scenarioById, prizeTableFor } from "./economy/economyConfig.js";
 import { seedFormLogFromCsHistory } from "./economy/formLog.js";
+//  ── Season vNext V7B：Retention Foundation（日／週／季目標）───────────────
+//  ⚠ 純函式層在 `retention/`；本層只負責「讀狀態 → 呼叫 → 寫回」，
+//    不在 Store 裡放任何目標規則。
+import {
+  emptyRetention, normalizeRetention, retentionViewOf, claimObjective as claimObjectiveIn,
+  recordTrainingActivity, recordScoutActivity, coordsOf,
+} from "./retention/retentionState.js";
 import { newGameFinancials } from "./economy/newGame.js";
 import { ensureTeamIdentity } from "./identity/teamIdentity.js";
 //  ── Milestone Q3：賽事系統。規則全在 competition/ 的純函式裡，
@@ -137,6 +144,32 @@ import {
   canEnterMatch as canEnterMatchOf, waitedSeconds, stateLabel,
 } from "./contracts/matchmaking.js";
 import { pollGateway, openRoom, pollRoom, openSession } from "./matchmaking/mockGateway.js";
+//  V0D：快速練習是**第三個 origin 生產者**（與賽程閘道平行），不是第三條管線。
+import {
+  issuePracticeMatch, openRoomForPractice, openSessionForPractice, isPracticeAssignment,
+} from "./matchmaking/practiceGateway.js";
+import { ORIGIN_KINDS } from "./contracts/matchOrigin.js";
+//  V1：世界時間契約（推進理由白名單、活動→時間成本、生涯年度邊界）。
+import {
+  ADVANCE_REASONS, isAdvanceReason, careerYearOf, CAREER_YEAR,
+  COMPETITIVE_BLOCK, competitiveBlockOf,
+} from "./time/worldClock.js";
+//  V2：跨生涯年度時把年齡往前推。觸發點只有 `advanceDay`（唯一時鐘）。
+import { applyCareerYearRollover, careerYearNotice } from "./time/careerYearRollover.js";
+//  V3：快速推進的**規劃器**。它一天都不推，只回答「下一站在第幾天」。
+import { nextStopOf, planAdvance, MAX_FAST_FORWARD_DAYS } from "./time/fastForward.js";
+//  V5-1：生涯年度邊界。冪等鍵是**年度編號**，重讀存檔不會重複封存。
+import { sealCareerYears, offSeasonViewOf } from "./time/offSeason.js";
+//  V5-2：年度能力漂移。老化時鐘 = raw age + 決定性個體 profile（**不吃當前能力**）。
+import { applyAgeDrift } from "./progress/ageDrift.js";
+//  V5-3：退休意向 → 退休／延役 → 名單地板補位。沒有宣布過意向的人永遠不會退休。
+import { evaluateIntents, resolveRetirements, retirementViewOf } from "./progress/retirement.js";
+//  V6-2：合約每天倒數，但**到期只在年度邊界結算**（不讓選手在星期三突然消失）。
+import { tickContracts, resolveContractExpiries, renewContract, contractViewOf,
+  renewCostOf, ensureRosterFloor } from "./progress/contract.js";
+//  V6-3：休賽期會期。**只在真的有決策時開**，完成後同一年不再開。
+import { openSession as openOffSeason, completeSession as completeOffSeasonSession,
+  sessionOf as offSeasonSessionOf, offSeasonSessionViewOf } from "./time/offSeasonSession.js";
 import {
   SESSION_STATES, CONNECTION_STATES, consumeLaunchToken, validateSession, cancelSession,
   sessionStateLabel, isSessionExpired, isSessionTerminal,
@@ -149,6 +182,8 @@ import {
   ROOM_STATES, transitionRoom, confirmSide, canEnterRoom, roomStateLabel,
   remainingSeconds, isRoomTerminal,
 } from "./contracts/matchRoom.js";
+//  TD-44：「這條流程還在跑嗎」的唯一判定，與 `canStartPracticeFrom` 共用同一份。
+import { matchFlowIdleFrom } from "./contracts/matchFlowIdle.js";
 import { createRecruitmentTransaction } from "./contracts/recruitment.js";
 import { applyRecruitmentToState } from "./recruit/applyRecruitment.js";
 import {
@@ -294,6 +329,10 @@ const DEFAULT = {
     fans: 128_000, reputation: 47, players: INITIAL_PLAYERS.length,
     days: 8, week: deriveTime(8).week, season: deriveTime(8).season,
     achievement: 48, talentPending: 1,
+    //  V5-1：年度封存紀錄。冪等鍵是年度編號（見 `time/offSeason.js`）。
+    //  舊存檔沒有這一欄 ⇒ 載入時由 `{ ...DEFAULT.meta, ...saved.meta }` 補上空紀錄，
+    //  等同「什麼都還沒封存」，不會回頭補封過去的年度。
+    offSeason: { years: {}, lastSealedYear: 0 },
   },
   // 戰隊發展是俱樂部層點數，不與 players[].talentPoints 混用。
   // 舊存檔第一次載入時由 meta.talentPending 提供相容的初始池。
@@ -348,6 +387,9 @@ const DEFAULT = {
   //  ⚠ 刻意**不設上限**：一季一筆小物件，與那兩個存整張名次表的 history 不同，
   //    而榮耀一旦被裁掉就等於歷史被改寫。
   honors: [],
+  //  V7B：Retention Foundation。目標清單本身是**推導**出來的，這裡只存
+  //  俱樂部點數、計數器、去重集合與領取紀錄（見 `retention/retentionState.js`）。
+  retention: emptyRetention(),
   // Q7b: metadata-only Season -> MOBA Career Circuit -> League Event wrapper.
   seasonStateV2: null,
   inbox: [
@@ -598,6 +640,8 @@ const load = () => {
       // Sprint10 的 sponsors[] 假名單已退場；舊存檔沒有 activeSponsor → null（尚未簽約）
       activeSponsor: saved.activeSponsor ?? DEFAULT.activeSponsor,
       scouted: saved.scouted && typeof saved.scouted === "object" ? saved.scouted : {},
+      //  V7B：舊存檔沒有 retention ⇒ 空的（不回填任何歷史進度，那是編造）。
+      retention: normalizeRetention(saved.retention),
       csHistory: arr(saved.csHistory, []),   // S23：舊存檔沒有 → 空（向下相容）
       //  Milestone N migration：舊存檔沒有 economy ⇒ 空帳本。
       //  ⚠ 刻意**不補結算過去的週**：那會在載入當下憑空扣一大筆薪資，
@@ -890,6 +934,9 @@ export const useProfileStore = create((rawSet, get) => {
     const effects = teamDevelopmentEffectsOf(get().teamDevelopment);
     const days = c.id === "rest" ? c.hours : Math.max(1, c.hours - effects.trainingDaysReduction);
     get()._patchPlayer(id, (x) => ({ ...x, training: { courseId, daysLeft: days, totalDays: days } }));
+    //  V7B：日目標「安排訓練」。記在**指派**這一刻，不是課程結束那一刻——
+    //  玩家今天做的事是「安排」，課程要跑好幾天，記在結束會讓今天的格子點不亮。
+    set({ retention: recordTrainingActivity(normalizeRetention(get().retention), get()._retentionCoords()) });
     return true;
   },
   cancelTraining(id) {
@@ -939,7 +986,7 @@ export const useProfileStore = create((rawSet, get) => {
     //    而且猜不到潛力上限造成的實際差異。這裡收的是套用前後的真實 diff。
     const trained = [];
     n = effective;
-    const { nextState, receipts } = advanceDaysInState(get(), n, (cur) => ({
+    let { nextState, receipts } = advanceDaysInState(get(), n, (cur) => ({
       players: (cur.players ?? []).map((p) => {
         //  Milestone O2：每一天都要跑恢復——沒排訓練的人回體力、
         //  連續幾天沒出賽就把連續出賽計數歸零。訓練與恢復不重複計算體力。
@@ -980,7 +1027,88 @@ export const useProfileStore = create((rawSet, get) => {
         return { ...done, growthLog: appendGrowth(p.growthLog, entry) };
       }),
     }));
-    set(nextState);
+    //  ── Season vNext V2：跨生涯年度 ⇒ age +1 ────────────────────────────
+    //  ⚠ **折進 `nextState`，在同一個 `set()` 裡完成**。分兩次寫會出現
+    //    「時間已經走了、年齡還沒走」的中間狀態，而那正是 `advanceDay`
+    //    檔頭承諾過的「錢、合約、帳本、時間一次寫完」要避免的事。
+    //  ⚠ 觸發點只有這裡。賽季 rollover **不得**推動年齡——兩個項目各換一次季
+    //    就會把年齡推兩次，而不打季賽的人永遠不老。
+    //  ⚠ 跨越用**年度編號差**，不是「天數差 / 84」：Day 84 → 85 跨 1 個年度，
+    //    但 (85−84)/84 = 0。詳見 careerYearRollover.js。
+    //  ── Season vNext V5-1：年度封存 ──────────────────────────────────────
+    //  ⚠ **順序是 rollover 之前**（V5-2 自檢修正）。第 N 生涯年度的封存紀錄要
+    //    代表「**該年度結束時**」的狀態——而 age +1 是跨進第 N+1 年才發生的事。
+    //    先 rollover 再封存的話，第 1 年的紀錄會寫著第 2 年的年齡
+    //    （實測：開局五人第 1 年度結束時平均 22.0 歲，卻被記成 23.0）。
+    //  ⚠ 兩者仍**折進同一個 `set()`**。分兩次寫會出現「年齡走了但年度沒封存」
+    //    的中間狀態——正是 V2 檔頭承諾要避免的事。
+    //  ⚠ 這是 `sealCareerYears` 在整個 Store 裡的**唯一呼叫點**。賽季 rollover
+    //    不得觸發它——兩個項目各換一次季就會把年度封存兩次。
+    const toDay = Number(nextState.meta?.days) || fromDay;
+    //  ── V6-2：合約隨世界時間倒數 ─────────────────────────────────────────
+    //  ⚠ 一次減 `effective` 天 ≡ 逐日各減 1 天 ⇒ 快轉與逐日推進逐值相同。
+    //  ⚠ 這裡**只倒數，不動名單**——到期離隊是下面年度邊界的事。
+    nextState = tickContracts(nextState, { days: effective }).state;
+    const departures = [], intents = [], expiries = [];
+    let promotedCount = 0;
+    const boundary = sealCareerYears(nextState, { fromDay, toDay });
+    const rolled = applyCareerYearRollover(boundary.state, { fromDay, toDay });
+    //  ── Season vNext V5-2：年度能力漂移 ─────────────────────────────────
+    //  ⚠ 跑在 rollover **之後**：漂移的老化時鐘要用**跨完年的年齡**。
+    //  ⚠ 老化時鐘是 `raw age + 決定性個體 profile`，**不是** V4 的 `effectiveAge`
+    //    ——後者吃當前能力，一旦開始扣能力，時鐘會往回走（實測倒退 2.25 年），
+    //    衰退就會自我熄火。詳見 `progress/ageDrift.js` 檔頭。
+    //  ⚠ 跨 k 年就補 k 年的漂移（`years: yearsCrossed`）⇒ 快轉與逐日推進逐值相同。
+    const aged = rolled.yearsCrossed > 0
+      ? { ...rolled.state, players: (rolled.state.players ?? []).map((p) => applyAgeDrift(p, { years: rolled.yearsCrossed })) }
+      : rolled.state;
+    //  ── Season vNext V5-3：離隊結算 → 離隊意向 → 名單地板 ────────────────
+    //  ⚠ 只在**真的封存了新年度**時跑（`boundary.sealed`）⇒ 直接繼承 V5-1 的
+    //    冪等：同一個年度邊界重跑、重讀存檔，都不可能退休兩批。
+    //  ⚠ 順序是「先結算去年的意向，再評估今年的新意向」——反過來會讓人
+    //    **同一年宣布、同一年就走**，預告就形同虛設。
+    //  ⚠ 這是 `resolveRetirements` 在整個 Store 裡的**唯一呼叫點**。
+    let after = aged;
+    for (const entry of boundary.sealed) {
+      const resolved = resolveRetirements(after, { careerYear: entry.careerYear });
+      const evaluated = evaluateIntents(resolved.state, { careerYear: entry.careerYear });
+      //  ⚠ **退休先於合約到期**：已經退役的人不在名單裡，不會被結算第二次。
+      const expired = resolveContractExpiries(evaluated.state, { careerYear: entry.careerYear });
+      after = expired.state;
+      for (const id of expired.departed) expiries.push({ id, careerYear: entry.careerYear });
+      promotedCount += expired.promoted.length;
+      for (const id of resolved.retired) departures.push({ id, careerYear: entry.careerYear });
+      for (const id of evaluated.declared) intents.push({ id, careerYear: entry.careerYear });
+      promotedCount += resolved.promoted.length;
+    }
+    //  ── V6-3：年度決策收成一個會期 ───────────────────────────────────────
+    //  ⚠ **只在真的有決策時才開**（`openSession` 自己判斷）⇒ 沒事的年度不會
+    //    多卡一道空殼畫面，這是 V5 設計 §6 立的產品判準。
+    const opened = boundary.sealed.length
+      ? openOffSeason(after, { careerYear: boundary.sealed[boundary.sealed.length - 1].careerYear })
+      : { state: after, opened: false };
+    set(opened.state);
+    if (rolled.yearsCrossed > 0) get().pushInbox(careerYearNotice(rolled));
+    //  ⚠ 退休預告一定要讓玩家看得到——那正是「有時間找接班人」的產品意義。
+    for (const d of departures) {
+      const name = aged.players?.find((p) => p.id === d.id)?.name ?? d.id;
+      get().pushInbox({ type: "roster", from: "戰隊管理處", subject: `${name} 正式退役`,
+        text: `${name} 在第 ${d.careerYear} 生涯年度結束後正式退役。` });
+    }
+    for (const it of intents) {
+      const name = after.players?.find((p) => p.id === it.id)?.name ?? it.id;
+      get().pushInbox({ type: "roster", from: "選手本人", subject: `${name}：這可能是我的最後一年`,
+        text: `${name} 表達了退役意向。他仍會打完下一個生涯年度——你有一整年可以找接班人。` });
+    }
+    for (const e of expiries) {
+      const name = aged.players?.find((p) => p.id === e.id)?.name ?? e.id;
+      get().pushInbox({ type: "roster", from: "戰隊管理處", subject: `${name} 合約到期離隊`,
+        text: `${name} 的合約在第 ${e.careerYear} 生涯年度結束時到期，未續約，已離開球隊。` });
+    }
+    if (promotedCount > 0) {
+      get().pushInbox({ type: "roster", from: "青訓營", subject: `青訓補位 ${promotedCount} 人`,
+        text: `可出賽人數低於門檻，${promotedCount} 名青訓選手已提前上調一軍。他們還很生澀。` });
+    }
     //  收件匣通知（合約到期／即將到期）由這裡發：pushInbox 會用 Date.now 產 id，
     //  屬於不決定性的部分，所以純 reducer 只回傳 notices，不自己寫 inbox。
     for (const r of receipts) for (const note of r.notices ?? []) get().pushInbox(note);
@@ -998,6 +1126,185 @@ export const useProfileStore = create((rawSet, get) => {
   },
   /** 舊名保留：訓練頁與 Legacy 呼叫端沿用，行為 = 推進一天（含週結算）。 */
   advanceTrainingDay() { return get().advanceDay(1); },
+  // ── Season vNext V1：世界時間的具名入口 ──────────────────────────────
+  /**
+   * 推進世界時間。**這是正式的公開入口**；`advanceDay` 是它的實作。
+   *
+   * ── 為什麼要多一層 ────────────────────────────────────────────────────
+   * `advanceDay` 一直是唯一的時鐘，但「誰有權推進」只是慣例，沒有任何地方
+   * 檢查得到。實測的後果是：正式 UI 只有訓練中心推得動它，而那顆按鈕還要求
+   * **真的有人在訓練** ⇒ 玩家不訓練，世界就完全停住（TD-34，比記載更嚴重）。
+   *
+   * 這一層做兩件事：
+   *   ① 把推進理由變成**可驗證的白名單**（`worldClock.ADVANCE_REASONS`）
+   *   ② 讓「誰推的」留在回傳值裡，之後接 Time Block 時不必回頭考古
+   *
+   * ⚠ **不是第二個時鐘**：它呼叫的就是 `advanceDay`，
+   *   `meta.days` 的寫入點仍然只有週結算那一處。
+   * ⚠ 既有的 D15 規則完全沒動：走得進比賽日，但比賽沒收尾就走不出去
+   *   ⇒ 回傳的 `daysAdvanced` 可能小於 `n`，`stoppedBy` 帶中文原因。
+   *   這是刻意的，不是凍結——**不自動判棄權**（規格 D15 否決過）。
+   *
+   * @param {number} n
+   * @param {{reason:string}} opts `worldClock.ADVANCE_REASONS` 之一
+   * @returns {{ok:boolean, daysAdvanced:number, stoppedBy:object|null,
+   *            receipts:object[], reason:string|null}}
+   */
+  advanceWorldDays(n = 1, { reason = null } = {}) {
+    //  ── V6-3：休賽期是真的停下來的地方 ───────────────────────────────────
+    //  ⚠ 這是本專案第一個**會擋住時間**的狀態，所以它必須有出口：
+    //    `completeOffSeason()` 永遠成功、永遠免費 ⇒ 破產或全部放走也走得下去。
+    if (offSeasonSessionOf(get())) {
+      return {
+        ok: false, daysAdvanced: 0, stoppedBy: null, receipts: [],
+        reason: "休賽期尚未結束——請先處理續約與補強，或直接完成休賽期",
+      };
+    }
+    if (!isAdvanceReason(reason)) {
+      return {
+        ok: false, daysAdvanced: 0, stoppedBy: null, receipts: [],
+        reason: `不明的時間推進來源「${reason}」，世界時間未推進`,
+      };
+    }
+    const days = Math.max(1, Math.floor(Number(n) || 1));
+    const receipts = get().advanceDay(days);
+    return {
+      ok: (receipts.daysAdvanced ?? 0) > 0,
+      daysAdvanced: receipts.daysAdvanced ?? 0,
+      stoppedBy: receipts.stoppedBy ?? null,
+      receipts,
+      reason: receipts.stoppedBy?.message ?? null,
+    };
+  },
+  /**
+   * 世界時間的**單一讀取點**。畫面不得自己從 `meta.days` 算週次或年度——
+   * 那正是專案裡「兩份時間各自漂移」踩過的坑（S23 team.lv/xp）。
+   */
+  worldTimeView() {
+    const days = Number(get().meta?.days) || 1;
+    const t = deriveTime(days);
+    const y = careerYearOf(days);
+    return {
+      day: days,
+      week: t.week,
+      dayOfWeek: t.dayOfWeek,
+      careerYear: y.year,
+      dayOfYear: y.dayOfYear,
+      daysPerYear: CAREER_YEAR.daysPerYear,
+      //  ⚠ 賽程日一律經 `absoluteDayOf`（賽季狀態機的唯一換算點），不讀 `fixture.day`。
+      nextFixtureDay: (() => {
+        for (const mode of GAME_MODES) {
+          const st = get().competitionByMode?.[mode];
+          if (!st?.schema) continue;
+          const f = nextPlayerFixture(st, days);
+          if (f) return absoluteDayOf(st, f);
+        }
+        return null;
+      })(),
+    };
+  },
+  // ── Season vNext V5-1：生涯年度邊界 ─────────────────────────────────
+  /**
+   * 年度封存狀態。**畫面的單一讀取點**——畫面不自己從 `meta.offSeason` 挖紀錄。
+   *
+   * ⚠ V5-1 的邊界**不擋路**：目前沒有任何決策要玩家做，所以快轉照樣穿過去。
+   *   等 V5-3 有了「離隊意向 vs 找接班人」的決策，才會變成真的停下來的地方。
+   */
+  offSeasonView() { return offSeasonViewOf(get()); },
+  /** 退休意向名單。**畫面的單一讀取點**——這就是 Off-season 的決策依據。 */
+  retirementView() { return retirementViewOf(get()); },
+  /** 合約狀態（即將到期／已到期）。**畫面的單一讀取點**。 */
+  contractView() { return contractViewOf(get()); },
+  /** 休賽期會期狀態。**畫面的單一讀取點**。 */
+  offSeasonSessionView() { return offSeasonSessionViewOf(get()); },
+  /**
+   * 完成休賽期。**永遠成功、永遠免費**——這是唯一的安全出口。
+   * ⚠ 不得在這裡自動續約或自動花錢：那是玩家的決定。
+   */
+  completeOffSeason() {
+    const r = completeOffSeasonSession(get());
+    if (r.completed) { set({ meta: r.state.meta }); get().save(); }
+    return { ok: r.completed };
+  },
+  /**
+   * 放走一名選手。**免費**——放走不該扣錢。
+   * ⚠ 放到低於名單地板時由**共用的** `ensureRosterFloor` 補位 ⇒ 不會卡死。
+   */
+  releasePlayer(playerId) {
+    const players = (get().players ?? []).filter((p) => p.id !== playerId);
+    if (players.length === (get().players ?? []).length) return { ok: false, reason: "找不到這名選手" };
+    const name = (get().players ?? []).find((p) => p.id === playerId)?.name ?? playerId;
+    const year = careerYearOf(Number(get().meta?.days) || 1).year;
+    const filled = ensureRosterFloor({ ...get(), players }, { careerYear: year });
+    set({ players: filled.state.players });
+    get().pushInbox({ type: "roster", from: "戰隊管理處", subject: `${name} 離隊`,
+      text: `${name} 已離開球隊。${filled.promoted.length ? `可出賽人數不足，${filled.promoted.length} 名青訓選手已上調一軍。` : ""}` });
+    get().save();
+    return { ok: true, promoted: filled.promoted.length };
+  },
+  /**
+   * 續約。**明碼標價，沒有談判**——續約金與 V4 的市場價值同源。
+   * ⚠ 宣布過退役意向的人不得續約（退休優先於合約）。
+   */
+  renewPlayerContract(playerId) {
+    const p = (get().players ?? []).find((x) => x.id === playerId);
+    if (!p) return { ok: false, cost: 0, reason: "找不到這名選手" };
+    //  ⚠ 續約與補強**共用同一份俱樂部預算**——這就是「留老將 vs 簽新人 vs 保留資金」
+    //    真的成為取捨的原因。錢不夠就據實拒絕，不得扣成負數。
+    const cost = renewCostOf(p);
+    const costCash = Math.round(cost * WAN);
+    const funds = Number(get().finance?.funds) || 0;
+    if (costCash > funds) {
+      return { ok: false, cost, reason: `資金不足：續約 ${p.name ?? p.id} 需要 $${cost}萬` };
+    }
+    const r = renewContract(get(), playerId, { careerYear: careerYearOf(Number(get().meta?.days) || 1).year });
+    if (!r.ok) return { ok: false, cost, reason: r.reason };
+    set({ players: r.state.players, finance: { ...get().finance, funds: funds - costCash } });
+    get().pushInbox({ type: "roster", from: "戰隊管理處", subject: `${p.name ?? p.id} 完成續約`,
+      text: `${p.name ?? p.id} 續約成功，支出 $${cost}萬。` });
+    get().save();
+    return { ok: true, cost, reason: null };
+  },
+  // ── Season vNext V3：快速推進 ────────────────────────────────────────
+  /**
+   * 下一個值得停下來的日子。**畫面的單一讀取點**——畫面不自己算。
+   *
+   * ⚠ 賽程日直接取自 `worldTimeView().nextFixtureDay`（已經是兩個項目取過
+   *   交集的絕對天數）⇒ 規劃器不必、也不得再掃一次賽程。
+   */
+  nextStopView() {
+    const t = get().worldTimeView();
+    return nextStopOf({ day: t.day, nextFixtureDay: t.nextFixtureDay, offSeasonOpen: !!offSeasonSessionOf(get()) });
+  },
+  /**
+   * 推進到下一站。**薄包裝**：規劃器算出天數，推進仍然走 `advanceWorldDays`。
+   *
+   * ── 為什麼要有這一支 ──────────────────────────────────────────────────
+   * 玩家要的是「幫我跳到下一件事」，不是「幫我按 28 次」。但**不能**因此變成
+   * 第二個時鐘：本函式自己一天都不推，只決定要請 V1 的入口推幾天。
+   *
+   * ⚠ **規劃器提案，引擎裁決。** 引擎的 D15 規則（走得進比賽日，但比賽沒收尾
+   *   就走不出去）永遠優先 ⇒ `daysAdvanced` 仍可能小於規劃的天數。
+   * ⚠ 規劃 0 天時**照實回報**，不自己改成 1 硬推——那是「自動出賽／自動棄權」
+   *   的入口，規格 D15 否決過（玩家會因手滑丟掉整季）。
+   *
+   * @returns {{ok, daysAdvanced, stoppedBy, receipts, reason, plannedDays, stop}}
+   */
+  advanceToNextStop({ maxDays = MAX_FAST_FORWARD_DAYS } = {}) {
+    const t = get().worldTimeView();
+    const plan = planAdvance({ day: t.day, nextFixtureDay: t.nextFixtureDay, offSeasonOpen: !!offSeasonSessionOf(get()) }, { maxDays });
+    if (plan.days <= 0) {
+      return {
+        ok: false, daysAdvanced: 0, stoppedBy: null, receipts: [],
+        reason: offSeasonSessionOf(get())
+          ? "休賽期尚未結束——請先處理續約與補強，或直接完成休賽期"
+          : `第 ${t.day} 天有你的比賽，請先出賽或棄權`,
+        plannedDays: 0, stop: plan.stop,
+      };
+    }
+    const res = get().advanceWorldDays(plan.days, { reason: ADVANCE_REASONS.schedule });
+    return { ...res, plannedDays: plan.days, stop: plan.stop };
+  },
   // ── Milestone Q3：賽事系統 ────────────────────────────────────────────
   /**
    * 確保這個存檔有賽季。**唯一的建立點**。
@@ -1789,6 +2096,60 @@ export const useProfileStore = create((rawSet, get) => {
     const fixtureId = fa?.origin?.fixtureId ?? null;
     return { inFixture: !!fixtureId, fixtureId };
   },
+  /**
+   * V0D：目前這條流程是不是**快速練習**。
+   *
+   * ⚠ 判斷一律讀 `MatchOrigin`（房間／場次／指派單三者任一即可），
+   *   **不得靠畫面名稱或路由猜**——那正是 V0C 明文禁止的事。
+   *   畫面要判斷「現在在練習」就吃這一份，不要各自比對 kind 字串。
+   */
+  /**
+   * V2：今天的競技時間區塊還剩幾格。**畫面與流程的單一讀取點。**
+   *
+   * ⚠ 區塊掛在 `meta`（俱樂部層級），**不是每個項目一份**——
+   *   否則切到另一個模式就能再拿一份配額。
+   */
+  competitiveBlockView() {
+    return competitiveBlockOf(get().meta?.competitiveBlock ?? null, Number(get().meta?.days) || 1);
+  },
+  /** 測試／驗證用：直接設定今天用掉幾格。正式流程一律由結算扣。 */
+  _setCompetitiveBlockUsed(used) {
+    const day = Number(get().meta?.days) || 1;
+    set({ meta: { ...(get().meta ?? {}), competitiveBlock: { day, used: Math.max(0, Math.floor(Number(used) || 0)) } } });
+    get().save();
+    return get().competitiveBlockView();
+  },
+  /**
+   *  這條流程與「快速練習」的關係。**兩個欄位問的是兩件事，不要混用。**
+   *
+   *  · `inPractice`（原意，**不得**改）：這條流程的來源是不是練習。
+   *    ⚠ 結算端讀的是這一個，而且**讀取時機在場次已經 completed 之後**——
+   *      `progress/settleCsMatch.js` 第 4 步（入史）就在 `settleMatchThroughSession`
+   *      之後。若把終局判定加進 `inPractice`，練習賽會突然開始寫 CS 戰績，
+   *      直接打破「快速練習零永久影響」。`battle/useBattleFeed.js` 同理。
+   *
+   *  · `activePractice`（TD-44 新增）：**現在**還在練習流程裡嗎。
+   *    賽前頁的層級橫幅、主按鈕退路、「快速練習」次要按鈕讀這一個。
+   *    練習打完（場次終局）之後為 false ⇒ 回得到一般對戰。
+   *
+   *  ⚠ `activePractice` 只看**現役流程**（場次優先於房間）的來源，**不看**
+   *    `practiceAssignment`。殘留的 assignment 沒有被任何流程清掉，若把它算進去，
+   *    玩家按「重新配對」開一場真的競技比賽時，橫幅會寫「快速練習」——
+   *    那是比 TD-44 更危險的反向誤導（以為在測試，其實在打正式的）。
+   */
+  matchPracticeContext() {
+    const mm = get().matchmaking ?? {};
+    const kindOf = (x) => x?.origin?.kind ?? null;
+    const inPractice = [mm.session, mm.room, mm.practiceAssignment]
+      .some((x) => kindOf(x) === ORIGIN_KINDS.practice);
+    const flowKind = kindOf(mm.session) ?? kindOf(mm.room) ?? null;
+    const { idle } = matchFlowIdleFrom({
+      roomState: mm.room?.state ?? null,
+      sessionState: mm.session?.state ?? null,
+    });
+    const activePractice = flowKind === ORIGIN_KINDS.practice && !idle;
+    return { inPractice, activePractice };
+  },
   /** 賽事總覽（畫面唯一入口；不得自己算積分榜或自己找下一場）。 */
   competitionView(mode = DEFAULT_GAME_MODE) {
     assertGameMode(mode);
@@ -2199,6 +2560,22 @@ export const useProfileStore = create((rawSet, get) => {
     if (isActiveTicket(cur)) {
       return { ok: false, ticket: cur, errors: [{ code: "already_queued", message: `已有一張進行中的票券（${stateLabel(cur.state)}），請先取消` }] };
     }
+    //  ── Season vNext V2：競技時間區塊 ─────────────────────────────────────
+    //  一個世界日只有 N 場競技容量。打滿了要再打，就得自己推進日曆
+    //  ⇒ 刷 XP 必然要付出世界時間，但競技比賽**本身一天都不加**
+    //    （所以愛打的人不會比不打的人老得快）。
+    //  ⚠ 檢查在排隊、扣格子在結算：排了又取消不該白白吃掉一格。
+    //  ⚠ 快速練習走的是 `startPracticeMatch`，**不經過這裡**，不吃容量。
+    const block = get().competitiveBlockView();
+    if (block.remaining <= 0) {
+      return {
+        ok: false, ticket: null,
+        errors: [{
+          code: "competitive_block_full",
+          message: `今天的競技場次已用滿（${block.used}/${block.capacity} 場），推進一天之後可以再打`,
+        }],
+      };
+    }
     const entry = get().matchEntry(mode);
     if (!entry.ok) return { ok: false, ticket: null, errors: entry.errors };
 
@@ -2289,6 +2666,60 @@ export const useProfileStore = create((rawSet, get) => {
     get().save();
     return true;
   },
+  // ── Season vNext V0D：快速練習 ───────────────────────────────────────
+  /**
+   * 開始一場快速練習。**純測試場**：不給成長、不給錢、不給粉絲、
+   * 不計戰績、不扣體力、不推進日曆。
+   *
+   * ⚠ 這**不是**第二條進場流程。它與 `startFixtureMatch` 的形狀完全相同：
+   *   簽發指派單 → 開房 → 交給既有的 poll / confirm / session / launch。
+   *   之後的 Battle / Result / 結算一行都不分岔。
+   *
+   * ⚠ 練習**不繞過出賽資格**：陣容不合法就開不了。「試新人」是把新人排進
+   *   陣容，不是無視陣容規則。
+   */
+  startPracticeMatch(mode = DEFAULT_GAME_MODE, now = Date.now()) {
+    //  ── 一次只能有一場進行中的對戰（與 startFixtureMatch 同一條規則）──────
+    //  少了這一條，玩家可以在一場正式賽進行中開一場練習，
+    //  而下面的 `set()` 會把 `session` 換掉 ⇒ 正式賽那一場**無聲消失**。
+    const mmNow = get().matchmaking ?? {};
+    const cur = mmNow.session ?? null;
+    const liveSession = !!cur && !isSessionTerminal(cur) &&
+      (cur.state === SESSION_STATES.launched || !isSessionExpired(cur, now));
+    if (liveSession) {
+      const opp = cur.opponent?.name ?? null;
+      const message = `你有一場進行中的對戰${opp ? `（對手：${opp}）` : ""}，請先打完或放棄那一場`;
+      return { ok: false, errors: [{ code: "live_session", message }], reason: message };
+    }
+
+    const entry = get().matchEntry(mode);
+    const issued = issuePracticeMatch({
+      entryRequest: entry.request,
+      players: get().players ?? [],
+      now,
+    });
+    if (!issued.ok) return { ok: false, errors: issued.errors, reason: issued.reason };
+
+    const room = openRoomForPractice({ assignment: issued.assignment, now });
+    if (!room.ok) return { ok: false, errors: room.errors, reason: room.errors[0]?.message ?? null };
+
+    set({
+      matchmaking: {
+        ...mmNow,
+        //  ⚠ 練習路徑沒有票券，也不屬於任何賽程。兩者都要清掉，
+        //    否則 `pollMatchRoom` 會拿不相干的票券來判定這個房間該不該關，
+        //    `matchFixtureContext` 也會誤判成「還在某場賽程裡」。
+        ticket: null,
+        fixtureAssignment: null,
+        practiceAssignment: issued.assignment,
+        room: room.room,
+        session: null,
+        launch: null,
+      },
+    });
+    get().save();
+    return { ok: true, errors: [], reason: null, assignment: issued.assignment, room: room.room };
+  },
   // ── Milestone O5：比賽房間與雙方確認 ─────────────────────────────────
   /**
    * 開房（由 mock gateway 簽發 roomId 與簽發者；客戶端不得自己造房間）。
@@ -2324,11 +2755,14 @@ export const useProfileStore = create((rawSet, get) => {
     const ticket = mm.ticket ?? null;
     if (!room || isRoomTerminal(room)) return { changed: false, room };
     //  Q3：賽程來源的房間**沒有票券**（`room.ticketId` 依契約為 null）。
-    //  下面那道票券檢查是給排隊路徑用的，套到賽程房間會一開就把它關掉。
-    //  賽程房間的有效性由賽程狀態決定，不由票券決定。
-    const isFixtureRoom = room.origin?.kind === "fixture";
+    //  下面那道票券檢查是給排隊路徑用的，套到沒有票券的房間會一開就把它關掉。
+    //  ⚠ V0D：判斷改成「**這是不是票券房間**」，而不是「是不是賽程房間」。
+    //    原本的寫法是「非 fixture ⇒ 檢查票券」，快速練習房間（第三種來源）
+    //    會直接落進去 ⇒ 沒有票券 ⇒ 開房當下就被判定「票券已失效」而關閉。
+    //    以後再多一種非票券來源也自動被涵蓋。
+    const isTicketRoom = room.origin?.kind === ORIGIN_KINDS.ticket;
     //  票券失效（被取消／被拒絕／換了新票）⇒ 房間不得繼續
-    if (!isFixtureRoom && (!ticket || ticket.state !== TICKET_STATES.matched || room.ticketId !== ticket.ticketId)) {
+    if (isTicketRoom && (!ticket || ticket.state !== TICKET_STATES.matched || room.ticketId !== ticket.ticketId)) {
       const dead = transitionRoom(room, ROOM_STATES.cancelled, { now, reason: "票券已失效，房間關閉" });
       if (dead.ok) { set({ matchmaking: { ...mm, room: dead.room } }); get().save(); }
       return { changed: dead.ok, room: dead.room ?? room };
@@ -2376,11 +2810,15 @@ export const useProfileStore = create((rawSet, get) => {
       && (isActiveMatch(cur) || !isSessionExpired(cur, now))) {
       return { ok: true, session: cur, errors: [], reused: true };
     }
-    //  Q3：賽程房間走賽事閘道（沒有票券可用）。兩條路都呼叫同一個
-    //  `contracts/matchSession.js` 的 `createSession`，不是兩套場次。
-    const made = mm.room?.origin?.kind === "fixture"
+    //  依**來源種類**分派到三個閘道之一。⚠ 三條路都呼叫同一個
+    //  `contracts/matchSession.js` 的 `createSession`，**不是三套場次**——
+    //  它們是三個伺服器實作對同一份契約，之後的 launch/battle/result 完全共用。
+    const kind = mm.room?.origin?.kind ?? null;
+    const made = kind === ORIGIN_KINDS.fixture
       ? openSessionForFixture({ room: mm.room, assignment: mm.fixtureAssignment ?? null, now })
-      : openSession({ room: mm.room ?? null, ticket: mm.ticket ?? null, now });
+      : kind === ORIGIN_KINDS.practice
+        ? openSessionForPractice({ room: mm.room, assignment: mm.practiceAssignment ?? null, now })
+        : openSession({ room: mm.room ?? null, ticket: mm.ticket ?? null, now });
     if (!made.ok) return { ok: false, session: null, errors: made.errors };
     //  ── CS Season M4-A：series 場次開場時建立 series 狀態 ─────────────────
     //  ⚠ 賽制來自 **fixture 的 `matchFormat`**，不是呼叫端說了算：一個 BO3
@@ -2916,8 +3354,69 @@ export const useProfileStore = create((rawSet, get) => {
 
   // ── 球探招募（Legacy RecruitModule）─────────────────────────────────
   setScouted(prospectId, level) {
-    set({ scouted: { ...(get().scouted ?? {}), [prospectId]: level } });
+    //  V7B：日目標「球探回報」。只在**偵查等級真的往上走**時記一次，
+    //  否則對同一個人重複點就能刷滿今天的格子。
+    const prev = Number((get().scouted ?? {})[prospectId]) || 0;
+    const next = { ...(get().scouted ?? {}), [prospectId]: level };
+    const advanced = (Number(level) || 0) > prev;
+    set({
+      scouted: next,
+      ...(advanced ? { retention: recordScoutActivity(normalizeRetention(get().retention), get()._retentionCoords()) } : {}),
+    });
     get().save();
+  },
+  // ── Season vNext V7B：Retention Foundation ──────────────────────────
+  /**
+   * 三個尺度的時間座標。**唯一讀取點**——呼叫端不得自己算週或年。
+   * ⚠ 年度一律取自 `careerYearOf`，與休賽期／生涯年度用的是同一條時間。
+   */
+  _retentionCoords() {
+    const days = Number(get().meta?.days) || 1;
+    return coordsOf({ days, day: days, week: deriveTime(days).week, year: careerYearOf(days).year });
+  },
+  /**
+   * 目標總覽。**畫面唯一入口**：不得自己抽目標、自己算進度、自己判可不可領。
+   *
+   * ⚠ 賽季目標的名次與巡迴積分是**從賽季狀態推導**的，不是計數器——
+   *   賽季自己已經有帳本，再存一份必然漂移。這裡只負責把它們讀出來。
+   * ⚠ 沒有賽季時一律回 null / 0（fail-open 成「尚未開賽」），不猜。
+   */
+  retentionView(mode = DEFAULT_GAME_MODE) {
+    const teamId = get().team?.id ?? "team";
+    let leagueRank = null;
+    let circuitPoints = 0;
+    try {
+      const cv = get().competitionView(mode);
+      if (cv?.hasSeason) {
+        //  ⚠ 玩家隊伍的身分以**賽季狀態**的 `playerTeamId` 為準，不是 `team.id`：
+        //    後者在落盤前會隨天數改變（見 `check_cs23` 的身分規則），
+        //    拿它去比對積分榜會在某些天查不到自己。
+        const myId = get()._competitionStateOf?.(mode)?.playerTeamId ?? get().team?.id ?? null;
+        //  ⚠ 名次直接讀 `row.rank`（`computeStandings` 的權威欄位），
+        //    不用陣列索引——那是第二套排序假設。
+        const mine = (cv.standings?.rows ?? []).find((r) => r.teamId === myId);
+        if (mine && Number.isFinite(Number(mine.rank))) leagueRank = Number(mine.rank);
+        for (const st of Object.values(cv.circuitPoints?.standings ?? {})) {
+          const row = (st?.rows ?? []).find((r) => r.teamId === myId);
+          if (row) circuitPoints = Math.max(circuitPoints, Number(row.points) || 0);
+        }
+      }
+    } catch { /*  賽季尚未建立／投影失敗 ⇒ 維持「尚未開賽」，不讓目標頁跟著壞掉 */ }
+    return retentionViewOf(get().retention, {
+      coords: get()._retentionCoords(), teamId, leagueRank, circuitPoints,
+    });
+  },
+  /**
+   * 領取一個目標的獎勵。
+   * @returns {{ok:boolean, gained:number, reason:string|null, clubPoints:number}}
+   */
+  claimRetentionObjective(objectiveId, mode = DEFAULT_GAME_MODE) {
+    const view = get().retentionView(mode);
+    const r = claimObjectiveIn(get().retention, objectiveId, view);
+    if (!r.ok) return { ok: false, gained: 0, reason: r.reason, clubPoints: view.clubPoints };
+    set({ retention: r.retention });
+    get().save();
+    return { ok: true, gained: r.gained, reason: null, clubPoints: r.retention.clubPoints };
   },
   // ── CS 訓練賽入史（Sprint23）────────────────────────────────────────
   /**

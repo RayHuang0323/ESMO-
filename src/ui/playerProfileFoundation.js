@@ -1,6 +1,9 @@
 import { conditionSummary } from "../platform/condition/playerCondition.js";
 import { growthLogOf } from "../platform/progress/growthLog.js";
 import { statZh } from "../data/playerModel.js";
+//  V4：生涯階段與市場價值都是**推導**的，畫面不自己算，也不落盤。
+import { careerStageOf as derivedCareerStageOf } from "../platform/progress/careerStage.js";
+import { marketValueOf } from "../platform/economy/marketValue.js";
 
 const finite = (value) => Number.isFinite(Number(value));
 
@@ -26,10 +29,38 @@ export const CAREER_STAGE_LABELS = Object.freeze({
   退役: "退役",
 });
 
+/**
+ * 生涯階段（Season vNext V4）。
+ *
+ * ⚠ V4 之前這裡讀的是 `player.careerStage`——而**全 repo 沒有任何地方寫入它**，
+ *   所以它永遠回「未啟用」。現在改由 `progress/careerStage.js` **推導**：
+ *   算得出來的東西不落盤，`players[]` 仍然不存這個欄位。
+ * ⚠ **簽章刻意不變**（`{available, label, source}`）⇒ 兩個既有畫面
+ *   （`RosterScreen` 名單列、`CareerPanel` 生涯分頁）一行都不用改。
+ * ⚠ 舊存檔若還帶著手寫的 `careerStage` 欄位，仍然優先採用——那是玩家資料，
+ *   不該被我們偷偷覆蓋。
+ */
 export function careerStageOf(player) {
   const raw = player?.careerStage ?? player?.lifecycleStage ?? player?.career?.stage ?? null;
-  if (!raw) return { available: false, label: "未啟用", source: "unavailable" };
-  return { available: true, label: CAREER_STAGE_LABELS[raw] ?? String(raw), source: "player" };
+  if (raw) return { available: true, label: CAREER_STAGE_LABELS[raw] ?? String(raw), source: "player" };
+  const derived = derivedCareerStageOf(player);
+  if (!derived) return { available: false, label: "未啟用", source: "unavailable" };
+  return { available: true, label: CAREER_STAGE_LABELS[derived] ?? String(derived), source: "derived" };
+}
+
+/**
+ * 市場價值（Season vNext V4）。
+ *
+ * ⚠ 這是**身價／轉會**用的資產價值，**不是週薪**。週薪自 N2 起一律由
+ *   `economy/salary.js` 依能力推導，V4 一個位元都沒動它。
+ */
+export function marketValuePresentationOf(player) {
+  if (!player || typeof player !== "object") {
+    return { available: false, label: "尚未建立", source: "unavailable" };
+  }
+  const value = marketValueOf(player);
+  if (!finite(value)) return { available: false, label: "尚未建立", source: "unavailable" };
+  return { available: true, label: `$${value}萬`, value, source: "derived" };
 }
 
 export function agePresentationOf(player) {

@@ -13639,6 +13639,1068 @@ Release checklist 寫的就是旗標，不是網址參數。
 - **Season vNext Design = READY**（可以開始**設計**，本輪不實作）
 
 未開始：Season vNext 實作、「低體力硬上但能力下降」、fatigue 重新設計。
+
+
+## Season vNext Design Sprint（2026-08-25）— 設計已裁決
+
+分支 `feature/remove-player-injury`。**docs-only，`src/` 零改動，未開始 implementation。**
+完整設計：`docs/design/Season_vNext_長期生涯與競賽框架.md`（16 節）
+量測腳本：`tools/season_vnext_calibration.mjs`（設計工具，非 verifier、不進 CI）
+
+### 這一輪最重要的事：題目被模擬改掉了
+
+原本的題目是「加上年齡與世代交替」。用主幹真正在跑的函式（`calculateTrainingResult`、
+`applyLevelGrowth`、`dayForRound`、XP 曲線、`genProspects`）實跑量測之後，
+**那樣做會失敗**：
+
+1. **新秀沒有成長空間**——`genProspects` 的新秀入行時主能力已達潛力的 **87.6%（中位）**，
+   成長空間 min 1.6 / **中位 8.4** / max 34.2 點。一半的新秀一輩子只能長 8 點以內。
+2. **成長是漸近線**——12 個 Career Year 後典型新人只關閉 **64.6%** 潛力空間，
+   高潛天才更只有 **50.3%**。玩家會看到「潛力 92，一輩子停在 70」。
+3. **正式賽事只貢獻 10.6% 的成長**（訓練 89.4%）⇒
+   「League/Tournament = 正式生涯成果」在數字上是假的。
+
+⇒ **「19–21 歲新人幾年變成熟主力」的答案是：現行模型下永遠不會。**
+⇒ **Season vNext 的第一優先不是 aging，是 Growth Model 重建。**
+
+已登記為 **TD-32**（新秀空間）、**TD-33**（漸近線）、**TD-34**（凍齡洞：世界時間只靠訓練推進，
+打比賽完全不推進日曆——**現在就已經存在的 exploit**）。
+
+### Grilling：17 條（brief 的 14 條 + 模擬翻出的 3 條）
+
+三條翻轉了原本的判斷：
+
+- **G1**：擔心的是 Practice 無限刷，但 **Practice 現在根本沒有永久成長路徑，那個 exploit 不存在**。
+  真正的洞是**無限訓練**——不需要任何比賽，貢獻 89% 的成長。防刷範圍要比原設想大。
+- **G2**：「不打 Season 凍齡」**現況 100% 成立**，不是未來風險。
+- **G4**：Live Event 消耗 Career Time 等於**懲罰參與**（真人 Event 是 real-time 排定的，
+  玩家控制不了頻率）。⇒ **已裁決採納**：Career Calendar 預留 **Event Window**，
+  窗口內不額外消耗 Career Time。
+
+### 裁決（FINAL）
+
+| 項目 | 裁決 |
+|---|---|
+| **Q2 Multi-Title Club** | **Opt-in / Later。** 玩家不被迫同時經營 MOBA + CS；第二分部**必須同時帶成本與收益**，不得成為「不開就吃虧」的 mandatory bonus |
+| **Q3 Online** | **Contract only。** 不做 server / real matchmaking，**也不做本地 fake Ranked**；但 Career / Growth contract **必須允許未來 AI 與真人 Match 共用**（成長路徑**不得知道對手是誰**） |
+| **Career Year** | **12 週 / 84 天 = MVP baseline，不是永久 balance freeze** |
+| **Live Event** | 不因玩家參與而額外懲罰 Career Time；Career Calendar 預留 Event Window |
+
+### Implementation Roadmap（已裁決）
+
+**Foundation**：**V0A** Player Career Growth Model ＋ **V0B** Prospect Growth Space
+
+🔒 **Foundation Gate**：兩者**不得各自宣告完成**，要跑**共同 calibration**。
+理由：成長速度是「公式 × 成長空間」的乘積——只修公式會讓 8.4 點的空間更快被關閉、
+只修空間會讓漸近線的尾巴更長，**分開驗收兩邊都會得到錯誤結論**。
+
+**成長產品驗收目標**（19–21 歲、正常高潛力新人）：
+Year 1 明顯進步可進輪換｜Year 2 左右有機會成為穩定主力｜Year 3–4 好選手接近成熟／巔峰。
+**不鎖公式數值**；**年度來源比例 target** Training 40 / Formal 35 / Ranked 15 / Practice 10
+是**年度佔比，不是公式常數**。
+
+**Foundation 之後**：V1 Career Clock → V2 Time Block → V3 大顆時間操作 →
+V4 Lifecycle → V5 Off-season → V6 AI turnover → V7 Online Event contract
+
+### 沒有做
+
+未修改任何 `src/` 產品碼。未開始任何 implementation。
+未鎖定任何 balance 常數（全部留給 Foundation calibration）。
+未實作 Ranked（含本地假對手）、Live Event 本體、Multi-Title 第二分部、
+Club DNA、Personality 影響戰術執行、Coach / Staff / Legacy。
+
+
+## Season vNext V0A — Player Career Growth Model（2026-08-25）
+
+分支 `feature/remove-player-injury`。**未 push。**
+Plan：`docs/superpowers/plans/2026-08-25-v0a-player-career-growth-model.md`
+
+> ⚠ **FOUNDATION_COMPLETE = NO。** V0A 只是 Foundation 的一半，
+> **V0B Prospect Growth Space 尚未執行**，兩者要跑共同 calibration 才算 Foundation 完成。
+
+### 解決的結構性不一致
+
+主幹有**兩條**永久成長路徑，但只有一條認年齡：
+
+| 路徑 | age？ |
+|---|---|
+| Training v1.1 `calculateTrainingResult` | ✅ |
+| 比賽升級 `applyLevelGrowth` | ❌ **完全沒有** |
+
+⇒ 34 歲老將靠打比賽的成長，與 18 歲新人**一模一樣**。V0A 把兩條接到同一組係數上。
+
+### 做法：re-export，不是搬家
+
+`platform/progress/careerGrowth.js` 是 PCGM 的**單一入口**，
+**原樣 re-export** `trainingCalculator.js` 的三個 efficiency 函式（**同一個 function reference**）。
+
+**為什麼不搬過來**：把曲線搬進 PCGM 會讓 `trainingCalculator.js` 出現 diff，
+於是「Training v1.1 有沒有回歸」變成要靠比對才能回答的問題。
+改成 re-export ⇒ **`trainingCalculator.js` 零 diff，無回歸由「檔案沒被改」直接成立**。
+
+gate §G 用兩條把它釘死：
+① **reference identity**（`careerGrowth.ageFactor === trainingCalculator.ageEfficiency`）
+② **單向依賴**（`trainingCalculator` 不得 import `careerGrowth`）
+
+### 修改的 authoritative path
+
+| 檔案 | 改動 |
+|---|---|
+| `platform/progress/careerGrowth.js` | **新增**。PCGM 單一入口：`GROWTH_SOURCES`、`PCGM_PARAMS`、`careerGrowthFactor()` |
+| `platform/progress/levelGrowth.js` | `applyLevelGrowth(player, levels, { source })` — **第三參數選配**，係數乘在 `perStatCap` clamp **之前** |
+| `platform/progress/applyMatchProgress.js` | 明示 `source: GROWTH_SOURCES.formal` |
+
+`data/trainingCalculator.js` **零 diff**（gate §F2 用 `git diff origin/main` 驗）。
+
+### 🔴 V0A 實作時發現的前置條件（TD-35）
+
+`MatchProgressTransaction` **不帶 `MatchOrigin`** ⇒ 結算層**分不出聯賽與自由對戰**。
+
+⇒ 設計文件 §5.1 的「Formal base 高於 Training」**做不到**：
+現在調高 `formal` 等於**自由對戰一起調高**，直接製造「刷自由對戰＝刷正式賽成長」的 exploit
+（正是 §11-G1 要擋的東西）。
+
+**因此 V0A 的 `sourceBase` 四個來源一律 1.0——刻意的，不是還沒填。**
+差異化 base 的前置條件是把 `MatchOrigin` 接進結算契約，屬**契約變更、獨立一輪**。
+
+### Calibration
+
+**只看公式本身**（與新秀池無關）
+
+| age | 年齡係數 | learning | 學習係數 | 合成 |
+|---|---|---|---|---|
+| 18 | 1.08 | 90 | 1.07 | **1.156** |
+| 24 | 1.04 | 70 | 1.00 | 1.040 |
+| 28 | 1.00 | 60 | 0.965 | 0.965 |
+| 36 | 0.88 | 40 | 0.90 | **0.792** |
+
+年齡相對差距 **1.23×**（18 vs 36）｜learning 相對差距 **1.19×**（90 vs 40）｜
+最好與最差合計 **1.46×**
+
+**用真實 prospect pool 跑一個 Career Year（12 週）**
+
+| 選手 | 成長空間 | 年成長 | 其中訓練 | 其中比賽 |
+|---|---|---|---|---|
+| 典型新人 19–21歲 | 25 點 | 50.8 | 44.2 | 6.6 |
+| 高潛天才 ≤21歲 | 34.2 點 | 61.9 | 53.5 | 8.4 |
+| 即戰力 21+歲 低潛 | 8 點 | 20.4 | 18.7 | 1.7 |
+| 超新星 ≤17歲 | 16 點 | 40.0 | 35.1 | 4.9 |
+
+### 哪些失真是 V0A 的問題、哪些必須等 V0B
+
+| 現象 | 歸屬 |
+|---|---|
+| 比賽成長不認年齡 | ✅ **V0A 已解決** |
+| 比賽成長不認 learning | ✅ **V0A 已解決** |
+| 新秀成長空間中位只有 8.4 點 | ⏳ **Expected pending V0B**（TD-32） |
+| 潛力是漸近線，永遠到不了 | ⏳ **Foundation calibration**（TD-33，`floorRate` 會改 Training 輸出值） |
+| 比賽只貢獻 ~13% 成長 | ⏳ **等 TD-35**（MatchOrigin 未接進契約，不能差異化 sourceBase） |
+
+⚠ **沒有為了讓 gate 變綠而扭曲 V0A 公式。** 上面三個「未解決」是照實標記的。
+
+### Gate
+
+- **新增 `tools/check_pcgm_v0a.mjs` — 24/24**，含 3 個 mutation sentinel：
+  S-A 拿掉 PCGM 乘法 ⇒ §A/§C 紅｜S-B 動到共用曲線 ⇒ §F Training golden 紅｜
+  S-C 把 re-export 換成包一層 ⇒ §G1 紅
+- 既有回歸：`growth_loop_p0` 25/25、`growth_ui_p1` 80/80、`progress25` 34/34、
+  `talent27`、`condition_o2` 29/29、`no_player_injury` 29/29、`dev_quick_recovery` 29/29、
+  `squad_o1` 40/40、`match_entry_o3` 35/35、`matchmaking_o4` 48/48、`fan_system` 66/66、
+  `fan_ui_f4` 35/35、`cs_season_lifecycle` 54/54、`competition_q4` 68/68、`competition_q6` 57/57、
+  `finance_n3` 40/40、`cs23` 28/28、`r62_player_ui_fixture` — **全綠**
+- `verify.mjs --only=progress25,talent27,growth_p0,growth_ui_p1,regress,regress2,build` — **7/7**
+
+### 沒有做
+
+未做 V0B（`recruitPool` 零改動）、Career Clock、age +1、lifecycle、decline、retirement。
+未建 fake Ranked / server / 新 UI。未新增玩家可見的 Practice 永久成長。
+未鎖任何 balance 常數（`PCGM_PARAMS` 全部標為 provisional）。未 push、未 deploy。
+
+
+## Season vNext V0B — Prospect Growth Space（2026-08-25）
+
+分支 `feature/remove-player-injury`。**未 push。**
+
+> ⚠ **FOUNDATION_COMPLETE = NO。** Foundation 已改為
+> **V0A ✅ → V0B ✅ → V0C（Match Origin / Growth Source Attribution）→ Foundation Calibration Gate**。
+
+### 根因（先查清楚才改，沒有先改數字）
+
+「新秀入行時主能力已達潛力 87.6%、空間中位只有 8.4 點」的原因**不是潛力設太低**，
+而是**生成時被兩個東西夾死**：
+
+```js
+// genCsProfiledStat（改動前）
+const baseline = 40 + current * 0.58;          // ← +40 的地板
+const generationCap = Math.max(1, potential - 2);  // ← 天花板
+```
+
+`potential` 的範圍是 **42–96**，而 baseline 有 **+40 的地板**
+⇒ 潛力 42–70 的新秀 baseline 直接衝破天花板，**出生就被釘在 `potential − 2`**。
+
+實測（40 人 × 6 seed）：
+
+| 潛力分層 | 人數 | 主能力被釘住 | 平均剩餘空間 |
+|---|---|---|---|
+| 42–55 | 9 | **73%** | 3.9 點 |
+| 56–70 | 16 | 54% | 7.4 點 |
+| 71–85 | 10 | 14% | 17.6 點 |
+| 86–96 | 5 | **0%** | 20.5 點 |
+
+⇒ 整體主能力 **41.5% 被釘住**，30/40 名新秀至少有一項貼住天花板。
+那個 `+40` 是 R46 為了讓 CS gameplay 素質落在可玩區間設的地板，
+與「potential 最低只有 42」直接衝突。
+
+### 修法：成長空間變成**直接生成的量**
+
+```
+archetype → core（起始能力）+ room（成長空間）
+potential = min(96, core + room)
+```
+
+空間不再是「潛力 − 起始」的**殘值**，因此**不可能再被 clamp 擠掉**。
+
+| 原型 | 權重 | 年齡 | 起始 core | 空間 room |
+|---|---|---|---|---|
+| 養成型 developmental | 30% | 16–19 | 34–50 | 22–38 |
+| 一般 standard | 40% | 17–21 | 42–58 | 12–24 |
+| 即戰力 readymade | 25% | 20–23 | 52–68 | 7–15 |
+| 超新星 superstar | 5% | 16–18 | 54–64 | 26–36 |
+
+另外新增 `spreadScale = clamp(room/24, 0.3, 1)`：**空間小的人能力集中（像成品）、
+空間大的人參差（像半成品）**。這同時解決一個技術問題——若振幅不隨 room 縮小，
+小 room 的新秀又會被 `generationCap` 夾住。
+
+### 結果
+
+| 指標 | 改動前 | 改動後 |
+|---|---|---|
+| 成長空間中位（metric C） | 8.4 點 | **15.8 點** |
+| 主能力釘住率 | 41.5% | **0.4%** |
+| 潛力範圍／中位 | 42–96 / ~69 | 54–96 / **71** |
+| 超新星比例 | — | **3.8%**（稀有） |
+
+原型分化（6 seed 共 240 人）：
+養成型 起始 44.4/空間 27.6｜一般 50.9/17.1｜即戰力 60.3/10.7｜超新星 59.7/29.4
+
+> ⚠ **A 級以上比例由約 31% 降到 12%**。這是**刻意的**：改動前高潛力很便宜，
+> 因為起始能力本來就貼著潛力；現在高潛力代表真正要投資。
+> 這屬 legitimate expectation change，不是回歸。
+
+### 招募等級（本輪追加 Audit）
+
+**現況**：唯一真效果是 `management_scout_network` → `scoutDaysReduction`（球探報告 −1 天/階）。
+它**完全不影響**新人池的品質、數量、潛力或 learning。
+`general_scout_support` 是 FUTURE 節點（無 effect）。
+`scoutLv` 遮蔽的是：潛力（0=「???」／1=十位數區間／2=精確值）、tier、個性、特質、能力值。
+
+**🔴 V0B 帶來的風險**：新增的 `archetype` / `growthSpace` 欄位**等於潛力的直接讀數**。
+目前 UI 沒渲染它們，但只要有人渲染，球探系統就整個失效。
+⇒ gate §R5 明文守住「招募 UI 不得渲染這兩個欄位」。
+
+**依設計原則實作**（招募等級不讓新人變強，只提高發現與判斷）：
+`genProspects(seed, { scoutNetworkRank })` 只把**初始已知程度** `scoutLv` 往上抬。
+
+⚠ 第一版用「rank 3 ⇒ +2」，結果 rank 3 時**每一位新秀都完全揭露**，
+**球探系統整個失去意義**。改成**依名次的部分揭露**（rank N ⇒ N/4 的新秀 +1）：
+
+| rank | 已知(lv≥1) | 完全揭露(lv2) | 平均起始 | 平均空間 | 平均潛力 |
+|---|---|---|---|---|---|
+| 0 | 66.7% | 33.3% | 52.4 | 18.0 | 70.4 |
+| 1 | 76.7% | 40.8% | 52.4 | 18.0 | 70.4 |
+| 3 | 94.2% | 58.3% | 52.4 | 18.0 | 70.4 |
+
+**起始／空間／潛力三欄完全相同** ⇒ 招募等級只改資訊，不改能力。
+rank 0 與改動前**逐位元相同**（舊存檔與既有呼叫端不受影響）。
+
+### V0A + V0B joint calibration（Year 0–4）
+
+> metric 口徑：Year 0 = **StartingCore（A）**；Year 1–4 = **MainStat 空間關閉率（E/C）**
+
+| 原型 | 起始 | 空間 | Y1 | Y2 | Y3 | Y4 |
+|---|---|---|---|---|---|---|
+| 一般新人 19–21歲 | 51.6 | 12.4 | 23.7% | 35.5% | 45.5% | 51.6% |
+| 養成型 | 49.0 | 32.0 | 24.3% | 36.8% | 47.6% | 55.0% |
+| 即戰力 | 67.8 | 12.2 | 13.3% | 18.0% | 24.1% | 27.9% |
+| 超新星 | 63.2 | 27.8 | 11.2% | 15.7% | 21.1% | 24.4% |
+
+**⚠ 距離產品目標（Y3–4 接近成熟）還有明顯落差，且我沒有為了讓數字好看而扭曲 V0B。**
+
+### 哪些已解決、哪些仍在等
+
+| 項目 | 狀態 |
+|---|---|
+| 新秀沒有成長空間（TD-32） | ✅ **V0B 已解決**（8.4 → 15.8 點） |
+| 出生就貼住潛力 | ✅ **V0B 已解決**（41.5% → 0.4%） |
+| 四種原型無分化 | ✅ **V0B 已解決** |
+| 招募等級對新人池毫無影響 | ✅ **V0B 已補**（只補資訊，不補能力） |
+| **成長曲線關不掉空間（Y4 僅 24–55%）** | ⏳ **Expected pending Foundation Calibration**（TD-33 漸近線 / `floorRate`——會改變 Training v1.1 輸出值，不在 V0A/V0B 範圍） |
+| **來源比例 40/35/15/10** | ⏳ **Expected pending V0C / TD-35**（`MatchProgressTransaction` 不帶 `MatchOrigin`，分不出聯賽與自由對戰） |
+| **課程 → 主能力覆蓋率隨定位而異** | ⚠ **新發現**：下路／輔助的主能力被訓練課程覆蓋得比中路少，MainStat 關閉率因此偏低。屬課程表設計，記錄待評估 |
+
+### Gate
+
+- **`check_prospect_growth_space_v0b` 31/31**（新增），含 3 個 sentinel：
+  壓回小空間 ⇒ §B 紅｜原型套同一組參數 ⇒ §A 紅｜招募等級直接加強新人 ⇒ §R1 紅
+- `check_cs_distribution_r46` **PASS**（R46 的 role identity／spread／HIGH_90／AGGR 全數維持）
+- `check_recruit_o` 41/41、`check_pcgm_v0a` 24/24、`growth_loop_p0` 25/25、
+  `growth_ui_p1` 80/80、`progress25` 34/34、`condition_o2` 29/29、`no_player_injury` 29/29、
+  `dev_quick_recovery` 29/29、`cs_roster_v1_r56`、`cs23` 28/28、`finance_n3` 40/40、
+  `squad_o1` 40/40、`roster_ui_r58/581/582`、`cs_matchup_acceptance_r57`、`r62_player_ui_fixture` — 全綠
+- `verify.mjs --only=progress25,talent27,growth_p0,growth_ui_p1,regress,regress2,build` — **7/7**
+
+⚠ **第三支 pre-existing red**：`check_team_development_v1` → `FAIL profileStore migration 與 write hook`。
+在 **V0A 的 commit（daf6cf2）** 與 **乾淨 main 基準（`ESMO-acceptance` @ a886e39）** 上都紅同一句
+⇒ 與本輪無關，未處理。
+
+### 沒有做
+
+未做 V0C / Career Clock / aging / off-season / AI turnover / Ranked / Live Event /
+Multi-Title / Coach / TD-35。未動 `trainingCalculator.js` 與 `careerGrowth.js`。
+未鎖任何 balance 常數。未 push、未 deploy。
+
+
+## Season vNext V0B.1 — 新人模型補強與校準（2026-08-25）
+
+分支 `feature/remove-player-injury`。**未 push、未開始 V0C。**
+
+> ⚠ **FOUNDATION_COMPLETE = NO。** V0A ✅ → V0B ✅ → **V0C** → Foundation Calibration Gate。
+
+### Audit：V0B 之後仍存在的四個問題（先量測才動手）
+
+320 名新秀（8 seed）實測：
+
+| 問題 | 證據 |
+|---|---|
+| **Learning 是起始能力的複製品** | 相關係數 **0.87**；且 Learning ↔ 成長空間 **−0.49**——**空間最大的人學得最慢** |
+| **Learning 值域太窄** | 29–71（中位 50）⇒ `learningEfficiency` 的作用帶（0.90–1.10）幾乎只用到下半，等於沒有差別 |
+| **沒有特殊個體** | 晚熟型 **0 人**、高潛高成長 **0 人**、高潛慢成長 1 人 |
+| **越年輕越好** | 年齡 ↔ 成長空間 **−0.63**，且年齡下緣只到 16 |
+
+根因：`learning` 走的是 `genProspectStat`（＝ `core + 雜訊`），與其餘素質同一個產生器；
+四個原型是**互不重疊的硬區間**，沒有任何離群機制。
+
+### 改了什麼
+
+**① Learning 獨立生成**（`genLearning`）
+與 potential **弱**正相關（每點潛力 +0.25），主要來自獨立亂數，**與起始能力無關**。
+值域 25–95，刻意涵蓋 `learningEfficiency` 的整個作用帶。
+
+**② 特殊個體 twist**（`PROSPECT_TWISTS`，機率權重不是規格表）
+
+| twist | 權重 | 偏移（**有代價**，不是免費加值） |
+|---|---|---|
+| 早熟 prodigy | 5 | core +10 / room −6 / age −2 |
+| 晚熟 lateBloom | 5 | core −8 / room +12 / age +2 |
+| 領悟力強 quickLearn | 6 | learning +22 |
+| 大器晚成 slowBurn | 6 | learning −22 / room +6 |
+| 璞玉 hiddenGem | 4 | core −10 / room +14 |
+
+合計約 26%，其餘七成多是普通新秀。
+
+**③ 年齡下緣延伸到 15**（各原型 −1，twist 可再偏移，clamp 15–24）
+
+**④ 招募等級改為「適度」影響人才市場**（依本輪產品指示修正 V0B 的原設計）
+`superstarBias = rank × 1.2`、`twistScale = 1 + rank × 0.12`——**只動機率，不動能力**。
+
+### 結果
+
+| 指標 | 改前 | 改後 |
+|---|---|---|
+| Learning ↔ 起始能力 | **0.87** | **−0.03** |
+| Learning ↔ 成長空間 | −0.49 | −0.006 |
+| Learning 值域 | 29–71 | **25–95** |
+| 年齡 ↔ 成長空間 | −0.63 | **−0.39** |
+| 年齡範圍 | 16–23 | **15–23** |
+| 晚熟型 | 0 | 5 |
+| 高潛高成長 | 0 | 2 |
+| 高潛慢成長 | 1 | 3 |
+| 年輕即戰力 | 8 | 9 |
+| 帶 twist 比例 | — | **25%** |
+
+**年紀大的新秀有補償優勢**（≥21 歲起始 57.3 vs ≤17 歲 50.7）⇒ 不是「越年輕越好」。
+
+### 招募等級現在的價值
+
+| rank | 已知(lv≥1) | 完全揭露 | 超新星率 | 平均起始 | 平均空間 | 平均潛力 |
+|---|---|---|---|---|---|---|
+| 0 | 61.7% | 34.2% | 4.0% | 52.6 | 18.4 | 71.0 |
+| 1 | 68.3% | 44.2% | 5.8% | 52.6 | 19.0 | 71.6 |
+| 3 | 90.8% | 56.7% | 8.0% | 52.8 | 19.2 | 72.0 |
+
+- **主要價值＝資訊**：已知比例 61.7% → 90.8%
+- **次要價值＝機率**：超新星 4% → 8%、特殊個體 26% → 32%
+- **不是全面膨脹**：平均起始 +0.2、潛力 +1.0，**位移 < 0.15 個標準差**
+- **兩端都在**：rank 0 仍挖得到潛力 ≥90 的天才；rank 3 仍有 65% 是普通原型，且**不會全部揭露**（完全揭露僅 56.7%）
+
+### V0A + V0B joint calibration（Year 0–4）
+
+> metric：Year 0 = **StartingCore (A)**；Year 1–4 = **MainStat 空間關閉率 (E/C)**
+
+| 原型 | 起始 | 空間 | Y1 | Y2 | Y3 | Y4 |
+|---|---|---|---|---|---|---|
+| 一般新人 19–21歲 | 50.0 | 15.0 | 20.4% | 29.6% | 37.5% | 42.4% |
+| 養成型 | 52.6 | 30.4 | 27.8% | 41.6% | 53.4% | **60.9%** |
+| 即戰力 | 68.2 | 10.8 | 10.9% | 15.6% | 20.7% | 23.7% |
+| 超新星 | 55.4 | 28.6 | 20.1% | 29.3% | 37.1% | 41.5% |
+
+**仍未達「Y3–4 接近成熟」。沒有為了湊結果而改新人生成。**
+
+### 留給後續
+
+| 項目 | 歸屬 |
+|---|---|
+| 成長曲線關不掉空間 | **TD-33 漸近線 / `floorRate`** — Foundation Calibration Gate（會改 Training v1.1 輸出值） |
+| 來源比例 40/35/15/10 | **TD-35 / V0C** — `MatchProgressTransaction` 不帶 `MatchOrigin` |
+| 訓練課程對主能力的覆蓋率隨定位而異 | 課程表設計，待評估 |
+| `learning` 可超過 `potential` | **刻意允許**（低潛快成長是產品要的組合）；gate C1 已排除 learning |
+
+### Gate
+
+- **`check_prospect_growth_space_v0b` 43/43**，含 4 個 sentinel
+  （壓縮空間 / 原型扁平化 / 招募等級加強能力 / **把 learning 綁回起始能力**）
+- `check_cs_distribution_r46` PASS、`check_recruit_o` 41/41、`check_pcgm_v0a` 24/24、
+  `growth_loop_p0` 25/25、`growth_ui_p1` 80/80、`progress25` 34/34、
+  `cs_learning_lifecycle_r55`、`cs_roster_v1_r56`、`cs_matchup_acceptance_r57`、
+  `cs23` 28/28、`condition_o2` 29/29、`no_player_injury` 29/29、`finance_n3` 40/40、
+  `squad_o1` 40/40、`roster_ui_r58`、`r62_player_ui_fixture` — 全綠
+- `verify.mjs`（progress25/talent27/growth_p0/growth_ui_p1/regress/regress2/**build**）— **7/7**
+
+⚠ **pre-existing red 增加到 5 支**（全部在乾淨 main `a886e39` 就紅，與本輪無關）：
+`check_team_development_recovery`、`check_acceptance_fix_p1` §6b、`check_team_development_v1`、
+**`check_cs_learning_measurement_r37`**、**`check_cs_learning_lifecycle_r16b`**
+（後兩支加上 `check_cs_gameplay_measurement_r49`、`check_cs_team_identity_consumers_r48`
+同屬 `R48_LEGACY_R47_SHA` 家族——`tools/cs_r15_legacy_source.mjs` 的歷史原始碼雜湊已過期）。
+
+### 沒有做
+
+未開始 V0C。未做世界時間／老化／退休／線上 Ranked。未新增青訓中心。
+UI 只有 V0B 既有的一行接線，**沒有新增畫面**。
+未動 `trainingCalculator.js` / `careerGrowth.js` / `levelGrowth.js`。未 push、未 deploy。
+
+
+## Season vNext V0C — Match Source 契約（2026-08-25）
+
+分支 `feature/remove-player-injury`。**未 push、未開始 Foundation Calibration。**
+
+> ⚠ **FOUNDATION_COMPLETE = NO。** V0A ✅ → V0B ✅ → V0C ✅ → **Foundation Calibration Gate**。
+
+### Audit：來源其實一路都在，只是被丟掉了
+
+| 事實 | 位置 |
+|---|---|
+| `MatchOrigin.v1` 有 `kind: ticket / fixture` | `contracts/matchOrigin.js` |
+| **MOBA 與 CS 都已經把 origin 傳進 adapter** | `useBattleFeed.js` / `settleCsMatch.js` 的 `origin: store.matchmaking?.session?.origin` |
+| adapter 只把它換算成一個 **Fan 倍率**就丟掉 | `mobaProgressAdapter.js:71 fanWeightForOrigin(ctx.origin)` |
+| `MatchProgressTransaction.metadata` 是**白名單**，沒有來源欄位 | `matchProgressTransaction.js` |
+
+⇒ **「粉絲分得出來、成長分不出來」**。這就是 TD-35 的實際形狀——
+不是資訊不存在，是它沒有被帶進權威紀錄。
+
+**另一個分類落差**：`fanSourceWeight.js` 的三桶是 practice / league / major，
+其中 **`ticket`（一般比賽）被歸進 practice**。對粉絲曲線是對的，
+但對產品定位是錯的——**快速練習**與**競技比賽**是兩層不同的東西。
+
+### 做了什麼（最小必要，四個檔）
+
+| 檔案 | 改動 |
+|---|---|
+| `platform/progress/matchSource.js` | **新增**（17 行實碼）。`MATCH_SOURCE = practice / competitive / official` ＋ `matchSourceFromOrigin()`。純函式，不讀 UI / route / stage / Store |
+| `contracts/matchProgressTransaction.js` | metadata 白名單**附加一欄** `matchSource`（`?? null`，舊交易單仍合法） |
+| 兩個 adapter | 用**同一支**分類把來源寫進交易單（MOBA / CS 共用，不是兩套） |
+| `applyMatchProgress.js` | 讀 `tx.metadata.matchSource` 交給 `applyLevelGrowth` |
+| `careerGrowth.js` | `GROWTH_SOURCES` 對齊三層（`formal`/`ranked` → `official`/`competitive`） |
+
+**`fanSourceWeight.js` 一個位元都沒動**（對 `origin/main` 零 diff）⇒ 粉絲行為逐值不變。
+兩支分類器分桶可以不同（Fan 需要 league/major），但 gate §X1 釘住
+**「這場是不是正式季賽」永遠一致**，不得分歧。
+
+### 三種模式的定位與完成度
+
+| 層 | 定位 | 現況 |
+|---|---|---|
+| **快速練習 practice** | 試新人／陣容／戰術，不應成為永久成長來源 | **只有契約**。入口未實作；目前只有「拿不到 origin」會落到這裡（保守預設） |
+| **競技比賽 competitive** | **今天的「一般比賽」就是這一層**。未來長出評分／牌位／排行榜 | **已可辨識**（`kind: ticket`） |
+| **正式季賽 official** | 正式排名／獎金／Fans／榮譽／生涯成果 | **已可辨識**（`kind: fixture`，含 Major 與年度總決賽） |
+
+### 成長倍率
+
+四個來源的 `sourceBase` **一律 1.0** ⇒ 本輪**行為逐值不變**，
+只是從「分不出來」變成「**分得出來且可獨立控制**」。
+數值（含 40/35/15/10 年度佔比）留給 **Foundation Calibration**。
+
+> V0A 時 base 必須是 1.0 是因為**分不出來**（調高正式賽等於自由對戰一起調高）。
+> **那個阻礙現在解除了**；本輪不動數值是產品要求，不是技術限制。
+
+### 快速練習的實作評估
+
+`MATCH_FLOWS` 已是 keyed by gameType，MOBA / CS 各有完整
+`prep → matching → (draft) → tactic → battle → result`。
+**快速練習不需要新流程**，只需要：
+① 一個進入方式 ② 一個 `MatchOrigin` 的新 kind（或 ticket 的子型別）
+③ 結算時 `matchSource = practice`。
+
+⇒ **值得一個獨立小 Sprint**（建議 V0D）。但要先想清楚
+「不給永久成長的話，玩家為什麼要打」——否則會做出一個沒人用的模式。
+
+### Gate
+
+- **`check_match_source_v0c` 21/21**（新增），含 2 個 sentinel
+  （把一般比賽併回練習 ⇒ §S2 紅｜結算不再讀來源 ⇒ §W1 紅）
+- `check_pcgm_v0a` 24/24、`check_prospect_growth_space_v0b` 43/43
+- `fan_system` 66/66、`fan_ui_f4` 35/35、`fan_f0` 33/33（**粉絲零影響**）
+- `authoritative_o7` 48/48、`result_flow_o71` 27/27（結算邊界未被破壞）
+- `competition_q4` 68/68、`competition_q6` 57/57、`cs_season_lifecycle` 54/54（季賽未被污染）
+- `progress25` 34/34、`growth_loop_p0` 25/25、`growth_ui_p1` 80/80、`condition_o2` 29/29、
+  `no_player_injury` 29/29、`cs23` 28/28、`recruit_o` 41/41、`cs_distribution_r46`、
+  `finance_n3` 40/40、`squad_o1` 40/40、`match_entry_o3` 35/35、`matchmaking_o4` 48/48 — 全綠
+- `verify.mjs`（含 **build**）— 7/7
+
+### 兩處 gate 斷言被刻意改寫（不是為了變綠）
+
+1. **`check_pcgm_v0a` H1**：來源名稱 `formal`/`ranked` → `official`/`competitive`。
+   V0A 是在三層定位敲定**之前**取的名字，V0C 定案後對齊。**是對齊，不是放寬。**
+2. **`check_prospect_growth_space_v0b` F3**：原本鎖 `careerGrowth.js` 對 V0A commit 零 diff。
+   那是**跨 sprint 的凍結**，撐不過下一輪的正當改動。改成鎖真正該保護的
+   `trainingCalculator.js` 對 `origin/main` 零 diff（行為面另有 F1 golden fixture）。
+
+> ⚠ `check_talent27` §28（`git diff --quiet HEAD -- matchProgressTransaction.js`）
+> 在**未提交**時必然紅——它偵測的是「你還沒 commit」，不是「契約被破壞」。
+> 這正是 talent27 自己註解裡承認的缺陷（它為此移除過 LogicEngine 那一條）。
+> commit 後即恢復綠燈。
+
+### 沒有做
+
+未實作快速練習入口、完整 Ranked、真人連線、Live Event、server / matchmaking。
+未做 Career Clock / 年齡增加 / 老化 / 退休。
+未動 `BattleResult.v2`、`CsMatchResult.v1`、`fanSourceWeight.js`、`trainingCalculator.js`。
+未鎖任何 balance 數值。未 push、未 deploy。
+
+---
+
+## Season vNext Foundation Calibration（2026-08-25）
+
+**分支** `feature/remove-player-injury`｜**起點** `bb8e8b3`（V0C 完成）
+**本輪不是加功能，是把既有成長系統調到合理的生命週期。**
+
+### 為什麼要有這一輪
+
+V0A（成長認年齡）／V0B（新秀有成長空間）／V0C（分得出比賽來源）都做完之後，
+實測仍然是**一般新人 Year 4 只關閉 42.4% 潛力空間**，而且成長 **85.1% 來自訓練**。
+先 Audit + 大樣本模擬找真因，才動參數——沒有先猜倍率。
+
+### Audit 找到五個彼此獨立的根因
+
+| # | 根因 | 實測 |
+|---|---|---|
+| RC1 | **除數與真實空間不匹配** | training 把剩餘空間除以 40、levelGrowth 除以 25，但 V0B 之後新秀主能力空間中位數只有 **17.4 點** ⇒ 節流閥入行即只開 **43.5%**，且只會再往下掉。那個 40 是 V0B **之前**的世界留下來的 |
+| RC2 | **線性收斂 = 指數逼近** | 每多關 10% 潛力所需努力持續放大（10%→3 步、90%→57 步）⇒ 尾巴是漸近線，永遠走不完。**這就是 TD-33** |
+| RC3 | **升級頻率隨等級衰減** | 比賽成長掛在升級上，`xpRequiredForLevel` 隨等級線性增加 ⇒ Y1 升 3 級、Y6 升不到 1 級。比賽這條路**自己會枯掉** |
+| RC4 | **三項能力完全練不到** | `courage` / `resilience` / `leadership` 不在任何課程裡。上路有 **46.7%（w4+w3）** 的定位權重落在練不到的能力上；中路／下路是 0% |
+| RC5 | **收斂系統會抹平速率差** | 年齡與 learning 只乘在**速率**上。當所有人終究逼近自己的上限，速率差在 4 年尺度被壓成 6pp（age 17 vs 36）與 4pp（learning 25 vs 95）⇒ 形同不存在 |
+
+### 改了什麼（每一項對應一個 RC）
+
+1. **`src/platform/progress/potentialSpace.js`（新，leaf，零 import）** — RC1 + RC2
+   把「剩餘空間 → 係數」抽成 `trainingCalculator` 與 `levelGrowth` **共用的一份定義**
+   （改動前兩邊各寫一份線性除法，除數還不同），形狀改為 `(room/ref)^gamma`，**gamma = 0.6**。
+   **為什麼不是 TD-33 原本規劃的 `floorRate`**：平坦下限會讓已頂到上限的人還在長，
+   等於蓋掉問題並抹平潛力差異。gamma < 1 在 room = 0 時仍**恰好是 0**（上限仍是硬的），
+   但 `dr/dt ∝ r^0.6` 是**有限時間收斂** ⇒ TD-33 是被**曲線形狀**解掉的，不是被下限蓋掉的。
+2. **`sourceBase.official` 1.0 → 3.0** — RC3
+   正式季賽一年 14 場、由賽程決定，**結構上刷不了**，所以可以放心加重。
+   `competitive` 維持 **1.0**（玩家自己排隊，能刷）。
+3. **年齡曲線陡峭化** — RC5
+   `≤20 → 1.10`；`21–28 → 1.10 − (a−20)×0.015`；`≥29 → max(0.20, 0.98 − (a−28)×0.11)`。
+   **20–28 歲幾乎不動**（age 24 前後都是 1.04）⇒ 既有陣容與 AI 隊（多在 21–26 歲）不受影響。
+   34 歲的成長效率降到 20 歲的 **29%**。⚠ 這**不是衰退**：能力不會下降，只是還能進步多少收斂。
+4. **learning 幅度加寬** — RC5：`0.90–1.10` → `0.80–1.22`，中性點 70 → 65（新秀 learning 中位約 59.5）。
+5. **新增「心志鍛鍊」課程** — RC4：`["resilience","courage","leadership"]`，`gain: 1.3`。
+   每小時產出 1.95，**略低於**一般 2 項課程（2.0）——廣度換效率，不會變成「排它就對了」。
+   10 個定位現在全是 **5/5 覆蓋**。
+6. **`TRAINING_FORMULA_VERSION` v1.1 → v1.2**（曲線改了就不能還叫 v1.1）。
+
+### 產品結果（大樣本 280+ 新秀 × 10 seed）
+
+| 原型 | 起始 | 空間 | Y1 | Y2 | Y3 | Y4 |
+|---|---|---|---|---|---|---|
+| 養成型 | 45.8 | 27.6 | 36.9% | 50.8% | 63.4% | **69.2%** |
+| 一般新人 | 52.3 | 16.8 | 46.0% | 59.7% | 71.6% | **76.5%** |
+| 即戰力 | 61.6 | 9.7 | 56.2% | 69.9% | 80.2% | **83.7%** |
+| 超新星 | 63.7 | 26.9 | 38.3% | 52.6% | 65.5% | **71.3%** |
+
+改動前一般新人是 20.4 / 29.6 / 37.5 / **42.4%**。
+四種原型 Year 4 相差 14.5pp ⇒ **沒有被校準成同一條曲線**。
+
+**來源分帳**：訓練 78.1%／正式季賽 21.9%（改動前 85.1% / 14.9%）。
+
+### 防刷與公平驗證
+
+- **純刷競技 Year 4 = 48%**，認真訓練 = 76.5% ⇒ 刷比賽**不是**最佳養成法。
+  實測 `competitive` base 1.5 時純刷會反超（81% vs 75%）⇒ **1.0 是分界線，不是隨手填的中性值**。
+- **正式季賽刷不了**：場次由賽程決定，與玩家意圖無關。
+- **職業公平**：四年絕對主能力成長 下路 11.5 ／ 打野 12 ／ 輔助 13.8 ／ 中路 14.4 ／ 上路 15.2，最差是最佳的 75.7%。
+  ⚠ 關閉率的排序與成長點數不同，那是**指標**造成的（空間小的定位天生容易關閉），不是不公平。
+- **年齡**：Year 4 關閉率 20 歲 85.0% vs 34 歲 34.7%（改動前只差 6pp）。
+- **learning**：Year 4 87.2% vs 78.4%（改動前只差 4pp）。
+- **高潛力不會過快滿能力**：潛力 96 的 Year 4 關閉率（64.7%）**低於**潛力 60（89.6%），
+  但 Year 8 主能力 86.9 vs 59.6 ⇒ 潛力決定**能長多少**，年齡與 learning 決定**多快長完**。
+
+### Match Source fallback audit（本輪要求的前置檢查）
+
+**正常路徑不會掉 origin。** `createSession` 是唯一的場次工廠，兩個生產者
+（`mockGateway.openSession` 票券／`competitionGateway.openSessionForFixture` 賽程）都經過它，
+而它在拿不到來源時**硬性拒絕發出場次**（`code: "ticket"`）⇒ 只要 session 存在就一定有 origin。
+殘餘的無 origin 路徑只有 **debug harness**（根本沒有 session）。
+
+⇒ 因此 `sourceBase.practice` **維持 1.0**：目前 practice 是「拿不到來源」的退路，
+調低它等於把**資料遺失**變成看不見的成長懲罰。建議未來讓真正的快速練習用
+**explicit practice origin**，並把 fallback 與 practice 分開 —— 見 **TD-36**（V0D 的前置條件）。
+
+### 四處 gate 斷言被刻意改寫（是期望變更，不是把紅燈調綠）
+
+1. **四支 gate 的 Training golden fixture**（`check_pcgm_v0a` F1、`check_prospect_growth_space_v0b` F1、
+   `check_no_player_injury` §14、`check_dev_quick_recovery` §5）：v1.1 → v1.2。
+   ⚠ **成長量逐值未動**（accuracy/reflex 各 +1.9、totalGain 3.8）；變的只有係數本身
+   （age 1.01 → 0.995、learning 1 → 1.03）與由它們導出的 efficiency。
+   每一處都在檔內標明理由與「這是刻意的期望變更」。
+2. **`check_pcgm_v0a` F2**（`trainingCalculator.js` 對 origin/main 零 diff）→ **退休**。
+   那是跨 sprint 凍結，而 V0A 檔頭本來就寫明「floorRate 屬 Foundation calibration，見 TD-33」
+   ⇒ 這一輪就是被指定來改它的。改成守 V0A 真正在乎的：
+   **efficiency 仍恰好是 age × learning × condition**（合成形狀沒被換掉）。
+3. **`check_prospect_growth_space_v0b` F3**（同一條凍結，V0C 時已經從 `careerGrowth.js` 搬到
+   `trainingCalculator.js`）→ **第二次因同一個理由失效，退休**。
+   改成守分層關係：`recruitPool` 與 `trainingCalculator` 互不 import。
+4. **`check_match_source_v0c` W4**（「本輪倍率一律 1.0」）→ 那是 **V0C 自己的 scope 宣告**，
+   Foundation Calibration 執行後必然失效。改成驗證 V0C 真正的交付：
+   **倍率確實分開生效**（official ≠ competitive 時成長係數真的不同）。
+
+另外修掉兩個**假紅**：`check_pcgm_v0a` G2 與新 gate 的 F4 原本用裸關鍵字 `careerGrowth` 掃
+`trainingCalculator.js`，會掃到檔內「本檔不得 import careerGrowth」那句**註解本身**
+⇒ 變成「把理由寫下來就變紅」。改成只掃 import 敘述。
+`check_no_player_injury` 的 sentinel 也修了：臨時模組必須寫在**原檔旁邊**，
+否則 `trainingCalculator.js` 的相對 import 會解析失敗，sentinel 測到的是「會不會當掉」。
+
+### Gate / build
+
+- **`check_foundation_calibration` 57/57**（新增，含 4 個 mutation sentinel）
+- `pcgm_v0a` 24/24、`prospect_growth_space_v0b` 43/43、`match_source_v0c` 21/21
+- `no_player_injury` 29/29、`dev_quick_recovery` 29/29、`recruit_o` PASS
+- 粉絲零影響：`fan_system` 66/66、`fan_ui_f4` 35/35、`fan_f0` 33/33
+- 結算邊界未破：`authoritative_o7` 48/48、`result_flow_o71` 27/27
+- 季賽未污染：`competition_q4` 68/68、`competition_q6` 57/57、`cs_season_lifecycle` PASS、`cs_season_contract` PASS
+- `verify.mjs --only=progress25,talent27,growth_p0,growth_ui_p1,regress,regress2,build` — **7/7**
+
+**先前就紅、與本輪無關**（逐一確認失敗原因不是成長曲線）：
+`team_development_recovery`（首頁磚／talentPick 路由）、`team_development_v1`（profileStore migration）、
+`acceptance_fix_p1` §6b（首頁天賦導向）、`cs_learning_measurement_r37` 與 `cs_learning_lifecycle_r16b`
+（`R48_LEGACY_R47_SHA` 陳舊雜湊）。
+⚠ 後兩支另外硬鎖 `playerModel.js` 的 SHA，而該檔在 **HEAD（本輪之前）就已經對不上**
+（`b02237b6…` vs 期望 `9d6f07f8…`）⇒ 那組鎖已永久失效，登記為 **TD-37**。
+
+### 簡短 grilling（自我壓力測試）
+
+- **Q：gamma 只是把成長調快，跟加 floor 有什麼實質差別？**
+  A：floor 讓 room = 0 時仍有成長（上限變軟）；gamma 在 room = 0 時**恰好是 0**，上限仍是硬的。
+  差別在 room → 0 的**趨近方式**：線性是指數逼近（走不完），`r^0.6` 是有限時間收斂（會走完）。
+  §C7 用真的 `calculateTrainingResult` 反覆上課驗證它真的到頂。
+- **Q：official = 3.0 會不會讓正式賽變成雪球？**
+  A：不會，因為場次是**賽程給的**（14 場），贏球不會多打，輸球不會少打。
+  XP 的勝負差只有 50 vs 20，且 `perStatCap` 在 PCGM 之後仍夾住單項每級上限（§F2 驗證）。
+- **Q：陡峭 age 曲線算不算偷做衰退系統？**
+  A：不算。能力**不會下降**，只有「還能再進步多少」隨年齡收斂，而那個係數本來就存在。
+  真正的 aging / decline / retirement 仍未實作（V1）。
+- **Q：老將問題解決了嗎？**
+  A：**沒有根本解決。** 只把 34 歲壓到 20 歲的 29%；玩家仍可長期持有老將慢慢練到上限。
+  根本解法是 aging / decline，不是把年齡係數再調更陡。已寫進報告 §⑦。
+- **Q：加課程會不會破壞既有訓練平衡？**
+  A：新課程每小時產出 1.95，低於一般課程的 2.0（§P3 釘住「最高不得超過第二名 1.15 倍」）。
+  它補的是**原本一門都沒有**的三項能力，不是在已覆蓋的能力上加碼。
+
+### 沒有做
+
+未實作快速練習入口／UI、完整 Ranked、真人連線、Live Event、server / matchmaking。
+未做 Career Clock / 年齡 +1 / 老化 / 衰退 / 退休。
+未動 `BattleResult.v2`、`CsMatchResult.v1`、`fanSourceWeight.js`、`matchSource.js`、
+`LEVEL_GROWTH` 的四個費率常數（`pointsPerLevel 3.0` / `roomFull 25` / `perStatCap 1.5` / `hardCap 99`）。
+未動體力經濟（`CONDITION`）——TD-38 記錄了為什麼那是下一輪的事。
+未 push、未 deploy。
+
+---
+
+## TD-36 + V0D 快速練習模式（2026-08-26）
+
+**分支** `feature/remove-player-injury`｜**起點** `2519dfa`（Foundation Calibration 完成）
+**本輪只做快速練習。** 未碰 Career Clock、年齡、老化、退休、Ranked、真人連線。
+
+### Audit：既有流程可以整條重用
+
+一般比賽（MOBA / CS 共用）的管線是：
+
+```
+matchEntry(mode) → 來源（票券 or 賽程）→ createAssignment → createRoom
+  → pollMatchRoom → confirmMatchReady → createSession → launchMatchSession
+  → Battle（MOBA: draft→tactic→battle／CS: tactic→battle）
+  → adapter → settleMatchThroughSession → applyMatchProgress
+```
+
+**可重用度 100%。** `competitionGateway`（賽程）早就證明**多一個 origin 生產者
+不需要動管線**——它自己 `createAssignment` / `createRoom` / `createSession`，
+之後全部走既有的。快速練習照抄這個形狀即可。
+
+Audit 同時抓到**三個必須改的分派點**，其中第三個是這一輪最危險的一條：
+
+| 位置 | 原本 | 不改的後果 |
+|---|---|---|
+| `pollMatchRoom` | `isFixtureRoom = kind === "fixture"` | 練習房間不是 fixture ⇒ 走票券檢查 ⇒ 沒有票券 ⇒ **開房當下就被判定「票券已失效」而關閉** |
+| `createMatchSession` | `kind === "fixture" ? 賽事閘道 : openSession({ticket})` | 練習落到 `openSession`，沒有票券 ⇒ `createSession` 拒發場次 |
+| `primaryActionFor` 的 retry | 非賽程一律 `requeue` → `enqueueMatch` | ⚠⚠ **練習失敗後按「重新來過」會開出一張真票券** ⇒ 玩家以為還在測試，實際上打的是一場正式競技比賽，而那場會真的發錢、發粉絲、發 XP、計戰績 |
+
+前兩個改成**依 origin kind 判斷**（不是「是不是 fixture」），第三個新增 `repractice`。
+
+### 改了什麼
+
+1. **`ORIGIN_KINDS.practice`（第三種來源）** ＋ `originFromPractice(entryRequest)`。
+   `originId` 由申請單的 `transactionId` 推導 ⇒ 決定性。
+   `validateOrigin` 的「不得帶賽事欄位」從 `kind === ticket` 擴成 `kind !== fixture`。
+2. **TD-36：`MATCH_SOURCE.unknown`（第四層）**。
+   `matchSourceFromOrigin(null)` 從 `practice` 改回 **`unknown`**；
+   `sourceBase`：`unknown = 1.0`（永遠中性）、**`practice = 0`**。
+   ⇒ 「查不到來源」與「明確是練習」從此是兩件事，practice 的倍率終於動得了。
+3. **獎勵歸零寫在唯一的獎勵公式檔**（`rewardFormulas.js`）：
+   `teamRewardsFor` 對練習來源**早退**回 0 錢 0 粉絲（不進 `updateEconomy`，
+   連 streak 副作用都碰不到）；`playerXpFor` 回 0 XP。
+   ⚠ **adapter 不自己判**——兩支各寫一次必然漂移，gate §Z4 釘住這件事。
+4. **兩支 adapter 對練習送空的 `playerProgress`**。這不只是「XP 給 0」：
+   名單為空 ⇒ 結算的選手迴圈根本不跑 ⇒ 不發 XP／不升級／不發天賦點／
+   不寫成長帳簿，而且**不會呼叫 `applyMatchWear`** ⇒ **不扣體力**。
+   「練習不消耗正式體力」因此是結構上的結果，**結算裡沒有加任何分支**。
+5. **`matchmaking/practiceGateway.js`（新，56 行實碼）**：第三個 origin 生產者。
+   對手取自既有 `MOCK_OPPONENTS`（不另建 AI 隊），對手與 seed 決定性推導。
+   **練習不繞過出賽資格**：陣容不合法就簽不出來。
+6. **`profileStore.startPracticeMatch(mode)`** ＋ `matchPracticeContext()`。
+   前者對照 `startFixtureMatch`（含「已有進行中的對戰就擋下」）；
+   後者只讀 `MatchOrigin`，讓 UI 不必猜。
+7. **不計戰績**：`useBattleFeed` 跳過 `recordResult` 與 `recordBattleResult`（英雄熟練度），
+   `settleCsMatch` 跳過 `recordCsMatch`。⚠ **Replay 刻意不跳過**——能回看剛剛試的
+   陣容正是快速練習的用途。
+8. **UI：一顆次要按鈕**「🧪 快速練習 · 不影響戰績與數值」，
+   放在 **MOBA / CS 共用的** `MatchPrepFrame` 底部，只在閒置且陣容就緒時出現
+   ⇒ 兩個模式自動都有，兩邊不各做一顆。流程文案全程標示「本場不影響戰績與數值」。
+
+### 產品規則落點（為什麼放在那裡）
+
+| 規則 | 落點 | 為什麼不放別處 |
+|---|---|---|
+| 不給錢／粉絲 | `rewardFormulas.teamRewardsFor` | 唯一的獎勵公式所在地；放 adapter 會變兩份 |
+| 不給 XP | `rewardFormulas.playerXpFor` | XP = 0 ⇒ 不升級 ⇒ 不發天賦點 ⇒ 不觸發 `applyLevelGrowth` |
+| 不給永久成長 | adapter 空名單 ＋ `sourceBase.practice = 0` | **雙保險**：交易單裡沒東西可發（結構），就算有也乘 0（數值） |
+| 不扣體力 | 空名單 ⇒ `applyMatchWear` 不被呼叫 | 這是選「空名單」而非「XP 0 的名單」的**主要理由**——結算不必加分支 |
+| 不計戰績 | `useBattleFeed` / `settleCsMatch` 各一處 | 判斷來自 `matchPracticeContext`（只讀 origin），不看畫面 |
+| 不污染賽季 | 天然成立 | 練習來源不是 `fixture` ⇒ `completeFixtureMatch` 永遠不會被觸發 |
+
+**「不消耗正式體力」是裁量後採用的**：TD-38 已量到訓練與比賽搶同一份體力，
+若練習也扣體力，玩家每試一次陣容就要付出訓練效率的代價 ⇒ 「試新人／試戰術」
+這個用途會直接死掉。純測試場不該有機會成本。
+
+### 端到端實跑（gate §E，不是只有單元檢查）
+
+`startPracticeMatch` → 輪詢房間 → 雙方確認 → 簽發場次 → 啟動 → 交易單 →
+`settleMatchThroughSession`，然後逐值比對存檔：
+
+```
+room.origin.kind = practice      | ticket = null
+session.issuedBy = practice-gateway
+交易單: matchSource=practice, money=0, fans=0, playerProgress=0
+結算 viaSession = true           ← 走的是權威路徑，不是無場次退路
+場次狀態 = completed             ← 玩家不會卡在一場打不完的練習
+資金 1200000 → 1200000  ✅ 未變
+粉絲  128000 →  128000  ✅ 未變
+選手 xp / 體力 / 天賦點 / 連續出賽  ✅ 逐值未變
+```
+
+### Gate / build
+
+- **`check_practice_match_v0d` 67/67**（新增，含端到端 §E 與 4 個 mutation sentinel）
+- `foundation_calibration` 58/58、`match_source_v0c` 21/21、`pcgm_v0a` 24/24、
+  `prospect_growth_space_v0b` 43/43
+- **進場管線未破**：`match_entry_o3` 35/35、`matchmaking_o4` 48/48、`match_room_o5` 45/45、
+  `match_session_o6` 36/36、`matchmaking_flow_acceptance` 97/97、
+  `authoritative_o7` 48/48、`result_flow_o71` 27/27
+- **賽事未污染**：`competition_q1` 93/93、`q3` 91/91、`q4` 68/68、`q6` 57/57、
+  `cs_season_lifecycle` 54/54
+- **粉絲零影響**：`fan_system` 66/66、`fan_ui_f4` 35/35、`fan_f0` 33/33
+  （`fanSourceWeight.js` 對 HEAD 零 diff）
+- `no_player_injury` 29/29、`dev_quick_recovery` 29/29、`recruit_o` 41/41、`flow09` PASS
+- `verify.mjs --only=progress25,talent27,growth_p0,growth_ui_p1,regress,regress2,build` — **7/7**
+
+⚠ **未經瀏覽器實測**：新按鈕的實際外觀與點擊行為、練習流程在 320px 的排版、
+以及「重新開始快速練習」在真實 UI 上的表現。端到端是在 Node 跑 store 流程，
+不是瀏覽器。這幾項留給使用者或 verifier 檢查。
+
+### 四處 gate 斷言被刻意改寫（都是期望變更，不是把紅燈調綠）
+
+1. **`check_match_source_v0c` S3／判準函式**（`null ⇒ practice`）→ `null ⇒ unknown`。
+   那正是 TD-36 記下來要修的東西，V0C 本來就把第四層與數值留給後續。
+2. **`check_foundation_calibration` S4／R5／R6**（`practice === competitive`、
+   `null ⇒ practice`）→ 改成 `practice = 0` ＋ 新增 **S4b**（`unknown` 中性）。
+   守則沒變（**殘餘的無 origin 路徑必須行為中性**），只是承接者換人。
+3. **`check_competition_q1` §3**（「只有兩種來源，不得自創第三種」）→
+   改成「來源種類就是契約定義的那幾種」。它真正要守的是**呼叫端不得自創**，
+   不是「永遠只能有兩種」——Q1 檔頭自己就寫著 fixture 當時「尚無生產者」。
+4. **`check_fan_ui_f4` §19/20**：`src/data/playerModel.js` **從檔案級凍結移出**。
+   那條要守的是 `SPONSORS[].reqFans`，但該檔同時放 `TRAINING_COURSES` /
+   `POSITION_PROFILE` / `STAT_DEF` ⇒ 整檔凍結會被任何不相干的改動觸發
+   （Foundation Calibration 新增一門課就踩到了）。
+   **不是放寬**：`reqFans` 改由既有的 §19b **逐值斷言**守住，那比檔案比對更精準。
+   ⚠ 這一條是**上一輪 commit 的延遲效應**（`origin/main...HEAD` 只看已提交歷史），
+   不是 V0D 造成的。
+
+### 沒有做
+
+未做 Career Clock、年齡 +1、老化、衰退、退休、Ranked／牌位／評分、真人連線、
+Live Event、第二個 Result 畫面、青訓中心。
+未動 `BattleResult.v2`、`CsMatchResult.v1`、`fanSourceWeight.js`、
+`LEVEL_GROWTH` 常數、`potentialSpace` 曲線、體力經濟（`CONDITION`）。
+未 push、未 deploy。
+
+---
+
+## Season vNext V1：世界時間基礎（2026-08-27）
+
+**分支** `feature/remove-player-injury`｜**起點** `4652c00`（V0D 完成）
+
+### 開場：V0D 瀏覽器 smoke（抓到兩個真缺陷）
+
+本機 dev server（`localhost:5173`）實測 MOBA / CS 快速練習入口。
+
+**通過**：MOBA 練習走完 賽前 → 尋找對手 → 雙方確認 → 對戰卡（對手「黑曜守望」與
+gate 的決定性結果一致）；狀態列全程顯示「本場不影響戰績與數值」；
+**練習前後存檔逐值不變**（`days 86 / fans 128180 / funds 70000 / xp / energy` 全同）；
+CS 賽前頁也有練習按鈕；跨模式保護生效（「另一個模式有進行中的對戰」）；
+390px 無水平溢出（按鈕 351px，文字不換行）。
+
+**抓到並修好兩個缺陷（gate 原本抓不到）**：
+
+1. **練習按鈕打過一場之後就永遠不再出現。**
+   `canStartPractice` 寫成 `!sessionState && !roomState`——**有沒有值**，
+   而不是**還活著沒有**。殘留的終局場次（`completed` / `expired`）於是永久擋住入口，
+   等於這個功能只有全新存檔看得到。改成看終局集合。
+   ⚠ `ROOM_TERMINAL` 不能直接用：它把 `confirmed` 也算終局（房間任務完成），
+   但那時候流程正要進場。
+2. **狀態文案自相矛盾**：底部寫「返回進行中的對戰」，上面卻說「正在準備場次」。
+   練習分支把 `room === "confirmed"` 排在場次狀態前面。改成與正式流程同一個順序。
+
+兩者都補進 gate（§U8／§U9／§U10），`check_practice_match_v0d` 67 → **70/70**。
+
+⚠ **未在瀏覽器打完整場練習**：MOBA 3D 場景在本機兩度把 renderer 卡到無回應
+（既有效能特性，非本輪造成）。結算面由 gate §E 的 store 端到端覆蓋。
+
+---
+
+### V1 Audit：世界時間卡在哪
+
+`meta.days` 的**寫入點全 repo 只有兩處**，而且都在同一條路上
+（`weeklySettlement.advanceDaysInState` ← `advanceDay`；`_startNewGame`）
+⇒ **單一時鐘本來就成立**。問題完全在**入口**：
+
+| `advanceDay` 的呼叫端 | 性質 |
+|---|---|
+| `TrainingScreen`「推進訓練日」 | **正式 UI 唯一入口** |
+| `DevQuickRecovery` | DEV-only，上線前移除（TD-30） |
+
+而那個唯一入口第一行是 `if (training.length === 0) { push("無選手在訓練中"); return; }`
+
+⇒ **沒有人在訓練，世界就完全停住。不是慢，是零。**
+TD-34 記的是「只靠訓練推進」，**實測比記載更嚴重**。
+
+**已經正確、本輪只需釘住的部分**（沒有動它們）：
+
+| 事項 | 現況 |
+|---|---|
+| MOBA / CS 共用一條時間 | ✅ `_advanceCompetition` 對兩個項目取**交集**，並明文禁止各推各的 |
+| 賽季 rollover 不影響世界時間 | ✅ 賽季狀態機**完全不寫 `meta`**（結構上不可能） |
+| 快速練習不推進時間 | ✅ 練習路徑從不呼叫 `advanceDay` |
+| 賽程 ↔ 世界日期 | ✅ 唯一換算點 `absoluteDayOf = startDay + fixture.day − 1` |
+| 同一天重複結算 | ✅ 週結算冪等鍵是**累計週次**（跨賽季不重置） |
+
+**84 天年度邊界**：專案裡有**兩個同長但不同錨**的「賽季」——
+`deriveTime().season`（世界年度，錨在第 1 天）與 `seasonState` 的賽事賽季
+（`SEASON_DAYS = 84`，錨在**建立當天**）。`seasonState` 註解自己承認兩者
+「本來就會逐季偏移」。未來的年齡系統必須用**世界年度**。
+
+### 改了什麼
+
+1. **`src/platform/time/worldClock.js`（新，37 行實碼，純契約）**
+   - `CAREER_YEAR`：**由 `timeline.js` 常數推導**（84 = 7 × 12），不重寫一次
+   - `ADVANCE_REASONS` / `PRODUCTION_REASONS`：推進理由白名單，DEV **不算**正式推進權
+   - `WORLD_TIME_COST`：訓練 1／休息 1／**練習 0**／**正式季賽 0**／
+     **一般競技 `null`（明確未定案）**
+   - `careerYearOf(days)`：**直接沿用 `deriveTime`**，不自己算年度
+2. **`profileStore.advanceWorldDays(n, { reason })`**：具名公開入口。
+   理由不在白名單 ⇒ **拒絕推進**並回中文原因。`advanceDay` 保留為實作。
+3. **`profileStore.worldTimeView()`**：世界時間的單一讀取點
+   （`day / week / careerYear / dayOfYear / daysPerYear / nextFixtureDay`）。
+4. **`TrainingScreen`**：拿掉「沒有人在訓練就 return」的早退；沒人訓練時按鈕改成「推進一天」。
+5. **`DashboardScreen`**：新增**世界時間卡**（`reason: rest`），
+   顯示生涯年度 / 本年度第幾天 / 下一場賽程在第幾天，**不依賴任何前置條件**。
+
+### 實測結果（gate §E 端到端）
+
+```
+E1 不明理由 ⇒ 拒絕，且 meta.days 未動
+E2 rest 理由推得動         day 8 → 9    ← 沒有人在訓練也一樣
+E3 training 理由照常        day 9 → 12   （實推 3）
+E4 快速練習跑完整條流程     day 12 → 12  ← 逐值不變
+E5 worldTimeView 與 meta.days 一致（week 2｜年度 1 第 12 天）
+```
+
+### 刻意留白
+
+**一般競技比賽的時間成本是 `null`（明確未定案），不是 0。**
+產品要求「不要簡單做成打一場 = +1 天」，真正的成本要等 V2 Time Block。
+用 `null` 而不是 0，是為了讓之後的人分得出「決定不消耗」與「還沒決定」——
+gate §A5 與 sentinel M-B 專門守這一條。
+
+⇒ **TD-34 只解掉前半**（世界不會被凍住）；後半（比賽不消耗時間 ⇒ 凍齡刷素質）
+仍未解，已在技術債清單分開記載。
+
+### Gate / build
+
+- **`check_world_time_v1` 46/46**（新增，含端到端 §E 與 4 個 mutation sentinel）
+- `practice_match_v0d` **70/70**（本輪 +3）、`foundation_calibration` 58/58
+- 賽事／賽季未受影響：`competition_q1` 93/93、`q3` 91/91、`q4` 68/68、`q6` 57/57、
+  `cs_season_lifecycle` 54/54、`cs_season_m2` 55/55、`cs_season_contract` PASS
+- `authoritative_o7` 48/48、`fan_system` 66/66、`dev_quick_recovery` 29/29、
+  `flow09` PASS、`dash10` PASS
+- `verify.mjs --only=progress25,talent27,growth_p0,growth_ui_p1,regress,regress2,build` — **7/7**
+
+**一處斷言被刻意改寫**：`check_growth_ui_p1` §7b 後半從 `res?.trained` 放寬成
+「有讀到 `.trained`」。V1 把推進改走 `advanceWorldDays`，回傳形狀變成
+`{ ok, daysAdvanced, receipts }` ⇒ 訓練頁讀 `res.receipts?.trained`，
+**讀的仍是同一份真實結算差值**，該條要守的意圖沒變；前半段
+「不得用課程定義猜」逐字未動。
+
+⚠ **未經瀏覽器實測**：首頁世界時間卡的實際外觀與點擊、訓練中心新文案。
+端到端是在 Node 跑 store 流程。
+
+### 沒有做
+
+未做選手 age +1、衰退、退休、Off-season、Ranked、真人連線、Time Block。
+未動 `meta.days` 的寫入點、`advanceDay` 的 D15 規則（比賽日沒收尾就走不出去）、
+`absoluteDayOf`、賽季狀態機、`fanSourceWeight.js`。
+未 push、未 deploy。
+
+---
+
+## Season vNext V2：時間區塊與年度邊界（2026-08-26）
+
+**分支** `feature/remove-player-injury`｜**起點** `e876b98`（V1 完成）
+
+本輪解兩件事：① 一般競技比賽如何合理消耗 Career Time；② 跨 84 天年度邊界時，
+年齡由哪條 authoritative path 觸發。
+
+### Audit + 模擬：四種 Time Block 做法
+
+先實跑比較（`tools/timeblock_calibration.mjs`），**沒有先硬定「打一場 = 1 天」**：
+
+| 做法 | 凍齡？ | 一年打 100 場**額外**老幾天 | 需要新增什麼 |
+|---|---|---|---|
+| A 每場 +1 天 | 擋住 | **+100 天**（年度的 119%） | 比賽結算要**寫時鐘** |
+| B 每 N 場自動 +1 天 | 有界 | +33 天（39%） | 比賽結算要**寫時鐘** |
+| **C 每日容量 N 場** | **擋住** | **+0 天** | 一個「今天用了幾格」的計數器 |
+| D 競技點數條 | 有界 | +0 天 | 一條與體力平行的新資源 |
+
+**兩個玩家都推進 84 天，一個狂打競技、一個完全不打**：
+A／B 的狂打者多走 **84 天**；C／D **一天都不差**。
+
+⇒ **選 C。** 三個理由：
+1. A／B 讓「愛打競技的人老得特別快」——正是產品明文要避免的。
+2. A／B **都要在比賽結算裡推時鐘 ⇒ 第二個時間推進者**，違反 V1 立的規則。
+   C 結構上不可能違反：它**完全不寫時鐘**。
+3. D 可行，但要再養一條與體力平行的疲勞資源 ⇒ 兩套疲勞、兩處要調。
+
+**核心轉念**：時間不是「一場比賽的價格」，而是「**一個世界日裡能做多少事**」。
+
+### 改了什麼
+
+1. **`worldClock.COMPETITIVE_BLOCK.matchesPerDay = 3`**（唯一容量常數）。
+   `WORLD_TIME_COST.competitive` 從 V1 的 `null`（明確未定案）**定案為 `0`**——
+   成本不在每一場，在每日容量。
+   ⚠ 3 的依據：體力天花板本來就在 5 場／日 ⇒ 容量會**先於**體力生效，配額才有意義。
+2. **`competitiveBlockOf(stored, day)`**（純函式）：跨日**讀取時自動歸零**，
+   不需要在 `advanceDay` 裡寫重置程式——少一個會忘記維護的地方。
+   舊存檔沒有欄位 ⇒ 視為「今天還沒用過」，不擋任何人。
+3. **檢查在排隊、扣格子在結算**：`enqueueMatch` 擋（排了又取消不該白吃一格）、
+   `applyMatchProgress` 扣（唯一結算入口 ⇒ 直接繼承 `processedMatchTransactions` 的冪等，
+   同一場再結算不會扣第二格）。
+   容量掛在 **`meta`（俱樂部層級）**，不是每個項目一份 ⇒ 切 MOBA/CS 拿不到第二份。
+4. **`platform/time/careerYearRollover.js`（新，21 行實碼，純函式）**：
+   `careerYearsCrossed(from, to)` 用**年度編號差**，不是「天數差 / 84」
+   （後者在邊界會錯：Day 84→85 是 (85−84)/84 = 0）。
+   `applyCareerYearRollover(state, {fromDay, toDay})` 是純 reducer。
+5. **age +1 已接上**：`advanceDay` 在 **同一個 `set()`** 裡折進 `nextState`
+   （分兩次寫會出現「時間走了但年齡沒走」）。觸發點**只有這裡**——
+   賽季 rollover 不得推動年齡（兩個項目各換一次季就會推兩次）。
+
+### Audit 順手抓到的既有正確行為（只釘住，沒有動）
+
+`applyMatchProgress` 裡 `matchSource` 原本算在**選手迴圈內**——而快速練習送的是
+**空的 `playerProgress`**，迴圈根本不會跑。V2 的容量掛在來源上，所以把它**提到迴圈外**
+算一次。這不是修 bug（V0C 時迴圈內就夠用），是 V2 的新需求逼出來的正確位置。
+
+### gate 抓到一個真 bug
+
+`applyCareerYearRollover` 第一版寫 `if (!Number.isFinite(Number(p?.age))) return p;`
+——**`Number(null)` 是 0（有限）**，於是 `age: null` 的舊存檔會被悄悄變成 1 歲。
+gate §G5 抓到，已改成先擋 `null` / `undefined`。
+
+### 攻擊面（全部通過）
+
+| 攻擊 | 結果 |
+|---|---|
+| 狂打競技能不能凍齡 | ❌ 不推日曆時**一天最多 3 場**，之後排不進去 |
+| 狂打競技會不會老太快 | ❌ 競技比賽**一天都不加**（`WORLD_TIME_COST.competitive === 0`） |
+| 切 MOBA / CS 各拿一份配額 | ❌ 配額掛 `meta`，兩邊都被擋 |
+| BO3／多場正式賽重複推日 | ❌ 正式季賽不吃配額、不加天，時間由賽程日曆承擔 |
+| 跨 Day 84 age +2 | ❌ 用年度編號差，84→85 恰好 1 |
+| 快速練習誤觸年度推進／吃配額 | ❌ 兩者都沒發生（實跑驗證） |
+
+### 端到端（gate §E）
+
+```
+day 83 → 84   年度內推進 ⇒ 年齡不動
+day 84 → 85   跨年度 ⇒ 年度 1 → 2；全隊 23,21,24,22,20 → 24,22,25,23,21（各 +1）
+worldTimeView 與 meta.days 一致
+```
+
+### Gate / build
+
+- **`check_time_block_v2` 47/47**（新增，含端到端 §E 與 3 個 mutation sentinel）
+- `world_time_v1` 46/46、`practice_match_v0d` 70/70、`foundation_calibration` 58/58
+- 結算與進場未受影響：`progress25` PASS、`matchmaking_o4` 48/48、
+  `matchmaking_flow_acceptance` 97/97、`authoritative_o7` 48/48、`result_flow_o71` 27/27
+- 賽事未污染：`competition_q1` 93/93、`q4` 68/68、`q6` 57/57、`cs_season_lifecycle` 54/54
+- `fan_system` 66/66、`no_player_injury` 29/29、`dev_quick_recovery` 29/29、`recruit_o` 41/41
+- `verify.mjs --only=progress25,talent27,growth_p0,growth_ui_p1,regress,regress2,build` — **7/7**
+
+⚠ build 第一次跑出現一次失敗、單跑與重跑都通過（`built in 9.87s`，exit 0）——
+判定為 OneDrive 寫檔競態（專案守則已知的既有現象），不是本輪改動。
+
+**一處斷言被刻意改寫**：`check_world_time_v1` §A5 與 sentinel M-B。
+V1 斷言 `competitive === null`（明確未定案），而**V2 就是來定案的那一輪**
+⇒ 留白必然失效。改成「每種活動都已定案，且**定案與否看得出來**」，
+sentinel 方向也跟著反過來（從「未定案不得被填成 0」變成「已定案不得被退回 null」）。
+V1 真正要守的那件事沒有變。
+
+⚠ **未經瀏覽器實測**：配額用滿時賽前頁的提示文案、首頁世界時間卡跨年度後的顯示。
+
+### 沒有做
+
+未做能力衰退、退休、生涯階段效果、Off-season、**AI 隊伍老化**（V6 AI turnover）。
+未動 `meta.days` 的寫入點（仍只有兩處）、`advanceDay` 的 D15 規則、
+`absoluteDayOf`、賽季狀態機、`fanSourceWeight.js`。
+未 push、未 deploy。
 ## CS P0 Visual Stability — Final Integration + Regression Hardening（2026-08-25）
 
 - Owner Android final acceptance：四項 PASS，狀態 `OWNER_ACCEPTED`。
@@ -13661,6 +14723,1078 @@ Release checklist 寫的就是旗標，不是網址參數。
 本次只整合 CS P0 視覺穩定性與防回歸契約；未開始 C2C、R63 fast-finish、balance 或其他功能 Sprint。
 ### Production HTTPS smoke（2026-08-25）
 
+- URL：`https://rayhuang0323.github.io/ESMO-/`
+- Home → Practice → Mirage → Battle：PASS
+- Canvas：`430×507`
+- 30 秒 production smoke geometry samples：`246`；StableCanvasRegion shifts：`0`
+- browser/page errors：`0`
+
+## Season vNext — 生涯 × 線上競技公平架構 Design Sprint（2026-08-26）
+
+分支 `season/vnext`，基準 HEAD `7b9c730`。
+**docs-only，`src/` 零改動，未開始 V3，未實作 Ranked / 連線 / Server / Live Event。**
+完整設計：`docs/design/Season_vNext_生涯與線上競技公平架構.md`（14 節，594 行）
+
+### 這一輪的題目
+
+> 生涯可以快轉、選手又會永久成長，怎麼避免玩得快的人在線上天然碾壓其他玩家？
+
+### 拆題：問題不在成長，也不在快轉
+
+```
+CareerTime = 私有資源，可快轉，取得速度取決於「誰有空」
+ServerTime = 公共資源，誰都快轉不了
+永久能力 ← CareerTime 產生
+線上名次 ← 若也由永久能力決定 ⇒ 線上名次 = 「誰有空」的排行榜
+```
+
+⇒ **要切的是「永久能力 → 線上戰力」這條邊，不是兩端。**
+
+### 為什麼單靠配對評分（MMR）在 ESMO 不夠
+
+ESMO 是經營模擬，**比賽由 AI 打完，玩家不操作** ⇒ 勝負主要由陣容能力決定
+⇒ 純 MMR 會收斂成一條**陣容戰力排行榜**，也就是生涯肝度榜，正好是要避免的東西。
+⇒ **必須有「帶什麼進場」的限制，不能只有「配到誰」的限制。**
+
+### 裁決（FINAL，10 條）
+
+1. **兩個時鐘不互通，沒有換算率**
+2. **線上（真人競技 + 定時賽事）永久成長 = 0、生涯經濟回報 = 0**
+3. **線上公平模型 = Cap → Bracket → Rating 三層（CBR）**
+4. **陣容上限只存在於線上；生涯比賽永不套用**
+5. **定價委派既有 `teamStrength.v1`，不新建戰力公式**
+6. **定價與模擬吃同一份快照、同一組正規化**（防沙包）
+7. **生涯選手經 `SquadSnapshot` 進場，進場即凍結**
+8. **不做兩套 condition；改用「線上正規化 + 現實時間配額 + 賽事局部疲勞」**
+9. **16 條不變式，每條都要有 sentinel**
+10. **線上是驗證場，生涯是養成場**
+
+### 修正的上游結論（`Season_vNext_長期生涯與競賽框架.md`）
+
+| 上游 | 原本 | 改為 | 理由 |
+|---|---|---|---|
+| §4 | `EventTimeBlock.careerDaysConsumed = 1 or 2` | **刪除換算率，一律 0** | 換算率 > 0 就是懲罰參與（G4 自己的理由）；= 0 則欄位不該存在 |
+| §9 | Live Event 成長「中高」、給獎金/粉絲 | **一律 0** | 非零就把「誰有空」的問題往下推一層——分級擋不住，因為成長會讓人跨級 |
+| §9 | Ranked 成長「中」、給少量 Fans | **一律 0** | 同上 |
+| §4 | Event Window 是「豁免規則」 | 降級為**純排程資訊** | 沒有換算率就不需要豁免 |
+
+### 為什麼長期不會崩：天花板才是真正的防線
+
+`potentialSpace.js`（V0B，gamma 0.6）在 `room = 0` 時因子**恰好是 0**——上限是硬的。
+加上 `ageEfficiency`（34 歲 = 20 歲的 29%）⇒
+**時間讓你更快抵達天花板，時間不會抬高天花板。**
+⇒ Career Year 20 的隊伍不會比 Career Year 6 的隊伍強，只要後者招到同等潛力的選手。
+⇒ 「老玩家碾壓新玩家」在一個有天花板的系統裡**結構上不成立**。
+
+**意外紅利**：因為線上零回報，用弱陣容去低級屠殺的收益是「一個沒有用途的數字」
+⇒ **沒有誘因就不需要反小號機制**。
+
+### 狀態／疲勞：建議**不要**分兩套（與使用者原提案不同）
+
+使用者提「生涯狀態 vs 真人競技狀態」兩套恢復。**建議不分**，三個理由：
+
+1. 「現實時間恢復」正是使用者自己在 grilling 清單裡列的陷阱（手遊體力條）——答案是**會**逼玩家等。
+2. **專案已經做過同一個選擇**：V2 決定競技時間成本時實跑比較四種做法，
+   明確**否決了「D 競技點數條（與體力平行的新資源）」**，選了「C 每日容量」。
+   理由逐字寫在 `worldClock.js`：「時間不是一場比賽的價格，而是一個世界日裡能做多少事」。
+   線上是同一個問題，沒有理由給相反答案。
+3. 兩個體力數字在選手頁上無法解釋。
+
+**改採三層**：生涯體力（現況不變）／線上狀態**正規化**（不吃也不扣）／
+線上場次量用**現實日配額**／賽事內疲勞**只活在該場賽事**，永不寫入 `players[]`。
+
+### Grilling：12 條自我壓力測試
+
+`A1` 狂快轉換線上優勢 → 靠**天花板**擋，不是靠分級｜
+`A2` 狂打線上刷永久能力 → `sourceBase.online = 0`，結構上不可能｜
+`A3` 老玩家碾壓新玩家 → 同級內不會、跨級不相遇、長期有天花板｜
+`A4` **陣容上限讓養成失去意義** → **本模型最大風險**，靠 I6（上限只在線上）擋｜
+`A5` 生涯與線上太割裂 → 只切斷回報流，選手/陣容/戰術/模擬器全共用｜
+`A6` 現實時間恢復逼等待 → 已從設計移除，只留配額且不擋生涯｜
+`A7` 盃賽被生涯時間影響 → 快照凍結 + 開賽只由 ServerTime 決定｜
+`A8` 雙開 MOBA/CS 繞過 → 生涯側 V2 已擋；線上側靠 I9 per-mode 隔離｜
+`A9` **沙包**（壓低定價進低級）→ **本輪最容易漏掉的一條**，見下｜
+`A10` V3 快轉讓時間免費 → 有時效缺口，登記 TD-40／TD-42｜
+`A11` 快轉+訓練無限 → 生涯側平衡問題，登記 TD-41｜
+`A12` 未被定價的能力 = 免費戰力 → 登記 TD-39
+
+#### A9 是本輪最重要的實作約束
+
+`calcPower()` 目前把**士氣與狀態**算進戰力。若線上定價照搬而模擬把狀態正規化：
+
+> 玩家刻意讓選手體力見底 ⇒ 定價下降 ⇒ 掉到低級 ⇒ 打起來卻是滿血 ⇒ **完美沙包**。
+
+⇒ **不變式 I13：定價與模擬必須吃同一份快照、同一組正規化規則**，結構上不可能分歧。
+
+### 新登記的技術債
+
+| TD | 內容 | 何時解 |
+|---|---|---|
+| **TD-39** | `teamStrength.v1` 未與 LogicEngine 校準 ⇒ 定價／模擬差集 = 免費戰力 | **V7 之前** |
+| **TD-40** | V3–V5 之間快轉幾乎沒有代價（無衰退、無退休） | V4/V5 落地時複驗 |
+| **TD-41** | 快轉 + 訓練是通往天花板的主要途徑（生涯側平衡） | V5 之後 balance 輪次 |
+| **TD-42** | 競技容量「不跨日累積」**碰巧正確但沒有測試釘住** | **V3** |
+
+### V3 判定：**可以照原計畫繼續（YES）**
+
+V3 不碰本輪任何一條不變式；快轉的代價已經存在（`ageEfficiency`）；
+上游 §2.4 已量測「17 年生涯要按 556 次推進」是硬傷，沒有 V3 玩家體感上到不了。
+
+**但 V3 必須新增兩個 gate**（原計畫沒有）：
+① `check_time_block_v3` §I7 **容量不得跨日累積**（TD-42）
+② **多週結算冪等**——`check_time_block_v2` §F1 只驗過單週
+
+### 這一輪沒有做
+
+- `src/` 零改動（唯讀查核了 `worldClock.js` / `matchOrigin.js` / `matchSource.js` /
+  `teamStrength.js` / `playerCondition.js`，未修改）
+- 未開始 V3；未實作 Ranked / 真人連線 / Server / Live Event
+- 未建立任何 `online` / `event` 的**生產者**（只定契約形狀）
+- **所有線上數值未定**（級數、上限、配額、Rating 演算法）——
+  沒有線上樣本之前寫死等於瞎猜，列為 LATER
+
+### 驗證
+
+docs-only ⇒ 不影響任何 gate。修改的四份既有文件**全部只追加、零刪除**
+（逐檔 diff 驗證：`少了 0 行`）。
+
+## Season vNext V3 — 時間快速推進（2026-08-26）
+
+分支 `season/vnext`，基準 `91ec289`。**未開始 V4 Lifecycle、衰退、退休、Off-season 或任何真人功能。**
+
+### 這一輪解什麼
+
+V1 解凍世界時間、V2 立了每日競技容量與年度邊界，但玩家仍然只能一天一天按。
+設計文件 §2.4 量過：**17 年生涯要按 556 次**推進 ⇒ V1/V2 修好的東西，玩家體感上到不了。
+
+### Audit 的結論：引擎本來就對，缺的是上層與測試
+
+開工前先讀了 `advanceDay` / `advanceDaysInState` / `advanceSeasonDays`，發現：
+
+- `advanceDaysInState` 是**逐日迴圈**，訓練、每日恢復、週結算本來就沿路照跑
+- 週結算的冪等鍵本來就是**累計週次**
+- `advanceSeasonDays` 本來就會停在玩家自己的賽程日（D15：走得進、走不出去）
+- `applyCareerYearRollover` 本來就折進同一個 `set()`
+- `competitiveBlockOf` 本來就跨日歸零 ⇒ 容量不會囤積
+
+⇒ **V3 不需要動引擎**，要做的是：① 規劃器 ② 畫面入口 ③ **把上面這些「碰巧正確」的行為釘住**。
+
+### 交付
+
+| 項目 | 內容 |
+|---|---|
+| `src/platform/time/fastForward.js`（新增，**31 行實碼**） | 規劃器。`STOP_REASONS` / `MAX_FAST_FORWARD_DAYS = 28` / `FAST_FORWARD_STEPS = [1, 7]` / `nextStopOf()` / `planAdvance()` |
+| `profileStore.nextStopView()`（新增） | 畫面的單一讀取點，賽程日取自既有 `worldTimeView().nextFixtureDay` |
+| `profileStore.advanceToNextStop()`（新增） | **薄包裝**：規劃器算天數，推進仍走 `advanceWorldDays` |
+| `DashboardScreen` 世界時間卡 | 推進 1 天 / 推進 7 天 / 前往下一站；顯示「下一站」與停下原因 |
+| `tools/check_time_block_v3.mjs`（新增） | **67/67**，含 4 個 mutation sentinel |
+
+### 兩條設計規則
+
+**① 規劃器提案，引擎裁決。**
+引擎的 D15 規則永遠優先，規劃器只能提出**更保守**的天數
+⇒ 結構上不可能讓玩家越過引擎會擋的東西。兩層獨立擋比賽日。
+
+**② 規劃器不得自己掃賽程。**
+專案已有唯一的賽程查找（`nextPlayerFixture` + `absoluteDayOf`，兩項目取交集由
+`worldTimeView()` 負責）。規劃器再寫一份就是第二套賽程邏輯，兩套遲早會對
+「下一場在第幾天」給出不同答案 ⇒ `fastForward.js` 只收 `{ day, nextFixtureDay }`
+兩個數字，由 §B5 釘住（不得出現 `seasonState` / `.fixtures` / `absoluteDayOf`）。
+
+### 補上 Design Sprint 指定的兩個缺口
+
+**缺口 ① §I7 競技容量不得跨日累積**（TD-42）
+掃 1–90 天，容量恆等於上限；跳過一整個生涯年度也不累積。
+端到端：用滿今天 3 格後跳 7 天 ⇒ remaining 仍是 3，**不是 21**。
+sentinel M-A：把跨日重置改成 `<=` ⇒ §I7-2 變紅。
+
+**缺口 ② §W 多週快速推進的結算冪等**
+一次跳 3 週 ⇒ **恰好 3 次**週結算；與「跳 21 次一天」比對
+**結算次數、天數、資金、`lastSettledWeek` 四項逐值相同**；
+跳 6 週 ⇒ 6 個相異週鍵；已結算的週不會被回頭補算。
+sentinel M-B：把跨週判定改成 `>=` ⇒ §W1 變紅。
+
+⚠ 這兩組**在實作前就已經是綠的**——這正是重點：行為一直正確，但沒有任何測試釘住它。
+V3 讓天數可以被大量跳過，這兩個洞才真的有人會踩到。
+
+### 為什麼快轉有 28 天上限
+
+一次快轉必須 ≤ 一個生涯年度（84 天），否則玩家可能一次跨過**兩個**年度邊界，
+而 age +1 的通知只會出現一次 ⇒ **有人會在毫無提示下老兩歲**。
+28 天 = 4 週：夠長到不必一直按，短到每次最多只結算 4 次週結算，玩家還讀得完。
+sentinel M-D：拿掉上限 ⇒ §A7 變紅。
+
+### 公平契約（91ec289）全部維持
+
+§P 逐條驗過：快轉不碰 ServerTime（規劃器無任何真實時間來源）｜
+快速練習仍 0 世界時間｜一般競技仍 0 加天｜
+**本輪未建立** `online` / `event` 的 origin kind，`MATCH_SOURCE` 仍是 4 層。
+
+### 不會自動做的事
+
+規劃器全檔不含 `forfeit` / `startFixtureMatch` / `autoPlay` / `setLineup`（§B7）。
+站在自己的比賽日上 ⇒ `planAdvance` 回 **0 天**，`advanceToNextStop` 照實回報
+「請先出賽或棄權」，**不自己改成 1 硬推**——那是規格 D15 否決過的入口
+（玩家會因手滑丟掉整季）。
+
+### Gates
+
+`check_time_block_v3` **67/67**（新增）｜`check_time_block_v2` 47/47｜
+`check_world_time_v1` 46/46｜`check_practice_match_v0d` 70/70｜
+`check_match_source_v0c` 21/21｜`check_pcgm_v0a` 24/24｜
+`check_prospect_growth_space_v0b` 43/43｜`check_foundation_calibration` 58/58｜
+`check_no_player_injury` 29/29｜`check_competition_q3` 91/91｜`q4` 68/68｜
+`q5` 69/69｜`q6` 57/57｜`check_competition_release_gate` 11/11｜
+`regress` 結束率 15/15｜`regress2` 節奏門檻 8/8｜`check_dash10` PASS｜`check_flow09` PASS｜
+`npm run build` ✓ built in 9.37s
+
+### ⚠ 未經瀏覽器實測
+
+本輪改了 `DashboardScreen` 的世界時間卡（三顆按鈕 + 下一站顯示 + `dashboard.css`
+新增 `.esmo-worldtime-actions`）。build 過、`check_dash10` / `check_flow09` 綠、
+gate §U 以 testid 驗過入口存在，但**沒有在瀏覽器裡實際點過**：
+按鈕排版在窄螢幕的換行、以及「前往下一站」在真有賽程時的停下訊息，
+需要人工或 browser gate 確認。
+
+### 沒有做
+
+V4 Lifecycle / 衰退 / 退休 / Off-season / AI turnover；
+真人競技 / 定時賽事 / Ranked / 連線 / server（連契約生產者都沒建）。
+
+## Season vNext V3 Closure — 瀏覽器實測與兩個真缺陷（2026-08-26）
+
+基準 `329130f`。V3 的 Node gate 早就全綠，但**沒有人在瀏覽器裡按過那三顆按鈕**。
+這一輪把它補完，並抓到**兩個 Node gate 抓不到的缺陷**。
+
+### 新增 `tools/browser_check_time_controls.mjs`（21/21）
+
+Roadmap 本來就把它列為 V3 的收尾條件。用專案既有的 `tools/browser/cdp.mjs`，
+以 `Emulation.setDeviceMetricsOverride` 取得**真正的 390px viewport**
+（觸發真的 media query，不是把視窗拉窄——實測 window resize 在本機根本改不動 innerWidth）。
+
+§D 桌面 1280｜§M 手機 390｜§F 有正式賽程時必須停住
+
+### 缺陷 ①：手機**完全沒有**推進世界時間的入口
+
+手機版不渲染 `ClubStatus`，而世界時間卡在它裡面。實測掃過首頁、戰隊、更多三個分頁
+（`home-nav-home` / `home-nav-team` / `home-nav-more`），`home-world-time` **一處都沒有**。
+
+⇒ 手機玩家只剩訓練中心那顆按鈕，而它要求「真的有人在訓練」
+⇒ **V1 修掉的 TD-34（不指派訓練，世界完全停住）在手機上一直還活著。**
+
+**修法**：把**同一個** `WorldTimeStatus` 元件放進 `MobileHome` 的主要動作之後、
+快捷動作之前。時間是每天都要按的東西，不是「需要時才進的功能」，不能收進 sheet。
+共用同一個元件 ⇒ 不會有兩套時間 UI。
+由 §M2–M6 釘住（卡片在、三顆按鈕可見、不溢出、無橫向捲動、按得動）。
+
+### 缺陷 ②：站在比賽日上時，「下一站」在說謊
+
+`nextStopOf` 原本只認 `fx > today` 的賽程。所以站在自己的比賽日上時，卡片顯示
+**「下一站：第 85 天進入第 2 生涯年度（還有 36 天）」**——但玩家其實**一步都走不了**。
+畫面指向一個他根本到不了的日子，而且正好是最會誤導人的方向。
+
+**修法**：改成 `fx >= today`，當天的 label 是「今天有你的比賽」、`daysAway` 為 0；
+`planAdvance` 在 `daysAway <= 0` 時回 0 天並**照實回傳那個 stop**（不得回下下一站）；
+畫面把 `daysAway === 0` 顯示成「就是今天」而不是「還有 0 天」。
+由 Node gate §B10／§B11 與 browser gate §F2 釘住。
+
+### 一個測試教訓（不是產品缺陷）
+
+實測中一度以為「比賽日按推進 7 天沒有任何反應」。實際是**我用了過期的座標**——
+前一次操作讓卡片多了一行提示，按鈕整體下移，點擊落在文字上。
+用新鮮座標重測後三顆按鈕都正確擋下並顯示原因。
+⇒ 這也是 browser gate 用 `data-testid` 點擊、不用固定座標的理由。
+
+### 實測結果
+
+| 情境 | 結果 |
+|---|---|
+| 桌面 推進 1 天 | 第 1 → 2 天 |
+| 桌面 推進 7 天 | 第 2 → 9 天 |
+| 桌面 前往下一站 | 第 9 → 37 天（推 28 天，剛好卡在上限） |
+| 390px viewport | innerW 390，卡片寬 362，按鈕 82/82/97px，不溢出、無橫向捲動 |
+| 390px 按鈕 | 第 37 → 38 天，按得動 |
+| 快轉到賽程日 | 賽程日 43，停在 43，**一天都沒多走** |
+| 比賽日 三顆按鈕 | 全部不動，全部顯示「請先出賽或棄權」 |
+| 自動棄權 | **0 場**（共 140 場） |
+| 頁面例外 | 0 |
+
+### Gates
+
+`browser_check_time_controls` **21/21**（新增）｜`check_time_block_v3` **69/69**（+2）｜
+`check_time_block_v2` 47/47｜`check_world_time_v1` 46/46｜`check_practice_match_v0d` 70/70｜
+`check_match_source_v0c` 21/21｜`check_pcgm_v0a` 24/24｜`check_prospect_growth_space_v0b` 43/43｜
+`check_foundation_calibration` 58/58｜`check_no_player_injury` 29/29｜
+`check_competition_q3` 91/91｜`q6` 57/57｜`check_competition_release_gate` 11/11｜
+`browser_check_home_ia` 23/23｜`regress` 15/15｜`regress2` 8/8｜`check_dash10` PASS｜
+`check_flow09` PASS｜`npm run build` ✓ built in 10.80s
+
+### CLAUDE.md
+
+新增「Season vNext 時間線」現役 verifier 段落（v1／v2／v3 ＋ browser gate），
+並註明這幾支是秒級、不走 `verify.mjs`。改動前已依規則備份為
+`_backup_20260826_CLAUDE.md`（`_backup_*` 已在 `.gitignore`）。
+
+### V3 = CLOSED
+
+## Season vNext V4 — 生涯階段與年齡效果（2026-08-26）
+
+基準 `ec02940`。核准範圍含使用者的兩點調整：**不做老將週薪溢價**、**退役不由 age 推導**。
+
+### 交付
+
+| 項目 | 內容 |
+|---|---|
+| `src/platform/progress/careerStage.js`（新增，**52 行實碼**） | 五個階段的推導。`CAREER_STAGES` / `STAGE_BANDS` / `MATURITY` / `maturityOf` / `effectiveCareerAgeOf` / `careerStageOf` |
+| `src/platform/economy/marketValue.js`（新增，**24 行實碼**） | `MARKET` / `ageMultiplier` / `marketValueOf` |
+| `src/ui/playerProfileFoundation.js` | `careerStageOf` 改讀推導模組（**簽章不變**）；新增 `marketValuePresentationOf` |
+| `src/ui/PlayerProfileFoundation.jsx` | 生涯分頁新增「市場價值」格；階段與市場價值都加了 testid |
+| `tools/careerstage_calibration.mjs`（新增） | 量測工具，**不進 CI** |
+| `tools/check_player_lifecycle_v4.mjs`（新增） | **44/44**，含 3 個 mutation sentinel |
+
+### Calibration 先行（常數全部來自實跑，不是猜的）
+
+| 量測 | 值 | 用途 |
+|---|---|---|
+| 同齡期望 maturity | 15:0.67 → 21:0.90 → 24:0.95 → 27+:0.97 | `MATURITY.expected` 表 |
+| 青年期（≤21）殘差跨度 | **0.22** | `perMaturity` = 2×2/0.22 ≈ **18**（兩端差 ±2 年） |
+| 30 歲殘差跨度 | **0.06** | 偏移**自己淡出**，不必為年長選手寫特例 |
+| 單次課程最大 Δmaturity | **0.01** | ×18 ⇒ effectiveAge 最多動 **0.18 年**，最窄區間 4 年 ⇒ 跳不了階 |
+| `ageEfficiency` 轉折點 | **29 歲** | 巔峰期結束 & 折價起點的共同錨 |
+
+⚠ Calibration 推翻了一個原本的假設：`maturity` 在 24 歲之後就飽和（同齡 p10–p90 只剩 0.05）。
+**用固定中性點會讓 15 歲的人一律吃到滿格負偏移** ⇒ 改成與**同齡期望值**比。
+
+### 階段判定
+
+```
+maturity     = 定位主能力平均 / 潛力        （沿用既有 levelGrowth.growthKeysFor）
+offset       = clamp(18 × (maturity − 同齡期望值), ±2.5 年)
+effectiveAge = age + offset
+階段區間      新秀 <20｜成長期 20–24｜巔峰期 24–29｜成熟期 29–33｜老將 ≥33
+```
+
+**早熟／晚熟沒有存在選手身上**（`PROSPECT_TWISTS` 是生成時的 delta），
+所以偏移讀「這名選手現在實際走到哪」，不是出生標籤。效果一樣：
+同樣 19 歲，空間剩 1 點的是**成長期**，空間剩 20 點的還是**新秀**。
+
+### 市場價值
+
+`(底 + 綜合能力項 + 未實現潛力項) × ageMultiplier(age)`
+- 未實現潛力（潛力 − 綜合能力）就是**年輕高潛的資產溢價來源**
+- `ageMultiplier`：28 歲（含）前為 1，之後**等比**遞減（每年 7%）至下限 0.25
+  ⚠ 等比不是等差——等差在接近下限時相鄰年份會掉 20%+，玩家會看到斷崖（§V6 釘住）
+
+實跑（潛力 80、空間 2、同能力）：
+`20 歲 成長期 $132.6萬｜24–28 歲 巔峰期 $132.6萬｜29 歲 成熟期 $123.3萬｜33 歲 老將 $92.2萬｜38 歲 $64.2萬`
+
+新秀池：`17 歲潛力 83 ⇒ $118.1萬` vs `22 歲潛力 60 ⇒ $51.4萬` ⇒ 年輕高潛確實更值錢。
+
+### 本輪明確不動的東西（由 §A 反向釘住）
+
+| 不變式 | 驗法 |
+|---|---|
+| 不改任何能力值 | 兩支模組都沒有寫 `stats` 的痕跡 |
+| 年齡仍不影響比賽結果 | `LogicEngine` 讀 `.age` 次數仍為 **0** |
+| **週薪逐值不變** | 22 歲與 38 歲同能力 ⇒ 週薪相同 |
+| 週結算仍不讀 `players[].salary` | 市場價值與週薪是兩條不相交的路徑 |
+| 階段不落盤 | Store 不得出現 `careerStage:` / `marketValue:` |
+| `ageEfficiency` 逐值不變 | `1.1,1.1,1.04,0.98,0.87,0.54,0.32,0.2` |
+
+### 一個 sentinel 的發現
+
+M-B 原本想用「放大 `perMaturity`」證明 §J1（不跳階）會變紅，**結果破不了**——
+偏移會在上限飽和，前後兩邊都貼在 ±2.5，差值反而是 0。
+⇒ 改成雙重變異，並照實寫明：**上限同時保護 §R4 與 §J1，兩個常數一起放掉才會出事**。
+不假裝單一常數就守得住。
+
+### 已知取捨（刻意）
+
+一名 20 歲、能力已經接近潛力上限的選手仍會被標為**成長期**而不是巔峰期
+（偏移上限 ±2.5 年，20 + 2.5 = 22.5 < 24）。這是「**age 為主軸**」的直接後果，
+也符合電競的實際說法（20 歲天才通常仍被視為還在成長）。**不視為缺陷。**
+
+### Gates
+
+`check_player_lifecycle_v4` **44/44**（新增）｜`check_finance_n` 32/32｜`n2` 35/35｜
+`n3` 40/40｜`n31` 31/31｜`check_recruit_o` 41/41｜`check_pcgm_v0a` 24/24｜
+`check_prospect_growth_space_v0b` 43/43｜`check_foundation_calibration` 58/58｜
+`check_no_player_injury` 29/29｜`check_time_block_v2` 47/47｜`check_time_block_v3` 69/69｜
+`check_r62_player_ui_fixture` PASS｜`check_home_team_contract` PASS｜
+`regress` 15/15｜`regress2` 8/8｜`check_dash10` PASS｜`check_flow09` PASS｜
+`npm run build` ✓ built in 11.54s
+
+⚠ `check_team_development_recovery` **VIOLATED**——**既有紅燈，非本輪造成**。
+違反的兩條是「首頁主要入口磚為戰隊發展」與「talentPick 路由仍保留給相容流程」，
+與 V4 無關。已用臨時 worktree 在 **V4 之前的 `03f473c` 實跑確認為完全相同的兩條違反**。
+
+### ⚠ 未經瀏覽器實測
+
+生涯分頁新增的「市場價值」格與階段標籤（`player-career-stage` / `player-market-value`）
+已由 Node gate §U 以真實選手驗過取得的值，但**沒有在瀏覽器裡打開選手頁看過版面**。
+
+### 沒有做
+
+能力衰退、退休、Off-season、AI 老化、選手離隊；週薪一個位元都沒動。
+
+## Season vNext V5 Design Sprint — 休賽期 × 老化／退休 × AI 世代交替（2026-08-26）
+
+基準 `df1e8ab`。**docs-only，`src/` 零改動，未實作。**
+完整設計：`docs/design/Season_vNext_V5_休賽期與世代交替.md`（12 節）
+
+### 為什麼三件事必須一起設計
+
+它們**在同一個時刻發生：生涯年度邊界**。那個邊界 V2 就建好了，
+而且目前只做一件事（age +1）。V5 把那一行變成序列：
+
+`年度封存 → age +1 → 生涯評估 → 能力漂移 → 退休意向 → 實際退休 → AI 同步老化 → 新秀入市 → 決策視窗`
+
+### Audit 的三個關鍵發現
+
+**① 能力四分類已經在主幹上，不必另寫清單**
+`STAT_DEF[].cat` = 操作／戰術／心理／團隊，各 4 項。
+⇒ **操作先衰、戰術與團隊緩升** ⇒ 老將是「換一種強法」，不是全面變廢。
+
+**② 玩家開局剛好 5 人 ⇒ soft-lock 不是遠期風險**
+`INITIAL_PLAYERS` 是 5 名（23/21/24/22/20，V4 判定全部 growth），`ROSTER_CAP` 15。
+**第一次退休就會湊不滿先發。**
+
+**③ `AI_TEAMS` 是模組層級凍結常數**
+`export const AI_TEAMS = buildAiTeams()` —— 固定 seed、import 時算一次、永不改變。
+要讓它老化只有兩條路：改成 career year 的決定性函式，或把 AI roster 存進存檔。
+⇒ **必須選前者**，否則破壞規格 D9「AI 不進經營迴圈」，而且每個存檔要多存 35 名 AI 選手。
+
+**④ 附帶發現**：`players[].contract`（365/280/400/350/300 天）**存在但沒有任何地方倒數**
+⇒ 「離隊」目前沒有任何既有機制可接。合約／續約列 V6。
+**⑤ 附帶發現**：`csAiTeams` 是手寫能力表，**完全沒有年齡欄位** ⇒ CS AI 老化列 V6。
+
+### 幾個裁決（與 Legacy 參考實作的差異）
+
+Legacy `EsportsGame.jsx:186` 的 `agePlayerOneSeason` 已經做過體能／心智分離，可以借，
+但**兩個地方不能照抄**：
+
+| Legacy | 本輪 | 理由 |
+|---|---|---|
+| 從 **26 歲**開始衰退 | 錨在**巔峰期結束（29）** | 主幹 V4 的巔峰期到 29 才結束（錨在 `ageEfficiency` 轉折點）；照抄會讓人**在巔峰期中間變弱** |
+| 完全決定性（同齡掉一樣多） | **機率 + 個體差異** | 使用者明確要求「不要過度寫死年齡」 |
+| 用原始 age | 用 V4 的 **`effectiveAge`** | 早熟／晚熟自動有不同衰退時機，**零新欄位** |
+
+### 退休：兩段式，預告是結構保證
+
+`第 N 年宣布意向 → 玩家有一整個年度找接班人 → 第 N+1 年真的走 或 撤回意向（延役）`
+
+**不變式 R1：沒有宣布過意向的人，不得退休。**
+意向機率由三個**狀態**決定（超過巔峰多久／能力掉多少／近一年出賽比例），
+不是純擲骰 ⇒ 同樣 33 歲，還在先發且能力保持的人機率明顯較低。
+
+### Soft-lock：退休照發生，地板由「青訓補位」守
+
+⚠ **不採用**「人數不足就延後退休」——那可以被反向利用（永遠不補人 ⇒ 永遠沒人退休），
+而且會讓退休失去意義。
+
+**採用**：退休一律照常發生；低於先發需求時，**免費但明顯較弱**的青訓選手頂上。
+⇒ 破產也不會卡死，而退休**仍然是損失**。兩個目標同時達成。
+
+### Grilling：12 條（使用者的 8 條 + 自己翻出的 4 條）
+
+自己翻出來的四條，有兩條是會讓系統互相打架的：
+
+- **G9 `learning` 漂移會與 `ageEfficiency` 重複計算**
+  `learning` 分類在「團隊」，但它是成長速率的輸入。整類緩升 ⇒ 老將學得更快 ⇒ 抵銷年齡效率。
+  ⇒ **不變式 D1：`learning` 排除在漂移之外。**
+- **G10 漂移會破壞 V0A/V0B 的成長校準**
+  成長在日常、漂移在年度邊界，疊加後 Year 1–4 的產品目標可能失效。
+  ⇒ **D2：V5 必須重跑 Foundation Calibration**，這是收尾條件不是選配。
+- **G11 緩升會突破潛力上限** ⇒ 升的項目一律夾在 `potential` 之下。
+- **G12 AI 只老化不換人 ⇒ 聯賽整體變弱** ⇒ 補進來的人以該隊 `strength` 錨點生成，
+  戰力維持在 band 內（A4）。
+
+### Sprint 拆分
+
+`V5-1 Off-season 骨架` → `V5-2 能力漂移（玩家 + MOBA AI，不得拆開）` → `V5-3 退休與補位`
+
+⚠ V5-2 的兩半必須同一個 Sprint 出。只有玩家會老、AI 永遠 19–27 歲 = 單方面懲罰玩家，
+這正是 V4 audit 把 AI turnover 判為「衰退的前置」的理由。
+
+### GO / NO-GO
+
+**GO**，因為三個地基都已經在跑：年度邊界（V2）、衰退時鐘 `effectiveAge`（V4）、
+四分類骨架（`STAT_DEF[].cat`）。
+
+⚠ **一個明確的 NO-GO 條件**：若 Off-season 做不出「一個會影響下一年的不可逆決策」，
+**就不要做 Off-season 畫面**，只做背景結算——多一個沒有決策的畫面比沒有畫面更糟。
+
+### 沒有做
+
+`src/` 零改動；未實作任何序列、漂移、退休或 AI 老化；所有數值未定（留給 calibration）。
+
+## Season vNext V5-1 — Off-season / 生涯年度邊界（2026-08-27）
+
+基準 `da59230`。**只做骨架：不改能力、不退休、不動 AI、不動合約、不補新秀。**
+
+### 交付
+
+| 項目 | 內容 |
+|---|---|
+| `src/platform/time/offSeason.js`（新增，**64 行實碼**） | `OFF_SEASON_VERSION` / `OFF_SEASON_STEPS`（九步）/ `IMPLEMENTED_STEPS`（本輪兩步）/ `sealCareerYears` / `sealedYearsOf` / `isYearSealed` / `offSeasonViewOf` |
+| `profileStore.advanceDay` | 年度封存**折進與 rollover 同一個 `set()`**；`sealCareerYears` 全 Store **只有一個呼叫點** |
+| `profileStore.offSeasonView()` | 畫面的單一讀取點 |
+| `DEFAULT.meta.offSeason` | `{ years: {}, lastSealedYear: 0 }`；舊存檔由既有的 `{...DEFAULT.meta, ...saved.meta}` 自動補上 |
+| `DashboardScreen` 世界時間卡 | 一行狀態顯示「第 N 生涯年度已封存（當時 X 人．平均 Y 歲）」 |
+| `tools/check_offseason_v5.mjs`（新增） | **44/44**，含 2 個 mutation sentinel |
+
+### 邊界怎麼運作
+
+```
+advanceDay(n)
+  → advanceDaysInState（逐日：訓練／恢復／週結算）
+  → applyCareerYearRollover（age +1）
+  → sealCareerYears（年度封存）        ← V5-1 新增
+  → set(...)                           ← 三者同一個 set，沒有中間狀態
+```
+
+**冪等鍵是年度編號**，照抄週結算已驗證的形狀（`settledWeeks[week]` + `lastSettledWeek`）。
+年度編號是世界時間的**推導值**，不是計數器 ⇒ 重整／重讀存檔／重複呼叫都不可能封存兩次。
+
+### 實作時發現的一個坑
+
+`sealedOnDay` 原本想寫「實際封存那一天」（也就是傳進來的 `toDay`）。
+那會讓「一次跳 10 天跨過邊界」與「逐日跨過邊界」寫下**不同的數字**（89 vs 85）
+⇒ **V3 好不容易立起來的「快轉＝逐日」保證會在這裡破功。**
+⇒ 改成推導值 `該年度最後一天 + 1`，與怎麼走到那裡無關。由 §F1 釘住。
+
+### 玩家目前看得到什麼
+
+首頁世界時間卡多一行：`第 1 生涯年度已封存（當時 5 人．平均 23.4 歲）`。
+**沒有 Off-season 專屬頁面**（§U2 反向釘住 `OffSeasonScreen.jsx` 不存在）。
+
+⚠ **邊界刻意不擋快轉**。V5-1 沒有任何決策要玩家做，而 V5 設計文件 §6 自己立的規則是
+「多一個沒有決策的畫面比沒有畫面更糟」。等 V5-3 有了「離隊意向 vs 找接班人」，
+才會變成真的停下來的地方。由 §E5 釘住「快轉不得被年度邊界卡住」。
+
+### 一個 gate 自我修正
+
+`§N2` 原本寫成「檔案裡不准出現 retire / intent」。那把**宣告未來掛載點**也一起擋掉了
+（九步序列本來就要提到後續步驟的名字）。
+⇒ 改成兩條精確的：**離隊步驟不得列入 `IMPLEMENTED_STEPS`**、
+**沒有任何移除選手／標記離隊的程式碼**。禁的是行為，不是宣告。
+
+### Gates
+
+`check_offseason_v5` **44/44**（新增）｜`check_time_block_v3` 69/69｜`check_time_block_v2` 47/47｜
+`check_world_time_v1` 46/46｜`check_player_lifecycle_v4` 44/44｜`check_practice_match_v0d` 70/70｜
+`check_foundation_calibration` 58/58｜`check_no_player_injury` 29/29｜`check_finance_n3` 40/40｜
+`check_competition_q3` 91/91｜`q5` 69/69｜`q6` 57/57｜`check_competition_release_gate` 11/11｜
+`browser_check_time_controls` **21/21**｜`browser_check_home_ia` **23/23**｜
+`regress` 15/15｜`regress2` 8/8｜`check_dash10` PASS｜`check_flow09` PASS｜
+`npm run build` ✓ built in 12.80s
+
+### V5-2 前置三條已正式記錄
+
+寫進 `docs/design/Season_vNext_V5_休賽期與世代交替.md` **§13**，其中第一條
+**推翻了該文件 §3.2 的原始提案**：
+
+**① 衰退時鐘不得用 V4 的 `effectiveAge`（AD-1～AD-4）**
+實測確認使用者指出的回饋迴圈是真的：33 歲、潛力 80 的選手，
+主能力 78 → `effectiveAge` **33.09**；掉 5 點 → **31.96**；再掉 5 點 → **30.84**。
+⇒ 掉 10 點能力讓衰退時鐘**倒退 2.25 年**，衰退會自我熄火且不再單調。
+V5-2 的 aging clock 必須以 **raw age** 為基底 ＋ 決定性個體 profile，
+且**不得**以當前能力為輸入。V4 的 `effectiveAge` 繼續作為 `careerStage` 的描述性推導。
+
+**② `RetirementIntent.v1`：出賽比例只能小幅修正（RI-1～RI-3）**
+不得存在「持續讓他出賽就永遠不會宣布意向」的組合——延緩可以，免疫不行。
+
+**③ `AiGeneration.v1`：跨年度 identity continuity（AG-1～AG-4）**
+只要求戰力 band **不夠**——每年整隊重生成也能滿足 band，但世界會變成每年換一批陌生人。
+必須是既有人繼續老化、離開者退出、只替換必要新人，且**交集比例可驗證**。
+
+### 沒有做
+
+能力衰退（V5-2）、退休與補位（V5-3）、AI 換血、合約、新秀補位、Off-season 專屬畫面。
+
+## Season vNext V5-2 — 年度能力漂移 × MOBA AI 世代交替（2026-08-27）
+
+基準 `10c1305`。**兩件事同一輪交付**——只有玩家會老、AI 永遠 19–27 歲，等於單方面懲罰玩家。
+
+### 開工前的 V5-1 自檢：抓到一個語意 bug
+
+第 N 生涯年度的封存 snapshot 應代表**該年度結束時**的狀態。實測：
+
+```
+第 1 年度結束時（day 84）平均 22.0 歲
+跨到 day 85 之後       平均 23.0 歲
+封存紀錄卻寫著          averageAge 23   ← 錯
+```
+
+原因：封存跑在 `applyCareerYearRollover`（age +1）**之後**。
+我在 V5-1 的註解裡把理由寫反了（寫成「否則會記著前一年的年齡」）。
+**最小修正**：封存移到 rollover 之前，兩者仍折在同一個 `set()`。
+由 `check_offseason_v5` §E4b 釘住（開局五人第 1 年度必須是 22.0）。
+
+### 交付
+
+| 項目 | 內容 |
+|---|---|
+| `src/platform/progress/ageDrift.js`（新增，**63 行實碼**） | `AGE_DRIFT_VERSION` / `DRIFT`（四分類參數）/ `DRIFT_EXCLUDED` / `agingProfileOf` / `agingAgeOf` / `applyAgeDrift` |
+| `aiTeams.aiRosterAt(team, careerYear)`（新增） | AI 逐年老化 + 逐人替換，決定性、不落盤 |
+| `seasonState.rostersFor(state, roster, careerYear)` | MOBA AI 改用**當年**的 roster；CS 維持原樣（沒有年齡欄位） |
+| `profileStore.advanceDay` | 年度邊界補上 `abilityDrift` 步驟（跨 k 年就補 k 年） |
+| `offSeason.IMPLEMENTED_STEPS` | 追加 `abilityDrift` / `worldSync` |
+| `tools/check_age_drift_v5.mjs`（新增） | **46/46**，含 3 個 mutation sentinel |
+
+### 老化時鐘：raw age + 決定性個體 profile
+
+紅線是「不得用 V4 的 `effectiveAge`」，理由已在 V5 設計 §13.1 量化過
+（33 歲掉 10 點能力 ⇒ `effectiveAge` 倒退 2.25 年 ⇒ 衰退自我熄火）。
+
+```
+profile.offsetYears = 由 player.id 雜湊導出，±3 年，**一個能力欄位都不讀**
+agingAge            = raw age + offsetYears
+```
+
+⇒ 「能力下降不能讓時鐘倒退」是**結構保證**：時鐘的輸入裡根本沒有能力。
+§C2／§C4 正面驗（掃 20–40 歲、能力 90→40），sentinel M-C 反面驗
+（讓 profile 讀 potential ⇒ 立刻變紅）。
+
+### 漂移方向（用主幹既有的四分類，不另寫清單）
+
+| 類別 | 緩升到 | 每年升 | 起衰 | 每年衰 |
+|---|---|---|---|---|
+| 操作 | 23 | 1.0 | **29** | 1.6 |
+| 戰術 | 31 | 0.7 | 36 | 0.8 |
+| 心理 | 30 | 0.4 | 39 | 0.5 |
+| 團隊 | 33 | 0.6 | **41** | 0.4 |
+
+`learning` **完全排除**（§P5 掃 20 年逐值不變；sentinel M-A 讓它參與 ⇒ 變紅）。
+衰退有 **3 年斜坡**，單項單年跌幅硬上限 **2.5 點** ⇒ 不會一年崩壞。
+
+### 15 年長跑：玩家（22 → 37 歲，潛力 88、起始 72）
+
+```
+年齡  操作  戰術  心理  團隊  綜合  learning
+  22  72.0  72.0  72.0  72.0  72.0    72
+  28  71.1  76.2  74.4  74.7  74.1    72
+  31  66.5  76.9  74.4  76.0  73.5    72
+  37  56.9  74.9  74.4  76.0  70.6    72
+```
+
+⇒ **操作 −21%，戰術／心理／團隊反而升，綜合只掉 1.4。**
+老將不是變廢，是換一種強法：手速掉了，視野與領導更好。
+對操作型定位（打野）影響明顯，對團隊型定位（輔助）幾乎無損——
+**不同定位有不同生涯長度**，這是設計意圖。
+
+### 15 年長跑：AI
+
+```
+年度   1    5    7    8   11   13   15
+年齡  24.0 28.0 30.0 28.6 25.6 24.4 23.8
+戰力  98.3 99.7 99.7 98.9 98.1 97.7 96.1
+交集  5/5  5/5  5/5  4/5  4/5  4/5  4/5
+```
+
+⇒ 平均年齡升到 30 後開始換血，之後在 23.8–28.6 循環（**世代週期真的出現了**）。
+戰力 98.3 → 96.1（**−2.2%**，遠在 ±20% band 內）。
+identity 每年保 **4–5 人**，任一年最多換 2 人 ⇒ **不是每年生一隊陌生人**。
+
+### ⚠ Foundation Calibration 58/58 是**假綠**——我沒有當成證據
+
+`tools/lib/careerSim.mjs` 對 `ageDrift` 的引用數是 **0** ⇒ calibration 的模擬迴圈
+**根本沒有經過漂移路徑**。它綠只證明「成長本身沒被動到」，
+**不能**證明「成長 + 漂移疊加後 Year 1–4 產品目標仍成立」（V5 設計的 D2）。
+
+⇒ 所以我直接量了（19–21 歲新秀 30 名、4 年、正常玩法）：
+
+| | Y1 | Y2 | Y3 | Y4 |
+|---|---|---|---|---|
+| 不含漂移 | 38.2% | 59.6% | 67.9% | 73.1% |
+| **含漂移** | **41.9%** | **66.7%** | **76.2%** | **81.4%** |
+
+**判定：合理的 lifecycle 變化，不是回歸。** 理由：19–21 歲的 `agingAge` 遠低於任何
+起衰年齡，落在**緩升**區段 ⇒ 漂移對他們是加分。目標變得**更容易**達成，沒有任何一項變差
+⇒ **不需要 rebaseline**（使用者指定要判斷而不是直接 rebaseline）。
+
+⚠ 但這是一個**真實的平衡位移**，Y4 關閉率 +8.3pp。而且它有一個設計疑慮：
+**青年期的「緩升」與訓練成長可能重複計算**（訓練本來就在長能力）——
+與 `learning` 被排除的理由是同一類問題。
+⇒ 列為 **V5-3 開工前的第一個 calibration 項目**，本輪**刻意不調**（數值未 freeze）。
+
+### Gates
+
+`check_age_drift_v5` **46/46**（新增，3 sentinel）｜`check_offseason_v5` **45/45**（+1）｜
+`check_player_lifecycle_v4` 44/44｜`check_time_block_v3` 69/69｜`v2` 47/47｜`v1` 46/46｜
+`check_foundation_calibration` 58/58（見上，假綠已另行實測）｜`check_pcgm_v0a` 24/24｜
+`check_prospect_growth_space_v0b` 43/43｜`check_no_player_injury` 29/29｜`check_finance_n3` 40/40｜
+`check_competition_q2b` 92/92｜`q3` 91/91｜`q4` 68/68｜`q5` 69/69｜`q6` 57/57｜
+`release_gate` 11/11｜`browser_check_time_controls` 21/21｜`browser_check_home_ia` 23/23｜
+`regress` 15/15｜`regress2` 8/8｜`dash10`／`flow09` PASS｜`npm run build` ✓ 9.42s
+
+### 沒有做
+
+退休意向、真正退休、青訓補位、合約、CS AI 老化（`csAiTeams` 沒有年齡欄位 ⇒ V6）、V5-3。
+
+## Season vNext V5-3 — 退休意向 × 退休 × 青訓補位（2026-08-27）
+
+基準 `7a777e8`。含開工前的 Age Drift calibration 修正。
+
+### 一、Calibration：青年期正向 drift 確實與訓練重複計算
+
+**量測（完全不訓練、純 aging 5 年）**：
+
+| 起始年齡 | 定位 | 主能力 | 操作 |
+|---|---|---|---|
+| 19 | 上路 | +2.7 | **+4.0** |
+| 19 | 輔助 | +3.2 | **+5.0** |
+| 22 | 中路 | +3.2 | **+3.0** |
+
+⇒ 純 aging 就吃掉訓練成長的 **11%**（+2.6 vs 訓練 +23.2），
+其中**操作 +2～+5**——直接違反「操作不需要因 aging 額外成長」。
+
+**最小調整**（只動 `AgeDrift` 曲線，**沒有碰 Training / PCGM，沒有 rebaseline**）：
+
+| 類別 | 每年正向 | 改為 |
+|---|---|---|
+| 操作 | 1.0 | **0**（手速是練出來的，不是長大就會） |
+| 戰術 | 0.7 | 0.25 |
+| 心理 | 0.4 | 0.15 |
+| 團隊 | 0.6 | 0.2 |
+
+**調整後複驗**：
+- 純 aging 5 年主能力 **+2.6 → +0.69**（gate §P5c 釘住 < 1.5）
+- Y1–Y4 關閉率：`39.0 / 61.3 / 69.4 / 74.3%`（不含漂移是 `38.2 / 59.6 / 67.9 / 73.1%`）
+  ⇒ Y4 的偏移從 **+8.3pp 收斂到 +1.2pp**，Foundation 目標維持
+- 老將四類曲線仍成立：22→37 歲 操作 72→57、團隊 72→73、綜合 **97%**
+- AI 15 年：戰力 98.3 → 95.1（−3.3%），identity 每年保 4–5/5
+- 新增 gate §P5b（操作正向必須為 0）／§P5c（純 aging 增幅上限）
+
+### 二、V5-3 交付
+
+| 項目 | 內容 |
+|---|---|
+| `src/platform/progress/retirement.js`（新增，**101 行實碼**） | `RETIREMENT` 常數／`intentChanceOf`／`evaluateIntents`／`resolveRetirements`／`retirementViewOf` |
+| `profileStore.advanceDay` | 年度邊界補上「先結算去年意向 → 再評估今年新意向 → 補足名單地板」 |
+| `profileStore.retirementView()` | 畫面的單一讀取點 |
+| 收件匣 | 意向、退役、青訓補位各一則通知 |
+| `DashboardScreen` | 首頁顯示「N 名選手宣布這可能是最後一年 — 你有一年可以找接班人」 |
+| `tools/check_retirement_v5.mjs`（新增） | **39/39**，含 3 個 mutation sentinel |
+
+### 三、退休怎麼運作
+
+```
+第 N 年度邊界   宣布意向 →  玩家有一整個生涯年度找接班人
+第 N+1 年度邊界  真的退休  或  撤回意向（延役，28%）
+```
+
+**紅線都是結構保證，不是自律**：
+- **沒宣布過不得退休** ⇒ `resolveRetirements` 只看 `player.retirement.intentYear`，
+  沒有那個欄位就不在候選名單裡。sentinel M-A 讓它忽略該欄位 ⇒ 立刻變紅。
+  §R1 用「全隊 44 歲但沒人宣布過、連跑 20 年」正面驗，退休數必須是 0。
+- **同年宣布同年退休也不允許**（§R2）⇒ 預告不會形同虛設。
+- **不得靠刷出賽永遠免疫** ⇒ 出賽率只做**平移**不做縮放，年齡項無上限持續累加。
+  §I5 掃 33–45 歲，全勤時機率必須仍 > 0 且單調上升。sentinel M-B 放大修正 ⇒ 變紅。
+
+機率主因：老化時鐘超過 31 歲多久（每年 +0.10）＋ 長期能力相對潛力的缺口（每點 +0.006）；
+出賽率只有 ±0.08 的修正上限。
+
+### 四、名單地板：退休照發生，青訓補位守底
+
+⚠ **沒有採用**「人數不足就延後退休」——那可被反向利用（永遠不補人 ⇒ 永遠沒人走）。
+
+退休**一律照常發生**；低於 5 人時由**免費、年輕、明顯較弱**的青訓選手頂上：
+實測青訓綜合 **45.4**、18 歲（一般新秀約 60+）⇒ 破產也不會卡死，而失去好手仍是真的損失。
+§F1 驗「剛好 5 人時仍然會退休」，§F3 驗「模組裡沒有任何花費欄位」。
+
+### 五、15 年 soft-lock 實跑
+
+```
+年度  人數  平均年齡  意向  退休  青訓  最年長
+   1     5      24.2     0     0     0      27
+   7     5      30.2     1     0     0      33
+   8     5      28.0     0     1     1      32
+  12     5      25.4     0     1     1      35
+  15     5      25.2     0     0     0      38
+15 年合計：意向 5｜退休 4｜青訓補位 4　最低人數 5 ⇒ 從未卡死
+```
+
+第 7 年首次出現意向 → 第 8 年退休 → 青訓補位。平均年齡在 24→30→25 之間循環
+⇒ **世代交替真的在跑**，而且人數一次都沒有低於地板。
+
+### 六、Off-season 的第一個真正決策
+
+首頁出現：`2 名選手宣布這可能是最後一年（A．33 歲、B．35 歲）— 你有一年可以找接班人`
+
+這就是設計文件 §6 要求的「**會影響下一年、且不可逆**」的決策：
+現在花錢簽接班人（今年就要付薪水、而且他還不夠強），還是賭他明年撤回意向。
+**不需要新的談判系統**，只用既有的招募與財務。
+
+⚠ **刻意不擋快轉**。紅線是「不得讓玩家永久卡死」，而擋路是製造卡死的最短路徑；
+玩家有一整年，訊息也在收件匣與首頁，不需要用強制停頓來提醒。
+
+### 七、一個 gate 的邊界推進（不是回歸）
+
+`check_offseason_v5` §N2 原本釘住「離隊步驟不得列為已實作」——那是 **V5-1 當時的邊界**。
+V5-3 正當地實作了它們 ⇒ 該條改為釘住 **V5-3 之後仍未實作**的三步
+（`lifecycleEvaluation` / `talentMarket` / `decisionWindow`）。
+**這是範圍推進，不是回歸**，已在 gate 註解裡寫明。
+
+### Gates
+
+`check_retirement_v5` **39/39**（新增，3 sentinel）｜`check_age_drift_v5` **48/48**（+2）｜
+`check_offseason_v5` 45/45｜`check_player_lifecycle_v4` 44/44｜`check_time_block_v3` 69/69｜
+`check_foundation_calibration` 58/58｜`check_no_player_injury` 29/29｜`check_finance_n3` 40/40｜
+`check_competition_q3` 91/91｜`q6` 57/57｜`release_gate` 11/11｜
+`browser_check_time_controls` 21/21｜`browser_check_home_ia` 23/23｜
+`regress` 15/15｜`regress2` 8/8｜`dash10`／`flow09` PASS｜`npm run build` ✓ 10.97s
+
+### 沒有做
+
+合約／續約／談判、轉會市場、CS AI 老化、Off-season 專屬畫面。
+
+## V6-1 — CS AI Lifecycle parity（2026-08-27）
+
+基準 `7e97fc9`。目標：把 CS AI 接上**與 MOBA 完全相同**的世代老化核心。
+
+### ⚠ 先更正一個 audit 誤判
+
+V5 設計文件 §5.4 與 `seasonState` 的註解都寫著
+「`csAiTeams` 是手寫能力表，**完全沒有年齡欄位** ⇒ CS AI 老化列 V6」。
+
+**那是錯的。** 當時 grep `age` 被 `courage` / `damage` 淹沒，我讀成 0 筆。
+實測：CS AI **40 名選手全部都有 `age`**（藍圖裡就寫著 `age: 22` 等），
+範圍 **18–28**、平均 **23.1**、缺值 **0**。
+
+⇒ V6-1 **不需要「建立年齡資料」**，只需要接線。已同步修掉 `seasonState` 裡那段錯註解。
+
+### 交付
+
+| 項目 | 內容 |
+|---|---|
+| `csAiTeams.csAiRosterAt(team, careerYear)` | 逐年老化 + 逐人替換，決定性、不落盤 |
+| `csAiTeams.csAiLineupAt(team, careerYear)` | 換人後重算先發（`team.lineup` 會指到已不存在的 id） |
+| `seasonState.rostersFor` | CS 也改用**當年** roster；MOBA 那一側不動 |
+| `tools/check_cs_ai_lifecycle_v6.mjs`（新增） | **32/32**，含 2 個 mutation sentinel |
+
+### 共用核心，不共用資料模型
+
+- **共用**：`progress/ageDrift.applyAgeDrift` ＋ `competition/aiTeams.AI_DEPARTURE`
+  ⇒ 玩家 / MOBA AI / CS AI 三邊的老化原則**逐位元相同**。
+  §C4 反向釘住「CS 檔內不得出現 `declineFrom` / `risePerYear` 等曲線常數」
+  ⇒ **結構上不可能有第二套 aging engine**。
+- **不共用**：CS 有自己的定位（entry/rifler/awp/lurker/igl）與 `lineup` 結構。
+
+### 補新人為什麼用「base roster 的同定位錨點」
+
+MOBA 的新人由 `makeAiPlayer(strength)` 生成，因為那邊本來就有隊伍強度錨點。
+CS 沒有——隊伍特色寫在藍圖的 `overallBias` / `statBias` / `roleBias` 裡，
+而那些欄位**沒有掛在 team 物件上**。
+
+⇒ 改用**第 1 年 base roster 中同定位選手的能力**當錨點：隊伍特色已經烘焙在裡面，
+不必把藍圖內部曝露出去，也不會因為老將已經衰退而把新人一起拉低。
+
+### 15 年長跑
+
+```
+CS AI（前 4 隊）
+shadowwolf      Y1 齡22.4 力77.6 → Y7 齡28.4 力78.1 → Y15 齡25.4 力77.9
+emeralddragon   Y1 齡23.4 力77.2 → Y7 齡29.4 力77.2 → Y15 齡23.0 力78.4
+flamephoenix    Y1 齡23.0 力78.4 → Y7 齡29.0 力78.7 → Y15 齡27.8 力78.3
+thunderbear     Y1 齡23.0 力76.2 → Y7 齡29.0 力76.4 → Y15 齡22.8 力76.6
+
+MOBA AI（對照）
+shadowwolf      Y1 齡24.0 力98.3 → Y7 齡30.0 力98.3 → Y15 齡23.8 力95.1
+flamephoenix    Y1 齡23.8 力94.4 → Y7 齡29.8 力93.3 → Y15 齡24.6 力89.8
+
+換血與 lineup：15 年換血 3–5 人｜**lineup 失效 0 年**
+全 8 隊戰力最大偏移：**1.8%**（門檻 20%）
+```
+
+⇒ **兩個項目都會老、都會換世代、都不凍結**。
+年齡在 22–29 之間循環，戰力穩定：CS 偏移 1.8%、MOBA 最多約 5%。
+CS 比 MOBA 穩，是因為 CS 新人用 base roster 錨點（低變異），
+MOBA 用 `strength ± 8`（高變異）——兩者都在 band 內，是設計差異不是缺陷。
+
+### Gates
+
+`check_cs_ai_lifecycle_v6` **32/32**（新增，2 sentinel）｜`check_cs23` 28/28｜
+`check_cs_roster_v1_r56` PASS｜`check_cs_season_lifecycle` PASS｜`check_cs_season_m2` PASS｜
+`check_cs_league_eligibility` PASS｜`check_cs_major` PASS｜`check_cs_season_contract` PASS｜
+`check_age_drift_v5` 48/48｜`check_retirement_v5` 39/39｜`check_offseason_v5` 45/45｜
+`check_player_lifecycle_v4` 44/44｜`check_time_block_v3` 69/69｜`check_foundation_calibration` 58/58｜
+`check_competition_q3` 91/91｜`q6` 57/57｜`release_gate` 11/11｜
+`regress` 15/15｜`regress2` 8/8｜`dash10`／`flow09` PASS｜`npm run build` ✓ 9.99s
+
+⚠ `check_cs_team_identity_consumers_r48` **FAIL — 既有紅燈（TD-37），非本輪造成**。
+它卡在 `R48_LEGACY_R47_SHA`，雜湊的是 **FPS 引擎檔**（`src/battle/fps/EsportsFPS3D.jsx`），
+而本輪 `src/battle/fps/` 的改動數是 **0**（只動了 `csAiTeams.js` / `seasonState.js` / 新 gate）。
+那個 SHA 鎖在 origin/main 的 CS-P0 改過 FPS 引擎之後就永久對不上了。
+
+### 沒有做
+
+玩家 Lifecycle 未重做；Training / PCGM 未動；沒有第二套 aging engine；
+沒有碰真人 Ranked / ServerTime；合約（V6-2）與轉會市場（V6-3）未開始。
+
+## V6-2 — 合約生命週期（2026-08-27）
+
+基準 `28f0d4b`。
+
+### 現況：欄位早就在，只是沒有人動它
+
+`players[].contract`（天）從 Legacy 就存在（開局五人 365/280/400/350/300），
+`ui/playerProfileFoundation.contractPresentationOf` 也早就在顯示它、在 ≤30 天標 `attention`。
+**但全 repo 沒有任何地方讓它倒數。** V6-2 只是把那條線接上，並定義到期會發生什麼。
+
+### 關鍵裁決：每天倒數，但**到期只在年度邊界結算**
+
+日中生效等於「選手在某個星期三突然不見」，正是紅線要擋的事；
+而且退休本來就只在年度邊界發生——**兩件事放同一個點，先後才定義得出來**。
+
+⇒ **優先順序：退休先於合約到期。**
+已經退役的人不在名單裡，不會被合約再結算一次（§P3）；
+宣布過退役意向的人**不得續約**（§P1）——他要離開這個運動，不只是離開這支隊。
+§P2 直接檢查 Store 原始碼裡 `resolveRetirements` 的呼叫位置在 `resolveContractExpiries` 之前。
+
+### 交付
+
+| 項目 | 內容 |
+|---|---|
+| `src/platform/progress/contract.js`（新增，**79 行實碼**） | `CONTRACT` 常數／`contractStatusOf`／`tickContracts`／`resolveContractExpiries`／`renewContract`／`renewCostOf`／`contractViewOf` |
+| `profileStore.advanceDay` | 合約隨 `effective` 天倒數；年度邊界在退休之後結算到期 |
+| `profileStore.contractView()` / `renewPlayerContract()` | 畫面讀取點與續約動作 |
+| 收件匣 | 合約到期離隊通知 |
+| `tools/check_contract_v6.mjs`（新增） | **38/38**，含 2 個 mutation sentinel |
+
+### 續約：明碼標價，沒有談判
+
+續約金 = **V4 市場價值 × 0.5** ⇒ 與既有估值直接接軌，年輕高潛比較貴、老將比較便宜
+（實測 22 歲 106.6 萬 vs 36 歲 60.5 萬）。
+§R4 反向釘住「模組裡不得出現出價／還價／議價」——本輪不做談判 AI。
+
+### 名單地板
+
+沿用 V5-3 的做法：**離隊照發生**，人數不足時由免費補位頂上。
+15 年長跑：到期離隊 15 人、補位 15 人、**最終仍是 5 人，任何一年都沒有低於地板**。
+
+### 實作時抓到的一個真 bug
+
+補位迴圈原本寫成 `for (let i = 0; i < CONTRACT.rosterFloor - kept.length; i++)`——
+`kept.length` 每補一個就增加，上界跟著縮短 ⇒ **只補到一半**
+（實測「離隊 5｜補位 3｜最終 3 人」）。缺額改成先算好再跑迴圈。
+
+### 兩個 gate 自我修正
+
+- **§F3** 原本用「12 人合約全部到期」來驗「人數充足時不補人」——
+  但全部到期之後當然缺人，前提本身就錯。改成「2 人到期、10 人合約還很長」。
+- **§N3** 原本寫「檔案裡不准出現 `stats[...] =`」，那會把**生成補位新人**時
+  寫他自己的能力也一起擋掉（與 V5-1 §N2 同一類教訓）。
+  改成實測「既有選手的能力逐值不變」。
+
+### Gates
+
+`check_contract_v6` **38/38**（新增，2 sentinel）｜`check_cs_ai_lifecycle_v6` 32/32｜
+`check_retirement_v5` 39/39｜`check_age_drift_v5` 48/48｜`check_offseason_v5` 45/45｜
+`check_player_lifecycle_v4` 44/44｜`check_time_block_v3` 69/69｜`v2` 47/47｜
+`check_finance_n` 32/32｜`n2` 35/35｜`n3` 40/40｜`check_recruit_o` 41/41｜
+`check_foundation_calibration` 58/58｜`release_gate` 11/11｜
+`regress` 15/15｜`regress2` 8/8｜`dash10`／`flow09` PASS｜`npm run build` ✓ 10.47s
+
+### 沒有做
+
+轉會市場（V6-3）、談判 AI、Off-season 專屬畫面。
+
+## V6-3 — 正式 Off-season 經營流程（2026-08-27）
+
+基準 `024b52e`。把散落的年度決策收成一個**會停下來**的休賽期。
+
+### 為什麼現在才做這個畫面
+
+V5 設計 §6 立過判準：**Off-season 至少要有一個「會影響下一年、且不可逆」的決策；
+做不到就不要做畫面**。到 V6-2 為止已經有三個：
+① 有人宣布最後一年 ⇒ 要不要現在簽接班人
+② 有人合約即將到期 ⇒ 續約還是放走
+③ 續約要花錢 ⇒ 和補強搶同一份預算
+⇒ 判準過了，畫面才存在。
+
+### 交付
+
+| 項目 | 內容 |
+|---|---|
+| `src/platform/time/offSeasonSession.js`（新增，**58 行實碼**） | `pendingDecisionsOf` / `openSession` / `completeSession` / `sessionOf` / `offSeasonSessionViewOf` |
+| `contract.ensureRosterFloor`（抽出） | **全專案唯一一份名單地板**——合約到期與玩家主動放走共用 |
+| `profileStore` | `releasePlayer`（免費）／`renewPlayerContract`（扣錢）／`completeOffSeason`（免費出口）／`offSeasonSessionView` |
+| `fastForward` | 新增 `STOP_REASONS.offSeason`；休賽期開著時 `planAdvance` 回 0 天 |
+| `advanceWorldDays` | 休賽期開著時**擋住世界時間**並說明原因 |
+| `src/screens/manage/OffSeasonScreen.jsx`（新增） | 六個區塊：年度摘要／退役／合約／補強／預算／完成 |
+| `tools/check_offseason_session_v6.mjs`（新增） | **39/39**，含 2 sentinel |
+| `tools/browser_check_offseason.mjs`（新增） | **18/18**，桌面 + 真 390px |
+
+### 一次年度結束的完整流程
+
+```
+Career Year 結束（advanceDay 跨過邊界）
+  → 年度封存（V5-1）→ age +1（V2）→ 能力漂移（V5-2）
+  → 退休結算 → 退休意向評估（V5-3）→ 合約到期結算（V6-2）→ 名單地板補位
+  → **若有待處理決策** ⇒ 開啟休賽期會期
+  → 世界時間被擋住；首頁出現「休賽期尚未結束：N 項決策待處理」
+  → 玩家進畫面：續約（扣錢）／放走（免費）／補強（走既有 signProspect）
+  → 「完成休賽期」（永遠成功、永遠免費）
+  → 世界時間又走得動，進入下一年度
+```
+
+### 三個系統怎麼互相影響
+
+- **退休 → 合約**：宣布過退役意向的人**不得續約**（他要離開這個運動）。
+  退休結算跑在合約之前 ⇒ 已退役的人不會再被合約結算一次。
+- **合約 → 財務**：續約金 = V4 市場價值 × 0.5，從**同一份俱樂部預算**扣
+  ⇒ 留老將 vs 簽新人 vs 保留資金成為真的取捨。
+- **退休 + 合約 → 補強**：兩者都會造成空缺，而補強要花錢
+  ⇒ 「現在就簽接班人，還是賭他明年延役」有了成本。
+
+### 安全出口
+
+「完成休賽期」**永遠成功、永遠免費**；放走／到期造成人數不足時，
+由**共用的** `ensureRosterFloor` 免費補位。實測連續放走 20 次，人數始終 ≥ 5。
+⇒ 破產、全部放走、什麼都不做，都走得下去。**不得永久卡死**是結構保證。
+
+### Browser smoke（桌面 + 真 390px）
+
+```
+D1 跨過邊界 ⇒ 休賽期自動開啟（待處理 2 項）
+D2 休賽期開著時世界時間被擋住
+D5 六個區塊都在
+F1 續約後資金 $9992萬 → $9913萬（續約 $79萬）
+F2 放走不扣錢 $9913萬 → $9913萬
+F3 補人後 $9913萬 → $9795萬（簽約 $118萬）
+F4 完成後世界時間又走得動（推進 7 天）
+M1–M4 390px：六個區塊都在、無橫向捲動、按鈕都在
+```
+
+### 實作時抓到的三個問題
+
+1. **gate 無窮迴圈**：`while (players.length > 1)` 連續放走——但地板會自動補回 5 人，
+   條件永遠成立。（諷刺的是那正好證明地板有效。）改成有界地連放 20 次。
+2. **browser 佈置順序錯**：先設短合約再推到第 84 天 ⇒ 那些合約在路上就先到期離隊了，
+   到休賽期反而「沒有決策」。改成**先推到邊界前、再設短合約**。
+3. **`NAV` 少一個 route**：首頁按鈕點了沒反應——`sel()` 走 `NAV` 對照表，
+   而 `offSeason` 不在表裡。
+
+### 兩個 gate 的邊界推進（不是回歸）
+
+- `check_time_block_v3` §N1 原本釘住「規劃器不得知道 Off-season」——那是 **V3 當時**的邊界。
+  V6-3 讓休賽期成為第一個真的會擋住時間的停止理由 ⇒ 改成釘住「規劃器仍不**實作**衰退／退休」。
+- `check_offseason_v5` §U2 原本釘住「沒有 Off-season 專屬畫面檔」——那是 **V5-1 當時**的邊界。
+  改成釘住**判準本身**：畫面可以存在，但必須由 `offSeasonSession` 判斷「真的有決策」才進得去。
+
+### Gates
+
+`check_offseason_session_v6` **39/39**｜`browser_check_offseason` **18/18**（皆新增）｜
+`check_contract_v6` 38/38｜`check_cs_ai_lifecycle_v6` 32/32｜`check_retirement_v5` 39/39｜
+`check_age_drift_v5` 48/48｜`check_offseason_v5` 45/45｜`check_time_block_v3` 69/69｜
+`check_player_lifecycle_v4` 44/44｜`check_finance_n3` 40/40｜`check_recruit_o` 41/41｜
+`check_foundation_calibration` 58/58｜`release_gate` 11/11｜
+`regress` 15/15｜`regress2` 8/8｜`dash10`／`flow09` PASS｜`npm run build` ✓ 9.56s
+
+### 沒有做
+
+Coach / Mentor、AI 轉會市場 / bidding、談判 AI、Ranked / ServerTime。
 - URL：`https://rayhuang0323.github.io/ESMO-/`
 - Home → Practice → Mirage → Battle：PASS
 - Canvas：`430×507`
@@ -13897,72 +16031,414 @@ Release checklist 寫的就是旗標，不是網址參數。
 - 以最新 `origin/main` 為基線整合已驗收的 Mirage、Dust II、Inferno environment；只保留必要的 C4B source、verifier、Owner Review 與 handoff 變更。
 - 完成完整 regression、production build、Battle/browser smoke、390px smoke、三圖 map/camera/character visibility 與 180 秒 long-run 後才進行 main push、Pages deploy。
 - 未開始 C5，未變更 gameplay、weapon stats、Competition、Training、Season 或無關 technical debt。
-## CS-C5A Gunfire / Hit / Impact Presentation（2026-08-27）
 
-### 交付
+## Season vNext Release Closure（2026-08-27）— **RELEASED**
 
-- 新增 `fpsGunplayPresentation.js` 與 C5A static/browser verifier；FX 只消費既有 frame snapshot，使用 bounded pools、共享 geometry/material、deterministic hash 與 map lifecycle dispose。
-- fire metadata 只補 presentation family/surface 欄位；character hit 使用 authoritative hp edge，death 使用 authoritative alive → dead edge；沒有修改 combat state、damage、fire rate、weapon stats、gameplay recoil 或 animation authority。
-- Owner Review 全中文，展示五類武器、四種材質 response、三張地圖 Battle runtime、角色 hit 與 death evidence。
+`season/vnext` 合併 `origin/main`（CS-C2C/C3/C4B 十個 commit）後整合進 main。
 
-### 驗證
+### 合併：零程式碼重疊
 
-- Static：Renderer 24/24、CS-A2 10/10、C2A 13/13、C2B 14/14、C2C 9/9、C3 18/18、C4A 13/13、C4B 20/20、Camera 8/8、RAF 7/7、StableCanvas 5/5、CS23 28/28、C5A 11/11 PASS。
-- Production build：2743 modules PASS；三圖 C5A Battle runtime 3/3 PASS；390px smoke 3/3 PASS；dist preview smoke PASS。
-- 180 秒：1,100 geometry samples、234 fIdx transitions、geometry shift 0、stale mismatch 0、duplicate RAF/render 0、rapid recovery 0、browser errors 0。
+main 只動 `src/battle/fps/*`（CS 角色美術與地圖環境），Season vNext 動
+platform / progress / data / screens ⇒ **交集為空**。
 
-### 邊界決策
+四份 handoff 文件衝突。第一次看起來比實際嚴重得多：git 對 04_Roadmap 報**整檔衝突**，
+因為我方是 **CRLF**、main 是 **LF**，每一行都被判定為不同。
+把換行符正規化後再跑三方合併 ⇒ 只剩**每檔 1 個真實衝突**（雙方各自在檔尾追加）。
+兩邊都保留、只移除標記，事後逐檔對兩個 parent 比對：**零行遺失**。
 
-目前 authoritative Battle impact event 是角色命中；concrete／metal／wood／ground 以同一 presentation surface catalogue 在隔離 Owner Review showcase 驗證。由於本輪禁止修改 collision／gameplay authority，未虛構環境命中事件。
-## Sprint CS-C5A.1｜Gunfeel & Combat Responsiveness（2026-08-27）
+一個差異值得指名而非隱藏：main 把標題「Season vNext 實作邊界（一律不做）」
+改寫為「Season vNext（尚未規劃，本輪一律不實作）」。段落本體逐字相同且都在，
+我方保留自己的標題文字。該標題無論哪個版本現在都已過時——這次 release 就是它的反例，
+已在 Roadmap 標明取代關係。
 
-- **Audit**：確認 combat 為 authoritative hitscan；延遲來自 2,000ms simulation decision snapshot 的 pair queue 加上首次射擊隨機 gate。確認 `Hit_Chest` clip 含可能改寫 rendered model 的 root／hips／pelvis position tracks；確認 C5A FX 是 bounded presentation layer，音效可在不改 combat authority 下程序化產生。
-- **Implementation**：加入 reaction episode telemetry 與 reaction model（既有 rxn／focus／distance／weapon family），新鮮清楚 LoS pair 優先；follow-up fire 保留原 aggression gate。移除 root-motion position tracks；tracer／muzzle 改成短生命週期 hitscan cue；加入 deterministic family recoil、短 hit latch timing、五類 bounded Web Audio profile 與 distance attenuation。
-- **Evidence**：三圖 median `276 / 250 / 267ms`；Hit_Chest drift 與 authoritative drift 全 `0`；audio profile `5/5`；C5A.1 static `15/15`；C5A legacy `11/11`；Renderer `24/24`、CS-A2 `10/10`、C2A `13/13`、C2B `14/14`、C2C `9/9`、C3 `18/18`、C4A `13/13`、C4B `20/20`、Camera `8/8`、RAF `7/7`、StableCanvas `5/5`、CS23 `28/28`。
-- **Runtime**：三圖 desktop 與 390px Battle smoke `3/3 PASS`，開火／命中／impact／death 均有 runtime evidence；production build `2743 modules PASS`；production Home → Practice → Mirage → Battle smoke PASS；180 秒 long-run 全部 P0 counters PASS。
-- **狀態**：`C5A1_GUNFEEL_READY_FOR_OWNER_ACCEPTANCE`。Owner acceptance 尚未完成；不 merge、push、deploy，不開始 C5B。
+### Release Gate
 
-## Sprint CS-C5A.2｜Combat Audit（2026-08-27）
+Season vNext V0A–V6 十五支 **663 項全綠**；Competition Q1–Q6、Release Gate 11/11、
+CS / Training / Progress / Finance、regress 15/15、regress2 8/8、
+三支 browser smoke（21/21・18/18・23/23）、production build 全部通過。
 
-- **Audit / root cause**：原本 first-shot 延遲由 2,000ms decision snapshot、一次一對 pair 配對與首次隨機 gate 疊加；後續 cadence 也被 snapshot loop 拖慢。另確認同一角色缺少穩定 target lock，會在可見 opponent pair 間輪換。movement 第一版誤把 buy phase spawn placement 當 teleport；排除 setup placement 後，authoritative route → collision → position 無穿牆證據。槍聲則因程序音不可信，且 suspended AudioContext 的 currentTime throttle 會誤擋後續 shot。
-- **修法**：simulation step 降為 500ms，ready pair 優先並以 sub-frame window 記錄 permission/shot；每個 attacker→target 用 `fireClock` 依單一 weapon profile `rof` 排程，加入 per-actor target lock 與可歸因 focus-fire。保留既有 route/HOLD/EXECUTE/RETAKE/ANCHOR/撤退分支。Hit root motion 仍由 C5A.1 的 root/hips/pelvis track filtering 隔離。槍聲改用五個 CC0 實錄 samples，以既有 audio boundary 做 attack/body/crack/tail 分層、距離衰減與 monotonic throttle。
-- **Evidence**：三圖 first-shot median/p90：Mirage `254/736ms`、Dust II `242/310ms`、Inferno `236/242ms`；reaction chain 全部有序。三圖 movement `blocked=0 / teleport=0 / wall crossing=0`。Battle audio recorded events：Pistol `4`、SMG `1`、Rifle `5`、Sniper `4`、Shotgun `3`；資產 `5/5` decode，loadErrors `0`。來源 ledger：`public/audio/cs/c5a2/SOURCES.md`。
-- **Gates**：Renderer `24/24`、CS-A2 `10/10`、C2A `13/13`、C2B `14/14`、C2C `9/9`、C3 `18/18`、C4A `13/13`、C4B `20/20`、Camera `8/8`、RAF `7/7`、StableCanvas `5/5`、CS23 `28/28`、C5A `11/11`、C5A.1 `15/15`、C5A.2 `21/21`；production build `2743 modules` PASS；三圖 Battle PASS；390×844 viewport audit/P0 smoke PASS；180 秒 P0 long-run PASS（geometry shift/stale fIdx/duplicate RAF-render/rapid recovery/browser errors 全 0）。
-- **狀態**：`C5A2_COMBAT_BEHAVIOUR_READY_FOR_OWNER_ACCEPTANCE`。Owner Review：`http://127.0.0.1:5470/ESMO-/artifacts/cs-c5a2/owner-review/owner-review.html`。未 merge、未 push、未 deploy，未開始 C5B。
+**兩次假紅燈已查明**：`career_final` 的 undici 錯誤來自背景 verifier 搶 CDP port
+（單獨重跑 12/12、乾淨重跑整體 11/11）；`progress25` 第 16 項是巢狀子行程逾時
+（`tactic24` 直接跑 29/29 exit 0，`progress25` 重跑 exit 0）。
+⇒ **無 Season vNext 回歸。**
 
-## Sprint CS-C5A.2｜Final Combat Corrections（2026-08-28）
+### TD-37 依既有規則處理，不擴大
 
-### Stable main 對照與 root cause
+`check_cs_team_identity_consumers_r48` 卡在 `R48_LEGACY_R47_SHA`，
+雜湊對象是 FPS 引擎檔。Season vNext 對 `src/battle/fps/` 的改動數是 **0**；
+main 的 CS 線改了 **5** 個檔。⇒ 與本次 release 無關，照既有技術債規則保留。
 
-- `Death floating`：C5A.x regression。death clip 的 hips/pelvis translation 必須保留，但 rendered corpse 缺少以 skinned bounds 對 authoritative ground Y=0 的接地修正。
-- `2.4x／timer／movement／projectile 慢`：C5A.x regression。RAF 把 wall delta 先 clamp 到 50ms 再餵 playback clock，掉幀時直接丟失 simulation time；timer 卡住、movement 慢與固定 4 秒 projectile 因此呈現共同 clock 症狀。
-- `Navigation/collision`：原設計不足加 C5A.x regression。原 collision 只有 walls/cars，crate／major cover 不在 obstacle authority；初版 audit 又誤把可走的 platform 當 solid，且 planner clearance 與 collision radius 不一致。
-- `Locomotion`：presentation bug。動畫由 tactical state／未正規化 displacement 推斷，沒有以 authoritative units/sec 分 idle/walk/run。
-- `Building scale`：presentation bug。建築主體比例正常，roof helper 卻被放在 ground Y，造成房屋看似低於角色。
-- `C2C limbs`：pre-existing design issue。原本低段數單一 limb shell 與 box joints 造成方柱感；rig/skeleton/clip 本身不需更換。
-- `Gunfire cadence/audio`：C5A.x regression。500ms simulation snapshot 每 tick 最多送一顆 shot，且舊 recorded blast 被分層 filter；kill event square-wave tone 又疊在命中那一發。背景 countdown/bomb beep 等 oscillator 也造成 Owner 聽到滴滴聲。
+---
 
-### 修正與量測
+---
 
-- Rifle/SMG 使用 single weapon authority 的 sub-frame schedule；Rifle 三圖 median `100ms`，SMG `71/62/63ms`（修前約 `500ms`）。Pistol `single, >=500ms`，Sniper `single, >=900ms`；shot→muzzle→tracer→audio 1:1。
-- Navigation obstacle 包含 building/crate/major cover；visibility route 只 normalize waypoint，不 teleport player。Mirage replan `1/1`、Dust2 `13/13`（12 resolved＋1 round-end）、Inferno `95/95`；crossing/blocked/teleport 全 0。
-- Clock 三圖：1x `1.006/1.002/1.095`；2.4x `2.406/2.366/2.334`。Projectile profile `0.55–2.4s`，實際 snapshot travel `0.5–1.5s`，取代固定 4 秒。
-- 角色 limbs 使用 12-sided tapered cylinders 與 rounded elbow/knee，skeleton mutation=false。Building 最低 3.35m／player 1.8m，roof units 回到屋頂。
-- Audio 換成 [The Free Firearm Sound Library](https://opengameart.org/content/the-free-firearm-sound-library) CC0 prepared recordings；Pistol 為 1911 .45 `A_42P.wav`。每發只播一個 direct buffer，沒有 filter layer、noise fallback 或 oscillator；程序 kill tone 與全部 background beep/tone dispatch 已移除。
-- Hit reaction presentation window 由 C5A.x 的 `0.22s` 修為 `0.42s`；C2C runtime 證明 Hit_Chest time/timer 前進並正常退出。`check_cs_c5a1_gunfeel.mjs` 的 exact-value assertion 同步由 0.22 更新為 0.42，原因是舊值與既有 runtime hit gate 衝突；gate 未刪除。`check_cs_c5a2_combat_audit.mjs` 由 21 增為 23 checks，新增 no-synth/no-overlay assertions。
+## Release Closure 補記：正式站 smoke（2026-08-27）
 
-### Final gates / boundary
+Release 本身已於 `e37abe5` 完成並上線，這一節補記**上線後的正式站 smoke**。
 
-- Static：MR12 `36/36`、A2 `10/10`、Camera `8/8`、Renderer `24/24`、StableCanvas `5/5`、RAF `7/7`、C2A `13/13`、C2B `14/14`、C2C `9/9`、C3 `18/18`、C4A `13/13`、C4B `20/20`、C5A.1 `17/17`、C5A `11/11`、C5A.2 audit `23/23`、final combat `38/38`。
-- Browser：P0 completion 4/4、C2C 10/10、C3 PASS、C4B 3/3、C5A 3/3、三圖 clock/audio PASS、390×844 三圖 smoke PASS。180 秒：`1782` samples、358 fIdx transitions、geometry shifts 0、stale/duplicate 0、rapid recovery 0、errors 0。Build PASS。
-- 狀態：`C5A2_FINAL_COMBAT_READY_FOR_OWNER_ACCEPTANCE`。未 merge、未 push、未 deploy；不開始 C5B 或其他任務。
+### 工具：`tools/browser_check_prod_season_vnext.mjs`
 
-### Final combat 補充稽核（2026-08-28）
+直接打正式站 `https://rayhuang0323.github.io/ESMO-/`。與其他 browser gate 不同：
 
-- 最後三圖 verifier 發現 semi-auto cooldown 仍可因切換 target 或 Glock→Scout 換槍而沿用較短 ready time；production 已改為 shooter-scoped cadence，並以當前 weapon interval 計算 weapon-swap 首發下限。
-- 最終 cadence：Mirage/Dust II/Inferno Rifle median `111/100/111ms`；SMG 有樣本地圖 `66/67ms`；Pistol min `500ms`；Sniper min `900ms`。三圖 shot/muzzle/tracer/audio event id 1:1，synthesized tone starts `0`。
-- 最終 reaction median `279/280/257ms`；navigation crossing/blocked/teleport 全 `0`，stuck detections `2/19/125` 全 resolved 或 round-end 中止。Clock 1x `1.003/1.001/1.105`，2.4x `2.363/2.340/2.349`。
-- Static final combat `39/39 PASS`、C5A Browser `3/3 PASS`、Owner Review 三圖 PASS、build PASS。既有 390px 三圖 smoke 與 180 秒 long-run evidence 維持 PASS。
+- **正式站只能走 UI ＋ localStorage**（TD-31）。`RESOLVE_APP_MODULES` 匯入 `/src/...`，
+  那只在 dev server 存在，打包後的 bundle 沒有那些路徑。所以這一支不讀 Store、
+  不呼叫 action，一律用 `data-testid` 點擊。
+- 這也是刻意的：正式站要驗的是「玩家真的按得到」，不是「函式回傳正確」。
+
+### 結果：30/30 全綠
+
+| 區塊 | 內容 |
+|---|---|
+| §H 首頁 | 無白屏、世界時間卡、三個玩法入口、下一站文字 |
+| §T 世界時間 | 推進 1 天（8→9）、推進 7 天（9→16）、前往下一站（16→44，推 28 天）|
+| §Y 跨年度 | 佈置成功（day 79 改短 2 份合約＋補資金）、推過第 84 天、年度封存「第 1 生涯年度已封存（當時 5 人．平均 22 歲）」、休賽期開出「2 項決策待處理」|
+| §O 休賽期 | 進得去、六區塊 6/6、續約＋補強真的扣錢（$9992萬 → $9913萬 → $9795萬）、完成後回首頁、世界時間又走得動（85→92 天）|
+| §P 選手 | 生涯分頁到得了、生涯階段「成長期」、市場價值「$157.9萬」、無白屏、名單頁徽章也有值 |
+| §N 玩法入口 | MOBA 662 字／CS 475 字／賽事 676 字，皆無白屏 |
+| §M 手機 390px | viewport 生效、無白屏、看得到世界時間卡、無橫向捲動、底部四個分頁 4/4 |
+| §C Console | 無 page-origin uncaught error |
+
+### 過程中踩到的三個坑（都是腳本問題，不是產品缺陷）
+
+寫在這裡是因為**下次要在正式站佈置情境，一定會再踩一次**。
+
+1. **正式站首次載入時 localStorage 是全空的。** 存檔要推進過天數才寫得出來，
+   所以「一開場就 patch 合約」是 no-op——這是第一版量不到休賽期的真正原因。
+   正確順序：先用「推進 7 天」爬到第 78 天左右 → 才 patch → reload → 再跨年。
+   （順序反了合約會在路上就到期，休賽期反而沒東西可決策；
+   `browser_check_offseason` 第一版栽過同一個坑，見該檔 `SETUP` 註解。）
+
+2. **`finance.funds` 的單位是「元」不是「萬」。** `OffSeasonScreen.jsx:118` 的
+   afford 判定是 `cost * 10000 <= funds`。開局 $35萬 買不起 ~$79萬 的續約報價，
+   按鈕會是 `disabled`——**那是正確行為**。腳本現在會把 `disabled` 一起記下來，
+   紅的時候才分得出「壞了」還是「錢不夠」。
+
+3. **整條導航鏈都比文字，一斷就全紅、還看不出斷在哪。** 現在 §P 每一跳都留痕跡
+   （`roster` / `opened` / `tabs` / `panel`），紅的時候直接指出是哪一跳掉的。
+
+### 技術債
+
+- **TD-38（新）**：`RosterScreen.jsx:363`「📋 開啟完整選手檔案」缺 `data-testid`，
+  讓「名單 → 選手詳情」這條主要路徑在瀏覽器 gate 裡只能靠比文字。
+  建議補上 `data-testid="roster-open-detail"`。**本輪不改**——Release 已上線，
+  不為了測試便利在 release 後動 `src/`。
+
+### 沿用的既有 waiver
+
+- **TD-37 / `check_cs_team_identity_consumers_r48`**：既有已知紅燈，與 Season vNext 無關，
+  照既有 waiver 處理，本次 release 未擴大處理。
+
+---
+
+## V7A 一般對戰收口 ＋ V7B Retention Foundation v1（2026-08-27）
+
+Season vNext 已於 `e37abe5` 上線（見上一節）。本輪做兩件事：把「一般對戰」這一層
+的產品契約收乾淨，然後立起 Retention v1。**不 push、不 deploy。**
+
+### 一、V7A：一般對戰收口（GENERAL_MATCH_CLOSED）
+
+#### 先做 Audit，不先改程式
+
+規格說「如果一般對戰現況本來就符合，不要為了有做事而改程式」。所以先實測。
+結論：**邏輯側本來就符合，唯一的真缺陷在快速練習那一側**。
+
+| 規格要求 | 實測結果 |
+|---|---|
+| 少量實戰成長 | ✅ competitive base 1.0＜official 3.0；實測 XP +120 |
+| 合理的一般生涯收益 | ✅ 實測錢 +33 萬、粉絲 +173 |
+| 每日容量限制 | ✅ 3 場／日，排隊時檢查、結算時扣格，跨日推導歸零 |
+| 不影響正式聯賽排名 | ✅ 賽程回寫唯一呼叫點被 `isFixtureSession` 守住 |
+| 不影響巡迴積分／晉級／冠軍 | ✅ 三者都只由賽事結果推導，沒有比賽來源的寫入路徑 |
+| 不影響正式賽季獎金 | ✅ 名次獎金在 `economy/competitionAward.js`，與比賽結算是兩條路 |
+| 不影響正式榮譽 | ✅ `honors.js` 只吃賽事決賽，不吃 `MatchResult` |
+| MOBA / CS 共用同一模式契約 | ✅ 兩支 adapter 都走 `matchSourceFromOrigin` |
+
+#### 找到並修掉的真缺陷：快速練習不是「零永久影響」
+
+`applyMatchProgress` 的 `appendFormEntry` 原本是**無條件**的
+⇒ 一場快速練習的勝負會寫進 `economy.formLog`
+⇒ `recentForm()` ⇒ 週結算的**贊助績效獎金**
+⇒ **練習其實有永久金錢影響**，只是繞了一週才付款。
+
+V0D 把練習的錢／粉絲／XP 都歸了零，唯獨漏掉這條**延後生效**的路。
+實測（`tools/` 外的一次性 probe）：練習結算後 `formLog.length === 1`。
+
+修法：在**唯一結算入口**用 `isPracticeSource` 擋掉，一處。
+⚠ `unknown`（舊存檔／debug harness）**照舊記錄**——排除它等於讓資料遺失
+變成看不見的收入懲罰，那是 TD-36 的形狀。
+實測修後：練習 `formLog.length === 0`、一般對戰仍是 1。
+
+#### UI 名稱與說明
+
+改動前，**一般對戰在整個 UI 裡沒有名字**：底部只寫「確認陣容並開始配對」，
+沒有一處說這一場會給成長與收益但不計入正式賽季，也沒有一處顯示今天還剩幾場
+——每日容量只有在「已經打滿」時以錯誤訊息現身。
+
+- 三層的玩家可見名稱與說明收進 `progress/matchSource.js`
+  （`MATCH_TIER_LABELS` ＋ `matchTierOf`），**與分類同源**，MOBA / CS 共用一份
+- 賽前頁加上層級橫幅（`prep-tier-banner`）：層級名稱／一句話契約／今日 N/3
+- 帳本裡一般對戰那筆錢改名為「MOBA 一般對戰勝利收入」
+  ——「獎金」在本專案專指賽季名次獎金，混用會讓玩家以為拿到了賽事獎金
+
+#### 瀏覽器實測抓到的第二個真缺陷
+
+**打完任何一場競技之後，「快速練習」按鈕就消失了。**
+`canStartPractice` 只把 `cancelled` / `expired` 當閒置，但打完一場之後房間會停在
+`confirmed`（房間任務確實完成了）⇒ 條件永遠不成立，要先按「重新配對」才回得來。
+這正是 `useMatchFlow` 註解裡記過的同一個坑換了一個殘留狀態。
+修法：**場次已走到終局時**，殘留的 `confirmed` 房間視為閒置。
+順手把整條規則從 hook 搬進 `matchPrepAction.canStartPracticeFrom`（純函式）——
+它已經踩過兩次「什麼叫閒置」的坑，不該每次都要起一個 dev server 才驗得到。
+現在由 `check_general_match_v7a` §U8–U15 以**單元**方式釘死（8 條）。
+
+### 二、V7B：Retention Foundation v1
+
+完整設計見 **`docs/design/Retention_v1_設計.md`**。摘要：
+
+- **三個尺度**：今日 3 個（10–20 分鐘）／本週 3 個（正常玩就完成大部分）／
+  賽季 4 個（**都不需要冠軍**）
+- **時間綁世界時間，不是真實時間**。沒有 ServerTime，也不會有——
+  真實時間會讓離線流失進度、讓掛機變成玩法。綁世界時間之後「今天的目標
+  只有你自己推得動」⇒ 沒有時限焦慮，也刷不動（推一天要付老化與合約的代價）
+- **獎勵只有俱樂部點數**，出口是**純展示**的俱樂部聲望等級。
+  日常目標不得產生永久戰力（否則每天點一點會變成最有效率的養成路徑）
+- **推導不落盤**：目標清單是 `(尺度前綴, teamId)` 的決定性函式，存檔只有
+  點數／計數器／去重集合／領取紀錄。所有 key 帶尺度前綴 ⇒ 過期自動失效
+- **寫入點只有既有的三個**：`applyMatchProgress`（唯一結算入口）／
+  `assignTraining`／`setScouted`。沒有第二條管線
+- **不做逐項紅點**：首頁只有一個聚合數字
+
+新檔：`src/platform/retention/retentionObjectives.js`、`retentionState.js`、
+`src/screens/manage/ObjectivesScreen.jsx`。
+
+#### 瀏覽器實測抓到的第三個缺口
+
+**手機版進不去目標頁。** 手機首頁不渲染 `Utility`，所以桌面那個磚在 390px
+根本不存在。已補進底部「更多」sheet，並在有東西可領時於「還需要處理」多一張卡。
+
+### 三、驗證
+
+| 項目 | 結果 |
+|---|---|
+| `check_general_match_v7a`（新） | 55/55 |
+| `check_retention_v7b`（新） | 58/58 |
+| `browser_check_general_match_and_objectives`（新） | **28/30**（最後一次完整跑完的結果，見下方）|
+| `check_match_source_v0c` / `check_practice_match_v0d` / `check_pcgm_v0a` | 全綠 |
+| `check_progress25` / `check_dash10` / `check_flow09` | 全綠 |
+| `check_offseason_session_v6` / `check_time_block_v3` | 全綠 |
+| `regress.mjs` / `regress2.mjs` | exit 0；節奏門檻 8/8 |
+| `npm run build` | ⚠ **本輪最後一版沒跑成功**（見下方「未驗證項」）|
+
+#### ⚠ 未驗證項（本機記憶體不足，**不是**改動造成的）
+
+這台機器在本輪後半段可用實體記憶體掉到 1.3–1.9 GB（另一個 session 正在
+`worktrees/cs-c5a-gunplay-impact` 跑東西，加上使用者的 Chrome 佔 4.4 GB）。
+於是有兩項**跑不完**，必須由後續 session 或使用者補跑：
+
+| 未驗證項 | 症狀 | 補跑指令 |
+|---|---|---|
+| `npm run build` 最終版 | 連續 7 次 `fatal error: out of memory` / `exit=134` | `npm run build` |
+| `browser_check_general_match_and_objectives` 最終版 | Vite `exit=134`；或第一個 `Runtime.evaluate` 卡 14 分鐘逾時 | `node tools/browser_check_general_match_and_objectives.mjs` |
+
+**目前有的證據（不等於 build 綠，但不是零）**：
+
+1. `npm run build` 在本輪**前半段成功三次**（22.65s / 12.01s / 12.38s）。
+   最後一次成功已涵蓋除了「`canStartPracticeFrom` 抽出成純函式」以外的所有 `src/` 改動。
+2. 11 個改過的 `src/` 檔**逐檔通過 `esbuild.transformSync`**（JSX 與 JS 都測）。
+3. `useMatchFlow.js` / `matchPrepAction.js` 在 Node 裡**以真的 ES module 載入成功**；
+   `check_general_match_v7a` §U8–U15 直接 import 並**執行** `canStartPracticeFrom`。
+4. `browser_check_general_match_and_objectives` 最後一次跑完是 **28/30**，
+   兩條紅正是 D9/D10（練習按鈕消失）——**那個缺陷隨後已修**，並改由 §U8–U15
+   以單元方式驗證。修完之後的確認跑因記憶體不足未能完成。
+
+⚠ 前半段也出現過同樣成因的假紅（`WebAssembly.Memory.grow` 失敗、Vite exit=134），
+乾淨重跑即通過。**判讀規則：連續兩次同樣的紅才當成真訊號。**
+
+### 四、技術債
+
+- **TD-42（新）**：Retention v1 的俱樂部點數**沒有兌換出口**（只有純展示的聲望等級）。
+  兌換球探情報／青訓名額／商業解鎖要接三個既有系統，各自是獨立產品決定 ⇒ v2。
+- **TD-43（新）**：週目標少一個「不同戰術」。`MatchProgressTransaction.metadata`
+  是白名單，要加 `tacticId` 得動被凍結的契約 ⇒ 另開一輪。
+- **TD-38**（沿用）：`RosterScreen.jsx:363` 缺 `data-testid`，本輪同樣不動。
+- **TD-37**（沿用 waiver）：`check_cs_team_identity_consumers_r48`，與本輪無關。
+
+### 五、狀態
+
+**GENERAL_MATCH_CLOSED = YES**　**RETENTION_V1 = SHIPPED（未 push、未部署）**
+
+### 六、補跑驗證（2026-08-27，本機記憶體釋放後）
+
+上面「三、驗證」表裡的兩個 ⚠ 未驗證項，已在記憶體釋放後於同一個 commit（`f98764d`，
+工作區乾淨、無新改動）補跑完成：
+
+| 補跑項 | 結果 |
+|---|---|
+| `npm run build` | ✅ `✓ built in 14.68s`（2760 modules transformed） |
+| `browser_check_general_match_and_objectives` | ✅ **30 / 30**（含先前紅的 D9／D10，以及 C1 無未捕捉錯誤） |
+
+⇒ 「本機記憶體不足」的假紅判讀確認成立：程式碼本身沒有問題，兩項紅都是環境造成。
+
+**GENERAL_MATCH_CLOSED = YES**　**RETENTION_V1_COMPLETE = YES**
+
+仍**未 push、未部署**；正式站驗收仍待另開一輪。
+
+### 七、正式站 Release（2026-08-28）
+
+**V7A = RELEASED　V7B Retention v1 = RELEASED**
+
+| | |
+|---|---|
+| 整合方式 | fast-forward（`origin/main` 停在 `516613f`，未前進 ⇒ 無 merge commit、無衝突） |
+| production SHA | `5f92343` |
+| Actions run | `33090060630`　build ✅／deploy ✅ |
+| 正式站 | <https://rayhuang0323.github.io/ESMO-/> |
+| bundle 核對 | 線上 `assets/index-CMdirWWl.js` 與本機 build 的 sha256 **逐位元組相同** |
+
+⚠ local `main` 分支被 `ESMO-worktrees/codex-cs-p0-main-release` 佔用（停在舊的 `1a14288`），
+所以整合走 `git push origin season/vnext:main`，沒有動那個 worktree。它的 `main` 仍是舊的。
+
+#### Release gate（推之前，全在 `5f92343` 上跑）
+
+| Gate | 結果 |
+|---|---|
+| `check_general_match_v7a` | 55/55 |
+| `check_retention_v7b` | 58/58 |
+| `check_match_source_v0c` | 21/21 |
+| `check_practice_match_v0d` | 70/70 |
+| `check_pcgm_v0a` | 24/24 |
+| `check_progress25` / `check_dash10` / `check_flow09` | exit 0 |
+| `check_offseason_session_v6` | 39/39 |
+| `check_time_block_v3` | exit 0 |
+| `regress.mjs` | exit 0（結束率 15/15、中位 22.5 分） |
+| `regress2.mjs` | 節奏門檻 8/8 |
+| `npm run build` | ✅ `built in 11.89s` |
+
+#### 正式站 smoke — **41/41**（新 gate）
+
+新增 `tools/browser_check_prod_v7_release.mjs`。**dev gate 不能直接拿來跑正式站**：
+`browser_check_general_match_and_objectives` 靠 `RESOLVE_APP_MODULES` 匯入 `/src/...`
+呼叫 Store action 推流程，正式站是打包後的 bundle，沒有那些路徑（TD-31）。
+這一支改成**全部點 UI**——包含 Ban/Pick 一個一個選英雄、按「快速完成」——
+一場約 1–2 分鐘，兩場（一般對戰＋快速練習）跑完整支約 12 分鐘。
+
+涵蓋：首頁無白屏／三個玩法入口／一般對戰名稱與今日 N/3／打得完且**有收益**
+（$120萬→$128萬、粉絲 +45、選手數值有變、交易 0→1）／容量 0/3→1/3／
+快速練習打得完且**零永久收益**（資金・財務・粉絲・聲望・formLog・贊助・選手數值・戰績・容量九項逐一比對存檔）／
+可重複進入／目標頁日 3 週 3 季 4／手動領取 ◆0→◆10 且重整後還在／
+MOBA・CS・賽事入口無白屏／390px 無橫向捲動／console 無 page-origin uncaught error。
+
+#### ⚠ 寫這支 gate 時吃到的三個假紅（記下來，免得下次重踩）
+
+1. **Ban/Pick 是輪流制**。第一版 idle 等 1.8 秒、budget 只有 90 步，
+   結果額度全花在等 AI，英雄池只從 100 掉到 88 就用完 ⇒ D6 假紅。
+2. **選角之後還有兩關**：分路確認頁（`confirm-draft`，有 testid）與
+   **戰術頁**（「開始載入 →」，**沒有** testid）。第一版漏了戰術頁，
+   整支停在那裡空轉 90 秒然後 STUCK。
+3. **P7 挑錯按鈕**。重複進入練習走的是**主按鈕** `repractice`，不是次要的
+   `prep-start-practice`——後者依 `canStartPracticeFrom` 只在「閒置且不在練習中」時出現。
+
+⚠ 另外：`processedMatchTransactions` 不保證是陣列，寫死 `.length` 會兩邊都拿到
+`undefined`，比較永遠不成立、紅得沒有資訊。
+
+### 八、技術債
+
+- **TD-44（新，已登錄到 `docs/09_技術債務清單.md`）**：打完一場快速練習之後，
+  MOBA **與 CS** 的賽前頁都永久停在 `tier=practice`，主按鈕只剩「重新開始快速練習」，
+  一般對戰的名稱與今日容量再也看不到；重整、推 1 天、再推 7 天都清不掉。
+  根因是 `matchPracticeContext().inPractice` 沒有像 `canStartPracticeFrom()` 那樣
+  把**終局場次**視為閒置。**`4652c00`（2026-08-25）就存在，早於本次 release 的基準
+  `516613f`** ⇒ 不是本輪回歸；V7A 的層級橫幅只是讓它看得見。
+  正式站 smoke 以 **W1** 印出、不計分。
+- **TD-42／TD-43**（本輪第六節登記的那兩個）維持原樣，不擴大處理、不阻擋 release。
+  ⚠ 其中 TD-42 與 `docs/09_技術債務清單.md` 既有的 TD-42 撞號，已在該檔加註，
+  留待下一輪整理技術債時重編。
+- **TD-37／TD-38** 沿用既有處理，本輪不動。
+
+## TD-44 修正（2026-08-28）— **TD-44 = CLOSED**
+
+production `b1830b3`｜Actions run build ✅／deploy ✅｜線上 bundle 與本機 build 同一個 hash。
+**本輪只修 TD-44，沒有開任何新功能。**
+
+### 一、根因
+
+`matchPracticeContext().inPractice` 只看 `origin.kind`，**沒有算終局**。
+練習打完之後殘留 `session=completed/practice` ＋ `room=confirmed/practice`
+⇒ 「還在練習中」永遠為真 ⇒ MOBA 與 CS 的賽前頁都停在 practice 層級。
+
+同一個問題 `canStartPracticeFrom()` 早就算對了（它知道「場次終局時，殘留的
+`confirmed` 房間要視為閒置」），只是那份判定沒有被共用。
+
+### 二、共用 predicate 怎麼收斂
+
+新增 `src/platform/contracts/matchFlowIdle.js` → `matchFlowIdleFrom({roomState, sessionState})`
+回傳 `{sessionOver, sessionIdle, roomIdle, idle}`，**兩邊共用**：
+
+- `matchPrepAction.canStartPracticeFrom()`：三行自算的終局改成呼叫共用判定（行為不變）。
+- `profileStore.matchPracticeContext()`：用同一份算出 `activePractice`。
+
+⚠ 房間刻意**不套** `ROOM_TERMINAL`——那份清單把 `confirmed` 也算終局，
+但簽場次的那一刻流程正要進場，絕不是閒置。房間自己只認 `cancelled`／`expired`；
+殘留的 `confirmed` 要不要算閒置，**綁在場次上**。
+
+### 三、**為什麼不能只改一個旗標**（本輪最重要的判斷）
+
+`inPractice` 有兩類需求相反的消費者：
+
+| 消費者 | 問的問題 | 讀取時機 |
+|---|---|---|
+| `battle/useBattleFeed.js`、`progress/settleCsMatch.js` | 這一場的**來源**是不是練習 | ⚠ `settleCsMatch` 第 4 步在 `settleMatchThroughSession` **之後**——那時場次已 `completed` |
+| 賽前頁（橫幅／主按鈕退路／次要按鈕） | **現在**還在練習流程裡嗎 | 隨時 |
+
+⇒ 把終局判定直接加進 `inPractice`，**練習賽會立刻開始寫 CS 戰績**，
+直接打破「快速練習零永久影響」。所以拆成兩個欄位：
+`inPractice`（原意，不動）＋ `activePractice`（新，賽前頁用）。
+gate §A 四條就是在守這件事（結算端不得改讀 `activePractice`）。
+
+⚠ 另一個守衛：`activePractice` 只看**現役流程**（場次優先於房間）的來源，
+**不看** `practiceAssignment`——沒有任何流程會清掉它，算進去的話，玩家按
+「重新配對」開一場真的競技比賽時橫幅會寫「快速練習」，那是比 TD-44
+更危險的**反向**誤導（以為在測試，其實在打正式的）。gate §C8 釘住。
+
+### 四、驗證
+
+| 項目 | 結果 |
+|---|---|
+| `check_td44_practice_exit`（新） | **46/46** |
+| `browser_check_td44_practice_exit`（新，MOBA ＋ CS） | **33/33** |
+| `check_general_match_v7a` | 55/55（未動） |
+| `check_retention_v7b` | 58/58（未動） |
+| `check_practice_match_v0d` | 70/70（未動） |
+| `check_match_source_v0c` / `check_pcgm_v0a` | 21/21／24/24 |
+| `check_progress25`／`dash10`／`flow09`／`offseason_session_v6`／`time_block_v3`／`cs23` | exit 0 |
+| `regress` / `regress2` | exit 0 |
+| `browser_check_general_match_and_objectives` | 30/30（未動） |
+| `npm run build` | ✅ `built in 13.21s` |
+| **正式站 smoke** `browser_check_prod_v7_release` | **44/44**（原 41 ＋ TD-44 的 P7–P10） |
+
+**瀏覽器實測（MOBA 與 CS 各走一遍完整路徑）**：
+一般對戰頁（一般對戰｜今日 0/3）→ 快速練習 → 完成（`session=completed/practice`）
+→ 回賽前頁 → **名稱回到「一般對戰」** → **容量回到 0/3** → 主按鈕回到「重新配對」
+→ **仍能再次開始快速練習** → reload 仍正常 → 推 1 天仍正常
+→ 再開一場練習層級**確實回到 practice**（沒有修過頭）。
+
+### 五、mutation sentinel
+
+- **M-A（真 sentinel）**：把共用判定的 `|| sessionOver` 拿掉，寫成暫存模組再 import 回來
+  ⇒ §I9（completed ＋ confirmed 應為閒置）真的變成 `false`。不是只證明「字串換得掉」。
+- **M-B**：把橫幅改回讀 `inPractice` ⇒ §U1 的正則不再命中。
+- **M-C**：把 `practiceAssignment` 算進現役流程 ⇒ §C8 的反向誤導守衛抓得到。
+
+### 六、寫 gate 時吃到的兩個假紅
+
+1. `settleMatchThroughSession({transaction: null})` 會直接以 `no_transaction` 退回，
+   場次永遠停在 `launched` ⇒ A3 假紅。交易一律由**該模式自己的 adapter** 產生。
+2. 樣板字串裡的註解**不得出現反引號**——會提早結束字串，整支 SyntaxError。
+
+### 七、本輪未動
+
+一般對戰收益與容量、快速練習零永久影響、正式季賽、match flow 整體結構，全部沒動。
+TD-42／TD-43 維持原樣（含既有的 TD-42 撞號，仍留待下一輪重編）。
 
 ### Sprint CS-C5A.2｜Recovery audit（2026-08-28）
 

@@ -16,6 +16,10 @@ import { useDashboardMotion } from "./dashboard/useDashboardMotion.js";
 import { useMobileSheetMotion } from "./dashboard/useMobileSheetMotion.js";
 //  「有選手需要處理嗎」用既有的判定，不在首頁另訂體力門檻。
 import { isExhausted } from "../platform/condition/playerCondition.js";
+//  V1：推進世界時間一律走具名入口＋白名單理由（見 platform/time/worldClock.js）。
+import { ADVANCE_REASONS } from "../platform/time/worldClock.js";
+//  V3：快轉級距讀自契約，畫面不自己寫死天數。
+import { FAST_FORWARD_STEPS } from "../platform/time/fastForward.js";
 import "./dashboard/dashboard.css";
 
 const numberOf = (value, fallback = 0) => {
@@ -44,6 +48,10 @@ const NAV = {
   cs: "csPrep",
   development: "teamDevelopment",
   newgame: "newGame",
+  //  V6-3：休賽期。只有真的有年度決策時，首頁才會出現這個入口。
+  offSeason: "offSeason",
+  //  V7B：俱樂部目標（日／週／季）。
+  objectives: "objectives",
 };
 
 const MODE_CONFIG = {
@@ -228,13 +236,117 @@ function FinanceStatus({ wk, fc, finBars, onOpen }) {
   );
 }
 
-function ClubStatus({ profile, players, developmentPoints, wk, fc, finBars, sponsor, onFinance, onSponsor, onRoster }) {
+/**
+ * 世界時間卡（Season vNext V1）。
+ *
+ * ── 為什麼首頁要有這張卡 ──────────────────────────────────────────────────
+ * V1 之前，正式 UI **唯一**推得動 `meta.days` 的地方是訓練中心那顆按鈕，
+ * 而那顆按鈕還要求「真的有人在訓練」⇒ 玩家不指派訓練，世界就完全停住。
+ * 時間是**俱樂部層級**的東西，不是訓練功能的副作用，所以入口在首頁。
+ *
+ * ⚠ **這不是第二個時鐘**：它呼叫 `advanceWorldDays`（→ `advanceDay`），
+ *   與訓練中心同一條路、同一套週結算與賽季日曆。
+ * ⚠ 顯示的時間一律來自 `worldTimeView()`，**不自己從 `meta.days` 算週次或年度**。
+ * ⚠ 這個入口**不依賴任何前置條件**——那正是它存在的理由。
+ *   唯一擋得住它的是既有的 D15 規則（比賽日沒收尾就走不出去），
+ *   那時會照實顯示原因，而不是靜靜地什麼都不做。
+ */
+function WorldTimeStatus({ onOffSeason }) {
+  const advanceWorldDays = useProfileStore((s) => s.advanceWorldDays);
+  const advanceToNextStop = useProfileStore((s) => s.advanceToNextStop);
+  const nextStopView = useProfileStore((s) => s.nextStopView);
+  const offSeasonView = useProfileStore((s) => s.offSeasonView);
+  const retirementView = useProfileStore((s) => s.retirementView);
+  const offSeasonSessionView = useProfileStore((s) => s.offSeasonSessionView);
+  const days = useProfileStore((s) => s.meta?.days);
+  const worldTimeView = useProfileStore((s) => s.worldTimeView);
+  const [note, setNote] = React.useState(null);
+  const t = worldTimeView();
+  const stop = nextStopView();
+  const offSeason = offSeasonView();
+  const retirement = retirementView();
+  const session = offSeasonSessionView();
+
+  //  ⚠ 推進結果一律照實顯示。「推不動」與「推了一半停下」是兩件不同的事，
+  //    合併成「什麼都沒發生」正是 V1 檔頭說要避免的靜默失敗。
+  const report = (res, wanted) => {
+    if (!res.ok) { setNote(res.reason ?? "今天推不動"); return; }
+    setNote(res.daysAdvanced < wanted
+      ? `推進 ${res.daysAdvanced} 天後停下：${res.reason ?? "有比賽尚未收尾"}`
+      : `已推進 ${res.daysAdvanced} 天`);
+  };
+
+  const advance = (n) => report(advanceWorldDays(n, { reason: ADVANCE_REASONS.rest }), n);
+  //  ⚠ 走 Store 的 `advanceToNextStop`——規劃與推進都不在畫面裡。
+  const advanceNext = () => { const r = advanceToNextStop(); report(r, r.plannedDays ?? 0); };
+
+  return (
+    <article className="esmo-card esmo-status-card" data-dashboard-reveal data-testid="home-world-time">
+      <div className="esmo-status-card__title">
+        <span><IconBadge name="chevron" accent={GC.purp} size={15} />世界時間</span>
+        <span className="esmo-status-card__label">CLOCK</span>
+      </div>
+      <div className="esmo-status-card__value">{numberOf(days)} <small>天</small></div>
+      <div className="esmo-status-card__detail">
+        第 {t.careerYear} 生涯年度 · 第 {t.dayOfYear}/{t.daysPerYear} 天 · 第 {t.week} 週
+        {t.nextFixtureDay ? ` · 下一場賽程在第 ${t.nextFixtureDay} 天` : " · 目前沒有排定的賽程"}
+      </div>
+      {stop && (
+        //  ⚠ `daysAway === 0` 要說「就是今天」，不能顯示「還有 0 天」——
+        //    那一格正是玩家**走不動**的時候，訊息必須讓他知道要先處理今天的事。
+        <div className="esmo-status-card__detail" data-testid="home-next-stop">
+          下一站：{stop.label}{stop.daysAway > 0 ? `（還有 ${stop.daysAway} 天）` : "（就是今天）"}
+        </div>
+      )}
+      {/*  V5-1：年度封存只是**狀態顯示**，不是決策點——所以它不擋快轉，也沒有專屬頁。
+          等 V5-3 有了「離隊意向 vs 找接班人」的決策，這裡才會變成真的停下來的地方。 */}
+      {offSeason.latest && (
+        <div className="esmo-status-card__detail" data-testid="home-offseason">
+          第 {offSeason.latest.careerYear} 生涯年度已封存
+          （當時 {offSeason.latest.rosterCount} 人{offSeason.latest.averageAge != null ? `．平均 ${offSeason.latest.averageAge} 歲` : ""}）
+        </div>
+      )}
+      {/*  V6-3：休賽期開著時，這是**唯一**能往前走的路——世界時間被擋住了，
+          出口是休賽期畫面上的「完成休賽期」（永遠成功、永遠免費）。 */}
+      {session.open && (
+        <button className="esmo-status-card__link" type="button" style={{ color: GC.gold, fontWeight: 900 }}
+          data-testid="home-offseason-enter" onClick={onOffSeason}>
+          休賽期尚未結束：{session.total} 項決策待處理 <EsmoIcon name="chevron" size={13} />
+        </button>
+      )}
+      {/*  V5-3：這是 Off-season 目前唯一、也是真正的決策提示——
+          有人宣布退役意向，玩家有一整個生涯年度可以決定要不要現在就簽接班人。 */}
+      {retirement.pendingCount > 0 && (
+        <div className="esmo-status-card__detail" data-testid="home-retirement-intent" style={{ color: GC.gold }}>
+          {retirement.pendingCount} 名選手宣布這可能是最後一年
+          （{retirement.pending.map((p) => `${p.name}．${p.age} 歲`).join("、")}）— 你有一年可以找接班人
+        </div>
+      )}
+      {note && <div className="esmo-status-card__detail" style={{ color: GC.gold }}>{note}</div>}
+      <div className="esmo-worldtime-actions">
+        {/*  ⚠ 級距讀自 `FAST_FORWARD_STEPS`（契約），畫面不自己寫死天數。 */}
+        {FAST_FORWARD_STEPS.map((n) => (
+          <button key={n} className="esmo-status-card__link" type="button"
+            data-testid={n === 1 ? "home-advance-day" : "home-advance-days"}
+            onClick={() => advance(n)}>
+            推進 {n} 天 <EsmoIcon name="chevron" size={13} />
+          </button>
+        ))}
+        <button className="esmo-status-card__link" type="button" data-testid="home-advance-next"
+          onClick={advanceNext}>前往下一站 <EsmoIcon name="chevron" size={13} /></button>
+      </div>
+    </article>
+  );
+}
+
+function ClubStatus({ profile, players, developmentPoints, wk, fc, finBars, sponsor, onFinance, onSponsor, onRoster, onOffSeason }) {
   const weeksLeft = numberOf(profile.activeSponsor?.weeksLeft);
   const sponsorTone = sponsor ? (weeksLeft <= 2 ? GC.gold : GC.green) : GC.gray;
   return (
     <section className="esmo-section">
       <SectionHeading label="CLUB STATUS" title="戰隊狀態" note="同一份經營資料的快速讀本" />
       <div className="esmo-status-grid">
+        <WorldTimeStatus onOffSeason={onOffSeason} />
         <FinanceStatus wk={wk} fc={fc} finBars={finBars} onOpen={onFinance} />
 
         <article className="esmo-card esmo-status-card" data-dashboard-reveal>
@@ -290,9 +402,20 @@ function Utility({ items, onSelect }) {
       <SectionHeading label="UTILITY" title="管理工具" note="需要時再來，不搶主要決策的焦點" />
       <div className="esmo-utility-grid">
         {items.map((item) => (
-          <button key={item.id} className="esmo-card esmo-interactive esmo-utility-card" type="button" onClick={() => onSelect(item.id)}>
+          <button key={item.id} className="esmo-card esmo-interactive esmo-utility-card" type="button"
+            data-testid={`home-utility-${item.id}`} onClick={() => onSelect(item.id)}>
             <span className="esmo-utility-card__icon"><EsmoIcon name={item.icon} size={18} /></span>
             <span className="esmo-utility-card__label">{item.label}</span>
+            {/*  V7B：**唯一**的聚合徽章。規格明文擋掉「十幾個紅點任務」⇒
+                 這裡只顯示一個總數，不做逐項紅點。 */}
+            {item.badge > 0 && (
+              <span data-testid={`home-utility-badge-${item.id}`}
+                style={{
+                  position: "absolute", top: 6, right: 8, minWidth: 16, textAlign: "center",
+                  background: "#34d399", color: "#04180f", borderRadius: 99,
+                  fontSize: 9, fontWeight: 900, padding: "1px 5px", lineHeight: 1.5,
+                }}>{item.badge}</span>
+            )}
           </button>
         ))}
       </div>
@@ -545,6 +668,10 @@ function MobileNavSheet({ type, onSelect, onClose }) {
       { id: "recruit", label: "招募選手", icon: "arrowUp" },
     ],
     more: [
+      //  ⚠ V7B：手機版**不渲染** `Utility`，所以桌面那個「俱樂部目標」磚在手機上
+      //    完全不存在——瀏覽器實測抓到（手機 390 進不去目標頁）。入口必須在
+      //    這裡也有一份，否則這個功能對手機玩家等於沒做。
+      { id: "objectives", label: "俱樂部目標", detail: "今日／本週／本季", icon: "award" },
       { id: "finance", label: "財務", detail: "收支與預測", icon: "finance" },
       { id: "equip", label: "商店", detail: "物品與升級", icon: "package" },
       { id: "newgame", label: "新遊戲", detail: "重新開始", icon: "arrowUp" },
@@ -606,7 +733,7 @@ function MobileBottomNav({ sheet, onTab }) {
   );
 }
 
-function MobileHome({ team, meta, finance, unread, xpPercent, activeMatchView, onResumeActive, primaryAction, quickActions, profile, players, developmentPoints, wk, sponsor, modes, onSelect }) {
+function MobileHome({ team, meta, finance, unread, xpPercent, activeMatchView, onResumeActive, primaryAction, quickActions, profile, players, developmentPoints, wk, sponsor, modes, onSelect, onOffSeason }) {
   const [sheet, setSheet] = useState(null);
   const scrollRef = useRef(null);
   //  底部 nav 的「競技」要捲到這一段，所以需要它的位置。
@@ -642,6 +769,15 @@ function MobileHome({ team, meta, finance, unread, xpPercent, activeMatchView, o
         <MobileTeamHeader team={{ ...team, gold: finance.funds }} meta={meta} unread={unread} xpPercent={xpPercent} onInbox={() => onSelect("notify")} />
         <main className="esmo-mobile-home__content">
           <MobilePrimaryAction activeMatchView={activeMatchView} onResumeActive={onResumeActive} action={primaryAction} />
+          {/*  ── V3：手機也必須推得動世界時間 ──────────────────────────────
+              手機版不渲染 `ClubStatus`，所以在 V3 之前，**整個手機介面沒有任何
+              推進世界時間的入口**——玩家只剩訓練中心那顆按鈕，而那顆按鈕要求
+              「真的有人在訓練」。也就是說 V1 修掉的 TD-34（不指派訓練，世界完全
+              停住）在手機上一直還活著，瀏覽器實測才抓到。
+              ⚠ 放在主要動作之後、快捷動作之前：時間是每天都要按的東西，
+                不是「需要時才進的功能」，不能收進分頁 sheet 裡。
+              ⚠ 與桌面共用**同一個** `WorldTimeStatus` 元件 ⇒ 不會有兩套時間 UI。 */}
+          <WorldTimeStatus onOffSeason={onOffSeason} />
           <MobileQuickActions items={quickActions} />
           <MobileClubSnapshot players={players} developmentPoints={developmentPoints} wk={wk} sponsor={sponsor} profile={profile} onSelect={onSelect} />
           <MobileCompeteRail modes={modes} onSelect={onSelect} sectionRef={competeRef} />
@@ -696,13 +832,17 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
   //      贊助商 → 戰隊狀態的「贊助狀態」摘要卡本來就能直接進贊助頁
   //      天賦   → 已由「戰隊發展」取代；個人天賦樹入口在選手詳情
   //      儀表板 → 指向未接線的舊版密集儀表板，而首頁本身就是儀表板
+  //  V7B：可領取的目標數。**只取一個總數**——首頁不做逐項提示。
+  //  ⚠ 目標與進度全部由 `retentionView()` 推導，首頁不自己算。
+  const objectiveBadge = (typeof profile.retentionView === "function" ? profile.retentionView().claimable : 0) || 0;
   const utilityItems = useMemo(() => [
     { id: "team", label: "戰隊詳情", icon: "award" },
     { id: "training", label: "訓練中心", icon: "signal" },
     { id: "recruit", label: "招募", icon: "arrowUp" },
+    { id: "objectives", label: "俱樂部目標", icon: "award", badge: objectiveBadge },
     { id: "newgame", label: "開新局", icon: "arrowUp" },
     { id: "equip", label: "商店", icon: "package" },
-  ], []);
+  ], [objectiveBadge]);
 
   const sel = (id) => {
     if (id === "moba") return onMoba();
@@ -734,6 +874,15 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
       title: "處理資金提醒",
       detail: fc.level === "danger" ? `預測第 ${fc.bankruptWeek} 週資金見底` : "本週淨額為負，先看現金預測",
       badge: "!", onClick: () => sel("finance"),
+    });
+  }
+  //  V7B：有目標可以領才出現。⚠ 沒得領就完全不渲染——這一區的規則是
+  //  「有訊號才成立」，塞一個永遠都在的「去看目標」就退回成固定捷徑了。
+  if (objectiveBadge > 0) {
+    todos.push({
+      id: "objectives", icon: "award", accent: GC.gold,
+      title: "領取目標獎勵", detail: `${objectiveBadge} 個目標已完成，可領取俱樂部點數`,
+      badge: objectiveBadge, onClick: () => sel("objectives"),
     });
   }
   if (unread > 0) {
@@ -770,6 +919,7 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
     <div ref={rootRef} className="esmo-dashboard" style={ESMO_CSS_VARS}>
       {isHomeMobile ? (
         <MobileHome
+          onOffSeason={() => sel("offSeason")}
           team={team}
           meta={meta}
           finance={finance}
@@ -803,7 +953,7 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
           <main className="esmo-dashboard__main-column">
             <ActiveMatchSection hasActiveMatch={Boolean(activeMatchView)} onResumeActive={onResumeActive} />
             <NextActions actions={actions} />
-            <ClubStatus profile={profile} players={players} developmentPoints={developmentPoints} wk={wk} fc={fc} finBars={finBars} onFinance={() => sel("finance")} onSponsor={() => sel("sponsor")} onRoster={() => sel("roster")} />
+            <ClubStatus profile={profile} players={players} developmentPoints={developmentPoints} wk={wk} fc={fc} finBars={finBars} onFinance={() => sel("finance")} onSponsor={() => sel("sponsor")} onRoster={() => sel("roster")} onOffSeason={() => sel("offSeason")} />
           </main>
 
           <aside className="esmo-dashboard__rail">

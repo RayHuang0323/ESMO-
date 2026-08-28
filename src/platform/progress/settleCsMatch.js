@@ -47,7 +47,11 @@ export function settleCsMatch(csResult) {
   });
 
   // 4) 入史（只寫紀錄，不發獎；同 matchId 冪等）
-  useProfileStore.getState().recordCsMatch(csResult, receipt);
+  //  ⚠ V0D：快速練習**不計戰績**。判斷讀 `MatchOrigin`（`matchPracticeContext`），
+  //    與 MOBA 那一側同一條規則、同一個判定來源——不看畫面、不看路由。
+  if (!useProfileStore.getState().matchPracticeContext().inPractice) {
+    useProfileStore.getState().recordCsMatch(csResult, receipt);
+  }
 
   return receipt;
 }
