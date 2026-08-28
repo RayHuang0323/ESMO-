@@ -1239,3 +1239,10 @@ gate：`check_general_match_v7a`（47）＋ `browser_check_general_match_and_obj
 - 本輪收斂 reaction latency、weapon cadence authority、最小 target-lock tactical layer、route/collision audit，以及五類合法 CC0 實錄槍聲接入；未修改 damage、fire-rate stats、economy、MatchSession、Competition、Training 或 Season。
 - 三圖 Battle、P0 regression、production build/preview、390×844 viewport smoke 與 180 秒 long-run 已自我驗證；中文 Owner Review：`http://127.0.0.1:5470/ESMO-/artifacts/cs-c5a2/owner-review/owner-review.html`。
 - Roadmap decision：先等待 C5A.2 Owner acceptance；下一階段候選仍為 C5B，但本輪不開始 grenade、smoke 或完整 audio system。
+
+## CS-C5A 正式收尾（2026-08-28）
+
+- 狀態：`C5A_DESKTOP_OWNER_ACCEPTED`／`C5A_CLOSED`。
+- 以最新 `origin/main` `e30f1d6` 整合 C5A；整合後 C5A、C5A.1、C5A.2 與既有 CS regression gates 全部 PASS。
+- Production release 前已完成 production build、三圖 Battle、390×844 smoke 與 180 秒 long-run；尚未開始 C5B。
+- Android real-device validation：`PENDING_AFTER_PRODUCTION_DEPLOY`。

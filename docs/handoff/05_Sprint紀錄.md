@@ -16446,3 +16446,11 @@ TD-42／TD-43 維持原樣（含既有的 TD-42 撞號，仍留待下一輪重�
 - 昨日長任務並未留下可證明「全部完成」的完整鏈：`targeted-inferno` 為空目錄，舊 390px clock evidence 使用舊 procedural audio，且 current-code 180 秒結果需重跑。補跑後三圖 cadence／槍聲、movement／collision／stuck、locomotion、1x／2.4x、projectile speed、camera zoom、scale、C2C mesh、3 圖截圖與 390px 均通過。
 - 補跑結果：C5A `11/11`、C5A.1 `17/17`、C5A.2 `23/23`、final `39/39`；父層 Renderer `24/24`、A2 `10/10`、C2A `13/13`、C2B `14/14`、C2C `9/9`、C3 `18/18`、C4A `13/13`、C4B `20/20`、Camera `8/8`、RAF `7/7`、StableCanvas `5/5`、CS23 `28/28` 全 PASS。Build、production desktop／390px smoke、三圖 clock／audio、180 秒 long-run 全 PASS。
 - 僅補 camera recovery 去重與 verifier 前置互動修正；未 merge、未 push、未 deploy，不開始 C5B 或下一階段。
+
+### Sprint CS-C5A｜正式收尾驗證（2026-08-28）
+
+- Owner 已接受目前 C5A.2 桌機本機版本；整合最新 `origin/main` 後，沒有新增功能或 polish，僅完成必要主線整合與驗證。
+- 整合後 static gates 全 PASS：C5A `11/11`、C5A.1 `17/17`、C5A.2 audit `23/23`、final `39/39`；父層 CS/C2C/C3/C4、camera、RAF、StableCanvas、CS23 gates 全 PASS。
+- Build：`npm run build` PASS，`2762 modules transformed`。Browser：三圖 Battle `3/3 PASS`、390×844 三圖 smoke `3/3 PASS`；180 秒 long-run `1684` samples，geometry shift `0`、stale／duplicate `0`、rapid recovery `0`、browser errors `0`。
+- 正式 Battle audio 已由三圖 runtime evidence 確認使用最新五個 prepared recorded samples；每發 authoritative shot 與 audio `1:1`，五類 profile `5/5` loaded，沒有 synthesized gunfire 或舊 procedural fallback。
+- 狀態標記：`C5A_DESKTOP_OWNER_ACCEPTED`、`C5A_CLOSED`；`Android real-device validation = PENDING_AFTER_PRODUCTION_DEPLOY`。本輪不開始 C5B。
