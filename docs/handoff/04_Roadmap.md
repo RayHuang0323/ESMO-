@@ -668,3 +668,20 @@ injury 也不得再成為出賽資格條件。
 - `C4B_TWO_MAPS = OWNER_ACCEPTED / CLOSED`
 - Mirage、Dust II、Inferno 三張地圖已完成共用 environment production framework 的正式整合與部署驗證，同時保留各自 visual identity。
 - 下一階段建議：C5（另行定義範圍後開始）；本次不實作 C5。
+## CS-C5A Gunfire / Hit / Impact Presentation（2026-08-27）
+
+- 狀態：`C5A_GUNPLAY_PRESENTATION_READY_FOR_OWNER_ACCEPTANCE`，完成 presentation-only 槍火、角色命中、材質 surface catalogue 與死亡 pulse；沒有開始 C5B。
+- 五類武器（Pistol／SMG／Rifle／Sniper／Shotgun）共用 bounded FX framework 並保留 family-specific silhouette；既有 Player identity、Camera recovery、StableCanvasRegion、RAF_FIDX_COHERENCE、C2C/C3/C4 契約維持 PASS。
+- 後續建議：C5B 再另立 scope，先做 grenade／smoke／audio 的產品決策與 authority 設計；本輪不預先實作。
+## CS-C5A.1 Gunfeel & Combat Responsiveness（2026-08-27）
+
+- C5A 的 Owner acceptance feedback 已開成 C5A.1 修正輪；目前達到 `C5A1_GUNFEEL_READY_FOR_OWNER_ACCEPTANCE`，尚未標記 Owner Accepted。
+- 範圍包含反應鏈量測與最小 reaction model、命中 root-motion 隔離、hitscan tracer／weapon kick／hit presentation、五類程序化核心槍聲；沒有修改 weapon stats、damage、fire rate、economy、MatchSession，也沒有開始 C5B。
+- 三圖 Battle、desktop／390px viewport、P0 contract 與 production build 已自我驗證；下一個決策點是 Owner 觀看中文 Review 與真實 Battle 體感後接受 C5A.1，再規劃 C5B（grenade／smoke／完整 audio）範圍。
+
+## CS-C5A.2 Combat Audit（2026-08-27）
+
+- 狀態：`C5A2_COMBAT_BEHAVIOUR_READY_FOR_OWNER_ACCEPTANCE`，尚未 Owner Accepted；未 merge、未 push、未 deploy，未開始 C5B。
+- 本輪收斂 reaction latency、weapon cadence authority、最小 target-lock tactical layer、route/collision audit，以及五類合法 CC0 實錄槍聲接入；未修改 damage、fire-rate stats、economy、MatchSession、Competition、Training 或 Season。
+- 三圖 Battle、P0 regression、production build/preview、390×844 viewport smoke 與 180 秒 long-run 已自我驗證；中文 Owner Review：`http://127.0.0.1:5470/ESMO-/artifacts/cs-c5a2/owner-review/owner-review.html`。
+- Roadmap decision：先等待 C5A.2 Owner acceptance；下一階段候選仍為 C5B，但本輪不開始 grenade、smoke 或完整 audio system。

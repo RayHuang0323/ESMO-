@@ -13897,3 +13897,76 @@ Release checklist 寫的就是旗標，不是網址參數。
 - 以最新 `origin/main` 為基線整合已驗收的 Mirage、Dust II、Inferno environment；只保留必要的 C4B source、verifier、Owner Review 與 handoff 變更。
 - 完成完整 regression、production build、Battle/browser smoke、390px smoke、三圖 map/camera/character visibility 與 180 秒 long-run 後才進行 main push、Pages deploy。
 - 未開始 C5，未變更 gameplay、weapon stats、Competition、Training、Season 或無關 technical debt。
+## CS-C5A Gunfire / Hit / Impact Presentation（2026-08-27）
+
+### 交付
+
+- 新增 `fpsGunplayPresentation.js` 與 C5A static/browser verifier；FX 只消費既有 frame snapshot，使用 bounded pools、共享 geometry/material、deterministic hash 與 map lifecycle dispose。
+- fire metadata 只補 presentation family/surface 欄位；character hit 使用 authoritative hp edge，death 使用 authoritative alive → dead edge；沒有修改 combat state、damage、fire rate、weapon stats、gameplay recoil 或 animation authority。
+- Owner Review 全中文，展示五類武器、四種材質 response、三張地圖 Battle runtime、角色 hit 與 death evidence。
+
+### 驗證
+
+- Static：Renderer 24/24、CS-A2 10/10、C2A 13/13、C2B 14/14、C2C 9/9、C3 18/18、C4A 13/13、C4B 20/20、Camera 8/8、RAF 7/7、StableCanvas 5/5、CS23 28/28、C5A 11/11 PASS。
+- Production build：2743 modules PASS；三圖 C5A Battle runtime 3/3 PASS；390px smoke 3/3 PASS；dist preview smoke PASS。
+- 180 秒：1,100 geometry samples、234 fIdx transitions、geometry shift 0、stale mismatch 0、duplicate RAF/render 0、rapid recovery 0、browser errors 0。
+
+### 邊界決策
+
+目前 authoritative Battle impact event 是角色命中；concrete／metal／wood／ground 以同一 presentation surface catalogue 在隔離 Owner Review showcase 驗證。由於本輪禁止修改 collision／gameplay authority，未虛構環境命中事件。
+## Sprint CS-C5A.1｜Gunfeel & Combat Responsiveness（2026-08-27）
+
+- **Audit**：確認 combat 為 authoritative hitscan；延遲來自 2,000ms simulation decision snapshot 的 pair queue 加上首次射擊隨機 gate。確認 `Hit_Chest` clip 含可能改寫 rendered model 的 root／hips／pelvis position tracks；確認 C5A FX 是 bounded presentation layer，音效可在不改 combat authority 下程序化產生。
+- **Implementation**：加入 reaction episode telemetry 與 reaction model（既有 rxn／focus／distance／weapon family），新鮮清楚 LoS pair 優先；follow-up fire 保留原 aggression gate。移除 root-motion position tracks；tracer／muzzle 改成短生命週期 hitscan cue；加入 deterministic family recoil、短 hit latch timing、五類 bounded Web Audio profile 與 distance attenuation。
+- **Evidence**：三圖 median `276 / 250 / 267ms`；Hit_Chest drift 與 authoritative drift 全 `0`；audio profile `5/5`；C5A.1 static `15/15`；C5A legacy `11/11`；Renderer `24/24`、CS-A2 `10/10`、C2A `13/13`、C2B `14/14`、C2C `9/9`、C3 `18/18`、C4A `13/13`、C4B `20/20`、Camera `8/8`、RAF `7/7`、StableCanvas `5/5`、CS23 `28/28`。
+- **Runtime**：三圖 desktop 與 390px Battle smoke `3/3 PASS`，開火／命中／impact／death 均有 runtime evidence；production build `2743 modules PASS`；production Home → Practice → Mirage → Battle smoke PASS；180 秒 long-run 全部 P0 counters PASS。
+- **狀態**：`C5A1_GUNFEEL_READY_FOR_OWNER_ACCEPTANCE`。Owner acceptance 尚未完成；不 merge、push、deploy，不開始 C5B。
+
+## Sprint CS-C5A.2｜Combat Audit（2026-08-27）
+
+- **Audit / root cause**：原本 first-shot 延遲由 2,000ms decision snapshot、一次一對 pair 配對與首次隨機 gate 疊加；後續 cadence 也被 snapshot loop 拖慢。另確認同一角色缺少穩定 target lock，會在可見 opponent pair 間輪換。movement 第一版誤把 buy phase spawn placement 當 teleport；排除 setup placement 後，authoritative route → collision → position 無穿牆證據。槍聲則因程序音不可信，且 suspended AudioContext 的 currentTime throttle 會誤擋後續 shot。
+- **修法**：simulation step 降為 500ms，ready pair 優先並以 sub-frame window 記錄 permission/shot；每個 attacker→target 用 `fireClock` 依單一 weapon profile `rof` 排程，加入 per-actor target lock 與可歸因 focus-fire。保留既有 route/HOLD/EXECUTE/RETAKE/ANCHOR/撤退分支。Hit root motion 仍由 C5A.1 的 root/hips/pelvis track filtering 隔離。槍聲改用五個 CC0 實錄 samples，以既有 audio boundary 做 attack/body/crack/tail 分層、距離衰減與 monotonic throttle。
+- **Evidence**：三圖 first-shot median/p90：Mirage `254/736ms`、Dust II `242/310ms`、Inferno `236/242ms`；reaction chain 全部有序。三圖 movement `blocked=0 / teleport=0 / wall crossing=0`。Battle audio recorded events：Pistol `4`、SMG `1`、Rifle `5`、Sniper `4`、Shotgun `3`；資產 `5/5` decode，loadErrors `0`。來源 ledger：`public/audio/cs/c5a2/SOURCES.md`。
+- **Gates**：Renderer `24/24`、CS-A2 `10/10`、C2A `13/13`、C2B `14/14`、C2C `9/9`、C3 `18/18`、C4A `13/13`、C4B `20/20`、Camera `8/8`、RAF `7/7`、StableCanvas `5/5`、CS23 `28/28`、C5A `11/11`、C5A.1 `15/15`、C5A.2 `21/21`；production build `2743 modules` PASS；三圖 Battle PASS；390×844 viewport audit/P0 smoke PASS；180 秒 P0 long-run PASS（geometry shift/stale fIdx/duplicate RAF-render/rapid recovery/browser errors 全 0）。
+- **狀態**：`C5A2_COMBAT_BEHAVIOUR_READY_FOR_OWNER_ACCEPTANCE`。Owner Review：`http://127.0.0.1:5470/ESMO-/artifacts/cs-c5a2/owner-review/owner-review.html`。未 merge、未 push、未 deploy，未開始 C5B。
+
+## Sprint CS-C5A.2｜Final Combat Corrections（2026-08-28）
+
+### Stable main 對照與 root cause
+
+- `Death floating`：C5A.x regression。death clip 的 hips/pelvis translation 必須保留，但 rendered corpse 缺少以 skinned bounds 對 authoritative ground Y=0 的接地修正。
+- `2.4x／timer／movement／projectile 慢`：C5A.x regression。RAF 把 wall delta 先 clamp 到 50ms 再餵 playback clock，掉幀時直接丟失 simulation time；timer 卡住、movement 慢與固定 4 秒 projectile 因此呈現共同 clock 症狀。
+- `Navigation/collision`：原設計不足加 C5A.x regression。原 collision 只有 walls/cars，crate／major cover 不在 obstacle authority；初版 audit 又誤把可走的 platform 當 solid，且 planner clearance 與 collision radius 不一致。
+- `Locomotion`：presentation bug。動畫由 tactical state／未正規化 displacement 推斷，沒有以 authoritative units/sec 分 idle/walk/run。
+- `Building scale`：presentation bug。建築主體比例正常，roof helper 卻被放在 ground Y，造成房屋看似低於角色。
+- `C2C limbs`：pre-existing design issue。原本低段數單一 limb shell 與 box joints 造成方柱感；rig/skeleton/clip 本身不需更換。
+- `Gunfire cadence/audio`：C5A.x regression。500ms simulation snapshot 每 tick 最多送一顆 shot，且舊 recorded blast 被分層 filter；kill event square-wave tone 又疊在命中那一發。背景 countdown/bomb beep 等 oscillator 也造成 Owner 聽到滴滴聲。
+
+### 修正與量測
+
+- Rifle/SMG 使用 single weapon authority 的 sub-frame schedule；Rifle 三圖 median `100ms`，SMG `71/62/63ms`（修前約 `500ms`）。Pistol `single, >=500ms`，Sniper `single, >=900ms`；shot→muzzle→tracer→audio 1:1。
+- Navigation obstacle 包含 building/crate/major cover；visibility route 只 normalize waypoint，不 teleport player。Mirage replan `1/1`、Dust2 `13/13`（12 resolved＋1 round-end）、Inferno `95/95`；crossing/blocked/teleport 全 0。
+- Clock 三圖：1x `1.006/1.002/1.095`；2.4x `2.406/2.366/2.334`。Projectile profile `0.55–2.4s`，實際 snapshot travel `0.5–1.5s`，取代固定 4 秒。
+- 角色 limbs 使用 12-sided tapered cylinders 與 rounded elbow/knee，skeleton mutation=false。Building 最低 3.35m／player 1.8m，roof units 回到屋頂。
+- Audio 換成 [The Free Firearm Sound Library](https://opengameart.org/content/the-free-firearm-sound-library) CC0 prepared recordings；Pistol 為 1911 .45 `A_42P.wav`。每發只播一個 direct buffer，沒有 filter layer、noise fallback 或 oscillator；程序 kill tone 與全部 background beep/tone dispatch 已移除。
+- Hit reaction presentation window 由 C5A.x 的 `0.22s` 修為 `0.42s`；C2C runtime 證明 Hit_Chest time/timer 前進並正常退出。`check_cs_c5a1_gunfeel.mjs` 的 exact-value assertion 同步由 0.22 更新為 0.42，原因是舊值與既有 runtime hit gate 衝突；gate 未刪除。`check_cs_c5a2_combat_audit.mjs` 由 21 增為 23 checks，新增 no-synth/no-overlay assertions。
+
+### Final gates / boundary
+
+- Static：MR12 `36/36`、A2 `10/10`、Camera `8/8`、Renderer `24/24`、StableCanvas `5/5`、RAF `7/7`、C2A `13/13`、C2B `14/14`、C2C `9/9`、C3 `18/18`、C4A `13/13`、C4B `20/20`、C5A.1 `17/17`、C5A `11/11`、C5A.2 audit `23/23`、final combat `38/38`。
+- Browser：P0 completion 4/4、C2C 10/10、C3 PASS、C4B 3/3、C5A 3/3、三圖 clock/audio PASS、390×844 三圖 smoke PASS。180 秒：`1782` samples、358 fIdx transitions、geometry shifts 0、stale/duplicate 0、rapid recovery 0、errors 0。Build PASS。
+- 狀態：`C5A2_FINAL_COMBAT_READY_FOR_OWNER_ACCEPTANCE`。未 merge、未 push、未 deploy；不開始 C5B 或其他任務。
+
+### Final combat 補充稽核（2026-08-28）
+
+- 最後三圖 verifier 發現 semi-auto cooldown 仍可因切換 target 或 Glock→Scout 換槍而沿用較短 ready time；production 已改為 shooter-scoped cadence，並以當前 weapon interval 計算 weapon-swap 首發下限。
+- 最終 cadence：Mirage/Dust II/Inferno Rifle median `111/100/111ms`；SMG 有樣本地圖 `66/67ms`；Pistol min `500ms`；Sniper min `900ms`。三圖 shot/muzzle/tracer/audio event id 1:1，synthesized tone starts `0`。
+- 最終 reaction median `279/280/257ms`；navigation crossing/blocked/teleport 全 `0`，stuck detections `2/19/125` 全 resolved 或 round-end 中止。Clock 1x `1.003/1.001/1.105`，2.4x `2.363/2.340/2.349`。
+- Static final combat `39/39 PASS`、C5A Browser `3/3 PASS`、Owner Review 三圖 PASS、build PASS。既有 390px 三圖 smoke 與 180 秒 long-run evidence 維持 PASS。
+
+### Sprint CS-C5A.2｜Recovery audit（2026-08-28）
+
+- Recovery audit 確認正確 worktree 為 `worktrees/cs-c5a-gunplay-impact`、branch `feature/cs-c5a-gunplay-impact`、HEAD `eeda26883ec90801ccd1baed6563b650e94e66bb`；昨日修改仍未提交，root `milestone-n-finance` worktree 未被修改。
+- 昨日長任務並未留下可證明「全部完成」的完整鏈：`targeted-inferno` 為空目錄，舊 390px clock evidence 使用舊 procedural audio，且 current-code 180 秒結果需重跑。補跑後三圖 cadence／槍聲、movement／collision／stuck、locomotion、1x／2.4x、projectile speed、camera zoom、scale、C2C mesh、3 圖截圖與 390px 均通過。
+- 補跑結果：C5A `11/11`、C5A.1 `17/17`、C5A.2 `23/23`、final `39/39`；父層 Renderer `24/24`、A2 `10/10`、C2A `13/13`、C2B `14/14`、C2C `9/9`、C3 `18/18`、C4A `13/13`、C4B `20/20`、Camera `8/8`、RAF `7/7`、StableCanvas `5/5`、CS23 `28/28` 全 PASS。Build、production desktop／390px smoke、三圖 clock／audio、180 秒 long-run 全 PASS。
+- 僅補 camera recovery 去重與 verifier 前置互動修正；未 merge、未 push、未 deploy，不開始 C5B 或下一階段。

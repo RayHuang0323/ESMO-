@@ -465,6 +465,7 @@ function createC4BMapEnvironment({ group, mapKey, W }) {
       c4bVersion: C4B_VERSION,
       fullMap: true,
       mapKey,
+      scaleContract: { playerHeight: 1.8, minBuildingHeight: 3.35, doorHeight: 2.45, crateHeight: 0.82, buildingToPlayerMinRatio: 1.861 },
       mapIdentity: identity,
       zones: summarizedZones,
       c4bZones: summarizedZones,
@@ -609,10 +610,10 @@ export function createC3MirageEnvironment({ group, mapKey, W }) {
     const sign = box(parent, `${prefix}_Shade`, [width + 0.36, 0.12, 0.38], worldPoint(x, y, 3.58), materials.plasterDark);
     sign.position.z = W.vz(side === "north" ? y - 0.2 : y + 0.2);
   };
-  const roofUnit = (parent, prefix, x, y, rotationY = 0) => {
-    box(parent, `${prefix}_Base`, [1.5, 0.24, 1.05], worldPoint(x, y, 0.3), materials.darkTrim, rotationY);
-    box(parent, `${prefix}_Housing`, [1.0, 0.42, 0.68], worldPoint(x, y, 0.62), materials.metal, rotationY);
-    cylinder(parent, `${prefix}_Vent`, 0.16, 0.46, worldPoint(x + 0.28, y, 0.92), materials.metalDark, null, 8);
+  const roofUnit = (parent, prefix, x, y, rotationY = 0, roofHeight = 3.35) => {
+    box(parent, `${prefix}_Base`, [1.5, 0.24, 1.05], worldPoint(x, y, roofHeight + 0.12), materials.darkTrim, rotationY);
+    box(parent, `${prefix}_Housing`, [1.0, 0.42, 0.68], worldPoint(x, y, roofHeight + 0.39), materials.metal, rotationY);
+    cylinder(parent, `${prefix}_Vent`, 0.16, 0.46, worldPoint(x + 0.28, y, roofHeight + 0.79), materials.metalDark, null, 8);
   };
   const overheadFrame = (parent, prefix, x, y, width, material = materials.metalDark) => {
     cylinder(parent, `${prefix}_PostL`, 0.06, 3.6, worldPoint(x - width / 2, y, 1.8), material, null, 8);
@@ -645,7 +646,7 @@ export function createC3MirageEnvironment({ group, mapKey, W }) {
   box(aSite, "A_Site_DoorFrameL", [0.14, 3.2, 0.2], worldPoint(80.15, 12.04, 1.6), materials.trim);
   box(aSite, "A_Site_DoorFrameR", [0.14, 3.2, 0.2], worldPoint(84.1, 12.04, 1.6), materials.trim);
   box(aSite, "A_Site_DoorLintel", [4.1, 0.14, 0.2], worldPoint(82.1, 12.04, 3.12), materials.trim);
-  roofUnit(aSite, "A_Site_RoofUnit", 88.4, 13.0, 0.12);
+  roofUnit(aSite, "A_Site_RoofUnit", 88.4, 13.0, 0.12, 4.35);
   overheadFrame(aSite, "A_Site_EntryFrame", 82.0, 20.7, 5.6);
   verticalSign(aSite, "A_Site_VerticalSign", materials.signA, 89.7, 11.55, 3.8, 1.15);
   [78.2, 80.2, 82.2, 84.2].forEach((x, index) => stripe(aSite, `A_Site_Paver_${index}`, x, 16.0, 1.25, 5.6, index % 2 ? materials.concrete : materials.plasterDark));
@@ -681,7 +682,7 @@ export function createC3MirageEnvironment({ group, mapKey, W }) {
   facadeBand(mid, "Mid_MarketFacade", 44.8, 40.0, 11.4, 4.05, "south", materials.plaster);
   facadeWindow(mid, "Mid_WindowC", 40.0, 40.18, "south", 1.35, 1.35);
   facadeWindow(mid, "Mid_WindowD", 44.0, 40.18, "south", 1.35, 1.35);
-  roofUnit(mid, "Mid_RoofUnit", 49.5, 41.0, -0.04);
+  roofUnit(mid, "Mid_RoofUnit", 49.5, 41.0, -0.04, 4.05);
   overheadFrame(mid, "Mid_StreetFrame", 45.0, 59.25, 8.6, materials.darkTrim);
   verticalSign(mid, "Mid_VerticalSign", materials.signMid, 38.8, 39.68, 3.8, 1.05, Math.PI);
   [40.0, 42.8, 45.6, 48.4, 51.2].forEach((x, index) => stripe(mid, `Mid_LaneMark_${index}`, x, 54.0, 1.55, 0.18, index % 2 ? materials.trim : materials.blueMark));
@@ -839,6 +840,7 @@ export function createC3MirageEnvironment({ group, mapKey, W }) {
       c4aVersion: C4A_VERSION,
       fullMap: true,
       mapKey: "mirage",
+      scaleContract: { playerHeight: 1.8, minBuildingHeight: 3.35, doorHeight: 2.45, crateHeight: 0.82, buildingToPlayerMinRatio: 1.861 },
       mapIdentity: { id: "mirage", name: "Mirage", style: "明亮沙漠市集戰術地圖", palette: "沙岩／混凝土／藍綠導視" },
       zones,
       fullMapZones,

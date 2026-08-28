@@ -363,7 +363,7 @@ function addDynamicSegment(root, updaters, name, startNames, endNames, material,
   lengthScale = 1.08,
   tStart = -0.03,
   tEnd = 1.03,
-  radialSegments = 8,
+  radialSegments = 10,
 } = {}) {
   const startBone = findBone(root, startNames);
   const endBone = findBone(root, endNames);
@@ -413,7 +413,11 @@ function addDynamicJoint(root, updaters, name, boneNames, referenceStartNames, r
   const referenceStart = findBone(root, referenceStartNames);
   const referenceEnd = findBone(root, referenceEndNames);
   if (!bone || !referenceStart || !referenceEnd) return null;
-  const mesh = addBox(root, name, [1, 1, 1], [0, 0, 0], material);
+  const mesh = mark(new THREE.Mesh(mark(new RoundedBoxGeometry(1, 1, 1, 0.22, 2)), material));
+  mesh.name = name;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  root.add(mesh);
   const point = new THREE.Vector3();
   const start = new THREE.Vector3();
   const end = new THREE.Vector3();
@@ -644,18 +648,25 @@ function buildKit(root, player) {
   ];
   limbs.forEach((limb) => {
     addDynamicSegment(root, updaters, `C2C_CombatSleeveUpper_${limb.index}`, limb.upper, limb.lower, materials.fabric, {
-      top: side === "ct" ? 0.31 : 0.29,
+      top: side === "ct" ? 0.32 : 0.3,
       tStart: -0.13,
-      bottom: 0.24,
+      bottom: 0.225,
       depth: side === "ct" ? 0.95 : 1.02,
       lengthScale: 1.12,
+      radialSegments: 12,
     });
     const lowerSleeveMaterial = profile.sleeves === "long" ? materials.fabric : materials.pants;
     addDynamicSegment(root, updaters, `C2C_CombatSleeve_${limb.index}`, limb.lower, limb.hand, lowerSleeveMaterial, {
-      top: 0.27,
-      bottom: 0.19,
+      top: 0.245,
+      bottom: 0.17,
       depth: side === "ct" ? 0.94 : 1.04,
       lengthScale: 1.12,
+      radialSegments: 12,
+    });
+    addDynamicJoint(root, updaters, `C2C_ElbowJoint_${limb.index}`, limb.lower, limb.upper, limb.lower, lowerSleeveMaterial, {
+      width: 0.28,
+      height: 0.2,
+      depth: 0.25,
     });
     if (profile.sleeves !== "long") addDynamicSegment(root, updaters, `C2C_RolledSleeveCuff_${limb.index}`, limb.lower, limb.hand, materials.polymer, {
       top: 0.3,
@@ -686,10 +697,11 @@ function buildKit(root, player) {
     });
 
     addDynamicSegment(root, updaters, `C2C_TacticalPantsThigh_${limb.index}`, limb.thigh, limb.calf, materials.pants, {
-      top: side === "ct" ? 0.3 : 0.31,
-      bottom: 0.23,
+      top: side === "ct" ? 0.33 : 0.34,
+      bottom: 0.235,
       depth: side === "ct" ? 0.95 : 1.04,
       lengthScale: 1.1,
+      radialSegments: 12,
     });
     addDynamicJoint(root, updaters, `C2C_CargoPocket_${limb.index}`, limb.thigh, limb.thigh, limb.calf, side === "ct" ? materials.fabric : materials.polymer, {
       width: 0.25,
@@ -700,10 +712,16 @@ function buildKit(root, player) {
       at: 0.45,
     });
     addDynamicSegment(root, updaters, `C2C_TacticalPantsCalf_${limb.index}`, limb.calf, limb.foot, materials.pants, {
-      top: 0.24,
-      bottom: 0.19,
+      top: 0.255,
+      bottom: 0.175,
       depth: side === "ct" ? 0.95 : 1.03,
       lengthScale: 1.12,
+      radialSegments: 12,
+    });
+    addDynamicJoint(root, updaters, `C2C_KneeJoint_${limb.index}`, limb.calf, limb.thigh, limb.calf, materials.pants, {
+      width: 0.32,
+      height: 0.19,
+      depth: 0.28,
     });
     addDynamicSegment(root, updaters, `C2C_BootCuff_${limb.index}`, limb.calf, limb.foot, materials.polymer, {
       top: 0.23,
@@ -779,6 +797,7 @@ function buildKit(root, player) {
     weaponFamily: initialWeaponFamily,
     weaponFamilyMap: WEAPON_FAMILY_BY_GUN,
     artMode: C2C_HERO_ART_MANIFEST.id,
+    limbPresentation: { segmentShape: "12-sided-tapered-cylinder", jointShape: "rounded-box", elbowJoints: 2, kneeJoints: 2, skeletonMutation: false },
     triangleCount: 0,
     materialCount: Object.keys(materials).length,
     disposed: false,

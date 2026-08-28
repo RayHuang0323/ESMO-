@@ -122,7 +122,9 @@ check("10-player identity remains presentation input", () => {
 });
 
 check("presentation state derivation is deterministic and non-mutating", () => {
-  const current = makePlayer({ pos: { x: 0.6, y: 0 } });
+  // One authoritative FPS snapshot is 0.5s. A 1.5-unit displacement is
+  // 3.0 units/s and therefore above the production 2.4 run threshold.
+  const current = makePlayer({ pos: { x: 1.5, y: 0 } });
   const previous = makePlayer({ pos: { x: 0, y: 0 } });
   const before = JSON.stringify({ current, previous });
   const first = stateFor(current, previous);
