@@ -1189,7 +1189,18 @@ V0A/V0B 成長 → V1 世界時間 → V2 年度邊界 → V3 快轉 → V4 生�
 
 ---
 
-## V7A / V7B（2026-08-28，**已上線**）
+## V7A / V7B（2026-08-28 上線；2026-08-30 **Release Closure 完成**）
+
+> ## ✅ GENERAL_MATCH = RELEASED　RETENTION_V1 = RELEASED
+>
+> **正式收尾於 2026-08-30**，production SHA **`bc4f797`**、
+> deploy run **`33273352390` success**、正式站 smoke **44/44**、
+> Release Gate **70 支實跑 / 62 PASS**（8 支非綠全為 main 既有狀態，
+> 已登記 TD-45～TD-48）。逐項證據見 `05_Sprint紀錄.md` 最後一節。
+>
+> 這次 release 的**產品位元組差異為 0**：合併後 HEAD 對 `origin/main` 的
+> `src/`／`public/` 差異為空集合，V7A／V7B 的產品碼早在 `b1830b3` 就已上線。
+> **READY_FOR_NEXT_PHASE = YES**（下一階段未開始）。
 
 > **V7A = RELEASED　V7B Retention v1 = RELEASED**（2026-08-28）
 > production `5f92343`｜Actions run `33090060630` build ✅／deploy ✅｜<https://rayhuang0323.github.io/ESMO-/>

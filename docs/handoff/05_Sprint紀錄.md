@@ -16499,3 +16499,123 @@ O12 重整後仍在、O13 領過不回退）、§M 手機 390×844 M1–M5、§C
 未 push、未 deploy、未重跑 Release Gate、未重新 Audit、未分析已完成功能。
 `d08239e` 提出的三個動機面問題（比賽 XP 相對門檻過低、賽季始終未開賽、
 賽事中心 0/35）仍為開放項，屬下一輪範圍，本節不處理。
+
+---
+
+## 2026-08-30　Release Closure：GENERAL_MATCH = RELEASED／RETENTION_V1 = RELEASED
+
+**範圍**：正式收尾。不重新 Audit、不開新功能、不改任何產品程式碼。
+
+### 一、整合最新 main
+
+`git fetch origin` 之後 `origin/main` 已從 `e30f1d6` 前進到 `1883b33`（CS-C5A gunplay 三筆），
+與本分支分岔（3 前 / 2 後）。合併 `origin/main` 進 `season/vnext`，
+**唯一衝突**是 `05_Sprint紀錄.md` 兩邊都在檔尾追加 —— 人工保留雙方三節，
+無任何一行被丟棄。合併結果 `bc4f797`。
+
+### 二、這次 release 的產品面差異是「零」
+
+合併後 HEAD 對 `origin/main` 的 **完整** 差異只有四個檔：
+
+| 檔案 | 性質 |
+|---|---|
+| `docs/handoff/00_目前專案狀態.md` | 文件 |
+| `docs/handoff/05_Sprint紀錄.md` | 文件 |
+| `docs/design/核心循環_Product_Playtest.md` | 文件 |
+| `tools/playtest_core_loop.mjs` | 新工具，未被產品引用 |
+
+`git diff --name-only origin/main HEAD -- src public package.json vite.config.js index.html`
+**回傳空集合**。這一點在下面的紅燈判定裡是決定性的：所有 verifier 讀的 `src/` 與
+`origin/main` 逐位元組相同，**本分支在結構上不可能造成任何回歸**。
+
+V7A／V7B 的產品碼早在 `b1830b3`（2026-08-27）就上線；本次 push 的正式站
+資產雜湊 `assets/index-CMbGh7vi.js` 與部署前線上的那份**同名**，
+亦即這次部署的產品位元組差異為 0。
+
+### 三、Release Gate（70 支實跑，62 PASS）
+
+| 群組 | 結果 |
+|---|---|
+| Season vNext V0A–V6（14 支） | ✅ **14/14**　24／43／21／70／46／47／69／44／45／48／39／38／39／32 |
+| V7A `general_match_v7a` | ✅ 全數通過 |
+| V7B `retention_v7b` | ✅ 全數通過 |
+| TD-44 `td44_practice_exit` | ✅ 全數通過 |
+| SeasonState v2（5 支） | 4/5（`migration_q7b` 紅，見 §四） |
+| Competition Q1–Q7d（19 支） | 17/19　93／112／92／91／66／68／69／57／18／29／51／69／43／72／59＋shared 28／shell 22 |
+| CS 賽季（14 支） | 12/14　cs23 28／MR12 36／lifecycle 54／Major 74／series 46／playable 99／hub 31／eligibility 31／M2 55／roster 25 |
+| CS C5A／C5A.1 | ✅ **11/11**／**17/17** |
+| Finance N／N2／N3／N3.1 | ✅ **32／35／40／31** |
+| Training × Competition／P0／P1 | ✅ **13/13**／25/25／**80/80** |
+| MOBA 核心 tactic24／experience26／stats28／flow09／dash10 | ✅ 29/29／29/29／全綠／全綠／全綠 |
+| `regress`／`regress2` | ✅ **結束率 15/15**／**節奏門檻 8/8** |
+| Browser gates（7 支） | 6/7　general_match 30/30・td44 33/33・home_ia 23/23・time_controls 21/21・offseason 18/18・competition_hub_shell 27/27 |
+| `npm run build` | ✅ `built in 16.16s` |
+
+### 四、8 支非綠 —— 全部是 main 既有狀態，不是本次回歸
+
+判定依據見 §二：`src/`／`public/` 與 `origin/main` 零差異。
+
+| 項目 | 實際失敗內容 | 判定 |
+|---|---|---|
+| `check_season_state_v2_migration_q7b` | `TypeError: Cannot read properties of undefined (reading 'id')`（`:44` 讀 `made.state.competition.id`），整支 crash | **TD-45（新登記）** |
+| `check_q7a_3d_asia_circuit` 66/67 | §9j「完全沒有動到錢」紅 | **TD-46（新登記）** |
+| `check_q7a_3f1_career_final` 40/42 | §4b `careerEventId` 未留 null；§7a 畫面仍直讀賽季封存名次 | **TD-46（新登記）** |
+| `check_cs_major_honors_award` 44/45 | §「獎金帳本只多了 Major 那一筆的鍵」`0 → 2` | **TD-46（新登記）** |
+| `check_cs_season_recap_lifecycle` 63/64 | §「聯賽沒有獎金 ⇒ view.award 為 null」紅 | **TD-46（新登記）** |
+| `check_cs_c5a2_combat_audit` | `ENOENT artifacts/cs-c5a2/baseline-audit/runtime-evidence.json` | 非程式紅燈：需先跑對應 browser probe 產生證據檔，`artifacts/` 不進版控 |
+| `check_cs_c5a2_final_combat` | `ENOENT artifacts/cs-c5a2/final-combat-probe/runtime-evidence.json` | 同上 |
+| `browser_check_p06b_product_presence` 8/12 | ①「Player Profile 四個分頁」`fullProfileClicked:false` ＝ **TD-38**；② 390px 元素級 overflow 6 項；③ 360px overflow 7 項 | TD-38 沿用；overflow 見下 |
+
+**TD-46 是一組、不是四筆孤立紅燈**：`q7a_3d` §9j、`cs_major_honors_award` 的獎金帳本鍵、
+`cs_season_recap_lifecycle` 的 `view.award` —— 三支紅的都是**獎金／帳本語義**。
+合理推測是 Finance N 線調整了獎金入帳語義之後，Competition／CS 這幾支斷言沒有同步更新。
+**本輪不修**（超出 release closure 範圍），登記為一組待辦。
+
+**關於 390px 的兩個測法要分清楚，不要互相打臉**：
+`p06b` 量的是**元素級** `scrollWidth > clientWidth`（會把刻意做成橫向捲動的
+「MAIN STAGE」卡片列 362→864 也算進去）；正式站 smoke §M2 量的是**頁面級**橫向捲動。
+正式站 §M2／§M4／§M5 全綠 ⇒ **使用者在手機上看到的頁面不會橫捲**；
+`p06b` 抓到的是 header 溢出 18px 這類元素級細節。兩者不衝突，登記為 TD-47。
+
+### 五、整合與部署
+
+| 步驟 | 結果 |
+|---|---|
+| `git push origin HEAD:main` | `1883b33..bc4f797  HEAD -> main` |
+| ancestry 覆核 | `HEAD == origin/main == bc4f797`，且 HEAD 是 origin/main 的祖先 ✅ |
+| Deploy run | `33273352390`　`Deploy Vite site to GitHub Pages`　**completed / success** |
+| 正式站 | <https://rayhuang0323.github.io/ESMO-/> |
+
+⚠ 本機 `main` **ref 仍停在 `1883b33`**：`main` 被 `ESMO-worktrees/codex-cs-p0-main-release`
+這個 worktree 佔用中，強推該 ref 會讓那個 worktree 的檔案與索引對不上。
+**刻意不動它**；`origin/main` 才是真值，那個 worktree 下次自己 `git pull` 即可。
+
+### 六、正式站 smoke：44 / 44 全綠（全走 UI，含兩場真的比賽）
+
+`tools/browser_check_prod_v7_release.mjs`，逐項對應驗收清單：
+
+- **§H 首頁**：H1 無白屏、H5 只有一個聚合徽章（0 個徽章｜可領 0）、H3 三個入口都在。
+- **§D 一般對戰**：D2 名稱「一般對戰」、D4 今日 **0/3**、D6 **34 步全走 UI 打完**
+  （配對→選角→比賽→結算）、D7 有收益（資金 $120萬→$128萬、粉絲 +45）、
+  D8 走權威路徑（`processedMatchTransactions 0 → 1`）、D9 容量變 **1/3**。
+- **§P 快速練習**：P4 打得完、P5 **零永久收益**（資金／財務／粉絲／聲望／**formLog**／
+  贊助／選手數值／戰績／競技容量全部未變）、P6 不吃容量（`used:1 → used:1`）、
+  P7–P10 打完一般對戰之後**練習仍可重複使用**且賽前頁回得到一般對戰。
+- **§O Retention**：O2 日 3／週 3／季 4、O5 可領 2、O6 手動領取、O7 ◆0→◆10、
+  O9 重整後仍在、O10 領過不回退。
+- **§N 入口**：MOBA／CS／Competition Hub 三個都進得去且無白屏。
+- **§M 390×844**：M2 首頁無白屏無橫捲、M4 目標頁不溢出、M5 賽前頁橫幅在且不溢出。
+- **§C**：**無 page-origin uncaught error**。
+
+### 七、狀態標記
+
+- **GENERAL_MATCH = RELEASED**
+- **RETENTION_V1 = RELEASED**
+- **READY_FOR_NEXT_PHASE = YES**（下一階段未開始）
+
+### 八、本輪新增的風險註記
+
+CS-C5A 的五個 `*-prepared.wav` 共約 **31 MB** 已隨 `public/` 進正式站，
+且 `EsportsFPS3D.jsx:79-87` 是 runtime 實際載入它們（不是死檔），
+`dist` 總量 **76 MB**。這是 C5A 既有設計、**非本輪引入**，但首次進 CS 對戰的
+下載量值得下一輪評估（登記為 TD-48）。
