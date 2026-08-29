@@ -16439,3 +16439,48 @@ gate §A 四條就是在守這件事（結算端不得改讀 `activePractice`）
 
 一般對戰收益與容量、快速練習零永久影響、正式季賽、match flow 整體結構，全部沒動。
 TD-42／TD-43 維持原樣（含既有的 TD-42 撞號，仍留待下一輪重編）。
+
+---
+
+## 2026-08-30　當機後補驗證：V7A／V7B 結案確認
+
+**背景**：上一輪（`d08239e`）之後電腦當機，最後一次驗證的輸出遺失。本節只補跑兩支驗證
+把結論落盤，**沒有重跑整套 Release Gate，也沒有重新 Audit，沒有改任何產品程式碼**。
+
+### 一、開工前狀態核對
+
+| 項目 | 值 |
+|---|---|
+| worktree | `D:\OneDrive\文件\GitHub\ESMO-season-vnext` |
+| branch | `season/vnext` |
+| HEAD | `d08239eb7268adb3f9e64acd9da9c6d3ced9e9b9`（`d08239e`） |
+| `f98764d` 是否仍在歷史中 | **是**（`git merge-base --is-ancestor f98764d HEAD` 通過） |
+| working tree | **乾淨**（`nothing to commit, working tree clean`） |
+
+### 二、補跑的驗證
+
+| 命令 | 結果 |
+|---|---|
+| `npm run build` | ✅ **PASS**　`✓ built in 14.48s`（2761 modules transformed） |
+| `node tools/browser_check_general_match_and_objectives.mjs` | ✅ **30 / 30 通過** |
+
+browser gate 四段全綠：
+§D 桌面 1280×900 一般對戰名稱與容量 D0–D10（含 D6 結算走 viaSession 權威路徑、
+D7 容量 0/3→1/3、D9 層級切回 practice、D10 練習不顯示競技容量）、
+§O 俱樂部目標 O1–O13（含 O2 單一聚合徽章、O8 訓練寫入點接上、O10 點數 0→10、
+O12 重整後仍在、O13 領過不回退）、§M 手機 390×844 M1–M5、§C1 無未捕捉錯誤。
+
+### 三、判定
+
+- **GENERAL_MATCH_CLOSED = YES**
+- **RETENTION_V1_COMPLETE = YES**
+
+依據：build PASS 且 `browser_check_general_match_and_objectives` 30/30，
+兩項判定條件都成立。上一輪已記錄的 `check_general_match_v7a` 55/55 與
+`check_retention_v7b` 58/58 本輪**未重跑**（範圍外，且該輪之後產品碼未再變動）。
+
+### 四、本輪未做（明確聲明）
+
+未 push、未 deploy、未重跑 Release Gate、未重新 Audit、未分析已完成功能。
+`d08239e` 提出的三個動機面問題（比賽 XP 相對門檻過低、賽季始終未開賽、
+賽事中心 0/35）仍為開放項，屬下一輪範圍，本節不處理。
