@@ -11,8 +11,9 @@ export const FPS_PRESENTATION_STATES = Object.freeze({
   DEATH: "death",
 });
 
-const EPSILON = 0.025;
-const RUN_SPEED = 0.58;
+const SIMULATION_STEP_SEC = 0.5;
+const IDLE_SPEED = 0.22;
+const RUN_SPEED = 2.4;
 
 function positionOf(player) {
   return player?.pos && Number.isFinite(player.pos.x) && Number.isFinite(player.pos.y)
@@ -36,15 +37,21 @@ function facingVector(player) {
  * decisions. Missing renderer identity is intentionally not represented as a
  * death state; the renderer handles that contract violation separately.
  */
-export function deriveFpsAnimationState({ player, previousPlayer, nextPlayer } = {}) {
+export function deriveFpsAnimationState({ player, previousPlayer, nextPlayer, playbackActive = true } = {}) {
   const current = player || {};
   const previous = previousPlayer || current;
   const delta = movementBetween(current, previous);
-  const speed = Math.hypot(delta.x, delta.y);
+  const measuredSpeed = Math.hypot(delta.x, delta.y) / SIMULATION_STEP_SEC;
+  const speed = Number.isFinite(Number(current.velocityUnitsPerSec))
+    ? Math.max(0, Number(current.velocityUnitsPerSec))
+    : measuredSpeed;
+  const velocity = current.velocity && Number.isFinite(Number(current.velocity.x)) && Number.isFinite(Number(current.velocity.y))
+    ? { x: Number(current.velocity.x), y: Number(current.velocity.y) }
+    : { x: delta.x / SIMULATION_STEP_SEC, y: delta.y / SIMULATION_STEP_SEC };
   const facing = facingVector(current);
-  const forward = delta.x * facing.x + delta.y * facing.y;
-  const lateral = -delta.x * facing.y + delta.y * facing.x;
-  const moving = speed > EPSILON;
+  const forward = velocity.x * facing.x + velocity.y * facing.y;
+  const lateral = -velocity.x * facing.y + velocity.y * facing.x;
+  const moving = playbackActive && speed > IDLE_SPEED;
   const state = String(current.state || "").toUpperCase();
   const aiming = !current.dead && (state === "ENGAGE" || state === "HOLD" || Number(current.shooting) > 0);
   const fireEvent = !current.dead && Number(current.shooting) > 0 && Number(previous.shooting) <= 0;
@@ -56,7 +63,7 @@ export function deriveFpsAnimationState({ player, previousPlayer, nextPlayer } =
   if (current.dead) locomotion = FPS_PRESENTATION_STATES.DEATH;
   else if (moving && Math.abs(lateral) > Math.abs(forward) * 1.15) {
     locomotion = lateral < 0 ? FPS_PRESENTATION_STATES.STRAFE_LEFT : FPS_PRESENTATION_STATES.STRAFE_RIGHT;
-  } else if (moving && forward < -EPSILON) locomotion = FPS_PRESENTATION_STATES.BACKPEDAL;
+  } else if (moving && forward < -IDLE_SPEED) locomotion = FPS_PRESENTATION_STATES.BACKPEDAL;
   else if (moving) locomotion = speed >= RUN_SPEED ? FPS_PRESENTATION_STATES.RUN : FPS_PRESENTATION_STATES.WALK;
 
   return {

@@ -24,9 +24,20 @@ export function loadFpsCharacterAssets() {
 
 function cloneWithoutRootMotion(clip) {
   const copy = clip.clone();
+  const deathClip = /death/i.test(String(clip.name || ""));
   copy.tracks = copy.tracks.filter((track) => {
     const name = String(track.name || "").toLowerCase();
-    return !(name.includes("root") && name.endsWith(".position"));
+    // FPS characters are placed by authoritative frame positions. Keep bone
+    // rotations for recoil/hurt/death, but remove translation on common
+    // locomotion roots; GLB exporters may call that channel root, hips, or
+    // pelvis. This prevents Hit_Chest from moving the rendered player.
+    const positionTrack = name.endsWith(".position");
+    // Death is different: the hips/pelvis translation is the authored fall
+    // to the floor. Removing it globally lifts the corpse; only the world
+    // root stays presentation-owned for the death clip.
+    const rootMotionBone = (deathClip ? ["root"] : ["root", "hips", "pelvis"])
+      .some((token) => name.includes(token));
+    return !(positionTrack && rootMotionBone);
   });
   return copy;
 }
@@ -153,6 +164,7 @@ function publishDiagnostic(controller, remove = false) {
     variationId: controller.c2c?.variationId || null,
     variationLabel: controller.c2c?.variationLabel || null,
     equipmentModules: controller.c2c?.equipmentModules || [],
+    limbPresentation: controller.c2c?.limbPresentation || null,
     artTriangles: controller.c2c?.triangleCount || 0,
     artMaterials: controller.c2c?.materialCount || 0,
     facingDegrees: controller.facingDegrees,
@@ -162,6 +174,12 @@ function publishDiagnostic(controller, remove = false) {
     baseBounds: controller.baseBounds,
     normalizedBounds: controller.normalizedBounds,
     currentBounds: controller.currentBounds,
+    hitPositionDrift: Number(controller.hitPositionDrift.toFixed(6)),
+    maxHitPositionDrift: Number(controller.maxHitPositionDrift.toFixed(6)),
+    hitPositionDriftSamples: controller.hitPositionDriftSamples,
+    rootMotionPolicy: "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+    deathGroundContactY: controller.deathGroundContactY,
+    deathGroundCorrection: Number(controller.deathGroundCorrection.toFixed(6)),
   };
   current.rigged = Object.values(current.players).filter((player) => player.mode === "rigged").length;
   current.fallback = Object.values(current.players).filter((player) => player.mode === "fallback").length;
@@ -208,6 +226,12 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true } = 
     normalizedBounds: null,
     baseBounds: null,
     currentBounds: null,
+    baseModelPosition: null,
+    hitPositionDrift: 0,
+    maxHitPositionDrift: 0,
+    hitPositionDriftSamples: 0,
+    deathGroundContactY: null,
+    deathGroundCorrection: 0,
     boundsSampleFrame: 0,
     setFacingDegrees(degrees) {
       if (!Number.isFinite(Number(degrees))) return;
@@ -246,11 +270,13 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true } = 
       controller.lastHitSignature = null;
       controller.lastHitFrame = null;
       controller.deathTriggered = false;
+      controller.deathGroundContactY = null;
+      controller.deathGroundCorrection = 0;
       controller.identityMiss = false;
       controller.lastRound = round;
       riggedRoot.visible = controller.mode === "rigged";
     },
-    update({ player: current, previousPlayer, nextPlayer, frameRound, previousFrameRound, frameIndex = null, dt = 0 } = {}) {
+    update({ player: current, previousPlayer, nextPlayer, frameRound, previousFrameRound, frameIndex = null, dt = 0, playbackActive = true } = {}) {
       if (controller.disposed || !current) return;
       controller.lastPlayer = current;
       controller.c2c?.update({ player: current });
@@ -259,7 +285,7 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true } = 
         if (controller.lastRound == null) controller.lastRound = frameRound;
         else if (frameRound !== controller.lastRound) controller.resetForRound(frameRound);
       }
-      const animation = deriveFpsAnimationState({ player: current, previousPlayer, nextPlayer });
+      const animation = deriveFpsAnimationState({ player: current, previousPlayer, nextPlayer, playbackActive });
       const eventFrame = Number.isFinite(Number(frameIndex)) ? Number(frameIndex) : "unknown";
       const fireSignature = animation.fireEvent
         ? `${eventFrame}:${current.shooting}:${previousPlayer?.shooting ?? 0}`
@@ -291,11 +317,16 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true } = 
         controller.fireTimer = Math.max(0, controller.fireTimer - dt);
         controller.hitTimer = Math.max(0, controller.hitTimer - dt);
         if (hitEvent) {
-          controller.hitTimer = 0.32;
-          controller._switch(FPS_CHARACTER_ASSET_MANIFEST.clips.hit, true, 0.05);
+          // A short one-shot overlay communicates impact without leaving the
+          // mixer clamped in Hit_Chest. The signature latch above still owns
+          // one trigger per hp edge; only the presentation window is tuned.
+          // Keep the authored one-shot readable across review seeks and normal
+          // RAF cadence; the 0.22s C5A window expired before a second sample.
+          controller.hitTimer = 0.42;
+          controller._switch(FPS_CHARACTER_ASSET_MANIFEST.clips.hit, true, 0.055);
         } else if (fireEvent) {
-          controller.fireTimer = 0.24;
-          controller._switch(FPS_CHARACTER_ASSET_MANIFEST.clips.fire, true, 0.04);
+          controller.fireTimer = 0.16;
+          controller._switch(FPS_CHARACTER_ASSET_MANIFEST.clips.fire, true, 0.045);
         } else if (controller.hitTimer <= 0 && controller.fireTimer <= 0) {
           const clipName = animation.aiming && !animation.moving
             ? FPS_CHARACTER_ASSET_MANIFEST.clips.aim
@@ -308,6 +339,32 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true } = 
         }
       }
       controller.mixer.update(Math.min(0.05, Math.max(0, dt)));
+      // Death animation owns the fall pose, while the authoritative parent
+      // still owns X/Z. Correct the one presentation root offset after the
+      // mixer has posed the corpse so its measured lowest skinned point is
+      // on the world floor (Y=0), without changing simulation coordinates.
+      if (controller.deathTriggered && controller.model) {
+        const posedBounds = measurePresentationBounds(riggedRoot);
+        const correction = Number(posedBounds?.min?.[1]);
+        if (Number.isFinite(correction) && Math.abs(correction) > 0.00001) {
+          controller.model.position.y -= correction;
+          controller.deathGroundCorrection += -correction;
+        }
+        const groundedBounds = measurePresentationBounds(riggedRoot);
+        controller.deathGroundContactY = Number.isFinite(groundedBounds?.min?.[1])
+          ? groundedBounds.min[1]
+          : null;
+      }
+      // Measure only local child displacement during the one-shot hit clip.
+      // The authoritative world position remains on riggedRoot, which is set
+      // by EsportsFPS3D from frame player.pos before this update.
+      if (controller.hitTimer > 0 && controller.baseModelPosition && controller.model) {
+        const dx=controller.model.position.x-controller.baseModelPosition.x;
+        const dz=controller.model.position.z-controller.baseModelPosition.z;
+        controller.hitPositionDrift=Math.hypot(dx,dz);
+        controller.maxHitPositionDrift=Math.max(controller.maxHitPositionDrift,controller.hitPositionDrift);
+        controller.hitPositionDriftSamples+=1;
+      } else controller.hitPositionDrift=0;
       controller.c2c?.syncAnchors?.();
       controller.boundsSampleFrame += 1;
       if (controller.boundsSampleFrame % 30 === 0) controller.currentBounds = measurePresentationBounds(riggedRoot);
@@ -353,6 +410,7 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true } = 
     const actions = new Map();
     clips.forEach((clip, name) => actions.set(name, mixer.clipAction(clip)));
     controller.model = model;
+    controller.baseModelPosition = model.position.clone();
     controller.normalizedBounds = measurePresentationBounds(model);
     controller.mixer = mixer;
     controller.actions = actions;
