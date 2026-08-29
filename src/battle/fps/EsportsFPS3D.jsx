@@ -12,6 +12,7 @@ import { createFpsCharacterRenderer } from "./presentation/FpsCharacterRenderer.
 import { getRiggedCharacterLimit } from "./presentation/fpsCharacterAssets.js";
 import { createC3MirageEnvironment } from "./presentation/fpsMapEnvironment.js";
 import { createGunplayPresentation } from "./presentation/fpsGunplayPresentation.js";
+import { createUtilityPresentation } from "./presentation/fpsUtilityPresentation.js";
 
 // EsportsFPS3D 已內聯於本檔（見下方 __FPS3D_MODULE），以符合單一檔案 artifact 限制
 /* ═══════════════════════════════════════════════════════════════
@@ -1469,6 +1470,15 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
         canvas.dataset.esmoFpsC5a1HitDriftMax=String(st.c5a1HitDriftMax||0);
         canvas.dataset.esmoFpsC5a1HitDriftSamples=String(st.c5a1HitDriftSamples||0);
         canvas.dataset.esmoFpsC5a1AuthoritativeDriftMax=String(st.c5a1AuthoritativeDriftMax||0);
+        const c5b=st.utilityFxEvidence||{};
+        canvas.dataset.esmoFpsC5bSmoke=String(c5b.activeSmoke||0);
+        canvas.dataset.esmoFpsC5bSmokeStages=JSON.stringify(c5b.smokeStages||{});
+        canvas.dataset.esmoFpsC5bTrajectory=String(c5b.trajectorySamples||0);
+        canvas.dataset.esmoFpsC5bHe=String(c5b.heBursts||0);
+        canvas.dataset.esmoFpsC5bFlash=String(c5b.flashBursts||0);
+        canvas.dataset.esmoFpsC5bFlashRecovery=String(c5b.flashRecoverySamples||0);
+        canvas.dataset.esmoFpsC5bMolly=String(c5b.mollyZones||0);
+        canvas.dataset.esmoFpsC5bMarkers=String(c5b.visibleMarkers||0);
       }
     };
     st_start();
@@ -1478,6 +1488,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
       const st=stateRef.current;if(st)st.running=false;
       cancelAnimationFrame(st?.raf);
       st?.c5aGunplayFx?.dispose?.();
+      st?.utilityFx?.dispose?.();
       st?.players?.forEach((player)=>player.rigged?.dispose?.());
       ro.disconnect();
       window.removeEventListener("mousemove",onMove);
@@ -1518,6 +1529,8 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
     const clear=g=>{for(let i=g.children.length-1;i>=0;i--){const c=g.children[i];c.traverse(disp);g.remove(c);}};
     st.c5aGunplayFx?.dispose?.();
     st.c5aGunplayFx=null;
+    st.utilityFx?.dispose?.();
+    st.utilityFx=null;
     st.players.forEach((player)=>player.rigged?.dispose?.());
     clear(worldGroup);clear(playerGroup);clear(fxGroup);clear(routeGroup);
     st.raycastTargets=[];
@@ -1685,14 +1698,11 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
     st.pools={
       tracer:mkPool(80,()=>new THREE.Mesh(st.beamGeo,new THREE.MeshBasicMaterial({color:0xfde047,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}))),
       muzzle:mkPool(16,()=>new THREE.Sprite(new THREE.SpriteMaterial({map:tex.flash,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}))),
-      smoke:mkPool(7*6,()=>new THREE.Mesh(sphereGeo,new THREE.MeshStandardMaterial({color:0xd5d8df,transparent:true,opacity:0,roughness:1,metalness:0,depthWrite:false}))),
-      fire:mkPool(8*7,()=>new THREE.Sprite(new THREE.SpriteMaterial({map:tex.fire,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}))),
-      nade:mkPool(28,()=>new THREE.Mesh(sphereGeo,new THREE.MeshStandardMaterial({color:0x2a2e36,roughness:0.6,emissive:0x000000}))),
-      boom:mkPool(8,()=>new THREE.Sprite(new THREE.SpriteMaterial({map:tex.glow,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}))),
       drop:mkPool(12,()=>new THREE.Mesh(new THREE.BoxGeometry(0.7,0.16,0.16),new THREE.MeshStandardMaterial({color:0xc9a24a,emissive:0x3a2c10,emissiveIntensity:0.6,roughness:0.5}))),
       spark:mkPool(24,()=>new THREE.Sprite(new THREE.SpriteMaterial({map:tex.glow,color:0xfff1c0,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}))),
     };
     st.c5aGunplayFx=createGunplayPresentation({group:fxGroup,scene,tex,beamGeometry:st.beamGeo,mapKey});
+    st.utilityFx=createUtilityPresentation({group:fxGroup,textures:tex,sphereGeometry:sphereGeo});
     // 槍口閃光點光（共用，循環）
     st.flashLights=[0,1,2].map(()=>{const l=new THREE.PointLight(0xffe6a0,0,14,2);l.visible=false;scene.add(l);return l;});
     st.flashIdx=0;
@@ -2001,49 +2011,9 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null){
     st.c5aFxEvidence=st.c5aGunplayFx.update({frame,previousFrame:pf,time,W,frameIndex,sub});
   }
 
-  // 煙霧（多球體積）
-  {const arr=st.pools.smoke;let i=0;const per=6;
-   (frame.smokes||[]).forEach(s=>{
-     const grow=clamp((s.age||0)/4,0,1);const fade=clamp(s.tl/6,0,1);const R=4.6*grow+1.2;
-     const cx=W.vx(s.pos.x),cz=W.vz(s.pos.y);const seed=parseInt((s.id||"0").replace(/\D/g,"").slice(-4)||"7",10)||7;
-     for(let j=0;j<per;j++){const m=arr[i++];if(!m)break;
-       const a=seed*0.7+j*1.7;const rr=R*(0.5+0.5*((j%3)/2));
-       m.position.set(cx+Math.cos(a)*rr*0.9,1.3+Math.sin(a*1.3)*0.8+ (j%2)*0.7+time*0.0,cz+Math.sin(a)*rr*0.9);
-       const sc=R*(0.9+0.3*Math.sin(a*2+time));m.scale.setScalar(sc);
-       m.material.opacity=0.5*fade;m.visible=true;
-     }
-   });for(;i<arr.length;i++)arr[i].visible=false;}
-
-  // 燃燒彈（火焰群）
-  {const arr=st.pools.fire;let i=0;const per=7;
-   (frame.mollys||[]).forEach(m0=>{const cx=W.vx(m0.pos.x),cz=W.vz(m0.pos.y);const fade=clamp(m0.tl/8,0,1);
-     for(let j=0;j<per;j++){const s=arr[i++];if(!s)break;
-       const a=j*0.9+time*2;const rr=1.6*(j%3)/2+0.3;
-       s.position.set(cx+Math.cos(a)*rr,0.5+Math.abs(Math.sin(time*6+j))*1.1,cz+Math.sin(a)*rr);
-       const sc=1.1+0.6*Math.abs(Math.sin(time*8+j*1.3));s.scale.set(sc,sc*1.4,1);
-       const fireSeed=(hsh(m0.id||`${m0.pos.x}:${m0.pos.y}:${j}`)%1000)/1000;
-       s.material.opacity=(0.7+0.18*fireSeed)*fade;s.visible=true;
-     }
-   });for(;i<arr.length;i++)arr[i].visible=false;}
-
-  // 投擲物（拋物飛行 + 旋轉 + 拖尾 + 落地爆閃）
-  {const it=usePool(st.pools.nade);const bt=usePool(st.pools.boom);
-   const nthrow={};(nf?.throwables||[]).forEach(t=>{nthrow[t.id]=t;});
-   const nadeCol=ty=>ty==="flash"?0xdfe6ff:ty==="he"?0x3b4250:ty==="molly"?0x6a3318:0x9aa0a8;
-   const arcOf=(tw,t)=>{const x=lerp(tw.from.x,tw.to.x,t),y=lerp(tw.from.y,tw.to.y,t),h=0.8+Math.sin(clamp(t,0,1)*Math.PI)*(Number(tw.arcHeightUnits)||4.5);return[W.vx(x),h,W.vz(y)];};
-   (frame.throwables||[]).forEach(tw=>{
-     if(tw.flying){
-       const ntw=nthrow[tw.id];
-       const frameFraction=Math.min(1,C5A2_SIM_STEP_SEC/Math.max(0.1,Number(tw.flightDurationSec)||C5A2_PROJECTILE_FLIGHT_SEC));
-       let t=ntw&&ntw.flying?lerp(tw.t,ntw.t,sub):lerp(tw.t,Math.min(1,tw.t+frameFraction),sub);t=clamp(t,0,1);
-       const col=nadeCol(tw.type);
-       // 拖尾（沿軌跡的殘影，營造丟擲速度感）
-       for(let k=1;k<=3;k++){const tt=Math.max(0,t-k*0.06);const m=it.next();if(!m)break;const p=arcOf(tw,tt);m.position.set(p[0],p[1],p[2]);m.scale.setScalar(0.34*(1-k*0.22));m.material.color.setHex(col);m.material.emissive&&m.material.emissive.setHex(tw.type==="flash"?0x222633:0x000000);m.visible=true;}
-       // 彈體本身（旋轉）
-       const m=it.next();if(m){const p=arcOf(tw,t);m.position.set(p[0],p[1],p[2]);m.scale.setScalar(0.42);m.rotation.set(time*9,time*7,time*5);m.material.color.setHex(col);m.visible=true;}
-     }else{const b=bt.next();if(b){const col=tw.type==="flash"?0xffffff:tw.type==="he"?0xfb923c:tw.type==="molly"?0xff5a18:0xd5d5d5;
-       b.position.set(W.vx(tw.to.x),1.0,W.vz(tw.to.y));const sc=(tw.type==="flash"?5:3.4)*(1+(3-(tw.boom||0))*0.25);b.scale.setScalar(sc);b.material.color.setHex(col);b.material.opacity=0.85*clamp((tw.boom||0)/3,0,1);b.visible=true;}}
-   });it.done();bt.done();}
+  if(st.utilityFx){
+    st.utilityFxEvidence=st.utilityFx.update({frame,nextFrame:nf,time,W,frameIndex,sub});
+  }
 
   // 掉落武器
   {const it=usePool(st.pools.drop);

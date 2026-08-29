@@ -16454,3 +16454,37 @@ TD-42／TD-43 維持原樣（含既有的 TD-42 撞號，仍留待下一輪重�
 - Build：`npm run build` PASS，`2762 modules transformed`。Browser：三圖 Battle `3/3 PASS`、390×844 三圖 smoke `3/3 PASS`；180 秒 long-run `1684` samples，geometry shift `0`、stale／duplicate `0`、rapid recovery `0`、browser errors `0`。
 - 正式 Battle audio 已由三圖 runtime evidence 確認使用最新五個 prepared recorded samples；每發 authoritative shot 與 audio `1:1`，五類 profile `5/5` loaded，沒有 synthesized gunfire 或舊 procedural fallback。
 - 狀態標記：`C5A_DESKTOP_OWNER_ACCEPTED`、`C5A_CLOSED`；`Android real-device validation = PENDING_AFTER_PRODUCTION_DEPLOY`。本輪不開始 C5B。
+
+### Sprint CS-C5B｜Grenade / Smoke / Utility FX（2026-08-30）
+
+#### 一、範圍與 ownership
+
+- 基線：`C5A_CLOSED`／`main @ 1883b33067ca8417ac4ef966554d41bbd8dd1f6e`。隔離 worktree：`worktrees/cs-c5b-utility-fx`，branch `feature/cs-c5b-utility-fx`。
+- `fpsUtilityPresentation.js` 是唯一 C5B utility presentation owner，掛在既有 FPS `fxGroup`；不擁有 simulation、damage、LOS、MatchSession、camera、RAF、roster 或 audio authority。
+- trajectory 只讀既有 `from/to/t/flightDurationSec/velocityUnitsPerSec/arcHeightUnits`；smoke／HE／flash／molly 只讀既有 snapshot。沒有修改 C5A2 authority、weapon damage／cadence、C5A recorded audio、C2C、camera 或 StableCanvas。
+
+#### 二、呈現內容
+
+- grenade／smoke／flash／HE／molly 共用固定容量 pools、deterministic event hash 與 map lifecycle dispose。
+- Smoke 有 grow／hold／dissipate，採多張 shared radial sprite 形成 volume，並保留 depth-tested 地面 marker 讓高位視角仍可定位。
+- HE 有短促核心 flash、dust layers、expanding impact ring 與 bounded debris；Flash 有局部 burst、玩家 halo、fade/recovery，不使用整頁白屏；molly 有 marker 與火焰群。
+- 沒有加入 ShaderMaterial、EffectComposer、RenderPass 或 post-processing；reduced-motion 只降低 pulse/debris，位置 marker 不消失。
+
+#### 三、驗證
+
+| 項目 | 結果 |
+|---|---|
+| `check_cs_c5b_utility_fx` | **53/53 PASS** |
+| 三圖 desktop C5B Battle runtime | **3/3 PASS**；trajectory、smoke 三階段、HE、flash/recovery、molly evidence；browser errors 0 |
+| 三圖 390px C5B Battle runtime | **3/3 PASS**；canvas `370×437`，browser errors 0 |
+| C5A.2 final combat | **39/39 PASS** |
+| C5A.2 combat audit | **23/23 PASS** |
+| 既有 CS/P0/C2C/C3/C4 gates | **全 PASS**：Renderer 24、A2 10、C2A 13、C2B 14、C2C 9、C3 18、C4A 13、C4B 20、Camera 8、RAF 7、StableCanvas 5、CS23 28、C5A 11、C5A.1 17 |
+| `npm run build` | **PASS**；Vite `2763 modules transformed`，既有 large-chunk warning 保留 |
+| P0 180 秒 long-run | **PASS**；`1757` samples，geometry shift 0、stale 0、duplicate 0、rapid recovery 0、browser errors 0 |
+
+#### 四、artifacts 與停止點
+
+- C5B Owner Review：`artifacts/cs-c5b/owner-review/owner-review.html`；evidence：`runtime-evidence-desktop.json`、`runtime-evidence-mobile.json`。
+- 既有 C5A.2 缺少的 baseline／final／owner evidence 亦以 current C5B runtime 補齊，未修改舊 verifier。歷史 R12–R15 provenance mismatch 維持原狀並另列風險，沒有為了綠燈改 hash anchor。
+- 狀態：`C5B_UTILITY_FX_READY_FOR_OWNER_ACCEPTANCE`。未 merge、未 push、未 deploy，不開始 C5C。

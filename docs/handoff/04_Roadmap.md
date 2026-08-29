@@ -1246,3 +1246,11 @@ gate：`check_general_match_v7a`（47）＋ `browser_check_general_match_and_obj
 - 以最新 `origin/main` `e30f1d6` 整合 C5A；整合後 C5A、C5A.1、C5A.2 與既有 CS regression gates 全部 PASS。
 - Production release 前已完成 production build、三圖 Battle、390×844 smoke 與 180 秒 long-run；尚未開始 C5B。
 - Android real-device validation：`PENDING_AFTER_PRODUCTION_DEPLOY`。
+
+## CS-C5B Utility FX — **READY FOR OWNER ACCEPTANCE（2026-08-30）**
+
+- 基線為 `C5A_CLOSED`／`main @ 1883b33067ca8417ac4ef966554d41bbd8dd1f6e`；本輪以獨立 `feature/cs-c5b-utility-fx` worktree 完成，未 merge、未 push、未 deploy。
+- 完成 grenade／smoke／flash／HE／molly 的 bounded presentation：authoritative trajectory 插值、smoke grow／hold／dissipate、多層 volume／marker、HE flash/dust/debris/impact、flashbang local fade/recovery；無 shader／post-processing，未碰 gameplay authority。
+- 自驗證：C5B `53/53`、既有 CS/P0/C2C/C3/C4/C5A gates 全 PASS；production build PASS；Mirage／Dust II／Inferno desktop 與 390px Battle smoke PASS；180 秒 long-run `1757` samples，geometry shift／stale／duplicate／rapid recovery／browser errors 全 `0`。
+- Owner Review artifacts：`artifacts/cs-c5b/owner-review/owner-review.html`；正式 Battle Preview（本機 dev）：`http://127.0.0.1:5174/ESMO-/?fpsRigged=all&fpsC2cHero=all`。
+- 停止於 `C5B_UTILITY_FX_READY_FOR_OWNER_ACCEPTANCE`。下一階段 C5C 不在本輪範圍；Android 真機驗收仍待 production deploy 後由 Owner 執行。
