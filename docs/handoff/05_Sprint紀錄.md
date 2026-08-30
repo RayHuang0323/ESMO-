@@ -16488,3 +16488,40 @@ TD-42／TD-43 維持原樣（含既有的 TD-42 撞號，仍留待下一輪重�
 - C5B Owner Review：`artifacts/cs-c5b/owner-review/owner-review.html`；evidence：`runtime-evidence-desktop.json`、`runtime-evidence-mobile.json`。
 - 既有 C5A.2 缺少的 baseline／final／owner evidence 亦以 current C5B runtime 補齊，未修改舊 verifier。歷史 R12–R15 provenance mismatch 維持原狀並另列風險，沒有為了綠燈改 hash anchor。
 - 狀態：`C5B_UTILITY_FX_READY_FOR_OWNER_ACCEPTANCE`。未 merge、未 push、未 deploy，不開始 C5C。
+
+### Sprint CS-C5B｜CS Combat Tactical Audit（2026-08-30）
+
+#### 一、root cause 與最小修正
+
+- `CsTacticScreen` 原先只把一個 tactic id 傳入 Battle，沒有真正的賽前多階段布局；現在增加四個 phase card 與 openness／post-plant 選項，並由 AppShell／CsMatchScreen 傳入 `tacticalLayout`。
+- `simulateFps` 原先 route 決策沒有完整消費 phase、score、economy、survival、Bomb、weapon mix 與 map control；現在以 phase tactic + deterministic weighted candidates 選擇 route／execute／rotate／post-plant anchor。跨 site route 僅在 mid-round control 條件成立，避免 open layout 將 CT 路線錯誤變成跨障礙直奔。
+- planner 與 movement collision 的 radius／waypoint margin 不一致，且 blocked direct segment 可能回退為同一 blocked route；現在以 `plannerSafePoint`、solid obstacle ledger、grid／corner detour 與 stuck → obstacle context → alternate replan 形成同一條 authority path，禁止 teleport／hard clamp 假修。
+- full-buy 原先只有角色槽位式 sniper／shotgun 分支；現在由 economy、map、target、tactic、player stats、score pressure 與 deterministic hash 共同決定，五類武器均能真實購買並進入 profile／damage／cadence。
+- flank 交戰的合法視線、FOV、取得目標、lock、permission、range、fire 沒有完整觀測；現在每段 shot telemetry 都攜帶該鏈，合法 flank 不再被 route state 阻止。Plant 後則即時切換 T `POST_PLANT/HOLD_ANGLE/DENY_DEFUSE` 與 CT `RETAKE/COVER/DEFUSE`。
+
+#### 二、賽前布局與驗證
+
+- 新增 deterministic verifier：`tools/check_cs_c5b_combat_tactical_audit.mjs`，共 `26/26 PASS`；browser verifier：`tools/browser_check_cs_c5b_combat_tactical_audit.mjs`。
+- desktop 三圖 route signature 為 Mirage `23`、Dust II `28`、Inferno `29`；三圖 stuck `0`、route deadlock `0`、illegal wall crossing `0`。flank engagements 為 `142 / 42 / 24`；plant 為 `0 / 0 / 8`。
+- desktop／390px mobile 均由真實賽前 UI 選擇 `f1 → f3 → f5 → f6` 四層配置並觀測到 authoritative `source=pre-match-layout` phase selections。三圖 evidence 已存於 `artifacts/cs-c5b/tactical-audit/`。
+- 最新正式驗證：C5B FX `53/53`、C5A.1 `17/17`、C5A.2 audit `23/23`、C5A.2 final `39/39`、C5A gunplay `11/11`、RAF `7/7`、C2A `13/13`、C2B `14/14`、Camera `8/8`；production build `2763 modules` PASS；P0 180 秒 `1600 samples` PASS，geometry shift／stale／duplicate／rapid recovery／browser errors 均 `0`。
+- `tools/check_cs_c5a2_final_combat.mjs` 的 route-planner assertion 由過時的 `R+0.08` anchor 更新為目前正式 `R+0.65`／`plannerSafePoint`／corner normalization contract；這是 verifier 與 current source contract 對齊，沒有降低 assertion。
+- 四層賽前 UI 使兩支舊 browser verifier 的「最後一顆 button」入口失去穩定性；改為使用正式 `data-testid` phase／confirm 入口後，C5B utility browser `3/3 PASS`，C5A.2 runtime-clock `3/3 PASS`。這是 verifier compatibility fix，不是為了繞過 runtime failure。
+
+#### 三、交付邊界
+
+- 中文 Owner Review：`http://127.0.0.1:5174/ESMO-/artifacts/cs-c5b/tactical-audit/owner-review/owner-review.html`；實際 Battle：`http://127.0.0.1:5174/ESMO-/?fpsRigged=all&fpsC2cHero=all`；兩者 HTTP `200`。
+- 未 merge、未 push、未 deploy；不開始 C5C。Node/headless 390px 仍不能取代 Android 真機視覺、FPS、觸控、AudioContext、喇叭與熱節流驗收。`systematic-debugging` 與 `verification-before-completion` 這兩個 exact skill 名稱在本 session 不可用，已依現有 debugging／gameplay／profiler／verification 指引執行同等 root-cause、runtime evidence 與 exit-code 檢查。
+
+### C5B route interrupt combat hotfix（2026-08-30）
+
+- 重現：正式 combat scan 原本要求 `prog>0.15`；`prog` 又在 12 秒 buy phase 後才起算，造成每回合前 `25.5s` 無 acquisition，即使 actor 還在 route 中且 LoS／FOV／range 全合法。
+- 修正：combat scan 改為只在 `buyP` 時鎖住；新增 route-active acquisition／permission／first-shot telemetry，permission 當下標記 combat interrupt，保留 tactical route。未改 damage、economy、fire interval、objective result 或 render pipeline。
+- 新增 `tools/check_cs_c5b_route_interrupt.mjs` 與 `tools/check_cs_c5b_route_interrupt_runtime.mjs`。固定 seed 三圖完成 `22R / 24R / 13R`；五種 opening／rotate／flank／retreat／post-plant-retake case 均 PASS，最早 acquisition `13.0s`，median `305 / 281 / 259ms`，p90 `1500 / 1500 / 1201ms`，cadence/navigation violations `0`。
+- 正式 UI Battle artifacts：`runtime-evidence-{mirage,dust2,inferno}-1366px.json`；三圖完成 `19R / 54R / 21R`，route chain、route preservation、C2C/P0/browser diagnostics 全 PASS。C5A.2 final `39/39`、C5B FX `53/53`、C5B tactical `26/26`、production build `2763 modules` PASS。
+
+### C5B first-shot p90 targeted audit（2026-08-30）
+
+- 修正前 deterministic trace 找到 Dust II `ct1 → t1`：`visible → acquisition = 0ms`、`reaction-ready = 31252ms`、`permission → shot = 6748ms`、weapon-ready 只差 `123ms`；不是 LoS/FOV、turning、tactical state 或 route lock，而是 ready pair queue 的 reservation starvation。
+- 最小正式修正為 ready episode oldest-first，並在 scheduled shot 尚未 ready 時延後 `usedT/usedCT` reservation。新增 `tools/check_cs_c5b_route_delay_audit.mjs`；修正後 `72` 筆 `>1000ms` 中 acquisition/snapshot `52`、weapon not ready `20`，其餘分類 `0`，unexplained `0`。
+- route-active median/p90 為 Mirage `304/1312ms`、Dust II `274/1229ms`、Inferno `312/1252ms`；C5A.2 final `39/39`、C5B FX `53/53`、C5B tactical `26/26`、production build `2763 modules` PASS。未 close、未 merge、未 deploy，不開始 C5C。

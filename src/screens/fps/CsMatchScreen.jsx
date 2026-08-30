@@ -4,7 +4,7 @@
 //  Presentation：EsportsFPS3D（Legacy 3D CS 引擎）原封使用（embedded），
 //    不重畫 FPS UI；HUD / 記分板 / 擊殺列 / 無線電 / 轉播運鏡全部是引擎內建。
 //  Sprint23 接線（只加 props，引擎零修改）：
-//    · config = 賽前流程輸出 {mapKey,mapName,tacticId,tacticName,tacticType,seed}
+//    · config = 賽前流程輸出 {mapKey,mapName,tacticId,tacticName,tacticType,tacticalLayout,seed}
 //      → 引擎 tactic/tacticType props（Legacy fpsRouter 同款吃法，EsportsGame.jsx:7629）。
 //    · 戰術顯示於 Match Header（Sprint23 D 節要求）。
 //    · 終局：引擎 onComplete 的 MatchResult → toCsMatchResult（CS 專屬契約，
@@ -83,7 +83,7 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
         </div>
       )}
 
-      <EsportsFPS3D embedded roster={roster ?? undefined} mapKey={mapKey} seed={seed} tactic={config?.tacticId ?? undefined} tacticType={config?.tacticType ?? undefined} teamName={team?.name} onComplete={setResult}
+      <EsportsFPS3D embedded roster={roster ?? undefined} mapKey={mapKey} seed={seed} tactic={config?.tacticId ?? undefined} tacticType={config?.tacticType ?? undefined} tacticalLayout={config?.tacticalLayout ?? undefined} teamName={team?.name} onComplete={setResult}
         resumeFrameIndex={Number(activeSnapshot?.frameIndex) || 0} onProgress={handleProgress} />
 
       {/* 終局：引擎真實 MatchResult → CS 契約 → 賽後戰報（入史在 CsResultScreen） */}

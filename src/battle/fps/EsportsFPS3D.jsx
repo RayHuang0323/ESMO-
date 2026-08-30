@@ -170,13 +170,46 @@ function navLineBlocked(a,b,walls){
   for(let i=1;i<steps;i++){const t=i/steps;const p={x:lerp(a.x,b.x,t),y:lerp(a.y,b.y,t)};for(const w of walls){if(p.x>=w.x&&p.x<=w.x+w.w&&p.y>=w.y&&p.y<=w.y+w.h)return true;}}
   return false;
 }
+function plannerSafePoint(point,walls,R){
+  const safe=snapOut(point,walls,R+0.65);
+  return blocked(safe,walls,R+0.65)?collideResolve({...safe},walls,R):safe;
+}
+function gridNavigableSegment(start,goal,walls,R){
+  const margin=R+0.8,step=3;
+  const expanded=walls.map(w=>({x:w.x-margin,y:w.y-margin,w:w.w+margin*2,h:w.h+margin*2}));
+  const clear=(a,b)=>!navLineBlocked(a,b,expanded);
+  if(clear(start,goal))return[{x:start.x,y:start.y},{x:goal.x,y:goal.y}];
+  const grid=[];
+  for(let x=2;x<=98;x+=step)for(let y=2;y<=98;y+=step){const point={x,y};if(!expanded.some(w=>point.x>=w.x&&point.x<=w.x+w.w&&point.y>=w.y&&point.y<=w.y+w.h))grid.push(point);}
+  const nodes=[{x:start.x,y:start.y},{x:goal.x,y:goal.y},...grid];
+  const startIndex=0,goalIndex=1,gScore=Array(nodes.length).fill(Infinity),fScore=Array(nodes.length).fill(Infinity),came=Array(nodes.length).fill(-1),open=[startIndex],closed=new Set();
+  gScore[startIndex]=0;fScore[startIndex]=dist(nodes[startIndex],nodes[goalIndex]);
+  const adjacent=(index)=>{
+    const node=nodes[index],result=[];
+    if(index<2){for(let i=2;i<nodes.length;i++)if(dist(node,nodes[i])<=step*2.4&&clear(node,nodes[i]))result.push(i);if(clear(node,nodes[index===0?goalIndex:startIndex]))result.push(index===0?goalIndex:startIndex);return result;}
+    const gx=Math.round((node.x-2)/step),gy=Math.round((node.y-2)/step);
+    for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){if(!dx&&!dy)continue;const nx=nodes.findIndex((candidate,i)=>i>=2&&Math.round((candidate.x-2)/step)===gx+dx&&Math.round((candidate.y-2)/step)===gy+dy);if(nx>=2&&clear(node,nodes[nx]))result.push(nx);}
+    for(const endpoint of [startIndex,goalIndex])if(dist(node,nodes[endpoint])<=step*2.4&&clear(node,nodes[endpoint]))result.push(endpoint);
+    return result;
+  };
+  while(open.length){let best=0;for(let i=1;i<open.length;i++)if(fScore[open[i]]<fScore[open[best]])best=i;const current=open.splice(best,1)[0];if(current===goalIndex){const path=[];for(let at=goalIndex;at>=0;at=came[at]){path.push(nodes[at]);if(at===startIndex)break;}return path.reverse();}closed.add(current);for(const next of adjacent(current)){if(closed.has(next))continue;const tentative=gScore[current]+dist(nodes[current],nodes[next]);if(tentative<gScore[next]){came[next]=current;gScore[next]=tentative;fScore[next]=tentative+dist(nodes[next],nodes[goalIndex]);if(!open.includes(next))open.push(next);}}}
+  return[];
+}
 function navigableSegment(start,goal,walls,R){
   // Match the authoritative collision radius closely. The previous extra
   // 0.45 clearance classified a player legally sliding at R from a wall as
   // already inside the planner obstacle, so replans fell back to the same
   // blocked direct segment. Keep only a numeric/navigation epsilon here.
-  const margin=R+0.08,cornerGap=0.14;
+  const plannerStart=plannerSafePoint(start,walls,R),plannerGoal=plannerSafePoint(goal,walls,R);
+  const margin=R+0.65,cornerGap=0.38;
   const obstacles=walls.map(w=>({x:w.x-margin,y:w.y-margin,w:w.w+margin*2,h:w.h+margin*2}));
+  // A direct line through a solid obstacle must never be returned as a route.
+  // Try the deterministic occupancy grid first; the visibility graph below is
+  // still useful for sparse geometry, but it must not hide a blocked segment.
+  if(navLineBlocked(plannerStart,plannerGoal,obstacles)){
+    const gridRoute=gridNavigableSegment(plannerStart,plannerGoal,walls,R);
+    if(gridRoute.length>1)return gridRoute;
+  }
   const cornerVertices=[];
   obstacles.forEach(w=>{
     cornerVertices.push({x:clamp(w.x-cornerGap,1.5,98.5),y:clamp(w.y-cornerGap,1.5,98.5)});
@@ -185,7 +218,7 @@ function navigableSegment(start,goal,walls,R){
     cornerVertices.push({x:clamp(w.x-cornerGap,1.5,98.5),y:clamp(w.y+w.h+cornerGap,1.5,98.5)});
   });
   const insideObstacle=p=>obstacles.some(w=>p.x>w.x&&p.x<w.x+w.w&&p.y>w.y&&p.y<w.y+w.h);
-  const vertices=[{x:start.x,y:start.y},{x:goal.x,y:goal.y},...cornerVertices.filter(p=>!insideObstacle(p))];
+  const vertices=[{x:plannerStart.x,y:plannerStart.y},{x:plannerGoal.x,y:plannerGoal.y},...cornerVertices.filter(p=>!insideObstacle(p))];
   const clear=(a,b)=>!navLineBlocked(a,b,obstacles);
   const n=vertices.length,ds=Array(n).fill(Infinity),prev=Array(n).fill(-1),used=Array(n).fill(false);ds[0]=0;
   for(let iter=0;iter<n;iter++){
@@ -193,14 +226,32 @@ function navigableSegment(start,goal,walls,R){
     if(u===1)break;
     for(let v=0;v<n;v++){if(used[v]||u===v||!clear(vertices[u],vertices[v]))continue;const nd=ds[u]+dist(vertices[u],vertices[v]);if(nd<ds[v]){ds[v]=nd;prev[v]=u;}}
   }
-  if(!Number.isFinite(ds[1]))return[{x:start.x,y:start.y},{x:goal.x,y:goal.y}];
+  if(!Number.isFinite(ds[1])){
+    const detourCorners=obstacles.flatMap(w=>[
+      {x:w.x-1.10,y:w.y-1.10},{x:w.x+w.w+1.10,y:w.y-1.10},
+      {x:w.x+w.w+1.10,y:w.y+w.h+1.10},{x:w.x-1.10,y:w.y+w.h+1.10},
+    ]).filter(p=>p.x>1.5&&p.x<98.5&&p.y>1.5&&p.y<98.5&&!blocked(p,walls,R+0.1));
+    const clearSegment=(a,b)=>!navLineBlocked(a,b,obstacles);
+    const direct=clearSegment(plannerStart,plannerGoal);
+    if(direct)return[{x:plannerStart.x,y:plannerStart.y},{x:plannerGoal.x,y:plannerGoal.y}];
+    for(let i=0;i<detourCorners.length;i++){
+      const a=detourCorners[i];
+      if(clearSegment(plannerStart,a)&&clearSegment(a,plannerGoal))return[{x:plannerStart.x,y:plannerStart.y},a,{x:plannerGoal.x,y:plannerGoal.y}];
+      for(let j=i+1;j<detourCorners.length;j++){
+        const b=detourCorners[j];
+        if(clearSegment(plannerStart,a)&&clearSegment(a,b)&&clearSegment(b,plannerGoal))return[{x:plannerStart.x,y:plannerStart.y},a,b,{x:plannerGoal.x,y:plannerGoal.y}];
+      }
+    }
+    const gridRoute=gridNavigableSegment(plannerStart,plannerGoal,walls,R);if(gridRoute.length>1)return gridRoute;
+    return navLineBlocked(plannerStart,plannerGoal,obstacles)?[{x:plannerStart.x,y:plannerStart.y}]:[{x:plannerStart.x,y:plannerStart.y},{x:plannerGoal.x,y:plannerGoal.y}];
+  }
   const path=[];for(let at=1;at>=0;at=prev[at]){path.push(vertices[at]);if(at===0)break;}path.reverse();return path;
 }
 function buildNavigableRoute(points,walls,R,memo){
   // Route intents may be authored on a site marker or beside newly-solid
   // cover. Normalize waypoints to walkable space before path search; this
   // moves only the route target, never the authoritative player position.
-  const base=(points||[]).filter(Boolean).map(p=>snapOut({x:Number(p.x),y:Number(p.y)},walls,R));if(base.length<2)return base;
+  const base=(points||[]).filter(Boolean).map(p=>plannerSafePoint({x:Number(p.x),y:Number(p.y)},walls,R));if(base.length<2)return base;
   const key=base.map(p=>`${p.x.toFixed(2)},${p.y.toFixed(2)}`).join("|");if(memo?.has(key))return memo.get(key).map(p=>({...p}));
   const route=[base[0]];for(let i=1;i<base.length;i++){const segment=navigableSegment(route[route.length-1],base[i],walls,R);route.push(...segment.slice(1));}
   memo?.set(key,route.map(p=>({...p})));return route;
@@ -554,11 +605,40 @@ const weaponAuthority=gun=>{const g=GUNS[gun];const family=c5a1WeaponFamily(gun)
 const weaponInRange=(d,auth)=>!(d>auth.range);
 const ROLE_GUNS={awp:["awp","scout"],igl:["ak","m4","famas"],entry:["ak","galil","m4a4"],rifler:["ak","m4","aug","sg"],support:["ak","m4","ump"],lurker:["ak","m4","p90"]};
 const ECO_GUNS=["glock","usp","p250","tec9","deagle","mp9","mac10"];
+const shotgunSlot=["nova","xm1014","mag7","sawedoff"];
+function c5bFullBuyWeapon(player,{side,money,mapKey,round,tactic,target,scoreDiff=0}={}){
+  const legal=(ROLE_GUNS[player.role]||["ak"]).filter(g=>side==="t"?g!=="m4"&&g!=="m4a4":g!=="ak");
+  const closeMap=mapKey==="inferno"||target==="b"||tactic?.type==="rush";
+  const focus=persStat(player,"foc"),accuracy=persStat(player,"acc"),positioning=persStat(player,"pos");
+  const sniperScore=focus+accuracy+positioning+(player.role==="awp"?36:0)+(target==="mid"?10:0)+(scoreDiff<0?8:0);
+  const sniperRoll=hsh(`${mapKey}:${round}:${player.id}:sniper`)%100;
+  if(money>=COST.awp&&sniperScore>=245&&sniperRoll<(player.role==="awp"?70:12))return"awp";
+  if(money>=COST.scout&&sniperScore>=220&&sniperRoll<(player.role==="awp"?86:20))return"scout";
+  const shotgunRoll=hsh(`${mapKey}:${round}:${player.id}:shotgun`)%100;
+  const shotgunThreshold=closeMap?14:6;
+  if(money>=COST.nova&&shotgunRoll<shotgunThreshold){
+    const shotguns=shotgunSlot.filter(g=>COST[g]<=money);
+    if(shotguns.length)return shotguns[hsh(`${player.id}:${round}:${mapKey}:shotgun-model`)%shotguns.length];
+  }
+  const smgRoll=hsh(`${mapKey}:${round}:${player.id}:smg`)%100;
+  const smgThreshold=closeMap?20:9;
+  if(smgRoll<smgThreshold){
+    const smgs=["mp9","mac10","ump","p90"].filter(g=>COST[g]<=money);
+    if(smgs.length)return smgs[hsh(`${mapKey}:${round}:${player.id}:smg-model`)%smgs.length];
+  }
+  const preferred=legal.slice().sort((a,b)=>{
+    const aScore=(a==="ak"||a==="m4"||a==="m4a4"?4:0)+(a==="galil"||a==="famas"?2:0)+(a==="aug"||a==="sg"?positioning/40:0);
+    const bScore=(b==="ak"||b==="m4"||b==="m4a4"?4:0)+(b==="galil"||b==="famas"?2:0)+(b==="aug"||b==="sg"?positioning/40:0);
+    return bScore-aScore;
+  });
+  return preferred.find(g=>(COST[g]??2700)<=money)||["galil","famas","mp9","tec9"].find(g=>(side==="t"?g!=="famas":g!=="galil")&&(COST[g]??0)<=money)||null;
+}
 // 武器價格與擊殺獎勵（仿 CS 經濟）
 const COST={ak:2700,m4:2900,m4a4:3100,galil:1800,famas:2050,aug:3300,sg:3000,awp:4750,scout:1700,mp9:1250,mac10:1050,ump:1200,p90:2350,deagle:700,glock:0,usp:0,p250:300,tec9:500,nova:1050,xm1014:2000,mag7:1300,sawedoff:1100};
 const killReward=gun=>{const g=GUNS[gun];if(!g)return 300;if(gun==="awp")return 100;if(g.cls==="衝鋒")return 600;return 300;};
 const ROLE_ZH={igl:"指揮",awp:"狙擊",rifler:"步槍",entry:"突破",support:"輔助",lurker:"埋伏"};
 const STATE_ZH={BUY:"購買",ROTATE:"轉移",EXECUTE:"執行",HOLD:"駐守",架槍:"架槍",RETAKE:"回防",ANCHOR:"鎮守",ENGAGE:"交火",安裝中:"安裝中"};
+const NAVIGATION_STABLE_STATES=Object.freeze(["ENGAGE","HOLD","COVER","POST_PLANT","ANCHOR","撤退"]);
 const stZh=s=>STATE_ZH[s]||s;
 const buyZh=b=>({pistol:"手槍局",eco:"省槍",force:"強起",full:"全買"}[b]||"—");
 
@@ -602,6 +682,108 @@ const TACTICS_DB={
     ],
   },
 };
+const CS_TACTICAL_PHASES=Object.freeze({OPENING:"opening",MID_ROUND:"mid-round",LATE_ROUND:"late-round",POST_PLANT:"post-plant"});
+const CS_PREMATCH_PHASE_KEYS=Object.freeze([CS_TACTICAL_PHASES.OPENING,CS_TACTICAL_PHASES.MID_ROUND,CS_TACTICAL_PHASES.LATE_ROUND,CS_TACTICAL_PHASES.POST_PLANT]);
+const CS_TACTICAL_CONTROL_KEYS=Object.freeze(["mid","midDoors","topMid","catwalk","connector","secondMid","banana","bTunnel","long","shortA","aConn","bTop","apps","palace"]);
+function tacticalPhaseFor(sec,planted){
+  if(planted)return CS_TACTICAL_PHASES.POST_PLANT;
+  if(sec<26)return CS_TACTICAL_PHASES.OPENING;
+  if(sec<70)return CS_TACTICAL_PHASES.MID_ROUND;
+  return CS_TACTICAL_PHASES.LATE_ROUND;
+}
+function normalizeCsTacticalLayout(input,library,fallback){
+  const source=input&&typeof input==="object"?input:{};
+  const rawPhases=source.phases&&typeof source.phases==="object"?source.phases:source;
+  const rawFor=phase=>rawPhases[phase]??(phase===CS_TACTICAL_PHASES.MID_ROUND?rawPhases.mid:phase===CS_TACTICAL_PHASES.LATE_ROUND?rawPhases.late:phase===CS_TACTICAL_PHASES.POST_PLANT?rawPhases.postPlant:rawPhases.opening);
+  const fallbackTactic=fallback||library[0]||null;
+  const resolve=(phase,raw)=>{
+    const selectionId=typeof raw==="string"?raw:raw?.id??raw?.tacticId??null;
+    const selectionType=typeof raw==="object"?raw?.type??raw?.tacticType:null;
+    const exact=selectionId&&library.find(t=>t.id===selectionId||t.name===selectionId);
+    const typed=selectionType?library.filter(t=>t.type===selectionType):[];
+    const tactic=exact||typed[(hsh(`${selectionId||phase}:${selectionType||""}`)%(typed.length||1))]||fallbackTactic;
+    return{phase,selectionId:selectionId||tactic?.id||null,selectionType:selectionType||tactic?.type||"default",tactic};
+  };
+  const phases=Object.fromEntries(CS_PREMATCH_PHASE_KEYS.map(phase=>[phase,resolve(phase,rawFor(phase))]));
+  const openness=["structured","adaptive","open"].includes(source.openness)?source.openness:"adaptive";
+  const requestedPostPlantMode=source.postPlantMode??source.postPlant?.mode;
+  const postPlantMode=["hold-angle","crossfire","deny-defuse"].includes(requestedPostPlantMode)?requestedPostPlantMode:"hold-angle";
+  return{version:1,openness,postPlantMode,phases};
+}
+function tacticalControlSnapshot(players,side,N){
+  const alive=(players||[]).filter(p=>!p.dead&&p.side===side);
+  const keys=CS_TACTICAL_CONTROL_KEYS.filter(key=>N?.[key]);
+  const controlled=keys.filter(key=>alive.some(p=>dist(p.pos,N[key])<=10));
+  const siteControl={a:0,b:0};
+  ["a","b"].forEach(site=>{const node=N?.[`${site}Site`];if(node)siteControl[site]=alive.filter(p=>dist(p.pos,node)<=14).length;});
+  return{controlledKeys:controlled,controlledCount:controlled.length,totalKeys:keys.length,ratio:keys.length?controlled.length/keys.length:0,siteControl,survival:alive.length};
+}
+function tacticalWeaponMix(players,side){
+  const mix={pistol:0,smg:0,rifle:0,sniper:0,shotgun:0,unknown:0};
+  (players||[]).filter(p=>!p.dead&&p.side===side).forEach(p=>{const family=c5a1WeaponFamily(p.gun);mix[family]=(mix[family]||0)+1;});
+  return mix;
+}
+function chooseRoundTacticalSite(tactic,{round=0,scoreFor=0,scoreAgainst=0,buyType="eco",previousControl=0}={}){
+  const preferred=tactic?.site==="a"||tactic?.site==="b"?tactic.site:(round%2===0?"a":"b");
+  if(tactic?.site==="a"||tactic?.site==="b")return preferred;
+  const pressure=scoreFor<scoreAgainst?2:scoreFor>scoreAgainst?-1:0;
+  const economy=buyType==="eco"||buyType==="pistol"?2:0;
+  const controlBias=previousControl>0.55?-1:previousControl<0.25?1:0;
+  const alternateWeight=Math.max(0,3+pressure+economy+controlBias);
+  return hsh(`${tactic?.id||"tactic"}:${round}:${scoreFor}:${scoreAgainst}:${buyType}`)%10<alternateWeight?preferred==="a"?"b":"a":preferred;
+}
+function weightedTacticalPick(candidates,key){
+  const total=candidates.reduce((sum,candidate)=>sum+Math.max(1,Number(candidate.weight)||1),0);
+  if(!total)return candidates[0]||null;
+  let cursor=hsh(key)%total;
+  for(const candidate of candidates){cursor-=Math.max(1,Number(candidate.weight)||1);if(cursor<0)return candidate;}
+  return candidates.at(-1)||null;
+}
+function tacticalRoutePlan({player,tactic,routeLibrary=[],RKF={},context={},round=0,mapKey=""}){
+  const routes=tactic?.routes||{};
+  const openness=context.openness||"adaptive";
+  const fallback=routes[RKF[player.role]]||routes.rifler||routes.entry||Object.values(routes).find(Array.isArray)||["tSpawn"];
+  const candidates=[];const seen=new Set();
+  const add=(kind,keys,weight)=>{
+    if(!Array.isArray(keys)||keys.length<2)return;
+    const normalized=keys.filter(Boolean);if(normalized.length<2)return;
+    const signature=normalized.join(">");if(seen.has(signature))return;seen.add(signature);candidates.push({kind,keys:normalized,weight});
+  };
+  add("primary",routes[player.role]||fallback,openness==="structured"?8:6);
+  for(const other of routeLibrary){
+    const keys=other?.routes?.[player.role]||other?.routes?.[RKF[player.role]]||other?.routes?.rifler||other?.routes?.entry;
+    const sameSite=!context.target||other?.site===context.target;
+    const hasControl=keys?.some(key=>CS_TACTICAL_CONTROL_KEYS.includes(key));
+    if(sameSite&&hasControl)add("control",keys,context.phase===CS_TACTICAL_PHASES.OPENING?4:context.controlRatio<0.45?6:2);
+    if(sameSite&&keys?.some(key=>key===`${context.target}Site`))add("site-execute",keys,context.phase===CS_TACTICAL_PHASES.LATE_ROUND?8:context.controlRatio>=0.45?5:2);
+    // 開放布局增加同一目標的可行路線權重；跨站點轉移仍須由 mid-round
+    // 的 map-control 判斷觸發，避免把 CT 架槍路線誤變成跨牆直奔另一點。
+    if(!sameSite&&context.phase===CS_TACTICAL_PHASES.MID_ROUND&&hasControl)add("rotate",keys,context.scoreDiff<0||context.survival<=3?4:1);
+  }
+  const selected=weightedTacticalPick(candidates,`${mapKey}:${round}:${player.id}:${player.side}:${context.phase}:${context.target}:${context.scoreDiff}:${context.buyType}:${context.survival}:${Math.round((context.controlRatio||0)*100)}:${context.replanOrdinal||0}`)||{kind:"fallback",keys:fallback,weight:1};
+  return{...selected,phase:context.phase||CS_TACTICAL_PHASES.OPENING,target:context.target||null,scoreDiff:Number(context.scoreDiff||0),buyType:context.buyType||"unknown",survival:Number(context.survival||0),controlRatio:Number((context.controlRatio||0).toFixed(3)),weaponMix:context.weaponMix||{},objective:context.phase===CS_TACTICAL_PHASES.POST_PLANT?(player.side==="ct"?"retake":"post-plant-hold"):context.phase===CS_TACTICAL_PHASES.OPENING?"opening":context.phase===CS_TACTICAL_PHASES.MID_ROUND?"mid-round":"late-round"};
+}
+function tacticalPostPlantAnchor(player,tactic,N,target,mode="hold-angle"){
+  const keys=tactic?.routes?.[player.role]||tactic?.routes?.rifler||tactic?.routes?.entry||[];
+  const offset=mode==="crossfire"?-3:mode==="deny-defuse"?-1:-2;
+  const anchorKey=keys[Math.max(0,keys.length+offset)]||keys.find(key=>key===`${target}Site`)||`${target}Site`;
+  const anchor=N?.[anchorKey]||N?.[`${target}Site`];
+  return anchor?{...anchor}:null;
+}
+function csAngleDelta(a,b){return Math.abs(((Number(a)-Number(b)+540)%360)-180);}
+function csTargetInFov(actor,target,halfFov=82){
+  if(!actor||!target)return false;
+  const bearing=Math.atan2(target.pos.y-actor.pos.y,target.pos.x-actor.pos.x)*180/Math.PI;
+  return csAngleDelta(actor.va??0,bearing)<=halfFov;
+}
+function csFlankGeometry(actor,target){
+  if(!actor||!target)return false;
+  const bearing=Math.atan2(actor.pos.y-target.pos.y,actor.pos.x-target.pos.x)*180/Math.PI;
+  return csAngleDelta(target.va??0,bearing)>=112;
+}
+function csEngagementPermission(actor,target,distance,auth,{lineOfSight=false,fov=false,smokeBlocked=false}={}){
+  return Boolean(actor&&!actor.dead&&target&&!target.dead&&lineOfSight&&fov&&!smokeBlocked&&weaponInRange(distance,auth));
+}
 const TAC_TYPE={execute:{label:"執行",color:"#ef4444"},default:{label:"標準",color:"#5b7fb0"},stack:{label:"堆人",color:"#fbbf24"},aggro:{label:"前壓",color:"#f59e0b"},retake:{label:"回防",color:"#a78bfa"},rush:{label:"強攻",color:"#ec4899"}};
 
 // ─── 模擬引擎（資料/策略核心；已修正曳光彈生命週期）─────────────────────
@@ -706,10 +888,13 @@ function c5a2SolidObstacles(map){
   });
   return obstacles;
 }
-function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
+
+function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=null){
   const RS=(roster||ROSTER).map(c=>({...c})); // 可注入即時名單（複製後套用每回合 currentSide，不回寫輸入）
   const originalTacticCT=tacticCT;
   const map=MAPS[mapKey];const rand=mkRng(seed);
+  const preMatchLayout=normalizeCsTacticalLayout(tacticalLayoutInput,TACTICS_DB[mapKey]?.t||[],tacticT);
+  const preMatchTacticForPhase=phase=>preMatchLayout.phases[phase]?.tactic||tacticT;
   // Keep one deterministic stream for the whole authoritative match. C5A.1
   // split combat RNG from route/economy RNG, which created a repeating 3:3
   // overtime cycle for some tactics and could materialize hundreds of OT
@@ -733,24 +918,53 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
   const reactionTelemetry=[];
   const shotCadenceTelemetry=[];
   const obstacleCounts=walls.reduce((counts,wall)=>{counts[wall.kind||"building"]=(counts[wall.kind||"building"]||0)+1;return counts;},{});
+  const routeLibraryBySide={t:TACTICS_DB[mapKey]?.t||[],ct:TACTICS_DB[mapKey]?.ct||[]};
+  const navigationAudit={solidObstacleCount:walls.length,obstacleCounts,obstacles:walls.map(({x,y,w,h,kind})=>({x,y,w,h,kind})),replanCount:0,stuckDetections:0,stuckResolved:0,replanAbortedByRoundEnd:0,routeAssignments:0,waypointTransitions:0,routeDeadlocks:0,illegalWallCrossings:0,routeHistory:[],waypointHistory:[],stuckEpisodes:[],replanHistory:[],maxStuckDurationSec:0,unresolvedStuckEpisodes:0};
+  const tacticalAudit={phases:Object.fromEntries(Object.values(CS_TACTICAL_PHASES).map(phase=>[phase,0])),preMatchLayout:{version:preMatchLayout.version,openness:preMatchLayout.openness,postPlantMode:preMatchLayout.postPlantMode,phases:Object.fromEntries(CS_PREMATCH_PHASE_KEYS.map(phase=>{const entry=preMatchLayout.phases[phase];return[phase,{selectionId:entry.selectionId,tacticId:entry.tactic?.id??null,tacticName:entry.tactic?.name??null,tacticType:entry.tactic?.type??entry.selectionType??null,site:entry.tactic?.site??null}];}))},phaseSelections:[],decisions:[],routeVariants:{},targetChanges:[],mapControlSamples:[]};
+  const buyAudit={rounds:[],totalPurchases:0,purchaseCounts:{pistol:0,smg:0,rifle:0,sniper:0,shotgun:0,unknown:0},loadoutCounts:{pistol:0,smg:0,rifle:0,sniper:0,shotgun:0,unknown:0},spendByFamily:{pistol:0,smg:0,rifle:0,sniper:0,shotgun:0,unknown:0}};
+  const bombAudit={plantEvents:[],timerSamples:0,objectiveTransitions:[],retakeAssignments:0,coverAssignments:0,defuseEvents:[],explosionEvents:[],resultLinks:[]};
+  const previousTacticalControl={t:0,ct:0};
+  const assignRoute=(player,points,meta={})=>{
+    const intent=(points||[]).filter(Boolean);const routePoints=player?.pos&&(!intent[0]||dist(player.pos,intent[0])>0.75)?[{...player.pos},...intent]:intent;
+    const route=navigableRoute(routePoints);
+    player.route=route;player.routeIdx=0;player.routeT=0;player._routeProgressKey=null;player._routeBestRemaining=null;player._stuckN=0;
+    player._routePlan={...meta,routeId:`r${rnd}-${player.id}-${navigationAudit.routeAssignments}`};
+    navigationAudit.routeAssignments+=1;
+    if(navigationAudit.routeHistory.length<1200)navigationAudit.routeHistory.push({round:rnd,roundSec:meta.roundSec??0,id:player.id,side:player.side,phase:meta.phase||null,variant:meta.kind||meta.variant||"direct",objective:meta.objective||null,routeId:player._routePlan.routeId,routeSignature:meta.routeSignature||null,waypoints:route.length});
+    const variant=meta.kind||meta.variant||"direct";tacticalAudit.routeVariants[variant]=(tacticalAudit.routeVariants[variant]||0)+1;
+    return route;
+  };
+  const obstacleContext=(from,to)=>walls.filter(w=>blocked(to,[w],PLAYER_R)||navLineBlocked(from,to,[w])).map(w=>({kind:w.kind||"building",x:w.x,y:w.y,w:w.w,h:w.h}));
+  const resolveStuckEpisode=(player,sec)=>{
+    const episode=player._activeStuckEpisode;
+    if(episode&&episode.status!=="resolved"){
+      episode.status="resolved";episode.resolvedAtSec=sec;episode.durationSec=Number((sec-episode.startedAtSec).toFixed(3));
+      navigationAudit.maxStuckDurationSec=Math.max(navigationAudit.maxStuckDurationSec,episode.durationSec);
+      navigationAudit.stuckResolved+=1;movementAudit.stuckResolved+=1;
+    }
+    player._activeStuckEpisode=null;player._stuckSinceSec=null;player._awaitingReplanProgress=false;
+  };
   const movementAudit={positionSamples:0,nonFinitePositions:0,blockedPositions:0,teleportViolations:0,maxStep:0,wallSegmentCrossings:0,wallCrossingSamples:[],replanCount:0,stuckDetections:0,stuckResolved:0,replanAbortedByRoundEnd:0,stuckSamples:[],locomotionSamples:{idle:0,walk:0,run:0}};
-  const navigationAudit={solidObstacleCount:walls.length,obstacleCounts,obstacles:walls.map(({x,y,w,h,kind})=>({x,y,w,h,kind})),replanCount:0,stuckDetections:0,stuckResolved:0,replanAbortedByRoundEnd:0};
-  const combatAudit={candidatePairs:0,fireRolls:0,scheduledSkips:0,shotEvents:0,damageEvents:0};
+  const combatAudit={candidatePairs:0,losChecks:0,fovChecks:0,targetAcquisitions:0,targetLocks:0,engagementPermissions:0,fireRolls:0,scheduledSkips:0,shotEvents:0,damageEvents:0,flankCandidates:0,flankEngagements:0,routeBlockedEngagements:0,routeInterruptAcquisitions:0,routeInterruptPermissions:0,routeInterruptFirstShots:0};
   const activeReactionEpisodes=new Map();
   let reactionSequence=0;
   const reactionKey=(actor,target)=>`${actor?.id ?? "?"}->${target?.id ?? "?"}`;
-  const ensureReactionEpisode=(actor,target,sec,distance,weapon,los,mapAware)=>{
+  const ensureReactionEpisode=(actor,target,sec,distance,weapon,los,mapAware,fov,flank)=>{
     const key=reactionKey(actor,target);
     let episode=activeReactionEpisodes.get(key);
     if(!episode){
       const weaponId=weapon||actor.gun||null;
       const profile=c5a1ReactionProfile(actor,distance,weaponId);
+      const routeActive=Array.isArray(actor.route)&&actor.routeIdx<actor.route.length-1;
       episode={id:`rx${++reactionSequence}`,actorId:actor.id,targetId:target.id,weaponId,
         weapon:GUNS[weaponId]?.name||weaponId,
         visibleAtMs:Math.round(sec*1000),targetAcquiredAtMs:null,firePermissionAtMs:null,
         firstAuthoritativeShotAtMs:null,latencyMs:null,distance:Math.round(distance*100)/100,
         reactionDelayMs:profile.delayMs,reactionConfidence:Number(profile.confidence.toFixed(3)),
-        reactionReadyAtMs:null,lineOfSight:Boolean(los),mapAware:Boolean(mapAware),shot:false};
+        reactionReadyAtMs:null,lineOfSight:Boolean(los),fov:Boolean(fov),targetAcquired:Boolean(mapAware),targetLock:Boolean(mapAware),engagementPermission:false,flank:Boolean(flank),mapAware:Boolean(mapAware),shot:false,
+        routeActiveAtAcquisition:routeActive,routeWaypointIndex:actor.routeIdx,routeWaypointCount:Array.isArray(actor.route)?actor.route.length:0,
+        routeKind:actor._routePlan?.kind||null,tacticalPhase:actor._routePlan?.phase||null,movementState:actor.state||null,objectiveState:actor.objectiveState||null,
+        routeInterrupted:false,routePreservedAfterEngage:false};
       activeReactionEpisodes.set(key,episode);reactionTelemetry.push(episode);
     }
     return episode;
@@ -780,16 +994,21 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
     RS.forEach(c=>{const teamId=teamOfRosterId(c.id);c.teamId=teamId;c.teamIdentity=teamId;c.side=sideByTeam[teamId];});
     const attackTeam=csTeamAtSide(sideByTeam,"t"),defenseTeam=csTeamAtSide(sideByTeam,"ct");
     const opponentTactic=originalTacticCT;
-    const attackTactic=attackTeam===CS_TEAM_US?tacticT:opponentTactic;
-    const defenseTactic=defenseTeam===CS_TEAM_US?tacticT:opponentTactic;
+    const tacticForTeamPhase=phase=>phase===CS_TACTICAL_PHASES.POST_PLANT?preMatchTacticForPhase(phase):preMatchTacticForPhase(phase);
+    const tacticForSidePhase=(side,phase)=>({t:attackTeam,ct:defenseTeam}[side]===CS_TEAM_US?tacticForTeamPhase(phase):opponentTactic);
+    const attackTactic=tacticForSidePhase("t",CS_TACTICAL_PHASES.OPENING);
+    const defenseTactic=tacticForSidePhase("ct",CS_TACTICAL_PHASES.OPENING);
     const tacticCT=defenseTactic;
-    const tac={t:attackTactic,ct:defenseTactic};const target=attackTactic.site;
+    const tac={t:attackTactic,ct:defenseTactic};
     const tacEdge=tacticEdge(attackTactic,defenseTactic); // 戰術 ownership 隨 stable team，攻守角色由 currentSide 決定
     // ── 賽前經濟決策（全買 / 強起 / 省錢 / 手槍局）──
     const teamAvg=side=>RS.filter(c=>sideByTeam[teamOfRosterId(c.id)]===side).reduce((s,c)=>s+econ[c.id].money,0)/5;
     const pistolRound=csIsPistolReset(roundPlan.economyResetReason);
     const decideBuy=(side,my,en)=>{if(pistolRound)return"pistol";const m=teamAvg(side),behind=en-my;if(m>=4200)return"full";if(m<2200)return"eco";if(behind>=2&&m>=2700)return"force";if(m>=3700)return"full";return"eco";};
     const buyT=decideBuy("t",tScore,ctScore),buyCT=decideBuy("ct",ctScore,tScore);
+    const attackScore=attackTeam===CS_TEAM_US?tScore:ctScore,defenseScore=attackTeam===CS_TEAM_US?ctScore:tScore;
+    const target=chooseRoundTacticalSite(attackTactic,{round:rnd,scoreFor:attackScore,scoreAgainst:defenseScore,buyType:buyT,previousControl:previousTacticalControl.t});
+    if(target!==attackTactic.site)tacticalAudit.targetChanges.push({round:rnd+1,from:attackTactic.site||null,to:target,scoreFor:attackScore,scoreAgainst:defenseScore,buyType:buyT,previousControl:previousTacticalControl.t});
     const ecoT=buyT==="eco"||buyT==="pistol",ecoCT=buyCT==="eco"||buyCT==="pistol";
     const ARMOR=1000,NADE={flash:200,smoke:300,he:300,molly:400},sidePistol=s=>s==="t"?"glock":"usp";
     const roundRoster=RS.map(c=>({...c,teamId:teamOfRosterId(c.id),teamIdentity:teamOfRosterId(c.id),side:sideByTeam[teamOfRosterId(c.id)]}));
@@ -801,7 +1020,8 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
       currentSideByTeam:cloneCsSides(sideByTeam),economyReset:Boolean(roundPlan.economyResetReason),economyResetReason:roundPlan.economyResetReason,
       economyResetMoney,pistolRound,startMoneyByPlayer,buyTypeByTeam,
       teamIdentityByPlayer:Object.fromEntries(RS.map(c=>[c.id,teamOfRosterId(c.id)])),
-      tacticOwnerByTeam:{[CS_TEAM_US]:tacticT?.id??tacticT?.name??null,[CS_TEAM_ENEMY]:originalTacticCT?.id??originalTacticCT?.name??null}};
+      tacticOwnerByTeam:{[CS_TEAM_US]:tacticT?.id??tacticT?.name??null,[CS_TEAM_ENEMY]:originalTacticCT?.id??originalTacticCT?.name??null},tacticalTarget:target,
+      preMatchLayout:{version:preMatchLayout.version,openness:preMatchLayout.openness,postPlantMode:preMatchLayout.postPlantMode,phaseSelections:tacticalAudit.preMatchLayout.phases}};
     let planted=false,c4t=null,c4pos=null,smokes=[],tracers=[],muzzles=[];
     let mollys=[],throwables=[],droppedGuns=[],droppedBomb=null;
     let roundEnd=null,firstKill=false,openKill=null,roundKills={},roundDmg={},roundUtilDmg={},roundDeaths={},roundAst={},throwerByNadeId={},doorStates={};
@@ -811,34 +1031,28 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
     const fireClockByActor=new Map();
     const lastShotAtByActor=new Map();
     let shotSequence=0;
-    let contactCalled=false,defuseCalled=false,defuseProg=0;
+    let contactCalled=false,defuseCalled=false,defuseProg=0,bombResultRecorded=false;
     map.doors.forEach((d,i)=>doorStates[i]=false);
     const ps=RS.map(rosterPlayer=>{
       const teamId=teamOfRosterId(rosterPlayer.id),side=sideByTeam[teamId];
       const c={...rosterPlayer,teamId,teamIdentity:teamId,side};
       const e=econ[c.id];const buy=side==="t"?buyT:buyCT;const tactic=tac[side];const sp=sidePistol(side);
-      let gun=e.gun,armor=e.armor,helmet=e.helmet,money=e.money,nades=[];
+      let gun=e.gun,armor=e.armor,helmet=e.helmet,money=e.money,nades=[],boughtWeapon=null;
       if(buy==="pistol"){
-        gun=sp;
+        gun=sp;boughtWeapon=gun;
         if(money>=ARMOR){armor=true;helmet=true;money-=ARMOR;}
-        if((c.role==="awp"||c.role==="entry")&&money>=700){gun="deagle";money-=700;}
-        else if(money>=300&&rand()<0.5){gun="p250";money-=300;}
+        if((c.role==="awp"||c.role==="entry")&&money>=700){gun="deagle";boughtWeapon=gun;money-=700;}
+        else if(money>=300&&rand()<0.5){gun="p250";boughtWeapon=gun;money-=300;}
         if(money>=NADE.flash&&rand()<0.6){nades.push("flash");money-=NADE.flash;}
         if(money>=NADE.smoke&&rand()<0.45){nades.push("smoke");money-=NADE.smoke;}
       }else if(buy==="eco"){
         if(!gun)gun=sp;
         if(!armor&&money>=ARMOR&&rand()<0.25){armor=true;helmet=true;money-=ARMOR;}
-        if(gun===sp&&money>=300&&rand()<0.35){gun="p250";money-=300;}
+        if(gun===sp&&money>=300&&rand()<0.35){gun="p250";boughtWeapon=gun;money-=300;}
       }else{ // full / force：負擔得起就買最好的，否則退階
         const legal=(ROLE_GUNS[c.role]||["ak"]).filter(g=>side==="t"?g!=="m4"&&g!=="m4a4":g!=="ak");
-        let bought=null;
-        const shotgunSlot=c.role==="support"&&hsh(`${mapKey}:${rnd}:${c.id}`)%6===0;
-        if(shotgunSlot){const shotgun=["nova","xm1014","mag7","sawedoff"][hsh(`${c.id}:${rnd}:${mapKey}`)%4];const cost=COST[shotgun]??0;if(money>=cost){bought=shotgun;money-=cost;}}
-        const smgSlot=!bought&&c.role==="lurker"&&hsh(`${c.id}:${mapKey}:${rnd}:smg`)%5===0;
-        if(smgSlot){const smg=["mp9","mac10","ump","p90"][hsh(`${mapKey}:${c.id}:${rnd}:smg`)%4];const cost=COST[smg]??0;if(money>=cost){bought=smg;money-=cost;}}
-        if(!bought)for(const g of legal){const cost=COST[g]??2700;if(money>=cost){bought=g;money-=cost;break;}}
-        if(!bought)for(const g of (side==="t"?["galil","mp9","tec9"]:["famas","mp9","p250"])){if(money>=(COST[g]||0)){bought=g;money-=COST[g]||0;break;}}
-        if(bought)gun=bought;else if(!gun)gun=sp;
+        const bought=c5bFullBuyWeapon(c,{side,money,mapKey,round:rnd,tactic,target,scoreDiff:attackScore-defenseScore});
+        if(bought){gun=bought;boughtWeapon=bought;money-=COST[bought]??0;}else if(!gun)gun=sp;
         if(!armor&&money>=ARMOR){armor=true;helmet=true;money-=ARMOR;}
         for(const n of ["flash","smoke","he","molly"]){if(money>=NADE[n]&&rand()<0.7){nades.push(n);money-=NADE[n];}}
       }
@@ -851,8 +1065,25 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
       const hasBomb=side==="t"&&c.role==="entry";
       return{...c,teamId,teamIdentity:teamId,side,pos:{...SPAWN[side==="ct"?"ct":"t"]},prevPos:{...SPAWN[side==="ct"?"ct":"t"]},
         hp:100,armor,helmet,money,gun,k:0,d:0,a:0,hsCount:0,dmgDealt:0,dead:false,state:"BUY",va:side==="ct"?225:45,flash:0,
-        route,routeIdx:0,routeT:0,hasBomb,reassigned:false,picking:0,shooting:0,nades,pistol:sp,buyType:buy};
+        route:[],routeIdx:0,routeT:0,hasBomb,reassigned:false,picking:0,shooting:0,nades,pistol:sp,buyType:buy,purchase:boughtWeapon,purchaseMoney:boughtWeapon?(COST[boughtWeapon]??0):0};
     });
+    const roundRKF={igl:"rifler",support:"rifler",lurker:"rifler",awp:"rifler",rifler:"entry",entry:"rifler"};
+    ps.forEach(p=>{
+      const sideScore=p.side==="t"?attackScore:defenseScore,opponentScore=p.side==="t"?defenseScore:attackScore;
+      const phase=CS_TACTICAL_PHASES.OPENING,weaponMix=tacticalWeaponMix(ps,p.side);
+      const phaseTactic=tacticForSidePhase(p.side,phase);
+      const plan=tacticalRoutePlan({player:p,tactic:phaseTactic,routeLibrary:routeLibraryBySide[p.side],RKF:roundRKF,
+        context:{phase,target,scoreDiff:sideScore-opponentScore,buyType:p.buyType,survival:5,controlRatio:0,weaponMix,openness:preMatchLayout.openness},round:rnd,mapKey});
+      assignRoute(p,plan.keys.map(key=>N[key]).filter(Boolean),{...plan,roundSec:0,routeSignature:plan.keys.join(">")});
+      p.tacticalPhase=phase;p._tacticalPhase=phase;p.objectiveState="OPENING";
+      tacticalAudit.phases[phase]+=1;
+      tacticalAudit.phaseSelections.push({round:rnd+1,roundSec:0,playerId:p.id,side:p.side,phase,selectionId:preMatchLayout.phases[phase]?.selectionId??null,tacticId:phaseTactic?.id??null,tacticType:phaseTactic?.type??null,source:"pre-match-layout"});
+      tacticalAudit.decisions.push({round:rnd+1,roundSec:0,playerId:p.id,side:p.side,phase,target,buyType:p.buyType,scoreDiff:sideScore-opponentScore,survival:5,controlRatio:0,weaponMix,variant:plan.kind,routeSignature:plan.keys.join(">"),objective:plan.objective,selectionId:preMatchLayout.phases[phase]?.selectionId??null,tacticId:phaseTactic?.id??null,openness:preMatchLayout.openness});
+    });
+    previousTacticalControl.t=tacticalControlSnapshot(ps,"t",N).ratio;
+    previousTacticalControl.ct=tacticalControlSnapshot(ps,"ct",N).ratio;
+    buyAudit.rounds.push({round:rnd+1,phase:roundPlan.phase,target,buyTypeByTeam,score:{t:tScore,ct:ctScore},players:ps.map(p=>({id:p.id,side:p.side,teamId:p.teamId,buyType:p.buyType,startMoney:startMoneyByPlayer[p.id],endMoney:p.money,spent:Math.max(0,(startMoneyByPlayer[p.id]??0)-p.money),weapon:p.gun,weaponFamily:c5a1WeaponFamily(p.gun),purchase:p.purchase,purchaseCost:p.purchaseMoney,authority:weaponAuthority(p.gun)}))});
+    ps.forEach(p=>{const loadoutFamily=c5a1WeaponFamily(p.gun);buyAudit.loadoutCounts[loadoutFamily]=(buyAudit.loadoutCounts[loadoutFamily]||0)+1;if(p.purchase){const family=c5a1WeaponFamily(p.purchase);buyAudit.totalPurchases+=1;buyAudit.purchaseCounts[family]=(buyAudit.purchaseCounts[family]||0)+1;buyAudit.spendByFamily[family]=(buyAudit.spendByFamily[family]||0)+(p.purchaseMoney||0);}});
     for(let sec=0;sec<115;sec+=C5A2_SIM_STEP_SEC){
       const telemetryStart=reactionTelemetry.length;
       const visibleReactionKeys=new Set();
@@ -868,6 +1099,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
       const finalizeKill=(at,df,{weapon=at.gun,isHS=false,distance=Infinity,sourceId=null}={})=>{
         df.dead=true;df.hp=0;at.k++;df.d++;if(isHS)at.hsCount++;at.money+=killReward(weapon);roundKills[at.id]=(roundKills[at.id]||0)+1;roundDeaths[df.id]=1;
         const leadershipSecond=leadershipFollowUpAfterKill(df,ps,target,N);
+        if(leadershipSecond.action){const followUp=ps.find(player=>player.id===leadershipSecond.playerId);if(followUp&&followUp.route)assignRoute(followUp,followUp.route,{kind:"leadership-followup",phase:tacticalPhaseFor(sec,planted),objective:"follow-up",roundSec:sec,routeSignature:"leadership-follow-up"});}
         (df._hitters||[]).forEach(id=>{if(id!==at.id){const ap=ps.find(x=>x.id===id);if(ap){ap.a++;roundAst[id]=(roundAst[id]||0)+1;}}});
         if(!["glock","usp"].includes(df.gun))droppedGuns.push({id:`dg${fi}${df.id}`,gun:df.gun,pos:{...df.pos}});
         if(df.hasBomb&&!planted){df.hasBomb=false;droppedBomb={pos:{...df.pos}};casts.push(`💣 炸彈掉落！`);}
@@ -878,7 +1110,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
         if(weapon==="molly")casts.push(`🔥 ${at.name} 燃燒彈擊殺 ${df.name}`);else if(weapon==="he")casts.push(`💥 ${at.name} 高爆彈擊殺 ${df.name}！`);else if(isHS)casts.push(`💀 ${at.name} 爆頭擊殺 ${df.name}！`);else if(isFirst)casts.push(`🔫 ${at.name} 取得首殺，拿下開局優勢`);else if(distance<12)casts.push(`${at.name} 近距離擊殺 ${df.name}`);else if(GUNS[weapon]?.cls==="狙擊")casts.push(`🎯 ${at.name} 一槍狙掉 ${df.name}`);else if(rand()<0.4)casts.push(`${at.name} 擊殺 ${df.name}`);
         if(rand()<0.4)comms.push({side:at.side,name:at.name,text:rk>=2?"清掉了，跟上！":isHS?"爆頭收掉":`收一個，剩 ${df.side==="t"?aliveT.length-1:aliveCT.length-1} 個`});
         const sameTeam=ps.filter(x=>x.side===df.side&&!x.dead&&!x.reassigned);
-        if(sameTeam.length&&rand()<0.6){const taker=sameTeam[0];taker.reassigned=true;const goal=df.side==="t"?N[target==="a"?"aSite":"bSite"]:df.pos;if(goal){taker.route=navigableRoute([taker.pos,goal]);taker.routeIdx=0;taker.routeT=0;casts.push(`🔄 ${taker.name} 接管 ${df.name} 的位置`);}}
+        if(sameTeam.length&&rand()<0.6){const taker=sameTeam[0];taker.reassigned=true;const goal=df.side==="t"?N[target==="a"?"aSite":"bSite"]:df.pos;if(goal){assignRoute(taker,[taker.pos,goal],{kind:"death-follow-up",phase:tacticalPhaseFor(sec,planted),objective:"follow-up",roundSec:sec,routeSignature:"death-follow-up"});casts.push(`🔄 ${taker.name} 接管 ${df.name} 的位置`);}}
       };
       if(sec===12){
         const tIgl=ps.find(p=>p.side==="t"&&p.role==="igl")||aliveT[0];
@@ -895,13 +1127,39 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
         if(buyP){const sp=SPAWN[p.side==="ct"?"ct":"t"];const h=hsh(p.id);
           if(!p._off)p._off={x:((h%5)-2)*1.7,y:(((h>>4)%5)-2)*1.7};
           p.pos=collideResolve({x:sp.x+p._off.x+Math.sin(sec*0.55+h*0.11)*0.6,y:sp.y+p._off.y+Math.cos(sec*0.5+h*0.13)*0.6},walls,PLAYER_R);p.state="BUY";return;}
+        const currentPhase=tacticalPhaseFor(sec,planted),control=tacticalControlSnapshot(ps,p.side,N);
+        if(sec%8===0&&tacticalAudit.mapControlSamples.length<1200)tacticalAudit.mapControlSamples.push({round:rnd+1,roundSec:sec,side:p.side,phase:currentPhase,controlRatio:Number(control.ratio.toFixed(3)),controlledKeys:control.controlledKeys,survival:control.survival,siteControl:control.siteControl});
+        if(p._tacticalPhase!==currentPhase){
+          const sideScore=p.side==="t"?attackScore:defenseScore,opponentScore=p.side==="t"?defenseScore:attackScore;
+          const phaseTactic=tacticForSidePhase(p.side,currentPhase);
+          let plan=null,objective=currentPhase===CS_TACTICAL_PHASES.POST_PLANT?(p.side==="t"?"post-plant-hold":"retake"):currentPhase;
+          if(currentPhase===CS_TACTICAL_PHASES.POST_PLANT&&c4pos){
+            if(p.side==="t"){
+              const anchor=tacticalPostPlantAnchor(p,phaseTactic,N,target,preMatchLayout.postPlantMode);if(anchor)plan={kind:"post-plant-cover",keys:["position","anchor"],points:[p.pos,anchor],objective:"post-plant-hold"};
+              p.objectiveState="HOLD_ANGLE";p.state="POST_PLANT";
+            }else{
+              const retake=tacticalRetakeRoute(p,phaseTactic,N,c4pos)||[p.pos,c4pos];plan={kind:"retake",keys:["position","retake","c4"],points:retake,objective:"retake"};
+              p.objectiveState="RETAKE";p.state="RETAKE";bombAudit.retakeAssignments+=1;
+            }
+          }else{
+            const weaponMix=tacticalWeaponMix(ps,p.side);
+            plan=tacticalRoutePlan({player:p,tactic:phaseTactic,routeLibrary:routeLibraryBySide[p.side],RKF:roundRKF,
+              context:{phase:currentPhase,target,scoreDiff:sideScore-opponentScore,buyType:p.buyType,survival:control.survival,controlRatio:control.ratio,weaponMix,openness:preMatchLayout.openness},round:rnd,mapKey});
+            plan.points=plan.keys.map(key=>N[key]).filter(Boolean);
+          }
+          if(plan?.points?.length>1)assignRoute(p,plan.points,{...plan,roundSec:sec,routeSignature:(plan.keys||[]).join(">")});
+          p._tacticalPhase=currentPhase;p.tacticalPhase=currentPhase;
+          tacticalAudit.phases[currentPhase]+=1;
+          tacticalAudit.phaseSelections.push({round:rnd+1,roundSec:sec,playerId:p.id,side:p.side,phase:currentPhase,selectionId:preMatchLayout.phases[currentPhase]?.selectionId??null,tacticId:phaseTactic?.id??null,tacticType:phaseTactic?.type??null,source:"pre-match-layout"});
+          tacticalAudit.decisions.push({round:rnd+1,roundSec:sec,playerId:p.id,side:p.side,phase:currentPhase,target,buyType:p.buyType,scoreDiff:sideScore-opponentScore,survival:control.survival,controlRatio:Number(control.ratio.toFixed(3)),weaponMix:tacticalWeaponMix(ps,p.side),variant:plan?.kind||"hold",routeSignature:(plan?.keys||[]).join(">"),objective,selectionId:preMatchLayout.phases[currentPhase]?.selectionId??null,tacticId:phaseTactic?.id??null,openness:preMatchLayout.openness});
+        }
         // 龜縮/撤退：素質保守（進攻性低）且殘血者，遇敵會後撤而非硬拚
         {const en=ps.filter(e=>!e.dead&&e.side!==p.side);
          const near=en.length?en.reduce((a,b)=>dist(b.pos,p.pos)<dist(a.pos,p.pos)?b:a):null;
          const mates=(p.side==="t"?aliveT:aliveCT).length;
          if(near&&!buyP&&dist(near.pos,p.pos)<32&&p.hp<48&&aggr(p)<0.82&&mates>1){
             const adaptiveGoal=adaptiveRouteGoal(p,target,N);
-            if(adaptiveGoal){p.route=navigableRoute([p.pos,adaptiveGoal]);p.routeIdx=0;p.routeT=0;p.state="ROTATE";return;}
+            if(adaptiveGoal){assignRoute(p,[p.pos,adaptiveGoal],{kind:"low-hp-rotate",phase:tacticalPhaseFor(sec,planted),objective:"retreat",roundSec:sec,routeSignature:"low-hp-rotate"});p.state="ROTATE";return;}
            const dx=p.pos.x-near.pos.x,dy=p.pos.y-near.pos.y,L=Math.hypot(dx,dy)||1;
            const retreatStep=3.2*C5A2_SIM_STEP_RATIO;
            p.pos=safeMove(p.pos,{x:p.pos.x+dx/L*retreatStep,y:p.pos.y+dy/L*retreatStep},walls,PLAYER_R);
@@ -917,25 +1175,39 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
           const des=remaining>0.001?{x:p.pos.x+dx/remaining*step,y:p.pos.y+dy/remaining*step}:{...tgt};
           const moved=safeMove(p.pos,des,walls,PLAYER_R),movedDistance=dist(moved,p.pos),remainingAfter=dist(moved,tgt);
           const routeProgressKey=`${p.routeIdx}:${Number(tgt.x).toFixed(2)}:${Number(tgt.y).toFixed(2)}`;
-          if(p._routeProgressKey!==routeProgressKey){p._routeProgressKey=routeProgressKey;p._routeBestRemaining=remaining;p._stuckN=0;}
-          if(remainingAfter<=0.55||remainingAfter<=maxStep*0.18){
-            if(p._awaitingReplanProgress){p._awaitingReplanProgress=false;movementAudit.stuckResolved+=1;navigationAudit.stuckResolved+=1;}
-            p.pos=moved;p.routeIdx++;p.routeT=0;p._stuckN=0;p._routeProgressKey=null;p._routeBestRemaining=null;
-          }else{
+           if(p._routeProgressKey!==routeProgressKey){p._routeProgressKey=routeProgressKey;p._routeBestRemaining=remaining;p._stuckN=0;p._stuckSinceSec=null;}
+           if(remainingAfter<=0.55||remainingAfter<=maxStep*0.18){
+             if(p._activeStuckEpisode||p._awaitingReplanProgress)resolveStuckEpisode(p,sec);
+             navigationAudit.waypointTransitions+=1;
+             if(navigationAudit.waypointHistory.length<1600)navigationAudit.waypointHistory.push({round:rnd,roundSec:sec,playerId:p.id,routeId:p._routePlan?.routeId||null,waypointIndex:p.routeIdx,from:{...wp},to:{...tgt},obstacles:obstacleContext(wp,tgt)});
+             p.pos=moved;p.routeIdx++;p.routeT=0;p._stuckN=0;p._routeProgressKey=null;p._routeBestRemaining=null;
+           }else{
             p.pos=moved;p.routeT=clamp(1-remainingAfter/segLen,0,0.99);
-            const madeProgress=remainingAfter<Number(p._routeBestRemaining)-0.04;
-            if(madeProgress){
-              p._routeBestRemaining=remainingAfter;p._stuckN=0;
-              if(p._awaitingReplanProgress){p._awaitingReplanProgress=false;movementAudit.stuckResolved+=1;navigationAudit.stuckResolved+=1;}
-            }else if(movedDistance<0.05||remainingAfter>=remaining-0.02){
-              p._stuckN=(p._stuckN||0)+1;
-              if(p._stuckN>=C5A2_STUCK_TIMEOUT_SEC/C5A2_SIM_STEP_SEC){
-                movementAudit.stuckDetections+=1;navigationAudit.stuckDetections+=1;
-                if(movementAudit.stuckSamples.length<32)movementAudit.stuckSamples.push({id:p.id,round:rnd,roundSec:sec,state:p.state,pos:{...p.pos},target:{...tgt},remaining:Number(remainingAfter.toFixed(3)),moved:Number(movedDistance.toFixed(3)),routeLength:p.route.length,routeIdx:p.routeIdx,targetBlocked:blocked(tgt,walls,PLAYER_R),segmentBlocked:navLineBlocked(p.pos,tgt,walls)});
-                const remainingRoute=navigableRoute([p.pos,...p.route.slice(p.routeIdx+1)]);
-                if(remainingRoute.length>1){p.route=remainingRoute;p.routeIdx=0;p.routeT=0;p._routeProgressKey=null;p._routeBestRemaining=null;p._awaitingReplanProgress=true;movementAudit.replanCount+=1;navigationAudit.replanCount+=1;}
-                p._stuckN=0;
-              }
+             const madeProgress=remainingAfter<Number(p._routeBestRemaining)-0.04;
+             if(madeProgress){
+               p._routeBestRemaining=remainingAfter;p._stuckN=0;
+               if(p._activeStuckEpisode||p._awaitingReplanProgress)resolveStuckEpisode(p,sec);
+            }else if(!NAVIGATION_STABLE_STATES.includes(p.state)&&(movedDistance<0.05||remainingAfter>=remaining-0.02)){
+               if(!p._stuckSinceSec)p._stuckSinceSec=sec;
+               p._stuckN=(p._stuckN||0)+1;
+               if(p._stuckN>=C5A2_STUCK_TIMEOUT_SEC/C5A2_SIM_STEP_SEC){
+                 movementAudit.stuckDetections+=1;navigationAudit.stuckDetections+=1;
+                 const blockers=obstacleContext(p.pos,tgt),episode={id:`stuck-${rnd}-${p.id}-${navigationAudit.stuckDetections}`,playerId:p.id,round:rnd,startedAtSec:p._stuckSinceSec??Math.max(0,sec-C5A2_STUCK_TIMEOUT_SEC),detectedAtSec:sec,durationSec:Number((sec-(p._stuckSinceSec??sec)).toFixed(3)),routeId:p._routePlan?.routeId||null,waypointIndex:p.routeIdx,routePoints:p.route.slice(Math.max(0,p.routeIdx),Math.min(p.route.length,p.routeIdx+5)).map(point=>({x:Number(point.x.toFixed(3)),y:Number(point.y.toFixed(3))})),obstacles:blockers,status:"detected"};
+                 p._activeStuckEpisode=episode;if(navigationAudit.stuckEpisodes.length<1200)navigationAudit.stuckEpisodes.push(episode);
+                 if(movementAudit.stuckSamples.length<32)movementAudit.stuckSamples.push({id:p.id,round:rnd,roundSec:sec,state:p.state,pos:{...p.pos},target:{...tgt},remaining:Number(remainingAfter.toFixed(3)),moved:Number(movedDistance.toFixed(3)),routeLength:p.route.length,routeIdx:p.routeIdx,targetBlocked:blocked(tgt,walls,PLAYER_R),segmentBlocked:navLineBlocked(p.pos,tgt,walls),obstacles:blockers});
+                 const beforeSignature=p.route.map(point=>`${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(">");
+                 const remainingRoute=navigableRoute([p.pos,...p.route.slice(p.routeIdx+1)]);
+                 let alternate=remainingRoute,planMeta={kind:"replan",phase:tacticalPhaseFor(sec,planted),objective:p.objectiveState||null,replanOrdinal:navigationAudit.replanCount+1};
+                 const validRoute=route=>route.length>1&&route.every(point=>!blocked(point,walls,PLAYER_R))&&route.slice(1).every((point,index)=>!navLineBlocked(route[index],point,walls));
+                 if(!validRoute(alternate)||alternate.map(point=>`${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(">")===beforeSignature){
+                   const controlNow=tacticalControlSnapshot(ps,p.side,N),sideScore=p.side==="t"?attackScore:defenseScore,opponentScore=p.side==="t"?defenseScore:attackScore;
+                   const replPlan=tacticalRoutePlan({player:p,tactic:tacticForSidePhase(p.side,tacticalPhaseFor(sec,planted)),routeLibrary:routeLibraryBySide[p.side],RKF:roundRKF,context:{phase:tacticalPhaseFor(sec,planted),target,scoreDiff:sideScore-opponentScore,buyType:p.buyType,survival:controlNow.survival,controlRatio:controlNow.ratio,weaponMix:tacticalWeaponMix(ps,p.side),openness:preMatchLayout.openness,replanOrdinal:navigationAudit.replanCount+1},round:rnd,mapKey});
+                   const replPoints=replPlan.keys.map(key=>N[key]).filter(Boolean);if(validRoute(navigableRoute([p.pos,...replPoints])))alternate=navigableRoute([p.pos,...replPoints]);planMeta={...replPlan,...planMeta,routeSignature:replPlan.keys.join(">")};
+                 }
+                 if(validRoute(alternate)&&alternate.length>1){assignRoute(p,alternate,{...planMeta,roundSec:sec,routeSignature:planMeta.routeSignature||alternate.map(point=>`${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(">")});p._awaitingReplanProgress=true;movementAudit.replanCount+=1;navigationAudit.replanCount+=1;navigationAudit.replanHistory.push({round:rnd,roundSec:sec,playerId:p.id,fromRoute:beforeSignature,toRoute:alternate.map(point=>`${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(">"),obstacles:blockers,waypointIndex:p.routeIdx});}
+                 else{navigationAudit.routeDeadlocks+=1;episode.status="deadlock";navigationAudit.unresolvedStuckEpisodes+=1;}
+                 p._stuckN=0;
+               }
             }
           }
           const faceTarget=p.route[Math.min(p.routeIdx+1,p.route.length-1)]||tgt;
@@ -946,9 +1218,9 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
           const threatNear=ps.find(e=>!e.dead&&e.side!==p.side&&dist(e.pos,p.pos)<40);
           if(p.side==="t"&&!threatNear&&prog>0.4&&!p._pushed){
             const goal=(planted&&c4pos)?c4pos:N[target==="a"?"aSite":"bSite"];
-            if(goal&&dist(p.pos,goal)>10){p._pushed=true;const via=N[target==="a"?"aConn":"car"];p.route=navigableRoute(via&&dist(p.pos,via)>8&&!planted?[p.pos,via,goal]:[p.pos,goal]);p.routeIdx=0;p.routeT=0;p.state="EXECUTE";}
+            if(goal&&dist(p.pos,goal)>10){p._pushed=true;const via=N[target==="a"?"aConn":"car"];assignRoute(p,via&&dist(p.pos,via)>8&&!planted?[p.pos,via,goal]:[p.pos,goal],{kind:planted?"post-plant-push":"site-execute",phase:tacticalPhaseFor(sec,planted),objective:planted?"post-plant-hold":"execute",roundSec:sec,routeSignature:planted?"post-plant-push":"site-execute"});p.state="EXECUTE";}
           }
-          p.state=planted?(p.side==="ct"?"RETAKE":"ANCHOR"):"HOLD";
+           if(planted){p.state=p.side==="ct"?"COVER":"POST_PLANT";p.objectiveState=p.side==="ct"?"COVER":"HOLD_ANGLE";}else{p.state="HOLD";p.objectiveState="HOLD";}
           if(!p._hold)p._hold={x:p.pos.x,y:p.pos.y};
           const threat=threatNear;
           if(threat){const dx=threat.pos.x-p.pos.x,dy=threat.pos.y-p.pos.y;p.va=Math.atan2(dy,dx)*180/Math.PI;p.state="架槍";}
@@ -983,13 +1255,15 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
       });
       if(sec===18)(attackTactic.smokes||[]).forEach(sk=>{const n=N[sk];if(n)smokes.push({id:`s${rnd}${sk}`,pos:{...n},tl:18,age:0});});
       if(sec===24)(attackTactic.mollys||[]).forEach(mk=>{const n=N[mk];if(n)mollys.push({id:`m${rnd}${mk}`,pos:{...n},tl:8});});
-      if(prog>0.15&&aliveT.length&&aliveCT.length){
-        let pairs=[];aliveT.forEach(tp=>aliveCT.forEach(cp=>{const d=dist(tp.pos,cp.pos);const tAuth=weaponAuthority(tp.gun),cAuth=weaponAuthority(cp.gun);const rangeVisible=weaponInRange(d,tAuth)||weaponInRange(d,cAuth);const visibleCandidate=d<55&&rangeVisible&&!lineBlocked(tp.pos,cp.pos,walls)&&!smokeBlocks(tp.pos,cp.pos,smokes);const mapAwareT=mapAwareCanReadVisibleCandidate(tp,d,visibleCandidate);const mapAwareCT=mapAwareCanReadVisibleCandidate(cp,d,visibleCandidate);
+      // Buy phase is the only global combat lock. Once the round is live, route
+      // execution is tactical intent and must never suppress legal acquisition.
+      if(!buyP&&aliveT.length&&aliveCT.length){
+        let pairs=[];aliveT.forEach(tp=>aliveCT.forEach(cp=>{const d=dist(tp.pos,cp.pos);const tAuth=weaponAuthority(tp.gun),cAuth=weaponAuthority(cp.gun);const rangeVisible=weaponInRange(d,tAuth)||weaponInRange(d,cAuth);const lineOfSight=!lineBlocked(tp.pos,cp.pos,walls);const smokeBlocked=smokeBlocks(tp.pos,cp.pos,smokes);const visibleCandidate=d<55&&rangeVisible&&lineOfSight&&!smokeBlocked;const fovT=csTargetInFov(tp,cp),fovCT=csTargetInFov(cp,tp);const flankT=csFlankGeometry(tp,cp),flankCT=csFlankGeometry(cp,tp);const mapAwareT=mapAwareCanReadVisibleCandidate(tp,d,visibleCandidate)&&fovT;const mapAwareCT=mapAwareCanReadVisibleCandidate(cp,d,visibleCandidate)&&fovCT;combatAudit.losChecks+=1;combatAudit.fovChecks+=2;if(flankT)combatAudit.flankCandidates+=1;if(flankCT)combatAudit.flankCandidates+=1;
           if(visibleCandidate&&(mapAwareT||mapAwareCT)){
             const freshPair=!activeReactionEpisodes.has(reactionKey(tp,cp))||!activeReactionEpisodes.has(reactionKey(cp,tp));
-            if(mapAwareT){const episode=ensureReactionEpisode(tp,cp,sec,d,tp.gun,visibleCandidate,mapAwareT);visibleReactionKeys.add(reactionKey(tp,cp));episode.distance=Math.round(d*100)/100;}
-            if(mapAwareCT){const episode=ensureReactionEpisode(cp,tp,sec,d,cp.gun,visibleCandidate,mapAwareCT);visibleReactionKeys.add(reactionKey(cp,tp));episode.distance=Math.round(d*100)/100;}
-            pairs.push([tp,cp,d,mapAwareT,mapAwareCT,freshPair]);
+            if(mapAwareT){const episode=ensureReactionEpisode(tp,cp,sec,d,tp.gun,lineOfSight,mapAwareT,fovT,flankT);visibleReactionKeys.add(reactionKey(tp,cp));episode.distance=Math.round(d*100)/100;combatAudit.targetAcquisitions+=1;combatAudit.targetLocks+=1;}
+            if(mapAwareCT){const episode=ensureReactionEpisode(cp,tp,sec,d,cp.gun,lineOfSight,mapAwareCT,fovCT,flankCT);visibleReactionKeys.add(reactionKey(cp,tp));episode.distance=Math.round(d*100)/100;combatAudit.targetAcquisitions+=1;combatAudit.targetLocks+=1;}
+            pairs.push([tp,cp,d,mapAwareT,mapAwareCT,freshPair,{lineOfSight,smokeBlocked,fovT,fovCT,flankT,flankCT}]);
             combatAudit.candidatePairs+=1;
           }
         }));
@@ -1003,22 +1277,28 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
         // Pair ordering is part of the stable authoritative outcome. Reaction
         // telemetry records visibility/acquisition, but it must not reorder
         // targets or starve an otherwise legal pair.
-        const ordered=[...pairs].sort((a,b)=>{if(a[5]!==b[5])return a[5]?-1:1;const sa=isSniperPair(a),sb=isSniperPair(b);if(sa!==sb)return sa?-1:1;return effD(a)-effD(b);});
+        const readyAtForPair=pr=>{
+          const [tp,cp,,mapAwareT,mapAwareCT]=pr;
+          const tReady=mapAwareT&&activeReactionEpisodes.get(reactionKey(tp,cp))?.reactionReadyAtMs;
+          const cReady=mapAwareCT&&activeReactionEpisodes.get(reactionKey(cp,tp))?.reactionReadyAtMs;
+          return Math.min(Number.isFinite(tReady)?tReady:Infinity,Number.isFinite(cReady)?cReady:Infinity);
+        };
+        const ordered=[...pairs].sort((a,b)=>{const ra=readyAtForPair(a),rb=readyAtForPair(b);const aReady=Number.isFinite(ra)&&ra<=combatWindowEndMs,bReady=Number.isFinite(rb)&&rb<=combatWindowEndMs;if(aReady!==bReady)return aReady?-1:1;if(aReady&&ra!==rb)return ra-rb;if(a[5]!==b[5])return a[5]?-1:1;const sa=isSniperPair(a),sb=isSniperPair(b);if(sa!==sb)return sa?-1:1;return effD(a)-effD(b);});
         const usedT=new Set(),usedCT=new Set();
         // Preserve the stable C4 pairing budget. The C5A fire clock gives a
         // pair its real cadence inside this budget; it must not let a single
         // actor/target reservation reshape round outcomes.
         const maxEngage=Math.min(pairs.length,Math.max(2,Math.ceil((aliveT.length+aliveCT.length)/3)));
         let done=0;
-        for(const[tp,cp,d,mapAwareT,mapAwareCT,freshPair] of ordered){
+        for(const[tp,cp,d,mapAwareT,mapAwareCT,freshPair,pairMeta] of ordered){
           const sniperInvolved=isSniperPair([tp,cp]);
           if(!sniperInvolved&&done>=maxEngage)break;
           if(tp.dead||cp.dead||usedT.has(tp.id)||usedCT.has(cp.id))continue;
-          if(mapAwareT){const episode=activeReactionEpisodes.get(reactionKey(tp,cp));if(episode&&episode.targetAcquiredAtMs==null){episode.targetAcquiredAtMs=Math.round(sec*1000);episode.reactionReadyAtMs=episode.targetAcquiredAtMs+episode.reactionDelayMs;}}
-          if(mapAwareCT){const episode=activeReactionEpisodes.get(reactionKey(cp,tp));if(episode&&episode.targetAcquiredAtMs==null){episode.targetAcquiredAtMs=Math.round(sec*1000);episode.reactionReadyAtMs=episode.targetAcquiredAtMs+episode.reactionDelayMs;}}
+          if(mapAwareT){const episode=activeReactionEpisodes.get(reactionKey(tp,cp));if(episode&&episode.targetAcquiredAtMs==null){episode.targetAcquiredAtMs=Math.round(sec*1000);episode.reactionReadyAtMs=episode.targetAcquiredAtMs+episode.reactionDelayMs;if(episode.routeActiveAtAcquisition)combatAudit.routeInterruptAcquisitions+=1;}}
+          if(mapAwareCT){const episode=activeReactionEpisodes.get(reactionKey(cp,tp));if(episode&&episode.targetAcquiredAtMs==null){episode.targetAcquiredAtMs=Math.round(sec*1000);episode.reactionReadyAtMs=episode.targetAcquiredAtMs+episode.reactionDelayMs;if(episode.routeActiveAtAcquisition)combatAudit.routeInterruptAcquisitions+=1;}}
           let fireChance=d<15?0.85:d<30?0.55:(sniperInvolved?0.55:0.3);
           fireChance*=(0.55+0.5*Math.max(aggr(tp),aggr(cp))); // 進攻性影響交火意願（雙方都龜縮→少對槍）
-          if(!contactCalled){contactCalled=true;const spotter=cp;comms.push({side:spotter.side,name:spotter.name,text:`${nearCO(tp.pos)} 有人，${aliveT.length} 個！`});const handoffReceiver=applyCommsHandoff(spotter,tp,ps,walls);}
+          if(!contactCalled){contactCalled=true;const spotter=cp;comms.push({side:spotter.side,name:spotter.name,text:`${nearCO(tp.pos)} 有人，${aliveT.length} 個！`});const handoffReceiver=applyCommsHandoff(spotter,tp,ps,walls);if(handoffReceiver&&handoffReceiver.route)assignRoute(handoffReceiver,handoffReceiver.route,{kind:"comms-handoff",phase:tacticalPhaseFor(sec,planted),objective:"handoff",roundSec:sec,routeSignature:"comms-handoff"});}
           // 對槍勝負由雙方 16 項素質 + 武器 + 情境決定（非隨機）
           const tHold=(tp.state==="架槍"||tp.state==="HOLD"),cHold=(cp.state==="架槍"||cp.state==="HOLD");
           const tSk=combatSkill(tp,{holding:tHold,entry:tp.role==="entry"&&!tHold,lurk:tp.role==="lurker"&&tHold,lastAlive:aliveT.length===1,lowHP:tp.hp<40});
@@ -1028,7 +1308,13 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
           const Pt=clamp(0.5+(tSk-cSk)*0.013+(MAP_EDGE[mapKey]??0.02)+ecoEdge+flashPen+tacEdge,0.07,0.93); // 結構平衡 + 戰術剋制
           const tw=combatRand()<Pt;const at=tw?tp:cp,df=tw?cp:tp;
           const attackerMapAware=tw?mapAwareT:mapAwareCT;if(!attackerMapAware)continue;
+          const attackerFov=tw?pairMeta?.fovT:pairMeta?.fovCT;
+          const attackerFlank=tw?pairMeta?.flankT:pairMeta?.flankCT;
+          const permission=csEngagementPermission(tw?tp:cp,tw?cp:tp,d,weaponAuthority((tw?tp:cp).gun),{lineOfSight:pairMeta?.lineOfSight,fov:attackerFov,smokeBlocked:pairMeta?.smokeBlocked});
+          if(!permission){combatAudit.routeBlockedEngagements+=0;continue;}
+          combatAudit.engagementPermissions+=1;
           const actorEpisode=activeReactionEpisodes.get(reactionKey(at,df));
+          if(actorEpisode){actorEpisode.engagementPermission=true;if(actorEpisode.routeActiveAtAcquisition&&!actorEpisode.routeInterrupted){actorEpisode.routeInterrupted=true;actorEpisode.routePreservedAfterEngage=Array.isArray(at.route)&&at.route.length>0;combatAudit.routeInterruptPermissions+=1;}}
           const engagementKey=reactionKey(at,df);
           const fireKey=at.id;
           combatAudit.fireRolls+=1;
@@ -1037,17 +1323,20 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
           const reactionShotAtMs=actorEpisode?.firstAuthoritativeShotAtMs==null&&Number.isFinite(actorEpisode?.reactionReadyAtMs)?actorEpisode.reactionReadyAtMs:null;
           const firstContactReady=Boolean(Number.isFinite(reactionShotAtMs)&&!hasCadenceClock);
           if(!firstContactReady&&!hasCadenceClock&&combatRand()>=fireChance)continue;
-          usedT.add(tp.id);usedCT.add(cp.id);if(!sniperInvolved)done++;
           const synergyPartner=synergyTradeCandidate(at,df,ps,walls);
           const synergyReady=Boolean(synergyPartner&&Math.max(persStat(at,"coo"),persStat(synergyPartner,"coo"))>=SYNERGY_TRADE_THRESHOLD);
           const synergySecond=synergyReady?synergyCoverFollowUpRoute(at,synergyPartner,df):null;
           if(synergyReady){
             synergyPartner.va=Math.atan2(df.pos.y-synergyPartner.pos.y,df.pos.x-synergyPartner.pos.x)*180/Math.PI;synergyPartner.state="ENGAGE";synergyPartner.shooting=Math.max(synergyPartner.shooting,1);
-            if(synergySecond){at.route=synergySecond;at.routeIdx=0;at.routeT=0;at.state="ROTATE";}
+            if(synergySecond){assignRoute(at,synergySecond,{kind:"trade-cover",phase:tacticalPhaseFor(sec,planted),objective:"trade-cover",roundSec:sec,routeSignature:"trade-cover"});at.state="ROTATE";}
           }
           const g=GUNS[at.gun],auth=weaponAuthority(at.gun);if(!g)continue;
           const reactionEpisode=activeReactionEpisodes.get(reactionKey(at,df));
           if((Number.isFinite(scheduledShotAtMs)&&scheduledShotAtMs>combatWindowEndMs)||(Number.isFinite(reactionShotAtMs)&&reactionShotAtMs>=combatWindowEndMs)){combatAudit.scheduledSkips+=1;continue;}
+          // Do not consume the per-tick pair reservation until this pair is
+          // actually ready to emit. A deferred cadence clock must not starve
+          // another legal target for multiple snapshots.
+          usedT.add(tp.id);usedCT.add(cp.id);if(!sniperInvolved)done++;
           const rawAccuracy=at.stats?.acc||80,effectiveAccuracy=at.stats?.acc!=null?persStat(at,"acc"):rawAccuracy;
           const automatic=auth.fireMode==="automatic";
           const actorPreviousShotAtMs=lastShotAtByActor.get(fireKey);
@@ -1063,11 +1352,11 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
             const hitChance=clamp(auth.accuracy*(0.46+effectiveAccuracy/210)*rangeFactor,0.32,0.92);
             const hit=combatRand()<hitChance;
             const isHS=hit&&combatRand()<g.hs*(0.72+0.55*(effectiveAccuracy/100))*auth.accuracy;
-            let killed=false;
+            let killed=false,damage=0;
             if(hit){
               let dmg=(g.dmg+Math.floor(combatRand()*40))*(isHS?2:1);
               if(df.armor&&!isHS)dmg*=0.72;
-              ({killed}=applyDamage(at,df,Math.round(dmg)));
+              ({killed,effectiveDamage:damage}=applyDamage(at,df,Math.round(dmg)));
               combatAudit.damageEvents+=1;
             }
             combatAudit.shotEvents+=1;
@@ -1077,10 +1366,11 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
                 reactionEpisode.firstAuthoritativeShotAtMs=roundedShotAtMs;
                 reactionEpisode.latencyMs=Math.max(0,reactionEpisode.firstAuthoritativeShotAtMs-reactionEpisode.visibleAtMs);
                 reactionEpisode.shot=true;
+                if(reactionEpisode.routeActiveAtAcquisition){reactionEpisode.routePreservedAfterEngage=reactionEpisode.routePreservedAfterEngage||(Array.isArray(at.route)&&at.route.length>0);combatAudit.routeInterruptFirstShots+=1;}
               }
             }
             const eventId=`shot-${rnd}-${fi}-${++shotSequence}`;
-            shotCadenceTelemetry.push({eventId,attackerId:at.id,targetId:df.id,gun:at.gun,weaponFamily:auth.family,shotAtMs:roundedShotAtMs,profileIntervalMs:Math.round(auth.intervalMs),actualIntervalMs:Number.isFinite(previousShotAtMs)?roundedShotAtMs-previousShotAtMs:null,round:rnd,hit});
+            shotCadenceTelemetry.push({eventId,attackerId:at.id,targetId:df.id,gun:at.gun,weaponFamily:auth.family,shotAtMs:roundedShotAtMs,profileIntervalMs:Math.round(auth.intervalMs),actualIntervalMs:Number.isFinite(previousShotAtMs)?roundedShotAtMs-previousShotAtMs:null,round:rnd,hit,damage:Number(damage||0),fov:Boolean(attackerFov),lineOfSight:Boolean(pairMeta?.lineOfSight),targetLock:true,engagementPermission:true,flank:Boolean(attackerFlank)});
             lastShotAtByActor.set(fireKey,roundedShotAtMs);
             const missAngle=(combatRand()-0.5)*0.36,missDistance=hit?0:Math.max(1.5,d*0.08);
             const tracerTo=hit?{x:df.pos.x,y:df.pos.y}:{x:df.pos.x+Math.cos(missAngle+at.va*Math.PI/180)*missDistance,y:df.pos.y+Math.sin(missAngle+at.va*Math.PI/180)*missDistance};
@@ -1090,7 +1380,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
             if(killed)finalizeKill(at,df,{weapon:at.gun,isHS,distance:d});
           }
           fireClockByActor.set(fireKey,authoritativeShotAtMs);
-          if(emittedShots>0){at.flash=3;df.flash=3;at.state="ENGAGE";df.state="ENGAGE";at.shooting=df.dead?1:2;}
+          if(emittedShots>0){at.flash=3;df.flash=3;at.state="ENGAGE";df.state="ENGAGE";at.shooting=df.dead?1:2;if(attackerFlank)combatAudit.flankEngagements+=1;}
           if(df.dead){}
           else if(df.hp<35&&combatRand()<0.25){comms.push({side:df.side,name:df.name,text:"我殘血，先撤一下"});}
         }
@@ -1099,14 +1389,16 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
         const sitePos=N[target==="a"?"aSite":"bSite"];const carrier=ps.find(p=>p.side==="t"&&!p.dead&&p.hasBomb);
         if(carrier){
           const endsNear=carrier.route.length&&dist(carrier.route[carrier.route.length-1],sitePos)<10;
-          if(!endsNear&&dist(carrier.pos,sitePos)>8){const ap=N[target==="a"?"aConn":"car"];carrier.route=navigableRoute(ap?[carrier.pos,ap,sitePos]:[carrier.pos,sitePos]);carrier.routeIdx=0;carrier.routeT=0;}
+          if(!endsNear&&dist(carrier.pos,sitePos)>8){const ap=N[target==="a"?"aConn":"car"];assignRoute(carrier,ap?[carrier.pos,ap,sitePos]:[carrier.pos,sitePos],{kind:"site-execute",phase:tacticalPhaseFor(sec,planted),objective:"plant",roundSec:sec,routeSignature:ap?`${target}Approach>${target}Site`:`${target}Site`});}
           if(dist(carrier.pos,sitePos)<9){const ctNear=aliveCT.filter(cp=>dist(cp.pos,sitePos)<13&&!lineBlocked(carrier.pos,cp.pos,walls)).length;const canPlant=(ctNear===0&&rand()<0.55)||(ctNear<=1&&aliveT.length>aliveCT.length&&rand()<0.18);if(canPlant){planted=true;c4pos={...sitePos};c4t=20;carrier.hasBomb=false;carrier.state="安裝中";carrier.money+=300;casts.push(`💣 ${carrier.name} 安裝炸彈！`);highlights.push({fi,label:`R${rnd+1} 炸彈安裝`});
-            aliveT.filter(p=>p.id!==carrier.id&&!p.dead&&!p.reassigned).forEach(p=>{const adaptivePostPlant=adaptivePostPlantGoal(p,planted,c4pos);if(adaptivePostPlant){p._adaptivePostPlant=true;p.route=navigableRoute([p.pos,adaptivePostPlant]);p.routeIdx=0;p.routeT=0;p.state="ROTATE";}});
-            comms.push({side:"t",name:carrier.name,text:`包下了，${target==="a"?"A":"B"} 點，全員交叉！`});const bombAwareReceiver=applyCommsBombAwareness(carrier,c4pos,aliveT);if(bombAwareReceiver)comms.push({side:"t",name:bombAwareReceiver.name,text:"收到包點資訊，調整路線"});
+            bombAudit.plantEvents.push({round:rnd+1,roundSec:sec,site:target,position:{...c4pos},carrierId:carrier.id,carrierName:carrier.name,score:{t:tScore,ct:ctScore},aliveT:aliveT.length,aliveCT:aliveCT.length});
+            bombAudit.objectiveTransitions.push({round:rnd+1,roundSec:sec,from:"PLANTING",to:"PLANTED",side:"t",site:target});
+            aliveT.filter(p=>p.id!==carrier.id&&!p.dead&&!p.reassigned).forEach(p=>{const anchor=tacticalPostPlantAnchor(p,tacticForSidePhase("t",CS_TACTICAL_PHASES.POST_PLANT),N,target,preMatchLayout.postPlantMode);if(anchor){p._adaptivePostPlant=true;assignRoute(p,[p.pos,anchor],{kind:"post-plant-cover",phase:CS_TACTICAL_PHASES.POST_PLANT,objective:"post-plant-hold",roundSec:sec,routeSignature:`post-plant>${target}`});p.objectiveState="HOLD_ANGLE";p.state="POST_PLANT";}});
+            comms.push({side:"t",name:carrier.name,text:`包下了，${target==="a"?"A":"B"} 點，全員交叉！`});const bombAwareReceiver=applyCommsBombAwareness(carrier,c4pos,aliveT);if(bombAwareReceiver){assignRoute(bombAwareReceiver,bombAwareReceiver.route,{kind:"bomb-awareness",phase:CS_TACTICAL_PHASES.POST_PLANT,objective:"post-plant-hold",roundSec:sec,routeSignature:"bomb-awareness"});comms.push({side:"t",name:bombAwareReceiver.name,text:"收到包點資訊，調整路線"});}
             const cd=aliveCT[0];if(cd)comms.push({side:"ct",name:cd.name,text:`${target==="a"?"A":"B"} 響了，全員回防拆彈！`});
             // 炸彈安裝後：所有存活警察立刻往包點移動（回防 / 拆彈）
             const appr=target==="a"?N.aConn:N.bTop;
-            aliveCT.forEach(cp=>{const tacticalRoute=tacticalRetakeRoute(cp,tacticCT,N,c4pos);cp.reassigned=false;cp.route=navigableRoute(tacticalRoute||(appr&&dist(cp.pos,appr)>6?[cp.pos,appr,c4pos]:[cp.pos,c4pos]));cp.routeIdx=0;cp.routeT=0;cp.state="RETAKE";});}}
+            aliveCT.forEach(cp=>{const tacticalRoute=tacticalRetakeRoute(cp,tacticForSidePhase("ct",CS_TACTICAL_PHASES.POST_PLANT),N,c4pos);cp.reassigned=false;assignRoute(cp,tacticalRoute||(appr&&dist(cp.pos,appr)>6?[cp.pos,appr,c4pos]:[cp.pos,c4pos]),{kind:"retake",phase:CS_TACTICAL_PHASES.POST_PLANT,objective:"retake",roundSec:sec,routeSignature:`retake>${target}>c4`});cp.objectiveState="RETAKE";cp.state="RETAKE";bombAudit.retakeAssignments+=1;});}}
         }
       }
       smokes=smokes.map(s=>({...s,tl:s.tl-C5A2_SIM_STEP_RATIO,age:(s.age||0)+C5A2_SIM_STEP_RATIO})).filter(s=>s.tl>0);
@@ -1122,16 +1414,20 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
         if(tw.type==="smoke")smokes.push({id:`s${tw.id}`,pos:{...tw.to},tl:18,age:0});
         if(tw.type==="molly")mollys.push({id:`m${tw.id}`,pos:{...tw.to},tl:MOLLY_TL});
       }}else if(tw.detonate){tw.boom--;}return tw;}).filter(tw=>tw.flying||tw.boom>0);
-      if(planted&&c4t!==null){c4t-=C5A2_SIM_STEP_RATIO;
+      if(planted&&c4t!==null){c4t-=C5A2_SIM_STEP_RATIO;bombAudit.timerSamples+=1;
         // 警察必須真的抵達包點且無匪徒壓制，才會累積拆彈進度（受專注力/決策影響）
         const defuseAliveCT=ps.filter(p=>p.side==="ct"&&!p.dead),defuseAliveT=ps.filter(p=>p.side==="t"&&!p.dead);
         const defuser=defuseAliveCT.find(cp=>dist(cp.pos,c4pos)<6);
         const contested=defuser&&defuseAliveT.some(tp=>dist(tp.pos,c4pos)<9&&!lineBlocked(tp.pos,defuser.pos,walls));
+        defuseAliveCT.filter(cp=>cp!==defuser).forEach(cp=>{cp.objectiveState="COVER";cp.state="COVER";});
+        defuseAliveT.forEach(tp=>{tp.objectiveState="DENY_DEFUSE";tp.state="POST_PLANT";});
+        bombAudit.coverAssignments+=defuseAliveCT.filter(cp=>cp!==defuser).length;
         if(defuser&&!contested){defuser.state="拆彈中";defuser.va=Math.atan2(c4pos.y-defuser.pos.y,c4pos.x-defuser.pos.x)*180/Math.PI;
+          defuser.objectiveState="DEFUSE";
           defuseProg+=(defuser.stats?(0.45+persStat(defuser,"foc")/250+persStat(defuser,"dec")/300):0.7)*C5A2_SIM_STEP_RATIO;
           if(!defuseCalled){defuseCalled=true;comms.push({side:"ct",name:defuser.name,text:"我拆，掩護我！"});}}
-        if(defuseProg>=3.5)roundEnd={winner:"ct",how:"defuse"};
-        else if(c4t<=0)roundEnd={winner:"t",how:"bomb"};
+        if(defuseProg>=3.5){roundEnd={winner:"ct",how:"defuse"};if(!bombResultRecorded){bombResultRecorded=true;bombAudit.defuseEvents.push({round:rnd+1,roundSec:sec,defuserId:defuser?.id||null,progress:Number(defuseProg.toFixed(3))});bombAudit.objectiveTransitions.push({round:rnd+1,roundSec:sec,from:"DEFUSE",to:"DEFUSED",side:"ct",playerId:defuser?.id||null});}}
+        else if(c4t<=0){roundEnd={winner:"t",how:"bomb"};if(!bombResultRecorded){bombResultRecorded=true;bombAudit.explosionEvents.push({round:rnd+1,roundSec:sec,position:{...c4pos},timer:0});bombAudit.objectiveTransitions.push({round:rnd+1,roundSec:sec,from:"PLANTED",to:"EXPLODED",side:"t",site:target});}}
       }
       if(!roundEnd){
         if(aliveT.length===0&&!planted)roundEnd={winner:"ct",how:"elim"};
@@ -1143,8 +1439,8 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
       // record the visible prefix length instead of cloning the growing array
       // on every 0.5s snapshot. The old `[...roundHist]` made C5A.2 long maps
       // quadratic in both allocation and GC pressure (especially Inferno).
-      frames.push({fi,ts:rnd*120+sec,rnd,roundSec:sec,roundHistCount:rnd, target,planted,buyP,c4t:c4t!==null?Math.ceil(c4t):null,c4pos:c4pos?{...c4pos}:null,
-        players:ps.map(p=>({...p,pos:{...p.pos},prevPos:{...p.prevPos}})),
+      frames.push({fi,ts:rnd*120+sec,rnd,roundSec:sec,roundHistCount:rnd, target,planted,tacticalPhase:tacticalPhaseFor(sec,planted),bombState:planted?(c4t<=0?"exploded":"planted"):"carried",buyP,c4t:c4t!==null?Math.ceil(c4t):null,c4pos:c4pos?{...c4pos}:null,
+        players:ps.map(p=>({...p,pos:{...p.pos},prevPos:{...p.prevPos},routePoints:(p.route||[]).map(point=>({x:Number(point.x.toFixed(3)),y:Number(point.y.toFixed(3))}))})),
         smokes:smokes.map(s=>({...s})),mollys:mollys.map(m=>({...m})),tracers:tracers.map(t=>({...t})),muzzles:muzzles.map(m=>({...m})),
         throwables:throwables.map(tw=>({...tw,from:{...tw.from},to:{...tw.to}})),droppedGuns:droppedGuns.map(g=>({...g})),droppedBomb:droppedBomb?{...droppedBomb}:null,doorStates:{...doorStates},
         events,casts,comms,reactionEvents:reactionTelemetry.slice(telemetryStart).map(episode=>({...episode})),ctScore,tScore,roundHist,ecoT,ecoCT,phase:roundPlan.phase,half:roundPlan.half,otGroup:roundPlan.otGroup,
@@ -1152,6 +1448,16 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
       fi++;if(roundEnd)break;
     }
     if(!roundEnd)roundEnd={winner:"ct",how:"time"};
+    ps.forEach(player=>{
+      const episode=player._activeStuckEpisode;
+      if(episode&&episode.status!=="resolved"){
+        episode.status="round-end-unresolved";
+        episode.resolvedAtSec=115;
+        episode.durationSec=Number((115-episode.startedAtSec).toFixed(3));
+        navigationAudit.maxStuckDurationSec=Math.max(navigationAudit.maxStuckDurationSec,episode.durationSec);
+        player._activeStuckEpisode=null;
+      }
+    });
     const abortedReplans=ps.filter(p=>p._awaitingReplanProgress).length;
     movementAudit.replanAbortedByRoundEnd+=abortedReplans;navigationAudit.replanAbortedByRoundEnd+=abortedReplans;
     const winnerSide=roundEnd.winner;
@@ -1163,6 +1469,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
     roundHist.push({...roundMeta,winner:winnerTeam===CS_TEAM_US?"t":"ct",winnerTeam,winnerSide,how:roundEnd.how,
       mvp:_rs[0]&&(_rs[0].k>0||_rs[0].dmg>0)?_rs[0]:null,top:_rs.slice(0,4),tS:tScore,cS:ctScore,
       nextCurrentSideByTeam:cloneCsSides(ruleState.currentSideByTeam),completed:ruleState.completed});
+    bombAudit.resultLinks.push({round:rnd+1,winnerSide,winnerTeam,how:roundEnd.how,planted,plantCount:bombAudit.plantEvents.filter(event=>event.round===rnd+1).length,defuseCount:bombAudit.defuseEvents.filter(event=>event.round===rnd+1).length,explosionCount:bombAudit.explosionEvents.filter(event=>event.round===rnd+1).length,timerSamples:bombAudit.timerSamples});
     const finalFrame=frames[frames.length-1];
     if(finalFrame){finalFrame.ctScore=ctScore;finalFrame.tScore=tScore;finalFrame.roundHist=roundHist;finalFrame.roundHistCount=roundHist.length;finalFrame.completed=ruleState.completed;finalFrame.winner=ruleState.winner;}
     // ── 跨回合累計每位選手數據 ──
@@ -1217,8 +1524,16 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){
   const cadenceByFamily={};shotCadenceTelemetry.forEach(event=>{if(event.actualIntervalMs!=null)(cadenceByFamily[event.weaponFamily]??=[]).push(event.actualIntervalMs);});
   const cadenceSummary=Object.fromEntries(Object.entries(cadenceByFamily).map(([family,values])=>{const sorted=[...values].sort((a,b)=>a-b);return[family,{samples:sorted.length,minMs:sorted[0]??null,medianMs:sorted.length?sorted[Math.floor((sorted.length-1)/2)]:null,maxMs:sorted.at(-1)??null}];}));
   const weaponAuthoritySummary=Object.fromEntries(Object.keys(GUNS).map(gun=>{const profile=weaponAuthority(gun);return[gun,{...profile,bodyShotsToKill:Math.max(1,Math.ceil(100/profile.damage)),actualCadenceSamples:shotCadenceTelemetry.filter(event=>event.gun===gun).length}];}));
+  const weaponFamilies=["pistol","smg","rifle","sniper","shotgun"];
+  const summarizeCadence=values=>{const sorted=values.filter(Number.isFinite).sort((a,b)=>a-b);return{samples:sorted.length,minMs:sorted[0]??null,medianMs:sorted.length?(sorted[Math.floor((sorted.length-1)/2)]??null):null,maxMs:sorted.at(-1)??null};};
+  const weaponMetrics=Object.fromEntries(weaponFamilies.map(family=>{
+    const events=shotCadenceTelemetry.filter(event=>event.weaponFamily===family),hits=events.filter(event=>event.hit),damage=events.reduce((sum,event)=>sum+(Number(event.damage)||0),0);
+    return[family,{shots:events.length,hits:hits.length,damage,avgDamagePerHit:hits.length?Number((damage/hits.length).toFixed(2)):0,profileIntervalMs:summarizeCadence(events.map(event=>Number(event.profileIntervalMs))),actualCadenceMs:summarizeCadence(events.map(event=>event.actualIntervalMs==null?NaN:Number(event.actualIntervalMs)))}];
+  }));
+  navigationAudit.unresolvedStuckEpisodes=navigationAudit.stuckEpisodes.filter(episode=>episode.status!=="resolved").length;
+  buyAudit.purchaseRatios=Object.fromEntries(weaponFamilies.map(family=>[family,buyAudit.totalPurchases?Number((buyAudit.purchaseCounts[family]/buyAudit.totalPurchases).toFixed(4)):0]));
   return{frames,highlights,roundHist,ctScore,tScore,mapKey,players,mvp,rounds:_R,reactionTelemetry,reactionSummary,
-       shotCadenceTelemetry,cadenceSummary,weaponAuthority:weaponAuthoritySummary,movementAudit,navigationAudit,combatAudit,
+       shotCadenceTelemetry,cadenceSummary,weaponAuthority:weaponAuthoritySummary,weaponMetrics,movementAudit,navigationAudit,combatAudit,tacticalAudit,buyAudit,bombAudit,
     completed:ruleState.completed,winner:ruleState.winner,phase:ruleState.phase,regulationRounds:ruleState.regulationRounds,
     overtimeGroups:ruleState.otGroup,sideChanges:ruleState.sideChanges,economyEvents,halftime:ruleState.sideChanges.find(x=>x.reason==="halftime")??null,
     currentSideByTeam:cloneCsSides(ruleState.currentSideByTeam)};
@@ -2347,6 +2662,7 @@ function EsportsFPS3D({
   opponent:oppProp,           // 對手 5 名（3D 形狀，side:"ct"）
   tactic:tacticProp,          // 我方 T 戰術（id 字串或物件）
   tacticType:tacticTypeProp,  // 我方 T 戰術類型（execute/rush/default）；id 對不到時用此挑選
+  tacticalLayout:tacticalLayoutProp, // 賽前四階段布局：opening/mid-round/late-round/post-plant
   ctTactic:ctTacticProp,      // 對手 CT 戰術 id（可選；未給則 AI 預設）
   mapKey:mapKeyProp,          // 指定地圖
   seed:seedProp,              // 指定亂數種子
@@ -2378,21 +2694,23 @@ function EsportsFPS3D({
   };
   const [tIdx,setTIdx]=useState(resolveTIdx());
   useEffect(()=>{setTIdx(resolveTIdx());},[tacticProp,tacticTypeProp,mapKey]);
+  const baseTactic=lib.t[Math.min(tIdx,lib.t.length-1)];
+  const preMatchLayout=useMemo(()=>normalizeCsTacticalLayout(tacticalLayoutProp,lib.t,baseTactic),[tacticalLayoutProp,lib,baseTactic]);
   // CT 戰術：有指定用指定；否則 AI 依我方站點挑一個合理防守（堆同點），增添對抗性
   const aiCtIdx=useMemo(()=>{
     if(ctTacticProp!=null){const i=lib.ct.findIndex(t=>t.id===ctTacticProp||t.name===ctTacticProp);if(i>=0)return i;}
-    const tSite=lib.t[Math.min(tIdx,lib.t.length-1)]?.site;
+    const tSite=preMatchLayout.phases[CS_TACTICAL_PHASES.OPENING]?.tactic?.site;
     // 50% 機率守對點（堆/標準），否則隨機 — 避免 AI 過強破壞平衡
     const rng=mkRng((seedProp||42)+7);
     if(tSite&&tSite!=="mid"&&rng()<0.5){const i=lib.ct.findIndex(t=>t.site===tSite);if(i>=0)return i;}
     return Math.floor(rng()*lib.ct.length);
-  },[ctTacticProp,tIdx,mapKey,seedProp]);
+  },[ctTacticProp,tIdx,mapKey,seedProp,preMatchLayout]);
   const [ctIdx,setCtIdx]=useState(aiCtIdx);
   useEffect(()=>{if(embedded)setCtIdx(aiCtIdx);},[aiCtIdx,embedded]);
   const [seed,setSeed]=useState(seedProp||42);
   useEffect(()=>{if(seedProp!=null&&seedProp!==seed)setSeed(seedProp);},[seedProp]);
-  const tacticT=lib.t[Math.min(tIdx,lib.t.length-1)],tacticCT=lib.ct[Math.min(ctIdx,lib.ct.length-1)];
-  const sim=useMemo(()=>simulateFps(mapKey,tacticT,tacticCT,seed,effectiveRoster),[mapKey,tIdx,ctIdx,seed,effectiveRoster]);
+  const tacticT=preMatchLayout.phases[CS_TACTICAL_PHASES.OPENING]?.tactic||baseTactic,tacticCT=lib.ct[Math.min(ctIdx,lib.ct.length-1)];
+  const sim=useMemo(()=>simulateFps(mapKey,tacticT,tacticCT,seed,effectiveRoster,tacticalLayoutProp),[mapKey,tIdx,ctIdx,seed,effectiveRoster,tacticalLayoutProp,tacticT,tacticCT]);
   // 賽後結果（給主遊戲）；播放到最後一格時透過 onComplete 回傳一次
   const matchResult=useMemo(()=>buildMatchResult(sim,{tacticT,tacticCT,tName:T_NAME,ctName:CT_NAME,seed}),[sim,seed]);
   const completedRef=useRef(null);
@@ -2434,7 +2752,8 @@ function EsportsFPS3D({
     if(p0Contract){p0Contract.fidxTransitions+=1;p0Contract.lastAuthoritativeFidx=next;p0Contract.lastReason=reason;}
     setFIdx(next);
   };
-  liveRef.current={sim,fIdx,playing,speed,playbackFrameSec:C5A2_PLAYBACK_FRAME_SEC,selected,showLabels,showRoutes,seekNonce:seekNonce.current,
+  const publishedFidx=liveRef.current?.sim===sim&&Number.isFinite(liveRef.current?.fIdx)?liveRef.current.fIdx:fIdx;
+  liveRef.current={...liveRef.current,sim,fIdx:publishedFidx,playing,speed,playbackFrameSec:C5A2_PLAYBACK_FRAME_SEC,selected,showLabels,showRoutes,seekNonce:seekNonce.current,
     advance:()=>{const from=liveRef.current.fIdx;if(from>=total-1){liveRef.current.playing=false;setPlaying(false);return from;}const next=from+1;publishFpsFrame(next,"playback");return next;}};
 
   // 切換比賽/地圖 → 重置
@@ -2661,7 +2980,7 @@ function EsportsFPS3D({
         <div style={{display:"flex",gap:6,marginTop:7}}>
           <button onClick={()=>setShowRoutes(r=>!r)} style={toolBtn(showRoutes)}>🧭 路線</button>
           <div style={{flex:1,display:"flex",alignItems:"center",gap:6,padding:"0 4px",color:C.gray2,fontSize:8.5}}>
-            <span style={{color:C.t,fontWeight:800}}>{lib.t[tIdx]?.name}</span><span style={{opacity:0.5}}>vs</span><span style={{color:C.ct,fontWeight:800}}>{lib.ct[ctIdx]?.name}</span><span style={{opacity:0.55}}>· 賽前戰術</span>
+            <span style={{color:C.t,fontWeight:800}}>{tacticT?.name}</span><span style={{opacity:0.5}}>vs</span><span style={{color:C.ct,fontWeight:800}}>{lib.ct[ctIdx]?.name}</span><span style={{opacity:0.55}}>· 四階段{preMatchLayout.openness==="open"?"開放布局":preMatchLayout.openness==="structured"?"固定布局":"自適應布局"}</span>
           </div>
         </div>
         {/* C3 全場導播視角：切換只改相機，不改戰鬥資料或幾何契約 */}

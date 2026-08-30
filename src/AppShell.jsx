@@ -71,7 +71,7 @@ export default function AppShell() {
   const [draft, setDraft] = useState(null);     // S18/S19：BanPick 結果 {picks,bans}
   const [tactic, setTactic] = useState(null);   // S19：TacticScreen 選定戰術（純展示，不影響引擎）
   const [playerId, setPlayerId] = useState(null); // S21：PlayerDetail 目標選手
-  const [csConfig, setCsConfig] = useState(null); // S23：CS 賽前選擇 {mapKey,mapName,tacticId,tacticName,tacticType,tacticEmoji,seed}
+  const [csConfig, setCsConfig] = useState(null); // S23/C5B：CS 賽前選擇含四階段 tacticalLayout
   const [csResult, setCsResult] = useState(null); // S23：CsMatchResult.v1（Match → Result 傳遞）
   const go = (s) => () => setScreen(s);
   const home = go("dashboard");
@@ -228,7 +228,7 @@ export default function AppShell() {
       {/*  UI-3：獨立的 `csHub` 路由已移除——賽事中心的 CS 分頁掛的就是同一個元件，
            而且是唯一入口。留一個到不了的第二路由只會讓後續開發誤判擁有者。 */}
       {screen === "csMap" && <CsMapSelectScreen onNext={(m) => { const next = { mapKey: m.key, mapName: m.name }; setCsConfig(next); useProfileStore.getState().setActiveMatchContext({ phase: "tactic", config: { csConfig: next } }); setScreen("csTactic"); }} onBack={go("csPrep")} />}
-      {screen === "csTactic" && <CsTacticScreen mapName={csConfig?.mapName} onNext={(t) => { const next = { ...csConfig, tacticId: t.id, tacticName: t.name, tacticType: t.type, tacticEmoji: t.emoji, seed: useProfileStore.getState().matchmaking?.launch?.seed ?? null }; setCsConfig(next); useProfileStore.getState().setActiveMatchContext({ phase: "loading", config: { csConfig: next } }); setScreen("csLoading"); }} onBack={go("csMap")} />}
+      {screen === "csTactic" && <CsTacticScreen mapName={csConfig?.mapName} onNext={(t) => { const next = { ...csConfig, tacticId: t.id, tacticName: t.name, tacticType: t.type, tacticEmoji: t.emoji, tacticalLayout: t.tacticalLayout, seed: useProfileStore.getState().matchmaking?.launch?.seed ?? null }; setCsConfig(next); useProfileStore.getState().setActiveMatchContext({ phase: "loading", config: { csConfig: next } }); setScreen("csLoading"); }} onBack={go("csMap")} />}
       {screen === "csLoading" && <CsLoadingScreen config={csConfig} onDone={() => { useProfileStore.getState().setActiveMatchContext({ phase: "battle" }); setScreen("cs"); }} />}
       {/* S25：CS 結算在「比賽完成邊界」做掉（不是 Result 掛載時）→ 跳過 Result 也不會漏發獎 */}
       {screen === "cs" && <CsMatchScreen config={csConfig} onFinish={(r) => { settleCsMatch(r); setCsResult(r); setScreen("csResult"); }} onBack={home} />}

@@ -6,9 +6,9 @@
 //  引擎吃法 = Legacy fpsRouter 逐字（EsportsGame.jsx:7629）：
 //    確認時輸出 {id, name, type: FPS_TACTIC_TYPE[id]}，引擎在選定地圖的
 //    TACTICS_DB 內挑同 type 戰術執行（引擎原生行為，非 Balance 變更）。
-//  與 Legacy 的差異（誠實）：
-//    · Legacy 的「② 隊員分工 / ③ 局數節奏」引擎沒有對應輸入（純展示層），
-//      本 Sprint 不恢復——不做沒有去處的假部署。
+//  C5B：賽前部署輸出四階段 tacticalLayout；每一層會進入 authoritative route planner。
+//    · opening / mid-round / late-round / post-plant 都可獨立選擇。
+//    · openness 只控制 deterministic weighted route variation，不使用 Math.random。
 //  對選手能力的提示：boost 欄位（Legacy 逐字）→ statZh 顯示。
 // ============================================================================
 import React, { useMemo, useState } from "react";
@@ -23,7 +23,16 @@ const ACC = "#fb923c";
 const RISK_C = { "低": GC.green, "中": GC.gold, "高": GC.red };
 
 export default function CsTacticScreen({ mapName, onNext, onBack }) {
-  const [sel, setSel] = useState(null);
+  const phaseDefs = [
+    { key: "opening", label: "開局", sub: "Opening" },
+    { key: "mid-round", label: "中局", sub: "Mid-round" },
+    { key: "late-round", label: "後段", sub: "Late-round" },
+    { key: "post-plant", label: "下包後", sub: "Post-plant" },
+  ];
+  const [activePhase, setActivePhase] = useState("opening");
+  const [selectedByPhase, setSelectedByPhase] = useState(() => Object.fromEntries(phaseDefs.map((phase) => [phase.key, "f1"])));
+  const [openness, setOpenness] = useState("open");
+  const [postPlantMode, setPostPlantMode] = useState("crossfire");
   const development = useProfileStore((s) => s.teamDevelopment);
   const developmentEffects = teamDevelopmentEffects(development);
   const players = useProfileStore((s) => s.players) ?? [];
@@ -34,7 +43,29 @@ export default function CsTacticScreen({ mapName, onNext, onBack }) {
   }, [csLineup, players]);
   const map = useMemo(() => CS_MAPS.find((item) => item.name === mapName) ?? csMapByKey(mapName), [mapName]);
   const mapFitResult = useMemo(() => mapFit(starters, map), [map, starters]);
-  const selT = CS_TEAM_TACTICS.find((t) => t.id === sel) || null;
+  const selectedId = selectedByPhase[activePhase];
+  const selT = CS_TEAM_TACTICS.find((t) => t.id === selectedId) || CS_TEAM_TACTICS[0];
+  const selectTactic = (id) => setSelectedByPhase((current) => ({ ...current, [activePhase]: id }));
+  const layoutSummary = phaseDefs.map((phase) => ({
+    ...phase,
+    tactic: CS_TEAM_TACTICS.find((t) => t.id === selectedByPhase[phase.key]) || CS_TEAM_TACTICS[0],
+  }));
+  const submit = () => {
+    const opening = layoutSummary.find((phase) => phase.key === "opening")?.tactic || CS_TEAM_TACTICS[0];
+    onNext({
+      id: opening.id, name: opening.name, emoji: opening.emoji, risk: opening.risk,
+      type: FPS_TACTIC_TYPE[opening.id] || "default",
+      tacticalLayout: {
+        version: 1,
+        openness,
+        postPlantMode,
+        phases: Object.fromEntries(layoutSummary.map((phase) => [phase.key, {
+          id: phase.tactic.id, name: phase.tactic.name, emoji: phase.tactic.emoji,
+          risk: phase.tactic.risk, type: FPS_TACTIC_TYPE[phase.tactic.id] || "default",
+        }])),
+      },
+    });
+  };
 
   return (
     <div style={{ height: "100%", overflow: "auto", background: GC.bg, fontFamily: FONT, padding: "12px 12px 30px" }}>
@@ -44,7 +75,7 @@ export default function CsTacticScreen({ mapName, onNext, onBack }) {
           <h2 style={{ color: "white", fontSize: 17, fontWeight: 900, margin: 0 }}>戰術部署</h2>
           {mapName && <span style={{ marginLeft: "auto", background: `${ACC}22`, color: ACC, fontSize: 9, fontWeight: 700, borderRadius: 5, padding: "2px 8px" }}>🗺 {mapName}</span>}
         </div>
-        <div style={{ color: GC.gray, fontSize: 10, marginBottom: 14 }}>配置團隊戰術，將實際影響攻防回合（引擎依戰術類型在該地圖執行對應打法）</div>
+        <div style={{ color: GC.gray, fontSize: 10, marginBottom: 14 }}>四層布局都會進入比賽邏輯：路線、控圖、轉點與下包後站位；開放度只改變可追溯的加權分支。</div>
 
         {developmentEffects.unlocks.csDemoAnalysis && (
           <div data-testid="cs-demo-analysis" style={{ color: "#fed7aa", background: ACC + "12", border: "1px solid " + ACC + "55", borderRadius: 9, padding: "9px 10px", fontSize: 9, lineHeight: 1.55, marginBottom: 10 }}>
@@ -63,12 +94,25 @@ export default function CsTacticScreen({ mapName, onNext, onBack }) {
           </div>
         )}
 
-        <div style={{ color: ACC, fontSize: 12, fontWeight: 800, marginBottom: 8 }}>① 團隊戰術</div>
+        <div style={{ color: ACC, fontSize: 12, fontWeight: 800, marginBottom: 8 }}>① 選擇布局層</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 4, marginBottom: 10 }}>
+          {phaseDefs.map((phase) => {
+            const active = activePhase === phase.key;
+            const chosen = CS_TEAM_TACTICS.find((t) => t.id === selectedByPhase[phase.key]) || CS_TEAM_TACTICS[0];
+            return (
+              <button key={phase.key} data-testid={`cs-tactic-phase-${phase.key}`} onClick={() => setActivePhase(phase.key)} style={{ minWidth: 0, padding: "7px 3px", borderRadius: 8, border: `1px solid ${active ? ACC : GC.line}`, background: active ? `${ACC}22` : GC.card, color: active ? "#fff" : GC.gray, cursor: "pointer" }}>
+                <div style={{ fontSize: 10, fontWeight: 900 }}>{phase.label}</div>
+                <div style={{ fontSize: 7, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{chosen.emoji} {chosen.name}</div>
+              </button>
+            );
+          })}
+        </div>
+        <div style={{ color: GC.gray, fontSize: 9, marginBottom: 8 }}>目前配置：{phaseDefs.find((phase) => phase.key === activePhase)?.label}（{phaseDefs.find((phase) => phase.key === activePhase)?.sub}）</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
           {CS_TEAM_TACTICS.map((t) => {
-            const isSel = sel === t.id;
+            const isSel = selectedId === t.id;
             return (
-              <button key={t.id} onClick={() => setSel(isSel ? null : t.id)} style={{ background: isSel ? `${ACC}22` : GC.card, border: `1.5px solid ${isSel ? ACC : GC.line}`, borderRadius: 11, padding: "10px", cursor: "pointer", textAlign: "left" }}>
+              <button key={t.id} onClick={() => selectTactic(t.id)} style={{ background: isSel ? `${ACC}22` : GC.card, border: `1.5px solid ${isSel ? ACC : GC.line}`, borderRadius: 11, padding: "10px", cursor: "pointer", textAlign: "left" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
                   <span style={{ fontSize: 15 }}>{t.emoji}</span>
                   <span style={{ color: "white", fontSize: 12, fontWeight: 800 }}>{t.name}</span>
@@ -84,17 +128,45 @@ export default function CsTacticScreen({ mapName, onNext, onBack }) {
 
         {selT && (
           <div style={{ background: GC.card, border: `1px solid ${ACC}44`, borderRadius: 11, padding: "10px 12px", marginBottom: 14 }}>
-            <div style={{ color: ACC, fontSize: 10, fontWeight: 800, marginBottom: 3 }}>{selT.emoji} {selT.name} · 引擎執行類型「{TACTIC_TYPE_ZH[FPS_TACTIC_TYPE[selT.id]] ?? "標準"}」</div>
+            <div style={{ color: ACC, fontSize: 10, fontWeight: 800, marginBottom: 3 }}>{selT.emoji} {selT.name} · {phaseDefs.find((phase) => phase.key === activePhase)?.label} · 引擎執行類型「{TACTIC_TYPE_ZH[FPS_TACTIC_TYPE[selT.id]] ?? "標準"}」</div>
             <div style={{ color: GC.gray, fontSize: 9, lineHeight: 1.5 }}>{selT.detail}</div>
           </div>
         )}
 
+        <div style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${GC.line}`, borderRadius: 11, padding: "10px 12px", marginBottom: 14 }}>
+          <div style={{ color: ACC, fontSize: 10, fontWeight: 800, marginBottom: 7 }}>② 開放式路線規則</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 5 }}>
+            {[{ key: "structured", label: "固定", desc: "主路線優先" }, { key: "adaptive", label: "自適應", desc: "依局勢加權" }, { key: "open", label: "開放", desc: "多路線轉點" }].map((option) => (
+              <button key={option.key} onClick={() => setOpenness(option.key)} style={{ minWidth: 0, padding: "7px 4px", borderRadius: 8, border: `1px solid ${openness === option.key ? ACC : GC.line}`, background: openness === option.key ? `${ACC}22` : GC.card, color: openness === option.key ? "#fff" : GC.gray, cursor: "pointer" }}>
+                <div style={{ fontSize: 10, fontWeight: 900 }}>{option.label}</div><div style={{ fontSize: 7, marginTop: 2 }}>{option.desc}</div>
+              </button>
+            ))}
+          </div>
+          <div style={{ color: GC.gray, fontSize: 8, lineHeight: 1.5, marginTop: 7 }}>依比分、經濟、存活、Bomb、武器、控圖與攻守方，以 seed + hash 決定權重；同一設定可重現，並非無約束亂數。</div>
+        </div>
+
+        <div style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${GC.line}`, borderRadius: 11, padding: "10px 12px", marginBottom: 14 }}>
+          <div style={{ color: ACC, fontSize: 10, fontWeight: 800, marginBottom: 7 }}>③ 下包後布局</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 5 }}>
+            {[{ key: "hold-angle", label: "守角" }, { key: "crossfire", label: "交叉火力" }, { key: "deny-defuse", label: "封拆彈" }].map((option) => (
+              <button key={option.key} onClick={() => setPostPlantMode(option.key)} style={{ minWidth: 0, padding: "7px 4px", borderRadius: 8, border: `1px solid ${postPlantMode === option.key ? ACC : GC.line}`, background: postPlantMode === option.key ? `${ACC}22` : GC.card, color: postPlantMode === option.key ? "#fff" : GC.gray, cursor: "pointer", fontSize: 9, fontWeight: 800 }}>{option.label}</button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ background: `${ACC}0d`, border: `1px solid ${ACC}33`, borderRadius: 11, padding: "9px 12px", marginBottom: 14 }}>
+          <div style={{ color: ACC, fontSize: 10, fontWeight: 800, marginBottom: 5 }}>目前四層配置</div>
+          <div style={{ display: "grid", gap: 3 }}>
+            {layoutSummary.map((phase) => <div key={phase.key} style={{ display: "flex", gap: 6, color: GC.gray, fontSize: 8 }}><span style={{ width: 48, color: "#fff", fontWeight: 800 }}>{phase.label}</span><span>{phase.tactic.emoji} {phase.tactic.name} · {TACTIC_TYPE_ZH[FPS_TACTIC_TYPE[phase.tactic.id]] ?? "標準"}</span></div>)}
+          </div>
+        </div>
+
         <button
-          onClick={() => selT && onNext({ id: selT.id, name: selT.name, emoji: selT.emoji, risk: selT.risk, type: FPS_TACTIC_TYPE[selT.id] || "default" })}
-          disabled={!selT}
-          style={{ width: "100%", background: selT ? `linear-gradient(135deg,${ACC},${ACC}aa)` : "rgba(255,255,255,0.06)", border: "none", borderRadius: 14, padding: "16px", cursor: selT ? "pointer" : "not-allowed", color: selT ? "#fff" : GC.gray, fontSize: 16, fontWeight: 900 }}
-        >🎯 確認戰術 · 開始對戰</button>
-        <div style={{ textAlign: "center", color: GC.gray, fontSize: 9, marginTop: 8 }}>{selT ? `團隊戰術「${selT.name}」` : "未選團隊戰術"}</div>
+          data-testid="cs-tactic-confirm"
+          onClick={submit}
+          style={{ width: "100%", background: `linear-gradient(135deg,${ACC},${ACC}aa)`, border: "none", borderRadius: 14, padding: "16px", cursor: "pointer", color: "#fff", fontSize: 16, fontWeight: 900 }}
+        >🎯 確認四層戰術 · 開始對戰</button>
+        <div style={{ textAlign: "center", color: GC.gray, fontSize: 9, marginTop: 8 }}>已配置開局／中局／後段／下包後；{openness === "open" ? "開放式" : openness === "adaptive" ? "自適應" : "固定式"}路線</div>
       </div>
     </div>
   );

@@ -53,9 +53,16 @@ async function enterBattle(chrome, mapKey, mapTitle) {
   await chrome.evaluate(`const bs=[...document.querySelectorAll("button")].filter((b)=>!b.disabled&&!b.dataset.mapKey);bs.at(-1)?.click();return true;`);
   await waitFor(chrome, `!document.querySelector('[data-map-key="${mapKey}"]') && document.body.innerText.includes(${JSON.stringify(mapTitle)})`, 30_000, "map confirm");
   console.log(`${mapKey} map confirmed`);
-  await clickByText(chrome, `(node, text) => text.length > 20 && !text.includes("Cancel") && !text.includes("取消")`, "tactic confirm");
+  await waitFor(chrome, `document.querySelector('[data-testid="cs-tactic-phase-opening"]')`, 30_000, "four-phase tactic layout");
+  for (const [phase, cardIndex] of [["opening", 0], ["mid-round", 2], ["late-round", 4], ["post-plant", 5]]) {
+    await chrome.evaluate(`document.querySelector('[data-testid="cs-tactic-phase-${phase}"]')?.click(); return true;`);
+    await sleep(80);
+    await chrome.evaluate(`const cards=[...document.querySelectorAll('button')].filter((node)=>!node.disabled&&node.textContent.includes('核心：')); const card=cards[${cardIndex}]; card?.click(); return Boolean(card);`);
+    await sleep(80);
+  }
+  const tacticConfirmed = await chrome.evaluate(`const button=document.querySelector('[data-testid="cs-tactic-confirm"]'); if(!button||button.disabled)return false; button.click(); return true;`);
+  if (!tacticConfirmed) throw new Error("tactic confirm failed");
   console.log(`${mapKey} tactic clicked`);
-  await chrome.evaluate(`const bs=[...document.querySelectorAll("button")].filter((b)=>!b.disabled);bs.at(-1)?.click();return true;`);
   await waitFor(chrome, `document.querySelector('[data-testid="cs-match-speed-controls"]') && document.querySelector("canvas")`, 45_000, "Battle runtime");
   console.log(`${mapKey} Battle controls ready`);
   await waitFor(chrome, `document.querySelector('[data-testid="cs-camera-presets"]')`, 10_000, "camera controls");
