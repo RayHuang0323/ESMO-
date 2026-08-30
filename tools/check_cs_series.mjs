@@ -90,7 +90,7 @@ const outcomeOf = (f) => (cs.outcomes ?? []).find((o) => o.fixtureId === f.id) ?
 const majorOutcomes = majorFx.map(outcomeOf).filter(Boolean);
 
 // ── §1 matchFormat ────────────────────────────────────────────────────────
-console.log("\n§1 matchFormat：Major 帶 bo3，聯賽不帶");
+console.log("\n§1 matchFormat：Major BO3 Veto，聯賽 BO1 Veto");
 ck("Major 走得完（前置條件）", majorFx.length === 4 && isCsMajorDone(cs),
   `${majorFx.length} 場`);
 ck("每一場 Major 都帶 matchFormat", majorFx.every((f) => !!f.matchFormat),
@@ -101,11 +101,12 @@ ck("bo3 的定義是先拿兩張地圖", CS_MAJOR_MAPS_TO_WIN === 2, `${CS_MAJOR
 ck("mapPool 逐值等於引擎現役地圖的 key",
   majorFx.every((f) => eq(f.matchFormat?.mapPool, CS_MAPS.map((m) => m.key))),
   (majorFx[0]?.matchFormat?.mapPool ?? []).join(","));
-//  ⚠ 三張池下 BO3 的 veto 近乎裝飾（規格 D4）⇒ 明文寫 null，不假裝有博弈
-ck("veto 明文為 null（不假裝有 ban/pick 博弈）",
-  majorFx.every((f) => f.matchFormat?.veto === null));
-ck("CS 聯賽場次不帶 matchFormat（BO1 隱含，既有行為未變）",
-  regularFixturesOf(cs).every((f) => f.matchFormat === null),
+ck("Major 明文帶可擴充 Ban → Pick → Pick → Decider Veto",
+  majorFx.every((f) => eq(f.matchFormat?.veto?.flow, ["ban", "pick", "pick", "decider"])));
+ck("CS 聯賽場次明文帶 BO1 Veto，但不是多地圖 series",
+  regularFixturesOf(cs).every((f) => f.matchFormat?.bestOf === 1
+    && f.matchFormat?.series === null
+    && eq(f.matchFormat?.veto?.flow, ["ban", "ban", "decider"])),
   `${regularFixturesOf(cs).length} 場聯賽`);
 
 // ── §2 合法 series score ──────────────────────────────────────────────────

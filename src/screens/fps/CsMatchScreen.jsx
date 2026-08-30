@@ -24,11 +24,15 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
   const players = useProfileStore((s) => s.players) ?? [];
   const team = useProfileStore((s) => s.team);
   const launch = useProfileStore((s) => s.matchmaking?.launch ?? null);
+  const session = useProfileStore((s) => s.matchmaking?.session ?? null);
   const activeSnapshot = useProfileStore((s) => s.matchmaking?.session?.activeMatch?.simulation?.snapshot ?? null);
   // seed / 地圖：賽前流程有給就用（決定性重播鍵）；否則沿 Sprint22 掛載時決定一次
   const [seed] = useState(() => launch?.seed ?? config?.seed ?? ((Date.now() & 0xffff) | 1));
   const mapKey = config?.mapKey ?? CS_MAP_KEYS[seed % CS_MAP_KEYS.length];
   const mapName = config?.mapName ?? csMapByKey(mapKey)?.name ?? mapKey;
+  const matchLabel = session?.origin?.kind === "fixture"
+    ? "CS 正式賽事"
+    : session?.origin?.kind === "practice" ? "CS 快速練習" : "CS 一般對戰";
   //  Milestone O1：以**出賽陣容**建立引擎名單（誰上場不再看陣列順序）
   const csLineup = useProfileStore((s) => s.csLineup);
   const roster = useMemo(() => toFpsRoster(players, csLineup), [players, csLineup]);
@@ -72,10 +76,10 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
       {/* Match Header：返回 + 對戰卡 + 地圖/戰術（不遮引擎自己的比分列） */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", flexWrap: "wrap" }}>
         <button onClick={handleBack} data-testid="leave-active-match" style={{ background: "rgba(255,255,255,0.08)", border: `1px solid ${GC.line}`, borderRadius: 8, padding: "5px 12px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>← 暫停並離開</button>
-        <span style={{ color: "#e8ebf0", fontSize: 13, fontWeight: 800 }}>{team?.name ?? "德國海豹"} <span style={{ color: "#8a8f9c", fontWeight: 600 }}>vs</span> Compulsary</span>
+        <span style={{ color: "#e8ebf0", fontSize: 13, fontWeight: 800 }}>{team?.name ?? "德國海豹"} <span style={{ color: "#8a8f9c", fontWeight: 600 }}>vs</span> {session?.opponent?.name ?? "對手"}</span>
         <span style={{ background: "rgba(251,146,60,0.14)", border: "1px solid rgba(251,146,60,0.4)", color: "#fdba74", fontSize: 9, fontWeight: 700, borderRadius: 5, padding: "1px 7px" }}>🗺 {mapName}</span>
         {config?.tacticName && <span style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GC.line}`, color: "#c8cdd6", fontSize: 9, fontWeight: 700, borderRadius: 5, padding: "1px 7px" }}>戰術「{config.tacticName}」</span>}
-        <span style={{ marginLeft: "auto", color: "#8a8f9c", fontSize: 10 }}>CS 訓練賽</span>
+        <span style={{ marginLeft: "auto", color: "#8a8f9c", fontSize: 10 }}>{matchLabel}</span>
       </div>
       {!roster && (
         <div style={{ margin: "0 10px 8px", padding: "6px 10px", borderRadius: 8, background: "rgba(251,146,60,0.12)", border: "1px solid rgba(251,146,60,0.4)", color: "#fed7aa", fontSize: 11 }}>

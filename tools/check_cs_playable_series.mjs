@@ -42,7 +42,7 @@ const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const S = await import("../src/platform/competition/seasonState.js");
 const { csMajorFixturesOf, regularFixturesOf, fixtureById } = S;
 const {
-  createMatchSeries, recordSeriesMap, isSeriesDecided, seriesScore, seriesView,
+  createMatchSeries, recordSeriesMap, isSeriesDecided, seriesScore, seriesView, seriesFormatOf,
   MATCH_SERIES_VERSION,
 } = await import("../src/platform/contracts/matchSeries.js");
 const { CS_MAJOR_MATCH_FORMAT } = await import("../src/platform/competition/csMajor.js");
@@ -557,8 +557,8 @@ st().ensureCompetitionSeason("cs");
 const stH = st;
 const csH = stH().competitionByMode.cs;
 const leagueFx = regularFixturesOf(csH)[0];
-ck("CS 聯賽場次沒有 matchFormat ⇒ 不會被當成 series",
-  leagueFx.matchFormat === null);
+ck("CS 聯賽雖帶 BO1 Veto matchFormat，仍不會被當成多地圖 series",
+  leagueFx.matchFormat?.bestOf === 1 && seriesFormatOf(leagueFx.matchFormat) === null);
 ck("聯賽 BO1 的橋接仍然回 1:0（既有行為未變）",
   (() => {
     const res = fixtureOutcomeInputFrom({

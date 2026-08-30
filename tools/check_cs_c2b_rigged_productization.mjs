@@ -53,11 +53,23 @@ check("current renderer retains the P0 camera visibility contract", () => {
 
 check("10-player flag is explicit and bounded", () => {
   const ten = roster();
-  expect(getRiggedCharacterLimit(ten) === 1, "default C2A mode must remain one rigged player");
+  expect(getRiggedCharacterLimit(ten) === 10, "formal Battle default must render all 10 rigged players");
+  const previousWindow = globalThis.window;
+  try {
+    globalThis.window = { location: { search: "?fpsRigged=off" } };
+    expect(getRiggedCharacterLimit(ten) === 0, "fpsRigged=off diagnostic opt-out is broken");
+    globalThis.window = { location: { search: "?fpsRigged=3" } };
+    expect(getRiggedCharacterLimit(ten) === 3, "numeric diagnostic limit is broken");
+    globalThis.window = { location: { search: "?fpsRigged=all" } };
+    expect(getRiggedCharacterLimit(ten) === 10, "fpsRigged=all is broken");
+  } finally {
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
   expect(rendererSource.includes("getRiggedCharacterLimit"), "renderer does not consume the rigged limit");
   expect(characterSource.includes('mode = "failed"'), "failed asset mode is missing");
   expect(characterSource.includes("enabled = true"), "character enable/fallback boundary is missing");
-  return "default 1 rigged, ?fpsRigged=all selects all 10, failed loads fall back";
+  return "formal default/all = 10 rigged; off and numeric diagnostic limits remain bounded";
 });
 
 check("authoritative IDs and sides remain one 5v5 renderer contract", () => {

@@ -841,10 +841,10 @@ function buildKit(root, player) {
 }
 
 export function isC2cHeroRequested(player) {
-  if (typeof window === "undefined") return false;
+  if (typeof window === "undefined") return true;
   const request = new URLSearchParams(window.location.search).get("fpsC2cHero");
-  if (!request) return false;
-  if (request === "all") return true;
+  if (!request || request === "all") return true;
+  if (request === "off") return false;
   if (request === "1" || request === "hero") return player?.id === "t1";
   return request === player?.id;
 }

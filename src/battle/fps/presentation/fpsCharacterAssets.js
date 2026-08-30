@@ -59,10 +59,10 @@ export const FPS_CHARACTER_QUALITY_POLICY = Object.freeze({
 });
 
 export function getRiggedCharacterLimit(roster = []) {
-  if (typeof window === "undefined") return 1;
+  if (typeof window === "undefined") return roster.length;
   const mode = new URLSearchParams(window.location.search).get("fpsRigged");
   if (mode === "off") return 0;
-  if (mode === "all") return roster.length;
-  const requested = Number.parseInt(mode || "1", 10);
-  return Number.isFinite(requested) ? Math.max(0, Math.min(roster.length, requested)) : 1;
+  if (!mode || mode === "all") return roster.length;
+  const requested = Number.parseInt(mode, 10);
+  return Number.isFinite(requested) ? Math.max(0, Math.min(roster.length, requested)) : roster.length;
 }

@@ -160,6 +160,9 @@ export function createSession({ room, ticket, origin = null, assignment: assignm
       //  比賽 seed 沿用 gateway 在配對時決定的那一個（前端不得挑）
       seed: assignment.seed,
       opponent: { id: assignment.opponent?.id ?? null, name: assignment.opponent?.name ?? null },
+      //  C5V：ticket / practice gateway 已完成的選圖跟著同一個 Session 存活。
+      //  Fixture veto 由 profileStore 在同一個 Session 建立後補上；不另建 store。
+      ...(assignment.mapSelection ? { mapSelection: assignment.mapSelection } : {}),
       issuedBy: server,
       //  一次性啟動令牌：由場次內容推導，但**是否用過**由 tokenUsed 記錄
       launchToken: `lt_${hash8(`${sessionId}:${assignment.seed}:${room.assignmentId}`)}`,

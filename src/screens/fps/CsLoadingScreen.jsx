@@ -10,7 +10,7 @@
 //  對手為引擎內建 Compulsary（不複製名單資料 → 誠實顯示「引擎內建陣容」）。
 //  無 MOBA Hero 圖、無 heroDatabase（CS/MOBA 分離）。
 // ============================================================================
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { FPS_WEIGHTS, statZh } from "../../data/playerModel.js";
 import { MOBA2FPS, FPS_ROLE_ZH } from "../../battle/fps/fpsRoster.js";
@@ -36,16 +36,27 @@ export default function CsLoadingScreen({ config, onDone }) {
   const team = useProfileStore((s) => s.team);
   const starters = players.filter((p) => p.status === "主力").slice(0, 5);
   const [pct, setPct] = useState(0);
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
 
   useEffect(() => {
     const t0 = Date.now();
+    let completed = false;
+    let finishTimer = null;
     const iv = setInterval(() => {
       const p = Math.min(100, Math.round(((Date.now() - t0) / 2600) * 100));
       setPct(p);
-      if (p >= 100) { clearInterval(iv); setTimeout(() => onDone && onDone(), 250); }
+      if (p >= 100 && !completed) {
+        completed = true;
+        clearInterval(iv);
+        finishTimer = setTimeout(() => onDoneRef.current?.(), 250);
+      }
     }, 60);
-    return () => clearInterval(iv);
-  }, [onDone]);
+    return () => {
+      clearInterval(iv);
+      if (finishTimer) clearTimeout(finishTimer);
+    };
+  }, []);
 
   const line = LINES[Math.min(LINES.length - 1, Math.floor(pct / (100 / LINES.length)))];
 

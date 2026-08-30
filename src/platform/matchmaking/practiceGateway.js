@@ -29,6 +29,7 @@ import { originFromPractice, ORIGIN_KINDS } from "../contracts/matchOrigin.js";
 import { createRoom, ROOM_STATES } from "../contracts/matchRoom.js";
 import { createSession } from "../contracts/matchSession.js";
 import { MOCK_OPPONENTS } from "./mockGateway.js";
+import { createPracticeMapSelection } from "../contracts/csMapVeto.js";
 
 /** 簽發者標記（追蹤鏈用；與 `mock-gateway` / `competition-gateway` 並列）。 */
 export const PRACTICE_SERVER = "practice-gateway";
@@ -59,7 +60,7 @@ export const isPracticeAssignment = (a) => a?.origin?.kind === ORIGIN_KINDS.prac
  * @param {number} [p.now]
  * @returns {{ok:boolean, assignment:object|null, origin:object|null, reason:string|null, errors:Array}}
  */
-export function issuePracticeMatch({ entryRequest, players = [], now = 0 } = {}) {
+export function issuePracticeMatch({ entryRequest, players = [], mapKey = null, now = 0 } = {}) {
   const fail = (code, message) => ({ ok: false, assignment: null, origin: null, reason: message, errors: [{ code, message }] });
 
   //  ① 資格重驗（與另外兩個閘道同樣的理由：提交到出賽之間狀況可能變了）
@@ -74,6 +75,13 @@ export function issuePracticeMatch({ entryRequest, players = [], now = 0 } = {})
 
   const opp = practiceOpponentFor(entryRequest);
   if (!opp) return fail("opponent", "找不到練習對手");
+  const seed = practiceSeedFor(entryRequest);
+  const mapSelection = entryRequest.mode === "cs"
+    ? createPracticeMapSelection({ mapKey, seed })
+    : { ok: true, selection: null, errors: [] };
+  if (!mapSelection.ok) {
+    return { ok: false, assignment: null, origin: og.origin, reason: mapSelection.errors[0]?.message ?? "請先選擇快速練習地圖", errors: mapSelection.errors };
+  }
 
   return {
     ok: true,
@@ -84,7 +92,8 @@ export function issuePracticeMatch({ entryRequest, players = [], now = 0 } = {})
     assignment: createAssignment({
       origin: og.origin,
       opponent: { id: opp.id, name: opp.name },
-      seed: practiceSeedFor(entryRequest),
+      seed,
+      mapSelection: mapSelection.selection,
       now,
       server: PRACTICE_SERVER,
     }),

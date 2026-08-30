@@ -81,6 +81,7 @@ import {
   ensureCsMajor, csMajorEntryOf, csMajorFixturesOf, isCsMajorDone,
 } from "./competition/seasonState.js";
 import { CS_MAJOR_EVENT_KEY } from "./competition/csMajor.js";
+import { csAiTeamById } from "../data/csAiTeams.js";
 //  CS Season M4-C：晉級線的規則只有一份，畫面不得自己切前四
 import { CS_MAJOR_QUALIFICATION, csMajorQualifiers } from "./competition/csSeasonConfig.js";
 //  Milestone Q4：名次獎金。錢的第三個入口（唯一新增的一個），純函式在 economy/。
@@ -125,7 +126,13 @@ import {
   fixtureOutcomeInputFrom, isFixtureSession, fixtureIdOfSession,
 } from "./competition/fixtureResultBridge.js";
 //  CS Season M4-A：BO3 series 狀態掛在 MatchSession，**不進 SeasonState**（規格 D4）
-import { createMatchSeries, seriesFormatOf, seriesView } from "./contracts/matchSeries.js";
+import { createMatchSeries, applySeriesMapOrder, seriesFormatOf, seriesView } from "./contracts/matchSeries.js";
+import {
+  CS_BO1_MATCH_FORMAT, CS_MAP_KEYS, CS_MAP_SELECTION_SCHEMA,
+  normalizeCsMapPreferences, createCsMapVeto, advanceAiCsMapVeto,
+  applyCsMapVetoAction, selectedCsMapKey,
+} from "./contracts/csMapVeto.js";
+import { csMapByKey } from "../battle/fps/csPrepData.js";
 import {
   syncSeasonStateV2, activeEventAdapter,
 } from "./competition/seasonStateV2.js";
@@ -346,6 +353,8 @@ const DEFAULT = {
   activeSponsor: null,           // {id, weeksLeft, signedWeek} — Legacy：一次只能有一家
   scouted: {},                   // {prospectId: 偵查等級 0–2}
   csHistory: [],                 // S23：CS 訓練賽紀錄（CsMatchResult.v1，最新在前，上限 30）
+  //  C5V：玩家的地圖偏好，不是比賽結果 authority。實際選定地圖仍在 MatchSession。
+  csMapPreferences: normalizeCsMapPreferences(null),
   //  Milestone N：週結算帳本。settledWeeks 的 key = 累計週次（全域唯一）⇒ 冪等。
   //  N2：scenario 決定基礎營收與營運成本（economyConfig.SCENARIOS）。
   economy: { settledWeeks: {}, lastSettledWeek: 0, scenario: DEFAULT_SCENARIO },
@@ -484,6 +493,16 @@ function seriesLedgerCarryingOver(state, fixtureId) {
   return { ...ledger, [fixtureId]: prev.series };
 }
 
+function mapSelectionLedgerCarryingOver(state, fixtureId) {
+  const mm = state.matchmaking ?? {};
+  const ledger = mm.mapSelectionByFixture ?? {};
+  if (!fixtureId || ledger[fixtureId]) return ledger;
+  const prev = mm.session ?? null;
+  const prevFixtureId = prev?.origin?.kind === "fixture" ? (prev.origin.fixtureId ?? null) : null;
+  if (prev?.mapSelection?.schema !== CS_MAP_SELECTION_SCHEMA || prevFixtureId !== fixtureId) return ledger;
+  return { ...ledger, [fixtureId]: prev.mapSelection };
+}
+
 function normalizeMatchmaking(saved) {
   const src = saved && typeof saved === "object" ? saved : {};
   const t = src.ticket && typeof src.ticket === "object" ? src.ticket : null;
@@ -506,6 +525,8 @@ function normalizeMatchmaking(saved) {
     launch: src.launch ?? null,
     // Q7b: the fixture binding is part of the live-session/resume contract.
     fixtureAssignment: src.fixtureAssignment ?? null,
+    practiceAssignment: src.practiceAssignment ?? null,
+    attempt: Math.max(0, Math.floor(Number(src.attempt) || 0)),
     //  O7：結果與結算帳本要保留——重整後重試結算必須認得出「已經算過了」
     lastResult: src.lastResult ?? null,
     settlements: src.settlements && typeof src.settlements === "object" ? src.settlements : {},
@@ -517,6 +538,10 @@ function normalizeMatchmaking(saved) {
     //    跟著賽程收尾死（`completeFixtureMatch` / `forfeitFixture` 會清掉）。
     //    規格 D4 擋的是「series 進 SeasonState」，不是「series 要跨場次」。
     seriesByFixture: src.seriesByFixture && typeof src.seriesByFixture === "object" ? src.seriesByFixture : {},
+    //  C5V：正式賽事的 veto 進度與 series 同樣以 fixture 為鍵，重簽 Session 不重擲。
+    mapSelectionByFixture: src.mapSelectionByFixture && typeof src.mapSelectionByFixture === "object"
+      ? src.mapSelectionByFixture
+      : {},
   };
 }
 function normalizeEconomy(saved, days) {
@@ -643,6 +668,8 @@ const load = () => {
       //  V7B：舊存檔沒有 retention ⇒ 空的（不回填任何歷史進度，那是編造）。
       retention: normalizeRetention(saved.retention),
       csHistory: arr(saved.csHistory, []),   // S23：舊存檔沒有 → 空（向下相容）
+      //  C5V：舊存檔沒有欄位時接受三圖、練習預設 Mirage；不重寫既有 Session。
+      csMapPreferences: normalizeCsMapPreferences(saved.csMapPreferences),
       //  Milestone N migration：舊存檔沒有 economy ⇒ 空帳本。
       //  ⚠ 刻意**不補結算過去的週**：那會在載入當下憑空扣一大筆薪資，
       //    使用者無從理解。舊存檔從載入後的下一個週結尾開始計費。
@@ -1548,6 +1575,7 @@ export const useProfileStore = create((rawSet, get) => {
         //  ⚠ 只在帳本**還沒有**這一場時才回填（帳本才是權威；這是給
         //    M4-A.1 之前建立的存檔、進度只掛在場次上的情況用的）。
         seriesByFixture: seriesLedgerCarryingOver(get(), fixtureId),
+        mapSelectionByFixture: mapSelectionLedgerCarryingOver(get(), fixtureId),
       },
     });
     get().save();
@@ -2523,6 +2551,24 @@ export const useProfileStore = create((rawSet, get) => {
     const seats = mode === "cs" ? get().csLineup : get().lineup;
     return validateSquad({ mode, seats, players });
   },
+  /** C5V：更新玩家願意玩的 CS 地圖池。至少保留一張；只影響下一張票券。 */
+  setCsAcceptedMapPool(pool) {
+    const current = normalizeCsMapPreferences(get().csMapPreferences);
+    const requested = [...new Set((Array.isArray(pool) ? pool : []).filter((key) => CS_MAP_KEYS.includes(key)))];
+    if (!requested.length) return { ok: false, errors: [{ code: "map_pool", message: "至少要勾選一張願意玩的地圖" }] };
+    const next = { ...current, acceptedPool: requested };
+    set({ csMapPreferences: next });
+    get().save();
+    return { ok: true, preferences: next, errors: [] };
+  },
+  /** C5V：快速練習的直接選圖。實際開場時仍由 Practice gateway 寫進 Session。 */
+  setCsPracticeMap(mapKey) {
+    if (!CS_MAP_KEYS.includes(mapKey)) return { ok: false, errors: [{ code: "map", message: "未知的 CS 地圖" }] };
+    const next = { ...normalizeCsMapPreferences(get().csMapPreferences), practiceMapKey: mapKey };
+    set({ csMapPreferences: next });
+    get().save();
+    return { ok: true, preferences: next, errors: [] };
+  },
   /**
    * Milestone O3：產生**出賽申請單**（MatchEntryRequest.v1）。
    *
@@ -2583,7 +2629,11 @@ export const useProfileStore = create((rawSet, get) => {
     //  ⇒ 重新配對時 +1，票券／指派／房間的 id 全部跟著換一組，
     //    但仍然完全決定性（見 contracts/matchmaking.js 的說明）。
     const n = Number.isFinite(attempt) ? attempt : (get().matchmaking?.attempt ?? 0);
-    const made = createTicket(entry.request, { now, attempt: n });
+    const made = createTicket(entry.request, {
+      now,
+      attempt: n,
+      acceptedMapPool: mode === "cs" ? normalizeCsMapPreferences(get().csMapPreferences).acceptedPool : null,
+    });
     if (!made.ok) return { ok: false, ticket: null, errors: made.errors };
     //  validating → queued（轉移規則在契約裡，這裡不自己判斷）
     const queued = transitionTicket(made.ticket, TICKET_STATES.queued, { now });
@@ -2696,6 +2746,7 @@ export const useProfileStore = create((rawSet, get) => {
     const issued = issuePracticeMatch({
       entryRequest: entry.request,
       players: get().players ?? [],
+      mapKey: mode === "cs" ? normalizeCsMapPreferences(get().csMapPreferences).practiceMapKey : null,
       now,
     });
     if (!issued.ok) return { ok: false, errors: issued.errors, reason: issued.reason };
@@ -2825,14 +2876,20 @@ export const useProfileStore = create((rawSet, get) => {
     //    是不是 BO3，由賽程決定（M3-2 掛上去的），不由進場流程宣稱。
     //  ⚠ 只在**新開**場次時建立。上面 `reused` 那條分支會原樣回傳既有場次 ⇒
     //    重整或重新進場**不會**把打到 1:0 的 series 洗回 0:0。
-    const session = get()._withSeriesForFixture(made.session);
+    //  C5V：先把 gateway 已解出的選圖／fixture veto 掛到同一個 Session，
+    //  BO3 series 再直接消費其 mapOrder；不再由 mapPool 原始順序偷偷決定。
+    const withMapSelection = get()._withCsMapSelectionForSession(made.session);
+    const session = get()._withSeriesForFixture(withMapSelection);
     //  ⚠ 新開的 series 要**立刻**落進 fixture 帳本。等到第一張圖打完才寫的話，
     //    「開場 → 中離 → 重進」中間那段沒有帳本，重進就會再開一個新的。
     const fixtureId = fixtureIdOfSession(session);
     const ledger = session.series && fixtureId
       ? { ...(mm.seriesByFixture ?? {}), [fixtureId]: session.series }
       : (mm.seriesByFixture ?? {});
-    set({ matchmaking: { ...mm, session, seriesByFixture: ledger } });
+    const mapLedger = session.mapSelection?.schema === CS_MAP_SELECTION_SCHEMA && fixtureId
+      ? { ...(mm.mapSelectionByFixture ?? {}), [fixtureId]: session.mapSelection }
+      : (mm.mapSelectionByFixture ?? {});
+    set({ matchmaking: { ...mm, session, seriesByFixture: ledger, mapSelectionByFixture: mapLedger } });
     get().save();
     return { ok: true, session, errors: [], reused: false };
   },
@@ -2862,9 +2919,39 @@ export const useProfileStore = create((rawSet, get) => {
 
 
     //  ② 真的是第一次進場 ⇒ 開新的，並立刻記進 fixture 帳本
-    const made = createMatchSeries(format);
+    const made = createMatchSeries(format, { mapOrder: session?.mapSelection?.mapOrder ?? null });
     if (!made.ok) return session;
     return { ...session, series: made.series };
+  },
+  /**
+   * C5V：把選圖進度掛在既有 MatchSession。ticket/practice 已由 gateway 帶入；
+   * fixture 則讀唯一的 Fixture.matchFormat（legacy null = BO1 compatibility）。
+   */
+  _withCsMapSelectionForSession(session) {
+    if (!session || session.mode !== "cs") return session;
+    if (session.mapSelection?.schema === CS_MAP_SELECTION_SCHEMA) return session;
+    const fixtureId = fixtureIdOfSession(session);
+    if (!fixtureId) return session;
+    const kept = get().matchmaking?.mapSelectionByFixture?.[fixtureId] ?? null;
+    if (kept?.schema === CS_MAP_SELECTION_SCHEMA) return { ...session, mapSelection: kept };
+
+    const mode = get()._modeOfFixture(fixtureId);
+    const state = mode ? get()._competitionStateOf(mode) : null;
+    const fixture = state?.schema ? fixtureById(state, fixtureId) : null;
+    if (!fixture) return session;
+    const matchFormat = fixture.matchFormat ?? CS_BO1_MATCH_FORMAT;
+    const byId = new Map((get().players ?? []).map((player) => [player.id, player]));
+    const ourRoster = Object.values(get().csLineup ?? {}).map((id) => byId.get(id)).filter(Boolean);
+    const opponentTeam = csAiTeamById(session.opponent?.id);
+    const recentTactic = (get().csHistory ?? []).find((row) => row?.tacticType)?.tacticType ?? null;
+    const made = createCsMapVeto({
+      matchFormat,
+      seed: session.seed,
+      us: { roster: ourRoster, history: get().csHistory ?? [], tacticType: recentTactic },
+      opponent: { roster: opponentTeam?.roster ?? [], style: opponentTeam?.style ?? null },
+    });
+    if (!made.ok) return session;
+    return { ...session, mapSelection: advanceAiCsMapVeto(made.selection) };
   },
   /**
    * 內部：賽程收尾（打完或棄權）⇒ 清掉它的 series 進度。
@@ -2873,10 +2960,14 @@ export const useProfileStore = create((rawSet, get) => {
    */
   _clearSeriesForFixture(fixtureId) {
     const mm = get().matchmaking ?? {};
-    if (!fixtureId || !mm.seriesByFixture?.[fixtureId]) return;
-    const next = { ...mm.seriesByFixture };
+    if (!fixtureId) return;
+    const next = { ...(mm.seriesByFixture ?? {}) };
+    const mapNext = { ...(mm.mapSelectionByFixture ?? {}) };
+    const changed = !!next[fixtureId] || !!mapNext[fixtureId];
+    if (!changed) return;
     delete next[fixtureId];
-    set({ matchmaking: { ...mm, seriesByFixture: next } });
+    delete mapNext[fixtureId];
+    set({ matchmaking: { ...mm, seriesByFixture: next, mapSelectionByFixture: mapNext } });
   },
   /**
    * 使用一次性令牌啟動比賽。**這是對戰入口的唯一許可**。
@@ -2893,10 +2984,24 @@ export const useProfileStore = create((rawSet, get) => {
       room: mm.room ?? null, ticket: mm.ticket ?? null, now,
     });
     if (!r.ok) return { ok: false, launch: null, errors: r.errors };
+    const selectedMap = selectedCsMapKey(r.session.mapSelection, r.session.series);
+    const initialConfig = r.session.mode === "cs"
+      ? {
+        phase: "map",
+        ...(selectedMap ? {
+          csConfig: {
+            mapKey: selectedMap,
+            mapName: csMapByKey(selectedMap)?.name ?? selectedMap,
+            mapSelectionId: r.session.mapSelection?.selectionId ?? null,
+          },
+        } : {}),
+      }
+      : null;
     const activated = {
       ...r.session,
       activeMatch: createActiveMatch(r.session, {
         lineup: activeLineupOf(get(), r.session.mode),
+        config: initialConfig,
         now,
       }),
     };
@@ -2997,6 +3102,112 @@ export const useProfileStore = create((rawSet, get) => {
     set({ matchmaking: { ...mm, session: next } });
     get().save();
     return { ok: true, session: next };
+  },
+  /** C5V：目前 Session 的選圖／Veto 視圖。UI 不自行重算 turn、phase 或 final map。 */
+  csMapSelectionView() {
+    const session = get().matchmaking?.session ?? null;
+    const selection = session?.mapSelection ?? null;
+    const mapKey = selectedCsMapKey(selection, session?.series ?? null);
+    return {
+      selection,
+      mapKey,
+      map: mapKey ? csMapByKey(mapKey) : null,
+      resolved: selection?.status === "resolved",
+      series: seriesView(session?.series ?? null),
+    };
+  },
+  /**
+   * C5V：玩家執行一次 Ban/Pick，接著只讓 deterministic AI 跑到下一個玩家回合。
+   * 所有進度寫回同一個 MatchSession；完成時同步既有 MatchSeries map order。
+   */
+  applyCsMapVeto(mapKey, now = Date.now()) {
+    const mm = get().matchmaking ?? {};
+    const session = mm.session ?? null;
+    const selection = session?.mapSelection ?? null;
+    if (!session || selection?.schema !== CS_MAP_SELECTION_SCHEMA) {
+      return { ok: false, errors: [{ code: "no_veto", message: "目前沒有可操作的地圖 Veto" }] };
+    }
+    const applied = applyCsMapVetoAction(selection, { side: "us", mapKey, source: "player" });
+    if (!applied.ok) return applied;
+    const nextSelection = advanceAiCsMapVeto(applied.selection);
+    let nextSeries = session.series ?? null;
+    if (nextSeries && nextSelection.status === "resolved" && (nextSeries.maps?.length ?? 0) === 0) {
+      const ordered = applySeriesMapOrder(nextSeries, nextSelection.mapOrder);
+      if (!ordered.ok) return { ok: false, errors: ordered.errors, selection };
+      nextSeries = ordered.series;
+    }
+    const selectedMap = selectedCsMapKey(nextSelection, nextSeries);
+    let nextSession = {
+      ...session,
+      mapSelection: nextSelection,
+      ...(nextSeries ? { series: nextSeries } : {}),
+      updatedAt: now,
+    };
+    if (nextSession.activeMatch?.schema === ACTIVE_MATCH_SCHEMA) {
+      const currentConfig = nextSession.activeMatch.config ?? {};
+      nextSession = patchActiveMatch(nextSession, {
+        phase: "map",
+        config: {
+          ...currentConfig,
+          ...(selectedMap ? {
+            csConfig: {
+              ...(currentConfig.csConfig ?? {}),
+              mapKey: selectedMap,
+              mapName: csMapByKey(selectedMap)?.name ?? selectedMap,
+              mapSelectionId: nextSelection.selectionId,
+            },
+          } : {}),
+        },
+      }, now);
+    }
+    const fixtureId = fixtureIdOfSession(nextSession);
+    const mapLedger = fixtureId
+      ? { ...(mm.mapSelectionByFixture ?? {}), [fixtureId]: nextSelection }
+      : (mm.mapSelectionByFixture ?? {});
+    const seriesLedger = fixtureId && nextSeries
+      ? { ...(mm.seriesByFixture ?? {}), [fixtureId]: nextSeries }
+      : (mm.seriesByFixture ?? {});
+    set({ matchmaking: { ...mm, session: nextSession, mapSelectionByFixture: mapLedger, seriesByFixture: seriesLedger } });
+    get().save();
+    return { ok: true, selection: nextSelection, mapKey: selectedMap, errors: [] };
+  },
+  /** C5V：練習在進 Battle 前仍可改選；同步 preference 與同一個 Session authority。 */
+  selectCsPracticeSessionMap(mapKey, now = Date.now()) {
+    if (!CS_MAP_KEYS.includes(mapKey)) return { ok: false, errors: [{ code: "map", message: "未知的 CS 地圖" }] };
+    const mm = get().matchmaking ?? {};
+    const session = mm.session ?? null;
+    const selection = session?.mapSelection ?? null;
+    if (selection?.kind !== "practice" || selection.schema !== CS_MAP_SELECTION_SCHEMA) {
+      return { ok: false, errors: [{ code: "not_practice", message: "只有快速練習可以直接改選地圖" }] };
+    }
+    const nextSelection = {
+      ...selection,
+      playerPool: [mapKey],
+      commonPool: [mapKey],
+      remaining: [mapKey],
+      mapOrder: [mapKey],
+      finalMapKey: mapKey,
+    };
+    const currentConfig = session.activeMatch?.config ?? {};
+    let nextSession = { ...session, mapSelection: nextSelection, updatedAt: now };
+    if (session.activeMatch?.schema === ACTIVE_MATCH_SCHEMA) {
+      nextSession = patchActiveMatch(nextSession, {
+        phase: "map",
+        config: {
+          ...currentConfig,
+          csConfig: {
+            ...(currentConfig.csConfig ?? {}),
+            mapKey,
+            mapName: csMapByKey(mapKey)?.name ?? mapKey,
+            mapSelectionId: nextSelection.selectionId,
+          },
+        },
+      }, now);
+    }
+    set({ matchmaking: { ...mm, session: nextSession } });
+    set({ csMapPreferences: { ...normalizeCsMapPreferences(get().csMapPreferences), practiceMapKey: mapKey } });
+    get().save();
+    return { ok: true, selection: nextSelection, mapKey, errors: [] };
   },
   /** R63：保存正式 simulator 的可恢復進度；snapshot 是該引擎的真實快照。 */
   saveActiveMatchSnapshot({ mode = null, snapshot = null, simulationTimeSec = 0, phase = undefined, config = undefined, status = "active", now = Date.now() } = {}) {
@@ -3268,6 +3479,7 @@ export const useProfileStore = create((rawSet, get) => {
       finance: { ...DEFAULT.finance, funds: ng.funds, transactions: [] },
       activeSponsor: ng.activeSponsor,
       csHistory: [],
+      csMapPreferences: normalizeCsMapPreferences(null),
       processedMatchTransactions: {},
       processedCompetitionAwards: {},
       competitionHistory: [],

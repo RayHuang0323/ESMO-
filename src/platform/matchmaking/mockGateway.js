@@ -23,6 +23,9 @@ import {
 } from "../contracts/matchRoom.js";
 import { createSession } from "../contracts/matchSession.js";
 import { validateMatchEntryRequest } from "../contracts/matchEntry.js";
+import {
+  CS_MAP_KEYS, createMatchmakingMapSelection, normalizeCsMapPool,
+} from "../contracts/csMapVeto.js";
 
 /** 模擬的等待區間（秒）。真伺服器由實際佇列長度決定。 */
 export const MOCK_WAIT = Object.freeze({ minSec: 3, maxSec: 9 });
@@ -59,6 +62,20 @@ export function seedFor(ticket) {
 }
 
 /**
+ * 模擬對手願意玩的地圖池。現有 mock 對手沒有 map win-rate 資料，故依對手 id
+ * 使用 deterministic weighted fallback；每隊接受 2–3 張，不會假裝有不存在的戰績。
+ */
+export function opponentMapPoolFor(ticket, opponent = opponentFor(ticket)) {
+  if (ticket?.mode !== "cs") return [];
+  const ranked = [...CS_MAP_KEYS].sort((a, b) => (
+    hash32(`${opponent?.id}:${ticket?.ticketId}:${a}:pool`)
+    - hash32(`${opponent?.id}:${ticket?.ticketId}:${b}:pool`)
+  ));
+  const count = 2 + (hash32(`${opponent?.id}:${ticket?.ticketId}:pool-size`) % 2);
+  return normalizeCsMapPool(ranked.slice(0, count));
+}
+
+/**
  * 輪詢閘道。純函式：不改任何狀態，只回報「伺服器會怎麼回」。
  *
  * @param {object} p
@@ -88,6 +105,21 @@ export function pollGateway({ ticket, entryRequest, players = [], now = 0 }) {
     return { decision: "waiting", waitedSec: waited, etaSec: need - waited, assignment: null, reason: null };
   }
   //  ③ 配對成功 —— 對手與種子由這裡決定，客戶端無從指定
+  const opponent = opponentFor(ticket);
+  const seed = seedFor(ticket);
+  const mapSelection = ticket.mode === "cs"
+    ? createMatchmakingMapSelection({
+      playerPool: ticket.acceptedMapPool,
+      opponentPool: opponentMapPoolFor(ticket, opponent),
+      seed,
+    })
+    : { ok: true, selection: null, errors: [] };
+  if (!mapSelection.ok) {
+    return {
+      decision: "rejected", waitedSec: waited, etaSec: 0, assignment: null,
+      reason: mapSelection.errors[0]?.message ?? "雙方沒有共同可接受的地圖",
+    };
+  }
   return {
     decision: "matched",
     waitedSec: waited,
@@ -95,8 +127,9 @@ export function pollGateway({ ticket, entryRequest, players = [], now = 0 }) {
     reason: null,
     assignment: createAssignment({
       ticket,
-      opponent: opponentFor(ticket),
-      seed: seedFor(ticket),
+      opponent,
+      seed,
+      mapSelection: mapSelection.selection,
       now,
       server: "mock-gateway",
     }),

@@ -27,7 +27,7 @@ export default function CsTacticScreen({ mapName, onNext, onBack }) {
     { key: "opening", label: "開局", sub: "Opening" },
     { key: "mid-round", label: "中局", sub: "Mid-round" },
     { key: "late-round", label: "後段", sub: "Late-round" },
-    { key: "post-plant", label: "下包後", sub: "Post-plant" },
+    { key: "post-plant", label: "安包後", sub: "Post-plant" },
   ];
   const [activePhase, setActivePhase] = useState("opening");
   const [selectedByPhase, setSelectedByPhase] = useState(() => Object.fromEntries(phaseDefs.map((phase) => [phase.key, "f1"])));
@@ -75,7 +75,7 @@ export default function CsTacticScreen({ mapName, onNext, onBack }) {
           <h2 style={{ color: "white", fontSize: 17, fontWeight: 900, margin: 0 }}>戰術部署</h2>
           {mapName && <span style={{ marginLeft: "auto", background: `${ACC}22`, color: ACC, fontSize: 9, fontWeight: 700, borderRadius: 5, padding: "2px 8px" }}>🗺 {mapName}</span>}
         </div>
-        <div style={{ color: GC.gray, fontSize: 10, marginBottom: 14 }}>四層布局都會進入比賽邏輯：路線、控圖、轉點與下包後站位；開放度只改變可追溯的加權分支。</div>
+        <div style={{ color: GC.gray, fontSize: 10, marginBottom: 14 }}>四層布局都會進入比賽邏輯：路線、控圖、轉點與安包後站位；開放度只改變可追溯的加權分支。</div>
 
         {developmentEffects.unlocks.csDemoAnalysis && (
           <div data-testid="cs-demo-analysis" style={{ color: "#fed7aa", background: ACC + "12", border: "1px solid " + ACC + "55", borderRadius: 9, padding: "9px 10px", fontSize: 9, lineHeight: 1.55, marginBottom: 10 }}>
@@ -146,7 +146,7 @@ export default function CsTacticScreen({ mapName, onNext, onBack }) {
         </div>
 
         <div style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${GC.line}`, borderRadius: 11, padding: "10px 12px", marginBottom: 14 }}>
-          <div style={{ color: ACC, fontSize: 10, fontWeight: 800, marginBottom: 7 }}>③ 下包後布局</div>
+          <div style={{ color: ACC, fontSize: 10, fontWeight: 800, marginBottom: 7 }}>③ 安包後布局</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 5 }}>
             {[{ key: "hold-angle", label: "守角" }, { key: "crossfire", label: "交叉火力" }, { key: "deny-defuse", label: "封拆彈" }].map((option) => (
               <button key={option.key} onClick={() => setPostPlantMode(option.key)} style={{ minWidth: 0, padding: "7px 4px", borderRadius: 8, border: `1px solid ${postPlantMode === option.key ? ACC : GC.line}`, background: postPlantMode === option.key ? `${ACC}22` : GC.card, color: postPlantMode === option.key ? "#fff" : GC.gray, cursor: "pointer", fontSize: 9, fontWeight: 800 }}>{option.label}</button>
@@ -166,7 +166,7 @@ export default function CsTacticScreen({ mapName, onNext, onBack }) {
           onClick={submit}
           style={{ width: "100%", background: `linear-gradient(135deg,${ACC},${ACC}aa)`, border: "none", borderRadius: 14, padding: "16px", cursor: "pointer", color: "#fff", fontSize: 16, fontWeight: 900 }}
         >🎯 確認四層戰術 · 開始對戰</button>
-        <div style={{ textAlign: "center", color: GC.gray, fontSize: 9, marginTop: 8 }}>已配置開局／中局／後段／下包後；{openness === "open" ? "開放式" : openness === "adaptive" ? "自適應" : "固定式"}路線</div>
+        <div style={{ textAlign: "center", color: GC.gray, fontSize: 9, marginTop: 8 }}>已配置開局／中局／後段／安包後；{openness === "open" ? "開放式" : openness === "adaptive" ? "自適應" : "固定式"}路線</div>
       </div>
     </div>
   );

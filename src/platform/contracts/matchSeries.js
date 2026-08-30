@@ -47,12 +47,18 @@ export const seriesFormatOf = (matchFormat) => {
  * @param {object} matchFormat  { series, mapPool, veto }
  * @returns {{ok:boolean, series:object|null, errors:Array}}
  */
-export function createMatchSeries(matchFormat) {
+export function createMatchSeries(matchFormat, { mapOrder = null } = {}) {
   const format = seriesFormatOf(matchFormat);
   if (!format) {
     return { ok: false, series: null, errors: [{ code: "format", message: `不支援的 series 賽制：${matchFormat?.series ?? "(無)"}` }] };
   }
-  const mapPool = Array.isArray(matchFormat.mapPool) ? [...matchFormat.mapPool] : [];
+  const declaredPool = Array.isArray(matchFormat.mapPool) ? [...matchFormat.mapPool] : [];
+  const resolvedOrder = Array.isArray(mapOrder)
+    ? mapOrder.filter((key, index) => declaredPool.includes(key) && mapOrder.indexOf(key) === index)
+    : [];
+  //  C5V：正式 runtime 傳入 Veto 解出的順序；未傳時維持 legacy pool-order 行為，
+  //  讓舊存檔與直接使用本 contract 的舊 verifier 不被強制 migration。
+  const mapPool = resolvedOrder.length >= 3 ? resolvedOrder : declaredPool;
   if (mapPool.length === 0) {
     return { ok: false, series: null, errors: [{ code: "map_pool", message: "series 缺少地圖池" }] };
   }
@@ -92,6 +98,27 @@ export const seriesScore = (series) => ({
 /** 這個 matchId 的地圖是不是已經記過了。 */
 export const hasSeriesMap = (series, matchId) =>
   (series?.maps ?? []).some((m) => m.matchId === matchId);
+
+/** C5V：Veto 完成後，在第一張圖開打前把權威 map order 套進既有 series。 */
+export function applySeriesMapOrder(series, mapOrder) {
+  if (!series || series.schema !== MATCH_SERIES_VERSION) {
+    return { ok: false, series, errors: [{ code: "series", message: "series 狀態無效" }] };
+  }
+  if ((series.maps?.length ?? 0) > 0) {
+    return { ok: false, series, errors: [{ code: "series_started", message: "series 開打後不可改變地圖順序" }] };
+  }
+  const order = Array.isArray(mapOrder)
+    ? mapOrder.filter((key, index) => series.mapPool.includes(key) && mapOrder.indexOf(key) === index)
+    : [];
+  if (order.length < series.maxMaps) {
+    return { ok: false, series, errors: [{ code: "map_order", message: "Veto 地圖順序不完整" }] };
+  }
+  return {
+    ok: true,
+    errors: [],
+    series: { ...series, mapPool: order, nextMapIndex: 0, nextMapKey: order[0] ?? null },
+  };
+}
 
 /**
  * 記下一張打完的地圖。**以 `matchId` 冪等**——同一張圖記兩次不會變成兩勝。

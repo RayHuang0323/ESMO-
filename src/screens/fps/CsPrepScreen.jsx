@@ -25,6 +25,7 @@ import { calcPower, bestPositions, personalityById } from "../../data/playerMode
 import { MOBA2FPS, FPS_ROLE_ZH } from "../../battle/fps/fpsRoster.js";
 import PlayerFace from "../../ui/PlayerFace.jsx";
 import { GC } from "../../ui/theme.js";
+import { CS_MAPS } from "../../battle/fps/csPrepData.js";
 
 const ACC = "#fb923c"; // Legacy CS 主色
 const COND_C = { "精神飽滿": GC.green, "正常": "#d4d4d8", "疲勞": GC.gold, "低潮": GC.red };
@@ -100,12 +101,25 @@ export default function CsPrepScreen({ onNext, onBack }) {
   const csHistory = useProfileStore((s) => s.csHistory) ?? [];
   const csLineup = useProfileStore((s) => s.csLineup);
   const autoFillLineup = useProfileStore((s) => s.autoFillLineup);
+  const mapPreferences = useProfileStore((s) => s.csMapPreferences);
+  const fixtureId = useProfileStore((s) => s.matchmaking?.fixtureAssignment?.origin?.fixtureId ?? null);
+  const setCsAcceptedMapPool = useProfileStore((s) => s.setCsAcceptedMapPool);
+  const setCsPracticeMap = useProfileStore((s) => s.setCsPracticeMap);
   const [tab, setTab] = useState("prep");
   const [bench, setBench] = useState(null);
 
   const byId = new Map(players.map((p) => [p.id, p]));
   const seated = CS_SEATS.map((seat) => byId.get(csLineup?.[seat])).filter(Boolean);
   const myPow = seated.length ? Math.round(seated.reduce((t, p) => t + calcPower(p, "fps"), 0) / seated.length) : 0;
+  const acceptedPool = mapPreferences?.acceptedPool ?? CS_MAPS.map((map) => map.key);
+  const practiceMapKey = mapPreferences?.practiceMapKey ?? "mirage";
+
+  const toggleAcceptedMap = (mapKey) => {
+    const next = acceptedPool.includes(mapKey)
+      ? acceptedPool.filter((key) => key !== mapKey)
+      : [...acceptedPool, mapKey];
+    if (next.length) setCsAcceptedMapPool(next);
+  };
 
   //  ⚠ 五個席位一定都算進來（**不 filter**）——缺員要看得見是哪一席。
   const seats = CS_SEATS.map((seat) => {
@@ -189,6 +203,40 @@ export default function CsPrepScreen({ onNext, onBack }) {
               <span style={{ color: GC.gray, fontSize: 11, fontWeight: 700 }}>出戰陣容（主力 5 人）</span>
               <span style={{ color: ACC, fontSize: 13, fontWeight: 900, whiteSpace: "nowrap" }}>隊伍戰力 {myPow}</span>
             </div>
+            {fixtureId ? (
+              <div data-testid="cs-official-veto-notice" style={{ marginBottom: 10, padding: "9px 10px", borderRadius: 10, background: `${ACC}12`, border: `1px solid ${ACC}44`, color: "#fed7aa", fontSize: 9.5, lineHeight: 1.6 }}>
+                <strong style={{ color: ACC }}>正式賽事 Map Veto</strong><br />
+                雙方確認後依本場 BO1／BO3 賽制進行 Ban／Pick；地圖結果會寫入同一個 MatchSession。
+              </div>
+            ) : (
+              <div data-testid="cs-map-preferences" style={{ marginBottom: 10, padding: 10, borderRadius: 11, background: "rgba(255,255,255,0.035)", border: `1px solid ${GC.line}` }}>
+                <div style={{ color: "#e5e7eb", fontSize: 10, fontWeight: 900, marginBottom: 6 }}>一般對戰 · 願意玩的地圖池</div>
+                <div style={{ color: GC.gray, fontSize: 8.5, marginBottom: 7 }}>配對只會從雙方都接受的地圖中決定（至少勾選一張）</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 6, marginBottom: 10 }}>
+                  {CS_MAPS.map((map) => {
+                    const active = acceptedPool.includes(map.key);
+                    return (
+                      <button key={`pool-${map.key}`} type="button" data-testid={`cs-map-pool-${map.key}`} aria-pressed={active} onClick={() => toggleAcceptedMap(map.key)}
+                        style={{ minWidth: 0, padding: "7px 4px", borderRadius: 8, border: `1px solid ${active ? ACC : GC.line}`, background: active ? `${ACC}20` : "rgba(255,255,255,0.025)", color: active ? "#fed7aa" : GC.gray, fontSize: 9, fontWeight: 800, cursor: "pointer" }}>
+                        {active ? "✓ " : ""}{map.name}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ color: "#e5e7eb", fontSize: 10, fontWeight: 900, marginBottom: 6 }}>快速練習 · 直接選圖</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 6 }}>
+                  {CS_MAPS.map((map) => {
+                    const active = practiceMapKey === map.key;
+                    return (
+                      <button key={`practice-${map.key}`} type="button" data-testid={`cs-practice-map-${map.key}`} aria-pressed={active} onClick={() => setCsPracticeMap(map.key)}
+                        style={{ minWidth: 0, padding: "7px 4px", borderRadius: 8, border: `1px solid ${active ? GC.green : GC.line}`, background: active ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.025)", color: active ? "#a7f3d0" : GC.gray, fontSize: 9, fontWeight: 800, cursor: "pointer" }}>
+                        {active ? "● " : "○ "}{map.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </>
         )}
         seats={seats}

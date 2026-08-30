@@ -13,6 +13,7 @@ import { leagueParticipants, LEAGUE_TEAM_COUNT } from "./aiTeams.js";
 import { csLeagueAiTeamsFor, csLeagueConfigFor } from "./csSeasonConfig.js";
 import { generateSchedule } from "./scheduleGenerator.js";
 import { seedForSeason } from "../identity/teamIdentity.js";
+import { CS_BO1_MATCH_FORMAT } from "../contracts/csMapVeto.js";
 
 // ── CS 官方聯賽的參賽名單（CS Season M1）────────────────────────────────────
 //
@@ -97,7 +98,12 @@ export function buildRegularSeason({ playerTeam, season = 1, seasonSeed, gameMod
   const seed = gameMode === "cs"
     ? seedForSeason(seasonSeed, `${season}:cs`)
     : seedForSeason(seasonSeed, season);
-  const sch = generateSchedule({ stage: stg.stage, seed });
+  const sch = generateSchedule({
+    stage: stg.stage,
+    seed,
+    //  C5V：新建立的 CS 聯賽 fixture 明文攜帶 BO1 veto 規則；MOBA 逐值不變。
+    matchFormat: gameMode === "cs" ? CS_BO1_MATCH_FORMAT : null,
+  });
   if (!sch.ok) return fail(sch.errors);
 
   const competition = { ...comp.competition, stageIds: [stg.stage.id] };

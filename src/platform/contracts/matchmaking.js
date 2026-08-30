@@ -21,6 +21,7 @@ import { MATCH_ENTRY_VERSION } from "./matchEntry.js";
 import {
   ORIGIN_VERSION, ORIGIN_KINDS, originFromTicket, validateOrigin, compatTicketIdOf,
 } from "./matchOrigin.js";
+import { CS_MAP_SELECTION_SCHEMA, normalizeCsMapPool } from "./csMapVeto.js";
 
 export const TICKET_VERSION = "MatchmakingTicket.v1";
 export const ASSIGNMENT_VERSION = "MatchAssignment.v1";
@@ -79,7 +80,7 @@ function hash8(input) {
  * @param {object} entryRequest MatchEntryRequest.v1
  * @param {{now:number}} opts   now = 真實時間戳（等待時間用；可注入以便測試）
  */
-export function createTicket(entryRequest, { now = 0, attempt = 0 } = {}) {
+export function createTicket(entryRequest, { now = 0, attempt = 0, acceptedMapPool = null } = {}) {
   if (!entryRequest || entryRequest.schema !== MATCH_ENTRY_VERSION) {
     return { ok: false, ticket: null, errors: [{ code: "invalid_entry", message: "出賽申請單無效，無法建立配對票券" }] };
   }
@@ -113,6 +114,10 @@ export function createTicket(entryRequest, { now = 0, attempt = 0 } = {}) {
       queuedAt: null,
       assignment: null,
       reason: null,
+      //  C5V：只有 CS 票券帶玩家願意玩的地圖池；舊票券／MOBA 形狀不變。
+      ...(entryRequest.mode === "cs" && acceptedMapPool
+        ? { acceptedMapPool: normalizeCsMapPool(acceptedMapPool) }
+        : {}),
     },
   };
 }
@@ -207,7 +212,7 @@ export function canEnterMatch(ticket) {
  * @param {object} p.opponent  { id, name, power? }  ← 由伺服器決定，客戶端不得指定
  * @param {number} p.seed      對戰亂數種子（伺服器決定 ⇒ 前端無法選有利種子）
  */
-export function createAssignment({ ticket, origin = null, opponent, seed, now = 0, server = "mock-gateway" }) {
+export function createAssignment({ ticket, origin = null, opponent, seed, mapSelection = null, now = 0, server = "mock-gateway" }) {
   const src = origin ?? originFromTicket(ticket).origin;
   if (!src) throw new TypeError("createAssignment：必須提供 ticket 或 origin");
   return {
@@ -221,6 +226,9 @@ export function createAssignment({ ticket, origin = null, opponent, seed, now = 
     //  對手只有識別，沒有戰力數值——真實數值由伺服器自己持有
     opponent: { id: opponent?.id ?? null, name: opponent?.name ?? null },
     seed,
+    //  C5V：由 gateway／Competition flow 產生的權威選圖結果或進度。
+    //  沒有選圖資料的 legacy/MOBA assignment 不新增欄位，維持向下相容。
+    ...(mapSelection ? { mapSelection } : {}),
     issuedBy: server,
     issuedAt: now,
   };
@@ -247,6 +255,9 @@ export function validateAssignment(a, ref = null) {
     errors.push({ code: "seed", message: "配對結果缺少對戰種子" });
   }
   if (!a.issuedBy) errors.push({ code: "issuer", message: "配對結果必須標明由誰簽發" });
+  if (a.mapSelection && a.mapSelection.schema !== CS_MAP_SELECTION_SCHEMA) {
+    errors.push({ code: "map_selection", message: "配對結果的地圖選擇資料無效" });
+  }
   //  ⛔ 前端不得指定結果
   const forbidden = ["winner", "result", "score", "rewards", "kills", "mvp", "outcome"];
   const leaked = Object.keys(a).filter((k) => forbidden.includes(k));

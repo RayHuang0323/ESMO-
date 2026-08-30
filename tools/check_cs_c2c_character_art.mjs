@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { C2C_HERO_ART_MANIFEST } from "../src/battle/fps/presentation/fpsC2cHero.js";
+import { C2C_HERO_ART_MANIFEST, isC2cHeroRequested } from "../src/battle/fps/presentation/fpsC2cHero.js";
 import { FPS_CHARACTER_ASSET_MANIFEST } from "../src/battle/fps/presentation/fpsCharacterAssets.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -49,10 +49,20 @@ const checks = [
     expect(!c2cSource.includes("AnimationMixer"), "C2C introduced a second animation authority");
     expect(!c2cSource.includes("setFIdx"), "C2C touched authoritative playback state");
   }],
-  ["Opt-in product safety", () => {
-    expect(c2cSource.includes("fpsC2cHero"), "C2C query opt-in missing");
-    expect(c2cSource.includes('request === "all"'), "10-player opt-in is not explicit");
-    expect(c2cSource.includes('request === "1" || request === "hero"'), "single-hero opt-in is not explicit");
+  ["Production default and diagnostic overrides", () => {
+    expect(isC2cHeroRequested({ id: "t1" }), "server/formal default is not C2C-enabled");
+    const previousWindow = globalThis.window;
+    try {
+      globalThis.window = { location: { search: "" } };
+      expect(isC2cHeroRequested({ id: "ct5" }), "no-query Battle is not C2C-enabled");
+      globalThis.window = { location: { search: "?fpsC2cHero=off" } };
+      expect(!isC2cHeroRequested({ id: "t1" }), "diagnostic opt-out is broken");
+      globalThis.window = { location: { search: "?fpsC2cHero=hero" } };
+      expect(isC2cHeroRequested({ id: "t1" }) && !isC2cHeroRequested({ id: "t2" }), "single-hero diagnostic override is broken");
+    } finally {
+      if (previousWindow === undefined) delete globalThis.window;
+      else globalThis.window = previousWindow;
+    }
     expect(!c2cSource.match(/https?:\/\//), "C2C source contains an external asset URL");
   }],
   ["Budget declaration", () => {

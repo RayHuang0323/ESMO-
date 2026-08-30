@@ -16712,3 +16712,43 @@ CS-C5A 的五個 `*-prepared.wav` 共約 **31 MB** 已隨 `public/` 進正式站
 - `browser_check_prod_v7_release`：`44/44 PASS`，包含桌機與 390px smoke、既有入口、一般對戰、快速練習、目標頁與 console。
 - local／production `assets/index-Di2GbNPy.js` 均 `3,234,181` bytes，SHA-256 `52bb805ff2ed55357f49e8a506f3df750f99d43ac737ae8e49c6b978952dccb7`。
 - Final marker：`C5B_OWNER_ACCEPTED`／`C5B_CLOSED`；C5C 未開始。
+
+### Sprint CS-C5V｜Map Selection / Veto（2026-08-31）
+
+#### 一、Authority audit 與最小整合
+
+- 以 `C5B_CLOSED`、main SHA `a23362d19a284894d31c63ad74ee26e399c45ecf` 建立獨立 worktree。Competition 的 `fixture.matchFormat` 維持賽制宣告；Veto 實例狀態掛在既有 MatchSession／ActiveMatch 與 fixture ledger，Battle 只消費 resolved `mapKey`。
+- 新增 `CsMapSelection.v1` 純契約：Practice 三圖直選、一般配對雙方 pool 交集、BO1 alternating Ban、可擴充 BO3 `Ban → Pick → Pick → Decider`、AI deterministic weighted scoring。沒有第二套 MatchSession／Competition／Season authority。
+- BO3 現役池只有三張而 series 需要三張，故 Ban 階段以規則註記自動略過，再執行 Pick／Pick／Decider；未製造假的 Ban。地圖池擴充後會先 Ban 至三張。
+- AI score 優先沿用 roster mapFit、實際 csHistory、既有 AI team style 與最近戰術；不足部分才使用 deterministic seed fallback，且每圖 evidence 隨 selection 保存。
+- 中文 UI 沿用 CsPrep／CsMap／ActiveMatch：Practice radio、一般配對 checkbox pool、正式 Veto turn/log/map cards 與最後地圖；390px 可操作且無水平溢位。
+- 參考 `threejs-gameplay-systems` 的 state-flow／input／diagnostics workflow 與 level-design readability checklist，將「規則宣告 → Session 狀態 → Battle 消費」邊界及手機可讀性列為驗收條件，沒有擴張 3D renderer。
+
+#### 二、Verification
+
+- C5V deterministic verifier：`35/35 PASS`；C5V Browser：`24/24 PASS`。三張 Practice 均由正式 UI 寫入同一 Session 並實際進 Battle；一般配對 final map 僅來自雙方交集；BO1／BO3 reload/resume 不重擲。
+- Competition／Session：schema `41/41`、Season contract `73/73`、eligibility `31/31`、lifecycle `54/54`、Season M2 `55/55`、Major `74/74`、honors `45/45`、recap `64/64`、hub `31/31`、MatchSession `36/36`、series `46/46`、playable series `99/99`、matchmaking `48/48`、flow `97/97`、Practice `70/70`、general match `55/55`，全 PASS。
+- Combat／P0：Renderer `24/24`、A2 `10/10`、C2A `13/13`、C2B `14/14`、C2C `9/9`、C3 `18/18`、C4A `13/13`、C4B `20/20`、Camera `8/8`、RAF `7/7`、StableCanvas `5/5`、C5A `11/11`、C5A.1 `17/17`、C5A.2 `23/23`／`39/39`、C5B Utility `55/55`、tactical `26/26`、route-interrupt memory/runtime 與 delay audit全 PASS。
+- Production build PASS；Browser 實測包含桌機、390×844、三張 Battle 與 console/page errors `0`。390px 為 CDP emulation，不宣稱 Android 真機 GPU／FPS／觸控完成。
+
+#### 三、停止點
+
+- Preview：`http://127.0.0.1:5187/ESMO-/`。
+- 未 merge、未 push、未 deploy；未開始 C5C。狀態：`C5V_MAP_SELECTION_VETO_READY_FOR_OWNER_ACCEPTANCE`。
+
+### C5V Owner 驗收後四項修正（2026-08-31）
+
+#### Root cause 與最小修正
+
+- 一般配對 Battle 的角色退回旗子不是 map／Session／localStorage authority 錯版，而是 C2A／C2C 正式角色仍以 `fpsRigged=all&fpsC2cHero=all` query opt-in；無 query 時只允許一個 rigged 且 C2C 全關。正式預設改為 roster 全員 rigged＋C2C，保留 `off`／數字／單角 query 作診斷降載。
+- MOBA Ban/Pick 現行 `hero-grid-scroll` 已是固定高度單一捲動區；走真實 MatchSession 重現為 100 位英雄、`scrollHeight 1620 > clientHeight 338`，實際 CDP mouse wheel `scrollTop 0 → 640` 且可到最後一排。Owner 當時命中的是舊 server／舊 verifier flow，產品碼不再重做。
+- 玩家文案的「下包後／下包位」統一改為「安包後／安包位置」；internal `post-plant` gameplay key 不變。
+- Resume 卡死有兩個時序風險：AppShell 以無監督 `setTimeout(120)` 收尾 restore overlay；`CsLoadingScreen` 又把 inline `onDone` 放在 effect dependency，宿主重 render 會重啟 loading。改為同步 `try/finally` restore routing，以及 `onDoneRef`＋單次 completion latch，失敗回 Dashboard 並顯示中文錯誤。
+
+#### Verification
+
+- 新增 `browser_check_c5v_acceptance_fixes.mjs`：production Preview `8/8 PASS`。一般配對 no-query 為 rigged `10`／fallback `0`／failed `0`、C2C `10/10`；MOBA 100 位英雄 wheel 可捲到底；loading reload/resume 進 Battle；console/page errors `0`。
+- C5V browser `24/24 PASS`：三張 Practice 實際 Battle、390px、一般配對交集、BO1／BO3 Veto、reload/resume 全綠。C5V deterministic `35/35 PASS`。
+- P0／C2：Renderer `24/24`、A2 `10/10`、C2A `13/13`、C2B `14/14`、C2C `9/9`、Camera `8/8`、RAF `7/7`、StableCanvas `5/5`。C2B／C2C verifier 只更新已改變的正式預設斷言，並新增診斷 opt-out 斷言，沒有刪安全檢查。
+- C5A.1 `17/17`、C5A gunplay `11/11`、route-interrupt 三圖 PASS、route-delay audit unreasonable delay `0`；MatchSession `36/36`、series `46/46`、playable series `99/99`、Major `74/74`、Season contract `73/73`、Training×Competition `13/13`。
+- Production build PASS（Vite `2764 modules`）；production Preview `http://127.0.0.1:5188/ESMO-/` HTTP `200`。未 merge／push／deploy，未開始下一階段。
