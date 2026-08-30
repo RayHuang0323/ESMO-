@@ -16752,3 +16752,11 @@ CS-C5A 的五個 `*-prepared.wav` 共約 **31 MB** 已隨 `public/` 進正式站
 - P0／C2：Renderer `24/24`、A2 `10/10`、C2A `13/13`、C2B `14/14`、C2C `9/9`、Camera `8/8`、RAF `7/7`、StableCanvas `5/5`。C2B／C2C verifier 只更新已改變的正式預設斷言，並新增診斷 opt-out 斷言，沒有刪安全檢查。
 - C5A.1 `17/17`、C5A gunplay `11/11`、route-interrupt 三圖 PASS、route-delay audit unreasonable delay `0`；MatchSession `36/36`、series `46/46`、playable series `99/99`、Major `74/74`、Season contract `73/73`、Training×Competition `13/13`。
 - Production build PASS（Vite `2764 modules`）；production Preview `http://127.0.0.1:5188/ESMO-/` HTTP `200`。未 merge／push／deploy，未開始下一階段。
+
+### C5V Owner Acceptance / Release Closeout（2026-08-31）
+
+- Owner 已接受 C5V map selection／veto 與四項驗收後修正；狀態改為 `C5V_OWNER_ACCEPTED`／`C5V_CLOSED`，沒有開始 C5C。
+- Feature branch 與最新 `origin/main` 無額外差異，兩次整合均為 fast-forward，conflict `0`。Release code commit：`9646786971304036773c465dfed6b199dab6ddb9`。
+- 推送 `main` 後 GitHub Pages workflow `33332608619` 完成且 conclusion `success`；production URL `https://rayhuang0323.github.io/ESMO-/` HTTP `200`。
+- Production browser：C5V 全流程 `24/24 PASS`（desktop／390px、三圖 Battle、一般配對 pool 交集、BO1／BO3、reload/resume、errors `0`）；Owner hotfix targeted `8/8 PASS`（C2C rigged `10/10`、fallback `0`、MOBA hero list 100 位可捲到底、「安包」文案、loading restore）。
+- Deterministic／regression gates 與 production build 均維持 PASS；build 為 Vite `2764 modules`，只有既有 large-chunk warning。

@@ -1278,11 +1278,12 @@ gate：`check_general_match_v7a`（47）＋ `browser_check_general_match_and_obj
 - local／production bundle `assets/index-Di2GbNPy.js` byte length `3,234,181`、SHA-256 `52bb805ff2ed55357f49e8a506f3df750f99d43ac737ae8e49c6b978952dccb7` 完全一致。
 - 狀態正式標記為 `C5B_OWNER_ACCEPTED`／`C5B_CLOSED`；C5C 未開始。
 
-## CS-C5V Map Selection / Veto — **READY FOR OWNER ACCEPTANCE（2026-08-31）**
+## CS-C5V Map Selection / Veto — **OWNER ACCEPTED / CLOSED（2026-08-31）**
 
 - Practice：Mirage／Dust II／Inferno 直選後才進 Battle。
 - 一般配對：玩家勾選 map pool，系統只從雙方交集做 deterministic weighted 決定；無交集 fail-closed。
 - 正式賽事：BO1 雙方輪流 Ban；BO3 契約為可擴充 `Ban → Pick → Pick → Decider`。現役三圖恰為 BO3 所需三圖，Ban 階段明確略過；未來 map pool 擴充後自動先 Ban 至三圖。
 - Authority：Competition 宣告 format，MatchSession／ActiveMatch 擁有 Veto 實例，MatchSeries 消費 resolved map order，Battle 消費單一 mapKey；localStorage 向下相容。
 - C5V deterministic `35/35`、Browser `24/24`、Competition／Session 與 C5A/C5B/P0 regression、production build 全 PASS。Preview：`http://127.0.0.1:5187/ESMO-/`。
-- 未 merge、未 push、未 deploy；C5C 未開始。停止標記：`C5V_MAP_SELECTION_VETO_READY_FOR_OWNER_ACCEPTANCE`。
+- Owner 驗收後四項修正已納入；release code commit `9646786971304036773c465dfed6b199dab6ddb9` 以 fast-forward、零衝突整合並推送 `main`。Pages workflow `33332608619` success，production C5V `24/24` 與 targeted hotfix `8/8` PASS。
+- 正式標記：`C5V_OWNER_ACCEPTED`／`C5V_CLOSED`。Production：`https://rayhuang0323.github.io/ESMO-/`。C5C 未開始。
