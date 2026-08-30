@@ -16704,3 +16704,11 @@ CS-C5A 的五個 `*-prepared.wav` 共約 **31 MB** 已隨 `public/` 進正式站
 #### 三、停止點
 
 - 已具備 `C5B_OWNER_ACCEPTED`／`C5B_CLOSED` release closeout 條件；本輪後續僅執行授權的 merge、push、GitHub Pages deploy、production smoke 與 main/bundle 一致性確認，不開始 C5C。
+
+#### 四、Production release
+
+- Push：`origin/main` = `0212e3a146d55bca51e6911c44bee2d0ff98b8b6`。
+- GitHub Pages workflow `33324847169`：`success`；production `https://rayhuang0323.github.io/ESMO-/` HTTP `200`。
+- `browser_check_prod_v7_release`：`44/44 PASS`，包含桌機與 390px smoke、既有入口、一般對戰、快速練習、目標頁與 console。
+- local／production `assets/index-Di2GbNPy.js` 均 `3,234,181` bytes，SHA-256 `52bb805ff2ed55357f49e8a506f3df750f99d43ac737ae8e49c6b978952dccb7`。
+- Final marker：`C5B_OWNER_ACCEPTED`／`C5B_CLOSED`；C5C 未開始。

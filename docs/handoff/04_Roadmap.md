@@ -1270,3 +1270,10 @@ gate：`check_general_match_v7a`（47）＋ `browser_check_general_match_and_obj
 - Owner 已接受 C5B；本輪以 `origin/main` `a0850179c43722c04c7f79783b3d544aad9745e4` 為基線，整合 commit `25a2a4a46968921dd353741ff6e30d840413e111`。未新增功能、未改 combat timing、tactic、route、weapon 或 bomb logic，未開始 C5C。
 - C5B `55/55`、tactical `26/26`、route-interrupt runtime、C5A.1 `17/17`、C5A gunplay `11/11`、C5A.2 `23/23`／`39/39`、CS series `46/46`、Major `74/74`、honors `45/45`、recap `64/64` PASS；production build、三圖 Battle smoke、390px smoke 與 P0 180 秒 long-run PASS。
 - Utility gate 的 HE 判定已修正為「每個 viewport 的三圖 Battle run 至少有 HE coverage」，逐圖仍驗證 flash/recovery 與其餘 runtime 契約；修正的是 verifier coverage，不是放寬或修改 gameplay authority。下一步只剩本輪授權的 merge/push/Pages deploy 與 production smoke。
+
+### C5B production release result（2026-08-31）
+
+- `origin/main` final SHA：`0212e3a146d55bca51e6911c44bee2d0ff98b8b6`；Pages workflow `33324847169`：`success`。
+- Production：<https://rayhuang0323.github.io/ESMO-/>，HTTP `200`；production smoke `44/44 PASS`。
+- local／production bundle `assets/index-Di2GbNPy.js` byte length `3,234,181`、SHA-256 `52bb805ff2ed55357f49e8a506f3df750f99d43ac737ae8e49c6b978952dccb7` 完全一致。
+- 狀態正式標記為 `C5B_OWNER_ACCEPTED`／`C5B_CLOSED`；C5C 未開始。
