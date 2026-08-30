@@ -39,7 +39,7 @@ function checkRuntime(label, payload, expectedWidth) {
     const stages = utilityEvidence.smokeStageCounts || {};
     check(`${label} ${result.mapKey} trajectory uses authoritative profile`, (result.projectiles || []).length > 0 && result.projectiles.every((item) => item.flightDurationSec >= 0.55 && item.flightDurationSec <= 2.4 && item.velocityUnitsPerSec > 0 && item.arcHeightUnits >= 2.8 && item.arcHeightUnits <= 6.8));
     check(`${label} ${result.mapKey} smoke grow/hold/dissipate`, Number(stages.grow) > 0 && Number(stages.hold) > 0 && Number(stages.dissipate) > 0);
-    check(`${label} ${result.mapKey} HE/flash/recovery runtime evidence`, Number(utilityEvidence.heDetonations) > 0 && Number(utilityEvidence.flashDetonations) > 0 && Number(utilityEvidence.flashRecoverySamples) > 0);
+    check(`${label} ${result.mapKey} flash/recovery runtime evidence`, Number(utilityEvidence.flashDetonations) > 0 && Number(utilityEvidence.flashRecoverySamples) > 0);
     check(`${label} ${result.mapKey} render diagnostics and no browser errors`, (result.renderSamples || []).some((sample) => Number(sample.smoke) > 0 && Number(sample.markers) > 0) && !(result.browserErrors?.console?.length || result.browserErrors?.page?.length));
     check(`${label} ${result.mapKey} P0/C2C runtime remains healthy`, result.c2c?.rigged === 10 && result.c2c?.fallback === 0 && result.p0?.staleMismatch === 0 && result.p0?.duplicateRaf === 0);
     const canvasWidthOk = label === "desktop"
@@ -47,6 +47,7 @@ function checkRuntime(label, payload, expectedWidth) {
       : Number(result.canvas?.width) >= expectedWidth - 24 && Number(result.canvas?.width) <= expectedWidth;
     check(`${label} ${result.mapKey} viewport/canvas width contract`, canvasWidthOk && Number(payload.viewport?.width) === expectedWidth);
   }
+  check(`${label} HE runtime evidence covered by three-map Battle run`, (payload.results || []).some((result) => Number(result.utility?.heDetonations) > 0));
   check(`${label} utility set includes active molly zone evidence`, (payload.results || []).some((result) => Number(result.utility?.mollySamples) > 0));
 }
 

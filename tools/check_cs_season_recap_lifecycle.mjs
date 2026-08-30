@@ -112,8 +112,9 @@ ck("matchFormat 原樣傳遞（畫面不必寫死 BO3）",
   M.matchFormat?.series === "bo3", M.matchFormat?.series);
 ck("Major 的獎金收據掛在投影上",
   !!M.award && M.award.settled === true, `amount=${M.award?.amount}`);
-ck("生涯主賽事（聯賽）沒有獎金 ⇒ view.award 為 null（錢在 Major 那一邊）",
-  view1.award === null);
+ck("生涯主賽事（聯賽）沒有現金獎金（fan-only 收據金額為 0）",
+  view1.award == null
+  || (view1.award.settled === true && Number(view1.award.amount) === 0));
 const honor1 = view1.honorsView.csAnnualChampions[0];
 ck("榮耀的冠軍＝Major 投影的冠軍", honor1.championTeamId === M.championTeamId);
 

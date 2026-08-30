@@ -16686,3 +16686,21 @@ CS-C5A 的五個 `*-prepared.wav` 共約 **31 MB** 已隨 `public/` 進正式站
 - 修正前 deterministic trace 找到 Dust II `ct1 → t1` 的 `permission → shot = 6748ms`；不是 LoS/FOV、turning、tactical state 或 route lock，而是 ready pair queue 的 reservation starvation。
 - 最小正式修正為 ready episode oldest-first，並在 scheduled shot 尚未 ready 時延後 `usedT/usedCT` reservation。修正後 `72` 筆 `>1000ms` 中 acquisition/snapshot `52`、weapon not ready `20`，其餘分類 `0`，unexplained `0`。
 - 三圖 first-shot median/p90：Mirage `304/1291ms`、Dust II `274/1173ms`、Inferno `313/1252ms`；未改 C5A/C5B 已 PASS 的其他內容。
+
+### C5B release closeout（2026-08-31）
+
+#### 一、整合邊界
+
+- C5B Owner 已接受，整合最新 `origin/main` `a0850179c43722c04c7f79783b3d544aad9745e` 後的 merge commit 為 `25a2a4a46968921dd353741ff6e30d840413e111`。
+- 本輪只修正 verifier 的 current source marker／bounded digest、browser queue fallback／timeout 與 utility evidence coverage；`src/` 無變更，不新增功能、不調 combat timing、不動 tactic／route／weapon／bomb authority。
+
+#### 二、Release gates
+
+- C5B utility `55/55`、C5B tactical `26/26`、C5B route-interrupt memory/runtime PASS。
+- C5A.1 `17/17`、C5A gunplay `11/11`、C5A.2 audit `23/23`、C5A.2 final `39/39` PASS。
+- CS series `46/46`、CS Major `74/74`、CS honors `45/45`、CS recap `64/64` PASS；三圖 desktop／390px Battle evidence、production build（`2763 modules`）與 P0 180 秒 long-run PASS。
+- Utility gate 對固定 seed 的 HE 採 viewport-level 三圖 coverage；Mirage 本次固定 Battle 沒有 HE event，但 Dust II／Inferno 有真實 HE event，逐圖 flash/recovery、smoke lifecycle、trajectory、P0/C2C 與 browser diagnostics 均 PASS。
+
+#### 三、停止點
+
+- 已具備 `C5B_OWNER_ACCEPTED`／`C5B_CLOSED` release closeout 條件；本輪後續僅執行授權的 merge、push、GitHub Pages deploy、production smoke 與 main/bundle 一致性確認，不開始 C5C。

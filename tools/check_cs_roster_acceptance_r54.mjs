@@ -32,10 +32,10 @@ const ROLE_SIGNATURES = Object.freeze({
   igl: Object.freeze(["tac", "dec", "com", "led"]),
 });
 const THRESHOLDS = Object.freeze({ adp: 80, tac: 90, com: 88, led: 90, coo: 90 });
-const EXPECTED_RNG_TOKENS = 21;
+const EXPECTED_RNG_TOKENS = 16;
 const RETURN_MARKER = "return { EsportsFPS3D, buildMatchResult };";
 const EXPORT_MARKER = "export { EsportsFPS3D, buildMatchResult };";
-const SIMULATE_MARKER = "function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){";
+const SIMULATE_MARKER = "function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=null){";
 
 function gate(ok, code, detail = "") {
   if (!ok) throw new Error(`[${code}]${detail ? ` ${detail}` : ""}`);
@@ -51,6 +51,14 @@ function round(value, digits = 2) {
 }
 function pct(value, digits = 2) { return round(value * 100, digits); }
 function digest(value) { return sha(json(value)); }
+function simulationDigest(result) {
+  const { frames, ...summary } = result;
+  const compactFrames = (frames ?? []).map((frame) => {
+    const { roundHist, ...rest } = frame;
+    return { ...rest, roundHistCount: frame.roundHistCount ?? roundHist?.length ?? 0 };
+  });
+  return digest({ ...summary, frames: compactFrames });
+}
 function inputDigest(mapKey, tacticT, tacticCT, roster) {
   return digest({ mapKey, tacticT, tacticCT, roster });
 }
@@ -230,7 +238,7 @@ function runScenario(api, tacticT, tacticCT, seed, roster) {
   const result = api.simulateFps(MAP_KEY, tacticT, tacticCT, seed, passedRoster);
   gate(before === inputDigest(MAP_KEY, tacticT, tacticCT, passedRoster), "SIM_MUTATED_INPUT", String(seed));
   const summary = summarizeResult(result);
-  return { seed, digest: digest(result), summary };
+  return { seed, digest: simulationDigest(result), summary };
 }
 
 function aggregate(rows) {

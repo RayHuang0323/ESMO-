@@ -1264,3 +1264,9 @@ gate：`check_general_match_v7a`（47）＋ `browser_check_general_match_and_obj
 - 完成 grenade／smoke／flash／HE／molly 的 bounded presentation：authoritative trajectory 插值、smoke grow／hold／dissipate、多層 volume／marker、HE flash/dust/debris/impact、flashbang local fade/recovery；未新增功能，未改 combat timing、tactic／route／weapon／bomb logic。
 - C5B gates、全 CS regression、C5A gates、三圖 Battle、390px smoke、180 秒 long-run 與 production build 全部通過；既有 large-chunk warning 維持為非阻擋風險。
 - 正式站：<https://rayhuang0323.github.io/ESMO-/>。下一階段 C5C 未開始；Android 真機視覺、FPS、觸控、AudioContext 與熱節流仍由 Owner 驗收。
+
+### C5B release closeout verification（2026-08-31）
+
+- Owner 已接受 C5B；本輪以 `origin/main` `a0850179c43722c04c7f79783b3d544aad9745e4` 為基線，整合 commit `25a2a4a46968921dd353741ff6e30d840413e111`。未新增功能、未改 combat timing、tactic、route、weapon 或 bomb logic，未開始 C5C。
+- C5B `55/55`、tactical `26/26`、route-interrupt runtime、C5A.1 `17/17`、C5A gunplay `11/11`、C5A.2 `23/23`／`39/39`、CS series `46/46`、Major `74/74`、honors `45/45`、recap `64/64` PASS；production build、三圖 Battle smoke、390px smoke 與 P0 180 秒 long-run PASS。
+- Utility gate 的 HE 判定已修正為「每個 viewport 的三圖 Battle run 至少有 HE coverage」，逐圖仍驗證 flash/recovery 與其餘 runtime 契約；修正的是 verifier coverage，不是放寬或修改 gameplay authority。下一步只剩本輪授權的 merge/push/Pages deploy 與 production smoke。

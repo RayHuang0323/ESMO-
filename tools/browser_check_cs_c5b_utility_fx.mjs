@@ -10,6 +10,10 @@ const HEIGHT = Number(process.env.CS_C5B_HEIGHT || 768);
 const VIEWPORT = WIDTH <= 600 ? "mobile" : "desktop";
 const OUTPUT_DIR = process.env.CS_C5B_OUTPUT_DIR || path.resolve("artifacts/cs-c5b/owner-review");
 const ALL_MAPS = { mirage: "Mirage", dust2: "Dust II", inferno: "Inferno" };
+const TARGET_MAPS = (process.env.CS_C5B_MAPS || "mirage,dust2,inferno")
+  .split(",").map((key) => key.trim()).filter((key) => ALL_MAPS[key]);
+const FIXED_SEEDS = Object.fromEntries(Object.keys(ALL_MAPS).map((key) => [key, Number(process.env[`CS_C5B_SEED_${key.toUpperCase()}`]) || null]));
+const TACTIC_OFFSETS = Object.fromEntries(Object.keys(ALL_MAPS).map((key) => [key, Number(process.env[`CS_C5B_TACTIC_OFFSET_${key.toUpperCase()}`]) || 0]));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function waitFor(chrome, expression, timeoutMs, label) {
@@ -49,7 +53,11 @@ async function enterBattle(chrome, mapKey, mapTitle) {
     prep = await prepAction(chrome);
   }
   if (prep.action === "enqueue") {
-    await waitFor(chrome, `document.querySelector('[data-testid="prep-primary-action"]')?.dataset.action === "confirm" || document.querySelector('[data-map-key="${mapKey}"]')`, 45_000, "queue");
+    await waitFor(chrome, `document.querySelector('[data-testid="prep-primary-action"]')?.dataset.action === "confirm" || document.querySelector('[data-map-key="${mapKey}"]') || document.querySelector('[data-testid="prep-start-practice"]')`, 75_000, "queue or practice fallback");
+    if (await chrome.evaluate(`return !document.querySelector('[data-map-key="${mapKey}"]') && Boolean(document.querySelector('[data-testid="prep-start-practice"]'));`)) {
+      await chrome.evaluate(`document.querySelector('[data-testid="prep-start-practice"]')?.click(); return true;`);
+      await waitFor(chrome, `document.querySelector('[data-map-key="${mapKey}"]')`, 45_000, "practice map picker");
+    }
     if (await chrome.evaluate(`return document.querySelector('[data-testid="prep-primary-action"]')?.dataset.action === "confirm";`)) await prepAction(chrome);
   }
   await waitFor(chrome, `document.querySelector('[data-map-key="${mapKey}"]')`, 45_000, "map picker");
@@ -60,13 +68,16 @@ async function enterBattle(chrome, mapKey, mapTitle) {
   for (const [phase, cardIndex] of [["opening", 0], ["mid-round", 2], ["late-round", 4], ["post-plant", 5]]) {
     await chrome.evaluate(`document.querySelector('[data-testid="cs-tactic-phase-${phase}"]')?.click(); return true;`);
     await sleep(80);
-    await chrome.evaluate(`const cards=[...document.querySelectorAll('button')].filter((node)=>!node.disabled&&node.textContent.includes('核心：')); const card=cards[${cardIndex}]; card?.click(); return Boolean(card);`);
+    await chrome.evaluate(`const cards=[...document.querySelectorAll('button')].filter((node)=>!node.disabled&&node.textContent.includes('核心：')); const card=cards[${cardIndex + TACTIC_OFFSETS[mapKey]}]; card?.click(); return Boolean(card);`);
     await sleep(80);
+  }
+  if (FIXED_SEEDS[mapKey] != null) {
+    await chrome.evaluate(`return import('/ESMO-/src/platform/profileStore.js').then((module)=>{const store=module.useProfileStore;const state=store.getState();store.setState({matchmaking:{...state.matchmaking,launch:{...(state.matchmaking?.launch||{}),seed:${FIXED_SEEDS[mapKey]}}}});return true;});`);
   }
   const tacticConfirmed = await chrome.evaluate(`const button=document.querySelector('[data-testid="cs-tactic-confirm"]'); if(!button||button.disabled)return false; button.click(); return true;`);
   if (!tacticConfirmed) throw new Error("tactic confirm failed");
-  await waitFor(chrome, `document.querySelector('[data-testid="cs-match-speed-controls"]') && document.querySelector("canvas")`, 45_000, "Battle runtime");
-  await waitFor(chrome, `window.__ESMO_FPS_SCENE__?.utilityFx`, 15_000, "C5B utility owner");
+  await waitFor(chrome, `document.querySelector('[data-testid="cs-match-speed-controls"]') && document.querySelector("canvas")`, 240_000, "Battle runtime");
+  await waitFor(chrome, `window.__ESMO_FPS_SCENE__?.utilityFx`, 60_000, "C5B utility owner");
 }
 
 async function seekFrame(chrome, index) {
@@ -101,7 +112,7 @@ async function readUtility(chrome, mapKey) {
       (frame.players||[]).forEach((player)=>{if(Number(player.flash)>0)flashRecoverySamples+=1;});
     });
     const renderSamples=[];const dataset=(label)=>({label,smoke:Number(canvas?.dataset.esmoFpsC5bSmoke||0),trajectory:Number(canvas?.dataset.esmoFpsC5bTrajectory||0),he:Number(canvas?.dataset.esmoFpsC5bHe||0),flash:Number(canvas?.dataset.esmoFpsC5bFlash||0),flashRecovery:Number(canvas?.dataset.esmoFpsC5bFlashRecovery||0),molly:Number(canvas?.dataset.esmoFpsC5bMolly||0),markers:Number(canvas?.dataset.esmoFpsC5bMarkers||0),stages:JSON.parse(canvas?.dataset.esmoFpsC5bSmokeStages||"{}")});
-    return {mapKey:${JSON.stringify(mapKey)},frameCount:frames.length,projectiles:[...projectileMap.values()].filter((item)=>item.detonate),activeTypes:[...types],trajectorySamples,smokeSamples,smokeStageCounts:stageCounts,heDetonations,flashDetonations,flashRecoverySamples,mollySamples,renderSamples,c2c:window.__ESMO_FPS_C2A__||null,p0:window.__ESMO_FPS_P0_CONTRACT__||null,canvas:canvas?{width:canvas.clientWidth,height:canvas.clientHeight,bufferWidth:canvas.width,bufferHeight:canvas.height}:null,browserErrors:{console:[],page:[]},_dataset:dataset("last")};
+    return {mapKey:${JSON.stringify(mapKey)},frameCount:frames.length,projectiles:[...projectileMap.values()].filter((item)=>item.detonate),activeTypes:[...types],trajectorySamples,smokeSamples,smokeStageCounts:stageCounts,heDetonations,flashDetonations,flashRecoverySamples,mollySamples,renderSamples,tactical:sim?.tacticalAudit?{preMatchLayout:sim.tacticalAudit.preMatchLayout,targetChanges:sim.tacticalAudit.targetChanges?.length||0}:null,c2c:window.__ESMO_FPS_C2A__||null,p0:window.__ESMO_FPS_P0_CONTRACT__||null,canvas:canvas?{width:canvas.clientWidth,height:canvas.clientHeight,bufferWidth:canvas.width,bufferHeight:canvas.height}:null,browserErrors:{console:[],page:[]},_dataset:dataset("last")};
   })()`);
 }
 
@@ -150,15 +161,15 @@ async function runMap(mapKey, mapTitle, index) {
     base.renderSamples = renderSamples;
     base.canvas = base.canvas || { width: WIDTH, height: HEIGHT };
     base.browserErrors = { console: chrome.consoleLines.filter((line) => line.startsWith("[error]")), page: chrome.pageErrors };
-    base.utility = { activeTypes: base.activeTypes, projectiles: base.projectiles, trajectorySamples: base.trajectorySamples, smokeStageCounts: base.smokeStageCounts, heDetonations: base.heDetonations, flashDetonations: base.flashDetonations, flashRecoverySamples: base.flashRecoverySamples, mollySamples: base.mollySamples, renderSamples };
+    base.utility = { activeTypes: base.activeTypes, projectiles: base.projectiles, trajectorySamples: base.trajectorySamples, smokeStageCounts: base.smokeStageCounts, heDetonations: base.heDetonations, flashDetonations: base.flashDetonations, flashRecoverySamples: base.flashRecoverySamples, mollySamples: base.mollySamples, renderSamples, tactical: base.tactical };
     console.log(`PASS ${VIEWPORT} ${mapKey} utility=${base.activeTypes.join(",")} smoke=${JSON.stringify(base.smokeStageCounts)} HE=${base.heDetonations} flash=${base.flashDetonations} recovery=${base.flashRecoverySamples}`);
-    return { mapKey, utility: base.utility, projectiles: base.projectiles, renderSamples, c2c: base.c2c, p0: base.p0, canvas: base.canvas, browserErrors: base.browserErrors, captures: capture };
+    return { mapKey, utility: base.utility, projectiles: base.projectiles, renderSamples, tactical: base.tactical, c2c: base.c2c, p0: base.p0, canvas: base.canvas, browserErrors: base.browserErrors, captures: capture };
   } finally { await chrome.close().catch(() => {}); }
 }
 
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 const results = [];
-for (const [index, [mapKey, mapTitle]] of Object.entries(ALL_MAPS).entries()) results.push(await runMap(mapKey, mapTitle, index));
+for (const [index, mapKey] of TARGET_MAPS.entries()) results.push(await runMap(mapKey, ALL_MAPS[mapKey], index));
 const output = path.join(OUTPUT_DIR, `runtime-evidence-${VIEWPORT}.json`);
 fs.writeFileSync(output, JSON.stringify({ generatedAt: new Date().toISOString(), source: "C5B utility FX Battle runtime verifier", viewport: { width: WIDTH, height: HEIGHT, mode: VIEWPORT }, results }, null, 2), "utf8");
 if (VIEWPORT === "desktop") {

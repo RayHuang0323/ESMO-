@@ -77,6 +77,7 @@ const cs = st().competitionByMode.cs;
 const majorEventId = Object.keys(cs.events).find((id) => cs.events[id].eventKey === CS_MAJOR_EVENT_KEY);
 const majorFinal = eventFinalOf(cs, majorEventId);
 const leagueEventId = Object.keys(cs.events).find((id) => id !== majorEventId);
+const leagueFinal = eventFinalOf(cs, leagueEventId);
 
 // ── §1 榮耀 ───────────────────────────────────────────────────────────────
 console.log("\n§1 CS 年度冠軍寫進生涯榮耀");
@@ -120,8 +121,10 @@ ck("Major 的獎金政策就是 CS_MAJOR_PRIZE_POLICY",
 ck("CS 聯賽的 Event 仍然沒有獎金政策（它是資格賽）",
   leagueEvent.prizePolicy === null, String(leagueEvent.prizePolicy));
 const awardKeys = Object.keys(st().processedCompetitionAwards ?? {});
-ck("獎金帳本只多了 Major 那一筆的鍵",
-  awardKeys.length === awardsBefore + (majorFinal ? 1 : 0),
+ck("獎勵帳本新增聯賽 fan-only 與 Major 現金獎勵兩筆鍵",
+  awardKeys.length === awardsBefore + (majorFinal ? 1 : 0) + (leagueFinal ? 1 : 0)
+  && (!majorFinal || awardKeys.includes(majorFinal.id))
+  && (!leagueFinal || awardKeys.includes(leagueFinal.id)),
   `${awardsBefore} → ${awardKeys.length}`);
 ck("入帳的冪等鍵是 Major FinalStandings 的 id",
   awardKeys.includes(majorFinal.id), awardKeys.join(","));

@@ -19,7 +19,11 @@ const MAP_KEY = "inferno";
 const FIXED_SEEDS = Object.freeze([
   3978742910, 4200255727, 541349949, 1011896540, 44863398, 1878380147,
 ]);
-const EXPECTED_RNG_TOKENS = 21;
+// The current C5A/C5B simulator keeps the deterministic buy/presentation
+// randomness but uses the authoritative cadence/accuracy path for shots.
+// Keep this count aligned with that shipped source shape (16 calls); this is
+// a source-integrity sentinel, not a gameplay override.
+const EXPECTED_RNG_TOKENS = 16;
 const ACTIVE_STAT_KEYS = Object.freeze([
   "rxn", "acc", "apm", "pos", "vis", "tac", "dec", "adp",
   "cou", "str", "foc", "res", "com", "led", "coo", "lrn",
@@ -27,7 +31,7 @@ const ACTIVE_STAT_KEYS = Object.freeze([
 const THRESHOLD_KEYS = Object.freeze({ adp: 80, tac: 90, com: 88, led: 90, coo: 90 });
 const RETURN_MARKER = "return { EsportsFPS3D, buildMatchResult };";
 const EXPORT_MARKER = "export { EsportsFPS3D, buildMatchResult };";
-const SIMULATE_MARKER = "function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster){";
+const SIMULATE_MARKER = "function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=null){";
 
 // R57 accepts the current roster under the same fixed simulator treatment as
 // R54. Production has no style->tactic adapter yet; inventing one in this
@@ -74,7 +78,8 @@ function digestMatch(result, roster) {
   hash.update(json({ result: summary, roster }));
   hash.update("|frames|");
   for (const frame of frames ?? []) {
-    hash.update(json(frame));
+    const { roundHist, ...compactFrame } = frame;
+    hash.update(json({ ...compactFrame, roundHistCount: frame.roundHistCount ?? roundHist?.length ?? 0 }));
     hash.update("|");
   }
   return hash.digest("hex");

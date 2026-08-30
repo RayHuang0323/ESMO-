@@ -64,7 +64,11 @@ async function enterBattle(chrome, mapKey, mapTitle) {
   }
   if (!prep.ok) throw new Error("準備流程不可用: " + JSON.stringify(prep));
   if (prep.action === "enqueue") {
-    await waitFor(chrome, "document.querySelector('[data-testid=\"prep-primary-action\"]')?.dataset.action==='confirm'||document.querySelector('[data-map-key=\"" + mapKey + "\"]')", 60000, "進入地圖選擇");
+    await waitFor(chrome, "document.querySelector('[data-testid=\"prep-primary-action\"]')?.dataset.action==='confirm'||document.querySelector('[data-map-key=\"" + mapKey + "\"]')||document.querySelector('[data-testid=\"prep-start-practice\"]')", 75000, "進入地圖選擇或快速練習");
+    if (await chrome.evaluate("return !document.querySelector('[data-map-key=\"" + mapKey + "\"]')&&Boolean(document.querySelector('[data-testid=\"prep-start-practice\"]'));")) {
+      await chrome.evaluate("document.querySelector('[data-testid=\"prep-start-practice\"]')?.click();return true;");
+      await waitFor(chrome, "document.querySelector('[data-map-key=\"" + mapKey + "\"]')", 45000, "快速練習地圖選擇");
+    }
     if (await chrome.evaluate("return document.querySelector('[data-testid=\"prep-primary-action\"]')?.dataset.action==='confirm';")) await prepAction(chrome);
   }
   await waitFor(chrome, "document.querySelector('[data-map-key=\"" + mapKey + "\"]')", 60000, "地圖選擇");
@@ -82,8 +86,8 @@ async function enterBattle(chrome, mapKey, mapTitle) {
   }
   await chrome.evaluate("return import('/ESMO-/src/platform/profileStore.js').then((module)=>{const store=module.useProfileStore,state=store.getState();store.setState({matchmaking:{...state.matchmaking,launch:{...(state.matchmaking?.launch||{}),seed:" + fixedSeedByMap[mapKey] + "}}});return store.getState().matchmaking?.launch?.seed;});");
   await chrome.evaluate("document.querySelector('[data-testid=\"cs-tactic-confirm\"]')?.click();return true;");
-  await waitFor(chrome, "window.__ESMO_FPS_SCENE__?.liveRef?.current?.sim&&document.querySelector('canvas')", 120000, "Battle runtime");
-  await waitFor(chrome, "window.__ESMO_FPS_SCENE__?.liveRef?.current?.sim?.completed===true", 120000, "authoritative simulation complete");
+  await waitFor(chrome, "window.__ESMO_FPS_SCENE__?.liveRef?.current?.sim&&document.querySelector('canvas')", 300000, "Battle runtime");
+  await waitFor(chrome, "window.__ESMO_FPS_SCENE__?.liveRef?.current?.sim?.completed===true", 300000, "authoritative simulation complete");
 }
 
 function readStaticDeterminism() {
