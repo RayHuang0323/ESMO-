@@ -1189,7 +1189,18 @@ V0A/V0B 成長 → V1 世界時間 → V2 年度邊界 → V3 快轉 → V4 生�
 
 ---
 
-## V7A / V7B（2026-08-28，**已上線**）
+## V7A / V7B（2026-08-28 上線；2026-08-30 **Release Closure 完成**）
+
+> ## ✅ GENERAL_MATCH = RELEASED　RETENTION_V1 = RELEASED
+>
+> **正式收尾於 2026-08-30**，production SHA **`bc4f797`**、
+> deploy run **`33273352390` success**、正式站 smoke **44/44**、
+> Release Gate **70 支實跑 / 62 PASS**（8 支非綠全為 main 既有狀態，
+> 已登記 TD-45～TD-48）。逐項證據見 `05_Sprint紀錄.md` 最後一節。
+>
+> 這次 release 的**產品位元組差異為 0**：合併後 HEAD 對 `origin/main` 的
+> `src/`／`public/` 差異為空集合，V7A／V7B 的產品碼早在 `b1830b3` 就已上線。
+> **READY_FOR_NEXT_PHASE = YES**（下一階段未開始）。
 
 > **V7A = RELEASED　V7B Retention v1 = RELEASED**（2026-08-28）
 > production `5f92343`｜Actions run `33090060630` build ✅／deploy ✅｜<https://rayhuang0323.github.io/ESMO-/>
@@ -1247,10 +1258,9 @@ gate：`check_general_match_v7a`（47）＋ `browser_check_general_match_and_obj
 - Production release 前已完成 production build、三圖 Battle、390×844 smoke 與 180 秒 long-run；尚未開始 C5B。
 - Android real-device validation：`PENDING_AFTER_PRODUCTION_DEPLOY`。
 
-## CS-C5B Utility FX — **READY FOR OWNER ACCEPTANCE（2026-08-30）**
+## CS-C5B Utility FX — **CLOSED（2026-08-30）**
 
-- 基線為 `C5A_CLOSED`／`main @ 1883b33067ca8417ac4ef966554d41bbd8dd1f6e`；本輪以獨立 `feature/cs-c5b-utility-fx` worktree 完成，未 merge、未 push、未 deploy。
-- 完成 grenade／smoke／flash／HE／molly 的 bounded presentation：authoritative trajectory 插值、smoke grow／hold／dissipate、多層 volume／marker、HE flash/dust/debris/impact、flashbang local fade/recovery；無 shader／post-processing，未碰 gameplay authority。
-- 自驗證：C5B `53/53`、既有 CS/P0/C2C/C3/C4/C5A gates 全 PASS；production build PASS；Mirage／Dust II／Inferno desktop 與 390px Battle smoke PASS；180 秒 long-run `1757` samples，geometry shift／stale／duplicate／rapid recovery／browser errors 全 `0`。
-- Owner Review artifacts：`artifacts/cs-c5b/owner-review/owner-review.html`；正式 Battle Preview（本機 dev）：`http://127.0.0.1:5174/ESMO-/?fpsRigged=all&fpsC2cHero=all`。
-- 停止於 `C5B_UTILITY_FX_READY_FOR_OWNER_ACCEPTANCE`。下一階段 C5C 不在本輪範圍；Android 真機驗收仍待 production deploy 後由 Owner 執行。
+- 狀態：`C5B_OWNER_ACCEPTED`／`C5B_CLOSED`；以最新 `origin/main` `a0850179c43722c04c7f79783b3d544aad9745e4` 為基線整合後完成 release closeout。
+- 完成 grenade／smoke／flash／HE／molly 的 bounded presentation：authoritative trajectory 插值、smoke grow／hold／dissipate、多層 volume／marker、HE flash/dust/debris/impact、flashbang local fade/recovery；未新增功能，未改 combat timing、tactic／route／weapon／bomb logic。
+- C5B gates、全 CS regression、C5A gates、三圖 Battle、390px smoke、180 秒 long-run 與 production build 全部通過；既有 large-chunk warning 維持為非阻擋風險。
+- 正式站：<https://rayhuang0323.github.io/ESMO-/>。下一階段 C5C 未開始；Android 真機視覺、FPS、觸控、AudioContext 與熱節流仍由 Owner 驗收。
