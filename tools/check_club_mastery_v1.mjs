@@ -11,6 +11,7 @@
 //  Club Points 有了出口 ⇒ **玩家一花點數，俱樂部等級就會倒退**。
 //  那是進度條倒退，不是消費——所以 lifetime 與 balance 必須分開。
 // ============================================================================
+import { readFileSync } from "node:fs";
 import {
   emptyRetention, normalizeRetention, clubTierOf, spendClubPoints,
   claimObjective, retentionViewOf, coordsOf, recordMatchActivity, recordTrainingActivity,
@@ -102,7 +103,7 @@ console.log("\n【Task 2：生涯打法累積】");
 // ── ⑦ 袋子形狀：只存不可推導的東西 ──────────────────────────────────────
 const bag = M.emptyClubMastery();
 ck("袋子鍵固定（不存可推導的快取）",
-  JSON.stringify(Object.keys(bag).sort()) === JSON.stringify(["activeDoctrine", "claims", "schema", "tacticIntent", "tacticUsage"]),
+  JSON.stringify(Object.keys(bag).sort()) === JSON.stringify(["activeDoctrine", "claims", "doctrineProgress", "schema", "tacticIntent", "tacticUsage"]),
   Object.keys(bag).join(", "));
 ck("MOBA 與 CS 各自一格（不互相污染）",
   bag.tacticUsage.moba && bag.tacticUsage.cs && bag.tacticIntent.moba && bag.tacticIntent.cs);
@@ -178,6 +179,149 @@ ck("結算後 retention 沒有多出 mastery 欄位",
   JSON.stringify(Object.keys(r1.nextState.retention).sort()) === JSON.stringify(["claims", "clubPoints", "clubPointsLifetime", "counters", "schema", "sets"]),
   Object.keys(r1.nextState.retention).join(", "));
 ck("Task 1 未退化：結算後 lifetime 仍存在", Number.isFinite(r1.nextState.retention.clubPointsLifetime));
+
+
+// ══════════════════════════════════════════════════════════════════════════
+//  Task 3：Doctrine contract ＋ mapping
+// ══════════════════════════════════════════════════════════════════════════
+const D = await import("../src/platform/mastery/doctrine.js");
+
+console.log("\n【Task 3：流派契約與對照】");
+
+// ── ⑬ 三條 doctrine，且不是只有名字 ─────────────────────────────────────
+ck("三條 doctrine", D.DOCTRINES.length === 3);
+ck("id 為 tempo / control / adaptive",
+  JSON.stringify(D.DOCTRINE_IDS.slice().sort()) === JSON.stringify(["adaptive", "control", "tempo"]));
+ck("每條都有中文名與主張", D.DOCTRINES.every((d) => d.zh && d.claim && d.claim.length > 8));
+//  ⚠ 這條擋的是「doctrine 只是換名稱的進度條」——主張必須說得出取捨。
+ck("每條主張都寫出代價（含『但』或『怕』或『需要』）",
+  D.DOCTRINES.every((d) => /但|怕|需要/.test(d.claim)),
+  D.DOCTRINES.map((d) => d.claim).join(" | "));
+
+// ── ⑭ MOBA mapping 對得起契約 ───────────────────────────────────────────
+const integ = D.mobaMappingIntegrity();
+ck("m1–m8 全部有歸屬（沒有孤兒戰術）", integ.missing.length === 0, integ.missing.join(","));
+ck("表裡沒有契約不存在的 id", integ.unknown.length === 0, integ.unknown.join(","));
+ck("mapping 與契約完全一致", integ.complete, `mapped=${integ.mapped.length} actual=${integ.actual.length}`);
+ck("每條 doctrine 都對到真實戰術池（非空）",
+  D.DOCTRINE_IDS.every((id) => D.tacticsOfDoctrine("moba", id).length > 0),
+  D.DOCTRINE_IDS.map((id) => `${id}:${D.tacticsOfDoctrine("moba", id).length}`).join(" "));
+
+// ── ⑮ 互斥：一個戰術不得同時屬於兩條 doctrine ───────────────────────────
+ck("contract 明文宣告不允許 multi-tag", D.MULTI_TAG_ALLOWED === false);
+ck("沒有戰術落入兩條 doctrine", (() => {
+  const seen = new Map();
+  for (const id of D.DOCTRINE_IDS) for (const t of D.tacticsOfDoctrine("moba", id)) {
+    if (seen.has(t)) return false;
+    seen.set(t, id);
+  }
+  return seen.size === integ.actual.length;
+})());
+ck("各 doctrine 的戰術數加總 == 契約戰術總數",
+  D.DOCTRINE_IDS.reduce((s, id) => s + D.tacticsOfDoctrine("moba", id).length, 0) === integ.actual.length);
+
+// ── ⑯ fail closed ──────────────────────────────────────────────────────
+ck("未知 tacticId ⇒ null", D.doctrineOfTactic("moba", "nope") === null);
+ck("未知 mode ⇒ null", D.doctrineOfTactic("lol", "m1") === null);
+ck("空字串 tacticId ⇒ null", D.doctrineOfTactic("moba", "") === null);
+ck("未知 doctrine 的戰術池為空", D.tacticsOfDoctrine("moba", "nope").length === 0);
+ck("isDoctrineId 拒絕壞值", !D.isDoctrineId("nope") && !D.isDoctrineId(null) && !D.isDoctrineId(5));
+ck("doctrineById 未知 ⇒ null（不回假預設）", D.doctrineById("nope") === null);
+
+// ── ⑰ CS：DESIGN_ONLY / OWNER_HANDOFF，且不污染 MOBA ────────────────────
+const cs = D.doctrineMapStatusOf("cs");
+ck("CS 標記為 OWNER_HANDOFF", cs.status === "OWNER_HANDOFF", cs.status);
+ck("CS 帶 CS_OWNER_HANDOFF 標記", cs.ownerHandoff === "CS_OWNER_HANDOFF");
+ck("CS mapping 為空（不硬做）", Object.keys(cs.byTactic).length === 0);
+ck("CS 寫明無法 mapping 的具體障礙", Array.isArray(cs.blockers) && cs.blockers.length >= 2);
+ck("CS 戰術查詢一律 null", D.doctrineOfTactic("cs", "t_apalace") === null);
+ck("MOBA 標記為 CURRENT_RUNTIME", D.doctrineMapStatusOf("moba").status === "CURRENT_RUNTIME");
+ck("CS 的空 mapping 不影響 MOBA", D.doctrineOfTactic("moba", "m1") === D.DOCTRINE.TEMPO);
+
+// ── ⑱ activeDoctrine 行為 ──────────────────────────────────────────────
+const base = M.emptyClubMastery();
+ck("預設沒有選流派", base.activeDoctrine === null);
+ck("可以切換", M.setActiveDoctrine(base, D.DOCTRINE.TEMPO).mastery.activeDoctrine === D.DOCTRINE.TEMPO);
+ck("可以取消選擇（null）", M.setActiveDoctrine(M.setActiveDoctrine(base, D.DOCTRINE.TEMPO).mastery, null).mastery.activeDoctrine === null);
+ck("壞的 doctrine id 被拒（fail closed）", M.setActiveDoctrine(base, "nope").ok === false);
+ck("被拒時狀態不變", M.setActiveDoctrine(base, "nope").mastery.activeDoctrine === null);
+
+// ── ⑲ 只有 Active Doctrine 才推進，且切換不清空進度 ─────────────────────
+const tempoOn = M.setActiveDoctrine(base, D.DOCTRINE.TEMPO).mastery;
+const playM1 = (b, intent = true) => M.recordTacticUsage(b, { mode: "moba", tacticId: "m1", matchSource: "competitive", intent });
+const playM4 = (b, intent = true) => M.recordTacticUsage(b, { mode: "moba", tacticId: "m4", matchSource: "competitive", intent });
+
+ck("打本流派戰術 ⇒ 進度 +1", M.doctrineProgressOf(playM1(tempoOn), D.DOCTRINE.TEMPO).matches === 1);
+ck("打本流派且意圖達成 ⇒ intent +1", M.doctrineProgressOf(playM1(tempoOn, true), D.DOCTRINE.TEMPO).intent === 1);
+ck("打本流派但意圖未達 ⇒ intent 不加", M.doctrineProgressOf(playM1(tempoOn, false), D.DOCTRINE.TEMPO).intent === 0);
+//  ⚠ 這一條就是「聚焦」的選擇成本：打別條流派的戰術，原始計數照記、流派進度不動。
+ck("打別條流派的戰術 ⇒ 該流派不推進", M.doctrineProgressOf(playM4(tempoOn), D.DOCTRINE.CONTROL).matches === 0);
+ck("打別條流派的戰術 ⇒ 目前流派也不推進", M.doctrineProgressOf(playM4(tempoOn), D.DOCTRINE.TEMPO).matches === 0);
+ck("但原始 tacticUsage 仍如實記錄（那是事實）", playM4(tempoOn).tacticUsage.moba.m4 === 1);
+ck("沒選流派 ⇒ 什麼都不推進", (() => {
+  const out = playM1(base);
+  return D.DOCTRINE_IDS.every((id) => M.doctrineProgressOf(out, id).matches === 0);
+})());
+ck("快速練習不推進流派進度", M.doctrineProgressOf(M.recordTacticUsage(tempoOn, { mode: "moba", tacticId: "m1", matchSource: "practice", intent: true }), D.DOCTRINE.TEMPO).matches === 0);
+ck("CS 不推進任何流派（尚未 mapping）", (() => {
+  const out = M.recordTacticUsage(tempoOn, { mode: "cs", tacticId: "t_apalace", matchSource: "competitive", intent: true });
+  return D.DOCTRINE_IDS.every((id) => M.doctrineProgressOf(out, id).matches === 0) && out.tacticUsage.cs.t_apalace === 1;
+})());
+
+//  ⚠ 核心保證：切換流派**永久保留**已累積進度。
+ck("切換流派不清空既有進度", (() => {
+  let b = tempoOn;
+  for (let i = 0; i < 3; i++) b = playM1(b);
+  const switched = M.setActiveDoctrine(b, D.DOCTRINE.CONTROL).mastery;
+  return M.doctrineProgressOf(switched, D.DOCTRINE.TEMPO).matches === 3;
+})());
+ck("切回去接著累積，不從零開始", (() => {
+  let b = tempoOn;
+  b = playM1(b); b = playM1(b);
+  b = M.setActiveDoctrine(b, D.DOCTRINE.CONTROL).mastery;
+  b = playM4(b);                                    // 這時推進 CONTROL
+  b = M.setActiveDoctrine(b, D.DOCTRINE.TEMPO).mastery;
+  b = playM1(b);
+  return M.doctrineProgressOf(b, D.DOCTRINE.TEMPO).matches === 3
+    && M.doctrineProgressOf(b, D.DOCTRINE.CONTROL).matches === 1;
+})());
+//  ⚠ 這條擋的是「快完成時切過去白拿」：進度必須是當下記帳，不能事後推導。
+ck("切換不得追溯把舊場次算進新流派", (() => {
+  let b = tempoOn;
+  for (let i = 0; i < 5; i++) b = playM1(b);        // TEMPO 累積 5
+  const switched = M.setActiveDoctrine(b, D.DOCTRINE.CONTROL).mastery;
+  return M.doctrineProgressOf(switched, D.DOCTRINE.CONTROL).matches === 0;
+})());
+
+// ── ⑳ migration / reload ───────────────────────────────────────────────
+ck("舊存檔沒有 doctrineProgress ⇒ 空", Object.keys(M.normalizeClubMastery({}).doctrineProgress).length === 0);
+ck("reload 後 activeDoctrine 正確", (() => {
+  const saved = JSON.parse(JSON.stringify(M.setActiveDoctrine(base, D.DOCTRINE.ADAPTIVE).mastery));
+  return M.normalizeClubMastery(saved).activeDoctrine === D.DOCTRINE.ADAPTIVE;
+})());
+ck("reload 後流派進度正確", (() => {
+  let b = tempoOn; b = playM1(b); b = playM1(b);
+  const saved = JSON.parse(JSON.stringify(b));
+  return M.doctrineProgressOf(M.normalizeClubMastery(saved), D.DOCTRINE.TEMPO).matches === 2;
+})());
+ck("存檔裡不存在的流派 id 被丟棄", Object.keys(M.normalizeClubMastery({ doctrineProgress: { nope: { matches: 9, intent: 9 } } }).doctrineProgress).length === 0);
+ck("intent 不得多於場次（壞存檔自我修正）",
+  M.normalizeClubMastery({ doctrineProgress: { tempo: { matches: 2, intent: 99 } } }).doctrineProgress.tempo.intent === 2);
+ck("負數進度被丟棄", Object.keys(M.normalizeClubMastery({ doctrineProgress: { tempo: { matches: -5, intent: -5 } } }).doctrineProgress).length === 0);
+ck("壞的 activeDoctrine ⇒ null", M.normalizeClubMastery({ activeDoctrine: "wat" }).activeDoctrine === null);
+
+// ── ㉑ 不得碰 production battle behavior ────────────────────────────────
+const MT = await import("../src/platform/contracts/MobaTacticConfig.js");
+ck("MobaTacticConfig 仍是 8 個戰術", MT.MOBA_TACTICS.length === 8);
+ck("m1 的引擎 knobs 未被 doctrine 影響", (() => {
+  const k = MT.toEngineTactic(MT.mobaTacticById("m1"));
+  return k.tacticId === "m1" && Number.isFinite(k.joinFight) && Number.isFinite(k.splitPush);
+})());
+//  CS runtime 只准出現在註解裡（說明為什麼 import 不到），不得出現在 import 陳述式。
+ck("doctrine 模組沒有 import CS runtime", (() => {
+  const src = readFileSync(new URL("../src/platform/mastery/doctrine.js", import.meta.url), "utf8");
+  return !/^\s*import\b.*battle\/fps/m.test(src);
+})());
 
 const passed = checks.filter((c) => c.ok).length;
 console.log(`\nClub Mastery v1：${passed}/${checks.length} ${passed === checks.length ? "PASS" : "FAIL"}`);

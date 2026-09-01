@@ -21,6 +21,7 @@
 //  純函式：不 import React / zustand / localStorage / 亂數 / 時鐘。
 // ============================================================================
 import { mobaTacticById } from "../contracts/MobaTacticConfig.js";
+import { DOCTRINE_IDS, doctrineOfTactic, isDoctrineId } from "./doctrine.js";
 
 export const CLUB_MASTERY_VERSION = "ClubMastery.v1";
 
@@ -46,6 +47,13 @@ export function emptyClubMastery() {
     tacticUsage: { moba: {}, cs: {} },
     //  同上，但只計「意圖達成」的場次。
     tacticIntent: { moba: {}, cs: {} },
+    //  ── 流派進度：**必須落盤，不能由上面兩個計數推導** ──────────────────
+    //  規則是「只有 Active Doctrine 的 progression 繼續推進」，所以進度得在
+    //  當下就記帳。若改成事後由 `tacticUsage` 推導，切換流派就會**追溯地**
+    //  把以前打的場次算進新流派 ⇒ 玩家只要在快完成時切過去就能白拿，
+    //  「聚焦」的選擇成本當場消失。
+    //  { tempo: { matches, intent }, ... } —— 切換流派**不清除**任何一格。
+    doctrineProgress: {},
     //  已領取的 mastery 獎勵。**不 prune**（生涯進度不會換日就消失）。
     claims: {},
   };
@@ -65,20 +73,79 @@ const modeBag = (raw) => Object.fromEntries(
   MASTERY_MODES.map((m) => [m, countBag(raw?.[m])]),
 );
 
+/** 流派進度袋：只留合法 doctrine id，且兩個計數都是非負整數。 */
+const progressBag = (raw) => {
+  const out = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  for (const id of DOCTRINE_IDS) {
+    const cell = raw[id];
+    if (!cell || typeof cell !== "object") continue;
+    const matches = Math.floor(Number(cell.matches));
+    const intent = Math.floor(Number(cell.intent));
+    const m = Number.isFinite(matches) && matches > 0 ? matches : 0;
+    const i = Number.isFinite(intent) && intent > 0 ? intent : 0;
+    if (m || i) out[id] = { matches: m, intent: Math.min(i, m) };  // intent 不可能多於場次
+  }
+  return out;
+};
+
 /** 讀存檔時的正規化。**形狀不對就當成空的**，不猜、不回填。 */
 export function normalizeClubMastery(saved) {
   if (!saved || typeof saved !== "object") return emptyClubMastery();
-  const doctrine = typeof saved.activeDoctrine === "string" && saved.activeDoctrine
-    ? saved.activeDoctrine
-    : null;
+  //  ⚠ 只接受**合法的** doctrine id。壞值或不存在的流派 ⇒ null，
+  //    否則玩家會停在一個查不到定義的流派上，而所有進度都不會推進。
+  const doctrine = isDoctrineId(saved.activeDoctrine) ? saved.activeDoctrine : null;
   return {
     schema: CLUB_MASTERY_VERSION,
     activeDoctrine: doctrine,
     tacticUsage: modeBag(saved.tacticUsage),
     tacticIntent: modeBag(saved.tacticIntent),
+    doctrineProgress: progressBag(saved.doctrineProgress),
     claims: (saved.claims && typeof saved.claims === "object" && !Array.isArray(saved.claims))
       ? { ...saved.claims } : {},
   };
+}
+
+/**
+ * 切換流派。
+ *
+ * ⚠ v1 刻意**免費、即時、無冷卻**：不扣 Club Points、不看 ServerTime、
+ *   不設現實時間門檻。選擇成本來自「只有 Active Doctrine 會推進」，
+ *   而不是懲罰——在單機經營遊戲裡懲罰式切換只會讓玩家不敢嘗試。
+ * ⚠ **切換不得清空任何既有進度。** 已累積的 `doctrineProgress` 原封不動，
+ *   切回去就接著算。
+ *
+ * @returns {{ok:boolean, mastery:object, reason:string|null}}
+ */
+export function setActiveDoctrine(mastery, doctrineId) {
+  const M = normalizeClubMastery(mastery);
+  //  允許傳 null 表示「不選」——但不接受亂填的 id（fail closed）。
+  if (doctrineId !== null && !isDoctrineId(doctrineId)) {
+    return { ok: false, mastery: M, reason: `沒有這個流派：${doctrineId}` };
+  }
+  if (M.activeDoctrine === doctrineId) return { ok: true, mastery: M, reason: null };
+  return { ok: true, reason: null, mastery: { ...M, activeDoctrine: doctrineId } };
+}
+
+/** 這條流派目前的進度（沒有紀錄 ⇒ 全 0，不回 undefined 讓呼叫端自己 `?? 0`）。 */
+export const doctrineProgressOf = (mastery, doctrineId) => {
+  const cell = normalizeClubMastery(mastery).doctrineProgress[doctrineId];
+  return { matches: cell?.matches ?? 0, intent: cell?.intent ?? 0 };
+};
+
+/**
+ * 這一場會不會推進流派進度。**唯一的判定處**，呼叫端不得自己拼條件。
+ *
+ * 條件是「這個戰術的流派 **就是** 目前的 Active Doctrine」：
+ *   · 沒選流派 ⇒ 不推進（v1 刻意如此：先做選擇，才有聚焦）
+ *   · 打的是別條流派的戰術 ⇒ 不推進（這就是「聚焦」的成本）
+ *   · 該 mode 尚未 mapping（CS）⇒ 不推進
+ */
+export function progressionDoctrineFor(mastery, mode, tacticId) {
+  const M = normalizeClubMastery(mastery);
+  if (!M.activeDoctrine) return null;
+  const d = doctrineOfTactic(mode, tacticId);
+  return d && d === M.activeDoctrine ? d : null;
 }
 
 /**
@@ -140,7 +207,17 @@ export function recordTacticUsage(mastery, { mode, tacticId, matchSource = "unkn
   const intentBag = { ...M.tacticIntent, [mode]: { ...M.tacticIntent[mode] } };
   if (intent) intentBag[mode][tacticId] = (intentBag[mode][tacticId] ?? 0) + 1;
 
-  return { ...M, tacticUsage: usage, tacticIntent: intentBag };
+  //  ── 流派進度**在當下結算**，不事後推導 ────────────────────────────────
+  //  只有「這個戰術的流派 == Active Doctrine」才推進。打別條流派的戰術，
+  //  原始計數照記（那是事實），但流派進度不動——那就是聚焦的成本。
+  const target = progressionDoctrineFor(M, mode, tacticId);
+  const progress = { ...M.doctrineProgress };
+  if (target) {
+    const cur = progress[target] ?? { matches: 0, intent: 0 };
+    progress[target] = { matches: cur.matches + 1, intent: cur.intent + (intent ? 1 : 0) };
+  }
+
+  return { ...M, tacticUsage: usage, tacticIntent: intentBag, doctrineProgress: progress };
 }
 
 /** 某模式下用過的不同戰術數（供 breadth 類 track 用）。 */
