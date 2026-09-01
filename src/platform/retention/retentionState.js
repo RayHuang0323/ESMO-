@@ -29,11 +29,20 @@ import {
   pickObjectives, scopePrefix, objectiveIdOf,
 } from "./retentionObjectives.js";
 
-/** 空的 retention 切片。舊存檔沒有這一塊 ⇒ 一律由這裡補，不散在各處寫 `?? {}`。 */
+/**
+ * 空的 retention 切片。舊存檔沒有這一塊 ⇒ 一律由這裡補，不散在各處寫 `?? {}`。
+ *
+ * ⚠ **點數是兩個欄位，不是一個。**
+ *   · `clubPointsLifetime` 累計**獲得**，只增不減 ⇒ 俱樂部等級讀這個。
+ *   · `clubPoints` 可花**餘額**，會減 ⇒ 兌換讀這個。
+ *   Retention v1 只進不出，所以一個欄位就夠；Meta Progression 給了點數出口，
+ *   若等級繼續讀餘額，玩家一消費就會**掉等級**——那是進度倒退，不是消費。
+ */
 export function emptyRetention() {
   return {
     schema: RETENTION_VERSION,
     clubPoints: 0,
+    clubPointsLifetime: 0,
     counters: {},
     sets: {},
     claims: {},
@@ -44,13 +53,40 @@ export function emptyRetention() {
 export function normalizeRetention(saved) {
   const base = emptyRetention();
   if (!saved || typeof saved !== "object") return base;
+  const balance = Math.max(0, Math.floor(Number(saved.clubPoints) || 0));
+  //  ⚠ 舊存檔沒有 lifetime。在這個欄位存在之前點數**只進不出** ⇒ 當時的餘額
+  //    就是累計值，以餘額回填才不會讓老玩家一升級就掉等級。這是唯一安全的假設。
+  //    另外夾住 lifetime ≥ balance：壞存檔若倒過來，等級不該低於手上已有的點數。
+  const savedLifetime = Number(saved.clubPointsLifetime);
+  const lifetime = Number.isFinite(savedLifetime) && savedLifetime >= 0
+    ? Math.max(Math.floor(savedLifetime), balance)
+    : balance;
   return {
     schema: RETENTION_VERSION,
-    clubPoints: Math.max(0, Math.floor(Number(saved.clubPoints) || 0)),
+    clubPoints: balance,
+    clubPointsLifetime: lifetime,
     counters: (saved.counters && typeof saved.counters === "object") ? { ...saved.counters } : {},
     sets: (saved.sets && typeof saved.sets === "object") ? { ...saved.sets } : {},
     claims: (saved.claims && typeof saved.claims === "object") ? { ...saved.claims } : {},
   };
+}
+
+/**
+ * 花掉俱樂部點數。**只動餘額，`clubPointsLifetime` 永遠不變。**
+ *
+ * ⚠ 這是「花點數不得降低 Club Level」唯一的實作點。任何兌換都必須走這裡，
+ *   不得自己去減 `clubPoints`——那會直接繞過這條保證。
+ *
+ * @returns {{ok:boolean, retention:object, reason:string|null}}
+ */
+export function spendClubPoints(retention, amount) {
+  const R = normalizeRetention(retention);
+  const n = Math.floor(Number(amount) || 0);
+  if (n <= 0) return { ok: false, retention: R, reason: "兌換金額必須是正整數" };
+  if (R.clubPoints < n) {
+    return { ok: false, retention: R, reason: `俱樂部點數不足（需要 ${n}，只有 ${R.clubPoints}）` };
+  }
+  return { ok: true, reason: null, retention: { ...R, clubPoints: R.clubPoints - n } };
 }
 
 /** 目前三個尺度的座標。呼叫端一律從這裡取，不自己算週或年。 */
@@ -224,7 +260,9 @@ export function retentionViewOf(retention, { coords, teamId = "team", leagueRank
     schema: RETENTION_VERSION,
     coords: c,
     clubPoints: R.clubPoints,
-    tier: clubTierOf(R.clubPoints),
+    clubPointsLifetime: R.clubPointsLifetime,
+    //  ⚠ 等級讀 **lifetime**，不是餘額——花點數不得讓俱樂部降級。
+    tier: clubTierOf(R.clubPointsLifetime),
     daily: byScope[OBJECTIVE_SCOPES.daily],
     weekly: byScope[OBJECTIVE_SCOPES.weekly],
     season: byScope[OBJECTIVE_SCOPES.season],
@@ -253,7 +291,9 @@ export function claimObjective(retention, objectiveId, view) {
     reason: null,
     retention: {
       ...R,
+      //  ⚠ 兩個都要推進：餘額給人花，lifetime 給等級讀。只加其中一個都會壞。
       clubPoints: R.clubPoints + gained,
+      clubPointsLifetime: R.clubPointsLifetime + gained,
       claims: { ...pruneScopes(R.claims, view.coords), [objectiveId]: true },
     },
   };

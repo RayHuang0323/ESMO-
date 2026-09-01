@@ -302,10 +302,15 @@ ck("P4) 練習**不算輪替、不算青訓**（週輪替與 U21 目標不吃練
 // ════════════════════════════════════════════════════════════════════════════
 console.log("\n【§V 推導不落盤】");
 
+//  ⚠ 這條守的是「**目標清單不落盤**」，不是「欄位永遠不得增加」。
+//    2026-09-01 Meta Progression v1 新增 `clubPointsLifetime`（累計獲得、
+//    只增不減，供俱樂部等級讀取）：花點數不得讓等級倒退，所以「累計」與
+//    「可花餘額」必須是兩個欄位。白名單隨之更新，**斷言強度不變**——
+//    任何不在清單上的欄位（尤其是目標清單或進度快取）仍然會讓這條失敗。
 ck("V1) 存檔只存點數／計數器／集合／領取紀錄——**目標清單不落盤**",
   (() => {
     const keys = Object.keys(S.emptyRetention()).sort();
-    return JSON.stringify(keys) === JSON.stringify(["claims", "clubPoints", "counters", "schema", "sets"]);
+    return JSON.stringify(keys) === JSON.stringify(["claims", "clubPoints", "clubPointsLifetime", "counters", "schema", "sets"]);
   })(),
   Object.keys(S.emptyRetention()).join(", "));
 
