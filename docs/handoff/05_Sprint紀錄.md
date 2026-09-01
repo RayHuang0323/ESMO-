@@ -16760,3 +16760,175 @@ CS-C5A 的五個 `*-prepared.wav` 共約 **31 MB** 已隨 `public/` 進正式站
 - 推送 `main` 後 GitHub Pages workflow `33332608619` 完成且 conclusion `success`；production URL `https://rayhuang0323.github.io/ESMO-/` HTTP `200`。
 - Production browser：C5V 全流程 `24/24 PASS`（desktop／390px、三圖 Battle、一般配對 pool 交集、BO1／BO3、reload/resume、errors `0`）；Owner hotfix targeted `8/8 PASS`（C2C rigged `10/10`、fallback `0`、MOBA hero list 100 位可捲到底、「安包」文案、loading restore）。
 - Deterministic／regression gates 與 production build 均維持 PASS；build 為 Vite `2764 modules`，只有既有 large-chunk warning。
+`check_cs23` 28/28、`check_online_cbr_v71` 48/48、`check_cbr_practice_room_v72` 40/40、
+`check_cbr_runtime_v725` 27/27、`check_battle_fairness_v726` 21/21、
+`check_battle_pool_equivalence_v727` 17/17，全數 exit 0。
+`npm run build` `✓ built in 18.74s`。
+
+### 八、本輪明確沒做
+
+未修改任何 CS runtime／gameplay、未改任何 CBR 數值（`starExcess`、`MATCH_BAND` 原封不動）、
+未開始 Rating。**未 push、未 deploy。**
+
+### 九、⚠ 更正（同日稍晚）：one-star 的效應**跨圖翻轉**，第四項判定作廢重寫
+
+上面第四節的 `one-star vs flat 92.8%` 只有 Mirage 一張圖。補完 cross-map 後結果如下——
+**同一組陣容、同一成本、同樣的 mirror 對齊，三張圖給出三個不同答案**：
+
+兩隊分別是 **[90, 46, 46, 46, 46]（cost 64.60）** 與 **[64×5]（cost 65.00）**，
+成本模型認為 one-star **還略便宜**。
+
+| map / tactic | one-star 勝率 | 95% CI | 效應 | n | 顯著 | arm1 / arm2 |
+|---|---|---|---|---|---|---|
+| mirage `t_apalace` | **92.8%** | ±1.8pp | **+42.75pp** | 800 | 是 | 93.5% / 92.0% |
+| dust2 `t_bsplit` | 45.5% | ±6.8pp | −4.50pp | 200 | 否 | 39.0% / 52.0% |
+| inferno `t_banana` | **0.5%** | ±1.3pp | **−49.50pp** | 200 | 是 | 0.0% / 1.0% |
+
+**效應跨度約 92pp，連正負號都翻轉。** 每張圖內兩個 arm 一致 ⇒ 不是席位假象。
+
+⇒ **`starExcess` 這個單一純量無法代表 CS 的明星集中度效應**——它要定價的那個量，
+本身的符號隨地圖改變。任何用單張圖校準出來的值，在另外兩張圖都會錯得很離譜。
+**這不是「0.05 太低」，是模型形狀問題。**
+
+⚠ 本節推翻本文件第四節對 one-star 的解讀，以及據此寫下的「premium 0.05 不建議保留」。
+正確表述見下方判定表。
+
+### 十、修正後的七項判定
+
+| # | 問題 | 判定 | 依據 |
+|---|---|---|---|
+| 1 | TD-52 是否完成 | **是** | 九項全量到 n／CI／效應／顯著性，基準 `identical` 49.8%（不顯著），cross-map 已做 |
+| 2 | TD-53 是否可關閉 | **是**（證據換成 n=400） | mirror 下 identical 49.8% ±4.9pp 不顯著；inferno 53.0%、dust2 42.0% 亦不顯著 |
+| 3 | CS cost delta 是否與 MOBA 同方向 | **是**，但量級差一個數量級 | 三圖皆成本高者勝；CS delta 1 = 65.1%，MOBA delta 15 = 65.0% |
+| 4 | premium 0.05 是否保留 | **無法判定**（不是保留、也不是修改） | one-star 效應跨圖 +42.75 → −49.50pp；單一純量無法表達 |
+| 5 | MATCH_BAND 4 是否保留 | **否** | delta 4 在三圖為 90.8% / 85.0% / 76.5%，皆顯著 |
+| 6 | MOBA / CS 是否可共用 CBR | **模型可共用、參數不可；且形狀問題未解** | `squadCostOf` 沒有地圖維度，換參數解不掉第 4 項 |
+| 7 | READY_FOR_RATING | **NO** | 第 4、5、6 未收斂前開 Rating 會把錯誤校準編進評分 |
+
+**本輪未修改**：任何 CS runtime、`starExcess`、`MATCH_BAND`、任何 CBR 數值。未 push、未 deploy、未開始 Rating。
+
+### 十一、Root-cause 診斷：one-star 的擺盪是 **role × tactic 交互**，不是 map
+
+⚠ 唯讀診斷。未改 runtime、`starExcess`、`MATCH_BAND`、seed 或斷言。
+
+**（1）換 tactic、同 map**（one-star `[90,46×4]` vs flat `[64×5]`，mirror，n=60）
+
+| map | tactic | one-star 勝率 | CI | 效應 |
+|---|---|---|---|---|
+| mirage | `t_apalace` | 92.8% | ±1.8pp | +42.75pp |
+| mirage | `t_bapps` | 86.7% | ±6.1pp | +36.67pp |
+| mirage | `t_midsplit` | 91.7% | ±5.0pp | +41.67pp |
+| inferno | **`t_banana`** | **0.5%** | ±1.3pp | **−49.50pp** |
+| inferno | `t_aexec` | 70.8% | ±8.0pp | +20.83pp |
+| inferno | `t_midctrl` | 67.5% | ±8.3pp | +17.50pp |
+| dust2 | `t_bsplit` | 45.5% | ±6.8pp | −4.50pp |
+
+**inferno 內部換 tactic 就有 70pp 擺盪**（0.5% → 70.8%），與跨圖差距同量級
+⇒ **排除「map 層級結構敏感度」作為主因**。
+
+**（2）星位輪換**：90 分星星輪流放 5 個 slot，其餘四人固定 46，對手固定 flat `[64×5]`，n=60/項
+
+| slot | role | mirage `t_apalace` | inferno `t_banana` |
+|---|---|---|---|
+| 0 | entry | **90.8% ±5.2pp** | **0.0% ±1.6pp** |
+| 1 | rifler | 69.2% ±8.2pp | 56.7% ±8.7pp（不顯著） |
+| 2 | **awp** | **1.7% ±2.7pp** | **0.0% ±1.6pp** |
+| 3 | support | 57.5% ±8.7pp（不顯著） | **88.3% ±5.8pp** |
+| 4 | rifler | 39.2% ±8.6pp | 52.5% ±8.8pp（不顯著） |
+
+**同一張圖、同一支戰術、同樣成本，只換星星所在的 slot，勝率就在 0% 與 90% 之間擺盪。**
+
+- **最佳 slot 隨 tactic 改變**：mirage `t_apalace` 是 entry（90.8%）；
+  inferno `t_banana` 是 support（88.3%），而 entry 在該戰術下是 **0.0%**。
+- **`awp` slot 在兩張圖都是災難**（1.7% / 0.0%）——把 90 分放在 awp 位置、
+  其餘四人 46，幾乎必敗。**這一項單獨值得 CS owner triage**：
+  可能與 AWP 的購買成本×弱隊友經濟、或該 role 的 route／架點行為有關。
+
+⇒ 先前寫的「跨圖翻轉」是**表象**：`onestar_vs_flat` 的建構
+（`[m+35, m−9×4]`）星星**永遠在 slot 0（entry）**，所以三張圖量到的是
+「entry 位置的星星在該戰術下值多少」，不是「明星集中度在該地圖值多少」。
+
+**結論**：主因是 **SLOT_ROLE**（role×tactic 交互），不是 MAP。
+`squadCostOf` 只吃 stats、沒有 role 或 context 維度，
+而引擎對**同一組 stats** 的反應可以從 0% 到 90% ⇒ **MODEL_SHAPE_PROBLEM**。
+標記 `TD52_AWP_SLOT_COLLAPSE_FOR_CS_OWNER`。
+
+## 2026-09-01　V7-2.9：Online CBR v2 Architecture Guardrails
+
+> 目標是**為 Codex 的 AWP triage 回來之後建立穩定邊界**，
+> 現在**不決定任何 role / tactic / map 權重**。
+> 未改 CS runtime、未改 `squadCostOf` 現有數值、未改 `starExcess`、未改 `MATCH_BAND`、
+> 未實作 role-aware 權重、未實作 tactic/map pricing、未開始 Rating。未 push、未 deploy。
+
+### 一、新增四份契約（全部是新檔，既有 production 檔案零修改）
+
+| 檔案 | 做什麼 |
+|---|---|
+| `contracts/onlineValuation.js` | `OnlineValuation.v1` 估值邊界 |
+| `contracts/cbrDecisionGate.js` | `CbrDecisionGate.v1` AWP triage 決策閘 |
+| `contracts/calibrationEvidence.js` | `CalibrationEvidence.v1` 證據必填契約 |
+| `contracts/matchmakingPolicy.js` | `MatchmakingPolicy.v1` 五層宣告 |
+
+### 二、Valuation Contract
+
+保留「同一份 authoritative SquadSnapshot」原則不動：`squadCostOf()` 維持原樣、
+仍是**唯一定價來源**。本層做的是**分離**而非取代——把「值多少錢」與
+「會打得多好」拆成兩個概念，讓未來的 role / context 有地方可放。
+
+輸出 `estimatedPower` / `valuationVersion` / `components` / `diagnostics` / `confidence`。
+
+**本版刻意什麼都不定價**：`estimatedPower` **就是 `squadCostOf()` 的值**，一個數字都沒變。
+- `components` 把那個純量拆成 `team` 與 `starExcess` 兩項，且**必須能還原成同一個數字**
+  ——還原不了就拋 `[VALUATION_SECOND_MODEL]`，因為那代表這裡偷偷變成第二套成本模型。
+- `roleAssignment` 與 `matchContext` **接受但不定價**，`diagnostics.*.priced` 恆為 `false`。
+- `confidence.status = "uncalibrated"`，且**未校準時不得帶 `confidence.level`**
+  （不編一個看起來像信心的數字）。`unmodelledFactors` 具名列出 slot_role（89pp）、
+  tactic（70pp）、tactic_ownership（19pp）三項與其證據路徑。
+
+⇒ 滿足「不要讓 matchmaking 只能依賴一個無法解釋的 scalar」。
+
+### 三、Matchmaking Policy 分層
+
+A `squadValuation` ／ B `capBracket` ／ C `matchBand` ／ D `opponentSelection`（未實作）／
+E `onlineRating`。**A 與 E 不得混成同一數值**——`assertRatingIsNotValuation()`
+擋估值欄位滲進評分層（與 `onlineCbr.js` 既有的 `RATING_FORBIDDEN` 互補，不重複）。
+
+保留產品原則：**生涯決定玩家擁有什麼戰隊；線上規則決定如何公平使用這支戰隊。**
+B/C/D 只准讀快照與估值，永不讀生涯欄位。
+
+⚠ 一併記錄 **`MATCH_BAND` 的證據衝突**：`onlineCbr.js` 註解宣稱「帶內最壞約 67%」
+（對 `simulateFixture` 校準），CS 真實引擎實測為 **76.5–90.8%**（三圖皆顯著）。
+**本輪不改 band**——改它是 production behavior 變更，且應由估值形狀推導，
+不是再猜一個常數。衝突寫進 `MATCH_BAND_EVIDENCE_CONFLICT`。
+
+### 四、Calibration Evidence Contract
+
+15 個必填欄位，每一個都對應一次真實踩坑：
+`runtimeSha`／`valuationVersion`／`harnessVersion`／`gameMode`／`map`／`tactic`／
+`lineup`／`seedPolicy`／`sampleN`／`winRate`／`ci95`／`effectSizePp`／`significant`／
+`evidenceId`／`timestamp`。
+
+`usableForTuning()` 另外把關三件事：runtime SHA 不符、樣本 < 385（±5pp 所需）、
+效應未顯著 ⇒ 皆不得用來調參。
+
+### 五、Decision Gate
+
+```
+AWP_TRIAGE = BUG        → cbrBlocked，等 CS owner 修正 → limited recalibration → 再評 valuation
+AWP_TRIAGE = DESIGN     → 解鎖 role-aware valuation experiment
+AWP_TRIAGE = UNRESOLVED → CBR BLOCKED，不進 Rating
+```
+
+**目前 `AWP_TRIAGE_STATUS = UNRESOLVED`**（Codex triage 中）。
+三種結果**都不解鎖 Rating**——Rating 需要的是估值形狀確定，不只是 AWP 一題。
+
+### 六、Verification
+
+`tools/check_online_valuation_v29.mjs`：**62/62 PASS**。純 contract 檢查，不跑引擎。
+含「production 數值逐值未變」的硬斷言（`starExcess === 0.05`、`MATCH_BAND === 4`、
+`BRACKETS` 四級邊界），以及「本輪不得動到 production matchmaking 檔案」的來源檢查。
+
+回歸：`check_online_cbr_v71` 48/48、`check_cbr_practice_room_v72` 40/40、
+`check_cbr_runtime_v725` 27/27、`check_battle_fairness_v726` 21/21、
+`check_battle_pool_equivalence_v727` 17/17、`check_cs23` 28/28，全數 exit 0。
+`npm run build` `✓ built in 10.31s`。

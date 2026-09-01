@@ -1287,3 +1287,48 @@ gate：`check_general_match_v7a`（47）＋ `browser_check_general_match_and_obj
 - C5V deterministic `35/35`、Browser `24/24`、Competition／Session 與 C5A/C5B/P0 regression、production build 全 PASS。Preview：`http://127.0.0.1:5187/ESMO-/`。
 - Owner 驗收後四項修正已納入；release code commit `9646786971304036773c465dfed6b199dab6ddb9` 以 fast-forward、零衝突整合並推送 `main`。Pages workflow `33332608619` success，production C5V `24/24` 與 targeted hotfix `8/8` PASS。
 - 正式標記：`C5V_OWNER_ACCEPTED`／`C5V_CLOSED`。Production：`https://rayhuang0323.github.io/ESMO-/`。C5C 未開始。
+---
+
+## V7-2.8 / V7-2.9　Online CBR v2（2026-09-01）— **BLOCKED，等 AWP triage**
+
+### 現況一句話
+
+CS 側的 CBR 已用真實引擎大樣本量過，結論是**現行參數不成立、而且問題不在參數**。
+架構護欄已就位，等 Codex 的 AWP slot triage 回來才知道往哪走。
+
+### 已完成
+
+- **V7-2.8 / TD-52**：CS 大樣本 CBR calibration（Mirage bounded calibration cell，
+  n=400/項、4400 場）＋ cross-map sanity ＋ root-cause 診斷。詳見 `05_Sprint紀錄.md`。
+- **V7-2.9**：四份契約（`onlineValuation` / `cbrDecisionGate` / `calibrationEvidence` /
+  `matchmakingPolicy`）＋ verifier `check_online_valuation_v29.mjs`（62/62）。
+  **未改任何 production 數值或行為。**
+
+### 三個已定案的結論
+
+1. **`MATCH_BAND = 4` 在 CS 不成立**：成本差 4 ⇒ 76.5–90.8%（三圖皆顯著）。
+   現行註解宣稱的 67% 來自 `simulateFixture`，與真實引擎不符。
+2. **`starExcess = 0.05` 無法判定**：等成本的 one-star 效應跨戰術從 +42.75pp 到
+   −49.50pp。**這是 MODEL_SHAPE_PROBLEM，不是參數問題。**
+3. **主因是 SLOT_ROLE（role × tactic 交互）**：同圖同戰術同成本，星星換席位
+   勝率 0%↔90%；哪個席位好由 tactic 決定。**不是 map 層級敏感度。**
+
+### 下一步（由 AWP triage 決定，不由本檔決定）
+
+```
+AWP_TRIAGE = BUG        → 等 CS owner 修正 → limited recalibration → 再評 valuation
+AWP_TRIAGE = DESIGN     → role-aware valuation experiment
+AWP_TRIAGE = UNRESOLVED → CBR BLOCKED，不進 Rating   ← 目前在這裡
+```
+
+### 一個尚未有答案的設計問題
+
+**tactic 在配對之後才決定。** 玩家在 `CsTacticScreen` 每場選戰術，而 tactic 正是
+決定 role 價值的維度。⇒ Valuation 在配對當下拿不到它最需要的 context。
+要嘛對 tactic 分布做邊際化、要嘛承認 power 是區間而非點值。
+這會直接決定 `confidence` 那一格的語意，需要 owner 決策。
+
+### 不做的事（本輪明文）
+
+不調 `starExcess`／`MATCH_BAND`、不實作 role-aware 權重、不實作 tactic/map pricing、
+不改 CS runtime、不開始 Rating、不 push／deploy。
