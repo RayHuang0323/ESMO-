@@ -50,6 +50,8 @@ const NAV = {
   newgame: "newGame",
   //  V6-3：休賽期。只有真的有年度決策時，首頁才會出現這個入口。
   offSeason: "offSeason",
+  //  Meta Progression v1：俱樂部專精（流派／專精進度／戰術變體）。
+  clubMastery: "clubMastery",
   //  V7B：俱樂部目標（日／週／季）。
   objectives: "objectives",
 };
@@ -672,6 +674,9 @@ function MobileNavSheet({ type, onSelect, onClose }) {
       //    完全不存在——瀏覽器實測抓到（手機 390 進不去目標頁）。入口必須在
       //    這裡也有一份，否則這個功能對手機玩家等於沒做。
       { id: "objectives", label: "俱樂部目標", detail: "今日／本週／本季", icon: "award" },
+      //  ⚠ 桌機 Utility 與手機「更多」**兩處都要加**：只加一邊，另一種裝置的
+      //    玩家等於沒有這個功能（V7B 與 V7-2.5 各踩過一次相反方向）。
+      { id: "clubMastery", label: "俱樂部專精", detail: "流派・專精・戰術變體", icon: "award" },
       { id: "finance", label: "財務", detail: "收支與預測", icon: "finance" },
       { id: "equip", label: "商店", detail: "物品與升級", icon: "package" },
       { id: "newgame", label: "新遊戲", detail: "重新開始", icon: "arrowUp" },
@@ -840,6 +845,7 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
     { id: "training", label: "訓練中心", icon: "signal" },
     { id: "recruit", label: "招募", icon: "arrowUp" },
     { id: "objectives", label: "俱樂部目標", icon: "award", badge: objectiveBadge },
+    { id: "clubMastery", label: "俱樂部專精", icon: "award" },
     { id: "newgame", label: "開新局", icon: "arrowUp" },
     { id: "equip", label: "商店", icon: "package" },
   ], [objectiveBadge]);
