@@ -666,6 +666,137 @@ ck("vertical slice：正式比賽 → 進度 → 領取 → 解鎖 → 可裝備
   return C.canEquipVariant(backHome, "m1_measured_siege").ok === true;         // 切回可用
 })());
 
+
+// ══════════════════════════════════════════════════════════════════════════
+//  Task 6：profileStore 接線
+//
+//  ⚠ 這一段驗的是**真實 store**，不是把 domain 再測一次。重點只有三件事：
+//    ① action 真的把結果寫進 canonical state 並存得住
+//    ② store 沒有自己重寫一份規則
+//    ③ 失敗路徑完全不改 state
+// ══════════════════════════════════════════════════════════════════════════
+const store = await import("../src/platform/profileStore.js");
+const S = store.useProfileStore;
+
+console.log("\n【Task 6：Store 接線】");
+
+const resetMastery = (bag) => S.setState({ clubMastery: M.normalizeClubMastery(bag) });
+const snap = () => JSON.parse(JSON.stringify(S.getState().clubMastery));
+
+// ── ㊸ actions 與 selectors 都在 ────────────────────────────────────────
+for (const fn of ["setActiveDoctrine", "claimMasteryTrack", "masteryView", "masteryEligibility", "equippableVariants", "variantsForTactic"]) {
+  ck(`store 提供 ${fn}()`, typeof S.getState()[fn] === "function");
+}
+ck("store 的初始 clubMastery 是正規化後的空袋",
+  S.getState().clubMastery.schema === "ClubMastery.v1" && S.getState().clubMastery.unlockedVariants.length === 0);
+
+// ── ㊹ setActiveDoctrine：只改一個欄位 ──────────────────────────────────
+resetMastery(M.emptyClubMastery());
+const beforeSwitch = snap();
+const sw1 = S.getState().setActiveDoctrine(D.DOCTRINE.TEMPO);
+ck("切換成功", sw1.ok === true && sw1.activeDoctrine === D.DOCTRINE.TEMPO);
+ck("寫進 canonical state", S.getState().clubMastery.activeDoctrine === D.DOCTRINE.TEMPO);
+ck("除了 activeDoctrine 之外什麼都沒動", (() => {
+  const a = { ...beforeSwitch, activeDoctrine: D.DOCTRINE.TEMPO };
+  return JSON.stringify(a) === JSON.stringify(snap());
+})());
+ck("壞的 doctrine 被拒", S.getState().setActiveDoctrine("nope").ok === false);
+ck("被拒時 state 零變化", (() => {
+  const before = snap();
+  S.getState().setActiveDoctrine("nope");
+  return JSON.stringify(before) === JSON.stringify(snap());
+})());
+
+// ── ㊺ claimMasteryTrack：成功一次、重複零變化 ──────────────────────────
+//  先用 domain 把進度做到門檻，再從 store 領——驗的是 store 的寫入，不是計數。
+let ready = M.setActiveDoctrine(M.emptyClubMastery(), D.DOCTRINE.TEMPO).mastery;
+for (let i = 0; i < 3; i++) ready = M.recordTacticUsage(ready, { mode: "moba", tacticId: "m1", matchSource: "competitive", intent: true });
+resetMastery(ready);
+
+ck("未領前不在 unlockedVariants", S.getState().clubMastery.unlockedVariants.length === 0);
+const cl1 = S.getState().claimMasteryTrack("tempo_execution");
+ck("領取成功", cl1.ok === true, cl1.reason ?? "");
+ck("回傳解鎖的變體 id", cl1.unlockedVariantId === "m1_measured_siege");
+ck("unlock 寫進 canonical state", S.getState().clubMastery.unlockedVariants.includes("m1_measured_siege"));
+ck("claims 寫進 canonical state", S.getState().clubMastery.claims.tempo_execution === true);
+
+const afterFirstClaim = snap();
+const cl2 = S.getState().claimMasteryTrack("tempo_execution");
+ck("重複領被拒", cl2.ok === false);
+//  ⚠ 這一條是本輪的核心：重複領不得產生**任何** state change。
+ck("重複領 state 逐位元不變", JSON.stringify(afterFirstClaim) === JSON.stringify(snap()));
+
+// ── ㊻ fail closed 時 profile 不變 ─────────────────────────────────────
+ck("未知 track 被拒", S.getState().claimMasteryTrack("nope").ok === false);
+ck("未知 track 後 state 不變", JSON.stringify(afterFirstClaim) === JSON.stringify(snap()));
+ck("條件未達時被拒且不寫入", (() => {
+  resetMastery(M.setActiveDoctrine(M.emptyClubMastery(), D.DOCTRINE.CONTROL).mastery);
+  const before = snap();
+  const r = S.getState().claimMasteryTrack("control_breadth");
+  return r.ok === false && JSON.stringify(before) === JSON.stringify(snap());
+})());
+
+// ── ㊼ 切換流派不刪任何東西 ─────────────────────────────────────────────
+resetMastery(M.normalizeClubMastery(afterFirstClaim));
+S.getState().setActiveDoctrine(D.DOCTRINE.CONTROL);
+ck("切換後 unlock 仍在", S.getState().clubMastery.unlockedVariants.includes("m1_measured_siege"));
+ck("切換後 mastery 進度仍在", M.doctrineProgressOf(S.getState().clubMastery, D.DOCTRINE.TEMPO).intent === 3);
+ck("切換後 claims 仍在", S.getState().clubMastery.claims.tempo_execution === true);
+ck("切換後該變體不可裝備", S.getState().equippableVariants().length === 0);
+S.getState().setActiveDoctrine(D.DOCTRINE.TEMPO);
+ck("切回後又可裝備", S.getState().equippableVariants().some((v) => v.variantId === "m1_measured_siege"));
+
+// ── ㊽ selector 等於 domain（store 沒有自己重寫規則）────────────────────
+ck("masteryView 與 domain 逐值相同",
+  JSON.stringify(S.getState().masteryView()) === JSON.stringify(C.masteryViewOf(S.getState().clubMastery)));
+ck("masteryEligibility 與 domain 相同",
+  JSON.stringify(S.getState().masteryEligibility("tempo_execution")) ===
+  JSON.stringify(C.masteryEligibilityOf(S.getState().clubMastery, "tempo_execution")));
+ck("variantsForTactic 與 domain 相同",
+  JSON.stringify(S.getState().variantsForTactic("m1")) ===
+  JSON.stringify(C.variantsAvailableForTactic(S.getState().clubMastery, "m1")));
+ck("equippableVariants 與 domain 相同",
+  JSON.stringify(S.getState().equippableVariants()) ===
+  JSON.stringify(C.equippableVariants(S.getState().clubMastery)));
+
+// ── ㊾ reload 後 selector 結果一致 ─────────────────────────────────────
+ck("reload 後 unlock 一致", (() => {
+  const saved = snap();
+  resetMastery(M.emptyClubMastery());          // 清掉
+  resetMastery(saved);                         // 再載回來
+  return S.getState().clubMastery.unlockedVariants.includes("m1_measured_siege");
+})());
+ck("reload 後 masteryView 一致", (() => {
+  const saved = snap();
+  const before = JSON.stringify(S.getState().masteryView());
+  resetMastery(M.emptyClubMastery());
+  resetMastery(saved);
+  return JSON.stringify(S.getState().masteryView()) === before;
+})());
+ck("reload 後仍可裝備", S.getState().equippableVariants().some((v) => v.variantId === "m1_measured_siege"));
+
+// ── ㊿ store 沒有第二份規則 ────────────────────────────────────────────
+//  ⚠ 規則若同時存在 domain 與 store，被修的永遠只有其中一份。
+ck("profileStore 沒有自己判斷 doctrine / variant / track 的分支", (() => {
+  const src = readFileSync(new URL("../src/platform/profileStore.js", import.meta.url), "utf8");
+  const start = src.indexOf("Club Mastery（Meta Progression v1）");
+  const end = src.indexOf("CS 訓練賽入史", start);
+  if (start < 0 || end < 0) return false;
+  const section = src.slice(start, end);
+  //  這一段只准呼叫 domain helper，不得出現自己的資格判斷。
+  return !/\bif\s*\(\s*(doctrineId|variantId|trackId)\s*===/.test(section)
+    && !section.includes("DOCTRINE.")
+    && !section.includes("TACTIC_VARIANTS");
+})());
+ck("store 沒有第二份 mastery state（只有一個 clubMastery 欄位）", (() => {
+  const src = readFileSync(new URL("../src/platform/profileStore.js", import.meta.url), "utf8");
+  return (src.match(/^\s*clubMastery:/gm) ?? []).length === 2;   // 初始狀態 ＋ migration 各一次
+})());
+
+// ── BASIC 不受 store 影響 ─────────────────────────────────────────────
+ck("store 視角下 BASIC 仍恆可用",
+  MT.MOBA_TACTICS.every((t) => S.getState().variantsForTactic(t.tacticId).basic === true));
+
 const passed = checks.filter((c) => c.ok).length;
 console.log(`\nClub Mastery v1：${passed}/${checks.length} ${passed === checks.length ? "PASS" : "FAIL"}`);
 if (passed !== checks.length) process.exitCode = 1;

@@ -66,7 +66,16 @@ import {
 } from "./retention/retentionState.js";
 //  Meta Progression v1：生涯累積打法。**獨立 domain**，不與 retention 共用袋子
 //  ——retention 的計數器會被 pruneScopes 依日／週／季清掉，mastery 不會。
-import { emptyClubMastery, normalizeClubMastery } from "./mastery/clubMasteryState.js";
+import {
+  emptyClubMastery, normalizeClubMastery,
+  setActiveDoctrine as setActiveDoctrineIn,
+} from "./mastery/clubMasteryState.js";
+//  ⚠ 規則 authority 在 domain 層。store 只包裝，不重寫任何一條資格判定。
+import {
+  masteryViewOf, masteryEligibilityOf, variantsAvailableForTactic,
+  equippableVariants as equippableVariantsOf,
+  claimMasteryReward as claimMasteryRewardIn,
+} from "./mastery/clubMastery.js";
 import { newGameFinancials } from "./economy/newGame.js";
 import { ensureTeamIdentity } from "./identity/teamIdentity.js";
 //  ── Milestone Q3：賽事系統。規則全在 competition/ 的純函式裡，
@@ -3637,6 +3646,65 @@ export const useProfileStore = create((rawSet, get) => {
     get().save();
     return { ok: true, gained: r.gained, reason: null, clubPoints: r.retention.clubPoints };
   },
+
+  // ── Club Mastery（Meta Progression v1）─────────────────────────────
+  //
+  //  ⚠ **本區只做 orchestration。** 規則的 authority 一律留在
+  //    `mastery/clubMastery.js`、`mastery/doctrine.js`、`mastery/tacticVariant.js`。
+  //    這裡不得出現 `if (doctrine…)` / `if (variant…)` / `if (track…)`——
+  //    規則在兩個地方就會有兩份，而畫面那一份永遠是後被修的那個。
+  //  ⚠ 所有 mutation 都走 canonical profile state ＋ `save()`：
+  //    unlock／doctrine／progress 一律不得由畫面自己保存。
+
+  /** 目前的 mastery 總覽（純推導，不落盤）。 */
+  masteryView() {
+    return masteryViewOf(get().clubMastery);
+  },
+
+  /** 某條 track 現在能不能領，以及被什麼擋住。**判定在 domain，不在這裡。** */
+  masteryEligibility(trackId) {
+    return masteryEligibilityOf(get().clubMastery, trackId);
+  },
+
+  /** 這一刻真的能派上場的變體。 */
+  equippableVariants() {
+    return equippableVariantsOf(get().clubMastery);
+  },
+
+  /** 某個基礎戰術現在可用的東西（BASIC 恆可用，見 domain）。 */
+  variantsForTactic(tacticId) {
+    return variantsAvailableForTactic(get().clubMastery, tacticId);
+  },
+
+  /**
+   * 切換流派。
+   *
+   * ⚠ **只改 `activeDoctrine`**：不清 mastery progress、不刪 unlockedVariants、
+   *   不碰 Club Points、不碰 CareerTime／ServerTime。
+   *   免費且即時——選擇成本是「只有目前流派會推進」，不是懲罰。
+   */
+  setActiveDoctrine(doctrineId) {
+    const r = setActiveDoctrineIn(get().clubMastery, doctrineId);
+    if (!r.ok) return { ok: false, reason: r.reason, activeDoctrine: get().clubMastery?.activeDoctrine ?? null };
+    set({ clubMastery: r.mastery });
+    get().save();
+    return { ok: true, reason: null, activeDoctrine: r.mastery.activeDoctrine };
+  },
+
+  /**
+   * 領取一條 mastery track 的獎勵。
+   *
+   * ⚠ 冪等與資格判定都在 `claimMasteryReward` 裡；這裡只負責
+   *   「失敗就完全不寫入、成功就一次寫入並存檔」。
+   */
+  claimMasteryTrack(trackId) {
+    const r = claimMasteryRewardIn(get().clubMastery, trackId);
+    if (!r.ok) return { ok: false, reason: r.reason, unlockedVariantId: null };
+    set({ clubMastery: r.mastery });
+    get().save();
+    return { ok: true, reason: null, unlockedVariantId: r.unlockedVariantId };
+  },
+
   // ── CS 訓練賽入史（Sprint23）────────────────────────────────────────
   /**
    * CS 訓練賽結果唯一入史口（冪等：同 matchId 重複呼叫回傳既有 entry，不重複入帳）。
