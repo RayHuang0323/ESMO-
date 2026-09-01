@@ -71,6 +71,28 @@ navigation / status icon 語意。
 顏色與文字狀態。瀏覽器若無法強制模擬該媒體偏好，交付時仍須以程式碼路徑與支援
 標記誠實回報，不宣稱已完成真機體感驗收。
 
+### 5.1 兩種實作路徑（2026-09-02 補）
+
+**GSAP 只在需要 timeline 編排時才用。** 單純的進場、hover、pulse、一次性回饋用
+純 CSS 就夠，不必為此加依賴：
+
+| 情境 | 作法 | 參考 |
+| --- | --- | --- |
+| 多元素依序編排、需要 cleanup 的 timeline | scoped `useGSAP` | `src/screens/dashboard/useDashboardMotion.js` |
+| 進場 stagger、hover／press、狀態 pulse、一次性完成回饋 | 畫面自己的 CSS 檔 + `@keyframes` | `src/screens/manage/clubMastery.css` |
+
+CSS 路徑的 stagger 用 `animation-delay: var(--cm-delay)`，延遲值由 React 以 inline
+custom property 帶入；`prefers-reduced-motion` 用一個 `@media` 區塊統一關掉。
+
+**Accent 換色可以 transition。** CSS 自訂屬性本身不能 transition，但**用到它的
+具體屬性**（`color` / `background` / `border-color`）可以——所以像 Club Mastery
+那樣「切換流派 ⇒ 整頁換色」是順的，不是硬跳。
+
+### 5.2 規則出處
+
+Motion 的**允許／禁止清單**是全專案規則，住在 `AGENTS.md` §Motion Policy
+（跨模型共用），不在本檔重複。本節只講在 ESMO 裡怎麼實作。
+
 ## 6. Data honesty and architecture boundary
 
 Home 只讀現有 `profileStore` 資料與 `currentWeekPreview()` / `cashForecast()`，不在

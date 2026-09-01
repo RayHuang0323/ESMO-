@@ -16932,3 +16932,80 @@ AWP_TRIAGE = UNRESOLVED → CBR BLOCKED，不進 Rating
 `check_cbr_runtime_v725` 27/27、`check_battle_fairness_v726` 21/21、
 `check_battle_pool_equivalence_v727` 17/17、`check_cs23` 28/28，全數 exit 0。
 `npm run build` `✓ built in 10.31s`。
+
+---
+
+## Club Mastery Visual V2 + Motion Policy（2026-09-02）
+
+承 P0 全域捲動修復（commit `b14aa73`）。本輪只動**呈現層與制度文件**，
+不碰 domain：`clubMasteryState` / `doctrine` / `tacticVariant` / `clubMastery`
+與 `profileStore` 的 mastery API 全部逐字未改。
+
+### 一、Club Mastery Visual V2
+
+**問題**：V1 是三張長相相同的流派卡＋三張進度卡，而規則是「**只有進行中的
+流派會累積**」。那條規則只寫在一行灰色小字裡——資訊在，但層級沒有反映它。
+
+**做法**：讓層級**就是**規則。
+
+- 現行流派升為 hero，帶自己的色相（強攻 `#fb923c`／控圖 `#38bdf8`／
+  應變 `#a78bfa`），accent 透過 `--doctrine-accent` 灌到全頁。
+- 另外兩條保持**完整可讀**但明顯沉睡（無色、低不透明度），點一下就換過去。
+  **沒有藏任何資訊**，只是重量不同。
+- 進度改用**分段刻度**而非百分比條：條件本來就是「打幾場」這種整數，
+  連續進度條會謊報精度。
+- 綠色在這一頁**只代表達成**（可領取／賽前可選），不當裝飾色。
+- 流派標記改為自繪 SVG，不用 `doctrine.emoji`：Windows 上 `🔄` 會 fallback 成
+  帶 END 字樣的箭頭；且設計系統 §4 明文說 navigation/status 不用 Emoji。
+  `doctrine.js` 的 emoji 欄位保留未動，供其他畫面使用。
+- V1 的「點現行流派＝取消選定」在 V2 沒有對應手勢，因此把該功能明確保留為
+  hero 內的「暫停累積」按鈕（`data-testid="doctrine-clear"`），不讓它悄悄消失。
+
+新增 `src/screens/manage/clubMastery.css`（純 CSS，無新依賴）。
+
+### 二、Motion Policy（取代舊共識）
+
+「ESMO 避免動畫」這條口耳相傳的舊規則**正式作廢**。新規則寫進：
+
+- `AGENTS.md` §Motion Policy — 跨模型完整版，含允許／禁止清單與建議時長表。
+- `docs/handoff/03_開發規範.md` §Motion Policy — 短版＋指回 AGENTS.md。
+- `docs/design/ESMO_Design_System_v1.md` §5.1／§5.2 — 兩種實作路徑
+  （GSAP timeline vs 純 CSS）與規則出處。
+
+判準一句話：**這個動態有沒有在傳達狀態變化？** 有就做，沒有就不要做。
+`prefers-reduced-motion: reduce` 是**必要條件**，不是加分項。
+
+三份制度檔改動前皆已備份為 `_backup_20260902_*`。
+
+### 三、Verification
+
+- `tools/browser_check_club_mastery_ui.mjs`：**68/68 PASS**（桌機 1366 / 手機 390）。
+  本輪把它從「只驅動 store」補成**真的點 DOM**：點入口進頁、按「領取獎勵」、
+  點沉睡卡換派、換派後 accent 實測為 `#38bdf8`、reduced-motion 下
+  `animationName === "none"` 且 hero `opacity=1 / transform=none`、捲動到底。
+- `tools/browser_check_global_scroll.mjs`：45/45 PASS（P0 契約未回歸）。
+- 契約回歸全綠：`check_club_mastery_v1` 265/265、`check_retention_v7b`、
+  `check_general_match_v7a`、`check_dash10`、`check_online_valuation_v29` 62/62、
+  `check_cs23` 28/28。
+- `npm run build` `✓ built in 20.63s`。
+
+**未經真機實測**（Node/CDP 驗不了）：實際觸控手感、真機 FPS、
+真實系統層級 reduced-motion 偏好（本輪用 CDP `Emulation.setEmulatedMedia` 模擬）。
+
+### 四、UI 現代化 backlog（本輪盤點，未動工）
+
+目前只有 4 個畫面用新設計語言（`DashboardScreen`、`RosterScreen`、
+`PlayerDetailScreen`、`ClubMasteryScreen`）。其餘仍是 inline-style 舊語言。
+依「玩家看到的頻率 × 目前散亂程度」排序，建議優先：
+
+1. `manage/CompetitionScreen.jsx`（660 行 / 90 處 inline style）— 賽事是主迴圈
+2. `manage/FinanceScreen.jsx`（403 / 102）— 每週必看，且自創深紫調
+3. `manage/TeamDevelopmentScreen.jsx`（359 / 88）— 與 Club Mastery 同層級的養成頁
+4. `manage/RecruitScreen.jsx`（321 / 86）— 最長的頁面（P0 量到 docH 3234）
+5. `moba/BanPickScreen.jsx`（685 / 84）與 `moba/LineupScreen.jsx`（303 / 67）
+6. `manage/TrainingScreen.jsx`（232 / 53）、`manage/ObjectivesScreen.jsx`（185 / 37）
+7. CS 系列 `fps/CsPrepScreen`（225 / 52）、`fps/CsTacticScreen`（173 / 49）、
+   `fps/CsResultScreen`（137 / 52）—— 但 CS runtime 有 owner 邊界，只動呈現層
+
+`manage/honors/*` 與 `manage/asiaFinals/*` 已無 inline style，改造成本最低，
+可當作下一輪的暖身。

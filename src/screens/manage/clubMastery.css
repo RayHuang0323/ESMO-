@@ -1,0 +1,733 @@
+/* ==========================================================================
+   screens/manage/clubMastery.css — 俱樂部專精 Visual V2
+
+   ── 這一頁的視覺主張 ─────────────────────────────────────────────────────
+   規則是「只有進行中的流派會累積」。V1 把這句話寫成灰色小字，三條流派長得
+   一模一樣——規則在文字裡，不在眼睛裡。V2 讓層級「就是」那條規則：進行中的
+   流派整段點亮並帶自己的色相，其餘兩條保持可讀但明顯沉睡。什麼都沒有藏起來，
+   只是重量不同。
+
+   `--doctrine-accent` 由 React 依現行流派注入；顏色一換，hero、刻度、變體邊框
+   一起換。CSS 自訂屬性本身不能 transition，但「用到它的具體屬性」可以，所以
+   切換流派時是整頁順順地換色，不是硬跳。
+
+   刻度（.cm__notch）是這頁的簽名元件：條件本來就是「幾場」這種整數，用連續
+   進度條會謊報精度。斜切的分段刻度誠實地說「還差兩場」。
+   ========================================================================== */
+
+.cm,
+.cm * { box-sizing: border-box; }
+
+.cm {
+  position: relative;
+  min-height: 100%;
+  padding-bottom: 34px;
+  overflow-x: hidden;
+  color: var(--esmo-text);
+  font-family: var(--esmo-font);
+  background:
+    radial-gradient(circle at 8% -4%, color-mix(in srgb, var(--doctrine-accent) 16%, transparent), transparent 26rem),
+    radial-gradient(circle at 96% 30%, color-mix(in srgb, var(--doctrine-accent) 8%, transparent), transparent 22rem),
+    var(--esmo-ink);
+  transition: background 620ms ease;
+}
+
+.cm__canvas {
+  width: min(100%, 720px);
+  margin: 0 auto;
+  padding: 14px clamp(12px, 3.4vw, 22px) 0;
+}
+
+/* 等級條與「基礎戰術永遠可用」：桌機並排，手機自然疊起。 */
+.cm__meta {
+  display: grid;
+  gap: 11px;
+  margin-top: 13px;
+}
+
+.cm__meta > .cm__club,
+.cm__meta > .cm__note { margin-top: 0; }
+
+@media (min-width: 660px) {
+  .cm__meta {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+
+  .cm__meta > .cm__note { align-self: center; }
+}
+
+.cm button { font: inherit; }
+
+.cm button:focus-visible {
+  outline: 2px solid var(--doctrine-accent);
+  outline-offset: 3px;
+}
+
+/* ── 共用排版原子 ──────────────────────────────────────────────────────── */
+
+.cm__eyebrow {
+  margin: 22px 0 9px;
+  color: var(--esmo-muted);
+  font-family: var(--esmo-mono);
+  font-size: 10px;
+  font-weight: 700;
+  /* 中文本來就有字距，0.2em 會散成一顆一顆的字；0.12em 剛好還讀得出是標籤。 */
+  letter-spacing: 0.12em;
+}
+
+.cm__data {
+  font-family: var(--esmo-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 頂列 ─────────────────────────────────────────────────────────────── */
+
+.cm__bar {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.cm__back {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: var(--esmo-text);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--esmo-line);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.cm__back:hover { background: rgba(255, 255, 255, 0.1); }
+.cm__back:active { transform: scale(0.94); }
+
+.cm__titles { min-width: 0; }
+
+.cm__title {
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.cm__subtitle {
+  margin-top: 1px;
+  color: var(--esmo-muted);
+  font-size: 10.5px;
+}
+
+.cm__wallet {
+  margin-left: auto;
+  flex: 0 0 auto;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cm__wallet-value {
+  color: var(--esmo-tactical);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.cm__wallet-label {
+  color: var(--esmo-muted);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+/* ── Hero：現行流派 ───────────────────────────────────────────────────── */
+
+.cm__hero {
+  position: relative;
+  margin-top: 16px;
+  padding: 18px clamp(14px, 3.6vw, 20px) 16px;
+  overflow: hidden;
+  background:
+    linear-gradient(150deg, color-mix(in srgb, var(--doctrine-accent) 15%, transparent), transparent 62%),
+    var(--esmo-surface);
+  border: 1px solid color-mix(in srgb, var(--doctrine-accent) 34%, transparent);
+  border-radius: 22px;
+}
+
+/* 極慢、極淡的環境光。它只是讓現行流派看起來是「活的」。 */
+.cm__hero::after {
+  position: absolute;
+  top: -40%;
+  right: -18%;
+  width: 62%;
+  height: 180%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--doctrine-accent) 20%, transparent), transparent);
+  content: "";
+  pointer-events: none;
+  animation: cm-drift 17s ease-in-out infinite alternate;
+}
+
+.cm__hero-head {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
+.cm__hero-mark {
+  display: flex;
+  flex: 0 0 auto;
+  align-self: center;
+  color: var(--doctrine-accent);
+  transition: color 620ms ease;
+}
+
+.cm__hero-name {
+  min-width: 0;
+  font-size: clamp(25px, 6.4vw, 34px);
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+.cm__hero-live {
+  margin-left: auto;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  color: var(--doctrine-accent);
+  font-family: var(--esmo-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  background: color-mix(in srgb, var(--doctrine-accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--doctrine-accent) 45%, transparent);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.cm__hero-dot {
+  width: 5px;
+  height: 5px;
+  background: var(--doctrine-accent);
+  border-radius: 50%;
+  animation: cm-pulse 2.6s ease-in-out infinite;
+}
+
+/*  ⚠ 不要在這裡設 `ch` 為單位的 max-width：`ch` 量的是 `0` 的寬度，中文字約是它
+    的兩倍，於是 42ch 只放得下 21 個中文字，主張句會被切成孤字。 */
+.cm__hero-claim {
+  position: relative;
+  margin-top: 10px;
+  color: #d7dbe4;
+  font-size: 12.5px;
+  line-height: 1.7;
+  overflow-wrap: break-word;
+}
+
+.cm__hero-rule {
+  position: relative;
+  margin-top: 12px;
+  padding-top: 12px;
+  color: var(--esmo-muted);
+  font-size: 10.5px;
+  line-height: 1.65;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  overflow-wrap: break-word;
+}
+
+/* 少用但不能消失的控制項：安靜、不搶焦點，仍然點得到。 */
+.cm__hero-pause {
+  margin-left: 7px;
+  padding: 0;
+  color: var(--esmo-muted);
+  font-size: 10.5px;
+  font-weight: 700;
+  background: none;
+  border: 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.22);
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+
+.cm__hero-pause:hover {
+  color: #cbd5e1;
+  border-bottom-color: rgba(255, 255, 255, 0.5);
+}
+
+/* ── 俱樂部等級條 ─────────────────────────────────────────────────────── */
+
+.cm__club {
+  position: relative;
+  margin-top: 13px;
+  padding: 11px 13px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--esmo-line);
+  border-radius: 14px;
+}
+
+.cm__club-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.cm__club-icon { font-size: 15px; }
+
+.cm__club-name {
+  font-size: 12.5px;
+  font-weight: 900;
+}
+
+.cm__club-next {
+  margin-left: auto;
+  color: var(--esmo-muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.cm__rail {
+  position: relative;
+  height: 4px;
+  margin-top: 9px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.cm__rail-fill {
+  height: 100%;
+  background: var(--esmo-tactical);
+  border-radius: 999px;
+  transition: width 520ms cubic-bezier(0.22, 0.9, 0.28, 1);
+}
+
+.cm__note {
+  margin-top: 13px;
+  color: var(--esmo-muted);
+  font-size: 10.5px;
+  line-height: 1.7;
+  overflow-wrap: break-word;
+}
+
+.cm__note strong {
+  color: #cbd5e1;
+  font-weight: 800;
+}
+
+/* ── 刻度：這一頁的簽名元件 ───────────────────────────────────────────── */
+
+.cm__notches {
+  display: flex;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.cm__notch {
+  width: 22px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  transform: skewX(-15deg);
+  transition: background 320ms ease, border-color 320ms ease, box-shadow 320ms ease;
+}
+
+.cm__notch--on {
+  background: var(--doctrine-accent);
+  border-color: var(--doctrine-accent);
+  box-shadow: 0 0 13px -3px var(--doctrine-accent);
+}
+
+.cm__notch--next {
+  border-color: color-mix(in srgb, var(--doctrine-accent) 62%, transparent);
+  animation: cm-breathe 2.6s ease-in-out infinite;
+}
+
+.cm__notch--done {
+  background: var(--esmo-signal);
+  border-color: var(--esmo-signal);
+  box-shadow: 0 0 13px -3px var(--esmo-signal);
+}
+
+.cm__notches--small .cm__notch {
+  width: 13px;
+  height: 7px;
+}
+
+/* ── 進行中流派的專精進度 ─────────────────────────────────────────────── */
+
+.cm__track {
+  position: relative;
+  margin-top: 10px;
+  padding: 13px 14px;
+  background: var(--esmo-surface);
+  border: 1px solid var(--esmo-line);
+  border-radius: 16px;
+}
+
+.cm__track[data-claimable="1"] {
+  background: linear-gradient(160deg, rgba(52, 211, 153, 0.1), transparent 58%), var(--esmo-surface);
+  border-color: color-mix(in srgb, var(--esmo-signal) 46%, transparent);
+}
+
+.cm__track[data-claimed="1"] { opacity: 0.82; }
+
+.cm__track-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.cm__track-name {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.cm__track-count {
+  margin-left: auto;
+  color: var(--esmo-muted);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cm__track[data-done="1"] .cm__track-count { color: var(--esmo-signal); }
+
+.cm__track-desc {
+  margin-top: 6px;
+  color: var(--esmo-muted);
+  font-size: 11px;
+  line-height: 1.7;
+  overflow-wrap: break-word;
+}
+
+.cm__track-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  min-width: 0;
+}
+
+.cm__track-status {
+  min-width: 0;
+  color: var(--esmo-muted);
+  font-size: 10.5px;
+  overflow-wrap: break-word;
+}
+
+.cm__track[data-claimable="1"] .cm__track-status {
+  color: var(--esmo-signal);
+  font-weight: 800;
+}
+
+/* 領取後的一次性回饋：綠色光暈掃過整張卡，1.5 秒後自然結束。 */
+.cm__track--celebrate { animation: cm-celebrate 1500ms ease-out 1; }
+
+.cm__claim {
+  margin-left: auto;
+  flex: 0 0 auto;
+  padding: 7px 16px;
+  color: var(--esmo-muted);
+  font-size: 11.5px;
+  font-weight: 900;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--esmo-line);
+  border-radius: 10px;
+  cursor: not-allowed;
+  transition: transform 140ms ease, box-shadow 240ms ease, background 240ms ease;
+}
+
+.cm__claim--ready {
+  color: #062018;
+  background: var(--esmo-signal);
+  border-color: var(--esmo-signal);
+  cursor: pointer;
+  box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5);
+  animation: cm-ready 2.4s ease-out infinite;
+}
+
+.cm__claim--ready:hover { box-shadow: 0 4px 22px -6px rgba(52, 211, 153, 0.8); }
+.cm__claim--ready:active { transform: scale(0.95); }
+
+/* ── 變體 ─────────────────────────────────────────────────────────────── */
+
+.cm__variant {
+  position: relative;
+  margin-top: 8px;
+  padding: 11px 13px 11px 15px;
+  background: rgba(255, 255, 255, 0.028);
+  border: 1px solid var(--esmo-line);
+  border-radius: 13px;
+  transition: border-color 320ms ease, background 320ms ease;
+}
+
+/* 左緣色條：可用＝綠、擁有但非現行流派＝金、未解鎖＝無。 */
+.cm__variant::before {
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  width: 3px;
+  background: transparent;
+  border-radius: 0 3px 3px 0;
+  content: "";
+}
+
+.cm__variant[data-equippable="1"] {
+  background: rgba(52, 211, 153, 0.05);
+  border-color: color-mix(in srgb, var(--esmo-signal) 34%, transparent);
+}
+
+.cm__variant[data-equippable="1"]::before { background: var(--esmo-signal); }
+
+.cm__variant[data-unlocked="1"][data-equippable="0"]::before { background: var(--esmo-tactical); }
+
+.cm__variant[data-unlocked="0"] { opacity: 0.66; }
+
+.cm__variant-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.cm__variant-name {
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 900;
+}
+
+.cm__variant-base {
+  color: var(--esmo-muted);
+  font-size: 9.5px;
+  white-space: nowrap;
+}
+
+.cm__pill {
+  margin-left: auto;
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  font-family: var(--esmo-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.cm__pill--live {
+  color: var(--esmo-signal);
+  background: rgba(52, 211, 153, 0.13);
+  border: 1px solid color-mix(in srgb, var(--esmo-signal) 44%, transparent);
+}
+
+.cm__pill--owned {
+  color: var(--esmo-tactical);
+  background: rgba(251, 191, 36, 0.11);
+  border: 1px solid color-mix(in srgb, var(--esmo-tactical) 42%, transparent);
+}
+
+.cm__pill--locked {
+  color: var(--esmo-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--esmo-line);
+}
+
+.cm__variant-desc {
+  margin-top: 5px;
+  color: var(--esmo-muted);
+  font-size: 10.5px;
+  line-height: 1.7;
+  overflow-wrap: break-word;
+}
+
+/* 取捨表：換得與付出並排，寬度不夠就疊起來。高階打法不等於更強。 */
+.cm__trade {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 9px;
+}
+
+.cm__trade-col {
+  flex: 1 1 150px;
+  min-width: 0;
+  padding: 7px 9px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 9px;
+}
+
+.cm__trade-label {
+  display: block;
+  font-family: var(--esmo-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.cm__trade-col--gain .cm__trade-label { color: var(--esmo-signal); }
+.cm__trade-col--cost .cm__trade-label { color: var(--esmo-danger); }
+
+.cm__trade-value {
+  margin-top: 3px;
+  color: #cbd5e1;
+  font-size: 10.5px;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+
+.cm__variant-hint {
+  margin-top: 8px;
+  color: var(--esmo-tactical);
+  font-size: 10px;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+
+.cm__variant-hint--locked { color: var(--esmo-muted); }
+
+/* ── 其他流派：可讀，但明顯沉睡 ───────────────────────────────────────── */
+
+.cm__dormant {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex-wrap: wrap;
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px 13px;
+  color: var(--esmo-text);
+  text-align: left;
+  background: rgba(255, 255, 255, 0.022);
+  border: 1px solid var(--esmo-line);
+  border-radius: 14px;
+  cursor: pointer;
+  opacity: 0.62;
+  transition: opacity 260ms ease, background 260ms ease, border-color 260ms ease, transform 160ms ease;
+}
+
+.cm__dormant:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.16);
+  opacity: 1;
+}
+
+.cm__dormant:active { transform: scale(0.99); }
+
+/* 沉睡的流派沒有顏色——hover 才透出它自己的色相，當成「換過去會變成這樣」的預告。 */
+.cm__dormant-mark {
+  display: flex;
+  flex: 0 0 auto;
+  color: var(--esmo-muted);
+  transition: color 260ms ease;
+}
+
+.cm__dormant:hover .cm__dormant-mark { color: var(--cm-preview-accent, #cbd5e1); }
+
+.cm__dormant-copy {
+  flex: 1 1 190px;
+  min-width: 0;
+}
+
+.cm__dormant-name {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.cm__dormant-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 5px;
+  color: var(--esmo-muted);
+  font-size: 10px;
+  min-width: 0;
+}
+
+.cm__dormant-switch {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 6px 12px;
+  color: #cbd5e1;
+  font-size: 10.5px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 9px;
+  white-space: nowrap;
+}
+
+/* 沉睡卡的刻度不吃流派色 —— 沉睡就是沒有顏色。 */
+.cm__dormant .cm__notch--on {
+  background: rgba(255, 255, 255, 0.34);
+  border-color: rgba(255, 255, 255, 0.34);
+  box-shadow: none;
+}
+
+.cm__dormant .cm__notch--next { animation: none; }
+
+/* ── 進場：同方向小幅位移，一次就好 ───────────────────────────────────── */
+
+.cm-rise {
+  animation: cm-rise 520ms cubic-bezier(0.22, 0.9, 0.28, 1) both;
+  animation-delay: var(--cm-delay, 0ms);
+}
+
+@keyframes cm-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes cm-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(-7%, 5%, 0) scale(1.1); }
+}
+
+@keyframes cm-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.25; }
+}
+
+@keyframes cm-breathe {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+
+@keyframes cm-ready {
+  0%   { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5); }
+  70%  { box-shadow: 0 0 0 9px rgba(52, 211, 153, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+
+@keyframes cm-celebrate {
+  0%   { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55); }
+  55%  { box-shadow: 0 0 0 14px rgba(52, 211, 153, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+
+/* ── 減少動態：呈現完成狀態，拿掉位移與閃爍，顏色與文字全部保留 ───────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .cm *,
+  .cm *::before,
+  .cm *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .cm-rise { opacity: 1; transform: none; }
+}
