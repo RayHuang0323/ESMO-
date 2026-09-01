@@ -323,6 +323,137 @@ ck("doctrine 模組沒有 import CS runtime", (() => {
   return !/^\s*import\b.*battle\/fps/m.test(src);
 })());
 
+
+// ══════════════════════════════════════════════════════════════════════════
+//  Task 4：VariantTradeoff 契約
+// ══════════════════════════════════════════════════════════════════════════
+const V = await import("../src/platform/mastery/tacticVariant.js");
+
+console.log("\n【Task 4：戰術變體取捨契約】");
+
+const okVariant = V.TACTIC_VARIANTS[0];
+const mut = (over) => ({ ...okVariant, ...over });
+
+// ── ㉒ 第一批變體本身合法 ───────────────────────────────────────────────
+ck("有 3 個變體（刻意不多）", V.TACTIC_VARIANTS.length === 3);
+ck("三個變體全部通過驗證", V.TACTIC_VARIANTS.every((v) => V.validateVariant(v).ok),
+  V.TACTIC_VARIANTS.map((v) => `${v.variantId}:${V.validateVariant(v).ok}`).join(" "));
+ck("三條 doctrine 各有至少一個變體（不會選了流派沒東西拿）",
+  D.DOCTRINE_IDS.every((id) => V.variantsOfDoctrine(id).length > 0),
+  D.DOCTRINE_IDS.map((id) => `${id}:${V.variantsOfDoctrine(id).length}`).join(" "));
+ck("每個變體的 base 都是真實戰術", V.TACTIC_VARIANTS.every((v) => MT.mobaTacticById(v.baseTacticId) != null));
+ck("變體流派 == base 戰術的流派",
+  V.TACTIC_VARIANTS.every((v) => v.doctrine === D.doctrineOfTactic("moba", v.baseTacticId)));
+
+// ── ㉓ benefit / cost 必須同時存在 ──────────────────────────────────────
+ck("缺 costAxes ⇒ 拒絕", V.validateVariant(mut({ costAxes: [] })).ok === false);
+ck("缺 benefitAxes ⇒ 拒絕", V.validateVariant(mut({ benefitAxes: [] })).ok === false);
+ck("拒絕理由說得出是 sidegrade 問題",
+  V.validateVariant(mut({ costAxes: [] })).errors.some((e) => e.code === "cost"));
+
+// ── ㉔ 不得所有改動都朝同一方向 ─────────────────────────────────────────
+//  把 cost 那一項也掛到 benefit 軸底下 ⇒ 全部都是 benefit ⇒ 必須被擋。
+ck("所有改動都是 benefit ⇒ 拒絕", (() => {
+  const bad = mut({
+    benefitAxes: [{ id: "all", label: "全都好", fields: ["macro.riskTolerance", "objectives.towerPriority"] }],
+    costAxes: [{ id: "empty", label: "沒付出", fields: [] }],
+  });
+  const r = V.validateVariant(bad);
+  return r.ok === false && r.errors.some((e) => e.code === "one_direction");
+})());
+
+// ── ㉕ 每個改動都要被認領（不得偷偷加強）────────────────────────────────
+ck("多改一個沒人認領的欄位 ⇒ 拒絕", (() => {
+  const bad = mut({ changedFields: { ...okVariant.changedFields, "macro.grouping": 0.7 } });
+  const r = V.validateVariant(bad);
+  return r.ok === false && r.errors.some((e) => e.code === "unclaimed");
+})());
+ck("軸宣告了卻沒改 ⇒ 拒絕", (() => {
+  const bad = mut({ benefitAxes: [{ id: "x", label: "x", fields: ["macro.riskTolerance", "macro.splitPush"] }] });
+  return V.validateVariant(bad).errors.some((e) => e.code === "axis_no_change");
+})());
+ck("同一欄位被兩條軸認領 ⇒ 拒絕", (() => {
+  const bad = mut({ costAxes: [{ id: "dup", label: "dup", fields: ["macro.riskTolerance"] }] });
+  return V.validateVariant(bad).errors.some((e) => e.code === "double_claim");
+})());
+
+// ── ㉖ FORBIDDEN 欄位零修改 ─────────────────────────────────────────────
+ck("改 tacticId ⇒ 拒絕", V.validateVariant(mut({ changedFields: { tacticId: "m2" } })).ok === false);
+ck("改 evidence ⇒ 拒絕（不得自訂成功標準）", V.validateVariant(mut({ changedFields: { evidence: [] } })).ok === false);
+ck("改 fit ⇒ 拒絕（不得適合所有人）", V.validateVariant(mut({ changedFields: { fit: {} } })).ok === false);
+//  ⚠ 這一組是「假選擇」紅線：改了引擎也讀不到。
+for (const f of ["macro.earlyGame", "objectives.heraldPriority", "economy.carryPriority", "vision.river"]) {
+  ck(`改未映射欄位 ${f} ⇒ 拒絕（假選擇）`, V.validateVariant(mut({ changedFields: { [f]: 0.9 } })).ok === false);
+}
+ck("FORBIDDEN 清單涵蓋全部未映射欄位",
+  ["macro.earlyGame", "macro.midGame", "macro.lateGame", "objectives.heraldPriority",
+    "economy.carryPriority", "economy.jungleResourceShare", "vision.river", "vision.enemyJungle", "vision.objectiveSetup"]
+    .every((f) => V.FORBIDDEN_VARIANT_FIELDS.includes(f)));
+ck("ALLOWED 與 FORBIDDEN 沒有交集",
+  V.ALLOWED_VARIANT_FIELDS.every((f) => !V.FORBIDDEN_VARIANT_FIELDS.includes(f)));
+
+// ── ㉗ envelope ────────────────────────────────────────────────────────
+ck("位移超出 envelope ⇒ 拒絕", (() => {
+  const r = V.validateVariant(mut({ changedFields: { ...okVariant.changedFields, "macro.riskTolerance": 0.05 } }));
+  return r.ok === false && r.errors.some((e) => e.code === "envelope");
+})());
+ck("剛好在 envelope 邊界內 ⇒ 允許", (() => {
+  const base = MT.mobaTacticById("m1");
+  const edge = Number((base.macro.riskTolerance - V.FIELD_ENVELOPE).toFixed(10));
+  return V.validateVariant(mut({ changedFields: { ...okVariant.changedFields, "macro.riskTolerance": edge } })).ok;
+})());
+ck("改成與 base 相同值 ⇒ 拒絕（no-op 不是變體）", (() => {
+  const base = MT.mobaTacticById("m1");
+  return V.validateVariant(mut({ changedFields: { ...okVariant.changedFields, "macro.riskTolerance": base.macro.riskTolerance } })).ok === false;
+})());
+ck("非數字值 ⇒ 拒絕", V.validateVariant(mut({ changedFields: { ...okVariant.changedFields, "macro.riskTolerance": "low" } })).ok === false);
+ck("enum 換太多項 ⇒ 拒絕", (() => {
+  const bad = {
+    ...okVariant,
+    benefitAxes: [{ id: "b", label: "b", fields: ["lanePlan.top", "lanePlan.mid", "lanePlan.adc"] }],
+    costAxes: [{ id: "c", label: "c", fields: ["objectives.towerPriority"] }],
+    changedFields: { "lanePlan.top": "aggressive", "lanePlan.mid": "defensive", "lanePlan.adc": "aggressive", "objectives.towerPriority": 0.75 },
+  };
+  return V.validateVariant(bad).errors.some((e) => e.code === "enum_swaps");
+})());
+
+// ── ㉘ applyVariant：不動 base、仍是合法戰術、引擎照吃 ───────────────────
+ck("applyVariant 不修改 base", (() => {
+  const base = MT.mobaTacticById("m1");
+  const before = JSON.stringify(base);
+  V.applyVariant(base, okVariant);
+  return JSON.stringify(MT.mobaTacticById("m1")) === before;
+})());
+ck("套用後仍通過 MobaTacticConfig 驗證",
+  V.TACTIC_VARIANTS.every((v) => MT.validateMobaTacticConfig(V.applyVariant(MT.mobaTacticById(v.baseTacticId), v)).ok));
+ck("套用後 tacticId 不變（引擎與賽果仍認得同一個戰術）",
+  V.TACTIC_VARIANTS.every((v) => V.applyVariant(MT.mobaTacticById(v.baseTacticId), v).tacticId === v.baseTacticId));
+ck("套用後 evidence 不變（意圖判定基準不得被變體改寫）",
+  V.TACTIC_VARIANTS.every((v) => {
+    const base = MT.mobaTacticById(v.baseTacticId);
+    return JSON.stringify(V.applyVariant(base, v).evidence) === JSON.stringify(base.evidence);
+  }));
+ck("套用後 toEngineTactic 仍算得出 knobs", (() => {
+  const k = MT.toEngineTactic(V.applyVariant(MT.mobaTacticById("m1"), okVariant));
+  return k.tacticId === "m1" && Number.isFinite(k.retreatAt) && Number.isFinite(k.joinFight);
+})());
+ck("變體確實改變了引擎 knobs（不是假的）", (() => {
+  const b = MT.toEngineTactic(MT.mobaTacticById("m1"));
+  const a = MT.toEngineTactic(V.applyVariant(MT.mobaTacticById("m1"), okVariant));
+  return a.retreatAt !== b.retreatAt;
+})());
+
+// ── ㉙ 查詢與 fail closed ──────────────────────────────────────────────
+ck("variantById 未知 ⇒ null", V.variantById("nope") === null);
+ck("variantsOfDoctrine 未知 ⇒ 空", V.variantsOfDoctrine("nope").length === 0);
+ck("null 變體 ⇒ 拒絕", V.validateVariant(null).ok === false);
+ck("空 changedFields ⇒ 拒絕", V.validateVariant(mut({ changedFields: {} })).ok === false);
+ck("未知 base 戰術 ⇒ 拒絕", V.validateVariant(mut({ baseTacticId: "m99" })).ok === false);
+
+// ── ㉚ BASIC 不受影響 ──────────────────────────────────────────────────
+ck("m1–m8 仍全部存在且合法",
+  MT.MOBA_TACTICS.length === 8 && MT.MOBA_TACTICS.every((t) => MT.validateMobaTacticConfig(t).ok));
+
 const passed = checks.filter((c) => c.ok).length;
 console.log(`\nClub Mastery v1：${passed}/${checks.length} ${passed === checks.length ? "PASS" : "FAIL"}`);
 if (passed !== checks.length) process.exitCode = 1;
