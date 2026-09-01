@@ -797,6 +797,95 @@ ck("store 沒有第二份 mastery state（只有一個 clubMastery 欄位）", (
 ck("store 視角下 BASIC 仍恆可用",
   MT.MOBA_TACTICS.every((t) => S.getState().variantsForTactic(t.tacticId).basic === true));
 
+
+// ══════════════════════════════════════════════════════════════════════════
+//  Task 7：Match Prep 接線
+//
+//  ⚠ 這一段驗兩件事：① UI 沒有自己重寫規則 ② 套用後的 config 真的能走完
+//    既有 runtime 路徑。畫面長什麼樣由瀏覽器 smoke 驗，不在這裡。
+// ══════════════════════════════════════════════════════════════════════════
+console.log("\n【Task 7：Match Prep 變體接線】");
+
+const tacticScreenSrc = readFileSync(new URL("../src/screens/moba/TacticScreen.jsx", import.meta.url), "utf8");
+
+// ── ㊿+ UI 不得重寫規則 ────────────────────────────────────────────────
+ck("TacticScreen 用 domain selector 取得可用變體",
+  tacticScreenSrc.includes("variantsAvailableForTactic"));
+ck("TacticScreen 用 applyVariant，不自己套欄位",
+  tacticScreenSrc.includes("applyVariant("));
+//  ⚠ 畫面一旦自己判斷解鎖／流派，規則就有兩份。
+ck("TacticScreen 沒有自己判斷 unlock / doctrine 的分支", (() => {
+  return !/unlockedVariants/.test(tacticScreenSrc)
+    && !/activeDoctrine/.test(tacticScreenSrc)
+    && !/DOCTRINE\./.test(tacticScreenSrc);
+})());
+ck("TacticScreen 只讀 row.equippable / row.unlocked，不自己算",
+  tacticScreenSrc.includes("row.equippable") && tacticScreenSrc.includes("row.unlocked"));
+ck("送出的是套用後的 config（onNext(applied)）", tacticScreenSrc.includes("onNext(applied)"));
+ck("切換基礎戰術會重設變體選擇", tacticScreenSrc.includes("setVariantSel(null)"));
+ck("引擎效果讀套用後的 config", tacticScreenSrc.includes("engineEffects(applied)"));
+ck("三種狀態都有可讀標籤（其他流派／未解鎖）",
+  tacticScreenSrc.includes("其他流派") && tacticScreenSrc.includes("未解鎖"));
+ck("BASIC 按鈕永遠存在且不帶 disabled", (() => {
+  const i = tacticScreenSrc.indexOf("moba-variant-basic");
+  const seg = tacticScreenSrc.slice(i, i + 400);
+  return i > 0 && !seg.includes("disabled");
+})());
+
+// ── 套用後的 config 走得完既有 runtime 路徑 ────────────────────────────
+const m1base = MT.mobaTacticById("m1");
+const appliedCfg = V.applyVariant(m1base, V.variantById("m1_measured_siege"));
+
+ck("useLocalServer 的守門條件仍通過（opts.tactic?.tacticId）", Boolean(appliedCfg?.tacticId));
+ck("canonical tacticId 仍是 m1", appliedCfg.tacticId === "m1");
+ck("evidence 未被變體改寫",
+  JSON.stringify(appliedCfg.evidence) === JSON.stringify(m1base.evidence));
+ck("base config 零 mutation", (() => {
+  const fresh = MT.mobaTacticById("m1");
+  return fresh.macro.riskTolerance === 0.6 && fresh.objectives.towerPriority === 0.9;
+})());
+
+//  引擎真的吃到變體數值 —— 這是「不是假的」的證據。
+const kBase = MT.toEngineTactic(m1base);
+const kVar = MT.toEngineTactic(appliedCfg);
+ck("toEngineTactic 對變體算得出 knobs", Number.isFinite(kVar.retreatAt) && Number.isFinite(kVar.laneOffset?.mid));
+ck("變體改變了 retreatAt（riskTolerance 下降 ⇒ 撤退更早）",
+  kVar.retreatAt !== kBase.retreatAt && kVar.retreatAt > kBase.retreatAt,
+  `${kBase.retreatAt} -> ${kVar.retreatAt}`);
+ck("變體改變了推線深度（towerPriority 下降）",
+  kVar.laneOffset.mid !== kBase.laneOffset.mid, `${kBase.laneOffset.mid} -> ${kVar.laneOffset.mid}`);
+ck("engine knobs 的 tacticId 仍是 m1（賽果與 evidence 判定不受影響）", kVar.tacticId === "m1");
+
+//  presentation metadata 只是搭便車，不得影響引擎。
+ck("config 可安全攜帶 variantId / variantName",
+  appliedCfg.variantId === "m1_measured_siege" && typeof appliedCfg.variantName === "string");
+ck("toEngineTactic 完全忽略 presentation metadata", (() => {
+  const withMeta = { ...m1base, variantId: "x", variantName: "y" };
+  return JSON.stringify(MT.toEngineTactic(withMeta)) === JSON.stringify(kBase);
+})());
+ck("套用後仍是合法 MobaTacticConfig", MT.validateMobaTacticConfig(appliedCfg).ok);
+
+// ── 未解鎖 / 非本流派：畫面拿到的資料就是不可選 ────────────────────────
+ck("未解鎖時 equippable 為 false",
+  C.variantsAvailableForTactic(M.emptyClubMastery(), "m1").variants.every((v) => v.equippable === false));
+ck("未解鎖時 unlocked 也為 false",
+  C.variantsAvailableForTactic(M.emptyClubMastery(), "m1").variants.every((v) => v.unlocked === false));
+ck("已擁有但非本流派：unlocked true、equippable false", (() => {
+  let b = M.setActiveDoctrine(M.emptyClubMastery(), D.DOCTRINE.TEMPO).mastery;
+  for (let i = 0; i < 3; i++) b = M.recordTacticUsage(b, { mode: "moba", tacticId: "m1", matchSource: "competitive", intent: true });
+  b = C.claimMasteryReward(b, "tempo_execution").mastery;
+  b = M.setActiveDoctrine(b, D.DOCTRINE.CONTROL).mastery;
+  const row = C.variantsAvailableForTactic(b, "m1").variants.find((v) => v.variantId === "m1_measured_siege");
+  return row.unlocked === true && row.equippable === false;
+})());
+ck("BASIC 在每一種狀態下都可用",
+  [M.emptyClubMastery(), M.setActiveDoctrine(M.emptyClubMastery(), D.DOCTRINE.CONTROL).mastery]
+    .every((b) => MT.MOBA_TACTICS.every((t) => C.variantsAvailableForTactic(b, t.tacticId).basic === true)));
+
+// ── 沒有變體的戰術：畫面不會出現打法列 ─────────────────────────────────
+ck("沒有變體的基礎戰術回傳空清單（UI 不畫打法列）",
+  C.variantsAvailableForTactic(M.emptyClubMastery(), "m3").variants.length === 0);
+
 const passed = checks.filter((c) => c.ok).length;
 console.log(`\nClub Mastery v1：${passed}/${checks.length} ${passed === checks.length ? "PASS" : "FAIL"}`);
 if (passed !== checks.length) process.exitCode = 1;

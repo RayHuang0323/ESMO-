@@ -19,6 +19,12 @@ import React, { useMemo, useState } from "react";
 import { Frame } from "./LineupScreen.jsx";
 import { MOBA_TACTICS, toEngineTactic, STANDARD_OPP_TACTIC } from "../../platform/contracts/MobaTacticConfig.js";
 import { useProfileStore } from "../../platform/profileStore.js";
+//  Meta Progression v1：戰術變體。
+//  ⚠ 本畫面**不判斷**解鎖／流派／資格——那些規則全住在 `mastery/` 底下，
+//    這裡只把 `variantsAvailableForTactic()` 已經算好的結果畫出來。
+//    UI 只要自己判斷一次，規則就有兩份，而被修的永遠是另外那一份。
+import { variantsAvailableForTactic } from "../../platform/mastery/clubMastery.js";
+import { applyVariant, variantById } from "../../platform/mastery/tacticVariant.js";
 import { teamDevelopmentEffects } from "../../platform/development/teamDevelopment.js";
 import { statZh } from "../../data/playerModel.js";
 import { fitScore, fitGrade } from "./tacticFit.js";
@@ -54,12 +60,31 @@ export default function TacticScreen({ onNext, onBack }) {
   const developmentEffects = teamDevelopmentEffects(development);
   const starters = useMemo(() => allPlayers.filter((p) => p.status === "主力"), [allPlayers]);
   const cur = MOBA_TACTICS.find((t) => t.tacticId === sel);
+
+  //  ── 變體選擇 ────────────────────────────────────────────────────────
+  //  `null` = 基礎戰術。m1–m8 永遠可選，這個狀態只決定「要不要疊一層變體」。
+  const [variantSel, setVariantSel] = useState(null);
+  const clubMastery = useProfileStore((s) => s.clubMastery);
+  const variantInfo = useMemo(() => variantsAvailableForTactic(clubMastery, sel), [clubMastery, sel]);
+  //  ⚠ 資格由 domain 決定，這裡只是「選到的那個現在還能不能用」。
+  //    換基礎戰術或切換流派之後，原本選的變體若不再 equippable 就自動回到基礎，
+  //    所以不需要 effect 去清狀態——也就不會出現「畫面顯示變體、送出去卻是基礎」。
+  const activeVariant = useMemo(() => {
+    if (!variantSel) return null;
+    const row = variantInfo.variants.find((v) => v.variantId === variantSel);
+    return row?.equippable ? variantById(variantSel) : null;
+  }, [variantSel, variantInfo]);
+
+  //  真正要送進引擎的那一份。基礎戰術時就是 `cur` 本身（行為與變體上線前完全相同）。
+  const applied = useMemo(() => (activeVariant ? applyVariant(cur, activeVariant) : cur), [cur, activeVariant]);
+
   const curFit = fitScore(cur, starters);
   const curFG = fitGrade(curFit);
-  const effects = engineEffects(cur);
+  //  ⚠ 引擎效果讀的是**套用後**的 config —— 玩家看到的就是引擎真的會吃到的東西。
+  const effects = engineEffects(applied);
 
   return (
-    <Frame title="戰術" sub="TEAM STRATEGY · 8 套戰術 · 實際影響對戰" onBack={onBack} onNext={() => onNext && onNext(cur)} nextLabel="開始載入 →">
+    <Frame title="戰術" sub="TEAM STRATEGY · 8 套戰術 · 實際影響對戰" onBack={onBack} onNext={() => onNext && onNext(applied)} nextLabel="開始載入 →">
       <div style={{ width: "100%", maxWidth: 940, padding: "0 14px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
         {/* 戰術卡：auto-fill 響應式（手機 1 欄 / 平板 2-3 欄 / 桌機 4 欄），高度隨內容 */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(min(190px,100%),1fr))", gap: 8 }}>
@@ -67,7 +92,7 @@ export default function TacticScreen({ onNext, onBack }) {
             const isSel = sel === t.tacticId;
             const fg = fitGrade(fitScore(t, starters));
             return (
-              <button key={t.tacticId} onClick={() => setSel(t.tacticId)} style={{ textAlign: "left", minWidth: 0, background: isSel ? GC.card2 : GC.card, border: `1px solid ${isSel ? GC.blueL : GC.line}`, borderRadius: 10, padding: "9px 11px", color: "#fff", cursor: "pointer" }}>
+              <button key={t.tacticId} onClick={() => { setSel(t.tacticId); setVariantSel(null); }} style={{ textAlign: "left", minWidth: 0, background: isSel ? GC.card2 : GC.card, border: `1px solid ${isSel ? GC.blueL : GC.line}`, borderRadius: 10, padding: "9px 11px", color: "#fff", cursor: "pointer" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
                   <span style={{ fontSize: 13, fontWeight: 900, minWidth: 0 }}>{t.emoji} {t.name}</span>
                   <span style={{ flexShrink: 0, fontSize: 8.5, fontWeight: 800, color: riskC(t.risk), border: `1px solid ${riskC(t.risk)}55`, borderRadius: 4, padding: "0 4px" }}>{t.risk}風險</span>
@@ -99,6 +124,59 @@ export default function TacticScreen({ onNext, onBack }) {
             <span style={{ fontSize: 9, color: riskC(cur.risk), border: `1px solid ${riskC(cur.risk)}55`, borderRadius: 5, padding: "1px 6px" }}>{cur.risk}風險</span>
             <span style={{ fontSize: 9, fontWeight: 800, color: curFG.c, border: `1px solid ${curFG.c}55`, borderRadius: 5, padding: "1px 6px" }}>我隊適性 {curFG.g}{curFit != null ? `（${curFit}）` : ""}</span>
           </div>
+          {/* 打法：基礎 ＋ 已解鎖的變體。基礎永遠在第一個且永遠可選。 */}
+          {variantInfo.variants.length > 0 && (
+            <div data-testid="moba-variant-row" style={{ marginTop: 9, paddingTop: 9, borderTop: `1px solid ${GC.line}` }}>
+              <div style={{ fontSize: 9, letterSpacing: "0.15em", color: GC.gray, fontWeight: 900, marginBottom: 5 }}>打法</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                <button
+                  data-testid="moba-variant-basic"
+                  onClick={() => setVariantSel(null)}
+                  style={{
+                    minWidth: 0, background: activeVariant ? GC.card2 : `${GC.blueL}22`,
+                    border: `1px solid ${activeVariant ? GC.line : GC.blueL}`, borderRadius: 8,
+                    padding: "5px 10px", color: "#fff", cursor: "pointer", fontSize: 10.5, fontWeight: 800,
+                  }}
+                >基礎</button>
+                {variantInfo.variants.map((row) => {
+                  const isSel = activeVariant?.variantId === row.variantId;
+                  //  ⚠ 三種狀態都要看得懂「為什麼不能用」，不只是變灰。
+                  const label = row.equippable ? null : (row.unlocked ? "其他流派" : "未解鎖");
+                  return (
+                    <button
+                      key={row.variantId}
+                      data-testid={`moba-variant-${row.variantId}`}
+                      disabled={!row.equippable}
+                      title={row.equippable ? "" : (row.unlocked ? "已擁有，但目前流派不同，切換流派後可用" : "尚未解鎖")}
+                      onClick={() => row.equippable && setVariantSel(row.variantId)}
+                      style={{
+                        minWidth: 0, background: isSel ? `${GC.blueL}22` : GC.card2,
+                        border: `1px solid ${isSel ? GC.blueL : GC.line}`, borderRadius: 8,
+                        padding: "5px 10px", color: row.equippable ? "#fff" : GC.gray2,
+                        cursor: row.equippable ? "pointer" : "not-allowed",
+                        fontSize: 10.5, fontWeight: 800, display: "flex", alignItems: "center", gap: 5,
+                      }}
+                    >
+                      <span style={{ minWidth: 0 }}>{row.name}</span>
+                      {label && (
+                        <span style={{ flexShrink: 0, fontSize: 8, fontWeight: 800, color: GC.gray2, border: `1px solid ${GC.line}`, borderRadius: 4, padding: "0 4px" }}>{label}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              {/* 選中的變體：一行講清楚買到什麼、付出什麼 */}
+              {activeVariant && (
+                <div data-testid="moba-variant-tradeoff" style={{ marginTop: 6, fontSize: 9.5, lineHeight: 1.6, color: GC.gray, overflowWrap: "break-word" }}>
+                  <span style={{ color: GC.green, fontWeight: 800 }}>換得 </span>
+                  {activeVariant.benefitAxes.map((a) => a.label).join("、")}
+                  <span style={{ color: GC.red, fontWeight: 800 }}>　付出 </span>
+                  {activeVariant.costAxes.map((a) => a.label).join("、")}
+                </div>
+              )}
+            </div>
+          )}
+
           <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", lineHeight: 1.7, marginTop: 8, overflowWrap: "break-word" }}>
             <span style={{ color: GC.green, fontWeight: 800 }}>優勢：</span>{cur.detail}
           </div>
