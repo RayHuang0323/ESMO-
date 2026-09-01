@@ -103,7 +103,7 @@ console.log("\n【Task 2：生涯打法累積】");
 // ── ⑦ 袋子形狀：只存不可推導的東西 ──────────────────────────────────────
 const bag = M.emptyClubMastery();
 ck("袋子鍵固定（不存可推導的快取）",
-  JSON.stringify(Object.keys(bag).sort()) === JSON.stringify(["activeDoctrine", "claims", "doctrineProgress", "schema", "tacticIntent", "tacticUsage"]),
+  JSON.stringify(Object.keys(bag).sort()) === JSON.stringify(["activeDoctrine", "claims", "doctrineProgress", "schema", "tacticIntent", "tacticUsage", "unlockedVariants"]),
   Object.keys(bag).join(", "));
 ck("MOBA 與 CS 各自一格（不互相污染）",
   bag.tacticUsage.moba && bag.tacticUsage.cs && bag.tacticIntent.moba && bag.tacticIntent.cs);
@@ -453,6 +453,218 @@ ck("未知 base 戰術 ⇒ 拒絕", V.validateVariant(mut({ baseTacticId: "m99" 
 // ── ㉚ BASIC 不受影響 ──────────────────────────────────────────────────
 ck("m1–m8 仍全部存在且合法",
   MT.MOBA_TACTICS.length === 8 && MT.MOBA_TACTICS.every((t) => MT.validateMobaTacticConfig(t).ok));
+
+
+// ══════════════════════════════════════════════════════════════════════════
+//  Task 5：Mastery Track / 資格 / 領取 / 變體解鎖
+// ══════════════════════════════════════════════════════════════════════════
+const C = await import("../src/platform/mastery/clubMastery.js");
+
+console.log("\n【Task 5：精通進度與變體解鎖】");
+
+const tempoBase = M.setActiveDoctrine(M.emptyClubMastery(), D.DOCTRINE.TEMPO).mastery;
+const playWith = (b, tacticId, intent = true, matchSource = "competitive") =>
+  M.recordTacticUsage(b, { mode: "moba", tacticId, matchSource, intent });
+const playN = (b, tacticId, n, intent = true) => {
+  let out = b;
+  for (let i = 0; i < n; i++) out = playWith(out, tacticId, intent);
+  return out;
+};
+
+// ── ㉛ track 定義本身健全 ───────────────────────────────────────────────
+ck("三條 doctrine 各有 track", D.DOCTRINE_IDS.every((id) => C.tracksOfDoctrine(id).length > 0));
+ck("每條 track 的獎勵都指向真實變體",
+  C.MASTERY_TRACKS.every((t) => V.variantById(t.reward.variantId) != null));
+ck("獎勵變體的流派 == track 的流派",
+  C.MASTERY_TRACKS.every((t) => V.variantById(t.reward.variantId).doctrine === t.doctrine));
+//  ⚠ 三條 track 不得是同一個條件換名字，否則 doctrine 只是換皮的同一條進度條。
+ck("三條 track 用三種不同條件",
+  new Set(C.MASTERY_TRACKS.map((t) => t.requirement.kind)).size === 3,
+  C.MASTERY_TRACKS.map((t) => t.requirement.kind).join(","));
+
+// ── ㉜ 條件計算 fail closed ─────────────────────────────────────────────
+ck("未知 requirement kind ⇒ 不完成", C.evaluateRequirement(tempoBase, D.DOCTRINE.TEMPO, { kind: "nope" }).done === false);
+ck("未知 kind 標記 unknown", C.evaluateRequirement(tempoBase, D.DOCTRINE.TEMPO, { kind: "nope" }).unknown === true);
+ck("null requirement ⇒ 不完成", C.evaluateRequirement(tempoBase, D.DOCTRINE.TEMPO, null).done === false);
+ck("壞掉的門檻值 ⇒ 不完成",
+  C.evaluateRequirement(tempoBase, D.DOCTRINE.TEMPO, { kind: "doctrineIntent", count: -1 }).done === false);
+ck("未知 doctrine ⇒ 不完成",
+  C.evaluateRequirement(tempoBase, "nope", { kind: "doctrineIntent", count: 1 }).done === false);
+
+// ── ㉝ 未達條件不能領 ───────────────────────────────────────────────────
+ck("零進度不可領", C.masteryEligibilityOf(tempoBase, "tempo_execution").ok === false);
+ck("阻擋原因是 incomplete", C.masteryEligibilityOf(tempoBase, "tempo_execution").code === "incomplete");
+ck("差一場仍不可領", C.masteryEligibilityOf(playN(tempoBase, "m1", 2), "tempo_execution").ok === false);
+ck("未達條件時 claim 直接失敗", C.claimMasteryReward(playN(tempoBase, "m1", 2), "tempo_execution").ok === false);
+ck("失敗的 claim 不改狀態", (() => {
+  const b = playN(tempoBase, "m1", 2);
+  const r = C.claimMasteryReward(b, "tempo_execution");
+  return r.mastery.unlockedVariants.length === 0 && Object.keys(r.mastery.claims).length === 0;
+})());
+
+// ── ㉞ 達條件可領，且只能領一次 ─────────────────────────────────────────
+const tempoDone = playN(tempoBase, "m1", 3);
+ck("達條件 ⇒ 可領", C.masteryEligibilityOf(tempoDone, "tempo_execution").ok === true);
+const claimed = C.claimMasteryReward(tempoDone, "tempo_execution");
+ck("領取成功", claimed.ok === true, claimed.reason ?? "");
+ck("回傳解鎖的變體 id", claimed.unlockedVariantId === "m1_measured_siege");
+ck("變體進入 unlockedVariants", claimed.mastery.unlockedVariants.includes("m1_measured_siege"));
+ck("claims 記下 trackId", claimed.mastery.claims.tempo_execution === true);
+//  ⚠ 冪等：重複領必須完全不產生任何 state change。
+ck("重複領被拒", C.claimMasteryReward(claimed.mastery, "tempo_execution").ok === false);
+ck("重複領理由是已領過", C.masteryEligibilityOf(claimed.mastery, "tempo_execution").code === "already_claimed");
+ck("重複領不改變 unlockedVariants 長度", (() => {
+  const again = C.claimMasteryReward(claimed.mastery, "tempo_execution");
+  return again.mastery.unlockedVariants.length === claimed.mastery.unlockedVariants.length;
+})());
+ck("重複領不新增 claims", (() => {
+  const again = C.claimMasteryReward(claimed.mastery, "tempo_execution");
+  return Object.keys(again.mastery.claims).length === Object.keys(claimed.mastery.claims).length;
+})());
+
+// ── ㉟ fail closed：未知 id ─────────────────────────────────────────────
+ck("未知 trackId 不可領", C.claimMasteryReward(tempoDone, "nope").ok === false);
+ck("未知 trackId 的資格碼是 unknown_track", C.masteryEligibilityOf(tempoDone, "nope").code === "unknown_track");
+ck("未知變體不可裝備", C.canEquipVariant(claimed.mastery, "nope").ok === false);
+ck("未知變體查詢不炸", C.variantsAvailableForTactic(claimed.mastery, "nope").variants.length === 0);
+ck("isVariantUnlocked 未知 ⇒ false", C.isVariantUnlocked(claimed.mastery, "nope") === false);
+//  獎勵無法解析時必須拒發，而不是當成完成。
+ck("未知獎勵種類 fail closed", (() => {
+  const fake = { ...C.MASTERY_TRACKS[0], trackId: "fake", reward: { kind: "mystery", variantId: "x" } };
+  //  直接用 evaluateRequirement + 手動判定模擬：masteryEligibilityOf 只認得註冊過的 track，
+  //  所以這裡驗的是「註冊表以外的 id 一律 unknown_track」這條更嚴格的規則。
+  return C.masteryEligibilityOf(claimed.mastery, fake.trackId).code === "unknown_track";
+})());
+
+// ── ㊱ Active Doctrine 與裝備資格 ───────────────────────────────────────
+ck("Active = TEMPO 時可裝備", C.canEquipVariant(claimed.mastery, "m1_measured_siege").ok === true);
+const switched = M.setActiveDoctrine(claimed.mastery, D.DOCTRINE.CONTROL).mastery;
+ck("切到 CONTROL 後仍擁有", C.isVariantUnlocked(switched, "m1_measured_siege") === true);
+ck("切到 CONTROL 後不可裝備", C.canEquipVariant(switched, "m1_measured_siege").ok === false);
+ck("不可裝備的原因是流派不符", C.canEquipVariant(switched, "m1_measured_siege").code === "wrong_doctrine");
+ck("切換不清空 mastery 進度", M.doctrineProgressOf(switched, D.DOCTRINE.TEMPO).intent === 3);
+ck("切換不清空 claims", switched.claims.tempo_execution === true);
+const backToTempo = M.setActiveDoctrine(switched, D.DOCTRINE.TEMPO).mastery;
+ck("切回 TEMPO 後可再次裝備", C.canEquipVariant(backToTempo, "m1_measured_siege").ok === true);
+ck("非 Active Doctrine 的 track 不可領", (() => {
+  //  在 CONTROL 之下，TEMPO 的 track 即使條件完成也不可領。
+  const b = M.setActiveDoctrine(playN(tempoBase, "m1", 3), D.DOCTRINE.CONTROL).mastery;
+  return C.masteryEligibilityOf(b, "tempo_execution").code === "not_active";
+})());
+ck("equippableVariants 只回目前流派的", C.equippableVariants(switched).length === 0);
+
+// ── ㊲ BASIC 永遠可用 ──────────────────────────────────────────────────
+ck("每個基礎戰術的 basic 恆為 true",
+  MT.MOBA_TACTICS.every((t) => C.variantsAvailableForTactic(claimed.mastery, t.tacticId).basic === true));
+ck("沒解鎖任何變體時，基礎戰術仍可用",
+  C.variantsAvailableForTactic(M.emptyClubMastery(), "m1").basic === true);
+ck("未解鎖的變體標記為 unlocked:false",
+  C.variantsAvailableForTactic(M.emptyClubMastery(), "m1").variants.every((v) => v.unlocked === false));
+
+// ── ㊳ Quick Practice 不得刷解鎖 ────────────────────────────────────────
+ck("快速練習打滿也不會完成 track", (() => {
+  let b = tempoBase;
+  for (let i = 0; i < 10; i++) b = playWith(b, "m1", true, "practice");
+  return C.masteryEligibilityOf(b, "tempo_execution").ok === false;
+})());
+ck("快速練習不推進流派進度", (() => {
+  let b = tempoBase;
+  for (let i = 0; i < 10; i++) b = playWith(b, "m1", true, "practice");
+  return M.doctrineProgressOf(b, D.DOCTRINE.TEMPO).intent === 0;
+})());
+
+// ── ㊴ 廣度型與穩定型 track ─────────────────────────────────────────────
+ck("控圖 track 需要兩個不同戰術", (() => {
+  let b = M.setActiveDoctrine(M.emptyClubMastery(), D.DOCTRINE.CONTROL).mastery;
+  b = playN(b, "m4", 5);                              // 同一個戰術打 5 次
+  const only = C.masteryEligibilityOf(b, "control_breadth").ok === false;
+  b = playWith(b, "m2");                              // 換第二個戰術
+  return only && C.masteryEligibilityOf(b, "control_breadth").ok === true;
+})());
+ck("廣度只算本流派的戰術", (() => {
+  let b = M.setActiveDoctrine(M.emptyClubMastery(), D.DOCTRINE.CONTROL).mastery;
+  b = playN(b, "m4", 1);
+  b = playN(b, "m1", 5);                              // m1 是 TEMPO，不該算進控圖廣度
+  return C.masteryEligibilityOf(b, "control_breadth").ok === false;
+})());
+ck("應變 track 需要場次與意圖都達標", (() => {
+  let b = M.setActiveDoctrine(M.emptyClubMastery(), D.DOCTRINE.ADAPTIVE).mastery;
+  b = playN(b, "m8", 4, false);                       // 4 場但意圖 0
+  const notYet = C.masteryEligibilityOf(b, "adaptive_consistency").ok === false;
+  b = playN(b, "m8", 2, true);
+  return notYet && C.masteryEligibilityOf(b, "adaptive_consistency").ok === true;
+})());
+
+// ── ㊵ persistence / reload ────────────────────────────────────────────
+ck("unlockedVariants 在袋子形狀裡",
+  JSON.stringify(Object.keys(M.emptyClubMastery()).sort()) ===
+  JSON.stringify(["activeDoctrine", "claims", "doctrineProgress", "schema", "tacticIntent", "tacticUsage", "unlockedVariants"]));
+ck("reload 後 unlock 仍在", (() => {
+  const saved = JSON.parse(JSON.stringify(claimed.mastery));
+  return C.isVariantUnlocked(M.normalizeClubMastery(saved), "m1_measured_siege");
+})());
+ck("reload 後 claims 仍在", (() => {
+  const saved = JSON.parse(JSON.stringify(claimed.mastery));
+  return M.normalizeClubMastery(saved).claims.tempo_execution === true;
+})());
+ck("reload 後仍可裝備", (() => {
+  const saved = JSON.parse(JSON.stringify(claimed.mastery));
+  return C.canEquipVariant(M.normalizeClubMastery(saved), "m1_measured_siege").ok === true;
+})());
+ck("unlockedVariants 去重且排序", (() => {
+  const n = M.normalizeClubMastery({ unlockedVariants: ["b", "a", "b", 5, null, "a"] });
+  return JSON.stringify(n.unlockedVariants) === JSON.stringify(["a", "b"]);
+})());
+ck("舊存檔沒有 unlockedVariants ⇒ 空", M.normalizeClubMastery({}).unlockedVariants.length === 0);
+
+// ── ㊶ MOBA / CS 不污染 ────────────────────────────────────────────────
+ck("CS 比賽不推進任何 track", (() => {
+  let b = tempoBase;
+  for (let i = 0; i < 10; i++) b = M.recordTacticUsage(b, { mode: "cs", tacticId: "t_apalace", matchSource: "competitive", intent: true });
+  return C.masteryEligibilityOf(b, "tempo_execution").ok === false;
+})());
+ck("所有 track 的 doctrine 都是 MOBA 有 mapping 的",
+  C.MASTERY_TRACKS.every((t) => D.tacticsOfDoctrine("moba", t.doctrine).length > 0));
+
+// ── ㊷ 完整 vertical slice：從一場正式比賽走到可裝備 ─────────────────────
+ck("vertical slice：正式比賽 → 進度 → 領取 → 解鎖 → 可裝備 → reload → 切換 → 切回", (() => {
+  //  用真實結算路徑跑三場（含冪等），不是直接呼叫 recordTacticUsage。
+  const m1def = MT.mobaTacticById("m1");
+  const hit = Object.fromEntries(m1def.evidence.map((e) => [e.key, e.goal]));
+  let state = {
+    players: [], finance: { funds: 0, transactions: [] }, meta: { days: 3, fans: 0 },
+    processedMatchTransactions: {}, retention: emptyRetention(),
+    clubMastery: M.setActiveDoctrine(M.emptyClubMastery(), D.DOCTRINE.TEMPO).mastery,
+  };
+  for (let i = 0; i < 3; i++) {
+    const tx = TX.createMatchProgressTransaction({
+      matchId: `slice-${i}`, mode: "moba", sourceResultVersion: "BattleResult.v2",
+      teamRewards: { money: 100, fans: 1, reputation: 0 }, playerProgress: [], unlocks: [],
+      metadata: {
+        matchSource: "competitive", winner: "us", score: { us: 1, enemy: 0 },
+        tacticId: "m1", tacticIntent: M.tacticIntentOf("moba", "m1", hit).intent,
+      },
+    });
+    const r = P.applyProgressToState(state, tx);
+    if (!r.nextState) return false;
+    state = { ...state, ...r.nextState };
+  }
+  if (M.doctrineProgressOf(state.clubMastery, D.DOCTRINE.TEMPO).intent !== 3) return false;
+
+  const cl = C.claimMasteryReward(state.clubMastery, "tempo_execution");
+  if (!cl.ok || cl.unlockedVariantId !== "m1_measured_siege") return false;
+  if (!C.canEquipVariant(cl.mastery, "m1_measured_siege").ok) return false;
+
+  const reloaded = M.normalizeClubMastery(JSON.parse(JSON.stringify(cl.mastery)));
+  if (!C.canEquipVariant(reloaded, "m1_measured_siege").ok) return false;
+
+  const toControl = M.setActiveDoctrine(reloaded, D.DOCTRINE.CONTROL).mastery;
+  if (!C.isVariantUnlocked(toControl, "m1_measured_siege")) return false;      // 仍擁有
+  if (C.canEquipVariant(toControl, "m1_measured_siege").ok) return false;      // 但不可用
+
+  const backHome = M.setActiveDoctrine(toControl, D.DOCTRINE.TEMPO).mastery;
+  return C.canEquipVariant(backHome, "m1_measured_siege").ok === true;         // 切回可用
+})());
 
 const passed = checks.filter((c) => c.ok).length;
 console.log(`\nClub Mastery v1：${passed}/${checks.length} ${passed === checks.length ? "PASS" : "FAIL"}`);

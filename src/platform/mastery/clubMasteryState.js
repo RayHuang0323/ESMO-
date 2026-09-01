@@ -56,6 +56,11 @@ export function emptyClubMastery() {
     doctrineProgress: {},
     //  已領取的 mastery 獎勵。**不 prune**（生涯進度不會換日就消失）。
     claims: {},
+    //  已解鎖的變體。**永久保留**——切換流派不刪除任何一個，
+    //  只是「不是目前流派的變體不能上場」（見 `clubMastery.canEquipVariant`）。
+    //  ⚠ 刻意**不從 `claims` 推導**：track 的獎勵內容未來可能調整，
+    //    而「玩家已經拿到的東西」不該因為內容更新就跟著變。
+    unlockedVariants: [],
   };
 }
 
@@ -103,6 +108,10 @@ export function normalizeClubMastery(saved) {
     doctrineProgress: progressBag(saved.doctrineProgress),
     claims: (saved.claims && typeof saved.claims === "object" && !Array.isArray(saved.claims))
       ? { ...saved.claims } : {},
+    //  只留字串、去重、排序 —— 壞存檔不得塞進非字串，重複也不得放大清單。
+    unlockedVariants: Array.isArray(saved.unlockedVariants)
+      ? [...new Set(saved.unlockedVariants.filter((x) => typeof x === "string" && x))].sort()
+      : [],
   };
 }
 
