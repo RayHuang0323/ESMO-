@@ -30,6 +30,7 @@ import { competitiveBlockOf, careerYearOf } from "../time/worldClock.js";
 //  V7B：日／週／季目標的比賽側記錄。**掛在這裡是刻意的**——本檔是全專案
 //  唯一的結算入口，掛在別處就會漏掉某一種來源（那正是 TD-35 的形狀）。
 import { recordMatchActivity, coordsOf, normalizeRetention } from "../retention/retentionState.js";
+import { recordTacticUsage, normalizeClubMastery } from "../mastery/clubMasteryState.js";
 import { makeGrowthEntry, appendGrowth } from "./growthLog.js";
 
 /**
@@ -249,10 +250,24 @@ export function applyProgressToState(state, tx) {
     appeared,
   }, retentionCoords);
 
+  //  ── Meta Progression v1：生涯累積打法 ──────────────────────────────────
+  //  ⚠ 放這裡而不是另開結算入口，是為了**繼承同一份冪等**：上面的
+  //    `alreadyApplied` 已經提早返回，所以同一場再結算根本走不到這一行
+  //    ⇒ 不需要第二套 matchId 帳本，也不可能重複累計。
+  //  ⚠ Club Mastery 是**獨立 domain**，不寫進 `retention`——後者的計數器綁
+  //    日／週／季座標而且會被 `pruneScopes` 清掉，但打法認同是生涯累積的。
+  const nextClubMastery = recordTacticUsage(normalizeClubMastery(state.clubMastery), {
+    mode: tx.mode,
+    tacticId: tx.metadata?.tacticId ?? null,
+    matchSource: matchSourceOfTx,
+    intent: tx.metadata?.tacticIntent === true,
+  });
+
   const nextState = {
     players: nextPlayers,
     finance: { ...finance, funds: moneyAfter, transactions: nextTransactions },
     retention: nextRetention,
+    clubMastery: nextClubMastery,
     //  `reputation` 由 spread 原樣帶過（F0 deprecated：不再由結算寫入）。
     meta: { ...meta, fans: fansAfter, competitiveBlock: nextBlock },
     processedMatchTransactions: { ...processed, [tx.transactionId]: receipt },

@@ -64,6 +64,9 @@ import {
   emptyRetention, normalizeRetention, retentionViewOf, claimObjective as claimObjectiveIn,
   recordTrainingActivity, recordScoutActivity, coordsOf,
 } from "./retention/retentionState.js";
+//  Meta Progression v1：生涯累積打法。**獨立 domain**，不與 retention 共用袋子
+//  ——retention 的計數器會被 pruneScopes 依日／週／季清掉，mastery 不會。
+import { emptyClubMastery, normalizeClubMastery } from "./mastery/clubMasteryState.js";
 import { newGameFinancials } from "./economy/newGame.js";
 import { ensureTeamIdentity } from "./identity/teamIdentity.js";
 //  ── Milestone Q3：賽事系統。規則全在 competition/ 的純函式裡，
@@ -399,6 +402,8 @@ const DEFAULT = {
   //  V7B：Retention Foundation。目標清單本身是**推導**出來的，這裡只存
   //  俱樂部點數、計數器、去重集合與領取紀錄（見 `retention/retentionState.js`）。
   retention: emptyRetention(),
+  //  Meta Progression v1：戰術使用與意圖累積（生涯尺度，永不 prune）。
+  clubMastery: emptyClubMastery(),
   // Q7b: metadata-only Season -> MOBA Career Circuit -> League Event wrapper.
   seasonStateV2: null,
   inbox: [
@@ -667,6 +672,8 @@ const load = () => {
       scouted: saved.scouted && typeof saved.scouted === "object" ? saved.scouted : {},
       //  V7B：舊存檔沒有 retention ⇒ 空的（不回填任何歷史進度，那是編造）。
       retention: normalizeRetention(saved.retention),
+      //  舊存檔沒有 clubMastery ⇒ 空袋子（不回填任何歷史打法，那是編造）。
+      clubMastery: normalizeClubMastery(saved.clubMastery),
       csHistory: arr(saved.csHistory, []),   // S23：舊存檔沒有 → 空（向下相容）
       //  C5V：舊存檔沒有欄位時接受三圖、練習預設 Mirage；不重寫既有 Session。
       csMapPreferences: normalizeCsMapPreferences(saved.csMapPreferences),

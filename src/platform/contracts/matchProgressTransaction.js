@@ -86,6 +86,13 @@ export function createMatchProgressTransaction({
       //    加在這裡而不是靠呼叫端猜，是因為交易單才是權威且可重算的紀錄：
       //    來源必須跟著它一起被稽核、一起冪等，而不是結算當下才由畫面決定。
       matchSource: metadata.matchSource ?? null,
+      //  Meta Progression v1：這場用的戰術，以及有沒有「打出它該有的樣子」。
+      //  ⚠ 同樣是**附加欄位、不是必填**（`?? null` / `?? false`），舊交易單仍合法。
+      //  ⚠ 放進交易單而不是結算時現算，理由與 `matchSource` 相同：交易單是權威
+      //    且可重算的紀錄，Club Mastery 的累積必須跟著它一起冪等——同一場再結算
+      //    會先被 `processedMatchTransactions` 擋下，因此不需要第二套冪等帳本。
+      tacticId: metadata.tacticId ?? null,
+      tacticIntent: metadata.tacticIntent === true,
     },
   };
 }

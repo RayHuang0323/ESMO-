@@ -22,6 +22,7 @@ import {
 import { fanWeightForOrigin } from "../fanSourceWeight.js";
 //  V0C：成長用的來源分類。與 Fan 分桶不同，但讀同一份 MatchOrigin。
 import { matchSourceFromOrigin, isPracticeSource } from "../matchSource.js";
+import { tacticIntentOf } from "../../mastery/clubMasteryState.js";
 
 /** 我方固定為藍隊（與 roster.js / draftRoster 一致）。 */
 const HOME = "blue";
@@ -124,6 +125,12 @@ export function mobaResultToTransaction(br, ctx = {}) {
       rewardFormulaVersion: MOBA_REWARD_FORMULA_VERSION,
       playerXpFormulaVersion: PLAYER_XP_FORMULA_VERSION,
       playerLevelFormulaVersion: PLAYER_LEVEL_FORMULA_VERSION,
+      //  Meta Progression v1：這場的戰術，以及有沒有「打出它該有的樣子」。
+      //  兩個來源都是既有的權威資料：`br.tactic`（引擎 configureMatch 的 meta）
+      //  與 `br.tacticExecution`（引擎真實執行統計）。這裡只轉述，
+      //  判定門檻與 fail-closed 規則住在 `mastery/clubMasteryState.js`。
+      tacticId: br.tactic?.tacticId ?? null,
+      tacticIntent: tacticIntentOf("moba", br.tactic?.tacticId, br.tacticExecution?.blue).intent,
     },
   });
 }
