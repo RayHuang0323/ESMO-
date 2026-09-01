@@ -65,6 +65,18 @@ import { buildBattleRoster } from "./battle/moba/mobaRosterAdapter.js";
 import { ROSTER } from "./data/roster.js";
 import { heroById } from "./data/heroDatabase.js";
 
+//  ── 需要鎖住 viewport 的畫面 ──────────────────────────────────────────────
+//  只有「整個畫面就是一個即時體驗」的才進這裡：對戰本身、進場載入、過場動畫。
+//  其餘全部走文件捲動（見下方 Scroll Contract）。
+//  ⚠ 加東西進來之前先問：這一頁的內容會不會超過一個 viewport？會 ⇒ 不要鎖。
+const VIEWPORT_LOCKED_SCREENS = new Set([
+  "battle",       // MOBA 對戰
+  "cs",           // CS 對戰
+  "loading",      // MOBA 進場載入
+  "csLoading",    // CS 進場載入
+  "matchmaking",  // 純過場動畫
+]);
+
 export default function AppShell() {
   const [screen, setScreen] = useState("dashboard");
   const [restoring, setRestoring] = useState(false);
@@ -164,8 +176,36 @@ export default function AppShell() {
     [profilePlayers, lineup, draft],
   );
 
+  //  ── Scroll Contract（全域，唯一一處）────────────────────────────────────
+  //  這個容器包住**每一個**畫面。它原本是 `height: min(88vh,760px)` ＋
+  //  `overflow: hidden` 的固定框——那是給對戰畫面的「遊戲視窗」造型，
+  //  但管理／生涯頁的內容早就長過它，於是超出的部分被裁掉、滾輪也捲不動。
+  //  這不是某幾頁的問題，是**所有頁共用同一個被鎖死的框**。
+  //
+  //  規則：
+  //    · 真正需要鎖住 viewport 的畫面（對戰、載入、過場動畫）維持固定框。
+  //    · 其餘一律 `minHeight` ＋ `overflow: visible` ⇒ 內容長多高，
+  //      文件就長多高，滾輪與觸控自然可捲到底。
+  //    · **畫面自己不要再發明捲動容器**——需要內部捲動的（例如 Dashboard
+  //      要讓底部導覽固定）自己處理，其餘交給文件捲動。
+  //
+  //  ⚠ Dashboard 有自己的內部捲動區與 `position: absolute` 的底部導覽，
+  //    所以它必須維持「容器不長高」的行為——它的內容被自己的捲動區收住，
+  //    容器停在 minHeight，導覽仍貼在框底，不會被推到內容尾端。
+  const viewportLocked = VIEWPORT_LOCKED_SCREENS.has(screen);
+  const shellStyle = {
+    width: "100%",
+    background: "linear-gradient(180deg,#0b1220,#0d1420)",
+    borderRadius: 14,
+    position: "relative",
+    fontFamily: "system-ui,-apple-system,sans-serif",
+    ...(viewportLocked
+      ? { height: "min(88vh, 760px)", overflow: "hidden" }
+      : { minHeight: "min(88vh, 760px)", overflow: "visible" }),
+  };
+
   return (
-    <div style={{ width: "100%", height: "min(88vh, 760px)", background: "linear-gradient(180deg,#0b1220,#0d1420)", borderRadius: 14, overflow: "hidden", position: "relative", fontFamily: "system-ui,-apple-system,sans-serif" }}>
+    <div data-viewport-locked={viewportLocked ? "1" : "0"} style={shellStyle}>
       {/* Q3.5：主畫面「🏆 賽事」改指向聯賽（不另建第二個入口）。
           Sprint09 的「賽季戰績」仍在 `season`，由 MenuScreen 進入——那是
           BattleResult 的統計頁，與聯賽是不同資料源，兩者刻意不合併。 */}

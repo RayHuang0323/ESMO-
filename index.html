@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>esmo · MOBA 3D</title>
     <style>
-      html, body, #root { margin: 0; padding: 0; height: 100%; background: #0d1420; }
+      /*  ⚠ `min-height` 而不是 `height`：固定成 100% 會讓根節點永遠等於
+          viewport 高度，內容長出去之後只能靠祖先自己開捲動區——那正是
+          管理頁捲不動的其中一半原因。另一半在 AppShell（見該檔的
+          Scroll Contract 註解）。 */
+      html, body, #root { margin: 0; padding: 0; min-height: 100%; background: #0d1420; }
     </style>
   </head>
   <body>
