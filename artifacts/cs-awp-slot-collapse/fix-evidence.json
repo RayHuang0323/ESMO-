@@ -1,0 +1,1821 @@
+{
+  "schema": "CsAwpslotCollapseMinimalFix.v1",
+  "generatedAt": "2026-09-02T10:02:06.255Z",
+  "source": {
+    "baseline": "origin/main @ e86ace1183cc28af16bf24a7df3a1e61c7b294eb",
+    "runtime": "src/battle/fps/EsportsFPS3D.jsx",
+    "sourceHash": "032b941d1009898b351660ef41674ebadd0b59dd0c9cba6c1a22c79f06324247"
+  },
+  "methodology": {
+    "deterministic": true,
+    "currentFormalRuntime": true,
+    "runtimeSource": "hotfix worktree",
+    "cbrFixture": "[90,46,46,46,46] vs [64x5]",
+    "adapterMetadata": "recomputed from overridden stats",
+    "noProductApiMutation": true,
+    "phase": "after"
+  },
+  "rows": [
+    {
+      "map": "mirage",
+      "seed": 13,
+      "starSide": "t",
+      "starId": "t1",
+      "starSlot": 0,
+      "starRole": "entry",
+      "flatRole": "entry",
+      "elapsedMs": 2904.5,
+      "completed": true,
+      "winner": "us",
+      "score": {
+        "starTeam": 13,
+        "opponent": 7,
+        "t": 13,
+        "ct": 7
+      },
+      "starWon": true,
+      "rounds": 20,
+      "star": {
+        "name": "Kratos",
+        "runtimeOverall": {
+          "adapterFps": 90,
+          "statsMean16": 90,
+          "combatStatsAll90": true
+        },
+        "final": {
+          "kills": 53,
+          "deaths": 7,
+          "assists": 0,
+          "adr": 261,
+          "role": "突破手",
+          "teamId": "us"
+        },
+        "purchases": {
+          "weaponCounts": {
+            "deagle": 2,
+            "ak": 7,
+            "scout": 3,
+            "p250": 1,
+            "glock": 2,
+            "xm1014": 1,
+            "usp": 1,
+            "m4a4": 3
+          },
+          "familyCounts": {
+            "pistol": 6,
+            "rifle": 10,
+            "sniper": 3,
+            "shotgun": 1
+          },
+          "purchaseCounts": {
+            "deagle": 2,
+            "ak": 7,
+            "scout": 3,
+            "p250": 1,
+            "xm1014": 1,
+            "m4a4": 3
+          },
+          "buyTypes": {
+            "pistol": 2,
+            "full": 8,
+            "eco": 4,
+            "force": 6
+          },
+          "totalSpent": 52900,
+          "rows": [
+            {
+              "round": 1,
+              "id": "t1",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "pistol",
+              "startMoney": 800,
+              "endMoney": 100,
+              "spent": 700,
+              "weapon": "deagle",
+              "weaponFamily": "pistol",
+              "purchase": "deagle",
+              "purchaseCost": 700,
+              "authority": {
+                "range": 38,
+                "accuracy": 1,
+                "fireMode": "single",
+                "triggerIntervalMs": 500,
+                "maxShotsPerTrigger": 1,
+                "family": "pistol",
+                "intervalMs": 500,
+                "damage": 53,
+                "headshot": 0.5,
+                "gun": "deagle"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "pistol",
+                "enemy": "pistol"
+              }
+            },
+            {
+              "round": 2,
+              "id": "t1",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 4250,
+              "endMoney": 50,
+              "spent": 4200,
+              "weapon": "ak",
+              "weaponFamily": "rifle",
+              "purchase": "ak",
+              "purchaseCost": 2700,
+              "authority": {
+                "range": 55,
+                "accuracy": 1,
+                "fireMode": "automatic",
+                "triggerIntervalMs": 0,
+                "maxShotsPerTrigger": 10,
+                "family": "rifle",
+                "intervalMs": 111.11111111111111,
+                "damage": 36,
+                "headshot": 0.45,
+                "gun": "ak"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "full",
+                "enemy": "eco"
+              }
+            },
+            {
+              "round": 3,
+              "id": "t1",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 4500,
+              "endMoney": 2100,
+              "spent": 2400,
+              "weapon": "scout",
+              "weaponFamily": "sniper",
+              "purchase": "scout",
+              "purchaseCost": 1700,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 900,
+                "damage": 88,
+                "headshot": 0.35,
+                "gun": "scout"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "full",
+                "enemy": "force"
+              }
+            },
+            {
+              "round": 4,
+              "id": "t1",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "eco",
+              "startMoney": 4400,
+              "endMoney": 4100,
+              "spent": 300,
+              "weapon": "p250",
+              "weaponFamily": "pistol",
+              "purchase": "p250",
+              "purchaseCost": 300,
+              "authority": {
+                "range": 38,
+                "accuracy": 1,
+                "fireMode": "single",
+                "triggerIntervalMs": 500,
+                "maxShotsPerTrigger": 1,
+                "family": "pistol",
+                "intervalMs": 500,
+                "damage": 38,
+                "headshot": 0.4,
+                "gun": "p250"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "eco",
+                "enemy": "full"
+              }
+            },
+            {
+              "round": 5,
+              "id": "t1",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "eco",
+              "startMoney": 6000,
+              "endMoney": 6000,
+              "spent": 0,
+              "weapon": "glock",
+              "weaponFamily": "pistol",
+              "purchase": null,
+              "purchaseCost": 0,
+              "authority": {
+                "range": 38,
+                "accuracy": 1,
+                "fireMode": "single",
+                "triggerIntervalMs": 500,
+                "maxShotsPerTrigger": 1,
+                "family": "pistol",
+                "intervalMs": 500,
+                "damage": 28,
+                "headshot": 0.3,
+                "gun": "glock"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "eco",
+                "enemy": "eco"
+              }
+            },
+            {
+              "round": 6,
+              "id": "t1",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 8400,
+              "endMoney": 3500,
+              "spent": 4900,
+              "weapon": "ak",
+              "weaponFamily": "rifle",
+              "purchase": "ak",
+              "purchaseCost": 2700,
+              "authority": {
+                "range": 55,
+                "accuracy": 1,
+                "fireMode": "automatic",
+                "triggerIntervalMs": 0,
+                "maxShotsPerTrigger": 10,
+                "family": "rifle",
+                "intervalMs": 111.11111111111111,
+                "damage": 36,
+                "headshot": 0.45,
+                "gun": "ak"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "full",
+                "enemy": "full"
+              }
+            },
+            {
+              "round": 7,
+              "id": "t1",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 7950,
+              "endMoney": 4550,
+              "spent": 3400,
+              "weapon": "ak",
+              "weaponFamily": "rifle",
+              "purchase": "ak",
+              "purchaseCost": 2700,
+              "authority": {
+                "range": 55,
+                "accuracy": 1,
+                "fireMode": "automatic",
+                "triggerIntervalMs": 0,
+                "maxShotsPerTrigger": 10,
+                "family": "rifle",
+                "intervalMs": 111.11111111111111,
+                "damage": 36,
+                "headshot": 0.45,
+                "gun": "ak"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "full",
+                "enemy": "full"
+              }
+            },
+            {
+              "round": 8,
+              "id": "t1",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 9300,
+              "endMoney": 5700,
+              "spent": 3600,
+              "weapon": "ak",
+              "weaponFamily": "rifle",
+              "purchase": "ak",
+              "purchaseCost": 2700,
+              "authority": {
+                "range": 55,
+                "accuracy": 1,
+                "fireMode": "automatic",
+                "triggerIntervalMs": 0,
+                "maxShotsPerTrigger": 10,
+                "family": "rifle",
+                "intervalMs": 111.11111111111111,
+                "damage": 36,
+                "headshot": 0.45,
+                "gun": "ak"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "full",
+                "enemy": "eco"
+              }
+            },
+            {
+              "round": 9,
+              "id": "t1",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 10150,
+              "endMoney": 6550,
+              "spent": 3600,
+              "weapon": "ak",
+              "weaponFamily": "rifle",
+              "purchase": "ak",
+              "purchaseCost": 2700,
+              "authority": {
+                "range": 55,
+                "accuracy": 1,
+                "fireMode": "automatic",
+                "triggerIntervalMs": 0,
+                "maxShotsPerTrigger": 10,
+                "family": "rifle",
+                "intervalMs": 111.11111111111111,
+                "damage": 36,
+                "headshot": 0.45,
+                "gun": "ak"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "full",
+                "enemy": "full"
+              }
+            },
+            {
+              "round": 10,
+              "id": "t1",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 11300,
+              "endMoney": 7400,
+              "spent": 3900,
+              "weapon": "ak",
+              "weaponFamily": "rifle",
+              "purchase": "ak",
+              "purchaseCost": 2700,
+              "authority": {
+                "range": 55,
+                "accuracy": 1,
+                "fireMode": "automatic",
+                "triggerIntervalMs": 0,
+                "maxShotsPerTrigger": 10,
+                "family": "rifle",
+                "intervalMs": 111.11111111111111,
+                "damage": 36,
+                "headshot": 0.45,
+                "gun": "ak"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "full",
+                "enemy": "force"
+              }
+            },
+            {
+              "round": 11,
+              "id": "t1",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 12150,
+              "endMoney": 8850,
+              "spent": 3300,
+              "weapon": "ak",
+              "weaponFamily": "rifle",
+              "purchase": "ak",
+              "purchaseCost": 2700,
+              "authority": {
+                "range": 55,
+                "accuracy": 1,
+                "fireMode": "automatic",
+                "triggerIntervalMs": 0,
+                "maxShotsPerTrigger": 10,
+                "family": "rifle",
+                "intervalMs": 111.11111111111111,
+                "damage": 36,
+                "headshot": 0.45,
+                "gun": "ak"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "full",
+                "enemy": "force"
+              }
+            },
+            {
+              "round": 12,
+              "id": "t1",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "eco",
+              "startMoney": 10550,
+              "endMoney": 10550,
+              "spent": 0,
+              "weapon": "glock",
+              "weaponFamily": "pistol",
+              "purchase": null,
+              "purchaseCost": 0,
+              "authority": {
+                "range": 38,
+                "accuracy": 1,
+                "fireMode": "single",
+                "triggerIntervalMs": 500,
+                "maxShotsPerTrigger": 1,
+                "family": "pistol",
+                "intervalMs": 500,
+                "damage": 28,
+                "headshot": 0.3,
+                "gun": "glock"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "eco",
+                "enemy": "force"
+              }
+            },
+            {
+              "round": 13,
+              "id": "t1",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "pistol",
+              "startMoney": 800,
+              "endMoney": 100,
+              "spent": 700,
+              "weapon": "deagle",
+              "weaponFamily": "pistol",
+              "purchase": "deagle",
+              "purchaseCost": 700,
+              "authority": {
+                "range": 38,
+                "accuracy": 1,
+                "fireMode": "single",
+                "triggerIntervalMs": 500,
+                "maxShotsPerTrigger": 1,
+                "family": "pistol",
+                "intervalMs": 500,
+                "damage": 53,
+                "headshot": 0.5,
+                "gun": "deagle"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "pistol",
+                "us": "pistol"
+              }
+            },
+            {
+              "round": 14,
+              "id": "t1",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "force",
+              "startMoney": 4550,
+              "endMoney": 550,
+              "spent": 4000,
+              "weapon": "xm1014",
+              "weaponFamily": "shotgun",
+              "purchase": "xm1014",
+              "purchaseCost": 2000,
+              "authority": {
+                "range": 25,
+                "accuracy": 0.78,
+                "fireMode": "single",
+                "triggerIntervalMs": 500,
+                "maxShotsPerTrigger": 1,
+                "family": "shotgun",
+                "intervalMs": 500,
+                "damage": 62,
+                "headshot": 0.16,
+                "gun": "xm1014"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "eco",
+                "us": "force"
+              }
+            },
+            {
+              "round": 15,
+              "id": "t1",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "force",
+              "startMoney": 3800,
+              "endMoney": 900,
+              "spent": 2900,
+              "weapon": "scout",
+              "weaponFamily": "sniper",
+              "purchase": "scout",
+              "purchaseCost": 1700,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 900,
+                "damage": 88,
+                "headshot": 0.35,
+                "gun": "scout"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "eco",
+                "us": "force"
+              }
+            },
+            {
+              "round": 16,
+              "id": "t1",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "force",
+              "startMoney": 4750,
+              "endMoney": 2350,
+              "spent": 2400,
+              "weapon": "scout",
+              "weaponFamily": "sniper",
+              "purchase": "scout",
+              "purchaseCost": 1700,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 900,
+                "damage": 88,
+                "headshot": 0.35,
+                "gun": "scout"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "full",
+                "us": "force"
+              }
+            },
+            {
+              "round": 17,
+              "id": "t1",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "eco",
+              "startMoney": 4050,
+              "endMoney": 4050,
+              "spent": 0,
+              "weapon": "usp",
+              "weaponFamily": "pistol",
+              "purchase": null,
+              "purchaseCost": 0,
+              "authority": {
+                "range": 38,
+                "accuracy": 1,
+                "fireMode": "single",
+                "triggerIntervalMs": 500,
+                "maxShotsPerTrigger": 1,
+                "family": "pistol",
+                "intervalMs": 500,
+                "damage": 35,
+                "headshot": 0.35,
+                "gun": "usp"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "full",
+                "us": "eco"
+              }
+            },
+            {
+              "round": 18,
+              "id": "t1",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "force",
+              "startMoney": 5950,
+              "endMoney": 650,
+              "spent": 5300,
+              "weapon": "m4a4",
+              "weaponFamily": "rifle",
+              "purchase": "m4a4",
+              "purchaseCost": 3100,
+              "authority": {
+                "range": 55,
+                "accuracy": 1,
+                "fireMode": "automatic",
+                "triggerIntervalMs": 0,
+                "maxShotsPerTrigger": 10,
+                "family": "rifle",
+                "intervalMs": 90.9090909090909,
+                "damage": 33,
+                "headshot": 0.4,
+                "gun": "m4a4"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "full",
+                "us": "force"
+              }
+            },
+            {
+              "round": 19,
+              "id": "t1",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "force",
+              "startMoney": 5400,
+              "endMoney": 1500,
+              "spent": 3900,
+              "weapon": "m4a4",
+              "weaponFamily": "rifle",
+              "purchase": "m4a4",
+              "purchaseCost": 3100,
+              "authority": {
+                "range": 55,
+                "accuracy": 1,
+                "fireMode": "automatic",
+                "triggerIntervalMs": 0,
+                "maxShotsPerTrigger": 10,
+                "family": "rifle",
+                "intervalMs": 90.9090909090909,
+                "damage": 33,
+                "headshot": 0.4,
+                "gun": "m4a4"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "eco",
+                "us": "force"
+              }
+            },
+            {
+              "round": 20,
+              "id": "t1",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "force",
+              "startMoney": 5350,
+              "endMoney": 1950,
+              "spent": 3400,
+              "weapon": "m4a4",
+              "weaponFamily": "rifle",
+              "purchase": "m4a4",
+              "purchaseCost": 3100,
+              "authority": {
+                "range": 55,
+                "accuracy": 1,
+                "fireMode": "automatic",
+                "triggerIntervalMs": 0,
+                "maxShotsPerTrigger": 10,
+                "family": "rifle",
+                "intervalMs": 90.9090909090909,
+                "damage": 33,
+                "headshot": 0.4,
+                "gun": "m4a4"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "full",
+                "us": "force"
+              }
+            }
+          ],
+          "nonEcoRows": 14,
+          "nonEcoPistolRows": 0,
+          "nonEcoPistolWithoutPrimaryBudget": 0
+        },
+        "engagement": {
+          "visible": 99,
+          "acquired": 99,
+          "firstShot": 62,
+          "shots": 108,
+          "hits": 86,
+          "damage": 5223
+        },
+        "movement": {
+          "routeAssignments": 57,
+          "routeVariants": {
+            "primary": 13,
+            "death-follow-up": 18,
+            "trade-cover": 11,
+            "control": 13,
+            "rotate": 2
+          },
+          "distance": 0,
+          "stuck": 0,
+          "unresolvedStuck": 0
+        },
+        "bomb": {
+          "plants": 0,
+          "defuses": 0
+        }
+      },
+      "team": {
+        "roundWins": 13,
+        "kills": 75,
+        "deaths": 74,
+        "plants": 0,
+        "defuses": 0,
+        "explosions": 0
+      },
+      "scenario": "cbr_entry_slot0"
+    },
+    {
+      "map": "mirage",
+      "seed": 13,
+      "starSide": "t",
+      "starId": "t3",
+      "starSlot": 2,
+      "starRole": "awp",
+      "flatRole": "awp",
+      "elapsedMs": 3233.1,
+      "completed": true,
+      "winner": "enemy",
+      "score": {
+        "starTeam": 13,
+        "opponent": 16,
+        "t": 13,
+        "ct": 16
+      },
+      "starWon": false,
+      "rounds": 29,
+      "star": {
+        "name": "Pinata",
+        "runtimeOverall": {
+          "adapterFps": 90,
+          "statsMean16": 90,
+          "combatStatsAll90": true
+        },
+        "final": {
+          "kills": 46,
+          "deaths": 19,
+          "assists": 2,
+          "adr": 171,
+          "role": "狙擊手",
+          "teamId": "us"
+        },
+        "purchases": {
+          "weaponCounts": {
+            "deagle": 2,
+            "galil": 2,
+            "awp": 10,
+            "glock": 1,
+            "scout": 13,
+            "usp": 1
+          },
+          "familyCounts": {
+            "pistol": 4,
+            "rifle": 2,
+            "sniper": 23
+          },
+          "purchaseCounts": {
+            "deagle": 2,
+            "galil": 2,
+            "awp": 9,
+            "scout": 13
+          },
+          "buyTypes": {
+            "pistol": 2,
+            "full": 16,
+            "eco": 6,
+            "force": 5
+          },
+          "totalSpent": 93550,
+          "rows": [
+            {
+              "round": 1,
+              "id": "t3",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "pistol",
+              "startMoney": 800,
+              "endMoney": 100,
+              "spent": 700,
+              "weapon": "deagle",
+              "weaponFamily": "pistol",
+              "purchase": "deagle",
+              "purchaseCost": 700,
+              "authority": {
+                "range": 38,
+                "accuracy": 1,
+                "fireMode": "single",
+                "triggerIntervalMs": 500,
+                "maxShotsPerTrigger": 1,
+                "family": "pistol",
+                "intervalMs": 500,
+                "damage": 53,
+                "headshot": 0.5,
+                "gun": "deagle"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "pistol",
+                "enemy": "pistol"
+              }
+            },
+            {
+              "round": 2,
+              "id": "t3",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 4550,
+              "endMoney": 550,
+              "spent": 4000,
+              "weapon": "galil",
+              "weaponFamily": "rifle",
+              "purchase": "galil",
+              "purchaseCost": 1800,
+              "authority": {
+                "range": 55,
+                "accuracy": 1,
+                "fireMode": "automatic",
+                "triggerIntervalMs": 0,
+                "maxShotsPerTrigger": 10,
+                "family": "rifle",
+                "intervalMs": 100,
+                "damage": 30,
+                "headshot": 0.38,
+                "gun": "galil"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "full",
+                "enemy": "eco"
+              }
+            },
+            {
+              "round": 3,
+              "id": "t3",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 5000,
+              "endMoney": 50,
+              "spent": 4950,
+              "weapon": "awp",
+              "weaponFamily": "sniper",
+              "purchase": "awp",
+              "purchaseCost": 4750,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 1000,
+                "damage": 115,
+                "headshot": 0.3,
+                "gun": "awp"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "full",
+                "enemy": "force"
+              }
+            },
+            {
+              "round": 4,
+              "id": "t3",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "eco",
+              "startMoney": 1650,
+              "endMoney": 1650,
+              "spent": 0,
+              "weapon": "glock",
+              "weaponFamily": "pistol",
+              "purchase": null,
+              "purchaseCost": 0,
+              "authority": {
+                "range": 38,
+                "accuracy": 1,
+                "fireMode": "single",
+                "triggerIntervalMs": 500,
+                "maxShotsPerTrigger": 1,
+                "family": "pistol",
+                "intervalMs": 500,
+                "damage": 28,
+                "headshot": 0.3,
+                "gun": "glock"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "eco",
+                "enemy": "eco"
+              }
+            },
+            {
+              "round": 5,
+              "id": "t3",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "eco",
+              "startMoney": 3550,
+              "endMoney": 1850,
+              "spent": 1700,
+              "weapon": "scout",
+              "weaponFamily": "sniper",
+              "purchase": "scout",
+              "purchaseCost": 1700,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 900,
+                "damage": 88,
+                "headshot": 0.35,
+                "gun": "scout"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "eco",
+                "enemy": "full"
+              }
+            },
+            {
+              "round": 6,
+              "id": "t3",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 4550,
+              "endMoney": 1350,
+              "spent": 3200,
+              "weapon": "scout",
+              "weaponFamily": "sniper",
+              "purchase": "scout",
+              "purchaseCost": 1700,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 900,
+                "damage": 88,
+                "headshot": 0.35,
+                "gun": "scout"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "full",
+                "enemy": "full"
+              }
+            },
+            {
+              "round": 7,
+              "id": "t3",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 4550,
+              "endMoney": 1050,
+              "spent": 3500,
+              "weapon": "scout",
+              "weaponFamily": "sniper",
+              "purchase": "scout",
+              "purchaseCost": 1700,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 900,
+                "damage": 88,
+                "headshot": 0.35,
+                "gun": "scout"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "full",
+                "enemy": "full"
+              }
+            },
+            {
+              "round": 8,
+              "id": "t3",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "force",
+              "startMoney": 4450,
+              "endMoney": 750,
+              "spent": 3700,
+              "weapon": "galil",
+              "weaponFamily": "rifle",
+              "purchase": "galil",
+              "purchaseCost": 1800,
+              "authority": {
+                "range": 55,
+                "accuracy": 1,
+                "fireMode": "automatic",
+                "triggerIntervalMs": 0,
+                "maxShotsPerTrigger": 10,
+                "family": "rifle",
+                "intervalMs": 100,
+                "damage": 30,
+                "headshot": 0.38,
+                "gun": "galil"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "force",
+                "enemy": "full"
+              }
+            },
+            {
+              "round": 9,
+              "id": "t3",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "force",
+              "startMoney": 4450,
+              "endMoney": 1250,
+              "spent": 3200,
+              "weapon": "scout",
+              "weaponFamily": "sniper",
+              "purchase": "scout",
+              "purchaseCost": 1700,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 900,
+                "damage": 88,
+                "headshot": 0.35,
+                "gun": "scout"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "force",
+                "enemy": "full"
+              }
+            },
+            {
+              "round": 10,
+              "id": "t3",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "force",
+              "startMoney": 4950,
+              "endMoney": 0,
+              "spent": 4950,
+              "weapon": "awp",
+              "weaponFamily": "sniper",
+              "purchase": "awp",
+              "purchaseCost": 4750,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 1000,
+                "damage": 115,
+                "headshot": 0.3,
+                "gun": "awp"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "force",
+                "enemy": "full"
+              }
+            },
+            {
+              "round": 11,
+              "id": "t3",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "force",
+              "startMoney": 3350,
+              "endMoney": 150,
+              "spent": 3200,
+              "weapon": "scout",
+              "weaponFamily": "sniper",
+              "purchase": "scout",
+              "purchaseCost": 1700,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 900,
+                "damage": 88,
+                "headshot": 0.35,
+                "gun": "scout"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "force",
+                "enemy": "eco"
+              }
+            },
+            {
+              "round": 12,
+              "id": "t3",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 3400,
+              "endMoney": 200,
+              "spent": 3200,
+              "weapon": "scout",
+              "weaponFamily": "sniper",
+              "purchase": "scout",
+              "purchaseCost": 1700,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 900,
+                "damage": 88,
+                "headshot": 0.35,
+                "gun": "scout"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "full",
+                "enemy": "full"
+              }
+            },
+            {
+              "round": 13,
+              "id": "t3",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "pistol",
+              "startMoney": 800,
+              "endMoney": 100,
+              "spent": 700,
+              "weapon": "deagle",
+              "weaponFamily": "pistol",
+              "purchase": "deagle",
+              "purchaseCost": 700,
+              "authority": {
+                "range": 38,
+                "accuracy": 1,
+                "fireMode": "single",
+                "triggerIntervalMs": 500,
+                "maxShotsPerTrigger": 1,
+                "family": "pistol",
+                "intervalMs": 500,
+                "damage": 53,
+                "headshot": 0.5,
+                "gun": "deagle"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "pistol",
+                "us": "pistol"
+              }
+            },
+            {
+              "round": 14,
+              "id": "t3",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 4550,
+              "endMoney": 1350,
+              "spent": 3200,
+              "weapon": "scout",
+              "weaponFamily": "sniper",
+              "purchase": "scout",
+              "purchaseCost": 1700,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 900,
+                "damage": 88,
+                "headshot": 0.35,
+                "gun": "scout"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "eco",
+                "us": "full"
+              }
+            },
+            {
+              "round": 15,
+              "id": "t3",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 5200,
+              "endMoney": 150,
+              "spent": 5050,
+              "weapon": "awp",
+              "weaponFamily": "sniper",
+              "purchase": "awp",
+              "purchaseCost": 4750,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 1000,
+                "damage": 115,
+                "headshot": 0.3,
+                "gun": "awp"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "force",
+                "us": "full"
+              }
+            },
+            {
+              "round": 16,
+              "id": "t3",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "eco",
+              "startMoney": 1550,
+              "endMoney": 1550,
+              "spent": 0,
+              "weapon": "usp",
+              "weaponFamily": "pistol",
+              "purchase": null,
+              "purchaseCost": 0,
+              "authority": {
+                "range": 38,
+                "accuracy": 1,
+                "fireMode": "single",
+                "triggerIntervalMs": 500,
+                "maxShotsPerTrigger": 1,
+                "family": "pistol",
+                "intervalMs": 500,
+                "damage": 35,
+                "headshot": 0.35,
+                "gun": "usp"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "force",
+                "us": "eco"
+              }
+            },
+            {
+              "round": 17,
+              "id": "t3",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "eco",
+              "startMoney": 3450,
+              "endMoney": 1750,
+              "spent": 1700,
+              "weapon": "scout",
+              "weaponFamily": "sniper",
+              "purchase": "scout",
+              "purchaseCost": 1700,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 900,
+                "damage": 88,
+                "headshot": 0.35,
+                "gun": "scout"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "force",
+                "us": "eco"
+              }
+            },
+            {
+              "round": 18,
+              "id": "t3",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 4150,
+              "endMoney": 950,
+              "spent": 3200,
+              "weapon": "scout",
+              "weaponFamily": "sniper",
+              "purchase": "scout",
+              "purchaseCost": 1700,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 900,
+                "damage": 88,
+                "headshot": 0.35,
+                "gun": "scout"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "force",
+                "us": "full"
+              }
+            },
+            {
+              "round": 19,
+              "id": "t3",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 5400,
+              "endMoney": 350,
+              "spent": 5050,
+              "weapon": "awp",
+              "weaponFamily": "sniper",
+              "purchase": "awp",
+              "purchaseCost": 4750,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 1000,
+                "damage": 115,
+                "headshot": 0.3,
+                "gun": "awp"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "eco",
+                "us": "full"
+              }
+            },
+            {
+              "round": 20,
+              "id": "t3",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 3600,
+              "endMoney": 100,
+              "spent": 3500,
+              "weapon": "scout",
+              "weaponFamily": "sniper",
+              "purchase": "scout",
+              "purchaseCost": 1700,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 900,
+                "damage": 88,
+                "headshot": 0.35,
+                "gun": "scout"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "force",
+                "us": "full"
+              }
+            },
+            {
+              "round": 21,
+              "id": "t3",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "eco",
+              "startMoney": 2700,
+              "endMoney": 1000,
+              "spent": 1700,
+              "weapon": "scout",
+              "weaponFamily": "sniper",
+              "purchase": "scout",
+              "purchaseCost": 1700,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 900,
+                "damage": 88,
+                "headshot": 0.35,
+                "gun": "scout"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "force",
+                "us": "eco"
+              }
+            },
+            {
+              "round": 22,
+              "id": "t3",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 5750,
+              "endMoney": 0,
+              "spent": 5750,
+              "weapon": "awp",
+              "weaponFamily": "sniper",
+              "purchase": "awp",
+              "purchaseCost": 4750,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 1000,
+                "damage": 115,
+                "headshot": 0.3,
+                "gun": "awp"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "eco",
+                "us": "full"
+              }
+            },
+            {
+              "round": 23,
+              "id": "t3",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "eco",
+              "startMoney": 3550,
+              "endMoney": 3550,
+              "spent": 0,
+              "weapon": "awp",
+              "weaponFamily": "sniper",
+              "purchase": null,
+              "purchaseCost": 0,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 1000,
+                "damage": 115,
+                "headshot": 0.3,
+                "gun": "awp"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "force",
+                "us": "eco"
+              }
+            },
+            {
+              "round": 24,
+              "id": "t3",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 7300,
+              "endMoney": 1550,
+              "spent": 5750,
+              "weapon": "awp",
+              "weaponFamily": "sniper",
+              "purchase": "awp",
+              "purchaseCost": 4750,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 1000,
+                "damage": 115,
+                "headshot": 0.3,
+                "gun": "awp"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "eco",
+                "us": "full"
+              }
+            },
+            {
+              "round": 25,
+              "id": "t3",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 12500,
+              "endMoney": 5950,
+              "spent": 6550,
+              "weapon": "awp",
+              "weaponFamily": "sniper",
+              "purchase": "awp",
+              "purchaseCost": 4750,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 1000,
+                "damage": 115,
+                "headshot": 0.3,
+                "gun": "awp"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "full",
+                "us": "full"
+              }
+            },
+            {
+              "round": 26,
+              "id": "t3",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 9500,
+              "endMoney": 4450,
+              "spent": 5050,
+              "weapon": "awp",
+              "weaponFamily": "sniper",
+              "purchase": "awp",
+              "purchaseCost": 4750,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 1000,
+                "damage": 115,
+                "headshot": 0.3,
+                "gun": "awp"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "full",
+                "us": "full"
+              }
+            },
+            {
+              "round": 27,
+              "id": "t3",
+              "side": "ct",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 5850,
+              "endMoney": 100,
+              "spent": 5750,
+              "weapon": "awp",
+              "weaponFamily": "sniper",
+              "purchase": "awp",
+              "purchaseCost": 4750,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 1000,
+                "damage": 115,
+                "headshot": 0.3,
+                "gun": "awp"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "enemy": "full",
+                "us": "full"
+              }
+            },
+            {
+              "round": 28,
+              "id": "t3",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "full",
+              "startMoney": 2100,
+              "endMoney": 100,
+              "spent": 2000,
+              "weapon": "scout",
+              "weaponFamily": "sniper",
+              "purchase": "scout",
+              "purchaseCost": 1700,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 900,
+                "damage": 88,
+                "headshot": 0.35,
+                "gun": "scout"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "full",
+                "enemy": "full"
+              }
+            },
+            {
+              "round": 29,
+              "id": "t3",
+              "side": "t",
+              "teamId": "us",
+              "buyType": "force",
+              "startMoney": 2500,
+              "endMoney": 200,
+              "spent": 2300,
+              "weapon": "scout",
+              "weaponFamily": "sniper",
+              "purchase": "scout",
+              "purchaseCost": 1700,
+              "authority": {
+                "range": 88,
+                "accuracy": 0.94,
+                "fireMode": "single",
+                "triggerIntervalMs": 900,
+                "maxShotsPerTrigger": 1,
+                "family": "sniper",
+                "intervalMs": 900,
+                "damage": 88,
+                "headshot": 0.35,
+                "gun": "scout"
+              },
+              "target": "a",
+              "buyTypeByTeam": {
+                "us": "force",
+                "enemy": "full"
+              }
+            }
+          ],
+          "nonEcoRows": 21,
+          "nonEcoPistolRows": 0,
+          "nonEcoPistolWithoutPrimaryBudget": 0
+        },
+        "engagement": {
+          "visible": 134,
+          "acquired": 134,
+          "firstShot": 68,
+          "shots": 99,
+          "hits": 75,
+          "damage": 4972
+        },
+        "movement": {
+          "routeAssignments": 70,
+          "routeVariants": {
+            "control": 15,
+            "trade-cover": 22,
+            "death-follow-up": 13,
+            "rotate": 3,
+            "primary": 17
+          },
+          "distance": 0,
+          "stuck": 0,
+          "unresolvedStuck": 0
+        },
+        "bomb": {
+          "plants": 0,
+          "defuses": 0
+        }
+      },
+      "team": {
+        "roundWins": 13,
+        "kills": 84,
+        "deaths": 118,
+        "plants": 0,
+        "defuses": 0,
+        "explosions": 0
+      },
+      "scenario": "cbr_awp_slot2"
+    }
+  ],
+  "directBuyMatrix": {
+    "t:6000": {
+      "counts": {
+        "awp": 256
+      },
+      "nullChoices": 0,
+      "primaryChoices": 256
+    },
+    "t:3000": {
+      "counts": {
+        "galil": 29,
+        "scout": 227
+      },
+      "nullChoices": 0,
+      "primaryChoices": 256
+    },
+    "t:1500": {
+      "counts": {
+        "mp9": 228,
+        "mag7": 4,
+        "sawedoff": 7,
+        "mac10": 5,
+        "ump": 6,
+        "nova": 6
+      },
+      "nullChoices": 0,
+      "primaryChoices": 256
+    },
+    "t:900": {
+      "counts": {
+        "null": 256
+      },
+      "nullChoices": 256,
+      "primaryChoices": 0
+    },
+    "ct:6000": {
+      "counts": {
+        "awp": 256
+      },
+      "nullChoices": 0,
+      "primaryChoices": 256
+    },
+    "ct:3000": {
+      "counts": {
+        "famas": 29,
+        "scout": 227
+      },
+      "nullChoices": 0,
+      "primaryChoices": 256
+    },
+    "ct:1500": {
+      "counts": {
+        "mp9": 228,
+        "mag7": 4,
+        "sawedoff": 7,
+        "mac10": 5,
+        "ump": 6,
+        "nova": 6
+      },
+      "nullChoices": 0,
+      "primaryChoices": 256
+    },
+    "ct:900": {
+      "counts": {
+        "null": 256
+      },
+      "nullChoices": 256,
+      "primaryChoices": 0
+    }
+  },
+  "digest": "7e985540ed561718b9826bd984eb1a919befc69b8f6dbe13744d2ff7b064f711"
+}

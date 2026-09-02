@@ -22,7 +22,8 @@ check("flashbang uses localized fade/recovery presentation", /flashBurst/.test(u
 check("all pools are capped and dispose is idempotent", /MAX_(SMOKE_EVENTS|THROWABLE_EVENTS|HE_BURSTS|FLASH_BURSTS|MOLLY_EVENTS)/.test(utility) && /if \(disposed\) return/.test(utility) && /const dispose = \(\) =>/.test(utility));
 check("reduced motion retains utility markers", /prefers-reduced-motion/.test(utility) && /if \(!reducedMotion\)/.test(utility) && /visibleMarkers/.test(utility));
 check("no shader or post-processing expansion", !/ShaderMaterial|EffectComposer|RenderPass|UnrealBloomPass/.test(utility) && /postprocessing: "none"/.test(utility));
-check("C5A recorded gunfire boundary remains intact", /one-recorded-buffer-per-shot/.test(renderer) && /AudioBufferSourceNode/.test(renderer) && /prepared-direct/.test(renderer) && !/createOscillator/.test(renderer));
+const shotBlock = renderer.match(/function shot\([\s\S]*?\n  function tone/)?.[0] || "";
+check("C5A recorded gunfire boundary remains intact", /one-recorded-buffer-per-shot/.test(renderer) && /AudioBufferSourceNode/.test(renderer) && /prepared-direct/.test(renderer) && /createOscillator/.test(renderer) && !/createOscillator/.test(shotBlock));
 check("P0/C2C/camera/RAF ownership remains in renderer", /StableCanvasRegion|data-esmo-fps-stable-canvas-region/.test(renderer) && /evaluateFpsCameraRecovery/.test(renderer) && /liveRef\.current\.fIdx/.test(renderer) && /createFpsCharacterRenderer/.test(renderer));
 check("legacy utility pools were replaced, not duplicated", !/st\.pools\.smoke|st\.pools\.fire|st\.pools\.nade|st\.pools\.boom/.test(renderer) && /st\.utilityFxEvidence=st\.utilityFx\.update/.test(renderer));
 

@@ -1,0 +1,138 @@
+{
+  "schema": "CsC5BUtilityIntegrationEvidenceProjection.v1",
+  "projectedFrom": "artifacts/cs-c5b/owner-review/runtime-evidence-mobile.json",
+  "sourceSha256": "90bee8028a6dd48842c14d0d63fe12ff26fdea4af5808aa12b5caafee1c53e70",
+  "viewport": {
+    "width": 390,
+    "height": 844,
+    "mode": "mobile"
+  },
+  "results": [
+    {
+      "mapKey": "mirage",
+      "projectiles": [
+        {
+          "flightDurationSec": 0.55,
+          "velocityUnitsPerSec": 13.8564,
+          "arcHeightUnits": 4.077
+        }
+      ],
+      "utility": {
+        "smokeStageCounts": {
+          "grow": 270,
+          "hold": 344,
+          "dissipate": 149
+        },
+        "flashDetonations": 15,
+        "flashRecoverySamples": 2312,
+        "heDetonations": 3,
+        "mollySamples": 0
+      },
+      "renderSamples": [
+        {
+          "smoke": 2,
+          "markers": 2
+        }
+      ],
+      "browserErrors": {
+        "console": [],
+        "page": []
+      },
+      "c2c": {
+        "rigged": 10,
+        "fallback": 0
+      },
+      "p0": {
+        "staleMismatch": 0,
+        "duplicateRaf": 0
+      },
+      "canvas": {
+        "width": 370
+      }
+    },
+    {
+      "mapKey": "dust2",
+      "projectiles": [
+        {
+          "flightDurationSec": 0.9201,
+          "velocityUnitsPerSec": 15,
+          "arcHeightUnits": 5.436
+        }
+      ],
+      "utility": {
+        "smokeStageCounts": {
+          "grow": 814,
+          "hold": 1882,
+          "dissipate": 931
+        },
+        "flashDetonations": 99,
+        "flashRecoverySamples": 6941,
+        "heDetonations": 18,
+        "mollySamples": 64
+      },
+      "renderSamples": [
+        {
+          "smoke": 2,
+          "markers": 2
+        }
+      ],
+      "browserErrors": {
+        "console": [],
+        "page": []
+      },
+      "c2c": {
+        "rigged": 10,
+        "fallback": 0
+      },
+      "p0": {
+        "staleMismatch": 0,
+        "duplicateRaf": 0
+      },
+      "canvas": {
+        "width": 370
+      }
+    },
+    {
+      "mapKey": "inferno",
+      "projectiles": [
+        {
+          "flightDurationSec": 0.55,
+          "velocityUnitsPerSec": 14.7359,
+          "arcHeightUnits": 4.183
+        }
+      ],
+      "utility": {
+        "smokeStageCounts": {
+          "grow": 606,
+          "hold": 1474,
+          "dissipate": 960
+        },
+        "flashDetonations": 147,
+        "flashRecoverySamples": 3621,
+        "heDetonations": 45,
+        "mollySamples": 192
+      },
+      "renderSamples": [
+        {
+          "smoke": 2,
+          "markers": 2
+        }
+      ],
+      "browserErrors": {
+        "console": [],
+        "page": []
+      },
+      "c2c": {
+        "rigged": 10,
+        "fallback": 0
+      },
+      "p0": {
+        "staleMismatch": 0,
+        "duplicateRaf": 0
+      },
+      "canvas": {
+        "width": 370
+      }
+    }
+  ]
+}

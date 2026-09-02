@@ -1,0 +1,4147 @@
+{
+  "generatedAt": "2026-09-02T08:28:20.359Z",
+  "source": "C5C Battle runtime browser evidence",
+  "viewport": {
+    "width": 390,
+    "height": 844,
+    "mode": "mobile"
+  },
+  "http": {
+    "ownerReview": 200,
+    "battle": 200
+  },
+  "results": [
+    {
+      "mapKey": "mirage",
+      "completed": true,
+      "frameCount": 1209,
+      "presentation": {
+        "version": 1,
+        "processedEvents": 240,
+        "duplicateEvents": 0,
+        "skippedHistoricalEvents": 0,
+        "feedEvents": 150,
+        "objectiveEvents": 0,
+        "roundStartEvents": 21,
+        "roundEndEvents": 21,
+        "clutchEvents": 4,
+        "audioRequests": 620,
+        "directorSwitches": 150,
+        "rapidDirectorSwitches": 0,
+        "rewindResets": 1,
+        "sameFramePublishes": 0,
+        "lastFrameIndex": 28,
+        "presentationBacklog": 0,
+        "lastEventId": "round-end-21",
+        "updateCalls": 183,
+        "framesWithEvents": 156,
+        "feedCount": 1,
+        "historyCount": 21,
+        "director": {
+          "kind": "multikill",
+          "at": 2471.5,
+          "score": 84,
+          "targetId": "t4",
+          "position": {
+            "x": 56,
+            "y": 65
+          },
+          "expiresAt": 2473.7,
+          "reason": "關鍵擊殺"
+        },
+        "bombEvents": 0,
+        "eventFrameCount": 177,
+        "eventTypes": {
+          "kill": 150,
+          "multikill": 62,
+          "door": 3,
+          "round-end": 21,
+          "clutch": 4
+        }
+      },
+      "audio": {
+        "assetSource": "CC0 real firearm recordings",
+        "presentationCueStarts": 271,
+        "recordedSourceStarts": 293,
+        "activeVoices": 3,
+        "loadErrors": {}
+      },
+      "camera": {
+        "directorSwitches": 150,
+        "manualOverrideSamples": 1,
+        "rapidSwitches": 0
+      },
+      "c2c": {
+        "rigged": 10,
+        "fallback": 0,
+        "failed": 0,
+        "players": {
+          "t1": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 0.983,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "assault",
+            "variationLabel": "Assault",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "radio"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 2808,
+            "artMaterials": 8,
+            "facingDegrees": 35.41954568075705,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.731436488324969
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8503623194700973,
+                0.7314364521113136
+              ],
+              "width": 2.4623,
+              "height": 1.89,
+              "depth": 1.4629
+            },
+            "currentBounds": {
+              "min": [
+                -13.559739412902214,
+                0.07994359070563103,
+                40.85376116716055
+              ],
+              "max": [
+                -11.443590528050429,
+                1.919923893177621,
+                42.42343786411473
+              ],
+              "width": 2.1161,
+              "height": 1.84,
+              "depth": 1.5697
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 9,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "t2": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 0.983,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "support",
+            "variationLabel": "Support",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "pack"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 2740,
+            "artMaterials": 8,
+            "facingDegrees": -70.23839051398868,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.731436488324969
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8503623194700973,
+                0.7314364521113136
+              ],
+              "width": 2.4623,
+              "height": 1.89,
+              "depth": 1.4629
+            },
+            "currentBounds": {
+              "min": [
+                -16.295071341051994,
+                0.07961087296091601,
+                33.85916695321762
+              ],
+              "max": [
+                -15.295535070420229,
+                1.9195911754329091,
+                36.23717292240052
+              ],
+              "width": 0.9995,
+              "height": 1.84,
+              "depth": 2.378
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 9,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "t3": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 0.983,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "marksman",
+            "variationLabel": "Marksman",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "long"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 2796,
+            "artMaterials": 8,
+            "facingDegrees": 0,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.731436488324969
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8503623194700973,
+                0.7314364521113136
+              ],
+              "width": 2.4623,
+              "height": 1.89,
+              "depth": 1.4629
+            },
+            "currentBounds": {
+              "min": [
+                -9.92985539174983,
+                0.08010614097089311,
+                41.572401210338356
+              ],
+              "max": [
+                -7.474407766485772,
+                1.9200864434428881,
+                42.38866564327833
+              ],
+              "width": 2.4554,
+              "height": 1.84,
+              "depth": 0.8163
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 0,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "t4": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 0.983,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "lurker",
+            "variationLabel": "Lurker",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "radio"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 2716,
+            "artMaterials": 8,
+            "facingDegrees": 27.85013119657803,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.731436488324969
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8503623194700973,
+                0.7314364521113136
+              ],
+              "width": 2.4623,
+              "height": 1.89,
+              "depth": 1.4629
+            },
+            "currentBounds": {
+              "min": [
+                -14.134153451328958,
+                0.08006307924984665,
+                40.799505386297376
+              ],
+              "max": [
+                -11.870311640456768,
+                1.9200433817218445,
+                42.10566528035475
+              ],
+              "width": 2.2638,
+              "height": 1.84,
+              "depth": 1.3062
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 0,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "t5": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "aim",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Pistol_Aim_Neutral",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 0.1497,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "utility",
+            "variationLabel": "Utility",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "pack"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 2764,
+            "artMaterials": 8,
+            "facingDegrees": -65.48383742926688,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.731436488324969
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8503623194700973,
+                0.7314364521113136
+              ],
+              "width": 2.4623,
+              "height": 1.89,
+              "depth": 1.4629
+            },
+            "currentBounds": {
+              "min": [
+                -14.842821222297898,
+                0.07226345032706655,
+                28.52032904266351
+              ],
+              "max": [
+                -13.667745614872294,
+                1.9201229579071901,
+                30.83243789181373
+              ],
+              "width": 1.1751,
+              "height": 1.8479,
+              "depth": 2.3121
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 8,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "ct1": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 0.983,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "assault",
+            "variationLabel": "Assault",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "radio"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 3128,
+            "artMaterials": 8,
+            "facingDegrees": -179.57713405495107,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.7312503366612964
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8305778815941036,
+                0.7312503006168618
+              ],
+              "width": 2.4623,
+              "height": 1.8702,
+              "depth": 1.4625
+            },
+            "currentBounds": {
+              "min": [
+                15.313366855350399,
+                0.07781481087954492,
+                5.641391534929914
+              ],
+              "max": [
+                17.770213725215832,
+                1.8994679219341157,
+                6.435297830764513
+              ],
+              "width": 2.4568,
+              "height": 1.8217,
+              "depth": 0.7939
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 0,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "ct2": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 0.983,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "support",
+            "variationLabel": "Support",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "pack"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 3048,
+            "artMaterials": 8,
+            "facingDegrees": 179.73800679602456,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.7312503366612964
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8305778815941036,
+                0.7312503006168618
+              ],
+              "width": 2.4623,
+              "height": 1.8702,
+              "depth": 1.4625
+            },
+            "currentBounds": {
+              "min": [
+                13.717824442196076,
+                0.08018421079734833,
+                5.611462263672196
+              ],
+              "max": [
+                16.17396815143927,
+                1.9018373218519216,
+                6.407751301657339
+              ],
+              "width": 2.4561,
+              "height": 1.8217,
+              "depth": 0.7963
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 4,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "ct3": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "fire",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Pistol_Aim_Neutral",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 0.1164,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "marksman",
+            "variationLabel": "Marksman",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "long"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 3140,
+            "artMaterials": 8,
+            "facingDegrees": 167.08298604145656,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.7312503366612964
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8305778815941036,
+                0.7312503006168618
+              ],
+              "width": 2.4623,
+              "height": 1.8702,
+              "depth": 1.4625
+            },
+            "currentBounds": {
+              "min": [
+                10.276068899398448,
+                0.05063557856632003,
+                4.742762591002921
+              ],
+              "max": [
+                12.701501134235729,
+                1.88017365683631,
+                5.499527538728285
+              ],
+              "width": 2.4254,
+              "height": 1.8295,
+              "depth": 0.7568
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 6,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "ct4": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 0.983,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "lurker",
+            "variationLabel": "Lurker",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "radio"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 3024,
+            "artMaterials": 8,
+            "facingDegrees": 180,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.7312503366612964
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8305778815941036,
+                0.7312503006168618
+              ],
+              "width": 2.4623,
+              "height": 1.8702,
+              "depth": 1.4625
+            },
+            "currentBounds": {
+              "min": [
+                11.849407766485772,
+                0.08006288697852323,
+                5.626870433830378
+              ],
+              "max": [
+                14.30485539174983,
+                1.9017159980330962,
+                6.42226137086707
+              ],
+              "width": 2.4554,
+              "height": 1.8217,
+              "depth": 0.7954
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 8,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "ct5": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 0.983,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "utility",
+            "variationLabel": "Utility",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "pack"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 3144,
+            "artMaterials": 8,
+            "facingDegrees": -176.11673594283556,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.7312503366612964
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8305778815941036,
+                0.7312503006168618
+              ],
+              "width": 2.4623,
+              "height": 1.8702,
+              "depth": 1.4625
+            },
+            "currentBounds": {
+              "min": [
+                17.078497174305923,
+                0.08034827611314624,
+                5.677252802672469
+              ],
+              "max": [
+                19.541760830227766,
+                1.9020013871677184,
+                6.457392934561237
+              ],
+              "width": 2.4633,
+              "height": 1.8217,
+              "depth": 0.7801
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 6,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          }
+        }
+      },
+      "p0": {
+        "version": 1,
+        "fidxTransitions": 183,
+        "staleMismatch": 0,
+        "rafFrames": 353,
+        "duplicateRaf": 0,
+        "duplicateRender": 0,
+        "lastAuthoritativeFidx": 28,
+        "lastReason": "seek"
+      },
+      "canvas": {
+        "width": 370,
+        "height": 437,
+        "bufferWidth": 370,
+        "bufferHeight": 437
+      },
+      "browserErrors": {
+        "console": [],
+        "page": []
+      },
+      "hud": {
+        "killFeed": true,
+        "bomb": true,
+        "history": true,
+        "textIncludesChinese": true
+      },
+      "manualFocusAttempt": true,
+      "firstShot": "mirage-390px-battle.png"
+    },
+    {
+      "mapKey": "dust2",
+      "completed": true,
+      "frameCount": 3233,
+      "presentation": {
+        "version": 1,
+        "processedEvents": 348,
+        "duplicateEvents": 0,
+        "skippedHistoricalEvents": 0,
+        "feedEvents": 208,
+        "objectiveEvents": 3,
+        "roundStartEvents": 36,
+        "roundEndEvents": 36,
+        "clutchEvents": 0,
+        "audioRequests": 929,
+        "directorSwitches": 226,
+        "rapidDirectorSwitches": 0,
+        "rewindResets": 1,
+        "sameFramePublishes": 0,
+        "lastFrameIndex": 48,
+        "presentationBacklog": 0,
+        "lastEventId": "round-end-36",
+        "updateCalls": 298,
+        "framesWithEvents": 255,
+        "feedCount": 2,
+        "historyCount": 36,
+        "director": {
+          "kind": "kill",
+          "at": 4251,
+          "score": 62,
+          "targetId": "ct1",
+          "position": {
+            "x": 18.591214041376645,
+            "y": 70.98599733605332
+          },
+          "expiresAt": 4253.2,
+          "reason": "關鍵擊殺"
+        },
+        "bombEvents": 3,
+        "eventFrameCount": 291,
+        "eventTypes": {
+          "kill": 208,
+          "multikill": 79,
+          "round-end": 36,
+          "door": 22,
+          "bomb-planted": 1,
+          "defuse-start": 1,
+          "bomb-defused": 1
+        }
+      },
+      "audio": {
+        "assetSource": "CC0 real firearm recordings",
+        "presentationCueStarts": 383,
+        "recordedSourceStarts": 391,
+        "activeVoices": 10,
+        "loadErrors": {}
+      },
+      "camera": {
+        "directorSwitches": 226,
+        "manualOverrideSamples": 1,
+        "rapidSwitches": 0
+      },
+      "c2c": {
+        "rigged": 10,
+        "fallback": 0,
+        "failed": 0,
+        "players": {
+          "t1": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 1.0166,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "assault",
+            "variationLabel": "Assault",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "radio"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 2808,
+            "artMaterials": 8,
+            "facingDegrees": 91.1896030755783,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.731436488324969
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8503623194700973,
+                0.7314364521113136
+              ],
+              "width": 2.4623,
+              "height": 1.89,
+              "depth": 1.4629
+            },
+            "currentBounds": {
+              "min": [
+                -8.45787295501547,
+                0.07685995436858509,
+                14.999703041087722
+              ],
+              "max": [
+                -7.647656812776404,
+                1.9184346150367189,
+                17.453089510639334
+              ],
+              "width": 0.8102,
+              "height": 1.8416,
+              "depth": 2.4534
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 0,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "t2": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 1.0166,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "support",
+            "variationLabel": "Support",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "pack"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 2740,
+            "artMaterials": 8,
+            "facingDegrees": 48.25448455728602,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.731436488324969
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8503623194700973,
+                0.7314364521113136
+              ],
+              "width": 2.4623,
+              "height": 1.89,
+              "depth": 1.4629
+            },
+            "currentBounds": {
+              "min": [
+                -33.21023649884715,
+                0.0770718498179539,
+                19.01875523254406
+              ],
+              "max": [
+                -31.429909579838718,
+                1.9186465104860848,
+                20.965432925230775
+              ],
+              "width": 1.7803,
+              "height": 1.8416,
+              "depth": 1.9467
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 8,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "t3": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 1.0166,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "marksman",
+            "variationLabel": "Marksman",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "long"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 2796,
+            "artMaterials": 8,
+            "facingDegrees": 91.32896773788308,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.731436488324969
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8503623194700973,
+                0.7314364521113136
+              ],
+              "width": 2.4623,
+              "height": 1.89,
+              "depth": 1.4629
+            },
+            "currentBounds": {
+              "min": [
+                -8.413639031952066,
+                0.07707186696859511,
+                14.62618250439424
+              ],
+              "max": [
+                -7.60402780373498,
+                1.9186465276367302,
+                17.079924363955854
+              ],
+              "width": 0.8096,
+              "height": 1.8416,
+              "depth": 2.4537
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 1,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "t4": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 1.0166,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "lurker",
+            "variationLabel": "Lurker",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "radio"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 2716,
+            "artMaterials": 8,
+            "facingDegrees": -90,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.731436488324969
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8503623194700973,
+                0.7314364521113136
+              ],
+              "width": 2.4623,
+              "height": 1.89,
+              "depth": 1.4629
+            },
+            "currentBounds": {
+              "min": [
+                -16.053825367884556,
+                0.07685432094855582,
+                10.380093012809722
+              ],
+              "max": [
+                -15.238641190294794,
+                1.9184289816166884,
+                12.829855391749808
+              ],
+              "width": 0.8152,
+              "height": 1.8416,
+              "depth": 2.4498
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 8,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "t5": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "aim",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Pistol_Aim_Neutral",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 0.0166,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "utility",
+            "variationLabel": "Utility",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "pack"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 2764,
+            "artMaterials": 8,
+            "facingDegrees": 48.384262015458276,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.731436488324969
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8503623194700973,
+                0.7314364521113136
+              ],
+              "width": 2.4623,
+              "height": 1.89,
+              "depth": 1.4629
+            },
+            "currentBounds": {
+              "min": [
+                -31.182489823859406,
+                0.07223479691860588,
+                21.277775197957617
+              ],
+              "max": [
+                -29.40419652961302,
+                1.9200943044987366,
+                23.22432737873237
+              ],
+              "width": 1.7783,
+              "height": 1.8479,
+              "depth": 1.9466
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 8,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "ct1": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "fire",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Pistol_Aim_Neutral",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 0.1665,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "assault",
+            "variationLabel": "Assault",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "radio"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 3128,
+            "artMaterials": 8,
+            "facingDegrees": 180,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.7312503366612964
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8305778815941036,
+                0.7312503006168618
+              ],
+              "width": 2.4623,
+              "height": 1.8702,
+              "depth": 1.4625
+            },
+            "currentBounds": {
+              "min": [
+                -0.2584556599491377,
+                0.07215674621988619,
+                30.024137703672935
+              ],
+              "max": [
+                2.1898553917498296,
+                1.9016948244898755,
+                30.697143476063218
+              ],
+              "width": 2.4483,
+              "height": 1.8295,
+              "depth": 0.673
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 6,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "ct2": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 1.0166,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "support",
+            "variationLabel": "Support",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "pack"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 3048,
+            "artMaterials": 8,
+            "facingDegrees": 179.83552989915876,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.7312503366612964
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8305778815941036,
+                0.7312503006168618
+              ],
+              "width": 2.4623,
+              "height": 1.8702,
+              "depth": 1.4625
+            },
+            "currentBounds": {
+              "min": [
+                2.9020890666665355,
+                0.07683008325887117,
+                29.967601799350515
+              ],
+              "max": [
+                5.352288509995768,
+                1.9016419576188017,
+                30.771991006247116
+              ],
+              "width": 2.4502,
+              "height": 1.8248,
+              "depth": 0.8044
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 0,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "ct3": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 1.0166,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "marksman",
+            "variationLabel": "Marksman",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "long"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 3140,
+            "artMaterials": 8,
+            "facingDegrees": 180,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.7312503366612964
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8305778815941036,
+                0.7312503006168618
+              ],
+              "width": 2.4623,
+              "height": 1.8702,
+              "depth": 1.4625
+            },
+            "currentBounds": {
+              "min": [
+                2.8600930128097466,
+                0.07683451198481692,
+                30.004823151173238
+              ],
+              "max": [
+                5.309855391749834,
+                1.9016463863447477,
+                30.808559195470895
+              ],
+              "width": 2.4498,
+              "height": 1.8248,
+              "depth": 0.8037
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 0,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "ct4": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 1.0166,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "lurker",
+            "variationLabel": "Lurker",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "radio"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 3024,
+            "artMaterials": 8,
+            "facingDegrees": 168.71730401256121,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.7312503366612964
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8305778815941036,
+                0.7312503006168618
+              ],
+              "width": 2.4623,
+              "height": 1.8702,
+              "depth": 1.4625
+            },
+            "currentBounds": {
+              "min": [
+                28.586453481383487,
+                0.07691867606543001,
+                7.887282431087664
+              ],
+              "max": [
+                31.02375576274437,
+                1.9017305504253603,
+                8.720229181450598
+              ],
+              "width": 2.4373,
+              "height": 1.8248,
+              "depth": 0.8329
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 8,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "ct5": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "fire",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Pistol_Aim_Neutral",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 0.1665,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "utility",
+            "variationLabel": "Utility",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "pack"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 3144,
+            "artMaterials": 8,
+            "facingDegrees": -165.95023797863567,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.7312503366612964
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8305778815941036,
+                0.7312503006168618
+              ],
+              "width": 2.4623,
+              "height": 1.8702,
+              "depth": 1.4625
+            },
+            "currentBounds": {
+              "min": [
+                1.3290894640500746,
+                0.07216522638432846,
+                29.965943940513245
+              ],
+              "max": [
+                3.7536120894941476,
+                1.9017033046543166,
+                30.729999216859152
+              ],
+              "width": 2.4245,
+              "height": 1.8295,
+              "depth": 0.7641
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 9,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          }
+        }
+      },
+      "p0": {
+        "version": 1,
+        "fidxTransitions": 298,
+        "staleMismatch": 0,
+        "rafFrames": 538,
+        "duplicateRaf": 0,
+        "duplicateRender": 0,
+        "lastAuthoritativeFidx": 48,
+        "lastReason": "seek"
+      },
+      "canvas": {
+        "width": 370,
+        "height": 437,
+        "bufferWidth": 370,
+        "bufferHeight": 437
+      },
+      "browserErrors": {
+        "console": [],
+        "page": []
+      },
+      "hud": {
+        "killFeed": true,
+        "bomb": true,
+        "history": true,
+        "textIncludesChinese": true
+      },
+      "manualFocusAttempt": true,
+      "firstShot": "dust2-390px-battle.png"
+    },
+    {
+      "mapKey": "inferno",
+      "completed": true,
+      "frameCount": 3036,
+      "presentation": {
+        "version": 1,
+        "processedEvents": 260,
+        "duplicateEvents": 0,
+        "skippedHistoricalEvents": 1,
+        "feedEvents": 149,
+        "objectiveEvents": 9,
+        "roundStartEvents": 23,
+        "roundEndEvents": 23,
+        "clutchEvents": 1,
+        "audioRequests": 511,
+        "directorSwitches": 166,
+        "rapidDirectorSwitches": 0,
+        "rewindResets": 1,
+        "sameFramePublishes": 0,
+        "lastFrameIndex": 109,
+        "presentationBacklog": 0,
+        "lastEventId": "round-end-23",
+        "updateCalls": 219,
+        "framesWithEvents": 190,
+        "feedCount": 1,
+        "historyCount": 23,
+        "director": {
+          "kind": "multikill",
+          "at": 2700.5,
+          "score": 84,
+          "targetId": "t2",
+          "position": {
+            "x": 78.85000000000001,
+            "y": 51.35
+          },
+          "expiresAt": 2702.7,
+          "reason": "關鍵擊殺"
+        },
+        "bombEvents": 9,
+        "eventFrameCount": 212,
+        "eventTypes": {
+          "door": 23,
+          "kill": 149,
+          "multikill": 55,
+          "round-end": 23,
+          "bomb-planted": 5,
+          "bomb-exploded": 4,
+          "clutch": 1
+        }
+      },
+      "audio": {
+        "assetSource": "CC0 real firearm recordings",
+        "presentationCueStarts": 293,
+        "recordedSourceStarts": 253,
+        "activeVoices": 8,
+        "loadErrors": {}
+      },
+      "camera": {
+        "directorSwitches": 166,
+        "manualOverrideSamples": 1,
+        "rapidSwitches": 0
+      },
+      "c2c": {
+        "rigged": 10,
+        "fallback": 0,
+        "failed": 0,
+        "players": {
+          "t1": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 1.0331,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "assault",
+            "variationLabel": "Assault",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "radio"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 2808,
+            "artMaterials": 8,
+            "facingDegrees": -47.72960734577359,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.731436488324969
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8503623194700973,
+                0.7314364521113136
+              ],
+              "width": 2.4623,
+              "height": 1.89,
+              "depth": 1.4629
+            },
+            "currentBounds": {
+              "min": [
+                4.27668825473843,
+                0.07372061955867643,
+                5.1555653830382635
+              ],
+              "max": [
+                6.055114281874585,
+                1.9178991608402858,
+                7.1018296725683125
+              ],
+              "width": 1.7784,
+              "height": 1.8442,
+              "depth": 1.9463
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 2,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "t2": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 1.0331,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "support",
+            "variationLabel": "Support",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "pack"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 2740,
+            "artMaterials": 8,
+            "facingDegrees": 0,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.731436488324969
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8503623194700973,
+                0.7314364521113136
+              ],
+              "width": 2.4623,
+              "height": 1.89,
+              "depth": 1.4629
+            },
+            "currentBounds": {
+              "min": [
+                -9.92985539174983,
+                0.07433146850632452,
+                14.561827322168213
+              ],
+              "max": [
+                -7.48186700742776,
+                1.9185100097879342,
+                15.381661286794449
+              ],
+              "width": 2.448,
+              "height": 1.8442,
+              "depth": 0.8198
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 8,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "t3": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 1.0331,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "marksman",
+            "variationLabel": "Marksman",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "long"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 2796,
+            "artMaterials": 8,
+            "facingDegrees": -47.56796166541053,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.731436488324969
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8503623194700973,
+                0.7314364521113136
+              ],
+              "width": 2.4623,
+              "height": 1.89,
+              "depth": 1.4629
+            },
+            "currentBounds": {
+              "min": [
+                2.016960954037135,
+                0.0742296075750527,
+                7.609790649237955
+              ],
+              "max": [
+                3.8001521722223894,
+                1.9184081488566618,
+                9.551820153349972
+              ],
+              "width": 1.7832,
+              "height": 1.8442,
+              "depth": 1.942
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 36,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "t4": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 1.0331,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "lurker",
+            "variationLabel": "Lurker",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "radio"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 2716,
+            "artMaterials": 8,
+            "facingDegrees": 170.5736152781163,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.731436488324969
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8503623194700973,
+                0.7314364521113136
+              ],
+              "width": 2.4623,
+              "height": 1.89,
+              "depth": 1.4629
+            },
+            "currentBounds": {
+              "min": [
+                -12.505979024423233,
+                0.07446694540819054,
+                13.427402849774413
+              ],
+              "max": [
+                -10.061914459477237,
+                1.9186454866898008,
+                14.275246769217434
+              ],
+              "width": 2.4441,
+              "height": 1.8442,
+              "depth": 0.8478
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 0,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "t5": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "death",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Death01",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 1.0331,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "utility",
+            "variationLabel": "Utility",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "pack"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 2764,
+            "artMaterials": 8,
+            "facingDegrees": 24.37646861667493,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.731436488324969
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8503623194700973,
+                0.7314364521113136
+              ],
+              "width": 2.4623,
+              "height": 1.89,
+              "depth": 1.4629
+            },
+            "currentBounds": {
+              "min": [
+                1.8978058210188393,
+                0.00021752886940037963,
+                13.05509948965597
+              ],
+              "max": [
+                4.1194571327578515,
+                1.9018837241778868,
+                14.174998745550068
+              ],
+              "width": 2.2217,
+              "height": 1.9017,
+              "depth": 1.1199
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 0,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": 0,
+            "deathGroundCorrection": 0.015559
+          },
+          "ct1": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 1.0331,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "assault",
+            "variationLabel": "Assault",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "radio"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 3128,
+            "artMaterials": 8,
+            "facingDegrees": 179.69695906898085,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.7312503366612964
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8305778815941036,
+                0.7312503006168618
+              ],
+              "width": 2.4623,
+              "height": 1.8702,
+              "depth": 1.4625
+            },
+            "currentBounds": {
+              "min": [
+                17.57536896206044,
+                0.07426379189184948,
+                5.794415239381199
+              ],
+              "max": [
+                20.024209038645445,
+                1.9016805706615427,
+                6.6038307321101595
+              ],
+              "width": 2.4488,
+              "height": 1.8274,
+              "depth": 0.8094
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 4,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "ct2": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 1.0331,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "support",
+            "variationLabel": "Support",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "pack"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 3048,
+            "artMaterials": 8,
+            "facingDegrees": 169.16351549368176,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.7312503366612964
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8305778815941036,
+                0.7312503006168618
+              ],
+              "width": 2.4623,
+              "height": 1.8702,
+              "depth": 1.4625
+            },
+            "currentBounds": {
+              "min": [
+                22.3303659646092,
+                0.07409517904187427,
+                2.2835036647202545
+              ],
+              "max": [
+                24.768150612015056,
+                1.9015119578115662,
+                3.121643136891859
+              ],
+              "width": 2.4378,
+              "height": 1.8274,
+              "depth": 0.8381
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 8,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "ct3": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "fire",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Pistol_Aim_Neutral",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 0.1664,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "marksman",
+            "variationLabel": "Marksman",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "long"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 3140,
+            "artMaterials": 8,
+            "facingDegrees": 172.20729388869387,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.7312503366612964
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8305778815941036,
+                0.7312503006168618
+              ],
+              "width": 2.4623,
+              "height": 1.8702,
+              "depth": 1.4625
+            },
+            "currentBounds": {
+              "min": [
+                27.804163566350276,
+                0.06674716317561236,
+                2.619528594803305
+              ],
+              "max": [
+                30.253554993896834,
+                1.8962852414456008,
+                3.3314824712313076
+              ],
+              "width": 2.4494,
+              "height": 1.8295,
+              "depth": 0.712
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 0,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "ct4": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 1.0331,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "lurker",
+            "variationLabel": "Lurker",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "radio"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 3024,
+            "artMaterials": 8,
+            "facingDegrees": 157.72985731669766,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.7312503366612964
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8305778815941036,
+                0.7312503006168618
+              ],
+              "width": 2.4623,
+              "height": 1.8702,
+              "depth": 1.4625
+            },
+            "currentBounds": {
+              "min": [
+                27.09074635516621,
+                0.07423970581909009,
+                -3.904197333618959
+              ],
+              "max": [
+                29.423618075432877,
+                1.9016564845887824,
+                -2.7907006145225215
+              ],
+              "width": 2.3329,
+              "height": 1.8274,
+              "depth": 1.1135
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 0,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          },
+          "ct5": {
+            "mode": "rigged",
+            "loadError": null,
+            "identityMiss": false,
+            "animation": "idle",
+            "skeleton": 65,
+            "clips": 43,
+            "mixer": true,
+            "round": 0,
+            "currentClip": "Idle_Loop",
+            "fireTimer": 0,
+            "hitTimer": 0,
+            "hitFrame": null,
+            "currentClipTime": 1.0331,
+            "artMode": "esmo-c2c-vector-9-hero",
+            "c2cHero": true,
+            "weaponType": "pistol",
+            "weaponFamily": "pistol",
+            "weaponFamilyMap": {
+              "glock": "pistol",
+              "usp": "pistol",
+              "p250": "pistol",
+              "tec9": "pistol",
+              "deagle": "pistol",
+              "mp9": "smg",
+              "mac10": "smg",
+              "ump": "smg",
+              "p90": "smg",
+              "ak": "rifle",
+              "m4": "rifle",
+              "m4a4": "rifle",
+              "galil": "rifle",
+              "famas": "rifle",
+              "aug": "rifle",
+              "sg": "rifle",
+              "awp": "sniper",
+              "scout": "sniper",
+              "nova": "shotgun",
+              "xm1014": "shotgun",
+              "mag7": "shotgun",
+              "sawedoff": "shotgun"
+            },
+            "variationId": "utility",
+            "variationLabel": "Utility",
+            "equipmentModules": [
+              "combat-top",
+              "tactical-pants",
+              "vest",
+              "helmet",
+              "headset",
+              "pouches",
+              "gloves",
+              "boots",
+              "pack"
+            ],
+            "limbPresentation": {
+              "segmentShape": "12-sided-tapered-cylinder",
+              "jointShape": "rounded-box",
+              "elbowJoints": 2,
+              "kneeJoints": 2,
+              "skeletonMutation": false
+            },
+            "artTriangles": 3144,
+            "artMaterials": 8,
+            "facingDegrees": -178.87639187665474,
+            "orientationOffset": 1.5707963267948966,
+            "rootScale": [
+              1.0002272412243896,
+              1.0002272412243896,
+              1.0002272412243896
+            ],
+            "riggedRootScale": [
+              1,
+              1,
+              1
+            ],
+            "baseBounds": {
+              "min": [
+                -0.9298553917498313,
+                0.009512010592837001,
+                -0.1280952597829877
+              ],
+              "max": [
+                0.9298553483584531,
+                1.8299255899047706,
+                0.1635250951648788
+              ],
+              "width": 1.8597,
+              "height": 1.8204,
+              "depth": 0.2916
+            },
+            "normalizedBounds": {
+              "min": [
+                -0.9298553917498313,
+                -0.03966488820607256,
+                -0.7312503366612964
+              ],
+              "max": [
+                1.5324851271221969,
+                1.8305778815941036,
+                0.7312503006168618
+              ],
+              "width": 2.4623,
+              "height": 1.8702,
+              "depth": 1.4625
+            },
+            "currentBounds": {
+              "min": [
+                17.128860106507346,
+                0.0742307598214248,
+                6.115198873483676
+              ],
+              "max": [
+                19.580307793594734,
+                1.9016475385911191,
+                6.918593837756642
+              ],
+              "width": 2.4514,
+              "height": 1.8274,
+              "depth": 0.8034
+            },
+            "hitPositionDrift": 0,
+            "maxHitPositionDrift": 0,
+            "hitPositionDriftSamples": 5,
+            "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
+            "deathGroundContactY": null,
+            "deathGroundCorrection": 0
+          }
+        }
+      },
+      "p0": {
+        "version": 1,
+        "fidxTransitions": 219,
+        "staleMismatch": 0,
+        "rafFrames": 419,
+        "duplicateRaf": 0,
+        "duplicateRender": 0,
+        "lastAuthoritativeFidx": 109,
+        "lastReason": "seek"
+      },
+      "canvas": {
+        "width": 370,
+        "height": 437,
+        "bufferWidth": 370,
+        "bufferHeight": 437
+      },
+      "browserErrors": {
+        "console": [],
+        "page": []
+      },
+      "hud": {
+        "killFeed": true,
+        "bomb": true,
+        "history": true,
+        "textIncludesChinese": true
+      },
+      "manualFocusAttempt": true,
+      "firstShot": "inferno-390px-battle.png"
+    }
+  ]
+}
