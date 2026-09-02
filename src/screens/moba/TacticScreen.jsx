@@ -25,7 +25,6 @@ import { useProfileStore } from "../../platform/profileStore.js";
 //    UI 只要自己判斷一次，規則就有兩份，而被修的永遠是另外那一份。
 import { variantsAvailableForTactic } from "../../platform/mastery/clubMastery.js";
 import { applyVariant, variantById } from "../../platform/mastery/tacticVariant.js";
-import { teamDevelopmentEffects } from "../../platform/development/teamDevelopment.js";
 import { statZh } from "../../data/playerModel.js";
 import { fitScore, fitGrade } from "./tacticFit.js";
 import { GC } from "../../ui/theme.js";
@@ -56,8 +55,8 @@ function engineEffects(t) {
 export default function TacticScreen({ onNext, onBack }) {
   const [sel, setSel] = useState("m1");
   const allPlayers = useProfileStore((s) => s.players) ?? [];
-  const development = useProfileStore((s) => s.teamDevelopment);
-  const developmentEffects = teamDevelopmentEffects(development);
+  //  Club Assets v1：讀合併權威（發展樹 ＋ 總教練），不自己合併。
+  const developmentEffects = useProfileStore((s) => s.clubCapabilities()).total;
   const starters = useMemo(() => allPlayers.filter((p) => p.status === "主力"), [allPlayers]);
   const cur = MOBA_TACTICS.find((t) => t.tacticId === sel);
 

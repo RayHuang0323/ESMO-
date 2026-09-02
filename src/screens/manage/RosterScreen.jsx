@@ -10,7 +10,6 @@
 // ============================================================================
 import React, { useMemo, useRef, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
-import { teamDevelopmentEffects } from "../../platform/development/teamDevelopment.js";
 import {
   STAT_DEF, MOBA_ROLES, ROSTER_CAP,
   calcPower, posFit, bestPositions, personalityById, CS_ROLE_BY_MOBA_ROLE, csSuitabilityOf,
@@ -149,8 +148,8 @@ const statusToneOf = (st) => (st === "主力" ? "positive" : st === "閒置" ? "
 export default function RosterScreen({ onBack, onRecruit, onPlayer, purpose = "roster" }) {
   const talentMode = purpose === "talent";
   const players = useProfileStore((s) => s.players) ?? [];
-  const development = useProfileStore((s) => s.teamDevelopment);
-  const developmentEffects = teamDevelopmentEffects(development);
+  //  Club Assets v1：讀合併權威（發展樹 ＋ 總教練），不自己合併。
+  const developmentEffects = useProfileStore((s) => s.clubCapabilities()).total;
   const renamePlayer = useProfileStore((s) => s.renamePlayer);
   const setPlayerRole = useProfileStore((s) => s.setPlayerRole);
   const setPlayerStatus = useProfileStore((s) => s.setPlayerStatus);

@@ -17009,3 +17009,110 @@ AWP_TRIAGE = UNRESOLVED → CBR BLOCKED，不進 Rating
 
 `manage/honors/*` 與 `manage/asiaFinals/*` 已無 inline style，改造成本最低，
 可當作下一輪的暖身。
+
+---
+
+## Club Assets v1 — 教練收藏與 Club Points 出口（2026-09-02）
+
+承 Meta Progression v1（Club Mastery）與 Visual V2（commit `6c8bef4`）。
+本輪把 Club Points 這條「只進不出」的迴圈接上出口。
+
+### 一、為什麼是這個形狀（Grill 兩輪的結論）
+
+實測發現 `spendClubPoints()`（`retentionState.js:82`）**早就寫好，但全專案零個
+呼叫端**——點數只進不出。所以本輪不是「加一個消費」，是把斷掉的迴圈接起來。
+
+最大的設計疑慮是：**Coach 憑什麼不是「換一張臉的第二棵發展樹」？**
+唯一站得住的差異是 **發展樹累加、Coach 互斥**：一個 slot、三位教練 ⇒
+選 A 就沒有 B，而且每個生涯週可以換。決策從「我要不要買」變成
+「這一週我要哪一種俱樂部」。下面每一條規則都是為了保住這個差異。
+
+三位教練刻意**互不可比**（各自在不同遊戲階段有用），所以沒有「哪個最強」的答案：
+
+| 教練 | 專長 | 價格 | 前置 | 能力 | 放棄什麼 |
+|---|---|---|---|---|---|
+| 體能教練 | conditioning | 700 | 無 | `dailyRecoveryBonus +4`、`trainingDaysReduction +1` | 完全不提供賽前情報 |
+| 球探總監 | scouting | 1100 | 無 | `scoutDaysReduction +1` | 不提高新秀素質、不影響現有陣容 |
+| 戰術教練 | tactical | 1700 | 累計 ≥ 500 | 解鎖 `mobaOpponentResearch`、`dataAnalysis` | 完全不加速養成 |
+
+**`rarity` 不存在，也不用 `presentationTier`**：任何有序階梯都會被讀成強度排序，
+三選一就塌成一選一。只有 `specialty`（三個並列的專長領域），價格只代表取得節奏。
+
+**與指示的一處偏差（已回報並採用）**：戰術教練不用 `mobaDraftIntel`——該旗標
+**全專案沒有消費端**，發出去是一張沒有效果的卡。改用兩個 live 的 MOBA 旗標
+（`BanPickScreen.jsx:543`、`moba/TacticScreen.jsx:110`）。CS 旗標
+（`csMapResearch` / `csDemoAnalysis` / `csTeamPrep`）記為 **CS OWNER_HANDOFF**，
+型錄由 verifier 硬擋。
+
+### 二、Capability 的唯一權威與 provenance
+
+新增 `src/platform/assets/clubCapabilities.js`：
+
+```
+clubCapabilities(profile) → { total, sources: { teamDevelopment, coach } }
+```
+
+合併政策是**資料表**，逐 kind 宣告 strategy 與 **domain cap**（不依賴消費端 clamp）：
+
+| capability | strategy | cap |
+|---|---|---|
+| `trainingDaysReduction` | sum | 2 |
+| `dailyRecoveryBonus` | sum | 8 |
+| `scoutDaysReduction` | sum | 2 |
+| `unlocks` | union | — |
+
+**provenance 不是除錯裝飾，是功能需求。** `scoutDaysReduction` 是一稿兩用的欄位：
+`RecruitScreen` 同時拿它當球探天數，又拿它當 `genProspects({ scoutNetworkRank })`
+——後者會改變抽新秀的分布（超新星權重 5→8.6、特殊個體 26%→35%）。
+教練可以讓球探**跑得快**，不該讓你**抽到更好的人**（ownership 換 power）。
+所以 `RecruitScreen` 天數讀 `total`、人才池讀 `sources.teamDevelopment`。
+沒有 provenance 就只能二選一。
+
+消費端改讀合併權威：`profileStore` 訓練排程／每日恢復、`RecruitScreen`、
+`BanPickScreen`、`moba/TacticScreen`、`RosterScreen`，並移除四個現已無用的
+`teamDevelopmentEffects` import（避免留下第二條讀取路徑）。
+**`src/screens/fps/CsTacticScreen.jsx` 逐位元組未動**（CS owner 邊界，verifier 用
+`git status --porcelain` 硬驗）。
+
+### 三、擁有與裝備分離、週鎖
+
+`ClubAssets.v1 = { schema, owned, headCoachId, lastCoachChangeWeek }`。
+
+- 空槽首次上任**免費**，且不寫 `lastCoachChangeWeek` ⇒ 買完當週仍能換人。
+- **沒有「卸下」**：否則「卸下 → 再裝上」就能無限次繞過週鎖。順帶消滅
+  「沒有總教練」這個對玩家毫無好處的狀態。
+- 換人每個生涯週一次，week = `deriveTime(meta.days).week`（**不建立第二個時間
+  authority**，不看真實時鐘）⇒ reload 不倒退、`advanceDay(7)` 自然解鎖、
+  跨賽季（第 13 週）與跨年度（第 97 週）都只是更大的數字。
+- 購買**不扣點**（`purchaseAsset` 只判定），扣點只走 `spendClubPoints`；
+  `retention` 與 `clubAssets` 在**同一個 `set()`** 落地 ⇒ 不會有「扣了點沒拿到人」。
+
+### 四、Online 邊界
+
+`valuateSquad({ snapshot })` 只吃 `SquadSnapshot.v1`，matchmaking / onlineValuation /
+matchmakingPolicy **完全沒有讀**任何俱樂部能力——邊界天生乾淨。因此
+`competitivePolicy` 在 v1 沒有 runtime 作用，它的價值全在契約：verifier 斷言
+① 有 capability 的資產必為 `careerOnly`、② 五個 online 檔案不出現任何俱樂部資產
+欄位、③ 把 `clubAssets` 塞進估值輸入，結果逐值不變。
+
+### 五、Verification
+
+- `tools/check_club_assets_v1.mjs`：**99/99 PASS**。含無硬編碼教練 id 的全域掃描
+  （`src/platform/**` ＋ `src/screens/**`，只允許型錄本身出現字面量）。
+- `tools/browser_check_club_assets_ui.mjs`：桌機 1366 + 手機 390。
+  完整 vertical slice **真的用滑鼠走一次**：進頁 → 按聘用 → 餘額 −700、
+  lifetime 逐值不變、等級不降 → 自動免費上任 → reload 仍擁有仍上任 →
+  **量出**推進一天體力 +12（base 8 ＋ 教練 4）、mechanics 課程從 3 天排成 2 天 →
+  同週換人被擋、`advanceDay(7)` 後可換、reload 繞不過。
+- 回歸：Club Mastery v1 265/265、retention、general match、dash10、
+  online valuation 62/62、cs23 28/28。
+- `npm run build` 通過。
+
+**未經真機實測**：觸控手感、真機 FPS、系統層級 reduced-motion
+（本輪以 CDP `Emulation.setEmulatedMedia` 模擬）。
+
+### 六、本輪明文不做
+
+擴 Variant、Variant balance calibration、CS runtime、CS 教練戰術效果、gacha／RNG
+pack、付費商城、教練合約生命週期、push／deploy。**也沒有順手新增發展點獎勵**
+（見 `08_目前待辦與風險.md` TD-56）。

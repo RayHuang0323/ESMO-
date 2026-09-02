@@ -41,6 +41,7 @@ import RecruitScreen from "./screens/manage/RecruitScreen.jsx";
 import PlayerDetailScreen from "./screens/manage/PlayerDetailScreen.jsx";
 import TeamDevelopmentScreen from "./screens/manage/TeamDevelopmentScreen.jsx";
 import ClubMasteryScreen from "./screens/manage/ClubMasteryScreen.jsx";
+import ClubAssetsScreen from "./screens/manage/ClubAssetsScreen.jsx";
 // ── 舊版個人天賦相容檢視（入口在 PlayerDetail）──
 import PlayerTalentScreen from "./screens/manage/PlayerTalentScreen.jsx";
 //  Milestone Q3.5：聯賽（賽程 / 積分榜 / 出賽入口）
@@ -256,6 +257,7 @@ export default function AppShell() {
       {screen === "training" && <TrainingScreen onBack={home} />}
       {screen === "teamDevelopment" && <TeamDevelopmentScreen onBack={home} />}
       {screen === "clubMastery" && <ClubMasteryScreen onBack={home} />}
+      {screen === "clubAssets" && <ClubAssetsScreen onBack={home} />}
       {screen === "offSeason" && <OffSeasonScreen onBack={home} />}
       {screen === "objectives" && <ObjectivesScreen onBack={home} />}
       {screen === "recruit" && <RecruitScreen onBack={home} />}

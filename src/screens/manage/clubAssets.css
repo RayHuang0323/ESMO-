@@ -1,0 +1,443 @@
+/* ==========================================================================
+   screens/manage/clubAssets.css — 俱樂部資產 v1
+
+   ── 這一頁的視覺主張 ─────────────────────────────────────────────────────
+   一個 slot、三位教練 ⇒ 這頁要回答的是「這一週誰在帶隊」，不是「我收集了幾張
+   卡」。所以現任總教練是 hero，型錄在下面；三位教練用各自的專長色相，
+   但**三者同飽和、同權重**——`specialty` 是分類不是等級，任何有序視覺
+   （星等／金框／稀有度）都會讓玩家自動排出「誰最強」，三選一就塌成一選一。
+
+   沿用 Club Mastery 建立的語彙：`--esmo-*` token ＋ 一個由 React 注入的
+   accent（這裡是 `--specialty-accent`），accent 一換整頁跟著換色。
+
+   ── 綠色的意思 ───────────────────────────────────────────────────────────
+   與專精頁一致：綠色只代表「現在可以做這件事」（買得起 / 換得動），
+   不當裝飾色。已擁有用金色，買不起用灰。
+   ========================================================================== */
+
+.ca,
+.ca * { box-sizing: border-box; }
+
+.ca {
+  position: relative;
+  min-height: 100%;
+  padding-bottom: 34px;
+  overflow-x: hidden;
+  color: var(--esmo-text);
+  font-family: var(--esmo-font);
+  background:
+    radial-gradient(circle at 10% -4%, color-mix(in srgb, var(--specialty-accent) 15%, transparent), transparent 26rem),
+    radial-gradient(circle at 94% 32%, color-mix(in srgb, var(--specialty-accent) 7%, transparent), transparent 22rem),
+    var(--esmo-ink);
+  transition: background 620ms ease;
+}
+
+.ca__canvas {
+  width: min(100%, 720px);
+  margin: 0 auto;
+  padding: 14px clamp(12px, 3.4vw, 22px) 0;
+}
+
+.ca button { font: inherit; }
+
+.ca button:focus-visible {
+  outline: 2px solid var(--specialty-accent);
+  outline-offset: 3px;
+}
+
+/* ── 頂列 ─────────────────────────────────────────────────────────────── */
+
+.ca__bar {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.ca__back {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: var(--esmo-text);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--esmo-line);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.ca__back:hover { background: rgba(255, 255, 255, 0.1); }
+.ca__back:active { transform: scale(0.94); }
+
+.ca__titles { min-width: 0; }
+
+.ca__title {
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.ca__subtitle {
+  margin-top: 1px;
+  color: var(--esmo-muted);
+  font-size: 10.5px;
+}
+
+.ca__wallet {
+  margin-left: auto;
+  flex: 0 0 auto;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ca__wallet-value {
+  color: var(--esmo-tactical);
+  font-size: 17px;
+  font-weight: 900;
+  font-family: var(--esmo-mono);
+  font-variant-numeric: tabular-nums;
+  /* 餘額變化時輕輕跳一下——花掉點數是這一頁最重要的回饋。 */
+  transition: color 240ms ease;
+}
+
+.ca__wallet--spent { animation: ca-spend 900ms ease-out 1; }
+
+.ca__wallet-label {
+  color: var(--esmo-muted);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+/* ── Hero：現任總教練 ─────────────────────────────────────────────────── */
+
+.ca__hero {
+  position: relative;
+  margin-top: 16px;
+  padding: 17px clamp(14px, 3.6vw, 20px);
+  overflow: hidden;
+  background:
+    linear-gradient(150deg, color-mix(in srgb, var(--specialty-accent) 15%, transparent), transparent 62%),
+    var(--esmo-surface);
+  border: 1px solid color-mix(in srgb, var(--specialty-accent) 34%, transparent);
+  border-radius: 22px;
+}
+
+.ca__hero--empty {
+  background: var(--esmo-surface);
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.ca__hero-eyebrow {
+  color: var(--esmo-muted);
+  font-family: var(--esmo-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.ca__hero-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  min-width: 0;
+}
+
+.ca__hero-mark {
+  display: flex;
+  flex: 0 0 auto;
+  color: var(--specialty-accent);
+  transition: color 620ms ease;
+}
+
+.ca__hero-name {
+  min-width: 0;
+  font-size: clamp(22px, 5.6vw, 29px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.ca__hero-body {
+  position: relative;
+  margin-top: 10px;
+  color: #d7dbe4;
+  font-size: 12.5px;
+  line-height: 1.7;
+  overflow-wrap: break-word;
+}
+
+.ca__hero-effect {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 11px;
+}
+
+.ca__chip {
+  padding: 4px 10px;
+  font-size: 10.5px;
+  font-weight: 800;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.ca__chip--gain {
+  color: var(--specialty-accent);
+  background: color-mix(in srgb, var(--specialty-accent) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--specialty-accent) 40%, transparent);
+}
+
+.ca__chip--cost {
+  color: var(--esmo-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--esmo-line);
+}
+
+.ca__hero-rule {
+  margin-top: 12px;
+  padding-top: 11px;
+  color: var(--esmo-muted);
+  font-size: 10.5px;
+  line-height: 1.65;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  overflow-wrap: break-word;
+}
+
+/* ── 型錄 ─────────────────────────────────────────────────────────────── */
+
+.ca__eyebrow {
+  margin: 22px 0 9px;
+  color: var(--esmo-muted);
+  font-family: var(--esmo-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.ca__card {
+  position: relative;
+  margin-top: 9px;
+  padding: 13px 14px 13px 16px;
+  background: var(--esmo-surface);
+  border: 1px solid var(--esmo-line);
+  border-radius: 16px;
+  transition: border-color 300ms ease, background 300ms ease;
+}
+
+/* 左緣色條＝專長色相。三個同飽和度，不構成排序。 */
+.ca__card::before {
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 0;
+  width: 3px;
+  background: var(--card-accent);
+  border-radius: 0 3px 3px 0;
+  content: "";
+}
+
+.ca__card[data-equipped="1"] {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--card-accent) 11%, transparent), transparent 58%), var(--esmo-surface);
+  border-color: color-mix(in srgb, var(--card-accent) 42%, transparent);
+}
+
+.ca__card[data-owned="0"][data-affordable="0"] { opacity: 0.72; }
+
+.ca__card-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.ca__card-mark {
+  display: flex;
+  flex: 0 0 auto;
+  color: var(--card-accent);
+}
+
+.ca__card-name {
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.ca__specialty {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  color: var(--card-accent);
+  font-family: var(--esmo-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: color-mix(in srgb, var(--card-accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--card-accent) 36%, transparent);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.ca__price {
+  margin-left: auto;
+  flex: 0 0 auto;
+  color: var(--esmo-tactical);
+  font-family: var(--esmo-mono);
+  font-size: 12px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ca__price--owned {
+  color: var(--esmo-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ca__card-desc {
+  margin-top: 6px;
+  color: var(--esmo-muted);
+  font-size: 11px;
+  line-height: 1.7;
+  overflow-wrap: break-word;
+}
+
+.ca__trade {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-top: 9px;
+}
+
+.ca__trade-col {
+  flex: 1 1 170px;
+  min-width: 0;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 9px;
+}
+
+.ca__trade-label {
+  display: block;
+  font-family: var(--esmo-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.ca__trade-col--gain .ca__trade-label { color: var(--card-accent); }
+.ca__trade-col--cost .ca__trade-label { color: var(--esmo-muted); }
+
+.ca__trade-value {
+  margin-top: 3px;
+  color: #cbd5e1;
+  font-size: 10.5px;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+
+.ca__card-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  min-width: 0;
+}
+
+.ca__status {
+  min-width: 0;
+  color: var(--esmo-muted);
+  font-size: 10.5px;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+
+.ca__status--ready { color: var(--esmo-signal); font-weight: 800; }
+.ca__status--owned { color: var(--esmo-tactical); font-weight: 800; }
+
+.ca__action {
+  margin-left: auto;
+  flex: 0 0 auto;
+  padding: 7px 16px;
+  color: var(--esmo-muted);
+  font-size: 11.5px;
+  font-weight: 900;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--esmo-line);
+  border-radius: 10px;
+  cursor: not-allowed;
+  transition: transform 140ms ease, box-shadow 240ms ease, background 240ms ease;
+}
+
+.ca__action--ready {
+  color: #062018;
+  background: var(--esmo-signal);
+  border-color: var(--esmo-signal);
+  cursor: pointer;
+}
+
+.ca__action--ready:hover { box-shadow: 0 4px 22px -6px rgba(52, 211, 153, 0.8); }
+.ca__action--ready:active { transform: scale(0.95); }
+
+/* 已擁有但未上任：換人是次要動作，用外框而不是實心，免得跟「購買」搶焦點。 */
+.ca__action--swap {
+  color: var(--esmo-text);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+}
+
+.ca__action--swap:hover { background: rgba(255, 255, 255, 0.12); }
+.ca__action--swap:active { transform: scale(0.95); }
+
+/* 購買／上任成功的一次性回饋，自己結束。 */
+.ca__card--flash { animation: ca-flash 1200ms ease-out 1; }
+
+.ca__note {
+  margin-top: 16px;
+  color: var(--esmo-muted);
+  font-size: 10px;
+  line-height: 1.7;
+  overflow-wrap: break-word;
+}
+
+/* ── 動態 ─────────────────────────────────────────────────────────────── */
+
+.ca-rise {
+  animation: ca-rise 520ms cubic-bezier(0.22, 0.9, 0.28, 1) both;
+  animation-delay: var(--ca-delay, 0ms);
+}
+
+@keyframes ca-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes ca-flash {
+  0%   { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5); }
+  55%  { box-shadow: 0 0 0 13px rgba(52, 211, 153, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+
+@keyframes ca-spend {
+  0%   { transform: none; }
+  30%  { transform: translateY(-3px); color: var(--esmo-signal); }
+  100% { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ca *,
+  .ca *::before,
+  .ca *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .ca-rise { opacity: 1; transform: none; }
+}

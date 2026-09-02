@@ -63,6 +63,8 @@ import { seedFormLogFromCsHistory } from "./economy/formLog.js";
 import {
   emptyRetention, normalizeRetention, retentionViewOf, claimObjective as claimObjectiveIn,
   recordTrainingActivity, recordScoutActivity, coordsOf,
+  //  ⚠ 花點數**只能**走這一個函式：它是「lifetime 不受影響」的唯一保證。
+  spendClubPoints as spendClubPointsIn,
 } from "./retention/retentionState.js";
 //  Meta Progression v1：生涯累積打法。**獨立 domain**，不與 retention 共用袋子
 //  ——retention 的計數器會被 pruneScopes 依日／週／季清掉，mastery 不會。
@@ -157,6 +159,15 @@ import {
   applyTeamDevelopmentPurchase,
   teamDevelopmentEffects as teamDevelopmentEffectsOf,
 } from "./development/teamDevelopment.js";
+//  Club Assets v1：俱樂部能力的唯一權威（發展樹 ＋ 裝備中的總教練）。
+import { clubCapabilitiesOf } from "./assets/clubCapabilities.js";
+import { COACH_CATALOG } from "./assets/coachCatalog.js";
+import {
+  emptyClubAssets, normalizeClubAssets,
+  purchaseAsset as purchaseAssetIn,
+  equipHeadCoach as equipHeadCoachIn,
+  clubAssetsViewOf,
+} from "./assets/clubAssetsState.js";
 import { createMatchEntryRequest, validateMatchEntryRequest } from "./contracts/matchEntry.js";
 import {
   TICKET_STATES, createTicket, transitionTicket, isActiveTicket,
@@ -413,6 +424,8 @@ const DEFAULT = {
   retention: emptyRetention(),
   //  Meta Progression v1：戰術使用與意圖累積（生涯尺度，永不 prune）。
   clubMastery: emptyClubMastery(),
+  //  Club Assets v1：教練收藏與總教練。ownership 與 loadout 分開存。
+  clubAssets: emptyClubAssets(),
   // Q7b: metadata-only Season -> MOBA Career Circuit -> League Event wrapper.
   seasonStateV2: null,
   inbox: [
@@ -683,6 +696,9 @@ const load = () => {
       retention: normalizeRetention(saved.retention),
       //  舊存檔沒有 clubMastery ⇒ 空袋子（不回填任何歷史打法，那是編造）。
       clubMastery: normalizeClubMastery(saved.clubMastery),
+      //  舊存檔沒有 clubAssets ⇒ 空收藏。normalize 會剔除型錄裡不存在的資產，
+      //  也會把「裝備了沒買的教練」這種被手改過的存檔拉回 null。
+      clubAssets: normalizeClubAssets(saved.clubAssets),
       csHistory: arr(saved.csHistory, []),   // S23：舊存檔沒有 → 空（向下相容）
       //  C5V：舊存檔沒有欄位時接受三圖、練習預設 Mirage；不重寫既有 Session。
       csMapPreferences: normalizeCsMapPreferences(saved.csMapPreferences),
@@ -929,8 +945,14 @@ export const useProfileStore = create((rawSet, get) => {
   },
 
   // ── 戰隊發展 v1（俱樂部層；不寫入單一選手）────────────────────────────
+  /**
+   * ⚠ **這裡回傳的是合併後的能力，不只是發展樹。**
+   *   Club Assets v1 之後，「俱樂部能提供什麼」有兩個來源（發展樹＋總教練）。
+   *   舊名字留著是為了不動既有呼叫端，但語意已經是 `clubCapabilities().total`。
+   *   要拆開來源請改用 `clubCapabilities().sources`。
+   */
   getTeamDevelopmentEffects() {
-    return teamDevelopmentEffectsOf(get().teamDevelopment);
+    return get().clubCapabilities().total;
   },
   purchaseTeamDevelopment(nodeId) {
     const result = applyTeamDevelopmentPurchase(get().teamDevelopment, nodeId, { now: Date.now() });
@@ -974,7 +996,8 @@ export const useProfileStore = create((rawSet, get) => {
     const p = (get().players ?? []).find((x) => x.id === id);
     if (!c || !p || p.training) return false;
     if (c.id !== "rest" && (p.energy ?? 100) < c.energyCost) return false;
-    const effects = teamDevelopmentEffectsOf(get().teamDevelopment);
+    //  Club Assets v1：讀合併後的能力（發展樹 ＋ 總教練），不再只讀發展樹。
+    const effects = get().clubCapabilities().total;
     const days = c.id === "rest" ? c.hours : Math.max(1, c.hours - effects.trainingDaysReduction);
     get()._patchPlayer(id, (x) => ({ ...x, training: { courseId, daysLeft: days, totalDays: days } }));
     //  V7B：日目標「安排訓練」。記在**指派**這一刻，不是課程結束那一刻——
@@ -1033,7 +1056,12 @@ export const useProfileStore = create((rawSet, get) => {
       players: (cur.players ?? []).map((p) => {
         //  Milestone O2：每一天都要跑恢復——沒排訓練的人回體力、
         //  連續幾天沒出賽就把連續出賽計數歸零。訓練與恢復不重複計算體力。
-        const recoveryBonus = teamDevelopmentEffectsOf(cur.teamDevelopment).dailyRecoveryBonus;
+        //  ⚠ 這裡必須讀 `cur`，不能讀 `get()`——這個 callback 跑在
+        //    `advanceDaysInState` 的逐日迴圈裡，`get()` 拿到的是推進**之前**的狀態。
+        const recoveryBonus = clubCapabilitiesOf({
+          developmentEffects: teamDevelopmentEffectsOf(cur.teamDevelopment),
+          clubAssets: cur.clubAssets,
+        }).total.dailyRecoveryBonus;
         if (!p.training) return applyDailyRecovery(p, { recoveryBonus });
         const daysLeft = p.training.daysLeft - 1;
         if (daysLeft > 0) return applyDailyRecovery({ ...p, training: { ...p.training, daysLeft } }, { recoveryBonus });
@@ -3703,6 +3731,89 @@ export const useProfileStore = create((rawSet, get) => {
     set({ clubMastery: r.mastery });
     get().save();
     return { ok: true, reason: null, unlockedVariantId: r.unlockedVariantId };
+  },
+
+  // ── Club Assets v1：教練收藏、總教練、俱樂部能力 ─────────────────────
+  /**
+   * 目前的生涯週次。**唯一時間來源**：從 `meta.days` 推導，不存第二份計數、
+   * 不看真實時鐘。所以 reload 不會倒退，fast-forward 會自然跨週。
+   */
+  careerWeek() {
+    return deriveTime(get().meta?.days ?? DEFAULT.meta.days).week;
+  },
+
+  /**
+   * 俱樂部現在真正擁有的能力。
+   *
+   * ⚠ **這是 capability 的唯一權威。** 消費端不得再自己合併發展樹與教練。
+   *   `total` 是套過 policy 與 cap 的合併值；`sources` 保留合併前的兩份，
+   *   讓「球探天數吃 total、人才池只吃 teamDevelopment」這種分流做得出來。
+   */
+  clubCapabilities() {
+    return clubCapabilitiesOf({
+      developmentEffects: teamDevelopmentEffectsOf(get().teamDevelopment),
+      clubAssets: get().clubAssets,
+    });
+  },
+
+  /** 資產頁要的一整包（規則全在 domain 算完，畫面不自己判）。 */
+  clubAssetsView() {
+    const r = get().retentionView();
+    return clubAssetsViewOf(get().clubAssets, {
+      catalog: COACH_CATALOG,
+      clubPoints: r.clubPoints,
+      clubPointsLifetime: r.clubPointsLifetime,
+      careerWeek: get().careerWeek(),
+    });
+  },
+
+  /**
+   * 買一份俱樂部資產。
+   *
+   * ⚠ **兩個判定、一次寫入。** 先問 domain 夠不夠格，再問 retention 扣不扣得動；
+   *   任一失敗就完全不寫入。成功時 `retention` 與 `clubAssets` 在**同一個
+   *   `set()`** 內落地，不會出現「扣了點但沒拿到教練」的半套狀態。
+   *
+   * ⚠ 扣點只走 `spendClubPoints`——它只動餘額，`clubPointsLifetime` 永不變，
+   *   所以俱樂部等級不會因為消費而下降。
+   */
+  buyClubAsset(assetId) {
+    const r = get().retentionView();
+    const week = get().careerWeek();
+    const bought = purchaseAssetIn(get().clubAssets, assetId, {
+      clubPoints: r.clubPoints,
+      clubPointsLifetime: r.clubPointsLifetime,
+      careerWeek: week,
+    });
+    if (!bought.ok) return { ok: false, reason: bought.reason, code: bought.code, equipped: false };
+
+    const paid = spendClubPointsIn(normalizeRetention(get().retention), bought.price);
+    if (!paid.ok) return { ok: false, reason: paid.reason, code: "insufficient", equipped: false };
+
+    //  空槽 ⇒ 順手免費裝備。第一位教練不該還要玩家再點一次，而且首裝
+    //  不寫 `lastCoachChangeWeek` ⇒ 買完當週仍能換到別位。
+    let assets = bought.assets;
+    let equipped = false;
+    if (!assets.headCoachId) {
+      const eq = equipHeadCoachIn(assets, assetId, { careerWeek: week });
+      if (eq.ok) { assets = eq.assets; equipped = true; }
+    }
+
+    set({ retention: paid.retention, clubAssets: assets });
+    get().save();
+    return { ok: true, reason: null, code: null, equipped, spent: bought.price, clubPoints: paid.retention.clubPoints };
+  },
+
+  /**
+   * 換總教練。免費，但每個生涯週只能換一次（首次從空槽裝備不受限）。
+   * 沒有「卸下」——那會讓玩家用「卸下再裝上」繞過週鎖。
+   */
+  equipHeadCoach(assetId) {
+    const r = equipHeadCoachIn(get().clubAssets, assetId, { careerWeek: get().careerWeek() });
+    if (!r.ok) return { ok: false, reason: r.reason, code: r.code, headCoachId: get().clubAssets?.headCoachId ?? null };
+    set({ clubAssets: r.assets });
+    get().save();
+    return { ok: true, reason: null, code: null, headCoachId: r.assets.headCoachId, firstEquip: r.firstEquip };
   },
 
   // ── CS 訓練賽入史（Sprint23）────────────────────────────────────────

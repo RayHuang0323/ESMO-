@@ -15,7 +15,6 @@
 import React, { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { useProfileStore, WAN } from "../../platform/profileStore.js";
-import { teamDevelopmentEffects } from "../../platform/development/teamDevelopment.js";
 import { genProspects, TIERS, SCOUT_DAYS } from "../../data/recruitPool.js";
 import { STAT_DEF, STAT_CATS, MOBA_ROLES, ROSTER_CAP, bestPositions, personalityById } from "../../data/playerModel.js";
 import { makeRecruitmentId } from "../../platform/contracts/recruitment.js";
@@ -33,8 +32,12 @@ export default function RecruitScreen({ onBack }) {
   //  Milestone O：已簽約狀態改讀**招募帳本**（冪等鍵 = 池 seed + 池內編號）。
   //  之前是比對「名字相同」——不同批新秀撞名就會被誤判成已簽約。
   const signedLedger = useProfileStore((s) => s.recruitment?.signed) ?? {};
-  const development = useProfileStore((s) => s.teamDevelopment);
-  const developmentEffects = teamDevelopmentEffects(development);
+  //  ⚠ Club Assets v1：這一頁是**唯一**需要分流的消費端。
+  //    `total` = 發展樹 ＋ 總教練；`sources.teamDevelopment` = 只有發展樹。
+  //    球探跑多快吃 total，抽到什麼樣的人才只吃發展樹——理由見下面兩處。
+  const capabilities = useProfileStore((s) => s.clubCapabilities());
+  const developmentEffects = capabilities.total;
+  const devOnlyEffects = capabilities.sources.teamDevelopment;
   const [notice, setNotice] = useState(null);
 
   const [seed, setSeed] = useState(7);
@@ -46,9 +49,15 @@ export default function RecruitScreen({ onBack }) {
 
   //  V0B：球探網絡等級只提高**初始已知程度**（資訊品質），不改任何新秀能力。
   //  `management_scout_network` 每階 amount 為 1 ⇒ scoutDaysReduction 的數值即等級。
+  //
+  //  ⚠ **這裡只讀發展樹那一份，不讀合併值。**
+  //    `scoutNetworkRank` 會改變抽新秀的分布（超新星權重 5 → 8.6、特殊個體
+  //    26% → 35%，見 `data/recruitPool.js`）。買一位教練可以讓球探**跑得快**，
+  //    但不該讓你**抽到更好的人**——那是 ownership 直接換成 power，是本輪明文
+  //    禁止的事。要切開這兩者，就必須讀 provenance 而不是 total。
   const prospects = useMemo(
-    () => genProspects(seed, { scoutNetworkRank: developmentEffects.scoutDaysReduction }),
-    [seed, developmentEffects.scoutDaysReduction]);
+    () => genProspects(seed, { scoutNetworkRank: devOnlyEffects.scoutDaysReduction }),
+    [seed, devOnlyEffects.scoutDaysReduction]);
   const budgetWan = Math.floor(funds / WAN);
   const full = players.length >= ROSTER_CAP;
   const isSignedOf = (p) => !!signedLedger[makeRecruitmentId(seed, p.id)];
@@ -73,6 +82,7 @@ export default function RecruitScreen({ onBack }) {
 
   const dispatchScout = (p, depth) => {
     if (scoutQueue[p.id] || scoutOf(p) >= 2) return;
+    //  天數吃**合併值**：球探總監的作用就在這裡（見上面 prospects 的說明）。
     const days = Math.max(1, SCOUT_DAYS[depth] - developmentEffects.scoutDaysReduction);
     setScoutQueue((s) => ({ ...s, [p.id]: { level: depth, daysLeft: days, totalDays: days } }));
   };

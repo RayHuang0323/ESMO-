@@ -54,6 +54,10 @@ const NAV = {
   clubMastery: "clubMastery",
   //  V7B：俱樂部目標（日／週／季）。
   objectives: "objectives",
+  //  Club Assets v1：俱樂部資產（教練收藏與總教練）。
+  //  ⚠ key 仍是 `equip`——它接的是首頁那個原本點下去只跳「尚未實作」的舊
+  //    「商店」磚。重用一個死掉的入口，而不是在首頁再加一個磚。
+  equip: "clubAssets",
 };
 
 const MODE_CONFIG = {
@@ -678,7 +682,7 @@ function MobileNavSheet({ type, onSelect, onClose }) {
       //    玩家等於沒有這個功能（V7B 與 V7-2.5 各踩過一次相反方向）。
       { id: "clubMastery", label: "俱樂部專精", detail: "流派・專精・戰術變體", icon: "award" },
       { id: "finance", label: "財務", detail: "收支與預測", icon: "finance" },
-      { id: "equip", label: "商店", detail: "物品與升級", icon: "package" },
+      { id: "equip", label: "俱樂部資產", detail: "教練與收藏", icon: "package" },
       { id: "newgame", label: "新遊戲", detail: "重新開始", icon: "arrowUp" },
     ],
   };
@@ -847,14 +851,16 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
     { id: "objectives", label: "俱樂部目標", icon: "award", badge: objectiveBadge },
     { id: "clubMastery", label: "俱樂部專精", icon: "award" },
     { id: "newgame", label: "開新局", icon: "arrowUp" },
-    { id: "equip", label: "商店", icon: "package" },
+    { id: "equip", label: "俱樂部資產", icon: "package" },
   ], [objectiveBadge]);
 
   const sel = (id) => {
     if (id === "moba") return onMoba();
     if (id === "bracket") return onSeason();
     if (NAV[id] && onNav) return onNav(NAV[id]);
-    setModal({ type: "legacy", name: { equip: "商店" }[id] || id });
+    //  ⚠ `equip` 以前落在這裡（點下去只跳「尚未實作」）。Club Assets v1 之後
+    //    它已經進 NAV ⇒ 這條路徑對它不再成立，所以那個特例對照表也移除了。
+    setModal({ type: "legacy", name: id });
   };
 
   //  ── 接下來做什麼＝真正需要處理的事 ──────────────────────────────────────

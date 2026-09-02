@@ -11,7 +11,6 @@
 // ============================================================================
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
-import { teamDevelopmentEffects } from "../../platform/development/teamDevelopment.js";
 import { selectOpponentName, selectTeamName } from "../../platform/matchTeamNames.js";
 import { seatPlayers as seatPlayersOf, SEAT_CODE } from "../../platform/contracts/matchLineup.js";
 import { heroTags } from "../../data/heroClassification.js";
@@ -216,8 +215,9 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
   //    玩家看不出衝突。現在改用可解釋評分 + 窮舉最佳解（5! = 120 種，決定性）。
   const storePlayers = useProfileStore((s) => s.players);
   const storeLineup = useProfileStore((s) => s.lineup);
-  const development = useProfileStore((s) => s.teamDevelopment);
-  const developmentEffects = teamDevelopmentEffects(development);
+  //  Club Assets v1：能力來源不只發展樹（戰術教練也會解鎖情報面板）⇒
+  //  一律讀合併權威，不要自己再合併一次。
+  const developmentEffects = useProfileStore((s) => s.clubCapabilities()).total;
   //  Q3.5-fix：選角階段要指名道姓——玩家從賽事頁看到的是「某某戰隊」，
   //  進來卻只寫「對手」，中間斷了一截。名字來自本場指派單（唯一來源見
   //  `platform/matchTeamNames.js`），沒有場次就退回中性的「對手／我方」。
