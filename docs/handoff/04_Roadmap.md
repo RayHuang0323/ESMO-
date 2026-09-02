@@ -1291,6 +1291,12 @@ gate：`check_general_match_v7a`（47）＋ `browser_check_general_match_and_obj
 
 ## V7-2.8 / V7-2.9　Online CBR v2（2026-09-01）— **BLOCKED，等 AWP triage**
 
+> ⚠ **本段描述的檔案不在這條 release 線上。** V7-2.8 / V7-2.9 的四份契約與
+> `check_online_valuation_v29.mjs` 住在 `v7/fast-calibration`：它們相依
+> `squadSnapshot.js` → `onlineCbr.js`，整合進來等於把整條 Online CBR 鏈一起帶進來。
+> AWP / CBR / Rating 是**另一條 owner 線**，與 Meta Progression release 分開推進。
+
+
 ### 現況一句話
 
 CS 側的 CBR 已用真實引擎大樣本量過，結論是**現行參數不成立、而且問題不在參數**。

@@ -20,9 +20,10 @@
 //    · FORBIDDEN 欄位零修改、`tacticId` 不可改
 //
 //  ⚠ **這只證明「結構上不是純升級」，不證明勝率公平。**
-//    真正的 gameplay sidegrade 需要 `CalibrationEvidence.v1` 的實測證據
-//    （見 `contracts/calibrationEvidence.js`）。在那之前任何變體都
-//    **不得標為已平衡**——這一點寫在這裡，是為了不讓下一個人誤讀 verifier 全綠。
+//    真正的 gameplay sidegrade 需要大樣本實測證據。那套 evidence 契約
+//    （`CalibrationEvidence.v1`）住在 `v7/fast-calibration` 的 Online CBR 線上，
+//    **不在本 release**。在證據回來之前任何變體都**不得標為已平衡**——
+//    這一點寫在這裡，是為了不讓下一個人誤讀 verifier 全綠。
 //
 //  純函式：不 import React / zustand / localStorage / 亂數 / 時鐘。
 // ============================================================================

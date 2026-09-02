@@ -16855,6 +16855,12 @@ CS-C5A 的五個 `*-prepared.wav` 共約 **31 MB** 已隨 `public/` 進正式站
 
 ## 2026-09-01　V7-2.9：Online CBR v2 Architecture Guardrails
 
+> ⚠ **本段描述的檔案不在這條 release 線上。** V7-2.8 / V7-2.9 的四份契約與
+> `check_online_valuation_v29.mjs` 住在 `v7/fast-calibration`：它們相依
+> `squadSnapshot.js` → `onlineCbr.js`，整合進來等於把整條 Online CBR 鏈一起帶進來。
+> AWP / CBR / Rating 是**另一條 owner 線**，與 Meta Progression release 分開推進。
+
+
 > 目標是**為 Codex 的 AWP triage 回來之後建立穩定邊界**，
 > 現在**不決定任何 role / tactic / map 權重**。
 > 未改 CS runtime、未改 `squadCostOf` 現有數值、未改 `starExcess`、未改 `MATCH_BAND`、
@@ -17089,11 +17095,17 @@ clubCapabilities(profile) → { total, sources: { teamDevelopment, coach } }
 
 ### 四、Online 邊界
 
-`valuateSquad({ snapshot })` 只吃 `SquadSnapshot.v1`，matchmaking / onlineValuation /
-matchmakingPolicy **完全沒有讀**任何俱樂部能力——邊界天生乾淨。因此
-`competitivePolicy` 在 v1 沒有 runtime 作用，它的價值全在契約：verifier 斷言
-① 有 capability 的資產必為 `careerOnly`、② 五個 online 檔案不出現任何俱樂部資產
-欄位、③ 把 `clubAssets` 塞進估值輸入，結果逐值不變。
+配對與隊伍契約（`contracts/matchmaking.js`、`contracts/matchSquad.js`）
+**完全沒有讀**任何俱樂部能力——邊界天生乾淨。因此 `competitivePolicy` 在 v1
+沒有 runtime 作用，它的價值全在契約：verifier 斷言 ① 有 capability 的資產必為
+`careerOnly`、② 配對／隊伍契約不出現任何俱樂部資產欄位、
+③ `SquadSnapshot` 來源不含任何俱樂部資產欄位。
+
+⚠ **估值層（`onlineValuation.js`）不在本 release**，所以「把 `clubAssets` 塞進
+估值輸入、結果逐值不變」這一條在這條線上**驗不到**。verifier 會明白印出
+`➖ 不在本 release`，**不會靜默當成通過**——那比紅燈更危險。
+估值層與其餘 V7-2.9 契約住在 `v7/fast-calibration`（相依 `squadSnapshot.js`
+→ `onlineCbr.js`，帶進來等於整條 Online CBR 鏈）。
 
 ### 五、Verification
 

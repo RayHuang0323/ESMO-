@@ -15,7 +15,7 @@
 //  ⑧ **lifetime 保護**：花點數不得動 lifetime、不得讓俱樂部等級下降
 // ============================================================================
 import { execFileSync } from "node:child_process";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname } from "node:path";
@@ -67,33 +67,64 @@ ck("有 prerequisite 的就是最貴的那位",
 // ── ② Online / 競技邊界 ───────────────────────────────────────────────────
 console.log("\n── ② Online 邊界 ──");
 const FORBIDDEN_IN_ONLINE = ["clubAssets", "coachCatalog", "headCoachId", "clubCapabilities"];
-const onlineFiles = [
-  "src/platform/contracts/onlineValuation.js",
-  "src/platform/contracts/matchmakingPolicy.js",
-  "src/platform/contracts/cbrDecisionGate.js",
+
+//  ⚠ 兩組檔案，分開處理：
+//  · ALWAYS 這組是主幹一定有的配對／隊伍契約 ⇒ 缺檔就是**紅燈**。
+//  · OPTIONAL 這組屬於 V7-2.9 Online CBR guardrails，住在 `v7/fast-calibration`
+//    那條線上（它們相依 `squadSnapshot.js` → `onlineCbr.js`，帶進來等於把整條
+//    CBR 鏈一起帶進來）。本 release 刻意不含它們。
+//    缺檔時**明說跳過**，不算 pass 也不算 fail——靜默通過會讓這條邊界
+//    在「檔案根本不存在」時看起來是綠的，那比紅燈更危險。
+const ONLINE_FILES_ALWAYS = [
   "src/platform/contracts/matchmaking.js",
   "src/platform/contracts/matchSquad.js",
 ];
-for (const f of onlineFiles) {
+const ONLINE_FILES_OPTIONAL = [
+  "src/platform/contracts/onlineValuation.js",
+  "src/platform/contracts/matchmakingPolicy.js",
+  "src/platform/contracts/cbrDecisionGate.js",
+];
+let skipped = 0;
+const scanOnline = (f, required) => {
   let src = "";
-  try { src = readFileSync(join(ROOT, f), "utf8"); } catch { ck(`${f} 可讀`, false, "找不到檔案"); continue; }
+  try { src = readFileSync(join(ROOT, f), "utf8"); } catch {
+    if (required) { ck(`${f} 可讀`, false, "找不到檔案"); return; }
+    skipped++; console.log(`➖ ${f}　不在本 release（V7-2.9 guardrails 在 v7/fast-calibration 線上）`);
+    return;
+  }
   const hits = FORBIDDEN_IN_ONLINE.filter((t) => src.includes(t));
   ck(`${f} 不出現任何俱樂部資產欄位`, hits.length === 0, hits.join(",") || "clean");
-}
-//  估值真的只吃 SquadSnapshot：塞進俱樂部資產欄位，結果必須逐值不變。
-const { valuateSquad } = await imp("src/platform/contracts/onlineValuation.js");
-const snapshot = {
-  players: [
-    { sta: 70, fps: 70, moba: 70, personality: 60 }, { sta: 65, fps: 68, moba: 66, personality: 55 },
-    { sta: 72, fps: 60, moba: 71, personality: 58 }, { sta: 61, fps: 63, moba: 64, personality: 61 },
-    { sta: 69, fps: 66, moba: 62, personality: 57 },
-  ],
 };
-const baseVal = valuateSquad({ snapshot });
-const pollutedVal = valuateSquad({
-  snapshot: { ...snapshot, clubAssets: { headCoachId: "coach_conditioning" }, headCoachId: "coach_tactical" },
-});
-eq("估值對俱樂部資產欄位完全無感", JSON.stringify(baseVal), JSON.stringify(pollutedVal));
+for (const f of ONLINE_FILES_ALWAYS) scanOnline(f, true);
+for (const f of ONLINE_FILES_OPTIONAL) scanOnline(f, false);
+
+//  估值真的只吃 SquadSnapshot：塞進俱樂部資產欄位，結果必須逐值不變。
+//  ⚠ 只有 `onlineValuation.js` 在這棵樹上時才驗得到；不在就明說，不假裝驗過。
+if (existsSync(join(ROOT, "src/platform/contracts/onlineValuation.js"))) {
+  const { valuateSquad } = await imp("src/platform/contracts/onlineValuation.js");
+  const snapshot = {
+    players: [
+      { sta: 70, fps: 70, moba: 70, personality: 60 }, { sta: 65, fps: 68, moba: 66, personality: 55 },
+      { sta: 72, fps: 60, moba: 71, personality: 58 }, { sta: 61, fps: 63, moba: 64, personality: 61 },
+      { sta: 69, fps: 66, moba: 62, personality: 57 },
+    ],
+  };
+  const baseVal = valuateSquad({ snapshot });
+  const pollutedVal = valuateSquad({
+    snapshot: { ...snapshot, clubAssets: { headCoachId: "coach_conditioning" }, headCoachId: "coach_tactical" },
+  });
+  eq("估值對俱樂部資產欄位完全無感", JSON.stringify(baseVal), JSON.stringify(pollutedVal));
+} else {
+  skipped++;
+  console.log("➖ 估值輸入污染測試　需要 onlineValuation.js，不在本 release");
+}
+
+//  ⚠ 這一條**永遠**要驗：不管估值層在不在，俱樂部資產都不得洩進 SquadSnapshot。
+//  它守的是「本 release 有沒有自己把 clubAssets 塞進競技資料流」，
+//  與 V7-2.9 在不在無關。
+const squadSrc = readFileSync(join(ROOT, "src/platform/contracts/matchSquad.js"), "utf8");
+ck("SquadSnapshot 來源不含任何俱樂部資產欄位",
+  FORBIDDEN_IN_ONLINE.every((t) => !squadSrc.includes(t)));
 
 // ── ③ 無硬編碼教練 id ────────────────────────────────────────────────────
 console.log("\n── ③ 無硬編碼 ──");
@@ -319,5 +350,6 @@ const viewLocked = clubAssetsViewOf(swap.assets, {
 ck("週鎖時 view 說得出原因", viewLocked.canChangeCoach === false && viewLocked.changeBlockedBy === ASSET_FAIL.WEEKLY_LOCKED);
 ck("週鎖時已擁有的都不可裝備", viewLocked.items.filter((i) => i.owned && !i.equipped).every((i) => i.canEquip === false));
 
-console.log(`\nClub Assets v1：${pass}/${pass + fail} ${fail === 0 ? "PASS" : "FAIL"}`);
+console.log(`\nClub Assets v1：${pass}/${pass + fail} ${fail === 0 ? "PASS" : "FAIL"}`
+  + (skipped ? `　（${skipped} 項不適用於本 release，見 ② Online 邊界）` : ""));
 if (fail) process.exitCode = 1;
