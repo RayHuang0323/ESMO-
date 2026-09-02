@@ -19,7 +19,7 @@
 // ============================================================================
 import React, { useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
-import { CS_SEATS, CS_SEAT_LABEL } from "../../platform/contracts/matchSquad.js";
+import { CS_SEATS } from "../../platform/contracts/matchSquad.js";
 import MatchPrepFrame, { SquadSeatRow } from "../common/MatchPrepFrame.jsx";
 import { calcPower, personalityById } from "../../data/playerModel.js";
 import { fpsRolePresentation, csLineupAdvisories } from "../../battle/fps/fpsRoster.js";
@@ -39,12 +39,13 @@ const SEAT_VISUAL_STYLE = {
   f5: { code: "S5", emoji: "⑤", color: "#94a3b8" },
 };
 const SLOT_CODE = Object.freeze({ f1: "SLOT 1", f2: "SLOT 2", f3: "SLOT 3", f4: "SLOT 4", f5: "SLOT 5" });
+const CS_SEAT_LABEL_LOCAL = Object.freeze(Object.fromEntries(CS_SEATS.map((seat, i) => [seat, `S${i + 1}`])));
 
 /** 指派先發（與 MOBA 的 BenchSheet 同一個 store action，不另建流程）。 */
 function CsBenchSheet({ seat, players, lineup, onClose }) {
   const setCsSeat = useProfileStore((s) => s.setCsSeat);
   const list = (players ?? []).filter((p) => p && typeof p.id === "string");
-  const slotLabel = CS_SEAT_LABEL[seat] ?? seat;
+  const slotLabel = CS_SEAT_LABEL_LOCAL[seat] ?? seat;
   return (
     <div style={{ position: "absolute", inset: 0, zIndex: 45 }}>
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)" }} />
@@ -118,7 +119,7 @@ export default function CsPrepScreen({ onNext, onBack }) {
     return (
       <SquadSeatRow
         key={seat}
-        code={st.code} label={CS_SEAT_LABEL[seat]} emoji={st.emoji} color={st.color}
+        code={st.code} label={CS_SEAT_LABEL_LOCAL[seat]} emoji={st.emoji} color={st.color}
         seated={!!p} playerName={p?.name} playerLv={p?.lv}
         onSwap={() => setBench(seat)}
         avatar={p ? (
