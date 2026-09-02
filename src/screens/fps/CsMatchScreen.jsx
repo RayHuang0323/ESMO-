@@ -19,6 +19,7 @@ import { toFpsRoster, CS_MAP_KEYS } from "../../battle/fps/fpsRoster.js";
 import { csMapByKey } from "../../battle/fps/csPrepData.js";
 import { toCsMatchResult } from "../../platform/contracts/CsMatchResult.js";
 import { GC, FONT } from "../../ui/theme.js";
+import CsLongMatchProgress from "./CsLongMatchProgress.jsx";
 
 export default function CsMatchScreen({ config, onFinish, onBack }) {
   const players = useProfileStore((s) => s.players) ?? [];
@@ -38,9 +39,21 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
   const roster = useMemo(() => toFpsRoster(players, csLineup), [players, csLineup]);
   const [result, setResult] = useState(null); // 引擎原生 MatchResult
   const progressRef = useRef({ frameIndex: Number(activeSnapshot?.frameIndex) || 0, totalFrames: 0, simulationTimeSec: Number(activeSnapshot?.simulationTimeSec) || 0, snapshot: activeSnapshot });
+  // C6C：引擎初次 onProgress 會先回報 frame 0，再套用 persisted resume frame。
+  // 只忽略這一筆 mount 初值，避免覆寫 MatchSession 權威游標；之後 seek 回 0 仍有效。
+  const initialResumeFrame = useRef(Number(activeSnapshot?.frameIndex) || 0);
+  const ignoredInitialResumeFrame = useRef(false);
   const lastProgressSave = useRef(0);
   const saveProgress = useCallback((progress, { paused = false, force = false } = {}) => {
-    if (progress) progressRef.current = progress;
+    if (config?.c5cReview) return;
+    if (progress) {
+      const frameIndex = Number(progress.frameIndex);
+      if (initialResumeFrame.current > 0 && !ignoredInitialResumeFrame.current && frameIndex === 0) {
+        ignoredInitialResumeFrame.current = true;
+        return;
+      }
+      progressRef.current = progress;
+    }
     const now = Date.now();
     if (!force && now - lastProgressSave.current < 1200) return;
     lastProgressSave.current = now;
@@ -86,6 +99,9 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
           名單不足 5 人，本場使用引擎內建示範陣容。
         </div>
       )}
+
+      {/* C6C outer progress：只讀 MatchSession snapshot，不進入 C5C engine HUD。 */}
+      <CsLongMatchProgress session={session} snapshot={activeSnapshot} config={{ ...config, mapKey, mapName }} />
 
       <EsportsFPS3D embedded roster={roster ?? undefined} mapKey={mapKey} seed={seed} tactic={config?.tacticId ?? undefined} tacticType={config?.tacticType ?? undefined} tacticalLayout={config?.tacticalLayout ?? undefined} teamName={team?.name} onComplete={setResult}
         resumeFrameIndex={Number(activeSnapshot?.frameIndex) || 0} onProgress={handleProgress} />

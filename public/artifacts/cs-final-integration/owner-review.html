@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ESMO CS Final Integration｜Owner Review</title>
+    <style>
+      :root { color-scheme: dark; font-family: Inter, "Noto Sans TC", system-ui, sans-serif; background: #071017; color: #edf6f4; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: radial-gradient(circle at 85% 0%, #17343b 0, #071017 42rem); }
+      main { width: min(1040px, calc(100% - 32px)); margin: 0 auto; padding: 40px 0 64px; }
+      .eyebrow { color: #65d8c4; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; }
+      h1 { margin: 8px 0 10px; font-size: clamp(30px, 6vw, 56px); line-height: 1.05; }
+      .lead { max-width: 760px; color: #a9bdba; line-height: 1.7; }
+      .status { display: inline-flex; gap: 8px; align-items: center; margin-top: 12px; padding: 8px 12px; border: 1px solid #2e5f59; border-radius: 999px; color: #8ff1dc; background: #102824; }
+      .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 28px; }
+      section { padding: 20px; border: 1px solid #24363c; border-radius: 18px; background: rgba(10, 22, 29, .86); }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      ul { margin: 0; padding-left: 20px; color: #b8cbc8; line-height: 1.75; }
+      .warn { border-color: #604b24; }
+      .warn h2 { color: #f5c469; }
+      .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+      a { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; padding: 10px 16px; border-radius: 12px; color: #071017; background: #70e0ca; font-weight: 750; text-decoration: none; }
+      a.secondary { color: #dce9e7; background: #162a31; border: 1px solid #34505a; }
+      footer { margin-top: 24px; color: #77908d; font-size: 13px; }
+      @media (max-width: 640px) { main { width: min(100% - 20px, 1040px); padding-top: 24px; } .grid { grid-template-columns: 1fr; } section { padding: 16px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">ESMO · CS Final Integration Candidate</div>
+      <h1>中文 Owner Review</h1>
+      <p class="lead">這是單一整合驗收入口。請依序確認 C5C 比賽呈現、C6C 長對局進度，以及已驗證的 AWP economy／route／acquisition 修正。所有比分、回合、時間與系列賽進度都讀取正式 MatchSession／simulation authority。</p>
+      <div class="status">● Ready for local owner acceptance</div>
+
+      <div class="grid">
+        <section>
+          <h2>C5C Match Presentation</h2>
+          <ul>
+            <li>Kill Feed、回合結果、Bomb 狀態清楚可讀</li>
+            <li>Recorded gunshot audio 與 authoritative shot 對齊</li>
+            <li>Camera、HUD、StableCanvas 與 RAF coherence 保持穩定</li>
+          </ul>
+        </section>
+        <section>
+          <h2>C6C Long Match Progress</h2>
+          <ul>
+            <li>Practice／BO1／BO3 顯示目前 Map、Round、比分與 frame</li>
+            <li>2.4× 只讀正式播放器狀態，不另建速度 authority</li>
+            <li>Leave、reload、resume 從保存的 ActiveMatch 繼續</li>
+          </ul>
+        </section>
+        <section>
+          <h2>AWP Verified Fixes</h2>
+          <ul>
+            <li>Role-wide economy fallback：AWP → Scout → Rifle／SMG → true eco pistol</li>
+            <li>T-side route continuation 與 sniper acquisition envelope 已整合</li>
+            <li>CBR stale metadata 修正只存在 tools／evidence adapter</li>
+          </ul>
+        </section>
+        <section class="warn">
+          <h2>本輪刻意不處理</h2>
+          <ul>
+            <li>RESIDUAL_TACTIC_SYNC_P1 保留，不調整 tactics／side-swap／CBR</li>
+            <li>Android 真機的觸控、效能、音訊仍待 Owner 驗收</li>
+            <li>不 merge、不 push、不 deploy</li>
+          </ul>
+        </section>
+      </div>
+
+      <div class="actions">
+        <a href="../../?c5c=battle&amp;map=mirage&amp;seed=505001">開啟 Mirage Battle</a>
+        <a class="secondary" href="../../?c5c=battle&amp;map=dust2&amp;seed=505002">Dust II</a>
+        <a class="secondary" href="../../?c5c=battle&amp;map=inferno&amp;seed=505003">Inferno</a>
+      </div>
+      <footer>Final integration candidate · baseline origin/main e86ace1 · local preview only</footer>
+    </main>
+  </body>
+</html>

@@ -9,6 +9,8 @@
 //  資料來源：profileStore.players（唯一選手來源）+ 選圖/戰術 config。
 //  對手為引擎內建 Compulsary（不複製名單資料 → 誠實顯示「引擎內建陣容」）。
 //  無 MOBA Hero 圖、無 heroDatabase（CS/MOBA 分離）。
+//  C6C：進場過場不把經過時間當成真實資源下載百分比；完整比賽進度由 Battle
+//  畫面的 MatchSession snapshot 摘要提供。
 // ============================================================================
 import React, { useEffect, useRef, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
@@ -35,7 +37,7 @@ export default function CsLoadingScreen({ config, onDone }) {
   const players = useProfileStore((s) => s.players) ?? [];
   const team = useProfileStore((s) => s.team);
   const starters = players.filter((p) => p.status === "主力").slice(0, 5);
-  const [pct, setPct] = useState(0);
+  const [phaseIndex, setPhaseIndex] = useState(0);
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
 
@@ -45,7 +47,7 @@ export default function CsLoadingScreen({ config, onDone }) {
     let finishTimer = null;
     const iv = setInterval(() => {
       const p = Math.min(100, Math.round(((Date.now() - t0) / 2600) * 100));
-      setPct(p);
+      setPhaseIndex(Math.min(LINES.length - 1, Math.floor(p / (100 / LINES.length))));
       if (p >= 100 && !completed) {
         completed = true;
         clearInterval(iv);
@@ -58,7 +60,7 @@ export default function CsLoadingScreen({ config, onDone }) {
     };
   }, []);
 
-  const line = LINES[Math.min(LINES.length - 1, Math.floor(pct / (100 / LINES.length)))];
+  const line = LINES[phaseIndex];
 
   return (
     <div style={{ height: "100%", overflow: "auto", background: "#070a10", fontFamily: FONT, padding: "14px 12px 24px" }}>
@@ -98,14 +100,13 @@ export default function CsLoadingScreen({ config, onDone }) {
           <div style={{ color: GC.gray, fontSize: 9 }}>引擎內建陣容 · 5 人（指揮 orgaNick / 狙擊 Oniheavy / 步槍 purPeEsw / 突破 b3autiFul / 輔助 GolDenous）</div>
         </div>
 
-        {/* Loading Bar */}
-        <div style={{ height: 6, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden", marginBottom: 8 }}>
-          <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg,${ACC},#f97316)`, transition: "width 0.1s linear" }} />
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", color: GC.gray, fontSize: 9 }}>
+        {/* C6C：不顯示不具 authority 的百分比；只提示目前正在準備哪個進場階段。 */}
+        <div data-testid="cs-loading-state" role="status" aria-live="polite" aria-busy="true" style={{ display: "flex", alignItems: "center", gap: 8, color: GC.gray, fontSize: 9, lineHeight: 1.4 }}>
+          <span aria-hidden="true" style={{ width: 7, height: 7, flexShrink: 0, borderRadius: "50%", background: ACC, boxShadow: `0 0 0 4px ${ACC}22`, animation: "csLoadingPulse 1.2s ease-in-out infinite" }} />
+          <span style={{ color: "#e8ebf0", fontWeight: 800 }}>正在準備 Battle…</span>
           <span>{line}</span>
-          <span style={{ fontFamily: MONO }}>{pct}%</span>
         </div>
+        <style>{"@keyframes csLoadingPulse { 0%,100% { opacity: .45; transform: scale(.9); } 50% { opacity: 1; transform: scale(1.08); } }"}</style>
       </div>
     </div>
   );
