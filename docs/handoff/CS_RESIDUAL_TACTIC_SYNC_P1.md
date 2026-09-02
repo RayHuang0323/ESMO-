@@ -73,3 +73,12 @@ The runtime root cause is fixed and the authority guard is green. Before pushing
 ## Marker
 
 `RESIDUAL_TACTIC_SYNC_P1 = FIXED; RELEASE_PENDING_TIMING_DEBT_REVIEW`
+
+## Release closeout — 2026-09-03
+
+- `RESIDUAL_TACTIC_SYNC_P1 = CLOSED`。
+- P1 runtime commit: `ef9f50e14d42dcf5fd50734a6d453c0b748022e9`。
+- Integrated production `main`: `e3d2ee1fc2f53001d11d0bb090ffffd097b50285`。
+- GitHub Pages workflow `33668856155` completed with `success`; production smoke passed.
+- Production smoke coverage: V7 release `44/44 PASS`, Meta release `67/67 PASS`; direct CS Battle smoke covered Mirage / Dust II / Inferno at desktop and 390px, C5C HUD, C6C progress, reload shell, HTTP 200 and console/page errors clean. The first desktop Inferno attempt had a transient CDP disconnect; an isolated rerun passed `5/5`.
+- Existing C5B timing-verifier long-tail and Node 24 gate-wrapper exit remain verification/tooling debt. They were reproduced before P1 and were not changed by this release.

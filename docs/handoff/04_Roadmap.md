@@ -1344,3 +1344,6 @@ AWP_TRIAGE = UNRESOLVED → CBR BLOCKED，不進 Rating   ← 目前在這裡
 - Status: runtime root cause fixed in an independent P1 worktree. `currentSideByTeam` is now the sole actual-side authority; stable tactic ownership is deterministically projected onto the legal T／CT tactic and route library after side changes.
 - Evidence: Mirage、Dust II、Inferno same-seed natural completion and post-swap authority guard `4/4 PASS`; C5V／C5C／C6C／Series／MatchSession／Competition regression evidence recorded in `docs/handoff/CS_RESIDUAL_TACTIC_SYNC_P1.md`.
 - Release boundary: no AWP／CBR／rating calibration change and no Meta Progression／Club Assets or C5C／C6C worktree change. Existing C5B timing debt、Node 24 gate-wrapper exit issue、large-chunk warning and Android real-device validation remain explicitly tracked.
+## CS RESIDUAL_TACTIC_SYNC_P1 release closeout — 2026-09-03
+- P1 runtime fix 已整合並部署：stable team tactic owner 維持穩定，actual T/CT side 透過 deterministic projection 取得合法 tactic / route / formation；不涉及 AWP balance、CBR、Rating 或 Meta branch。
+- 狀態：`RESIDUAL_TACTIC_SYNC_P1 = CLOSED`。剩餘 C5B timing verification、Node 24 gate-wrapper、Vite large-chunk 與 Android 真機驗收列為既有 debt / pending，不再阻塞此 P1。
