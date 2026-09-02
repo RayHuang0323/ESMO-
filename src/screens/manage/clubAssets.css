@@ -441,3 +441,56 @@
 
   .ca-rise { opacity: 1; transform: none; }
 }
+
+/* ── 外觀預覽 ─────────────────────────────────────────────────────────────
+   ⚠ 外觀卡刻意不畫「帶來／不提供」那兩欄：那兩欄在教練卡上是在說取捨，
+     放在沒有任何效果的東西上，只會讓玩家以為外觀也影響數值。
+     改成把外觀**本身**預覽出來——看得到才知道自己在買什麼。
+   ────────────────────────────────────────────────────────────────────────── */
+
+.ca__look-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+/* 主題色：兩顆色票 */
+.ca__look-preview i {
+  display: block;
+  width: 13px;
+  height: 13px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+/* 稱號：實際會出現在戰隊名旁的那顆膠囊 */
+.ca__look-preview em {
+  padding: 2px 8px;
+  color: var(--card-accent);
+  font-size: 9.5px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--card-accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--card-accent) 42%, transparent);
+  border-radius: 999px;
+}
+
+/* 隊徽框：縮小版的框本身 */
+.ca__look-preview b {
+  display: block;
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid currentColor;
+  border-radius: 5px;
+}
+
+.ca__look-preview b[data-pattern="hex"] {
+  border-radius: 2px;
+  clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0 50%);
+}
+
+.ca__look-preview b[data-pattern="circuit"] { border-style: dashed; }
+.ca__look-preview b[data-pattern="laurel"] { border-radius: 50%; }

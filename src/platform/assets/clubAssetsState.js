@@ -22,7 +22,9 @@
 //
 //  純函式：不 import React / zustand / localStorage / 亂數 / 時鐘。
 // ============================================================================
-import { CLUB_ASSET_VERSION, assetById, isRetired } from "./coachCatalog.js";
+import { CLUB_ASSET_VERSION } from "./coachCatalog.js";
+import { assetById, isRetired, isCosmetic, identitySlotOf } from "./assetCatalog.js";
+import { IDENTITY_SLOTS, IDENTITY_SLOT_OF } from "./identityCatalog.js";
 
 /** 失敗碼 → 呼叫端可以直接對應文案。判定在這裡，文案在畫面。 */
 export const ASSET_FAIL = Object.freeze({
@@ -37,8 +39,22 @@ export const ASSET_FAIL = Object.freeze({
   RETIRED: "retired",
 });
 
+/**
+ * ⚠ **Club Identity v1 是擴充，不是第二套 store。**
+ *   識別與教練共用同一個 `owned`（同一套購買規則、同一個永久擁有契約），
+ *   只是裝備欄位不同：教練一個槽 ＋ 每週鎖；識別三個槽 ＋ **免費、隨時可換**。
+ *   schema 仍是 `ClubAssets.v1`——新欄位是純附加，舊存檔由 normalize 補成空槽，
+ *   行為與識別上線前完全相同，沒有 migration 分支的必要。
+ */
 export function emptyClubAssets() {
-  return { schema: CLUB_ASSET_VERSION, owned: {}, headCoachId: null, lastCoachChangeWeek: null };
+  return {
+    schema: CLUB_ASSET_VERSION,
+    owned: {},
+    headCoachId: null,
+    lastCoachChangeWeek: null,
+    //  三個外觀槽。`null` = 使用俱樂部預設外觀。
+    equippedIdentity: { themeId: null, titleId: null, bannerId: null },
+  };
 }
 
 const posInt = (v) => {
@@ -81,6 +97,16 @@ export function normalizeClubAssets(raw) {
   out.lastCoachChangeWeek = posInt(raw.lastCoachChangeWeek);
   //  沒有總教練就不該留著換人紀錄——否則第一次裝備可能莫名被鎖。
   if (!out.headCoachId) out.lastCoachChangeWeek = null;
+
+  //  外觀槽：**裝備仍然 fail closed**——沒買、查不到型錄、或型別對不上槽位的，
+  //  一律歸 null。ownership 不會因此消失（它還在 `owned` 裡），只是不生效。
+  const eq = raw.equippedIdentity && typeof raw.equippedIdentity === "object" ? raw.equippedIdentity : {};
+  for (const slot of IDENTITY_SLOTS) {
+    const id = typeof eq[slot] === "string" ? eq[slot] : null;
+    if (!id || !out.owned[id]) { out.equippedIdentity[slot] = null; continue; }
+    const asset = assetById(id);
+    out.equippedIdentity[slot] = asset && identitySlotOf(asset) === slot ? id : null;
+  }
   return out;
 }
 
@@ -157,7 +183,11 @@ export function equipHeadCoach(assets, assetId, { careerWeek = 1 } = {}) {
   const A = normalizeClubAssets(assets);
   const fail = (code, reason) => ({ ok: false, assets: A, reason, code, firstEquip: false });
 
-  if (!assetById(assetId)) return fail(ASSET_FAIL.UNKNOWN_ASSET, "找不到這份資產");
+  const target = assetById(assetId);
+  if (!target) return fail(ASSET_FAIL.UNKNOWN_ASSET, "找不到這份資產");
+  //  ⚠ 外觀資產與教練共用同一個 `owned` ⇒ 這裡必須擋，否則一件主題色可以被
+  //    裝成總教練（型別檢查是唯一擋得住的地方）。
+  if (isCosmetic(target)) return fail(ASSET_FAIL.UNKNOWN_ASSET, "這是外觀資產，不能當總教練");
   if (!A.owned[assetId]) return fail(ASSET_FAIL.NOT_OWNED, "還沒有聘用這位教練");
   if (A.headCoachId === assetId) return fail(ASSET_FAIL.ALREADY_EQUIPPED, "這位已經是總教練");
 
@@ -176,6 +206,75 @@ export function equipHeadCoach(assets, assetId, { careerWeek = 1 } = {}) {
       //  首裝不寫入紀錄 ⇒ 玩家買第一位教練的當週仍能換到第二位。
       lastCoachChangeWeek: firstEquip ? A.lastCoachChangeWeek : (posInt(careerWeek) ?? 1),
     },
+  };
+}
+
+/**
+ * 裝備／卸下一件外觀。
+ *
+ * ⚠ **與教練的規則刻意不同，這不是不一致：**
+ *   教練會改變數值，所以換人有每週一次的成本；外觀不影響任何數值，
+ *   對它設冷卻只會懲罰玩家換造型，換不到任何設計上的好處。
+ *   ⇒ **免費、隨時可換、可以卸回預設**（`assetId = null`）。
+ *   教練的 `lastCoachChangeWeek` 完全不受這裡影響。
+ *
+ * @param {string|null} assetId `null` ⇒ 把該槽卸回俱樂部預設外觀。
+ * @param {string=} slotHint 卸下時要指定槽位（`null` 沒有型別可以推斷）。
+ */
+export function equipIdentity(assets, assetId, { slot: slotHint = null } = {}) {
+  const A = normalizeClubAssets(assets);
+  const fail = (code, reason) => ({ ok: false, assets: A, reason, code, slot: null });
+
+  //  卸下：只要槽位合法就成立。
+  if (assetId === null) {
+    if (!IDENTITY_SLOTS.includes(slotHint)) return fail(ASSET_FAIL.UNKNOWN_ASSET, "找不到這個外觀槽位");
+    if (A.equippedIdentity[slotHint] === null) return fail(ASSET_FAIL.ALREADY_EQUIPPED, "這個槽位已經是預設外觀");
+    return {
+      ok: true, reason: null, code: null, slot: slotHint,
+      assets: { ...A, equippedIdentity: { ...A.equippedIdentity, [slotHint]: null } },
+    };
+  }
+
+  const asset = assetById(assetId);
+  if (!asset) return fail(ASSET_FAIL.UNKNOWN_ASSET, "找不到這份資產");
+  if (!isCosmetic(asset)) return fail(ASSET_FAIL.UNKNOWN_ASSET, "這不是外觀資產");
+  if (!A.owned[assetId]) return fail(ASSET_FAIL.NOT_OWNED, "還沒有取得這個外觀");
+
+  const slot = identitySlotOf(asset);
+  if (!IDENTITY_SLOTS.includes(slot)) return fail(ASSET_FAIL.UNKNOWN_ASSET, "這份外觀沒有對應的槽位");
+  if (A.equippedIdentity[slot] === assetId) return fail(ASSET_FAIL.ALREADY_EQUIPPED, "這個外觀已經在使用中");
+
+  return {
+    ok: true, reason: null, code: null, slot,
+    assets: { ...A, equippedIdentity: { ...A.equippedIdentity, [slot]: assetId } },
+  };
+}
+
+/**
+ * 現在生效的外觀 token。**呈現層唯一該讀的東西**——畫面不要自己去查型錄。
+ *
+ * ⚠ 回傳的顏色只能流進管理／俱樂部呈現層。戰鬥側顏色（MOBA 藍紅、CS T/CT）
+ *   有自己的權威，識別一個都不准覆蓋（見 `identityCatalog.js` 檔頭）。
+ */
+export function identityPresentationOf(assets) {
+  const A = normalizeClubAssets(assets);
+  const of = (slot) => {
+    const id = A.equippedIdentity[slot];
+    const asset = id ? assetById(id) : null;
+    return asset ? { assetId: id, name: asset.name, token: asset.visualToken } : null;
+  };
+  const theme = of(IDENTITY_SLOT_OF.clubTheme);
+  const title = of(IDENTITY_SLOT_OF.clubTitle);
+  const banner = of(IDENTITY_SLOT_OF.clubBanner);
+  return {
+    schema: CLUB_ASSET_VERSION,
+    theme, title, banner,
+    //  攤平成畫面直接可用的值；沒裝備就是 null ⇒ 畫面沿用既有預設，不做任何事。
+    accent: theme?.token?.accent ?? null,
+    accent2: theme?.token?.accent2 ?? null,
+    titleLabel: title?.token?.label ?? null,
+    bannerPattern: banner?.token?.pattern ?? null,
+    bannerRing: banner?.token?.ring ?? null,
   };
 }
 
@@ -222,6 +321,56 @@ export function clubAssetsViewOf(assets, { catalog, clubPoints = 0, clubPointsLi
         blockedBy: owned
           ? (equipped ? null : (gate.ok ? null : gate.code))
           : (!preOk ? ASSET_FAIL.PREREQUISITE : (!affordable ? ASSET_FAIL.INSUFFICIENT : null)),
+        acquiredWeek: owned ? A.owned[asset.assetId].acquiredWeek : null,
+        retired: isRetired(asset),
+      };
+    }),
+  };
+}
+
+/**
+ * 外觀型錄要的一整包。與教練的 view 分開，因為**規則不同**：
+ * 外觀沒有週鎖、可以卸回預設、而且分三個槽各自獨立。
+ */
+export function identityViewOf(assets, { catalog, clubPoints = 0, clubPointsLifetime = 0 } = {}) {
+  const A = normalizeClubAssets(assets);
+  const balance = Math.max(0, Math.floor(Number(clubPoints) || 0));
+  const present = identityPresentationOf(A);
+  return {
+    schema: CLUB_ASSET_VERSION,
+    clubPoints: balance,
+    equipped: { ...A.equippedIdentity },
+    presentation: present,
+    items: (catalog ?? []).map((asset) => {
+      const slot = identitySlotOf(asset);
+      const owned = Boolean(A.owned[asset.assetId]);
+      const equipped = A.equippedIdentity[slot] === asset.assetId;
+      const preOk = prerequisiteMet(asset, { clubPointsLifetime });
+      const affordable = balance >= asset.priceClubPoints;
+      const retired = isRetired(asset);
+      return {
+        assetId: asset.assetId,
+        type: asset.type,
+        slot,
+        name: asset.name,
+        description: asset.description,
+        styleTags: asset.styleTags ?? [],
+        visualToken: asset.visualToken,
+        price: asset.priceClubPoints,
+        prerequisite: asset.prerequisite,
+        prerequisiteMet: preOk,
+        competitivePolicy: asset.competitivePolicy,
+        owned, equipped, affordable, retired,
+        shortBy: affordable ? 0 : asset.priceClubPoints - balance,
+        //  下架品仍可裝備（已擁有的話），只是不能再買。
+        canBuy: !owned && !retired && preOk && affordable,
+        //  外觀裝備**沒有任何冷卻**：擁有且不是現用的，隨時可換。
+        canEquip: owned && !equipped,
+        blockedBy: owned
+          ? null
+          : (retired ? ASSET_FAIL.RETIRED
+            : (!preOk ? ASSET_FAIL.PREREQUISITE
+              : (!affordable ? ASSET_FAIL.INSUFFICIENT : null))),
         acquiredWeek: owned ? A.owned[asset.assetId].acquiredWeek : null,
       };
     }),

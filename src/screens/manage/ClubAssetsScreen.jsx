@@ -18,6 +18,7 @@
 import React from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { assetById, SPECIALTY_ZH } from "../../platform/assets/coachCatalog.js";
+import { IDENTITY_TYPE_LIST, IDENTITY_TYPE_ZH } from "../../platform/assets/identityCatalog.js";
 import { ESMO_CSS_VARS } from "../../ui/designSystem.js";
 import "./clubAssets.css";
 
@@ -135,10 +136,90 @@ function CoachCard({ item, onBuy, onEquip, view, flash, delay }) {
   );
 }
 
+/**
+ * 一件外觀。
+ *
+ * ⚠ 與教練卡刻意長得不一樣：外觀**沒有能力、沒有取捨、沒有冷卻**，
+ *   所以這裡不畫「帶來／不提供」兩欄——那兩欄在教練卡上是在說取捨，
+ *   放到沒有取捨的東西上只會製造「它是不是也有效果」的誤會。
+ *   這裡改成直接把外觀本身**預覽出來**：主題色給色票、稱號給實際的膠囊、
+ *   隊徽框給一個小圓框。看得到才知道自己在買什麼。
+ */
+function IdentityCard({ item, onBuy, onEquip, onClear, flash, delay }) {
+  const t = item.visualToken ?? {};
+  const accent = t.accent ?? t.ring ?? "#94a3b8";
+  const status = item.equipped ? "使用中"
+    : item.owned ? "已擁有"
+      : item.retired ? "已下架，無法取得"
+        : !item.prerequisiteMet ? `需要俱樂部累計 ${item.prerequisite.min} 點`
+          : !item.affordable ? `還差 ${item.shortBy} 點`
+            : "點數足夠，可以取得";
+  return (
+    <div
+      className={`ca__card ca-rise${flash ? " ca__card--flash" : ""}`}
+      style={{ "--card-accent": accent, "--ca-delay": `${delay}ms` }}
+      data-testid={`identity-card-${item.assetId}`}
+      data-owned={item.owned ? "1" : "0"}
+      data-equipped={item.equipped ? "1" : "0"}
+      data-affordable={item.affordable ? "1" : "0"}
+      data-slot={item.slot}>
+      <div className="ca__card-head">
+        {/*  預覽：三種型別各自畫自己的樣子。 */}
+        <span className="ca__look-preview" data-kind={item.type}>
+          {item.type === "clubTheme" && (
+            <>
+              <i style={{ background: t.accent }} />
+              <i style={{ background: t.accent2 }} />
+            </>
+          )}
+          {item.type === "clubTitle" && <em>{t.label}</em>}
+          {item.type === "clubBanner" && <b data-pattern={t.pattern} style={{ borderColor: t.ring }} />}
+        </span>
+        <span className="ca__card-name">{item.name}</span>
+        {item.owned
+          ? <span className="ca__price ca__price--owned">{item.retired ? "典藏" : "已擁有"}</span>
+          : <span className="ca__price">◆ {item.price}</span>}
+      </div>
+
+      <div className="ca__card-desc">{item.description}</div>
+
+      <div className="ca__card-foot">
+        <span className={`ca__status${item.canBuy ? " ca__status--ready" : item.owned ? " ca__status--owned" : ""}`}>
+          {status}
+        </span>
+        {item.owned ? (
+          item.equipped ? (
+            <button type="button" className="ca__action ca__action--swap"
+              data-testid={`identity-clear-${item.assetId}`}
+              onClick={() => onClear(item.slot)}>
+              換回預設
+            </button>
+          ) : (
+            <button type="button" className="ca__action ca__action--swap"
+              data-testid={`identity-equip-${item.assetId}`}
+              onClick={() => onEquip(item.assetId)}>
+              使用
+            </button>
+          )
+        ) : (
+          <button type="button"
+            className={`ca__action${item.canBuy ? " ca__action--ready" : ""}`}
+            data-testid={`identity-buy-${item.assetId}`}
+            disabled={!item.canBuy}
+            onClick={() => item.canBuy && onBuy(item.assetId)}>
+            取得
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ClubAssetsScreen({ onBack }) {
   const profile = useProfileStore();
-  //  ⚠ 這一份是**推導**出來的，畫面不保存任何一份。
+  //  ⚠ 這兩份都是**推導**出來的，畫面不保存任何一份。
   const view = profile.clubAssetsView();
+  const identity = profile.identityView();
 
   //  一次性回饋旗標。只是動畫用，不是狀態來源——不進 store、不進存檔。
   const [flash, setFlash] = React.useState(null);
@@ -162,6 +243,12 @@ export default function ClubAssetsScreen({ onBack }) {
     const r = profile.equipHeadCoach(assetId);
     if (r?.ok) setFlash(assetId);
   };
+  //  外觀：裝備免費、隨時可換，所以按下去就換，不需要任何確認。
+  const equipLook = (assetId) => {
+    const r = profile.equipClubIdentity(assetId);
+    if (r?.ok) setFlash(assetId);
+  };
+  const clearLook = (slot) => profile.equipClubIdentity(null, slot);
 
   const head = view.headCoachId ? assetById(view.headCoachId) : null;
   const accent = head ? (SPECIALTY_ACCENT[head.specialty] ?? NO_COACH_ACCENT) : NO_COACH_ACCENT;
@@ -230,6 +317,28 @@ export default function ClubAssetsScreen({ onBack }) {
             onBuy={buy} onEquip={equip}
             flash={flash === item.assetId} delay={150 + i * 60} />
         ))}
+
+        {/*  ── 外觀 ────────────────────────────────────────────────────────
+             與教練分區，因為規則不同：外觀不影響任何數值、裝備免費、隨時可換。
+             三個槽各自獨立，所以按型別分組列出。 */}
+        {IDENTITY_TYPE_LIST.map((type, gi) => {
+          const rows = identity.items.filter((it) => it.type === type);
+          if (rows.length === 0) return null;
+          const equippedId = identity.equipped[rows[0].slot];
+          const equippedName = rows.find((r) => r.assetId === equippedId)?.name ?? "預設";
+          return (
+            <React.Fragment key={type}>
+              <div className="ca__eyebrow ca-rise" style={{ "--ca-delay": `${340 + gi * 40}ms` }}>
+                {IDENTITY_TYPE_ZH[type]}　·　使用中：{equippedName}
+              </div>
+              {rows.map((item, i) => (
+                <IdentityCard key={item.assetId} item={item}
+                  onBuy={buy} onEquip={equipLook} onClear={clearLook}
+                  flash={flash === item.assetId} delay={360 + gi * 40 + i * 50} />
+              ))}
+            </React.Fragment>
+          );
+        })}
 
         {/*  ⚠ 這句要寫在畫面上：玩家看到「聘用」會擔心花掉的點數讓等級掉下去。 */}
         <div className="ca__note ca-rise" style={{ "--ca-delay": "330ms" }} data-testid="club-assets-note">

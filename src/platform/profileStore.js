@@ -162,11 +162,13 @@ import {
 //  Club Assets v1：俱樂部能力的唯一權威（發展樹 ＋ 裝備中的總教練）。
 import { clubCapabilitiesOf } from "./assets/clubCapabilities.js";
 import { COACH_CATALOG } from "./assets/coachCatalog.js";
+import { IDENTITY_CATALOG } from "./assets/identityCatalog.js";
 import {
   emptyClubAssets, normalizeClubAssets,
   purchaseAsset as purchaseAssetIn,
   equipHeadCoach as equipHeadCoachIn,
-  clubAssetsViewOf,
+  equipIdentity as equipIdentityIn,
+  clubAssetsViewOf, identityViewOf, identityPresentationOf,
 } from "./assets/clubAssetsState.js";
 import { createMatchEntryRequest, validateMatchEntryRequest } from "./contracts/matchEntry.js";
 import {
@@ -3790,11 +3792,18 @@ export const useProfileStore = create((rawSet, get) => {
     const paid = spendClubPointsIn(normalizeRetention(get().retention), bought.price);
     if (!paid.ok) return { ok: false, reason: paid.reason, code: "insufficient", equipped: false };
 
-    //  空槽 ⇒ 順手免費裝備。第一位教練不該還要玩家再點一次，而且首裝
-    //  不寫 `lastCoachChangeWeek` ⇒ 買完當週仍能換到別位。
+    //  空槽 ⇒ 順手免費裝備。買完還要再點一次才看得到，是沒有意義的一步。
+    //  ⚠ 兩種資產走**不同的槽**：外觀進三個外觀槽（免費、無冷卻），
+    //    教練進總教練槽（首裝不寫 `lastCoachChangeWeek` ⇒ 買完當週仍能換）。
+    //    這裡用 `equipIdentityIn` / `equipHeadCoachIn` 各自的規則去判，
+    //    不在 store 裡自己決定誰能裝進哪裡。
     let assets = bought.assets;
     let equipped = false;
-    if (!assets.headCoachId) {
+    const idEq = equipIdentityIn(assets, assetId);
+    if (idEq.ok) {
+      //  只在該外觀槽是空的時候自動裝上——已經有選擇的槽不該被購買行為覆蓋。
+      if (!assets.equippedIdentity[idEq.slot]) { assets = idEq.assets; equipped = true; }
+    } else if (!assets.headCoachId) {
       const eq = equipHeadCoachIn(assets, assetId, { careerWeek: week });
       if (eq.ok) { assets = eq.assets; equipped = true; }
     }
@@ -3814,6 +3823,39 @@ export const useProfileStore = create((rawSet, get) => {
     set({ clubAssets: r.assets });
     get().save();
     return { ok: true, reason: null, code: null, headCoachId: r.assets.headCoachId, firstEquip: r.firstEquip };
+  },
+
+  // ── Club Identity v1：外觀收藏（與教練共用 owned，裝備規則不同）──────
+  /** 外觀型錄要的一整包。 */
+  identityView() {
+    const r = get().retentionView();
+    return identityViewOf(get().clubAssets, {
+      catalog: IDENTITY_CATALOG,
+      clubPoints: r.clubPoints,
+      clubPointsLifetime: r.clubPointsLifetime,
+    });
+  },
+
+  /**
+   * 現在生效的外觀。**呈現層唯一該讀的入口**——畫面不要自己去查型錄。
+   *
+   * ⚠ 這裡回傳的顏色只能用在管理／俱樂部呈現層。MOBA 藍紅（`ui/theme.js`
+   *   的 `sideColor`）與 CS T／CT（CS runtime）有各自的權威，外觀不得覆蓋。
+   */
+  clubIdentity() {
+    return identityPresentationOf(get().clubAssets);
+  },
+
+  /**
+   * 裝備／卸下外觀。**免費、沒有冷卻、隨時可換**（`assetId = null` ⇒ 回預設）。
+   * 與教練的每週鎖完全分開：這裡不讀也不寫 `lastCoachChangeWeek`。
+   */
+  equipClubIdentity(assetId, slot = null) {
+    const r = equipIdentityIn(get().clubAssets, assetId, { slot });
+    if (!r.ok) return { ok: false, reason: r.reason, code: r.code, slot: null };
+    set({ clubAssets: r.assets });
+    get().save();
+    return { ok: true, reason: null, code: null, slot: r.slot, equipped: { ...r.assets.equippedIdentity } };
   },
 
   // ── CS 訓練賽入史（Sprint23）────────────────────────────────────────

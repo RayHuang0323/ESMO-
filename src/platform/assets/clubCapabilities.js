@@ -23,7 +23,7 @@
 //
 //  純函式：不 import React / zustand / localStorage / 亂數 / 時鐘。
 // ============================================================================
-import { assetById } from "./coachCatalog.js";
+import { assetById } from "./assetCatalog.js";
 
 export const CLUB_CAPABILITY_VERSION = "ClubCapabilities.v1";
 

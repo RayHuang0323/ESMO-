@@ -86,7 +86,7 @@ function SectionHeading({ label, title, note }) {
   );
 }
 
-function TeamHero({ team, meta, unread, xpPercent, onInbox, fansAtSeasonStart }) {
+function TeamHero({ team, meta, unread, xpPercent, onInbox, fansAtSeasonStart, identity }) {
   const achievement = numberOf(team.achievement ?? meta.achievement);
   const level = numberOf(team.lv ?? meta.lv);
   const xp = numberOf(team.xp ?? meta.xp);
@@ -115,13 +115,23 @@ function TeamHero({ team, meta, unread, xpPercent, onInbox, fansAtSeasonStart })
       <div className="esmo-hero__main">
         <div className="esmo-hero__copy">
           <div className="esmo-hero__identity">
-            <div className="esmo-hero__crest" aria-label={`${team.name ?? "戰隊"} 隊徽`}>
+            {/*  Club Identity v1：隊徽框（banner）與稱號（title）的呈現處。
+                 沒裝備時 `data-banner` 為 undefined、稱號不渲染 ⇒ 與上線前完全相同。 */}
+            <div className="esmo-hero__crest" aria-label={`${team.name ?? "戰隊"} 隊徽`}
+              data-banner={identity?.bannerPattern ?? undefined}>
               {team.emoji ?? "◆"}
               <span className="esmo-hero__crest-badge">{achievement}</span>
             </div>
             <div className="esmo-hero__copy">
               <div className="esmo-hero__kicker">{team.tag ?? "ESMO SQUAD"}</div>
-              <h1 className="esmo-hero__title">{team.name ?? "未命名戰隊"}</h1>
+              <h1 className="esmo-hero__title">
+                {team.name ?? "未命名戰隊"}
+                {identity?.titleLabel && (
+                  <span className="esmo-hero__club-title" data-testid="club-identity-title">
+                    {identity.titleLabel}
+                  </span>
+                )}
+              </h1>
               <p className="esmo-hero__subtitle">這是你的戰隊總部。掌握本週節奏，先處理最重要的決策，再把隊伍送上舞台。</p>
               <div className="esmo-hero__meta-row">
                 <span className="esmo-hero__meta"><strong>第 {week} 週</strong></span>
@@ -429,7 +439,7 @@ function Utility({ items, onSelect }) {
   );
 }
 
-function MobileTeamHeader({ team, meta, unread, xpPercent, onInbox }) {
+function MobileTeamHeader({ team, meta, unread, xpPercent, onInbox, identity }) {
   const achievement = numberOf(team.achievement ?? meta.achievement);
   const level = numberOf(team.lv ?? meta.lv);
   const xp = numberOf(team.xp ?? meta.xp);
@@ -440,13 +450,23 @@ function MobileTeamHeader({ team, meta, unread, xpPercent, onInbox }) {
     <header className="esmo-mobile-header" data-dashboard-reveal>
       <div className="esmo-mobile-header__top">
         <div className="esmo-mobile-header__identity">
-          <div className="esmo-mobile-header__crest" aria-label={`${team.name ?? "ESMO Team"} crest`}>
+          {/*  Club Identity v1：手機也要看得到隊徽框與稱號——只加桌機那份，
+               手機玩家等於沒有這個功能（V7B 與 V7-2.5 各踩過一次相反方向）。 */}
+          <div className="esmo-mobile-header__crest" aria-label={`${team.name ?? "ESMO Team"} crest`}
+            data-banner={identity?.bannerPattern ?? undefined}>
             {team.emoji ?? "◈"}
             <span className="esmo-mobile-header__crest-badge">{achievement}</span>
           </div>
           <div className="esmo-mobile-header__copy">
             <div className="esmo-mobile-header__kicker">{team.tag ?? "ESMO SQUAD"}</div>
-            <h1>{team.name ?? "ESMO TEAM"}</h1>
+            <h1>
+              {team.name ?? "ESMO TEAM"}
+              {identity?.titleLabel && (
+                <span className="esmo-hero__club-title" data-testid="club-identity-title">
+                  {identity.titleLabel}
+                </span>
+              )}
+            </h1>
             <div className="esmo-mobile-header__meta">
               <span>Lv. {level}</span>
               <span>W{week}</span>
@@ -742,7 +762,7 @@ function MobileBottomNav({ sheet, onTab }) {
   );
 }
 
-function MobileHome({ team, meta, finance, unread, xpPercent, activeMatchView, onResumeActive, primaryAction, quickActions, profile, players, developmentPoints, wk, sponsor, modes, onSelect, onOffSeason }) {
+function MobileHome({ team, meta, finance, unread, xpPercent, activeMatchView, onResumeActive, primaryAction, quickActions, profile, players, developmentPoints, wk, sponsor, modes, onSelect, onOffSeason, identity }) {
   const [sheet, setSheet] = useState(null);
   const scrollRef = useRef(null);
   //  底部 nav 的「競技」要捲到這一段，所以需要它的位置。
@@ -775,7 +795,7 @@ function MobileHome({ team, meta, finance, unread, xpPercent, activeMatchView, o
           <span><EsmoIcon name="signal" size={13} /> ESMO / COMMAND DECK</span>
           <span>W{numberOf(meta.week, 1)}</span>
         </div>
-        <MobileTeamHeader team={{ ...team, gold: finance.funds }} meta={meta} unread={unread} xpPercent={xpPercent} onInbox={() => onSelect("notify")} />
+        <MobileTeamHeader team={{ ...team, gold: finance.funds }} meta={meta} unread={unread} xpPercent={xpPercent} identity={identity} onInbox={() => onSelect("notify")} />
         <main className="esmo-mobile-home__content">
           <MobilePrimaryAction activeMatchView={activeMatchView} onResumeActive={onResumeActive} action={primaryAction} />
           {/*  ── V3：手機也必須推得動世界時間 ──────────────────────────────
@@ -807,6 +827,8 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
   useDashboardMotion(rootRef, isHomeMobile);
 
   const team = profile.team ?? {};
+  //  Club Identity v1：**唯一**該讀的外觀入口。畫面不自己查型錄。
+  const identity = typeof profile.clubIdentity === "function" ? profile.clubIdentity() : null;
   const meta = profile.meta ?? {};
   const finance = profile.finance ?? {};
   const players = profile.players ?? [];
@@ -927,11 +949,23 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
   const actions = todos.slice(0, 4);
   const mobileQuickActions = todos.slice(1, 4);
 
+  //  Club Identity v1：主題色只覆寫俱樂部呈現層的兩個變數。
+  //  ⚠ 沒裝備主題就**完全不注入**，CSS 的預設值（原本寫死的紫／綠）繼續生效
+  //    ⇒ 未裝備時畫面逐像素不變。戰鬥側顏色不在這裡，也永遠不會在這裡。
+  const identityStyle = {
+    ...ESMO_CSS_VARS,
+    ...(identity?.accent ? { "--club-accent": identity.accent } : {}),
+    ...(identity?.accent2 ? { "--club-accent-2": identity.accent2 } : {}),
+    ...(identity?.bannerRing ? { "--club-ring": identity.bannerRing } : {}),
+  };
+
   return (
-    <div ref={rootRef} className="esmo-dashboard" style={ESMO_CSS_VARS}>
+    <div ref={rootRef} className="esmo-dashboard" style={identityStyle}
+      data-club-theme={identity?.theme?.assetId ?? "none"}>
       {isHomeMobile ? (
         <MobileHome
           onOffSeason={() => sel("offSeason")}
+          identity={identity}
           team={team}
           meta={meta}
           finance={finance}
@@ -959,7 +993,7 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
           <span className="esmo-dashboard__brand-caption">WEEK {numberOf(meta.week, 1)}</span>
         </div>
 
-        <TeamHero team={{ ...team, gold: finance.funds }} meta={meta} unread={unread} xpPercent={xpPercent} fansAtSeasonStart={comp.fansAtSeasonStart ?? null} onInbox={() => sel("notify")} />
+        <TeamHero team={{ ...team, gold: finance.funds }} meta={meta} unread={unread} xpPercent={xpPercent} fansAtSeasonStart={comp.fansAtSeasonStart ?? null} identity={identity} onInbox={() => sel("notify")} />
 
         <div className="esmo-dashboard__layout">
           <main className="esmo-dashboard__main-column">

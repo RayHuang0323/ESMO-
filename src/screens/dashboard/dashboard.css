@@ -133,17 +133,33 @@
   font-weight: 900;
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Club Identity v1：hero 的兩個主色改由變數提供。
+
+   ⚠ **預設值就是識別上線前寫死的那兩個顏色**（紫 #a78bfa／綠 #34d399），
+     所以沒有裝備主題色時**畫面逐像素不變**。裝了主題色，React 才會在
+     `.esmo-dashboard` 上覆寫這兩個變數。
+
+   ⚠ 這兩個變數只影響俱樂部呈現層。MOBA 藍紅（`ui/theme.js` 的 `sideColor`）
+     與 CS T／CT 有各自的權威，識別不得覆蓋——那是玩家辨識敵我的唯一線索。
+   ────────────────────────────────────────────────────────────────────────── */
+.esmo-dashboard {
+  --club-accent: #a78bfa;
+  --club-accent-2: #34d399;
+}
+
 .esmo-hero {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   padding: clamp(20px, 3vw, 34px);
-  border: 1px solid rgba(167, 139, 250, 0.26);
+  border: 1px solid color-mix(in srgb, var(--club-accent) 26%, transparent);
   border-radius: 28px;
   background:
-    linear-gradient(135deg, rgba(167, 139, 250, 0.17), transparent 42%),
+    linear-gradient(135deg, color-mix(in srgb, var(--club-accent) 17%, transparent), transparent 42%),
     linear-gradient(112deg, rgba(13, 18, 27, 0.96), rgba(19, 21, 28, 0.9));
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: border-color 520ms ease, background 520ms ease;
 }
 
 .esmo-hero::before,
@@ -264,13 +280,77 @@
   height: clamp(72px, 9vw, 104px);
   flex: 0 0 auto;
   place-items: center;
-  border: 1px solid rgba(52, 211, 153, 0.5);
+  /* 隊徽框：`--club-ring` 由裝備中的隊徽框提供，預設就是原本的綠。 */
+  border: 1px solid color-mix(in srgb, var(--club-ring, var(--club-accent-2)) 50%, transparent);
   border-radius: 24px;
   background:
-    linear-gradient(145deg, rgba(52, 211, 153, 0.22), rgba(167, 139, 250, 0.14)),
+    linear-gradient(145deg, color-mix(in srgb, var(--club-accent-2) 22%, transparent),
+      color-mix(in srgb, var(--club-accent) 14%, transparent)),
     rgba(7, 11, 16, 0.62);
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28), inset 0 0 0 6px rgba(255, 255, 255, 0.025);
   font-size: clamp(32px, 4.2vw, 48px);
+  transition: border-color 520ms ease, background 520ms ease, box-shadow 520ms ease;
+}
+
+/* ── 隊徽框紋樣：三種 pattern 各自一層，沒裝備就一層都不畫 ─────────────── */
+.esmo-hero__crest[data-banner="hex"] {
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28),
+    inset 0 0 0 6px rgba(255, 255, 255, 0.025),
+    inset 0 0 0 9px color-mix(in srgb, var(--club-ring) 34%, transparent);
+  clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0 50%);
+}
+
+.esmo-hero__crest[data-banner="circuit"] {
+  border-style: dashed;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28),
+    inset 0 0 0 6px rgba(255, 255, 255, 0.025),
+    inset 0 0 22px color-mix(in srgb, var(--club-ring) 30%, transparent);
+}
+
+/* 桂冠：用兩片弧線夾住隊徽，純 CSS，不加資產檔。 */
+.esmo-hero__crest[data-banner="laurel"]::before {
+  position: absolute;
+  inset: -7px;
+  border: 2px solid color-mix(in srgb, var(--club-ring) 62%, transparent);
+  border-radius: 50%;
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+  content: "";
+  pointer-events: none;
+}
+
+/* ── 稱號：掛在戰隊名稱旁 ─────────────────────────────────────────────── */
+.esmo-hero__club-title {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 9px;
+  padding: 3px 10px;
+  color: var(--club-accent);
+  font-size: 0.42em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  vertical-align: middle;
+  background: color-mix(in srgb, var(--club-accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--club-accent) 42%, transparent);
+  border-radius: 999px;
+  animation: esmo-club-title-in 460ms cubic-bezier(0.22, 0.9, 0.28, 1) both;
+}
+
+@keyframes esmo-club-title-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .esmo-hero,
+  .esmo-hero__crest,
+  .esmo-hero__club-title {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .esmo-hero__club-title { opacity: 1; transform: none; }
 }
 
 .esmo-hero__crest::after {
@@ -1314,11 +1394,28 @@
     height: 46px;
     flex: 0 0 46px;
     place-items: center;
-    border: 1px solid rgba(52, 211, 153, 0.52);
+    /* Club Identity v1：與桌機 hero 用同一組變數，預設值即原本的顏色。 */
+    border: 1px solid color-mix(in srgb, var(--club-ring, var(--club-accent-2)) 52%, transparent);
     border-radius: 13px;
-    background: linear-gradient(145deg, rgba(52, 211, 153, 0.2), rgba(167, 139, 250, 0.16)), rgba(7, 11, 16, 0.7);
+    background:
+      linear-gradient(145deg, color-mix(in srgb, var(--club-accent-2) 20%, transparent),
+        color-mix(in srgb, var(--club-accent) 16%, transparent)),
+      rgba(7, 11, 16, 0.7);
     box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.025), 0 10px 20px rgba(0, 0, 0, 0.2);
     font-size: 23px;
+    transition: border-color 520ms ease, background 520ms ease;
+  }
+
+  .esmo-mobile-header__crest[data-banner="hex"] {
+    clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0 50%);
+  }
+
+  .esmo-mobile-header__crest[data-banner="circuit"] { border-style: dashed; }
+
+  .esmo-mobile-header__crest[data-banner="laurel"] {
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.025),
+      0 0 0 2px color-mix(in srgb, var(--club-ring) 55%, transparent);
   }
 
   .esmo-mobile-header__crest-badge {
