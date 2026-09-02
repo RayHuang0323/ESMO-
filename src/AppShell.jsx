@@ -66,6 +66,26 @@ import { buildBattleRoster } from "./battle/moba/mobaRosterAdapter.js";
 import { ROSTER } from "./data/roster.js";
 import { heroById } from "./data/heroDatabase.js";
 
+// C5C owner-review entrypoint. Normal navigation remains the existing
+// state-machine flow; this query only opens a read-only Battle review with a
+// selected map for local/browser evidence and never changes MatchSession.
+const C5C_DIRECT_MAPS = Object.freeze({ mirage: "Mirage", dust2: "Dust II", inferno: "Inferno" });
+const getC5CDirectConfig = () => {
+  if (typeof window === "undefined") return null;
+  const query = new URLSearchParams(window.location.search);
+  if (query.get("c5c") !== "battle") return null;
+  const mapKey = C5C_DIRECT_MAPS[query.get("map")] ? query.get("map") : "mirage";
+  const seed = Number(query.get("seed"));
+  return {
+    c5cReview: true,
+    mapKey,
+    mapName: C5C_DIRECT_MAPS[mapKey],
+    tacticType: "default",
+    tacticName: "標準控圖",
+    seed: Number.isFinite(seed) && seed > 0 ? seed : 505001,
+  };
+};
+
 //  ── 需要鎖住 viewport 的畫面 ──────────────────────────────────────────────
 //  只有「整個畫面就是一個即時體驗」的才進這裡：對戰本身、進場載入、過場動畫。
 //  其餘全部走文件捲動（見下方 Scroll Contract）。
@@ -79,13 +99,13 @@ const VIEWPORT_LOCKED_SCREENS = new Set([
 ]);
 
 export default function AppShell() {
-  const [screen, setScreen] = useState("dashboard");
+  const [screen, setScreen] = useState(() => (getC5CDirectConfig() ? "cs" : "dashboard"));
   const [restoring, setRestoring] = useState(false);
   const [restoreError, setRestoreError] = useState(null);
   const [draft, setDraft] = useState(null);     // S18/S19：BanPick 結果 {picks,bans}
   const [tactic, setTactic] = useState(null);   // S19：TacticScreen 選定戰術（純展示，不影響引擎）
   const [playerId, setPlayerId] = useState(null); // S21：PlayerDetail 目標選手
-  const [csConfig, setCsConfig] = useState(null); // S23/C5B：CS 賽前選擇含四階段 tacticalLayout
+  const [csConfig, setCsConfig] = useState(() => getC5CDirectConfig()); // S23/C5B：CS 賽前選擇含四階段 tacticalLayout
   const [csResult, setCsResult] = useState(null); // S23：CsMatchResult.v1（Match → Result 傳遞）
   const go = (s) => () => setScreen(s);
   const home = go("dashboard");
@@ -279,7 +299,7 @@ export default function AppShell() {
       {screen === "csTactic" && <CsTacticScreen mapName={csConfig?.mapName} onNext={(t) => { const next = { ...csConfig, tacticId: t.id, tacticName: t.name, tacticType: t.type, tacticEmoji: t.emoji, tacticalLayout: t.tacticalLayout, seed: useProfileStore.getState().matchmaking?.launch?.seed ?? null }; setCsConfig(next); useProfileStore.getState().setActiveMatchContext({ phase: "loading", config: { csConfig: next } }); setScreen("csLoading"); }} onBack={go("csMap")} />}
       {screen === "csLoading" && <CsLoadingScreen config={csConfig} onDone={() => { useProfileStore.getState().setActiveMatchContext({ phase: "battle" }); setScreen("cs"); }} />}
       {/* S25：CS 結算在「比賽完成邊界」做掉（不是 Result 掛載時）→ 跳過 Result 也不會漏發獎 */}
-      {screen === "cs" && <CsMatchScreen config={csConfig} onFinish={(r) => { settleCsMatch(r); setCsResult(r); setScreen("csResult"); }} onBack={home} />}
+      {screen === "cs" && <CsMatchScreen config={csConfig} onFinish={(r) => { if (!csConfig?.c5cReview) settleCsMatch(r); setCsResult(r); setScreen("csResult"); }} onBack={home} />}
       {/*  CS Season M4-A：BO3 的中間地圖打完之後不回首頁，接著打下一張。
             ⚠ 判斷來源是 **store 的 series 狀態**，不是畫面自己數打了幾張——
               畫面狀態重整就沒了，而 series 跟著場次一起存檔。
