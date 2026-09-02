@@ -1,0 +1,1178 @@
+{
+  "schema": "CsResidualTacticSyncP1.v1",
+  "baseline": "origin/main @ dc9809976689daefddc1dc6ae5210ab601843e71",
+  "runtime": "src/battle/fps/EsportsFPS3D.jsx",
+  "methodology": {
+    "deterministic": true,
+    "naturalCompletion": true,
+    "maps": [
+      "mirage",
+      "dust2",
+      "inferno"
+    ],
+    "seed": 13
+  },
+  "checks": {
+    "three maps complete naturally": true,
+    "halftime changes actual side while owner tactic remains stable": true,
+    "post-swap tactic ids belong to the actual-side library": true,
+    "post-swap route assignments use the actual-side spawn schema": true
+  },
+  "reports": [
+    {
+      "mapKey": "mirage",
+      "completed": true,
+      "score": "13:6",
+      "rounds": 19,
+      "first": {
+        "currentSideByTeam": {
+          "us": "t",
+          "enemy": "ct"
+        },
+        "tacticOwnerByTeam": {
+          "us": "t_apalace",
+          "enemy": "c_std"
+        }
+      },
+      "secondHalf": {
+        "currentSideByTeam": {
+          "us": "ct",
+          "enemy": "t"
+        },
+        "tacticOwnerByTeam": {
+          "us": "t_apalace",
+          "enemy": "c_std"
+        }
+      },
+      "secondHalfSelections": [
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "t1",
+          "side": "ct",
+          "phase": "opening",
+          "selectionId": "t_apalace",
+          "tacticId": "c_std",
+          "tacticType": "default",
+          "ownerTeamId": "us",
+          "currentSideTacticId": "c_std",
+          "currentSideTacticType": "default",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "t2",
+          "side": "ct",
+          "phase": "opening",
+          "selectionId": "t_apalace",
+          "tacticId": "c_std",
+          "tacticType": "default",
+          "ownerTeamId": "us",
+          "currentSideTacticId": "c_std",
+          "currentSideTacticType": "default",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "t3",
+          "side": "ct",
+          "phase": "opening",
+          "selectionId": "t_apalace",
+          "tacticId": "c_std",
+          "tacticType": "default",
+          "ownerTeamId": "us",
+          "currentSideTacticId": "c_std",
+          "currentSideTacticType": "default",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "t4",
+          "side": "ct",
+          "phase": "opening",
+          "selectionId": "t_apalace",
+          "tacticId": "c_std",
+          "tacticType": "default",
+          "ownerTeamId": "us",
+          "currentSideTacticId": "c_std",
+          "currentSideTacticType": "default",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "t5",
+          "side": "ct",
+          "phase": "opening",
+          "selectionId": "t_apalace",
+          "tacticId": "c_std",
+          "tacticType": "default",
+          "ownerTeamId": "us",
+          "currentSideTacticId": "c_std",
+          "currentSideTacticType": "default",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "ct1",
+          "side": "t",
+          "phase": "opening",
+          "selectionId": "t_apalace",
+          "tacticId": "t_midsplit",
+          "tacticType": "execute",
+          "ownerTeamId": "enemy",
+          "currentSideTacticId": "t_midsplit",
+          "currentSideTacticType": "execute",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "ct2",
+          "side": "t",
+          "phase": "opening",
+          "selectionId": "t_apalace",
+          "tacticId": "t_midsplit",
+          "tacticType": "execute",
+          "ownerTeamId": "enemy",
+          "currentSideTacticId": "t_midsplit",
+          "currentSideTacticType": "execute",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "ct3",
+          "side": "t",
+          "phase": "opening",
+          "selectionId": "t_apalace",
+          "tacticId": "t_midsplit",
+          "tacticType": "execute",
+          "ownerTeamId": "enemy",
+          "currentSideTacticId": "t_midsplit",
+          "currentSideTacticType": "execute",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "ct4",
+          "side": "t",
+          "phase": "opening",
+          "selectionId": "t_apalace",
+          "tacticId": "t_midsplit",
+          "tacticType": "execute",
+          "ownerTeamId": "enemy",
+          "currentSideTacticId": "t_midsplit",
+          "currentSideTacticType": "execute",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "ct5",
+          "side": "t",
+          "phase": "opening",
+          "selectionId": "t_apalace",
+          "tacticId": "t_midsplit",
+          "tacticType": "execute",
+          "ownerTeamId": "enemy",
+          "currentSideTacticId": "t_midsplit",
+          "currentSideTacticType": "execute",
+          "source": "pre-match-layout"
+        }
+      ],
+      "secondHalfSelectionSummary": [
+        44,
+        35,
+        4
+      ],
+      "actualSideSelectionIds": [
+        "c_std",
+        "t_midsplit",
+        "t_apalace"
+      ],
+      "actualSideSelectionsLegal": true,
+      "routeHistoryCount": 362,
+      "routeHistoryRoundRange": [
+        0,
+        18
+      ],
+      "postSwapRouteSamples": [
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "t1",
+          "side": "ct",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "ctSpawn>connector>bSite"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "t2",
+          "side": "ct",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "ctSpawn>aSite>ramp"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "t3",
+          "side": "ct",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "ctSpawn>window>mid"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "t4",
+          "side": "ct",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "ctSpawn>aSite>ramp"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "t5",
+          "side": "ct",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "ctSpawn>aSite"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "ct1",
+          "side": "t",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "tSpawn>ramp>aSite"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "ct2",
+          "side": "t",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "tSpawn>mid>window>aRamp>aSite"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "ct3",
+          "side": "t",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "tSpawn>ramp>aSite"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "ct4",
+          "side": "t",
+          "phase": "opening",
+          "variant": "control",
+          "objective": "opening",
+          "routeSignature": "tSpawn>palace>aSite"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "ct5",
+          "side": "t",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "tSpawn>mid"
+        },
+        {
+          "round": 13,
+          "roundSec": 26,
+          "id": "t2",
+          "side": "ct",
+          "phase": "mid-round",
+          "variant": "rotate",
+          "objective": "mid-round",
+          "routeSignature": "ctSpawn>apps"
+        },
+        {
+          "round": 13,
+          "roundSec": 26,
+          "id": "t5",
+          "side": "ct",
+          "phase": "mid-round",
+          "variant": "primary",
+          "objective": "mid-round",
+          "routeSignature": "ctSpawn>aSite"
+        }
+      ],
+      "wrongSpawnRoutes": [],
+      "sideChanges": [
+        {
+          "reason": "halftime",
+          "before": {
+            "us": "t",
+            "enemy": "ct"
+          },
+          "after": {
+            "us": "ct",
+            "enemy": "t"
+          },
+          "afterRound": 12
+        }
+      ]
+    },
+    {
+      "mapKey": "dust2",
+      "completed": true,
+      "score": "35:37",
+      "rounds": 72,
+      "first": {
+        "currentSideByTeam": {
+          "us": "t",
+          "enemy": "ct"
+        },
+        "tacticOwnerByTeam": {
+          "us": "t_long",
+          "enemy": "c_std"
+        }
+      },
+      "secondHalf": {
+        "currentSideByTeam": {
+          "us": "ct",
+          "enemy": "t"
+        },
+        "tacticOwnerByTeam": {
+          "us": "t_long",
+          "enemy": "c_std"
+        }
+      },
+      "secondHalfSelections": [
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "t1",
+          "side": "ct",
+          "phase": "opening",
+          "selectionId": "t_long",
+          "tacticId": "c_astack",
+          "tacticType": "stack",
+          "ownerTeamId": "us",
+          "currentSideTacticId": "c_astack",
+          "currentSideTacticType": "stack",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "t2",
+          "side": "ct",
+          "phase": "opening",
+          "selectionId": "t_long",
+          "tacticId": "c_astack",
+          "tacticType": "stack",
+          "ownerTeamId": "us",
+          "currentSideTacticId": "c_astack",
+          "currentSideTacticType": "stack",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "t3",
+          "side": "ct",
+          "phase": "opening",
+          "selectionId": "t_long",
+          "tacticId": "c_astack",
+          "tacticType": "stack",
+          "ownerTeamId": "us",
+          "currentSideTacticId": "c_astack",
+          "currentSideTacticType": "stack",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "t4",
+          "side": "ct",
+          "phase": "opening",
+          "selectionId": "t_long",
+          "tacticId": "c_astack",
+          "tacticType": "stack",
+          "ownerTeamId": "us",
+          "currentSideTacticId": "c_astack",
+          "currentSideTacticType": "stack",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "t5",
+          "side": "ct",
+          "phase": "opening",
+          "selectionId": "t_long",
+          "tacticId": "c_astack",
+          "tacticType": "stack",
+          "ownerTeamId": "us",
+          "currentSideTacticId": "c_astack",
+          "currentSideTacticType": "stack",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "ct1",
+          "side": "t",
+          "phase": "opening",
+          "selectionId": "t_long",
+          "tacticId": "t_midctrl",
+          "tacticType": "default",
+          "ownerTeamId": "enemy",
+          "currentSideTacticId": "t_midctrl",
+          "currentSideTacticType": "default",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "ct2",
+          "side": "t",
+          "phase": "opening",
+          "selectionId": "t_long",
+          "tacticId": "t_midctrl",
+          "tacticType": "default",
+          "ownerTeamId": "enemy",
+          "currentSideTacticId": "t_midctrl",
+          "currentSideTacticType": "default",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "ct3",
+          "side": "t",
+          "phase": "opening",
+          "selectionId": "t_long",
+          "tacticId": "t_midctrl",
+          "tacticType": "default",
+          "ownerTeamId": "enemy",
+          "currentSideTacticId": "t_midctrl",
+          "currentSideTacticType": "default",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "ct4",
+          "side": "t",
+          "phase": "opening",
+          "selectionId": "t_long",
+          "tacticId": "t_midctrl",
+          "tacticType": "default",
+          "ownerTeamId": "enemy",
+          "currentSideTacticId": "t_midctrl",
+          "currentSideTacticType": "default",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "ct5",
+          "side": "t",
+          "phase": "opening",
+          "selectionId": "t_long",
+          "tacticId": "t_midctrl",
+          "tacticType": "default",
+          "ownerTeamId": "enemy",
+          "currentSideTacticId": "t_midctrl",
+          "currentSideTacticType": "default",
+          "source": "pre-match-layout"
+        }
+      ],
+      "secondHalfSelectionSummary": [
+        184,
+        318,
+        347,
+        132
+      ],
+      "actualSideSelectionIds": [
+        "c_astack",
+        "t_midctrl",
+        "c_std",
+        "t_long"
+      ],
+      "actualSideSelectionsLegal": true,
+      "routeHistoryCount": 1200,
+      "routeHistoryRoundRange": [
+        0,
+        36
+      ],
+      "postSwapRouteSamples": [
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "t1",
+          "side": "ct",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "ctSpawn>aSite"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "t2",
+          "side": "ct",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "ctSpawn>aSite>pit"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "t3",
+          "side": "ct",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "ctSpawn>aRamp"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "t4",
+          "side": "ct",
+          "phase": "opening",
+          "variant": "site-execute",
+          "objective": "opening",
+          "routeSignature": "ctSpawn>bSite"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "t5",
+          "side": "ct",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "ctSpawn>aSite"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "ct1",
+          "side": "t",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "tSpawn>mid>xbox"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "ct2",
+          "side": "t",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "tSpawn>mid>midDoors"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "ct3",
+          "side": "t",
+          "phase": "opening",
+          "variant": "control",
+          "objective": "opening",
+          "routeSignature": "tSpawn>lower>bTunnel>bDoors>bSite"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "ct4",
+          "side": "t",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "tSpawn>mid>midDoors>catwalk"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "ct5",
+          "side": "t",
+          "phase": "opening",
+          "variant": "control",
+          "objective": "opening",
+          "routeSignature": "tSpawn>lower>bTunnel>bSite"
+        },
+        {
+          "round": 13,
+          "roundSec": 26,
+          "id": "t1",
+          "side": "ct",
+          "phase": "mid-round",
+          "variant": "primary",
+          "objective": "mid-round",
+          "routeSignature": "ctSpawn>ctMid>bDoors"
+        },
+        {
+          "round": 13,
+          "roundSec": 26,
+          "id": "t2",
+          "side": "ct",
+          "phase": "mid-round",
+          "variant": "primary",
+          "objective": "mid-round",
+          "routeSignature": "ctSpawn>aRamp>aSite"
+        }
+      ],
+      "wrongSpawnRoutes": [],
+      "sideChanges": [
+        {
+          "reason": "halftime",
+          "before": {
+            "us": "t",
+            "enemy": "ct"
+          },
+          "after": {
+            "us": "ct",
+            "enemy": "t"
+          },
+          "afterRound": 12
+        },
+        {
+          "reason": "overtime-side-swap",
+          "before": {
+            "us": "ct",
+            "enemy": "t"
+          },
+          "after": {
+            "us": "t",
+            "enemy": "ct"
+          },
+          "afterRound": 27
+        },
+        {
+          "reason": "overtime-side-swap",
+          "before": {
+            "us": "t",
+            "enemy": "ct"
+          },
+          "after": {
+            "us": "ct",
+            "enemy": "t"
+          },
+          "afterRound": 30
+        },
+        {
+          "reason": "overtime-side-swap",
+          "before": {
+            "us": "ct",
+            "enemy": "t"
+          },
+          "after": {
+            "us": "t",
+            "enemy": "ct"
+          },
+          "afterRound": 33
+        },
+        {
+          "reason": "overtime-side-swap",
+          "before": {
+            "us": "t",
+            "enemy": "ct"
+          },
+          "after": {
+            "us": "ct",
+            "enemy": "t"
+          },
+          "afterRound": 36
+        },
+        {
+          "reason": "overtime-side-swap",
+          "before": {
+            "us": "ct",
+            "enemy": "t"
+          },
+          "after": {
+            "us": "t",
+            "enemy": "ct"
+          },
+          "afterRound": 39
+        },
+        {
+          "reason": "overtime-side-swap",
+          "before": {
+            "us": "t",
+            "enemy": "ct"
+          },
+          "after": {
+            "us": "ct",
+            "enemy": "t"
+          },
+          "afterRound": 42
+        },
+        {
+          "reason": "overtime-side-swap",
+          "before": {
+            "us": "ct",
+            "enemy": "t"
+          },
+          "after": {
+            "us": "t",
+            "enemy": "ct"
+          },
+          "afterRound": 45
+        },
+        {
+          "reason": "overtime-side-swap",
+          "before": {
+            "us": "t",
+            "enemy": "ct"
+          },
+          "after": {
+            "us": "ct",
+            "enemy": "t"
+          },
+          "afterRound": 48
+        },
+        {
+          "reason": "overtime-side-swap",
+          "before": {
+            "us": "ct",
+            "enemy": "t"
+          },
+          "after": {
+            "us": "t",
+            "enemy": "ct"
+          },
+          "afterRound": 51
+        },
+        {
+          "reason": "overtime-side-swap",
+          "before": {
+            "us": "t",
+            "enemy": "ct"
+          },
+          "after": {
+            "us": "ct",
+            "enemy": "t"
+          },
+          "afterRound": 54
+        },
+        {
+          "reason": "overtime-side-swap",
+          "before": {
+            "us": "ct",
+            "enemy": "t"
+          },
+          "after": {
+            "us": "t",
+            "enemy": "ct"
+          },
+          "afterRound": 57
+        },
+        {
+          "reason": "overtime-side-swap",
+          "before": {
+            "us": "t",
+            "enemy": "ct"
+          },
+          "after": {
+            "us": "ct",
+            "enemy": "t"
+          },
+          "afterRound": 60
+        },
+        {
+          "reason": "overtime-side-swap",
+          "before": {
+            "us": "ct",
+            "enemy": "t"
+          },
+          "after": {
+            "us": "t",
+            "enemy": "ct"
+          },
+          "afterRound": 63
+        },
+        {
+          "reason": "overtime-side-swap",
+          "before": {
+            "us": "t",
+            "enemy": "ct"
+          },
+          "after": {
+            "us": "ct",
+            "enemy": "t"
+          },
+          "afterRound": 66
+        },
+        {
+          "reason": "overtime-side-swap",
+          "before": {
+            "us": "ct",
+            "enemy": "t"
+          },
+          "after": {
+            "us": "t",
+            "enemy": "ct"
+          },
+          "afterRound": 69
+        },
+        {
+          "reason": "overtime-side-swap",
+          "before": {
+            "us": "t",
+            "enemy": "ct"
+          },
+          "after": {
+            "us": "ct",
+            "enemy": "t"
+          },
+          "afterRound": 72
+        }
+      ]
+    },
+    {
+      "mapKey": "inferno",
+      "completed": true,
+      "score": "4:13",
+      "rounds": 17,
+      "first": {
+        "currentSideByTeam": {
+          "us": "t",
+          "enemy": "ct"
+        },
+        "tacticOwnerByTeam": {
+          "us": "t_banana",
+          "enemy": "c_std"
+        }
+      },
+      "secondHalf": {
+        "currentSideByTeam": {
+          "us": "ct",
+          "enemy": "t"
+        },
+        "tacticOwnerByTeam": {
+          "us": "t_banana",
+          "enemy": "c_std"
+        }
+      },
+      "secondHalfSelections": [
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "t1",
+          "side": "ct",
+          "phase": "opening",
+          "selectionId": "t_banana",
+          "tacticId": "c_btop",
+          "tacticType": "aggro",
+          "ownerTeamId": "us",
+          "currentSideTacticId": "c_btop",
+          "currentSideTacticType": "aggro",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "t2",
+          "side": "ct",
+          "phase": "opening",
+          "selectionId": "t_banana",
+          "tacticId": "c_btop",
+          "tacticType": "aggro",
+          "ownerTeamId": "us",
+          "currentSideTacticId": "c_btop",
+          "currentSideTacticType": "aggro",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "t3",
+          "side": "ct",
+          "phase": "opening",
+          "selectionId": "t_banana",
+          "tacticId": "c_btop",
+          "tacticType": "aggro",
+          "ownerTeamId": "us",
+          "currentSideTacticId": "c_btop",
+          "currentSideTacticType": "aggro",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "t4",
+          "side": "ct",
+          "phase": "opening",
+          "selectionId": "t_banana",
+          "tacticId": "c_btop",
+          "tacticType": "aggro",
+          "ownerTeamId": "us",
+          "currentSideTacticId": "c_btop",
+          "currentSideTacticType": "aggro",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "t5",
+          "side": "ct",
+          "phase": "opening",
+          "selectionId": "t_banana",
+          "tacticId": "c_btop",
+          "tacticType": "aggro",
+          "ownerTeamId": "us",
+          "currentSideTacticId": "c_btop",
+          "currentSideTacticType": "aggro",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "ct1",
+          "side": "t",
+          "phase": "opening",
+          "selectionId": "t_banana",
+          "tacticId": "t_midctrl",
+          "tacticType": "default",
+          "ownerTeamId": "enemy",
+          "currentSideTacticId": "t_midctrl",
+          "currentSideTacticType": "default",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "ct2",
+          "side": "t",
+          "phase": "opening",
+          "selectionId": "t_banana",
+          "tacticId": "t_midctrl",
+          "tacticType": "default",
+          "ownerTeamId": "enemy",
+          "currentSideTacticId": "t_midctrl",
+          "currentSideTacticType": "default",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "ct3",
+          "side": "t",
+          "phase": "opening",
+          "selectionId": "t_banana",
+          "tacticId": "t_midctrl",
+          "tacticType": "default",
+          "ownerTeamId": "enemy",
+          "currentSideTacticId": "t_midctrl",
+          "currentSideTacticType": "default",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "ct4",
+          "side": "t",
+          "phase": "opening",
+          "selectionId": "t_banana",
+          "tacticId": "t_midctrl",
+          "tacticType": "default",
+          "ownerTeamId": "enemy",
+          "currentSideTacticId": "t_midctrl",
+          "currentSideTacticType": "default",
+          "source": "pre-match-layout"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "playerId": "ct5",
+          "side": "t",
+          "phase": "opening",
+          "selectionId": "t_banana",
+          "tacticId": "t_midctrl",
+          "tacticType": "default",
+          "ownerTeamId": "enemy",
+          "currentSideTacticId": "t_midctrl",
+          "currentSideTacticType": "default",
+          "source": "pre-match-layout"
+        }
+      ],
+      "secondHalfSelectionSummary": [
+        50,
+        48
+      ],
+      "actualSideSelectionIds": [
+        "c_btop",
+        "t_midctrl"
+      ],
+      "actualSideSelectionsLegal": true,
+      "routeHistoryCount": 1200,
+      "routeHistoryRoundRange": [
+        0,
+        7
+      ],
+      "postSwapRouteSamples": [
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "t1",
+          "side": "ct",
+          "phase": "opening",
+          "variant": "control",
+          "objective": "opening",
+          "routeSignature": "ctSpawn>arch>aConn"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "t2",
+          "side": "ct",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "ctSpawn>bTop>bSite"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "t3",
+          "side": "ct",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "ctSpawn>aRamp>aSite"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "t4",
+          "side": "ct",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "ctSpawn>bTop>bSite"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "t5",
+          "side": "ct",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "ctSpawn>arch>aConn"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "ct1",
+          "side": "t",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "tSpawn>tRamp>banana>car"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "ct2",
+          "side": "t",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "tSpawn>tRamp>mid>aConn>aSite"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "ct3",
+          "side": "t",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "tSpawn>tRamp>banana>car"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "ct4",
+          "side": "t",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "tSpawn>tRamp>mid>secondMid>aConn>aSite"
+        },
+        {
+          "round": 13,
+          "roundSec": 0,
+          "id": "ct5",
+          "side": "t",
+          "phase": "opening",
+          "variant": "primary",
+          "objective": "opening",
+          "routeSignature": "tSpawn>apps>boiler>mid"
+        },
+        {
+          "round": 13,
+          "roundSec": 26,
+          "id": "t1",
+          "side": "ct",
+          "phase": "mid-round",
+          "variant": "control",
+          "objective": "mid-round",
+          "routeSignature": "ctSpawn>arch>aConn"
+        },
+        {
+          "round": 13,
+          "roundSec": 26,
+          "id": "t2",
+          "side": "ct",
+          "phase": "mid-round",
+          "variant": "primary",
+          "objective": "mid-round",
+          "routeSignature": "ctSpawn>bTop>bSite"
+        }
+      ],
+      "wrongSpawnRoutes": [],
+      "sideChanges": [
+        {
+          "reason": "halftime",
+          "before": {
+            "us": "t",
+            "enemy": "ct"
+          },
+          "after": {
+            "us": "ct",
+            "enemy": "t"
+          },
+          "afterRound": 12
+        }
+      ]
+    }
+  ]
+}

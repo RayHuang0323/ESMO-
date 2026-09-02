@@ -17154,3 +17154,27 @@ clubCapabilities(profile) → { total, sources: { teamDevelopment, coach } }
 擴 Variant、Variant balance calibration、CS runtime、CS 教練戰術效果、gacha／RNG
 pack、付費商城、教練合約生命週期、push／deploy。**也沒有順手新增發展點獎勵**
 （見 `08_目前待辦與風險.md` TD-56）。
+
+## Sprint CS-P1｜RESIDUAL_TACTIC_SYNC_P1（2026-09-03）
+
+### 範圍
+
+- 只處理 stable team identity 與 actual T／CT side 的 tactic、route、formation authority 同步。
+- 未修改 Meta Progression／Club Assets branch、C5C／C6C worktree、AWP balance、CBR、Rating、`MATCH_BAND`、`starExcess` 或其他新功能。
+
+### Root cause 與修正
+
+- `currentSideByTeam` 原本會正確 swap，但 side-specific route schema 沒有隨 stable tactic owner 投影；side swap 後可能把 T-only tactic route 傳給 CT，或反向傳遞。
+- 新增 deterministic `projectCsTacticToSide()`：保留 stable owner strategy identity，依 site／type 將其投影到 actual-side tactic library；route planner 與 side library 由同一 actual side authority 驅動。
+- `tacticOwnerByTeam` 仍是 stable owner；`tacticBySide`／tactical audit 只記錄 projection，不建立第二個可寫 state。
+
+### Evidence / release note
+
+- P1 verifier：Mirage、Dust II、Inferno 自然完整、halftime／OT side swap、actual-side tactic 與 spawn schema `4/4 PASS`。
+- MatchSession、Series、Playable Series、CS23、C5A／C5B／C5V、C5C／C6C browser、camera／RAF／StableCanvas／renderer regression 已執行；production build direct PASS。
+- Competition product sections `10/10 PASS`。既有 C5B timing verifier 的 Inferno p90 debt，以及 Competition wrapper 在 build 完成後的 Node 24 `0xC0000409`，未修改門檻、未改 gameplay，記入 P1 handoff 作為 release tooling／verification debt。
+
+### 交付邊界
+
+- 完整證據與檔案清單：`docs/handoff/CS_RESIDUAL_TACTIC_SYNC_P1.md`。
+- Android 真機 GPU／FPS／觸控／音訊／熱節流仍待 Owner 驗收；舊 AWP calibration rows 維持 quarantine。
