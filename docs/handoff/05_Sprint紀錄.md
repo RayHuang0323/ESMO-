@@ -16760,3 +16760,29 @@ CS-C5A 的五個 `*-prepared.wav` 共約 **31 MB** 已隨 `public/` 進正式站
 - 推送 `main` 後 GitHub Pages workflow `33332608619` 完成且 conclusion `success`；production URL `https://rayhuang0323.github.io/ESMO-/` HTTP `200`。
 - Production browser：C5V 全流程 `24/24 PASS`（desktop／390px、三圖 Battle、一般配對 pool 交集、BO1／BO3、reload/resume、errors `0`）；Owner hotfix targeted `8/8 PASS`（C2C rigged `10/10`、fallback `0`、MOBA hero list 100 位可捲到底、「安包」文案、loading restore）。
 - Deterministic／regression gates 與 production build 均維持 PASS；build 為 Vite `2764 modules`，只有既有 large-chunk warning。
+
+## CS Final Integration Candidate／Production Deploy（2026-09-02）
+
+### 一、整合與 release boundary
+
+- 以 `origin/main @ e86ace1` 建立 `integration/cs-final-owner-preview`，commit `511e79b`；無衝突以 `--no-ff` 整合至 `main`，最終 main SHA `fe363d5`。
+- C5C、C6C outer progress、已驗證 AWP fixes 已整合；`RESIDUAL_TACTIC_SYNC_P1` 刻意未修，未修改 C5C／C6C worktree，未改 CBR／tactic sync／balance。
+
+### 二、Release gate
+
+- C5C `29/29`、C6C integration `12/12`、AWP focused PASS、MatchSession `36/36`、Series `46/46`、Playable Series `99/99`、Competition `11/11`、production build PASS。
+- Vite 仍顯示既有 main chunk >500kB warning；C5B route interrupt fixture coverage `12/13` 為既有驗證債，沒有為了 release 擴大修正。
+
+### 三、部署與正式站 smoke
+
+- `git push origin main`：`e86ace1..fe363d5`，未使用 force push。
+- Pages workflow `33618417280`（Deploy Vite site to GitHub Pages）success。
+- 正式站：<https://rayhuang0323.github.io/ESMO-/>，首頁／Owner Review／CS Battle HTTP `200`。
+- 既有 production smoke `44/44 PASS`；新增 CS targeted smoke Desktop／390px 全 PASS：Home、Competition Hub、Practice／Battle、C5C HUD、C6C progress、AWP bundle marker、reload/resume、無白屏／infinite loading／overflow，console/page-origin errors `0`。
+
+### 四、部署後狀態
+
+- `CS_FINAL_INTEGRATION_DEPLOYED`。
+- 尚存 P1：`RESIDUAL_TACTIC_SYNC_P1`。
+- Android 真機觸控／GPU／FPS／音訊／熱節流與長時間 session pending；390px emulation 不等於真機驗收。
+- 本輪停止，不開始 C6D 或其他新功能。

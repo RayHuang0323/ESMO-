@@ -41,3 +41,11 @@
 - Android real-device touch, audio, thermal/performance, and long-session behavior remain pending.
 - `RESIDUAL_TACTIC_SYNC_P1` remains a known gameplay balance/debt item and must not be inferred as closed by this integration.
 - Preview URLs are local-only and are reported when the final Vite server is running.
+
+## Production deployment
+
+- Final main: `fe363d590885baa961de86fd889078af06f7137b`.
+- Push: `e86ace1..fe363d5 main -> main`, no force push.
+- GitHub Pages workflow `33618417280`: success.
+- Production smoke: existing `44/44` plus targeted CS Desktop／390px smoke all PASS; no new page-origin console errors.
+- Status: `CS_FINAL_INTEGRATION_DEPLOYED`.
