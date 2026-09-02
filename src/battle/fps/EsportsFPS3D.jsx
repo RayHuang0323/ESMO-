@@ -716,6 +716,22 @@ const TACTICS_DB={
     ],
   },
 };
+// A team's selected tactic is a stable strategy owner, but its route schema is
+// side-specific. Project the owner's strategic intent onto the current-side
+// library at the half/OT boundary so CT never receives T-only route nodes (or
+// vice versa). The projection is deterministic and does not add a balance
+// modifier or a second tactic authority.
+function projectCsTacticToSide(ownerTactic,{mapKey,side,phase="opening"}={}){
+  const library=TACTICS_DB[mapKey]?.[side]||[];
+  if(!ownerTactic||!library.length)return ownerTactic;
+  const exact=library.find(candidate=>candidate.id===ownerTactic.id);
+  if(exact)return exact;
+  const sameSiteType=library.filter(candidate=>candidate.site===ownerTactic.site&&candidate.type===ownerTactic.type);
+  const sameType=library.filter(candidate=>candidate.type===ownerTactic.type);
+  const sameSite=library.filter(candidate=>candidate.site===ownerTactic.site);
+  const pool=sameSiteType.length?sameSiteType:sameType.length?sameType:sameSite.length?sameSite:library;
+  return pool[hsh(`${mapKey}:${side}:${phase}:${ownerTactic.id||ownerTactic.name||ownerTactic.type||"tactic"}`)%pool.length]||pool[0];
+}
 const CS_TACTICAL_PHASES=Object.freeze({OPENING:"opening",MID_ROUND:"mid-round",LATE_ROUND:"late-round",POST_PLANT:"post-plant"});
 const CS_PREMATCH_PHASE_KEYS=Object.freeze([CS_TACTICAL_PHASES.OPENING,CS_TACTICAL_PHASES.MID_ROUND,CS_TACTICAL_PHASES.LATE_ROUND,CS_TACTICAL_PHASES.POST_PLANT]);
 const CS_TACTICAL_CONTROL_KEYS=Object.freeze(["mid","midDoors","topMid","catwalk","connector","secondMid","banana","bTunnel","long","shortA","aConn","bTop","apps","palace"]);
@@ -1028,8 +1044,12 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
     RS.forEach(c=>{const teamId=teamOfRosterId(c.id);c.teamId=teamId;c.teamIdentity=teamId;c.side=sideByTeam[teamId];});
     const attackTeam=csTeamAtSide(sideByTeam,"t"),defenseTeam=csTeamAtSide(sideByTeam,"ct");
     const opponentTactic=originalTacticCT;
-    const tacticForTeamPhase=phase=>phase===CS_TACTICAL_PHASES.POST_PLANT?preMatchTacticForPhase(phase):preMatchTacticForPhase(phase);
-    const tacticForSidePhase=(side,phase)=>({t:attackTeam,ct:defenseTeam}[side]===CS_TEAM_US?tacticForTeamPhase(phase):opponentTactic);
+    const tacticForTeamPhase=phase=>preMatchTacticForPhase(phase);
+    const tacticForSidePhase=(side,phase)=>{
+      const ownerTeam=({t:attackTeam,ct:defenseTeam}[side]);
+      const ownerTactic=ownerTeam===CS_TEAM_US?tacticForTeamPhase(phase):opponentTactic;
+      return projectCsTacticToSide(ownerTactic,{mapKey,side,phase});
+    };
     const attackTactic=tacticForSidePhase("t",CS_TACTICAL_PHASES.OPENING);
     const defenseTactic=tacticForSidePhase("ct",CS_TACTICAL_PHASES.OPENING);
     const tacticCT=defenseTactic;
@@ -1054,7 +1074,8 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
       currentSideByTeam:cloneCsSides(sideByTeam),economyReset:Boolean(roundPlan.economyResetReason),economyResetReason:roundPlan.economyResetReason,
       economyResetMoney,pistolRound,startMoneyByPlayer,buyTypeByTeam,
       teamIdentityByPlayer:Object.fromEntries(RS.map(c=>[c.id,teamOfRosterId(c.id)])),
-      tacticOwnerByTeam:{[CS_TEAM_US]:tacticT?.id??tacticT?.name??null,[CS_TEAM_ENEMY]:originalTacticCT?.id??originalTacticCT?.name??null},tacticalTarget:target,
+      tacticOwnerByTeam:{[CS_TEAM_US]:tacticT?.id??tacticT?.name??null,[CS_TEAM_ENEMY]:originalTacticCT?.id??originalTacticCT?.name??null},
+      tacticBySide:{t:attackTactic?.id??attackTactic?.name??null,ct:defenseTactic?.id??defenseTactic?.name??null},tacticalTarget:target,
       preMatchLayout:{version:preMatchLayout.version,openness:preMatchLayout.openness,postPlantMode:preMatchLayout.postPlantMode,phaseSelections:tacticalAudit.preMatchLayout.phases}};
     let planted=false,c4t=null,c4pos=null,smokes=[],tracers=[],muzzles=[];
     let mollys=[],throwables=[],droppedGuns=[],droppedBomb=null;
@@ -1119,8 +1140,8 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
       assignRoute(p,plan.keys.map(key=>N[key]).filter(Boolean),{...plan,roundSec:0,routeSignature:plan.keys.join(">")});
       p.tacticalPhase=phase;p._tacticalPhase=phase;p.objectiveState="OPENING";
       tacticalAudit.phases[phase]+=1;
-      tacticalAudit.phaseSelections.push({round:rnd+1,roundSec:0,playerId:p.id,side:p.side,phase,selectionId:preMatchLayout.phases[phase]?.selectionId??null,tacticId:phaseTactic?.id??null,tacticType:phaseTactic?.type??null,source:"pre-match-layout"});
-      tacticalAudit.decisions.push({round:rnd+1,roundSec:0,playerId:p.id,side:p.side,phase,target,buyType:p.buyType,scoreDiff:sideScore-opponentScore,survival:5,controlRatio:0,weaponMix,variant:plan.kind,routeSignature:plan.keys.join(">"),objective:plan.objective,selectionId:preMatchLayout.phases[phase]?.selectionId??null,tacticId:phaseTactic?.id??null,openness:preMatchLayout.openness});
+      tacticalAudit.phaseSelections.push({round:rnd+1,roundSec:0,playerId:p.id,side:p.side,phase,selectionId:preMatchLayout.phases[phase]?.selectionId??null,tacticId:phaseTactic?.id??null,tacticType:phaseTactic?.type??null,ownerTeamId:({t:attackTeam,ct:defenseTeam}[p.side]),currentSideTacticId:phaseTactic?.id??null,currentSideTacticType:phaseTactic?.type??null,source:"pre-match-layout"});
+      tacticalAudit.decisions.push({round:rnd+1,roundSec:0,playerId:p.id,side:p.side,phase,target,buyType:p.buyType,scoreDiff:sideScore-opponentScore,survival:5,controlRatio:0,weaponMix,variant:plan.kind,routeSignature:plan.keys.join(">"),objective:plan.objective,selectionId:preMatchLayout.phases[phase]?.selectionId??null,tacticId:phaseTactic?.id??null,ownerTeamId:({t:attackTeam,ct:defenseTeam}[p.side]),currentSideTacticId:phaseTactic?.id??null,currentSideTacticType:phaseTactic?.type??null,openness:preMatchLayout.openness});
     });
     previousTacticalControl.t=tacticalControlSnapshot(ps,"t",N).ratio;
     previousTacticalControl.ct=tacticalControlSnapshot(ps,"ct",N).ratio;
@@ -1192,8 +1213,8 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
           if(plan?.points?.length>1)assignRoute(p,plan.points,{...plan,roundSec:sec,routeSignature:(plan.keys||[]).join(">")});
           p._tacticalPhase=currentPhase;p.tacticalPhase=currentPhase;
           tacticalAudit.phases[currentPhase]+=1;
-          tacticalAudit.phaseSelections.push({round:rnd+1,roundSec:sec,playerId:p.id,side:p.side,phase:currentPhase,selectionId:preMatchLayout.phases[currentPhase]?.selectionId??null,tacticId:phaseTactic?.id??null,tacticType:phaseTactic?.type??null,source:"pre-match-layout"});
-          tacticalAudit.decisions.push({round:rnd+1,roundSec:sec,playerId:p.id,side:p.side,phase:currentPhase,target,buyType:p.buyType,scoreDiff:sideScore-opponentScore,survival:control.survival,controlRatio:Number(control.ratio.toFixed(3)),weaponMix:tacticalWeaponMix(ps,p.side),variant:plan?.kind||"hold",routeSignature:(plan?.keys||[]).join(">"),objective,selectionId:preMatchLayout.phases[currentPhase]?.selectionId??null,tacticId:phaseTactic?.id??null,openness:preMatchLayout.openness});
+          tacticalAudit.phaseSelections.push({round:rnd+1,roundSec:sec,playerId:p.id,side:p.side,phase:currentPhase,selectionId:preMatchLayout.phases[currentPhase]?.selectionId??null,tacticId:phaseTactic?.id??null,tacticType:phaseTactic?.type??null,ownerTeamId:({t:attackTeam,ct:defenseTeam}[p.side]),currentSideTacticId:phaseTactic?.id??null,currentSideTacticType:phaseTactic?.type??null,source:"pre-match-layout"});
+          tacticalAudit.decisions.push({round:rnd+1,roundSec:sec,playerId:p.id,side:p.side,phase:currentPhase,target,buyType:p.buyType,scoreDiff:sideScore-opponentScore,survival:control.survival,controlRatio:Number(control.ratio.toFixed(3)),weaponMix:tacticalWeaponMix(ps,p.side),variant:plan?.kind||"hold",routeSignature:(plan?.keys||[]).join(">"),objective,selectionId:preMatchLayout.phases[currentPhase]?.selectionId??null,tacticId:phaseTactic?.id??null,ownerTeamId:({t:attackTeam,ct:defenseTeam}[p.side]),currentSideTacticId:phaseTactic?.id??null,currentSideTacticType:phaseTactic?.type??null,openness:preMatchLayout.openness});
         }
         // 龜縮/撤退：素質保守（進攻性低）且殘血者，遇敵會後撤而非硬拚
         {const en=ps.filter(e=>!e.dead&&e.side!==p.side);

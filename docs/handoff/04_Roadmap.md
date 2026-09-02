@@ -1338,3 +1338,9 @@ AWP_TRIAGE = UNRESOLVED → CBR BLOCKED，不進 Rating   ← 目前在這裡
 
 不調 `starExcess`／`MATCH_BAND`、不實作 role-aware 權重、不實作 tactic/map pricing、
 不改 CS runtime、不開始 Rating、不 push／deploy。
+
+## CS RESIDUAL_TACTIC_SYNC_P1（2026-09-03）
+
+- Status: runtime root cause fixed in an independent P1 worktree. `currentSideByTeam` is now the sole actual-side authority; stable tactic ownership is deterministically projected onto the legal T／CT tactic and route library after side changes.
+- Evidence: Mirage、Dust II、Inferno same-seed natural completion and post-swap authority guard `4/4 PASS`; C5V／C5C／C6C／Series／MatchSession／Competition regression evidence recorded in `docs/handoff/CS_RESIDUAL_TACTIC_SYNC_P1.md`.
+- Release boundary: no AWP／CBR／rating calibration change and no Meta Progression／Club Assets or C5C／C6C worktree change. Existing C5B timing debt、Node 24 gate-wrapper exit issue、large-chunk warning and Android real-device validation remain explicitly tracked.

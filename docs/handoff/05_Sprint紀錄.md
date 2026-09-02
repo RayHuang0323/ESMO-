@@ -17208,3 +17208,10 @@ pack、付費商城、教練合約生命週期、push／deploy。**也沒有順�
   已記錄、排在 release 之後獨立處理。
 - **Android 驗證**：pending，不阻塞本次發布。
 - **Club Identity**：下一個 Club Points sink，尚未開始。
+
+## Sprint CS-P1｜RESIDUAL_TACTIC_SYNC_P1（2026-09-03）
+
+- Root cause：stable team identity 與 actual T／CT side 已分離，但 side-specific tactic route schema 未在 halftime／OT projection；side swap 後可能將 T-only route 傳給 CT，或反向傳遞。
+- Fix：新增 deterministic `projectCsTacticToSide()`，保留 stable owner strategy identity，依 site／type 投影到 actual-side tactic library；route planner 同時使用 actual-side tactic 與 `routeLibraryBySide[side]`。
+- Evidence：Mirage、Dust II、Inferno 自然完成並通過 P1 guard `4/4`；C5A／C5B／C5V、C5C／C6C browser、MatchSession／Series／Playable Series／CS23、Competition product sections 與 production build 均已記錄。
+- 明確未做：AWP balance、CBR、Rating、`MATCH_BAND`、`starExcess`、Meta branch、C5C／C6C worktree、tactic redesign。C5B timing debt 與 Competition Node 24 wrapper exit issue 不改門檻，見 P1 handoff。
