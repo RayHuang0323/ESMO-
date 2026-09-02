@@ -52,6 +52,25 @@ export function fpsRoleOf(player) {
   return inferred ?? "rifler";
 }
 
+/**
+ * Player-card presentation only: the best FPS fit comes from playerModel;
+ * an explicit CS role is shown separately only when this match assignment
+ * differs.  Lineup seats are intentionally not consulted.
+ */
+export function fpsRolePresentation(player) {
+  const best = bestPositions(player)?.fps;
+  const bestRole = FPS_POSITION_ROLE[best?.pos] ?? "rifler";
+  const assignedRole = normalizeFpsRole(player?.csRole ?? player?.fpsRoleKey ?? player?.fpsRole);
+  const taskRole = assignedRole && assignedRole !== bestRole ? assignedRole : null;
+  return {
+    bestRole,
+    bestLabel: FPS_ROLE_ZH[bestRole],
+    bestFit: best?.fit ?? 0,
+    taskRole,
+    taskLabel: taskRole ? FPS_ROLE_ZH[taskRole] : null,
+  };
+}
+
 export function csLineupAdvisories(players = []) {
   const roles = players.map(fpsRoleOf);
   const advisories = [];
@@ -89,9 +108,11 @@ export function toFpsRoster(players = [], csLineup = null) {
     //   無天賦時 derived === base（逐鍵相等）→ baseline 與 S26 一致。
     const short = toShortStats(getPlayerDerivedStats(p));
     const role = fpsRoleOf(p);
+    const roleView = fpsRolePresentation(p);
     const ovr = fpsOvr(short);
     return {
       id: p.id, name: p.name, side: "t", role, fpsRole: FPS_ROLE_ZH[role],
+      bestFpsRole: roleView.bestRole, taskFpsRole: roleView.taskRole,
       moba: ovr, fps: ovr, sta: p.energy ?? 82, personality: p.personality || "steady",
       morale: p.morale, condition: p.condition, stats: short, _gid: p.id,
     };

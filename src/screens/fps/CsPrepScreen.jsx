@@ -21,8 +21,8 @@ import React, { useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { CS_SEATS, CS_SEAT_LABEL } from "../../platform/contracts/matchSquad.js";
 import MatchPrepFrame, { SquadSeatRow } from "../common/MatchPrepFrame.jsx";
-import { calcPower, bestPositions, personalityById } from "../../data/playerModel.js";
-import { FPS_ROLE_ZH, fpsRoleOf, csLineupAdvisories } from "../../battle/fps/fpsRoster.js";
+import { calcPower, personalityById } from "../../data/playerModel.js";
+import { fpsRolePresentation, csLineupAdvisories } from "../../battle/fps/fpsRoster.js";
 import PlayerFace from "../../ui/PlayerFace.jsx";
 import { GC } from "../../ui/theme.js";
 
@@ -30,13 +30,13 @@ const ACC = "#fb923c"; // Legacy CS 主色
 const COND_C = { "精神飽滿": GC.green, "正常": "#d4d4d8", "疲勞": GC.gold, "低潮": GC.red };
 const MONO = "'Courier New',monospace";
 
-//  五個 CS 席位的呈現差異（**只允許到這裡為止**：名稱、圖示、色彩）
+//  CS 席位只代表出賽順序；定位屬於選手，不能被 SLOT 外觀暗示成固定職位。
 const SEAT_VISUAL_STYLE = {
-  f1: { code: "ENTRY", emoji: "⚔️", color: "#f97316" },
-  f2: { code: "LURKER", emoji: "🕶", color: "#22c55e" },
-  f3: { code: "RIFLER", emoji: "🔫", color: "#a855f7" },
-  f4: { code: "AWP", emoji: "🎯", color: "#eab308" },
-  f5: { code: "IGL", emoji: "🧠", color: "#14b8a6" },
+  f1: { code: "S1", emoji: "①", color: "#94a3b8" },
+  f2: { code: "S2", emoji: "②", color: "#94a3b8" },
+  f3: { code: "S3", emoji: "③", color: "#94a3b8" },
+  f4: { code: "S4", emoji: "④", color: "#94a3b8" },
+  f5: { code: "S5", emoji: "⑤", color: "#94a3b8" },
 };
 const SLOT_CODE = Object.freeze({ f1: "SLOT 1", f2: "SLOT 2", f3: "SLOT 3", f4: "SLOT 4", f5: "SLOT 5" });
 
@@ -61,6 +61,7 @@ function CsBenchSheet({ seat, players, lineup, onClose }) {
           {list.map((p) => {
             const at = CS_SEATS.find((x) => lineup?.[x] === p.id) ?? null;
             const isHere = at === seat;
+            const roleView = fpsRolePresentation(p);
             return (
               <button key={p.id} onClick={() => { setCsSeat(seat, p.id); onClose(); }} disabled={isHere}
                 style={{
@@ -76,7 +77,8 @@ function CsBenchSheet({ seat, players, lineup, onClose }) {
                     <span style={{ marginLeft: 5, fontSize: 9, fontWeight: 800, color: "#93c5fd", background: "rgba(59,130,246,0.14)", borderRadius: 5, padding: "1px 5px", fontFamily: "system-ui" }}>Lv.{p.lv ?? 1}</span>
                   </div>
                   <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.45)" }}>
-                    {FPS_ROLE_ZH[fpsRoleOf(p)] ?? "步槍手"} · CS 戰力 {calcPower(p, "fps")}
+                    最擅長：{roleView.bestLabel} · CS 戰力 {calcPower(p, "fps")}
+                    {roleView.taskLabel && <span style={{ color: ACC }}> · 本場定位：{roleView.taskLabel}</span>}
                     {at && at !== seat && <span style={{ color: "#fbbf24" }}> · 目前 {SLOT_CODE[at]}（點擊將互換）</span>}
                   </div>
                 </div>
@@ -112,10 +114,11 @@ export default function CsPrepScreen({ onNext, onBack }) {
     const cond = p?.condition || "正常";
     const cc = COND_C[cond] || "#d4d4d8";
     const pers = p ? personalityById(p.personality) : null;
+    const roleView = p ? fpsRolePresentation(p) : null;
     return (
       <SquadSeatRow
         key={seat}
-        code={SLOT_CODE[seat]} label={`${SLOT_CODE[seat]} · ${CS_SEAT_LABEL[seat]}`} emoji={st.emoji} color={st.color}
+        code={st.code} label={CS_SEAT_LABEL[seat]} emoji={st.emoji} color={st.color}
         seated={!!p} playerName={p?.name} playerLv={p?.lv}
         onSwap={() => setBench(seat)}
         avatar={p ? (
@@ -123,8 +126,9 @@ export default function CsPrepScreen({ onNext, onBack }) {
         ) : null}
         subLine={p ? (
           <div style={{ display: "flex", gap: 5, marginTop: 2, flexWrap: "wrap", minWidth: 0 }}>
-            <span style={{ background: `${ACC}22`, color: ACC, fontSize: 8, fontWeight: 700, borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap" }}>{FPS_ROLE_ZH[fpsRoleOf(p)] || "步槍手"}</span>
-            <span style={{ color: GC.gray, fontSize: 8, whiteSpace: "nowrap" }}>適配 {bestPositions(p).fps.fit}</span>
+            <span style={{ background: `${ACC}22`, color: ACC, fontSize: 8, fontWeight: 700, borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap" }}>最擅長：{roleView.bestLabel}</span>
+            <span style={{ color: GC.gray, fontSize: 8, whiteSpace: "nowrap" }}>適配 {roleView.bestFit}</span>
+            {roleView.taskLabel && <span style={{ background: "rgba(251,191,36,0.14)", color: GC.gold, fontSize: 8, fontWeight: 700, borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap" }}>本場定位：{roleView.taskLabel}</span>}
             <span style={{ color: cc, fontSize: 8, whiteSpace: "nowrap" }}>{cond}</span>
             {pers && <span style={{ fontSize: 8 }}>{pers.emoji}</span>}
           </div>
