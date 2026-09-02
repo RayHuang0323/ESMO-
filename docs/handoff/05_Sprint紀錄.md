@@ -17154,3 +17154,57 @@ clubCapabilities(profile) → { total, sources: { teamDevelopment, coach } }
 擴 Variant、Variant balance calibration、CS runtime、CS 教練戰術效果、gacha／RNG
 pack、付費商城、教練合約生命週期、push／deploy。**也沒有順手新增發展點獎勵**
 （見 `08_目前待辦與風險.md` TD-56）。
+
+---
+
+## Meta Progression v1 + Club Assets v1 — 正式發布（2026-09-02）
+
+接在 Codex 的 CS Final Integration production main（`a3c2d9a`）之上，
+以 fast-forward 推上 `main`（**未 force**），GitHub Pages 部署成功。
+
+| | |
+| --- | --- |
+| 發布前 main | `a3c2d9ad44796b18e403bea6d155549915caff09` |
+| 發布後 main | `dc9809976689daefddc1dc6ae5210ab601843e71` |
+| Production | https://rayhuang0323.github.io/ESMO-/ |
+| 產物 | `assets/index-C547RlhB.js`（與本地 build 同雜湊） |
+
+### 本次發布的內容
+
+- **Meta Progression v1**：Club Mastery（Doctrine 三選一、專精進度、領取解鎖）、
+  Tactic Variant（結構上證明不是純升級）、Match Prep 變體選用。
+- **Club Assets v1**：三位教練型錄、Club Points 購買、Collection/Equip 分離、
+  每生涯週一次的換人鎖、`clubCapabilities` 單一 capability 權威（含 provenance）。
+- **Global Scroll Contract**：`AppShell` 依畫面決定鎖不鎖 viewport。
+- **Motion Policy**：取代「ESMO 避免動畫」的舊共識（`AGENTS.md` §Motion Policy）。
+
+### CS Final production 完整保留
+
+`src/battle/`、`src/screens/fps/`、`artifacts/`、`public/artifacts/`、
+`matchmaking/`、`competition/`、`contracts/matchmaking.js`、`matchSquad.js`
+相對 `a3c2d9a` **零差異**。C5C 直入口（`getC5CDirectConfig`）、`c5cReview`
+結算防護、C5V `mapSelectionId` 全部保留原樣。
+
+### 驗證
+
+- Meta gates：`check_club_assets_v1` 96/96、`check_club_mastery_v1` 265/265、
+  retention／general match／progress25／dash10／flow09 全綠。
+- Browser gates：Club Assets UI 68/68、Club Mastery UI 68/68、
+  MOBA Variant Prep 16/16、Global Scroll 43/43。
+- CS 相容性：`check_cs23` 28/28、C5C presentation 29/29、C6C progress 12/12、
+  C5B utility FX 55/55、AWP slot collapse fix digest 相符。
+- `npm run build` 通過。
+- **正式站 smoke `browser_check_prod_meta_release.mjs`：67/67 PASS**
+  （桌機 1366 + 手機 390；實測購買扣 700、lifetime 3000 逐值不變、
+  教練上任與 reload 保持、流派切換換色、領取解鎖入檔、長頁捲到底 docH=3234、
+  三個玩法入口都在、無白屏／無無限載入／無橫向溢出／無本站程式 console error）。
+
+### 仍未處理（明文，本輪未修）
+
+- **TD-56**：Team Development 沒有點數產出管道（P1 progression design debt）。
+- **RESIDUAL_TACTIC_SYNC_P1**：屬 CS owner 線，保留不修。
+- **Browser Harness debt**：port 重複、cleanup 無 timeout（見 `08_目前待辦與風險.md`）。
+- **Save Contract / Capability Guard / Variant telemetry**：Hardening Audit 的 P1，
+  已記錄、排在 release 之後獨立處理。
+- **Android 驗證**：pending，不阻塞本次發布。
+- **Club Identity**：下一個 Club Points sink，尚未開始。
