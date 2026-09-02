@@ -80,6 +80,8 @@ export const COACH_CATALOG = Object.freeze([
     capability: Object.freeze({ trainingDaysReduction: 1, dailyRecoveryBonus: 4 }),
     status: "CURRENT_RUNTIME",
     competitivePolicy: "careerOnly",
+    //  下架時改成 true，**不要刪這一筆**（見 Permanent Ownership Contract）。
+    retired: false,
   }),
   Object.freeze({
     assetId: "coach_scouting",
@@ -97,6 +99,8 @@ export const COACH_CATALOG = Object.freeze([
     capability: Object.freeze({ scoutDaysReduction: 1 }),
     status: "CURRENT_RUNTIME",
     competitivePolicy: "careerOnly",
+    //  下架時改成 true，**不要刪這一筆**（見 Permanent Ownership Contract）。
+    retired: false,
   }),
   Object.freeze({
     assetId: "coach_tactical",
@@ -117,6 +121,8 @@ export const COACH_CATALOG = Object.freeze([
     }),
     status: "CURRENT_RUNTIME",
     competitivePolicy: "careerOnly",
+    //  下架時改成 true，**不要刪這一筆**（見 Permanent Ownership Contract）。
+    retired: false,
   }),
 ]);
 
@@ -125,6 +131,29 @@ const BY_ID = new Map(COACH_CATALOG.map((a) => [a.assetId, a]));
 export const assetById = (id) => BY_ID.get(id) ?? null;
 export const allAssets = () => COACH_CATALOG;
 export const coachAssets = () => COACH_CATALOG.filter((a) => a.type === ASSET_TYPES.COACH);
+
+/**
+ * ── Permanent Ownership Contract ─────────────────────────────────────────
+ *
+ * **下架資產的方式是 `retired: true`，不是把它從型錄刪掉。**
+ *
+ * 理由：`normalizeClubAssets` 會用型錄判斷 `owned` 裡的 id 合不合法。如果直接
+ * 刪除一筆資產，玩家花 Club Points 買到的東西會在下一次載入時**靜默消失**，
+ * 而且下次存檔後永久消失——那與畫面上「聘用的教練永久保留」這句話直接矛盾。
+ *
+ * retired 的語意：
+ *   · ownership **保留**（照樣算擁有、照樣可裝備、能力照樣生效）
+ *   · **不可再新購買**（型錄不再賣）
+ *   · UI 可標成「典藏」
+ *   · 不因此退還或扣除任何 Club Points
+ *
+ * ⇒ 想讓某個資產退場：把它的 `retired` 改成 true，**不要刪那一筆**。
+ *   真的要刪（例如根本沒上線過），必須確認沒有任何存檔擁有它。
+ */
+export const isRetired = (asset) => Boolean(asset?.retired);
+
+/** 還在賣的資產（型錄頁只列這些；已擁有的 retired 資產仍由收藏區顯示）。 */
+export const purchasableAssets = () => COACH_CATALOG.filter((a) => !isRetired(a));
 
 /** 這份資產有沒有實際能力（用來判 competitivePolicy 的硬規則）。 */
 export function hasCapability(asset) {

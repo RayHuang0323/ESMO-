@@ -22,7 +22,7 @@
 //
 //  純函式：不 import React / zustand / localStorage / 亂數 / 時鐘。
 // ============================================================================
-import { CLUB_ASSET_VERSION, assetById } from "./coachCatalog.js";
+import { CLUB_ASSET_VERSION, assetById, isRetired } from "./coachCatalog.js";
 
 /** 失敗碼 → 呼叫端可以直接對應文案。判定在這裡，文案在畫面。 */
 export const ASSET_FAIL = Object.freeze({
@@ -33,6 +33,8 @@ export const ASSET_FAIL = Object.freeze({
   INSUFFICIENT: "insufficient",
   ALREADY_EQUIPPED: "already_equipped",
   WEEKLY_LOCKED: "weekly_locked",
+  //  已下架：**已擁有的照樣保留**，只是不能再新購買（Permanent Ownership Contract）。
+  RETIRED: "retired",
 });
 
 export function emptyClubAssets() {
@@ -45,9 +47,20 @@ const posInt = (v) => {
 };
 
 /**
- * 舊存檔／被手改過的存檔一律由這裡補正。**fail closed**：
- *   · 型錄裡不存在的 assetId ⇒ 從 `owned` 剔除（型錄縮編時不留幽靈資產）
- *   · `headCoachId` 不在 `owned` ⇒ 歸 null（不能裝備沒買的東西）
+ * 舊存檔／被手改過的存檔一律由這裡補正。
+ *
+ * ⚠ **Permanent Ownership Contract（2026-09-03）**
+ *   以前這裡會把「型錄查不到的 assetId」從 `owned` 剔除。那條規則是錯的：
+ *   型錄一改名或下架，玩家花 Club Points 買到的東西就會**靜默消失**，
+ *   而且下次存檔之後永久消失。已購買的東西不該因為型錄變動而不見。
+ *
+ *   現在的規則：**`owned` 只增不減。** 型錄查不到的 id 保留成
+ *   `{ acquiredWeek, unknown: true }` —— 擁有、但沒有型錄資料可顯示，
+ *   由 UI 標成「典藏」，不由這裡刪掉。
+ *   下架請用型錄的 `retired: true`（見 `coachCatalog.js`），**不要刪那一筆**。
+ *
+ *   仍然 fail closed 的是**裝備與能力**：`headCoachId` 不在 `owned` ⇒ 歸 null，
+ *   而查不到型錄的資產不提供任何能力（`clubCapabilities.js` 的 `coachCapabilitiesOf`）。
  */
 export function normalizeClubAssets(raw) {
   const out = emptyClubAssets();
@@ -55,8 +68,12 @@ export function normalizeClubAssets(raw) {
 
   const owned = raw.owned && typeof raw.owned === "object" ? raw.owned : {};
   for (const [assetId, entry] of Object.entries(owned)) {
-    if (!assetById(assetId)) continue;
-    out.owned[assetId] = { acquiredWeek: posInt(entry?.acquiredWeek) ?? 1 };
+    if (typeof assetId !== "string" || !assetId) continue;
+    out.owned[assetId] = {
+      acquiredWeek: posInt(entry?.acquiredWeek) ?? 1,
+      //  型錄查不到 ⇒ 標記給 UI，但**絕不刪除**。
+      ...(assetById(assetId) ? {} : { unknown: true }),
+    };
   }
 
   const head = typeof raw.headCoachId === "string" ? raw.headCoachId : null;
@@ -93,7 +110,9 @@ export function purchaseAsset(assets, assetId, { clubPoints = 0, clubPointsLifet
 
   const asset = assetById(assetId);
   if (!asset) return fail(ASSET_FAIL.UNKNOWN_ASSET, "找不到這份資產");
-  if (A.owned[assetId]) return fail(ASSET_FAIL.ALREADY_OWNED, "已經擁有這位教練");
+  if (A.owned[assetId]) return fail(ASSET_FAIL.ALREADY_OWNED, "已經擁有這份資產");
+  //  ⚠ retired = 下架，不是刪除：已擁有的照樣保留，但不能再新購買。
+  if (isRetired(asset)) return fail(ASSET_FAIL.RETIRED, "這份資產已經下架，無法再取得");
   if (!prerequisiteMet(asset, { clubPointsLifetime })) {
     return fail(ASSET_FAIL.PREREQUISITE, `需要俱樂部累計 ${asset.prerequisite.min} 點才能聘用`);
   }

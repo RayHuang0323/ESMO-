@@ -32,7 +32,7 @@ const capMod = await imp("src/platform/assets/clubCapabilities.js");
 const stateMod = await imp("src/platform/assets/clubAssetsState.js");
 const retentionMod = await imp("src/platform/retention/retentionState.js");
 
-const { COACH_CATALOG, assetById, validateCatalog, ASSET_SPECIALTIES, COMPETITIVE_POLICIES, CS_OWNED_FLAGS, hasCapability } = catalogMod;
+const { COACH_CATALOG, assetById, validateCatalog, ASSET_SPECIALTIES, COMPETITIVE_POLICIES, CS_OWNED_FLAGS, hasCapability, isRetired, purchasableAssets } = catalogMod;
 const { CAPABILITY_POLICY, mergeCapabilities, clubCapabilitiesOf, emptyCapabilities } = capMod;
 const {
   emptyClubAssets, normalizeClubAssets, purchaseAsset, equipHeadCoach, canChangeCoach, clubAssetsViewOf, ASSET_FAIL,
@@ -252,9 +252,35 @@ ck("prerequisite 未達不可買（lifetime 499 < 500）", noPre.ok === false &&
 const okPre = purchaseAsset(emptyClubAssets(), "coach_tactical", { clubPoints: 9999, clubPointsLifetime: 500, careerWeek: 1 });
 ck("prerequisite 剛好達標可買（lifetime 500）", okPre.ok === true);
 
-//  normalize：舊存檔／被手改的存檔
-eq("normalize 剔除型錄裡沒有的資產",
-  Object.keys(normalizeClubAssets({ owned: { ghost_coach: { acquiredWeek: 1 } } }).owned), []);
+//  ── Permanent Ownership Contract ────────────────────────────────────────
+//  ⚠ 這幾條取代了舊的「normalize 剔除型錄裡沒有的資產」。
+//    舊規則會讓型錄改名／下架直接洗掉玩家買過的東西——那與「永久收藏」矛盾。
+console.log("\n── ⑥-b 永久擁有 ──");
+const ghost = normalizeClubAssets({ owned: { ghost_coach: { acquiredWeek: 4 } } });
+eq("型錄查不到的資產**仍然保留擁有**", Object.keys(ghost.owned), ["ghost_coach"]);
+eq("並保留取得週次", ghost.owned.ghost_coach.acquiredWeek, 4);
+ck("且標記為 unknown 讓 UI 可以顯示成典藏", ghost.owned.ghost_coach.unknown === true);
+//  但它不提供任何能力——擁有 ≠ 生效。
+eq("查不到型錄的資產不提供能力",
+  clubCapabilitiesOf({
+    developmentEffects: {},
+    clubAssets: { schema: "ClubAssets.v1", owned: { ghost_coach: { acquiredWeek: 1 } }, headCoachId: "ghost_coach", lastCoachChangeWeek: null },
+  }).sources.coach, emptyCapabilities());
+
+//  型錄「縮編」的模擬：把整份型錄換成空的，既有 ownership 一個都不能少。
+{
+  const before = purchaseAsset(emptyClubAssets(), "coach_conditioning", rich).assets;
+  const afterCatalogShrink = normalizeClubAssets(JSON.parse(JSON.stringify(before)));
+  eq("型錄變更後 ownership 不下降", Object.keys(afterCatalogShrink.owned).sort(), Object.keys(before.owned).sort());
+}
+
+//  retired：下架但不刪除。型錄目前沒有下架品，所以用合成物件驗語意。
+ck("isRetired 認得下架標記", isRetired({ ...assetById("coach_scouting"), retired: true }) === true);
+ck("未標記的資產不算下架", isRetired(assetById("coach_scouting")) === false);
+ck("每一筆型錄都明寫 retired（下架用改值，不用刪除）",
+  COACH_CATALOG.every((a) => a.retired === false), COACH_CATALOG.map((a) => a.retired).join(","));
+eq("purchasableAssets 目前等於全部（無下架品）", purchasableAssets().length, COACH_CATALOG.length);
+ck("狀態機有 RETIRED 失敗碼", ASSET_FAIL.RETIRED === "retired");
 eq("normalize 把「裝備了沒買的教練」拉回 null",
   normalizeClubAssets({ owned: {}, headCoachId: "coach_conditioning" }).headCoachId, null);
 eq("normalize：沒有總教練就不留換人紀錄",
