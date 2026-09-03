@@ -17838,3 +17838,11 @@ Owner Review 通過，正式發布。
 `volume / rotate / circuit / finance`（＋日目標與 rank／youth）——
 `fixtures` 與 `streak` 那一天沒被抽到，因此**沒有在畫面上逐字驗到**；
 它們由 bundle 字串檢查（§D）與 dev gate 的 30/30 覆蓋。
+## CS Android Owner Review V2（temporary HTTPS preview recovered，2026-09-04）
+
+- `localhost.run` SSH reverse tunnel 已取得 temporary HTTPS preview：
+  `https://41101287e092c4.lhr.life/ESMO-/`。local production preview 綁定
+  `127.0.0.1:5187`，未修改產品／deploy config；preview-only config 已在啟動後清理。
+- External smoke `node tools/browser_check_cs_android_owner_preview.mjs`：
+  **33/33 PASS**，HTTP 200；Home、Mirage／Dust II／Inferno、HUD／C4／POV／controls、
+  console/page errors 均通過。Owner 真機驗收仍未完成，且未 push／未 deploy。
