@@ -1347,3 +1347,23 @@ AWP_TRIAGE = UNRESOLVED → CBR BLOCKED，不進 Rating   ← 目前在這裡
 ## CS RESIDUAL_TACTIC_SYNC_P1 release closeout — 2026-09-03
 - P1 runtime fix 已整合並部署：stable team tactic owner 維持穩定，actual T/CT side 透過 deterministic projection 取得合法 tactic / route / formation；不涉及 AWP balance、CBR、Rating 或 Meta branch。
 - 狀態：`RESIDUAL_TACTIC_SYNC_P1 = CLOSED`。剩餘 C5B timing verification、Node 24 gate-wrapper、Vite large-chunk 與 Android 真機驗收列為既有 debt / pending，不再阻塞此 P1。
+
+## Club Identity v2 + Social Identity v1 + Dashboard Scroll P0 release closeout — 2026-09-03
+
+- Owner Review 判定 v1 `REVISE_BEFORE_RELEASE`；本輪回應退回意見重做視覺與社交層，
+  Owner Review 結果 `ACCEPTED`，正式合併 `origin/main`（含已 CLOSED 的 P1）並發布。
+- 狀態：**`CLUB_IDENTITY_VISUAL_V2 = RELEASED`**、**`SOCIAL_IDENTITY_V1 = RELEASED`**、
+  **`DASHBOARD_SCROLL_P0 = CLOSED`**、**`CLUB_PROGRESSION_CONTRACT_V1 = DESIGN READY／
+  NOT IMPLEMENTED`**。
+- Production main：`cbf5edf5f40c685973554b8683a68224896ae206`。Release gates 與正式站
+  smoke（55/55，含桌機完整 CS 對戰掛載）明細見 `08_目前待辦與風險.md` 同名 closeout 節
+  與 `00_目前專案狀態.md`。
+- Release boundary：未改 CS runtime／CBR／Rating；`RESIDUAL_TACTIC_SYNC_P1` 屬 CS owner
+  線，本次合併採用其原樣（`EsportsFPS3D.jsx` 與 origin/main 逐位元組一致），未在此線修改。
+- **Browser Harness Reliability 從「已提案」升級為 next engineering priority**：本輪釋出
+  過程中實際撞見既有債的兩種模式（gate cleanup 卡住不退出、資源緊繃造成的一次性逾時假紅），
+  兩者都用乾淨重跑或終止卡住行程排除，不影響本次 release 的判定，但代表這項 debt 該排進
+  下一輪工程優先序，而不是繼續停在提案階段。
+- Club Progression Contract v1 只完成設計與現況稽核（`docs/design/ClubProgression_現況與
+  Contract_v1.md`），**未實作任何 progression 行為變更**——首頁 LEVEL/XP/BADGE 是否要接
+  真實權威、週目標門檻是否要對齊實際賽程供給量，留給下一輪決定。
