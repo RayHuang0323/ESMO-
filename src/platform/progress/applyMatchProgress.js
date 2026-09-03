@@ -32,6 +32,10 @@ import { competitiveBlockOf, careerYearOf } from "../time/worldClock.js";
 import { recordMatchActivity, coordsOf, normalizeRetention } from "../retention/retentionState.js";
 import { recordTacticUsage, normalizeClubMastery } from "../mastery/clubMasteryState.js";
 import { makeGrowthEntry, appendGrowth } from "./growthLog.js";
+//  Club Progression v1：Club XP 的**唯一**授予處。掛在這裡的理由與
+//  retention／mastery 完全相同——本檔是全專案唯一的結算入口，掛在別處
+//  （例如各自的 Result Screen）一定會漏掉某一種來源，而且會失去冪等保護。
+import { addClubXp, clubXpForMatch, normalizeClubProgression } from "../progression/clubProgression.js";
 
 /**
  * 純 reducer：state + transaction → { nextState, receipt }
@@ -189,6 +193,26 @@ export function applyProgressToState(state, tx) {
       }, ...(finance.transactions ?? [])].slice(0, 30)
     : (finance.transactions ?? []);
 
+  //  ── Club Progression v1：這一場為俱樂部帶來多少 Club XP ────────────────
+  //  ⚠ 授予量只由 `clubXpForMatch()` 決定（練習與 unknown 一律 0）——規則表住在
+  //    domain，不在這裡；這裡只負責「把它算進 state，而且只算一次」。
+  //    冪等由本檔既有的 `processedMatchTransactions` 守著：重複套用同一個
+  //    transactionId 會在函式最上方就 return，根本走不到這裡。
+  const clubXpGained = clubXpForMatch({
+    matchSource: matchSourceOfTx,
+    win: tx.metadata?.winner === "us",
+  });
+  //  ⚠ bootstrap 的 ctx 讀的是**進來時**的 retention，不是這一場結算後的
+  //    `nextRetention`（那要到下面才算得出來，在這裡用會是 TDZ）。
+  //    這不影響正確性：ctx 只在「舊存檔第一次遇到本系統」時才被用到，
+  //    而那一刻本來就該以結算前的 lifetime 當基線。
+  const clubProgressionResult = addClubXp(
+    normalizeClubProgression(state.clubProgression, {
+      clubPointsLifetime: normalizeRetention(state.retention).clubPointsLifetime,
+    }),
+    clubXpGained,
+  );
+
   // 8) 寫入完成紀錄（receipt 存進 processedMatchTransactions → 冪等憑證）
   const receipt = {
     ok: true,
@@ -210,6 +234,17 @@ export function applyProgressToState(state, tx) {
       xpGained: playerReceipts.reduce((s, p) => s + p.xpGained, 0),
       levelsGained: playerReceipts.reduce((s, p) => s + p.levelsGained, 0),
       talentPointsGained: playerReceipts.reduce((s, p) => s + p.talentPointsGained, 0),
+    },
+    //  Club Progression v1：這一場為**俱樂部**帶來什麼。
+    //  ⚠ 與 `totals.xpGained`（選手個人 XP）是兩件事，刻意分開放——
+    //    選手成長與俱樂部成長混在一個欄位裡，正是這個 Sprint 要解決的語意混亂。
+    club: {
+      xpGained: clubProgressionResult.gained,
+      xpBefore: clubProgressionResult.progression.xp - clubProgressionResult.gained,
+      xpAfter: clubProgressionResult.progression.xp,
+      levelBefore: clubProgressionResult.levelBefore,
+      levelAfter: clubProgressionResult.levelAfter,
+      leveledUp: clubProgressionResult.leveledUp,
     },
     metadata: tx.metadata,
   };
@@ -268,6 +303,8 @@ export function applyProgressToState(state, tx) {
     finance: { ...finance, funds: moneyAfter, transactions: nextTransactions },
     retention: nextRetention,
     clubMastery: nextClubMastery,
+    //  Club Progression v1：Club XP 單調遞增，且只在這裡被寫入。
+    clubProgression: clubProgressionResult.progression,
     //  `reputation` 由 spread 原樣帶過（F0 deprecated：不再由結算寫入）。
     meta: { ...meta, fans: fansAfter, competitiveBlock: nextBlock },
     processedMatchTransactions: { ...processed, [tx.transactionId]: receipt },
