@@ -764,14 +764,15 @@ function MobileBottomNav({ sheet, onTab }) {
 
 function MobileHome({ team, meta, finance, unread, xpPercent, activeMatchView, onResumeActive, primaryAction, quickActions, profile, players, developmentPoints, wk, sponsor, modes, onSelect, onOffSeason, identity }) {
   const [sheet, setSheet] = useState(null);
-  const scrollRef = useRef(null);
   //  底部 nav 的「競技」要捲到這一段，所以需要它的位置。
   const competeRef = useRef(null);
 
   const onTab = (tab) => {
     if (tab === "home") {
       setSheet(null);
-      scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      //  ⚠ 捲動權威在 document，不在 `.esmo-mobile-home__scroll`。
+      //  對已經不是捲動容器的 div 呼叫 `scrollTo` 是靜默的空操作。
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
     if (tab === "messages") {
@@ -790,7 +791,7 @@ function MobileHome({ team, meta, finance, unread, xpPercent, activeMatchView, o
 
   return (
     <div className="esmo-mobile-home">
-      <div className="esmo-mobile-home__scroll" ref={scrollRef}>
+      <div className="esmo-mobile-home__scroll">
         <div className="esmo-mobile-home__brandline">
           <span><EsmoIcon name="signal" size={13} /> ESMO / COMMAND DECK</span>
           <span>W{numberOf(meta.week, 1)}</span>

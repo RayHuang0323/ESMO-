@@ -210,9 +210,11 @@ export default function AppShell() {
   //    · **畫面自己不要再發明捲動容器**——需要內部捲動的（例如 Dashboard
   //      要讓底部導覽固定）自己處理，其餘交給文件捲動。
   //
-  //  ⚠ Dashboard 有自己的內部捲動區與 `position: absolute` 的底部導覽，
-  //    所以它必須維持「容器不長高」的行為——它的內容被自己的捲動區收住，
-  //    容器停在 minHeight，導覽仍貼在框底，不會被推到內容尾端。
+  //  ⚠ Dashboard **不再**有自己的捲動區（Dashboard Scroll P0）。它以前用
+  //    `height:100% + overflow:auto` 自建一層，但父層在這裡只有 `minHeight`，
+  //    `100%` 退化成 auto ⇒ 那是一個捲不動的捲動容器，滾輪被它接走、
+  //    `overscroll-behavior:contain` 又不還給 document ⇒ 桌機完全捲不動。
+  //    現在桌機與 390px 都吃 document 捲動，底部導覽改 `position: fixed`。
   const viewportLocked = VIEWPORT_LOCKED_SCREENS.has(screen);
   const shellStyle = {
     width: "100%",

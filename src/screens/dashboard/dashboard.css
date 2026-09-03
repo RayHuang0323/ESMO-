@@ -3,19 +3,31 @@
   box-sizing: border-box;
 }
 
+/*
+ *  ⚠ Scroll authority：Dashboard **不是**捲動容器。
+ *
+ *  這裡原本是 `height:100%` ＋ `overflow:auto` ＋ `overscroll-behavior:contain`。
+ *  AppShell 走 Global Scroll Contract 之後（非鎖定畫面用 `minHeight` ＋
+ *  `overflow:visible`），父層沒有確定高度 ⇒ `height:100%` 退化成 auto ⇒
+ *  這個 `overflow:auto` 容器的 scrollHeight 永遠等於 clientHeight，也就是
+ *  **一個捲不動的捲動容器**。滾輪落在它身上被它接走，而
+ *  `overscroll-behavior:contain` 又禁止把捲動接力交還給 document
+ *  ⇒ 桌機滾輪實測位移 0px（CDP `Input.dispatchMouseEvent` 量到的，不是推論）。
+ *
+ *  產品規則：桌機與 390px 都用**自然 document 捲動**，Dashboard 不得再包
+ *  第二層 scroll authority。底部導覽改用 `position:fixed` 貼在 viewport，
+ *  不再依賴「容器不長高」來定位。
+ */
 .esmo-dashboard {
   position: relative;
   z-index: 21;
-  height: 100%;
   min-height: 100%;
-  overflow: auto;
   color: var(--esmo-text);
   background:
     radial-gradient(circle at 12% 4%, rgba(167, 139, 250, 0.12), transparent 28rem),
     radial-gradient(circle at 90% 38%, rgba(52, 211, 153, 0.07), transparent 24rem),
     var(--esmo-ink);
   font-family: var(--esmo-font);
-  overscroll-behavior: contain;
 }
 
 .esmo-dashboard button {
@@ -1036,8 +1048,10 @@
   text-transform: uppercase;
 }
 
+/*  同 sheet：對話框蓋的是 viewport。`absolute` 會以整份文件為框，
+ *  捲到一半開對話框時它會被置中在文件中央（螢幕外）。 */
 .esmo-modal-backdrop {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 30;
   display: grid;
@@ -1285,30 +1299,27 @@
 
 /* Mobile Home v2: a compact game shell, not a stacked desktop landing page. */
 @media (max-width: 520px) {
-  .esmo-dashboard {
-    height: 100%;
-    min-height: 100%;
-    overflow: hidden;
-  }
-
+  /*
+   *  ⚠ 390px 也走 document 捲動。這裡原本是
+   *  `.esmo-dashboard{overflow:hidden}` → `.esmo-mobile-home{height:100%}` →
+   *  `__scroll{height:calc(100% - 82px); overflow-y:auto}` 三層。父層沒有確定
+   *  高度時整條 `100%` 全部退化成 auto ⇒ 內層捲動區捲動範圍是 0，外層
+   *  `overflow:hidden` ＋ `overscroll-behavior:contain` 又把觸控／滾輪吃掉
+   *  ⇒ 整頁 1072px 內容塞在 844px viewport 裡完全捲不動，底部導覽被推到
+   *  y=993（viewport 外）而點不到。
+   *
+   *  現在：不設高度、不設 overflow，內容自然撐長 document；底部導覽用
+   *  `position:fixed` 貼 viewport，`__scroll` 只保留底部 padding 讓最後一張
+   *  卡片不會躲在導覽底下。
+   */
   .esmo-mobile-home {
     position: relative;
-    height: 100%;
-    min-height: 100%;
-    overflow: hidden;
   }
 
   .esmo-mobile-home__scroll {
-    height: calc(100% - 82px - env(safe-area-inset-bottom));
-    overflow-x: hidden;
-    overflow-y: auto;
     padding: 8px 14px calc(94px + env(safe-area-inset-bottom));
-    overscroll-behavior: contain;
-    scroll-behavior: smooth;
-    scrollbar-width: none;
   }
 
-  .esmo-mobile-home__scroll::-webkit-scrollbar,
   .esmo-mobile-compete-rail::-webkit-scrollbar {
     display: none;
   }
@@ -1947,8 +1958,10 @@
     font-weight: 900;
   }
 
+  /*  底部導覽貼 viewport，而不是貼一個「假裝不長高」的容器。
+   *  這是把 scroll authority 還給 document 之後唯一正確的定位方式。 */
   .esmo-mobile-nav {
-    position: absolute;
+    position: fixed;
     right: 10px;
     bottom: max(8px, env(safe-area-inset-bottom));
     left: 10px;
@@ -1993,8 +2006,10 @@
     transform: translateY(1px);
   }
 
+  /*  Sheet 蓋的是 viewport，不是文件。容器不再有確定高度，`absolute; inset:0`
+   *  會跟著整份文件長高 ⇒ 遮罩比螢幕高好幾倍、sheet 掉到看不到的地方。 */
   .esmo-mobile-sheet-backdrop {
-    position: absolute;
+    position: fixed;
     inset: 0;
     z-index: 40;
     display: flex;
