@@ -17575,6 +17575,7 @@ evaluate 撞上）。那是逾時的餘波，不是另一個獨立問題。真�
   兩個 Result 畫面都不重算，各自的 Result UI 一行都沒改。
 - 首頁桌機＋手機改讀 `clubProgressionView()`；假的三個數字全部移除。
   第三格改成真有語意的榮譽（earned title → 年度冠軍次數 → 誠實空狀態「尚無」）。
+- 戰隊詳情頁（`TeamScreen`）也還在顯示同一個假的 `team.lv`，一併改讀 canonical XP。
 - 俱樂部專精那張卡補上標籤「**俱樂部聲望**」；`clubLevel` 欄位改名 `prestige`。
   Club Mastery 的流派／專精進度／戰術變體**一行邏輯都沒改**。
 
