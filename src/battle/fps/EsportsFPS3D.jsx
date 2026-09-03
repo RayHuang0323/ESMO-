@@ -7,6 +7,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import * as THREE from "three";
 import MatchSpeedControls from "../ui/MatchSpeedControls.jsx";
 import { checkFpsRendererIdentity } from "./fpsIdentity.js";
+import { FPS_ROLE_ZH } from "./fpsRoster.js";
 import { checkFpsRuntimeVisibility, evaluateFpsCameraRecovery, isFpsBodyScreenReadable, resolveFpsPresentationVisibility, summarizeFpsTeamVisibility } from "./fpsVisibilityDiagnostics.js";
 import { createFpsCharacterRenderer } from "./presentation/FpsCharacterRenderer.js";
 import { getRiggedCharacterLimit } from "./presentation/fpsCharacterAssets.js";
@@ -285,6 +286,14 @@ const HE_R=12,HE_MAX_DAMAGE=80,HE_ARMOR_SCALE=0.72;
 // R15 functional baseline only; balance calibration requires a separate Sprint.
 const MOLLY_R=4,MOLLY_TL=8,MOLLY_DAMAGE_PER_TICK=10;
 function smokeBlocks(a,b,smokes){if(!smokes||!smokes.length)return false;for(const s of smokes){if((s.tl??1)<=0)continue;if(segPtDist(a.x,a.y,b.x,b.y,s.pos.x,s.pos.y)<SMOKE_R)return true;}return false;}
+const angleDelta=(a,b)=>Math.abs(((b-a+540)%360)-180);
+function canEngage(observer,target,walls,smokes,prog){
+  if(!observer||!target||observer.dead||target.dead||prog<=0.15)return false;
+  if(observer.state==="BUY"||observer.state==="撤退"||!observer.gun||observer.shooting>0||observer.picking>0)return false;
+  const d=dist(observer.pos,target.pos);
+  if(d>=55||angleDelta(observer.va,Math.atan2(target.pos.y-observer.pos.y,target.pos.x-observer.pos.x)*180/Math.PI)>72)return false;
+  return !lineBlocked(observer.pos,target.pos,walls)&&!smokeBlocks(observer.pos,target.pos,smokes);
+}
 
 // ─── 地圖資料（walls = 碰撞 + 3D 建築）───────────────────────────────────
 const MAPS={
@@ -1228,7 +1237,13 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
            p.pos=safeMove(p.pos,{x:p.pos.x+dx/L*retreatStep,y:p.pos.y+dy/L*retreatStep},walls,PLAYER_R);
            p.va=Math.atan2(near.pos.y-p.pos.y,near.pos.x-p.pos.x)*180/Math.PI;p.state="撤退";return;
          }}
-        if(p.routeIdx<p.route.length-1){
+        // A visible, legal contact interrupts locomotion before the next waypoint;
+        // the reaction/combat system below still owns hit resolution and damage.
+        const contact=ps.filter(e=>e.side!==p.side&&canEngage(p,e,walls,smokes,prog)).sort((a,b)=>dist(p.pos,a.pos)-dist(p.pos,b.pos))[0];
+        if(contact){
+          p.va=Math.atan2(contact.pos.y-p.pos.y,contact.pos.x-p.pos.x)*180/Math.PI;
+          p.state="架槍";
+        }else if(p.routeIdx<p.route.length-1){
           const wp=p.route[p.routeIdx],tgt=p.route[p.routeIdx+1];
           const segLen=Math.max(2,dist(wp,tgt));
           const spd=4.8+(p.sta?(p.sta-82)*0.025:0);
@@ -1772,7 +1787,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
     const onWheel=e=>{e.preventDefault();const chasing=!!(stateRef.current._chase&&stateRef.current._chase.alive);const min=chasing?4.5:18,max=chasing?55:200;cam.autoFollow=false;cam.viewPreset=null;cam.manualRadius=clamp((cam.manualRadius??cam.dRadius)*(e.deltaY>0?1.1:0.9),min,max);cam.dRadius=cam.manualRadius;};
     const onTouchStart=e=>{cam.autoFollow=false;cam.viewPreset=null;if(e.touches.length===2){drag=null;const[a,b]=e.touches;pinch={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),r:cam.dRadius,cx:(a.clientX+b.clientX)/2,cy:(a.clientY+b.clientY)/2,tx:cam.dTgt.x,tz:cam.dTgt.z,th:cam.dTheta};}else onDown(e);};
     const onTouchMove=e=>{e.preventDefault();
-      if(e.touches.length===2&&pinch){const[a,b]=e.touches;const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);cam.dRadius=clamp(pinch.r*pinch.d/Math.max(1,d),18,200);
+      if(e.touches.length===2&&pinch){const[a,b]=e.touches;const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);const min=stateRef.current._chase?.alive?4.5:18;cam.dRadius=clamp(pinch.r*pinch.d/Math.max(1,d),min,200);cam.manualRadius=cam.dRadius;
         const cx=(a.clientX+b.clientX)/2,cy=(a.clientY+b.clientY)/2;panBy(cx-pinch.cx,cy-pinch.cy,cam.dRadius*0.0018,pinch.th,pinch.tx,pinch.tz);}
       else onMove(e);};
     el.addEventListener("contextmenu",e=>e.preventDefault());
@@ -1796,6 +1811,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
     el.addEventListener("touchstart",e=>{onTouchStart(e);onClickDown(e);},{passive:false});
     el.addEventListener("touchmove",onTouchMove,{passive:false});
     el.addEventListener("touchend",e=>{onUp();onClickUp(e);});
+    el.addEventListener("touchcancel",onUp);
 
     if(onRecenterRef)onRecenterRef.current=()=>{cam.autoFollow=true;cam.overview=true;cam.viewPreset=null;cam._ovBase=null;cam.manualRadius=null;cam.chaseYaw=0;cam.chasePitch=0;};
     if(onCameraPresetRef)onCameraPresetRef.current=(name)=>setFpsCameraPreset(stateRef.current,name);
@@ -2046,6 +2062,13 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
       const mag=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.3,0.12),polyMat);mag.position.set(0.56,0.74,0.04);mag.rotation.z=0.18;gun.add(mag);
       const sight=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.09,0.05),metalMat);sight.position.set(0.62,1.0,0.04);gun.add(sight);
       body.add(gun);
+      // Read-only carrier marker driven by the authoritative frame hasBomb state.
+      const bagMat=new THREE.MeshStandardMaterial({color:0x24252a,roughness:0.82,metalness:0.12});bagMat.__keep=true;
+      const bombBag=new THREE.Group();
+      const bag=new THREE.Mesh(new THREE.BoxGeometry(0.38,0.42,0.28),bagMat);bag.position.set(-0.22,0.68,0);bombBag.add(bag);
+      const bagMarkMat=new THREE.MeshStandardMaterial({color:0xfbbf24,emissive:0x5a3500,emissiveIntensity:0.65,roughness:0.45});bagMarkMat.__keep=true;
+      const bagMark=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.13,0.035),bagMarkMat);bagMark.position.set(-0.22,0.75,-0.15);bombBag.add(bagMark);
+      bombBag.visible=false;body.add(bombBag);
       const bodyParts={torso,head,helm,limbs:body.children.slice(3,7),weapon:gun};
       // 架槍視線（沿瞄準方向的細光線，顯示選手正在架住的角度）
       const aimMat=new THREE.MeshBasicMaterial({color:p.side==="ct"?0x7dd3fc:0xfdba74,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false});aimMat.__keep=true;
@@ -2072,7 +2095,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
 
       playerGroup.add(g);
       g.traverse(o=>{o.frustumCulled=false;if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(mm=>{mm.fog=false;});}}); // 選手不受霧/視錐裁切影響，避免拉遠/縮放/邊緣時消失
-      return {id:p.id,side:p.side,role:p.role,col,g,body,bodyParts,torso,torsoMat,head,gun,ring,ringMat,disc,selBeam,beamMat,hpGroup,hpFill,nameSpr,dead,deadMat,aimLine,aimMat,rigged};
+      return {id:p.id,side:p.side,role:p.role,col,g,body,bodyParts,torso,torsoMat,head,gun,bombBag,ring,ringMat,disc,selBeam,beamMat,hpGroup,hpFill,nameSpr,dead,deadMat,aimLine,aimMat,rigged};
     });
     st.raycastTargets=st.players.map(p=>p.g);
 
@@ -2307,7 +2330,7 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null){
     P.rigged?.setFacingDegrees?.(va);
     const sel=live.selected===P.id;
     if(p.dead){
-      P.body.visible=!riggedActive;P.hpGroup.visible=false;P.nameSpr.visible=false;P.selBeam.visible=false;
+      P.body.visible=!riggedActive;P.bombBag.visible=false;P.hpGroup.visible=false;P.nameSpr.visible=false;P.selBeam.visible=false;
       P.deadMat.opacity=0.8;P.ringMat.opacity=0.0;P.disc.visible=false;
       P.dead.scale.setScalar(clamp(st.cam.radius/55,0.85,2.0)); // 死亡地面 X，遠看清楚
     }else{
@@ -2344,6 +2367,7 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null){
         else{P._emBase&&P.torsoMat.emissive.copy(P._emBase);P.torsoMat.emissiveIntensity=p.shooting>0?0.6:0.18;}}
       P._dmg=Math.max(0,dmg-0.06);
       // 持包/接管 環脈動
+      P.bombBag.visible=Boolean(p.hasBomb);
       if(p.hasBomb){P.ringMat.color.setHex(0xfbbf24);P.ringMat.opacity=0.6+0.4*Math.abs(Math.sin(time*5));}
       else P.ringMat.color.copy(P.col);
       // 選中：放大環 + 光柱
@@ -3004,7 +3028,7 @@ function EsportsFPS3D({
                 <div style={{width:24,height:24,borderRadius:7,background:`${sideColor(selP.side)}2a`,border:`1px solid ${sideColor(selP.side)}66`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,flexShrink:0}}>{selP.dead?"💀":"🎯"}</div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",gap:5}}>{selP.name}{selP.hasBomb?" 💣":""}{selP.stats&&<span style={{background:`linear-gradient(135deg,${C.gold},#d97706)`,color:"#1a1205",fontSize:8,fontWeight:900,borderRadius:4,padding:"0px 4px"}}>OVR {ovr(selP)}</span>}</div>
-                  <div style={{color:C.gray2,fontSize:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{selP.fpsRole||ROLE_ZH[selP.role]||selP.role} · {selP.dead?"陣亡":stZh(selP.state)} · {GUNS[selP.gun]?.name}{!selP.dead&&" · 🎥"}</div>
+                  <div style={{color:C.gray2,fontSize:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>最擅長：{FPS_ROLE_ZH[selP.bestFpsRole]||selP.fpsRole||ROLE_ZH[selP.role]||selP.role}{selP.taskFpsRole&&` · 本場定位：${FPS_ROLE_ZH[selP.taskFpsRole]}`} · {selP.dead?"陣亡":stZh(selP.state)} · {GUNS[selP.gun]?.name}{!selP.dead&&" · 🎥"}</div>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
                   <span style={{fontSize:9.5,fontWeight:800,color:"#e8ebf0",fontVariantNumeric:"tabular-nums"}}>{selP.k}<span style={{color:C.gray2}}>/</span>{selP.d}<span style={{color:C.gray2}}>/</span><span style={{color:C.gold}}>{selP.a||0}</span></span>
