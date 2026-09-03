@@ -334,10 +334,14 @@ export default function ClubMasteryScreen({ onBack }) {
 
         {/*  等級與「基礎戰術永遠可用」是兩則背景資訊，桌機並排、手機自然疊起來。 */}
         <div className="cm__meta">
-        {/* 俱樂部等級：累計決定等級，餘額才是能花的 */}
+        {/*  俱樂部**聲望**（Prestige Tier）：由 `clubPointsLifetime` 推導。
+             ⚠ 這不是 Club Level。Club Level 住在 `platform/progression/clubProgression.js`，
+             由比賽產出的 Club XP 決定；這一格看的是累計拿過多少俱樂部點數。
+             以前這張卡沒有標題，只放一個「職業俱樂部」，玩家分不出兩者 ⇒ 補上標籤。 */}
         {tier && (
           <div className="cm__club cm-rise" style={{ "--cm-delay": "110ms" }} data-testid="mastery-club-card">
             <div className="cm__club-row">
+              <span className="cm__club-label" data-testid="mastery-prestige-label">俱樂部聲望</span>
               <span className="cm__club-icon">{tier.icon}</span>
               <span className="cm__club-name" data-testid="mastery-club-tier">{tier.name}</span>
               <span className="cm__club-next cm__data">

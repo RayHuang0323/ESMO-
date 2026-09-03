@@ -86,11 +86,7 @@ function SectionHeading({ label, title, note }) {
   );
 }
 
-function TeamHero({ team, meta, unread, xpPercent, onInbox, fansAtSeasonStart, identity }) {
-  const achievement = numberOf(team.achievement ?? meta.achievement);
-  const level = numberOf(team.lv ?? meta.lv);
-  const xp = numberOf(team.xp ?? meta.xp);
-  const xpMax = numberOf(team.xpMax ?? meta.xpMax, 1);
+function TeamHero({ team, meta, unread, clubProgress, honorStat, onInbox, fansAtSeasonStart, identity }) {
   const week = numberOf(meta.week, 1);
   const days = numberOf(meta.days, 0);
   const fans = formatFans(meta.fans);
@@ -132,7 +128,10 @@ function TeamHero({ team, meta, unread, xpPercent, onInbox, fansAtSeasonStart, i
                    Dashboard 唯一的常駐動態（常青綠連這個都不動）。 */}
               <span className="esmo-hero__crest-aura" data-testid="club-identity-aura" aria-hidden="true" />
               {team.emoji ?? "◆"}
-              <span className="esmo-hero__crest-badge">{achievement}</span>
+              {/*  ⚠ 這顆角標以前是 `meta.achievement`（種子常數 48，沒有 writer）。
+                   改標真實的 Club Level——隊徽上掛等級是看得懂的語意，
+                   掛一個永遠是 48 的號碼不是。 */}
+              <span className="esmo-hero__crest-badge" data-testid="home-crest-level">{clubProgress.level}</span>
             </div>
             <div className="esmo-hero__copy">
               <div className="esmo-hero__kicker">{team.tag ?? "ESMO SQUAD"}</div>
@@ -170,21 +169,40 @@ function TeamHero({ team, meta, unread, xpPercent, onInbox, fansAtSeasonStart, i
             <div className="esmo-hero__funds-value">{money(team.gold ?? 0)}</div>
             <div className="esmo-hero__funds-note">可用資金 · 由財務模組提供</div>
           </div>
+          {/*  Club Progression v1：這三格以前是 `Lv. 93` / `7.27萬` / `#48`，
+               三個都是 `DEFAULT` 裡的種子常數，全庫沒有任何 writer——打幾百場
+               都不會動。現在全部接真值：等級與 XP 來自 `clubProgressionView()`，
+               第三格改放**真的有語意**的榮譽，而不是再編一個 badge 號碼。 */}
           <div className="esmo-hero__stats">
-            <div className="esmo-stat"><div className="esmo-stat__label">LEVEL</div><div className="esmo-stat__value">Lv. {level}</div></div>
-            <div className="esmo-stat"><div className="esmo-stat__label">XP</div><div className="esmo-stat__value">{compactWan(xp)}</div></div>
-            <div className="esmo-stat"><div className="esmo-stat__label">BADGE</div><div className="esmo-stat__value">#{achievement}</div></div>
+            <div className="esmo-stat" data-testid="home-club-level">
+              <div className="esmo-stat__label">CLUB LEVEL</div>
+              <div className="esmo-stat__value">Lv. {clubProgress.level}</div>
+            </div>
+            <div className="esmo-stat" data-testid="home-club-xp">
+              <div className="esmo-stat__label">CLUB XP</div>
+              <div className="esmo-stat__value">{clubProgress.xp.toLocaleString("zh-Hant")}</div>
+            </div>
+            <div className="esmo-stat" data-testid="home-club-honor">
+              <div className="esmo-stat__label">{honorStat.label}</div>
+              <div className="esmo-stat__value" style={honorStat.empty ? { color: "rgba(255,255,255,0.38)" } : undefined}>
+                {honorStat.value}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="esmo-hero__xp">
         <div className="esmo-hero__xp-topline">
-          <span>TEAM GROWTH / XP</span>
-          <strong>{compactWan(xp)} / {compactWan(xpMax)}</strong>
+          <span>CLUB PROGRESSION</span>
+          {/*  ⚠ 級距門檻由 domain 推導（`clubProgressToNextLevel`），畫面不自己算。 */}
+          <strong data-testid="home-club-xp-progress">
+            {clubProgress.intoLevel.toLocaleString("zh-Hant")} / {clubProgress.levelSpan.toLocaleString("zh-Hant")}
+            {clubProgress.toNext > 0 ? `　距 Lv.${clubProgress.level + 1} 還差 ${clubProgress.toNext.toLocaleString("zh-Hant")}` : ""}
+          </strong>
         </div>
-        <div className="esmo-hero__xp-track" aria-label={`戰隊 XP ${Math.round(xpPercent)}%`}>
-          <div className="esmo-hero__xp-fill" data-dashboard-progress style={{ transform: `scaleX(${Math.max(0, Math.min(1, xpPercent / 100))})` }} />
+        <div className="esmo-hero__xp-track" aria-label={`俱樂部經驗 ${clubProgress.percent}%`}>
+          <div className="esmo-hero__xp-fill" data-dashboard-progress style={{ transform: `scaleX(${Math.max(0, Math.min(1, clubProgress.percent / 100))})` }} />
         </div>
       </div>
     </header>
@@ -452,11 +470,7 @@ function Utility({ items, onSelect }) {
   );
 }
 
-function MobileTeamHeader({ team, meta, unread, xpPercent, onInbox, identity }) {
-  const achievement = numberOf(team.achievement ?? meta.achievement);
-  const level = numberOf(team.lv ?? meta.lv);
-  const xp = numberOf(team.xp ?? meta.xp);
-  const xpMax = numberOf(team.xpMax ?? meta.xpMax, 1);
+function MobileTeamHeader({ team, meta, unread, clubProgress, onInbox, identity }) {
   const week = numberOf(meta.week, 1);
 
   return (
@@ -479,7 +493,8 @@ function MobileTeamHeader({ team, meta, unread, xpPercent, onInbox, identity }) 
                  皮膚差最多的地方。 */}
             <span className="esmo-hero__crest-aura" data-testid="club-identity-aura" aria-hidden="true" />
             {team.emoji ?? "◈"}
-            <span className="esmo-mobile-header__crest-badge">{achievement}</span>
+            {/*  同桌機：這顆角標以前是種子常數 48，改標真實 Club Level。 */}
+            <span className="esmo-mobile-header__crest-badge" data-testid="home-crest-level">{clubProgress.level}</span>
           </div>
           <div className="esmo-mobile-header__copy">
             <div className="esmo-mobile-header__kicker">{team.tag ?? "ESMO SQUAD"}</div>
@@ -493,7 +508,7 @@ function MobileTeamHeader({ team, meta, unread, xpPercent, onInbox, identity }) 
               )}
             </h1>
             <div className="esmo-mobile-header__meta">
-              <span>Lv. {level}</span>
+              <span data-testid="home-club-level">Lv. {clubProgress.level}</span>
               <span>W{week}</span>
               {/*  F4：手機頁首刻意**只顯示總數**（不加本季成長）——這一列是三欄的
                    緊湊資訊列，塞第四個數字會擠壞。成長在桌機 hero 與賽季總結看得到。 */}
@@ -514,13 +529,16 @@ function MobileTeamHeader({ team, meta, unread, xpPercent, onInbox, identity }) 
         </div>
       </div>
 
-      <div className="esmo-mobile-header__xp">
+      {/*  Club Progression v1：手機版與桌機共用同一份 `clubProgressionView()`，
+           顯示的是「離下一級還差多少」，不是舊的 7.27萬／12.1萬 定值。 */}
+      <div className="esmo-mobile-header__xp" data-testid="home-club-xp-progress"
+        data-level={clubProgress.level} data-xp={clubProgress.xp}>
         <div className="esmo-mobile-header__xp-label">
-          <span>XP</span>
-          <strong>{compactWan(xp)} / {compactWan(xpMax)}</strong>
+          <span>CLUB XP</span>
+          <strong>{clubProgress.intoLevel.toLocaleString("zh-Hant")} / {clubProgress.levelSpan.toLocaleString("zh-Hant")}</strong>
         </div>
-        <div className="esmo-mobile-header__xp-track" aria-label={`Team XP ${Math.round(xpPercent)}%`}>
-          <div className="esmo-mobile-header__xp-fill" data-dashboard-progress style={{ transform: `scaleX(${Math.max(0, Math.min(1, xpPercent / 100))})` }} />
+        <div className="esmo-mobile-header__xp-track" aria-label={`Club XP ${Math.round(clubProgress.percent)}%`}>
+          <div className="esmo-mobile-header__xp-fill" data-dashboard-progress style={{ transform: `scaleX(${Math.max(0, Math.min(1, clubProgress.percent / 100))})` }} />
         </div>
       </div>
     </header>
@@ -787,7 +805,7 @@ function MobileBottomNav({ sheet, onTab }) {
   );
 }
 
-function MobileHome({ team, meta, finance, unread, xpPercent, activeMatchView, onResumeActive, primaryAction, quickActions, profile, players, developmentPoints, wk, sponsor, modes, onSelect, onOffSeason, identity }) {
+function MobileHome({ team, meta, finance, unread, clubProgress, activeMatchView, onResumeActive, primaryAction, quickActions, profile, players, developmentPoints, wk, sponsor, modes, onSelect, onOffSeason, identity }) {
   const [sheet, setSheet] = useState(null);
   //  底部 nav 的「競技」要捲到這一段，所以需要它的位置。
   const competeRef = useRef(null);
@@ -821,7 +839,7 @@ function MobileHome({ team, meta, finance, unread, xpPercent, activeMatchView, o
           <span><EsmoIcon name="signal" size={13} /> ESMO / COMMAND DECK</span>
           <span>W{numberOf(meta.week, 1)}</span>
         </div>
-        <MobileTeamHeader team={{ ...team, gold: finance.funds }} meta={meta} unread={unread} xpPercent={xpPercent} identity={identity} onInbox={() => onSelect("notify")} />
+        <MobileTeamHeader team={{ ...team, gold: finance.funds }} meta={meta} unread={unread} clubProgress={clubProgress} identity={identity} onInbox={() => onSelect("notify")} />
         <main className="esmo-mobile-home__content">
           <MobilePrimaryAction activeMatchView={activeMatchView} onResumeActive={onResumeActive} action={primaryAction} />
           {/*  ── V3：手機也必須推得動世界時間 ──────────────────────────────
@@ -870,9 +888,23 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
   const fc = profile.cashForecast();
   const sponsor = profile.activeSponsor ? resolveSponsor(profile.activeSponsor.id) : null;
   const finBars = finance.weekly9 ?? [6, 4, 5, 3, 2, 9, 5, 6, 4];
-  const xp = numberOf(team.xp ?? meta.xp);
-  const xpMax = Math.max(1, numberOf(team.xpMax ?? meta.xpMax, 1));
-  const xpPercent = Math.max(0, Math.min(100, xp / xpMax * 100));
+  //  Club Progression v1：首頁的等級／XP **一律**來自這個 selector。
+  //  ⚠ 舊的 `team.xp / team.xpMax / team.lv` 已經不再被讀——它們是永遠不動的
+  //    種子常數，留在畫面上只會讓玩家以為自己在成長。
+  const clubProgress = typeof profile.clubProgressionView === "function"
+    ? profile.clubProgressionView()
+    : { level: 1, xp: 0, intoLevel: 0, levelSpan: 1, toNext: 0, percent: 0 };
+  //  第三格：**真的有語意的榮譽**，不再編一個 badge 號碼。
+  //  順序：打出來的稱號（earned）→ 年度冠軍次數 → 誠實的空狀態。
+  //  ⚠ 用點數買來的稱號不進這一格——它已經掛在隊名旁邊，而且「買到的」不是榮譽。
+  const honorStat = (() => {
+    if (identity?.titleLabel && identity.titleEarned) {
+      return { label: "榮譽稱號", value: identity.titleLabel, empty: false };
+    }
+    const champs = typeof profile.annualChampionCount === "function" ? profile.annualChampionCount() : 0;
+    if (champs > 0) return { label: "年度冠軍", value: `${champs} 次`, empty: false };
+    return { label: "榮譽", value: "尚無", empty: true };
+  })();
   const activeMatchView = typeof profile.activeMatchView === "function" ? profile.activeMatchView() : null;
   const comp = profile.competitionView();
   const bracketBadge = !comp.hasSeason ? "進入聯賽"
@@ -1004,7 +1036,7 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
           meta={meta}
           finance={finance}
           unread={unread}
-          xpPercent={xpPercent}
+          clubProgress={clubProgress}
           activeMatchView={activeMatchView}
           onResumeActive={onResumeActive}
           primaryAction={priority}
@@ -1027,7 +1059,7 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
           <span className="esmo-dashboard__brand-caption">WEEK {numberOf(meta.week, 1)}</span>
         </div>
 
-        <TeamHero team={{ ...team, gold: finance.funds }} meta={meta} unread={unread} xpPercent={xpPercent} fansAtSeasonStart={comp.fansAtSeasonStart ?? null} identity={identity} onInbox={() => sel("notify")} />
+        <TeamHero team={{ ...team, gold: finance.funds }} meta={meta} unread={unread} clubProgress={clubProgress} honorStat={honorStat} fansAtSeasonStart={comp.fansAtSeasonStart ?? null} identity={identity} onInbox={() => sel("notify")} />
 
         <div className="esmo-dashboard__layout">
           <main className="esmo-dashboard__main-column">

@@ -357,7 +357,7 @@ export default function ClubAssetsScreen({ onBack }) {
 
         {/*  ⚠ 這句要寫在畫面上：玩家看到「聘用」會擔心花掉的點數讓等級掉下去。 */}
         <div className="ca__note ca-rise" style={{ "--ca-delay": "330ms" }} data-testid="club-assets-note">
-          聘用只花可用點數，不影響累計 {view.clubPointsLifetime} 點——俱樂部等級看累計，不會因為花錢而下降。
+          聘用只花可用點數，不影響累計 {view.clubPointsLifetime} 點——俱樂部聲望看累計，不會因為花錢而下降。
           三位教練專長不同、沒有高低之分，價格只代表開放的先後。教練的效果只在生涯模式生效，不進線上競技。
         </div>
       </div>
