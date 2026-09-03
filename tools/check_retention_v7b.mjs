@@ -70,15 +70,50 @@ ck("D3) 日目標每一個都是「做一次」（10–20 分鐘的量體）",
   O.OBJECTIVE_POOLS.daily.every((d) => d.target === 1),
   O.OBJECTIVE_POOLS.daily.map((d) => `${d.id}=${d.target}`).join(" "));
 
-ck("D4) 日目標**一個都不要求正式季賽**（季賽是賽程排定的，不是想打就有）",
-  O.OBJECTIVE_POOLS.daily.every((d) => !/季賽|賽程|聯賽|巡迴|冠軍/.test(`${d.name}${d.desc}`)),
-  O.OBJECTIVE_POOLS.daily.map((d) => d.name).join("／"));
+//  ── D4 改寫（Retention Economy Calibration v1，2026-09-04）─────────────────
+//  舊版是**字串比對**：`desc` 出現「賽程」就算違規。校準後「今日出賽」的說明
+//  是「打 1 場一般對戰或正式賽程」——賽程是**選項之一**，不是要求，舊斷言把它
+//  讀成要求而變紅。改成**行為斷言**（比字串比對強）：餵一天只有一般對戰／
+//  訓練／球探的活動，證明日目標**不靠任何正式賽程**就全部推得動。
+//  一般對戰隨時開得出來，只受每日 3 場容量限制（`COMPETITIVE_BLOCK`）。
+ck("D4) 日目標**一個都不要求正式季賽**（沒有賽程的日子也全部推得動）", (() => {
+  const c = S.coordsOf({ day: 5, week: 1, year: 1 });
+  let r = S.emptyRetention();
+  for (let i = 0; i < 3; i++) {
+    r = S.recordMatchActivity(r, {
+      matchSource: "competitive", win: true, income: 100_000,
+      appeared: [{ id: "p1", age: 23 }, { id: "p2", age: 21 }, { id: "p3", age: 24 },
+        { id: "p4", age: 22 }, { id: "p5", age: 20 }],
+    }, c);
+  }
+  r = S.recordTrainingActivity(r, c);
+  r = S.recordScoutActivity(r, c);
+  const v = S.retentionViewOf(r, { coords: c, teamId: TEAM, leagueRank: null, circuitPoints: 0 });
+  return v.daily.items.every((i) => i.done);
+})(), O.OBJECTIVE_POOLS.daily.map((d) => d.name).join("／"));
 
-ck("D5) 日目標導向的是快速對戰／一般對戰／訓練／球探",
-  (() => {
-    const ids = new Set(O.OBJECTIVE_POOLS.daily.map((d) => d.id));
-    return ids.has("play") && ids.has("train") && ids.has("scout") && ids.has("tryout");
-  })());
+//  ── D5 改寫（Retention Economy Calibration v1，2026-09-04）─────────────────
+//  舊版要求日目標池裡**必須有** `tryout`（「打 1 場快速對戰」）。那一條在本輪被
+//  移除，因為它與新的產品規則直接矛盾：**快速練習的永久 Club Points 必須是 0**。
+//  實測校準前它可以換到 1,010 CP/季（Natural 玩家整季的 65%）。
+//  ⚠ 這是**產品決策被取代**，不是為了讓 gate 綠而放寬斷言——新的斷言反而更嚴：
+//    不只要求訓練／球探這兩條「沒有賽程的日子的自然路線」存在，還直接證明
+//    **打再多快速練習也點不亮任何一格**。
+ck("D5) 日目標導向的是一般對戰／訓練／球探，且沒有一項靠快速練習", (() => {
+  const ids = new Set(O.OBJECTIVE_POOLS.daily.map((d) => d.id));
+  if (!(ids.has("play") && ids.has("train") && ids.has("scout"))) return false;
+  const c = S.coordsOf({ day: 5, week: 1, year: 1 });
+  let r = S.emptyRetention();
+  for (let i = 0; i < 10; i++) {
+    r = S.recordMatchActivity(r, {
+      matchSource: "practice", win: true, income: 500_000,
+      appeared: [{ id: "p1", age: 20 }, { id: "p2", age: 20 }, { id: "p3", age: 23 },
+        { id: "p4", age: 24 }, { id: "p5", age: 22 }],
+    }, c);
+  }
+  const v = S.retentionViewOf(r, { coords: c, teamId: TEAM, leagueRank: null, circuitPoints: 0 });
+  return v.daily.items.every((i) => !i.done);
+})());
 
 //  ⚠ 週目標的主題是輪替。至少要有「不同選手」與「不同陣容」兩種去重目標，
 //    否則整組就退化成「多打幾場」。
