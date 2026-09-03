@@ -17547,3 +17547,44 @@ evaluate 撞上）。那是逾時的餘波，不是另一個獨立問題。真�
 - `tools/browser/cdp.mjs` **維持原樣未動**——48 支未遷移的 gate 都還靠它，
   在它們遷移完成前改它風險過高。
 - TD-56、Android 真機驗收、Club Progression Contract 實作：均未動。
+
+## CS Android Owner Review V2（2026-09-04，本地 preview）
+
+狀態：`CS_ANDROID_OWNER_REVIEW_V2_READY`。本輪以 `origin/main` 最新 remote truth
+`9d3cb2d03d2024d9ce6a65b0f88406ab4f91710b` 建立獨立 worktree／branch
+`cs/android-owner-review-v2`；只處理 CS Battle / presentation，**未 merge、未 push、未 deploy**。
+
+### Scope boundary
+
+- HUD 移除玩家不可理解的 WebGL／simulation／snapshot／render／engine 文案；debug 路線
+  helper 改為必須顯式 `?fpsDebug=1` 才顯示。
+- 三個 tactical camera preset 使用 900ms 平滑 position／target transition；保留 manual
+  rotate／pan／pinch override；新增選手 head/eye follow 的 `第一人稱` POV 與切人。
+- C4 carrier、dropped、planted 使用同一 authoritative frame 的明確 C4 presentation；
+  player card icon 改為 armor／helmet／flash／grenade／smoke／C4／weapon 語意 SVG。
+- 黃／白 persistent helper marker 不再由 production route overlay 顯示；selection ring
+  只留給真正選中的角色；ground C4 使用明確模型，不再只畫 generic red circle。
+- combat root cause 為 round-live `15%` progress lock 抑制 locomotion interruption；
+  最小修正為只保留 buy phase lock，未改 tactic／navigation／weapon balance authority。
+- utility audio 以 `public/audio/cs/c5a2/` 的單一 CC0 recorded sample、spatial gain/pan
+  cue 取代 utility synthetic fallback；gunfire cadence authority 未改。來源 ledger 見
+  `public/audio/cs/c5a2/SOURCES.md`。
+
+### Verification
+
+- `node tools/browser_check_cs_android_owner_review_v2.mjs`：390×844 三圖 `95/95 PASS`；
+  desktop 1366×900 三圖 `95/95 PASS`。包含 HUD copy、preset transition、POV／切人／
+  manual camera、C4 三狀態、marker、icon、combat audit、locomotion／cover、audio assets、
+  overflow 與 console/page errors。
+- `node tools/check_cs_c5b_route_interrupt.mjs`：exit `0`；Mirage／Dust II／Inferno
+  route interrupt、first-shot latency、weapon cadence、navigation safety 全 PASS。
+- `node tools/check_cs23.mjs`：`28/28`；`npm run build`：PASS（保留既有 large-chunk warning）。
+- Node／CDP 只代表 desktop 與 390px emulation；Android GPU／FPS／真 touch pinch／
+  rotate／喇叭體感仍待 Owner 真機驗收。
+
+### 明確未做
+
+未修改 profile persistence／profileStore、Club XP／Level／Points、match settlement、
+reward summary、Home／Club Mastery、shared progression Store、Dashboard、Club Identity、
+Club Assets、Meta、AppShell、CBR／Rating、weapon balance、economy、Competition／Season 或
+tactic-sync authority；未開始下一個 Sprint。
