@@ -169,6 +169,30 @@ runner 對每個子行程設 `ESMO_VERIFY_FLAT=1` ⇒ fan-out 腳本跳過巢狀
 關閉鈕固定頂部；小地圖在 safe area。響應式判斷唯一來源 `src/ui/useViewport.js`。
 **Node 驗不了視覺 / FPS / 觸控** ⇒ 交付時列「未經真機實測」清單交使用者驗收。
 
+### Owner Preview 的交付方式（2026-09-03 起）
+
+Ray 的實際環境：**手機吃 4G，電腦連手機熱點**。兩台裝置不在同一個區網，
+所以 `localhost` 與區網 IP（`--host` 印出來的那個 `192.168.x.x`）
+**手機一律連不上**。過去每次給區網位址都是白給。
+
+| 驗收對象 | 交付方式 |
+|---|---|
+| 桌機 | `localhost` preview（`node node_modules/vite/bin/vite.js --port <port>`） |
+| **手機** | **臨時對外 HTTPS tunnel**，優先 Cloudflare Quick Tunnel |
+
+```
+cloudflared tunnel --url http://localhost:<preview-port>
+```
+
+規則：
+
+1. **先檢查 `cloudflared` 在不在**（`where cloudflared` / `Get-Command cloudflared`）。
+2. **不在就先回報，不要自己裝。** 安裝 tunnel client 屬於全域環境變更，
+   要 Ray 當次同意才做。
+3. tunnel **只用於 Owner Review**，驗收結束就關掉——那是一個對外開放的網址。
+4. Quick Tunnel 每次啟動網址都不同，**不要把網址寫進任何文件或 commit**。
+5. tunnel 不取代桌機 preview；兩個並存，桌機仍走 localhost。
+
 ## UI 呈現原則（2026-08-04 起，適用**所有**新功能）
 
 Ray 的長期要求：功能上 UI 時，**優先做成圖形化、好操作的介面**，而不是純數字或表格。

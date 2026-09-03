@@ -17208,3 +17208,79 @@ pack、付費商城、教練合約生命週期、push／deploy。**也沒有順�
   已記錄、排在 release 之後獨立處理。
 - **Android 驗證**：pending，不阻塞本次發布。
 - **Club Identity**：下一個 Club Points sink，尚未開始。
+
+---
+
+## Club Identity v2 + Dashboard Scroll P0（2026-09-03，`feature/club-identity-v1`）
+
+Owner Review 判定 Club Identity v1 `REVISE_BEFORE_RELEASE`（主題只換色、
+隊徽只換框線、稱號只有自己看得到）。本輪回應該次退回，並修掉 Owner 在桌機
+實際使用時發現的首頁捲動問題。**未整合 latest main、未 push、未 deploy。**
+
+### 完成項
+
+1. **Dashboard Scroll P0（根因已量到，不是猜的）**
+   `.esmo-dashboard` 是 `height:100% + overflow:auto + overscroll-behavior:contain`。
+   AppShell 走 Global Scroll Contract 後父層只有 `minHeight` ⇒ `100%` 退化成 auto
+   ⇒ 那是一個 `scrollHeight === clientHeight` 的**捲不動的捲動容器**：滾輪被它
+   接走，`overscroll-behavior:contain` 又不還給 document。
+   CDP `Input.dispatchMouseEvent` 實測：修前桌機／390px 皆 **0px**；
+   修後桌機 **747px**、390px **228px**，且都捲得到底。
+   390px 另外連帶修好：底部導覽原本被推到 y=993（viewport 外）而點不到，
+   現在 `position: fixed`。Modal／sheet backdrop 一併改 `fixed`
+   （文件會長高，`absolute` 會置中在文件中央＝螢幕外）。
+
+2. **Club Identity v2 — Management UI Skin**
+   主題不再只是兩個 CSS 顏色。三套皮膚各自決定**光向／材質／是否有動態**：
+   午夜藍＝頂燈＋資料格線＋掃描光暈；餘燼橙＝底部爐火＋熱斑＋呼吸光暈；
+   常青綠＝無方向平光＋織紋＋**刻意完全靜止**。
+   簽名元素是隊徽光暈（`.esmo-hero__crest-aura`），也是整個 Dashboard
+   **唯一**的常駐動態；只動 transform／opacity。
+
+3. **Banner / Crest 語意修正（release 前唯一一次改名）**
+   `clubBanner` 舊語意其實只畫隊徽外框。拆成兩個槽：
+   `clubCrestFrame`（小型，`crest_*`）與 `clubBanner`（大面積主視覺，`banner_*`）。
+   assetId 一併改名——型錄尚未 release，這是唯一還能改名的時機；
+   之後只能 `retired: true`。Permanent Ownership Guard 不變（`owned` 只增不減）。
+
+4. **Title 來源分流**
+   新增硬欄位 `source: identity | earned`。`earned` 的 `priceClubPoints` 必須是
+   `null`，並帶 `earnedRequirement`；`purchaseAsset()` 直接回 `earned_only`
+   （擋在 domain，不是靠 UI 不畫按鈕）。
+   王朝改成 earned（3 次年度冠軍），新增「冠軍」（1 次）。資料源是
+   `competition/honors.js` 的 `teamHonorCount`，**沒有新造任何成就資料**。
+
+5. **Social Identity v1 — 公開俱樂部識別契約 ＋ Opponent Club Card**
+   新增 `src/platform/identity/publicClubIdentity.js`：公開欄位的唯一契約，
+   內含 `FORBIDDEN_PUBLIC_FIELDS` 禁列與 `assertPublicSafe()`（doctrine／
+   headCoach／capability／tactic／matchPrep／lineup／scout／mastery 一律不得外流）。
+   MOBA 積分榜任一列可點開對手俱樂部卡。AI 俱樂部只借自己 seed 的隊色，
+   **不會**拿到玩家花點數買的皮膚／橫幅／隊徽框。
+
+6. **Club Progression / Economy 稽核**
+   `docs/design/ClubProgression_現況與Contract_v1.md`：CURRENT STATE 資料圖、
+   Owner 六問逐條回答（附 `檔案:行號`）、Club Points 產量估算、
+   Club Progression Contract v1 提案與 monetization boundary。
+   **本輪沒有改任何 progression 行為。**
+
+### 驗證（實跑，輸出見回報）
+
+- `npm run build` 通過
+- `check_club_identity_v1`（已擴充到 v2）**83/83 PASS**
+- `browser_check_club_identity_ui`（已擴充：滾輪／觸控／四槽／三套皮膚差異／
+  對手卡禁列／reduced-motion）**129/129 PASS**
+- `regress` 15/15、`regress2` 8/8、`check_club_assets_v1` 105/105、
+  `check_capability_authority` 15/15、`check_cs23` 28/28、`check_flow09`、`check_dash10`
+
+### 未處理 / 待決
+
+- **未整合 `origin/main` 99928d8**（Owner 指示：等 UI 驗收通過再一次性整合）。
+- **未 commit、未 push、未 deploy。**
+- **4G 手機驗收**：`cloudflared` 未安裝，已回報等 Owner 決定（安裝屬全域環境變更）。
+- **Skill Atlas**（`skill-atlas-dashboard.hsirung.chatgpt.site`）回 401，
+  且 Claude 的 Chrome extension 未連線 ⇒ 本輪無法查閱該清單。
+- **經濟不平衡（本輪找到、未修）**：週目標門檻是照「每日 3 場容量」算的
+  （`retentionObjectives.js:118-122`），但實際賽程每週只給約 1.17 場正式賽
+  ⇒ 一般玩家幾乎領不到週目標，與高活躍玩家的產量差 4 倍以上。
+- **Browser gate 會漏掉 dev server**：本輪兩次因 port 5383 未釋放而假紅
+  （`server.stop()` 不可靠）。屬 Browser Harness Reliability，本輪未動。
