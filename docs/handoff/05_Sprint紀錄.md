@@ -17547,3 +17547,69 @@ evaluate 撞上）。那是逾時的餘波，不是另一個獨立問題。真�
 - `tools/browser/cdp.mjs` **維持原樣未動**——48 支未遷移的 gate 都還靠它，
   在它們遷移完成前改它風險過高。
 - TD-56、Android 真機驗收、Club Progression Contract 實作：均未動。
+
+---
+
+## Sprint：Club Progression v1（2026-09-04）
+
+分支 `feature/club-progression-v1`，基線 `9d3cb2d`（已 `git fetch origin` 核對過，
+遠端沒有前進）。**本地 commit，未 push、未部署**，等 Owner Review。
+
+### 問題
+
+首頁的 `Lv.93` / `XP 7.27萬` / `BADGE #48` 是 `profileStore` 的 `DEFAULT` 種子常數，
+**全庫沒有任何 writer**（grep 過 `profileStore.js` 與 `applyMatchProgress.js` 的 `nextState`）。
+打幾百場都不會動。同時「Club Level」這個詞在首頁與俱樂部專精頁各指一件事——
+後者其實是 `clubTierOf(clubPointsLifetime)` 的五階。
+
+### 做了什麼
+
+建立**真正獨立**的 canonical Club XP，而不是把 `clubPointsLifetime` 改名。
+
+- `src/platform/progression/clubProgression.js`（新）：曲線、`clubLevelOf` / `clubXpForLevel` /
+  `clubProgressToNextLevel`、normalize、bootstrap、授予公式、view。**Level 一律推導、不落盤**。
+- 授予點只有一個：`applyProgressToState()`。掛在那裡的理由跟 retention / mastery 一樣——
+  它是全專案唯一的結算入口，掛別處一定會漏掉某一種來源（TD-35 的形狀），
+  而且它已經有 `transactionId` 冪等保護，不必再造第二套。
+- receipt 加 `club` 區塊 → MOBA / CS **共用**的 `RewardReceiptPanel` 顯示「俱樂部 XP」與升級提示。
+  兩個 Result 畫面都不重算，各自的 Result UI 一行都沒改。
+- 首頁桌機＋手機改讀 `clubProgressionView()`；假的三個數字全部移除。
+  第三格改成真有語意的榮譽（earned title → 年度冠軍次數 → 誠實空狀態「尚無」）。
+- 俱樂部專精那張卡補上標籤「**俱樂部聲望**」；`clubLevel` 欄位改名 `prestige`。
+  Club Mastery 的流派／專精進度／戰術變體**一行邏輯都沒改**。
+
+### Migration 決策（有實際量測才決定）
+
+`floor(clubPointsLifetime × 0.5)` 一次性 bootstrap。**沒有**採用 `team.lv/xp`——
+那是假常數，搬進新系統等於把假資料洗成規格。也沒有歸零（會懲罰老玩家）。
+累計 4,000 點 ⇒ 2,000 XP ⇒ Lv.7。Bootstrap 只做一次，之後兩者正式分離。
+理由與量級表寫在 `docs/design/ClubProgression_現況與Contract_v1.md` 第四節。
+
+### 量級投影（勝率 50%，一季 = 常規賽 14 場）
+
+一季 2,625 XP → **Lv.8**；三季 7,875 → **Lv.12**；十季 26,250 → **Lv.19**。
+一場正式賽 150–225 XP、一場一般競技 60–90 XP、快速練習 **0**。
+
+### 驗證（全部實跑）
+
+| 驗證 | 結果 |
+|---|---|
+| `npm run build` | ✓ `built in 9.72s` |
+| `tools/check_club_progression_v1.mjs`（新） | **36/36** |
+| `tools/browser_check_club_progression_home.mjs`（新，Harness v1，桌機＋390px） | **55/55 PASS** |
+| `browser_check_club_mastery_ui` | 68/68 PASS |
+| `browser_check_club_identity_ui` | 129/129 PASS |
+| `check_club_identity_v1`（欄位改名後） | 83/83 |
+| `check_club_mastery_v1` / `check_club_assets_v1` / `check_cs23` | PASS |
+| `regress` / `regress2` | ✓ / 節奏門檻 8/8 |
+
+新 gate 第一次跑是 `HARNESS_FAIL`（我在 gate 腳本裡呼叫了不存在的 `store.go()`），
+**22/22 產品斷言全過、被正確分類成 harness 問題，沒有誣賴產品**——
+改成點擊真實入口導航後 55/55 PASS。這是 Browser Harness v1 分類機制的又一次實戰驗證。
+
+### 未做（明確留給下一輪）
+
+- **Retention Economy Calibration** 整輪未做：週目標門檻對齊供給量、Club Points 產量與售價重估、
+  Club XP 曲線正式校準、Club Level 要不要給實質回饋、冠軍額外 XP。契約已留位置，未接。
+- 48 支 legacy browser gate 仍未 migrate（本輪只新增一支 Harness v1 gate，未開 batch 2）。
+- TD-56、Club Facilities、真錢商城：均未動。
