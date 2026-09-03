@@ -17761,3 +17761,25 @@ Club Level milestone 只出設計提案（DESIGN ONLY / NOT IMPLEMENTED，7 條�
 Club Asset 價格節奏、TD-56（仍 OPEN）、Club Facilities（仍 NOT STARTED）、
 商城／真錢、legacy gate 遷移 batch、CS runtime／CBR／Rating：全部未動。
 Retention UI 未改版（現行畫面已能回答「做什麼／進度／獎勵／狀態」四問）。
+
+
+### Release（2026-09-04）
+
+Owner Review 通過，正式發布。
+
+| 項目 | 值 |
+|---|---|
+| ORIGIN_MAIN_SHA（發布前） | `cc46f98a021510e6c2eeaf21fd3f154de4997e58`（fetch 後確認未前進） |
+| FINAL_MAIN_SHA | **`e572862d39b4bc1420dbc47afcd636b70e62392a`** |
+| push | fast-forward `cc46f98..e572862`，非 force |
+| Pages workflow | `33802726698` — **success** |
+| 正式站 smoke | `browser_check_prod_retention_economy_release` **52/52 PASS**（桌機＋390px） |
+
+因為 `origin/main` 未前進，本次是純 fast-forward，**沒有任何整合工作**，
+也就沒有機會回退 CS runtime／Club Progression v1／Browser Harness v1。
+最終 diff 7 檔，`src/` 只有 `retention/retentionObjectives.js` 一個。
+
+⚠ 正式站 smoke 的「卡片上顯示的是校準後的門檻」那一條，實際被抽到的卡片是
+`volume / rotate / circuit / finance`（＋日目標與 rank／youth）——
+`fixtures` 與 `streak` 那一天沒被抽到，因此**沒有在畫面上逐字驗到**；
+它們由 bundle 字串檢查（§D）與 dev gate 的 30/30 覆蓋。
