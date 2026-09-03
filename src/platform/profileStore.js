@@ -128,7 +128,7 @@ import {
 //    而且那兩個 history 都只在**換季**時寫入，年度冠軍在封存當下就產生了。
 import {
   recordPendingHonors, annualChampionsOf, latestAnnualChampion,
-  teamHonorCount, honorsOf, HONOR_TYPES, honorsByType,
+  teamHonorCount, honorsOf, HONOR_TYPES, HONOR_LABELS, honorsByType,
 } from "./competition/honors.js";
 import { playoffBracket, playoffOrder } from "./competition/playoffs.js";
 import { asiaCircuitEnabled } from "../featureFlags.js";
@@ -162,14 +162,18 @@ import {
 //  Club Assets v1：俱樂部能力的唯一權威（發展樹 ＋ 裝備中的總教練）。
 import { clubCapabilitiesOf } from "./assets/clubCapabilities.js";
 import { COACH_CATALOG } from "./assets/coachCatalog.js";
-import { IDENTITY_CATALOG } from "./assets/identityCatalog.js";
+import { IDENTITY_CATALOG, isEarnedIdentity } from "./assets/identityCatalog.js";
 import {
   emptyClubAssets, normalizeClubAssets,
   purchaseAsset as purchaseAssetIn,
   equipHeadCoach as equipHeadCoachIn,
   equipIdentity as equipIdentityIn,
+  grantEarnedIdentity as grantEarnedIdentityIn,
   clubAssetsViewOf, identityViewOf, identityPresentationOf,
 } from "./assets/clubAssetsState.js";
+//  Club Identity v2：公開俱樂部卡的唯一契約（自己與對手共用，禁列在該檔）。
+import { publicClubCardOf, neutralIdentityOf } from "./identity/publicClubIdentity.js";
+import { aiTeamById } from "./competition/aiTeams.js";
 import { createMatchEntryRequest, validateMatchEntryRequest } from "./contracts/matchEntry.js";
 import {
   TICKET_STATES, createTicket, transitionTicket, isActiveTicket,
@@ -3825,14 +3829,107 @@ export const useProfileStore = create((rawSet, get) => {
     return { ok: true, reason: null, code: null, headCoachId: r.assets.headCoachId, firstEquip: r.firstEquip };
   },
 
-  // ── Club Identity v1：外觀收藏（與教練共用 owned，裝備規則不同）──────
+  // ── Club Identity v2：外觀收藏（與教練共用 owned，裝備規則不同）──────
+  /**
+   * 我拿過幾次年度冠軍。**earned 稱號唯一認可的實績來源**。
+   *
+   * ⚠ 讀的是 `honors[]`——那是從已封存賽事推導出來的 append-only 紀錄
+   *   （`competition/honors.js` 檔頭），不是可以自由寫入的計數器。
+   *   MOBA 亞洲年度冠軍與 CS 年度冠軍**都算**：兩邊都是年度冠軍，
+   *   只認一邊會讓 CS 玩家永遠拿不到稱號。
+   */
+  annualChampionCount() {
+    const myTeamId = get().team?.id ?? null;
+    if (!myTeamId) return 0;
+    const h = honorsOf(get().honors);
+    return teamHonorCount(h, myTeamId, { honorType: HONOR_TYPES.asiaAnnualChampion })
+      + teamHonorCount(h, myTeamId, { honorType: HONOR_TYPES.csAnnualChampion });
+  },
+
+  /**
+   * 把達標的實績稱號授予自己。**冪等**：已擁有就什麼都不做。
+   *
+   * 由 `identityView()` 在讀取時順手呼叫，所以玩家拿到年度冠軍之後
+   * 一打開俱樂部資產頁就會看到稱號已經在手上——不需要另外一個「領取」步驟，
+   * 也就沒有「忘了領」這種狀態。
+   */
+  syncEarnedIdentities() {
+    const champions = get().annualChampionCount();
+    const week = deriveTime(get().meta?.days).week;
+    let assets = get().clubAssets;
+    let granted = [];
+    for (const asset of IDENTITY_CATALOG) {
+      if (!isEarnedIdentity(asset)) continue;
+      const r = grantEarnedIdentityIn(assets, asset.assetId, { annualChampionCount: champions, careerWeek: week });
+      if (r.ok) { assets = r.assets; granted.push(asset.assetId); }
+    }
+    if (!granted.length) return { granted: [] };
+    set({ clubAssets: assets });
+    get().save();
+    return { granted };
+  },
+
   /** 外觀型錄要的一整包。 */
   identityView() {
     const r = get().retentionView();
+    //  ⚠ 先授予再組 view，否則剛拿到冠軍的那一刻畫面會顯示「未取得」。
+    get().syncEarnedIdentities();
     return identityViewOf(get().clubAssets, {
       catalog: IDENTITY_CATALOG,
       clubPoints: r.clubPoints,
       clubPointsLifetime: r.clubPointsLifetime,
+      annualChampionCount: get().annualChampionCount(),
+    });
+  },
+
+  /**
+   * 一張公開俱樂部卡。**對外呈現的唯一入口**（自己與對手共用同一份契約）。
+   *
+   * ⚠ 公開欄位由 `platform/identity/publicClubIdentity.js` 的禁列把關：
+   *   主義／總教練／戰術／賽前準備一律不得出現。畫面不要自己多讀 profile。
+   *
+   * @param {string|null} teamId `null` 或自己的 id ⇒ 自己的卡。
+   */
+  publicClubCard(teamId = null) {
+    const myTeamId = get().team?.id ?? null;
+    const isMe = !teamId || teamId === myTeamId;
+
+    //  積分榜是公開資料：名次／勝敗／積分本來就印在榜上。
+    const rows = get().competitionView()?.standings?.rows ?? [];
+    const row = rows.find((r) => r.teamId === (isMe ? myTeamId : teamId)) ?? null;
+    const record = row
+      ? { rank: row.rank, wins: row.wins, losses: row.losses, points: row.points }
+      : null;
+
+    //  榮耀同樣是已封存的公開結果。
+    const honors = honorsOf(get().honors)
+      .filter((h) => h?.championTeamId === (isMe ? myTeamId : teamId))
+      .map((h) => ({ label: HONOR_LABELS[h.honorType] ?? h.honorType, season: h.season, gameMode: h.gameMode }));
+
+    if (isMe) {
+      const team = get().team ?? {};
+      return publicClubCardOf({
+        teamId: myTeamId,
+        name: team.name,
+        tag: team.tag,
+        emoji: team.emoji,
+        identity: identityPresentationOf(get().clubAssets),
+        clubLevel: get().retentionView()?.tier ?? null,
+        record, honors, isMe: true,
+      });
+    }
+
+    const ai = aiTeamById(teamId);
+    return publicClubCardOf({
+      teamId,
+      name: ai?.name ?? row?.name ?? teamId,
+      tag: ai?.tag ?? null,
+      emoji: ai?.emoji ?? "◆",
+      //  ⚠ AI 俱樂部**不會**拿到玩家花點數買的 skin／banner／crest frame。
+      //    它只借自己 seed 裡本來就有的隊色（見 neutralIdentityOf 的理由）。
+      identity: neutralIdentityOf(ai?.color ?? null),
+      clubLevel: null,
+      record, honors, isMe: false,
     });
   },
 

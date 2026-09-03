@@ -36,8 +36,12 @@ const {
 const { ALL_ASSETS, assetById, validateCatalogUnion, isCosmetic } = unionMod;
 const {
   emptyClubAssets, normalizeClubAssets, purchaseAsset, equipIdentity, equipHeadCoach,
+  grantEarnedIdentity,
   identityPresentationOf, identityViewOf, ASSET_FAIL,
 } = stateMod;
+//  v2：公開識別契約（對手俱樂部卡共用的那一份）。
+const publicMod = await imp("src/platform/identity/publicClubIdentity.js");
+const { publicClubCardOf, assertPublicSafe, neutralIdentityOf } = publicMod;
 const { clubCapabilitiesOf, emptyCapabilities } = capMod;
 const { emptyRetention, spendClubPoints, clubTierOf } = retentionMod;
 
@@ -49,8 +53,8 @@ console.log("\n── ① 型錄 ──");
 const errs = validateIdentityCatalog();
 ck("識別型錄自我驗證無錯誤", errs.length === 0, errs.join(" / ") || "clean");
 eq("兩份型錄合起來沒有重複 id", validateCatalogUnion(), []);
-ck("數量在 6–9 之間", IDENTITY_CATALOG.length >= 6 && IDENTITY_CATALOG.length <= 9, `${IDENTITY_CATALOG.length} 件`);
-eq("三種型別都有", [...new Set(IDENTITY_CATALOG.map((a) => a.type))].sort(), [...IDENTITY_TYPE_LIST].sort());
+ck("數量在 8–16 之間", IDENTITY_CATALOG.length >= 8 && IDENTITY_CATALOG.length <= 16, `${IDENTITY_CATALOG.length} 件`);
+eq("四種型別都有", [...new Set(IDENTITY_CATALOG.map((a) => a.type))].sort(), [...IDENTITY_TYPE_LIST].sort());
 ck("每種型別至少 2 件",
   IDENTITY_TYPE_LIST.every((t) => IDENTITY_CATALOG.filter((a) => a.type === t).length >= 2));
 ck("沒有 rarity / presentationTier / 星等欄位",
@@ -71,9 +75,9 @@ ck("每一件都是 cosmeticNeutral",
   IDENTITY_CATALOG.every((a) => a.competitivePolicy === "cosmeticNeutral"));
 //  ⚠ 真的裝上去也不能長出能力——契約寫得再好，行為才算數。
 {
-  const owned = buyAll(["theme_ember", "title_ironclad", "banner_laurel"]);
+  const owned = buyAll(["theme_ember", "title_ironclad", "crest_laurel", "banner_halo"]);
   let A = owned;
-  for (const id of ["theme_ember", "title_ironclad", "banner_laurel"]) A = equipIdentity(A, id).assets;
+  for (const id of ["theme_ember", "title_ironclad", "crest_laurel", "banner_halo"]) A = equipIdentity(A, id).assets;
   eq("三件外觀全裝上之後，教練能力仍為空",
     clubCapabilitiesOf({ developmentEffects: {}, clubAssets: A }).sources.coach, emptyCapabilities());
   eq("合併後的能力也沒有被外觀影響",
@@ -159,7 +163,7 @@ eq("空袋子有三個外觀槽", Object.keys(emptyClubAssets().equippedIdentity
   eq("卸下後該槽為 null", c1.assets.equippedIdentity.themeId, null);
   ck("重複卸下被拒", equipIdentity(c1.assets, null, { slot: IDENTITY_SLOT_OF.clubTheme }).ok === false);
   //  沒買不能裝。
-  ck("沒買的外觀不能裝", equipIdentity(A0, "banner_laurel").ok === false);
+  ck("沒買的外觀不能裝", equipIdentity(A0, "crest_laurel").ok === false);
   ck("重複裝備現用的被拒", equipIdentity(e3.assets, "title_rising").ok === false);
 
   //  ⚠ 教練週鎖完全不受外觀影響。
@@ -168,11 +172,11 @@ eq("空袋子有三個外觀槽", Object.keys(emptyClubAssets().equippedIdentity
 }
 //  裝備狀態要能 reload。
 {
-  let A = buyAll(["banner_hex"]);
-  A = equipIdentity(A, "banner_hex").assets;
+  let A = buyAll(["crest_hex"]);
+  A = equipIdentity(A, "crest_hex").assets;
   const reloaded = normalizeClubAssets(JSON.parse(JSON.stringify(A)));
-  eq("reload 後外觀仍裝備著", reloaded.equippedIdentity.bannerId, "banner_hex");
-  eq("reload 後呈現 token 仍算得出來", identityPresentationOf(reloaded).bannerPattern, "hex");
+  eq("reload 後外觀仍裝備著", reloaded.equippedIdentity.crestFrameId, "crest_hex");
+  eq("reload 後呈現 token 仍算得出來", identityPresentationOf(reloaded).crestPattern, "hex");
 }
 //  裝備 fail closed：存檔被手改成裝了沒買的東西 ⇒ 歸 null，但 ownership 不受影響。
 {
@@ -199,11 +203,26 @@ console.log("\n── ⑤ 永久擁有 ──");
   eq("型錄查不到的外觀仍然保留", Object.keys(ghost.owned), ["retired_looking_thing"]);
   ck("並標記為 unknown 供 UI 顯示典藏", ghost.owned.retired_looking_thing.unknown === true);
 }
-//  未達 prerequisite 不可買。
-ck("lifetime 未達門檻不可買王朝",
-  purchaseAsset(emptyClubAssets(), "title_dynasty", { clubPoints: 9999, clubPointsLifetime: 1999, careerWeek: 1 }).ok === false);
-ck("lifetime 剛好達標可買王朝",
-  purchaseAsset(emptyClubAssets(), "title_dynasty", { clubPoints: 9999, clubPointsLifetime: 2000, careerWeek: 1 }).ok === true);
+//  ── 實績稱號（v2）：**買不到**，而且擋在 domain，不是靠 UI 不畫按鈕 ──────
+{
+  for (const id of ["title_champion", "title_dynasty"]) {
+    const r = purchaseAsset(emptyClubAssets(), id, { clubPoints: 999999, clubPointsLifetime: 999999, careerWeek: 1 });
+    ck(`實績稱號再有錢也買不到（${id}）`, r.ok === false && r.code === ASSET_FAIL.EARNED_ONLY, `code=${r.code}`);
+  }
+  ck("實績不足不得授予",
+    grantEarnedIdentity(emptyClubAssets(), "title_champion", { annualChampionCount: 0 }).ok === false);
+  const g1 = grantEarnedIdentity(emptyClubAssets(), "title_champion", { annualChampionCount: 1, careerWeek: 3 });
+  ck("拿過 1 次年度冠軍 ⇒ 冠軍稱號入手", g1.ok === true && Boolean(g1.assets.owned.title_champion));
+  ck("1 次還拿不到王朝",
+    grantEarnedIdentity(g1.assets, "title_dynasty", { annualChampionCount: 1 }).ok === false);
+  const g3 = grantEarnedIdentity(g1.assets, "title_dynasty", { annualChampionCount: 3, careerWeek: 9 });
+  ck("拿過 3 次 ⇒ 王朝入手", g3.ok === true && Boolean(g3.assets.owned.title_dynasty));
+  //  ⚠ 授予路徑不得變成繞過付款的萬用後門。
+  ck("授予路徑不能拿來白拿可購買的外觀",
+    grantEarnedIdentity(emptyClubAssets(), "theme_ember", { annualChampionCount: 99 }).ok === false);
+  const back = normalizeClubAssets(JSON.parse(JSON.stringify(g3.assets)));
+  ck("實績稱號 reload 後仍在", Boolean(back.owned.title_champion) && Boolean(back.owned.title_dynasty));
+}
 
 // ── ⑥ 經濟 ───────────────────────────────────────────────────────────────
 console.log("\n── ⑥ 經濟 ──");
@@ -215,12 +234,22 @@ console.log("\n── ⑥ 經濟 ──");
   eq("clubPointsLifetime 逐值不變", spent.retention.clubPointsLifetime, 3000);
   eq("俱樂部等級不下降", clubTierOf(spent.retention.clubPointsLifetime).id, tierBefore.id);
 }
-const total = IDENTITY_CATALOG.reduce((s, a) => s + a.priceClubPoints, 0);
+//  ⚠ 只算**買得到**的那些。實績稱號沒有價格（null），把它算進總價會讓這條
+//     門檻靜默地變成 NaN，或把「買不到」誤讀成「免費」。
+const buyable = IDENTITY_CATALOG.filter((a) => a.source !== "earned");
+const total = buyable.reduce((s, a) => s + a.priceClubPoints, 0);
 ck("全套外觀總價落在 1.5–2.5 個賽季的產速內（約 3000/季）",
   total >= 4500 && total <= 7500, `${total} 點 ≈ ${(total / 3000).toFixed(1)} 季`);
 ck("最貴的單件不超過一個月的產速（避免為外觀 grind）",
-  Math.max(...IDENTITY_CATALOG.map((a) => a.priceClubPoints)) <= 1000,
-  `最貴 ${Math.max(...IDENTITY_CATALOG.map((a) => a.priceClubPoints))}`);
+  Math.max(...buyable.map((a) => a.priceClubPoints)) <= 1000,
+  `最貴 ${Math.max(...buyable.map((a) => a.priceClubPoints))}`);
+//  大面積橫幅要比小隊徽框貴——價格要說得出兩個槽的體積差，
+//  否則玩家分不出這兩個槽為什麼要分開（那正是 v1 的語意錯誤）。
+{
+  const maxCrest = Math.max(...buyable.filter((a) => a.type === IDENTITY_TYPES.CREST_FRAME).map((a) => a.priceClubPoints));
+  const minBanner = Math.min(...buyable.filter((a) => a.type === IDENTITY_TYPES.BANNER).map((a) => a.priceClubPoints));
+  ck("大面積橫幅比小隊徽框貴", minBanner > maxCrest, `crest<=${maxCrest} banner>=${minBanner}`);
+}
 
 // ── ⑦ view ───────────────────────────────────────────────────────────────
 console.log("\n── ⑦ view ──");
@@ -233,17 +262,62 @@ console.log("\n── ⑦ view ──");
   ck("已裝備的標記正確", ember.owned === true && ember.equipped === true && ember.canEquip === false);
   const verdant = v.items.find((i) => i.assetId === "theme_verdant");
   ck("買得起的可買", verdant.canBuy === true, `price=${verdant.price} balance=800`);
-  const dynasty = v.items.find((i) => i.assetId === "title_dynasty");
-  ck("買不起的說得出差多少", dynasty.canBuy === false && dynasty.shortBy === 100, `shortBy=${dynasty.shortBy}`);
+  const ridge = v.items.find((i) => i.assetId === "banner_ridge");
+  ck("買不起的說得出差多少", ridge.canBuy === false && ridge.shortBy === 100, `shortBy=${ridge.shortBy}`);
   eq("view 直接給呈現用的 accent", v.presentation.accent, "#fb923c");
+  eq("view 直接給呈現用的 skin", v.presentation.skin, "ember");
+  //  實績稱號在 view 上：不可買、不當成買得起、講得出還差幾次。
+  const champ = v.items.find((i) => i.assetId === "title_champion");
+  ck("實績稱號在 view 上不可買",
+    champ.canBuy === false && champ.earned === true && champ.affordable === false);
+  eq("實績稱號說得出還差幾次", [champ.earnedHave, champ.earnedNeed], [0, 1]);
 }
 //  未裝備任何外觀 ⇒ 呈現全部是 null ⇒ 畫面沿用既有預設，逐像素不變。
 {
   const p = identityPresentationOf(emptyClubAssets());
   ck("完全未裝備時呈現值全為 null（畫面不做任何事）",
-    p.accent === null && p.accent2 === null && p.titleLabel === null
-    && p.bannerPattern === null && p.bannerRing === null);
+    p.skin === null && p.accent === null && p.accent2 === null && p.titleLabel === null
+    && p.crestPattern === null && p.crestRing === null
+    && p.bannerMotif === null && p.bannerWash === null);
+  ck("未裝備稱號時 titleEarned 是 false（不是 null）", p.titleEarned === false);
 }
 
-console.log(`\nClub Identity v1：${pass}/${pass + fail} ${fail === 0 ? "PASS" : "FAIL"}`);
+// ── ⑧ 公開識別契約（Social Identity v1）──────────────────────────────────
+console.log("\n── ⑧ 公開識別契約 ──");
+{
+  const ids = ["theme_ember", "title_ironclad", "crest_laurel", "banner_halo"];
+  let A = buyAll(ids);
+  for (const id of ids) A = equipIdentity(A, id).assets;
+  const card = publicClubCardOf({
+    teamId: "t1", name: "德國海豹", tag: "GSEAL", emoji: "🦭",
+    identity: identityPresentationOf(A),
+    clubLevel: clubTierOf(3000),
+    record: { rank: 2, wins: 8, losses: 4, points: 24 },
+    honors: [{ label: "亞洲年度冠軍", season: 1, gameMode: "moba" }],
+    isMe: true,
+  });
+  eq("公開卡帶得出稱號", card.titleLabel, "鐵壁");
+  eq("公開卡帶得出皮膚", card.skin, "ember");
+  eq("公開卡帶得出大面積橫幅", card.bannerMotif, "halo");
+  eq("公開卡帶得出隊徽框", card.crestPattern, "laurel");
+  ck("公開卡帶得出戰績與榮耀", card.record.rank === 2 && card.honors.length === 1);
+
+  //  ⚠ 這一條是整張對手卡存在的前提：點對手不得變成免費偵察。
+  eq("公開卡不含任何禁列欄位", assertPublicSafe(card), []);
+
+  //  禁列真的有在擋（不是一個永遠回空陣列的裝飾）。
+  ck("禁列會抓到洩漏",
+    assertPublicSafe({ ...card, activeDoctrine: "aggro" }).length === 1,
+    JSON.stringify(assertPublicSafe({ ...card, activeDoctrine: "aggro" })));
+  ck("禁列也擋巢狀洩漏",
+    assertPublicSafe({ ...card, meta: { headCoachId: "coach_tactical" } }).length === 1);
+
+  //  AI 對手：借自己的隊色，但**不得**拿到玩家花點數買的收藏品。
+  const ai = neutralIdentityOf("#7c3aed");
+  ck("AI 俱樂部有自己的顏色", ai.accent === "#7c3aed" && ai.derived === true);
+  ck("AI 俱樂部拿不到玩家的皮膚／橫幅／隊徽框",
+    ai.skin === null && ai.bannerMotif === null && ai.crestPattern === null);
+}
+
+console.log(`\nClub Identity v2：${pass}/${pass + fail} ${fail === 0 ? "PASS" : "FAIL"}`);
 if (fail) process.exitCode = 1;

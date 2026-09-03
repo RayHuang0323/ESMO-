@@ -1,0 +1,276 @@
+/* ============================================================================
+   對手俱樂部卡（Social Identity v1）
+
+   ⚠ 皮膚／橫幅／隊徽框的畫法與 Dashboard 是**同一套語彙**（光向、材質、
+     大面積橫幅），但**不共用選擇器**：Dashboard 的皮膚掛在 `.esmo-dashboard`
+     上，這張卡是自己的 `data-club-skin` 範圍。共用選擇器會讓兩邊的版面
+     互相牽動，改一邊壞另一邊。
+
+   ⚠ 這張卡蓋的是 viewport（`position: fixed`）。Dashboard Scroll P0 之後
+     文件會長高，`absolute` 會把卡片置中在整份文件的中央（螢幕外）。
+   ============================================================================ */
+.occ-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  padding: 18px;
+  place-items: center;
+  background: rgba(3, 6, 11, 0.74);
+  backdrop-filter: blur(6px);
+}
+
+.occ {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  width: min(100%, 392px);
+  max-height: min(86vh, 640px);
+  overflow-y: auto;
+  padding: 20px;
+  color: #e5e7eb;
+  font-family: var(--esmo-font, system-ui, -apple-system, sans-serif);
+  background: linear-gradient(150deg, rgba(19, 24, 34, 0.98), rgba(11, 15, 22, 0.98));
+  border: 1px solid color-mix(in srgb, var(--club-accent, #94a3b8) 34%, transparent);
+  border-radius: 22px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+}
+
+/* ── 皮膚：與首頁同一套光向語言 ─────────────────────────────────────── */
+.occ__skin {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+}
+
+.occ[data-club-skin="none"] .occ__skin { display: none; }
+
+.occ[data-club-skin="midnight"] .occ__skin {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--club-accent) 22%, transparent), transparent 58%),
+    repeating-linear-gradient(0deg,
+      color-mix(in srgb, var(--club-accent) 7%, transparent) 0 1px, transparent 1px 5px);
+}
+
+.occ[data-club-skin="ember"] .occ__skin {
+  background:
+    radial-gradient(130% 92% at 50% 116%, color-mix(in srgb, var(--club-accent) 32%, transparent), transparent 62%),
+    radial-gradient(44% 60% at 16% 90%, color-mix(in srgb, var(--club-accent-2) 18%, transparent), transparent 70%);
+}
+
+.occ[data-club-skin="verdant"] .occ__skin {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--club-accent) 9%, transparent), transparent),
+    repeating-linear-gradient(45deg, color-mix(in srgb, var(--club-accent) 6%, transparent) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(-45deg, color-mix(in srgb, var(--club-accent-2) 5%, transparent) 0 1px, transparent 1px 7px);
+}
+
+/* ── 大面積橫幅 ─────────────────────────────────────────────────────── */
+.occ__banner {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.occ__banner[data-motif="ridge"] {
+  background: repeating-linear-gradient(66deg,
+    transparent 0 22px,
+    color-mix(in srgb, var(--club-accent) 13%, transparent) 22px 24px,
+    transparent 24px 46px);
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent 72%);
+  mask-image: linear-gradient(180deg, #000, transparent 72%);
+}
+
+.occ__banner[data-motif="halo"] {
+  background: repeating-radial-gradient(circle at 18% 18%,
+    color-mix(in srgb, var(--club-accent) 12%, transparent) 0 2px, transparent 2px 26px);
+}
+
+.occ__banner[data-motif="weave"] {
+  background:
+    repeating-linear-gradient(45deg, color-mix(in srgb, var(--club-accent) 10%, transparent) 0 2px, transparent 2px 9px),
+    repeating-linear-gradient(-45deg, color-mix(in srgb, var(--club-accent-2) 8%, transparent) 0 2px, transparent 2px 9px);
+  -webkit-mask-image: radial-gradient(120% 120% at 80% 108%, #000, transparent 68%);
+  mask-image: radial-gradient(120% 120% at 80% 108%, #000, transparent 68%);
+}
+
+.occ__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.occ__close:focus-visible { outline: 2px solid var(--club-accent, #a78bfa); outline-offset: 2px; }
+
+/* ── 頭部 ───────────────────────────────────────────────────────────── */
+.occ__head {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+}
+
+.occ__crest {
+  position: relative;
+  display: grid;
+  width: 62px;
+  height: 62px;
+  flex: 0 0 auto;
+  place-items: center;
+  font-size: 30px;
+  background:
+    linear-gradient(145deg,
+      color-mix(in srgb, var(--club-accent-2, #34d399) 22%, transparent),
+      color-mix(in srgb, var(--club-accent, #a78bfa) 14%, transparent)),
+    rgba(7, 11, 16, 0.62);
+  border: 1px solid color-mix(in srgb, var(--club-ring, var(--club-accent-2, #34d399)) 52%, transparent);
+  border-radius: 18px;
+}
+
+.occ__crest[data-crest="hex"] { clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0 50%); }
+.occ__crest[data-crest="circuit"] { border-style: dashed; }
+
+.occ__crest[data-crest="laurel"]::before {
+  position: absolute;
+  inset: -6px;
+  border: 2px solid color-mix(in srgb, var(--club-ring) 62%, transparent);
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  content: "";
+}
+
+.occ__name { min-width: 0; }
+
+.occ__tag {
+  color: rgba(255, 255, 255, 0.42);
+  font-family: var(--esmo-mono, ui-monospace, monospace);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+}
+
+.occ__name h2 {
+  margin: 2px 0 0;
+  overflow: hidden;
+  font-size: 21px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+}
+
+/* 稱號：與首頁同一塊銘牌，不是另一種 badge。 */
+.occ__title {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 9px;
+  padding: 3px 10px 2px;
+  color: color-mix(in srgb, var(--club-accent, #a78bfa) 88%, #fff);
+  font-size: 0.42em;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
+  vertical-align: middle;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--club-accent, #a78bfa) 20%, transparent), transparent),
+    rgba(6, 10, 16, 0.55);
+  border-top: 1px solid color-mix(in srgb, var(--club-accent, #a78bfa) 62%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--club-accent, #a78bfa) 62%, transparent);
+  border-radius: 2px;
+}
+
+.occ__level {
+  margin-top: 4px;
+  color: color-mix(in srgb, var(--club-accent, #a78bfa) 80%, #fff);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+/* ── 戰績 ───────────────────────────────────────────────────────────── */
+.occ__record {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.occ__record > div {
+  padding: 9px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 11px;
+}
+
+.occ__record span {
+  display: block;
+  color: rgba(255, 255, 255, 0.44);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.occ__record strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+/* ── 榮耀 ───────────────────────────────────────────────────────────── */
+.occ__honors { margin-top: 16px; }
+
+.occ__eyebrow {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+}
+
+.occ__honor {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  color: #fde68a;
+  font-size: 11.5px;
+  font-weight: 800;
+  background: linear-gradient(180deg, rgba(251, 191, 36, 0.14), transparent), rgba(255, 255, 255, 0.03);
+  border-top: 1px solid rgba(251, 191, 36, 0.5);
+  border-bottom: 1px solid rgba(251, 191, 36, 0.5);
+  border-radius: 3px;
+}
+
+.occ__empty {
+  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 11px;
+}
+
+.occ__note {
+  margin-top: 16px;
+  padding-top: 12px;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 10px;
+  line-height: 1.7;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 400px) {
+  .occ { padding: 16px; }
+  .occ__crest { width: 52px; height: 52px; font-size: 25px; }
+  .occ__name h2 { font-size: 18px; }
+}

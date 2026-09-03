@@ -24,7 +24,7 @@
 // ============================================================================
 import { CLUB_ASSET_VERSION } from "./coachCatalog.js";
 import { assetById, isRetired, isCosmetic, identitySlotOf } from "./assetCatalog.js";
-import { IDENTITY_SLOTS, IDENTITY_SLOT_OF } from "./identityCatalog.js";
+import { IDENTITY_SLOTS, IDENTITY_SLOT_OF, isEarnedIdentity, EARNED_KINDS } from "./identityCatalog.js";
 
 /** 失敗碼 → 呼叫端可以直接對應文案。判定在這裡，文案在畫面。 */
 export const ASSET_FAIL = Object.freeze({
@@ -37,6 +37,10 @@ export const ASSET_FAIL = Object.freeze({
   WEEKLY_LOCKED: "weekly_locked",
   //  已下架：**已擁有的照樣保留**，只是不能再新購買（Permanent Ownership Contract）。
   RETIRED: "retired",
+  //  只能靠實績取得的稱號。**購買路徑硬擋**，不是靠 UI 不畫按鈕。
+  EARNED_ONLY: "earned_only",
+  //  實績還沒達標。
+  NOT_EARNED: "not_earned",
 });
 
 /**
@@ -52,8 +56,10 @@ export function emptyClubAssets() {
     owned: {},
     headCoachId: null,
     lastCoachChangeWeek: null,
-    //  三個外觀槽。`null` = 使用俱樂部預設外觀。
-    equippedIdentity: { themeId: null, titleId: null, bannerId: null },
+    //  四個外觀槽（v2）。`null` = 使用俱樂部預設外觀。
+    //  ⚠ `crestFrameId`（小型隊徽框）與 `bannerId`（大面積主視覺）是**兩個槽**。
+    //    v1 只有 bannerId 而且畫的其實是框——那個語意錯誤在 release 前修掉了。
+    equippedIdentity: { themeId: null, titleId: null, crestFrameId: null, bannerId: null },
   };
 }
 
@@ -121,6 +127,49 @@ export function prerequisiteMet(asset, { clubPointsLifetime = 0 } = {}) {
 }
 
 /**
+ * 實績門檻判定（earned 稱號專用）。
+ *
+ * ⚠ **fail closed**：kind 不在 `EARNED_KINDS` 白名單就一律不滿足。這樣「有人
+ *   新造了一個假成就欄位」不會靜默地變成一個可取得的稱號。
+ *
+ * `annualChampionCount` 由呼叫端從 `competition/honors.js` 的 `teamHonorCount`
+ * 算出來——**本檔不讀 honors**，它是純函式，不認識賽事資料。
+ */
+export function earnedRequirementProgress(asset, { annualChampionCount = 0 } = {}) {
+  const req = asset?.earnedRequirement ?? null;
+  if (!req) return { applicable: false, met: true, have: 0, need: 0 };
+  if (!EARNED_KINDS.includes(req.kind)) return { applicable: true, met: false, have: 0, need: Number(req.min) || 0 };
+  const have = Math.max(0, Math.floor(Number(annualChampionCount) || 0));
+  const need = Number(req.min) || 0;
+  return { applicable: true, met: have >= need, have, need };
+}
+
+/**
+ * 授予一份資產（**不扣點**）。earned 稱號達標時由 store 呼叫。
+ *
+ * ⚠ 這條路徑刻意**不檢查價格也不檢查 retired**：它不是購買。它檢查的是
+ *   「這份資產是不是 earned，而且實績真的到了」——其餘一律拒絕，
+ *   免得它變成一個繞過付款的萬用後門。
+ */
+export function grantEarnedIdentity(assets, assetId, { annualChampionCount = 0, careerWeek = 1 } = {}) {
+  const A = normalizeClubAssets(assets);
+  const fail = (code, reason) => ({ ok: false, assets: A, reason, code });
+
+  const asset = assetById(assetId);
+  if (!asset) return fail(ASSET_FAIL.UNKNOWN_ASSET, "找不到這份資產");
+  if (!isEarnedIdentity(asset)) return fail(ASSET_FAIL.UNKNOWN_ASSET, "這份資產不是實績取得的稱號");
+  if (A.owned[assetId]) return fail(ASSET_FAIL.ALREADY_OWNED, "已經擁有這個稱號");
+
+  const p = earnedRequirementProgress(asset, { annualChampionCount });
+  if (!p.met) return fail(ASSET_FAIL.NOT_EARNED, `還需要 ${p.need - p.have} 次年度冠軍`);
+
+  return {
+    ok: true, reason: null, code: null,
+    assets: { ...A, owned: { ...A.owned, [assetId]: { acquiredWeek: posInt(careerWeek) ?? 1, earned: true } } },
+  };
+}
+
+/**
  * 買一份資產。
  *
  * ⚠ **不扣點、不自動裝備。** 回傳 `price` 讓 store 去 `spendClubPoints`，
@@ -139,6 +188,11 @@ export function purchaseAsset(assets, assetId, { clubPoints = 0, clubPointsLifet
   if (A.owned[assetId]) return fail(ASSET_FAIL.ALREADY_OWNED, "已經擁有這份資產");
   //  ⚠ retired = 下架，不是刪除：已擁有的照樣保留，但不能再新購買。
   if (isRetired(asset)) return fail(ASSET_FAIL.RETIRED, "這份資產已經下架，無法再取得");
+  //  ⚠ **實績稱號買不到。** 擋在這裡（而不是靠 UI 不畫購買鍵）才是真的擋住：
+  //    這是唯一的購買入口，任何呼叫端都繞不過去。
+  if (isEarnedIdentity(asset)) {
+    return fail(ASSET_FAIL.EARNED_ONLY, "這個稱號只能靠比賽實績取得，點數買不到");
+  }
   if (!prerequisiteMet(asset, { clubPointsLifetime })) {
     return fail(ASSET_FAIL.PREREQUISITE, `需要俱樂部累計 ${asset.prerequisite.min} 點才能聘用`);
   }
@@ -265,16 +319,24 @@ export function identityPresentationOf(assets) {
   };
   const theme = of(IDENTITY_SLOT_OF.clubTheme);
   const title = of(IDENTITY_SLOT_OF.clubTitle);
+  const crestFrame = of(IDENTITY_SLOT_OF.clubCrestFrame);
   const banner = of(IDENTITY_SLOT_OF.clubBanner);
   return {
     schema: CLUB_ASSET_VERSION,
-    theme, title, banner,
+    theme, title, crestFrame, banner,
     //  攤平成畫面直接可用的值；沒裝備就是 null ⇒ 畫面沿用既有預設，不做任何事。
+    skin: theme?.token?.skin ?? null,
     accent: theme?.token?.accent ?? null,
     accent2: theme?.token?.accent2 ?? null,
     titleLabel: title?.token?.label ?? null,
-    bannerPattern: banner?.token?.pattern ?? null,
-    bannerRing: banner?.token?.ring ?? null,
+    //  買來的與打來的看得出來不一樣——呈現層靠這個旗標換銘牌樣式。
+    titleEarned: title ? isEarnedIdentity(assetById(title.assetId)) : false,
+    //  小型隊徽框
+    crestPattern: crestFrame?.token?.pattern ?? null,
+    crestRing: crestFrame?.token?.ring ?? null,
+    //  大面積主視覺
+    bannerMotif: banner?.token?.motif ?? null,
+    bannerWash: banner?.token?.wash ?? null,
   };
 }
 
@@ -332,13 +394,16 @@ export function clubAssetsViewOf(assets, { catalog, clubPoints = 0, clubPointsLi
  * 外觀型錄要的一整包。與教練的 view 分開，因為**規則不同**：
  * 外觀沒有週鎖、可以卸回預設、而且分三個槽各自獨立。
  */
-export function identityViewOf(assets, { catalog, clubPoints = 0, clubPointsLifetime = 0 } = {}) {
+export function identityViewOf(assets, {
+  catalog, clubPoints = 0, clubPointsLifetime = 0, annualChampionCount = 0,
+} = {}) {
   const A = normalizeClubAssets(assets);
   const balance = Math.max(0, Math.floor(Number(clubPoints) || 0));
   const present = identityPresentationOf(A);
   return {
     schema: CLUB_ASSET_VERSION,
     clubPoints: balance,
+    annualChampionCount: Math.max(0, Math.floor(Number(annualChampionCount) || 0)),
     equipped: { ...A.equippedIdentity },
     presentation: present,
     items: (catalog ?? []).map((asset) => {
@@ -346,8 +411,13 @@ export function identityViewOf(assets, { catalog, clubPoints = 0, clubPointsLife
       const owned = Boolean(A.owned[asset.assetId]);
       const equipped = A.equippedIdentity[slot] === asset.assetId;
       const preOk = prerequisiteMet(asset, { clubPointsLifetime });
-      const affordable = balance >= asset.priceClubPoints;
       const retired = isRetired(asset);
+      const earned = isEarnedIdentity(asset);
+      //  ⚠ earned 沒有價格（`priceClubPoints` 是 null）。這裡**不要**讓它掉進
+      //    數字比較——`balance >= null` 會是 true，一路把「買不到的稱號」
+      //    算成「買得起」。earned 一律 affordable:false、canBuy:false。
+      const affordable = earned ? false : balance >= asset.priceClubPoints;
+      const progress = earnedRequirementProgress(asset, { annualChampionCount });
       return {
         assetId: asset.assetId,
         type: asset.type,
@@ -356,21 +426,29 @@ export function identityViewOf(assets, { catalog, clubPoints = 0, clubPointsLife
         description: asset.description,
         styleTags: asset.styleTags ?? [],
         visualToken: asset.visualToken,
+        source: asset.source ?? null,
+        earned,
+        //  earned 的進度給畫面顯示「還差幾次」，判定仍在 domain。
+        earnedRequirement: asset.earnedRequirement ?? null,
+        earnedMet: earned ? progress.met : true,
+        earnedHave: earned ? progress.have : 0,
+        earnedNeed: earned ? progress.need : 0,
         price: asset.priceClubPoints,
         prerequisite: asset.prerequisite,
         prerequisiteMet: preOk,
         competitivePolicy: asset.competitivePolicy,
         owned, equipped, affordable, retired,
-        shortBy: affordable ? 0 : asset.priceClubPoints - balance,
+        shortBy: affordable || earned ? 0 : asset.priceClubPoints - balance,
         //  下架品仍可裝備（已擁有的話），只是不能再買。
-        canBuy: !owned && !retired && preOk && affordable,
+        canBuy: !owned && !earned && !retired && preOk && affordable,
         //  外觀裝備**沒有任何冷卻**：擁有且不是現用的，隨時可換。
         canEquip: owned && !equipped,
         blockedBy: owned
           ? null
-          : (retired ? ASSET_FAIL.RETIRED
-            : (!preOk ? ASSET_FAIL.PREREQUISITE
-              : (!affordable ? ASSET_FAIL.INSUFFICIENT : null))),
+          : (earned ? (progress.met ? null : ASSET_FAIL.NOT_EARNED)
+            : (retired ? ASSET_FAIL.RETIRED
+              : (!preOk ? ASSET_FAIL.PREREQUISITE
+                : (!affordable ? ASSET_FAIL.INSUFFICIENT : null)))),
         acquiredWeek: owned ? A.owned[asset.assetId].acquiredWeek : null,
       };
     }),

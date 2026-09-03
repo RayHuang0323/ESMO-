@@ -147,13 +147,18 @@ function CoachCard({ item, onBuy, onEquip, view, flash, delay }) {
  */
 function IdentityCard({ item, onBuy, onEquip, onClear, flash, delay }) {
   const t = item.visualToken ?? {};
-  const accent = t.accent ?? t.ring ?? "#94a3b8";
+  const accent = t.accent ?? t.ring ?? (item.earned ? "#fbbf24" : "#94a3b8");
+  //  ⚠ 實績稱號的文案要說「怎麼拿到」，不是「還差幾點」——它跟點數無關。
   const status = item.equipped ? "使用中"
-    : item.owned ? "已擁有"
-      : item.retired ? "已下架，無法取得"
-        : !item.prerequisiteMet ? `需要俱樂部累計 ${item.prerequisite.min} 點`
-          : !item.affordable ? `還差 ${item.shortBy} 點`
-            : "點數足夠，可以取得";
+    : item.owned ? (item.earned ? "已取得的榮譽稱號" : "已擁有")
+      : item.earned
+        ? (item.earnedMet
+          ? "實績已達成，即將入手"
+          : `年度冠軍 ${item.earnedHave} / ${item.earnedNeed} 次——點數買不到`)
+        : item.retired ? "已下架，無法取得"
+          : !item.prerequisiteMet ? `需要俱樂部累計 ${item.prerequisite.min} 點`
+            : !item.affordable ? `還差 ${item.shortBy} 點`
+              : "點數足夠，可以取得";
   return (
     <div
       className={`ca__card ca-rise${flash ? " ca__card--flash" : ""}`}
@@ -162,23 +167,27 @@ function IdentityCard({ item, onBuy, onEquip, onClear, flash, delay }) {
       data-owned={item.owned ? "1" : "0"}
       data-equipped={item.equipped ? "1" : "0"}
       data-affordable={item.affordable ? "1" : "0"}
+      data-source={item.source ?? "identity"}
       data-slot={item.slot}>
       <div className="ca__card-head">
-        {/*  預覽：三種型別各自畫自己的樣子。 */}
+        {/*  預覽：四種型別各自畫自己的樣子。**主題預覽不是兩個色票**——
+             它要看得出光向與材質，否則卡片會再一次把「換皮膚」講成「換顏色」。 */}
         <span className="ca__look-preview" data-kind={item.type}>
           {item.type === "clubTheme" && (
-            <>
-              <i style={{ background: t.accent }} />
-              <i style={{ background: t.accent2 }} />
-            </>
+            <b data-skin={t.skin} style={{ "--p-a": t.accent, "--p-b": t.accent2 }} />
           )}
-          {item.type === "clubTitle" && <em>{t.label}</em>}
-          {item.type === "clubBanner" && <b data-pattern={t.pattern} style={{ borderColor: t.ring }} />}
+          {item.type === "clubTitle" && <em data-earned={item.earned ? "1" : "0"}>{t.label}</em>}
+          {item.type === "clubCrestFrame" && <b data-pattern={t.pattern} style={{ borderColor: t.ring }} />}
+          {item.type === "clubBanner" && (
+            <b data-motif={t.motif} style={{ "--p-a": "currentColor", "--p-b": "currentColor" }} />
+          )}
         </span>
         <span className="ca__card-name">{item.name}</span>
         {item.owned
           ? <span className="ca__price ca__price--owned">{item.retired ? "典藏" : "已擁有"}</span>
-          : <span className="ca__price">◆ {item.price}</span>}
+          : item.earned
+            ? <span className="ca__price ca__price--earned">實績取得</span>
+            : <span className="ca__price">◆ {item.price}</span>}
       </div>
 
       <div className="ca__card-desc">{item.description}</div>
@@ -201,6 +210,12 @@ function IdentityCard({ item, onBuy, onEquip, onClear, flash, delay }) {
               使用
             </button>
           )
+        ) : item.earned ? (
+          //  ⚠ 實績稱號**沒有購買鍵**，而且 domain 也擋（`purchaseAsset` 回
+          //     `earned_only`）。這裡只是不畫一顆按不下去的鍵。
+          <span className="ca__action ca__action--locked" data-testid={`identity-locked-${item.assetId}`}>
+            打出來的
+          </span>
         ) : (
           <button type="button"
             className={`ca__action${item.canBuy ? " ca__action--ready" : ""}`}

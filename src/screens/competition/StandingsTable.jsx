@@ -31,6 +31,8 @@ import { GC, MONO } from "../../ui/theme.js";
  * @param {object}   [p.qualify]       `{ afterRank, label }`；不給就不畫晉級線
  * @param {string}   [p.testIdPrefix]  既有標記要傳進來（例如 `cs-hub-standing`）
  * @param {Node}     [p.footer]        表格下方的補充說明（MOBA 的來源分佈）
+ * @param {Function} [p.onInspect]     `(teamId) => void`。給了才讓列可以點開
+ *                                     對手俱樂部卡；不給就完全維持原本的行為。
  */
 export default function StandingsTable({
   rows = [],
@@ -44,6 +46,7 @@ export default function StandingsTable({
   testIdPrefix = "competition-standing",
   emptyText = "尚無積分榜資料",
   footer = null,
+  onInspect = null,
 }) {
   if (!rows.length) {
     return <div style={{ fontSize: 11, color: GC.gray, padding: "6px 0" }}>{emptyText}</div>;
@@ -78,12 +81,23 @@ export default function StandingsTable({
         const tag = tagOf ? tagOf(row.teamId) : "";
         return (
           <React.Fragment key={row.teamId}>
+            {/*  Social Identity v1：給了 `onInspect` 才變成可點的入口。
+                 用 `role=button` ＋ 鍵盤可達，而不是把整列換成 <button>——
+                 換成 button 會把裡面的 grid 版面與字重全部重算一次。 */}
             <div
               data-testid={`${testIdPrefix}-row`}
               data-team-id={row.teamId}
               data-rank={row.rank}
               data-me={isMe ? "true" : "false"}
               data-qualified={inLine ? "true" : "false"}
+              data-inspectable={onInspect ? "1" : "0"}
+              role={onInspect ? "button" : undefined}
+              tabIndex={onInspect ? 0 : undefined}
+              aria-label={onInspect ? `查看 ${row.name ?? row.teamId} 的俱樂部資訊` : undefined}
+              onClick={onInspect ? () => onInspect(row.teamId) : undefined}
+              onKeyDown={onInspect
+                ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onInspect(row.teamId); } }
+                : undefined}
               style={{
                 display: "grid", gridTemplateColumns: columns, gap: showScoreDiff ? 0 : 8,
                 alignItems: "center", padding: showScoreDiff ? "4px 0" : "6px 6px",
@@ -92,6 +106,7 @@ export default function StandingsTable({
                 borderRadius: isMe && showMeBadge ? 6 : 0,
                 color: isMe && !showMeBadge ? GC.gold : "rgba(255,255,255,0.82)",
                 fontWeight: isMe ? 900 : showScoreDiff ? 600 : 800,
+                cursor: onInspect ? "pointer" : undefined,
               }}
             >
               <span style={{

@@ -304,15 +304,184 @@
   transition: border-color 520ms ease, background 520ms ease, box-shadow 520ms ease;
 }
 
-/* ── 隊徽框紋樣：三種 pattern 各自一層，沒裝備就一層都不畫 ─────────────── */
-.esmo-hero__crest[data-banner="hex"] {
+/* ══════════════════════════════════════════════════════════════════════════
+   Club Identity v2 — 俱樂部皮膚（Management UI Skin）
+
+   ── 設計主張 ────────────────────────────────────────────────────────────
+   一套主題不是兩個顏色，是**這個房間被誰接管了**。三套皮膚換的是：
+
+     · 光從哪裡來（午夜＝天花板／餘燼＝地面／常青＝均勻無方向）
+     · 材質是什麼（資料格線／熱燼／織紋）
+     · 會不會動（午夜＝掃描一次／餘燼＝呼吸／常青＝完全不動）
+
+   常青綠**刻意沒有任何常駐動態**。那不是省略：老俱樂部不閃。
+   它同時也是最省 GPU 的那一套。
+
+   ── Motion Policy ──────────────────────────────────────────────────────
+     · 常駐動態只有一個元素（`.esmo-hero__crest-aura`），且只動 transform/opacity
+     · 沒有粒子、沒有多層常駐動畫
+     · 裝備／取得是**一次性**回饋，不是永久動畫
+     · `prefers-reduced-motion` 全部停在最終視覺狀態（見本檔末的統一關閉）
+
+   ⚠ 這些顏色只流進俱樂部呈現層。MOBA 藍紅、CS T／CT 有各自的權威。
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* 預設（未裝備主題）：與識別上線前逐像素相同——不畫任何皮膚層。 */
+.esmo-dashboard[data-club-skin="none"] .esmo-hero__skin,
+.esmo-dashboard:not([data-club-skin]) .esmo-hero__skin { display: none; }
+
+/* ── 皮膚層：鋪在 hero 底、內容之下 ─────────────────────────────────── */
+.esmo-hero__skin {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* ①  午夜藍 — 冷光從天花板落下，細密資料格線 ------------------------- */
+.esmo-dashboard[data-club-skin="midnight"] .esmo-hero__skin {
+  background:
+    /* 頂燈：光源在正上方，往下衰減 */
+    linear-gradient(180deg, color-mix(in srgb, var(--club-accent) 22%, transparent), transparent 58%),
+    /* 資料格線：橫向細規線，密而低對比 */
+    repeating-linear-gradient(0deg,
+      color-mix(in srgb, var(--club-accent) 7%, transparent) 0 1px,
+      transparent 1px 5px);
+}
+
+.esmo-dashboard[data-club-skin="midnight"] .esmo-hero {
+  border-color: color-mix(in srgb, var(--club-accent) 40%, transparent);
+  /* 冷光的發光語言：緊、薄、像螢幕邊緣 */
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--club-accent) 22%, transparent),
+    0 24px 70px rgba(0, 0, 0, 0.3);
+}
+
+/* ②  餘燼橙 — 光從下方來，像還沒燒完的炭 ----------------------------- */
+.esmo-dashboard[data-club-skin="ember"] .esmo-hero__skin {
+  background:
+    /* 爐火：光源在底部，往上散 */
+    radial-gradient(130% 92% at 50% 116%,
+      color-mix(in srgb, var(--club-accent) 34%, transparent), transparent 62%),
+    /* 兩團不規則熱斑，不是格線——熱是散的 */
+    radial-gradient(46% 62% at 16% 88%, color-mix(in srgb, var(--club-accent-2) 20%, transparent), transparent 70%),
+    radial-gradient(38% 52% at 84% 96%, color-mix(in srgb, var(--club-accent) 17%, transparent), transparent 70%);
+}
+
+.esmo-dashboard[data-club-skin="ember"] .esmo-hero {
+  border-color: color-mix(in srgb, var(--club-accent) 34%, transparent);
+  /* 熱的發光語言：寬、軟、往外暈 */
+  box-shadow:
+    0 30px 80px color-mix(in srgb, var(--club-accent) 15%, transparent),
+    0 24px 70px rgba(0, 0, 0, 0.3);
+}
+
+/* ③  常青綠 — 均勻室內光、織紋與刻線，完全不動 ----------------------- */
+.esmo-dashboard[data-club-skin="verdant"] .esmo-hero__skin {
+  background:
+    /* 沒有方向的平光：整面同亮度，這就是它的個性 */
+    linear-gradient(180deg, color-mix(in srgb, var(--club-accent) 9%, transparent), transparent),
+    /* 斜向織紋，兩個方向交錯 = 布料而不是格線 */
+    repeating-linear-gradient(45deg,
+      color-mix(in srgb, var(--club-accent) 6%, transparent) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(-45deg,
+      color-mix(in srgb, var(--club-accent-2) 5%, transparent) 0 1px, transparent 1px 7px);
+}
+
+.esmo-dashboard[data-club-skin="verdant"] .esmo-hero {
+  /* 不發光。改用雙細刻線——印刷徽章的邊，不是螢幕的邊。 */
+  border-color: color-mix(in srgb, var(--club-accent) 46%, transparent);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 0 0 4px color-mix(in srgb, var(--club-accent) 10%, transparent),
+    0 24px 70px rgba(0, 0, 0, 0.26);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   主視覺橫幅（clubBanner）— **大面積**，不是框線
+
+   v1 的 `clubBanner` 只畫了隊徽外框，名字說的跟做的不一樣。v2 的橫幅鋪滿
+   整個 hero，是「這面牆是我的俱樂部的」那一層。
+   ══════════════════════════════════════════════════════════════════════════ */
+.esmo-hero__banner {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+/* 稜線：橫過整面的折線稜脊 */
+.esmo-hero__banner[data-motif="ridge"] {
+  background:
+    repeating-linear-gradient(66deg,
+      transparent 0 26px,
+      color-mix(in srgb, var(--club-accent) 13%, transparent) 26px 28px,
+      transparent 28px 54px),
+    repeating-linear-gradient(114deg,
+      transparent 0 34px,
+      color-mix(in srgb, var(--club-accent-2) 9%, transparent) 34px 35px,
+      transparent 35px 70px);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.25) 78%, transparent);
+  mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.25) 78%, transparent);
+}
+
+/* 環暈：以隊徽為圓心的同心環（隊徽在左側，所以圓心不是正中） */
+.esmo-hero__banner[data-motif="halo"] {
+  background:
+    repeating-radial-gradient(circle at 12% 46%,
+      color-mix(in srgb, var(--club-accent) 12%, transparent) 0 2px,
+      transparent 2px 30px),
+    radial-gradient(46% 82% at 12% 46%,
+      color-mix(in srgb, var(--club-accent-2) 16%, transparent), transparent 70%);
+}
+
+/* 織紋：斜向密織，鋪滿整面 */
+.esmo-hero__banner[data-motif="weave"] {
+  background:
+    repeating-linear-gradient(45deg,
+      color-mix(in srgb, var(--club-accent) 10%, transparent) 0 2px, transparent 2px 9px),
+    repeating-linear-gradient(-45deg,
+      color-mix(in srgb, var(--club-accent-2) 8%, transparent) 0 2px, transparent 2px 9px);
+  -webkit-mask-image: radial-gradient(120% 120% at 78% 110%, #000 0%, rgba(0, 0, 0, 0.3) 62%, transparent);
+  mask-image: radial-gradient(120% 120% at 78% 110%, #000 0%, rgba(0, 0, 0, 0.3) 62%, transparent);
+}
+
+/* 洗光方向：橫幅自己也有一個光向，和皮膚疊在一起 */
+.esmo-hero__banner[data-wash="top"]::after,
+.esmo-hero__banner[data-wash="center"]::after,
+.esmo-hero__banner[data-wash="bottom"]::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  content: "";
+}
+
+.esmo-hero__banner[data-wash="top"]::after {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--club-accent) 13%, transparent), transparent 54%);
+}
+
+.esmo-hero__banner[data-wash="center"]::after {
+  background: radial-gradient(60% 90% at 50% 50%, color-mix(in srgb, var(--club-accent) 11%, transparent), transparent 72%);
+}
+
+.esmo-hero__banner[data-wash="bottom"]::after {
+  background: linear-gradient(0deg, color-mix(in srgb, var(--club-accent-2) 13%, transparent), transparent 52%);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   隊徽框（clubCrestFrame）— **小型**，只包住隊徽
+   ══════════════════════════════════════════════════════════════════════════ */
+.esmo-hero__crest[data-crest="hex"] {
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28),
     inset 0 0 0 6px rgba(255, 255, 255, 0.025),
     inset 0 0 0 9px color-mix(in srgb, var(--club-ring) 34%, transparent);
   clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0 50%);
 }
 
-.esmo-hero__crest[data-banner="circuit"] {
+.esmo-hero__crest[data-crest="circuit"] {
   border-style: dashed;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28),
     inset 0 0 0 6px rgba(255, 255, 255, 0.025),
@@ -320,7 +489,7 @@
 }
 
 /* 桂冠：用兩片弧線夾住隊徽，純 CSS，不加資產檔。 */
-.esmo-hero__crest[data-banner="laurel"]::before {
+.esmo-hero__crest[data-crest="laurel"]::before {
   position: absolute;
   inset: -7px;
   border: 2px solid color-mix(in srgb, var(--club-ring) 62%, transparent);
@@ -331,38 +500,163 @@
   pointer-events: none;
 }
 
-/* ── 稱號：掛在戰隊名稱旁 ─────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════
+   隊徽光暈（Crest Aura）— 這是本次的簽名元素
+
+   三套皮膚在這裡表達得最清楚，而且**整個 Dashboard 只有這一個常駐動態**：
+
+     · midnight  每 7 秒一道由上而下的掃描光（螢幕更新的節奏）
+     · ember     6 秒一次的熱呼吸（軟、慢、沒有邊緣）
+     · verdant   完全靜止的雙刻環（老俱樂部不閃）
+
+   只動 transform / opacity ⇒ 合成層即可完成，390px 不掉幀。
+   ══════════════════════════════════════════════════════════════════════════ */
+.esmo-hero__crest-aura {
+  position: absolute;
+  z-index: -1;
+  inset: -10px;
+  border-radius: 30px;
+  pointer-events: none;
+}
+
+.esmo-dashboard[data-club-skin="none"] .esmo-hero__crest-aura,
+.esmo-dashboard:not([data-club-skin]) .esmo-hero__crest-aura { display: none; }
+
+/* midnight：一道掃描光 */
+.esmo-dashboard[data-club-skin="midnight"] .esmo-hero__crest-aura {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--club-accent) 26%, transparent);
+}
+
+.esmo-dashboard[data-club-skin="midnight"] .esmo-hero__crest-aura::after {
+  position: absolute;
+  top: -60%;
+  left: 0;
+  width: 100%;
+  height: 60%;
+  background: linear-gradient(180deg, transparent,
+    color-mix(in srgb, var(--club-accent) 40%, transparent), transparent);
+  animation: esmo-crest-sweep 7s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  content: "";
+}
+
+@keyframes esmo-crest-sweep {
+  0%, 62% { transform: translateY(0); opacity: 0; }
+  66%     { opacity: 1; }
+  100%    { transform: translateY(270%); opacity: 0; }
+}
+
+/* ember：熱呼吸 */
+.esmo-dashboard[data-club-skin="ember"] .esmo-hero__crest-aura {
+  background: radial-gradient(circle at 50% 60%,
+    color-mix(in srgb, var(--club-accent) 34%, transparent), transparent 68%);
+  filter: blur(6px);
+  animation: esmo-crest-breathe 6s ease-in-out infinite;
+}
+
+@keyframes esmo-crest-breathe {
+  0%, 100% { opacity: 0.5; transform: scale(0.94); }
+  50%      { opacity: 0.95; transform: scale(1.04); }
+}
+
+/* verdant：靜止的雙刻環。**沒有 animation**，這是刻意的。 */
+.esmo-dashboard[data-club-skin="verdant"] .esmo-hero__crest-aura {
+  border: 1px solid color-mix(in srgb, var(--club-accent) 40%, transparent);
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--club-accent-2) 16%, transparent);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   稱號 — 俱樂部頭銜，不是後台 badge
+
+   差別在三件事：襯線化的字距、上下細刻線（獎盃銘牌的作法），以及
+   **實績稱號有金色刻線**——買來的和打來的看得出來不一樣。
+   ══════════════════════════════════════════════════════════════════════════ */
 .esmo-hero__club-title {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  margin-left: 9px;
-  padding: 3px 10px;
-  color: var(--club-accent);
-  font-size: 0.42em;
+  margin-left: 10px;
+  padding: 4px 12px 3px;
+  color: color-mix(in srgb, var(--club-accent) 88%, #fff);
+  font-size: 0.4em;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;
   white-space: nowrap;
   vertical-align: middle;
-  background: color-mix(in srgb, var(--club-accent) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--club-accent) 42%, transparent);
-  border-radius: 999px;
-  animation: esmo-club-title-in 460ms cubic-bezier(0.22, 0.9, 0.28, 1) both;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--club-accent) 20%, transparent), transparent),
+    rgba(6, 10, 16, 0.55);
+  border-top: 1px solid color-mix(in srgb, var(--club-accent) 62%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--club-accent) 62%, transparent);
+  border-radius: 2px;
+  animation: esmo-club-title-in 520ms cubic-bezier(0.22, 0.9, 0.28, 1) both;
 }
+
+/* 實績稱號：銘牌換成金色，而且兩端加刻角。買不到的東西要看得出來。 */
+.esmo-hero__club-title[data-earned="1"] {
+  color: #fde68a;
+  background:
+    linear-gradient(180deg, rgba(251, 191, 36, 0.22), transparent),
+    rgba(6, 10, 16, 0.6);
+  border-top-color: rgba(251, 191, 36, 0.75);
+  border-bottom-color: rgba(251, 191, 36, 0.75);
+}
+
+.esmo-hero__club-title[data-earned="1"]::before,
+.esmo-hero__club-title[data-earned="1"]::after {
+  position: absolute;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border: 1px solid rgba(251, 191, 36, 0.8);
+  border-radius: 50%;
+  content: "";
+  transform: translateY(-50%);
+}
+
+.esmo-hero__club-title[data-earned="1"]::before { left: 3px; }
+.esmo-hero__club-title[data-earned="1"]::after { right: 3px; }
 
 @keyframes esmo-club-title-in {
   from { opacity: 0; transform: translateX(-6px); }
   to   { opacity: 1; transform: none; }
 }
 
+/* ── 裝備／取得：一次性回饋，不是常駐動畫 ───────────────────────────── */
+.esmo-hero[data-identity-flash="1"] .esmo-hero__skin,
+.esmo-hero[data-identity-flash="1"] .esmo-hero__banner {
+  animation: esmo-skin-in 620ms cubic-bezier(0.22, 0.9, 0.28, 1) both;
+}
+
+@keyframes esmo-skin-in {
+  from { opacity: 0; transform: scale(1.015); }
+  to   { opacity: 0.85; transform: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .esmo-hero,
+  .esmo-hero__skin,
+  .esmo-hero__banner,
   .esmo-hero__crest,
+  .esmo-hero__crest-aura,
+  .esmo-hero__crest-aura::after,
   .esmo-hero__club-title {
     animation: none !important;
     transition: none !important;
   }
 
+  /* 停在最終視覺狀態，而不是消失。 */
   .esmo-hero__club-title { opacity: 1; transform: none; }
+  .esmo-hero__skin,
+  .esmo-hero__banner { opacity: 0.85; transform: none; }
+
+  .esmo-dashboard[data-club-skin="ember"] .esmo-hero__crest-aura {
+    opacity: 0.8;
+    transform: none;
+  }
+
+  .esmo-dashboard[data-club-skin="midnight"] .esmo-hero__crest-aura::after { opacity: 0; }
 }
 
 .esmo-hero__crest::after {
@@ -1417,16 +1711,90 @@
     transition: border-color 520ms ease, background 520ms ease;
   }
 
-  .esmo-mobile-header__crest[data-banner="hex"] {
+  /*  隊徽光暈在手機上要按比例縮小：桌機那組 `inset:-10px / radius:30px`
+   *  套在 46px 的隊徽上會整個溢出去。 */
+  .esmo-mobile-header__crest {
+    position: relative;
+  }
+
+  .esmo-mobile-header__crest .esmo-hero__crest-aura {
+    inset: -5px;
+    border-radius: 16px;
+  }
+
+  .esmo-mobile-header__crest[data-crest="hex"] {
     clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0 50%);
   }
 
-  .esmo-mobile-header__crest[data-banner="circuit"] { border-style: dashed; }
+  .esmo-mobile-header__crest[data-crest="circuit"] { border-style: dashed; }
 
-  .esmo-mobile-header__crest[data-banner="laurel"] {
+  .esmo-mobile-header__crest[data-crest="laurel"] {
     border-radius: 50%;
     box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.025),
       0 0 0 2px color-mix(in srgb, var(--club-ring) 55%, transparent);
+  }
+
+  /*  390px 的皮膚：手機頭部空間小，皮膚只鋪在 header 上，不整頁鋪——
+   *  整頁鋪在小螢幕會壓到可讀性，而且是常駐的繪製成本。 */
+  .esmo-mobile-header__skin {
+    position: absolute;
+    z-index: 0;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  .esmo-dashboard[data-club-skin="midnight"] .esmo-mobile-header__skin {
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--club-accent) 20%, transparent), transparent 62%),
+      repeating-linear-gradient(0deg,
+        color-mix(in srgb, var(--club-accent) 7%, transparent) 0 1px, transparent 1px 5px);
+  }
+
+  .esmo-dashboard[data-club-skin="ember"] .esmo-mobile-header__skin {
+    background: radial-gradient(130% 100% at 50% 118%,
+      color-mix(in srgb, var(--club-accent) 32%, transparent), transparent 66%);
+  }
+
+  .esmo-dashboard[data-club-skin="verdant"] .esmo-mobile-header__skin {
+    background:
+      repeating-linear-gradient(45deg,
+        color-mix(in srgb, var(--club-accent) 7%, transparent) 0 1px, transparent 1px 7px),
+      repeating-linear-gradient(-45deg,
+        color-mix(in srgb, var(--club-accent-2) 6%, transparent) 0 1px, transparent 1px 7px);
+  }
+
+  .esmo-dashboard[data-club-skin="none"] .esmo-mobile-header__skin,
+  .esmo-dashboard:not([data-club-skin]) .esmo-mobile-header__skin { display: none; }
+
+  /*  手機的橫幅用同一組 motif，鋪在 header 全幅。 */
+  .esmo-mobile-header__banner {
+    position: absolute;
+    z-index: 0;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 0.8;
+    pointer-events: none;
+  }
+
+  .esmo-mobile-header__banner[data-motif="ridge"] {
+    background: repeating-linear-gradient(66deg,
+      transparent 0 18px,
+      color-mix(in srgb, var(--club-accent) 14%, transparent) 18px 20px,
+      transparent 20px 38px);
+  }
+
+  .esmo-mobile-header__banner[data-motif="halo"] {
+    background: repeating-radial-gradient(circle at 14% 50%,
+      color-mix(in srgb, var(--club-accent) 13%, transparent) 0 2px, transparent 2px 20px);
+  }
+
+  .esmo-mobile-header__banner[data-motif="weave"] {
+    background:
+      repeating-linear-gradient(45deg,
+        color-mix(in srgb, var(--club-accent) 11%, transparent) 0 2px, transparent 2px 8px),
+      repeating-linear-gradient(-45deg,
+        color-mix(in srgb, var(--club-accent-2) 9%, transparent) 0 2px, transparent 2px 8px);
   }
 
   .esmo-mobile-header__crest-badge {

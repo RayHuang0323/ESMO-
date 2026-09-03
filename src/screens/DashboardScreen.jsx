@@ -12,7 +12,7 @@ import { GC } from "../ui/theme.js";
 import { ESMO_CSS_VARS } from "../ui/designSystem.js";
 import EsmoIcon from "../ui/EsmoIcon.jsx";
 import { useIsHomeMobile } from "../ui/useViewport.js";
-import { useDashboardMotion } from "./dashboard/useDashboardMotion.js";
+import { useDashboardMotion, useIdentityTransition } from "./dashboard/useDashboardMotion.js";
 import { useMobileSheetMotion } from "./dashboard/useMobileSheetMotion.js";
 //  「有選手需要處理嗎」用既有的判定，不在首頁另訂體力門檻。
 import { isExhausted } from "../platform/condition/playerCondition.js";
@@ -100,6 +100,15 @@ function TeamHero({ team, meta, unread, xpPercent, onInbox, fansAtSeasonStart, i
   return (
     <header className="esmo-hero" data-dashboard-reveal>
       <div className="esmo-hero__ambient" data-dashboard-ambient />
+      {/*  Club Identity v2：皮膚與橫幅是**兩層獨立的大面積視覺**。
+           皮膚 = 主題決定的光向與材質；橫幅 = 另一個槽位的紋樣。
+           兩者都沒裝備時一層都不畫 ⇒ 與識別上線前逐像素相同。 */}
+      <div className="esmo-hero__skin" data-testid="club-identity-skin" aria-hidden="true" />
+      {identity?.bannerMotif && (
+        <div className="esmo-hero__banner" data-testid="club-identity-banner"
+          data-motif={identity.bannerMotif} data-wash={identity.bannerWash ?? undefined}
+          aria-hidden="true" />
+      )}
       <div className="esmo-hero__topline">
         <div className="esmo-hero__eyebrow">
           <span className="esmo-pulse" data-dashboard-pulse />
@@ -115,10 +124,13 @@ function TeamHero({ team, meta, unread, xpPercent, onInbox, fansAtSeasonStart, i
       <div className="esmo-hero__main">
         <div className="esmo-hero__copy">
           <div className="esmo-hero__identity">
-            {/*  Club Identity v1：隊徽框（banner）與稱號（title）的呈現處。
-                 沒裝備時 `data-banner` 為 undefined、稱號不渲染 ⇒ 與上線前完全相同。 */}
+            {/*  Club Identity v2：隊徽框（crestFrame）與稱號（title）的呈現處。
+                 沒裝備時 `data-crest` 為 undefined、稱號不渲染 ⇒ 與上線前完全相同。 */}
             <div className="esmo-hero__crest" aria-label={`${team.name ?? "戰隊"} 隊徽`}
-              data-banner={identity?.bannerPattern ?? undefined}>
+              data-crest={identity?.crestPattern ?? undefined}>
+              {/*  簽名元素：隊徽光暈。三套皮膚在這裡差最多，而且這是整個
+                   Dashboard 唯一的常駐動態（常青綠連這個都不動）。 */}
+              <span className="esmo-hero__crest-aura" data-testid="club-identity-aura" aria-hidden="true" />
               {team.emoji ?? "◆"}
               <span className="esmo-hero__crest-badge">{achievement}</span>
             </div>
@@ -127,7 +139,8 @@ function TeamHero({ team, meta, unread, xpPercent, onInbox, fansAtSeasonStart, i
               <h1 className="esmo-hero__title">
                 {team.name ?? "未命名戰隊"}
                 {identity?.titleLabel && (
-                  <span className="esmo-hero__club-title" data-testid="club-identity-title">
+                  <span className="esmo-hero__club-title" data-testid="club-identity-title"
+                    data-earned={identity.titleEarned ? "1" : "0"}>
                     {identity.titleLabel}
                   </span>
                 )}
@@ -448,12 +461,23 @@ function MobileTeamHeader({ team, meta, unread, xpPercent, onInbox, identity }) 
 
   return (
     <header className="esmo-mobile-header" data-dashboard-reveal>
+      {/*  Club Identity v2：手機的皮膚與橫幅鋪在 header 上（不整頁鋪——
+           小螢幕整頁鋪會壓可讀性，而且那是常駐的繪製成本）。
+           手機也要看得到，只做桌機那份等於手機玩家沒有這個功能
+           （V7B 與 V7-2.5 各踩過一次相反方向）。 */}
+      <div className="esmo-mobile-header__skin" aria-hidden="true" />
+      {identity?.bannerMotif && (
+        <div className="esmo-mobile-header__banner" data-testid="club-identity-banner"
+          data-motif={identity.bannerMotif} data-wash={identity.bannerWash ?? undefined}
+          aria-hidden="true" />
+      )}
       <div className="esmo-mobile-header__top">
         <div className="esmo-mobile-header__identity">
-          {/*  Club Identity v1：手機也要看得到隊徽框與稱號——只加桌機那份，
-               手機玩家等於沒有這個功能（V7B 與 V7-2.5 各踩過一次相反方向）。 */}
           <div className="esmo-mobile-header__crest" aria-label={`${team.name ?? "ESMO Team"} crest`}
-            data-banner={identity?.bannerPattern ?? undefined}>
+            data-crest={identity?.crestPattern ?? undefined}>
+            {/*  簽名元素在手機上也要有。只做桌機那份 = 手機玩家看不到三套
+                 皮膚差最多的地方。 */}
+            <span className="esmo-hero__crest-aura" data-testid="club-identity-aura" aria-hidden="true" />
             {team.emoji ?? "◈"}
             <span className="esmo-mobile-header__crest-badge">{achievement}</span>
           </div>
@@ -462,7 +486,8 @@ function MobileTeamHeader({ team, meta, unread, xpPercent, onInbox, identity }) 
             <h1>
               {team.name ?? "ESMO TEAM"}
               {identity?.titleLabel && (
-                <span className="esmo-hero__club-title" data-testid="club-identity-title">
+                <span className="esmo-hero__club-title" data-testid="club-identity-title"
+                  data-earned={identity.titleEarned ? "1" : "0"}>
                   {identity.titleLabel}
                 </span>
               )}
@@ -828,8 +853,13 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
   useDashboardMotion(rootRef, isHomeMobile);
 
   const team = profile.team ?? {};
-  //  Club Identity v1：**唯一**該讀的外觀入口。畫面不自己查型錄。
+  //  Club Identity v2：**唯一**該讀的外觀入口。畫面不自己查型錄。
   const identity = typeof profile.clubIdentity === "function" ? profile.clubIdentity() : null;
+  //  換皮膚／換橫幅／換隊徽框／換稱號 ⇒ 播一次轉場（首次掛載不播）。
+  useIdentityTransition(rootRef, [
+    identity?.skin ?? "-", identity?.bannerMotif ?? "-",
+    identity?.crestPattern ?? "-", identity?.titleLabel ?? "-",
+  ].join("|"));
   const meta = profile.meta ?? {};
   const finance = profile.finance ?? {};
   const players = profile.players ?? [];
@@ -950,19 +980,22 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
   const actions = todos.slice(0, 4);
   const mobileQuickActions = todos.slice(1, 4);
 
-  //  Club Identity v1：主題色只覆寫俱樂部呈現層的兩個變數。
+  //  Club Identity v2：主題只覆寫俱樂部呈現層的顏色變數，皮膚本身由
+  //  `data-club-skin` 在 CSS 裡選擇（光向、材質、發光語言、光暈是設計，
+  //  不是資料——所以它不能只靠新增一列型錄就長出來）。
   //  ⚠ 沒裝備主題就**完全不注入**，CSS 的預設值（原本寫死的紫／綠）繼續生效
   //    ⇒ 未裝備時畫面逐像素不變。戰鬥側顏色不在這裡，也永遠不會在這裡。
   const identityStyle = {
     ...ESMO_CSS_VARS,
     ...(identity?.accent ? { "--club-accent": identity.accent } : {}),
     ...(identity?.accent2 ? { "--club-accent-2": identity.accent2 } : {}),
-    ...(identity?.bannerRing ? { "--club-ring": identity.bannerRing } : {}),
+    ...(identity?.crestRing ? { "--club-ring": identity.crestRing } : {}),
   };
 
   return (
     <div ref={rootRef} className="esmo-dashboard" style={identityStyle}
-      data-club-theme={identity?.theme?.assetId ?? "none"}>
+      data-club-theme={identity?.theme?.assetId ?? "none"}
+      data-club-skin={identity?.skin ?? "none"}>
       {isHomeMobile ? (
         <MobileHome
           onOffSeason={() => sel("offSeason")}

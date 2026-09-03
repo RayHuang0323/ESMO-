@@ -1,7 +1,71 @@
+import { useRef } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 
 gsap.registerPlugin(useGSAP);
+
+/**
+ * Club Identity v2 — 換皮膚／換橫幅／換稱號時的一次性轉場。
+ *
+ * ⚠ **一次性，不是常駐動畫。** Motion Policy 的分工：常駐動態只表達狀態
+ *   （隊徽光暈，而且常青綠連那個都不動），狀態**改變**的那一刻才播轉場。
+ *   把轉場做成常駐迴圈，畫面就會一直在動，390px 也一直在付繪製成本。
+ *
+ * ⚠ 只動 `opacity` / `scale` / `x` ⇒ 純合成層，不觸發 reflow。
+ *
+ * 首次掛載**不播**：一進首頁就閃一下不是回饋，是雜訊。
+ *
+ * @param {object} rootRef      Dashboard 根節點
+ * @param {string} identityKey  皮膚／橫幅／隊徽框／稱號的組合鍵，變了才播
+ */
+export function useIdentityTransition(rootRef, identityKey) {
+  const seenRef = useRef(null);
+
+  useGSAP(() => {
+    const root = rootRef.current;
+    if (!root) return undefined;
+
+    const first = seenRef.current === null;
+    seenRef.current = identityKey;
+    if (first) return undefined;
+
+    const skins = root.querySelectorAll(
+      ".esmo-hero__skin, .esmo-hero__banner, .esmo-mobile-header__skin, .esmo-mobile-header__banner");
+    const crest = root.querySelector(".esmo-hero__crest, .esmo-mobile-header__crest");
+    const title = root.querySelector('[data-testid="club-identity-title"]');
+    const media = gsap.matchMedia();
+
+    //  reduced-motion：直接停在最終狀態，不做任何位移。
+    media.add("(prefers-reduced-motion: reduce)", () => {
+      if (skins.length) gsap.set(skins, { autoAlpha: 1, scale: 1 });
+      if (crest) gsap.set(crest, { scale: 1 });
+      if (title) gsap.set(title, { autoAlpha: 1, x: 0 });
+    });
+
+    media.add("(prefers-reduced-motion: no-preference)", () => {
+      const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
+      if (skins.length) {
+        tl.fromTo(skins,
+          { autoAlpha: 0, scale: 1.014 },
+          { autoAlpha: 1, scale: 1, duration: 0.52, clearProps: "transform" }, 0);
+      }
+      //  隊徽蓋章：短、帶一點過衝，像把徽章壓上去。
+      if (crest) {
+        tl.fromTo(crest,
+          { scale: 0.93 },
+          { scale: 1, duration: 0.44, ease: "back.out(2.2)", clearProps: "transform" }, 0.04);
+      }
+      if (title) {
+        tl.fromTo(title,
+          { autoAlpha: 0, x: -8 },
+          { autoAlpha: 1, x: 0, duration: 0.36, clearProps: "transform" }, 0.12);
+      }
+      return () => tl.kill();
+    });
+
+    return () => media.revert();
+  }, { scope: rootRef, dependencies: [identityKey] });
+}
 
 /**
  * Dashboard-only motion language.

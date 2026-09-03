@@ -48,6 +48,7 @@ import CompetitionPanel from "../competition/CompetitionPanel.jsx";
 import AsiaFinalsPanel from "./asiaFinals/AsiaFinalsPanel.jsx";
 //  UI-4A：與 CS 賽事中心共用的純呈現元件（不算任何數字，見各檔檔頭）
 import StandingsTable from "../competition/StandingsTable.jsx";
+import OpponentClubCard from "../competition/OpponentClubCard.jsx";
 import { FixtureRow } from "../competition/FixtureList.jsx";
 import RecapNextSeason from "./seasonRecap/RecapNextSeason.jsx";
 import SeasonRecap from "./seasonRecap/SeasonRecap.jsx";
@@ -76,6 +77,10 @@ export default function CompetitionScreen({ onBack, onPlay, onResume, mode, game
 
   const [err, setErr] = useState(null);
   const [confirmForfeit, setConfirmForfeit] = useState(null);
+  //  Social Identity v1：正在檢視哪一間俱樂部。純畫面狀態，不進 store。
+  const [inspectTeamId, setInspectTeamId] = useState(null);
+  //  卡片要整包 store（`publicClubCard` 是 selector，不是原始值）。
+  const profile = useProfileStore();
 
   //  沒有賽季就在這裡建（決定性：只由 team.id 與 meta.seasonSeed 決定）。
   //  刻意不在載入存檔時建——那會讓每個舊存檔莫名多出一整季賽程。
@@ -618,6 +623,9 @@ export default function CompetitionScreen({ onBack, onPlay, onResume, mode, game
           showHeader
           showScoreDiff
           tagOf={tagOf}
+          //  Social Identity v1：點任何一列 ⇒ 對手俱樂部卡。
+          //  公開欄位由 `publicClubCard()` 的契約決定，這裡不自己挑。
+          onInspect={setInspectTeamId}
           testIdPrefix="moba-competition-standing"
           footer={(() => {
             //  誠實標示：有多少場不是玩家實打的
@@ -654,6 +662,17 @@ export default function CompetitionScreen({ onBack, onPlay, onResume, mode, game
               `rollSeason` 仍是同一個 handler，不自動 rollover。 */}
       {final && canRoll?.ok && (
         <RecapNextSeason canRoll={canRoll} onClick={rollSeason} />
+      )}
+
+      {/*  ── 對手俱樂部卡（Social Identity v1）────────────────────────────
+           ⚠ 資料只從 `profile.publicClubCard(teamId)` 來。那支背後是
+              `platform/identity/publicClubIdentity.js` 的公開契約，主義／
+              總教練／戰術／賽前準備都在禁列上——點對手不得變成免費偵察。 */}
+      {inspectTeamId && (
+        <OpponentClubCard
+          card={profile.publicClubCard(inspectTeamId)}
+          onClose={() => setInspectTeamId(null)}
+        />
       )}
     </CompetitionFrame>
   );
