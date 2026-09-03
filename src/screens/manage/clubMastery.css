@@ -277,6 +277,15 @@
   min-width: 0;
 }
 
+/*  Club Progression v1：這張卡是「聲望」不是「等級」，標籤要先講清楚。 */
+.cm__club-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--esmo-muted);
+  text-transform: none;
+}
+
 .cm__club-icon { font-size: 15px; }
 
 .cm__club-name {

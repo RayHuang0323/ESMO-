@@ -17592,3 +17592,116 @@ evaluate 撞上）。那是逾時的餘波，不是另一個獨立問題。真�
 reward summary、Home／Club Mastery、shared progression Store、Dashboard、Club Identity、
 Club Assets、Meta、AppShell、CBR／Rating、weapon balance、economy、Competition／Season 或
 tactic-sync authority；未開始下一個 Sprint。
+- TD-56、Android 真機驗收、Club Progression Contract 實作：均未動。
+
+---
+
+## Sprint：Club Progression v1（2026-09-04）
+
+分支 `feature/club-progression-v1`，基線 `9d3cb2d`（已 `git fetch origin` 核對過，
+遠端沒有前進）。**本地 commit，未 push、未部署**，等 Owner Review。
+
+### 問題
+
+首頁的 `Lv.93` / `XP 7.27萬` / `BADGE #48` 是 `profileStore` 的 `DEFAULT` 種子常數，
+**全庫沒有任何 writer**（grep 過 `profileStore.js` 與 `applyMatchProgress.js` 的 `nextState`）。
+打幾百場都不會動。同時「Club Level」這個詞在首頁與俱樂部專精頁各指一件事——
+後者其實是 `clubTierOf(clubPointsLifetime)` 的五階。
+
+### 做了什麼
+
+建立**真正獨立**的 canonical Club XP，而不是把 `clubPointsLifetime` 改名。
+
+- `src/platform/progression/clubProgression.js`（新）：曲線、`clubLevelOf` / `clubXpForLevel` /
+  `clubProgressToNextLevel`、normalize、bootstrap、授予公式、view。**Level 一律推導、不落盤**。
+- 授予點只有一個：`applyProgressToState()`。掛在那裡的理由跟 retention / mastery 一樣——
+  它是全專案唯一的結算入口，掛別處一定會漏掉某一種來源（TD-35 的形狀），
+  而且它已經有 `transactionId` 冪等保護，不必再造第二套。
+- receipt 加 `club` 區塊 → MOBA / CS **共用**的 `RewardReceiptPanel` 顯示「俱樂部 XP」與升級提示。
+  兩個 Result 畫面都不重算，各自的 Result UI 一行都沒改。
+- 首頁桌機＋手機改讀 `clubProgressionView()`；假的三個數字全部移除。
+  第三格改成真有語意的榮譽（earned title → 年度冠軍次數 → 誠實空狀態「尚無」）。
+- 戰隊詳情頁（`TeamScreen`）也還在顯示同一個假的 `team.lv`，一併改讀 canonical XP。
+- 俱樂部專精那張卡補上標籤「**俱樂部聲望**」；`clubLevel` 欄位改名 `prestige`。
+  Club Mastery 的流派／專精進度／戰術變體**一行邏輯都沒改**。
+
+### Migration 決策（有實際量測才決定）
+
+`floor(clubPointsLifetime × 0.5)` 一次性 bootstrap。**沒有**採用 `team.lv/xp`——
+那是假常數，搬進新系統等於把假資料洗成規格。也沒有歸零（會懲罰老玩家）。
+累計 4,000 點 ⇒ 2,000 XP ⇒ Lv.7。Bootstrap 只做一次，之後兩者正式分離。
+理由與量級表寫在 `docs/design/ClubProgression_現況與Contract_v1.md` 第四節。
+
+### 量級投影（勝率 50%，一季 = 常規賽 14 場）
+
+一季 2,625 XP → **Lv.8**；三季 7,875 → **Lv.12**；十季 26,250 → **Lv.19**。
+一場正式賽 150–225 XP、一場一般競技 60–90 XP、快速練習 **0**。
+
+### 驗證（全部實跑）
+
+| 驗證 | 結果 |
+|---|---|
+| `npm run build` | ✓ `built in 9.72s` |
+| `tools/check_club_progression_v1.mjs`（新） | **36/36** |
+| `tools/browser_check_club_progression_home.mjs`（新，Harness v1，桌機＋390px） | **55/55 PASS** |
+| `browser_check_club_mastery_ui` | 68/68 PASS |
+| `browser_check_club_identity_ui` | 129/129 PASS |
+| `check_club_identity_v1`（欄位改名後） | 83/83 |
+| `check_club_mastery_v1` / `check_club_assets_v1` / `check_cs23` | PASS |
+| `regress` / `regress2` | ✓ / 節奏門檻 8/8 |
+
+新 gate 第一次跑是 `HARNESS_FAIL`（我在 gate 腳本裡呼叫了不存在的 `store.go()`），
+**22/22 產品斷言全過、被正確分類成 harness 問題，沒有誣賴產品**——
+改成點擊真實入口導航後 55/55 PASS。這是 Browser Harness v1 分類機制的又一次實戰驗證。
+
+### 未做（明確留給下一輪）
+
+- **Retention Economy Calibration** 整輪未做：週目標門檻對齊供給量、Club Points 產量與售價重估、
+  Club XP 曲線正式校準、Club Level 要不要給實質回饋、冠軍額外 XP。契約已留位置，未接。
+- 48 支 legacy browser gate 仍未 migrate（本輪只新增一支 Harness v1 gate，未開 batch 2）。
+- TD-56、Club Facilities、真錢商城：均未動。
+
+### Release（2026-09-04）
+
+Owner Review 通過，正式發布。
+
+| 項目 | 值 |
+|---|---|
+| ORIGIN_MAIN_SHA（發布前） | `9d3cb2d03d2024d9ce6a65b0f88406ab4f91710b`（fetch 後確認未前進） |
+| FINAL_MAIN_SHA | **`f5b666aaaa0bdb3fffc9573488003a86b6be99a6`** |
+| push | fast-forward `9d3cb2d..f5b666a`，非 force |
+| Pages workflow | `33795102564` — **success** |
+| 正式站 smoke | `browser_check_prod_club_progression_release` **76/76 PASS**（桌機＋390px） |
+
+因為 `origin/main` 沒有前進，本次是純 fast-forward，**沒有任何整合工作**，
+也就沒有動到 Codex 的 CS runtime／`fpsRoster`／`CsPrepScreen`／`CsLoadingScreen`。
+最終 diff 17 檔，禁區檔案一個都沒出現。
+
+### 正式站 smoke 過程中我自己的三個 gate bug（值得記下來）
+
+三次都被正確分類，**沒有一次誣賴產品**：
+
+1. **註解裡的反引號**提早結束樣板字串（`` `prestige` ``）⇒ 腳本連載入都失敗。
+   已知坑，這次又踩一次——`chrome.evaluate` 的字串裡連註解都不能出現反引號。
+2. **導航未完成就 fetch**：Chrome 啟動時帶 url 不保證導航已完成，太早 evaluate 時
+   `location.href` 還是 `about:blank` ⇒ `Failed to fetch` ⇒ `HARNESS_FAIL`。
+   修法：進 §D 之前先明確 `navigate` ＋ 等待。
+3. **斷言讀錯地方（唯一一次 `PRODUCT_FAIL`，但不是產品問題）**：
+   我讀 `localStorage.clubProgression.xp` 判斷 migration 有沒有生效，得到 `null`。
+   但同一份 log 裡隊徽是 `crest=7`——正是 4000×0.5=2000 XP 推導出的 Lv.7。
+   真相是：**migration 發生在載入時的 normalize，要等有東西呼叫 `save()` 才落盤**，
+   純 reload 之後存檔裡當然還是舊形狀。
+   修法不是放寬斷言，而是**改強**：先看畫面推導出的等級，再主動觸發一次落盤，
+   確認切片真的寫進去（`{xp: 2000, migratedFromLifetime: 2000}`）且不超過 lifetime。
+
+### 為了正式站 smoke 對 harness 的唯一改動
+
+`runGate()` 新增 `externalUrl` 選項：傳了就跳過 `startOwnedDevServer`，
+其餘（Chrome 擁有權、總時限、PASS／PRODUCT_FAIL／HARNESS_FAIL 分類、保證收尾）完全相同。
+這讓正式站 smoke 也享有同一套分類。**沒有開 legacy gate 遷移 batch 2。**
+
+### 已知外部殘留（不是本輪造成）
+
+有一個 2026-09-04 01:09 起就沒關掉的 `browser_check_club_identity_ui.mjs` 行程，
+來自另一個 worktree（`club-identity-v2-release-final`），跑的是**遷移前**的舊版 gate——
+正是 Browser Harness v1 修掉的「dev server 永遠不關」病灶的活體。未處理（不在本輪 worktree 內）。

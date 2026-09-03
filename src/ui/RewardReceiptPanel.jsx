@@ -34,6 +34,9 @@ export default function RewardReceiptPanel({ receipt, accent = GC.gold }) {
   }
 
   const t = receipt.team ?? {};
+  //  Club Progression v1：Club XP 也是 receipt 的一部分（`applyMatchProgress` 寫的），
+  //  這裡**只顯示**，不重算。舊 receipt 沒有 `club` ⇒ 這一格自動不出現。
+  const club = receipt.club ?? null;
   const players = receipt.players ?? [];
   const totals = receipt.totals ?? {};
   const settled = receipt.alreadyApplied;
@@ -54,17 +57,30 @@ export default function RewardReceiptPanel({ receipt, accent = GC.gold }) {
       {/*  Fan System F0：移除「聲望」格。它從來沒有公式，收據裡永遠是 0 ⇒ 永遠顯示
            「聲望 —」。一個永遠不會動的欄位，比沒有這個欄位更誤導玩家。
            `reputation` 欄位本身保留在 save schema 裡（deprecated，見 TD-22）。 */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: club ? "1fr 1fr 1fr" : "1fr 1fr", gap: 6, marginBottom: 8 }}>
         {[
-          ["獎金", t.money > 0 ? `+$${wan(t.money)}` : "—", GC.green],
-          ["粉絲", t.fans > 0 ? `+${t.fans}` : "—", accent],
-        ].map(([k, v, c]) => (
-          <div key={k} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "6px 4px", textAlign: "center" }}>
+          ["獎金", t.money > 0 ? `+$${wan(t.money)}` : "—", GC.green, null],
+          ["粉絲", t.fans > 0 ? `+${t.fans}` : "—", accent, null],
+          //  練習賽的 Club XP 是 0 ⇒ 顯示「—」而不是 +0，跟上面兩格一致。
+          ...(club ? [["俱樂部 XP", club.xpGained > 0 ? `+${club.xpGained}` : "—", GC.purp, "receipt-club-xp"]] : []),
+        ].map(([k, v, c, tid]) => (
+          <div key={k} data-testid={tid ?? undefined} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "6px 4px", textAlign: "center" }}>
             <div style={{ color: GC.gray, fontSize: 8, fontWeight: 700 }}>{k}</div>
             <div style={{ color: c, fontSize: 12, fontWeight: 900, fontFamily: MONO }}>{v}</div>
           </div>
         ))}
       </div>
+
+      {/*  俱樂部升級：只有真的跨級才出現一行，不做動畫、不占常駐空間。 */}
+      {club?.leveledUp && (
+        <div data-testid="receipt-club-levelup" style={{
+          marginBottom: 8, padding: "5px 8px", borderRadius: 8,
+          background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.35)",
+          color: GC.purp, fontSize: 10, fontWeight: 900, textAlign: "center",
+        }}>
+          俱樂部升級 Lv.{club.levelBefore} → Lv.{club.levelAfter}
+        </div>
+      )}
 
       {/* 選手 XP / 升級 / 天賦點 */}
       {players.length > 0 ? (

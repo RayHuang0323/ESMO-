@@ -482,6 +482,11 @@ export async function runGate({
   //    確認 startup 階段真的判成 HARNESS_FAIL）。正常 gate 不要傳這兩個——
   //    不傳就是預設行為：向 OS 要一個目前空的 port。
   port = null, cdpPort = null,
+  //  ⚠ `externalUrl` 是給**正式站 smoke** 用的：目標已經在線上，不需要（也不該）
+  //    起本地 dev server。傳了就跳過 startOwnedDevServer，其餘（Chrome 擁有權、
+  //    總時限、PASS / PRODUCT_FAIL / HARNESS_FAIL 分類、保證收尾）完全相同。
+  //    正式站是打包後的 bundle，沒有 `/src/...` ⇒ gate 內只能點 UI 與讀 localStorage。
+  externalUrl = null,
 } = {}) {
   const startedAt = Date.now();
   let phase = "startup";
@@ -496,12 +501,15 @@ export async function runGate({
   let harnessReason = null;
 
   try {
-    server = await startOwnedDevServer({ port, base, timeoutMs: DEFAULT_TIMEOUTS.devServerStartMs });
-    chrome = await launchOwnedChrome({ url: server.url, port: cdpPort, headless });
+    if (!externalUrl) {
+      server = await startOwnedDevServer({ port, base, timeoutMs: DEFAULT_TIMEOUTS.devServerStartMs });
+    }
+    const targetUrl = externalUrl ?? server.url;
+    chrome = await launchOwnedChrome({ url: targetUrl, port: cdpPort, headless });
 
     phase = "test";
     await Promise.race([
-      run({ chrome, url: server.url, ck, sleep, J: (raw) => JSON.parse(String(raw).replace(/^"|"$/g, "")) }),
+      run({ chrome, url: targetUrl, ck, sleep, J: (raw) => JSON.parse(String(raw).replace(/^"|"$/g, "")) }),
       sleep(timeoutMs).then(() => {
         throw new HarnessError(`gate 總時限逾時（軟上限 ${timeoutMs}ms；硬上限見 run-gate.mjs 的 supervisor）`);
       }),

@@ -11,6 +11,7 @@
 // ============================================================================
 import React, { useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
+import { clubLevelOf } from "../../platform/progression/clubProgression.js";
 import { useSeasonStore } from "../../platform/seasonStore.js";
 import { standings } from "../../platform/seasonData.js";
 import { calcPower, bestPositions, personalityById } from "../../data/playerModel.js";
@@ -29,6 +30,11 @@ export default function TeamScreen({ onBack }) {
   const players = useProfileStore((s) => s.players) ?? [];
   const team = useProfileStore((s) => s.team);
   const meta = useProfileStore((s) => s.meta);
+  //  Club Progression v1：`team.lv` 是沒有 writer 的種子常數（永遠 93）。
+  //  ⚠ 訂閱的是**切片**、等級當場推導——selector 若回傳每次都不同的新物件，
+  //    zustand 的 getSnapshot 會判定為變更，這裡不用 `clubProgressionView()`。
+  const clubXp = useProfileStore((s) => s.clubProgression?.xp ?? 0);
+  const clubLevel = clubLevelOf(clubXp);
   const history = useSeasonStore((s) => s.history);
   const [div, setDiv] = useState("moba");
 
@@ -48,7 +54,7 @@ export default function TeamScreen({ onBack }) {
         <div style={{ width: 54, height: 54, borderRadius: 14, background: "linear-gradient(135deg,#3b82f6,#1e40af)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, border: "2px solid #60a5fa" }}>{team.emoji}</div>
         <div style={{ flex: 1 }}>
           <div style={{ color: "white", fontSize: 18, fontWeight: 900 }}>{team.name}</div>
-          <div style={{ color: GC.gray, fontSize: 10 }}>Lv.{team.lv} · {rec.wins}勝{rec.losses}負 · 粉絲 {(meta.fans ?? 0).toLocaleString()}</div>
+          <div style={{ color: GC.gray, fontSize: 10 }} data-testid="team-club-level">Lv.{clubLevel} · {rec.wins}勝{rec.losses}負 · 粉絲 {(meta.fans ?? 0).toLocaleString()}</div>
         </div>
       </div>
 

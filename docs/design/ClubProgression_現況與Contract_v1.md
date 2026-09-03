@@ -124,30 +124,149 @@ Club Points 只從 `claimObjective()` 進帳（`retentionState.js:281-300`），
 
 ---
 
-## 四、Club Progression Contract v1（提案，尚未實作）
+## 四、Club Progression Contract v1（**已實作**，2026-09-04）
 
 **一個軸只能有一個權威，而且每個軸要說得出「它給玩家什麼」。**
 
+上一版這張表把 Club XP / Level 的權威寫成 `clubPointsLifetime → clubTierOf()`。
+那個提案被否決了，理由是它會把「可以花的軟貨幣的累計值」直接當成遊玩進度——
+玩家做日常目標就會升級，打不打比賽都一樣。這一輪改成建立**真正獨立**的 Club XP。
+
 | 軸 | 定義 | 權威 | 可消耗？ | 玩家看到什麼 |
 |---|---|---|---|---|
-| **Club XP / Level** | 長期遊玩進度 | `clubPointsLifetime` → `clubTierOf()` | ❌ 永不下降 | 首頁與 Club Mastery **共用同一個等級**，名稱統一 |
-| **Club Points** | gameplay 賺來的可花軟貨幣 | `retention.clubPoints` | ✅ | 餘額 ＋ 買得起什麼 |
-| **Honors / Titles / Badge** | 成就與社交展示 | `competition/honors.js` 的 `honors[]` | ❌ | 稱號、對手俱樂部卡上的榮耀列 |
+| **Club XP** | 比賽打出來的長期遊玩進度 | `clubProgression.xp`（`platform/progression/clubProgression.js`） | ❌ 只增不減 | 首頁 CLUB XP 與「距下一級還差多少」 |
+| **Club Level** | Club XP 的**推導**結果，不落盤 | `clubLevelOf(xp)` | — | 首頁 CLUB LEVEL 與隊徽角標 |
+| **Club Points** | 目標系統賺來的可花軟貨幣 | `retention.clubPoints` | ✅ | 餘額 ＋ 買得起什麼 |
+| **俱樂部聲望（Prestige Tier）** | 累計拿過多少點數的門面階級 | `clubTierOf(clubPointsLifetime)` | ❌ | 俱樂部專精頁那張卡、對手俱樂部卡 |
+| **Honors / Earned Titles** | 賽場成就與社交展示 | `competition/honors.js` 的 `honors[]` | ❌ | 稱號、榮譽欄位、對手卡上的榮耀列 |
 | **Career Funds** | 球隊營運經濟 | `finance.funds` | ✅ | 營運資金 |
 | **Player / Hero 成長** | 選手個體成長 | `players[]`（生涯）與 `heroProgressStore`（戰鬥） | — | 選手頁與英雄頁 |
 
-### 由此得出的四項待辦（本輪不做）
+### 資料流
 
-1. **移除首頁的假 LEVEL 與 BADGE**，或把它們改接 `clubTierOf(clubPointsLifetime)` 與 `honors.length`。目前它們是死值，直接違反「每個軸要說得出它給玩家什麼」。
-2. **統一「Club Level」這個詞**。現在首頁與 Club Mastery 各自叫它 Level，這是玩家困惑的直接來源。
-3. **`clubPointsLifetime` 保持雙角色但要講清楚**：它同時是等級來源與購買門檻，UI 要說「花點數不會讓等級下降」（俱樂部資產頁已經有這句，`ClubAssetsScreen.jsx` 的 `club-assets-note`）。
-4. **週目標門檻要對齊實際賽程供給量**（見上節）。
+```
+比賽（一般競技 / 正式賽季）
+        │
+        └─► applyProgressToState()  ← 全專案唯一結算入口（天生帶冪等保護）
+                 ├─► Club XP  ──► clubLevelOf() ──► Club Level      （首頁）
+                 ├─► Player XP ─► 選手等級 / 天賦點                  （選手頁）
+                 ├─► Funds / Fans                                    （財務 / 粉絲）
+                 └─► receipt.club ─► RewardReceiptPanel              （賽後結算）
 
-### Monetization boundary（現在就先立，避免以後被既成事實推著走）
+俱樂部目標（日 / 週 / 季）
+        └─► Club Points ──┬─► 可花餘額 ──► 教練 / 俱樂部識別          （Club Assets）
+                          └─► clubPointsLifetime ──► 俱樂部聲望階級    （俱樂部專精）
 
-- **真錢不得直接換 Career power。** Club Points 現在可以買教練，而教練有 career capability ⇒ 因此 **Club Points 不得接現金購買**。
-- 未來若商業化，優先順序：
-  1. **直接購買外觀**（跳過 Club Points，現金 → 外觀，外觀永遠 `capability: {}`）
-  2. **cosmetic-only premium 路線**（賽季外觀通行證之類）
-- 不做：現金換 Club Points、gacha、任何會把 career capability 放進付費路徑的設計。
-- 本輪**沒有**實作任何付款或商城。
+賽事名次封存
+        └─► honors[] ──► 榮譽稱號 / 年度冠軍次數                      （首頁第三格、對手卡）
+
+快速練習 ──► 0 Club XP、0 獎勵、不計戰績（`isPracticeSource()` 唯一判定）
+```
+
+**五條界線**（這一輪的重點，都有 verifier 守）：
+
+1. Club XP **不是** `clubPointsLifetime` 改名。兩者不同源、不互相影響。
+2. Club Level **不落盤**。存兩份權威一定會漂移——這正是舊 `team.lv/xp` 的下場。
+3. 俱樂部聲望 **不是** Club Level。前者看累計點數，後者看比賽產出的 XP。
+4. Honors / Earned Titles **不是** XP 也不是貨幣。
+5. Career Funds、Player XP 都 **不是** Club XP。
+
+### 授予規則與曲線
+
+授予點只有一個：`applyProgressToState()`（`platform/progress/applyMatchProgress.js`）。
+MOBA / CS 的 Result 畫面**一律不得自己加 XP**，只讀 `receipt.club`。
+
+| 來源 | 判定 | 敗場 | 勝場（×1.5） |
+|---|---|---|---|
+| 快速練習 `practice` | `origin.kind === "practice"` | 0 | 0 |
+| 來源不明 `unknown` | 查不到 origin | 0 | 0 |
+| 一般競技 `competitive` | `origin.kind === "ticket"` | 60 | 90 |
+| 正式賽季 `official` | `origin.kind === "fixture"` | 150 | 225 |
+
+曲線集中在 `clubProgression.js` 的 `LEVEL_STEPS` 一張表（前 20 級手工，之後每級固定 4000）。
+UI 一律不得自己寫門檻。前 20 級的累計門檻：
+
+```
+120 / 300 / 540 / 860 / 1260 / 1760 / 2380 / 3140 / 4060 / 5160
+6460 / 8000 / 9800 / 11880 / 14260 / 16960 / 20000 / 23400 / 27180 / 31180
+```
+
+**量級投影**（勝率 50%，一個賽季 = 常規賽 14 場正式賽，`scheduleGenerator.js:15`）：
+
+| 情境 | Club XP | 到達 |
+|---|---|---|
+| 1 場一般競技（勝／敗） | 90 / 60 | Lv.1 |
+| 1 場正式賽季（勝／敗） | 225 / 150 | Lv.2 |
+| 1 個生涯賽季 | 2,625 | **Lv.8** |
+| 3 個賽季 | 7,875 | **Lv.12** |
+| 10 個賽季 | 26,250 | **Lv.19** |
+
+早期每一兩場就看得到動靜，後期逐漸拉長，十季也不會爆表。
+數值是否留在這裡由 Retention Economy Calibration 決定（見第六節）。
+
+### Migration policy
+
+**判斷依據**：舊存檔沒有 `clubProgression` 欄位，只有兩個可能的來源可以參考——
+`team.lv / team.xp`（首頁那個 Lv.93 / 7.27萬）與 `retention.clubPointsLifetime`。
+
+- ❌ **不採用 `team.lv / team.xp`**。它們是 `DEFAULT` 裡的種子常數，全庫沒有任何 writer，
+  打幾百場都不會動。把一個假常數搬進新系統，等於把假資料洗成規格。
+- ❌ **不採用歸零**。既有生涯的玩家一夜之間掉回 Lv.1，等於懲罰玩得久的人。
+- ✅ **採用 `floor(clubPointsLifetime × 0.5)` 一次性 bootstrap**。
+  理由：`clubPointsLifetime` 是這個存檔裡唯一真的隨遊玩累積、而且只增不減的量。
+  取 0.5 是保守方向——寧可略低，因為之後只會往上加。
+  例：累計 4,000 點 ⇒ bootstrap 2,000 XP ⇒ Lv.7，落在「玩過幾季的老存檔」該有的位置。
+
+Bootstrap **只做一次**：`normalizeClubProgression()` 看到已有 `clubProgression` 就原樣通過，
+之後再賺多少 Club Points 都不會再灌進 Club XP ⇒ **migration 之後兩者正式分離**。
+落盤欄位只有 `{ schema, xp }` ＋ 一次性的 `migratedFromLifetime` 註記。
+
+Club Assets（永久所有權、教練、識別）與 Club Points 餘額**完全不受影響**——
+migration 只新增 `clubProgression` 一個切片，不改動任何既有欄位。
+
+### 命名衝突的處理
+
+俱樂部專精頁上那個由 `clubTierOf(clubPointsLifetime)` 推導的五階，以前沒有標題，
+玩家只看到一個「職業俱樂部」和一條進度條，分不出它跟首頁的 Level 是不是同一件事。
+這一輪：
+
+- 那張卡加上明確標籤「**俱樂部聲望**」（`mastery-prestige-label`）。
+- `ClubAssetsScreen` 的說明句「俱樂部等級看累計」→「俱樂部**聲望**看累計」。
+- 公開俱樂部卡的欄位 `clubLevel` → `prestige`（`publicClubIdentity.js`），
+  這樣對手卡上顯示的也不會再被讀成 Club Level。
+- Club Mastery 本身（流派、專精進度、戰術變體）**一行邏輯都沒有改**。
+
+---
+
+## 五、本輪實作的檔案
+
+| 檔案 | 角色 |
+|---|---|
+| `src/platform/progression/clubProgression.js` | **新增**。Club XP / Level 的唯一 domain：曲線、normalize、bootstrap、授予公式、view |
+| `src/platform/profileStore.js` | `clubProgression` 切片（DEFAULT / load / startNewGame）＋ `clubProgressionView()` selector；`clubLevel` → `prestige` |
+| `src/platform/progress/applyMatchProgress.js` | Club XP 的**唯一**授予點；receipt 加上 `club` 區塊 |
+| `src/screens/DashboardScreen.jsx` | 首頁桌機＋手機都改讀 `clubProgressionView()`；假的 Lv.93 / 7.27萬 / #48 全部移除 |
+| `src/ui/RewardReceiptPanel.jsx` | MOBA / CS **共用**的賽後收據加上「俱樂部 XP」與升級提示（只讀 receipt，不重算） |
+| `src/screens/manage/ClubMasteryScreen.jsx`＋`clubMastery.css` | 聲望卡加標籤 |
+| `src/screens/manage/ClubAssetsScreen.jsx` | 說明句改用「聲望」 |
+| `src/platform/identity/publicClubIdentity.js`、`src/screens/competition/OpponentClubCard.jsx` | 欄位 `clubLevel` → `prestige` |
+| `src/platform/retention/retentionState.js` | 只改註解措辭（等級 → 聲望），**沒有動任何數值或邏輯** |
+| `tools/check_club_progression_v1.mjs` | **新增**。36 項契約驗證＋量級投影 |
+| `tools/browser_check_club_progression_home.mjs` | **新增**。Browser Harness v1 gate（桌機＋390px） |
+
+---
+
+## 六、Retention Economy Calibration — **NEXT / NOT IMPLEMENTED**
+
+這一輪**沒有**做完整的留存經濟校準。以下項目全部留給下一個 sprint：
+
+1. **週目標門檻對齊實際賽程供給量**（見第三節的產量估算）。
+2. **Club Points 產量與售價的整體重估**（教練與識別的定價現在是各自訂的）。
+3. **Club XP 曲線的正式校準**。這一輪只保證量級合理（一季 Lv.8、十季 Lv.19），
+   沒有對照留存曲線調過。要改只需要動 `clubProgression.js` 的 `LEVEL_STEPS` 一張表。
+4. **Club Level 要不要有實質回饋**（現在純粹是進度展示，不解鎖任何東西）。
+5. **賽季／冠軍的額外 Club XP**。契約已經留了位置（`CLUB_XP_AWARD` 依來源分級），
+   但本輪只實作到「正式賽季場次權重較高」，冠軍加成尚未接。
+
+第三節的 Monetization boundary 維持不變，並補一條：
+**Club XP 永遠不得以任何形式販售或加速**——它是遊玩進度，不是貨幣。

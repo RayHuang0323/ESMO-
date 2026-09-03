@@ -70,8 +70,8 @@ export default function OpponentClubCard({ card, onClose }) {
                 <span className="occ__title" data-testid="opponent-club-title">{card.titleLabel}</span>
               )}
             </h2>
-            {card.clubLevel?.name && (
-              <div className="occ__level" data-testid="opponent-club-level">{card.clubLevel.name}</div>
+            {card.prestige?.name && (
+              <div className="occ__level" data-testid="opponent-club-level">{card.prestige.name}</div>
             )}
           </div>
         </div>

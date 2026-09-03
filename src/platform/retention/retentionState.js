@@ -33,7 +33,8 @@ import {
  * 空的 retention 切片。舊存檔沒有這一塊 ⇒ 一律由這裡補，不散在各處寫 `?? {}`。
  *
  * ⚠ **點數是兩個欄位，不是一個。**
- *   · `clubPointsLifetime` 累計**獲得**，只增不減 ⇒ 俱樂部等級讀這個。
+ *   · `clubPointsLifetime` 累計**獲得**，只增不減 ⇒ 俱樂部**聲望**讀這個。
+ *     （聲望 ≠ Club Level；Club Level 由 Club XP 推導，見 platform/progression/clubProgression.js）
  *   · `clubPoints` 可花**餘額**，會減 ⇒ 兌換讀這個。
  *   Retention v1 只進不出，所以一個欄位就夠；Meta Progression 給了點數出口，
  *   若等級繼續讀餘額，玩家一消費就會**掉等級**——那是進度倒退，不是消費。
@@ -74,7 +75,7 @@ export function normalizeRetention(saved) {
 /**
  * 花掉俱樂部點數。**只動餘額，`clubPointsLifetime` 永遠不變。**
  *
- * ⚠ 這是「花點數不得降低 Club Level」唯一的實作點。任何兌換都必須走這裡，
+ * ⚠ 這是「花點數不得降低俱樂部聲望」唯一的實作點。任何兌換都必須走這裡，
  *   不得自己去減 `clubPoints`——那會直接繞過這條保證。
  *
  * @returns {{ok:boolean, retention:object, reason:string|null}}

@@ -72,6 +72,10 @@ import {
   emptyClubMastery, normalizeClubMastery,
   setActiveDoctrine as setActiveDoctrineIn,
 } from "./mastery/clubMasteryState.js";
+//  Club Progression v1：Club XP／Club Level 的唯一權威（純函式，等級一律推導）。
+import {
+  emptyClubProgression, normalizeClubProgression, clubProgressionViewOf,
+} from "./progression/clubProgression.js";
 //  ⚠ 規則 authority 在 domain 層。store 只包裝，不重寫任何一條資格判定。
 import {
   masteryViewOf, masteryEligibilityOf, variantsAvailableForTactic,
@@ -432,6 +436,10 @@ const DEFAULT = {
   clubMastery: emptyClubMastery(),
   //  Club Assets v1：教練收藏與總教練。ownership 與 loadout 分開存。
   clubAssets: emptyClubAssets(),
+  //  Club Progression v1：**Club XP 的唯一權威**。等級一律推導、不落盤
+  //  （落兩份會漂移——team.lv/xp 就是那個坑）。與 clubPointsLifetime 正式分離：
+  //  那個衡量「領了多少獎勵」，這個衡量「打了多少正式比賽」。
+  clubProgression: emptyClubProgression(),
   // Q7b: metadata-only Season -> MOBA Career Circuit -> League Event wrapper.
   seasonStateV2: null,
   inbox: [
@@ -705,6 +713,15 @@ const load = () => {
       //  舊存檔沒有 clubAssets ⇒ 空收藏。normalize 會剔除型錄裡不存在的資產，
       //  也會把「裝備了沒買的教練」這種被手改過的存檔拉回 null。
       clubAssets: normalizeClubAssets(saved.clubAssets),
+      //  Club Progression v1：舊存檔沒有這個欄位 ⇒ 做**一次性** bootstrap。
+      //  ⚠ 刻意**不**從 `team.lv/xp` 換算——那兩個是每份存檔都一樣的種子常數
+      //    （93 / 7.27），換算出來只是把假數字洗成看起來像真的。
+      //    改用 `clubPointsLifetime` 做保守換算：它不是 Club XP 的定義，但它是
+      //    目前唯一與真實遊玩量正相關且單調不減的既有數字。理由與係數見
+      //    `progression/clubProgression.js` 的 `bootstrapClubProgression`。
+      clubProgression: normalizeClubProgression(saved.clubProgression, {
+        clubPointsLifetime: normalizeRetention(saved.retention).clubPointsLifetime,
+      }),
       csHistory: arr(saved.csHistory, []),   // S23：舊存檔沒有 → 空（向下相容）
       //  C5V：舊存檔沒有欄位時接受三圖、練習預設 Mirage；不重寫既有 Session。
       csMapPreferences: normalizeCsMapPreferences(saved.csMapPreferences),
@@ -3533,6 +3550,9 @@ export const useProfileStore = create((rawSet, get) => {
       processedMatchTransactions: {},
       processedCompetitionAwards: {},
       competitionHistory: [],
+      //  Club Progression v1：開新局 = 新的俱樂部，Club XP 從 0 開始。
+      //  ⚠ 不重置的話會沿用上一局的等級——那是「新局」這個動作最不該有的行為。
+      clubProgression: emptyClubProgression(),
       economy: ng.economy,
       recruitment: { signed: {} },
       matchmaking: { ticket: null, room: null, session: null, launch: null, lastResult: null, settlements: {}, lastSettlementError: null },
@@ -3636,6 +3656,23 @@ export const useProfileStore = create((rawSet, get) => {
     const days = Number(get().meta?.days) || 1;
     return coordsOf({ days, day: days, week: deriveTime(days).week, year: careerYearOf(days).year });
   },
+
+  /**
+   * Club Progression v1：**Club Level／Club XP 的畫面唯一入口**。
+   *
+   * ⚠ 等級與級距門檻一律由 `progression/clubProgression.js` 推導，
+   *   畫面不得自己算、不得自己寫死門檻——首頁那個永遠不會動的
+   *   `Lv. 93` 就是「UI 自己拿一個數字來顯示」的下場。
+   *
+   * ⚠ 這裡的 Level **不是** Club Mastery 頁的聲望階級（那個由
+   *   `clubPointsLifetime` 推導，衡量的是「領了多少獎勵」）。兩者刻意分開。
+   */
+  clubProgressionView() {
+    return clubProgressionViewOf(get().clubProgression, {
+      clubPointsLifetime: get().retention?.clubPointsLifetime ?? 0,
+    });
+  },
+
   /**
    * 目標總覽。**畫面唯一入口**：不得自己抽目標、自己算進度、自己判可不可領。
    *
@@ -3914,7 +3951,7 @@ export const useProfileStore = create((rawSet, get) => {
         tag: team.tag,
         emoji: team.emoji,
         identity: identityPresentationOf(get().clubAssets),
-        clubLevel: get().retentionView()?.tier ?? null,
+        prestige: get().retentionView()?.tier ?? null,
         record, honors, isMe: true,
       });
     }
@@ -3928,7 +3965,7 @@ export const useProfileStore = create((rawSet, get) => {
       //  ⚠ AI 俱樂部**不會**拿到玩家花點數買的 skin／banner／crest frame。
       //    它只借自己 seed 裡本來就有的隊色（見 neutralIdentityOf 的理由）。
       identity: neutralIdentityOf(ai?.color ?? null),
-      clubLevel: null,
+      prestige: null,
       record, honors, isMe: false,
     });
   },

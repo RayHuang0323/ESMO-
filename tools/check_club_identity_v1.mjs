@@ -291,7 +291,7 @@ console.log("\n── ⑧ 公開識別契約 ──");
   const card = publicClubCardOf({
     teamId: "t1", name: "德國海豹", tag: "GSEAL", emoji: "🦭",
     identity: identityPresentationOf(A),
-    clubLevel: clubTierOf(3000),
+    prestige: clubTierOf(3000),
     record: { rank: 2, wins: 8, losses: 4, points: 24 },
     honors: [{ label: "亞洲年度冠軍", season: 1, gameMode: "moba" }],
     isMe: true,

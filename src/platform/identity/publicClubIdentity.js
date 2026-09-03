@@ -96,14 +96,16 @@ export function neutralIdentityOf(teamColor) {
  * @param {string} [p.emoji]        隊徽符號
  * @param {object} [p.identity]     `identityPresentationOf()` 的結果，或
  *                                  `neutralIdentityOf()`。沒有就用預設外觀。
- * @param {object} [p.clubLevel]    `clubTierOf()` 的結果（公開的俱樂部等級）
+ * @param {object} [p.prestige]     `clubTierOf()` 的結果（公開的**俱樂部聲望**）。
+ *                                  ⚠ 這不是 Club Level——Club Level 由 Club XP 推導，
+ *                                  而且目前不公開給對手看。
  * @param {object} [p.record]       `{ rank, wins, losses, points }`，沒有就 null
  * @param {Array}  [p.honors]       `[{ label, season, gameMode }]`，只放已封存的榮耀
  * @param {boolean}[p.isMe]
  */
 export function publicClubCardOf({
   teamId, name, tag = null, emoji = null,
-  identity = null, clubLevel = null, record = null, honors = [], isMe = false,
+  identity = null, prestige = null, record = null, honors = [], isMe = false,
 }) {
   const id = identity ?? {};
   const card = {
@@ -124,8 +126,8 @@ export function publicClubCardOf({
     bannerMotif: id.bannerMotif ?? null,
     bannerWash: id.bannerWash ?? null,
     //  ── 公開戰績（只放已經公開在積分榜上的東西）────────────────────
-    clubLevel: clubLevel
-      ? { id: clubLevel.id ?? null, name: clubLevel.name ?? null, percent: clubLevel.percent ?? null }
+    prestige: prestige
+      ? { id: prestige.id ?? null, name: prestige.name ?? null, percent: prestige.percent ?? null }
       : null,
     record: record
       ? {
