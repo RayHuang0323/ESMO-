@@ -17614,3 +17614,48 @@ evaluate 撞上）。那是逾時的餘波，不是另一個獨立問題。真�
   Club XP 曲線正式校準、Club Level 要不要給實質回饋、冠軍額外 XP。契約已留位置，未接。
 - 48 支 legacy browser gate 仍未 migrate（本輪只新增一支 Harness v1 gate，未開 batch 2）。
 - TD-56、Club Facilities、真錢商城：均未動。
+
+### Release（2026-09-04）
+
+Owner Review 通過，正式發布。
+
+| 項目 | 值 |
+|---|---|
+| ORIGIN_MAIN_SHA（發布前） | `9d3cb2d03d2024d9ce6a65b0f88406ab4f91710b`（fetch 後確認未前進） |
+| FINAL_MAIN_SHA | **`f5b666aaaa0bdb3fffc9573488003a86b6be99a6`** |
+| push | fast-forward `9d3cb2d..f5b666a`，非 force |
+| Pages workflow | `33795102564` — **success** |
+| 正式站 smoke | `browser_check_prod_club_progression_release` **76/76 PASS**（桌機＋390px） |
+
+因為 `origin/main` 沒有前進，本次是純 fast-forward，**沒有任何整合工作**，
+也就沒有動到 Codex 的 CS runtime／`fpsRoster`／`CsPrepScreen`／`CsLoadingScreen`。
+最終 diff 17 檔，禁區檔案一個都沒出現。
+
+### 正式站 smoke 過程中我自己的三個 gate bug（值得記下來）
+
+三次都被正確分類，**沒有一次誣賴產品**：
+
+1. **註解裡的反引號**提早結束樣板字串（`` `prestige` ``）⇒ 腳本連載入都失敗。
+   已知坑，這次又踩一次——`chrome.evaluate` 的字串裡連註解都不能出現反引號。
+2. **導航未完成就 fetch**：Chrome 啟動時帶 url 不保證導航已完成，太早 evaluate 時
+   `location.href` 還是 `about:blank` ⇒ `Failed to fetch` ⇒ `HARNESS_FAIL`。
+   修法：進 §D 之前先明確 `navigate` ＋ 等待。
+3. **斷言讀錯地方（唯一一次 `PRODUCT_FAIL`，但不是產品問題）**：
+   我讀 `localStorage.clubProgression.xp` 判斷 migration 有沒有生效，得到 `null`。
+   但同一份 log 裡隊徽是 `crest=7`——正是 4000×0.5=2000 XP 推導出的 Lv.7。
+   真相是：**migration 發生在載入時的 normalize，要等有東西呼叫 `save()` 才落盤**，
+   純 reload 之後存檔裡當然還是舊形狀。
+   修法不是放寬斷言，而是**改強**：先看畫面推導出的等級，再主動觸發一次落盤，
+   確認切片真的寫進去（`{xp: 2000, migratedFromLifetime: 2000}`）且不超過 lifetime。
+
+### 為了正式站 smoke 對 harness 的唯一改動
+
+`runGate()` 新增 `externalUrl` 選項：傳了就跳過 `startOwnedDevServer`，
+其餘（Chrome 擁有權、總時限、PASS／PRODUCT_FAIL／HARNESS_FAIL 分類、保證收尾）完全相同。
+這讓正式站 smoke 也享有同一套分類。**沒有開 legacy gate 遷移 batch 2。**
+
+### 已知外部殘留（不是本輪造成）
+
+有一個 2026-09-04 01:09 起就沒關掉的 `browser_check_club_identity_ui.mjs` 行程，
+來自另一個 worktree（`club-identity-v2-release-final`），跑的是**遷移前**的舊版 gate——
+正是 Browser Harness v1 修掉的「dev server 永遠不關」病灶的活體。未處理（不在本輪 worktree 內）。
