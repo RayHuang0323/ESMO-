@@ -17551,9 +17551,9 @@ evaluate 撞上）。那是逾時的餘波，不是另一個獨立問題。真�
 ## CS Android Owner Review V2（2026-09-04，本地 preview）
 
 狀態：`CS_ANDROID_OWNER_REVIEW_V2_READY`。本輪以 `origin/main` 最新 remote truth
-`e572862d39b4bc1420dbc47afcd636b70e62392a` 建立獨立 worktree／branch
+`7cb202d3201cd0f27279bec6310e5c46286b237a` 建立獨立 worktree／branch
 `cs/android-owner-review-v2`；只處理 CS Battle / presentation，已以 non-force merge
-`b5be960`、`26a81cb` 依序整合 latest main，**未 push、未 deploy**。
+`b5be960`、`26a81cb`、`6a231e8` 依序整合 latest main，**未 push、未 deploy**。
 
 ### Scope boundary
 
@@ -17584,8 +17584,8 @@ evaluate 撞上）。那是逾時的餘波，不是另一個獨立問題。真�
   bundle：`33/33 PASS`，Home 與三圖 CS smoke、HTTP 200、console/page clean。
 - latest main merge 後重新驗證：`check_cs_c5c_presentation.mjs` **29/29 PASS**；
   C5C browser 390px／Desktop 各 **5/5 PASS**，`check_cs23` **28/28**，build PASS。
-  `origin/main @ e572862`（Retention Economy 變更）整合後再次 build 與 static CS
-  compatibility 全 PASS，production preview smoke 再次 **33/33 PASS**。
+  `origin/main @ 7cb202d`（Retention Economy release，無 CS runtime source 變更）整合後，
+  build 與 static CS compatibility 仍 PASS，production preview smoke **33/33 PASS**。
 - Cloudflare Quick Tunnel 曾成功建立 connector，但 edge 對 GET／HEAD 均回 `403 Forbidden`；
   latest connector 則在 DNS propagation window 後仍無法解析；依安全規則未再繞過或高頻重試，
   因此本輪沒有可交付的 HTTPS URL。Local preview 已停止。
