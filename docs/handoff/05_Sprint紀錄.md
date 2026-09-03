@@ -17659,3 +17659,105 @@ Owner Review 通過，正式發布。
 有一個 2026-09-04 01:09 起就沒關掉的 `browser_check_club_identity_ui.mjs` 行程，
 來自另一個 worktree（`club-identity-v2-release-final`），跑的是**遷移前**的舊版 gate——
 正是 Browser Harness v1 修掉的「dev server 永遠不關」病灶的活體。未處理（不在本輪 worktree 內）。
+
+
+---
+
+## Sprint：Retention Economy Calibration v1（2026-09-04）
+
+分支 `feature/retention-economy-v1`，基線 `cc46f98`（已 `git fetch origin` 核對，遠端未前進）。
+**本地 commit，未 push、未部署**，等 Owner Review。
+
+### 稽核先推翻了舊門檻的前提
+
+舊註解用「每日容量 3 場 × 7 天 = 21 場上限 ⇒ 5 場只是兩天的量」推門檻。
+那個推導假設玩家會自己去打滿容量，但 Natural Career Player 不會。
+用真的賽季建構器（`createSeasonState` ＋ `applyAsiaCircuit`）量出來：
+
+    一季 84 天／12 週　玩家正式賽 35 場（聯賽 14 ＋ 亞洲巡迴 3 站 × 7）
+    每週分布 [2,3,3,3,2,4,3,3,2,3,3,4]　平均 2.92 場
+
+**自然供給是每週 2–4 場，不是 21 場。** 另外兩件只有實跑才看得到的事：
+新局名單只有 5 人（`data/players.js`）⇒ `rotate`(7 名)／`variety`(2 套) 開局字面上做不到；
+`teamId="me"` 的第 1 週決定性抽到 `variety, streak, volume`，三格對新玩家全部推不動。
+
+### 最大的一個洞：快速練習可以換到永久 Club Points
+
+日目標 `play`（任何一場都算）＋ `tryout`（指定打練習）各 10 點。實測：
+
+| | CP/季 |
+|---|---|
+| Natural | 1,543 |
+| Natural ＋ 每天一場快速練習 | 2,553 |
+| **差額** | **＋1,010（Natural 全季的 65%）** |
+
+一個定義上「不影響戰績與數值」的模式，是當時最有效率的賺點方式。
+修法：`play` 與 `volume` 改讀 `nonPracticeMatches`（`match − practiceMatch`），移除 `tryout`。
+兩個推導都從**既有計數器**算出來 ⇒ 不新增 writer、不動存檔、不需要 migration。
+
+### 校準途中抓到一個舊 bug：`pickObjectives` 抽不滿
+
+週目標池從 5 加到 6 之後，`browser_check_general_match_and_objectives` 的 O4 變紅
+（有些週只抽出 2 個週目標），O8 也跟著紅。根因在舊實作的等差數列
+`idx = (start + i*step) % len`——只有 `step` 與 `len` 互質時才走得遍。
+三個池本來都是 5 個（質數）⇒ 永遠互質 ⇒ 從沒露出來。實測 **9.7% 的抽選會少給**。
+
+改成決定性 Fisher–Yates，與池長度無關；修完 22,000 次抽選 0 次少給、0 次重複，
+且仍完全決定性。**兩支 gate 都自己回到 30/30，我一行 assertion 都沒改。**
+
+⚠ 這個 bug 原本在**壓低所有人**的產出。修好後三個原型都上升約 6%，
+Engaged 與 High Activity 超出上緣 ⇒ 才有下面那個獎勵調整。
+
+### 校準結果
+
+| | CP/季 | 週完成率 | 完整型錄 |
+|---|---|---|---|
+| Natural | 1,530 → **2,376** | 43.9% → **80.8%** | 7.0 → **4.5 季** |
+| Engaged | 3,235 → **3,589** | 93.6% → **97.8%** | 3.3 → **3.0 季** |
+| High Activity | 4,045 → **4,054** | 98.3% → **99.2%** | 2.7 → **2.6 季** |
+| High / Natural | **2.64x → 1.71x** | | |
+| 快速練習永久 CP | 1,010/季 → **0** | | |
+
+門檻：週 `volume` 5→3、`streak` 3→2、`rotate` 7→6、新增 `fixtures` 2；
+季 `circuit` 100→60、`finance` 800萬→600萬；日移除 `tryout`、`play` 排除練習。
+獎勵只動一個：**日目標 10→8**（理由見設計文件第三節——日目標是唯一隨「打了幾場」
+線性放大的尺度，週／季看的是核心循環）。**型錄價格一項都沒動**（14 項 / 10,900 點）。
+
+### 唯一沒有硬湊的偏差
+
+High/Natural = **1.71x**，在 1.8 硬上限內但高於 1.3–1.6 優先區間。
+來源是日目標（Natural 612／High 1,426），因為日目標對「今天有沒有比賽」極度敏感——
+Natural 只有 42% 的日子有賽程，日完成率 30.4%，**沒有賽程的日子只有 17.1%**。
+要壓到 1.6 需要給沒有賽程的日子第三條自然路線（現在只有訓練與球探兩條，卻要抽 3 格），
+那需要新的自然計數器＝新 writer，超出「校準門檻」的範圍。**列為下一輪第一順位。**
+
+### Club XP Curve = CALIBRATED BASELINE（未改）
+
+但更正了上一輪文件裡的錯誤投影：那是用**每季 14 場**算的（`scheduleGenerator.js:15`
+的註解只涵蓋聯賽常規賽），真實供給是 **35 場**。重算後 Natural 一季 Lv.12／
+三季 Lv.17／十季 Lv.29（原記載 Lv.8／12／19）。曲線本身仍合理，不改。
+
+### 驗證（全部實跑）
+
+| 驗證 | 結果 |
+|---|---|
+| `npm run build` | ✓ built in 13.56s |
+| `check_retention_economy_v1`（新） | **38/38** |
+| `check_retention_v7b` | **58/58** |
+| `check_progress25` | 34/34 |
+| `browser_check_retention_economy_v1`（新，Harness v1） | **30/30 PASS** |
+| `browser_check_general_match_and_objectives`（既有 legacy gate） | **30/30** |
+| `check_club_progression_v1`／`club_assets`／`club_mastery`／`club_identity`／`cs23` | PASS |
+| `regress2` | 節奏門檻 8/8 |
+
+`check_retention_v7b` 的 D4／D5 被改寫，理由寫在檔案裡：D4 從**字串比對**改成
+**行為斷言**（舊版把 desc 裡的「賽程」當成要求，但它是選項）；D5 原本**要求**
+`tryout` 存在，與本輪「快速練習永久 CP = 0」直接矛盾。**兩條都改嚴，不是放寬。**
+
+### 未做
+
+Club Level milestone 只出設計提案（DESIGN ONLY / NOT IMPLEMENTED，7 條全是展示與資格，
+不含任何戰力）。沒有賽程的日子的第三條自然路線＝下一輪第一順位。
+Club Asset 價格節奏、TD-56（仍 OPEN）、Club Facilities（仍 NOT STARTED）、
+商城／真錢、legacy gate 遷移 batch、CS runtime／CBR／Rating：全部未動。
+Retention UI 未改版（現行畫面已能回答「做什麼／進度／獎勵／狀態」四問）。
