@@ -36,9 +36,22 @@ export const OBJECTIVE_SCOPES = Object.freeze({
   season: "season",
 });
 
-/** 每個尺度給幾點俱樂部點數。單一調整處。 */
+/**
+ * 每個尺度給幾點俱樂部點數。單一調整處。
+ *
+ * ⚠ Calibration v1 把日目標從 10 降到 8，這是本輪**唯一**動到的獎勵值。
+ *   理由不是為了湊數字，而是三個尺度的性質不同：
+ *     · 日目標**隨「今天打了幾場」線性放大** —— High Activity 每天都有比賽，
+ *       Natural 只有 42% 的日子有賽程 ⇒ 這一格是活躍度差距的主要放大器。
+ *     · 週／季目標看的是核心循環（賽程、輪替、名次、青訓、財務），
+ *       打再多場也只能完成一次 ⇒ 對差距幾乎沒有貢獻。
+ *   修好 `pickObjectives` 的抽不滿 bug 之後（它原本在壓低所有人的產出），
+ *   Engaged 與 High Activity 都超出目標區間上緣，而 Natural 還有餘裕。
+ *   把權重從「量」的尺度移向「核心循環」的尺度，同時修正三者，
+ *   而且方向與本輪的產品原則一致：獎勵核心循環，不獎勵額外刷場。
+ */
 export const CLUB_POINTS = Object.freeze({
-  [OBJECTIVE_SCOPES.daily]: 10,
+  [OBJECTIVE_SCOPES.daily]: 8,
   [OBJECTIVE_SCOPES.weekly]: 40,
   [OBJECTIVE_SCOPES.season]: 300,
 });
@@ -69,6 +82,21 @@ export const COUNTERS = Object.freeze({
   matchIncome: "matchIncome",       // 對戰收入（元）
 });
 
+/**
+ * 「不是快速練習的一場」與「正式賽程的一場」。
+ *
+ * ⚠ 兩者都是從**既有計數器推導**，不新增 writer、不動存檔結構：
+ *     nonPractice = match − practiceMatch
+ *     official    = match − practiceMatch − competitiveMatch
+ *   Retention Economy Calibration v1 之前，日目標的「今日出賽」把快速練習
+ *   也算進去，等於讓一個**定義上不產生任何永久進度**的模式換到永久 Club Points
+ *   （實測：1,010 CP/季，是 Natural 玩家整季的 65%）。這兩個讀法是修法。
+ */
+export const nonPracticeMatches = (ctx) =>
+  Math.max(0, ctx.count(COUNTERS.match) - ctx.count(COUNTERS.practiceMatch));
+export const officialMatches = (ctx) =>
+  Math.max(0, ctx.count(COUNTERS.match) - ctx.count(COUNTERS.practiceMatch) - ctx.count(COUNTERS.competitiveMatch));
+
 export const SETS = Object.freeze({
   players: "players",               // 出賽過的不同選手
   lineups: "lineups",               // 用過的不同陣容
@@ -90,8 +118,10 @@ export const YOUTH_MAX_AGE = 21;
 const DAILY_POOL = Object.freeze([
   Object.freeze({
     id: "play", name: "今日出賽", target: 1,
-    desc: "打 1 場對戰（快速對戰或一般對戰都算）",
-    read: (ctx) => ctx.count(COUNTERS.match),
+    //  ⚠ Calibration v1：**快速練習不算**。它的定義是「不影響戰績與數值」，
+    //    卻能換到永久 Club Points，那讓最有效率的賺點方式變成打練習賽。
+    desc: "打 1 場一般對戰或正式賽程（快速練習不算）",
+    read: nonPracticeMatches,
   }),
   Object.freeze({
     id: "train", name: "安排訓練", target: 1,
@@ -108,28 +138,52 @@ const DAILY_POOL = Object.freeze([
     desc: "贏 1 場一般對戰",
     read: (ctx) => ctx.count(COUNTERS.win),
   }),
-  Object.freeze({
-    id: "tryout", name: "試一次陣容", target: 1,
-    desc: "打 1 場快速對戰（不影響戰績與數值，純試陣）",
-    read: (ctx) => ctx.count(COUNTERS.practiceMatch),
-  }),
 ]);
+//  ⚠ Calibration v1 移除了日目標 `tryout`（「打 1 場快速對戰」）。
+//    它是上面那個漏洞的另一半，而且「去試陣容」這件事本來就由週目標
+//    `variety`（本週用 2 種不同先發）承擔——那一個看的是**真的比賽**裡的
+//    輪替，比「打一場不算數的練習」更接近我們想鼓勵的行為。
 
 //  ⚠ 週目標的量體標準：**正常玩就會完成大部分**。
-//    每日競技容量是 3 場，一週推 7 天就有 21 場的上限 ⇒ 5 場是兩天的量。
-//    刻意不放「本週 20 場」這種要靠刷的目標。
+//
+//  ── Calibration v1：門檻改依「自然供給」，不再依「容量上限」──────────────
+//  舊註解用的是**容量**推導（「每日 3 場 × 7 天 = 21 場上限 ⇒ 5 場只是兩天的量」）。
+//  那個推導的前提是玩家會自己去打滿容量，但 Natural Career Player 不會——
+//  他打的是賽程排到的比賽。實測（`tools/retention_economy_model.mjs`，用真的
+//  `createSeasonState` ＋ `applyAsiaCircuit` 產生的賽程）：
+//      一季 35 場正式賽 ／ 12 週，每週分布 [2,3,3,3,2,4,3,3,2,3,3,4]
+//  ⇒ **自然供給是每週 2–4 場，平均 2.92 場**，不是 21 場。
+//  舊門檻對 Natural 的實測完成率：volume 0%、streak 12%、rotate 38%
+//  ⇒ 週目標整體只有 43.9%，而且要補足只能靠額外刷一般對戰。
+//  那讓 Retention 從「獎勵核心循環」變成「要求第二個雜務循環」。
+//  新門檻一律對齊自然供給（見各項的註解）。
 //  ⚠ 週目標的主題是**輪替**：不同選手、不同陣容、新人上場。
 //    這是唯一一個會讓玩家主動改陣容的機制，也是青訓有意義的前提。
 
 const WEEKLY_POOL = Object.freeze([
   Object.freeze({
-    id: "volume", name: "本週出賽", target: 5,
-    desc: "本週打 5 場對戰（任何層級都算）",
-    read: (ctx) => ctx.count(COUNTERS.match),
+    //  自然供給每週 2–4 場（平均 2.92）⇒ 3 場是「照賽程打就會到」的量。
+    //  舊值 5 需要再多打 1–3 場一般對戰，Natural 實測完成率 0%。
+    //  ⚠ 也排除快速練習。留一個「任何層級都算」的缺口，快速練習就仍然換得到
+    //    永久 Club Points（實測殘留 30 CP/季）。契約是 0，就要真的是 0。
+    id: "volume", name: "本週出賽", target: 3,
+    desc: "本週打 3 場對戰（一般對戰或正式賽程，快速練習不算）",
+    read: nonPracticeMatches,
   }),
   Object.freeze({
-    id: "rotate", name: "輪替陣容", target: 7,
-    desc: "本週讓 7 名不同選手出賽",
+    //  Calibration v1 新增：**每個生涯玩家都一定會做的那件事**——把賽程打完。
+    //  自然供給每週最少 2 場 ⇒ 這一格對 Natural 是穩定可完成的路線，
+    //  而且它不獎勵額外刷場（一般對戰不算進來）。
+    id: "fixtures", name: "本週賽程", target: 2,
+    desc: "本週打完 2 場正式賽程（一般對戰與快速練習不算）",
+    read: officialMatches,
+  }),
+  Object.freeze({
+    //  新局名單只有 5 人（`data/players.js`）⇒ 7 名在開局是**做不到**的。
+    //  實測 Natural 平均 6.2 名、完成率 38%。降到 6 讓「有簽人＋願意輪替」
+    //  就達得到，同時仍然要求真的動陣容。
+    id: "rotate", name: "輪替陣容", target: 6,
+    desc: "本週讓 6 名不同選手出賽",
     read: (ctx) => ctx.size(SETS.players),
   }),
   Object.freeze({
@@ -143,8 +197,11 @@ const WEEKLY_POOL = Object.freeze([
     read: (ctx) => ctx.size(SETS.lineups),
   }),
   Object.freeze({
-    id: "streak", name: "本週戰績", target: 3,
-    desc: "本週贏 3 場一般對戰",
+    //  自然供給 2.92 場 × 五成勝率 ⇒ 期望 1.46 勝。舊值 3 勝實測完成率 12%。
+    //  2 勝仍然要求「打好」，但落在自然供給的變異範圍內。
+    //  ⚠ 這個計數器本來就不含快速練習（見 `recordMatchActivity`）。
+    id: "streak", name: "本週戰績", target: 2,
+    desc: "本週贏 2 場對戰（快速練習不計）",
     read: (ctx) => ctx.count(COUNTERS.win),
   }),
 ]);
@@ -167,8 +224,11 @@ const SEASON_POOL = Object.freeze([
       ? `目前第 ${ctx.leagueRank} 名` : "本季尚未開賽"),
   }),
   Object.freeze({
-    id: "circuit", name: "巡迴成績", target: 100,
-    desc: "本年度累積 100 點巡迴積分",
+    //  積分表：冠軍 100／亞軍 70／季軍 50／第四 35／5–8 名 15（`circuitPoints.js`）。
+    //  舊值 100 等於「拿一次冠軍」，與本組目標「四個都不需要冠軍」的規格矛盾。
+    //  60 分是「三站都有中上表現」拿得到的量。
+    id: "circuit", name: "巡迴成績", target: 60,
+    desc: "本年度累積 60 點巡迴積分",
     read: (ctx) => Math.max(0, Number(ctx.circuitPoints) || 0),
   }),
   Object.freeze({
@@ -177,8 +237,10 @@ const SEASON_POOL = Object.freeze([
     read: (ctx) => ctx.count(COUNTERS.youthAppearance),
   }),
   Object.freeze({
-    id: "finance", name: "財務目標", target: 8_000_000,
-    desc: "本年度累積 800 萬對戰收入",
+    //  Natural 一季 35 場正式賽 ⇒ 對戰收入約 700 萬，舊值 800 萬**剛好差一點**——
+    //  那是最糟的門檻位置：玩家整季照著打，最後還是差一步。降到 600 萬。
+    id: "finance", name: "財務目標", target: 6_000_000,
+    desc: "本年度累積 600 萬對戰收入",
     read: (ctx) => ctx.count(COUNTERS.matchIncome),
     //  ⚠ 單位是**元**，不是萬（`finance.funds` 同一個單位）。
     format: (v) => `$${Math.round(v / 10000)}萬`,
@@ -204,24 +266,31 @@ function hash32(input) {
  *
  * ⚠ **決定性**是規格，不是實作細節：同一天重整頁面、換裝置、重讀存檔，
  *   看到的必須是同一組目標。用亂數就會出現「重整換一組簡單的」。
- * ⚠ 抽法是「以 seed 決定起點，再依序取」——不是每個都獨立抽，
- *   那樣會重複。池比 n 小的時候就整池回傳。
+ * ⚠ **一定要抽滿 `n` 個**（池夠大時）。這一條看起來理所當然，但舊實作做不到——
+ *
+ *   舊寫法是「以 seed 決定起點與步長，再依序取」：
+ *       idx = (start + i * step) % len
+ *   只有在 `step` 與 `len` **互質**時，這個等差數列才會走遍所有索引。
+ *   三個池本來都是 5 個（質數）⇒ 任何步長都互質 ⇒ 從來沒露出來。
+ *   Calibration v1 把週目標池加到 6 個之後，`step ∈ {2,3,4}` 就只能走到
+ *   3／2／3 個索引 ⇒ **有些週只抽得出 2 個目標**（實測 9.7% 的抽選會少給，
+ *   `browser_check_general_match_and_objectives` 的 O4 就是這樣紅的）。
+ *
+ *   改成決定性的 Fisher–Yates：每一步的交換位置由 seed 派生的計數器決定，
+ *   與池長度無關 ⇒ **任何池大小都保證抽滿且不重複**，而且仍然完全決定性。
  */
 export function pickObjectives(pool, n, seed) {
   const list = Array.isArray(pool) ? pool : [];
   if (list.length <= n) return list.slice();
-  const h = hash32(seed);
-  const start = h % list.length;
-  const step = 1 + (Math.floor(h / list.length) % (list.length - 1));
-  const out = [];
-  const seen = new Set();
-  for (let i = 0; out.length < n && i < list.length * 2; i++) {
-    const idx = (start + i * step) % list.length;
-    if (seen.has(idx)) continue;
-    seen.add(idx);
-    out.push(list[idx]);
+  const idx = list.map((_, i) => i);
+  let h = hash32(seed);
+  //  只洗前 n 個位置就夠——後面的順序不影響結果。
+  for (let i = 0; i < n; i++) {
+    h = hash32(`${seed}:${i}:${h}`);
+    const j = i + (h % (idx.length - i));
+    [idx[i], idx[j]] = [idx[j], idx[i]];
   }
-  return out;
+  return idx.slice(0, n).map((i) => list[i]);
 }
 
 /**
