@@ -17368,3 +17368,28 @@ Owner Review 對上一輪的 Club Identity v2 / Dashboard Scroll P0 判定 `ACCE
 - **Club Progression Contract v1** 仍是 DESIGN READY／NOT IMPLEMENTED——本輪找到的
   週目標經濟失衡（一般玩家與高活躍玩家產量差 4 倍）**未修**。
 - **Club Facilities**（Club Points 長期 sink 的第 2 項）尚未開始、未校準。
+
+---
+
+## CS acceptance source integration + release closeout（2026-09-04）
+
+### Scope boundary
+
+- 以 latest `origin/main @ 274f48e068a72de965952b61c20d86d47d215d3f` 為 baseline，沒有 wholesale cherry-pick acceptance deployment commit。
+- 只整合四個已驗證 CS source 檔：`src/battle/fps/EsportsFPS3D.jsx`、`src/battle/fps/fpsRoster.js`、`src/screens/fps/CsPrepScreen.jsx`、`src/screens/fps/CsLoadingScreen.jsx`。
+- Dashboard Scroll P0、Club Identity V2、Social Identity、Meta／Club Assets 保留在 latest main；未修改跨線 protected files。
+
+### Verification
+
+- `check_cs23.mjs`：`28/28 PASS`。
+- `check_cs_c5b_route_interrupt.mjs`：Mirage／Dust II／Inferno route interrupt、接敵反應與 combat route preservation PASS；route-delay audit 的兩個 >1 秒 residual 與 candidate baseline 相同，未在本輪擴大 scheduler 範圍。
+- `browser_check_cs_c5c_presentation.mjs`：Desktop 1366 與 Mobile 390，三圖 completed，HUD／bomb events／manual focus／camera override／rigged C2C／browser errors `0`。
+- `browser_check_club_identity_ui.mjs`：`129/129 PASS`，含 Dashboard desktop wheel、390px wheel／touch、bottom nav、reload 與水平 overflow gate。
+- `npm run build`：PASS（既有 Vite large-chunk warning 保留）。
+
+### Release
+
+- Integration commit：`1179e9f5f468a770fc6e3bf17cd8ef58ee9423fa`。
+- Fast-forward push：`274f48e..1179e9f`，無 force；Pages workflow `33785282713` success。
+- Production static smoke：HTTP `200`、entry HTTP `200`，部署 bundle 含 CS role／camera／bomb／engagement markers。
+- Production browser smoke 因本機 Chrome `ERR_NETWORK_ACCESS_DENIED` 無法在 URL 就位前完成；不視為產品 FAIL，但仍列為環境阻塞，Owner 需在可連線環境補跑。
