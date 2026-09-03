@@ -17587,8 +17587,9 @@ evaluate 撞上）。那是逾時的餘波，不是另一個獨立問題。真�
   `origin/main @ 7cb202d`（Retention Economy release，無 CS runtime source 變更）整合後，
   build 與 static CS compatibility 仍 PASS，production preview smoke **33/33 PASS**。
 - Cloudflare Quick Tunnel 曾成功建立 connector，但 edge 對 GET／HEAD 均回 `403 Forbidden`；
-  latest connector 則在 DNS propagation window 後仍無法解析；依安全規則未再繞過或高頻重試，
-  因此本輪沒有可交付的 HTTPS URL。Local preview 已停止。
+  最新 HTTP/2＋IPv4 connector（`hkg09`）已註冊後仍回 `403 Forbidden`，確定是 edge／環境
+  blocker 而非 local origin（local HTTP 200）。依安全規則未再繞過或高頻重試，因此本輪沒有
+  可交付的 HTTPS URL。Local preview 已停止。
 - Node／CDP 只代表 desktop 與 390px emulation；Android GPU／FPS／真 touch pinch／
   rotate／喇叭體感仍待 Owner 真機驗收。
 
