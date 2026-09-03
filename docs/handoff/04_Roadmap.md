@@ -1367,3 +1367,20 @@ AWP_TRIAGE = UNRESOLVED → CBR BLOCKED，不進 Rating   ← 目前在這裡
 - Club Progression Contract v1 只完成設計與現況稽核（`docs/design/ClubProgression_現況與
   Contract_v1.md`），**未實作任何 progression 行為變更**——首頁 LEVEL/XP/BADGE 是否要接
   真實權威、週目標門檻是否要對齊實際賽程供給量，留給下一輪決定。
+
+## Browser Harness Reliability v1 — IMPLEMENTED／VERIFIED（2026-09-04）
+
+- 狀態：**`BROWSER_HARNESS_V1 = IMPLEMENTED／VERIFIED`**。純工程 Sprint，
+  **未改任何遊戲產品行為**；本地 commit，未 push、未 deploy。
+- 新檔案：`tools/browser/harness.mjs`（可重用 harness：unique port、process
+  ownership、startup／total timeout、finally cleanup、結果分類、精簡 evidence）
+  與 `tools/browser/run-gate.mjs`（外層 supervisor，提供「即使 cleanup 卡死也
+  一定結束」的硬保證——這需要獨立 process 才做得到，因為卡在同步呼叫的
+  event loop 連自己的 `setTimeout` 都不會觸發）。
+- **三種結果語意**：`PASS`(0)／`PRODUCT_FAIL`(1)／`HARNESS_FAIL`(2)。
+  `HARNESS_FAIL` 不會被算進產品 pass/fail。配套的 AI workflow 規則
+  （未確認 `PRODUCT_FAIL` 前不得改產品程式）寫在 `AGENTS.md` §7。
+- 已 migrate 4 支作為 v1 proof，產品斷言數與遷移前完全相同。其餘 48 支
+  legacy gate 未動（Sprint 明文不要一次重寫全部），清單與建議順序見
+  `08_目前待辦與風險.md` 同名章節。
+- 驗證 A–F 全部實跑通過，含人工製造的 product fail／port 佔用／事件迴圈鎖死。

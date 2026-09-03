@@ -1,32 +1,46 @@
 #!/usr/bin/env node
 // C5C browser evidence：三圖 Battle、presentation adapter、音效、導播、手動鏡頭、390px。
+//
+// 執行：`node tools/browser_check_cs_c5c_presentation.mjs`
+// 或走 supervisor（硬總時限，見 Browser Harness v1）：
+//   `node tools/browser/run-gate.mjs tools/browser_check_cs_c5c_presentation.mjs --timeout 300000`
+//
+// ── Browser Harness v1 migration（2026-09-04）──────────────────────────────
+// 這支是 2026-09-03 那次「終止上一個卡住行程的瞬間，以 `mirage Battle mount
+// timeout` 失敗；乾淨環境隔離重跑後 completed:true / exit=0」的當事 gate。
+// 原本的寫法：`runMap()` 裡任何 timeout／canvas 拿不到／seek 沒 commit
+// 都直接 `throw`，外層 `catch` 接住後一律 `process.exitCode = 1`——跟兩行
+// HTTP 狀態檢查失敗**用的是同一個訊號**，事後完全分不出「這次紅是環境問題
+// 還是產品真的壞了」。改用 `runGate()`：任何從 `run()` 逃出的例外（包含
+// `${mapKey} Battle mount timeout` 這類）自動分類成 `HARNESS_FAIL`，不會被
+// 誤讀成產品 regression；HTTP 狀態與 console/page error 檢查則改用 `ck()`
+// 明確表達成產品斷言（判斷條件與原本完全相同，只是從靜默的
+// `process.exitCode=1` 變成看得到、算得出來的一條）。
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { startDevServer, launchChrome } from "./browser/cdp.mjs";
+import { runGate, finishGate } from "./browser/harness.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OUTPUT_DIR = path.join(ROOT, "artifacts/cs-c5c/owner-review");
 const MAPS = { mirage: "Mirage", dust2: "Dust II", inferno: "Inferno" };
 const TARGET_MAPS = (process.env.C5C_MAPS || Object.keys(MAPS).join(",")).split(",").map((key) => key.trim()).filter((key) => MAPS[key]);
-const PORT = Number(process.env.C5C_PORT || 5188);
-const CDP_PORT = Number(process.env.C5C_CDP_PORT || 9588);
 const WIDTH = Number(process.env.C5C_WIDTH || 1366);
 const HEIGHT = Number(process.env.C5C_HEIGHT || 900);
 const mobile = WIDTH <= 600;
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const waitFor = async (chrome, expression, timeoutMs, label) => {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try { if (await chrome.evaluate(`return Boolean(${expression});`)) return; } catch {}
-    await sleep(200);
+    await new Promise((r) => setTimeout(r, 200));
   }
   throw new Error(`${label} timeout`);
 };
 
 async function pauseBattle(chrome) {
   await chrome.evaluate(`const button=[...document.querySelectorAll('button')].find((node)=>node.textContent.includes('❚❚'));if(button)button.click();return true;`);
-  await sleep(150);
+  await new Promise((r) => setTimeout(r, 150));
   await chrome.evaluate(`const live=window.__ESMO_FPS_SCENE__?.liveRef?.current;if(live)live.playing=false;return true;`);
 }
 async function realClick(chrome, selector) {
@@ -44,7 +58,7 @@ async function seekFrame(chrome, frameIndex) {
   while (Date.now() < deadline) {
     const committed = await chrome.evaluate(`return window.__ESMO_C5C_PRESENTATION__?.diagnostics?.lastFrameIndex===${frameIndex}`);
     if (committed) return;
-    await sleep(80);
+    await new Promise((r) => setTimeout(r, 80));
   }
   throw new Error(`presentation did not commit frame ${frameIndex}`);
 }
@@ -63,8 +77,8 @@ async function readEventFrames(chrome) {
   return chrome.evaluate(`return (()=>{const frames=window.__ESMO_FPS_SCENE__?.liveRef?.current?.sim?.frames||[];const eventFrames=[],muzzleFrames=[],eventTypes={};frames.forEach((frame,index)=>{if(frame.roundStart||(frame.events||[]).length){eventFrames.push(index);(frame.events||[]).forEach((event)=>{eventTypes[event.type]=(eventTypes[event.type]||0)+1;});}if((frame.muzzles||[]).length)muzzleFrames.push(index);});const selected=[0,...eventFrames,...muzzleFrames.slice(0,8)].filter((value,index,array)=>value>=0&&array.indexOf(value)===index).sort((a,b)=>a-b);return {frameCount:frames.length,eventFrames,muzzleFrames,selected,eventTypes};})()`);
 }
 
-async function runMap(chrome, mapKey, seed) {
-  const url = `${chrome.__c5cBase}?c5c=battle&map=${mapKey}&seed=${seed}`;
+async function runMap(chrome, base, mapKey, seed) {
+  const url = `${base}?c5c=battle&map=${mapKey}&seed=${seed}`;
   await chrome.navigate(url);
   await waitFor(chrome, `document.querySelector('[data-testid="cs-match-speed-controls"]')&&document.querySelector('canvas')&&document.querySelector('[data-testid="cs-c5c-presentation-hud"]')`, 90_000, `${mapKey} Battle mount`);
   await pauseBattle(chrome);
@@ -85,35 +99,48 @@ async function runMap(chrome, mapKey, seed) {
     await captureCanvas(chrome, `${mapKey}-${mobile ? "390px" : "desktop"}-event.png`);
   }
   const manual = await chrome.evaluate(`return (()=>{const card=document.querySelector('[data-esmo-fps-player-card]');if(!card)return {ok:false};card.click();return {ok:true};})()`);
-  await sleep(220);
+  await new Promise((r) => setTimeout(r, 220));
   const manualAfterFocus = await chrome.evaluate(`return Boolean((window.__ESMO_FPS_SCENE__?.cam&&!window.__ESMO_FPS_SCENE__.cam.autoFollow)||window.__ESMO_FPS_SCENE__?.liveRef?.current?.selected)`);
   await chrome.evaluate(`const button=[...document.querySelectorAll('button')].find((node)=>node.textContent.includes('重新置中'));if(button)button.click();return true;`);
-  await sleep(160);
-  const sample = await chrome.evaluate(`return (()=>{const presentation=window.__ESMO_C5C_PRESENTATION__||{};const diagnostics=presentation.diagnostics||{};const audio=window.__ESMO_FPS_AUDIO_DIAGNOSTICS__||{};const scene=window.__ESMO_FPS_SCENE__||{};const canvas=document.querySelector('canvas');const text=document.body.innerText||'';return {mapKey:${JSON.stringify(mapKey)},completed:Boolean(scene.liveRef?.current?.sim?.completed),frameCount:Number(scene.liveRef?.current?.sim?.frames?.length||0),presentation:{...diagnostics,roundStartEvents:Number(diagnostics.roundStartEvents||0),roundEndEvents:Number(diagnostics.roundEndEvents||0),bombEvents:Number(diagnostics.objectiveEvents||0),clutchEvents:Number(diagnostics.clutchEvents||0),feedCount:Number(diagnostics.feedCount||0),eventFrameCount:${frames.eventFrames.length},eventTypes:${JSON.stringify(frames.eventTypes)}},audio:{assetSource:audio.assetSource||null,presentationCueStarts:Number(audio.presentationCueStarts||0),recordedSourceStarts:Number(audio.recordedSourceStarts||0),activeVoices:Number(audio.activeVoices||0),loadErrors:audio.loadErrors||{}},camera:{directorSwitches:Number(diagnostics.directorSwitches||0),manualOverrideSamples:${manualAfterFocus ? 1 : 0},rapidSwitches:Number(diagnostics.rapidDirectorSwitches||0)},c2c:window.__ESMO_FPS_C2A__||null,p0:window.__ESMO_FPS_P0_CONTRACT__||null,canvas:canvas?{width:canvas.clientWidth,height:canvas.clientHeight,bufferWidth:canvas.width,bufferHeight:canvas.height}:null,browserErrors:{console:[],page:[]},hud:{killFeed:Boolean(document.querySelector('[data-testid="cs-c5c-kill-feed"]')),bomb:Boolean(document.querySelector('[data-testid="cs-c5c-bomb-status"]')),history:Boolean(document.querySelector('[data-testid="cs-c5c-round-history"]')),textIncludesChinese:/[\u4e00-\u9fff]/.test(text)},manualFocusAttempt:Boolean(${manual?.ok ? "true" : "false"}),firstShot:${JSON.stringify(firstShot)}};})()`);
+  await new Promise((r) => setTimeout(r, 160));
+  const sample = await chrome.evaluate(`return (()=>{const presentation=window.__ESMO_C5C_PRESENTATION__||{};const diagnostics=presentation.diagnostics||{};const audio=window.__ESMO_FPS_AUDIO_DIAGNOSTICS__||{};const scene=window.__ESMO_FPS_SCENE__||{};const canvas=document.querySelector('canvas');const text=document.body.innerText||'';return {mapKey:${JSON.stringify(mapKey)},completed:Boolean(scene.liveRef?.current?.sim?.completed),frameCount:Number(scene.liveRef?.current?.sim?.frames?.length||0),presentation:{...diagnostics,roundStartEvents:Number(diagnostics.roundStartEvents||0),roundEndEvents:Number(diagnostics.roundEndEvents||0),bombEvents:Number(diagnostics.objectiveEvents||0),clutchEvents:Number(diagnostics.clutchEvents||0),feedCount:Number(diagnostics.feedCount||0),eventFrameCount:${frames.eventFrames.length},eventTypes:${JSON.stringify(frames.eventTypes)}},audio:{assetSource:audio.assetSource||null,presentationCueStarts:Number(audio.presentationCueStarts||0),recordedSourceStarts:Number(audio.recordedSourceStarts||0),activeVoices:Number(audio.activeVoices||0),loadErrors:audio.loadErrors||{}},camera:{directorSwitches:Number(diagnostics.directorSwitches||0),manualOverrideSamples:${manualAfterFocus ? 1 : 0},rapidSwitches:Number(diagnostics.rapidDirectorSwitches||0)},c2c:window.__ESMO_FPS_C2A__||null,p0:window.__ESMO_FPS_P0_CONTRACT__||null,canvas:canvas?{width:canvas.clientWidth,height:canvas.clientHeight,bufferWidth:canvas.width,bufferHeight:canvas.height}:null,browserErrors:{console:[],page:[]},hud:{killFeed:Boolean(document.querySelector('[data-testid="cs-c5c-kill-feed"]')),bomb:Boolean(document.querySelector('[data-testid="cs-c5c-bomb-status"]')),history:Boolean(document.querySelector('[data-testid="cs-c5c-round-history"]')),textIncludesChinese:/[一-鿿]/.test(text)},manualFocusAttempt:Boolean(${manual?.ok ? "true" : "false"}),firstShot:${JSON.stringify(firstShot)}};})()`);
   sample.browserErrors = { console: chrome.consoleLines.filter((line) => line.startsWith("[error]")), page: chrome.pageErrors };
   return sample;
 }
 
-const server = await startDevServer({ port: PORT });
-let chrome = null;
-try {
-  chrome = await launchChrome({ url: server.url, port: CDP_PORT, headless: true });
-  chrome.__c5cBase = server.url;
-  await chrome.send("Emulation.setDeviceMetricsOverride", { width: WIDTH, height: HEIGHT, deviceScaleFactor: 1, mobile });
-  const results = [];
-  for (const [index, mapKey] of TARGET_MAPS.entries()) results.push(await runMap(chrome, mapKey, 505001 + index * 17));
-  const ownerStatus = await fetch(`${server.url}artifacts/cs-c5c/owner-review.html`).then((response) => response.status);
-  const battleStatus = await fetch(`${server.url}?c5c=battle&map=mirage&seed=505001`).then((response) => response.status);
-  const payload = { generatedAt: new Date().toISOString(), source: "C5C Battle runtime browser evidence", viewport: { width: WIDTH, height: HEIGHT, mode: mobile ? "mobile" : "desktop" }, http: { ownerReview: ownerStatus, battle: battleStatus }, results };
-  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-  fs.writeFileSync(path.join(OUTPUT_DIR, `runtime-evidence-${mobile ? "mobile" : "desktop"}.json`), JSON.stringify(payload, null, 2), "utf8");
-  console.log(JSON.stringify(payload, null, 2));
-  if (results.some((result) => result.browserErrors.console.length || result.browserErrors.page.length)) process.exitCode = 1;
-  if (ownerStatus !== 200 || battleStatus !== 200) process.exitCode = 1;
-} catch (error) {
-  console.error(error?.stack ?? error);
-  process.exitCode = 1;
-} finally {
-  if (chrome) await chrome.close().catch(() => {});
-  await server.stop().catch(() => {});
-}
+const result = await runGate({
+  name: "CS-C5C match presentation",
+  base: "/ESMO-/",
+  run: async ({ chrome, url, ck }) => {
+    chrome.__c5cBase = url;
+    await chrome.send("Emulation.setDeviceMetricsOverride", { width: WIDTH, height: HEIGHT, deviceScaleFactor: 1, mobile });
+    const results = [];
+    for (const [index, mapKey] of TARGET_MAPS.entries()) results.push(await runMap(chrome, url, mapKey, 505001 + index * 17));
+
+    //  ⚠ 排空 body（`.arrayBuffer()`）——不排空的話 undici 不會回收這個
+    //    keep-alive socket，process 會多等它自己的 idle timeout 才真的退出。
+    const drain = async (u) => { const r = await fetch(u); await r.arrayBuffer().catch(() => {}); return r.status; };
+    const ownerStatus = await drain(`${url}artifacts/cs-c5c/owner-review.html`);
+    const battleStatus = await drain(`${url}?c5c=battle&map=mirage&seed=505001`);
+    const payload = {
+      generatedAt: new Date().toISOString(), source: "C5C Battle runtime browser evidence",
+      viewport: { width: WIDTH, height: HEIGHT, mode: mobile ? "mobile" : "desktop" },
+      http: { ownerReview: ownerStatus, battle: battleStatus }, results,
+    };
+    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+    fs.writeFileSync(path.join(OUTPUT_DIR, `runtime-evidence-${mobile ? "mobile" : "desktop"}.json`), JSON.stringify(payload, null, 2), "utf8");
+    console.log(JSON.stringify(payload, null, 2));
+
+    //  ⚠ 這兩條與原本的 `process.exitCode = 1` 判斷條件逐字相同——只是從
+    //    靜默旗標改成看得到、算得出來的 `ck()`。沒有放寬也沒有收緊任何斷言。
+    for (const r of results) {
+      ck(`${r.mapKey} console/page errors = 0`,
+        r.browserErrors.console.length === 0 && r.browserErrors.page.length === 0,
+        JSON.stringify(r.browserErrors));
+    }
+    ck("owner-review.html 可連得到（HTTP 200）", ownerStatus === 200, `status=${ownerStatus}`);
+    ck("battle 路由可連得到（HTTP 200）", battleStatus === 200, `status=${battleStatus}`);
+  },
+});
+
+await finishGate(result);

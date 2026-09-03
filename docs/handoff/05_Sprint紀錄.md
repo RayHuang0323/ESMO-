@@ -17368,3 +17368,86 @@ Owner Review 對上一輪的 Club Identity v2 / Dashboard Scroll P0 判定 `ACCE
 - **Club Progression Contract v1** 仍是 DESIGN READY／NOT IMPLEMENTED——本輪找到的
   週目標經濟失衡（一般玩家與高活躍玩家產量差 4 倍）**未修**。
 - **Club Facilities**（Club Points 長期 sink 的第 2 項）尚未開始、未校準。
+
+---
+
+## Browser Harness Reliability v1（2026-09-04，純工程 Sprint）
+
+Club Identity v2 release 那一輪連續撞到兩類 harness 問題，因此把
+「Browser Harness Reliability」從提案升級為獨立 Sprint 做完。
+**未改任何遊戲產品行為**；本地 commit，未 push、未 deploy。
+
+### 先做的事：找根因，不是先寫新東西
+
+動手寫 harness 之前先讀完 `tools/browser/cdp.mjs` 與 4 支目標 gate，
+結果找到**三個真實存在的 bug**（不是預防性工程）：
+
+1. **`server?.close?.()` 靜默 no-op** — `startDevServer()` 回傳的物件只有
+   `.stop`，沒有 `.close`。`undefined?.()` 對不存在的方法做 optional call 會
+   靜默短路，而且外面還包著 `try/catch`，所以從來沒人發現：
+   `browser_check_club_identity_ui` 與 `browser_check_club_mastery_ui`
+   **歷來每一次執行都沒有真的關掉自己的 dev server**。這解釋了整個 session
+   反覆冒出來的殘留 vite 與「port 被佔」。
+2. **`spawnSync("taskkill", ...)` 沒有 timeout** — taskkill 一卡住就鎖死整個
+   Node 事件迴圈，`setTimeout` 不再觸發 ⇒ **任何 in-process timeout 保護都無效**。
+   這是 09-03 那次「印出 68/68 PASS 後卡住近一小時」的直接成因。
+3. **gate 印完結果卻不退出** — 用 `process._getActiveHandles()` 追到殘留的
+   `ChildProcess`／`Server` handle。
+
+### 完成項
+
+- `tools/browser/harness.mjs`：unique port（向 OS 要）、process ownership
+  （只清自己起的 PID，不掃描、不猜）、startup／total timeout、統一 finally
+  cleanup（每步各自有時限，一步卡住不擋下一步）、結果分類、精簡 evidence
+  （預設只印 stdout，不寫永久檔）。
+- `tools/browser/run-gate.mjs`：外層 supervisor。**硬總時限只有獨立 process
+  做得到**——子行程內部再怎麼卡，supervisor 的計時器活在另一個事件迴圈裡，
+  照樣準時觸發並砍掉整棵 process tree。
+- 三種結果語意 `PASS`／`PRODUCT_FAIL`／`HARNESS_FAIL`，三個不同 exit code。
+- 4 支 gate migrate 完成，**產品斷言數與遷移前逐條相同**。
+
+### 一條走錯又走回來的路（記下來避免後人重走）
+
+第 3 個根因一度想用「在 `spawn()` 當下 `unref()`」解決。**那是錯的**：
+unref 之後該子行程的 `'exit'` 事件就不再送達，`stopOwnedProcess()` 等 exit 的
+await 永遠不 settle（最小重現腳本直接以 exit code 13「unsettled top-level
+await」結束），收尾反而更不可靠。改回保留 `'exit'`，並用 CLI 工具通則收尾：
+`finishGate()` 先等 stdout 排空再明確 `process.exit()`。
+實測：mastery gate 從「40 秒跑完 ＋ 80 秒以上空轉」變成「35.6 秒跑完、立刻結束」。
+
+### 驗證（A–F 全部實跑）
+
+| 項 | 內容 | 結果 |
+| --- | --- | --- |
+| A | 正常 PASS、server／Chrome 全清、exit code 正確 | ✓ 4 支全 `exit=0` |
+| B | 人工製造 product assertion failure | ✓ `PRODUCT_FAIL`、exit 1、cleanup 正常 |
+| C | 人工製造 startup failure（真的佔住 port） | ✓ `HARNESS_FAIL`、exit 2、產品 tally 維持 0/0 |
+| D | 人工製造事件迴圈**同步鎖死** | ✓ supervisor 於時限內強制結束、`exit=2`、**零殘留行程** |
+| E | 同一支 gate 連跑 3 次 | ✓ 全 `exit=0`，無 port collision、無 stale PID |
+| F | 4 支 migrated gate | ✓ 129/129、68/68、5/5、16/16 |
+
+### F 驗證時抓到我自己的一個 bug（值得記下來）
+
+第一次跑完整 F 驗證時，`browser_check_cs_c6c_progress` 回 `HARNESS_FAIL`。
+查下去是**我自己把 `DEFAULT_TIMEOUTS.totalMs` 設成 300 秒、設太緊**——
+C6C 本來就要跑 ~280 秒（完整 BO1 ＋ BO3 真實 simulation），稍慢一次就撞上。
+
+這件事本身反而是分類機制的一次真實驗證：**11 條產品斷言全過、`fail=0`，
+結果被正確標成 `HARNESS_FAIL`，沒有誣賴產品**。舊版寫法會變成 `11/12 FAIL`，
+跟真的產品迴歸長得一模一樣，而且會把人引去查根本不存在的產品 bug。
+
+修法：預設上限提高到 600 秒；C6C 自己再明確指定 `timeoutMs: 900_000`。
+
+⚠ 附帶記錄一個已知限制：軟上限用的是 `Promise.race`，逾時只會停止「等待」，
+**不會取消還在跑的 `run()` 本體**——所以逾時後可能還會看到一條
+`CDP WebSocket 已關閉` 的後續錯誤（cleanup 關掉 Chrome，而背景還在跑的
+evaluate 撞上）。那是逾時的餘波，不是另一個獨立問題。真正的硬保證仍在
+`run-gate.mjs` supervisor。
+
+### 未處理
+
+- **48 支 legacy browser gate 未 migrate**（Sprint 明文不要一次重寫全部），
+  仍帶有上述根因 ①②③ 的風險。清單與建議順序見 `08_目前待辦與風險.md`。
+- `tools/browser/cdp.mjs` **維持原樣未動**——48 支未遷移的 gate 都還靠它，
+  在它們遷移完成前改它風險過高。
+- TD-56、Android 真機驗收、Club Progression Contract 實作：均未動。

@@ -66,6 +66,34 @@ ESMO 是 **Web MOBA / 電競經營模擬遊戲**。目標不是程式實驗，�
 - 碰 **MOBA battle** 依影響範圍跑：current Sprint verifier、`runtime29`、`pacing29b1`、
   `presentation29b2`、`controls29b3`、`regress` / `regress2`、`build`。
 
+### ⚠⚠ Browser gate 的三種結果，與「不准直接改產品」的規則（2026-09-04）
+
+已 migrate 到 Browser Harness v1（`tools/browser/harness.mjs`）的 browser gate
+最後一行會明確印出 `RESULT=`，並以三種 exit code 區分：
+
+| 結果 | 意義 | exit code | 該怎麼做 |
+| --- | --- | --- | --- |
+| `PASS` | 產品斷言全過 | 0 | 繼續 |
+| `PRODUCT_FAIL` | **產品真的壞了**（`ck()` 記到 fail） | 1 | 這時才可以去看產品程式 |
+| `HARNESS_FAIL` | **環境／工具問題**：dev server 起不來、Chrome／CDP 失敗、逾時、gate 腳本自己丟例外 | 2 | **修環境或 gate，不要動產品程式** |
+
+**規則（Claude／Codex 都適用）：**
+
+1. **看到紅燈，先確認是哪一種。** 只有 `PRODUCT_FAIL` 才代表產品有問題。
+2. **未確認 `PRODUCT_FAIL` 之前，不得開始修改產品程式。** 2026-09-03 有一次
+   C5C 在機器資源尖峰時以 `mirage Battle mount timeout` 失敗，乾淨環境重跑就
+   `completed:true / exit=0`——當時的 gate 沒有這個分類，紅燈長得跟真的迴歸
+   一模一樣，差一點就往產品程式去找不存在的 bug。
+3. **`HARNESS_FAIL` 不得被當成產品 regression 回報**，也不得用「調鬆斷言／改
+   seed／改 baseline」的方式讓它變綠。
+4. 懷疑是環境問題時的標準動作：確認沒有殘留 gate 行程（`esmo-cdp-` profile 的
+   Chrome、ephemeral port 的 vite），機器記憶體是否吃緊，然後**乾淨隔離重跑一次**。
+   重跑就過 ⇒ 記成 `HARNESS_FAIL`，不是產品問題。
+5. 需要「即使 gate 卡死也一定要結束」的硬保證時，走 supervisor：
+   `node tools/browser/run-gate.mjs <gate.mjs> --timeout <ms>`。
+   它是獨立 process，計時器不受子行程內部卡死影響（in-process 的 `setTimeout`
+   在同步呼叫卡死時根本不會觸發——這是實測踩出來的）。
+
 ### ⚠⚠ 長 verifier 一律走 `tools/verify.mjs`（2026-08-09 更正）
 
 **本節原本寫「`runtime29` 跑它=跑完全部，約 10–15 分」——那是錯的。**
