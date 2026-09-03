@@ -17579,6 +17579,10 @@ evaluate 撞上）。那是逾時的餘波，不是另一個獨立問題。真�
 - `node tools/check_cs_c5b_route_interrupt.mjs`：exit `0`；Mirage／Dust II／Inferno
   route interrupt、first-shot latency、weapon cadence、navigation safety 全 PASS。
 - `node tools/check_cs23.mjs`：`28/28`；`npm run build`：PASS（保留既有 large-chunk warning）。
+- `node tools/browser_check_cs_android_owner_preview.mjs` 對本地 `npm run preview` production
+  bundle：`33/33 PASS`，Home 與三圖 CS smoke、HTTP 200、console/page clean。
+- Cloudflare Quick Tunnel 曾成功建立 connector，但 edge 對 GET／HEAD 均回 `403 Forbidden`；
+  依安全規則未再繞過或高頻重試，因此本輪沒有可交付的 HTTPS URL。Local preview 已停止。
 - Node／CDP 只代表 desktop 與 390px emulation；Android GPU／FPS／真 touch pinch／
   rotate／喇叭體感仍待 Owner 真機驗收。
 
