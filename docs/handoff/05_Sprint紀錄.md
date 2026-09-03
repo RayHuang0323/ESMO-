@@ -17846,3 +17846,10 @@ Owner Review 通過，正式發布。
 - External smoke `node tools/browser_check_cs_android_owner_preview.mjs`：
   **33/33 PASS**，HTTP 200；Home、Mirage／Dust II／Inferno、HUD／C4／POV／controls、
   console/page errors 均通過。Owner 真機驗收仍未完成，且未 push／未 deploy。
+## CS Android Owner Review V2（preview URL rotated，2026-09-04）
+
+- 前一個 `localhost.run` hostname 已回 `503 no tunnel here`；已停止失效 SSH
+  forwarding，重新建立帶 keepalive 的 tunnel。現行 temporary HTTPS preview：
+  `https://6ae47de8ff1d10.lhr.life/ESMO-/`。
+- 現行 URL GET `200`，external Owner preview smoke **33/33 PASS**；Vite 使用
+  preview-only `.lhr.life` allowlist，config 未納入產品或 deploy，且已清理。未 push／未 deploy。
