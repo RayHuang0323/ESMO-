@@ -17209,6 +17209,20 @@ pack、付費商城、教練合約生命週期、push／deploy。**也沒有順�
 - **Android 驗證**：pending，不阻塞本次發布。
 - **Club Identity**：下一個 Club Points sink，尚未開始。
 
+## Sprint CS-P1｜RESIDUAL_TACTIC_SYNC_P1（2026-09-03）
+
+- Root cause：stable team identity 與 actual T／CT side 已分離，但 side-specific tactic route schema 未在 halftime／OT projection；side swap 後可能將 T-only route 傳給 CT，或反向傳遞。
+- Fix：新增 deterministic `projectCsTacticToSide()`，保留 stable owner strategy identity，依 site／type 投影到 actual-side tactic library；route planner 同時使用 actual-side tactic 與 `routeLibraryBySide[side]`。
+- Evidence：Mirage、Dust II、Inferno 自然完成並通過 P1 guard `4/4`；C5A／C5B／C5V、C5C／C6C browser、MatchSession／Series／Playable Series／CS23、Competition product sections 與 production build 均已記錄。
+- 明確未做：AWP balance、CBR、Rating、`MATCH_BAND`、`starExcess`、Meta branch、C5C／C6C worktree、tactic redesign。C5B timing debt 與 Competition Node 24 wrapper exit issue 不改門檻，見 P1 handoff。
+## Sprint CS-P1 release closeout — 2026-09-03
+- `RESIDUAL_TACTIC_SYNC_P1` 已完成、整合、push 並部署；P1 commit `ef9f50e14d42dcf5fd50734a6d453c0b748022e9`，production main `e3d2ee1fc2f53001d11d0bb090ffffd097b50285`。
+- Regression / build evidence：P1 authority `4/4`、CS23 `28/28`、MatchSession `36/36`、Series `46/46`、Playable Series `99/99`、C5A `11/11`、C5B utility `55/55`、C5V `35/35`、Competition integration `13/13`、production build PASS。
+- Production smoke：V7 `44/44`、Meta `67/67`；直接 CS Battle 覆蓋三圖、desktop / 390px、C5C HUD、C6C progress、reload shell 與 console/page errors clean。desktop Inferno transient CDP disconnect 已隔離重跑 `5/5 PASS`。
+- 結論：`RESIDUAL_TACTIC_SYNC_P1 = CLOSED`。C5B timing verifier 長尾、Node 24 Windows wrapper exit、Vite large-chunk warning、Android 真機驗收為既有 debt / pending；未因本 Sprint 放寬 verifier 或改 gameplay timing。
+
+---
+
 ---
 
 ## Club Identity v2 + Dashboard Scroll P0（2026-09-03，`feature/club-identity-v1`）
