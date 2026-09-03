@@ -22,7 +22,7 @@ import { useProfileStore } from "../../platform/profileStore.js";
 import { CS_SEATS, CS_SEAT_LANE_ZH } from "../../platform/contracts/matchSquad.js";
 import MatchPrepFrame, { SquadSeatRow } from "../common/MatchPrepFrame.jsx";
 import { calcPower, bestPositions, personalityById } from "../../data/playerModel.js";
-import { MOBA2FPS, FPS_ROLE_ZH } from "../../battle/fps/fpsRoster.js";
+import { fpsRolePresentation } from "../../battle/fps/fpsRoster.js";
 import PlayerFace from "../../ui/PlayerFace.jsx";
 import { GC } from "../../ui/theme.js";
 import { CS_MAPS } from "../../battle/fps/csPrepData.js";
@@ -76,7 +76,7 @@ function CsBenchSheet({ seat, players, lineup, onClose }) {
                     <span style={{ marginLeft: 5, fontSize: 9, fontWeight: 800, color: "#93c5fd", background: "rgba(59,130,246,0.14)", borderRadius: 5, padding: "1px 5px", fontFamily: "system-ui" }}>Lv.{p.lv ?? 1}</span>
                   </div>
                   <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.45)" }}>
-                    {FPS_ROLE_ZH[MOBA2FPS[p.role]] ?? "步槍手"} · CS 戰力 {calcPower(p, "fps")}
+                    {(() => { const roleView = fpsRolePresentation(p); return <>最擅長：{roleView.bestLabel} · CS 戰力 {calcPower(p, "fps")}{roleView.taskLabel && <span style={{ color: ACC }}> · 本場定位：{roleView.taskLabel}</span>}</>; })()}
                     {at && at !== seat && <span style={{ color: "#fbbf24" }}> · 目前 {SEAT_STYLE[at]?.code}（點擊將互換）</span>}
                   </div>
                 </div>
@@ -140,8 +140,11 @@ export default function CsPrepScreen({ onNext, onBack }) {
         ) : null}
         subLine={p ? (
           <div style={{ display: "flex", gap: 5, marginTop: 2, flexWrap: "wrap", minWidth: 0 }}>
-            <span style={{ background: `${ACC}22`, color: ACC, fontSize: 8, fontWeight: 700, borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap" }}>{FPS_ROLE_ZH[MOBA2FPS[p.role]] || "步槍手"}</span>
-            <span style={{ color: GC.gray, fontSize: 8, whiteSpace: "nowrap" }}>適配 {bestPositions(p).fps.fit}</span>
+            {(() => { const roleView = fpsRolePresentation(p); return <>
+              <span style={{ background: `${ACC}22`, color: ACC, fontSize: 8, fontWeight: 700, borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap" }}>最擅長：{roleView.bestLabel}</span>
+              <span style={{ color: GC.gray, fontSize: 8, whiteSpace: "nowrap" }}>適配 {roleView.bestFit}</span>
+              {roleView.taskLabel && <span style={{ background: "rgba(251,191,36,0.14)", color: GC.gold, fontSize: 8, fontWeight: 700, borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap" }}>本場定位：{roleView.taskLabel}</span>}
+            </>; })()}
             <span style={{ color: cc, fontSize: 8, whiteSpace: "nowrap" }}>{cond}</span>
             {pers && <span style={{ fontSize: 8 }}>{pers.emoji}</span>}
           </div>

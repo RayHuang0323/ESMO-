@@ -15,7 +15,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { FPS_WEIGHTS, statZh } from "../../data/playerModel.js";
-import { MOBA2FPS, FPS_ROLE_ZH } from "../../battle/fps/fpsRoster.js";
+import { fpsRolePresentation } from "../../battle/fps/fpsRoster.js";
 import PlayerFace from "../../ui/PlayerFace.jsx";
 import { GC, FONT, MONO } from "../../ui/theme.js";
 
@@ -77,12 +77,13 @@ export default function CsLoadingScreen({ config, onDone }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {starters.map((p) => {
               const ks = keyStat(p);
-              const fpsRole = FPS_ROLE_ZH[MOBA2FPS[p.role]] || "步槍手";
+              const roleView = fpsRolePresentation(p);
               return (
                 <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 9 }}>
                   <PlayerFace player={p} size={28} />
                   <span style={{ color: "white", fontSize: 11, fontWeight: 700, minWidth: 52 }}>{p.name}</span>
-                  <span style={{ background: `${ACC}22`, color: ACC, fontSize: 8, fontWeight: 700, borderRadius: 4, padding: "1px 6px" }}>{fpsRole}</span>
+                  <span style={{ background: `${ACC}22`, color: ACC, fontSize: 8, fontWeight: 700, borderRadius: 4, padding: "1px 6px" }}>最擅長：{roleView.bestLabel}</span>
+                  {roleView.taskLabel && <span style={{ background: "rgba(251,191,36,0.14)", color: GC.gold, fontSize: 8, fontWeight: 700, borderRadius: 4, padding: "1px 6px" }}>本場：{roleView.taskLabel}</span>}
                   {ks && <span style={{ marginLeft: "auto", color: GC.gray, fontSize: 9 }}>{ks.zh} <b style={{ color: "#e8ebf0", fontFamily: MONO }}>{ks.val}</b></span>}
                 </div>
               );

@@ -17371,6 +17371,102 @@ Owner Review 對上一輪的 Club Identity v2 / Dashboard Scroll P0 判定 `ACCE
 
 ---
 
+## CS acceptance source integration + release closeout（2026-09-04）
+
+### Scope boundary
+
+- 以 latest `origin/main @ 274f48e068a72de965952b61c20d86d47d215d3f` 為 baseline，沒有 wholesale cherry-pick acceptance deployment commit。
+- 只整合四個已驗證 CS source 檔：`src/battle/fps/EsportsFPS3D.jsx`、`src/battle/fps/fpsRoster.js`、`src/screens/fps/CsPrepScreen.jsx`、`src/screens/fps/CsLoadingScreen.jsx`。
+- Dashboard Scroll P0、Club Identity V2、Social Identity、Meta／Club Assets 保留在 latest main；未修改跨線 protected files。
+
+### Verification
+
+- `check_cs23.mjs`：`28/28 PASS`。
+- `check_cs_c5b_route_interrupt.mjs`：Mirage／Dust II／Inferno route interrupt、接敵反應與 combat route preservation PASS；route-delay audit 的兩個 >1 秒 residual 與 candidate baseline 相同，未在本輪擴大 scheduler 範圍。
+- `browser_check_cs_c5c_presentation.mjs`：Desktop 1366 與 Mobile 390，三圖 completed，HUD／bomb events／manual focus／camera override／rigged C2C／browser errors `0`。
+- `browser_check_club_identity_ui.mjs`：`129/129 PASS`，含 Dashboard desktop wheel、390px wheel／touch、bottom nav、reload 與水平 overflow gate。
+- `npm run build`：PASS（既有 Vite large-chunk warning 保留）。
+
+### Release
+
+- Integration commit：`1179e9f5f468a770fc6e3bf17cd8ef58ee9423fa`。
+- Fast-forward push：`274f48e..1179e9f`，無 force；Pages workflow `33785282713` success。
+- Production static smoke：HTTP `200`、entry HTTP `200`，部署 bundle 含 CS role／camera／bomb／engagement markers。
+- Production browser smoke 因本機 Chrome `ERR_NETWORK_ACCESS_DENIED` 無法在 URL 就位前完成；不視為產品 FAIL，但仍列為環境阻塞，Owner 需在可連線環境補跑。
+
+
+---
+
+## Club Identity v2 Release：checkpoint → merge → push → deploy（2026-09-03）
+
+Owner Review 對上一輪的 Club Identity v2 / Dashboard Scroll P0 判定 `ACCEPTED`。
+本輪把它從 feature branch 正式送上生產環境。
+
+### 完成項
+
+1. **Review 環境清理**：刪除 untracked review seed
+   （`public/review-seed-33a4e516726286c79b05a85a.html`）、停掉本次 Cloudflare Quick
+   Tunnel（tunnel URL 事後確認 HTTP 530 已失效）、working tree clean。
+
+2. **重新取得 remote 真值並安全整合**：`git fetch origin` 確認 `origin/main` 在整個
+   Owner Review 期間**沒有再前進**，仍是使用者提供的 `99928d8`。用 `git merge
+   origin/main --no-ff --no-commit` 整合（不是假設，是重新 fetch 確認）。
+   - 唯一衝突：`docs/handoff/05_Sprint紀錄.md`——兩邊都只是往後追加新章節，沒有互相
+     取代，兩份都保留（main 的 CS-P1 章節在前，因為先發布）。
+   - `src/battle/fps/EsportsFPS3D.jsx` 合併後與 `origin/main` **逐位元組一致**——
+     Club Identity 從未修改 CS runtime，這裡沒有東西需要調解。
+   - Gate 執行順手覆寫的 `artifacts/cs-c5c/owner-review/*`（7 個檔）在 push 前 `git
+     checkout HEAD --` 還原，保持這次 release 的 diff 精確落在本輪範圍。
+
+3. **Focused Release Gate 全綠**（node gates 序列、browser gates 序列，不併行）：
+   `check_club_identity_v1` 83/83、`check_club_assets_v1` 105/105、
+   `check_capability_authority` 15/15、`check_club_mastery_v1` 265/265、
+   `check_dash10`／`check_flow09`、`check_cs23` 28/28、
+   `check_cs_residual_tactic_sync_p1` 4/4、`check_cs_c5c_presentation`（node）29/29、
+   `check_cs_c6c_progress_ux`（node）12/12、`browser_check_club_identity_ui` 129/129、
+   `browser_check_club_mastery_ui` 68/68、`browser_check_cs_c5c_presentation`（見下方
+   事故記錄）、`browser_check_cs_c6c_progress` 16/16、`npm run build`。
+
+4. **Push（fast-forward，非 force）＋ GitHub Pages Deploy**：`git push origin
+   HEAD:refs/heads/main` 產出 `99928d8..cbf5edf`。沒有動本地 `main` 分支
+   （它被另一個 worktree `ESMO-worktrees/codex-cs-p0-main-release` checkout 著，
+   直接推 remote ref 避免任何干擾）。Deploy workflow（push-to-main 觸發）以 GitHub
+   Actions 公開 API 確認：run #195，`head_sha=cbf5edf…`，`status=completed`，
+   `conclusion=success`，15:29:07 → 15:30:06。
+
+5. **新建正式站 release smoke**：`tools/browser_check_prod_club_identity_release.mjs`。
+   走真實 UI 流程（正式站是打包後 bundle，不能呼叫 Store action），涵蓋首頁健康度、
+   桌機滾輪／手機觸控真實捲動、Club Theme／Crest Frame／Banner 生效（含背景真的畫得
+   出來，不只是掛屬性）、**earned 稱號（冠軍）只要打開俱樂部資產頁就自動授予、且沒有
+   購買鍵**、教練購買上任、俱樂部專精頁、Competition Hub → Opponent Inspect（含禁列掃
+   描）、**桌機完整跑一次 CS 對戰流程**（CS 卡片 → 練習地圖選擇 → 自動填入 →
+   快速練習 → 20 秒確認倒數 → 地圖確認 → 四層戰術確認 → canvas 掛載 → C5C 呈現層
+   HUD／速度控制都在）、console 零本站程式錯誤。**55/55 PASS**（桌機 1366 + 390px）。
+
+### 過程中的兩次事故（都排除，記錄在案）
+
+1. **`browser_check_club_mastery_ui` 印出 `68/68 PASS` 後卡在收尾（cleanup）近一
+   小時**，序列因此卡住不往下跑。這正是 `08_目前待辦與風險.md` 早就記過的
+   「cleanup 無 timeout」——這次不是理論風險，是真的撞見。診斷方式：先確認卡住的
+   node 行程（Chrome 已無 `esmo-cdp-` profile 殘留，純粹是 node 收尾沒返回）已經印出
+   通過結果，再安全終止，序列自動往下走。
+2. **`browser_check_cs_c5c_presentation` 在終止上一個卡住行程的瞬間以 `mirage
+   Battle mount timeout` 失敗**（當時約 4GB／19.84GB 可用記憶體）。先確認環境已無
+   殘留 gate chrome（0 個），乾淨隔離重跑：三張圖 `completed:true`、HTTP 200/200、
+   `exit=0`。確認是資源尖峰造成的一次性假紅，不是合併帶入的迴歸。
+   → **結論：Browser Harness Reliability 從「已提案」升級為 next engineering
+   priority**，已在 `04_Roadmap.md`／`08_目前待辦與風險.md` 同步記錄。
+
+### 未處理 / 待決（延續上一輪）
+
+- **TD-56** 仍 OPEN（Team Development 點數乾涸）。
+- **Android 真機驗證**仍 PENDING，不阻塞本次發布。
+- **Club Progression Contract v1** 仍是 DESIGN READY／NOT IMPLEMENTED——本輪找到的
+  週目標經濟失衡（一般玩家與高活躍玩家產量差 4 倍）**未修**。
+- **Club Facilities**（Club Points 長期 sink 的第 2 項）尚未開始、未校準。
+
+---
+
 ## Browser Harness Reliability v1（2026-09-04，純工程 Sprint）
 
 Club Identity v2 release 那一輪連續撞到兩類 harness 問題，因此把
