@@ -1,4 +1,6 @@
-# Retention Economy Calibration v1
+# Retention Economy Calibration v1 — **RELEASED**
+
+production main `e572862d39b4bc1420dbc47afcd636b70e62392a`（2026-09-04）｜Pages workflow `33802726698` success｜正式站 smoke 52/52 PASS。
 
 基線 `cc46f98a021510e6c2eeaf21fd3f154de4997e58`（Club Progression v1 上線後的 production main）。
 所有數字都是用 `tools/retention_economy_model.mjs` 實跑出來的；模型只負責「玩家每天做了什麼」，
