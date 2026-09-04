@@ -1816,3 +1816,51 @@ NODE_CARD_DENSITY: 11–13 行 → 7–8 行
 2. Online Fairness architecture：GAP-1（`SquadSnapshot` 正名）與 GAP-2
    （effective competitive power）—— 產品原則已 DECIDED，架構仍 PENDING。
 3. Club Facilities：維持 **DEFER**，條件見設計文件 §6。
+
+## Online Competitive Power Contract v1 — DESIGN COMPLETE（2026-09-05）
+
+設計文件：`docs/design/Online_Competitive_Power_Contract_v1.md`。
+**Audit ＋ 契約 ＋ 架構邊界，未實作 CBR／Rating／battle runtime。**
+驗證器：`tools/check_online_power_contract_v1.mjs` **44/44 PASS**。
+
+### 最重要的 audit 發現
+
+**CBR / Cap / Bracket / Rating / SquadSnapshot 在 `main` 上全部不存在。**
+`starExcess`、`MATCH_BAND`、`onlineCbr`、`squadSnapshot.js`、`onlineValuation.js`、
+`matchmakingPolicy.js`、`cbrDecisionGate.js` —— `src/` 全庫 0 命中／檔案不存在。
+它們在 `v7/fast-calibration` 那條線上。
+
+⚠ `src/` 裡的 `rating` 是 **BattleResult 的單場表現評分**，與配對 Rating
+是完全不同的東西。配對用的評分建議另取名 `LadderRating`，否則兩者永久互相污染。
+
+### 契約現況
+
+| | |
+|---|---|
+| canonical | **`MatchEntryRequest.v1`**（委派 `MatchSquad.v1` 驗合法性） |
+| client 送什麼 | 只有身分與編制。實測陣容條目 **0 個數值型別**，整張申請單唯一的數字是時間座標 |
+| server 該自己取什麼 | 能力、體力、士氣、等級、戰力、任何 career modifier 的結果 |
+| GAP-2 的位置 | **伺服器由 playerId 回查那一步**，而那一步**今天不存在** ⇒ 不是漏洞，是尚未建造的一層 |
+
+### 決定
+
+- **`MatchSquad` 與 `SquadSnapshot` 是兩個不同概念，兩個都保留，不 rename。**
+  前者是 client→server 的**申請**（不可信），後者是 server 內部的**裁決依據**（權威）。
+  合併會直接毀掉目前唯一真正成立的 identity-only 保護。
+- **推薦模型 = A ＋ 波動狀態正規化**（＝既有 Season vNext 的 Cap → Bracket → Rating）。
+  能力值**原樣使用**，只正規化 condition／morale；公平性由**定價**產生。
+  ⇒ GAP-2 因此不需要 effective stats：career 加成確實讓能力變高，
+  但那個高會被定價換成「更硬的對手」，不是「同級內的碾壓」。
+- **B（normalization）被否決**：抹平養成成果等於把經營遊戲與線上切開。
+- **C（hybrid）被否決**：複雜度是 A＋B 相加，而它多換到的東西 A 已用更好懂的方式給了。
+
+### 本輪明確不做
+
+未建立 `squadSnapshot.js` prototype —— 沒有伺服器與定價層，它會是一個
+**沒有消費端的契約**，正是 TD-56 花一整輪修掉的反模式。等真的接伺服器時一次做對。
+
+### 下一個候選（未開始）
+
+1. `SquadSnapshot.v1` ＋ `SquadBudget.v1`（需要先有伺服器或至少一個權威定價路徑）。
+2. `check_club_assets_v1` 裡三條「SquadSnapshot」代理註解正名為 `MatchSquad.v1`（低風險待辦）。
+3. Club Facilities：維持 **DEFER**。
