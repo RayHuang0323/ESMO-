@@ -257,17 +257,43 @@ export function validateTeamDevelopmentState(state) {
   return { ok: errors.length === 0, errors };
 }
 
-function blockedReason(state, node, previousRank) {
-  if (node.future || node.activeLevelCap <= 0) return "這項發展仍在規劃中";
-  if (previousRank >= node.activeLevelCap) return "下一階段尚在規劃中";
+/**
+ * 現在能不能投入這一級，不能的話**為什麼**。
+ *
+ * ⚠ 這是**唯一**的資格判定。投入用它、畫面也用它——TD-56 Owner Review 抓到
+ *   畫面自己重推了一套（`nodeStatus`），結果「前置未完成」與「點數不足」
+ *   被壓成同一個「待解鎖」，同一張卡還會同時說「待解鎖」和「可生效」。
+ *   要改規則只改這裡；畫面不得再自己判一次。
+ *
+ * `kind` 給畫面決定怎麼呈現，`reason` 是**可以直接顯示給玩家看**的中文。
+ *
+ * @returns {{ok:boolean, kind:string, reason:string|null}}
+ *   kind: `ok` | `maxed` | `planned`（整個節點還在規劃）
+ *       | `nextPlanned`（已生效，但下一階段還沒開放）
+ *       | `prerequisite`（前置未完成）| `points`（發展點不足）
+ */
+export function teamDevelopmentEligibility(rawState, nodeId) {
+  const state = sanitizeTeamDevelopment(rawState);
+  const node = teamDevelopmentNodeById(nodeId);
+  if (!node) return { ok: false, kind: "unknown", reason: "找不到這項發展" };
+  return nodeEligibility(state, node, state.ranks[nodeId] ?? 0);
+}
+
+function nodeEligibility(state, node, previousRank) {
+  const no = (kind, reason) => ({ ok: false, kind, reason });
+  if (previousRank >= node.maxRank) return no("maxed", "這項發展已完成");
+  if (node.future || node.activeLevelCap <= 0) return no("planned", "這項發展仍在規劃中");
+  if (previousRank >= node.activeLevelCap) return no("nextPlanned", "下一階段尚在規劃中");
   for (const prerequisite of node.prerequisites) {
     if ((state.ranks[prerequisite.nodeId] ?? 0) < prerequisite.minRank) {
       const parent = teamDevelopmentNodeById(prerequisite.nodeId);
-      return `需要先完成「${parent?.name ?? prerequisite.nodeId}」`;
+      return no("prerequisite", `需先完成「${parent?.name ?? prerequisite.nodeId}」`);
     }
   }
-  if (state.availablePoints < node.costPerRank) return `需要 ${node.costPerRank} 點發展點`;
-  return null;
+  if (state.availablePoints < node.costPerRank) {
+    return no("points", `需要 ${node.costPerRank} 點發展點`);
+  }
+  return { ok: true, kind: "ok", reason: null };
 }
 
 /** 純 reducer：一次只投入一點，失敗時不產生部分更新。 */
@@ -280,9 +306,9 @@ export function applyTeamDevelopmentPurchase(rawState, nodeId, { now = null } = 
     receipt: { success: false, nodeId, previousRank, newRank: previousRank, pointsSpent: 0, remainingPoints: state.availablePoints, failureReason: reason },
   });
   if (!node) return fail("找不到這項發展");
-  if (previousRank >= node.maxRank) return fail("這項發展已完成");
-  const reason = blockedReason(state, node, previousRank);
-  if (reason) return fail(reason);
+  //  ⚠ 與畫面共用同一份判定（見 `nodeEligibility`），不在這裡另寫一組條件。
+  const eligibility = nodeEligibility(state, node, previousRank);
+  if (!eligibility.ok) return fail(eligibility.reason);
   const ranks = { ...state.ranks, [nodeId]: previousRank + 1 };
   const nextState = {
     ...state,

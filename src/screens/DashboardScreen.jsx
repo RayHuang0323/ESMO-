@@ -931,6 +931,12 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
   const objectiveBadge = (typeof profile.retentionView === "function" ? profile.retentionView().claimable : 0) || 0;
   const utilityItems = useMemo(() => [
     { id: "team", label: "戰隊詳情", icon: "award" },
+    //  ⚠ 常駐入口，**不可以**改成「有點數才出現」。下面的 todos 也有一張戰隊發展卡，
+    //    但那是**提醒**（有點數待分配），這一個是**入口**（隨時進去看進度與里程碑）。
+    //    只留提醒的後果實測過：`availablePoints = 0` 時桌機首頁完全找不到戰隊發展，
+    //    而玩家每次把點花完都會落進那個狀態（TD-56 Owner Review 發現 ①）。
+    //    手機的入口在「戰隊」分頁 group，兩邊都要有。
+    { id: "development", label: "戰隊發展", icon: "award" },
     { id: "training", label: "訓練中心", icon: "signal" },
     { id: "recruit", label: "招募", icon: "arrowUp" },
     { id: "objectives", label: "俱樂部目標", icon: "award", badge: objectiveBadge },

@@ -15,6 +15,7 @@ import {
   teamDevelopmentNodesByCategory,
   sanitizeTeamDevelopment,
   teamDevelopmentEffects,
+  teamDevelopmentEligibility,
 } from "../../platform/development/teamDevelopment.js";
 import {
   developmentPointsViewOf, CLUB_LEVEL_MILESTONES, POINTS_PER_CAREER_SEASON,
@@ -25,8 +26,12 @@ import ManageFrame from "./ManageFrame.jsx";
 
 gsap.registerPlugin(useGSAP);
 
+//  ⚠ `locked` 與 `needsPoints` 是**兩件不同的事**，不可再合併成一個「待解鎖」：
+//    前者是「還不能買」（前置沒完成），後者是「買得起就能買，只是錢不夠」。
+//    TD-56 Owner Review 抓到合併後的畫面會同時說「待解鎖」與「可生效」。
 const STATUS = {
   locked: { label: "待解鎖", color: GC.gray },
+  needsPoints: { label: "點數不足", color: GC.gold },
   available: { label: "可投入", color: GC.blueL },
   upgrade: { label: "可升級", color: GC.blueL },
   active: { label: "已生效", color: GC.green },
@@ -40,14 +45,29 @@ const categoryOf = (id) => TEAM_DEVELOPMENT_CATEGORIES.find((cat) => cat.id === 
 const colorOf = (cat) => GC[cat?.colorKey] ?? GC.gray;
 const clamp01 = gsap.utils.clamp(0, 1);
 
+/**
+ * 節點的顯示狀態 ＋ 給玩家看的原因。
+ *
+ * ⚠ **判定完全來自 domain 的 `teamDevelopmentEligibility()`**，這裡只負責把
+ *   `kind` 對應到徽章。TD-56 之前這支自己重推了一遍條件，才會把
+ *   「前置未完成」與「點數不足」壓成同一個 `locked`。不要再加平行判定。
+ */
 function nodeStatus(state, node) {
   const rank = state.ranks[node.id] ?? 0;
-  if (rank >= node.maxRank) return "maxed";
-  if (rank > 0 && node.activeLevelCap > 0 && rank >= node.activeLevelCap) return "activeFuture";
-  if (node.future || node.activeLevelCap <= 0) return "future";
-  if (node.prerequisites.some((pre) => (state.ranks[pre.nodeId] ?? 0) < pre.minRank)) return "locked";
-  if (state.availablePoints >= node.costPerRank) return rank > 0 ? "upgrade" : "available";
-  return rank > 0 ? "active" : "locked";
+  const eligibility = teamDevelopmentEligibility(state, node.id);
+  if (eligibility.ok) return { key: rank > 0 ? "upgrade" : "available", reason: null };
+  switch (eligibility.kind) {
+    case "maxed": return { key: "maxed", reason: null };
+    //  已經投入過、但下一階段還沒開放 ⇒ 它是「已生效」，不是「鎖住」。
+    case "nextPlanned": return { key: "activeFuture", reason: null };
+    case "planned": return { key: "future", reason: null };
+    case "prerequisite": return { key: "locked", reason: eligibility.reason };
+    //  點數不足：投入過的仍然是「已生效」，只是這次升不了；沒投入過才是「點數不足」。
+    case "points": return rank > 0
+      ? { key: "active", reason: eligibility.reason }
+      : { key: "needsPoints", reason: eligibility.reason };
+    default: return { key: "locked", reason: eligibility.reason };
+  }
 }
 
 function categoryProgress(state, categoryId) {
@@ -66,7 +86,7 @@ function primaryDirection(state) {
 
 function routeNodeState(state, node) {
   const rank = state.ranks[node.id] ?? 0;
-  const status = nodeStatus(state, node);
+  const { key: status } = nodeStatus(state, node);
   const info = STATUS[status];
   return { rank, status, color: status === "future" ? GC.gray : info.color, info };
 }
@@ -175,11 +195,15 @@ function PointSourceDetail({ points }) {
 }
 
 function nextRouteNode(state, nodes) {
-  const actionable = nodes.find((node) => ["available", "upgrade"].includes(nodeStatus(state, node)));
+  const keyOf = (node) => nodeStatus(state, node).key;
+  const actionable = nodes.find((node) => ["available", "upgrade"].includes(keyOf(node)));
   if (actionable) return { node: actionable, status: "actionable" };
-  const locked = nodes.find((node) => nodeStatus(state, node) === "locked");
+  //  ⚠ 「點數不足」也是下一個該看的節點——它只差點數，比前置沒完成的更接近。
+  const needsPoints = nodes.find((node) => keyOf(node) === "needsPoints");
+  if (needsPoints) return { node: needsPoints, status: "needsPoints" };
+  const locked = nodes.find((node) => keyOf(node) === "locked");
   if (locked) return { node: locked, status: "locked" };
-  const planned = nodes.find((node) => nodeStatus(state, node) === "future");
+  const planned = nodes.find((node) => keyOf(node) === "future");
   return planned ? { node: planned, status: "future" } : { node: null, status: "complete" };
 }
 
@@ -235,7 +259,10 @@ function RouteSummary({ state, nodes, color }) {
   const next = nextRouteNode(state, nodes);
   const nextRank = next.node ? state.ranks[next.node.id] ?? 0 : 0;
   const nextEffect = next.node ? teamDevelopmentLevelEffect(next.node, nextRank) : null;
-  const nextLabel = next.status === "actionable" ? "下一個可發展" : next.status === "locked" ? "下一個節點（先完成前置）" : next.status === "future" ? "下一個節點（規劃中）" : "目前路線已完成可用階段";
+  const nextLabel = next.status === "actionable" ? "下一個可發展"
+    : next.status === "needsPoints" ? "下一個節點（發展點不足）"
+    : next.status === "locked" ? "下一個節點（先完成前置）"
+    : next.status === "future" ? "下一個節點（規劃中）" : "目前路線已完成可用階段";
   return (
     <div data-testid="development-route-summary" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(190px,100%),1fr))", gap: 7, marginTop: 10 }}>
       <div style={{ background: GC.card, border: `1px solid ${color}33`, borderRadius: 9, padding: "8px 9px", minWidth: 0 }}>
@@ -416,7 +443,7 @@ export default function TeamDevelopmentScreen({ onBack }) {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(260px,100%),1fr))", gap: 9 }}>
             {nodes.map((node) => {
               const rank = state.ranks[node.id] ?? 0;
-              const statusKey = nodeStatus(state, node);
+              const { key: statusKey, reason: blockedWhy } = nodeStatus(state, node);
               const status = STATUS[statusKey];
               const selected = confirmId === node.id;
               const currentEffect = currentEffectOf(node, rank);
@@ -448,15 +475,27 @@ export default function TeamDevelopmentScreen({ onBack }) {
                       </div>}
                       <div style={{ color: GC.gray, fontSize: 8 }}>下一級效果</div>
                       <div data-development-next-effect={node.id} style={{ color: nextEffect?.status === "live" ? "#e5e7eb" : GC.gray, fontSize: 9.5, lineHeight: 1.45, marginTop: 2 }}>{nextEffect ? nextEffect.text : "已完成全部階段"}</div>
-                      {nextEffect && <span style={{ color: nextEffect.status === "live" ? GC.green : GC.gray, fontSize: 7.5, fontWeight: 800 }}>{nextEffect.status === "live" ? "目前可生效" : "尚未開放"}</span>}
+                      {/*  ⚠ 這個旗標講的是「這一級的效果**已經做出來了**」，不是「你現在買得起」。
+                          原本寫「目前可生效」，在一張同時標示「待解鎖」的卡片上會直接打架
+                          （TD-56 Owner Review 發現 ②）。改成描述投入之後會發生什麼。 */}
+                      {nextEffect && <span style={{ color: nextEffect.status === "live" ? GC.green : GC.gray, fontSize: 7.5, fontWeight: 800 }}>{nextEffect.status === "live" ? "投入後生效" : "尚未開放"}</span>}
                     </div>
                     <span style={{ color: c, fontSize: 8.5, fontWeight: 900, whiteSpace: "nowrap" }}>影響：{node.scope}</span>
                   </div>
 
-                  {node.prerequisites.length > 0 && <div style={{ color: statusKey === "locked" ? GC.gray : c, fontSize: 8.5, lineHeight: 1.4, marginTop: 7 }}>前置：{node.prerequisites.map((pre) => teamDevelopmentNodeById(pre.nodeId)?.name).join("、")}</div>}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 9 }}>
+                  {/*  為什麼不能投入。⚠ 這句話直接來自 domain 的資格判定，畫面不自己組——
+                       「需先完成「訓練流程優化」」與「需要 1 點發展點」是兩件事，
+                       合成一個「待解鎖」正是 Owner Review 發現 ② 的問題。 */}
+                  {blockedWhy && <div data-development-blocked-reason={node.id}
+                    style={{ color: statusKey === "needsPoints" ? GC.gold : GC.gray, fontSize: 8.5, lineHeight: 1.4, marginTop: 7 }}>{blockedWhy}</div>}
+                  {!blockedWhy && node.prerequisites.length > 0 && <div style={{ color: c, fontSize: 8.5, lineHeight: 1.4, marginTop: 7 }}>前置：{node.prerequisites.map((pre) => teamDevelopmentNodeById(pre.nodeId)?.name).join("、")}</div>}
+                  <div data-development-cta-row style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 9 }}>
                     <span style={{ color: GC.gray, fontSize: 8.5 }}>每級 {node.costPerRank} 點</span>
-                    {canPurchase && <button onClick={() => setConfirmId(selected ? null : node.id)} style={{ background: `${c}1c`, border: `1px solid ${c}66`, borderRadius: 7, color: c, padding: "5px 9px", fontSize: 9, fontWeight: 900, cursor: "pointer", fontFamily: FONT }}>{selected ? "收起" : "投入發展點"}</button>}
+                    {/*  ⚠ 手機的觸控高度由下面的 <style> 補到 44px（`data-development-cta`），
+                         不在這裡寫死尺寸——桌機用滑鼠，不需要把按鈕做大。 */}
+                    {canPurchase && <button data-development-cta data-testid={`development-cta-${node.id}`}
+                      onClick={() => setConfirmId(selected ? null : node.id)}
+                      style={{ background: `${c}1c`, border: `1px solid ${c}66`, borderRadius: 7, color: c, padding: "5px 9px", fontSize: 9, fontWeight: 900, cursor: "pointer", fontFamily: FONT }}>{selected ? "收起" : "投入發展點"}</button>}
                   </div>
                   {selected && canPurchase && (
                     <div style={{ marginTop: 8, borderTop: `1px solid ${c}33`, paddingTop: 8 }}>
@@ -473,7 +512,11 @@ export default function TeamDevelopmentScreen({ onBack }) {
           </div>
         </div>
         <div style={{ color: GC.gray, fontSize: 8.5, lineHeight: 1.55, marginTop: 11 }}>發展點只投入俱樂部路線，與選手訓練及個人特質分開計算；重複點擊不會再次扣點。</div>
-        <style>{`[data-development-card]{will-change:transform,opacity}[data-development-progress-fill]{will-change:transform}@media(max-width:390px){[data-development-card]{padding:10px!important}[data-development-card] button{padding-left:7px!important;padding-right:7px!important}}@media(prefers-reduced-motion:reduce){[data-development-card],[data-development-progress-fill]{transition:none!important;animation:none!important}}`}</style>
+        {/*  ⚠ 手機 CTA 觸控目標（Owner Review 發現 ⑤）：實測原本只有 61×23px。
+             這裡只長**觸控高度**（min-height + 垂直 padding 歸零），視覺上仍是同一顆按鈕；
+             多出來的高度用同一段規則把該列的 margin-top 收回去 ⇒ 卡片不會明顯變高，
+             文字也不重排。桌機用滑鼠，不套這條。 */}
+        <style>{`[data-development-card]{will-change:transform,opacity}[data-development-progress-fill]{will-change:transform}@media(max-width:430px){[data-development-card]{padding:10px!important}[data-development-card] button{padding-left:7px!important;padding-right:7px!important}[data-development-cta]{min-height:44px!important;min-width:44px!important;padding-top:0!important;padding-bottom:0!important}[data-development-cta-row]{margin-top:1px!important;margin-bottom:-6px!important}}@media(prefers-reduced-motion:reduce){[data-development-card],[data-development-progress-fill]{transition:none!important;animation:none!important}}`}</style>
       </div>
     </ManageFrame>
   );

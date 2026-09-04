@@ -13,6 +13,7 @@ import { readFileSync } from "node:fs";
 import {
   sanitizeTeamDevelopment, validateTeamDevelopmentState, applyTeamDevelopmentPurchase,
   teamDevelopmentEffects, TEAM_DEVELOPMENT_TOTAL_BUYABLE, TEAM_DEVELOPMENT_NODES,
+  teamDevelopmentEligibility,
 } from "../src/platform/development/teamDevelopment.js";
 import {
   reconcileDevelopmentPoints, developmentPointsViewOf, dueGrantsFor, migrationGrantsOf,
@@ -309,6 +310,55 @@ console.log("\n── §12 節奏投影 ──");
   ck("刷滿 Club XP 也無法在第一季畢業（賽季那一條刷不動）",
     grantedTotalOf(grindOneSeason.state.grants) < TEAM_DEVELOPMENT_TOTAL_BUYABLE,
     `${grantedTotalOf(grindOneSeason.state.grants)} / ${TEAM_DEVELOPMENT_TOTAL_BUYABLE}`);
+}
+
+// ── §13 資格判定是單一來源（Owner Review 發現 ②）─────────────────────────
+console.log("\n── §13 資格判定 ──");
+{
+  const rich = sanitizeTeamDevelopment({ availablePoints: 5, ranks: {} });
+  const broke = sanitizeTeamDevelopment({ availablePoints: 0, ranks: { general_training_flow: 1 } });
+  const preUnmet = teamDevelopmentEligibility(rich, "general_data_analysis");
+  const noPoints = teamDevelopmentEligibility(broke, "general_recovery");
+  ck("前置未完成與點數不足是不同的 kind",
+    preUnmet.kind === "prerequisite" && noPoints.kind === "points",
+    `${preUnmet.kind} / ${noPoints.kind}`);
+  ck("前置未完成的原因指名要先完成哪一項",
+    /需先完成/.test(preUnmet.reason) && /訓練流程優化/.test(preUnmet.reason), preUnmet.reason);
+  ck("點數不足的原因說得出還要幾點",
+    /需要 1 點發展點/.test(noPoints.reason), noPoints.reason);
+  ck("可投入時 ok = true 且沒有原因",
+    (() => { const e = teamDevelopmentEligibility(rich, "general_recovery"); return e.ok && e.reason === null; })());
+  ck("已完成 / 規劃中 / 下一階段規劃中 各有自己的 kind", (() => {
+    const maxed = teamDevelopmentEligibility(sanitizeTeamDevelopment({ availablePoints: 5, ranks: { general_training_flow: 3 } }), "general_training_flow");
+    const planned = teamDevelopmentEligibility(rich, "general_growth_support");
+    const nextPlanned = teamDevelopmentEligibility(sanitizeTeamDevelopment({ availablePoints: 5, ranks: { moba_hero_lab: 1 } }), "moba_hero_lab");
+    return maxed.kind === "maxed" && planned.kind === "planned" && nextPlanned.kind === "nextPlanned";
+  })());
+  //  前置優先於點數：兩者都不成立時要先講前置（有錢也買不到）
+  const both = teamDevelopmentEligibility(sanitizeTeamDevelopment({ availablePoints: 0, ranks: {} }), "general_data_analysis");
+  ck("前置與點數都不足時，先講前置", both.kind === "prerequisite", both.reason);
+  //  投入路徑與畫面路徑必須是同一份判定
+  const src = read("src/platform/development/teamDevelopment.js");
+  ck("投入 reducer 走的就是這份資格判定", /const eligibility = nodeEligibility\(/.test(src));
+  ck("資格判定只有一處實作", (src.match(/function nodeEligibility\(/g) ?? []).length === 1);
+  const screen = read("src/screens/manage/TeamDevelopmentScreen.jsx");
+  ck("畫面不再自己重推前置／點數條件",
+    /teamDevelopmentEligibility\(/.test(screen)
+    && !/prerequisites\.some\(/.test(screen)
+    && !/availablePoints >= node\.costPerRank/.test(screen));
+  ck("畫面把「點數不足」與「待解鎖」分成兩個徽章",
+    /needsPoints/.test(screen) && /點數不足/.test(screen));
+  //  ⚠ 只看程式碼：說明這次為什麼要改的註解裡本來就會提到舊字串。
+  const stripComments = (t) => t
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")   // JSX 註解
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  ck("畫面不再出現「目前可生效」（會與「待解鎖」打架）", !/目前可生效/.test(stripComments(screen)));
+  const dash = read("src/screens/DashboardScreen.jsx");
+  ck("桌機管理工具有常駐的戰隊發展入口",
+    /utilityItems = useMemo\(\(\) => \[[\s\S]{0,700}?id: "development"/.test(dash));
+  ck("常駐入口沿用既有路由，沒有第二套",
+    (dash.match(/development: "teamDevelopment"/g) ?? []).length === 1);
 }
 
 console.log(`\nTeam Development Progression v1：${pass}/${pass + fail} ${fail === 0 ? "PASS" : "FAIL"}`);
