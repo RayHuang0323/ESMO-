@@ -11,7 +11,7 @@
 
 | 問題 | 結論 |
 |---|---|
-| 8 個 future node 怎麼辦 | **6 個以 unlock／information 形式啟用，2 個 REJECT** |
+| 8 個 future node **候選**怎麼辦 | **ADOPTED = 6**（unlock／information）、**REJECTED = 2**。⚠ 8 是**候選數**，不是將實作數 |
 | 要不要新增 capability kind | **不要**。六個倖存者全部走既有的 `unlocks`（聯集、無上限） |
 | 要不要提高既有 cap | **不要**。前三個 kind 已被 TD＋Coach 超供，提高上限只是把兩個既有系統一起放大 |
 | 啟用幾階 | **每個節點 1 階**（`activeLevelCap: 1`），與既有 live 資訊節點同形 |
@@ -21,7 +21,12 @@
 
 ---
 
-## 1. Audit：8 個 future nodes
+## 1. Audit：8 個 future node **候選**
+
+> ⚠ **命名約定（Owner 裁示 2026-09-05）**：`8` 永遠指**候選數**，
+> `ADOPTED_NODES = 6` 才是本次要實作的數量，`REJECTED = 2`。
+> 文件中出現 8 的地方一律指「當初表裡有 8 個 `future` 節點」這個事實，
+> **不代表 8 個都會實作**。**不為了湊回 8 個而補新節點。**
 
 全部共同點：`maxRank: 3`、`costPerRank: 1`、`activeLevelCap: 0`、`effect: null`
 ⇒ 目前可購買點數 **0**，在畫面上顯示「規劃中」。
@@ -83,7 +88,7 @@
 | 選項 | 評估 |
 |---|---|
 | **A. 保持 cap，future nodes 改為 unlock / sidegrade / information** | ✅ **採用**。`unlocks` 是聯集、冪等、無上限——天生就是「多一個來源不會壞」的欄位。六個倖存者全部走這條，**不需要動 policy 一個字**。 |
-| B. 新增 capability kind | ❌ 本輪不需要。新增 kind 的真實成本不在型別，而在**新的消費端**（沒有讀取點的能力＝假效果，正是 TD-56 之前 8 個 future node 的狀態）。留給 Facilities 的容量題（§6）。 |
+| B. 新增 capability kind | ❌ 本輪不需要。新增 kind 的真實成本不在型別，而在**新的消費端**（沒有讀取點的能力＝假效果，正是 TD-56 之前那 8 個 future node 候選的狀態）。留給 Facilities 的容量題（§6）。 |
 | C. 重設既有節點 effect | ❌ 會改變已發布玩家的既有投資語意。TD-56 才剛讓玩家第一次真的能買，立刻改掉效果是最糟的時機。 |
 | D. 部分 future nodes 不應啟用 | ✅ **部分採用**：#2 與 #8 REJECT（理由見 §1）。 |
 
@@ -173,7 +178,7 @@ scoutDaysReduction    → 更好的新秀池 ─┴→ roster 本身變強 → �
 
 ---
 
-## 4. Future Node Proposal（6 個候選）
+## 4. Adopted Node Proposal（**ADOPTED_NODES = 6**）
 
 共同規格：`costPerRank: 1`、`maxRank: 3`（保留三階外觀）、**`activeLevelCap: 1`**
 （只開放第一階，與既有 live 資訊節點同形；二三階維持「未來」，誠實標示）。
@@ -286,7 +291,7 @@ management_finance      REJECT — 現金預測已是免費且無條件顯示，
 
 | 方案 | 可購買總點數 | S1 | S3 | S5 | S7 | S10 | 全樹達成 |
 |---|---|---|---|---|---|---|---|
-| **現況**（8 個都不啟用） | 18 | 4／5 | 9／11 | 14／16 | 18／18 | 18／18 | **S7／S6** |
+| **現況**（8 個候選都未啟用） | 18 | 4／5 | 9／11 | 14／16 | 18／18 | 18／18 | **S7／S6** |
 | **採用案**：6 個 ×1 階 | **24** | 4／5 | 9／11 | 14／16 | 19／21 | 24／24 | **S9／S9** |
 | 8 個 ×1 階 | 26 | 4／5 | 9／11 | 14／16 | 19／21 | 26／26 | S10／S10 |
 | 8 個 ×2 階 | 34 | 4／5 | 9／11 | 14／16 | 19／21 | 26／27 | S14 ❌ |
@@ -305,7 +310,7 @@ management_finance      REJECT — 現金預測已是免費且無條件顯示，
 | 不先改 Development Point source | ✅ 供給表一個常數都沒動 |
 
 **關鍵觀察**：因為上限是**由節點表推導**的（TD-56 刻意這樣設計），
-啟用 future nodes **不需要動供給表的任何一行**，上限自己就會變大。
+啟用採用的 6 個節點**不需要動供給表的任何一行**，上限自己就會變大。
 早期曲線完全不受影響，只是把 S6–S10 的內容真空填掉。
 
 ---
@@ -377,3 +382,142 @@ Development Point supply、Codex worktree、節點表本身。
 
 預估：節點表與供給上限**零風險**（上限自動推導、早期曲線實測不變），
 工作量集中在六個面板的 UI 與各自的資料聚合。
+
+---
+
+## 10. Owner Review 裁示（2026-09-05）—— GO
+
+本節是 Owner 的正式裁示紀錄。**與前文衝突時以本節為準。**
+
+### 10.1 命名與採用範圍
+
+```
+FUTURE_NODE_CANDIDATES            = 8   ← 候選數（歷史事實）
+ADOPTED_NODES                     = 6   ← 本次要實作的數量
+REJECTED_NODES                    = 2
+TEAM_DEVELOPMENT_FULL_TREE_POINTS = 24
+FULL_TREE_ETA                     = 約 Season 9
+```
+
+兩個 REJECT 已接受：`general_scout_support`、`management_finance`。
+
+⚠ **不得為了維持 8 個而補新的節點。** 發展樹縮成 18 個節點是刻意的結果，
+不是待補的缺口。`general` 與 `management` 兩條線各剩 4 個節點。
+
+### 10.2 Online Fairness —— 產品原則已裁示
+
+```
+ONLINE_FAIRNESS_PRODUCT_POLICY          = DECIDED
+ONLINE_FAIRNESS_ARCHITECTURE_IMPLEMENTATION = PENDING
+```
+
+**正式產品原則：`CAREER_OWNS_ROSTER` ／ `ONLINE_OWNS_MATCH`。**
+
+Career **可以**決定：roster ownership、player development history、
+club progression、roster composition。
+
+Career-only passive modifiers —— Team Development、Coach、Facilities、
+training／recovery／scouting modifiers —— **不得直接作為 Online Match modifier**。
+
+**GAP-2 已被 Owner 正式確認並接受**：Career progression 已經會改變
+player accumulated stats，因此**未來的 Online Competitive 必須自行建立
+effective competitive power，不可無條件把 Career accumulated power
+直接視為最終 Online power**。
+
+該問題交由未來的 Online architecture 處理
+（MatchSquad ／ snapshot ／ Cap ／ Bracket ／ Rating ／ normalization 等）。
+**本輪不修改 CBR ／ Rating ／ MatchBand。**
+
+GAP-1（`SquadSnapshot` 只有名字沒有實作）與 GAP-3（沒有 verifier 守邊界）
+維持開放，GAP-3 建議在 Expansion Sprint 內以靜態掃描 verifier 關閉（§9）。
+
+### 10.3 Facilities
+
+```
+FACILITIES_NEXT = DEFER
+```
+
+Owner 接受的理由：Facilities 真正的獨立價值應該是未來的
+**Funds sink ／ weekly operating cost ／ infrastructure・capacity**，
+而**不是再提供一套 Training ／ Scouting 數值加成**。本輪不開始 Facilities。
+
+### 10.4 UI／UX 範圍
+
+| Owner Review 項目 | 本輪狀態 |
+|---|---|
+| ③ Available Points hierarchy | **維持 DEFERRED** |
+| ④ Node card density | **改為 IN SCOPE** |
+
+④ 進入範圍的原因：節點卡已達 **11–13 行**，再加 6 個節點會放大既有的資訊密度問題。
+
+⚠ 界線寫死：依 `docs/design/ESMO_UIUX設計原則.md`，
+**只做 progressive disclosure ／ detail hierarchy，不要重新設計整個
+Team Development 頁**。③ 不在範圍內，不得順手一起改。
+
+---
+
+## 11. Phase 0 — Consumer Feasibility Gate（Expansion Sprint 的進入條件）
+
+Expansion Sprint **必須先通過本 Gate**，才可以開始 implementation。
+逐一確認六個 adopted node，並分類。
+
+**只有 `READY_TO_IMPLEMENT` 與 `CLAUDE_SAFE` 可以進入本 Sprint 的 implementation。**
+若某個節點需要修改 Codex-owned CS runtime ⇒ **不實作，只記 dependency**。
+其餘節點等 Expansion 完成後再重新評估。
+
+### 分類定義
+
+| 分類 | 意義 |
+|---|---|
+| `READY_TO_IMPLEMENT` | 消費端已存在，只差 wiring |
+| `CLAUDE_SAFE` | 需要新讀取點，但完全落在 Claude 可安全修改的範圍 |
+| `CODEX_DEPENDENCY` | 需要動 Codex-owned CS runtime ⇒ 只記依賴，不實作 |
+| `ARCHITECTURE_REQUIRED` | 需要新 state／新 authority／migration |
+| `REJECT` | 不做 |
+
+### 逐節點評估
+
+| 節點 | consumer 在哪 | 已有 authority | 需新增 state | 碰 CS runtime | 碰 Online | 碰 Finance/Training/Scouting | 需 migration | 可 deterministic verify | **分類** |
+|---|---|---|---|---|---|---|---|---|---|
+| **N1 成長支援** | `TeamDevelopmentScreen`（沿用 `dataAnalysis` 面板形式）或 PlayerDetail | ✅ `potentialSpaceFactor` `careerStage` `retirement` `growthLogOf` 皆為既有純函式 | ❌ | ❌ | ❌ | 讀 Training 結果，**不改** | ❌ | ✅ 純函式可 node 驗 | **CLAUDE_SAFE** |
+| **N2 MOBA 戰術傾向** | `TacticScreen` | ✅ `seasonData.analytics()`、`clubMastery` tacticUsage | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | **CLAUDE_SAFE** |
+| **N3 MOBA 賽前總覽** | `BanPickScreen` 或 `TacticScreen` | ✅ 三個 live 節點的資料已解鎖，只是散落 | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | **CLAUDE_SAFE** |
+| **N4 CS 戰術傾向** | `CsTacticScreen` | ✅ 既有 `csHistory`、`mapFit`；該檔**已經是 TD 消費端**（`csDemoAnalysis`） | ❌ | ⚠ **否**——`CsTacticScreen` 不在 Codex 的 CS runtime 禁區（禁區是 `EsportsFPS3D` / `fpsRoster` / `CsPrepScreen` / `CsLoadingScreen` / camera・POV・C4・audio・locomotion・route） | ❌ | ❌ | ❌ | ✅ | **CLAUDE_SAFE**（⚠ 見下方協調註記） |
+| **N5 CS 賽前總覽** | `CsTacticScreen` | ✅ 同上 | ❌ | ⚠ 同上 | ❌ | ❌ | ❌ | ✅ | **CLAUDE_SAFE**（⚠ 同上） |
+| **N6 贊助拓展** | `FinanceScreen`（已 import `resolveSponsor`）或戰隊發展面板 | ✅ `SPONSORS` 型錄、`activeSponsor`、`sponsors.js` | ❌ | ❌ | ❌ | 讀 Finance，**不改任何贊助條件或收入** | ❌ | ✅ | **CLAUDE_SAFE** |
+
+### Gate 結論
+
+```
+READY_TO_IMPLEMENT    = 0
+CLAUDE_SAFE           = 6
+CODEX_DEPENDENCY      = 0
+ARCHITECTURE_REQUIRED = 0
+REJECT                = 2（已在 §1 排除，不計入 6）
+```
+
+- **沒有任何節點需要新增 state、新增 authority 或 migration。**
+  六個都是 `unlock` 旗標 ＋ 讀既有純函式，發展點帳本、供給表、契約一律不動。
+- **沒有任何節點需要修改 Codex-owned CS runtime** ⇒ `CODEX_DEPENDENCY = 0`。
+- 六個都可 deterministic verify（純函式輸入輸出 ＋ 靜態掃描 ＋ browser gate）。
+
+⚠ **N4／N5 的協調註記**：`CsTacticScreen.jsx` 不在 Codex 的禁區清單內
+（禁區是 `EsportsFPS3D` / `fpsRoster` / `CsPrepScreen` / `CsLoadingScreen`
+與 camera・POV・C4・audio・locomotion・route），而且它**本來就已經是
+Team Development 的消費端**（`csDemoAnalysis` 旗標的讀取點在這支檔案裡）。
+
+2026-09-05 的協調檢查（**只讀 commit metadata，未讀取檔案內容、未整合任何東西**）：
+`cs/android-owner-review-v2` 上最後一個碰到這支檔案的 commit 是 `9646786`，
+**與 main 相同** ⇒ Codex 在它未發布的工作裡**沒有改過** `CsTacticScreen.jsx`。
+
+⇒ N4／N5 維持 `CLAUDE_SAFE`。但依 `AGENTS.md` §10「不得讓多個 agent 同時改同一區」，
+**開工當下仍應重跑一次這個檢查**（Codex 隨時可能新增 commit）。
+若屆時撞期 ⇒ 把 N4／N5 降級為 `CODEX_DEPENDENCY` 並延到下一輪，
+N1／N2／N3／N6 不受影響、可獨立完成。
+
+### Sprint 進入條件（全部滿足才開工）
+
+1. ✅ Owner Review 裁示已記錄（本檔 §10）。
+2. ✅ Phase 0 Gate 已完成分類（本節）。
+3. ⬜ 開工當下再確認一次 Codex 是否正在改 `CsTacticScreen.jsx`。
+4. ⬜ `git fetch origin` 確認基線。

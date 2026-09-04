@@ -1546,6 +1546,15 @@ AWP_TRIAGE = UNRESOLVED → CBR BLOCKED，不進 Rating   ← 目前在這裡
 
 ## Club Facilities Checkpoint — DESIGN FIRST（2026-09-04，TD-56 release 後）
 
+> ⚠ **本節已被後續裁示取代（2026-09-05）**，保留為決策脈絡。
+> · `FACILITIES_NEXT` 由 `DESIGN_FIRST` 改為 **`DEFER`**。
+> · 本節末尾建議的「直接啟用那 8 個 `future` 節點」**已被細化**：
+>   8 是**候選數**，實際 `ADOPTED_NODES = 6`、`REJECTED = 2`
+>   （`general_scout_support`、`management_finance`），且每個只開 1 階。
+>   **不得為了湊回 8 個而補新節點。**
+> · 最新結論見下方「Team Development Expansion & Online Boundary v1」與
+>   `docs/design/TeamDevelopment_Expansion_v1.md` §10。
+
 短版 Roadmap／Product Architecture Checkpoint。**只做 audit 與建議，未實作任何功能。**
 
 ### 現況：七個系統的責任與資源
@@ -1687,7 +1696,7 @@ Funds 還有一個結構優勢：設施可以帶**週營運成本**，讓「蓋�
 
 | 項目 | 結論 |
 |---|---|
-| 8 個 future node | **6 個啟用（unlock／information），2 個 REJECT** |
+| 8 個 future node **候選** | **ADOPTED = 6**（unlock／information）、**REJECTED = 2**。8 是候選數，不是實作數 |
 | REJECT 的兩個 | `general_scout_support`（球探線已飽和，且會滑向改人才池）、`management_finance`（現金預測已是免費且無條件顯示，改成付費解鎖是功能倒退） |
 | 新增 capability kind | **不需要**。六個倖存者全部走既有的 `unlocks`（聯集、無上限） |
 | 提高既有 cap | **不做**。前三個 kind 已被 TD＋Coach 超供 200%，提高上限只是把兩個既有系統一起放大 |
@@ -1726,3 +1735,52 @@ progressive disclosure）、一併處理 Owner Review ④（節點卡密度，�
 
 節點表與供給上限**零風險**（上限自動推導、早期曲線實測不變），
 工作量集中在六個面板的 UI 與資料聚合。
+
+### Owner Review 裁示（2026-09-05）—— GO
+
+```
+FUTURE_NODE_CANDIDATES = 8      ← 候選數（歷史事實，非實作數）
+ADOPTED_NODES          = 6
+REJECTED_NODES         = 2      general_scout_support / management_finance
+TEAM_DEVELOPMENT_FULL_TREE_POINTS = 24
+FULL_TREE_ETA          = 約 Season 9
+
+ONLINE_FAIRNESS_PRODUCT_POLICY              = DECIDED
+ONLINE_FAIRNESS_ARCHITECTURE_IMPLEMENTATION = PENDING
+FACILITIES_NEXT                             = DEFER
+```
+
+- **不得為了維持 8 個而補新的節點。** 發展樹縮成 18 個節點是刻意結果。
+- **Online 產品原則已裁示**：`CAREER_OWNS_ROSTER` ／ `ONLINE_OWNS_MATCH`。
+  Career-only passive modifier（Team Development／Coach／Facilities／
+  training・recovery・scouting）**不得直接作為 Online Match modifier**。
+  **GAP-2 已被 Owner 確認並接受**：Career progression 會改變 player accumulated
+  stats，因此未來 Online Competitive **必須自行建立 effective competitive power**，
+  不可無條件把 Career accumulated power 當成最終 Online power。
+  交由未來 Online architecture（MatchSquad／snapshot／Cap／Bracket／Rating／
+  normalization）處理。**本輪未修改 CBR／Rating／MatchBand。**
+- **UI 範圍**：③ Available Points hierarchy 維持 **DEFERRED**；
+  ④ Node card density 改為 **IN SCOPE**（節點卡已 11–13 行，再加 6 個會放大問題）。
+  只做 progressive disclosure／detail hierarchy，**不重新設計整頁**。
+
+### Phase 0 — Consumer Feasibility Gate（已完成）
+
+Expansion Sprint 的進入條件。六個 adopted node 逐一評估結果：
+
+```
+READY_TO_IMPLEMENT    = 0
+CLAUDE_SAFE           = 6      N1 成長支援 / N2 MOBA 戰術傾向 / N3 MOBA 賽前總覽
+                               N4 CS 戰術傾向 / N5 CS 賽前總覽 / N6 贊助拓展
+CODEX_DEPENDENCY      = 0
+ARCHITECTURE_REQUIRED = 0
+```
+
+- 六個都**不需要**新增 state／authority／migration —— 全部是 `unlock` 旗標
+  ＋ 讀既有純函式。發展點帳本、供給表、契約一律不動。
+- 六個都**不需要**修改 Codex-owned CS runtime。N4／N5 的讀取點是
+  `CsTacticScreen.jsx`，它不在禁區清單內，而且本來就已經是 TD 消費端。
+  協調檢查（只讀 commit metadata）：Codex 的 `cs/android-owner-review-v2`
+  最後碰該檔的 commit 與 main 相同 ⇒ 未改過。**開工當下仍須重跑此檢查。**
+- 六個都可 deterministic verify。
+
+逐節點明細見 `docs/design/TeamDevelopment_Expansion_v1.md` §11。

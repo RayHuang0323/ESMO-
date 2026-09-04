@@ -261,6 +261,8 @@ entitlement**，本輪也**沒有動** CBR / Rating / CS runtime（一行都沒�
 ### 8.3 本輪未做
 
 - 未擴充發展樹節點內容（8 個 `future` 節點仍是 0 點）。
+  → **後續**：2026-09-05 Owner 裁示採用其中 6 個（各開 1 階）、REJECT 2 個，
+    可購買 18 → 24、全樹 ETA S9。見 `TeamDevelopment_Expansion_v1.md`。
 - 未動 handoff 文件（見檔頭）。
 - 未 push、未部署。
 - CS runtime / `EsportsFPS3D.jsx` / `fpsRoster.js` / `CsPrepScreen.jsx` /
