@@ -17783,3 +17783,91 @@ Owner Review 通過，正式發布。
 `volume / rotate / circuit / finance`（＋日目標與 rank／youth）——
 `fixtures` 與 `streak` 那一天沒被抽到，因此**沒有在畫面上逐字驗到**；
 它們由 bundle 字串檢查（§D）與 dev gate 的 30/30 覆蓋。
+
+---
+
+# TD-56 Team Development Progression v1（2026-09-04）
+
+## 為什麼要做
+
+發展樹可購買 **18 點**，而整份存檔一生只拿得到 **1 點**。
+全庫唯一寫 `teamDevelopment.availablePoints` 的地方是 `purchaseTeamDevelopment()`，
+而它只會減；種子來自 `sanitizeTeamDevelopment(null, 1)`。
+沒有任何比賽／賽季／里程碑會發點 ⇒ **發展樹在主幹上等於沒有開放**。
+
+## 供給表（實測後選定：混合模式 C）
+
+```
+1 點 Onboarding（沿用既有種子）
+＋ Club Level 里程碑 Lv 4/6/8/10/13/16/19/22 各 1 點（上限 8）
+＋ 每完成 1 個生涯賽季 2 點
+（累計夾在發展樹目前能吸收的量）
+```
+
+先實跑三個候選再決定，不是估的。真實 `buildRegularSeason()` 量到每個項目每季
+14 場玩家自己的常規賽（第一場第 6 天，之後約每 6 天一場）：
+
+| 玩法 | 第一個 earned 點 | S1 | S3 | S5 | 全樹 18 |
+|---|---|---|---|---|---|
+| 單項休閒（MOBA 聯賽） | 第 18 天 / W3 | 4 | 9 | 14 | **S7** |
+| 雙項主線（MOBA+CS） | 第 12 天 / W2 | 5 | 11 | 16 | **S6** |
+| 雙項＋輕度競技 | 第 6 天 / W1 | 5 | 12 | 17 | **S6** |
+| 重度刷分（每日滿 3 場） | 第 3 天 / W1 | **8** | 13 | 17 | **S6** |
+
+純 Club Level 方案主線玩家 10 季走不完，拉高密度又擋不住刷分；純賽季方案第一點
+要等 84 天。混合才同時滿足「早期有節奏」與「刷分打不穿」——**重度刷分 S1 只有
+8/18，到 S6 與主線玩家一起收斂。**
+
+## 實作要點
+
+- 發放走 **keyed ledger**（`grants`），不是重算餘額——餘額會被花掉，一旦花了，
+  重算就會把花掉的再發一次。
+- 冪等鍵＝里程碑本身 ⇒ 四個對帳入口（載入／結算／推進日／投入前）可安全重複呼叫。
+- 舊存檔遷移**不加也不減**：舊餘額拆進帳本認列後才正常對帳，老玩家一點不收回，
+  也不會平白多一點。
+- 快速練習 0 點是**結構保證**：練習給 0 Club XP 也不推世界日，程式裡沒有 `if (practice)`。
+- 上限由節點表推導 ⇒ 8 個 `future` 節點日後接上讀取點時，供給上限自己變大。
+
+## Owner Review（依 `docs/design/ESMO_UIUX設計原則.md`）
+
+量測器 `browser_review_team_development_uiux.mjs` 跑 3 情境 × 2 裝置，
+抓到 6 項；Owner 裁示修 ①②⑤、③④ deferred。
+
+| # | 發現 | 處理 |
+|---|---|---|
+| ① | **桌機 0 點時完全進不去戰隊發展**（只在 `todos` 的 `developmentPoints > 0` 分支，`utilityItems` 沒有） | 已修：補常駐磚，沿用既有路由 |
+| ② | 「待解鎖」同時代表前置未完成與點數不足，同卡還寫「目前可生效」 | 已修：資格判定收斂到 domain 單一來源 |
+| ③ | Available Points 不是最大的數字（20px `primaryDirection` > 18px） | **DEFERRED** |
+| ④ | 節點卡 11–13 行，超過原則 2–3 行門檻 | **DEFERRED** |
+| ⑤ | 390px 主要 CTA 只有 61×23px | 已修：觸控高度 44px，整頁反而短 28px |
+| ⑥ | 桌機只是把手機拉寬（單欄） | 未處理，純視覺 |
+
+①：TD-56 之前玩家一生 1 點，投完就不回來，所以沒人踩到；現在玩家會反覆歸零，
+每次歸零桌機就失去這個頁面。這正是 `DashboardScreen.jsx` 自己註解警告過的
+「兩處都要加」。
+
+③④ 在量測器裡保留為 `⏸ DEFERRED` 註記（數字照印、移出 pass/fail），
+要做時把 `note` 換回 `ck`。
+
+## 驗證
+
+| | |
+|---|---|
+| `check_team_development_progression_v1`（新增） | **87/87 PASS** |
+| `browser_check_team_development_progression`（新增） | **51/51 PASS** |
+| `browser_review_team_development_uiux`（新增） | **55/55 PASS** |
+| `browser_probe_td56_entry`（新增） | **3/3 PASS** |
+| progress25 / capability_authority / club_assets_v1 / regress / regress2 / flow09 / dash10 / build | PASS |
+
+`check_team_development_v1` 從**紅轉綠**：修了三條被後續 sprint 淘汰的斷言
+（schema 釘死 v10、首頁必須有 `talent: "talentPick"`、訓練頁必須呼叫
+`advanceTrainingDay`）。三條都改成認契約不認名字，沒有放寬意圖。
+
+`check_home_team_contract` 仍有 3 條 FAIL —— 在乾淨的 `7cb202d` worktree 重跑
+同樣失敗，**基線紅燈**，本輪未動產品程式去迎合它。
+
+## 邊界
+
+CS runtime、CBR／Rating／Matchmaking、Club XP curve、Retention Economy、
+capability contract、LogicEngine／MOBA battle **diff 全部為 0**（逐路徑核對）。
+未讀取、未整合 Codex 未發布的 `cs/android-owner-review-v2` worktree。
