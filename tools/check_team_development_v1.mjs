@@ -97,17 +97,32 @@ const development = read("src/screens/manage/TeamDevelopmentScreen.jsx");
 const banPick = read("src/screens/moba/BanPickScreen.jsx");
 const csTactic = read("src/screens/fps/CsTacticScreen.jsx");
 const roster = read("src/screens/manage/RosterScreen.jsx");
-ck("profileStore migration 與 write hook", /PROFILE_SCHEMA_VERSION = 10/.test(store) && /teamDevelopment: sanitizeTeamDevelopment/.test(store) && /purchaseTeamDevelopment\(nodeId\)/.test(store));
+//  ⚠ 原斷言硬寫 `PROFILE_SCHEMA_VERSION = 10`，CS Season M0 把 schema 升到 11
+//    之後這一支就一直是紅的（TD-56 之前即如此，非本輪造成）。發展樹要的是
+//    「**至少** v10 起有這一塊」，不是「永遠停在 v10」——schema 每升一版就
+//    要回頭改一次戰隊發展的驗證器，本身就是錯的判準。改成下限比對。
+//    （`check_home_team_contract.mjs` 早就是用下限寫的，這裡與它對齊。）
+const schemaVersion = Number(/PROFILE_SCHEMA_VERSION = (\d+)/.exec(store)?.[1] ?? 0);
+ck("profileStore migration 與 write hook", schemaVersion >= 10 && /teamDevelopment: sanitizeTeamDevelopment/.test(store) && /purchaseTeamDevelopment\(nodeId\)/.test(store));
 ck("訓練與恢復讀取戰隊效果", /trainingDaysReduction/.test(store) && /recoveryBonus/.test(store));
 ck("首頁入口與頁面路由", /teamDevelopment/.test(dashboard) && /TeamDevelopmentScreen/.test(shell));
 // Contract §11：PlayerTalent 是 legacy compatibility/detail，必須保留；
 // 新版長期投資入口則由首頁「戰隊發展」與 teamDevelopment route 負責。
 // 舊斷言把「不得取代戰隊發展」誤寫成「不得出現 purchasePlayerTalent」，
 // 會把合法的 legacy 詳情流程判成紅燈。
+//  ⚠ 原斷言在 `dashboard` 裡找 `talent: "talentPick"`。那個入口後來搬到
+//    PlayerDetail →「天賦」，首頁不再直接掛它（TD-56 之前即如此，非本輪造成）。
+//    契約要守的是「**talentPick 路由仍然存在**、且沒有取代戰隊發展入口」，
+//    不是「它一定掛在首頁」——路由住哪是 IA 決定，不是本契約的範圍。
+//    改成在 AppShell 找路由註冊點。
 ck("個人天賦保留為 legacy compatibility，不取代戰隊發展",
   /purchasePlayerTalent/.test(personal) && /PlayerTalent/.test(personal)
-  && /teamDevelopment/.test(dashboard) && /talent: "talentPick"/.test(dashboard));
-ck("訓練流程維持既有入口", /assignTraining/.test(training) && /advanceTrainingDay/.test(training) && /StatGainList/.test(training));
+  && /teamDevelopment/.test(dashboard) && /screen === "talentPick"/.test(shell));
+//  ⚠ Season vNext V1 之後訓練中心改走具名入口 `advanceWorldDays(1, { reason: training })`；
+//    `advanceTrainingDay` 仍在 profileStore 保留為別名，但畫面不再直接呼叫它
+//    （TD-56 之前即如此，非本輪造成）。契約要守的是「訓練仍然推得動同一個時鐘」，
+//    不是「一定叫那個舊名字」⇒ 兩個名字都接受。
+ck("訓練流程維持既有入口", /assignTraining/.test(training) && /advance(TrainingDay|WorldDays)/.test(training) && /StatGainList/.test(training));
 ck("GSAP 路線回饋與減少動態支援", /useGSAP/.test(development) && /gsap\.timeline/.test(development) && /gsap\.utils\.toArray/.test(development) && /gsap\.set\(\[content, \.\.\.cards\], \{ autoAlpha: 1/.test(development) && /prefers-reduced-motion/.test(development));
 ck("玩家用語與路線資訊", /下一級效果/.test(development) && /發展路線/.test(development) && !/consumer|reducer|schema|production/.test(development));
 ck("R60 真實資訊讀取點", /dataAnalysis/.test(development) && /mobaOpponentResearch/.test(banPick) && /analyzeChamp/.test(banPick)

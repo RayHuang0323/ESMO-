@@ -165,6 +165,18 @@ export const TEAM_DEVELOPMENT_NODES = [
 
 const BY_ID = new Map(TEAM_DEVELOPMENT_NODES.map((node) => [node.id, node]));
 
+/**
+ * 現在**真的花得掉**的總點數（TD-56）。
+ *
+ * ⚠ 由節點表推導，不是手寫常數：`activeLevelCap` 以外的等級與 `future` 節點
+ *   都還沒有讀取點，發點數給它們等於發花不掉的點。等那些節點接上讀取點，
+ *   這個值自己就會變大，發展點供給的上限也跟著變大（見 `developmentPoints.js`）。
+ */
+export const TEAM_DEVELOPMENT_TOTAL_BUYABLE = TEAM_DEVELOPMENT_NODES.reduce(
+  (sum, node) => sum + (node.future ? 0 : Math.min(node.maxRank, node.activeLevelCap) * node.costPerRank),
+  0,
+);
+
 export const teamDevelopmentNodeById = (id) => BY_ID.get(id) ?? null;
 export const teamDevelopmentNodesByCategory = (category) =>
   TEAM_DEVELOPMENT_NODES.filter((node) => node.category === category);
@@ -199,11 +211,24 @@ export function sanitizeTeamDevelopment(raw, fallbackPoints = 0) {
   const availablePoints = Number.isFinite(Number(rawAvailable))
     ? Math.max(0, Math.floor(Number(rawAvailable)))
     : 0;
+  //  TD-56：發放帳本。**這裡只做形狀正規化**，不決定該不該發——
+  //  發放規則住在 `developmentPoints.js`，本檔不重複一份。
+  //  ⚠ `undefined`（舊存檔沒有這一欄）與 `{}`（已遷移、還沒發過任何一筆）
+  //    必須分得出來，否則每次載入都會重跑一次遷移 ⇒ 這裡刻意不補預設值。
+  const grants = source && source.grants && typeof source.grants === "object"
+    ? Object.fromEntries(
+        Object.entries(source.grants)
+          .filter(([key, value]) => typeof key === "string" && key && Number.isFinite(Number(value)))
+          .map(([key, value]) => [key, Math.max(0, Math.floor(Number(value)))])
+          .filter(([, value]) => value > 0),
+      )
+    : undefined;
   return {
     version: TEAM_DEVELOPMENT_STATE_VERSION,
     availablePoints,
     spentPoints,
     ranks,
+    ...(grants ? { grants } : {}),
     updatedAt: Number.isFinite(source?.updatedAt) ? source.updatedAt : null,
   };
 }
@@ -221,6 +246,13 @@ export function validateTeamDevelopmentState(state) {
       else if (!Number.isInteger(rank) || rank < 0 || rank > node.maxRank) errors.push(`ranks.${id} 不正確`);
     }
     if (state.spentPoints !== recomputeTeamDevelopmentSpent(state.ranks)) errors.push("spentPoints 不正確");
+  }
+  //  TD-56：帳本是選用欄位（TD-56 之前的存檔沒有），但存在時形狀必須正確。
+  if (state.grants !== undefined) {
+    if (!state.grants || typeof state.grants !== "object") errors.push("grants 不正確");
+    else for (const [key, points] of Object.entries(state.grants)) {
+      if (!Number.isInteger(points) || points <= 0) errors.push(`grants.${key} 不正確`);
+    }
   }
   return { ok: errors.length === 0, errors };
 }

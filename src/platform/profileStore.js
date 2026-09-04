@@ -163,6 +163,10 @@ import {
   applyTeamDevelopmentPurchase,
   teamDevelopmentEffects as teamDevelopmentEffectsOf,
 } from "./development/teamDevelopment.js";
+//  TD-56：發展點供給。**唯一**決定「什麼時候發、發幾點」的地方。
+import {
+  reconcileDevelopmentPoints, developmentPointsViewOf,
+} from "./development/developmentPoints.js";
 //  Club Assets v1：俱樂部能力的唯一權威（發展樹 ＋ 裝備中的總教練）。
 import { clubCapabilitiesOf } from "./assets/clubCapabilities.js";
 import { COACH_CATALOG } from "./assets/coachCatalog.js";
@@ -628,14 +632,31 @@ function withIdentity(state) {
   return { ...next, seasonStateV2: seasonStateV2For(next) };
 }
 
+/**
+ * TD-56：把「該發但還沒發」的發展點補上。
+ *
+ * ⚠ **冪等**（帳本鍵去重，見 `development/developmentPoints.js`）⇒ 可以放心
+ *   在多個入口呼叫。這裡是**載入 / 開新局**那一個：舊存檔第一次進來時
+ *   一次補齊它整段生涯應得的點數，之後每次載入都是 no-op。
+ * ⚠ 呼叫端必須已經備妥 `clubProgression` 與 `meta.days`——供給只由這兩個
+ *   既有的單調權威決定，本函式不自己算生涯進度。
+ */
+function withDevelopmentPoints(state) {
+  const result = reconcileDevelopmentPoints(state.teamDevelopment, {
+    clubXp: state.clubProgression?.xp ?? 0,
+    days: state.meta?.days ?? 1,
+  });
+  return result.changed ? { ...state, teamDevelopment: result.state } : state;
+}
+
 const load = () => {
-  if (!canLS) return withIdentity(DEFAULT);
+  if (!canLS) return withDevelopmentPoints(withIdentity(DEFAULT));
   try {
     const saved = JSON.parse(localStorage.getItem(KEY)) || {};
     const f = saved.finance || {};
     // Milestone E：lineup 依「清洗後的名單」驗證（指到已離隊選手的席位會被回收）。
     const players = arr(saved.players, DEFAULT.players).map(migratePlayer);
-    return withIdentity({
+    return withDevelopmentPoints(withIdentity({
       manager: { ...DEFAULT.manager, ...saved.manager },
       team:    { ...DEFAULT.team,    ...saved.team },
       finance: {
@@ -765,8 +786,8 @@ const load = () => {
       notifications: arr(saved.notifications, DEFAULT.notifications),
       worldNews:     arr(saved.worldNews,     DEFAULT.worldNews),
       events:        arr(saved.events,        DEFAULT.events),
-    });
-  } catch { return withIdentity(DEFAULT); }
+    }));
+  } catch { return withDevelopmentPoints(withIdentity(DEFAULT)); }
 };
 
 /**
@@ -834,7 +855,7 @@ export const useProfileStore = create((rawSet, get) => {
       localStorage.setItem(KEY, JSON.stringify({ ...get(), seasonStateV2 }));
     } catch {}
   },
-  reset() { if (canLS) localStorage.removeItem(KEY); set(withIdentity(DEFAULT)); },
+  reset() { if (canLS) localStorage.removeItem(KEY); set(withDevelopmentPoints(withIdentity(DEFAULT))); },
 
   // Keep legacy SeasonState.v1 authoritative while every write carries a
   // deterministic SeasonState.v2 compatibility index.
@@ -977,7 +998,39 @@ export const useProfileStore = create((rawSet, get) => {
   getTeamDevelopmentEffects() {
     return get().clubCapabilities().total;
   },
+  /**
+   * TD-56：發展點的**供給視圖**（可用／已投入／累計獲得／下一個里程碑）。
+   *
+   * ⚠ 畫面只讀這裡，**不自己算門檻**，也不自己讀 `clubProgression` 去推。
+   *   規則表住在 `development/developmentPoints.js`。
+   */
+  developmentPointsView() {
+    return developmentPointsViewOf(get().teamDevelopment, {
+      clubXp: get().clubProgression?.xp ?? 0,
+      days: get().meta?.days ?? 1,
+    });
+  },
+  /**
+   * TD-56：把該發還沒發的點數補上（冪等）。
+   *
+   * 正常情況下載入／推進日／賽後結算已經補過了；這裡是**安全網**——
+   * 少一個寫入點的後果是玩家看不到應得的點數，而多呼叫一次的代價是零。
+   * @returns {{gained:number, awarded:Array}}
+   */
+  syncDevelopmentPoints() {
+    const result = reconcileDevelopmentPoints(get().teamDevelopment, {
+      clubXp: get().clubProgression?.xp ?? 0,
+      days: get().meta?.days ?? 1,
+    });
+    if (!result.changed) return { gained: 0, awarded: [] };
+    set({ teamDevelopment: result.state });
+    get().save();
+    return { gained: result.gained, awarded: result.awarded };
+  },
   purchaseTeamDevelopment(nodeId) {
+    //  ⚠ 先對帳再判斷點數夠不夠：否則一個「剛升級但還沒被任何寫入點對到帳」
+    //    的玩家會看到「發展點不足」，而他其實已經賺到了。
+    get().syncDevelopmentPoints();
     const result = applyTeamDevelopmentPurchase(get().teamDevelopment, nodeId, { now: Date.now() });
     if (!result.receipt.success) return result.receipt;
     set({ teamDevelopment: result.nextState });
@@ -1181,7 +1234,9 @@ export const useProfileStore = create((rawSet, get) => {
     const opened = boundary.sealed.length
       ? openOffSeason(after, { careerYear: boundary.sealed[boundary.sealed.length - 1].careerYear })
       : { state: after, opened: false };
-    set(opened.state);
+    //  TD-56：世界日推進過賽季邊界時，生涯賽季那一條供給就到期了。
+    //  ⚠ 冪等，所以「這次沒跨季」呼叫它一樣安全（什麼都不會發）。
+    set(withDevelopmentPoints(opened.state));
     if (rolled.yearsCrossed > 0) get().pushInbox(careerYearNotice(rolled));
     //  ⚠ 退休預告一定要讓玩家看得到——那正是「有時間找接班人」的產品意義。
     for (const d of departures) {
@@ -3536,7 +3591,7 @@ export const useProfileStore = create((rawSet, get) => {
     //  Milestone Q1：新局要拿到**全新**的 team.id 與 meta.seasonSeed。
     //  DEFAULT.team / DEFAULT.meta 刻意不帶這兩個欄位 ⇒ withIdentity 會依新情境
     //  重新推導；舊局的身分不會被沿用。
-    set(withIdentity({
+    set(withDevelopmentPoints(withIdentity({
       ...DEFAULT,
       players: INITIAL_PLAYERS.map(migratePlayer),
       lineup: { ...DEFAULT_LINEUP },
@@ -3557,7 +3612,7 @@ export const useProfileStore = create((rawSet, get) => {
       recruitment: { signed: {} },
       matchmaking: { ticket: null, room: null, session: null, launch: null, lastResult: null, settlements: {}, lastSettlementError: null },
       schemaVersion: PROFILE_SCHEMA_VERSION,
-    }));
+    })));
     get().pushInbox({
       type: "match", from: "戰隊管理處",
       subject: `新賽季開始 · ${sc.name}`,

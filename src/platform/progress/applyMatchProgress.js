@@ -36,6 +36,7 @@ import { makeGrowthEntry, appendGrowth } from "./growthLog.js";
 //  retention／mastery 完全相同——本檔是全專案唯一的結算入口，掛在別處
 //  （例如各自的 Result Screen）一定會漏掉某一種來源，而且會失去冪等保護。
 import { addClubXp, clubXpForMatch, normalizeClubProgression } from "../progression/clubProgression.js";
+import { reconcileDevelopmentPoints } from "../development/developmentPoints.js";
 
 /**
  * 純 reducer：state + transaction → { nextState, receipt }
@@ -305,6 +306,18 @@ export function applyProgressToState(state, tx) {
     clubMastery: nextClubMastery,
     //  Club Progression v1：Club XP 單調遞增，且只在這裡被寫入。
     clubProgression: clubProgressionResult.progression,
+    //  ── TD-56：這一場把 Club Level 推過里程碑了嗎 ─────────────────────────
+    //  ⚠ 放在這裡而不是另開發放入口，是為了繼承**同一份冪等**：上面的
+    //    `alreadyApplied` 已經提早返回，同一場再結算根本走不到這一行。
+    //  ⚠ 供給表本身另有帳本鍵去重（`developmentPoints.js`）⇒ 就算有人日後
+    //    在別處多呼叫一次，也不可能發第二次。兩層都不是多餘的：
+    //    這一層守「同一場不重跑」，那一層守「同一個里程碑不重發」。
+    //  ⚠ 快速練習走不到這裡也沒關係——它的 `clubXpGained` 是 0，
+    //    Club Level 不動 ⇒ 不會有任何里程碑到期。**不需要 practice 特判。**
+    teamDevelopment: reconcileDevelopmentPoints(state.teamDevelopment, {
+      clubXp: clubProgressionResult.progression.xp,
+      days: dayNow,
+    }).state,
     //  `reputation` 由 spread 原樣帶過（F0 deprecated：不再由結算寫入）。
     meta: { ...meta, fans: fansAfter, competitiveBlock: nextBlock },
     processedMatchTransactions: { ...processed, [tx.transactionId]: receipt },

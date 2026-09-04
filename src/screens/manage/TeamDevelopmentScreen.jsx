@@ -1,7 +1,7 @@
 // ============================================================================
 // 戰隊發展 v1.5：俱樂部長期路線視圖
 // ============================================================================
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useProfileStore } from "../../platform/profileStore.js";
@@ -16,6 +16,10 @@ import {
   sanitizeTeamDevelopment,
   teamDevelopmentEffects,
 } from "../../platform/development/teamDevelopment.js";
+import {
+  developmentPointsViewOf, CLUB_LEVEL_MILESTONES, POINTS_PER_CAREER_SEASON,
+} from "../../platform/development/developmentPoints.js";
+import { clubLevelOf } from "../../platform/progression/clubProgression.js";
 import { GC, FONT, MONO } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
 
@@ -68,6 +72,107 @@ function routeNodeState(state, node) {
 }
 
 const currentEffectOf = (node, rank) => rank > 0 ? teamDevelopmentLevelEffect(node, rank - 1) : null;
+
+/**
+ * TD-56：「下一個發展點從哪來」。
+ *
+ * ⚠ 這一條是**第二層**資訊（見 `docs/design/ESMO_UIUX設計原則.md`）：
+ *   一行說明 ＋ 一條進度條，完整規則收在下面的可展開區塊裡。
+ * ⚠ 用玩家語言：講「俱樂部等級」與「賽季」，不講 milestone / grant / ledger。
+ */
+function NextPointHint({ points, clubLevel }) {
+  const level = points.next.clubLevel;
+  const season = points.next.careerSeason;
+  const done = points.lifetimeGranted >= points.treeTotal;
+  if (done) {
+    return (
+      <div style={{ marginTop: 11, background: `${GC.gold}12`, border: `1px solid ${GC.gold}33`, borderRadius: 10, padding: "8px 10px" }}>
+        <span style={{ color: GC.gold, fontSize: 10, fontWeight: 900 }}>目前所有發展路線都已開放投入</span>
+        <span style={{ color: GC.gray, fontSize: 9, marginLeft: 6 }}>新路線開放時會再發點數</span>
+      </div>
+    );
+  }
+  const items = [];
+  if (level) {
+    items.push({
+      key: "level",
+      icon: "▲",
+      color: GC.blueL,
+      title: `俱樂部升到 Lv.${level.level}`,
+      sub: `還差 ${level.levelsToGo} 級 · 打正式賽最快`,
+      reward: "+1 點",
+    });
+  }
+  items.push({
+    key: "season",
+    icon: "◷",
+    color: GC.purp,
+    title: `打完第 ${season.season - 1} 賽季`,
+    sub: `還有 ${season.daysToGo} 天`,
+    reward: `+${season.points} 點`,
+  });
+  return (
+    <div style={{ marginTop: 11 }}>
+      <div style={{ color: GC.gray, fontSize: 8, fontWeight: 900, letterSpacing: "0.16em", marginBottom: 5 }}>下一個發展點</div>
+      <div style={{ display: "grid", gap: 6 }}>
+        {items.map((item) => (
+          <div key={item.key} data-testid={`development-next-${item.key}`}
+            style={{ display: "flex", alignItems: "center", gap: 9, background: GC.card2, border: `1px solid ${item.color}2e`, borderRadius: 10, padding: "7px 10px" }}>
+            <span style={{ color: item.color, fontSize: 13, fontWeight: 900, lineHeight: 1 }}>{item.icon}</span>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ color: "#e5e7eb", fontSize: 10.5, fontWeight: 900 }}>{item.title}</div>
+              <div style={{ color: GC.gray, fontSize: 8.5, marginTop: 1 }}>{item.sub}</div>
+            </div>
+            <span style={{ color: item.color, fontSize: 10, fontWeight: 900, fontFamily: MONO, whiteSpace: "nowrap" }}>{item.reward}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ color: GC.gray, fontSize: 8, marginTop: 5 }}>俱樂部等級 Lv.{clubLevel} · 快速練習不會給發展點</div>
+    </div>
+  );
+}
+
+/**
+ * 第三層：完整規則。**預設收合**——主畫面不該被一段規則說明佔掉。
+ */
+function PointSourceDetail({ points }) {
+  const [open, setOpen] = useState(false);
+  const rows = [
+    ["生涯起始", `${points.bySource.seed} 點`],
+    ["俱樂部等級里程碑", `${points.bySource.clubLevel} / ${CLUB_LEVEL_MILESTONES.length} 點`],
+    ["賽季完成獎勵", `${points.bySource.careerSeason} 點（每季 ${POINTS_PER_CAREER_SEASON} 點）`],
+  ];
+  if (points.bySource.legacy > 0) rows.push(["既有存檔保留", `${points.bySource.legacy} 點`]);
+  return (
+    <div style={{ marginTop: 9 }}>
+      <button type="button" onClick={() => setOpen((v) => !v)} data-testid="development-point-detail-toggle"
+        style={{ background: "transparent", border: "none", color: GC.blueL, fontSize: 9.5, fontWeight: 900, cursor: "pointer", padding: "3px 0", minHeight: 32 }}>
+        {open ? "▾" : "▸"} 發展點怎麼拿到的？
+      </button>
+      {open && (
+        <div data-testid="development-point-detail" style={{ background: GC.card2, borderRadius: 10, padding: "9px 11px", marginTop: 3 }}>
+          <div style={{ color: GC.gray, fontSize: 9, lineHeight: 1.6 }}>
+            發展點來自經營生涯本身：打正式比賽推高俱樂部等級，以及打完整個賽季。
+            一般對戰也算俱樂部經驗，但等級里程碑只有 {CLUB_LEVEL_MILESTONES.length} 個
+            —— 想更快拿滿整棵樹，還是得把賽季打完。
+          </div>
+          <div style={{ display: "grid", gap: 4, marginTop: 8 }}>
+            {rows.map(([label, value]) => (
+              <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                <span style={{ color: GC.gray, fontSize: 9 }}>{label}</span>
+                <span style={{ color: "#e5e7eb", fontSize: 9, fontWeight: 900, fontFamily: MONO }}>{value}</span>
+              </div>
+            ))}
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, borderTop: `1px solid ${GC.line}`, paddingTop: 4, marginTop: 2 }}>
+              <span style={{ color: GC.gray, fontSize: 9 }}>累計獲得</span>
+              <span style={{ color: GC.gold, fontSize: 9, fontWeight: 900, fontFamily: MONO }}>{points.lifetimeGranted} / {points.treeTotal} 點</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function nextRouteNode(state, nodes) {
   const actionable = nodes.find((node) => ["available", "upgrade"].includes(nodeStatus(state, node)));
@@ -163,7 +268,21 @@ export default function TeamDevelopmentScreen({ onBack }) {
   const csHistory = useProfileStore((s) => s.csHistory) ?? [];
   const mobaHistory = useSeasonStore((s) => s.history) ?? [];
   const purchase = useProfileStore((s) => s.purchaseTeamDevelopment);
+  //  TD-56：供給只由這兩個既有的單調權威決定。
+  //  ⚠ 刻意訂閱**純量**再自己 useMemo——直接 `s.developmentPointsView()` 會
+  //    每次 render 回一個新物件，zustand 的 getSnapshot 會判定為變更
+  //    （同 TeamScreen 對 `clubProgressionView()` 的處置）。
+  const clubXp = useProfileStore((s) => s.clubProgression?.xp ?? 0);
+  const careerDays = useProfileStore((s) => s.meta?.days ?? 1);
+  const syncPoints = useProfileStore((s) => s.syncDevelopmentPoints);
   const state = useMemo(() => sanitizeTeamDevelopment(rawState), [rawState]);
+  const points = useMemo(
+    () => developmentPointsViewOf(state, { clubXp, days: careerDays }),
+    [state, clubXp, careerDays],
+  );
+  //  安全網：載入／推進日／賽後結算都會對帳，這裡只處理「萬一漏了一個寫入點」。
+  //  冪等 ⇒ 正常情況下這一次呼叫什麼都不會做。
+  useEffect(() => { if (typeof syncPoints === "function") syncPoints(); }, [syncPoints]);
   const effects = useMemo(() => teamDevelopmentEffects(state), [state]);
   const dataAnalysis = useMemo(() => {
     const moba = mobaAnalytics(mobaHistory);
@@ -244,6 +363,8 @@ export default function TeamDevelopmentScreen({ onBack }) {
               <div><div style={{ color: GC.gray, fontSize: 8 }}>已投入點數</div><div style={{ color: GC.green, fontSize: 18, fontWeight: 900, fontFamily: MONO }}>{state.spentPoints}</div></div>
             </div>
           </div>
+          <NextPointHint points={points} clubLevel={clubLevelOf(clubXp)} />
+          <PointSourceDetail points={points} />
           <div style={{ display: "grid", gap: 7, marginTop: 13 }}>
             {TEAM_DEVELOPMENT_CATEGORIES.map((category) => <CategoryMeter key={category.id} state={state} category={category} />)}
           </div>
