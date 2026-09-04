@@ -101,6 +101,9 @@ const MEASURE = `
     points: save?.teamDevelopment?.availablePoints ?? null,
     grantKeys: Object.keys(save?.teamDevelopment?.grants ?? {}),
     cardCount: cards.length,
+    openDetails: document.querySelectorAll('[data-testid^="development-detail-"]:not([data-testid*="toggle"])').length,
+    detailToggles: document.querySelectorAll('[data-testid^="development-detail-toggle-"]').length,
+    nodeIds: cards.map((c) => c.id),
     showsAvailable: body.includes("可用發展點"),
     showsNextHint: body.includes("下一個發展點"),
     nextLevel: (document.querySelector('[data-testid="development-next-level"]')?.innerText || "").trim() || null,
@@ -138,7 +141,10 @@ const result = await runGate({
 
       const a = J(await chrome.evaluate(MEASURE));
       ck(`${label}｜Onboarding 點數 = 1（畫面）`, a.displayedPoints === 1, `顯示=${a.displayedPoints}`);
-      ck(`${label}｜四條路線的節點都渲染`, a.cardCount === 5, `${a.cardCount} 張`);
+      //  Expansion v1：general 線現在是 4 個節點（REJECT 掉一個 specialty）
+      ck(`${label}｜通用路線渲染 4 個節點（Expansion 後）`, a.cardCount === 4, `${a.cardCount} 張`);
+      ck(`${label}｜節點卡細節層預設收合`, a.openDetails === 0, `${a.openDetails} 個展開`);
+      ck(`${label}｜每張卡都有細節層開關`, a.detailToggles === a.cardCount, `${a.detailToggles}/${a.cardCount}`);
       ck(`${label}｜顯示「可用發展點」`, a.showsAvailable === true);
       ck(`${label}｜顯示「下一個發展點」`, a.showsNextHint === true);
       ck(`${label}｜下一個等級里程碑`, /俱樂部升到/.test(a.nextLevel ?? ""), JSON.stringify(a.nextLevel));
@@ -147,6 +153,10 @@ const result = await runGate({
       ck(`${label}｜沒有自相矛盾的狀態文字`, a.contradictory.length === 0, a.contradictory.join(", ") || "無");
       ck(`${label}｜玩家端沒有工程術語`, a.jargonHits.length === 0, a.jargonHits.join(", "));
       ck(`${label}｜不水平溢出`, a.overflow === false, `${a.scrollWidth}/${a.innerWidth}`);
+      ck(`${label}｜通用線含 Expansion 的成長支援節點`,
+        a.nodeIds.includes("general_growth_support"), a.nodeIds.join(","));
+      ck(`${label}｜被 REJECT 的球探支援節點已不存在`,
+        !a.nodeIds.includes("general_scout_support"));
 
       // ── B. 0 點（Owner Review ① ② 的關鍵狀態）──────────────────────────
       await chrome.evaluate(seedBroke);
