@@ -24,7 +24,11 @@ import { RESOLVE_APP_MODULES } from "./browser/cdp.mjs";
 import { runGate, finishGate } from "./browser/harness.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const SHOT_DIR = resolve(ROOT, "review/td56-uiux");
+//  ⚠ 輸出目錄可覆寫。預設仍是 TD-56 的證據目錄（不動既有呼叫端），但後續
+//    Sprint 跑這支時**必須**指定自己的目錄——否則會直接覆寫掉前一輪已經隨
+//    release 交付出去的截圖與量測，把 baseline 洗掉（本輪實際踩到）。
+//    例：`ESMO_REVIEW_OUT=review/tdx-expansion node tools/browser/run-gate.mjs …`
+const SHOT_DIR = resolve(ROOT, process.env.ESMO_REVIEW_OUT ?? "review/td56-uiux");
 mkdirSync(SHOT_DIR, { recursive: true });
 
 const J = (raw) => JSON.parse(String(raw).replace(/^"|"$/g, ""));
@@ -238,8 +242,14 @@ const result = await runGate({
         const worst = [...m.cards].sort((a, b) => b.lines - a.lines)[0];
         note(`   節點卡：${m.cards.length} 張　字數 ${m.cards.map((c) => c.chars).join("/")}　最長 ${worst?.lines ?? 0} 行（${worst?.id ?? "-"}）`);
         note(`   節點卡高度：${m.cards.map((c) => c.height).join("/")}px`);
-        //  ⏸ Owner Review 發現 ④（節點卡密度 redesign）**本輪明確裁示不做**。
-        note(`   ⏸ DEFERRED ④ 節點卡最長 ${worst?.lines ?? 0} 行（設計原則門檻 2–3 行）`);
+        //  Owner Review ④ 在 Expansion v1 **正式進入 scope**（不再 DEFERRED）。
+        //  ⚠ 判準不是「追到某個絕對數字」，而是「加了 6 個節點之後，第一眼的
+        //    資訊負擔沒有比 TD-56 baseline 更糟」。baseline 實測最長 11–13 行。
+        const TD56_BASELINE_MAX_LINES = 13;
+        ck(`${label}/${scenario}｜節點卡第一眼資訊沒有比 TD-56 baseline 惡化`,
+          (worst?.lines ?? 0) <= TD56_BASELINE_MAX_LINES,
+          `最長 ${worst?.lines ?? 0} 行（baseline ${TD56_BASELINE_MAX_LINES}）`);
+        note(`   NODE_CARD_VISIBLE_TEXT_LINES = ${m.cards.map((c) => c.lines).join("/")}（最長 ${worst?.lines ?? 0}）`);
         ck(`${label}/${scenario}｜「下一個發展點」看得到`, m.hasNextHint === true);
         ck(`${label}/${scenario}｜完整規則預設收合`, m.detailOpen === false);
         ck(`${label}/${scenario}｜玩家端沒有工程術語`, m.jargonHits.length === 0, m.jargonHits.join(", "));

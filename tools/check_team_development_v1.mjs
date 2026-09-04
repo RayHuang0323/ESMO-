@@ -20,10 +20,24 @@ const ck = (label, ok) => {
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
 ck("四個發展分類", TEAM_DEVELOPMENT_CATEGORIES.length === 4 && ["general", "moba", "cs", "management"].every((id) => TEAM_DEVELOPMENT_CATEGORIES.some((x) => x.id === id)));
-ck("20 個節點與每類五項", TEAM_DEVELOPMENT_NODES.length === 20 && TEAM_DEVELOPMENT_CATEGORIES.every((cat) => teamDevelopmentNodesByCategory(cat.id).length === 5));
-ck("基礎、進階、專精路線", TEAM_DEVELOPMENT_CATEGORIES.every((cat) => {
+//  ⚠ Expansion v1 REJECT 並移除了 `general_scout_support` 與 `management_finance`
+//    （理由見 `docs/design/TeamDevelopment_Expansion_v1.md` §1）
+//    ⇒ 20 → 18 個節點，general / management 各剩 4 個。
+//    Owner 裁示：**不得為了湊回原本的數量而補新節點**，所以這裡認的是實際形狀。
+ck("18 個節點（Expansion v1 移除兩個 REJECT）",
+  TEAM_DEVELOPMENT_NODES.length === 18
+  && teamDevelopmentNodesByCategory("general").length === 4
+  && teamDevelopmentNodesByCategory("moba").length === 5
+  && teamDevelopmentNodesByCategory("cs").length === 5
+  && teamDevelopmentNodesByCategory("management").length === 4);
+//  ⚠ 移除的兩個節點都是 `specialty` ⇒ general / management 這兩條線
+//    目前到 `advanced` 為止（已在 Owner Review 回報中標記）。
+//    所以判準改成：每條線都有 2 個基礎＋2 個進階，專精是選配。
+ck("每條路線都有 2 基礎 ＋ 2 進階（專精為選配）", TEAM_DEVELOPMENT_CATEGORIES.every((cat) => {
   const tiers = teamDevelopmentNodesByCategory(cat.id).map((node) => node.tier);
-  return tiers.filter((tier) => tier === "base").length === 2 && tiers.filter((tier) => tier === "advanced").length === 2 && tiers.filter((tier) => tier === "specialty").length === 1;
+  return tiers.filter((t) => t === "base").length === 2
+    && tiers.filter((t) => t === "advanced").length === 2
+    && tiers.filter((t) => t === "specialty").length <= 1;
 }));
 ck("三格等級與下一級說明", TEAM_DEVELOPMENT_NODES.every((node) => node.maxRank === 3 && node.costPerRank === 1 && node.levelEffects.length === 3 && teamDevelopmentLevelEffect(node, 0)));
 ck("效果不直接寫入選手能力", TEAM_DEVELOPMENT_NODES.every((node) => !node.effect?.stat));
@@ -68,20 +82,30 @@ ck("真實 consumer 依等級累計", effects.trainingDaysReduction === 3 && eff
   && effects.unlocks.mobaOpponentResearch === "對手選角摘要"
   && effects.unlocks.csDemoAnalysis === "地圖與對手情報"
   && effects.unlocks.contractSummary === "合約摘要");
-const plannedEffects = teamDevelopmentEffects({
+//  ⚠ 原斷言把這八個節點當成「規劃中、不得產生效果」。Expansion v1 之後，
+//    其中六個已正式啟用（各開 1 階），另外兩個已被 REJECT 並移除
+//    ⇒ 原本的前提整個不存在了。
+//    但它真正在守的東西仍然重要：**超過 activeLevelCap 的等級不得憑空生出效果**。
+//    所以改成「把六個節點灌到 rank 3，效果仍然只等於第 1 階」。
+const overRanked = teamDevelopmentEffects({
   availablePoints: 0,
   ranks: {
     general_growth_support: 3,
-    general_scout_support: 3,
     moba_tactical_prep: 3,
     moba_match_analysis: 3,
     cs_tactical_prep: 3,
     cs_match_intel: 3,
     management_sponsorship: 3,
-    management_finance: 3,
   },
 });
-ck("規劃中節點不產生假效果", Object.keys(plannedEffects.unlocks).length === 0);
+ck("灌到 rank 3 也只拿得到第 1 階的解鎖（不假裝後續階段生效）",
+  ["growthPlanning", "mobaTacticInsight", "mobaMatchOverview", "csTacticInsight", "csMatchOverview", "sponsorInsight"]
+    .every((f) => Boolean(overRanked.unlocks[f]))
+  && Object.keys(overRanked.unlocks).length === 6);
+ck("Expansion 節點不因為 rank 高就生出數值能力",
+  overRanked.trainingDaysReduction === 0 && overRanked.dailyRecoveryBonus === 0 && overRanked.scoutDaysReduction === 0);
+ck("被 REJECT 的兩個節點已不存在於節點表",
+  teamDevelopmentNodeById("general_scout_support") === null && teamDevelopmentNodeById("management_finance") === null);
 ck("尚未升級時不生效", Object.keys(teamDevelopmentEffects({ availablePoints: 0, ranks: {} }).unlocks).length === 0);
 
 const repeatedA = applyTeamDevelopmentPurchase(migrated, "general_recovery", { now: 555 });

@@ -12,6 +12,8 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { selectOpponentName, selectTeamName } from "../../platform/matchTeamNames.js";
+//  Expansion v1 N3：capstone，只聚合已解鎖資訊，不引入新資料。
+import { MatchOverviewPanel } from "../../ui/DevelopmentInsights.jsx";
 import { seatPlayers as seatPlayersOf, SEAT_CODE } from "../../platform/contracts/matchLineup.js";
 import { heroTags } from "../../data/heroClassification.js";
 import { assignDraft, assignmentToHeroIds } from "../../battle/moba/mobaDraftAssignment.js";
@@ -539,6 +541,18 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
             收合狀態成本極低，放回上方讓它一直在首屏，英雄格仍從首屏開始。 */}
         <DraftPlanPanel plan={draftPlan} loadout={planLoadout}
           open={planOpen} onToggle={() => setPlanOpen((v) => !v)} needs={compNeeds} laneByHero={laneByHero} picks={picks.blue} />
+
+        {developmentEffects.unlocks.mobaMatchOverview && (
+          <MatchOverviewPanel testId="moba-match-overview"
+            note="把已解鎖的資訊整理成一頁；本身不產生新資料。"
+            rows={[
+              { label: "對手", value: oppName ?? "對手" },
+              { label: "對手已選英雄", value: opponentReport.picks.length > 0 ? opponentReport.picks.map((champ) => champ.zh).join("、") : "尚未選角" },
+              { label: "對手陣容類型", value: opponentReport.archetypes.map(([name, count]) => name + " ×" + count).join("、") || "尚未形成" },
+              { label: "我方已選", value: picks.blue.length > 0 ? `${picks.blue.length} 名` : "尚未選角",
+                tone: picks.blue.length >= 5 ? "good" : "warn" },
+            ]} />
+        )}
 
         {developmentEffects.unlocks.mobaOpponentResearch && (
           <div data-testid="moba-opponent-research" style={{ background: GC2.card, border: "1px solid rgba(96,165,250,0.35)", borderRadius: 10, padding: "9px 11px", marginBottom: 10 }}>

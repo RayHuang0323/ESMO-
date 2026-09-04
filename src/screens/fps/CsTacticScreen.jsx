@@ -18,6 +18,10 @@ import { useProfileStore } from "../../platform/profileStore.js";
 import { CS_SEATS } from "../../platform/contracts/matchSquad.js";
 import { teamDevelopmentEffects } from "../../platform/development/teamDevelopment.js";
 import { GC, FONT } from "../../ui/theme.js";
+//  Expansion v1 N4/N5：只讀既有計數與已解鎖資訊（見 ui/DevelopmentInsights.jsx 檔頭）。
+//  ⚠ 本檔屬 CS 產品線但**不是** Codex 的 CS battle runtime 禁區；
+//    這裡只加賽前資訊面板，不碰 camera／POV／C4／audio／locomotion／route runtime。
+import { TacticInsightPanel, MatchOverviewPanel } from "../../ui/DevelopmentInsights.jsx";
 
 const ACC = "#fb923c";
 const RISK_C = { "低": GC.green, "中": GC.gold, "高": GC.red };
@@ -36,6 +40,15 @@ export default function CsTacticScreen({ mapName, onNext, onBack }) {
   const development = useProfileStore((s) => s.teamDevelopment);
   const developmentEffects = teamDevelopmentEffects(development);
   const players = useProfileStore((s) => s.players) ?? [];
+  //  ── Expansion v1 N4：地圖戰術表現 ────────────────────────────────────
+  //  ⚠ 讀 Club Mastery 已在累積的計數，不新增事件流、不解鎖任何戰術。
+  const clubMastery = useProfileStore((s) => s.clubMastery);
+  const csTacticRows = useMemo(() => CS_TEAM_TACTICS.map((t) => ({
+    id: t.id,
+    name: t.name,
+    games: clubMastery?.tacticUsage?.cs?.[t.id] ?? 0,
+    intent: clubMastery?.tacticIntent?.cs?.[t.id] ?? 0,
+  })), [clubMastery]);
   const csLineup = useProfileStore((s) => s.csLineup);
   const starters = useMemo(() => {
     const byId = new Map(players.map((player) => [player.id, player]));
@@ -76,6 +89,25 @@ export default function CsTacticScreen({ mapName, onNext, onBack }) {
           {mapName && <span style={{ marginLeft: "auto", background: `${ACC}22`, color: ACC, fontSize: 9, fontWeight: 700, borderRadius: 5, padding: "2px 8px" }}>🗺 {mapName}</span>}
         </div>
         <div style={{ color: GC.gray, fontSize: 10, marginBottom: 14 }}>四層布局都會進入比賽邏輯：路線、控圖、轉點與安包後站位；開放度只改變可追溯的加權分支。</div>
+
+        {developmentEffects.unlocks.csTacticInsight && (
+          <TacticInsightPanel rows={csTacticRows} color={ACC} testId="cs-tactic-insight"
+            scopeLabel={map?.name ?? null} />
+        )}
+
+        {developmentEffects.unlocks.csMatchOverview && (
+          <MatchOverviewPanel testId="cs-match-overview" color={ACC}
+            note="把已解鎖的資訊整理成一頁；本身不產生新資料。"
+            rows={[
+              { label: "地圖", value: map ? `${map.name} · ${map.type}` : "尚未選定" },
+              { label: "地圖風格", value: map?.style ?? "—" },
+              { label: "先發適配", value: mapFitResult.score != null ? `${mapFitResult.score}（${mapFitResult.grade}）` : "尚未評估",
+                tone: mapFitResult.score != null && mapFitResult.score >= 60 ? "good" : "warn" },
+              { label: "先發人數", value: `${starters.length} / ${CS_SEATS.length}`,
+                tone: starters.length === CS_SEATS.length ? "good" : "warn" },
+              { label: "目前戰術", value: selT?.name ?? "—" },
+            ]} />
+        )}
 
         {developmentEffects.unlocks.csDemoAnalysis && (
           <div data-testid="cs-demo-analysis" style={{ color: "#fed7aa", background: ACC + "12", border: "1px solid " + ACC + "55", borderRadius: 9, padding: "9px 10px", fontSize: 9, lineHeight: 1.55, marginBottom: 10 }}>

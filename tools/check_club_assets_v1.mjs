@@ -154,13 +154,34 @@ ck("production code 沒有任何硬編碼的教練 id", offenders.length === 0, 
 console.log("\n── ④ CS 邊界 ──");
 const grantedFlags = COACH_CATALOG.flatMap((a) => Object.keys(a.capability?.unlocks ?? {}));
 ck("型錄不授予任何 CS 旗標", grantedFlags.every((f) => !CS_OWNED_FLAGS.includes(f)), grantedFlags.join(",") || "無旗標");
-//  CS 畫面屬於另一個 owner：本輪必須逐位元組未動。
+//  CS 屬於另一個 owner（Codex）。
+//
+//  ⚠ 這一條原本檢查「`src/screens/fps/` 與 `src/battle/fps/` 整棵樹逐位元組未動」，
+//    而它的註解寫的是「**本輪**必須未動」——它是 Club Assets v1 那一輪的範圍守衛。
+//    但實作成 working tree 檢查之後，就變成對**所有後續 Sprint** 的永久凍結，
+//    連 Codex 並不擁有的賽前畫面也一起凍住。
+//
+//  2026-09-05 Owner 裁示（TD Expansion v1）把真正的邊界寫清楚了，那是**具名的
+//  battle runtime**，不是整個 fps 目錄：
+//      EsportsFPS3D.jsx / fpsRoster.js / CsPrepScreen.jsx / CsLoadingScreen.jsx
+//      ＋ camera・POV・C4・audio・locomotion・combat route runtime
+//  `CsTacticScreen.jsx` 不在其中，而且它**本來就是 Team Development 的消費端**
+//  （`csDemoAnalysis` 的讀取點就在那支檔案裡）。Expansion v1 的 N4／N5 在 Phase 0
+//  collision check 通過後（Codex 分支對該檔 0 個新 commit）獲授權加賽前資訊面板。
+//
+//  ⇒ 收窄成「具名禁區逐位元組未動」。**保護力沒有降低**：Codex 的 battle runtime
+//    仍然整棵樹凍結，只是不再連帶凍結它不擁有的畫面。
+const CS_FROZEN = [
+  "src/battle/fps/",                    // Codex 的 battle runtime，整棵樹
+  "src/screens/fps/CsPrepScreen.jsx",
+  "src/screens/fps/CsLoadingScreen.jsx",
+];
 let csDirty = "";
 try {
-  csDirty = execFileSync("git", ["status", "--porcelain", "--", "src/screens/fps/", "src/battle/fps/"],
+  csDirty = execFileSync("git", ["status", "--porcelain", "--", ...CS_FROZEN],
     { cwd: ROOT, encoding: "utf8" }).trim();
 } catch (e) { csDirty = `git 失敗：${e.message}`; }
-ck("src/screens/fps 與 src/battle/fps 完全未改動", csDirty === "", csDirty || "clean");
+ck("Codex 具名 CS 禁區完全未改動", csDirty === "", csDirty || "clean");
 //  戰術教練用的兩個旗標必須真的有消費端——否則就是一張沒有效果的卡。
 const banPick = readFileSync(join(ROOT, "src/screens/moba/BanPickScreen.jsx"), "utf8");
 const mobaTactic = readFileSync(join(ROOT, "src/screens/moba/TacticScreen.jsx"), "utf8");

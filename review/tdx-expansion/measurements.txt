@@ -1,0 +1,99 @@
+
+════ 桌機 1366px ════
+   入口路徑：open:direct
+
+── 桌機 1366px · 情境 fresh ──
+   整頁字數 493　可見行數 88
+   可用發展點「1」= 18px / w900
+   比它大的文字（1 個）："尚未選定"(20px)
+   ⏸ DEFERRED ③ 可用發展點不是最大的數字：尚未選定=20px
+   字級前 6："尚未選定"20px  "1"18px  "0"18px  "戰隊發展"14px  "▲"13px  "◷"13px
+   節點卡：4 張　字數 38/33/44/45　最長 8 行（general_training_flow）
+   節點卡高度：113/113/120/120px
+   NODE_CARD_VISIBLE_TEXT_LINES = 8/8/8/8（最長 8）
+   不能投入的卡 2 張：general_data_analysis[待解鎖] → "需先完成「訓練流程優化」"  general_growth_support[待解鎖] → "需先完成「恢復中心」"
+   鎖住的節點 2 個（逐字）：
+     · general_data_analysis → "數據分析室 / 進階 / 待解鎖 / Lv.0 / 3 / 解鎖選手與比賽摘要 / 需先完成「訓練流程優化」 / 每級 1 點 / ▸ 細節"
+     · general_growth_support → "成長支援 / 進階 / 待解鎖 / Lv.0 / 3 / 解鎖選手成長空間與生涯階段 / 需先完成「恢復中心」 / 每級 1 點 / ▸ 細節"
+   📸 review/td56-uiux/desktop-fresh.png
+   入口路徑：open:direct
+
+── 桌機 1366px · 情境 broke ──
+   整頁字數 493　可見行數 90
+   可用發展點「0」= 18px / w900
+   比它大的文字（1 個）："通用"(20px)
+   ⏸ DEFERRED ③ 可用發展點不是最大的數字：通用=20px
+   字級前 6："通用"20px  "0"18px  "1"18px  "戰隊發展"14px  "▲"13px  "◷"13px
+   節點卡：4 張　字數 40/36/40/45　最長 8 行（general_training_flow）
+   節點卡高度：120/120/120/120px
+   NODE_CARD_VISIBLE_TEXT_LINES = 8/8/8/8（最長 8）
+   不能投入的卡 3 張：general_recovery[點數不足] → "需要 1 點發展點"  general_data_analysis[點數不足] → "需要 1 點發展點"  general_growth_support[待解鎖] → "需先完成「恢復中心」"
+   鎖住的節點 1 個（逐字）：
+     · general_growth_support → "成長支援 / 進階 / 待解鎖 / Lv.0 / 3 / 解鎖選手成長空間與生涯階段 / 需先完成「恢復中心」 / 每級 1 點 / ▸ 細節"
+   📸 review/td56-uiux/desktop-broke.png
+   入口路徑：open:direct
+
+── 桌機 1366px · 情境 mid ──
+   整頁字數 582　可見行數 103
+   可用發展點「7」= 18px / w900
+   比它大的文字（1 個）："通用"(20px)
+   ⏸ DEFERRED ③ 可用發展點不是最大的數字：通用=20px
+   字級前 6："通用"20px  "7"18px  "4"18px  "0"15px  "0"15px  "0"15px
+   節點卡：4 張　字數 38/33/39/45　最長 8 行（general_training_flow）
+   節點卡高度：113/113/102/120px
+   NODE_CARD_VISIBLE_TEXT_LINES = 8/8/7/8（最長 8）
+   不能投入的卡 1 張：general_growth_support[待解鎖] → "需先完成「恢復中心」"
+   鎖住的節點 1 個（逐字）：
+     · general_growth_support → "成長支援 / 進階 / 待解鎖 / Lv.0 / 3 / 解鎖選手成長空間與生涯階段 / 需先完成「恢復中心」 / 每級 1 點 / ▸ 細節"
+   📸 review/td56-uiux/desktop-mid.png
+
+════ 手機 390px ════
+   入口路徑：open:direct
+
+── 手機 390px · 情境 fresh ──
+   整頁字數 493　可見行數 88
+   可用發展點「1」= 18px / w900
+   比它大的文字（1 個）："尚未選定"(20px)
+   ⏸ DEFERRED ③ 可用發展點不是最大的數字：尚未選定=20px
+   字級前 6："尚未選定"20px  "1"18px  "0"18px  "戰隊發展"14px  "▲"13px  "◷"13px
+   節點卡：4 張　字數 38/33/44/45　最長 8 行（general_training_flow）
+   節點卡高度：119/119/137/137px
+   NODE_CARD_VISIBLE_TEXT_LINES = 8/8/8/8（最長 8）
+   不能投入的卡 2 張：general_data_analysis[待解鎖] → "需先完成「訓練流程優化」"  general_growth_support[待解鎖] → "需先完成「恢復中心」"
+   主要 CTA：▸ 細節 44×44  投入發展點 61×44  ▸ 細節 44×44  投入發展點 61×44  ▸ 細節 44×44  ▸ 細節 44×44
+   鎖住的節點 2 個（逐字）：
+     · general_data_analysis → "數據分析室 / 進階 / 待解鎖 / Lv.0 / 3 / 解鎖選手與比賽摘要 / 需先完成「訓練流程優化」 / 每級 1 點 / ▸ 細節"
+     · general_growth_support → "成長支援 / 進階 / 待解鎖 / Lv.0 / 3 / 解鎖選手成長空間與生涯階段 / 需先完成「恢復中心」 / 每級 1 點 / ▸ 細節"
+   📸 review/td56-uiux/mobile-fresh.png
+   入口路徑：open:戰隊
+
+── 手機 390px · 情境 broke ──
+   整頁字數 493　可見行數 90
+   可用發展點「0」= 18px / w900
+   比它大的文字（1 個）："通用"(20px)
+   ⏸ DEFERRED ③ 可用發展點不是最大的數字：通用=20px
+   字級前 6："通用"20px  "0"18px  "1"18px  "戰隊發展"14px  "▲"13px  "◷"13px
+   節點卡：4 張　字數 40/36/40/45　最長 8 行（general_training_flow）
+   節點卡高度：137/137/137/137px
+   NODE_CARD_VISIBLE_TEXT_LINES = 8/8/8/8（最長 8）
+   不能投入的卡 3 張：general_recovery[點數不足] → "需要 1 點發展點"  general_data_analysis[點數不足] → "需要 1 點發展點"  general_growth_support[待解鎖] → "需先完成「恢復中心」"
+   主要 CTA：▸ 細節 44×44  ▸ 細節 44×44  ▸ 細節 44×44  ▸ 細節 44×44
+   鎖住的節點 1 個（逐字）：
+     · general_growth_support → "成長支援 / 進階 / 待解鎖 / Lv.0 / 3 / 解鎖選手成長空間與生涯階段 / 需先完成「恢復中心」 / 每級 1 點 / ▸ 細節"
+   📸 review/td56-uiux/mobile-broke.png
+   入口路徑：open:direct
+
+── 手機 390px · 情境 mid ──
+   整頁字數 582　可見行數 103
+   可用發展點「7」= 18px / w900
+   比它大的文字（1 個）："通用"(20px)
+   ⏸ DEFERRED ③ 可用發展點不是最大的數字：通用=20px
+   字級前 6："通用"20px  "7"18px  "4"18px  "0"15px  "0"15px  "0"15px
+   節點卡：4 張　字數 38/33/39/45　最長 8 行（general_training_flow）
+   節點卡高度：119/119/119/137px
+   NODE_CARD_VISIBLE_TEXT_LINES = 8/8/7/8（最長 8）
+   不能投入的卡 1 張：general_growth_support[待解鎖] → "需先完成「恢復中心」"
+   主要 CTA：▸ 細節 44×44  投入發展點 61×44  ▸ 細節 44×44  投入發展點 61×44  ▸ 細節 44×44  ▸ 細節 44×44
+   鎖住的節點 1 個（逐字）：
+     · general_growth_support → "成長支援 / 進階 / 待解鎖 / Lv.0 / 3 / 解鎖選手成長空間與生涯階段 / 需先完成「恢復中心」 / 每級 1 點 / ▸ 細節"
+   📸 review/td56-uiux/mobile-mid.png

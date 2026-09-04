@@ -13,6 +13,9 @@ import React, { useMemo, useState } from "react";
 import { Award, Users, Star, Package, Zap, BarChart2, ArrowUpRight, ArrowDownLeft, TrendingUp } from "lucide-react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { resolveSponsor } from "../../platform/economy/sponsors.js";
+//  Expansion v1 N6：只做**比較顯示**。⚠ 不改任何贊助條件或收入——
+//    那會變成用發展點買錢。資料源是既有的 SPONSORS 型錄。
+import { SPONSORS } from "../../data/playerModel.js";
 import { useIsMobile } from "../../ui/useViewport.js";
 import { isDebugMode } from "../../ui/debugMode.js";
 import ManageFrame from "./ManageFrame.jsx";
@@ -104,6 +107,8 @@ export default function FinanceScreen({ onBack }) {
   const activeSponsor = useProfileStore((s) => s.activeSponsor);
   const sponsor = activeSponsor ? resolveSponsor(activeSponsor.id) : null;
   const sponsorWeeksLeft = activeSponsor?.weeksLeft ?? 0;
+  //  Expansion v1 N6：合併權威（發展樹 ＋ 總教練），不自己合併。
+  const clubUnlocks = useProfileStore((s) => s.clubCapabilities()).total.unlocks;
   const isMobile = useIsMobile();
   const [tab, setTab] = useState("overview");
   const [txFilter, setTxFilter] = useState("all");
@@ -228,6 +233,26 @@ export default function FinanceScreen({ onBack }) {
               <span style={{ color: T.gray, fontSize: 10.5 }}>無合約中的贊助商</span>
             )}
           </div>
+
+          {/*  Expansion v1 N6：贊助條件比較。**只顯示既有型錄，不改任何條件。** */}
+          {clubUnlocks.sponsorInsight && (
+            <div data-testid="sponsor-insight" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 10, padding: "9px 11px", marginBottom: 10 }}>
+              <div style={{ color: T.amber, fontSize: 10, fontWeight: 900 }}>贊助條件比較</div>
+              <div style={{ color: T.gray, fontSize: 9, lineHeight: 1.5, marginTop: 3 }}>簽約前先看清楚週收入、簽約金與合約長度；條件本身不會因此改變。</div>
+              <div style={{ display: "grid", gap: 4, marginTop: 8 }}>
+                {[...SPONSORS].sort((a, b) => b.weekly - a.weekly).map((sp) => (
+                  <div key={sp.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: "rgba(0,0,0,0.22)", borderRadius: 7, padding: "5px 8px" }}>
+                    <span style={{ color: sp.id === activeSponsor?.id ? T.green : "#e5e7eb", fontSize: 9, fontWeight: 800, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {sp.emoji} {sp.name}{sp.id === activeSponsor?.id ? "（合約中）" : ""}
+                    </span>
+                    <span style={{ color: T.gray2, fontSize: 8.5, flexShrink: 0, whiteSpace: "nowrap" }}>
+                      ${sp.weekly}萬/週 · 簽約金 ${sp.signBonus}萬 · {sp.weeks} 週
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* 未來四週現金預測 */}
           <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8, flexWrap: "wrap" }}>

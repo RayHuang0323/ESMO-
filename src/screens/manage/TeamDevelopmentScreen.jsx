@@ -8,6 +8,9 @@ import { useProfileStore } from "../../platform/profileStore.js";
 import { useSeasonStore } from "../../platform/seasonStore.js";
 import { analytics as mobaAnalytics } from "../../platform/seasonData.js";
 import { growthLogOf } from "../../platform/progress/growthLog.js";
+//  Expansion v1 N1：成長空間只**讀**既有純函式，不新增任何計算。
+import { careerStageOf, CAREER_STAGES } from "../../platform/progress/careerStage.js";
+import { STAT_DEF } from "../../data/playerModel.js";
 import {
   TEAM_DEVELOPMENT_CATEGORIES,
   teamDevelopmentLevelEffect,
@@ -92,6 +95,88 @@ function routeNodeState(state, node) {
 }
 
 const currentEffectOf = (node, rank) => rank > 0 ? teamDevelopmentLevelEffect(node, rank - 1) : null;
+
+/** 生涯階段的玩家用語。⚠ id 來自 `careerStage.js`，這裡只做翻譯，不重新分級。 */
+const STAGE_ZH = {
+  [CAREER_STAGES.rookie]: "新秀", [CAREER_STAGES.growth]: "成長期",
+  [CAREER_STAGES.peak]: "巔峰期", [CAREER_STAGES.mature]: "成熟期",
+  [CAREER_STAGES.veteran]: "老將",
+};
+
+/**
+ * Expansion v1 N1：選手成長空間。
+ *
+ * ⚠ **只讀，不加速。** 這個節點不改任何成長公式——它解鎖的是「看得到」，
+ *   而看得到本身不影響 roster power，所以 Online policy 是 careerOnly／無影響。
+ * ⚠ 剩餘空間的定義沿用 `trainingCalculator` 的 `room = potential − 現值`，
+ *   逐項加總。**不另立一套潛力模型。**
+ */
+function growthPlanningOf(players) {
+  const rows = (players ?? []).map((p) => {
+    const potential = Number(p?.potential);
+    const stats = p?.stats ?? {};
+    const room = Number.isFinite(potential)
+      ? STAT_DEF.reduce((sum, def) => {
+          const key = def.key ?? def.id ?? def;
+          const now = Number(stats[key]);
+          return sum + (Number.isFinite(now) ? Math.max(0, potential - now) : 0);
+        }, 0)
+      : 0;
+    return {
+      id: p?.id, name: p?.name ?? p?.id,
+      room: Math.round(room),
+      stage: careerStageOf(p),
+      retiring: Boolean(p?.retirement?.intentYear),
+    };
+  }).sort((a, b) => b.room - a.room);
+  return {
+    rows,
+    totalRoom: rows.reduce((s, r) => s + r.room, 0),
+    peakCount: rows.filter((r) => r.stage === CAREER_STAGES.peak).length,
+    retiringCount: rows.filter((r) => r.retiring).length,
+  };
+}
+
+/** N1 面板。沿用既有 `dataAnalysis` 面板的形式，細節層預設收合。 */
+function GrowthPlanningPanel({ data }) {
+  const [open, setOpen] = useState(false);
+  const tile = (label, value, note) => (
+    <div style={{ background: GC.card2, borderRadius: 8, padding: "7px 8px" }}>
+      <div style={{ color: GC.gray, fontSize: 8 }}>{label}</div>
+      <div style={{ color: "white", fontSize: 15, fontWeight: 900, fontFamily: MONO }}>{value}</div>
+      <div style={{ color: GC.gray, fontSize: 8 }}>{note}</div>
+    </div>
+  );
+  return (
+    <section data-testid="team-development-growth-planning"
+      style={{ background: GC.card, border: `1px solid ${GC.blueL}44`, borderRadius: 12, padding: "11px 12px", marginBottom: 10 }}>
+      <div style={{ color: GC.blueL, fontSize: 10, fontWeight: 900, letterSpacing: "0.12em" }}>選手成長空間</div>
+      <div style={{ color: GC.gray, fontSize: 9, lineHeight: 1.5, marginTop: 3 }}>看得到誰還練得動、誰接近生涯尾聲；不會加快任何成長。</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 7, marginTop: 9 }}>
+        {tile("全隊剩餘空間", data.totalRoom, "距離潛力上限")}
+        {tile("巔峰期", data.peakCount, "人")}
+        {tile("接近退役", data.retiringCount, "已表達意向")}
+      </div>
+      <button type="button" data-testid="growth-planning-detail-toggle" onClick={() => setOpen((v) => !v)}
+        style={{ background: "transparent", border: "none", color: GC.blueL, fontSize: 9.5, fontWeight: 900, cursor: "pointer", padding: "6px 0 0", minHeight: 32, fontFamily: FONT }}>
+        {open ? "▾ 收起逐位選手" : "▸ 逐位選手"}
+      </button>
+      {open && (
+        <div data-testid="growth-planning-detail" style={{ display: "grid", gap: 4, marginTop: 3 }}>
+          {data.rows.map((r) => (
+            <div key={r.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: GC.card2, borderRadius: 7, padding: "5px 8px" }}>
+              <span style={{ color: "#e5e7eb", fontSize: 9, fontWeight: 800, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                <span style={{ color: r.retiring ? GC.gold : GC.gray, fontSize: 8.5 }}>{r.retiring ? "接近退役" : STAGE_ZH[r.stage] ?? "—"}</span>
+                <span style={{ color: r.room > 0 ? GC.green : GC.gray, fontSize: 9, fontWeight: 900, fontFamily: MONO }}>{r.room}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
 
 /**
  * TD-56：「下一個發展點從哪來」。
@@ -317,8 +402,13 @@ export default function TeamDevelopmentScreen({ onBack }) {
     const csWins = csHistory.filter((match) => match?.winner === "us").length;
     return { moba, growthEntries, csGames: csHistory.length, csWins };
   }, [csHistory, mobaHistory, players]);
+  //  Expansion v1 N1：只在解鎖時才算，未解鎖時不做任何無用工作。
+  const growthPlanning = useMemo(() => growthPlanningOf(players), [players]);
   const [tab, setTab] = useState("general");
   const [confirmId, setConfirmId] = useState(null);
+  //  Owner Review ④：一次只展開一張卡的細節層。用單一 id 而不是 Set——
+  //  同時攤開五張卡就等於沒有做 progressive disclosure。
+  const [detailId, setDetailId] = useState(null);
   const [receipt, setReceipt] = useState(null);
   const rootRef = useRef(null);
   const tabContentRef = useRef(null);
@@ -405,6 +495,8 @@ export default function TeamDevelopmentScreen({ onBack }) {
           </div>
         </section>
 
+        {effects.unlocks.growthPlanning && <GrowthPlanningPanel data={growthPlanning} />}
+
         {effects.unlocks.dataAnalysis && (
           <section data-testid="team-development-data-analysis" style={{ background: GC.card, border: `1px solid ${GC.green}44`, borderRadius: 12, padding: "11px 12px", marginBottom: 10 }}>
             <div style={{ color: GC.green, fontSize: 10, fontWeight: 900, letterSpacing: "0.12em" }}>數據分析摘要</div>
@@ -450,6 +542,7 @@ export default function TeamDevelopmentScreen({ onBack }) {
               const nextEffect = teamDevelopmentLevelEffect(node, rank);
               const c = currentColor;
               const canPurchase = typeof purchase === "function" && (statusKey === "available" || statusKey === "upgrade");
+              const detailOpen = detailId === node.id;
               return (
                 <article key={node.id} data-development-card data-development-node-id={node.id} style={{ background: selected ? GC.card2 : GC.card, border: `1px solid ${selected ? c : status.color + "55"}`, borderRadius: 12, padding: "11px 12px", minWidth: 0, boxShadow: "0 0 0 0 transparent" }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
@@ -458,45 +551,79 @@ export default function TeamDevelopmentScreen({ onBack }) {
                         <div style={{ color: "white", fontSize: 12, fontWeight: 900, overflowWrap: "break-word" }}>{node.name}</div>
                         <span style={{ color: c, fontSize: 7.5, fontWeight: 900, border: `1px solid ${c}55`, borderRadius: 4, padding: "2px 5px" }}>{TIER_LABEL[node.tier]}</span>
                       </div>
-                      <div style={{ color: GC.gray, fontSize: 9.5, lineHeight: 1.55, marginTop: 4 }}>{node.description}</div>
                     </div>
                     <span style={{ color: status.color, border: `1px solid ${status.color}55`, borderRadius: 5, padding: "2px 5px", fontSize: 8, fontWeight: 900, flexShrink: 0, whiteSpace: "nowrap" }}>{status.label}</span>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 8 }}>
                     <span style={{ color: "#e5e7eb", fontSize: 10, fontFamily: MONO, whiteSpace: "nowrap" }}>Lv.{rank} / 3</span>
                     <div data-development-progress-fill style={{ flex: 1, transformOrigin: "left center" }}><ProgressCells rank={rank} color={c} /></div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginTop: 9 }}>
-                    <div style={{ minWidth: 0 }}>
-                      {currentEffect?.status === "live" && <div data-development-current-effect={node.id} style={{ marginBottom: 5 }}>
-                        <div style={{ color: GC.gray, fontSize: 8 }}>已解鎖效果</div>
-                        <div style={{ color: GC.green, fontSize: 9.5, lineHeight: 1.45, marginTop: 2 }}>{currentEffect.text}</div>
-                      </div>}
-                      <div style={{ color: GC.gray, fontSize: 8 }}>下一級效果</div>
-                      <div data-development-next-effect={node.id} style={{ color: nextEffect?.status === "live" ? "#e5e7eb" : GC.gray, fontSize: 9.5, lineHeight: 1.45, marginTop: 2 }}>{nextEffect ? nextEffect.text : "已完成全部階段"}</div>
-                      {/*  ⚠ 這個旗標講的是「這一級的效果**已經做出來了**」，不是「你現在買得起」。
-                          原本寫「目前可生效」，在一張同時標示「待解鎖」的卡片上會直接打架
-                          （TD-56 Owner Review 發現 ②）。改成描述投入之後會發生什麼。 */}
-                      {nextEffect && <span style={{ color: nextEffect.status === "live" ? GC.green : GC.gray, fontSize: 7.5, fontWeight: 800 }}>{nextEffect.status === "live" ? "投入後生效" : "尚未開放"}</span>}
-                    </div>
-                    <span style={{ color: c, fontSize: 8.5, fontWeight: 900, whiteSpace: "nowrap" }}>影響：{node.scope}</span>
+
+                  {/*  ── 主卡只留「玩家現在需要知道的」（Owner Review ④）──────────────
+                       核心效果一行 ＋ 不能投入的原因 ＋ 每級點數 ＋ 主要行動。
+                       敘述／已解鎖效果／影響範圍／前置清單／下一級狀態全部移到細節層
+                       （`ESMO_UIUX設計原則.md` §1 §3）。
+                       ⚠ 資訊沒有被刪掉，只是換了層級——展開就看得到。 */}
+                  <div data-development-next-effect={node.id}
+                    style={{ color: nextEffect?.status === "live" ? "#e5e7eb" : GC.gray, fontSize: 9.5, lineHeight: 1.45, marginTop: 8 }}>
+                    {nextEffect ? nextEffect.text : "已完成全部階段"}
                   </div>
 
                   {/*  為什麼不能投入。⚠ 這句話直接來自 domain 的資格判定，畫面不自己組——
                        「需先完成「訓練流程優化」」與「需要 1 點發展點」是兩件事，
                        合成一個「待解鎖」正是 Owner Review 發現 ② 的問題。 */}
                   {blockedWhy && <div data-development-blocked-reason={node.id}
-                    style={{ color: statusKey === "needsPoints" ? GC.gold : GC.gray, fontSize: 8.5, lineHeight: 1.4, marginTop: 7 }}>{blockedWhy}</div>}
-                  {!blockedWhy && node.prerequisites.length > 0 && <div style={{ color: c, fontSize: 8.5, lineHeight: 1.4, marginTop: 7 }}>前置：{node.prerequisites.map((pre) => teamDevelopmentNodeById(pre.nodeId)?.name).join("、")}</div>}
-                  <div data-development-cta-row style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 9 }}>
-                    <span style={{ color: GC.gray, fontSize: 8.5 }}>每級 {node.costPerRank} 點</span>
+                    style={{ color: statusKey === "needsPoints" ? GC.gold : GC.gray, fontSize: 8.5, lineHeight: 1.4, marginTop: 6 }}>{blockedWhy}</div>}
+                  <div data-development-cta-row style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+                      <span style={{ color: GC.gray, fontSize: 8.5, whiteSpace: "nowrap" }}>每級 {node.costPerRank} 點</span>
+                      <button data-development-cta data-testid={`development-detail-toggle-${node.id}`}
+                        type="button" aria-expanded={detailOpen}
+                        onClick={() => setDetailId(detailOpen ? null : node.id)}
+                        style={{ background: "transparent", border: "none", color: GC.gray, fontSize: 8.5, fontWeight: 900, cursor: "pointer", padding: 0, fontFamily: FONT, whiteSpace: "nowrap" }}>
+                        {detailOpen ? "▾ 收起細節" : "▸ 細節"}
+                      </button>
+                    </div>
                     {/*  ⚠ 手機的觸控高度由下面的 <style> 補到 44px（`data-development-cta`），
                          不在這裡寫死尺寸——桌機用滑鼠，不需要把按鈕做大。 */}
                     {canPurchase && <button data-development-cta data-testid={`development-cta-${node.id}`}
                       onClick={() => setConfirmId(selected ? null : node.id)}
-                      style={{ background: `${c}1c`, border: `1px solid ${c}66`, borderRadius: 7, color: c, padding: "5px 9px", fontSize: 9, fontWeight: 900, cursor: "pointer", fontFamily: FONT }}>{selected ? "收起" : "投入發展點"}</button>}
+                      style={{ background: `${c}1c`, border: `1px solid ${c}66`, borderRadius: 7, color: c, padding: "5px 9px", fontSize: 9, fontWeight: 900, cursor: "pointer", fontFamily: FONT, whiteSpace: "nowrap" }}>{selected ? "收起" : "投入發展點"}</button>}
                   </div>
+
+                  {/*  細節層：主卡搬下來的四件事。**不是新資訊**，是同一份資訊換了層級。 */}
+                  {detailOpen && (
+                    <div data-testid={`development-detail-${node.id}`}
+                      style={{ background: GC.card2, borderRadius: 9, padding: "8px 10px", marginTop: 7, display: "grid", gap: 5 }}>
+                      <div style={{ color: GC.gray, fontSize: 9, lineHeight: 1.55 }}>{node.description}</div>
+                      {currentEffect?.status === "live" && (
+                        <div data-development-current-effect={node.id} style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                          <span style={{ color: GC.gray, fontSize: 8.5, whiteSpace: "nowrap" }}>已解鎖效果</span>
+                          <span style={{ color: GC.green, fontSize: 8.5, textAlign: "right" }}>{currentEffect.text}</span>
+                        </div>
+                      )}
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                        <span style={{ color: GC.gray, fontSize: 8.5, whiteSpace: "nowrap" }}>影響範圍</span>
+                        <span style={{ color: c, fontSize: 8.5, fontWeight: 900, textAlign: "right" }}>{node.scope}</span>
+                      </div>
+                      {node.prerequisites.length > 0 && (
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                          <span style={{ color: GC.gray, fontSize: 8.5, whiteSpace: "nowrap" }}>前置</span>
+                          <span style={{ color: "#e5e7eb", fontSize: 8.5, textAlign: "right" }}>{node.prerequisites.map((pre) => teamDevelopmentNodeById(pre.nodeId)?.name).join("、")}</span>
+                        </div>
+                      )}
+                      {nextEffect && (
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                          <span style={{ color: GC.gray, fontSize: 8.5, whiteSpace: "nowrap" }}>下一級狀態</span>
+                          {/*  ⚠ 這個旗標講的是「這一級的效果**已經做出來了**」，不是「你現在買得起」。
+                              原本寫「目前可生效」，在同時標示「待解鎖」的卡片上會直接打架
+                              （TD-56 Owner Review 發現 ②）。 */}
+                          <span style={{ color: nextEffect.status === "live" ? GC.green : GC.gray, fontSize: 8.5, fontWeight: 800, textAlign: "right" }}>{nextEffect.status === "live" ? "投入後生效" : "尚未開放"}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {selected && canPurchase && (
                     <div style={{ marginTop: 8, borderTop: `1px solid ${c}33`, paddingTop: 8 }}>
                       <div style={{ color: "#e5e7eb", fontSize: 10, fontWeight: 800, marginBottom: 6 }}>確認投入 {node.costPerRank} 點，解鎖下一級效果？</div>

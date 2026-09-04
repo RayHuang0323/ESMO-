@@ -17871,3 +17871,68 @@ Owner Review 通過，正式發布。
 CS runtime、CBR／Rating／Matchmaking、Club XP curve、Retention Economy、
 capability contract、LogicEngine／MOBA battle **diff 全部為 0**（逐路徑核對）。
 未讀取、未整合 Codex 未發布的 `cs/android-owner-review-v2` worktree。
+
+---
+
+# Team Development Expansion v1（2026-09-05）
+
+## 做了什麼
+
+把 TD-56 留下的 8 個 `future` 候選節點收斂成 **6 個啟用 ＋ 2 個 REJECT**，
+並把 Owner Review ④（節點卡密度）一起處理掉。
+
+- 節點表：20 → **18** 個；可購買 18 → **24** 點；`future` 節點 **0** 個。
+- 六個節點全部走既有 `unlock` 旗標，**沒有新增 capability kind、沒有提高任何 cap**。
+- 兩個 REJECT（`general_scout_support`、`management_finance`）**直接移除**，
+  依 Owner 裁示不補替代節點。
+
+## 為什麼是 unlock 而不是數值
+
+四個 capability kind 裡有三個早就被 Team Development ＋ Coach 超供 200%
+（cap 2／8／2，實際供給 4／16／4）⇒ **第三個數值來源玩家一點感覺都不會有**。
+`unlocks` 是聯集、冪等、無上限，天生就是「多一個來源不會壞」的欄位。
+
+## 供給曲線沒有被動到
+
+供給表一個常數都沒改（種子 1 ／ 里程碑 8 個 ／ 每季 2 點）。
+變的只有上限，而上限本來就由節點表推導：
+
+| | S1 | S3 | S5 | S8 | S9 |
+|---|---|---|---|---|---|
+| 供給（雙項主線） | 5 | 11 | 16 | 23 | **24** |
+
+⇒ **早期曲線逐值不變**，只是把 S6–S9 的內容真空填掉。全樹 ETA S6–S7 → **S9**。
+
+## ④ 節點卡密度
+
+主卡只留：名稱＋狀態、Lv 進度、核心效果一行、locked reason、每級點數、CTA。
+敘述／已解鎖效果／影響範圍／前置／下一級狀態搬進「▸ 細節」（預設收合，一次只開一張）。
+
+**實測 11–13 行 → 7–8 行**，資訊沒有刪除（驗證器逐條斷言那些欄位仍在細節層）。
+③ Available Points hierarchy 依裁示**未動**。
+
+## 動到既有 gate 的四處（都是內容改變所致，非放寬）
+
+1. `check_team_development_v1` 節點數 20 → 18、tier 分布改為「spec 選配」。
+2. `check_team_development_v1` 的「規劃中節點不產生假效果」前提消失
+   ⇒ 改守它真正在守的事：灌到 rank 3 也只拿得到第 1 階解鎖。
+3. `check_team_development_progression_v1` 全樹 ETA S8 → S9（**同時加驗 S8 還走不完**）。
+4. `check_club_assets_v1` 的 CS 凍結範圍收窄成 Owner 裁示的具名禁區。
+   原斷言註解寫的是「**本輪**必須未動」，卻實作成永久 working-tree 凍結；
+   收窄後 Codex 的 `battle/fps/` 仍整棵樹凍結，保護力未降低。
+
+## 邊界
+
+- CS runtime 禁區（`EsportsFPS3D`／`fpsRoster`／`CsPrepScreen`／`CsLoadingScreen`
+  ＋ camera・POV・C4・audio・locomotion・route）**一個位元組都沒動**。
+- 只改了 `CsTacticScreen.jsx`（不在禁區，且本來就是 TD 消費端），
+  Phase 0 collision check 證明 Codex 分支對該檔 0 個新 commit。
+- CBR／Rating／MatchBand／Matchmaking／Online normalization **未動**。
+- Development Point supply／Club XP curve／Retention economy **未動**。
+- 六個新旗標**沒有進入** Online 邊界的四個契約檔（驗證器靜態斷言，關閉 GAP-3 的一半）。
+
+## 未經畫面實測（交 Owner 驗收）
+
+N2／N3／N4／N5 的面板掛在需要完整賽事流程才到得了的賽前畫面
+（TacticScreen／BanPickScreen／CsTacticScreen）⇒ 只做到「讀取點存在 ＋ 模組載入無錯誤」，
+**未在畫面上目視確認**。N1 與 N6 已瀏覽器實測（桌機＋390px）。

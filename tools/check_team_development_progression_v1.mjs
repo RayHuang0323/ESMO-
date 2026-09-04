@@ -304,7 +304,13 @@ console.log("\n── §12 節奏投影 ──");
   const s8 = project(8, 28);
   ck("第一季拿得到「數次真正選擇」（≥3 點）", s1 >= 3, `S1 = ${s1} 點`);
   ck("第一季不可能把整棵樹買完", s1 < TEAM_DEVELOPMENT_TOTAL_BUYABLE, `S1 = ${s1} / ${TEAM_DEVELOPMENT_TOTAL_BUYABLE}`);
-  ck("八季內可走完整棵樹", s8 >= TEAM_DEVELOPMENT_TOTAL_BUYABLE, `S8 = ${s8} / ${TEAM_DEVELOPMENT_TOTAL_BUYABLE}`);
+  //  ⚠ Expansion v1 把可購買總量由 18 提到 24 ⇒ 全樹 ETA 由 S6–S7 移到 S9
+  //    （Owner 裁示 `FULL_TREE_ETA ≈ Season 9`）。**供給表一個常數都沒動**，
+  //    變的是上限——而上限本來就由節點表推導。判準跟著內容走，不是放寬。
+  const s9 = project(9, 28);
+  ck("九季內可走完整棵樹", s9 >= TEAM_DEVELOPMENT_TOTAL_BUYABLE, `S9 = ${s9} / ${TEAM_DEVELOPMENT_TOTAL_BUYABLE}`);
+  ck("八季還走不完（擴充沒有把節奏稀釋成一次到位）",
+    s8 < TEAM_DEVELOPMENT_TOTAL_BUYABLE, `S8 = ${s8} / ${TEAM_DEVELOPMENT_TOTAL_BUYABLE}`);
   //  重度刷分：Club XP 拉到天花板，但世界日一天都沒多推
   const grindOneSeason = reconcileDevelopmentPoints(fresh(), { clubXp: xpForLevel(60), days: SEASON_DAYS });
   ck("刷滿 Club XP 也無法在第一季畢業（賽季那一條刷不動）",
@@ -328,12 +334,18 @@ console.log("\n── §13 資格判定 ──");
     /需要 1 點發展點/.test(noPoints.reason), noPoints.reason);
   ck("可投入時 ok = true 且沒有原因",
     (() => { const e = teamDevelopmentEligibility(rich, "general_recovery"); return e.ok && e.reason === null; })());
-  ck("已完成 / 規劃中 / 下一階段規劃中 各有自己的 kind", (() => {
+  //  ⚠ Expansion v1 之後**沒有任何節點是 `future`** ⇒ `planned` 這個 kind
+  //    在目前的節點表下不可能被觸發。原斷言拿 `general_growth_support` 當
+  //    `planned` 的例子，而它現在是已啟用的 N1。
+  //    kind 本身仍保留（domain 對未來新增的 future 節點要 fail closed），
+  //    所以這裡改成分兩條驗：真實節點驗得到的兩個 kind ＋ 「目前沒有 planned」。
+  ck("已完成 / 下一階段規劃中 各有自己的 kind", (() => {
     const maxed = teamDevelopmentEligibility(sanitizeTeamDevelopment({ availablePoints: 5, ranks: { general_training_flow: 3 } }), "general_training_flow");
-    const planned = teamDevelopmentEligibility(rich, "general_growth_support");
     const nextPlanned = teamDevelopmentEligibility(sanitizeTeamDevelopment({ availablePoints: 5, ranks: { moba_hero_lab: 1 } }), "moba_hero_lab");
-    return maxed.kind === "maxed" && planned.kind === "planned" && nextPlanned.kind === "nextPlanned";
+    return maxed.kind === "maxed" && nextPlanned.kind === "nextPlanned";
   })());
+  ck("目前節點表沒有 future 節點 ⇒ 沒有任何節點回報 planned",
+    TEAM_DEVELOPMENT_NODES.every((n) => teamDevelopmentEligibility(rich, n.id).kind !== "planned"));
   //  前置優先於點數：兩者都不成立時要先講前置（有錢也買不到）
   const both = teamDevelopmentEligibility(sanitizeTeamDevelopment({ availablePoints: 0, ranks: {} }), "general_data_analysis");
   ck("前置與點數都不足時，先講前置", both.kind === "prerequisite", both.reason);

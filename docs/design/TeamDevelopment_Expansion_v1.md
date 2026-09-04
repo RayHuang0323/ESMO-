@@ -521,3 +521,109 @@ N1／N2／N3／N6 不受影響、可獨立完成。
 2. ✅ Phase 0 Gate 已完成分類（本節）。
 3. ⬜ 開工當下再確認一次 Codex 是否正在改 `CsTacticScreen.jsx`。
 4. ⬜ `git fetch origin` 確認基線。
+
+---
+
+## 12. Implementation 紀錄（2026-09-05）
+
+`TEAM_DEVELOPMENT_EXPANSION_V1_IMPLEMENTED = YES`
+
+### Phase 0 開工檢查
+
+| 項目 | 結果 |
+|---|---|
+| `origin/main` | `bf996b6`（與 Owner 指定基準一致，期間沒有其他工作進 main） |
+| worktree | 新開 `ESMO-tdx` ＠ `bf996b6`，**不沿用 TD-56 worktree 的未發布狀態** |
+| branch | `feature/team-development-expansion-v1` |
+| N4／N5 collision check | `cs/android-owner-review-v2` 上碰 `CsTacticScreen.jsx` 的最後一個 commit 是 `9646786`，**與 main 相同**；`origin/main..codex -- <path>` 的 commit 數 = **0** ⇒ 無衝突，N4／N5 照設計實作 |
+
+⚠ collision check **只讀 commit metadata**（branch tip SHA、path-level `git log`／`rev-list --count`），
+未讀取檔案內容、未 diff、未 cherry-pick、未進入 Codex worktree。
+
+### 節點表
+
+18 個節點（20 − 2 REJECT），可購買 **24 點**，`future` 節點 **0 個**。
+
+| 分類 | 節點數 | tier 分布 | 可購買 |
+|---|---|---|---|
+| general | 4 | 2 基礎 ＋ 2 進階 | 8 |
+| moba | 5 | 2 基礎 ＋ 2 進階 ＋ 1 專精 | 5 |
+| cs | 5 | 2 基礎 ＋ 2 進階 ＋ 1 專精 | 5 |
+| management | 4 | 2 基礎 ＋ 2 進階 | 6 |
+
+⚠ **general 與 management 目前沒有 specialty 節點** —— 被 REJECT 的兩個
+（`general_scout_support`、`management_finance`）剛好都是那兩條線的專精節點。
+依 Owner 裁示「不得為了湊回數量而補新節點」，這裡**維持 4 個**。
+路線 stepper 的「由基礎走向專精」對這兩條線因此略微不精確，
+列為 UI 待辦（優先度低，不在本輪 scope）。
+
+### 六個節點的最終定義
+
+| 節點 | 旗標 | 消費端 | 玩家看到什麼 |
+|---|---|---|---|
+| `general_growth_support` 成長支援 | `growthPlanning` | `TeamDevelopmentScreen` | 全隊剩餘成長空間／巔峰期人數／接近退役人數 ＋ 逐位選手（收合） |
+| `moba_tactical_prep` 戰術傾向 | `mobaTacticInsight` | `TacticScreen` | 各戰術用過幾場、其中幾場照計畫走 |
+| `moba_match_analysis` 賽前總覽 | `mobaMatchOverview` | `BanPickScreen` | 對手／對手已選英雄／陣容類型／我方已選 |
+| `cs_tactical_prep` 戰術傾向 | `csTacticInsight` | `CsTacticScreen` | 同 MOBA，但帶**地圖維度** |
+| `cs_match_intel` 賽前總覽 | `csMatchOverview` | `CsTacticScreen` | 地圖／風格／先發適配／先發人數／目前戰術 |
+| `management_sponsorship` 贊助拓展 | `sponsorInsight` | `FinanceScreen` | 各贊助商週收入・簽約金・合約長度比較 |
+
+共用面板：`src/ui/DevelopmentInsights.jsx`（`TacticInsightPanel` ＋ `MatchOverviewPanel`），
+純呈現層，不碰 Store／localStorage。
+
+### ④ 節點卡密度（IN SCOPE，已完成）
+
+主卡保留：**名稱＋階級／狀態徽章、Lv 進度、核心效果一行、locked reason、每級點數、CTA**。
+搬到細節層（`▸ 細節`，預設收合、一次只開一張）：**敘述、已解鎖效果、影響範圍、前置清單、下一級狀態**。
+
+實測（六個情境 × 兩種裝置）：
+
+```
+NODE_CARD_VISIBLE_TEXT_LINES
+  TD-56 baseline : 11 – 13 行（字數 62–98）
+  Expansion v1   : 7 – 8 行
+```
+
+⚠ **資訊沒有被刪除**，只是換了層級——展開細節層就看得到，
+且驗證器逐條斷言那些欄位仍存在（`check_team_development_expansion_v1` §9）。
+③ Available Points hierarchy **未被順手改動**（驗證器斷言仍是 18px）。
+
+### 既有 gate 的調整（三處，皆為內容改變所致）
+
+| gate | 原斷言 | 改法與理由 |
+|---|---|---|
+| `check_team_development_v1` | 「20 個節點與每類五項」「每類 base2/adv2/spec1」 | 改成實際形狀（18 個；spec 為選配）。內容變了，判準跟著走 |
+| `check_team_development_v1` | 「規劃中節點不產生假效果」（拿那 8 個當例子） | 前提消失（6 個已啟用、2 個已移除）。改成守它真正在守的事：**灌到 rank 3 也只拿得到第 1 階解鎖**，且不生出數值能力 |
+| `check_team_development_progression_v1` | 「八季內可走完整棵樹」 | 上限 18 → 24 ⇒ 全樹 ETA 移到 S9。改成「S9 走得完 ＋ S8 還走不完」（兩邊都驗，不是單純放寬） |
+| `check_club_assets_v1` | 「`src/screens/fps` 與 `src/battle/fps` 完全未改動」 | 收窄成 Owner 裁示的**具名禁區**（`battle/fps/` 整棵樹 ＋ `CsPrepScreen` ＋ `CsLoadingScreen`）。詳見下 |
+
+⚠ **`check_club_assets_v1` 的調整值得單獨說明**：那條斷言的註解寫的是
+「CS 畫面屬於另一個 owner：**本輪**必須逐位元組未動」——它是 Club Assets v1
+**那一輪的範圍守衛**，但實作成 working-tree 檢查後就變成對所有後續 Sprint 的
+永久凍結，連 Codex 不擁有的賽前畫面也一起凍住。收窄後 **Codex 的 battle runtime
+仍然整棵樹凍結**，保護力沒有降低。
+
+### 驗證
+
+| | |
+|---|---|
+| `check_team_development_expansion_v1`（新增） | **85/85 PASS** |
+| `browser_check_team_development_expansion`（新增，桌機＋390px） | **78/78 PASS** |
+| `check_team_development_progression_v1` | 89/89 PASS |
+| `check_team_development_v1` | PASS |
+| `check_club_assets_v1` | 105/105 PASS |
+| `check_capability_authority` | 15/15 PASS |
+| `browser_review_team_development_uiux` | 66/66 PASS |
+| `browser_check_team_development_progression` | 51/51 PASS |
+| `browser_probe_td56_entry` | 3/3 PASS |
+| progress25 / regress / regress2 / flow09 / dash10 / build | PASS |
+
+### ⚠ 消費端的驗證強度不一致（誠實標記）
+
+| 節點 | 驗證方式 |
+|---|---|
+| N1 成長支援 | **瀏覽器實測**：面板渲染、逐位選手收合／展開、內容非空 |
+| N6 贊助拓展 | **瀏覽器實測**：桌機＋390px 都走真實導覽到財務頁，面板可見、有內容、不溢出 |
+| N2／N3／N4／N5 | **靜態＋模組載入**：驗證器逐條斷言讀取點存在，且四個模組在瀏覽器中載入無錯誤。**未在畫面上目視確認** —— 這四個面板掛在需要完整賽事流程才到得了的賽前畫面（TacticScreen／BanPickScreen／CsTacticScreen） |
+
+⇒ N2–N5 列入 Owner Review 的「**未經畫面實測**」清單。

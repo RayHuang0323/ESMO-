@@ -66,16 +66,17 @@ export const TEAM_DEVELOPMENT_NODES = [
     effect: { kind: "unlock", flag: "dataAnalysis", label: "選手與比賽摘要" },
     levelEffects: [LIVE("解鎖選手與比賽摘要"), FUTURE("未來：開放比賽資料比較"), FUTURE("未來：開放長期趨勢建議")],
   }),
-  NODE("general_growth_support", "general", "advanced", "成長支援", "建立俱樂部層級的長期培養支援，協助規劃選手成長。", "成長支援", {
-    future: true,
+  //  Expansion v1 N1：只給「看得到成長空間」，**不加速任何成長**。
+  NODE("general_growth_support", "general", "advanced", "成長支援", "看得到每位選手還有多少成長空間，以及誰接近生涯尾聲。", "成長支援", {
+    activeLevelCap: 1,
+    effect: { kind: "unlock", flag: "growthPlanning", label: "選手成長空間" },
     prerequisites: [{ nodeId: "general_recovery", minRank: 1 }],
-    levelEffects: [FUTURE("未來：解鎖成長規劃提示"), FUTURE("未來：擴充培養建議"), FUTURE("未來：開放長期成長報告")],
+    levelEffects: [LIVE("解鎖選手成長空間與生涯階段"), FUTURE("未來：擴充培養建議"), FUTURE("未來：開放長期成長報告")],
   }),
-  NODE("general_scout_support", "general", "specialty", "球探支援", "讓通用支援路線延伸到人才觀察與招募準備。", "球探", {
-    future: true,
-    prerequisites: [{ nodeId: "general_data_analysis", minRank: 1 }, { nodeId: "general_growth_support", minRank: 1 }],
-    levelEffects: [FUTURE("未來：擴充球探報告摘要"), FUTURE("未來：提升人才比較深度"), FUTURE("未來：解鎖長期招募規劃")],
-  }),
+  //  ⚠ `general_scout_support` 已於 Expansion v1 REJECT 並移除：球探線已被
+  //    `management_scout_network` ＋ `coach_scouting` 佔滿（cap 2、合計 4），
+  //    它剩下能做的「人才比較深度」會滑向改變人才池 ⇒ roster power。
+  //    **不要為了湊回原本的 8 個候選而補一個替代節點。**
 
   // MOBA：目前的研究節點只提供既有賽前畫面的研究支援提示。
   NODE("moba_hero_lab", "moba", "base", "英雄研究室", "整理英雄研究方向，讓賽前準備看得到目前可用的研究支援。", "MOBA 賽前", {
@@ -95,15 +96,21 @@ export const TEAM_DEVELOPMENT_NODES = [
     prerequisites: [{ nodeId: "moba_hero_lab", minRank: 1 }],
     levelEffects: [LIVE("解鎖對手實際選角與類型摘要"), FUTURE("未來：開放對位比較"), FUTURE("未來：開放對手趨勢")],
   }),
-  NODE("moba_tactical_prep", "moba", "advanced", "戰術準備", "把研究成果整理成比賽前可採用的戰術準備方向。", "MOBA 賽前", {
-    future: true,
+  //  Expansion v1 N2：只顯示**歷史表現**。
+  //  ⚠ 原設計的「擴充戰術選項」已放棄——解鎖戰術是 Club Mastery
+  //    （`mastery/tacticVariant.js`）的責任，兩個系統都能解鎖會產生第二套 authority。
+  NODE("moba_tactical_prep", "moba", "advanced", "戰術傾向", "看得到各套戰術過去打下來的實際表現。", "MOBA 賽前", {
+    activeLevelCap: 1,
+    effect: { kind: "unlock", flag: "mobaTacticInsight", label: "戰術歷史表現" },
     prerequisites: [{ nodeId: "moba_draft_intel", minRank: 1 }],
-    levelEffects: [FUTURE("未來：解鎖戰術準備摘要"), FUTURE("未來：擴充戰術選項"), FUTURE("未來：開放戰術配對")],
+    levelEffects: [LIVE("解鎖戰術歷史表現"), FUTURE("未來：擴充對局情境比較"), FUTURE("未來：開放戰術配對")],
   }),
-  NODE("moba_match_analysis", "moba", "specialty", "賽前分析", "將英雄、選擇與對手資訊整合成完整賽前分析。", "MOBA 賽前", {
-    future: true,
+  //  Expansion v1 N3：capstone。**不引入新資料**，只把已解鎖的資訊聚合成一頁。
+  NODE("moba_match_analysis", "moba", "specialty", "賽前總覽", "把對手傾向、我方戰術與陣容狀態整理成一頁。", "MOBA 賽前", {
+    activeLevelCap: 1,
+    effect: { kind: "unlock", flag: "mobaMatchOverview", label: "賽前總覽" },
     prerequisites: [{ nodeId: "moba_opponent_research", minRank: 1 }, { nodeId: "moba_tactical_prep", minRank: 1 }],
-    levelEffects: [FUTURE("未來：開放賽前總覽"), FUTURE("未來：開放情境比較"), FUTURE("未來：開放完整準備報告")],
+    levelEffects: [LIVE("解鎖賽前總覽"), FUTURE("未來：開放情境比較"), FUTURE("未來：開放完整準備報告")],
   }),
 
   // CS：保留既有地圖研究與團隊磨合讀取點，其餘先是可見但不生效的路線。
@@ -124,15 +131,19 @@ export const TEAM_DEVELOPMENT_NODES = [
     prerequisites: [{ nodeId: "cs_map_lab", minRank: 1 }],
     levelEffects: [LIVE("解鎖地圖風格與對手筆記"), FUTURE("未來：開放對手比較"), FUTURE("未來：開放回合趨勢")],
   }),
-  NODE("cs_tactical_prep", "cs", "advanced", "戰術準備", "把地圖與團隊資料整理成賽前可採用的戰術方向。", "CS 賽前", {
-    future: true,
+  //  Expansion v1 N4：CS 的特色是**地圖維度**（MOBA 沒有），這是兩條線該有的差異。
+  NODE("cs_tactical_prep", "cs", "advanced", "戰術傾向", "看得到各張地圖上的戰術實際打下來如何。", "CS 賽前", {
+    activeLevelCap: 1,
+    effect: { kind: "unlock", flag: "csTacticInsight", label: "地圖戰術表現" },
     prerequisites: [{ nodeId: "cs_team_drill", minRank: 1 }],
-    levelEffects: [FUTURE("未來：解鎖戰術準備摘要"), FUTURE("未來：擴充戰術選項"), FUTURE("未來：開放戰術配對")],
+    levelEffects: [LIVE("解鎖地圖戰術表現"), FUTURE("未來：擴充回合情境比較"), FUTURE("未來：開放戰術配對")],
   }),
-  NODE("cs_match_intel", "cs", "specialty", "賽前情報", "整合地圖、Demo 與團隊磨合，形成完整 CS 賽前情報。", "CS 賽前", {
-    future: true,
+  //  Expansion v1 N5：capstone，同 N3——只聚合，不產生新事實。
+  NODE("cs_match_intel", "cs", "specialty", "賽前總覽", "把地圖、對手與團隊狀態整理成一頁。", "CS 賽前", {
+    activeLevelCap: 1,
+    effect: { kind: "unlock", flag: "csMatchOverview", label: "CS 賽前總覽" },
     prerequisites: [{ nodeId: "cs_demo_analysis", minRank: 1 }, { nodeId: "cs_tactical_prep", minRank: 1 }],
-    levelEffects: [FUTURE("未來：開放賽前總覽"), FUTURE("未來：開放情境比較"), FUTURE("未來：開放完整情報報告")],
+    levelEffects: [LIVE("解鎖 CS 賽前總覽"), FUTURE("未來：開放情境比較"), FUTURE("未來：開放完整情報報告")],
   }),
 
   // 經營：球探效率是目前正式讀取點，青訓支援維持既有資訊提示。
@@ -151,16 +162,18 @@ export const TEAM_DEVELOPMENT_NODES = [
     prerequisites: [{ nodeId: "management_scout_network", minRank: 1 }],
     levelEffects: [LIVE("解鎖名單合約到期摘要"), FUTURE("未來：擴充續約提醒"), FUTURE("未來：開放合約規劃")],
   }),
-  NODE("management_sponsorship", "management", "advanced", "贊助拓展", "建立贊助與俱樂部曝光的長期經營方向。", "經營", {
-    future: true,
+  //  Expansion v1 N6：只做**比較顯示**。⚠ 不得改變任何贊助條件或收入——
+  //    那會變成用發展點買錢，而且會與未來 Facilities 的經營題撞號。
+  NODE("management_sponsorship", "management", "advanced", "贊助拓展", "簽約前看得到各家贊助商的條件比較。", "經營", {
+    activeLevelCap: 1,
+    effect: { kind: "unlock", flag: "sponsorInsight", label: "贊助條件比較" },
     prerequisites: [{ nodeId: "management_contracts", minRank: 1 }],
-    levelEffects: [FUTURE("未來：開放贊助機會摘要"), FUTURE("未來：擴充合作選項"), FUTURE("未來：開放贊助規劃")],
+    levelEffects: [LIVE("解鎖贊助條件比較"), FUTURE("未來：擴充合作選項"), FUTURE("未來：開放贊助規劃")],
   }),
-  NODE("management_finance", "management", "specialty", "財務規劃", "把球探、青訓與經營資源整合成長期財務方向。", "經營", {
-    future: true,
-    prerequisites: [{ nodeId: "management_sponsorship", minRank: 1 }],
-    levelEffects: [FUTURE("未來：開放財務摘要"), FUTURE("未來：擴充資源預測"), FUTURE("未來：開放長期預算規劃")],
-  }),
+  //  ⚠ `management_finance` 已於 Expansion v1 REJECT 並移除：現金預測
+  //    （`economy/forecast.js` 的 `cashForecast()`）**已經是免費且無條件顯示**的功能，
+  //    首頁的資金提醒卡就是它。把玩家已經看得到的東西改成付費解鎖是功能倒退。
+  //    真正缺的是「錢的出口」，那是 Facilities 的題目，不是解鎖。
 ];
 
 const BY_ID = new Map(TEAM_DEVELOPMENT_NODES.map((node) => [node.id, node]));

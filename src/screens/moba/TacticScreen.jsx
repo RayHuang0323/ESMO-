@@ -18,6 +18,8 @@
 import React, { useMemo, useState } from "react";
 import { Frame } from "./LineupScreen.jsx";
 import { MOBA_TACTICS, toEngineTactic, STANDARD_OPP_TACTIC } from "../../platform/contracts/MobaTacticConfig.js";
+//  Expansion v1 N2/N3：只讀既有計數，不產生新事實（見 ui/DevelopmentInsights.jsx 檔頭）。
+import { TacticInsightPanel, MatchOverviewPanel } from "../../ui/DevelopmentInsights.jsx";
 import { useProfileStore } from "../../platform/profileStore.js";
 //  Meta Progression v1：戰術變體。
 //  ⚠ 本畫面**不判斷**解鎖／流派／資格——那些規則全住在 `mastery/` 底下，
@@ -64,6 +66,15 @@ export default function TacticScreen({ onNext, onBack }) {
   //  `null` = 基礎戰術。m1–m8 永遠可選，這個狀態只決定「要不要疊一層變體」。
   const [variantSel, setVariantSel] = useState(null);
   const clubMastery = useProfileStore((s) => s.clubMastery);
+  //  ── Expansion v1 N2：戰術歷史表現 ────────────────────────────────────
+  //  ⚠ 資料來源是 Club Mastery 已經在累積的計數，這裡不新增任何事件流，
+  //    也不解鎖任何戰術（那是 tacticVariant 的責任）。
+  const tacticInsightRows = useMemo(() => MOBA_TACTICS.map((t) => ({
+    id: t.tacticId,
+    name: t.name ?? t.tacticId,
+    games: clubMastery?.tacticUsage?.moba?.[t.tacticId] ?? 0,
+    intent: clubMastery?.tacticIntent?.moba?.[t.tacticId] ?? 0,
+  })), [clubMastery]);
   const variantInfo = useMemo(() => variantsAvailableForTactic(clubMastery, sel), [clubMastery, sel]);
   //  ⚠ 資格由 domain 決定，這裡只是「選到的那個現在還能不能用」。
   //    換基礎戰術或切換流派之後，原本選的變體若不再 equippable 就自動回到基礎，
@@ -105,6 +116,10 @@ export default function TacticScreen({ onNext, onBack }) {
             );
           })}
         </div>
+
+        {developmentEffects.unlocks.mobaTacticInsight && (
+          <TacticInsightPanel rows={tacticInsightRows} testId="moba-tactic-insight" />
+        )}
 
         {developmentEffects.unlocks.dataAnalysis && (
           <div data-testid="moba-data-analysis" style={{ background: GC.card, border: `1px solid ${GC.green}44`, borderRadius: 10, padding: "9px 11px", color: GC.gray, fontSize: 9, lineHeight: 1.5 }}>

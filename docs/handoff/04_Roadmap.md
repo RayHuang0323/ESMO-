@@ -1784,3 +1784,35 @@ ARCHITECTURE_REQUIRED = 0
 - 六個都可 deterministic verify。
 
 逐節點明細見 `docs/design/TeamDevelopment_Expansion_v1.md` §11。
+
+## Team Development Expansion v1 — IMPLEMENTED（2026-09-05）
+
+```
+ADOPTED_NODES_IMPLEMENTED = 6
+CODEX_DEPENDENCY_NODES    = 0
+TREE_TOTAL_POINTS         = 24
+FULL_TREE_ETA             ≈ Season 9
+DEVELOPMENT_POINT_SUPPLY_CHANGED = NO
+NEW_STATE_ADDED           = 無
+NEW_CAPABILITY_KIND_ADDED = 無
+MIGRATION_REQUIRED        = NO
+ONLINE_BOUNDARY_CHANGED   = 無
+NODE_CARD_DENSITY: 11–13 行 → 7–8 行
+```
+
+- 節點表 20 → 18（2 個 REJECT 直接移除，未補替代節點）；`future` 節點 0 個。
+- 六個節點全部走既有 `unlock` 旗標；capability policy 與三個 cap 一律未動。
+- 供給表零改動；早期曲線（S1／S3／S5）逐值不變，只把 S6–S9 的內容真空填掉。
+- Owner Review ④ 已完成（progressive disclosure）；③ 依裁示未動。
+- ⚠ general／management 兩條線目前沒有 specialty 節點（被 REJECT 的剛好是那兩個），
+  路線 stepper 的「由基礎走向專精」對這兩條線略微不精確 —— 低優先 UI 待辦。
+- ⚠ N2／N3／N4／N5 **未經畫面實測**（面板在需要完整賽事流程的賽前畫面上）。
+
+詳見 `docs/design/TeamDevelopment_Expansion_v1.md` §12。
+
+### 下一步候選（未開始）
+
+1. N2–N5 的畫面實測（需要走完整賽事流程的 browser gate）。
+2. Online Fairness architecture：GAP-1（`SquadSnapshot` 正名）與 GAP-2
+   （effective competitive power）—— 產品原則已 DECIDED，架構仍 PENDING。
+3. Club Facilities：維持 **DEFER**，條件見設計文件 §6。
