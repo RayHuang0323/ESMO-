@@ -1677,3 +1677,52 @@ Funds 還有一個結構優勢：設施可以帶**週營運成本**，讓「蓋�
 **更便宜的替代方案（可與 design 並行評估）**：直接**啟用 Team Development 那 8 個
 `future` 節點**。供給上限由節點表推導，所以上限會自動變大，S6–S7 的內容真空
 立刻被填掉，且不新增任何系統、不動經濟層。這是目前 CP 值最高的一步。
+
+## Team Development Expansion & Online Boundary v1 — DESIGN COMPLETE（2026-09-04）
+
+設計文件：`docs/design/TeamDevelopment_Expansion_v1.md`。
+**Audit ＋ Design ＋ Architecture decision，未實作任何產品功能。**
+
+### 結論
+
+| 項目 | 結論 |
+|---|---|
+| 8 個 future node | **6 個啟用（unlock／information），2 個 REJECT** |
+| REJECT 的兩個 | `general_scout_support`（球探線已飽和，且會滑向改人才池）、`management_finance`（現金預測已是免費且無條件顯示，改成付費解鎖是功能倒退） |
+| 新增 capability kind | **不需要**。六個倖存者全部走既有的 `unlocks`（聯集、無上限） |
+| 提高既有 cap | **不做**。前三個 kind 已被 TD＋Coach 超供 200%，提高上限只是把兩個既有系統一起放大 |
+| 啟用階數 | 每個節點 **1 階**（`activeLevelCap: 1`），與既有 live 資訊節點同形 |
+| 可購買總點數 | 18 → **24** |
+| 全樹 ETA | S6–S7 → **S9**（實跑投影；滿階方案 S14／S18 已否決） |
+| 早期曲線 | **S1／S3／S5 完全不變**——上限由節點表推導，只在後段才咬得到 |
+| Club Facilities | **DEFER**（條件見設計文件 §6） |
+
+### Online Fairness Contract（本輪定義，未實作）
+
+`CAREER_OWNS_ROSTER, ONLINE_OWNS_MATCH`：生涯決定你**擁有**什麼（roster、
+能力、club progression、已解鎖資訊）；career-only passive modifier
+（training／recovery／scouting／未來的設施容量）**不得**作為 Online Match modifier；
+線上戰力只由出賽名單快照 ＋ online fairness rules 決定，伺服器以 playerId 自行查證。
+
+**這條原則結構上已經成立且已被強制**：`MatchEntryRequest.v1` 明文「只送身分，
+不送數值」，`FORBIDDEN_VALUE_KEYS` 遞迴擋下數值欄位，`rosterVersionOf()` 的雜湊
+只含身分與編制；四個邊界檔案對 capability 的引用數實測為 **0**。
+
+三個 architecture gap（**已列出，未自行修改**）：
+
+- **GAP-1**：`SquadSnapshot` 不是實作出來的契約，全庫只有一處註解提到。
+  實際存在的是 `MatchSquad.v1` 與 `MatchEntryRequest.v1`。名字沒有統一。
+- **GAP-2**：能力不跨邊界，但**能力的後果已經烘進 roster**
+  （訓練加速 → 成長更快；球探等級 → 更好的新秀池）。
+  「生涯養成的名單在線上算不算公平」這個產品問題還沒有答案，需要 Owner 裁示。
+- **GAP-3**：沒有 verifier 守這條線。今天 0 引用，明天有人加一行就破了且不會紅燈。
+
+### 下一個建議實作 Sprint
+
+**`Team Development Expansion v1` 實作** —— 6 個節點改 `activeLevelCap: 1` ＋
+`effect.kind = "unlock"`、移除 2 個 REJECT、六個資訊面板（沿用既有面板形式與
+progressive disclosure）、一併處理 Owner Review ④（節點卡密度，因為六個新面板
+會放大它），並附帶小 verifier `check_online_fairness_boundary.mjs` 關閉 GAP-3。
+
+節點表與供給上限**零風險**（上限自動推導、早期曲線實測不變），
+工作量集中在六個面板的 UI 與資料聚合。
