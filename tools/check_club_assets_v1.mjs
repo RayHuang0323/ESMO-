@@ -8,7 +8,9 @@
 //  ① 型錄自我一致（價格、specialty、competitivePolicy、無 rarity）
 //  ② **Online 邊界**：俱樂部資產不得以任何形式進入估值／配對
 //  ③ **無硬編碼教練 id**：效果只能走 capability 表，不能靠 `if (id === ...)`
-//  ④ **CS 邊界**：型錄不得授予 CS 旗標；`CsTacticScreen.jsx` 逐位元組未改
+//  ④ **CS 邊界**：型錄不得授予 CS 旗標；Codex 的 CS 保護邊界逐位元組未改
+//     （`src/battle/fps/` 整棵樹 ＋ `CsPrepScreen.jsx` ＋ `CsLoadingScreen.jsx`；
+//      清單與理由見 ④ 區塊內的說明）
 //  ⑤ 合併政策：逐 kind 的 strategy 與 cap 真的生效
 //  ⑥ 狀態機：購買冪等、fail closed、原子性
 //  ⑦ 週鎖：首裝免費、同週擋、跨週解、reload 繞不過
@@ -154,23 +156,24 @@ ck("production code 沒有任何硬編碼的教練 id", offenders.length === 0, 
 console.log("\n── ④ CS 邊界 ──");
 const grantedFlags = COACH_CATALOG.flatMap((a) => Object.keys(a.capability?.unlocks ?? {}));
 ck("型錄不授予任何 CS 旗標", grantedFlags.every((f) => !CS_OWNED_FLAGS.includes(f)), grantedFlags.join(",") || "無旗標");
-//  CS 屬於另一個 owner（Codex）。
+//  ── CS 保護邊界（Codex owned）─────────────────────────────────────────────
 //
-//  ⚠ 這一條原本檢查「`src/screens/fps/` 與 `src/battle/fps/` 整棵樹逐位元組未動」，
-//    而它的註解寫的是「**本輪**必須未動」——它是 Club Assets v1 那一輪的範圍守衛。
-//    但實作成 working tree 檢查之後，就變成對**所有後續 Sprint** 的永久凍結，
-//    連 Codex 並不擁有的賽前畫面也一起凍住。
+//  這是**目前正式的保護邊界**，適用於所有 Sprint（不是任何一輪的暫時範圍）：
 //
-//  2026-09-05 Owner 裁示（TD Expansion v1）把真正的邊界寫清楚了，那是**具名的
-//  battle runtime**，不是整個 fps 目錄：
-//      EsportsFPS3D.jsx / fpsRoster.js / CsPrepScreen.jsx / CsLoadingScreen.jsx
-//      ＋ camera・POV・C4・audio・locomotion・combat route runtime
-//  `CsTacticScreen.jsx` 不在其中，而且它**本來就是 Team Development 的消費端**
-//  （`csDemoAnalysis` 的讀取點就在那支檔案裡）。Expansion v1 的 N4／N5 在 Phase 0
-//  collision check 通過後（Codex 分支對該檔 0 個新 commit）獲授權加賽前資訊面板。
+//    · `src/battle/fps/`        —— Codex 的 CS battle runtime，**整棵樹**凍結
+//    · `src/screens/fps/CsPrepScreen.jsx`     —— 凍結
+//    · `src/screens/fps/CsLoadingScreen.jsx`  —— 凍結
+//    （同屬 Codex 的還有 `src/data/fpsRoster.js` 與 camera・POV・C4・audio・
+//      locomotion・combat route runtime；前者不在 fps 目錄下，由本檔以外的
+//      Sprint 邊界檢查覆蓋。）
 //
-//  ⇒ 收窄成「具名禁區逐位元組未動」。**保護力沒有降低**：Codex 的 battle runtime
-//    仍然整棵樹凍結，只是不再連帶凍結它不擁有的畫面。
+//  ⚠ `src/screens/fps/` 底下**其餘的賽前／賽後畫面不屬於這個邊界**。
+//    例如 `CsTacticScreen.jsx` 本來就是 Team Development 的消費端
+//    （`csDemoAnalysis` 的讀取點就在那支檔案裡），可以加賽前資訊面板。
+//    動它之前仍須依 `AGENTS.md` §10 做 collision check（確認 Codex 當時
+//    沒有在同一支檔案上工作）。
+//
+//  ⚠ 改這份清單 = 改保護邊界，需要 Owner 裁示，不得順手放寬。
 const CS_FROZEN = [
   "src/battle/fps/",                    // Codex 的 battle runtime，整棵樹
   "src/screens/fps/CsPrepScreen.jsx",
@@ -181,7 +184,7 @@ try {
   csDirty = execFileSync("git", ["status", "--porcelain", "--", ...CS_FROZEN],
     { cwd: ROOT, encoding: "utf8" }).trim();
 } catch (e) { csDirty = `git 失敗：${e.message}`; }
-ck("Codex 具名 CS 禁區完全未改動", csDirty === "", csDirty || "clean");
+ck("Codex CS 保護邊界完全未改動", csDirty === "", csDirty || "clean");
 //  戰術教練用的兩個旗標必須真的有消費端——否則就是一張沒有效果的卡。
 const banPick = readFileSync(join(ROOT, "src/screens/moba/BanPickScreen.jsx"), "utf8");
 const mobaTactic = readFileSync(join(ROOT, "src/screens/moba/TacticScreen.jsx"), "utf8");

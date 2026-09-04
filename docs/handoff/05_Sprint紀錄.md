@@ -17936,3 +17936,22 @@ capability contract、LogicEngine／MOBA battle **diff 全部為 0**（逐路徑
 N2／N3／N4／N5 的面板掛在需要完整賽事流程才到得了的賽前畫面
 （TacticScreen／BanPickScreen／CsTacticScreen）⇒ 只做到「讀取點存在 ＋ 模組載入無錯誤」，
 **未在畫面上目視確認**。N1 與 N6 已瀏覽器實測（桌機＋390px）。
+
+## Release 前補齊：N2–N5 消費端 gate（2026-09-05）
+
+`tools/browser_check_expansion_consumers.mjs` **94/94 PASS**（桌機 1366 ＋ 手機 390）。
+
+上一節列為「未經畫面實測」的四個節點已補驗。三個賽前畫面
+（TacticScreen／BanPickScreen／CsTacticScreen）只有在配對 → 房間 → 場次
+全部成立之後才到得了（實測 `startPracticeMatch` 只做到房間），
+而 Owner 不要求跑完整場、也不得為測試加產品捷徑
+⇒ 改用 `tools/browser/mountConsumer.jsx` 掛**真元件 ＋ 真 Store**，
+只繞過「怎麼到達畫面」。掛載器在 `tools/`，產品不 import 它，
+release build 實測**未進 bundle**。
+
+逐節點驗：解鎖前面板不存在 → 走真實購買流程解鎖 → 面板出現且有內容 →
+reload 後仍成立 → 無溢出、面板互動 ≥44px、console/page errors 0。
+
+⚠ 觸控判準只涵蓋**面板自己的互動**；整個畫面的既有按鈕（BanPick 210 個
+英雄格中 110 個 <44px）是既有內容，gate 只回報觀察值，列為獨立的
+mobile 可用性待辦，不在本輪 scope。
