@@ -238,5 +238,50 @@ console.log("\n── §7 本輪不動數值 ──");
   ck("teamStrength 版本字串未變", read("src/platform/competition/teamStrength.js").includes('"teamStrength.v1"'));
 }
 
+// ── §8 定價 ≠ 模擬：免費戰力的實測 ──────────────────────────────────────
+//
+//  ⚠ 這一節是 Owner Review 反駁 Model A 之後補的，也是整份契約最重要的證據。
+//    Season vNext 的 I13 要求「定價與模擬吃同一份輸入」。實測**目前做不到**：
+//    引擎把選手經 `withDerivedStats`（天賦加成）之後才注入，而定價路徑
+//    （`teamStrength(players[])`）看的是**原始** `stats` ⇒ 天賦是免費戰力。
+//    ⇒ 在 `teamStrength` 被證明足夠準確之前，不得把「raw stats 原樣進線上」
+//      寫成不可逆的 FINAL。
+console.log("\n── §8 定價 ≠ 模擬（免費戰力）──");
+{
+  const { teamStrength } = await import("../src/platform/competition/teamStrength.js");
+  const { withDerivedStats, getTalentStatBonuses } =
+    await import("../src/platform/talents/playerDerivedStats.js");
+  const { TALENT_DEFINITIONS } = await import("../src/platform/talents/talentDefinitions.js");
+
+  const STATS = Object.fromEntries(["reflex", "accuracy", "apm", "positioning", "mapAware",
+    "tacticalIQ", "decision", "adaptability", "courage", "focus", "clutch", "consistency",
+    "teamwork", "comms", "leadership", "synergy"].map((k) => [k, 70]));
+  const ranks = Object.fromEntries(TALENT_DEFINITIONS.map((d) => [d.id, d.maxRank ?? 3]));
+  const mk = () => ({ id: "p", role: "mid", status: "主力", morale: 70, condition: "正常",
+    stats: { ...STATS }, talents: { ranks } });
+  const team = [mk(), mk(), mk(), mk(), mk()];
+
+  ck("天賦確實會加能力（前提成立）", Object.keys(getTalentStatBonuses({ ranks })).length > 0);
+  const priced = teamStrength(team, "moba");
+  const engineSide = teamStrength(team.map(withDerivedStats), "moba");
+  //  ⚠ 這一條**斷言差異存在**。它不是在守「差異要消失」——那要等校準；
+  //    它守的是「這件事還沒被解決」這個事實不會被默默遺忘。
+  //    真的把定價與模擬對齊之後，這一條要連同契約文件一起更新（會紅，逼出同步）。
+  ck("已知缺口：定價看不到天賦加成（免費戰力仍存在）",
+    engineSide > priced, `定價 ${priced} vs 引擎側 ${engineSide}（+${(engineSide - priced).toFixed(2)}）`);
+
+  //  引擎真的有走 derived，定價真的沒有 —— 兩邊各自釘住
+  const adapter = read("src/battle/moba/mobaRosterAdapter.js");
+  ck("MOBA 引擎注入前有套用 withDerivedStats", /\.map\(withDerivedStats\)/.test(adapter));
+  const sim = code(read("src/platform/competition/simulateFixture.js"));
+  ck("定價路徑未套用 withDerivedStats", !/withDerivedStats/.test(sim));
+
+  //  其餘已知未定價的向度（只做存在性斷言，證明它們確實在模擬側）
+  ck("英雄熟練會影響引擎 power/tough（未被定價）", /英雄熟練/.test(adapter));
+  ck("召喚師技能隨對戰名單注入（未被定價）", /spellsFor/.test(adapter));
+  ck("CS 地圖適配是真實計算（未被定價）",
+    /export function mapFit/.test(read("src/battle/fps/csPrepData.js")));
+}
+
 console.log(`\nOnline Competitive Power Contract v1：${pass}/${pass + fail} ${fail === 0 ? "PASS" : "FAIL"}`);
 if (fail) process.exitCode = 1;

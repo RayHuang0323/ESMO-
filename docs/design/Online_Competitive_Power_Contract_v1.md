@@ -2,7 +2,7 @@
 
 > 建立日期：2026-09-05　基線：`origin/main` = `3c3f836`
 > 性質：**Audit ＋ 產品契約 ＋ 架構邊界**。未修改 CBR／Rating／battle runtime。
-> 驗證器：`tools/check_online_power_contract_v1.mjs`（**44/44 PASS**）
+> 驗證器：`tools/check_online_power_contract_v1.mjs`（**51/51 PASS**，含 §8 免費戰力實測）
 > 前置：`docs/design/Season_vNext_生涯與線上競技公平架構.md`（既有 FINAL 架構）
 
 ---
@@ -15,9 +15,13 @@
 | `SquadSnapshot` | **不存在於程式**。只是設計文件的名字 ＋ 2 處註解 ＋ 3 條把 `matchSquad.js` 當代理掃描的斷言 |
 | CBR / Cap / Bracket / Rating | **全部不存在於 `main`**。在 `v7/fast-calibration` 那條線上 |
 | MatchSquad vs SquadSnapshot | **兩個不同概念，兩個都要保留**。不 rename |
-| 推薦模型 | **A ＋ 波動狀態正規化**（＝既有 Season vNext 的 CBR 三層），不是 B、不是 C |
-| Career stats 直接用於 Online | **YES（能力值原樣使用）**，但由 Cap／Bracket **定價**，不是免費優勢 |
+| 推薦模型 | **C（保守版）**：raw stats 當**輸入**，server 權威定價，加 effective-power guardrail。**見 §11（本輪內被 Owner Review 推翻並更正）** |
+| Career stats 直接用於 Online | **PARTIAL**：raw stats 是輸入，但**不是**最終 online power |
+| `RAW_CAREER_STATS_ALWAYS_FINAL` | **NO** —— 在 `teamStrength` 定價被證明夠準之前，不得寫成不可逆的 FINAL |
 | 本輪要不要動 CBR／Rating | **NO** |
+
+> ⚠ **本檔 §3 的原始結論（推薦 Model A）已於同一輪被 Owner Review 推翻。**
+> §3 保留原文作為推理脈絡，**結論以 §11 為準**。
 
 ---
 
@@ -134,7 +138,7 @@ career players[] ──(訓練加速/球探等級把能力養高)──▶ 能�
 | **實作複雜度** | 中：Cap 定價 ＋ Bracket ＋ Rating | 高：要維護第二套 effective stats，且必須與模擬同源 | **最高**：A ＋ B 全做，再加一條邊界規則 |
 | **長期 / Steam** | 適合：可加級別、可調上限，不動玩家既有能力 | 不適合：養成型玩家會流失 | 可行但難維護 |
 
-### 推薦：**A ＋ 波動狀態正規化**
+### ~~推薦~~：**A ＋ 波動狀態正規化**（⚠ 已被 §11 推翻，保留為脈絡）
 
 即 Season vNext 的 **Cap → Bracket → Rating**：
 
@@ -142,9 +146,9 @@ career players[] ──(訓練加速/球探等級把能力養高)──▶ 能�
 - **只正規化波動狀態**：`condition` / `morale` 一律寫成基準值。
 - 公平性由**定價**產生：能力高 ⇒ 陣容貴 ⇒ 級別高 ⇒ 對手也貴。
 
-**這解決了 GAP-2 而不需要 effective stats**：career 加成確實讓能力變高，
-但那個高會被**定價**，換成「更硬的對手」，不是「同級內的碾壓」。
-生涯肝度買到的是**入場資格與選擇餘裕**。
+~~**這解決了 GAP-2 而不需要 effective stats**~~：⚠ **這句話是錯的，見 §11。**
+它成立的前提是「定價看得到所有影響模擬的東西」，而實測**目前看不到**
+（天賦加成就有 5.8% 的差距，且那只是五個未定價向度之一）。
 
 ### 為什麼不是 B
 
@@ -227,8 +231,19 @@ CAREER_PLAYER_STATS  = Career 是唯一權威。線上經 SquadSnapshot **取值
 ⇒ 事後查帳時，「88 是 career 值、`normalized` 不含能力 ⇒ 線上也是 88，
 只是它在定價裡值多少錢」是一句話能回答的。
 
-⚠ **不要**在 provenance 裡放「effective 82」這種欄位 —— 推薦模型根本不重算能力。
-放一個永遠等於 career 值的欄位，只會讓後人以為有兩套數字。
+⚠ **本段已依 §11 更正**：原本寫「不要放 effective 欄位，因為模型不重算能力」。
+既然改採 guardrail（§11），provenance **必須**能表達「這一場實際採用的值」，
+否則 guardrail 一旦作用就查不出帳。修正後的形狀：
+
+```jsonc
+  "values":    { "reflex": 88, ... },   // career raw（輸入）
+  "effective": { "reflex": 88, ... },   // 本場實際採用（guardrail 未作用時逐值相等）
+  "guardrail": { "applied": false, "policy": "none", "version": "v1" }
+```
+
+⚠ `effective` 在 guardrail 未啟用時**逐值等於** `values` —— 這不是冗餘，
+而是讓「這個 88 是不是原值」變成一個**可以直接讀出來**的事實，
+而不是靠讀規則文件推論。
 
 ---
 
@@ -305,7 +320,137 @@ CAREER_PLAYER_STATS  = Career 是唯一權威。線上經 SquadSnapshot **取值
 | §5 | 冪等與版本語意：同陣容同日 ⇒ 同 id；JSON 往返不變；練功不變；換人改變；跨日改變；舊名單被拒 |
 | §6 | MOBA／CS 共用同一份契約 |
 | §7 | 線上契約層沒有任何 CBR／Rating 數值 |
+| §8 | **定價 ≠ 模擬**：實測天賦加成進得了引擎、進不了定價（69 vs 73），並釘住其餘未定價向度的存在 |
+
+⚠ §8 的斷言方向是**「差異存在」**，不是「差異要消失」。它守的是
+「這件事還沒被解決」這個事實不會被默默遺忘 —— 真的把定價與模擬對齊之後，
+這一條會紅，逼出一次契約文件的同步更新。
 
 ⚠ §4 的「練功不改變 rosterVersion」是本輪最值得留意的一條：
 它保證「名單有沒有換人」這件事**不會被練功污染** —— 伺服器可以用版本判斷
 「這張申請單是不是基於過期名單」，而不會因為玩家練了一場就誤判。
+
+---
+
+## 11. Contract Reconciliation（Owner Review，2026-09-05）
+
+**本節推翻本檔 §3 的原始推薦，並取代它成為本檔的正式結論。**
+
+### 11.1 兩套規則的正式來源與時序
+
+| | A | B |
+|---|---|---|
+| 文件 | `docs/design/Season_vNext_生涯與線上競技公平架構.md` §6 | `docs/design/TeamDevelopment_Expansion_v1.md` §10.2＋`04_Roadmap.md`＋`08_目前待辦與風險.md` |
+| commit | `91ec289` | `bf996b6` |
+| 日期 | **2026-08-26** | **2026-09-05**（**新 10 天**） |
+| 性質 | 設計文件自己的推薦 | **Owner Review 正式裁示** |
+| 原文語意 | 「推薦的線上公平模型：**CBR 三層**（**FINAL 為結構，LATER 為數值**）」 | 「**未來的 Online Competitive 必須自行建立 effective competitive power，不可無條件把 Career accumulated power 直接視為最終 Online power**」 |
+
+**較新的 Owner decision = B。**
+
+### 11.2 衝突確認：`POLICY_CONFLICT_CONFIRMED = YES`
+
+但衝突的位置要講精確 —— **A 與 B 其實並不直接衝突**：
+
+- A 只把 **結構**（Cap → Bracket → Rating）標為 FINAL，**數值標為 LATER**。
+  它從未寫「raw career stats 永遠原樣進線上、永不加 guardrail」。
+- B 明文列出的機制是「MatchSquad ／ snapshot ／ Cap ／ Bracket ／ Rating ／
+  **normalization**」—— **normalization 本來就在 B 的清單裡**。
+
+⇒ **真正與 B 衝突的是本檔 §3 的結論**，不是 A。
+是我把 A 留下的空間（「數值 LATER」）擅自收斂成
+「`CAREER_STATS_DIRECTLY_USED_ONLINE = YES`、不需要 effective stats」。
+那一步既沒有 Owner 授權，也**沒有證據支持**（見 §11.3）。
+
+⚠ **舊文件的 FINAL 不得覆蓋較新的 Owner 裁示** —— 而本案更簡單：
+舊文件根本沒有做出那個 FINAL，是本檔越權替它做了。
+
+### 11.3 決定性證據：Model A 目前**無法**避免免費戰力
+
+Owner 的問題是「如果 `teamStrength` 定價不準，Model A 怎麼避免免費戰力？」
+實測答案是：**避免不了**，而且不是理論風險，是現在就量得到的差距。
+
+**定價路徑**（`simulateFixture.js:142`）：
+```js
+const sA = teamStrength(rosters?.[fixture.sideA], fixture.gameMode);   // 原始 players[]
+```
+
+**引擎路徑**（`mobaRosterAdapter.js:360,365`）：
+```js
+const rosterBlue = (cfg.roster ?? []).map(withDerivedStats);           // base + 天賦加成
+```
+
+⇒ 天賦加成**進得了引擎，進不了定價**。實測（驗證器 §8，可重跑）：
+
+```
+天賦全滿的能力加成: reflex+3 accuracy+3 apm+6 positioning+6 decision+6
+                    courage+6 leadership+6 adaptability+6 …
+定價路徑 teamStrength(players[])        = 69
+引擎路徑 teamStrength(withDerivedStats) = 73
+未定價的免費戰力 = 4.00（5.8%）
+```
+
+而天賦只是**五個未定價向度之一**。`calcPower` 定價的是
+「16 項能力的加權平均 × 個性 × 士氣 × 狀態」；模擬另外還吃：
+
+| 未定價的向度 | 證據 |
+|---|---|
+| **選手天賦**（derived stats） | `mobaRosterAdapter.js:360` 套 `withDerivedStats`；定價路徑沒有 |
+| **英雄熟練**（heroProgress → power/tough） | `mobaRosterAdapter.js:115` 註明「英雄熟練 → power/tough 由 heroProgressStore」 |
+| **英雄 arch/diff × 角色基準** | 同檔檔頭：power 由「英雄定位 × 選手能力 × 角色基準」推導 |
+| **召喚師技能** | `spellsFor()` 隨對戰名單注入 |
+| **位置適配 `posFit`** | `POSITION_PROFILE` 用前 5 項能力加權 5/4/3/2/1；`calcPower` 用的是**平坦的 mode 權重** ⇒ 「把對的人放對位置」不被定價 |
+| **戰術／流派變體** | `MOBA_TACTICS` ＋ Club Mastery `tacticVariant` |
+| **CS 地圖適配 `mapFit`** | 真實計算，`CsTacticScreen` / `csMapVeto` 都在用 |
+
+⇒ Season vNext 的 **I12／I13**（「快照雜湊涵蓋所有影響模擬的欄位」「定價與模擬吃同一份輸入」）
+在目前架構下**尚不可滿足**。把 Model A 寫成 FINAL，等於把上面每一項都變成
+**可以用生涯進度換取、而且不用付定價代價**的線上戰力 —— 其中天賦與英雄熟練
+正是 career progression 本身。**這正是 GAP-2 的實體。**
+
+### 11.4 修正後的推薦：**C（保守版）**
+
+不是「所有能力統一變成 80」。Owner 沒有要求那個，本檔也不建議。
+建議的是一個**保守、可逆、暫不實作**的契約形狀：
+
+```
+① Raw Stats as Input
+   career raw stats 是 SquadSnapshot 的**輸入**，不是最終 online power。
+   （不做全域正規化，養成成果保留。）
+
+② Server-Authoritative Pricing
+   定價只在 server 端進行，委派 teamStrength.v1，
+   client 永遠不提交任何數值（現況已成立，見 §6）。
+
+③ Effective-Power Guardrail  ←── 本輪新增，取代原 §3 的「不需要」
+   在 pricing 與 simulation 之間放一個**具名的可插拔點**。
+   預設 `policy: "none"`（effective 逐值等於 raw）⇒ **今天行為與 A 完全相同**，
+   但契約上留下「這裡可以介入」以及「介入了要記帳」（§5 的 provenance）。
+
+④ Mode-Specific Normalization Hook
+   MOBA 與 CS 的未定價向度不同（CS 有 mapFit，MOBA 有英雄熟練／召喚師技能）
+   ⇒ guardrail policy **按 mode 設定**，不強迫兩邊用同一條規則。
+   ⚠ 這是**契約參數**，不是修改 battle runtime。
+```
+
+**為什麼是「保守版 C」而不是完整 C**：完整 C 要現在就決定 cap 線與折算規則，
+那需要 `teamStrength` 校準樣本 —— 而本輪明文不做校準。
+保守版只要求**留下介入點與記帳欄位**，數值與政策全部 LATER。
+
+### 11.5 這樣做付出什麼、換到什麼
+
+| | |
+|---|---|
+| **付出** | 契約多兩個欄位（`effective`、`guardrail`）與一個 hook；預設關閉時零行為差異 |
+| **換到** | 不把「raw stats 永遠是最終 online power」寫成**不可逆**的 FINAL。日後若校準顯示定價夠準，只要讓 policy 保持 `none` 即可 —— **A 仍然是 C 的一個特例**，不需要改契約 |
+
+⇒ 這是**單向門與雙向門**的差別：寫 A 是單向門（拆掉要動契約），
+寫保守 C 是雙向門（不用就不啟用）。在證據不足時選雙向門。
+
+### 11.6 前置條件
+
+`TEAMSTRENGTH_CALIBRATION_REQUIRED_BEFORE_MODEL_A_FINAL = YES`。
+
+要把 policy 永久設成 `none`（＝等價於 Model A），必須先證明：
+**模擬吃的每一個影響勝負的向度，定價都吃得到**（I12／I13）。
+今天至少差七項（§11.3 表）。校準本身不在本輪範圍。

@@ -1847,12 +1847,18 @@ NODE_CARD_DENSITY: 11–13 行 → 7–8 行
 - **`MatchSquad` 與 `SquadSnapshot` 是兩個不同概念，兩個都保留，不 rename。**
   前者是 client→server 的**申請**（不可信），後者是 server 內部的**裁決依據**（權威）。
   合併會直接毀掉目前唯一真正成立的 identity-only 保護。
-- **推薦模型 = A ＋ 波動狀態正規化**（＝既有 Season vNext 的 Cap → Bracket → Rating）。
-  能力值**原樣使用**，只正規化 condition／morale；公平性由**定價**產生。
-  ⇒ GAP-2 因此不需要 effective stats：career 加成確實讓能力變高，
-  但那個高會被定價換成「更硬的對手」，不是「同級內的碾壓」。
-- **B（normalization）被否決**：抹平養成成果等於把經營遊戲與線上切開。
-- **C（hybrid）被否決**：複雜度是 A＋B 相加，而它多換到的東西 A 已用更好懂的方式給了。
+- ⚠ **初稿推薦 Model A，已於同一輪被 Owner Review 推翻**（見設計文件 §11）。
+- **推薦模型 = C（保守版）**：raw stats 當**輸入**、server 權威定價、
+  加一個預設關閉的 **effective-power guardrail** ＋ **mode-specific hook**。
+  預設 `policy: "none"` ⇒ **今天行為與 A 完全相同**，但不把
+  「raw stats 永遠是最終 online power」寫成不可逆的 FINAL。
+- **B（完全抹平）仍然否決**：抹平養成成果等於把經營遊戲與線上切開。Owner 也沒有要求它。
+- **推翻 A 的理由是實測，不是偏好**：定價路徑
+  （`simulateFixture` → `teamStrength(players[])`）看不到天賦加成，
+  而引擎路徑（`mobaRosterAdapter` → `.map(withDerivedStats)`）看得到
+  ⇒ 實測 **69 vs 73（5.8% 免費戰力）**，且天賦只是七個未定價向度之一
+  （英雄熟練、英雄定位、召喚師技能、posFit、戰術變體、CS mapFit）。
+  ⇒ Season vNext 的 I12／I13 在目前架構下**尚不可滿足**。
 
 ### 本輪明確不做
 
