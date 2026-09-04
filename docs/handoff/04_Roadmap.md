@@ -1543,3 +1543,137 @@ AWP_TRIAGE = UNRESOLVED → CBR BLOCKED，不進 Rating   ← 目前在這裡
   legacy gate 未動（Sprint 明文不要一次重寫全部），清單與建議順序見
   `08_目前待辦與風險.md` 同名章節。
 - 驗證 A–F 全部實跑通過，含人工製造的 product fail／port 佔用／事件迴圈鎖死。
+
+## Club Facilities Checkpoint — DESIGN FIRST（2026-09-04，TD-56 release 後）
+
+短版 Roadmap／Product Architecture Checkpoint。**只做 audit 與建議，未實作任何功能。**
+
+### 現況：七個系統的責任與資源
+
+| 系統 | 產出 | 消耗 | 權威 |
+|---|---|---|---|
+| Team Development | 4 類 20 節點（12 個活的／8 個 `future`），能力＋解鎖旗標 | **Development Points**（18 點） | `development/` |
+| Club Assets / Coach | 一位裝備中的總教練提供能力；識別是純外觀 | **Club Points**（700／1100／1700） | `assets/clubAssetsState.js` |
+| Club Mastery | 流派認同、戰術變體解鎖 | 比賽行為（非點數） | `mastery/` |
+| Club Progression | Club Level（由 Club XP 推導，不落盤） | — 只進不出 | `progression/` |
+| Training | 4 門課程改 16 項能力 | 選手體力＋世界日 | `data/playerModel.js` |
+| Scouting | 新秀池與偵查等級 | 世界日（`SCOUT_DAYS`）＋ Funds（簽約） | `data/recruitPool.js` |
+| Retention Economy | 日／週／季目標 → Club Points ＋ lifetime | — | `retention/` |
+
+### ⚠ 最關鍵的發現：能力欄位已經飽和
+
+`clubCapabilities.CAPABILITY_POLICY` **只有四個 kind**，而且都已經有兩個來源在餵：
+
+| kind | 上限 | Team Development 最大 | Coach 最大 | 合計 vs 上限 |
+|---|---|---|---|---|
+| `trainingDaysReduction` | **2** | 3 | 1 | 4 ⇒ **已超供** |
+| `dailyRecoveryBonus` | **8** | 12 | 4 | 16 ⇒ **已超供** |
+| `scoutDaysReduction` | **2** | 3 | 1 | 4 ⇒ **已超供** |
+| `unlocks` | 無上限（聯集） | 6 個旗標 | 2 個旗標 | 冪等 |
+
+⇒ **第三個來源餵同樣的欄位，玩家一點感覺都不會有**——上限早就被前兩個吃滿。
+Facilities 要有意義，只有三條路：① 提高既有上限（＝重新平衡 TD 與 Coach）、
+② 新增 capability kind（＝要有**新的消費端**，那才是真正的工作量）、
+③ 不給數值，只給解鎖／容量。
+
+### 1. Club Facilities 應該負責什麼
+
+**應該**：俱樂部的**容量與規模**——「你能同時做多少事」，而不是「你做得多快」。
+既有系統已經佔滿「多快」（Training 天數、Scout 天數、恢復速度）。
+候選責任（都需要新的消費端，見 §5）：
+
+- 同時可訓練人數上限（目前無此概念）
+- 名單容量 `ROSTER_CAP` / 青訓席位
+- 每日競技場次容量 `COMPETITIVE_BLOCK.matchesPerDay`（目前寫死 3）
+- 週營運成本結構（把 Funds 接進俱樂部經營）
+
+**不應該**：再發一次訓練加速、恢復加成、球探加速——那三個是 Team Development
+與 Coach 的既有責任，而且上限已滿。
+
+### 2. 放進 Facilities 會與誰重複
+
+| 若 Facilities 提供 | 與誰重複 | 嚴重度 |
+|---|---|---|
+| 訓練加速 | TD `general_training_flow`（3 階）＋ `coach_conditioning` | 🔴 直接撞號，且已超供 |
+| 體力恢復 | TD `general_recovery`（3 階）＋ `coach_conditioning` | 🔴 同上 |
+| 球探加速 | TD `management_scout_network`（3 階）＋ `coach_scouting` | 🔴 同上 |
+| 賽前情報解鎖 | TD 的 6 個 unlock 旗標 ＋ `coach_tactical` | 🟠 旗標可聯集，但責任模糊 |
+| 青訓／球探基礎建設 | **TD 已保留 `general_scout_support`、`management_academy`** | 🟠 概念被佔走 |
+| 贊助／財務 | **TD 已保留 `management_sponsorship`、`management_finance`** | 🟠 同上 |
+
+⚠ Team Development 的 **8 個 `future` 節點**（可購買點數 0）當中，至少四個
+（成長支援、球探支援、贊助拓展、財務規劃）正是 Facilities 最直覺會claim 的題目。
+**先決定它們歸誰**，否則兩邊會長出同名的東西。
+
+### 3. Facilities 應該是什麼形式
+
+**建議：unlock / capacity system，不是第四棵技能樹，也不是純 passive modifier。**
+
+- ❌ **建築升級樹**（Lv1→2→3 ＋ 前置）＝ 與 Team Development **同形狀**：
+  節點、階級、前置、點數。那會是第三棵樹（見 §5）。
+- ❌ **passive career modifier**＝ 直接落進已飽和的四個 capability 欄位。
+- ✅ **沿用既有的資產購買權威**：`assetCatalog.js` 檔頭自己就寫著
+  「識別上線只是第一次，之後還有**設施**」。Facilities 作為**第三份型錄**
+  接進 `clubAssetsState.js`，一次購買、永久擁有、`competitivePolicy` 既有欄位，
+  **不新增購買狀態機**。差別是設施給的是**容量／解鎖**，不是速度數值。
+
+### 4. 用什麼資源購買
+
+**建議：Funds（資金），而不是 Club Points。**
+
+| 資源 | 現況 | 判斷 |
+|---|---|---|
+| **Funds** | 收入來自週結算＋獎金；**目前唯一的出口是續約與簽新秀** | ✅ 有嚴重的 sink 缺口。設施是「俱樂部基礎建設」，用錢買最符合玩家直覺 |
+| Club Points | 已是 Coach＋識別的貨幣，`clubPointsLifetime` 是購買資格 | ⚠ 再加一個大 sink 會與教練競爭同一份預算，稀釋既有選擇 |
+| Development Points | 18 點、S6–S7 用完 | ❌ 供給太小，且它的語意是「路線選擇」不是「蓋東西」 |
+
+Funds 還有一個結構優勢：設施可以帶**週營運成本**，讓「蓋了就要養」成真，
+這是目前經濟層完全缺席的一條負回饋。
+
+### 5. 會不會產生第三／第四套技能樹
+
+**會，如果照建築升級樹做。** 目前已經有兩套進度結構：
+
+- Team Development：節點／階級／前置／點數（**樹**）
+- Club Mastery：doctrine track／需求種類／領取（**軌道**）
+
+再加一棵有前置與階級的設施樹 ⇒ 玩家要同時理解三套不同規則的進度系統，
+違反 `ESMO_UIUX設計原則.md` §4「一畫面一重點、不要同時要求玩家理解太多系統」。
+
+**避免方式**：設施做成**扁平的一次性購買清單**（像教練型錄），
+沒有階級、沒有前置圖，資格條件沿用既有的 `prerequisite` 形狀。
+
+### 6. 是否影響 Online competitive fairness
+
+**是同一個既有問題，不是新問題。** 現有骨架已經處理了一半：
+
+- `coachCatalog` 的 validator 有硬規則：**「有 capability 就必須是 `careerOnly`」**。
+- 識別（純外觀）一律 `cosmeticNeutral`。
+
+所以設施只要有能力欄位，就會被同一條規則強制標成 `careerOnly`。
+
+但 TD-56 留下的 `ONLINE_FAIRNESS_REVIEW_REQUIRED = YES` **仍未解**：
+`scoutDaysReduction` 一稿兩用（同時改新秀分布）、`trainingDaysReduction` 加速成長，
+兩者都流進名單強度。**設施若碰容量（同時訓練人數、名單上限），會讓這條路徑更粗。**
+
+⇒ 建議：**在 Facilities 開工前先結掉 online fairness 的裁示**，
+否則會在一個未定案的地基上再疊一層。
+
+### 7. 建議
+
+**`DESIGN FIRST`** —— 不是 GO，也不是 DEFER。
+
+理由：題目本身成立（Funds 沒有 sink、S6–S7 之後沒有新東西可買、
+架構已預留設施型錄），但**四個前置決策沒做完之前開工，會直接撞上既有系統**：
+
+1. Team Development 那 8 個 `future` 節點歸誰？（成長支援／球探支援／贊助／財務）
+2. 四個 capability kind 已飽和 —— 設施要提高上限、還是新增 kind＋新消費端？
+3. Funds 作為設施貨幣，週營運成本要不要一起做？
+4. online fairness 裁示（TD-56 遺留）。
+
+**Design sprint 的產出**應該是一份 `docs/design/ClubFacilities_v1.md`，
+把上面四題答完，外加一張「哪一條能力歸哪個系統」的責任表。預估遠小於實作。
+
+**更便宜的替代方案（可與 design 並行評估）**：直接**啟用 Team Development 那 8 個
+`future` 節點**。供給上限由節點表推導，所以上限會自動變大，S6–S7 的內容真空
+立刻被填掉，且不新增任何系統、不動經濟層。這是目前 CP 值最高的一步。

@@ -134,6 +134,14 @@ runner 對每個子行程設 `ESMO_VERIFY_FLAT=1` ⇒ fan-out 腳本跳過巢狀
 - 碰 **Progress / Reward** → 跑 `check_progress25`（冪等、不重複發獎）。
 - 碰 **Replay** → 跑含 replay 斷言的 verifier（`experience26` / `presentation29b2` / `controls29b3`）。
 - **所有子行程必須檢查 exit code 與輸出形狀**（不可只看有沒有印字）。
+- **正式站 smoke：驗證結果前，必須先驗證 scenario precondition 真的成立。**
+  不得只依 localStorage／test-internal state 推定情境已就緒。
+  情境的成立與否要由**受測系統自己的輸出**（畫面上的值、UI 狀態）確認，
+  種子失敗必須讓該情境**紅燈或明確跳過**，不得靜默地用另一個狀態跑完然後回報通過。
+  ⚠ 實例（TD-56 release）：正式站 smoke 的 0 點情境靠「讀既有存檔再 patch」種子，
+  但剛開的正式站分頁還沒觸發過 `save()`，localStorage 是空的 ⇒ patch 被跳過，
+  整段實際跑在 1 點狀態，卻仍回報 33/39 通過。修法是直接寫入最小存檔，
+  並把斷言改讀**畫面上的數字**而不是 localStorage。
 - 各支檢查數被彼此的輸出形狀正則硬編碼（改一支可能連動）：見 `CLAUDE.md` 現役清單。
 
 ## 8. Git Rules
@@ -222,6 +230,10 @@ cloudflared tunnel --url http://localhost:<preview-port>
 5. tunnel 不取代桌機 preview；兩個並存，桌機仍走 localhost。
 
 ## UI 呈現原則（2026-08-04 起，適用**所有**新功能）
+
+> **全域 UI/UX 設計原則見 `docs/design/ESMO_UIUX設計原則.md`——建立任何新玩家端畫面前必讀。**
+> 該檔規範：progressive disclosure、資訊三層級、文字密度、一畫面一重點、遊戲感與互動狀態、
+> 手機規則、玩家端禁用工程術語、新 UI 前的九問檢查表。本節只保留硬規則，詳細不在此重複。
 
 Ray 的長期要求：功能上 UI 時，**優先做成圖形化、好操作的介面**，而不是純數字或表格。
 可以有克制的視覺特效。**但特效與版面不得影響功能邏輯。**
