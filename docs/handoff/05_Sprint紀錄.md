@@ -17955,3 +17955,56 @@ reload 後仍成立 → 無溢出、面板互動 ≥44px、console/page errors 0
 ⚠ 觸控判準只涵蓋**面板自己的互動**；整個畫面的既有按鈕（BanPick 210 個
 英雄格中 110 個 <44px）是既有內容，gate 只回報觀察值，列為獨立的
 mobile 可用性待辦，不在本輪 scope。
+
+---
+
+## Sprint：ESMO Core Loop & Mode Differentiation v1（2026-09-07，產品重新定位）
+
+**類型**：純設計。`src/` 零變更、`tools/` 零變更、不 push、不 deploy。
+**觸發**：Owner 指出「一般對戰」長期定位太弱——想測試打快速練習、
+想成長打季賽，中間那一層沒有不可取代的價值。
+
+### 完成項
+
+- 新增 `docs/design/ESMO_Core_Loop_Mode_Differentiation_v1.md`
+  （診斷、每日循環、四模式定位、12 題逐題回答、General Match 三案評估、
+  玩家挑戰邊界、未決事項）。
+- 更新 `04_Roadmap.md`、`08_目前待辦與風險.md`。
+
+### 主要結論
+
+1. **一般對戰同時在做兩份不相干的工作**，兩份都做得比別人差
+   ⇒ 拆分：練兵功能留 Career（練習賽，AI，成長 1.0 逐值不變），
+   配對管線長成玩家挑戰（Unranked async PvP，0 Career 成長）。
+   `GENERAL_MATCH_LONG_TERM_DECISION = A`（拆分式），現在不改程式。
+2. **模式差異必須建立在風險與資訊，不能建立在獎勵大小。**
+   用獎勵區分，永遠是獎勵最大的那個吃掉其他模式——那是一般對戰的死因。
+   判準：**拿掉獎勵之後玩家還會不會打這一場？**
+3. `ASYNC_PVP_RECOMMENDED = YES`。決定性理由是**兩個玩家的世界時間無法同步**
+   （甲第 1 年第 12 天 vs 乙第 3 年第 70 天），不是偏好問題。
+4. **定價權威是 Ranked 的前置，不是 Player Challenge 的前置** ⇒ 排程改為
+   Player Challenge 架構在前、`Online Pricing Authority Design v1` 在 Ranked 前恢復。
+5. 新增風險：`CAREER_OWNS_ROSTER` 之下，**任何可購買的生涯加速都是線上競技力**
+   ——包含看起來無害的「購買額外每日容量」。
+
+### 量測依據（非估計）
+
+- 一場 MOBA 平均 22.5 分鐘遊戲內時間（`tools/measure_teamstrength_pricing_v1.mjs` 實跑）
+- `SIM_PER_REAL = 0.5 / 0.13 ≈ 3.85×` ⇒ 1× 觀戰約 5.8 分鐘、4× 約 1.5 分鐘
+- ⇒ 每日容量 3 場 × 1× ≈ 18 分鐘 = 10～20 分鐘 session 的全部
+- 與 `retentionObjectives.js` 既有設計註解（「三個加起來 10–20 分鐘，
+  一場對戰約 5–8 分鐘」）吻合 ⇒ 目標時長不是新主張，是既有標準只在留存層被遵守
+
+### 未完成 / 未決（等 Owner）
+
+練習賽每日容量是否維持 3、每日目標是否與出賽脫鉤、Ranked 稀少性機制、
+付費重置生涯（建議不做）、玩家挑戰的對手索引軸。
+
+### 明確沒做
+
+不改 General Match 程式（**連改名也沒改**——`MATCH_TIER_LABELS` 是名稱與分類
+同源處，分類定案前改名會製造分歧）、不刪既有 General Match、不重做 Quick Practice、
+不動 Season runtime / MOBA / CS battle、不實作 PvP、不實作 monetization、
+不開 Cap / Bracket / LadderRating / SquadSnapshot / Pricing Authority。
+**也沒做任何數值設計**——獎勵量級、配額、點數換算全部留白：
+在模式邊界定案前調數字，會把「這個模式該不該存在」偽裝成「這個模式給多少」。
