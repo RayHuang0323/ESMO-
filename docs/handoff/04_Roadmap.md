@@ -2017,3 +2017,133 @@ Unranked 挑戰不需要 Bracket 也不需要 Rating ⇒ **不依賴 `teamStreng
 3. Ranked 稀少性用什麼機制（賽季配額 / 每週配額 / 綁生涯年）
 4. 付費重置生涯 / 洗選手（建議預設不做）
 5. 玩家挑戰的對手索引軸
+
+---
+
+## 🎯 Player Challenge (Async PvP) Architecture v1（2026-09-07，架構）
+
+完整文件：`docs/design/Player_Challenge_Async_PvP_Architecture_v1.md`。
+本輪 **`src/` 零變更**，只做架構。承接 28859a2 的全部結論 ＋ 本輪 Owner Decisions 1–5。
+
+### 支點：引擎是決定性的
+
+一場對戰是 `模擬(seed, 我方快照＋戰術, 對方快照＋預存方案)` 的純函式。
+由這一句直接推出整套語意，不必為每件事各發明一條規則：
+
+```
+challengeId = hash(兩份快照雜湊 | 兩邊戰術)     ← 刻意不含嘗試次數 / 時間戳 / 亂數
+seed        = challengeId
+```
+
+| 問題 | 由上式直接得到的答案 |
+|---|---|
+| 去重 | 同一組輸入 ⇒ 同一個 id ⇒ 天然去重（與 `matchEntry` 的 `transactionId` 同手法） |
+| 重整 / 連點 / 回上一頁 | 重算出同一個 id ⇒ 命中既有紀錄 |
+| 洗結果 | **不可能**。不改輸入重打，結果逐值相同 |
+| 回放 | **不存**。有 id 就有 seed，重算得出（省下每場最多 2.5MB） |
+
+### `SquadSnapshot.v1` 與 `MatchEntryRequest.v1` **方向相反，兩者都對**
+
+| | `MatchEntryRequest.v1` | `SquadSnapshot.v1` |
+|---|---|---|
+| 描述 | **我**的出賽申請 | **對手**的凍結狀態 |
+| 數值 | **絕對不帶**（遞迴掃描擋下） | **必須帶** |
+| 為什麼 | 伺服器有我的資料，客戶端說什麼都不算 | **對手離線，沒有人可以去查** |
+| 誰能產生 | 我的客戶端（伺服器重驗） | **只有擁有那條生涯的一方** |
+
+⚠ 「只送身分不送值」的前提（有線上權威可查）在非同步下**不成立**
+⇒ 快照靠雜湊 ＋ 簽發者建立可信度。
+⚠ **挑戰者的客戶端永遠不得構造對手的快照**——這是本架構的信任邊界。
+
+`SQUADSNAPSHOT_FIRST_REAL_CONSUMER = Player Challenge`（第一個「非有它不可」的消費端）。
+⚠ **但本輪不建它**——現在建，到下一輪之前仍是 dead module ⇒ 與 Challenge 同輪落地。
+
+### 快照必須含英雄熟練（271b31d 直接決定）
+
+I12「雜湊涵蓋所有影響模擬的欄位」有了具體清單，其中最關鍵的一項是
+**英雄熟練 loadout（power/tough 乘數）**——271b31d 實測它是勝負主要決定者
+（×1.25 ⇒ 勝率 94.4%）。漏掉它，重播會對不上。
+`condition`/`morale`/`energy` 一律寫**基準值**（I13），堵住那條 28.7% 的沙包管道。
+
+### ⚠ 有一條可以自我證明的不變式
+
+因為引擎決定性：**用儲存的輸入重跑，重播不出當初的結果 ⇒ 快照少了欄位。**
+⇒ I12 不必靠人工清點欄位。一支 `check_challenge_replay` 會在漏欄位的當下就變紅。
+**這支驗證器要在快照落地後立刻做**，否則等發現漏欄位時已有一批對不上的歷史紀錄。
+
+### 對手探索：看板，不是自動配對
+
+`CHALLENGE_BOARD_RECOMMENDED = YES`。理由不只是 Owner 指定——
+自動配對必須由系統宣告「這兩隊實力相近」，而 271b31d 已證明系統**沒有能力做這個宣告**。
+看板把宣告換成描述，選擇權交回玩家 ⇒ 系統不必說出它證明不了的話。
+
+五個候選位全部由**觀測值**定義：可以先試手／勢均力敵／硬仗（三者用
+**這份快照的被攻破率＋樣本數**）／特殊陣容（用組成差異，**不宣告強弱**）／近期突出。
+
+⚠ 每個標籤都是「有樣本數的觀測事實」：寫「12 戰 3 守」，不寫「較弱」。
+⚠ 樣本不足就寫「尚無挑戰紀錄」，**不推估、不補值**。
+⚠ 不得把 `calcPower` 換名當戰力／評分／星等（Owner Decision 5）。
+⚠ 未用 Career Year 當公平軸，未宣稱 Club Level 等於戰力（Owner Decision 5）。
+
+`CURRENT_PRICING_REQUIRED = NO`（Unranked 不需 Cap / Bracket / Rating）。
+`FAIR_MATCH_GUARANTEED = **NO**`——沒有可信定價就不可能保證，本設計不假裝。
+它做的是避免極差首局：玩家自己選、冷啟偏向已被攻破的快照（樣本不足者不入首局看板）、
+依最近結果調整**看板組成**（不是動態難度、不碰模擬參數）、零永久損失。
+
+### 真人感的主力資料來源已經在了
+
+`ClubMastery.v1` ＋ `Doctrine.v1`：三條流派（強攻／控圖／應變）**生涯累積、永不過期**，
+而且每條 `claim` 都寫得出取捨（強攻「容錯低、被拖久會失勢」…）
+⇒ 揭露流派本身就是可針對的資訊，且不涉及任何強弱宣告。
+再加上 `Honor.v1` 履歷、快照的先發不平均（例：先發插一個 18 歲）、
+「三天內換過先發」＝ 舊情報失效。
+
+### General Match 沿用約八成，一段誠實收掉
+
+沿用：`MatchSquad` / `MatchEntryRequest` / 票券（狀態流變短，**不經 `queued`**）/
+指派單（對手欄改帶快照雜湊）/ `MatchSession`（本來就綁**雙方**隊伍版本＋seed＋
+一次性 token，幾乎為 async 而寫）/ 回放播放器。新增 `origin.kind = challenge`。
+
+⚠ **`MatchRoom.v1` 的 ready check 不能原樣沿用**：防守方不在線上，沒有人可以確認。
+房間走 `waiting → confirmed`，標 `opponentConfirmedBy: "snapshot"`
+（發布快照就是他的事前同意）。
+⚠ **不得為了臨場感假裝跑一段倒數**——那是 V0D `repractice` 事故的同一類錯誤。
+畫面要寫「對手已預先提交防守陣容（9 月 3 日）」，不是「等待對手確認…」。
+
+### 獎懲邊界
+
+需要**第五個** `MATCH_SOURCE`：`challenge`，成長倍率 **0.0**。
+⚠ 不得用「`competitive` ＋ 布林旗標」代替（TD-36 的形狀）。
+
+`CAREER_WRITEBACK = NONE`：0 成長 / 0 體力 / 0 世界時間 / 0 賽季名次 /
+0 LadderRating / **不吃練習賽每日容量**（容量是為節流生涯成長，Challenge 沒有可節流的）
+/ 輸掉不掉任何東西。
+
+**兩層防護**：① Challenge 結算**根本不呼叫** `applyMatchProgress`；
+② 就算接錯線，`challenge` 倍率 0.0、獎勵公式早退。
+⚠ ① 是設計、② 是防呆，**驗證器要同時釘住兩層**，否則 ① 被繞過時沒人會發現。
+
+### Owner Decisions 的落點
+
+1. 練習賽容量 3 是 **ceiling**，UI 不得呈現成「今日 0/3」；Challenge 不吃這個容量。
+2. Daily Objectives 每天最多 **1 個**強制出賽，且必須存在
+   「巡場 → 經營決策 → 推進世界日」這條完全不比賽也能完成的完整路徑。
+   ⚠ Challenge **不得**進入每日出賽類目標，成為新的出賽壓力。
+3. Ranked：Rated quota 掛 **ServerTime**（⚠ 不得接 `worldClock`，那會讓線上推生涯時鐘），
+   產品基準 3 場／伺服器日，用完仍可玩 Challenge / Practice / Career，**永不可付費增加**。
+   本輪只留介面位置。
+4. 不賣 Career reset / 額外成長場次 / 額外 Rated quota；額外 Save Slot 未來可評估。
+5. 已遵守：未用 Career Year 當公平軸、未宣稱 Club Level 等於戰力、未重包 `calcPower`。
+
+### 落地順序（下一輪）
+
+① `SquadSnapshot.v1` ＋ 發布節流 ＋ I13 正規化 → ② `check_challenge_replay`（**緊接著做**）
+→ ③ `MATCH_SOURCE.challenge` ＋ 兩層防護驗證器 → ④ challenge 路徑（沿用為主，
+ready check 收掉）→ ⑤ Challenge Board ＋ 觀測值標籤 ＋ 冷啟 → ⑥ 賽後對照。
+
+⚠ **v1 建議先只做 MOBA Challenge**：CS 沒有 headless 解算器（271b31d），
+「決定性重算 = 驗證快照完整」在 CS 上目前不成立，須與 CS owner 協調。
+
+### 建議下一輪：`Player Challenge v1 實作（MOBA）`
+
+按上面 ①–⑥ 的順序。Online Pricing Authority 維持暫停，在 **Ranked 之前**恢復。

@@ -18008,3 +18008,63 @@ mobile 可用性待辦，不在本輪 scope。
 不開 Cap / Bracket / LadderRating / SquadSnapshot / Pricing Authority。
 **也沒做任何數值設計**——獎勵量級、配額、點數換算全部留白：
 在模式邊界定案前調數字，會把「這個模式該不該存在」偽裝成「這個模式給多少」。
+
+---
+
+## Sprint：Player Challenge (Async PvP) Architecture v1（2026-09-07，架構）
+
+**類型**：純架構設計。`src/` 零變更、`tools/` 零變更、不 push、不 deploy。
+**承接**：`ESMO_Core_Loop_Mode_Differentiation_v1.md`（28859a2）＋ 本輪 Owner Decisions 1–5。
+
+### 完成項
+
+- 新增 `docs/design/Player_Challenge_Async_PvP_Architecture_v1.md`
+- 更新 `04_Roadmap.md`、`08_目前待辦與風險.md`
+
+### 主要結論
+
+1. **整套架構的支點是「引擎是決定性的」。**
+   `seed = challengeId = hash(兩份快照雜湊 | 兩邊戰術)`，刻意不含嘗試次數／時間戳／亂數
+   ⇒ 去重、重整、洗結果、回放四件事的語意**直接掉出來**，不必各發明一條規則。
+   其中「回放不存、由 seed 重算」省下每場最多 2.5MB。
+2. **`SquadSnapshot.v1` 與 `MatchEntryRequest.v1` 方向相反，兩者都對。**
+   申請單「只送身分不送值」的前提是有線上權威可查；非同步時對手離線，
+   前提不成立 ⇒ 快照**必須帶值**，改靠雜湊 ＋ 簽發者建立可信度。
+   ⚠ 挑戰者的客戶端永遠不得構造對手的快照。
+3. `SQUADSNAPSHOT_FIRST_REAL_CONSUMER = Player Challenge` —— 第一個「非有它不可」的消費端。
+   ⚠ **但本輪不建它**，現在建到下一輪之前仍是 dead module ⇒ 與 Challenge 同輪落地。
+4. **有一條可以自我證明的不變式**：用儲存的輸入重跑，重播不出當初的結果
+   ⇒ 快照少了欄位（I12）。`check_challenge_replay` 要在快照落地後**立刻**做。
+5. **看板不是自動配對，而且理由不只是 Owner 指定**：自動配對必須由系統宣告
+   「這兩隊實力相近」，271b31d 已證明系統沒有能力做這個宣告。
+   看板把宣告換成描述 ⇒ 系統不必說出它證明不了的話。
+   `FAIR_MATCH_GUARANTEED = NO`，照實說。
+
+### 由 271b31d 直接決定的一件事
+
+快照**必須包含英雄熟練 loadout**（power/tough 乘數）——它是勝負主要決定者
+（×1.25 ⇒ 勝率 94.4%），卻**不在** `calcPower` 的輸入裡。
+⇒ 憑「定價看得到什麼」去列快照欄位一定會漏掉它，而漏掉就是重播對不上。
+`condition`/`morale`/`energy` 一律寫基準值（I13），堵住那條 28.7% 的沙包管道。
+
+### 盤點結果（實測）
+
+- `SquadSnapshot.v1` **不存在**（全樹只有 `coachCatalog.js:49` 一處註解提到）。
+- `onlineValuation.js` **不存在**（`check_club_assets_v1.mjs` 用 `existsSync` 判斷，
+  不在就明說跳過；實跑 105/105 PASS，4 項不適用）。
+- `MatchSession.v1` 本來就綁「**雙方**隊伍版本 ＋ seed ＋ 一次性 launchToken」
+  ⇒ 幾乎是為 async 寫的，欄位不必新增，語意直接對上。
+- ⚠ `MatchRoom.v1` 的 ready check 是**唯一**不能原樣沿用的一段（防守方不在線上）。
+  收成 `waiting → confirmed` ＋ `opponentConfirmedBy: "snapshot"`，
+  **不得假裝跑倒數**（V0D `repractice` 事故的同一類錯誤）。
+
+### 未完成 / 未決
+
+Club Points 數值、快照新鮮度門檻（起始基準 14 真實天）、看板位數、冷啟樣本門檻
+——全部刻意留白。CS Challenge 因無 headless 解算器暫不納入，v1 先只做 MOBA。
+
+### 明確沒做
+
+`src/` 零變更。不實作 Online Pricing Authority / Cap / Bracket / LadderRating / Ranked，
+不動 MOBA / CS battle runtime，不改 `teamStrength` 權重，不實作 monetization，
+不重做 General Match。**也沒建 `SquadSnapshot.v1` 的程式**（見結論 3）。
