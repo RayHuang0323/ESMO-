@@ -18068,3 +18068,59 @@ Club Points 數值、快照新鮮度門檻（起始基準 14 真實天）、看�
 `src/` 零變更。不實作 Online Pricing Authority / Cap / Bracket / LadderRating / Ranked，
 不動 MOBA / CS battle runtime，不改 `teamStrength` 權重，不實作 monetization，
 不重做 General Match。**也沒建 `SquadSnapshot.v1` 的程式**（見結論 3）。
+
+---
+
+## Sprint：Player Challenge Architecture v1 — Reconciliation（2026-09-07）
+
+**類型**：小型契約修正。**未重做整份設計**、`src/` 零變更、不 push、不 deploy。
+**觸發**：Owner Review d461170 主方向接受，兩處契約要改。
+
+### R1 `matchSeed` 不再由內容雜湊推導
+
+初版 `seed = challengeId = hash(兩份快照 ＋ 兩邊戰術)` 作廢。
+它把「可重播」誤當成「同一組陣容永遠只有一種結果」，
+後者會讓 Player Challenge 變成**可窮舉的決定性謎題**。
+
+`matchSeed` 改為**單一 challenge instance 的不可變屬性**：
+權威層建立 challenge 時一次性取得、立即凍結、此後永不重算。
+`IDEMPOTENT_SAME_CHALLENGE = YES`／`REPLAY_DETERMINISTIC = YES`／
+`SAME_LINEUP_ALWAYS_SAME_RESULT = NO`。`challengeId` 與 `matchSeed` 不強制等同。
+本輪不決定 RNG / crypto 實作。
+
+⚠ 兩條衍生紅線：**去重的鍵改為 `challengeId`**（內容雜湊會把兩場合法的不同
+challenge 誤判成同一場）；**防重骰不再由 seed 結構承擔**，整個移到獎勵閘門。
+
+**佐證**：`MatchSession.v1` 本來就把 seed 當成**場次的屬性**（簽發者給、綁一次性
+launchToken），不是內容推導 ⇒ R1 是回到既有契約原本的形狀，不是新發明。
+
+### R2 SquadSnapshot 的值一律由權威層產生
+
+`SNAPSHOT_PUBLISH_REQUEST_OWNER = PLAYER`／
+`SNAPSHOT_VALUE_AUTHORITY = SERVER / AUTHORITATIVE_LAYER`／
+`CLIENT_CAN_SUBMIT_FINAL_STATS = NO`。
+
+⚠ 初版文案把差別寫成「非同步沒有線上權威可查，所以快照要帶值」——**那個理由不對**，
+容易被讀成放寬信任邊界。更正：差別**不是誰能決定數值**（永遠是權威層），
+只是**權威層什麼時候查值**（比賽當下 vs 發布時先查好並簽章）。
+
+### R3 新增風險：重複挑戰不得無限 farm
+
+R1 直接造成的：同一對手 ＋ 同一份快照可以一直重打且結果可以不同
+⇒ 獎勵一接上就是可重骰的無限產點管道。
+獎勵接上前必須同時有三條：每份快照對每位挑戰者最多結算一次獎勵、
+同一對手的正式再戰要有冷卻或次數上限、「再試一次」恆不給獎勵。
+**本輪不設任何獎勵數值。**
+
+### 未重開（Owner 指定保留，逐項不動）
+
+Async PvP、Challenge Board、0 Career growth / stamina / world time、0 LadderRating、
+SquadSnapshot 是第一個 real consumer、General Match reuse plan、no fake ready-check、
+MOBA first / CS later、Pricing Authority 在 Ranked 前再恢復。
+
+### 下一輪
+
+`Player Challenge v1 Implementation — MOBA Slice 1`。
+落地順序：① 快照 ＋ 發布責任鏈 → ② challenge instance（凍結 seed）
+→ ③ `check_challenge_replay` → ④ `MATCH_SOURCE.challenge` ＋ 兩層防護
+→ ⑤ challenge 路徑 → ⑥ Board → ⑦ 賽後對照。⚠ 獎勵不在這七步裡。

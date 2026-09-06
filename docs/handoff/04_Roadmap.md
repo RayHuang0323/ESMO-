@@ -2147,3 +2147,78 @@ ready check 收掉）→ ⑤ Challenge Board ＋ 觀測值標籤 ＋ 冷啟 → 
 ### 建議下一輪：`Player Challenge v1 實作（MOBA）`
 
 按上面 ①–⑥ 的順序。Online Pricing Authority 維持暫停，在 **Ranked 之前**恢復。
+
+---
+
+### 🔧 Reconciliation（2026-09-07，Owner Review d461170 之後）
+
+主方向接受，兩處契約修正。**未重做整份設計，未改 `src/`。**
+變更清單見 `Player_Challenge_Async_PvP_Architecture_v1.md` §10。
+
+#### R1 `matchSeed` 不再由內容雜湊推導
+
+初版 `seed = challengeId = hash(兩份快照 ＋ 兩邊戰術)` **作廢**。
+它把「可重播」誤當成「同一組陣容永遠只有一種結果」，
+而後者會讓 Player Challenge 變成**可窮舉的決定性謎題**——
+一組 matchup 被解過一次就永遠解完。
+
+**`matchSeed` 是單一 challenge instance 的不可變屬性**：
+權威層在建立 challenge 時一次性取得，立即凍結，此後永不重算。
+
+```
+IDEMPOTENT_SAME_CHALLENGE     = YES   reload / 連點 / resume / replay / 伺服器重驗
+REPLAY_DETERMINISTIC          = YES   一律讀同一個凍結的 matchSeed
+SAME_LINEUP_ALWAYS_SAME_RESULT = NO   新 challenge 允許拿到新 matchSeed
+```
+
+⚠ `challengeId` 與 `matchSeed` **不強制等同**，兩者都由權威層簽發並一起凍結。
+⚠ 本輪**不決定** RNG / crypto 實作，只定契約形狀。
+
+**兩條由 R1 衍生的實作紅線**：
+
+- **去重的鍵是 `challengeId`，不是輸入內容的雜湊。**
+  內容雜湊在本版會把兩場合法的不同 challenge 誤判成同一場。
+- **防重骰不再由 seed 結構承擔**，整個移到獎勵閘門（§4.4、§7.3）。
+  初版「重骰結構上不可能」在本版**不成立**——開新 challenge 就是新 seed。
+
+**佐證**：`MatchSession.v1` 本來就把 seed 當成**場次的屬性**（由簽發者給、
+綁一次性 launchToken），不是由內容推導。R1 等於回到這份契約原本的形狀。
+
+#### R2 SquadSnapshot 的值一律由權威層產生
+
+```
+SNAPSHOT_PUBLISH_REQUEST_OWNER = PLAYER
+SNAPSHOT_VALUE_AUTHORITY       = SERVER / AUTHORITATIVE_LAYER
+CLIENT_CAN_SUBMIT_FINAL_STATS  = NO
+```
+
+責任鏈：玩家請求發布 → 權威層讀**正式 Career state** → 依 playerId / roster /
+tactic **自己查值** → 套 Online policy 與正規化（I13）→ 建立 → hash → sign → store。
+
+客戶端不得提交：final player stats、mastery final values、normalized values、
+combat modifiers、Online effective power。
+⚠ 客戶端能說的只有「**用我這五個人、這套戰術**」，不能說「**他們的數值是這些**」。
+
+⚠ 文案修正：初版把差別寫成「非同步時沒有線上權威可查，所以快照要帶值」。
+**那個說法不對。** 兩份契約的差別**不是誰能決定數值**（永遠是權威層），
+只是**權威層什麼時候查值**：申請單「比賽當下查」，快照「發布時先查好、凍結、簽章」。
+⇒ **不因為 async 就放寬 client trust boundary。**
+
+#### R3 新增風險條款：重複挑戰不得無限 farm
+
+見 `08_目前待辦與風險.md`。獎勵接上之前必須先有三條條款，本輪不設數值。
+
+#### 未重開（Owner 指定保留）
+
+Async PvP、Challenge Board、0 Career growth / stamina / world time、
+0 LadderRating、SquadSnapshot 是第一個 real consumer、General Match reuse plan、
+no fake ready-check、MOBA first / CS later、Pricing Authority 在 Ranked 前再恢復。
+
+#### 落地順序小幅調整
+
+① 快照 ＋ 發布責任鏈 → ② challenge instance（`challengeId` ＋ 凍結 `matchSeed`）
+→ ③ `check_challenge_replay`（讀**那一場自己的** seed）→ ④ `MATCH_SOURCE.challenge`
+＋ 兩層防護 → ⑤ challenge 路徑 → ⑥ Board → ⑦ 賽後對照。
+⚠ 獎勵不在這七步裡，要先有 §7.3 的三條條款。
+
+**下一輪**：`Player Challenge v1 Implementation — MOBA Slice 1`。
