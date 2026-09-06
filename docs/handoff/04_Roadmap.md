@@ -1870,3 +1870,71 @@ NODE_CARD_DENSITY: 11–13 行 → 7–8 行
 1. `SquadSnapshot.v1` ＋ `SquadBudget.v1`（需要先有伺服器或至少一個權威定價路徑）。
 2. `check_club_assets_v1` 裡三條「SquadSnapshot」代理註解正名為 `MatchSquad.v1`（低風險待辦）。
 3. Club Facilities：維持 **DEFER**。
+
+## Team Strength Pricing Calibration Assessment v1 — COMPLETE（2026-09-07）
+
+文件：`docs/design/Team_Strength_Pricing_Calibration_Assessment_v1.md`
+工具：`tools/measure_teamstrength_pricing_v1.mjs`（deterministic，真實 LogicEngine，換邊對打）
+**Assessment only —— 未調任何平衡，`src/` 零 diff。**
+
+### 結論
+
+```
+TEAMSTRENGTH_READY_FOR_ONLINE_PRICING    = NO
+FREE_POWER_GAP_EXISTS                    = YES
+EFFECTIVE_POWER_GUARDRAIL_STILL_REQUIRED = YES
+CALIBRATION_REQUIRED_BEFORE_SQUADSNAPSHOT = NO
+CALIBRATION_REQUIRED_BEFORE_CAP_BRACKET   = YES
+```
+
+### 最能說明問題的一組數字
+
+| | Δ定價 | 勝率變化 |
+|---|---|---|
+| **有定價**的最大擺動（能力 55→85） | **+15**（+21%） | **0.0pp** |
+| **未定價**的英雄熟練（power ×1.25） | **0.00** | **+44.4pp** |
+
+⇒ 定價漲 21% 買不到勝率；定價看不見的維度可以把勝率推到 94.4%。
+
+### 三個結構性根因
+
+1. **`calcPower` 自己就宣告過不是戰力來源** ——
+   檔頭逐字「純展示用（經營端）。**不進 LogicEngine、不影響 Battle Balance**」。
+   把它升格成 Online 定價權威，與它自己的契約直接衝突。
+2. **定價量行為，引擎決勝於 power/tough** ——
+   `configurePlayers` 檔頭：能力只改「門檻／機率／節奏／深度」，
+   **power/tough 一律不受能力影響**；而 power/tough 來自**英雄熟練 loadout**，完全未定價。
+3. **定價吃引擎完全不讀的輸入** —— `morale`／`condition`／`energy` 在
+   `LogicEngine.js` 出現 **0 次**，但 `calcPower` 直接乘上它們。
+   實測可操縱區間 **28.7%**，模擬側零反應 ⇒ **現成的沙包管道**。
+   （這證明 Season vNext 的 **I13 是承重結構，不是可選保險**。）
+
+### 其他量測
+
+- 定價偏重**操作**（positioning／apm／reflex 各高估 ~4pp），
+  引擎偏重**戰術與資訊**（mapAware 低估 **16.6pp**、decision 6.5pp、comms 4.9pp）。
+- 相近定價（Δ ≤ 1）的隊伍勝率跨度約 **28pp**（最極端：Δ定價 = 0 ⇒ 27.8% vs 72.2%）
+  ⇒ 若用現在的定價分級，**同級內落差會比級與級之間還大**。
+- **CS 無法量測**（`EsportsFPS3D` 無法 headless；`simulateFixture` 用的就是 teamStrength
+  ⇒ 循環論證）⇒ `CS_PRICING_QUALITY = UNKNOWN`。
+
+### 建議下一輪：`Online Pricing Authority Design v1`（不是調權重）
+
+**這不是 calibration 問題，是 pricing authority 問題。** 重調 `MOBA_WEIGHTS`
+無法讓定價看見英雄熟練 —— 它根本不在 `calcPower` 的輸入裡。三條路擇一：
+
+| | |
+|---|---|
+| **P1 擴大定價輸入** | 定價改吃引擎實際使用的那組輸入（power/tough 含熟練＋行為 mods＋位置＋英雄） |
+| **P2 以模擬定價** | headless LogicEngine 跑 N 場推導價位（定義上與模擬同源，但 4.7s／場） |
+| **P3 縮小線上輸入** | 線上只接受被定價的維度（犧牲養成表達，與 CAREER_OWNS_ROSTER 精神衝突） |
+
+⚠ **在選定之前不要動 `COMBINE` / `MOBA_WEIGHTS` / `STAT_MAP`** ——
+那會把一把「量錯東西」的尺，變成「量錯東西但看起來準」的尺。
+
+### 可以先做 / 不能先做
+
+- ✅ **`SquadSnapshot.v1` 可以先做**：它是資料契約（取值／正規化／凍結／雜湊），
+  不依賴定價正確性，而且正好是修上面那條沙包管道的位置。
+- ❌ **Cap / Bracket 不可以**：兩者的度量衡就是定價。
+- ⚠ LadderRating 技術上可做但沒意義（沒有可信分級，級內評分排的是錯的池子）。
