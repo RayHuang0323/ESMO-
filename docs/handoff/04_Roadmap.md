@@ -2222,3 +2222,61 @@ no fake ready-check、MOBA first / CS later、Pricing Authority 在 Ranked 前�
 ⚠ 獎勵不在這七步裡，要先有 §7.3 的三條條款。
 
 **下一輪**：`Player Challenge v1 Implementation — MOBA Slice 1`。
+
+---
+
+## 🧱 Player Challenge v1 — MOBA Slice 1 已落地（2026-09-07，實作）
+
+驗證器 `tools/check_player_challenge_slice1.mjs` **107/107 PASS**（含真跑 MOBA E2E）；
+`check_moba_runtime29` **44/44**（umbrella，含 regress／regress2／build）。
+本地 commit，未 push、未 deploy。
+
+### 落地了什麼
+
+| 契約 | 檔案 | 一句話 |
+|---|---|---|
+| `SimulationVersion.v1` | `contracts/simulationVersion.js` | `moba-sim.v1`；跨版本一律拒絕重播，**不做 migration framework** |
+| `SquadSnapshot.v1` | `contracts/squadSnapshot.js` | 權威層簽發的凍結裁決資料；雜湊用排除法涵蓋全部欄位 |
+| `ChallengeInstance.v1` | `contracts/challengeInstance.js` | `challengeId`（身分）／**凍結的 `matchSeed`**（怎麼跑）／結算冪等 |
+| 權威層 | `challenge/snapshotAuthority.js` | 擋數值 → 節流 → 自行查值 → 正規化 → 簽發 |
+| 組裝點 | `challenge/challengeRunner.js` | **唯一**的引擎組裝點；第一次跑與重播共用同一支 |
+| 來源 | `MATCH_SOURCE.challenge` | 獨立一格 ＋ 兩層生涯防護 |
+
+### 三個最重要的實作決定
+
+1. **快照欄位以「實際的 LogicEngine 消費端」為準，不照定價欄位猜。**
+   清單來自 `useLocalServer.start()`，其中**英雄熟練 loadout 不在 `calcPower` 的輸入裡**
+   —— 而 271b31d 實測它才是勝負主要決定者（×1.25 ⇒ 94.4%）。
+   ⇒ 照定價欄位列表**一定會漏掉它**，漏掉就是重播對不上。
+2. **快照自己宣告涵蓋範圍**（`capturedInputs`），runner 只用被宣告過的輸入。
+   Slice 1 未涵蓋英雄選角／原型／召喚師技能 ⇒ **刻意不呼叫**那三支 `configure`。
+   驗證器實測拿掉 `heroLoadout` 宣告之後結果真的改變（1490s → 1283s），
+   證明它是真輸入不是裝飾欄位。
+3. **正規化用白名單，不是把狀態寫成基準值。** 狀態三欄若進快照會進雜湊
+   ⇒「狀態變了 ⇒ 看起來像換了一支隊伍」。基準值改宣告在隊伍層級一份。
+
+### 誠實邊界
+
+- **沒有任何 UI**（`src/**/*.jsx` 零 import）。Slice 1 的 consumer 是 verifier 的 E2E。
+- **沒有真伺服器**：`SNAPSHOT_AUTHORITY.trusted === false`、`kind: "mock-authority"`。
+  雜湊是變更偵測不是簽章 ⇒ **不得宣稱已有防作弊能力**。
+- 未做：Challenge Board、五候選探索、Club Points、Ranked、Cap／Bracket、
+  LadderRating、Pricing Authority、monetization、CS Challenge。
+- 未動：`src/battle/`、`LogicEngine.js`、`teamStrength.js`、`src/screens/fps/`、
+  matchmaking／matchRoom／matchSession、General Match。
+
+### 三支既有驗證器同步了期望值（不是放寬）
+
+`check_time_block_v3` P4/P5、`check_competition_q1` 3/3b、
+`check_online_power_contract_v1` §1。最後一條原本**刻意斷言 `squadSnapshot.js` 不存在**，
+註解寫明「有人加進來卻沒更新文件時會紅，逼出一次同步」——
+它在 Slice 1 落地當下確實變紅，這次更新就是它要逼出來的那次同步。
+
+### 建議下一輪：`Player Challenge v1 — MOBA Slice 2`
+
+1. **英雄選角 / 戰鬥原型 / 召喚師技能進快照**（同時 bump `capturedInputs` 與
+   `MOBA_SIMULATION_VERSION`，三件事缺一，歷史挑戰的重播會靜默失真）。
+2. **挑戰紀錄的儲存與冪等**（目前 `ChallengeInstance` 是純契約，沒有落盤）。
+3. **最小 UI**：發布防守陣容 ＋ 對單一 fixture 對手發起挑戰 ＋ 看結果。
+4. ⚠ **獎勵仍然不接**。要接 Club Points 之前必須先有架構文件 §7.3 的三條
+   重複挑戰條款，否則接上的那天就會被 farm。

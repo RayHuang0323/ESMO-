@@ -20,7 +20,7 @@
 import { updateEconomy } from "../data/matchRecorder.js";
 //  V0D：「快速練習不發任何獎勵」的規則放在**這裡**，不放在 adapter。
 //  本檔是唯一的獎勵公式所在地；兩支 adapter 各判一次就會漂移。
-import { isPracticeSource } from "./matchSource.js";
+import { isPracticeSource, isChallengeSource } from "./matchSource.js";
 
 export const MOBA_REWARD_FORMULA_VERSION = "moba-reward.v1";   // = Legacy updateEconomy（逐字重用）
 export const CS_REWARD_FORMULA_VERSION = "cs-reward.v1";       // = Legacy updateEconomy（逐字重用）
@@ -51,6 +51,12 @@ export function teamRewardsFor({ win, marginF, streak, fansNow, fanSourceWeight 
   //  ⚠ `matchSource` 沒傳（既有呼叫端）⇒ `isPracticeSource(null)` 為 false
   //    ⇒ 行為逐值不變。
   if (isPracticeSource(matchSource)) return { prizeWan: 0, money: 0, fans: 0 };
+  //  Player Challenge Slice 1：線上挑戰 ⇒ **0 獎金、0 粉絲**（`CAREER_WRITEBACK = NONE`）。
+  //  ⚠ 同樣是早退，理由與練習不同 ⇒ 兩個判斷分開寫，不合併成
+  //    `isRewardlessSource`。合併之後想單獨給挑戰一點粉絲就得先拆回來，
+  //    而那時候拆錯就會連練習也一起開了。
+  //  ⚠ 這是**第二層**防護。第一層是「Challenge 結算不呼叫這條管線」。
+  if (isChallengeSource(matchSource)) return { prizeWan: 0, money: 0, fans: 0 };
   const eco = updateEconomy(
     {
       record: { streak: fin(streak, 0) },

@@ -47,20 +47,28 @@ const CTX = { teamId: "t1", teamName: "隊伍", day: 8, week: 2, season: 1 };
 // ── §1 現況：哪些線上契約真的存在 ────────────────────────────────────────
 console.log("── §1 現況 ──");
 {
-  const EXISTS = ["src/platform/contracts/matchEntry.js", "src/platform/contracts/matchSquad.js"];
-  const ABSENT = [
+  const EXISTS = [
+    "src/platform/contracts/matchEntry.js", "src/platform/contracts/matchSquad.js",
+    //  ⚠ 2026-09-07（Player Challenge Slice 1）：`squadSnapshot.js` 從 ABSENT 移到這裡。
+    //    下面那條斷言**如設計般發揮了作用**——它在 Slice 1 建立快照的當下變紅，
+    //    逼出這一次同步。移動它是「已完成的同步」，不是把守衛放寬。
     "src/platform/contracts/squadSnapshot.js",
+  ];
+  const ABSENT = [
     "src/platform/contracts/onlineCbr.js",
     "src/platform/contracts/onlineValuation.js",
     "src/platform/contracts/matchmakingPolicy.js",
     "src/platform/contracts/cbrDecisionGate.js",
   ];
   ck("canonical 線上契約存在", EXISTS.every((f) => existsSync(new URL(`../${f}`, import.meta.url))));
-  //  ⚠ 這一條是**刻意**斷言「不存在」：文件與註解多處提到 SquadSnapshot／CBR，
+  //  ⚠ 這一條是**刻意**斷言「不存在」：文件與註解多處提到 CBR／估值層，
   //    若有人日後把它們加進來卻沒更新契約文件，這裡會紅，逼出一次同步。
+  //  ⚠ SquadSnapshot 已於 Slice 1 落地，但它的第一個消費端是 **Player Challenge**
+  //    （非同步 Unranked PvP），**不是**定價／分級——Cap／Bracket 仍然
+  //    受 271b31d 的定價缺陷阻擋，見 §8。
   const present = ABSENT.filter((f) => existsSync(new URL(`../${f}`, import.meta.url)));
-  ck("CBR／SquadSnapshot／估值層在 main 上仍不存在（設計尚未實作）",
-    present.length === 0, present.join(", ") || "5 個都不存在");
+  ck("CBR／估值層／配對政策在 main 上仍不存在（設計尚未實作）",
+    present.length === 0, present.join(", ") || "4 個都不存在");
   ck("契約版本字串穩定",
     MATCH_ENTRY_VERSION === "MatchEntryRequest.v1" && MATCH_SQUAD_VERSION === "MatchSquad.v1",
     `${MATCH_ENTRY_VERSION} / ${MATCH_SQUAD_VERSION}`);

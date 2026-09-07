@@ -50,6 +50,7 @@ import {
  * · `practice`    快速練習（V0D 起有明確入口與明確 origin）
  * · `competitive` 競技比賽——**今天的「一般比賽」就是這一層**
  * · `official`    正式季賽（Competition / Season，含 Major）
+ * · `challenge`   玩家挑戰（Player Challenge Slice 1）——非同步 Unranked PvP
  */
 export const GROWTH_SOURCES = Object.freeze({
   training: "training",
@@ -57,6 +58,7 @@ export const GROWTH_SOURCES = Object.freeze({
   practice: "practice",
   competitive: "competitive",
   official: "official",
+  challenge: "challenge",
 });
 
 /**
@@ -106,6 +108,14 @@ export const PCGM_PARAMS = Object.freeze({
     [GROWTH_SOURCES.practice]: 0.0,
     [GROWTH_SOURCES.competitive]: 1.0,
     [GROWTH_SOURCES.official]: 3.0,
+    //  · `challenge` **0.0** — 玩家挑戰是線上模式，`CAREER_WRITEBACK = NONE`。
+    //    ⚠ 這是**兩層防護的第二層**，而且第一層才是設計：Challenge 的結算
+    //      **根本不呼叫 `applyMatchProgress`**（見 `platform/challenge/`）。
+    //      這個 0 是防止未來有人把 Challenge 接進既有結算管線時默默開始發成長。
+    //    ⚠ 與 `practice` 的 0.0 **理由不同**，不可合併成一格：
+    //      練習是「自己的測試場」，挑戰是「線上不得寫回生涯」。
+    //      合併之後其中一個就再也調不動了（TD-36 的形狀）。
+    [GROWTH_SOURCES.challenge]: 0.0,
   }),
 });
 

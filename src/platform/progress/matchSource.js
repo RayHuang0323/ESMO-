@@ -27,7 +27,7 @@
 import { ORIGIN_KINDS } from "../contracts/matchOrigin.js";
 
 /**
- * 比賽來源。**唯一來源**——呼叫端不得自創第五種。
+ * 比賽來源。**唯一來源**——呼叫端不得自創新的一種。
  *
  * · `unknown`     **查不到來源**。舊存檔／debug harness／沒有場次的流程。
  *                 ⚠ V0D 之前這一格是 `practice`，而那正是 TD-36：
@@ -38,12 +38,21 @@ import { ORIGIN_KINDS } from "../contracts/matchOrigin.js";
  * · `competitive` 競技比賽。**今天的「一般比賽」就是這一層**，
  *                 未來會長出評分／牌位／排行榜。
  * · `official`    正式季賽。既有的 Competition / Season（含 Major、年度總決賽）。
+ * · `challenge`   **玩家挑戰**（Player Challenge Slice 1）。非同步 Unranked PvP，
+ *                 對手是另一位玩家的**凍結快照**。
+ *                 ⚠ **必須是獨立的一格，不得用 `competitive` ＋ 布林旗標代替。**
+ *                 那正是 TD-36 的形狀：兩件不同的事塞進同一格，
+ *                 其中一件從此再也調不動。它的規則與其他四格都不同——
+ *                 0 生涯成長、0 獎金粉絲、0 世界時間、0 賽季名次，
+ *                 而且**不吃每日競技容量**（容量是為了節流生涯成長，
+ *                 而它根本沒有生涯成長可節流）。
  */
 export const MATCH_SOURCE = Object.freeze({
   unknown: "unknown",
   practice: "practice",
   competitive: "competitive",
   official: "official",
+  challenge: "challenge",
 });
 
 /**
@@ -65,6 +74,12 @@ export function matchSourceFromOrigin(origin) {
   if (origin.kind === ORIGIN_KINDS.fixture) return MATCH_SOURCE.official;
   if (origin.kind === ORIGIN_KINDS.ticket) return MATCH_SOURCE.competitive;
   if (origin.kind === ORIGIN_KINDS.practice) return MATCH_SOURCE.practice;
+  //  Player Challenge Slice 1：非同步 Unranked PvP。
+  //  ⚠ 這一行是**兩層生涯防護的第二層的入口**。第一層是「Challenge 結算
+  //    根本不呼叫 `applyMatchProgress`」；萬一有人接錯線走進來了，
+  //    這裡把它歸到 `challenge`，而 `challenge` 的成長倍率是 0.0、
+  //    獎勵公式會早退 ⇒ 拿不到任何東西。
+  if (origin.kind === ORIGIN_KINDS.challenge) return MATCH_SOURCE.challenge;
   return MATCH_SOURCE.unknown;
 }
 
@@ -80,6 +95,16 @@ export const normalizeMatchSource = (v) =>
  *   那正是 TD-36 的形狀。
  */
 export const isPracticeSource = (v) => normalizeMatchSource(v) === MATCH_SOURCE.practice;
+
+/**
+ * 這場是不是**玩家挑戰**。
+ *
+ * ⚠ 與 `isPracticeSource` 分開兩支，不合併成
+ *   `isRewardlessSource`——兩者今天的產品規則碰巧都是 0，
+ *   但理由完全不同（練習是自己的測試場；挑戰是線上不得寫回生涯），
+ *   合併之後其中一個就再也調不動了。這是 TD-36 的教訓。
+ */
+export const isChallengeSource = (v) => normalizeMatchSource(v) === MATCH_SOURCE.challenge;
 
 /**
  * 三個對戰層級的**玩家可見名稱與一句話說明**。V7A 立。
@@ -102,6 +127,9 @@ export const MATCH_TIER_LABELS = Object.freeze({
   [MATCH_SOURCE.practice]: Object.freeze({ name: "快速練習", note: "不影響戰績與數值" }),
   [MATCH_SOURCE.competitive]: Object.freeze({ name: "一般對戰", note: "累積成長與收益，不計入正式賽季" }),
   [MATCH_SOURCE.official]: Object.freeze({ name: "生涯季賽", note: "計入排名、巡迴積分與冠軍" }),
+  //  ⚠ `note` 必須與實際行為一致：Challenge 真的一項生涯資料都不寫。
+  //    這句話是玩家判斷「打這個會不會影響我的隊伍」的唯一依據。
+  [MATCH_SOURCE.challenge]: Object.freeze({ name: "玩家挑戰", note: "不影響生涯：不給成長、不耗體力、不推進日期" }),
 });
 
 /**

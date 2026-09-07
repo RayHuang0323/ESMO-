@@ -18124,3 +18124,111 @@ MOBA first / CS later、Pricing Authority 在 Ranked 前再恢復。
 落地順序：① 快照 ＋ 發布責任鏈 → ② challenge instance（凍結 seed）
 → ③ `check_challenge_replay` → ④ `MATCH_SOURCE.challenge` ＋ 兩層防護
 → ⑤ challenge 路徑 → ⑥ Board → ⑦ 賽後對照。⚠ 獎勵不在這七步裡。
+
+---
+
+## Sprint：Player Challenge v1 — MOBA Slice 1（Authoritative Foundation，2026-09-07）
+
+**類型**：實作。基線 `09a9cda`（= origin/main）。本地 commit，不 push、不 deploy。
+**驗證**：`tools/check_player_challenge_slice1.mjs` **107/107 PASS**（含真跑 MOBA 模擬的 E2E）。
+
+### 新增（5 支 src ＋ 1 支 verifier，共 1312 行）
+
+| 檔案 | 行數 | 職責 |
+|---|---|---|
+| `src/platform/contracts/simulationVersion.js` | 64 | `moba-sim.v1`；跨版本一律拒絕重播，**不做 migration framework** |
+| `src/platform/contracts/squadSnapshot.js` | 259 | `SquadSnapshot.v1`：形狀、雜湊、`capturedInputs`、客戶端禁送清單 |
+| `src/platform/contracts/challengeInstance.js` | 218 | `ChallengeInstance.v1`：`challengeId` ／ **凍結的 `matchSeed`** ／ 結算冪等 |
+| `src/platform/challenge/snapshotAuthority.js` | 221 | 權威層：擋數值 → 節流 → 自行查值 → 正規化 → 簽發 |
+| `src/platform/challenge/challengeRunner.js` | 157 | **唯一**的引擎組裝點（第一次跑與重播共用同一支） |
+| `tools/check_player_challenge_slice1.mjs` | 393 | 七節驗證 ＋ 最小 E2E |
+
+### 修改（既有 src 全部是**加法**，共 +100 行）
+
+`matchSource.js`（+`challenge` 來源、標籤、`isChallengeSource`）、
+`matchOrigin.js`（+`ORIGIN_KINDS.challenge`、中文名、`originFromChallenge`）、
+`careerGrowth.js`（+`GROWTH_SOURCES.challenge`，倍率 **0.0**）、
+`rewardFormulas.js`（challenge 早退 ⇒ 0 錢 0 粉絲）、
+`worldClock.js`（`WORLD_TIME_COST.challenge = 0`）。
+
+### 最重要的三個決定
+
+1. **快照欄位以「實際的 LogicEngine 消費端」為準，不照定價欄位猜。**
+   清單直接來自 `useLocalServer.start()`：
+   `new LogicEngine(seed, loadout)` ＋ `configurePlayers` ＋ `configureHeroes` ＋
+   `configureArchetypes` ＋ `configureSpells` ＋ `configureMatch`。
+   ⚠ 其中**英雄熟練 loadout** 不在 `calcPower` 的輸入裡（271b31d 實測它才是勝負
+   主要決定者，×1.25 ⇒ 94.4%）⇒ **照定價欄位列表一定會漏掉它，而漏掉就是重播對不上。**
+
+2. **快照自己宣告涵蓋範圍（`capturedInputs`），runner 只用被宣告過的輸入。**
+   Slice 1 涵蓋 lineup / playerStats / heroLoadout / tactic；
+   **英雄選角 / 戰鬥原型 / 召喚師技能未涵蓋**，所以 runner **刻意不呼叫**
+   對應的三支 `configure`。這是誠實標示，不是偷偷略過——
+   驗證器實測「把 heroLoadout 從宣告拿掉 ⇒ 真的不注入，而且結果因此不同」
+   （1490s → 1283s），證明它是真輸入不是裝飾欄位。
+
+3. **正規化用白名單，不是「把狀態改成基準值」。**
+   `condition`/`morale`/`energy` 引擎讀 0 次，若寫進快照會進雜湊
+   ⇒「狀態變了 ⇒ 雜湊變了 ⇒ 看起來像換了一支隊伍」。
+   ⇒ 直接**不收**（只留 16 項能力），基準值宣告在 `snapshot.normalization`
+   隊伍層級一份，未來接定價仍然同源（I13）。
+
+### 兩層生涯防護（驗證器同時釘住兩層）
+
+- **第一層（設計）**：runner / 權威層**完全不 import** `applyMatchProgress`、
+  profileStore、zustand、localStorage —— 以原始碼掃描斷言。
+- **第二層（防呆）**：成長倍率 0、`teamRewardsFor` 早退、世界時間 0、
+  不吃每日競技容量。
+- ⚠ **對照組**：同一組參數下 `competitive` 仍然給錢給粉絲
+  ⇒ 證明那些 0 是 challenge 專屬，不是整條管線壞了。
+
+### 三支既有驗證器的期望值更新（**不是放寬，是同步**）
+
+| 驗證器 | 原斷言 | 現在 |
+|---|---|---|
+| `check_time_block_v3` P4 | `ORIGIN_KINDS.length === 3`（「本輪未建立」） | 與契約定義比對；仍擋 `online`/`event` |
+| `check_time_block_v3` P5 | `MATCH_SOURCE.length === 4`（「本輪未建立線上來源」） | 改守**真正重要的事**：線上來源存在，但成長倍率 0、世界時間 0；Ranked 仍不存在 |
+| `check_competition_q1` 3/3b | 三種 origin kind | 四種（沿用該檔既有的「刻意期望變更」註解慣例） |
+| `check_online_power_contract_v1` §1 | 斷言 `squadSnapshot.js` **不存在** | 移到 EXISTS。⚠ **這條斷言如設計般發揮作用**——它在快照落地當下變紅，逼出這次同步 |
+
+⚠ 依 Owner 先前裁示，驗證器註解一律改成**目前的保護邊界**，
+不再使用歷史「本輪未動」語意。
+
+### 驗證結果
+
+```
+check_player_challenge_slice1     107/107 PASS  ← 新增（含真跑 MOBA E2E，單場約 3.9s）
+check_online_power_contract_v1     51/51  PASS
+check_time_block_v3                69/69  通過
+check_competition_q1               93/93  通過
+check_match_source_v0c             21/21  通過
+check_practice_match_v0d           70/70  通過
+check_td44_practice_exit           46/46  通過
+check_general_match_v7a            55/55  通過
+check_world_time_v1                46/46  通過
+check_time_block_v2                47/47  通過
+check_pcgm_v0a                     24/24  通過
+check_foundation_calibration       58/58  通過
+check_club_progression_v1          36/36  通過
+check_retention_economy_v1         38/38  通過
+check_fan_f0                       33/33  通過
+check_fan_system                   66/66  通過
+check_growth_ui_p1                 80/80  通過
+check_team_development_expansion_v1 85/85 PASS
+check_club_assets_v1              105/105 PASS
+regress                            結束率 15/15
+regress2                           節奏門檻 8/8
+npm run build                      built in 15.31s
+```
+
+### 未做 / 未涵蓋（誠實清單）
+
+- **沒有任何 UI**：`grep` 確認 `src/**/*.jsx` 一處都沒有 import 新模組。
+  Slice 1 的 consumer 是 verifier 的 E2E，不是玩家畫面。
+- **快照未涵蓋英雄選角 / 戰鬥原型 / 召喚師技能** ⇒ Slice 2。
+- **沒有真伺服器**：`SNAPSHOT_AUTHORITY.trusted === false`、
+  `kind: "mock-authority"`，程式與文件都明說目前擋不住蓄意偽造。
+- **沒有**：Challenge Board、五候選探索、Club Points、Ranked、Cap／Bracket、
+  LadderRating、Pricing Authority、monetization、CS Challenge。
+- **沒有動**：`src/battle/`、`LogicEngine.js`、`teamStrength.js`、`src/screens/fps/`、
+  matchmaking / matchRoom / matchSession、General Match（`git status` 全空）。
