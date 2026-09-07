@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-02T08:28:20.359Z",
+  "generatedAt": "2026-09-03T20:27:30.265Z",
   "source": "C5C Battle runtime browser evidence",
   "viewport": {
     "width": 390,
@@ -14,60 +14,62 @@
     {
       "mapKey": "mirage",
       "completed": true,
-      "frameCount": 1209,
+      "frameCount": 1884,
       "presentation": {
         "version": 1,
-        "processedEvents": 240,
+        "processedEvents": 224,
         "duplicateEvents": 0,
         "skippedHistoricalEvents": 0,
-        "feedEvents": 150,
-        "objectiveEvents": 0,
+        "feedEvents": 138,
+        "objectiveEvents": 4,
         "roundStartEvents": 21,
         "roundEndEvents": 21,
-        "clutchEvents": 4,
-        "audioRequests": 620,
-        "directorSwitches": 150,
+        "clutchEvents": 2,
+        "audioRequests": 498,
+        "directorSwitches": 152,
         "rapidDirectorSwitches": 0,
         "rewindResets": 1,
         "sameFramePublishes": 0,
-        "lastFrameIndex": 28,
+        "lastFrameIndex": 107,
         "presentationBacklog": 0,
         "lastEventId": "round-end-21",
-        "updateCalls": 183,
-        "framesWithEvents": 156,
+        "updateCalls": 177,
+        "framesWithEvents": 149,
         "feedCount": 1,
         "historyCount": 21,
         "director": {
-          "kind": "multikill",
-          "at": 2471.5,
-          "score": 84,
-          "targetId": "t4",
+          "kind": "kill",
+          "at": 2479.5,
+          "score": 62,
+          "targetId": "ct3",
           "position": {
-            "x": 56,
-            "y": 65
+            "x": 41.3502757117563,
+            "y": 56.80069763476262
           },
-          "expiresAt": 2473.7,
+          "expiresAt": 2481.7,
           "reason": "關鍵擊殺"
         },
-        "bombEvents": 0,
-        "eventFrameCount": 177,
+        "bombEvents": 4,
+        "eventFrameCount": 170,
         "eventTypes": {
-          "kill": 150,
-          "multikill": 62,
-          "door": 3,
+          "kill": 138,
+          "multikill": 57,
           "round-end": 21,
-          "clutch": 4
+          "clutch": 2,
+          "bomb-planted": 3,
+          "bomb-exploded": 1,
+          "door": 2
         }
       },
       "audio": {
         "assetSource": "CC0 real firearm recordings",
-        "presentationCueStarts": 271,
-        "recordedSourceStarts": 293,
-        "activeVoices": 3,
+        "presentationCueStarts": 268,
+        "recordedSourceStarts": 239,
+        "activeVoices": 5,
         "loadErrors": {}
       },
       "camera": {
-        "directorSwitches": 150,
+        "directorSwitches": 152,
         "manualOverrideSamples": 1,
         "rapidSwitches": 0
       },
@@ -80,16 +82,16 @@
             "mode": "rigged",
             "loadError": null,
             "identityMiss": false,
-            "animation": "idle",
+            "animation": "aim",
             "skeleton": 65,
             "clips": 43,
             "mixer": true,
             "round": 0,
-            "currentClip": "Idle_Loop",
+            "currentClip": "Pistol_Aim_Neutral",
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 0.983,
+            "currentClipTime": 0.0167,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -140,7 +142,7 @@
             },
             "artTriangles": 2808,
             "artMaterials": 8,
-            "facingDegrees": 35.41954568075705,
+            "facingDegrees": 176.4872076085058,
             "orientationOffset": 1.5707963267948966,
             "rootScale": [
               1.0002272412243896,
@@ -184,22 +186,22 @@
             },
             "currentBounds": {
               "min": [
-                -13.559739412902214,
-                0.07994359070563103,
-                40.85376116716055
+                2.5940887844836915,
+                0.00011929627289122835,
+                8.226979130070193
               ],
               "max": [
-                -11.443590528050429,
-                1.919923893177621,
-                42.42343786411473
+                4.900616628355655,
+                1.901598335043263,
+                9.22095602893392
               ],
-              "width": 2.1161,
-              "height": 1.84,
-              "depth": 1.5697
+              "width": 2.3065,
+              "height": 1.9015,
+              "depth": 0.994
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 9,
+            "hitPositionDriftSamples": 0,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -217,7 +219,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 0.983,
+            "currentClipTime": 1.0167,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -268,7 +270,7 @@
             },
             "artTriangles": 2740,
             "artMaterials": 8,
-            "facingDegrees": -70.23839051398868,
+            "facingDegrees": -40.1770286559239,
             "orientationOffset": 1.5707963267948966,
             "rootScale": [
               1.0002272412243896,
@@ -312,22 +314,22 @@
             },
             "currentBounds": {
               "min": [
-                -16.295071341051994,
-                0.07961087296091601,
-                33.85916695321762
+                1.4236056807095834,
+                -0.000047830133574844336,
+                8.26714639426242
               ],
               "max": [
-                -15.295535070420229,
-                1.9195911754329091,
-                36.23717292240052
+                3.084300818743342,
+                1.9016718287285146,
+                10.179951355721617
               ],
-              "width": 0.9995,
-              "height": 1.84,
-              "depth": 2.378
+              "width": 1.6607,
+              "height": 1.9017,
+              "depth": 1.9128
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 9,
+            "hitPositionDriftSamples": 0,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -345,7 +347,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 0.983,
+            "currentClipTime": 1.0167,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -396,7 +398,7 @@
             },
             "artTriangles": 2796,
             "artMaterials": 8,
-            "facingDegrees": 0,
+            "facingDegrees": -90,
             "orientationOffset": 1.5707963267948966,
             "rootScale": [
               1.0002272412243896,
@@ -440,22 +442,22 @@
             },
             "currentBounds": {
               "min": [
-                -9.92985539174983,
-                0.08010614097089311,
-                41.572401210338356
+                2.0701446082501684,
+                0.0002685202456723379,
+                8.493103549584937
               ],
               "max": [
-                -7.474407766485772,
-                1.9200864434428881,
-                42.38866564327833
+                4.316346206108194,
+                1.9011463210256534,
+                9.512909667176956
               ],
-              "width": 2.4554,
-              "height": 1.84,
-              "depth": 0.8163
+              "width": 2.2462,
+              "height": 1.9009,
+              "depth": 1.0198
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 0,
+            "hitPositionDriftSamples": 8,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -473,7 +475,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 0.983,
+            "currentClipTime": 1.0167,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -524,7 +526,7 @@
             },
             "artTriangles": 2716,
             "artMaterials": 8,
-            "facingDegrees": 27.85013119657803,
+            "facingDegrees": -90,
             "orientationOffset": 1.5707963267948966,
             "rootScale": [
               1.0002272412243896,
@@ -568,22 +570,22 @@
             },
             "currentBounds": {
               "min": [
-                -14.134153451328958,
-                0.08006307924984665,
-                40.799505386297376
+                -9.079771898664832,
+                -0.05364279010503542,
+                5.365514863925584
               ],
               "max": [
-                -11.870311640456768,
-                1.9200433817218445,
-                42.10566528035475
+                -8.236194424174965,
+                1.8210702859399,
+                7.731100466954202
               ],
-              "width": 2.2638,
-              "height": 1.84,
-              "depth": 1.3062
+              "width": 0.8436,
+              "height": 1.8747,
+              "depth": 2.3656
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 0,
+            "hitPositionDriftSamples": 2,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -592,16 +594,16 @@
             "mode": "rigged",
             "loadError": null,
             "identityMiss": false,
-            "animation": "aim",
+            "animation": "idle",
             "skeleton": 65,
             "clips": 43,
             "mixer": true,
             "round": 0,
-            "currentClip": "Pistol_Aim_Neutral",
+            "currentClip": "Idle_Loop",
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 0.1497,
+            "currentClipTime": 1.0167,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -652,7 +654,7 @@
             },
             "artTriangles": 2764,
             "artMaterials": 8,
-            "facingDegrees": -65.48383742926688,
+            "facingDegrees": -39.8730126204186,
             "orientationOffset": 1.5707963267948966,
             "rootScale": [
               1.0002272412243896,
@@ -696,22 +698,22 @@
             },
             "currentBounds": {
               "min": [
-                -14.842821222297898,
-                0.07226345032706655,
-                28.52032904266351
+                3.4109459701309843,
+                0.005395751140456789,
+                8.513225310449728
               ],
               "max": [
-                -13.667745614872294,
-                1.9201229579071901,
-                30.83243789181373
+                5.470193540834462,
+                1.8993502589442854,
+                9.540573722766846
               ],
-              "width": 1.1751,
-              "height": 1.8479,
-              "depth": 2.3121
+              "width": 2.0592,
+              "height": 1.894,
+              "depth": 1.0273
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 8,
+            "hitPositionDriftSamples": 0,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -729,7 +731,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 0.983,
+            "currentClipTime": 1.0167,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -780,7 +782,7 @@
             },
             "artTriangles": 3128,
             "artMaterials": 8,
-            "facingDegrees": -179.57713405495107,
+            "facingDegrees": 140.54675673722787,
             "orientationOffset": 1.5707963267948966,
             "rootScale": [
               1.0002272412243896,
@@ -824,18 +826,18 @@
             },
             "currentBounds": {
               "min": [
-                15.313366855350399,
-                0.07781481087954492,
-                5.641391534929914
+                -21.86653802615242,
+                -0.0000024753346530015374,
+                39.02337335833413
               ],
               "max": [
-                17.770213725215832,
-                1.8994679219341157,
-                6.435297830764513
+                -19.51679984833295,
+                1.901641589035635,
+                39.98312347850326
               ],
-              "width": 2.4568,
-              "height": 1.8217,
-              "depth": 0.7939
+              "width": 2.3497,
+              "height": 1.9016,
+              "depth": 0.9598
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
@@ -857,7 +859,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 0.983,
+            "currentClipTime": 1.0167,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -908,7 +910,7 @@
             },
             "artTriangles": 3048,
             "artMaterials": 8,
-            "facingDegrees": 179.73800679602456,
+            "facingDegrees": 140.37084627757636,
             "orientationOffset": 1.5707963267948966,
             "rootScale": [
               1.0002272412243896,
@@ -952,22 +954,22 @@
             },
             "currentBounds": {
               "min": [
-                13.717824442196076,
-                0.08018421079734833,
-                5.611462263672196
+                0.48348999011381133,
+                0.023911836679421122,
+                41.599767577175996
               ],
               "max": [
-                16.17396815143927,
-                1.9018373218519216,
-                6.407751301657339
+                2.3432014187176464,
+                1.8801204213820673,
+                42.53461830642937
               ],
-              "width": 2.4561,
-              "height": 1.8217,
-              "depth": 0.7963
+              "width": 1.8597,
+              "height": 1.8562,
+              "depth": 0.9349
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 4,
+            "hitPositionDriftSamples": 8,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -985,7 +987,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 0.1164,
+            "currentClipTime": 0.15,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -1036,7 +1038,7 @@
             },
             "artTriangles": 3140,
             "artMaterials": 8,
-            "facingDegrees": 167.08298604145656,
+            "facingDegrees": 130.80754171441782,
             "orientationOffset": 1.5707963267948966,
             "rootScale": [
               1.0002272412243896,
@@ -1080,22 +1082,22 @@
             },
             "currentBounds": {
               "min": [
-                10.276068899398448,
-                0.05063557856632003,
-                4.742762591002921
+                -5.972168071222349,
+                0.0267237418868993,
+                22.879801549036323
               ],
               "max": [
-                12.701501134235729,
-                1.88017365683631,
-                5.499527538728285
+                -5.24422808549345,
+                1.856261820156888,
+                25.317365543877685
               ],
-              "width": 2.4254,
+              "width": 0.7279,
               "height": 1.8295,
-              "depth": 0.7568
+              "depth": 2.4376
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 6,
+            "hitPositionDriftSamples": 0,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -1113,7 +1115,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 0.983,
+            "currentClipTime": 1.0167,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -1164,7 +1166,7 @@
             },
             "artTriangles": 3024,
             "artMaterials": 8,
-            "facingDegrees": 180,
+            "facingDegrees": 139.82297134407614,
             "orientationOffset": 1.5707963267948966,
             "rootScale": [
               1.0002272412243896,
@@ -1208,22 +1210,22 @@
             },
             "currentBounds": {
               "min": [
-                11.849407766485772,
-                0.08006288697852323,
-                5.626870433830378
+                -11.30485539174983,
+                0.07527260387499912,
+                41.56877649601634
               ],
               "max": [
-                14.30485539174983,
-                1.9017159980330962,
-                6.42226137086707
+                -8.85650371335271,
+                1.901719658862091,
+                42.37561641138635
               ],
-              "width": 2.4554,
-              "height": 1.8217,
-              "depth": 0.7954
+              "width": 2.4484,
+              "height": 1.8264,
+              "depth": 0.8068
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 8,
+            "hitPositionDriftSamples": 0,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -1241,7 +1243,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 0.983,
+            "currentClipTime": 1.0167,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -1292,7 +1294,7 @@
             },
             "artTriangles": 3144,
             "artMaterials": 8,
-            "facingDegrees": -176.11673594283556,
+            "facingDegrees": 139.87446981822632,
             "orientationOffset": 1.5707963267948966,
             "rootScale": [
               1.0002272412243896,
@@ -1336,18 +1338,18 @@
             },
             "currentBounds": {
               "min": [
-                17.078497174305923,
-                0.08034827611314624,
-                5.677252802672469
+                -3.9433383388345966,
+                0.0725643195819285,
+                41.59139410883529
               ],
               "max": [
-                19.541760830227766,
-                1.9020013871677184,
-                6.457392934561237
+                -1.4828747635025479,
+                1.8942043976506608,
+                42.354112198368114
               ],
-              "width": 2.4633,
-              "height": 1.8217,
-              "depth": 0.7801
+              "width": 2.4605,
+              "height": 1.8216,
+              "depth": 0.7627
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
@@ -1360,12 +1362,12 @@
       },
       "p0": {
         "version": 1,
-        "fidxTransitions": 183,
+        "fidxTransitions": 177,
         "staleMismatch": 0,
-        "rafFrames": 353,
+        "rafFrames": 398,
         "duplicateRaf": 0,
         "duplicateRender": 0,
-        "lastAuthoritativeFidx": 28,
+        "lastAuthoritativeFidx": 107,
         "lastReason": "seek"
       },
       "canvas": {
@@ -1390,62 +1392,63 @@
     {
       "mapKey": "dust2",
       "completed": true,
-      "frameCount": 3233,
+      "frameCount": 7646,
       "presentation": {
         "version": 1,
-        "processedEvents": 348,
+        "processedEvents": 716,
         "duplicateEvents": 0,
         "skippedHistoricalEvents": 0,
-        "feedEvents": 208,
-        "objectiveEvents": 3,
-        "roundStartEvents": 36,
-        "roundEndEvents": 36,
-        "clutchEvents": 0,
-        "audioRequests": 929,
-        "directorSwitches": 226,
+        "feedEvents": 410,
+        "objectiveEvents": 9,
+        "roundStartEvents": 66,
+        "roundEndEvents": 66,
+        "clutchEvents": 3,
+        "audioRequests": 1891,
+        "directorSwitches": 526,
         "rapidDirectorSwitches": 0,
         "rewindResets": 1,
         "sameFramePublishes": 0,
         "lastFrameIndex": 48,
         "presentationBacklog": 0,
-        "lastEventId": "round-end-36",
-        "updateCalls": 298,
-        "framesWithEvents": 255,
+        "lastEventId": "round-end-66",
+        "updateCalls": 604,
+        "framesWithEvents": 530,
         "feedCount": 2,
-        "historyCount": 36,
+        "historyCount": 66,
         "director": {
-          "kind": "kill",
-          "at": 4251,
-          "score": 62,
+          "kind": "multikill",
+          "at": 7884,
+          "score": 84,
           "targetId": "ct1",
           "position": {
-            "x": 18.591214041376645,
-            "y": 70.98599733605332
+            "x": 45.01999999999999,
+            "y": 80.38
           },
-          "expiresAt": 4253.2,
+          "expiresAt": 7886.2,
           "reason": "關鍵擊殺"
         },
-        "bombEvents": 3,
-        "eventFrameCount": 291,
+        "bombEvents": 9,
+        "eventFrameCount": 596,
         "eventTypes": {
-          "kill": 208,
-          "multikill": 79,
-          "round-end": 36,
-          "door": 22,
-          "bomb-planted": 1,
-          "defuse-start": 1,
-          "bomb-defused": 1
+          "kill": 410,
+          "multikill": 166,
+          "round-end": 66,
+          "door": 62,
+          "bomb-planted": 3,
+          "defuse-start": 3,
+          "bomb-defused": 3,
+          "clutch": 3
         }
       },
       "audio": {
         "assetSource": "CC0 real firearm recordings",
-        "presentationCueStarts": 383,
-        "recordedSourceStarts": 391,
-        "activeVoices": 10,
+        "presentationCueStarts": 866,
+        "recordedSourceStarts": 735,
+        "activeVoices": 7,
         "loadErrors": {}
       },
       "camera": {
-        "directorSwitches": 226,
+        "directorSwitches": 526,
         "manualOverrideSamples": 1,
         "rapidSwitches": 0
       },
@@ -1467,7 +1470,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 1.0166,
+            "currentClipTime": 1,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -1562,22 +1565,22 @@
             },
             "currentBounds": {
               "min": [
-                -8.45787295501547,
-                0.07685995436858509,
+                -8.457759634477899,
+                0.07433146850632366,
                 14.999703041087722
               ],
               "max": [
-                -7.647656812776404,
-                1.9184346150367189,
-                17.453089510639334
+                -7.643056240489785,
+                1.9185100097879335,
+                17.451324608901544
               ],
-              "width": 0.8102,
-              "height": 1.8416,
-              "depth": 2.4534
+              "width": 0.8147,
+              "height": 1.8442,
+              "depth": 2.4516
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 0,
+            "hitPositionDriftSamples": 33,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -1595,7 +1598,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 1.0166,
+            "currentClipTime": 1,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -1691,21 +1694,21 @@
             "currentBounds": {
               "min": [
                 -33.21023649884715,
-                0.0770718498179539,
+                0.07425589541808544,
                 19.01875523254406
               ],
               "max": [
-                -31.429909579838718,
-                1.9186465104860848,
-                20.965432925230775
+                -31.430777707541896,
+                1.918434436699698,
+                20.9638380889652
               ],
-              "width": 1.7803,
-              "height": 1.8416,
-              "depth": 1.9467
+              "width": 1.7795,
+              "height": 1.8442,
+              "depth": 1.9451
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 8,
+            "hitPositionDriftSamples": 17,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -1723,7 +1726,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 1.0166,
+            "currentClipTime": 1,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -1818,22 +1821,22 @@
             },
             "currentBounds": {
               "min": [
-                -8.413639031952066,
-                0.07707186696859511,
+                -8.413476999536947,
+                0.0742251788491074,
                 14.62618250439424
               ],
               "max": [
-                -7.60402780373498,
-                1.9186465276367302,
-                17.079924363955854
+                -7.599397688878843,
+                1.9184037201307187,
+                17.078160577332962
               ],
-              "width": 0.8096,
-              "height": 1.8416,
-              "depth": 2.4537
+              "width": 0.8141,
+              "height": 1.8442,
+              "depth": 2.452
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 1,
+            "hitPositionDriftSamples": 13,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -1851,7 +1854,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 1.0166,
+            "currentClipTime": 1,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -1946,22 +1949,22 @@
             },
             "currentBounds": {
               "min": [
-                -16.053825367884556,
-                0.07685432094855582,
-                10.380093012809722
+                -16.05817267783178,
+                0.07446694540819165,
+                10.38186700742774
               ],
               "max": [
-                -15.238641190294794,
-                1.9184289816166884,
+                -15.238338713205549,
+                1.9186454866898017,
                 12.829855391749808
               ],
-              "width": 0.8152,
-              "height": 1.8416,
-              "depth": 2.4498
+              "width": 0.8198,
+              "height": 1.8442,
+              "depth": 2.448
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 8,
+            "hitPositionDriftSamples": 0,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -1979,7 +1982,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 0.0166,
+            "currentClipTime": 0.1667,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -2075,12 +2078,12 @@
             "currentBounds": {
               "min": [
                 -31.182489823859406,
-                0.07223479691860588,
+                0.07211368449884006,
                 21.277775197957617
               ],
               "max": [
                 -29.40419652961302,
-                1.9200943044987366,
+                1.9199731920789704,
                 23.22432737873237
               ],
               "width": 1.7783,
@@ -2089,7 +2092,7 @@
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 8,
+            "hitPositionDriftSamples": 17,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -2107,7 +2110,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 0.1665,
+            "currentClipTime": 0.1333,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -2158,7 +2161,7 @@
             },
             "artTriangles": 3128,
             "artMaterials": 8,
-            "facingDegrees": 180,
+            "facingDegrees": -165.95353399987144,
             "orientationOffset": 1.5707963267948966,
             "rootScale": [
               1.0002272412243896,
@@ -2202,22 +2205,22 @@
             },
             "currentBounds": {
               "min": [
-                -0.2584556599491377,
-                0.07215674621988619,
-                30.024137703672935
+                1.337195502927338,
+                0.07218135249273594,
+                29.966028023712976
               ],
               "max": [
-                2.1898553917498296,
-                1.9016948244898755,
-                30.697143476063218
+                3.761740948109153,
+                1.9017194307627274,
+                30.729949114101487
               ],
-              "width": 2.4483,
+              "width": 2.4245,
               "height": 1.8295,
-              "depth": 0.673
+              "depth": 0.7639
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 6,
+            "hitPositionDriftSamples": 9,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -2235,7 +2238,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 1.0166,
+            "currentClipTime": 1,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -2330,18 +2333,18 @@
             },
             "currentBounds": {
               "min": [
-                2.9020890666665355,
-                0.07683008325887117,
-                29.967601799350515
+                2.9038552848401915,
+                0.07430288009239552,
+                29.96737873007023
               ],
               "max": [
                 5.352288509995768,
-                1.9016419576188017,
-                30.771991006247116
+                1.901719658862089,
+                30.776231392965897
               ],
-              "width": 2.4502,
-              "height": 1.8248,
-              "depth": 0.8044
+              "width": 2.4484,
+              "height": 1.8274,
+              "depth": 0.8089
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
@@ -2363,7 +2366,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 1.0166,
+            "currentClipTime": 1,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -2458,22 +2461,22 @@
             },
             "currentBounds": {
               "min": [
-                2.8600930128097466,
-                0.07683451198481692,
-                30.004823151173238
+                2.861867007427762,
+                0.07421697882254438,
+                30.004655999835528
               ],
               "max": [
                 5.309855391749834,
-                1.9016463863447477,
-                30.808559195470895
+                1.9016337575922375,
+                30.812834498520946
               ],
-              "width": 2.4498,
-              "height": 1.8248,
-              "depth": 0.8037
+              "width": 2.448,
+              "height": 1.8274,
+              "depth": 0.8082
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 0,
+            "hitPositionDriftSamples": 27,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -2491,7 +2494,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 1.0166,
+            "currentClipTime": 1,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -2586,22 +2589,22 @@
             },
             "currentBounds": {
               "min": [
-                28.586453481383487,
-                0.07691867606543001,
-                7.887282431087664
+                28.588266066918788,
+                0.07425504995882504,
+                7.883307214795546
               ],
               "max": [
                 31.02375576274437,
-                1.9017305504253603,
-                8.720229181450598
+                1.9016718287285164,
+                8.722043236541417
               ],
-              "width": 2.4373,
-              "height": 1.8248,
-              "depth": 0.8329
+              "width": 2.4355,
+              "height": 1.8274,
+              "depth": 0.8387
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 8,
+            "hitPositionDriftSamples": 4,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -2619,7 +2622,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 0.1665,
+            "currentClipTime": 0.1333,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -2670,7 +2673,7 @@
             },
             "artTriangles": 3144,
             "artMaterials": 8,
-            "facingDegrees": -165.95023797863567,
+            "facingDegrees": 180,
             "orientationOffset": 1.5707963267948966,
             "rootScale": [
               1.0002272412243896,
@@ -2714,22 +2717,22 @@
             },
             "currentBounds": {
               "min": [
-                1.3290894640500746,
-                0.07216522638432846,
-                29.965943940513245
+                1.2934193400508642,
+                0.07215674621988422,
+                30.024137703672935
               ],
               "max": [
-                3.7536120894941476,
-                1.9017033046543166,
-                30.729999216859152
+                3.741730391749832,
+                1.9016948244898735,
+                30.697143476063218
               ],
-              "width": 2.4245,
+              "width": 2.4483,
               "height": 1.8295,
-              "depth": 0.7641
+              "depth": 0.673
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 9,
+            "hitPositionDriftSamples": 0,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -2738,9 +2741,9 @@
       },
       "p0": {
         "version": 1,
-        "fidxTransitions": 298,
+        "fidxTransitions": 604,
         "staleMismatch": 0,
-        "rafFrames": 538,
+        "rafFrames": 1202,
         "duplicateRaf": 0,
         "duplicateRender": 0,
         "lastAuthoritativeFidx": 48,
@@ -2768,62 +2771,62 @@
     {
       "mapKey": "inferno",
       "completed": true,
-      "frameCount": 3036,
+      "frameCount": 2643,
       "presentation": {
         "version": 1,
-        "processedEvents": 260,
+        "processedEvents": 214,
         "duplicateEvents": 0,
         "skippedHistoricalEvents": 1,
-        "feedEvents": 149,
-        "objectiveEvents": 9,
-        "roundStartEvents": 23,
-        "roundEndEvents": 23,
+        "feedEvents": 127,
+        "objectiveEvents": 2,
+        "roundStartEvents": 19,
+        "roundEndEvents": 19,
         "clutchEvents": 1,
-        "audioRequests": 511,
-        "directorSwitches": 166,
+        "audioRequests": 391,
+        "directorSwitches": 142,
         "rapidDirectorSwitches": 0,
         "rewindResets": 1,
         "sameFramePublishes": 0,
         "lastFrameIndex": 109,
         "presentationBacklog": 0,
-        "lastEventId": "round-end-23",
-        "updateCalls": 219,
-        "framesWithEvents": 190,
+        "lastEventId": "round-end-19",
+        "updateCalls": 186,
+        "framesWithEvents": 161,
         "feedCount": 1,
-        "historyCount": 23,
+        "historyCount": 19,
         "director": {
           "kind": "multikill",
-          "at": 2700.5,
+          "at": 2222.5,
           "score": 84,
-          "targetId": "t2",
+          "targetId": "t4",
           "position": {
-            "x": 78.85000000000001,
-            "y": 51.35
+            "x": 79.13276004741962,
+            "y": 53.58047467108443
           },
-          "expiresAt": 2702.7,
+          "expiresAt": 2224.7,
           "reason": "關鍵擊殺"
         },
-        "bombEvents": 9,
-        "eventFrameCount": 212,
+        "bombEvents": 2,
+        "eventFrameCount": 179,
         "eventTypes": {
-          "door": 23,
-          "kill": 149,
-          "multikill": 55,
-          "round-end": 23,
-          "bomb-planted": 5,
-          "bomb-exploded": 4,
+          "door": 19,
+          "kill": 127,
+          "multikill": 46,
+          "bomb-planted": 1,
+          "bomb-exploded": 1,
+          "round-end": 19,
           "clutch": 1
         }
       },
       "audio": {
         "assetSource": "CC0 real firearm recordings",
-        "presentationCueStarts": 293,
-        "recordedSourceStarts": 253,
-        "activeVoices": 8,
+        "presentationCueStarts": 264,
+        "recordedSourceStarts": 234,
+        "activeVoices": 3,
         "loadErrors": {}
       },
       "camera": {
-        "directorSwitches": 166,
+        "directorSwitches": 142,
         "manualOverrideSamples": 1,
         "rapidSwitches": 0
       },
@@ -2845,7 +2848,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 1.0331,
+            "currentClipTime": 1.0498,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -2940,22 +2943,22 @@
             },
             "currentBounds": {
               "min": [
-                4.27668825473843,
-                0.07372061955867643,
-                5.1555653830382635
+                27.460600813787334,
+                0.07809368207655315,
+                -6.06616230630742
               ],
               "max": [
-                6.055114281874585,
-                1.9178991608402858,
-                7.1018296725683125
+                29.741628081939474,
+                1.9188931680422299,
+                -4.8101176036829125
               ],
-              "width": 1.7784,
-              "height": 1.8442,
-              "depth": 1.9463
+              "width": 2.281,
+              "height": 1.8408,
+              "depth": 1.256
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 2,
+            "hitPositionDriftSamples": 0,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -2973,7 +2976,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 1.0331,
+            "currentClipTime": 1.0498,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -3068,22 +3071,22 @@
             },
             "currentBounds": {
               "min": [
-                -9.92985539174983,
-                0.07433146850632452,
-                14.561827322168213
+                27.04736262761095,
+                0.00007806982645477967,
+                3.591059315288523
               ],
               "max": [
-                -7.48186700742776,
-                1.9185100097879342,
-                15.381661286794449
+                29.335355978968373,
+                1.9017196588620886,
+                4.613900944498598
               ],
-              "width": 2.448,
-              "height": 1.8442,
-              "depth": 0.8198
+              "width": 2.288,
+              "height": 1.9016,
+              "depth": 1.0228
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 8,
+            "hitPositionDriftSamples": 9,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -3101,7 +3104,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 1.0331,
+            "currentClipTime": 1.0498,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -3196,22 +3199,22 @@
             },
             "currentBounds": {
               "min": [
-                2.016960954037135,
-                0.0742296075750527,
-                7.609790649237955
+                24.907546473433772,
+                0.07973837854464,
+                -5.381525906380037
               ],
               "max": [
-                3.8001521722223894,
-                1.9184081488566618,
-                9.551820153349972
+                27.164528690646016,
+                1.9197943081307525,
+                -4.065207343084722
               ],
-              "width": 1.7832,
-              "height": 1.8442,
-              "depth": 1.942
+              "width": 2.257,
+              "height": 1.8401,
+              "depth": 1.3163
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 36,
+            "hitPositionDriftSamples": 8,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -3229,7 +3232,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 1.0331,
+            "currentClipTime": 1.0498,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -3324,22 +3327,22 @@
             },
             "currentBounds": {
               "min": [
-                -12.505979024423233,
-                0.07446694540819054,
-                13.427402849774413
+                27.624323571746086,
+                0.07218698591276818,
+                3.303909845045615
               ],
               "max": [
-                -10.061914459477237,
-                1.9186454866898008,
-                14.275246769217434
+                30.075853418690894,
+                1.9200464934928922,
+                4.0247195955785315
               ],
-              "width": 2.4441,
-              "height": 1.8442,
-              "depth": 0.8478
+              "width": 2.4515,
+              "height": 1.8479,
+              "depth": 0.7208
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 0,
+            "hitPositionDriftSamples": 2,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -3357,7 +3360,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 1.0331,
+            "currentClipTime": 1.0498,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -3452,25 +3455,25 @@
             },
             "currentBounds": {
               "min": [
-                1.8978058210188393,
-                0.00021752886940037963,
-                13.05509948965597
+                39.66110605335206,
+                0.00033271774471982374,
+                4.987769502234607
               ],
               "max": [
-                4.1194571327578515,
-                1.9018837241778868,
-                14.174998745550068
+                40.67205603704924,
+                1.9014790387703737,
+                7.286322784183587
               ],
-              "width": 2.2217,
-              "height": 1.9017,
-              "depth": 1.1199
+              "width": 1.0109,
+              "height": 1.9011,
+              "depth": 2.2986
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 0,
+            "hitPositionDriftSamples": 9,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": 0,
-            "deathGroundCorrection": 0.015559
+            "deathGroundCorrection": -0.007212
           },
           "ct1": {
             "mode": "rigged",
@@ -3485,7 +3488,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 1.0331,
+            "currentClipTime": 1.0498,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -3580,18 +3583,18 @@
             },
             "currentBounds": {
               "min": [
-                17.57536896206044,
-                0.07426379189184948,
-                5.794415239381199
+                -32.21874253295944,
+                0.0015275418356915094,
+                22.981811826050013
               ],
               "max": [
-                20.024209038645445,
-                1.9016805706615427,
-                6.6038307321101595
+                -31.094942847135826,
+                1.9008778007799785,
+                25.01577491819053
               ],
-              "width": 2.4488,
-              "height": 1.8274,
-              "depth": 0.8094
+              "width": 1.1238,
+              "height": 1.8994,
+              "depth": 2.034
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
@@ -3613,7 +3616,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 1.0331,
+            "currentClipTime": 1.0498,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -3708,18 +3711,18 @@
             },
             "currentBounds": {
               "min": [
-                22.3303659646092,
-                0.07409517904187427,
-                2.2835036647202545
+                5.062284116983588,
+                0.07792648890702489,
+                4.268027533875792
               ],
               "max": [
-                24.768150612015056,
-                1.9015119578115662,
-                3.121643136891859
+                6.851636164273063,
+                1.901479482099523,
+                6.209326911335111
               ],
-              "width": 2.4378,
-              "height": 1.8274,
-              "depth": 0.8381
+              "width": 1.7894,
+              "height": 1.8236,
+              "depth": 1.9413
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
@@ -3741,7 +3744,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 0.1664,
+            "currentClipTime": 0.0165,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -3792,7 +3795,7 @@
             },
             "artTriangles": 3140,
             "artMaterials": 8,
-            "facingDegrees": 172.20729388869387,
+            "facingDegrees": 158.23793985287895,
             "orientationOffset": 1.5707963267948966,
             "rootScale": [
               1.0002272412243896,
@@ -3836,22 +3839,22 @@
             },
             "currentBounds": {
               "min": [
-                27.804163566350276,
-                0.06674716317561236,
-                2.619528594803305
+                -5.336746252964441,
+                0.00021752886940032412,
+                14.493435967902673
               ],
               "max": [
-                30.253554993896834,
-                1.8962852414456008,
-                3.3314824712313076
+                -3.0660165142583877,
+                1.9018837241778868,
+                15.5231796309424
               ],
-              "width": 2.4494,
-              "height": 1.8295,
-              "depth": 0.712
+              "width": 2.2707,
+              "height": 1.9017,
+              "depth": 1.0297
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 0,
+            "hitPositionDriftSamples": 4,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -3869,7 +3872,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 1.0331,
+            "currentClipTime": 1.0498,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -3964,22 +3967,22 @@
             },
             "currentBounds": {
               "min": [
-                27.09074635516621,
-                0.07423970581909009,
-                -3.904197333618959
+                7.524960282141843,
+                -0.02652939292450479,
+                10.550012958996701
               ],
               "max": [
-                29.423618075432877,
-                1.9016564845887824,
-                -2.7907006145225215
+                9.326440405114568,
+                1.8751043646677328,
+                12.330431902685268
               ],
-              "width": 2.3329,
-              "height": 1.8274,
-              "depth": 1.1135
+              "width": 1.8015,
+              "height": 1.9016,
+              "depth": 1.7804
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 0,
+            "hitPositionDriftSamples": 2,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -3997,7 +4000,7 @@
             "fireTimer": 0,
             "hitTimer": 0,
             "hitFrame": null,
-            "currentClipTime": 1.0331,
+            "currentClipTime": 1.0498,
             "artMode": "esmo-c2c-vector-9-hero",
             "c2cHero": true,
             "weaponType": "pistol",
@@ -4092,22 +4095,22 @@
             },
             "currentBounds": {
               "min": [
-                17.128860106507346,
-                0.0742307598214248,
-                6.115198873483676
+                -0.4336801822674818,
+                0.00007646441429723372,
+                15.448025242811205
               ],
               "max": [
-                19.580307793594734,
-                1.9016475385911191,
-                6.918593837756642
+                0.49746209079862935,
+                1.901748293142813,
+                17.793605391749843
               ],
-              "width": 2.4514,
-              "height": 1.8274,
-              "depth": 0.8034
+              "width": 0.9311,
+              "height": 1.9017,
+              "depth": 2.3456
             },
             "hitPositionDrift": 0,
             "maxHitPositionDrift": 0,
-            "hitPositionDriftSamples": 5,
+            "hitPositionDriftSamples": 0,
             "rootMotionPolicy": "root position tracks removed; locomotion/hit hips/pelvis removed; death hips/pelvis preserved and ground-contact corrected",
             "deathGroundContactY": null,
             "deathGroundCorrection": 0
@@ -4116,9 +4119,9 @@
       },
       "p0": {
         "version": 1,
-        "fidxTransitions": 219,
+        "fidxTransitions": 186,
         "staleMismatch": 0,
-        "rafFrames": 419,
+        "rafFrames": 369,
         "duplicateRaf": 0,
         "duplicateRender": 0,
         "lastAuthoritativeFidx": 109,
