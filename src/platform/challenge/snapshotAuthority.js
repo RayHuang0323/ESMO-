@@ -58,6 +58,22 @@ export const SNAPSHOT_AUTHORITY = Object.freeze({
 export const PUBLISH_REASONS = Object.freeze({ auto: "auto", manual: "manual" });
 
 /**
+ * 快照的用途。**兩者的節流規則不同，所以必須分開。**
+ *
+ * · `defense` **對外掛著的防守陣容**。別人挑戰你時遇到的就是它。
+ *   每個生涯日最多一份 —— 否則玩家能高速輪換，看板上同一支隊伍會出現十幾個版本。
+ * · `entry`   **這一場的出賽陣容**（Slice 3）。你去挑戰別人時用的是**當下**的隊伍，
+ *   在建立 challenge 的當下凍結（＝ Season vNext 的 I10「報名／進場時產生」）。
+ *   ⚠ **不吃節流**：它不是掛在外面給別人打的東西，換先發、練熟練之後
+ *     下一場就該生效——那正是「賽前決策有意義」的前提。
+ *   ⚠ 也**不寫入** `challenge.defense`：出賽用的快照不會改變你的防守陣容。
+ *
+ * ⚠ 兩者用**同一支**產生函式、同一套正規化、同一種雜湊 ⇒ 不可能分歧。
+ *   差別只在「要不要節流」與「要不要存成防守陣容」，由呼叫端決定。
+ */
+export const SNAPSHOT_INTENT = Object.freeze({ defense: "defense", entry: "entry" });
+
+/**
  * 節流：**每個生涯日最多一份**。
  *
  * ⚠ 為什麼不是「每次改陣容就發」：那會讓玩家能高速輪換快照，
@@ -114,19 +130,28 @@ export function validatePublishRequest(request) {
  * @param {number} p.now          呼叫端注入的時刻（本層不讀時鐘）
  * @returns {{ ok:boolean, snapshot:object|null, errors:Array, throttled:boolean }}
  */
-export function publishDefensiveSnapshot({ request = null, careerState = {}, now = null } = {}) {
+export function publishDefensiveSnapshot({
+  request = null, careerState = {}, now = null, intent = SNAPSHOT_INTENT.defense,
+} = {}) {
   //  ── ① 客戶端信任邊界 ──────────────────────────────────────────────────
   const rv = validatePublishRequest(request);
   if (!rv.ok) return { ok: false, snapshot: null, errors: rv.errors, throttled: false };
   if (!Number.isFinite(now)) {
     return { ok: false, snapshot: null, throttled: false, errors: [{ code: "now", message: "缺少發布時刻" }] };
   }
+  if (!(intent in SNAPSHOT_INTENT)) {
+    return { ok: false, snapshot: null, throttled: false, errors: [{ code: "intent", message: `未知的快照用途 ${intent}` }] };
+  }
 
   //  ── ② 節流 ────────────────────────────────────────────────────────────
-  const th = publishThrottle({
-    lastPublishedCareerDay: careerState.lastPublishedCareerDay,
-    careerDay: careerState.careerDay,
-  });
+  //  ⚠ 只有**防守快照**吃節流。出賽快照（`entry`）是「這一場的陣容」，
+  //    在建立 challenge 當下凍結；擋它等於讓玩家換了先發也不能出賽。
+  const th = intent === SNAPSHOT_INTENT.defense
+    ? publishThrottle({
+      lastPublishedCareerDay: careerState.lastPublishedCareerDay,
+      careerDay: careerState.careerDay,
+    })
+    : { allowed: true, reason: null, careerDay: Math.max(0, Math.floor(Number(careerState.careerDay) || 0)) };
   if (!th.allowed) {
     return { ok: false, snapshot: null, throttled: true, errors: [{ code: "throttled", message: th.reason }] };
   }

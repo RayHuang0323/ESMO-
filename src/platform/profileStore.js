@@ -81,8 +81,10 @@ import {
   emptyChallengeState, normalizeChallengeState, setDefense, putSnapshot,
   putInstance, settleInstance, challengeBundle, recentChallenges,
 } from "./challenge/challengeState.js";
-import { publishDefensiveSnapshot, PUBLISH_REASONS, SNAPSHOT_AUTHORITY } from "./challenge/snapshotAuthority.js";
-import { createChallengeInstance } from "./contracts/challengeInstance.js";
+import { publishDefensiveSnapshot, PUBLISH_REASONS, SNAPSHOT_AUTHORITY, SNAPSHOT_INTENT } from "./challenge/snapshotAuthority.js";
+//  Slice 3：挑戰看板（純推導；⚠ 不 import teamStrength / calcPower）。
+import { buildChallengeBoard } from "./challenge/challengeBoard.js";
+import { createChallengeInstance, CHALLENGE_KINDS } from "./contracts/challengeInstance.js";
 import { runChallenge } from "./challenge/challengeRunner.js";
 import { fixtureSnapshot, FIXTURE_OPPONENTS, fixtureOpponentByKey } from "./challenge/fixtureOpponents.js";
 //  Club Progression v1：Club XP／Club Level 的唯一權威（純函式，等級一律推導）。
@@ -3890,34 +3892,134 @@ export const useProfileStore = create((rawSet, get) => {
    *   連點就會在落盤之前跑第二場。
    * ⚠ `matchSeed` 在這裡取一次就凍結，之後任何路徑都只讀。
    */
-  startFixtureChallenge(opponentKey) {
+  startFixtureChallenge(opponentKey, { tacticId = null, heroProgress = null } = {}) {
     const st = get();
     const cur = st.challenge ?? emptyChallengeState();
-    if (!cur.defense) return { ok: false, errors: [{ code: "defense", message: "請先發布你的防守陣容" }] };
     const def = fixtureOpponentByKey(opponentKey);
     if (!def) return { ok: false, errors: [{ code: "opponent", message: "找不到這個練習對手" }] };
-    const fx = fixtureSnapshot(opponentKey);
+
+    //  ── Slice 3：出賽用的是**當下**的隊伍，不是掛在外面的防守陣容 ──────────
+    //  ⚠ 這是「賽前決策有意義」的前提：換了先發、練了熟練，下一場就該生效。
+    //    防守快照仍然只由「更新我的防守陣容」產生，而且照舊每日一份。
+    const entry = get()._issueEntrySnapshot({
+      tacticId: tacticId ?? cur.defense?.standingOrders?.tacticId ?? null, heroProgress,
+    });
+    if (!entry.ok) return { ok: false, errors: entry.errors };
+
+    const fx = fixtureSnapshot(opponentKey, { playerMasteryLevel: get()._playerMasteryLevel(heroProgress) });
     if (!fx.ok) return { ok: false, errors: fx.errors };
 
     const built = createChallengeInstance({
-      challenger: cur.defense,
+      challenger: entry.snapshot,
       defender: fx.snapshot,
-      //  Slice 2：挑戰方本場戰術＝我的預存戰術（還沒有「挑戰前臨時改戰術」的畫面）。
-      challengerTacticId: cur.defense.standingOrders.tacticId,
+      challengerTacticId: entry.snapshot.standingOrders.tacticId,
       //  ⚠ **權威層一次性取得**的亂數。不是內容推導 —— 同樣兩份快照可以打第二場。
       seedSource: (Math.random() * 0x7fffffff) >>> 0,
       createdAt: Date.now(),
       issuedBy: SNAPSHOT_AUTHORITY.id,
       nonce: `${opponentKey}:${cur.order.length}`,
+      opponentKey,
+      kind: CHALLENGE_KINDS.formal,
     });
     if (!built.ok) return { ok: false, errors: built.errors };
 
     let next = putSnapshot(cur, fx.snapshot);
-    next = putSnapshot(next, cur.defense);
+    next = putSnapshot(next, entry.snapshot);
     const put = putInstance(next, built.challenge);
     set({ challenge: put.state });
     get().save();
     return { ok: true, errors: [], challengeId: put.instance.challengeId, created: put.added };
+  },
+
+  /**
+   * 再試一次：打**同一份**對手快照，可以改我方陣容與戰術。
+   *
+   * ⚠ 這是**學習沙盒**：`kind = retry` ⇒ **不計入觀測紀錄、不產生任何獎勵**
+   *   （架構文件 §7.3）。沒有這條，玩家可以靠重試把攻破率刷成任何數字，
+   *   而看板正是靠攻破率分類的。
+   * ⚠ 仍然是**新的 challenge instance ＋ 新的 matchSeed**——
+   *   「同一場再打一次」在契約上不存在（Slice 1 R1）。
+   */
+  retryChallenge(challengeId, { tacticId = null, heroProgress = null } = {}) {
+    const cur = get().challenge ?? emptyChallengeState();
+    const src = challengeBundle(cur, challengeId);
+    if (!src.ok) return { ok: false, errors: [{ code: "bundle", message: src.reason }] };
+
+    const entry = get()._issueEntrySnapshot({
+      tacticId: tacticId ?? src.instance.challengerTacticId, heroProgress,
+    });
+    if (!entry.ok) return { ok: false, errors: entry.errors };
+
+    const built = createChallengeInstance({
+      challenger: entry.snapshot,
+      //  ⚠ 對手用**原本那一份**快照（這就是「再試一次」的定義）。
+      defender: src.defenderSnapshot,
+      challengerTacticId: entry.snapshot.standingOrders.tacticId,
+      seedSource: (Math.random() * 0x7fffffff) >>> 0,
+      createdAt: Date.now(),
+      issuedBy: SNAPSHOT_AUTHORITY.id,
+      nonce: `retry:${challengeId}:${cur.order.length}`,
+      opponentKey: src.instance.opponentKey,
+      kind: CHALLENGE_KINDS.retry,
+    });
+    if (!built.ok) return { ok: false, errors: built.errors };
+
+    let next = putSnapshot(cur, src.defenderSnapshot);
+    next = putSnapshot(next, entry.snapshot);
+    const put = putInstance(next, built.challenge);
+    set({ challenge: put.state });
+    get().save();
+    return { ok: true, errors: [], challengeId: put.instance.challengeId, created: put.added };
+  },
+
+  /**
+   * 產生**這一場**的出賽快照（不節流、不寫入防守陣容）。
+   *
+   * ⚠ 走的是與防守發布**同一支**權威函式，只是 `intent = entry`
+   *   ⇒ 取值、正規化、雜湊完全相同，不可能分歧。
+   */
+  _issueEntrySnapshot({ tacticId = null, heroProgress = null } = {}) {
+    const st = get();
+    const tid = tacticId ?? st.challenge?.defense?.standingOrders?.tacticId ?? null;
+    if (!tid) return { ok: false, errors: [{ code: "tactic", message: "請先選擇這一場要用的戰術" }] };
+    return publishDefensiveSnapshot({
+      request: { teamId: st.team?.id ?? "team", tacticId: tid, reason: PUBLISH_REASONS.manual },
+      careerState: {
+        players: st.players ?? [],
+        lineup: st.lineup ?? null,
+        heroProgress: heroProgress ?? {},
+        heroAssign: HERO_ASSIGN,
+        team: { teamId: st.team?.id ?? "team", teamName: st.team?.name ?? null, tag: st.team?.tag ?? null },
+        careerDay: Number(st.meta?.days) || 1,
+        lastPublishedCareerDay: null,
+      },
+      now: Date.now(),
+      intent: SNAPSHOT_INTENT.entry,
+    });
+  },
+
+  /** 玩家目前的平均英雄熟練（`drill_mirror` 對齊用；讀不到就當 1）。 */
+  _playerMasteryLevel(heroProgress) {
+    const rows = Object.values(heroProgress ?? {}).map((h) => Number(h?.level)).filter(Number.isFinite);
+    if (!rows.length) return 1;
+    return Math.max(1, Math.round(rows.reduce((a, b) => a + b, 0) / rows.length));
+  },
+
+  /**
+   * 挑戰看板。**畫面唯一的讀取點**——卡片不自己拼資料、更不自己算強弱。
+   *
+   * ⚠ 本檔與 `challengeBoard.js` 都**不 import** `teamStrength` / `calcPower`。
+   */
+  challengeBoardView({ heroProgress = null } = {}) {
+    const st = get();
+    const cur = st.challenge ?? emptyChallengeState();
+    const mastery = get()._playerMasteryLevel(heroProgress);
+    return buildChallengeBoard({
+      challengeState: cur,
+      careerDay: Number(st.meta?.days) || 1,
+      playerMasteryLevel: mastery,
+      snapshotFor: (key) => fixtureSnapshot(key, { playerMasteryLevel: mastery }),
+    });
   },
 
   /**

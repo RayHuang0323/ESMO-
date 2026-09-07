@@ -78,9 +78,20 @@ export const toEngineSeed = (n) => ((Number(n) >>> 0) | 1) >>> 0;
  * @param {string}   [p.nonce]           讓同一組輸入也能開出不同 challengeId 的區別碼
  * @returns {{ ok:boolean, challenge:object|null, errors:Array }}
  */
+/** 挑戰種類（Slice 3）。⚠ `retry` 恆不產生獎勵，見架構文件 §7.3。 */
+export const CHALLENGE_KINDS = Object.freeze({
+  /** 正式挑戰：抓對方**最新**快照，計入觀測紀錄。 */
+  formal: "formal",
+  /** 再試一次：打**同一份舊快照**，可改我方陣容與戰術，**不計入紀錄、不給獎勵**。 */
+  retry: "retry",
+});
+
 export function createChallengeInstance({
   challenger = null, defender = null, challengerTacticId = null,
   seedSource = null, createdAt = null, issuedBy = null, nonce = null,
+  //  Slice 3：看板與歷史需要知道「打的是誰」與「這是不是重試」。
+  //  ⚠ `opponentKey` 只是**身分標籤**，不含任何戰力資訊。
+  opponentKey = null, kind = CHALLENGE_KINDS.formal,
 } = {}) {
   const errors = [];
   const cv = validateSquadSnapshot(challenger);
@@ -123,6 +134,8 @@ export function createChallengeInstance({
       defenderSnapshotHash: defender.hash,
       challengerTacticId: String(challengerTacticId),
       defenderTacticId: String(defender.standingOrders.tacticId),
+      opponentKey: opponentKey ? String(opponentKey) : null,
+      kind: kind in CHALLENGE_KINDS ? kind : CHALLENGE_KINDS.formal,
       //  ⚠ **凍結**：建立時取一次，之後任何路徑都只能讀，不得重新產生。
       matchSeed: toEngineSeed(seedSource),
       simulationVersion: challenger.simulationVersion ?? MOBA_SIMULATION_VERSION,

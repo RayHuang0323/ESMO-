@@ -158,11 +158,18 @@ ck("③ 連點「發起挑戰」會產生**新的一場**（不是被誤判成�
   `${nBefore} → ${store().challenge.order.length}`);
 ck("③ 新的一場有自己的 seed",
   store().challenge.instances[dup.challengeId].matchSeed !== seedFrozen);
-//  ⚠ 這一條是 Slice 1 R1 的產品後果：同樣兩份快照可以打第二場，
-//    所以「重複」必須以 challengeId 判斷，不是內容雜湊。
-ck("③ 兩場引用同樣的兩份快照（內容相同，但是不同的場次）",
+//  ⚠ 期望值於 Slice 3 更新。Slice 2 時挑戰方沿用**已發布的防守快照**，
+//    所以兩場的 `challengerSnapshotHash` 相同。Slice 3 起挑戰方用的是
+//    **這一場的出賽快照**（在建立 challenge 當下凍結）⇒ 每場都有自己的一份。
+//    這是刻意的：換了先發、練了熟練，下一場就該生效。
+//  ⚠ 不變的是**對手**：打同一個 fixture ⇒ 同一份防守快照 ⇒ 同一個雜湊。
+//    「重複」仍然必須以 `challengeId` 判斷，不是內容雜湊（Slice 1 R1）。
+ck("③ 兩場打同一個對手 ⇒ 共用同一份防守快照",
+  store().challenge.instances[dup.challengeId].defenderSnapshotHash
+    === store().challenge.instances[cid].defenderSnapshotHash);
+ck("③ 但各自有自己的出賽快照（Slice 3：出賽用當下的隊伍）",
   store().challenge.instances[dup.challengeId].challengerSnapshotHash
-    === store().challenge.instances[cid].challengerSnapshotHash);
+    !== store().challenge.instances[cid].challengerSnapshotHash);
 
 const verify = store().verifyChallengeReplay(cid);
 ck("③ 重播驗證：重算結果與當初逐值一致", verify.ok && verify.match === true, verify.reason ?? "一致");

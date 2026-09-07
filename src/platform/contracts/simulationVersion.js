@@ -98,7 +98,15 @@ export const SIMULATION_SEMANTICS_FILES = Object.freeze([
  *   ⚠ 舊版本的指紋**保留不刪**：它是歷史挑戰「當初是用哪一版跑的」的憑據。
  */
 export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
-  "moba-sim.v1": "90694c43d2351cfa",
+  //  2026-09-08（Slice 3）：`challengeRunner.js` 在 tick 迴圈**結束之後**多讀一次
+  //  `eng.snapshot().tacticExec`，把戰術執行計數放進 `ChallengeResult`
+  //  （賽後「宣告 vs 實際」的資料來源）。
+  //  ⚠ **判定為不改變模擬語意**：它發生在模擬跑完之後，沒有回寫引擎、
+  //    沒有改變任何 tick 的輸入。⇒ 沿用 `moba-sim.v1`，只換指紋。
+  //  ⚠ 這個判定不是憑感覺 —— Slice 1/2 的「同一場重播逐值相同」與
+  //    「reload 後重播與當初一致」在改動後仍然全綠，等於實測過
+  //    `snapshot()` 沒有副作用。
+  "moba-sim.v1": "54d52e2fcf0491f9",
 });
 
 export const isKnownSimulationVersion = (v) =>

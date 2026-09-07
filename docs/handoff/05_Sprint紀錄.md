@@ -18471,3 +18471,131 @@ check_moba_runtime29                   （對本次凍結的程式碼執行；�
 ⚠ 程式碼凍結點之後只新增 handoff 文件，`src/` 與 `tools/` 一個位元都沒再動
 （可用 `git diff --stat <FINAL_HEAD> -- src/ tools/` 對照）。
 ⚠ 機器上仍有其他來源不明的 node 行程（多為 9/5 殘留），**全部未動**。
+
+---
+
+## Sprint：Player Challenge v1 — MOBA Slice 3（Challenge Board ＋ Player Experience，2026-09-08）
+
+**類型**：實作。基線 `9eeee0c`。本地 commit，不 push、不 deploy。
+
+### 玩家現在可以「自己選對手」
+
+打開玩家挑戰 → 看板列 5 個候選 → 讀懂對手（熟練／流派／戰術弱點／先發／你的紀錄）
+→ 挑戰前選戰術 → 發起 → 看結果 → **賽前宣告 vs 實際發生**的逐條對照
+→ 再試一次（同一份對手快照、可改戰術、不計入紀錄）。
+
+### 新增 / 修改
+
+| 檔案 | 內容 |
+|---|---|
+| `challenge/challengeBoard.js`（新） | 候選推導、觀測紀錄、候選位、新鮮度、賽後對照 |
+| `challenge/fixtureOpponents.js` | 5 個對手，每個帶**可證明的特徵**；新增 `drill_mirror` |
+| `challenge/snapshotAuthority.js` | `SNAPSHOT_INTENT`：`defense`（節流）vs `entry`（不節流） |
+| `contracts/challengeInstance.js` | `opponentKey` ＋ `CHALLENGE_KINDS`（formal / retry） |
+| `challenge/challengeRunner.js` | 結果帶 `tacticExec`（賽後對照的唯一資料來源） |
+| `profileStore.js` | 看板 view、出賽快照、retry、玩家熟練推導 |
+| `screens/challenge/PlayerChallengeScreen.jsx` | 看板 UI、賽前戰術、賽後對照、紀錄 |
+| `tools/check_player_challenge_slice3.mjs`（新） | 100 條 |
+| `tools/browser_check_player_challenge_slice3.mjs`（新） | 85 條 × 桌機／手機 |
+
+### 四個關鍵決定
+
+**① 出賽快照 ≠ 防守快照。**
+你去挑戰別人，用的是**當下**的隊伍（在建立 challenge 當下凍結，`intent: entry`，不節流）；
+掛在外面給別人打的仍是**已發布的防守快照**（每個生涯日一份）。
+⇒ 換先發、練熟練，下一場就生效——這是「賽前決策有意義」的前提。
+⚠ 兩者走**同一支**權威函式、同一套正規化與雜湊，不可能分歧。
+
+**② 看板一個戰力數字都沒有。**
+`challengeBoard.js` / `fixtureOpponents.js` / 畫面**都不 import**
+`teamStrength` / `calcPower`，也不產生 strength / rating / tier 欄位（verifier 掃描）。
+候選位由**觀測紀錄**決定；樣本 < 3 一律 `unknown` 並誠實寫「尚無足夠挑戰紀錄」。
+⚠ 文案禁區也被釘住：畫面不得出現「戰力較弱／較強／勝率／星等／最近變強」。
+⚠ 紀錄是**這個存檔自己的**（沒有伺服器），文案寫「你挑戰過 N 次」，
+畫面另外明說「不是全服資料」。
+
+**③ 首局體驗：加一個對手，不是把所有對手調弱。**
+`drill_mirror` 的熟練**取自玩家當下的熟練**，卡片直接寫出這個事實。
+⚠ 過程中量到一件事，值得記：**熟練位移 +0/+1/+2 就足以翻盤**——
+第一版 mirror 熟練 1.8 vs 玩家 1.0（差約 2% power），新玩家仍只有 1/8。
+改成五席同級後才真的打平。這是 271b31d 的結論再一次現形。
+⚠ 能力值 `base = 70` 是**實測校出來的**，不是憑感覺：引擎對藍方（＝挑戰方）
+本來就有側偏——完全相同的兩隊，挑戰方只贏 33%（實測 4/12）。
+熟練打平之後還要把側偏算進去，否則會變成「看起來公平、實際必敗」。
+
+**④ 賽後只並排真實數字，不下結論。**
+左邊是戰術自己宣告的 `evidence.goal`（`MobaTacticConfig.js` 寫死的觀察指標），
+右邊是引擎的 `tacticExec` 真實計數。雙方戰術各一張表。
+⚠ 引擎沒統計到的項目顯示「—」，**不填 0**：「沒統計到」與「真的是 0」
+是兩件事，混在一起會讓玩家讀出錯誤結論。
+⚠ 明確不做：勝因分析、AI 教練建議（verifier 掃描「建議／勝因／你應該」）。
+
+### 實測數字（新存檔，英雄熟練全 Lv.1）
+
+| 對手 | 平均熟練 | 新玩家勝率 |
+|---|---|---|
+| `drill_mirror`（合理候選） | = 玩家 | **9/16（56%）** |
+| `drill_balanced` | 4.8 | 0/5 |
+| `drill_topheavy` | 4.8 | 1/5 |
+| `drill_veteran` | 12.8 | 0/5 |
+| `drill_rotation` | 6.8 | 2/5 |
+
+⇒ Slice 2 的 **0/18 結構性必敗已解除**，難度梯度仍然真實存在，
+而且**沒有保證勝率**（mirror 仍會輸 44%）。
+
+### 對稱性實測（順帶確認 runner 沒有偏袒任何一方）
+
+| 情境 | 挑戰方勝率 |
+|---|---|
+| 完全相同（能力 75 / 熟練 Lv.1） | 33%（＝引擎藍方側偏） |
+| 挑戰方能力 +10 | 75% |
+| 挑戰方熟練 +5 級 | 83% |
+| 挑戰方熟練 +11 級 | 100% |
+
+### simulationVersion Gate 走了一次完整流程
+
+`challengeRunner.js` 動了（多讀一次 `eng.snapshot().tacticExec`）⇒ 指紋改變 ⇒ 閘門變紅。
+判定：**發生在 tick 迴圈之後、沒有回寫引擎 ⇒ 不改變模擬語意**
+⇒ 沿用 `moba-sim.v1`，只換指紋，理由寫在契約註解裡。
+⚠ 這個判定不是憑感覺：Slice 1/2 的「重播逐值相同」在改動後仍全綠，
+等於實測過 `snapshot()` 沒有副作用。
+
+### 驗證結果（最終 working tree）
+
+```
+check_player_challenge_slice3          100/100 PASS   ← 新增
+browser_check_player_challenge_slice3   85/85  PASS   ← 新增（桌機 1366 ＋ 手機 390，一次過）
+check_player_challenge_slice2           70/70  PASS
+check_player_challenge_slice1          107/107 PASS
+check_simulation_version_gate           26/26  PASS
+regress 結束率 15/15 ｜ regress2 節奏門檻 8/8
+check_practice_match_v0d 70/70 ｜ check_general_match_v7a 55/55
+check_time_block_v3 69/69 ｜ check_competition_q3 91/91 ｜ check_retention_economy_v1 38/38
+npm run build ✓
+```
+
+⚠ **未跑 `check_moba_runtime29`**：引擎語意檔案（`LogicEngine.js` /
+`mobaPlayerStats.js` / `MobaTacticConfig.js` / `heroProgress.js`）本輪**一個都沒動**
+（`git status` 為空），只動了 `challengeRunner.js`，而它沒有 Challenge 以外的消費端。
+regress / regress2 已單獨跑過並全綠。⇒ 判定 umbrella 非必要。
+
+### Slice 2 有一條斷言的期望值被更新（不是放寬）
+
+`check_player_challenge_slice2` 原本斷言「兩場引用同樣的兩份快照」——
+那是 Slice 2 的行為（挑戰方沿用已發布的防守快照）。
+Slice 3 改成出賽快照 ⇒ 每場都有自己的一份。
+更新後改守兩條更精確的：**打同一個對手 ⇒ 共用同一份防守快照**、
+**但各自有自己的出賽快照**。
+
+### 本輪不做（Owner 明令）
+
+Club Points 與任何獎勵、Ranked、Cap／Bracket、LadderRating、Pricing Authority、
+CS Challenge、真 server、monetization、社交好友、排行榜、
+大改 battle runtime、大改 General Match。
+
+### Ban/Pick 仍未進快照（Slice 4）
+
+技術上可沿用（三個引擎轉換點都吃「席位 → `{heroId, hero, spells}`」，英雄查表是注入式）。
+⚠ 但加它必須**同時**做三件事：進快照、進 `capturedInputs`、bump `MOBA_SIMULATION_VERSION`。
+本輪已同時動了看板、出賽快照、retry、賽後對照——再疊上模擬輸入變更，
+一旦出現「重播對不上」就分不清是哪一項造成的。

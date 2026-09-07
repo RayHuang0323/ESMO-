@@ -126,6 +126,15 @@ export function runChallenge({
 
   for (let t = CHALLENGE_DT; t <= CHALLENGE_MAX_T && !eng.over; t += CHALLENGE_DT) eng.tick(CHALLENGE_DT);
 
+  //  ── Slice 3：戰術執行證據（賽後「宣告 vs 實際」的唯一資料來源）──────────
+  //  ⚠ 這是**引擎自己的真實計數**（`snapshot().tacticExec`，Sprint24 起就有），
+  //    不是事後推論，也不是「AI 教練結論」。賽後畫面只被允許把這些數字
+  //    與戰術自己宣告的 `evidence.goal` 並排，讓玩家自己判斷。
+  //  ⚠ 只讀一次 snapshot：它會複製整份狀態，放進迴圈會很慢。
+  //  ⚠ 這**不改變模擬語意**（只是多讀一次既有輸出），但它改了本檔的程式碼，
+  //    所以 `SIMULATION_SEMANTICS_FINGERPRINTS` 仍必須重新登記（同版本）。
+  const exec = eng.snapshot()?.tacticExec ?? null;
+
   return {
     ok: true, errors: [],
     result: {
@@ -133,6 +142,8 @@ export function runChallenge({
       challengeId: challenge.challengeId,
       simulationVersion: challenge.simulationVersion,
       matchSeed: seed,
+      //  ⚠ 以**挑戰方／防守方**記錄，不用引擎的 blue/red（同下面 `outcome` 的理由）。
+      tacticExec: exec ? { challenger: { ...exec.blue }, defender: { ...exec.red } } : null,
       //  ⚠ `outcome` 以**挑戰方**視角記錄，不用引擎的 blue/red——
       //    日後若允許挑戰方站紅方，blue/red 的意義會反過來，而這個欄位不會。
       outcome: eng.winner === "blue" ? "challengerWin" : eng.winner === "red" ? "defenderWin" : "unresolved",
