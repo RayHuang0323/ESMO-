@@ -18250,3 +18250,40 @@ Claude 線的 Online 定案只作為邊界：`CAREER_OWNS_ROSTER / ONLINE_OWNS_M
 ### Handoff
 
 此節記錄的是 push 前 release validation。完成最後 fetch、normal fast-forward push、既有 `.github/workflows/deploy.yml` Pages workflow 與 production smoke 後，追加實際 main SHA、workflow run 與 smoke 結果。
+
+---
+## Sprint CS Android Owner Review V3 final release closeout（2026-09-08）
+
+### Release identity
+
+- 依規定先 fetch，唯一 baseline 是 `origin/main=09a9cdadb7fbc325fa0c529d2c5d7eabfd1c43af`。
+- 沿用 `cs/android-owner-review-v2` 的 Owner PASS；candidate `cae4f9c3a558bb67eaf9a97f8259c80f2116c7e6` 以 semantic integration 形成 `4e1473dd76d64a595a8d6ef3e3498af390df16e1`。
+- release branch 保留 main 的 TD-56、Club Progression、Dashboard、Competition、async PvP；Online boundary 維持 `CAREER_OWNS_ROSTER / ONLINE_OWNS_MATCH`、`MatchEntryRequest.v1`、server-authoritative `SquadSnapshot.v1` 與 `ChallengeInstance.v1`。本輪 CS 是 runtime consumer，沒有新增 CS Online contract 或改 matchSeed／simulationVersion／snapshot authority。
+
+### Required focused gates
+
+- `npm.cmd run build`：PASS，`2785 modules transformed`；僅有既有 large-chunk warning。
+- `node tools/check_cs23.mjs`：`28/28` PASS。
+- `node tools/check_cs_renderer_visibility.mjs`：`24/24` PASS。
+- `node tools/check_cs_camera_recovery.mjs`：`8/8` PASS。
+- `node tools/check_cs_c5b_route_interrupt.mjs`：PASS；Mirage／Dust II／Inferno deterministic maps completed，route interrupt、live-round acquisition、permission→first shot、movement stop、route preservation、weapon cadence 與 navigation safety 均 PASS；unexpected return-to-spawn 與 spawn-anchor violation 均為 `0`。
+- `node tools/check_cs_c5c_presentation.mjs`：`29/29` PASS。
+- `node tools/check_cs_c5c_icon_help.mjs`：`19/19` PASS。
+- `node tools/check_cs_c5d_side_bias_audit.mjs`：9/9 paired deterministic checks PASS；verdict `NO_T_SIDE_SYSTEMIC_BIAS`；T／CT aggregate stuck detections `0`。
+- `node tools/browser_check_cs_android_owner_review_v3.mjs`：六個獨立 map×viewport runs aggregate `495/495 PASS`；Mirage、Dust II、Inferno 各 Desktop＋390px；每組 console/page errors `0`，frame stream 存在。
+
+### Production evidence
+
+- `node tools/browser_check_prod_td56_release.mjs`：`48/48 PASS`，涵蓋 Home、Dashboard、Team Development，桌機與 390px。
+- `node tools/browser_check_prod_club_identity_release.mjs`：`55/55 PASS`，涵蓋 Home、Club Identity／Club Assets、Competition Hub opponent inspect、CS 賽前與 CS Battle canvas/C5C mount，桌機與 390px。
+- `node tools/browser_check_prod_v7_release.mjs`：`44/44 PASS`，涵蓋 Home、MOBA／CS／Competition 入口、一般對戰、快速練習與 Competition Hub，含 390px。
+- `node tools/browser_check_cs_android_owner_preview.mjs` 指向 `https://rayhuang0323.github.io/ESMO-/`：`33/33 RESULT=PASS`，HTTP 200；Home、Mirage／Dust II／Inferno、HUD、5v5 player cards、三個 tactical preset、FPS POV control、player controls、C4 HUD 與 390px overflow 均通過；console/page errors `0`。
+- Pages 使用既有 `.github/workflows/deploy.yml`；程式 release commit 對應 workflow run `34140430661`，conclusion `success`。未直接寫 `gh-pages`。
+
+### Verdict 與 residual
+
+- `CS_ANDROID_OWNER_REVIEW_V3_RELEASED = YES`。
+- `CS_NAVIGATION_SPAWN_RETURN_CLOSED = YES`。
+- `T_SIDE_SYSTEMIC_BIAS = CLOSED`。
+- Node/CDP 390px 是 browser emulation；實體 Android 的 GPU/FPS、thermal、喇叭低頻、WebView 與長時間 touch／pinch／rotate 體感仍需 Owner 真機驗收，不能把 emulation 宣稱成真機完成。
+- 額外舊 Club Progression production verifier 的 `75/76` 是 over-broad bundle text assertion：TD-56 合法保留「俱樂部等級」在 Team Development，頁面級 Club Mastery／Assets assertions 全 PASS。此分類已記錄，不是新產品 regression。
