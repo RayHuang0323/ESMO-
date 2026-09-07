@@ -47,6 +47,9 @@ const NAV = {
   recruit: "recruit",
   cs: "csPrep",
   development: "teamDevelopment",
+  //  Player Challenge Slice 2：非同步 Unranked PvP。
+  //  ⚠ 它**不是**排位、**不影響生涯** —— 畫面自己會逐條說明，這裡只給入口。
+  playerChallenge: "playerChallenge",
   newgame: "newGame",
   //  V6-3：休賽期。只有真的有年度決策時，首頁才會出現這個入口。
   offSeason: "offSeason",
@@ -744,6 +747,9 @@ function MobileNavSheet({ type, onSelect, onClose }) {
       //  ⚠ 桌機 Utility 與手機「更多」**兩處都要加**：只加一邊，另一種裝置的
       //    玩家等於沒有這個功能（V7B 與 V7-2.5 各踩過一次相反方向）。
       { id: "clubMastery", label: "俱樂部專精", detail: "流派・專精・戰術變體", icon: "award" },
+      //  ⚠ Slice 2：桌機 Utility 加了「玩家挑戰」，這裡**必須跟著加**——
+      //    只加一邊，另一種裝置的玩家等於沒有這個功能（上面那條註解的同一個坑）。
+      { id: "playerChallenge", label: "玩家挑戰", detail: "非同步・不影響生涯", icon: "compete" },
       { id: "finance", label: "財務", detail: "收支與預測", icon: "finance" },
       { id: "equip", label: "俱樂部資產", detail: "教練與收藏", icon: "package" },
       { id: "newgame", label: "新遊戲", detail: "重新開始", icon: "arrowUp" },
@@ -941,6 +947,9 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
     { id: "recruit", label: "招募", icon: "arrowUp" },
     { id: "objectives", label: "俱樂部目標", icon: "award", badge: objectiveBadge },
     { id: "clubMastery", label: "俱樂部專精", icon: "award" },
+    //  Slice 2：常駐入口。與「戰隊發展」同一條理由——玩家必須隨時進得去，
+    //  而不是只有某個狀態下才看得到。
+    { id: "playerChallenge", label: "玩家挑戰", icon: "compete" },
     { id: "newgame", label: "開新局", icon: "arrowUp" },
     { id: "equip", label: "俱樂部資產", icon: "package" },
   ], [objectiveBadge]);

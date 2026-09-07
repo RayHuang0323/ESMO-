@@ -35,7 +35,9 @@
 //      只有 money/fans/reputation，沒有 xp）。
 // ============================================================================
 import { create } from "zustand";
-import { TEAMS } from "../data/roster.js";
+//  `HERO_ASSIGN`：席位 → 英雄。Slice 2 用它把英雄熟練查成快照裡的 loadout
+//  （與 `useLocalServer.start()` 的 `getLoadout()` 同一份對應表）。
+import { TEAMS, HERO_ASSIGN } from "../data/roster.js";
 import { INITIAL_PLAYERS } from "../data/players.js";
 import {
   ROSTER_CAP, sponsorById, courseById, applyCourse, conditionFor,
@@ -72,6 +74,17 @@ import {
   emptyClubMastery, normalizeClubMastery,
   setActiveDoctrine as setActiveDoctrineIn,
 } from "./mastery/clubMasteryState.js";
+//  Player Challenge Slice 2：線上挑戰的存檔切片與權威層。
+//  ⚠ 這些模組**不得**反過來 import 本檔——挑戰是線上側，它讀生涯狀態，
+//    但生涯狀態不認得挑戰。單向依賴是「線上不寫回生涯」的結構保證。
+import {
+  emptyChallengeState, normalizeChallengeState, setDefense, putSnapshot,
+  putInstance, settleInstance, challengeBundle, recentChallenges,
+} from "./challenge/challengeState.js";
+import { publishDefensiveSnapshot, PUBLISH_REASONS, SNAPSHOT_AUTHORITY } from "./challenge/snapshotAuthority.js";
+import { createChallengeInstance } from "./contracts/challengeInstance.js";
+import { runChallenge } from "./challenge/challengeRunner.js";
+import { fixtureSnapshot, FIXTURE_OPPONENTS, fixtureOpponentByKey } from "./challenge/fixtureOpponents.js";
 //  Club Progression v1：Club XP／Club Level 的唯一權威（純函式，等級一律推導）。
 import {
   emptyClubProgression, normalizeClubProgression, clubProgressionViewOf,
@@ -438,6 +451,10 @@ const DEFAULT = {
   retention: emptyRetention(),
   //  Meta Progression v1：戰術使用與意圖累積（生涯尺度，永不 prune）。
   clubMastery: emptyClubMastery(),
+  //  Player Challenge Slice 2：我的防守快照 ＋ 挑戰紀錄（`challenge/challengeState.js`）。
+  //  ⚠ 這一格是**線上**資料：它從不寫回 players / meta / competition。
+  //    走的是既有的持久化邊界（`save()` 序列化整份 state），不新增第二套 storage。
+  challenge: emptyChallengeState(),
   //  Club Assets v1：教練收藏與總教練。ownership 與 loadout 分開存。
   clubAssets: emptyClubAssets(),
   //  Club Progression v1：**Club XP 的唯一權威**。等級一律推導、不落盤
@@ -731,6 +748,11 @@ const load = () => {
       retention: normalizeRetention(saved.retention),
       //  舊存檔沒有 clubMastery ⇒ 空袋子（不回填任何歷史打法，那是編造）。
       clubMastery: normalizeClubMastery(saved.clubMastery),
+      //  Slice 2：舊存檔沒有 challenge ⇒ 空的。
+      //  ⚠ 正規化會**丟掉**雜湊對不上的快照與引用不全的挑戰——
+      //    壞掉的一筆拿去重播會產生「看起來正常但其實錯誤」的結果，
+      //    那比少一筆紀錄糟得多。
+      challenge: normalizeChallengeState(saved.challenge),
       //  舊存檔沒有 clubAssets ⇒ 空收藏。normalize 會剔除型錄裡不存在的資產，
       //  也會把「裝備了沒買的教練」這種被手改過的存檔拉回 null。
       clubAssets: normalizeClubAssets(saved.clubAssets),
@@ -3800,6 +3822,155 @@ export const useProfileStore = create((rawSet, get) => {
   /** 某個基礎戰術現在可用的東西（BASIC 恆可用，見 domain）。 */
   variantsForTactic(tacticId) {
     return variantsAvailableForTactic(get().clubMastery, tacticId);
+  },
+
+  // ══════════════════════════════════════════════════════════════════════
+  //  Player Challenge Slice 2 —— 非同步 Unranked PvP
+  //
+  //  ⚠ **這一整段永不寫回生涯。** 它只寫 `challenge` 切片，
+  //    從不碰 `players` / `meta` / `competition` / `retention` / `clubMastery`。
+  //    這是「兩層防護」的**第一層**（設計層）；第二層是
+  //    `MATCH_SOURCE.challenge` 的 0 倍率與獎勵早退。
+  //  ⚠ 這裡也**不呼叫 `applyMatchProgress`**，一次都沒有。
+  // ══════════════════════════════════════════════════════════════════════
+
+  /** 玩家挑戰的整體檢視（畫面唯一的讀取點；畫面不自己拼資料）。 */
+  challengeView() {
+    const st = get().challenge ?? emptyChallengeState();
+    const day = Number(get().meta?.days) || 1;
+    const defense = st.defense;
+    return {
+      defense,
+      //  ⚠ 節流以**生涯日**判斷，不是真實時間。
+      canPublish: st.lastPublishedCareerDay === null || day > st.lastPublishedCareerDay,
+      lastPublishedCareerDay: st.lastPublishedCareerDay,
+      careerDay: day,
+      opponents: FIXTURE_OPPONENTS.map((o) => ({ key: o.key, teamName: o.teamName, tag: o.tag, note: o.note })),
+      history: recentChallenges(st),
+    };
+  },
+
+  /**
+   * 發布／更新我的防守陣容。
+   *
+   * ⚠ 這裡送給權威層的是**身分與選擇**（teamId ＋ tacticId），
+   *   數值一律由權威層自己從 `players` / `lineup` / heroProgress 查。
+   *   畫面不得組 final values——那正是 `FORBIDDEN_CLIENT_KEYS` 在擋的事。
+   */
+  publishDefenseSnapshot(tacticId, { heroProgress = null } = {}) {
+    const st = get();
+    const cur = st.challenge ?? emptyChallengeState();
+    const r = publishDefensiveSnapshot({
+      request: { teamId: st.team?.id ?? st.meta?.teamId ?? "team", tacticId, reason: PUBLISH_REASONS.manual },
+      careerState: {
+        players: st.players ?? [],
+        lineup: st.lineup ?? null,
+        //  ⚠ 英雄熟練住在 `heroProgressStore`（另一個 store）。本檔不 import 它
+        //    ——那會讓 profileStore 依賴 hero 進度，而 Node verifier 也要跟著背。
+        //    ⇒ 由呼叫端注入，與 `buildBattleRoster` 的 `heroLookup` 同一個慣例。
+        heroProgress: heroProgress ?? {},
+        heroAssign: HERO_ASSIGN,
+        team: { teamId: st.team?.id ?? "team", teamName: st.team?.name ?? null, tag: st.team?.tag ?? null },
+        careerDay: Number(st.meta?.days) || 1,
+        lastPublishedCareerDay: cur.lastPublishedCareerDay,
+      },
+      now: Date.now(),
+    });
+    if (!r.ok) return { ok: false, errors: r.errors, throttled: r.throttled };
+    set({ challenge: setDefense(cur, r.snapshot, Number(st.meta?.days) || 1) });
+    get().save();
+    return { ok: true, errors: [], snapshot: r.snapshot, throttled: false };
+  },
+
+  /**
+   * 對一個練習對手發起挑戰。**只建立場次，不跑模擬**（模擬在 `runChallengeById`）。
+   *
+   * ⚠ 分成兩步是刻意的：建立要落盤（重整之後找得回來），
+   *   模擬要花幾秒（畫面得先畫出「模擬中」）。合成一步的話，
+   *   連點就會在落盤之前跑第二場。
+   * ⚠ `matchSeed` 在這裡取一次就凍結，之後任何路徑都只讀。
+   */
+  startFixtureChallenge(opponentKey) {
+    const st = get();
+    const cur = st.challenge ?? emptyChallengeState();
+    if (!cur.defense) return { ok: false, errors: [{ code: "defense", message: "請先發布你的防守陣容" }] };
+    const def = fixtureOpponentByKey(opponentKey);
+    if (!def) return { ok: false, errors: [{ code: "opponent", message: "找不到這個練習對手" }] };
+    const fx = fixtureSnapshot(opponentKey);
+    if (!fx.ok) return { ok: false, errors: fx.errors };
+
+    const built = createChallengeInstance({
+      challenger: cur.defense,
+      defender: fx.snapshot,
+      //  Slice 2：挑戰方本場戰術＝我的預存戰術（還沒有「挑戰前臨時改戰術」的畫面）。
+      challengerTacticId: cur.defense.standingOrders.tacticId,
+      //  ⚠ **權威層一次性取得**的亂數。不是內容推導 —— 同樣兩份快照可以打第二場。
+      seedSource: (Math.random() * 0x7fffffff) >>> 0,
+      createdAt: Date.now(),
+      issuedBy: SNAPSHOT_AUTHORITY.id,
+      nonce: `${opponentKey}:${cur.order.length}`,
+    });
+    if (!built.ok) return { ok: false, errors: built.errors };
+
+    let next = putSnapshot(cur, fx.snapshot);
+    next = putSnapshot(next, cur.defense);
+    const put = putInstance(next, built.challenge);
+    set({ challenge: put.state });
+    get().save();
+    return { ok: true, errors: [], challengeId: put.instance.challengeId, created: put.added };
+  },
+
+  /**
+   * 跑（或重播）一場挑戰。
+   *
+   * ⚠ **冪等**：已結算 ⇒ 直接回既有結果，不重跑、不覆蓋。
+   *   連點 / 重整 / resume 都走這一支，所以它們看到的是同一個結果。
+   * ⚠ 重播用的是**那一場自己凍結的** `matchSeed`（`runChallenge` 內有斷言）。
+   */
+  runChallengeById(challengeId) {
+    const cur = get().challenge ?? emptyChallengeState();
+    const bundle = challengeBundle(cur, challengeId);
+    if (!bundle.ok) return { ok: false, errors: [{ code: "bundle", message: bundle.reason }] };
+    if (bundle.instance.result) {
+      return { ok: true, errors: [], result: bundle.instance.result, replayed: true };
+    }
+    const r = runChallenge({
+      challenge: bundle.instance,
+      challengerSnapshot: bundle.challengerSnapshot,
+      defenderSnapshot: bundle.defenderSnapshot,
+    });
+    if (!r.ok) return { ok: false, errors: r.errors };
+    const settled = settleInstance(get().challenge, challengeId, r.result);
+    set({ challenge: settled.state });
+    get().save();
+    return { ok: true, errors: [], result: settled.instance.result, replayed: settled.alreadySettled };
+  },
+
+  /**
+   * 重新計算一場已結算的挑戰，並與當初的結果比對。
+   *
+   * ⚠ 這是**玩家看得到的重播驗證**：它證明「同一場永遠是同一場」。
+   *   對不上時**不覆蓋**既有結果，只回報不一致——覆蓋等於把證據銷毀。
+   */
+  verifyChallengeReplay(challengeId) {
+    const cur = get().challenge ?? emptyChallengeState();
+    const bundle = challengeBundle(cur, challengeId);
+    if (!bundle.ok) return { ok: false, match: false, reason: bundle.reason };
+    if (!bundle.instance.result) return { ok: false, match: false, reason: "這場還沒有結果" };
+    const r = runChallenge({
+      challenge: bundle.instance,
+      challengerSnapshot: bundle.challengerSnapshot,
+      defenderSnapshot: bundle.defenderSnapshot,
+    });
+    if (!r.ok) return { ok: false, match: false, reason: r.errors[0]?.message ?? "重播失敗" };
+    const match = JSON.stringify(r.result) === JSON.stringify(bundle.instance.result);
+    return { ok: true, match, reason: match ? null : "重播結果與當初記錄不一致" };
+  },
+
+  /** 取一場挑戰的完整資料（畫面用；找不到就是 null，不編造）。 */
+  challengeDetail(challengeId) {
+    const b = challengeBundle(get().challenge ?? emptyChallengeState(), challengeId);
+    return b.ok ? b : null;
   },
 
   /**

@@ -2280,3 +2280,70 @@ no fake ready-check、MOBA first / CS later、Pricing Authority 在 Ranked 前�
 3. **最小 UI**：發布防守陣容 ＋ 對單一 fixture 對手發起挑戰 ＋ 看結果。
 4. ⚠ **獎勵仍然不接**。要接 Club Points 之前必須先有架構文件 §7.3 的三條
    重複挑戰條款，否則接上的那天就會被 farm。
+
+---
+
+## 🎮 Player Challenge v1 — MOBA Slice 2 已落地（2026-09-07，實作）
+
+**玩家第一次可以從 UI 走完一整條線上流程**：
+首頁 →「玩家挑戰」→ 發布防守陣容 → 對練習對手發起挑戰 → 真的跑 MOBA 模擬 →
+看結果 → 重播驗證 → **重整之後那一場還在，重播得出同一個結果**。
+桌機 1366 與手機 390 都實測走完（browser smoke 66/66）。
+
+### 落地了什麼
+
+| | |
+|---|---|
+| 落盤 | `challenge` 切片掛在既有的 `profileStore`（`save()` 本來就序列化整份 state）⇒ **沒有第二套 storage**；容量上限 20 場並連帶清無人引用的快照 |
+| UI | `screens/challenge/PlayerChallengeScreen.jsx`；桌機 Utility 與手機「更多」**兩處**都有入口 |
+| 對手 | 三個**決定性** fixture，走的是玩家發布用的**同一支權威函式**（不是手寫快照物件，避免第二條繞過規則的路徑） |
+| 版本閘門 | `check_simulation_version_gate.mjs`：對五支「決定模擬語意」的檔案取指紋，改了就紅 |
+
+### simulationVersion Gate ⚠
+
+Owner 要求「禁止 simulationVersion 只存欄位、引擎改版卻永遠不更新」。
+做法是內容指紋 ＋ 一個必須回答的問題：
+
+> 這次改動會讓同一份輸入跑出不同的結果嗎？
+> 　會 ⇒ bump 版本並更新指紋　／　不會 ⇒ 只更新指紋
+
+⚠ 指紋**刻意不做正規化**——分得出「只改註解」就代表有程式在替我們判斷
+「這不影響語意」，而那正是閘門存在的原因。
+⚠ 反向測試過：加一行註解 ⇒ 16/17 FAIL，移除 ⇒ 17/17 PASS。
+
+### 🔴 browser smoke 抓到一個真 bug
+
+模擬跑完、資料也對，但**結果卡永遠不更新**，要重整才看得到。
+根因是訂閱簽章只看挑戰筆數，而結算不會改變筆數。
+**當時 Node verifier 是全綠的。**
+⇒ 「玩家會看到結果」的功能，資料驗證器綠不代表做完了。已加迴歸斷言。
+
+### 🟡 fixture 難度未校準（已量測，本輪不調）
+
+新存檔英雄熟練全 Lv.1、fixture 是 4～12 ⇒ 挑戰方 **0/18 勝**，
+`drill_balanced` 有 1/6 打到 30 分鐘上限。熟練調到 3–6 就變 5/18 勝、18/18 打得完。
+⇒ 這是 271b31d 結論的具體展現（熟練是勝負主要決定者），不是 bug。
+Slice 3 要改善首場體驗，該調的是 **fixture 的熟練值**，不是引擎。
+
+### Ban/Pick 沿用評估（Owner 指定評估項）
+
+**可行，但建議 Slice 3 再做。** 三個引擎轉換點都吃「席位 →
+`{heroId, hero, spells}`」，英雄查表本來就是注入式 ⇒ 不需要第二套 Ban-Pick model。
+但加它必須**同時**做三件事（進快照、進 `capturedInputs`、bump 模擬版本），
+而本輪同時是第一次接 UI 與落盤——兩者一起改，出現「重播對不上」時
+就分不出是落盤問題還是新輸入問題。
+
+### ⚠ 本輪 runtime29 不具正式效力
+
+`check_moba_runtime29` 於 20:51 啟動，而結果卡 bug 與迴歸斷言都是**之後**才做的
+⇒ **NOT_AUTHORITATIVE_FOR_FINAL_HEAD**。
+`FINAL_RUNTIME29_REQUIRED = YES`：下一輪針對**固定 commit SHA**
+在乾淨環境重跑一次當正式 closure gate。
+
+### 建議下一輪：`Player Challenge v1 — MOBA Slice 3`
+
+0. **先補跑 clean runtime29**（對固定 SHA）當 Slice 2 的正式 closure gate。
+1. 英雄選角 / 戰鬥原型 / 召喚師技能進快照（三件事同時做）。
+2. fixture 熟練值調到讓首場體驗合理。
+3. ⚠ **獎勵仍不接**：要接 Club Points 前必須先有架構文件 §7.3 的三條
+   重複挑戰條款，否則接上的那天就會被 farm。
