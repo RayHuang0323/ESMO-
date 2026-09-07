@@ -72,7 +72,7 @@ function summarizeSide(players, side) {
     sceneBodies: members.filter((player) => player.sceneBodyPresent).length,
     bodyVisibleFlags: members.filter((player) => player.sceneBodyVisibleFlag).length,
     readableBodies: members.filter((player) => player.screenBodyReadable).length,
-    visiblePresentation: members.filter((player) => player.presentationVisible).length,
+    visiblePresentation: members.filter((player) => player.presentationVisible || player.povSelfHidden).length,
     alive: members.filter((player) => player.authoritativeAlive === true).length,
     dead: members.filter((player) => player.authoritativeAlive === false).length,
     finiteTransforms: members.filter((player) => player.transformFinite).length,
@@ -99,16 +99,16 @@ export function summarizeFpsTeamVisibility(players = []) {
     ok: list.length === 10 && countBySide(list, "t") === 5 && countBySide(list, "ct") === 5
       && list.every((player) => player.entityExists && !player.identityMiss)
       && list.filter((player) => player.authoritativeAlive === true)
-        .every((player) => player.presentationVisible && player.transformFinite),
+        .every((player) => (player.presentationVisible || player.povSelfHidden) && player.transformFinite),
   };
 }
 
 export function checkFpsRuntimeVisibility({ players = [], requireCameraViewport = false } = {}) {
   const list = Array.isArray(players) ? players.filter(Boolean) : [];
   const summary = summarizeFpsTeamVisibility(list);
-  const aliveHidden = list.filter((player) => player.authoritativeAlive === true && !player.presentationVisible)
+  const aliveHidden = list.filter((player) => player.authoritativeAlive === true && !player.presentationVisible && !player.povSelfHidden)
     .map((player) => ({ id: player.id, reason: player.visibilityReason }));
-  const aliveBodyHidden = list.filter((player) => player.authoritativeAlive === true && player.bodyVisible === false)
+  const aliveBodyHidden = list.filter((player) => player.authoritativeAlive === true && player.bodyVisible === false && !player.povSelfHidden)
     .map((player) => player.id);
   const identityMisses = list.filter((player) => player.identityMiss).map((player) => player.id);
   const nonFiniteTransforms = list.filter((player) => !player.transformFinite).map((player) => player.id);

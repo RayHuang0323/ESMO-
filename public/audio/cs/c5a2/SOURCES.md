@@ -26,3 +26,26 @@ gunfire from filtered layers and has no oscillator/noise gunfire fallback.
 
 The older five `.mp3` files in this folder are retained only as provenance for
 the earlier blast-only audit. They are not referenced by the Battle runtime.
+
+## C5A.2 utility presentation source ledger
+
+Utility cues use single recorded CC0 sources. The runtime applies only gain,
+distance attenuation, a small deterministic pitch variation and stereo
+spatialisation; it does not synthesize grenade or C4 cues.
+
+- `utility-he.wav`: `dull_explosion.wav`, Spring Spring, OpenGameArt, CC0 1.0
+- `utility-flash.wav`: `flash_bang.wav`, teeeece, OpenGameArt, CC0 1.0
+- `utility-smoke.ogg`: `compressed_gas_leak.ogg`, 0new4y, OpenGameArt, CC0 1.0
+- `utility-throw.wav`: `snd_throw1.wav`, Spring Spring, OpenGameArt, CC0 1.0
+- `utility-bounce.wav`: `tap_stone.wav`, Spring Spring, OpenGameArt, CC0 1.0
+- `utility-footstep.wav`: `snd_footsteps1.wav`, Spring Spring, OpenGameArt, CC0 1.0
+- `utility-click.wav`: `click.wav`, Spring Spring, OpenGameArt, CC0 1.0
+- `utility-tick.wav`: `tick.wav`, Spring Spring, OpenGameArt, CC0 1.0
+
+Source pages:
+
+- https://opengameart.org/content/various-sound-effects-0
+- https://opengameart.org/content/flash-bang-sound
+- https://opengameart.org/content/compressed-gas-leak-sfx
+
+No Valve or Counter-Strike original audio is used.

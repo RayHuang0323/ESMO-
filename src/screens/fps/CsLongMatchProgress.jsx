@@ -207,17 +207,17 @@ export default function CsLongMatchProgress({ session = null, snapshot = null, c
     : progress.status === "paused"
       ? "比賽已暫停；返回後會從最後同步的 frame 繼續。"
       : progress.stale
-        ? "畫面暫時沒有新快照，正在等待下一次同步；這裡不提供不可靠的剩餘時間預估。"
-        : progress.frameNumber == null
-          ? "正在建立第一個比賽快照；模擬仍由正式引擎執行。"
-          : "比賽仍在進行；frame、回合與比分都來自同一份場次快照。";
+        ? "比賽畫面暫停更新，正在等待比賽狀態恢復。"
+      : progress.frameNumber == null
+          ? "比賽畫面準備中。"
+          : "比賽進行中。";
 
   return (
     <section data-testid="cs-long-match-progress" aria-label="CS 比賽進度" style={{ maxWidth: 760, margin: "0 auto", padding: "0 10px 10px", boxSizing: "border-box", fontFamily: FONT }}>
       <div style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 12, padding: "10px 12px", boxSizing: "border-box" }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, minWidth: 0 }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ color: GC.gray, fontSize: 8, letterSpacing: "0.16em", fontWeight: 900 }}>MATCH PROGRESS</div>
+            <div style={{ color: GC.gray, fontSize: 8, letterSpacing: "0.16em", fontWeight: 900 }}>MATCH STATUS</div>
             <div data-testid="cs-match-phase" style={{ color: "#f3f4f6", fontSize: 13, fontWeight: 900, marginTop: 3 }}>{phase}</div>
           </div>
           <StatusPill progress={progress} />
@@ -238,24 +238,24 @@ export default function CsLongMatchProgress({ session = null, snapshot = null, c
 
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, marginTop: 8 }}>
           <span data-testid="cs-match-round-progress" style={{ color: "#fff", background: "rgba(255,255,255,0.06)", borderRadius: 6, padding: "4px 7px", fontSize: 9, fontWeight: 900 }}>回合 {progress.roundNumber ?? "—"}</span>
-          <span data-testid="cs-match-simulation-state" style={{ color: progress.stale ? GC.gold : GC.green, fontSize: 9, fontWeight: 800 }}>{progress.stale ? "等待 simulation 快照" : phase}</span>
-          <span data-testid="cs-match-simulation-clock" style={{ color: GC.gray, fontSize: 9, fontFamily: MONO }}>模擬時間 {formatSeconds(progress.simulationTimeSec)}</span>
-          <span data-testid="cs-match-sync" style={{ color: GC.gray, fontSize: 9, fontFamily: MONO }}>最後同步 {formatTime(progress.lastSyncAt)} · Frame {progress.frameNumber ?? "—"}</span>
+          <span data-testid="cs-match-simulation-state" style={{ color: progress.stale ? GC.gold : GC.green, fontSize: 9, fontWeight: 800 }}>{progress.stale ? "等待比賽狀態" : phase}</span>
+          <span data-testid="cs-match-simulation-clock" style={{ color: GC.gray, fontSize: 9, fontFamily: MONO }}>比賽時間 {formatSeconds(progress.simulationTimeSec)}</span>
+          <span data-testid="cs-match-sync" style={{ color: GC.gray, fontSize: 9, fontFamily: MONO }}>最近更新 {formatTime(progress.lastSyncAt)}</span>
         </div>
 
         {progress.totalFrames > 0 && progress.frameRatio != null ? (
           <div data-testid="cs-match-frame-progress" style={{ marginTop: 9 }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, color: GC.gray, fontSize: 8, fontWeight: 800 }}>
-              <span>播放位置（正式 simulation frame）</span>
+              <span>比賽進度</span>
               <span style={{ flexShrink: 0, fontFamily: MONO }}>{progress.frameNumber} / {progress.totalFrames} 格</span>
             </div>
-            <div role="progressbar" aria-label="正式 simulation frame 播放位置" aria-valuemin={1} aria-valuemax={progress.totalFrames} aria-valuenow={progress.frameNumber} style={{ height: 5, marginTop: 5, overflow: "hidden", background: "rgba(255,255,255,0.08)", borderRadius: 99 }}>
+            <div role="progressbar" aria-label="比賽進度" aria-valuemin={1} aria-valuemax={progress.totalFrames} aria-valuenow={progress.frameNumber} style={{ height: 5, marginTop: 5, overflow: "hidden", background: "rgba(255,255,255,0.08)", borderRadius: 99 }}>
               <div style={{ width: `${Math.round(progress.frameRatio * 100)}%`, height: "100%", background: `linear-gradient(90deg,${GC.blue},${GC.green})`, transition: "width 0.2s linear" }} />
             </div>
-            <div style={{ color: GC.gray, fontSize: 8, marginTop: 4 }}>這是目前 frame 位置，不是剩餘時間預估。</div>
+            <div style={{ color: GC.gray, fontSize: 8, marginTop: 4 }}>目前比賽進度。</div>
           </div>
         ) : (
-          <div data-testid="cs-match-frame-progress" style={{ marginTop: 9, color: GC.gray, fontSize: 8 }}>等待第一個正式 simulation frame；不估算剩餘時間。</div>
+          <div data-testid="cs-match-frame-progress" style={{ marginTop: 9, color: GC.gray, fontSize: 8 }}>比賽畫面準備中。</div>
         )}
 
         <SeriesMapStrip progress={progress} />
@@ -265,8 +265,8 @@ export default function CsLongMatchProgress({ session = null, snapshot = null, c
         </div>
 
         <div data-testid="cs-match-speed-status" style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "baseline", marginTop: 7, color: GC.gray, fontSize: 8, lineHeight: 1.45 }}>
-          <span style={{ color: "#c8cdd6", fontWeight: 900 }}>播放倍率</span>
-          <span>請看下方播放器的選取按鈕：1× / 2.4× / 4×；C6C 不另建速度狀態。</span>
+          <span style={{ color: "#c8cdd6", fontWeight: 900 }}>播放速度</span>
+          <span>請使用下方的 1× / 2.4× / 4×。</span>
         </div>
       </div>
     </section>
