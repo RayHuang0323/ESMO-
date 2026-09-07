@@ -51,9 +51,19 @@ async function realTouch(chrome, selector, holdMs = 0) {
 }
 
 async function pauseBattle(chrome) {
-  await chrome.evaluate(`const live=window.__ESMO_FPS_SCENE__?.liveRef?.current;if(live)live.playing=false;return true;`);
+  const result = await chrome.evaluate(`return (()=>{
+    const live=window.__ESMO_FPS_SCENE__?.liveRef?.current;
+    if(!live)return {ok:false,reason:"live ref unavailable"};
+    if(live.playing===false)return {ok:true,alreadyPaused:true};
+    const node=[...document.querySelectorAll('[data-testid="cs-playback-controls"] button')]
+      .find(button=>button.textContent?.includes("❚"));
+    if(!node)return {ok:false,reason:"pause control unavailable"};
+    node.click();
+    return {ok:true,alreadyPaused:false};
+  })()`);
+  if(!result?.ok)throw new Error(`pause battle failed: ${result?.reason||"unknown"}`);
+  await waitFor(chrome, `window.__ESMO_FPS_SCENE__?.liveRef?.current?.playing===false`, 5_000, "pause battle");
   await sleep(180);
-  await chrome.evaluate(`const live=window.__ESMO_FPS_SCENE__?.liveRef?.current;if(live)live.playing=false;return true;`);
 }
 
 async function readScene(chrome, id = null) {
@@ -375,21 +385,28 @@ async function testMap(chrome, base, mapKey, seed, viewport, ck) {
   return { mapKey, viewport: widthLabel, frameCount: await chrome.evaluate(`return window.__ESMO_FPS_SCENE__?.liveRef?.current?.sim?.frames?.length||0`) };
 }
 
-const result = await runGate({
-  name: "CS Android Owner Review V3 (Desktop + 390px)",
-  base: "/ESMO-/",
-  timeoutMs: 1_200_000,
-  run: async ({ chrome, url, ck }) => {
-    const maps = [];
-    for (const viewport of TARGET_WIDTHS) {
-      for (const [index, mapKey] of TARGET_MAPS.map((key, i) => [i, key])) {
-        maps.push(await testMap(chrome, url, mapKey, SEED_BASE + index * 17, viewport, ck));
-      }
-    }
-    ck("browser console errors = 0", chrome.consoleLines.filter((line) => line.startsWith("[error]")).length===0, JSON.stringify(chrome.consoleLines.filter((line) => line.startsWith("[error]"))));
-    ck("browser page errors = 0", chrome.pageErrors.length===0, JSON.stringify(chrome.pageErrors));
-    console.log(`INFO OWNER_REVIEW_V3 ${JSON.stringify({maps})}`);
-  },
-});
+const results = [];
+for (const [index, mapKey] of TARGET_MAPS.map((key, i) => [i, key])) {
+  for (const viewport of TARGET_WIDTHS) {
+    const result = await runGate({
+      name: `CS Android Owner Review V3 ${MAPS[mapKey]} ${viewport.label}`,
+      base: "/ESMO-/",
+      timeoutMs: 1_200_000,
+      run: async ({ chrome, url, ck }) => {
+        const map = await testMap(chrome, url, mapKey, SEED_BASE + index * 17, viewport, ck);
+        ck("browser console errors = 0", chrome.consoleLines.filter((line) => line.startsWith("[error]")).length===0, JSON.stringify(chrome.consoleLines.filter((line) => line.startsWith("[error]"))));
+        ck("browser page errors = 0", chrome.pageErrors.length===0, JSON.stringify(chrome.pageErrors));
+        console.log(`INFO OWNER_REVIEW_V3 ${JSON.stringify({maps:[map]})}`);
+      },
+    });
+    results.push(result);
+  }
+}
 
-await finishGate(result);
+const pass = results.reduce((sum, result) => sum + result.pass, 0);
+const fail = results.reduce((sum, result) => sum + result.fail, 0);
+const verdict = results.some((result) => result.verdict === "HARNESS_FAIL")
+  ? "HARNESS_FAIL" : fail === 0 ? "PASS" : "PRODUCT_FAIL";
+const elapsedMs = results.reduce((sum, result) => sum + result.elapsedMs, 0);
+console.log(`\nCS Android Owner Review V3 (Desktop + 390px)：${pass}/${pass + fail}　RESULT=${verdict}　耗時 ${elapsedMs}ms`);
+await finishGate({ verdict });

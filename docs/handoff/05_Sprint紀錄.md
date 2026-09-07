@@ -18220,3 +18220,33 @@ MOBA first / CS later、Pricing Authority 在 Ranked 前再恢復。
 - Verification：`npm.cmd run build` PASS（Vite `2783 modules transformed`，僅既有 large-chunk warning）；`check_cs23` `28/28`、C5A `11/11`、C5B utility `55/55`、C5C `29/29`、icon `19/19`；V3 browser 六個獨立 map×viewport runs 全 PASS；Cloudflare HTTPS smoke `33/33`；console/page errors `0`。
 - Owner Preview：local production preview port `5187`；Cloudflare Quick Tunnel `https://acrobat-director-police-promotes.trycloudflare.com/ESMO-/`。`/ESMO-/` HEAD `200`；bare `/` `302` 到 `/ESMO-/`。preview process 與 tunnel process 均保持 live。
 - 未完成項仍是實體 Android Owner 驗收（真機 GPU／FPS／熱節流、低頻喇叭、實際 touch／pinch／rotate 與 POV framing）；390px CDP 是通過的 emulation gate，不能冒充真機。
+
+---
+## Sprint CS Android Owner Review V3 正式 release validation（2026-09-07）
+
+### Scope 與整合
+
+沿用既有 `cs/android-owner-review-v2` worktree 已完成的 Owner PASS，不重新開發。先以 `origin/main=` `09a9cdadb7fbc325fa0c529d2c5d7eabfd1c43af` 建立 clean release worktree，再以 semantic merge 整合 candidate `cae4f9c3a558bb67eaf9a97f8259c80f2116c7e6`，形成 `4e1473dd76d64a595a8d6ef3e3498af390df16e1`。整合保留 TD-56、Club Progression、Dashboard、Competition 與 async PvP。
+
+Claude 線的 Online 定案只作為邊界：`CAREER_OWNS_ROSTER / ONLINE_OWNS_MATCH`；`MatchEntryRequest.v1`、`SquadSnapshot.v1`、`ChallengeInstance.v1` 由 Online layer 負責。CS runtime 本次是 consumer，沒有新增 CS 專屬 contract，也沒有改 matchSeed、simulationVersion、snapshot、matchmaking、rating 或 pricing。
+
+### Release gates
+
+- `npm.cmd run build`：PASS，`2785 modules transformed`；僅有既有 large chunk warning。
+- `node tools/check_cs23.mjs`：`28/28` PASS。
+- `node tools/check_cs_renderer_visibility.mjs`：`24/24` PASS。
+- `node tools/check_cs_camera_recovery.mjs`：`8/8` PASS。
+- `node tools/check_cs_c5b_route_interrupt.mjs`：三圖 deterministic route 完成（Mirage `14R`、Dust II `21R`、Inferno `13R`），route interrupt、permission、first shot、movement stop 與 navigation safety PASS；unexpected return-to-spawn events `0`、spawn anchors `0`。
+- `node tools/check_cs_c5c_presentation.mjs`：`29/29` PASS。
+- `node tools/check_cs_c5c_icon_help.mjs`：`19/19` PASS。
+- `node tools/check_cs_c5d_side_bias_audit.mjs`：9/9 paired cases，`NO_T_SIDE_SYSTEMIC_BIAS`；determinism `9/9`，aggregate stuck detections `0`。
+- `node tools/browser_check_cs_android_owner_review_v3.mjs`：Mirage、Dust II、Inferno × Desktop/390px，六個獨立 session 合計 `495/495 PASS`；console errors `0`、page errors `0`。
+- browser locomotion/route audits：non-finite、blocked、teleport、wall crossing、player overlap violation、route deadlock、stuck 與 unresolved stuck 全部 `0`；每張圖的 authoritative frame stream 存在。
+
+### Verifier root cause 與修正
+
+初次 aggregate run 的 390px failures 不是產品行為：原 pause helper 只直接寫 `liveRef.current.playing=false`，React state 仍為 true，後續 card click 會重新寫回 playing；跨 map 導航也會讓同一 CDP page 的 compositor touch source 殘留。修正為點擊既有 playback pause control 並等待 React state 真正為 paused；V3 gate 另以每個 map/viewport 一個獨立 browser session 執行。兩圖 aggregate `300/300 PASS`，三圖六組正式 aggregate `495/495 PASS`，因此未發現新的產品 regression。
+
+### Handoff
+
+此節記錄的是 push 前 release validation。完成最後 fetch、normal fast-forward push、既有 `.github/workflows/deploy.yml` Pages workflow 與 production smoke 後，追加實際 main SHA、workflow run 與 smoke 結果。
