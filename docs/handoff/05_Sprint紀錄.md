@@ -17548,6 +17548,61 @@ evaluate 撞上）。那是逾時的餘波，不是另一個獨立問題。真�
   在它們遷移完成前改它風險過高。
 - TD-56、Android 真機驗收、Club Progression Contract 實作：均未動。
 
+## CS Android Owner Review V2（2026-09-04，本地 preview）
+
+狀態：`CS_ANDROID_OWNER_REVIEW_V2_READY`。本輪以 `origin/main` 最新 remote truth
+`7cb202d3201cd0f27279bec6310e5c46286b237a` 建立獨立 worktree／branch
+`cs/android-owner-review-v2`；只處理 CS Battle / presentation，已以 non-force merge
+`b5be960`、`26a81cb`、`6a231e8` 依序整合 latest main，**未 push、未 deploy**。
+
+### Scope boundary
+
+- HUD 移除玩家不可理解的 WebGL／simulation／snapshot／render／engine 文案；debug 路線
+  helper 改為必須顯式 `?fpsDebug=1` 才顯示。
+- 三個 tactical camera preset 使用 900ms 平滑 position／target transition；保留 manual
+  rotate／pan／pinch override；新增選手 head/eye follow 的 `第一人稱` POV 與切人。
+- C4 carrier、dropped、planted 使用同一 authoritative frame 的明確 C4 presentation；
+  player card icon 改為 armor／helmet／flash／grenade／smoke／C4／weapon 語意 SVG。
+- 黃／白 persistent helper marker 不再由 production route overlay 顯示；selection ring
+  只留給真正選中的角色；ground C4 使用明確模型，不再只畫 generic red circle。
+- combat root cause 為 round-live `15%` progress lock 抑制 locomotion interruption；
+  最小修正為只保留 buy phase lock，未改 tactic／navigation／weapon balance authority。
+- utility audio 以 `public/audio/cs/c5a2/` 的單一 CC0 recorded sample、spatial gain/pan
+  cue 取代 utility synthetic fallback；gunfire cadence authority 未改。來源 ledger 見
+  `public/audio/cs/c5a2/SOURCES.md`。
+
+### Verification
+
+- `node tools/browser_check_cs_android_owner_review_v2.mjs`：390×844 三圖 `95/95 PASS`；
+  desktop 1366×900 三圖 `95/95 PASS`。包含 HUD copy、preset transition、POV／切人／
+  manual camera、C4 三狀態、marker、icon、combat audit、locomotion／cover、audio assets、
+  overflow 與 console/page errors。
+- `node tools/check_cs_c5b_route_interrupt.mjs`：exit `0`；Mirage／Dust II／Inferno
+  route interrupt、first-shot latency、weapon cadence、navigation safety 全 PASS。
+- `node tools/check_cs23.mjs`：`28/28`；`npm run build`：PASS（保留既有 large-chunk warning）。
+- `node tools/browser_check_cs_android_owner_preview.mjs` 對本地 `npm run preview` production
+  bundle：`33/33 PASS`，Home 與三圖 CS smoke、HTTP 200、console/page clean。
+- latest main merge 後重新驗證：`check_cs_c5c_presentation.mjs` **29/29 PASS**；
+  C5C browser 390px／Desktop 各 **5/5 PASS**，`check_cs23` **28/28**，build PASS。
+  `origin/main @ 7cb202d`（Retention Economy release，無 CS runtime source 變更）整合後，
+  build 與 static CS compatibility 仍 PASS，production preview smoke **33/33 PASS**。
+- Cloudflare Quick Tunnel 曾成功建立 connector，但 edge 對 GET／HEAD 均回 `403 Forbidden`；
+  最新 HTTP/2＋IPv4 connector（`hkg09`）已註冊後仍回 `403 Forbidden`，確定是 edge／環境
+  blocker 而非 local origin（local HTTP 200）。另以 localtunnel 做低頻 fallback：第一個
+  hostname 在修正 preview allowlist 前回 Vite `403`，更新為每次 tunnel hostname 並明確綁定
+  `127.0.0.1` 後，HTTPS GET 仍逾時且 tunnel client 退出。依安全規則未繞過或高頻重試，
+  因此本輪仍沒有可交付的 HTTPS URL；temporary config 與 Local preview 已清理／停止。
+- Node／CDP 只代表 desktop 與 390px emulation；Android GPU／FPS／真 touch pinch／
+  rotate／喇叭體感仍待 Owner 真機驗收。
+
+### 明確未做
+
+未修改 profile persistence／profileStore、Club XP／Level／Points、match settlement、
+reward summary、Home／Club Mastery、shared progression Store、Dashboard、Club Identity、
+Club Assets、Meta、AppShell、CBR／Rating、weapon balance、economy、Competition／Season 或
+tactic-sync authority；未開始下一個 Sprint。
+- TD-56、Android 真機驗收、Club Progression Contract 實作：均未動。
+
 ---
 
 ## Sprint：Club Progression v1（2026-09-04）
@@ -17783,6 +17838,7 @@ Owner Review 通過，正式發布。
 `volume / rotate / circuit / finance`（＋日目標與 rank／youth）——
 `fixtures` 與 `streak` 那一天沒被抽到，因此**沒有在畫面上逐字驗到**；
 它們由 bundle 字串檢查（§D）與 dev gate 的 30/30 覆蓋。
+<!-- latest origin/main sprint history retained; candidate V3 history follows -->
 
 ---
 
@@ -18124,3 +18180,43 @@ MOBA first / CS later、Pricing Authority 在 Ranked 前再恢復。
 落地順序：① 快照 ＋ 發布責任鏈 → ② challenge instance（凍結 seed）
 → ③ `check_challenge_replay` → ④ `MATCH_SOURCE.challenge` ＋ 兩層防護
 → ⑤ challenge 路徑 → ⑥ Board → ⑦ 賽後對照。⚠ 獎勵不在這七步裡。
+---
+## CS Android Owner Review V2（temporary HTTPS preview recovered，2026-09-04）
+
+- `localhost.run` SSH reverse tunnel 已取得 temporary HTTPS preview：
+  `https://41101287e092c4.lhr.life/ESMO-/`。local production preview 綁定
+  `127.0.0.1:5187`，未修改產品／deploy config；preview-only config 已在啟動後清理。
+- External smoke `node tools/browser_check_cs_android_owner_preview.mjs`：
+  **33/33 PASS**，HTTP 200；Home、Mirage／Dust II／Inferno、HUD／C4／POV／controls、
+  console/page errors 均通過。Owner 真機驗收仍未完成，且未 push／未 deploy。
+## CS Android Owner Review V2（preview URL rotated，2026-09-04）
+
+- 前一個 `localhost.run` hostname 已回 `503 no tunnel here`；已停止失效 SSH
+  forwarding，重新建立帶 keepalive 的 tunnel。現行 temporary HTTPS preview：
+  `https://6ae47de8ff1d10.lhr.life/ESMO-/`。
+- 現行 URL GET `200`，external Owner preview smoke **33/33 PASS**；Vite 使用
+  preview-only `.lhr.life` allowlist，config 未納入產品或 deploy，且已清理。未 push／未 deploy。
+
+## CS Android Owner Review V3（2026-09-04）
+
+- **工作邊界**：先前已 `git fetch origin`，CS 維持獨立 `cs/android-owner-review-v2` worktree／branch；本輪 baseline fetch truth 為 `origin/main @ 7cb202d3201cd0f27279bec6310e5c46286b237a`。Review 期間 remote-tracking ref 已前進至 `cd08f7c850e971e9d0276c46aabf1843726eea7b`，但 Claude TD-56 release 尚未提供 `FINAL_MAIN_SHA`，所以沒有讀取、整合或 push；待明確 SHA 後才重新 fetch／semantic integrate。
+- **Player Focus／POV**：card click 不再切 POV，只進 spectator focus；camera focus 半徑保留可操作距離（約 14／18），pinch／rotate 可用。明確按「第一人稱」才切 selected player eye/head + aim/facing，隱藏自身 mesh，離開 POV 回 tactical focus 並保留 selected player。
+- **FPS weapon presentation**：camera-attached lower-right／center weapon rig 只讀 selected actor 的 existing `gun` 與 `frame.muzzles`，以同一 authoritative fire cadence 驅動 flash／recoil；沒有新增 shot、damage、target 或 player state authority。
+- **Auto Director**：三個 tactical preset 都透過 smooth transition；preset 只控制 radius／角度，combat／objective hotspot 由既有 frame／presentation signals 推導，使用 key hysteresis 與平滑追蹤；manual drag 會取消 auto follow，auto-director button 可重新接管。
+- **Audio P0**：根因是 audio asset／decode 與 `AudioContext.resume()` 的時序沒有在 unmute 前完成。修正為 mount preload／decode、gesture resume、`running` 才反映 unmute；browser gate 觀測 resume latency 約 `580ms`，且 preload 早於 unmute。
+- **IconHelp／GameIcon**：`GAME_ICON_CONTRACT v1` 採 canonical gameplay state、desktop hover／focus、mobile tap／long-press；語意 map 為「防彈衣／減少身體子彈傷害、頭盔／降低頭部傷害、手榴彈／範圍爆炸傷害、閃光彈／短暫失去視線、煙霧彈／遮擋視線、燃燒彈／持續傷害區、C4／目前攜帶炸彈、武器／主要武器、生命值／目前 HP、金錢／購買資源」。
+- **Side-bias evidence**：修正前 9 paired cases 的 aggregate T `121/519 = 23.31%`、CT `398/519 = 76.69%`，Team A side swap mean effect `+4.6667` round wins；root cause 為舊 `MAP_EDGE` side calibration。移除後三圖 seed `505001` spot re-audit aggregate T `49/112 = 43.75%`、CT `63/112 = 56.25%`，paired side effect `0.3333`，判定 `NO_T_SIDE_SYSTEMIC_BIAS`，deterministic `3/3`。
+- **驗證**：`npm run build` PASS；`check_cs23` `28/28`；C5A presentation `11/11`；C5C `29/29`；C5B utility `55/55`；C2C `9/9`；V3 browser gate 三圖各 `90/90`；Cloudflare HTTPS production smoke `33/33`。兩支需要歷史 evidence JSON 的舊 verifier 未以假檔補跑，因 target worktree 沒有其預期輸入，並保留既有 dirty artifacts。
+- **Owner Preview**：local production preview 實際 port `5187`；Cloudflare Quick Tunnel：`https://pays-elimination-integration-mechanisms.trycloudflare.com/ESMO-/`。bare root `302 → /ESMO-/`，實際 app path HTTP `200`；preview 與 tunnel 保持 live，未使用 localhost.run。
+
+## CS Android Owner Review V3 owner feedback closeout（2026-09-05）
+
+- 工作分支／worktree：`cs/android-owner-review-v2`；本輪仍未 merge、未 push、未 deploy，沒有讀取或整合 TD-56／Club Progression feature worktree。
+- 最小 source 修正集中於 `src/battle/fps/EsportsFPS3D.jsx`：production marker cleanup、Player Card `GameIcon` pointer contract、route interrupt live-round predicate、spectator focus／true POV weapon presentation、combat/objective hotspot Auto Director；`fpsVisibilityDiagnostics.js` 只同步 POV self-hidden diagnostics。
+- Marker evidence：production `objectiveSiteCount=2`、`mapCalloutsVisible=0`、`routeHelpersVisible=0`、`selectedGroundHelpers=0`、`selectionBeams=0`、`aimHelpers=0`、`utilityEffectMarkers=0`。保留的兩個 site marker 仍來自 objective/site authority。
+- Tooltip evidence：`GAME_ICON_CONTRACT v1` 全十項 canonical map（防彈衣、頭盔、高爆手榴彈、閃光彈、煙霧彈、燃燒彈、C4、武器、生命值、金錢）；static `19/19`。Mirage／Dust II／Inferno 各自 Desktop＋390px `90/90`，desktop hover/focus 與 mobile tap/second-tap close/long-press 均通過。
+- Route evidence：合法 contact 在 route-active 時仍通過既有 permission → first authoritative shot，且先記錄 movement stop；focused deterministic run Mirage／Dust II／Inferno `24R/19R/15R`，movement stops `288/192/53`，route preservation、navigation safety、weapon cadence 均 PASS。
+- Balance evidence：`check_cs_c5d_side_bias_audit.mjs` 同 roster／same seed base + side swap `9/9` PASS，verdict `NO_T_SIDE_SYSTEMIC_BIAS`；aggregate T `165/339 = 48.67%`、CT `174/339 = 51.33%`，T−CT `-2.66pp`。不做玩家 buff，不動 Rating／damage／economy。
+- Verification：`npm.cmd run build` PASS（Vite `2783 modules transformed`，僅既有 large-chunk warning）；`check_cs23` `28/28`、C5A `11/11`、C5B utility `55/55`、C5C `29/29`、icon `19/19`；V3 browser 六個獨立 map×viewport runs 全 PASS；Cloudflare HTTPS smoke `33/33`；console/page errors `0`。
+- Owner Preview：local production preview port `5187`；Cloudflare Quick Tunnel `https://acrobat-director-police-promotes.trycloudflare.com/ESMO-/`。`/ESMO-/` HEAD `200`；bare `/` `302` 到 `/ESMO-/`。preview process 與 tunnel process 均保持 live。
+- 未完成項仍是實體 Android Owner 驗收（真機 GPU／FPS／熱節流、低頻喇叭、實際 touch／pinch／rotate 與 POV framing）；390px CDP 是通過的 emulation gate，不能冒充真機。
