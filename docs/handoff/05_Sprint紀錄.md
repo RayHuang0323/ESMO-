@@ -18761,3 +18761,82 @@ CS Challenge、真 server、monetization、社交好友、排行榜、
 ⚠ 但加它必須**同時**做三件事：進快照、進 `capturedInputs`、bump `MOBA_SIMULATION_VERSION`。
 本輪已同時動了看板、出賽快照、retry、賽後對照——再疊上模擬輸入變更，
 一旦出現「重播對不上」就分不清是哪一項造成的。
+
+---
+
+## Sprint：Player Challenge MOBA Slice 3 — Integration ＋ Closure（2026-09-08）
+
+**類型**：整合與收尾。不 push、不 deploy。
+
+```
+PREVIOUS_LOCAL_HEAD = 49e98f0
+LATEST_ORIGIN_MAIN  = 53bc02d（Codex：CS Android Owner Review V3）
+INTEGRATED_HEAD     = 257ec74
+```
+
+### 兩線的實際重疊：只有兩份文件
+
+分岔點 `09a9cda`：我方領先 4 個 commit，main 領先 16 個。
+
+- **我方**（Challenge 線）：`src/platform/challenge/`、`src/platform/contracts/`、
+  `src/screens/challenge/`、`profileStore`、`matchSource` / `careerGrowth` /
+  `rewardFormulas` / `worldClock` 的加法、以及 Challenge 的 verifier。
+- **Codex**（CS 線）：`src/battle/fps/`、`src/screens/fps/`、`public/audio/cs/`、
+  CS gates、artifacts。
+- **真正重疊**：`docs/handoff/05_Sprint紀錄.md`、`docs/handoff/08_目前待辦與風險.md`
+  ——**兩邊都是純附加**，各一個衝突區塊。
+
+⚠ 我方 `09a9cda..HEAD` 對 `src/battle/fps/` `src/screens/fps/` `public/audio/`
+的 diff 是**空的** ⇒ 整個 Challenge 線一次都沒碰過 CS。
+
+### 為什麼是 merge 而不是 rebase
+
+我方 4 個 commit 裡有 4 個都動到那兩份文件 ⇒ rebase 會把**同一個 CJK 附加衝突
+手工重解四次**。merge 只解一次。
+⚠ 而且 merge 之後 `origin/main` 仍是 HEAD 的祖先 ⇒ 未來 push 依然是 fast-forward
+（實測 `git merge-base --is-ancestor` 通過）。
+⚠ 沒有 reset、沒有 force、沒有改寫任何 Codex commit。
+
+### 衝突解法：兩塊都留，main 段在前
+
+順序取「origin/main 先、我方後」有一個可驗證的好處：
+合併結果相對 `origin/main` 是**一次乾淨的附加**——
+三份文件 197 / 474 / 347 行新增、**0 行刪除**。
+那就是「Codex 的內容一個字都沒被解掉」最直接的證據。
+
+⚠ 用位元組層級處理，不走字串往返：`05_Sprint紀錄.md` 是 CRLF，
+字串往返會把它壓平（本專案既有教訓）。合併後行尾實測仍是 CRLF。
+
+### CS 歸屬是**驗證過**的，不是假設
+
+```
+git diff 257ec74 origin/main -- src/battle/ src/screens/fps/ public/audio/
+⇒ 空
+```
+⇒ 這條分支上 CS runtime 的每一個位元組都來自 Codex 的 commit，
+沒有一個來自本次整合。
+
+### 整合後的閘門結果
+
+```
+check_player_challenge_slice1          107/107 PASS
+check_player_challenge_slice2           70/70  PASS
+check_player_challenge_slice3          100/100 PASS
+check_simulation_version_gate           26/26  PASS
+browser_check_player_challenge_slice3   85/85  PASS（桌機 1366 ＋ 手機 390）
+browser_check_player_challenge_slice2   66/66  PASS（桌機 1366 ＋ 手機 390）
+regress    結束率 15/15
+regress2   節奏門檻 8/8
+npm run build ✓
+check_moba_runtime29                    ← 在**程式碼凍結後**於 257ec74 啟動；
+                                          結果單獨回報，未在本 commit 內宣稱通過
+```
+
+### fresh-save 體驗沒有回歸（未重調 fixture）
+
+整合後重測，合理候選 `drill_mirror` **6/16**（前一輪 9/16）。
+⚠ 兩者是**同一個機率的取樣噪音**，不是回歸：每一場 challenge 都取一次新的
+`matchSeed`（Slice 1 R1 的設計），所以逐輪數字本來就會跳。
+判準是「> 20% 且 < 85%」，兩次都在帶內，而 Slice 2 的結構性必敗是 **0/18**。
+其餘候選 0/5～2/5，最難的 `drill_veteran` 仍是 0/5 ⇒ 梯度仍在。
+⚠ **本輪沒有調任何 fixture 數值**（Owner 明令）。
