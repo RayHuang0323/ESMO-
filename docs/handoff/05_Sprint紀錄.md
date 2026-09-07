@@ -18380,3 +18380,94 @@ monetization、General Match 大改。
 - 目前在本機結算（`mock-authority`），**還沒有防作弊機制**。
 - 「模擬中」的 30ms 延遲是為了讓瀏覽器先畫出狀態，**不是**假裝網路延遲
   （原始碼有註解，verifier 有斷言）。
+
+---
+
+## Sprint：Player Challenge Slice 2 — Closure（2026-09-07）
+
+**類型**：修正 ＋ 收尾。基線 `0aae71c`。本地 commit，不 push、不 deploy。
+
+### 1. 修掉 simulationVersion gate 的 false positive
+
+**Owner 裁示**：只有「simulation semantics 發生**實質**變化」才要求 bump。
+comment-only ／ whitespace-only ／ formatting-only **不得**觸發。
+
+⚠ 我原本把「改一行註解就變紅」寫成**刻意的設計**，理由是
+「分得出只改註解就代表有程式在替我們判斷語意」。
+那個理由站不住：它把一個**必然會誤報**的閘門合理化了，
+而誤報的代價是玩家（開發者）學會「紅了就貼新指紋」——
+**閘門被訓練成雜訊，比沒有閘門更糟。**
+
+**修法（最小）**：指紋改成對**語意正規化後**的原始碼取雜湊。
+用 `esbuild.transformSync`：
+
+```
+minifyWhitespace: true      去空白／換行／縮排
+legalComments: "none"       去掉所有註解
+minifyIdentifiers: false    不改名 ⇒ 識別名仍在指紋裡
+minifySyntax: false         不重寫語法 ⇒ 不會把不同程式碼折成同一形狀
+```
+
+⚠ **不自己寫剝註解的正則**：字串／樣板字串／正則字面值裡的 `//` 與 `/*`
+會被剝壞，而剝壞的結果是「指紋看起來穩定、其實在亂跳」。交給真的 parser。
+
+**指紋改成綁在版本上**（`SIMULATION_SEMANTICS_FINGERPRINTS` 是一張
+版本 → 指紋的表），因為「語意變了」就是「新版本」——兩者必須一起出現。
+只改指紋不改版本，等於宣稱「語意變了但版本沒變」，正是要擋的事。
+⚠ 舊版本的指紋**保留不刪**：那是歷史挑戰「當初用哪一版跑的」的憑據。
+
+### 檢定力：§A–§D 自我測試（寫進閘門本身）
+
+閘門**在記憶體裡**改寫真實原始碼並重算指紋，不寫檔、不動 repo：
+
+| | 情境 | 期望 | 實測 |
+|---|---|---|---|
+| §A | 只加註解（行 ＋ 區塊 ＋ 尾端） | 指紋不變 | ✅ 無變化 |
+| §A2 | 註解裡含 `//`、`/*` 的字串與正則 | 指紋不變 | ✅ |
+| §B | 只改空白／縮排／換行 | 指紋不變 | ✅ 無變化 |
+| §C | `CHALLENGE_DT` 0.5 → 0.25（真語意） | 指紋改變 | ✅ `90694c43…` → `080e2dff…` |
+| §C2 | 識別名改動 | 指紋改變 | ✅ |
+| §D | 開新版號並替新版號登記指紋 | 恢復通過 | ✅ 舊版指紋仍在 |
+| §D2 | 只 bump 版號、不登記指紋 | 仍不通過 | ✅ |
+
+⚠ §C 另外釘住「探針錨點仍存在」：`CHALLENGE_DT = 0.5` 這行若被改名或搬走，
+自我測試會先紅，不會默默失去檢定力。
+⚠ 也做過**真實磁碟**確認：在 `challengeRunner.js` 尾端加一行真註解
+⇒ 閘門仍 26/26 PASS（修正前是 16/17 FAIL）。
+
+⚠ 指紋隨 `esbuild` 版本而定（目前由 package-lock 釘住）。
+升級 esbuild 之後指紋會整批變動，屆時 §A–§D 仍會綠，但要重新登記一次。
+
+### 2. Fresh-save fixture：正式記為 Slice 3 Player Experience 問題
+
+保留量測：新存檔英雄熟練 **Lv.1** vs fixture **Lv.4–12** ⇒ 挑戰方 **0/18 勝**
+（`drill_balanced` 有 1/6 打到 30 分鐘上限）。熟練調到 3–6 ⇒ 5/18 勝、18/18 打得完。
+
+- **不是 Slice 2 的 correctness bug**（重播、冪等、生涯隔離全部正確）。
+- **本輪不調 fixture。**
+- 正式記為 **Slice 3 Player Experience 問題**：
+  Challenge Board 上線前，新玩家必須有合理的首批對手體驗。
+- ⚠ **不得用目前不可信的 `calcPower` 假裝公平配對**（271b31d）。
+  可用的手段是調 fixture 的熟練值、或用觀測值挑對手，不是重新包裝定價。
+
+### 驗證結果（最終 working tree）
+
+```
+check_simulation_version_gate          26/26  PASS   ← 含 §A–§D 檢定力自我測試
+check_player_challenge_slice2          69/69  PASS
+check_player_challenge_slice1         107/107 PASS
+npm run build                          ✓ built in 15.90s
+check_moba_runtime29                   （對本次凍結的程式碼執行；結果單獨回報給 Owner，
+                                        未在本 commit 內宣稱通過）
+```
+
+### runtime29 的兩次執行
+
+| | 啟動 | 效力 |
+|---|---|---|
+| 20:51 那次 | 早於結果卡 bug 修正與迴歸斷言 | **NOT_AUTHORITATIVE_FOR_FINAL_HEAD**；未終止、未計入 closure |
+| 本次 | 在**程式碼凍結之後**啟動；此後只動 `docs/` | **正式 closure evidence** |
+
+⚠ 程式碼凍結點之後只新增 handoff 文件，`src/` 與 `tools/` 一個位元都沒再動
+（可用 `git diff --stat <FINAL_HEAD> -- src/ tools/` 對照）。
+⚠ 機器上仍有其他來源不明的 node 行程（多為 9/5 殘留），**全部未動**。

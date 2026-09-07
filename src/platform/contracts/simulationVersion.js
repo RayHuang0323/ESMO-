@@ -49,15 +49,23 @@ export const KNOWN_SIMULATION_VERSIONS = Object.freeze([MOBA_SIMULATION_VERSION]
  * 而人會忘記。忘記的後果不是報錯，是**歷史挑戰默默重播出不同的結果**——
  * 沒有任何程式會發現，玩家也不會發現，直到有人比對舊紀錄為止。
  *
- * ⇒ `tools/check_simulation_version_gate.mjs` 對這些檔案取內容指紋，
- *   與下面的 `SIMULATION_SEMANTICS_FINGERPRINT` 比對。
- *   **改了其中任何一支卻沒有更新指紋 ⇒ 驗證器變紅**，逼人做一次判斷：
+ * ⇒ `tools/check_simulation_version_gate.mjs` 對這些檔案取**語意指紋**，
+ *   與下面 `SIMULATION_SEMANTICS_FINGERPRINTS` 裡「目前版本」那一格比對。
+ *   對不上 ⇒ 驗證器變紅，逼人做一次判斷：
  *     · 這次改動會改變同一份輸入的結果嗎？
- *       會   ⇒ bump `MOBA_SIMULATION_VERSION`，並更新指紋
- *       不會 ⇒ 只更新指紋（例如純註解／log／格式）
+ *       會   ⇒ bump `MOBA_SIMULATION_VERSION` 並替新版本登記指紋
+ *       不會 ⇒ 不會發生（純註解／空白／格式**不會**改變語意指紋，見下）
  *
- * ⚠ 這**不是** migration framework，也不自動判斷「有沒有改變語意」——
- *   那沒有任何程式判得出來。它只保證**沒有人能默默略過那個判斷**。
+ * ── 為什麼是「語意指紋」而不是原始內容雜湊 ──────────────────────────────
+ * ⚠ 初版直接雜湊檔案內容，於是**改一行註解就會紅**。那是 false positive：
+ *   規則是「simulation semantics 發生實質變化才要 bump」，而註解不是語意。
+ *   讓人習慣「紅了就貼新指紋」，等於把這個閘門訓練成雜訊。
+ * ⇒ 現在先用 `esbuild` 做**只去空白與註解**的正規化（不改識別名、不改語法），
+ *   再雜湊。⇒ 註解／縮排／換行／格式一律不觸發；**任何真的程式碼改動都會觸發**。
+ *
+ * ⚠ 它仍然**不判斷**「這個程式碼改動有沒有改變結果」——那沒有程式判得出來。
+ *   它只保證：**真的動到程式碼時，沒有人能默默略過那個判斷。**
+ * ⚠ 這不是 migration framework。
  * ⚠ 清單漏了檔案 ⇒ 閘門對那支檔案無效。新增任何會進引擎的輸入轉換時，
  *   必須同時把它加進這裡。
  */
@@ -75,10 +83,23 @@ export const SIMULATION_SEMANTICS_FILES = Object.freeze([
 ]);
 
 /**
- * 上列檔案的內容指紋。⚠ **改動上列任一檔案後，這一行必須跟著更新。**
- * 更新方式：`node tools/check_simulation_version_gate.mjs --print`
+ * 每個模擬版本對應的**語意指紋**。
+ *
+ * ⚠ **指紋是綁在版本上的，不是綁在檔案上的。** 這是刻意的：
+ *   語意變了就是新版本，所以「新指紋」與「新版本」必須一起出現。
+ *   只改指紋不改版本，等於宣稱「語意變了但版本沒變」——那正是要擋的事。
+ *
+ * 流程（改動上列任一檔案的**程式碼**之後）：
+ *   1. `node tools/check_simulation_version_gate.mjs --print` 取得新指紋
+ *   2. 判斷：同一份輸入會跑出不同結果嗎？
+ *      · 會   ⇒ 在 `MOBA_SIMULATION_VERSION` 開新版號、加進
+ *               `KNOWN_SIMULATION_VERSIONS`，並在這裡替**新版本**登記指紋
+ *      · 不會 ⇒ 仍要登記（同版本換指紋），但請在 commit 訊息寫清楚為什麼不算語意變化
+ *   ⚠ 舊版本的指紋**保留不刪**：它是歷史挑戰「當初是用哪一版跑的」的憑據。
  */
-export const SIMULATION_SEMANTICS_FINGERPRINT = "4dd343907eac6366";
+export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
+  "moba-sim.v1": "90694c43d2351cfa",
+});
 
 export const isKnownSimulationVersion = (v) =>
   typeof v === "string" && KNOWN_SIMULATION_VERSIONS.includes(v);
