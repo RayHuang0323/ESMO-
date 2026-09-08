@@ -233,8 +233,11 @@ ck("④ challenge 記錄了 simulationVersion", ch1.challenge.simulationVersion 
 ck("④ 目前版本在已知清單裡", isKnownSimulationVersion(MOBA_SIMULATION_VERSION));
 ck("④ 未記錄版本 ⇒ 不可重播", !canReplay(undefined).ok);
 ck("④ 不明版本 ⇒ 不可重播", !canReplay("moba-sim.v999").ok);
+//  ⚠ 「另一個版本」由目前版號推導，**不要寫死**：原本寫死 "moba-sim.v2"，
+//    等到 v2 真的成為現行版本時，這一條的前提就失效了（2026-09-09 被抓到）。
+const OTHER_VERSION = `${MOBA_SIMULATION_VERSION}-not-a-real-version`;
 ck("④ 版本不同 ⇒ 不可重播（不做相容性推測）",
-  !canReplay(MOBA_SIMULATION_VERSION, "moba-sim.v2").ok);
+  !canReplay(MOBA_SIMULATION_VERSION, OTHER_VERSION).ok, OTHER_VERSION);
 ck("④ 拒絕原因是可直接顯示的中文",
   /模擬語意|無法重播|不可重播/.test(canReplay("moba-sim.v999").reason ?? ""));
 ck("④ 版本相同 ⇒ 可重播", canReplay(MOBA_SIMULATION_VERSION).ok);

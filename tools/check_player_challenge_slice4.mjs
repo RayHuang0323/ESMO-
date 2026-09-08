@@ -214,5 +214,33 @@ console.log("   （跑一場真的模擬作對照，請稍候）");
 const runOk = runChallenge({ challenge: chOk.challenge, challengerSnapshot: synthetic, defenderSnapshot: synthetic });
 ck("⑥ 對照組：未宣告 ⇒ 正常跑完（證明上面的紅燈是專屬的）", runOk.ok === true, runOk.result?.outcome);
 
+// ══════════════════════════════════════════════════════════════════════════
+console.log("\n── ⑦ 歷史挑戰：跨版本必須明確拒絕，不得靜默重算 ──");
+{
+  const { MOBA_SIMULATION_VERSION } = await import("../src/platform/contracts/simulationVersion.js");
+  store().publishDefenseSnapshot("m1", { heroProgress: FRESH });
+  const s2 = store().startFixtureChallenge("drill_mirror", { tacticId: "m1", heroProgress: FRESH });
+  store().runChallengeById(s2.challengeId);
+  ck("⑦ 新挑戰記錄目前版本",
+    store().challenge.instances[s2.challengeId].simulationVersion === MOBA_SIMULATION_VERSION,
+    MOBA_SIMULATION_VERSION);
+  ck("⑦ 新挑戰可重播且一致", store().verifyChallengeReplay(s2.challengeId).match === true);
+
+  //  偽造一筆舊版本紀錄（模擬 Rift 330 之前留下的挑戰）
+  const inst = store().challenge.instances[s2.challengeId];
+  const legacyId = "chal:legacy:v1";
+  const legacy = { ...inst, challengeId: legacyId, simulationVersion: "moba-sim.v1" };
+  useProfileStore.setState({ challenge: { ...store().challenge,
+    instances: { ...store().challenge.instances, [legacyId]: legacy },
+    order: [legacyId, ...store().challenge.order] } });
+
+  const v = store().verifyChallengeReplay(legacyId);
+  ck("⑦ 舊版本挑戰**不可重播**（不靜默用新地圖重算）", v.ok === false && v.match === false);
+  ck("⑦ 拒絕理由明講版本不符",
+    /moba-sim\.v1/.test(v.reason ?? "") && /不可重播/.test(v.reason ?? ""), v.reason);
+  const run = store().runChallengeById(legacyId);
+  ck("⑦ 舊紀錄仍讀得到（回既有結果，不重算）", !!run.result && run.replayed === true);
+}
+
 console.log(`\nPlayer Challenge Slice 4：${pass}/${pass + fail} ${fail === 0 ? "PASS" : "FAIL"}`);
 if (fail) process.exitCode = 1;

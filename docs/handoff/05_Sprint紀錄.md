@@ -19021,3 +19021,104 @@ regress 結束率 15/15 ｜ regress2 節奏門檻 8/8 ｜ npm run build ✓
 真 server、真玩家帳號同步、Ranked、Cap／Bracket、LadderRating、
 Pricing Authority、Club Points reward、monetization、CS Challenge、
 大改 MOBA battle runtime。
+
+---
+
+## Sprint：simulation semantics gate 擴充 ＋ `moba-sim.v2`（2026-09-09，Owner Decision）
+
+**類型**：契約修正。基線 `a4ba9ef`。本地 commit，不 push、不 deploy。
+
+### 1. `src/gameData.js` 納入 `SIMULATION_SEMANTICS_FILES`
+
+Owner 裁示，理由已由實測證明：Rift 330 改了 `gameData.js` 之後，
+`regress` 的時長 22.5→21.9 分、平均擊殺 19.7→19.1、hot 60%→58%。
+⇒ 它是 simulation semantics，不是 presentation / map visual data。
+
+### 2. 小型 audit：另外四支也有證據，一併納入
+
+判準用 Owner 給的那一條（**直接被 LogicEngine 消費，且修改會改變結果**）。
+`LogicEngine.js` 的直接 import 只有四支，逐項都符合：
+
+| 檔案 | 證據 |
+|---|---|
+| `src/gameData.js` | LANES／PITS／地圖範圍；regress 實測已變 |
+| `battle/moba/matchProgression.js` | `rulesFor` / `SIM_RULES` / `powerMultFor` / `hpMultFor`／XP 曲線，每個 tick 都在讀 |
+| `battle/moba/nav/mobaNavigation.js` | 尋路與可通行判定 ⇒ 走位改變 = 結果改變 |
+| `battle/moba/map/mobaTowerPlacement.js` | 塔座標 |
+| `battle/moba/map/riftMapMetrics.js` | ⚠ **不是** LogicEngine 直接 import，但 `gameData.js` 用它的 `RIFT_EXTENT_RATIO` / `placeRiftAnchor` 位移每條路線與每個坑位 |
+
+⚠ `riftMapMetrics.js` 是這次 audit 最重要的一項：**只加 `gameData.js` 會留下一個洞**
+——改 `RIFT_EXTENT_RATIO` 會改變 `gameData` 的**輸出**，
+但 `gameData.js` 的**文字**一個字都不會動 ⇒ 指紋抓不到。
+（Rift 330 做的正是這件事。）驗證器 §G6 直接釘住這一條。
+
+⚠ **沒有納入**：Rift GLB／貼圖／renderer／art 來源。它們不影響模擬。
+
+### ⚠ 已知殘留缺口（誠實記錄，本輪不修）
+
+清單是「檔案清單」，不是「模組圖」。
+`mobaNavigation.js` 還 import `mapPassability.js` / `mobaMapLayout.js` /
+`mapTerrainShapes.js`；`mobaTowerPlacement.js` 也 import 後兩者。
+改**那些**會改變結果，但不會改變清單裡任何一支的文字 ⇒ 指紋抓不到。
+
+⇒ 已寫成 `KNOWN_TRANSITIVE_GAPS` 常數並在契約註解裡說明。
+要真正堵死得改成「對 LogicEngine 可達的整個模組圖取指紋」，
+代價是任何地圖／渲染重構都會讓閘門變紅——那是下一次的取捨題，
+不是這一輪偷偷做掉的事。
+
+### 3. 正式 bump `moba-sim.v1` → `moba-sim.v2`
+
+⚠ **不是「同版本只換指紋」**。Rift 330 已實際改變 lane anchors／pit positions／
+map extents／navigation geometry，而且 regress 結果已變 ⇒ 這是正式的
+simulation semantics change。
+
+- `MOBA_SIMULATION_VERSION = "moba-sim.v2"`
+- `KNOWN_SIMULATION_VERSIONS = ["moba-sim.v1", "moba-sim.v2"]`（舊版**留著不刪**）
+- 指紋表兩版都在：v1 `ca2f3e86…`、v2 `824a8958…`
+
+⚠ 一個誠實的註記：**v1 的指紋是在舊的 5 支檔案清單下算出來的**，
+清單擴充成 10 支之後它**再也重算不出來**。它是歷史紀錄，不是可再驗的斷言；
+閘門只比對「目前版本」那一格，所以不影響正確性。
+
+### 4. 歷史挑戰：明確拒絕，不靜默重算
+
+實測（Slice 4 verifier §⑦）：
+
+```
+新挑戰記錄 moba-sim.v2 ⇒ 可重播且一致
+偽造一筆 moba-sim.v1 的舊紀錄
+  verifyChallengeReplay ⇒ ok:false, match:false
+  理由：「這場使用 moba-sim.v1 的模擬語意，目前是 moba-sim.v2，不可重播」
+  runChallengeById ⇒ 回**既有結果**（replayed:true），不重算
+```
+
+⇒ 舊紀錄**仍讀得到**，但**永遠不會**被新地圖重算後宣稱「與當初一致」。
+沒有建立任何 migration framework。
+
+### 5. 順手修掉兩條「寫死版本號」的過期斷言
+
+bump 之後有兩條測試因為**把 v2 寫死當成「未來的版本」**而失效：
+
+- `check_simulation_version_gate` §D／§D2 → 改成從目前版號**推導** `NEXT_VERSION`
+- `check_player_challenge_slice1` ④ → 改成用一個保證不同的衍生版本字串
+
+⚠ 這是同一種病：**測試把「當時的未來」寫死，等未來真的到了就默默失效**。
+兩處都加了註解說明，避免下次 bump 再踩一次。
+
+### 驗證結果
+
+```
+check_simulation_version_gate           43/43  PASS   ← 含 §G0–§G6、§D0、§H
+   §G1 gameData 只加註解      ⇒ 指紋不變
+   §G2 gameData 只改空白格式  ⇒ 指紋不變
+   §G4 gameData 改地圖範圍    ⇒ 指紋改變（824a8958 → bc267b01）
+   §G6 改 RIFT_EXTENT_RATIO   ⇒ 指紋改變（824a8958 → 10cc51ec）
+   §H  v1 挑戰不可重播，理由明講版本不符
+check_player_challenge_slice4           57/57  PASS   ← 新增 §⑦ 歷史挑戰
+check_player_challenge_slice3          100/100 PASS
+check_player_challenge_slice2           70/70  PASS
+check_player_challenge_slice1          107/107 PASS
+regress 結束率 15/15 ｜ regress2 節奏門檻 8/8 ｜ npm run build ✓
+```
+
+⚠ 本輪**沒有**開始 Draft combat input（Owner 明令）。

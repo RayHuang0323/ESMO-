@@ -188,15 +188,64 @@ ck("§C 改動模擬步長（真語意變化）⇒ 指紋改變（要求 bump）
 const fpRenamed = withProbe((src) => src.replace(/CHALLENGE_MAX_T/g, "CHALLENGE_MAX_TIME"));
 ck("§C2 識別名改動也會被偵測（沒有開 minifyIdentifiers）", fpRenamed !== actual);
 
+// ── gameData.js 專屬（2026-09-09 Owner Decision 要求逐項證明）──────────────
+const GD = "src/gameData.js";
+ck("§G0 gameData.js 已納入語意清單", SIMULATION_SEMANTICS_FILES.includes(GD));
+
+const withGd = (mutate) => {
+  const m = new Map(base);
+  m.set(GD, mutate(base.get(GD)));
+  return fingerprintOf(m);
+};
+ck("§G1 gameData 只加註解 ⇒ 指紋不變（不要求 bump）",
+  withGd((src) => `// 探針：純註解\n/* 區塊 */\n${src}\n// 尾端\n`) === actual);
+ck("§G2 gameData 只改空白／縮排 ⇒ 指紋不變",
+  withGd((src) => src.replace(/\n/g, "\n\n").replace(/^(\s*)/gm, "$1  ")) === actual);
+
+//  真語意改動：把地圖範圍比例改掉（＝ Rift 330 做的那一類事）
+const GD_FROM = "maxX: 220 * RIFT_EXTENT_RATIO";
+ck("§G3 探針錨點仍存在（自我測試沒有失效）", base.get(GD).includes(GD_FROM), GD_FROM);
+const fpGd = withGd((src) => src.replace(GD_FROM, "maxX: 999 * RIFT_EXTENT_RATIO"));
+ck("§G4 gameData 真語意改動（地圖範圍）⇒ 指紋改變（要求 bump）",
+  fpGd !== actual, `${actual} → ${fpGd}`);
+
+//  ⚠ 這一條是本次加入 gameData 的**主要理由**：改常數檔會改變 gameData 的
+//    輸出，但 gameData 自己的文字不動 ⇒ 舊清單抓不到。
+const RM = "src/battle/moba/map/riftMapMetrics.js";
+ck("§G5 riftMapMetrics 也在清單裡（否則改比例值會繞過閘門）",
+  SIMULATION_SEMANTICS_FILES.includes(RM));
+const fpRm = (() => {
+  const m = new Map(base);
+  m.set(RM, base.get(RM).replace("RIFT_EXTENT_RATIO = 1.5", "RIFT_EXTENT_RATIO = 2.0"));
+  return fingerprintOf(m);
+})();
+ck("§G6 改 RIFT_EXTENT_RATIO ⇒ 指紋改變", fpRm !== actual, `${actual} → ${fpRm}`);
+
 //  §D bump 版本並登記新指紋 ⇒ 恢復通過
-const bumped = { ...SIMULATION_SEMANTICS_FINGERPRINTS, "moba-sim.v2": fpSemantic };
+//  ⚠ 「下一版」由目前版號推導，**不要寫死**：v1 → v2 之後，寫死 v2 會讓
+//    這兩條在下一次 bump 之後默默失效（本次就是這樣被抓到的）。
+const NEXT_VERSION = MOBA_SIMULATION_VERSION.replace(/v(\d+)$/, (_, n) => "v" + (Number(n) + 1));
+ck("§D0 推導得出下一個版號", NEXT_VERSION !== MOBA_SIMULATION_VERSION, MOBA_SIMULATION_VERSION + " → " + NEXT_VERSION);
+const bumped = { ...SIMULATION_SEMANTICS_FINGERPRINTS, [NEXT_VERSION]: fpSemantic };
 ck("§D 開新版號並替新版號登記指紋 ⇒ 恢復通過",
-  bumped["moba-sim.v2"] === fpSemantic && bumped[MOBA_SIMULATION_VERSION] === pinned,
+  bumped[NEXT_VERSION] === fpSemantic && bumped[MOBA_SIMULATION_VERSION] === pinned,
   "舊版本指紋仍保留");
 //  ⚠ 只 bump 版號、不登記指紋 ⇒ 仍然不通過（否則 bump 會變成繞過的方法）
 const bumpedOnly = { ...SIMULATION_SEMANTICS_FINGERPRINTS };
 ck("§D2 只 bump 版號但不登記指紋 ⇒ 仍然不通過",
-  bumpedOnly["moba-sim.v2"] === undefined);
+  bumpedOnly[NEXT_VERSION] === undefined);
+
+// ── 歷史挑戰：跨版本必須**明確拒絕**，不得靜默重算 ────────────────────────
+{
+  const { canReplay: cr, KNOWN_SIMULATION_VERSIONS: KV } =
+    await import("../src/platform/contracts/simulationVersion.js");
+  ck("§H 舊版本仍留在已知清單裡（歷史憑據不刪）", KV.includes("moba-sim.v1"));
+  const old = cr("moba-sim.v1");
+  ck("§H 以 moba-sim.v1 記錄的挑戰**不可重播**", old.ok === false, old.reason);
+  ck("§H 拒絕理由明講是版本不符（不是靜默重算）",
+    /moba-sim.v1/.test(old.reason ?? "") && /moba-sim.v2/.test(old.reason ?? ""), old.reason);
+  ck("§H 目前版本自己可重播", cr(MOBA_SIMULATION_VERSION).ok === true);
+}
 
 //  ── 契約層的其他斷言 ──────────────────────────────────────────────────────
 const inst = read("src/platform/contracts/challengeInstance.js");

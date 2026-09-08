@@ -36,10 +36,11 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
  * ⚠ **什麼時候不用 bump**：純呈現層、UI、文案、log。
  * ⚠ 版本字串一旦發布就**不可回收再用**：舊 Challenge 存著它。
  */
-export const MOBA_SIMULATION_VERSION = "moba-sim.v1";
+export const MOBA_SIMULATION_VERSION = "moba-sim.v2";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze([MOBA_SIMULATION_VERSION]);
+//  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -80,6 +81,47 @@ export const SIMULATION_SEMANTICS_FILES = Object.freeze([
   "src/hero/heroProgress.js",
   //  Challenge 的引擎組裝點：dt、時間上限、注入哪些輸入
   "src/platform/challenge/challengeRunner.js",
+
+  //  ── 2026-09-09 Owner Decision：地圖與規則幾何也是 simulation semantics ──
+  //  判準（Owner 給的）：**直接被 LogicEngine / Challenge simulation 消費，
+  //  而且修改會改變結果**。以下五項逐項有證據，不是「看起來相關就加」。
+
+  //  · 路線錨點 / 野區坑位 / 地圖範圍。LogicEngine 直接 import。
+  //    ⚠ 實測證據：Rift 330 改了本檔之後，`regress` 的對局時長 22.5→21.9 分、
+  //      平均擊殺 19.7→19.1、hot 60%→58%。⇒ 它不是 presentation data。
+  "src/gameData.js",
+  //  · `RIFT_EXTENT_RATIO` 與 `placeRiftAnchor` —— **`gameData.js` 用它來位移
+  //    每一條路線與每一個坑位**。⚠ 沒有它，上面那一條就有洞：
+  //    改 `RIFT_EXTENT_RATIO` 會改變 `gameData` 的**輸出**，
+  //    但 `gameData.js` 的**文字**一個字都不會變 ⇒ 指紋抓不到。
+  "src/battle/moba/map/riftMapMetrics.js",
+  //  · `rulesFor` / `SIM_RULES` / `powerMultFor` / `hpMultFor` / XP 曲線。
+  //    ⚠ LogicEngine 每一個 tick 都在讀，是最核心的戰鬥縮放與規則集。
+  "src/battle/moba/matchProgression.js",
+  //  · 尋路與可通行判定。LogicEngine 直接 import ⇒ 走位改變 = 結果改變。
+  "src/battle/moba/nav/mobaNavigation.js",
+  //  · 塔的座標。LogicEngine 直接 import。
+  "src/battle/moba/map/mobaTowerPlacement.js",
+]);
+
+/**
+ * ⚠ **已知的殘留缺口：本清單是「檔案清單」，不是「模組圖」。**
+ *
+ * `mobaNavigation.js` 自己還 import 了
+ * `map/mapPassability.js`、`map/mobaMapLayout.js`、`map/mapTerrainShapes.js`；
+ * `mobaTowerPlacement.js` 也 import 了後兩者。
+ * 改**那些**檔案會改變模擬結果，但不會改變本清單裡任何一支的文字 ⇒ 指紋抓不到。
+ *
+ * ⇒ 目前**刻意不收**它們（Owner：不要無限擴張清單）。要真正堵死這個缺口，
+ *   正確做法是改成「對 LogicEngine 可達的整個模組圖取指紋」，
+ *   代價是任何一次地圖／渲染重構都會讓閘門變紅。那是下一次的取捨題，
+ *   不是這一輪偷偷做掉的事。
+ * ⚠ 在那之前，改動下列檔案時**要自己記得**做一次版本判斷：
+ */
+export const KNOWN_TRANSITIVE_GAPS = Object.freeze([
+  "src/battle/moba/map/mapPassability.js",
+  "src/battle/moba/map/mobaMapLayout.js",
+  "src/battle/moba/map/mapTerrainShapes.js",
 ]);
 
 /**
@@ -114,7 +156,20 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  ⚠ 真正會改變語意的是「**把 draftPolicy 接成戰鬥輸入**」——那一天要
   //    開新版號，而且會讓既有挑戰的重播全部失效。這道護欄存在的目的，
   //    就是不讓那件事在沒有 bump 版本的情況下悄悄發生。
+  //  ⚠ v1 的指紋是在**舊的檔案清單**（5 支）下算出來的。清單在 v2 擴充成 10 支
+  //    之後，這個值**再也重算不出來**——它是歷史紀錄，不是可再驗的斷言。
+  //    閘門只比對「目前版本」那一格，所以這不影響正確性；留著它是為了記住
+  //    「v1 當時是什麼」。
   "moba-sim.v1": "ca2f3e8693ce194e",
+
+  //  2026-09-09（Owner Decision）：**正式的 simulation semantics change**。
+  //  Rift 330 已經實際改動 lane anchors / pit positions / map extents，
+  //  而且**實測讓 regress 的結果改變**（時長 22.5→21.9 分、擊殺 19.7→19.1、
+  //  hot 60%→58%）。⇒ 這不是「同版本換指紋」，是新版本。
+  //  同時把 `gameData.js` 等五支地圖／規則檔案納入語意清單（見上）。
+  //  ⚠ 後果（已知且接受）：所有以 `moba-sim.v1` 記錄的歷史挑戰**不再可重播**，
+  //    並且會被 `canReplay` 明確拒絕——不是靜默用新地圖重算。
+  "moba-sim.v2": "824a89582f8e9014",
 });
 
 export const isKnownSimulationVersion = (v) =>
