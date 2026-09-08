@@ -40,6 +40,8 @@ import TrainingScreen from "./screens/manage/TrainingScreen.jsx";
 import RecruitScreen from "./screens/manage/RecruitScreen.jsx";
 import PlayerDetailScreen from "./screens/manage/PlayerDetailScreen.jsx";
 import TeamDevelopmentScreen from "./screens/manage/TeamDevelopmentScreen.jsx";
+//  Player Challenge Slice 2：第一個玩家看得到的線上挑戰畫面（非同步 Unranked）。
+import PlayerChallengeScreen from "./screens/challenge/PlayerChallengeScreen.jsx";
 import ClubMasteryScreen from "./screens/manage/ClubMasteryScreen.jsx";
 import ClubAssetsScreen from "./screens/manage/ClubAssetsScreen.jsx";
 // ── 舊版個人天賦相容檢視（入口在 PlayerDetail）──
@@ -278,6 +280,7 @@ export default function AppShell() {
       {screen === "talentPick" && <RosterScreen purpose="talent" onBack={home} onPlayer={(id) => { setPlayerId(id); setScreen("playerTalent"); }} />}
       {screen === "training" && <TrainingScreen onBack={home} />}
       {screen === "teamDevelopment" && <TeamDevelopmentScreen onBack={home} />}
+      {screen === "playerChallenge" && <PlayerChallengeScreen onBack={home} />}
       {screen === "clubMastery" && <ClubMasteryScreen onBack={home} />}
       {screen === "clubAssets" && <ClubAssetsScreen onBack={home} />}
       {screen === "offSeason" && <OffSeasonScreen onBack={home} />}

@@ -373,13 +373,25 @@ ck("P2) 快速練習仍然是 0 世界時間（V3 沒有動它）",
 ck("P3) 一般競技仍然 0 加天（成本仍在每日容量，不在每一場）",
   clock.WORLD_TIME_COST.competitive === 0 && clock.isWorldTimeCostDecided("competitive"));
 
-ck("P4) **本輪未建立**真人競技／定時賽事的 origin kind",
-  Object.keys(origin.ORIGIN_KINDS).length === 3
+//  ⚠ 期望值於 Player Challenge Slice 1 更新：新增了 `challenge`（非同步 Unranked PvP）。
+//    這一條守的**不是**「永遠只能有三種」——來源本來就是可擴充的契約。
+//    它守的是「呼叫端不得自創來源種類」，以及**定時賽事 / Ranked 仍未建立**。
+//    ⇒ 改成與契約自己的定義比對，並保留原本真正在擋的兩個名字。
+ck("P4) origin kind 就是契約定義的那幾種（event / online 仍未建立）",
+  Object.keys(origin.ORIGIN_KINDS).sort().join("/") === "challenge/fixture/practice/ticket"
   && !("online" in origin.ORIGIN_KINDS) && !("event" in origin.ORIGIN_KINDS),
   Object.keys(origin.ORIGIN_KINDS).join("/"));
 
-ck("P5) **本輪未建立**線上成長來源",
-  Object.keys(source.MATCH_SOURCE).length === 4 && !("online" in source.MATCH_SOURCE),
+//  ⚠ 期望值於 Player Challenge Slice 1 更新。原本的語意是「線上來源還不存在」，
+//    現在 `challenge` 存在了 ⇒ 這一條改守**真正重要的那件事**：
+//    線上來源存在，但它**不得寫回生涯**（成長倍率 0、世界時間 0）。
+//    Ranked 仍未建立。
+const growth = await imp("src/platform/progress/careerGrowth.js");
+ck("P5) 成長來源就是契約定義的那幾種；線上來源存在但不寫回生涯",
+  Object.keys(source.MATCH_SOURCE).sort().join("/") === "challenge/competitive/official/practice/unknown"
+  && !("online" in source.MATCH_SOURCE) && !("ranked" in source.MATCH_SOURCE)
+  && growth.PCGM_PARAMS.sourceBase[growth.GROWTH_SOURCES.challenge] === 0
+  && clock.WORLD_TIME_COST.challenge === 0,
   Object.keys(source.MATCH_SOURCE).join("/"));
 
 ck("P6) 快轉不產生額外收益——規劃器不碰 finance / 粉絲",

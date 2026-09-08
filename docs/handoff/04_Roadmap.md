@@ -2222,3 +2222,200 @@ no fake ready-check、MOBA first / CS later、Pricing Authority 在 Ranked 前�
 ⚠ 獎勵不在這七步裡，要先有 §7.3 的三條條款。
 
 **下一輪**：`Player Challenge v1 Implementation — MOBA Slice 1`。
+
+---
+
+## 🧱 Player Challenge v1 — MOBA Slice 1 已落地（2026-09-07，實作）
+
+驗證器 `tools/check_player_challenge_slice1.mjs` **107/107 PASS**（含真跑 MOBA E2E）；
+`check_moba_runtime29` **44/44**（umbrella，含 regress／regress2／build）。
+本地 commit，未 push、未 deploy。
+
+### 落地了什麼
+
+| 契約 | 檔案 | 一句話 |
+|---|---|---|
+| `SimulationVersion.v1` | `contracts/simulationVersion.js` | `moba-sim.v1`；跨版本一律拒絕重播，**不做 migration framework** |
+| `SquadSnapshot.v1` | `contracts/squadSnapshot.js` | 權威層簽發的凍結裁決資料；雜湊用排除法涵蓋全部欄位 |
+| `ChallengeInstance.v1` | `contracts/challengeInstance.js` | `challengeId`（身分）／**凍結的 `matchSeed`**（怎麼跑）／結算冪等 |
+| 權威層 | `challenge/snapshotAuthority.js` | 擋數值 → 節流 → 自行查值 → 正規化 → 簽發 |
+| 組裝點 | `challenge/challengeRunner.js` | **唯一**的引擎組裝點；第一次跑與重播共用同一支 |
+| 來源 | `MATCH_SOURCE.challenge` | 獨立一格 ＋ 兩層生涯防護 |
+
+### 三個最重要的實作決定
+
+1. **快照欄位以「實際的 LogicEngine 消費端」為準，不照定價欄位猜。**
+   清單來自 `useLocalServer.start()`，其中**英雄熟練 loadout 不在 `calcPower` 的輸入裡**
+   —— 而 271b31d 實測它才是勝負主要決定者（×1.25 ⇒ 94.4%）。
+   ⇒ 照定價欄位列表**一定會漏掉它**，漏掉就是重播對不上。
+2. **快照自己宣告涵蓋範圍**（`capturedInputs`），runner 只用被宣告過的輸入。
+   Slice 1 未涵蓋英雄選角／原型／召喚師技能 ⇒ **刻意不呼叫**那三支 `configure`。
+   驗證器實測拿掉 `heroLoadout` 宣告之後結果真的改變（1490s → 1283s），
+   證明它是真輸入不是裝飾欄位。
+3. **正規化用白名單，不是把狀態寫成基準值。** 狀態三欄若進快照會進雜湊
+   ⇒「狀態變了 ⇒ 看起來像換了一支隊伍」。基準值改宣告在隊伍層級一份。
+
+### 誠實邊界
+
+- **沒有任何 UI**（`src/**/*.jsx` 零 import）。Slice 1 的 consumer 是 verifier 的 E2E。
+- **沒有真伺服器**：`SNAPSHOT_AUTHORITY.trusted === false`、`kind: "mock-authority"`。
+  雜湊是變更偵測不是簽章 ⇒ **不得宣稱已有防作弊能力**。
+- 未做：Challenge Board、五候選探索、Club Points、Ranked、Cap／Bracket、
+  LadderRating、Pricing Authority、monetization、CS Challenge。
+- 未動：`src/battle/`、`LogicEngine.js`、`teamStrength.js`、`src/screens/fps/`、
+  matchmaking／matchRoom／matchSession、General Match。
+
+### 三支既有驗證器同步了期望值（不是放寬）
+
+`check_time_block_v3` P4/P5、`check_competition_q1` 3/3b、
+`check_online_power_contract_v1` §1。最後一條原本**刻意斷言 `squadSnapshot.js` 不存在**，
+註解寫明「有人加進來卻沒更新文件時會紅，逼出一次同步」——
+它在 Slice 1 落地當下確實變紅，這次更新就是它要逼出來的那次同步。
+
+### 建議下一輪：`Player Challenge v1 — MOBA Slice 2`
+
+1. **英雄選角 / 戰鬥原型 / 召喚師技能進快照**（同時 bump `capturedInputs` 與
+   `MOBA_SIMULATION_VERSION`，三件事缺一，歷史挑戰的重播會靜默失真）。
+2. **挑戰紀錄的儲存與冪等**（目前 `ChallengeInstance` 是純契約，沒有落盤）。
+3. **最小 UI**：發布防守陣容 ＋ 對單一 fixture 對手發起挑戰 ＋ 看結果。
+4. ⚠ **獎勵仍然不接**。要接 Club Points 之前必須先有架構文件 §7.3 的三條
+   重複挑戰條款，否則接上的那天就會被 farm。
+
+---
+
+## 🎮 Player Challenge v1 — MOBA Slice 2 已落地（2026-09-07，實作）
+
+**玩家第一次可以從 UI 走完一整條線上流程**：
+首頁 →「玩家挑戰」→ 發布防守陣容 → 對練習對手發起挑戰 → 真的跑 MOBA 模擬 →
+看結果 → 重播驗證 → **重整之後那一場還在，重播得出同一個結果**。
+桌機 1366 與手機 390 都實測走完（browser smoke 66/66）。
+
+### 落地了什麼
+
+| | |
+|---|---|
+| 落盤 | `challenge` 切片掛在既有的 `profileStore`（`save()` 本來就序列化整份 state）⇒ **沒有第二套 storage**；容量上限 20 場並連帶清無人引用的快照 |
+| UI | `screens/challenge/PlayerChallengeScreen.jsx`；桌機 Utility 與手機「更多」**兩處**都有入口 |
+| 對手 | 三個**決定性** fixture，走的是玩家發布用的**同一支權威函式**（不是手寫快照物件，避免第二條繞過規則的路徑） |
+| 版本閘門 | `check_simulation_version_gate.mjs`：對五支「決定模擬語意」的檔案取指紋，改了就紅 |
+
+### simulationVersion Gate ⚠
+
+Owner 要求「禁止 simulationVersion 只存欄位、引擎改版卻永遠不更新」。
+做法是內容指紋 ＋ 一個必須回答的問題：
+
+> 這次改動會讓同一份輸入跑出不同的結果嗎？
+> 　會 ⇒ bump 版本並更新指紋　／　不會 ⇒ 只更新指紋
+
+⚠ 指紋**刻意不做正規化**——分得出「只改註解」就代表有程式在替我們判斷
+「這不影響語意」，而那正是閘門存在的原因。
+⚠ 反向測試過：加一行註解 ⇒ 16/17 FAIL，移除 ⇒ 17/17 PASS。
+
+### 🔴 browser smoke 抓到一個真 bug
+
+模擬跑完、資料也對，但**結果卡永遠不更新**，要重整才看得到。
+根因是訂閱簽章只看挑戰筆數，而結算不會改變筆數。
+**當時 Node verifier 是全綠的。**
+⇒ 「玩家會看到結果」的功能，資料驗證器綠不代表做完了。已加迴歸斷言。
+
+### 🟡 fixture 難度未校準（已量測，本輪不調）
+
+新存檔英雄熟練全 Lv.1、fixture 是 4～12 ⇒ 挑戰方 **0/18 勝**，
+`drill_balanced` 有 1/6 打到 30 分鐘上限。熟練調到 3–6 就變 5/18 勝、18/18 打得完。
+⇒ 這是 271b31d 結論的具體展現（熟練是勝負主要決定者），不是 bug。
+Slice 3 要改善首場體驗，該調的是 **fixture 的熟練值**，不是引擎。
+
+### Ban/Pick 沿用評估（Owner 指定評估項）
+
+**可行，但建議 Slice 3 再做。** 三個引擎轉換點都吃「席位 →
+`{heroId, hero, spells}`」，英雄查表本來就是注入式 ⇒ 不需要第二套 Ban-Pick model。
+但加它必須**同時**做三件事（進快照、進 `capturedInputs`、bump 模擬版本），
+而本輪同時是第一次接 UI 與落盤——兩者一起改，出現「重播對不上」時
+就分不出是落盤問題還是新輸入問題。
+
+### ⚠ 本輪 runtime29 不具正式效力
+
+`check_moba_runtime29` 於 20:51 啟動，而結果卡 bug 與迴歸斷言都是**之後**才做的
+⇒ **NOT_AUTHORITATIVE_FOR_FINAL_HEAD**。
+`FINAL_RUNTIME29_REQUIRED = YES`：下一輪針對**固定 commit SHA**
+在乾淨環境重跑一次當正式 closure gate。
+
+### 建議下一輪：`Player Challenge v1 — MOBA Slice 3`
+
+0. **先補跑 clean runtime29**（對固定 SHA）當 Slice 2 的正式 closure gate。
+1. 英雄選角 / 戰鬥原型 / 召喚師技能進快照（三件事同時做）。
+2. fixture 熟練值調到讓首場體驗合理。
+3. ⚠ **獎勵仍不接**：要接 Club Points 前必須先有架構文件 §7.3 的三條
+   重複挑戰條款，否則接上的那天就會被 farm。
+
+---
+
+## 🎯 Player Challenge v1 — MOBA Slice 3 已落地（2026-09-08）
+
+**玩家現在可以自己選對手。** 看板列 5 個候選 → 讀懂對手 → 選戰術 → 挑戰 →
+看「賽前宣告 vs 實際發生」→ 再試一次。桌機 1366 與手機 390 都實測走完（85/85）。
+
+### 看板的設計原則：只說證明得出來的話
+
+`challengeBoard.js` / `fixtureOpponents.js` / 畫面**都不 import**
+`teamStrength` / `calcPower`，不產生任何 strength / rating / tier 欄位。
+不用 Career Year 當公平軸、不宣稱 Club Level 等於戰力。
+
+候選位由**觀測紀錄**決定（`你挑戰過 12 次，攻破 3 次、被守下 9 次`）；
+樣本 < 3 一律「尚無足夠挑戰紀錄」，**不推估**。
+⚠ 紀錄是**這個存檔自己的**（沒有伺服器），畫面明說「不是全服資料」。
+⚠ 只計正式挑戰，`retry` 不計入——否則攻破率可以被刷，而看板正是靠它分類。
+
+### 首局體驗：加一個對手，不是把所有對手調弱
+
+`drill_mirror` 的熟練**取自玩家當下的熟練**，卡片直接寫出這個事實。
+
+| 對手 | 平均熟練 | 新玩家勝率 |
+|---|---|---|
+| `drill_mirror` | = 玩家 | **9/16（56%）** |
+| `drill_balanced` | 4.8 | 0/5 |
+| `drill_topheavy` | 4.8 | 1/5 |
+| `drill_veteran` | 12.8 | 0/5 |
+| `drill_rotation` | 6.8 | 2/5 |
+
+⇒ Slice 2 的 **0/18 結構性必敗解除**，梯度仍在，**沒有保證勝率**。
+
+⚠ 兩個實測發現值得記：**熟練 +1/+2 的位移就足以翻盤**（第一版 mirror 熟練 1.8
+vs 玩家 1.0，新玩家仍只有 1/8）；**引擎對挑戰方有側偏**（完全相同的兩隊，
+挑戰方只贏 33%）。設計「勢均力敵」時兩者都要算進去。
+
+### 賽前決策真的有意義了
+
+出賽用的是**當下**的隊伍（`intent: entry`，建立 challenge 當下凍結，不節流）；
+防守快照仍是已發布的那份（每日一份）。⇒ 換先發、練熟練，下一場就生效。
+賽前另可選這一場的戰術。
+
+### 賽後：宣告 vs 實際
+
+左邊是戰術自己宣告的 `evidence.goal`，右邊是引擎 `tacticExec` 的真實計數，雙方各一張表。
+⚠ 引擎沒統計到的顯示「—」不填 0；**不做**勝因分析與教練建議。
+
+### 驗證
+
+```
+check_player_challenge_slice3          100/100 PASS
+browser_check_player_challenge_slice3   85/85  PASS（桌機＋手機，一次過）
+check_player_challenge_slice2           70/70  PASS
+check_player_challenge_slice1          107/107 PASS
+check_simulation_version_gate           26/26  PASS
+regress 15/15 ｜ regress2 8/8 ｜ npm run build ✓
+```
+
+⚠ **未跑 umbrella**：引擎語意檔案本輪一個都沒動（只動 `challengeRunner.js`，
+無 Challenge 以外的消費端），regress / regress2 已單獨全綠 ⇒ 判定非必要。
+
+### 建議下一輪：`Player Challenge v1 — MOBA Slice 4`
+
+1. **Ban/Pick 進快照**（同時做三件事：進快照、進 `capturedInputs`、
+   bump `MOBA_SIMULATION_VERSION`；缺一則歷史挑戰重播靜默失真）。
+   ⚠ 這會動到引擎輸入 ⇒ umbrella 變成必要，且要對固定 SHA 跑。
+2. **對手快照的真人化前置**：目前是 fixture；接真人之前要先定
+   snapshot 發布與索引的伺服器側形狀。
+3. ⚠ **獎勵仍不接**：接 Club Points 前必須先有架構文件 §7.3 的三條
+   重複挑戰條款（每份快照對每位挑戰者最多結算一次、正式再戰要有冷卻、
+   `retry` 恆不給獎勵）。目前 `retry` 已恆不給獎勵，另兩條尚未實作。

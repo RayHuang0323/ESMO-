@@ -27,24 +27,29 @@
 export const ORIGIN_VERSION = "MatchOrigin.v1";
 
 /**
- * 來源種類。**唯一來源**——呼叫端不得自創第四種。
+ * 來源種類。**唯一來源**——呼叫端不得自創新的一種。
  *
- * · `ticket`   玩家自己排隊配到的（O4 既有路徑）
- * · `fixture`  賽程排定的（Competition）
- * · `practice` 快速練習（V0D）。**純測試場**：不給成長、不給獎勵、不計戰績。
- *              它是**第三個生產者**，不是第三條管線——見
- *              `matchmaking/practiceGateway.js`，之後的 Room / Session /
- *              Launch / Battle / Result / 結算全部共用既有那一條。
+ * · `ticket`    玩家自己排隊配到的（O4 既有路徑）
+ * · `fixture`   賽程排定的（Competition）
+ * · `practice`  快速練習（V0D）。**純測試場**：不給成長、不給獎勵、不計戰績。
+ *               它是**第三個生產者**，不是第三條管線——見
+ *               `matchmaking/practiceGateway.js`，之後的 Room / Session /
+ *               Launch / Battle / Result / 結算全部共用既有那一條。
+ * · `challenge` 玩家挑戰（Player Challenge Slice 1）。非同步 Unranked PvP，
+ *               對手是另一位玩家的**凍結快照**（`SquadSnapshot.v1`）。
+ *               ⚠ 同樣是**生產者**不是新管線：它一樣不得帶任何賽事欄位，
+ *                 也一樣走既有的驗證。
  */
 export const ORIGIN_KINDS = Object.freeze({
   ticket: "ticket",
   fixture: "fixture",
   practice: "practice",
+  challenge: "challenge",
 });
 
 /** 中文顯示名（畫面與錯誤訊息共用，避免兩套說法）。 */
 export function originKindLabel(kind) {
-  return ({ ticket: "排隊配對", fixture: "賽程排定", practice: "快速練習" })[kind] ?? kind;
+  return ({ ticket: "排隊配對", fixture: "賽程排定", practice: "快速練習", challenge: "玩家挑戰" })[kind] ?? kind;
 }
 
 /** FNV-1a → 8 位十六進位（與 matchEntry / matchmaking 同一套決定性雜湊手法）。 */
@@ -146,6 +151,40 @@ export function originFromPractice(entryRequest) {
       rosterVersion: entryRequest.rosterVersion ?? null,
       teamId: entryRequest.teamId ?? null,
       //  賽事專屬欄位在練習來源一律為 null
+      competitionId: null,
+      stageId: null,
+      fixtureId: null,
+    },
+  };
+}
+
+/**
+ * 玩家挑戰的來源（Player Challenge Slice 1）。
+ *
+ * ⚠ `originId` 綁 **`challengeId`**，不綁快照內容——
+ *   `challengeId` 才是「這是不是同一場」的身分。用內容推導會把兩場
+ *   **合法的不同挑戰**（同樣兩份快照、同樣戰術，但玩家真的打了第二次）
+ *   誤判成同一場，玩家會看到「我的第二次挑戰沒有發生」。
+ *
+ * ⚠ 與練習／票券同一條規則：**不得帶任何賽事欄位**。
+ */
+export function originFromChallenge(challenge) {
+  if (!challenge?.challengeId) {
+    return { ok: false, origin: null, errors: [{ code: "challenge", message: "缺少 challengeId，無法建立玩家挑戰來源" }] };
+  }
+  return {
+    ok: true,
+    errors: [],
+    origin: {
+      schema: ORIGIN_VERSION,
+      kind: ORIGIN_KINDS.challenge,
+      originId: `challenge:${challenge.challengeId}`,
+      mode: "moba",
+      challengeId: challenge.challengeId,
+      //  ⚠ 只帶雜湊引用，不帶快照內容（快照另存；複製進來就會有兩份真相）。
+      challengerSnapshotHash: challenge.challengerSnapshotHash ?? null,
+      defenderSnapshotHash: challenge.defenderSnapshotHash ?? null,
+      //  賽事專屬欄位在挑戰來源一律為 null
       competitionId: null,
       stageId: null,
       fixtureId: null,

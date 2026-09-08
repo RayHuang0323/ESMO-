@@ -90,6 +90,13 @@ export const WORLD_TIME_COST = Object.freeze({
   practice: 0,
   official: 0,
   competitive: 0,
+  //  Player Challenge Slice 1：**線上不推進生涯時鐘**。
+  //  ⚠ 這不是「跟 competitive 一樣所以填 0」，而是一條**契約**：
+  //    線上一旦能推進世界日，玩家就會因為打線上而讓選手變老、讓賽程流失
+  //    ⇒ 系統在懲罰玩家去玩線上。這一格必須永遠是 0，不是待校準的數值。
+  //  ⚠ 未來 Ranked 的每日配額要掛在**伺服器日**上，
+  //    **不得**接到本檔的世界時鐘（同一條理由）。
+  challenge: 0,
 });
 
 /**

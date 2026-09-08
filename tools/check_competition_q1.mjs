@@ -116,12 +116,14 @@ console.log("══ Milestone Q1：隊伍身分 / 賽季種子 / 比賽來源 �
   //    來源本來就是可擴充的契約（Q1 檔頭自己就寫著 fixture 當時「尚無生產者」）。
   //    V0D 依產品需求新增第三種 `practice`（快速練習），每一種都有工廠、驗證與中文名。
   //    **這是刻意的期望變更**：從硬編兩種改成「與契約自己的定義一致」。
+  //    Player Challenge Slice 1 依**同一條理由**新增第四種 `challenge`
+  //    （非同步 Unranked PvP，工廠是 `originFromChallenge`，驗證與中文名齊備）。
   ck("3) 來源種類就是契約定義的那幾種，呼叫端不得自創",
-    Object.keys(ORIGIN_KINDS).sort().join() === "fixture,practice,ticket",
+    Object.keys(ORIGIN_KINDS).sort().join() === "challenge,fixture,practice,ticket",
     Object.keys(ORIGIN_KINDS).join(","));
   ck("3b) 每一種來源都有中文顯示名（畫面與錯誤訊息不出現內部字串）",
     originKindLabel("ticket") === "排隊配對" && originKindLabel("fixture") === "賽程排定"
-    && originKindLabel("practice") === "快速練習");
+    && originKindLabel("practice") === "快速練習" && originKindLabel("challenge") === "玩家挑戰");
 
   const q = queuedOf();
   const to = originFromTicket(q).origin;

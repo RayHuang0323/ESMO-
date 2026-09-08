@@ -18340,3 +18340,556 @@ Claude 線的 Online 定案只作為邊界：`CAREER_OWNS_ROSTER / ONLINE_OWNS_M
 仍需誠實保留：舊 Replay 無完整野怪攻擊／受擊時間，不偽造缺失動作；真機 Android FPS／觸控未測，瀏覽器節流樣本不可當效能保證。六 GLB 約 11.3 MB，增加 skinning／面數成本。診斷參數下 390px 底部面板遮擋與既有 nexus guard 事件 lane 文案列入紀錄。基地／塔／坑建築精修留下一輪。
 
 完整資產、程式與驗證清單：`docs/design/ESMO_Rift_330_野怪整合驗收.md`；瀏覽器證據：`art/moba-rift/browser-acceptance.md`。依使用者要求，未 commit／push／deploy，未整合其他 AI worktree。
+---
+
+## Sprint：Player Challenge v1 — MOBA Slice 1（Authoritative Foundation，2026-09-07）
+
+**類型**：實作。基線 `09a9cda`（= origin/main）。本地 commit，不 push、不 deploy。
+**驗證**：`tools/check_player_challenge_slice1.mjs` **107/107 PASS**（含真跑 MOBA 模擬的 E2E）。
+
+### 新增（5 支 src ＋ 1 支 verifier，共 1312 行）
+
+| 檔案 | 行數 | 職責 |
+|---|---|---|
+| `src/platform/contracts/simulationVersion.js` | 64 | `moba-sim.v1`；跨版本一律拒絕重播，**不做 migration framework** |
+| `src/platform/contracts/squadSnapshot.js` | 259 | `SquadSnapshot.v1`：形狀、雜湊、`capturedInputs`、客戶端禁送清單 |
+| `src/platform/contracts/challengeInstance.js` | 218 | `ChallengeInstance.v1`：`challengeId` ／ **凍結的 `matchSeed`** ／ 結算冪等 |
+| `src/platform/challenge/snapshotAuthority.js` | 221 | 權威層：擋數值 → 節流 → 自行查值 → 正規化 → 簽發 |
+| `src/platform/challenge/challengeRunner.js` | 157 | **唯一**的引擎組裝點（第一次跑與重播共用同一支） |
+| `tools/check_player_challenge_slice1.mjs` | 393 | 七節驗證 ＋ 最小 E2E |
+
+### 修改（既有 src 全部是**加法**，共 +100 行）
+
+`matchSource.js`（+`challenge` 來源、標籤、`isChallengeSource`）、
+`matchOrigin.js`（+`ORIGIN_KINDS.challenge`、中文名、`originFromChallenge`）、
+`careerGrowth.js`（+`GROWTH_SOURCES.challenge`，倍率 **0.0**）、
+`rewardFormulas.js`（challenge 早退 ⇒ 0 錢 0 粉絲）、
+`worldClock.js`（`WORLD_TIME_COST.challenge = 0`）。
+
+### 最重要的三個決定
+
+1. **快照欄位以「實際的 LogicEngine 消費端」為準，不照定價欄位猜。**
+   清單直接來自 `useLocalServer.start()`：
+   `new LogicEngine(seed, loadout)` ＋ `configurePlayers` ＋ `configureHeroes` ＋
+   `configureArchetypes` ＋ `configureSpells` ＋ `configureMatch`。
+   ⚠ 其中**英雄熟練 loadout** 不在 `calcPower` 的輸入裡（271b31d 實測它才是勝負
+   主要決定者，×1.25 ⇒ 94.4%）⇒ **照定價欄位列表一定會漏掉它，而漏掉就是重播對不上。**
+
+2. **快照自己宣告涵蓋範圍（`capturedInputs`），runner 只用被宣告過的輸入。**
+   Slice 1 涵蓋 lineup / playerStats / heroLoadout / tactic；
+   **英雄選角 / 戰鬥原型 / 召喚師技能未涵蓋**，所以 runner **刻意不呼叫**
+   對應的三支 `configure`。這是誠實標示，不是偷偷略過——
+   驗證器實測「把 heroLoadout 從宣告拿掉 ⇒ 真的不注入，而且結果因此不同」
+   （1490s → 1283s），證明它是真輸入不是裝飾欄位。
+
+3. **正規化用白名單，不是「把狀態改成基準值」。**
+   `condition`/`morale`/`energy` 引擎讀 0 次，若寫進快照會進雜湊
+   ⇒「狀態變了 ⇒ 雜湊變了 ⇒ 看起來像換了一支隊伍」。
+   ⇒ 直接**不收**（只留 16 項能力），基準值宣告在 `snapshot.normalization`
+   隊伍層級一份，未來接定價仍然同源（I13）。
+
+### 兩層生涯防護（驗證器同時釘住兩層）
+
+- **第一層（設計）**：runner / 權威層**完全不 import** `applyMatchProgress`、
+  profileStore、zustand、localStorage —— 以原始碼掃描斷言。
+- **第二層（防呆）**：成長倍率 0、`teamRewardsFor` 早退、世界時間 0、
+  不吃每日競技容量。
+- ⚠ **對照組**：同一組參數下 `competitive` 仍然給錢給粉絲
+  ⇒ 證明那些 0 是 challenge 專屬，不是整條管線壞了。
+
+### 三支既有驗證器的期望值更新（**不是放寬，是同步**）
+
+| 驗證器 | 原斷言 | 現在 |
+|---|---|---|
+| `check_time_block_v3` P4 | `ORIGIN_KINDS.length === 3`（「本輪未建立」） | 與契約定義比對；仍擋 `online`/`event` |
+| `check_time_block_v3` P5 | `MATCH_SOURCE.length === 4`（「本輪未建立線上來源」） | 改守**真正重要的事**：線上來源存在，但成長倍率 0、世界時間 0；Ranked 仍不存在 |
+| `check_competition_q1` 3/3b | 三種 origin kind | 四種（沿用該檔既有的「刻意期望變更」註解慣例） |
+| `check_online_power_contract_v1` §1 | 斷言 `squadSnapshot.js` **不存在** | 移到 EXISTS。⚠ **這條斷言如設計般發揮作用**——它在快照落地當下變紅，逼出這次同步 |
+
+⚠ 依 Owner 先前裁示，驗證器註解一律改成**目前的保護邊界**，
+不再使用歷史「本輪未動」語意。
+
+### 驗證結果
+
+```
+check_player_challenge_slice1     107/107 PASS  ← 新增（含真跑 MOBA E2E，單場約 3.9s）
+check_online_power_contract_v1     51/51  PASS
+check_time_block_v3                69/69  通過
+check_competition_q1               93/93  通過
+check_match_source_v0c             21/21  通過
+check_practice_match_v0d           70/70  通過
+check_td44_practice_exit           46/46  通過
+check_general_match_v7a            55/55  通過
+check_world_time_v1                46/46  通過
+check_time_block_v2                47/47  通過
+check_pcgm_v0a                     24/24  通過
+check_foundation_calibration       58/58  通過
+check_club_progression_v1          36/36  通過
+check_retention_economy_v1         38/38  通過
+check_fan_f0                       33/33  通過
+check_fan_system                   66/66  通過
+check_growth_ui_p1                 80/80  通過
+check_team_development_expansion_v1 85/85 PASS
+check_club_assets_v1              105/105 PASS
+regress                            結束率 15/15
+regress2                           節奏門檻 8/8
+npm run build                      built in 15.31s
+```
+
+### 未做 / 未涵蓋（誠實清單）
+
+- **沒有任何 UI**：`grep` 確認 `src/**/*.jsx` 一處都沒有 import 新模組。
+  Slice 1 的 consumer 是 verifier 的 E2E，不是玩家畫面。
+- **快照未涵蓋英雄選角 / 戰鬥原型 / 召喚師技能** ⇒ Slice 2。
+- **沒有真伺服器**：`SNAPSHOT_AUTHORITY.trusted === false`、
+  `kind: "mock-authority"`，程式與文件都明說目前擋不住蓄意偽造。
+- **沒有**：Challenge Board、五候選探索、Club Points、Ranked、Cap／Bracket、
+  LadderRating、Pricing Authority、monetization、CS Challenge。
+- **沒有動**：`src/battle/`、`LogicEngine.js`、`teamStrength.js`、`src/screens/fps/`、
+  matchmaking / matchRoom / matchSession、General Match（`git status` 全空）。
+
+---
+
+## Sprint：Player Challenge v1 — MOBA Slice 2（Persisted Flow ＋ Minimal UI，2026-09-07）
+
+**類型**：實作。基線 `8c2ce10`。本地 commit，不 push、不 deploy。
+
+### 玩家第一次可以做完一整條線上流程
+
+首頁 →「玩家挑戰」→ 發布防守陣容 → 對練習對手發起挑戰 → 真的跑 MOBA 模擬 →
+看結果 → 重播驗證 → **重整之後那一場還在，而且重播得出同一個結果**。
+桌機 1366 與手機 390 都實測走完。
+
+### 新增
+
+| 檔案 | 職責 |
+|---|---|
+| `platform/challenge/challengeState.js` | 存檔切片的純函式層（正規化 / reducer / 容量上限 / 冪等） |
+| `platform/challenge/fixtureOpponents.js` | 三個**決定性**練習對手 |
+| `screens/challenge/PlayerChallengeScreen.jsx` | 最小 UI（發布 / 對手 / 結果 / 重播 / 紀錄） |
+| `tools/check_simulation_version_gate.mjs` | 模擬語意指紋閘門 |
+| `tools/check_player_challenge_slice2.mjs` | 落盤 / reload / 冪等 / 生涯隔離 / UI 契約 |
+| `tools/browser_check_player_challenge_slice2.mjs` | 桌機＋手機瀏覽器 smoke |
+
+### 修改
+
+`profileStore.js`（+`challenge` 切片、正規化、五個動作）、
+`simulationVersion.js`（+語意檔案清單與指紋）、
+`AppShell.jsx`（+路由）、`DashboardScreen.jsx`（+桌機 Utility 與手機「更多」兩處入口）。
+
+### 三個值得記的決定
+
+1. **落盤走既有邊界，沒有第二套 storage。**
+   `profileStore.save()` 本來就序列化整份 state ⇒ 加一個切片就是全部工作。
+   `challenge/` 四支檔案都被斷言**不得出現 `localStorage`**。
+2. **正規化時「壞掉的一筆就丟掉」，不盡量救。**
+   雜湊對不上的快照、引用不到快照的挑戰，讀檔時直接剔除。
+   一份雜湊對不上的快照拿去重播，會產生**看起來正常但其實錯誤**的結果，
+   那比少一筆紀錄糟得多。
+3. **挑戰紀錄有容量上限（`MAX_INSTANCES = 20`）並連帶清無人引用的快照。**
+   一份快照約 1.5–2KB；無上限的話存檔會長到 localStorage 寫入失敗，
+   而 `save()` 的 `catch {}` 會**靜默吞掉**那個失敗
+   ⇒ 玩家某天發現「進度不見了」。⚠ 我自己的防守快照永不被清。
+
+### simulationVersion Gate（本輪的核心新機制）
+
+Owner 要求：「禁止 simulationVersion 只存在欄位、實際引擎改版卻永遠不更新」。
+
+做法：`SIMULATION_SEMANTICS_FILES` 列出決定模擬語意的五支檔案
+（`LogicEngine.js` / `mobaPlayerStats.js` / `MobaTacticConfig.js` /
+`heroProgress.js` / `challengeRunner.js`），對它們取內容指紋，
+與契約裡釘住的 `SIMULATION_SEMANTICS_FINGERPRINT` 比對。
+改了卻沒更新 ⇒ **紅**，並印出該問的那個問題。
+
+⚠ **指紋刻意不做正規化**（不剝註解、不去空白）。
+「只改註解」與「改了數值」在這一層分不出來，也**不該**分——
+分得出來就代表有程式在替我們判斷「這個改動不影響語意」，
+而那正是這個閘門存在的原因。
+
+⚠ **反向測試做過**：在 `challengeRunner.js` 尾端加一行註解 ⇒ 閘門 16/17 FAIL，
+移除後回到 17/17 PASS。它不是裝飾。
+
+### 🔴 瀏覽器 smoke 抓到一個真 bug（結果卡永遠不更新）
+
+第一次跑 smoke 時 ④⑤ 全紅：模擬跑完了，**結果卡卻不顯示**，
+要重整才看得到（⑦「reload 後看得到結果」反而是綠的——那個對比就是線索）。
+
+根因：畫面的訂閱簽章只看 `history.length`，而**結算不會改變筆數**
+（那一場在 `startFixtureChallenge` 時就已經進清單了）
+⇒ `useMemo` 的依賴不變 ⇒ 結果永遠不重算。
+
+修法：簽章改成涵蓋**每一場的 `status`**，並且訂閱一個**穩定字串**而不是
+每次新建的物件（`useProfileStore((s) => s.challengeView())` 每次回傳新物件，
+`getSnapshot` 不穩定）。已加兩條迴歸斷言釘住。
+
+⚠ **這正是 smoke 存在的理由**：Node verifier 當時全綠（契約與資料都對），
+但玩家看不到結果。只驗資料的測試永遠抓不到這一類。
+
+### 🟡 觀察：fixture 難度未校準（本輪不處理）
+
+實測（Node，隨機 seed）：新存檔的英雄熟練**全是 Lv.1**，而三個練習對手的
+熟練是 4～12 ⇒ 挑戰方 **0/18 勝**，`drill_balanced` 甚至有 1/6 打到 30 分鐘上限
+（`unresolved`）。把熟練調到 3–6 之後變成 5/18 勝、18/18 都打得完。
+
+⇒ 這**不是 bug**，是 271b31d 那個結論的具體展現：英雄熟練是勝負的主要決定者。
+⚠ 本輪 Owner 明令不做獎勵與校準，所以只記錄不調整。
+Slice 3 若要讓首場體驗合理，該調的是**fixture 的熟練值**，不是引擎。
+
+### Ban/Pick 沿用評估（Owner 指定評估項）
+
+**結論：可行，但建議留到 Slice 3，不在本輪做。**
+
+- **可行**：`toEngineHeroMods` / `toEngineArchetypes` / `toEngineSpells` 都吃
+  「席位 → `{heroId, hero, spells}`」的 roster，而 `toEngineHeroMods` 的英雄查表
+  本來就是**注入**的 ⇒ 快照存 `heroId` ＋ `spells`，runner 注入 `heroById` 即可。
+  **不需要**第二套 roster builder / hero configuration / Ban-Pick model。
+- **建議延後的理由**：加它必須**同時**做三件事——進快照、進 `capturedInputs`、
+  bump `MOBA_SIMULATION_VERSION`。而本輪同時是**第一次接 UI 與落盤**；
+  兩者一起改，一旦出現「重播對不上」就分不出是落盤問題還是新模擬輸入問題。
+  ⇒ 先讓落盤與重播在**已知穩定的輸入集合**上綠一輪，再擴輸入。
+- ⚠ 實作前提：`data/roster.js` 會連帶 import `heroDatabase.js`（396KB data URI），
+  Node verifier 會 import 快照層 ⇒ 英雄查表必須維持注入式。
+
+### 驗證結果（對**最終** working tree）
+
+```
+check_player_challenge_slice2          69/69  PASS   ← 新增（含真跑 MOBA）
+check_player_challenge_slice1         107/107 PASS
+check_simulation_version_gate          17/17  PASS   ← 新增（反向測試過）
+browser_check_player_challenge_slice2  66/66  PASS   ← 桌機 1366 ＋ 手機 390
+npm run build                          ✓
+```
+
+修 bug **之前**跑過、且未再動到其範圍因而仍然成立的：
+
+```
+check_online_power_contract_v1  51/51   check_time_block_v3  69/69
+check_competition_q1  93/93             check_competition_q3  91/91
+check_practice_match_v0d  70/70         check_general_match_v7a  55/55
+check_cs23  28/28                       check_progress25  34/34
+check_retention_economy_v1  38/38       check_team_development_expansion_v1  85/85
+check_club_assets_v1  105/105           check_flow09 / check_dash10  無錯誤
+```
+
+### ⚠ `check_moba_runtime29` = **NOT_AUTHORITATIVE_FOR_FINAL_HEAD**
+
+本輪的 runtime29 在 **20:51 啟動**，而結果卡 bug 是**之後**才修的、
+迴歸斷言也是之後才加的 ⇒ **即使它最後 PASS，也不能當最終 HEAD 的正式 gate 證據。**
+
+它也跑得異常慢（逾 2 小時未結束，平常 10–15 分鐘）：機器上約 97 個 node 行程，
+多數是 9/5 的殘留，巢狀 fan-out 被拖住。
+⚠ **未清理那些殘留行程**（可能屬於其他工作）。
+
+⇒ **`FINAL_RUNTIME29_REQUIRED = YES`**：下一輪必須針對**固定的 commit SHA**
+在乾淨環境重跑一次 runtime29 當正式 closure gate。
+
+### 未做（本輪 Owner 明令）
+
+Challenge Board 五候選、Club Points、任何獎勵、對手防守數據彙總、Ranked、
+Cap／Bracket、LadderRating、Pricing Authority、CS Challenge、真 server、
+monetization、General Match 大改。
+
+### 誠實邊界（畫面上寫得出來的）
+
+- 對手是**固定練習對手**，不是其他玩家的戰隊；**不會即時反應**。
+- 目前在本機結算（`mock-authority`），**還沒有防作弊機制**。
+- 「模擬中」的 30ms 延遲是為了讓瀏覽器先畫出狀態，**不是**假裝網路延遲
+  （原始碼有註解，verifier 有斷言）。
+
+---
+
+## Sprint：Player Challenge Slice 2 — Closure（2026-09-07）
+
+**類型**：修正 ＋ 收尾。基線 `0aae71c`。本地 commit，不 push、不 deploy。
+
+### 1. 修掉 simulationVersion gate 的 false positive
+
+**Owner 裁示**：只有「simulation semantics 發生**實質**變化」才要求 bump。
+comment-only ／ whitespace-only ／ formatting-only **不得**觸發。
+
+⚠ 我原本把「改一行註解就變紅」寫成**刻意的設計**，理由是
+「分得出只改註解就代表有程式在替我們判斷語意」。
+那個理由站不住：它把一個**必然會誤報**的閘門合理化了，
+而誤報的代價是玩家（開發者）學會「紅了就貼新指紋」——
+**閘門被訓練成雜訊，比沒有閘門更糟。**
+
+**修法（最小）**：指紋改成對**語意正規化後**的原始碼取雜湊。
+用 `esbuild.transformSync`：
+
+```
+minifyWhitespace: true      去空白／換行／縮排
+legalComments: "none"       去掉所有註解
+minifyIdentifiers: false    不改名 ⇒ 識別名仍在指紋裡
+minifySyntax: false         不重寫語法 ⇒ 不會把不同程式碼折成同一形狀
+```
+
+⚠ **不自己寫剝註解的正則**：字串／樣板字串／正則字面值裡的 `//` 與 `/*`
+會被剝壞，而剝壞的結果是「指紋看起來穩定、其實在亂跳」。交給真的 parser。
+
+**指紋改成綁在版本上**（`SIMULATION_SEMANTICS_FINGERPRINTS` 是一張
+版本 → 指紋的表），因為「語意變了」就是「新版本」——兩者必須一起出現。
+只改指紋不改版本，等於宣稱「語意變了但版本沒變」，正是要擋的事。
+⚠ 舊版本的指紋**保留不刪**：那是歷史挑戰「當初用哪一版跑的」的憑據。
+
+### 檢定力：§A–§D 自我測試（寫進閘門本身）
+
+閘門**在記憶體裡**改寫真實原始碼並重算指紋，不寫檔、不動 repo：
+
+| | 情境 | 期望 | 實測 |
+|---|---|---|---|
+| §A | 只加註解（行 ＋ 區塊 ＋ 尾端） | 指紋不變 | ✅ 無變化 |
+| §A2 | 註解裡含 `//`、`/*` 的字串與正則 | 指紋不變 | ✅ |
+| §B | 只改空白／縮排／換行 | 指紋不變 | ✅ 無變化 |
+| §C | `CHALLENGE_DT` 0.5 → 0.25（真語意） | 指紋改變 | ✅ `90694c43…` → `080e2dff…` |
+| §C2 | 識別名改動 | 指紋改變 | ✅ |
+| §D | 開新版號並替新版號登記指紋 | 恢復通過 | ✅ 舊版指紋仍在 |
+| §D2 | 只 bump 版號、不登記指紋 | 仍不通過 | ✅ |
+
+⚠ §C 另外釘住「探針錨點仍存在」：`CHALLENGE_DT = 0.5` 這行若被改名或搬走，
+自我測試會先紅，不會默默失去檢定力。
+⚠ 也做過**真實磁碟**確認：在 `challengeRunner.js` 尾端加一行真註解
+⇒ 閘門仍 26/26 PASS（修正前是 16/17 FAIL）。
+
+⚠ 指紋隨 `esbuild` 版本而定（目前由 package-lock 釘住）。
+升級 esbuild 之後指紋會整批變動，屆時 §A–§D 仍會綠，但要重新登記一次。
+
+### 2. Fresh-save fixture：正式記為 Slice 3 Player Experience 問題
+
+保留量測：新存檔英雄熟練 **Lv.1** vs fixture **Lv.4–12** ⇒ 挑戰方 **0/18 勝**
+（`drill_balanced` 有 1/6 打到 30 分鐘上限）。熟練調到 3–6 ⇒ 5/18 勝、18/18 打得完。
+
+- **不是 Slice 2 的 correctness bug**（重播、冪等、生涯隔離全部正確）。
+- **本輪不調 fixture。**
+- 正式記為 **Slice 3 Player Experience 問題**：
+  Challenge Board 上線前，新玩家必須有合理的首批對手體驗。
+- ⚠ **不得用目前不可信的 `calcPower` 假裝公平配對**（271b31d）。
+  可用的手段是調 fixture 的熟練值、或用觀測值挑對手，不是重新包裝定價。
+
+### 驗證結果（最終 working tree）
+
+```
+check_simulation_version_gate          26/26  PASS   ← 含 §A–§D 檢定力自我測試
+check_player_challenge_slice2          69/69  PASS
+check_player_challenge_slice1         107/107 PASS
+npm run build                          ✓ built in 15.90s
+check_moba_runtime29                   （對本次凍結的程式碼執行；結果單獨回報給 Owner，
+                                        未在本 commit 內宣稱通過）
+```
+
+### runtime29 的兩次執行
+
+| | 啟動 | 效力 |
+|---|---|---|
+| 20:51 那次 | 早於結果卡 bug 修正與迴歸斷言 | **NOT_AUTHORITATIVE_FOR_FINAL_HEAD**；未終止、未計入 closure |
+| 本次 | 在**程式碼凍結之後**啟動；此後只動 `docs/` | **正式 closure evidence** |
+
+⚠ 程式碼凍結點之後只新增 handoff 文件，`src/` 與 `tools/` 一個位元都沒再動
+（可用 `git diff --stat <FINAL_HEAD> -- src/ tools/` 對照）。
+⚠ 機器上仍有其他來源不明的 node 行程（多為 9/5 殘留），**全部未動**。
+
+---
+
+## Sprint：Player Challenge v1 — MOBA Slice 3（Challenge Board ＋ Player Experience，2026-09-08）
+
+**類型**：實作。基線 `9eeee0c`。本地 commit，不 push、不 deploy。
+
+### 玩家現在可以「自己選對手」
+
+打開玩家挑戰 → 看板列 5 個候選 → 讀懂對手（熟練／流派／戰術弱點／先發／你的紀錄）
+→ 挑戰前選戰術 → 發起 → 看結果 → **賽前宣告 vs 實際發生**的逐條對照
+→ 再試一次（同一份對手快照、可改戰術、不計入紀錄）。
+
+### 新增 / 修改
+
+| 檔案 | 內容 |
+|---|---|
+| `challenge/challengeBoard.js`（新） | 候選推導、觀測紀錄、候選位、新鮮度、賽後對照 |
+| `challenge/fixtureOpponents.js` | 5 個對手，每個帶**可證明的特徵**；新增 `drill_mirror` |
+| `challenge/snapshotAuthority.js` | `SNAPSHOT_INTENT`：`defense`（節流）vs `entry`（不節流） |
+| `contracts/challengeInstance.js` | `opponentKey` ＋ `CHALLENGE_KINDS`（formal / retry） |
+| `challenge/challengeRunner.js` | 結果帶 `tacticExec`（賽後對照的唯一資料來源） |
+| `profileStore.js` | 看板 view、出賽快照、retry、玩家熟練推導 |
+| `screens/challenge/PlayerChallengeScreen.jsx` | 看板 UI、賽前戰術、賽後對照、紀錄 |
+| `tools/check_player_challenge_slice3.mjs`（新） | 100 條 |
+| `tools/browser_check_player_challenge_slice3.mjs`（新） | 85 條 × 桌機／手機 |
+
+### 四個關鍵決定
+
+**① 出賽快照 ≠ 防守快照。**
+你去挑戰別人，用的是**當下**的隊伍（在建立 challenge 當下凍結，`intent: entry`，不節流）；
+掛在外面給別人打的仍是**已發布的防守快照**（每個生涯日一份）。
+⇒ 換先發、練熟練，下一場就生效——這是「賽前決策有意義」的前提。
+⚠ 兩者走**同一支**權威函式、同一套正規化與雜湊，不可能分歧。
+
+**② 看板一個戰力數字都沒有。**
+`challengeBoard.js` / `fixtureOpponents.js` / 畫面**都不 import**
+`teamStrength` / `calcPower`，也不產生 strength / rating / tier 欄位（verifier 掃描）。
+候選位由**觀測紀錄**決定；樣本 < 3 一律 `unknown` 並誠實寫「尚無足夠挑戰紀錄」。
+⚠ 文案禁區也被釘住：畫面不得出現「戰力較弱／較強／勝率／星等／最近變強」。
+⚠ 紀錄是**這個存檔自己的**（沒有伺服器），文案寫「你挑戰過 N 次」，
+畫面另外明說「不是全服資料」。
+
+**③ 首局體驗：加一個對手，不是把所有對手調弱。**
+`drill_mirror` 的熟練**取自玩家當下的熟練**，卡片直接寫出這個事實。
+⚠ 過程中量到一件事，值得記：**熟練位移 +0/+1/+2 就足以翻盤**——
+第一版 mirror 熟練 1.8 vs 玩家 1.0（差約 2% power），新玩家仍只有 1/8。
+改成五席同級後才真的打平。這是 271b31d 的結論再一次現形。
+⚠ 能力值 `base = 70` 是**實測校出來的**，不是憑感覺：引擎對藍方（＝挑戰方）
+本來就有側偏——完全相同的兩隊，挑戰方只贏 33%（實測 4/12）。
+熟練打平之後還要把側偏算進去，否則會變成「看起來公平、實際必敗」。
+
+**④ 賽後只並排真實數字，不下結論。**
+左邊是戰術自己宣告的 `evidence.goal`（`MobaTacticConfig.js` 寫死的觀察指標），
+右邊是引擎的 `tacticExec` 真實計數。雙方戰術各一張表。
+⚠ 引擎沒統計到的項目顯示「—」，**不填 0**：「沒統計到」與「真的是 0」
+是兩件事，混在一起會讓玩家讀出錯誤結論。
+⚠ 明確不做：勝因分析、AI 教練建議（verifier 掃描「建議／勝因／你應該」）。
+
+### 實測數字（新存檔，英雄熟練全 Lv.1）
+
+| 對手 | 平均熟練 | 新玩家勝率 |
+|---|---|---|
+| `drill_mirror`（合理候選） | = 玩家 | **9/16（56%）** |
+| `drill_balanced` | 4.8 | 0/5 |
+| `drill_topheavy` | 4.8 | 1/5 |
+| `drill_veteran` | 12.8 | 0/5 |
+| `drill_rotation` | 6.8 | 2/5 |
+
+⇒ Slice 2 的 **0/18 結構性必敗已解除**，難度梯度仍然真實存在，
+而且**沒有保證勝率**（mirror 仍會輸 44%）。
+
+### 對稱性實測（順帶確認 runner 沒有偏袒任何一方）
+
+| 情境 | 挑戰方勝率 |
+|---|---|
+| 完全相同（能力 75 / 熟練 Lv.1） | 33%（＝引擎藍方側偏） |
+| 挑戰方能力 +10 | 75% |
+| 挑戰方熟練 +5 級 | 83% |
+| 挑戰方熟練 +11 級 | 100% |
+
+### simulationVersion Gate 走了一次完整流程
+
+`challengeRunner.js` 動了（多讀一次 `eng.snapshot().tacticExec`）⇒ 指紋改變 ⇒ 閘門變紅。
+判定：**發生在 tick 迴圈之後、沒有回寫引擎 ⇒ 不改變模擬語意**
+⇒ 沿用 `moba-sim.v1`，只換指紋，理由寫在契約註解裡。
+⚠ 這個判定不是憑感覺：Slice 1/2 的「重播逐值相同」在改動後仍全綠，
+等於實測過 `snapshot()` 沒有副作用。
+
+### 驗證結果（最終 working tree）
+
+```
+check_player_challenge_slice3          100/100 PASS   ← 新增
+browser_check_player_challenge_slice3   85/85  PASS   ← 新增（桌機 1366 ＋ 手機 390，一次過）
+check_player_challenge_slice2           70/70  PASS
+check_player_challenge_slice1          107/107 PASS
+check_simulation_version_gate           26/26  PASS
+regress 結束率 15/15 ｜ regress2 節奏門檻 8/8
+check_practice_match_v0d 70/70 ｜ check_general_match_v7a 55/55
+check_time_block_v3 69/69 ｜ check_competition_q3 91/91 ｜ check_retention_economy_v1 38/38
+npm run build ✓
+```
+
+⚠ **未跑 `check_moba_runtime29`**：引擎語意檔案（`LogicEngine.js` /
+`mobaPlayerStats.js` / `MobaTacticConfig.js` / `heroProgress.js`）本輪**一個都沒動**
+（`git status` 為空），只動了 `challengeRunner.js`，而它沒有 Challenge 以外的消費端。
+regress / regress2 已單獨跑過並全綠。⇒ 判定 umbrella 非必要。
+
+### Slice 2 有一條斷言的期望值被更新（不是放寬）
+
+`check_player_challenge_slice2` 原本斷言「兩場引用同樣的兩份快照」——
+那是 Slice 2 的行為（挑戰方沿用已發布的防守快照）。
+Slice 3 改成出賽快照 ⇒ 每場都有自己的一份。
+更新後改守兩條更精確的：**打同一個對手 ⇒ 共用同一份防守快照**、
+**但各自有自己的出賽快照**。
+
+### 本輪不做（Owner 明令）
+
+Club Points 與任何獎勵、Ranked、Cap／Bracket、LadderRating、Pricing Authority、
+CS Challenge、真 server、monetization、社交好友、排行榜、
+大改 battle runtime、大改 General Match。
+
+### Ban/Pick 仍未進快照（Slice 4）
+
+技術上可沿用（三個引擎轉換點都吃「席位 → `{heroId, hero, spells}`」，英雄查表是注入式）。
+⚠ 但加它必須**同時**做三件事：進快照、進 `capturedInputs`、bump `MOBA_SIMULATION_VERSION`。
+本輪已同時動了看板、出賽快照、retry、賽後對照——再疊上模擬輸入變更，
+一旦出現「重播對不上」就分不清是哪一項造成的。
+
+---
+
+## Sprint：Player Challenge MOBA Slice 3 — Integration ＋ Closure（2026-09-08）
+
+**類型**：整合與收尾。不 push、不 deploy。
+
+```
+PREVIOUS_LOCAL_HEAD = 49e98f0
+LATEST_ORIGIN_MAIN  = 53bc02d（Codex：CS Android Owner Review V3）
+INTEGRATED_HEAD     = 257ec74
+```
+
+### 兩線的實際重疊：只有兩份文件
+
+分岔點 `09a9cda`：我方領先 4 個 commit，main 領先 16 個。
+
+- **我方**（Challenge 線）：`src/platform/challenge/`、`src/platform/contracts/`、
+  `src/screens/challenge/`、`profileStore`、`matchSource` / `careerGrowth` /
+  `rewardFormulas` / `worldClock` 的加法、以及 Challenge 的 verifier。
+- **Codex**（CS 線）：`src/battle/fps/`、`src/screens/fps/`、`public/audio/cs/`、
+  CS gates、artifacts。
+- **真正重疊**：`docs/handoff/05_Sprint紀錄.md`、`docs/handoff/08_目前待辦與風險.md`
+  ——**兩邊都是純附加**，各一個衝突區塊。
+
+⚠ 我方 `09a9cda..HEAD` 對 `src/battle/fps/` `src/screens/fps/` `public/audio/`
+的 diff 是**空的** ⇒ 整個 Challenge 線一次都沒碰過 CS。
+
+### 為什麼是 merge 而不是 rebase
+
+我方 4 個 commit 裡有 4 個都動到那兩份文件 ⇒ rebase 會把**同一個 CJK 附加衝突
+手工重解四次**。merge 只解一次。
+⚠ 而且 merge 之後 `origin/main` 仍是 HEAD 的祖先 ⇒ 未來 push 依然是 fast-forward
+（實測 `git merge-base --is-ancestor` 通過）。
+⚠ 沒有 reset、沒有 force、沒有改寫任何 Codex commit。
+
+### 衝突解法：兩塊都留，main 段在前
+
+順序取「origin/main 先、我方後」有一個可驗證的好處：
+合併結果相對 `origin/main` 是**一次乾淨的附加**——
+三份文件 197 / 474 / 347 行新增、**0 行刪除**。
+那就是「Codex 的內容一個字都沒被解掉」最直接的證據。
+
+⚠ 用位元組層級處理，不走字串往返：`05_Sprint紀錄.md` 是 CRLF，
+字串往返會把它壓平（本專案既有教訓）。合併後行尾實測仍是 CRLF。
+
+### CS 歸屬是**驗證過**的，不是假設
+
+```
+git diff 257ec74 origin/main -- src/battle/ src/screens/fps/ public/audio/
+⇒ 空
+```
+⇒ 這條分支上 CS runtime 的每一個位元組都來自 Codex 的 commit，
+沒有一個來自本次整合。
+
+### 整合後的閘門結果
+
+```
+check_player_challenge_slice1          107/107 PASS
+check_player_challenge_slice2           70/70  PASS
+check_player_challenge_slice3          100/100 PASS
+check_simulation_version_gate           26/26  PASS
+browser_check_player_challenge_slice3   85/85  PASS（桌機 1366 ＋ 手機 390）
+browser_check_player_challenge_slice2   66/66  PASS（桌機 1366 ＋ 手機 390）
+regress    結束率 15/15
+regress2   節奏門檻 8/8
+npm run build ✓
+check_moba_runtime29                    ← 在**程式碼凍結後**於 257ec74 啟動；
+                                          結果單獨回報，未在本 commit 內宣稱通過
+```
+
+### fresh-save 體驗沒有回歸（未重調 fixture）
+
+整合後重測，合理候選 `drill_mirror` **6/16**（前一輪 9/16）。
+⚠ 兩者是**同一個機率的取樣噪音**，不是回歸：每一場 challenge 都取一次新的
+`matchSeed`（Slice 1 R1 的設計），所以逐輪數字本來就會跳。
+判準是「> 20% 且 < 85%」，兩次都在帶內，而 Slice 2 的結構性必敗是 **0/18**。
+其餘候選 0/5～2/5，最難的 `drill_veteran` 仍是 0/5 ⇒ 梯度仍在。
+⚠ **本輪沒有調任何 fixture 數值**（Owner 明令）。
