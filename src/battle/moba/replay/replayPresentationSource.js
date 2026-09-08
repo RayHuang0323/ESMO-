@@ -31,7 +31,7 @@
 //    · 舊 replay（無 `mapMeta` / 無 `objectivesMeta`）由呼叫端判斷是否可用 3D，
 //      不可用時退回 2D SVG（見 `canUse3DPresentation`）。
 // ============================================================================
-import { WORLD_BOUNDS, PITS } from "../../../gameData.js";
+import { WORLD_BOUNDS, PITS, LANES, CAMPS } from "../../../gameData.js";
 import { decodePsRow } from "../../../platform/contracts/mobaReplay.js";
 
 const clamp01 = (v) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0);
@@ -87,8 +87,8 @@ function effectsFromFrame(f) {
 
 /**
  * 這份 replay 能不能用 3D 戰場重播？
- *  條件：帶 `mapMeta.bounds` 且**與目前世界尺度一致**。
- *  舊 replay 是 100×100 座標，而 3D 場景是由目前的 `gameData`（220×220）建的
+ *  條件：保存的世界邊界、路線與營地位置皆與目前場景一致。
+ *  舊 replay 的座標與布局可能不同，而 3D 場景由目前 gameData 建立。
  *  ⇒ 硬畫會把所有東西擺錯位置。這種情況退回 2D SVG（它有 legacyBounds 相容）
  *  ⇒ **不白畫面、也不顯示錯誤的地圖**。
  */
@@ -96,7 +96,17 @@ export function canUse3DPresentation(replay) {
   const b = replay?.mapMeta?.bounds;
   if (!b || !replay?.frames?.length) return false;
   return b.width === WORLD_BOUNDS.width && b.height === WORLD_BOUNDS.height
-    && b.minX === WORLD_BOUNDS.minX && b.minY === WORLD_BOUNDS.minY;
+    && b.minX === WORLD_BOUNDS.minX && b.minY === WORLD_BOUNDS.minY
+    // Equal world extents do not imply equal routes. Read frozen metadata only.
+    && Object.entries(LANES).every(([key, points]) => {
+      const saved = replay.mapMeta.lanes?.[key];
+      return Array.isArray(saved) && saved.length === points.length
+        && points.every((p, i) => saved[i]?.x === p.x && saved[i]?.y === p.y);
+    })
+    && CAMPS.every(camp => {
+      const saved = replay.objectivesMeta?.find(o => o.id === camp.id);
+      return saved?.pos?.x === camp.x && saved?.pos?.y === camp.y;
+    });
 }
 
 /** 目前時間 t → 前後 frame + 插值係數（frames.t 遞增；二分搜尋）。 */

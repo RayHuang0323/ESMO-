@@ -25,7 +25,7 @@ import MobaRuntimeMinions from "./MobaRuntimeMinions.jsx";
 import MobaRuntimeEffects from "./MobaRuntimeEffects.jsx";
 import HeroSkillEffects from "../presentation/HeroSkillEffects.jsx";
 import TowerRangeDebug from "../presentation/TowerRangeDebug.jsx";
-import MobaRuntimeNeutrals from "./MobaRuntimeNeutrals.jsx";
+import MobaRuntimeNeutrals from "./RiggedMobaRuntimeNeutrals.jsx";
 import BattleCameraController from "../../ui/BattleCameraController.jsx";
 import { useCameraStore } from "../../cameraStore.js";
 import { blendRuntimePosition } from "./runtimeMovementPolicy.js";
@@ -91,37 +91,15 @@ const RUNTIME_CAMERA = Object.freeze({
   zoomDefault: 3.4, zoomMobile: 3.05,
 });
 
-/**
- * 要把整張地圖收進畫面所需的相機距離。
- * 地面在視線方向被 pitch 壓縮（垂直方向乘 sin(pitch)），所以垂直與水平要分開算，取大的。
- * @param aspect 視窗寬高比
- */
-function fitDistance(aspect) {
-  const halfTan = Math.tan((CAM.fov * Math.PI) / 180 / 2);
-  const pitch = (CAM.pitchDeg * Math.PI) / 180;
-  const needV = (MAP_HALF_WORLD.z * Math.sin(pitch)) / halfTan;
-  const needH = MAP_HALF_WORLD.x / (halfTan * Math.max(0.2, aspect));
-  return Math.min(CAM.distMax, Math.max(CAM.distMin, Math.max(needV, needH) * 1.06));
-}
-
-//  Milestone G：拖曳增益與俯角補償。
-//    PAN_GAIN 沿用既有手感基準（H.2-close 之後校過的 1.6），
-//    PITCH_SIN 用來補回「地面被俯角壓縮」造成的直向遲鈍。
-const PAN_GAIN = 1.6;
+// 正交視錐換算拖曳距離，垂直方向補回固定俯角的地面壓縮。
 const PITCH_SIN = Math.sin((CAM.pitchDeg * Math.PI) / 180);
-
-/** 相機距離 → 平移邊界（拉遠時可平移的範圍小一些，避免看到地圖外）。 */
-const panLimit = (dist) => ({
-  x: Math.max(0, MAP_HALF_WORLD.x - dist * 0.28),
-  z: Math.max(0, MAP_HALF_WORLD.z - dist * 0.28),
-});
 
 /**
  * 相機控制：拖曳平移、滾輪縮放、手機單指拖曳 / 雙指縮放、邊界限制、
  * 回到中心、鎖定英雄。**不寫回 snapshot**，相機狀態只活在本元件。
  */
 function RuntimeCameraInput({ ctrl }) {
-  const { gl } = useThree();
+  const { gl, camera } = useThree();
   const state = useRef({
     drag: null,
     pinch: null,
@@ -139,9 +117,11 @@ function RuntimeCameraInput({ ctrl }) {
       },
       /** 拉到剛好看得見整張地圖（驗收全場截圖用；玩家的「回到中心」不走這條）。 */
       fitAll() {
-        const distance = fitDistance(gl.domElement.clientWidth / Math.max(1, gl.domElement.clientHeight));
-        useCameraStore.getState().userZoomTo(
-          RUNTIME_CAMERA.zoomDefault * RUNTIME_CAMERA.distDefault / distance);
+        const width = gl.domElement.clientWidth, height = gl.domElement.clientHeight;
+        const zoom = .9 * Math.min(width / (MAP_HALF_WORLD.x * 2),
+          height / (MAP_HALF_WORLD.z * 2 * PITCH_SIN));
+        useCameraStore.getState().userViewTo(WORLD_BOUNDS.centerX,
+          WORLD_BOUNDS.centerY, zoom);
       },
     };
   }, [ctrl, gl]);
@@ -152,7 +132,7 @@ function RuntimeCameraInput({ ctrl }) {
     window.__ESMO_RUNTIME_CAM = () => {
       const cam = useCameraStore.getState();
       return {
-        dist: RUNTIME_CAMERA.distDefault * RUNTIME_CAMERA.zoomDefault / cam.zoom,
+        projection: 'orthographic', zoom: camera.zoom, dist: 700,
         pan: { x: worldX(cam.pan.x), z: worldZ(cam.pan.y) }, mode: cam.mode,
       };
     };
@@ -169,7 +149,7 @@ function RuntimeCameraInput({ ctrl }) {
       return window.__ESMO_RUNTIME_CAM();
     };
     return () => { delete window.__ESMO_RUNTIME_CAM; delete window.__ESMO_RUNTIME_SETCAM; };
-  }, [ctrl]);
+  }, [ctrl, camera]);
 
   useEffect(() => {
     const el = gl.domElement;
@@ -200,8 +180,7 @@ function RuntimeCameraInput({ ctrl }) {
       else if (e.pointerId !== st.drag.id) return;
       //  螢幕像素 → 世界位移：距離愈遠，同樣的拖曳距離要移動愈多世界單位
       const cam = useCameraStore.getState();
-      const distance = RUNTIME_CAMERA.distDefault * RUNTIME_CAMERA.zoomDefault / cam.zoom;
-      const k = (distance / el.clientHeight) * PAN_GAIN / S;
+      const k = (camera.right - camera.left) / camera.zoom / el.clientWidth / S;
       //  ⚠ 地面被俯角壓縮：同樣的螢幕垂直位移，對應到的世界距離比水平方向大。
       //    舊碼兩軸用同一個係數 ⇒ 直向拖曳明顯比橫向「鈍」，這就是「移動很慢」的一半原因。
       const ky = k / PITCH_SIN;
@@ -251,7 +230,7 @@ function RuntimeCameraInput({ ctrl }) {
         //  必須縮放、放開、再單指拖一次，操作被切成兩段。
         const c = centroid();
         const distance = RUNTIME_CAMERA.distDefault * RUNTIME_CAMERA.zoomDefault / zoom;
-        const k = (distance / el.clientHeight) * PAN_GAIN / S;
+        const k = (camera.right - camera.left) / camera.zoom / el.clientWidth / S;
         cam.userViewTo(st.pinch.panX - (c.x - st.pinch.c.x) * k,
           st.pinch.panY - (c.y - st.pinch.c.y) * (k / PITCH_SIN), zoom);
       }
@@ -288,7 +267,7 @@ function RuntimeCameraInput({ ctrl }) {
       el.removeEventListener("touchend", onTouchEnd);
       el.removeEventListener("contextmenu", onMenu);
     };
-  }, [gl]);
+  }, [gl, camera]);
 
   return null;
 }
@@ -432,9 +411,10 @@ export default function MobaRuntimeView3D({
   return (
     <>
     <Canvas
+      orthographic
       dpr={dpr}
       gl={{ antialias: quality !== "low", powerPreference: "high-performance" }}
-      camera={{ position: [0, 260, 200], fov: CAM.fov, near: CAM.near, far: CAM.far }}
+      camera={{ position: [0, 550, 430], zoom: 3.4, near: 35, far: 1400 }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = 1.1;
       }}

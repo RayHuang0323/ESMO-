@@ -475,7 +475,9 @@ export function installRuntimeDiagnostics({ gl, scene, camera, frameRef }) {
         const t = window.__ESMO_RUNTIME_CAM?.();
         return t ? +t.dist.toFixed(1) : null;
       })(),
-      camera: { position: vec3(camera.position), fov: camera.fov, near: camera.near, far: camera.far },
+      camera: { position: vec3(camera.position), fov: camera.fov, near: camera.near, far: camera.far,
+        projection: camera.isOrthographicCamera ? 'orthographic' : 'perspective',
+        zoom: camera.zoom, left: camera.left, right: camera.right, top: camera.top, bottom: camera.bottom },
       heroRenderDiagnostics: heroes,
       performance: perf(),
     };

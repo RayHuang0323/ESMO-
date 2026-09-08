@@ -159,11 +159,16 @@ ck(`3) minion hp/death 存在（snapshot 小兵 hp 取樣 ${O.minionHpSeen} 筆�
   ck("10) 英雄詳情關閉鈕固定頂部（✕ 在可捲動內容之前；手機全螢幕 sheet）",
     headerIdx > 0 && scrollIdx > headerIdx && /isMobile \? "100%" : 340/.test(HD));
 }
-// 11) Timeline 預設收合（手機）
+// 11) Timeline compact default (published Milestone L three-mode UI).
 {
   const TL = code(src("src/battle/ui/BattleTimeline.jsx"));
-  ck("11) Timeline 手機預設收合（useState(() => isMobile)；收合時顯示最新一則 = toast 語意）",
-    /useState\(\(\) => isMobile\)/.test(TL) && /fold && latest/.test(TL));
+  // The old fold/isMobile signature predates the published persisted three-mode UI.
+  // Keep guarding compact-by-default, bounded mobile rows/height and dismissibility.
+  ck("11) Timeline 預設精簡、手機限高限列、可切換隱藏／精簡／展開",
+    /useState\(loadTimelineMode\)/.test(TL) && /return "compact"/.test(TL)
+    && /\["hidden", "compact", "expanded"\]/.test(TL)
+    && /isMobile \? 2 : 3/.test(TL) && /isMobile \? 50 : 84/.test(TL)
+    && /setMode\(next\); saveTimelineMode\(next\)/.test(TL));
 }
 // 12) 無 undefined / NaN
 {

@@ -1,0 +1,8 @@
+{
+  "mapVersion": "esmo-rift-330-corridor-v3",
+  "span": 330,
+  "meshes": 97,
+  "triangles": 167612,
+  "glbBytes": 13425188,
+  "source": "Original ESMO Blender meshes and baked procedural texture"
+}

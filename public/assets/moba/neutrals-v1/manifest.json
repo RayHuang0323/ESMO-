@@ -1,0 +1,117 @@
+{
+  "version": "esmo-neutrals-rig-v1",
+  "up": "+Y",
+  "forward": "+Z",
+  "assets": [
+    {
+      "id": "dragon",
+      "file": "dragon.glb",
+      "vertices": 6472,
+      "triangles": 12328,
+      "bones": 22,
+      "materials": 5,
+      "bytes": 2077140,
+      "clips": {
+        "Idle": 4,
+        "Move": 1.333333,
+        "Attack": 1,
+        "Hit": 0.416667,
+        "Death": 2,
+        "Roar": 2.5
+      },
+      "height": 7.236759662628174,
+      "provenance": "Original ESMO authored anatomical meshes via Blender MCP; no third-party assets"
+    },
+    {
+      "id": "baron",
+      "file": "baron.glb",
+      "vertices": 4692,
+      "triangles": 9108,
+      "bones": 16,
+      "materials": 5,
+      "bytes": 1882340,
+      "clips": {
+        "Idle": 4,
+        "Move": 1.333333,
+        "Attack": 1,
+        "Hit": 0.416667,
+        "Death": 2,
+        "Roar": 2.5
+      },
+      "height": 12.804719924926758,
+      "provenance": "Original ESMO authored anatomical meshes via Blender MCP; no third-party assets"
+    },
+    {
+      "id": "red-buff",
+      "file": "red-buff.glb",
+      "vertices": 5322,
+      "triangles": 10348,
+      "bones": 18,
+      "materials": 5,
+      "bytes": 1769712,
+      "clips": {
+        "Idle": 4,
+        "Move": 1.333333,
+        "Attack": 1,
+        "Hit": 0.416667,
+        "Death": 2
+      },
+      "height": 6.706897735595703,
+      "provenance": "Original ESMO authored anatomical meshes via Blender MCP; no third-party assets"
+    },
+    {
+      "id": "blue-buff",
+      "file": "blue-buff.glb",
+      "vertices": 4852,
+      "triangles": 9428,
+      "bones": 18,
+      "materials": 5,
+      "bytes": 1919180,
+      "clips": {
+        "Idle": 4,
+        "Move": 1.333333,
+        "Attack": 1,
+        "Hit": 0.416667,
+        "Death": 2
+      },
+      "height": 6.1637678146362305,
+      "provenance": "Original ESMO authored anatomical meshes via Blender MCP; no third-party assets"
+    },
+    {
+      "id": "wolf",
+      "file": "wolf.glb",
+      "vertices": 3898,
+      "triangles": 7560,
+      "bones": 18,
+      "materials": 5,
+      "bytes": 1900328,
+      "clips": {
+        "Idle": 4,
+        "Move": 1.333333,
+        "Attack": 1,
+        "Hit": 0.416667,
+        "Death": 2
+      },
+      "height": 4.452727317810059,
+      "provenance": "Original ESMO authored anatomical meshes via Blender MCP; no third-party assets"
+    },
+    {
+      "id": "stone-beetle",
+      "file": "stone-beetle.glb",
+      "vertices": 3436,
+      "triangles": 6740,
+      "bones": 20,
+      "materials": 5,
+      "bytes": 1743500,
+      "clips": {
+        "Idle": 4,
+        "Move": 1.333333,
+        "Attack": 1,
+        "Hit": 0.416667,
+        "Death": 2
+      },
+      "height": 3.332629919052124,
+      "provenance": "Original ESMO authored anatomical meshes via Blender MCP; no third-party assets"
+    }
+  ]
+}

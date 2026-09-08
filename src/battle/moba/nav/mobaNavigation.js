@@ -264,6 +264,19 @@ export function isWalkable(x, y, radius = HERO_RADIUS, alive = null) {
  * 找不到就回原點（呼叫端仍會被子步進擋住，不會穿牆）。
  */
 export function projectToWalkable(x, y, radius = HERO_RADIUS, alive = null, maxR = 24) {
+  // Expanded coordinates exposed ulp-sensitive clearance tests at mirrored
+  // tower edges. Solve projection in the same canonical half as pathfinding.
+  const { F } = nav();
+  const cx = F.B.centerX, cy = F.B.centerY;
+  if (x > cx || (x === cx && y > cy)) {
+    const p = projectToWalkableCanonical(2 * cx - x, 2 * cy - y,
+      radius, mirrorAlive(alive), maxR);
+    return { x: 2 * cx - p.x, y: 2 * cy - p.y };
+  }
+  return projectToWalkableCanonical(x, y, radius, alive, maxR);
+}
+
+function projectToWalkableCanonical(x, y, radius, alive, maxR) {
   if (isWalkable(x, y, radius, alive)) return { x, y };
   const { F } = nav();
   const cx = F.B.centerX, cy = F.B.centerY;

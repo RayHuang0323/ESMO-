@@ -21,6 +21,7 @@ import React, { useMemo } from "react";
 import MobaMapBlockout from "./MobaMapBlockout.jsx";
 import { buildMobaLayout } from "./mobaMapLayout.js";
 import { buildTerrainShapes } from "./mapTerrainShapes.js";
+import EsmoRiftEnvironment from './EsmoRiftEnvironment.jsx';
 
 /** 正式 Runtime 的圖層設定：沒有任何 debug 開關。 */
 const RUNTIME_SHOW = Object.freeze({
@@ -62,7 +63,9 @@ function MobaRuntimeMap({ quality = "high" }) {
     : (quality === "mid" || quality === "medium") ? "mobile" : "desktop";
   const show = quality === "low" ? RUNTIME_SHOW_LOW : RUNTIME_SHOW;
   return (
-    <MobaMapBlockout show={show} ring={ring} castTowerShadow={quality === "high"} />
+    <EsmoRiftEnvironment quality={quality} fallback={
+      <MobaMapBlockout show={show} ring={ring} castTowerShadow={quality === "high"} />
+    } />
   );
 }
 

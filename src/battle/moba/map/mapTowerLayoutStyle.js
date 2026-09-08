@@ -31,7 +31,7 @@
 //
 //  ⚠ 純資料、無 THREE/React、不使用 Math.random()。
 // ============================================================================
-import { posOnLane, BASE, TOWER_T } from "../../../gameData.js";
+import { posOnLane, WORLD_BOUNDS, TOWER_T } from "../../../gameData.js";
 
 /**
  * 呈現用的塔位 t（藍方；紅方一律取 1 − t，維持 180° 對稱）。
@@ -169,6 +169,10 @@ function symmetrizeDisplayPos(pos, cx, cy) {
  * @returns {{ laneTowers, nexusTurrets, all }}
  */
 export function buildTowerPlan(L) {
+  const position = (lane, t) => {
+    const p = posOnLane(lane, t), offset = (WORLD_BOUNDS.width - L.bounds.width) / 2;
+    return { x: p.x - offset, y: p.y - offset };
+  };
   const cx = L.bounds.centerX, cy = L.bounds.centerY;
 
   //  先取樣原始呈現座標，再整批做 180° 鏡射校正，最後才組出塔物件
@@ -178,7 +182,7 @@ export function buildTowerPlan(L) {
     for (const side of ["blue", "red"]) {
       DISPLAY_T[lane].forEach((tBlue, tier) => {
         const dt = side === "blue" ? tBlue : 1 - tBlue;
-        rawPos[`${side}|${lane}|${tier}`] = { ...posOnLane(lane, dt), dt };
+        rawPos[`${side}|${lane}|${tier}`] = { ...position(lane, dt), dt };
       });
     }
   }
@@ -192,8 +196,8 @@ export function buildTowerPlan(L) {
         const S = TOWER_SPEC[kind];
         const p = rawPos[`${side}|${lane}|${tier}`];
         const simT = TOWER_T[side][tier];
-        const sp = posOnLane(lane, simT);
-        const b = BASE[side];
+        const sp = position(lane, simT);
+        const b = L.bases[side];
         laneTowers.push({
           id: `${side}_${lane}_${tier}`, side, lane, tier, kind, rank: S.rank,
           x: p.x, y: p.y, displayT: p.dt,

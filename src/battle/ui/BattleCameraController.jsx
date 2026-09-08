@@ -52,7 +52,7 @@ function applyCamera(camera, panX, panY, zoom, perspective = null) {
   if (perspective) {
     const pitch = (perspective.pitchDeg * Math.PI) / 180;
     const yaw = (perspective.yawDeg * Math.PI) / 180;
-    const distance = clamp(perspective.distDefault * (perspective.zoomDefault / zoom),
+    const distance = camera.isOrthographicCamera ? 700 : clamp(perspective.distDefault * (perspective.zoomDefault / zoom),
       perspective.distMin, perspective.distMax);
     const h = Math.sin(pitch) * distance;
     const back = Math.cos(pitch) * distance;

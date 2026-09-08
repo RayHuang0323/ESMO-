@@ -26,6 +26,7 @@
 //  frames 每 2 秒取樣 → **由 MobaView3D 自己的 prev→snapshot 插值**補平順，不重算。
 // ============================================================================
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { REPLAY_SPEEDS, SIM_PER_REAL } from "../../platform/contracts/mobaReplay.js";
 import { fmtT, WORLD_BOUNDS, LANES, RIVER, presentationForObjective } from "../../gameData.js";
 import { GC, MONO } from "../../ui/theme.js";
@@ -245,8 +246,11 @@ export default function MobaReplayScreen({ replay, onClose }) {
   const prevEvent = () => { const e = [...events].reverse().find((x) => x.t < t - 0.25); seek(e ? e.t : 0); };
   const nextEvent = () => { const e = events.find((x) => x.t > t + 0.25); seek(e ? e.t : duration); };
 
-  return (
-    <div style={wrap}>
+  return createPortal(
+    <div style={wrap} role="dialog" aria-label="比賽重播" aria-modal="true">
+      <div style={{ width: "100%", display: "flex", justifyContent: "flex-end", flexShrink: 0 }}>
+        <button onClick={onClose} style={btn(false)}>關閉重播</button>
+      </div>
       {/* 標頭：比分 / 經濟 / 勝率 */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", justifyContent: "center", flexShrink: 0 }}>
         <span style={{ fontSize: 10, letterSpacing: "0.2em", color: GC.gray, fontWeight: 900 }}>REPLAY</span>
@@ -299,7 +303,7 @@ export default function MobaReplayScreen({ replay, onClose }) {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, height: "100%", width: "100%", justifyContent: "center" }}>
             <ReplayMap2D replay={replay} a={a} b={b} f={f} />
-            <span style={{ fontSize: 9, color: GC.gold }}>⚠ 舊格式重播（無當局地圖 metadata）⇒ 以 2D 俯視圖播放</span>
+            <span style={{ fontSize: 9, color: GC.gold }}>此重播的地圖資料與目前版本不同或不完整，使用 2D 俯視圖播放。</span>
           </div>
         )}
       </div>
@@ -366,12 +370,13 @@ export default function MobaReplayScreen({ replay, onClose }) {
           ⇒ 只有**舊 Replay** 才真的沒有兵線。誠實顯示實際狀態，不誤導驗收。 */}
       {use3D && !hasMinions && <div style={{ fontSize: 8.5, color: GC.gray, textAlign: "center" }}>此場重播未擷取小兵（舊版 Replay）⇒ 戰場只顯示英雄 / 塔 / 中立目標</div>}
       {replay.truncated && <div style={{ fontSize: 9, color: GC.gold }}>⚠ 本場超過重播長度上限，尾段未收錄</div>}
-    </div>
+    </div>, document.body
   );
 }
 
 const wrap = {
-  position: "absolute", inset: 0, zIndex: 60,
+  // Above Drei Html's default zIndexRange (16,777,271) in the underlying Result canvas.
+  position: "fixed", inset: 0, zIndex: 20000000,
   background: "rgba(7,11,20,0.985)",
   display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
   gap: 8, padding: "12px 10px calc(12px + env(safe-area-inset-bottom))", boxSizing: "border-box",

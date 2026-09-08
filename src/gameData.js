@@ -4,6 +4,7 @@
 //  座標系：WORLD_BOUNDS 內的邏輯世界單位；x 右、y 下。
 // ============================================================================
 
+import { RIFT_EXTENT_RATIO, placeRiftAnchor } from './battle/moba/map/riftMapMetrics.js';
 export const lerp = (a, b, t) => a + (b - a) * t;
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 export const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
@@ -12,8 +13,9 @@ export const fmtT = (s) => `${Math.floor(s / 60)}:${(Math.floor(s) % 60).toStrin
 
 // Sprint 29B5：3D / Minimap / Camera / Replay 共用的正式世界 metadata。
 export const WORLD_BOUNDS = Object.freeze({
-  minX: 0, minY: 0, maxX: 220, maxY: 220,
-  width: 220, height: 220, centerX: 110, centerY: 110,
+  minX: 0, minY: 0, maxX: 220 * RIFT_EXTENT_RATIO, maxY: 220 * RIFT_EXTENT_RATIO,
+  width: 220 * RIFT_EXTENT_RATIO, height: 220 * RIFT_EXTENT_RATIO,
+  centerX: 110 * RIFT_EXTENT_RATIO, centerY: 110 * RIFT_EXTENT_RATIO,
 });
 export const MAP_BOUNDS = WORLD_BOUNDS;
 export const WORLD_SIZE = WORLD_BOUNDS.width;
@@ -45,6 +47,7 @@ export const LANES = {
 //      複利成系統性優勢（原本被「藍方先手」偏差抵銷，S29 修掉先手後才浮現）。
 //  改為弧長參數化後：t 正比於沿路距離、t=0.5 就是路徑中點、對稱 t 值 ⇒ 對稱世界位置。
 //  副作用（刻意）：小兵以固定 dt 前進 ⇒ 現在是**等速世界移動**（原本忽快忽慢）。
+for (const name of Object.keys(LANES)) LANES[name] = LANES[name].map(placeRiftAnchor);
 const LANE_ARC = {};
 for (const [name, pts] of Object.entries(LANES)) {
   const cum = [0];
@@ -68,7 +71,7 @@ export const laneLength = (lane) => LANE_ARC[lane].total;
 
 export const RIVER = Object.freeze({
   width: 22,
-  points: [{x:42,y:38},{x:66,y:62},{x:88,y:84},{x:110,y:110},{x:132,y:136},{x:154,y:158},{x:178,y:182}],
+  points: [{x:42,y:38},{x:66,y:62},{x:88,y:84},{x:110,y:110},{x:132,y:136},{x:154,y:158},{x:178,y:182}].map(placeRiftAnchor),
 });
 
 // 坑位在雙方基地中垂線上，並互為 180° 鏡射。
@@ -76,9 +79,10 @@ export const PITS = {
   dragon: { x:160, y:157.8260869565 },
   baron: { x:60, y:62.1739130435 },
 };
+for (const side of Object.keys(PITS)) PITS[side] = placeRiftAnchor(PITS[side]);
 export const WATER = [
   { ...PITS.baron, r: 12 }, { ...PITS.dragon, r: 12 },
-  {x:82,y:80,r:7.5},{x:110,y:110,r:8},{x:138,y:140,r:7.5},
+  ...[{x:82,y:80,r:7.5},{x:110,y:110,r:8},{x:138,y:140,r:7.5}].map(placeRiftAnchor),
 ];
 const BLUE_WALLS = [
   {x:34,y:154,r:7},{x:52,y:168,r:6},{x:70,y:176,r:7},{x:88,y:162,r:6},
@@ -86,8 +90,9 @@ const BLUE_WALLS = [
   {x:52,y:106,r:7},{x:74,y:116,r:6},{x:94,y:128,r:5.5},
   {x:112,y:170,r:6},{x:126,y:184,r:6},{x:100,y:190,r:5},
 ];
-const RED_WALLS = BLUE_WALLS.map((o) => ({ x: WORLD_SIZE - o.x, y: WORLD_SIZE - o.y, r: o.r }));
-export const WALLS = [...BLUE_WALLS, ...RED_WALLS];
+const SCALED_BLUE_WALLS = BLUE_WALLS.map(placeRiftAnchor);
+const RED_WALLS = SCALED_BLUE_WALLS.map((o) => ({ x: WORLD_SIZE - o.x, y: WORLD_SIZE - o.y, r: o.r }));
+export const WALLS = [...SCALED_BLUE_WALLS, ...RED_WALLS];
 export const OBSTACLES = [...WATER, ...WALLS];
 
 // S29（公平性修正 2/2）：baron 坑原為 {33,32}，**不在** 兩基地連線的中垂線上
@@ -121,10 +126,10 @@ export const CAMPS = [
   // 導致可攻擊實體與畫面相差 17.1。Milestone C 上線動態野怪後統一到淨空座標。
   { id: "camp_blue_buff", side: "blue", type: "buff", presentationKey: "blueBuff", x: 76, y: 171 },
   { id: "camp_blue_a",    side: "blue", type: "camp", presentationKey: "jungleCamp", x: 48, y: 142 },
-  { id: "camp_blue_b",    side: "blue", type: "camp", presentationKey: "jungleCamp", x: 96, y: 174 },
+  { id: "camp_blue_b",    side: "blue", type: "camp", presentationKey: "jungleCamp", x: 96, y: 193 },
   { id: "camp_red_buff",  side: "red",  type: "buff", presentationKey: "redBuff", x: 144, y: 49 },
   { id: "camp_red_a",     side: "red",  type: "camp", presentationKey: "jungleCamp", x: 172, y: 78 },
-  { id: "camp_red_b",     side: "red",  type: "camp", presentationKey: "jungleCamp", x: 124, y: 46 },
+  { id: "camp_red_b",     side: "red",  type: "camp", presentationKey: "jungleCamp", x: 124, y: 27 },
 ];
 
 export const OBJECTIVE_PRESENTATION = Object.freeze({
@@ -142,6 +147,12 @@ export const presentationForObjective = (objective) => {
 };
 
 export const INVASION_POINT = { blue: { x:142, y:72 }, red: { x:78, y:148 } };
+for (const points of [BASE, FOUNTAIN, INVASION_POINT]) {
+  for (const side of Object.keys(points)) points[side] = placeRiftAnchor(points[side]);
+}
+for (const points of [BUSHES, CAMPS]) {
+  for (let i = 0; i < points.length; i++) points[i] = placeRiftAnchor(points[i]);
+}
 
 export const ROLES = ["top", "jungle", "mid", "adc", "sup"];
 export const ROLE_LANE = { top: "top", jungle: "mid", mid: "mid", adc: "bot", sup: "bot" };

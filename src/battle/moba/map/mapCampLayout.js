@@ -28,7 +28,6 @@
 //  每個營地仍保留 `sim{x,y}` 對照，供 verifier 防止日後再度分叉。
 //  ⚠ 純資料、無 THREE/React、不使用 Math.random()。
 // ============================================================================
-import { CAMPS, WORLD_SIZE } from "../../../gameData.js";
 
 /** 營地相對「路 / 河 / 坑 / 塔 / 其它營地」的最小淨空（模擬單位）。verifier 用同一份。 */
 export const CAMP_CLEARANCE = Object.freeze({
@@ -71,7 +70,6 @@ const BLUE_PRESENTATION = Object.freeze([
   { key: "gromp", x: 44, y: 92, archetype: "gromp", label: "蟾蜍" },
 ]);
 
-const mirror = (p) => ({ x: WORLD_SIZE - p.x, y: WORLD_SIZE - p.y });
 
 /**
  * 建立完整營地配置（含位移後的呈現座標與呈現用營地）。
@@ -80,11 +78,12 @@ const mirror = (p) => ({ x: WORLD_SIZE - p.x, y: WORLD_SIZE - p.y });
  *             clearR, pocketR, facing }]
  */
 export function buildCampPlan(L) {
+  const mirror = (p) => ({ x: L.bounds.maxX - p.x, y: L.bounds.maxY - p.y });
   const cx = L.bounds.centerX, cy = L.bounds.centerY;
   const out = [];
 
   // ── A. gameData 的 6 個營地（必要時位移）────────────────────────────────
-  for (const c of CAMPS) {
+  for (const c of L.camps) {
     let disp;
     if (c.side === "blue") {
       disp = BLUE_DISPLAY[c.id] ?? null;

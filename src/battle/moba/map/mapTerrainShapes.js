@@ -39,6 +39,9 @@ import { buildMonsters } from "./mapMonsterShapes.js";
 import { buildCampPlan, CAMP_SIZE } from "./mapCampLayout.js";
 import { buildBushCover, bushReach } from "./mapBushCover.js";
 import { buildJungleStructures } from "./mapJungleStructures.js";
+import { translateRiftSpatial } from './riftLayoutGeometry.js';
+import { RIFT_DESIGN_SPAN } from './riftMapMetrics.js';
+import { clearRiftLaneWalls } from './riftLaneClearance.js';
 
 /** 競技場輪廓：矩形內縮 3，並切掉左上／右下兩個無路經過的死角。 */
 function arenaPolygon(B) {
@@ -116,6 +119,28 @@ function entranceTaper(cx0, cy0, r, gaps, { baseH, thick, seed = 0, span = 0.20 
  * @returns {{ groundLayers, wallItems, towers, gates, rocks, meta }}
  */
 export function buildTerrainShapes(L) {
+  const offset = (L.bounds.width - RIFT_DESIGN_SPAN) / 2;
+  const core = translateRiftSpatial(L, -offset);
+  core.bounds = { minX:0, minY:0, maxX:RIFT_DESIGN_SPAN, maxY:RIFT_DESIGN_SPAN,
+    width:RIFT_DESIGN_SPAN, height:RIFT_DESIGN_SPAN,
+    centerX:RIFT_DESIGN_SPAN/2, centerY:RIFT_DESIGN_SPAN/2 };
+  core.quadrants = L.quadrants;
+  const result = translateRiftSpatial(buildDesignTerrainShapes(core), offset);
+  result.meta.bounds = L.bounds;
+  result.meta.arena = arenaPolygon(L.bounds);
+  result.meta.arenaSmooth = smoothPath(result.meta.arena, 6, {closed:true});
+  result.groundLayers.unshift({ id:'outer_forest', kind:'jungle', poly:result.meta.arena,
+    color:PALETTE.grass_jungle, colorKey:'grass_jungle', y:LAYER_Y.arena-.08 });
+  const {centerX:cx,centerY:cy} = L.bounds;
+  const edge = result.meta.arena.map(p=>({x:cx+(p.x-cx)*.97,y:cy+(p.y-cy)*.97}));
+  const ridge = naturalWallRun(edge.slice(0,4), {seed:8801,step:5,amp:.35,
+    height:10,heightVar:2,thick:3,thickVar:.2,kind:'outer_ridge'});
+  result.wallItems.push(...ridge,...ridge.map(w=>({...w,x:2*cx-w.x,y:2*cy-w.y,angle:w.angle+Math.PI})));
+  result.wallItems = clearRiftLaneWalls(result.wallItems, L.lanes);
+  return result;
+}
+
+function buildDesignTerrainShapes(L) {
   const B = L.bounds, cx = B.centerX, cy = B.centerY;
   const ground = [];
   const walls = [];

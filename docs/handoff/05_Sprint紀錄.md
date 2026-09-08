@@ -18287,3 +18287,56 @@ Claude 線的 Online 定案只作為邊界：`CAREER_OWNS_ROSTER / ONLINE_OWNS_M
 - `T_SIDE_SYSTEMIC_BIAS = CLOSED`。
 - Node/CDP 390px 是 browser emulation；實體 Android 的 GPU/FPS、thermal、喇叭低頻、WebView 與長時間 touch／pinch／rotate 體感仍需 Owner 真機驗收，不能把 emulation 宣稱成真機完成。
 - 額外舊 Club Progression production verifier 的 `75/76` 是 over-broad bundle text assertion：TD-56 合法保留「俱樂部等級」在 Team Development，頁面級 Club Mastery／Assets assertions 全 PASS。此分類已記錄，不是新產品 regression。
+
+## MOBA Rift 330 Blender 候選（2026-09-08）
+
+- Owner：Codex，分支 `art/moba-rift-esmo-v1`；未整合 main／未發布。
+- 原創 Blender 環境、330 邏輯地圖、正交 camera、minimap 已整合；保留塔戰鬥碰撞尺寸，修正鏡像投影浮點邊界差異，未改 LogicEngine。
+- Build PASS，地圖 12/12、nav 14/14、controls focused 18/18；presentation focused 11/12（baseline 舊 Timeline 斷言）；pacing focused 21/25（分布／首殺／順序勝率尚需對照）；map verifier 缺 published 依賴。未刪改既有 verifier。
+- 正式 GameView 流程已走通，320/360/390/430px 無 document 水平溢出；真機未測。詳見本輪 design 交付文件。
+- 後續授權：地圖收尾後接續 rigged 野怪與大型物件，不改核心戰鬥規則。
+
+## MOBA Rift 330 非等比幾何校正（2026-09-08，接續候選）
+
+- 保留 330×330 世界，核心 220 幾何平移 (+55,+55)，不放大英雄／小兵速度、塔半徑或核心路徑。石怪營地移到外圍鏡像位置 (177,268)/(153,62)，初期 Buff／狼營路徑保留。
+- quarry 診斷 pacing 25/25：首殺 p50 395s（published baseline 399s），時長 p50 23.0 分（22.9），陣列正序／反序藍勝 16/40 vs 17/40。正式 source 匯出與該診斷 source 逐欄 deepEqual PASS。正式無 loader 的 pacing 與完整 flat 回歸執行中，尚非完成交付。
+- 實際可走格 88,361 / published 34,481 = 2.5626×；六營地皆可往返，三組鏡像路徑等長。Blender 岩壁匯出修正角度基準 (+Y)，100,984 頂點／16 rock mesh 檢查，導航牆外違規 0。
+- Blender MCP 重匯 esmo-rift-330-core-v2，97 meshes、167,748 triangles、13,439,928 bytes。單一平面移除冗餘網格，外環樹木只放既有阻擋輪廓。資產 gate 13/13。
+- Replay 僅新增既存 mapMeta.lanes 相容檢查：同尺寸不同路線回到原有 2D fallback；不改 frame／contract／Store，不重模擬。
+- 必要 verifier 維護：presentation29b2 §11 舊 fold/isMobile 字串已不符合 published Milestone L 三段式戰報。改驗證 loadTimelineMode 精簡預設、三種模式、手機 2 列／50px、切換保存；未改 BattleTimeline、未刪斷言或放寬 pacing/fairness。focused presentation 12/12、controls 18/18，exit 0。
+- flow09、dash10 均 exit 0，輸出全 ✅。完整回歸、最终 browser smoke、野怪 rig 尚待完成；未 commit／push／deploy。
+
+### 完整 flat 結果與續修（同日）
+
+- core-v2 full flat 已完成：8/10 PASS。tactic24、cs23、progress25、experience26、talent27、stats28、runtime29（含順序公平性）、build PASS；regress 14/15、regress2 6/8，不能交付。
+- seed 271 在 2700s 仍未終局：18 路塔全毀、門牙塔／主堡滿血；1200s 後雙方門牙塔兵線到達 tick 均 0，英雄可接近至 5.2～6.6 單位。屬於需繼續校正的推進節奏，未關閉既有兵線閘門、未改 AI。
+- 下一個獨立 process 診斷把石怪營地改到 (151,248)/(179,82)，縮短外圍必要往返路徑 102.82→78.93；保持 330 世界與三路。未採用、測試中。
+- 最終版冷啟動正式流程 Dashboard→Lineup→Matchmaking→BanPick→Tactic→Battle 已走通；Desktop 互動取樣 58.9～60 FPS、約 597～600 calls。320/360/390/430 document 無水平溢出，console errors 0。手機 FPS 取樣波動且真機未測，未作效能 PASS 宣稱；viewport 已 reset。
+
+### 道路／基地出口聯合校正診斷（同日接續）
+
+- 外路改線＋淨寬 8＋基地 flankSegs=1＋縮短石怪往返，雖 regress 15/15、regress2 8/8、導航 14/14，pacing 23/25（15 分擊殺 p50=6、v2 對照組失去檢定力），未採用。
+- 保留原道路長度＋淨寬 8＋flankSegs=1＋石怪 (151,248)/(179,82)，regress2 8/8、20/20 結束、最長 24.4 分；導航 14/14、20 航段可達、鏡像路徑差 0、塔位最大側偏 4.06。pacing 與 runtime29 focused 執行中，尚不能宣稱全綠。
+- 候選透過本 worktree 自有只讀 loader 驗證，正式 source／GLB 仍 core-v2，未 commit／push／deploy。完整診斷見 `docs/design/ESMO_Rift_330_幾何診斷.md`。
+
+### corridor-v3 正式整合與完整程式 gates（同日）
+
+- 已將上述全綠幾何整合正式檔案：`riftLaneClearance.js` 裁切侵入兵線的靜態岩壁、`mapBaseFrame.js` flankSegs=1、`gameData.js` 石怪 (151,248)/(179,82)。世界仍 330，三路有效長度未變；未改 LogicEngine、速度、AI、傷害、HP、economy、router、Store、Online 或 result contracts。
+- 正式 source 與採用前候選逐欄 deepEqual PASS，Blender MCP 重建 corridor-v3 GLB／atlas／blend／preview。97 meshes、167,612 triangles、13,425,188 bytes；可走格 89,083（baseline 的 2.5835×）。
+- 無 loader 的 `verify.mjs --only=tactic24,cs23,progress25,experience26,talent27,stats28,regress,regress2,runtime29,build` **10/10，FULL_EXIT=0**。各段 exit 與輸出形狀均由現有 runner 驗證；其餘 81 段是未選取的跨系統項目，不充作本次通過數。
+- 正式 nav 14/14、營地 6 去＋6 回可達／3 鏡像組等長、presentation 12/12、controls 18/18、flow09／dash10 全 PASS。三路各 201 點最小 clearance 為 4.8284／5.2426／4.8284，低於 HERO_RADIUS 的點 0。
+- 岩壁 97,760 頂點／16 nodes，導航輪廓外違規 0；資產 14/14。Replay 僅增加既存 objectivesMeta 營地位置相容檢查：同尺寸同三路但營地搬動時採 2D fallback，不改 frame、不重跑引擎。
+- 最終 browser smoke **未完成**：正常返回既有本機測試局可進 Battle；「放棄本場」及「快速完成」JS confirm 使 CUA 的 Emulation.setFocusEmulationEnabled 持續逾時，專用 getJsDialog／重新連線亦無法解除。沒有改產品繞過確認、沒有清 localStorage。可能仍有本機測試分頁的確認框，需人工關閉後恢復驗證。
+- 地圖幾何程式 gates 已綠，視覺品質／手機 FPS／最終正式流程與 Replay 實測仍待完成；rigged 野怪依地圖優先順序尚未製作。未 commit／push／deploy，不宣稱整體交付完成。
+
+## MOBA Rift 330 瀏覽器與野怪整合完成（2026-09-08，候選未發布）
+
+本節更新先前「browser 未完成／rig 未製作」狀態，不改寫既有 Sprint 歷史。330330 corridor-v3 的 pacing／fairness／navigation PASS 保留；本輪未改幾何、移速或 Battle 規則。
+
+已完成正式 Battle 自然結束、Result／3D Replay 控制與末幀比分核對、桌面與手機尺寸呈現驗收；修正 Replay 被 Result 捲動容器裁切與頂部關閉操作。Blender MCP 已製作 Dragon、Baron、紅／藍 Buff、狼、石甲蟲六種原創骨架 GLB，含 Idle／Move／Attack／Hit／Death，接實際 snapshot/event，不新增戰鬥狀態。新模型實戰 25:39、8:18，Replay 末幀一致，console errors 0。
+
+新增 rig gate 14/14、focused presentation 12/12、controls 18/18、camp 6 出＋6 回與 3 鏡像對、最終 build 均 PASS。既有 foundation 10/10 PASS 證據保留。新增 consumer 僅處理呈現；LogicEngine／Store／router／結果與 Online contracts 未改。
+
+仍需誠實保留：舊 Replay 無完整野怪攻擊／受擊時間，不偽造缺失動作；真機 Android FPS／觸控未測，瀏覽器節流樣本不可當效能保證。六 GLB 約 11.3 MB，增加 skinning／面數成本。診斷參數下 390px 底部面板遮擋與既有 nexus guard 事件 lane 文案列入紀錄。基地／塔／坑建築精修留下一輪。
+
+完整資產、程式與驗證清單：`docs/design/ESMO_Rift_330_野怪整合驗收.md`；瀏覽器證據：`art/moba-rift/browser-acceptance.md`。依使用者要求，未 commit／push／deploy，未整合其他 AI worktree。

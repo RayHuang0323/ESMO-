@@ -311,7 +311,7 @@ function ObjectiveRespawnLabel({ objective, frameRef }) {
   });
   return (
     <Html position={[objective.world.x, GROUND_Y + 2.2 * S, objective.world.z]}
-      center distanceFactor={190} style={{ pointerEvents: "none" }}>
+      center style={{ pointerEvents: "none" }}>
       <span ref={label} style={{
         display: !objective.alive && objective.respawnIn > 0 ? "inline-flex" : "none",
         alignItems: "center", gap: 3, whiteSpace: "nowrap",
@@ -402,7 +402,7 @@ function CampUnit({ objective, asset, geo, mats, register }) {
             position={[0, 0.3, 0]} rotation={[-Math.PI / 2, 0, buffKind === "blue" ? Math.PI / 4 : 0]}
             renderOrder={46} frustumCulled={false}
             userData={{ part: "buff-ground-rune", buff: buffKind }} />
-          <Html position={[0, top + 1.9 * S, 0]} center distanceFactor={190}
+          <Html position={[0, top + 1.9 * S, 0]} center
             style={{ pointerEvents: "none" }}>
             <span style={{
               display: "inline-block", whiteSpace: "nowrap",

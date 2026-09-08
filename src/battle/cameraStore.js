@@ -39,7 +39,8 @@ export const HERO_FOCUS_MS = 4000;   // 點英雄聚焦時長（任務單：3–
  *   不是相機的設計包絡**，也沒有動 pitch / fov / near / far。
  *   ZOOM_MAX 維持 9（近距離視角不變）。
  */
-export const ZOOM_MIN = 1.06;
+// 330-unit orthographic map must also fit in a 320px viewport (with margins).
+export const ZOOM_MIN = 0.35;
 export const ZOOM_MAX = 9;
 
 const clampN = (v, a, b) => Math.max(a, Math.min(b, v));

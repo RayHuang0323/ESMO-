@@ -103,6 +103,7 @@ export default function RuntimeDeviceDiagnosticsPanel() {
       `renderer    ${p.renderer ?? "unavailable"}`,
       `vendor      ${p.vendor ?? "unavailable"}`,
       `camera      near ${p.camera?.near} / far ${p.camera?.far}`,
+      `projection  ${p.camera?.projection} zoom ${p.camera?.zoom?.toFixed(2)}`,
       `pixel ratio device ${p.pixelRatio?.device} / renderer ${p.pixelRatio?.renderer}`,
       `buffer      ${p.drawingBuffer?.width}×${p.drawingBuffer?.height}`,
       `performance ${p.performance?.fps} fps / ${p.performance?.frameTimeMs} ms / ${p.performance?.drawCalls} calls / ${p.performance?.triangles} tris`,

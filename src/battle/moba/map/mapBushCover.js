@@ -23,7 +23,6 @@
 //  ⚠ 純資料、無 THREE/React、不使用 Math.random()（形狀必須每次相同）。
 //  ⚠ 不改 gameData.js、不改任何模擬常數、不新增任何模擬實體。
 // ============================================================================
-import { BUSHES, WORLD_SIZE } from "../../../gameData.js";
 import { hash01, TAU } from "./mapShapePrimitives.js";
 
 /** 草叢的尺寸慣例（模擬單位；高度為世界單位）。
@@ -50,7 +49,6 @@ const BLUE_COVER = Object.freeze([
   { key: "raptor_side", cat: "raptor", x: 96, y: 64, r: 4.6, label: "上野伏擊草" }, // G.8：藍上野營地旁伏擊草
 ]);
 
-const mirror = (p) => ({ x: WORLD_SIZE - p.x, y: WORLD_SIZE - p.y });
 
 /**
  * 一叢草的組成：中央大叢 + n 顆環繞小叢（全部決定性）。
@@ -87,10 +85,11 @@ export function bushReach(cluster) {
  * @returns [{ id, x, y, r, isPresentation, blobs }]
  */
 export function buildBushCover(L) {
+  const mirror = (p) => ({ x: L.bounds.maxX - p.x, y: L.bounds.maxY - p.y });
   const out = [];
 
   // ── A. gameData 的視野草叢（有模擬實體，全部保留）────────────────────────
-  BUSHES.forEach((b, i) => {
+  L.bushes.forEach((b, i) => {
     out.push({
       id: `bush_gd_${i}`, x: b.x, y: b.y, r: b.r,
       isPresentation: false,

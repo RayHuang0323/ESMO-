@@ -22,7 +22,7 @@
 import {
   simToWorld, inBoundsSim, clampSim, baseSim, pitSim, LANE_IDS,
 } from "./coordinateMapping.js";
-import { TOWER_HP, NEXUS_HP, ROLE_NAME, posOnLane } from "../../../gameData.js";
+import { TOWER_HP, NEXUS_HP, ROLE_NAME, posOnLane, WORLD_BOUNDS } from "../../../gameData.js";
 import {
   findPath, isWalkable, projectToWalkable, structureList,
 } from "../nav/mobaNavigation.js";
@@ -197,7 +197,7 @@ export function adaptObjectives(snapshot) {
   const seen = new Set();
 
   for (const o of snapshot?.objectives ?? []) {
-    const { sim, clamped } = safePos(o.pos, { x: 110, y: 110 });
+    const { sim, clamped } = safePos(o.pos, { x: WORLD_BOUNDS.centerX, y: WORLD_BOUNDS.centerY });
     seen.add(o.type);
     out.push({
       id: String(o.id),

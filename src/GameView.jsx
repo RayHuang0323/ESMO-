@@ -38,6 +38,8 @@ function Minimap({ mobile = false }) {
   const ref = useRef(null);
   useEffect(() => {
     let raf, last = 0;
+    const terrainImage = new Image();
+    terrainImage.src = `${import.meta.env.BASE_URL}assets/moba/rift-v1/rift-albedo.png?rev=330-corridor-v3`;
     // S29 效能：小地圖原本用**無節流的 rAF**（每秒 60 次重繪整張 canvas）。
     //   引擎每秒只推 2–8 幀，60fps 重繪是純浪費 ⇒ 節流到 12fps（肉眼無差）。
     const MIN_MS = 1000 / 12;
@@ -53,6 +55,9 @@ function Minimap({ mobile = false }) {
         const vis = (pos) => VIS.some((v) => (v.x - pos.x) ** 2 + (v.y - pos.y) ** 2 < 289);
         g.clearRect(0, 0, D, D);
         g.fillStyle = "rgba(10,18,28,0.82)"; g.fillRect(0, 0, D, D);
+        if (terrainImage.complete && terrainImage.naturalWidth > 0) {
+          g.globalAlpha = .64; g.drawImage(terrainImage, 0, 0, D, D); g.globalAlpha = 1;
+        }
         g.strokeStyle = "rgba(70,150,200,0.5)"; g.lineWidth = D * 0.05; g.beginPath();
         RIVER.points.forEach((p, i) => (i ? g.lineTo(P(p.x), P(p.y)) : g.moveTo(P(p.x), P(p.y)))); g.stroke();
         g.strokeStyle = "rgba(190,170,120,0.4)"; g.lineWidth = 2;
