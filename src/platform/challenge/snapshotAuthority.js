@@ -43,6 +43,8 @@ import {
   createSquadSnapshot, findForbiddenClientKeys, ONLINE_NORMALIZATION, SNAPSHOT_SEATS,
 } from "../contracts/squadSnapshot.js";
 import { MOBA_SIMULATION_VERSION } from "../contracts/simulationVersion.js";
+//  Slice 4：非同步選角方針。⚠ 只是**偏好**，不是數值 —— 見 draftPolicy.js 檔頭。
+import { createDraftPolicy, validateDraftPolicy } from "./draftPolicy.js";
 import { buildPlayerStatSlots } from "../../battle/moba/mobaRosterAdapter.js";
 import { buildLoadout } from "../../hero/heroProgress.js";
 import { tierOf } from "../contracts/matchSquad.js";
@@ -114,6 +116,13 @@ export function validatePublishRequest(request) {
   }
   if (!request.teamId) errors.push({ code: "team", message: "發布請求缺少 teamId" });
   if (!request.tacticId) errors.push({ code: "tactic", message: "發布請求缺少戰術選擇" });
+  //  Slice 4：選角方針是**選擇**（heroId 與席位偏好），不是數值 ⇒ 客戶端可以送。
+  //  ⚠ 但仍然要驗形狀：夾帶數值的方針會被 `validateDraftPolicy` 的
+  //    `value_leak` 擋下，與快照同一條紅線。
+  if (request.draftPolicy) {
+    const dv = validateDraftPolicy(request.draftPolicy);
+    if (!dv.ok) errors.push(...dv.errors.map((e) => ({ ...e, code: `draft_${e.code}` })));
+  }
   if (request.reason && !(request.reason in PUBLISH_REASONS)) {
     errors.push({ code: "reason", message: `未知的發布理由 ${request.reason}` });
   }
@@ -204,7 +213,12 @@ export function publishDefensiveSnapshot({
     team: careerState.team ?? { teamId: request.teamId },
     careerDay: th.careerDay,
     seats, stats, loadout,
-    standingOrders: { tacticId: request.tacticId },
+    standingOrders: {
+      tacticId: request.tacticId,
+      //  ⚠ 沒送方針 ⇒ 給一份**空方針**，不是 null：防守方離線時 Draft 必須有
+      //    可執行的回應，而「什麼都沒指定」本身就是一種決定性的方針（取池首）。
+      draftPolicy: request.draftPolicy ?? createDraftPolicy({}),
+    },
     issuedBy: SNAPSHOT_AUTHORITY.id,
     issuedAt: now,
     simulationVersion: MOBA_SIMULATION_VERSION,

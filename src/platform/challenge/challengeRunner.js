@@ -82,6 +82,26 @@ export function runChallenge({
   const frozen = assertSeedFrozen(challenge, seed);
   if (!frozen.ok) return { ok: false, result: null, errors: [{ code: "seed", message: frozen.message }] };
 
+  //  ── 紅線②之一：宣告了卻沒實作的輸入必須**大聲失敗** ────────────────────
+  //  ⚠ Slice 4 把 `draftPolicy` 凍進快照，但**刻意還沒**把它接成戰鬥輸入
+  //    （接上要 bump `MOBA_SIMULATION_VERSION`，會讓既有挑戰的重播全部失效）。
+  //    這一段守的是那個過渡狀態：只要有人把 `draftPolicy` 加進 `capturedInputs`
+  //    卻沒有同時實作注入，**這裡立刻拒絕**——而不是默默跑出一場
+  //    「宣告用了選角、實際沒用」的比賽，那種比賽重播不出來而且沒人會發現。
+  for (const [who, snap] of [["挑戰方", challengerSnapshot], ["防守方", defenderSnapshot]]) {
+    if (snapshotCovers(snap, SNAPSHOT_INPUTS.draftPolicy)) {
+      return {
+        ok: false, result: null,
+        errors: [{
+          code: "draft_not_wired",
+          message: `${who}快照宣告了 draftPolicy 是戰鬥輸入，但 runner 尚未注入選角`
+            + "（需同時實作 configureHeroes / configureArchetypes / configureSpells"
+            + " 並 bump MOBA_SIMULATION_VERSION）",
+        }],
+      };
+    }
+  }
+
   const blue = sideInputs(challengerSnapshot, "blue");
   const red = sideInputs(defenderSnapshot, "red");
 

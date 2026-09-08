@@ -86,7 +86,7 @@ import { publishDefensiveSnapshot, PUBLISH_REASONS, SNAPSHOT_AUTHORITY, SNAPSHOT
 import { buildChallengeBoard } from "./challenge/challengeBoard.js";
 import { createChallengeInstance, CHALLENGE_KINDS } from "./contracts/challengeInstance.js";
 import { runChallenge } from "./challenge/challengeRunner.js";
-import { fixtureSnapshot, FIXTURE_OPPONENTS, fixtureOpponentByKey } from "./challenge/fixtureOpponents.js";
+import { fixtureSnapshot, FIXTURE_OPPONENTS, fixtureOpponentByKey, fixtureOpponentProvider } from "./challenge/fixtureOpponents.js";
 //  Club Progression v1：Club XP／Club Level 的唯一權威（純函式，等級一律推導）。
 import {
   emptyClubProgression, normalizeClubProgression, clubProgressionViewOf,
@@ -4010,7 +4010,7 @@ export const useProfileStore = create((rawSet, get) => {
    *
    * ⚠ 本檔與 `challengeBoard.js` 都**不 import** `teamStrength` / `calcPower`。
    */
-  challengeBoardView({ heroProgress = null } = {}) {
+  challengeBoardView({ heroProgress = null, heroNameOf = null } = {}) {
     const st = get();
     const cur = st.challenge ?? emptyChallengeState();
     const mastery = get()._playerMasteryLevel(heroProgress);
@@ -4018,7 +4018,10 @@ export const useProfileStore = create((rawSet, get) => {
       challengeState: cur,
       careerDay: Number(st.meta?.days) || 1,
       playerMasteryLevel: mastery,
-      snapshotFor: (key) => fixtureSnapshot(key, { playerMasteryLevel: mastery }),
+      //  Slice 4：吃 provider 給的對手 —— 看板不知道這是 fixture 還是真玩家。
+      //  ⚠ 換真伺服器時**只換這一行的 provider**，看板與流程一行不用改。
+      opponents: fixtureOpponentProvider.list({ playerMasteryLevel: mastery }),
+      heroNameOf,
     });
   },
 

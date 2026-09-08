@@ -25,6 +25,8 @@ import { MATCH_SOURCE, MATCH_TIER_LABELS } from "../../platform/progress/matchSo
 import { SNAPSHOT_AUTHORITY } from "../../platform/challenge/snapshotAuthority.js";
 import { BOARD_SLOTS, tacticEvidenceRows } from "../../platform/challenge/challengeBoard.js";
 import { CHALLENGE_KINDS } from "../../platform/contracts/challengeInstance.js";
+//  ⚠ 英雄名只用於**顯示**選角傾向；資料本身在快照裡是 heroId。
+import { heroById } from "../../data/heroDatabase.js";
 import { GC, FONT, MONO } from "../../ui/theme.js";
 import ManageFrame from "../manage/ManageFrame.jsx";
 
@@ -92,6 +94,10 @@ function OpponentCard({ c, busy, onChallenge, open, onToggle }) {
         </span>
         <span data-testid={`challenge-fresh-${c.key}`} style={chip(GC.gray)}>{c.freshness.label}</span>
         {c.recentLineupChange && <span style={chip(GC.gold)}>近期換過先發</span>}
+        {/* ⚠ 誠實標示資料來源：fixture 不得被講成真玩家。 */}
+        <span data-testid={`challenge-source-${c.key}`} style={chip(GC.gray)}>
+          {c.source === "fixture" ? "練習對手" : "玩家戰隊"}
+        </span>
       </div>
 
       {/* 觀測紀錄：⚠ 一定要帶樣本數，而且說明是「你的」紀錄 */}
@@ -132,6 +138,14 @@ function OpponentCard({ c, busy, onChallenge, open, onToggle }) {
                 </div>
               ))}
             </div>
+            {c.draft?.hasPolicy && (
+              <div data-testid={`challenge-draft-${c.key}`} style={{ fontSize: 11, color: "#d4d4d8", lineHeight: 1.6 }}>
+                選角傾向：
+                {c.draft.lines.map((l) => (
+                  <div key={l} style={{ color: "#a1a1aa", marginTop: 2 }}>· {l}</div>
+                ))}
+              </div>
+            )}
             {c.traits.slice(1).map((t) => (
               <div key={t} style={{ fontSize: 10.5, color: "#71717a" }}>· {t}</div>
             ))}
@@ -183,7 +197,7 @@ export default function PlayerChallengeScreen({ onBack }) {
 
   const view = useMemo(() => useProfileStore.getState().challengeView(), [sig]);
   const board = useMemo(
-    () => useProfileStore.getState().challengeBoardView({ heroProgress }),
+    () => useProfileStore.getState().challengeBoardView({ heroProgress, heroNameOf: (id) => heroById?.[id]?.name ?? id }),
     [sig, heroProgress],
   );
 

@@ -36,10 +36,13 @@
 //      eng.configureSpells(...)            ← ⑥ 召喚師技能      ⟋
 //      eng.configureMatch(...)             ← ⑦ 戰術 → 行為權重
 //
-//  Slice 1 涵蓋 ②③⑦（①由 ChallengeInstance 持有），**④⑤⑥ 尚未涵蓋**。
+//  目前涵蓋 ②③⑦（①由 ChallengeInstance 持有），**④⑤⑥ 仍未涵蓋**。
 //  ⚠ 這不是偷偷略過：`capturedInputs` 會把涵蓋範圍寫進快照本身，
-//    重播驗證器只允許使用被宣告過的輸入。等 Slice 2 補上選角，
-//    版本會跟著 bump，舊快照仍然誠實地宣告自己只有 ②③⑦。
+//    重播驗證器只允許使用被宣告過的輸入。
+//  ⚠ Slice 4 起，`standingOrders.draftPolicy`（非同步選角方針）**已經凍進快照
+//    並納入雜湊**，但**刻意還沒**列入 `capturedInputs` ⇒ 它還不是戰鬥輸入。
+//    把它接上要 bump `MOBA_SIMULATION_VERSION`，那會讓既有挑戰的重播全部失效，
+//    是一扇單向門。⇒ 形狀先凍對，開啟留給下一輪。
 //
 //  ── 正規化（I13）────────────────────────────────────────────────────────
 //  `condition` / `morale` / `energy` 在 `LogicEngine.js` 出現 **0 次**，
@@ -58,6 +61,14 @@ export const SNAPSHOT_INPUTS = Object.freeze({
   heroLoadout: "heroLoadout",   // new LogicEngine(seed, loadout)（英雄熟練）
   tactic: "tactic",             // configureMatch（戰術 → 行為權重）
   lineup: "lineup",             // 席位指派本身
+  //  Slice 4：非同步選角方針（見 `challenge/draftPolicy.js`）。
+  //  ⚠ **已凍進快照並納入雜湊，但尚未列入 `SLICE1_CAPTURED_INPUTS`**
+  //    ⇒ runner 目前不會呼叫 configureHeroes / Archetypes / Spells。
+  //    把它接成戰鬥輸入要 bump `MOBA_SIMULATION_VERSION`，那會讓既有挑戰
+  //    的重播全部失效——是一扇單向門，該有自己的一輪與 closure gate。
+  //    現在先把形狀凍對，日後開啟只需要「加進 capturedInputs ＋ 呼叫三個
+  //    configure ＋ bump 版本」，快照形狀不必再變。
+  draftPolicy: "draftPolicy",
 });
 
 /** Slice 1 涵蓋的輸入。⚠ 未涵蓋：heroPick / archetypes / spells（Slice 2）。 */
@@ -158,6 +169,8 @@ export function createSquadSnapshot({
   if (!issuedBy) errors.push({ code: "authority", message: "快照必須帶簽發者（不得由客戶端自建）" });
   if (!Number.isFinite(issuedAt)) errors.push({ code: "issued_at", message: "快照必須帶簽發時刻" });
   if (!standingOrders?.tacticId) errors.push({ code: "tactic", message: "快照必須有預存戰術" });
+  //  Slice 4：選角方針是**必填**——防守方離線時，它就是他唯一的 Draft 發言權。
+  if (!standingOrders?.draftPolicy) errors.push({ code: "draft_policy", message: "快照必須有選角方針" });
 
   const bySeat = new Map((seats ?? []).filter((s) => s?.seat).map((s) => [s.seat, s]));
   for (const seat of SNAPSHOT_SEATS) {
@@ -197,7 +210,11 @@ export function createSquadSnapshot({
         toughMult: Number(loadout[s].toughMult) || 1,
       }])),
     },
-    standingOrders: { tacticId: String(standingOrders.tacticId) },
+    //  ⚠  只存**身分與偏好**（heroId／席位），不存任何數值。
+    standingOrders: {
+      tacticId: String(standingOrders.tacticId),
+      draftPolicy: standingOrders.draftPolicy,
+    },
     normalization: { ...ONLINE_NORMALIZATION },
   };
 

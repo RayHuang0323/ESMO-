@@ -18893,3 +18893,131 @@ check_moba_runtime29                    ← 在**程式碼凍結後**於 257ec74
 判準是「> 20% 且 < 85%」，兩次都在帶內，而 Slice 2 的結構性必敗是 **0/18**。
 其餘候選 0/5～2/5，最難的 `drill_veteran` 仍是 0/5 ⇒ 梯度仍在。
 ⚠ **本輪沒有調任何 fixture 數值**（Owner 明令）。
+
+---
+
+## Sprint：Player Challenge v1 — MOBA Slice 4（Real Opponent Data + Async Draft Contract，2026-09-09）
+
+**類型**：契約 ＋ 實作。基線 `cf308d3`。本地 commit，不 push、不 deploy。
+
+### 本輪最關鍵的稽核結論：現有 `aiPick` 不能重用
+
+`screens/moba/BanPickScreen.jsx` 的 `aiPick` **呼叫了 4 次 `Math.random()`**
+（ban 60% 針對性、pick 50% counter、兩處隨機挑選），而且它是**閉包在 React
+元件狀態上**的函式。
+
+⇒ 它**不可能**用在非同步挑戰：同一份輸入每次跑出不同選角，重播必然對不上，
+而 Challenge 的整個契約建立在「存輸入、可重算」之上。
+⇒ 改造它必須動到**正在營運**的 MOBA 賽前流程。依 Owner 明文
+（「若目前 Ban/Pick 架構不適合低風險接入，本輪停在 contract + adapter」），
+本輪**一行都沒動 `BanPickScreen.jsx`**，改為新建 adapter。
+
+### `DraftPolicy.v1`：防守方離線時的 Draft 發言權
+
+防守方在**發布防守陣容時**一併發布選角方針；挑戰當下由這份**凍結的方針**自動回應。
+
+```
+bans[]              優先禁用序列
+pickPriority[]      優先選用序列
+rolePreference{}    每個席位的偏好英雄
+fallback            byRole（補缺少的定位）／byPool（取可用順序）
+```
+
+**完全不用亂數——連 seeded PRNG 都沒有。** 方針是一份有序偏好清單，可用的第一個就選。
+比「用 matchSeed 餵 PRNG」更好的三個理由：
+① 重播不必保存 RNG 狀態，也不會因呼叫次數改變而漂移；
+② 玩家看得懂——卡片寫得出「他優先 ban 這三隻」，那是**事實**不是機率；
+③ 驗證器可以逐值斷言，不必統計。
+
+⚠ **驗證器抓到一個真的設計缺陷**：方針只指定 2 個 ban 時，第三個 ban 落到池首，
+而池首正好是它自己 `rolePreference.b2` 的偏好英雄 ⇒ **自己把自己想要的禁掉了**。
+而且因為完全決定性，這**每一次都會發生**，不是偶發。
+⇒ ban 的 fallback 改成「先跳過自己 pickPriority / rolePreference 裡的英雄」。
+
+### 修掉的 fixture-only 依賴（本輪 §1 的重點）
+
+Slice 3 的看板讀的是 fixture 定義上的 `traits` / `doctrineHint` /
+`recentLineupChange` / `mastery`——**真玩家的快照沒有那些欄位**
+⇒ 換成 server provider 的那天看板會直接空掉。全部改成從快照推導：
+
+| 原本 | 現在 |
+|---|---|
+| `def.doctrineHint` | `doctrineOfTactic("moba", snapshot.standingOrders.tacticId)` |
+| `def.traits` | `traitsOf(snapshot, comp)`（熟練分布 ＋ 能力分布） |
+| `def.recentLineupChange` | 由 `snapshot.careerDay` 與新鮮度門檻推導 |
+| `def.mastery === "mirror"` | 快照熟練與玩家熟練**比較**得出 |
+
+⇒ `challengeBoard.js` 現在**完全不 import `fixtureOpponents.js`**（verifier 釘住）。
+
+### OpponentProvider 邊界
+
+`OpponentEntry = { key, source, snapshot }` —— **只有身分鍵與快照，不給形容詞**。
+`fixtureOpponentProvider` 是目前唯一實作；接真伺服器只要新增一個
+`source: server` 的 provider，看板與挑戰流程一行不用改。
+
+⚠ 已用實證驗過：把一份快照包成 `source: "server"` 的 entry 餵給
+`buildChallengeBoard`，看板照樣長得出完整候選（流派、特徵、選角傾向、新鮮度）。
+
+### 快照生命週期（§2）
+
+實測驗過：發布 v1 → 用 v1 建立挑戰 → 隔天發布 v2
+⇒ current 換成 v2、**舊快照沒被刪**、已建立的挑戰仍引用 v1、
+且**歷史挑戰重播結果與當初一致**。
+
+### ⚠ Draft 目前**還不是** combat input（刻意）
+
+`draftPolicy` 已**凍進快照並納入雜湊**（改動它會讓快照驗不過），
+但**沒有**列入 `capturedInputs`，runner 也沒有呼叫
+`configureHeroes` / `configureArchetypes` / `configureSpells`。
+
+理由：把選角接成戰鬥輸入必須 bump `MOBA_SIMULATION_VERSION`，
+那會讓**所有既有挑戰的重播失效**——是一扇單向門，該有自己的一輪與 closure gate。
+
+⇒ 現在先把形狀凍對。日後開啟只需要「加進 `capturedInputs` ＋ 呼叫三個 configure
+＋ bump 版本」，**快照形狀不必再變**。
+
+**§6 要求的紅燈已經做出來了**：只要有人把 `draftPolicy` 加進 `capturedInputs`
+卻沒實作注入，`runChallenge` **立刻拒絕**並回 `draft_not_wired`，
+訊息明說「需同時 bump MOBA_SIMULATION_VERSION」。
+驗證器同時驗了對照組（未宣告 ⇒ 正常跑完），證明那個紅燈是專屬的。
+
+### 🟠 發現一個 gate 盲點（本輪未修，建議下一輪處理）
+
+`regress` 的數字變了：時長 22.5→21.9 分、平均擊殺 19.7→19.1、hot 60%→58%。
+**不是本輪造成的** —— 追到原因是 Codex 的 Rift 330 改了 `src/gameData.js`：
+
+```js
++import { RIFT_EXTENT_RATIO, placeRiftAnchor } from './battle/moba/map/riftMapMetrics.js';
+-  minX: 0, minY: 0, maxX: 220, maxY: 220,
++  minX: 0, minY: 0, maxX: 220 * RIFT_EXTENT_RATIO, ...
++for (const name of Object.keys(LANES)) LANES[name] = LANES[name].map(placeRiftAnchor);
++for (const side of Object.keys(PITS)) PITS[side] = placeRiftAnchor(PITS[side]);
+```
+
+路線錨點、野區坑位、地圖範圍全部位移 ⇒ **模擬結果確實會變**（regress 門檻仍 8/8 通過）。
+
+⚠ **但 `src/gameData.js` 與 `riftMapMetrics.js` 都不在 `SIMULATION_SEMANTICS_FILES` 裡**
+⇒ 地圖幾何改變**不會**觸發版本判斷，而它明明會改變同一份輸入的結果。
+這是我這道閘門的真實盲點。
+
+⚠ **本輪刻意不自行擴充清單**：加進去會讓 Codex 每次動地圖都被我的閘門擋住，
+而且現在加會立刻變紅、逼我替**別人的改動**做語意判斷。
+那是協作決策，不是純技術決策 ⇒ 交給 Owner 裁示。
+
+### 驗證結果（最終 working tree）
+
+```
+check_player_challenge_slice4           52/52  PASS   ← 新增
+check_player_challenge_slice3          100/100 PASS
+check_player_challenge_slice2           70/70  PASS
+check_player_challenge_slice1          107/107 PASS
+check_simulation_version_gate           26/26  PASS   ← 走完一次完整判斷流程
+browser_check_player_challenge_slice3   85/85  PASS（桌機 1366 ＋ 手機 390）
+regress 結束率 15/15 ｜ regress2 節奏門檻 8/8 ｜ npm run build ✓
+```
+
+### 本輪不做（Owner 明令）
+
+真 server、真玩家帳號同步、Ranked、Cap／Bracket、LadderRating、
+Pricing Authority、Club Points reward、monetization、CS Challenge、
+大改 MOBA battle runtime。

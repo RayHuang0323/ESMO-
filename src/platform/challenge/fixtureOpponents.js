@@ -34,6 +34,8 @@
 import { STAT_DEF } from "../../data/playerModel.js";
 import { SNAPSHOT_SEATS } from "../contracts/squadSnapshot.js";
 import { publishDefensiveSnapshot, SNAPSHOT_INTENT } from "./snapshotAuthority.js";
+import { createDraftPolicy, DRAFT_FALLBACK } from "./draftPolicy.js";
+import { createOpponentProvider, opponentEntry, OPPONENT_SOURCE } from "./opponentProvider.js";
 
 const STAT_KEYS = STAT_DEF.map((s) => s.key);
 const ROLES = ["top", "jungle", "mid", "adc", "sup"];
@@ -49,6 +51,7 @@ const ROLES = ["top", "jungle", "mid", "adc", "sup"];
 export const FIXTURE_OPPONENTS = Object.freeze([
   Object.freeze({
     key: "drill_mirror",
+    draft: { bans: ["lieyan"], pickPriority: ["ironclad", "bingshuang"], rolePreference: { b2: ["duskblade"] }, fallback: DRAFT_FALLBACK.byRole },
     teamId: "team:fixture-mirror", teamName: "同級陪練所", tag: "MIR",
     tacticId: "m1", doctrineHint: "tempo",
     //  ⚠ `masteryEven: true` ⇒ 五個席位**都**用玩家當下的熟練，不加 `(i % 3)` 位移。
@@ -65,6 +68,7 @@ export const FIXTURE_OPPONENTS = Object.freeze([
   }),
   Object.freeze({
     key: "drill_balanced",
+    draft: { bans: ["ironclad", "lieyan"], pickPriority: ["bingshuang", "leiting"], rolePreference: {}, fallback: DRAFT_FALLBACK.byRole },
     teamId: "team:fixture-balanced", teamName: "藍嶺訓練所", tag: "BLR",
     tacticId: "m1", doctrineHint: "tempo",
     mastery: 4, base: 68, spread: 0, ageBase: 23,
@@ -73,6 +77,7 @@ export const FIXTURE_OPPONENTS = Object.freeze([
   }),
   Object.freeze({
     key: "drill_topheavy",
+    draft: { bans: ["bingshuang", "duskblade", "leiting"], pickPriority: ["cinderfist", "lieyan", "chichuan"], rolePreference: { b1: ["stoneguard"] }, fallback: DRAFT_FALLBACK.byPool },
     teamId: "team:fixture-topheavy", teamName: "西門雙核", tag: "WGD",
     tacticId: "m4", doctrineHint: "control",
     mastery: 4, base: 62, spread: 22, ageBase: 24,
@@ -81,6 +86,7 @@ export const FIXTURE_OPPONENTS = Object.freeze([
   }),
   Object.freeze({
     key: "drill_veteran",
+    draft: { bans: ["cinderfist"], pickPriority: ["dadi", "stoneguard", "yanfeng"], rolePreference: { b3: ["lieyan"] }, fallback: DRAFT_FALLBACK.byRole },
     teamId: "team:fixture-veteran", teamName: "老兵工坊", tag: "VET",
     tacticId: "m6", doctrineHint: "adaptive",
     mastery: 12, base: 64, spread: 0, ageBase: 28,
@@ -89,6 +95,7 @@ export const FIXTURE_OPPONENTS = Object.freeze([
   }),
   Object.freeze({
     key: "drill_rotation",
+    draft: { bans: [], pickPriority: ["chichuan"], rolePreference: { b4: ["leiting"], b5: ["dadi"] }, fallback: DRAFT_FALLBACK.byRole },
     teamId: "team:fixture-rotation", teamName: "輪替實驗室", tag: "ROT",
     tacticId: "m2", doctrineHint: "adaptive",
     mastery: 6, base: 65, spread: 10, ageBase: 20,
@@ -160,7 +167,11 @@ export function fixtureSnapshot(key, { playerMasteryLevel = 1 } = {}) {
   if (!def) return { ok: false, snapshot: null, errors: [{ code: "fixture", message: `未知的練習對手 ${key}` }] };
   const level = fixtureMasteryLevel(def, playerMasteryLevel);
   const r = publishDefensiveSnapshot({
-    request: { teamId: def.teamId, tacticId: def.tacticId },
+    request: {
+      teamId: def.teamId, tacticId: def.tacticId,
+      //  ⚠ 只送**偏好**（heroId 與席位），不送任何數值 —— 與快照同一條紅線。
+      draftPolicy: createDraftPolicy(def.draft ?? {}),
+    },
     careerState: fixtureCareerState(def, level),
     //  ⚠ 固定時刻，不讀時鐘——`issuedAt` 會進雜湊，讀了就不再是 fixture。
     //    `drill_rotation` 用較晚的時刻表示「近期發布」（新鮮度是可觀測事實）。
@@ -169,3 +180,19 @@ export function fixtureSnapshot(key, { playerMasteryLevel = 1 } = {}) {
   });
   return { ok: r.ok, snapshot: r.snapshot, errors: r.errors, masteryLevel: level };
 }
+
+/**
+ * fixture 的 `OpponentProvider`（Slice 4）。
+ *
+ * ⚠ 這是**唯一**該被換掉的東西。接真伺服器時新增一個
+ *   `source: OPPONENT_SOURCE.server` 的 provider，看板與挑戰流程一行不用改
+ *   —— 前提是看板只讀快照，而 Slice 4 已經把它改成那樣了。
+ */
+export const fixtureOpponentProvider = createOpponentProvider({
+  source: OPPONENT_SOURCE.fixture,
+  list: ({ playerMasteryLevel = 1 } = {}) =>
+    FIXTURE_OPPONENTS.map((def) => {
+      const r = fixtureSnapshot(def.key, { playerMasteryLevel });
+      return r.ok ? opponentEntry({ key: def.key, snapshot: r.snapshot, source: OPPONENT_SOURCE.fixture }) : null;
+    }).filter(Boolean),
+});

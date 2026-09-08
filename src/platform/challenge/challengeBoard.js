@@ -22,9 +22,9 @@
 //
 //  純函式：不 import React / zustand / localStorage / 亂數 / 時鐘。
 // ============================================================================
-import { FIXTURE_OPPONENTS, fixtureOpponentByKey } from "./fixtureOpponents.js";
 import { mobaTacticById } from "../contracts/MobaTacticConfig.js";
-import { DOCTRINES } from "../mastery/doctrine.js";
+import { DOCTRINES, doctrineOfTactic } from "../mastery/doctrine.js";
+import { draftTendencyOf } from "./draftPolicy.js";
 
 export const CHALLENGE_BOARD_VERSION = "ChallengeBoard.v1";
 
@@ -114,6 +114,34 @@ export function freshnessOf(snapshot, careerDay) {
   };
 }
 
+/**
+ * 從**快照本身**推導可讀的組成特徵句。
+ *
+ * ⚠ Slice 4 的重點修正：Slice 3 的這些句子來自 fixture 定義上的 `traits`，
+ *   而真玩家的快照**沒有那個欄位** ⇒ 換成 server provider 的那天看板會空掉。
+ *   ⇒ 全部改成從快照推導。每一句都必須是快照裡讀得出來的事實。
+ * ⚠ 不得出現強弱形容詞（271b31d：我們沒有可信的戰力度量）。
+ */
+export function traitsOf(snapshot, comp) {
+  const out = [];
+  const spread = (comp.masteryMax ?? 0) - (comp.masteryMin ?? 0);
+  if (spread === 0) out.push(`五名先發的英雄熟練同為 Lv.${comp.masteryMin}`);
+  else out.push(`英雄熟練介於 Lv.${comp.masteryMin}–${comp.masteryMax}`);
+
+  //  能力分布：只講「集中 / 平均」，那是能力值本身讀得出來的分布事實。
+  const avgs = (snapshot?.seats ?? []).map((s) => {
+    const st = snapshot.combat.stats[s.seat] ?? {};
+    const v = Object.values(st).filter(Number.isFinite);
+    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0;
+  });
+  if (avgs.length) {
+    const hi = Math.max(...avgs), lo = Math.min(...avgs);
+    if (hi - lo >= 12) out.push("資源明顯集中在部分位置，其餘先發較低");
+    else out.push("五名先發的能力值相當平均");
+  }
+  return out;
+}
+
 /** 從快照推導**可觀測**的組成特徵。⚠ 只描述看得到的東西，不算戰力。 */
 export function compositionOf(snapshot) {
   const seats = snapshot?.seats ?? [];
@@ -140,50 +168,66 @@ export function compositionOf(snapshot) {
  * @returns {{ candidates: Array, coldStart: boolean }}
  */
 export function buildChallengeBoard({
-  challengeState = null, careerDay = 1, snapshotFor = null, playerMasteryLevel = 1,
+  challengeState = null, careerDay = 1, opponents = [], playerMasteryLevel = 1, heroNameOf = null,
 } = {}) {
   const records = observedRecords(challengeState);
   const anyRecord = Object.values(records).some((r) => r.challenged >= MIN_RECORD_SAMPLE);
 
   const candidates = [];
-  for (const def of FIXTURE_OPPONENTS) {
-    const built = snapshotFor?.(def.key);
-    if (!built?.ok) continue;
-    const snap = built.snapshot;
-    const rec = records[def.key] ?? null;
+  //  ⚠ Slice 4：吃的是 **provider 給的 `OpponentEntry[]`**，不再是 fixture 定義。
+  //    本檔從此**不 import** `fixtureOpponents.js` ⇒ 換成 server provider 時
+  //    這裡一行都不用改（`opponentProvider.js` 檔頭說明了為什麼這是重點）。
+  for (const entry of opponents ?? []) {
+    const snap = entry?.snapshot;
+    if (!snap?.hash) continue;
+    const rec = records[entry.key] ?? null;
     const comp = compositionOf(snap);
     const fresh = freshnessOf(snap, careerDay);
     const tactic = mobaTacticById(snap.standingOrders.tacticId);
-    const doctrine = DOCTRINES.find((d) => d.id === def.doctrineHint) ?? null;
+    //  ⚠ 流派由**快照的戰術**推導（`doctrineOfTactic`），不再讀 fixture 的
+    //    `doctrineHint` —— 真玩家的快照沒有那個欄位。
+    const doctrineId = doctrineOfTactic("moba", snap.standingOrders.tacticId);
+    const doctrine = DOCTRINES.find((d) => d.id === doctrineId) ?? null;
+    const traits = traitsOf(snap, comp);
+    //  ⚠ 「近期換過先發」由**快照發布時間**推導，不再讀 fixture 旗標。
+    const recentLineupChange = fresh.days !== null && fresh.days <= FRESH_WITHIN_DAYS;
 
     //  ── 候選位 ───────────────────────────────────────────────────────────
-    //  有足夠樣本 ⇒ 用觀測紀錄。沒有 ⇒ 用**組成事實**分到描述性的格子，
+    //  有足夠樣本 ⇒ 用觀測紀錄。沒有 ⇒ 用**快照事實**分到描述性的格子，
     //  而那些格子（unusual / changed / unknown）**不宣告強弱**。
     let slot = slotFromRecord(rec);
     if (slot === BOARD_SLOTS.unknown.id) {
-      if (def.spread > 0) slot = BOARD_SLOTS.unusual.id;
-      else if (def.recentLineupChange) slot = BOARD_SLOTS.changed.id;
+      const uneven = (comp.masteryMax ?? 0) - (comp.masteryMin ?? 0) >= 2
+        || traits.some((t) => t.includes("集中"));
+      if (uneven) slot = BOARD_SLOTS.unusual.id;
+      else if (recentLineupChange) slot = BOARD_SLOTS.changed.id;
     }
 
     candidates.push({
-      key: def.key,
+      key: entry.key,
+      //  ⚠ UI 必須照實顯示這是 fixture 還是真玩家，不得混為一談。
+      source: entry.source,
       snapshotHash: snap.hash,
       team: snap.team,
       publishedAt: snap.issuedAt,
+      careerDay: snap.careerDay,
       freshness: fresh,
       seats: snap.seats.map((s) => ({ seat: s.seat, playerId: s.playerId, role: s.role, level: snap.combat.loadout[s.seat]?.level ?? null })),
       composition: comp,
       doctrine: doctrine ? { id: doctrine.id, zh: doctrine.zh, emoji: doctrine.emoji, claim: doctrine.claim } : null,
       tactic: tactic ? { tacticId: tactic.tacticId, name: tactic.name, emoji: tactic.emoji, focus: tactic.focus, cons: tactic.cons } : null,
-      traits: [...def.traits],
-      recentLineupChange: !!def.recentLineupChange,
+      //  Slice 4：選角傾向也從快照讀（凍結的方針），不是憑空描述。
+      draft: draftTendencyOf(snap.standingOrders.draftPolicy, heroNameOf),
+      traits,
+      recentLineupChange,
       record: rec,
       recordLabel: recordLabel(rec),
       slot,
       //  ⚠ `mirrorsPlayerMastery` 是**事實**（熟練與玩家相同），
       //    UI 用它顯示「可以先試手」的**理由**，而不是顯示一個強弱分數。
-      mirrorsPlayerMastery: def.mastery === "mirror",
-      note: def.note,
+      //    ⚠ 由快照與玩家熟練**比較**得出，不再讀 fixture 的 `mastery === "mirror"`。
+      mirrorsPlayerMastery: comp.masteryMin === comp.masteryMax
+        && comp.masteryMin === Math.max(1, Math.floor(Number(playerMasteryLevel) || 1)),
     });
   }
 

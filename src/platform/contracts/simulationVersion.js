@@ -106,7 +106,15 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  ⚠ 這個判定不是憑感覺 —— Slice 1/2 的「同一場重播逐值相同」與
   //    「reload 後重播與當初一致」在改動後仍然全綠，等於實測過
   //    `snapshot()` 沒有副作用。
-  "moba-sim.v1": "54d52e2fcf0491f9",
+  //  2026-09-09（Slice 4）：`challengeRunner.js` 新增一道**拒絕**用的護欄——
+  //  若快照把 `draftPolicy` 列進 `capturedInputs` 卻沒有實作注入，就直接拒跑。
+  //  ⚠ **判定為不改變模擬語意**：目前沒有任何快照宣告 `draftPolicy`
+  //    （`SLICE1_CAPTURED_INPUTS` 沒有它），所以這道護欄對每一份既有輸入
+  //    都不會觸發 ⇒ 同一份輸入的結果逐值不變。⇒ 沿用 `moba-sim.v1`。
+  //  ⚠ 真正會改變語意的是「**把 draftPolicy 接成戰鬥輸入**」——那一天要
+  //    開新版號，而且會讓既有挑戰的重播全部失效。這道護欄存在的目的，
+  //    就是不讓那件事在沒有 bump 版本的情況下悄悄發生。
+  "moba-sim.v1": "ca2f3e8693ce194e",
 });
 
 export const isKnownSimulationVersion = (v) =>
