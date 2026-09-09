@@ -1,0 +1,108 @@
+{
+  "url": "https://rayhuang0323.github.io/ESMO-/",
+  "boot": {
+    "title": "esmo · MOBA 3D",
+    "bundle": "/ESMO-/assets/index-jbLk9JvL.js",
+    "home": true
+  },
+  "desktop": {
+    "gd": {
+      "client": 338,
+      "scroll": 1620,
+      "x": 683,
+      "y": 537,
+      "before": 0
+    },
+    "wheel": {
+      "after": 300,
+      "doc": 0
+    },
+    "dlog": {
+      "log": "選角動態\n🔴 黑曜守望 禁用 虛空裂縫"
+    }
+  },
+  "mobileDrag": {
+    "ok": true,
+    "before": {
+      "scrollTop": 0,
+      "doc": 0,
+      "picked": 0
+    },
+    "after": {
+      "scrollTop": 205,
+      "doc": 0,
+      "picked": 0,
+      "stillOnBanPick": true
+    },
+    "hero": "voidrift"
+  },
+  "mobileLast": {
+    "total": 100,
+    "atEnd": true,
+    "lastInViewport": true,
+    "scrollTop": 1299
+  },
+  "mobileTap": {
+    "ok": true,
+    "hero": "tiankong",
+    "log": "選角動態\n🔴 黑曜守望 禁用 荊棘壁壘"
+  },
+  "mobilePickDrag": {
+    "ok": true,
+    "before": {
+      "scrollTop": 0,
+      "doc": 0,
+      "picked": 0
+    },
+    "after": {
+      "scrollTop": 185,
+      "doc": 0,
+      "picked": 0,
+      "stillOnBanPick": true
+    },
+    "hero": "phantom"
+  },
+  "cs": {
+    "first": {
+      "m": {
+        "hasSession": true,
+        "state": "launched",
+        "status": "active",
+        "phase": "battle",
+        "sessionId": "session:cs:1f84fc9b",
+        "seed": 48973,
+        "mapKey": "dust2",
+        "roster": 5
+      },
+      "r": {
+        "canvas": 1,
+        "sceneHandle": false,
+        "battleUi": true
+      }
+    },
+    "leave": {
+      "canvas": 0,
+      "sceneHandle": false,
+      "battleUi": false
+    },
+    "resume": {
+      "m": {
+        "hasSession": true,
+        "state": "launched",
+        "status": "active",
+        "phase": "battle",
+        "sessionId": "session:cs:1f84fc9b",
+        "seed": 48973,
+        "mapKey": "dust2",
+        "roster": 5
+      },
+      "r": {
+        "canvas": 1,
+        "sceneHandle": false,
+        "battleUi": true
+      }
+    },
+    "firstMs": 83490,
+    "resumeMs": 69333
+  }
+}

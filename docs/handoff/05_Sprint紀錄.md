@@ -19352,3 +19352,45 @@ BanPickScreen 的根元素寫的是 `height:100%`，百分比高度在沒有確�
 它住在 `overflow-x:auto` 的水平捲動篩選列裡，超出視窗是設計狀態。
 沒有直接放寬斷言，改成：容器外的按鈕一律不得出界；容器內的必須證明**捲得到**
 （`stripUnreachable` 為空）。
+
+---
+
+## Bugfix Release Checkpoint（2026-09-10）
+
+三個玩家可見 Bug 一起上線。
+
+- **FINAL_MAIN_SHA / ORIGIN_MAIN_SHA**：`34e54a3`（`git ls-remote` 查伺服器真值，兩端一致）
+- **推送方式**：`b6e0463..34e54a3` normal fast-forward。推之前確認 origin/main 沒有前進、
+  工作區乾淨、四個改動檔都不在 `SIMULATION_SEMANTICS_FILES` 裡（只有 B 的 `gameData.js` 在，
+  當時已 bump 到 `moba-sim.v4`）。
+- **本次釋出的 4 個 commit**：`ad0fe29`（野怪座標）、`6b88d76`（量測工具）、
+  `c01a0f8`（CS 生命週期）、`34e54a3`（手機 Ban/Pick 捲動）。
+- **PRODUCTION_BUNDLE**：`assets/index-jbLk9JvL.js`，HTTP 200。
+  用本輪才新增的字串 `matchmaking-enter-banpick` 確認線上就是這一版（不是碰巧同名）。
+
+### 正式站實測
+
+`browser_check_prod_bugfix_release` **28/28 PASS**（桌機 1366 ＋ 手機 390 真 touch）：
+
+- 手機 390：可捲 viewport 1620/321、單指 scrollTop 0→205、document 維持 0、
+  第 100 張卡落在視窗內、拖曳不誤選、輕點可選角、ban→pick 切換後仍可捲。
+- 桌機：真滾輪 0→300、點擊可選角。
+- CS：首次進場 83.5s → 返回同一場 69.3s（沒有「返回後更卡」）；
+  離場後 canvas 0、全域場景參照已清；返回後 canvas 仍是 1（沒有第二個）；
+  `sessionId` `session:cs:1f84fc9b`／`seed` 48973／`mapKey` `dust2`／`roster` 5 全部不變。
+- 無 page-origin uncaught error。
+
+`browser_check_prod_replay_guard` **11/11 PASS**：正式站打一場挑戰（記錄為 `moba-sim.v4`），
+竄改存檔成 `moba-sim.v3` 後按「重新計算並比對」，畫面給出
+「這場使用 moba-sim.v3 的模擬語意，目前是 moba-sim.v4，不可重播」——
+明確拒絕、指名版本，沒有偷偷用 v4 重算。對照組（未竄改）會說「完全一致」，
+證明這條路徑本來走得通，不是因為沒跑到才沒說一致。
+
+### 兩件照實記的限制
+
+1. **野怪座標與模擬版本是對「線上 bundle 檔案本身」做內容比對**，不是頁內模組讀取。
+   正式站是打包產物，沒有 `/src/` 可 import（本地 gate 用的 `RESOLVE_APP_MODULES`
+   在正式站一定失敗）。線上六個坑位與本地已驗證值（`check_moba_camp_placement` 43/43）
+   逐項比對，差異 0；`moba-sim.v4` 亦在線上 bundle 內。
+2. **正式站沒有重跑 15 分鐘的 CS lifecycle benchmark**（Owner 明示不需要）。
+   線上只做一次真實的「進入 → 離開 → 返回」，資源不累積的三輪證據來自本地 22/22。
