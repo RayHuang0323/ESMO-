@@ -15,7 +15,7 @@
 //    · draft  ← BanPickScreen onNext({picks,bans}) → LoadingScreen / GameView
 //    · tactic ← TacticScreen onNext(tacticObj)     → LoadingScreen / GameView
 // ============================================================================
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import DashboardScreen from "./screens/DashboardScreen.jsx";
 //  V6-3：休賽期。只有真的有年度決策時才進得來（見 offSeasonSession）。
 import OffSeasonScreen from "./screens/manage/OffSeasonScreen.jsx";
@@ -42,6 +42,7 @@ import PlayerDetailScreen from "./screens/manage/PlayerDetailScreen.jsx";
 import TeamDevelopmentScreen from "./screens/manage/TeamDevelopmentScreen.jsx";
 //  Player Challenge Slice 2：第一個玩家看得到的線上挑戰畫面（非同步 Unranked）。
 import PlayerChallengeScreen from "./screens/challenge/PlayerChallengeScreen.jsx";
+import ChallengeDraftRoute from "./screens/challenge/ChallengeDraftRoute.jsx";
 import ClubMasteryScreen from "./screens/manage/ClubMasteryScreen.jsx";
 import ClubAssetsScreen from "./screens/manage/ClubAssetsScreen.jsx";
 // ── 舊版個人天賦相容檢視（入口在 PlayerDetail）──
@@ -109,6 +110,9 @@ const VIEWPORT_LOCKED_SCREENS = new Set([
   //    上面那句「內容會不會超過一個 viewport？會 ⇒ 不要鎖」對這一頁不適用：
   //    它的內容**本來就打算**被框住，超出的部分由英雄格自己捲。
   "banpick",      // MOBA 選角（固定框 ＋ 英雄格單一捲動區）
+  //  ⚠ 挑戰的手動選角用的是**同一支** BanPickScreen，版面前提完全相同 ⇒
+  //    不鎖的話會重演上一輪那個「英雄格 client == scroll、整頁跟著捲」的缺陷。
+  "challengeDraft",
 ]);
 
 export default function AppShell() {
@@ -116,6 +120,18 @@ export default function AppShell() {
   const [restoring, setRestoring] = useState(false);
   const [restoreError, setRestoreError] = useState(null);
   const [draft, setDraft] = useState(null);     // S18/S19：BanPick 結果 {picks,bans}
+  //  Slice 6：手動選角送出後，要開打的那一場（一次性交棒，跑完就清掉）。
+  const [challengeRunId, setChallengeRunId] = useState(null);
+  //  ⚠ Slice 6 resume：reload 之後那一手還在存檔裡（已驗），但畫面預設回首頁 ⇒
+  //    玩家得自己想起來「我剛剛在選角」。這裡在掛載時把畫面接回去。
+  //    只在**開場**做一次：中途取消或送出都會把 pendingDraft 清成 null，
+  //    所以不會把已經離開選角的玩家又抓回去。
+  const restoredDraftRef = useRef(false);
+  useEffect(() => {
+    if (restoredDraftRef.current) return;
+    restoredDraftRef.current = true;
+    if (useProfileStore.getState().challenge?.pendingDraft) setScreen("challengeDraft");
+  }, []);
   const [tactic, setTactic] = useState(null);   // S19：TacticScreen 選定戰術（純展示，不影響引擎）
   const [playerId, setPlayerId] = useState(null); // S21：PlayerDetail 目標選手
   const [csConfig, setCsConfig] = useState(() => getC5CDirectConfig()); // S23/C5B：CS 賽前選擇含四階段 tacticalLayout
@@ -291,7 +307,19 @@ export default function AppShell() {
       {screen === "talentPick" && <RosterScreen purpose="talent" onBack={home} onPlayer={(id) => { setPlayerId(id); setScreen("playerTalent"); }} />}
       {screen === "training" && <TrainingScreen onBack={home} />}
       {screen === "teamDevelopment" && <TeamDevelopmentScreen onBack={home} />}
-      {screen === "playerChallenge" && <PlayerChallengeScreen onBack={home} />}
+      {screen === "playerChallenge" && (
+        <PlayerChallengeScreen onBack={home} onDraft={() => setScreen("challengeDraft")}
+          //  ⚠ 選角送出後由挑戰頁**接手開打**，沿用它既有的「模擬中／結果」呈現。
+          //    在選角路由裡自己跑模擬會變成第二條開打路徑。
+          runChallengeId={challengeRunId} onRanChallenge={() => setChallengeRunId(null)} />
+      )}
+      {/*  Slice 6：挑戰的手動選角。**同一支 `BanPickScreen`**，只是帶了
+           `challengeDraft` adapter（決定性、只走我方那一半、不跑 Legacy AI）。
+           另開一個畫面元件會變成第二套 Ban/Pick，本輪明令不做。 */}
+      {screen === "challengeDraft" && (
+        <ChallengeDraftRoute onBack={() => setScreen("playerChallenge")}
+          onDone={(challengeId) => { setChallengeRunId(challengeId ?? null); setScreen("playerChallenge"); }} />
+      )}
       {screen === "clubMastery" && <ClubMasteryScreen onBack={home} />}
       {screen === "clubAssets" && <ClubAssetsScreen onBack={home} />}
       {screen === "offSeason" && <OffSeasonScreen onBack={home} />}

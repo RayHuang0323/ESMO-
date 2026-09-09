@@ -18,6 +18,7 @@ import { seatPlayers as seatPlayersOf, SEAT_CODE } from "../../platform/contract
 import { heroTags } from "../../data/heroClassification.js";
 import { assignDraft, assignmentToHeroIds } from "../../battle/moba/mobaDraftAssignment.js";
 import { buildLoadout, SUMMONER_SPELLS } from "../../battle/moba/mobaHeroLoadout.js";
+import { DRAFT_SHAPE } from "../../platform/challenge/draftPolicy.js";
 
 /** assignment → buildLoadout 需要的 `{seat:{heroId}}` 形狀。 */
 const assignmentToRoster = (a = {}) =>
@@ -211,7 +212,26 @@ export function ChampFace({ champ, size = 44 }) {
   return <HeroPortrait heroId={c.id} size={size} radius="50%" border={`1.5px solid ${accent}`} alt={c.zh} fallback={swatch} />;
 }
 
-export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
+//  ── Slice 6：挑戰用的決定性選角序列 ──────────────────────────────────────
+//  ⚠ 形狀與一般 MOBA **不同**（一般是 4 ban + 10 pick 雙方輪選；挑戰是每方
+//    3 ban + 5 pick），而且挑戰只走**我方這一半**：對手不在線，他的回應由
+//    快照裡凍結的 DraftPolicy 在建立場次時一次解出來。所以這裡沒有紅方步驟，
+//    也**完全不呼叫 `aiPick`** —— 那支是 Legacy AI，含 6 處 Math.random()，
+//    放進挑戰就等於讓同樣的輸入產生不同的結果。
+const CHALLENGE_SEQ = [
+  ...Array.from({ length: DRAFT_SHAPE.bansPerSide }, () => ({ team: "blue", act: "ban" })),
+  ...Array.from({ length: DRAFT_SHAPE.picksPerSide }, () => ({ team: "blue", act: "pick" })),
+];
+
+/**
+ * @param {object|null} challengeDraft
+ *   挑戰模式的 adapter。`null` = 一般 MOBA 選角，行為與本輪之前完全相同。
+ *   給值時只需要三件事，畫面不自己算任何選角結果：
+ *     · `view`     —— `pendingChallengeDraftView()` 的回傳（唯一讀取點）
+ *     · `onAction` —— 玩家的一手，交給 Store 判合法性並落盤
+ *     · `onConfirm`—— 送出，由 Store 走 canonical resolver 產生唯一的 DraftResult
+ */
+export default function BanPickScreen({ onNext, onBack, onCodex, onComplete, challengeDraft = null }) {
   //  ── Milestone I：選手／英雄／五路的自動分配 ─────────────────────────────
   //    舊版是「picks[i] → 席位 b(i+1)」的順序硬對位：選到兩隻中路照樣塞，
   //    玩家看不出衝突。現在改用可解釋評分 + 窮舉最佳解（5! = 120 種，決定性）。
@@ -252,9 +272,20 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
   //  席位 → 實際上場選手（沿用 Milestone E 的先發指派，不另建一套）
   const seatPlayers = useMemo(() => seatPlayersOf(storeLineup, storePlayers ?? []), [storeLineup, storePlayers]);
   //  每次我方選角變動就重算分配 ⇒ 面板隨時反映「目前這批英雄會怎麼排」
+  //  ── Slice 6：挑戰模式的序列與狀態來源 ──────────────────────────────────
+  //  ⚠ 挑戰模式下，**Store 是唯一權威**。畫面只是把 Store 裡那串
+  //    `challengerActions` 畫出來，並把玩家的下一手送回去；合法性由 Store 判。
+  //    這樣 reload 之後接得回同一手，也不會出現「畫面一份、Store 一份」。
+  const cdView = challengeDraft?.view ?? null;
+  const SEQ_ACTIVE = challengeDraft ? CHALLENGE_SEQ : SEQ;
+  const cdHeroes = (ids) => (ids ?? []).map((id) => CHAMPIONS_100.find((c) => c.id === id)).filter(Boolean);
+  const effBans = challengeDraft ? { blue: cdHeroes(cdView?.bans), red: [] } : bans;
+  const effPicks = challengeDraft ? { blue: cdHeroes(cdView?.picks), red: [] } : picks;
+  const effStep = challengeDraft ? ((cdView?.bans?.length ?? 0) + (cdView?.picks?.length ?? 0)) : step;
+
   const draftPlan = useMemo(
-    () => assignDraft({ picks: picks.blue, seatPlayers, tagsOf: heroTags }),
-    [picks.blue, seatPlayers],
+    () => assignDraft({ picks: effPicks.blue, seatPlayers, tagsOf: heroTags }),
+    [effPicks.blue, seatPlayers],
   );
   const planLoadout = useMemo(
     () => buildLoadout(assignmentToRoster(draftPlan.assignment), heroById),
@@ -298,8 +329,9 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
     return { have, need, haveCode, needCode };
   }, [draftPlan]);
 
-  const cur = step < SEQ.length ? SEQ[step] : null;
-  const done = step >= SEQ.length;
+  const cur = effStep < SEQ_ACTIVE.length ? SEQ_ACTIVE[effStep] : null;
+  const done = effStep >= SEQ_ACTIVE.length;
+  //  挑戰模式全程都是我方在選（對手離線）⇒ 永遠輪到自己，直到選滿。
   const isMyTurn = cur && cur.team === "blue";
   const opponentReport = useMemo(() => {
     const picksByArchetype = picks.red.reduce((counts, champ) => {
@@ -314,7 +346,11 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
       tags,
     };
   }, [bans.red, picks.red]);
-  const pool = CHAMPIONS_100.filter((c) => !usedRef.current.has(c.id));
+  //  ⚠ 挑戰模式的可選集合由 Store 給（`pendingChallengeDraftView().available`），
+  //    與 `createDraftResult` 的 `used` 規則同一套。畫面自己算一套遲早分歧。
+  const pool = challengeDraft
+    ? CHAMPIONS_100.filter((c) => (cdView?.available ?? []).includes(c.id))
+    : CHAMPIONS_100.filter((c) => !usedRef.current.has(c.id));
   //  Hotfix2：畫面上實際列出的英雄 ＝ 定位頁籤 ∩ 關鍵字。
   //    關鍵字比對中文名、英文名、id、稱號與預設路線——玩家記得哪個就打哪個。
   const query = pickQuery.trim().toLowerCase();
@@ -376,6 +412,14 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
 
   const playerChoose = (champ) => {
     if (!isMyTurn) return;
+    if (challengeDraft) {
+      //  ⚠ 只送**輸入**。合法性（重複／額滿／不在池裡）由 Store 判，
+      //    畫面不自己放行——畫面錯了也不該髒到落盤的那一手。
+      const r = challengeDraft.onAction?.({ act: cur.act, heroId: champ.id });
+      if (r && r.ok === false) { setLog((l) => [`⚠ ${r.errors?.[0]?.message ?? "這一手不合法"}`, ...l].slice(0, 8)); return; }
+      setLog((l) => [`🔵 你 ${cur.act === "ban" ? "禁用" : "選擇"} ${champ.zh}`, ...l].slice(0, 8));
+      return;
+    }
     usedRef.current.add(champ.id);
     if (cur.act === "ban") { setBans((b) => ({ ...b, blue: [...b.blue, champ] })); setLog((l) => [`🔵 你 禁用 ${champ.zh}`, ...l].slice(0, 8)); }
     else { setPicks((p) => ({ ...p, blue: [...p.blue, champ] })); setLog((l) => [`🔵 你 選擇 ${champ.zh}（${champ.arch}）`, ...l].slice(0, 8)); }
@@ -386,6 +430,12 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
   //  Milestone I：把分配結果與召喚師技能一併往下傳（純附加欄位；
   //    下游沒有讀 assignment 的舊路徑仍可用 picks 的順序對位）。
   const confirmDraft = () => {
+    if (challengeDraft) {
+      //  ⚠ 畫面**不產生** DraftResult。只說「我選完了」，
+      //    唯一那一份由 Store 的 `createDraftResult` 算一次然後凍結。
+      challengeDraft.onConfirm?.();
+      return;
+    }
     const payload = {
       picks, bans,
       assignment: { blue: assignmentToHeroIds(draftPlan.assignment) },
@@ -400,6 +450,9 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
     //    最終分路結果只閃現不到一秒就換到戰術頁（Ray 的原話）。
     //    現在停在這裡，由玩家自己按「確認出戰配置」——要看多久看多久。
     if (done) return;
+    //  ⚠ 挑戰模式不跑 Legacy AI。對手離線，他的回應在建立場次時由
+    //    凍結的 DraftPolicy 一次解出；這裡動一次就等於第二套 draft 邏輯。
+    if (challengeDraft) { setShowPicker(true); return; }
     if (isMyTurn) { setShowPicker(true); return; }
     const t = setTimeout(() => {
       const champ = aiPick(cur.team, cur.act);
@@ -485,7 +538,7 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
                 {t === "blue" ? "我方" : "對手"}
               </span>
               <div style={{ display: "flex", gap: 3, flex: 1, minWidth: 0 }}>
-                {picks[t].map((c) => {
+                {effPicks[t].map((c) => {
                   //  只有我方才有分路資料（assignment 只算我方）。對手不標，
                   //  不是留白偷懶——我們本來就不知道對手怎麼分路，標了就是編造。
                   const at = t === "blue" ? (laneByHero[c.id] ?? null) : null;
@@ -515,16 +568,16 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
                     </button>
                   );
                 })}
-                {Array.from({ length: 5 - picks[t].length }).map((_, i) => (
+                {Array.from({ length: 5 - effPicks[t].length }).map((_, i) => (
                   <div key={i} style={{ width: 34, height: 34, borderRadius: 8, background: "rgba(255,255,255,0.035)", border: "1px dashed rgba(255,255,255,0.10)", flexShrink: 0 }} />
                 ))}
               </div>
               {/*  禁用縮到同一列的最右側（原本自成一段，含標題共約 90px）。 */}
               <div style={{ display: "flex", gap: 2, flexShrink: 0, paddingLeft: 4, borderLeft: "1px solid rgba(255,255,255,0.07)" }} title="禁用">
-                {bans[t].map((c) => (
+                {effBans[t].map((c) => (
                   <div key={c.id} style={{ width: 20, height: 20, borderRadius: 5, overflow: "hidden", opacity: 0.42, filter: "grayscale(1)" }}><ChampFace champ={c} size={20} /></div>
                 ))}
-                {Array.from({ length: 2 - bans[t].length }).map((_, i) => (
+                {Array.from({ length: (challengeDraft ? DRAFT_SHAPE.bansPerSide : 2) - effBans[t].length }).map((_, i) => (
                   <div key={i} style={{ width: 20, height: 20, borderRadius: 5, background: "rgba(255,255,255,0.035)", border: "1px dashed rgba(255,255,255,0.10)" }} />
                 ))}
               </div>
@@ -540,7 +593,7 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
             y≈1910——技術上捲得到，實際上要滑過上百隻英雄才看得到，等於沒有。
             收合狀態成本極低，放回上方讓它一直在首屏，英雄格仍從首屏開始。 */}
         <DraftPlanPanel plan={draftPlan} loadout={planLoadout}
-          open={planOpen} onToggle={() => setPlanOpen((v) => !v)} needs={compNeeds} laneByHero={laneByHero} picks={picks.blue} />
+          open={planOpen} onToggle={() => setPlanOpen((v) => !v)} needs={compNeeds} laneByHero={laneByHero} picks={effPicks.blue} />
 
         {developmentEffects.unlocks.mobaMatchOverview && (
           <MatchOverviewPanel testId="moba-match-overview"
@@ -549,8 +602,8 @@ export default function BanPickScreen({ onNext, onBack, onCodex, onComplete }) {
               { label: "對手", value: oppName ?? "對手" },
               { label: "對手已選英雄", value: opponentReport.picks.length > 0 ? opponentReport.picks.map((champ) => champ.zh).join("、") : "尚未選角" },
               { label: "對手陣容類型", value: opponentReport.archetypes.map(([name, count]) => name + " ×" + count).join("、") || "尚未形成" },
-              { label: "我方已選", value: picks.blue.length > 0 ? `${picks.blue.length} 名` : "尚未選角",
-                tone: picks.blue.length >= 5 ? "good" : "warn" },
+              { label: "我方已選", value: effPicks.blue.length > 0 ? `${effPicks.blue.length} 名` : "尚未選角",
+                tone: effPicks.blue.length >= 5 ? "good" : "warn" },
             ]} />
         )}
 

@@ -17,7 +17,7 @@
 //  其餘（先發、核心、流派取捨、戰術傾向）收在「查看詳情」裡。
 //  所有可點擊元素 ≥44px。
 // ============================================================================
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 //  ⚠ 席位→路名用**唯一那張表**，畫面不自己寫一份對照。
 import { SEAT_LANE_ZH } from "../../platform/contracts/matchLineup.js";
@@ -334,7 +334,7 @@ function EvidenceTable({ title, rows, testid }) {
   );
 }
 
-export default function PlayerChallengeScreen({ onBack }) {
+export default function PlayerChallengeScreen({ onBack, onDraft = null, runChallengeId = null, onRanChallenge = null }) {
   //  ── 訂閱一個**穩定字串**（Slice 2 的教訓：結算不改變筆數，簽章必須含 status）
   const sig = useProfileStore((s) => {
     const c = s.challenge;
@@ -380,6 +380,24 @@ export default function PlayerChallengeScreen({ onBack }) {
   };
 
   /** 共用：建立場次 → 讓畫面先畫出「模擬中」→ 跑模擬。 */
+  //  ── Slice 6：從選角頁接手開打 ─────────────────────────────────────────
+  //  ⚠ 只跑一次。`ranRef` 防 StrictMode 雙掛載重複模擬（同一場跑兩次會覆蓋結果）。
+  const ranRef = useRef(null);
+  useEffect(() => {
+    if (!runChallengeId || ranRef.current === runChallengeId) return;
+    ranRef.current = runChallengeId;
+    setMsg(null); setVerify(null);
+    setOpenId(runChallengeId);
+    setBusy("run");
+    const t = setTimeout(() => {
+      const r = useProfileStore.getState().runChallengeById(runChallengeId);
+      setBusy(null);
+      if (!r.ok) setMsg({ kind: "err", text: r.errors?.[0]?.message ?? "模擬失敗" });
+      onRanChallenge?.();
+    }, 30);
+    return () => clearTimeout(t);
+  }, [runChallengeId, onRanChallenge]);
+
   const runFlow = (start) => {
     setMsg(null); setVerify(null);
     const started = start();
@@ -395,8 +413,21 @@ export default function PlayerChallengeScreen({ onBack }) {
     }, 30);
   };
 
-  const challenge = (key) => runFlow(() =>
-    useProfileStore.getState().startFixtureChallenge(key, { tacticId, heroProgress }));
+  //  ── Slice 6：挑戰改成先進手動選角 ────────────────────────────────────
+  //  ⚠ 這裡**不再直接建立場次**。玩家先自己 Ban/Pick，選滿之後由
+  //    `ChallengeDraftRoute` 帶著 `challengerActions` 呼叫同一支
+  //    `startFixtureChallenge` —— 建立場次的入口仍然只有一個。
+  //  ⚠ 沒有 `onDraft`（例如舊的嵌入用法）就退回原本的直接開打，
+  //    這條路徑仍然合法：不傳 actions ⇒ 由玩家自己的方針決定性補位。
+  const challenge = (key) => {
+    if (onDraft) {
+      const r = useProfileStore.getState().beginChallengeDraft(key, { tacticId });
+      if (!r.ok) { setMsg({ kind: "err", text: r.errors?.[0]?.message ?? "無法開始選角" }); return; }
+      onDraft(key);
+      return;
+    }
+    runFlow(() => useProfileStore.getState().startFixtureChallenge(key, { tacticId, heroProgress }));
+  };
   const retry = (id) => runFlow(() =>
     useProfileStore.getState().retryChallenge(id, { tacticId, heroProgress }));
 

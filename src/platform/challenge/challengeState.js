@@ -43,6 +43,11 @@ export function emptyChallengeState() {
     instances: {},
     //  最近在前。⚠ 順序另存，不靠物件鍵順序——那不是規格保證的。
     order: [],
+    //  ── Slice 6：**還沒送出**的手動選角 ────────────────────────────────
+    //  ⚠ 這裡存的是玩家的**輸入**（challengerActions），不是選角結果。
+    //    結果只有一份，而且只在建立場次時由 `createDraftResult` 產生一次。
+    //    存輸入是為了 reload 之後接得回同一手；存結果會變成第二個真相來源。
+    pendingDraft: null,
   };
 }
 
@@ -78,11 +83,20 @@ export function normalizeChallengeState(saved) {
   for (const id of Object.keys(instances)) if (!order.includes(id)) order.push(id);
 
   const day = Number(saved.lastPublishedCareerDay);
+  //  ⚠ 半截的 pendingDraft 一律丟掉，不修補：形狀不對就當作沒有在選角，
+  //    玩家重新開始那一場即可。留著半截資料會讓「接回同一手」變成假的。
+  const pd = saved.pendingDraft;
+  const pendingDraft = pd && typeof pd.opponentKey === "string" && Array.isArray(pd.actions)
+    && pd.actions.every((a) => a && typeof a.heroId === "string" && (a.act === "ban" || a.act === "pick"))
+    ? { opponentKey: pd.opponentKey, tacticId: typeof pd.tacticId === "string" ? pd.tacticId : null,
+        actions: pd.actions.map((a) => ({ act: a.act, heroId: a.heroId })),
+        startedAt: Number.isFinite(Number(pd.startedAt)) ? Number(pd.startedAt) : null }
+    : null;
   return {
     ...base,
     defense,
     lastPublishedCareerDay: Number.isFinite(day) ? Math.floor(day) : null,
-    snapshots, instances, order,
+    snapshots, instances, order, pendingDraft,
   };
 }
 

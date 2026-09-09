@@ -88,6 +88,7 @@ import { createChallengeInstance, CHALLENGE_KINDS } from "./contracts/challengeI
 import { runChallenge } from "./challenge/challengeRunner.js";
 //  Slice 5：非同步 Draft。⚠ 席位指派沿用既有的 assignDraft，不另寫一套。
 import { createDraftResult, draftComparisonRows } from "./challenge/draftResult.js";
+import { DRAFT_SHAPE } from "./challenge/draftPolicy.js";
 import { assignDraft } from "../battle/moba/mobaDraftAssignment.js";
 import { heroTags } from "../data/heroClassification.js";
 import { CHAMPIONS_100, heroById } from "../data/heroDatabase.js";
@@ -3889,6 +3890,109 @@ export const useProfileStore = create((rawSet, get) => {
     return { ok: true, errors: [], snapshot: r.snapshot, throttled: false };
   },
 
+  //  ── Slice 6：手動選角的**輸入**管理 ──────────────────────────────────
+  //  ⚠ 這三支只碰玩家的輸入（challengerActions），一律不產生、不保存 DraftResult。
+  //    選角結果只有一份，只在 `startFixtureChallenge` 由 `createDraftResult`
+  //    算一次然後凍結——UI 自己算一份、runner 又算一份，正是本輪明令不做的事。
+
+  /** 開始對某個對手手動選角。已經在選了就沿用（reload 之後接得回同一手）。 */
+  beginChallengeDraft(opponentKey, { tacticId = null } = {}) {
+    const cur = get().challenge ?? emptyChallengeState();
+    if (!fixtureOpponentByKey(opponentKey)) {
+      return { ok: false, errors: [{ code: "opponent", message: "找不到這個練習對手" }] };
+    }
+    const prev = cur.pendingDraft;
+    const keep = prev && prev.opponentKey === opponentKey;
+    const pendingDraft = keep ? prev : {
+      opponentKey, tacticId: tacticId ?? null, actions: [], startedAt: Date.now(),
+    };
+    set({ challenge: { ...cur, pendingDraft } });
+    get().save();
+    return { ok: true, errors: [], pendingDraft, resumed: !!keep };
+  },
+
+  /**
+   * 記下玩家的一手。
+   *
+   * ⚠ 合法性在**這裡**判定，不在畫面：同一隻不可以出現兩次，
+   *   ban／pick 各有上限。畫面只負責不讓玩家點到違法的選項，
+   *   但即使畫面錯了，這裡也不會讓違法的一手落盤。
+   */
+  recordChallengeDraftAction({ act, heroId } = {}) {
+    const cur = get().challenge ?? emptyChallengeState();
+    const pd = cur.pendingDraft;
+    if (!pd) return { ok: false, errors: [{ code: "no_draft", message: "現在沒有進行中的選角" }] };
+    if (act !== "ban" && act !== "pick") {
+      return { ok: false, errors: [{ code: "act", message: "只能 ban 或 pick" }] };
+    }
+    if (!heroId || !get()._heroPool().includes(heroId)) {
+      return { ok: false, errors: [{ code: "hero", message: "這隻英雄不在本場英雄池裡" }] };
+    }
+    if (pd.actions.some((a) => a.heroId === heroId)) {
+      return { ok: false, errors: [{ code: "duplicate", message: "這隻英雄這一場已經被選過了" }] };
+    }
+    const cap = act === "ban" ? DRAFT_SHAPE.bansPerSide : DRAFT_SHAPE.picksPerSide;
+    if (pd.actions.filter((a) => a.act === act).length >= cap) {
+      return { ok: false, errors: [{ code: "full", message: act === "ban" ? "禁用已經額滿" : "五個位置已經選滿" }] };
+    }
+    const actions = [...pd.actions, { act, heroId }];
+    set({ challenge: { ...cur, pendingDraft: { ...pd, actions } } });
+    get().save();
+    return { ok: true, errors: [], actions };
+  },
+
+  /** 收回最後一手。 */
+  undoChallengeDraftAction() {
+    const cur = get().challenge ?? emptyChallengeState();
+    const pd = cur.pendingDraft;
+    if (!pd || pd.actions.length === 0) {
+      return { ok: false, errors: [{ code: "empty", message: "沒有可以收回的一手" }] };
+    }
+    const actions = pd.actions.slice(0, -1);
+    set({ challenge: { ...cur, pendingDraft: { ...pd, actions } } });
+    get().save();
+    return { ok: true, errors: [], actions };
+  },
+
+  /** 整場取消。 */
+  cancelChallengeDraft() {
+    const cur = get().challenge ?? emptyChallengeState();
+    set({ challenge: { ...cur, pendingDraft: null } });
+    get().save();
+    return { ok: true, errors: [] };
+  },
+
+  /**
+   * 選角畫面唯一的讀取點：現在該做什麼、還能選誰。
+   *
+   * ⚠ 畫面不自己算「剩下哪些可選」。可選集合＝英雄池扣掉這一場已經動過的，
+   *   與 `createDraftResult` 的 `used` 規則同一套；分開寫遲早分歧。
+   */
+  pendingChallengeDraftView() {
+    const cur = get().challenge ?? emptyChallengeState();
+    const pd = cur.pendingDraft;
+    if (!pd) return null;
+    const taken = new Set(pd.actions.map((a) => a.heroId));
+    const bans = pd.actions.filter((a) => a.act === "ban").map((a) => a.heroId);
+    const picks = pd.actions.filter((a) => a.act === "pick").map((a) => a.heroId);
+    //  ⚠ 形狀取自契約常數，不在畫面裡寫死 3 與 5。
+    const phase = bans.length < DRAFT_SHAPE.bansPerSide ? "ban"
+      : picks.length < DRAFT_SHAPE.picksPerSide ? "pick" : "done";
+    const opponent = fixtureOpponentByKey(pd.opponentKey) ?? null;
+    return {
+      opponentKey: pd.opponentKey,
+      opponentName: opponent?.name ?? null,
+      tacticId: pd.tacticId ?? null,
+      actions: pd.actions,
+      bans, picks, phase,
+      shape: { bans: DRAFT_SHAPE.bansPerSide, picks: DRAFT_SHAPE.picksPerSide },
+      remaining: phase === "ban" ? DRAFT_SHAPE.bansPerSide - bans.length
+        : phase === "pick" ? DRAFT_SHAPE.picksPerSide - picks.length : 0,
+      available: get()._heroPool().filter((id) => !taken.has(id)),
+      complete: phase === "done",
+    };
+  },
+
   /**
    * 對一個練習對手發起挑戰。**只建立場次，不跑模擬**（模擬在 `runChallengeById`）。
    *
@@ -3940,7 +4044,9 @@ export const useProfileStore = create((rawSet, get) => {
     let next = putSnapshot(cur, fx.snapshot);
     next = putSnapshot(next, entry.snapshot);
     const put = putInstance(next, built.challenge);
-    set({ challenge: put.state });
+    //  ⚠ Slice 6：場次一建立，那一手就已經被凍進 DraftResult 了 ⇒ 進行中的
+    //    輸入必須清掉。留著的話下一次點對手會接到上一場的殘留半手。
+    set({ challenge: { ...put.state, pendingDraft: null } });
     get().save();
     return { ok: true, errors: [], challengeId: put.instance.challengeId, created: put.added };
   },

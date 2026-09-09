@@ -19394,3 +19394,69 @@ BanPickScreen 的根元素寫的是 `height:100%`，百分比高度在沒有確�
    逐項比對，差異 0；`moba-sim.v4` 亦在線上 bundle 內。
 2. **正式站沒有重跑 15 分鐘的 CS lifecycle benchmark**（Owner 明示不需要）。
    線上只做一次真實的「進入 → 離開 → 返回」，資源不累積的三輪證據來自本地 22/22。
+
+---
+
+## Player Challenge Slice 6 — Challenger Manual Draft（2026-09-10）
+
+玩家挑戰終於可以自己 Ban/Pick。**本輪沒有建立任何新的 Draft 系統。**
+
+### Audit 先於實作（讀 main 真值）
+
+`challengerActions` **早就是既有契約的一等參數**：`startFixtureChallenge` /
+`retryChallenge` / `_resolveDraft` / `createDraftResult` 全程接受，只是 UI 一個都沒傳，
+所以之前一律走玩家自己方針決定性補位。缺的從來只有 UI。
+
+同時查到兩件必須繞開的事：
+1. `BanPickScreen` 的 `aiPick` 含 **6 處 `Math.random()`**，由 700ms `setTimeout` 驅動。
+2. 選角**形狀不同**：一般 MOBA 是 4 ban + 10 pick 雙方輪選，挑戰是每方 3 ban + 5 pick。
+
+### 做法
+
+- `BanPickScreen` 加一個 **optional `challengeDraft` adapter**（沒傳 = 行為與本輪之前完全相同）。
+  挑戰模式走 `CHALLENGE_SEQ`（只有我方那一半，形狀取自 `DRAFT_SHAPE`），
+  **完全不呼叫 `aiPick`**，可選集合與已選內容一律讀 Store。
+  沒有複製第二份 ChallengeBanPickScreen——複製會讓上一輪剛修好的捲動契約分岔成兩份。
+- 新增 `ChallengeDraftRoute.jsx`：**沒有任何選角邏輯**，只做讀 view／送一手／送出三件事。
+- Store 新增 `beginChallengeDraft` / `recordChallengeDraftAction` / `undoChallengeDraftAction` /
+  `cancelChallengeDraft` / `pendingChallengeDraftView`。
+  **合法性判定在 Store**（重複、額滿、不在池裡），畫面錯了也髒不到落盤的那一手。
+- `challenge.pendingDraft` 只存**輸入**，不存結果。存結果就等於第二個真相來源。
+
+### 踩到並修掉的一個真陷阱
+
+我第一版把新的讀取點命名為 `challengeDraftView()`——**與 Slice 5 既有的
+`challengeDraftView(challengeId)`（讀凍結那份）撞名**。物件字面量後者覆蓋前者，
+結果是我的新方法變死碼，而路由會呼叫到 Slice 5 那支。已改名為
+`pendingChallengeDraftView()`。這個如果沒抓到，會是靜默的錯誤行為。
+
+### 驗證
+
+- `check_player_challenge_slice6` **30/30 PASS**（含 ⑦ 反向測試：把 `challengerActions`
+  丟掉重解，⭐ 那幾條的前提就不成立 ⇒ 證明它們有檢定力）
+  - A. 只換玩家的手 ⇒ DraftResult 雜湊與席位英雄都不同
+  - B. 兩份合法選角 ⇒ 交給引擎的 roster 不同
+  - C. 同輸入重跑 ⇒ 整份結果逐欄相同
+- `browser_check_challenge_manual_draft` **27/27 PASS**（390px 真 touch）
+  - D. 重播讀凍結那份：`ok/match` 皆真，且 hash `4ceb793e → 4ceb793e` 未變
+  - E. 中途 reload 那一手原封不動接得回來，且**直接停回選角畫面**；
+    完成後 reload，DraftResult 與席位完全相同
+  - F. 單指捲動 0→185、document 不動、捲動不誤選、選滿 3 ban + 5 pick
+  - 送出後 `pendingDraft` 清空；防守方五隻由凍結方針解出且不會拿到我禁掉／選走的
+- 回歸：Slice 1 108/108、Slice 2 78/78、Slice 3 100/100、Slice 4 60/60、Slice 5 71/71、
+  版本 gate 51/51、野怪 43/43、regress 15/15、regress2 8/8、
+  手機 Ban/Pick 捲動 23/23、`npm run build` 通過。
+
+### 模擬版本：**不 bump**（有證據，不是嫌麻煩）
+
+本輪改動的六個檔案**沒有一個**在 `SIMULATION_SEMANTICS_FILES` 裡，
+`check_simulation_version_gate` 的 esbuild 指紋檢查 51/51 全綠。
+解算器一行未動，只是多了一種**輸入來源**（而那個參數本來就存在）；
+既有場次讀的仍是自己凍結的那份 DraftResult ⇒ 舊資料重播結果不變。維持 `moba-sim.v4`。
+
+### 一個誠實的設計取捨
+
+畫面**不在選角過程中揭露對手的選擇**。契約規定防守方是看到挑戰方**完整的一手**之後
+才一次回應（`createDraftResult` 的註解寫得很明白），要做「逐手互相反應」就得在 UI 裡
+再實作一套逐手解算——那正是 §3 禁止的第二套 Draft 邏輯。所以對手的回應在送出後
+一次揭曉。這是遵守單一權威的結果，不是偷懶。
