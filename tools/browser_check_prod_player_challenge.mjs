@@ -255,26 +255,34 @@ const result = await runGate({
         verBefore.drafts === verBefore.n, `${verBefore.drafts}/${verBefore.n}`);
 
       //  把其中一場改成舊版號 ⇒ 重播必須被**明確拒絕**，不得靜默用新規則重算。
-      const forged = J(await chrome.evaluate(`
-        const raw = localStorage.getItem("esmo.profile.v1");
-        const save = JSON.parse(raw);
-        const id = save.challenge.order[0];
-        save.challenge.instances[id].simulationVersion = "moba-sim.v1";
-        localStorage.setItem("esmo.profile.v1", JSON.stringify(save));
-        return JSON.stringify({ ok: true, id });
-      `));
-      ck(`${L}｜⑧b 偽造得出一筆舊版本紀錄`, forged.ok === true);
-      await chrome.navigate(url); await sleep(2600);
-      if (mobile) await chrome.evaluate(clickByText("更多"));
-      await chrome.evaluate(clickByText("玩家挑戰"));
-      await sleep(700);
-      await chrome.evaluate(clickBy(`[data-testid="challenge-history-${forged.id}"]`));
-      await chrome.evaluate(clickBy('[data-testid="challenge-verify-btn"]'));
-      const refused = await waitFor(chrome, sleep, readScreen, (x) => !!x.verifyText, 60000);
-      ck(`${L}｜⑧b 舊版本紀錄的重播被拒絕（不是靜默重算）`,
-        !/完全一致/.test(refused.value?.verifyText ?? ""), refused.value?.verifyText || "(逾時)");
-      ck(`${L}｜⑧b 拒絕理由明講是模擬版本不符`,
-        /模擬語意|模擬版本|不可重播/.test(refused.value?.verifyText ?? ""), refused.value?.verifyText || "");
+      //  ⚠ v1 與 v2 **各驗一次**。只驗 v1 的話，v2 就只是推論——
+      //    而 v2 才是玩家手上真的會有的舊存檔（v1 是 Rift 330 之前的）。
+      for (const legacy of ["moba-sim.v1", "moba-sim.v2"]) {
+        const forged = J(await chrome.evaluate(`
+          const raw = localStorage.getItem("esmo.profile.v1");
+          const save = JSON.parse(raw);
+          const id = save.challenge.order[0];
+          save.challenge.instances[id].simulationVersion = "${legacy}";
+          localStorage.setItem("esmo.profile.v1", JSON.stringify(save));
+          return JSON.stringify({ ok: true, id });
+        `));
+        ck(`${L}｜⑧b ${legacy}：偽造得出一筆舊版本紀錄`, forged.ok === true);
+        await chrome.navigate(url); await sleep(2600);
+        if (mobile) await chrome.evaluate(clickByText("更多"));
+        await chrome.evaluate(clickByText("玩家挑戰"));
+        await sleep(700);
+        //  ⚠ 舊結果**必須讀得到**（只是不可重播）——先證明這一點。
+        const stillThere = J(await chrome.evaluate(clickBy(`[data-testid="challenge-history-${forged.id}"]`)));
+        ck(`${L}｜⑧b ${legacy}：舊場次的紀錄仍讀得到（不是被刪掉）`, stillThere.ok, stillThere.why ?? "");
+        await chrome.evaluate(clickBy('[data-testid="challenge-verify-btn"]'));
+        const refused = await waitFor(chrome, sleep, readScreen, (x) => !!x.verifyText, 60000);
+        ck(`${L}｜⑧b ${legacy}：重播被拒絕（不是靜默用 v3 重算）`,
+          !/完全一致/.test(refused.value?.verifyText ?? ""), refused.value?.verifyText || "(逾時)");
+        ck(`${L}｜⑧b ${legacy}：拒絕理由明講版本不相容`,
+          /模擬語意|模擬版本|不可重播/.test(refused.value?.verifyText ?? "")
+          && (refused.value?.verifyText ?? "").includes(legacy),
+          refused.value?.verifyText || "");
+      }
 
       // ── ⑧c 版面 ─────────────────────────────────────────────────────
       v = J(await chrome.evaluate(readScreen()));
