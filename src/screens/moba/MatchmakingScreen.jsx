@@ -23,7 +23,7 @@ export default function MatchmakingScreen({ onDone, onBack }) {
       </div>
       <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
         {onBack && <button onClick={onBack} style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "9px 24px", color: "#fff", fontWeight: 800, cursor: "pointer" }}>← 取消</button>}
-        <button onClick={onDone} disabled={!found} style={{ background: found ? "linear-gradient(135deg,#3b82f6,#1d4ed8)" : "rgba(255,255,255,0.06)", border: found ? "2px solid #93c5fd" : "1px solid rgba(255,255,255,0.15)", borderRadius: 10, padding: "9px 30px", color: found ? "#fff" : "rgba(255,255,255,0.3)", fontWeight: 900, cursor: found ? "pointer" : "default" }}>進入 Ban/Pick →</button>
+        <button data-testid="matchmaking-enter-banpick" onClick={onDone} disabled={!found} style={{ background: found ? "linear-gradient(135deg,#3b82f6,#1d4ed8)" : "rgba(255,255,255,0.06)", border: found ? "2px solid #93c5fd" : "1px solid rgba(255,255,255,0.15)", borderRadius: 10, padding: "9px 30px", color: found ? "#fff" : "rgba(255,255,255,0.3)", fontWeight: 900, cursor: found ? "pointer" : "default" }}>進入 Ban/Pick →</button>
       </div>
     </div>
   );

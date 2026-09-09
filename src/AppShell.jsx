@@ -98,6 +98,17 @@ const VIEWPORT_LOCKED_SCREENS = new Set([
   "loading",      // MOBA 進場載入
   "csLoading",    // CS 進場載入
   "matchmaking",  // 純過場動畫
+  //  ⚠ Ban/Pick 也在這裡，而且是**必要**的，不是造型偏好。
+  //    這一頁自己就是「固定框 ＋ 一個捲動區」的設計（根元素 height:100% ＋
+  //    flex column ＋ overflow:hidden，只有英雄格捲）。但 `height:100%` 要
+  //    成立，父層必須有**確定高度**；外框在非鎖定分支只有 `minHeight`，
+  //    百分比高度於是退化成 auto。
+  //    390×844 實測（修正前）：英雄格 client 1620 = scroll 1620 ⇒ 沒有可捲量，
+  //    整欄長到 2042px、bottom 1988 掉在 844 的視窗外，單指拖曳只讓
+  //    document 捲了 205px（整頁跟著跑），英雄格一格都沒動。
+  //    上面那句「內容會不會超過一個 viewport？會 ⇒ 不要鎖」對這一頁不適用：
+  //    它的內容**本來就打算**被框住，超出的部分由英雄格自己捲。
+  "banpick",      // MOBA 選角（固定框 ＋ 英雄格單一捲動區）
 ]);
 
 export default function AppShell() {

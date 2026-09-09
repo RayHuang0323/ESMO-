@@ -19302,3 +19302,53 @@ disposer），環境建構函式回傳 `dispose()` 並區分**自有資源**（f
 
 Owner 明令本輪不開。已排除 CSS `overflow`／`touch-action` 與 pointer handler 兩類原因；
 「容器高度無上界所以沒有可捲區」的假說尚未證實，量測 harness 也還沒走到 Ban/Pick 畫面。
+
+### C. 手機 Ban/Pick 英雄清單單指滑不動（本次 commit）
+
+**ROOT_CAUSE（幾何量出來的，不是猜的）**：LAYOUT_OR_EVENT_PROBLEM = **layout**。
+`banpick` 不在 AppShell 的 `VIEWPORT_LOCKED_SCREENS` 裡，所以它的外框走的是
+`minHeight: min(88vh,760px)` + `overflow: visible` 分支——**只有最小高度，沒有確定高度**。
+BanPickScreen 的根元素寫的是 `height:100%`，百分比高度在沒有確定高度的父層下退化成 auto，
+於是整欄長到內容高度，英雄格跟著長滿，`overflow-y:auto` 永遠沒有可捲量。
+
+390×844 修正前實測：
+- `hero-grid-scroll` clientHeight 1620 = scrollHeight 1620（沒有可捲量）
+- 該區 bottom 1988，掉在 844 的視窗外
+- 祖先鏈上那層外框 `min-height 742.72px`，實際 height 卻是 2042px
+- html clientHeight 844 / scrollHeight 2042 ⇒ 真正在捲的是 document
+- 單指拖曳：英雄格 scrollTop 0 → 0，document scrollTop 0 → **205**（整頁跟著跑）
+
+⚠ 這解釋了為什麼上一輪排除 CSS 與 pointer handler 之後仍找不到原因：
+`overflowY:auto`、`minHeight:0`、`overscrollBehavior:contain`、`touchAction:pan-y`
+**全部都在且都正確**，問題不在它們身上，在它們拿不到高度。
+畫面裡那段 Hotfix2 註解寫「根元素已被 height:100% 框住」——那句話在寫的當下成立，
+後來的 Scroll Contract 改動把 banpick 留在非鎖定分支，前提就失效了，註解沒有跟著更新。
+
+**FIX**：把 `banpick` 加進既有的 `VIEWPORT_LOCKED_SCREENS`（一行 + 說明）。
+沒有新增 `position:fixed`、沒有 `100vh`、沒有新的 modal 或 scroll library，
+也沒有重做 Ban/Pick UI——這一頁本來就是「固定框 ＋ 單一捲動區」的設計，
+只是外框沒有給它高度。
+
+**FILES_CHANGED**：`src/AppShell.jsx`（修正）、
+`src/screens/moba/MatchmakingScreen.jsx`（只補一個 `data-testid`，流程邏輯一行未動）、
+`tools/browser_check_banpick_mobile_scroll.mjs`（新 gate）。
+
+**修正後（390×844）**：clientHeight 321 / scrollHeight 1620；單指上滑 scrollTop 0 → 205
+且 document 維持 0；捲到底 scrollTop 1299，第 100 張卡真的落在視窗內。
+
+**guard**：`browser_check_banpick_mobile_scroll` **23/23 PASS**，涵蓋
+320/360/390/430 四種寬度、ban 與 pick 兩個階段、單指拖曳不誤選、輕點仍可選角、
+桌機真滾輪不回歸。反向測試：拿掉 `"banpick"` 這一行 → **11/23 紅**（紅在版面那幾條），
+還原 → 23/23。
+
+**過程中修掉自己 gate 的兩個假綠（照實記）**：
+1. 「最後一排可達」原本只比卡片在**容器矩形**內——容器長到 1620px 掉出畫面時，
+   卡片當然在容器內，玩家卻看不到。改成比**視窗**。
+2. 「正常 tap 仍可選角」原本用 `el.click()`，不產生 pointerdown，於是繼承了前一次
+   捲動手勢留下的 suppress 旗標而被吞掉，紅得莫名。改成送真的 touch tap
+   （桌機那條改送真 mousePressed/mouseReleased、真滾輪 `Input.dispatchMouseEvent`）。
+
+**一個不是缺陷的紅（照實記）**：320px 下「輔助」篩選鈕 right 329 > 320。
+它住在 `overflow-x:auto` 的水平捲動篩選列裡，超出視窗是設計狀態。
+沒有直接放寬斷言，改成：容器外的按鈕一律不得出界；容器內的必須證明**捲得到**
+（`stripUnreachable` 為空）。
