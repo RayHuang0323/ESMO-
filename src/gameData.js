@@ -126,10 +126,23 @@ export const CAMPS = [
   // 導致可攻擊實體與畫面相差 17.1。Milestone C 上線動態野怪後統一到淨空座標。
   { id: "camp_blue_buff", side: "blue", type: "buff", presentationKey: "blueBuff", x: 76, y: 171 },
   { id: "camp_blue_a",    side: "blue", type: "camp", presentationKey: "jungleCamp", x: 48, y: 142 },
-  { id: "camp_blue_b",    side: "blue", type: "camp", presentationKey: "jungleCamp", x: 96, y: 193 },
+  //  ⚠ 2026-09-10 修正：原座標 y:193 距**下路路線只有 1.0 單位**（規則要求 ≥5.5），
+  //    營地整個壓在兵線上。根因不是變換也不是 renderer：
+  //      · 營地座標定於 2026-07-15（Sprint 29B1），對**當時的**路線是合規的。
+  //      · `LANES` 在 2026-07-16（Sprint 29B5 世界尺度調整）被重新塑形，
+  //        路線從營地底下移走，而營地沒有跟著重新驗證。
+  //      · `placeRiftAnchor` 是純平移（x+55, y+55），營地與路線平移同一個量
+  //        ⇒ 相對距離不變 ⇒ 變換不可能是原因。
+  //    新座標由掃格求解（照本區塊開頭那條選點規則），取「合規且離原位最近」，
+  //    並多要 8.0 的餘裕而不是剛好 5.5——卡在最小值的位置，路線下次再動就又壓線。
+  //    結果：距路線 1.0 → 8.0，導航淨空 12.2 → 19.2，鏡像仍精確（96+124=220、186+34=220）。
+  { id: "camp_blue_b",    side: "blue", type: "camp", presentationKey: "jungleCamp", x: 96, y: 186 },
   { id: "camp_red_buff",  side: "red",  type: "buff", presentationKey: "redBuff", x: 144, y: 49 },
   { id: "camp_red_a",     side: "red",  type: "camp", presentationKey: "jungleCamp", x: 172, y: 78 },
-  { id: "camp_red_b",     side: "red",  type: "camp", presentationKey: "jungleCamp", x: 124, y: 27 },
+  //  ⚠ 同一個錯誤的 180° 鏡像：它壓在**上路**線上（也是 1.0）。
+  //    Owner 只回報了下路那座，但兩座是同一個原因、必須一起修，
+  //    否則地圖會變成不對稱——而對稱是 runtime29 用規則在守的 invariant。
+  { id: "camp_red_b",     side: "red",  type: "camp", presentationKey: "jungleCamp", x: 124, y: 34 },
 ];
 
 export const OBJECTIVE_PRESENTATION = Object.freeze({

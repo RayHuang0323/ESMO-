@@ -209,13 +209,17 @@ ck("③ instance 帶了 DraftResult 仍通過形狀驗證", validateChallengeIns
 // ══════════════════════════════════════════════════════════════════════════
 console.log("\n── ④ 模擬版本：v3 ──");
 
-ck("④ 目前版本是 moba-sim.v3", MOBA_SIMULATION_VERSION === "moba-sim.v3", MOBA_SIMULATION_VERSION);
+//  ⚠ 不要寫死版號。這裡要守的是「選角成為戰鬥輸入之後的版本」，
+//    也就是**至少** v3；之後每次 bump 都不該讓這條假紅（已經發生過三次）。
+const VER_N = Number(String(MOBA_SIMULATION_VERSION).replace(/^moba-sim.v/, "")) || 0;
+ck("④ 版本至少是 moba-sim.v3（選角已是戰鬥輸入）", VER_N >= 3, MOBA_SIMULATION_VERSION);
 ck("④ v1 / v2 都留在已知清單（歷史憑據不刪）",
   ["moba-sim.v1", "moba-sim.v2"].every((v) => KNOWN_SIMULATION_VERSIONS.includes(v)));
 ck("④ v1 / v2 / v3 都有登記指紋",
   ["moba-sim.v1", "moba-sim.v2", "moba-sim.v3"].every((v) => !!SIMULATION_SEMANTICS_FINGERPRINTS[v]));
 ck("④ v2 的挑戰明確被拒絕重播（不是靜默用新規則重算）",
-  canReplay("moba-sim.v2").ok === false && canReplay("moba-sim.v2").reason.includes("moba-sim.v3"),
+  canReplay("moba-sim.v2").ok === false
+  && canReplay("moba-sim.v2").reason.includes(MOBA_SIMULATION_VERSION),
   canReplay("moba-sim.v2").reason);
 //  ⚠ 選角一旦成為戰鬥輸入，決定選角的那些檔案就是 simulation semantics。
 //    漏掉任何一支 ⇒ 改它不會讓閘門變紅 ⇒ 歷史挑戰默默重播出不同結果。

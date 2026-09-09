@@ -36,11 +36,11 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
  * ⚠ **什麼時候不用 bump**：純呈現層、UI、文案、log。
  * ⚠ 版本字串一旦發布就**不可回收再用**：舊 Challenge 存著它。
  */
-export const MOBA_SIMULATION_VERSION = "moba-sim.v3";
+export const MOBA_SIMULATION_VERSION = "moba-sim.v4";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", MOBA_SIMULATION_VERSION]);
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -234,6 +234,17 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  ⚠ 這一版的量測數字（見上）是**修正解算順序之前**跑的；順序修好之後
   //    重跑：新存檔對同級陪練所 38%（原本 19%），難度梯度仍在。
   "moba-sim.v3": "a9ac2b91b46341ae",
+
+  //  2026-09-10（玩家回報的 bug 修復）：兩座野怪營地原本壓在兵線上
+  //  （`camp_blue_b` 距下路 1.0、鏡像 `camp_red_b` 距上路 1.0，規則要求 ≥5.5）。
+  //  根因是 2026-07-16 重新塑形 `LANES` 之後沒有重新驗證營地——路線從營地
+  //  底下移走了。營地移到合規位置（距路線 8.0、導航淨空 19.2、鏡像不變）。
+  //  ⚠ **判定為真的語意變化，而且是量出來的**：同一組 seed 的 regress
+  //    平均擊殺 19.1 → 15.9、平均時長 21.9 → 21.6 分。野怪站在兵線上時
+  //    會被路過的小兵與英雄順手打掉，移回野區之後那些交戰不再發生。
+  //  ⇒ 這不是「同版本換指紋」，是新版本。
+  //  ⚠ 後果（已知且接受）：v1/v2/v3 的歷史挑戰不再可重播，由 `canReplay` 明確拒絕。
+  "moba-sim.v4": "d2335417a7c170af",
 });
 
 export const isKnownSimulationVersion = (v) =>
