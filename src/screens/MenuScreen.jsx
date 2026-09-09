@@ -13,8 +13,11 @@ export default function MenuScreen({ onMoba, onSeason, onBack }) {
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 12 }}>
       <div style={{ fontSize: 22, fontWeight: 900, color: "#e5e7eb", letterSpacing: "0.15em", marginBottom: 8 }}>主選單</div>
       <Item title="🗡 MOBA 對戰" desc="賽前準備 → 英雄資訊 → 開始 Battle" onClick={onMoba} />
-      <Item title="📊 賽季戰績" desc="History / Ranking / Analytics（全部來自 BattleResult）" onClick={onSeason} />
-      <Item title="🔫 CS 模式" desc="Legacy 內聯模組（EsportsGame.jsx），尚未整合至主幹" disabled />
+      {/* ⚠ 「全部來自 BattleResult」是資料來源，不是玩家語言。
+          玩家想知道的是「這些數字可不可信」＝ 依實際比賽結果統計。 */}
+      <Item title="📊 賽季戰績" desc="戰績 · 排名 · 數據分析（依每場實際結果統計）" onClick={onSeason} />
+      {/* ⚠ 同上：檔名與「主幹」是開發語彙。玩家只需要知道還不能玩。 */}
+      <Item title="🔫 CS 模式" desc="尚未開放" disabled />
       <button onClick={onBack} style={{ marginTop: 10, background: "none", border: "none", color: "rgba(255,255,255,0.45)", fontSize: 12, cursor: "pointer" }}>← 返回首頁</button>
     </div>
   );

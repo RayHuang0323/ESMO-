@@ -26,6 +26,8 @@ import {
 import { clubLevelOf } from "../../platform/progression/clubProgression.js";
 import { GC, FONT, MONO } from "../../ui/theme.js";
 import ManageFrame from "./ManageFrame.jsx";
+//  UI Clarity Pass v1.1：沿用上一輪的共用元件，不另造一套 help 互動。
+import { InfoHint } from "../../ui/Disclosure.jsx";
 
 gsap.registerPlugin(useGSAP);
 
@@ -638,7 +640,20 @@ export default function TeamDevelopmentScreen({ onBack }) {
             })}
           </div>
         </div>
-        <div style={{ color: GC.gray, fontSize: 8.5, lineHeight: 1.55, marginTop: 11 }}>發展點只投入俱樂部路線，與選手訓練及個人特質分開計算；重複點擊不會再次扣點。</div>
+        {/* ⚠ 這是規則不是狀態，而且 8.5px 的灰字對比也太低。
+            玩家在這裡要做的決定是「投哪一條」，不是先讀完計算方式。 */}
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 10 }}>
+          <InfoHint title="發展說明" icon="help" text="發展說明" testid="teamdev-rules" tone={GC.blueL}>
+            <p><b>發展點只用在俱樂部路線</b><br />
+              它跟選手訓練、個人特質是<b>分開</b>的兩件事——把點投在這裡不會消耗訓練資源，
+              反過來練選手也不會扣發展點。</p>
+            <p><b>投下去就固定了</b><br />
+              已經投入的節點會留著，重複點同一個節點不會再扣一次點。</p>
+            <p><b>解鎖的是支援，不是數值</b><br />
+              路線給的是訓練、賽前準備、球探與經營方面的支援。
+              它讓你多一些能做的事，不是直接把選手變強。</p>
+          </InfoHint>
+        </div>
         {/*  ⚠ 手機 CTA 觸控目標（Owner Review 發現 ⑤）：實測原本只有 61×23px。
              這裡只長**觸控高度**（min-height + 垂直 padding 歸零），視覺上仍是同一顆按鈕；
              多出來的高度用同一段規則把該列的 margin-top 收回去 ⇒ 卡片不會明顯變高，

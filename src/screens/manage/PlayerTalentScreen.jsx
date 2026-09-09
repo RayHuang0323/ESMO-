@@ -24,6 +24,8 @@ import { calculateLevelProgress } from "../../platform/progress/playerLevel.js";
 import { statZh } from "../../data/playerModel.js";
 import PlayerFace from "../../ui/PlayerFace.jsx";
 import { GC, FONT, MONO } from "../../ui/theme.js";
+//  UI Clarity Pass v1.1：沿用共用元件。
+import { InfoHint } from "../../ui/Disclosure.jsx";
 
 /** 購買前置檢查（僅供 UI 顯示「無法購買原因」；真正的檢查在購買服務內再做一次） */
 function blockReason(def, state) {
@@ -84,7 +86,20 @@ export default function PlayerTalentScreen({ playerId, onBack }) {
             <span style={{ background: "rgba(255,255,255,0.05)", color: GC.gray, fontSize: 11, fontWeight: 800, borderRadius: 8, padding: "5px 12px", fontFamily: MONO }}>已投入 {state.spentPoints} 點</span>
           </div>
         </div>
-        <div style={{ color: GC.gold, fontSize: 9.5, marginBottom: 12 }}>⚠ 天賦為永久投入，目前投入後不可重置。效果進入衍生能力（不覆寫基礎能力），MOBA 戰術適性與 CS 對戰都會讀到。</div>
+        {/* ⚠ 「不可重置」留在第一層：它會**改變玩家的決定**，藏起來等於騙人。
+            其餘（效果算在哪一層、哪些模式讀得到）是背景資訊，收進說明。 */}
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap", marginBottom: 12 }}>
+          <span style={{ color: GC.gold, fontSize: 11, fontWeight: 800 }}>投入後不可重置</span>
+          <InfoHint title="天賦說明" tone={GC.gold} testid="talent-rules">
+            <p><b>投下去就收不回來</b><br />
+              目前沒有洗點功能，所以每一點都值得想一下再投。</p>
+            <p><b>天賦是加成，不是覆蓋</b><br />
+              它加在選手的基礎能力**之上**，不會把原本的數值改掉。
+              所以你在能力頁看到的成長，是基礎值與天賦加成的合計。</p>
+            <p><b>兩種模式都吃得到</b><br />
+              MOBA 的戰術適性與 CS 的對戰都會讀到這些加成，不是只在其中一邊生效。</p>
+          </InfoHint>
+        </div>
 
         {/* 最近一次購買 receipt（UI 只顯示，不自行重算） */}
         {lastReceipt && (

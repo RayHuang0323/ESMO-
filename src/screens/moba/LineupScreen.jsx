@@ -22,6 +22,8 @@ import { TEAMS, ROSTER } from "../../data/roster.js";
 import { heroById } from "../../data/heroDatabase.js";
 import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
 import { useProfileStore } from "../../platform/profileStore.js";
+//  UI Clarity Pass v1.1：規則不常駐在第一層（沿用上一輪的共用元件，不另造）。
+import { InfoHint } from "../../ui/Disclosure.jsx";
 import { ENGINE_SEATS, SEAT_CODE, SEAT_LANE_ZH, seatPlayers, seatOfPlayer } from "../../platform/contracts/matchLineup.js";
 import MatchPrepFrame, { SquadSeatRow } from "../common/MatchPrepFrame.jsx";
 import { heroSourceContext, heroSourceFor } from "../../battle/moba/mobaHeroSource.js";
@@ -169,7 +171,9 @@ function PlayerSheet({ slot, pos, onClose }) {
             <Stat label="英雄熟練" val={`Lv ${slot.heroLv}`} mono />
             <Stat label="出賽" val={slot.games ? `${slot.games}` : "—"} mono />
           </div>
-          <div style={{ fontSize: 9, color: "#3f3f46", textAlign: "center" }}>選手等級來自賽後結算（profileStore）；英雄熟練/出賽來自 Hero Progress——兩條不同成長軸</div>
+          {/* ⚠ 原本這行寫著資料來自哪兩個 store。玩家需要懂的是**兩條成長軸不同**，
+              不是它們存在哪裡；而且 #3f3f46 的對比低到幾乎看不見，等於白寫。 */}
+          <div style={{ fontSize: 9, color: "#71717a", textAlign: "center" }}>選手等級與英雄熟練是兩條成長軸</div>
         </div>
       </div>
     </div>
@@ -252,8 +256,23 @@ export default function LineupScreen({ onNext, onBack }) {
         seats={seats}
         belowSeats={(
           <>
-            <div style={{ fontSize: 9, color: "#52525b", marginTop: 6 }}>選手 Lv＝賽後結算持久值（profileStore）；「英雄」欄＝該英雄熟練等級（Hero Progress）· 無出賽顯示「新」，不推估</div>
-            <div style={{ fontSize: 9, color: "#52525b", marginTop: 4, marginBottom: 8 }}>🔁 換人＝先發指派（席位 b1–b5 → 選手，持久化）。這五個人就是進引擎、進 3D 名牌與賽後戰報的同一批人。</div>
+            {/* ⚠ 這兩行以前把同一件事講了第二次，而且用的是實作語彙
+                （持久值／持久化／進引擎）。第一層只留玩家做決策要知道的那一句，
+                完整規則收進說明。 */}
+            <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap", marginTop: 6, marginBottom: 8 }}>
+              <span style={{ fontSize: 10, color: "#a1a1aa" }}>這五個人就是實際上場的先發。</span>
+              <InfoHint title="關於先發與等級" testid="lineup-rules">
+                <p><b>換人＝指定先發</b><br />
+                  這裡排的五個位置就是實際上場、出現在戰場名牌與賽後戰報上的同一批人。
+                  換完之後會記住，下次進來還是這一組。</p>
+                <p><b>兩條不同的成長軸</b><br />
+                  <b>選手等級</b>是這名選手的整體成長，每場比賽結算後累積。<br />
+                  <b>英雄熟練</b>是這名選手對<b>某一隻英雄</b>的熟悉度，只有實際用那隻英雄出賽才會漲。<br />
+                  練了新英雄不會讓選手等級變高，反過來也一樣。</p>
+                <p><b>沒有出賽紀錄就顯示「新」</b><br />
+                  沒打過就是沒打過，不會用其他數字幫他推估一個看起來合理的值。</p>
+              </InfoHint>
+            </div>
             {/* 目標 5 的重點：講清楚英雄**不是**綁死的，正式出戰以 Ban/Pick 為準 */}
             <div data-testid="hero-source-note"
               style={{ marginBottom: 10, fontSize: 9, lineHeight: 1.7, color: "#94a3b8", background: "rgba(148,163,184,0.07)", border: "1px solid rgba(148,163,184,0.18)", borderRadius: 8, padding: "7px 9px" }}>

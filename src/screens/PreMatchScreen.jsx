@@ -33,7 +33,9 @@ export default function PreMatchScreen({ onStart, onBack }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", height: "100%", padding: "18px 0", overflow: "auto" }}>
       <div style={{ fontSize: 19, fontWeight: 900, color: "#e5e7eb", letterSpacing: "0.15em" }}>賽前準備</div>
-      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", marginBottom: 12 }}>英雄資料庫：CHAMPIONS_100 · 等級：Hero Progress</div>
+      {/* ⚠ 這行原本寫著兩個程式識別字（英雄表的變數名、進度模組的名字）。
+          玩家要知道的是「這裡看得到什麼」，不是資料放在哪個檔案。 */}
+      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", marginBottom: 12 }}>英雄圖鑑 · 英雄熟練</div>
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", justifyContent: "center" }}>
         {["blue", "red"].map((side) => (
           <div key={side} style={{ width: 330 }}>

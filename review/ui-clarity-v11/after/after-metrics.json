@@ -1,0 +1,50 @@
+[
+  {
+    "width": "desktop-1366",
+    "page": "lineup",
+    "pageHeight": 943,
+    "screens": 1,
+    "totalChars": 474,
+    "firstScreenChars": 385,
+    "badTerms": [],
+    "escaped": [],
+    "pageOverflow": false,
+    "sample": "← 🎮 MOBA 賽前配置 LINEUP · 五路先發陣容 ⚔️ 一般對戰 今日 0/3 場 累積成長與收益，不計入正式賽季 1. 確認出賽陣容 2. 尋找對手 3. 雙方確認 "
+  },
+  {
+    "width": "desktop-1366",
+    "page": "team-development",
+    "pageHeight": 1241,
+    "screens": 1.4,
+    "totalChars": 459,
+    "firstScreenChars": 306,
+    "badTerms": [],
+    "escaped": [],
+    "pageOverflow": false,
+    "sample": "戰隊發展 CLUB DEVELOPMENT 1 發展點 俱樂部長期方向 尚未選定 把發展點投入路線，逐步解鎖訓練、賽前準備、球探與經營支援。 可用發展點 1 已投入點數 0 下一個"
+  },
+  {
+    "width": "mobile-390",
+    "page": "lineup",
+    "pageHeight": 958,
+    "screens": 1.1,
+    "totalChars": 474,
+    "firstScreenChars": 358,
+    "badTerms": [],
+    "escaped": [],
+    "pageOverflow": false,
+    "sample": "← 🎮 MOBA 賽前配置 LINEUP · 五路先發陣容 ⚔️ 一般對戰 今日 0/3 場 累積成長與收益，不計入正式賽季 1. 確認出賽陣容 2. 尋找對手 3. 雙方確認 "
+  },
+  {
+    "width": "mobile-390",
+    "page": "team-development",
+    "pageHeight": 1355,
+    "screens": 1.6,
+    "totalChars": 459,
+    "firstScreenChars": 301,
+    "badTerms": [],
+    "escaped": [],
+    "pageOverflow": false,
+    "sample": "戰隊發展 CLUB DEVELOPMENT 1 發展點 俱樂部長期方向 尚未選定 把發展點投入路線，逐步解鎖訓練、賽前準備、球探與經營支援。 可用發展點 1 已投入點數 0 下一個"
+  }
+]
