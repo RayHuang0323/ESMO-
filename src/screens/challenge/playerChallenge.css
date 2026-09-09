@@ -1,0 +1,47 @@
+/* ============================================================================
+   screens/challenge/playerChallenge.css — 玩家挑戰的遊戲感（UI Clarity Pass v1）
+
+   ⚠ 動態只做三件事：**提示狀態改變、建立層級、給操作回饋**。
+     不做裝飾性的持續動畫，不做會一直閃的東西——這一頁玩家會停留很久。
+   ⚠ 全部包在 `prefers-reduced-motion: no-preference` 裡；靜態樣式本身
+     就要看得懂（展開／選中／可按與否都不只靠動畫表達）。
+   ============================================================================ */
+
+/* ── 選中的候選卡：建立層級 ────────────────────────────────────────────
+   ⚠ 不是只靠光暈——同時加了邊框色與背景，因為只靠一種視覺線索
+     （尤其是發光這種低對比的）在強光下的手機上看不出來。 */
+.esmo-cand { position: relative; }
+.esmo-cand[data-open="1"] {
+  border-color: rgba(147, 197, 253, 0.55) !important;
+  background: rgba(147, 197, 253, 0.05);
+  box-shadow: 0 0 0 1px rgba(147, 197, 253, 0.18), 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+/* ── 操作回饋 ──────────────────────────────────────────────────────────
+   ⚠ 只改顏色與極小的位移，**不改版面邊界**——會推動周圍內容的按壓效果
+     在列表裡看起來像是整頁在抖。 */
+.esmo-cand button:not(:disabled):active { transform: translateY(1px); }
+
+/* ── 結果揭曉 ──────────────────────────────────────────────────────────
+   模擬跑完是這一頁唯一真正的「事件」，值得一個明確但短的提示。 */
+.esmo-outcome { display: inline-block; }
+.esmo-score { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .esmo-cand {
+    animation: esmo-cand-in 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: var(--esmo-cand-delay, 0ms);
+    transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+  }
+  .esmo-cand button { transition: transform 0.08s ease, filter 0.14s ease; }
+  .esmo-cand button:not(:disabled):hover { filter: brightness(1.08); }
+  .esmo-outcome { animation: esmo-outcome-in 0.34s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .esmo-score { animation: esmo-outcome-in 0.34s cubic-bezier(0.16, 1, 0.3, 1) 0.06s both; }
+  /* 模擬進行中：緩慢呼吸，用來說「還在跑」而不是「壞掉了」。
+     ⚠ 2 秒一次、透明度只在 0.55–1 之間——不是會讓人分心的閃爍。 */
+  .esmo-running { animation: esmo-breathe 2s ease-in-out infinite; }
+}
+
+@keyframes esmo-cand-in { from { opacity: 0; transform: translateY(7px); } }
+@keyframes esmo-outcome-in { from { opacity: 0; transform: translateY(-5px) scale(0.97); } }
+@keyframes esmo-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }

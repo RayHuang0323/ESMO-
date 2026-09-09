@@ -136,19 +136,43 @@ const result = await runGate({
       ck(`${labelText}｜② 冷啟說明有出現`, /還沒有挑戰紀錄/.test(v.coldStart), v.coldStart.slice(0, 30));
       ck(`${labelText}｜② 卡片顯示熟練與新鮮度`,
         v.cards.every((c) => /英雄熟練 平均 Lv\./.test(c.text) && /(今天發布|天前發布)/.test(c.text)));
-      ck(`${labelText}｜② 卡片顯示你的挑戰紀錄`, v.cards.every((c) => /還沒有挑戰過這支隊伍|你挑戰過/.test(c.text)));
+      //  ⚠ 冷啟時**不再**每張卡都寫「你還沒有挑戰過這支隊伍」（五張卡同一句），
+      //    改由看板頂端說一次。有紀錄之後那一行才會回到卡片上。
+      ck(`${labelText}｜② 冷啟時看板說明分類會隨戰績變準`,
+        /還沒有挑戰紀錄/.test(v.coldStart), v.coldStart.slice(0, 30));
+      ck(`${labelText}｜② 冷啟時卡片不重複同一句紀錄`,
+        v.cards.every((c) => !/還沒有挑戰過這支隊伍/.test(c.text)));
       //  ⚠ 誠實：不得出現強弱宣告
       ck(`${labelText}｜② 卡片不出現戰力／勝率宣告`,
         v.cards.every((c) => !/戰力|勝率|評分|星等/.test(c.text)));
 
-      // ── ③ 誠實標示 ───────────────────────────────────────────────────
-      for (const t of ["不增加生涯成長", "不消耗選手體力", "不推進生涯日期", "不影響正式賽季", "沒有排位分數"]) {
-        ck(`${labelText}｜③ 看得到「${t}」`, v.careerSafe.includes(t));
+      // ── ③ 誠實標示：第一層摘要 ＋ 點得開的完整說明 ───────────────────
+      //  ⚠ 這一節以前驗的是「五句完整聲明常駐在畫面上」。UI Clarity Pass v1
+      //    把完整原因收進「挑戰規則」，第一層只留短標示。
+      //    ⇒ 檢定力**不下降**：兩層各驗一次，缺任何一邊都紅。
+      for (const t of ["0 生涯成長", "不耗體力", "不推進日期", "不影響正式賽季", "無排位"]) {
+        ck(`${labelText}｜③ 第一層標示「${t}」`, v.careerSafe.includes(t), v.careerSafe.replace(/\n/g, " "));
       }
-      ck(`${labelText}｜③ 明說對手不是其他玩家`, /不是其他玩家的戰隊/.test(v.disclaimer));
-      ck(`${labelText}｜③ 明說對手不會即時反應`, /不會即時反應/.test(v.disclaimer));
-      ck(`${labelText}｜③ 明說沒有防作弊機制`, /還沒有防作弊機制/.test(v.authority));
-      ck(`${labelText}｜③ 明說紀錄只是本存檔（非全服）`, /不是全服資料/.test(v.authority));
+      //  點開規則面板，逐條確認完整說明真的取得得到。
+      const rules = J(await chrome.evaluate(`
+        const el = document.querySelector('[data-testid="challenge-rules"]');
+        if (!el) return JSON.stringify({ ok: false, why: "沒有規則入口" });
+        el.scrollIntoView({ block: "center" }); el.click();
+        await new Promise((d) => setTimeout(d, 450));
+        const s = document.querySelector('.esmo-pop, .esmo-sheet');
+        return JSON.stringify({ ok: !!s, text: s ? (s.innerText || '') : '' });
+      `));
+      ck(`${labelText}｜③ 規則說明打得開`, rules.ok, rules.why ?? "");
+      ck(`${labelText}｜③ 說明裡有：不給生涯成長的原因`, /選手不會得到經驗/.test(rules.text));
+      ck(`${labelText}｜③ 說明裡有：不耗體力`, /不會消耗體力/.test(rules.text));
+      ck(`${labelText}｜③ 說明裡有：不推進日期`, /日期不會前進/.test(rules.text));
+      ck(`${labelText}｜③ 說明裡有：不影響正式賽季`, /正式賽季的戰績與名次也不會變動/.test(rules.text));
+      ck(`${labelText}｜③ 明說對手不是其他玩家`, /不是其他玩家的戰隊/.test(rules.text));
+      ck(`${labelText}｜③ 明說對手不會即時反應`, /不會即時反應/.test(rules.text));
+      ck(`${labelText}｜③ 明說沒有防作弊機制`, /還沒有防作弊機制/.test(rules.text));
+      ck(`${labelText}｜③ 明說紀錄只是本存檔（非全服）`, /不是全服資料/.test(rules.text));
+      await chrome.evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        await new Promise((d) => setTimeout(d, 300)); return JSON.stringify({});`);
       ck(`${labelText}｜③ 說明出賽用的是目前的隊伍`, /目前.*先發|凍結/.test(v.entryNote), v.entryNote.slice(0, 40));
 
       // ── ④ 對手詳情可展開（手機的第二層）─────────────────────────────

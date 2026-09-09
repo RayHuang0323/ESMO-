@@ -20,6 +20,8 @@ import { useProfileStore } from "../../platform/profileStore.js";
 import { assetById, SPECIALTY_ZH } from "../../platform/assets/coachCatalog.js";
 import { IDENTITY_TYPE_LIST, IDENTITY_TYPE_ZH } from "../../platform/assets/identityCatalog.js";
 import { ESMO_CSS_VARS } from "../../ui/designSystem.js";
+//  UI Clarity Pass v1：氣氛描述與規則不常駐，點開才看。
+import { InfoHint } from "../../ui/Disclosure.jsx";
 import "./clubAssets.css";
 
 /**
@@ -96,9 +98,17 @@ function CoachCard({ item, onBuy, onEquip, view, flash, delay }) {
         {item.owned
           ? <span className="ca__price ca__price--owned">已聘用</span>
           : <span className="ca__price">◆ {item.price}</span>}
+        <InfoHint title={item.name} testid={`asset-desc-${item.assetId}`}>
+          <p>{item.description}</p>
+          <p><b>帶來</b>　{item.capabilityText}</p>
+          <p><b>不提供</b>　{item.tradeoffText}</p>
+        </InfoHint>
       </div>
 
-      <div className="ca__card-desc">{item.description}</div>
+      {/* ⚠ 原本這裡有一段 description，但它跟下面「帶來」講的是同一件事
+          （例：desc「把訓練排程壓短…」／帶來「訓練排程 −1 天」）。
+          同一張卡把同一件事講兩次 ⇒ 卡片高一截，資訊量卻沒有多。
+          ⇒ 第一層只留可比較的「帶來／不提供」，完整描述點 i 才看。 */}
 
       {/* 換到什麼、放棄什麼。三位教練互不可比，這兩欄就是在說這件事。 */}
       <div className="ca__trade">
@@ -157,8 +167,11 @@ function IdentityCard({ item, onBuy, onEquip, onClear, flash, delay }) {
           : `年度冠軍 ${item.earnedHave} / ${item.earnedNeed} 次——點數買不到`)
         : item.retired ? "已下架，無法取得"
           : !item.prerequisiteMet ? `需要俱樂部累計 ${item.prerequisite.min} 點`
-            : !item.affordable ? `還差 ${item.shortBy} 點`
-              : "點數足夠，可以取得";
+            //  ⚠ 點數為 0 時 `shortBy === price`，與旁邊的「◆ 700」是同一個數字。
+            //    多一列講同一件事 ⇒ 十六張卡就多十六列。差額只在**已經有一些點數**
+            //    時才是新資訊（「再賺 200 就夠了」）。
+            : !item.affordable ? (item.shortBy === item.price ? null : `還差 ${item.shortBy} 點`)
+              : "點數足夠";
   return (
     <div
       className={`ca__card ca-rise${flash ? " ca__card--flash" : ""}`}
@@ -188,14 +201,21 @@ function IdentityCard({ item, onBuy, onEquip, onClear, flash, delay }) {
           : item.earned
             ? <span className="ca__price ca__price--earned">實績取得</span>
             : <span className="ca__price">◆ {item.price}</span>}
+        <InfoHint title={item.name} testid={`look-desc-${item.assetId}`}>
+          <p>{item.description}</p>
+        </InfoHint>
       </div>
 
-      <div className="ca__card-desc">{item.description}</div>
+      {/* ⚠ 氣氛描述（「冷光從天花板落下…」）是**想看時**才看的東西，
+          不是決定要不要換外觀時需要的。十六張卡每張都常駐一段，
+          整頁就被撐成三屏。⇒ 收進上面的 i。 */}
 
-      <div className="ca__card-foot">
-        <span className={`ca__status${item.canBuy ? " ca__status--ready" : item.owned ? " ca__status--owned" : ""}`}>
-          {status}
-        </span>
+      <div className="ca__card-foot ca__card-foot--tight">
+        {status && (
+          <span className={`ca__status${item.canBuy ? " ca__status--ready" : item.owned ? " ca__status--owned" : ""}`}>
+            {status}
+          </span>
+        )}
         {item.owned ? (
           item.equipped ? (
             <button type="button" className="ca__action ca__action--swap"
@@ -307,7 +327,9 @@ export default function ClubAssetsScreen({ onBack }) {
             <span className="ca__hero-name">{head ? head.name : "尚未聘用"}</span>
           </div>
           <div className="ca__hero-body">
-            {head ? head.description : "俱樂部點數可以聘用教練。第一位上任免費，之後每個賽季週最多換一次人。"}
+            {/* ⚠ 未聘用時原本是一整句規則。玩家在這一格要知道的只有
+                「還沒有人」＋「怎麼開始」；換人頻率是之後才會遇到的事。 */}
+            {head ? head.description : "用俱樂部點數聘一位，第一位免費。"}
           </div>
           {head && (
             <div className="ca__hero-effect">
@@ -320,18 +342,20 @@ export default function ClubAssetsScreen({ onBack }) {
               ? (view.canChangeCoach
                 ? `一次只有一位總教練帶隊。這一週（第 ${view.careerWeek} 週）還可以換一次人。`
                 : `一次只有一位總教練帶隊。第 ${view.careerWeek} 週已經換過了，下週才能再換。`)
-              : "聘用的教練永久保留，但同時只有一位帶隊——換誰上場才是每週的決定。"}
+              : "同時只有一位帶隊。"}
           </div>
         </div>
 
         <div className="ca__eyebrow ca-rise" style={{ "--ca-delay": "120ms" }}>
           教練　·　已聘用 {view.ownedCount} / {view.items.length}
         </div>
-        {view.items.map((item, i) => (
-          <CoachCard key={item.assetId} item={item} view={view}
-            onBuy={buy} onEquip={equip}
-            flash={flash === item.assetId} delay={150 + i * 60} />
-        ))}
+        <div className="ca__grid">
+          {view.items.map((item, i) => (
+            <CoachCard key={item.assetId} item={item} view={view}
+              onBuy={buy} onEquip={equip}
+              flash={flash === item.assetId} delay={150 + i * 60} />
+          ))}
+        </div>
 
         {/*  ── 外觀 ────────────────────────────────────────────────────────
              與教練分區，因為規則不同：外觀不影響任何數值、裝備免費、隨時可換。
@@ -346,19 +370,26 @@ export default function ClubAssetsScreen({ onBack }) {
               <div className="ca__eyebrow ca-rise" style={{ "--ca-delay": `${340 + gi * 40}ms` }}>
                 {IDENTITY_TYPE_ZH[type]}　·　使用中：{equippedName}
               </div>
-              {rows.map((item, i) => (
-                <IdentityCard key={item.assetId} item={item}
-                  onBuy={buy} onEquip={equipLook} onClear={clearLook}
-                  flash={flash === item.assetId} delay={360 + gi * 40 + i * 50} />
-              ))}
+              <div className="ca__grid">
+                {rows.map((item, i) => (
+                  <IdentityCard key={item.assetId} item={item}
+                    onBuy={buy} onEquip={equipLook} onClear={clearLook}
+                    flash={flash === item.assetId} delay={360 + gi * 40 + i * 50} />
+                ))}
+              </div>
             </React.Fragment>
           );
         })}
 
-        {/*  ⚠ 這句要寫在畫面上：玩家看到「聘用」會擔心花掉的點數讓等級掉下去。 */}
+        {/*  ⚠ 第一句要留在畫面上：玩家看到「聘用」會擔心花掉的點數讓聲望掉下去，
+             那是會**阻止他按下去**的疑慮，不能藏起來。後兩句是背景說明，收進 i。 */}
         <div className="ca__note ca-rise" style={{ "--ca-delay": "330ms" }} data-testid="club-assets-note">
-          聘用只花可用點數，不影響累計 {view.clubPointsLifetime} 點——俱樂部聲望看累計，不會因為花錢而下降。
-          三位教練專長不同、沒有高低之分，價格只代表開放的先後。教練的效果只在生涯模式生效，不進線上競技。
+          聘用只花可用點數，不影響累計 {view.clubPointsLifetime} 點。
+          <InfoHint title="關於教練與點數" testid="club-assets-note-hint">
+            <p>俱樂部聲望看的是<b>累計</b>拿過多少點數，不會因為花錢而下降。</p>
+            <p>三位教練專長不同、<b>沒有高低之分</b>，價格只代表開放的先後。</p>
+            <p>教練的效果只在生涯模式生效，不進線上競技。</p>
+          </InfoHint>
         </div>
       </div>
     </div>

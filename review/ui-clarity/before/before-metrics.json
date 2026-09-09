@@ -1,0 +1,74 @@
+[
+  {
+    "width": "desktop-1366",
+    "page": "club-mastery",
+    "pageHeight": 900,
+    "viewportHeight": 900,
+    "screens": 1,
+    "totalChars": 328,
+    "firstScreenChars": 239,
+    "firstCtaTop": 177,
+    "tallestCard": 870,
+    "ctaCount": 4
+  },
+  {
+    "width": "desktop-1366",
+    "page": "club-assets",
+    "pageHeight": 2660,
+    "viewportHeight": 900,
+    "screens": 3,
+    "totalChars": 964,
+    "firstScreenChars": 319,
+    "firstCtaTop": 395,
+    "tallestCard": 2660,
+    "ctaCount": 14
+  },
+  {
+    "width": "desktop-1366",
+    "page": "player-challenge",
+    "pageHeight": 1999,
+    "viewportHeight": 900,
+    "screens": 2.2,
+    "totalChars": 842,
+    "firstScreenChars": 277,
+    "firstCtaTop": 576,
+    "tallestCard": 1128,
+    "ctaCount": 11
+  },
+  {
+    "width": "mobile-390",
+    "page": "club-mastery",
+    "pageHeight": 929,
+    "viewportHeight": 844,
+    "screens": 1.1,
+    "totalChars": 328,
+    "firstScreenChars": 225,
+    "firstCtaTop": 191,
+    "tallestCard": 929,
+    "ctaCount": 4
+  },
+  {
+    "width": "mobile-390",
+    "page": "club-assets",
+    "pageHeight": 2879,
+    "viewportHeight": 844,
+    "screens": 3.4,
+    "totalChars": 964,
+    "firstScreenChars": 271,
+    "firstCtaTop": 486,
+    "tallestCard": 2879,
+    "ctaCount": 14
+  },
+  {
+    "width": "mobile-390",
+    "page": "player-challenge",
+    "pageHeight": 2141,
+    "viewportHeight": 844,
+    "screens": 2.5,
+    "totalChars": 842,
+    "firstScreenChars": 386,
+    "firstCtaTop": 601,
+    "tallestCard": 1253,
+    "ctaCount": 11
+  }
+]

@@ -256,7 +256,55 @@ Claude / Codex 在建立任何新 UI 前，先自問並在交付說明中回答�
 - **色票**：`src/ui/theme.js` 匯出 `GC`（唯一色票來源）、`card()`、`chip()`、`btn()`、`label`。
   畫面專用色必須在檔頭說明為何需要。
 - **響應式**：`src/ui/useViewport.js`。
-- **reduced-motion：目前主幹尚無共用實作。** 第一個做動態效果的 Sprint 應建立
-  `src/ui/useReducedMotion.js`（讀 `matchMedia('(prefers-reduced-motion: reduce)')`），
-  之後所有動效統一走它，不要各自 inline 判斷。
+- **reduced-motion：已有實作，走 CSS media query，不要另建 hook。**
+  三處可參考：`src/ui/disclosure.css`（**預設無動畫**，動畫包在 no-preference 裡——
+  建議照這個方向寫）、`clubMastery.css` / `clubAssets.css`（reduce 時整頁 `animation: none`）。
+  GSAP 的部分用 `gsap.matchMedia()`，見 `screens/dashboard/useMobileSheetMotion.js`。
+  ⚠ 2026-09-09 更正：原本這裡寫「尚無共用實作、應建 useReducedMotion.js」，那已經過期了。
 - **開發者模式**：`src/ui/debugMode.js`；工程術語只能出現在 debug 分支。
+
+---
+
+## 13. 資訊分層與遊戲感（UI Clarity & Game Feel Pass v1，2026-09-09）
+
+### 為什麼有這一節
+
+新功能上線時，說明文字會一段一段長在主畫面上。每一段單看都合理，
+加起來就變成「一頁要先讀完才能玩」——像官方說明頁，不像遊戲。
+實測（俱樂部資產）：整頁 2660px、964 字，十六張卡每張都常駐一段氣氛描述。
+
+### 五條規則
+
+1. **第一層 = 做決策才需要的東西。** 狀態、數值、選擇、CTA。
+   規則、原因、例外、背景一律不常駐。
+2. **漸進式說明用共用元件**：`src/ui/Disclosure.jsx`
+   （`InfoHint` 第二／三層說明、`ExpandableDetail` 就地展開、`ChipRow` 狀態標籤）。
+   **不要每頁自己再造一套 help 互動。**
+3. **手機一定要有 tap 路徑。** hover 只能是桌機的額外提示，
+   不得是取得資訊的唯一方式。桌機開 popover、手機開 bottom sheet——
+   同一個 API，`useIsMobile()` 自己判斷，呼叫端不要自己分岔。
+4. **同一條規則只解釋一次。** 每張卡都重複的資訊（例：五張候選卡都寫
+   「練習對手」「你還沒有挑戰過這支隊伍」）等於零資訊，但佔的高度是真的。
+   ⇒ 標**例外**就好，常態放在區塊層級講一次。
+5. **動態只做三件事**：提示狀態改變、建立層級、給操作回饋。
+   不做裝飾性的持續動畫。一律包在 `@media (prefers-reduced-motion: no-preference)`
+   裡（**預設無動畫、動畫是加上去的**），而且狀態不可以只靠動畫表達。
+
+### 兩個實作陷阱（都踩過）
+
+- **`btn()` 內建 `width: 100%`。** 兩顆並排時各要 100% ⇒ 撐破容器。
+  手機上主要 CTA 會整顆掉到卡片外、文字擠成一行一個字。
+  並排時必須改 `width: "auto"` ＋ `minWidth: 0`。
+  ⚠ 這個 bug **所有既有斷言都是綠的**（DOM 在、testid 在、點得到），
+  只有看截圖才發現 ⇒ `tools/browser_shot_ui_density.mjs` 已加入溢出判定。
+- **`ManageFrame` 的 `maxWidth: 460` 是手機欄寬。** 桌機沿用它，
+  等於把手機版置中放大——內容一樣多、寬度只用三分之一，於是一直往下長。
+  需要並排比較的頁面請用 `<ManageFrame wide>`（opt-in，不要全域改）。
+
+### 誠實性與瘦身的界線
+
+**瘦身不等於刪掉。** 誠實聲明（不影響生涯、對手不是真玩家、沒有防作弊）
+可以從「常駐整句」改成「第一層短標示 ＋ 點得開的完整說明」，
+但**兩層都要驗**：`check_player_challenge_slice2` §⑥ 與
+`browser_check_player_challenge_slice3` §③ 是這條界線的守門員，
+少任何一層都要紅。不得為了版面把它們刪成單層。

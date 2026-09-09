@@ -9,10 +9,19 @@ import React from "react";
 import { ChevronLeft } from "lucide-react";
 import { GC, FONT } from "../../ui/theme.js";
 
-export default function ManageFrame({ title, subtitle, onBack, right, children }) {
+/**
+ * @param {boolean} [wide]  桌機用較寬的欄寬（預設 460）。
+ *
+ * ⚠ 460px 是**手機**的欄寬。桌機沿用它，等於把手機版置中放大——
+ *   內容一樣多、寬度只用了三分之一，於是整頁一直往下長。
+ * ⚠ 但這個外框是所有經營畫面共用的，一次全改風險太大。
+ *   ⇒ 只有**真的需要並排比較**的頁面（例如挑戰看板的候選卡）才選 wide，
+ *     其餘維持原樣。手機不受影響：min() 會讓它照舊吃滿寬度。
+ */
+export default function ManageFrame({ title, subtitle, onBack, right, children, wide = false }) {
   return (
     <div style={{ height: "100%", overflow: "auto", background: GC.bg, fontFamily: FONT }}>
-      <div style={{ maxWidth: 460, margin: "0 auto", padding: "12px 12px 30px" }}>
+      <div style={{ maxWidth: wide ? 940 : 460, margin: "0 auto", padding: "12px 12px 30px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, minWidth: 0, marginBottom: 12 }}>
           <button
             onClick={onBack}

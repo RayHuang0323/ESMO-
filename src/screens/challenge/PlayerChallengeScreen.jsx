@@ -21,6 +21,9 @@ import React, { useMemo, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 //  ⚠ 席位→路名用**唯一那張表**，畫面不自己寫一份對照。
 import { SEAT_LANE_ZH } from "../../platform/contracts/matchLineup.js";
+//  UI Clarity Pass v1：規則不常駐在主畫面，收進可點開的說明。
+import { InfoHint, ExpandableDetail, ChipRow } from "../../ui/Disclosure.jsx";
+import "./playerChallenge.css";
 import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
 import { MOBA_TACTICS, mobaTacticById } from "../../platform/contracts/MobaTacticConfig.js";
 import { MATCH_SOURCE, MATCH_TIER_LABELS } from "../../platform/progress/matchSource.js";
@@ -52,7 +55,40 @@ const SLOT_TONE = {
   unusual: GC.purp, changed: GC.gold, unknown: GC.gray,
 };
 
-const CAREER_SAFE = ["不增加生涯成長", "不消耗選手體力", "不推進生涯日期", "不影響正式賽季", "沒有排位分數"];
+//  ⚠ 第一層只放**短標籤**：玩家要的是「這會不會影響我的生涯」這個答案，
+//    不是五句完整的句子。完整理由在 `<ChallengeRules>` 裡。
+const CAREER_SAFE = ["0 生涯成長", "不耗體力", "不推進日期", "不影響正式賽季", "無排位"];
+
+/**
+ * 完整規則的**唯一**入口。
+ *
+ * ⚠ 這些以前散在四個地方常駐著：頂部說明、戰術卡註解、看板免責聲明、
+ *   頁尾的權威層說明。同一件事講四次，而且四段都是玩家不需要先讀的。
+ * ⚠ 措辭紅線：這裡才可以出現系統語彙（快照／模擬版本），
+ *   主畫面上不可以 —— 那是實作規則，不是玩家的第一層資訊。
+ */
+function ChallengeRules() {
+  return (
+    <InfoHint title="玩家挑戰規則" icon="help" text="挑戰規則" testid="challenge-rules" tone={GC.blueL}>
+      <p><b>為什麼不影響生涯</b><br />
+        挑戰跑的是完整的 MOBA 模擬，但結果只寫進挑戰紀錄，不寫回生涯：
+        選手不會得到經驗、不會消耗體力，日期不會前進，正式賽季的戰績與名次也不會變動。
+        因為不影響生涯，這裡也沒有排位分數。</p>
+      <p><b>對手是誰</b><br />
+        目前是固定的練習對手，<b>不是其他玩家的戰隊</b>。
+        對手不會即時反應——用的是預先設定好的陣容、戰術與選角方針。</p>
+      <p><b>出賽陣容什麼時候固定</b><br />
+        按下「發起挑戰」的那一刻，你當下的先發與英雄熟練就固定成這一場的內容，
+        之後再換先發或練熟練都只影響下一場。同一場永遠可以重算出同一個結果。</p>
+      <p><b>再試一次</b><br />
+        打同一份對手陣容，可以改自己的先發與戰術。它是練習用的，
+        <b>不計入挑戰紀錄、也不產生任何獎勵</b>——否則重試就能把攻破率刷成任何數字。</p>
+      <p><b>紀錄的範圍</b><br />
+        目前在本機結算，還沒接伺服器，也還沒有防作弊機制。
+        看板上的「你挑戰過幾次」只統計這個存檔自己的紀錄，不是全服資料。</p>
+    </InfoHint>
+  );
+}
 
 function TierBanner() {
   //  ⚠ 這是**對戰層級**（玩家挑戰／非排位），不是戰力分級。改名避免混淆。
@@ -63,21 +99,27 @@ function TierBanner() {
         <span style={{ fontSize: 13 }}>🤝</span>
         <span data-testid="challenge-tier-name" style={{ color: GC.purp, fontSize: 13, fontWeight: 900 }}>{matchTier.name}</span>
         <span style={chip(GC.gold)}>非排位</span>
+        <span style={{ marginLeft: "auto" }}><ChallengeRules /></span>
       </div>
-      <div style={{ color: "#d4d4d8", fontSize: 11, marginTop: 6, lineHeight: 1.6 }}>{matchTier.note}</div>
-      <div data-testid="challenge-career-safe" style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 8 }}>
-        {CAREER_SAFE.map((t) => <span key={t} style={chip(GC.green)}>{t}</span>)}
+      {/* ⚠ 以前這裡是一句話**再加**五個 chip，兩者講的是同一件事。留 chip：
+          它更短、掃一眼就看完，而且不會在手機上折成三行。 */}
+      <div data-testid="challenge-career-safe" style={{ marginTop: 7 }}>
+        <ChipRow dense items={CAREER_SAFE.map((t) => ({ text: t, tone: GC.green }))} />
       </div>
     </div>
   );
 }
 
 /** 對手卡。第一層＝身分＋一句事實＋你的紀錄；詳情收在展開層。 */
-function OpponentCard({ c, busy, onChallenge, open, onToggle }) {
+function OpponentCard({ c, busy, onChallenge, open, onToggle, index = 0 }) {
   const tone = SLOT_TONE[c.slot] ?? GC.gray;
   return (
-    <div data-testid={`challenge-candidate-${c.key}`} data-slot={c.slot}
-      style={{ background: GC.card2, border: `1px solid ${tone}33`, borderRadius: 10, padding: "10px 12px", minWidth: 0 }}>
+    //  ⚠ `data-open` 同時驅動邊框、底色與陰影（見 playerChallenge.css）：
+    //    「哪一張被展開了」不可以只靠發光表達——強光下的手機看不出來。
+    <div className="esmo-cand" data-testid={`challenge-candidate-${c.key}`} data-slot={c.slot}
+      data-open={open ? "1" : "0"}
+      style={{ background: GC.card2, border: `1px solid ${tone}33`, borderRadius: 10, padding: "10px 12px", minWidth: 0,
+        "--esmo-cand-delay": `${Math.min(index, 5) * 45}ms` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0 }}>
         <span style={{ ...label, color: GC.purp, fontFamily: MONO }}>{c.team.tag}</span>
         <span style={{ color: "#fff", fontSize: 13, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -96,21 +138,43 @@ function OpponentCard({ c, busy, onChallenge, open, onToggle }) {
         </span>
         <span data-testid={`challenge-fresh-${c.key}`} style={chip(GC.gray)}>{c.freshness.label}</span>
         {c.recentLineupChange && <span style={chip(GC.gold)}>近期換過先發</span>}
-        {/* ⚠ 誠實標示資料來源：fixture 不得被講成真玩家。 */}
-        <span data-testid={`challenge-source-${c.key}`} style={chip(GC.gray)}>
-          {c.source === "fixture" ? "練習對手" : "玩家戰隊"}
-        </span>
+        {/* ⚠ 誠實標示資料來源：fixture 不得被講成真玩家——但**標例外就夠了**。
+            目前每一張卡都是練習對手，五個一模一樣的灰標籤只是在佔行高；
+            「這些不是真玩家」那句話在「挑戰規則」裡講一次就夠。
+            等真的有玩家戰隊時，它會是唯一被標出來的那一張 ⇒ 反而更醒目。 */}
+        {c.source !== "fixture" && (
+          <span data-testid={`challenge-source-${c.key}`} style={chip(GC.blueL)}>玩家戰隊</span>
+        )}
       </div>
 
-      {/* 觀測紀錄：⚠ 一定要帶樣本數，而且說明是「你的」紀錄 */}
-      <div data-testid={`challenge-record-${c.key}`} style={{ color: "#71717a", fontSize: 10.5, marginTop: 7, lineHeight: 1.6 }}>
-        {c.recordLabel}
-      </div>
+      {/* 觀測紀錄：⚠ 一定要帶樣本數，而且說明是「你的」紀錄。
+          ⚠ 冷啟時每張卡都是「你還沒有挑戰過這支隊伍」——看板頂端已經說過一次了。
+            打過之後這一行才有內容，那時它才值得佔一行。 */}
+      {(c.record?.challenged ?? 0) > 0 && (
+        <div data-testid={`challenge-record-${c.key}`} style={{ color: "#71717a", fontSize: 10.5, marginTop: 7, lineHeight: 1.6 }}>
+          {c.recordLabel}
+        </div>
+      )}
 
-      <div style={{ marginTop: 9, display: "grid", gap: 7 }}>
-        <button data-testid={`challenge-detail-${c.key}`} onClick={onToggle} style={{ ...btn(false), fontSize: 12 }}>
-          {open ? "收合詳情" : "查看詳情"}
+      {/* ⚠ 以前是兩顆全寬按鈕上下疊，每張卡因此高出一倍。
+          詳情是次要動作 ⇒ 縮成文字觸發點，主要 CTA 才佔按鈕的份量。 */}
+      <div style={{ marginTop: 9, display: "flex", alignItems: "center", gap: 8 }}>
+        {/* ⚠ 本地的 `btn()` 帶 `width: 100%`。並排時必須改回 auto，
+            否則兩顆各要 100% 會撐破卡片（實測：手機上主要 CTA 會掉到卡片外，
+            文字被擠成一行一個字）。`minWidth: 0` 讓它在窄螢幕上縮得下去。 */}
+        <button
+          data-testid={`challenge-detail-${c.key}`} onClick={onToggle}
+          aria-expanded={open}
+          style={{ ...btn(false), fontSize: 11, minHeight: 44, padding: "0 14px", width: "auto", flex: "0 0 auto" }}
+        >
+          {open ? "收合" : "詳情"}
         </button>
+        <button data-testid={`challenge-start-${c.key}`} onClick={onChallenge} disabled={busy !== null}
+          style={{ ...btn(true, busy !== null), width: "auto", flex: "1 1 0", minWidth: 0, whiteSpace: "nowrap" }}>
+          {busy === "run" ? "模擬中…" : "發起挑戰"}
+        </button>
+      </div>
+      <div style={{ display: "grid", gap: 7 }}>
         {open && (
           <div data-testid={`challenge-detail-body-${c.key}`} style={{ display: "grid", gap: 7, padding: "2px 2px 4px" }}>
             {c.doctrine && (
@@ -153,9 +217,6 @@ function OpponentCard({ c, busy, onChallenge, open, onToggle }) {
             ))}
           </div>
         )}
-        <button data-testid={`challenge-start-${c.key}`} onClick={onChallenge} disabled={busy !== null} style={btn(true, busy !== null)}>
-          {busy === "run" ? "模擬中…" : "發起挑戰"}
-        </button>
       </div>
     </div>
   );
@@ -351,7 +412,8 @@ export default function PlayerChallengeScreen({ onBack }) {
   const oppTactic = detail ? mobaTacticById(detail.instance.defenderTacticId) : null;
 
   return (
-    <ManageFrame title="玩家挑戰" subtitle="ASYNC UNRANKED" onBack={onBack}>
+    //  ⚠ wide：候選卡是拿來互相比較的，460px 只放得下一欄。
+    <ManageFrame title="玩家挑戰" subtitle="ASYNC UNRANKED" onBack={onBack} wide>
       <TierBanner />
 
       {/* ── 賽前決策：這一場要用哪一套戰術 ─────────────────────────────── */}
@@ -363,9 +425,15 @@ export default function PlayerChallengeScreen({ onBack }) {
         >
           {MOBA_TACTICS.map((t) => <option key={t.tacticId} value={t.tacticId}>{t.emoji} {t.name}</option>)}
         </select>
-        <div data-testid="challenge-entry-note" style={{ color: "#a1a1aa", fontSize: 11, marginTop: 8, lineHeight: 1.7 }}>
-          出賽用的是你**目前**的先發與英雄熟練，在發起挑戰的當下凍結。
-          換先發、練熟練之後，下一場就會生效。
+        {/* ⚠ 完整的凍結語意（快照／可重算）是系統規則，收進「挑戰規則」。
+            這裡只留玩家真的要知道的那一句。 */}
+        <div data-testid="challenge-entry-note" style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, minWidth: 0 }}>
+          <span style={{ color: "#a1a1aa", fontSize: 11 }}>本場使用目前的先發與熟練，發起時固定。</span>
+          <InfoHint title="出賽陣容什麼時候固定" testid="challenge-entry-hint">
+            <p>按下「發起挑戰」的那一刻，你當下的先發與英雄熟練就固定成這一場的內容。</p>
+            <p>之後換先發、練熟練都只影響<b>下一場</b>；這一場無論重看幾次都是同一個結果。</p>
+            <p>你在這裡選的戰術，同時也會成為別人挑戰你時的預設戰術。</p>
+          </InfoHint>
         </div>
       </div>
 
@@ -377,20 +445,25 @@ export default function PlayerChallengeScreen({ onBack }) {
             {board.candidates.length} 個候選
           </span>
         </div>
-        <div data-testid="challenge-fixture-disclaimer" style={{ color: "#a1a1aa", fontSize: 11, marginTop: 6, lineHeight: 1.7 }}>
-          目前是固定的練習對手，不是其他玩家的戰隊。對手不會即時反應，
-          他們用的是預先設定好的陣容與戰術。
-        </div>
+        {/* ⚠ 免責聲明搬進「挑戰規則」：它每次進來都一樣，但玩家只需要讀一次。 */}
         {board.coldStart && (
-          <div data-testid="challenge-coldstart-note" style={{ color: GC.gold, fontSize: 11, marginTop: 7, lineHeight: 1.7 }}>
-            你還沒有挑戰紀錄，所以多數候選標成「尚無足夠挑戰紀錄」。
-            打過幾場之後，分類會依你自己的實際戰績變準。
+          <div data-testid="challenge-coldstart-note" style={{ color: GC.gold, fontSize: 11, marginTop: 6, display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+            <span>還沒有挑戰紀錄，分類會隨你的戰績變準。</span>
+            <InfoHint title="候選是怎麼分類的" tone={GC.gold} testid="challenge-coldstart-hint">
+              <p>看板依<b>你自己打過的實際戰績</b>把對手分類，不是依戰力分數——
+                這個遊戲裡沒有任何一個數字能誠實代表戰力。</p>
+              <p>樣本不足時會標成「尚無足夠挑戰紀錄」，這是誠實的「還不知道」，
+                不是「這隊很弱」。同一支隊伍打過三場以上才會出現攻破率。</p>
+              <p>「再試一次」的場次<b>不計入</b>，否則重試就能把攻破率刷成任何數字。</p>
+            </InfoHint>
           </div>
         )}
-        <div data-testid="challenge-board" style={{ marginTop: 10, display: "grid", gap: 9 }}>
+        {/* ⚠ 桌機把候選排成兩欄：1366px 下單欄會讓整頁多捲一屏，
+            而候選卡本來就是拿來互相比較的——並排才比得動。 */}
+        <div data-testid="challenge-board" className="esmo-challenge-board" style={{ marginTop: 10 }}>
           {board.candidates.map((c) => (
             <OpponentCard
-              key={c.key} c={c} busy={busy}
+              key={c.key} c={c} busy={busy} index={board.candidates.indexOf(c)}
               open={openCard === c.key}
               onToggle={() => setOpenCard(openCard === c.key ? null : c.key)}
               onChallenge={() => challenge(c.key)}
@@ -415,14 +488,16 @@ export default function PlayerChallengeScreen({ onBack }) {
             )}
           </div>
           {busy === "run" && !result && (
-            <div data-testid="challenge-running" style={{ color: GC.blueL, fontSize: 12, marginTop: 8 }}>模擬進行中…（約需數秒）</div>
+            <div className="esmo-running" data-testid="challenge-running" style={{ color: GC.blueL, fontSize: 12, marginTop: 8 }}>模擬進行中…（約需數秒）</div>
           )}
           {result && (
             <>
-              <div data-testid="challenge-outcome" style={{ marginTop: 8, fontSize: 20, fontWeight: 900, color: result.outcome === "challengerWin" ? GC.green : GC.redL }}>
+              {/* ⚠ 模擬跑完是這一頁唯一真正的「事件」。給它一個短而明確的揭曉，
+                  但**不慶祝**——挑戰失敗也走同一個動態，不然就變成只在贏的時候有回饋。 */}
+              <div className="esmo-outcome" data-testid="challenge-outcome" style={{ marginTop: 8, fontSize: 20, fontWeight: 900, color: result.outcome === "challengerWin" ? GC.green : GC.redL }}>
                 {result.outcome === "challengerWin" ? "挑戰成功" : result.outcome === "defenderWin" ? "挑戰失敗" : "未分勝負"}
               </div>
-              <div data-testid="challenge-score" style={{ color: "#d4d4d8", fontSize: 12, marginTop: 6, fontFamily: MONO }}>
+              <div className="esmo-score" data-testid="challenge-score" style={{ color: "#d4d4d8", fontSize: 12, marginTop: 6, fontFamily: MONO }}>
                 擊殺 {result.score.challenger} : {result.score.defender}　時長 {Math.round(result.durationSec / 60)} 分
               </div>
 
@@ -537,9 +612,17 @@ export default function PlayerChallengeScreen({ onBack }) {
         )}
       </div>
 
-      <div data-testid="challenge-authority-note" style={{ ...label, color: "#52525b", lineHeight: 1.7, padding: "0 2px 8px" }}>
-        目前挑戰在本機結算（{SNAPSHOT_AUTHORITY.kind}），尚未連上伺服器，也還沒有防作弊機制。
-        看板上的「你挑戰過幾次」只統計這個存檔自己的紀錄，不是全服資料。
+      {/* ⚠ 原本是 #52525b 的小灰字：對比不足，實際上等於沒人讀得到——
+          而它講的正是「還沒有防作弊機制」這種**該讓人看到**的事。
+          ⇒ 完整內容進「挑戰規則」，這裡只留一行對比足夠的狀態。 */}
+      <div data-testid="challenge-authority-note" style={{ display: "flex", alignItems: "center", gap: 4, padding: "0 2px 8px", flexWrap: "wrap" }}>
+        <span style={{ ...label, color: "#a1a1aa" }}>本機結算・尚未連上伺服器</span>
+        <InfoHint title="紀錄的範圍與限制" testid="challenge-authority-hint">
+          <p>目前挑戰在<b>本機</b>結算（{SNAPSHOT_AUTHORITY.kind}），尚未連上伺服器，
+            也還沒有防作弊機制。</p>
+          <p>看板上的「你挑戰過幾次」只統計<b>這個存檔自己</b>的紀錄，不是全服資料。
+            換一個存檔就會從零開始。</p>
+        </InfoHint>
       </div>
     </ManageFrame>
   );

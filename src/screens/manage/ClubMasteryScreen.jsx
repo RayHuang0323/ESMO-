@@ -31,6 +31,9 @@ import { DOCTRINES, doctrineById } from "../../platform/mastery/doctrine.js";
 import { variantById, variantsOfDoctrine } from "../../platform/mastery/tacticVariant.js";
 import { mobaTacticById } from "../../platform/contracts/MobaTacticConfig.js";
 import { ESMO_CSS_VARS } from "../../ui/designSystem.js";
+//  UI Clarity Pass v1：規則不常駐在主卡上。
+import { InfoHint } from "../../ui/Disclosure.jsx";
+import { GC } from "../../ui/theme.js";
 import "./clubMastery.css";
 
 /**
@@ -83,6 +86,29 @@ function DoctrineMark({ id, size }) {
       strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       {DOCTRINE_MARK[id] ?? <circle cx="12" cy="12" r="7.6" />}
     </svg>
+  );
+}
+
+/**
+ * 專精規則的**唯一**入口。
+ *
+ * ⚠ 這些以前是主卡上的一行長句 ＋ 清單前的一段說明。兩段都在講同一件事
+ *   （「基礎戰術永遠可用、變體是交換不是升級」），而且都不是玩家
+ *   **當下要做決策**才需要知道的——他要決定的是「走哪一條」。
+ */
+function MasteryRules({ activeName = null }) {
+  return (
+    <InfoHint title="專精規則" icon="help" text="規則說明" testid="mastery-rules" tone={GC.gold}>
+      <p><b>只有進行中的那一條會累積</b><br />
+        {activeName ? `目前是「${activeName}」：只有這條流派的比賽會累積專精，` : "選定一條之後，只有那條流派的比賽會累積專精，"}
+        也只有它的變體能在賽前選用。</p>
+      <p><b>切換免費，進度不會消失</b><br />
+        隨時可以改打別條，不花任何點數。已經累積的進度<b>永久保留</b>，
+        改回來就接著算——選錯不會被懲罰，代價只是「同一時間只有一條在推進」。</p>
+      <p><b>八套基礎戰術永遠可用</b><br />
+        專精解鎖的是<b>變體</b>：它換到某些東西，同時也付出代價。
+        不是更強的版本，是另一種打法。沒有解鎖任何變體也打得完整場遊戲。</p>
+    </InfoHint>
   );
 }
 
@@ -315,14 +341,14 @@ export default function ClubMasteryScreen({ onBack }) {
           <div className="cm__hero-claim">
             {active
               ? active.doctrine.claim
-              : "選一條流派，之後的比賽才會開始累積專精。切換免費，進度永久保留。"}
+              : "選一條流派開始累積。"}
           </div>
+          {/* ⚠ 這裡以前是一整句系統規則（只有這條會累積／切換免費／進度保留）。
+              那是玩家**想了解時**才需要的，不是選流派時要先讀的 ⇒ 收進「規則說明」。
+              留在第一層的只有：狀態、以及「暫停累積」這個真的會用到的操作。 */}
           <div className="cm__hero-rule">
-            {active
-              ? `只有「${active.doctrine.zh}」的比賽會累積專精，也只有它的變體能在賽前選用。切換免費，已累積的進度永久保留。`
-              : "目前沒有任何流派在累積。往下挑一條開始。"}
-            {/*  V1 的「點現行流派＝取消選定」在 V2 沒有了（hero 不是按鈕），
-                 所以把那條功能明確留在這裡——不常用，但不能悄悄消失。 */}
+            {!active && "還沒有流派在累積。往下挑一條開始。"}
+            <MasteryRules activeName={active ? active.doctrine.zh : null} />
             {active && (
               <button type="button" className="cm__hero-pause"
                 data-testid="doctrine-clear" onClick={() => setDoctrine(null)}>
@@ -355,10 +381,11 @@ export default function ClubMasteryScreen({ onBack }) {
           </div>
         )}
 
-        {/*  ⚠ 刻意放在流派清單之前：玩家看到「解鎖」會以為有東西被鎖住。 */}
+        {/*  ⚠ 「八套基礎戰術永遠可用」這件事**必須**讓玩家知道（看到「解鎖」
+             會以為有東西被鎖住），但它是一次性的認知，不需要每次進來都佔一段。
+             ⇒ 濃縮成一行，完整版在「規則說明」裡。 */}
         <div className="cm__note cm-rise" style={{ "--cm-delay": "150ms" }} data-testid="mastery-basic-note">
-          <strong>八套基礎戰術永遠可用。</strong>
-          專精解鎖的是變體：它換到某些東西，同時也付出代價——不是更強的版本，是另一種打法。
+          <strong>八套基礎戰術永遠可用</strong>　專精解鎖的是變體：交換，不是升級。
         </div>
         </div>
 

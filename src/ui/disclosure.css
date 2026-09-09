@@ -1,0 +1,184 @@
+/* ============================================================================
+   ui/disclosure.css — 漸進式說明的樣式與動態（UI Clarity Pass v1）
+
+   ⚠ 所有動態都包在 `@media (prefers-reduced-motion: no-preference)` 裡。
+     預設是**沒有動畫**的靜態樣式，動畫是加上去的 —— 反過來寫（先寫動畫、
+     再用 reduce 關掉）很容易漏掉某一條，而漏掉的那條沒有人會發現。
+   ⚠ 動態只用來：提示狀態改變、建立層級、給回饋。不做裝飾性的持續動畫。
+   ============================================================================ */
+
+/* ── 觸發點 ───────────────────────────────────────────────────────────── */
+.esmo-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0.72;
+}
+.esmo-hint:hover,
+.esmo-hint:focus-visible { opacity: 1; background: rgba(255, 255, 255, 0.06); }
+/* ⚠ 鍵盤焦點必須看得見，而且不能只靠顏色 —— 用外框。 */
+.esmo-hint:focus-visible,
+.esmo-exp__btn:focus-visible { outline: 2px solid #93c5fd; outline-offset: 2px; }
+.esmo-hint__text { text-decoration: underline dotted; text-underline-offset: 3px; }
+
+/* ── 桌機 popover ─────────────────────────────────────────────────────── */
+.esmo-pop {
+  position: fixed;
+  z-index: 4000;
+  width: min(360px, calc(100vw - 20px));
+  max-height: min(60vh, 460px);
+  display: flex;
+  flex-direction: column;
+  background: #18181b;
+  border: 1px solid #3f3f46;
+  border-radius: 10px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+}
+.esmo-pop__head,
+.esmo-sheet__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 8px 12px;
+  border-bottom: 1px solid #27272a;
+}
+.esmo-pop__title,
+.esmo-sheet__title {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 800;
+  color: #e4e4e7;
+  letter-spacing: 0.04em;
+}
+.esmo-pop__x,
+.esmo-sheet__x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  margin: -10px -8px -10px 0;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: #a1a1aa;
+  cursor: pointer;
+}
+.esmo-pop__x:hover,
+.esmo-sheet__x:hover { color: #fafafa; background: rgba(255, 255, 255, 0.07); }
+.esmo-pop__body,
+.esmo-sheet__body {
+  overflow-y: auto;
+  padding: 10px 12px 12px;
+  font-size: 12px;
+  line-height: 1.75;
+  color: #d4d4d8;
+}
+.esmo-pop__body p,
+.esmo-sheet__body p { margin: 0 0 8px; }
+.esmo-pop__body p:last-child,
+.esmo-sheet__body p:last-child { margin-bottom: 0; }
+.esmo-pop__body b,
+.esmo-sheet__body b { color: #fafafa; }
+
+/* ── 手機 bottom sheet ────────────────────────────────────────────────── */
+.esmo-sheet-root { position: fixed; inset: 0; z-index: 4000; }
+.esmo-sheet-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); }
+.esmo-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 78vh;
+  display: flex;
+  flex-direction: column;
+  background: #18181b;
+  border-top: 1px solid #3f3f46;
+  border-radius: 14px 14px 0 0;
+  /* ⚠ safe-area：不可以壓到 home indicator / 手勢區。 */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-shadow: 0 -14px 40px rgba(0, 0, 0, 0.6);
+}
+.esmo-sheet__grip {
+  width: 36px;
+  height: 4px;
+  margin: 8px auto 2px;
+  border-radius: 2px;
+  background: #52525b;
+}
+
+/* ── 就地展開 ─────────────────────────────────────────────────────────── */
+.esmo-exp { width: 100%; }
+.esmo-exp__btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 2px;
+  background: transparent;
+  border: 0;
+  color: #a1a1aa;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+}
+.esmo-exp__btn:hover { color: #e4e4e7; }
+.esmo-exp__chev { display: inline-flex; }
+.esmo-exp__label { flex: 1; min-width: 0; }
+.esmo-exp__count {
+  font-size: 10px;
+  color: #71717a;
+  font-variant-numeric: tabular-nums;
+}
+.esmo-exp__body { padding: 2px 0 6px; }
+
+/* ── 狀態 chip ────────────────────────────────────────────────────────── */
+.esmo-chiprow { display: flex; flex-wrap: wrap; align-items: center; }
+.esmo-chip {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  border: 1px solid;
+  border-radius: 5px;
+  line-height: 1.45;
+}
+
+/* ── 動態（只在使用者沒有要求減少動態時才有）──────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  .esmo-hint { transition: opacity 0.14s ease, background-color 0.14s ease; }
+  .esmo-pop { animation: esmo-pop-in 0.16s cubic-bezier(0.16, 1, 0.3, 1); }
+  .esmo-sheet-scrim { animation: esmo-fade-in 0.16s ease; }
+  .esmo-sheet { animation: esmo-sheet-in 0.24s cubic-bezier(0.16, 1, 0.3, 1); }
+  .esmo-exp__chev { transition: transform 0.18s ease; }
+  .esmo-exp__chev.is-open { transform: rotate(180deg); }
+  .esmo-exp__body.is-open { animation: esmo-exp-in 0.18s ease; }
+  .esmo-pop__x, .esmo-sheet__x { transition: color 0.14s ease, background-color 0.14s ease; }
+}
+/* 減少動態時，展開狀態仍要看得出來 —— 用靜態的方向，不用旋轉動畫。 */
+@media (prefers-reduced-motion: reduce) {
+  .esmo-exp__chev.is-open { transform: rotate(180deg); }
+}
+
+@keyframes esmo-pop-in { from { opacity: 0; transform: translateY(-4px) scale(0.98); } }
+@keyframes esmo-fade-in { from { opacity: 0; } }
+@keyframes esmo-sheet-in { from { transform: translateY(14px); opacity: 0; } }
+@keyframes esmo-exp-in { from { opacity: 0; transform: translateY(-3px); } }
+
+/* ── 挑戰看板：桌機兩欄 ────────────────────────────────────────────────
+   ⚠ 候選卡本來就是拿來互相比較的。1366px 下排成單欄，整頁會多捲一屏，
+     而且沒有任何一組卡片能同時進入視野 —— 比不動就等於沒有在選。 */
+.esmo-challenge-board { display: grid; gap: 9px; grid-template-columns: 1fr; }
+@media (min-width: 860px) {
+  .esmo-challenge-board { grid-template-columns: 1fr 1fr; gap: 10px; }
+}
