@@ -12,6 +12,9 @@
 //  ⚠ 不用固定 sleep 等模擬（會變成「機器夠快才會綠」）⇒ 輪詢。
 // ============================================================================
 import { runGate, finishGate } from "./browser/harness.mjs";
+//  ⚠ 從**本機原始碼**讀目前版本，拿去比對正式站存下來的值。
+//    這正是要抓的東西：部署沒生效 ⇒ 正式站記的還是舊版號 ⇒ 這裡會紅。
+import { MOBA_SIMULATION_VERSION } from "../src/platform/contracts/simulationVersion.js";
 
 const J = (raw) => JSON.parse(String(raw).replace(/^"|"$/g, ""));
 const PROD = "https://rayhuang0323.github.io/ESMO-/";
@@ -203,9 +206,80 @@ const result = await runGate({
       v = J(await chrome.evaluate(readScreen()));
       ck(`${L}｜⑦ reload 後看得到同一場結果`, /挑戰成功|挑戰失敗|未分勝負/.test(v.outcome), v.outcome);
 
-      // ── ⑧ 版面 ───────────────────────────────────────────────────────
-      ck(`${L}｜⑧ 不造成水平溢出`, v.overflow === false);
-      if (mobile) ck(`${L}｜⑧ 本頁互動元素都 ≥44px`, v.smallCount === 0, v.small.join(",") || "clean");
+      // ── ⑧ 這一場的選角（Slice 5）─────────────────────────────────────
+      //  ⚠ 對手不在線：畫面必須說「依預存選角方針回應」，
+      //    不得寫成「等待對手 Ban/Pick」那種假的即時感。
+      const draftUi = J(await chrome.evaluate(`
+        const box = document.querySelector('[data-testid="challenge-draft"]');
+        if (!box) return JSON.stringify({ ok: false });
+        const t = (s) => (document.querySelector('[data-testid="' + s + '"]')?.innerText || "");
+        return JSON.stringify({
+          ok: true, text: box.innerText || "",
+          mine: t("challenge-draft-mine"), opp: t("challenge-draft-opponent"),
+          note: t("challenge-draft-async-note"), compare: t("challenge-draft-compare"),
+        });
+      `));
+      ck(`${L}｜⑧ 看得到這一場的選角面板`, draftUi.ok === true);
+      ck(`${L}｜⑧ 我方五個席位都有英雄`,
+        ["b1", "b2", "b3", "b4", "b5"].every((s) => (draftUi.mine || "").includes(s)));
+      ck(`${L}｜⑧ 對手五個席位都有英雄`,
+        ["r1", "r2", "r3", "r4", "r5"].every((s) => (draftUi.opp || "").includes(s)));
+      ck(`${L}｜⑧ 英雄顯示的是名字不是 id`,
+        !/\b(ironclad|duskblade|bingshuang)\b/.test(draftUi.mine + draftUi.opp),
+        (draftUi.mine || "").replace(/\s+/g, " ").slice(0, 60));
+      ck(`${L}｜⑧ 明說對手是依預存方針回應、且不在線上`,
+        /預存選角方針/.test(draftUi.note) && /不在線上|不是即時/.test(draftUi.note), draftUi.note);
+      ck(`${L}｜⑧ **不出現**「等待對手」這種假的即時感`,
+        !/等待對手|對手正在|思考中/.test(draftUi.text));
+      ck(`${L}｜⑧ 有賽後「方針 vs 實際」對照`,
+        /他拿到了|被我禁掉|被我先選走|沒拿到/.test(draftUi.compare), (draftUi.compare || "").slice(0, 50));
+
+      // ── ⑧b 模擬版本閘門（正式站實測）───────────────────────────────
+      //  ⚠ 這一段原本只活在 scratchpad 的一次性腳本裡。
+      //    只在 scratchpad 存在的關鍵驗證＝下一次沒有人會跑＝等於沒有驗證。
+      const verBefore = J(await chrome.evaluate(`
+        const raw = localStorage.getItem("esmo.profile.v1");
+        if (!raw) return JSON.stringify({ ok: false, why: "沒有存檔" });
+        const st = JSON.parse(raw).challenge || {};
+        const ids = st.order || [];
+        const vs = ids.map((id) => st.instances?.[id]?.simulationVersion).filter(Boolean);
+        const drafts = ids.map((id) => st.instances?.[id]?.draftResult?.hash).filter(Boolean);
+        return JSON.stringify({ ok: true, n: ids.length, versions: [...new Set(vs)], drafts: drafts.length, firstId: ids[0] || null });
+      `));
+      ck(`${L}｜⑧b precondition：正式站真的存下了挑戰場次`,
+        verBefore.ok === true && verBefore.n > 0, `${verBefore.n} 場`);
+      ck(`${L}｜⑧b 正式站記錄的是目前的模擬版本`,
+        verBefore.versions.length === 1 && verBefore.versions[0] === MOBA_SIMULATION_VERSION,
+        `${verBefore.versions.join(",")} vs 本機 ${MOBA_SIMULATION_VERSION}`);
+      ck(`${L}｜⑧b 每一場都凍結了自己的 DraftResult`,
+        verBefore.drafts === verBefore.n, `${verBefore.drafts}/${verBefore.n}`);
+
+      //  把其中一場改成舊版號 ⇒ 重播必須被**明確拒絕**，不得靜默用新規則重算。
+      const forged = J(await chrome.evaluate(`
+        const raw = localStorage.getItem("esmo.profile.v1");
+        const save = JSON.parse(raw);
+        const id = save.challenge.order[0];
+        save.challenge.instances[id].simulationVersion = "moba-sim.v1";
+        localStorage.setItem("esmo.profile.v1", JSON.stringify(save));
+        return JSON.stringify({ ok: true, id });
+      `));
+      ck(`${L}｜⑧b 偽造得出一筆舊版本紀錄`, forged.ok === true);
+      await chrome.navigate(url); await sleep(2600);
+      if (mobile) await chrome.evaluate(clickByText("更多"));
+      await chrome.evaluate(clickByText("玩家挑戰"));
+      await sleep(700);
+      await chrome.evaluate(clickBy(`[data-testid="challenge-history-${forged.id}"]`));
+      await chrome.evaluate(clickBy('[data-testid="challenge-verify-btn"]'));
+      const refused = await waitFor(chrome, sleep, readScreen, (x) => !!x.verifyText, 60000);
+      ck(`${L}｜⑧b 舊版本紀錄的重播被拒絕（不是靜默重算）`,
+        !/完全一致/.test(refused.value?.verifyText ?? ""), refused.value?.verifyText || "(逾時)");
+      ck(`${L}｜⑧b 拒絕理由明講是模擬版本不符`,
+        /模擬語意|模擬版本|不可重播/.test(refused.value?.verifyText ?? ""), refused.value?.verifyText || "");
+
+      // ── ⑧c 版面 ─────────────────────────────────────────────────────
+      v = J(await chrome.evaluate(readScreen()));
+      ck(`${L}｜⑧c 不造成水平溢出`, v.overflow === false);
+      if (mobile) ck(`${L}｜⑧c 本頁互動元素都 ≥44px`, v.smallCount === 0, v.small.join(",") || "clean");
 
       // ── ⑨ CS 入口未被破壞（只確認入口，不重跑 Codex 全套）───────────
       await chrome.navigate(url); await sleep(2600);

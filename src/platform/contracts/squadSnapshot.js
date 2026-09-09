@@ -36,13 +36,16 @@
 //      eng.configureSpells(...)            ← ⑥ 召喚師技能      ⟋
 //      eng.configureMatch(...)             ← ⑦ 戰術 → 行為權重
 //
-//  目前涵蓋 ②③⑦（①由 ChallengeInstance 持有），**④⑤⑥ 仍未涵蓋**。
-//  ⚠ 這不是偷偷略過：`capturedInputs` 會把涵蓋範圍寫進快照本身，
-//    重播驗證器只允許使用被宣告過的輸入。
-//  ⚠ Slice 4 起，`standingOrders.draftPolicy`（非同步選角方針）**已經凍進快照
-//    並納入雜湊**，但**刻意還沒**列入 `capturedInputs` ⇒ 它還不是戰鬥輸入。
-//    把它接上要 bump `MOBA_SIMULATION_VERSION`，那會讓既有挑戰的重播全部失效，
-//    是一扇單向門。⇒ 形狀先凍對，開啟留給下一輪。
+//  Slice 5 起 **②③④⑤⑥⑦ 全部涵蓋**（①由 ChallengeInstance 持有）。
+//  ⚠ 這不是偷偷加上去的：`capturedInputs` 會把涵蓋範圍寫進快照本身，
+//    runner 只允許使用被宣告過的輸入 —— 兩個方向都擋：
+//    宣告了卻沒接上 ⇒ 拒跑；沒宣告卻想注入 ⇒ 那段程式碼根本進不去。
+//  ⚠ ④⑤⑥ 的來源是 `standingOrders.draftPolicy` 解出來的 `DraftResult.v1`
+//    （凍在 `ChallengeInstance` 上，一場一份）。走這條路而不是把英雄直接
+//    寫進快照，是因為**同一支隊伍面對不同對手會選不同的英雄**——
+//    選角是「這一場」的事，隊伍才是快照的事。
+//  ⚠ 接上這件事是一扇單向門：已 bump `MOBA_SIMULATION_VERSION` → `moba-sim.v3`，
+//    `moba-sim.v1` / `v2` 的歷史挑戰從此不可重播（由 `canReplay` 明確拒絕）。
 //
 //  ── 正規化（I13）────────────────────────────────────────────────────────
 //  `condition` / `morale` / `energy` 在 `LogicEngine.js` 出現 **0 次**，
@@ -61,22 +64,30 @@ export const SNAPSHOT_INPUTS = Object.freeze({
   heroLoadout: "heroLoadout",   // new LogicEngine(seed, loadout)（英雄熟練）
   tactic: "tactic",             // configureMatch（戰術 → 行為權重）
   lineup: "lineup",             // 席位指派本身
-  //  Slice 4：非同步選角方針（見 `challenge/draftPolicy.js`）。
-  //  ⚠ **已凍進快照並納入雜湊，但尚未列入 `SLICE1_CAPTURED_INPUTS`**
-  //    ⇒ runner 目前不會呼叫 configureHeroes / Archetypes / Spells。
-  //    把它接成戰鬥輸入要 bump `MOBA_SIMULATION_VERSION`，那會讓既有挑戰
-  //    的重播全部失效——是一扇單向門，該有自己的一輪與 closure gate。
-  //    現在先把形狀凍對，日後開啟只需要「加進 capturedInputs ＋ 呼叫三個
-  //    configure ＋ bump 版本」，快照形狀不必再變。
+  //  非同步選角方針（見 `challenge/draftPolicy.js`）。
+  //  ⚠ Slice 5 起**已經是真正的戰鬥輸入**：這一場由方針解出 `DraftResult.v1`，
+  //    runner 據此呼叫 configureHeroes / Archetypes / Spells。
+  //  ⚠ 快照裡凍的是**方針**（意圖），不是**結果**（這一場實際拿到誰）。
+  //    結果凍在 `ChallengeInstance.draftResult` 上，一場一份——
+  //    因為同一份方針面對不同的挑戰方決策會解出不同的結果。
   draftPolicy: "draftPolicy",
 });
 
-/** Slice 1 涵蓋的輸入。⚠ 未涵蓋：heroPick / archetypes / spells（Slice 2）。 */
+/**
+ * 目前涵蓋的引擎輸入。
+ *
+ * ⚠ Slice 5 起加入 `draftPolicy`：非同步選角**已經真的進引擎**
+ *   （runner 會呼叫 configureHeroes / configureArchetypes / configureSpells）。
+ *   這是一扇單向門，同時 bump 了 `MOBA_SIMULATION_VERSION` → `moba-sim.v3`。
+ * ⚠ 名稱保留 `SLICE1_` 是為了不動所有既有呼叫端；它的語意一直都是
+ *   「**目前**涵蓋哪些輸入」，不是「Slice 1 當時涵蓋哪些」。
+ */
 export const SLICE1_CAPTURED_INPUTS = Object.freeze([
   SNAPSHOT_INPUTS.lineup,
   SNAPSHOT_INPUTS.playerStats,
   SNAPSHOT_INPUTS.heroLoadout,
   SNAPSHOT_INPUTS.tactic,
+  SNAPSHOT_INPUTS.draftPolicy,
 ]);
 
 /** 引擎席位（藍方語彙；紅方由 runner 在組裝時對映）。 */

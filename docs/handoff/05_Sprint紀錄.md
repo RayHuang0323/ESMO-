@@ -19122,3 +19122,135 @@ regress 結束率 15/15 ｜ regress2 節奏門檻 8/8 ｜ npm run build ✓
 ```
 
 ⚠ 本輪**沒有**開始 Draft combat input（Owner 明令）。
+
+---
+
+## Player Challenge v1 — MOBA Slice 5：Async Draft Combat Integration + Replay Closure
+
+基線 `4e20c4c`。本輪把 **Draft 從「凍在快照裡的一個欄位」變成真正的戰鬥輸入**，
+並為此開新的模擬版號 `moba-sim.v3`。這是一扇單向門：v1／v2 的歷史挑戰從此不可重播。
+
+### 1. `DraftResult.v1`：這一場實際發生的 Ban/Pick
+
+`src/platform/challenge/draftResult.js`（新檔）。與 `DraftPolicy.v1` 是兩件事：
+
+| | 是什麼 | 凍在哪 | 一份對多少場 |
+|---|---|---|---|
+| `DraftPolicy.v1` | 防守方的**意圖／偏好** | `SquadSnapshot` | 一份可被很多場重複使用 |
+| `DraftResult.v1` | **這一場實際發生的** Ban/Pick ＋ 最終席位 | `ChallengeInstance` | 一場一份 |
+
+**為什麼要凍結而不是每次重算**：重算需要同一份 policy、同一份英雄池、
+同一套解算程式碼。前兩者凍得住，第三者凍不住——解算規則日後一定會調。
+⇒ 凍結之後重播只要「照當初的結果組陣容」，不必也不可以再解一次。
+與 `matchSeed` 凍結是同一個道理。
+
+**沒有第二套真相來源**：席位指派用既有的 `assignDraft`（純函式、窮舉 5!、
+字典序平手 ⇒ 本來就完全決定性）；補位用既有的 `nextDefenderAction`；
+英雄查表一律注入。`BanPickScreen.jsx` **一行未動**。
+
+### 2. 接進引擎：`challengeRunner` 呼叫三支既有的 configure
+
+```
+DraftResult.assignment  →  draftResultToRoster  →  { configureHeroes,
+                                                     configureArchetypes,
+                                                     configureSpells }
+```
+
+三支都是 `useLocalServer.start()` 用的**同一組**轉換點，不是為 Challenge 另寫的。
+差別只在資料來源：正式生涯走 Ban/Pick 畫面，Challenge 走凍結的 `DraftResult`。
+三支都關在 `if (draftDeclared)` 裡——沒宣告選角的舊快照一律不注入。
+
+### 3. ⭐ 反向測試（本輪的驗收門檻）
+
+保持**快照／matchSeed／戰術／對手／模擬版本全部相同**，只換一個合法的
+Draft outcome：
+
+```
+A（依方針補位）  challengerWin  1512 秒  12–7
+B（玩家自己選）  defenderWin    1344 秒   3–13
+```
+
+⇒ 有可觀測差異，才敢說 Draft 是 combat input。
+`check_player_challenge_slice5` §① 把這條釘死；把三支 configure 拆掉之後，
+它會退化成 `challengerWin/1253s/14:7 vs challengerWin/1253s/14:7` 並變紅。
+
+### 4. 順手抓到三個**靜默失效**的既有缺陷
+
+這三個都不會報錯、不會變紅，只會安靜地讓某條規則失效：
+
+1. **`draftPolicy.js` 自己另立了一套英文路名**（`{b1:"top", …, b4:"bot", b5:"bot"}`），
+   而注入的 `laneOf` 讀的是 `heroDatabase.lane`（**中文**路名）
+   ⇒ `byRole` 補位**一次都沒命中過**，全部退化成「取可用池第一個」。
+   已改成引用 `matchLineup.SEAT_LANE_ZH`（唯一那張表），並順手修掉 b4/b5 都對到 "bot"。
+2. **解算順序給了 AI 先手**：初版先解防守方，於是玩家只要沒手動 Ban/Pick，
+   對手就等於整池先挑。實測讓新存檔的合理候選勝率掉到 19%。
+   已改成挑戰方先手（藍方先手 = 正常順序），防守方才是「回應」。
+3. **預設方針是一份空方針**：五個 fixture 對手都有人工編寫的方針，玩家沒有
+   ⇒ 對手成套、玩家撿剩的。已改成「打我們自己真的在練的那五隻」
+   （資料來自既有的 `heroAssign`，不新增真相來源）。
+   修完之後合理候選勝率 **19% → 38%**，難度梯度仍在。
+
+另外修掉畫面上一個一直存在的 bug：`heroById` 是**函式**不是物件，
+`heroById?.[id]?.name` 永遠是 undefined ⇒ 英雄名一律退化成英文 id。
+
+### 5. `moba-sim.v3` ＋ 語意清單擴充
+
+選角一旦成為戰鬥輸入，**決定選角的檔案就是 simulation semantics**。
+新增 8 支：`draftPolicy` `draftResult` `mobaDraftAssignment` `mobaHeroProfile`
+`mobaHeroLoadout` `heroCombatArchetypes` `heroClassification` `matchLineup`。
+
+`heroDatabase.js` **刻意不收**（150 KB、日常文案編輯對象，收了會把閘門訓練成雜訊），
+改列進 `KNOWN_TRANSITIVE_GAPS` 並註明**只有三個欄位**會改變結果：
+`arch`、`lane`、`P/Q/W/E/R` 技能**名稱**（`heroTags` 的關鍵字比對）。
+改 `stats` / `skills.desc` / `title` / `color` 不會——組裝路徑一個字都沒讀它們。
+
+v1／v2 的指紋與版號**保留不刪**（歷史憑據），`canReplay` 對它們明確拒絕。
+
+### 6. Slice 5 verifier 的**反向證明**
+
+Owner 要求「omit 任何一塊都要紅」。逐項拆掉接線實測：
+
+| 拆掉什麼 | 結果 |
+|---|---|
+| A 三支 configure | 68/71 FAIL，⭐ 反向測試退化成兩場逐值相同 |
+| B `draft_missing` 護欄 | 70/71 FAIL |
+| C `draftResultToRoster` 不給英雄 | 69/71 FAIL，⭐ 反向測試同樣退化 |
+| D 快照不宣告 `draftPolicy` | 4 條紅（含 ⭐） |
+
+四項全部變紅，還原後回到 71/71 PASS。
+
+### 7. 本輪**刻意沒做**：玩家手動 Ban/Pick 的畫面
+
+契約層已經備好：`startFixtureChallenge` / `retryChallenge` 都收 `challengerActions`，
+`createDraftResult` 會優先採用玩家自己選的、只補不足的部分。
+**但畫面上還沒有讓玩家逐手選的 UI** —— 目前玩家這一側走的是
+「打我們自己真的在練的那五隻」（快照裡的預設方針）。
+
+⚠ 這是**範圍**問題不是缺陷：Owner 明令不大改 Career Ban/Pick，
+而做一套挑戰專用的逐手選角畫面是獨立的一輪。接上去時**不必改契約**，
+只要把玩家的選擇當成 `challengerActions` 傳進來。
+
+### 8. 沒做的事（Owner 明令）
+
+Ranked／Pricing Authority／Cap／Bracket／LadderRating／CS Challenge／
+真伺服器／Club Points 獎勵／monetization 一律未動。
+`src/battle/fps/`、`src/screens/fps/`、CS audio/camera/combat、CS Match runtime 一行未改。
+
+### 驗證結果
+
+```
+check_player_challenge_slice5           71/71  PASS   ← 新增（含 ⭐ 反向測試）
+check_player_challenge_slice4           60/60  PASS   ← ⑤⑥ 反轉為「接上了」
+check_player_challenge_slice3          100/100 PASS   ← 首局勝率 38%（修正前 19%）
+check_player_challenge_slice2           72/72  PASS   ← 新增「reload 後 DraftResult 還在」
+check_player_challenge_slice1          108/108 PASS   ← ⑦ 反轉為「三支 configure 都要在且關在條件裡」
+check_simulation_version_gate           51/51  PASS
+regress 結束率 15/15（21.9 分／19.1 擊殺／hot 58%，與 v2 基線逐項相同）
+regress2 節奏門檻 8/8
+npm run build ✓
+browser_check_player_challenge_slice5（桌機 1366 ＋ 手機 390）
+```
+
+⚠ **未經瀏覽器實測的項目**：正式站 smoke（`browser_check_prod_player_challenge`
+新增的 ⑧／⑧b 兩節）——本輪不 push、不 deploy，所以那兩節只通過語法檢查，
+要等下一次 release checkpoint 才會真的跑到。

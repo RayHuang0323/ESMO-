@@ -242,8 +242,10 @@ ck("§D2 只 bump 版號但不登記指紋 ⇒ 仍然不通過",
   ck("§H 舊版本仍留在已知清單裡（歷史憑據不刪）", KV.includes("moba-sim.v1"));
   const old = cr("moba-sim.v1");
   ck("§H 以 moba-sim.v1 記錄的挑戰**不可重播**", old.ok === false, old.reason);
+  //  ⚠ 兩個版號都從常數／清單推導，不寫字面值：
+  //    寫死的話每次 bump 都會假紅，而假紅會訓練人去放寬斷言。
   ck("§H 拒絕理由明講是版本不符（不是靜默重算）",
-    /moba-sim.v1/.test(old.reason ?? "") && /moba-sim.v2/.test(old.reason ?? ""), old.reason);
+    old.reason?.includes("moba-sim.v1") && old.reason?.includes(MOBA_SIMULATION_VERSION), old.reason);
   ck("§H 目前版本自己可重播", cr(MOBA_SIMULATION_VERSION).ok === true);
 }
 

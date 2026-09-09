@@ -86,6 +86,11 @@ import { publishDefensiveSnapshot, PUBLISH_REASONS, SNAPSHOT_AUTHORITY, SNAPSHOT
 import { buildChallengeBoard } from "./challenge/challengeBoard.js";
 import { createChallengeInstance, CHALLENGE_KINDS } from "./contracts/challengeInstance.js";
 import { runChallenge } from "./challenge/challengeRunner.js";
+//  Slice 5：非同步 Draft。⚠ 席位指派沿用既有的 assignDraft，不另寫一套。
+import { createDraftResult, draftComparisonRows } from "./challenge/draftResult.js";
+import { assignDraft } from "../battle/moba/mobaDraftAssignment.js";
+import { heroTags } from "../data/heroClassification.js";
+import { CHAMPIONS_100, heroById } from "../data/heroDatabase.js";
 import { fixtureSnapshot, FIXTURE_OPPONENTS, fixtureOpponentByKey, fixtureOpponentProvider } from "./challenge/fixtureOpponents.js";
 //  Club Progression v1：Club XP／Club Level 的唯一權威（純函式，等級一律推導）。
 import {
@@ -3892,7 +3897,7 @@ export const useProfileStore = create((rawSet, get) => {
    *   連點就會在落盤之前跑第二場。
    * ⚠ `matchSeed` 在這裡取一次就凍結，之後任何路徑都只讀。
    */
-  startFixtureChallenge(opponentKey, { tacticId = null, heroProgress = null } = {}) {
+  startFixtureChallenge(opponentKey, { tacticId = null, heroProgress = null, challengerActions = [] } = {}) {
     const st = get();
     const cur = st.challenge ?? emptyChallengeState();
     const def = fixtureOpponentByKey(opponentKey);
@@ -3909,9 +3914,18 @@ export const useProfileStore = create((rawSet, get) => {
     const fx = fixtureSnapshot(opponentKey, { playerMasteryLevel: get()._playerMasteryLevel(heroProgress) });
     if (!fx.ok) return { ok: false, errors: fx.errors };
 
+    //  ── Slice 5：Ban/Pick 在**這裡**發生，一次，然後凍結 ──────────────────
+    //  ⚠ 對手不在線，他出的是快照裡凍結的 DraftPolicy——所以畫面必須說
+    //    「對手依預存選角方針回應」，不可假裝有人在對面即時 Ban/Pick。
+    const dr = get()._resolveDraft({
+      challengerSnapshot: entry.snapshot, defenderSnapshot: fx.snapshot, challengerActions,
+    });
+    if (!dr.ok) return { ok: false, errors: dr.errors };
+
     const built = createChallengeInstance({
       challenger: entry.snapshot,
       defender: fx.snapshot,
+      draftResult: dr.draft,
       challengerTacticId: entry.snapshot.standingOrders.tacticId,
       //  ⚠ **權威層一次性取得**的亂數。不是內容推導 —— 同樣兩份快照可以打第二場。
       seedSource: (Math.random() * 0x7fffffff) >>> 0,
@@ -3940,7 +3954,7 @@ export const useProfileStore = create((rawSet, get) => {
    * ⚠ 仍然是**新的 challenge instance ＋ 新的 matchSeed**——
    *   「同一場再打一次」在契約上不存在（Slice 1 R1）。
    */
-  retryChallenge(challengeId, { tacticId = null, heroProgress = null } = {}) {
+  retryChallenge(challengeId, { tacticId = null, heroProgress = null, challengerActions = [] } = {}) {
     const cur = get().challenge ?? emptyChallengeState();
     const src = challengeBundle(cur, challengeId);
     if (!src.ok) return { ok: false, errors: [{ code: "bundle", message: src.reason }] };
@@ -3950,10 +3964,22 @@ export const useProfileStore = create((rawSet, get) => {
     });
     if (!entry.ok) return { ok: false, errors: entry.errors };
 
+    //  ── Slice 5：再試一次要**重新**解 Draft ────────────────────────────────
+    //  ⚠ 我方是**新的**出賽快照（可能換了先發、練了熟練），
+    //    舊的 DraftResult 綁在舊快照的雜湊上，套過來會直接被綁定檢查擋掉——
+    //    這正是要的行為：不得把舊選角結果貼到新陣容上。
+    //  ⚠ 對手的 policy 沒變 ⇒ 若我方也照樣不選，會解出同樣的對手陣容；
+    //    這是決定性，不是快取。
+    const dr = get()._resolveDraft({
+      challengerSnapshot: entry.snapshot, defenderSnapshot: src.defenderSnapshot, challengerActions,
+    });
+    if (!dr.ok) return { ok: false, errors: dr.errors };
+
     const built = createChallengeInstance({
       challenger: entry.snapshot,
       //  ⚠ 對手用**原本那一份**快照（這就是「再試一次」的定義）。
       defender: src.defenderSnapshot,
+      draftResult: dr.draft,
       challengerTacticId: entry.snapshot.standingOrders.tacticId,
       seedSource: (Math.random() * 0x7fffffff) >>> 0,
       createdAt: Date.now(),
@@ -4006,6 +4032,40 @@ export const useProfileStore = create((rawSet, get) => {
   },
 
   /**
+   * 這一場的英雄池。**決定性**：固定取英雄庫的 id 字典序，不擲骰。
+   *
+   * ⚠ 池的順序會影響 Draft 的 fallback（沒選滿時照池序補），
+   *   所以順序本身就是模擬語意的一部分——英雄庫的 id 集合改了，
+   *   同一份 policy 可能解出不同的 DraftResult。
+   *   ⇒ 這也是為什麼 DraftResult 必須**凍結**而不是每次重算。
+   */
+  _heroPool() {
+    return CHAMPIONS_100.map((h) => h.id).filter(Boolean).sort();
+  },
+
+  /**
+   * 解出這一場的 `DraftResult.v1`。
+   *
+   * ⚠ 只在**建立場次**時呼叫一次。重播路徑一律讀 instance 上凍結的那一份，
+   *   絕不重新解算（解算規則會改版，重算就會得到別的陣容）。
+   */
+  _resolveDraft({ challengerSnapshot, defenderSnapshot, challengerActions = [] }) {
+    return createDraftResult({
+      challengerActions,
+      defenderPolicy: defenderSnapshot?.standingOrders?.draftPolicy ?? null,
+      //  ⚠ 玩家自己的方針**只在他沒選滿時**用來補位，不會蓋掉他手動選的。
+      challengerPolicy: challengerSnapshot?.standingOrders?.draftPolicy ?? null,
+      pool: get()._heroPool(),
+      challengerSnapshot,
+      defenderSnapshot,
+      assign: assignDraft,
+      tagsOf: heroTags,
+      heroOf: (id) => heroById(id),
+      laneOf: (id) => heroById(id)?.lane ?? null,
+    });
+  },
+
+  /**
    * 挑戰看板。**畫面唯一的讀取點**——卡片不自己拼資料、更不自己算強弱。
    *
    * ⚠ 本檔與 `challengeBoard.js` 都**不 import** `teamStrength` / `calcPower`。
@@ -4043,6 +4103,9 @@ export const useProfileStore = create((rawSet, get) => {
       challenge: bundle.instance,
       challengerSnapshot: bundle.challengerSnapshot,
       defenderSnapshot: bundle.defenderSnapshot,
+      //  ⚠ 用**這一場凍結的** DraftResult，不重新解算。
+      draftResult: bundle.instance.draftResult ?? null,
+      heroOf: (id) => heroById(id),
     });
     if (!r.ok) return { ok: false, errors: r.errors };
     const settled = settleInstance(get().challenge, challengeId, r.result);
@@ -4066,10 +4129,31 @@ export const useProfileStore = create((rawSet, get) => {
       challenge: bundle.instance,
       challengerSnapshot: bundle.challengerSnapshot,
       defenderSnapshot: bundle.defenderSnapshot,
+      draftResult: bundle.instance.draftResult ?? null,
+      heroOf: (id) => heroById(id),
     });
     if (!r.ok) return { ok: false, match: false, reason: r.errors[0]?.message ?? "重播失敗" };
     const match = JSON.stringify(r.result) === JSON.stringify(bundle.instance.result);
     return { ok: true, match, reason: match ? null : "重播結果與當初記錄不一致" };
+  },
+
+  /**
+   * 賽後 Draft 對照。**只列可證明的事實**：
+   * 對手方針裡的哪幾隻他拿到了、哪幾隻被我禁掉、哪幾隻兩者都不是。
+   *
+   * ⚠ 不下任何結論（沒有「你應該先禁 X」這種話）——那需要的是
+   *   對局理解，不是我們手上這些欄位。編一句像 AI 教練的話很容易，
+   *   但它會是憑空的。
+   */
+  challengeDraftView(challengeId) {
+    const b = challengeBundle(get().challenge ?? emptyChallengeState(), challengeId);
+    if (!b.ok || !b.instance.draftResult) return null;
+    const policy = b.defenderSnapshot?.standingOrders?.draftPolicy ?? null;
+    const nameOf = (id) => heroById(id)?.zh ?? id;
+    return {
+      draft: b.instance.draftResult,
+      rows: policy ? draftComparisonRows(policy, b.instance.draftResult, nameOf) : [],
+    };
   },
 
   /** 取一場挑戰的完整資料（畫面用；找不到就是 null，不編造）。 */

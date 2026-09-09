@@ -35,7 +35,10 @@
 //  ⚠ 亂數與時鐘由呼叫端（權威層）注入 ⇒ 契約層本身完全決定性、可測試。
 // ============================================================================
 import { MOBA_SIMULATION_VERSION, canReplay } from "./simulationVersion.js";
-import { stableHash, validateSquadSnapshot } from "./squadSnapshot.js";
+import { stableHash, validateSquadSnapshot, SNAPSHOT_INPUTS } from "./squadSnapshot.js";
+
+/** 「選角是戰鬥輸入」的宣告鍵。⚠ 與 `squadSnapshot.js` 同一個真相來源。 */
+const DRAFT_POLICY_INPUT = SNAPSHOT_INPUTS.draftPolicy;
 
 export const CHALLENGE_INSTANCE_VERSION = "ChallengeInstance.v1";
 
@@ -92,6 +95,13 @@ export function createChallengeInstance({
   //  Slice 3：看板與歷史需要知道「打的是誰」與「這是不是重試」。
   //  ⚠ `opponentKey` 只是**身分標籤**，不含任何戰力資訊。
   opponentKey = null, kind = CHALLENGE_KINDS.formal,
+  //  Slice 5：這一場**實際發生**的 Ban/Pick（`DraftResult.v1`）。
+  //  ⚠ 它在這裡凍結，之後任何路徑只能讀。理由與 `matchSeed` 完全相同：
+  //    解算規則日後會調整，重播若重跑解算就會得到別的陣容。
+  //  ⚠ 本檔只做**綁定**檢查（有沒有、綁的是不是這兩份快照）。
+  //    形狀與雜湊的完整驗證留在 `draftResult.js` / `challengeRunner.js`——
+  //    contracts 層不反向 import challenge 層，也不把 Draft 規則抄第二份。
+  draftResult = null,
 } = {}) {
   const errors = [];
   const cv = validateSquadSnapshot(challenger);
@@ -103,6 +113,21 @@ export function createChallengeInstance({
   if (!Number.isFinite(createdAt)) errors.push({ code: "created_at", message: "缺少建立時刻" });
   if (!issuedBy) errors.push({ code: "authority", message: "challenge 必須由權威層簽發" });
   if (errors.length) return { ok: false, challenge: null, errors };
+
+  //  ── Slice 5：選角是不是戰鬥輸入，由**快照自己宣告** ────────────────────
+  //  ⚠ 判準用 `capturedInputs` 而不是版本號：快照自己說「我把 draftPolicy
+  //    當成凍結輸入」，這一場就必須有對應的 DraftResult。舊快照沒宣告 ⇒
+  //    完全不受影響 ⇒ 歷史場次不會因為這條規則被判成無效而消失。
+  const draftDeclared = (challenger.capturedInputs ?? []).includes(DRAFT_POLICY_INPUT)
+    || (defender.capturedInputs ?? []).includes(DRAFT_POLICY_INPUT);
+  if (draftDeclared) {
+    if (!draftResult?.hash) {
+      return { ok: false, challenge: null, errors: [{ code: "draft", message: "快照宣告 draftPolicy 是戰鬥輸入，建立場次時必須一併凍結 DraftResult" }] };
+    }
+    if (draftResult.challengerSnapshotHash !== challenger.hash || draftResult.defenderSnapshotHash !== defender.hash) {
+      return { ok: false, challenge: null, errors: [{ code: "draft_binding", message: "DraftResult 綁的快照與這一場的不符（不得把別場的選角結果套過來）" }] };
+    }
+  }
 
   //  ⚠ 兩份快照的模擬版本必須一致，否則這一場從一開始就重播不出來。
   if (challenger.simulationVersion !== defender.simulationVersion) {
@@ -138,6 +163,8 @@ export function createChallengeInstance({
       kind: kind in CHALLENGE_KINDS ? kind : CHALLENGE_KINDS.formal,
       //  ⚠ **凍結**：建立時取一次，之後任何路徑都只能讀，不得重新產生。
       matchSeed: toEngineSeed(seedSource),
+      //  ⚠ 與 `matchSeed` 同級的凍結輸入：一場一份，此後只讀。
+      draftResult: draftDeclared ? draftResult : null,
       simulationVersion: challenger.simulationVersion ?? MOBA_SIMULATION_VERSION,
       createdAt,
       issuedBy,
@@ -168,6 +195,12 @@ export function validateChallengeInstance(c) {
     errors.push({ code: "snapshot_ref", message: "缺少雙方快照雜湊" });
   }
   if (!c.issuedBy) errors.push({ code: "authority", message: "challenge 沒有簽發者" });
+  //  ⚠ 只在**有帶**的時候驗綁定。不強制存在——舊場次沒有這個欄位，
+  //    在這裡把它們判成無效，等於因為新規則刪掉歷史紀錄。
+  if (c.draftResult && (c.draftResult.challengerSnapshotHash !== c.challengerSnapshotHash
+    || c.draftResult.defenderSnapshotHash !== c.defenderSnapshotHash)) {
+    errors.push({ code: "draft_binding", message: "DraftResult 綁的快照與場次記錄的不符" });
+  }
   if (!(c.status in CHALLENGE_STATES)) errors.push({ code: "status", message: `未知狀態 ${c.status}` });
   return { ok: errors.length === 0, errors };
 }

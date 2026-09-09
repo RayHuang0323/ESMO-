@@ -193,10 +193,19 @@ ck("④ reload 後 simulationVersion 不變",
 
 //  重播：用 reload 出來的資料重算，必須與當初逐值相同。
 const { runChallenge } = await import("../src/platform/challenge/challengeRunner.js");
+const { heroById: heroOfId } = await import("../src/data/heroDatabase.js");
+//  Slice 5：重播讀的是**存檔裡凍結的那一份** DraftResult，不重新解算。
+ck("④ reload 後凍結的 DraftResult 還在", !!reloaded.instances[cid].draftResult?.hash,
+  reloaded.instances[cid].draftResult?.hash ?? "（沒有）");
+ck("④ 存檔裡的 DraftResult 綁的是這一場的兩份快照",
+  reloaded.instances[cid].draftResult?.challengerSnapshotHash === reloaded.instances[cid].challengerSnapshotHash
+  && reloaded.instances[cid].draftResult?.defenderSnapshotHash === reloaded.instances[cid].defenderSnapshotHash);
 const rerun = runChallenge({
   challenge: reloaded.instances[cid],
   challengerSnapshot: reloaded.snapshots[reloaded.instances[cid].challengerSnapshotHash],
   defenderSnapshot: reloaded.snapshots[reloaded.instances[cid].defenderSnapshotHash],
+  draftResult: reloaded.instances[cid].draftResult ?? null,
+  heroOf: (id) => heroOfId(id),
 });
 ck("④ reload 後重播結果與當初逐值一致",
   rerun.ok && JSON.stringify(rerun.result) === JSON.stringify(run1.result),

@@ -33,6 +33,11 @@ import { toEngineTactic, mobaTacticById, MOBA_TACTIC_VERSION } from "../contract
 import { SNAPSHOT_SEATS, SNAPSHOT_INPUTS, snapshotCovers } from "../contracts/squadSnapshot.js";
 import { assertSeedFrozen, challengeReplayability } from "../contracts/challengeInstance.js";
 import { MOBA_SIMULATION_VERSION } from "../contracts/simulationVersion.js";
+//  Slice 5：Draft 成為戰鬥輸入。⚠ 三支都是**既有**的引擎轉換點，不是新寫的。
+import { toEngineHeroMods } from "../../battle/moba/mobaHeroProfile.js";
+import { toEngineArchetypes, COMBAT_ARCHETYPE_CONTRACT_VERSION } from "../../data/heroCombatArchetypes.js";
+import { buildLoadout as buildHeroLoadout, toEngineSpells } from "../../battle/moba/mobaHeroLoadout.js";
+import { draftResultToRoster, validateDraftResult } from "./draftResult.js";
 
 /** 模擬步長與上限。⚠ 與 `useLocalServer.js` 的 `DT_SIM` 對齊；改這裡等於改模擬語意。 */
 export const CHALLENGE_DT = 0.5;
@@ -70,6 +75,9 @@ function sideInputs(snapshot, side) {
 export function runChallenge({
   challenge = null, challengerSnapshot = null, defenderSnapshot = null,
   currentSimulationVersion = MOBA_SIMULATION_VERSION,
+  //  Slice 5：這一場凍結的 Draft，以及英雄查表。
+  //  ⚠ 查表**注入**，本檔不 import 英雄庫（396KB data URI，Node verifier 會吃到）。
+  draftResult = null, heroOf = null,
 } = {}) {
   //  ── 可重播性：版本 ＋ 兩份快照雜湊都要對得上 ──────────────────────────
   const rep = challengeReplayability(challenge, {
@@ -82,22 +90,34 @@ export function runChallenge({
   const frozen = assertSeedFrozen(challenge, seed);
   if (!frozen.ok) return { ok: false, result: null, errors: [{ code: "seed", message: frozen.message }] };
 
-  //  ── 紅線②之一：宣告了卻沒實作的輸入必須**大聲失敗** ────────────────────
-  //  ⚠ Slice 4 把 `draftPolicy` 凍進快照，但**刻意還沒**把它接成戰鬥輸入
-  //    （接上要 bump `MOBA_SIMULATION_VERSION`，會讓既有挑戰的重播全部失效）。
-  //    這一段守的是那個過渡狀態：只要有人把 `draftPolicy` 加進 `capturedInputs`
-  //    卻沒有同時實作注入，**這裡立刻拒絕**——而不是默默跑出一場
-  //    「宣告用了選角、實際沒用」的比賽，那種比賽重播不出來而且沒人會發現。
-  for (const [who, snap] of [["挑戰方", challengerSnapshot], ["防守方", defenderSnapshot]]) {
-    if (snapshotCovers(snap, SNAPSHOT_INPUTS.draftPolicy)) {
+  //  ── Slice 5：Draft 成為戰鬥輸入 ────────────────────────────────────────
+  //  ⚠ 只要**任一方**的快照宣告了 `draftPolicy` 是戰鬥輸入，這一場就**必須**
+  //    拿得到凍結的 `DraftResult` 與英雄查表，否則拒跑。宣告了卻沒接上，
+  //    會跑出一場「宣告用了選角、實際沒用」的比賽——那種比賽重播不出來，
+  //    而且沒有人會發現。
+  const draftDeclared = snapshotCovers(challengerSnapshot, SNAPSHOT_INPUTS.draftPolicy)
+    || snapshotCovers(defenderSnapshot, SNAPSHOT_INPUTS.draftPolicy);
+  if (draftDeclared) {
+    if (!draftResult) {
       return {
         ok: false, result: null,
-        errors: [{
-          code: "draft_not_wired",
-          message: `${who}快照宣告了 draftPolicy 是戰鬥輸入，但 runner 尚未注入選角`
-            + "（需同時實作 configureHeroes / configureArchetypes / configureSpells"
-            + " 並 bump MOBA_SIMULATION_VERSION）",
-        }],
+        errors: [{ code: "draft_missing", message: "快照宣告 draftPolicy 是戰鬥輸入，但這一場沒有凍結的 DraftResult" }],
+      };
+    }
+    const dv = validateDraftResult(draftResult);
+    if (!dv.ok) return { ok: false, result: null, errors: dv.errors.map((e) => ({ ...e, code: `draft_${e.code}` })) };
+    //  ⚠ DraftResult 必須綁在**這兩份快照**上，不得把別場的結果套進來。
+    if (draftResult.challengerSnapshotHash !== challengerSnapshot.hash
+      || draftResult.defenderSnapshotHash !== defenderSnapshot.hash) {
+      return {
+        ok: false, result: null,
+        errors: [{ code: "draft_snapshot_mismatch", message: "DraftResult 綁的快照與這一場的不符" }],
+      };
+    }
+    if (typeof heroOf !== "function") {
+      return {
+        ok: false, result: null,
+        errors: [{ code: "draft_no_lookup", message: "選角要進引擎需要英雄查表（heroOf），呼叫端未注入" }],
       };
     }
   }
@@ -140,9 +160,34 @@ export function runChallenge({
     });
   }
 
-  //  ⚠ Slice 1 **刻意不呼叫** configureHeroes / configureArchetypes /
-  //    configureSpells：快照沒有凍結英雄選角，用了就無法重播。
-  //    等 Slice 2 把選角納入快照並 bump `capturedInputs` 之後才會啟用。
+  //  ── Slice 5：選角真的進引擎 ──────────────────────────────────────────
+  //  ⚠ 三支都是**既有**的轉換點（`useLocalServer.start()` 用的同一組），
+  //    不是為 Challenge 另寫的第二套。差別只在資料來源：
+  //    正式生涯走 Ban/Pick 畫面，這裡走**凍結的 DraftResult**。
+  let draftUsed = null;
+  if (draftDeclared) {
+    const roster = draftResultToRoster(draftResult);
+    //  英雄物件（含 arch）與召喚師技能都由既有函式算出，不自己拼資料。
+    const withHero = Object.fromEntries(Object.entries(roster)
+      .map(([seat, v]) => [seat, { ...v, hero: heroOf(v.heroId) ?? null }]));
+    const spellRoster = buildHeroLoadout(withHero, heroOf);
+
+    const heroMods = toEngineHeroMods(withHero, heroOf);
+    if (heroMods) eng.configureHeroes(heroMods);
+
+    const archMods = toEngineArchetypes(withHero);
+    if (archMods && Object.keys(archMods).length) {
+      const b = {}, r = {};
+      for (const [pid, mod] of Object.entries(archMods)) (String(pid)[0] === "r" ? r : b)[pid] = mod;
+      eng.configureArchetypes({ blue: b, red: r,
+        meta: { version: COMBAT_ARCHETYPE_CONTRACT_VERSION, seats: Object.keys(archMods).length } });
+    }
+
+    const spellMods = toEngineSpells(spellRoster);
+    if (spellMods) eng.configureSpells(spellMods);
+
+    draftUsed = { hash: draftResult.hash, heroes: { ...draftResult.assignment } };
+  }
 
   for (let t = CHALLENGE_DT; t <= CHALLENGE_MAX_T && !eng.over; t += CHALLENGE_DT) eng.tick(CHALLENGE_DT);
 
@@ -170,10 +215,13 @@ export function runChallenge({
       finished: !!eng.over,
       durationSec: Math.round(eng.t),
       score: { challenger: eng.bK, defender: eng.rK },
+      //  ⚠ 這一場實際用了哪一份 Draft（雜湊 ＋ 席位英雄），讓重播可逐值比對。
+      draft: draftUsed,
       usedInputs: [
         ...(useStats ? [SNAPSHOT_INPUTS.playerStats] : []),
         ...(useLoadout ? [SNAPSHOT_INPUTS.heroLoadout] : []),
         ...(useTactic ? [SNAPSHOT_INPUTS.tactic] : []),
+        ...(draftDeclared ? [SNAPSHOT_INPUTS.draftPolicy] : []),
       ],
     },
   };

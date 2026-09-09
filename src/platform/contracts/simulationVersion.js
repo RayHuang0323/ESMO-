@@ -36,11 +36,11 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
  * ⚠ **什麼時候不用 bump**：純呈現層、UI、文案、log。
  * ⚠ 版本字串一旦發布就**不可回收再用**：舊 Challenge 存著它。
  */
-export const MOBA_SIMULATION_VERSION = "moba-sim.v2";
+export const MOBA_SIMULATION_VERSION = "moba-sim.v3";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", MOBA_SIMULATION_VERSION]);
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -69,6 +69,16 @@ export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", MOBA_SIMU
  * ⚠ 這不是 migration framework。
  * ⚠ 清單漏了檔案 ⇒ 閘門對那支檔案無效。新增任何會進引擎的輸入轉換時，
  *   必須同時把它加進這裡。
+ *
+ * ── 收與不收的判準：**改它會不會讓「同一份快照」重播出不同結果** ──────
+ * 這條界線比「看起來相關嗎」精確得多，而且有實際的分界案例：
+ *   · `challengeRunner.js`   **收**。它決定凍結的快照怎麼變成引擎狀態
+ *                            ⇒ 改它，同一份舊快照就會重播出不同結果。
+ *   · `snapshotAuthority.js` **不收**。它只決定**新**快照裡放什麼
+ *                            （例如 Slice 5 改了預設的 draftPolicy）。
+ *                            既有快照是凍結的值，重播逐位元不受影響。
+ * ⚠ 所以「改了發布邏輯」不等於「要 bump」。要 bump 的是改了**解讀**，
+ *   不是改了**生成**。搞混這兩者會讓清單無限膨脹，閘門就變成雜訊。
  */
 export const SIMULATION_SEMANTICS_FILES = Object.freeze([
   //  引擎本體：數值、判定順序、tick 語意
@@ -102,6 +112,31 @@ export const SIMULATION_SEMANTICS_FILES = Object.freeze([
   "src/battle/moba/nav/mobaNavigation.js",
   //  · 塔的座標。LogicEngine 直接 import。
   "src/battle/moba/map/mobaTowerPlacement.js",
+
+  //  ── 2026-09-09（Slice 5）：**選角成為戰鬥輸入** ────────────────────────
+  //  在這一輪之前，Challenge 完全不呼叫 configureHeroes / configureArchetypes /
+  //  configureSpells ⇒ 下面這些檔案改了也不影響任何 Challenge 結果。
+  //  現在它們每一支都在**決定五個席位各拿到哪隻英雄、以及那隻英雄怎麼打**。
+  //  ⚠ 實測證據（同一份快照／同一個 matchSeed／同一個戰術，只換一個合法的
+  //    Draft outcome）：challengerWin 1512 秒 12–7  ⇄  defenderWin 1344 秒 3–13。
+
+  //  · 防守方的凍結方針怎麼一手一手解出來（含 byRole 定位補齊）
+  "src/platform/challenge/draftPolicy.js",
+  //  · 這一場的 Ban/Pick 怎麼凍成 DraftResult，挑戰方沒選滿時怎麼補
+  "src/platform/challenge/draftResult.js",
+  //  · picks → 五個席位的指派（窮舉 5! 取最高分，字典序平手）
+  "src/battle/moba/mobaDraftAssignment.js",
+  //  · 英雄定位 → 引擎行為 mods（`configureHeroes`）
+  "src/battle/moba/mobaHeroProfile.js",
+  //  · 席位 × 英雄 → 召喚師技能（`configureSpells`）
+  "src/battle/moba/mobaHeroLoadout.js",
+  //  · heroId → 交戰距離／站位（`configureArchetypes`）
+  "src/data/heroCombatArchetypes.js",
+  //  · `heroTags` —— 席位指派的適性評分讀它
+  "src/data/heroClassification.js",
+  //  · `SEAT_LANE_ZH` —— Draft 的 byRole 補位讀它。
+  //    ⚠ 這張表看起來只是 UI 詞彙，但它現在決定「b4 該補哪一路的英雄」。
+  "src/platform/contracts/matchLineup.js",
 ]);
 
 /**
@@ -122,6 +157,16 @@ export const KNOWN_TRANSITIVE_GAPS = Object.freeze([
   "src/battle/moba/map/mapPassability.js",
   "src/battle/moba/map/mobaMapLayout.js",
   "src/battle/moba/map/mapTerrainShapes.js",
+  //  ⚠ Slice 5 新增的缺口，**刻意**不收進上面的清單：
+  //    `heroDatabase.js` 有 150 KB，而且是英雄文案與數值的日常編輯對象。
+  //    把它納入指紋 ⇒ 改一句技能描述就讓閘門變紅 ⇒ 閘門被訓練成雜訊。
+  //  ⚠ 但它**確實**有三個欄位會改變 Challenge 的結果，改到它們要自己 bump：
+  //      · `arch`（定位）      → `toEngineHeroMods` 的行為 mods
+  //      · `lane`（擅長路線）  → Draft 的 byRole 補位與席位適性評分
+  //      · `P`/`Q`/`W`/`E`/`R` 技能**名稱** → `heroTags` 的關鍵字比對
+  //    改 `stats` / `skills.desc` / `title` / `color` 則**不會**——
+  //    Challenge 的組裝路徑一個字都沒讀它們。
+  "src/data/heroDatabase.js",
 ]);
 
 /**
@@ -170,6 +215,25 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  ⚠ 後果（已知且接受）：所有以 `moba-sim.v1` 記錄的歷史挑戰**不再可重播**，
   //    並且會被 `canReplay` 明確拒絕——不是靜默用新地圖重算。
   "moba-sim.v2": "824a89582f8e9014",
+
+  //  2026-09-09（Slice 5）：**選角真的成為戰鬥輸入**。
+  //  在 v2 之前，Challenge 一次都沒有呼叫 `configureHeroes` /
+  //  `configureArchetypes` / `configureSpells` —— 五個席位在引擎眼中是
+  //  五個沒有英雄的中性單位。現在 `DraftResult.v1` 決定他們各拿到誰，
+  //  而那決定了交戰距離、站位、行為 mods 與召喚師技能。
+  //  ⚠ 這是**實測過的**語意變化，不是推論。保持快照／matchSeed／戰術／
+  //    對手／版本全部相同，只換一個合法的 Draft outcome：
+  //      A（照方針補位）challengerWin  1512 秒  12–7
+  //      B（玩家自己選）defenderWin    1344 秒   3–13
+  //    ⇒ 若這裡沒有差異，就不該宣稱 Draft 是 combat input，也不該開 v3。
+  //  ⚠ 同時修掉一個 Slice 4 的靜默失效：`draftPolicy.js` 自己另立了一套
+  //    **英文**路名，而注入的 `laneOf` 回的是中文路名 ⇒ `byRole` 補位
+  //    一次都沒命中過。修好之後補位才會照席位補定位（見該檔說明）。
+  //  ⚠ 後果（已知且接受）：`moba-sim.v1` / `v2` 的歷史挑戰**不再可重播**，
+  //    由 `canReplay` 明確拒絕，不是靜默用新規則重算。
+  //  ⚠ 這一版的量測數字（見上）是**修正解算順序之前**跑的；順序修好之後
+  //    重跑：新存檔對同級陪練所 38%（原本 19%），難度梯度仍在。
+  "moba-sim.v3": "a9ac2b91b46341ae",
 });
 
 export const isKnownSimulationVersion = (v) =>

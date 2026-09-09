@@ -182,37 +182,71 @@ ck("⑤ draftPolicy 不 import 英雄資料庫（查表一律注入）",
   !/heroDatabase|data\/roster/.test(code("src/platform/challenge/draftPolicy.js")));
 ck("⑤ 沒有第二套英雄清單（方針只存 heroId 字串）",
   !/CHAMPIONS|HERO_DB|heroes\s*=\s*\[/.test(code("src/platform/challenge/draftPolicy.js")));
-ck("⑤ 席位語彙沿用既有的 b1–b5，不另立一套",
-  /b1:.*b2:.*b3:/s.test(code("src/platform/challenge/draftPolicy.js")));
+//  ⚠ 初版只驗「檔案裡有 b1/b2/b3 這幾個鍵」，那擋不住真正發生的事：
+//    draftPolicy 自己寫了一套**英文**路名（top/jungle/mid/bot），
+//    而注入的 laneOf 回的是中文路名 ⇒ byRole 補位一次都沒命中過。
+//    ⇒ 現在直接驗「引用的是唯一那張表」，並且驗它**沒有**自建對照。
+ck("⑤ 席位→路線用的是 matchLineup 的唯一那張表，不另立一套",
+  /SEAT_LANE_ZH/.test(code("src/platform/challenge/draftPolicy.js"))
+  && !/b1:\s*"(top|上路)"/.test(code("src/platform/challenge/draftPolicy.js")));
+ck("⑤ 補位真的會命中定位（byRole fallback 不是死碼）", (() => {
+  const pool = ["h_top", "h_jgl", "h_mid"];
+  const laneOf = (h) => ({ h_top: "上路", h_jgl: "打野", h_mid: "中路" })[h] ?? null;
+  //  b2 期望打野 ⇒ 必須跳過池首的 h_top 去拿 h_jgl。
+  const r = nextDefenderAction({
+    policy: createDraftPolicy({ fallback: DRAFT_FALLBACK.byRole }),
+    action: "pick", available: pool, seat: "b2", laneOf, taken: [],
+  });
+  return r.heroId === "h_jgl";
+})());
 
 // ══════════════════════════════════════════════════════════════════════════
-console.log("\n── ⑥ Replay 安全：宣告了卻沒接 ⇒ 紅燈 ──");
+console.log("\n── ⑥ Replay 安全：宣告了就**必須**接上，缺一塊就紅燈 ──");
 
-ck("⑥ `draftPolicy` 目前**不在** capturedInputs（還不是戰鬥輸入）",
-  !synthetic.capturedInputs.includes(SNAPSHOT_INPUTS.draftPolicy),
-  synthetic.capturedInputs.join(","));
+//  Slice 5 起 `draftPolicy` **就是**戰鬥輸入，正式快照一定會宣告它。
+ck("⑥ 正式快照把 draftPolicy 列為戰鬥輸入",
+  store()._issueEntrySnapshot({ tacticId: "m1", heroProgress: FRESH })
+    .snapshot.capturedInputs.includes(SNAPSHOT_INPUTS.draftPolicy));
 
-//  把 draftPolicy 加進宣告卻沒有實作注入 ⇒ runner 必須拒絕。
-const declared = { ...synthetic, capturedInputs: [...synthetic.capturedInputs, SNAPSHOT_INPUTS.draftPolicy] };
-declared.hash = snapshotHashOf(declared);
+//  宣告了卻沒有一併凍結 DraftResult ⇒ **建立場次**這一關就要擋下來。
+//  ⚠ `synthetic` 是正式發出的快照，Slice 5 起它本來就宣告 draftPolicy，
+//    所以這裡不必再「加宣告」——直接不給 draftResult 就該被擋。
 const chBad = createChallengeInstance({
-  challenger: declared, defender: declared, challengerTacticId: "m1",
+  challenger: synthetic, defender: synthetic, challengerTacticId: "m1",
   seedSource: 12345, createdAt: 1, issuedBy: SNAPSHOT_AUTHORITY.id, nonce: "x",
 });
-const runBad = runChallenge({ challenge: chBad.challenge, challengerSnapshot: declared, defenderSnapshot: declared });
-ck("⑥ 宣告 draftPolicy 是戰鬥輸入但未接線 ⇒ runner **拒絕**（紅燈）",
-  runBad.ok === false && runBad.errors[0]?.code === "draft_not_wired",
-  runBad.errors?.[0]?.message?.slice(0, 60));
-ck("⑥ 拒絕訊息明確指出要同時 bump 模擬版本",
-  /MOBA_SIMULATION_VERSION/.test(runBad.errors?.[0]?.message ?? ""));
-//  對照組：沒宣告就正常跑
+ck("⑥ 宣告 draftPolicy 卻沒凍結 DraftResult ⇒ 建立場次就拒絕（紅燈）",
+  chBad.ok === false && chBad.errors[0]?.code === "draft",
+  chBad.errors?.[0]?.message?.slice(0, 60));
+
+//  ── 對照組：把 draftPolicy 的宣告拿掉 ⇒ 回到 Slice 4 的舊語意 ─────────
+//  ⚠ 這一組同時扮演兩個角色：
+//    · 證明上面的紅燈是**選角專屬**的，不是整條管線壞了
+//    · 證明歷史快照（沒宣告過選角的那些）不會被新規則掃掉
+const undeclared = { ...synthetic, capturedInputs: synthetic.capturedInputs.filter((x) => x !== SNAPSHOT_INPUTS.draftPolicy) };
+undeclared.hash = snapshotHashOf(undeclared);
 const chOk = createChallengeInstance({
-  challenger: synthetic, defender: synthetic, challengerTacticId: "m1",
+  challenger: undeclared, defender: undeclared, challengerTacticId: "m1",
   seedSource: 12345, createdAt: 1, issuedBy: SNAPSHOT_AUTHORITY.id, nonce: "y",
 });
+ck("⑥ 未宣告選角的快照 ⇒ 不需要 DraftResult 也建得起來", chOk.ok === true,
+  chOk.errors?.map((e) => e.message).join(" | "));
+
+//  就算硬繞過建立那一關（把宣告過的快照塞進一個沒有 draft 的 instance），
+//  runner 也必須自己再擋一次 —— 縱深防禦。
+const runBad = runChallenge({
+  challenge: { ...chOk.challenge, challengerSnapshotHash: synthetic.hash, defenderSnapshotHash: synthetic.hash },
+  challengerSnapshot: synthetic, defenderSnapshot: synthetic,
+});
+ck("⑥ 繞過建立關卡也沒用：runner 自己再擋一次（縱深防禦）",
+  runBad.ok === false && runBad.errors[0]?.code === "draft_missing",
+  runBad.errors?.[0]?.message?.slice(0, 60));
+
 console.log("   （跑一場真的模擬作對照，請稍候）");
-const runOk = runChallenge({ challenge: chOk.challenge, challengerSnapshot: synthetic, defenderSnapshot: synthetic });
+const runOk = runChallenge({ challenge: chOk.challenge, challengerSnapshot: undeclared, defenderSnapshot: undeclared });
 ck("⑥ 對照組：未宣告 ⇒ 正常跑完（證明上面的紅燈是專屬的）", runOk.ok === true, runOk.result?.outcome);
+ck("⑥ 對照組沒有注入選角（usedInputs 誠實）",
+  runOk.ok && !runOk.result.usedInputs.includes(SNAPSHOT_INPUTS.draftPolicy));
 
 // ══════════════════════════════════════════════════════════════════════════
 console.log("\n── ⑦ 歷史挑戰：跨版本必須明確拒絕，不得靜默重算 ──");

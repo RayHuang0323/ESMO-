@@ -27,19 +27,24 @@
 //    · 驗證器可以逐值斷言，不必統計
 //  ⇒ 相同的 policy ＋ 相同的挑戰方行為 ⇒ **必然**相同的防守方選角。
 //
-//  ── ⚠ 目前**還不是** combat input ───────────────────────────────────────
-//  本輪把方針**凍進快照並納入雜湊**，但 `capturedInputs` **尚未**宣告它，
-//  runner 也**尚未**呼叫 `configureHeroes` / `configureArchetypes` / `configureSpells`。
-//  理由見 `docs/handoff/05_Sprint紀錄.md`：把選角接成戰鬥輸入必須 bump
-//  `MOBA_SIMULATION_VERSION`，而那會讓**所有既有挑戰的重播失效**——
-//  那是一扇單向門，該有自己的一輪與自己的 closure gate。
-//  ⇒ 現在先把形狀與凍結做對，日後開啟只是「加進 capturedInputs ＋ 呼叫三個
-//    configure ＋ bump 版本」，**快照形狀不必再變**。
+//  ── ⚠ 這**已經是** combat input（Slice 5 起）─────────────────────────────
+//  `capturedInputs` 宣告了 `draftPolicy`，`challengeRunner` 會依這份方針解出的
+//  `DraftResult.v1` 呼叫 `configureHeroes` / `configureArchetypes` / `configureSpells`。
+//  ⇒ 改本檔的任何規則，就是改 simulation semantics（本檔已列入
+//    `SIMULATION_SEMANTICS_FILES`）。
+//  ⚠ 那一步已經 bump `MOBA_SIMULATION_VERSION` → `moba-sim.v3`，
+//    `moba-sim.v1` / `v2` 的歷史挑戰從此不可重播——單向門已經走過了。
+//
+//  ⚠ 本檔只回答「**下一手該出誰**」。「這一場最後長什麼樣」是
+//    `draftResult.js` 的事（含挑戰方先手、補位、席位指派、凍結雜湊）。
 //
 //  純函式：不 import React / zustand / localStorage / 亂數 / 時鐘 / 英雄資料庫。
 //  ⚠ 英雄查表一律**注入**（`heroDatabase.js` 帶 396KB data URI，
 //    而 Node verifier 會 import 本檔的消費端）。
 // ============================================================================
+
+//  ⚠ 席位 → 中文路名的**唯一**來源。見下方 `SEAT_LANE` 的說明。
+import { SEAT_LANE_ZH } from "../contracts/matchLineup.js";
 
 export const DRAFT_POLICY_VERSION = "DraftPolicy.v1";
 
@@ -160,8 +165,18 @@ export function nextDefenderAction({
   return { heroId: pool[0], reason: "fallback：取可用池第一個" };
 }
 
-/** 席位 → 期望路線（與 `matchLineup.js` 的席位語彙一致，不另立一套）。 */
-const SEAT_LANE = Object.freeze({ b1: "top", b2: "jungle", b3: "mid", b4: "bot", b5: "bot" });
+/**
+ * 席位 → 期望路線。
+ *
+ * ⚠ 2026-09-09 修正：初版在這裡**自己寫了一套英文路名**
+ *   （`{b1:"top", …, b4:"bot", b5:"bot"}`），但注入的 `laneOf` 讀的是
+ *   `heroDatabase.lane`，那是**中文**路名（上路／打野／中路／下路／輔助）。
+ *   ⇒ `laneOf(h) === want` 永遠是 false，`byRole` fallback 一次都沒命中過，
+ *     補位全部退化成「取可用池第一個」。這種錯誤不會報錯、不會變紅，
+ *     只會安靜地讓一條規則失效——所以現在直接引用**唯一的**那張表。
+ * ⚠ 順帶修掉另一個問題：初版 b4/b5 都對到 "bot"，等於下路與輔助搶同一種英雄。
+ */
+const SEAT_LANE = SEAT_LANE_ZH;
 
 /**
  * 跑完整條非同步 Draft：挑戰方的每一手都由呼叫端提供，防守方由方針自動回應。

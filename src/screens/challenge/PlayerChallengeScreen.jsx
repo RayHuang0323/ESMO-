@@ -19,6 +19,8 @@
 // ============================================================================
 import React, { useMemo, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
+//  ⚠ 席位→路名用**唯一那張表**，畫面不自己寫一份對照。
+import { SEAT_LANE_ZH } from "../../platform/contracts/matchLineup.js";
 import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
 import { MOBA_TACTICS, mobaTacticById } from "../../platform/contracts/MobaTacticConfig.js";
 import { MATCH_SOURCE, MATCH_TIER_LABELS } from "../../platform/progress/matchSource.js";
@@ -159,6 +161,94 @@ function OpponentCard({ c, busy, onChallenge, open, onToggle }) {
   );
 }
 
+/** 一隻英雄的小方塊（禁用的畫成刪除線）。 */
+function HeroChip({ id, nameOf, banned = false }) {
+  return (
+    <span style={{
+      fontSize: 11, padding: "3px 7px", borderRadius: 5, whiteSpace: "nowrap",
+      border: `1px solid ${banned ? "#7f1d1d" : "#3f3f46"}`,
+      background: banned ? "#450a0a55" : "#27272a",
+      color: banned ? "#fca5a5" : "#e4e4e7",
+      textDecoration: banned ? "line-through" : "none",
+    }}>{nameOf(id)}</span>
+  );
+}
+
+/**
+ * 這一場的選角結果。
+ *
+ * ⚠ 對手**不在線**：他出的是發布防守陣容時就凍結的方針。
+ *   所以這裡的措辭是「依預存選角方針回應」，不是「等待對手 Ban/Pick」——
+ *   後者會讓玩家以為對面有人，那是假的。
+ * ⚠ 只呈現事實（誰禁了誰、誰拿到誰、最後誰站哪一路），
+ *   不寫任何「你應該先禁 X」之類的結論。
+ */
+function DraftPanel({ view, nameOf }) {
+  if (!view?.draft) return null;
+  const d = view.draft;
+  const SEATS = ["b1", "b2", "b3", "b4", "b5"];
+  const side = (title, color, bans, seats, testid) => (
+    <div data-testid={testid} style={{ minWidth: 0 }}>
+      <div style={{ ...label, color }}>{title}</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 5 }}>
+        {bans.length === 0
+          ? <span style={{ fontSize: 11, color: GC.gray }}>沒有禁用</span>
+          : bans.map((h) => <HeroChip key={h} id={h} nameOf={nameOf} banned />)}
+      </div>
+      <div style={{ marginTop: 6, display: "grid", gap: 3 }}>
+        {seats.map(([seat, heroId, lane]) => (
+          <div key={seat} style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 11, minWidth: 0 }}>
+            <span style={{ ...label, fontFamily: MONO, color, minWidth: 20 }}>{seat}</span>
+            <span style={{ ...label, color: GC.gray, minWidth: 26 }}>{lane}</span>
+            <span style={{ color: "#e4e4e7", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nameOf(heroId)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+  const rowsOf = (prefix) => SEATS.map((s, i) => {
+    const seat = `${prefix}${s.slice(1)}`;
+    return [seat, d.assignment[seat], SEAT_LANE_ZH[SEATS[i]]];
+  });
+
+  return (
+    <div data-testid="challenge-draft" style={{ marginTop: 12, borderTop: "1px solid #27272a", paddingTop: 10 }}>
+      <div style={label}>這一場的選角</div>
+      <div data-testid="challenge-draft-async-note" style={{ fontSize: 11, color: GC.gold, marginTop: 4, lineHeight: 1.6 }}>
+        對手依預存選角方針回應（他不在線上，這不是即時 Ban/Pick）
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
+        {side("我方", GC.blueL, d.bans.challenger, rowsOf("b"), "challenge-draft-mine")}
+        {side("對手", GC.redL, d.bans.defender, rowsOf("r"), "challenge-draft-opponent")}
+      </div>
+      {view.rows.length > 0 && (
+        <div data-testid="challenge-draft-compare" style={{ marginTop: 10 }}>
+          <div style={label}>對手方針 vs 這一場實際</div>
+          <div style={{ display: "grid", gap: 3, marginTop: 5 }}>
+            {view.rows.map((r) => (
+              <div key={`${r.kind}:${r.heroId}`} style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 11, minWidth: 0 }}>
+                <span style={{ color: "#e4e4e7", minWidth: 72, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</span>
+                <span style={{ ...label, color: GC.gray }}>{r.kind === "priority" ? "優先選用" : r.kind.replace("seat:", "席位 ")}</span>
+                {/* ⚠ 四種都是可證明的事實。「被我先選走」不可以和「他自己沒選」混為一談。 */}
+                <span style={{ marginLeft: "auto", ...chip(
+                  r.bannedByChallenger || r.pickedByChallenger ? GC.green : r.got ? GC.redL : GC.gray,
+                ) }}>
+                  {r.bannedByChallenger ? "被我禁掉"
+                    : r.pickedByChallenger ? "被我先選走"
+                      : r.got ? "他拿到了" : "沒拿到"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <div style={{ ...label, color: "#52525b", marginTop: 8, fontFamily: MONO, wordBreak: "break-all" }}>
+        draft {d.hash}　指派方式 {d.resolution.assigner}
+      </div>
+    </div>
+  );
+}
+
 /** 賽後：宣告 vs 實際。⚠ 只並排真實數字，**不下結論**。 */
 function EvidenceTable({ title, rows, testid }) {
   if (!rows?.length) return null;
@@ -194,10 +284,13 @@ export default function PlayerChallengeScreen({ onBack }) {
     ].join("|");
   });
   const heroProgress = useHeroProgressStore((s) => s.progress);
+  const heroNameOf = (id) => heroById(id)?.zh ?? id;
 
   const view = useMemo(() => useProfileStore.getState().challengeView(), [sig]);
   const board = useMemo(
-    () => useProfileStore.getState().challengeBoardView({ heroProgress, heroNameOf: (id) => heroById?.[id]?.name ?? id }),
+    //  ⚠ `heroById` 是**函式**（`(id) => hero | null`），不是物件。
+    //    寫成 `heroById?.[id]` 永遠拿到 undefined，英雄名就會全部退化成 id。
+    () => useProfileStore.getState().challengeBoardView({ heroProgress, heroNameOf }),
     [sig, heroProgress],
   );
 
@@ -210,6 +303,11 @@ export default function PlayerChallengeScreen({ onBack }) {
 
   const detail = useMemo(
     () => (openId ? useProfileStore.getState().challengeDetail(openId) : null),
+    [openId, sig],
+  );
+  //  ⚠ 讀的是**這一場凍結的** DraftResult，不重新解算（重算會得到別的陣容）。
+  const draftView = useMemo(
+    () => (openId ? useProfileStore.getState().challengeDraftView(openId) : null),
     [openId, sig],
   );
 
@@ -334,6 +432,8 @@ export default function PlayerChallengeScreen({ onBack }) {
               <EvidenceTable testid="challenge-evidence-opponent"
                 title={`對手宣告 vs 實際（${oppTactic?.name ?? detail.instance.defenderTacticId}）`}
                 rows={tacticEvidenceRows(oppTactic, result.tacticExec?.defender)} />
+
+              <DraftPanel view={draftView} nameOf={heroNameOf} />
 
               <div style={{ ...label, color: "#52525b", marginTop: 10, fontFamily: MONO, wordBreak: "break-all" }}>
                 {detail.instance.challengeId}

@@ -181,6 +181,26 @@ export function publishDefensiveSnapshot({
   //  英雄熟練：與正式開局同一支（`useLocalServer.start()` 用的就是它）。
   const heroLoadout = buildLoadout(careerState.heroProgress ?? {}, careerState.heroAssign ?? {});
 
+  /**
+   * 沒送方針時的預設：**這支隊伍真的在練的那五隻**。
+   *
+   * ⚠ Slice 4 的預設是一份全空的方針。當時無害（選角還不是戰鬥輸入），
+   *   Slice 5 之後就變成實質劣勢：每個 fixture 對手都有人工編寫的方針，
+   *   玩家卻只能「照可用池順序補位」⇒ 對手成套、玩家撿剩的。
+   * ⚠ 資料來自既有的 `heroAssign`（＝正式開局用的同一張表），
+   *   不新增第二份英雄真相來源，也不含任何強弱推估——
+   *   它只說「這個席位平常練的是誰」，那是可證明的事實。
+   */
+  const defaultDraftPolicyFor = (slotList) => {
+    const assign = careerState.heroAssign ?? {};
+    const rolePreference = {};
+    for (const slot of slotList) {
+      const heroId = assign[slot.playerId] ?? assign[slot.id] ?? null;
+      if (heroId) rolePreference[slot.id] = [heroId];
+    }
+    return createDraftPolicy({ rolePreference });
+  };
+
   const byId = new Map(players.filter((p) => p?.id).map((p) => [p.id, p]));
   const seats = [];
   const stats = {};
@@ -215,9 +235,10 @@ export function publishDefensiveSnapshot({
     seats, stats, loadout,
     standingOrders: {
       tacticId: request.tacticId,
-      //  ⚠ 沒送方針 ⇒ 給一份**空方針**，不是 null：防守方離線時 Draft 必須有
-      //    可執行的回應，而「什麼都沒指定」本身就是一種決定性的方針（取池首）。
-      draftPolicy: request.draftPolicy ?? createDraftPolicy({}),
+      //  ⚠ 沒送方針 ⇒ 用**這支隊伍平常練的英雄**當偏好，不是空方針、也不是 null：
+      //    離線的一方在 Draft 裡必須有可執行的回應，而「什麼都沒指定」會退化成
+      //    取可用池第一個 —— 那不是中立，那是輸。
+      draftPolicy: request.draftPolicy ?? defaultDraftPolicyFor(slots),
     },
     issuedBy: SNAPSHOT_AUTHORITY.id,
     issuedAt: now,
