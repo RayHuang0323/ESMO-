@@ -232,8 +232,8 @@ export default function AppShell() {
   return (
     <div data-viewport-locked={viewportLocked ? "1" : "0"} style={shellStyle}>
       {/* Q3.5：主畫面「🏆 賽事」改指向聯賽（不另建第二個入口）。
-          Sprint09 的「賽季戰績」仍在 `season`，由 MenuScreen 進入——那是
-          BattleResult 的統計頁，與聯賽是不同資料源，兩者刻意不合併。 */}
+          ⚠ 2026-09-09：原註解提到的 `MenuScreen` 已刪除（死碼，沒有任何 import、
+            沒有路由、也沒有進 bundle）。賽季戰績的入口現在只有 `season` 這一條。 */}
       {screen === "dashboard" && <DashboardScreen onMoba={go("lineup")} onSeason={go("competition")} onNav={(t) => setScreen(t)} onResumeActive={() => resumeActiveMatch()} />}
       {/* ⚠ 出賽要導到 `lineup`（賽前配置頁）而不是 `matchmaking`。
           `MatchmakingScreen` 是 Sprint11 的**純過場動畫**（寫死對手、假計時），

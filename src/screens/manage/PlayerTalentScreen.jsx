@@ -60,7 +60,10 @@ export default function PlayerTalentScreen({ playerId, onBack }) {
   };
 
   return (
-    <div style={{ height: "100%", overflow: "auto", background: GC.bg, fontFamily: FONT }}>
+    //  ⚠ `data-player` 帶著實際渲染的 playerId：驗證「有沒有走到天賦頁」與
+    //    「走到的是不是點選的那位選手」需要它。只加屬性，不影響任何行為。
+    <div data-testid="talent-screen" data-player={p?.id ?? ""}
+      style={{ height: "100%", overflow: "auto", background: GC.bg, fontFamily: FONT }}>
       <div style={{ width: "100%", maxWidth: 760, margin: "0 auto", padding: "12px 12px 30px", boxSizing: "border-box" }}>
         {/* 返回列 */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -78,7 +81,7 @@ export default function PlayerTalentScreen({ playerId, onBack }) {
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 12, padding: "10px 14px", marginBottom: 10 }}>
           <PlayerFace player={p} size={44} />
           <div style={{ minWidth: 0 }}>
-            <div style={{ color: "white", fontSize: 14, fontWeight: 900 }}>{p.name} <span style={{ color: GC.gold, fontSize: 10 }}>Lv.{lp.newLevel}</span></div>
+            <div data-testid="talent-player-name" style={{ color: "white", fontSize: 14, fontWeight: 900 }}>{p.name} <span style={{ color: GC.gold, fontSize: 10 }}>Lv.{lp.newLevel}</span></div>
             <div style={{ color: GC.gray, fontSize: 9.5 }}>{p.role} · XP {lp.xpIntoLevel}/{lp.xpForNextLevel}</div>
           </div>
           <div style={{ marginLeft: "auto", display: "flex", gap: 8, flexWrap: "wrap" }}>
