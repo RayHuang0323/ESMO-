@@ -2048,6 +2048,21 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
     stateRef.current={renderer,scene,camera,cam,ambient,hemi,sun,rim,tex,sphereGeo,beamGeo,worldGroup,routeGroup,playerGroup,fxGroup,liveRef,
       players:[],pools:{},raycastTargets:[],povWeapon:null,povWeaponDiagnostics:null,running:true,lastT:0,time:0,cameraRecoveryCount:0,rapidCameraRecoveryCount:0,lastCameraRecoveryAt:null,
       c5a1HitDriftMax:0,c5a1HitDriftSamples:0,c5a1AuthoritativeDriftMax:0,clock:{wallClockSec:0,lastFrameIndex:null,frameTransitions:0,samples:[]},disposables:[]};
+    //  ── 單一清理路徑（`disposables`）────────────────────────────────────
+    //  ⚠ 這個陣列本來就宣告在 state 裡，但從來沒有被寫入也沒有被排乾。
+    //    現在把它接成**唯一**的擁有權登記簿：凡是這次掛載自己建立、
+    //    離場就該收掉的東西，都在建立當下登記，卸載時一次排乾。
+    //  ⚠ 只登記**自己擁有**的資源。跨 mount 共用的（例如 GLTF 快取）不登記，
+    //    它們由自己的 dispose 契約負責（rigged.dispose()）。
+    const own=(label,fn)=>{stateRef.current.disposables.push({label,fn});};
+    //  共用幾何與貼圖是這次建立的，離場要收。
+    own("tex",()=>{for(const t of Object.values(tex))t?.dispose?.();});
+    own("sphereGeo",()=>sphereGeo.dispose?.());
+    own("beamGeo",()=>beamGeo.dispose?.());
+    own("lights",()=>{for(const l of [ambient,hemi,sun,rim]){l.parent?.remove?.(l);l.dispose?.();}});
+    own("groups",()=>{for(const g of [worldGroup,routeGroup,playerGroup,fxGroup]){g.parent?.remove?.(g);g.clear?.();}});
+    stateRef.current.own=own;
+
     stateRef.current.povWeapon=createFpsPovWeapon(camera);
     stateRef.current.setCameraPreset=(name)=>setFpsCameraPreset(stateRef.current,name);
 
@@ -2076,7 +2091,11 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
         const min=stateRef.current._chase?.alive?4.5:18;cam.dRadius=clamp(pinch.r*pinch.d/Math.max(1,d),min,200);cam.manualRadius=cam.dRadius;
         const cx=(a.clientX+b.clientX)/2,cy=(a.clientY+b.clientY)/2;panBy(cx-pinch.cx,cy-pinch.cy,cam.dRadius*0.0018,pinch.th,pinch.tx,pinch.tz);}
       else onMove(e);};
-    el.addEventListener("contextmenu",e=>e.preventDefault());
+    //  ⚠ 監聽一律具名並登記，卸載時逐一移除。
+    //    實測（離場後快照）：`window.mouseup` 仍掛著 —— 它閉包持有整份 CS 狀態，
+    //    所以光是它一個就足以讓整個場景無法被回收。
+    const onContextMenu=e=>e.preventDefault();
+    el.addEventListener("contextmenu",onContextMenu);
     // 點擊選取選手
     const ray=new THREE.Raycaster();const ndc=new THREE.Vector2();let downPt=null;let clickTarget=null;
     const onClickDown=e=>{if(e.target!==el)return;const p=e.touches?e.touches[0]:e;clickTarget=el;downPt={x:p.clientX,y:p.clientY};};
@@ -2090,14 +2109,29 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
       else onSelectPlayer&&onSelectPlayer(null);
       downPt=null;clickTarget=null;
     };
-    el.addEventListener("mousedown",e=>{onDown(e);onClickDown(e);});
+    const onMouseDown=e=>{onDown(e);onClickDown(e);};
+    const onMouseUp=e=>{onUp();onClickUp(e);};
+    const onTouchStartAll=e=>{onTouchStart(e);onClickDown(e);};
+    const onTouchEndAll=e=>{onUp();onClickUp(e);};
+    el.addEventListener("mousedown",onMouseDown);
     window.addEventListener("mousemove",onMove);
-    window.addEventListener("mouseup",e=>{onUp();onClickUp(e);});
+    window.addEventListener("mouseup",onMouseUp);
     el.addEventListener("wheel",onWheel,{passive:false});
-    el.addEventListener("touchstart",e=>{onTouchStart(e);onClickDown(e);},{passive:false});
+    el.addEventListener("touchstart",onTouchStartAll,{passive:false});
     el.addEventListener("touchmove",onTouchMove,{passive:false});
-    el.addEventListener("touchend",e=>{onUp();onClickUp(e);});
+    el.addEventListener("touchend",onTouchEndAll);
     el.addEventListener("touchcancel",onUp);
+    own("listeners",()=>{
+      window.removeEventListener("mousemove",onMove);
+      window.removeEventListener("mouseup",onMouseUp);
+      el.removeEventListener("contextmenu",onContextMenu);
+      el.removeEventListener("mousedown",onMouseDown);
+      el.removeEventListener("wheel",onWheel);
+      el.removeEventListener("touchstart",onTouchStartAll);
+      el.removeEventListener("touchmove",onTouchMove);
+      el.removeEventListener("touchend",onTouchEndAll);
+      el.removeEventListener("touchcancel",onUp);
+    });
 
     if(onRecenterRef)onRecenterRef.current=()=>{cancelPresetTransition();cam.autoFollow=true;cam.overview=true;cam.viewPreset=null;cam._ovBase=null;cam.manualRadius=null;cam._directorHotspot=null;cam._directorTarget=null;cam._directorTelemetry=null;cam.chaseYaw=0;cam.chasePitch=0;cam.povFov=42;camera.fov=42;camera.updateProjectionMatrix();};
     if(onCameraPresetRef)onCameraPresetRef.current=(name)=>setFpsCameraPreset(stateRef.current,name);
@@ -2184,12 +2218,38 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
       st?.povWeapon?.group?.traverse((object)=>{object.geometry?.dispose?.();const materials=Array.isArray(object.material)?object.material:[object.material];materials.filter(Boolean).forEach(material=>material.dispose?.());});
       st?.camera?.remove?.(st?.povWeapon?.group);
       ro.disconnect();
-      window.removeEventListener("mousemove",onMove);
+      //  ⚠ 地圖環境（857 行的幾何與材質）以前完全沒有被收 —— 實測離場後
+      //    仍有 561 geometries、55 textures、19 programs 留著。
+      st?.c3Environment?.dispose?.();
+      //  ── 排乾單一清理路徑 ──────────────────────────────────────────
+      //  ⚠ 逐項 try/catch：一項失敗不可以讓後面的清理整串停掉，
+      //    否則一個小錯誤就會退回「什麼都沒收」的狀態。
+      for(const d of (st?.disposables??[])){try{d.fn();}catch(e){console.warn("[cs-cleanup]",d.label,e);}}
+      if(st)st.disposables=[];
+      scene.clear?.();
       if(onRecenterRef)onRecenterRef.current=null;
       if(onCameraPresetRef)onCameraPresetRef.current=null;
       if(typeof window!=="undefined")delete window.__ESMO_FPS_P0_CONTRACT__;
+      //  ⚠ 這個全域參照是**主要**的洩漏：它在卸載後仍指著整份 state，
+      //    於是 renderer、canvas、場景圖、所有閉包都無法被回收 —— 連已經
+      //    dispose 過的東西也還被 hold 著。必須清掉。
+      //    只有在它仍指向**這一次**的 state 時才清，避免把下一次掛載的踩掉。
+      if(typeof window!=="undefined"&&window.__ESMO_FPS_SCENE__===st)delete window.__ESMO_FPS_SCENE__;
       try{mount.removeChild(renderer.domElement);}catch(e){}
+      //  ⚠ 留下**卸載後**的資源數字給量測／regression 用。
+      //    只寫數字：寫物件參照的話，等於把剛修掉的洩漏原封不動放回來。
+      try{
+        const info=renderer.info;
+        if(typeof window!=="undefined")window.__ESMO_FPS_TEARDOWN__={
+          geometries:info?.memory?.geometries??null,textures:info?.memory?.textures??null,
+          programs:info?.programs?.length??null,sceneChildren:scene?.children?.length??null,
+          at:Date.now(),
+        };
+      }catch(e){}
       renderer.dispose();
+      //  ⚠ WebGL context 數量有上限（約 16）。只 dispose renderer 不保證
+      //    context 立刻釋放；明確要求 context loss 才不會在多次進出後耗盡。
+      try{renderer.forceContextLoss?.();}catch(e){}
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
@@ -2236,6 +2296,8 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
     st.players.forEach((player)=>player.rigged?.dispose?.());
     clear(worldGroup);clear(playerGroup);clear(fxGroup);clear(routeGroup);
     st.raycastTargets=[];
+    //  ⚠ 換地圖會重建環境 ⇒ 先收掉上一份，否則每換一次就多留一整張地圖。
+    st.c3Environment?.dispose?.();
     st.c3Environment=createC3MirageEnvironment({group:worldGroup,mapKey,W});
 
     // 地板

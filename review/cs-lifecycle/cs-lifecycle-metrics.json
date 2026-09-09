@@ -12,19 +12,21 @@
       "window:orientationchange": 1
     },
     "intervals": 1,
-    "glContexts": 0,
+    "glAcquired": 0,
+    "glAlive": 0,
     "sceneHandle": false,
     "geometries": null,
     "textures": null,
     "programs": null,
     "drawCalls": null,
-    "sceneChildren": null
+    "sceneChildren": null,
+    "lastTeardown": null
   },
   {
     "cycle": 1,
     "phase": "in-battle",
-    "loadMs": 109123,
-    "heapMB": 222,
+    "loadMs": 107024,
+    "heapMB": 208,
     "canvas": 1,
     "rafLive": 1,
     "listenerTotal": 3,
@@ -34,34 +36,206 @@
       "window:mouseup": 1
     },
     "intervals": 1,
-    "glContexts": 1,
+    "glAcquired": 1,
+    "glAlive": 1,
     "sceneHandle": true,
     "geometries": 1271,
     "textures": 55,
     "programs": 19,
     "drawCalls": 1322,
-    "sceneChildren": 11
+    "sceneChildren": 11,
+    "lastTeardown": null,
+    "match": {
+      "hasView": true,
+      "restoreable": true,
+      "mode": "cs",
+      "phase": "battle",
+      "sessionId": "session:cs:e369a084",
+      "seed": 11521,
+      "mapKey": "inferno",
+      "round": null,
+      "score": [
+        null,
+        null
+      ],
+      "roster": 10
+    }
   },
   {
     "cycle": 1,
     "phase": "after-leave",
-    "heapMB": 227,
+    "heapMB": 182,
     "canvas": 0,
     "rafLive": 1,
-    "listenerTotal": 4,
+    "listenerTotal": 3,
     "listeners": {
       "document:selectionchange": 1,
       "window:resize": 1,
-      "window:orientationchange": 1,
+      "window:orientationchange": 1
+    },
+    "intervals": 1,
+    "glAcquired": 1,
+    "glAlive": 0,
+    "sceneHandle": false,
+    "geometries": null,
+    "textures": null,
+    "programs": null,
+    "drawCalls": null,
+    "sceneChildren": null,
+    "lastTeardown": {
+      "geometries": 481,
+      "textures": 41,
+      "programs": 19,
+      "sceneChildren": 0,
+      "at": 1788985690676
+    }
+  },
+  {
+    "cycle": 2,
+    "phase": "in-battle",
+    "loadMs": 86550,
+    "heapMB": 311,
+    "canvas": 1,
+    "rafLive": 2,
+    "listenerTotal": 3,
+    "listeners": {
+      "document:selectionchange": 1,
+      "window:mousemove": 1,
       "window:mouseup": 1
     },
     "intervals": 1,
-    "glContexts": 1,
+    "glAcquired": 2,
+    "glAlive": 1,
     "sceneHandle": true,
-    "geometries": 561,
-    "textures": 55,
-    "programs": 19,
-    "drawCalls": 1323,
-    "sceneChildren": 11
+    "geometries": 1137,
+    "textures": 53,
+    "programs": 18,
+    "drawCalls": 1326,
+    "sceneChildren": 11,
+    "lastTeardown": {
+      "geometries": 481,
+      "textures": 41,
+      "programs": 19,
+      "sceneChildren": 0,
+      "at": 1788985690676
+    },
+    "match": {
+      "hasView": true,
+      "restoreable": true,
+      "mode": "cs",
+      "phase": "battle",
+      "sessionId": "session:cs:e369a084",
+      "seed": 11521,
+      "mapKey": "inferno",
+      "round": null,
+      "score": [
+        null,
+        null
+      ],
+      "roster": 10
+    }
+  },
+  {
+    "cycle": 2,
+    "phase": "after-leave",
+    "heapMB": 313,
+    "canvas": 0,
+    "rafLive": 1,
+    "listenerTotal": 3,
+    "listeners": {
+      "document:selectionchange": 1,
+      "window:resize": 1,
+      "window:orientationchange": 1
+    },
+    "intervals": 1,
+    "glAcquired": 2,
+    "glAlive": 0,
+    "sceneHandle": false,
+    "geometries": null,
+    "textures": null,
+    "programs": null,
+    "drawCalls": null,
+    "sceneChildren": null,
+    "lastTeardown": {
+      "geometries": 347,
+      "textures": 39,
+      "programs": 18,
+      "sceneChildren": 0,
+      "at": 1788985784246
+    }
+  },
+  {
+    "cycle": 3,
+    "phase": "in-battle",
+    "loadMs": 86743,
+    "heapMB": 461,
+    "canvas": 1,
+    "rafLive": 2,
+    "listenerTotal": 3,
+    "listeners": {
+      "document:selectionchange": 1,
+      "window:mousemove": 1,
+      "window:mouseup": 1
+    },
+    "intervals": 1,
+    "glAcquired": 3,
+    "glAlive": 1,
+    "sceneHandle": true,
+    "geometries": 1137,
+    "textures": 53,
+    "programs": 18,
+    "drawCalls": 1324,
+    "sceneChildren": 11,
+    "lastTeardown": {
+      "geometries": 347,
+      "textures": 39,
+      "programs": 18,
+      "sceneChildren": 0,
+      "at": 1788985784246
+    },
+    "match": {
+      "hasView": true,
+      "restoreable": true,
+      "mode": "cs",
+      "phase": "battle",
+      "sessionId": "session:cs:e369a084",
+      "seed": 11521,
+      "mapKey": "inferno",
+      "round": null,
+      "score": [
+        null,
+        null
+      ],
+      "roster": 10
+    }
+  },
+  {
+    "cycle": 3,
+    "phase": "after-leave",
+    "heapMB": 121,
+    "canvas": 0,
+    "rafLive": 1,
+    "listenerTotal": 3,
+    "listeners": {
+      "document:selectionchange": 1,
+      "window:resize": 1,
+      "window:orientationchange": 1
+    },
+    "intervals": 1,
+    "glAcquired": 3,
+    "glAlive": 0,
+    "sceneHandle": false,
+    "geometries": null,
+    "textures": null,
+    "programs": null,
+    "drawCalls": null,
+    "sceneChildren": null,
+    "lastTeardown": {
+      "geometries": 347,
+      "textures": 39,
+      "programs": 18,
+      "sceneChildren": 0,
+      "at": 1788985878162
+    }
   }
 ]

@@ -459,6 +459,8 @@ function createC4BMapEnvironment({ group, mapKey, W }) {
     enabled: true,
     version: C4B_VERSION,
     group: environment,
+    //  ⚠ 同上：C4B 版本也要有出口，否則換地圖時一樣漏。
+    dispose: () => disposeEnvironmentResources({ environment, geometryCache, materials }),
     summary: {
       enabled: true,
       version: C4B_VERSION,
@@ -479,6 +481,35 @@ function createC4BMapEnvironment({ group, mapKey, W }) {
       noGameplayMutation: true,
     },
   };
+}
+
+/**
+ * 釋放一次環境建構所擁有的資源。
+ *
+ * ⚠ 只收**本次呼叫建立**的東西：`geometryCache` 與 `materials` 都是 builder
+ *   內的區域變數，沒有跨 mount 共用。所以這裡 dispose 是安全的。
+ * ⚠ 刻意**不** traverse 整棵 group 去 dispose 每個 mesh 的 material／geometry：
+ *   那樣會連「多個 mesh 共用同一份幾何」的情況重複 dispose，也可能誤傷日後
+ *   從共用快取拿來的資產。收 cache 與 materials 才是精確的擁有權邊界。
+ * ⚠ 也把 group 從父節點移除並清空 children，否則場景圖仍指著這些物件。
+ */
+function disposeEnvironmentResources({ environment, geometryCache, materials }) {
+  let geometries = 0, mats = 0, textures = 0;
+  for (const geo of geometryCache.values()) { geo.dispose?.(); geometries++; }
+  geometryCache.clear();
+  for (const m of Object.values(materials ?? {})) {
+    for (const one of (Array.isArray(m) ? m : [m])) {
+      if (!one) continue;
+      //  材質身上掛的貼圖也是本次建立的，一起收。
+      for (const k of ["map", "normalMap", "roughnessMap", "metalnessMap", "emissiveMap", "alphaMap", "aoMap"]) {
+        if (one[k]?.dispose) { one[k].dispose(); textures++; }
+      }
+      one.dispose?.(); mats++;
+    }
+  }
+  environment?.parent?.remove?.(environment);
+  if (environment) environment.clear?.();
+  return { geometries, materials: mats, textures };
 }
 
 export function createC3MirageEnvironment({ group, mapKey, W }) {
@@ -834,6 +865,8 @@ export function createC3MirageEnvironment({ group, mapKey, W }) {
     enabled: true,
     version: ENV_VERSION,
     group: environment,
+    //  ⚠ 呼叫端**必須**在卸載時呼叫它，否則整張地圖的幾何／材質會留在記憶體裡。
+    dispose: () => disposeEnvironmentResources({ environment, geometryCache, materials }),
     summary: {
       enabled: true,
       version: ENV_VERSION,

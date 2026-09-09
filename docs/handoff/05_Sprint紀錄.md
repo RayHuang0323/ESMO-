@@ -19254,3 +19254,51 @@ browser_check_player_challenge_slice5（桌機 1366 ＋ 手機 390）
 ⚠ **未經瀏覽器實測的項目**：正式站 smoke（`browser_check_prod_player_challenge`
 新增的 ⑧／⑧b 兩節）——本輪不 push、不 deploy，所以那兩節只通過語法檢查，
 要等下一次 release checkpoint 才會真的跑到。
+
+---
+
+## 玩家可見 Bug 修復批次（2026-09-10，A／B 完成，C 未開始）
+
+Owner 指定三個玩家可見缺陷，規則是「先重現 → 找 root cause → 最小修正 →
+建 regression guard → runtime 驗證」，每個缺陷分開 commit。
+
+### B. MOBA 裂隙 330 野怪長在下路上（commit ad0fe29）
+
+`camp_blue_b` / `camp_red_b` 的座標離兵線只有 1.0 單位，視覺上就是野怪站在路上。
+根因用 git history 追到：那兩個點是在一次兵線改形之前定的，兵線挪過去之後沒有跟著挪。
+改成 y:186 / y:34（距離 1.0 → 8.0，導航淨空 12.2 → 19.2，鏡像對稱 220 維持）。
+因為改的是 `src/gameData.js`（在 `SIMULATION_SEMANTICS_FILES` 內），
+一併 bump `moba-sim.v3` → `v4`。新 guard `check_moba_camp_placement` 43/43。
+
+### A. CS 賽前 Loading／返回變慢與當掉（本次 commit）
+
+**根因（四項全部量到，不是推測）**：CS runtime 的卸載路徑沒有把自己建的東西收回去——
+① `window.__ESMO_FPS_SCENE__` 離場後仍指著死掉的場景，整棵 scene graph／renderer
+被全域變數釘住不能回收；② `window.mouseup` 監聽從未移除，每進出一輪多留一個；
+③ 地圖環境（`createC3MirageEnvironment` 與 C4B builder）根本沒有 dispose 契約，
+幾何／材質／貼圖只能等 GC，而 ① 讓它們等不到；④ 材質、燈光、群組沒有統一的回收路徑。
+
+**修法**：在既有的 `stateRef.current.disposables` 上接單一條回收路徑（不另造第二套
+disposer），環境建構函式回傳 `dispose()` 並區分**自有資源**（function-local 的
+`geometryCache`／`materials`）與**共用快取資源**（module-level GLTF，共用故不收）。
+
+**量測（三輪，第 1 輪完整進場、第 2/3 輪 resume 同一場）**：
+進場 107.0s → 86.5s → 86.7s（不再逐輪變慢）；離場後存活 WebGL context 0/0/0；
+監聽回 baseline 3/3/3 且無殘留 mouseup；canvas 0/0/0；RAF 回 baseline 1/1/1；
+卸載快照 geometries 481 → 347、textures 41 → 39（不單調累積）、sceneChildren 0。
+修復前基線：離場後仍留 561 geometries／55 textures／19 programs，mouseup 殘留，
+全域 handle 仍指著死場景。
+
+**guard**：`browser_measure_cs_lifecycle.mjs` 22/22 PASS，並做過反向測試——
+拿掉全域 handle 清除 → 21/22 紅；拿掉監聽移除 → 20/22 紅。
+
+**已知限制（照實記）**：
+- 沒有穩定重現真正的 crash，所以只能宣稱 CRASH_RISK_REDUCED，不是 CRASH_FIXED。
+- 卸載後 geometries 收斂在 347 而非 0，那是刻意保留的共用 rigged GLTF 快取。
+- guard 裡的 `round`／`score` 讀取路徑仍是錯的（讀出 null），未驗證；
+  `sessionId`／`seed`／`mapKey`／`roster` 四項是真值比對，有效。
+
+### C. 手機 Ban/Pick 英雄清單單指滑不動（未開始）
+
+Owner 明令本輪不開。已排除 CSS `overflow`／`touch-action` 與 pointer handler 兩類原因；
+「容器高度無上界所以沒有可捲區」的假說尚未證實，量測 harness 也還沒走到 Ban/Pick 畫面。
