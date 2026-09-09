@@ -1,0 +1,67 @@
+[
+  {
+    "cycle": 0,
+    "phase": "baseline",
+    "heapMB": 83,
+    "canvas": 0,
+    "rafLive": 1,
+    "listenerTotal": 3,
+    "listeners": {
+      "document:selectionchange": 1,
+      "window:resize": 1,
+      "window:orientationchange": 1
+    },
+    "intervals": 1,
+    "glContexts": 0,
+    "sceneHandle": false,
+    "geometries": null,
+    "textures": null,
+    "programs": null,
+    "drawCalls": null,
+    "sceneChildren": null
+  },
+  {
+    "cycle": 1,
+    "phase": "in-battle",
+    "loadMs": 109123,
+    "heapMB": 222,
+    "canvas": 1,
+    "rafLive": 1,
+    "listenerTotal": 3,
+    "listeners": {
+      "document:selectionchange": 1,
+      "window:mousemove": 1,
+      "window:mouseup": 1
+    },
+    "intervals": 1,
+    "glContexts": 1,
+    "sceneHandle": true,
+    "geometries": 1271,
+    "textures": 55,
+    "programs": 19,
+    "drawCalls": 1322,
+    "sceneChildren": 11
+  },
+  {
+    "cycle": 1,
+    "phase": "after-leave",
+    "heapMB": 227,
+    "canvas": 0,
+    "rafLive": 1,
+    "listenerTotal": 4,
+    "listeners": {
+      "document:selectionchange": 1,
+      "window:resize": 1,
+      "window:orientationchange": 1,
+      "window:mouseup": 1
+    },
+    "intervals": 1,
+    "glContexts": 1,
+    "sceneHandle": true,
+    "geometries": 561,
+    "textures": 55,
+    "programs": 19,
+    "drawCalls": 1323,
+    "sceneChildren": 11
+  }
+]
