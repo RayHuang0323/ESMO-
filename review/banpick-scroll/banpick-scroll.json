@@ -248,7 +248,7 @@
     "hero": "tiankong",
     "before": 0,
     "picked": 0,
-    "log": "選角動態\n🔴 鎏金王朝 禁用 剃翼"
+    "log": "選角動態\n🔴 鎏金王朝 禁用 賭徒"
   },
   "pickPhase": {
     "geometry": {
@@ -1720,7 +1720,7 @@
     },
     "dclick": {
       "hero": "suishan",
-      "log": "選角動態\n🔴 鎏金王朝 禁用 極光"
+      "log": "選角動態\n🔴 鎏金王朝 禁用 賭徒"
     }
   }
 }

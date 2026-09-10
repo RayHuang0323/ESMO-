@@ -238,8 +238,46 @@ for (const [label, now, was] of [
 ck("⑤ 挑戰路徑不呼叫 applyMatchProgress",
   !/applyMatchProgress/.test(code("src/platform/challenge/challengeState.js"))
   && !/applyMatchProgress/.test(code("src/platform/challenge/challengeRunner.js")));
-ck("⑤ 挑戰的 Store 動作只寫 challenge 切片",
-  (code("src/platform/profileStore.js").match(/set\(\{ challenge: [^}]+\}\)/g) ?? []).length >= 3);
+//  ⚠ 2026-09-10（Slice 7）：原本這條數的是**單行**寫法
+//    `set({ challenge: X })` 的出現次數。那是原始碼形狀的啟發式，
+//    只要有人把寫入改成多行物件展開（Slice 7 就這樣做了）就會假紅，
+//    而底層性質其實沒變。改成直接驗那個性質本身：
+//      · 仍然有多處寫入 challenge 切片
+//      · 挑戰相關的函式本體裡**沒有**寫進其他切片
+//    這比原本嚴格：原本只要湊滿三個字串就過。
+{
+  const src = code("src/platform/profileStore.js");
+  ck("⑤ 挑戰路徑有寫入 challenge 切片",
+    (src.match(/set\(\{\s*challenge:/g) ?? []).length >= 3,
+    `${(src.match(/set\(\{\s*challenge:/g) ?? []).length} 處`);
+
+  //  取出所有挑戰相關動作的函式本體，檢查裡面有沒有寫別的切片。
+  const names = ["startFixtureChallenge", "retryChallenge", "runChallengeById",
+    "beginChallengeDraft", "recordChallengeDraftAction", "undoChallengeDraftAction",
+    "cancelChallengeDraft", "publishDefenseSnapshot"];
+  const leaks = [];
+  for (const name of names) {
+    const i = src.indexOf(`  ${name}(`);
+    if (i < 0) continue;
+    //  下一個同縮排的方法起點當作結尾（夠用，且不需要真的 parse）。
+    //  ⚠ 逐行掃描，不用含換行的正則：本檔是用腳本產生的，
+    //    換行跳脫在那條路徑上會被吃掉，變成一個壞掉的 regex 字面量。
+    const rest = src.slice(i + name.length);
+    const LF = String.fromCharCode(10);
+    const lines = rest.split(LF);
+    let end = lines.length;
+    for (let k = 1; k < lines.length; k++) {
+      if (/^ {2}[A-Za-z_$][\w$]*\(/.test(lines[k])) { end = k; break; }
+    }
+    const body = lines.slice(0, end).join(LF);
+    for (const m of body.match(/set\(\{\s*([A-Za-z_$][\w$]*)\s*:/g) ?? []) {
+      const slice = m.replace(/set\(\{\s*/, "").replace(/\s*:$/, "");
+      if (slice !== "challenge") leaks.push(`${name} → ${slice}`);
+    }
+  }
+  ck("⑤ 挑戰的 Store 動作只寫 challenge 切片（不碰生涯資料）",
+    leaks.length === 0, leaks.join("｜") || "沒有任何越界寫入");
+}
 
 // ══════════════════════════════════════════════════════════════════════════
 console.log("\n── ⑥ UI 契約（原始碼層；瀏覽器行為由 smoke 負責）──");

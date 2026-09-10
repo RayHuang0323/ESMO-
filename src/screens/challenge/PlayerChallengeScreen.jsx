@@ -348,14 +348,17 @@ export default function PlayerChallengeScreen({ onBack, onDraft = null, runChall
   const heroNameOf = (id) => heroById(id)?.zh ?? id;
 
   const view = useMemo(() => useProfileStore.getState().challengeView(), [sig]);
+  //  ⚠ Slice 7：`tacticId` 必須宣告在 `board` 之前——看板要用它算陣容身分，
+  //    而 const 在同一個作用域裡先用後宣告是 TDZ 錯誤，不是 undefined。
+  const [tacticId, setTacticId] = useState(() => view.defense?.standingOrders?.tacticId ?? MOBA_TACTICS[0].tacticId);
+
   const board = useMemo(
     //  ⚠ `heroById` 是**函式**（`(id) => hero | null`），不是物件。
     //    寫成 `heroById?.[id]` 永遠拿到 undefined，英雄名就會全部退化成 id。
-    () => useProfileStore.getState().challengeBoardView({ heroProgress, heroNameOf }),
-    [sig, heroProgress],
+    //  ⚠ 戰術是陣容身分的一部分 ⇒ 換戰術要重算看板狀態，所以它在相依陣列裡。
+    () => useProfileStore.getState().challengeBoardView({ heroProgress, heroNameOf, tacticId }),
+    [sig, heroProgress, tacticId],
   );
-
-  const [tacticId, setTacticId] = useState(() => view.defense?.standingOrders?.tacticId ?? MOBA_TACTICS[0].tacticId);
   const [busy, setBusy] = useState(null);
   const [msg, setMsg] = useState(null);
   const [openId, setOpenId] = useState(null);
@@ -517,6 +520,18 @@ export default function PlayerChallengeScreen({ onBack, onDraft = null, runChall
             {detail.instance.kind === CHALLENGE_KINDS.retry && (
               <span data-testid="challenge-result-retry" style={{ ...chip(GC.gray), marginLeft: "auto" }}>再試一次・不計入紀錄</span>
             )}
+            {/*  ── Slice 7：這一場算不算正式、有沒有獎勵資格 ────────────────
+                 ⚠ 第一層只放**結論**（一個短標籤）。完整的重試／獎勵規則
+                   走既有的 InfoHint 第二層，不在這裡展開成說明文。
+                 ⚠ 狀態一律讀 Store 凍結的判定，畫面不自己推。 */}
+            {detail.instance.settlement && detail.instance.kind !== CHALLENGE_KINDS.retry && (
+              <span data-testid="challenge-settlement-class"
+                data-class={detail.instance.settlement.settlementClass}
+                data-eligible={detail.instance.settlement.rewardEligible ? "1" : "0"}
+                style={{ ...chip(detail.instance.settlement.rewardEligible ? GC.green : GC.gray), marginLeft: "auto" }}>
+                {detail.instance.settlement.rewardEligible ? "正式紀錄" : "不計入正式紀錄"}
+              </span>
+            )}
           </div>
           {busy === "run" && !result && (
             <div className="esmo-running" data-testid="challenge-running" style={{ color: GC.blueL, fontSize: 12, marginTop: 8 }}>模擬進行中…（約需數秒）</div>
@@ -531,6 +546,15 @@ export default function PlayerChallengeScreen({ onBack, onDraft = null, runChall
               <div className="esmo-score" data-testid="challenge-score" style={{ color: "#d4d4d8", fontSize: 12, marginTop: 6, fontFamily: MONO }}>
                 擊殺 {result.score.challenger} : {result.score.defender}　時長 {Math.round(result.durationSec / 60)} 分
               </div>
+
+              {/*  Slice 7：為什麼這一場算／不算，一行講完。理由字串來自
+                   `challengeEligibility` 的常數，畫面不自己編。 */}
+              {detail.instance.settlement && (
+                <div data-testid="challenge-settlement-reason"
+                  style={{ color: "#71717a", fontSize: 10.5, marginTop: 5, lineHeight: 1.6 }}>
+                  {detail.instance.settlement.rewardReason}
+                </div>
+              )}
 
               <EvidenceTable testid="challenge-evidence-mine"
                 title={`我方宣告 vs 實際（${myTactic?.name ?? detail.instance.challengerTacticId}）`}

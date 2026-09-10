@@ -25,6 +25,7 @@
 import { mobaTacticById } from "../contracts/MobaTacticConfig.js";
 import { DOCTRINES, doctrineOfTactic } from "../mastery/doctrine.js";
 import { draftTendencyOf } from "./draftPolicy.js";
+import { formalStateFor, squadIdentityOf } from "./challengeEligibility.js";
 
 export const CHALLENGE_BOARD_VERSION = "ChallengeBoard.v1";
 
@@ -61,12 +62,32 @@ export const BOARD_SLOTS = Object.freeze({
  *
  * @returns {Object<string,{challenged:number,broke:number,held:number}>} key → 紀錄
  */
+/**
+ * 看板上的一句狀態。⚠ 只描述**可證明的事**：打過沒、對手那份是不是新的。
+ *   不得出現任何強弱推估——那是本模組從 Slice 3 起就守住的紅線。
+ */
+export const FORMAL_STATE_LABELS = Object.freeze({
+  available: "尚未正式挑戰",
+  played: "已挑戰這份陣容",
+  updated: "對手更新了陣容，可重新挑戰",
+  unknown: "",
+});
+
 export function observedRecords(challengeState) {
   const out = {};
   const instances = challengeState?.instances ?? {};
   for (const id of challengeState?.order ?? []) {
     const inst = instances[id];
     if (!inst?.result || inst.kind === "retry") continue;
+    //  ── Slice 7：觀測紀錄 vs 獎勵資格是**兩件事** ────────────────────────
+    //  ⚠ 這裡**照樣計入** `repeat`（同一組陣容對同一份快照再打一場）。
+    //    理由：觀測紀錄不給任何獎勵，它只回答「你對這支隊伍打過幾次、贏幾次」，
+    //    而那些場次是真的打完的 —— 排除掉會讓看板謊報你的經驗。
+    //    防刷是**獎勵層**的事，由 `challengeEligibility` 判 `rewardEligible`。
+    //  ⚠ 一開始我把 repeat 也排除，結果 `coldStart` 與候選位分類變成不可達：
+    //    fixture 的快照是固定的，玩家不改自己的陣容就永遠累積不到
+    //    `MIN_RECORD_SAMPLE` 筆 —— 直接弄壞一個已經上線的功能（Slice 3 ④ 實測紅）。
+    //  ⚠ `retry` 仍然排除（上一行），那才是 Owner §7 點名不得洗紀錄的東西。
     const key = inst.opponentKey;
     if (!key) continue;
     const row = out[key] ?? (out[key] = { challenged: 0, broke: 0, held: 0 });
@@ -169,6 +190,10 @@ export function compositionOf(snapshot) {
  */
 export function buildChallengeBoard({
   challengeState = null, careerDay = 1, opponents = [], playerMasteryLevel = 1, heroNameOf = null,
+  //  Slice 7：判斷「這份快照我打過了沒」需要**我方目前的快照身分**。
+  //  ⚠ 沒有傳（例如還沒發布過防守陣容）⇒ 狀態退化成只看對手那一邊，
+  //    不會亂猜，也不會假裝可以再打一場正式的。
+  challengerIdentity = null,
 } = {}) {
   const records = observedRecords(challengeState);
   const anyRecord = Object.values(records).some((r) => r.challenged >= MIN_RECORD_SAMPLE);
@@ -203,8 +228,21 @@ export function buildChallengeBoard({
       else if (recentLineupChange) slot = BOARD_SLOTS.changed.id;
     }
 
+    //  ── Slice 7：正式挑戰狀態 ────────────────────────────────────────────
+    //  ⚠ 唯一判定在 `challengeEligibility.formalStateFor`，看板不自己算。
+    //    `updated` 只在對手的 defenderSnapshotHash 真的變了才會出現——
+    //    我們**不製造**「對手更新了陣容」這件事。
+    const formalState = formalStateFor({
+      opponentKey: entry.key,
+      challengerIdentity,
+      defenderIdentity: squadIdentityOf(snap),
+      instances: Object.values(challengeState?.instances ?? {}),
+    });
+
     candidates.push({
       key: entry.key,
+      formalState,
+      formalStateLabel: FORMAL_STATE_LABELS[formalState] ?? "",
       //  ⚠ UI 必須照實顯示這是 fixture 還是真玩家，不得混為一談。
       source: entry.source,
       snapshotHash: snap.hash,

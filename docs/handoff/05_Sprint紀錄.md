@@ -19507,3 +19507,79 @@ BanPickScreen 的根元素寫的是 `height:100%`，百分比高度在沒有確�
 - `v.careerSafe` 是字串不是陣列，我多加的 `.join()` 讓 gate 直接 HARNESS_FAIL。
 - 註解裡寫了反引號包住的識別字，落在樣板字串內 ⇒ `SyntaxError`。
   這個坑本 session 已經踩到第五次，`heredoc`／樣板字串內一律不要用反引號。
+
+---
+
+## Player Challenge Slice 7 — Lifecycle Closure & Repeat Control（2026-09-10）
+
+把玩家挑戰收成一個可重複、紀錄清楚、不能刷收益的循環。**沒有發明任何獎勵數值。**
+
+### Audit：既有的不重做
+
+- `CHALLENGE_KINDS = { formal, retry }` 已存在，`retryChallenge` 已正確標 `kind: retry`。
+- `observedRecords` 已排除 retry（Slice 3 就做了）。
+- **缺的**：rechallenge 的判定、eligibility、結算層再驗、看板狀態、Result 狀態顯示。
+- **repo 目前沒有任何 Challenge 獎勵契約**（`src/platform/challenge/` 搜不到 clubPoints/reward）
+  ⇒ 依 §3 只產出 `SETTLEMENT_CLASS` / `REWARD_ELIGIBLE` / `REWARD_REASON` 三個欄位。
+
+### 本輪最重要的發現：快照雜湊**不是**隊伍身分
+
+第一版拿 `challengerSnapshotHash + defenderSnapshotHash` 當防刷鍵。端到端實測（繞過畫面
+直接呼叫 store）打兩場同陣容、同對手的 formal，**兩場都判為 eligible** ——
+因為 `issuedAt` 會進快照雜湊，同一支隊伍每次簽發都換一個 hash（實測 `e0202b9f` vs `c0eb232f`）。
+`snapshotAuthority.js` 自己的註解早就講過同一件事：「狀態變了 ⇒ 快照雜湊變了 ⇒ 看起來像換了一支隊伍」。
+
+改法：`squadIdentityOf(snapshot)` = 快照內容**扣掉 issuedAt** 的穩定雜湊，
+在建立場次時凍結到 `instance.identity`。換先發／換戰術／練熟練 ⇒ 身分改變（本來就該算新的一場）；
+只是再按一次挑戰 ⇒ 身分不變。舊資料沒有 `identity` ⇒ 退回快照雜湊，不追溯改寫。
+
+⚠ 這個缺口**只有端到端跑真 Store 才會現形**，契約層用測試素材（自己指定 hash）永遠看不到。
+
+### 第二個判斷點：觀測紀錄 vs 獎勵資格是兩件事
+
+我一開始把 `repeat` 也排除在 `observedRecords` 之外，結果 `coldStart` 與候選位分類
+**變成不可達**：fixture 的快照是固定的，玩家不改自己陣容就永遠累積不到 `MIN_RECORD_SAMPLE`
+（Slice 3 ④「打過之後不再是冷啟」實測紅）——直接弄壞一個已上線的功能。
+
+重讀條文後分開處理：§3 的防刷對象是**收益**，§7 點名不得洗紀錄的是 **Retry**。
+所以：
+- **觀測紀錄**照樣計入 `repeat`（那些場次真的打完了，排除掉會讓看板謊報你的經驗），
+  但**永遠排除 retry**。
+- **獎勵資格**只有每組配對的第一場才有。
+
+⚠ 若 Owner 的原意是連紀錄也要排除 repeat，那 `coldStart` 與候選位分類需要換一個基礎，
+這需要另一個決策——我沒有自己決定，照實記在這裡。
+
+### 權威：不只在 UI
+
+判定在**建立時**凍結，**結算時再驗一次**（`reconcileAtSettlement`），而且只會往嚴格的方向改：
+建立時判 formal、結算時發現配對被佔走 ⇒ 降級為 repeat；**反過來永遠不會**把 repeat 升成 formal
+（否則刪掉前例的 result 就能把資格洗回來）。端到端實測：手改存檔刪掉前例 → 那場仍是 repeat。
+
+⚠ **目前仍是 local/mock authority**，不是伺服器安全機制。存檔在玩家自己的瀏覽器裡，
+有人要改就改得掉——這裡擋的是「正常玩法下反覆重打拿重複收益」，不是惡意竄改。
+
+### 驗證
+
+- `check_player_challenge_slice7` **27/27 PASS**（含 ⑪ 反向測試：只看 kind 的話同配對重打會被誤判為可領獎）
+- `browser_check_challenge_lifecycle` **21/21 PASS**（繞過畫面直接呼叫 store）
+  A 首場 eligible／B retry×3 不具資格／C 3 場 retry 不進紀錄且五場只有一場有資格／
+  D 換 seed 無效（並釘住「快照雜湊本來就不同」這個陷阱）／E 對手換快照可再正式挑戰／
+  F reload 判定與看板狀態皆不變／G 繞過畫面仍降為 repeat／G2 刪前例洗不回來／
+  H 生涯日期、選手經驗、體力三項皆不變
+- 回歸：Slice 1 108/108、Slice 2 **79/79**、Slice 4 60/60、Slice 5 71/71、Slice 6 30/30、
+  版本 gate 51/51、手動選角 27/27、手機捲動 23/23、regress 15/15、regress2 8/8、build 過。
+
+### 順手強化的一條既有檢查
+
+Slice 2 的「⑤ 挑戰的 Store 動作只寫 challenge 切片」原本是數
+`set({ challenge: X })` 單行寫法的出現次數——原始碼形狀的啟發式，我把寫入改成多行
+物件展開就假紅了。改成**直接驗那個性質**：掃每個挑戰相關動作的函式本體，
+確認沒有任何 `set({ 其他切片: ... })`。比原本嚴格（原本只要湊滿三個字串就過），
+所以 Slice 2 從 78 條變 79 條。
+
+### 既有的不穩定（非本輪造成）
+
+`check_player_challenge_slice3` 的「③ 新存檔不是結構性必敗（勝率 > 20%）」是統計性檢查，
+實測落在 13–21% 之間跳，會讓整支在 97–100 之間浮動。我用 `git stash` 在**未修改的 HEAD**
+上連跑五次確認同樣會抖（100/99/98/100/100）⇒ 既有問題，**沒有**去放寬那個閾值。

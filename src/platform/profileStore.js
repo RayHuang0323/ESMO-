@@ -89,6 +89,7 @@ import { runChallenge } from "./challenge/challengeRunner.js";
 //  Slice 5：非同步 Draft。⚠ 席位指派沿用既有的 assignDraft，不另寫一套。
 import { createDraftResult, draftComparisonRows } from "./challenge/draftResult.js";
 import { DRAFT_SHAPE } from "./challenge/draftPolicy.js";
+import { classifyChallenge, reconcileAtSettlement, squadIdentityOf } from "./challenge/challengeEligibility.js";
 import { assignDraft } from "../battle/moba/mobaDraftAssignment.js";
 import { heroTags } from "../data/heroClassification.js";
 import { CHAMPIONS_100, heroById } from "../data/heroDatabase.js";
@@ -4044,9 +4045,23 @@ export const useProfileStore = create((rawSet, get) => {
     let next = putSnapshot(cur, fx.snapshot);
     next = putSnapshot(next, entry.snapshot);
     const put = putInstance(next, built.challenge);
-    //  ⚠ Slice 6：場次一建立，那一手就已經被凍進 DraftResult 了 ⇒ 進行中的
-    //    輸入必須清掉。留著的話下一次點對手會接到上一場的殘留半手。
-    set({ challenge: { ...put.state, pendingDraft: null } });
+    //  ⚠ Slice 7：建立當下就判定「這算不算正式、有沒有獎勵資格」並凍結，
+    //    這樣 reload 不會改變資格（判定只看已結算的先前場次，是穩定的）。
+    //    ⚠ 結算時還會**再驗一次**，只會往嚴格的方向改 —— 見 `runChallengeById`。
+    //  ⚠ 身分（不含 issuedAt）必須在這裡凍結：快照雜湊每次簽發都不同，
+    //    拿它當防刷鍵等於沒擋（實測連打兩場的 challengerSnapshotHash 就不同）。
+    const identity = {
+      challenger: squadIdentityOf(entry.snapshot),
+      defender: squadIdentityOf(fx.snapshot),
+    };
+    const staged = { ...put.instance, identity };
+    const cls0 = classifyChallenge(staged, Object.values(next.instances ?? {}));
+    const withCls = { ...staged, settlement: { ...cls0, decidedAt: Date.now() } };
+    set({ challenge: {
+      ...put.state,
+      instances: { ...put.state.instances, [put.instance.challengeId]: withCls },
+      pendingDraft: null,
+    } });
     get().save();
     return { ok: true, errors: [], challengeId: put.instance.challengeId, created: put.added };
   },
@@ -4099,7 +4114,18 @@ export const useProfileStore = create((rawSet, get) => {
     let next = putSnapshot(cur, src.defenderSnapshot);
     next = putSnapshot(next, entry.snapshot);
     const put = putInstance(next, built.challenge);
-    set({ challenge: put.state });
+    //  ⚠ Slice 7：retry 也要帶判定。少了它，畫面就得自己推「這場算不算」，
+    //    那又是第二套規則。這裡一律走同一支 `classifyChallenge`。
+    const identity = {
+      challenger: squadIdentityOf(entry.snapshot),
+      defender: squadIdentityOf(src.defenderSnapshot),
+    };
+    const staged = { ...put.instance, identity };
+    const cls0 = classifyChallenge(staged, Object.values(next.instances ?? {}));
+    set({ challenge: {
+      ...put.state,
+      instances: { ...put.state.instances, [put.instance.challengeId]: { ...staged, settlement: { ...cls0, decidedAt: Date.now() } } },
+    } });
     get().save();
     return { ok: true, errors: [], challengeId: put.instance.challengeId, created: put.added };
   },
@@ -4176,7 +4202,10 @@ export const useProfileStore = create((rawSet, get) => {
    *
    * ⚠ 本檔與 `challengeBoard.js` 都**不 import** `teamStrength` / `calcPower`。
    */
-  challengeBoardView({ heroProgress = null, heroNameOf = null } = {}) {
+  //  ⚠ `tacticId`：戰術是**陣容身分的一部分**（它進 standingOrders、進快照）。
+  //    不帶的話看板算出來的身分與實際出賽那一份對不上，狀態會永遠停在
+  //    「尚未正式挑戰」——實測就是這樣紅的。畫面必須把玩家當下選的戰術傳進來。
+  challengeBoardView({ heroProgress = null, heroNameOf = null, tacticId = null } = {}) {
     const st = get();
     const cur = st.challenge ?? emptyChallengeState();
     const mastery = get()._playerMasteryLevel(heroProgress);
@@ -4188,6 +4217,11 @@ export const useProfileStore = create((rawSet, get) => {
       //  ⚠ 換真伺服器時**只換這一行的 provider**，看板與流程一行不用改。
       opponents: fixtureOpponentProvider.list({ playerMasteryLevel: mastery }),
       heroNameOf,
+      //  Slice 7：正式挑戰狀態比對的是**陣容身分**（不含 issuedAt），
+      //  不是快照雜湊——後者每次簽發都不同，狀態會永遠對不上。
+      //  ⚠ 是 `_issueEntrySnapshot`（出賽用）不是 `defense`（對外防守用）：
+      //    配對鍵用的就是前者。這支只讀狀態、不寫入，view 裡呼叫是安全的。
+      challengerIdentity: squadIdentityOf(get()._issueEntrySnapshot({ tacticId, heroProgress })?.snapshot ?? null),
     });
   },
 
@@ -4215,9 +4249,22 @@ export const useProfileStore = create((rawSet, get) => {
     });
     if (!r.ok) return { ok: false, errors: r.errors };
     const settled = settleInstance(get().challenge, challengeId, r.result);
-    set({ challenge: settled.state });
+    //  ── Slice 7：結算層再驗一次資格 ────────────────────────────────────
+    //  ⚠ 這一段是**權威**，不是重複勞動。建立時的判定可能已經過期：
+    //    reload、手改存檔、或直接呼叫 runner 繞過畫面，都會走到這裡。
+    //  ⚠ `reconcileAtSettlement` 只會往嚴格的方向改 —— 永遠不把 repeat
+    //    升級回 formal，否則刪掉先前那場的 result 就能把資格洗回來。
+    const others = Object.values(settled.state.instances ?? {})
+      .filter((p) => p.challengeId !== challengeId);
+    const recomputed = classifyChallenge(settled.instance, others);
+    const finalCls = reconcileAtSettlement(settled.instance.settlement ?? null, recomputed);
+    const finalInst = { ...settled.instance, settlement: { ...finalCls, decidedAt: Date.now() } };
+    set({ challenge: {
+      ...settled.state,
+      instances: { ...settled.state.instances, [challengeId]: finalInst },
+    } });
     get().save();
-    return { ok: true, errors: [], result: settled.instance.result, replayed: settled.alreadySettled };
+    return { ok: true, errors: [], result: finalInst.result, settlement: finalInst.settlement, replayed: settled.alreadySettled };
   },
 
   /**

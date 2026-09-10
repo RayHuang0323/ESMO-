@@ -73,6 +73,9 @@ export function normalizeChallengeState(saved) {
   for (const [id, inst] of Object.entries(saved.instances ?? {})) {
     if (!inst || inst.challengeId !== id) continue;
     if (!validateChallengeInstance(inst).ok) continue;
+    //  ⚠ Slice 7 的 `settlement` 是**附加欄位**：舊存檔沒有它仍然合法，
+    //    只是那些場次會被當成 formal（見 challengeBoard）。這裡不補值、
+    //    也不改寫——追溯重判會讓玩家既有的紀錄無聲變動。
     //  ⚠ 引用的兩份快照都要在，否則這一場再也重播不出來 ⇒ 不留半截紀錄。
     if (!snapshots[inst.challengerSnapshotHash] || !snapshots[inst.defenderSnapshotHash]) continue;
     instances[id] = inst;
