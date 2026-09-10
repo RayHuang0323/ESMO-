@@ -18,6 +18,21 @@
 import { CHALLENGE_KINDS } from "../contracts/challengeInstance.js";
 import { stableHash } from "../contracts/squadSnapshot.js";
 
+//  ── Owner 裁示（2026-09-10，Slice 7 Review）─────────────────────────────
+//    這三個計數是**三件事**，任何一個併回另一個都是回歸：
+//
+//                    observed   formal   eligible
+//      首次 Formal     YES        YES      YES
+//      Repeat          YES        NO       NO
+//      Retry           NO         NO       NO
+//      Rechallenge（對手快照身分**真的**改變後）
+//                      YES        YES      YES
+//
+//    observed = 「你對這支隊伍打過幾場」（看板文案與候選位分類讀它）
+//    formal   = 「算幾次正式挑戰」（`observedRecords(...).formal`）
+//    eligible = 「這一場有沒有獎勵資格」（本檔的 `rewardEligible`）
+//  ────────────────────────────────────────────────────────────────────────
+
 /** 這一場在結算層的類別。 */
 export const SETTLEMENT_CLASS = Object.freeze({
   /** 首次以這組陣容挑戰這份對手快照 ⇒ 正式紀錄 ＋ 具獎勵資格。 */

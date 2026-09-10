@@ -19583,3 +19583,30 @@ Slice 2 的「⑤ 挑戰的 Store 動作只寫 challenge 切片」原本是數
 `check_player_challenge_slice3` 的「③ 新存檔不是結構性必敗（勝率 > 20%）」是統計性檢查，
 實測落在 13–21% 之間跳，會讓整支在 97–100 之間浮動。我用 `git stash` 在**未修改的 HEAD**
 上連跑五次確認同樣會抖（100/99/98/100/100）⇒ 既有問題，**沒有**去放寬那個閾值。
+
+### Owner 裁示補記（Slice 7 Review）
+
+三個計數是**三件事**，任何一個併回另一個都是回歸：
+
+| | observed | formal | eligible |
+|---|---|---|---|
+| 首次 Formal | YES | YES | YES |
+| Repeat（同一組陣容 × 同一份對手快照） | YES | NO | NO |
+| Retry | NO | NO | NO |
+| Rechallenge（對手快照身分**真的**改變後） | YES | YES | YES |
+
+- `observed` = 你對這支隊伍打過幾場（看板文案與候選位分類讀它）
+- `formal` = 算幾次正式挑戰 ⇒ `observedRecords(...).formal`
+- `eligible` = 這一場有沒有獎勵資格 ⇒ `challengeEligibility` 的 `rewardEligible`
+
+契約層寫在 `src/platform/challenge/challengeEligibility.js` 檔頭，
+`check_player_challenge_slice7` §③b 有八條斷言把它釘住（35/35）。
+
+### 技術債登記
+
+**TD：`check_player_challenge_slice3` §③ 首局勝率 gate 為 flaky verifier。**
+它實跑 MOBA 模擬量測新存檔的合理候選勝率，閾值 `> 20%`，實測落在 13–21% 之間跳，
+整支因此在 97–100 之間浮動。已在**未修改的 HEAD** 上連跑五次確認同樣會抖
+（100/99/98/100/100）⇒ 既有問題，非任何一輪改動造成。
+Owner 裁示：**不放寬 threshold**，只登記技術債，不阻擋 release。
+要修的話方向是提高樣本數或改成信賴區間判定，不是調低門檻。

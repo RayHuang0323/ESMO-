@@ -88,10 +88,20 @@ export function observedRecords(challengeState) {
     //    fixture 的快照是固定的，玩家不改自己的陣容就永遠累積不到
     //    `MIN_RECORD_SAMPLE` 筆 —— 直接弄壞一個已經上線的功能（Slice 3 ④ 實測紅）。
     //  ⚠ `retry` 仍然排除（上一行），那才是 Owner §7 點名不得洗紀錄的東西。
+    //
+    //  ── Owner 裁示（2026-09-10）：三個計數是**三件事** ────────────────────
+    //          observed  formal  eligible
+    //    首次     YES      YES     YES
+    //    Repeat   YES      NO      NO     打過就是打過，但不算一次正式挑戰
+    //    Retry    NO       NO      NO
+    //  challenged = 觀測次數（看板文案與候選位分類讀它）
+    //  formal     = 正式挑戰次數，只有 settlementClass 為 formal 才加
+    //  舊資料沒有 settlement 欄位就視為 formal，不追溯改寫既有紀錄。
     const key = inst.opponentKey;
     if (!key) continue;
-    const row = out[key] ?? (out[key] = { challenged: 0, broke: 0, held: 0 });
+    const row = out[key] ?? (out[key] = { challenged: 0, broke: 0, held: 0, formal: 0 });
     row.challenged += 1;
+    if (!inst.settlement || inst.settlement.settlementClass === "formal") row.formal += 1;
     if (inst.result.outcome === "challengerWin") row.broke += 1;
     else row.held += 1;
   }

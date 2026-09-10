@@ -64,6 +64,37 @@ ck("⭐ C. 打 1 場正式 ＋ 8 場 retry ⇒ 正式挑戰次數仍是 1",
 ck("⭐ C. 勝率沒有被 retry 洗動", recC.rival_a?.broke === 1 && recC.rival_a?.held === 0,
   JSON.stringify(recC.rival_a));
 
+console.log("\n── ③b Owner 裁示：observed / formal / eligible 是三個計數 ──");
+//            observed  formal  eligible
+//  首次       YES       YES     YES
+//  Repeat     YES       NO      NO
+//  Retry      NO        NO      NO
+//  ⚠ 這一節把裁示釘進 verifier：日後有人把 repeat 併回 formal，或把 repeat
+//    從 observed 拿掉（我第一版就做錯過，弄壞了看板的 coldStart），這裡會紅。
+{
+  const f1 = inst();                        // 首次 formal
+  const rep = inst({ seed: 777 });          // 同配對再打一場
+  const ret = inst({ kind: CHALLENGE_KINDS.retry });
+  const all = [f1, rep, ret];
+  const st = {
+    instances: Object.fromEntries(all.map((i) => [i.challengeId, i])),
+    order: all.map((i) => i.challengeId),
+  };
+  f1.settlement = classifyChallenge(f1, []);
+  rep.settlement = classifyChallenge(rep, [f1]);
+  ret.settlement = classifyChallenge(ret, [f1]);
+  const r = observedRecords(st).rival_a;
+  ck("⭐ 首次 formal：formal ＋ eligible",
+    f1.settlement.settlementClass === SETTLEMENT_CLASS.formal && f1.settlement.rewardEligible === true);
+  ck("⭐ Repeat：observed 有增加", r.challenged === 2, `observed=${r.challenged}`);
+  ck("⭐ Repeat：formal 沒有增加", r.formal === 1, `formal=${r.formal}`);
+  ck("⭐ Repeat：不具 reward eligibility", rep.settlement.rewardEligible === false);
+  ck("⭐ Retry：observed 沒有增加（是 2 不是 3）", r.challenged === 2, `observed=${r.challenged}`);
+  ck("⭐ Retry：formal 沒有增加", r.formal === 1, `formal=${r.formal}`);
+  ck("⭐ Retry：不具 reward eligibility", ret.settlement.rewardEligible === false);
+  ck("③b 勝負數只算觀測到的那兩場", r.broke + r.held === r.challenged, JSON.stringify(r));
+}
+
 console.log("\n── ④ D. 換 seed 的 Retry 仍拿不回資格 ──");
 //  ⚠ seed 不在判定鍵裡，這一條就是要證明「改 seed 沒用」。
 const seeded = inst({ kind: CHALLENGE_KINDS.retry, seed: 999999 });
