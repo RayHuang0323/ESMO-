@@ -615,3 +615,103 @@ Cap / Bracket / LadderRating / Ranked，不動 MOBA / CS battle runtime，
 - **CS 的 Challenge 未展開**。CS 沒有 headless 解算器（271b31d），
   「決定性重算 = 驗證快照完整」這條在 CS 上目前不成立。
   ⚠ v1 建議**先只做 MOBA Challenge**，CS 留待與 CS owner 協調。
+
+---
+
+## 11. Slice 8 補記：對手來源的擁有權與換手縫（2026-09-10）
+
+⚠ 本節是**實作落點**的補記，不是新的 PRD。§5（`OPPONENT_DISCOVERY_MODEL`）
+的設計沒有改，這裡只記「現在誰擁有對手資料、日後換成真伺服器要動哪裡」。
+
+### 11.1 Provider Ownership（誰擁有對手資料）
+
+```
+OpponentProvider（契約）          src/platform/challenge/opponentProvider.js
+  ├─ list(ctx)                    listOpponents()
+  ├─ getSnapshot(key, ctx)        getOpponentSnapshot()
+  └─ refresh(ctx)                 refreshOpponents()
+        ▲
+        │ 實作
+FixtureOpponentProvider           src/platform/challenge/fixtureOpponents.js
+（唯一實作，providerId = "fixture"）
+        ▲
+        │ 註冊
+OpponentDirectory（狀態＋註冊點）  src/platform/challenge/opponentDirectory.js
+  · activeOpponentProvider() / setOpponentProvider() / resetOpponentProvider()
+  · idle → loading → ready | empty | error
+        ▲
+        │ 唯一消費者
+profileStore
+  · refreshOpponents()      唯一會寫入 directory 的動作
+  · opponentDirectoryView() 三態（畫面讀它，不自己判狀態）
+  · challengeBoardView()    餵 `OpponentEntry[]` 給看板
+        ▲
+challengeBoard.js / PlayerChallengeScreen.jsx
+  ⚠ 這兩層**都不知道**對手是 fixture 還是真玩家。
+```
+
+`OpponentEntry` 只有兩樣東西：**身分鍵 ＋ 一份權威層簽發的 `SquadSnapshot.v1`**。
+`displayIdentity`（`snapshot.team`）與 `publishedAt`（`snapshot.issuedAt`）
+一律**推導**，不落成欄位——落了就是第二個真相來源。
+provider 的合約只有一句：**給我快照，不要給我形容詞。**
+
+### 11.2 fixture → future server 的換手縫
+
+接真伺服器要動的是**一行**：
+
+```js
+setOpponentProvider(createOpponentProvider({
+  providerId: "server",
+  source: OPPONENT_SOURCE.server,
+  list: (ctx) => fetchedSnapshots.map((s) => opponentEntry({ key: s.team.teamId, snapshot: s, source: OPPONENT_SOURCE.server })),
+  getSnapshot: (key) => fetchOne(key),
+  refresh: (ctx) => { dropCache(); return fetchAll(ctx); },
+}));
+```
+
+看板、挑戰流程、畫面**一行都不用改**。`check_player_challenge_slice8` §② 就是
+拿一個第二來源實跑這一條（看板換成另一批對手、卡片資訊照樣從快照讀得出來）。
+
+fixture 仍然保留，因為它同時是 local development 對手、deterministic test 對手
+（Slice 2/3/4/5 全靠它），與正式站目前的 demo 來源。
+⚠ 但它**只是一個 provider**，不再是看板的隱性資料庫。
+⚠ fixture 的 `refresh` 刻意與 `list` 同結果：憑空讓它變化就是製造
+「對手更新了陣容」，那是 `challengeEligibility.js` 明令不做的事。
+
+### 11.3 Snapshot lifecycle（對手更新陣容）
+
+| 階段 | 誰做 | 落點 |
+|---|---|---|
+| A 對手發布第一版 | 權威層 `publishDefensiveSnapshot` | `SquadSnapshot.v1` |
+| B 對手改 Career roster ⇒ 發布新版 | 同上（讀 roster → 建快照 → 發布） | 新雜湊、新 `squadIdentityOf` |
+| C 看板辨識「對手更新了陣容，可重新挑戰」 | `formalStateFor` ⇒ `updated` | 看板卡片 |
+| D 既有場次仍引用**舊**凍結快照 | `challenge.snapshots[hash]` | 重播不變 |
+| E Rechallenge 用新快照並恢復 formal / eligible | `classifyChallenge` | Slice 7 規則原封不動 |
+
+⚠ **C 只有在對手快照身分真的改變時才會出現**，看板不製造這件事。
+⚠ **D 是硬約束**：對手更新不得把歷史 Battle / Replay 換成新陣容。
+
+### 11.4 Identity：仍然只有三個，沒有第四個
+
+- **對手快照身分** `squadIdentityOf(snapshot)` — 快照內容扣掉 `issuedAt` / `hash`
+- **配對身分** `pairKeyOf(instance)` — `challengerIdentity::defenderIdentity`
+- **資格判定身分** 同上（`classifyChallenge` / `formalStateFor` 讀同一支）
+
+provider 的 `opponentId` / `key` 是**路由鍵**，不進任何資格判定。
+`issuedAt` 等 metadata 不得讓相同陣容被判成不同隊伍——這條是 Slice 7 的結論，
+Slice 8 只是在 provider 層再驗一次（§③）。
+
+### 11.5 Mock authority limitation（照實說）
+
+- `SNAPSHOT_AUTHORITY.kind = "mock-authority"`、`trusted = false`。
+- 整條鏈跑在玩家自己的瀏覽器裡，雜湊是 FNV-1a（變更偵測），不是密碼學簽章。
+- Client 仍然**只能 request publish**：夾帶 final combat stats 會被
+  `FORBIDDEN_CLIENT_KEYS` 擋下，數值一律由權威層自己從 Career state 查。
+- ⇒ **`SERVER_SECURITY_CLAIMED = NO`。** 本輪建立的是縫，不是後端，
+  文件與 UI 都不得宣稱相反。
+
+### 11.6 本輪明確沒做
+
+真後端、Firebase / Supabase / WebSocket、login、Ranked、LadderRating、
+matchmaking queue、presence / 在線狀態、friend system、Club Points 數值、
+Career power normalization、combat / Draft / `simulationVersion` 任何改動。

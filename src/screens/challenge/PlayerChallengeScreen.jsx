@@ -8,7 +8,15 @@
 //     可靠戰力 ⇒ 卡片上不出現任何戰力分／評分／星等；
 //     只出現「快照裡讀得到的事實」與「你自己的挑戰紀錄（帶樣本數）」。
 //
+//  ④ **不得把對手來源的工程詞搬上主畫面。**（Slice 8）
+//     快照 / provider / 來源 / 同步 這些字只活在程式碼與「挑戰規則」裡；
+//     玩家在主畫面只該看到：對手、對手陣容狀態、是否更新、挑戰按鈕。
+//     取不到對手時也只說「暫時無法取得對手」，不寫技術原因。
+//
 //  ⚠ 本檔**不 import** `teamStrength` / `calcPower`，一次都沒有。
+//  ⚠ 本檔也**不 import** 任何 fixture 對手資料：對手一律來自 store 的
+//    來源邊界（`opponentDirectory` / `OpponentProvider`）。換成真伺服器時
+//    這個畫面一行都不用改——Slice 8 驗的就是這一條。
 //  ⚠ 畫面**不組任何數值**：只送 `tacticId` / `opponentKey`，
 //    快照的值一律由權威層自己查（`challenge/snapshotAuthority.js`）。
 //
@@ -29,6 +37,8 @@ import { MOBA_TACTICS, mobaTacticById } from "../../platform/contracts/MobaTacti
 import { MATCH_SOURCE, MATCH_TIER_LABELS } from "../../platform/progress/matchSource.js";
 import { SNAPSHOT_AUTHORITY } from "../../platform/challenge/snapshotAuthority.js";
 import { BOARD_SLOTS, tacticEvidenceRows } from "../../platform/challenge/challengeBoard.js";
+//  Slice 8：對手來源的三態。⚠ 畫面**不判狀態、不寫文案**，只照 view 顯示。
+import { DIRECTORY_STATUS } from "../../platform/challenge/opponentDirectory.js";
 import { CHALLENGE_KINDS } from "../../platform/contracts/challengeInstance.js";
 //  ⚠ 英雄名只用於**顯示**選角傾向；資料本身在快照裡是 heroId。
 import { heroById } from "../../data/heroDatabase.js";
@@ -45,6 +55,14 @@ const btn = (primary = false, disabled = false) => ({
   border: `1px solid ${disabled ? GC.line : primary ? GC.blueL : GC.line}`,
   color: disabled ? GC.gray : "#fff", fontSize: 13, fontWeight: 900,
   cursor: disabled ? "not-allowed" : "pointer",
+});
+//  ⚠ 仍然 44px 高（手指目標），只是寬度隨內容——它不是主要 CTA，
+//    不該和「發起挑戰」一樣搶版面。
+const smallBtn = (disabled = false) => ({
+  minHeight: 44, padding: "0 14px", borderRadius: 10,
+  background: "rgba(255,255,255,0.06)", border: `1px solid ${GC.line}`,
+  color: disabled ? GC.gray : "#fff", fontSize: 12, fontWeight: 800,
+  cursor: disabled ? "not-allowed" : "pointer", whiteSpace: "nowrap",
 });
 const label = { color: GC.gray, fontSize: 10, fontWeight: 800, letterSpacing: "0.06em" };
 const chip = (c) => ({ ...label, color: c, border: `1px solid ${c}55`, borderRadius: 5, padding: "2px 7px", whiteSpace: "nowrap" });
@@ -361,12 +379,28 @@ export default function PlayerChallengeScreen({ onBack, onDraft = null, runChall
   //    而 const 在同一個作用域裡先用後宣告是 TDZ 錯誤，不是 undefined。
   const [tacticId, setTacticId] = useState(() => view.defense?.standingOrders?.tacticId ?? MOBA_TACTICS[0].tacticId);
 
+  //  ── Slice 8：對手來源狀態 ─────────────────────────────────────────────
+  //  ⚠ 訂閱的是 store 上的 `opponentDirectory`：`refreshOpponents()` 寫它，
+  //    寫了畫面就重畫。畫面自己不記狀態，也不自己呼叫 provider。
+  const dirState = useProfileStore((s) => s.opponentDirectory);
+  const dir = useMemo(
+    () => useProfileStore.getState().opponentDirectoryView({ heroProgress }),
+    [dirState, heroProgress],
+  );
+  //  ⚠ 掛載時去取一次。目前 provider 是同步的，所以這一瞬間就完成；
+  //    接上真 API 之後，這裡就是「正在取得對手…」真正會出現的地方。
+  //    ⚠ 相依陣列刻意留空：熟練度之後才變的話，store 的 read-through
+  //      會自己拿到新的一批（見 `_resolveOpponentDirectory`），不需要在這裡重取。
+  useEffect(() => { useProfileStore.getState().refreshOpponents({ heroProgress }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const board = useMemo(
     //  ⚠ `heroById` 是**函式**（`(id) => hero | null`），不是物件。
     //    寫成 `heroById?.[id]` 永遠拿到 undefined，英雄名就會全部退化成 id。
     //  ⚠ 戰術是陣容身分的一部分 ⇒ 換戰術要重算看板狀態，所以它在相依陣列裡。
+    //  ⚠ `dirState`：來源重新整理之後對手可能換了一份陣容，看板要跟著重算，
+    //    否則「對手更新了陣容」永遠不會出現。
     () => useProfileStore.getState().challengeBoardView({ heroProgress, heroNameOf, tacticId }),
-    [sig, heroProgress, tacticId],
+    [sig, heroProgress, tacticId, dirState],
   );
   const [busy, setBusy] = useState(null);
   const [msg, setMsg] = useState(null);
@@ -389,6 +423,18 @@ export default function PlayerChallengeScreen({ onBack, onDraft = null, runChall
     const r = useProfileStore.getState().publishDefenseSnapshot(tacticId, { heroProgress });
     setBusy(null);
     setMsg(r.ok ? { kind: "ok", text: "防守陣容已更新" } : { kind: "err", text: r.errors[0]?.message ?? "發布失敗" });
+  };
+
+  /**
+   * 再去問一次對手來源。
+   *
+   * ⚠ 這**不是**配對、不是排隊、不是找線上玩家。它只是「重新取得清單」。
+   *   目前來源是本機固定的練習對手，所以重新整理通常拿到同一批——
+   *   畫面照實呈現，不編造「找到新對手了」。
+   */
+  const refreshOpponents = () => {
+    setMsg(null);
+    useProfileStore.getState().refreshOpponents({ heroProgress });
   };
 
   /** 共用：建立場次 → 讓畫面先畫出「模擬中」→ 跑模擬。 */
@@ -482,12 +528,52 @@ export default function PlayerChallengeScreen({ onBack, onDraft = null, runChall
 
       {/* ── 挑戰看板 ───────────────────────────────────────────────────── */}
       <div style={card()}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0 }}>
           <div style={label}>挑戰看板</div>
           <span data-testid="challenge-board-count" style={{ ...label, marginLeft: "auto", color: GC.gray }}>
             {board.candidates.length} 個候選
           </span>
+          {/* ⚠ 這顆只是「再去看一次有沒有新對手」。**不做**自動輪詢、
+              不顯示在線人數、不假裝對面有人（Owner §7）。 */}
+          <button
+            type="button"
+            data-testid="challenge-refresh"
+            disabled={!dir.canRetry || !!busy}
+            onClick={refreshOpponents}
+            style={smallBtn(!dir.canRetry || !!busy)}
+          >
+            {dir.retryLabel}
+          </button>
         </div>
+        {/* ── 來源三態：只在需要說話時才佔位 ─────────────────────────────
+            ⚠ 文案由 store 的 view 給（`opponentDirectory.js` 的 `DIRECTORY_TEXT`），
+              畫面不自己寫——兩邊各寫一份遲早會分歧。
+            ⚠ 錯誤時**不顯示技術原因**：玩家看到的只有一句話與一顆重新整理。 */}
+        {dir.message && (
+          <div
+            data-testid="challenge-source-state"
+            data-status={dir.status}
+            style={{
+              marginTop: 8, padding: "9px 11px", borderRadius: 9,
+              border: `1px solid ${dir.status === DIRECTORY_STATUS.error ? `${GC.red}55` : GC.line}`,
+              background: dir.status === DIRECTORY_STATUS.error ? "rgba(248,113,113,0.08)" : "rgba(255,255,255,0.03)",
+              color: dir.status === DIRECTORY_STATUS.error ? GC.redL : GC.gray,
+              fontSize: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minWidth: 0,
+            }}
+          >
+            <span data-testid="challenge-source-message">{dir.message}</span>
+            {dir.status !== DIRECTORY_STATUS.loading && (
+              <button
+                type="button"
+                data-testid="challenge-source-retry"
+                onClick={refreshOpponents}
+                style={{ ...smallBtn(false), marginLeft: "auto" }}
+              >
+                {dir.retryLabel}
+              </button>
+            )}
+          </div>
+        )}
         {/* ⚠ 免責聲明搬進「挑戰規則」：它每次進來都一樣，但玩家只需要讀一次。 */}
         {board.coldStart && (
           <div data-testid="challenge-coldstart-note" style={{ color: GC.gold, fontSize: 11, marginTop: 6, display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
@@ -580,7 +666,7 @@ export default function PlayerChallengeScreen({ onBack, onDraft = null, runChall
               </div>
               <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
                 <button data-testid="challenge-retry-btn" onClick={() => retry(detail.instance.challengeId)} disabled={busy !== null} style={btn(false, busy !== null)}>
-                  再試一次（同一份對手快照・不計入紀錄）
+                  再試一次（同一份對手陣容・不計入紀錄）
                 </button>
                 <button data-testid="challenge-verify-btn" onClick={() => doVerify(detail.instance.challengeId)} style={btn(false)}>
                   重新計算並比對（驗證這場可重現）
@@ -666,7 +752,7 @@ export default function PlayerChallengeScreen({ onBack, onDraft = null, runChall
                   </div>
                   <div style={{ ...label, color: "#71717a", fontWeight: 600 }}>
                     {mobaTacticById(h.challengerTacticId)?.name ?? h.challengerTacticId}
-                    　對手快照 生涯第 {useProfileStore.getState().challenge?.snapshots?.[h.defenderSnapshotHash]?.careerDay ?? "—"} 天
+                    　對手陣容 生涯第 {useProfileStore.getState().challenge?.snapshots?.[h.defenderSnapshotHash]?.careerDay ?? "—"} 天
                     　{new Date(h.createdAt).toLocaleDateString()}
                   </div>
                 </button>

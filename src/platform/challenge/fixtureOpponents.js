@@ -182,17 +182,34 @@ export function fixtureSnapshot(key, { playerMasteryLevel = 1 } = {}) {
 }
 
 /**
- * fixture 的 `OpponentProvider`（Slice 4）。
+ * fixture 的 `OpponentProvider`（Slice 4 → Slice 8）。
  *
  * ⚠ 這是**唯一**該被換掉的東西。接真伺服器時新增一個
- *   `source: OPPONENT_SOURCE.server` 的 provider，看板與挑戰流程一行不用改
- *   —— 前提是看板只讀快照，而 Slice 4 已經把它改成那樣了。
+ *   `source: OPPONENT_SOURCE.server` 的 provider，
+ *   在啟動時 `setOpponentProvider(...)` 換掉它——看板、挑戰流程與畫面
+ *   一行不用改（前提是看板只讀快照，Slice 4 已經把它改成那樣了）。
+ *
+ * ── Slice 8：fixture 從「看板的隱性資料庫」降級成「一個 provider」 ────────
+ * 它仍然保留，因為目前沒有伺服器，而它同時是：
+ *   · local development 的對手
+ *   · deterministic test 的對手（`check_player_challenge_slice2/3/4/5` 全靠它）
+ *   · 正式站目前的 demo 來源
+ * 但呼叫端**不再直接 import 它**——一律走 `opponentDirectory.js` 的註冊點。
+ *
+ * ⚠ `refresh` 刻意**不覆寫**：fixture 是決定性的，「再去拿一次」拿到的
+ *   本來就是同一份。這裡如果為了讓畫面「看起來有更新」而做出變化，
+ *   就是憑空製造「對手更新了陣容」——`challengeEligibility.js` 明令不做的事。
  */
 export const fixtureOpponentProvider = createOpponentProvider({
+  providerId: "fixture",
   source: OPPONENT_SOURCE.fixture,
+  label: "內建練習對手",
   list: ({ playerMasteryLevel = 1 } = {}) =>
     FIXTURE_OPPONENTS.map((def) => {
       const r = fixtureSnapshot(def.key, { playerMasteryLevel });
       return r.ok ? opponentEntry({ key: def.key, snapshot: r.snapshot, source: OPPONENT_SOURCE.fixture }) : null;
     }).filter(Boolean),
+  //  ⚠ 單筆路徑是**真的單筆**，不是「撈全部再 find」。fixture 上這只是省一點
+  //    計算，但它釘住了真 provider 該有的形狀：一個 key 一次請求。
+  getSnapshot: (key, { playerMasteryLevel = 1 } = {}) => fixtureSnapshot(key, { playerMasteryLevel }),
 });

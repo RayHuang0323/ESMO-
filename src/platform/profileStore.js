@@ -93,7 +93,13 @@ import { classifyChallenge, reconcileAtSettlement, squadIdentityOf } from "./cha
 import { assignDraft } from "../battle/moba/mobaDraftAssignment.js";
 import { heroTags } from "../data/heroClassification.js";
 import { CHAMPIONS_100, heroById } from "../data/heroDatabase.js";
-import { fixtureSnapshot, FIXTURE_OPPONENTS, fixtureOpponentByKey, fixtureOpponentProvider } from "./challenge/fixtureOpponents.js";
+//  Slice 8：**不再直接 import fixture**。對手一律走註冊點取得的 provider
+//  ⇒ 換成真伺服器只要在啟動時 `setOpponentProvider(...)`，本檔一行不用改。
+import {
+  emptyOpponentDirectory, markLoading, loadOpponentDirectory, opponentDirectoryView,
+  entriesOf, entryByKey, directoryAnswers, activeOpponentProvider,
+} from "./challenge/opponentDirectory.js";
+import { displayIdentityOf, publishedAtOf, opponentEntry } from "./challenge/opponentProvider.js";
 //  Club Progression v1：Club XP／Club Level 的唯一權威（純函式，等級一律推導）。
 import {
   emptyClubProgression, normalizeClubProgression, clubProgressionViewOf,
@@ -877,13 +883,22 @@ export const useProfileStore = create((rawSet, get) => {
   return {
   ...load(),
 
+  //  ── Slice 8：對手來源的取得狀態 ─────────────────────────────────────────
+  //  ⚠ **不落盤**（見 `save()` 把它剔掉）。理由有兩個：
+  //    ① 它是快取，不是存檔。存進去等於把「上一次看到的對手」變成第二個
+  //      真相來源，而真正該保存的凍結快照早就在 `challenge.snapshots` 裡了。
+  //    ② `load()` 是白名單，本來就不會讀回它 ⇒ 存了也只是白白撐大存檔
+  //      （五份完整快照）。
+  opponentDirectory: emptyOpponentDirectory(),
+
   save() {
     if (!canLS) return;
     try {
       const current = get();
       const seasonStateV2 = seasonStateV2For(current);
       if (JSON.stringify(seasonStateV2) !== JSON.stringify(current.seasonStateV2)) set({ seasonStateV2 });
-      localStorage.setItem(KEY, JSON.stringify({ ...get(), seasonStateV2 }));
+      //  ⚠ `opponentDirectory: undefined` ⇒ `JSON.stringify` 會直接略過這個鍵。
+      localStorage.setItem(KEY, JSON.stringify({ ...get(), seasonStateV2, opponentDirectory: undefined }));
     } catch {}
   },
   reset() { if (canLS) localStorage.removeItem(KEY); set(withDevelopmentPoints(withIdentity(DEFAULT))); },
@@ -3843,6 +3858,83 @@ export const useProfileStore = create((rawSet, get) => {
   //  ⚠ 這裡也**不呼叫 `applyMatchProgress`**，一次都沒有。
   // ══════════════════════════════════════════════════════════════════════
 
+  // ── Slice 8：對手來源（Provider Boundary）─────────────────────────────
+  //
+  //  ⚠ 本檔從此**沒有一行**知道對手是 fixture。它只知道三件事：
+  //    ① 目前掛著哪一個 provider（`activeOpponentProvider()`）
+  //    ② 那個 provider 現在回了什麼（`opponentDirectory`）
+  //    ③ 拿不到的時候要說什麼（`opponentDirectoryView`）
+  //  ⇒ 接真伺服器＝啟動時 `setOpponentProvider(serverProvider)`，本段不用改。
+  //  ⚠ **這不代表有 server security。** 目前仍然是本機權威層
+  //    （`SNAPSHOT_AUTHORITY.trusted === false`），文件與 UI 不得宣稱相反。
+
+  /** 取得對手時要送出的情境。⚠ 只有身分／偏好，沒有任何數值。 */
+  _opponentCtx(heroProgress = null) {
+    return { playerMasteryLevel: get()._playerMasteryLevel(heroProgress) };
+  },
+
+  /**
+   * **唯讀**地拿到一份可用的 directory。
+   *
+   * ⚠ 這支**不寫 state**：它會在 React render 期間被 `challengeBoardView`
+   *   呼叫，render 期間 setState 是無限迴圈。要寫入請用 `refreshOpponents()`。
+   * ⚠ 快取答不了這個請求（還沒拿過、或 ctx 換了）⇒ 當場算一份**但不快取**。
+   *   目前的 provider 是同步且決定性的，所以這只是「沒有記憶化」而已；
+   *   換成真的非同步 provider 時，`list()` 會回空陣列，由 UI 掛載時
+   *   呼叫的 `refreshOpponents()` 負責填資料——兩條路走的是同一支載入函式。
+   */
+  _resolveOpponentDirectory(heroProgress = null) {
+    const ctx = get()._opponentCtx(heroProgress);
+    const cached = get().opponentDirectory;
+    if (directoryAnswers(cached, ctx)) return cached;
+    return loadOpponentDirectory({
+      provider: activeOpponentProvider(), ctx, now: Date.now(), prev: cached, mode: "list",
+    });
+  },
+
+  /**
+   * 重新向來源要一次對手。**唯一會寫入 `opponentDirectory` 的地方。**
+   *
+   * ⚠ 目前 provider 是同步的，所以 `loading` 只存在一瞬間。仍然照樣寫出去：
+   *   那個狀態不是裝飾，它是接上真 API 之後畫面唯一能顯示「正在取得對手…」
+   *   的依據，而現在就先讓它被走過一次。
+   * ⚠ 不做 polling、不做 WebSocket、不做在線狀態（Owner §7 明令不做）。
+   */
+  refreshOpponents({ heroProgress = null } = {}) {
+    const ctx = get()._opponentCtx(heroProgress);
+    set({ opponentDirectory: markLoading(get().opponentDirectory) });
+    const next = loadOpponentDirectory({
+      provider: activeOpponentProvider(), ctx, now: Date.now(),
+      prev: get().opponentDirectory, mode: "refresh",
+    });
+    set({ opponentDirectory: next });
+    //  ⚠ 刻意**不 `save()`**：這是快取，不進存檔（見初始 state 的說明）。
+    return opponentDirectoryView(next);
+  },
+
+  /** 對手來源的三態（畫面讀這一支，不自己判狀態、不自己寫文案）。 */
+  opponentDirectoryView({ heroProgress = null } = {}) {
+    return opponentDirectoryView(get()._resolveOpponentDirectory(heroProgress));
+  },
+
+  /**
+   * 依身分鍵取一筆對手。
+   *
+   * ⚠ 先問 directory（那是玩家**現在看到的**那一批），沒有才問 provider 單筆。
+   *   順序不可交換：看板上按下去的那一張，必須就是被挑戰的那一份快照。
+   */
+  _opponentEntryFor(opponentKey, heroProgress = null) {
+    const dir = get()._resolveOpponentDirectory(heroProgress);
+    const hit = entryByKey(dir, opponentKey);
+    if (hit) return hit;
+    const r = activeOpponentProvider().getSnapshot(opponentKey, get()._opponentCtx(heroProgress));
+    //  ⚠ 用同一支 `opponentEntry()` 組，不在這裡手拼一個形狀相近的物件——
+    //    手拼的那一刻就會有第二個 `OpponentEntry` 的定義，而它不受契約約束。
+    return r.ok
+      ? opponentEntry({ key: opponentKey, snapshot: r.snapshot, source: activeOpponentProvider().source })
+      : null;
+  },
+
   /** 玩家挑戰的整體檢視（畫面唯一的讀取點；畫面不自己拼資料）。 */
   challengeView() {
     const st = get().challenge ?? emptyChallengeState();
@@ -3854,7 +3946,14 @@ export const useProfileStore = create((rawSet, get) => {
       canPublish: st.lastPublishedCareerDay === null || day > st.lastPublishedCareerDay,
       lastPublishedCareerDay: st.lastPublishedCareerDay,
       careerDay: day,
-      opponents: FIXTURE_OPPONENTS.map((o) => ({ key: o.key, teamName: o.teamName, tag: o.tag, note: o.note })),
+      //  Slice 8：**canonical `OpponentEntry` 推導**，不再攤平 fixture 定義。
+      //  ⚠ 舊版讀的是 fixture 上的 `teamName` / `tag` / `note`——真玩家的快照
+      //    沒有那三個欄位，換 provider 的那天這裡會全部變 undefined。
+      //    現在每一格都從**快照本身**讀（`displayIdentityOf` / `publishedAtOf`）。
+      opponents: entriesOf(get()._resolveOpponentDirectory()).map((e) => ({
+        opponentId: e.opponentId ?? e.key, key: e.key, source: e.source,
+        displayIdentity: displayIdentityOf(e), publishedAt: publishedAtOf(e),
+      })),
       history: recentChallenges(st),
     };
   },
@@ -3899,8 +3998,9 @@ export const useProfileStore = create((rawSet, get) => {
   /** 開始對某個對手手動選角。已經在選了就沿用（reload 之後接得回同一手）。 */
   beginChallengeDraft(opponentKey, { tacticId = null } = {}) {
     const cur = get().challenge ?? emptyChallengeState();
-    if (!fixtureOpponentByKey(opponentKey)) {
-      return { ok: false, errors: [{ code: "opponent", message: "找不到這個練習對手" }] };
+    //  ⚠ 存不存在由**來源**回答，不由本檔查一張 fixture 表。
+    if (!get()._opponentEntryFor(opponentKey)) {
+      return { ok: false, errors: [{ code: "opponent", message: "找不到這個對手" }] };
     }
     const prev = cur.pendingDraft;
     const keep = prev && prev.opponentKey === opponentKey;
@@ -3979,10 +4079,13 @@ export const useProfileStore = create((rawSet, get) => {
     //  ⚠ 形狀取自契約常數，不在畫面裡寫死 3 與 5。
     const phase = bans.length < DRAFT_SHAPE.bansPerSide ? "ban"
       : picks.length < DRAFT_SHAPE.picksPerSide ? "pick" : "done";
-    const opponent = fixtureOpponentByKey(pd.opponentKey) ?? null;
+    //  ⚠ 舊版讀 fixture 定義上的 `o.name`——那個欄位**根本不存在**
+    //    （fixture 有的是 `teamName`）⇒ `opponentName` 一直是 null。
+    //    改成從快照的 `team` 讀，順帶把那個沉默的 bug 修掉。
+    const identity = displayIdentityOf(get()._opponentEntryFor(pd.opponentKey));
     return {
       opponentKey: pd.opponentKey,
-      opponentName: opponent?.name ?? null,
+      opponentName: identity?.teamName ?? null,
       tacticId: pd.tacticId ?? null,
       actions: pd.actions,
       bans, picks, phase,
@@ -4005,8 +4108,9 @@ export const useProfileStore = create((rawSet, get) => {
   startFixtureChallenge(opponentKey, { tacticId = null, heroProgress = null, challengerActions = [] } = {}) {
     const st = get();
     const cur = st.challenge ?? emptyChallengeState();
-    const def = fixtureOpponentByKey(opponentKey);
-    if (!def) return { ok: false, errors: [{ code: "opponent", message: "找不到這個練習對手" }] };
+    //  Slice 8：對手快照一律由**來源**給，本檔不知道它是 fixture 還是伺服器。
+    const oppEntry = get()._opponentEntryFor(opponentKey, heroProgress);
+    if (!oppEntry) return { ok: false, errors: [{ code: "opponent", message: "找不到這個對手" }] };
 
     //  ── Slice 3：出賽用的是**當下**的隊伍，不是掛在外面的防守陣容 ──────────
     //  ⚠ 這是「賽前決策有意義」的前提：換了先發、練了熟練，下一場就該生效。
@@ -4016,20 +4120,24 @@ export const useProfileStore = create((rawSet, get) => {
     });
     if (!entry.ok) return { ok: false, errors: entry.errors };
 
-    const fx = fixtureSnapshot(opponentKey, { playerMasteryLevel: get()._playerMasteryLevel(heroProgress) });
-    if (!fx.ok) return { ok: false, errors: fx.errors };
+    //  ⚠ 用的是**看板上那一張**的快照（`_opponentEntryFor` 先問 directory），
+    //    不是當場再跟來源要一份——後者會在對手剛好更新時開出一場
+    //    「玩家按的是 A、實際打的是 B」的挑戰。
+    //  ⚠ 這一份從此**被凍結進 ChallengeInstance**：對手之後再怎麼更新，
+    //    這一場的重播讀到的永遠是它（`challenge.snapshots` 以雜湊為鍵）。
+    const defenderSnapshot = oppEntry.snapshot;
 
     //  ── Slice 5：Ban/Pick 在**這裡**發生，一次，然後凍結 ──────────────────
     //  ⚠ 對手不在線，他出的是快照裡凍結的 DraftPolicy——所以畫面必須說
     //    「對手依預存選角方針回應」，不可假裝有人在對面即時 Ban/Pick。
     const dr = get()._resolveDraft({
-      challengerSnapshot: entry.snapshot, defenderSnapshot: fx.snapshot, challengerActions,
+      challengerSnapshot: entry.snapshot, defenderSnapshot, challengerActions,
     });
     if (!dr.ok) return { ok: false, errors: dr.errors };
 
     const built = createChallengeInstance({
       challenger: entry.snapshot,
-      defender: fx.snapshot,
+      defender: defenderSnapshot,
       draftResult: dr.draft,
       challengerTacticId: entry.snapshot.standingOrders.tacticId,
       //  ⚠ **權威層一次性取得**的亂數。不是內容推導 —— 同樣兩份快照可以打第二場。
@@ -4042,7 +4150,7 @@ export const useProfileStore = create((rawSet, get) => {
     });
     if (!built.ok) return { ok: false, errors: built.errors };
 
-    let next = putSnapshot(cur, fx.snapshot);
+    let next = putSnapshot(cur, defenderSnapshot);
     next = putSnapshot(next, entry.snapshot);
     const put = putInstance(next, built.challenge);
     //  ⚠ Slice 7：建立當下就判定「這算不算正式、有沒有獎勵資格」並凍結，
@@ -4052,7 +4160,7 @@ export const useProfileStore = create((rawSet, get) => {
     //    拿它當防刷鍵等於沒擋（實測連打兩場的 challengerSnapshotHash 就不同）。
     const identity = {
       challenger: squadIdentityOf(entry.snapshot),
-      defender: squadIdentityOf(fx.snapshot),
+      defender: squadIdentityOf(defenderSnapshot),
     };
     const staged = { ...put.instance, identity };
     const cls0 = classifyChallenge(staged, Object.values(next.instances ?? {}));
@@ -4214,8 +4322,9 @@ export const useProfileStore = create((rawSet, get) => {
       careerDay: Number(st.meta?.days) || 1,
       playerMasteryLevel: mastery,
       //  Slice 4：吃 provider 給的對手 —— 看板不知道這是 fixture 還是真玩家。
-      //  ⚠ 換真伺服器時**只換這一行的 provider**，看板與流程一行不用改。
-      opponents: fixtureOpponentProvider.list({ playerMasteryLevel: mastery }),
+      //  Slice 8：連「是哪一個 provider」都不知道了 —— 它只拿 directory
+      //  現在握著的那一批。換真伺服器時本檔一行不用改。
+      opponents: entriesOf(get()._resolveOpponentDirectory(heroProgress)),
       heroNameOf,
       //  Slice 7：正式挑戰狀態比對的是**陣容身分**（不含 issuedAt），
       //  不是快照雜湊——後者每次簽發都不同，狀態會永遠對不上。

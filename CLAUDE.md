@@ -74,6 +74,22 @@ node tools/regress2.mjs # 一律跑（若存在）
   ⚠ Retention 的日／週／年一律綁**世界時間**（`meta.days`），**永久排除 ServerTime**；
   目標清單是決定性推導，**不落盤**；日常目標**不得**給任何永久戰力。
 
+- **Player Challenge（動到挑戰／對手來源／快照就必跑）**：
+  `check_player_challenge_slice1`（108）`slice2`（79）`slice3`（100，§③ flaky 見下）
+  `slice4`（60）`slice5`（71）`slice6`（30）`slice7`（35）**`slice8`（121）**
+  ＋瀏覽器 `browser_check_challenge_lifecycle`（21）
+  `browser_check_challenge_manual_draft`（27）
+  **`browser_check_player_challenge_slice8`（50，桌機＋390）**
+  ⚠ **對手資料只有一個入口**：`challenge/opponentDirectory.js` 的註冊點。
+  `challengeBoard.js` / `PlayerChallengeScreen.jsx` / `profileStore` 都**不得**
+  再 import `fixtureOpponents.js` —— slice8 §① 會直接掃原始碼。
+  ⚠ `opponentDirectory` 在 store state 裡但 **`save()` 剔掉它**（是快取不是存檔）。
+  ⚠ **identity 只有三個**（快照身分／配對身分／資格判定），全部走
+  `challengeEligibility.squadIdentityOf`；provider 的 `opponentId` 只是路由鍵。
+  ⚠ 已知紅：`check_player_challenge_slice3` §③ 首局勝率是 flaky 統計 gate、
+  `browser_check_player_challenge_slice3` 停在 Slice 6 之前 —— 兩支都已登記
+  技術債（`docs/handoff/08_目前待辦與風險.md`），**不得為了變綠放寬門檻**。
+
 - **正式站 smoke（部署後才跑）**：**`browser_check_prod_season_vnext`**（30）
   ⚠ 打的是**線上網址**，不是 dev server。因此**只能走 UI ＋ localStorage**（TD-31）：
   `RESOLVE_APP_MODULES` 匯入 `/src/...`，打包後的 bundle 沒有那些路徑。

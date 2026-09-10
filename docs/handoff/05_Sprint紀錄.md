@@ -19610,3 +19610,82 @@ Slice 2 的「⑤ 挑戰的 Store 動作只寫 challenge 切片」原本是數
 （100/99/98/100/100）⇒ 既有問題，非任何一輪改動造成。
 Owner 裁示：**不放寬 threshold**，只登記技術債，不阻擋 release。
 要修的話方向是提高樣本數或改成信賴區間判定，不是調低門檻。
+
+---
+
+## Player Challenge Slice 8 — Real Opponent Provider Readiness（2026-09-10）
+
+**這一輪不是做後端**，是把 fixture / local mock opponent source 整理成
+「日後可以無痛換成真玩家 Snapshot Provider」的架構。`src/` 沒有新增任何網路呼叫。
+
+### Audit（動工前的實際盤點）
+
+| 已經走 provider boundary | 仍然直接吃 fixture |
+|---|---|
+| `challengeBoard.js`（Slice 4 起吃 `OpponentEntry[]`） | `profileStore.js` **6 處**：import、`challengeView().opponents`、`beginChallengeDraft`、`pendingChallengeDraftView`、`startFixtureChallenge`、`challengeBoardView` |
+| `PlayerChallengeScreen.jsx`（不 import fixture） | — |
+
+⇒ 真正的洞不在看板，在 **store**：它把 `fixtureOpponentProvider` 寫死在
+`challengeBoardView` 那一行，而且另外五處直接查 `fixtureOpponentByKey`。
+換 provider 要改 store ＝ fixture 還是隱性資料庫。
+
+### 做了什麼
+
+1. **`opponentProvider.js` v1 → v2**：補上 Owner 的三支
+   （`list` / `getSnapshot` / `refresh`），加 `providerId` / `label`。
+   `opponentEntry` 補 `opponentId`（與 `key` 同值，`validateOpponentEntry` 驗一致）。
+   `displayIdentity` / `publishedAt` 是**推導函式**，不是欄位。
+2. **新增 `opponentDirectory.js`**：狀態機（`idle/loading/ready/empty/error`）
+   ＋ **provider 註冊點**（`setOpponentProvider` / `resetOpponentProvider`）。
+   provider 允許 throw，本層接住轉成 error ⇒ 呼叫端永遠不用 try/catch。
+   `ctxKey` 讓「熟練度變了」不會吃到舊快取（`drill_mirror` 會跟著玩家熟練重算）。
+3. **`profileStore` 六處全部改走 directory**，不再 import fixture 一個字。
+   `opponentDirectory` 放在 state 但 **`save()` 把它剔掉**——它是快取不是存檔
+   （`load()` 本來就是白名單，存了也只是白撐大五份快照）。
+4. **UI 三態**：`challenge-source-state` / `challenge-refresh` /
+   `challenge-source-retry`。文案由 `DIRECTORY_TEXT` 給，畫面不自己寫。
+5. 順手修掉一個沉默 bug：`pendingChallengeDraftView().opponentName` 讀
+   fixture 上**根本不存在的** `o.name`（fixture 有的是 `teamName`）⇒ 一直是 null。
+   改成從快照的 `team` 讀。
+6. UI Clarity：主畫面兩處玩家看得到的「對手快照」改成「對手陣容」
+   （Owner §11：工程詞不得出現在正式玩家 UI）。
+
+### 驗證
+
+- **`check_player_challenge_slice8` 121/121 PASS**（新增）
+  A 看板／畫面／store 都不 import fixture／B 換第二個 fake provider，UI 原始碼零改動
+  即顯示另一批對手／C refresh 後看板顯示「對手更新了陣容，可重新挑戰」／
+  D 舊 ChallengeInstance 仍指向舊凍結快照且重播一致／E Rechallenge 用新快照並恢復
+  formal＋eligible，對手沒更新就再打仍是 repeat／F provider throw 不炸整頁／
+  G 空清單是 empty **不是** error／H reload 後歷史、凍結快照、判定、重播全不變。
+- **`browser_check_player_challenge_slice8` 50/50 PASS**（新增，桌機 1366 ＋ **手機 390**）
+  在頁面裡真的 `setOpponentProvider` 換來源，逐一驗 empty／error／復原三段，
+  重新整理鍵 44px、無橫向溢出、整頁 innerText 掃不到工程詞。
+- 回歸：Slice 1 108/108、Slice 2 79/79、Slice 4 60/60、Slice 5 71/71、
+  Slice 6 30/30、Slice 7 35/35、build 過。
+  瀏覽器：`browser_check_challenge_lifecycle` 21/21、
+  `browser_check_challenge_manual_draft` 27/27。
+
+### 既有紅燈（**非本輪造成**，已在 HEAD 逐項對照確認）
+
+1. `check_player_challenge_slice3` §③ 首局勝率 gate（**flaky**）：
+   本輪第一次跑 98/100，數字 `drill_mirror 2/16 = 13%`；同一份程式碼收尾再跑一次
+   是 **100/100**。第一次那個 13% 在**未修改的 HEAD** worktree 跑出**逐值相同**的
+   `2/16 / 13%` ⇒ 既有 flaky verifier（上一節已登記為 TD），
+   同時也反證本輪對 fixture 路徑是 bit-for-bit 行為保持。
+2. `browser_check_player_challenge_slice3` **73/97**：失敗全部從
+   「⑤ 模擬在時限內完成 90.6s」串下來。根因是這支 gate 停在 **Slice 6 之前**
+   （最後一次改是 `c99bfed`，而選角路由是 `980917f` 才進來）：它按下「發起挑戰」
+   之後等結果，但現在會先進 Ban/Pick 頁。
+   ⇒ 在**未修改的 HEAD** worktree 實跑，得到**完全相同的 73/97 與同樣那 24 條**
+   （桌機／手機各 12 條，都從「⑤ 模擬在時限內完成 90.8s」串下來）
+   ⇒ **gate 過期，不是產品回歸**。登記為技術債（見 `08_目前待辦與風險.md`）。
+
+### 沒做（Owner §9 明令）
+
+真後端、Firebase / Supabase / WebSocket、login/account、Ranked、LadderRating、
+matchmaking queue、presence、friend system、Club Points 數值、
+Career power normalization、combat／Draft／`simulationVersion` 任何改動。
+
+**`SERVER_SECURITY_CLAIMED = NO`**：仍然是 `mock-authority` / `trusted: false`，
+文件與 UI 都沒有宣稱相反。
