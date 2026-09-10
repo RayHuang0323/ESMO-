@@ -137,6 +137,15 @@ function OpponentCard({ c, busy, onChallenge, open, onToggle, index = 0 }) {
           英雄熟練 平均 Lv.{c.composition.avgMastery}
         </span>
         <span data-testid={`challenge-fresh-${c.key}`} style={chip(GC.gray)}>{c.freshness.label}</span>
+        {/*  Slice 7：這份陣容我打過了沒。第一層只放**結論**（一個短標籤），
+             完整的重複／獎勵規則走既有的第二層 InfoHint，不在卡片上展開。
+             ⚠ 狀態由 Store 判（challengeEligibility），卡片不自己推。 */}
+        {c.formalStateLabel && (
+          <span data-testid={`challenge-formal-state-${c.key}`} data-state={c.formalState}
+            style={chip(c.formalState === "updated" ? GC.gold : c.formalState === "played" ? GC.gray : GC.green)}>
+            {c.formalStateLabel}
+          </span>
+        )}
         {c.recentLineupChange && <span style={chip(GC.gold)}>近期換過先發</span>}
         {/* ⚠ 誠實標示資料來源：fixture 不得被講成真玩家——但**標例外就夠了**。
             目前每一張卡都是練習對手，五個一模一樣的灰標籤只是在佔行高；
