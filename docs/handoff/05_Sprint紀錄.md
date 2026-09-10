@@ -20027,3 +20027,73 @@ season 磁碟    8,709 B   （這一輪只入史一場；50 場上限實測 ~854
 Supabase、Auth、Google Login、revision/deviceId conflict、Remote DB、Ranked、
 遊戲平衡、大改 Zustand / persistence architecture。
 **本輪不自動修剪 season / replay**，容量風險仍列技術債。
+
+---
+
+## B1C Release Checkpoint（2026-09-11）
+
+### Release safety
+
+| 項目 | 值 |
+|---|---|
+| push 前 `origin/main` | `4fe769c` |
+| push 前 `HEAD` | `833570d` |
+| `origin/main..HEAD` | 一筆（`833570d`） |
+| `HEAD..origin/main` | 空 ⇒ remote **未**前進 |
+| working tree | clean（只有既有的未追蹤 `review/prod-*`） |
+| push | dry-run `4fe769c..833570d`（**無** `+`，非 forced），normal fast-forward |
+
+⚠ 全程沒有 force / reset / 覆蓋 remote。
+
+### Deploy
+
+- `ORIGIN_MAIN_SHA` = `833570d`（tools/docs commit 之後為 checkpoint SHA）
+- `PRODUCTION_HTTP` = 200
+- `PRODUCTION_BUNDLE` = `assets/index-BkUAP-GE.js`（與本機 build 雜湊一致）
+
+### 正式站 smoke（新增 `browser_check_prod_b1c`，**38/38 PASS**）
+
+| Owner 指定項 | 結果 |
+|---|---|
+| ① 舊存檔正常載入 | 裸 heroProgress／裸 season → 熟練 `maxLevel=7` 沒歸零、season 1 筆、生涯數值逐值原封不動、**沒有被誤判成損壞** |
+| ② 已修動作 reload 後仍保存 | Training 安排後 reload 仍在（`b1`）。Sponsor 在新存檔上未達門檻簽不了約 ⇒ 誠實標註走本地驗證 |
+| ③ New Game reset | 挑戰 1→0、熟練 7→1、season 1→0 |
+| ④ visibilitychange / pagehide 真實 flush | **故障注入**製造一次真的存檔失敗 → 畫面出現「進度沒有存起來」→ 修好後**只靠 `pagehide`** 把未存變更補寫回去（15,677 B → 20,509 B） |
+| ⑤ 乾淨狀態切背景不重寫 | 連切 5 次背景，profile **內容一個 byte 都沒變**（390 再驗一次） |
+| ⑥ 正常存檔不誤顯 error | 正常／舊存檔／損壞啟動後／390 各驗一次，都沒出現 |
+| ⑦ 損壞存檔隔離不影響啟動 | 畫面正常（886 字、0 未捕捉例外）、原始 bytes 進 `.corrupt`、存過一次後原鍵恢復正常而**副本仍在** |
+| ⑧ Challenge / Manual Draft / Replay | 走得完，「重播結果與當初完全一致」 |
+| ⑨ Season / Career | 賽事頁打得開、有內容、沒有 crash 字樣 |
+| ⑩ Mobile 390 + console | 看板正常、不橫向溢出、切背景不重寫、console clean |
+
+**這支 gate 做的兩件破壞性動作，都是安全的**
+- **故障注入**：暫時把 `localStorage.setItem` 包成「寫 profile 就丟例外」。
+  這**不是**塞爆配額（Owner 明令不做），寫入失敗時舊值本來就原封不動留著。
+- **弄壞一份存檔**：弄壞的是**這支 gate 自己在開頭建立的那份**
+  （開頭先清空 localStorage 再開新局），不是任何玩家的資料。
+
+**notCoveredHere（誠實標註在 `review/prod-b1c/prod-b1c.json`）**
+- 「內部改了 state 但沒存 ⇒ flush 落盤」需要 `_patchPlayerNoSave`，正式站碰不到
+  ⇒ 由本地 `browser_check_exit_flush`（12/12，真 Chrome）負責。
+  正式站改用故障注入間接證明同一條路。
+- 半套寫入回滾只在本地 `check_save_hardening_b1c` §④ 涵蓋
+  （正式站只注入了 profile 鍵）。
+- `recordCsMatch`：CS 完整比賽跑不進 smoke 的時間預算，由本地行為驗證涵蓋。
+
+### 正式站回歸
+
+`browser_check_prod_b1b` **42/42**、`browser_check_prod_slice8` **43/43**、
+`browser_check_prod_slice7` **29/29** —— 換了存檔硬化之後全都沒動。
+
+### 這一輪 gate 錯一次
+
+⑦ 的「損壞存檔不影響正常啟動」我斷言 `磁碟上的 players > 0` ⇒ 假紅。
+**隔離之後原鍵上的損壞字串仍然留著**，直到下一次存檔才被覆蓋（副本已經在
+`.corrupt` 裡了）。「有沒有正常啟動」要看**畫面**，不是看磁碟。
+改成看 `document.body.innerText` 長度 ＋ 未捕捉例外數，並補一條斷言把
+「存過一次之後原鍵恢復正常、副本仍在」也釘住。
+
+### 沒做
+
+Supabase、Auth、revision/deviceId、Remote DB、Ranked、遊戲平衡。
+checkpoint 階段 `src/` **零變更**，只動 `tools/` 與 `docs/`。

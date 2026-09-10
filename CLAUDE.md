@@ -104,6 +104,11 @@ node tools/regress2.mjs # 一律跑（若存在）
   **`check_save_bundle_b1b`（86）**
   **`check_save_hardening_b1c`（76）**
   ＋瀏覽器 **`browser_check_exit_flush`（12）**
+  ＋**正式站**（部署後才跑）**`browser_check_prod_b1c`（38）**
+  ⚠ 正式站**製造不出「內部改了 state 但沒存」**（公開動作都會自己存檔，
+  而 `_patchPlayerNoSave` 是 store 內部）⇒ 那條路只能在本地 gate 驗。
+  正式站改用**故障注入**（暫時讓 `setItem` 對 profile 鍵丟例外）間接走同一條路，
+  **不得**改用塞爆配額的方式。
   ＋量測工具 `measure_season_size`（不是 gate，跑 50 場真對局，1–3 分鐘）
   ⚠ **公開動作寫了 state 就必須自己存檔**（`check_save_hardening_b1c` §① 掃原始碼
   ＋逐個動作跑「改了 → 直接讀磁碟」的行為驗證）。靠別的動作順便存＝靠運氣。
