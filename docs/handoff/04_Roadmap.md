@@ -2419,3 +2419,47 @@ regress 15/15 ｜ regress2 8/8 ｜ npm run build ✓
 3. ⚠ **獎勵仍不接**：接 Club Points 前必須先有架構文件 §7.3 的三條
    重複挑戰條款（每份快照對每位挑戰者最多結算一次、正式再戰要有冷卻、
    `retry` 恆不給獎勵）。目前 `retry` 已恆不給獎勵，另兩條尚未實作。
+
+---
+
+## Backend Phase B1A — Cloud Save Persistence Audit（2026-09-10．已完成）
+
+**盤點，不是實作。**沒有安裝 Supabase、沒有改任何產品程式（`src/` 零變更）。
+
+完整結果在 **`docs/architecture/Cloud_Save_Boundary_Audit_B1A.md`**。下面只留路標。
+
+### 一句話結論
+
+真正的存檔路徑**只有一條**（`profileStore.save()` → `esmo.profile.v1`），
+但旁邊還有**兩個各自獨立寫入的 store**（`esmo.heroProgress.v2`、`esmo.season.v1`），
+三者之間**沒有交易、沒有版本、沒有協調的重置**。
+⇒ Cloud Save 的第一號問題是**這個**，不是 Supabase 選型。
+
+### 三個實測數字（決定了 B1B 的形狀）
+
+| | |
+|---|---|
+| 新局存檔 | **7,049 B** |
+| 挑戰紀錄灌到上限後 | **119,963 B**，其中 `challenge` 佔 **113,050 B（94%）** |
+| 英雄熟練 | **1,160 B**（有界，但**必須**上雲——它直接決定戰力與快照） |
+
+⇒ 生涯本體其實只有 7 KB，是**重播證據**把它撐到 17 倍。
+
+### B1B 建議（沿用 Slice 8 剛驗證過的 provider 邊界，不大重構）
+
+1. `SaveBundle.v1` 純函式信封（A/B/C 分類的唯一事實來源）
+2. `SaveProvider` 邊界 ＋ `LocalSaveProvider`（行為與今天完全一樣）
+3. `saveGateway` 單一入口 —— `profileStore.save()` 的**名字與 84 個呼叫點都不動**
+4. `challenge` 拆 `core`（上雲）／`evidence`（延後）⇒ 上雲量回到 7 KB 等級
+5. 衝突**只偵測不自動合併**
+
+### 動手前必須先做的三件量測 / 小修
+
+1. 量 `esmo.season.v1` 在 50 場上限時的真實大小（B1A **未實測**，不猜）
+2. 修 `assignTraining` 的存檔順序（`set({retention})` 落在 `save()` 之後）
+3. 給 `heroProgress` / `season` 補 `schemaVersion`
+
+### 明確不做
+
+不安裝 Supabase、不選型、不寫 SQL、不做 login、不做多裝置即時同步、
+不動 combat / Draft / `simulationVersion`、不碰 Ranked。
