@@ -19460,3 +19460,50 @@ BanPickScreen 的根元素寫的是 `height:100%`，百分比高度在沒有確�
 才一次回應（`createDraftResult` 的註解寫得很明白），要做「逐手互相反應」就得在 UI 裡
 再實作一套逐手解算——那正是 §3 禁止的第二套 Draft 邏輯。所以對手的回應在送出後
 一次揭曉。這是遵守單一權威的結果，不是偷懶。
+
+---
+
+## Slice 6 Release Checkpoint（2026-09-10）
+
+- **FINAL_MAIN_SHA / ORIGIN_MAIN_SHA**：`980917f` → 補上正式站 gate 後為本節末的 SHA
+  （`git ls-remote` 查伺服器真值，兩端一致）。推送方式為 normal fast-forward，
+  推之前確認 origin/main 未前進、工作區乾淨。
+- **PRODUCTION_BUNDLE**：`assets/index-CGRbtuBs.js`，HTTP 200。
+  用本輪才新增的 `pendingChallengeDraftView` / `recordChallengeDraftAction` /
+  `beginChallengeDraft` 三個字串確認線上就是這一版。
+
+### 正式站實測
+
+`browser_check_prod_slice6` **30/30 PASS**（桌機 1366 ＋ 手機 390）：
+桌機滾輪 1620/352、手機單指 0→185 且 document 不動、捲動不誤選；
+兩種裝置都完成 3 ban + 5 pick，凍結的 DraftResult 與玩家操作逐項一致、無自動補位；
+防守方五隻決定性解出且不含玩家禁掉／選走的；中途 reload 那一手原封不動且直接回到選角；
+重播「完全一致」且 hash `89fa8e20 → 89fa8e20` 未變；`moba-sim.v4` 不變；
+竄改成 v3 後被明確擋下；console clean。
+
+`browser_check_prod_player_challenge`（Slice 1–5 正式站回歸）**137/137 PASS**。
+
+### ⚠ 這支 gate 原本是紅的，而且**不是 Slice 6 造成的**
+
+第一次跑是 28/49。逐條查證後分成兩類：
+
+1. **`c99bfed`（UI Clarity）起就該紅的**，與本輪無關：
+   - 「不增加生涯成長／不消耗選手體力／不推進生涯日期」三句長文案已被改成短標籤
+     （`0 生涯成長`／`不耗體力`／`不推進日期`），完整說明移進第二層 InfoHint。
+     用 `git log -S` 查到就是 `c99bfed` 改的，且那三句在線上 bundle 出現次數為 **0**。
+   - 「卡片有你的挑戰紀錄」原本要求每張卡都有紀錄行，但 `c99bfed` 刻意改成
+     **打過之後才出現**（原始碼註解寫明冷啟時每張都寫「還沒挑戰過」是重複）。
+     舊斷言與現行設計相反。
+2. **本輪流程改變造成的**：點「發起挑戰」現在先進手動選角，不再直接開打。
+
+**處理方式不是放寬斷言**：文案改成第一層驗短標籤**加**第二層驗完整保證（兩層都驗）；
+紀錄行改成驗**兩端**（冷啟不出現、打完要出現）——只驗一端的話「永遠不顯示」也會過關；
+④ 補上「進到手動選角」「玩家選滿 3 ban + 5 pick」「凍結的選角就是玩家選的那一手」
+「沒有自動補位」四條，原本的「真 MOBA 模擬跑完／結果顯示／比分時長／重播一致」
+一條都沒有拿掉。檢定力比原本高。
+
+### 過程中我自己的兩個錯（照實記）
+
+- `v.careerSafe` 是字串不是陣列，我多加的 `.join()` 讓 gate 直接 HARNESS_FAIL。
+- 註解裡寫了反引號包住的識別字，落在樣板字串內 ⇒ `SyntaxError`。
+  這個坑本 session 已經踩到第五次，`heredoc`／樣板字串內一律不要用反引號。

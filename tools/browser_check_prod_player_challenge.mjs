@@ -123,9 +123,27 @@ const result = await runGate({
       let v = J(await chrome.evaluate(readScreen()));
       ck(`${L}｜① 進到玩家挑戰畫面`, v.onScreen === true);
       ck(`${L}｜① 標示為玩家挑戰`, v.tierName === "玩家挑戰", v.tierName);
-      for (const t of ["不增加生涯成長", "不消耗選手體力", "不推進生涯日期", "不影響正式賽季", "沒有排位分數"]) {
-        ck(`${L}｜① 看得到「${t}」`, v.careerSafe.includes(t));
+      //  ⚠ 2026-09-10：這五條原本斷言的是長句（「不增加生涯成長」…）。
+      //    `c99bfed`（UI Clarity）把第一層改成短標籤、完整說明移進第二層，
+      //    所以那些長句在 bundle 裡已經不存在 —— 本 gate 從那時起就是紅的，
+      //    與 Slice 6 無關。這裡改成驗**現行第一層標籤**，並額外要求第二層
+      //    仍講得出完整保證：兩層都驗，檢定力不比原本低。
+      for (const t of ["0 生涯成長", "不耗體力", "不推進日期", "不影響正式賽季", "無排位"]) {
+        ck(`${L}｜① 第一層看得到「${t}」`, v.careerSafe.includes(t), v.careerSafe);
       }
+      const deep = J(await chrome.evaluate(`
+        //  用 testid 定位第二層（challenge-rules 是規則的 InfoHint），
+        //  不要靠按鈕文字猜：文字會隨文案調整而變，testid 才是穩定識別。
+        const el = document.querySelector('[data-testid="challenge-rules"]');
+        const btn = el?.tagName === "BUTTON" ? el : el?.querySelector("button") ?? el;
+        btn?.click();
+        await new Promise((r) => setTimeout(r, 600));
+        return JSON.stringify({ opened: !!btn, text: document.body.innerText });
+      `));
+      ck(`${L}｜① 第二層仍講得出完整生涯隔離保證`,
+        !!deep?.text && /經驗/.test(deep.text) && /體力/.test(deep.text)
+        && /日期/.test(deep.text) && /排位/.test(deep.text),
+        (deep?.text ?? "").includes("不寫回生涯") ? "含「不寫回生涯」" : "(未找到完整說明)");
 
       // ── ② 發布防守陣容 ───────────────────────────────────────────────
       const pub = J(await chrome.evaluate(clickBy('[data-testid="challenge-publish-btn"]')));
@@ -144,7 +162,13 @@ const result = await runGate({
       ck(`${L}｜③ 至少一個「可以先試手」`, v.cards.some((c) => c.slot === "warmup"));
       ck(`${L}｜③ 卡片有熟練與新鮮度`,
         v.cards.every((c) => /英雄熟練 平均 Lv\./.test(c.text) && /(今天發布|天前發布)/.test(c.text)));
-      ck(`${L}｜③ 卡片有你的挑戰紀錄`, v.cards.every((c) => /還沒有挑戰過這支隊伍|你挑戰過/.test(c.text)));
+      //  ⚠ 2026-09-10：原本斷言「每張卡都要有紀錄行」。`c99bfed`（UI Clarity）
+      //    刻意改成**打過之後才出現**（冷啟時每張都寫「還沒挑戰過」是重複，
+      //    看板頂端已經說過一次）⇒ 這條從那時起就與設計相反，本來就該紅，
+      //    與 Slice 6 無關。改成驗真正的意圖：冷啟不出現、打完才出現。
+      ck(`${L}｜③ 冷啟時卡片不重複「還沒挑戰過」`,
+        v.cards.every((c) => !/還沒有挑戰過這支隊伍/.test(c.text)),
+        v.cards.filter((c) => /還沒有挑戰過這支隊伍/.test(c.text)).map((c) => c.key).join(",") || "都沒有");
       ck(`${L}｜③ 卡片不出現戰力／勝率宣告`, v.cards.every((c) => !/戰力|勝率|評分|星等/.test(c.text)));
 
       const warm = v.cards.find((c) => c.slot === "warmup") ?? v.cards[0];
@@ -155,20 +179,89 @@ const result = await runGate({
       ck(`${L}｜③ 詳情有預存戰術與弱點`, /預存戰術/.test(v.detailText) && /弱點/.test(v.detailText));
       ck(`${L}｜③ 詳情有五名先發`, ["b1", "b2", "b3", "b4", "b5"].every((x) => v.detailText.includes(x)));
 
-      // ── ④ 發起挑戰 → 真的跑完 ───────────────────────────────────────
+      // ── ④ 發起挑戰 → 手動選角 → 真的跑完 ───────────────────────────
+      //  ⚠ Slice 6 起，「發起挑戰」進的是**手動 Ban/Pick**，不是直接開打。
+      //    這不是把斷言放寬，是流程真的多了一段：下面照樣要求真 MOBA 模擬
+      //    跑完、結果顯示、重播一致，只是中間多走玩家自己選角這一步。
       const start = J(await chrome.evaluate(clickBy(`[data-testid="challenge-start-${warm.key}"]`)));
       ck(`${L}｜④ 發起挑戰點得到`, start.ok, start.why ?? "");
+      const onDraft = await waitFor(chrome, sleep,
+        () => `return JSON.stringify({ grid: !!document.querySelector('[data-testid="hero-grid-scroll"]') });`,
+        (x) => x.grid === true, 30000);
+      ck(`${L}｜④ 進到手動選角`, onDraft.ok);
+      //  選滿 3 ban + 5 pick（點看得見的第一張卡，選不到就往下捲）。
+      for (let i = 0; i < 20; i++) {
+        const st = J(await chrome.evaluate(`
+          const raw = localStorage.getItem("esmo.profile.v1");
+          const pd = raw ? JSON.parse(raw)?.challenge?.pendingDraft ?? null : null;
+          if (!pd) return JSON.stringify({ done: true });
+          const b = pd.actions.filter((a) => a.act === "ban").length;
+          const p = pd.actions.filter((a) => a.act === "pick").length;
+          return JSON.stringify({ done: b >= 3 && p >= 5, b, p });
+        `));
+        if (st?.done) break;
+        const tapped = J(await chrome.evaluate(`
+          const el = document.querySelector('[data-testid="hero-grid-scroll"]');
+          if (!el) return JSON.stringify({ ok: false });
+          const r = el.getBoundingClientRect();
+          const b = [...el.querySelectorAll('[data-testid="hero-choose"]')].find((n) => {
+            const q = n.getBoundingClientRect();
+            return q.top >= r.top && q.bottom <= r.bottom && q.top >= 0 && q.bottom <= innerHeight;
+          });
+          if (!b) { el.scrollTop += 160; return JSON.stringify({ ok: false, scrolled: true }); }
+          b.click();
+          return JSON.stringify({ ok: true, hero: b.getAttribute("data-hero") });
+        `));
+        await sleep(tapped?.ok ? 450 : 250);
+      }
+      const drafted = J(await chrome.evaluate(`
+        const raw = localStorage.getItem("esmo.profile.v1");
+        const pd = raw ? JSON.parse(raw)?.challenge?.pendingDraft ?? null : null;
+        return JSON.stringify({
+          bans: (pd?.actions ?? []).filter((a) => a.act === "ban").map((a) => a.heroId),
+          picks: (pd?.actions ?? []).filter((a) => a.act === "pick").map((a) => a.heroId),
+        });
+      `));
+      ck(`${L}｜④ 玩家選滿 3 ban + 5 pick`,
+        drafted?.bans?.length === 3 && drafted?.picks?.length === 5,
+        `${drafted?.bans?.length} ban / ${drafted?.picks?.length} pick`);
+      await chrome.evaluate(`
+        const vis = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+        [...document.querySelectorAll("button")].filter(vis)
+          .find((n) => !n.disabled && /確認|開始/.test(n.innerText || ""))?.click();
+        return JSON.stringify({});
+      `);
       const w = await waitFor(chrome, sleep, readScreen, (x) => !!x.outcome, 120000);
       ck(`${L}｜④ 真 MOBA 模擬在時限內完成`, w.ok, `${(w.ms / 1000).toFixed(1)}s`);
       v = w.value;
       ck(`${L}｜④ 結果立即顯示`, /挑戰成功|挑戰失敗|未分勝負/.test(v.outcome), v.outcome);
       ck(`${L}｜④ 有比分與時長`, /擊殺 \d+ : \d+/.test(v.score), v.score);
       ck(`${L}｜④ 有「宣告 vs 實際」對照`, /目標 \d+/.test(v.evidenceMine));
+      //  ⚠ Slice 6：凍結的那一份必須就是玩家剛剛選的，不是方針補出來的。
+      const frozen = J(await chrome.evaluate(`
+        const cur = JSON.parse(localStorage.getItem("esmo.profile.v1")).challenge;
+        const id = (cur.order ?? [])[0];
+        const d = cur.instances[id]?.draftResult ?? null;
+        return JSON.stringify({ bans: d?.bans?.challenger ?? null, picks: d?.picks?.challenger ?? null,
+          autofill: d?.resolution?.challengerAutofillTrace?.length ?? null });
+      `));
+      ck(`${L}｜④ 凍結的選角就是玩家選的那一手`,
+        JSON.stringify(frozen?.bans) === JSON.stringify(drafted?.bans)
+        && JSON.stringify(frozen?.picks) === JSON.stringify(drafted?.picks),
+        `${JSON.stringify(frozen?.bans)} / ${JSON.stringify(frozen?.picks)}`);
+      ck(`${L}｜④ 玩家選滿 ⇒ 沒有自動補位`, frozen?.autofill === 0, `${frozen?.autofill} 手`);
 
       // ── ⑤ 重播驗證 ───────────────────────────────────────────────────
       await chrome.evaluate(clickBy('[data-testid="challenge-verify-btn"]'));
       const vw = await waitFor(chrome, sleep, readScreen, (x) => !!x.verifyText, 120000);
       ck(`${L}｜⑤ 重播與當初一致`, /完全一致/.test(vw.value.verifyText), vw.value.verifyText || "(逾時)");
+
+      //  ⚠ 承上：打完之後，**被挑戰的那一隊**的卡片必須長出紀錄行。
+      //    只驗「冷啟沒有」會讓「永遠不顯示」也過關 —— 兩端都要驗才有檢定力。
+      const boardAfter = J(await chrome.evaluate(readScreen()));
+      const chall = boardAfter.cards?.find((c) => c.key === warm.key) ?? null;
+      ck(`${L}｜③ 打完之後該隊卡片出現「你挑戰過」`,
+        !!chall && /你挑戰過/.test(chall.text), chall ? chall.text.slice(0, 60) : "(找不到那張卡)");
 
       // ── ⑥ 生涯隔離（正式站實測）─────────────────────────────────────
       const after = J(await chrome.evaluate(CAREER));
