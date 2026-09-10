@@ -68,6 +68,9 @@ import { useProfileStore } from "./platform/profileStore.js";
 import { buildBattleRoster } from "./battle/moba/mobaRosterAdapter.js";
 import { ROSTER } from "./data/roster.js";
 import { heroById } from "./data/heroDatabase.js";
+//  Backend B1B：存檔失敗時的最小提示。⚠ 只有 error 才會出現，
+//  其餘狀態一律不佔版面（見該檔檔頭）。
+import SaveStatusNotice from "./ui/SaveStatusNotice.jsx";
 
 // C5C owner-review entrypoint. Normal navigation remains the existing
 // state-machine flow; this query only opens a read-only Battle review with a
@@ -258,6 +261,8 @@ export default function AppShell() {
 
   return (
     <div data-viewport-locked={viewportLocked ? "1" : "0"} style={shellStyle}>
+      {/* ⚠ 掛在 shell 最外層：存檔失敗可能發生在任何一頁（84 個呼叫點）。 */}
+      <SaveStatusNotice />
       {/* Q3.5：主畫面「🏆 賽事」改指向聯賽（不另建第二個入口）。
           ⚠ 2026-09-09：原註解提到的 `MenuScreen` 已刪除（死碼，沒有任何 import、
             沒有路由、也沒有進 bundle）。賽季戰績的入口現在只有 `season` 這一條。 */}

@@ -2463,3 +2463,41 @@ regress 15/15 ｜ regress2 8/8 ｜ npm run build ✓
 
 不安裝 Supabase、不選型、不寫 SQL、不做 login、不做多裝置即時同步、
 不動 combat / Draft / `simulationVersion`、不碰 Ranked。
+
+---
+
+## Backend Phase B1B — Cloud-ready Save Foundation（2026-09-11．已完成）
+
+**沒有安裝 Supabase、沒有 Auth、沒有遠端呼叫。**細節在
+`docs/handoff/05_Sprint紀錄.md`，這裡只留路標。
+
+### 落地了什麼
+
+```
+src/platform/persistence/
+  saveBundle.js        SaveBundle.v1（純函式；A/B/C 分類的唯一事實來源）
+  saveProvider.js      load / save / describe ＋ idle/saving/synced/error
+  localSaveProvider.js 目前唯一實作（磁碟格式與之前一模一樣）
+  saveGateway.js       唯一出入口（profileStore.save() 的 84 個呼叫端不動）
+```
+
+接雲＝啟動時 `setSaveProvider(cloudProvider)` 一行，store 與畫面不用改。
+
+### 實測（不估算）
+
+```
+OLD_PROFILE_SIZE     = 119,919 B
+FULL_LOCAL_DATA_SIZE = 120,271 B（season 空）／974,921 B（season 滿載）
+CLOUD_BUNDLE_SIZE    =  19,830 B
+```
+
+### 建議下一輪：`B1C — Save Hardening`（**仍不接 Supabase**）
+
+1. `beforeunload` 保底存檔（B1A R2 只修掉 `assignTraining` 那一格）
+2. 逐行查證 `requeueMatch` / `signSponsor` 的存檔時機
+3. 降低 `BattleResult.timeline` 的保存量 —— 本機資料已達配額 1/5，
+   而 timeline 只給展示用
+4. 配額接近時的提醒（目前爆掉才會看到「進度沒有存起來」）
+
+⚠ **`revision` / device conflict 仍然明令不做**，要做的話先定
+「只偵測不自動合併」（B1A §6.5），不要做自動合併。

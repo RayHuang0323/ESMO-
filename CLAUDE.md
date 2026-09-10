@@ -100,6 +100,23 @@ node tools/regress2.mjs # 一律跑（若存在）
   不要先動逾時值——`browser_check_player_challenge_slice3` 就是這樣紅了兩個
   Slice（辨識法寫在 `08_目前待辦與風險.md`）。
 
+- **存檔 / 持久化（動到 save/load、New Game、任何 store 切片就必跑）**：
+  **`check_save_bundle_b1b`（86）**
+  ＋量測工具 `measure_season_size`（不是 gate，跑 50 場真對局，1–3 分鐘）
+  ⚠ **存檔只有一個出口**：`platform/persistence/saveGateway.js`。
+  `profileStore.save()` 的名字與 84 個呼叫端**不得更動**，它裡面呼叫 gateway。
+  ⚠ **新增 store 切片時要決定它屬哪一類**（`saveBundle.js` 的
+  `CLOUD_PROFILE_KEYS` / `LOCAL_PROFILE_KEYS` / `TRANSIENT_KEYS`）——
+  漏了就是「換裝置後那塊不見了」，那份清單是唯一的事實來源。
+  ⚠ **三個 localStorage 鍵名不得更改**（`esmo.profile.v1` /
+  `esmo.heroProgress.v2` / `esmo.season.v1`）：換鍵＝所有玩家存檔歸零。
+  版本化靠**信封 ＋ 形狀偵測**，不靠換鍵。
+  ⚠ **persistence 層不准空的 `catch {}`**（§⑨ 有斷言掃原始碼）。
+  存檔失敗必須變成 `saveState = error`，玩家看得到。
+  ⚠ Challenge 的 core/evidence 分離用**黑名單**（core = 整筆扣掉 `draftResult`）。
+  改成白名單會在契約長新欄位時靜默丟掉整筆場次——已經踩過一次。
+  ⚠ `esmo.season.v1` 實測 ~854,650 B（比 profile 大 7 倍）⇒ **不進雲端信封**。
+
 - **正式站 smoke（部署後才跑）**：**`browser_check_prod_season_vnext`**（30）
   ⚠ 打的是**線上網址**，不是 dev server。因此**只能走 UI ＋ localStorage**（TD-31）：
   `RESOLVE_APP_MODULES` 匯入 `/src/...`，打包後的 bundle 沒有那些路徑。

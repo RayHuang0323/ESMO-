@@ -100,6 +100,9 @@ import {
   entriesOf, entryByKey, directoryAnswers, activeOpponentProvider,
 } from "./challenge/opponentDirectory.js";
 import { displayIdentityOf, publishedAtOf, opponentEntry } from "./challenge/opponentProvider.js";
+//  Backend B1B：存檔的唯一出入口。⚠ `save()` 的名字與 84 個呼叫端都不動，
+//  只換它裡面做的事——生涯與英雄熟練從此**一起**出去、**一起**回來。
+import { saveBundleNow, resetAllPersistence, idleSaveState, saveStatusView } from "./persistence/saveGateway.js";
 //  Club Progression v1：Club XP／Club Level 的唯一權威（純函式，等級一律推導）。
 import {
   emptyClubProgression, normalizeClubProgression, clubProgressionViewOf,
@@ -891,17 +894,49 @@ export const useProfileStore = create((rawSet, get) => {
   //      （五份完整快照）。
   opponentDirectory: emptyOpponentDirectory(),
 
+  //  ── B1B：存檔同步狀態 ───────────────────────────────────────────────────
+  //  ⚠ **不落盤**（`buildSaveBundle` 是白名單，它不在 A/B 任何一類）。
+  //  ⚠ 它存在的唯一理由是不再靜默吞掉存檔失敗（B1A 風險 R3）：
+  //    以前 `save()` 是 `try {...} catch {}`，玩家「會在某一天發現進度不見了」。
+  saveState: idleSaveState(),
+
+  /**
+   * 存檔。**唯一出口**，但名字與 84 個呼叫端刻意都沒動。
+   *
+   * ⚠ 從 B1B 起它做的是「組信封 → 交給 provider」，而信封裡**一定**同時
+   *   帶著英雄熟練 ⇒ 不可能再出現「生涯是新的、熟練是舊的」（B1A 風險 R1）。
+   * ⚠ 接雲＝啟動時 `setSaveProvider(cloudProvider)`，這裡一行不用改。
+   * ⚠ 本支**不 throw**：存不進去只會把 `saveState` 轉成 `error`，
+   *   遊戲流程不會因此中斷。
+   */
   save() {
-    if (!canLS) return;
-    try {
-      const current = get();
-      const seasonStateV2 = seasonStateV2For(current);
-      if (JSON.stringify(seasonStateV2) !== JSON.stringify(current.seasonStateV2)) set({ seasonStateV2 });
-      //  ⚠ `opponentDirectory: undefined` ⇒ `JSON.stringify` 會直接略過這個鍵。
-      localStorage.setItem(KEY, JSON.stringify({ ...get(), seasonStateV2, opponentDirectory: undefined }));
-    } catch {}
+    const current = get();
+    //  ⚠ 這一步保留原樣：`seasonStateV2` 要在寫出去之前先同步好
+    //    （它不是純推導——封存狀態重算不回來，見 saveBundle.js 檔頭）。
+    const seasonStateV2 = seasonStateV2For(current);
+    if (JSON.stringify(seasonStateV2) !== JSON.stringify(current.seasonStateV2)) set({ seasonStateV2 });
+    const r = saveBundleNow({ profile: get(), now: Date.now() });
+    //  ⚠ 只在**狀態真的變了**時才寫回，否則 84 個呼叫端會每次都觸發重繪。
+    const prev = get().saveState;
+    if (prev.status !== r.state.status || prev.errorCode !== r.state.errorCode) {
+      set({ saveState: r.state });
+    }
+    return r.ok;
   },
-  reset() { if (canLS) localStorage.removeItem(KEY); set(withDevelopmentPoints(withIdentity(DEFAULT))); },
+
+  /** 存檔狀態的三態檢視（畫面讀這一支，不自己判狀態、不自己寫文案）。 */
+  saveStatus() { return saveStatusView(get().saveState); },
+
+  /**
+   * 清掉這台機器上的存檔。
+   *
+   * ⚠ B1B：**三個鍵一起清**（profile / heroProgress / season）。
+   *   在此之前只清 profile，開新局會帶著上一局的英雄熟練（B1A 風險 R5）。
+   */
+  reset() {
+    resetAllPersistence();
+    set({ ...withDevelopmentPoints(withIdentity(DEFAULT)), saveState: idleSaveState() });
+  },
 
   // Keep legacy SeasonState.v1 authoritative while every write carries a
   // deterministic SeasonState.v2 compatibility index.
@@ -1029,9 +1064,21 @@ export const useProfileStore = create((rawSet, get) => {
 
   // ── 內部：更新單一選手 ────────────────────────────────────────────────
   _patchPlayer(id, fn) {
+    get()._patchPlayerNoSave(id, fn);
+    get().save();
+  },
+
+  /**
+   * 只改選手、**不存檔**。
+   *
+   * ⚠ 給「同一個動作還要再寫別的切片」的呼叫端用（例如 `assignTraining`
+   *   還要寫 `retention`）。用 `_patchPlayer` 的話會先存一次、再寫第二個切片，
+   *   而第二個切片就落在那次存檔之外了（B1A 風險 R2 的成因）。
+   * ⚠ 呼叫它的人**有責任**在最後自己 `save()` 一次。
+   */
+  _patchPlayerNoSave(id, fn) {
     const players = (get().players ?? []).map((p) => (p.id === id ? fn(p) : p));
     set({ players });
-    get().save();
   },
 
   // ── 戰隊發展 v1（俱樂部層；不寫入單一選手）────────────────────────────
@@ -1121,10 +1168,16 @@ export const useProfileStore = create((rawSet, get) => {
     //  Club Assets v1：讀合併後的能力（發展樹 ＋ 總教練），不再只讀發展樹。
     const effects = get().clubCapabilities().total;
     const days = c.id === "rest" ? c.hours : Math.max(1, c.hours - effects.trainingDaysReduction);
-    get()._patchPlayer(id, (x) => ({ ...x, training: { courseId, daysLeft: days, totalDays: days } }));
+    //  ⚠ B1B（B1A 風險 R2）：**順序修正**。
+    //    舊版先呼叫 `_patchPlayer()`（那支內部就 `save()` 了），**之後**才寫
+    //    `retention` ⇒ 那次 retention 寫入不在這次存檔裡，玩家安排完訓練
+    //    立刻關掉分頁，今天的日目標就白點了。
+    //    ⇒ 現在把兩個寫入都做完，最後才存一次。
+    get()._patchPlayerNoSave(id, (x) => ({ ...x, training: { courseId, daysLeft: days, totalDays: days } }));
     //  V7B：日目標「安排訓練」。記在**指派**這一刻，不是課程結束那一刻——
     //  玩家今天做的事是「安排」，課程要跑好幾天，記在結束會讓今天的格子點不亮。
     set({ retention: recordTrainingActivity(normalizeRetention(get().retention), get()._retentionCoords()) });
+    get().save();
     return true;
   },
   cancelTraining(id) {
@@ -3629,6 +3682,12 @@ export const useProfileStore = create((rawSet, get) => {
   startNewGame(scenarioId) {
     const sc = SCENARIOS[scenarioId];
     if (!sc) return false;
+    //  ⚠ B1B（B1A 風險 R5）：新局必須**一起**清掉英雄熟練與對戰歷史。
+    //    在此之前 `resetProgress()` / `resetSeason()` 在整個 src/ 沒有任何
+    //    生產呼叫端 ⇒ 開新局會帶著上一局練好的熟練，而熟練是勝負的主要決定者。
+    //    證據：browser gate 的 seed() 一直得自己多寫一行清熟練——測試在替
+    //    產品補這件事。現在由這裡負責，測試那一行變成多餘（但無害）。
+    resetAllPersistence();
     //  N3.1：新局的財務起點由 economy/newGame.js 決定（含情境附帶的扶持贊助）。
     //  規則只有一份 ⇒ 驗證器可以驗到**真正會發生**的狀態，不會兩邊漂移。
     const ng = newGameFinancials(scenarioId);

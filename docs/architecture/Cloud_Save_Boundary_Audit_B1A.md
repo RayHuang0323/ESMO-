@@ -2,6 +2,10 @@
 
 > 2026-09-10．**盤點，不是實作。**本輪沒有安裝 Supabase、沒有改任何產品程式。
 > 所有數字都是在這個 repo 上實跑量到的，不是估的。
+>
+> **2026-09-11 B1B 回填了兩處**（下面各自就地標示）：
+> ① R7「`esmo.season.v1` 大小未實測」已量出來 ⇒ **~854,650 B**
+> ② §4 把 `seasonStateV2` 列為「純推導」是**錯的**，B1B 更正為 A 類
 
 ---
 
@@ -27,7 +31,7 @@
 |---|---|---|---|
 | `esmo.profile.v1` | `platform/profileStore.js` | **生涯主存檔**（36 個 state 欄位） | 新局 **7,049 B**；挑戰紀錄灌滿後 **119,963 B** |
 | `esmo.heroProgress.v2` | `hero/heroProgressStore.js` | 英雄熟練（10 隻，xp/level/mastery） | 初始 **1,160 B**（有界） |
-| `esmo.season.v1` | `platform/seasonStore.js` | `BattleResult.v2[]`，上限 50 場 | **本輪未實測**（見 §5 風險 R7） |
+| `esmo.season.v1` | `platform/seasonStore.js` | `BattleResult.v2[]`，上限 50 場 | **~854,650 B**（B1B 實測，見 R7） |
 | `esmo.quality.v1` | `battle/quality.js` | 畫質設定 | 極小 |
 | `esmo.hud.mode.v1` | `battle/ui/hudStore.js` | HUD 模式 | 極小 |
 | `esmo.timeline.mode.v1` | `battle/ui/BattleTimeline.jsx` | 時間軸顯示模式 | 極小 |
@@ -142,7 +146,7 @@
 | 項目 | 性質 |
 |---|---|
 | `opponentDirectory` | Slice 8 的對手來源快取。**已經明確排除在 `save()` 之外**，而且 `load()` 白名單也沒有它 |
-| `seasonStateV2` | **純推導**（`seasonStateV2For()` 由 `competition` + `competitionHistory` + `processedCompetitionAwards` + `meta` 算出）。存了也會在 `withIdentity()` 載入時被重算覆蓋 |
+| ~~`seasonStateV2`~~ | ⚠ **這一格 B1A 判斷錯了，B1B 更正**：它**不是**純推導。`seasonSealingV2.sealSeasonBoundary()` 會把它寫成 `status: sealed` / `active: null`，而 `migrateSeasonStateV2()` 對一份已經合法的 v2 state 是**保留不重建**（只有 legacy 換季才重建）⇒ 丟掉它＝丟掉「這一季已經封存」，重算不回來。**它屬 A 類**，見 `saveBundle.js` 的 `CLOUD_PROFILE_KEYS` |
 | `competition` / `competitionHistory` | `competitionByMode` / `competitionHistoryByMode` 的**別名投影**（`routeCompetitionWrite`）。目前會被寫進存檔但 `load()` 不讀 |
 | `replayBuffer`（記憶體） | 只保留當前 session 最近一場的完整 frames |
 | `battleStore` / `hudStore` runtime / `useGameStore` snapshot | 每 tick 變動的戰鬥狀態 |
@@ -211,11 +215,22 @@
 `heroProgress` 與 `season` 沒有版本欄位（`heroProgress` 靠**換鍵名**做過一次遷移：
 `v1 → v2`）。雲端存的東西必須能被未來的版本讀懂 ⇒ 這兩個要補版本欄位。
 
-### R7 ⚠ `esmo.season.v1` 大小未實測
+### R7 ✅ `esmo.season.v1` 大小 —— **B1B 已實測**
 
-`BattleResult.v2` 帶 `rounds`、`players`、`raw` 透傳，上限 50 場。
-本輪沒有跑完整生涯賽事，**沒有量到真實大小**。
-⇒ 列為 B1B 的前置量測項，不在這裡猜。
+`tools/measure_season_size.mjs`（跑 50 場**真的** `LogicEngine` 對局 → 真的事件流
+→ `useBattleFeed` 賽後用的同一支 `snapshotToBattleResult`），2026-09-11：
+
+```
+單場 BattleResult.v2   min 13,637 / 中位 16,733 / max 22,117 / 平均 17,093 B
+  其中 timeline        15,477 B（約 90%，是中文事件字串）
+  平均事件數           94
+50 場上限合計          ~854,650 B（最壞 ~1,105,850 B）
+```
+
+⇒ 比 profile 存檔大 **7 倍**，而且不參與任何生涯數值
+⇒ **B 類確立**，不進 `SaveBundle`（`check_save_bundle_b1b` §④H 有斷言釘住）。
+⚠ 順帶一個新數字：本機資料滿載時合計 **~974,921 B**，
+  已經接近 localStorage 5 MB 配額的 1/5 —— 見 `08_目前待辦與風險.md`。
 
 ### R8 ⚠ 沒有 device / revision，多裝置就是「最後寫入者覆蓋」
 

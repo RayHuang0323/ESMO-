@@ -3,16 +3,37 @@
 //  模型邏輯全在 heroProgress.js（純）；本檔只做 zustand 包裝 + 持久化適配。
 //  持久化：瀏覽器 localStorage；無 localStorage（Node/SSR）自動退化為記憶體。
 //  觸發：useBattleFeed 偵測終局 → recordBattleResult(finalSnap)（單向，一場一次）。
+//
+//  ── B1B：版本化 ＋ 向下相容（B1A 風險 R6）────────────────────────────────
+//  舊格式是**裸的** `{ heroId: {xp, level, mastery} }`，沒有版本欄位。
+//  新格式包一層 `{ schema: "HeroProgress.v3", progress: {...} }`。
+//  ⚠ **鍵名刻意不變**：換鍵會讓所有既有玩家的熟練歸零，而熟練是勝負的
+//    主要決定者（271b31d）。改用**形狀偵測**相容，形狀規則只有一份，
+//    住在 `platform/persistence/localSaveProvider.js`。
+//
+//  ⚠ 熟練屬 Cloud Save 的 A 類：它與生涯**必須是同一個時點**，
+//    所以真正的存檔出口是 `saveGateway`（見 `installProgress`）。
+//    本檔自己的 `persist.save` 只是「賽後立刻落地」的即時保險。
 // ============================================================================
 import { create } from "zustand";
 import { applyMatchResult, buildLoadout, createInitialProgress } from "./heroProgress.js";
 import { HERO_ASSIGN, ALL_HERO_IDS } from "../data/roster.js";
+import { readHeroProgressPayload, heroProgressPayload } from "../platform/persistence/localSaveProvider.js";
 
 const KEY = "esmo.heroProgress.v2";   // Sprint09：heroId 對接 CHAMPIONS_100，鍵空間更換
 const canLS = typeof localStorage !== "undefined";
 const persist = {
-  load() { if (!canLS) return null; try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } },
-  save(p) { if (!canLS) return; try { localStorage.setItem(KEY, JSON.stringify(p)); } catch {} },
+  load() {
+    if (!canLS) return null;
+    try { return readHeroProgressPayload(localStorage.getItem(KEY)).progress; } catch { return null; }
+  },
+  save(p) {
+    if (!canLS) return { ok: false, error: "no_storage" };
+    //  ⚠ 這裡的 catch **回報**而不是靜默吞掉（B1A 風險 R3）。
+    //    呼叫端目前只在賽後用它，真正會顯示給玩家的錯誤走 `saveGateway`。
+    try { localStorage.setItem(KEY, JSON.stringify(heroProgressPayload(p))); return { ok: true }; }
+    catch (e) { return { ok: false, error: String(e?.message ?? e) }; }
+  },
 };
 
 export const useHeroProgressStore = create((set, get) => ({
@@ -34,6 +55,21 @@ export const useHeroProgressStore = create((set, get) => ({
 
   /** 下場沿用：目前 progress → 引擎 loadout */
   getLoadout() { return buildLoadout(get().progress, HERO_ASSIGN); },
+
+  /**
+   * B1B：把一份 progress 整個裝回去（**還原用**，不是累加）。
+   *
+   * ⚠ 只有 `saveGateway.applyBundle()` 該呼叫它——那是唯一能保證
+   *   「生涯與熟練是同一個時點」的地方（B1A 風險 R1）。
+   * ⚠ 也會清掉 `lastRecordedKey`：換了一份存檔之後，上一份的防重複鍵
+   *   會讓還原後的第一場比賽被誤判成「已經記過了」。
+   */
+  installProgress(progress) {
+    if (!progress || typeof progress !== "object") return false;
+    persist.save(progress);
+    set({ progress, lastDetail: null, lastRecordedKey: null });
+    return true;
+  },
 
   resetProgress() {
     const p = createInitialProgress(ALL_HERO_IDS);

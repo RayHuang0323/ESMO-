@@ -19770,3 +19770,83 @@ formal / repeat / retry 三個計數語意不變（observed 2 / formal 1 / eligi
 
 沒有開始 Slice 9、沒有真 Backend、沒有 Ranked。
 `src/` 在 checkpoint 階段**零變更**——本階段只動 `tools/` 與 `docs/`。
+
+---
+
+## Backend Phase B1B — Cloud-ready Save Foundation（2026-09-11）
+
+**沒有安裝 Supabase、沒有 Auth、沒有遠端呼叫。**做的是「未來只替換 SaveProvider
+就能接 Cloud」的架構，以及把 B1A 找到的存檔一致性問題**真的修掉**。
+
+### 三個前置
+
+| | 結果 |
+|---|---|
+| 實測 `esmo.season.v1` | 新增 `tools/measure_season_size.mjs`（跑 50 場**真對局**）。單場平均 **17,093 B**（90% 是 timeline），50 場上限 **~854,650 B** ⇒ 比 profile 大 7 倍、不參與任何生涯數值 ⇒ **B 類確立** |
+| `assignTraining` 漏存 | 新增 `_patchPlayerNoSave()`；`assignTraining` 改成「兩個切片都寫完，最後才存一次」。以前是 `_patchPlayer()`（內部就存了）⇒ 之後才寫 `retention` ⇒ 那格日目標落在存檔之外 |
+| `heroProgress` / `season` 版本化 | 各自包一層信封（`HeroProgress.v3` / `SeasonHistory.v2`）。⚠ **鍵名一個都沒換**（換鍵＝所有玩家熟練歸零），靠**形狀偵測**向下相容：裸物件／裸陣列＝舊格式 |
+
+### 新增四支（`src/platform/persistence/`）
+
+- **`saveBundle.js`**（純函式）—— `SaveBundle.v1`。A/B/C 分類的**唯一事實來源**，
+  C 類在組信封時就被剔掉，不靠呼叫端記得。內含 Challenge 的
+  `core`（判定，上雲）／`evidence`（快照＋選角，留本機）分離。
+- **`saveProvider.js`**（純函式）—— `load` / `save` / `describe` 三支，
+  ＋ `idle / saving / synced / error` 四態與玩家文案。
+- **`localSaveProvider.js`** —— 目前唯一實作。⚠ **磁碟格式與 B1B 之前一模一樣**
+  （`esmo.profile.v1` 仍是一份完整 profile 物件）⇒ 舊存檔照讀、`load()` 的白名單與
+  所有 migration 一行不用改。`SaveBundle` 是**邊界上的形狀，不是磁碟上的形狀**。
+- **`saveGateway.js`** —— 唯一出入口。`profileStore.save()` 的**名字與 84 個呼叫端
+  都沒動**，只換它裡面做的事。
+
+### 修掉的 B1A 風險
+
+| | 修法 |
+|---|---|
+| R1 三個 store 沒有交易 | 熟練在 `saveBundleNow()` 裡被讀進來 ⇒ 與生涯**必然同一時點**。`applyBundle()` 也是同一支裝回去 |
+| R2 沒有 autosave、8 個動作漏存 | `assignTraining` 已修（見上）。⚠ autosave / `beforeunload` **本輪沒做**，仍列風險 |
+| R3 `catch {}` 靜默吞失敗 | 全鏈改成回報。`saveState` 四態 ＋ `SaveStatusNotice.jsx`（**只有 error 才出現**的最小橫幅） |
+| R4 存檔 94% 是重播證據 | core/evidence 分離 ⇒ **CLOUD_BUNDLE_SIZE = 19,830 B**（本機仍是 119,919 B） |
+| R5 New Game 不清熟練 | `startNewGame()` 與 `reset()` 都走 `resetAllPersistence()`，三個鍵一起清 |
+| R6 只有 profile 有版本 | heroProgress / season 都有了 |
+| R7 season 大小未知 | 已實測（見上） |
+| R8 沒有 revision/device | **本輪明令不做**，仍列風險 |
+
+### 實測（不估算）
+
+```
+OLD_PROFILE_SIZE     = 119,919 B
+FULL_LOCAL_DATA_SIZE = 120,271 B（season 空）／974,921 B（season 滿載）
+CLOUD_BUNDLE_SIZE    =  19,830 B   ← 挑戰重播證據 99,985 B 被留在本機
+  其中 heroProgress  =     270 B
+  challenge core     =  13,616 B
+```
+
+### 驗證
+
+- **`check_save_bundle_b1b` 86/86 PASS**（新增）：舊存檔相容（三種舊格式）／
+  round-trip 逐值／生涯＋熟練同一時點／New Game 三個鍵一起清（`reset()` 也驗）／
+  `assignTraining` 不漏存／schemaVersion／Challenge core 沒有證據也還原得出判定／
+  雲端信封 < 100KB／寫入失敗轉 error 且不打斷流程／換 provider 後 store 與畫面不用改。
+- 回歸：Slice 1–8 全綠（108/79/100/60/71/30/35/121）、`regress` 15/15、`regress2` 8/8、
+  `check_flow09` / `dash10` / `progress25` / `retention_v7b` / `world_time_v1` /
+  `time_block_v3` / `offseason_v5` / `contract_v6` / `general_match_v7a` 皆 0 失敗、build 過。
+- 瀏覽器：`challenge_lifecycle` 21/21、`manual_draft` 27/27、
+  `player_challenge_slice3` 99/99、`slice8` 50/50、`time_controls` 21/21。
+
+### 過程中修掉的兩個自己的錯
+
+1. **Challenge core 用白名單挑欄位 ⇒ 漏了 `issuedBy`** ⇒ `validateChallengeInstance`
+   驗不過 ⇒ `normalizeChallengeState` 把**整筆場次丟掉**，reload 後挑戰紀錄變 0
+   （slice2 / slice8 直接紅）。改成**黑名單**（core = 整筆扣掉 `draftResult`）：
+   白名單的失敗方式是「靜靜少一個欄位」，而 `ChallengeInstance` 契約往後一定還會
+   長欄位；黑名單的失敗方式是「多存一點」，那是安全的方向。
+2. **B1A 把 `seasonStateV2` 列為純推導是錯的** —— `sealSeasonBoundary()` 會寫入
+   封存狀態，`migrateSeasonStateV2()` 對合法 v2 是保留不重建 ⇒ 丟掉就重算不回來。
+   已更正為 A 類，並在 B1A 文件就地標註。
+
+### 沒做（Owner 明令）
+
+Supabase、Auth、Google Login、Remote DB、revision / device conflict、Ranked、
+Online Challenge Backend、大改 Zustand、大改 84 個 save call sites、改遊戲平衡。
+`CORE_GAME_LOGIC_CHANGED = NO`（combat / Draft / `simulationVersion` 一個字沒動）。
