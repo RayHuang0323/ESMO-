@@ -103,6 +103,8 @@ import { displayIdentityOf, publishedAtOf, opponentEntry } from "./challenge/opp
 //  Backend B1B：存檔的唯一出入口。⚠ `save()` 的名字與 84 個呼叫端都不動，
 //  只換它裡面做的事——生涯與英雄熟練從此**一起**出去、**一起**回來。
 import { saveBundleNow, resetAllPersistence, idleSaveState, saveStatusView } from "./persistence/saveGateway.js";
+//  B1C：讀不懂的存檔要**先隔離再開新局**，不准被下一次 save() 靜默覆寫。
+import { readProfileRecord, quarantine, PROFILE_KEY as LS_PROFILE_KEY } from "./persistence/localSaveProvider.js";
 //  Club Progression v1：Club XP／Club Level 的唯一權威（純函式，等級一律推導）。
 import {
   emptyClubProgression, normalizeClubProgression, clubProgressionViewOf,
@@ -684,10 +686,34 @@ function withDevelopmentPoints(state) {
   return result.changed ? { ...state, teamDevelopment: result.state } : state;
 }
 
+/**
+ * 載入存檔。
+ *
+ * ⚠ B1C 修的洞：舊版是 `JSON.parse(...) || {}` 包在一個大 `try` 裡，
+ *   讀不懂就 `catch` 成一份全新的 DEFAULT——而**下一次 `save()` 就把原始
+ *   bytes 蓋掉了**。玩家原本也許還救得回來的東西，靜默消失。
+ * ⇒ 現在三種情況分開處理：
+ *     沒有存檔        → 正常開新局（什麼都不做）
+ *     有存檔但讀不懂  → **先搬進隔離區**（`esmo.profile.v1.corrupt`）再開新局
+ *     讀得懂但遷移炸了 → 同上（`migrate_failed`）
+ * ⚠ 刻意**不拒絕啟動**：把玩家鎖在門外救不回任何東西，隔離才有機會。
+ */
 const load = () => {
   if (!canLS) return withDevelopmentPoints(withIdentity(DEFAULT));
+  const read = readProfileRecord();
+  if (read.state === "corrupt") {
+    quarantine(LS_PROFILE_KEY, read.raw, read.reason ?? "parse_failed");
+    return withDevelopmentPoints(withIdentity(DEFAULT));
+  }
+  if (read.state === "empty") return withDevelopmentPoints(withIdentity(DEFAULT));
   try {
-    const saved = JSON.parse(localStorage.getItem(KEY)) || {};
+    const saved = read.record;
+    //  ⚠ 存檔來自**更新版本**的 build（schemaVersion 比我認得的大）：
+    //    白名單會靜默丟掉我不認得的欄位，而下一次存檔就把它們永久刪掉了。
+    //    ⇒ 照樣載入（不把玩家鎖在門外），但先留一份原樣在隔離區。
+    if (Number(saved?.schemaVersion) > PROFILE_SCHEMA_VERSION) {
+      quarantine(LS_PROFILE_KEY, read.raw, "unknown_schema");
+    }
     const f = saved.finance || {};
     // Milestone E：lineup 依「清洗後的名單」驗證（指到已離隊選手的席位會被回收）。
     const players = arr(saved.players, DEFAULT.players).map(migratePlayer);
@@ -827,7 +853,11 @@ const load = () => {
       worldNews:     arr(saved.worldNews,     DEFAULT.worldNews),
       events:        arr(saved.events,        DEFAULT.events),
     }));
-  } catch { return withDevelopmentPoints(withIdentity(DEFAULT)); }
+  } catch {
+    //  ⚠ 讀得懂 JSON 但遷移途中炸了 —— 一樣**先隔離**，理由同上。
+    quarantine(LS_PROFILE_KEY, read.raw, "migrate_failed");
+    return withDevelopmentPoints(withIdentity(DEFAULT));
+  }
 };
 
 /**
@@ -877,12 +907,40 @@ function normalizeMsg(m, i) {
   };
 }
 
+//  ── B1C：dirty 追蹤的兩個計數器 ───────────────────────────────────────────
+//  ⚠ 刻意**不放進 store state**：它們每次寫入都會變，放進 state 會讓每一個
+//    訂閱者跟著重繪，而這兩個數字對畫面完全沒有意義。
+//  `writeSeq` 每次寫到會落盤的鍵就 +1；`savedSeq` 記下最後一次**成功存檔**
+//  當下的 `writeSeq`。兩者不同 ⇒ 有東西還沒存下去。
+let writeSeq = 0;
+let savedSeq = 0;
+
+/** 有沒有還沒存下去的變更。⚠ 離開頁面的保底 flush 用它決定要不要寫。 */
+export const isProfileDirty = () => writeSeq !== savedSeq;
+
+/** 診斷用（verifier 讀它，不自己數）。 */
+export const profileWriteCounters = () => ({ writeSeq, savedSeq });
+
 export const useProfileStore = create((rawSet, get) => {
   //  v11：所有寫入的單一轉接點。既有呼叫端仍然寫 `set({ competition })`，
   //  真正落地的是 `competitionByMode.moba`，別名再投影回來（同一個參考）。
   //  ⚠ 本檔沒有 functional 形式的 `set((s) => ...)`（已確認），所以只處理物件形式；
   //    真的要新增 functional 寫法時，這裡必須一併支援，否則會繞過轉接。
-  const set = (partial) => rawSet(routeCompetitionWrite(get(), partial));
+  //
+  //  ── B1C：dirty 追蹤就掛在這裡 ─────────────────────────────────────────
+  //  ⚠ 掛在**唯一的轉接點**上，所以不需要動任何一個呼叫端就能知道
+  //    「有沒有還沒存下去的變更」。離開頁面時的保底 flush 靠它決定要不要寫，
+  //    沒有它就會每次切分頁都重寫一次整份存檔（存檔風暴）。
+  //  ⚠ 只有**會落盤的鍵**才算 dirty：`saveState` 與 `opponentDirectory`
+  //    本來就不進存檔，它們變動不該讓 flush 白寫一次。
+  const set = (partial) => {
+    if (partial && typeof partial === "object") {
+      for (const k of Object.keys(partial)) {
+        if (k !== "saveState" && k !== "opponentDirectory") { writeSeq += 1; break; }
+      }
+    }
+    return rawSet(routeCompetitionWrite(get(), partial));
+  };
   return {
   ...load(),
 
@@ -915,13 +973,30 @@ export const useProfileStore = create((rawSet, get) => {
     //    （它不是純推導——封存狀態重算不回來，見 saveBundle.js 檔頭）。
     const seasonStateV2 = seasonStateV2For(current);
     if (JSON.stringify(seasonStateV2) !== JSON.stringify(current.seasonStateV2)) set({ seasonStateV2 });
+    //  ⚠ 先記下這一刻的寫入序號。存檔期間如果又有人寫 state，
+    //    那份變更**不在**這次存檔裡，所以不能事後才讀 `writeSeq`。
+    const seqAtSave = writeSeq;
     const r = saveBundleNow({ profile: get(), now: Date.now() });
+    //  ⚠ 只有**成功**才對齊：失敗還把它當已存，離開頁面的保底 flush 就不會補救了。
+    if (r.ok) savedSeq = seqAtSave;
     //  ⚠ 只在**狀態真的變了**時才寫回，否則 84 個呼叫端會每次都觸發重繪。
     const prev = get().saveState;
     if (prev.status !== r.state.status || prev.errorCode !== r.state.errorCode) {
       set({ saveState: r.state });
     }
     return r.ok;
+  },
+
+  /**
+   * 只在有未存變更時才存（離開頁面的保底 flush 用）。
+   *
+   * ⚠ 與 `save()` 分開是刻意的：`save()` 的語意是「現在就存」，
+   *   84 個呼叫端都依賴它無條件執行，**不得**在那裡加 dirty 判斷。
+   * @returns {{ saved: boolean, ok: boolean|null, reason: string }}
+   */
+  flushIfDirty() {
+    if (!isProfileDirty()) return { saved: false, ok: null, reason: "clean" };
+    return { saved: true, ok: get().save(), reason: "dirty" };
   },
 
   /** 存檔狀態的三態檢視（畫面讀這一支，不自己判狀態、不自己寫文案）。 */
@@ -2929,6 +3004,12 @@ export const useProfileStore = create((rawSet, get) => {
     const nextAttempt = (get().matchmaking?.attempt ?? 0) + 1;
     set({ matchmaking: { ticket: null, room: null, session: null, launch: null, attempt: nextAttempt } });
     const r = get().enqueueMatch(mode, now, nextAttempt);
+    //  ⚠ B1C：`enqueueMatch` **成功**時自己會存檔，但**失敗**時它在自己的
+    //    `set()` 之前就 return 了 ⇒ 上面那次「清乾淨」只活在記憶體裡，
+    //    磁碟上還留著舊票券。實務影響很小（`matchmaking` 是 B 類，而且
+    //    `normalizeMatchmaking` 載入時本來就會作廢 queued/validating），
+    //    但「畫面說清掉了、磁碟說沒有」本身就是個會誤導人的狀態。
+    if (!r.ok) get().save();
     return { ...r, reused: false };
   },
   /** 清掉終局票券，回到 idle（保留給既有呼叫端；玩家路徑改用 requeueMatch）。 */
@@ -3748,6 +3829,10 @@ export const useProfileStore = create((rawSet, get) => {
       finance: { ...get().finance, funds: get().finance.funds + sp.signBonus * WAN },
     });
     get().pushInbox({ type: "sponsor", from: sp.name, subject: `簽約完成 · ${sp.tier}贊助商`, text: `簽約贊助商 ${sp.name}！簽約金 +$${sp.signBonus}萬，每週 +$${sp.weekly}萬。` });
+    //  ⚠ B1C：以前這裡沒有 `save()`，靠上一行的 `pushInbox()` 順便把它存下去
+    //    ——**靠運氣，不是靠設計**。哪天收件匣改成不存檔（它是 B 類），
+    //    簽約金與贊助商（**A 類**）就會靜靜地不落盤。
+    get().save();
     return true;
   },
   endSponsor() {
@@ -4769,6 +4854,10 @@ export const useProfileStore = create((rawSet, get) => {
       subject: `CS 訓練賽${win ? "勝利" : "失利"} ${result.ourScore}:${result.enemyScore}`,
       text: `${result.mapName ?? result.mapId} · ${result.tacticName ?? "未部署戰術"}｜獎金 +$${Math.round(money / WAN)}萬、粉絲 +${fans}、選手 XP 共 +${xpTotal}`,
     });
+    //  ⚠ B1C：`csHistory` 是 **A 類**（跨裝置要一致的賽事帳本），但這裡以前
+    //    沒有 `save()`，靠上一行的 `pushInbox()` 順便存下去——與 `signSponsor`
+    //    同一個毛病。收件匣是 B 類，哪天它改成不落盤，CS 戰績就會靜靜地不見。
+    get().save();
     return entry;
   },
 

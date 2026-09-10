@@ -2501,3 +2501,27 @@ CLOUD_BUNDLE_SIZE    =  19,830 B
 
 ⚠ **`revision` / device conflict 仍然明令不做**，要做的話先定
 「只偵測不自動合併」（B1A §6.5），不要做自動合併。
+
+---
+
+## Backend Phase B1C — Save Hardening（2026-09-11．已完成）
+
+沒有接 Supabase / Auth / revision。細節在 `docs/handoff/05_Sprint紀錄.md`。
+
+### 落地了什麼
+
+1. **隔離區** —— 讀不懂的存檔搬進 `<key>.corrupt`，不再被下一次 `save()` 靜默覆寫
+2. **`exitFlush.js`** —— `visibilitychange(hidden)` ＋ `pagehide` 保底存檔
+3. **dirty 控制** —— 掛在唯一的 `set` 轉接點，乾淨時一個 byte 都不寫
+4. **半套寫入回滾** —— profile 寫成功但熟練失敗會把 profile 放回去
+5. **三個漏存修掉** —— `signSponsor`、**`recordCsMatch`**、`requeueMatch` 失敗路徑
+
+### 建議下一輪（**仍不接 Supabase**）
+
+1. **載入失敗的 UI** —— 目前隔離區運作了但玩家不知道；
+   `SaveStatusNotice` 只處理存檔失敗，不處理載入失敗
+2. **降低 `BattleResult.timeline` 的保存量** —— 本機資料已達配額 1/5，
+   而 timeline 只給展示用（B1C 明令不做自動 prune）
+3. 配額接近時的提醒
+
+⚠ `revision` / device conflict 仍然明令不做。

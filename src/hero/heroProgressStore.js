@@ -18,14 +18,24 @@
 import { create } from "zustand";
 import { applyMatchResult, buildLoadout, createInitialProgress } from "./heroProgress.js";
 import { HERO_ASSIGN, ALL_HERO_IDS } from "../data/roster.js";
-import { readHeroProgressPayload, heroProgressPayload } from "../platform/persistence/localSaveProvider.js";
+import { readHeroProgressPayload, heroProgressPayload, quarantine } from "../platform/persistence/localSaveProvider.js";
 
 const KEY = "esmo.heroProgress.v2";   // Sprint09：heroId 對接 CHAMPIONS_100，鍵空間更換
 const canLS = typeof localStorage !== "undefined";
 const persist = {
+  /**
+   * ⚠ B1C：讀不懂**要先隔離**，不能靜默退回初始熟練。
+   *   熟練歸零＋下一次存檔覆寫 = 玩家練了幾十場的東西無聲消失。
+   *   「鍵不存在」（第一次玩）與「讀不懂」是兩件事，這裡分得開。
+   */
   load() {
     if (!canLS) return null;
-    try { return readHeroProgressPayload(localStorage.getItem(KEY)).progress; } catch { return null; }
+    let raw = null;
+    try { raw = localStorage.getItem(KEY); } catch { return null; }
+    if (raw === null || raw === "") return null;          // 第一次玩，正常
+    const r = readHeroProgressPayload(raw);
+    if (r.progress === null) quarantine(KEY, raw, "parse_failed");
+    return r.progress;
   },
   save(p) {
     if (!canLS) return { ok: false, error: "no_storage" };

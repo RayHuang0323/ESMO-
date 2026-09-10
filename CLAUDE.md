@@ -102,7 +102,18 @@ node tools/regress2.mjs # 一律跑（若存在）
 
 - **存檔 / 持久化（動到 save/load、New Game、任何 store 切片就必跑）**：
   **`check_save_bundle_b1b`（86）**
+  **`check_save_hardening_b1c`（76）**
+  ＋瀏覽器 **`browser_check_exit_flush`（12）**
   ＋量測工具 `measure_season_size`（不是 gate，跑 50 場真對局，1–3 分鐘）
+  ⚠ **公開動作寫了 state 就必須自己存檔**（`check_save_hardening_b1c` §① 掃原始碼
+  ＋逐個動作跑「改了 → 直接讀磁碟」的行為驗證）。靠別的動作順便存＝靠運氣。
+  ⚠ **讀不懂的存檔一律先隔離**（`<key>.corrupt`）再開新局，**不准**讓下一次
+  `save()` 把原始 bytes 蓋掉。這條踩過一次，代價是玩家的存檔無聲消失。
+  ⚠ 保底 flush 只掛 `visibilitychange(hidden)` ＋ `pagehide`，
+  **不得**改用 `beforeunload` 當唯一機制（行動裝置上經常不觸發）。
+  ⚠ `save()` 永遠無條件執行；dirty 判斷只在 `flushIfDirty()` 裡。
+  要製造「未存的變更」來測順序，請用 `_patchPlayerNoSave()` —— 
+  `pushInbox` / `renamePlayer` 都會自己存檔，拿它們測永遠假綠。
   ＋**正式站**（部署後才跑）**`browser_check_prod_b1b`（42）**
   ⚠ 正式站**看不到 `SaveBundle`**：打包後沒有 `/src/`，而且本專案沒有把 store
   掛到 window ⇒ 雲端信封的內容邊界只能在本地 `check_save_bundle_b1b` 驗。

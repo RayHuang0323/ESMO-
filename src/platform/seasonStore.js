@@ -5,7 +5,7 @@
 // ============================================================================
 import { create } from "zustand";
 import { resultKey } from "./seasonData.js";
-import { readSeasonPayload, seasonPayload } from "./persistence/localSaveProvider.js";
+import { readSeasonPayload, seasonPayload, quarantine } from "./persistence/localSaveProvider.js";
 
 //  ── B1B：版本化 ＋ 向下相容（B1A 風險 R6）────────────────────────────────
 //  舊格式是**裸陣列** `BattleResult[]`；新格式是 `{ schema, history }`。
@@ -23,9 +23,15 @@ const KEY = "esmo.season.v1";
 const HISTORY_CAP = 50;
 const canLS = typeof localStorage !== "undefined";
 const persist = {
+  /** ⚠ B1C：讀不懂一樣先隔離（理由同 heroProgressStore）。 */
   load() {
     if (!canLS) return null;
-    try { return readSeasonPayload(localStorage.getItem(KEY)).history; } catch { return null; }
+    let raw = null;
+    try { raw = localStorage.getItem(KEY); } catch { return null; }
+    if (raw === null || raw === "") return null;          // 還沒入史過，正常
+    const r = readSeasonPayload(raw);
+    if (r.history === null) quarantine(KEY, raw, "parse_failed");
+    return r.history;
   },
   save(h) {
     if (!canLS) return { ok: false, error: "no_storage" };

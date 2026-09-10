@@ -71,6 +71,9 @@ import { heroById } from "./data/heroDatabase.js";
 //  Backend B1B：存檔失敗時的最小提示。⚠ 只有 error 才會出現，
 //  其餘狀態一律不佔版面（見該檔檔頭）。
 import SaveStatusNotice from "./ui/SaveStatusNotice.jsx";
+//  Backend B1C：離開頁面前的保底存檔。⚠ 只在**有未存變更**時才寫
+//  （見該檔檔頭：切分頁很頻繁，無條件重寫是存檔風暴）。
+import { ensureExitFlush } from "./platform/persistence/exitFlush.js";
 
 // C5C owner-review entrypoint. Normal navigation remains the existing
 // state-machine flow; this query only opens a read-only Battle review with a
@@ -258,6 +261,13 @@ export default function AppShell() {
       ? { height: "min(88vh, 760px)", overflow: "hidden" }
       : { minHeight: "min(88vh, 760px)", overflow: "visible" }),
   };
+
+  //  ⚠ 只掛一次。`ensureExitFlush` 自己會先拆掉上一次，所以 StrictMode
+  //    的雙重掛載不會疊出兩份監聽。
+  useEffect(() => {
+    const h = ensureExitFlush(() => useProfileStore.getState().flushIfDirty());
+    return () => h.dispose();
+  }, []);
 
   return (
     <div data-viewport-locked={viewportLocked ? "1" : "0"} style={shellStyle}>

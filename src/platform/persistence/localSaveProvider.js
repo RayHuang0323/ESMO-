@@ -35,12 +35,92 @@ export const PROFILE_KEY = "esmo.profile.v1";
 export const HERO_PROGRESS_KEY = "esmo.heroProgress.v2";
 export const SEASON_KEY = "esmo.season.v1";
 
+/**
+ * 隔離區（B1C）。讀不懂的存檔會被**原封不動搬到這裡**，而不是被下一次存檔蓋掉。
+ *
+ * ⚠ 為什麼需要：B1C 實測 `profileStore.load()` 的 `catch` 會把讀不懂的存檔
+ *   靜默換成一份全新的 DEFAULT，而**下一次 `save()` 就把原始 bytes 蓋掉了**。
+ *   玩家原本也許還救得回來的東西，就這樣沒了，而且沒有任何人知道。
+ * ⚠ 隔離只做一次（`__at` 已存在就不再覆蓋）：第二次啟動時當前存檔已經是
+ *   正常的新存檔，再隔離一次只會把第一次救下來的東西蓋掉。
+ */
+export const QUARANTINE_SUFFIX = ".corrupt";
+
 /** heroProgress 的信封版本（B1B 新增；鍵名不變，靠形狀偵測相容）。 */
 export const HERO_PROGRESS_SCHEMA = "HeroProgress.v3";
 /** season 歷史的信封版本（B1B 新增；同樣靠形狀偵測相容）。 */
 export const SEASON_HISTORY_SCHEMA = "SeasonHistory.v2";
 
 const canLS = () => typeof localStorage !== "undefined";
+
+// ══════════════════════════════════════════════════════════════════════════
+//  隔離：讀不懂的存檔不准被靜默覆寫（B1C）
+// ══════════════════════════════════════════════════════════════════════════
+
+/** 這一輪 session 裡發生過的讀取問題。⚠ 診斷用，不落盤。 */
+const loadIssues = [];
+
+/** 取出（並清空）本輪的讀取問題。呼叫端據此決定要不要告訴玩家。 */
+export function takeLoadIssues() {
+  const out = loadIssues.slice();
+  loadIssues.length = 0;
+  return out;
+}
+
+/** 只讀不清空（verifier 用）。 */
+export const peekLoadIssues = () => loadIssues.slice();
+
+/**
+ * 把一份讀不懂的原始資料搬進隔離區。
+ *
+ * @param {string} key     原本的鍵
+ * @param {string} raw     原始字串（**原封不動**，不做任何清洗）
+ * @param {string} reason  診斷代碼（`parse_failed` / `migrate_failed` / `unknown_schema`）
+ * @returns {{ ok, quarantinedTo, skipped, error }}
+ */
+export function quarantine(key, raw, reason) {
+  loadIssues.push({ key, reason, at: Date.now() });
+  if (!canLS() || typeof raw !== "string" || raw.length === 0) {
+    return { ok: false, quarantinedTo: null, skipped: true, error: "nothing_to_quarantine" };
+  }
+  const target = `${key}${QUARANTINE_SUFFIX}`;
+  try {
+    //  ⚠ 已經有隔離檔就**不覆蓋**：第二次啟動時當前存檔已經是正常的新存檔，
+    //    再隔離一次等於把第一次救下來的東西蓋掉。
+    if (localStorage.getItem(target) !== null) {
+      return { ok: true, quarantinedTo: target, skipped: true, error: null };
+    }
+    localStorage.setItem(target, raw);
+    return { ok: true, quarantinedTo: target, skipped: false, error: null };
+  } catch (e) {
+    //  ⚠ 隔離失敗（例如配額已滿）**也要說出來**，不能靜默。
+    loadIssues.push({ key, reason: "quarantine_failed", at: Date.now() });
+    return { ok: false, quarantinedTo: null, skipped: false, error: String(e?.message ?? e) };
+  }
+}
+
+/**
+ * 讀原始 profile 字串並嘗試解析。
+ *
+ * ⚠ 三種結果**必須分得開**，呼叫端的處置完全不同：
+ *   · `empty`   沒有存檔（第一次玩）⇒ 正常開新局，什麼都不做
+ *   · `ok`      讀得懂 ⇒ 照常
+ *   · `corrupt` 有存檔但讀不懂 ⇒ **先隔離再開新局**
+ */
+export function readProfileRecord() {
+  if (!canLS()) return { state: "empty", record: null, raw: null, reason: null };
+  let raw;
+  try { raw = localStorage.getItem(PROFILE_KEY); }
+  catch (e) { return { state: "corrupt", record: null, raw: null, reason: "read_failed" }; }
+  if (raw === null || raw === "") return { state: "empty", record: null, raw: null, reason: null };
+  let parsed;
+  try { parsed = JSON.parse(raw); }
+  catch { return { state: "corrupt", record: null, raw, reason: "parse_failed" }; }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return { state: "corrupt", record: null, raw, reason: "not_an_object" };
+  }
+  return { state: "ok", record: parsed, raw, reason: null };
+}
 
 // ══════════════════════════════════════════════════════════════════════════
 //  向下相容的讀取（B1A 風險 R6）
@@ -151,24 +231,58 @@ export const localSaveProvider = createSaveProvider({
     return { ok: true, bundle: profileRecordToBundle(record, hero.progress, Date.now()), errors: [] };
   },
 
+  /**
+   * 寫入。**兩個鍵要嘛一起成功，要嘛一起維持原樣。**
+   *
+   * ⚠ B1C 補的洞：舊版是「先寫 profile，成功後再寫 heroProgress」，
+   *   第二步失敗時磁碟上會留下**新生涯 ＋ 舊熟練**——正是 B1A 風險 R1 那個
+   *   我們花了 B1B 一整輪去消滅的狀態，只是換成從寫入失敗這一側發生。
+   * ⚠ localStorage 沒有交易，所以這裡是**最佳努力的回滾**：先記下兩個鍵原本
+   *   的原始字串，任何一步失敗就把兩個都放回去。回滾本身也可能失敗
+   *   （配額已滿時通常還原得回去，因為是寫回更短或等長的舊值），
+   *   失敗的話照實回報，**不假裝回滾成功**。
+   */
   save(bundle) {
     if (!canLS()) return { ok: false, errors: [{ code: "no_storage", message: "這個環境沒有 localStorage" }] };
     const record = bundleToProfileRecord(bundle);
     const hero = bundle?.cloud?.heroProgress ?? null;
+
+    //  ⚠ 先記下原樣。讀不到就當作 null（那代表本來就沒有，回滾＝刪掉）。
+    let prevProfile = null, prevHero = null;
+    try { prevProfile = localStorage.getItem(PROFILE_KEY); } catch { prevProfile = null; }
+    try { prevHero = localStorage.getItem(HERO_PROGRESS_KEY); } catch { prevHero = null; }
+
+    const restore = (key, prev) => {
+      try {
+        if (prev === null) localStorage.removeItem(key);
+        else localStorage.setItem(key, prev);
+        return true;
+      } catch { return false; }
+    };
+
     try {
       localStorage.setItem(PROFILE_KEY, JSON.stringify(record));
     } catch (e) {
       //  ⚠ **回報出去**，不是 `catch {}`。配額爆掉就是玩家的進度沒存到，
       //    那件事必須有人知道（B1A 風險 R3）。
+      //  ⚠ profile 本身沒寫進去 ⇒ 磁碟仍是原樣，不需要回滾。
       return { ok: false, errors: [{ code: "profile_write_failed", message: String(e?.message ?? e) }] };
     }
-    //  ⚠ 熟練是 A 類：profile 寫成功但熟練沒寫成功，就是 B1A 風險 R1
-    //    的那個「生涯是新的、熟練是舊的」⇒ 照樣回報失敗。
+
     if (hero) {
       try {
         localStorage.setItem(HERO_PROGRESS_KEY, JSON.stringify(heroProgressPayload(hero)));
       } catch (e) {
-        return { ok: false, errors: [{ code: "hero_write_failed", message: String(e?.message ?? e) }] };
+        //  ⚠ 熟練是 A 類：只寫進 profile 就是半套 ⇒ **把 profile 放回去**。
+        const rolledBack = restore(PROFILE_KEY, prevProfile);
+        return {
+          ok: false,
+          errors: [{
+            code: "hero_write_failed",
+            message: String(e?.message ?? e),
+            rolledBack,
+          }, ...(rolledBack ? [] : [{ code: "rollback_failed", message: "profile 已寫入但熟練沒有，且回滾失敗" }])],
+        };
       }
     }
     return { ok: true, errors: [] };

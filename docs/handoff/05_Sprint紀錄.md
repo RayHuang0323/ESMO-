@@ -19921,3 +19921,109 @@ Online Challenge Backend、大改 Zustand、大改 84 個 save call sites、改�
 
 Supabase、Auth、revision/deviceId、真 Cloud Save、Ranked、遊戲平衡。
 checkpoint 階段 `src/` **零變更**，只動 `tools/` 與 `docs/`。
+
+---
+
+## Backend Phase B1C — Save Hardening（2026-09-11）
+
+承接已上線的 B1B。**沒有接 Supabase、沒有 Auth、沒有 revision/deviceId。**
+目標是讓本機存檔可信到足以當雲端的基礎。
+
+### 最重要的一個發現：損壞存檔會被靜默覆寫
+
+實測 B1B 之前的行為：
+
+```
+localStorage["esmo.profile.v1"] = "{ NOT VALID JSON"
+→ load() 的 catch 把它換成一份全新的 DEFAULT
+→ 下一次 save() 直接蓋掉原始 bytes
+→ 玩家原本也許還救得回來的東西，靜默消失，沒有任何人知道
+```
+
+**修法：隔離區。** `load()` 現在把三種情況分開——
+「沒有存檔」（第一次玩）／「有存檔但讀不懂」／「讀得懂但遷移炸了」。
+後兩者會把**原始 bytes 原封不動**搬進 `esmo.profile.v1.corrupt` 再開新局。
+
+- ⚠ **刻意不拒絕啟動**：把玩家鎖在門外救不回任何東西，隔離才有機會。
+- ⚠ 第二次隔離**不覆蓋**第一次救下來的（否則第二次啟動就把它蓋掉了）。
+- ⚠ `heroProgress` / `season` 同樣處理——熟練歸零＋下一次覆寫，
+  等於玩家練了幾十場的東西無聲消失。
+- ⚠ `schemaVersion` 比目前大（來自更新版本的 build）也會先留一份：
+  白名單會靜默丟掉不認得的欄位，而下一次存檔就把它們永久刪掉。
+
+### Save Coverage：兩個真的漏存
+
+掃描 ＋ **行為驗證**（跑動作 → 直接讀磁碟 → 斷言改動在磁碟上）。
+掃 `save()` 只看得到「有沒有那一行」，看不到 B1A R2 那種順序錯誤。
+
+| 動作 | 問題 | 修法 |
+|---|---|---|
+| `signSponsor` | 寫 `activeSponsor` ＋ `finance.funds`（**A 類**）卻沒有 `save()`，靠上一行 `pushInbox()` 順便存 —— **靠運氣** | 加 `get().save()` |
+| **`recordCsMatch`** | 寫 `csHistory`（**A 類**賽事帳本）卻沒有 `save()`，同一個毛病 | 加 `get().save()` |
+| `requeueMatch` | B1A 未查證的那一個。`enqueueMatch` **成功**時會存，**失敗**時在自己的 `set()` 之前就 return ⇒ 那次「清乾淨」只活在記憶體裡 | 失敗路徑補 `save()` |
+
+⚠ 其餘 5 個底線開頭的私有 helper 逐一追過呼叫鏈，**全部有公開動作包著存檔**。
+新增守門：**沒有任何公開動作可以寫了 state 卻不存檔**（`refreshOpponents` 是
+明列的例外——它只寫 Slice 8 的快取，本來就不落盤）。
+
+### Exit Safety
+
+新增 `src/platform/persistence/exitFlush.js`：
+
+- 掛 `visibilitychange`（**只在變成 hidden 時**）與 `pagehide`
+- ⚠ **不用 `beforeunload` 當唯一機制**：它在行動裝置上經常不觸發
+  （切背景、多工列滑掉、系統回收記憶體都不會走它）
+- ⚠ flush 丟例外**不往外炸**：離開頁面的路徑上丟例外會中斷整個卸載流程
+
+### Dirty 控制（避免存檔風暴）
+
+掛在 store **唯一的 `set` 轉接點**上，所以不動任何呼叫端就知道有沒有未存變更。
+
+- 只有**會落盤的鍵**才算 dirty（`saveState` / `opponentDirectory` 不算）
+- ⚠ `save()` 的語意**沒有改**——84 個呼叫端仍然無條件執行。
+  dirty 判斷只在新的 `flushIfDirty()` 裡，那是保底 flush 專用的入口。
+- ⚠ 存檔**失敗**時不對齊 `savedSeq` ⇒ 仍然是 dirty ⇒ 保底 flush 補得回來
+
+### 寫入失敗：半套寫入會回滾
+
+舊版是「先寫 profile，成功後再寫 heroProgress」，第二步失敗會在磁碟上留下
+**新生涯 ＋ 舊熟練**——正是 B1B 花一整輪消滅的狀態，只是從寫入失敗這一側發生。
+現在先記下兩個鍵原本的原始字串，任何一步失敗就把兩個都放回去。
+⚠ localStorage 沒有交易，所以是**最佳努力**的回滾；回滾本身失敗會照實回報。
+
+### 驗證
+
+- **`check_save_hardening_b1c` 76/76 PASS**（新增）
+- **`browser_check_exit_flush` 12/12 PASS**（新增，**真瀏覽器**）：
+  切背景後未存變更真的落盤、乾淨時連切 5 次背景**一個 byte 都沒重寫**、
+  pagehide 也會落盤、保底 flush 真的裝上去了（`skipped=5 / saved=2 / errors=0`）
+  ⚠ 這台機器的 Chrome 沒有 `Page.setWebLifecycleState`，gate 退回
+  `defineProperty + dispatchEvent`，**並在輸出裡標示走了哪一條**。
+- 回歸：Slice 1–8 全綠、B1B 86/86、`regress` 15/15、`regress2` 8/8、
+  八支 career/season verifier 皆 0 失敗、build 過。
+- 瀏覽器：`challenge_lifecycle` 21/21、`manual_draft` 27/27、
+  `player_challenge_slice3` 99/99、`slice8` 50/50、`time_controls` 21/21。
+
+### 實測（延用既有量測，本輪不自動 prune）
+
+```
+雲端信封      20,183 B   （season timeline 與重播證據都不在裡面）
+profile 磁碟 119,382 B
+season 磁碟    8,709 B   （這一輪只入史一場；50 場上限實測 ~854,650 B）
+```
+
+### 這一輪我自己的測試錯了三次
+
+1. 要求 `fired === 3`——但變成**可見**的那一次直接 return，連計數都不加，
+   那才是「不白寫」的意思。
+2. 半套寫入的回滾基準抓在 `pushInbox` 之前——它自己就存了一次，磁碟早就往前走。
+3. 改用 `renamePlayer` 製造差異——它**也**自己存了一次，同一個錯誤犯第二次。
+   最後改用 `_patchPlayerNoSave`（不存檔的變更），回滾才有檢定力。
+
+⇒ 教訓：**驗存檔順序時，基準與變更之間不能有任何會自己存檔的動作。**
+
+### 沒做（Owner 明令）
+
+Supabase、Auth、Google Login、revision/deviceId conflict、Remote DB、Ranked、
+遊戲平衡、大改 Zustand / persistence architecture。
+**本輪不自動修剪 season / replay**，容量風險仍列技術債。
