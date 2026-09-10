@@ -79,16 +79,26 @@ node tools/regress2.mjs # 一律跑（若存在）
   `slice4`（60）`slice5`（71）`slice6`（30）`slice7`（35）**`slice8`（121）**
   ＋瀏覽器 `browser_check_challenge_lifecycle`（21）
   `browser_check_challenge_manual_draft`（27）
+  `browser_check_player_challenge_slice3`（99，2026-09-10 補上手動選角後恢復）
   **`browser_check_player_challenge_slice8`（50，桌機＋390）**
+  ＋**正式站**（部署後才跑）`browser_check_prod_slice7`（29）
+  **`browser_check_prod_slice8`（43）**
+  ⚠ 正式站 gate **注入不了 provider**（打包後沒有 `/src/`，TD-31）
+  ⇒ loading／empty／error 三態只能在**本地** gate 驗，正式站只驗正常路徑。
+  這個分界寫在 `browser_check_prod_slice8` 的 `notCoveredHere`，不要讀成
+  「三態在正式站驗過了」。
   ⚠ **對手資料只有一個入口**：`challenge/opponentDirectory.js` 的註冊點。
   `challengeBoard.js` / `PlayerChallengeScreen.jsx` / `profileStore` 都**不得**
   再 import `fixtureOpponents.js` —— slice8 §① 會直接掃原始碼。
   ⚠ `opponentDirectory` 在 store state 裡但 **`save()` 剔掉它**（是快取不是存檔）。
   ⚠ **identity 只有三個**（快照身分／配對身分／資格判定），全部走
   `challengeEligibility.squadIdentityOf`；provider 的 `opponentId` 只是路由鍵。
-  ⚠ 已知紅：`check_player_challenge_slice3` §③ 首局勝率是 flaky 統計 gate、
-  `browser_check_player_challenge_slice3` 停在 Slice 6 之前 —— 兩支都已登記
-  技術債（`docs/handoff/08_目前待辦與風險.md`），**不得為了變綠放寬門檻**。
+  ⚠ 已知紅：`check_player_challenge_slice3` §③ 首局勝率是 **flaky 統計 gate**
+  （13–21% 之間跳，整支在 97–100 浮動），已登記技術債
+  （`docs/handoff/08_目前待辦與風險.md`），**不得為了變綠放寬門檻**。
+  ⚠ 一支 gate 紅成「一條逾時＋後面一整串跟著紅」時，**先查流程有沒有多一段**，
+  不要先動逾時值——`browser_check_player_challenge_slice3` 就是這樣紅了兩個
+  Slice（辨識法寫在 `08_目前待辦與風險.md`）。
 
 - **正式站 smoke（部署後才跑）**：**`browser_check_prod_season_vnext`**（30）
   ⚠ 打的是**線上網址**，不是 dev server。因此**只能走 UI ＋ localStorage**（TD-31）：

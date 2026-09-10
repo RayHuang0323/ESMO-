@@ -12,6 +12,14 @@
 //    · 樣板字串裡**不得出現反引號**（會提早結束字串）
 //    · 選擇器一律 `JSON.stringify` 注入（testid 自己含雙引號）
 //    · **不用固定 sleep 等模擬**（會變成「機器夠快才會綠」）⇒ 輪詢
+//
+//  ── 2026-09-10 維護：補上 Slice 6 的手動選角這一段 ────────────────────────
+//  這支從 `c99bfed` 之後就沒動過，而選角路由是 `980917f`（Slice 6）才進來的。
+//  「發起挑戰」現在會**先把玩家帶到 Ban/Pick 頁**，所以原本「按下去就等結果」
+//  的寫法永遠等不到 `challenge-outcome` ⇒ ⑤ 之後 12 條全部串著紅（73/97）。
+//  ⚠ 修法只有一種是誠實的：**把選角那一段走完**。
+//    刻意**沒有**放寬 90 秒的等待上限——它不是紅在慢，是紅在流程少一段。
+//    ⑤⑥⑦⑧⑨ 的 Battle / Result / Replay / reload 斷言**一條都沒有刪**。
 // ============================================================================
 import { RESOLVE_APP_MODULES } from "./browser/cdp.mjs";
 import { runGate, finishGate } from "./browser/harness.mjs";
@@ -97,6 +105,64 @@ const readScreen = () => `
     overflow: document.documentElement.scrollWidth > window.innerWidth + 1,
   });
 `;
+
+/**
+ * 走完 Slice 6 的手動 Ban/Pick（3 ban + 5 pick），然後按確認。
+ *
+ * ⚠ 進度**從存檔讀**（`challenge.pendingDraft`），不數畫面上的格子：
+ *   畫面可能還沒重繪，數錯就會少點一手然後卡在選角頁。
+ * ⚠ 只點**視窗內看得到**的那一張；看不到就把英雄池往下捲——
+ *   直接 click 一個在容器外的節點，在手機寬度下會點不到。
+ */
+async function completeManualDraft(chrome, sleep) {
+  const seen = await waitFor(chrome, sleep,
+    () => `return JSON.stringify({ v: !!document.querySelector('[data-testid="hero-grid-scroll"]') });`,
+    (x) => x.v, 25000);
+  //  ⚠ 沒有選角頁**不算失敗**：沒有 onDraft 的嵌入用法仍然是直接開打，
+  //    那條路徑也還合法（見 PlayerChallengeScreen 的 `challenge`）。
+  if (!seen.ok) return { ok: true, skipped: true };
+
+  for (let i = 0; i < 20; i++) {
+    const st = J(await chrome.evaluate(`
+      const raw = localStorage.getItem("esmo.profile.v1");
+      const pd = raw ? (JSON.parse(raw).challenge || {}).pendingDraft || null : null;
+      if (!pd) return JSON.stringify({ done: true });
+      const b = pd.actions.filter((a) => a.act === "ban").length;
+      const p = pd.actions.filter((a) => a.act === "pick").length;
+      return JSON.stringify({ done: b >= 3 && p >= 5, b, p });
+    `));
+    if (st.done) break;
+    await chrome.evaluate(`
+      const el = document.querySelector('[data-testid="hero-grid-scroll"]');
+      if (!el) return JSON.stringify({});
+      const r = el.getBoundingClientRect();
+      const b = [...el.querySelectorAll('[data-testid="hero-choose"]')].find((n) => {
+        const q = n.getBoundingClientRect();
+        return q.top >= r.top && q.bottom <= r.bottom && q.top >= 0 && q.bottom <= innerHeight;
+      });
+      if (!b) { el.scrollTop += 160; return JSON.stringify({}); }
+      b.click(); return JSON.stringify({});
+    `);
+    await sleep(420);
+  }
+  const final = J(await chrome.evaluate(`
+    const raw = localStorage.getItem("esmo.profile.v1");
+    const pd = raw ? (JSON.parse(raw).challenge || {}).pendingDraft || null : null;
+    if (!pd) return JSON.stringify({ b: 3, p: 5 });
+    return JSON.stringify({
+      b: pd.actions.filter((a) => a.act === "ban").length,
+      p: pd.actions.filter((a) => a.act === "pick").length,
+    });
+  `));
+  await chrome.evaluate(`
+    const vis = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+    [...document.querySelectorAll("button")].filter(vis)
+      .find((n) => !n.disabled && /確認|開始/.test(n.innerText || ""))?.click();
+    return JSON.stringify({});
+  `);
+  await sleep(600);
+  return { ok: final.b >= 3 && final.p >= 5, skipped: false, bans: final.b, picks: final.p };
+}
 
 async function waitFor(chrome, sleep, script, done, timeoutMs) {
   const t0 = Date.now();
@@ -188,6 +254,10 @@ const result = await runGate({
       const fpBefore = J(await chrome.evaluate(`${RESOLVE_APP_MODULES}${CAREER_FP} return JSON.stringify({ fp });`)).fp;
       const start = J(await chrome.evaluate(clickBy(`[data-testid="challenge-start-${warm.key}"]`)));
       ck(`${labelText}｜⑤ 發起挑戰點得到`, start.ok, start.why ?? "");
+      //  ── Slice 6 起：「發起挑戰」會先進 Ban/Pick 頁，選完才開打 ──────────
+      const drafted = await completeManualDraft(chrome, sleep);
+      ck(`${labelText}｜⑤ 手動選角走得完（3 ban + 5 pick）`, drafted.ok,
+        drafted.skipped ? "（沒有選角頁，走直接開打路徑）" : `${drafted.bans} ban / ${drafted.picks} pick`);
       const waited = await waitFor(chrome, sleep, readScreen, (x) => !!x.outcome, 90000);
       ck(`${labelText}｜⑤ 模擬在時限內完成`, waited.ok, `${(waited.ms / 1000).toFixed(1)}s`);
       v = waited.value;

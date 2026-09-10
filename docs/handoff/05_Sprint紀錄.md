@@ -19689,3 +19689,84 @@ Career power normalization、combat／Draft／`simulationVersion` 任何改動�
 
 **`SERVER_SECURITY_CLAIMED = NO`**：仍然是 `mock-authority` / `trusted: false`，
 文件與 UI 都沒有宣稱相反。
+
+---
+
+## Slice 8 Release Checkpoint（2026-09-10）
+
+### Release safety
+
+| 項目 | 值 |
+|---|---|
+| push 前 `origin/main` | `ab884f2` |
+| push 前 `HEAD` | `b8b53f0` |
+| `git log origin/main..HEAD` | 恰好一筆（`b8b53f0`） |
+| `git log HEAD..origin/main` | 空 ⇒ remote **未**前進 |
+| working tree | clean（只有既有的未追蹤 `review/prod-slice7/`） |
+| push 方式 | `git push origin HEAD:main`，dry-run 顯示 `ab884f2..b8b53f0`（**無** `+`，非 forced） |
+
+⚠ 全程沒有用 force / reset / 覆蓋 remote。
+⚠ 第一次 `git push --dry-run` 遇到 `Recv failure: Connection was reset`（網路瞬斷），
+重跑一次即正常——**不是**非 fast-forward，重試前有再確認一次 `origin/main`。
+
+### Deploy
+
+- `ORIGIN_MAIN_SHA` = `b8b53f0`
+- `PRODUCTION_HTTP` = 200
+- `PRODUCTION_BUNDLE` = `assets/index-BNFQkxIh.js`
+  ⚠ 與本機 `npm run build` 產出的檔名雜湊**一致** ⇒ 正式站跑的就是這一版。
+  （部署前是 `index-Z78yCNML.js`，輪詢到換手才開始 smoke。）
+
+### 正式站 smoke（新增 `browser_check_prod_slice8`，**43/43 PASS**）
+
+- **A** 看板從 provider 載得出五位內建練習對手，`ready` 時**不多顯示**任何狀態訊息
+- **B** 卡片有隊名／陣容資訊（熟練、能力分布）／挑戰狀態／「發起挑戰」CTA；
+  整頁 `innerText` 掃 `snapshot / provider / fixture / 快照 / Directory /
+  OpponentEntry / squadIdentity / identity` ⇒ **0 命中**
+- **C** 看板 → 手動 Ban/Pick → 對戰 → 結果 → 重播：`重播結果與當初完全一致`
+- **D** 打過之後顯示「已挑戰這份陣容」，其餘四張仍是「尚未正式挑戰」
+- **E** 重新整理**兩次**（打之前、打之後）對手清單逐項相同，
+  **沒有**任何卡片顯示「對手更新了陣容」——fixture 的 refresh 不製造變化
+- **F** 重新整理後舊場次的 `defenderSnapshotHash` / `matchSeed` / `simulationVersion`
+  逐值不變，凍結快照仍在存檔裡，reload 後仍重播一致
+- 另驗：`opponentDirectory` **不在存檔裡**（是快取不是存檔）、
+  生涯日期／經驗／體力三項不變、手機 390 看板＋選角＋單指捲動、console clean
+
+⚠ **正式站驗不到 loading / empty / error 三態**：打包後沒有 `/src/`（TD-31），
+無法安全注入第二個 provider，而**不會**為了 smoke 去改正式產品資料。
+三態在本地驗：`browser_check_player_challenge_slice8`（50/50，桌機＋390）
+與 `check_player_challenge_slice8` §⑥（121/121）。
+這個分界也寫進了 gate 產出的 `review/prod-slice8/prod-slice8.json` 的
+`notCoveredHere`，避免日後被誤讀成「正式站驗過三態了」。
+
+### 正式站回歸
+
+`browser_check_prod_slice7` **29/29 PASS**：
+formal / repeat / retry 三個計數語意不變（observed 2 / formal 1 / eligible 1）、
+結果頁標示正確、reload 逐項不變、手動選角正常、
+手機 390 單指捲動正常、生涯隔離三項不變、console clean。
+
+### 順手修好：`browser_check_player_challenge_slice3`（過期 gate）
+
+**99/99 PASS，67 秒**（原本 73/97、590 秒）。
+
+修法是補 `completeManualDraft()`——走完現行的 3 ban + 5 pick 再等結果。
+⚠ **沒有**放寬那個 90 秒上限（它不是紅在慢，是紅在流程少一段）；
+⑤⑥⑦⑧⑨ 的 Battle / Result / Replay / reload 斷言**一條都沒刪**，
+只多了一條「手動選角走得完（3 ban + 5 pick）」。
+那 523 秒的差額就是兩次 90 秒逾時 × 桌機／手機兩輪。
+
+### 這一輪被自己的 gate 抓到的一個量測錯誤
+
+`browser_check_prod_slice8` 第一版跑出 40/42，紅在
+「生涯日期不變 `null → 8`」「選手經驗不變 `0 → 174800`」。
+查下去發現 `8` 與 `174800` 正是**新存檔的預設值**（`DEFAULT.meta.days` / 預設
+`players[].xp` 總和）——真正的問題是**基準線在存檔還沒寫出來時就抓了**
+（`st === null` ⇒ 讀成 `null` / `0`）。
+⇒ 修的是 gate（先確認存檔存在再抓基準線，必要時用「更新我的防守陣容」把它逼出來），
+**不是**產品。並補一條前置斷言「生涯基準線抓得到」，否則那三條會靜靜地空過。
+
+### 沒做（Owner 明令）
+
+沒有開始 Slice 9、沒有真 Backend、沒有 Ranked。
+`src/` 在 checkpoint 階段**零變更**——本階段只動 `tools/` 與 `docs/`。
