@@ -19850,3 +19850,74 @@ CLOUD_BUNDLE_SIZE    =  19,830 B   ← 挑戰重播證據 99,985 B 被留在本�
 Supabase、Auth、Google Login、Remote DB、revision / device conflict、Ranked、
 Online Challenge Backend、大改 Zustand、大改 84 個 save call sites、改遊戲平衡。
 `CORE_GAME_LOGIC_CHANGED = NO`（combat / Draft / `simulationVersion` 一個字沒動）。
+
+---
+
+## B1B Release Checkpoint（2026-09-11）
+
+### Release safety
+
+| 項目 | 值 |
+|---|---|
+| push 前 `origin/main` | `7fa7933` |
+| push 前 `HEAD` | `422fccc` |
+| `origin/main..HEAD` | 兩筆（`4078112` B1A、`422fccc` B1B） |
+| `HEAD..origin/main` | 空 ⇒ remote **未**前進 |
+| working tree | clean（只有既有的未追蹤 `review/prod-*`） |
+| push | `git push origin HEAD:main`，dry-run `7fa7933..422fccc`（**無** `+`，非 forced） |
+
+⚠ 全程沒有 force / reset / 覆蓋 remote。
+
+### Deploy
+
+- `ORIGIN_MAIN_SHA` = `422fccc`
+- `PRODUCTION_HTTP` = 200
+- `PRODUCTION_BUNDLE` = `assets/index-CKPk73pT.js`（與本機 build 雜湊一致）
+
+### 正式站 smoke（新增 `browser_check_prod_b1b`，**42/42 PASS**）
+
+| Owner 指定項 | 結果 |
+|---|---|
+| ① 舊存檔可正常載入 | 把 heroProgress 降級成**裸物件**、season 降級成**裸陣列**後 reload：熟練 `maxLevel=7` 沒歸零、season 1 筆讀得回來、挑戰紀錄還在 |
+| ② Career / roster / heroProgress 數值 | `players 5 / xpSum 174,800 / days 8 / funds` 逐值原封不動 |
+| ③ Player Challenge history | 看板 5 卡 ＋ 歷史 1 筆，舊存檔載入後也在 |
+| ④ Manual Draft → Battle → Result → Replay | 走得完，「重播結果與當初完全一致」 |
+| ⑤ Season / Competition | 賽事頁打得開、有內容、沒有 crash 字樣 |
+| ⑥ New Game 三個一起重置 | **熟練 7 → 1、season 1 → 0、挑戰 1 → 0**，且沒有殘留額外的 esmo 鍵 |
+| ⑦ Training 後 reload | 安排「走位特訓」後 reload 仍在（`b1`） |
+| ⑧ Save error UI | 正常情況**沒有**出現（桌機／舊存檔／重置後／390 各驗一次） |
+| ⑨ Mobile 390 | 看板正常、不橫向溢出 |
+| ⑩ console | clean |
+
+**特別驗證**
+- `esmo.profile.v1` 內**找不到** `BattleResult.v2` 或 `"timeline"` ⇒ 季賽歷史沒有溜進 profile
+- 重播證據（2 快照 / 1 選角）**仍然留在本機的 profile 裡** ⇒ 沒有被丟掉、也沒有上雲
+- 磁碟上只可能出現既有那三個鍵，**沒有新格式**；舊格式在下一次存檔升級成信封，**鍵名不變**，升級後熟練值不跑掉
+
+⚠ **正式站驗不到雲端信封的內容**：打包後沒有 `/src/`，而且這個 app **沒有把 store
+掛到 window**（實際掃過，只有 FPS 診斷物件）⇒ `SaveBundle` 是記憶體裡的形狀，
+正式站看不到。內容邊界由本地 `check_save_bundle_b1b`（86/86）負責，
+這個分界寫在 gate 產出的 `review/prod-b1b/prod-b1b.json` 的 `notCoveredHere`。
+
+### 正式站回歸
+
+`browser_check_prod_slice8` **43/43 PASS**、`browser_check_prod_slice7` **29/29 PASS**
+（換掉存檔層之後，對手來源邊界與 formal/repeat/retry 三個計數都沒動）。
+
+### 這一輪 gate 自己錯了三次（都不是產品問題）
+
+1. **「三個 esmo 鍵都必須在」** —— `esmo.season.v1` 只有真的入史過才會存在，
+   而挑戰不寫季賽歷史（生涯隔離）。改成斷言「**沒有**既有三個以外的鍵」。
+2. **Training 用「找含『訓練』字樣的按鈕」猜路徑** ⇒ 0 → 0。
+   改走真實入口 `home-utility-training` → 選手卡 → 課程按鈕（課名取自
+   `TRAINING_COURSES`，不是猜的字）。
+3. **New Game 情境名猜成「菁英／新秀」** —— 這個 repo 的字是
+   **新手戰隊／一般戰隊／頂級戰隊**（`economyConfig.SCENARIOS`）。
+   選不到情境 ⇒ 確認鍵永遠不 render（它只在 `picked` 有值時出現）。
+
+⇒ 共同教訓：**UI 導航一律用 testid 或從程式碼讀到的字串，不要憑印象寫中文關鍵字。**
+
+### 沒做
+
+Supabase、Auth、revision/deviceId、真 Cloud Save、Ranked、遊戲平衡。
+checkpoint 階段 `src/` **零變更**，只動 `tools/` 與 `docs/`。

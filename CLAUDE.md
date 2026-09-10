@@ -103,6 +103,12 @@ node tools/regress2.mjs # 一律跑（若存在）
 - **存檔 / 持久化（動到 save/load、New Game、任何 store 切片就必跑）**：
   **`check_save_bundle_b1b`（86）**
   ＋量測工具 `measure_season_size`（不是 gate，跑 50 場真對局，1–3 分鐘）
+  ＋**正式站**（部署後才跑）**`browser_check_prod_b1b`（42）**
+  ⚠ 正式站**看不到 `SaveBundle`**：打包後沒有 `/src/`，而且本專案沒有把 store
+  掛到 window ⇒ 雲端信封的內容邊界只能在本地 `check_save_bundle_b1b` 驗。
+  ⚠ 寫 browser gate 的 UI 導航**一律用 testid，或用從程式碼讀到的字串**
+  （課名 `TRAINING_COURSES`、情境名 `economyConfig.SCENARIOS`）。
+  憑印象寫中文關鍵字已經連續害這支 gate 假紅三次。
   ⚠ **存檔只有一個出口**：`platform/persistence/saveGateway.js`。
   `profileStore.save()` 的名字與 84 個呼叫端**不得更動**，它裡面呼叫 gateway。
   ⚠ **新增 store 切片時要決定它屬哪一類**（`saveBundle.js` 的
