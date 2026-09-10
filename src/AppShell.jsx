@@ -35,6 +35,7 @@ import FinanceScreen from "./screens/manage/FinanceScreen.jsx";
 import SponsorScreen from "./screens/manage/SponsorScreen.jsx";
 import TeamScreen from "./screens/manage/TeamScreen.jsx";
 import NewGameScreen from "./screens/manage/NewGameScreen.jsx";
+import CloudSaveScreen from "./screens/manage/CloudSaveScreen.jsx";
 import RosterScreen from "./screens/manage/RosterScreen.jsx";
 import TrainingScreen from "./screens/manage/TrainingScreen.jsx";
 import RecruitScreen from "./screens/manage/RecruitScreen.jsx";
@@ -74,6 +75,9 @@ import SaveStatusNotice from "./ui/SaveStatusNotice.jsx";
 //  Backend B1C：離開頁面前的保底存檔。⚠ 只在**有未存變更**時才寫
 //  （見該檔檔頭：切分頁很頻繁，無條件重寫是存檔風暴）。
 import { ensureExitFlush } from "./platform/persistence/exitFlush.js";
+//  Backend B1D：有設定 Supabase 才會把雲端 provider 掛上去；
+//  沒設定就完全不做事，存檔照舊走本機（見該檔檔頭）。
+import { startCloudSave } from "./platform/persistence/cloudBootstrap.js";
 
 // C5C owner-review entrypoint. Normal navigation remains the existing
 // state-machine flow; this query only opens a read-only Battle review with a
@@ -269,6 +273,13 @@ export default function AppShell() {
     return () => h.dispose();
   }, []);
 
+  //  ⚠ B1D：只掛一次。沒設定 Supabase 時 `startCloudSave` 直接回
+  //    `enabled:false`，什麼都不做——缺設定不是錯誤。
+  useEffect(() => {
+    const h = startCloudSave();
+    return () => h.dispose();
+  }, []);
+
   return (
     <div data-viewport-locked={viewportLocked ? "1" : "0"} style={shellStyle}>
       {/* ⚠ 掛在 shell 最外層：存檔失敗可能發生在任何一頁（84 個呼叫點）。 */}
@@ -315,6 +326,7 @@ export default function AppShell() {
       {screen === "team" && <TeamScreen onBack={home} />}
       {/* Milestone N3：開新局／情境選擇（三種財務情境的唯一入口） */}
       {screen === "newGame" && <NewGameScreen onBack={home} onDone={home} />}
+      {screen === "cloudSave" && <CloudSaveScreen onBack={home} />}
       {screen === "roster" && <RosterScreen onBack={home} onRecruit={go("recruit")} onPlayer={(id) => { setPlayerId(id); setScreen("playerDetail"); }} />}
       {/*  集中驗收修正（項目五）：天賦入口的中介頁。同一個 RosterScreen，
            purpose="talent" 只改標題與每張卡的動作 —— 點選手**直達該選手的天賦樹**，

@@ -33,3 +33,16 @@ review/moba-combat/**/*.csv
 _backup_*
 tools/_backup_*
 review/moba-combat/_backup_*
+
+# B1D：Supabase 連線設定。**真的 secret 永遠不進版控**。
+#   要提交的是 .env.example（只有欄位名與說明，沒有值）。
+#   ⚠ anon key 雖然是「可公開」的（它靠 RLS 保護資料），仍然不入庫——
+#     它綁定特定 project，commit 進來等於把測試環境釘在原始碼裡。
+#   ⚠ service-role key **絕對不可以**出現在這個 repo 的任何地方，
+#     它繞過 RLS，而這是一個前端專案。
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+!.env.example

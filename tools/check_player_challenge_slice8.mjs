@@ -416,7 +416,20 @@ for (const f of ["src/platform/challenge/opponentProvider.js", "src/platform/cha
   ck(`⑩ ${f.split("/").pop()} 沒有 Ranked / LadderRating`,
     !/ranked|ladderRating|\bmmr\b|\belo\b/i.test(src));
 }
-ck("⑩ 沒有引入 Firebase / Supabase / socket", !/firebase|supabase|socket\.io/i.test(read("package.json")));
+//  ⚠ 2026-09-11 B1D 更新：專案**已經**依 Owner 指示引入 Supabase 做 Cloud Save，
+//    所以「package.json 不得出現 supabase」這條已經過期，直接留著只會變成假紅。
+//    但它原本要守的東西仍然成立、而且更重要：
+//    **對手來源與挑戰層不得自己去碰後端。**
+//    真玩家 Challenge backend 是後面的階段，Slice 8 只做 provider 邊界。
+ck("⭐ ⑩ 對手來源與挑戰層**都不碰**任何後端 SDK",
+  (() => {
+    const files = fs.readdirSync(new URL("../src/platform/challenge/", import.meta.url))
+      .filter((f) => f.endsWith(".js"));
+    return files.every((f) => !/supabase|firebase|socket\.io|createClient/i.test(code(`src/platform/challenge/${f}`)));
+  })());
+ck("⑩ 挑戰看板與畫面也不碰後端 SDK",
+  !/supabase|firebase|createClient/i.test(boardSrc)
+  && !/supabase|firebase|createClient/i.test(uiSrc));
 ck("⑩ 模擬版本沒有被動到", /moba-sim\.v4/.test(read("src/platform/contracts/simulationVersion.js")));
 ck("⑩ 畫面沒有新增「非同步 PvP / Provider」說明段",
   !/非同步\s*PvP/.test(uiRaw) && !/Provider/.test(stripComments(uiRaw)));

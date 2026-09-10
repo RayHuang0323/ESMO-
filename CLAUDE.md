@@ -109,7 +109,20 @@ node tools/regress2.mjs # 一律跑（若存在）
   而 `_patchPlayerNoSave` 是 store 內部）⇒ 那條路只能在本地 gate 驗。
   正式站改用**故障注入**（暫時讓 `setItem` 對 profile 鍵丟例外）間接走同一條路，
   **不得**改用塞爆配額的方式。
+  **`check_cloud_save_b1d`（109）**＋瀏覽器 **`browser_check_cloud_save_ui`（29）**
   ＋量測工具 `measure_season_size`（不是 gate，跑 50 場真對局，1–3 分鐘）
+  ⚠ **Supabase 相關（B1D）**：真憑證**永遠不進版控**（`.gitignore` 擋 `.env*`，
+  只放行 `.env.example`）。**只能用 anon key**，資料保護靠 `supabase/migrations/`
+  的 RLS；service-role key 一旦出現在前端就等於資料庫公開，
+  `supabaseClient.js` 有偵測器會直接擋掉。
+  ⚠ **只有 `supabaseClient.js` 可以 import SDK**；畫面一律走 `authGateway` 與
+  provider 的 view，不得自己碰 Supabase。
+  ⚠ 雲端是**組合 provider**（本機同步寫 ＋ 雲端背景補），不是把本機換掉。
+  `save()` 的 `ok` **只看本機**——雲端沒同步就說「進度沒有存起來」是說謊。
+  ⚠ `supabaseSaveProvider` 的 load/save 是 **async**，**不得**直接掛上
+  `saveGateway`（那是同步契約，掛上去錯誤碼會被吃掉，已經踩過一次）。
+  ⚠ 這台機器**沒有憑證** ⇒ 遠端 E2E 從未跑過。報告一律標
+  `REMOTE_E2E_NOT_RUN`，**不得**用 mock 冒充 Supabase 驗證。
   ⚠ **公開動作寫了 state 就必須自己存檔**（`check_save_hardening_b1c` §① 掃原始碼
   ＋逐個動作跑「改了 → 直接讀磁碟」的行為驗證）。靠別的動作順便存＝靠運氣。
   ⚠ **讀不懂的存檔一律先隔離**（`<key>.corrupt`）再開新局，**不准**讓下一次

@@ -20097,3 +20097,109 @@ Supabase、Auth、Google Login、revision/deviceId conflict、Remote DB、Ranked
 
 Supabase、Auth、revision/deviceId、Remote DB、Ranked、遊戲平衡。
 checkpoint 階段 `src/` **零變更**，只動 `tools/` 與 `docs/`。
+
+---
+
+## Backend Phase B1D — Supabase Foundation + Auth + Cloud Save Provider（2026-09-11）
+
+⚠ **這台機器沒有 Supabase 專案憑證**，所以本輪是
+`IMPLEMENTATION_COMPLETE` ＋ `REMOTE_E2E_NOT_RUN`，兩者在下面分得很清楚。
+
+### 落地了什麼
+
+```
+supabase/migrations/0001_career_saves.sql   profiles / career_saves ＋ RLS
+.env.example                                 欄位與說明，**沒有任何值**
+src/platform/persistence/
+  supabaseClient.js          唯一接線點（動態 import，沒設定就誠實回報）
+  authGateway.js             唯一碰 auth 的地方（Google ＋ 匿名 fallback）
+  supabaseSaveProvider.js    load / save / describe（**async 版**）
+  cloudBackedSaveProvider.js 本機優先 ＋ 雲端加值（工廠）
+  cloudBootstrap.js          啟動時 setSaveProvider(...) 那一行
+src/screens/manage/CloudSaveScreen.jsx       最小介面（登入 / 同步狀態 / 範圍說明）
+```
+
+⚠ **沒有重新設計 persistence**：`saveGateway` / `SaveProvider` / `SaveBundle.v1`
+一個字都沒改，`profileStore.save()` 的名字與 84 個呼叫端也沒動。
+接雲就是 B1B 承諾的那一行 `setSaveProvider(cloudBackedSaveProvider)`。
+
+### 為什麼是「組合 provider」而不是「換成 Supabase」
+
+gateway 只掛一個 provider。直接換成雲端，本機就不寫了 ——
+違反 Owner §5F「Cloud 暫時失敗 ⇒ Local Save 仍存在」。所以：
+
+| | |
+|---|---|
+| Local | gameplay safety copy —— **必須成功**，而且是同步的 |
+| Cloud | authenticated persistence —— 背景補，失敗只是「沒同步」 |
+
+⚠ `save()` 回報的 `ok` **只看本機**。因為雲端沒同步就說「進度沒有存起來」
+是說謊 —— 本機那份真的存成功了，而那句話會讓玩家去做不必要的事。
+兩者的文案因此**刻意不同**：
+「進度沒有存起來」 vs 「雲端同步失敗，進度已存在這台裝置」。
+
+⚠ **合併寫入**：一次遊玩會 `save()` 幾十次。同時只允許一發在飛，
+飛行中來的只留最新一份，落地後再寫一次。實測連續 20 次存檔只打 2 發。
+
+### 分歧：偵測並回報，不自動合併（Owner §6）
+
+兩邊都有而且不一樣 ⇒ 狀態轉 `diverged`，回傳**比較新的那一份**
+（用資料庫的 `updated_at` 對本機的 `savedAt`）。
+⚠ 這不是合併，是一條寫得出來的規則，而且**不會靜默丟掉比較新的資料**。
+較舊的那一份也沒有被覆蓋。完整的 revision / device conflict 留 B1E
+（欄位已在 schema 裡預留）。
+
+### Security
+
+- ⚠ **沒有任何真 secret 進版控。** `.env.example` 只有欄位名；
+  `.gitignore` 擋 `.env*` 但放行 `.env.example`。
+- ⚠ **只用 anon key。** 而且加了偵測器：貼錯 service-role key 會被**擋下來**
+  （解 JWT payload 看 `"role":"service_role"`），不是「試著用用看」。
+- RLS：兩張表 `enable` ＋ `force`，四個動作各自有 policy，
+  寫入類都有 `with check`（少了它使用者能把 `user_id` 改成別人的），
+  **anon 角色一條 policy 都沒有、grant 也撤掉**。
+- ⚠ schema 檔尾明寫：**不提供任何防作弊保證**。RLS 保證「只有你能改你自己的
+  存檔」，不保證「存檔內容誠實」——數值仍然是玩家的瀏覽器算的。
+
+### 驗證
+
+- **`check_cloud_save_b1d` 109/109 PASS**（新增）
+- **`browser_check_cloud_save_ui` 29/29 PASS**（新增，桌機 ＋ **390**）：
+  沒設定時照實說「這個版本還沒有開放雲端存檔」、**不給**按了沒反應的登入鍵、
+  明說不是防作弊、玩家看得到的字裡沒有工程詞、不誤顯同步失敗。
+- 回歸：B1B 86/86、B1C 76/76、Slice 1–8 全綠、`regress` 15/15、`regress2` 8/8、
+  五支 career/season verifier 0 失敗、build 過。
+  瀏覽器：`challenge_lifecycle` 21/21、`slice8` 50/50、`exit_flush` 12/12。
+
+### ⚠ REMOTE_E2E_NOT_RUN
+
+**沒有**被驗證的（要正式憑證才做得到）：
+- Google 登入的真實往返
+- 真的寫進 Postgres 再讀回來
+- RLS 在真資料庫上實際擋住別人的資料
+
+verifier §⑤⑥⑦ 用的是**假的 cloud provider**，驗的是**我們自己的組合邏輯**
+（本機優先、失敗不清空、合併寫入、分歧偵測），**不是 Supabase**，也不冒充遠端 E2E。
+
+### 這一輪抓到 / 犯過的
+
+1. **真 bug**：`supabaseSaveProvider` 一開始用 `createSaveProvider()` 包，
+   但那是**同步契約**（`const r = save(b) ?? {}` 然後讀 `r.ok`）。
+   丟 async 函式進去拿到的是 `{ok:false, errors:[]}` —— **錯誤碼整個被吃掉**，
+   `cloudBacked` 就分不出「沒登入」與「真的寫失敗」，會把前者也掛成紅字。
+   verifier §② 抓到。改成明確的 async provider，並在檔頭寫明它不得直接掛 gateway。
+2. **我的字串替換靜默沒套用**：改 composite provider 時有幾處 `replace` 沒加
+   assert，結果工廠根本沒生成，`export` 少了一個才發現。⇒ 後來整檔重寫。
+3. **verifier 自己假紅三次**：service_role 檢查用不分大小寫比對，
+   把「偵測器」也算成「使用」；空 catch 檢查掃到**註解裡**在講舊 bug 的
+   `catch {}` 散文；雲端畫面用「字數 > 200」當「有沒有內容」，而那頁刻意只有 187 字；
+   返回鍵是 `aria-label` 圖示按鈕、沒有 innerText。
+4. **Slice 8 的一條斷言正確地紅了**：它守「本輪不做真後端」，而 B1D 依指示加了
+   Supabase。**沒有刪掉它**，改成守真正該守的邊界：
+   `src/platform/challenge/` 與看板／畫面**都不得**碰任何後端 SDK。
+
+### 沒做（Owner §8 明令）
+
+Ranked、LadderRating、Server-authoritative battle、真玩家 Challenge backend、
+WebSocket、好友 / presence、複雜 merge、大改 Zustand、改 84 個 save call sites、
+改遊戲平衡。

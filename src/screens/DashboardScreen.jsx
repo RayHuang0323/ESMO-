@@ -51,6 +51,9 @@ const NAV = {
   //  ⚠ 它**不是**排位、**不影響生涯** —— 畫面自己會逐條說明，這裡只給入口。
   playerChallenge: "playerChallenge",
   newgame: "newGame",
+  //  B1D：雲端存檔（登入 ＋ 同步狀態）。⚠ 沒設定 Supabase 時這一頁會照實說
+  //  「這個版本還沒有開放雲端存檔」，不會假裝有。
+  cloudSave: "cloudSave",
   //  V6-3：休賽期。只有真的有年度決策時，首頁才會出現這個入口。
   offSeason: "offSeason",
   //  Meta Progression v1：俱樂部專精（流派／專精進度／戰術變體）。
@@ -752,6 +755,9 @@ function MobileNavSheet({ type, onSelect, onClose }) {
       { id: "playerChallenge", label: "玩家挑戰", detail: "非同步・不影響生涯", icon: "compete" },
       { id: "finance", label: "財務", detail: "收支與預測", icon: "finance" },
       { id: "equip", label: "俱樂部資產", detail: "教練與收藏", icon: "package" },
+      //  ⚠ 與「玩家挑戰」同一條教訓：桌機加了，**手機那份也要加**，
+      //    只加一邊等於另一種裝置的玩家沒有這個功能。
+      { id: "cloudSave", label: "雲端存檔", detail: "登入後跨裝置", icon: "package" },
       { id: "newgame", label: "新遊戲", detail: "重新開始", icon: "arrowUp" },
     ],
   };
@@ -950,6 +956,7 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
     //  Slice 2：常駐入口。與「戰隊發展」同一條理由——玩家必須隨時進得去，
     //  而不是只有某個狀態下才看得到。
     { id: "playerChallenge", label: "玩家挑戰", icon: "compete" },
+    { id: "cloudSave", label: "雲端存檔", icon: "package" },
     { id: "newgame", label: "開新局", icon: "arrowUp" },
     { id: "equip", label: "俱樂部資產", icon: "package" },
   ], [objectiveBadge]);

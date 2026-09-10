@@ -2525,3 +2525,24 @@ CLOUD_BUNDLE_SIZE    =  19,830 B
 3. 配額接近時的提醒
 
 ⚠ `revision` / device conflict 仍然明令不做。
+
+---
+
+## Backend Phase B1D — Supabase Foundation + Auth + Cloud Save（2026-09-11．程式完成）
+
+⚠ **`IMPLEMENTATION_COMPLETE` ＋ `REMOTE_E2E_NOT_RUN`** ——
+這台機器沒有 Supabase 憑證。細節在 `docs/handoff/05_Sprint紀錄.md`。
+
+接雲就是 B1B 承諾的那一行：`setSaveProvider(cloudBackedSaveProvider)`。
+`saveGateway` / `SaveProvider` / `SaveBundle.v1` 一個字都沒改。
+
+### 建議下一輪：`B1E — Cloud Conflict & Remote E2E`
+
+1. **先做遠端 E2E**（見 `08_目前待辦與風險.md` 的五步驟），把
+   `REMOTE_E2E_NOT_RUN` 換掉 —— 尤其是**實測 RLS 擋得住別人**
+2. `revision` 樂觀鎖（欄位已預留）取代目前的「比 `updated_at`」
+   —— 時鐘偏移會讓現在這條規則判反
+3. 離開頁面時的雲端 flush（`sendBeacon` 之類）
+4. 匿名帳號升級成 Google 帳號的路徑
+
+⚠ Ranked / Server Authority / 真玩家 Challenge backend 仍然不在這條線上。
