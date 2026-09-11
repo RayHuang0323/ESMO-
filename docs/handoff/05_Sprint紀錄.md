@@ -20203,3 +20203,85 @@ verifier §⑤⑥⑦ 用的是**假的 cloud provider**，驗的是**我們自�
 Ranked、LadderRating、Server-authoritative battle、真玩家 Challenge backend、
 WebSocket、好友 / presence、複雜 merge、大改 Zustand、改 84 個 save call sites、
 改遊戲平衡。
+
+---
+
+## B1D Release Checkpoint ＋ B1D.1 準備（2026-09-11）
+
+### Release safety
+
+| 項目 | 值 |
+|---|---|
+| push 前 `origin/main` | `d9b35b2` |
+| push 前 `HEAD` | `6c67ff3` |
+| `origin/main..HEAD` | 一筆 |
+| `HEAD..origin/main` | 空 ⇒ remote **未**前進 |
+| working tree | clean（只有既有的未追蹤 `review/prod-*`） |
+| push | dry-run `d9b35b2..6c67ff3`（**無** `+`，非 forced） |
+
+⚠ 全程沒有 force / reset。
+
+### Deploy
+
+- `ORIGIN_MAIN_SHA` = `6c67ff3`
+- `PRODUCTION_HTTP` = 200
+- `PRODUCTION_BUNDLE` = `assets/index-CbopzZHe.js`（與本機 build 一致）
+
+### 正式站 smoke（新增 `browser_check_prod_b1d`，**27/27 PASS**）
+
+這一支要證明的其實只有一件事：**加了雲端之後，沒設定的玩家什麼都沒變。**
+
+- 雲端存檔頁照實說「這個版本還沒有開放雲端存檔」，**不給**按了沒反應的登入鍵
+- **不誤顯**雲端同步失敗；明說這不是防作弊機制；沒有工程詞
+- **沒有任何 `sb-*` session 鍵** ⇒ 真的一次都沒連過 Supabase
+- LocalSaveProvider 完全正常：Manual Draft → Battle → Result → Replay
+  「完全一致」，存檔完整寫在裝置上（players=5 / 挑戰 1 / 快照 2）
+- 磁碟上仍然只有既有那三個鍵，`heroProgress` 仍帶 B1C 的版本信封
+- Training → reload 仍在；賽事頁正常；390 兩頁都正常；console clean
+
+⚠ 這支**驗不到任何真正的雲端行為**（正式站沒有憑證，
+GitHub Actions 也沒有注入任何 `VITE_SUPABASE_*`，已查過 workflow）。
+
+### 正式站回歸
+
+`browser_check_prod_b1c` **38/38**、`browser_check_prod_b1b` **42/42**、
+`browser_check_prod_slice8` **43/43** —— 接上雲端之後全都沒動。
+
+### B1D.1 — Real Supabase Validation：**BLOCKED_BY_SETUP**
+
+逐項查過，**這台機器沒有任何 Supabase 憑證**：
+
+```
+專案內 .env / .env.local     不存在（只有 .env.example）
+環境變數 SUPABASE_*           無
+使用者家目錄                  無
+supabase CLI                 未安裝
+GitHub Actions workflow      沒有注入任何 VITE_SUPABASE_*
+```
+
+⇒ 依 Owner 指示**停止實作**，改交出設定清單：
+**`docs/handoff/SUPABASE_SETUP_OWNER.md`**（7 件事，全部是後台操作）。
+
+⚠ 沒有捏造任何憑證，也沒有用 mock 冒充 remote E2E。
+
+**清單裡特別標出來的兩件事**
+1. 第 2 步跑完 migration 之後要親眼確認 **RLS enabled 標記**；
+   沒有那個標記就不要往下做——那代表資料是公開的。
+2. 第 7 步（正式站）除了後台變數之外，**還需要改一行 `deploy.yml`**
+   把變數傳給 build。那是程式改動不是後台設定，等 Owner 說可以再做。
+   在那之前正式站維持「沒有開放雲端存檔」，一切照常。
+
+**清單裡刻意寫給 Owner 知道的兩個限制**
+- `VITE_*` 一定會被打包進公開 bundle，anon key 本來就是設計成公開的 ——
+  資料保護**完全來自 RLS**。所以第 2 步比什麼都重要。
+- **有帳號 ≠ 防作弊**：數值仍然在玩家自己的瀏覽器裡算。
+
+### 拿到憑證之後要跑的 Remote E2E（A–H）
+
+已列在設定清單的最後一節。⚠ 其中 **G（兩個帳號實測 RLS）最重要**——
+它是目前唯一「寫好了但從來沒有在真環境驗證過」的安全機制，
+**SQL 寫得對不代表它真的生效了**。
+
+### 沒做
+
+沒有開始 B1E（revision / conflict）。checkpoint 階段 `src/` **零變更**。
