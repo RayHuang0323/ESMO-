@@ -20285,3 +20285,86 @@ GitHub Actions workflow      沒有注入任何 VITE_SUPABASE_*
 ### 沒做
 
 沒有開始 B1E（revision / conflict）。checkpoint 階段 `src/` **零變更**。
+
+---
+
+## Backend B1D.2 — Cloud Deployment Readiness（2026-09-11）
+
+不需要真憑證，也沒有開始 B1E。目標是：**Owner 只要填兩個 GitHub Variables，
+下一次部署就會生效**，而在那之前正式站完全照舊。
+
+### 做了什麼
+
+| | |
+|---|---|
+| `deploy.yml` | Build step 收 `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`（來自 `vars.`），並在 build **之前**跑設定閘門 |
+| `tools/check_supabase_env.mjs`（新增） | build 前閘門，四種狀態都有明確行為 |
+| `tools/check_supabase_remote_e2e.mjs`（新增） | 真 E2E 入口；**沒憑證就 SKIP，絕不 mock** |
+| `SUPABASE_SETUP_OWNER.md` | 第 7 步改成「已接好，只要填變數」 |
+
+⚠ **Career / Challenge / SaveBundle 一行都沒動**（`src/` 唯一的變動是 0 個檔案；
+本輪只動 `.github/`、`tools/`、`docs/`）。
+
+### build 前閘門的四種狀態（都實跑過）
+
+| 狀態 | 行為 |
+|---|---|
+| 兩個都沒設 | `UNCONFIGURED`，**exit 0** —— 這是正式站目前的狀態，一切正常 |
+| 只設一半 | **exit 1，擋下部署** |
+| service-role JWT | **exit 1，擋下部署** |
+| `sb_secret_` 新格式 | **exit 1，擋下部署** |
+| 正常 anon key | `✅ 已設定（host xxx）`，exit 0 |
+
+⚠ 為什麼「只設一半」要擋：程式會把它當成「沒設定」而**靜默**走本機存檔。
+行為是安全的，但 Owner 會以為雲端開好了卻沒有——那種「設了卻沒作用」最難查。
+
+⚠ 為什麼 service-role 要**擋到部署失敗**：`VITE_*` 一旦 build 出去就
+**永久公開**，撤不回來，只能去後台輪替金鑰。寧可部署失敗。
+
+⚠ 閘門**永遠不印 key**，連前幾碼都不印（verifier 有斷言釘住）。
+
+### 實測：變數真的傳得到 bundle
+
+用一組假的 URL/anon key 跑一次完整 build，`grep` 到那個值確實出現在打包產物裡
+⇒ 證明 workflow 的接線會生效。**跑完立刻重新 build 一次乾淨的**，
+確認假值沒有殘留在 `dist/`。
+
+### Remote E2E 入口
+
+- 沒憑證 ⇒ 印 `REMOTE_E2E = SKIPPED` ＋ 缺什麼 ＋ **exit 0**
+- 有憑證但沒開匿名 ⇒ `PARTIAL_SKIPPED`（B–H 需要兩個可程式化登入的帳號）
+- 有憑證且開了匿名 ⇒ 真的跑 B–H，**含兩個帳號的 RLS 實測**
+- **A（Google 登入）永遠標成跳過** —— OAuth 要人在瀏覽器按同意，腳本做不到
+- 跑完會刪掉自己寫進去的 `career_saves` 列
+
+⚠ 它用**真的** `createClient` 打真的網路。原始碼裡**沒有**任何假 client 的退路
+（verifier §⑬ 掃識別字與 import 釘住這一點）。
+
+⚠ RLS 的負向測試寫法要注意：**被擋時 select 是「回 0 列」不是「回錯誤」**，
+update 是「影響 0 列」。所以斷言的是「查不到 / 沒被改到」，
+而且改完會**回頭用對方的身分再讀一次**確認沒被動到。
+
+### 驗證
+
+- **`check_cloud_save_b1d` 126/126 PASS**（新增 §⑬，14 條部署就緒斷言）
+- 回歸：B1B 86/86、B1C 76/76、Slice 1–8 全綠、build 過
+- 兩種 build 都實跑：未設定（`UNCONFIGURED` → 成功）與已設定（`✅` → 成功）
+
+### 又踩到同一個坑（第三次了）
+
+`⑬ workflow 沒有 service-role 相關的東西` 與 `⑬ Remote E2E 沒有 mock` 兩條
+一開始都紅了 —— 因為那兩個檔案的**說明文字裡正好在講「我們不放 service-role」
+「我們不用 mock」**，被字串比對算成違規。
+
+⇒ 改成比對**真正該擋的東西**：
+`(vars|secrets).*SERVICE` 這種**引用**、以及 `fakeCloud` / `mockClient` 這類
+**識別字與 import**，而不是散文裡的詞。
+
+**這是同一類錯誤第三次出現**（B1D 的 service_role、B1C 的空 catch、
+prod_b1c 的磁碟 vs 畫面）。教訓寫進 CLAUDE.md：
+**寫「不得出現 X」的斷言時，先問「X 會不會正當地出現在註解或文案裡」。**
+
+### 沒做
+
+沒有 revision / multi-device conflict（B1E）。沒有動 Career / Challenge /
+SaveBundle 邏輯。沒有 push、沒有 deploy。

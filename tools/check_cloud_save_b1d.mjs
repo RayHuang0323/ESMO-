@@ -429,6 +429,62 @@ ck("⑫ `save()` 仍然是同步的（沒有大改 84 個呼叫端）",
   && !/async\s+save\(\)/.test(code("src/platform/profileStore.js")));
 
 // ══════════════════════════════════════════════════════════════════════════
+console.log("\n── ⑬ B1D.2 部署就緒：workflow ＋ build 前閘門 ＋ E2E 入口 ──");
+
+const wf = read(".github/workflows/deploy.yml");
+ck("⭐ ⑬ workflow 把兩個變數傳給 Build",
+  /- name: Build[\s\S]{0,500}VITE_SUPABASE_URL[\s\S]{0,300}VITE_SUPABASE_ANON_KEY/.test(wf));
+ck("⭐ ⑬ workflow 在 build **之前**跑設定閘門",
+  wf.indexOf("check_supabase_env.mjs") > 0
+  && wf.indexOf("check_supabase_env.mjs") < wf.indexOf("run: npm run build"));
+ck("⭐ ⑬ 用 `vars.` 不是 `secrets.`（這兩個值一定會進公開 bundle）",
+  /vars\.VITE_SUPABASE_URL/.test(wf) && /vars\.VITE_SUPABASE_ANON_KEY/.test(wf)
+  && !/secrets\.VITE_SUPABASE/.test(wf));
+ck("⭐ ⑬ 正式站**不開**匿名登入（換裝置就找不回來）",
+  !/VITE_SUPABASE_ALLOW_ANONYMOUS:/.test(wf));
+//  ⚠ 要擋的是「**引用**一個 service-role 變數」，不是「提到這個詞」——
+//    workflow 的註解裡本來就在說明「貼錯 service-role key 會讓部署失敗」。
+ck("⑬ workflow 沒有引用任何 service-role 變數",
+  !/(vars|secrets)\.[A-Z_]*SERVICE/i.test(wf));
+
+const { inspectSupabaseEnv, isSecretKey, looksLikeSupabaseUrl } = await import("./check_supabase_env.mjs");
+const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64");
+ck("⭐ ⑬ 閘門：兩個都沒設 ⇒ unconfigured（**不是**錯誤）",
+  inspectSupabaseEnv({ url: "", anonKey: "" }).state === "unconfigured");
+ck("⭐ ⑬ 閘門：只設一半 ⇒ invalid（避免「設了卻沒作用」的靜默狀態）",
+  inspectSupabaseEnv({ url: "https://a.supabase.co", anonKey: "" }).state === "invalid"
+  && inspectSupabaseEnv({ url: "", anonKey: "k" }).state === "invalid");
+ck("⭐ ⑬ 閘門：service-role JWT ⇒ invalid",
+  inspectSupabaseEnv({ url: "https://a.supabase.co", anonKey: `a.${b64({ role: "service_role" })}.b` })
+    .problems.some((p) => p.code === "secret_key_in_frontend"));
+ck("⭐ ⑬ 閘門：`sb_secret_` 新格式也擋得住", isSecretKey("sb_secret_abcdefghijklmnop") === true);
+ck("⑬ 閘門：正常 anon key 不會被誤擋",
+  inspectSupabaseEnv({ url: "https://a.supabase.co", anonKey: `a.${b64({ role: "anon" })}.b` }).state === "ok"
+  && isSecretKey(`a.${b64({ role: "anon" })}.b`) === false);
+ck("⑬ 閘門：URL 形狀不對會被擋",
+  looksLikeSupabaseUrl("not a url") === false
+  && inspectSupabaseEnv({ url: "ftp://a", anonKey: "k" }).problems.some((p) => p.code === "bad_url"));
+ck("⭐ ⑬ 閘門**永遠不印 key**", !/console\.(log|error)\([^)]*anonKey/.test(code("tools/check_supabase_env.mjs")));
+
+const { preflight } = await import("./check_supabase_remote_e2e.mjs");
+const pf = preflight();
+ck("⭐ ⑬ Remote E2E 入口：沒有憑證時**不跑**，而且說得出缺什麼",
+  pf.run === false && pf.reason === "no_credentials" && pf.detail.length > 0, pf.reason);
+const e2eSrc = code("tools/check_supabase_remote_e2e.mjs");
+//  ⚠ 同上：要擋的是「**存在**一個假 client」，不是「字串裡提到 mock」——
+//    這支自己會印「沒有用 mock 頂替」，那正是我們要的誠實宣告。
+//    ⇒ 比對的是識別字與 import，不是散文。
+ck("⭐ ⑬ Remote E2E **沒有** mock / 假 client 的退路",
+  !/(fakeCloud|createFake|makeFake|mockClient|stubClient)/.test(e2eSrc)
+  && !/from\s+["'][^"']*(mock|fake|stub)[^"']*["']/i.test(e2eSrc));
+ck("⑬ Remote E2E 用的是真的 createClient",
+  /@supabase\/supabase-js/.test(e2eSrc) && /createClient\(/.test(e2eSrc));
+ck("⑬ Remote E2E 跑完會清掉自己寫進去的列",
+  /delete\(\)\.eq\("user_id", uidA\)/.test(e2eSrc) && /delete\(\)\.eq\("user_id", uidB\)/.test(e2eSrc));
+ck("⑬ Remote E2E 把 Google 登入標成人工項目，不假裝驗過",
+  /skip\("A\. Google 登入/.test(e2eSrc));
+
+// ══════════════════════════════════════════════════════════════════════════
 console.log("\n══════════════════════════════════════════════════════════");
 console.log(`Backend B1D：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
 console.log("");

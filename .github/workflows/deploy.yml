@@ -32,7 +32,33 @@ jobs:
       - name: Install
         run: npm install --legacy-peer-deps
 
+      # ── Supabase 連線設定（Backend B1D.2）────────────────────────────────
+      #  兩個變數放在 repo 的 **Variables**（不是 Secrets）。理由：
+      #  `VITE_*` 一定會被打包進**公開的** JavaScript，放 Secrets 只會給人
+      #  「它被保護著」的錯覺。anon key 本來就是設計成公開的，資料保護
+      #  完全來自 RLS（supabase/migrations/）。
+      #
+      #  ⚠ **沒有設定這兩個變數時，這裡會是空字串，而那是完全正常的狀態**：
+      #    build 照樣成功，線上就是「未開放雲端存檔」，存檔全部走
+      #    LocalSaveProvider。正式站目前就是這樣。
+      - name: Check Supabase env
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        #  ⚠ 這一步會在**貼錯 service-role key** 或**只設一半**時讓部署失敗。
+        #    寧可部署失敗，也不要把一把繞過 RLS 的金鑰永久 build 進公開 bundle。
+        run: node tools/check_supabase_env.mjs
+
       - name: Build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          #  ⚠ 正式站的 OAuth 導回位址。留空時程式會用「目前的網址」，
+          #    對 GitHub Pages 來說那已經是對的，所以不設也能運作。
+          VITE_SUPABASE_REDIRECT_URL: ${{ vars.VITE_SUPABASE_REDIRECT_URL }}
+          #  ⚠ 匿名登入**刻意不在正式站開**：訪客帳號換裝置就找不回來，
+          #    讓玩家在正式站用它建立整個生涯，是我們在幫他製造損失。
+          #    （所以這裡不傳 VITE_SUPABASE_ALLOW_ANONYMOUS。）
         run: npm run build
 
       - name: Setup Pages

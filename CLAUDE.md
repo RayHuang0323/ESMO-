@@ -100,6 +100,11 @@ node tools/regress2.mjs # 一律跑（若存在）
   不要先動逾時值——`browser_check_player_challenge_slice3` 就是這樣紅了兩個
   Slice（辨識法寫在 `08_目前待辦與風險.md`）。
 
+⚠⚠ **寫「不得出現 X」這類斷言之前，先問一句：X 會不會正當地出現在註解或文案裡？**
+同一類假紅已經發生過三次（B1C 的空 `catch {}`、B1D 的 `service_role`、
+B1D.2 的 `mock`）—— 那些檔案的說明文字**正好在講「我們不做 X」**。
+要擋的是**引用／識別字／import**，不是散文裡的詞。必要時先剝註解再比對。
+
 - **存檔 / 持久化（動到 save/load、New Game、任何 store 切片就必跑）**：
   **`check_save_bundle_b1b`（86）**
   **`check_save_hardening_b1c`（76）**
@@ -125,6 +130,13 @@ node tools/regress2.mjs # 一律跑（若存在）
   ⚠ 這台機器**沒有憑證** ⇒ 遠端 E2E 從未跑過。報告一律標
   `REMOTE_E2E_NOT_RUN`，**不得**用 mock 冒充 Supabase 驗證。
   要開通請照 `docs/handoff/SUPABASE_SETUP_OWNER.md`（那 7 步只有 Owner 做得到）。
+  ⚠ **B1D.2 起 `deploy.yml` 已接好**：Owner 只要填 repo 的 **Variables**
+  （`VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`），下次部署就生效。
+  build 之前會跑 `tools/check_supabase_env.mjs`：**只設一半**或**貼錯
+  service-role key 會直接讓部署失敗**（`VITE_*` build 出去就永久公開，
+  寧可部署失敗）。它永遠不印 key。
+  ⚠ 真 E2E 是 `tools/check_supabase_remote_e2e.mjs`：**沒憑證就 SKIP（exit 0）**，
+  **絕不用 mock 頂替**。Google 登入那一條腳本做不到，永遠標成人工項目。
   ⚠ 正式站目前**沒有**注入 `VITE_SUPABASE_*`，所以線上是「未開放雲端存檔」
   的狀態；`browser_check_prod_b1d`（27）守的就是「沒設定時一切照舊」。
   要讓正式站真的接雲，除了後台變數之外**還要改 `deploy.yml`** 把變數傳給 build。
