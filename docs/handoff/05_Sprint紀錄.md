@@ -20368,3 +20368,91 @@ prod_b1c 的磁碟 vs 畫面）。教訓寫進 CLAUDE.md：
 
 沒有 revision / multi-device conflict（B1E）。沒有動 Career / Challenge /
 SaveBundle 邏輯。沒有 push、沒有 deploy。
+
+---
+
+## B1D.2 Release Checkpoint（2026-09-13）
+
+### Release safety
+
+| 項目 | 值 |
+|---|---|
+| push 前 `origin/main` | `e1e6326` |
+| push 前 `HEAD` | `6d074dd` |
+| `origin/main..HEAD` | 一筆 |
+| `HEAD..origin/main` | 空 ⇒ remote **未**前進 |
+| working tree | clean（只有既有的未追蹤 `review/prod-*`） |
+| workflow YAML | 推送前用真 parser 解析通過（這次改的正是部署流程，語法錯會整個部署掛掉） |
+| push | dry-run `e1e6326..6d074dd`（**無** `+`，非 forced） |
+
+⚠ 全程沒有 force / reset。
+
+### Deploy：**看 Actions 結論，不看雜湊**
+
+這次 commit 沒動 `src/`，而本機 build 的入口雜湊與當時的正式站**完全相同**
+（`index-CbopzZHe.js`）。如果拿「雜湊有沒有換」判斷部署完成，會永遠等不到——
+更糟的是，**這次改的正是 workflow 本身**：新加的 `Check Supabase env` 步驟
+若在 Linux CI 上失敗，正式站會停在舊版，卻一樣回 HTTP 200。
+
+⇒ 直接查 GitHub Actions run（`/actions/runs?head_sha=6d074dd…`）：
+
+```
+run 34717414270  completed / success
+JOB build   => success
+  Check Supabase env => success   ← 新閘門在 Linux 上正常通過（未設定 ⇒ exit 0）
+  Build              => success
+JOB deploy  => success
+```
+
+- `ORIGIN_MAIN_SHA` = `6d074dd`
+- `PRODUCTION_HTTP` = 200
+- `PRODUCTION_BUNDLE` = `assets/index-Zgb5SLWr.js`
+
+### ⚠ bundle 雜湊還是換了 —— 原因已查明
+
+部署後正式站從 `CbopzZHe` 變成 `Zgb5SLWr`，而且比本機大 **154 bytes**。
+比對打包產物：
+
+```
+正式站（CI）  ...PROD:!0,SSR:!1,VITE_SUPABASE_ANON_KEY:"",VITE_SUPABASE_REDIRECT_URL:"",VITE_SUPABASE_URL:""}
+本機          （import.meta.env 裡沒有這三個鍵）
+```
+
+⇒ **未設定的 Variables 會以空字串傳進 build**，Vite 把它們內嵌進
+`import.meta.env`。三個都是 `""`，而 `supabaseClient.envOf()` 把空字串
+當成未設定 ⇒ 仍是 LocalSaveProvider（下面的 gate 實證）。
+
+⚠ 順帶確認：`VITE_SUPABASE_ALLOW_ANONYMOUS` **沒有**被內嵌 ——
+workflow 刻意不傳匿名開關是生效的。
+
+⚠ 這代表先前「本機雜湊＝正式站雜湊」只在 B1D.2 **之前**成立。
+從這一版起，CI 產出的 bundle 會與「完全沒有這些變數」的本機 build 不同。
+
+### 正式 bundle 不含測試假值（Owner 項目 7）
+
+掃了正式站**全部 6 個 JS 資產**（含動態載入的 Supabase chunk，
+從主 bundle 內的 import 路徑找出來，不是只掃入口）：
+
+| 掃描目標 | 命中 |
+|---|---|
+| `example.supabase.co`（B1D.2 驗 build 時用的假值） | 0 |
+| `abc.supabase.co`（閘門測試用的假值） | 0 |
+| `esmo-invalid-host-for-e2e`（E2E 故障測試 host） | 0 |
+| `sb_secret_…` 金鑰字樣 | 0 |
+| JWT 形狀的金鑰（`eyJ….eyJ`） | 0 |
+| 任何 `*.supabase.co` host | **0 個** |
+
+### 正式站 smoke
+
+**`browser_check_prod_b1d` 27/27 PASS**（跑在新 bundle `index-Zgb5SLWr.js` 上）：
+- 雲端存檔頁照實說「這個版本還沒有開放雲端存檔」、**不給**按了沒反應的登入鍵
+- **不誤顯**雲端同步失敗；**沒有任何 `sb-*` session 鍵**（真的沒連過）
+- LocalSaveProvider 正常：Manual Draft → Battle → Result → Replay「完全一致」，
+  存檔完整寫在裝置上，磁碟上仍只有既有那三個鍵
+- Training → reload 仍在；賽事頁正常；390 兩頁都正常；console clean
+
+**`browser_check_prod_b1c` 38/38 PASS**（存檔硬化、舊存檔、損壞隔離回歸）。
+
+### 沒做
+
+沒有開始 B1E。checkpoint 階段 `src/` **零變更**，只動 `docs/`。

@@ -137,6 +137,12 @@ B1D.2 的 `mock`）—— 那些檔案的說明文字**正好在講「我們不�
   寧可部署失敗）。它永遠不印 key。
   ⚠ 真 E2E 是 `tools/check_supabase_remote_e2e.mjs`：**沒憑證就 SKIP（exit 0）**，
   **絕不用 mock 頂替**。Google 登入那一條腳本做不到，永遠標成人工項目。
+  ⚠ **未設定的 Variables 仍會以空字串傳進 build**，Vite 會內嵌
+  `VITE_SUPABASE_*: ""` ⇒ **即使沒動 `src/`，CI 的 bundle 雜湊也會與本機不同**。
+  ⇒ 判斷部署是否完成**要看 Actions run 結論**
+  （`api.github.com/repos/<repo>/actions/runs?head_sha=<sha>`），**不能看雜湊**；
+  改到 workflow 本身時更是如此——新步驟失敗時正式站會停在舊版卻照樣回 200。
+  空字串被 `supabaseClient.envOf()` 當成未設定，所以行為仍是 LocalSaveProvider。
   ⚠ 正式站目前**沒有**注入 `VITE_SUPABASE_*`，所以線上是「未開放雲端存檔」
   的狀態；`browser_check_prod_b1d`（27）守的就是「沒設定時一切照舊」。
   要讓正式站真的接雲，除了後台變數之外**還要改 `deploy.yml`** 把變數傳給 build。
