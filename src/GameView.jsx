@@ -24,6 +24,8 @@ import { draftRoster } from "./battle/moba/draftRoster.js";
 import { loadQuality, saveQuality, QUALITY_IDS, QUALITY_PRESETS } from "./battle/quality.js";
 import { useIsMobile } from "./ui/useViewport.js";
 import { useCameraStore } from "./battle/cameraStore.js";
+import { observerTokens } from "./battle/ui/BattleObserverHUD.jsx";
+import { useHudMode, hudSafeTop } from './battle/ui/hudStore.js';
 import { isDebugMode } from "./ui/debugMode.js";
 import { featureEnabled } from "./featureFlags.js";
 import {
@@ -107,8 +109,17 @@ function Minimap({ mobile = false }) {
   //  H.1-close：原本抬 50px **不夠**——BattleHeroStrip 收合後（把手 + 一列對位列）
   //  約 80px 高、自身又從 bottom 8px 起算 ⇒ 小地圖下緣被十人面板蓋掉一截
   //  （Codex H.1 視覺驗收把它列為 blocking）。抬到 96px 讓兩者不再重疊。
-  const px2 = mobile ? 106 : 150;
-  return <canvas ref={ref} width={150} height={150} style={{ position: "absolute", bottom: mobile ? "calc(96px + env(safe-area-inset-bottom))" : 10, right: mobile ? 6 : 10, width: px2, height: px2, borderRadius: 10, border: "1px solid rgba(255,255,255,0.25)", boxShadow: "0 4px 20px rgba(0,0,0,0.5)", pointerEvents: "none", zIndex: Z.minimap }} />;
+  const px2 = mobile ? 106 : 180;
+  const locate = e => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    useCameraStore.getState().userPanTo(WORLD_BOUNDS.minX + (e.clientX - rect.left) / rect.width * WORLD_BOUNDS.width,
+      WORLD_BOUNDS.minY + (e.clientY - rect.top) / rect.height * WORLD_BOUNDS.height);
+  };
+  return <canvas ref={ref} width={240} height={240} data-testid="battle-minimap" aria-label="小地圖，點選位置移動鏡頭" role="button" tabIndex={0}
+    onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); locate(e); }}
+    onPointerMove={e => { if (e.buttons) locate(e); }}
+    onKeyDown={e => { const d = { ArrowLeft: [-10, 0], ArrowRight: [10, 0], ArrowUp: [0, -10], ArrowDown: [0, 10] }[e.key]; if (d) { e.preventDefault(); const c = useCameraStore.getState(); c.userPanTo(c.pan.x + d[0], c.pan.y + d[1]); } }}
+    style={{ position: "absolute", bottom: mobile ? "calc(128px + env(safe-area-inset-bottom))" : 12, right: mobile ? 6 : 12, width: px2, height: px2, borderRadius: 3, border: "2px solid var(--battle-gold)", boxShadow: "0 4px 20px rgba(0,0,0,0.5)", cursor: "crosshair", touchAction: "none", zIndex: Z.minimap }} />;
 }
 
 export default function GameView({ roster = ROSTER, onContinue = null, autoStart = false, draft = null, tactic = null }) {
@@ -175,6 +186,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   const hud = useGameStore((s) => s.hud);
   // S29B2：手機控制鈕收納（⚙ 展開）；地圖不被常駐按鈕群遮擋
   const isMobile = useIsMobile();
+  const controlTop = hudSafeTop(useHudMode(), isMobile);
   const [showCtl, setShowCtl] = useState(false);
   // 保留既有 debug gate 的語意與 verifier anchor；實際控制由共用元件呈現。
   const debugQuickFinishGate = playing && isDebugMode() && featureEnabled("devFastForward");
@@ -190,7 +202,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   const liveRoster = useMemo(() => draftRoster(roster, draft), [roster, draft]);
   liveRosterRef.current = liveRoster;
   return (
-    <div style={{ position: "relative", width: "100%", height: "min(82vh, 720px)", background: "#0d1420", borderRadius: 14, overflow: "hidden", fontFamily: "system-ui,-apple-system,sans-serif" }}>
+    <div className={`battle-stage ${isMobile ? 'mobile' : 'desktop'}`} style={{ ...observerTokens, position: "relative", width: "100%", height: "100%", background: "#0d1420", borderRadius: 6, overflow: "hidden", fontFamily: "system-ui,-apple-system,sans-serif" }}>
       {/* 3D：對局進行中相機由 cameraStore 管理（director/objectiveFocus/heroFocus/free）*/}
       <MobaRuntimeView3D quality={qualityId} roster={liveRoster} compactLabels={isMobile} />
       {/* Battle Presentation Layer：HUD / Timeline / 浮動大字 / TAB 記分板 / 終局畫面 */}
@@ -209,14 +221,14 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
         <button data-testid="director-toggle" aria-pressed={directorOn}
           onClick={() => useCameraStore.getState().toggleDirector()}
           title={directorOn ? "關閉自動導播並回到原本自由視角" : "啟用自動導播"}
-          style={{ position: "absolute", bottom: isMobile ? `calc(${DIRECTOR_BOTTOM_MOBILE}px + env(safe-area-inset-bottom))` : DIRECTOR_BOTTOM_DESKTOP, left: "50%", transform: "translateX(-50%)", zIndex: Z.controls, background: directorOn ? "rgba(96,165,250,0.92)" : "rgba(8,14,24,0.82)", border: `1px solid ${directorOn ? "#93c5fd" : "rgba(255,255,255,.35)"}`, borderRadius: 999, padding: "6px 13px", color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.45)" }}>
+          style={{ position: "absolute", bottom: isMobile ? "calc(128px + env(safe-area-inset-bottom))" : 130, left: isMobile ? 8 : "50%", transform: isMobile ? undefined : "translateX(-50%)", minHeight: 36, zIndex: Z.controls, background: "rgba(8,14,24,0.9)", border: `1px solid ${directorOn ? "#93c5fd" : "rgba(255,255,255,.35)"}`, borderRadius: 3, padding: "6px 13px", color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.45)" }}>
           🎥 自動導播 {directorOn ? "ON" : "OFF"}
         </button>
       )}
       {playing && (
         <button data-testid="leave-active-match" onClick={() => { pause(); onContinue?.(); }}
           title="暫停並離開；回到首頁後可返回進行中的比賽"
-          style={{ position: "absolute", top: SAFE_TOP, left: isMobile ? 8 : 12, zIndex: Z.overlay, background: "rgba(8,14,24,0.78)", border: "1px solid rgba(255,255,255,0.28)", borderRadius: 8, padding: "6px 10px", color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>
+          style={{ position: "absolute", top: isMobile ? controlTop : 12, left: isMobile ? 8 : 12, minHeight: 36, zIndex: Z.overlay, background: "rgba(8,14,24,0.78)", border: "1px solid rgba(255,255,255,0.28)", borderRadius: 3, padding: "6px 10px", color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>
           ← 暫停並離開
         </button>
       )}
@@ -224,7 +236,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
           舊碼每顆鈕各自寫死 top（92 / 128 / 160），而 BattleHUD 從 top 6 起高約
           120px ⇒ ⏩ 與 ⚙ 直接壓在塔點陣與**藍紅勝率條**上（Ray 手機實測回報）。
           現在整欄在 HUD 底緣之下，彼此用 gap 排列，不再有魔術數字互撞。 */}
-      <div style={{ position: "absolute", top: SAFE_TOP, right: isMobile ? 8 : 12, zIndex: Z.overlay, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+      <div style={{ position: "absolute", top: isMobile ? controlTop : 12, right: isMobile ? 8 : 12, zIndex: Z.overlay, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
         {/* S29B4：Debug「快速完成比賽」——**不藏在 ⚙ 收納面板裡**（S29B4 根因：
             手機上它原本被 showCtl 收合，Pages 加 ?debug=1 也看不到）。測試模式
             **常駐可見**。fastForward：同一顆引擎安全推進到終局 → 走既有
@@ -268,7 +280,6 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
         </div>
       )}
       {/* 掛載信標：看得到這個 tag = 渲染的是主幹 GameView（非 Legacy App.jsx）*/}
-      <div style={{ position: "absolute", bottom: 166, right: 12, color: "rgba(147,197,253,0.55)", fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", pointerEvents: "none", zIndex: Z.minimap }}>ESMO 主幹 · S16</div>
       <Minimap mobile={isMobile} />
     </div>
   );

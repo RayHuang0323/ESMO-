@@ -19,7 +19,7 @@ import { useBattleStore } from "../battleStore.js";
 import { fmtT } from "../../gameData.js";
 import { HUD_TOP, HUD_H, PANEL_MAX_W, Z } from "./battleLayout.js";
 //  L Hotfix 2 §4：記分板顯示層級（compact / expanded）＋ 安全區高度的唯一來源。
-import { useHudMode, toggleHudMode, hudHeight, HUD_MODE_ZH } from "./hudStore.js";
+import { useHudMode, toggleHudMode, hudHeight, hudSafeTop, HUD_MODE_ZH } from "./hudStore.js";
 import { useIsMobile } from "../../ui/useViewport.js";
 
 const BLUE = "#60a5fa", RED = "#fb923c", MONO = "'Courier New',monospace";
@@ -56,8 +56,10 @@ function TeamObjectiveBuffs({ state, side }) {
 }
 
 function BossStatusBar({ objectives = [] }) {
+  const mobile = useIsMobile();
+  const safeTop = hudSafeTop(useHudMode(), mobile);
   const active = objectives
-    .filter((o) => (o.type === "dragon" || o.type === "baron") && o.alive)
+    .filter((o) => (o.type === "dragon" || o.type === "baron") && o.alive && o.hp < 1)
     .sort((a, b) => (a.type === "baron" ? -1 : 1) - (b.type === "baron" ? -1 : 1))[0];
   if (!active) return null;
   const isBaron = active.type === "baron";
@@ -65,7 +67,7 @@ function BossStatusBar({ objectives = [] }) {
   const hp = Math.max(0, Math.min(1, active.hp ?? 0));
   return (
     <div data-testid="boss-hud" style={{
-      position: "absolute", top: HUD_TOP + HUD_H + 6, left: "50%", transform: "translateX(-50%)",
+      position: "absolute", top: safeTop + (mobile ? 124 : 8), left: "50%", transform: "translateX(-50%)",
       width: "min(72vw, 330px)", zIndex: Z.hud, pointerEvents: "none",
       borderRadius: 7, padding: "4px 7px", background: "rgba(7,10,16,.86)",
       border: `1px solid ${color}88`, boxShadow: `0 2px 12px ${color}22`,
@@ -116,7 +118,7 @@ export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭
     {/* S29B6：top / 寬度 / z-index 改讀 `battleLayout` 共用常數。
         戰報與控制鈕的安全區（SAFE_TOP）由 HUD_TOP + HUD_H 推導；
         `maxHeight: HUD_H` 讓「HUD 實際高度 ≤ 常數」在執行期也成立。 */}
-    <div data-testid="battle-hud" data-mode={hudMode}
+    <div className="battle-score" data-testid="battle-hud" data-mode={hudMode}
       style={{ position: "absolute", top: HUD_TOP, left: "50%", transform: "translateX(-50%)", width: `min(96%, ${PANEL_MAX_W}px)`, height: hudH, maxHeight: hudH, boxSizing: "border-box", overflow: "hidden", pointerEvents: "none", fontFamily: "system-ui,-apple-system,sans-serif", zIndex: Z.hud, background: "rgba(13,11,18,0.92)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: compact ? "4px 10px 5px" : "6px 12px 7px", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
       <style>{`@keyframes esmoPulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
 
@@ -140,16 +142,21 @@ export default function BattleHUD({ blueName = "德國海豹", blueEmoji = "🦭
             <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0, flex: 1 }}>
               <span style={{ fontSize: 15, width: 18, textAlign: "center", flexShrink: 0 }}>{blueEmoji}</span>
               <span data-testid="hud-team-blue" style={{ color: BLUE, fontSize: 8.5, fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{shortBlue}</span>
-              <span style={{ color: "white", fontSize: 16, fontWeight: 900, fontFamily: MONO, marginLeft: "auto" }}>{hud.bK}</span>
+              <span className="observer-score-number" style={{ color: "white", fontSize: 24, fontWeight: 900, fontFamily: MONO, marginLeft: "auto" }}>{hud.bK}</span>
             </div>
             <div style={{ textAlign: "center", flexShrink: 0, padding: "0 6px" }}>
               <div data-testid="hud-clock" style={{ color: "white", fontSize: 15, fontWeight: 900, fontFamily: MONO, lineHeight: 1.05 }}>{fmtT(hud.ts)}</div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0, flex: 1, justifyContent: "flex-end" }}>
-              <span style={{ color: "white", fontSize: 16, fontWeight: 900, fontFamily: MONO, marginRight: "auto" }}>{hud.rK}</span>
+              <span className="observer-score-number" style={{ color: "white", fontSize: 24, fontWeight: 900, fontFamily: MONO, marginRight: "auto" }}>{hud.rK}</span>
               <span data-testid="hud-team-red" style={{ color: RED, fontSize: 8.5, fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{shortRed}</span>
               <span style={{ fontSize: 15, width: 18, textAlign: "center", flexShrink: 0 }}>{redEmoji}</span>
             </div>
+          </div>
+          <div style={{display:'flex',justifyContent:'space-between',color:'#aaaeb8',fontSize:9,fontFamily:MONO}}>
+            <span>{Number.isFinite(snap.bGold) ? `$${(snap.bGold / 10000).toFixed(1)}萬` : '—'}</span>
+            <span>擊殺 · 比賽時間 · 擊殺</span>
+            <span>{Number.isFinite(snap.rGold) ? `$${(snap.rGold / 10000).toFixed(1)}萬` : '—'}</span>
           </div>
           {/*  最重要的少量資源資訊：勝率條（保留，因為它是一眼判局勢的東西）*/}
           <div style={{ marginTop: 4, height: 4, borderRadius: 99, overflow: "hidden", background: "rgba(0,0,0,0.55)", display: "flex" }}>

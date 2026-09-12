@@ -225,7 +225,7 @@ export default function AppShell() {
     position: "relative",
     fontFamily: "system-ui,-apple-system,sans-serif",
     ...(viewportLocked
-      ? { height: "min(88vh, 760px)", overflow: "hidden" }
+      ? { height: screen === "battle" ? "100dvh" : "min(88vh, 760px)", overflow: "hidden" }
       : { minHeight: "min(88vh, 760px)", overflow: "visible" }),
   };
 

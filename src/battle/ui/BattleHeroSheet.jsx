@@ -203,23 +203,20 @@ export default function BattleHeroSheet({ heroId, heroName, playerName, playerId
             <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>此英雄無技能資料</div>
           )}
           <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
-            英雄技能為 CHAMPIONS_100 的靜態資料；引擎目前不模擬個別技能冷卻，故不顯示假 CD。
+            此處為英雄技能說明。本場尚未提供個別技能冷卻、裝備與魔力資訊。
           </div>
 
           {/* ── 目前戰鬥資訊 ────────────────────────────────────────── */}
           <SectionTitle>本場數據</SectionTitle>
           <Row l="KDA" v={p ? `${p.k}/${p.d}/${p.a ?? 0}` : "—"} />
-          <Row l="金錢" v={p ? p.gold.toLocaleString() : "—"} c="#fbbf24" />
+          <Row l="金錢" v={p ? `$${(p.gold / 10000).toFixed(1)}萬` : "—"} c="#fbbf24" />
           <Row l="英雄傷害" v={p ? p.dmg.toLocaleString() : "—"} c="#fda4af" />
           <Row l="治療量" v={p ? p.heal.toLocaleString() : "—"} c="#86efac" />
           <Row l="推塔傷害" v={p ? p.twrDmg.toLocaleString() : "—"} c="#a5b4fc" />
           {Number.isFinite(p?.mxpNext) && p.mxpNext > 0 && (
             <Row l="本場經驗" v={`${p.mxp} / ${p.mxpNext}`} c="#fde047" />
           )}
-          {p?.decision?.action && (
-            <Row l="目前意圖" v={p.decision.action} c="#c4b5fd"
-              title={`引擎的可解釋決策（Milestone D-fix2）：${(p.decision.reasons ?? []).join(" · ")}`} />
-          )}
+          {p?.state && <Row l="目前狀態" v={p.state} c="#c4b5fd" />}
 
           {/* 生涯／完整能力：需要才開，不佔戰鬥中的版面 */}
           <button onClick={() => setCareer(true)} style={{

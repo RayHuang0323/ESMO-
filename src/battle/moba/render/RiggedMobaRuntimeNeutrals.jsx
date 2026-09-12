@@ -10,6 +10,7 @@ import { buildMonsters } from '../map/mapMonsterShapes.js';
 import { LAYER_Y } from '../map/mapVisualStyle.js';
 import { NEUTRAL_ASSETS, sampleNeutralAnimation } from './neutralAnimationPolicy.js';
 import LegacyNeutrals from './MobaRuntimeNeutrals.jsx';
+import { useReducedBattleMotion } from './useReducedBattleMotion.js';
 
 const GROUND_Y = LAYER_Y.jungle_ground ?? LAYER_Y.lane_surface ?? 0;
 const URL_BASE = `${import.meta.env.BASE_URL}assets/moba/neutrals-v1/`;
@@ -68,16 +69,17 @@ function NeutralGroup({ objective, asset, frameRef, gltf, shadow }) {
     if (!label.current) return;
     const respawning = !live.alive && live.respawnIn > 0;
     const buff = live.type === 'buff' && live.alive;
-    label.current.style.display = respawning || buff ? 'inline-block' : 'none';
+    const engaged = live.alive && !!live.targetId;
+    label.current.style.display = respawning || buff || engaged ? 'inline-block' : 'none';
     label.current.textContent = respawning
       ? `${live.respawnState === 'unspawned' ? '首次刷新' : '重生'} ${Math.ceil(live.respawnIn)}s`
-      : asset.label;
+      : engaged ? `${asset.label} · 攻擊中` : asset.label;
   });
   return <group userData={{ objectiveId: objective.id, part: boss ? 'dynamic-boss' : 'dynamic-neutral' }}>
     {entities.map((member, index) => <NeutralCreature key={member?.id ?? objective.id}
       objective={objective} memberId={member?.id ?? null} index={index}
       asset={asset} gltf={gltf} frameRef={frameRef} shadow={shadow} />)}
-    <Html center position={[objective.world.x, GROUND_Y + (boss ? 3 : asset.top + 5), objective.world.z]}
+    <Html center zIndexRange={[6, 0]} position={[objective.world.x, GROUND_Y + (boss ? 3 : asset.top + 5), objective.world.z]}
       style={{ pointerEvents: 'none' }}>
       <span ref={label} style={{ display: 'none', whiteSpace: 'nowrap', color: '#e5e7eb',
         background: 'rgba(5,9,15,.78)', borderRadius: 4, padding: '2px 4px', font: '700 8px system-ui' }} />
@@ -86,7 +88,8 @@ function NeutralGroup({ objective, asset, frameRef, gltf, shadow }) {
 }
 
 function NeutralCreature({ objective, memberId, index, asset, gltf, frameRef, shadow }) {
-  const root = useRef(), visual = useRef(), hp = useRef(), hpRoot = useRef();
+  const root = useRef(), visual = useRef(), hp = useRef(), hpRoot = useRef(), contact = useRef();
+  const reducedMotion = useReducedBattleMotion();
   const previous = useRef(null);
   const boss = objective.type === 'dragon' || objective.type === 'baron';
   const model = useMemo(() => {
@@ -118,7 +121,7 @@ function NeutralCreature({ objective, memberId, index, asset, gltf, frameRef, sh
   const top = Math.max(2.6, ...(member?.parts ?? []).map(p => p.z + (p.h ?? 0))) * (asset.sizeK ?? 1);
   const scale = top / NEUTRAL_ASSETS[asset.archetype].height;
   const barWidth = boss ? 16 : index === 0 ? 6.5 : 4;
-  useFrame(() => {
+  useFrame(({ camera }) => {
     const frame = frameRef?.current;
     const live = frame?.objectives?.find(o => o.id === objective.id) ?? objective;
     const entity = memberId ? live.members?.find(m => m.id === memberId) : live;
@@ -134,7 +137,18 @@ function NeutralCreature({ objective, memberId, index, asset, gltf, frameRef, sh
     const target = frame?.heroes?.find(h => h.id === entity.targetId);
     if (target?.world && entity.alive) visual.current.rotation.y = Math.atan2(target.world.x - p.x, target.world.z - p.z);
     previous.current = { ts, x: p.x, z: p.z };
-    hpRoot.current.visible = !!entity.alive;
+    hpRoot.current.visible = !!entity.alive && (boss || entity.hpRatio < 1 || !!entity.targetId);
+    hpRoot.current.quaternion.copy(camera.quaternion);
+    // A compact contact cue belongs to this real attack, not an invented area-of-effect.
+    // One preallocated ring per creature; hidden on death, seek-away or idle.
+    const attacking = pose.clip === 'Attack' && entity.alive;
+    contact.current.visible = attacking || pose.hit !== null;
+    const impact = attacking ? Math.sin(Math.PI * Math.min(1, pose.time / .45)) : 0;
+    const radius = Math.max(1.2, top * .22) * (reducedMotion ? 1 : 1 + impact * .18);
+    contact.current.scale.set(radius, radius, 1);
+    contact.current.material.opacity = reducedMotion ? .38 : pose.hit !== null ? .55 : .3 + impact * .25;
+    // Cosmetic weight shift only. Root world position remains exactly the saved entity world.
+    visual.current.position.y = reducedMotion || !attacking ? 0 : -impact * top * .025;
     const ratio = Math.max(0, Math.min(1, entity.hpRatio ?? 0));
     hp.current.scale.x = barWidth * ratio;
     hp.current.position.x = -barWidth * (1 - ratio) / 2;
@@ -144,11 +158,15 @@ function NeutralCreature({ objective, memberId, index, asset, gltf, frameRef, sh
       const active = name === pose.clip, hit = name === 'Hit' && hitWeight > 0;
       action.enabled = active || hit;
       action.setEffectiveWeight(active ? 1 - hitWeight : hit ? hitWeight : 0);
-      if (active || hit) action.time = active ? pose.time : pose.hit;
+      if (active || hit) action.time = reducedMotion ? active && pose.clip === 'Attack' ? .3 : 0 : active ? pose.time : pose.hit;
     }
     model.mixer.update(0);
   });
   return <group ref={root} visible={false} userData={{ objectiveId: objective.id, memberId, part: 'dynamic-neutral-member' }}>
+    <mesh ref={contact} visible={false} rotation={[-Math.PI / 2, 0, 0]} position={[0, .18, 0]}>
+      <ringGeometry args={[.86, 1, 20]} />
+      <meshBasicMaterial color="#e5b85c" transparent opacity={.4} depthWrite={false} side={THREE.DoubleSide} polygonOffset polygonOffsetFactor={-2} />
+    </mesh>
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, .1, 0]} scale={[top * 1.3, top * 1.1, 1]}>
       <planeGeometry args={[1, 1]} />
       <meshBasicMaterial map={shadow} transparent depthWrite={false} polygonOffset polygonOffsetFactor={-2} />
