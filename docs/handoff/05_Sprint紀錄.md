@@ -20456,3 +20456,58 @@ workflow 刻意不傳匿名開關是生效的。
 ### 沒做
 
 沒有開始 B1E。checkpoint 階段 `src/` **零變更**，只動 `docs/`。
+## 2026-09-13 MOBA Observer HUD / Combat Presentation（未發布候選）
+
+Owner：Codex；工作樹 `worktrees/moba-rift-esmo-v1`，基底 `692ee77`。主工作樹有其他未提交工作，未碰觸。
+
+完成全高戰場、中央比分／時間／金錢、雙側英雄列、底部選中英雄資訊、技能說明、真實召喚師冷卻、Buff、擊殺列、手機隊伍抽屜、小地圖指標／鍵盤移鏡頭、Replay 共用唯讀面板。保留原本核心與資產。使用者追加後補野怪接觸回饋、面向鏡頭血條、塔冠蓄能與飛行期鎖定提示；減少動態時保留狀態提示。
+
+座標修復試驗造成 regress 13/15、regress2 7/8，已撤回兩個 camp 座標，恢復後 regression 通過；未鬆綁任何既有斷言，位置問題尚未結案。
+
+新增 `check_battle_observer_ui` 用真引擎 snapshot 做 SSR 8 項檢查。初版靜態安全掃描誤抓註解中的 LogicEngine，修正為移除註解後檢查實際呼叫，沒有刪除安全斷言。臨時驗證 runner 初版 flow/dashboard shape 只認 PASS/通過，但原 verifier 印 ✅；已依真輸出修正 runner，原 verifier 不變。
+
+實際 Battle 證據與完整未實測項目見 `docs/design/MOBA_Observer_UI驗收.md`。不宣稱 Replay/VFX 動態驗收完成，不 commit / push / deploy。
+
+## 2026-09-13 Observer HUD 續驗：Replay
+
+使用者解除確認視窗後，實际賽後 3D 重播完成 seek／±10s／事件跳轉／選角檢查；另以固定真引擎錄影驗證倍速、暫停、手機隊伍／詳情與同份重開。新截圖 replay-desktop-final.jpg、replay-mobile.jpg。320/360/390/430 重播寬度無頁面水平溢出；未做手機真機。Replay 缺少召喚師冷卻的顯示改為「未保存」，SSR 8/8、build exit 0。沒有更動 capture 契約、既有 verifier 或引擎。座標修復衝突、VFX 完整動態驗收與舊 Replay 事件 ID 文字仍未結案。無 commit / push / deploy。
+
+## 2026-09-13 Observer HUD 收尾驗收與新增位置阻斷
+
+本輪完成 Replay 顯示層名稱 formatter（18/18），涵蓋選手、缺名單陣營席位、營地、塔、首殺／連殺。瀏覽器實測文字為「Nacht 使用懲戒（藍 Buff）」「Ember 使用閃現（逃生）」。未更改保存事件、frames 或 Replay 契約。
+
+正式 Dashboard → MOBA → Lineup → Matchmaking → Ban/Pick → Tactic → Loading → GameView，設定 1×；Desktop 高畫質與 390px 低畫質、隊伍／詳情開關通過，console error 0。瀏覽器 viewport capability 只作用原分頁，因此先暫停正式場次，再從該分頁的 Dashboard 返回同一場（15:51），沒有清存檔或同時開兩場；重新恢復時預設倍率回 2×，已以 UI 改回 1×。
+
+以真 LogicEngine seed42 的原始快照（完整 timestamps）作診斷片段，逐格檢查野怪／巨龍／巴龍 Attack／Hit／Death；另檢查塔蓄能／飛行／命中。不是產品 Replay，也不藉由 fixture 改產品資料來源。塔鎖定標記原本太小太暗，改為固定隊色 pool 並擴到 2.2S；原技能 lock 材質保持不變。連續影格與來源時間見設計驗收文件。scratch／logs／截圖不提交。
+
+使用者追加下路塔旁野怪問題，正式畫面確認石甲蟲與 snapshot 出生座標一致；中心距最近塔 7.05。這是既有營地位置，並非渲染漂移。本輪沒有改地圖幾何／營地座標／pacing／fairness，位置修復仍阻斷「全部無阻斷才 commit」條件。未 commit、push、deploy。
+
+## 2026-09-13 Observer 收尾最終 Gate 補記
+
+固定隊色塔鎖定 pool 的最後修改後完整重跑：regress 15/15（34s）、regress2 8/8（41s）、runtime29 flat 35/35（127s）、build（27s），runner 4/4 PASS、exit 0；沿用既有委派／TD-21，不宣稱 91 全綠。正式場自然完成 22:52；跨分頁恢復後重錄的這一份 Replay 為 2D fallback、缺前半段，不等同完整 0:00 錄影。新增觀察已列入風險，未為此放寬重播相容判斷。無 commit / push / deploy。
+
+## 2026-09-13 使用者授權石甲蟲真實位置修復
+
+使用者明確允許只調整石甲蟲與必要鏡像營地位置，再驗證 pacing/fairness。根因有兩層：原中心距下路塔僅 7.05；此外 mapTerrainShapes 把 CAMPS 當作岩壁生成輸入，因此先前單改位置會悄悄改碰撞地形，與固定 GLB 不同。
+
+加入既有烘焙 clearings 的地形 landmark，僅固定生成幾何；真實營地仍是 gameData 單一來源。沒有重做地圖、改塔位、改 LogicEngine 或 pacing/fairness 參數，也沒有放寬任何既有 verifier。新增 krug clearance verifier 同時檢查同源、淨空、對稱與搬營地不動岩壁／地面。中間候選若正式流程、regression 或 pacing 紅燈即不採用，不拼接不同候選的 PASS。
+
+磁碟候選為 `(153,228)/(177,102)`：距塔 22.04、距兵線 21.09。6 座營地往返皆可達、3 對鏡像路徑相同；nav_h2 14/14、Rift 14/14。新錄影由實際 seed42 engine 生成，516 frames、21:25.5、87 events、3D compatible=true。Desktop/390px Replay 共用 HUD、隊伍抽屜與事件名稱已檢視；最後完整批次結果見下節／設計驗收文件。
+
+Replay 缺前段的根因是既有分頁記憶體 buffer，不在本輪改成持久化。UI 改用 frames[0].t 作為起點與 seek 下限，明示前段未保存；22/22 名稱／起點測試通過。實際瀏覽器缺前段診斷檔起點 952.5，按 −10s 不會倒退到未保存範圍；390px 無溢出。此為純顯示修正，沒有補造 frames 或改保存契約。
+
+### 固定磁碟版本最終結果：不建立 commit
+
+`verify --only=regress,regress2,runtime29,build` exit 0、4/4：15/15（47s）、8/8（54s）、flat 35/35（138s）、build（22s）。另 observer 8/8、presentation 12/12、controls 18/18、flow09、dash10、Rift 14/14、neutral rigs 均通過；名稱／起點 22/22，nav14/14、camp routes、krug clearance 通過。
+
+但 pacing29b1 exit 1、24/25：40 場 15 分鐘擊殺中位數 6，未達既有下限 7。第25項順序公平性通過（23/40 vs 18/40，差12.5pp，顯示13pp≤15）。不以 runtime flat 或其他 PASS 掩蓋這一紅燈，不放寬 verifier、不調核心規則。因此依使用者「全部無阻斷才 commit」條件保留未提交驗收版，無 push／deploy。
+
+最後瀏覽器確認 390×844、1366×768 Replay 共用 HUD，隊伍面板可開關、scrollWidth 等於視窗寬度；固定載入 console errors=[]。最終截圖 `final-replay-mobile-390.jpg`、`final-replay-team-390.jpg`、`final-replay-desktop.jpg` 與兩側 krug-fixed.jpg 保留本機；全部 scratch／logs／review 不提交。
+
+## 2026-09-13 石甲蟲座標修改撤回與候選 gate
+
+依使用者要求撤回本輪石甲蟲座標修改，`gameData.CAMPS` 恢復 `(151,248)/(179,82)`；原始距塔 7.05 列為已知限制，本輪不再處理。連帶移除 `RIFT_BAKED_CLEARINGS` 與 `mapTerrainShapes` 的位置修復接線，沒有修改地圖幾何、營地模型資產、LogicEngine、移速、pacing/fairness 或 verifier 門檻。
+
+撤回後重新確認：`SKIP_NESTED=1 node tools/check_moba_pacing29b1.mjs` **25/25**（40 場 v3/v2；15 分鐘擊殺 p50=7；順序公平性正序藍 22/40、反序 23/40，差 3pp）；`check_moba_nav_h2.mjs` 14/14。`node tools/verify.mjs --only=runtime29,regress,regress2,build` exit 0、4/4：regress 15/15（30s）、regress2 8/8（33s）、runtime29 flat 35/35（85s）、build（17s）。補充 presentation 12/12、controls 18/18、flow09、dash10、observer SSR 8/8、neutral rigs、Replay display 22/22、Rift 14/14 均通過。
+
+因此建立本輪候選 commit，未 push／deploy。石甲蟲距塔過近保留於 known limitations；手機真機／實機 FPS 與 reduced-motion 仍未測，Replay 跨分頁前段仍依既有記憶體 buffer 不保存，但 UI 已以實際第一個 frame.t 為起點並明示缺段。

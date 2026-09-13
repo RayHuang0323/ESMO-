@@ -13,10 +13,7 @@ import BattleTimeline from "./BattleTimeline.jsx";
 import BattleFloatingText from "./BattleFloatingText.jsx";
 import BattleScoreboard from "./BattleScoreboard.jsx";
 import BattleEndScreen from "./BattleEndScreen.jsx";
-import BattleHeroStrip from "./BattleHeroStrip.jsx";
-//  Milestone L：關鍵演出的 HUD 播報（頭像 ＋ 演出分類）。與 3D 層讀同一份
-//  snapshot.fx，經同一支 heroPresentationAdapter ⇒ 現場與 Replay 不可能分岔。
-import HeroSkillCallout from "../moba/presentation/HeroSkillCallout.jsx";
+import BattleObserverHUD from "./BattleObserverHUD.jsx";
 import { Z } from "./battleLayout.js";
 
 export default function BattlePresentationLayer({ roster = null, showTimeline = true, onContinue = null, draft = null, tactic = null, blueName = null, redName = null }) {
@@ -37,19 +34,20 @@ export default function BattlePresentationLayer({ roster = null, showTimeline = 
 
   // TAB 按住顯示記分板（比照 MOBA 慣例）
   useEffect(() => {
-    const down = (e) => { if (e.key === "Tab") { e.preventDefault(); setShowBoard(true); } };
+    const down = (e) => { if (e.key === "Tab" && !e.target?.closest?.('button,input,select,textarea,a,[tabindex]')) { e.preventDefault(); setShowBoard(true); } };
     const up = (e) => { if (e.key === "Tab") setShowBoard(false); };
+    const blur = () => setShowBoard(false);
+    window.addEventListener('blur', blur);
     window.addEventListener("keydown", down); window.addEventListener("keyup", up);
-    return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); };
+    return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); window.removeEventListener('blur', blur); };
   }, []);
 
   return (
     <>
       <BattleHUD roster={roster} tactic={tactic} {...names} />
       {showTimeline && !over && <BattleTimeline open roster={roster} />}
-      {!over && <HeroSkillCallout roster={roster} />}
       <BattleFloatingText />
-      {!over && <BattleHeroStrip roster={roster} draft={draft} />}
+      {!over && <BattleObserverHUD roster={roster} />}
 
       {/* 戰中 TAB 記分板 */}
       {showBoard && !over && (

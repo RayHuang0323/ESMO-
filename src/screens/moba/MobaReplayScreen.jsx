@@ -27,7 +27,8 @@
 // ============================================================================
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { REPLAY_SPEEDS, SIM_PER_REAL } from "../../platform/contracts/mobaReplay.js";
+import { ObserverPanel, observerTokens } from '../../battle/ui/BattleObserverHUD.jsx';
+import { REPLAY_SPEEDS, SIM_PER_REAL, FRAME_INTERVAL_S } from "../../platform/contracts/mobaReplay.js";
 import { fmtT, WORLD_BOUNDS, LANES, RIVER, presentationForObjective } from "../../gameData.js";
 import { GC, MONO } from "../../ui/theme.js";
 import MobaView3D from "../../MobaView3D.jsx";
@@ -41,6 +42,7 @@ import { loadQuality, presetFor } from "../../battle/quality.js";
 import { SUMMONER_SPELLS } from "../../battle/moba/mobaHeroLoadout.js";
 import { useIsMobile } from "../../ui/useViewport.js";
 import { useCameraStore } from "../../battle/cameraStore.js";
+import { replayDisplayText, replayPlayerName, replayEventText, replayStartTime } from '../../battle/moba/replay/replayDisplayText.js';
 
 const SIDE_C = { blue: "#3b82f6", red: "#ef4444" };
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -105,7 +107,7 @@ function ReplayMap2D({ replay, a, b, f, inset = false }) {
           <g key={pm.id} opacity={dead ? 0.4 : 1}>
             <circle cx={x} cy={y} r={1.9 * K} fill={dead ? "none" : SIDE_C[pm.side]} stroke={SIDE_C[pm.side]} strokeWidth={0.5 * K} />
             {!inset && !dead && <rect x={x - 1.9 * K} y={y - 3.1 * K} width={3.8 * K * Math.max(0, pa[2])} height={0.7 * K} rx={0.3 * K} fill="#34d399" />}
-            {!inset && <text x={x} y={y + 4.6 * K} fontSize={2.4 * K} textAnchor="middle" fill="rgba(255,255,255,0.75)" fontFamily="monospace">{pm.id}</text>}
+            {!inset && <text x={x} y={y + 4.6 * K} fontSize={2.4 * K} textAnchor="middle" fill="rgba(255,255,255,0.75)" fontFamily="monospace">{replayPlayerName(pm.id, playersMeta)}</text>}
           </g>
         );
       })}
@@ -126,7 +128,7 @@ function replayRosterOf(replay) {
   for (const pm of replay?.playersMeta ?? []) {
     if (!pm?.id || !pm.heroId) continue;
     out[pm.id] = {
-      player: pm.playerName ?? pm.id.toUpperCase(),
+      player: replayPlayerName(pm.id, replay.playersMeta),
       heroId: pm.heroId, hero: pm.heroName ?? pm.heroId,
       lane: pm.lane ?? null, spells: Array.isArray(pm.spells) ? pm.spells : [],
     };
@@ -161,10 +163,11 @@ function ReplayLineup({ roster }) {
 export default function MobaReplayScreen({ replay, onClose }) {
   const frames = replay?.frames ?? [];
   const duration = replay?.duration ?? 0;
-  const [t, setT] = useState(0);
+  const startTime = replayStartTime(replay);
+  const [t, setT] = useState(startTime);
   const [playing, setPlaying] = useState(true);
   const [speed, setSpeed] = useState(1);
-  const tRef = useRef(0);
+  const tRef = useRef(startTime);
   const isMobile = useIsMobile();
   const replayCamMode = useCameraStore((s) => s.mode);
   const replayDirectorOn = replayCamMode !== "free";
@@ -178,7 +181,7 @@ export default function MobaReplayScreen({ replay, onClose }) {
   const use3D = useMemo(() => canUse3DPresentation(replay), [replay]);
   //  Milestone I-close：重播的名牌／陣容改用當場保存的名單（舊 replay ⇒ null ⇒ 行為不變）
   const replayRoster = useMemo(() => replayRosterOf(replay), [replay]);
-  const [showLineup, setShowLineup] = useState(!isMobile);
+  const [showLineup, setShowLineup] = useState(false);
   //  ── Milestone H：重播固定使用 runtime-v2 ────────────────────────────────
   //   舊碼跟著 `loadMapPresentation()`（預設 legacy），但正式 GameView 自 H.1 起
   //   固定 runtime-v2 ⇒ 同一場比賽的「現場」與「重播」是兩套不同外觀的戰場
@@ -240,20 +243,21 @@ export default function MobaReplayScreen({ replay, onClose }) {
   }
 
   const seek = (nt) => {
-    const v = Math.min(duration, Math.max(0, nt));
+    const v = Math.min(duration, Math.max(startTime, nt));
     tRef.current = v; source?.seek(v); setT(v);
   };
-  const prevEvent = () => { const e = [...events].reverse().find((x) => x.t < t - 0.25); seek(e ? e.t : 0); };
+  const prevEvent = () => { const e = [...events].reverse().find((x) => x.t < t - 0.25); seek(e ? e.t : startTime); };
   const nextEvent = () => { const e = events.find((x) => x.t > t + 0.25); seek(e ? e.t : duration); };
 
   return createPortal(
-    <div style={wrap} role="dialog" aria-label="比賽重播" aria-modal="true">
+    <div className="battle-replay" style={{...wrap, ...observerTokens}} role="dialog" aria-label="比賽重播" aria-modal="true">
       <div style={{ width: "100%", display: "flex", justifyContent: "flex-end", flexShrink: 0 }}>
         <button onClick={onClose} style={btn(false)}>關閉重播</button>
       </div>
       {/* 標頭：比分 / 經濟 / 勝率 */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", justifyContent: "center", flexShrink: 0 }}>
         <span style={{ fontSize: 10, letterSpacing: "0.2em", color: GC.gray, fontWeight: 900 }}>REPLAY</span>
+        {startTime > FRAME_INTERVAL_S && <span style={{ fontSize: 10, color: GC.gold }}>錄影自 {fmtT(startTime)} 開始，前段未保存</span>}
         <span style={{ fontFamily: MONO, fontWeight: 900, fontSize: 17 }}>
           <span style={{ color: SIDE_C.blue }}>{sA[0]}</span>
           <span style={{ color: GC.gray }}> : </span>
@@ -293,6 +297,7 @@ export default function MobaReplayScreen({ replay, onClose }) {
                 ? <MobaRuntimeView3D quality={qualityId} source={source} roster={replayRoster} compactLabels={isMobile} />
                 : <MobaView3D battleFollow autoRotate={false} quality={quality} source={source} roster={replayRoster} />}
             </div>
+            <ObserverPanel snapshot={source?.getState().prev} roster={replayRoster ?? {}} replay />
             {/* 輔助 inset 小地圖（桌機才放；手機空間留給戰場，避免遮擋） */}
             {!isMobile && (
               <div style={{ position: "absolute", right: 8, bottom: 8, width: 132, height: 132, borderRadius: 10, border: "1px solid rgba(255,255,255,0.2)", overflow: "hidden", pointerEvents: "none", zIndex: 9 }}>
@@ -316,7 +321,7 @@ export default function MobaReplayScreen({ replay, onClose }) {
       <div style={{ minHeight: 34, width: "100%", maxWidth: 560, display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
         {recentEvents.map((e, i) => (
           <div key={`${e.t}-${i}`} style={{ fontSize: 9.5, color: i === recentEvents.length - 1 ? "#e5e7eb" : GC.gray, fontFamily: MONO, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            <span style={{ color: GC.gold }}>[{fmtT(e.t)}]</span> <span style={{ color: SIDE_C[e.side] ?? GC.gray }}>{e.text}</span>
+            <span style={{ color: GC.gold }}>[{fmtT(e.t)}]</span> <span data-testid="replay-event-text" style={{ color: SIDE_C[e.side] ?? GC.gray }}>{replayEventText(e, replay)}</span>
           </div>
         ))}
         {/* Milestone E：本場播報（已保存於 replay.comms，重播不重新生成對話） */}
@@ -324,8 +329,8 @@ export default function MobaReplayScreen({ replay, onClose }) {
           <div key={c.id ?? `c-${c.t}-${i}`} data-testid="replay-comms"
             style={{ fontSize: 9.5, color: "rgba(255,255,255,0.72)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             <span style={{ color: GC.gray, fontFamily: MONO }}>[{fmtT(c.t)}]</span>{" "}
-            <span style={{ color: SIDE_C[c.side] ?? GC.gray, fontWeight: 800 }}>{c.speaker ?? c.speakerId}</span>
-            <span style={{ color: GC.gray }}>：</span>{c.text}
+            <span style={{ color: SIDE_C[c.side] ?? GC.gray, fontWeight: 800 }}>{replayDisplayText(c.speaker ?? replayPlayerName(c.speakerId, replay.playersMeta), replay)}</span>
+            <span style={{ color: GC.gray }}>：</span>{replayDisplayText(c.text, replay)}
           </div>
         ))}
       </div>
@@ -333,7 +338,7 @@ export default function MobaReplayScreen({ replay, onClose }) {
       {/* Timeline */}
       <div style={{ width: "100%", maxWidth: 560, display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
         <span style={{ fontFamily: MONO, fontSize: 11, color: "#e5e7eb", flexShrink: 0 }}>{fmtT(t)}</span>
-        <input type="range" min={0} max={duration} step={0.5} value={t}
+        <input aria-label="重播時間軸" type="range" min={startTime} max={duration} step={0.5} value={t}
           onChange={(e) => seek(Number(e.target.value))}
           style={{ flex: 1, minWidth: 0, accentColor: "#3b82f6" }} />
         <span style={{ fontFamily: MONO, fontSize: 11, color: GC.gray, flexShrink: 0 }}>{fmtT(duration)}</span>
@@ -343,7 +348,7 @@ export default function MobaReplayScreen({ replay, onClose }) {
       <div style={{ display: "flex", flexWrap: "wrap", gap: 7, justifyContent: "center", alignItems: "center", flexShrink: 0 }}>
         <button onClick={prevEvent} style={btn(false)} title="上一個事件">⏮ 事件</button>
         <button onClick={() => seek(t - 10)} style={btn(false)}>−10s</button>
-        <button onClick={() => { if (!playing && tRef.current >= duration) seek(0); setPlaying((p) => !p); }} style={btn(true)}>{playing ? "⏸ 暫停" : "▶ 播放"}</button>
+        <button onClick={() => { if (!playing && tRef.current >= duration) seek(startTime); setPlaying((p) => !p); }} style={btn(true)}>{playing ? "⏸ 暫停" : "▶ 播放"}</button>
         <button onClick={() => seek(t + 10)} style={btn(false)}>+10s</button>
         <button onClick={nextEvent} style={btn(false)} title="下一個事件">事件 ⏭</button>
         {replayRoster && (

@@ -17,6 +17,7 @@ import * as THREE from "three";
 import { WORLD_SCALE, simToWorld } from "../map/coordinateMapping.js";
 import { LAYER_Y } from "../map/mapVisualStyle.js";
 import { countMount, countUnmount } from "./runtimeDiagnostics.js";
+import { useReducedBattleMotion } from './useReducedBattleMotion.js';
 
 /** ⚠ 地面鋪層高度在 LAYER_Y（不是 HEIGHT）；取不到就退回安全值，不讓它變成 NaN。 */
 const layer = (key, fallback) => (Number.isFinite(LAYER_Y[key]) ? LAYER_Y[key] : fallback);
@@ -62,6 +63,7 @@ const RING_Y = Object.freeze({
  * @param towerAnchors Map(id → {x,y} 呈現座標)；來自 mapTerrainShapes 的 T.towers
  */
 export default function MobaRuntimeStructures({ structures = [], objectives = [], towerAnchors, frameRef = null }) {
+  const reducedMotion = useReducedBattleMotion();
   const nodes = useRef(new Map());
   //  H.2-flicker：掛載計數。閃爍的其中一個可能根因是「元件在對戰途中被反覆卸載重掛」
   //  （每次重掛都會有幾幀沒有東西可畫）。這裡如實記錄，讓 verifier 用數字判斷，
@@ -153,11 +155,13 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
         const damage = (s.damageDelta ?? 0) > 0 ? Math.max(0, 1 - (s.damageProgress ?? 0)) : 0;
         n.crown.position.x = Math.sin(t * 55 + n.phase) * damage * 0.32 * S;
         n.crown.position.z = Math.cos(t * 49 + n.phase) * damage * 0.22 * S;
-        n.crown.position.y = n.baseY + Math.sin(t * 1.4 + n.phase) * 0.25 * S;
-        n.crown.rotation.y = t * 0.5 + n.phase;
+        const shot = live?.effects?.find(fx => fx.sourceId === s.id && fx.style === 'tower' && fx.phase === 'cast');
+        const charge = shot ? Math.sin(Math.PI * (shot.phaseProgress ?? 0)) : 0;
+        n.crown.position.y = n.baseY + (reducedMotion ? 0 : charge * .35 * S);
+        n.crown.rotation.y = reducedMotion ? n.phase : (live?.ts ?? 0) * .3 + n.phase;
         //  血量低 ⇒ 冠變暗（不換材質，只調 emissiveIntensity 的共用值不行 ⇒ 用 scale 表達）
         const k = 0.55 + 0.45 * (s.displayHpRatio ?? s.hpRatio);
-        n.crown.scale.setScalar(k);
+        n.crown.scale.setScalar(k * (1 + (reducedMotion ? 0 : charge * .16)));
       }
       if (n.wasAlive === undefined) n.wasAlive = s.alive;
       if (n.wasAlive && !s.alive) n.destroyAt = t;

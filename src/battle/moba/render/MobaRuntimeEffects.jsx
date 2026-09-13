@@ -10,6 +10,7 @@ import * as THREE from "three";
 import { WORLD_SCALE } from "../map/coordinateMapping.js";
 import { LAYER_Y } from "../map/mapVisualStyle.js";
 import { countMount, countUnmount } from "./runtimeDiagnostics.js";
+import { useReducedBattleMotion } from './useReducedBattleMotion.js';
 
 const S = WORLD_SCALE;
 const LINE_CAP = 64;
@@ -35,6 +36,7 @@ const TOWER_FX_COLOR = Object.freeze({
 });
 
 export default function MobaRuntimeEffects({ frameRef }) {
+  const reducedMotion = useReducedBattleMotion();
   const refs = useRef({});
   const geo = useMemo(() => ({
     line: new THREE.CylinderGeometry(1, 1, 1, 8, 1, true),
@@ -169,11 +171,13 @@ export default function MobaRuntimeEffects({ frameRef }) {
     };
     const slashMesh = refs.current.slash;
     const lockMesh = refs.current.lock;
+    const towerLocks = { blue: refs.current.towerLockBlue, red: refs.current.towerLockRed };
     if (!lineMesh || !ringMesh || !orbMesh || !projectileMesh || !coreMesh
       || !towerBlueMesh || !towerRedMesh || Object.values(classMeshes).some((mesh) => !mesh)
-      || !slashMesh || !lockMesh) return;
+      || !slashMesh || !lockMesh || !towerLocks.blue || !towerLocks.red) return;
     let lines = 0, rings = 0, orbs = 0, projectiles = 0, cores = 0;
     let towerBlue = 0, towerRed = 0, slashes = 0, locks = 0;
+    const towerLockCounts = { blue: 0, red: 0 };
     const classCounts = {
       tank: 0, fighter: 0, assassin: 0, mage: 0, marksman: 0, support: 0,
     };
@@ -181,7 +185,7 @@ export default function MobaRuntimeEffects({ frameRef }) {
       matrix, pos, scale, quat, dir, up, flat, lockQuat, slashQuat, euler,
       color, coreColor, white,
     } = q;
-    const elapsed = clock.getElapsedTime();
+    const elapsed = reducedMotion ? 0 : frame.ts ?? 0;
 
     const addRing = (world, radius, tint, y = GROUND_Y + 0.15) => {
       if (rings >= BURST_CAP) return;
@@ -300,6 +304,19 @@ export default function MobaRuntimeEffects({ frameRef }) {
       lockMesh.setColorAt(locks, tint);
       locks++;
     };
+    // Fixed team materials, as for tower shells: instance tint can become too dark
+    // in the actual WebGL path. Keep the target glyph outside the hero footprint.
+    const addTowerLock = (world, team) => {
+      const count = towerLockCounts[team];
+      if (count >= LOCK_CAP) return;
+      pos.set(world.x, GROUND_Y + .2, world.z);
+      euler.set(-Math.PI / 2, 0, Math.PI / 4);
+      lockQuat.setFromEuler(euler);
+      scale.set(2.2 * S, 2.2 * S, 1);
+      matrix.compose(pos, lockQuat, scale);
+      towerLocks[team].setMatrixAt(count, matrix);
+      towerLockCounts[team]++;
+    };
     const addLine = (a, b, width, tint, y = GROUND_Y + 1.25 * S) => {
       if (lines >= LINE_CAP) return;
       const len = Math.hypot(b.x - a.x, b.z - a.z);
@@ -362,7 +379,7 @@ export default function MobaRuntimeEffects({ frameRef }) {
             GROUND_Y + 4.7 * S, 1.28);
           addOrb(origin, (0.78 + phaseProgress * 0.2) * S, color,
             GROUND_Y + 4.7 * S, 1.25);
-          addLock(impact, (0.42 + phaseProgress * 0.06) * S, color, elapsed * 2.6);
+          addTowerLock(impact, towerTeam);
         } else {
           const spread = (0.72 + phaseProgress * (isSkill ? 0.88 : 0.46)) * S * visualWidth;
           addRing(origin, spread, color);
@@ -424,6 +441,8 @@ export default function MobaRuntimeEffects({ frameRef }) {
           z: az + (bz - az) * phaseProgress,
         };
         if (isTower) {
+          // Keep a stable aim marker while the recorded shot travels; no full-range danger disc.
+          addTowerLock(impact, towerTeam);
           // MOBA 塔彈：從高塔冠飛向目標，保留明確飛行時間；不畫全長光束或震波。
           const projectileY = GROUND_Y + (1.35 + (1 - phaseProgress) * 3.2
             + Math.sin(Math.PI * phaseProgress) * 0.75) * S;
@@ -619,6 +638,8 @@ export default function MobaRuntimeEffects({ frameRef }) {
     for (const cls of Object.keys(classMeshes)) update(classMeshes[cls], classCounts[cls]);
     update(slashMesh, slashes);
     update(lockMesh, locks);
+    update(towerLocks.blue, towerLockCounts.blue);
+    update(towerLocks.red, towerLockCounts.red);
   });
 
   const pool = (key, geometry, material, cap, order) => (
@@ -643,6 +664,8 @@ export default function MobaRuntimeEffects({ frameRef }) {
       {pool("classSupport", geo.projectile, mats.classSupport, CLASS_PROJECTILE_CAP, 63)}
       {pool("slash", geo.slash, mats.slash, SLASH_CAP, 53)}
       {pool("lock", geo.lock, mats.lock, LOCK_CAP, 51)}
+      {pool("towerLockBlue", geo.lock, mats.towerBlue, LOCK_CAP, 52)}
+      {pool("towerLockRed", geo.lock, mats.towerRed, LOCK_CAP, 52)}
     </group>
   );
 }

@@ -19,7 +19,7 @@ const KEY = "esmo.hud.mode.v1";
 
 /** 記分板實際高度。compact 讓出更多戰場；expanded 沿用原本的完整版型。 */
 export const HUD_HEIGHT = Object.freeze({
-  compact: Object.freeze({ desktop: 56, mobile: 48 }),
+  compact: Object.freeze({ desktop: 72, mobile: 64 }),
   expanded: Object.freeze({ desktop: 126, mobile: 118 }),
 });
 export const hudHeight = (mode, mobile) =>
