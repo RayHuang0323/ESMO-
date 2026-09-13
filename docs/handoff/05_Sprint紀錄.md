@@ -20731,8 +20731,8 @@ Owner 要求 audit `ef706f1` 新增的 `__ESMO_CS_SIM_CACHE__` 是否值得留�
 - **事實**：一般 `npm run build` 的 bundle 原本含 `__ESMO_CS_SIM_CACHE__` 與 `sim:cache-*` 字串（會跟著部署上線）。
   產品程式**沒有任何讀取者**——只有 verifier 讀（`browser_check_cs_mobile_stability` 讀全域、
   `check_cs_sim_cache_lifecycle` 讀 `readCsSimCacheStatus`）⇒ 純測試用途。
-- **修法**：`csSimCacheEvent` 只在 `import.meta.env.DEV` 或 `VITE_ESMO_TEST_HOOKS=1` 的 build 生效；
-  GitHub Actions 正式部署不設這個變數 ⇒ 正式 bundle 為 no-op、不建立全域、不多記事件。快取本身的行為不變。
+- **修法**：`csSimCacheEvent` 只在 `import.meta.env.DEV` 或 `MODE === "testhooks"`（`npm run build -- --mode testhooks`）的 build 生效；
+  正式部署的 MODE 一定是 production ⇒ 條件在 build 時被代換成常數 false，整段移除、不建立全域、不多記事件。快取本身的行為不變。
   寫法沿用同檔 `__ESMO_FPS_AUDIO_API__` 的 DEV gate（`import.meta.env?.DEV`，打包後整段被移除）。
 - `browser_check_cs_mobile_stability` 改成需要 test build（`npm run build -- --mode testhooks`），
   一般 build 下會在 precondition 明確說明並停下，不會假綠。
