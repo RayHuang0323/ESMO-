@@ -2,7 +2,9 @@
 // ============================================================================
 //  CS Mobile Stability Pass：手機 390px／類 Android 環境下的 Loading v2 快取與 runtime 穩定度
 //
-//  執行（打包後 bundle；先 `npm run build`，再用 vite preview 起站）：
+//  執行（打包後 bundle 的 **test build**：`npm run build -- --mode testhooks`，再用 vite preview 起站）：
+//  ⚠ 快取狀態全域 `__ESMO_CS_SIM_CACHE__` 只在 DEV 或 test build 存在；一般 `npm run build`
+//    （也就是 GitHub Actions 正式部署）沒有它，這支會在 precondition 直接說明並停下。
 //    node tools/browser/run-gate.mjs tools/browser_check_cs_mobile_stability.mjs --timeout 2700000 -- \
 //      --external-url http://localhost:<port>/ESMO-/ --save-in <乾淨存檔.json> [--label full] [--shots <dir>]
 //      [--throttle]   CPU 4× 降速＋4G 網路（估低階手機；只跑首次進場＋一次返回）
@@ -228,6 +230,9 @@ const result = await runGate({
     await sleep(2500);
     const battle1 = record("battle-first", J(await chrome.evaluate(snap())), await pressureAndGc(), { loadMs: firstLoadMs });
     ck("首次：10 名 rigged 就位、WebGL context 1、沒有 context lost", ready1 && battle1.rigged === 10 && battle1.glAlive === 1 && battle1.lostAttached === 0, `rigged ${battle1.rigged}｜alive ${battle1.glAlive}｜lost ${battle1.lostAttached}`);
+    ck("precondition：這是 test build（有快取狀態診斷）", battle1.cache != null,
+      battle1.cache ? "ok" : "沒有 window.__ESMO_CS_SIM_CACHE__ ⇒ 請用 npm run build -- --mode testhooks");
+    if (!battle1.cache) { writeFileSync(new URL(`${LABEL}.json`, OUT), JSON.stringify(report, null, 2)); return; }
     ck("首次：快取保存一份", battle1.cache?.held === true && battle1.cache?.stores === 1, JSON.stringify(battle1.cache));
     await shot("01-battle-first");
     const firstSession = J(await chrome.evaluate(identity()));

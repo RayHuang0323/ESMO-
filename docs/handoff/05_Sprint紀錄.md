@@ -20723,3 +20723,29 @@ Owner Review GO 後，只做安全整合、push、deploy、正式站驗證；**�
   `Memory.simulatePressureNotification` 只是觸發瀏覽器的回收路徑，不等於系統真的缺記憶體。
 - CPU 4× 降速是粗略估計，不代表特定機型。
 - 「比賽中途直接開新場」在 UI 上走不到（CS 沒有放棄鈕），替換路徑只在 Node 驗。
+
+## 2026-09-13 CS Mobile Stability Owner Review：快取診斷 hook 改成 DEV／test-only
+
+Owner 要求 audit `ef706f1` 新增的 `__ESMO_CS_SIM_CACHE__` 是否值得留在正式版。
+
+- **事實**：一般 `npm run build` 的 bundle 原本含 `__ESMO_CS_SIM_CACHE__` 與 `sim:cache-*` 字串（會跟著部署上線）。
+  產品程式**沒有任何讀取者**——只有 verifier 讀（`browser_check_cs_mobile_stability` 讀全域、
+  `check_cs_sim_cache_lifecycle` 讀 `readCsSimCacheStatus`）⇒ 純測試用途。
+- **修法**：`csSimCacheEvent` 只在 `import.meta.env.DEV` 或 `VITE_ESMO_TEST_HOOKS=1` 的 build 生效；
+  GitHub Actions 正式部署不設這個變數 ⇒ 正式 bundle 為 no-op、不建立全域、不多記事件。快取本身的行為不變。
+  寫法沿用同檔 `__ESMO_FPS_AUDIO_API__` 的 DEV gate（`import.meta.env?.DEV`，打包後整段被移除）。
+- `browser_check_cs_mobile_stability` 改成需要 test build（`npm run build -- --mode testhooks`），
+  一般 build 下會在 precondition 明確說明並停下，不會假綠。
+
+**驗證**：
+- 第一版用自訂 `VITE_ESMO_TEST_HOOKS` 當開關：一般 build 的 bundle **仍含**全域名稱 1 次（自訂 `VITE_*` 沒設定時
+  不會在 build 時代換成常數，整段無法被移除）⇒ 改用 vite 內建的 `MODE`。
+- 一般 `npm run build`（= 正式部署）：bundle `index-DXm5wkfL.js` 中 `__ESMO_CS_SIM_CACHE__` **0**、`sim:cache-` **0**；
+  Loading v2 的 `sim:reuse` 計時標記仍在。
+- test build（`npm run build -- --mode testhooks`）：全域 1 次；`browser_check_cs_mobile_stability` **37/37**
+  （首次 17.4s；返回 1.46／1.44／1.38／1.37／1.39s；離場 heap 62→63MB 不累積；結果後 37MB；新場 59MB；
+  context lost 0；console 0）。
+- `check_cs_sim_cache_lifecycle` 10/10（DEV SSR）、`check_cs_match_completion` 36/36、build ✓；
+  最後還原的一般 build dist 全域 0 次。
+
+**Android 真機結果**：Owner Review 訊息中未附上實測數字，最終判定待補（不以桌機模擬代替真機結論）。

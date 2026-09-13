@@ -58,11 +58,19 @@ export function csLoadSpan(name) {
 //  這裡只記「現在有沒有持有、持有哪一場、各事件發生幾次」，讓 verifier 驗
 //  「離場保留 → 返回沿用 → 比賽完成釋放 → 換新場不殘留」。
 //  ⚠ 不存 sim、key 或任何物件參照。
+//  ⚠ Owner Review：這是**測試用途**（只有 verifier 讀），只在 DEV 或 test build
+//    （`npm run build -- --mode testhooks`）生效。正式部署的 MODE 一定是 production ⇒
+//    打包時條件被代換成常數 false，整段在正式 bundle 裡被移除：不建立全域、不多記 cache 事件；
+//    快取本身的行為不受影響。
+//  ⚠ 只能用 vite 內建、build 時必定代換的 DEV／MODE。自訂的 VITE_* 沒設時不會被代換成常數，
+//    整段會留在正式 bundle 裡（實測：用 VITE_ESMO_TEST_HOOKS 寫，一般 build 仍含全域名稱）。
+const SIM_CACHE_HOOK = import.meta.env?.DEV || import.meta.env?.MODE === "testhooks";
 const SIM_CACHE_KEY = "__ESMO_CS_SIM_CACHE__";
 const simCache = { held: false, mapKey: null, seed: null, frames: 0, stores: 0, reuses: 0, releasedOnComplete: 0, replaced: 0, lastEvent: null };
 
-/** event：store／reuse／release-complete／replace。 */
+/** event：store／reuse／release-complete／replace。正式 build 為 no-op。 */
 export function csSimCacheEvent(event, detail = {}) {
+  if (!SIM_CACHE_HOOK) return;
   if (event === "store") {
     simCache.held = true; simCache.stores += 1;
     simCache.mapKey = detail.mapKey ?? null; simCache.seed = detail.seed ?? null; simCache.frames = Number(detail.frames) || 0;
