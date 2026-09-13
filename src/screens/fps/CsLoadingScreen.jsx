@@ -17,6 +17,7 @@ import { useProfileStore } from "../../platform/profileStore.js";
 import { FPS_WEIGHTS, statZh } from "../../data/playerModel.js";
 import { fpsRolePresentation } from "../../battle/fps/fpsRoster.js";
 import PlayerFace from "../../ui/PlayerFace.jsx";
+import { csLoadMark } from "../../battle/fps/csLoadTiming.js";
 import { GC, FONT, MONO } from "../../ui/theme.js";
 
 const ACC = "#fb923c";
@@ -43,6 +44,7 @@ export default function CsLoadingScreen({ config, onDone }) {
 
   useEffect(() => {
     const t0 = Date.now();
+    csLoadMark("ui:cs-loading-mount");
     let completed = false;
     let finishTimer = null;
     const iv = setInterval(() => {
@@ -51,7 +53,7 @@ export default function CsLoadingScreen({ config, onDone }) {
       if (p >= 100 && !completed) {
         completed = true;
         clearInterval(iv);
-        finishTimer = setTimeout(() => onDoneRef.current?.(), 250);
+        finishTimer = setTimeout(() => { csLoadMark("ui:cs-loading-done"); onDoneRef.current?.(); }, 250);
       }
     }, 60);
     return () => {

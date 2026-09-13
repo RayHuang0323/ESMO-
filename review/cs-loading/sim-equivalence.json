@@ -1,0 +1,110 @@
+{
+  "ref": "origin/main",
+  "baselineCommit": "107bf94",
+  "seeds": [
+    11521
+  ],
+  "matches": 7,
+  "baselineMsTotal": 731336,
+  "currentMsTotal": 93192,
+  "rows": [
+    {
+      "cell": "mirage/t_apalace/c_std",
+      "seed": 11521,
+      "rounds": 22,
+      "frames": 1444,
+      "score": "13:9",
+      "baselineMs": 19375,
+      "currentMs": 3595,
+      "speedup": 5.39,
+      "simSha": "2d357b651f29842b2629c215f6499fcce7e1a6e630b2b85bacbfa178520cced2",
+      "baselineSimSha": "2d357b651f29842b2629c215f6499fcce7e1a6e630b2b85bacbfa178520cced2",
+      "resultId": "cs_58f9fe4e",
+      "identical": true
+    },
+    {
+      "cell": "mirage/t_bapps/c_window",
+      "seed": 11521,
+      "rounds": 24,
+      "frames": 3643,
+      "score": "11:13",
+      "baselineMs": 38766,
+      "currentMs": 7624,
+      "speedup": 5.08,
+      "simSha": "35f2edde022f288b8f11877fbea74b41ba6539d7e97826a7e5b491a3ca7d5c23",
+      "baselineSimSha": "35f2edde022f288b8f11877fbea74b41ba6539d7e97826a7e5b491a3ca7d5c23",
+      "resultId": "cs_fd6d430d",
+      "identical": true
+    },
+    {
+      "cell": "mirage/t_midsplit/c_bstack",
+      "seed": 11521,
+      "rounds": 28,
+      "frames": 2902,
+      "score": "12:16",
+      "baselineMs": 49038,
+      "currentMs": 8548,
+      "speedup": 5.74,
+      "simSha": "5b8572d44c8d904b794d100a8373f6eb59a87278c4ae60294d6febcf71d70e42",
+      "baselineSimSha": "5b8572d44c8d904b794d100a8373f6eb59a87278c4ae60294d6febcf71d70e42",
+      "resultId": "cs_167c9f58",
+      "identical": true
+    },
+    {
+      "cell": "inferno/t_banana/c_std",
+      "seed": 11521,
+      "rounds": 15,
+      "frames": 3043,
+      "score": "2:13",
+      "baselineMs": 303070,
+      "currentMs": 33418,
+      "speedup": 9.07,
+      "simSha": "1c9818b963cf0326bbf63b9b8f214117a9455c0942e5a3e31202f4c8fc200d5e",
+      "baselineSimSha": "1c9818b963cf0326bbf63b9b8f214117a9455c0942e5a3e31202f4c8fc200d5e",
+      "resultId": "cs_a641416d",
+      "identical": true
+    },
+    {
+      "cell": "inferno/t_aexec/c_astack",
+      "seed": 11521,
+      "rounds": 18,
+      "frames": 2349,
+      "score": "5:13",
+      "baselineMs": 101728,
+      "currentMs": 11731,
+      "speedup": 8.67,
+      "simSha": "966f8ad4c572c53f8b9d391a9e6786a3f967ed3965f3830c2522f5c763510659",
+      "baselineSimSha": "966f8ad4c572c53f8b9d391a9e6786a3f967ed3965f3830c2522f5c763510659",
+      "resultId": "cs_46972d8d",
+      "identical": true
+    },
+    {
+      "cell": "inferno/t_midctrl/c_btop",
+      "seed": 11521,
+      "rounds": 15,
+      "frames": 2828,
+      "score": "13:2",
+      "baselineMs": 128026,
+      "currentMs": 15002,
+      "speedup": 8.53,
+      "simSha": "02c0da635a90218839b3158562c7e613a5715dc801d379e6f48abf3e201da4d7",
+      "baselineSimSha": "02c0da635a90218839b3158562c7e613a5715dc801d379e6f48abf3e201da4d7",
+      "resultId": "cs_a5d96920",
+      "identical": true
+    },
+    {
+      "cell": "dust2/t_bsplit/c_astack",
+      "seed": 11521,
+      "rounds": 23,
+      "frames": 2202,
+      "score": "10:13",
+      "baselineMs": 91333,
+      "currentMs": 13274,
+      "speedup": 6.88,
+      "simSha": "8cc3c64bf5c29c233e4008a94c452a2b99f734b218499ecb0fcee22aa23f4d1b",
+      "baselineSimSha": "8cc3c64bf5c29c233e4008a94c452a2b99f734b218499ecb0fcee22aa23f4d1b",
+      "resultId": "cs_79548319",
+      "identical": true
+    }
+  ]
+}

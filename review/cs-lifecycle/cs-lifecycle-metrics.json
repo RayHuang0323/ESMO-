@@ -2,14 +2,16 @@
   {
     "cycle": 0,
     "phase": "baseline",
-    "heapMB": 83,
+    "heapMB": 85,
     "canvas": 0,
     "rafLive": 1,
-    "listenerTotal": 3,
+    "listenerTotal": 5,
     "listeners": {
       "document:selectionchange": 1,
       "window:resize": 1,
-      "window:orientationchange": 1
+      "window:orientationchange": 1,
+      "window:visibilitychange": 1,
+      "window:pagehide": 1
     },
     "intervals": 1,
     "glAcquired": 0,
@@ -25,13 +27,15 @@
   {
     "cycle": 1,
     "phase": "in-battle",
-    "loadMs": 107024,
-    "heapMB": 208,
+    "loadMs": 34212,
+    "heapMB": 196,
     "canvas": 1,
     "rafLive": 1,
-    "listenerTotal": 3,
+    "listenerTotal": 5,
     "listeners": {
       "document:selectionchange": 1,
+      "window:visibilitychange": 1,
+      "window:pagehide": 1,
       "window:mousemove": 1,
       "window:mouseup": 1
     },
@@ -42,7 +46,7 @@
     "geometries": 1271,
     "textures": 55,
     "programs": 19,
-    "drawCalls": 1322,
+    "drawCalls": 1323,
     "sceneChildren": 11,
     "lastTeardown": null,
     "match": {
@@ -64,14 +68,16 @@
   {
     "cycle": 1,
     "phase": "after-leave",
-    "heapMB": 182,
+    "heapMB": 183,
     "canvas": 0,
     "rafLive": 1,
-    "listenerTotal": 3,
+    "listenerTotal": 5,
     "listeners": {
       "document:selectionchange": 1,
       "window:resize": 1,
-      "window:orientationchange": 1
+      "window:orientationchange": 1,
+      "window:visibilitychange": 1,
+      "window:pagehide": 1
     },
     "intervals": 1,
     "glAcquired": 1,
@@ -87,19 +93,21 @@
       "textures": 41,
       "programs": 19,
       "sceneChildren": 0,
-      "at": 1788985690676
+      "at": 1789308009375
     }
   },
   {
     "cycle": 2,
     "phase": "in-battle",
-    "loadMs": 86550,
-    "heapMB": 311,
+    "loadMs": 1325,
+    "heapMB": 296,
     "canvas": 1,
     "rafLive": 2,
-    "listenerTotal": 3,
+    "listenerTotal": 5,
     "listeners": {
       "document:selectionchange": 1,
+      "window:visibilitychange": 1,
+      "window:pagehide": 1,
       "window:mousemove": 1,
       "window:mouseup": 1
     },
@@ -110,14 +118,14 @@
     "geometries": 1137,
     "textures": 53,
     "programs": 18,
-    "drawCalls": 1326,
+    "drawCalls": 1332,
     "sceneChildren": 11,
     "lastTeardown": {
       "geometries": 481,
       "textures": 41,
       "programs": 19,
       "sceneChildren": 0,
-      "at": 1788985690676
+      "at": 1789308009375
     },
     "match": {
       "hasView": true,
@@ -138,14 +146,16 @@
   {
     "cycle": 2,
     "phase": "after-leave",
-    "heapMB": 313,
+    "heapMB": 282,
     "canvas": 0,
     "rafLive": 1,
-    "listenerTotal": 3,
+    "listenerTotal": 5,
     "listeners": {
       "document:selectionchange": 1,
       "window:resize": 1,
-      "window:orientationchange": 1
+      "window:orientationchange": 1,
+      "window:visibilitychange": 1,
+      "window:pagehide": 1
     },
     "intervals": 1,
     "glAcquired": 2,
@@ -161,19 +171,21 @@
       "textures": 39,
       "programs": 18,
       "sceneChildren": 0,
-      "at": 1788985784246
+      "at": 1789308017295
     }
   },
   {
     "cycle": 3,
     "phase": "in-battle",
-    "loadMs": 86743,
-    "heapMB": 461,
+    "loadMs": 1330,
+    "heapMB": 239,
     "canvas": 1,
     "rafLive": 2,
-    "listenerTotal": 3,
+    "listenerTotal": 5,
     "listeners": {
       "document:selectionchange": 1,
+      "window:visibilitychange": 1,
+      "window:pagehide": 1,
       "window:mousemove": 1,
       "window:mouseup": 1
     },
@@ -184,14 +196,14 @@
     "geometries": 1137,
     "textures": 53,
     "programs": 18,
-    "drawCalls": 1324,
+    "drawCalls": 1328,
     "sceneChildren": 11,
     "lastTeardown": {
       "geometries": 347,
       "textures": 39,
       "programs": 18,
       "sceneChildren": 0,
-      "at": 1788985784246
+      "at": 1789308017295
     },
     "match": {
       "hasView": true,
@@ -212,14 +224,16 @@
   {
     "cycle": 3,
     "phase": "after-leave",
-    "heapMB": 121,
+    "heapMB": 216,
     "canvas": 0,
     "rafLive": 1,
-    "listenerTotal": 3,
+    "listenerTotal": 5,
     "listeners": {
       "document:selectionchange": 1,
       "window:resize": 1,
-      "window:orientationchange": 1
+      "window:orientationchange": 1,
+      "window:visibilitychange": 1,
+      "window:pagehide": 1
     },
     "intervals": 1,
     "glAcquired": 3,
@@ -235,7 +249,7 @@
       "textures": 39,
       "programs": 18,
       "sceneChildren": 0,
-      "at": 1788985878162
+      "at": 1789308025694
     }
   }
 ]

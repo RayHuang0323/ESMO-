@@ -4,19 +4,38 @@ import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
 import { FPS_CHARACTER_ASSET_MANIFEST } from "./fpsCharacterAssets.js";
 import { deriveFpsAnimationState, FPS_PRESENTATION_STATES } from "./fpsAnimationState.js";
 import { C2C_HERO_ART_MANIFEST, createC2cHeroPresentation, isC2cHeroRequested } from "./fpsC2cHero.js";
+import { csLoadSpan, csLoadTime } from "../csLoadTiming.js";
 
 let assetPromise = null;
 
-function loadGltf(loader, url) {
-  return new Promise((resolve, reject) => loader.load(url, resolve, undefined, reject));
+//  量測用：把一個 GLB 拆成「下載」與「parse（含內嵌貼圖解碼）」兩段。
+//  下載結束點 = FileLoader 回報 loaded >= total 的那一次 progress。
+function loadGltf(loader, url, label) {
+  let endDownload = csLoadSpan(`rig:download:${label}`);
+  let endParse = null;
+  let bytes = 0;
+  const downloaded = () => {
+    if (!endDownload) return;
+    endDownload({ bytes });
+    endDownload = null;
+    endParse = csLoadSpan(`rig:parse:${label}`);
+  };
+  return new Promise((resolve, reject) => loader.load(url, (gltf) => {
+    downloaded();
+    endParse?.({ bytes });
+    resolve(gltf);
+  }, (event) => {
+    bytes = Number(event?.loaded) || bytes;
+    if (event?.total > 0 && event.loaded >= event.total) downloaded();
+  }, reject));
 }
 
 export function loadFpsCharacterAssets() {
   if (!assetPromise) {
     const loader = new GLTFLoader();
     assetPromise = Promise.all([
-      loadGltf(loader, FPS_CHARACTER_ASSET_MANIFEST.character),
-      loadGltf(loader, FPS_CHARACTER_ASSET_MANIFEST.animationLibrary),
+      loadGltf(loader, FPS_CHARACTER_ASSET_MANIFEST.character, "character"),
+      loadGltf(loader, FPS_CHARACTER_ASSET_MANIFEST.animationLibrary, "animation-library"),
     ]).then(([character, animationLibrary]) => ({ character, animationLibrary }));
   }
   return assetPromise;
@@ -397,7 +416,8 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true } = 
 
   loadFpsCharacterAssets().then(({ character, animationLibrary }) => {
     if (controller.disposed) return;
-    const model = prepareCharacterRoot(character.scene);
+    const endPlayerInit = csLoadSpan("rig:player-init");
+    const model = csLoadTime("rig:player-prepare-root", () => prepareCharacterRoot(character.scene));
     controller.baseBounds = measurePresentationBounds(model);
     setTeamAccent(model, player?.side);
     if (isC2cHeroRequested(player)) {
@@ -405,7 +425,7 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true } = 
       controller.c2cHero = Boolean(controller.c2c);
       controller.artMode = controller.c2cHero ? C2C_HERO_ART_MANIFEST.id : "c2a-base";
     }
-    const clips = clipMap(animationLibrary);
+    const clips = csLoadTime("rig:player-clip-map", () => clipMap(animationLibrary));
     const mixer = new THREE.AnimationMixer(model);
     const actions = new Map();
     clips.forEach((clip, name) => actions.set(name, mixer.clipAction(clip)));
@@ -429,6 +449,7 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true } = 
     controller.model.updateWorldMatrix(true, true);
     controller.c2c?.syncAnchors?.();
     controller.currentBounds = measurePresentationBounds(riggedRoot);
+    endPlayerInit({ clips: clips.size });
     publishDiagnostic(controller);
   }).catch((error) => {
     if (controller.disposed) return;

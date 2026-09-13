@@ -1,0 +1,325 @@
+{
+  "label": "before-dev-heap",
+  "mode": "vite-dev",
+  "headed": false,
+  "cycles": 3,
+  "profile": false,
+  "url": "(vite dev)",
+  "at": "2026-09-13T14:16:58.190Z",
+  "baselineHeapGcMB": 72,
+  "results": [
+    {
+      "cycle": 1,
+      "ui": {
+        "clickCs": 1,
+        "prepVisible": 80,
+        "enqueue": 93,
+        "confirmVisible": 7229,
+        "mapSelectVisible": 15212,
+        "tacticVisible": 16527,
+        "tacticConfirm": 16933
+      },
+      "kind": "first",
+      "endToEndMs": 103106,
+      "loadMs": 86168,
+      "firstFrameMs": 85391,
+      "critical": {
+        "ui-transition": 16938,
+        "fixed-loading-timer": 2902,
+        "react-mount": 8,
+        "simulate-match": 80686,
+        "scene-construction": 145,
+        "first-frame-render": 1649,
+        "wait-rig-assets": 777
+      },
+      "phases": {
+        "asset-download:glb": {
+          "wallMs": 1787,
+          "files": [
+            {
+              "name": "c2a/esmo-fps-character.glb",
+              "ms": 1787,
+              "transfer": 6465508,
+              "body": 6465208
+            },
+            {
+              "name": "c2a/esmo-fps-animation-library.glb",
+              "ms": 1733,
+              "transfer": 2715056,
+              "body": 2714756
+            }
+          ]
+        },
+        "asset-download:audio": {
+          "wallMs": 1362,
+          "sumMs": 16232,
+          "files": 13,
+          "bytes": 34246342,
+          "cachedFiles": 0
+        },
+        "gltf:character": {
+          "downloadMs": 1789,
+          "parseMs": 450
+        },
+        "gltf:animation-library": {
+          "downloadMs": 1734,
+          "parseMs": 157,
+          "clipMapSumMs": 52,
+          "clipMapCalls": 10
+        },
+        "texture-decode": {
+          "imageBitmapSumMs": 780,
+          "imageBitmaps": 7,
+          "glUploadMs": 14,
+          "glUploadCalls": 170,
+          "proceduralFloorMs": 17
+        },
+        "map-environment": {
+          "environmentMs": 14,
+          "staticWorldMs": 30
+        },
+        "player-rig-init": {
+          "scenePlayersMs": 15,
+          "rigInitSumMs": 170,
+          "rigInitCalls": 10,
+          "prepareRootSumMs": 39
+        },
+        "shader-compile": {
+          "blockingGlMs": 904,
+          "programsLinked": 19,
+          "firstRenderMs": 1011,
+          "firstRiggedRenderMs": 25
+        },
+        "audio": {
+          "fetchSumMs": 18295,
+          "decodeSumMs": 769,
+          "preloadWallMs": 1552
+        },
+        "scene-construction": {
+          "rendererInitMs": 45,
+          "fxPoolsMs": 6,
+          "mapBuildTotalMs": 82
+        },
+        "main-thread": {
+          "simulateFpsMs": 80685,
+          "simulateCalls": 1,
+          "simReuse": 0,
+          "buildMatchResultMs": 1,
+          "fixedLoadingTimerMs": 2902,
+          "longTaskTotalMs": 82899,
+          "longTasks": 7,
+          "longestTaskMs": 80705
+        }
+      },
+      "marks": {
+        "loadingMount": 16938,
+        "loadingDone": 19841,
+        "matchRender": 19842,
+        "firstFrame": 102329,
+        "riggedReady": 103106,
+        "riggedCount": 10
+      },
+      "sim": {
+        "sha": "71e32f2b82b8c42585f56ee84bedf9150d8da5471b3db4a0c93c919e819a70b5",
+        "bytes": 131814289,
+        "frames": 2477
+      },
+      "heapAfterLeaveGcMB": 96
+    },
+    {
+      "cycle": 2,
+      "ui": {
+        "clickResume": 1
+      },
+      "kind": "return",
+      "endToEndMs": 81959,
+      "loadMs": 81959,
+      "firstFrameMs": 81959,
+      "critical": {
+        "ui-transition": 5,
+        "simulate-match": 81177,
+        "scene-construction": 107,
+        "first-frame-render": 670,
+        "wait-rig-assets": 0
+      },
+      "phases": {
+        "asset-download:glb": {
+          "wallMs": 0,
+          "files": []
+        },
+        "asset-download:audio": {
+          "wallMs": 582,
+          "sumMs": 3054,
+          "files": 13,
+          "bytes": 34246342,
+          "cachedFiles": 13
+        },
+        "gltf:character": {
+          "downloadMs": 0,
+          "parseMs": 0
+        },
+        "gltf:animation-library": {
+          "downloadMs": 0,
+          "parseMs": 0,
+          "clipMapSumMs": 36,
+          "clipMapCalls": 10
+        },
+        "texture-decode": {
+          "imageBitmapSumMs": 0,
+          "imageBitmaps": 0,
+          "glUploadMs": 13,
+          "glUploadCalls": 164,
+          "proceduralFloorMs": 17
+        },
+        "map-environment": {
+          "environmentMs": 5,
+          "staticWorldMs": 15
+        },
+        "player-rig-init": {
+          "scenePlayersMs": 8,
+          "rigInitSumMs": 148,
+          "rigInitCalls": 10,
+          "prepareRootSumMs": 36
+        },
+        "shader-compile": {
+          "blockingGlMs": 165,
+          "programsLinked": 18,
+          "firstRenderMs": 294,
+          "firstRiggedRenderMs": 0
+        },
+        "audio": {
+          "fetchSumMs": 8700,
+          "decodeSumMs": 1157,
+          "preloadWallMs": 872
+        },
+        "scene-construction": {
+          "rendererInitMs": 41,
+          "fxPoolsMs": 4,
+          "mapBuildTotalMs": 49
+        },
+        "main-thread": {
+          "simulateFpsMs": 81176,
+          "simulateCalls": 1,
+          "simReuse": 0,
+          "buildMatchResultMs": 1,
+          "fixedLoadingTimerMs": null,
+          "longTaskTotalMs": 81972,
+          "longTasks": 2,
+          "longestTaskMs": 81639
+        }
+      },
+      "marks": {
+        "loadingMount": null,
+        "loadingDone": null,
+        "matchRender": 3,
+        "firstFrame": 81959,
+        "riggedReady": 81959,
+        "riggedCount": 10
+      },
+      "sim": {
+        "sha": "71e32f2b82b8c42585f56ee84bedf9150d8da5471b3db4a0c93c919e819a70b5",
+        "bytes": 131814289,
+        "frames": 2477
+      },
+      "heapAfterLeaveGcMB": 96
+    },
+    {
+      "cycle": 3,
+      "ui": {
+        "clickResume": 1
+      },
+      "kind": "return",
+      "endToEndMs": 86127,
+      "loadMs": 86127,
+      "firstFrameMs": 86127,
+      "critical": {
+        "ui-transition": 5,
+        "simulate-match": 85328,
+        "scene-construction": 130,
+        "first-frame-render": 665,
+        "wait-rig-assets": 0
+      },
+      "phases": {
+        "asset-download:glb": {
+          "wallMs": 0,
+          "files": []
+        },
+        "asset-download:audio": {
+          "wallMs": 580,
+          "sumMs": 3040,
+          "files": 13,
+          "bytes": 34246342,
+          "cachedFiles": 13
+        },
+        "gltf:character": {
+          "downloadMs": 0,
+          "parseMs": 0
+        },
+        "gltf:animation-library": {
+          "downloadMs": 0,
+          "parseMs": 0,
+          "clipMapSumMs": 37,
+          "clipMapCalls": 10
+        },
+        "texture-decode": {
+          "imageBitmapSumMs": 0,
+          "imageBitmaps": 0,
+          "glUploadMs": 13,
+          "glUploadCalls": 164,
+          "proceduralFloorMs": 35
+        },
+        "map-environment": {
+          "environmentMs": 9,
+          "staticWorldMs": 18
+        },
+        "player-rig-init": {
+          "scenePlayersMs": 9,
+          "rigInitSumMs": 150,
+          "rigInitCalls": 10,
+          "prepareRootSumMs": 37
+        },
+        "shader-compile": {
+          "blockingGlMs": 165,
+          "programsLinked": 18,
+          "firstRenderMs": 302,
+          "firstRiggedRenderMs": 0
+        },
+        "audio": {
+          "fetchSumMs": 8690,
+          "decodeSumMs": 997,
+          "preloadWallMs": 867
+        },
+        "scene-construction": {
+          "rendererInitMs": 42,
+          "fxPoolsMs": 4,
+          "mapBuildTotalMs": 75
+        },
+        "main-thread": {
+          "simulateFpsMs": 85326,
+          "simulateCalls": 1,
+          "simReuse": 0,
+          "buildMatchResultMs": 2,
+          "fixedLoadingTimerMs": null,
+          "longTaskTotalMs": 86139,
+          "longTasks": 2,
+          "longestTaskMs": 85804
+        }
+      },
+      "marks": {
+        "loadingMount": null,
+        "loadingDone": null,
+        "matchRender": 3,
+        "firstFrame": 86127,
+        "riggedReady": 86127,
+        "riggedCount": 10
+      },
+      "sim": {
+        "sha": "71e32f2b82b8c42585f56ee84bedf9150d8da5471b3db4a0c93c919e819a70b5",
+        "bytes": 131814289,
+        "frames": 2477
+      },
+      "heapAfterLeaveGcMB": 96
+    }
+  ],
+  "cpuProfile": null
+}

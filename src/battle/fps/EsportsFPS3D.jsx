@@ -15,6 +15,7 @@ import { createC3MirageEnvironment } from "./presentation/fpsMapEnvironment.js";
 import { createGunplayPresentation } from "./presentation/fpsGunplayPresentation.js";
 import { createUtilityPresentation } from "./presentation/fpsUtilityPresentation.js";
 import { createFpsMatchPresentation } from "./presentation/fpsMatchPresentation.js";
+import { csLoadMark, csLoadSpan, csLoadTime } from "./csLoadTiming.js";
 
 // EsportsFPS3D 已內聯於本檔（見下方 __FPS3D_MODULE），以符合單一檔案 artifact 限制
 /* ═══════════════════════════════════════════════════════════════
@@ -182,12 +183,12 @@ function makeAudio(){
   let preloadPromise=null;
   const preload=()=>{if(preloadPromise)return preloadPromise;
     audioDiag.preloadStarts+=1;audioDiag.preloadStartedAt=Date.now();publish();
-    const load=async({key,profile,target,utility=false})=>{try{const res=await fetch(`${audioBase}${profile.sample}`,{cache:"force-cache"});if(!res.ok)throw new Error(`HTTP ${res.status}`);const bytes=await res.arrayBuffer();const buffer=await ctx.decodeAudioData(bytes.slice(0));target.set(utility?profile.sample:key,buffer);if(utility)audioDiag.loadedPresentationProfiles=target.size;else audioDiag.loadedProfiles=target.size;publish();return true;}
+    const load=async({key,profile,target,utility=false})=>{try{const endFetch=csLoadSpan("audio:fetch");const res=await fetch(`${audioBase}${profile.sample}`,{cache:"force-cache"});if(!res.ok)throw new Error(`HTTP ${res.status}`);const bytes=await res.arrayBuffer();endFetch({sample:profile.sample,bytes:bytes.byteLength});const endDecode=csLoadSpan("audio:decode");const buffer=await ctx.decodeAudioData(bytes.slice(0));endDecode({sample:profile.sample,bytes:bytes.byteLength});target.set(utility?profile.sample:key,buffer);if(utility)audioDiag.loadedPresentationProfiles=target.size;else audioDiag.loadedProfiles=target.size;publish();return true;}
       catch(error){if(utility){presentationLoadErrors[key]=String(error?.message||error);audioDiag.presentationLoadErrors={...presentationLoadErrors};}else{loadErrors[key]=String(error?.message||error);audioDiag.loadErrors={...loadErrors};}publish();return false;}};
     const gunLoads=Object.entries(C5A1_AUDIO_PROFILES).map(([key,profile])=>load({key,profile,target:audioBuffers}));
     const utilitySamples=[...new Map(Object.entries(C5A2_UTILITY_AUDIO_PROFILES).map(([key,profile])=>[profile.sample,{key,profile}])).values()];
     const utilityLoads=utilitySamples.map(({key,profile})=>load({key,profile,target:presentationBuffers,utility:true}));
-    preloadPromise=Promise.all([...gunLoads,...utilityLoads]).then(results=>{audioDiag.preloadReadyAt=Date.now();publish();return results;});return preloadPromise;};
+    const endAudioAll=csLoadSpan("audio:preload-all");preloadPromise=Promise.all([...gunLoads,...utilityLoads]).then(results=>{endAudioAll({assets:results.length});audioDiag.preloadReadyAt=Date.now();publish();return results;});return preloadPromise;};
   function noise(dur,freq,q,gain,type,attenuation=1){voice(dur,()=>{const s=ctx.createBufferSource();s.buffer=nb;const f=ctx.createBiquadFilter();f.type=type||"lowpass";f.frequency.value=freq;f.Q.value=q||1;const g=ctx.createGain();const t=now();g.gain.setValueAtTime(gain*attenuation,t);g.gain.exponentialRampToValueAtTime(0.0008,t+dur);s.connect(f);f.connect(g);g.connect(master);s.start(t);s.stop(t+dur);});}
   function normalizeFamily(family){const key=String(family||"").toLowerCase();return C5A1_AUDIO_PROFILES[key]?key:key==="狙擊"?"sniper":key==="衝鋒"?"smg":key==="手槍"?"pistol":"rifle";}
   function recordedOneShot(key,buffer,{delay,offset,duration,pitch,attenuation,gain}){
@@ -339,8 +340,18 @@ function lineBlocked(a,b,walls){
 // inserts deterministic clearance waypoints around buildings/cars when a
 // node-to-node segment is blocked. Movement still goes through safeMove().
 function navLineBlocked(a,b,walls){
-  const steps=Math.ceil(dist(a,b)/0.7);
-  for(let i=1;i<steps;i++){const t=i/steps;const p={x:lerp(a.x,b.x,t),y:lerp(a.y,b.y,t)};for(const w of walls){if(p.x>=w.x&&p.x<=w.x+w.w&&p.y>=w.y&&p.y<=w.y+w.h)return true;}}
+  // CS Loading v2（沿用 TD-54 / 51aebee 的寫法）：謂詞不變——a→b 每 0.7 單位取樣，任一點落在任一牆內即為 true。
+  // 只把牆移到外圈，用「取樣點的實際外框」一次排除碰不到的牆，而不是每個取樣點重測所有牆。
+  // ⚠ 外框取自第 1 與第 steps-1 個取樣點（lerp 對 t 單調，端點樣本就是極值），不用 a／b 本身：
+  //   用 a／b 的話，浮點誤差可能讓極端樣本落在外框外一個 ulp，排除就不再精確。
+  // 這是 simulateFps 最熱的呼叫；CS 進場時整場比賽是在 main thread 上一次模擬完的。
+  const steps=Math.ceil(dist(a,b)/0.7);if(steps<2)return false;
+  const t1=1/steps,tn=(steps-1)/steps;
+  const x1=lerp(a.x,b.x,t1),xn=lerp(a.x,b.x,tn),y1=lerp(a.y,b.y,t1),yn=lerp(a.y,b.y,tn);
+  const minX=Math.min(x1,xn),maxX=Math.max(x1,xn),minY=Math.min(y1,yn),maxY=Math.max(y1,yn);
+  for(let k=0;k<walls.length;k++){const w=walls[k];const wx2=w.x+w.w,wy2=w.y+w.h;
+    if(w.x>maxX||wx2<minX||w.y>maxY||wy2<minY)continue;
+    for(let i=1;i<steps;i++){const t=i/steps;const px=lerp(a.x,b.x,t);if(px<w.x||px>wx2)continue;const py=lerp(a.y,b.y,t);if(py>=w.y&&py<=wy2)return true;}}
   return false;
 }
 function plannerSafePoint(point,walls,R){
@@ -407,12 +418,19 @@ function navigableSegment(start,goal,walls,R){
     const clearSegment=(a,b)=>!navLineBlocked(a,b,obstacles);
     const direct=clearSegment(plannerStart,plannerGoal);
     if(direct)return[{x:plannerStart.x,y:plannerStart.y},{x:plannerGoal.x,y:plannerGoal.y}];
+    // CS Loading v2（沿用 TD-54 / 51aebee）：同一個搜尋、同一個接受順序——第一個讓 start→a、a→b、b→goal
+    // 全部暢通的 (i,j) 仍然勝出。clearSegment 是純函式：start→a 對 j 不變，提到外層
+    // （start 走不到的角落直接跳過整個內圈）；corner→goal 每個角落最多算一次。
+    const goalClear=new Array(detourCorners.length).fill(null);
+    const cornerReachesGoal=k=>(goalClear[k]===null?(goalClear[k]=clearSegment(detourCorners[k],plannerGoal)):goalClear[k]);
     for(let i=0;i<detourCorners.length;i++){
       const a=detourCorners[i];
-      if(clearSegment(plannerStart,a)&&clearSegment(a,plannerGoal))return[{x:plannerStart.x,y:plannerStart.y},a,{x:plannerGoal.x,y:plannerGoal.y}];
+      const startReachesA=clearSegment(plannerStart,a);
+      if(startReachesA&&cornerReachesGoal(i))return[{x:plannerStart.x,y:plannerStart.y},a,{x:plannerGoal.x,y:plannerGoal.y}];
+      if(!startReachesA)continue;
       for(let j=i+1;j<detourCorners.length;j++){
         const b=detourCorners[j];
-        if(clearSegment(plannerStart,a)&&clearSegment(a,b)&&clearSegment(b,plannerGoal))return[{x:plannerStart.x,y:plannerStart.y},a,b,{x:plannerGoal.x,y:plannerGoal.y}];
+        if(clearSegment(a,b)&&cornerReachesGoal(j))return[{x:plannerStart.x,y:plannerStart.y},a,b,{x:plannerGoal.x,y:plannerGoal.y}];
       }
     }
     const gridRoute=gridNavigableSegment(plannerStart,plannerGoal,walls,R);if(gridRoute.length>1)return gridRoute;
@@ -1868,6 +1886,24 @@ function stableResultId(sim, seed, tacticT, tacticCT) {
   for (let i = 0; i < input.length; i++) { h ^= input.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
   return `cs_${h.toString(16).padStart(8, "0")}`;
 }
+// ── CS Loading v2：返回同一場時沿用上一次的模擬結果 ─────────────────────────
+// simulateFps 是輸入的純函式（seeded RNG、不讀時鐘、不回寫輸入；播放端不改寫 frames），
+// 同一組輸入必定得到同一份輸出（tools/check_cs_loading_v2_sim_equivalence.mjs 驗同一實例重跑；
+// tools/browser_measure_cs_loading.mjs 驗返回後的 sim hash 與首次進場相同）。
+// 所以「離開 → 返回同一場」時整場重算，只是讓玩家在 main thread 上再等一次。
+// ⚠ 只留**一份**、只存模擬資料（不含任何 three／DOM 物件）：換一組輸入先放掉舊的，
+//   比賽播完交出結果時放掉（completeOnce）。
+let lastMountSimulation=null;
+function simulateFpsForMount(mapKey,tacticT,tacticCT,seed,roster,tacticalLayout){
+  let key=null;
+  try{key=JSON.stringify([mapKey,tacticT,tacticCT,seed,roster,tacticalLayout]);}catch(e){key=null;}
+  if(key&&lastMountSimulation&&lastMountSimulation.key===key){csLoadMark("sim:reuse",{mapKey,seed});return lastMountSimulation.sim;}
+  lastMountSimulation=null;
+  const sim=csLoadTime("sim:simulateFps",()=>simulateFps(mapKey,tacticT,tacticCT,seed,roster,tacticalLayout),{mapKey,seed});
+  if(key)lastMountSimulation={key,sim};
+  return sim;
+}
+function releaseMountSimulation(sim){if(lastMountSimulation&&lastMountSimulation.sim===sim)lastMountSimulation=null;}
 function buildMatchResult(sim,opts={}){
   const{tacticT,tacticCT,tName="德國海豹",ctName="Compulsary",date=null,seed=0,matchId=null}=opts;
   const win=sim.winner===CS_TEAM_US||(sim.winner==null&&sim.tScore>sim.ctScore);
@@ -1999,6 +2035,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
   // ── 初始化 renderer / scene / camera（只做一次）──
   useEffect(()=>{
     const mount=mountRef.current;if(!mount)return;
+    const endRendererInit=csLoadSpan("scene:renderer-init");
     const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:"high-performance"});
     renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
     renderer.outputEncoding=THREE.sRGBEncoding;
@@ -2139,6 +2176,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
     // ── 尺寸自適應 ──
     const resize=()=>{const w=mount.clientWidth||1,h=mount.clientHeight||1;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();};
     resize();const ro=new ResizeObserver(resize);ro.observe(mount);
+    endRendererInit();
 
       // ── 主迴圈：播放時鐘 + 插值 + 渲染 ──
     const animate=t=>{
@@ -2172,7 +2210,18 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
       updateCamera(st,frame,sub,dt,W,live.cameraMode);
       updateFpsPovWeapon(st,frame,st._chase,Boolean(live.cameraMode==="pov"),dt);
       if(frame&&import.meta.env?.DEV){publishFpsVisibilityDiagnostics(st,frame,fIdx);}
+      //  量測用：進場後只看到「第一個戰鬥 frame」與「rigged 角色全部就位後的第一個 frame」，
+      //  兩個都記到就不再進入（之後每幀只剩一個布林判斷）。
+      const loadWatch=st.loadWatch;
+      const riggedPending=loadWatch&&!loadWatch.riggedReady&&frame&&st.mapReady?st.players.filter((player)=>player.rigged?.mode==="loading").length:-1;
+      const watchName=riggedPending<0?null:!loadWatch.firstFrame?"gpu:first-render":riggedPending===0?"gpu:first-rigged-render":null;
+      const endWatchRender=watchName?csLoadSpan(watchName):null;
       renderer.render(scene,camera);
+      if(endWatchRender){
+        endWatchRender({programs:renderer.info.programs?.length??0,calls:renderer.info.render.calls,textures:renderer.info.memory.textures});
+        if(!loadWatch.firstFrame){loadWatch.firstFrame=true;csLoadMark("battle:first-frame",{riggedPending});}
+        if(riggedPending===0){loadWatch.riggedReady=true;csLoadMark("battle:rigged-ready",{rigged:st.players.filter((player)=>player.rigged?.mode==="rigged").length});}
+      }
       if(import.meta.env?.DEV&&typeof document!=="undefined"){
         const canvas=renderer.domElement;
         canvas.dataset.esmoFpsVisibilityFrame=String(fIdx);
@@ -2257,6 +2306,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
   // ── 依地圖重建靜態世界 + 重置選手/特效池 ──
   useEffect(()=>{
     const st=stateRef.current;if(!st)return;
+    const endMapBuild=csLoadSpan("scene:map-build");
     st.cam.autoFollow=true;st.cam.overview=true;st.cam.viewPreset=null;st.cam._ovBase=null;st.cameraRecoveryCount=0;
     st.c5a1HitDriftMax=0;st.c5a1HitDriftSamples=0;st.c5a1AuthoritativeDriftMax=0;st.objectiveSiteCount=0;
     const {scene,worldGroup,playerGroup,fxGroup,routeGroup,tex,sphereGeo}=st;
@@ -2298,16 +2348,17 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
     st.raycastTargets=[];
     //  ⚠ 換地圖會重建環境 ⇒ 先收掉上一份，否則每換一次就多留一整張地圖。
     st.c3Environment?.dispose?.();
-    st.c3Environment=createC3MirageEnvironment({group:worldGroup,mapKey,W});
+    st.c3Environment=csLoadTime("scene:map-environment",()=>createC3MirageEnvironment({group:worldGroup,mapKey,W}),{mapKey});
 
     // 地板
     if(st.floorTex)st.floorTex.dispose?.();
-    st.floorTex=makeFloorTexture(map);
+    st.floorTex=csLoadTime("scene:floor-texture",()=>makeFloorTexture(map));
     const floor=new THREE.Mesh(new THREE.PlaneGeometry(150,150),new THREE.MeshStandardMaterial({map:st.floorTex,roughness:0.97,metalness:0.0}));
     floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;floor.position.y=0;worldGroup.add(floor);
     // 地板外框光帶
 
     // 立面貼圖（程序產生窗戶/門，依面尺寸快取）
+    const endStaticWorld=csLoadSpan("scene:static-world");
     const ptIn=(x,y)=>map.walls.some(o=>x>o.x&&x<o.x+o.w&&y>o.y&&y<o.y+o.h);
     const facadeCache={};
     const getFacade=(cols,rows,door,variant)=>{
@@ -2390,6 +2441,8 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
       m.rotation.x=-Math.PI/2;m.position.set(W.vx(c.x),0.07,W.vz(c.y));m.userData.fpsMarkerType="map-callout";m.visible=FPS_DEBUG_ENABLED;worldGroup.add(m);st.calloutSprites.push(m);
     });
 
+    endStaticWorld({walls:map.walls.length});
+    const endPlayers=csLoadSpan("scene:players");
     // ── 選手（10 名，固定池）──
     const riggedLimit=getRiggedCharacterLimit(roster);
     st.players=roster.map((p,playerIndex)=>{
@@ -2465,6 +2518,8 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
       return {id:p.id,side:p.side,role:p.role,col,g,body,bodyParts,torso,torsoMat,head,gun,bombBag,ring,ringMat,disc,selBeam,beamMat,hpGroup,hpFill,nameSpr,dead,deadMat,aimLine,aimMat,rigged};
     });
     st.raycastTargets=st.players.map(p=>p.g);
+    endPlayers({players:st.players.length});
+    const endFxPools=csLoadSpan("scene:fx-pools");
 
     // ── 特效池 ──
     const mkPool=(n,make)=>{const arr=[];for(let i=0;i<n;i++){const o=make();o.visible=false;fxGroup.add(o);arr.push(o);}return arr;};
@@ -2495,7 +2550,11 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
     const bombLight=new THREE.PointLight(0xff3030,0,18,2);bombGrp.add(bombLight);
     st.bomb={grp:bombGrp,mat:bombMat,light:bombLight,box:bombCase,label:bombLabel};
 
+    endFxPools();
     st.mapReady=true;st.seekNonce=-1;st.subT=0;
+    //  量測用：只記「第一個戰鬥 frame」與「rigged 角色全部就位」兩個時間點，記完即停。
+    st.loadWatch={firstFrame:false,riggedReady:false};
+    endMapBuild({mapKey});
   // roster reference is useMemo-stable in the wrapper and changes on identity change.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[mapKey,roster]);
@@ -3288,6 +3347,8 @@ function EsportsFPS3D({
 }={}){
   // 名稱覆寫（嵌入時）
   if(teamNameProp)T_NAME=teamNameProp; if(oppNameProp)CT_NAME=oppNameProp;
+  const loadMountMarked=useRef(false);
+  if(!loadMountMarked.current){loadMountMarked.current=true;csLoadMark("fps:component-first-render");}
   const [mapKey,setMapKey]=useState(mapKeyProp||"inferno");
   useEffect(()=>{if(mapKeyProp&&mapKeyProp!==mapKey)setMapKey(mapKeyProp);},[mapKeyProp]);
   const lib=useMemo(()=>TACTICS_DB[mapKey],[mapKey]);
@@ -3323,9 +3384,9 @@ function EsportsFPS3D({
   const [seed,setSeed]=useState(seedProp||42);
   useEffect(()=>{if(seedProp!=null&&seedProp!==seed)setSeed(seedProp);},[seedProp]);
   const tacticT=preMatchLayout.phases[CS_TACTICAL_PHASES.OPENING]?.tactic||baseTactic,tacticCT=lib.ct[Math.min(ctIdx,lib.ct.length-1)];
-  const sim=useMemo(()=>simulateFps(mapKey,tacticT,tacticCT,seed,effectiveRoster,tacticalLayoutProp),[mapKey,tIdx,ctIdx,seed,effectiveRoster,tacticalLayoutProp,tacticT,tacticCT]);
+  const sim=useMemo(()=>simulateFpsForMount(mapKey,tacticT,tacticCT,seed,effectiveRoster,tacticalLayoutProp),[mapKey,tIdx,ctIdx,seed,effectiveRoster,tacticalLayoutProp,tacticT,tacticCT]);
   // 賽後結果（給主遊戲）；播放到最後一格時透過 onComplete 回傳一次
-  const matchResult=useMemo(()=>buildMatchResult(sim,{tacticT,tacticCT,tName:T_NAME,ctName:CT_NAME,seed}),[sim,seed]);
+  const matchResult=useMemo(()=>csLoadTime("sim:buildMatchResult",()=>buildMatchResult(sim,{tacticT,tacticCT,tName:T_NAME,ctName:CT_NAME,seed})),[sim,seed]);
   const completedRef=useRef(null);
   useEffect(()=>{completedRef.current=null;},[matchResult]); // 換場後重置觸發旗標
 
@@ -3427,8 +3488,8 @@ function EsportsFPS3D({
   const matchOver=Boolean(sim.completed)&&fIdx>=total-1;
   const completeOnce=useCallback(()=>{
     if(!onComplete||completedRef.current===matchResult.id)return false;
-    completedRef.current=matchResult.id;onComplete(matchResult);return true;
-  },[matchResult,onComplete]);
+    completedRef.current=matchResult.id;onComplete(matchResult);releaseMountSimulation(sim);return true;
+  },[matchResult,onComplete,sim]);
   // Quick Finish 直接交付 simulator 已計算好的 MatchResult；不把 completion 綁在 final frame seek/render。
   const quickFinish=useCallback(()=>{
     if(matchOver||quickCompleted||completedRef.current===matchResult.id)return;

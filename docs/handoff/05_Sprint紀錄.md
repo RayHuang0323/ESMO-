@@ -20519,3 +20519,95 @@ Replay 缺前段的根因是既有分頁記憶體 buffer，不在本輪改成持
 重新以相同 `SKIP_NESTED=1 node tools/check_moba_presentation29b2.mjs` 驗證乾淨 `origin/main=dc8941611e600403505026e95f3c65914a4f60f4` 與整合 commit `94eb62b49907dbf02409e7be41b10e553a717a03`：兩者均 exit 1、`11/12`，第 2 項均為 `6` 座營地中 `2` 座觀測到連續掉血（斷言要求至少 `4` 座）。其餘 11 項輸出數值與原因一致，整合版沒有讓 camp HP 結果比 baseline 更差。
 
 依使用者裁決，此項標記為 **BASELINE_KNOWN_FAILURE**／既有 verifier debt。本輪不修改 camp HP、Battle 規則、`gameData` 或 `presentation29b2` verifier；以其餘正式 Gate 全綠為 release 依據。
+
+## 2026-09-13 CS Loading Performance Pass v2
+
+承接 lifecycle cleanup（c01a0f8，WebGL／listener／RAF／scene 洩漏已修），本輪只處理「賽前 → 真正進入 Battle 約 80 秒」。
+先量測、再優化；分支 `perf/cs-loading-v2`（基於 origin/main 289e6ee），local commit，未 push／deploy。
+
+### 量測方式
+
+- `src/battle/fps/csLoadTiming.js`：runtime 在各階段邊界記時間（只存數字，不存物件參照）。
+- `tools/browser_measure_cs_loading.mjs`：注入 probe 攔 WebGL compile/link/upload、ImageBitmap 解碼、long task、
+  resource timing；以 marks 切出牆鐘關鍵路徑。dev server 與打包 bundle（vite preview）兩種模式都跑。
+- 定義：**load** = Loading 畫面出現 → 10 名 rigged 角色全部就位後的第一個 frame（`battle:rigged-ready`）；
+  **返回** = 首頁按「返回對戰」→ 同一時點。harness 腳本點擊的固定等待不計入。
+- 環境：headless Chrome（`--disable-gpu`，軟體 GL）1366×900。shader／首幀在真 GPU 上會更短，比例僅供參考。
+
+### 瓶頸（打包版 before，第 1 次完整進場 load 87.4s）
+
+| 段落 | ms | 佔 load |
+|---|---|---|
+| **simulateFps（整場比賽在 main thread 同步模擬）** | **82,216** | **94.1%** |
+| Loading 畫面固定計時 | 2,898 | 3.3% |
+| 首幀 render（含 shader 阻塞 897ms、19 programs） | 1,460 | 1.7% |
+| 等 rigged 資產 | 673 | 0.8% |
+| 場景建構（renderer／地圖／選手／FX 池） | 143 | 0.2% |
+
+非關鍵路徑（非同步、與模擬重疊）：GLB 下載 1.6s（6.5MB＋2.7MB）、角色 parse 0.35s、ImageBitmap 解碼 0.7s、
+音效 13 檔 34MB fetch（牆鐘 1.3s）＋decode 1.0s。**返回同一場**時整場重算一次：87.6s 中 86.8s 是 simulateFps。
+
+根因：C5B 之後 route planner 的 `navLineBlocked` 每個 0.7 單位取樣點重測所有牆，detour fallback 重複測同一段線
+（即 TD-54，commit 51aebee 已找到但從未合併進 main）。
+
+### 優化（只動前兩名）
+
+1. **route planner 熱點**（`navLineBlocked`、`navigableSegment` detour）：沿用 TD-54 寫法，但外框改取自
+   第 1／第 steps-1 個實際取樣點（lerp 對 t 單調）⇒ 排除條件在浮點下也精確等價。純函式重排，不改謂詞、不改接受順序。
+2. **返回同一場沿用模擬結果**（`simulateFpsForMount`）：以六個輸入的 JSON 為 key，只留一份純資料；
+   換輸入先放掉舊的，比賽播完交出結果時放掉。
+
+未做（刻意）：Loading 固定計時（屬 Sprint23 UI 規格）、shader 預編、音效快取、GLB 預載——都在 3% 以下或不在關鍵路徑。
+
+### 結果
+
+| | before | after |
+|---|---|---|
+| 打包版 首次 load | 87.4s | **17.8s** |
+| 打包版 返回 load | 87.6s／87.7s | **0.7s／0.9s** |
+| dev 首次 load | 85.8s | 18.6s |
+| dev 返回 load | 80.2s／80.9s | 0.8s／0.7s |
+
+after 的首次 load：simulateFps 12.5s（70.5%）、固定計時 2.9s、首幀 1.5s、等資產 0.7s。
+
+### 驗證（輸出見本機 log；數據檔在 `review/cs-loading/`、`review/cs-lifecycle/`）
+
+- **BUILD**：`npm run build` ✓ built in 12.12s（before 版同樣可 build，11.24s）。
+- **模擬等價**：`check_cs_loading_v2_sim_equivalence` **10/10**——7 場（mirage×3、inferno×3、dust2×1）整份輸出與
+  origin/main 逐位元組相同，另驗同一實例重跑相同；合計 731.3s → 93.2s（×7.85）。
+- **返回沿用安全**：dev 三輪（首次＋兩次返回，中間有播放）in-page sim sha256 皆為 `71e32f2b82b8…`。
+- **RESOURCE_LEAK**：`browser_measure_cs_lifecycle` **22/22**——離場後 WebGL context 存活 0/0/0、listener 回 baseline
+  5/5/5 且無殘留 mouseup、canvas 0、RAF 回 1、teardown geometries 481→347／textures 41→39 不累積、場景清空。
+- **heap（強制 GC 後，離場）**：before 96/96/96 MB → after 122/122/123 MB，**固定多約 26–27MB、三輪不累積**
+  ＝返回沿用保留的那一份模擬資料（刻意取捨，見 08 的 CS-LOAD-1）。
+- **RIG／ANIMATION**：dev、打包版 before/after 每一輪 10/10 名 rigged 角色就位；renderer.info 首次 1271 geometries／
+  55 textures／19 programs、返回 1137／53／18，與 lifecycle pass 當時相同；`check_cs_c2a` 13/13、`c2b` 14/14、
+  `c2c` 9/9、`a2_renderer_identity` 10/10。
+- **VISUAL（靜態 gate）**：`c5a` 11/11、`c5a1` 17/17、`c5b_utility_fx` 55/55、`c5c_icon_help` 19/19、
+  `c5c_presentation` 29/29、`camera_recovery` 8/8、`raf_fidx_coherence` 7/7、`stable_canvas_geometry` 5/5、
+  `renderer_visibility` 24/24。
+- **MATCHSESSION**：lifecycle ⑧ leave→resume 的 sessionId／seed／mapKey／roster 不變；`check_cs23` 28/28、
+  `check_cs_series` 46/46、`check_cs_playable_series` 99/99、`check_cs_residual_tactic_sync_p1` 4/4、
+  `check_cs_awp_slot_collapse_fix` PASS、`check_cs_c5b_route_interrupt` PASS。後兩者（加 tactic sync）的證據檔
+  在乾淨 origin/main 重跑後逐欄相同（忽略時間戳、耗時、sourceHash）。
+- **MOBA**：`regress` 15/15、`regress2` 節奏門檻 8/8。
+
+**紅燈與歸因（均以乾淨 origin/main 289e6ee worktree 重跑對照）**：
+- `check_cs_c3_environment_slice` 16/18、`c4a_mirage_full` 12/13、`c4b_two_maps` 19/20：origin/main 同項同紅（legacy walls／palette 斷言過期）。
+- `check_cs_c5a2_combat_audit`、`c5a2_final_combat`、`c5b_combat_tactical_audit`：origin/main 同樣因缺 `artifacts/` 證據檔而 crash。
+- `check_cs_c6c_progress_ux` 11/12：唯一紅項是「工作樹中 `EsportsFPS3D.jsx` 沒有未提交改動」的範圍護欄（`git diff --name-only`），本輪必須改此檔。將本輪檔案 `git add` 後重跑 **12/12 PASS**（origin/main 亦 12/12）。
+- `check_cs_match_completion` 一度 35/36：「onComplete is exactly-once guarded」以原始碼字串
+  `completedRef.current=matchResult.id;onComplete(matchResult)` 比對，而我把 `releaseMountSimulation(sim)` 插在兩者之間
+  ——**本輪造成**。改為在 `onComplete(matchResult)` 之後放掉快取（行為等價），重跑 **36/36**。
+  另以固定字串對整個 `tools/` 搜尋所有被本輪改掉的舊片段，無其他 verifier 依賴。
+- `check_cs_c5b_route_delay_audit`：`unreasonable=1`（25 筆 >1s 中 1 筆歸為 pair reservation／fire budget）；origin/main 同樣 1 筆、同樣原因，且模擬輸出已證明逐位元組相同 ⇒ 既有。
+- `browser_check_cs_c2c_vertical_slice`（tactic selection timeout）、`browser_check_cs_c5c_presentation`（HARNESS_FAIL：mirage audio control missing）：origin/main 以同樣錯誤失敗，屬 gate 的點擊流程過時，本輪未修。
+- 已提交的 `artifacts/cs-residual-tactic-sync-p1/authority-evidence.json` 本身過期（乾淨 origin/main 重跑也與它不同）；本輪重新產生的 artifacts **不提交**。
+
+### 未驗證／已知限制
+
+- 全部是 headless Chrome＋軟體 GL；真 GPU、Android 真機的首幀、shader、heap 與 FPS **未測**。
+- CS 進場／返回的 UI 流程只由自動化 harness 走過，**未經人工瀏覽器實測**。
+- 首次進場仍有 12.5s 在 main thread 模擬（佔 load 70%），期間畫面不會動；下一步候選是移到 Web Worker 或在賽前預算（本輪未做，屬架構調整）。
+- Loading 畫面固定 2.9s 計時未動（Sprint23 UI 規格）。
+- dust2 兩組無界加時配對未重新探測。
