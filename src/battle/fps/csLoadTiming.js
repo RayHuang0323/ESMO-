@@ -53,6 +53,34 @@ export function csLoadSpan(name) {
   };
 }
 
+// ── CS Mobile Stability Pass：返回沿用快取的狀態（只有數字與字串）──────────
+//  runtime 的 `lastMountSimulation` 是模組內變數，外面看不到它還在不在。
+//  這裡只記「現在有沒有持有、持有哪一場、各事件發生幾次」，讓 verifier 驗
+//  「離場保留 → 返回沿用 → 比賽完成釋放 → 換新場不殘留」。
+//  ⚠ 不存 sim、key 或任何物件參照。
+const SIM_CACHE_KEY = "__ESMO_CS_SIM_CACHE__";
+const simCache = { held: false, mapKey: null, seed: null, frames: 0, stores: 0, reuses: 0, releasedOnComplete: 0, replaced: 0, lastEvent: null };
+
+/** event：store／reuse／release-complete／replace。 */
+export function csSimCacheEvent(event, detail = {}) {
+  if (event === "store") {
+    simCache.held = true; simCache.stores += 1;
+    simCache.mapKey = detail.mapKey ?? null; simCache.seed = detail.seed ?? null; simCache.frames = Number(detail.frames) || 0;
+  } else if (event === "reuse") {
+    simCache.reuses += 1;
+  } else if (event === "release-complete" || event === "replace") {
+    if (event === "replace") simCache.replaced += 1; else simCache.releasedOnComplete += 1;
+    simCache.held = false; simCache.mapKey = null; simCache.seed = null; simCache.frames = 0;
+  }
+  simCache.lastEvent = event;
+  csLoadMark(`sim:cache-${event}`, detail);
+  if (typeof window !== "undefined") window[SIM_CACHE_KEY] = { ...simCache };
+}
+
+export function readCsSimCacheStatus() {
+  return { ...simCache };
+}
+
 /** 同步區段量測：回傳 fn 的結果，例外照常往外丟。 */
 export function csLoadTime(name, fn, detail) {
   const end = csLoadSpan(name);

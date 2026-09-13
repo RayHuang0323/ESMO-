@@ -15,7 +15,7 @@ import { createC3MirageEnvironment } from "./presentation/fpsMapEnvironment.js";
 import { createGunplayPresentation } from "./presentation/fpsGunplayPresentation.js";
 import { createUtilityPresentation } from "./presentation/fpsUtilityPresentation.js";
 import { createFpsMatchPresentation } from "./presentation/fpsMatchPresentation.js";
-import { csLoadMark, csLoadSpan, csLoadTime } from "./csLoadTiming.js";
+import { csLoadMark, csLoadSpan, csLoadTime, csSimCacheEvent } from "./csLoadTiming.js";
 
 // EsportsFPS3D 已內聯於本檔（見下方 __FPS3D_MODULE），以符合單一檔案 artifact 限制
 /* ═══════════════════════════════════════════════════════════════
@@ -1897,13 +1897,14 @@ let lastMountSimulation=null;
 function simulateFpsForMount(mapKey,tacticT,tacticCT,seed,roster,tacticalLayout){
   let key=null;
   try{key=JSON.stringify([mapKey,tacticT,tacticCT,seed,roster,tacticalLayout]);}catch(e){key=null;}
-  if(key&&lastMountSimulation&&lastMountSimulation.key===key){csLoadMark("sim:reuse",{mapKey,seed});return lastMountSimulation.sim;}
+  if(key&&lastMountSimulation&&lastMountSimulation.key===key){csLoadMark("sim:reuse",{mapKey,seed});csSimCacheEvent("reuse",{mapKey,seed});return lastMountSimulation.sim;}
+  if(lastMountSimulation)csSimCacheEvent("replace",{mapKey:lastMountSimulation.mapKey,seed:lastMountSimulation.seed});
   lastMountSimulation=null;
   const sim=csLoadTime("sim:simulateFps",()=>simulateFps(mapKey,tacticT,tacticCT,seed,roster,tacticalLayout),{mapKey,seed});
-  if(key)lastMountSimulation={key,sim};
+  if(key){lastMountSimulation={key,sim,mapKey,seed};csSimCacheEvent("store",{mapKey,seed,frames:sim.frames.length});}
   return sim;
 }
-function releaseMountSimulation(sim){if(lastMountSimulation&&lastMountSimulation.sim===sim)lastMountSimulation=null;}
+function releaseMountSimulation(sim){if(lastMountSimulation&&lastMountSimulation.sim===sim){lastMountSimulation=null;csSimCacheEvent("release-complete",{});}}
 function buildMatchResult(sim,opts={}){
   const{tacticT,tacticCT,tName="德國海豹",ctName="Compulsary",date=null,seed=0,matchId=null}=opts;
   const win=sim.winner===CS_TEAM_US||(sim.winner==null&&sim.tScore>sim.ctScore);

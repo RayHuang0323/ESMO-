@@ -20660,3 +20660,66 @@ Owner Review GO 後，只做安全整合、push、deploy、正式站驗證；**�
 - **Web Worker** 列為未來選項（首次進場仍有約 12.5s 在 main thread 模擬），**不是下一步自動開工**。
 - 既有紅燈（c3／c4a／c4b、c5a2×2、c5b tactical audit、route delay audit、c2c／c5c browser gate）
   在乾淨 origin/main 同樣紅，本輪未放寬 gate、未改 assertion、未順手修。
+
+## 2026-09-13 CS Mobile Stability Pass
+
+目標：確認 Loading v2 的返回沿用快取與目前 CS runtime 在手機／低記憶體環境下仍然安全。
+分支 `test/cs-mobile-stability`（基於 main `0f936f6`），local commit，未 push／deploy。
+**沒有**關快取、降畫質、做 mobile 特例、Web Worker、改 battle logic。
+
+### 本輪加了什麼
+
+- **快取狀態診斷**（`csLoadTiming.csSimCacheEvent`）：runtime 的 `lastMountSimulation` 是模組內變數，外面看不到。
+  新增只存數字的狀態 `window.__ESMO_CS_SIM_CACHE__`（held／mapKey／seed／frames／stores／reuses／
+  releasedOnComplete／replaced），`simulateFpsForMount`／`releaseMountSimulation` 在保存、沿用、完成釋放、
+  被替換時各記一次。**行為不變**，不存 sim、key 或任何物件參照。
+- `tools/check_cs_sim_cache_lifecycle.mjs`：Node 直接呼叫 runtime 同一支函式驗生命週期（含瀏覽器走不到的
+  「中途換新場 → 替換」）。
+- `tools/browser_check_cs_mobile_stability.mjs`：打包版＋390×844／DPR 3／觸控／Android UA；每次離場後送
+  `Memory.simulatePressureNotification(critical)` 並強制 GC（不真的 OOM）；`--throttle` 另加 CPU 4× 與 4G 網路。
+- `review/cs-mobile-stability/ANDROID_5MIN_CHECKLIST.md`：給 Owner 的真機 5 分鐘清單。
+
+### 結果
+
+**快取生命週期（Node）10/10**：首次保存一份 → 返回沿用同一份 → 完成釋放（重複釋放不多算）→
+釋放後重跑逐位元組相同 → 中途換場替換、只留新的 → 被替換的舊場交結果不會誤放新場 → 任何時刻最多一份 → 最後不持有。
+
+**手機 390px 完整流程（打包版）36/36**：
+
+| 步驟 | heap（壓力＋GC 後） | canvas | RAF | listener | GL alive | 快取 |
+|---|---|---|---|---|---|---|
+| 首頁基準 | 12MB | 0 | 0 | 5 | 0 | — |
+| 首次進場 Battle（load **17.6s**） | 119MB | 1 | 1 | 5 | 1 | 保存 1 |
+| 離場 1 | 62MB | 0 | 0 | 5 | 0 | **保留** |
+| 返回 ×5（load 1.45／1.44／1.37／1.37／1.41s） | 118–120MB | 1 | 2 | 5 | 1 | 沿用 1→5，保存仍 1 |
+| 每次離場（6 次） | **62→62→63→63→63→63MB** | 0 | 0 | 5 | 0 | 保留 |
+| 比賽完成（快速完成） | 118MB | 1 | 2 | 5 | 1 | **釋放** |
+| 結果後回 Dashboard | **37MB** | 0 | 0 | 5 | 0 | 無 |
+| 開新的一場（不同 session、mirage） | 115MB | 1 | 1 | 5 | 1 | 保存 2（只有新的一份） |
+| 新的一場離場 | 59MB | 0 | 0 | 5 | 0 | 保留（新的） |
+
+- 保留快取時離場 heap 62MB、釋放後 37MB ⇒ 快取實占約 25MB，與 Loading v2 的 26–27MB 一致；**五次返回不累積**。
+- 新的一場離場 59MB ≈ 第一場 62MB ⇒ **沒有兩份快取疊加**。
+- 整段畫布掛載中 WebGL context lost **0**；page error／console `[error]` **0**。
+- 返回時 RAF 2（首次 1）：與 lifecycle pass 當時的 metrics 相同（返回時多一個短暫 RAF），離場後都回 0。
+
+**CPU 4×＋4G（估低階手機）14/14**：首次進場 **90.8s**、返回 **2.64s**；離場 heap 62→63MB、context lost 0、console 0。
+⚠ 首次進場在低階 CPU 上仍可能接近 90 秒，期間畫面停住——這是 Loading v2 已知剩下的 main thread 模擬
+（Web Worker 為未來選項，本輪不做）。
+
+### 回歸驗證（本輪改了 EsportsFPS3D 的快取診斷呼叫點）
+
+- `check_cs_match_completion` 36/36、`check_cs_sim_cache_lifecycle` 10/10、
+  `check_cs_loading_v2_sim_equivalence`（mirage＋同實例重跑）4/4。
+- `check_cs_c2a` 13/13、`c2b` 14/14、`c2c` 9/9、`c5c_presentation` 29/29、`cs23` 28/28、
+  `camera_recovery` 8/8、`renderer_visibility` 24/24；`check_cs_c6c_progress_ux` 暫存後 12/12。
+- `browser_measure_cs_lifecycle`（dev，3 輪）**22/22**：進場 33.6s → 返回 1.3s／1.3s；離場後 WebGL context 0、
+  canvas 0、RAF 回 1、listener 回 5、teardown geometries 481→347 不累積。
+- `npm run build` ✓ built in 11.77s。
+
+### 未驗證／限制
+
+- **Android 真機仍然必要**：桌機 headless Chrome 模擬不了真機的 GPU driver、分頁回收策略、熱降頻與實際 RAM 上限；
+  `Memory.simulatePressureNotification` 只是觸發瀏覽器的回收路徑，不等於系統真的缺記憶體。
+- CPU 4× 降速是粗略估計，不代表特定機型。
+- 「比賽中途直接開新場」在 UI 上走不到（CS 沒有放棄鈕），替換路徑只在 Node 驗。
