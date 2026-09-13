@@ -20511,3 +20511,11 @@ Replay 缺前段的根因是既有分頁記憶體 buffer，不在本輪改成持
 撤回後重新確認：`SKIP_NESTED=1 node tools/check_moba_pacing29b1.mjs` **25/25**（40 場 v3/v2；15 分鐘擊殺 p50=7；順序公平性正序藍 22/40、反序 23/40，差 3pp）；`check_moba_nav_h2.mjs` 14/14。`node tools/verify.mjs --only=runtime29,regress,regress2,build` exit 0、4/4：regress 15/15（30s）、regress2 8/8（33s）、runtime29 flat 35/35（85s）、build（17s）。補充 presentation 12/12、controls 18/18、flow09、dash10、observer SSR 8/8、neutral rigs、Replay display 22/22、Rift 14/14 均通過。
 
 因此建立本輪候選 commit，未 push／deploy。石甲蟲距塔過近保留於 known limitations；手機真機／實機 FPS 與 reduced-motion 仍未測，Replay 跨分頁前段仍依既有記憶體 buffer 不保存，但 UI 已以實際第一個 frame.t 為起點並明示缺段。
+
+## 2026-09-13 MOBA Battle UI Release：BASELINE_KNOWN_FAILURE
+
+補充核對：乾淨 `origin/main=dc8941611e600403505026e95f3c65914a4f60f4` 與整合版 `94eb62b49907dbf02409e7be41b10e553a717a03` 的 `check_esmo_rift_v1` 同為 exit 1、`13 PASS / 1 FAIL`，唯一失敗為 `Blender source exactly follows runtime nav walls`，差異內容一致。該腳本不在正式 MOBA Battle UI runner，列為 supplemental baseline debt；本輪不改地形、營地、Battle 規則或 verifier。
+
+重新以相同 `SKIP_NESTED=1 node tools/check_moba_presentation29b2.mjs` 驗證乾淨 `origin/main=dc8941611e600403505026e95f3c65914a4f60f4` 與整合 commit `94eb62b49907dbf02409e7be41b10e553a717a03`：兩者均 exit 1、`11/12`，第 2 項均為 `6` 座營地中 `2` 座觀測到連續掉血（斷言要求至少 `4` 座）。其餘 11 項輸出數值與原因一致，整合版沒有讓 camp HP 結果比 baseline 更差。
+
+依使用者裁決，此項標記為 **BASELINE_KNOWN_FAILURE**／既有 verifier debt。本輪不修改 camp HP、Battle 規則、`gameData` 或 `presentation29b2` verifier；以其餘正式 Gate 全綠為 release 依據。

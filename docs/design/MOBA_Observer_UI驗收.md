@@ -136,3 +136,15 @@ Desktop 1366×768 高畫質／Mobile 390×844 低畫質，390px scrollWidth=390�
 依使用者要求，撤回 `(153,228)/(177,102)` 試驗，`gameData.CAMPS` 恢復 `(151,248)/(179,82)`；原始中心距下路塔 7.05 列為已知限制，本輪不再修正。移除 `RIFT_BAKED_CLEARINGS` 與 terrain 接線，確保地圖／碰撞幾何回到候選前狀態。UI／Replay／動態野怪／塔特效本輪變更均保留。
 
 最終結果：pacing29b1 25/25（15 分鐘擊殺 p50=7；順序公平性 3pp）、nav_h2 14/14；`verify --only=runtime29,regress,regress2,build` exit 0、4/4（runtime29 flat 35/35）；presentation 12/12、controls 18/18、flow09、dash10、observer SSR 8/8、Replay display 22/22、Rift 14/14、neutral rigs 均通過。瀏覽器 Desktop／390px Replay 及 console errors=[] 複查完成。符合候選條件，已建立本地 commit；不 push／deploy。
+
+## Release Gate 例外紀錄（2026-09-13）
+
+### BASELINE_KNOWN_FAILURE：`presentation29b2` §2 camp HP
+
+### Supplemental baseline：`check_esmo_rift_v1` §13
+
+乾淨 `origin/main=dc8941611e600403505026e95f3c65914a4f60f4` 與整合版 `94eb62b49907dbf02409e7be41b10e553a717a03` 均為 exit 1、`13 PASS / 1 FAIL`；唯一失敗均為 `Blender source exactly follows runtime nav walls`，差異同為既有 camp-wall／rock source 幾何未與目前 runtime nav walls 完全相等。此腳本未收錄於正式 MOBA Battle UI runner，故列為 supplemental baseline debt；本輪不修改地形、營地、Battle 規則或 verifier。
+
+以相同 `SKIP_NESTED=1` 指令重跑：乾淨 `origin/main=dc8941611e600403505026e95f3c65914a4f60f4` 與整合 commit `94eb62b49907dbf02409e7be41b10e553a717a03` 的結果完全一致：exit 1、`11/12`，唯一失敗為「6 座營地、2 座觀測到連續掉血」，斷言要求 `total === 6 && ok >= 4`。
+
+這是既有 baseline verifier debt，不是 `94eb62b` 造成；本輪不修改 camp HP、Battle 規則、`gameData` 或 `presentation29b2` verifier。其餘正式 Gate 維持獨立驗證與完整輸出，不以放寬斷言掩蓋此例外。
