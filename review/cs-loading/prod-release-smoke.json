@@ -1,0 +1,82 @@
+{
+  "url": "https://rayhuang0323.github.io/ESMO-/",
+  "headed": false,
+  "at": "2026-09-13T15:24:29.451Z",
+  "bundle": [
+    "/ESMO-/assets/index-B1u9YFyO.js"
+  ],
+  "cycles": [
+    {
+      "kind": "first",
+      "firstLoadMs": 20416,
+      "simulateMs": [
+        12272
+      ],
+      "rigged": 10,
+      "clipsSeen": [
+        "Walk_Loop",
+        "Idle_Loop",
+        "Sprint_Loop",
+        "Pistol_Aim_Neutral",
+        "Pistol_Shoot",
+        "Hit_Chest",
+        "Death01"
+      ],
+      "identity": {
+        "sessionId": "session:cs:e369a084",
+        "matchId": "active:session:cs:e369a084",
+        "status": "active",
+        "seed": 11521,
+        "mapKey": "inferno",
+        "tacticId": "f1",
+        "lineup": "{\"f1\":\"b1\",\"f2\":\"b2\",\"f3\":\"b3\",\"f4\":\"b4\",\"f5\":\"b5\"}",
+        "frameIndex": 116,
+        "totalFrames": 2477
+      }
+    },
+    {
+      "kind": "return",
+      "loadMs": 806,
+      "reuse": 1,
+      "resim": 0,
+      "rigged": 10,
+      "heapAfterPreviousLeaveGcMB": 63,
+      "identity": {
+        "sessionId": "session:cs:e369a084",
+        "matchId": "active:session:cs:e369a084",
+        "status": "active",
+        "seed": 11521,
+        "mapKey": "inferno",
+        "tacticId": "f1",
+        "lineup": "{\"f1\":\"b1\",\"f2\":\"b2\",\"f3\":\"b3\",\"f4\":\"b4\",\"f5\":\"b5\"}",
+        "frameIndex": 117,
+        "totalFrames": 2477
+      }
+    },
+    {
+      "kind": "return",
+      "loadMs": 791,
+      "reuse": 1,
+      "resim": 0,
+      "rigged": 10,
+      "heapAfterPreviousLeaveGcMB": 63,
+      "identity": {
+        "sessionId": "session:cs:e369a084",
+        "matchId": "active:session:cs:e369a084",
+        "status": "active",
+        "seed": 11521,
+        "mapKey": "inferno",
+        "tacticId": "f1",
+        "lineup": "{\"f1\":\"b1\",\"f2\":\"b2\",\"f3\":\"b3\",\"f4\":\"b4\",\"f5\":\"b5\"}",
+        "frameIndex": 123,
+        "totalFrames": 2477
+      }
+    }
+  ],
+  "consoleErrors": [],
+  "pageErrors": [],
+  "returnLoads": [
+    806,
+    791
+  ]
+}

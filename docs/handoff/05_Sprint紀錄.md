@@ -20611,3 +20611,52 @@ after 的首次 load：simulateFps 12.5s（70.5%）、固定計時 2.9s、首幀
 - 首次進場仍有 12.5s 在 main thread 模擬（佔 load 70%），期間畫面不會動；下一步候選是移到 Web Worker 或在賽前預算（本輪未做，屬架構調整）。
 - Loading 畫面固定 2.9s 計時未動（Sprint23 UI 規格）。
 - dust2 兩組無界加時配對未重新探測。
+
+## 2026-09-13 CS Loading Performance v2 Release Checkpoint
+
+Owner Review GO 後，只做安全整合、push、deploy、正式站驗證；**不開始 Web Worker v3、不擴大效能重構**。
+
+### 整合與部署
+
+- `git fetch` 後 origin/main 前進 1 個 commit（`107bf94` Release: prevent production favicon 404，只改 `index.html` 1 行），
+  與本輪檔案**零重疊**。`1d3eedf` rebase 成 **`550a514`**，重跑 build、match completion 36/36、c6c 12/12、
+  c2a 13/13、c2b 14/14、c2c 9/9、c5c 29/29、cs23 28/28、模擬等價（mirage 一場＋同實例重跑）4/4，全綠。
+- normal fast-forward push：`107bf94..550a514 HEAD -> main`（無 force、無 reset）。
+- Pages workflow run [`34765218439`](https://github.com/RayHuang0323/ESMO-/actions/runs/34765218439)：
+  build success、deploy success（以 Actions API 的 run conclusion 判定，不看 bundle hash）。
+- 正式站 `https://rayhuang0323.github.io/ESMO-/` HTTP 200，entry `assets/index-B1u9YFyO.js` HTTP 200，
+  內含本輪才有的 `sim:reuse`／`scene:map-build`／`rig:player-init`／`battle:rigged-ready`。
+
+### 正式站實測（`tools/browser_check_prod_cs_loading_v2.mjs`，headless 1366×900）
+
+**42/42 PASS**（數據：`review/cs-loading/prod-release-smoke.json`）。流程：CS → Prep → 地圖 → 戰術 → Loading →
+10 名 rigged 就位 → Battle（4× 取樣動畫）→ 離場 → 返回同一場 → 離場 → 返回同一場 → 快速完成 → 賽後結果。
+
+| 項目 | 正式站結果 |
+|---|---|
+| FIRST_LOAD_PRODUCTION（Loading 出現 → 10 名 rigged 就位） | **20.4s**（整場模擬只跑 1 次，12.3s） |
+| RETURN_LOAD_PRODUCTION（按返回 → 10 名 rigged 就位） | **0.81s／0.79s**（`sim:reuse` 1、`simulateFps` 0，不越來越慢） |
+| Session identity | sessionId `session:cs:e369a084`、matchId、seed 11521、map inferno、tactic、lineup、totalFrames 2477 兩次返回皆不變；10 名選手 id 相同 |
+| Rig／動畫 | 三次進場皆 rigged 10／mixer 10；Idle／Walk／Sprint／Aim／Fire／Hit／Death 七個片段都有播放 |
+| 比賽推進／結果 | frame 8 → 110 前進；快速完成 → 賽後戰報入口 → 結果頁（MVP、返回 Dashboard） |
+| Lifecycle | 兩次離場後 canvas 0、WebGL context 存活 0、teardown sceneChildren 0、`__ESMO_FPS_SCENE__` 不存在（正式站本來就不發佈） |
+| WebGL context | 對戰中存活 1，畫布掛載中 context lost 0 次 |
+| Console | page-origin uncaught error 0、console `[error]` 0 |
+
+- 模擬 hash 在正式站讀不到（sim 物件沒有對外 handle）：正式站驗「返回沒有重跑」＋總 frame 數不變；
+  逐位元組等價由 `check_cs_loading_v2_sim_equivalence`（7 場）與 dev 三輪 in-page sha256 在同一份原始碼上證明。
+- 截圖（本機檢視，未入庫）：首次進場、4× 中段、兩次返回、比賽完成、結果頁，地圖／名牌／擊殺訊息／鏡頭正常。
+- 正式站環境是 headless 桌機 Chrome（軟體 GL）；**Android 真機未測**。
+
+### 本輪結論（給之後的人）
+
+- **根因**：CS 進場慢不是資產或 shader，而是 `EsportsFPS3D` 每次掛載都在 main thread 同步跑完整場
+  `simulateFps`；熱點在 route planner（`navLineBlocked`、detour fallback，即 TD-54）。
+- **before → after**（打包版、headless）：首次 load 87.4s → 17.8s；返回同一場 87.6s → 0.7s。
+- **比賽結果沒變**：7 場（mirage×3、inferno×3、dust2×1）整份 `simulateFps` 輸出與 origin/main 逐位元組相同。
+- **取捨**：返回同一場沿用模擬結果，中途離場期間 heap 固定多約 26–27MB（強制 GC 後量測、三輪不累積）。
+  Owner 本輪接受，**不改**；也**沒有**加 mobile fallback。
+- **Android 真機尚未驗證**（heap、WebGL context、分頁回收、FPS 都沒在真機看過）。
+- **Web Worker** 列為未來選項（首次進場仍有約 12.5s 在 main thread 模擬），**不是下一步自動開工**。
+- 既有紅燈（c3／c4a／c4b、c5a2×2、c5b tactical audit、route delay audit、c2c／c5c browser gate）
+  在乾淨 origin/main 同樣紅，本輪未放寬 gate、未改 assertion、未順手修。
