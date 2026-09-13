@@ -2215,13 +2215,15 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
       //  兩個都記到就不再進入（之後每幀只剩一個布林判斷）。
       const loadWatch=st.loadWatch;
       const riggedPending=loadWatch&&!loadWatch.riggedReady&&frame&&st.mapReady?st.players.filter((player)=>player.rigged?.mode==="loading").length:-1;
+      //  CS Mobile Stability closure：記「正式 rigged 還在載入時，舊 primitive 身體被畫出來」的格數（只有數字）。
+      if(riggedPending>0){loadWatch.pendingFrames+=1;if(st.players.some((player)=>player.rigged?.mode==="loading"&&player.body.visible))loadWatch.primitiveLeakFrames+=1;}
       const watchName=riggedPending<0?null:!loadWatch.firstFrame?"gpu:first-render":riggedPending===0?"gpu:first-rigged-render":null;
       const endWatchRender=watchName?csLoadSpan(watchName):null;
       renderer.render(scene,camera);
       if(endWatchRender){
         endWatchRender({programs:renderer.info.programs?.length??0,calls:renderer.info.render.calls,textures:renderer.info.memory.textures});
         if(!loadWatch.firstFrame){loadWatch.firstFrame=true;csLoadMark("battle:first-frame",{riggedPending});}
-        if(riggedPending===0){loadWatch.riggedReady=true;csLoadMark("battle:rigged-ready",{rigged:st.players.filter((player)=>player.rigged?.mode==="rigged").length});}
+        if(riggedPending===0){loadWatch.riggedReady=true;csLoadMark("battle:rigged-ready",{rigged:st.players.filter((player)=>player.rigged?.mode==="rigged").length,primitiveLeakFrames:loadWatch.primitiveLeakFrames,pendingFrames:loadWatch.pendingFrames});}
       }
       if(import.meta.env?.DEV&&typeof document!=="undefined"){
         const canvas=renderer.domElement;
@@ -2554,7 +2556,8 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
     endFxPools();
     st.mapReady=true;st.seekNonce=-1;st.subT=0;
     //  量測用：只記「第一個戰鬥 frame」與「rigged 角色全部就位」兩個時間點，記完即停。
-    st.loadWatch={firstFrame:false,riggedReady:false};
+    st.loadWatch={firstFrame:false,riggedReady:false,primitiveLeakFrames:0,pendingFrames:0};
+    st.riggedRevealDeadline=(typeof performance!=="undefined"?performance.now():0)+RIGGED_REVEAL_TIMEOUT_MS;
     endMapBuild({mapKey});
   // roster reference is useMemo-stable in the wrapper and changes on identity change.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2565,6 +2568,24 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
 
 // ── 每幀更新：選手 + 特效（插值）──
 const _q=new THREE.Quaternion(),_vA=new THREE.Vector3(),_vB=new THREE.Vector3(),_dir=new THREE.Vector3(),_xAxis=new THREE.Vector3(1,0,0);
+
+// ── CS Mobile Stability closure：正式 rigged 角色就位前不露出舊 primitive ────────
+// 根因：每幀以 `P.body.visible=!riggedActive` 決定 primitive 身體，而 rigged controller 在
+// GLB 下載／parse 期間是 mode "loading"（不是 "rigged"）⇒ 首次進場那段時間畫出舊的 primitive
+// （俯瞰鏡頭下還會被放大），GLB 就位後才切成正式角色。返回同一場因資產已快取而沒有這個空窗。
+// 修法只改「loading」這一種狀態：先不畫 primitive，就位後一次顯示正式角色。
+// ⚠ fallback safety 不變：載入失敗（"failed"）與關閉 rigged（"fallback"）照舊顯示 primitive；
+//   資產卡住超過期限也退回 primitive，不讓選手永遠不見。
+//  ⚠ 這個期限只給「資產真的卡死」用，不是一般慢網路：CPU 4×＋4G 模擬低階手機時，
+//    rigged 資產在 map build 後約 30 秒以上才就位，20 秒的期限會讓舊 primitive 又冒出來。
+//    載入失敗仍會立刻變成 "failed" 而退回 primitive，不受這個期限影響。
+const RIGGED_REVEAL_TIMEOUT_MS=60000;
+function primitiveBodyAllowed(st,P){
+  const mode=P.rigged?.mode;
+  if(mode==="rigged")return false;
+  if(mode!=="loading")return true;
+  return Number.isFinite(st.riggedRevealDeadline)&&typeof performance!=="undefined"&&performance.now()>=st.riggedRevealDeadline;
+}
 
 function allFinite(values){return values.every((value)=>Number.isFinite(Number(value)));}
 function nodeVisibleThroughParents(node){
@@ -2659,7 +2680,7 @@ function buildFpsVisibilitySnapshot(st,frame,frameIndex){
       scale:{x:P.g.scale.x,y:P.g.scale.y,z:P.g.scale.z},
     };
     const identityMiss=Boolean(P.identityMiss||!authoritative);
-    const resolved=resolveFpsPresentationVisibility({entityExists:true,identityMiss,rootVisible:P.g.visible!==false,parentVisible:nodeVisibleThroughParents(P.g),sceneVisible,playerGroupVisible,primitiveBodyVisible,riggedRootVisible:P.rigged?.root?.visible===true,riggedActive,transform});
+    const resolved=resolveFpsPresentationVisibility({entityExists:true,identityMiss,rootVisible:P.g.visible!==false,parentVisible:nodeVisibleThroughParents(P.g),sceneVisible,playerGroupVisible,primitiveBodyVisible,riggedRootVisible:P.rigged?.root?.visible===true,riggedActive,presentationPending:P.rigged?.mode==="loading"&&!primitiveBodyAllowed(st,P),transform});
     return {
       id:P.id,team:authoritative?.side||P.side,authoritativePresent:Boolean(authoritative),authoritativeAlive:authoritative?!authoritative.dead:null,
       framePosition:authoritative?.pos?{x:authoritative.pos.x,y:authoritative.pos.y}:null,entityExists:true,entityType:riggedActive?"rigged":"primitive",
@@ -2711,7 +2732,7 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null){
       // Identity miss is not authoritative death. Keep the last presentation
       // state visible as a recoverable diagnostic instead of silently hiding it.
       P.identityMiss=true;P.povSelfHidden=false;P.g.userData.identityMiss=true;P.g.visible=true;
-      P.body.visible=P.rigged?.mode!=="rigged";P.disc.visible=false;P.ring.visible=false;P.deadMat.opacity=0;P.selBeam.visible=false;
+      P.body.visible=primitiveBodyAllowed(st,P);P.disc.visible=false;P.ring.visible=false;P.deadMat.opacity=0;P.selBeam.visible=false;
       P.nameSpr.visible=showLabels;
       P.rigged?.setIdentityMiss?.();
       return;
@@ -2729,7 +2750,7 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null){
     if(P.rigged){st.c5a1HitDriftMax=Math.max(st.c5a1HitDriftMax,P.rigged.maxHitPositionDrift||0);st.c5a1HitDriftSamples=st.players.reduce((sum,player)=>sum+(player.rigged?.hitPositionDriftSamples||0),0);}
     const riggedActive=P.rigged?.mode==="rigged";
     const riggedMode=P.rigged?.mode||"fallback";
-    P.body.visible=!riggedActive;
+    P.body.visible=primitiveBodyAllowed(st,P);
     // Primitive characters keep a fixed world-space size. The P0 overview
     // camera can legitimately move farther out to protect whole-team framing,
     // which made the fallback silhouette unreadably small while labels/rings
@@ -2766,11 +2787,11 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null){
     P.rigged?.setFacingDegrees?.(va);
     const sel=live.selected===P.id;
     if(p.dead){
-      P.body.visible=!riggedActive;P.bombBag.visible=false;P.hpGroup.visible=false;P.nameSpr.visible=false;P.selBeam.visible=false;
+      P.body.visible=primitiveBodyAllowed(st,P);P.bombBag.visible=false;P.hpGroup.visible=false;P.nameSpr.visible=false;P.selBeam.visible=false;
       P.deadMat.opacity=0.8;P.ringMat.opacity=0.0;P.ring.visible=false;P.disc.visible=false;
       P.dead.scale.setScalar(clamp(st.cam.radius/55,0.85,2.0)); // 死亡地面 X，遠看清楚
     }else{
-      P.body.visible=!riggedActive;P.disc.visible=Boolean(FPS_DEBUG_ENABLED);P.deadMat.opacity=0;
+      P.body.visible=primitiveBodyAllowed(st,P);P.disc.visible=Boolean(FPS_DEBUG_ENABLED);P.deadMat.opacity=0;
       // 轉向（+X 對齊視角方向）
       P.body.rotation.y=-va*Math.PI/180;
       // 移動/掃視微動（呼吸感）

@@ -1,0 +1,178 @@
+{
+  "label": "after-flash-throttled",
+  "throttle": true,
+  "url": "http://localhost:5671/ESMO-/",
+  "at": "2026-09-13T18:22:47.292Z",
+  "steps": [
+    {
+      "step": "home-baseline",
+      "heapMB": 12,
+      "pressure": "ok",
+      "canvas": 0,
+      "rafLive": 0,
+      "listenerTotal": 5,
+      "intervals": 0,
+      "glAlive": 0,
+      "glAcquired": 0,
+      "lostAttached": 0,
+      "lostDetached": 0,
+      "rigged": 0,
+      "mixers": 0,
+      "cache": null,
+      "viewport": [
+        390,
+        844,
+        3
+      ]
+    },
+    {
+      "step": "battle-first",
+      "heapMB": 128,
+      "pressure": "ok",
+      "canvas": 1,
+      "rafLive": 1,
+      "listenerTotal": 5,
+      "intervals": 0,
+      "glAlive": 1,
+      "glAcquired": 1,
+      "lostAttached": 0,
+      "lostDetached": 0,
+      "rigged": 10,
+      "mixers": 10,
+      "cache": {
+        "held": true,
+        "mapKey": "inferno",
+        "seed": 11521,
+        "frames": 2477,
+        "stores": 1,
+        "reuses": 0,
+        "releasedOnComplete": 0,
+        "replaced": 0,
+        "lastEvent": "store"
+      },
+      "viewport": [
+        390,
+        844,
+        3
+      ],
+      "loadMs": 102820
+    },
+    {
+      "step": "leave-1",
+      "heapMB": 62,
+      "pressure": "ok",
+      "canvas": 0,
+      "rafLive": 0,
+      "listenerTotal": 5,
+      "intervals": 0,
+      "glAlive": 0,
+      "glAcquired": 1,
+      "lostAttached": 0,
+      "lostDetached": 1,
+      "rigged": 0,
+      "mixers": 0,
+      "cache": {
+        "held": true,
+        "mapKey": "inferno",
+        "seed": 11521,
+        "frames": 2477,
+        "stores": 1,
+        "reuses": 0,
+        "releasedOnComplete": 0,
+        "replaced": 0,
+        "lastEvent": "store"
+      },
+      "viewport": [
+        390,
+        844,
+        3
+      ]
+    },
+    {
+      "step": "resume-1",
+      "heapMB": 118,
+      "pressure": "ok",
+      "canvas": 1,
+      "rafLive": 2,
+      "listenerTotal": 5,
+      "intervals": 0,
+      "glAlive": 1,
+      "glAcquired": 2,
+      "lostAttached": 0,
+      "lostDetached": 1,
+      "rigged": 10,
+      "mixers": 10,
+      "cache": {
+        "held": true,
+        "mapKey": "inferno",
+        "seed": 11521,
+        "frames": 2477,
+        "stores": 1,
+        "reuses": 1,
+        "releasedOnComplete": 0,
+        "replaced": 0,
+        "lastEvent": "reuse"
+      },
+      "viewport": [
+        390,
+        844,
+        3
+      ],
+      "loadMs": 3493
+    },
+    {
+      "step": "leave-2",
+      "heapMB": 63,
+      "pressure": "ok",
+      "canvas": 0,
+      "rafLive": 0,
+      "listenerTotal": 5,
+      "intervals": 0,
+      "glAlive": 0,
+      "glAcquired": 2,
+      "lostAttached": 0,
+      "lostDetached": 2,
+      "rigged": 0,
+      "mixers": 0,
+      "cache": {
+        "held": true,
+        "mapKey": "inferno",
+        "seed": 11521,
+        "frames": 2477,
+        "stores": 1,
+        "reuses": 1,
+        "releasedOnComplete": 0,
+        "replaced": 0,
+        "lastEvent": "reuse"
+      },
+      "viewport": [
+        390,
+        844,
+        3
+      ]
+    }
+  ],
+  "primitiveFirstEntry": {
+    "leakFrames": 161,
+    "pendingFrames": 387
+  },
+  "summary": {
+    "firstLoadMs": 102820,
+    "resumeLoads": [
+      3493
+    ],
+    "leaveHeaps": [
+      62,
+      63
+    ],
+    "baseHeap": 12,
+    "battleHeap": 128,
+    "firstSession": {
+      "sessionId": "session:cs:e369a084",
+      "seed": 11521,
+      "status": "active"
+    }
+  },
+  "consoleErrors": [],
+  "pageErrors": []
+}

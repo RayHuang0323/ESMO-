@@ -20749,3 +20749,81 @@ Owner 要求 audit `ef706f1` 新增的 `__ESMO_CS_SIM_CACHE__` 是否值得留�
   最後還原的一般 build dist 全域 0 次。
 
 **Android 真機結果**：Owner Review 訊息中未附上實測數字，最終判定待補（不以桌機模擬代替真機結論）。
+
+## 2026-09-14 CS Mobile Stability Closure：Owner 真機 PASS＋首次進場舊 primitive 閃現修正
+
+分支 `test/cs-mobile-stability`（保留 local commits `ef706f1`、`9d2537c`、`b247f9c`），local commit，未 push／deploy。
+**不做** Web Worker。
+
+### Owner Android 真機結果
+
+| 項目 | 結果 |
+|---|---|
+| 機型 | vivo X80（台灣版 12GB RAM／Dimensity 9000） |
+| 首次進場 | 約 10–15 秒；Loading 期間**無**「網頁沒有回應」 |
+| 返回 ×3 | 約 2–3 秒／2–3 秒／2–3 秒 |
+| 背景 30 秒回來 | 約 2–3 秒，正常 |
+| 結果後開新的一場 | 約 2–3 秒，正常 |
+| 黑畫面／crash／瀏覽器自動 reload／WebGL context lost | 無／未發現／未發現／無可觀察異常 |
+| 手動整頁 reload 後重新進場 | 約 10 秒 |
+
+**Owner Final**：`CS_MOBILE_STABILITY_FINAL = PASS`、`CACHE_DESIGN = KEEP`、`DIAGNOSTIC_HOOK = DEV_ONLY`、
+`WEB_WORKER_PRIORITY = NOT_NEEDED`（現階段）。⚠ 高階機結果；低階 Android 未實測（桌機 CPU 4× 模擬約 91 秒）。
+
+### 真機發現：首次進 CS 短暫看到舊「旗子／primitive」角色
+
+- **根因**：`EsportsFPS3D` 每幀以 `P.body.visible=!riggedActive` 決定 primitive 身體，而 rigged controller
+  在 GLB 下載／parse 期間是 mode `"loading"`（不是 `"rigged"`）⇒ 首次進場在「第一個戰鬥 frame」到
+  「rigged 就位」之間畫出舊 primitive（俯瞰鏡頭下還會被 readability scale 放大到最多 3 倍）。
+  返回同一場因 GLB 已快取、第一個 frame 前就已是 `"rigged"`，所以沒有這個空窗——與真機「只在首次進場看到」一致。
+- **修法（最小）**：新增 `primitiveBodyAllowed(st,P)`，只改 `"loading"` 這一種狀態——載入中不畫 primitive，
+  就位後一次顯示正式角色。**fallback safety 不變**：`"failed"`（載入失敗）與 `"fallback"`（關閉 rigged）照舊顯示
+  primitive；資產卡住超過 60 秒也退回 primitive。沒有改 FpsCharacterRenderer、動畫架構、Loading 時序、simulation 或快取。
+- ⚠ 期限一開始設 20 秒：CPU 4×＋4G 下 rigged 資產在 map build 後要 30 秒以上才就位，期限一到舊 primitive 又冒出來
+  （387 格等待中露出 161 格）⇒ 改為 60 秒，只留給「資產真的卡死」。
+- DEV 可見性契約（`fpsVisibilityDiagnostics`）新增 `rigged-asset-pending` 原因：載入中的刻意隱藏不算違規，
+  計數照實；其餘隱藏原因判定不變。
+- 量測：`battle:rigged-ready` 標記新增 `primitiveLeakFrames`（rigged 載入中卻畫出 primitive 的格數）與 `pendingFrames`。
+
+### 修前／修後量測（`battle:rigged-ready` 的 primitiveLeakFrames／pendingFrames）
+
+| 情境 | 修前 | 修後 |
+|---|---|---|
+| dev 首次進場 | 露出 10／等待 10 格 | 露出 **0**／等待 12 格 |
+| dev 返回同一場 | 0／0 | 0／0 |
+| 手機 390 首次進場（test build） | 露出 9／等待 9 格（同時段對照組） | 露出 **0**／等待 10 格 |
+| 手機 390 開新的一場 | 0／0 | 0／0 |
+| 手機 390＋CPU 4×＋4G | 露出 345／等待 345 格 | 20 秒期限：161／387；**60 秒期限：0／377** |
+
+截圖（本機檢視、未入庫）：修前在 rigged 就位前可見橘／藍 primitive 小人；修後同一時刻只有名牌與血條。
+
+**LOADING_REGRESSION（同機、相鄰時段 A/B）**：對照組＝HEAD `b247f9c`＋量測、無修正。
+
+| | 對照組（無修正） | 修正後 |
+|---|---|---|
+| 手機 390 首次進場 | 22.6s | 22.6s |
+| 返回 ×5 | 2.47／2.47／2.42／2.41／2.45s | 2.44／2.52／2.54／2.44／2.44s |
+| 離場 heap（壓力＋GC） | 62→63MB | 62→63MB |
+| dev 首次／返回 | 22.1s／1.17s | 22.3s／1.26、1.38s |
+
+⇒ **無載入回歸**。本輪數字比前一輪（首次 17.6s／返回 1.4s）慢，是機器狀態；對照組同樣慢。
+CPU 4×＋4G 首次進場 102.9s（前一輪 90.8s、本輪修前 106.4s，同屬這一輪的機器狀態）。
+
+### 驗證（修正後）
+
+- `check_cs_renderer_visibility` 24/24（新增 `rigged-asset-pending` 後原斷言不變）、`check_cs_c2a` 13/13、`c2b` 14/14、
+  `c2c` 9/9、`c5c_presentation` 29/29、`camera_recovery` 8/8、`raf_fidx_coherence` 7/7、`stable_canvas_geometry` 5/5、
+  `cs23` 28/28、`check_cs_sim_cache_lifecycle` 10/10、`check_cs_match_completion` 36/36、模擬等價（mirage＋同實例重跑）4/4、
+  `check_cs_c6c_progress_ux`（暫存後）12/12。
+- `browser_measure_cs_loading`（dev，3 輪）11/11；`browser_measure_cs_lifecycle`（dev，3 輪）**22/22**。
+- 本機打包版跑 `browser_check_prod_cs_loading_v2` **42/42**：10/10 rigged、Idle／Walk／Sprint／Aim／Fire／Hit／Death
+  七個片段都有播放、返回同一場秒級、賽後結果正常、context lost 0、console 0。
+- **PRODUCTION_DEBUG_GLOBAL**：一般 `npm run build` 的 bundle 中 `__ESMO_CS_SIM_CACHE__` 0、`sim:cache-` 0
+  （test build `--mode testhooks` 為 1）。
+
+### 未驗證／限制
+
+- 修正後**尚未**在 Owner 真機重看首次進場（修前為真機發現，修後只有自動化證據）。
+- 首次進場在 rigged 就位前的短暫空窗（桌機約 0.75s、4G 更久）改為「角色尚未出現、名牌／血條在」，
+  不是 Loading 畫面延長；若 Owner 希望連名牌都一起延後出現，屬另一個小調整。
+- 低階 Android 仍未實測。

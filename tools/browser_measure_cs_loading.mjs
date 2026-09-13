@@ -312,6 +312,7 @@ function summarize({ kind, t0, before, after }) {
     marks: {
       loadingMount: r1(loadingMount?.at - t0), loadingDone: r1(loadingDone?.at - t0), matchRender: r1(matchRender?.at - t0),
       firstFrame: r1(firstFrame?.at - t0), riggedReady: r1(ready?.at - t0), riggedCount: ready?.detail?.rigged ?? null,
+      primitiveLeakFrames: ready?.detail?.primitiveLeakFrames ?? null, pendingFrames: ready?.detail?.pendingFrames ?? null,
     },
   };
 }
@@ -408,6 +409,7 @@ const result = await runGate({
       cycles.push(summary);
       console.log(`   loadMs=${summary.loadMs}  endToEnd=${summary.endToEndMs}  firstFrame=${summary.firstFrameMs}`);
       console.log(`   關鍵路徑 ${JSON.stringify(summary.critical)}`);
+      console.log(`   rigged 就位前：等待 ${summary.marks.pendingFrames ?? "?"} 格，其中舊 primitive 露出 ${summary.marks.primitiveLeakFrames ?? "?"} 格`);
       if (sim) console.log(`   sim sha ${sim.sha.slice(0, 16)}（${sim.frames} frames, ${(sim.bytes / 1048576).toFixed(1)} MB JSON）｜reuse ${summary.phases["main-thread"].simReuse}`);
 
       await sleep(1500);

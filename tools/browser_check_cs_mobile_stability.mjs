@@ -222,6 +222,8 @@ const result = await runGate({
     const enter = await enterBattle(chrome, sleep);
     ck("首次進場流程走得通（390px）", enter.ok, enter.why ?? "");
     if (!enter.ok) { writeFileSync(new URL(`${LABEL}.json`, OUT), JSON.stringify(report, null, 2)); return; }
+    //  畫面一出現就截一張：rigged 還沒就位的那一瞬間，玩家會不會看到舊 primitive 角色。
+    if (await waitFor(chrome, sleep, `document.querySelector("canvas")`, THROTTLE ? 600000 : 240000, 100)) { await sleep(250); await shot("00-canvas-before-rig-ready"); }
     const ready1 = await waitFor(chrome, sleep, markSince("battle:rigged-ready", t0), THROTTLE ? 600000 : 240000, 250);
     let s = J(await chrome.evaluate(snap()));
     const lm = s.entries.find((e) => e.name === "ui:cs-loading-mount" && e.at >= t0);
@@ -234,6 +236,9 @@ const result = await runGate({
       battle1.cache ? "ok" : "沒有 window.__ESMO_CS_SIM_CACHE__ ⇒ 請用 npm run build -- --mode testhooks");
     if (!battle1.cache) { writeFileSync(new URL(`${LABEL}.json`, OUT), JSON.stringify(report, null, 2)); return; }
     ck("首次：快取保存一份", battle1.cache?.held === true && battle1.cache?.stores === 1, JSON.stringify(battle1.cache));
+    ck("首次：rigged 就位前沒有畫出舊 primitive 角色", rr?.detail?.primitiveLeakFrames === 0,
+      `primitive 露出 ${rr?.detail?.primitiveLeakFrames ?? "?"} 格／等待 rigged ${rr?.detail?.pendingFrames ?? "?"} 格`);
+    report.primitiveFirstEntry = { leakFrames: rr?.detail?.primitiveLeakFrames ?? null, pendingFrames: rr?.detail?.pendingFrames ?? null };
     await shot("01-battle-first");
     const firstSession = J(await chrome.evaluate(identity()));
 
@@ -311,6 +316,9 @@ const result = await runGate({
         await sleep(2500);
         const battle2 = record("battle-new-match", J(await chrome.evaluate(snap())), await pressureAndGc());
         const secondSession = J(await chrome.evaluate(identity()));
+        const rr2 = J(await chrome.evaluate(snap())).entries.find((e) => e.name === "battle:rigged-ready" && e.at >= tn);
+        ck("新的一場：rigged 就位前沒有畫出舊 primitive 角色", rr2?.detail?.primitiveLeakFrames === 0,
+          `primitive 露出 ${rr2?.detail?.primitiveLeakFrames ?? "?"} 格／等待 rigged ${rr2?.detail?.pendingFrames ?? "?"} 格`);
         ck("新的一場：是不同 session、10 名 rigged", ready2 && battle2.rigged === 10 && secondSession?.sessionId && secondSession.sessionId !== firstSession?.sessionId,
           `${firstSession?.sessionId} → ${secondSession?.sessionId}`);
         ck("新的一場：只保存新的一份（舊的不在）", battle2.cache?.held === true && battle2.cache?.stores === 2 && battle2.cache?.releasedOnComplete === 1,

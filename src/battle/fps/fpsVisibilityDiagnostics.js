@@ -42,6 +42,8 @@ export function resolveFpsPresentationVisibility({
   primitiveBodyVisible = false,
   riggedRootVisible = false,
   riggedActive = false,
+  //  正式 rigged 資產仍在載入、primitive 刻意不畫的暫態（CS Mobile Stability closure）。
+  presentationPending = false,
   transform = null,
 } = {}) {
   const transformOk = isFpsPresentationTransformFinite(transform);
@@ -56,11 +58,13 @@ export function resolveFpsPresentationVisibility({
   else if (identityMiss) reason = "identity-miss";
   else if (!sceneVisible || !playerGroupVisible || !parentVisible || !rootVisible) reason = "parent-hidden";
   else if (!transformOk) reason = "non-finite-or-zero-transform";
-  else if (!activePresentationVisible) reason = riggedActive ? "rigged-root-hidden" : "primitive-body-hidden";
+  else if (!activePresentationVisible) reason = presentationPending ? "rigged-asset-pending" : riggedActive ? "rigged-root-hidden" : "primitive-body-hidden";
   return { identityOk, transformOk, activePresentationVisible: Boolean(activePresentationVisible), presentationVisible, reason };
 }
 
 function countBySide(players, side) { return players.filter((player) => player?.team === side).length; }
+//  rigged 資產載入中的刻意隱藏不是可見性違規；計數仍照實（不算進 visiblePresentation）。
+const isRiggedAssetPending = (player) => player?.visibilityReason === "rigged-asset-pending";
 
 function summarizeSide(players, side) {
   const members = players.filter((player) => player?.team === side);
@@ -99,16 +103,16 @@ export function summarizeFpsTeamVisibility(players = []) {
     ok: list.length === 10 && countBySide(list, "t") === 5 && countBySide(list, "ct") === 5
       && list.every((player) => player.entityExists && !player.identityMiss)
       && list.filter((player) => player.authoritativeAlive === true)
-        .every((player) => (player.presentationVisible || player.povSelfHidden) && player.transformFinite),
+        .every((player) => (player.presentationVisible || player.povSelfHidden || isRiggedAssetPending(player)) && player.transformFinite),
   };
 }
 
 export function checkFpsRuntimeVisibility({ players = [], requireCameraViewport = false } = {}) {
   const list = Array.isArray(players) ? players.filter(Boolean) : [];
   const summary = summarizeFpsTeamVisibility(list);
-  const aliveHidden = list.filter((player) => player.authoritativeAlive === true && !player.presentationVisible && !player.povSelfHidden)
+  const aliveHidden = list.filter((player) => player.authoritativeAlive === true && !player.presentationVisible && !player.povSelfHidden && !isRiggedAssetPending(player))
     .map((player) => ({ id: player.id, reason: player.visibilityReason }));
-  const aliveBodyHidden = list.filter((player) => player.authoritativeAlive === true && player.bodyVisible === false && !player.povSelfHidden)
+  const aliveBodyHidden = list.filter((player) => player.authoritativeAlive === true && player.bodyVisible === false && !player.povSelfHidden && !isRiggedAssetPending(player))
     .map((player) => player.id);
   const identityMisses = list.filter((player) => player.identityMiss).map((player) => player.id);
   const nonFiniteTransforms = list.filter((player) => !player.transformFinite).map((player) => player.id);

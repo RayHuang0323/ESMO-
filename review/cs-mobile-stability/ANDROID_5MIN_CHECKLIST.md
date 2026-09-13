@@ -55,3 +55,24 @@ CS → 賽前 → 選地圖 → 選戰術 → 出現 Loading 畫面時**開始�
 
 **只要出現任一 ❌，先不要做任何調整，直接回報**——第一個嫌疑是返回沿用的快取（CS-LOAD-1），
 但也可能是既有的 WebGL／記憶體問題，需要用數字確認。
+
+## 真機結果（2026-09-14，Owner）
+
+| 項目 | 結果 |
+|---|---|
+| 機型 | vivo X80（台灣版，12GB RAM／Dimensity 9000） |
+| 1. 首次進場 | 約 10–15 秒；Loading 期間**沒有**「網頁沒有回應」 |
+| 2. 對戰 | 無黑畫面、無角色消失 |
+| 3. 返回 ×3 | 約 2–3 秒／2–3 秒／2–3 秒 |
+| 4. 背景 30 秒回來 | 約 2–3 秒，正常 |
+| 5. 結果後開新的一場 | 約 2–3 秒，正常 |
+| reload／crash／WebGL context lost | 未發現瀏覽器自動 reload、未發現 crash、無可觀察的 context lost |
+| 手動整頁 reload 後重新進場 | 約 10 秒 |
+
+**Owner Final**：`CS_MOBILE_STABILITY_FINAL = PASS`、`CACHE_DESIGN = KEEP`、`DIAGNOSTIC_HOOK = DEV_ONLY`、
+`WEB_WORKER_PRIORITY = NOT_NEEDED（現階段）`。
+
+**真機另外發現**：首次進 CS 時短暫看到舊的 primitive（「旗子」）角色，之後才切換成正式 rigged 角色——
+列為 closure audit 修正（見 05 Sprint 紀錄）。
+
+注意：這是高階機（Dimensity 9000）。桌機以 CPU 4× 模擬低階手機時首次進場約 91 秒，低階 Android 尚未實測。
