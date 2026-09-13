@@ -209,6 +209,13 @@ const result = await runGate({
     ck("首次：10 名角色 ready 並進入 Battle", ready1 && s1.rigged === 10 && s1.mixers === 10, `rigged ${s1.rigged}／mixer ${s1.mixers}`);
     ck("首次：進場時間明顯低於舊版 80 秒級（< 45s）", firstLoadMs != null && firstLoadMs < 45000, `${(firstLoadMs / 1000).toFixed(1)}s（Loading 出現 → 10 名 rigged 就位）`);
     ck("首次：整場模擬只跑一次", sims1.length === 1, `${sims1.length} 次，${sims1.map((e) => Math.round(e.dur)).join(",")}ms`);
+    //  CS Mobile Stability closure：首次進場在 rigged 就位前不得畫出舊 primitive（計數由 battle:rigged-ready 標記帶出）。
+    ck("首次：rigged 就位前沒有 primitive flash", readyMark?.detail?.primitiveLeakFrames === 0,
+      `primitive 露出 ${readyMark?.detail?.primitiveLeakFrames ?? "?"} 格／等待 rigged ${readyMark?.detail?.pendingFrames ?? "?"} 格`);
+    //  ⚠ 回傳物件再取欄位：J() 會剝掉外層引號，裸字串 "undefined" 會被 JSON.parse 當成失敗而回 null。
+    const debugGlobal = J(await chrome.evaluate("return JSON.stringify({ t: typeof window.__ESMO_CS_SIM_CACHE__ });"))?.t ?? null;
+    ck("正式 bundle 沒有 debug global（__ESMO_CS_SIM_CACHE__）", debugGlobal === "undefined", String(debugGlobal));
+    report.primitiveFirstEntry = { leakFrames: readyMark?.detail?.primitiveLeakFrames ?? null, pendingFrames: readyMark?.detail?.pendingFrames ?? null };
     ck("首次：對戰中存活 WebGL context = 1、沒有 context lost", s1.glAlive === 1 && s1.lostAttached === 0, `alive ${s1.glAlive}｜lost(掛載中) ${s1.lostAttached}`);
     await shot("01-battle-first-entry");
 
@@ -284,6 +291,24 @@ const result = await runGate({
     const resultText = J(await chrome.evaluate(`return JSON.stringify(document.body.innerText.slice(0, 400));`));
     ck("賽後結果畫面正常（有 MVP 與返回 Dashboard）", resultScreen, String(resultText || "").replace(/\s+/g, " ").slice(0, 120));
     await shot("09-result");
+
+    // ── 結果後開新的一場 ──────────────────────────────────────────────────
+    await chrome.evaluate(clickText("返回 Dashboard"));
+    await sleep(2500);
+    const tn = await pageNow(chrome);
+    const enter2 = await enterBattle(chrome, sleep);
+    ck("結果後開新的一場走得通", enter2.ok, enter2.why ?? "");
+    if (enter2.ok) {
+      const ready2 = await waitFor(chrome, sleep, markSince("battle:rigged-ready", tn), 240000, 100);
+      const s2 = J(await chrome.evaluate(snap()));
+      const r2 = marksSince(s2.entries, "battle:rigged-ready", tn)[0];
+      const id2 = J(await chrome.evaluate(identity()));
+      ck("新的一場：10 名 rigged、不同 session、沒有 primitive flash",
+        ready2 && s2.rigged === 10 && Boolean(id2?.sessionId) && id2.sessionId !== idBefore?.sessionId && r2?.detail?.primitiveLeakFrames === 0,
+        `rigged ${s2.rigged}｜${idBefore?.sessionId} → ${id2?.sessionId}｜primitive 露出 ${r2?.detail?.primitiveLeakFrames ?? "?"} 格`);
+      report.newMatch = { rigged: s2.rigged, sessionId: id2?.sessionId ?? null, leakFrames: r2?.detail?.primitiveLeakFrames ?? null };
+      await shot("10-new-match");
+    }
 
     const consoleErrors = (chrome.consoleLines ?? []).filter((l) => l.startsWith("[error]"));
     const pageErrors = chrome.pageErrors ?? [];

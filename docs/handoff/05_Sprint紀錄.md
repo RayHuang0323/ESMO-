@@ -20827,3 +20827,46 @@ CPU 4×＋4G 首次進場 102.9s（前一輪 90.8s、本輪修前 106.4s，同�
 - 首次進場在 rigged 就位前的短暫空窗（桌機約 0.75s、4G 更久）改為「角色尚未出現、名牌／血條在」，
   不是 Loading 畫面延長；若 Owner 希望連名牌都一起延後出現，屬另一個小調整。
 - 低階 Android 仍未實測。
+
+## 2026-09-14 CS Mobile Stability Final Gate＋Release（60 秒 rigged-loading fallback）
+
+Owner Review：Conditional GO。先前部分 lifecycle／static／production gate 跑在 20 秒版本上，
+本節全部以最終 60 秒版本（src 與 `951333d` 逐位元組相同）重跑，release evidence 對齊同一個最終版本。
+**未改** timeout 數值、未做新的 renderer polish、未處理名牌／血條 reveal、未開始 Web Worker。
+
+### 新增的驗證工具
+
+- `tools/check_cs_rigged_reveal_fallback.mjs`：直接呼叫 runtime 的 `primitiveBodyAllowed`（deterministic、不等真實時間），
+  驗 NORMAL_PATH、TIMEOUT_PATH 與 failed／fallback safety，並以原始碼確認期限常數 60000、map build 設定 deadline、
+  四處 primitive 可見性都走這支函式。
+- `tools/browser_check_cs_rigged_reveal_timeout.mjs`：dev server＋CDP Fetch 攔住角色 GLB 且永不放行（模擬資產卡死），
+  真的等過 60 秒，驗期限前刻意隱藏、期限後 primitive fallback 真的出現。
+- `browser_check_prod_cs_loading_v2` 補：首次進場 primitive flash 計數、debug global、結果後開新的一場。
+
+### Final Gate 結果（src 與 `951333d` 相同；2026-09-14 03:29–03:47）
+
+| # | Gate | 結果 |
+|---|---|---|
+| 1 | cache lifecycle（`check_cs_sim_cache_lifecycle`） | 10/10 |
+| 2 | lifecycle leak guard（`browser_measure_cs_lifecycle`，dev 3 輪） | **22/22**（進場 38.8s → 返回 1.5s／1.3s） |
+| 3 | rig／animation／visibility | `renderer_visibility` 24/24、`c2a` 13/13、`c2b` 14/14、`c2c` 9/9、`c5c_presentation` 29/29、`camera_recovery` 8/8、`raf_fidx` 7/7、`stable_canvas` 5/5；打包版 smoke 七個動畫片段都有播放 |
+| 4 | match completion／MatchSession | `match_completion` 36/36、`cs23` 28/28、`cs_series` 46/46、`playable_series` 99/99、`residual_tactic_sync_p1` 4/4、模擬等價 4/4、`c6c` 12/12 |
+| 5 | mobile 390（test build） | 完整 **39/39**（首次 22.8s、返回 2.44–2.53s、離場 heap 62→63MB、新場 59MB）；CPU 4×＋4G **16/16** |
+| 6 | production-equivalent build | `npm run build` ✓ |
+| 7 | production debug global | bundle 內 `__ESMO_CS_SIM_CACHE__` **0**、`sim:cache-` **0**；打包版 smoke 在頁面上 typeof window.__ESMO_CS_SIM_CACHE__ === "undefined"（修正工具後重跑 46/46） |
+| 8 | primitive flash verifier | dev 首次露出 **0**／等待 12 格、返回 0／0；390 首次 **0**／9、新場 0／0；CPU 4×＋4G **0**／385；打包版 smoke 首次 0／12、新場 0 |
+| 9 | 60 秒 fallback deterministic | `check_cs_rigged_reveal_fallback` **13/13**；瀏覽器實等 `browser_check_cs_rigged_reveal_timeout` **13/13** |
+
+**NORMAL_PATH**：rigged 載入中 primitive 露出 0 格、10/10 rigged 就位；dev 首次進場 rigged 在 map build 後約 2.7s 就位，
+遠在 60s 期限之前。fallback 若被觸發，載入中 primitive 會被畫出（露出格數 > 0）⇒ 三個情境都是 0，即未觸發。
+
+**TIMEOUT_PATH**：CDP 攔住角色 GLB 且永不放行（模擬資產卡死）：期限前（距期限 55.3s）10 名皆 loading、primitive 0、
+可見性標為 `rigged-asset-pending`（aliveHidden 0、check.ok true）；等過期限 2.6s 後仍是 loading，但 primitive fallback
+10 名出現、pending 0、aliveHidden 0 ⇒ **不會永久 invisible**。
+
+**Gate 工具本身的兩個修正（均非產品問題，src 未動）**：
+- `check_cs_rigged_reveal_fallback` 首跑 12/13：「舊規則不存在」誤把根因**註解**裡的舊規則原文算進去；改為只看程式行後 13/13
+  （程式碼中 helper 4 處、舊規則 0 處）。
+- 打包版 smoke 首跑 45/46：debug global 檢查把 `typeof` 回傳的裸字串 `"undefined"` 解析成 `null`；改為回傳物件後重跑。
+
+正式站 smoke 在本 commit push／deploy 之後執行，結果記於 release 回報（不為補文件再觸發一次 deploy）。
