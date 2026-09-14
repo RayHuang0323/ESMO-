@@ -21117,3 +21117,58 @@ FIRST_VISIBLE_MAP    = Rift
 - 慢網路最壞情況：玩家在 Loading／Replay 載入畫面最多等 60 秒（持續有進度時），之後才看到 blockout。
 - 待辦沿用：小地圖底圖 4.7 MB 未 preload、野怪模型 `?rev=rig-v3`；技術債：`RIFT_GLB_BYTES` 寫死；asset 壓縮本輪未開始。
 - 四組 baseline red 不變（`check_esmo_rift_v1` 13/1、`check_moba_runtime_map_h1` 61/5、`check_moba_minions_h3` 19/22、`check_moba_camera_replay29b6` fan-out 逾時 17/23）。
+
+## 2026-09-15 MOBA Item System v1 — M1 Pure Foundation（純資料＋純函式＋離線驗證）
+
+Owner Review：M0 APPROVED，Q1–Q5 照 M0 建議定案。M0 三份文件先做 local checkpoint `1a51722`。
+本輪**只**做純資料、純函式與離線驗證：**未**改 LogicEngine、Battle runtime、HUD、Replay runtime；
+**未**調 `dmgK`、未調收入、未做平衡、未加亂數；未 push、未 deploy。
+（Q2 提醒：未來 M2／M3 可以在 itemsV1 規則集內調 `dmgK`／收入，M1 一律不動。）
+
+### 新增模組（`src/battle/moba/items/`，正式程式碼沒有任何檔案 import 它們）
+
+| 模組 | 內容 |
+|---|---|
+| `itemCatalog.js` | 88 件（T1 18／T2 16／T3 44／Boots 6／Starter 4），v1.0 首發 68 件；深度凍結；`ITEM_CATALOG_VERSION = moba-items.catalog.v1` |
+| `itemRecipes.js` | 合成樹驗證（組件存在、階層遞增、無循環、合成費 > 0）、遞迴總價、購買差價（已有組件以原價抵扣、缺件往下遞迴） |
+| `itemInventory.js` | 6 格、靴子 1 雙、starter 1 件、unique group、滿格自動丟 starter（不退款）、最小空格放入 |
+| `itemEconomy.js` | 整數 milli-gold 帳本、守恆檢查、決定性均分、購買交易（只在出生／復活／回城抵達）；收入常數鏡像 legacy，未調整 |
+| `itemEffectKeys.js` | 效果語意去重鍵與強度（唯一實作） |
+| `combatStatsV1.js` | inventory → 凍結 CombatStatsV1；英雄定位傷害 profile；契約常數 |
+| `itemEffects.js` | primitive 登記（v1.0／v1.1／延後）與純計算：輸出、減傷、斬殺、反暴擊、減療、吸血、低血護盾、光環、緩速 |
+| `buildPolicy.js` | 六定位 × 五策略出裝；敵方 profile；情境規則；狀態調整；路線鎖定；不使用亂數 |
+| `offlinePurchaseSim.js` | 離線購買時間線與固定合成情境（legacy 收入常數排出的腳本，**非平衡資料**） |
+
+驗證工具：`tools/check_moba_items_m1.mjs`（13 道 gate）。
+
+### M1 期間發現並修正
+
+- **效果去重鍵用錯**：初版以物品 unique group 去重，重創鐮（T2）與裂傷刺矛（T3）的攻擊通道重傷被算兩次。
+  改為依效果語意（類型＋觸發方式／變體）去重；unique group 只管背包合法性。
+  回歸測試：三種 on-hit 變體仍並存、技能通道重傷與被擊中重傷仍並存。
+- **early 策略會重買前期組件**：前期 T2 被合成進核心裝後不在背包，AI 會再買一次並佔掉最終物品額度。
+  改為「擁有或已被合成進身上物品」即算完成，且不計入 5 件最終物品。
+- **M0 規格補齊**：starter 效果在 M0 沒有命名 primitive，M1 定為 `ROLE_CAMP_DAMAGE`（獵人護符）、`ROLE_INCOME_TITHE`（守護徽章），皆 v1.0。
+- **已知規格張力（未改規格）**：戰士對 AP 重陣容的核心 3「靜海披風」與核心 2「不屈戰旗」同屬 `lifeline` group，
+  依背包規則不可同時持有 ⇒ policy 自動略過並改走 fallback。v1.1 的不動石像上線後建議改用它。
+
+### 驗證結果
+
+| 驗證 | 結果 |
+|---|---|
+| `node tools/check_moba_items_m1.mjs` | **70/70 PASS**（G1 7／G2 5／G3 6／G4 8／G5 4／G6 5／G7 4／G8 6／G9 1／G10 2／G11 15／G12 3／G13 4） |
+| `npm run build` | ✓ built in 13.48s |
+| `node tools/check_simulation_version_gate.mjs` | 51/51 PASS（仍是 `moba-sim.v4`） |
+| `verify.mjs --only=regress,regress2,experience26` | 3/3 PASS（15 seeds／節奏門檻 8/8／29/29；引擎未改，逐值未受影響） |
+
+- G4／G9／G10／G12：15 場離線模擬（5 策略 × 3 陣容）守恆與背包違規 0、AI 購買 v1.1 物品 0 次、深度凍結輸入兩次雜湊相同、
+  反轉輸入陣列順序結果相同。
+- G8：600 組（6 定位 × 5 策略 × 4 陣容 × 5 席位）目標清單兩次逐字相同。
+- G13：工作區只動 items 模組、M1 verifier、handoff 文件；LogicEngine／規則集／GameView／HUD／Replay／contracts 相對 HEAD 無改動。
+
+### 未做／限制
+
+- 未接引擎（M2）；未做 HUD／Replay／BattleResult（M4）；未做平衡校準（M3）。
+- 離線情境收入是固定腳本，不代表真實對局金錢曲線，不能拿來判斷裝備強度或出裝時間。
+- `buildPolicy` 的定位傷害 profile 仍是定位推導；混合型英雄覆寫表未建（M0 Q12）。
+- items 模組尚未列入 `SIMULATION_SEMANTICS_FILES`：它們還沒進引擎，列入會改指紋；M2 接入時一併列入並 bump `moba-sim.v5`。
