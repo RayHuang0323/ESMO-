@@ -21013,3 +21013,35 @@ TIMEOUT_FALLBACK         = PASS（normal／resume／replay：等滿 20s、第一
 - 技術債：`riftMapGate.js` 的 `RIFT_GLB_BYTES` 是寫死的資產大小常數（重建 GLB 要手動同步；`check_moba_rift_loading` 會擋）。
 - debug harness（`?debug` MobaRuntimeBattle）仍無入口閘門，期限內不畫地形（非玩家路徑）。
 - 正式站 CDN 行為與真機未測，需 deploy 後跑 `browser_check_moba_rift_loading --url <正式站>`。
+
+## 2026-09-14 MOBA Rift Loading Release（fba58aa 上線；正式站 Resume／Replay 仍會逾時）
+
+- origin/main 自 `11350c9` 未前進 ⇒ fast-forward push `11350c9..fba58aa`（無 force／reset）。
+  GitHub Actions run 34839171232：build success、deploy success。
+- HTTP：index 200、`assets/index-DZIKlu28.js` 200、`assets/esmo-rift-CHLYDTrC.glb` 200（gzip 7,204,101 bytes、max-age=600）、
+  `rift-albedo-ByqkHkBs.png` 200；舊 `?rev=330-corridor-v3` 路徑 404。
+
+### 正式站 smoke（本機網路，browser_check_moba_rift_loading --url 正式站）
+
+| 入口／情境 | 桌機 | 390＋4G |
+|---|---|---|
+| normal ＋ 賽後 Replay | **21/21** | **21/21** |
+| resume | ❌ 16/19 | ❌ 17/19 |
+| replay（卡 4 秒後放行） | ❌ 17/19 | ❌ 17/19 |
+| normal failure／timeout | 14/14／14/14 | — |
+| resume failure／timeout | 17/17／16/17（前置：戰鬥本身已逾時進場） | — |
+| replay failure／timeout | 15/15／17/17 | — |
+
+- Normal：Rift 從 Ban/Pick 起跑，桌機 22.7s、390 30.0s 就緒，進場前已好 ⇒ 第一幀 Rift、blockout 0、空白 0；賽後 Replay 同樣 Rift。
+- **Resume／Replay 失敗全部是 `timeout`，不是閘門錯誤**：入口才開始下載，正式站 GLB 需 19.5–30s，超過 20s 期限
+  ⇒ 依設計改畫 blockout（桌機 resume Loading 21.6s、replay 載入畫面 20.3s）。Loading／載入畫面有正確顯示、時間軸揭露前停住、
+  ts 接續同一場。
+- CDN 實測：首次 `X-Cache: MISS` 26.0s；之後 HIT 仍 19.5s／21.9s（約 330–370 KB/s）；對照主 bundle 3.6 MB 6.4s（約 570 KB/s）
+  ⇒ 瓶頸是 7.2 MB 下載量 × 此網路頻寬，快取命中也壓不到 20s 內。
+- console error 0、page error 0。
+
+### 狀態
+
+- RIFT_LOADING_RELEASED = YES；RIFT_LOADING_LINE_CLOSED = **NO**（Resume／Replay 在慢網路下仍看到 blockout，待 Owner 決定）。
+- 未修改程式、未調整期限（需 Owner 決策：延長／依下載進度延長期限、或縮小 GLB）。
+- 四組既有 baseline red 不變（見前節）。
