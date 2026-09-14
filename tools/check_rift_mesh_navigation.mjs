@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {Matrix4,Vector3,Quaternion} from 'three';
 const source=JSON.parse(fs.readFileSync(process.argv[2]??'art/moba-rift/source.json','utf8'));
-const bytes=fs.readFileSync(process.argv[3]??'public/assets/moba/rift-v1/esmo-rift.glb');
+const bytes=fs.readFileSync(process.argv[3]??'src/assets/moba/rift-v1/esmo-rift.glb');
 assert.equal(bytes.readUInt32LE(0),0x46546c67);
 const jsonLength=bytes.readUInt32LE(12);
 const gltf=JSON.parse(bytes.subarray(20,20+jsonLength).toString());

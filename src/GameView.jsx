@@ -28,6 +28,8 @@ import { observerTokens } from "./battle/ui/BattleObserverHUD.jsx";
 import { useHudMode, hudSafeTop } from './battle/ui/hudStore.js';
 import { isDebugMode } from "./ui/debugMode.js";
 import { featureEnabled } from "./featureFlags.js";
+//  小地圖底圖走 Vite asset pipeline（內容雜湊檔名），不再用 ?rev= 查詢字串切版本。
+import riftAlbedoUrl from "./assets/moba/rift-v1/rift-albedo.png";
 import {
   DIRECTOR_BOTTOM_DESKTOP,
   DIRECTOR_BOTTOM_MOBILE,
@@ -41,7 +43,7 @@ function Minimap({ mobile = false }) {
   useEffect(() => {
     let raf, last = 0;
     const terrainImage = new Image();
-    terrainImage.src = `${import.meta.env.BASE_URL}assets/moba/rift-v1/rift-albedo.png?rev=330-corridor-v3`;
+    terrainImage.src = riftAlbedoUrl;
     // S29 效能：小地圖原本用**無節流的 rAF**（每秒 60 次重繪整張 canvas）。
     //   引擎每秒只推 2–8 幀，60fps 重繪是純浪費 ⇒ 節流到 12fps（肉眼無差）。
     const MIN_MS = 1000 / 12;

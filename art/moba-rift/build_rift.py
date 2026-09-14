@@ -10,6 +10,11 @@ from mathutils import Vector
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / 'public' / 'assets' / 'moba' / 'rift-v1'
 OUT.mkdir(parents=True, exist_ok=True)
+# Files the runtime loads go through the Vite asset pipeline (content-hashed URLs);
+# manifest.json and the preview render stay in public/. After a rebuild, update
+# RIFT_GLB_BYTES in src/battle/moba/map/riftMapGate.js (check_moba_rift_loading guards it).
+ASSET_OUT = ROOT / 'src' / 'assets' / 'moba' / 'rift-v1'
+ASSET_OUT.mkdir(parents=True, exist_ok=True)
 DATA = json.loads((Path(__file__).parent / 'source.json').read_text(encoding='utf-8'))
 SPAN = DATA['WORLD_BOUNDS']['width']
 HALF = SPAN / 2
@@ -98,7 +103,7 @@ rgb[region==2] *= (.93 + .12*river_bed[region==2,None] + .025*flow[region==2,Non
 rgba=np.ones((N,N,4),dtype=np.float32); rgba[:,:,:3]=np.clip(rgb,0,1)
 atlas=bpy.data.images.new('ESMO_Rift_Original_Atlas',width=N,height=N,alpha=False)
 atlas.pixels.foreach_set(rgba.ravel())
-atlas.filepath_raw=str(OUT/'rift-albedo.png'); atlas.file_format='PNG'; atlas.save(); atlas.pack()
+atlas.filepath_raw=str(ASSET_OUT/'rift-albedo.png'); atlas.file_format='PNG'; atlas.save(); atlas.pack()
 groundmat=material('GroundAtlas',(1,1,1))
 tex=groundmat.node_tree.nodes.new('ShaderNodeTexImage'); tex.image=atlas
 groundmat.node_tree.links.new(tex.outputs['Color'],groundmat.node_tree.nodes.get('Principled BSDF').inputs['Base Color'])
@@ -222,8 +227,8 @@ scene.render.filepath=str(OUT/'rift-preview.png')
 bpy.ops.object.select_all(action='DESELECT')
 for obj in scene.objects:
     if obj.type=='MESH': obj.select_set(True)
-bpy.ops.export_scene.gltf(filepath=str(OUT/'esmo-rift.glb'),export_format='GLB',use_selection=True,use_active_scene=True,export_cameras=False,export_lights=False)
+bpy.ops.export_scene.gltf(filepath=str(ASSET_OUT/'esmo-rift.glb'),export_format='GLB',use_selection=True,use_active_scene=True,export_cameras=False,export_lights=False)
 bpy.data.libraries.write(str(Path(__file__).parent/'esmo-rift.blend'),{scene},fake_user=True)
-stats={'mapVersion':scene['mapVersion'],'span':SPAN,'meshes':sum(o.type=='MESH' for o in scene.objects),'triangles':sum(sum(len(p.vertices)-2 for p in o.data.polygons) for o in scene.objects if o.type=='MESH'),'glbBytes':(OUT/'esmo-rift.glb').stat().st_size,'source':'Original ESMO Blender meshes and baked procedural texture'}
+stats={'mapVersion':scene['mapVersion'],'span':SPAN,'meshes':sum(o.type=='MESH' for o in scene.objects),'triangles':sum(sum(len(p.vertices)-2 for p in o.data.polygons) for o in scene.objects if o.type=='MESH'),'glbBytes':(ASSET_OUT/'esmo-rift.glb').stat().st_size,'source':'Original ESMO Blender meshes and baked procedural texture'}
 (OUT/'manifest.json').write_text(json.dumps(stats,indent=2),encoding='utf-8')
 print(json.dumps(stats))

@@ -7,7 +7,7 @@
 //    未經 BanPick（直接測試進入）則回退 ROSTER 預設英雄。
 //  Adapter：TEAMS/ROSTER（data/roster.js）+ heroDatabase（唯一英雄資料）。
 // ============================================================================
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { TEAMS, ROSTER } from "../../data/roster.js";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { selectOpponentName, selectTeamName } from "../../platform/matchTeamNames.js";
@@ -15,6 +15,8 @@ import { heroById } from "../../data/heroDatabase.js";
 import HeroPortrait from "../../ui/HeroPortrait.jsx";
 import { draftRoster } from "../../battle/moba/draftRoster.js";
 import { SUMMONER_SPELLS } from "../../battle/moba/mobaHeroLoadout.js";
+import { armRiftGate, getRiftAssetSnapshot, preloadRiftAsset, subscribeRiftAsset } from "../../battle/moba/map/riftAsset.js";
+import { loadingBarCap } from "../../battle/moba/map/riftMapGate.js";
 
 const ARCH_COLOR = { 坦克: "#60a5fa", 戰士: "#f97316", 刺客: "#ef4444", 法師: "#a855f7", 射手: "#22c55e", 輔助: "#14b8a6" };
 const TIPS = ["提示：控制型英雄可反制高機動陣容", "提示：真傷是對付肉盾的最佳解", "提示：射手需要發育時間，前期注意保護", "提示：觀察對手動向，掌握開團時機"];
@@ -60,8 +62,16 @@ export default function LoadingScreen({ draft, tactic = null, onDone, roster = R
   //  `platform/matchTeamNames.js`）。沒有場次（單獨測試進入）才退回 TEAMS 預設。
   const oppName = useProfileStore(selectOpponentName);
   const teamName = useProfileStore(selectTeamName);
+  //  Rift 載入修正：Rift 330 地圖（13 MB）從 Ban/Pick 就在背景下載。這裡等它就緒
+  //  才讓進度條走到 100 進對戰；最多等 RIFT_GATE_TIMEOUT_MS，逾時或失敗才進場並由
+  //  戰場用 MobaMapBlockout 頂替。正常路徑玩家第一幀看到的就是 Rift。
+  const rift = useSyncExternalStore(subscribeRiftAsset, getRiftAssetSnapshot, getRiftAssetSnapshot);
+  const capRef = useRef(0);
+  capRef.current = loadingBarCap(rift.decision, rift.progress);
   useEffect(() => {
-    const iv = setInterval(() => setPct((p) => { if (p >= 100) { clearInterval(iv); setTimeout(onDone, 400); return 100; } return p + 3; }), 50);
+    preloadRiftAsset({ source: "loading", retryFailed: true });
+    armRiftGate({ force: true, by: "loading" });
+    const iv = setInterval(() => setPct((p) => { if (p >= 100) { clearInterval(iv); setTimeout(onDone, 400); return 100; } return Math.max(p, Math.min(capRef.current, p + 3)); }), 50);
     return () => clearInterval(iv);
   }, []);
 
@@ -117,7 +127,8 @@ export default function LoadingScreen({ draft, tactic = null, onDone, roster = R
       )}
 
       {/* Loading Bar + 進場文案（Legacy 紫漸層主題）*/}
-      <div style={{ marginTop: 16 }}>
+      <div style={{ marginTop: 16 }} data-testid="moba-loading-progress"
+        data-map-gate={rift.decision.mode} data-map-gate-reason={rift.decision.reason ?? ""}>
         <div style={{ height: 8, borderRadius: 99, background: "rgba(255,255,255,0.07)", overflow: "hidden", marginBottom: 8 }}>
           <div style={{ width: `${pct}%`, height: "100%", background: "linear-gradient(90deg,#a78bfa,#7c3aed)", borderRadius: 99, transition: "width .1s linear" }} />
         </div>

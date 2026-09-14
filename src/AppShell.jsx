@@ -29,6 +29,8 @@ import CodexScreen from "./screens/moba/CodexScreen.jsx";
 import TacticScreen from "./screens/moba/TacticScreen.jsx";
 import LoadingScreen from "./screens/moba/LoadingScreen.jsx";
 import GameView from "./GameView.jsx";
+//  Rift 載入修正：確定進入 MOBA 選角才背景下載 Rift 330 地圖（不在首頁下載）。
+import { preloadRiftAsset, resetRiftGate } from "./battle/moba/map/riftAsset.js";
 // ── Sprint21：經營模組 ──
 import InboxScreen from "./screens/manage/InboxScreen.jsx";
 import FinanceScreen from "./screens/manage/FinanceScreen.jsx";
@@ -148,6 +150,18 @@ export default function AppShell() {
   const [csResult, setCsResult] = useState(null); // S23：CsMatchResult.v1（Match → Result 傳遞）
   const go = (s) => () => setScreen(s);
   const home = go("dashboard");
+
+  //  Rift 載入修正：13 MB 的 Rift 330 地圖從 Ban/Pick 開始下載 ⇒ 玩家選角的時間就是下載時間，
+  //  Loading 再等它就緒才進對戰（見 battle/moba/map/riftAsset.js）。
+  //  重新進 Ban/Pick 代表新的一場：清掉上一場的等待期限，上次失敗的也重試一次。
+  useEffect(() => {
+    if (screen === "banpick") {
+      resetRiftGate();
+      preloadRiftAsset({ source: "banpick", retryFailed: true });
+    } else if (screen === "tactic") {
+      preloadRiftAsset({ source: "tactic" });
+    }
+  }, [screen]);
 
   //  CS Season M2：從賽事頁按「出賽」之後，要去哪個賽前流程由**剛簽出的指派單**
   //  決定，不寫死 MOBA。指派單帶的是賽程場次本身的 `gameMode` ⇒ CS 的聯賽場次

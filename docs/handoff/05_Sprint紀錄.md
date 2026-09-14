@@ -20870,3 +20870,79 @@ Owner Review：Conditional GO。先前部分 lifecycle／static／production gat
 - 打包版 smoke 首跑 45/46：debug global 檢查把 `typeof` 回傳的裸字串 `"undefined"` 解析成 `null`；改為回傳物件後重跑。
 
 正式站 smoke 在本 commit push／deploy 之後執行，結果記於 release 回報（不為補文件再觸發一次 deploy）。
+
+## 2026-09-14 MOBA Rift Loading Fix（Rift 330 預載＋Loading 等待＋可快取檔名）
+
+Owner Review GO（MOBA Runtime Audit 接受）。本輪只處理 Rift 330 的載入體驗。
+**未**開始 Item System v1、**未**動 Career／Finance、**未**改 LogicEngine／模擬／Battle Balance／地圖幾何。
+local commit，未 push、未 deploy。
+
+### 根因（Audit 已確認）
+
+`esmo-rift.glb`（13,425,188 bytes）在戰場掛載後才由 `useGLTF` 開始下載，下載完成前 Suspense 顯示
+`MobaMapBlockout` ⇒ 正式站桌機 8.7s、390＋4G 22.6s 看到的是舊方塊地形，玩家誤以為新地圖沒上線。
+
+### 修正
+
+- **提前下載**：`src/battle/moba/map/riftAsset.js` 是 Rift GLB 唯一載入點。AppShell 在進入 Ban/Pick 時開始背景下載
+  （清掉上一場的等待期限、失敗過的重試一次），Tactic 補觸發；首頁與賽前頁不下載。
+- **Loading 等待**：`LoadingScreen` 等 Rift 就緒才讓進度條到 100 進對戰；最多 20 秒（`RIFT_GATE_TIMEOUT_MS`）。
+  進度條上限受真實下載進度管制（等待中最多 95%）。
+- **blockout 保留為真正 fallback**：戰場 `EsmoRiftEnvironment` 依純決策 `decideRiftMap`（`riftMapGate.js`，零 import）：
+  ready → Rift；failed → blockout／error；到期 → blockout／timeout；期限內 → 不畫地形。就緒永遠優先：逾時後才載完會換回 Rift
+  （只影響畫面，不影響模擬）。render 例外仍由 `AssetBoundary` 退回 blockout。
+- **快取**：GLB 與小地圖底圖 `git mv` 到 `src/assets/moba/rift-v1/`，走 Vite asset pipeline 輸出內容雜湊檔名
+  （`esmo-rift-<hash>.glb`、`rift-albedo-<hash>.png`），移除 `?rev=330-corridor-v3`；`public/` 不留副本（dist 不重複 18 MB）。
+  `art/moba-rift/build_rift.py` 輸出路徑、`check_esmo_rift_v1`／`check_rift_mesh_navigation` 預設路徑同步。
+- **診斷（僅 `?diag=1`）**：`__ESMO_RIFT_DIAG()`（下載狀態、起點、就緒／失敗時間、期限、逐幀記帳）；`__ESMO_RUNTIME_DIAG()` 新增
+  `mapMode`（loading｜rift｜blockout）、`mapFallbackReason`、`mapFrames`、`firstMapFrameMode`。逐幀探針只在診斷模式掛載，
+  一般玩家 UI 不變（Loading 容器只多了不可見的 `data-map-gate` 屬性）。
+
+### 新增的驗證工具
+
+- `tools/check_moba_rift_loading.mjs`：固定時鐘驗 NORMAL／TIMEOUT／FAILURE、2000 筆決定性、進度條上限、逐幀記帳、資產大小、
+  原始碼契約（下載起點、Loading 等待、fallback、無 `?rev=`、診斷 gating）；`--dist` 另驗雜湊檔名與 bundle。
+- `tools/browser_check_moba_rift_loading.mjs`：production build＋`vite preview`，真的點 Ban/Pick 走完 Loading → Battle；
+  `--scenario normal|failure|timeout`、`--mobile`（390×844 DPR3＋4G）。失敗／逾時以 CDP Fetch 攔 GLB，產品程式碼無測試開關。
+
+### 驗證結果（2026-09-14 12:48–13:25，production build＋`vite preview`）
+
+| # | 驗證 | 結果 |
+|---|---|---|
+| 1 | `check_moba_rift_loading --dist`（最終 build） | **31/31** |
+| 2 | `npm run build` | ✓ built in 15.85s；`esmo-rift-CHLYDTrC.glb` 13,425,188、`rift-albedo-ByqkHkBs.png` |
+| 3 | 瀏覽器 normal 桌機 | **19/19** |
+| 4 | 瀏覽器 normal 390＋4G | **19/19** |
+| 5 | 瀏覽器 failure 桌機 | **15/15** |
+| 6 | 瀏覽器 timeout 桌機 | **15/15** |
+| 7 | 快取探測（scratch，未提交） | 3/3：首次 13,425,488 bytes；重複請求與重新整理後各 300 bytes（ETag 304） |
+| 8 | `verify.mjs --only=regress,regress2,experience26` | 3/3 PASS（15 seeds／節奏門檻 8/8／29/29） |
+| 9 | 地圖／導航／營地／效果 | `check_rift_mesh_navigation` PASS、`check_moba_nav_h2` 14/14、`check_moba_camp_placement` 43/43、`check_rift_camp_routes` PASS、`check_moba_milestone_d` PASS |
+| 10 | 既有紅燈（與未修改 main `11350c9` 快照逐項相同，非本輪） | `check_esmo_rift_v1` 13/1（Blender source 與 nav walls 不一致）、`check_moba_runtime_map_h1` 61/5、`check_moba_minions_h3` 19/22、`check_moba_camera_replay29b6` 全量 fan-out 900s 逾時 17/23（含 replay mapMeta fallback、pacing 項；main 快照另因缺 reference pack 多紅 1 項） |
+
+截圖：normal 桌機／390 開局 1 秒皆為 Rift（松樹、石柱）；failure 為 blockout；timeout 放行後為 Rift。
+
+### 記錄欄位
+
+```
+RIFT_PRELOAD_START     = 進入 Ban/Pick（firstSource=banpick）；首頁、賽前頁 0 請求、下載器未啟動
+RIFT_READY             = 桌機下載開始後 0.3s；390＋4G 12.8s（preview 無 gzip，原檔 13.4 MB）；兩者皆在戰場掛載前就緒
+FIRST_BATTLE_FRAME_MAP = rift（桌機、390＋4G）
+BLOCKOUT_NORMAL_FRAMES = 0（桌機 198 幀、390＋4G 580 幀；空白 loading 幀也是 0；持續 ≥10s 無切換）
+FALLBACK_FAILURE_PATH  = GLB 請求失敗（Ban/Pick＋Loading 重試共 2 次）⇒ Loading 2.3s 進場、第一幀 blockout／error、Rift 0 幀，
+                         10 名英雄／主堡／營地正常、無 page error；
+                         請求卡住 ⇒ Loading 22.1s 進場（期限 20s）、第一幀 blockout／timeout，放行後換回 Rift
+DESKTOP_LOAD           = Loading 2.4s，進場前 Rift 已就緒
+MOBILE_4G_LOAD         = Loading 2.3s（Loading 開始時仍在下載，閘門多等約 0.4s）；對照正式站舊版 22.6s 看到舊地形
+CACHE_BEHAVIOR         = 內容雜湊檔名、無查詢字串、GLB 只請求一次；重複請求／重新整理只傳 300 bytes（304）；dist 只一份。
+                         正式站 GitHub Pages 為 max-age=600＋ETag，內容不變網址就不變；CDN 首次 edge miss 無法靠檔名消除，
+                         只是移到 Ban/Pick 背景期間 —— 未 deploy，正式站未實測
+```
+
+### 未驗證／限制
+
+- 未 push／deploy：正式站 CDN 行為未實測（deploy 後跑 `browser_check_moba_rift_loading --url <正式站>`）；真機未測。
+- 自動選角約 11 秒，真人通常更久；極快選角＋慢網路時 Loading 最多多等 20 秒。preview 無 gzip，量到的時間偏保守。
+- 略過 Loading 的入口（恢復進行中的戰鬥、Replay 首次開、debug harness）在期限內不畫地形（深色背景），逾時才 blockout。
+- 未處理：小地圖底圖（4.7 MB）仍在戰場掛載才載；`RiggedMobaRuntimeNeutrals` 仍用 `?rev=rig-v3`。
+- 重建 Rift GLB 後要同步 `riftMapGate.js` 的 `RIFT_GLB_BYTES`（`check_moba_rift_loading` 會擋）。

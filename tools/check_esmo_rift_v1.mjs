@@ -42,7 +42,7 @@ check('same-size replay with moved camp uses 2D fallback',()=>{
  const moved=structuredClone(objectivesMeta);moved[2].pos.x+=26;
  assert.equal(canUse3DPresentation({mapMeta:{bounds:WORLD_BOUNDS,lanes:LANES},objectivesMeta:moved,frames:[{t:0}]}),false);
 });
-const bytes=fs.readFileSync('public/assets/moba/rift-v1/esmo-rift.glb');
+const bytes=fs.readFileSync('src/assets/moba/rift-v1/esmo-rift.glb');
 assert.equal(bytes.readUInt32LE(0),0x46546c67);
 const doc=JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)).toString());
 check('GLB contains only ESMO Rift scene objects',()=>assert(doc.nodes.every(n=>n.name?.startsWith('Rift_'))));

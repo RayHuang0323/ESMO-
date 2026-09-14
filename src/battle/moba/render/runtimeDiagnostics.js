@@ -12,6 +12,7 @@
 //     正式玩家路徑不會有任何 window 汙染。
 //   · 不 import LogicEngine、不讀寫 store。
 // ============================================================================
+import { mapFrameTally } from "../map/riftMapGate.js";
 
 /**
  * H.2-flicker：Runtime 元件的掛載／卸載計數。
@@ -425,10 +426,16 @@ export function installRuntimeDiagnostics({ gl, scene, camera, frameRef }) {
     const heroes = heroDiagnostics();
     const structures = f.structures ?? [];
     const objectives = f.objectives ?? [];
+    //  Rift 載入：這個畫面**實際畫出來**的地圖（loading | rift | blockout）與逐幀計數。
+    const map = mapFrameTally();
     return {
       ts: f.ts ?? null,
       over: !!f.over,
       warnings: f.warnings ?? [],
+      mapMode: map.mapMode,
+      mapFallbackReason: map.mapFallbackReason,
+      mapFrames: map.frames,
+      firstMapFrameMode: map.firstFrameMode,
       heroCount: heroes.length,
       blueHeroCount: heroes.filter((h) => h.team === "blue").length,
       redHeroCount: heroes.filter((h) => h.team === "red").length,
