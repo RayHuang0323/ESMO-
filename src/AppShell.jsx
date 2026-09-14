@@ -30,7 +30,7 @@ import TacticScreen from "./screens/moba/TacticScreen.jsx";
 import LoadingScreen from "./screens/moba/LoadingScreen.jsx";
 import GameView from "./GameView.jsx";
 //  Rift 載入修正：確定進入 MOBA 選角才背景下載 Rift 330 地圖（不在首頁下載）。
-import { preloadRiftAsset, resetRiftGate } from "./battle/moba/map/riftAsset.js";
+import { getRiftAssetSnapshot, preloadRiftAsset, resetRiftGate } from "./battle/moba/map/riftAsset.js";
 // ── Sprint21：經營模組 ──
 import InboxScreen from "./screens/manage/InboxScreen.jsx";
 import FinanceScreen from "./screens/manage/FinanceScreen.jsx";
@@ -208,7 +208,9 @@ export default function AppShell() {
         setTactic(config.tactic ?? null);
         if (phase === "tactic") setScreen("tactic");
         else if (phase === "loading") setScreen("loading");
-        else if (phase === "battle") setScreen("battle");
+        //  Rift 載入修正：恢復進行中的戰鬥也不可先看到沒有地形的戰場 ⇒ Rift 未就緒時
+        //  先走既有的 LoadingScreen（它等 Rift 就緒／逾時／失敗才進 battle）。
+        else if (phase === "battle") setScreen(getRiftAssetSnapshot().status === "ready" ? "battle" : "loading");
         else setScreen("banpick");
       }
     } catch (error) {

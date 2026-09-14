@@ -60,7 +60,10 @@ export function loadingBarCap(decision, progress) {
 // ── 逐幀記帳（只在 ?diag=1 時由地圖元件呼叫）──────────────────────────────
 //  記的是「這一幀地圖元件實際畫了什麼」，不是資產狀態：
 //  驗收要證明的是正常路徑 blockout 畫出 0 幀，而不是「資產大概好了」。
+//  owner：最後掛上的地圖元件才是記帳對象。Replay 以 overlay 開在戰場之上，底下的戰場
+//  canvas 仍在畫；不分 owner 的話它的幀會混進 Replay 的計數。
 const tally = {
+  owner: null,
   mountedAt: null, mode: null, reason: null,
   frames: { loading: 0, rift: 0, blockout: 0 },
   firstFrameMode: null, firstFrameReason: null, firstFrameAt: null,
@@ -68,7 +71,8 @@ const tally = {
   switches: [],
 };
 
-export function beginMapFrameTally(now) {
+export function beginMapFrameTally(now, owner = null) {
+  tally.owner = owner;
   tally.mountedAt = Number.isFinite(now) ? now : null;
   tally.mode = null; tally.reason = null;
   tally.frames = { loading: 0, rift: 0, blockout: 0 };
@@ -77,7 +81,8 @@ export function beginMapFrameTally(now) {
   tally.switches = [];
 }
 
-export function noteMapFrame(mode, reason, now) {
+export function noteMapFrame(mode, reason, now, owner = null) {
+  if (tally.owner !== null && owner !== tally.owner) return;
   if (!Object.prototype.hasOwnProperty.call(tally.frames, mode)) return;
   tally.frames[mode] += 1;
   if (tally.firstFrameMode === null) {

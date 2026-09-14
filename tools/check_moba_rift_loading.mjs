@@ -115,6 +115,12 @@ const ERROR = { mode: "blockout", reason: "error" };
   ck("記帳：正常路徑第一幀 rift、blockout 0 幀、無切換",
     normal.firstFrameMode === "rift" && normal.frames.blockout === 0 && normal.frames.rift === 5
     && normal.switches.length === 0 && normal.mapMode === "rift");
+  const ownerA = {}, ownerB = {};
+  beginMapFrameTally(300, ownerA);
+  noteMapFrame("blockout", "error", 301, ownerB); noteMapFrame("rift", null, 302, ownerA); noteMapFrame("blockout", "error", 303, ownerB);
+  const owned = mapFrameTally();
+  ck("記帳：只計最後掛上的地圖（Replay 底下仍在畫的戰場 canvas 不混入）",
+    owned.firstFrameMode === "rift" && owned.frames.rift === 1 && owned.frames.blockout === 0, JSON.stringify(owned.frames));
   ck("記帳：逾時路徑記下 loading→blockout→rift 切換與原因，未知模式不計",
     timeout.firstFrameMode === "loading" && timeout.frames.blockout === 2 && timeout.frames.rift === 1
     && timeout.switches.map((s) => s.to).join(">") === "blockout>rift"
@@ -164,11 +170,24 @@ const ERROR = { mode: "blockout", reason: "error" };
     }
   };
   walk("src");
-  ck("流程：只有 Ban/Pick／Tactic（AppShell）、Loading、戰場地圖會觸發下載（首頁不會）",
+  ck("流程：只有 Ban/Pick／Tactic（AppShell）、Loading、Replay 入口、戰場地圖會觸發下載（首頁不會）",
     users.sort().join(",") === [
       "src/AppShell.jsx", "src/battle/moba/map/EsmoRiftEnvironment.jsx",
       "src/battle/moba/map/riftAsset.js", "src/screens/moba/LoadingScreen.jsx",
+      "src/screens/moba/RiftEntryGate.jsx",
     ].sort().join(","), users.join(", "));
+  ck("Resume：恢復進行中的戰鬥時 Rift 未就緒 ⇒ 先走既有 LoadingScreen",
+    /else if \(phase === "battle"\) setScreen\(getRiftAssetSnapshot\(\)\.status === "ready" \? "battle" : "loading"\);/.test(app));
+  const gate = code("src/screens/moba/RiftEntryGate.jsx");
+  ck("入口閘門：沿用 riftAsset（重試失敗、重新計時），入口自己啟動後才依決策揭露",
+    /preloadRiftAsset\(\{ source, retryFailed: true \}\)/.test(gate) && /armRiftGate\(\{ force: true, by: source \}\)/.test(gate)
+    && /const open = !enabled \|\| rift\.status === "ready" \|\| \(armed && rift\.decision\.mode !== "loading"\);/.test(gate)
+    && !/new GLTFLoader|useGLTF|setTimeout/.test(gate));
+  const replayScreen = code("src/screens/moba/MobaReplayScreen.jsx");
+  ck("Replay：Rift 未就緒時戰場不掛載、顯示載入畫面、時間軸不走",
+    /const riftGate = useRiftEntryGate\("replay", \{ enabled: use3D && runtimeMap \}\);/.test(replayScreen)
+    && /if \(!playing \|\| !mapReady\) return;/.test(replayScreen)
+    && /\(mapReady\s*\?\s*<MobaRuntimeView3D[^>]*\/>\s*:\s*<RiftEntryLoading rift=\{riftGate\.rift\} \/>\)/.test(replayScreen));
   const loading = code("src/screens/moba/LoadingScreen.jsx");
   ck("流程：Loading 進場重試失敗並重新計時，進度條受 loadingBarCap 管制",
     /preloadRiftAsset\(\{ source: "loading", retryFailed: true \}\)/.test(loading)

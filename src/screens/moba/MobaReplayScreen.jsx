@@ -36,6 +36,7 @@ import MobaView3D from "../../MobaView3D.jsx";
 //   MobaRuntimeView3D + mobaRuntimeMapAdapter；legacy 維持原本的 MobaView3D 不變。
 //   資料源仍是 createReplaySource（唯讀），replayBuffer schema 一個欄位都沒動。
 import MobaRuntimeView3D from "../../battle/moba/render/MobaRuntimeView3D.jsx";
+import { RiftEntryLoading, useRiftEntryGate } from "./RiftEntryGate.jsx";
 import { loadMapPresentation, isRuntimeV2 } from "../../battle/moba/mobaMapPresentation.js";
 import { createReplaySource, canUse3DPresentation, frameAt } from "../../battle/moba/replay/replayPresentationSource.js";
 import { loadQuality, presetFor } from "../../battle/quality.js";
@@ -190,6 +191,10 @@ export default function MobaReplayScreen({ replay, onClose }) {
   //   舊 replay 仍走既有的 legacy 退路，不會白畫面。
   const runtimeMap = use3D ? true : isRuntimeV2(mapMode);
   const source = useMemo(() => (use3D ? createReplaySource(replay) : null), [use3D, replay]);
+  //  Rift 載入修正：第一次開 Replay 不經過 Loading ⇒ Rift 未就緒時先顯示載入畫面，
+  //  戰場不掛載、時間軸不走；就緒（或失敗／逾時由戰場改畫 blockout）才揭露並開始播放。
+  const riftGate = useRiftEntryGate("replay", { enabled: use3D && runtimeMap });
+  const mapReady = riftGate.open;
 
   // 重播開場相機回導播（cameraStore 是全域單例；上一場對戰可能停在 free）
   useEffect(() => { if (use3D) { const c = useCameraStore.getState(); c.backToDirector(); c.resetView(); } }, [use3D]);
@@ -199,7 +204,7 @@ export default function MobaReplayScreen({ replay, onClose }) {
   //   每個顯示幀都 seek 一次 ⇒ MobaView3D 的 prev→snapshot 插值拿到連續的 subT。
   useEffect(() => {
     source?.seek(tRef.current);
-    if (!playing) return;
+    if (!playing || !mapReady) return;
     let raf, last = performance.now(), uiLast = 0;
     const loop = (now) => {
       const dt = Math.min(0.25, (now - last) / 1000); last = now;
@@ -214,7 +219,7 @@ export default function MobaReplayScreen({ replay, onClose }) {
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [playing, speed, duration, source]);
+  }, [playing, mapReady, speed, duration, source]);
 
   const events = replay?.events ?? [];
   const { a, b, f } = useMemo(() => frameAt(frames, t), [frames, t]);
@@ -294,7 +299,9 @@ export default function MobaReplayScreen({ replay, onClose }) {
                 （flex item 的 auto 寬度可能塌成 0）⇒ 用 inset:0 的絕對定位層明確給尺寸。 */}
             <div style={{ position: "absolute", inset: 0 }} data-replay-presentation={runtimeMap ? "runtime-v2" : "legacy"}>
               {runtimeMap
-                ? <MobaRuntimeView3D quality={qualityId} source={source} roster={replayRoster} compactLabels={isMobile} />
+                ? (mapReady
+                  ? <MobaRuntimeView3D quality={qualityId} source={source} roster={replayRoster} compactLabels={isMobile} />
+                  : <RiftEntryLoading rift={riftGate.rift} />)
                 : <MobaView3D battleFollow autoRotate={false} quality={quality} source={source} roster={replayRoster} />}
             </div>
             <ObserverPanel snapshot={source?.getState().prev} roster={replayRoster ?? {}} replay />

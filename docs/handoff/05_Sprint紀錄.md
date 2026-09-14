@@ -20946,3 +20946,70 @@ CACHE_BEHAVIOR         = 內容雜湊檔名、無查詢字串、GLB 只請求一
 - 略過 Loading 的入口（恢復進行中的戰鬥、Replay 首次開、debug harness）在期限內不畫地形（深色背景），逾時才 blockout。
 - 未處理：小地圖底圖（4.7 MB）仍在戰場掛載才載；`RiggedMobaRuntimeNeutrals` 仍用 `?rev=rig-v3`。
 - 重建 Rift GLB 後要同步 `riftMapGate.js` 的 `RIFT_GLB_BYTES`（`check_moba_rift_loading` 會擋）。
+
+## 2026-09-14 MOBA Rift Loading Closure：Resume／Replay Rift Ready Gate
+
+Owner Review：Conditional GO。正常 BanPick → Loading → Battle 的 Rift Loading Fix 驗證已接受；正式 deploy 前補最後一個
+product closure：略過 Loading 的兩個入口（恢復進行中的 MOBA 戰鬥、第一次開 MOBA Replay）在 Rift 未就緒時不得先露出
+沒有地形的戰場。**未**改地圖／renderer／導航／模擬、**未**大改 Router、**未**把 MobaMapBlockout 放回正常載入路徑。
+local commit，未 push、未 deploy。
+
+### 修正
+
+- **Resume**：`AppShell.resumeActiveMatch` 恢復到 `phase === "battle"` 時，Rift 未就緒改走既有 `LoadingScreen`
+  （它本來就等 Rift 就緒／逾時／失敗才進 battle）；已就緒維持直接進 battle。戰鬥在 Loading 期間不掛載，不會先開跑。
+- **Replay**：新增 `src/screens/moba/RiftEntryGate.jsx`（`useRiftEntryGate`＋`RiftEntryLoading`）。`MobaReplayScreen`
+  在 Rift 未就緒時不掛 `MobaRuntimeView3D`、改顯示載入畫面，時間軸暫停；就緒才揭露並開始播放；失敗／逾時才揭露，由戰場畫 blockout。
+  入口自己啟動過（重試上次失敗、重新計時 20 秒）才依決策揭露，避免上一場留下的 failed／過期期限直接判 blockout。
+- **沒有第二套 readiness**：狀態、期限、決策全部沿用 `riftAsset.js`／`riftMapGate.js`。
+- **診斷記帳**：`beginMapFrameTally`／`noteMapFrame` 加 owner，只計最後掛上的地圖——Replay 以 overlay 開在戰場之上，
+  底下的戰場 canvas 仍在畫，不分 owner 會混進 Replay 的幀數（只在 `?diag=1`）。
+- `check_moba_rift_loading`：補 owner 記帳、Resume 路由、入口閘門、Replay 掛載／時間軸契約（35/35）。
+- `browser_check_moba_rift_loading`：新增 `--entry normal|resume|replay` 與 `--replay`。Resume 以停用快取重新整理（新的 session、
+  Rift 未載入）再按「返回進行中的比賽」；Replay 讓戰鬥期間 GLB 失敗（以 blockout 進場）→ 快速完成 → 第一次開 Replay。
+
+### 驗證結果（2026-09-14 13:55–14:40，production build＋`vite preview`）
+
+| # | 入口／情境 | 桌機 | 390＋4G |
+|---|---|---|---|
+| 1 | normal ＋ 賽後 Replay（Rift 已就緒） | **21/21** | **21/21** |
+| 2 | resume（重新整理後返回） | **19/19** | **19/19** |
+| 3 | replay（Rift 未就緒，請求卡 4 秒後放行） | **19/19** | **19/19** |
+| 4 | normal failure／timeout | **14/14**／**14/14** | — |
+| 5 | resume failure／timeout | **17/17**（修正斷言後重跑）／**17/17** | — |
+| 6 | replay failure／timeout | **15/15**／**17/17** | — |
+
+- `check_moba_rift_loading --dist` 35/35；`npm run build` ✓ built in 15.54s。
+- 導航／營地：`check_moba_nav_h2` 14/14、`check_moba_camp_placement` 43/43、`check_rift_camp_routes` PASS、`check_rift_mesh_navigation` PASS。
+- `verify.mjs --only=regress,regress2,experience26`：3/3 PASS（15 seeds／節奏門檻 8/8／29/29，含 Replay 檢查）。
+- resume failure 首跑 16/17：斷言要求 Loading 閘門第一個 200ms 取樣是 `loading`，但失敗情境請求幾毫秒就失敗、閘門取樣前已翻成
+  `blockout`（當下畫面仍是 Loading，第一幀 blockout／error、Rift 0、空白 0 皆通過）。改為 failure 情境只要求有顯示 Loading 後重跑。
+  屬 gate 工具問題，src 未動。
+- 截圖：resume 390 第 1 秒、replay 桌機揭露後 3 秒皆為 Rift。
+
+### 記錄欄位
+
+```
+NORMAL_ENTRY_FIRST_FRAME = rift（桌機 Loading 2.3s；390＋4G Loading 2.3s，Ban/Pick 起跑後 12.6s 就緒）
+RESUME_FIRST_VISIBLE_MAP = rift（桌機 Loading 2.3s；390＋4G 在 Loading 等 12.6s 後進場；ts 5.5→15.9 為接續同一場）
+REPLAY_FIRST_VISIBLE_MAP = rift（桌機載入畫面 4.7s；390＋4G 17.0s；期間時間軸停在 0，揭露後前進）
+NORMAL_BLOCKOUT_FRAMES   = 0（空白幀 0；賽後 Replay 已就緒時不出現載入畫面、blockout 0）
+RESUME_BLOCKOUT_FRAMES   = 0（桌機 54 幀、390 186 幀；空白幀 0）
+REPLAY_BLOCKOUT_FRAMES   = 0（桌機 33 幀、390 100 幀；空白幀 0）
+ASSET_FAILURE_FALLBACK   = PASS（normal／resume／replay：不等期限、第一幀 blockout／error、Rift 0、空白 0）
+TIMEOUT_FALLBACK         = PASS（normal／resume／replay：等滿 20s、第一幀 blockout／timeout，放行後換回 Rift）
+```
+
+### 既有 verifier 紅燈（baseline debt，本 Sprint 不修）
+
+與未修改 main `11350c9` 快照逐項相同的 failure signature：
+`check_esmo_rift_v1` 13/1（Blender source 與 runtime nav walls 不一致）、`check_moba_runtime_map_h1` 61/5、
+`check_moba_minions_h3` 19/22、`check_moba_camera_replay29b6` 全量 fan-out 900s 逾時 17/23。
+
+### 待辦／技術債（本輪不擴張）
+
+- 待辦：小地圖底圖 `rift-albedo`（4.7 MB）尚未 preload，仍在戰場掛載才載。
+- 待辦：野怪模型 `RiggedMobaRuntimeNeutrals` 仍用 `?rev=rig-v3`。
+- 技術債：`riftMapGate.js` 的 `RIFT_GLB_BYTES` 是寫死的資產大小常數（重建 GLB 要手動同步；`check_moba_rift_loading` 會擋）。
+- debug harness（`?debug` MobaRuntimeBattle）仍無入口閘門，期限內不畫地形（非玩家路徑）。
+- 正式站 CDN 行為與真機未測，需 deploy 後跑 `browser_check_moba_rift_loading --url <正式站>`。

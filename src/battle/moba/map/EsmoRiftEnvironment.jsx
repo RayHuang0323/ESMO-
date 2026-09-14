@@ -28,28 +28,31 @@ class AssetBoundary extends React.Component {
   render() { return this.state.failed ? this.props.fallback : this.props.children; }
 }
 // Diagnostics only (?diag=1): records what this component drew on each frame.
-function MapFrameProbe({ mode, reason = null }) {
-  useFrame(() => noteMapFrame(mode, reason, performance.now()));
+// `owner` keeps a battle canvas still rendering under the Replay overlay out of
+// the Replay's tally.
+function MapFrameProbe({ mode, reason = null, owner }) {
+  useFrame(() => noteMapFrame(mode, reason, performance.now(), owner));
   return null;
 }
 export default function EsmoRiftEnvironment({ quality, fallback }) {
   const { decision, gltf } = useSyncExternalStore(subscribeRiftAsset, getRiftMapSnapshot, getRiftMapSnapshot);
   const probe = useMemo(() => diagnosticsEnabled(), []);
+  const owner = useMemo(() => ({}), []);
   useLayoutEffect(() => {
-    if (probe) beginMapFrameTally(performance.now());
-    // Entries that skip Loading (resumed battle, Replay, debug harness) still
-    // start the download and share the same deadline.
+    if (probe) beginMapFrameTally(performance.now(), owner);
+    // Entries that skip the gates (debug harness) still start the download and
+    // share the same deadline.
     preloadRiftAsset({ source: 'map' });
     armRiftGate({ by: 'map' });
-  }, [probe]);
+  }, [probe, owner]);
   if (decision.mode === 'rift') {
-    return <AssetBoundary fallback={<>{fallback}{probe && <MapFrameProbe mode="blockout" reason="error" />}</>}>
+    return <AssetBoundary fallback={<>{fallback}{probe && <MapFrameProbe mode="blockout" reason="error" owner={owner} />}</>}>
       <RiftAsset gltf={gltf} quality={quality} />
-      {probe && <MapFrameProbe mode="rift" />}
+      {probe && <MapFrameProbe mode="rift" owner={owner} />}
     </AssetBoundary>;
   }
   if (decision.mode === 'blockout') {
-    return <>{fallback}{probe && <MapFrameProbe mode="blockout" reason={decision.reason} />}</>;
+    return <>{fallback}{probe && <MapFrameProbe mode="blockout" reason={decision.reason} owner={owner} />}</>;
   }
-  return probe ? <MapFrameProbe mode="loading" /> : null;
+  return probe ? <MapFrameProbe mode="loading" owner={owner} /> : null;
 }
