@@ -21045,3 +21045,75 @@ TIMEOUT_FALLBACK         = PASS（normal／resume／replay：等滿 20s、第一
 - RIFT_LOADING_RELEASED = YES；RIFT_LOADING_LINE_CLOSED = **NO**（Resume／Replay 在慢網路下仍看到 blockout，待 Owner 決定）。
 - 未修改程式、未調整期限（需 Owner 決策：延長／依下載進度延長期限、或縮小 GLB）。
 - 四組既有 baseline red 不變（見前節）。
+
+## 2026-09-14 MOBA Rift Progress-aware Loading Gate（取代固定 20 秒期限）
+
+Owner 決策：採方案 2＋保留 hard timeout，不單純換另一個固定秒數。依據是正式站證據：GLB gzip 7.2 MB，
+MISS 26s、HIT 19.5–21.9s，390 就緒約 30s；Resume／Replay 全部是 `timeout`，沒有下載錯誤，閘門邏輯本身正確，是 20 秒太短。
+**未**開始 asset 壓縮、**未**改 renderer／導航／模擬。production 仍是 `fba58aa`；文件 commit `2b87881` 保留、未單獨 push。
+local commit，未 push、未 deploy。
+
+### 新規則（同一套 riftAsset／riftMapGate，normal／resume／replay 共用）
+
+- Rift ready ⇒ 立即揭露，不等任何期限。
+- asset load error ⇒ 立即走既有 failure fallback（blockout／error）。
+- 只要下載位元組仍在增加 ⇒ 不因超過幾秒就 fallback。
+- `RIFT_STALL_TIMEOUT_MS = 10000`：連續 10 秒沒有有效進度 ⇒ blockout／stall。基準取「入口閘門開始」與「最後一次進度」較晚者，
+  Ban/Pick 期間的舊進度不會讓入口一開始就判 stall。
+- `RIFT_HARD_TIMEOUT_MS = 60000`：入口閘門開始滿 60 秒仍未就緒 ⇒ 不論是否仍有微量進度，blockout／timeout。
+- stall／timeout 判定後鎖住（`latchedReason`）：之後零星進度不會讓戰場從 blockout 退回空白；只有下載完成才換回 Rift。
+- store 只在位元組實際增加時更新 `lastProgressAt`；計時器排在下一個可能改變決策的時間（`nextRiftGateDeadline`），
+  提早醒來只重排，不為每個進度事件重排。
+- 移除 `RIFT_GATE_TIMEOUT_MS`／`deadlineAt`；診斷改報 `gateStartAt`、`lastProgressAt`、`latchedReason`、`nextDeadlineAt`，
+  fallback 原因值域為 `error｜stall｜timeout`。
+
+### 驗證工具
+
+- `check_moba_rift_loading`：41/41（`--dist` 45/45）。固定時鐘驗 20／30／45／59.999 秒仍有進度不 fallback、最後進度後 9.999 秒 loading／
+  10 秒 stall、入口後完全無進度 10 秒 stall、Ban/Pick 舊進度不提早 stall、100ms 前仍有進度時 60 秒 hard timeout、stall 與 hard 同時成立回報
+  timeout、鎖定後新進度仍維持 blockout、就緒優先、錯誤立即 fallback、下一期限計算，以及 2000 筆隨機輸入「有進度且未滿 60 秒」0 筆被判 fallback。
+- `browser_check_moba_rift_loading`：新增 `--serve dist`，工具自己起靜態伺服器服務 production build，GLB 傳輸由伺服器控制——
+  `slow`（447 KB/s，約 30 秒傳完）、`stall`（傳到 40% 後完全停住，可放行）、`crawl`（100 KB/s，超過 60 秒）、`failure`（斷線）。
+  產品程式碼沒有任何測試開關；正式站仍只跑 normal／failure（CDP Fetch）。
+
+### Final Gate（2026-09-14，production build＋本機伺服器；桌機／390＋4G）
+
+| 入口 | normal | slow（約 30s） | stall（40% 停住） | crawl（> 60s） | failure |
+|---|---|---|---|---|---|
+| normal | 20/20／20/20（含賽後 Replay） | 15/15 | 14/14 | — | 12/12 |
+| resume | 20/20／20/20 | 23/23／23/23 | 20/20 | 19/19 | 18/18 |
+| replay | （normal 入口的賽後 Replay） | 22/22／22/22 | 20/20 | 19/19 | 15/15 |
+
+- A. **Slow but progressing**：下載 30.5／30.5／31.8／31.7 秒；Resume Loading 等 31.2s／31.1s、Replay 載入畫面 31.8s／32.0s——
+  都超過舊的 20 秒且未 fallback，第一幀 Rift，blockout 0、空白 0，未鎖定任何 fallback。normal 入口下載 30.7s（Ban/Pick 起跑，Loading 等 19.3s）。
+- B. **Stall**：最後一次有效進度（或閘門開始）後 10.17／10.03／10.38 秒 fallback，距閘門開始 10.2／13.0／13.4 秒，遠早於 60 秒；
+  第一幀 blockout／stall；恢復傳輸後就緒並換回 Rift。
+- C. **Pathological crawl**：下載持續有進度，閘門開始後 60.08／60.25 秒 hard cap fallback，第一幀 blockout／timeout；fallback 後仍在下載。
+- D. **Failure**：normal 2.3s、resume 2.3s 進場，replay 立即揭露；第一幀 blockout／error，Rift 0、空白 0。
+- E. **既有流程**：normal 第一幀 Rift（桌機、390）；賽後 Replay 已就緒時不出現載入畫面、第一幀 Rift；resume 390 在 Loading 等 12.9s 後第一幀 Rift，
+  ts 接續同一場。導航 `check_moba_nav_h2` 14/14、`check_moba_camp_placement` 43/43、`check_rift_camp_routes` PASS、
+  `check_rift_mesh_navigation` PASS；`npm run build` ✓；`verify.mjs --only=regress,regress2,experience26` 3/3 PASS（15 seeds／節奏門檻 8/8／29/29）。console error 0、page error 0（所有情境）。
+
+### 記錄欄位
+
+```
+PROGRESS_AWARE_GATE  = 啟用（ready 立即揭露／error 立即 fallback／有進度就等；normal、resume、replay 共用同一套）
+STALL_TIMEOUT        = 10s（連續無有效進度）
+HARD_TIMEOUT         = 60s（入口閘門開始起算）
+SLOW_PROGRESS_RESULT = PASS（30.5–31.8s 下載、等待 31–32s 不 fallback，第一幀 Rift）
+STALL_RESULT         = PASS（最後進度後 10.0–10.4s fallback，不等 60s；放行後換回 Rift）
+HARD_TIMEOUT_RESULT  = PASS（持續極慢，60.1–60.2s fallback）
+FAILURE_RESULT       = PASS（normal／resume 2.3s、replay 立即，blockout／error）
+NORMAL_ENTRY         = PASS（桌機、390＋4G，第一幀 Rift）
+RESUME_ENTRY         = PASS（normal／slow／stall／crawl／failure 全綠）
+REPLAY_ENTRY         = PASS（slow／stall／crawl／failure 全綠；賽後已就緒 Replay 第一幀 Rift）
+BLOCKOUT_NORMAL_PATH = 0（normal／resume／replay 正常與慢速情境 blockout 0 幀、空白 0 幀）
+FIRST_VISIBLE_MAP    = Rift
+```
+
+### 未驗證／限制
+
+- 正式站尚未驗證新閘門（等 Final Gate 後一起 release，再跑正式站 smoke）；真機未測。
+- 慢網路最壞情況：玩家在 Loading／Replay 載入畫面最多等 60 秒（持續有進度時），之後才看到 blockout。
+- 待辦沿用：小地圖底圖 4.7 MB 未 preload、野怪模型 `?rev=rig-v3`；技術債：`RIFT_GLB_BYTES` 寫死；asset 壓縮本輪未開始。
+- 四組 baseline red 不變（`check_esmo_rift_v1` 13/1、`check_moba_runtime_map_h1` 61/5、`check_moba_minions_h3` 19/22、`check_moba_camera_replay29b6` fan-out 逾時 17/23）。

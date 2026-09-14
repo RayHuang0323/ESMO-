@@ -2,13 +2,13 @@
 //  screens/moba/RiftEntryGate.jsx — 略過 Loading 的入口也要等 Rift（Replay 用）
 //
 //  【為什麼】正常 Ban/Pick → Loading → Battle 已由 LoadingScreen 等 Rift 就緒。
-//   但第一次開 Replay 不經過 Loading：Rift 還沒好就掛上戰場，會先看到最多 20 秒
-//   沒有地形的深色背景。這裡在同一個入口先顯示載入畫面，就緒才揭露戰場。
+//   但第一次開 Replay 不經過 Loading：Rift 還沒好就掛上戰場，會先看到沒有地形的
+//   深色背景。這裡在同一個入口先顯示載入畫面，就緒才揭露戰場。
 //   （恢復進行中的戰鬥則由 AppShell 直接改走既有的 LoadingScreen。）
 //
 //  【不是第二套 readiness】狀態、期限、決策全部沿用 riftAsset.js／riftMapGate.js：
-//   ready → 揭露 Rift；failed 或到期 → 揭露，戰場自己畫 MobaMapBlockout；
-//   期限內 → 只顯示本檔的載入畫面，戰場不掛載。
+//   ready → 揭露 Rift；failed、stall（連續 10 秒無進度）或 hard timeout（60 秒）→ 揭露，
+//   戰場自己畫 MobaMapBlockout；仍在等待 → 只顯示本檔的載入畫面，戰場不掛載。
 // ============================================================================
 import React, { useEffect, useState, useSyncExternalStore } from "react";
 import { armRiftGate, getRiftAssetSnapshot, preloadRiftAsset, subscribeRiftAsset } from "../../battle/moba/map/riftAsset.js";

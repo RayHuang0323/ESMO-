@@ -63,7 +63,8 @@ export default function LoadingScreen({ draft, tactic = null, onDone, roster = R
   const oppName = useProfileStore(selectOpponentName);
   const teamName = useProfileStore(selectTeamName);
   //  Rift 載入修正：Rift 330 地圖（13 MB）從 Ban/Pick 就在背景下載。這裡等它就緒
-  //  才讓進度條走到 100 進對戰；最多等 RIFT_GATE_TIMEOUT_MS，逾時或失敗才進場並由
+  //  才讓進度條走到 100 進對戰；仍有下載進度就繼續等（連續 10 秒無進度或滿 60 秒才算逾時，
+  //  規則在 riftMapGate.js），逾時或失敗才進場並由
   //  戰場用 MobaMapBlockout 頂替。正常路徑玩家第一幀看到的就是 Rift。
   const rift = useSyncExternalStore(subscribeRiftAsset, getRiftAssetSnapshot, getRiftAssetSnapshot);
   const capRef = useRef(0);

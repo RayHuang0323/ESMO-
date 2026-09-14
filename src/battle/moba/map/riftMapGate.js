@@ -1,20 +1,28 @@
 // ============================================================================
 //  battle/moba/map/riftMapGate.js — Rift 330 地圖閘門：純決策＋逐幀記帳
 //
-//  【存在的理由】Rift 330 的 GLB 約 13 MB。舊流程在戰鬥掛載後才開始下載，
-//   下載完成前以 MobaMapBlockout 頂替 ⇒ 玩家開局看到的是舊方塊地形，
-//   誤以為新地圖沒有上線（正式站實測桌機 8.7s、390＋4G 22.6s）。
-//   現在 Ban/Pick 就開始背景下載，Loading 等到就緒才進對戰；
-//   本檔只負責「這一刻該畫哪一種地圖」的判定，讓逾時／失敗行為可以用
+//  【存在的理由】Rift 330 的 GLB 約 13 MB（gzip 7.2 MB）。舊流程在戰鬥掛載後才開始下載，
+//   下載完成前以 MobaMapBlockout 頂替 ⇒ 玩家開局看到的是舊方塊地形。
+//   現在 Ban/Pick 就開始背景下載，Loading／Resume／Replay 入口等到就緒才揭露；
+//   本檔只負責「這一刻該畫哪一種地圖」的判定，讓 stall／hard timeout／失敗行為可以用
 //   固定時鐘重現（tools/check_moba_rift_loading.mjs 直接 import 本檔）。
 //
-//  【硬規則】
-//   · 純函式、零 import：不碰 three、React、store、window。
-//   · 就緒永遠優先：逾時後才載完，戰場會換回 Rift（只影響畫面，不影響模擬）。
+//  【Progress-aware 規則】（正式站實測：GLB 下載 19.5–30s，固定 20 秒期限會誤判）
+//   · ready            ⇒ 立即 Rift，不等任何期限。
+//   · 載入錯誤          ⇒ 立即 blockout／error。
+//   · 仍有實際下載進度  ⇒ 繼續等，不因「超過幾秒」就 fallback。
+//   · 連續 STALL 無進度 ⇒ blockout／stall（進度基準取「閘門開始」與「最後一次進度」較晚者）。
+//   · 閘門開始滿 HARD  ⇒ 不論是否仍有微量進度，blockout／timeout。
+//   · stall／timeout 一旦判定就鎖住（latchedReason），之後零星進度不會讓戰場退回空白；只有就緒才換回 Rift。
+//
+//  【硬規則】純函式、零 import：不碰 three、React、store、window。
 // ============================================================================
 
-/** Loading 畫面最多等 Rift 多久；超過就讓戰場以 MobaMapBlockout 頂替。 */
-export const RIFT_GATE_TIMEOUT_MS = 20_000;
+/** 連續這麼久沒有任何有效下載進度，視為 stalled。 */
+export const RIFT_STALL_TIMEOUT_MS = 10_000;
+
+/** 閘門開始後的絕對上限：超過仍未就緒就 fallback。 */
+export const RIFT_HARD_TIMEOUT_MS = 60_000;
 
 /** GLB 未壓縮大小（位元組）。GitHub Pages 以 gzip 傳輸，進度只能用這個當分母。 */
 export const RIFT_GLB_BYTES = 13_425_188;
@@ -23,24 +31,42 @@ export const RIFT_GLB_BYTES = 13_425_188;
 export const LOADING_BAR_WAIT_CAP = 95;
 
 export const RIFT_MAP_MODES = Object.freeze(["loading", "rift", "blockout"]);
+export const RIFT_FALLBACK_REASONS = Object.freeze(["error", "stall", "timeout"]);
 
 //  固定實例：快照比對用參照相等就能知道決策有沒有變。
 const RIFT = Object.freeze({ mode: "rift", reason: null });
 const LOADING = Object.freeze({ mode: "loading", reason: null });
 const BLOCKOUT_ERROR = Object.freeze({ mode: "blockout", reason: "error" });
+const BLOCKOUT_STALL = Object.freeze({ mode: "blockout", reason: "stall" });
 const BLOCKOUT_TIMEOUT = Object.freeze({ mode: "blockout", reason: "timeout" });
 
+const progressBase = (gateStartAt, lastProgressAt) =>
+  (Number.isFinite(lastProgressAt) ? Math.max(gateStartAt, lastProgressAt) : gateStartAt);
+
 /**
- * @param status     "idle" | "loading" | "ready" | "failed"
- * @param now        目前時間（毫秒，與 deadlineAt 同一個時鐘）
- * @param deadlineAt 等待期限；null ⇒ 尚未開始計時
- * @returns {{ mode: "loading"|"rift"|"blockout", reason: null|"error"|"timeout" }}
+ * @param status         "idle" | "loading" | "ready" | "failed"
+ * @param now            目前時間（毫秒，與下列時間同一個時鐘）
+ * @param gateStartAt    這個入口開始等待的時間；null ⇒ 尚未開始計時（永遠不 fallback）
+ * @param lastProgressAt 最後一次下載位元組實際增加的時間；null ⇒ 還沒有進度
+ * @param latchedReason  已判定過的 "stall" | "timeout"（同一個閘門內不會再退回 loading）
+ * @returns {{ mode: "loading"|"rift"|"blockout", reason: null|"error"|"stall"|"timeout" }}
  */
-export function decideRiftMap({ status, now, deadlineAt } = {}) {
+export function decideRiftMap({ status, now, gateStartAt, lastProgressAt, latchedReason } = {}) {
   if (status === "ready") return RIFT;
   if (status === "failed") return BLOCKOUT_ERROR;
-  if (Number.isFinite(deadlineAt) && Number.isFinite(now) && now >= deadlineAt) return BLOCKOUT_TIMEOUT;
+  if (!Number.isFinite(gateStartAt)) return LOADING;
+  if (latchedReason === "timeout") return BLOCKOUT_TIMEOUT;
+  if (latchedReason === "stall") return BLOCKOUT_STALL;
+  if (!Number.isFinite(now)) return LOADING;
+  if (now >= gateStartAt + RIFT_HARD_TIMEOUT_MS) return BLOCKOUT_TIMEOUT;
+  if (now >= progressBase(gateStartAt, lastProgressAt) + RIFT_STALL_TIMEOUT_MS) return BLOCKOUT_STALL;
   return LOADING;
+}
+
+/** 下一個可能改變決策的時間（stall 或 hard 較早者）；尚未計時 ⇒ null。store 用它排計時器。 */
+export function nextRiftGateDeadline({ gateStartAt, lastProgressAt } = {}) {
+  if (!Number.isFinite(gateStartAt)) return null;
+  return Math.min(gateStartAt + RIFT_HARD_TIMEOUT_MS, progressBase(gateStartAt, lastProgressAt) + RIFT_STALL_TIMEOUT_MS);
 }
 
 /** 下載進度 0–1；未就緒時最多 0.99，避免進度條先滿但其實還在解析。 */
