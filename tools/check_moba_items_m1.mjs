@@ -415,8 +415,8 @@ const COMPS = {
     if (/Math\.random|Date\.now|new Date|performance\.now|crypto\.|\brng\d?\s*\(|window\.|localStorage|document\./.test(code)) offenders.push(`${f}:runtime`);
     if (/from\s+["'][^"']*(LogicEngine|react|zustand|profileStore|useGameStore|three)["']/.test(code)) offenders.push(`${f}:import`);
   }
-  //  M1 9 支純模組 ＋ M2 三支（itemsEngineRuntime／itemsEngineAdapter／itemsViewModel）
-  ck("G11", `items 模組（${files.length} 支）不使用時間／亂數／瀏覽器 API，不 import 引擎、React、store、three`, files.length === 12 && offenders.length === 0, offenders.join(","));
+  //  M1 9 支純模組 ＋ M2 三支（itemsEngineRuntime／itemsEngineAdapter／itemsViewModel）＋ M3a 一支（itemsUiSelectors）
+  ck("G11", `items 模組（${files.length} 支）不使用時間／亂數／瀏覽器 API，不 import 引擎、React、store、three`, files.length === 13 && offenders.length === 0, offenders.join(","));
 }
 
 // ── G13 隔離 ──────────────────────────────────────────────────────────────────
@@ -433,8 +433,9 @@ const COMPS = {
     }
   };
   walk("src");
-  const allowedImporters = ["src/LogicEngine.js", "src/debug/ItemInspector/ItemInspector.jsx"];
-  ck("G13", "只有 LogicEngine（opt-in）與 DEV Item Inspector import items 模組", importers.every((f) => allowedImporters.includes(f)) && importers.includes("src/LogicEngine.js"), importers.join(","));
+  //  M3a：useLocalServer（受 itemsV1 開關保護）、DEV 工具、裝備 UI 元件也可以讀 items 模組。
+  const allowedImporter = (f) => f === "src/LogicEngine.js" || f === "src/useLocalServer.js" || f.startsWith("src/debug/") || f.startsWith("src/battle/ui/items/");
+  ck("G13", "只有 LogicEngine（opt-in）、useLocalServer（開關保護）、DEV 工具與裝備 UI import items 模組", importers.every(allowedImporter) && importers.includes("src/LogicEngine.js"), importers.join(","));
   const callers = [];
   const walkCalls = (d) => {
     for (const e of fs.readdirSync(path.join(ROOT, d), { withFileTypes: true })) {
@@ -446,7 +447,12 @@ const COMPS = {
     }
   };
   walkCalls("src");
-  ck("G13", "正式流程沒有呼叫 configureItems／toEngineItems（M2 不上線）", callers.length === 0, callers.join(","));
+  //  M3a（Owner D1）：只允許 useLocalServer 在 itemsV1 開關保護下呼叫（正式開關預設 false）。
+  const ulsCode = read("src/useLocalServer.js");
+  const ulsGuarded = /itemsV1: false/.test(read("src/featureFlags.js"))
+    && /featureEnabled\("itemsV1"\)\s*\|\|\s*\(import\.meta\.env\.DEV && itemsDevRequested\(\)\)/.test(ulsCode);
+  const unguardedCallers = callers.filter((f) => !(f === "src/useLocalServer.js" && ulsGuarded));
+  ck("G13", "正式流程只有 useLocalServer 在 itemsV1 開關保護下呼叫 configureItems（正式站預設 OFF）", unguardedCallers.length === 0, unguardedCallers.join(","));
   const simVer = read("src/platform/contracts/simulationVersion.js");
   const semanticsList = simVer.slice(simVer.indexOf("export const SIMULATION_SEMANTICS_FILES"), simVer.indexOf("]);", simVer.indexOf("export const SIMULATION_SEMANTICS_FILES")));
   ck("G13", "模擬版本仍是 moba-sim.v4，items 模組未列入語意清單（正式輸入到不了它們）", /MOBA_SIMULATION_VERSION = "moba-sim\.v4"/.test(simVer) && !/moba\/items/.test(semanticsList));

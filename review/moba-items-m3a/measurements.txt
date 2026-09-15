@@ -1,0 +1,20 @@
+
+════ 手機 320px ════
+   截圖 review/moba-items-m3a/gallery-320.png
+   截圖 review/moba-items-m3a/hero-detail-320.png
+   截圖 review/moba-items-m3a/strategy-cards-320.png
+   截圖 review/moba-items-m3a/slots-320.png
+
+════ 手機 390px ════
+   截圖 review/moba-items-m3a/gallery-390.png
+
+════ 平板 768px ════
+   截圖 review/moba-items-m3a/gallery-768.png
+
+════ 桌機 1366px ════
+   截圖 review/moba-items-m3a/gallery-1366.png
+   截圖 review/moba-items-m3a/hero-detail-1366.png
+   截圖 review/moba-items-m3a/strategy-cards-1366.png
+   截圖 review/moba-items-m3a/slots-1366.png
+
+════ 手機 390px｜減少動態 ════

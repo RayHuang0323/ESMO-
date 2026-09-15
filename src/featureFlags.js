@@ -75,6 +75,18 @@ export const FEATURE_FLAGS = Object.freeze({
   heroProxyChichuan: true,
   /** Hero Proxy A/B 版本；可用 `?heroProxyVariant=desktop-v002` 切換。 */
   heroProxyVariant: "cli-v003",
+
+  /**
+   * MOBA 裝備系統 v1（Item System M3a）。
+   *
+   * **正式站預設 OFF。** Owner 決策：平衡（Balance Closure）完成前不在正式站啟用。
+   * DEV 驗證用 `npm run dev` ＋ `?itemsDev=1`（見 `useLocalServer.start()` 與 `ui/itemsDevFlag.js`），
+   * 那條路徑在正式 build 會被常數折疊移除——正式站沒有任何 query／UI 操作能打開它。
+   *
+   * ⚠ 改成 `true` 的那一天：Challenge 若也呼叫 `configureItems`，必須開 `moba-sim.v5`
+   *   並把裝備模組列入模擬語意清單（`platform/contracts/simulationVersion.js`）。
+   */
+  itemsV1: false,
 });
 
 /** 單一查詢出口（呼叫端不直接讀物件，日後要改成遠端旗標也只動這裡）。 */

@@ -21249,3 +21249,83 @@ Owner 指示：開始 M2；**不做**正式玩家 Item UI，但從一開始把 M
 - 正式玩家 Item UI（M3）、平衡／收入／`dmgK` 校準（M3，只能在 itemsV1 規則集內）、Replay／BattleResult 正式欄位、正式流程啟用（屆時開 v5）。
 - M3 開始前：先 audit 已安裝 skills（UI／frontend design、game UI／gameplay、GSAP 若真的需要、Superpowers），不猜名稱、不另裝；
   目標是現代電競 MOBA HUD／Shop／Build UI，mobile-first。
+
+## 2026-09-15 MOBA Item System v1 — M3a Item UI 基礎＋視覺樣張（停在 Owner Review）
+
+Owner Review：M3 PLAN APPROVED，D1–D5 照建議。補充兩點：
+- **itemsV1 在 production 維持預設 OFF**；只在 DEV／test 明確開啟；正式站不能因 query 或 UI 操作啟用。
+- **M3a 完成後先停**，交 desktop＋mobile 視覺樣張與截圖，Owner Review 外觀後才進 M3b。
+
+本輪：
+- **沒有改動：** LogicEngine、裝備規則模組、平衡、`dmgK`、收入。
+- **沒有接進正式畫面：** HUD、BattleHeroSheet、TacticScreen、Replay（M3b–M3e）。
+- 未 push、未 deploy。
+
+### 一、規格與計畫
+
+- 規格：`docs/design/MOBA_裝備UI_M3規格_v1.md`
+  - Owner 決策、硬規則、開關設計、selectors
+  - 視覺系統「鍛爐插槽」、十個元件、三個動效時刻
+  - 後續 M3b–M3e 摘要、UIUX 九問
+- 實作計畫：`docs/design/MOBA_裝備UI_M3a實作計畫_v1.md`（writing-plans 格式，8 個 task）。
+- 使用的 skills：superpowers writing-plans／verification-before-completion、frontend-design、ui-ux-pro-max。
+- ui-ux-pro-max 推薦的「霓虹紫＋Russo One／Chakra Petch」**刻意不採用**：沒有 CJK 字形、4G 首開多載 webfont、紫色電競皮是樣板。理由寫在規格 §5.1。
+
+### 二、itemsV1 開關（D1＋補 1）
+
+- `FEATURE_FLAGS.itemsV1 = false`。
+- DEV 開啟：`?itemsDev=1`（`src/ui/itemsDevFlag.js`）。
+- `useLocalServer.start()`：`featureEnabled("itemsV1") || (import.meta.env.DEV && itemsDevRequested())` 才 `configureItems`；出裝策略讀 `opts.buildStrategy`（M3d 由 Prep 傳入）。
+- **證據**：M3 驗證器實際 `vite build` 到暫存目錄，產物不含 `itemsDev`、`ItemsUiGallery`、`ItemInspector`、`items-ui`。
+- M2 G8、M1 G13 改為「只允許受開關保護的 useLocalServer 呼叫」。
+
+### 三、新增
+
+| 檔案 | 內容 |
+|---|---|
+| `src/battle/moba/items/itemsUiSelectors.js` | `itemVisual`、`selectHudItems`（含還差多少／進度）、`coachNotes`、`BUILD_STRATEGY_META`、`previewStrategy`（直接呼叫 buildTargets） |
+| `src/ui/useReducedMotion.js` | UIUX 原則 §12 指定的共用 reduced-motion 出口 |
+| `src/battle/ui/items/*`（11 支） | `itemsTheme`（GC 基底＋階級／流派專用色）、`ItemGlyphs`（程式 SVG 圖紋與策略徽章）、`ItemSlot`／`InventoryBar`、`GoldChip`、`PurchaseToast`、`NextItemCard`、`BuildPathTrack`、`CoachNote`、`BuildStrategyCards`、`HeroItemDetail`、`useItemFeedbackMotion`（GSAP 三個回饋時刻） |
+| `src/debug/ItemsUiGallery/ItemsUiGallery.jsx` | `?debug=items-ui`（DEV only）：頁內跑真實引擎 seed 7 第 12 分鐘，九個樣張區塊 |
+| `tools/check_moba_items_m3.mjs` | M3a 驗證器（開關＋build 掃描、selectors、UI 隔離、動效、樣張頁、M2 未動） |
+| `tools/browser_review_moba_items_m3a.mjs` | 320／390／768／1366 截圖＋版面量測＋減少動態 |
+
+### 四、驗證（全部實跑）
+
+- `node tools/check_moba_items_m3.mjs` ⇒ **25/25 PASS**。第一次跑 4/19（實作前的紅燈）。
+- `node tools/check_moba_items_m2.mjs` ⇒ **53/53 PASS**（含 G1 legacy 指紋逐場零差異）。
+- `node tools/check_moba_items_m1.mjs` ⇒ **69/69 PASS**（G11 模組數 12→13；G13 白名單）。
+- `npm run build`（最終程式碼）⇒ built in 12.58s；dist 掃描無 `itemsDev`／`ItemsUiGallery`／`items-ui`。
+- 最終程式碼上依序重跑一次：M3 25/25、M1 69/69、M2 53/53、build 綠。
+  - 第一次串在一起跑時，系統記憶體不足把行程砍掉；改成一支一支跑，沒有重試同一個失敗。
+- `node tools/browser/run-gate.mjs tools/browser_review_moba_items_m3a.mjs` ⇒ **35/35 PASS**。每個寬度（320／390／768／1366）都檢查：
+  - 九區塊存在、不水平溢出、無工程術語／undefined／NaN。
+  - 通知完整可見、console／page 錯誤 0。
+  - 英雄詳情 6 格真的畫出來；手機每格 ≥ 44px（320px 實測 44.3、390px 48）。
+  - 另外在 prefers-reduced-motion 下重跑一次：通知立即完整、沒有掃光層。
+- 截圖：`review/moba-items-m3a/`
+  - 整頁：`gallery-320／390／768／1366.png`
+  - 近拍：`hero-detail-320／1366.png`、`strategy-cards-320／1366.png`、`slots-320／1366.png`
+  - 量測明細：`measurements.txt`
+
+### 五、截圖自我檢查（frontend-design 自評，逐張看過截圖）
+
+第一輪截圖抓到並修正四件事：
+1. **320px 背包格太小**（36px < 44）：`InventoryBar` fluid 改成純 CSS 階梯——每格夠 44px 就一排 6 格，否則自動 3×2；樣張頁手機版英雄詳情改為貼齊螢幕（等同真實 bottom sheet 寬度）。
+2. **教練筆記同一件事講兩次**（「繼續合成：破曉長弓」＋「存錢中：破曉長弓」）：`coachNotes` 對同一目標只留存錢那句。
+3. **戰術卡預覽分不出差異**：同流派完成裝圖紋相同（破曉長弓與穿雲破甲弓都是準星）⇒ 預覽圖示下加名稱。
+4. **出裝路徑換行時下一行開頭多一截連線**：連線改畫在插槽之後。
+
+修正 1 的第一版引入新 bug：`justifyItems: center` 讓格子寬度塌成 0，**6 格整排消失**，但量測照樣綠——看不見的元素被「可見」濾掉了。
+- 修法：格子恢復 stretch，置中改由格子自身 `maxWidth＋margin: auto` 處理。
+- 量測補一條「英雄詳情 6 格真的畫出來且尺寸達標」，同類問題以後會變紅。
+- 教訓：版面量測不能只量「看得見的元素」，要斷言預期元素的數量與尺寸。
+
+### 六、未經真機實測
+
+- 真實手機（4G、觸控手感、實際字級、Safari／Android Chrome）未測；截圖為 headless Chrome 模擬寬度。
+- GSAP 回饋動效的觀感（掃光、回彈）只驗證了「結束後完整可見」與 reduced-motion 分支，沒有錄影逐幀檢查。
+
+### 七、停止點
+
+M3a 完成後依 Owner 指示**停止**，等 Owner Review 外觀；通過後才寫 M3b（Battle HUD）的細部計畫。

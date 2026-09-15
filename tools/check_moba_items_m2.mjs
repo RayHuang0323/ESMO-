@@ -416,7 +416,13 @@ let lastOnSnapshot = null;
     }
   };
   walk("src");
-  ck("G8", "正式流程（useLocalServer／Challenge／GameView…）沒有呼叫 configureItems／toEngineItems／debugSetInventory", callers.length === 0, callers.join(","));
+  //  M3a（Owner D1）：useLocalServer 可以呼叫，但必須受 itemsV1 開關保護，且正式開關預設 false。
+  const uls = read("src/useLocalServer.js");
+  const { FEATURE_FLAGS } = await load("src/featureFlags.js");
+  const guarded = FEATURE_FLAGS.itemsV1 === false && !/debugSetInventory/.test(uls)
+    && /featureEnabled\("itemsV1"\)\s*\|\|\s*\(import\.meta\.env\.DEV && itemsDevRequested\(\)\)/.test(uls);
+  const unguarded = callers.filter((f) => !(f === "src/useLocalServer.js" && guarded));
+  ck("G8", "正式流程只有 useLocalServer 呼叫 configureItems，且受 itemsV1 開關保護（正式站預設 OFF）；沒有人呼叫 debugSetInventory", unguarded.length === 0, unguarded.join(","));
   const main = read("src/main.jsx");
   ck("G8", "DEV Item Inspector 只掛在 import.meta.env.DEV && ?debug=items（正式 build 被移除）",
     /import\.meta\.env\.DEV && debugMode === "items"/.test(main) && !/ItemInspector/.test(read("src/AppShell.jsx")));

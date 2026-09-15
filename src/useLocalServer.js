@@ -20,6 +20,10 @@ import { toEngineSpells } from "./battle/moba/mobaHeroLoadout.js";
 import { toEngineArchetypes, COMBAT_ARCHETYPE_CONTRACT_VERSION } from "./data/heroCombatArchetypes.js";
 import { heroById } from "./data/heroDatabase.js";
 import { toEnginePlayerMods } from "./battle/moba/mobaPlayerStats.js";
+//  Item System M3a：裝備層開關（正式站預設 OFF；DEV 才讀 ?itemsDev=1，見 start() 內）
+import { featureEnabled } from "./featureFlags.js";
+import { itemsDevRequested } from "./ui/itemsDevFlag.js";
+import { toEngineItems } from "./battle/moba/items/itemsEngineAdapter.js";
 
 // ============================================================================
 //  S29：simTime / presentationTime / playbackRate 明確分離
@@ -221,6 +225,18 @@ export function useLocalServer() {
         red: toEngineTactic(STANDARD_OPP_TACTIC),
         meta: { tacticId: opts.tactic.tacticId, tacticName: opts.tactic.name, version: MOBA_TACTIC_VERSION, opponentTacticId: STANDARD_OPP_TACTIC.tacticId },
       });
+    }
+
+    // ── Item System M3a：裝備層（itemsV1，第六個 opt-in 配置層）──────────────
+    //   正式站預設 OFF（FEATURE_FLAGS.itemsV1 = false）。DEV 驗證才用 `?itemsDev=1`：
+    //   `import.meta.env.DEV` 在正式 build 是常數 false ⇒ 後半段連同 itemsDevRequested 被移除，
+    //   正式站沒有任何 query／UI 操作能打開（check_moba_items_m3 G1 實際 build 掃描）。
+    //   未開啟 ⇒ 不呼叫 ⇒ 引擎逐位元回到 M2 之前（check_moba_items_m2 G1）。
+    //   出裝策略：Prep（M3d）經 opts.buildStrategy 傳入；沒有 ⇒ 標準。
+    const itemsOn = featureEnabled("itemsV1") || (import.meta.env.DEV && itemsDevRequested());
+    if (itemsOn && opts.roster) {
+      const itemsCfg = toEngineItems({ roster: opts.roster, heroLookup: heroById, defaultStrategy: opts.buildStrategy ?? "standard" });
+      if (itemsCfg) eng.configureItems(itemsCfg);
     }
     const activeConfig = {
       phase: "battle",

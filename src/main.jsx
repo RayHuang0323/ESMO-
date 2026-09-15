@@ -37,6 +37,10 @@ if (debugMode === "terrain-sandbox") {
   //  ⚠ 只在 `npm run dev` 存在：正式 build 時 import.meta.env.DEV 代換成 false ⇒ 整段被移除。
   const Inspector = React.lazy(() => import("./debug/ItemInspector/ItemInspector.jsx"));
   root.render(<React.Suspense fallback={null}><Inspector /></React.Suspense>);
+} else if (import.meta.env.DEV && debugMode === "items-ui") {
+  // Item System M3a：裝備 UI 視覺樣張（Owner Review 外觀用；DEV only，正式 build 整段移除）。
+  const Gallery = React.lazy(() => import("./debug/ItemsUiGallery/ItemsUiGallery.jsx"));
+  root.render(<React.Suspense fallback={null}><Gallery /></React.Suspense>);
 } else {
   root.render(<AppShell />);
 }
