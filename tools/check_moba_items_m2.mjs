@@ -25,8 +25,16 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-/** M1 完成、引擎尚未接入裝備的 commit（legacy 基準）。 */
-const BASE_COMMIT = "6a7d40a";
+/**
+ * legacy 基準 commit：G1 要證明的是「裝備層不改變 itemsV1 關閉時的引擎結果」。
+ *
+ * ⚠ 原本釘在 M1 的 `6a7d40a`（引擎尚未接入裝備）。M4b.5 Tower Safety 是**刻意的**
+ *   模擬語意變更（`moba-sim.v5`：塔射程／塔傷／仇恨／AI 越塔），關閉裝備時的結果本來就
+ *   和 M1 不同 ⇒ 舊基準永遠對不上，留著只會把這個閘門訓練成雜訊。
+ *   改釘在 M4b.5 的 commit：從此 G1 抓的是「**本 commit 之後**新增的裝備層改動有沒有
+ *   動到 OFF 路徑」。下一次刻意的引擎語意變更（bump 版本）時，同樣要把它往前移。
+ */
+const BASE_COMMIT = "1fce160";
 const load = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
 
@@ -88,7 +96,11 @@ const setInv = (e, id, items) => e.items.debugSetInventory(P(e, id), items, lvl(
     execFileSync("tar", ["-x", "-f", "-"], { cwd: base, input: tar, maxBuffer: 1 << 30 });
     const tool = path.join(ROOT, "tools/moba_items_legacy_fingerprint.mjs");
     const run = (args) => promisify(execFile)(process.execPath, [tool, ...args], { cwd: ROOT, maxBuffer: 64 << 20 }).then((r) => JSON.parse(r.stdout));
-    const [b, off, nul] = await Promise.all([run([`--root=${base}`]), run([`--root=${ROOT}`]), run([`--root=${ROOT}`, "--items=null"])]);
+    //  ⚠ ticks 從預設 3600（30 分）拉到 4800（40 分）：M4b.5 Tower Safety 之後節奏變慢，
+    //    seed 7 的 configured 對局要 30.7 分才結束，用 3600 會被上限截斷 ⇒ 第一項斷言
+    //    「6 場全部跑完」假紅（逐位元比對本身不受影響，因為兩棵樹跑同樣的 tick 數）。
+    const TICKS = "--ticks=4800";
+    const [b, off, nul] = await Promise.all([run([`--root=${base}`, TICKS]), run([`--root=${ROOT}`, TICKS]), run([`--root=${ROOT}`, TICKS, "--items=null"])]);
     const diffOf = (x) => b.runs.flatMap((r, i) => Object.keys(r).filter((k) => JSON.stringify(r[k]) !== JSON.stringify(x.runs[i]?.[k])).map((k) => `${r.seed}/${r.mode}:${k}`));
     const dOff = diffOf(off), dNull = diffOf(nul);
     ck("G1", `基準 ${BASE_COMMIT} 共 ${b.runs.length} 場（3 seed × bare／configured）全部跑完且有真實對局`,
