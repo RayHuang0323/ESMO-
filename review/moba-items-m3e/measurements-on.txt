@@ -1,0 +1,29 @@
+
+════ itemsV1 ON｜前期壓制 → 戰鬥記錄 → 戰鬥中重新整理 → 快速完成 ════
+   重新整理前已存模擬時間 151.5
+   恢復時 ts 151.5
+   終局 ts 1357.5（over true）　live 記錄 235 個 tick
+   重播戰場模式：2d
+   Replay：起點 151.5　長度 1357.5　baseline {"t":151.5,"seq":10}　purchases 105　標記 105　gaps 0
+   fold 對照 live：235／235 個 tick，不同 0
+
+════ ON 重播｜1366px ════
+   暫停 t 162　6 格 st_blade,,,,,　購買籤 2　標記 11（應 11）　尺寸 {"major":17,"boots":11.3,"component":2}　軌高 28　戰場高 388　事件列 5
+   截圖 review/moba-items-m3e/replay-1366.png
+
+════ ON 重播｜768px ════
+   暫停 t 984　6 格 st_blade,t3_warbringer,bt_base,,,　購買籤 2　標記 11（應 11）　尺寸 {"major":17,"boots":11.3,"component":2}　軌高 28　戰場高 442　事件列 5
+   截圖 review/moba-items-m3e/replay-768.png
+
+════ ON 重播｜390px ════
+   截圖 review/moba-items-m3e/replay-collapsed-390.png
+   暫停 t 989　6 格 st_blade,t3_warbringer,bt_base,,,　購買籤 2　標記 11（應 11）　尺寸 {"major":17,"boots":11.3,"component":2}　軌高 44　戰場高 300　事件列 0
+   截圖 review/moba-items-m3e/replay-390.png
+
+════ ON 重播｜320px ════
+   暫停 t 989　6 格 st_blade,t3_warbringer,bt_base,,,　購買籤 2　標記 11（應 11）　尺寸 {"major":17,"boots":11.3,"component":2}　軌高 44　戰場高 173　事件列 0
+   截圖 review/moba-items-m3e/replay-320.png
+
+════ ON｜關閉重播 → 再打開 ════
+   重播戰場模式：2d
+   截圖 review/moba-items-m3e/replay-reopen-390.png

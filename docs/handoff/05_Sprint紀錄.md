@@ -21595,3 +21595,89 @@ G11 內容（seed 42、ROSTER）：
 ### 六、停止點
 
 M3d 完成後依 Owner 指示停止，等 Owner Review；未開始 M3e（Replay）。
+
+## 2026-09-15 MOBA Item System v1 — M3e Item Replay Integration（停在 Owner Review）
+
+Owner Review：M3d APPROVED。本輪只做 Replay；不做 balance、不正式啟用 itemsV1；不動 LogicEngine、`dmgK`、收入、裝備平衡、TacticScreen；未 push、未 deploy。
+計畫：`docs/design/MOBA_裝備UI_M3e實作計畫_v1.md`。
+
+### 一、做了什麼
+
+- **Replay 格式**（`MobaReplay.v1` 版本不變，附加 optional）：
+  - `itemMeta = { version: "moba-items.replay.v1", catalogVersion, itemIds[], strategyByPlayer[10], baseline: { t, seq, slots[10][6] }, gaps }`
+  - `purchases = [[seq, t, seatIdx, actionCode, itemIdx, cost, unspentAfter], …]`
+  - frame 不存背包；itemsV1 關閉的對局一個欄位都不加。
+  - `validateMobaReplay`：兩欄都沒有 ⇒ 不檢查；有其一 ⇒ 形狀、索引、seq／t 遞增都要正確。
+- **擷取**（`replayBuffer`）：每個 snapshot 在取樣判斷之前依 seq 收購買事件；第一格 frame 記 baseline（10 人 6 格＋lastSeq＋引擎策略）。
+  - 原因：引擎只留最近 40 筆購買；戰鬥中重新整理後恢復，引擎先安靜重跑到保存時間，之前的事件已經拿不到 ⇒ 以 baseline 起算。
+- **還原**（新純函式 `src/battle/moba/items/itemReplay.js`）：
+  - `foldPurchasesAt(items, t)`：baseline 起依 seq 套用 t 以前的實際購買；格位用 `purchaseCost`＋`applyPurchase`（與引擎購買同一規則）⇒ 6 格順序與現場相同。不重跑 AI。
+  - `decodeItemsReplay`（舊 Replay ⇒ null）、`selectReplayPurchaseMarkers`、`selectReplayHeroItemsAt`、`selectReplayStrategies`（讀保存的引擎策略原值，不重算 previewStrategy）。
+- **播放 UI**（`MobaReplayScreen`；元件 `ReplayItemTrack`、`ReplayItemPanel`）：
+  - 時間軸下方購買軌：沒選英雄只畫全場 T3（12px 金菱形，外框隊伍色）與升級鞋（8px 青菱形）；選了英雄畫該英雄全部購買（組件 2×10 細刻度）。整條軌可點（手機高 44）跳到最近標記；←／→ 切換。
+  - 「🛒 裝備」面板（桌機預設開、手機預設收）：10 位英雄 44×44 頭像鈕 → 目前時間的 6 格、完成件數、策略；該英雄 T3／升級鞋購買籤（高 44）可跳時間。
+  - 手機（compact）：英雄鈕一列橫向捲動；開著裝備面板時事件列暫時收起 ⇒ 戰場高度 390 寬 300px、320 寬 173px。
+  - 標頭「我方出裝 ○○」「紅方出裝 ○○」。
+  - 背包只由時間 t 推導 ⇒ seek／暫停／繼續後必然一致；暫停時把畫面 t 對齊實際時鐘。
+  - 舊 Replay：購買軌、裝備鈕、面板、策略籤都不出現，其餘照舊（舊的一列時間軸原樣保留）。
+  - 戰場容器加 `data-replay-stage="3d|2d"`（量測用，行為不變）。
+
+### 二、驗證（全部實跑，最終程式碼）
+
+| 驗證 | 結果 |
+|---|---|
+| `node tools/check_moba_items_m3.mjs` | 66/66 PASS（新增 G13 7/7、G14 5/5；含 vite build 與產物掃描） |
+| `node tools/check_moba_items_m1.mjs` | 69/69 PASS（items 模組 15 支） |
+| `node tools/check_moba_items_m2.mjs` | 53/53 PASS（G1 legacy 指紋 3/3 ⇒ itemsV1 關閉時引擎結果與 M1 基準逐位元相同，模擬未變） |
+| `node tools/verify.mjs --only=milestone_i_close,milestone_b4,experience26` | 3/3 PASS（Replay 名單、小兵 Replay、Replay 契約與容量） |
+| `npm run build` | built in 25.93s |
+| 瀏覽器 OFF／ON | 15/15、53/53 PASS |
+
+G13 內容（seed 42、ROSTER、前期壓制）：
+- 格式合法、baseline＝第一格 frame、seq 無跳號、我方 early／紅方 standard、JSON 來回仍合法。
+- fold at T＝snapshot inventory：2401 個 tick 逐一相同，沒有被拒絕的購買，終局相同。
+- 同 seed＋同策略兩次擷取：itemMeta／purchases／標記逐位元相同。
+- 打亂順序查詢＝依序查詢，查詢不改資料。
+- 從 400s 恢復才擷取：1601 個 tick 的 fold＝snapshot＝未中斷的那一場。
+- 舊 Replay 相容與形狀錯誤被拒絕；容量：裝備欄位約 3KB、整份約 1.5MB（1,498,607 bytes）。
+
+回歸的一次錯誤與處理：
+- 我先直接跑 29B 系列回歸（`controls29b3`、`camera_replay29b6`…），它們會在內部再展開整套 runtime29／stats28／talent27，`controls29b3` 跑滿 25 分鐘逾時。已停掉這一串（只停本輪自己啟動的行程），改走 `verify.mjs` 平跑。
+- 直接跑時看到的紅燈：`camera_replay29b6` 自身 11/12（#7 小兵首次受傷 p50、#10 英雄／小兵速度倍率）、其內含的 29B2「營地血量」。三項都是戰鬥節奏數值；M3e 沒有改模擬（M2 G1 指紋相同），**但未在 M3d HEAD 另行跑同一支確認是否既有**。
+
+### 三、真實流程瀏覽器量測（`tools/browser_review_moba_items_m3e.mjs`，分 OFF／ON 兩段）
+
+- OFF（不帶 `?itemsDev=1`，15/15）：真實流程打一場 → 快速完成 → 觀看重播。舊格式（沒有 itemMeta／purchases）、契約合法、decode 為 null；沒有購買軌、裝備鈕、面板、策略籤；照常播放；1366／390 不溢出；console error 0（存為 ON 基準）。
+- ON（`?itemsDev=1`，53/53）：
+  - 戰術頁選「前期壓制」→ 戰鬥（預設 2×）→ 本場存檔到 151.5s → 重新整理 →「返回進行中的比賽」→ 恢復在 151.5s → 再推進 90s → 快速完成（終局 1357.5s）→ 觀看重播。
+  - Replay 資料：起點 151.5、baseline seq 10、purchases 105、gaps 0、我方 early／紅方 standard；fold 對照 live 記錄 235／235 個 tick 全部相同；終局 fold＝最後 snapshot；JSON 來回後標記與 fold 相同。
+  - 這場從中途開始錄 ⇒ 戰場為 2D 俯視圖（既有行為，見風險）；裝備 UI 在 2D 模式全部正常。
+
+| 寬度 | 版面 | 量測 |
+|---|---|---|
+| 1366 | 裝備面板預設開 | 軌高 28、戰場 388px |
+| 768 | 裝備面板預設開 | 軌高 28、戰場 442px |
+| 390 | 面板預設收合；打開後英雄鈕一列、事件列收起 | 軌高 44、戰場 300px、可點元素全 ≥ 44 |
+| 320 | 同上 | 軌高 44、戰場 173px、12 個可點元素全 ≥ 44 |
+
+  - 每個寬度：暫停 1.2 秒時間與 6 格不變且＝fold；購買籤往後（該件在 6 格內）／往前跳 ⇒ 6 格＝fold；點購買軌 ⇒ 跳到標記時間且 6 格＝fold；繼續播放時間前進、再暫停 6 格＝fold；標記數＝selector；T3 17px > 升級鞋 11.3px > 組件 2px（外接框）；策略籤正確；不溢出。
+  - 關閉重播再打開：同一筆購買籤 ⇒ 同一時間、同一組 6 格。
+  - console error 不比 OFF 多、page exception 0。
+- ON 重跑紀錄（照實）：
+  1. 第一輪「重播打不開」：實際是恢復後的 Replay 走 2D 俯視圖，工具只認 3D canvas。
+  2. 第二輪恢復在 3.5s（沒有真的接回）：測試在重新整理前切了倍速，觸發既有存檔問題（見風險）。
+  3. 第三輪加存檔等待，存檔時間一直是 0；第四輪加診斷，確認場次正常但戰鬥中從未存檔 ⇒ 找到 `setRate` 重建計時器不存進度。
+  4. 工具改為重新整理前不切倍速、接受 2D、暫停比對用面板實際時間（滑桿 step=0.5 會四捨五入）⇒ 53/53。
+
+### 四、截圖自我檢查
+
+- 抓到並已修：手機打開裝備面板時，英雄鈕兩列（約 100px）＋事件列（5 行）把戰場擠掉，320 寬幾乎看不到戰場 ⇒ 手機英雄鈕改一列橫向捲動、開面板時收起事件列；新增閘門「手機開面板戰場 ≥ 120px」。
+- 確認正常：四寬度策略籤、購買軌（組件細刻度、T3 金菱形、升級鞋青菱形、目前時間指針）、6 格與購買籤；手機收合時事件列回來；關閉再打開一致；舊 Replay 畫面與 M3e 之前相同。
+
+### 五、未經真機實測
+
+- 真實手機點購買軌的精準度、橫向捲動英雄列的手感、面板開啟後戰場剩餘高度的觀感、4G 效能未測；截圖為 headless Chrome。
+
+### 六、停止點
+
+M3e 完成後依 Owner 指示停止，等 Owner Review；未做 balance、未正式啟用 itemsV1。

@@ -415,8 +415,8 @@ const COMPS = {
     if (/Math\.random|Date\.now|new Date|performance\.now|crypto\.|\brng\d?\s*\(|window\.|localStorage|document\./.test(code)) offenders.push(`${f}:runtime`);
     if (/from\s+["'][^"']*(LogicEngine|react|zustand|profileStore|useGameStore|three)["']/.test(code)) offenders.push(`${f}:import`);
   }
-  //  M1 9 支純模組 ＋ M2 三支（itemsEngineRuntime／itemsEngineAdapter／itemsViewModel）＋ M3a 一支（itemsUiSelectors）＋ M3d 一支（buildStrategyPrep）
-  ck("G11", `items 模組（${files.length} 支）不使用時間／亂數／瀏覽器 API，不 import 引擎、React、store、three`, files.length === 14 && offenders.length === 0, offenders.join(","));
+  //  M1 9 支純模組 ＋ M2 三支（itemsEngineRuntime／itemsEngineAdapter／itemsViewModel）＋ M3a 一支（itemsUiSelectors）＋ M3d 一支（buildStrategyPrep）＋ M3e 一支（itemReplay）
+  ck("G11", `items 模組（${files.length} 支）不使用時間／亂數／瀏覽器 API，不 import 引擎、React、store、three`, files.length === 15 && offenders.length === 0, offenders.join(","));
 }
 
 // ── G13 隔離 ──────────────────────────────────────────────────────────────────
@@ -437,8 +437,9 @@ const COMPS = {
   //  M3b：戰鬥底層 BattleObserverHUD 只讀 itemsUiSelectors（replay 與 OFF 時回 null）。
   //  M3c：戰鬥英雄面板 BattleHeroSheet 只讀 itemsViewModel／itemsUiSelectors（OFF 時回 null）。
   //  M3d：戰術頁 TacticScreen 只讀 buildStrategyPrep 的預覽 selector（itemsV1 閘門內才呼叫）。
+  //  M3e：Replay 擷取（replayBuffer 用 itemReplay 編碼）與播放（MobaReplayScreen 用 itemReplay 解碼／還原）。
   const allowedImporter = (f) => f === "src/LogicEngine.js" || f === "src/useLocalServer.js" || f === "src/battle/ui/BattleObserverHUD.jsx" || f === "src/battle/ui/BattleHeroSheet.jsx"
-    || f === "src/screens/moba/TacticScreen.jsx"
+    || f === "src/screens/moba/TacticScreen.jsx" || f === "src/battle/moba/replay/replayBuffer.js" || f === "src/screens/moba/MobaReplayScreen.jsx"
     || f.startsWith("src/debug/") || f.startsWith("src/battle/ui/items/");
   ck("G13", "只有 LogicEngine（opt-in）、useLocalServer（開關保護）、DEV 工具與裝備 UI import items 模組", importers.every(allowedImporter) && importers.includes("src/LogicEngine.js"), importers.join(","));
   const callers = [];

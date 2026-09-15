@@ -10,6 +10,8 @@
 //   G7／G8 M3b 戰鬥 HUD；G9／G10 M3c 英雄裝備詳情
 //   G11 M3d 出裝策略輸入：五策略 match input、對手固定標準、同 seed 同策略逐位元相同、策略真的改變出裝、預覽＝開局計畫
 //   G12 M3d 接線：戰術頁 itemsV1 閘門、選卡存進本場設定、恢復／載入鎖定／GameView 傳入、不用 select
+//   G13 M3e Replay 裝備紀錄：格式、fold＝snapshot、determinism、恢復 baseline、seek 順序無關、舊 Replay 相容、容量
+//   G14 M3e 接線：擷取在取樣判斷之前收事件、契約 optional 驗證、播放端不重跑 AI／不 import 規則模組
 //
 //  用法：node tools/check_moba_items_m3.mjs   （G1 會跑一次 vite build 到暫存目錄，約 30 秒）
 // ============================================================================
@@ -221,8 +223,8 @@ const REQUIRED_UI = ["itemsTheme.js", "ItemGlyphs.jsx", "ItemSlot.jsx", "GoldChi
   const git = (args) => execFileSync("git", args, { cwd: ROOT, encoding: "utf8" });
   const RULE_FILES = ["itemCatalog", "itemRecipes", "itemInventory", "itemEconomy", "combatStatsV1", "itemEffects", "itemEffectKeys", "buildPolicy", "itemsEngineRuntime", "itemsEngineAdapter", "itemsViewModel", "offlinePurchaseSim"]
     .map((f) => `src/battle/moba/items/${f}.js`);
-  const diff = git(["diff", "--name-only", "HEAD", "--", "src/LogicEngine.js", "src/battle/moba/matchProgression.js", "src/platform/contracts", ...RULE_FILES]).trim();
-  ck("G6", "LogicEngine、規則集、contracts、M1／M2 裝備模組相對 HEAD 無改動", diff === "", diff);
+  const diff = git(["diff", "--name-only", "HEAD", "--", "src/LogicEngine.js", "src/battle/moba/matchProgression.js", "src/platform/contracts", ":(exclude)src/platform/contracts/mobaReplay.js", ...RULE_FILES]).trim();
+  ck("G6", "LogicEngine、規則集、contracts（M3e 起 mobaReplay.js 的 optional 裝備欄位驗證改由 G14 檢查）、M1／M2 裝備模組相對 HEAD 無改動", diff === "", diff);
   let gateOk = true, gateOut = "";
   try { gateOut = execFileSync(process.execPath, ["tools/check_simulation_version_gate.mjs"], { cwd: ROOT, encoding: "utf8" }); } catch (err) { gateOk = false; gateOut = String(err.stdout ?? err.message); }
   ck("G6", "模擬版本閘門綠（仍是 moba-sim.v4）", gateOk, gateOut.split("\n").slice(-3).join(" "));
@@ -280,9 +282,8 @@ const REQUIRED_UI = ["itemsTheme.js", "ItemGlyphs.jsx", "ItemSlot.jsx", "GoldChi
   const git = (args) => execFileSync("git", args, { cwd: ROOT, encoding: "utf8" });
   //  M3c 起英雄面板（BattleHeroSheet）是合法接點，改由 G10 檢查；M3d 起戰術頁（TacticScreen）是合法接點，改由 G12 檢查。
   const untouched = git(["diff", "--name-only", "HEAD", "--",
-    "src/screens/moba/MobaReplayScreen.jsx", "src/battle/moba/replay", "src/platform/contracts/mobaReplay.js",
-    "src/battle/ui/hudStore.js", "src/battle/ui/BattleHUD.jsx"]).trim();
-  ck("G8", "Replay、記分板（BattleHUD／hudStore 高度表）相對 HEAD 無改動；HUD_H 仍 126",
+    "src/screens/moba/TacticScreen.jsx", "src/battle/ui/hudStore.js", "src/battle/ui/BattleHUD.jsx"]).trim();
+  ck("G8", "TacticScreen、記分板（BattleHUD／hudStore 高度表）相對 HEAD 無改動；HUD_H 仍 126（M3e 起 Replay 是合法接點，改由 G13／G14 檢查）",
     untouched === "" && /export const HUD_H = 126;/.test(layout), untouched);
   const css = read("src/battle/ui/battleObserver.css");
   const m3bCss = css.slice(css.indexOf("Item System M3b"));
@@ -499,6 +500,132 @@ const REQUIRED_UI = ["itemsTheme.js", "ItemGlyphs.jsx", "ItemSlot.jsx", "GoldChi
   ck("G12", "卡片：桌機一排五張、手機橫向滑動（scroll-snap）、locked 不可點且顯示「本場已鎖定」；載入頁只在有策略時顯示鎖定",
     /repeat\(\$\{metas\.length\}, minmax\(0, 1fr\)\)/.test(cards) && /scrollSnapType: "x mandatory"/.test(cards) && /disabled=\{locked\}/.test(cards)
     && /本場已鎖定/.test(cards) && /\{buildStrategy && \(/.test(loading) && /<BuildStrategyLockedChip strategy=\{buildStrategy\} \/>/.test(loading));
+}
+
+// ── G13 M3e：Replay 裝備紀錄（格式、fold＝snapshot、determinism、seek、恢復、舊 Replay、容量）──
+{
+  const rp = await tryLoad("src/battle/moba/items/itemReplay.js");
+  if (typeof rp.foldPurchasesAt !== "function" || typeof rp.decodeItemsReplay !== "function") {
+    ck("G13", "itemReplay 匯出 decodeItemsReplay／foldPurchasesAt／selector", false, rp.__error ?? "missing export");
+  } else {
+    const { LogicEngine } = await load("src/LogicEngine.js");
+    const { ROSTER } = await load("src/data/roster.js");
+    const { heroById } = await load("src/data/heroDatabase.js");
+    const { getItem } = await load("src/battle/moba/items/itemCatalog.js");
+    const prep = await load("src/battle/moba/items/buildStrategyPrep.js");
+    const rb = await load("src/battle/moba/replay/replayBuffer.js");
+    const contract = await load("src/platform/contracts/mobaReplay.js");
+    const invOf = (s) => JSON.stringify(Object.fromEntries(Object.entries(s.items.players).map(([id, p]) => [id, p.inventory])));
+    //  照 useLocalServer／useBattleFeed：每個 snapshot 都交給 captureReplayFrame；恢復＝先安靜重跑到保存時間才開始擷取
+    const play = ({ items = true, resumeAt = 0, ticks = 2400, matchId }) => {
+      rb.clearReplay();
+      const e = new LogicEngine(42);
+      if (items) e.configureItems(prep.matchItemsConfig({ roster: ROSTER, heroLookup: heroById, buildStrategy: "early" }));
+      let i = 0;
+      while (e.t < resumeAt && !e.over) { e.tick(0.5); i++; }
+      rb.beginReplayCapture({ seed: 42, config: {}, roster: ROSTER });
+      const truth = new Map();
+      const push = () => { const s = e.snapshot(); rb.captureReplayFrame(s); if (s.items) truth.set(s.ts, invOf(s)); return s; };
+      let last = push();
+      for (; i < ticks && !e.over; i++) { e.tick(0.5); last = push(); }
+      return { replay: rb.finalizeReplay({ matchId, events: [] }), truth, last };
+    };
+    const a = play({ matchId: "g13-a" });
+    const b = play({ matchId: "g13-b" });
+    const items = rp.decodeItemsReplay(a.replay);
+    const v = contract.validateMobaReplay(a.replay);
+    ck("G13", `格式：MobaReplay.v1 仍合法、附加 itemMeta（${rp.ITEMS_REPLAY_VERSION}）＋ ${a.replay.purchases?.length} 筆 purchases；baseline＝第一格 frame；seq 無跳號；我方 early、紅方 standard；JSON 來回仍合法`,
+      v.ok && a.replay.version === contract.MOBA_REPLAY_VERSION && a.replay.itemMeta?.version === rp.ITEMS_REPLAY_VERSION
+      && a.replay.itemMeta.baseline.t === a.replay.frames[0].t && a.replay.itemMeta.gaps === 0 && a.replay.purchases.length > 20
+      && a.replay.itemMeta.strategyByPlayer.join() === "early,early,early,early,early,standard,standard,standard,standard,standard"
+      && contract.validateMobaReplay(JSON.parse(JSON.stringify(a.replay))).ok, v.errors.join(","));
+
+    let bad = 0, firstBad = "";
+    for (const [ts, inv] of a.truth) {
+      if (JSON.stringify(rp.foldPurchasesAt(items, ts)) !== inv) { bad++; firstBad ||= `t=${ts}`; }
+    }
+    ck("G13", `fold at T＝snapshot inventory：${a.truth.size} 個 tick 逐一相同、沒有被拒絕的購買、終局＝最後 snapshot`,
+      a.truth.size > 2000 && bad === 0 && rp.foldPurchasesDetailed(items, Infinity).rejected === 0
+      && JSON.stringify(rp.foldPurchasesAt(items, a.replay.duration)) === invOf(a.last), `bad=${bad} ${firstBad}`);
+    ck("G13", "purchase timeline deterministic：同 seed＋同策略兩次擷取，itemMeta／purchases／標記逐位元相同",
+      JSON.stringify([a.replay.itemMeta, a.replay.purchases]) === JSON.stringify([b.replay.itemMeta, b.replay.purchases])
+      && JSON.stringify(rp.selectReplayPurchaseMarkers(items)) === JSON.stringify(rp.selectReplayPurchaseMarkers(rp.decodeItemsReplay(b.replay))));
+
+    const times = [...a.truth.keys()].filter((_, i) => i % 37 === 0);
+    const frozen = JSON.stringify(items);
+    const forward = times.map((ts) => JSON.stringify(rp.foldPurchasesAt(items, ts)));
+    const shuffled = times.map((_, i) => (i * 7919) % times.length).map((k) => [k, JSON.stringify(rp.foldPurchasesAt(items, times[k]))]);
+    ck("G13", `seek backward／forward：${times.length} 個時間點打亂順序查詢＝依序查詢，且查詢不改解碼資料`,
+      shuffled.every(([k, s]) => s === forward[k]) && JSON.stringify(items) === frozen);
+
+    const r = play({ resumeAt: 400, matchId: "g13-resume" });
+    const ri = rp.decodeItemsReplay(r.replay);
+    let rbad = 0;
+    for (const [ts, inv] of r.truth) {
+      if (JSON.stringify(rp.foldPurchasesAt(ri, ts)) !== inv || (a.truth.has(ts) && a.truth.get(ts) !== inv)) rbad++;
+    }
+    ck("G13", `戰鬥中重新整理後恢復（安靜重跑到 400s 才擷取）：baseline 起算，${r.truth.size} 個 tick 的 fold＝snapshot＝未中斷的那一場`,
+      r.replay.frames[0].t === 400 && r.replay.itemMeta.baseline.seq > 0 && r.replay.itemMeta.gaps === 0
+      && contract.validateMobaReplay(r.replay).ok && rbad === 0, `rbad=${rbad}`);
+
+    const off = play({ items: false, ticks: 600, matchId: "g13-off" });
+    const stripped = { ...a.replay };
+    delete stripped.itemMeta; delete stripped.purchases;
+    const bad1 = { ...a.replay, itemMeta: undefined };
+    const bad2 = { ...a.replay, purchases: [a.replay.purchases[1], a.replay.purchases[0], ...a.replay.purchases.slice(2)] };
+    const bad3 = { ...a.replay, purchases: a.replay.purchases.map((row, i) => (i === 0 ? [row[0], row[1], row[2], row[3], 9999, row[5], row[6]] : row)) };
+    const bad4 = { ...a.replay, itemMeta: { ...a.replay.itemMeta, baseline: { ...a.replay.itemMeta.baseline, slots: a.replay.itemMeta.baseline.slots.slice(1) } } };
+    ck("G13", "舊 Replay 相容：itemsV1 關閉的擷取不加任何欄位；拿掉兩欄的 Replay 仍合法、decode／fold／標記／策略都回空值不丟錯；形狀錯誤（缺 itemMeta、seq 倒序、索引超出、baseline 列數不符）被拒絕",
+      !("itemMeta" in off.replay) && !("purchases" in off.replay) && contract.validateMobaReplay(off.replay).ok
+      && contract.validateMobaReplay(stripped).ok && rp.decodeItemsReplay(stripped) === null && rp.foldPurchasesAt(null, 100) === null
+      && rp.selectReplayPurchaseMarkers(null).length === 0 && rp.selectReplayStrategies(null) === null && rp.selectReplayHeroItemsAt(null, 1, "b1") === null
+      && [bad1, bad2, bad3, bad4].every((x) => !contract.validateMobaReplay(x).ok));
+
+    const markers = rp.selectReplayPurchaseMarkers(items);
+    const nonDrop = items.events.filter((e) => e.action !== "dropStarter");
+    const kindOk = markers.every((m) => {
+      const it = getItem(m.itemId);
+      return m.kind === (it.tier === "T3" ? "major" : it.tier === "BOOTS" && m.itemId !== "bt_base" ? "boots" : "component");
+    });
+    const hero = rp.selectReplayHeroItemsAt(items, a.replay.duration, "b4");
+    const strat = rp.selectReplayStrategies(items);
+    const itemBytes = JSON.stringify({ itemMeta: a.replay.itemMeta, purchases: a.replay.purchases }).length;
+    const total = contract.estimateReplaySize(a.replay);
+    ck("G13", `標記 ${markers.length} 個＝非丟棄事件（T3→major、升級鞋→boots、基礎鞋算組件）；英雄 6 格＝fold；策略籤＝我方前期壓制／紅方標準；容量：裝備欄位 ${(itemBytes / 1024).toFixed(1)}KB、整份 ${(total / 1024).toFixed(0)}KB`,
+      markers.length === nonDrop.length && kindOk && markers.some((m) => m.kind === "major") && markers.some((m) => m.kind === "boots")
+      && JSON.stringify(hero.slots.map((s) => s.itemId)) === JSON.stringify(rp.foldPurchasesAt(items, a.replay.duration).b4)
+      && strat.blue?.label === "前期壓制" && strat.red?.label === "標準" && itemBytes < 20000 && total < 2_000_000);
+  }
+}
+
+// ── G14 M3e：Replay 接線 ─────────────────────────────────────────────────────────
+{
+  const buf = stripComments(read("src/battle/moba/replay/replayBuffer.js"));
+  const screen = stripComments(read("src/screens/moba/MobaReplayScreen.jsx"));
+  const mobaReplay = read("src/platform/contracts/mobaReplay.js");
+  const itemReplay = stripComments(read("src/battle/moba/items/itemReplay.js"));
+  const RULES = /from\s+["'][^"']*\/(LogicEngine|itemEconomy|combatStatsV1|buildPolicy|itemRecipes|itemsEngineRuntime|itemInventory|buildStrategyPrep|itemsEngineAdapter)(\.js)?["']/;
+  ck("G14", "擷取：每個 snapshot 在取樣判斷之前收購買事件（只收 baseline 之後、依 seq 去重），終局才附加；不 import 引擎",
+    buf.indexOf("if (snap.items)") > 0 && buf.indexOf("if (snap.items)") < buf.indexOf("const due =")
+    && /e\.seq > cap\.items\.baseline\.seq && !cap\.items\.events\.has\(e\.seq\)/.test(buf)
+    && /if \(cap\.items\) \{\s*Object\.assign\(replay, encodeItemsReplay\(/.test(buf) && !/LogicEngine/.test(buf));
+  ck("G14", "契約：版本仍是 MobaReplay.v1；itemMeta／purchases 只在存在時檢查（optional additive）；契約不 import 裝備模組",
+    /MOBA_REPLAY_VERSION = "MobaReplay\.v1"/.test(mobaReplay) && /if \(r\.itemMeta !== undefined \|\| r\.purchases !== undefined\)/.test(mobaReplay)
+    && !/moba\/items/.test(stripComments(mobaReplay)));
+  ck("G14", "播放：MobaReplayScreen 只用 itemReplay 解碼／還原與裝備元件，不 import 規則模組或引擎、不呼叫 previewStrategy／buildTargets；購買軌、裝備鈕、面板、策略籤都以 itemsReplay 閘門",
+    !RULES.test(screen) && !/previewStrategy|buildTargets|nextStep\(|\.tick\(/.test(screen)
+    && /const itemsReplay = useMemo\(\(\) => decodeItemsReplay\(replay\), \[replay\]\)/.test(screen)
+    && /\{itemsReplay && showItems && \(/.test(screen) && /\{itemsReplay \? \(/.test(screen)
+    && /\{itemsReplay && \(\s*<button data-testid="replay-items-toggle"/.test(screen) && /\{itemStrategies && <ReplayStrategyChips/.test(screen));
+  ck("G14", "還原不重跑 AI：itemReplay 不 import buildPolicy／引擎，只用 purchaseCost＋applyPurchase 套用實際事件；策略讀保存值",
+    !/from\s+["'][^"']*(buildPolicy|LogicEngine|itemsEngineRuntime|buildStrategyPrep)(\.js)?["']/.test(itemReplay)
+    && !/previewStrategy\(|buildTargets\(|nextStep\(/.test(itemReplay)
+    && /purchaseCost\(e\.itemId, cur\.slots, catalog\)/.test(itemReplay) && /applyPurchase\(cur, e\.itemId, cost\.consumedSlots, catalog\)/.test(itemReplay));
+  const track = read("src/battle/ui/items/ReplayItemTrack.jsx");
+  const panel = read("src/battle/ui/items/ReplayItemPanel.jsx");
+  ck("G14", "UI：T3 標記 12px、升級鞋 8px、組件 2×10 細刻度；軌道手機高 44；英雄鈕 44×44、購買籤 minHeight 44",
+    /m\.kind === "major"[\s\S]*?width: 12, height: 12/.test(track) && /m\.kind === "boots"[\s\S]*?width: 8, height: 8/.test(track) && /width: 2, height: 10/.test(track)
+    && /height: tall \? 44 : 28/.test(track) && /width: 44, height: 44/.test(panel) && /minHeight: 44/.test(panel));
 }
 
 const byGate = {};

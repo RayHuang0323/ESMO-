@@ -24,6 +24,11 @@
 //  控制（任務單 §7 全數）：播放 / 暫停、±10 秒、上一 / 下一事件、
 //    0.5× / 1× / 2× / 4×、timeline slider、當前 / 總時間、返回 Result。
 //  frames 每 2 秒取樣 → **由 MobaView3D 自己的 prev→snapshot 插值**補平順，不重算。
+//
+//  ── Item System M3e：裝備重播 ────────────────────────────────────────────
+//  replay 帶 optional `itemMeta`／`purchases` 時：時間軸下方購買軌、「🛒 裝備」面板（選英雄看當下 6 格）、
+//  標頭出裝策略籤。背包一律由 `foldPurchasesAt`（實際購買事件）在目前時間 t 還原，不重跑 AI；
+//  t 是唯一狀態 ⇒ seek／暫停／繼續後裝備必然一致。舊 Replay 沒有這兩欄 ⇒ 三者都不出現，其餘照舊。
 // ============================================================================
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -44,6 +49,10 @@ import { SUMMONER_SPELLS } from "../../battle/moba/mobaHeroLoadout.js";
 import { useIsMobile } from "../../ui/useViewport.js";
 import { useCameraStore } from "../../battle/cameraStore.js";
 import { replayDisplayText, replayPlayerName, replayEventText, replayStartTime } from '../../battle/moba/replay/replayDisplayText.js';
+//  Item System M3e：裝備紀錄的解碼與還原（純函式）＋呈現元件（只收 selector 輸出）
+import { decodeItemsReplay, selectReplayHeroItemsAt, selectReplayPurchaseMarkers, selectReplayStrategies } from "../../battle/moba/items/itemReplay.js";
+import { ReplayItemTrack } from "../../battle/ui/items/ReplayItemTrack.jsx";
+import { ReplayItemPanel, ReplayStrategyChips } from "../../battle/ui/items/ReplayItemPanel.jsx";
 
 const SIDE_C = { blue: "#3b82f6", red: "#ef4444" };
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -183,6 +192,21 @@ export default function MobaReplayScreen({ replay, onClose }) {
   //  Milestone I-close：重播的名牌／陣容改用當場保存的名單（舊 replay ⇒ null ⇒ 行為不變）
   const replayRoster = useMemo(() => replayRosterOf(replay), [replay]);
   const [showLineup, setShowLineup] = useState(false);
+
+  //  ── Item System M3e：裝備重播（舊 Replay ⇒ itemsReplay 為 null ⇒ 下列 UI 都不出現）──────
+  const itemsReplay = useMemo(() => decodeItemsReplay(replay), [replay]);
+  const itemStrategies = useMemo(() => selectReplayStrategies(itemsReplay), [itemsReplay]);
+  const [showItemsPref, setShowItemsPref] = useState(null);   // null ⇒ 桌機預設開、手機預設收
+  const showItems = showItemsPref ?? !isMobile;
+  const [itemSeat, setItemSeat] = useState(null);
+  //  沒選英雄 ⇒ 軌上只放全場 T3／升級鞋；選了英雄 ⇒ 該英雄全部購買（手機不擁擠）
+  const trackMarkers = useMemo(() => (!itemsReplay ? [] : selectReplayPurchaseMarkers(itemsReplay, itemSeat
+    ? { seat: itemSeat, from: startTime }
+    : { kinds: ["major", "boots"], from: startTime })), [itemsReplay, itemSeat, startTime]);
+  const keyPurchases = useMemo(() => (itemsReplay && itemSeat
+    ? selectReplayPurchaseMarkers(itemsReplay, { seat: itemSeat, kinds: ["major", "boots"], from: startTime }) : []), [itemsReplay, itemSeat, startTime]);
+  const heroItems = useMemo(() => (itemsReplay && itemSeat ? selectReplayHeroItemsAt(itemsReplay, t, itemSeat) : null), [itemsReplay, itemSeat, t]);
+
   //  ── Milestone H：重播固定使用 runtime-v2 ────────────────────────────────
   //   舊碼跟著 `loadMapPresentation()`（預設 legacy），但正式 GameView 自 H.1 起
   //   固定 runtime-v2 ⇒ 同一場比賽的「現場」與「重播」是兩套不同外觀的戰場
@@ -253,6 +277,14 @@ export default function MobaReplayScreen({ replay, onClose }) {
   };
   const prevEvent = () => { const e = [...events].reverse().find((x) => x.t < t - 0.25); seek(e ? e.t : startTime); };
   const nextEvent = () => { const e = events.find((x) => x.t > t + 0.25); seek(e ? e.t : duration); };
+  //  M3e：暫停時把畫面標籤的 t 對齊實際時鐘（播放中只以 ~10fps 更新）⇒ 暫停後裝備與戰場同一個時間點
+  const togglePlay = () => {
+    if (!playing && tRef.current >= duration) seek(startTime);
+    if (playing) setT(tRef.current);
+    setPlaying((p) => !p);
+  };
+  const itemsNotice = itemsReplay && (itemsReplay.gaps > 0 || !itemsReplay.catalogMatches)
+    ? "⚠ 本場裝備紀錄與目前版本不完全一致，顯示可能有落差" : null;
 
   return createPortal(
     <div className="battle-replay" style={{...wrap, ...observerTokens}} role="dialog" aria-label="比賽重播" aria-modal="true">
@@ -273,6 +305,8 @@ export default function MobaReplayScreen({ replay, onClose }) {
           <div style={{ height: "100%", width: `${lerp(wpA, wpB, f) * 100}%`, background: SIDE_C.blue }} />
         </div>
         {replay.config?.tacticName && <span style={{ fontSize: 9, color: GC.purp }}>戰術 {replay.config.tacticName}</span>}
+        {/* M3e：本場出裝策略（保存的引擎原值；舊 Replay 無裝備紀錄 ⇒ 不出現） */}
+        {itemStrategies && <ReplayStrategyChips strategies={itemStrategies} />}
         {/* Milestone E：團隊目標增益，與現場 BattleHUD 的 `龍×N` / `巴 Ns` 同一組數字 */}
         {tb && ["blue", "red"].map((side, si) => {
           const row = tb[si] ?? [];
@@ -290,7 +324,7 @@ export default function MobaReplayScreen({ replay, onClose }) {
       </div>
 
       {/* 戰場 */}
-      <div style={{ flex: 1, minHeight: 0, width: "100%", position: "relative", display: "flex", justifyContent: "center", borderRadius: 12, overflow: "hidden" }}>
+      <div data-replay-stage={use3D ? "3d" : "2d"} style={{ flex: 1, minHeight: 0, width: "100%", position: "relative", display: "flex", justifyContent: "center", borderRadius: 12, overflow: "hidden" }}>
         {use3D ? (
           <>
             {/* 與現場對戰**同一個** MobaView3D；資料源是 replay frame，不是 live store。
@@ -324,43 +358,69 @@ export default function MobaReplayScreen({ replay, onClose }) {
           手機預設收合，把畫面留給戰場。舊 replay 沒有名單資訊 ⇒ 整塊不出現。 */}
       {replayRoster && showLineup && <ReplayLineup roster={replayRoster} />}
 
-      {/* 事件 ticker */}
-      <div style={{ minHeight: 34, width: "100%", maxWidth: 560, display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
-        {recentEvents.map((e, i) => (
-          <div key={`${e.t}-${i}`} style={{ fontSize: 9.5, color: i === recentEvents.length - 1 ? "#e5e7eb" : GC.gray, fontFamily: MONO, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            <span style={{ color: GC.gold }}>[{fmtT(e.t)}]</span> <span data-testid="replay-event-text" style={{ color: SIDE_C[e.side] ?? GC.gray }}>{replayEventText(e, replay)}</span>
-          </div>
-        ))}
-        {/* Milestone E：本場播報（已保存於 replay.comms，重播不重新生成對話） */}
-        {recentComms.map((c, i) => (
-          <div key={c.id ?? `c-${c.t}-${i}`} data-testid="replay-comms"
-            style={{ fontSize: 9.5, color: "rgba(255,255,255,0.72)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            <span style={{ color: GC.gray, fontFamily: MONO }}>[{fmtT(c.t)}]</span>{" "}
-            <span style={{ color: SIDE_C[c.side] ?? GC.gray, fontWeight: 800 }}>{replayDisplayText(c.speaker ?? replayPlayerName(c.speakerId, replay.playersMeta), replay)}</span>
-            <span style={{ color: GC.gray }}>：</span>{replayDisplayText(c.text, replay)}
-          </div>
-        ))}
-      </div>
+      {/* M3e：裝備面板（選英雄 → 目前時間的 6 格；完成裝／升級鞋購買籤可跳時間）。手機預設收合 */}
+      {itemsReplay && showItems && (
+        <ReplayItemPanel seats={itemsReplay.seats} focusSeat={itemSeat} onFocus={setItemSeat} hero={heroItems}
+          keyPurchases={keyPurchases} t={t} onSeek={(m) => seek(m.t)} formatTime={fmtT} notice={itemsNotice} compact={isMobile} />
+      )}
 
-      {/* Timeline */}
-      <div style={{ width: "100%", maxWidth: 560, display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-        <span style={{ fontFamily: MONO, fontSize: 11, color: "#e5e7eb", flexShrink: 0 }}>{fmtT(t)}</span>
-        <input aria-label="重播時間軸" type="range" min={startTime} max={duration} step={0.5} value={t}
-          onChange={(e) => seek(Number(e.target.value))}
-          style={{ flex: 1, minWidth: 0, accentColor: "#3b82f6" }} />
-        <span style={{ fontFamily: MONO, fontSize: 11, color: GC.gray, flexShrink: 0 }}>{fmtT(duration)}</span>
-      </div>
+      {/* 事件 ticker（M3e：手機開著裝備面板時先收起，把高度留給戰場；關掉面板就回來） */}
+      {!(isMobile && itemsReplay && showItems) && (
+        <div style={{ minHeight: 34, width: "100%", maxWidth: 560, display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
+          {recentEvents.map((e, i) => (
+            <div key={`${e.t}-${i}`} style={{ fontSize: 9.5, color: i === recentEvents.length - 1 ? "#e5e7eb" : GC.gray, fontFamily: MONO, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <span style={{ color: GC.gold }}>[{fmtT(e.t)}]</span> <span data-testid="replay-event-text" style={{ color: SIDE_C[e.side] ?? GC.gray }}>{replayEventText(e, replay)}</span>
+            </div>
+          ))}
+          {/* Milestone E：本場播報（已保存於 replay.comms，重播不重新生成對話） */}
+          {recentComms.map((c, i) => (
+            <div key={c.id ?? `c-${c.t}-${i}`} data-testid="replay-comms"
+              style={{ fontSize: 9.5, color: "rgba(255,255,255,0.72)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <span style={{ color: GC.gray, fontFamily: MONO }}>[{fmtT(c.t)}]</span>{" "}
+              <span style={{ color: SIDE_C[c.side] ?? GC.gray, fontWeight: 800 }}>{replayDisplayText(c.speaker ?? replayPlayerName(c.speakerId, replay.playersMeta), replay)}</span>
+              <span style={{ color: GC.gray }}>：</span>{replayDisplayText(c.text, replay)}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Timeline（M3e：有裝備紀錄時，滑桿下方加購買軌；舊 Replay 維持原本一列） */}
+      {itemsReplay ? (
+        <div style={{ width: "100%", maxWidth: 560, display: "flex", alignItems: "flex-start", gap: 10, flexShrink: 0 }}>
+          <span style={{ fontFamily: MONO, fontSize: 11, color: "#e5e7eb", flexShrink: 0, lineHeight: "22px" }}>{fmtT(t)}</span>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+            <input aria-label="重播時間軸" type="range" min={startTime} max={duration} step={0.5} value={t}
+              onChange={(e) => seek(Number(e.target.value))}
+              style={{ width: "100%", minWidth: 0, margin: "4px 0", accentColor: "#3b82f6" }} />
+            <ReplayItemTrack markers={trackMarkers} start={startTime} end={duration} t={t} onSeek={(m) => seek(m.t)}
+              tall={isMobile} focusSeat={itemSeat} label={itemSeat ? "該英雄的購買時間軸" : "全場完成裝與升級鞋時間軸"} />
+          </div>
+          <span style={{ fontFamily: MONO, fontSize: 11, color: GC.gray, flexShrink: 0, lineHeight: "22px" }}>{fmtT(duration)}</span>
+        </div>
+      ) : (
+        <div style={{ width: "100%", maxWidth: 560, display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+          <span style={{ fontFamily: MONO, fontSize: 11, color: "#e5e7eb", flexShrink: 0 }}>{fmtT(t)}</span>
+          <input aria-label="重播時間軸" type="range" min={startTime} max={duration} step={0.5} value={t}
+            onChange={(e) => seek(Number(e.target.value))}
+            style={{ flex: 1, minWidth: 0, accentColor: "#3b82f6" }} />
+          <span style={{ fontFamily: MONO, fontSize: 11, color: GC.gray, flexShrink: 0 }}>{fmtT(duration)}</span>
+        </div>
+      )}
 
       {/* 控制列 */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 7, justifyContent: "center", alignItems: "center", flexShrink: 0 }}>
         <button onClick={prevEvent} style={btn(false)} title="上一個事件">⏮ 事件</button>
         <button onClick={() => seek(t - 10)} style={btn(false)}>−10s</button>
-        <button onClick={() => { if (!playing && tRef.current >= duration) seek(startTime); setPlaying((p) => !p); }} style={btn(true)}>{playing ? "⏸ 暫停" : "▶ 播放"}</button>
+        <button data-testid="replay-play-toggle" onClick={togglePlay} style={btn(true)}>{playing ? "⏸ 暫停" : "▶ 播放"}</button>
         <button onClick={() => seek(t + 10)} style={btn(false)}>+10s</button>
         <button onClick={nextEvent} style={btn(false)} title="下一個事件">事件 ⏭</button>
         {replayRoster && (
           <button data-testid="replay-lineup-toggle" aria-pressed={showLineup} onClick={() => setShowLineup((v) => !v)}
             style={btn(false)} title="本場出戰配置（選手／英雄／召喚師技能）">🧾 陣容</button>
+        )}
+        {itemsReplay && (
+          <button data-testid="replay-items-toggle" aria-pressed={showItems} onClick={() => setShowItemsPref(!showItems)}
+            style={{ ...btn(false), ...(isMobile ? { minHeight: 44 } : {}) }} title="各英雄在目前時間的裝備">🛒 裝備</button>
         )}
         <span style={{ width: 8 }} />
         {REPLAY_SPEEDS.map((s) => (

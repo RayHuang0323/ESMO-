@@ -274,9 +274,47 @@ export function validateMobaReplay(r) {
   if (!Array.isArray(r.playersMeta) || (r.frames?.length && r.playersMeta.length !== (r.frames[0].p?.length ?? 0)))
     errors.push("playersMeta 與 frame.p 長度不一致");
   if (!Number.isFinite(r.duration) || r.duration < 0) errors.push("duration 必須為非負數字");
+  // Item System M3e：裝備紀錄（optional additive，版本仍是 MobaReplay.v1）。
+  //   舊 Replay 兩欄都沒有 ⇒ 不檢查、照常播放；有其一就必須兩者形狀都正確。
+  //   格式由裝備模組的 itemReplay.js 產生與解讀（本檔不 import 裝備模組，只檢查形狀）。
+  if (r.itemMeta !== undefined || r.purchases !== undefined) {
+    const itemError = itemsReplayShapeError(r);
+    if (itemError) errors.push(itemError);
+  }
   // 可序列化（不含函式 / 循環參照 / React・Three 物件）
   try { JSON.stringify(r); } catch { errors.push("replay 無法 JSON 序列化"); }
   return { ok: errors.length === 0, errors };
+}
+
+/**
+ * M3e：itemMeta／purchases 形狀檢查（回傳第一個錯誤或 null）。
+ *   itemMeta  = { version, catalogVersion, itemIds[], strategyByPlayer[n], baseline: { t, seq, slots[n][6] }, gaps }
+ *   purchases = [[seq, t, seatIdx, actionCode(0 buy/1 combine/2 dropStarter), itemIdx, cost, unspentAfter], …]
+ */
+function itemsReplayShapeError(r) {
+  const m = r.itemMeta;
+  const n = Array.isArray(r.playersMeta) ? r.playersMeta.length : 0;
+  if (!m || typeof m !== "object" || typeof m.version !== "string") return "itemMeta 缺少或缺 version";
+  if (!Array.isArray(m.itemIds) || m.itemIds.some((id) => typeof id !== "string")) return "itemMeta.itemIds 必須為字串陣列";
+  const k = m.itemIds.length;
+  if (!Array.isArray(m.strategyByPlayer) || m.strategyByPlayer.length !== n
+    || m.strategyByPlayer.some((s) => s !== null && typeof s !== "string")) return "itemMeta.strategyByPlayer 與 playersMeta 長度不一致";
+  const b = m.baseline;
+  if (!b || !Number.isFinite(b.t) || !Number.isInteger(b.seq) || !Array.isArray(b.slots) || b.slots.length !== n
+    || b.slots.some((row) => !Array.isArray(row) || row.length !== 6 || row.some((v) => !Number.isInteger(v) || v < -1 || v >= k))) {
+    return "itemMeta.baseline 形狀錯誤";
+  }
+  if (!Array.isArray(r.purchases)) return "purchases 必須為陣列";
+  let prevSeq = b.seq, prevT = b.t;
+  for (let i = 0; i < r.purchases.length; i++) {
+    const row = r.purchases[i];
+    if (!Array.isArray(row) || row.length !== 7 || row.some((v) => !Number.isFinite(v))) return `purchases[${i}] 形狀錯誤或含非有限數值`;
+    if (!Number.isInteger(row[0]) || row[0] <= prevSeq || row[1] < prevT) return `purchases[${i}] seq／t 必須遞增`;
+    if (!Number.isInteger(row[2]) || row[2] < 0 || row[2] >= n || !Number.isInteger(row[3]) || row[3] < 0 || row[3] > 2
+      || !Number.isInteger(row[4]) || row[4] < 0 || row[4] >= k) return `purchases[${i}] 席位／動作／物品索引超出範圍`;
+    prevSeq = row[0]; prevT = row[1];
+  }
+  return null;
 }
 
 /** 容量估算（bytes）。 */

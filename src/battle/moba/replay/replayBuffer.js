@@ -12,11 +12,16 @@
 //
 //  保證：本模組**只讀** snapshot，不呼叫 LogicEngine、不碰任何 Store
 //    → 擷取與重播都不可能觸發發獎 / 入史 / 統計。
+//
+//  Item System M3e：snapshot 帶 `items`（itemsV1 開啟）時，每個 snapshot 依 seq 收購買事件、
+//    第一格 frame 記 baseline（6 格＋lastSeq＋策略），finalize 附加 optional `itemMeta`／`purchases`
+//    （格式見 battle/moba/items/itemReplay.js）。沒有 `items` ⇒ 一個欄位都不加，與 M3e 之前逐欄相同。
 // ============================================================================
 import {
   createMobaReplay, snapshotToFrame, FRAME_INTERVAL_S, MAX_FRAMES,
 } from "../../../platform/contracts/mobaReplay.js";
 import { WORLD_BOUNDS, LANES, RIVER } from "../../../gameData.js";
+import { encodeItemsReplay, itemsBaselineFromSnapshot } from "../items/itemReplay.js";
 
 let cap = null;        // 進行中的擷取 { seed, config, startedAt, frames, playersMeta, towersMeta, lastT, truncated }
 let current = null;    // 最近一場完成的 MobaReplay.v1（session 記憶體，最多 1 場）
@@ -26,6 +31,7 @@ export function beginReplayCapture({ seed = null, config = {}, roster = null } =
   cap = {
     seed, config, roster, startedAt: Date.now(), frames: [], playersMeta: [], towersMeta: {}, objectivesMeta: [],
     pendingFx: new Map(), seenFx: new Set(),
+    items: null,
     lastT: -Infinity, truncated: false,
     mapMeta: {
       bounds: { ...WORLD_BOUNDS },
@@ -46,6 +52,19 @@ export function captureReplayFrame(snap) {
     if (!id || cap.seenFx.has(id)) continue;
     cap.seenFx.add(id);
     cap.pendingFx.set(id, { ...f });
+  }
+  // M3e：購買事件同樣每個 snapshot 都收（引擎只留最近 40 筆）。第一個 snapshot 必定成為 frame 0
+  //   （lastT = -Infinity）⇒ baseline 的時間＝replay 的起點。
+  if (snap.items) {
+    if (!cap.items && cap.frames.length === 0) {
+      const baseline = itemsBaselineFromSnapshot(snap);
+      if (baseline) cap.items = { baseline, events: new Map() };
+    }
+    if (cap.items) {
+      for (const e of snap.items.purchases ?? []) {
+        if (Number.isInteger(e?.seq) && e.seq > cap.items.baseline.seq && !cap.items.events.has(e.seq)) cap.items.events.set(e.seq, e);
+      }
+    }
   }
   const due = snap.ts - cap.lastT >= FRAME_INTERVAL_S || snap.over;
   if (!due || snap.ts === cap.lastT) return;
@@ -117,6 +136,14 @@ export function finalizeReplay({ matchId, events = [], comms = [], resultSummary
     id: c.id, t: c.t, ruleId: c.ruleId, side: c.side,
     speakerId: c.speakerId, speaker: c.speaker, text: c.text, evidence: c.evidence ?? null,
   }));
+  // M3e：裝備（optional additive；itemsV1 關閉的對局 cap.items 為 null ⇒ 不加欄位）
+  if (cap.items) {
+    Object.assign(replay, encodeItemsReplay({
+      baseline: cap.items.baseline,
+      events: [...cap.items.events.values()],
+      playerIds: cap.playersMeta.map((p) => p.id),
+    }));
+  }
   current = replay;   // 只留最近一場（session 記憶體上限）
   cap = null;
   return replay;

@@ -1,0 +1,6 @@
+
+════ itemsV1 OFF｜打一場 → 快速完成 → 觀看重播（舊格式） ════
+   {"ok":true,"valid":true,"errors":[],"hasMeta":false,"hasPurchases":false,"decode":null,"track":0,"toggle":0,"panel":0,"strategy":0}
+   截圖 review/moba-items-m3e/off-replay-1366.png
+   截圖 review/moba-items-m3e/off-replay-390.png
+   OFF console error 0 則（存為 ON 的比較基準）
