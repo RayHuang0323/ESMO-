@@ -1,0 +1,20 @@
+
+════ Tactic → Loading ════
+   截圖 review/moba-items-m3-closure/closure-tactic-1366.png
+
+════ Battle（AI 買裝，不切倍速）════
+   HUD：ts 305.5　顯示 10 席裝備點
+   截圖 review/moba-items-m3-closure/closure-hud-1366.png
+   英雄詳情：b4 ts 317　金錢 959　6 格 st_blade,,,,,
+   截圖 review/moba-items-m3-closure/closure-detail-1366.png
+
+════ 快速完成 → Result ════
+   終局 ts 1255　lastSeq 106　live 記錄 685 tick／107 筆事件
+   BattleResult 欄位：schema,mode,teams,winner,duration,score,gold,towers,dragon,baron,tactic,tacticExecution,timeline,mvpId,players　players[0] 欄位：id,side,role,heroId,lv,k,d,a,gold,dmg,heal,twrDmg,participation,rating,won,mvp
+   截圖 review/moba-items-m3-closure/closure-result-1366.png
+
+════ Replay ════
+   Replay：起點 0　長度 1255　baseline seq 9　事件 97（應 97）　gaps 0
+   事件逐欄比對 97 筆、不同 0；背包比對 685 tick、不同 0
+   Replay 畫面：模式 3d　跳到 1001.5s 6 格 st_blade,t3_warbringer,bt_base,,,　終局 1255s 6 格 st_blade,t3_warbringer,bt_base,,,
+   截圖 review/moba-items-m3-closure/closure-replay-1366.png

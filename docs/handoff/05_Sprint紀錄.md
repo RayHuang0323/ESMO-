@@ -21681,3 +21681,55 @@ G13 內容（seed 42、ROSTER、前期壓制）：
 ### 六、停止點
 
 M3e 完成後依 Owner 指示停止，等 Owner Review；未做 balance、未正式啟用 itemsV1。
+
+## 2026-09-15 MOBA Item System v1 — M3 Closure（停在 Owner Review）
+
+Owner Review：M3e APPROVED。本輪只做收尾驗證：不新增功能、不做 balance、不正式啟用 itemsV1；未 push、未 deploy。
+
+### 一、一場完整流程的資料一致性（`tools/browser_review_moba_items_m3_closure.mjs`）
+
+DEV `?itemsDev=1`、1366×900、不切倍速，同一場比賽：Tactic → Loading → Battle → Battle HUD → Hero Item Detail → 快速完成 → Result → Replay。**24/24 PASS（237s）**。
+
+| 項目 | 比對 | 結果 |
+|---|---|---|
+| buildStrategy | 戰術頁選卡 → 本場設定 early → 載入頁「本場已鎖定」→ 引擎我方五人 early／紅方 standard → 英雄詳情「前期壓制策略」→ Replay itemMeta → Replay 策略籤 | 全部一致 |
+| Battle HUD | ts 305.5：十人裝備點（`data-seat-pips`）＝同一 ts 的 `selectHudItems`；selector 6 格＝snapshot 背包 | 10/10 席一致 |
+| gold | ts 317：b4 英雄詳情可用金 959＝view-model＝snapshot；每筆購買的購買後可用金 Replay＝live | 一致 |
+| inventory | Replay `foldPurchasesAt(t)`＝戰鬥中頁面記錄的背包 | 685／685 tick 一致 |
+| purchase events | Replay 事件逐欄（seq／t／席位／動作／物品／花費／購買後可用金）＝live 記錄；事件數 97＝終局 lastSeq 106 − baseline 9；seq 連續、gaps 0、沒有被拒絕的購買 | 97／97 一致 |
+| final build | 終局 snapshot 背包＝HUD selector＝Replay fold(1255s)＝Replay 畫面 b4 6 格（`st_blade,t3_warbringer,bt_base`） | 一致 |
+| Result × Replay | 勝方 red、比分 4:12、時長 1255s＝Replay resultSummary | 一致 |
+| Result 出裝 | `BattleResult.v2` 沒有裝備欄位（players[] 只有 id／side／role／heroId／lv／k／d／a／gold／dmg／heal／twrDmg／participation／rating／won／mvp）；Result 畫面也不顯示裝備 | **無此資料**（M0 §8 規劃的 `players[].build` 未在 M3 實作；本輪不新增） |
+| console | page exception 0、console error 0 | 乾淨 |
+
+- 這場 Replay 從 0 秒開始錄 ⇒ 3D 戰場。
+- 截圖：`review/moba-items-m3-closure/`（tactic、hud、detail、result、replay）。
+
+### 二、M3e 看到的 3 個 29B 紅燈：在 M3d `a78663b` 跑同一測試
+
+- 暫存 worktree（detached `a78663b`，`node_modules` junction 指回本 worktree），兩支都加 `SKIP_NESTED=1`（只跑自身斷言，不展開整套）。
+
+| 測試 | a78663b（M3d） | 48b78ab（M3e） | 失敗項 |
+|---|---|---|---|
+| `check_moba_worldscale29b5` | 18/20 | 18/20 | #7 小兵首次受傷 p50 79.0s 未大於舊 83s＋20；#10 英雄／小兵速度未依地圖倍率同步提高 |
+| `check_moba_presentation29b2` | 11/12 | 11/12 | #2 營地血量連續下降只觀測到 2／6 座（門檻 ≥ 4） |
+
+- 兩個 commit 失敗項目與數值完全相同 ⇒ **記為 known baseline，不修**（皆為戰鬥節奏／世界尺度數值，與裝備系統無關）。
+
+### 三、Final gates（依序執行，不同時吃記憶體）
+
+| 驗證 | 結果 |
+|---|---|
+| `node tools/check_moba_items_m1.mjs` | 69/69 PASS（2s） |
+| `node tools/check_moba_items_m2.mjs` | 53/53 PASS（50s；G1 legacy 指紋 3/3 ⇒ itemsV1 關閉時引擎與 M1 基準逐位元相同） |
+| `node tools/check_moba_items_m3.mjs` | 66/66 PASS（49s；含 vite build 與產物掃描、G13 Replay 7/7、G14 5/5） |
+| `npm run build` | built in 15.11s |
+| `node tools/regress.mjs` | 結束率 15/15、平均時長 21.6 分（35s） |
+| `node tools/regress2.mjs` | 結束率 20/20、節奏門檻 8/8（37s） |
+| `node tools/verify.mjs --only=milestone_i_close,milestone_b4,experience26` | 3/3 PASS（Replay 名單、小兵 Replay、Replay 契約與容量） |
+| console | 完整流程 page exception 0、console error 0 |
+
+### 四、結論
+
+- M3（M3a–M3e）裝備 UI／UX 範圍完成：戰術頁策略、戰鬥 HUD、英雄裝備詳情、Replay 購買軌與還原，同一場資料前後一致。
+- 仍為 production itemsV1 OFF；正式啟用前需 Balance Closure 與 `moba-sim.v5`（見 M0 §8）。
