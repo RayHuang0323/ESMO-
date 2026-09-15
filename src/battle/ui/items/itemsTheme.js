@@ -69,6 +69,15 @@ export const SIDE_TINT = Object.freeze({ blue: GC.blueL, red: GC.redL });
 export const COACH = GC.purp;
 export const COACH_TEXT = "#d4c8fd";
 
+/**
+ * M3c：教練分析分類色（經濟＝金、敵情＝紅、調整＝紫、局勢＝灰）與狀態色（不利＝紅、有利＝綠）。
+ * 全部沿用 GC，沒有新顏色。
+ */
+export const TONE = Object.freeze({
+  economy: GC.gold, threat: GC.redL, adjust: GC.purp, info: COMPONENT_TINT,
+  bad: GC.redL, good: GC.green,
+});
+
 export const SLOT_SIZE = Object.freeze({ xs: 20, sm: 30, md: 40, lg: 48 });
 export const SLOT_GAP = Object.freeze({ xs: 3, sm: 4, md: 6, lg: 6 });
 

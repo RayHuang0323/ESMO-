@@ -36,8 +36,8 @@ export function NextItemCard({ nextItem, hud, buildComplete = false }) {
       <ItemSlot itemId={nextItem.itemId} size="md" highlight="next" />
       <div style={{ minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-          <span style={{ fontSize: 15, fontWeight: 800, color: TEXT.primary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nextItem.name}</span>
-          <span style={{ fontSize: 12, color: ready ? GOLD_TEXT : TEXT.secondary, whiteSpace: "nowrap", ...NUM, fontWeight: 700 }}>
+          <span data-next-item-name={nextItem.itemId} style={{ fontSize: 15, fontWeight: 800, color: TEXT.primary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nextItem.name}</span>
+          <span data-next-shortfall={ready ? 0 : (hud?.nextShortfall ?? nextItem.remainingCost)} style={{ fontSize: 12, color: ready ? GOLD_TEXT : TEXT.secondary, whiteSpace: "nowrap", ...NUM, fontWeight: 700 }}>
             {ready ? "回城就能合成" : `還差 ${(hud?.nextShortfall ?? nextItem.remainingCost).toLocaleString("en-US")}`}
           </span>
         </div>

@@ -21431,3 +21431,78 @@ Owner Review：M3a APPROVED。本輪只接 Battle HUD：
 ### 七、停止點
 
 M3b 完成後依 Owner 指示停止，等 Owner Review；未開始 M3c（英雄詳情）／M3d（戰術卡）／M3e（Replay）。
+
+## 2026-09-15 MOBA Item System v1 — M3c Hero Item Detail（停在 Owner Review）
+
+Owner Review：M3b APPROVED。本輪只做 M3c（英雄裝備詳情），不開始 M3d／M3e；不動 LogicEngine、`dmgK`、收入、裝備平衡、Replay、TacticScreen；production 仍 itemsV1 OFF；未 push、未 deploy。
+計畫：`docs/design/MOBA_裝備UI_M3c實作計畫_v1.md`。
+
+### 一、做了什麼
+
+- **接點**：既有的戰鬥英雄面板 `BattleHeroSheet`（底欄頭像開啟）。
+  - 本場有裝備系統時多「戰鬥資訊｜裝備」兩個分頁（≥ 44px）；沒有時面板逐字原樣（無分頁、寬 340、原本說明原文）。
+  - 桌機面板有裝備時 340→380px；手機沿用既有全螢幕 sheet。
+  - 手機 M3b 裝備 sheet 加「完整出裝詳情」，直達該英雄的裝備分頁。
+  - 只聚焦單一英雄，不放十人資訊。
+- **資訊分層**（`HeroItemDetail` embedded 版型）：
+
+| 層 | 內容 |
+|---|---|
+| 常駐 | 英雄＋可用金、6 格（點格子看名稱與階級）、下一件卡（還差多少＋進度＋組件）、教練重點 2 條 |
+| 出裝路徑 | 出裝路徑鏈＋下一件多層合成樹（已擁有打勾、其餘標價格） |
+| 屬性與特效 | 戰鬥屬性（非 0）＋裝備特效（名稱＋一句說明）＋目前狀態（被重傷／被緩速／法傷護盾／光環） |
+| 戰術分析 | 全部教練分析 |
+
+  分段控制一次只開一層，再點一次收起。
+- **教練戰術分析**：新 selector `coachAnalysis(view, hud)` 把 AI 理由碼翻成「原因 → 行動」，依經濟→敵情→調整→局勢排序。例：
+  - 「還差 680 Gold → 破曉長弓」
+  - 「敵方雙前排 → 優先穿甲」
+  - 「敵方 1 名回復型 → 補重傷」
+  - 「反制策略 → 情境裝提前到第 2 件」
+  - 數字只來自理由碼與 `selectHudItems` 的 `nextShortfall`；行動文字已對照 `buildPolicy` 的情境裝（前排＝穿甲、回復＝重傷、爆發＝魔抗保命）。
+- **特效／狀態**：`selectActiveEffects(view)` ＋ `EFFECT_LABELS`（每個效果 primitive 都有中文名稱與說明）。
+- **新元件**：`CoachAnalysis`、`RecipeTree`、`ActiveEffects`；`HeroItemDetail` 改為分層＋embedded（樣張頁舊 props 相容）；`NextItemCard` 補 data 屬性；`itemsTheme.TONE` 全部沿用 GC。
+- **既有 320px「隊伍」鈕 18px**：M3c 不碰底欄，依 Owner 指示**不修**。
+
+### 二、驗證（全部實跑）
+
+| 驗證 | 結果 |
+|---|---|
+| `node tools/check_moba_items_m3.mjs` | 42/42 PASS（新增 G9 教練分析固定文字＋真實對局 seed 42 對照、G10 面板接點靜態檢查） |
+| `node tools/check_moba_items_m1.mjs` | 69/69 PASS |
+| `node tools/check_moba_items_m2.mjs` | 53/53 PASS |
+| `node tools/regress.mjs`／`regress2.mjs` | 2/2 PASS |
+| `npm run build` | built in 14.23s；dist 掃描乾淨（無 debug 全域） |
+
+- 中途一次 build 因機器記憶體不足失敗（errno=1455，commit free 約 1.3 GB），屬環境問題；使用者關閉其他程式後（commit free 6.2 GB）在最終程式碼上整串重跑全綠。
+
+### 三、真實戰鬥頁量測（`tools/browser_review_moba_items_m3c.mjs`）
+
+- 41/41 PASS，跑兩次（兩場不同真實對局：修正前目標 r5、最終程式碼目標 b5／完成裝 1 件／ts 733）。
+- OFF（390、1366）：英雄面板無分頁、無裝備詳情、寬 340、說明原文不變。
+- ON：4 倍速推進到有人完成 T3 裝，挑存活且完成裝最多的英雄，同一場依序 1366→768→390→320：
+
+| 寬度 | 版型 | 金錢／下一件／還差（與 selector 同 ts 比對） |
+|---|---|---|
+| 1366 | 桌機面板 380px，分頁 44px | 164／鐵步靴／536 |
+| 768 | 桌機面板 380px，分頁 44px | 192／鐵步靴／508 |
+| 390 | 全螢幕 sheet 390×844，11 個觸控目標全 ≥ 44px | 210／鐵步靴／490 |
+| 320 | 全螢幕 sheet 320×720，觸控目標全 ≥ 44px | 234／鐵步靴／466 |
+
+- 三層（出裝路徑／屬性與特效／戰術分析）的內容逐項與 selector 相符：路徑數、合成樹節點、屬性鍵與顯示值、特效類型、狀態種類、全部教練分析列。
+- 頁面與 sheet 均無水平 overflow；console 錯誤數不多於 OFF。
+- 截圖：`review/moba-items-m3c/`（hero-detail 四寬度、三層 390／1366、stats 320、OFF 390／1366）。
+
+### 四、截圖自我檢查
+
+- 抓到並已修：開「戰術分析」層時，上方「教練重點」與分析內容一字不差重複 → 開該層時隱藏教練重點。
+- 抓到並已修：在「裝備」分頁時面板標題仍寫「戰鬥資訊」 → 有裝備系統時標題改「英雄資訊」（OFF 不變）。
+- 修正後重跑瀏覽器量測 41/41，並目視 1366、390 分析層、320 屬性層截圖確認。
+
+### 五、未經真機實測
+
+- 真實手機的觸控手感、全螢幕 sheet 捲動、4G 效能、實際字級未測；截圖為 headless Chrome（SwiftShader WebGL）。
+
+### 六、停止點
+
+M3c 完成後依 Owner 指示停止，等 Owner Review；未開始 M3d（戰術卡）／M3e（Replay）。

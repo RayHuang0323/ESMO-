@@ -1,0 +1,33 @@
+
+════ itemsV1 OFF｜390px ════
+   截圖 review/moba-items-m3c/off-hero-sheet-390.png
+
+════ itemsV1 OFF｜1366px ════
+   截圖 review/moba-items-m3c/off-hero-sheet-1366.png
+
+════ itemsV1 ON｜推進到有人完成裝 ════
+   倍速：4x
+   目標英雄 b5（完成裝 1 件，ts 733）
+
+════ itemsV1 ON｜1366px ════
+   金錢 164　下一件 鐵步靴　還差 536　教練重點：還差 536 Gold → 鐵步靴／敵方物理傷害 67%
+   截圖 review/moba-items-m3c/hero-detail-1366.png
+   截圖 review/moba-items-m3c/hero-detail-path-1366.png
+   截圖 review/moba-items-m3c/hero-detail-stats-1366.png
+   截圖 review/moba-items-m3c/hero-detail-analysis-1366.png
+
+════ itemsV1 ON｜768px ════
+   金錢 192　下一件 鐵步靴　還差 508　教練重點：還差 508 Gold → 鐵步靴／敵方物理傷害 67%
+   截圖 review/moba-items-m3c/hero-detail-768.png
+
+════ itemsV1 ON｜390px ════
+   金錢 210　下一件 鐵步靴　還差 490　教練重點：還差 490 Gold → 鐵步靴／敵方物理傷害 67%
+   截圖 review/moba-items-m3c/hero-detail-390.png
+   截圖 review/moba-items-m3c/hero-detail-path-390.png
+   截圖 review/moba-items-m3c/hero-detail-stats-390.png
+   截圖 review/moba-items-m3c/hero-detail-analysis-390.png
+
+════ itemsV1 ON｜320px ════
+   金錢 234　下一件 鐵步靴　還差 466　教練重點：還差 466 Gold → 鐵步靴／敵方物理傷害 67%
+   截圖 review/moba-items-m3c/hero-detail-320.png
+   截圖 review/moba-items-m3c/hero-detail-stats-320.png

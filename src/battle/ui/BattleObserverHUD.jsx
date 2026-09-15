@@ -122,15 +122,17 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
       </div>}
     </section>
     {mobile && itemsSheet && mine && <MobileItemsSheet hud={hudItems} focusId={p.id} roster={roster}
-      onPick={pick} onClose={() => setItemsSheet(false)} bottom={ITEM_TOAST_MOBILE_BOTTOM} />}
+      onPick={pick} onClose={() => setItemsSheet(false)} bottom={ITEM_TOAST_MOBILE_BOTTOM}
+      onOpenDetail={() => { setItemsSheet(false); setSkill(null); setDetail('items'); }} />}
     {hudItems && <BattlePurchaseToasts snapshot={snapshot} roster={roster} />}
     <div className="observer-killfeed" aria-live="polite">{events.filter(e => ['KILL','FIRST_BLOOD','MULTI_KILL','ACE'].includes(e.type) && snapshot.ts - e.t < 12).slice(-3).map(e => <div key={e.id} className={`observer-kill ${e.side}`}>
       {e.data?.killer && <HeroPortrait heroId={roster?.[e.data.killer]?.heroId} size={28} radius={2} alt="" />}
       <span>{e.type === 'FIRST_BLOOD' ? '首殺' : e.type === 'ACE' ? '團滅' : e.type === 'MULTI_KILL' ? '連殺' : '擊殺'}<strong>{roster?.[e.data?.killer]?.player ?? e.text}</strong></span>
       {e.data?.victim && <HeroPortrait heroId={roster?.[e.data.victim]?.heroId} size={28} radius={2} alt={roster?.[e.data.victim]?.player ?? e.data.victim} />}
     </div>)}</div>
-    {detail && !replay && <BattleHeroSheet heroId={r.heroId} heroName={hero.zh ?? r.hero} playerName={r.player}
-      playerId={p.id} side={p.side} spells={r.spells} lane={r.lane} onClose={() => setDetail(false)} />}
+    {detail && !replay && <BattleHeroSheet key={`${p.id}-${detail === 'items' ? 'items' : 'battle'}`} heroId={r.heroId} heroName={hero.zh ?? r.hero} playerName={r.player}
+      playerId={p.id} side={p.side} spells={r.spells} lane={r.lane} onClose={() => setDetail(false)}
+      initialTab={detail === 'items' && hudItems ? 'items' : 'battle'} />}
     {detail && replay && <div className="observer-replay-detail"><button onClick={() => setDetail(false)}>關閉 ✕</button>
       <strong>{hero.zh ?? r.hero} · 重播紀錄</strong><p>生命 {pct(p.hp)}% · 等級 {p.mlv ?? '—'}</p><p>{p.state ?? '本段未保存狀態'}</p>
     </div>}

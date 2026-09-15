@@ -271,16 +271,86 @@ const REQUIRED_UI = ["itemsTheme.js", "ItemGlyphs.jsx", "ItemSlot.jsx", "GoldChi
     /TOAST_LIFETIME_MS = 2500/.test(toasts) && /MAX_VISIBLE = 2/.test(toasts) && /pointerEvents: "none"/.test(toasts) && /selectPurchaseToasts\(/.test(toasts));
   const layout = read("src/battle/ui/battleLayout.js");
   const git = (args) => execFileSync("git", args, { cwd: ROOT, encoding: "utf8" });
+  //  M3c 起英雄面板（BattleHeroSheet）是合法接點，改由 G10 檢查。
   const untouched = git(["diff", "--name-only", "HEAD", "--",
     "src/screens/moba/MobaReplayScreen.jsx", "src/battle/moba/replay", "src/platform/contracts/mobaReplay.js",
-    "src/screens/moba/TacticScreen.jsx", "src/battle/ui/hudStore.js", "src/battle/ui/BattleHUD.jsx", "src/battle/ui/BattleHeroSheet.jsx"]).trim();
-  ck("G8", "Replay、TacticScreen、記分板（BattleHUD／hudStore 高度表）、英雄面板（M3c）相對 HEAD 無改動；HUD_H 仍 126",
+    "src/screens/moba/TacticScreen.jsx", "src/battle/ui/hudStore.js", "src/battle/ui/BattleHUD.jsx"]).trim();
+  ck("G8", "Replay、TacticScreen、記分板（BattleHUD／hudStore 高度表）相對 HEAD 無改動；HUD_H 仍 126",
     untouched === "" && /export const HUD_H = 126;/.test(layout), untouched);
   const css = read("src/battle/ui/battleObserver.css");
   const m3bCss = css.slice(css.indexOf("Item System M3b"));
   ck("G8", "M3b 樣式全部掛在 .items-on／items chip 底下（OFF 版面不受影響），且不改底欄與席位高度",
     css.includes("Item System M3b") && m3bCss.split("\n").filter((l) => l.trim().startsWith(".")).every((l) => /items-on|observer-items-chip|observer-equipment\.items/.test(l))
     && !/min-height:112px|height:52px/.test(m3bCss));
+}
+
+// ── G9 M3c：教練戰術分析與特效 selector ────────────────────────────────────────
+{
+  const sel = await tryLoad("src/battle/moba/items/itemsUiSelectors.js");
+  if (typeof sel.coachAnalysis !== "function" || typeof sel.selectActiveEffects !== "function") {
+    ck("G9", "coachAnalysis／selectActiveEffects 存在", false, sel.__error ?? "missing export");
+  } else {
+    const view = { decision: { reasons: ["arch:射手", "strategy:counter", "adShare:0.7", "enemyTanks:2>=1→core2", "enemyHeal:1>=1", "counter:situational→core2", "lock:t3_dawnbow", "insufficient:t3_dawnbow", "skip:t3_pierce:unique_conflict"] } };
+    const hud = { nextItemId: "t3_dawnbow", nextShortfall: 680 };
+    const frozen = JSON.stringify([view, hud]);
+    const texts = sel.coachAnalysis(view, hud).map((r) => r.text);
+    const expected = ["還差 680 Gold → 破曉長弓", "敵方雙前排 → 優先穿甲", "敵方 1 名回復型 → 補重傷", "反制策略 → 情境裝提前到第 2 件", "敵方物理傷害 70%"];
+    ck("G9", "教練分析：理由碼 → 原因 → 行動（經濟→敵情→調整→局勢；同一目標不重複講「繼續合成」；背景句不列）",
+      JSON.stringify(texts) === JSON.stringify(expected), texts.join(" | "));
+    ck("G9", "沒有 hud 時不編造差價（存錢中）；沒有 view 回空陣列；純函式",
+      sel.coachAnalysis(view, null)[0]?.text === "存錢中 → 破曉長弓" && sel.coachAnalysis(null).length === 0 && JSON.stringify([view, hud]) === frozen);
+    const fx = sel.selectActiveEffects({ stats: { effects: ["LOW_HP_SHIELD", "ON_HIT", "LOW_HP_SHIELD"] }, status: { grievous: 2.4, slow: 0, magicShield: 120, aura: { armor: 8, mr: 8, moveSpeed: 0 } } });
+    ck("G9", "特效去重並翻成中文；狀態只列有值的（被重傷 3 秒、法傷護盾 120、光環抗性）",
+      JSON.stringify(fx.effects.map((e) => e.label)) === JSON.stringify(["低血護盾", "攻擊附加傷害"])
+      && JSON.stringify(fx.status.map((s) => `${s.label} ${s.value}`)) === JSON.stringify(["被重傷 3 秒", "法傷護盾 120", "光環抗性 +8 甲／+8 魔抗"])
+      && sel.selectActiveEffects(null) === null, JSON.stringify(fx));
+    const { PRIMITIVES } = await load("src/battle/moba/items/itemEffects.js");
+    const unlabeled = Object.entries(PRIMITIVES).filter(([, p]) => !p.statBased).map(([k]) => k).filter((k) => !sel.EFFECT_LABELS[k]);
+    ck("G9", "每個效果 primitive 都有中文名稱與說明", unlabeled.length === 0, unlabeled.join(","));
+
+    const { LogicEngine } = await load("src/LogicEngine.js");
+    const { ROSTER } = await load("src/data/roster.js");
+    const { heroById } = await load("src/data/heroDatabase.js");
+    const { toEngineItems } = await load("src/battle/moba/items/itemsEngineAdapter.js");
+    const { selectPlayerItemsView } = await load("src/battle/moba/items/itemsViewModel.js");
+    const e = new LogicEngine(42);
+    e.configureItems(toEngineItems({ roster: ROSTER, heroLookup: heroById }));
+    for (let i = 0; i < 1600 && !e.over; i++) e.tick(0.5);
+    const snap = e.snapshot();
+    const hudAll = sel.selectHudItems(snap);
+    const bad = [];
+    let rows = 0;
+    for (const id of Object.keys(hudAll)) {
+      const v = selectPlayerItemsView(snap, id);
+      const a = sel.coachAnalysis(v, hudAll[id]);
+      rows += a.length;
+      for (const r of a) {
+        if (!v.decision.reasons.includes(r.code)) bad.push(`${id}:${r.code}`);
+        if (r.code.startsWith("insufficient:") && hudAll[id].nextItemId === r.code.slice(13) && hudAll[id].nextShortfall > 0
+          && !r.text.includes(hudAll[id].nextShortfall.toLocaleString("en-US"))) bad.push(`${id}:shortfall`);
+      }
+      if (sel.selectActiveEffects(v).effects.length !== new Set(v.stats.effects).size) bad.push(`${id}:effects`);
+    }
+    ck("G9", `真實對局 10 人：${rows} 條分析都來自自己的理由碼、差價＝selectHudItems、特效數＝去重後的效果`, rows > 0 && bad.length === 0, bad.slice(0, 5).join(","));
+  }
+}
+
+// ── G10 M3c：英雄面板接線 ─────────────────────────────────────────────────────
+{
+  const sheet = stripComments(read("src/battle/ui/BattleHeroSheet.jsx"));
+  ck("G10", "英雄面板只讀 view-model／selector（不 import 規則模組、不碰帳本）",
+    !/from\s+["'][^"']*\/(LogicEngine|itemEconomy|combatStatsV1|buildPolicy|itemRecipes|itemsEngineRuntime|itemCatalog|itemInventory)(\.js)?["']/.test(sheet)
+    && !/\bledger\b|\bMILLI\b|computeCombatStats|nextStep\(|purchaseCost\(/.test(sheet)
+    && /selectPlayerItemsView\(snapshot, playerId\)/.test(sheet));
+  ck("G10", "「裝備」分頁以 itemsView 閘門；OFF 時原本技能說明原文與面板寬度 340 保留",
+    /\{itemsView && \(/.test(sheet) && /itemsView && tab === "items"/.test(sheet) && /本場尚未提供個別技能冷卻、裝備與魔力資訊/.test(sheet)
+    && /itemsView \? 380 : 340/.test(sheet) && /layout="embedded"/.test(sheet));
+  const obs = stripComments(read("src/battle/ui/BattleObserverHUD.jsx"));
+  ck("G10", "入口：手機裝備 sheet 可直達裝備分頁；重播不開英雄面板",
+    /onOpenDetail=/.test(obs) && /initialTab=\{detail === 'items' && hudItems \? 'items' : 'battle'\}/.test(obs) && /detail && !replay && <BattleHeroSheet/.test(obs));
+  const detail = read("src/battle/ui/items/HeroItemDetail.jsx");
+  ck("G10", "詳情分層：三個第二層（出裝路徑／屬性與特效／戰術分析）、一次只開一層、分層鈕 ≥ 44",
+    /\["path", "出裝路徑"\], \["stats", "屬性與特效"\], \["analysis", "戰術分析"\]/.test(detail) && /setLayer\(on \? null : id\)/.test(detail) && /minHeight: 44/.test(detail));
 }
 
 const byGate = {};

@@ -22,6 +22,10 @@ import { SUMMONER_SPELLS } from "../moba/mobaHeroLoadout.js";
 import { GC } from "../../ui/theme.js";
 import { useIsMobile } from "../../ui/useViewport.js";
 import { Z } from "./battleLayout.js";
+//  Item System M3c：裝備詳情分頁。只讀 view-model／selector（itemsV1 OFF ⇒ null ⇒ 沒有分頁，面板與舊版逐字相同）。
+import { selectPlayerItemsView } from "../moba/items/itemsViewModel.js";
+import { coachAnalysis, selectActiveEffects, selectHudItems } from "../moba/items/itemsUiSelectors.js";
+import { HeroItemDetail } from "./items/HeroItemDetail.jsx";
 
 const MONO = "ui-monospace,Menlo,monospace";
 
@@ -67,8 +71,12 @@ const SectionTitle = ({ children }) => (
   <div style={{ fontSize: 9.5, letterSpacing: "0.2em", color: "rgba(255,255,255,0.5)", fontWeight: 900, margin: "12px 0 4px" }}>{children}</div>
 );
 
-export default function BattleHeroSheet({ heroId, heroName, playerName, playerId, side = "blue", spells = [], lane = null, onClose }) {
+export default function BattleHeroSheet({ heroId, heroName, playerName, playerId, side = "blue", spells = [], lane = null, onClose, initialTab = "battle" }) {
   const [career, setCareer] = useState(false);
+  //  M3c：有裝備系統時才有「戰鬥資訊｜裝備」分頁（純呈現狀態）
+  const [tab, setTab] = useState(initialTab === "items" ? "items" : "battle");
+  const snapshot = useGameStore((s) => s.snapshot);
+  const itemsView = selectPlayerItemsView(snapshot, playerId);
   const isMobile = useIsMobile();
   //  只訂閱這一名英雄的即時狀態（引擎唯一資料源）
   const p = useGameStore((s) => (s.snapshot?.players ?? []).find((x) => x.id === playerId) ?? null);
@@ -90,8 +98,8 @@ export default function BattleHeroSheet({ heroId, heroName, playerName, playerId
 
   return (
     <div style={{ position: "absolute", inset: 0, zIndex: Z.sheet, display: "flex", alignItems: isMobile ? "stretch" : "center", justifyContent: "center", background: "rgba(4,8,16,0.7)", backdropFilter: "blur(4px)" }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{
-        width: isMobile ? "100%" : 340, maxWidth: "100%",
+      <div data-hero-sheet={playerId} onClick={(e) => e.stopPropagation()} style={{
+        width: isMobile ? "100%" : (itemsView ? 380 : 340), maxWidth: "100%",
         maxHeight: isMobile ? "100%" : "84%",
         display: "flex", flexDirection: "column",
         background: "rgba(10,16,28,0.97)", border: isMobile ? "none" : `1px solid ${sideC}55`,
@@ -99,11 +107,30 @@ export default function BattleHeroSheet({ heroId, heroName, playerName, playerId
       }}>
         {/* 固定頂部列 */}
         <div style={{ flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px 8px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-          <span style={{ fontSize: 12, fontWeight: 900, color: "rgba(255,255,255,0.75)", letterSpacing: "0.1em" }}>戰鬥資訊</span>
+          <span style={{ fontSize: 12, fontWeight: 900, color: "rgba(255,255,255,0.75)", letterSpacing: "0.1em" }}>{itemsView ? "英雄資訊" : "戰鬥資訊"}</span>
           <button onClick={onClose} aria-label="關閉" style={{ width: 30, height: 30, borderRadius: 8, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", fontWeight: 900, fontSize: 14, cursor: "pointer", lineHeight: 1 }}>✕</button>
         </div>
+        {itemsView && (
+          <div role="tablist" aria-label="英雄資訊分頁" style={{ flexShrink: 0, display: "grid", gridTemplateColumns: "1fr 1fr", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+            {[["battle", "戰鬥資訊"], ["items", "裝備"]].map(([id, label]) => (
+              <button key={id} type="button" role="tab" aria-selected={tab === id} data-touch data-hero-sheet-tab={id} onClick={() => setTab(id)} style={{
+                minHeight: 44, border: 0, cursor: "pointer", fontSize: 13, fontWeight: 800,
+                background: tab === id ? "rgba(251,191,36,0.12)" : "transparent",
+                color: tab === id ? GC.gold : "rgba(255,255,255,0.72)",
+                boxShadow: tab === id ? `inset 0 -2px 0 ${GC.gold}` : "none",
+              }}>{label}</button>
+            ))}
+          </div>
+        )}
 
         <div style={{ overflowY: "auto", padding: "12px 16px 16px", paddingBottom: isMobile ? "calc(16px + env(safe-area-inset-bottom))" : 16 }}>
+          {itemsView && tab === "items" ? (
+            <HeroItemDetail layout="embedded" view={itemsView} ts={snapshot?.ts ?? null}
+              hud={selectHudItems(snapshot)?.[playerId] ?? null}
+              analysis={coachAnalysis(itemsView, selectHudItems(snapshot)?.[playerId] ?? null)}
+              effects={selectActiveEffects(itemsView)}
+              heroId={heroId} heroName={db.zh || heroName} />
+          ) : (<>
           {/* 身分列：英雄圖 + 英雄／選手 + 本場等級 */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <HeroPortrait heroId={heroId} size={44} radius={10} border={`2px solid ${sideC}66`} alt={db.zh || heroName || ""} fallback={null} />
@@ -203,7 +230,7 @@ export default function BattleHeroSheet({ heroId, heroName, playerName, playerId
             <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>此英雄無技能資料</div>
           )}
           <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
-            此處為英雄技能說明。本場尚未提供個別技能冷卻、裝備與魔力資訊。
+            {itemsView ? "此處為英雄技能說明。本場尚未提供個別技能冷卻與魔力資訊（裝備請看「裝備」分頁）。" : "此處為英雄技能說明。本場尚未提供個別技能冷卻、裝備與魔力資訊。"}
           </div>
 
           {/* ── 目前戰鬥資訊 ────────────────────────────────────────── */}
@@ -226,6 +253,7 @@ export default function BattleHeroSheet({ heroId, heroName, playerName, playerId
           }}>
             英雄生涯 · 熟練與完整能力 →
           </button>
+          </>)}
         </div>
       </div>
     </div>

@@ -95,6 +95,100 @@ export function selectPurchaseToasts(snapshot, { afterSeq = -1, catalog = ITEM_C
     .map((e) => ({ ...e, consumed: (e.consumed ?? []).slice(), actionLabel: ACTION_LABELS[e.action] ?? e.action }));
 }
 
+/** 裝備效果 type → 玩家看得懂的名稱與一句說明（M3c）。未知 type 原樣顯示，不猜。 */
+export const EFFECT_LABELS = Object.freeze({
+  ON_HIT: Object.freeze({ label: "攻擊附加傷害", hint: "普攻額外造成傷害" }),
+  GRIEVOUS_WOUNDS: Object.freeze({ label: "重傷", hint: "讓對手的回復降低" }),
+  LOW_HP_SHIELD: Object.freeze({ label: "低血護盾", hint: "生命過低時自動獲得護盾" }),
+  EXECUTE: Object.freeze({ label: "斬殺", hint: "對殘血目標傷害提高" }),
+  ANTI_CRIT: Object.freeze({ label: "減免暴擊", hint: "受到的暴擊傷害降低" }),
+  AURA: Object.freeze({ label: "團隊光環", hint: "身旁友軍獲得加成" }),
+  SLOW_ON_HIT: Object.freeze({ label: "緩速", hint: "技能命中時緩速對手" }),
+  ROLE_CAMP_DAMAGE: Object.freeze({ label: "打野加成", hint: "對野怪傷害提高" }),
+  ROLE_INCOME_TITHE: Object.freeze({ label: "輔助收入", hint: "額外收入並分給隊友" }),
+  BURN: Object.freeze({ label: "燃燒", hint: "持續造成魔法傷害" }),
+  RAMPING_STAT: Object.freeze({ label: "越打越強", hint: "持續戰鬥時屬性疊加" }),
+  RAMPING_RESIST: Object.freeze({ label: "越打越硬", hint: "持續戰鬥時抗性疊加" }),
+  SUSTAIN_REGEN: Object.freeze({ label: "持續回復", hint: "脫戰回復提高" }),
+});
+
+/**
+ * 英雄詳情的「裝備特效＋目前狀態」（M3c）。
+ * @param view selectPlayerItemsView 的輸出
+ * @returns null ⇒ 沒有裝備系統；status.tone：bad＝對自己不利、good＝有利
+ */
+export function selectActiveEffects(view) {
+  if (!view?.stats) return null;
+  const effects = [...new Set(view.stats.effects ?? [])]
+    .map((type) => ({ type, ...(EFFECT_LABELS[type] ?? { label: type, hint: "" }) }));
+  const s = view.status ?? {};
+  const aura = s.aura ?? {};
+  const status = [];
+  if (s.grievous > 0) status.push({ kind: "grievous", label: "被重傷", value: `${Math.ceil(s.grievous)} 秒`, tone: "bad" });
+  if (s.slow > 0) status.push({ kind: "slow", label: "被緩速", value: `${Math.ceil(s.slow)} 秒`, tone: "bad" });
+  if (s.magicShield > 0) status.push({ kind: "magicShield", label: "法傷護盾", value: String(s.magicShield), tone: "good" });
+  if (aura.armor > 0 || aura.mr > 0) status.push({ kind: "auraResist", label: "光環抗性", value: `+${aura.armor} 甲／+${aura.mr} 魔抗`, tone: "good" });
+  if (aura.moveSpeed > 0) status.push({ kind: "auraSpeed", label: "光環移速", value: `+${Math.round(aura.moveSpeed * 100)}%`, tone: "good" });
+  return { effects, status };
+}
+
+const COACH_KIND_ORDER = Object.freeze({ economy: 0, threat: 1, adjust: 2, info: 3 });
+
+/**
+ * 教練戰術分析（M3c）：AI 決策理由碼 → 「原因 → 行動」。
+ * 數字只來自理由碼本身與 hud.nextShortfall（selectHudItems），不另外計算。
+ * 行動文字對照 buildPolicy 的情境裝：前排＝穿甲／破甲、回復型＝重傷、爆發型＝魔抗保命。
+ * @returns [{ code, kind, cause, action, text }]，依 經濟→敵情→調整→局勢 排序
+ */
+export function coachAnalysis(view, hud = null) {
+  const reasons = view?.decision?.reasons;
+  if (!reasons) return [];
+  const valueOf = (code) => String(code).slice(String(code).indexOf(":") + 1);
+  const countOf = (code) => Number(valueOf(code).split(">=")[0]);
+  const nameOf = (id) => itemVisual(id)?.name ?? id;
+  const saving = new Set(reasons.filter((c) => String(c).startsWith("insufficient:")).map(valueOf));
+  const rows = [];
+  const push = (code, kind, cause, action = null) => rows.push({ code, kind, cause, action, text: action ? `${cause} → ${action}` : cause });
+  for (const raw of reasons) {
+    const code = String(raw);
+    switch (code.match(/^[a-zA-Z]+/)?.[0] ?? "") {
+      case "insufficient": {
+        const id = valueOf(code);
+        const short = hud && hud.nextItemId === id ? hud.nextShortfall : null;
+        push(code, "economy", short > 0 ? `還差 ${short.toLocaleString("en-US")} Gold` : "存錢中", nameOf(id));
+        break;
+      }
+      case "lock":
+        if (!saving.has(valueOf(code))) push(code, "economy", "繼續合成", nameOf(valueOf(code)));
+        break;
+      case "complete": push(code, "economy", "六件出裝已完成"); break;
+      case "enemyTanks": {
+        const n = countOf(code);
+        push(code, "threat", n === 2 ? "敵方雙前排" : `敵方 ${n} 名前排`, "優先穿甲");
+        break;
+      }
+      case "enemyHeal": push(code, "threat", `敵方 ${countOf(code)} 名回復型`, "補重傷"); break;
+      case "enemyBurst": push(code, "threat", `敵方 ${countOf(code)} 名爆發型`, "補魔抗保命"); break;
+      case "counter": push(code, "adjust", "反制策略", "情境裝提前到第 2 件"); break;
+      case "survival": push(code, "adjust", "保命策略", "保命裝提前到第 2 件"); break;
+      case "scaling": push(code, "adjust", "後期策略", "奢侈核心提前到第 1 件"); break;
+      case "deathsRecent": push(code, "adjust", `近期陣亡 ${valueOf(code).split("→")[0]} 次`, "保命裝提前"); break;
+      case "behindGold": push(code, "adjust", "經濟落後", "先補最便宜的核心"); break;
+      case "lateKd": push(code, "adjust", `表現領先（KD ${valueOf(code).split("→")[0]}）`, "衝奢侈裝"); break;
+      case "adShare": {
+        const x = Number(valueOf(code));
+        if (x >= 0.62) push(code, "info", `敵方物理傷害 ${Math.round(x * 100)}%`);
+        else if (x <= 0.45) push(code, "info", `敵方魔法傷害 ${Math.round((1 - x) * 100)}%`);
+        break;
+      }
+      default: break;   // arch／strategy／skip／rejected 等背景或除錯句不列
+    }
+  }
+  return rows.map((r, i) => ({ r, i }))
+    .sort((a, b) => COACH_KIND_ORDER[a.r.kind] - COACH_KIND_ORDER[b.r.kind] || a.i - b.i)
+    .map(({ r }) => r);
+}
+
 /** 教練筆記挑句的優先序：先說「現在在做什麼」，再說「為什麼改路線」，最後才是陣容判斷。 */
 const NOTE_RANK = Object.freeze({
   insufficient: 0, lock: 0, complete: 0,

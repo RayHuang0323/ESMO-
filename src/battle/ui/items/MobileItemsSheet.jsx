@@ -3,19 +3,19 @@
 //
 //  由焦點底欄的裝備 chip 開啟；貼在底欄正上方，不蓋底欄本身。
 //   · 焦點英雄：大金錢＋6 格（點格子看名稱）
+//   · 「完整出裝詳情」（M3c）：直接打開英雄面板的裝備分頁
 //   · 其他英雄：精簡列（指示＋金錢），點選＝切換觀戰焦點
 //   · 關閉鈕 ≥ 44px
 //  資料：selectHudItems(snapshot)（hud）＋ itemVisual（名稱），不算數字。
-//  完整下一件／出裝路徑／屬性屬 M3c（英雄詳情），這裡刻意不放。
 // ============================================================================
 import React, { useState } from "react";
 import { itemVisual } from "../../moba/items/itemsUiSelectors.js";
 import { GoldChip } from "./GoldChip.jsx";
 import { InventoryBar } from "./ItemSlot.jsx";
 import { SeatItemPips } from "./SeatItemsCompact.jsx";
-import { ITEM_FONT, SIDE_TINT, SURFACE, TEXT, TIER_LABEL, cornerCut } from "./itemsTheme.js";
+import { GOLD, GOLD_TEXT, ITEM_FONT, SIDE_TINT, SURFACE, TEXT, TIER_LABEL, alpha, cornerCut } from "./itemsTheme.js";
 
-export function MobileItemsSheet({ hud, focusId, roster = {}, onPick, onClose, bottom }) {
+export function MobileItemsSheet({ hud, focusId, roster = {}, onPick, onClose, onOpenDetail, bottom }) {
   const [picked, setPicked] = useState(null);
   const me = hud?.[focusId];
   if (!me) return null;
@@ -49,9 +49,16 @@ export function MobileItemsSheet({ hud, focusId, roster = {}, onPick, onClose, b
           : pickedSlot ? "空格：之後回城會依出裝路徑補上" : "點裝備看名稱"}
       </div>
 
+      {onOpenDetail && (
+        <button type="button" data-touch data-open-hero-detail={focusId} onClick={() => onOpenDetail(focusId)} style={{
+          marginTop: 8, width: "100%", minHeight: 44, border: 0, cursor: "pointer", fontFamily: ITEM_FONT, fontSize: 13.5, fontWeight: 800,
+          color: GOLD_TEXT, background: alpha(GOLD, 0.12), boxShadow: `inset 0 0 0 1px ${alpha(GOLD, 0.4)}`, clipPath: cornerCut(8),
+        }}>完整出裝詳情</button>
+      )}
+
       <div style={{ marginTop: 8, display: "grid", gap: 4 }}>
         {others.map((id) => (
-          <button key={id} type="button" data-touch onClick={() => onPick?.(id)} aria-label={`切換觀戰：${nameOf(id)}`}
+          <button key={id} type="button" data-touch data-pick-seat={id} onClick={() => onPick?.(id)} aria-label={`切換觀戰：${nameOf(id)}`}
             style={{
               minHeight: 44, display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto auto", alignItems: "center", gap: 10,
               padding: "0 10px", border: 0, cursor: "pointer", textAlign: "left", fontFamily: ITEM_FONT,
