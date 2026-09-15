@@ -8,6 +8,13 @@ import { GC } from '../../ui/theme.js';
 import { useIsMobile } from '../../ui/useViewport.js';
 import { SUMMONER_SPELLS } from '../moba/mobaHeroLoadout.js';
 import BattleHeroSheet from './BattleHeroSheet.jsx';
+//  Item System M3b：裝備 HUD。只讀 selector（selectHudItems），元件都在 ./items/。
+import { selectHudItems } from '../moba/items/itemsUiSelectors.js';
+import { GoldChip } from './items/GoldChip.jsx';
+import { SeatItemPips, SeatItemsExpanded } from './items/SeatItemsCompact.jsx';
+import { MobileItemsSheet } from './items/MobileItemsSheet.jsx';
+import { BattlePurchaseToasts } from './items/BattlePurchaseToasts.jsx';
+import { ITEM_TOAST_MOBILE_BOTTOM } from './battleLayout.js';
 import './battleObserver.css';
 
 // Only presentation tokens; all battle values remain owned by snapshot / saved replay.
@@ -24,28 +31,52 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
   const [teamOpen, setTeamOpen] = useState(false);
   const [detail, setDetail] = useState(false);
   const [skill, setSkill] = useState(null);
+  //  M3b：桌機十人列「裝備視圖」與手機裝備 sheet（純呈現狀態）
+  const [itemsView, setItemsView] = useState(false);
+  const [itemsSheet, setItemsSheet] = useState(false);
   const players = snapshot?.players ?? [];
+  //  M3b：只有「現場對戰、且本場有裝備系統」才讀。重播或 itemsV1 OFF ⇒ null ⇒
+  //  下面所有裝備 JSX 都不渲染，既有 HUD（含「裝備 · 未提供」佔位）逐字維持原樣。
+  const hudItems = replay ? null : selectHudItems(snapshot);
   const p = players.find(x => x.id === (selected ?? focusId)) ?? players[0];
   if (!p) return null;
   const r = roster?.[p.id] ?? {};
   const hero = heroById(r.heroId) ?? {};
+  const mine = hudItems?.[p.id] ?? null;
+  const showItemsView = !!hudItems && itemsView && !mobile;
   const pick = id => { setSelected(id); setSkill(null); setTeamOpen(false); useCameraStore.getState().focusHero(id); };
   const portrait = (x, size) => <HeroPortrait heroId={roster?.[x.id]?.heroId} size={size} radius={3}
     alt={roster?.[x.id]?.hero ?? x.id} fallback={<span className="observer-fallback">{roster?.[x.id]?.hero?.slice(0, 1) ?? x.id}</span>} />;
   const rail = side => <div className={`observer-rail ${side}`} aria-label={side === 'blue' ? '藍方英雄' : '紅方英雄'}>
-    {players.filter(x => x.side === side).map(x => <button key={x.id} data-seat={x.id} data-testid="observer-hero"
-      className={`observer-seat ${x.dead ? 'dead' : ''}`} aria-pressed={p.id === x.id} onClick={() => pick(x.id)}>
-      <span className="observer-avatar">{portrait(x, mobile ? 28 : 38)}<b>{x.dead ? Number.isFinite(x.respawn) ? `${Math.ceil(x.respawn)}s` : '陣亡' : x.mlv ?? '—'}</b></span>
-      <span className="observer-seat-info"><strong>{roster?.[x.id]?.player ?? x.id}</strong>
-        <span className="observer-hp"><i style={{ width: `${x.dead ? 0 : pct(x.hp)}%` }} /></span>
-        <span>{x.k ?? '—'} / {x.d ?? '—'} / {x.a ?? '—'} <em>{x.dead ? '陣亡' : x.state}</em></span>
-        {!!x.buffs?.length && <span className="observer-buffs">{x.buffs.map(b => <em key={b.id}>{({red:'紅',blue:'藍',dragon:'龍',baron:'巴龍'})[b.id] ?? '增益'}{b.id === 'dragon' ? `×${b.stacks}` : `${Math.ceil(b.remaining ?? 0)}s`}</em>)}</span>}
-      </span>
-    </button>)}
+    {players.filter(x => x.side === side).map(x => {
+      const hi = hudItems?.[x.id] ?? null;
+      const name = roster?.[x.id]?.player ?? x.id;
+      return <button key={x.id} data-seat={x.id} data-testid="observer-hero"
+        data-items-gold={hi ? hi.unspent : undefined} data-items-slots={hi ? hi.slots.map(s => s.itemId ?? '').join(',') : undefined}
+        className={`observer-seat ${x.dead ? 'dead' : ''}`} aria-pressed={p.id === x.id} onClick={() => pick(x.id)}>
+        <span className="observer-avatar">{portrait(x, mobile ? 28 : 38)}<b>{x.dead ? Number.isFinite(x.respawn) ? `${Math.ceil(x.respawn)}s` : '陣亡' : x.mlv ?? '—'}</b></span>
+        {!hi ? <span className="observer-seat-info"><strong>{name}</strong>
+          <span className="observer-hp"><i style={{ width: `${x.dead ? 0 : pct(x.hp)}%` }} /></span>
+          <span>{x.k ?? '—'} / {x.d ?? '—'} / {x.a ?? '—'} <em>{x.dead ? '陣亡' : x.state}</em></span>
+          {!!x.buffs?.length && <span className="observer-buffs">{x.buffs.map(b => <em key={b.id}>{({red:'紅',blue:'藍',dragon:'龍',baron:'巴龍'})[b.id] ?? '增益'}{b.id === 'dragon' ? `×${b.stacks}` : `${Math.ceil(b.remaining ?? 0)}s`}</em>)}</span>}
+        </span>
+        : showItemsView ? <span className="observer-seat-info items-view">
+          <span className="observer-seat-head"><strong>{name}</strong><GoldChip amount={hi.unspent} size="xs" /></span>
+          <SeatItemsExpanded hud={hi} />
+        </span>
+        : <span className="observer-seat-info">
+          <span className="observer-seat-head"><strong>{name}</strong><SeatItemPips hud={hi} /></span>
+          <span className="observer-hp"><i style={{ width: `${x.dead ? 0 : pct(x.hp)}%` }} /></span>
+          <span className="observer-seat-line"><span>{x.k ?? '—'} / {x.d ?? '—'} / {x.a ?? '—'}</span><em>{x.dead ? '陣亡' : x.state}</em><GoldChip amount={hi.unspent} size="xs" /></span>
+          {!!x.buffs?.length && <span className="observer-buffs">{x.buffs.map(b => <em key={b.id}>{({red:'紅',blue:'藍',dragon:'龍',baron:'巴龍'})[b.id] ?? '增益'}{b.id === 'dragon' ? `×${b.stacks}` : `${Math.ceil(b.remaining ?? 0)}s`}</em>)}</span>}
+        </span>}
+      </button>;
+    })}
   </div>;
-  return <div className={`observer-ui ${mobile ? 'mobile' : 'desktop'} ${replay ? 'replay' : ''} ${teamOpen || detail ? 'sheet-open' : ''}`} style={observerTokens}>
+  const rootClass = `observer-ui ${mobile ? 'mobile' : 'desktop'} ${replay ? 'replay' : ''} ${teamOpen || detail || (itemsSheet && mine) ? 'sheet-open' : ''} ${hudItems ? 'items-on' : ''} ${showItemsView ? 'items-view' : ''}`;
+  return <div className={rootClass} style={observerTokens} data-items-ts={hudItems ? snapshot.ts : undefined}>
     {(!mobile || teamOpen) && <div className={teamOpen ? 'observer-team-sheet' : 'observer-teams'}>
-      {teamOpen && <><header><strong>雙方隊伍</strong><button onClick={() => setTeamOpen(false)}>關閉 ✕</button></header><p>選擇英雄以跟隨視角。本場尚未提供裝備與魔力資訊。</p></>}
+      {teamOpen && <><header><strong>雙方隊伍</strong><button onClick={() => setTeamOpen(false)}>關閉 ✕</button></header><p>{hudItems ? '選擇英雄以跟隨視角。本場尚未提供魔力資訊。' : '選擇英雄以跟隨視角。本場尚未提供裝備與魔力資訊。'}</p></>}
       {rail('blue')}{rail('red')}
     </div>}
     <section className="observer-dock" aria-label="觀戰英雄" data-testid="observer-dock">
@@ -54,10 +85,15 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
         <span><small>觀戰英雄</small><strong>{hero.zh ?? r.hero ?? p.id}</strong><small>{r.player ?? p.id}</small></span>
       </button>
       <div className="observer-vitals">
-        <div className="observer-mobile-name"><strong>{hero.zh ?? r.hero ?? p.id}</strong><span>{r.player ?? p.id} · Lv.{p.mlv ?? '—'}</span></div>
+        <div className="observer-mobile-name"><strong>{hero.zh ?? r.hero ?? p.id}</strong><span>{r.player ?? p.id} · Lv.{p.mlv ?? '—'}</span>
+          {mine && <button className="observer-items-chip" data-touch data-items-chip={p.id} data-items-gold={mine.unspent}
+            onClick={() => setItemsSheet(v => !v)} aria-expanded={itemsSheet} aria-label={`${hero.zh ?? p.id}的裝備`}>
+            <span className="observer-items-chip-face"><SeatItemPips hud={mine} /><GoldChip amount={mine.unspent} size="xs" /></span>
+          </button>}
+        </div>
         <div className="observer-health"><i style={{ width: `${p.dead ? 0 : pct(p.hp)}%` }} /><b>{p.dead ? Number.isFinite(p.respawn) ? `陣亡 · ${Math.ceil(p.respawn)}秒復活` : '陣亡 · 未保存復活時間' : `生命 ${pct(p.hp)}%`}</b></div>
         <div className="observer-xp" title={Number.isFinite(p.mxp) ? `經驗 ${p.mxp} / ${p.mxpNext || '滿等'}` : '此段未保存經驗'}><i style={{ width: `${Number.isFinite(p.mxp) ? p.mxpNext > 0 ? pct(p.mxp / p.mxpNext) : 100 : 0}%` }} /></div>
-        <div className="observer-stats"><span>{p.k ?? '—'} / {p.d ?? '—'} / {p.a ?? '—'}</span><span>{gold(p.gold)}</span><span>{p.rc > 0 ? `回城 ${Math.ceil(p.rc)}s` : p.state}</span></div>
+        <div className="observer-stats"><span>{p.k ?? '—'} / {p.d ?? '—'} / {p.a ?? '—'}</span><span>{hudItems ? `總收入 ${gold(p.gold)}` : gold(p.gold)}</span><span>{p.rc > 0 ? `回城 ${Math.ceil(p.rc)}s` : p.state}</span></div>
       </div>
       <div className="observer-abilities" aria-label="英雄技能說明">
         {['P', 'Q', 'W', 'E', 'R'].map((key, i) => <button key={key} className={`observer-ability ability-${i}`} aria-pressed={skill === key}
@@ -72,7 +108,12 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
             <span>{meta?.icon ?? '—'}</span><b>{s?.id ? s.ready ? '可用' : `${Math.ceil(s.cd)}s` : replay ? '未保存' : '—'}</b>
           </button>; })}
       </div>
-      <button className="observer-equipment" onClick={() => setSkill(skill === 'items' ? null : 'items')}><span>◇ ◇ ◇</span><small>裝備 · 未提供</small></button>
+      {mine
+        ? <button className="observer-equipment items" data-items-dock={p.id} data-items-gold={mine.unspent}
+            onClick={() => setItemsView(v => !v)} aria-pressed={itemsView} aria-label={itemsView ? '收起十人裝備' : '展開十人裝備'}>
+            <SeatItemPips hud={mine} /><GoldChip amount={mine.unspent} size="xs" /><small>{itemsView ? '收起裝備' : '十人裝備'}</small>
+          </button>
+        : <button className="observer-equipment" onClick={() => setSkill(skill === 'items' ? null : 'items')}><span>◇ ◇ ◇</span><small>裝備 · 未提供</small></button>}
       <button className="observer-team-toggle" onClick={() => setTeamOpen(v => !v)} aria-expanded={teamOpen}>隊伍</button>
       {skill && <div className="observer-tooltip" role="status"><button onClick={() => setSkill(null)} aria-label="關閉技能說明">✕</button>
         {skill === 'items' ? '本場尚未提供裝備與魔力資訊。' : skill.startsWith('spell')
@@ -80,6 +121,9 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
           : `${skill} · ${hero[skill] ?? '尚無技能說明'}。個別英雄技能冷卻尚未提供。`}
       </div>}
     </section>
+    {mobile && itemsSheet && mine && <MobileItemsSheet hud={hudItems} focusId={p.id} roster={roster}
+      onPick={pick} onClose={() => setItemsSheet(false)} bottom={ITEM_TOAST_MOBILE_BOTTOM} />}
+    {hudItems && <BattlePurchaseToasts snapshot={snapshot} roster={roster} />}
     <div className="observer-killfeed" aria-live="polite">{events.filter(e => ['KILL','FIRST_BLOOD','MULTI_KILL','ACE'].includes(e.type) && snapshot.ts - e.t < 12).slice(-3).map(e => <div key={e.id} className={`observer-kill ${e.side}`}>
       {e.data?.killer && <HeroPortrait heroId={roster?.[e.data.killer]?.heroId} size={28} radius={2} alt="" />}
       <span>{e.type === 'FIRST_BLOOD' ? '首殺' : e.type === 'ACE' ? '團滅' : e.type === 'MULTI_KILL' ? '連殺' : '擊殺'}<strong>{roster?.[e.data?.killer]?.player ?? e.text}</strong></span>

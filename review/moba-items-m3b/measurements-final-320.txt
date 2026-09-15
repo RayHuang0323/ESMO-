@@ -1,0 +1,29 @@
+
+════ itemsV1 OFF｜390px ════
+✅ OFF 390｜戰鬥推進到 90s　{"ok":true,"ts":90,"items":false}
+✅ OFF 390｜snapshot 沒有 items、裝備 HUD DOM = 0、原本「裝備 · 未提供」佔位還在　items=false dom=0 placeholder=true
+✅ OFF 390｜page exception = 0
+   截圖 review/moba-items-m3b/off-390.png
+
+════ itemsV1 OFF｜1366px ════
+✅ OFF 1366｜戰鬥推進到 90s　{"ok":true,"ts":90.5,"items":false}
+✅ OFF 1366｜snapshot 沒有 items、裝備 HUD DOM = 0、原本「裝備 · 未提供」佔位還在　items=false dom=0 placeholder=true
+✅ OFF 1366｜page exception = 0
+   截圖 review/moba-items-m3b/off-1366.png
+
+════ itemsV1 ON｜320px ════
+✅ ON 320｜戰鬥推進到 90s 且 snapshot 有 items　{"ok":true,"ts":90,"items":true}
+   底欄 112px　十人列寬 —　席位高 —　中央戰場 {"x":0,"y":70,"w":320,"h":532}
+✅ ON 320｜不水平溢出　320/320
+✅ ON 320｜焦點底欄沒有加高（112px，OFF 同類寬度 112px）
+✅ ON 320｜常駐裝備元素不進入中央戰場矩形　hits=0
+✅ ON 320｜手機裝備 chip 點擊區 ≥ 44px　[[83,45]]
+✅ ON 320｜手機只出現名字列 chip，不出現桌機「十人裝備」鈕　dock=false chip=true team=18/28
+✅ ON 320｜畫面上的金錢／背包／指示＝同一 ts 的 selectHudItems（檢查 2 處）
+   截圖 review/moba-items-m3b/battle-hud-320.png
+✅ ON 320｜裝備 sheet 開啟：在記分板下、底欄上；6 格與按鈕都 ≥ 44（16 個）　{"ok":true,"sheet":[90,500],"belowScore":true,"aboveDock":true,"small":[],"touchCount":16,"slots":[[48,48],[48,48],[48,48],[48,48],[48,48],[48,48]]}
+   截圖 review/moba-items-m3b/mobile-items-sheet-320.png
+✅ ON 320｜關閉鈕收起 sheet
+✅ ON 320｜page exception = 0、console error 不比 OFF 多
+
+════ itemsV1 ON｜390px ════

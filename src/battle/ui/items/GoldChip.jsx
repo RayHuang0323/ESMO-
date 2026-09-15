@@ -9,6 +9,15 @@ import { GOLD, GOLD_TEXT, GOLD_WASH, NUM, alpha } from "./itemsTheme.js";
 export function GoldChip({ amount, size = "sm", label = "可用金錢" }) {
   const lg = size === "lg";
   const text = Number.isFinite(amount) ? amount.toLocaleString("en-US") : "—";
+  //  M3b：xs＝十人列／戰鬥底欄用（10px 數字、無膠囊底，放進既有資訊列不加高）。
+  if (size === "xs") {
+    return (
+      <span aria-label={`${label} ${text}`} title={label} style={{ display: "inline-flex", alignItems: "center", gap: 3, color: GOLD_TEXT, ...NUM, fontSize: 10, lineHeight: 1, whiteSpace: "nowrap" }}>
+        <CoinIcon size={10} />
+        <span>{text}</span>
+      </span>
+    );
+  }
   return (
     <span aria-label={`${label} ${text}`} title={label} style={{
       display: "inline-flex", alignItems: "center", gap: lg ? 7 : 5,

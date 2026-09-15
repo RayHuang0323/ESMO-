@@ -1,0 +1,24 @@
+範圍：ON 寬度 390/768/1366；購買通知段 略過
+
+════ itemsV1 OFF｜390px ════
+   截圖 review/moba-items-m3b/off-390.png
+
+════ itemsV1 OFF｜1366px ════
+   截圖 review/moba-items-m3b/off-1366.png
+
+════ itemsV1 ON｜390px ════
+   底欄 112px　十人列寬 —　席位高 —　中央戰場 {"x":0,"y":70,"w":390,"h":656}
+   截圖 review/moba-items-m3b/battle-hud-390.png
+   截圖 review/moba-items-m3b/mobile-items-sheet-390.png
+
+════ itemsV1 ON｜768px ════
+   底欄 114px　十人列寬 192/192　席位高 52　中央戰場 {"x":204,"y":78,"w":360,"h":820}
+   截圖 review/moba-items-m3b/battle-hud-768.png
+   截圖 review/moba-items-m3b/desktop-items-view-768.png
+
+════ itemsV1 ON｜1366px ════
+   底欄 114px　十人列寬 192/192　席位高 52　中央戰場 {"x":204,"y":78,"w":958,"h":696}
+   截圖 review/moba-items-m3b/battle-hud-1366.png
+   截圖 review/moba-items-m3b/desktop-items-view-1366.png
+
+購買通知段：依 ESMO_M3B_SKIP_TOAST=1 略過

@@ -11,7 +11,7 @@
 // ============================================================================
 import { ITEM_CATALOG, LAUNCH_BATCH, getItem } from "./itemCatalog.js";
 import { BUILD_STRATEGIES, buildTargets } from "./buildPolicy.js";
-import { STRATEGY_LABELS } from "./itemsViewModel.js";
+import { ACTION_LABELS, STRATEGY_LABELS } from "./itemsViewModel.js";
 
 export const ITEMS_UI_SELECTORS_VERSION = "moba-items.ui-selectors.v1";
 
@@ -75,6 +75,24 @@ export function selectHudItems(snapshot, { catalog = ITEM_CATALOG } = {}) {
     };
   }
   return out;
+}
+
+/**
+ * 戰鬥 HUD 的購買回饋（M3b）：只挑「完成 T3」與「鞋子升級」，且 seq 大於 afterSeq。
+ * 一般組件、基礎鞋、起始裝與「丟棄起始裝」都不跳通知（戰鬥中太吵）。
+ * @param afterSeq 已經看過的最後一筆 seq（HUD 掛載當下用 snapshot.items.lastSeq，開局的出生購買不會補跳）
+ * @returns null ⇒ 本場沒有裝備系統；否則依 seq 由舊到新
+ */
+export function selectPurchaseToasts(snapshot, { afterSeq = -1, catalog = ITEM_CATALOG } = {}) {
+  const list = snapshot?.items?.purchases;
+  if (!list) return null;
+  return list
+    .filter((e) => e.seq > afterSeq && e.action !== "dropStarter")
+    .filter((e) => {
+      const v = itemVisual(e.itemId, catalog);
+      return !!v && (v.state === "completed" || (v.state === "boots" && e.itemId !== "bt_base"));
+    })
+    .map((e) => ({ ...e, consumed: (e.consumed ?? []).slice(), actionLabel: ACTION_LABELS[e.action] ?? e.action }));
 }
 
 /** 教練筆記挑句的優先序：先說「現在在做什麼」，再說「為什麼改路線」，最後才是陣容判斷。 */

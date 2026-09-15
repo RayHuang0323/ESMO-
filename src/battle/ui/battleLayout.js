@@ -49,6 +49,14 @@ export const DIRECTOR_BOTTOM_DESKTOP = 90;
 export const DIRECTOR_BOTTOM_MOBILE = 110;
 
 /**
+ * Item System M3b：手機戰鬥中的購買通知／裝備 sheet 底距。
+ * = 焦點底欄最小高度 112（battleObserver.css `.observer-ui.mobile .observer-dock{min-height:112px}`）
+ *   ＋ 底欄底距 6 ＋ 間隔 12。改底欄高度時要同步。
+ * 手機記分板下方已經有暫停／倍率鈕與戰報，所以通知放在底欄上方，不放頂部。
+ */
+export const ITEM_TOAST_MOBILE_BOTTOM = 130;
+
+/**
  * z-index 統一表（29B2 起列為待辦，29B6 落地）。
  * 數值沿用各元件既有值 ⇒ 這次只是把它們收斂到一處，沒有改變既有疊放次序。
  */

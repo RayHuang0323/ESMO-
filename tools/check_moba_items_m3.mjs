@@ -221,6 +221,68 @@ const REQUIRED_UI = ["itemsTheme.js", "ItemGlyphs.jsx", "ItemSlot.jsx", "GoldChi
   ck("G6", "模擬版本閘門綠（仍是 moba-sim.v4）", gateOk, gateOut.split("\n").slice(-3).join(" "));
 }
 
+// ── G7 M3b：戰鬥購買回饋的篩選 ─────────────────────────────────────────────────
+{
+  const sel = await tryLoad("src/battle/moba/items/itemsUiSelectors.js");
+  if (typeof sel.selectPurchaseToasts !== "function") {
+    ck("G7", "selectPurchaseToasts 存在", false, sel.__error ?? "missing export");
+  } else {
+    const { LogicEngine } = await load("src/LogicEngine.js");
+    const { ROSTER } = await load("src/data/roster.js");
+    const { heroById } = await load("src/data/heroDatabase.js");
+    const { toEngineItems } = await load("src/battle/moba/items/itemsEngineAdapter.js");
+    const { getItem } = await load("src/battle/moba/items/itemCatalog.js");
+    const e = new LogicEngine(42);
+    e.configureItems(toEngineItems({ roster: ROSTER, heroLookup: heroById }));
+    const all = new Map();
+    for (let i = 0; i < 2400 && !e.over; i++) {
+      e.tick(0.5);
+      if (i % 10 === 0) for (const ev of e.snapshot().items.purchases) all.set(ev.seq, ev);
+    }
+    const events = [...all.values()].sort((a, b) => a.seq - b.seq);
+    const fake = { items: { purchases: events } };
+    const frozen = JSON.stringify(fake);
+    const toasts = sel.selectPurchaseToasts(fake);
+    const expected = events.filter((ev) => ev.action !== "dropStarter" && (getItem(ev.itemId).tier === "T3" || (getItem(ev.itemId).tier === "BOOTS" && ev.itemId !== "bt_base")));
+    ck("G7", `只挑完成裝與鞋子升級（整場 ${events.length} 筆事件 → ${toasts.length} 則通知）`,
+      toasts.length > 0 && toasts.length === expected.length && toasts.every((t, i) => t.seq === expected[i].seq && typeof t.actionLabel === "string" && t.actionLabel.length > 0)
+      && toasts.some((t) => getItem(t.itemId).tier === "T3") && toasts.some((t) => getItem(t.itemId).tier === "BOOTS"),
+      `expected=${expected.length}`);
+    const mid = toasts[Math.floor(toasts.length / 2)].seq;
+    ck("G7", "afterSeq 之後的才回傳（HUD 掛載時不補跳舊事件）", sel.selectPurchaseToasts(fake, { afterSeq: mid }).every((t) => t.seq > mid)
+      && sel.selectPurchaseToasts(fake, { afterSeq: events.at(-1).seq }).length === 0);
+    ck("G7", "純函式；OFF snapshot 回 null", JSON.stringify(fake) === frozen && sel.selectPurchaseToasts({}) === null && sel.selectPurchaseToasts({ items: null }) === null);
+  }
+}
+
+// ── G8 M3b：戰鬥 HUD 接線 ─────────────────────────────────────────────────────
+{
+  const hudFile = "src/battle/ui/BattleObserverHUD.jsx";
+  const hud = read(hudFile);
+  const code = stripComments(hud);
+  ck("G8", "戰鬥底層只讀 selector 與裝備元件（不 import 規則模組／引擎、不碰帳本）",
+    !/from\s+['"][^'"]*\/(LogicEngine|itemEconomy|combatStatsV1|buildPolicy|itemRecipes|itemsEngineRuntime|itemCatalog|itemInventory)(\.js)?['"]/.test(code)
+    && !/\bledger\b|\bMILLI\b|computeCombatStats|nextStep\(|purchaseCost\(/.test(code)
+    && /selectHudItems/.test(code));
+  ck("G8", "重播不讀裝備（replay ? null : selectHudItems(snapshot)）；itemsV1 OFF 時保留原本「裝備 · 未提供」佔位",
+    /const hudItems = replay \? null : selectHudItems\(snapshot\)/.test(code) && /裝備 · 未提供/.test(code) && /本場尚未提供裝備與魔力資訊/.test(code));
+  const toasts = exists("src/battle/ui/items/BattlePurchaseToasts.jsx") ? read("src/battle/ui/items/BattlePurchaseToasts.jsx") : "";
+  ck("G8", "購買通知：2.5 秒、最多 2 則、pointer-events: none、只用 selectPurchaseToasts 篩選",
+    /TOAST_LIFETIME_MS = 2500/.test(toasts) && /MAX_VISIBLE = 2/.test(toasts) && /pointerEvents: "none"/.test(toasts) && /selectPurchaseToasts\(/.test(toasts));
+  const layout = read("src/battle/ui/battleLayout.js");
+  const git = (args) => execFileSync("git", args, { cwd: ROOT, encoding: "utf8" });
+  const untouched = git(["diff", "--name-only", "HEAD", "--",
+    "src/screens/moba/MobaReplayScreen.jsx", "src/battle/moba/replay", "src/platform/contracts/mobaReplay.js",
+    "src/screens/moba/TacticScreen.jsx", "src/battle/ui/hudStore.js", "src/battle/ui/BattleHUD.jsx", "src/battle/ui/BattleHeroSheet.jsx"]).trim();
+  ck("G8", "Replay、TacticScreen、記分板（BattleHUD／hudStore 高度表）、英雄面板（M3c）相對 HEAD 無改動；HUD_H 仍 126",
+    untouched === "" && /export const HUD_H = 126;/.test(layout), untouched);
+  const css = read("src/battle/ui/battleObserver.css");
+  const m3bCss = css.slice(css.indexOf("Item System M3b"));
+  ck("G8", "M3b 樣式全部掛在 .items-on／items chip 底下（OFF 版面不受影響），且不改底欄與席位高度",
+    css.includes("Item System M3b") && m3bCss.split("\n").filter((l) => l.trim().startsWith(".")).every((l) => /items-on|observer-items-chip|observer-equipment\.items/.test(l))
+    && !/min-height:112px|height:52px/.test(m3bCss));
+}
+
 const byGate = {};
 for (const r of results) {
   byGate[r.gate] ??= { pass: 0, total: 0 };

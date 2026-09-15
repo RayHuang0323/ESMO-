@@ -25,3 +25,21 @@
 .observer-ui.desktop .observer-rail{top:112px}.observer-killfeed{top:412px}
 .observer-buffs{display:flex;gap:4px}.observer-buffs em{color:var(--battle-gold);font-style:normal}.desktop .observer-seat-info{gap:3px}.desktop .observer-seat{height:52px}.desktop .observer-buffs{position:absolute;margin-top:39px;opacity:.9}.desktop .observer-rail{gap:6px}
 @media(prefers-reduced-motion:reduce){.battle-stage *,.battle-replay *{animation:none!important;transition:none!important}}
+/* ── Item System M3b：裝備 HUD。全部掛在 .items-on 底下（itemsV1 OFF 與重播完全不受影響）。
+   不加高：桌機席位維持 52px、手機底欄維持 112px；十人列加寬 160→192px 才放得下 6 格 20px。 */
+.observer-ui.items-on.desktop .observer-rail{width:192px}
+.items-on .observer-seat-head,.items-on .observer-seat-line{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}
+.items-on .observer-seat-head strong{min-width:0}
+.items-on .observer-seat-line>span:first-child{white-space:nowrap}
+.items-on .observer-seat-line em{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.items-on .observer-seat-info.items-view{gap:4px}
+/* 「十人裝備」切換只屬於桌機（手機走名字列 chip＋sheet）。⚠ 必須限定 .desktop：
+   `.observer-ui .observer-equipment.items` 比原本的 `.mobile .observer-equipment{display:none}` 權重高，
+   不限定就會在手機底欄頂排多出一顆，把「隊伍」鈕擠成直排（M3b 截圖抓到）。 */
+.observer-ui.desktop .observer-equipment.items{display:grid;justify-items:center;align-content:center;gap:4px;min-width:58px;color:var(--battle-gold)!important}
+.observer-ui.desktop .observer-equipment.items small{color:var(--battle-muted)}
+.observer-ui .observer-items-chip{display:none}
+/* 手機 chip：點擊區只往下延伸 30px（蓋在非互動的血條區），版面仍只佔名字列 14px，不搶技能鈕 */
+.observer-ui.mobile .observer-items-chip{display:block;align-self:flex-start;min-height:44px;margin:0 0 -30px 8px;padding:0 0 30px;background:none!important;border:0!important;box-shadow:none!important}
+.observer-ui.mobile .observer-items-chip-face{display:inline-flex;align-items:center;gap:6px;height:14px}
+.observer-ui.items-on.mobile .observer-mobile-name>span{margin-left:auto}

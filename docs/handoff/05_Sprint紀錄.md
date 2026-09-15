@@ -21329,3 +21329,105 @@ Owner Review：M3 PLAN APPROVED，D1–D5 照建議。補充兩點：
 ### 七、停止點
 
 M3a 完成後依 Owner 指示**停止**，等 Owner Review 外觀；通過後才寫 M3b（Battle HUD）的細部計畫。
+
+## 2026-09-15 MOBA Item System v1 — M3b Battle HUD（停在 Owner Review）
+
+Owner Review：M3a APPROVED。本輪只接 Battle HUD：
+- 不開始 M3c／M3d／M3e。
+- 不動 LogicEngine、`dmgK`、收入、裝備平衡、Replay、TacticScreen。
+- production 仍 itemsV1 OFF。
+- 未 push、未 deploy。
+
+計畫：`docs/design/MOBA_裝備UI_M3b實作計畫_v1.md`（含 M3b 前的真實戰鬥頁量測基準與版面決策）。
+
+### 一、先量再做：現役戰鬥 HUD 不是 M3 規劃時以為的那一支
+
+- 現役底層是 `BattleObserverHUD` → `ObserverPanel`：
+  - 桌機：左右十人列（寬 160、席位 52 高）＋焦點英雄底欄。
+  - 手機：只有焦點底欄（**既有 112px 高**），十人在「隊伍」sheet。
+- `BattleHeroStrip` 已經沒有任何 import（死碼），不動。
+- `ObserverPanel` 也被 Replay 使用（`replay` prop）⇒ 裝備一律 `replay ? null : selectHudItems(snapshot)`。
+- 底欄原本就有「◇◇◇ 裝備 · 未提供」佔位 ⇒ itemsV1 OFF 時逐字保留。
+- 真實戰鬥頁的 `shot=`／`diag=` 參數會打開 WebGL 診斷與戰鬥 Debug 面板蓋住底欄 ⇒ M3b 截圖一律不帶。
+
+### 二、做了什麼
+
+| 位置 | 常駐 | 點開後 |
+|---|---|---|
+| 桌機十人列 | 名字列右側 6 顆裝備指示（完成裝金／組件鋼／鞋青／起始裝銅／空格暗）；KDA 列右側 xs 可用金 | 底欄「十人裝備」→ 席位換成 6 格 20px 真插槽＋可用金（席位仍 52px） |
+| 桌機底欄 | 原「裝備 · 未提供」按鈕換成焦點英雄指示＋可用金 | 切換十人裝備視圖 |
+| 手機底欄 | 名字列右側焦點英雄指示＋可用金（點擊區只往下延伸到非互動血條區，達 44px，不搶技能鈕） | 底欄上方 bottom sheet：焦點 6 格（點格子看名稱）＋其餘英雄精簡列（點選切換觀戰）＋關閉鈕 |
+| 購買通知 | 只有完成 T3／鞋子升級；2.5 秒；最多 2 則；`pointer-events: none`；桌機記分板下方、手機底欄上方 | — |
+
+- 十人列加寬 160→192px（`.items-on` 才生效），6 格 20px 才放得下。
+- 新增：
+  - `selectPurchaseToasts`（selector）
+  - `BattlePurchaseToasts`、`SeatItemPips`／`SeatItemsExpanded`、`MobileItemsSheet`
+  - `GoldChip xs`、`ITEM_TOAST_MOBILE_BOTTOM`
+- 有值時底欄原本的「$x萬」改標「總收入 $x萬」，避免與 chip 的可用金混淆（OFF 時原字不變）。
+
+### 三、驗證（全部實跑）
+
+最終程式碼上依序實跑（一支一支跑，避免記憶體不足被系統砍）：
+
+| 項目 | 結果 |
+|---|---|
+| `node tools/check_moba_items_m3.mjs` | **33/33 PASS**（含 G7 通知篩選 3、G8 戰鬥接線 5；第一次 32/33，G8 抓到一條未掛 `.items-on` 的手機 CSS） |
+| `npm run build` | built in 12.91s；dist 無 `itemsDev`／`ItemsUiGallery`／`items-ui` |
+| `node tools/check_moba_items_m1.mjs` | **69/69 PASS**（G13 importer 白名單加入 `BattleObserverHUD.jsx`） |
+| `node tools/check_moba_items_m2.mjs` | **53/53 PASS** |
+| `node tools/verify.mjs --only=regress,regress2` | **2/2 通過**（regress 15 seeds 31s、regress2 節奏門檻 34s） |
+| 真實戰鬥頁瀏覽器量測 | 第一輪 44/44（含購買通知）＋最終程式碼 34/34，見 §四 |
+
+### 四、真實戰鬥頁量測（`tools/browser_review_moba_items_m3b.mjs`）
+
+共跑三輪（量測明細都在 `review/moba-items-m3b/`）：
+
+1. **第一輪完整量測 44/44**（`measurements.txt`）：
+   - OFF 390／1366：`snapshot.items` 不存在、裝備 DOM 0、佔位還在。
+   - ON 320／390／768／1366：
+     - 無溢出、底欄高度＝OFF（手機 112、桌機 114–115）、席位 52。
+     - 裝備元素不進中央戰場。
+     - DOM 金錢／背包＝同一 ts 的 `selectHudItems`。
+     - sheet 6 格 48px、16 個按鈕都 ≥ 44。
+     - 十人裝備視圖 10×6、席位仍 52。
+   - 購買通知（1366、4 倍速真實對局）：
+     - 「合成戰慄巨斧」只出現完成裝、`pointer-events: none`、約 2.5 秒消失。
+     - 減少動態下出現即 opacity 1、無掃光層。
+2. 看截圖發現手機多一顆桌機鈕（見 §五）→ 修正後在最終程式碼上重跑。
+   - 第一次完整重跑被系統以記憶體不足砍在 ON 390，但已跑完 OFF 390／1366 與 ON 320 全綠，含新檢查「手機不出現桌機鈕」（`measurements-final-320.txt`）。
+3. **最終程式碼縮小範圍重跑 34/34**（`measurements-final.txt`，OFF 390／1366＋ON 390／768／1366，略過通知段）：
+   - 手機 390 只出現 chip、「隊伍」鈕寬 28＝OFF。
+   - 桌機只出現「十人裝備」鈕。
+   - 其餘同第一輪。
+   - 通知段沒有重跑：修正只動桌機鈕的 CSS 範圍，與通知無關。
+
+環境紀錄：這台機器同時有 Codex 桌面程式約 110 個 node 行程（約 3.4 GB）。
+- 系統 commit 一度剩 300 MB，vite 啟動即崩潰、CDP 啟動逾時，兩次 HARNESS_FAIL（環境失敗，不是產品失敗）。
+- Owner 釋放其他工作後，只清掉本 gate 自己遺留的 headless Chrome（esmo-cdp profile）再重跑一次通過；**沒有結束 Codex 行程**。
+
+截圖（`review/moba-items-m3b/`）：
+- 關閉狀態：`off-390`、`off-1366`
+- 戰鬥 HUD：`battle-hud-320／390／768／1366`
+- 手機 sheet：`mobile-items-sheet-320／390`
+- 桌機十人裝備視圖：`desktop-items-view-768／1366`
+- 購買通知：`purchase-toast-1366`
+
+### 五、本輪修掉的問題
+
+- 通知計時器依賴父層每個 snapshot 都換新的 callback ⇒ 通知永遠不會消失。改成掛載時只啟動一次、以 ref 讀最新 callback（寫完自查發現，未上瀏覽器前修正）。
+- M3 驗證器 G8 抓到一條手機 CSS 沒掛在 `.items-on` 底下（會影響 OFF 版面）⇒ 已改。
+- 第一輪真實戰鬥頁量測 44/44 全綠，但**看截圖**發現手機底欄頂排多了一顆桌機專用「十人裝備」鈕，把「隊伍」鈕擠成直排。
+  - 原因：`.observer-ui .observer-equipment.items` 的權重高於既有 `.mobile .observer-equipment{display:none}`。
+  - 修法：限定 `.desktop`。
+  - 量測補兩條「各端只看得到自己的入口」（手機無桌機鈕、390 時隊伍鈕寬度＝OFF；桌機無手機 chip）。
+  - 教訓：一致性檢查只比「數值對不對」，沒有比「這個元素該不該在這一端出現」。
+
+### 六、未經真機實測
+
+- 真實手機觸控（chip 往下延伸的點擊區、sheet 捲動）、4G 效能、實際字級都未測；截圖為 headless Chrome（SwiftShader WebGL）。
+- 購買通知的動畫觀感未錄影逐幀檢查。
+
+### 七、停止點
+
+M3b 完成後依 Owner 指示停止，等 Owner Review；未開始 M3c（英雄詳情）／M3d（戰術卡）／M3e（Replay）。

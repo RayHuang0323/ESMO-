@@ -434,7 +434,9 @@ const COMPS = {
   };
   walk("src");
   //  M3a：useLocalServer（受 itemsV1 開關保護）、DEV 工具、裝備 UI 元件也可以讀 items 模組。
-  const allowedImporter = (f) => f === "src/LogicEngine.js" || f === "src/useLocalServer.js" || f.startsWith("src/debug/") || f.startsWith("src/battle/ui/items/");
+  //  M3b：戰鬥底層 BattleObserverHUD 只讀 itemsUiSelectors（replay 與 OFF 時回 null）。
+  const allowedImporter = (f) => f === "src/LogicEngine.js" || f === "src/useLocalServer.js" || f === "src/battle/ui/BattleObserverHUD.jsx"
+    || f.startsWith("src/debug/") || f.startsWith("src/battle/ui/items/");
   ck("G13", "只有 LogicEngine（opt-in）、useLocalServer（開關保護）、DEV 工具與裝備 UI import items 模組", importers.every(allowedImporter) && importers.includes("src/LogicEngine.js"), importers.join(","));
   const callers = [];
   const walkCalls = (d) => {
