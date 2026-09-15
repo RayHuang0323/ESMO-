@@ -41,7 +41,9 @@ export class ItemsEngineRuntime {
    * @param config  { [playerId]: { arch, healer, strategy, heroId } }
    * @param radii   { minion, tower, camp }（沿用引擎 XP 的歸屬半徑）
    */
-  constructor({ players, config = {}, batch = LAUNCH_BATCH, catalog = ITEM_CATALOG, radii, meta = null }) {
+  constructor({ players, config = {}, batch = LAUNCH_BATCH, catalog = ITEM_CATALOG, radii, meta = null, incomeMultiplier = 1 }) {
+    //  M4b：個人收入統一倍率（所有收入來源同乘；開局金錢不乘）。預設 1 ⇒ 與 M4a 逐位元相同。
+    this.incomeK = Number.isFinite(incomeMultiplier) && incomeMultiplier > 0 ? incomeMultiplier : 1;
     this.batch = batch;
     this.catalog = catalog;
     this.radii = radii;
@@ -110,7 +112,8 @@ export class ItemsEngineRuntime {
   // ── 收入（整數 milli-gold；鏡像 legacy 數值）───────────────────────────────
   _earn(id, source, milli) {
     const s = this.ps.get(id);
-    if (s && milli > 0) s.ledger = earn(s.ledger, source, milli);
+    const m = this.incomeK === 1 ? milli : Math.round(milli * this.incomeK);
+    if (s && m > 0) s.ledger = earn(s.ledger, source, m);
   }
   _split(ids, source, totalMilli) {
     for (const [id, milli] of splitMilli(totalMilli, ids)) this._earn(id, source, milli);

@@ -89,7 +89,7 @@ export function mirroredRoster(seed, M) {
   return roster;
 }
 
-export function configure(seed, config, M) {
+export function configure(seed, config, M, incomeK = 1) {
   const roster = mirroredRoster(seed, M);
   const e = new M.LE.LogicEngine(seed);
   const heroMods = M.profile.toEngineHeroMods(roster, M.heroes.heroById);
@@ -106,7 +106,11 @@ export function configure(seed, config, M) {
       strategySide = seed % 2 === 0 ? "blue" : "red";
       for (const pid of Object.keys(roster)) strategies[pid] = (pid[0] === "b") === (strategySide === "blue") ? config : "standard";
     }
-    e.configureItems(M.adapter.toEngineItems({ roster, heroLookup: M.heroes.heroById, strategies, defaultStrategy: "standard" }));
+    const itemsCfg = M.adapter.toEngineItems({ roster, heroLookup: M.heroes.heroById, strategies, defaultStrategy: "standard" });
+    e.configureItems(itemsCfg);
+    //  M4b 量測：倍率直接寫進裝備 runtime（不動 LogicEngine ⇒ moba-sim 指紋不變）。
+    //  configureItems 當下只有出生購買（花開局金錢，不入帳）⇒ 第一個 tick 前設定等同從頭生效。
+    if (incomeK !== 1) e.items.incomeK = incomeK;
   }
   return { e, roster, strategySide };
 }
@@ -126,10 +130,10 @@ const towersDown = (e) => {
   return { blue: s.blue.lane + s.blue.guard, red: s.red.lane + s.red.guard };
 };
 
-export async function runMatch(config, seed) {
+export async function runMatch(config, seed, incomeK = 1) {
   const M = await modules();
   const started = performance.now();
-  const { e, roster, strategySide } = configure(seed, config, M);
+  const { e, roster, strategySide } = configure(seed, config, M, incomeK);
   const itemsOn = !!e.items;
   const getItem = M.catalog.getItem;
   const players = e.players;
@@ -262,7 +266,7 @@ if (process.argv.includes("--worker")) {
   process.on("message", async (task) => {
     if (task?.type !== "run") return;
     try {
-      const r = await runMatch(task.config, task.seed);
+      const r = await runMatch(task.config, task.seed, task.incomeK ?? 1);
       process.send({ type: "done", key: task.key, result: r });
     } catch (err) {
       process.send({ type: "error", key: task.key, error: String(err?.stack ?? err) });
@@ -280,9 +284,12 @@ async function main() {
   const configs = String(arg("configs", ALL_CONFIGS.join(","))).split(",").filter((c) => ALL_CONFIGS.includes(c));
   const workers = Math.max(1, Math.min(Number(arg("workers", Math.max(1, Math.min(6, os.cpus().length - 2)))), 12));
   const outDir = path.resolve(ROOT, arg("out", "reports/moba-items-m4a"));
+  //  M4b：個人收入倍率（只影響 itemsV1 設定；off 不受影響）
+  const incomeK = Number(arg("incomeK", 1));
+  if (!(incomeK > 0)) throw new Error(`--incomeK 必須為正數：${incomeK}`);
   fs.mkdirSync(outDir, { recursive: true });
   const tasks = [];
-  for (const config of configs) for (let i = 0; i < seeds; i++) tasks.push({ type: "run", key: `${config}:${seedStart + i}`, config, seed: seedStart + i });
+  for (const config of configs) for (let i = 0; i < seeds; i++) tasks.push({ type: "run", key: `${config}:${seedStart + i}`, config, seed: seedStart + i, incomeK });
   const results = new Map();
   const t0 = Date.now();
   let next = 0, done = 0, failed = 0;
@@ -317,7 +324,7 @@ async function main() {
   const ordered = tasks.map((t) => results.get(t.key)).filter(Boolean);
   const ok = ordered.filter((r) => !r.error);
   await modules();   // 主程序寫 item_purchases.csv 需要物品目錄（worker 各自載入，主程序這裡才載）
-  writeOutputs(outDir, ok, { seeds, seedStart, configs, workers, failed, wallS: Math.round((Date.now() - t0) / 1000) });
+  writeOutputs(outDir, ok, { seeds, seedStart, configs, incomeK, workers, failed, wallS: Math.round((Date.now() - t0) / 1000) });
   log(`完成：${ok.length} 場、失敗 ${failed}，耗時 ${Math.round((Date.now() - t0) / 1000)}s`);
   process.exit(failed ? 1 : 0);
 }

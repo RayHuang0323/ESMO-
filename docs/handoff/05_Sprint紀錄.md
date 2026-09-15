@@ -21771,3 +21771,48 @@ DEV `?itemsDev=1`、1366×900、不切倍速，同一場比賽：Tactic → Load
 ### 五、未做
 
 - 未改任何數值；未 push、未 deploy；未跑瀏覽器 gate（本輪沒有 UI 改動）。
+
+## MOBA Item System — M4b Economy Multiplier ＋ Tower Dive Audit（2026-09-16）
+
+分支 `design/moba-items-v1-m0`。經濟段只動收入倍率；塔段只找根因、未修。dmgK、裝備數值／價格、AI 出裝、塔規則皆未改。
+
+### 一、M4b Economy
+
+- `itemsEngineRuntime.js`：新增 `incomeK`（預設 1，入帳 `_earn` 乘倍率，開局金錢不乘）；`LogicEngine.js` 未改 ⇒ `moba-sim.v4` 指紋不變。
+- runner 新增 `--incomeK=`。倍率 1 與 M4a 逐列相同（matches 6/6、players 60/60）。
+- 掃描 standard 各 200 seeds（`reports/moba-items-m4b/k1.6|k1.8|k1.9|k2.0`）：
+
+| 倍率 | 第一／二／三件 T3 | 20 分每人 T3 | 中位／P90 | >35 分 | 60 分未結束 |
+|---|---|---|---|---|---|
+| 1.0 | 15.61／21.83／32.22 | 1.03 | 22.85／26.96 | 2.5% | 3 |
+| 1.6 | 10.77／18.44／20.78 | 1.85 | 22.38／25.85 | 2.0% | 0 |
+| 1.8 | 9.78／17.19／20.00 | 2.23 | 22.42／26.61 | 1.0% | 1 |
+| **1.9** | **9.34／16.62／19.50** | **2.36** | **22.25／25.14** | 2.5% | 2 |
+| 2.0 | 9.06／15.95／19.18 | 2.50 | 22.05／25.42 | 1.5% | 2 |
+
+- 最佳 1.9：唯一五個定位第一件 T3 中位全部在 7–11 的倍率。1.9 下 early／scaling／counter／survival 各 200 seeds 全部達標（策略方勝率 48.0–55.1%）。
+- 帳務：所有倍率與策略購買被拒 0、背包違規 0、守恆失敗 0。
+- 正式預設仍為 1，上線需另行核准。報告：`docs/design/MOBA_裝備經濟調整_M4b_v1.md`。
+
+### 二、Tower Dive Audit
+
+- 工具 `tools/audit/moba_tower_dive_audit.mjs`；證據 `reports/moba-tower-dive-audit/audit.json`；報告 `docs/design/MOBA_塔下越塔Audit_v1.md`。
+- 根因：
+  1. 碰撞讓英雄離塔中心 ≥ ~4.5、塔打英雄只到 6 ⇒ 攻擊方站在射程外就能打抱塔守方（早期單人 320–472 命中 tick、塔 0 發）；
+  2. 塔傷乘 lateFactor（20 分單發 47.8%、25 分 63.8% 最大生命），AI 越塔／撤退評估固定 66／秒 ⇒ 後期低估 14–19 倍、半血在射程內 80% 秒死；
+  3. 路塔增幅每 tick 被清零、lane band 與世界距離不同源造成射程內 0 發死區、門牙塔 AI 塔區 13 vs 實際 6。
+- 早期越塔行為正常：進塔 ≤ 1 秒、最多 2 發、撤退後 0 發、0 陣亡。
+
+### 三、驗證
+
+| 驗證 | 結果 |
+|---|---|
+| `node tools/check_moba_items_m1.mjs` | 69/69 PASS |
+| `node tools/check_moba_items_m2.mjs` | 53/53 PASS（G1 legacy 指紋、G8 模擬版本閘門綠） |
+| `node tools/check_moba_items_m3.mjs`（commit 前） | 65/66：只有 G6「裝備模組相對 HEAD 無改動」擋下 `itemsEngineRuntime.js`（本次刻意改動；G6 比對 `git diff HEAD`，commit 後重跑） |
+| `node tools/regress.mjs` | 結束率 15/15、平均 21.6 分 |
+| `node tools/regress2.mjs` | 節奏門檻 8/8 |
+
+### 四、未做
+
+- 未修塔、未改 AI；未上線倍率；未 push、未 deploy；未跑瀏覽器（無 UI 改動）。
