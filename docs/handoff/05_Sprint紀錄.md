@@ -21843,8 +21843,8 @@ DEV `?itemsDev=1`、1366×900、不切倍速，同一場比賽：Tactic → Load
 |---|---|
 | `check_simulation_version_gate` | 51/51 PASS（v5 指紋） |
 | `check_moba_items_m1` | 69/69 PASS |
-| `check_moba_items_m2` | 見下方 commit 後結果 |
-| `check_moba_items_m3` | 見下方 commit 後結果 |
+| `check_moba_items_m2` | 53/53 PASS（commit `55b6cef` 後） |
+| `check_moba_items_m3` | 66/66 PASS（commit `55b6cef` 後） |
 | `regress` | 13/15（平均 25.3 分；基準 15/15、21.6 分） |
 | `regress2` | **7/8**：20/20 收得掉、平均 25.9、中位 25.4 過；最長 36.4 分 > 32 ❌ |
 | `check_combat_threat_l2` | 17/19（與 HEAD 相同的兩項，數字更好：打小兵 15→36 發、超距 5→1） |
