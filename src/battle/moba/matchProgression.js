@@ -412,6 +412,29 @@ SIM_RULES.v3 = {
   //  門牙塔的接戰半徑（它不在 lane 上，本來就用世界距離；抽出來讓 debug 射程圈
   //  能照每座建築畫正確大小，不再一律畫 towerAggroRange）。
   nexusGuardRange: 13,
+  //  ── M4b.5 Tower Safety & Dive Fix（2026-09-16）──────────────────────────────
+  //  根因與量測：docs/design/MOBA_塔下越塔Audit_v1.md。開啟後（v1/v2 沒有這個鍵 ⇒ 舊路徑逐位元不變）：
+  //   · 射程：LogicEngine.towerRange() = 碰撞外緣＋本場最長英雄攻擊距離（不再讀 towerAggroRange／nexusGuardRange）
+  //   · 塔對英雄單發：towerHeroShot × 時間曲線 × 連續命中增幅，**不乘 lateFactor**，而且可以擊殺
+  //     時間曲線 min(cap, 1 + max(0, t − T0) / div)：10 分 ×1.56、20 分 ×2.26、25 分以後 ×2.6
+  //     ⇒ 單發約 39／57／65（英雄最大生命 836／951／1006 的 4.5–6.5%）；舊值 20 分 455（48%）、25 分 642（64%）
+  //     ⚠ 單發 25 而不是舊的 33：射程從 6 變成約 13，站在塔區的時間變長。
+  //       同一組 8 seeds 實測（HEAD 基準中位 21.2 分）：33 ⇒ 中位 27.4 分；25 ⇒ 23.3 分
+  //   · AI 越塔／風險／塔區退出用同一個單發函式估算吃幾發與能否撤離
+  //   · 塔的仇恨：打兵分支找不到小兵時不清英雄鎖定；「有兵先打兵」改用世界距離
+  towerSafetyV1: true,
+  towerHeroShot: 25,          // 開局單發（舊 66 × 0.5 = 33；見上方說明）
+  towerHeroTimeT0: 120,
+  towerHeroTimeDiv: 860,
+  towerHeroTimeCap: 2.6,
+  towerFallbackStructR: 2.5,  // 導航沒有該結構圓時的保底半徑（與 mobaNavigation 的預設同值）
+  towerEscapeHoldSec: 1.0,    // 塔區撤離估算：決策到開始走出射程之間仍會吃塔的秒數
+  towerHitsResetSec: 3,       // 離開塔區滿這麼久，連續吃塔計數才歸零（防止在射程邊緣進出重領額度）
+  //  撤退門檻加上「走出射程會吃的塔傷」：
+  //    "onMe"    只在塔正鎖定我時（預設）
+  //    "exposed" 另含沒有己方小兵扛塔的所有人
+  //    false     不加
+  towerRetreatExposure: "onMe",
   //  ── M1.6：站位穩定化（修「兩三個英雄靠近後持續繞圈、長時間不攻擊」）────────
   //  舊站位以「我→敵人」的當下向量取垂直方向做側向偏移，側移會轉動該向量
   //  ⇒ 目標點跟著轉 ⇒ 必然繞圈。開啟後：站位框改用「我方基地→敵人」這條不隨

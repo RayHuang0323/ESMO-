@@ -27,7 +27,7 @@ import {
 //    mobaNavigation（由地圖 wallItems 柵格化的距離場 + 動態結構圓）。
 //    `gameData.WALLS` 只剩 legacy 畫面在用，不再是碰撞來源。
 import {
-  HERO_RADIUS, moveTowards, projectToWalkable, findPath, recenterToCorridor, lineWalkable,
+  HERO_RADIUS, moveTowards, projectToWalkable, findPath, recenterToCorridor, lineWalkable, structureList,
 } from "./battle/moba/nav/mobaNavigation.js";
 //  H.2：塔位的單一真實來源（由地圖呈現座標推回 lane t），取代 posOnLane(lane, TOWER_T)。
 import {
@@ -436,6 +436,7 @@ export class LogicEngine {
     this.archOn = true;
     this.archMeta = meta;
     this.arch = { ...(blue ?? {}), ...(red ?? {}) };
+    this._towerRangeCache = null;   // M4b.5：塔射程依本場英雄攻擊距離推導，換原型要重算
   }
   /** 該英雄的戰鬥原型；未啟用 / 無資料 ⇒ null（＝走原始路徑）。 */
   _arch(p) { return this.archOn ? (this.arch[p.id] ?? null) : null; }
@@ -1092,7 +1093,8 @@ export class LogicEngine {
     }
     let hasWave = false;
     if (enemyTower) hasWave = this._hasWaveAtStructure(p.side, enemyTower);
-    const inTowerRisk = !!enemyTower && towerDist <= (R.towerAggroRange ?? 8) + 2;
+    const inTowerRisk = !!enemyTower &&
+      towerDist <= (R.towerSafetyV1 ? this.towerRange(enemyTower) : (R.towerAggroRange ?? 8)) + 2;
     const towerDefenders = enemyTower
       ? alive.filter((q) => q.side !== p.side && dist(q.pos, enemyTower.pos) < 11).length
       : 0;
@@ -1314,15 +1316,29 @@ export class LogicEngine {
     if (ally && ad > 3) return { pos: { ...ally.pos }, st: "集合", fsm: "SETUP", intent: "向隊友集合" };
     return null;
   }
-  _towerZoneV17(p, alive, objective = null) {
+  _towerZoneV17(p, alive, objective = null, at = null) {
     const R = this.rules;
+    //  M4b.5：`at` ＝ 判定位置（預設目前位置）。移動目標也要判——否則站位層把目標點推回塔下，
+    //  英雄在射程邊緣「出去一步、進來一步」每秒吃一發（實測近戰一場 24 發）。
+    const here = at ?? p.pos;
     let tw = null, td = Infinity;
     for (const t of Object.values(this.towers)) {
       if (t.hp <= 0 || t.side === p.side) continue;
-      const d = dist(p.pos, t.pos);
+      const d = dist(here, t.pos);
       if (d <= this.towerRange(t) && d < td) { td = d; tw = t; }
     }
-    if (!tw) { p.towerHits = 0; return { inZone: false, allow: true, tower: null }; }
+    if (!tw) {
+      if (at) return { inZone: false, allow: true, tower: null };
+      //  M4b.5：離開塔區要滿 `towerHitsResetSec` 才歸零連續吃塔計數。
+      //  立刻歸零 ⇒ 英雄在射程邊緣出去一步再進來，3 發額度一直重新發。
+      if (!R.towerSafetyV1) p.towerHits = 0;
+      else {
+        p.towerZoneLeftAt ??= this.t;
+        if (this.t - p.towerZoneLeftAt >= (R.towerHitsResetSec ?? 0)) p.towerHits = 0;
+      }
+      return { inZone: false, allow: true, tower: null };
+    }
+    if (R.towerSafetyV1 && !at) p.towerZoneLeftAt = null;
     const hasWave = this._hasWaveAtStructure(p.side, tw);
     const hpOk = p.hp >= p.maxHp * (R.diveMinHp ?? 0.55);
     const shotsOk = (p.towerHits ?? 0) < (R.diveMaxShots ?? 3);
@@ -1357,8 +1373,28 @@ export class LogicEngine {
     //    引擎本來就允許無兵線攻城（`nexusGuardNoWaveK` 0.62 是**乘數不是歸零**），
     //    決策層不該把它擋死。
     const sieging = !!objective && objective === tw;
-    const allow = hpOk && shotsOk && (sieging || hasWave || kill);
-    return { inZone: true, allow, tower: tw, hasWave, hpOk, shotsOk, kill, sieging, killWhy };
+    //  M4b.5：撤得出去嗎？——用與塔開火同一個單發函式，估「反應時間＋從這裡走出射程會吃多少」。
+    //  被己方兵線坦住且不是塔的威脅目標 ⇒ 塔不會打他。
+    let escapeOk = true;
+    let shotsGate = shotsOk;
+    if (R.towerSafetyV1) {
+      const tanked = this._towerMinionsInRange(tw) > 0 && !((p.towerThreatUntil ?? 0) > this.t);
+      const ex = this._towerExposure(p, tw, R.towerEscapeHoldSec ?? 0, !tanked, here);
+      escapeOk = ex.dmg * (R.diveSafetyMargin ?? 1.25) < p.hp;
+      //  射程改成碰撞外緣＋攻擊距離之後，圍攻與推線一定站在射程內，舊的「連續 3 發就退」
+      //  會把推塔的人一直逼退（實測 8 場只收掉 4–6 場、中位 40.9–45 分）。放寬只給兩種情況：
+      //   · 己方小兵在射程內扛塔、而且我不是塔的威脅目標 ⇒ 塔不會打我，計數歸零
+      //   · 真的拆得動的圍攻／推線（與可攻塔判定同一個 `_siegeAllowedV3`：沒有守軍或人數優勢）
+      //  ⚠ 守方站在塔下、拆不動塔時照舊 3 發就退——否則單人會在塔下吃到半血（實測 7–12 發）。
+      //  ⚠ 只放寬「有兵扛塔」（不含無守軍圍攻）⇒ 8 場只收 4 場；只放寬多人 ⇒ 2–5 場。
+      if (tanked) p.towerHits = 0;
+      if (tanked || ((sieging || hasWave) && this._siegeAllowedV3(p, tw, alive))) shotsGate = true;
+    }
+    //  M4b.5：「圍攻」要真的拆得動才算進塔理由（守軍在塔邊、人數不佔優 ⇒ 英雄傷害為零，
+    //  站進去只是吃塔）。有兵線與強殺兩條理由不變。
+    const siegeReason = sieging && (!R.towerSafetyV1 || this._siegeAllowedV3(p, tw, alive));
+    const allow = hpOk && shotsGate && escapeOk && (siegeReason || hasWave || kill);
+    return { inZone: true, allow, tower: tw, hasWave, hpOk, shotsOk, escapeOk, kill, sieging, killWhy };
   }
 
   /**
@@ -1380,23 +1416,45 @@ export class LogicEngine {
   _diveAssessV18(p, target, tw, alive) {
     const R = this.rules;
     //  ① 殺得掉？——用既有傷害公式的**同一組係數**做唯讀估算
-    const myDps = Math.max(1e-6, p.power * (R.dmgK ?? 0.92));
+    //  M4b.5：英雄傷害估算補上 lateFactor（實際傷害式有乘，估算沒乘 ⇒ 後期 TTK 高估十幾倍）
+    const safe = !!R.towerSafetyV1;
+    //  M4b.5：組團越塔要算隊友——目標附近（攻擊距離＋4 內）未撤退的己方英雄一起輸出
+    let myDps;
+    if (safe) {
+      myDps = this._heroDpsEst(p);
+      for (const q of alive) {
+        if (q === p || q.dead || q.side !== p.side || q.retreating) continue;
+        if (dist(q.pos, target.pos) <= this._engageRange(q) + 4) myDps += this._heroDpsEst(q);
+      }
+      myDps = Math.max(1e-6, myDps);
+    } else myDps = Math.max(1e-6, p.power * (R.dmgK ?? 0.92));
     const ttk = target.hp / myDps;
     if (ttk > (R.diveMaxTtk ?? 6)) return { ok: false, why: "predicted_ttk_too_long" };
 
-    //  ③ 走得掉？——先算撤離時間，再把它算進暴露時間
     const range = this.towerRange(tw);
-    const gap = Math.max(0, range - dist(p.pos, tw.pos)) + (R.diveEscapeMargin ?? 2);
-    const speed = Math.max(1e-6, R.moveSpeed ?? 5.6);
-    const escapeT = gap / speed;
-    const exposure = ttk + escapeT;
+    let expected;
+    if (safe) {
+      //  M4b.5：②③ 改用與塔開火同一個單發函式。
+      //  暴露＝走到攻擊距離＋輸出 ttk（塔會轉火打我）＋從目標位置走出射程；增幅逐發往上疊。
+      const speed = Math.max(1e-6, R.moveSpeed ?? 5.6);
+      const approach = Math.max(0, dist(p.pos, target.pos) - this._engageRange(p)) / speed;
+      const ex = this._towerExposure(p, tw, ttk + approach, true, target.pos);
+      const foeDmg = this._heroDpsEst(target) * (ttk + approach);
+      expected = (ex.dmg + foeDmg) * (R.diveSafetyMargin ?? 1.25);
+    } else {
+      //  ③ 走得掉？——先算撤離時間，再把它算進暴露時間
+      const gap = Math.max(0, range - dist(p.pos, tw.pos)) + (R.diveEscapeMargin ?? 2);
+      const speed = Math.max(1e-6, R.moveSpeed ?? 5.6);
+      const escapeT = gap / speed;
+      const exposure = ttk + escapeT;
 
-    //  ② 不會先死？——塔傷（含連續命中增幅）＋ 目標反擊
-    const ramp = Math.min(R.towerLockRampMax ?? 1,
-      1 + (p.towerHits ?? 0) * (R.towerLockRamp ?? 0));
-    const towerDmg = (R.towerAggroDmg ?? 66) * exposure * ramp;
-    const foeDmg = target.power * (R.dmgK ?? 0.92) * Math.min(ttk, exposure);
-    const expected = (towerDmg + foeDmg) * (R.diveSafetyMargin ?? 1.25);
+      //  ② 不會先死？——塔傷（含連續命中增幅）＋ 目標反擊
+      const ramp = Math.min(R.towerLockRampMax ?? 1,
+        1 + (p.towerHits ?? 0) * (R.towerLockRamp ?? 0));
+      const towerDmg = (R.towerAggroDmg ?? 66) * exposure * ramp;
+      const foeDmg = target.power * (R.dmgK ?? 0.92) * Math.min(ttk, exposure);
+      expected = (towerDmg + foeDmg) * (R.diveSafetyMargin ?? 1.25);
+    }
     if (expected >= p.hp) return { ok: false, why: "would_die_before_kill" };
 
     //  ④ 人數：塔邊的敵方英雄不能多於我方（含自己）
@@ -1458,7 +1516,13 @@ export class LogicEngine {
     let towerThreat = 0;
     for (const t of Object.values(this.towers)) {
       if (t.hp <= 0 || t.side === p.side) continue;
-      if (dist(p.pos, t.pos) <= this.towerRange(t)) { towerThreat = R.towerAggroDmg ?? 66; break; }
+      if (dist(p.pos, t.pos) <= this.towerRange(t)) {
+        //  M4b.5：與塔開火同一個單發函式（含對我的連續命中增幅），換算成每秒傷害
+        towerThreat = R.towerSafetyV1
+          ? this._towerHeroShot(t.targetKind === "hero" && t.targetId === p.id ? (t.lockShots ?? 0) : 0) / (R.towerAttackInterval || 0.5)
+          : (R.towerAggroDmg ?? 66);
+        break;
+      }
     }
 
     //  退路：退回我方半場所需時間，以及這段時間預估承受的傷害
@@ -2419,10 +2483,12 @@ export class LogicEngine {
       if (R.towerAttackInterval) {
         // Milestone C：英雄在敵方塔下攻擊該塔隊友時，短時間成為優先仇恨目標。
         // 只記錄事實，不改英雄傷害；塔端仍會檢查射程與存活。
+        //  M4b.5：與塔開火同一個射程——守方在射程內、攻擊者也在射程內 ⇒ 塔轉火
         const threatened = Object.values(this.towers).some((tw) =>
           tw.hp > 0 && tw.side === foe.side &&
-          dist(foe.pos, tw.pos) <= R.towerAggroRange + 1 &&
-          dist(p.pos, tw.pos) <= R.towerAggroRange);
+          (R.towerSafetyV1
+            ? dist(foe.pos, tw.pos) <= this.towerRange(tw) && dist(p.pos, tw.pos) <= this.towerRange(tw)
+            : dist(foe.pos, tw.pos) <= R.towerAggroRange + 1 && dist(p.pos, tw.pos) <= R.towerAggroRange));
         if (threatened) p.towerThreatUntil = this.t + R.towerChampionThreatT;
       }
       if (p.atkCd <= 0) {
@@ -2451,9 +2517,7 @@ export class LogicEngine {
     let canSiege = false;
     if (tw && dist(p.pos, tw.pos) < 6) {
       if (R.engagementFsm) {
-        const defN = alive.filter((q) => q.side !== p.side && !q.retreating && dist(q.pos, tw.pos) < 9).length;
-        const atkN = alive.filter((q) => q.side === p.side && dist(q.pos, tw.pos) < 9).length;
-        canSiege = defN === 0 || atkN > defN;
+        canSiege = this._siegeAllowedV3(p, tw, alive);
       } else canSiege = !alive.some((q) => q.side !== p.side && dist(q.pos, tw.pos) < 9);
     }
     if (canSiege) {
@@ -2637,8 +2701,108 @@ export class LogicEngine {
    */
   towerRange(tw) {
     const R = this.rules;
+    if (R.towerSafetyV1) return this._towerSafeRange(tw);
     return (tw.lane === "nexus_guard" || tw.lane === "nexus")
       ? (R.nexusGuardRange ?? 13) : R.towerAggroRange;
+  }
+  /**
+   * M4b.5 Tower Safety：塔的接戰半徑＝**碰撞外緣＋本場最長的英雄攻擊距離**。
+   *
+   * 根因（`docs/design/MOBA_塔下越塔Audit_v1.md` §2.1、§5-1）：塔的碰撞圓讓英雄離塔心
+   * 至少約 4.5，塔打英雄卻只到 6 ⇒ 真正會挨打的只剩 1.5 寬的環，所有英雄（攻擊距離 4–8.4）
+   * 都能站在射程外打抱塔的守方，塔也永遠不轉火。
+   * 這裡讓「抱塔守方」一定能被塔保護：攻擊方要打到他，自己必然在射程內。
+   *   · 碰撞外緣：導航的結構圓半徑＋英雄半徑＋呈現座標與模擬座標的位移（取最壞方向）
+   *   · 攻擊距離：本場十名英雄 `_engageRange` 的最大值（雙方同一個值 ⇒ 陣營對稱；
+   *     未配置原型時沿用引擎預設 8）
+   * 實際開火、仇恨、AI 塔區、debug 射程圈全部讀這個值。
+   */
+  _towerSafeRange(tw) {
+    if (!this._towerRangeCache) {
+      const cover = Math.max(...this.players.map((p) => this._engageRange(p)));
+      const structs = new Map(structureList().map((s) => [s.id, s]));
+      this._towerRangeCache = new Map();
+      for (const [id, t] of Object.entries(this.towers)) {
+        const s = structs.get(id);
+        const edge = (s ? s.r + dist(s, t.pos) : (this.rules.towerFallbackStructR ?? 2.5)) + HERO_RADIUS;
+        this._towerRangeCache.set(t, Math.round((edge + cover) * 100) / 100);
+      }
+    }
+    return this._towerRangeCache.get(tw) ?? (this.rules.nexusGuardRange ?? 13);
+  }
+  /**
+   * M4b.5：塔對英雄的**單發傷害**（塔開火與 AI 估算共用的唯一來源）。
+   * 與 lateFactor 脫鉤：自己的時間曲線 × 連續命中增幅。
+   */
+  _towerHeroShot(lockShots = 0) {
+    const R = this.rules;
+    const timeK = Math.min(R.towerHeroTimeCap ?? 1, 1 + Math.max(0, this.t - (R.towerHeroTimeT0 ?? 0)) / (R.towerHeroTimeDiv ?? Infinity));
+    const ramp = Math.min(R.towerLockRampMax ?? 1, 1 + lockShots * (R.towerLockRamp ?? 0));
+    return (R.towerHeroShot ?? 33) * timeK * ramp;
+  }
+  /**
+   * S29B1（v3）的可攻塔判定（抽出成單一來源，行為逐字不變）：
+   * 塔邊（9 內）沒有未撤退的守軍，或攻方人數多於守軍。
+   * M4b.5 起塔區退出也讀它：「這一次圍攻是真的拆得動」才放寬連續吃塔上限。
+   */
+  _siegeAllowedV3(p, tw, alive) {
+    const defN = alive.filter((q) => q.side !== p.side && !q.retreating && dist(q.pos, tw.pos) < 9).length;
+    const atkN = alive.filter((q) => q.side === p.side && dist(q.pos, tw.pos) < 9).length;
+    return defN === 0 || atkN > defN;
+  }
+  /** M4b.5：射程內的攻方小兵數（塔會先打兵 ⇒ 英雄被兵線坦住）。 */
+  _towerMinionsInRange(tw) {
+    const key = tw.side === "blue" ? "rm" : "bm";
+    const range = this.towerRange(tw);
+    const lanes = this.lanes[tw.lane] ? [tw.lane] : ["top", "mid", "bot"];
+    let n = 0;
+    for (const ln of lanes) for (const m of this.lanes[ln][key]) if (dist(posOnLane(ln, m.t), tw.pos) <= range) n++;
+    return n;
+  }
+  /**
+   * M4b.5：預估這名英雄在這座塔下會吃幾發、多少傷害。
+   *   holdSec     在塔下停留（輸出）的秒數
+   *   assumeAggro 塔會打他（false ⇒ 被兵線坦住，停留期間不吃塔）
+   *   from        撤離起點（預設目前位置；越塔評估用目標位置）
+   * 撤離時間＝離射程邊緣的距離 ÷ 移速；每 `towerAttackInterval` 一發，增幅從目前鎖定數往上疊。
+   */
+  _towerExposure(p, tw, holdSec = 0, assumeAggro = true, from = p.pos) {
+    const R = this.rules;
+    const range = this.towerRange(tw);
+    const speed = Math.max(1e-6, (R.moveSpeed ?? 5.6) * (p.retreating ? (R.retreatSpeedMult ?? 1) : 1));
+    const escapeT = Math.max(0, range - dist(from, tw.pos)) / speed;
+    if (!assumeAggro) return { range, escapeT, shots: 0, dmg: 0 };
+    const interval = R.towerAttackInterval || 0.5;
+    const sec = holdSec + escapeT;
+    const shots = sec > 0 ? Math.ceil(sec / interval) : 0;
+    const lock0 = tw.targetKind === "hero" && tw.targetId === p.id ? (tw.lockShots ?? 0) : 0;
+    let dmg = 0;
+    for (let i = 0; i < shots; i++) dmg += this._towerHeroShot(lock0 + i);
+    return { range, escapeT, shots, dmg };
+  }
+  /** M4b.5：英雄每秒傷害的唯讀估算（與實際傷害式同一組係數，含 lateFactor）。 */
+  _heroDpsEst(p) {
+    return p.power * (this.rules.dmgK ?? 0.92) * (this._lateFactorNow ?? 1);
+  }
+  /**
+   * M4b.5：塔補最後一下時的擊殺歸屬（維持 Σk == bK+rK == Σd 的結果契約）。
+   * 8 秒助攻窗內**最後**打到他的敵方英雄；沒有 ⇒ 最近的敵方英雄（同距離依席位順序）。
+   */
+  _towerKillerFor(foe) {
+    let best = null, bt = -Infinity;
+    for (const [id, at] of foe.hitBy) {
+      if (this.t - at > 8) continue;
+      const q = this.players.find((x) => x.id === id && x.side !== foe.side);
+      if (q && at > bt) { bt = at; best = q; }
+    }
+    if (best) return best;
+    let nd = Infinity;
+    for (const q of this.players) {
+      if (q.side === foe.side) continue;
+      const d = q.dead ? Infinity : dist(q.pos, foe.pos);
+      if (!best || d < nd) { nd = d; best = q; }
+    }
+    return best;
   }
   /**
    * M1.6：開啟戰鬥 Debug 輸出（`?diag=1` 時由呈現層呼叫）。
@@ -2868,6 +3032,7 @@ export class LogicEngine {
     //   不再拖出 30 分鐘長尾。v1/v2 無此欄位 ⇒ 第二項恆為 0，行為不變。
     const lateFactor = 1 + Math.max(0, this.t - 360) / 600 +
       (R.lateAccelT ? Math.max(0, this.t - R.lateAccelT) / R.lateAccelDiv : 0);
+    this._lateFactorNow = lateFactor;   // M4b.5：AI 傷害估算讀同一個值（唯讀）
     if (this.itemsOn) this.items.beginTick(this.players);   // M2：光環（tick 開頭的凍結位置）
 
     this.waveTimer -= dt;
@@ -3101,14 +3266,14 @@ export class LogicEngine {
           //  ⚠ 舊規則集沒有 `towerRangeWorld` ⇒ 仍走 band ⇒ 歷史基準逐位元不變。
           const inRange = R.towerRangeWorld
             ? this.lanes[ln][enemyKey].filter((mm) =>
-              dist(posOnLane(ln, mm.t), tw.pos) <= R.towerAggroRange)
+              dist(posOnLane(ln, mm.t), tw.pos) <= (R.towerSafetyV1 ? this.towerRange(tw) : R.towerAggroRange))
             : this.lanes[ln][enemyKey].filter((mm) =>
               Math.abs(mm.t - tw.t) < (R.towerMinionBand ?? 0.05));
           if (R.towerAttackInterval) {
             const enemySide = side === "blue" ? "red" : "blue";
             const priorityHero = this.players.some((p) =>
               !p.dead && p.side === enemySide && (p.towerThreatUntil ?? 0) > this.t &&
-              dist(p.pos, tw.pos) < R.towerAggroRange);
+              (R.towerSafetyV1 ? dist(p.pos, tw.pos) <= this.towerRange(tw) : dist(p.pos, tw.pos) < R.towerAggroRange));
             if (priorityHero) continue; // 塔下攻擊英雄：下一發切到英雄，符合 MOBA 仇恨規則。
             // 固定鎖定仍在射程內的目標；目標離場後才換人，避免血條與鎖定提示抖動。
             let m = tw.targetKind === "minion" ? inRange.find((mm) => mm.id === tw.targetId) : null;
@@ -3119,7 +3284,11 @@ export class LogicEngine {
                 : (mm) => Math.abs(mm.t - tw.t);
               m = inRange.slice().sort((a, b) =>
                 key2(a) - key2(b) || String(a.id).localeCompare(String(b.id)))[0] ?? null;
-              tw.targetId = m?.id ?? null; tw.targetKind = m ? "minion" : null; tw.lockShots = 0;
+              //  M4b.5：射程內沒有小兵時**不清掉英雄鎖定**——否則路塔每一發都是第 1 發，
+              //  連續命中增幅永遠不生效（Audit §2.2）。有小兵時照舊改鎖小兵。
+              if (m || !R.towerSafetyV1 || tw.targetKind !== "hero") {
+                tw.targetId = m?.id ?? null; tw.targetKind = m ? "minion" : null; tw.lockShots = 0;
+              }
             }
             // 舊 v3 每個「塔有目標」tick 都為 renderer FX 消耗一次主 rng。
             // 離散射擊不再靠該骰值決定顯示，但仍消耗，避免視覺重構污染後續戰鬥決策序列。
@@ -3162,8 +3331,11 @@ export class LogicEngine {
       for (const k in this.towers) {
         const tw = this.towers[k]; if (tw.hp <= 0) continue;
         const enemySide = tw.side === "blue" ? "red" : "blue";
+        //  M4b.5：塔打英雄的射程與 AI 塔區、仇恨、debug 同源（towerRange）
+        const heroRange = R.towerSafetyV1 ? this.towerRange(tw) : R.towerAggroRange;
         const candidates = this.players.filter((p) =>
-          !p.dead && p.side === enemySide && dist(p.pos, tw.pos) < R.towerAggroRange);
+          !p.dead && p.side === enemySide &&
+          (R.towerSafetyV1 ? dist(p.pos, tw.pos) <= heroRange : dist(p.pos, tw.pos) < heroRange));
         const threats = R.towerAttackInterval
           ? candidates.filter((p) => (p.towerThreatUntil ?? 0) > this.t) : [];
         if (tw.lane === "nexus_guard" && !threats.length) {
@@ -3177,7 +3349,7 @@ export class LogicEngine {
               //  `_minionAtBase()` 的 `m.t ≥ 0.95` 分支回答的是「兵線到基地了沒」
               //  （M1.5 的攻城／閘門述詞），拿它當射程會讓門牙塔打到 26 單位外的
               //  小兵、特效線橫跨半個基地。兩個問題分開：閘門照舊，射擊用 nexusGuardRange。
-              if (gap <= (R.nexusGuardRange ?? 13)) inRange.push({ m, lane, pos, gap });
+              if (gap <= (R.towerSafetyV1 ? this.towerRange(tw) : (R.nexusGuardRange ?? 13))) inRange.push({ m, lane, pos, gap });
             }
           }
           const locked = tw.targetKind === "minion"
@@ -3203,7 +3375,12 @@ export class LogicEngine {
         }
         if (tw.lane !== "nexus" && this.lanes[tw.lane]) {
           const arr = this.lanes[tw.lane][tw.side === "blue" ? "rm" : "bm"];
-          if (arr.some((m) => Math.abs(m.t - tw.t) < 0.05) && !threats.length) continue;
+          //  M4b.5：「有兵就先打兵」改用與打兵分支同一個世界距離（舊的 lane band 0.05
+          //  會在小兵還在射程外時就讓塔不打英雄，射程內英雄 0 發的死區；Audit §2.4）
+          const minionInRange = R.towerSafetyV1
+            ? arr.some((m) => dist(posOnLane(tw.lane, m.t), tw.pos) <= this.towerRange(tw))
+            : arr.some((m) => Math.abs(m.t - tw.t) < 0.05);
+          if (minionInRange && !threats.length) continue;
         }
         const nearest = (arr) => arr.slice().sort((a, b) =>
           dist(a.pos, tw.pos) - dist(b.pos, tw.pos) || String(a.id).localeCompare(String(b.id)))[0] ?? null;
@@ -3227,10 +3404,13 @@ export class LogicEngine {
               if (R.towerRangeWorld) lockToBest();
               //  L Hotfix 2：連續命中同一英雄的威脅增幅。塔仍不執行擊殺，
               //  改用「越站越痛」逼退——這是「不能站在塔下無視塔」的機制。
-              const ramp = Math.min(R.towerLockRampMax ?? 1,
-                1 + (tw.lockShots ?? 0) * (R.towerLockRamp ?? 0));
-              const shot = R.towerAggroDmg * R.towerAttackInterval * lateFactor * ramp;
-              best.hp -= Math.min(shot, Math.max(0, best.hp - 1));
+              //  M4b.5：單發與 lateFactor 脫鉤（_towerHeroShot），而且**可以擊殺**；
+              //  死亡歸屬交給 _towerKillerFor（維持 Σk == Σd）。舊規則集照舊（最低 1 HP）。
+              const shot = R.towerSafetyV1
+                ? this._towerHeroShot(tw.lockShots ?? 0)
+                : R.towerAggroDmg * R.towerAttackInterval * lateFactor *
+                  Math.min(R.towerLockRampMax ?? 1, 1 + (tw.lockShots ?? 0) * (R.towerLockRamp ?? 0));
+              best.hp -= R.towerSafetyV1 ? shot : Math.min(shot, Math.max(0, best.hp - 1));
               //  M1.7：被塔連續打了幾發。`_towerZoneV17` 用它當「該撤了」的硬訊號；
               //  離開塔區時歸零（見 _towerZoneV17）。塔傷本身一點都沒改。
               best.towerHits = (best.towerHits ?? 0) + 1;
@@ -3241,6 +3421,7 @@ export class LogicEngine {
                 ability: "tower:basic", feedback: "attack", width: 1.2, exp: 1.15, life: 1.1, targetKind: "hero",
                 lockShots: tw.lockShots,
               });
+              if (R.towerSafetyV1 && best.hp <= 0 && !best.dead) this._resolveKill(this._towerKillerFor(best), best);
             }
           } else {
             best.hp -= Math.min(R.towerAggroDmg * dt * lateFactor, Math.max(0, best.hp - 1));
@@ -3518,6 +3699,29 @@ export class LogicEngine {
         //  19/20 → 20/20、最長 45.0 分 → 26.1 分、撤退鎖死 1 → 0。
         //  `inTowerZone` 保留下來只當**理由字串**，不再平移門檻。
         if (inTowerZone) reason ??= "在敵塔射程內";
+        //  M4b.5：塔可以擊殺之後，撤退門檻要把「走出射程會吃的塔傷」算進去。
+        //  只在**塔真的會打我**時才加（塔正鎖定我，或沒有己方小兵扛塔）——不是舊的
+        //  「一進塔區就 +0.12」（那會一走進射程就往家裡跑，見上方註解）。
+        //  實測（regress2 的 20 seeds）：不加時塔擊殺每場 18.2 次、幾乎全是「撤退中沒走出射程」。
+        if (R.towerSafetyV1 && R.towerRetreatExposure && inTowerZone) {
+          let ztw = null, zd = Infinity;
+          for (const t of Object.values(this.towers)) {
+            if (t.hp <= 0 || t.side === p.side) continue;
+            const d = dist(p.pos, t.pos);
+            if (d <= this.towerRange(t) && d < zd) { zd = d; ztw = t; }
+          }
+          const onMe = ztw.targetKind === "hero" && ztw.targetId === p.id;
+          //  模式："onMe" 只在塔正鎖定我時加；"exposed" 另外涵蓋「沒有小兵扛塔」的所有人
+          //  （多人圍攻時只有一人被鎖定，其餘人也提早回家 ⇒ 推進被拖慢）。
+          const exposed = R.towerRetreatExposure === "exposed" &&
+            !(this._towerMinionsInRange(ztw) > 0 && !((p.towerThreatUntil ?? 0) > this.t));
+          if (onMe || exposed) {
+            const ex = this._towerExposure(p, ztw, R.towerEscapeHoldSec ?? 0, true);
+            const need = ex.dmg * (R.diveSafetyMargin ?? 1.25) / p.maxHp;
+            if (p.hp < p.maxHp * (retreatAt + need)) reason = "撤離會吃太多塔傷";
+            retreatAt = Math.min(0.62, retreatAt + need);
+          }
+        }
         const nFoe = alive.filter((q) => q.side !== p.side && dist(q.pos, p.pos) < 10).length;
         const nAlly = alive.filter((q) => q.side === p.side && q !== p && dist(q.pos, p.pos) < 10).length;
         if (nFoe > nAlly + 1) reason ??= "人數劣勢";
@@ -3712,7 +3916,7 @@ export class LogicEngine {
           if (dd < threatDist) { threatDist = dd; threatTower = tw; }
         }
         if (threatTower) {
-          const safeDist = (R.towerAggroRange ?? 8) + 2.5;
+          const safeDist = (R.towerSafetyV1 ? this.towerRange(threatTower) : (R.towerAggroRange ?? 8)) + 2.5;
           const ux = (p.pos.x - threatTower.pos.x) / (threatDist || 1);
           const uy = (p.pos.y - threatTower.pos.y) / (threatDist || 1);
           tgt = { x: threatTower.pos.x + ux * safeDist, y: threatTower.pos.y + uy * safeDist };
@@ -3881,7 +4085,14 @@ export class LogicEngine {
       //  ── M1.7 ②：塔區退出。允許有計畫的越塔，禁止「站到殘血為止」──────────
       if (R.decisionV17 && !p.retreating) {
         //  這一路的前線建築＝我的推進目標；它若正好是把我罩住的那座塔，就是圍攻。
-        const tz = this._towerZoneV17(p, alive, this.frontStructure(p.side, effLane, p.pos));
+        const zoneObjective = this.frontStructure(p.side, effLane, p.pos);
+        let tz = this._towerZoneV17(p, alive, zoneObjective);
+        //  M4b.5：移動目標落在「不准停留」的敵塔射程內 ⇒ 同樣改成退到射程外
+        //  （站位層會把目標點推向塔下的敵人；只看目前位置會在射程邊緣來回擺動）。
+        if (R.towerSafetyV1 && tgt && (!tz.inZone || tz.allow)) {
+          const tzAt = this._towerZoneV17(p, alive, zoneObjective, tgt);
+          if (tzAt.inZone && !tzAt.allow) tz = tzAt;
+        }
         p.dbgTower = tz.inZone
           ? { allow: tz.allow, siege: !!tz.sieging, wave: !!tz.hasWave, hp: !!tz.hpOk, shots: p.towerHits ?? 0, kill: !!tz.kill }
           : null;
@@ -3897,7 +4108,7 @@ export class LogicEngine {
           };
           st = "避塔"; p.fsm = "DISENGAGE";
           p.intent = !tz.hpOk ? "血量不足以越塔" : !tz.shotsOk ? "連續吃塔過多"
-            : "無兵線也無擊殺機會";
+            : tz.escapeOk === false ? "撤離會吃太多塔傷" : "無兵線也無擊殺機會";
         }
       }
       //  ── M1.7 ①：發呆再任務 ───────────────────────────────────────────────

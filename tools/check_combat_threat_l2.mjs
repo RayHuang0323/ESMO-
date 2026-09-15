@@ -74,7 +74,9 @@ function observe(seed, ticks) {
           //  ⚠ 用 tick **開始前**的座標判射程：塔在 tick 內先選目標、英雄接著移動，
           //     拿事後座標比會把「合法開火後對方跑出去」誤判成超距（第一版量到 144 次）。
           const pb = posBefore.get(f.targetId);
-          if (tgt && tw && pb && dist(pb, tw.pos) > R.towerAggroRange + 0.5) out.towerOutOfRange++;
+          //  M4b.5：開啟 towerSafetyV1 後，塔打英雄的射程＝towerRange()（碰撞外緣＋攻擊距離）
+          const heroRange = R.towerSafetyV1 ? e.towerRange(tw) : R.towerAggroRange;
+          if (tgt && tw && pb && dist(pb, tw.pos) > heroRange + 0.5) out.towerOutOfRange++;
         } else if (f.targetId) {
           out.towerToMinion++;
         }
@@ -146,7 +148,8 @@ ck(`7) 連續命中會累積 lockShots（威脅增幅有在運作，最高 ${Mat
     R.towerMinionBand >= R.minionSiegeBand, { band: R.towerMinionBand, siege: R.minionSiegeBand });
 }
 {
-  //  塔傷不執行擊殺（維持 Σk == Σd 的結果契約）
+  //  Σk == Σd 的結果契約。M4b.5 起塔可以擊殺，死亡歸屬給 8 秒內最後打到他的敵方英雄
+  //  （沒有則最近的敵方英雄，見 LogicEngine._towerKillerFor），契約不變。
   const e = new LogicEngine(99);
   for (let i = 0; i < 2500 && !e.over; i++) e.tick(0.5);
   const kills = e.players.reduce((s, p) => s + p.k, 0);

@@ -53,8 +53,12 @@ const firedOnHero = (e, tw, heroId) => fired(e, tw) && tw.targetKind === "hero" 
 /** 開火當下用的增幅：開火後 lockShots 已 +1 ⇒ 用的是 lockShots − 1。 */
 const shotDamage = (e, tw, lf) => {
   const R = e.rules;
+  //  M4b.5：開啟 towerSafetyV1 後直接讀引擎的單發函式（與塔開火同一個來源）
+  if (R.towerSafetyV1) return e._towerHeroShot(Math.max(0, (tw.lockShots ?? 1) - 1));
   return R.towerAggroDmg * R.towerAttackInterval * lf * Math.min(R.towerLockRampMax ?? 1, 1 + Math.max(0, (tw.lockShots ?? 1) - 1) * (R.towerLockRamp ?? 0));
 };
+/** 塔打英雄的實際射程（M4b.5 後＝towerRange；之前＝towerAggroRange）。 */
+const heroRangeOf = (e, tw) => (e.rules.towerSafetyV1 ? e.towerRange(tw) : e.rules.towerAggroRange);
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  場景基底
@@ -106,9 +110,13 @@ function makeMinion(tmpl, i, t) {
 //  pinned：只量塔
 // ─────────────────────────────────────────────────────────────────────────────
 function runPinned(seed, o) {
-  const { e, tmpl } = base(seed, { lateT: o.lateT ?? null });
+  const { e, tmpl } = base(seed, { lateT: o.lateT ?? null, warmS: o.warmS ?? 150 });
   const R = e.rules;
-  const [twId, tw] = o.tower === "guard" ? guardTower(e, "red") : redLaneTower(e);
+  const pick = o.tower === "guard" ? guardTower(e, "red") : redLaneTower(e);
+  if (!pick) return null;
+  const [twId, tw] = pick;
+  //  dRel：相對塔打英雄射程的距離（射程由規則推導，不寫死）
+  if (o.dRel != null) o = { ...o, d: heroRangeOf(e, tw) + o.dRel };
   //  門牙塔不在任何 lane 上（lane = nexus_guard）；門牙塔測試不放小兵
   const ln = o.tower === "guard" ? "mid" : tw.lane;
   const u = o.tower === "guard" ? unit(tw.pos, FOUNTAIN.blue) : unit(tw.pos, posOnLane(ln, tw.t - 0.08));
@@ -116,14 +124,23 @@ function runPinned(seed, o) {
   revive(e, diver, 1, along(tw.pos, u, o.d));
   let def = null;
   if (o.defender) { def = hero(e, "r3"); revive(e, def, 1, along(tw.pos, u, 1.5)); }
-  const minionTs = o.tower === "guard" ? [] : (o.waveDists ?? []).map((d) => tForDist(ln, tw, d));
+  const waveDists = o.waveRel ? o.waveRel.map((rel) => heroRangeOf(e, tw) + rel) : (o.waveDists ?? []);
+  const minionTs = o.tower === "guard" ? [] : waveDists.map((d) => tForDist(ln, tw, d));
   if (minionTs.length) e.lanes[ln].bm = minionTs.map((t, i) => makeMinion(tmpl, i, t));
   const ticks = Math.round((o.dur ?? 10) / DT);
   const out = { shots: 0, measuredDmg: 0, formulaDmg: 0, shotDmg: [], shotT: [], minionShots: 0, measuredD: [], targetKinds: {}, threatTicks: 0, attackTicks: 0, lockMax: 0 };
+  const t0 = e.t;
+  const twHp0 = tw.hp;
+  const lethal = { died: false, deathSec: null, shotsToDeath: null, killer: null, kdaOk: null };
   for (let i = 0; i < ticks; i++) {
     const inPhase = !o.flicker || (i % o.flicker.period) < o.flicker.inTicks;
-    e._navTeleport(diver, along(tw.pos, u, inPhase ? o.d : o.flicker.outD));
-    diver.hp = diver.maxHp;
+    const outD = o.flicker ? (o.flicker.outRel != null ? heroRangeOf(e, tw) + o.flicker.outRel : o.flicker.outD) : null;
+    if (diver.dead) break;
+    e._navTeleport(diver, along(tw.pos, u, inPhase ? o.d : outD));
+    if (!o.lethal) diver.hp = diver.maxHp;
+    //  ⚠ 塔擊殺測試：受測英雄站在攻塔距離內、又沒有守軍 ⇒ 他自己會把塔拆了（後期幾秒就拆掉），
+    //  塔跟著停火，量到的就不是「塔要幾發才打死人」。每 tick 還原塔血量，只量塔的輸出。
+    if (o.lethal) tw.hp = twHp0;
     if (def) { def.dead = false; def.hp = def.maxHp; e._navTeleport(def, along(tw.pos, u, 1.5)); }
     if (o.forceThreat) diver.towerThreatUntil = e.t + (R.towerChampionThreatT ?? 3);
     for (let k = 0; k < minionTs.length; k++) {
@@ -148,11 +165,17 @@ function runPinned(seed, o) {
     } else if (fired(e, tw) && tw.targetKind === "minion") out.minionShots++;
     out.lateFactor = r2(lfNow);
     void lf;
+    if (o.lethal && diver.dead && !lethal.died) {
+      const sumK = e.players.reduce((s, p) => s + p.k, 0), sumD = e.players.reduce((s, p) => s + p.d, 0);
+      Object.assign(lethal, { died: true, deathSec: r2(e.t - t0), shotsToDeath: out.shots, killer: e.feed[0]?.killer ?? null,
+        kdaOk: sumK === sumD && sumK === e.bK + e.rK });
+    }
   }
   const ds = out.measuredD, secs = ticks * DT;
   return {
-    seed, tower: twId, towerLane: tw.lane, engineTowerRange: e.towerRange(tw), heroAggroRange: R.towerAggroRange,
-    dReq: o.d, dMeasured: { min: Math.min(...ds), max: Math.max(...ds) },
+    seed, tower: twId, towerLane: tw.lane, engineTowerRange: e.towerRange(tw), heroAggroRange: heroRangeOf(e, tw),
+    t0: r2(t0), lethal: o.lethal ? lethal : null,
+    dReq: r2(o.d), dMeasured: { min: Math.min(...ds), max: Math.max(...ds) },
     shots: out.shots, shotsPerSec: r2(out.shots / secs), minionShotsPerSec: r2(out.minionShots / secs),
     formulaDmgPctPerSec: r2((out.formulaDmg / diver.maxHp) * 100 / secs),
     measuredDmgPctPerSec: def ? null : r2((out.measuredDmg / diver.maxHp) * 100 / secs),
@@ -180,7 +203,7 @@ function runAi(seed, sc) {
   revive(e, diver, sc.diverHp, along(tw.pos, u, start));
   const allies = (sc.allies ?? []).map((id, i) => { const p = hero(e, id); revive(e, p, sc.allyHp ?? 1, along(tw.pos, u, start + 1.2 + i)); return p; });
   if (sc.wave) e.lanes[ln].bm = Array.from({ length: sc.wave }, (_, i) => makeMinion(tmpl, i, tForDist(ln, tw, 2 + i * 0.8)));
-  const RANGE = R.towerAggroRange;
+  const RANGE = heroRangeOf(e, tw);
   const rel = () => r2(e.t - warmS);
   const s = {
     seed, tower: twId, t0: r2(warmS), lateFactor0: r2(lateFactorOf(e)), diverId: diver.id, diverRole: diver.role,
@@ -251,9 +274,15 @@ function lateSample(seed) {
     if (e.over) break;
     const lf = lateFactorOf(e);
     const hp = avg(e.players.map((p) => p.maxHp));
-    const shot = R.towerAggroDmg * R.towerAttackInterval * lf;
+    const shotAt = (lock) => (R.towerSafetyV1 ? e._towerHeroShot(lock)
+      : R.towerAggroDmg * R.towerAttackInterval * lf * Math.min(R.towerLockRampMax ?? 1, 1 + lock * (R.towerLockRamp ?? 0)));
+    const shot = shotAt(0);
+    //  連續吃塔（增幅逐發往上疊）打死一名平均最大生命英雄要幾發；舊規則塔不擊殺 ⇒ 打到 1 HP 為止
+    let acc = 0, shotsToKill = 0;
+    while (acc < hp && shotsToKill < 200) { acc += shotAt(shotsToKill); shotsToKill++; }
     out.push({ seed, t: T, lateFactor: r2(lf), heroMaxHpMean: hp, shot: r2(shot), shotPctMaxHp: r2(shot / hp * 100),
-      shotPctMaxHpAtRampMax: r2(shot * (R.towerLockRampMax ?? 1) / hp * 100), heroPowerMean: avg(e.players.map((p) => p.power)) });
+      shotPctMaxHpAtRampMax: r2(shot * (R.towerLockRampMax ?? 1) / hp * 100), shotsToKillFromFull: shotsToKill,
+      secToKillFromFull: r2(shotsToKill * (R.towerAttackInterval || 0.5)), heroPowerMean: avg(e.players.map((p) => p.power)) });
   }
   return out;
 }
@@ -262,16 +291,21 @@ function lateSample(seed) {
 //  測試清單
 // ─────────────────────────────────────────────────────────────────────────────
 const PINNED = [
-  //  射程：路塔（塔打英雄 dist < towerAggroRange；AI 塔區 dist <= towerRange）
-  ...[4, 5.8, 6.2, 7].map((d) => ({ id: `range_lane_d${d}`, tower: "lane", d, dur: 10 })),
-  //  射程：門牙塔（AI 塔區 nexusGuardRange 13；塔打英雄的候選仍用 towerAggroRange）
-  ...[4, 5.8, 6.2, 9, 12].map((d) => ({ id: `range_guard_d${d}`, tower: "guard", d, dur: 10 })),
+  //  射程：相對塔打英雄射程的距離（−8 ≈ 抱塔、±0.3 ＝ 邊界、+2 ＝ 射程外）
+  ...[-8, -0.3, 0.3, 2].map((dRel) => ({ id: `range_lane_rel${dRel}`, tower: "lane", dRel, dur: 10 })),
+  ...[-8, -0.3, 0.3, 2].map((dRel) => ({ id: `range_guard_rel${dRel}`, tower: "guard", dRel, dur: 10 })),
+  //  塔擊殺：不重置血量，量打死一名滿血英雄的秒數、發數、擊殺歸屬、KDA 不變量
+  { id: "lethal_lane_t150", tower: "lane", dRel: -8, dur: 40, lethal: true },
+  { id: "lethal_lane_t1200", tower: "lane", dRel: -8, dur: 40, lethal: true, warmS: 1200 },
+  { id: "lethal_lane_t1500", tower: "lane", dRel: -8, dur: 40, lethal: true, warmS: 1500 },
+  //  死區：己方小兵在世界射程外（但舊 lane band 內）⇒ 塔要打射程內的英雄
+  { id: "minion_outside_world_range_hero_inside", tower: "lane", d: 5, dur: 10, waveRel: [3] },
   //  攻速／連續命中增幅
   { id: "cadence_lane_12s", tower: "lane", d: 3, dur: 12 },
   { id: "cadence_guard_12s", tower: "guard", d: 3, dur: 12 },
   //  進出射程：每 3 秒出去 0.5 秒
-  { id: "flicker_lane", tower: "lane", d: 3, dur: 24, flicker: { period: 7, inTicks: 6, outD: 7 } },
-  { id: "flicker_guard", tower: "guard", d: 3, dur: 24, flicker: { period: 7, inTicks: 6, outD: 7 } },
+  { id: "flicker_lane", tower: "lane", d: 3, dur: 24, flicker: { period: 7, inTicks: 6, outRel: 1 } },
+  { id: "flicker_guard", tower: "guard", d: 3, dur: 24, flicker: { period: 7, inTicks: 6, outRel: 1 } },
   //  小兵坦塔：己方小兵在世界射程內
   { id: "wave_in_range_hero_idle", tower: "lane", d: 3, dur: 10, waveDists: [2.5, 3.5] },
   //  仇恨切換：有兵線＋塔下敵方英雄（自然出手）
@@ -316,6 +350,11 @@ const AI = [
   { id: "ML3_late_melee_full_vs_low", diverId: "b1", diverHp: 1, defHp: 0.2, holdDef: true, dur: 30, warmS: 1200 },
   { id: "ML5_late_melee_3v1_vs_low", diverId: "b1", diverHp: 1, defHp: 0.4, allies: ["b2", "b4"], holdDef: true, dur: 30, warmS: 1200 },
   { id: "ML6_late_melee_start_inside_half", diverId: "b1", diverHp: 0.5, defHp: 1, start: 3, holdDef: true, dur: 30, warmS: 1200 },
+  //  25 分（M4b.5 驗證：塔傷與 lateFactor 脫鉤後的後段）
+  { id: "X1_25min_ranged_full_solo", diverHp: 1, defHp: 1, holdDef: true, dur: 30, warmS: 1500 },
+  { id: "X3_25min_melee_full_vs_low", diverId: "b1", diverHp: 1, defHp: 0.2, holdDef: true, dur: 30, warmS: 1500 },
+  { id: "X5_25min_melee_3v1_vs_low", diverId: "b1", diverHp: 1, defHp: 0.4, allies: ["b2", "b4"], holdDef: true, dur: 30, warmS: 1500 },
+  { id: "X6_25min_start_inside_half", diverHp: 0.5, defHp: 1, start: 3, holdDef: true, dur: 30, warmS: 1500 },
 ];
 
 const RULE_KEYS = ["towerAggroRange", "nexusGuardRange", "towerAggroDmg", "towerAttackInterval", "towerMinionDamage", "towerLockRamp", "towerLockRampMax",
@@ -366,6 +405,7 @@ for (const r of pinned) {
   p.diverEngageRange.push(r.diverEngageRange); p.dMeasured.push(r.dMeasured.min); p.shotsPerSec.push(r.shotsPerSec); p.minionShotsPerSec.push(r.minionShotsPerSec);
   p.formulaDmgPctPerSec.push(r.formulaDmgPctPerSec); p.measuredDmgPctPerSec.push(r.measuredDmgPctPerSec); p.lockShotsMax.push(r.lockShotsMax);
   p.targetKinds.push(r.targetKinds); p.threatTicks.push(r.threatTicks); p.diverHitDefenderTicks.push(r.diverHitDefenderTicks);
+  if (r.lethal) (p.lethal ??= []).push({ seed: r.seed, t0: r.t0, maxHp: r.diverMaxHp, ...r.lethal });
   if (r.seed === 1) p.shotDmgSeed1 = r.shotDmg;
 }
 const lateSummary = Object.fromEntries([600, 900, 1200, 1500].map((T) => {

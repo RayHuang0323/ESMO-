@@ -161,7 +161,7 @@ console.log("\n── §4 不得退步：舊規則集與既有不變量 ──")
     sumK === eng.bK + eng.rK && sumK === sumD, { sumK, sumD, bK: eng.bK, rK: eng.rK });
 }
 {
-  //  塔傷不執行擊殺（保 KDA 不變量的既有紅線）
+  //  群體拆塔的效率分級（KDA 不變量見 23)；M4b.5 起塔可擊殺，死亡歸屬仍是英雄）
   const engSrc = src("src/LogicEngine.js");
   ck("24) 群體拆塔只放寬「無兵線」的效率分級，沒有改塔血或塔傷本體",
     engSrc.includes("heroTowerGroupMin") && R.heroTowerSoloK === 0.30 &&
