@@ -21506,3 +21506,92 @@ Owner Review：M3b APPROVED。本輪只做 M3c（英雄裝備詳情），不開�
 ### 六、停止點
 
 M3c 完成後依 Owner 指示停止，等 Owner Review；未開始 M3d（戰術卡）／M3e（Replay）。
+
+## 2026-09-15 MOBA Item System v1 — M3d Build Strategy UI（停在 Owner Review）
+
+Owner Review：M3c APPROVED。本輪只做 M3d（出裝策略接進戰術流程），不開始 M3e Replay；不動 LogicEngine、`dmgK`、收入、裝備平衡、Replay；production 仍 itemsV1 OFF；未 push、未 deploy。
+計畫：`docs/design/MOBA_裝備UI_M3d實作計畫_v1.md`。
+
+### 一、做了什麼
+
+- **戰術頁出裝策略區**（`TacticScreen`，itemsV1 開啟時才出現；閘門與 `useLocalServer` 同式）：
+  - 五張卡：標準／前期壓制／後期成型／反制優先／保命優先。
+  - 每張卡有名稱、一句白話說明、前期／後期／保命／反制四項傾向刻度、三件核心裝預覽（插槽＋名稱）、selected／locked 狀態。
+  - 桌機（含 768）一排五張；手機橫向滑動（scroll-snap、露出下一張、位置點、「左右滑動看五種策略」）；整張卡可點；沒有 select。
+  - 預覽英雄切換：我方五人頭像鈕 44×44。預設＝五人中「五張卡核心預覽差異最多」的英雄（同分：射手席 → 中路席 → 席位順序）。
+  - 文案：「全隊五人套用同一策略，對手固定『標準』」。
+- **資料**（新純函式 `src/battle/moba/items/buildStrategyPrep.js`）：
+  - `normalizeBuildStrategy`：五種原樣，其他 ⇒ 標準。
+  - `matchItemsConfig`：`useLocalServer` 唯一的 configureItems 輸入；我方五人＝所選、紅方＝標準（Owner D4）；選「標準」時與 M3c 之前逐欄相同。
+  - `selectStrategyPrepView`：預覽＝引擎開局那一次 `buildTargets` 的同一份輸入（同一份 roster → `toEngineItems`、席位角色＝引擎 `ROLES`、敵方開局背包空）。UI 不另算出裝。
+- **流程**：
+  - 選卡當下 → `setActiveMatchContext({ config: { buildStrategy } })` 存檔。
+  - 開始載入 → `config: { tactic, buildStrategy }`；itemsV1 OFF 時只寫 `tactic`（存檔形狀不變）。
+  - 重新整理 → 「返回進行中的比賽」→ `resumeActiveMatch` 接回 `buildStrategy`。
+  - 載入頁顯示「全隊出裝策略　○○　本場已鎖定」。
+  - `GameView` → `start({ buildStrategy })` → `matchItemsConfig` → `configureItems`。
+- **元件**：`BuildStrategyCards` 加 `layout="prep"`、`locked`、`previewLabel`、`data-strategy-state`；新 `BuildStrategyLockedChip`；`ItemGlyphs` 加鎖頭。樣張頁舊版面不變。
+- **驗證器**：M3 新增 G11（策略輸入）、G12（接線）；G1 改驗 `matchItemsConfig` 呼叫；G8 untouched 清單移除 TacticScreen。M1 G11 模組數 14、G13 允許 TacticScreen。
+
+### 二、驗證（全部實跑，最終程式碼）
+
+| 驗證 | 結果 |
+|---|---|
+| `node tools/check_moba_items_m3.mjs` | 54/54 PASS（G11 7/7、G12 5/5；含 vite build 與產物掃描） |
+| `node tools/check_moba_items_m1.mjs` | 69/69 PASS |
+| `node tools/check_moba_items_m2.mjs` | 53/53 PASS |
+| `node tools/regress.mjs`／`regress2.mjs` | 15/15 局結束、節奏門檻 8/8（42s／46s；在「預設預覽英雄」修正前跑，該修正只改戰術頁 selector，regress 不開 itemsV1） |
+| `npm run build` | built in 16.69s |
+| 真實流程瀏覽器量測 | 60/60 PASS（344s） |
+
+G11 內容（seed 42、ROSTER）：
+- 五策略 match input：我方五人＝所選、紅方＝standard；沒選 ⇒ 全部 standard 且與 `toEngineItems` 預設逐欄相同。
+- 五策略各跑兩次 2400 tick：最終 snapshot 與整場購買紀錄逐位元相同。
+- 四種非標準策略的我方開局出裝路徑與整場購買紀錄都和標準不同（首次分歧：前期壓制 187s、後期成型 719s、保命 829s、反制 1025s）。
+- 預覽＝引擎開局計畫：五策略 × 我方五席的核心 3 件、升級鞋、英雄、定位、席位角色逐一相同；缺英雄資料的席位定位退路與引擎相同。
+- 預設預覽英雄＝差異最多的一位（另以「射手席換成戰士」名單驗一次）。
+
+- 環境：一次背景執行的 M3 驗證器被系統以記憶體不足中止（commit free 約 5 GB，使用者自己的 Chrome 50 個行程）；前台重跑通過，未結束任何其他行程。
+
+### 三、真實流程瀏覽器量測（`tools/browser_review_moba_items_m3d.mjs`）
+
+走真實流程：首頁 → MOBA 賽前 → Ban/Pick（真的點英雄）→ 戰術頁。
+
+- OFF（1366、390）：戰術頁沒有出裝策略區；本場設定沒有 `buildStrategy`。
+- ON（重新整理帶 `?itemsDev=1` → 「返回進行中的比賽」接回同一場）：
+
+| 寬度 | 版面 | 量測 |
+|---|---|---|
+| 1366 | 一排五張 | 卡寬 168px、同一列 |
+| 768 | 一排五張 | 卡寬 131px、同一列 |
+| 390 | 橫向滑動 | 卡寬 266px（捲動區 1368／可視 332）、10 個可點元素全 ≥ 44 |
+| 320 | 橫向滑動 | 卡寬 210px（捲動區 1089／可視 262）、10 個可點元素全 ≥ 44 |
+
+- 四個寬度：五張卡順序、名稱、白話說明、四項傾向、三件核心＝selector；沒有 select；沒選時預設「標準」；預設預覽英雄＝selector 挑的 b3 極光（法師）；整頁與出裝策略區都不水平溢出。
+- 390 逐一點選五種策略：每次只有那張 selected（含「已選擇」、滑進畫面、位置點跟著走），本場設定 `buildStrategy` 同步變成那一種。
+- 切換預覽英雄：預覽跟著換、仍＝selector；五人核心預覽差異 b1 1、b2 2、b3 2、b4 1、b5 1。
+- 戰術頁重新整理 → 接回：仍是「前期壓制」，已選的卡自動滑進畫面。
+- 返回 Ban/Pick、重新選角、再進戰術頁：仍是「前期壓制」。
+- 開始載入：載入頁「全隊出裝策略　前期壓制　本場已鎖定」。
+- 戰鬥（ts 0）：
+  - 我方五人 AI 策略＝early、紅方五人＝standard；本場設定仍是 early（phase battle）。
+  - 英雄面板策略名＝「前期壓制」，手機英雄裝備詳情顯示「前期壓制策略」。
+  - 我方五席開局核心三件＝戰術頁預覽。
+- 戰鬥推進到 300s → 重新整理 → 恢復（經過載入頁，仍顯示前期壓制已鎖定）：我方仍 early、紅方 standard；恢復前後 26 筆購買紀錄逐欄相同。
+- console error 不比 OFF 多、page exception 0。
+- 截圖 `review/moba-items-m3d/`：戰術頁四寬度、OFF 1366／390、選定後、重新整理後、載入頁鎖定（開始載入／恢復）、戰鬥英雄詳情。
+
+### 四、截圖自我檢查
+
+- 抓到並已修：第一輪預設預覽停在射手席，但選角把戰士分到射手席，五張卡的核心三件一模一樣（看不出策略差別）⇒ 預設改為「核心預覽差異最多的英雄」；G11 以「射手席換成戰士」的名單驗證。
+- 第一輪瀏覽器量測 56/60：另外 3 項是量測工具把純字串回傳當 JSON 解析（載入頁文字、預覽對照、英雄面板文字），產品本身正確；工具已修，第二輪 60/60。
+- 看到但**未修**（既有問題，不在 M3d 範圍）：載入頁根節點 `height: 100%` 加上下 padding、沒有 `boxSizing`，在固定外框內溢出 48px，390 寬時底部進度條只露一條、百分比文字被切掉。M3d 加的鎖定標籤由 `flex: 1` 的英雄區吸收高度，沒有讓它更糟。
+- 同一位英雄的「標準／前期壓制／後期成型」核心三件可能相同（前期壓制改的是前期組件，後期成型只改射手／法師的奢侈核心順序）；卡片靠白話說明與傾向刻度區分。
+
+### 五、未經真機實測
+
+- 真實手機的橫向滑動手感（慣性、snap 停點）、字級、4G 效能未測；截圖為 headless Chrome。
+
+### 六、停止點
+
+M3d 完成後依 Owner 指示停止，等 Owner Review；未開始 M3e（Replay）。

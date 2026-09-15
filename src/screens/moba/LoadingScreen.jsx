@@ -17,6 +17,7 @@ import { draftRoster } from "../../battle/moba/draftRoster.js";
 import { SUMMONER_SPELLS } from "../../battle/moba/mobaHeroLoadout.js";
 import { armRiftGate, getRiftAssetSnapshot, preloadRiftAsset, subscribeRiftAsset } from "../../battle/moba/map/riftAsset.js";
 import { loadingBarCap } from "../../battle/moba/map/riftMapGate.js";
+import { BuildStrategyLockedChip } from "../../battle/ui/items/BuildStrategyCards.jsx";
 
 const ARCH_COLOR = { 坦克: "#60a5fa", 戰士: "#f97316", 刺客: "#ef4444", 法師: "#a855f7", 射手: "#22c55e", 輔助: "#14b8a6" };
 const TIPS = ["提示：控制型英雄可反制高機動陣容", "提示：真傷是對付肉盾的最佳解", "提示：射手需要發育時間，前期注意保護", "提示：觀察對手動向，掌握開團時機"];
@@ -55,7 +56,7 @@ function HeroCard({ hero, player, side, spells = [], lane = null }) {
 
 // Milestone E：roster 由 AppShell 傳入（buildBattleRoster 的同一份對戰名單），
 //   讓 Loading 顯示的選手＝實際上場的人。未傳 ⇒ 退回靜態 ROSTER（行為不變）。
-export default function LoadingScreen({ draft, tactic = null, onDone, roster = ROSTER }) {
+export default function LoadingScreen({ draft, tactic = null, buildStrategy = null, onDone, roster = ROSTER }) {
   const [pct, setPct] = useState(0);
   const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
   //  Q3.5-fix：進場畫面的隊名同樣來自本場指派單（唯一來源見
@@ -124,6 +125,13 @@ export default function LoadingScreen({ draft, tactic = null, onDone, roster = R
               <div style={{ fontSize: 12.5, fontWeight: 900, color: "#c4b5fd" }}>{tactic.name}<span style={{ color: "#71717a", fontWeight: 600, fontSize: 10 }}> · {tactic.desc}</span></div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Item System M3d：本場出裝策略已鎖定（戰術頁選定；itemsV1 OFF 時 AppShell 傳 null ⇒ 不顯示）*/}
+      {buildStrategy && (
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
+          <BuildStrategyLockedChip strategy={buildStrategy} />
         </div>
       )}
 

@@ -7,6 +7,9 @@
 //   G4 動效：reduced-motion 共用 hook、GSAP 只在回饋 hook、單次 ≤ 0.6s
 //   G5 樣張頁：DEV-only 路由、九個必備區塊
 //   G6 M2 未動：引擎、裝備規則模組、contracts 相對 HEAD 無改動；模擬版本閘門綠
+//   G7／G8 M3b 戰鬥 HUD；G9／G10 M3c 英雄裝備詳情
+//   G11 M3d 出裝策略輸入：五策略 match input、對手固定標準、同 seed 同策略逐位元相同、策略真的改變出裝、預覽＝開局計畫
+//   G12 M3d 接線：戰術頁 itemsV1 閘門、選卡存進本場設定、恢復／載入鎖定／GameView 傳入、不用 select
 //
 //  用法：node tools/check_moba_items_m3.mjs   （G1 會跑一次 vite build 到暫存目錄，約 30 秒）
 // ============================================================================
@@ -40,7 +43,11 @@ const SEATS = ["b1", "b2", "b3", "b4", "b5", "r1", "r2", "r3", "r4", "r5"];
   const calls = (stripComments(uls).match(/configureItems\(/g) ?? []).length;
   ck("G1", "useLocalServer 只有一個 configureItems 呼叫，且受 featureEnabled(\"itemsV1\") || (import.meta.env.DEV && itemsDevRequested()) 保護",
     calls === 1 && /featureEnabled\("itemsV1"\)\s*\|\|\s*\(import\.meta\.env\.DEV && itemsDevRequested\(\)\)/.test(uls), `calls=${calls}`);
-  ck("G1", "出裝策略由 opts.buildStrategy 傳入（預設 standard）", /defaultStrategy:\s*opts\.buildStrategy \?\? "standard"/.test(uls));
+  //  M3d：出裝策略經 buildStrategyPrep.matchItemsConfig（我方＝所選、對手＝標準；沒選／非法 ⇒ 標準），且在開關內才計算
+  ck("G1", "出裝策略由 opts.buildStrategy 傳入（normalize ⇒ 預設 standard），經 matchItemsConfig 進 configureItems",
+    /const buildStrategy = itemsOn && opts\.roster \? normalizeBuildStrategy\(opts\.buildStrategy\) : null;/.test(uls)
+    && /matchItemsConfig\(\{ roster: opts\.roster, heroLookup: heroById, buildStrategy \}\)/.test(uls)
+    && !/toEngineItems\(/.test(stripComments(uls)));
 
   //  實際 build 一次，確認 DEV 開啟路徑與樣張頁不在正式產物裡
   const out = fs.mkdtempSync(path.join(os.tmpdir(), "esmo-m3-dist-"));
@@ -271,11 +278,11 @@ const REQUIRED_UI = ["itemsTheme.js", "ItemGlyphs.jsx", "ItemSlot.jsx", "GoldChi
     /TOAST_LIFETIME_MS = 2500/.test(toasts) && /MAX_VISIBLE = 2/.test(toasts) && /pointerEvents: "none"/.test(toasts) && /selectPurchaseToasts\(/.test(toasts));
   const layout = read("src/battle/ui/battleLayout.js");
   const git = (args) => execFileSync("git", args, { cwd: ROOT, encoding: "utf8" });
-  //  M3c 起英雄面板（BattleHeroSheet）是合法接點，改由 G10 檢查。
+  //  M3c 起英雄面板（BattleHeroSheet）是合法接點，改由 G10 檢查；M3d 起戰術頁（TacticScreen）是合法接點，改由 G12 檢查。
   const untouched = git(["diff", "--name-only", "HEAD", "--",
     "src/screens/moba/MobaReplayScreen.jsx", "src/battle/moba/replay", "src/platform/contracts/mobaReplay.js",
-    "src/screens/moba/TacticScreen.jsx", "src/battle/ui/hudStore.js", "src/battle/ui/BattleHUD.jsx"]).trim();
-  ck("G8", "Replay、TacticScreen、記分板（BattleHUD／hudStore 高度表）相對 HEAD 無改動；HUD_H 仍 126",
+    "src/battle/ui/hudStore.js", "src/battle/ui/BattleHUD.jsx"]).trim();
+  ck("G8", "Replay、記分板（BattleHUD／hudStore 高度表）相對 HEAD 無改動；HUD_H 仍 126",
     untouched === "" && /export const HUD_H = 126;/.test(layout), untouched);
   const css = read("src/battle/ui/battleObserver.css");
   const m3bCss = css.slice(css.indexOf("Item System M3b"));
@@ -351,6 +358,147 @@ const REQUIRED_UI = ["itemsTheme.js", "ItemGlyphs.jsx", "ItemSlot.jsx", "GoldChi
   const detail = read("src/battle/ui/items/HeroItemDetail.jsx");
   ck("G10", "詳情分層：三個第二層（出裝路徑／屬性與特效／戰術分析）、一次只開一層、分層鈕 ≥ 44",
     /\["path", "出裝路徑"\], \["stats", "屬性與特效"\], \["analysis", "戰術分析"\]/.test(detail) && /setLayer\(on \? null : id\)/.test(detail) && /minHeight: 44/.test(detail));
+}
+
+// ── G11 M3d：出裝策略輸入（match input、determinism、預覽＝開局計畫）──────────────
+{
+  const prep = await tryLoad("src/battle/moba/items/buildStrategyPrep.js");
+  if (typeof prep.matchItemsConfig !== "function" || typeof prep.selectStrategyPrepView !== "function" || typeof prep.normalizeBuildStrategy !== "function") {
+    ck("G11", "buildStrategyPrep 匯出 normalizeBuildStrategy／matchItemsConfig／selectStrategyPrepView", false, prep.__error ?? "missing export");
+  } else {
+    const { LogicEngine } = await load("src/LogicEngine.js");
+    const { ROSTER } = await load("src/data/roster.js");
+    const { heroById } = await load("src/data/heroDatabase.js");
+    const { toEngineItems } = await load("src/battle/moba/items/itemsEngineAdapter.js");
+    const { BUILD_STRATEGIES } = await load("src/battle/moba/items/buildPolicy.js");
+    const { getItem } = await load("src/battle/moba/items/itemCatalog.js");
+    const vm = await load("src/battle/moba/items/itemsViewModel.js");
+    const sel = await load("src/battle/moba/items/itemsUiSelectors.js");
+    const S = BUILD_STRATEGIES;
+    const BLUE = SEATS.slice(0, 5), RED = SEATS.slice(5);
+    const rosterFrozen = JSON.stringify(ROSTER);
+
+    ck("G11", "normalizeBuildStrategy：五種原樣；null／空字串／打錯字／大小寫不同 ⇒ standard",
+      S.every((s) => prep.normalizeBuildStrategy(s) === s)
+      && [null, undefined, "", "Scaling", "aggressive", 3].every((v) => prep.normalizeBuildStrategy(v) === "standard"));
+
+    const inputBad = [];
+    for (const s of S) {
+      const cfg = prep.matchItemsConfig({ roster: ROSTER, heroLookup: heroById, buildStrategy: s });
+      if (!BLUE.every((id) => cfg.players[id].strategy === s)) inputBad.push(`${s}:blue`);
+      if (!RED.every((id) => cfg.players[id].strategy === "standard")) inputBad.push(`${s}:red`);
+    }
+    const none = prep.matchItemsConfig({ roster: ROSTER, heroLookup: heroById });
+    ck("G11", "五策略 match input：我方五人＝所選、紅方五人＝standard；沒選 ⇒ 全部 standard 且與 toEngineItems 預設逐欄相同（M2 指紋不變）；沒有名單 ⇒ null",
+      inputBad.length === 0 && SEATS.every((id) => none.players[id].strategy === "standard")
+      && JSON.stringify(none) === JSON.stringify(toEngineItems({ roster: ROSTER, heroLookup: heroById }))
+      && prep.matchItemsConfig({ roster: null, heroLookup: heroById }) === null, inputBad.join(","));
+
+    const TICKS = 2400;
+    const run = (strategy) => {
+      const e = new LogicEngine(42);
+      e.configureItems(prep.matchItemsConfig({ roster: ROSTER, heroLookup: heroById, buildStrategy: strategy }));
+      e.tick(0.5);
+      const opening = e.snapshot();
+      const events = new Map();
+      for (let i = 1; i < TICKS && !e.over; i++) {
+        e.tick(0.5);
+        if (i % 10 === 0) for (const ev of e.snapshot().items.purchases) events.set(ev.seq, ev);
+      }
+      const last = e.snapshot();
+      for (const ev of last.items.purchases) events.set(ev.seq, ev);
+      const evs = [...events.values()].sort((a, b) => a.seq - b.seq);
+      return {
+        opening, final: JSON.stringify(last),
+        blue: evs.filter((ev) => ev.playerId[0] === "b").map((ev) => `${ev.playerId}:${ev.action}:${ev.itemId}@${ev.t}`).join(","),
+        plan: BLUE.map((id) => opening.items.players[id].plan.buildPath.join(">")).join("|"),
+        strategies: Object.fromEntries(SEATS.map((id) => [id, last.items.players[id].strategy])),
+      };
+    };
+    const runs = Object.fromEntries(S.map((s) => [s, [run(s), run(s)]]));
+    const nondet = S.filter((s) => runs[s][0].final !== runs[s][1].final || runs[s][0].blue !== runs[s][1].blue);
+    ck("G11", `同 seed＋同策略：五種策略各跑兩次 ${TICKS} tick，最終 snapshot 與整場購買紀錄逐位元相同`, nondet.length === 0, nondet.join(","));
+    const liveBad = S.filter((s) => !BLUE.every((id) => runs[s][0].strategies[id] === s) || !RED.every((id) => runs[s][0].strategies[id] === "standard")
+      || !BLUE.every((id) => vm.selectPlayerItemsView(runs[s][0].opening, id).strategyLabel === sel.BUILD_STRATEGY_META[s].label));
+    ck("G11", "引擎 snapshot 的 AI 策略＝match input（我方所選、紅方標準）；view-model 策略名稱＝戰術卡名稱", liveBad.length === 0, liveBad.join(","));
+    const purchasesSame = S.filter((s) => s !== "standard" && runs[s][0].blue === runs.standard[0].blue);
+    const planSame = S.filter((s) => s !== "standard" && runs[s][0].plan === runs.standard[0].plan);
+    ck("G11", "策略真的改變 AI：四種非標準策略的我方開局出裝路徑與整場購買紀錄都和標準不同",
+      purchasesSame.length === 0 && planSame.length === 0, `purchasesSame=${purchasesSame} planSame=${planSame}`);
+
+    const t3 = (ids) => ids.filter((id) => getItem(id).tier === "T3").slice(0, 3).join(",");
+    const bootsOf = (ids) => ids.find((id) => getItem(id).tier === "BOOTS" && id !== "bt_base") ?? null;
+    const previewBad = [];
+    for (const s of S) {
+      for (const seat of BLUE) {
+        const v = prep.selectStrategyPrepView({ roster: ROSTER, heroLookup: heroById, focusSeat: seat });
+        const p = runs[s][0].opening.items.players[seat];
+        if (v.focusSeat !== seat || v.previews[s].core.join(",") !== t3(p.plan.buildPath) || v.previews[s].boots !== bootsOf(p.plan.buildPath)) previewBad.push(`${s}/${seat}`);
+        const vs = v.seats.find((x) => x.seat === seat);
+        if (!vs || vs.arch !== p.arch || vs.seatRole !== p.seatRole || vs.heroId !== p.heroId) previewBad.push(`${s}/${seat}:seat`);
+      }
+    }
+    ck("G11", "戰術卡預覽＝引擎開局計畫：五策略 × 我方五席的核心 3 件、升級鞋、英雄、定位、席位角色逐一相同", previewBad.length === 0, previewBad.slice(0, 5).join(","));
+
+    const broken = { ...ROSTER, b2: { ...ROSTER.b2, heroId: "no_such_hero" }, r3: { ...ROSTER.r3, heroId: null } };
+    const e2 = new LogicEngine(7);
+    e2.configureItems(prep.matchItemsConfig({ roster: broken, heroLookup: heroById, buildStrategy: "counter" }));
+    e2.tick(0.5);
+    const bp = e2.snapshot().items.players;
+    const bv = prep.selectStrategyPrepView({ roster: broken, heroLookup: heroById, focusSeat: "b2" });
+    //  預設預覽＝核心預覽差異最多的我方英雄（同分：射手席 → 中路席 → 席位順序）。
+    //  M3d 瀏覽器實測：選角後射手席是戰士，五種策略核心三件完全相同 ⇒ 另外以「射手席換成戰士」的名單驗一次。
+    const ROLE_RANK = { adc: 0, mid: 1 };
+    const expectedFocus = (roster) => {
+      const seats = prep.selectStrategyPrepView({ roster, heroLookup: heroById }).seats;
+      const spread = (seat) => new Set(S.map((s) => prep.selectStrategyPrepView({ roster, heroLookup: heroById, focusSeat: seat }).previews[s].core.join(","))).size;
+      return seats.map((x, i) => ({ seat: x.seat, n: spread(x.seat), rank: ROLE_RANK[x.seatRole] ?? 2, i }))
+        .sort((a, b) => b.n - a.n || a.rank - b.rank || a.i - b.i)[0];
+    };
+    const warriorAdc = { ...ROSTER, b4: { ...ROSTER.b4, heroId: ROSTER.r1.heroId } };
+    const dflt = prep.selectStrategyPrepView({ roster: ROSTER, heroLookup: heroById });
+    const dflt2 = prep.selectStrategyPrepView({ roster: warriorAdc, heroLookup: heroById });
+    const exp1 = expectedFocus(ROSTER), exp2 = expectedFocus(warriorAdc);
+    ck("G11", "預設預覽＝核心預覽差異最多的我方英雄（同分射手→中路→席位；射手席換成戰士時不會停在五張一樣的預覽）、指定紅方席位無效；缺英雄資料的席位（b2、敵方 r3）定位退路與引擎相同、預覽仍＝引擎開局計畫；不改輸入",
+      dflt.focusSeat === exp1.seat && dflt.spread === exp1.n && exp1.n >= 2
+      && dflt2.focusSeat === exp2.seat && dflt2.spread === exp2.n && exp2.n >= 2
+      && dflt.seats.length === 5 && dflt.opponentStrategy === "standard"
+      && prep.selectStrategyPrepView({ roster: ROSTER, heroLookup: heroById, focusSeat: "r1" }).focusSeat === dflt.focusSeat
+      && bp.b2.archSource === "seatFallback" && bv.seats.find((x) => x.seat === "b2").arch === bp.b2.arch
+      && bv.previews.counter.core.join(",") === t3(bp.b2.plan.buildPath)
+      && prep.selectStrategyPrepView({ roster: null, heroLookup: heroById }) === null && JSON.stringify(ROSTER) === rosterFrozen,
+      JSON.stringify({ focus: dflt.focusSeat, b2: [bp.b2.archSource, bp.b2.arch, bv.seats.find((x) => x.seat === "b2")?.arch] }));
+  }
+}
+
+// ── G12 M3d：戰術頁接線 ─────────────────────────────────────────────────────────
+{
+  const tcode = stripComments(read("src/screens/moba/TacticScreen.jsx"));
+  ck("G12", "戰術頁出裝策略區受 itemsV1 閘門（與 useLocalServer 同式）；OFF ⇒ prep 為 null ⇒ 不渲染、onNext 第二參數為 null",
+    /featureEnabled\("itemsV1"\) \|\| \(import\.meta\.env\.DEV && itemsDevRequested\(\)\)/.test(tcode)
+    && /itemsOn && roster \? selectStrategyPrepView\(/.test(tcode) && /\{prep && \(/.test(tcode) && /onNext\(applied, prep \? buildStrategy : null\)/.test(tcode));
+  ck("G12", "戰術頁只讀 selector 與卡片元件（不 import 規則模組／引擎、不自己算出裝）、名單與 Loading／GameView 同一個 draftRoster；沒有 select；預覽英雄鈕 44×44",
+    !/from\s+["'][^"']*\/(LogicEngine|itemEconomy|combatStatsV1|buildPolicy|itemRecipes|itemsEngineRuntime|itemCatalog|itemInventory|itemsEngineAdapter)(\.js)?["']/.test(tcode)
+    && !/buildTargets\(|previewStrategy\(|nextStep\(|toEngineItems\(/.test(tcode) && !/<select\b/.test(tcode)
+    && /draftRoster\(roster, draft\)/.test(tcode) && /width: 44, height: 44/.test(tcode) && /layout="prep"/.test(tcode));
+  const shell = read("src/AppShell.jsx");
+  ck("G12", "AppShell：選卡當下存進本場設定、開始載入寫入 tactic＋buildStrategy（OFF 只寫 tactic）、恢復時接回、Loading／GameView 拿同一個值",
+    shell.includes("onBuildStrategyChange={(s) => useProfileStore.getState().setActiveMatchContext({ config: { buildStrategy: s } })}")
+    && shell.includes("config: s ? { tactic: t, buildStrategy: s } : { tactic: t }")
+    && shell.includes("setBuildStrategy(config.buildStrategy ?? null);")
+    && shell.includes("<TacticScreen roster={battleRoster} draft={draft}")
+    && shell.includes("<LoadingScreen draft={draft} tactic={tactic} buildStrategy={buildStrategy}")
+    && shell.includes("<GameView autoStart draft={draft} tactic={tactic} buildStrategy={buildStrategy}"));
+  const gv = stripComments(read("src/GameView.jsx"));
+  const ulsCode = stripComments(read("src/useLocalServer.js"));
+  ck("G12", "GameView 把 buildStrategy 交給 start()；useLocalServer 只在開關內把策略寫進本場設定（OFF 存檔形狀不變）",
+    /tactic = null, buildStrategy = null \}\)/.test(gv) && /start\(\{\s*tactic,\s*buildStrategy,/.test(gv)
+    && /\.\.\.\(buildStrategy \? \{ buildStrategy \} : \{\}\)/.test(ulsCode));
+  const cards = stripComments(read("src/battle/ui/items/BuildStrategyCards.jsx"));
+  const loading = stripComments(read("src/screens/moba/LoadingScreen.jsx"));
+  ck("G12", "卡片：桌機一排五張、手機橫向滑動（scroll-snap）、locked 不可點且顯示「本場已鎖定」；載入頁只在有策略時顯示鎖定",
+    /repeat\(\$\{metas\.length\}, minmax\(0, 1fr\)\)/.test(cards) && /scrollSnapType: "x mandatory"/.test(cards) && /disabled=\{locked\}/.test(cards)
+    && /本場已鎖定/.test(cards) && /\{buildStrategy && \(/.test(loading) && /<BuildStrategyLockedChip strategy=\{buildStrategy\} \/>/.test(loading));
 }
 
 const byGate = {};

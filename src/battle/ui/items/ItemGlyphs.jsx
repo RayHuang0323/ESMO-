@@ -57,6 +57,7 @@ const UI = {
   headset: [P("M4 14v-2a8 8 0 0 1 16 0v2"), P("M4 14h3v6H5a1 1 0 0 1-1-1z", true), P("M20 14h-3v6h2a1 1 0 0 0 1-1z", true), P("M17 20.5c0 .8-1.6 1.3-4 1.3")],
   check: [P("M5 12.5l4.5 4.5L19 7.5")],
   chevron: [P("M6 9l6 6 6-6")],
+  lock: [P("M6 11h12v9H6z"), P("M8.5 11V8a3.5 3.5 0 0 1 7 0v3")],
 };
 
 function Shapes({ shapes }) {
@@ -88,6 +89,7 @@ export function StrategyEmblem({ id, size = 22 }) {
 
 export const HeadsetIcon = ({ size = 18 }) => <Svg size={size}><Shapes shapes={UI.headset} /></Svg>;
 export const CheckIcon = ({ size = 12 }) => <Svg size={size} strokeWidth={3}><Shapes shapes={UI.check} /></Svg>;
+export const LockIcon = ({ size = 12 }) => <Svg size={size} strokeWidth={2.4}><Shapes shapes={UI.lock} /></Svg>;
 export const ChevronIcon = ({ size = 16, up = false }) => (
   <Svg size={size} strokeWidth={2.4} style={{ transform: up ? "rotate(180deg)" : "none" }}><Shapes shapes={UI.chevron} /></Svg>
 );

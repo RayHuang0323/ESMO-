@@ -1,0 +1,48 @@
+
+════ itemsV1 OFF｜首頁 → 賽前 → Ban/Pick → 戰術頁 ════
+   截圖 review/moba-items-m3d/off-tactic-1366.png
+   截圖 review/moba-items-m3d/off-tactic-390.png
+
+════ itemsV1 ON｜接回同一場的戰術頁 ════
+
+════ itemsV1 ON｜戰術頁 1366px ════
+   版面 row　卡寬 168/168/168/168/168　預覽 b3（法師，核心預覽 2 種）　已選 standard　本場設定 null
+   截圖 review/moba-items-m3d/tactic-1366.png
+
+════ itemsV1 ON｜戰術頁 768px ════
+   版面 row　卡寬 131/131/131/131/131　預覽 b3（法師，核心預覽 2 種）　已選 standard　本場設定 null
+   截圖 review/moba-items-m3d/tactic-768.png
+
+════ itemsV1 ON｜戰術頁 390px ════
+   版面 swipe　卡寬 266/266/266/266/266　預覽 b3（法師，核心預覽 2 種）　已選 standard　本場設定 null
+   截圖 review/moba-items-m3d/tactic-390.png
+
+════ itemsV1 ON｜戰術頁 320px ════
+   版面 swipe　卡寬 210/210/210/210/210　預覽 b3（法師，核心預覽 2 種）　已選 standard　本場設定 null
+   截圖 review/moba-items-m3d/tactic-320.png
+
+════ ON 390｜五種策略逐一點選 ════
+   點 early ⇒ 本場設定 early　已選 early　位置點 1
+   點 scaling ⇒ 本場設定 scaling　已選 scaling　位置點 2
+   點 counter ⇒ 本場設定 counter　已選 counter　位置點 3
+   點 survival ⇒ 本場設定 survival　已選 survival　位置點 4
+   點 standard ⇒ 本場設定 standard　已選 standard　位置點 0
+   點 early ⇒ 本場設定 early　已選 early　位置點 1
+   五人核心預覽差異 {"b1":1,"b2":2,"b3":2,"b4":1,"b5":1}　預設預覽 b3（法師）
+   截圖 review/moba-items-m3d/tactic-selected-early-390.png
+
+════ ON 390｜戰術頁重新整理 ════
+   截圖 review/moba-items-m3d/tactic-restored-390.png
+
+════ ON｜戰術頁 → 返回 Ban/Pick → 再進戰術頁 ════
+
+════ ON 390｜開始載入 → 載入頁 → 戰鬥 ════
+   截圖 review/moba-items-m3d/loading-locked-390.png
+   載入頁：{"id":"early","text":"全隊出裝策略\n前期壓制\n本場已鎖定","battle":false}
+   ts 0　策略 {"b1":"early","b2":"early","b3":"early","b4":"early","b5":"early","r1":"standard","r2":"standard","r3":"standard","r4":"standard","r5":"standard"}　面板策略名 前期壓制,前期壓制,前期壓制,前期壓制,前期壓制　開局核心 {"b1":"t3_warbringer,t3_unbroken,t3_bloodplate","b2":"t3_warbringer,t3_unbroken,t3_bloodplate","b3":"t3_starcrown,t3_voidstaff,t3_lifespring","b4":"t3_warbringer,t3_unbroken,t3_bloodplate","b5":"t3_shadowblade,t3_nightscythe,t3_unbroken"}
+   截圖 review/moba-items-m3d/battle-hero-strategy-390.png
+
+════ ON｜戰鬥推進到 300s → 重新整理 → 恢復 ════
+   截圖 review/moba-items-m3d/loading-locked-resume-390.png
+   恢復時：{"id":"early","text":"全隊出裝策略\n前期壓制\n本場已鎖定","battle":false}
+   恢復前 ts 300（26 筆）　恢復後 ts 310（26 筆）　共同 26 筆、不同 0 筆

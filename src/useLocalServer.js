@@ -23,7 +23,7 @@ import { toEnginePlayerMods } from "./battle/moba/mobaPlayerStats.js";
 //  Item System M3a：裝備層開關（正式站預設 OFF；DEV 才讀 ?itemsDev=1，見 start() 內）
 import { featureEnabled } from "./featureFlags.js";
 import { itemsDevRequested } from "./ui/itemsDevFlag.js";
-import { toEngineItems } from "./battle/moba/items/itemsEngineAdapter.js";
+import { matchItemsConfig, normalizeBuildStrategy } from "./battle/moba/items/buildStrategyPrep.js";
 
 // ============================================================================
 //  S29：simTime / presentationTime / playbackRate 明確分離
@@ -232,16 +232,21 @@ export function useLocalServer() {
     //   `import.meta.env.DEV` 在正式 build 是常數 false ⇒ 後半段連同 itemsDevRequested 被移除，
     //   正式站沒有任何 query／UI 操作能打開（check_moba_items_m3 G1 實際 build 掃描）。
     //   未開啟 ⇒ 不呼叫 ⇒ 引擎逐位元回到 M2 之前（check_moba_items_m2 G1）。
-    //   出裝策略：Prep（M3d）經 opts.buildStrategy 傳入；沒有 ⇒ 標準。
+    //   出裝策略（M3d）：戰術頁 → 本場設定 → GameView → opts.buildStrategy；沒選／非法值 ⇒ 標準。
+    //   我方五人同一策略、對手固定標準（Owner D4）——規則在 buildStrategyPrep.matchItemsConfig（純函式，
+    //   M3 驗證器 G11 驗 match input、同 seed 同策略逐位元相同、預覽＝開局計畫）。
     const itemsOn = featureEnabled("itemsV1") || (import.meta.env.DEV && itemsDevRequested());
-    if (itemsOn && opts.roster) {
-      const itemsCfg = toEngineItems({ roster: opts.roster, heroLookup: heroById, defaultStrategy: opts.buildStrategy ?? "standard" });
+    const buildStrategy = itemsOn && opts.roster ? normalizeBuildStrategy(opts.buildStrategy) : null;
+    if (buildStrategy) {
+      const itemsCfg = matchItemsConfig({ roster: opts.roster, heroLookup: heroById, buildStrategy });
       if (itemsCfg) eng.configureItems(itemsCfg);
     }
     const activeConfig = {
       phase: "battle",
       draft: opts.draft ?? null,
       tactic: opts.tactic ?? null,
+      //  M3d：裝備系統真的開著才寫進本場設定（OFF 時存檔形狀與 M3d 之前相同）
+      ...(buildStrategy ? { buildStrategy } : {}),
     };
     activeMatchRef.current = {
       sessionId: opts.sessionId ?? null,

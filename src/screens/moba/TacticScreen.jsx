@@ -14,8 +14,21 @@
 //
 //  戰術自 Sprint24 起「真的」進引擎：onNext(cur) → AppShell → GameView →
 //  useLocalServer.start({tactic}) → engine.configureMatch。
+//
+//  Item System M3d：出裝策略區（itemsV1 開啟時才出現；閘門與 useLocalServer 相同）。
+//    五張卡＝BUILD_STRATEGY_META＋selectStrategyPrepView（預覽＝引擎開局 buildTargets 的同一份輸入，
+//    本畫面不算出裝）。選卡當下由 AppShell 存進本場設定（重新整理／返回都接得回來）；
+//    onNext(applied, buildStrategy) 的第二參數在 OFF 時是 null。
 // ============================================================================
 import React, { useMemo, useState } from "react";
+import { featureEnabled } from "../../featureFlags.js";
+import { itemsDevRequested } from "../../ui/itemsDevFlag.js";
+import { heroById } from "../../data/heroDatabase.js";
+import { draftRoster } from "../../battle/moba/draftRoster.js";
+import { normalizeBuildStrategy, selectStrategyPrepView } from "../../battle/moba/items/buildStrategyPrep.js";
+import { BuildStrategyCards } from "../../battle/ui/items/BuildStrategyCards.jsx";
+import HeroPortrait from "../../ui/HeroPortrait.jsx";
+import { useIsMobile } from "../../ui/useViewport.js";
 import { Frame } from "./LineupScreen.jsx";
 import { MOBA_TACTICS, toEngineTactic, STANDARD_OPP_TACTIC } from "../../platform/contracts/MobaTacticConfig.js";
 //  Expansion v1 N2/N3：只讀既有計數，不產生新事實（見 ui/DevelopmentInsights.jsx 檔頭）。
@@ -54,7 +67,7 @@ function engineEffects(t) {
   return out;
 }
 
-export default function TacticScreen({ onNext, onBack }) {
+export default function TacticScreen({ onNext, onBack, roster = null, draft = null, onBuildStrategyChange = null }) {
   const [sel, setSel] = useState("m1");
   const allPlayers = useProfileStore((s) => s.players) ?? [];
   //  Club Assets v1：讀合併權威（發展樹 ＋ 總教練），不自己合併。
@@ -93,8 +106,25 @@ export default function TacticScreen({ onNext, onBack }) {
   //  ⚠ 引擎效果讀的是**套用後**的 config —— 玩家看到的就是引擎真的會吃到的東西。
   const effects = engineEffects(applied);
 
+  //  ── Item System M3d：出裝策略 ──────────────────────────────────────────
+  //  正式站 itemsV1=false；DEV 才讀 ?itemsDev=1（正式 build 時後半段整段折疊，itemsDev 字串不進產物）。
+  const itemsOn = useMemo(() => featureEnabled("itemsV1") || (import.meta.env.DEV && itemsDevRequested()), []);
+  const isMobile = useIsMobile();
+  //  本場已存的選擇（重新整理、返回戰術頁時接回來）；沒有場次時才只靠本畫面的暫存。
+  const savedStrategy = useProfileStore((s) => s.matchmaking?.session?.activeMatch?.config?.buildStrategy ?? null);
+  const [pickedStrategy, setPickedStrategy] = useState(null);
+  const buildStrategy = normalizeBuildStrategy(pickedStrategy ?? savedStrategy);
+  const [focusSeat, setFocusSeat] = useState(null);
+  //  與 LoadingScreen／GameView 同一個 adapter（draftRoster）⇒ 預覽的英雄＝實際上場的英雄。
+  const prep = useMemo(
+    () => (itemsOn && roster ? selectStrategyPrepView({ roster: draftRoster(roster, draft), heroLookup: heroById, focusSeat }) : null),
+    [itemsOn, roster, draft, focusSeat],
+  );
+  const pickStrategy = (id) => { setPickedStrategy(id); onBuildStrategyChange?.(id); };
+  const focusHero = prep ? heroById(prep.seats.find((s) => s.seat === prep.focusSeat)?.heroId) : null;
+
   return (
-    <Frame title="戰術" sub="TEAM STRATEGY · 8 套戰術 · 實際影響對戰" onBack={onBack} onNext={() => onNext && onNext(applied)} nextLabel="開始載入 →">
+    <Frame title="戰術" sub="TEAM STRATEGY · 8 套戰術 · 實際影響對戰" onBack={onBack} onNext={() => onNext && onNext(applied, prep ? buildStrategy : null)} nextLabel="開始載入 →">
       <div style={{ width: "100%", maxWidth: 940, padding: "0 14px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
         {/* 戰術卡：auto-fill 響應式（手機 1 欄 / 平板 2-3 欄 / 桌機 4 欄），高度隨內容 */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(min(190px,100%),1fr))", gap: 8 }}>
@@ -217,6 +247,40 @@ export default function TacticScreen({ onNext, onBack }) {
             </div>
           </div>
         </div>
+
+        {/* Item System M3d：出裝策略（全隊同一策略，對手固定標準）。itemsV1 OFF ⇒ prep 為 null ⇒ 整塊不渲染 */}
+        {prep && (
+          <section data-build-strategy-prep aria-label="出裝策略" style={{ background: GC.card, border: `1px solid ${GC.gold}40`, borderRadius: 12, padding: "12px 14px 14px", minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 16, fontWeight: 900, color: GC.gold }}>出裝策略</span>
+              <span style={{ fontSize: 11, color: GC.gray }}>全隊五人套用同一策略，對手固定「標準」</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+              <div role="radiogroup" aria-label="預覽哪位英雄的出裝" style={{ display: "flex", gap: 6 }}>
+                {prep.seats.map((s) => {
+                  const on = s.seat === prep.focusSeat;
+                  const hero = heroById(s.heroId);
+                  return (
+                    <button key={s.seat} type="button" role="radio" aria-checked={on} aria-label={`預覽${hero?.zh ?? s.seat}（${s.arch}）`}
+                      data-touch data-focus-seat={s.seat} onClick={() => setFocusSeat(s.seat)}
+                      style={{ width: 44, height: 44, padding: 0, border: 0, borderRadius: 10, cursor: "pointer", background: GC.card2, flexShrink: 0, overflow: "hidden",
+                        boxShadow: on ? `0 0 0 2px ${GC.gold}` : `0 0 0 1px ${GC.line}`, opacity: on ? 1 : 0.72 }}>
+                      <HeroPortrait heroId={s.heroId} size={44} radius={10} alt=""
+                        fallback={<span style={{ color: "#fff", fontSize: 13, fontWeight: 900 }}>{(hero?.zh ?? "?").slice(0, 1)}</span>} />
+                    </button>
+                  );
+                })}
+              </div>
+              <span style={{ fontSize: 11.5, color: GC.gray, minWidth: 0, lineHeight: 1.5 }}>
+                預覽 <b style={{ color: "#fff" }}>{focusHero?.zh ?? prep.focusSeat}</b>（{prep.previews.standard.arch}）開局的前三件核心
+                {isMobile && <span style={{ display: "block" }}>左右滑動看五種策略</span>}
+              </span>
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <BuildStrategyCards layout="prep" selected={buildStrategy} onSelect={pickStrategy} previews={prep.previews} previewLabel="開局核心" />
+            </div>
+          </section>
+        )}
       </div>
     </Frame>
   );

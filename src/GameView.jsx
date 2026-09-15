@@ -124,7 +124,7 @@ function Minimap({ mobile = false }) {
     style={{ position: "absolute", bottom: mobile ? "calc(128px + env(safe-area-inset-bottom))" : 12, right: mobile ? 6 : 12, width: px2, height: px2, borderRadius: 3, border: "2px solid var(--battle-gold)", boxShadow: "0 4px 20px rgba(0,0,0,0.5)", cursor: "crosshair", touchAction: "none", zIndex: Z.minimap }} />;
 }
 
-export default function GameView({ roster = ROSTER, onContinue = null, autoStart = false, draft = null, tactic = null }) {
+export default function GameView({ roster = ROSTER, onContinue = null, autoStart = false, draft = null, tactic = null, buildStrategy = null }) {
   // Sprint19【C】：draft（Ban/Pick 結果）仍僅作 Presentation 傳遞。
   // Sprint24【D 升級】：tactic = MobaTacticConfig.v1 → start({tactic}) → engine.configureMatch
   //   （行為權重層；戰術現在「真的」進 LogicEngine，證據寫入 BattleResult.tacticExecution）。
@@ -150,6 +150,8 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
     c.backToDirector(); c.resetView();
     start({
       tactic,
+      //  Item System M3d：戰術頁選定的出裝策略（AppShell 從本場設定傳入；itemsV1 OFF 時為 null）
+      buildStrategy,
       roster: liveRosterRef.current,
       //  O7：權威啟動參數（沒有場次就是 undefined ⇒ 退回舊行為）
       seed: launch?.seed,

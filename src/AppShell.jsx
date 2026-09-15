@@ -145,6 +145,7 @@ export default function AppShell() {
     if (useProfileStore.getState().challenge?.pendingDraft) setScreen("challengeDraft");
   }, []);
   const [tactic, setTactic] = useState(null);   // S19：TacticScreen 選定戰術（純展示，不影響引擎）
+  const [buildStrategy, setBuildStrategy] = useState(null); // Item System M3d：本場出裝策略（itemsV1 開啟時才非 null；存檔在 activeMatch.config）
   const [playerId, setPlayerId] = useState(null); // S21：PlayerDetail 目標選手
   const [csConfig, setCsConfig] = useState(() => getC5CDirectConfig()); // S23/C5B：CS 賽前選擇含四階段 tacticalLayout
   const [csResult, setCsResult] = useState(null); // S23：CsMatchResult.v1（Match → Result 傳遞）
@@ -206,6 +207,7 @@ export default function AppShell() {
       } else {
         setDraft(config.draft ?? null);
         setTactic(config.tactic ?? null);
+        setBuildStrategy(config.buildStrategy ?? null);
         if (phase === "tactic") setScreen("tactic");
         else if (phase === "loading") setScreen("loading");
         //  Rift 載入修正：恢復進行中的戰鬥也不可先看到沒有地形的戰場 ⇒ Rift 未就緒時
@@ -331,9 +333,9 @@ export default function AppShell() {
       {screen === "matchmaking" && <MatchmakingScreen onDone={() => { useProfileStore.getState().setActiveMatchContext({ phase: "banpick" }); setScreen("banpick"); }} onBack={go("lineup")} />}
       {screen === "banpick" && <BanPickScreen onNext={(d) => { setDraft(d); useProfileStore.getState().setActiveMatchContext({ phase: "tactic", config: { draft: d } }); setScreen("tactic"); }} onBack={go("matchmaking")} onCodex={go("codex")} />}
       {screen === "codex" && <CodexScreen onBack={go("banpick")} />}
-      {screen === "tactic" && <TacticScreen onNext={(t) => { setTactic(t); useProfileStore.getState().setActiveMatchContext({ phase: "loading", config: { tactic: t } }); setScreen("loading"); }} onBack={go("banpick")} />}
-      {screen === "loading" && <LoadingScreen draft={draft} tactic={tactic} roster={battleRoster} onDone={() => { useProfileStore.getState().setActiveMatchContext({ phase: "battle" }); setScreen("battle"); }} />}
-      {screen === "battle" && <GameView autoStart draft={draft} tactic={tactic} roster={battleRoster} onContinue={home} />}
+      {screen === "tactic" && <TacticScreen roster={battleRoster} draft={draft} onBuildStrategyChange={(s) => useProfileStore.getState().setActiveMatchContext({ config: { buildStrategy: s } })} onNext={(t, s) => { setTactic(t); setBuildStrategy(s ?? null); useProfileStore.getState().setActiveMatchContext({ phase: "loading", config: s ? { tactic: t, buildStrategy: s } : { tactic: t } }); setScreen("loading"); }} onBack={go("banpick")} />}
+      {screen === "loading" && <LoadingScreen draft={draft} tactic={tactic} buildStrategy={buildStrategy} roster={battleRoster} onDone={() => { useProfileStore.getState().setActiveMatchContext({ phase: "battle" }); setScreen("battle"); }} />}
+      {screen === "battle" && <GameView autoStart draft={draft} tactic={tactic} buildStrategy={buildStrategy} roster={battleRoster} onContinue={home} />}
 
       {/* ── Sprint21 經營模組 ── */}
       {screen === "inbox" && <InboxScreen onBack={home} onNav={(t) => setScreen(t)} />}
