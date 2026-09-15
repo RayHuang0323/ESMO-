@@ -21172,3 +21172,80 @@ Owner Review：M0 APPROVED，Q1–Q5 照 M0 建議定案。M0 三份文件先做
 - 離線情境收入是固定腳本，不代表真實對局金錢曲線，不能拿來判斷裝備強度或出裝時間。
 - `buildPolicy` 的定位傷害 profile 仍是定位推導；混合型英雄覆寫表未建（M0 Q12）。
 - items 模組尚未列入 `SIMULATION_SEMANTICS_FILES`：它們還沒進引擎，列入會改指紋；M2 接入時一併列入並 bump `moba-sim.v5`。
+
+## 2026-09-15 MOBA Item System v1 — M2 Engine Integration（引擎接入＋M3 UI 資料契約）
+
+Owner 指示：開始 M2；**不做**正式玩家 Item UI，但從一開始把 M3 UI 所需的資料契約準備完整；
+可建 DEV-only Item Inspector（不美化、不進正式 UI）。最重要：**itemsV1 OFF 時 legacy 模擬完全不變，ON 時裝備真正進 Battle**。
+本輪**未**調 `dmgK`、未調收入數值、未做平衡、未加亂數；正式流程與 Challenge **未**啟用裝備；未 push、未 deploy。
+
+### 一、引擎接入：`LogicEngine.configureItems(cfg)`（第六個 opt-in 配置層）
+
+不呼叫／傳 null ⇒ `itemsOn` 恆為 false ⇒ 所有掛點短路。只能在第一個 tick 前呼叫（出生購買窗 = tick 0）。
+裝備規則全部住在 `src/battle/moba/items/itemsEngineRuntime.js`，引擎只留一行閘門呼叫。
+
+| 掛點 | 引擎位置 | itemsOn 時做什麼 |
+|---|---|---|
+| E1 輸出 | `_combatStep` 的 `dmgAmt` | D0（原式一個係數都不改）依定位拆物理／魔法，乘 AD／AP／攻速／暴擊期望值／技能急速／on-hit／斬殺 |
+| E2 減傷 | 同上 | 護甲／魔抗（含穿透、光環）`100/(100+抗性)` |
+| E3 扣血出口 | `pendingHits` flush、`_damageHero` | 先全部扣血（法傷護盾 → 一般護盾 → 血量），再依席位順序結算吸血／重傷／緩速／低血護盾，最後才判死亡 |
+| E4 回復 | 三段式回復 `healK` | 重傷與點燃取較強者；裝備每秒回復疊在三段式上 |
+| E5 生命 | `_applyMatchLevel` | `maxHp = baseMaxHp × 等級倍率 ＋ 裝備生命` |
+| E6 移速 | 移速乘法鏈 | 裝備移速＋光環；裝備緩速與紅 Buff 緩速取較強者 |
+| 其他 | 屏障／治療、野怪傷害、tick 開頭 | 治療強度、獵人護符、光環 |
+| 收入 | 小兵／擊殺＋助攻／塔／龍巴龍／營地／被動 | 個人 milli-gold 帳本；隊伍金 = Σ 個人帳本；英雄 `gold` = 個人累計收入 |
+| 購買窗 | 出生／復活落地／回城抵達／**走路進泉水** | Q3 核准 ⇒ `SHOP_WINDOWS` 加 `fountain`（只在泉水外 → 內那一 tick 開，不與復活／回城重複） |
+| snapshot | 尾端 | `...(itemsOn ? { items } : {})`，`MobaItemsSnapshot.v1` |
+
+### 二、M3 UI 資料契約（`docs/architecture/MOBA_裝備UI資料契約_v1.md`）
+
+- Owner 列的九項全部有欄位與 view-model 出口：玩家金錢、6 格背包、目前裝備、下一件計畫裝備（含合成樹、差價、買得起）、
+  出裝策略、AI 決策理由（機器碼＋中文）、購買事件（`seq` 可跨 snapshot 去重）、合成／出裝路徑、CombatStats 摘要；另加戰鬥狀態與全隊摘要。
+- `itemsViewModel.js`：純函式；OFF 回 null（UI 不得造假）。
+- `itemsEngineAdapter.js`：roster → configureItems 形狀（定位用 `correctedArch`，缺資料依席位 fallback）。
+- DEV Item Inspector：`src/debug/ItemInspector/ItemInspector.jsx`，`npm run dev` 後 `?debug=items`；
+  `main.jsx` 以 `import.meta.env.DEV` 把關，正式 build 產物裡沒有它（已查 dist）。
+
+### 三、檔案
+
+- 新增：`itemsEngineRuntime.js`、`itemsEngineAdapter.js`、`itemsViewModel.js`、`src/debug/ItemInspector/ItemInspector.jsx`、
+  `tools/check_moba_items_m2.mjs`、`tools/moba_items_legacy_fingerprint.mjs`、`docs/architecture/MOBA_裝備UI資料契約_v1.md`。
+- 修改：`src/LogicEngine.js`（29 處掛點，全部 itemsOn 閘門）、`itemEconomy.js`（`fountain` 窗）、`itemEffects.js`（`physAttack` 通道）、
+  `src/main.jsx`（DEV 路由）、`simulationVersion.js`（v4 換指紋＋理由）、`tools/check_moba_items_m1.mjs`（G6／G11／G13 隨 M2 更新）、
+  `docs/design/MOBA_裝備系統_v1.md`（§6.3 購買窗改為四個）。
+
+### 四、驗證（全部實跑）
+
+- **legacy 不變**：`moba_items_legacy_fingerprint` 把 M1 commit `6a7d40a` 的引擎解出來逐場比對
+  （3 seed × bare／照 useLocalServer 全配置；snapshot 串流雜湊、終局雜湊、rng／rng2／rng3 呼叫次數、key 集合）
+  ⇒ 不呼叫 configureItems 與 `configureItems(null)` 兩種都 **6/6 場零差異**。
+- `node tools/check_moba_items_m2.mjs` ⇒ **53/53 PASS**（G1 legacy 3、G2 opt-in 6、G3 整場 8、G4 戰鬥掛點 15、G5 收入與購買窗 6、
+  G6 決定性 1、G7 UI 契約 10、G8 隔離 4）。第一次跑 50/53：一個真 bug（見 §六）、兩個驗證器自身寫錯（光環測試攻擊者帶著起始裝；
+  掃描把 simulationVersion 的註解當成呼叫），修正後重跑全綠。
+- `node tools/check_moba_items_m1.mjs` ⇒ **69/69 PASS**（原 70；G13 的 4 條 M1 隔離檢查換成 3 條 M2 時代仍成立的隔離檢查）。
+- `node tools/check_simulation_version_gate.mjs` ⇒ 綠；仍 `moba-sim.v4`，指紋 `d2335417a7c170af → 870f893d7a1aa43a`（同版本換指紋，理由寫在檔內）。
+- `npm run build`（最終程式碼）⇒ built in 15.87s；dist 內無 ItemInspector。
+- `node tools/verify.mjs --only=regress,regress2,experience26` ⇒ **3/3 通過**（experience26 7s、regress 15 seeds 33s、regress2 節奏門檻 44s）。
+- **未經瀏覽器實測**：DEV Item Inspector（`npm run dev` → `?debug=items`）。
+
+### 五、量測（12 seed × OFF／ON 標準／ON 反制；固定名單；**不是平衡結論**）
+
+| 模式 | 結束 | 中位數 | 最長 |
+|---|---|---|---|
+| OFF | 12/12 | 22.9 分 | 25.4 分 |
+| ON 標準 | 12/12 | 23.2 分 | 46.4 分（seed 42） |
+| ON 反制 | 12/12 | 22.4 分 | 31.9 分 |
+
+- 約 21 分鐘時每人累計收入約 5,000–6,000、平均 1.1–1.4 件 T3（legacy 收入常數偏低）。
+- 固定測試名單藍方勝率偏低在 OFF 就存在（陣容差），不是裝備造成。
+
+### 六、本輪修掉的問題
+
+- `outgoingDamage` 零裝備短路沒有回 `physAttack` ⇒ 零裝備攻擊者打棘刺鎧時「被攻擊觸發」重傷不發動。已補，驗證器 G4 覆蓋。
+- 吸血的點燃減療原本是佔位寫法；改由引擎傳入既有點燃減療（`_igniteCut`），與重傷取較強者。
+
+### 七、刻意沒做
+
+- 正式玩家 Item UI（M3）、平衡／收入／`dmgK` 校準（M3，只能在 itemsV1 規則集內）、Replay／BattleResult 正式欄位、正式流程啟用（屆時開 v5）。
+- M3 開始前：先 audit 已安裝 skills（UI／frontend design、game UI／gameplay、GSAP 若真的需要、Superpowers），不猜名稱、不另裝；
+  目標是現代電競 MOBA HUD／Shop／Build UI，mobile-first。

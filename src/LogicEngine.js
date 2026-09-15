@@ -37,6 +37,8 @@ import {
 import {
   rulesFor, XP, addMatchXp, powerMultFor, hpMultFor, xpToNext,
 } from "./battle/moba/matchProgression.js";
+//  Item System v1 M2：裝備層（opt-in；未 configureItems ⇒ 完全不執行 ⇒ legacy 逐位元不變）
+import { ItemsEngineRuntime } from "./battle/moba/items/itemsEngineRuntime.js";
 
 const MAP_EDGE_PAD = 3;
 //  H.2 導航調參：近場預判距離與重算路徑的冷卻（tick）。
@@ -72,6 +74,8 @@ export class LogicEngine {
     this.hmod = {}; this.heroMeta = null;
     this.spellsOn = false;         // J：未 configureSpells ⇒ 全部召喚師技能 v2 程式碼不生效
     this.spellMeta = null;
+    this.itemsOn = false;          // Item System M2：未 configureItems ⇒ 全部裝備程式碼不生效
+    this.items = null;
     this.rules = rulesFor(opts.rules);   // S29：模擬規則集（v2 預設）
     const R = this.rules;
     this.t = 0; this.over = false; this.winner = null;
@@ -611,6 +615,39 @@ export class LogicEngine {
     }
   }
 
+  /**
+   * Item System v1 M2：裝備層（第六個 opt-in 配置層）。
+   * @param cfg { players: { [playerId]: { arch, healer, strategy, heroId } }, batch?, meta? }
+   *   形狀由 battle/moba/items/itemsEngineAdapter.toEngineItems 準備；引擎不認得 heroId。
+   * ⚠ 只能在第一個 tick 之前呼叫（出生購買窗 = 開局 tick 0）。
+   * ⚠ 不呼叫／傳 null ⇒ itemsOn 恆為 false ⇒ 全部裝備程式碼短路 ⇒ legacy 逐位元不變
+   *   （tools/moba_items_legacy_fingerprint.mjs 對 M1 基準逐場比對）。
+   * 規則與數值：docs/architecture/MOBA_戰鬥屬性契約_v1.md；snapshot：docs/architecture/MOBA_裝備UI資料契約_v1.md。
+   * @returns {boolean} 是否啟用
+   */
+  configureItems(cfg = null) {
+    if (!cfg?.players || this.itemsOn || this.t > 0) return false;
+    this.itemsOn = true;
+    this.items = new ItemsEngineRuntime({
+      players: this.players, config: cfg.players, batch: cfg.batch,
+      radii: { minion: XP.MINION_RADIUS, tower: XP.TOWER_RADIUS, camp: XP.CAMP_RADIUS },
+      meta: cfg.meta ?? null,
+    });
+    this.items.spawnAll(this.players, this.t, (q) => this._applyMatchLevel(q));
+    this._itemsSyncGold();
+    return true;
+  }
+  /** itemsOn：隊伍金錢 = 五人個人帳本總和；個人 gold 統計 = 帳本累計收入（不含起始金）。 */
+  _itemsSyncGold() {
+    this.bGold = this.items.teamGold("blue");
+    this.rGold = this.items.teamGold("red");
+    for (const p of this.players) p.gold = this.items.earnedGold(p.id);
+  }
+  /** 既有點燃減療比例（裝備吸血與它取較強者）。 */
+  _igniteCut(q) {
+    return (this.spellsOn && this.t < (q.healCutUntil ?? 0)) ? this.rules.igniteHealCut : 0;
+  }
+
   /** 技能冷卻（單一查表出口；未知技能 ⇒ 用閃現的冷卻，不會變成 undefined）。 */
   _spellCd(spell) {
     const R = this.rules;
@@ -635,7 +672,7 @@ export class LogicEngine {
    * 未啟用技能層 ⇒ `shield` 恆為 0 ⇒ 與基準逐位元相同（`foe.hp -= amt`）。
    */
   _damageHero(foe, amt) {
-    if (this.spellsOn && foe.shield > 0 && this.t < foe.shieldUntil) {
+    if ((this.spellsOn || this.itemsOn) && foe.shield > 0 && this.t < foe.shieldUntil) {
       const absorbed = Math.min(foe.shield, amt);
       foe.shield -= absorbed;
       amt -= absorbed;
@@ -711,7 +748,8 @@ export class LogicEngine {
   /** 等級 → 本場 power / maxHp（以 Lv1 基準錨定；升級補上「新增的那段血」，不是全補）。 */
   _applyMatchLevel(p) {
     p.power = p.basePower * powerMultFor(p.mlv);
-    const newMax = p.baseMaxHp * hpMultFor(p.mlv);
+    let newMax = p.baseMaxHp * hpMultFor(p.mlv);
+    if (this.itemsOn) newMax += this.items.hpBonus(p.id);   // M2：裝備生命（E5）
     const gain = newMax - p.maxHp;
     p.maxHp = newMax;
     p.hp = Math.min(newMax, p.hp + Math.max(0, gain));
@@ -1585,14 +1623,14 @@ export class LogicEngine {
           p.cleanseUntil = this.t + R.cleanseT;
           break;
         case "barrier":
-          p.shield = p.maxHp * R.barrierPct;
+          p.shield = p.maxHp * R.barrierPct * (this.itemsOn ? this.items.hspK(p) : 1);
           p.shieldUntil = this.t + R.barrierT;
           break;
         case "heal": {
-          const gain = Math.min(p.maxHp, p.hp + p.maxHp * R.healPct) - p.hp;
+          const gain = Math.min(p.maxHp, p.hp + p.maxHp * R.healPct * (this.itemsOn ? this.items.hspK(p) : 1)) - p.hp;
           p.hp += gain; p.heal += gain;
           if (arg && !arg.dead) {
-            const g2 = Math.min(arg.maxHp, arg.hp + arg.maxHp * R.healAllyPct) - arg.hp;
+            const g2 = Math.min(arg.maxHp, arg.hp + arg.maxHp * R.healAllyPct * (this.itemsOn ? this.items.hspK(p) : 1)) - arg.hp;
             arg.hp += g2; p.heal += g2;       // 治療量記在施放者身上（是他救的）
           }
           break;
@@ -1985,6 +2023,7 @@ export class LogicEngine {
         q.gold += campGold * share;
         if (R.matchXp) this._addXp(q, campXp * share);
       }
+      if (this.itemsOn) this.items.earnCamp(kt, m.pos, campGold * share, alive);   // M2：個人帳本
       // Buff 只屬於主怪（index 0），由真正參與該個體擊殺且仍在場的英雄取得。
       if (c.type === "buff" && m.index === 0) {
         const receiver = alive.filter((q) => q.side === kt && m.participants.has(q.id))
@@ -2107,6 +2146,7 @@ export class LogicEngine {
           o.killerTeam = kt;
           if (kt) {
             this._dmgGold(kt, key === "baron" ? 400 : 200);
+            if (this.itemsOn) this.items.earnObjective(kt, key, this.players);
             if (R.matchXp) this._awardObjectiveXp(kt, key);
             // 巴龍 buff：擊殺方限時兵線強化（收尾機制；不是傷害/勝率係數，是攻城節奏）
             if (key === "baron" && this.fsm3) this.fsm3[kt].baronBuffUntil = this.t + R.baronBuffT;
@@ -2217,7 +2257,7 @@ export class LogicEngine {
           if (!victim || dist(p.pos, victim.pos) > 3.5) return null;
           return {
             p, victim,
-            amount: p.power * this._dragonPowerK(p.side) * R.campDmgK * dt,
+            amount: p.power * this._dragonPowerK(p.side) * R.campDmgK * dt * (this.itemsOn ? this.items.campDamageK(p) : 1),
           };
         })
         .filter(Boolean)
@@ -2272,6 +2312,8 @@ export class LogicEngine {
     const S = this.tacticOn ? this._tac[p.side] : null;
     // 回血：靠泉水快速回、脫離戰鬥緩慢回
     const nearFountain = dist(p.pos, FOUNTAIN[p.side]) < 10;
+    //  M2（Q3）：走路進泉水也開購買窗（進入的那一 tick；復活／回城落地已開過窗不重複）
+    if (this.itemsOn) this.items.fountainEdge(p, nearFountain, this.t, (q) => this._applyMatchLevel(q));
     // S29（順序偏差修正 ③）：舊碼 alive.find ⇒ 一律打「陣列索引最小」的敵人
     //   （藍方永遠先集火 r1、紅方永遠先集火 b1）。改為打**最近的**敵人 ⇒ 順序無關。
     let foe = null;
@@ -2311,7 +2353,9 @@ export class LogicEngine {
     // S29B1：連續接觸起點（killContext.startedAt/duration 的資料來源）
     if (R.engagementFsm) p.contactSince = foe ? (p.contactSince ?? this.t) : null;
     //  Milestone J：點燃期間回復量打折（未啟用技能層 ⇒ healK 恆為 1 ⇒ 逐位元不變）
-    const healK = (this.spellsOn && this.t < (p.healCutUntil ?? 0)) ? (1 - R.igniteHealCut) : 1;
+    let healK = (this.spellsOn && this.t < (p.healCutUntil ?? 0)) ? (1 - R.igniteHealCut) : 1;
+    //  M2：裝備重傷與點燃取較強者（不相加）
+    if (this.itemsOn) healK = this.items.healK(p, this.t, healK);
     //  Milestone M1.5：三段式回復（交戰中／脫戰延遲後／泉水），數值全部來自 R.regen 單一設定源。
     //  舊規則集（v1/v2）沒有 regen 契約 ⇒ 走下面的 legacy 分支 ⇒ 歷史基準逐位元不變。
     const RG = R.regen;
@@ -2336,7 +2380,9 @@ export class LogicEngine {
           ? R.retreatHoldRegenPctPerSec : RG.outOfCombatPctPerSec;
         pctPerSec = (!foe && settled) ? outRate : RG.inCombatPctPerSec;
       }
-      const h = Math.min(p.maxHp, p.hp + p.maxHp * pctPerSec * dt * healK) - p.hp;
+      //  M2：裝備每秒回復（E4）疊在三段式之上；未啟用 ⇒ 與舊碼同一個乘數
+      const itemRegen = this.itemsOn ? this.items.regenBonus(p) : 0;
+      const h = Math.min(p.maxHp, p.hp + p.maxHp * (itemRegen ? pctPerSec + itemRegen : pctPerSec) * dt * healK) - p.hp;
       p.hp += h; p.heal += h;
       p.regenMode = inFountain ? "fountain"
         : pctPerSec === R.retreatHoldRegenPctPerSec ? "retreatHold"
@@ -2364,7 +2410,9 @@ export class LogicEngine {
       const dmgAmt = p.power * dt * R.dmgK * lateFactor *
         (hasRedBuff || hasBlueBuff ? R.combatBuffDamageK : 1) *
         this._dragonPowerK(p.side) / this._dragonGuardK(foe.side);
-      p.dmg += dmgAmt; foe.hitBy.set(p.id, this.t); // Sprint06：傷害/助攻追蹤（附加）
+      //  M2：裝備屬性把 D0（dmgAmt，一個係數都不改）拆成物理／魔法並做減傷（E1–E2）
+      const itemHit = this.itemsOn ? this.items.resolveHit(p, foe, dmgAmt, dt, lateFactor) : null;
+      p.dmg += itemHit ? itemHit.total : dmgAmt; foe.hitBy.set(p.id, this.t); // Sprint06：傷害/助攻追蹤（附加）
       //  Milestone J：淨化後的短暫免疫期內不再被掛上減速（否則解了等於沒解）。
       const cleansed = this.spellsOn && this.t < (foe.cleanseUntil ?? 0);
       if (hasRedBuff && !cleansed) foe.redSlowUntil = Math.max(foe.redSlowUntil ?? 0, this.t + R.redBuffSlowT);
@@ -2389,8 +2437,12 @@ export class LogicEngine {
         });
         p.atkCd = 0.5 * (hasBlueBuff ? R.blueBuffCooldownK : 1);
       }
-      if (R.simultaneousCombat) pendingHits.push([p, foe, dmgAmt]);
-      else { this._damageHero(foe, dmgAmt); if (foe.hp <= 0 && !foe.dead) this._resolveKill(p, foe); }
+      if (R.simultaneousCombat) pendingHits.push(itemHit ? [p, foe, dmgAmt, itemHit] : [p, foe, dmgAmt]);
+      else if (itemHit) {
+        this.items.applyDamage(foe, itemHit, this.t);
+        this.items.afterDamage([[p, foe, dmgAmt, itemHit]], this.players, this.t, (q) => this._igniteCut(q));
+        if (foe.hp <= 0 && !foe.dead) this._resolveKill(p, foe);
+      } else { this._damageHero(foe, dmgAmt); if (foe.hp <= 0 && !foe.dead) this._resolveKill(p, foe); }
     }
     let tw = this.frontStructure(p.side, effLane, p.pos);
     // 可攻塔判定：v1/v2 = 塔邊有任何敵人就完全打不了塔（Legacy 簡化）。
@@ -2496,6 +2548,7 @@ export class LogicEngine {
     }
     foe.hitBy.clear();
     this._dmgGold(p.side, 300); p.gold += 300;
+    if (this.itemsOn) this.items.earnKill(p, assists);   // M2：擊殺 300 ＋ 助攻均分 150
     // S29B1：killContext（v3；擊殺當下的真實分類，Timeline/Replay/verifier 消費，
     //   不進 BattleResult.v2——契約不變）
     let ctx = null;
@@ -2815,6 +2868,7 @@ export class LogicEngine {
     //   不再拖出 30 分鐘長尾。v1/v2 無此欄位 ⇒ 第二項恆為 0，行為不變。
     const lateFactor = 1 + Math.max(0, this.t - 360) / 600 +
       (R.lateAccelT ? Math.max(0, this.t - R.lateAccelT) / R.lateAccelDiv : 0);
+    if (this.itemsOn) this.items.beginTick(this.players);   // M2：光環（tick 開頭的凍結位置）
 
     this.waveTimer -= dt;
     if (this.waveTimer <= 0) {
@@ -3093,6 +3147,7 @@ export class LogicEngine {
           this._dmgGold(foe, deadMs.length * 20);
           // S29：小兵陣亡 → 敵方在場英雄分 XP（真實事件驅動，非時間流逝自動加）
           if (R.matchXp) for (const m of deadMs) this._awardMinionXp(foe, posOnLane(ln, m.t));
+          if (this.itemsOn) for (const m of deadMs) this.items.earnMinion(foe, posOnLane(ln, m.t), this.players);
         }
         this.lanes[ln][key] = this.lanes[ln][key].filter((m) => m.hp > 0);
       });
@@ -3392,6 +3447,7 @@ export class LogicEngine {
         if (p.respawn <= 0) {
           p.dead = false; p.hp = p.maxHp; p.retreating = false; p.retreatDeep = false; p.hitBy.clear();
           const f = FOUNTAIN[p.side]; this._navTeleport(p, f); p.state = "回防";   // H.2：重生點投影到可走區
+          if (this.itemsOn) this.items.shopWindow(p, "respawn", this.t, (q) => this._applyMatchLevel(q));
           // S29B1（v3）：復活鎖——RETURN 期間不得參團/追擊，必須先走回戰線
           if (R.engagementFsm) {
             p.fsm = "RETURN"; p.reengageAt = this.t + R.respawnLock; p.chaseId = null;
@@ -3620,6 +3676,7 @@ export class LogicEngine {
                 this._navTeleport(p, f);     // H.2：回城落點投影到可走區
                 p.contactSince = null;
                 this._recallEventV3(p, "done", from);
+                if (this.itemsOn) this.items.shopWindow(p, "recallArrive", this.t, (q) => this._applyMatchLevel(q));
                 st = "回城"; p.fsm = "RECALL";
               } else {
                 tgt = { x: p.pos.x, y: p.pos.y };   // 原地引導（不移動）
@@ -3874,7 +3931,9 @@ export class LogicEngine {
           (R.neutralObjectives && this.t < (p.redSlowUntil ?? 0) ? R.redBuffSlowK : 1) *
           (R.neutralObjectives && this.t < (p.blueBuffUntil ?? 0) ? R.blueBuffMoveK : 1) *
           //  Milestone J：幽魂的移速加成。未啟用技能層 ⇒ hasteUntil 恆為 0 ⇒ 係數恆為 1。
-          (this.spellsOn && this.t < (p.hasteUntil ?? 0) ? R.ghostSpeedK : 1) * dt;
+          (this.spellsOn && this.t < (p.hasteUntil ?? 0) ? R.ghostSpeedK : 1) *
+          //  M2：裝備移速＋光環；裝備緩速與紅 Buff 緩速取較強者（E6）。未啟用 ⇒ 係數恆為 1。
+          (this.itemsOn ? this.items.moveK(p, this.t, R.neutralObjectives && this.t < (p.redSlowUntil ?? 0), R.redBuffSlowK) : 1) * dt;
       //  ── H.2：真正的碰撞與導航 ────────────────────────────────────────────
       //  舊版是「直線位移 + 對 28 個手寫圓做推開」，那和畫面上的牆體無關 ⇒ 會穿牆。
       //  現在：目標點先推回通道中心 → 子步進前進（沿牆切線滑動）→ 需要時尋路。
@@ -3925,7 +3984,13 @@ export class LogicEngine {
     // S29（順序偏差修正 ①）：同時結算 —— 本 tick 所有傷害一起套用，再判定死亡。
     //   ⇒ 兩名英雄可在同一 tick 互相擊殺（真實換命），沒有任何一方享有「先手」。
     if (R.simultaneousCombat && pendingHits.length) {
-      for (const [, foe, amt] of pendingHits) this._damageHero(foe, amt);
+      if (this.itemsOn) {
+        //  M2：先套用全部傷害（法傷護盾 → 護盾 → 血量），再依席位順序結算吸血／重傷／緩速／低血護盾，最後才判死亡。
+        for (const [, foe, amt, hit] of pendingHits) { if (hit) this.items.applyDamage(foe, hit, this.t); else this._damageHero(foe, amt); }
+        this.items.afterDamage(pendingHits, this.players, this.t, (q) => this._igniteCut(q));
+      } else {
+        for (const [, foe, amt] of pendingHits) this._damageHero(foe, amt);
+      }
       for (const [atk, foe] of pendingHits) {
         if (foe.hp <= 0 && !foe.dead) this._resolveKill(atk, foe);
       }
@@ -3964,6 +4029,7 @@ export class LogicEngine {
         tw._dead = true;
         const atk = tw.side === "blue" ? "red" : "blue";
         this._dmgGold(atk, tw.lane === "nexus" ? 0 : 250);
+        if (this.itemsOn && tw.lane !== "nexus") this.items.earnTower(atk, tw.pos, this.players);
         // S29：拆塔 XP（拆塔方在場英雄；主堡不給，因為那就結束了）
         if (R.matchXp && tw.lane !== "nexus") {
           for (const q of this.players) {
@@ -3983,14 +4049,15 @@ export class LogicEngine {
         const r = alive.filter((p) => p.side === "red" && dist(p.pos, pit) < 9).length;
         o.contested = b > 0 && r > 0;
         // S29：目標擊殺 → 全隊存活者分 XP（輔助/打野不因低擊殺卡等級）
-        if (b > r) { o.hp -= 28 * dt; if (o.hp <= 0) { o.alive = false; o.respawn = 150; this._dmgGold("blue", gold); if (R.matchXp) this._awardObjectiveXp("blue", key); } }
-        else if (r > b) { o.hp -= 28 * dt; if (o.hp <= 0) { o.alive = false; o.respawn = 150; this._dmgGold("red", gold); if (R.matchXp) this._awardObjectiveXp("red", key); } }
+        if (b > r) { o.hp -= 28 * dt; if (o.hp <= 0) { o.alive = false; o.respawn = 150; this._dmgGold("blue", gold); if (this.itemsOn) this.items.earnObjective("blue", key, this.players); if (R.matchXp) this._awardObjectiveXp("blue", key); } }
+        else if (r > b) { o.hp -= 28 * dt; if (o.hp <= 0) { o.alive = false; o.respawn = 150; this._dmgGold("red", gold); if (this.itemsOn) this.items.earnObjective("red", key, this.players); if (R.matchXp) this._awardObjectiveXp("red", key); } }
       };
       if (this.t > 90) upd(this.dragon, "dragon", 200);
       if (this.t > 300) upd(this.baron, "baron", 400);
     }
 
     this.bGold += 14 * dt; this.rGold += 14 * dt;
+    if (this.itemsOn) { this.items.earnPassive(this.players, this.t, dt); this._itemsSyncGold(); }   // M2：隊伍金錢 = Σ 個人帳本
     this.fx = this.fx.filter((f) => (f.exp -= dt) > 0);
     //  M1.5：脫戰計時器的**唯一**寫入點（見 tick 開頭的血量快照）。
     if (_hpAtTickStart) {
@@ -4053,7 +4120,7 @@ export class LogicEngine {
             ? [{ id: "ignite", remaining: Math.round((p.igniteUntil - this.t) * 10) / 10 }] : []),
           ...(this.spellsOn && this.t < (p.hasteUntil ?? 0)
             ? [{ id: "haste", remaining: Math.round((p.hasteUntil - this.t) * 10) / 10 }] : []),
-          ...(this.spellsOn && p.shield > 0 && this.t < (p.shieldUntil ?? 0)
+          ...((this.spellsOn || this.itemsOn) && p.shield > 0 && this.t < (p.shieldUntil ?? 0)
             ? [{ id: "shield", remaining: Math.round((p.shieldUntil - this.t) * 10) / 10,
               amount: Math.round(p.shield) }] : []),
         ],
@@ -4136,6 +4203,8 @@ export class LogicEngine {
       ...(R.summonerSpells ? { spellEvents: this.spellLog.slice(-8).map((e) => ({ ...e })) } : {}),
       // S29B3：回城事件（最近 8 筆；view 的傳送/引導特效 + Timeline 事件來源）
       ...(R.recallChannel ? { recallEvents: this.recallLog.slice(-8).map((e) => ({ ...e })) } : {}),
+      //  Item System M2：裝備層（MobaItemsSnapshot.v1；M3 Item UI 的唯一資料來源）。未 configureItems ⇒ key 不存在。
+      ...(this.itemsOn ? { items: this.items.snapshot(this.players, this.t) } : {}),
     };
   }
   _snapLane(ln) {

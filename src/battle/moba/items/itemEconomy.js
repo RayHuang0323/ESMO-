@@ -20,7 +20,8 @@ import { applyPurchase } from "./itemInventory.js";
 export const MILLI = 1000;
 
 /** 購買只在這三個事件開窗（Owner 核准；走路進泉水不在其中）。 */
-export const SHOP_WINDOWS = Object.freeze(["spawn", "respawn", "recallArrive"]);
+//  M2：Q3 核准「走路進泉水也開窗」（與回城抵達同效果）⇒ 第四個窗 fountain。
+export const SHOP_WINDOWS = Object.freeze(["spawn", "respawn", "recallArrive", "fountain"]);
 
 export const INCOME_SOURCES = Object.freeze([
   "passive", "minion", "kill", "assist", "tower", "dragon", "baron", "camp", "tithe",

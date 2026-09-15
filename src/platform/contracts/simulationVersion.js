@@ -244,7 +244,19 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //    會被路過的小兵與英雄順手打掉，移回野區之後那些交戰不再發生。
   //  ⇒ 這不是「同版本換指紋」，是新版本。
   //  ⚠ 後果（已知且接受）：v1/v2/v3 的歷史挑戰不再可重播，由 `canReplay` 明確拒絕。
-  "moba-sim.v4": "d2335417a7c170af",
+  //
+  //  2026-09-15（Item System v1 M2：Engine Integration）：LogicEngine 新增 opt-in 的
+  //  `configureItems` 與 `itemsOn` 閘門下的戰鬥／收入／購買窗掛點。
+  //  ⚠ **判定為不改變模擬語意**，而且是實測，不是推論：
+  //    `tools/check_moba_items_m2.mjs` G1 把 M1 commit 6a7d40a 的引擎解出來，
+  //    與改動後的引擎逐場比對（3 seed × bare／照 useLocalServer 全配置；
+  //    snapshot 串流雜湊、終局雜湊、rng／rng2／rng3 呼叫次數、key 集合）⇒ 全部相同；
+  //    `configureItems(null)` 也相同。正式流程與 Challenge 都沒有呼叫 configureItems
+  //    ⇒ 任何既有輸入到不了裝備層。⇒ 沿用 `moba-sim.v4`，只換指紋（舊值 d2335417a7c170af）。
+  //  ⚠ 裝備模組刻意**不列入**上面的語意清單：它們只在 itemsOn 時被執行，v4 的任何輸入都不會經過。
+  //    **正式流程或 Challenge 第一次呼叫 configureItems 的那一天必須開 moba-sim.v5**，
+  //    並同時把裝備模組加進清單（Item System 設計 §8 已定）。
+  "moba-sim.v4": "870f893d7a1aa43a",
 });
 
 export const isKnownSimulationVersion = (v) =>

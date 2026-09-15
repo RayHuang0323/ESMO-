@@ -51,24 +51,27 @@ const effectsOf = (cs, type) => (cs?.effects ?? []).filter((e) => e.type === typ
  */
 export function outgoingDamage({ D0, cs, profile, foe = {}, dt = 0, lateFactor = 1 }) {
   const K = COMBAT_CONSTANTS;
-  if (!cs || cs.isEmpty) return { phys: D0 * profile.phys, magic: D0 * profile.magic };
   const w = channelWeights(profile);
+  //  M2：短路也要帶 physAttack（攻擊通道）——否則零裝備攻擊者打到棘刺鎧時「被攻擊觸發」的效果不會發動。
+  if (!cs || cs.isEmpty) return { phys: D0 * profile.phys, magic: D0 * profile.magic, physAttack: D0 * w.wPA };
   const hasteK = 1 + Math.min(cs.abilityHaste, K.AH_CAP) / 100;
   const critDamageEff = cs.critDamage * (1 - (foe.antiCrit ?? 0));
   const atkK = (1 + cs.ad / K.K_AD) * (1 + cs.attackSpeed) * (1 + cs.critChance * (critDamageEff - 1));
   const abPK = (1 + (cs.ad * K.R_ABILITY_AD) / K.K_AD) * hasteK;
   const maAK = (1 + (cs.ap * K.R_ATTACK_AP) / K.K_AP) * (1 + cs.attackSpeed);
   const maBK = (1 + cs.ap / K.K_AP) * hasteK;
-  let phys = D0 * (w.wPA * atkK + w.wPB * abPK);
+  let physAttack = D0 * w.wPA * atkK;
+  let phys = physAttack + D0 * w.wPB * abPK;
   let magic = D0 * (w.wMA * maAK + w.wMB * maBK);
   for (const e of effectsOf(cs, "ON_HIT")) {
     const p = e.params;
     const base = (p.flat ?? 0) + (p.ratioAp ?? 0) * cs.ap + (p.pctCurrent ?? 0) * (foe.hp ?? 0) + (p.pctMax ?? 0) * (foe.maxHp ?? 0);
     const amt = base * K.ONHIT_BASE_RATE * (1 + cs.attackSpeed) * dt * lateFactor;
-    if (p.damageType === "magic") magic += amt; else phys += amt;
+    if (p.damageType === "magic") magic += amt; else { phys += amt; physAttack += amt; }
   }
   const execK = executeMultiplier(cs, foe);
-  return { phys: phys * execK, magic: magic * execK };
+  //  physAttack：物理「攻擊通道」（含物理 on-hit），吸血只算這一段。
+  return { phys: phys * execK, magic: magic * execK, physAttack: physAttack * execK };
 }
 
 /** 斬殺倍率：目標血量比例低於門檻時 × (1 + bonus)；多件已由 unique 去重。 */

@@ -227,7 +227,10 @@ const safe = (fn) => { try { return { ok: true, value: fn() }; } catch (e) { ret
   ck("G6", "滿格時自動丟棄 starter（不退款：已花費只增加新物品成本）",
     drop.ok && drop.events[0].action === "dropStarter" && drop.events[0].cost === 0 && drop.ledger.spentMilli === 3000 * MILLI && !drop.inventory.slots.includes("st_blade"), JSON.stringify(drop.events));
   const nowin = purchase({ ledger: rich, inventory: emptyInventory(), itemId: "t1_ad_s", window: "walkIn" });
-  ck("G6", `只能在 ${SHOP_WINDOWS.join("／")} 購買（走路進泉水被拒絕）`, !nowin.ok && nowin.reason === "not_in_shop_window" && SHOP_WINDOWS.length === 3);
+  //  M2：Q3 核准走路進泉水開窗 ⇒ 第四個窗 fountain；其他任何時點仍一律拒絕。
+  const walk = purchase({ ledger: rich, inventory: emptyInventory(), itemId: "t1_ad_s", window: "fountain" });
+  ck("G6", `只能在 ${SHOP_WINDOWS.join("／")} 購買（非購買窗被拒絕）`, !nowin.ok && nowin.reason === "not_in_shop_window" && walk.ok
+    && JSON.stringify(SHOP_WINDOWS) === JSON.stringify(["spawn", "respawn", "recallArrive", "fountain"]));
 }
 
 // ── G7 金錢不足 ───────────────────────────────────────────────────────────────
@@ -412,18 +415,15 @@ const COMPS = {
     if (/Math\.random|Date\.now|new Date|performance\.now|crypto\.|\brng\d?\s*\(|window\.|localStorage|document\./.test(code)) offenders.push(`${f}:runtime`);
     if (/from\s+["'][^"']*(LogicEngine|react|zustand|profileStore|useGameStore|three)["']/.test(code)) offenders.push(`${f}:import`);
   }
-  ck("G11", `items 模組（${files.length} 支）不使用時間／亂數／瀏覽器 API，不 import 引擎、React、store、three`, files.length === 9 && offenders.length === 0, offenders.join(","));
+  //  M1 9 支純模組 ＋ M2 三支（itemsEngineRuntime／itemsEngineAdapter／itemsViewModel）
+  ck("G11", `items 模組（${files.length} 支）不使用時間／亂數／瀏覽器 API，不 import 引擎、React、store、three`, files.length === 12 && offenders.length === 0, offenders.join(","));
 }
 
 // ── G13 隔離 ──────────────────────────────────────────────────────────────────
+//  M1 時代的「LogicEngine 相對 HEAD 無改動」已由 M2 接手：引擎改動後 itemsV1 OFF 的逐位元不變
+//  改由 tools/check_moba_items_m2.mjs G1（對 M1 基準 commit 逐場比對指紋）證明。
+//  這裡只保留仍然成立的隔離：誰可以 import items 模組、正式流程沒有啟用、模擬版本沒動。
 {
-  const git = (args) => execFileSync("git", args, { cwd: ROOT, encoding: "utf8" });
-  const changed = git(["status", "--porcelain", "--untracked-files=all"]).split(/\r?\n/).filter(Boolean).map((l) => l.slice(3).replace(/^"|"$/g, ""));
-  const allowed = (p) => p.startsWith("src/battle/moba/items/") || p === "tools/check_moba_items_m1.mjs" || p.startsWith("docs/handoff/");
-  const outside = changed.filter((p) => !allowed(p) && !p.includes("_backup_"));
-  ck("G13", "工作區只改動 items 模組、M1 verifier 與 handoff 文件", outside.length === 0, outside.slice(0, 5).join(", "));
-  const engineDiff = git(["diff", "--name-only", "HEAD", "--", "src/LogicEngine.js", "src/battle/moba/matchProgression.js", "src/GameView.jsx", "src/battle/ui", "src/battle/moba/render", "src/battle/moba/replay", "src/platform/contracts"]).trim();
-  ck("G13", "LogicEngine、規則集、GameView、HUD、Replay、contracts 相對 HEAD 無改動", engineDiff === "", engineDiff);
   const importers = [];
   const walk = (d) => {
     for (const e of fs.readdirSync(path.join(ROOT, d), { withFileTypes: true })) {
@@ -433,9 +433,23 @@ const COMPS = {
     }
   };
   walk("src");
-  ck("G13", "正式程式碼沒有任何檔案 import items 模組（M1 未接入 runtime）", importers.length === 0, importers.join(","));
+  const allowedImporters = ["src/LogicEngine.js", "src/debug/ItemInspector/ItemInspector.jsx"];
+  ck("G13", "只有 LogicEngine（opt-in）與 DEV Item Inspector import items 模組", importers.every((f) => allowedImporters.includes(f)) && importers.includes("src/LogicEngine.js"), importers.join(","));
+  const callers = [];
+  const walkCalls = (d) => {
+    for (const e of fs.readdirSync(path.join(ROOT, d), { withFileTypes: true })) {
+      const rel = `${d}/${e.name}`;
+      if (e.isDirectory()) { if (!["src/battle/moba/items", "src/debug"].includes(rel)) walkCalls(rel); }
+      //  註解行不算呼叫（例如 simulationVersion.js 的版本判定說明）
+      else if (/\.(jsx?|mjs)$/.test(e.name) && rel !== "src/LogicEngine.js"
+        && /configureItems\s*\(|toEngineItems\s*\(/.test(read(rel).split(/\r?\n/).filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n"))) callers.push(rel);
+    }
+  };
+  walkCalls("src");
+  ck("G13", "正式流程沒有呼叫 configureItems／toEngineItems（M2 不上線）", callers.length === 0, callers.join(","));
   const simVer = read("src/platform/contracts/simulationVersion.js");
-  ck("G13", "模擬版本仍是 moba-sim.v4（M1 不改模擬語意）", /MOBA_SIMULATION_VERSION = "moba-sim\.v4"/.test(simVer) && !/moba\/items/.test(simVer));
+  const semanticsList = simVer.slice(simVer.indexOf("export const SIMULATION_SEMANTICS_FILES"), simVer.indexOf("]);", simVer.indexOf("export const SIMULATION_SEMANTICS_FILES")));
+  ck("G13", "模擬版本仍是 moba-sim.v4，items 模組未列入語意清單（正式輸入到不了它們）", /MOBA_SIMULATION_VERSION = "moba-sim\.v4"/.test(simVer) && !/moba\/items/.test(semanticsList));
 }
 
 const byGate = {};

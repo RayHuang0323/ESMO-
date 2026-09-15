@@ -32,6 +32,11 @@ if (debugMode === "terrain-sandbox") {
   // Milestone L：八個演出模板的固定 fixture 畫廊（正式流程不受影響）。
   const Gallery = React.lazy(() => import("./debug/HeroPresentation/HeroPresentationGallery.jsx"));
   root.render(<React.Suspense fallback={null}><Gallery /></React.Suspense>);
+} else if (import.meta.env.DEV && debugMode === "items") {
+  // Item System M2：DEV-only Item Inspector（驗證引擎裝備資料；不是正式玩家 UI）。
+  //  ⚠ 只在 `npm run dev` 存在：正式 build 時 import.meta.env.DEV 代換成 false ⇒ 整段被移除。
+  const Inspector = React.lazy(() => import("./debug/ItemInspector/ItemInspector.jsx"));
+  root.render(<React.Suspense fallback={null}><Inspector /></React.Suspense>);
 } else {
   root.render(<AppShell />);
 }
