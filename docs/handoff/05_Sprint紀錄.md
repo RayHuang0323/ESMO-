@@ -21733,3 +21733,41 @@ DEV `?itemsDev=1`、1366×900、不切倍速，同一場比賽：Tactic → Load
 
 - M3（M3a–M3e）裝備 UI／UX 範圍完成：戰術頁策略、戰鬥 HUD、英雄裝備詳情、Replay 購買軌與還原，同一場資料前後一致。
 - 仍為 production itemsV1 OFF；正式啟用前需 Balance Closure 與 `moba-sim.v5`（見 M0 §8）。
+
+## MOBA Item System — M4a Balance Baseline & Instrumentation（2026-09-16）
+
+分支 `design/moba-items-v1-m0`。**只量測，沒有改任何遊戲數值**（dmgK、收入、裝備數值／價格、AI 出裝皆未動）。
+
+### 一、交付
+
+- `tools/balance/moba_items_balance_runner.mjs`：決定性平衡 runner（鏡像陣容、策略方依 seed 奇偶換邊、60 分上限、fork worker 平行、輸出依 config/seed 排序）。
+- `reports/moba-items-m4a/`：`summary.json`、`matches.csv`（1200 列）、`players.csv`（12000 列）、`item_purchases.csv`、`side_bias_diagnostic.txt`、`README.md`。
+- 報告：`docs/design/MOBA_裝備平衡基線_M4a_v1.md`（回答六個問題＋M4b 建議）。
+
+### 二、執行
+
+| 項目 | 結果 |
+|---|---|
+| 樣本 | off／standard／early／scaling／counter／survival × 200 seeds ＝ 1200 場，8 workers，846s，失敗 0 |
+| 決定性 | 同指令重跑兩次，summary 所有既有指標完全相同；單程序抽 4 場與 CSV 逐欄相同 |
+| 帳務 | 1000 場 itemsV1：守恆失敗 0、背包違規 0、購買被拒 0 |
+| 側邊偏差診斷 | 原始引擎 100 場藍 41.2%；M2 固定陣容 60 場藍 25.4%，左右對調後藍 22.0% |
+
+### 三、主要結果（standard）
+
+- 時長中位 22.85／P90 26.96／>35 分 2.5%／60 分未結束 3 場（OFF：23.37／26.85／2.0%／0）。
+- 第一件 T3 中位 15.61 分（目標 7–11）、第二件 21.83（27% 買到）、第三件 32.22（3.7%）；20 分每人約 1 件（目標 2–3）。
+- 收入：20 分每人 4828，被動佔 68%；反推需約 2.0 倍收入。
+- 最慢成裝：中路／法師（17.96 分，核心 3600）；最快：輔助 11.94。
+- 反制裝幾乎不買：soulrend、scythe、psyward、rendspear、finalstring、thornmail；只有 calmveil 常買。
+- 鏡像藍方勝率 24–27%（OFF 同樣 25.5%）⇒ 地圖／側邊偏差，與裝備無關。
+- 長局：路線塔全倒後門牙塔無人攻擊（受到傷害 0），主堡 30 分鐘以上滿血；OFF 也有。
+
+### 四、M4b 建議
+
+- 只調 `INCOME_V1` 統一收入倍率，runner 掃 1.6／1.8／2.0。
+- 不在 M4b 範圍：側邊偏差、門牙塔卡局、反制裝排序、法師／射手核心價格。
+
+### 五、未做
+
+- 未改任何數值；未 push、未 deploy；未跑瀏覽器 gate（本輪沒有 UI 改動）。

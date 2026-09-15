@@ -1,0 +1,4 @@
+bare engine (no configure, built-in roster) seeds 1-100 {"n":100,"blue":40,"red":57,"none":3,"blueRate":0.412} 313s
+M2 fixed roster (blue tank/assassin/mage/adc/sup vs red fighter/fighter/mage/adc/tank) seeds 1-60 {"n":60,"blue":15,"red":44,"none":1,"blueRate":0.254}
+same rosters swapped sides seeds 1-60 {"n":60,"blue":13,"red":46,"none":1,"blueRate":0.22}
+elapsed 968s
