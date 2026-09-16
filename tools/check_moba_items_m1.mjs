@@ -461,7 +461,7 @@ const COMPS = {
   ck("G13", "正式流程只有 useLocalServer 在 itemsV1 開關保護下呼叫 configureItems（正式站預設 OFF）", unguardedCallers.length === 0, unguardedCallers.join(","));
   const simVer = read("src/platform/contracts/simulationVersion.js");
   const semanticsList = simVer.slice(simVer.indexOf("export const SIMULATION_SEMANTICS_FILES"), simVer.indexOf("]);", simVer.indexOf("export const SIMULATION_SEMANTICS_FILES")));
-  ck("G13", "模擬版本是 moba-sim.v5（M4b.5 塔規則的語意變化），items 模組未列入語意清單（正式輸入到不了它們）", /MOBA_SIMULATION_VERSION = "moba-sim\.v5"/.test(simVer) && !/moba\/items/.test(semanticsList));
+  ck("G13", "模擬版本是 moba-sim.v6（M4b.6 圍攻節奏的語意變化），items 模組未列入語意清單（正式輸入到不了它們）", /MOBA_SIMULATION_VERSION = "moba-sim\.v6"/.test(simVer) && !/moba\/items/.test(semanticsList));
 }
 
 const byGate = {};

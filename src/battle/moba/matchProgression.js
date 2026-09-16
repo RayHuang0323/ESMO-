@@ -435,6 +435,35 @@ SIM_RULES.v3 = {
   //    "exposed" 另含沒有己方小兵扛塔的所有人
   //    false     不加
   towerRetreatExposure: "onMe",
+  //  ── M4b.6 Siege Tempo（2026-09-16）────────────────────────────────────────
+  //  塔「找小兵」的射程：
+  //    "same"（預設）與 towerRange() 相同 ⇒ **塔只有一個射程**，對小兵與對英雄一致
+  //    "legacy"      路塔 6、基地建築 13（診斷用；曾短暫當過預設）
+  //  ⚠ Owner 決策（2026-09-16）：塔攻、清兵、打英雄的判準要與 LoL 一致——LoL 的塔是
+  //    單一射程、單一目標，優先序「攻擊我方英雄的敵方英雄 ＞ 小兵 ＞ 最近的英雄」，
+  //    連續打同一目標傷害遞增、換目標歸零、可以擊殺。⇒ 射程**不得**按目標種類分裂。
+  //    節奏問題改由 AI 圍攻語意／推進側參數處理，不靠拆分射程。
+  towerMinionRange: "same",
+  //  進塔理由的人數條件（扣塔血一律嚴格優勢，見 LogicEngine._siegeAllowedV3）：
+  //    "advantage"（預設）必須嚴格多於守軍
+  //    "notOutnumbered"    塔邊我方人數 ≥ 守軍即可站進去
+  //  ⚠ 實測 20 seeds：放寬成 notOutnumbered 對長尾沒有幫助（seed 11 仍 37.2 分），
+  //    平均 23.8 → 24.7 分、regress 15/15 → 13/15 ⇒ 維持 advantage。
+  towerSiegeEntry: "advantage",
+  //  無守軍的圍攻要不要套血量門檻（`diveMinHp`）：
+  //    "undefended"（預設）塔邊沒有守軍且撤離撐得住 ⇒ 不套（打贏的低血英雄可以推塔）
+  //    "off"                一律套（M4b.5 行為）
+  towerSiegeLowHp: "undefended",
+  //  基地建築的兵線閘門：
+  //    "guardsSoft"（預設）門牙塔沒有兵線時用 `nexusGuardNoWaveK`（0.62）倍率，不再歸零；
+  //                       主堡仍是硬閘門（沒有兵線＝零傷害）
+  //    "hard"             門牙塔與主堡都硬歸零（M1.5–M4b.5 行為）
+  //  ⚠ LoL 沒有「沒有小兵就完全拆不動塔」這條規則；硬歸零在塔改單一射程後會讓基地段卡死。
+  baseSiegeGate: "guardsSoft",
+  //  扣塔血的人數條件（效率倍率不變：單人 heroTowerSoloK 0.30、三人以上 heroTowerGroupK 0.62）：
+  //    "parity"（預設）塔邊我方人數 ≥ 守軍即可扣血（LoL：有人守也拆得動，只是要換血）
+  //    "advantage"     必須嚴格多於守軍（S29B1–M4b.5 行為）
+  towerSiegeDamage: "parity",
   //  ── M1.6：站位穩定化（修「兩三個英雄靠近後持續繞圈、長時間不攻擊」）────────
   //  舊站位以「我→敵人」的當下向量取垂直方向做側向偏移，側移會轉動該向量
   //  ⇒ 目標點跟著轉 ⇒ 必然繞圈。開啟後：站位框改用「我方基地→敵人」這條不隨

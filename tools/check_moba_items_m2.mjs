@@ -442,7 +442,7 @@ let lastOnSnapshot = null;
   ck("G8", "裝備 runtime 不用亂數／時間（決定性）", !/Math\.random|Date\.now|performance\.now|\brng\d?\s*\(/.test(runtime));
   let gateOk = true, gateOut = "";
   try { gateOut = execFileSync(process.execPath, ["tools/check_simulation_version_gate.mjs"], { cwd: ROOT, encoding: "utf8" }); } catch (err) { gateOk = false; gateOut = (err.stdout ?? "") + err.message; }
-  ck("G8", "模擬版本閘門綠（moba-sim.v5：M4b.5 塔規則是語意變化；正式輸入仍不經過裝備層，G1 已證明關閉裝備時結果不變）", gateOk && /moba-sim\.v5"/.test(read("src/platform/contracts/simulationVersion.js").match(/MOBA_SIMULATION_VERSION = "[^"]+"/)?.[0] ?? ""), gateOut.split("\n").slice(-4).join(" "));
+  ck("G8", "模擬版本閘門綠（moba-sim.v6：M4b.6 圍攻節奏是語意變化；正式輸入仍不經過裝備層，G1 已證明關閉裝備時結果不變）", gateOk && /moba-sim\.v6"/.test(read("src/platform/contracts/simulationVersion.js").match(/MOBA_SIMULATION_VERSION = "[^"]+"/)?.[0] ?? ""), gateOut.split("\n").slice(-4).join(" "));
 }
 
 const byGate = {};

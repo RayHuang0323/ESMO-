@@ -36,11 +36,11 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
  * ⚠ **什麼時候不用 bump**：純呈現層、UI、文案、log。
  * ⚠ 版本字串一旦發布就**不可回收再用**：舊 Challenge 存著它。
  */
-export const MOBA_SIMULATION_VERSION = "moba-sim.v5";
+export const MOBA_SIMULATION_VERSION = "moba-sim.v6";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", MOBA_SIMULATION_VERSION]);
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -267,6 +267,17 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  ⚠ 實測的語意變化：regress2 同 20 seeds 中位時長 21.2 → 25.4 分、平均擊殺 15.8 → 22.9。
   //  ⚠ 後果（已知且接受）：v1–v4 的歷史挑戰不再可重播，由 `canReplay` 明確拒絕。
   "moba-sim.v5": "a47541d98096db2e",
+
+  //  2026-09-16（M4b.6：Siege Tempo Audit & Fix）：**正式的 simulation semantics change**。
+  //  v5 的塔保護射程讓「一路清空」從 16–18 分延後到 21–27 分（8 seeds 實測）。根因與修正：
+  //    · 塔只有**一個射程**（Owner：與 LoL 一致，對小兵與對英雄同值）⇒ `towerMinionRange: "same"`
+  //    · 無守軍的圍攻不套 `diveMinHp` 血量門檻（打贏的低血英雄才推得動塔）
+  //    · 門牙塔的「沒有兵線 ⇒ 傷害歸零」改為既有 `nexusGuardNoWaveK` 0.62 倍率（LoL 沒有硬歸零）
+  //    · 扣塔血的人數條件由「嚴格優勢」改為「人數相等即可」（效率倍率不變）
+  //  ⚠ 實測（regress2 同 20 seeds）：最長 36.4 → 29.9 分、平均 25.9 → 24.2、中位 25.4 → 23.6，
+  //    節奏門檻 7/8 → **8/8**；regress 13/15 → 15/15。
+  //  ⚠ 後果（已知且接受）：v1–v5 的歷史挑戰不再可重播，由 `canReplay` 明確拒絕。
+  "moba-sim.v6": "795922935aaaed78",
 });
 
 export const isKnownSimulationVersion = (v) =>

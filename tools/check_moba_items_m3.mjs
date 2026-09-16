@@ -227,7 +227,7 @@ const REQUIRED_UI = ["itemsTheme.js", "ItemGlyphs.jsx", "ItemSlot.jsx", "GoldChi
   ck("G6", "LogicEngine、規則集、contracts（M3e 起 mobaReplay.js 的 optional 裝備欄位驗證改由 G14 檢查）、M1／M2 裝備模組相對 HEAD 無改動", diff === "", diff);
   let gateOk = true, gateOut = "";
   try { gateOut = execFileSync(process.execPath, ["tools/check_simulation_version_gate.mjs"], { cwd: ROOT, encoding: "utf8" }); } catch (err) { gateOk = false; gateOut = String(err.stdout ?? err.message); }
-  ck("G6", "模擬版本閘門綠（moba-sim.v5）", gateOk, gateOut.split("\n").slice(-3).join(" "));
+  ck("G6", "模擬版本閘門綠（moba-sim.v6）", gateOk, gateOut.split("\n").slice(-3).join(" "));
 }
 
 // ── G7 M3b：戰鬥購買回饋的篩選 ─────────────────────────────────────────────────

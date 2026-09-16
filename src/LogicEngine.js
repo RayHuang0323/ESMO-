@@ -1388,13 +1388,22 @@ export class LogicEngine {
       //  ⚠ 守方站在塔下、拆不動塔時照舊 3 發就退——否則單人會在塔下吃到半血（實測 7–12 發）。
       //  ⚠ 只放寬「有兵扛塔」（不含無守軍圍攻）⇒ 8 場只收 4 場；只放寬多人 ⇒ 2–5 場。
       if (tanked) p.towerHits = 0;
-      if (tanked || ((sieging || hasWave) && this._siegeAllowedV3(p, tw, alive))) shotsGate = true;
+      if (tanked || ((sieging || hasWave) && this._siegeAllowedV3(p, tw, alive, true))) shotsGate = true;
     }
     //  M4b.5：「圍攻」要真的拆得動才算進塔理由（守軍在塔邊、人數不佔優 ⇒ 英雄傷害為零，
     //  站進去只是吃塔）。有兵線與強殺兩條理由不變。
-    const siegeReason = sieging && (!R.towerSafetyV1 || this._siegeAllowedV3(p, tw, alive));
-    const allow = hpOk && shotsGate && escapeOk && (siegeReason || hasWave || kill);
-    return { inZone: true, allow, tower: tw, hasWave, hpOk, shotsOk, escapeOk, kill, sieging, killWhy };
+    const siegeReason = sieging && (!R.towerSafetyV1 || this._siegeAllowedV3(p, tw, alive, true));
+    //  M4b.6：**無守軍的圍攻**不套「血量 ≥ diveMinHp」。
+    //  根因（seed 11 實測）：塔區半徑變成約 12.3 之後，交戰打贏的一方幾乎都低於 55% 血，
+    //  於是連「塔邊沒有敵人的推塔」都被血量門檻擋在射程外 ⇒ 第 18–32 分塔傷為 0、
+    //  內側塔滿血 14 分鐘沒人碰，對局 19.9 → 37.2 分。
+    //  只在「這座塔就是推進目標、塔邊沒有未撤退的守軍、且撤離估算撐得住」時放寬；
+    //  有守軍在場的越塔仍要血量門檻（M1.7 的「不准站到殘血」原意不變）。
+    let hpGate = hpOk;
+    if (R.towerSafetyV1 && R.towerSiegeLowHp === "undefended" && sieging && escapeOk
+      && this._towerDefendersNear(p, tw, alive) === 0) hpGate = true;
+    const allow = hpGate && shotsGate && escapeOk && (siegeReason || hasWave || kill);
+    return { inZone: true, allow, tower: tw, hasWave, hpOk: hpGate, shotsOk, escapeOk, kill, sieging, killWhy };
   }
 
   /**
@@ -2531,7 +2540,15 @@ export class LogicEngine {
       //  ⚠ 這條之所以現在才能收，是因為本次同步修好了兵線推進（縱隊 + 強化兵）；
       //    在那之前門牙塔前**永遠**不可能有兵線，硬閘門會讓比賽收不掉。
       //  ⚠ 路上的三座塔不套用（維持 Milestone F 的分級懲罰，孤軍推塔只是慢，不是零）。
-      const gateHard = R.nexusWaveGate &&
+      //  M4b.6：門牙塔的「沒有兵線 ⇒ 傷害歸零」硬閘門改成既有的 `nexusGuardNoWaveK` 倍率。
+      //  ⚠ 兩個理由：
+      //    ① **LoL 一致性**（Owner 2026-09-16）：LoL 沒有「沒有小兵就完全拆不動塔」這條規則，
+      //       只有效率差別；硬歸零是本專案 M1.5 為了收尾節奏加的。
+      //    ② 塔改成單一射程之後，門牙塔在 12.8 就開始清兵 ⇒ 兵線抵達基地前先被清光 ⇒
+      //       硬閘門永遠不開。實測 seed 1000：清空一路只花 19.7 分，之後 17.4 分門牙塔都不掉血。
+      //  主堡（nexus）維持硬閘門不變。
+      const softGuard = R.towerSafetyV1 && R.baseSiegeGate === "guardsSoft" && tw.lane === "nexus_guard";
+      const gateHard = R.nexusWaveGate && !softGuard &&
         (tw.lane === "nexus_guard" || tw.lane === "nexus");
       if (R.engagementFsm && (tw.lane !== "nexus" || gateHard)) {
         const hasWave = this._hasWaveAtStructure(p.side, tw);
@@ -2745,15 +2762,46 @@ export class LogicEngine {
    * 塔邊（9 內）沒有未撤退的守軍，或攻方人數多於守軍。
    * M4b.5 起塔區退出也讀它：「這一次圍攻是真的拆得動」才放寬連續吃塔上限。
    */
-  _siegeAllowedV3(p, tw, alive) {
-    const defN = alive.filter((q) => q.side !== p.side && !q.retreating && dist(q.pos, tw.pos) < 9).length;
+  /** M4b.6：塔邊（9 內）未撤退的敵方守軍數（圍攻判定與塔區放寬共用同一個述詞）。 */
+  _towerDefendersNear(p, tw, alive) {
+    return alive.filter((q) => q.side !== p.side && !q.retreating && dist(q.pos, tw.pos) < 9).length;
+  }
+  _siegeAllowedV3(p, tw, alive, entry = false) {
+    const defN = this._towerDefendersNear(p, tw, alive);
     const atkN = alive.filter((q) => q.side === p.side && dist(q.pos, tw.pos) < 9).length;
-    return defN === 0 || atkN > defN;
+    if (defN === 0) return true;
+    //  M4b.6：**站進去**（entry）與**扣得到塔血**（canSiege）分開。
+    //  扣血仍要嚴格人數優勢（S29B1 的既有規則，不動）；但塔區半徑變成約 12.3 之後，
+    //  拿「嚴格優勢」當進塔理由會讓僵持局永遠不推塔——實測 seed 11 第 18–32 分塔傷為 0、
+    //  內側塔滿血 14 分鐘沒人碰，對局 19.9 → 37.2 分。⇒ 進塔只要求「人數不劣勢」。
+    if (entry && this.rules.towerSiegeEntry === "notOutnumbered") return atkN >= defN;
+    //  M4b.6：扣塔血的人數條件。LoL 沒有「塔邊有敵人就完全拆不動」這條——有人守你照樣能拆，
+    //  只是要換血，而效率差別本專案已經用 heroTowerSoloK 0.30／heroTowerGroupK 0.62 表達。
+    //  塔改單一射程後，兵線到不了內側塔，「嚴格優勢」讓混戰中的內側塔好幾分鐘沒人能扣血
+    //  （實測 seed 5555 第 19–26 分塔傷 0、兩邊 tier-0 塔滿血）。⇒ 人數相等即可扣血。
+    if (!entry && this.rules.towerSiegeDamage === "parity") return atkN >= defN;
+    return atkN > defN;
+  }
+  /**
+   * M4b.6：塔「找小兵」的射程（與塔對英雄的保護射程分開）。
+   *
+   * 根因（8 seeds 實測，對照 M4b.5 之前）：塔對英雄的保護射程變成約 12.7 之後，塔也跟著
+   * 在 12.7 就開始清兵 ⇒ 兵線在抵達建築前就被清光 ⇒ 英雄幾乎永遠拿不到「有兵扛塔」與
+   * `hasWave` 這兩個推進條件（實測「有兵扛塔」每分鐘 ≈ 0 tick）：
+   *   攻塔 uptime 每分 19.2 → 9.7 tick、兩人以上同時攻塔 63.6 → 12.8 tick、
+   *   清空一路 17.6 → 22.0 分。
+   * ⇒ 對小兵維持 M4b.5 之前的射程（路塔 `towerAggroRange`、基地建築 `nexusGuardRange`）。
+   *   **對英雄的保護射程一個字都沒動**（仍是 `towerRange()`，遠程仍打不到抱塔的守方）。
+   */
+  _towerMinionRange(tw) {
+    const R = this.rules;
+    if (R.towerSafetyV1 && R.towerMinionRange === "same") return this.towerRange(tw);
+    return (tw.lane === "nexus_guard" || tw.lane === "nexus") ? (R.nexusGuardRange ?? 13) : R.towerAggroRange;
   }
   /** M4b.5：射程內的攻方小兵數（塔會先打兵 ⇒ 英雄被兵線坦住）。 */
   _towerMinionsInRange(tw) {
     const key = tw.side === "blue" ? "rm" : "bm";
-    const range = this.towerRange(tw);
+    const range = this._towerMinionRange(tw);
     const lanes = this.lanes[tw.lane] ? [tw.lane] : ["top", "mid", "bot"];
     let n = 0;
     for (const ln of lanes) for (const m of this.lanes[ln][key]) if (dist(posOnLane(ln, m.t), tw.pos) <= range) n++;
@@ -3266,7 +3314,7 @@ export class LogicEngine {
           //  ⚠ 舊規則集沒有 `towerRangeWorld` ⇒ 仍走 band ⇒ 歷史基準逐位元不變。
           const inRange = R.towerRangeWorld
             ? this.lanes[ln][enemyKey].filter((mm) =>
-              dist(posOnLane(ln, mm.t), tw.pos) <= (R.towerSafetyV1 ? this.towerRange(tw) : R.towerAggroRange))
+              dist(posOnLane(ln, mm.t), tw.pos) <= this._towerMinionRange(tw))
             : this.lanes[ln][enemyKey].filter((mm) =>
               Math.abs(mm.t - tw.t) < (R.towerMinionBand ?? 0.05));
           if (R.towerAttackInterval) {
@@ -3349,7 +3397,7 @@ export class LogicEngine {
               //  `_minionAtBase()` 的 `m.t ≥ 0.95` 分支回答的是「兵線到基地了沒」
               //  （M1.5 的攻城／閘門述詞），拿它當射程會讓門牙塔打到 26 單位外的
               //  小兵、特效線橫跨半個基地。兩個問題分開：閘門照舊，射擊用 nexusGuardRange。
-              if (gap <= (R.towerSafetyV1 ? this.towerRange(tw) : (R.nexusGuardRange ?? 13))) inRange.push({ m, lane, pos, gap });
+              if (gap <= this._towerMinionRange(tw)) inRange.push({ m, lane, pos, gap });
             }
           }
           const locked = tw.targetKind === "minion"
@@ -3378,7 +3426,7 @@ export class LogicEngine {
           //  M4b.5：「有兵就先打兵」改用與打兵分支同一個世界距離（舊的 lane band 0.05
           //  會在小兵還在射程外時就讓塔不打英雄，射程內英雄 0 發的死區；Audit §2.4）
           const minionInRange = R.towerSafetyV1
-            ? arr.some((m) => dist(posOnLane(tw.lane, m.t), tw.pos) <= this.towerRange(tw))
+            ? arr.some((m) => dist(posOnLane(tw.lane, m.t), tw.pos) <= this._towerMinionRange(tw))
             : arr.some((m) => Math.abs(m.t - tw.t) < 0.05);
           if (minionInRange && !threats.length) continue;
         }

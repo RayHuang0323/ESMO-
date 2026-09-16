@@ -21854,3 +21854,47 @@ DEV `?itemsDev=1`、1366×900、不切倍速，同一場比賽：Tactic → Load
 - **regress2 最長時長未過**：塔保護範圍變大讓路塔階段（清空一路 16.6–18.5 → 21–27 分）與基地階段都變慢，需要一輪推進側節奏重新對標（塔血／`heroTowerDmg`／攻城上限，或重新校準門檻）——不在本輪範圍。
 - 未動：nexus siege 長局、side bias、item stats／AI 出裝、Replay／UI、income 1.9（預設仍 1）。
 - 未 push、未 deploy、未跑瀏覽器（無 UI 改動）。
+
+## MOBA Item System — M4b.6 Siege Tempo Audit & Fix（2026-09-16）
+
+分支 `design/moba-items-v1-m0`。解掉 M4b.5 留下的唯一 blocker（regress2 最長 36.4 分 > 32）。
+**模擬語意 bump 為 `moba-sim.v6`**（指紋 `795922935aaaed78`）⇒ v1–v5 歷史挑戰不再可重播。
+報告：`docs/design/MOBA_圍攻節奏修正_M4b6_v1.md`。
+
+### 一、根因（8 seeds，對照塔修正前）
+
+清空一路 17.6 → 22.0 分、攻塔 19.2 → 9.7 tick/分、兩人以上同時攻塔 63.6 → 12.8 tick、「有兵扛塔」≈ 0。四條鏈：
+1. 塔用單一射程（12.7）連清兵也從 12.7 開始 ⇒ 兵線抵達建築前就死光 ⇒ `hasWave`／扛塔條件不成立。
+2. 塔區從 6 變 12.7，但進塔要血量 ≥55% ⇒ 交戰打贏的低血英雄連「沒人守的塔」都推不動（seed 11 第 18–32 分塔傷 0）。
+3. 門牙塔「沒兵線 ⇒ 傷害歸零」的硬閘門永遠不開（seed 1000 清空後 17.4 分門牙塔不掉血）。
+4. 扣塔血要求嚴格人數優勢，混戰僵持期永遠不成立（seed 5555 第 19–26 分塔傷 0）。
+
+### 二、修正（只動 AI 圍攻語意與多人圍攻；`heroTowerDmg`／塔血量未碰）
+
+| 規則鍵 | 值 |
+|---|---|
+| `towerMinionRange` | `"same"`（塔只有一個射程，對小兵與對英雄同值；LoL 一致性，Owner 指示） |
+| `towerSiegeLowHp` | `"undefended"`（推進目標塔、無守軍、撤離撐得住 ⇒ 不套 55% 血量門檻） |
+| `baseSiegeGate` | `"guardsSoft"`（門牙塔改用 `nexusGuardNoWaveK` 0.62，主堡仍硬閘門） |
+| `towerSiegeDamage` | `"parity"`（扣塔血人數相等即可；效率倍率不變） |
+
+量測否決：`towerSiegeEntry: "notOutnumbered"`（兩次都沒幫助，平均 23.8→24.7、regress 15/15→13/15）；門牙塔射程退回 6（seed 42 卡 45 分）；塔打小兵單發 45／40（最長仍 33）。
+
+單點效果：seed 11 37.2→21.9、seed 1000 37.1→26.3、seed 5555 33.6→26.8。
+
+### 三、驗證
+
+| 驗證 | 結果 |
+|---|---|
+| `regress` | **15/15**、平均 25.0 分、破塔 15.7/12（M4b.5 為 13/15、25.3 分） |
+| `regress2` | **8/8**：20/20 收得掉、最短 20.2、最長 **29.9**、平均 24.2、中位 23.6 |
+| `check_simulation_version_gate` | 51/51 PASS（v6 指紋） |
+| `check_moba_items_m1` | 69/69 PASS |
+| `check_moba_items_m2` / `m3` | 見 commit 後結果（G1 基準需再往前釘） |
+| Tower Safety audit（10 seeds） | 射程邊界、塔擊殺（15 發/8 秒、9–10 發/5–5.5 秒、8 發/4.5 秒）、仇恨、後期單發 5.9–6.5% 全部維持；抱塔滿血守方的塔外偷打仍 0，總計 322→290 |
+| income 1.9（standard 200 場） | T3 8.98／16.45／20.25、20 分每人 2.37 件、中位 23.41 分、帳務 0／0／0 |
+
+### 四、未做
+
+- 未動塔對英雄的射程與傷害、`heroTowerDmg`、塔血量、income 倍率（預設仍 1）、裝備平衡、side bias、Replay／UI、主堡硬閘門。
+- 未 push、未 deploy、未跑瀏覽器（無 UI 改動）。
