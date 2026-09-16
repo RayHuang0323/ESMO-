@@ -1,0 +1,2204 @@
+{
+  "runner": "moba-items.balance-runner.v1",
+  "meta": {
+    "seeds": 200,
+    "seedStart": 1,
+    "configs": [
+      "off",
+      "standard"
+    ],
+    "incomeK": 1.9,
+    "workers": 6,
+    "failed": 0,
+    "wallS": 329
+  },
+  "capS": 3600,
+  "dt": 0.5,
+  "summary": {
+    "off": {
+      "n": 200,
+      "finish_rate": 1,
+      "unfinished_at_60": 0,
+      "duration_min": {
+        "median": 25.35,
+        "p75": 28.33,
+        "p90": 31.9,
+        "max": 40.85,
+        "mean": 26.64
+      },
+      "over30_rate": 0.175,
+      "over35_rate": 0.045,
+      "over40_rate": 0.01,
+      "blue_win_rate": 0.245,
+      "strategy_team_win_rate": null,
+      "kills_at": {
+        "10": 2.84,
+        "15": 6.89,
+        "20": 12.99,
+        "end": 25.36
+      },
+      "towers_at_20": 7.92,
+      "per_role": {
+        "top": {
+          "n": 400,
+          "goldPerMin": 40.5,
+          "dmgPerMin": 391.29,
+          "takenPerMin": 773.03,
+          "deathsPerMatch": 1.57,
+          "killsPerMatch": 3.66,
+          "at": {
+            "10": {
+              "dmg": 2259,
+              "deaths": 0.19,
+              "kills": 0.28,
+              "mlv": 5.66
+            },
+            "15": {
+              "dmg": 4056.72,
+              "deaths": 0.36,
+              "kills": 0.9,
+              "mlv": 7.17
+            },
+            "20": {
+              "dmg": 6504.18,
+              "deaths": 0.72,
+              "kills": 1.84,
+              "mlv": 8.75
+            },
+            "25": {
+              "dmg": 9659.04,
+              "deaths": 1.33,
+              "kills": 3.29,
+              "mlv": 10.11
+            }
+          }
+        },
+        "jungle": {
+          "n": 400,
+          "goldPerMin": 59.83,
+          "dmgPerMin": 263.08,
+          "takenPerMin": 448.08,
+          "deathsPerMatch": 2.28,
+          "killsPerMatch": 2.51,
+          "at": {
+            "10": {
+              "dmg": 1158.62,
+              "deaths": 0.13,
+              "kills": 0.21,
+              "mlv": 4.35
+            },
+            "15": {
+              "dmg": 2572.34,
+              "deaths": 0.42,
+              "kills": 0.65,
+              "mlv": 6.15
+            },
+            "20": {
+              "dmg": 4487.73,
+              "deaths": 1.07,
+              "kills": 1.43,
+              "mlv": 7.62
+            },
+            "25": {
+              "dmg": 6505.98,
+              "deaths": 1.88,
+              "kills": 2.22,
+              "mlv": 8.82
+            }
+          }
+        },
+        "mid": {
+          "n": 400,
+          "goldPerMin": 30.33,
+          "dmgPerMin": 503.1,
+          "takenPerMin": 513.64,
+          "deathsPerMatch": 2.42,
+          "killsPerMatch": 2.79,
+          "at": {
+            "10": {
+              "dmg": 2504.76,
+              "deaths": 0.26,
+              "kills": 0.27,
+              "mlv": 5.78
+            },
+            "15": {
+              "dmg": 4428.46,
+              "deaths": 0.67,
+              "kills": 0.6,
+              "mlv": 7.43
+            },
+            "20": {
+              "dmg": 7554.96,
+              "deaths": 1.24,
+              "kills": 1.21,
+              "mlv": 8.74
+            },
+            "25": {
+              "dmg": 11767.09,
+              "deaths": 2.08,
+              "kills": 2.3,
+              "mlv": 9.86
+            }
+          }
+        },
+        "adc": {
+          "n": 400,
+          "goldPerMin": 26.88,
+          "dmgPerMin": 457.99,
+          "takenPerMin": 390.03,
+          "deathsPerMatch": 3.49,
+          "killsPerMatch": 2.48,
+          "at": {
+            "10": {
+              "dmg": 2033.38,
+              "deaths": 0.61,
+              "kills": 0.36,
+              "mlv": 5.01
+            },
+            "15": {
+              "dmg": 3785.07,
+              "deaths": 1.23,
+              "kills": 0.7,
+              "mlv": 6.48
+            },
+            "20": {
+              "dmg": 6566.32,
+              "deaths": 2,
+              "kills": 1.16,
+              "mlv": 7.65
+            },
+            "25": {
+              "dmg": 10619.73,
+              "deaths": 3.1,
+              "kills": 1.96,
+              "mlv": 8.7
+            }
+          }
+        },
+        "sup": {
+          "n": 400,
+          "goldPerMin": 14.48,
+          "dmgPerMin": 211.63,
+          "takenPerMin": 545.13,
+          "deathsPerMatch": 2.92,
+          "killsPerMatch": 1.24,
+          "at": {
+            "10": {
+              "dmg": 1157.97,
+              "deaths": 0.25,
+              "kills": 0.31,
+              "mlv": 4.29
+            },
+            "15": {
+              "dmg": 2169.37,
+              "deaths": 0.76,
+              "kills": 0.6,
+              "mlv": 5.89
+            },
+            "20": {
+              "dmg": 3457.44,
+              "deaths": 1.48,
+              "kills": 0.87,
+              "mlv": 7.23
+            },
+            "25": {
+              "dmg": 5156.26,
+              "deaths": 2.53,
+              "kills": 1.17,
+              "mlv": 8.4
+            }
+          }
+        }
+      },
+      "per_arch": {
+        "戰士": {
+          "n": 410,
+          "goldPerMin": 49.02,
+          "deathsPerMatch": 1.92,
+          "dmgPerMin": 329.78,
+          "takenPerMin": 612.63,
+          "killsPerMatch": 2.99,
+          "at": {
+            "10": {
+              "dmg": 1727.94,
+              "deaths": 0.17,
+              "kills": 0.24,
+              "mlv": 5.03
+            },
+            "15": {
+              "dmg": 3335.07,
+              "deaths": 0.44,
+              "kills": 0.75,
+              "mlv": 6.65
+            },
+            "20": {
+              "dmg": 5564.89,
+              "deaths": 0.95,
+              "kills": 1.57,
+              "mlv": 8.16
+            },
+            "25": {
+              "dmg": 8131.45,
+              "deaths": 1.64,
+              "kills": 2.61,
+              "mlv": 9.42
+            }
+          }
+        },
+        "法師": {
+          "n": 400,
+          "goldPerMin": 30.33,
+          "deathsPerMatch": 2.42,
+          "dmgPerMin": 503.1,
+          "takenPerMin": 513.64,
+          "killsPerMatch": 2.79,
+          "at": {
+            "10": {
+              "dmg": 2504.76,
+              "deaths": 0.26,
+              "kills": 0.27,
+              "mlv": 5.78
+            },
+            "15": {
+              "dmg": 4428.46,
+              "deaths": 0.67,
+              "kills": 0.6,
+              "mlv": 7.43
+            },
+            "20": {
+              "dmg": 7554.96,
+              "deaths": 1.24,
+              "kills": 1.21,
+              "mlv": 8.74
+            },
+            "25": {
+              "dmg": 11767.09,
+              "deaths": 2.08,
+              "kills": 2.3,
+              "mlv": 9.86
+            }
+          }
+        },
+        "射手": {
+          "n": 400,
+          "goldPerMin": 26.88,
+          "deathsPerMatch": 3.49,
+          "dmgPerMin": 457.99,
+          "takenPerMin": 390.03,
+          "killsPerMatch": 2.48,
+          "at": {
+            "10": {
+              "dmg": 2033.38,
+              "deaths": 0.61,
+              "kills": 0.36,
+              "mlv": 5.01
+            },
+            "15": {
+              "dmg": 3785.07,
+              "deaths": 1.23,
+              "kills": 0.7,
+              "mlv": 6.48
+            },
+            "20": {
+              "dmg": 6566.32,
+              "deaths": 2,
+              "kills": 1.16,
+              "mlv": 7.65
+            },
+            "25": {
+              "dmg": 10619.73,
+              "deaths": 3.1,
+              "kills": 1.96,
+              "mlv": 8.7
+            }
+          }
+        },
+        "坦克": {
+          "n": 392,
+          "goldPerMin": 29.54,
+          "deathsPerMatch": 2.63,
+          "dmgPerMin": 301.6,
+          "takenPerMin": 689.06,
+          "killsPerMatch": 2.63,
+          "at": {
+            "10": {
+              "dmg": 1752.85,
+              "deaths": 0.27,
+              "kills": 0.29,
+              "mlv": 5.01
+            },
+            "15": {
+              "dmg": 3218.94,
+              "deaths": 0.66,
+              "kills": 0.8,
+              "mlv": 6.58
+            },
+            "20": {
+              "dmg": 5058.55,
+              "deaths": 1.28,
+              "kills": 1.48,
+              "mlv": 8.08
+            },
+            "25": {
+              "dmg": 7328.77,
+              "deaths": 2.24,
+              "kills": 2.41,
+              "mlv": 9.33
+            }
+          }
+        },
+        "輔助": {
+          "n": 200,
+          "goldPerMin": 9.97,
+          "deathsPerMatch": 2.24,
+          "dmgPerMin": 199.03,
+          "takenPerMin": 477.26,
+          "killsPerMatch": 0.85,
+          "at": {
+            "10": {
+              "dmg": 1001.55,
+              "deaths": 0.17,
+              "kills": 0.32,
+              "mlv": 4.13
+            },
+            "15": {
+              "dmg": 1825.64,
+              "deaths": 0.59,
+              "kills": 0.51,
+              "mlv": 5.73
+            },
+            "20": {
+              "dmg": 3045.2,
+              "deaths": 1.16,
+              "kills": 0.64,
+              "mlv": 7.07
+            },
+            "25": {
+              "dmg": 4922.36,
+              "deaths": 1.99,
+              "kills": 0.79,
+              "mlv": 8.19
+            }
+          }
+        },
+        "刺客": {
+          "n": 198,
+          "goldPerMin": 61.91,
+          "deathsPerMatch": 2.25,
+          "dmgPerMin": 268.47,
+          "takenPerMin": 453.31,
+          "killsPerMatch": 2.74,
+          "at": {
+            "10": {
+              "dmg": 1183.59,
+              "deaths": 0.07,
+              "kills": 0.21,
+              "mlv": 4.37
+            },
+            "15": {
+              "dmg": 2651.7,
+              "deaths": 0.31,
+              "kills": 0.69,
+              "mlv": 6.24
+            },
+            "20": {
+              "dmg": 4576.49,
+              "deaths": 0.92,
+              "kills": 1.53,
+              "mlv": 7.65
+            },
+            "25": {
+              "dmg": 6672.94,
+              "deaths": 1.72,
+              "kills": 2.42,
+              "mlv": 8.9
+            }
+          }
+        }
+      },
+      "duration_buckets": {
+        "le26": {
+          "n": 114,
+          "kills_per_min": 0.81,
+          "towers_at_20": 8.05,
+          "towers_end": 13.4,
+          "both_lane_towers_cleared_rate": 0,
+          "both_lane_towers_cleared_min": null,
+          "stall_min_after_both_cleared": null,
+          "guard_towers_down_end": 2,
+          "loser_nexus_hp_end": -1134.55,
+          "gold_diff_at_20": 3302.41,
+          "kill_diff_at_20": 5.59,
+          "barons": 2.61,
+          "dragons": 3.59,
+          "team_completed_at_20": null,
+          "full_inventory_end_rate": null,
+          "unspent_end": null,
+          "deaths_per_min": 0.81
+        },
+        "b26_35": {
+          "n": 77,
+          "kills_per_min": 1.04,
+          "towers_at_20": 7.56,
+          "towers_end": 14.74,
+          "both_lane_towers_cleared_rate": 0,
+          "both_lane_towers_cleared_min": null,
+          "stall_min_after_both_cleared": null,
+          "guard_towers_down_end": 2.08,
+          "loser_nexus_hp_end": -1787.86,
+          "gold_diff_at_20": 2333.08,
+          "kill_diff_at_20": 4.55,
+          "barons": 3.45,
+          "dragons": 4.57,
+          "team_completed_at_20": null,
+          "full_inventory_end_rate": null,
+          "unspent_end": null,
+          "deaths_per_min": 1.04
+        },
+        "gt35": {
+          "n": 9,
+          "kills_per_min": 1.45,
+          "towers_at_20": 9.22,
+          "towers_end": 15.67,
+          "both_lane_towers_cleared_rate": 0,
+          "both_lane_towers_cleared_min": null,
+          "stall_min_after_both_cleared": null,
+          "guard_towers_down_end": 2,
+          "loser_nexus_hp_end": -5139.56,
+          "gold_diff_at_20": 992.11,
+          "kill_diff_at_20": 1.44,
+          "barons": 4.78,
+          "dragons": 6.22,
+          "team_completed_at_20": null,
+          "full_inventory_end_rate": null,
+          "unspent_end": null,
+          "deaths_per_min": 1.45
+        }
+      },
+      "long_matches": [
+        {
+          "seed": 14,
+          "min": 39.15,
+          "over": 1,
+          "winner": "blue",
+          "kills": 66,
+          "barons": 5,
+          "laneCleared": {
+            "blue": null,
+            "red": null
+          },
+          "stallMin": null,
+          "guardsDown": 2,
+          "nexusHp": {
+            "blue": 7200,
+            "red": -5351
+          },
+          "guardDamageAfterClear": {
+            "blue": 0,
+            "red": 0
+          }
+        },
+        {
+          "seed": 34,
+          "min": 38.61,
+          "over": 1,
+          "winner": "blue",
+          "kills": 56,
+          "barons": 5,
+          "laneCleared": {
+            "blue": null,
+            "red": null
+          },
+          "stallMin": null,
+          "guardsDown": 2,
+          "nexusHp": {
+            "blue": 7200,
+            "red": -7897
+          },
+          "guardDamageAfterClear": {
+            "blue": 0,
+            "red": 0
+          }
+        },
+        {
+          "seed": 37,
+          "min": 40.33,
+          "over": 1,
+          "winner": "red",
+          "kills": 61,
+          "barons": 5,
+          "laneCleared": {
+            "blue": null,
+            "red": null
+          },
+          "stallMin": null,
+          "guardsDown": 2,
+          "nexusHp": {
+            "blue": -6417,
+            "red": 7200
+          },
+          "guardDamageAfterClear": {
+            "blue": 0,
+            "red": 0
+          }
+        },
+        {
+          "seed": 39,
+          "min": 35.92,
+          "over": 1,
+          "winner": "red",
+          "kills": 50,
+          "barons": 4,
+          "laneCleared": {
+            "blue": null,
+            "red": null
+          },
+          "stallMin": null,
+          "guardsDown": 2,
+          "nexusHp": {
+            "blue": -2658,
+            "red": 7200
+          },
+          "guardDamageAfterClear": {
+            "blue": 0,
+            "red": 0
+          }
+        },
+        {
+          "seed": 140,
+          "min": 35.42,
+          "over": 1,
+          "winner": "blue",
+          "kills": 41,
+          "barons": 4,
+          "laneCleared": {
+            "blue": null,
+            "red": null
+          },
+          "stallMin": null,
+          "guardsDown": 2,
+          "nexusHp": {
+            "blue": 7200,
+            "red": -2270
+          },
+          "guardDamageAfterClear": {
+            "blue": 0,
+            "red": 0
+          }
+        },
+        {
+          "seed": 151,
+          "min": 40.85,
+          "over": 1,
+          "winner": "blue",
+          "kills": 72,
+          "barons": 5,
+          "laneCleared": {
+            "blue": null,
+            "red": null
+          },
+          "stallMin": null,
+          "guardsDown": 2,
+          "nexusHp": {
+            "blue": 7200,
+            "red": -6896
+          },
+          "guardDamageAfterClear": {
+            "blue": 0,
+            "red": 0
+          }
+        },
+        {
+          "seed": 156,
+          "min": 35.11,
+          "over": 1,
+          "winner": "red",
+          "kills": 39,
+          "barons": 4,
+          "laneCleared": {
+            "blue": null,
+            "red": null
+          },
+          "stallMin": null,
+          "guardsDown": 2,
+          "nexusHp": {
+            "blue": -2035,
+            "red": 7200
+          },
+          "guardDamageAfterClear": {
+            "blue": 0,
+            "red": 0
+          }
+        },
+        {
+          "seed": 174,
+          "min": 39.42,
+          "over": 1,
+          "winner": "blue",
+          "kills": 60,
+          "barons": 5,
+          "laneCleared": {
+            "blue": null,
+            "red": null
+          },
+          "stallMin": null,
+          "guardsDown": 2,
+          "nexusHp": {
+            "blue": 7200,
+            "red": -5595
+          },
+          "guardDamageAfterClear": {
+            "blue": 0,
+            "red": 0
+          }
+        },
+        {
+          "seed": 195,
+          "min": 39.69,
+          "over": 1,
+          "winner": "red",
+          "kills": 57,
+          "barons": 6,
+          "laneCleared": {
+            "blue": 37.07,
+            "red": null
+          },
+          "stallMin": null,
+          "guardsDown": 2,
+          "nexusHp": {
+            "blue": -7137,
+            "red": 7200
+          },
+          "guardDamageAfterClear": {
+            "blue": 0,
+            "red": 0
+          }
+        }
+      ],
+      "wall_ms_mean": 5333.7
+    },
+    "standard": {
+      "n": 200,
+      "finish_rate": 0.995,
+      "unfinished_at_60": 1,
+      "duration_min": {
+        "median": 23.48,
+        "p75": 25.13,
+        "p90": 27.12,
+        "max": 60,
+        "mean": 24.36
+      },
+      "over30_rate": 0.045,
+      "over35_rate": 0.03,
+      "over40_rate": 0.005,
+      "blue_win_rate": 0.397,
+      "strategy_team_win_rate": null,
+      "kills_at": {
+        "10": 2.02,
+        "15": 5.92,
+        "20": 15.81,
+        "end": 32.48
+      },
+      "towers_at_20": 10.21,
+      "per_role": {
+        "top": {
+          "n": 400,
+          "goldPerMin": 481.59,
+          "dmgPerMin": 513.56,
+          "takenPerMin": 1095.57,
+          "deathsPerMatch": 1.62,
+          "killsPerMatch": 2.47,
+          "at": {
+            "10": {
+              "dmg": 2603.97,
+              "deaths": 0.06,
+              "kills": 0.2,
+              "mlv": 5.69
+            },
+            "15": {
+              "dmg": 5008.45,
+              "deaths": 0.2,
+              "kills": 0.75,
+              "mlv": 7.23
+            },
+            "20": {
+              "dmg": 8653.63,
+              "deaths": 0.63,
+              "kills": 1.6,
+              "mlv": 8.88
+            },
+            "25": {
+              "dmg": 13786.9,
+              "deaths": 1.47,
+              "kills": 2.48,
+              "mlv": 10
+            }
+          },
+          "spikes": {
+            "1": {
+              "n": 400,
+              "prePerMin": 332.87,
+              "postPerMin": 538.28,
+              "ratio": 1.62
+            },
+            "2": {
+              "n": 400,
+              "prePerMin": 628.61,
+              "postPerMin": 743.15,
+              "ratio": 1.18
+            },
+            "3": {
+              "n": 272,
+              "prePerMin": 844.44,
+              "postPerMin": 904.36,
+              "ratio": 1.07
+            }
+          },
+          "t3": {
+            "first_median_min": 8.75,
+            "first_p90_min": 9.56,
+            "second_median_min": 15.8,
+            "third_median_min": 20.24,
+            "reach1_rate": 1,
+            "reach2_rate": 1,
+            "reach3_rate": 0.855,
+            "first_before_11_rate": 1
+          },
+          "completed": {
+            "600": 0.97,
+            "900": 1.35,
+            "1200": 2.39,
+            "end": 3.26
+          },
+          "unspent": {
+            "600": 581.91,
+            "900": 539.14,
+            "1200": 679.82,
+            "end": 1078.65
+          },
+          "earnedAt": {
+            "600": 3901.06,
+            "900": 6316.29,
+            "1200": 9183.69
+          },
+          "incomeAt1200": {
+            "passive": {
+              "per_player": 6253,
+              "share": 0.681
+            },
+            "minion": {
+              "per_player": 923,
+              "share": 0.101
+            },
+            "kill": {
+              "per_player": 913,
+              "share": 0.099
+            },
+            "tower": {
+              "per_player": 744,
+              "share": 0.081
+            },
+            "baron": {
+              "per_player": 155,
+              "share": 0.017
+            },
+            "dragon": {
+              "per_player": 117,
+              "share": 0.013
+            },
+            "assist": {
+              "per_player": 71,
+              "share": 0.008
+            },
+            "camp": {
+              "per_player": 7,
+              "share": 0.001
+            }
+          }
+        },
+        "jungle": {
+          "n": 400,
+          "goldPerMin": 471.09,
+          "dmgPerMin": 374.4,
+          "takenPerMin": 599.52,
+          "deathsPerMatch": 2.64,
+          "killsPerMatch": 1.99,
+          "at": {
+            "10": {
+              "dmg": 1388.68,
+              "deaths": 0.12,
+              "kills": 0.14,
+              "mlv": 4.38
+            },
+            "15": {
+              "dmg": 3250.09,
+              "deaths": 0.41,
+              "kills": 0.54,
+              "mlv": 6.21
+            },
+            "20": {
+              "dmg": 6171.31,
+              "deaths": 1.34,
+              "kills": 1.24,
+              "mlv": 7.66
+            },
+            "25": {
+              "dmg": 9961.78,
+              "deaths": 2.56,
+              "kills": 2.06,
+              "mlv": 8.81
+            }
+          },
+          "spikes": {
+            "1": {
+              "n": 400,
+              "prePerMin": 274.69,
+              "postPerMin": 429.01,
+              "ratio": 1.56
+            },
+            "2": {
+              "n": 397,
+              "prePerMin": 591.35,
+              "postPerMin": 602.3,
+              "ratio": 1.02
+            },
+            "3": {
+              "n": 190,
+              "prePerMin": 900.42,
+              "postPerMin": 817.58,
+              "ratio": 0.91
+            }
+          },
+          "t3": {
+            "first_median_min": 8.82,
+            "first_p90_min": 9.53,
+            "second_median_min": 16.27,
+            "third_median_min": 21.16,
+            "reach1_rate": 1,
+            "reach2_rate": 1,
+            "reach3_rate": 0.713,
+            "first_before_11_rate": 0.995
+          },
+          "completed": {
+            "600": 0.95,
+            "900": 1.15,
+            "1200": 2.19,
+            "end": 2.94
+          },
+          "unspent": {
+            "600": 638.29,
+            "900": 956.52,
+            "1200": 764.3,
+            "end": 1087.97
+          },
+          "earnedAt": {
+            "600": 4080.49,
+            "900": 6575.72,
+            "1200": 9180.44
+          },
+          "incomeAt1200": {
+            "passive": {
+              "per_player": 6253,
+              "share": 0.681
+            },
+            "camp": {
+              "per_player": 1273,
+              "share": 0.139
+            },
+            "kill": {
+              "per_player": 710,
+              "share": 0.077
+            },
+            "minion": {
+              "per_player": 336,
+              "share": 0.037
+            },
+            "tower": {
+              "per_player": 187,
+              "share": 0.02
+            },
+            "baron": {
+              "per_player": 156,
+              "share": 0.017
+            },
+            "assist": {
+              "per_player": 150,
+              "share": 0.016
+            },
+            "dragon": {
+              "per_player": 114,
+              "share": 0.012
+            }
+          }
+        },
+        "mid": {
+          "n": 400,
+          "goldPerMin": 492.44,
+          "dmgPerMin": 761.58,
+          "takenPerMin": 625.91,
+          "deathsPerMatch": 4.39,
+          "killsPerMatch": 3.71,
+          "at": {
+            "10": {
+              "dmg": 3081.11,
+              "deaths": 0.18,
+              "kills": 0.18,
+              "mlv": 5.63
+            },
+            "15": {
+              "dmg": 6015.52,
+              "deaths": 0.62,
+              "kills": 0.5,
+              "mlv": 7.35
+            },
+            "20": {
+              "dmg": 11203.24,
+              "deaths": 2.09,
+              "kills": 1.45,
+              "mlv": 8.78
+            },
+            "25": {
+              "dmg": 19914.13,
+              "deaths": 4.58,
+              "kills": 4.05,
+              "mlv": 10.15
+            }
+          },
+          "spikes": {
+            "1": {
+              "n": 400,
+              "prePerMin": 489.41,
+              "postPerMin": 578.8,
+              "ratio": 1.18
+            },
+            "2": {
+              "n": 387,
+              "prePerMin": 1055.13,
+              "postPerMin": 1371.44,
+              "ratio": 1.3
+            },
+            "3": {
+              "n": 144,
+              "prePerMin": 1554.56,
+              "postPerMin": 2178.63,
+              "ratio": 1.4
+            }
+          },
+          "t3": {
+            "first_median_min": 10.55,
+            "first_p90_min": 11.29,
+            "second_median_min": 18.16,
+            "third_median_min": 22.12,
+            "reach1_rate": 1,
+            "reach2_rate": 1,
+            "reach3_rate": 0.563,
+            "first_before_11_rate": 0.78
+          },
+          "completed": {
+            "600": 0.18,
+            "900": 1.02,
+            "1200": 1.97,
+            "end": 2.81
+          },
+          "unspent": {
+            "600": 1343.89,
+            "900": 386.08,
+            "1200": 573.36,
+            "end": 1240.06
+          },
+          "earnedAt": {
+            "600": 3893.11,
+            "900": 6257.23,
+            "1200": 8987.5
+          },
+          "incomeAt1200": {
+            "passive": {
+              "per_player": 6253,
+              "share": 0.696
+            },
+            "minion": {
+              "per_player": 1021,
+              "share": 0.114
+            },
+            "kill": {
+              "per_player": 826,
+              "share": 0.092
+            },
+            "tower": {
+              "per_player": 477,
+              "share": 0.053
+            },
+            "assist": {
+              "per_player": 156,
+              "share": 0.017
+            },
+            "baron": {
+              "per_player": 141,
+              "share": 0.016
+            },
+            "dragon": {
+              "per_player": 110,
+              "share": 0.012
+            },
+            "camp": {
+              "per_player": 3,
+              "share": 0
+            }
+          }
+        },
+        "adc": {
+          "n": 400,
+          "goldPerMin": 558.73,
+          "dmgPerMin": 994.13,
+          "takenPerMin": 486.73,
+          "deathsPerMatch": 5.65,
+          "killsPerMatch": 7.32,
+          "at": {
+            "10": {
+              "dmg": 2695.16,
+              "deaths": 0.55,
+              "kills": 0.27,
+              "mlv": 4.97
+            },
+            "15": {
+              "dmg": 5521.49,
+              "deaths": 1.34,
+              "kills": 0.72,
+              "mlv": 6.51
+            },
+            "20": {
+              "dmg": 11944.49,
+              "deaths": 2.87,
+              "kills": 2.98,
+              "mlv": 8.37
+            },
+            "25": {
+              "dmg": 24281.58,
+              "deaths": 6.13,
+              "kills": 7.39,
+              "mlv": 9.99
+            }
+          },
+          "spikes": {
+            "1": {
+              "n": 400,
+              "prePerMin": 387.79,
+              "postPerMin": 448.97,
+              "ratio": 1.16
+            },
+            "2": {
+              "n": 393,
+              "prePerMin": 993.71,
+              "postPerMin": 1668.49,
+              "ratio": 1.68
+            },
+            "3": {
+              "n": 237,
+              "prePerMin": 2138.11,
+              "postPerMin": 2946,
+              "ratio": 1.38
+            }
+          },
+          "t3": {
+            "first_median_min": 9.63,
+            "first_p90_min": 10.57,
+            "second_median_min": 17.48,
+            "third_median_min": 20.78,
+            "reach1_rate": 1,
+            "reach2_rate": 1,
+            "reach3_rate": 0.855,
+            "first_before_11_rate": 0.973
+          },
+          "completed": {
+            "600": 0.69,
+            "900": 1.08,
+            "1200": 2.24,
+            "end": 3.43
+          },
+          "unspent": {
+            "600": 753.92,
+            "900": 535.86,
+            "1200": 763.27,
+            "end": 1807.47
+          },
+          "earnedAt": {
+            "600": 3829.42,
+            "900": 6152.33,
+            "1200": 9555.94
+          },
+          "incomeAt1200": {
+            "passive": {
+              "per_player": 6253,
+              "share": 0.654
+            },
+            "kill": {
+              "per_player": 1698,
+              "share": 0.178
+            },
+            "minion": {
+              "per_player": 789,
+              "share": 0.083
+            },
+            "tower": {
+              "per_player": 423,
+              "share": 0.044
+            },
+            "baron": {
+              "per_player": 144,
+              "share": 0.015
+            },
+            "assist": {
+              "per_player": 135,
+              "share": 0.014
+            },
+            "dragon": {
+              "per_player": 106,
+              "share": 0.011
+            },
+            "camp": {
+              "per_player": 6,
+              "share": 0.001
+            }
+          }
+        },
+        "sup": {
+          "n": 400,
+          "goldPerMin": 509.43,
+          "dmgPerMin": 283.51,
+          "takenPerMin": 808.61,
+          "deathsPerMatch": 1.94,
+          "killsPerMatch": 0.75,
+          "at": {
+            "10": {
+              "dmg": 1303.88,
+              "deaths": 0.1,
+              "kills": 0.21,
+              "mlv": 4.31
+            },
+            "15": {
+              "dmg": 2670.47,
+              "deaths": 0.39,
+              "kills": 0.45,
+              "mlv": 5.91
+            },
+            "20": {
+              "dmg": 4634.5,
+              "deaths": 0.97,
+              "kills": 0.63,
+              "mlv": 7.49
+            },
+            "25": {
+              "dmg": 7439.38,
+              "deaths": 1.95,
+              "kills": 0.71,
+              "mlv": 8.63
+            }
+          },
+          "spikes": {
+            "1": {
+              "n": 400,
+              "prePerMin": 155.51,
+              "postPerMin": 143.83,
+              "ratio": 0.92
+            },
+            "2": {
+              "n": 400,
+              "prePerMin": 331.94,
+              "postPerMin": 303.4,
+              "ratio": 0.91
+            },
+            "3": {
+              "n": 394,
+              "prePerMin": 394.39,
+              "postPerMin": 439.81,
+              "ratio": 1.12
+            }
+          },
+          "t3": {
+            "first_median_min": 6.83,
+            "first_p90_min": 7.43,
+            "second_median_min": 12.36,
+            "third_median_min": 17.23,
+            "reach1_rate": 1,
+            "reach2_rate": 1,
+            "reach3_rate": 0.998,
+            "first_before_11_rate": 1
+          },
+          "completed": {
+            "600": 1,
+            "900": 2.04,
+            "1200": 3.11,
+            "end": 3.87
+          },
+          "unspent": {
+            "600": 608.46,
+            "900": 578.72,
+            "1200": 780.19,
+            "end": 1227.24
+          },
+          "earnedAt": {
+            "600": 4718.59,
+            "900": 7510.05,
+            "1200": 10222.52
+          },
+          "incomeAt1200": {
+            "passive": {
+              "per_player": 6253,
+              "share": 0.612
+            },
+            "tithe": {
+              "per_player": 2223,
+              "share": 0.217
+            },
+            "tower": {
+              "per_player": 593,
+              "share": 0.058
+            },
+            "kill": {
+              "per_player": 358,
+              "share": 0.035
+            },
+            "minion": {
+              "per_player": 287,
+              "share": 0.028
+            },
+            "assist": {
+              "per_player": 235,
+              "share": 0.023
+            },
+            "baron": {
+              "per_player": 151,
+              "share": 0.015
+            },
+            "dragon": {
+              "per_player": 114,
+              "share": 0.011
+            },
+            "camp": {
+              "per_player": 8,
+              "share": 0.001
+            }
+          }
+        }
+      },
+      "per_arch": {
+        "戰士": {
+          "n": 410,
+          "goldPerMin": 484.52,
+          "deathsPerMatch": 2,
+          "dmgPerMin": 504.58,
+          "takenPerMin": 921.35,
+          "killsPerMatch": 2.64,
+          "at": {
+            "10": {
+              "dmg": 2117.54,
+              "deaths": 0.08,
+              "kills": 0.16,
+              "mlv": 5.04
+            },
+            "15": {
+              "dmg": 4555.76,
+              "deaths": 0.25,
+              "kills": 0.7,
+              "mlv": 6.75
+            },
+            "20": {
+              "dmg": 8264.42,
+              "deaths": 0.81,
+              "kills": 1.62,
+              "mlv": 8.35
+            },
+            "25": {
+              "dmg": 13350.38,
+              "deaths": 1.75,
+              "kills": 2.58,
+              "mlv": 9.54
+            }
+          },
+          "spikes": {
+            "1": {
+              "n": 410,
+              "prePerMin": 324.36,
+              "postPerMin": 552.06,
+              "ratio": 1.7
+            },
+            "2": {
+              "n": 408,
+              "prePerMin": 740.72,
+              "postPerMin": 792.09,
+              "ratio": 1.07
+            },
+            "3": {
+              "n": 218,
+              "prePerMin": 1004.28,
+              "postPerMin": 1004.13,
+              "ratio": 1
+            }
+          },
+          "t3": {
+            "first_median_min": 8.92,
+            "first_p90_min": 9.71,
+            "second_median_min": 16.6,
+            "third_median_min": 20.94,
+            "reach1_rate": 1,
+            "reach2_rate": 1,
+            "reach3_rate": 0.749,
+            "first_before_11_rate": 0.995
+          },
+          "completedAt1200": 2.24,
+          "unspentAt1200": 706.39
+        },
+        "法師": {
+          "n": 400,
+          "goldPerMin": 492.44,
+          "deathsPerMatch": 4.39,
+          "dmgPerMin": 761.58,
+          "takenPerMin": 625.91,
+          "killsPerMatch": 3.71,
+          "at": {
+            "10": {
+              "dmg": 3081.11,
+              "deaths": 0.18,
+              "kills": 0.18,
+              "mlv": 5.63
+            },
+            "15": {
+              "dmg": 6015.52,
+              "deaths": 0.62,
+              "kills": 0.5,
+              "mlv": 7.35
+            },
+            "20": {
+              "dmg": 11203.24,
+              "deaths": 2.09,
+              "kills": 1.45,
+              "mlv": 8.78
+            },
+            "25": {
+              "dmg": 19914.13,
+              "deaths": 4.58,
+              "kills": 4.05,
+              "mlv": 10.15
+            }
+          },
+          "spikes": {
+            "1": {
+              "n": 400,
+              "prePerMin": 489.41,
+              "postPerMin": 578.8,
+              "ratio": 1.18
+            },
+            "2": {
+              "n": 387,
+              "prePerMin": 1055.13,
+              "postPerMin": 1371.44,
+              "ratio": 1.3
+            },
+            "3": {
+              "n": 144,
+              "prePerMin": 1554.56,
+              "postPerMin": 2178.63,
+              "ratio": 1.4
+            }
+          },
+          "t3": {
+            "first_median_min": 10.55,
+            "first_p90_min": 11.29,
+            "second_median_min": 18.16,
+            "third_median_min": 22.12,
+            "reach1_rate": 1,
+            "reach2_rate": 1,
+            "reach3_rate": 0.563,
+            "first_before_11_rate": 0.78
+          },
+          "completedAt1200": 1.97,
+          "unspentAt1200": 573.36
+        },
+        "射手": {
+          "n": 400,
+          "goldPerMin": 558.73,
+          "deathsPerMatch": 5.65,
+          "dmgPerMin": 994.13,
+          "takenPerMin": 486.73,
+          "killsPerMatch": 7.32,
+          "at": {
+            "10": {
+              "dmg": 2695.16,
+              "deaths": 0.55,
+              "kills": 0.27,
+              "mlv": 4.97
+            },
+            "15": {
+              "dmg": 5521.49,
+              "deaths": 1.34,
+              "kills": 0.72,
+              "mlv": 6.51
+            },
+            "20": {
+              "dmg": 11944.49,
+              "deaths": 2.87,
+              "kills": 2.98,
+              "mlv": 8.37
+            },
+            "25": {
+              "dmg": 24281.58,
+              "deaths": 6.13,
+              "kills": 7.39,
+              "mlv": 9.99
+            }
+          },
+          "spikes": {
+            "1": {
+              "n": 400,
+              "prePerMin": 387.79,
+              "postPerMin": 448.97,
+              "ratio": 1.16
+            },
+            "2": {
+              "n": 393,
+              "prePerMin": 993.71,
+              "postPerMin": 1668.49,
+              "ratio": 1.68
+            },
+            "3": {
+              "n": 237,
+              "prePerMin": 2138.11,
+              "postPerMin": 2946,
+              "ratio": 1.38
+            }
+          },
+          "t3": {
+            "first_median_min": 9.63,
+            "first_p90_min": 10.57,
+            "second_median_min": 17.48,
+            "third_median_min": 20.78,
+            "reach1_rate": 1,
+            "reach2_rate": 1,
+            "reach3_rate": 0.855,
+            "first_before_11_rate": 0.973
+          },
+          "completedAt1200": 2.24,
+          "unspentAt1200": 763.27
+        },
+        "坦克": {
+          "n": 392,
+          "goldPerMin": 492.59,
+          "deathsPerMatch": 1.61,
+          "dmgPerMin": 373.12,
+          "takenPerMin": 976.67,
+          "killsPerMatch": 1.46,
+          "at": {
+            "10": {
+              "dmg": 1946.26,
+              "deaths": 0.08,
+              "kills": 0.23,
+              "mlv": 5.14
+            },
+            "15": {
+              "dmg": 3709.46,
+              "deaths": 0.3,
+              "kills": 0.61,
+              "mlv": 6.67
+            },
+            "20": {
+              "dmg": 6356.9,
+              "deaths": 0.79,
+              "kills": 1.06,
+              "mlv": 8.24
+            },
+            "25": {
+              "dmg": 9710.26,
+              "deaths": 1.49,
+              "kills": 1.35,
+              "mlv": 9.2
+            }
+          },
+          "spikes": {
+            "1": {
+              "n": 392,
+              "prePerMin": 237.74,
+              "postPerMin": 317.53,
+              "ratio": 1.34
+            },
+            "2": {
+              "n": 392,
+              "prePerMin": 406.6,
+              "postPerMin": 456.37,
+              "ratio": 1.12
+            },
+            "3": {
+              "n": 349,
+              "prePerMin": 586.68,
+              "postPerMin": 593.5,
+              "ratio": 1.01
+            }
+          },
+          "t3": {
+            "first_median_min": 7.52,
+            "first_p90_min": 9.02,
+            "second_median_min": 13.35,
+            "third_median_min": 18.38,
+            "reach1_rate": 1,
+            "reach2_rate": 1,
+            "reach3_rate": 0.972,
+            "first_before_11_rate": 1
+          },
+          "completedAt1200": 2.81,
+          "unspentAt1200": 703.24
+        },
+        "輔助": {
+          "n": 200,
+          "goldPerMin": 506.14,
+          "deathsPerMatch": 2.05,
+          "dmgPerMin": 269.92,
+          "takenPerMin": 704.51,
+          "killsPerMatch": 0.54,
+          "at": {
+            "10": {
+              "dmg": 1167.17,
+              "deaths": 0.1,
+              "kills": 0.2,
+              "mlv": 4.02
+            },
+            "15": {
+              "dmg": 2424.94,
+              "deaths": 0.38,
+              "kills": 0.37,
+              "mlv": 5.67
+            },
+            "20": {
+              "dmg": 4259.39,
+              "deaths": 0.96,
+              "kills": 0.48,
+              "mlv": 7.33
+            },
+            "25": {
+              "dmg": 7035.85,
+              "deaths": 2.33,
+              "kills": 0.54,
+              "mlv": 8.56
+            }
+          },
+          "spikes": {
+            "1": {
+              "n": 200,
+              "prePerMin": 142.64,
+              "postPerMin": 93.9,
+              "ratio": 0.66
+            },
+            "2": {
+              "n": 200,
+              "prePerMin": 322.51,
+              "postPerMin": 290.27,
+              "ratio": 0.9
+            },
+            "3": {
+              "n": 200,
+              "prePerMin": 333.41,
+              "postPerMin": 430.45,
+              "ratio": 1.29
+            }
+          },
+          "t3": {
+            "first_median_min": 6.49,
+            "first_p90_min": 7.32,
+            "second_median_min": 12.15,
+            "third_median_min": 16.83,
+            "reach1_rate": 1,
+            "reach2_rate": 1,
+            "reach3_rate": 1,
+            "first_before_11_rate": 1
+          },
+          "completedAt1200": 3.14,
+          "unspentAt1200": 884.46
+        },
+        "刺客": {
+          "n": 198,
+          "goldPerMin": 463.95,
+          "deathsPerMatch": 3.11,
+          "dmgPerMin": 310.42,
+          "takenPerMin": 504.91,
+          "killsPerMatch": 1.64,
+          "at": {
+            "10": {
+              "dmg": 1283.11,
+              "deaths": 0.13,
+              "kills": 0.14,
+              "mlv": 4.37
+            },
+            "15": {
+              "dmg": 2851.77,
+              "deaths": 0.52,
+              "kills": 0.48,
+              "mlv": 6.16
+            },
+            "20": {
+              "dmg": 5301.1,
+              "deaths": 1.74,
+              "kills": 1.08,
+              "mlv": 7.56
+            },
+            "25": {
+              "dmg": 7805.94,
+              "deaths": 3.24,
+              "kills": 1.74,
+              "mlv": 8.66
+            }
+          },
+          "spikes": {
+            "1": {
+              "n": 198,
+              "prePerMin": 255.15,
+              "postPerMin": 378.04,
+              "ratio": 1.48
+            },
+            "2": {
+              "n": 197,
+              "prePerMin": 471.47,
+              "postPerMin": 495.46,
+              "ratio": 1.05
+            },
+            "3": {
+              "n": 89,
+              "prePerMin": 739.22,
+              "postPerMin": 702.15,
+              "ratio": 0.95
+            }
+          },
+          "t3": {
+            "first_median_min": 8.77,
+            "first_p90_min": 9.44,
+            "second_median_min": 16.27,
+            "third_median_min": 21.4,
+            "reach1_rate": 1,
+            "reach2_rate": 1,
+            "reach3_rate": 0.697,
+            "first_before_11_rate": 1
+          },
+          "completedAt1200": 2.18,
+          "unspentAt1200": 743.72
+        }
+      },
+      "t3_all": {
+        "first_median_min": 8.98,
+        "first_p90_min": 10.69,
+        "second_median_min": 16.35,
+        "third_median_min": 20.19,
+        "reach1_rate": 1,
+        "reach2_rate": 1,
+        "reach3_rate": 0.797,
+        "first_before_11_rate": 0.95
+      },
+      "team_completed_at": {
+        "600": 3.79,
+        "900": 6.63,
+        "1200": 11.91,
+        "1500": 17.09,
+        "end": 16.31
+      },
+      "earned_per_player_at": {
+        "600": 4084.53,
+        "900": 6562.32,
+        "1200": 9426.02
+      },
+      "income_share_at": {
+        "600": {
+          "passive": {
+            "per_player": 3061,
+            "share": 0.75
+          },
+          "minion": {
+            "per_player": 451,
+            "share": 0.11
+          },
+          "tithe": {
+            "per_player": 262,
+            "share": 0.064
+          },
+          "camp": {
+            "per_player": 142,
+            "share": 0.035
+          },
+          "kill": {
+            "per_player": 115,
+            "share": 0.028
+          },
+          "dragon": {
+            "per_player": 40,
+            "share": 0.01
+          },
+          "assist": {
+            "per_player": 11,
+            "share": 0.003
+          },
+          "baron": {
+            "per_player": 2,
+            "share": 0
+          }
+        },
+        "1200": {
+          "passive": {
+            "per_player": 6253,
+            "share": 0.663
+          },
+          "kill": {
+            "per_player": 901,
+            "share": 0.096
+          },
+          "minion": {
+            "per_player": 671,
+            "share": 0.071
+          },
+          "tower": {
+            "per_player": 485,
+            "share": 0.051
+          },
+          "tithe": {
+            "per_player": 445,
+            "share": 0.047
+          },
+          "camp": {
+            "per_player": 259,
+            "share": 0.028
+          },
+          "baron": {
+            "per_player": 150,
+            "share": 0.016
+          },
+          "assist": {
+            "per_player": 149,
+            "share": 0.016
+          },
+          "dragon": {
+            "per_player": 112,
+            "share": 0.012
+          }
+        }
+      },
+      "unspent_at": {
+        "600": {
+          "mean": 785.29,
+          "p90": 1561
+        },
+        "900": {
+          "mean": 599.26,
+          "p90": 1187.3
+        },
+        "1200": {
+          "mean": 712.19,
+          "p90": 1442.1
+        },
+        "end": {
+          "mean": 1288.28,
+          "p90": 2168.7
+        }
+      },
+      "purchase_top": [
+        {
+          "id": "t1_hp_s",
+          "per_match": 10.24
+        },
+        {
+          "id": "bt_base",
+          "per_match": 10
+        },
+        {
+          "id": "t1_ap_l",
+          "per_match": 9.56
+        },
+        {
+          "id": "t1_ad_l",
+          "per_match": 9.31
+        },
+        {
+          "id": "t1_hp_l",
+          "per_match": 8.88
+        },
+        {
+          "id": "t1_ad_s",
+          "per_match": 8.87
+        },
+        {
+          "id": "t2_core",
+          "per_match": 6.63
+        },
+        {
+          "id": "t2_mail",
+          "per_match": 6.34
+        },
+        {
+          "id": "t1_ah",
+          "per_match": 6.25
+        },
+        {
+          "id": "t2_belt",
+          "per_match": 6.01
+        },
+        {
+          "id": "t1_as",
+          "per_match": 4.84
+        },
+        {
+          "id": "t1_ap_s",
+          "per_match": 4.73
+        },
+        {
+          "id": "t2_sigil",
+          "per_match": 4.58
+        },
+        {
+          "id": "t2_rend",
+          "per_match": 4.55
+        },
+        {
+          "id": "t2_veil",
+          "per_match": 4.53
+        },
+        {
+          "id": "t2_scope",
+          "per_match": 4.48
+        },
+        {
+          "id": "t2_gale",
+          "per_match": 4.17
+        },
+        {
+          "id": "st_blade",
+          "per_match": 3.98
+        },
+        {
+          "id": "bt_swift",
+          "per_match": 3.48
+        },
+        {
+          "id": "t1_ar_s",
+          "per_match": 3.33
+        },
+        {
+          "id": "t1_hsp",
+          "per_match": 3
+        },
+        {
+          "id": "t2_halo",
+          "per_match": 2.99
+        },
+        {
+          "id": "t3_wardaltar",
+          "per_match": 2.96
+        },
+        {
+          "id": "bt_iron",
+          "per_match": 2.85
+        },
+        {
+          "id": "t2_heart",
+          "per_match": 2.78
+        }
+      ],
+      "purchase_all": {
+        "st_blade": 796,
+        "st_hunter": 400,
+        "st_tome": 404,
+        "st_tithe": 400,
+        "bt_base": 2000,
+        "t1_ap_l": 1911,
+        "t2_core": 1325,
+        "t2_mail": 1268,
+        "t1_hp_l": 1775,
+        "t2_scope": 896,
+        "t2_belt": 1201,
+        "t1_ah": 1249,
+        "t1_ad_l": 1862,
+        "t2_sigil": 916,
+        "t3_bulwark": 366,
+        "t3_warbringer": 392,
+        "t3_starcrown": 424,
+        "bt_iron": 569,
+        "t3_dawnbow": 400,
+        "t1_hp_s": 2048,
+        "bt_arcane": 392,
+        "t1_hsp": 599,
+        "t1_ad_s": 1773,
+        "bt_swift": 696,
+        "t1_ap_s": 946,
+        "t2_rift": 355,
+        "t2_halo": 597,
+        "t3_wardaltar": 592,
+        "t1_mr_l": 504,
+        "t3_unbroken": 452,
+        "t2_gale": 834,
+        "t1_as": 968,
+        "t1_ar_s": 666,
+        "t1_mpen": 219,
+        "t1_mr_s": 392,
+        "t3_voidstaff": 350,
+        "t2_veil": 906,
+        "t2_echo": 190,
+        "t3_stormfork": 338,
+        "t1_crit": 329,
+        "t1_apen": 237,
+        "t3_lifespring": 117,
+        "t3_bloodplate": 251,
+        "t3_calmveil": 455,
+        "t1_ar_l": 287,
+        "t2_rend": 909,
+        "t3_vowshield": 349,
+        "t3_pierce": 238,
+        "t3_thornmail": 191,
+        "t2_heart": 556,
+        "bt_focus": 300,
+        "t3_redemption": 187,
+        "t3_shieldbreaker": 334,
+        "t2_scythe": 99,
+        "t3_rendspear": 146,
+        "t3_frostcrown": 173,
+        "t3_finalstring": 210,
+        "t3_psyward": 185,
+        "t3_shadowblade": 192,
+        "t3_nightscythe": 179,
+        "bt_quiet": 38,
+        "t2_vial": 3,
+        "t3_soulrend": 2
+      },
+      "counter_items": {
+        "t3_thornmail": {
+          "bought_per_100_matches": 95.5,
+          "planned_player_slots": 395,
+          "bought": 191
+        },
+        "t3_calmveil": {
+          "bought_per_100_matches": 227.5,
+          "planned_player_slots": 592,
+          "bought": 455
+        },
+        "t2_scythe": {
+          "bought_per_100_matches": 49.5,
+          "planned_player_slots": 3,
+          "bought": 99
+        },
+        "t3_finalstring": {
+          "bought_per_100_matches": 105,
+          "planned_player_slots": 584,
+          "bought": 210
+        },
+        "t3_soulrend": {
+          "bought_per_100_matches": 1,
+          "planned_player_slots": 3,
+          "bought": 2
+        },
+        "t3_psyward": {
+          "bought_per_100_matches": 92.5,
+          "planned_player_slots": 424,
+          "bought": 185
+        },
+        "t3_rendspear": {
+          "bought_per_100_matches": 73,
+          "planned_player_slots": 400,
+          "bought": 146
+        },
+        "t3_shieldbreaker": {
+          "bought_per_100_matches": 167,
+          "planned_player_slots": 792,
+          "bought": 334
+        }
+      },
+      "rejected_total": 0,
+      "inventory_violations": 0,
+      "conservation_fails": 0,
+      "duration_buckets": {
+        "le26": {
+          "n": 169,
+          "kills_per_min": 1.17,
+          "towers_at_20": 10.38,
+          "towers_end": 15.39,
+          "both_lane_towers_cleared_rate": 0.006,
+          "both_lane_towers_cleared_min": 25.31,
+          "stall_min_after_both_cleared": 0.03,
+          "guard_towers_down_end": 2.34,
+          "loser_nexus_hp_end": -853.3,
+          "gold_diff_at_20": 6106.71,
+          "kill_diff_at_20": 5.87,
+          "barons": 2.46,
+          "dragons": 3.47,
+          "team_completed_at_20": 11.83,
+          "full_inventory_end_rate": 0.765,
+          "unspent_end": 963,
+          "deaths_per_min": 1.17
+        },
+        "b26_35": {
+          "n": 25,
+          "kills_per_min": 1.63,
+          "towers_at_20": 9,
+          "towers_end": 17.72,
+          "both_lane_towers_cleared_rate": 0,
+          "both_lane_towers_cleared_min": null,
+          "stall_min_after_both_cleared": null,
+          "guard_towers_down_end": 2.88,
+          "loser_nexus_hp_end": -1438.88,
+          "gold_diff_at_20": 3901.96,
+          "kill_diff_at_20": 3.76,
+          "barons": 3.16,
+          "dragons": 4.08,
+          "team_completed_at_20": 11.48,
+          "full_inventory_end_rate": 0.912,
+          "unspent_end": 1613.24,
+          "deaths_per_min": 1.63
+        },
+        "gt35": {
+          "n": 6,
+          "kills_per_min": 2.75,
+          "towers_at_20": 10.67,
+          "towers_end": 20.83,
+          "both_lane_towers_cleared_rate": 0.667,
+          "both_lane_towers_cleared_min": 29.31,
+          "stall_min_after_both_cleared": 14.22,
+          "guard_towers_down_end": 3.33,
+          "loser_nexus_hp_end": -4684.17,
+          "gold_diff_at_20": 2907.33,
+          "kill_diff_at_20": 3.17,
+          "barons": 5.83,
+          "dragons": 7.33,
+          "team_completed_at_20": 11.83,
+          "full_inventory_end_rate": 1,
+          "unspent_end": 9096.05,
+          "deaths_per_min": 2.75
+        }
+      },
+      "long_matches": [
+        {
+          "seed": 41,
+          "min": 60,
+          "over": 0,
+          "winner": null,
+          "kills": 225,
+          "barons": 9,
+          "laneCleared": {
+            "blue": 33.2,
+            "red": 29.32
+          },
+          "stallMin": 26.8,
+          "guardsDown": 4,
+          "nexusHp": {
+            "blue": 7200,
+            "red": 7200
+          },
+          "guardDamageAfterClear": {
+            "blue": 0,
+            "red": 0
+          }
+        },
+        {
+          "seed": 44,
+          "min": 35.59,
+          "over": 1,
+          "winner": "blue",
+          "kills": 89,
+          "barons": 4,
+          "laneCleared": {
+            "blue": null,
+            "red": 33.36
+          },
+          "stallMin": null,
+          "guardsDown": 2,
+          "nexusHp": {
+            "blue": 7200,
+            "red": -4804
+          },
+          "guardDamageAfterClear": {
+            "blue": 0,
+            "red": 0
+          }
+        },
+        {
+          "seed": 45,
+          "min": 37.37,
+          "over": 1,
+          "winner": "red",
+          "kills": 99,
+          "barons": 5,
+          "laneCleared": {
+            "blue": 25.48,
+            "red": 24.48
+          },
+          "stallMin": 11.88,
+          "guardsDown": 4,
+          "nexusHp": {
+            "blue": -4928,
+            "red": 7200
+          },
+          "guardDamageAfterClear": {
+            "blue": 300,
+            "red": 0
+          }
+        },
+        {
+          "seed": 115,
+          "min": 38.92,
+          "over": 1,
+          "winner": "red",
+          "kills": 93,
+          "barons": 6,
+          "laneCleared": {
+            "blue": 28.33,
+            "red": 28.23
+          },
+          "stallMin": 10.59,
+          "guardsDown": 3,
+          "nexusHp": {
+            "blue": -6380,
+            "red": 7200
+          },
+          "guardDamageAfterClear": {
+            "blue": 600,
+            "red": 0
+          }
+        },
+        {
+          "seed": 156,
+          "min": 39.37,
+          "over": 1,
+          "winner": "blue",
+          "kills": 106,
+          "barons": 6,
+          "laneCleared": {
+            "blue": null,
+            "red": 37.23
+          },
+          "stallMin": null,
+          "guardsDown": 3,
+          "nexusHp": {
+            "blue": 7200,
+            "red": -13828
+          },
+          "guardDamageAfterClear": {
+            "blue": 0,
+            "red": 0
+          }
+        },
+        {
+          "seed": 161,
+          "min": 37.84,
+          "over": 1,
+          "winner": "blue",
+          "kills": 95,
+          "barons": 5,
+          "laneCleared": {
+            "blue": 30.23,
+            "red": 27.78
+          },
+          "stallMin": 7.62,
+          "guardsDown": 4,
+          "nexusHp": {
+            "blue": 7200,
+            "red": -5365
+          },
+          "guardDamageAfterClear": {
+            "blue": 300,
+            "red": 0
+          }
+        }
+      ],
+      "wall_ms_mean": 4465.2
+    }
+  }
+}

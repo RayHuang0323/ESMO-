@@ -1,6 +1,7 @@
 # MOBA Counter Ecosystem & Build Reachability（M4d）v1
 
-> 狀態：2026-09-16。Counter 偵測改為 capability 優先、情境裝可達性修復完成。
+> 狀態：2026-09-17 **M4D_CLOSED = YES**（配對 200-seed gate 已通過，見 §8）。
+> 2026-09-16 Counter 偵測改為 capability 優先、情境裝可達性修復完成。
 > 基準固定：`moba-sim.v6`、income 1.9、Tower／Siege 規則未動。
 > 範圍：**只動 `buildPolicy.js`**（＋`itemsViewModel`／`itemsUiSelectors` 的新 reason 文案）。
 > 未動：item stats、income、Tower／Siege、全域戰鬥公式、verifier。
@@ -133,10 +134,81 @@ r3 法師持有 1 件 E 族 T3（星隕法冠，ap=146）⇒ 舊規則計入、`
 | `check_moba_items_m3` | **65/66** —— 只有 G6「相對 HEAD 無改動」擋下刻意修改的 `buildPolicy.js`，commit 後回綠 |
 | counter audit 30 組 | 帳務／背包違規 **0** |
 
-**未跑**：paired 200 seeds（`MATCH_DURATION`）。可用實體記憶體低於 Owner 指定的 5 GB 門檻，
-依指示不硬跑；離線推演不受影響（無引擎、無 fork worker），所以 timing 與 legality 都是實跑數字。
+配對 200-seed gate 當時因可用記憶體低於 Owner 指定的 5 GB 門檻而未跑（依指示不硬跑）；
+**已於 2026-09-17 記憶體回升後補跑完成，結果見 §8**。
 
 ## 7. 沒有動的東西
 
 item stats、income 1.9、Tower／Siege 規則、`K_AD`／`K_AP`／`CRIT_BASE`、全域戰鬥公式、
 AI build path 的既有順序（只新增提前規則）、任何 verifier、既有 reason code 名稱。
+
+## 8. 配對 200-seed gate（2026-09-17）
+
+固定條件：`moba-sim.v6`、income 1.9、commit `d9538f7`、OFF vs ON 同 seeds、200 seeds。
+400 場、失敗 0、耗時 329 秒（6 workers；runner 文件明載 worker 數不影響輸出）。
+證據：`reports/moba-items-m4d/off-vs-on/`。**本輪未改任何程式。**
+
+### 8.1 MATCH_DURATION（ON）
+
+| 指標 | M4c ON | **M4d ON** |
+|---|---|---|
+| median／p75／P90 | 23.62／25.15／26.94 | **23.48／25.13／27.12** |
+| max／mean | 60／24.39 | **60／24.36** |
+| >30／>35／>40 | 4.5%／2.0%／1.0% | **4.5%／3.0%／0.5%** |
+| finish／60 分未結束 | 0.995／1 場 | **0.995／1 場** |
+
+中位與平均略降、P90 +0.18 分、max 與未結束場數持平。兩個小幅波動照實記錄：
+**>35 由 2.0% 升到 3.0%**（200 場中 4 → 6 場），而 **>40 反而由 1.0% 降到 0.5%**（2 → 1 場）。
+以 200 seeds 而言屬雜訊範圍，且 P90 27.12 遠低於 30–32 的目標帶。
+
+### 8.2 OFF_BASELINE：逐項相同（差異欄位數 0）
+
+`duration_min`（median 25.35／p75 28.33／P90 31.9／max 40.85／mean 26.64）、
+`over30/35/40_rate`、`finish_rate` 1.0、`unfinished_at_60` 0、`blue_win_rate` 0.245、
+`kills_at`（2.84／6.89／12.99／25.36）、`towers_at_20` 7.92、`n` 200
+—— 十個欄位全部與既有 baseline 一致 ⇒ **OFF 路徑未受 M4d 影響**。
+
+### 8.3 T3_TIMING / LEGALITY / WIN_RATE
+
+- T3 1/2/3 件中位 **8.98／16.35／20.19**（M4c 8.98／16.38／20.25），
+  `reach3_rate` 0.797（M4c 0.799）、`first_before_11_rate` 0.95 ⇒ **實質不變**。
+- LEGALITY：`rejected_total` 0、`inventory_violations` 0、`conservation_fails` 0。
+- WIN_RATE（只記錄、未修）：OFF 藍勝率 0.245（與 baseline 相同）、ON 0.367 → **0.397**。
+  kills 10/15/20/end = 2.02／5.92／15.81／32.48；`towers_at_20` OFF 7.92 / ON 10.21。
+
+### 8.4 COUNTER_PURCHASE（每 100 場購買數）
+
+| 裝備 | M4c | **M4d** | 變化 |
+|---|---|---|---|
+| `t3_finalstring`（穿甲） | 86 | **105** | +22% |
+| `t3_psyward`（反爆發） | 56.5 | **92.5** | +64% |
+| `t3_thornmail`（反治療） | 89.5 | **95.5** | +6.7% |
+| `t3_rendspear`（反治療） | 68.5 | **73** | +6.6% |
+| `t3_calmveil` | 218 | **227.5** | +4.4% |
+| `t3_soulrend` | 0（計畫席次 0） | **1**（計畫席次 3） | 首次脫離結構性零購買 |
+| `t3_shieldbreaker` | 174.5 | **167** | −4.3%，與「每人最多提前 1 件」的額度重分配一致 |
+
+**⚠ 時點與購買率的來源不可混用**：計畫席次與購買率出自本次 200 場對局；
+**逐件 counter 的購買時點出自離線對位量測**（§4），因為本資料集不含逐件購買時間戳
+（`item_purchases.csv` 只有次數、`players.csv` 只有每位玩家的 T3 完成時點）。
+
+### 8.5 ⚠ `counterPlanned` 欄位的正確讀法
+
+`players.csv` 的 `counterPlanned` **只代表該玩家的 build target 曾經包含 counter item**
+（含排在 fallback 順位、實際永遠買不到的那些）。實測 ON 的 2000 名玩家**全部非空（100%）、
+六個定位都是 100%**，因此它：
+
+- **不能代表 counter signal 實際觸發**；
+- **不得用來當 trigger rate 的證據**。
+
+它的有效用途只有兩個：交叉驗證 `counter_items.planned_player_slots`
+（792／592／584／424／400／395／3／3，與 summary 完全一致），以及提供 ON 的 T3 完成時點。
+要判斷訊號是否真的觸發，必須看 `reasons` 中的 `enemyHeal`／`enemyTanks`／`enemyBurst`／
+`counterPromote`，或用 `tools/audit/moba_counter_audit.mjs` 的中性對照差異法。
+
+### 8.6 結論
+
+**M4D_TARGET_MET = YES**　**M4D_CLOSED = YES**　**READY_FOR_M4E = YES**
+
+duration 與 legality 無明顯退步、OFF baseline 逐項相同、T3 timing 實質不變、
+counter 購買率全面提升。未 push、未 deploy。
