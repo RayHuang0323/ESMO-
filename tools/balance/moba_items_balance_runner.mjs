@@ -38,6 +38,14 @@ const ALL_CONFIGS = ["off", "standard", "early", "scaling", "counter", "survival
 const DT = 0.5;
 const CAP_S = 3600;
 const SAMPLE_S = [600, 900, 1200, 1500, 1800];
+/**
+ * M4c：T3 完成前後的輸出速率（戰力跳升）。
+ * ⚠ 購買發生在泉水／復活窗，買完的頭幾十秒英雄還在回線路上、根本沒有交戰
+ *   ⇒ 直接取「完成後 60 秒」會量到「這一分鐘有沒有打架」（實測出現 ratio 0.22 這種值）。
+ *   因此後窗先跳過 SPIKE_LAG 秒，再取 SPIKE_WINDOW 秒；前窗取完成前同長度。
+ */
+const SPIKE_WINDOW = 90;
+const SPIKE_LAG = 20;
 const LANES = ["top", "mid", "bot"];
 const ROLE_ARCH = {
   top: ["戰士", "坦克"],
@@ -142,7 +150,10 @@ export async function runMatch(config, seed, incomeK = 1) {
     arch: M.heroes.heroById(roster[p.id]?.heroId)?.arch ?? null,
     strategy: itemsOn ? e.items.stateOf(p.id).strategy : null,
     taken: 0, t3Times: [], samples: {}, prevHp: p.hp, prevDead: p.dead,
+    //  M4c：T3 完成前後的輸出變化（戰力跳升）。dmgHist 每 10 秒一筆，spikes 記錄每一件 T3。
+    dmgHist: [{ t: 0, dmg: 0 }], spikes: [], pending: [],
   }]));
+  const byId = Object.fromEntries(players.map((p) => [p.id, p]));
   const purchaseCount = {};
   const counterBought = {};
   let lastSeq = -1;
@@ -187,6 +198,20 @@ export async function runMatch(config, seed, incomeK = 1) {
         else if (p.hp < st.prevHp) st.taken += st.prevHp - p.hp;
       }
       st.prevHp = p.hp; st.prevDead = p.dead;
+      //  M4c：每 10 秒記一筆累計輸出（戰力跳升的 pre 視窗來源），並關閉到期的視窗
+      if (Math.round(t * 10) % 100 === 0) {
+        st.dmgHist.push({ t, dmg: p.dmg });
+        if (st.dmgHist.length > 400) st.dmgHist.shift();
+      }
+      if (st.pending.length) {
+        st.pending = st.pending.filter((w) => {
+          if (w.dmgAtOpen === null && t >= w.openAt) w.dmgAtOpen = p.dmg;
+          if (t < w.closeAt) return true;
+          const base = w.dmgAtOpen ?? p.dmg;
+          st.spikes.push({ n: w.n, t: w.t, prePerMin: Math.round(w.prePerMin), postPerMin: Math.round(((p.dmg - base) / SPIKE_WINDOW) * 60) });
+          return false;
+        });
+      }
     }
     if (prevDragon && !e.dragon.alive) dragons++;
     if (prevBaron && !e.baron.alive) barons++;
@@ -201,7 +226,16 @@ export async function runMatch(config, seed, incomeK = 1) {
         const it = getItem(ev.itemId);
         purchaseCount[ev.itemId] = (purchaseCount[ev.itemId] ?? 0) + 1;
         if (COUNTER_ITEMS.includes(ev.itemId)) counterBought[ev.itemId] = (counterBought[ev.itemId] ?? 0) + 1;
-        if (it?.tier === "T3") P[ev.playerId].t3Times.push(ev.t);
+        if (it?.tier === "T3") {
+          const stp = P[ev.playerId];
+          stp.t3Times.push(ev.t);
+          //  M4c：開一個「完成後 SPIKE_WINDOW 秒」的視窗；pre 取完成前同長度的輸出速率
+          const pl = byId[ev.playerId];
+          const back = stp.dmgHist.find((h) => h.t >= ev.t - SPIKE_WINDOW) ?? stp.dmgHist[0];
+          const preSpan = Math.max(1e-6, ev.t - back.t);
+          stp.pending.push({ n: stp.t3Times.length, t: ev.t, openAt: ev.t + SPIKE_LAG, dmgAtOpen: null,
+            closeAt: ev.t + SPIKE_LAG + SPIKE_WINDOW, prePerMin: ((pl.dmg - back.dmg) / preSpan) * 60 });
+        }
       }
     }
     const td = towersDown(e);
@@ -239,6 +273,7 @@ export async function runMatch(config, seed, incomeK = 1) {
       id: p.id, side: p.side, role: p.role, arch: st.arch, heroId: st.heroId, strategy: st.strategy,
       won: winner ? (winner === p.side ? 1 : 0) : null,
       k: p.k, d: p.d, a: p.a, dmg: Math.round(p.dmg), taken: Math.round(st.taken), gold: Math.round(p.gold),
+      spikes: st.spikes,
       goldPerMin: Math.round((p.gold / minutes) * 10) / 10,
       t3_1: st.t3Times[0] ?? null, t3_2: st.t3Times[1] ?? null, t3_3: st.t3Times[2] ?? null, t3Count: st.t3Times.length,
       samples: st.samples, counterPlanned: planned[p.id] ?? [],
@@ -365,6 +400,20 @@ export function summarize(rows) {
       first_before_11_rate: rate(ps, (p) => p.t3_1 !== null && p.t3_1 <= 660),
     });
     const sampleMean = (ps, label, key) => mean(ps.map((p) => p.samples?.[label]?.[key]).filter((x) => x !== undefined));
+    //  M4c：10／15／20／25 分的累計輸出、死亡、擊殺（同一組 seed 比 OFF／ON 用）
+    const atWindows = (ps) => Object.fromEntries([["10", "600"], ["15", "900"], ["20", "1200"], ["25", "1500"]].map(([lab, l]) => [lab, {
+      dmg: sampleMean(ps, l, "dmg"), deaths: sampleMean(ps, l, "d"), kills: sampleMean(ps, l, "k"), mlv: sampleMean(ps, l, "mlv"),
+    }]));
+    //  M4c：T3 第 n 件完成前後 60 秒的輸出速率（戰力跳升）
+    const spikeStats = (ps) => {
+      const out = {};
+      for (const n of [1, 2, 3]) {
+        const sp = ps.flatMap((p) => (p.spikes ?? []).filter((s) => s.n === n));
+        out[n] = sp.length ? { n: sp.length, prePerMin: mean(sp.map((s) => s.prePerMin)), postPerMin: mean(sp.map((s) => s.postPerMin)),
+          ratio: Math.round((mean(sp.map((s) => s.postPerMin)) / Math.max(1, mean(sp.map((s) => s.prePerMin)))) * 100) / 100 } : null;
+      }
+      return out;
+    };
     const incomeShare = (ps, label) => {
       const totals = {};
       let all = 0;
@@ -378,7 +427,9 @@ export function summarize(rows) {
       dmgPerMin: mean(ps.map((p) => p.dmg / (p.duration / 60))),
       takenPerMin: mean(ps.map((p) => p.taken / (p.duration / 60))),
       deathsPerMatch: mean(ps.map((p) => p.d)), killsPerMatch: mean(ps.map((p) => p.k)),
+      at: atWindows(ps),
       ...(itemsOn ? {
+        spikes: spikeStats(ps),
         t3: t3Stats(ps),
         completed: Object.fromEntries(["600", "900", "1200", "end"].map((l) => [l, sampleMean(ps, l, "completed")])),
         unspent: Object.fromEntries(["600", "900", "1200", "end"].map((l) => [l, sampleMean(ps, l, "unspent")])),
@@ -388,7 +439,12 @@ export function summarize(rows) {
     }]));
     const perArch = Object.fromEntries(Object.entries(byArch).map(([a, ps]) => [a, {
       n: ps.length, goldPerMin: mean(ps.map((p) => p.goldPerMin)), deathsPerMatch: mean(ps.map((p) => p.d)),
-      ...(itemsOn ? { t3: t3Stats(ps), completedAt1200: sampleMean(ps, "1200", "completed"), unspentAt1200: sampleMean(ps, "1200", "unspent") } : {}),
+      //  M4c：六 archetype 也要 damage／deaths／kills 的 10／15／20／25 分取樣與 T3 跳升
+      dmgPerMin: mean(ps.map((p) => p.dmg / (p.duration / 60))),
+      takenPerMin: mean(ps.map((p) => p.taken / (p.duration / 60))),
+      killsPerMatch: mean(ps.map((p) => p.k)),
+      at: atWindows(ps),
+      ...(itemsOn ? { spikes: spikeStats(ps), t3: t3Stats(ps), completedAt1200: sampleMean(ps, "1200", "completed"), unspentAt1200: sampleMean(ps, "1200", "unspent") } : {}),
     }]));
     const sampleKills = (label) => mean(list.map((r) => r.samples?.[label]?.kills).filter((x) => x !== undefined));
     const purchase = {};

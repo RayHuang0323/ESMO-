@@ -114,12 +114,25 @@ const T2 = [
 const lifeline = (params) => fx("LOW_HP_SHIELD", { target: "self", threshold: 0.3, cooldown: 60, blocks: "all", ...params });
 const T3 = [
   // A 暴擊／射手
-  item("t3_dawnbow", "T3", "破曉長弓", 3100, { family: "A", unique: "critAmp", components: ["t2_scope", "t1_ad_l", "t1_ad_l"], stats: { ad: 45, critChance: 0.25, critDamageAmp: 0.35 } }),
-  item("t3_hunter", "T3", "追獵者之瞳", 2800, { family: "A", batch: "1.1", components: ["t2_scope", "t2_gale"], stats: { ad: 30, critChance: 0.20, attackSpeed: 0.25, moveSpeed: 0.05 } }),
-  item("t3_reaper", "T3", "收割連弩", 2900, { family: "A", batch: "1.1", unique: "execute", components: ["t2_scope", "t1_ad_l", "t1_ad_s"], stats: { ad: 40, critChance: 0.20 }, effects: [fx("EXECUTE", { threshold: 0.35, bonus: 0.12 })] }),
-  item("t3_pierce", "T3", "穿雲破甲弓", 3000, { family: "A", unique: "armorPenPct", components: ["t2_scope", "t2_rend"], stats: { ad: 35, critChance: 0.20, armorPenPct: 0.30 } }),
-  item("t3_bloodoath", "T3", "血誓長弓", 3100, { family: "A", batch: "1.1", unique: "lifeline", components: ["t2_scope", "t2_fang"], stats: { ad: 40, critChance: 0.20, lifesteal: 0.10 }, effects: [lifeline({ shieldPctMaxHp: 0.18 })] }),
-  item("t3_rendspear", "T3", "裂傷刺矛", 2700, { family: "A", unique: "grievous", components: ["t2_scope", "t2_scythe"], stats: { ad: 30, critChance: 0.20 }, effects: [GRIEVOUS_ATTACK] }),
+  //  ── M4c.1 Marksman Power Tuning（2026-09-16）────────────────────────────────
+  //  只調**射手族 T3 的暴擊鏈**（critChance／critDamageAmp）。AD、攻速、價格、組件、
+  //  unique、效果一律不動；通用鞋 bt_swift、組件 t2_scope／t1_crit、K_AD／K_AP 也不動。
+  //  根因（M4c 配對 200 seeds ＋ 離線拆解）：射手攻擊通道是三段相乘——
+  //    AD 107（×2.07）× 攻速 0.60（×1.60）× 暴擊 0.45×(2.10−1)（×1.495）
+  //  ⇒ 對局每分鐘傷害 OFF→ON 2.46×、離線滿裝 4.01×，都高於 1.8–2.1 的目標；
+  //    其他流派只吃單一主因（法師 AP −62%、戰士 AD −40%），只有射手同時吃三段。
+  //  ⚠ 同族目前沒被買到的 T3（hunter／reaper／bloodoath／rendspear）一起下修，
+  //    否則 AI 會改買它們，等於沒調。
+  //  ⚠ 兩段式調整（每次都重跑同一套證據：離線模型 → 屬性拆解 → 配對 200 seeds）：
+  //    原始   dawnbow cc 0.25 / amp 0.35、同族 cc 0.20 ⇒ 模型 4.01、對局 2.46
+  //    第一次 dawnbow cc 0.15 / amp 0.20、同族 cc 0.10 ⇒ 模型 3.61、對局 2.23（仍 > 2.1）
+  //    第二次 dawnbow cc 0.10 / amp 0.10、同族 cc 0.05 ⇒ 模型 3.32（預估對局 ≈ 2.05）
+  item("t3_dawnbow", "T3", "破曉長弓", 3100, { family: "A", unique: "critAmp", components: ["t2_scope", "t1_ad_l", "t1_ad_l"], stats: { ad: 45, critChance: 0.10, critDamageAmp: 0.10 } }),
+  item("t3_hunter", "T3", "追獵者之瞳", 2800, { family: "A", batch: "1.1", components: ["t2_scope", "t2_gale"], stats: { ad: 30, critChance: 0.05, attackSpeed: 0.25, moveSpeed: 0.05 } }),
+  item("t3_reaper", "T3", "收割連弩", 2900, { family: "A", batch: "1.1", unique: "execute", components: ["t2_scope", "t1_ad_l", "t1_ad_s"], stats: { ad: 40, critChance: 0.05 }, effects: [fx("EXECUTE", { threshold: 0.35, bonus: 0.12 })] }),
+  item("t3_pierce", "T3", "穿雲破甲弓", 3000, { family: "A", unique: "armorPenPct", components: ["t2_scope", "t2_rend"], stats: { ad: 35, critChance: 0.05, armorPenPct: 0.30 } }),
+  item("t3_bloodoath", "T3", "血誓長弓", 3100, { family: "A", batch: "1.1", unique: "lifeline", components: ["t2_scope", "t2_fang"], stats: { ad: 40, critChance: 0.05, lifesteal: 0.10 }, effects: [lifeline({ shieldPctMaxHp: 0.18 })] }),
+  item("t3_rendspear", "T3", "裂傷刺矛", 2700, { family: "A", unique: "grievous", components: ["t2_scope", "t2_scythe"], stats: { ad: 30, critChance: 0.05 }, effects: [GRIEVOUS_ATTACK] }),
   // B 攻速／On-hit
   item("t3_stormfork", "T3", "風暴三叉", 3000, { family: "B", unique: "onHitCurrent", components: ["t2_gale", "t1_as", "t1_ad_l"], stats: { attackSpeed: 0.35, ad: 20 }, effects: [fx("ON_HIT", { damageType: "physical", pctCurrent: 0.04 })] }),
   item("t3_thunderfist", "T3", "雷鳴手套", 2600, { family: "B", batch: "1.1", components: ["t2_gale", "t1_as", "t1_mpen"], stats: { attackSpeed: 0.40 }, effects: [fx("ON_HIT", { damageType: "magic", flat: 18 })] }),

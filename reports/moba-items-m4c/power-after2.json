@@ -1,0 +1,196 @@
+{
+  "tool": "moba-item-power.v1",
+  "refMaxHp": 1131.2,
+  "constants": {
+    "K_AD": 100,
+    "K_AP": 150,
+    "R_ABILITY_AD": 0.6,
+    "R_ATTACK_AP": 0.3,
+    "CRIT_BASE": 1.75,
+    "AH_CAP": 60,
+    "ONHIT_BASE_RATE": 1,
+    "RESIST_K": 100
+  },
+  "byArch": {
+    "坦克": {
+      "build": [
+        "st_blade",
+        "bt_base",
+        "t3_calmveil",
+        "bt_quiet",
+        "t3_wardaltar",
+        "t3_bulwark"
+      ],
+      "outputMult": 1.116,
+      "outputMultMirror": 0.687,
+      "ehpMultVsFullAdc": 2.685,
+      "ehpMultVsZeroAdc": 2.857,
+      "hpBonus": 920,
+      "armor": 55,
+      "mr": 85,
+      "ad": 7,
+      "ap": 0,
+      "ttkMirrorOn": 82.08,
+      "ttkMirrorOff": 31.08,
+      "ttkRatio": 2.641,
+      "spikeByItemCount": [
+        1.039,
+        1.039,
+        1.039,
+        1.039,
+        1.116,
+        1.116
+      ]
+    },
+    "戰士": {
+      "build": [
+        "st_blade",
+        "bt_base",
+        "t3_warbringer",
+        "bt_quiet",
+        "t3_unbroken",
+        "t3_bloodplate"
+      ],
+      "outputMult": 1.777,
+      "outputMultMirror": 1.326,
+      "ehpMultVsFullAdc": 2.368,
+      "ehpMultVsZeroAdc": 2.547,
+      "hpBonus": 1020,
+      "armor": 35,
+      "mr": 25,
+      "ad": 97,
+      "ap": 0,
+      "ttkMirrorOn": 44.58,
+      "ttkMirrorOff": 31.08,
+      "ttkRatio": 1.434,
+      "spikeByItemCount": [
+        1.049,
+        1.049,
+        1.375,
+        1.375,
+        1.594,
+        1.777
+      ]
+    },
+    "刺客": {
+      "build": [
+        "st_hunter",
+        "bt_base",
+        "t3_shadowblade",
+        "bt_swift",
+        "t3_nightscythe",
+        "t3_unbroken"
+      ],
+      "outputMult": 2,
+      "outputMultMirror": 2,
+      "ehpMultVsFullAdc": 1.265,
+      "ehpMultVsZeroAdc": 1.265,
+      "hpBonus": 300,
+      "armor": 0,
+      "mr": 0,
+      "ad": 115,
+      "ap": 0,
+      "ttkMirrorOn": 19.66,
+      "ttkMirrorOff": 31.08,
+      "ttkRatio": 0.633,
+      "spikeByItemCount": [
+        1,
+        1,
+        1.266,
+        1.385,
+        1.787,
+        2
+      ]
+    },
+    "法師": {
+      "build": [
+        "st_tome",
+        "bt_base",
+        "t3_starcrown",
+        "bt_quiet",
+        "t3_voidstaff",
+        "t3_lifespring"
+      ],
+      "outputMult": 2.96,
+      "outputMultMirror": 2.554,
+      "ehpMultVsFullAdc": 1.34,
+      "ehpMultVsZeroAdc": 1.354,
+      "hpBonus": 370,
+      "armor": 0,
+      "mr": 25,
+      "ad": 0,
+      "ap": 296.4,
+      "ttkMirrorOn": 16.15,
+      "ttkMirrorOff": 31.08,
+      "ttkRatio": 0.52,
+      "spikeByItemCount": [
+        1.065,
+        1.065,
+        1.797,
+        1.797,
+        2.255,
+        2.96
+      ]
+    },
+    "射手": {
+      "build": [
+        "st_blade",
+        "bt_base",
+        "t3_dawnbow",
+        "bt_swift",
+        "t3_stormfork",
+        "t3_pierce"
+      ],
+      "outputMult": 3.132,
+      "outputMultMirror": 3.132,
+      "ehpMultVsFullAdc": 1.062,
+      "ehpMultVsZeroAdc": 1.062,
+      "hpBonus": 70,
+      "armor": 0,
+      "mr": 0,
+      "ad": 107,
+      "ap": 0,
+      "ttkMirrorOn": 10.54,
+      "ttkMirrorOff": 31.08,
+      "ttkRatio": 0.339,
+      "spikeByItemCount": [
+        1.058,
+        1.058,
+        1.524,
+        1.84,
+        2.556,
+        3.132
+      ]
+    },
+    "輔助": {
+      "build": [
+        "st_tithe",
+        "bt_base",
+        "t3_vowshield",
+        "bt_focus",
+        "t3_wardaltar",
+        "t3_redemption"
+      ],
+      "outputMult": 1.294,
+      "outputMultMirror": 1.035,
+      "ehpMultVsFullAdc": 1.855,
+      "ehpMultVsZeroAdc": 1.968,
+      "hpBonus": 650,
+      "armor": 25,
+      "mr": 25,
+      "ad": 0,
+      "ap": 0,
+      "ttkMirrorOn": 47.27,
+      "ttkMirrorOff": 31.08,
+      "ttkRatio": 1.521,
+      "spikeByItemCount": [
+        1,
+        1,
+        1,
+        1.084,
+        1.189,
+        1.294
+      ]
+    }
+  }
+}

@@ -1,0 +1,408 @@
+{
+  "tool": "moba-item-power-decompose.v1",
+  "refMaxHp": 1131.2,
+  "byArch": {
+    "坦克": {
+      "build": [
+        "st_blade",
+        "bt_base",
+        "t3_calmveil",
+        "bt_quiet",
+        "t3_wardaltar",
+        "t3_bulwark"
+      ],
+      "stats": {
+        "ad": 7,
+        "ap": 0,
+        "attackSpeed": 0,
+        "critChance": 0,
+        "critDamage": 1.75,
+        "abilityHaste": 15,
+        "hp": 920,
+        "armor": 55,
+        "mr": 85
+      },
+      "outputMult": 1.116,
+      "ehpMult": 2.954,
+      "offense": {
+        "ad": {
+          "multWithout": 1.075,
+          "dropPct": 3.709
+        },
+        "attackSpeed": {
+          "multWithout": 1.116,
+          "dropPct": 0
+        },
+        "crit": {
+          "multWithout": 1.116,
+          "dropPct": 0
+        },
+        "critDamage": {
+          "multWithout": 1.116,
+          "dropPct": 0
+        },
+        "ap": {
+          "multWithout": 1.116,
+          "dropPct": 0
+        },
+        "apAmp": {
+          "multWithout": 1.116,
+          "dropPct": 0
+        },
+        "abilityHaste": {
+          "multWithout": 1.039,
+          "dropPct": 6.916
+        }
+      },
+      "defense": {
+        "hp": {
+          "multWithout": 1.629,
+          "dropPct": 44.852
+        },
+        "armor": {
+          "multWithout": 2.152,
+          "dropPct": 27.139
+        },
+        "mr": {
+          "multWithout": 2.875,
+          "dropPct": 2.689
+        }
+      }
+    },
+    "戰士": {
+      "build": [
+        "st_blade",
+        "bt_base",
+        "t3_warbringer",
+        "bt_quiet",
+        "t3_unbroken",
+        "t3_bloodplate"
+      ],
+      "stats": {
+        "ad": 97,
+        "ap": 0,
+        "attackSpeed": 0,
+        "critChance": 0,
+        "critDamage": 1.75,
+        "abilityHaste": 15,
+        "hp": 1020,
+        "armor": 35,
+        "mr": 25
+      },
+      "outputMult": 1.777,
+      "ehpMult": 2.368,
+      "offense": {
+        "ad": {
+          "multWithout": 1.068,
+          "dropPct": 39.926
+        },
+        "attackSpeed": {
+          "multWithout": 1.777,
+          "dropPct": 0
+        },
+        "crit": {
+          "multWithout": 1.777,
+          "dropPct": 0
+        },
+        "critDamage": {
+          "multWithout": 1.777,
+          "dropPct": 0
+        },
+        "ap": {
+          "multWithout": 1.777,
+          "dropPct": 0
+        },
+        "apAmp": {
+          "multWithout": 1.777,
+          "dropPct": 0
+        },
+        "abilityHaste": {
+          "multWithout": 1.676,
+          "dropPct": 5.678
+        }
+      },
+      "defense": {
+        "hp": {
+          "multWithout": 1.245,
+          "dropPct": 47.415
+        },
+        "armor": {
+          "multWithout": 1.916,
+          "dropPct": 19.093
+        },
+        "mr": {
+          "multWithout": 2.346,
+          "dropPct": 0.911
+        }
+      }
+    },
+    "刺客": {
+      "build": [
+        "st_hunter",
+        "bt_base",
+        "t3_shadowblade",
+        "bt_swift",
+        "t3_nightscythe",
+        "t3_unbroken"
+      ],
+      "stats": {
+        "ad": 115,
+        "ap": 0,
+        "attackSpeed": 0.25,
+        "critChance": 0,
+        "critDamage": 1.75,
+        "abilityHaste": 15,
+        "hp": 300,
+        "armor": 0,
+        "mr": 0
+      },
+      "outputMult": 2,
+      "ehpMult": 1.265,
+      "offense": {
+        "ad": {
+          "multWithout": 1.185,
+          "dropPct": 40.754
+        },
+        "attackSpeed": {
+          "multWithout": 1.832,
+          "dropPct": 8.399
+        },
+        "crit": {
+          "multWithout": 2,
+          "dropPct": 0
+        },
+        "critDamage": {
+          "multWithout": 2,
+          "dropPct": 0
+        },
+        "ap": {
+          "multWithout": 2,
+          "dropPct": 0
+        },
+        "apAmp": {
+          "multWithout": 2,
+          "dropPct": 0
+        },
+        "abilityHaste": {
+          "multWithout": 1.849,
+          "dropPct": 7.566
+        }
+      },
+      "defense": {
+        "hp": {
+          "multWithout": 1,
+          "dropPct": 20.961
+        },
+        "armor": {
+          "multWithout": 1.265,
+          "dropPct": 0
+        },
+        "mr": {
+          "multWithout": 1.265,
+          "dropPct": 0
+        }
+      }
+    },
+    "法師": {
+      "build": [
+        "st_tome",
+        "bt_base",
+        "t3_starcrown",
+        "bt_quiet",
+        "t3_voidstaff",
+        "t3_lifespring"
+      ],
+      "stats": {
+        "ad": 0,
+        "ap": 296.4,
+        "attackSpeed": 0,
+        "critChance": 0,
+        "critDamage": 1.75,
+        "abilityHaste": 15,
+        "hp": 370,
+        "armor": 0,
+        "mr": 25
+      },
+      "outputMult": 2.96,
+      "ehpMult": 1.337,
+      "offense": {
+        "ad": {
+          "multWithout": 2.96,
+          "dropPct": 0
+        },
+        "attackSpeed": {
+          "multWithout": 2.96,
+          "dropPct": 0
+        },
+        "crit": {
+          "multWithout": 2.96,
+          "dropPct": 0
+        },
+        "critDamage": {
+          "multWithout": 2.96,
+          "dropPct": 0
+        },
+        "ap": {
+          "multWithout": 1.12,
+          "dropPct": 62.158
+        },
+        "apAmp": {
+          "multWithout": 2.96,
+          "dropPct": 0
+        },
+        "abilityHaste": {
+          "multWithout": 2.614,
+          "dropPct": 11.666
+        }
+      },
+      "defense": {
+        "hp": {
+          "multWithout": 1.007,
+          "dropPct": 24.647
+        },
+        "armor": {
+          "multWithout": 1.337,
+          "dropPct": 0
+        },
+        "mr": {
+          "multWithout": 1.327,
+          "dropPct": 0.738
+        }
+      }
+    },
+    "射手": {
+      "build": [
+        "st_blade",
+        "bt_base",
+        "t3_dawnbow",
+        "bt_swift",
+        "t3_stormfork",
+        "t3_pierce"
+      ],
+      "stats": {
+        "ad": 107,
+        "ap": 0,
+        "attackSpeed": 0.6,
+        "critChance": 0.45,
+        "critDamage": 2.1,
+        "abilityHaste": 0,
+        "hp": 70,
+        "armor": 0,
+        "mr": 0
+      },
+      "outputMult": 4.009,
+      "ehpMult": 1.062,
+      "offense": {
+        "ad": {
+          "multWithout": 2.05,
+          "dropPct": 48.854
+        },
+        "attackSpeed": {
+          "multWithout": 2.624,
+          "dropPct": 34.548
+        },
+        "crit": {
+          "multWithout": 2.828,
+          "dropPct": 29.447
+        },
+        "critDamage": {
+          "multWithout": 3.633,
+          "dropPct": 9.369
+        },
+        "ap": {
+          "multWithout": 4.009,
+          "dropPct": 0
+        },
+        "apAmp": {
+          "multWithout": 4.009,
+          "dropPct": 0
+        },
+        "abilityHaste": {
+          "multWithout": 4.009,
+          "dropPct": 0
+        }
+      },
+      "defense": {
+        "hp": {
+          "multWithout": 1,
+          "dropPct": 5.828
+        },
+        "armor": {
+          "multWithout": 1.062,
+          "dropPct": 0
+        },
+        "mr": {
+          "multWithout": 1.062,
+          "dropPct": 0
+        }
+      }
+    },
+    "輔助": {
+      "build": [
+        "st_tithe",
+        "bt_base",
+        "t3_vowshield",
+        "bt_focus",
+        "t3_wardaltar",
+        "t3_redemption"
+      ],
+      "stats": {
+        "ad": 0,
+        "ap": 0,
+        "attackSpeed": 0,
+        "critChance": 0,
+        "critDamage": 1.75,
+        "abilityHaste": 42,
+        "hp": 650,
+        "armor": 25,
+        "mr": 25
+      },
+      "outputMult": 1.294,
+      "ehpMult": 1.854,
+      "offense": {
+        "ad": {
+          "multWithout": 1.294,
+          "dropPct": 0
+        },
+        "attackSpeed": {
+          "multWithout": 1.294,
+          "dropPct": 0
+        },
+        "crit": {
+          "multWithout": 1.294,
+          "dropPct": 0
+        },
+        "critDamage": {
+          "multWithout": 1.294,
+          "dropPct": 0
+        },
+        "ap": {
+          "multWithout": 1.294,
+          "dropPct": 0
+        },
+        "apAmp": {
+          "multWithout": 1.294,
+          "dropPct": 0
+        },
+        "abilityHaste": {
+          "multWithout": 1,
+          "dropPct": 22.72
+        }
+      },
+      "defense": {
+        "hp": {
+          "multWithout": 1.178,
+          "dropPct": 36.492
+        },
+        "armor": {
+          "multWithout": 1.586,
+          "dropPct": 14.45
+        },
+        "mr": {
+          "multWithout": 1.838,
+          "dropPct": 0.862
+        }
+      }
+    }
+  }
+}

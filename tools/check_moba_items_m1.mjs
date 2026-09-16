@@ -365,7 +365,11 @@ const COMPS = {
   const a = safe(() => computeCombatStats(inv));
   const b = computeCombatStats(clone(inv));
   ck("G11", "凍結輸入可計算、兩次輸出逐字相同、輸出深度凍結", a.ok && hash(a.value) === hash(b) && Object.isFrozen(b) && Object.isFrozen(b.effects));
-  ck("G11", "屬性加總正確：AD 45+15+30+7=97、暴擊 0.45、暴擊倍率 2.10、攻速 0.25", b.ad === 97 && Math.abs(b.critChance - 0.45) < 1e-12 && Math.abs(b.critDamage - 2.10) < 1e-12 && Math.abs(b.attackSpeed - 0.25) < 1e-12,
+  //  ⚠ M4c.1 Marksman Power Tuning：射手族 T3 的暴擊鏈刻意分兩段下修
+  //    （dawnbow critChance 0.25→0.15→0.10／critDamageAmp 0.35→0.20→0.10、同族其餘 0.20→0.10→0.05）
+  //    ⇒ 本 fixture 的暴擊 0.45→0.15、暴擊倍率 2.10→1.85；**AD 97 與攻速 0.25 不變**，
+  //    正好證明這兩輪只動暴擊鏈，沒碰 AD／攻速。
+  ck("G11", "屬性加總正確：AD 45+15+30+7=97、暴擊 0.15、暴擊倍率 1.85、攻速 0.25", b.ad === 97 && Math.abs(b.critChance - 0.15) < 1e-12 && Math.abs(b.critDamage - 1.85) < 1e-12 && Math.abs(b.attackSpeed - 0.25) < 1e-12,
     JSON.stringify({ ad: b.ad, cr: b.critChance, cd: b.critDamage, as: b.attackSpeed }));
   const griev = b.effects.filter((e) => e.type === "GRIEVOUS_WOUNDS");
   ck("G11", "效果去重：重創鐮與裂傷刺矛的攻擊通道重傷只保留一個", griev.length === 1, JSON.stringify(b.effects.map((e) => e.type)));
