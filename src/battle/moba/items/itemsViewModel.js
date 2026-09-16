@@ -35,6 +35,11 @@ export function reasonText(reason) {
     case "enemyBurst": return `敵方爆發 ${value.replace(">=", " 人，門檻 ")}`;
     case "enemyTanks": return `敵方坦克 ${value.replace(">=", " 人，門檻 ").replace("→", " ⇒ ")}`;
     case "counter": return "反制優先：情境裝提前到第 2 件";
+    //  M4d：明確偵測到威脅而把情境裝提前（hard ⇒ 第 2 件、normal ⇒ 第 3 件）。
+    case "counterPromote": {
+      const [id, slot] = value.split("→");
+      return `反制成立：${getItem(id)?.name ?? id} 提前到第 ${String(slot).replace("core", "")} 件`;
+    }
     case "survival": return "保命優先：保命裝提前到第 2 件";
     case "scaling": return "後期成型：奢侈裝提前到第 1 件";
     case "lock": return `繼續合成：${getItem(value)?.name ?? value}`;

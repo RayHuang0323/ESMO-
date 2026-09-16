@@ -170,6 +170,13 @@ export function coachAnalysis(view, hud = null) {
       case "enemyHeal": push(code, "threat", `敵方 ${countOf(code)} 名回復型`, "補重傷"); break;
       case "enemyBurst": push(code, "threat", `敵方 ${countOf(code)} 名爆發型`, "補魔抗保命"); break;
       case "counter": push(code, "adjust", "反制策略", "情境裝提前到第 2 件"); break;
+      //  M4d：偵測到敵方真實 capability（CombatStats／effects）而提前情境裝。
+      //  hard（威脅明確）⇒ 第 2 件；normal ⇒ 第 3 件。每位玩家最多只提前 1 件。
+      case "counterPromote": {
+        const [id, slot] = valueOf(code).split("→");
+        push(code, "adjust", "反制成立", `${nameOf(id)} 提前到第 ${String(slot).replace("core", "")} 件`);
+        break;
+      }
       case "survival": push(code, "adjust", "保命策略", "保命裝提前到第 2 件"); break;
       case "scaling": push(code, "adjust", "後期策略", "奢侈核心提前到第 1 件"); break;
       case "deathsRecent": push(code, "adjust", `近期陣亡 ${valueOf(code).split("→")[0]} 次`, "保命裝提前"); break;
@@ -193,7 +200,7 @@ export function coachAnalysis(view, hud = null) {
 const NOTE_RANK = Object.freeze({
   insufficient: 0, lock: 0, complete: 0,
   deathsRecent: 1, behindGold: 1, lateKd: 1,
-  counter: 2, survival: 2, scaling: 2,
+  counter: 2, counterPromote: 2, survival: 2, scaling: 2,
   enemyHeal: 3, enemyBurst: 3, enemyTanks: 3,
   rejected: 4,
 });

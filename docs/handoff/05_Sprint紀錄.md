@@ -22009,3 +22009,61 @@ M4c.1 射手案即為此流程第一個實例（2.18 記為 ACCEPTED WITH KNOWN 
 ### 六、未做
 
 未改任何數值、未重跑對局、未 push、未 deploy、無 UI 改動故未跑瀏覽器。
+
+## MOBA Item System — M4d Counter 生態（2026-09-16）
+
+分支 `design/moba-items-v1-m0`。基準固定 `moba-sim.v6`、income 1.9、Tower／Siege 不動。
+報告：`docs/design/MOBA_Counter生態與可達性_M4d_v1.md`。證據：`reports/moba-items-m4d/`。
+**範圍只動 `buildPolicy.js`**（＋兩處新 reason 文案）；未動 item stats／income／Tower／Siege／戰鬥公式／verifier。
+
+### 一、Audit：counter 訊號幾乎是死的
+
+`enemyProfile` 五個訊號只有 heal 真的讀 capability，而它**實戰恆偽**：
+`HEAL_RX` 比對技能文字，100 名英雄只命中 2 名；裝備路徑要求 sustain ≥ 0.08，
+但 v1 可達上限是生命法泉的 0.07（唯一的 0.08 是 `t2_fang`，1.1 裝備的組件、不在任何 v1 path）。
+crit 與 shield **完全沒有偵測**。可達性上，情境裝固定排在第 4 順位之後，而每人平均只完成 2.4–3 件 T3 ⇒ 買不到。
+
+新增兩支工具：`tools/audit/moba_counter_audit.mjs`（5 對位＋無威脅對照 × 5 策略，離線決定性推演）、
+`tools/audit/moba_counter_thresholds.mjs`（量 v1 實際可達的 capability 分布，作為門檻證據）。
+
+### 二、修正
+
+偵測改以敵方即時 CombatStats／effects 為主，`arch`／`healer` 標籤只作 fallback：
+tanks `armor>=70`、heal `sustain>=0.10 ‖ healShieldPower>=0.15`、burst `ap>=130`、
+crit `critChance>=0.40`（v1 上限 0.20 ⇒ 正確地永不觸發）、mr 與 lowHpShield 只記錄。
+**門檻全部取自實測分布，不得高於可達上限**（舊的 0.08 就是死碼）。
+
+可達性：明確 counter 成立時提前情境裝 —— hard ⇒ 最早第 2 件、normal ⇒ 最早第 3 件、
+無訊號 ⇒ 原 build 不變；**每人最多提前 1 件**，既有 `tanksReplacesCore` 與 counter 策略分支原樣保留。
+
+| 對位（standard） | BEFORE | AFTER |
+|---|---|---|
+| 高回復→重傷 | 3/5 第4件@22.68 | **3/5 第3件@18.2** |
+| 高護甲→穿甲 | 第3@18.08 | **第2.67@16.91** |
+| 高 MR→法穿 | 1/5 第2@13.23 | 不變（虛空裂杖本就是法師核心） |
+| 高暴擊／高護盾 | 0/5 | 0/5（收益不足／v1 無裝備） |
+
+核心裝保留最低 2/3、每人提前上限零違規、30 組帳務違規 0。
+
+### 三、一次 differential debug 找出 G11 回歸真因
+
+改動後 M3 G11 變紅。**我一度用「M4d 規格與 G11 契約政策衝突」解釋，那是錯的，已撤回。**
+依 Owner 指示做精準比對（seed 42 / b1 / t=1092.5，HEAD vs 現行，依欄位序找第一個不同）：
+`FIRST_DIVERGENCE = enemyProfile.burstCount`（HEAD=1 / 我的版本=0）。
+把**同一組 items** 代入兩種規則驗證因果：星隕法冠單件 ap=146，舊規則「法師持有 ≥1 件 E 族」計入、
+`ap>=250` 不計入、`ap>=130` 計入 ⇒ 規則本身造成翻轉，與輸入無關。
+根因是我把觸發點從第 1 件推遲到第 3 件。修法：`burstAp` → 130，並移除自行擴張的 `armorPenFlat>=15`。
+**IS_REAL_POLICY_CONFLICT = NO。**
+
+過程中試過把 counter 插入點改到 core index 0：**無效**（刺客／射手走 `tanksReplacesCore`、
+不進 `situ`，該分支根本沒執行），且連帶文案改動打破 G9 ⇒ 整組回退。
+
+### 四、驗證
+
+`check_moba_items_m1` 69/69 PASS、`m2` 53/53 PASS、`m3` 65/66（僅 G6 範圍守門，commit 後回綠）。
+counter audit 30 組帳務／背包違規 0。
+
+### 五、未做
+
+paired 200 seeds（`MATCH_DURATION`）未跑 —— 可用記憶體低於 Owner 指定的 5 GB 門檻，依指示不硬跑。
+未 push、未 deploy、無 UI 行為改動（只加了兩句 reason 文案）。
