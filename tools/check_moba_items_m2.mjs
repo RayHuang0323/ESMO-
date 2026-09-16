@@ -34,7 +34,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
  *   改釘在 M4b.5 的 commit：從此 G1 抓的是「**本 commit 之後**新增的裝備層改動有沒有
  *   動到 OFF 路徑」。下一次刻意的引擎語意變更（bump 版本）時，同樣要把它往前移。
  */
-const BASE_COMMIT = "1fce160";
+const BASE_COMMIT = "556a1a5";
 const load = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
 
