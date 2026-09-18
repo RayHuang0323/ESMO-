@@ -22167,3 +22167,7 @@ disabled 的唯一原因；本輪不實作該 debt。
 ### P0 fairness candidate C14（2026-09-18）
 
 只停用 `_archPosition` 的 support ally reposition；n=40 結果 Blue `13/40`、`rK/bK=1.7458`、P90 `31.85` 分、max `40.33` 分。P90 改善但 ratio 變差且 winner 仍偏，假設否決，source 已撤回。
+
+### P0 fairness candidate C15/C16（2026-09-18）
+
+Lane component isolation：C15 只把 red top 映射到 bot，n=40 為 Blue `28.2%`、`rK/bK=1.8588`、P90/max `32.62/60.00`、unfinished `1`；C16 只把 red adc/sup 映射到 top，為 Blue `37.5%`、`rK/bK=1.4634`、P90/max `32.43/42.37`、unfinished `0`。均未通過全指標，source 已撤回。

@@ -134,3 +134,14 @@ COMPETITIVE_ENABLE_READY = NO
 ## Candidate C14 — support ally reposition isolation（2026-09-18）
 
 假設是 support formation 依 live ally HP／position 選擇保護目標，造成 side-ordered movement 放大器；只停用 `_archPosition` 的 support ally reposition，保留其他 formation、lane、combat、tower 與 navigation。固定 OFF、seeds 1–40 得 Blue `32.5%`、`rK/bK=1.7458`、P90 `31.85` 分、max `40.33` 分、unfinished `0`。P90 有改善但 kill ratio 變差且 winner 仍不公平，假設否決，source 已撤回。
+
+## Candidate C15/C16 — lane component isolation（2026-09-18）
+
+為分解已確認的 role/lane contributor，分別只改一個紅方 lane component：
+
+| candidate | change | Blue | rK/bK | P90 | max | unfinished | verdict |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| C15 | red top → bot | 28.2% | 1.8588 | 32.62 | 60.00 | 1 | reject |
+| C16 | red adc/sup bot → top | 37.5% | 1.4634 | 32.43 | 42.37 | 0 | reject |
+
+兩個 component 都不能同時滿足 winner、ratio、P90、max；C15 甚至產生 unfinished。這支持「lane mapping × role/formation interaction」而非單一路線 root，兩個 source 候選均已撤回，未升級到 n=200。
