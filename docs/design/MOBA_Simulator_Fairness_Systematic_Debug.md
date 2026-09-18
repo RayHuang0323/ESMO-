@@ -112,3 +112,9 @@ COMPETITIVE_ENABLE_READY = NO
 ```
 
 下一個可接受的 code change 必須同時保護 role/lane mirror invariant 與 movement/formation 的 tick-level symmetry，並在固定 n=200 上同時通過 winner、`rK/bK`、P90、max、determinism、regress、build；本輪不開始該修正。
+
+## Candidate C10 — immutable movement view（2026-09-18）
+
+針對「每名英雄依序移動時，後面的 formation／movement decision 讀到前面英雄已更新的位置」做單一候選驗證：movement／formation／tower-zone／join 讀取 tick 內快照，combat resolve 保留 live state。固定 `moba-sim.v6`、Items OFF、同一 mirrored roster 與 seeds 1–40：Blue `18/40 = 45.0%`、`rK/bK=1.0018`、mean `27.815` 分、P90 `31.785` 分、max `50.117` 分、unfinished `0`；對照 n=40 baseline Blue `30.0%`、`rK/bK=1.6183`、P90 `34.667` 分、max `40.333` 分。
+
+這是「平均／ratio 改善但 tail 退化」的明確反例：max 增加約 9.8 分，故不升級到 n=200、不跑 release gate、不接受為產品修正。候選 source patch 已完整撤回；本輪只保留證據文件，`LogicEngine`、`mobaNavigation.js`、`findPath`、baseline、seed、gate 與 `moba-sim.v6` 均未改動。

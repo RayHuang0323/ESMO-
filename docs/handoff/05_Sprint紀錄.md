@@ -22147,3 +22147,7 @@ disabled 的唯一原因；本輪不實作該 debt。
 ### P0 fairness controlled evidence addendum（2026-09-18）
 
 `baseline+noArch`（只在 scratch monkey-patch bypass `_archPosition`，未改 source）n=200：Blue `87/200 = 43.5%`、`rK/bK=0.9740`、P90 `30.683`、max `39.408`、unfinished `0`；相對固定 OFF baseline `24.5% / 1.7520 / 31.90 / 40.85` 同時改善。這確認 live formation 是主要因果 surface，但 noArch 會移除既有站位行為，不能直接採用。`mirrorSpawn` n=40 與 baseline 相同；LaneSwap 單獨仍使 max 惡化至 `52.675`。本輪維持不改 engine、不接受 partial fix。
+
+### P0 fairness candidate C10 tail rejection（2026-09-18）
+
+以固定 `moba-sim.v6`、Items OFF、seeds 1–40 驗證 movement／formation immutable view：Blue `18/40`、`rK/bK=1.0018`、P90 `31.785` 分、max `50.117` 分、unfinished `0`。雖 winner／ratio 改善，max 相對 baseline `40.333` 分惡化，故依 systematic-debugging 規則視為未解決；source patch 已撤回，未提交 engine code。
