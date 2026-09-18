@@ -22175,3 +22175,7 @@ Lane component isolation：C15 只把 red top 映射到 bot，n=40 為 Blue `28.
 ### P0 fairness candidate C17/C18（2026-09-18）
 
 C17 完整 lane mirror 加同 role paired movement，n=40 為 Blue `19/40`、`rK/bK=1.0410`、P90 `30.64` 分、max `44.68` 分；C18 再加 formation tick-start snapshot 為 Blue `22/40`、`rK/bK=0.8225`、P90/max `33.46/42.62`。均因 ratio 或 max tail 否決，source 已撤回。
+
+### P0 navigation residual diagnostic（2026-09-18）
+
+唯讀比較同一路線正反向 `findPath`：`t=.25↔.75` 的 top `168.595/165.745`、mid `115.210/114.399`、bot `165.745/168.595`；`alive=null` 與全活塔結果相同。這補足 180° mirror gate 未涵蓋的 directional path evidence；本輪不改 navigation／findPath。

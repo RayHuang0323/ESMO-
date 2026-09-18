@@ -156,3 +156,15 @@ COMPETITIVE_ENABLE_READY = NO
 | C18 C17 + formation tick-start view | 55.0% | 0.8225 | 33.46 | 42.62 | 0 | reject: ratio/tail |
 
 C17 是目前最接近公平面的組合，但 max 仍比 n=40 baseline `40.33` 惡化；C18 再次證明 snapshot 不是根因修正。兩個 source candidate 均撤回，依 tail gate 不升級到 n=200。
+
+## Navigation residual diagnostic — same-lane directionality（2026-09-18）
+
+既有 `check_moba_nav_h2` 驗的是 180° mirror route（例如 `blue_top` ↔ `red_bot`），不等於同一 global lane 的雙向 path symmetry。新增唯讀診斷，以同一路線 `t=.25 ↔ .75` 比較 `findPath` 長度；`alive` 為空與全活塔集合結果相同：
+
+| lane | forward | reverse | difference |
+| --- | ---: | ---: | ---: |
+| top | 168.595 | 165.745 | +2.850 |
+| mid | 115.210 | 114.399 | +0.810 |
+| bot | 165.745 | 168.595 | −2.850 |
+
+更近的 `t=.35 ↔ .65` 仍為 top `+1.449`、bot `−1.449`。這不是 tower alive state；它是靜態 A*／路徑簡化的方向性 residual。它與 side-blind role/lane distribution 及 live formation 的 interaction 可解釋為何 180° mirror gate 全綠仍有 Side Bias，但原 closure 的 findPath candidate 已被 n=200 paired gate 否決；本輪依使用者紅線不修改 `mobaNavigation.js` 或 `findPath`。
