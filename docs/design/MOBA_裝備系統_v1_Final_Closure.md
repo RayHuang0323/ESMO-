@@ -52,3 +52,18 @@ M4 paired evidence（`reports/moba-items-m4d/off-vs-on/summary.json`）為 `off`
 ## 交付邊界
 
 正式 PvE enable 所需的 Item v1 contract、economy、inventory legality、T3 timing、counter、Tower／Siege、Replay 與 deterministic same-seed evidence 已具備；競技模式維持 disabled-ready boundary，唯一原因是上述既有 P0 Simulator Fairness。手機真機 touch／GPU／FPS 與視覺體感不由 Node／桌面 browser gate 代替，仍交 Owner 驗收。
+
+## Production Release Addendum（2026-09-18）
+
+Closure 後已完成正式發布整合：`FEATURE_FLAGS.itemsV1 = true`，Formal PvE 使用既有
+Item v1 runtime；Competitive／Challenge／Ranked 維持 disabled。M1／M2／M3、flat
+release gate、build 與 browser closure 均在 release commit 前重跑通過。
+
+```text
+ITEM_V1_RELEASED = YES
+FORMAL_PVE_ENABLED = YES
+COMPETITIVE_ENABLED = NO
+```
+
+本 addendum 不改寫原始 M0～M4d closure evidence；`moba-sim.v6`、income `1.9`
+candidate、findPath 邊界與既有 Fairness debt 均維持原裁決。

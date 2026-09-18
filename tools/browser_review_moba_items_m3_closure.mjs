@@ -27,6 +27,7 @@ const SHOT_DIR = resolve(ROOT, process.env.ESMO_REVIEW_OUT ?? "review/moba-items
 mkdirSync(SHOT_DIR, { recursive: true });
 const MID_TS = Number(process.env.ESMO_CLOSURE_MID_TS ?? 300);
 const FOCUS = process.env.ESMO_CLOSURE_SEAT ?? "b4";
+const TARGET_URL = process.env.ESMO_EXTERNAL_URL?.trim() || null;
 const BLUE = ["b1", "b2", "b3", "b4", "b5"], RED = ["r1", "r2", "r3", "r4", "r5"];
 
 const report = [];
@@ -285,8 +286,9 @@ async function shot(chrome, name) {
 const result = await runGate({
   name: "MOBA Item System M3 Closure｜一場完整流程資料一致性",
   timeoutMs: 1_150_000,
+  externalUrl: TARGET_URL,
   run: async ({ chrome, url, ck, sleep }) => {
-    const onUrl = `${url}${url.includes("?") ? "&" : "?"}itemsDev=1`;
+    const onUrl = TARGET_URL ?? `${url}${url.includes("?") ? "&" : "?"}itemsDev=1`;
     await chrome.send("Emulation.setDeviceMetricsOverride", { width: 1366, height: 900, deviceScaleFactor: 1, mobile: false });
     const c0 = chrome.consoleLines.length, p0 = chrome.pageErrors.length;
     await chrome.navigate(onUrl); await sleep(2500);

@@ -22097,3 +22097,30 @@ COMPETITIVE_ENABLE_READY = NO
 Competitive NO 的唯一原因是獨立 P0 `MOBA Simulator Fairness`：Items OFF Blue baseline `24.5%`；未採用 findPath fix 後 `28.5%`，`n=200` McNemar `p≈0.43` 不顯著，`rK/bK=1.71`，且 P90／max 變差。Side Bias 在 Item v1 前即存在，lane／role distribution／`engageRange` interaction 會放大偏差；findPath mirror invariant defect 另列 navigation debt。Fairness 修正前，Competitive／Challenge／Ranked 不可把 side 結果當公平競技依據。本輪不再追 Side Bias。
 
 Item v1 沒有改 balance、沒有新增功能、沒有 v1.1、沒有 production deploy；正式站 `itemsV1` 維持 OFF，待 Owner 依 PVE／競技啟用邊界另行決策。
+
+## MOBA Item System v1 Production Release（2026-09-18）
+
+這是 Item v1 Final Closure 後的正式發布紀錄。`src/featureFlags.js` 的
+`FEATURE_FLAGS.itemsV1` 已切為 `true`，仍由 `useLocalServer` 的既有 guard 接入；
+Competitive／Challenge／Ranked 沒有開啟。
+
+### Release Gate
+
+- `node tools/verify.mjs --only=runtime29,regress,regress2,build`：`4/4 PASS`；
+  `runtime29` flat `35/35`。
+- Item v1：M1 `69/69`、M2 `53/53`、M3 `66/66`；simulation version `51/51`、
+  `moba-sim.v6` 保持不變。
+- Tower attack：有敵人無動作 `0`、有傷害無 FX `0`；Counter audit exit `0`、
+  帳務／背包違規 `0`。
+- Local browser closure：`24/24 PASS`；正式 bundle 不含 DEV Item gallery／inspector。
+
+```text
+ITEM_V1_RELEASED = YES
+FORMAL_PVE_ENABLE_READY = YES
+COMPETITIVE_ENABLE_READY = NO
+COMPETITIVE_ENABLED = NO
+```
+
+本輪不修改 `mobaNavigation.js` findPath、不 bump `moba-sim.v7`、不調 balance、
+不新增功能、不中途開始 v1.1。既有 P0 `MOBA Simulator Fairness` 仍是 Competitive
+disabled 的唯一原因；本輪不實作該 debt。

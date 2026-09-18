@@ -457,12 +457,12 @@ const COMPS = {
     }
   };
   walkCalls("src");
-  //  M3a（Owner D1）：只允許 useLocalServer 在 itemsV1 開關保護下呼叫（正式開關預設 false）。
+  //  M3a（Owner D1）：只允許 useLocalServer 在 itemsV1 開關保護下呼叫（正式 PvE 預設 true）。
   const ulsCode = read("src/useLocalServer.js");
-  const ulsGuarded = /itemsV1: false/.test(read("src/featureFlags.js"))
+  const ulsGuarded = /itemsV1: true/.test(read("src/featureFlags.js"))
     && /featureEnabled\("itemsV1"\)\s*\|\|\s*\(import\.meta\.env\.DEV && itemsDevRequested\(\)\)/.test(ulsCode);
   const unguardedCallers = callers.filter((f) => !(f === "src/useLocalServer.js" && ulsGuarded));
-  ck("G13", "正式流程只有 useLocalServer 在 itemsV1 開關保護下呼叫 configureItems（正式站預設 OFF）", unguardedCallers.length === 0, unguardedCallers.join(","));
+  ck("G13", "正式流程只有 useLocalServer 在 itemsV1 開關保護下呼叫 configureItems（正式 PvE 預設 ON）", unguardedCallers.length === 0, unguardedCallers.join(","));
   const simVer = read("src/platform/contracts/simulationVersion.js");
   const semanticsList = simVer.slice(simVer.indexOf("export const SIMULATION_SEMANTICS_FILES"), simVer.indexOf("]);", simVer.indexOf("export const SIMULATION_SEMANTICS_FILES")));
   ck("G13", "模擬版本是 moba-sim.v6（M4b.6 圍攻節奏的語意變化），items 模組未列入語意清單（正式輸入到不了它們）", /MOBA_SIMULATION_VERSION = "moba-sim\.v6"/.test(simVer) && !/moba\/items/.test(semanticsList));

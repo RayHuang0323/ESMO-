@@ -1,7 +1,7 @@
 // ============================================================================
 //  tools/check_moba_items_m3.mjs — MOBA Item System v1 M3a（UI 基礎＋視覺樣張）驗證器
 //
-//   G1 itemsV1 開關：production 預設 OFF、DEV 才讀 ?itemsDev=1；實際 vite build 產物不含 DEV 開啟路徑與樣張頁
+//   G1 itemsV1 開關：正式 PvE production 預設 ON、DEV 仍可讀 ?itemsDev=1；實際 vite build 產物不含 DEV 工具與樣張頁
 //   G2 itemsUiSelectors：與 itemsViewModel 同值、純函式、戰術卡預覽＝buildPolicy 真實目標序列
 //   G3 UI 隔離：裝備 UI 元件不 import 規則模組、不碰帳本、不自訂色碼、不自寫寬度判斷
 //   G4 動效：reduced-motion 共用 hook、GSAP 只在回饋 hook、單次 ≤ 0.6s
@@ -37,7 +37,7 @@ const SEATS = ["b1", "b2", "b3", "b4", "b5", "r1", "r2", "r3", "r4", "r5"];
 {
   const flags = await tryLoad("src/featureFlags.js");
   const dev = await tryLoad("src/ui/itemsDevFlag.js");
-  ck("G1", "FEATURE_FLAGS.itemsV1 存在且預設 false（production OFF）", flags.FEATURE_FLAGS && "itemsV1" in flags.FEATURE_FLAGS && flags.FEATURE_FLAGS.itemsV1 === false, flags.__error ?? "");
+  ck("G1", "FEATURE_FLAGS.itemsV1 存在且正式 PvE 預設 true（production ON）", flags.FEATURE_FLAGS && "itemsV1" in flags.FEATURE_FLAGS && flags.FEATURE_FLAGS.itemsV1 === true, flags.__error ?? "");
   ck("G1", "itemsDevRequested 只認 ?itemsDev=1", !dev.__error && dev.ITEMS_DEV_QUERY === "itemsDev"
     && dev.itemsDevRequested("?itemsDev=1") === true && dev.itemsDevRequested("?itemsDev=0") === false
     && dev.itemsDevRequested("") === false && dev.itemsDevRequested("?items=1") === false && dev.itemsDevRequested("?debug=1") === false, dev.__error ?? "");

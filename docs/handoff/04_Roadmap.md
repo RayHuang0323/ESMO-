@@ -2562,3 +2562,25 @@ COMPETITIVE_ENABLE_READY = NO
 Final Gate：M1 `69/69`、M2 `53/53`、M3 `66/66`、simulation version `51/51`、`regress` 15/15、`regress2` 8/8、Tower／Siege relevant audit、Counter behavior、正式 Item Replay closure `24/24`、Vite build `2908 modules` 全部通過。M4 paired 200-seed evidence 的 OFF Blue baseline 為 `24.5%`，income 1.9 的 T3 timing 與 economy／inventory／determinism evidence 保留於 closure 文件。
 
 唯一競技阻擋是獨立 P0 `MOBA Simulator Fairness`：Side Bias 在 Item v1 前即存在；未採用 findPath fix 後 `24.5% → 28.5%` 的 paired 結果 McNemar `p≈0.43` 不顯著，`rK/bK=1.71` 且 P90／max 變差。findPath mirror invariant defect 另列 navigation debt；不再把 Side Bias 追蹤混入 Item v1 roadmap。詳見 `docs/design/MOBA_裝備系統_v1_Final_Closure.md`。
+
+## MOBA Item System v1 — Production Release（2026-09-18）
+
+Item v1 已完成安全整合與發布準備：Formal PvE 啟用，Competitive 維持 disabled。
+Release gate、build 與 local browser closure 已通過；GitHub Pages deploy 與 production
+smoke 由本次 `main` push 後的 workflow／正式站驗證補上。
+
+```text
+ITEM_V1_RELEASED = YES
+FORMAL_PVE_ENABLED = YES
+COMPETITIVE_ENABLED = NO
+```
+
+### 下一階段（只建立，不開始實作）：P0 MOBA Simulator Fairness Sprint
+
+```text
+FAIRNESS_SPRINT_READY = YES
+```
+
+範圍只記錄既有 engine debt：side imbalance、`rK/bK`、P90／max tail、
+`findPath` mirror invariant。這不是 Item v1.1，也不在本輪修改任何 balance、navigation
+或 simulator version。
