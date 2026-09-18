@@ -126,3 +126,7 @@ COMPETITIVE_ENABLE_READY = NO
 ## Candidate C12 — formation nearest-anchor tie-break（2026-09-18）
 
 假設是 `_archPosition` 在等距最近敵人時沿用 `alive` 陣列順序，讓 formation anchor 選擇受 blue-first player order 影響。只加入 `player.id` deterministic secondary key，固定 OFF、`moba-sim.v6`、seeds 1–40 得 Blue `12/40 = 30.0%`、`rK/bK=1.6385`、P90 `34.79` 分、max `40.33` 分、unfinished `0`；與同一 n=40 baseline 的 `30.0% / 1.6183 / 34.667 / 40.333 / 0` 無實質改善。假設否決，source 已撤回，未升級到 n=200。
+
+## Candidate C13 — formation tick-start view only（2026-09-18）
+
+假設是只有 `_archPosition` 讀取到前面玩家已移動後的 live geometry 才造成 side bias；因此只把 formation helper 的 `alive`／position 輸入換成 tick-start snapshot，其他 movement、tower、combat 與 navigation 維持原狀。固定 OFF、`moba-sim.v6`、seeds 1–40 得 Blue `25.0%`、`rK/bK=1.2119`、mean `27.85` 分、P90 `33.69` 分、max `48.83` 分、unfinished `0`。雖 P90／ratio 有局部改善，winner 未改善且 max 從 baseline `40.33` 惡化，依 tail gate 否決；source 已撤回，未升級到 n=200。

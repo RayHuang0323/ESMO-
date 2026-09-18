@@ -22159,3 +22159,7 @@ disabled 的唯一原因；本輪不實作該 debt。
 ### P0 fairness candidate C12（2026-09-18）
 
 只在 formation `_archPosition` 最近敵人等距時加入 deterministic `player.id` tie-break；n=40 結果 Blue `12/40`、`rK/bK=1.6385`、P90 `34.79` 分、max `40.33` 分，與 baseline 無實質差異，假設否決，source 已撤回，未升級到 n=200。
+
+### P0 fairness candidate C13（2026-09-18）
+
+只把 `_archPosition` 的 `alive`／position 輸入改為 tick-start snapshot；n=40 結果 Blue `25/40`、`rK/bK=1.2119`、P90 `33.69` 分、max `48.83` 分。winner 未改善且 tail 惡化，依 gate 否決，source 已撤回。
