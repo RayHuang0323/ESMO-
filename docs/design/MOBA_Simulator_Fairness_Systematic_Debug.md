@@ -85,6 +85,19 @@ Deterministic mirrored roster、同一 seed、decisionTemper=0、固定 RNG、�
 
 因此本輪沒有把任何「平均值變好」誤標為 root-cause fix，也沒有留下會改變 `moba-sim.v6` 語意的半成品。
 
+## Additional controlled evidence (2026-09-18)
+
+The diagnostic-only `baseline+noArch` control was run with the same `moba-sim.v6`, roster construction, seeds, and OFF configuration; it bypassed `_archPosition` without changing engine source:
+
+| control | n | Blue win | rK/bK | P90 | max | unfinished |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| official baseline | 200 | 24.5% | 1.7520 | 31.90 | 40.85 | 0 |
+| baseline + noArch diagnostic bypass | 200 | 43.5% | 0.9740 | 30.683 | 39.408 | 0 |
+
+This is causal evidence that the live formation layer is the dominant fairness surface, not an acceptable product fix: removing formation changes intended gameplay behavior. `mirrorSpawn` alone was unchanged from baseline in the 40-seed control; `LaneSwap` improved mean winner/kill metrics but failed the tail (`max=52.675` at n=200). Therefore the lane mapping is an independent geometry contributor, while the accepted root boundary is the interaction between side-blind lane mapping and live formation/target geometry in the per-player movement loop.
+
+Static navigation, route/camp/tower mirror gates remain green. Pure target-selection probes, tower-zone probes, spawn probes, FX RNG, decision temperature, and per-player quality RNG were rejected as sole roots. No production code fix is accepted by this sprint because the candidate fixes either remove formation behavior or worsen P90/max. `mobaNavigation.js` and `findPath` remain untouched.
+
 ## Scope boundary
 
 - 未修改 `src/LogicEngine.js`、`src/gameData.js`、`mobaNavigation.js` 或 `findPath`。

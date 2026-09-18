@@ -22143,3 +22143,7 @@ disabled 的唯一原因；本輪不實作該 debt。
 - 靜態 navigation／塔位／營地鏡像 gates 全綠；LaneSwap 後仍在 t=19 出現 mid-only dynamic navigation timing divergence。
 - formation／movement live geometry 是放大器；LaneSwap 與 freeze snapshot 的平均值／ratio 雖改善，但 P90/max 仍退化，故未接受 partial fix。
 - 本輪沒有修改 `LogicEngine`、`gameData`、`mobaNavigation.js`、`findPath`、balance、seed、baseline、gate 或 `moba-sim.v6`；Fairness 仍 CLOSED = NO，Competitive 仍 disabled。
+
+### P0 fairness controlled evidence addendum（2026-09-18）
+
+`baseline+noArch`（只在 scratch monkey-patch bypass `_archPosition`，未改 source）n=200：Blue `87/200 = 43.5%`、`rK/bK=0.9740`、P90 `30.683`、max `39.408`、unfinished `0`；相對固定 OFF baseline `24.5% / 1.7520 / 31.90 / 40.85` 同時改善。這確認 live formation 是主要因果 surface，但 noArch 會移除既有站位行為，不能直接採用。`mirrorSpawn` n=40 與 baseline 相同；LaneSwap 單獨仍使 max 惡化至 `52.675`。本輪維持不改 engine、不接受 partial fix。
