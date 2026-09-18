@@ -22163,3 +22163,7 @@ disabled 的唯一原因；本輪不實作該 debt。
 ### P0 fairness candidate C13（2026-09-18）
 
 只把 `_archPosition` 的 `alive`／position 輸入改為 tick-start snapshot；n=40 結果 Blue `25/40`、`rK/bK=1.2119`、P90 `33.69` 分、max `48.83` 分。winner 未改善且 tail 惡化，依 gate 否決，source 已撤回。
+
+### P0 fairness candidate C14（2026-09-18）
+
+只停用 `_archPosition` 的 support ally reposition；n=40 結果 Blue `13/40`、`rK/bK=1.7458`、P90 `31.85` 分、max `40.33` 分。P90 改善但 ratio 變差且 winner 仍偏，假設否決，source 已撤回。

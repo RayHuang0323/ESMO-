@@ -130,3 +130,7 @@ COMPETITIVE_ENABLE_READY = NO
 ## Candidate C13 — formation tick-start view only（2026-09-18）
 
 假設是只有 `_archPosition` 讀取到前面玩家已移動後的 live geometry 才造成 side bias；因此只把 formation helper 的 `alive`／position 輸入換成 tick-start snapshot，其他 movement、tower、combat 與 navigation 維持原狀。固定 OFF、`moba-sim.v6`、seeds 1–40 得 Blue `25.0%`、`rK/bK=1.2119`、mean `27.85` 分、P90 `33.69` 分、max `48.83` 分、unfinished `0`。雖 P90／ratio 有局部改善，winner 未改善且 max 從 baseline `40.33` 惡化，依 tail gate 否決；source 已撤回，未升級到 n=200。
+
+## Candidate C14 — support ally reposition isolation（2026-09-18）
+
+假設是 support formation 依 live ally HP／position 選擇保護目標，造成 side-ordered movement 放大器；只停用 `_archPosition` 的 support ally reposition，保留其他 formation、lane、combat、tower 與 navigation。固定 OFF、seeds 1–40 得 Blue `32.5%`、`rK/bK=1.7458`、P90 `31.85` 分、max `40.33` 分、unfinished `0`。P90 有改善但 kill ratio 變差且 winner 仍不公平，假設否決，source 已撤回。
