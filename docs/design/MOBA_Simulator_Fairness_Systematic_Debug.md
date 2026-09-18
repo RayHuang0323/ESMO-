@@ -168,3 +168,29 @@ C17 是目前最接近公平面的組合，但 max 仍比 n=40 baseline `40.33` 
 | bot | 165.745 | 168.595 | −2.850 |
 
 更近的 `t=.35 ↔ .65` 仍為 top `+1.449`、bot `−1.449`。這不是 tower alive state；它是靜態 A*／路徑簡化的方向性 residual。它與 side-blind role/lane distribution 及 live formation 的 interaction 可解釋為何 180° mirror gate 全綠仍有 Side Bias，但原 closure 的 findPath candidate 已被 n=200 paired gate 否決；本輪依使用者紅線不修改 `mobaNavigation.js` 或 `findPath`。
+
+## P0-A — Side-relative Formation / Movement closure（2026-09-19）
+
+TDD verifier `tools/check_moba_side_relative_p0a.mjs` 先在未修正狀態得到 `3 PASS / 4 FAIL`：top、adc、sup 的 lane assignment 與 movement intent 不符合 180° mirror；加入 canonical lane transform 後，再以可觀測 live movement 加強 contract，得到 `6 PASS / 1 FAIL`，鎖定同 tick 內「先算目標即移動」仍讓後迭代方讀到新位置。最小結構修正如下：
+
+- `ROLE_LANE` 明確定義為己方 canonical tactical lane；runtime 透過 `worldLaneForSide()` 映射到 world lane。
+- 紅方 formation 先轉到己方 canonical frame，執行同一份 `_archPositionCanonical()`，再以 180° transform 回 world coordinates。
+- `twoPhaseTick` 先收集全員 immutable movement intent，全部決策完成後才套用位移；v1 legacy path 不變。
+
+修正後 symmetry contract `8 PASS / 0 FAIL`；其中新增的 v2 相容性測試先以 `7/1` 失敗，加入僅限 v3 的 `sideRelativeFormationMovement` 規則開關後轉綠，歷史 v1/v2 的 lane 與 movement iteration 語意保持不變。固定 Items OFF、`moba-sim.v6`、seeds 1–200 的 A/B/C 證據：
+
+| 組別 | Blue win | rK/bK | median | P90 | max | unfinished |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| A 原始 baseline | 24.5% | 1.7520 | 25.35 | 31.90 | 40.85 | 0 |
+| B side-relative formation/movement | 48.5% | 0.9335 | 27.28 | 33.58 | 48.92 | 0 |
+
+B 證明 lane/formation/movement 是 causal root：winner 與 kill ratio 大幅收斂，且 `regress`、`regress2`、build、正式 180° navigation mirror gate 均通過。但 P90/max 相對 A 惡化，因此不宣稱整體 fairness closure。
+
+C 以 `tools/measure_moba_navigation_directionality_p0b.mjs` 量測未修改的 `findPath`：t=.25↔.75 的 same-lane forward/reverse 差為 top `+4.308`、mid `+0.810`、bot `−4.308`；t=.35↔.65 仍為 top `+1.449`、mid `+0.138`、bot `−1.449`。這與既有 180° mirror `14/14` 並不衝突，正式切為 P0-B Navigation Mirror Sprint。
+
+```text
+P0_A_CLOSED = YES
+FAIRNESS_CLOSED = NO
+COMPETITIVE_ENABLE_READY = NO
+P0_B_NAVIGATION_MIRROR = READY / NOT STARTED
+```

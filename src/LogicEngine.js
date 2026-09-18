@@ -18,8 +18,9 @@
 
 import {
   clamp, dist, posOnLane, laneLength, WALLS, PITS, BASE, FOUNTAIN, TOWER_T,
-  ROLES, ROLE_LANE, TOWER_HP, NEXUS_HP, SIDE, BUSHES, CAMPS,
-  WORLD_BOUNDS, INVASION_POINT,
+  ROLES, ROLE_LANE, worldLaneForSide, sideRelativeLane,
+  toSideRelativePoint, fromSideRelativePoint,
+  TOWER_HP, NEXUS_HP, SIDE, BUSHES, CAMPS, WORLD_BOUNDS, INVASION_POINT,
 } from "./gameData.js";
 //  H.2：英雄碰撞與尋路的**唯一真實來源**。
 //  ⚠ 這裡刻意**不再** import gameData.WALLS：那是 28 個手寫圓，和畫面上的真實牆體
@@ -116,8 +117,13 @@ export class LogicEngine {
         const spawn = R.navCollision
           ? projectToWalkable(spawnRaw.x, spawnRaw.y, HERO_RADIUS, null)
           : spawnRaw;
+        const canonicalLane = ROLE_LANE[role];
         this.players.push({
-          id: playerId, side, role, lane: ROLE_LANE[role],
+          id: playerId, side, role,
+          // P0-A 只屬於現行 v3；v1/v2 的歷史物件形狀與 world-space lane 不動。
+          ...(R.sideRelativeFormationMovement
+            ? { canonicalLane, lane: worldLaneForSide(side, canonicalLane) }
+            : { lane: canonicalLane }),
           pos: { x: spawn.x, y: spawn.y },
           maxHp: 600 * tough, hp: 600 * tough, power, tough,
           dead: false, respawn: 0, state: "對線", atkCd: 0, gold: 0,
@@ -460,6 +466,33 @@ export class LogicEngine {
    * ⚠ 未啟用原型層 ⇒ 直接回傳原本的 tgt，一個位元都不動。
    */
   _archPosition(p, tgt, alive) {
+    if (!this.rules.sideRelativeFormationMovement || p.side !== "red") {
+      return this._archPositionCanonical(p, tgt, alive);
+    }
+    const canonicalPlayer = {
+      ...p,
+      side: "blue",
+      lane: sideRelativeLane("red", p.lane),
+      pos: toSideRelativePoint("red", p.pos),
+    };
+    const canonicalAlive = alive.map((q) => ({
+      ...q,
+      side: q.side === "red" ? "blue" : "red",
+      lane: sideRelativeLane("red", q.lane),
+      pos: toSideRelativePoint("red", q.pos),
+    }));
+    const out = this._archPositionCanonical(
+      canonicalPlayer,
+      tgt ? toSideRelativePoint("red", tgt) : tgt,
+      canonicalAlive,
+    );
+    for (const key of ["_archFoe", "_hold", "dbgHold", "dbgEnter", "dbgExit", "dbgFoeDist", "dbgFoeId"]) {
+      if (Object.prototype.hasOwnProperty.call(canonicalPlayer, key)) p[key] = canonicalPlayer[key];
+    }
+    return out ? fromSideRelativePoint("red", out) : out;
+  }
+
+  _archPositionCanonical(p, tgt, alive) {
     const a = this._arch(p);
     if (!a || !tgt) return tgt;
     const R = this.rules;
@@ -3660,6 +3693,10 @@ export class LogicEngine {
 
     const pendingHits = [];       // S29：本 tick 的英雄傷害（同時結算，見下方 flush）
     const effLanes = new Map();   // S29：loop1 決定的 effLane → loop2 的推塔判定沿用
+    // P0-A：twoPhaseTick 不只要把 combat 延後，也要先凍結全員 movement intent。
+    // 舊流程在同一個 loop 內「算目標→立刻移動」，紅方會讀到藍方的新位置，
+    // 即使 combat 是兩相，formation / engage / retreat 仍然帶有 iteration-order bias。
+    const movementPlans = R.sideRelativeFormationMovement && R.twoPhaseTick ? [] : null;
     // Milestone D-fix2：在任何英雄移動前，用同一份凍結位置建立全員局部決策。
     // 這維持 S29 的順序公平性；plan 本身不抽 rng，也不改傷害／技能 CD。
     const decisionPlans = new Map();
@@ -4198,7 +4235,9 @@ export class LogicEngine {
       //  現在：目標點先推回通道中心 → 子步進前進（沿牆切線滑動）→ 需要時尋路。
       //  ⚠ 只在 `navCollision`（v3）啟用。v1/v2 保留舊路徑：它們是 runtime29 用來
       //  重現「修改前病灶」的歷史基準，一旦也吃到碰撞就不再可比（實測 §12/§23/§29 會紅）。
-      if (R.navCollision) {
+      if (movementPlans) {
+        if (d > 0.6) movementPlans.push({ p, tgt: { x: tgt.x, y: tgt.y }, spd, nav: R.navCollision });
+      } else if (R.navCollision) {
         if (d > 0.6) this._navMove(p, tgt, spd);
       } else {
         if (d > 0.6) { p.pos.x += ((tgt.x - p.pos.x) / d) * Math.min(spd, d); p.pos.y += ((tgt.y - p.pos.y) / d) * Math.min(spd, d); }
@@ -4226,6 +4265,19 @@ export class LogicEngine {
       effLanes.set(p, effLane);
       // v1：交戰緊接著移動、在同一迴圈內處理（＝舊行為，含「用敵方舊位置判定接戰」）。
       if (!R.twoPhaseTick) this._combatStep(p, effLane, alive, dt, lateFactor, pendingHits);
+    }
+
+    // P0-A：所有 intent 都已在同一份 tick-start geometry 上決定，現在才套用位移。
+    if (movementPlans) {
+      for (const { p, tgt, spd, nav } of movementPlans) {
+        if (nav) this._navMove(p, tgt, spd);
+        else {
+          const d = dist(p.pos, tgt);
+          if (d > 0.6) { p.pos.x += ((tgt.x - p.pos.x) / d) * Math.min(spd, d); p.pos.y += ((tgt.y - p.pos.y) / d) * Math.min(spd, d); }
+          for (const o of WALLS) { const dd = dist(p.pos, o); if (dd < o.r + 1.4) { p.pos.x += ((p.pos.x - o.x) / (dd || 1)) * (o.r + 1.4 - dd); p.pos.y += ((p.pos.y - o.y) / (dd || 1)) * (o.r + 1.4 - dd); } }
+          p.pos.x = clampMapX(p.pos.x); p.pos.y = clampMapY(p.pos.y);
+        }
+      }
     }
 
     // S29（順序偏差修正 ②）：兩相 tick —— 先讓**全員**移動完，再讓全員交戰。

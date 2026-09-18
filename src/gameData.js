@@ -168,7 +168,20 @@ for (const points of [BUSHES, CAMPS]) {
 }
 
 export const ROLES = ["top", "jungle", "mid", "adc", "sup"];
+/**
+ * 戰術 lane 採己方視角："top" 是從己方基地出發的上側路線。
+ * 地圖以 180° 旋轉對稱，因此紅方 canonical top 對應 world bot，反之亦然。
+ */
+export const MIRROR_LANE = Object.freeze({ top: "bot", mid: "mid", bot: "top" });
 export const ROLE_LANE = { top: "top", jungle: "mid", mid: "mid", adc: "bot", sup: "bot" };
+export const worldLaneForSide = (side, lane) => side === "red" ? MIRROR_LANE[lane] : lane;
+export const sideRelativeLane = (side, worldLane) => side === "red" ? MIRROR_LANE[worldLane] : worldLane;
+export const toSideRelativePoint = (side, point) => side === "red" ? {
+  x: WORLD_BOUNDS.minX + WORLD_BOUNDS.maxX - point.x,
+  y: WORLD_BOUNDS.minY + WORLD_BOUNDS.maxY - point.y,
+} : { x: point.x, y: point.y };
+// 180° 旋轉是自身的反函式。
+export const fromSideRelativePoint = toSideRelativePoint;
 export const ROLE_NAME = { top: "上路", jungle: "打野", mid: "中路", adc: "射手", sup: "輔助" };
 export const TOWER_HP = 2100, NEXUS_HP = 7200;
 

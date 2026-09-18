@@ -158,6 +158,9 @@ export const SIM_RULES = {
 SIM_RULES.v3 = {
   ...SIM_RULES.v2,
   id: "v3",
+  // P0-A：現行規則才啟用 canonical side-relative formation / movement。
+  // v1/v2 是歷史基準，必須保留原本的 world-space lane 與 iteration 語意。
+  sideRelativeFormationMovement: true,
   //  ── H.2：真實碰撞上線後的移速補償 ─────────────────────────────────────
   //  H.2 起英雄走的是**繞過牆體的真實路徑**（mobaNavigation），不再是穿牆直線。
   //

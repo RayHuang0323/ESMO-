@@ -22179,3 +22179,11 @@ C17 完整 lane mirror 加同 role paired movement，n=40 為 Blue `19/40`、`rK
 ### P0 navigation residual diagnostic（2026-09-18）
 
 唯讀比較同一路線正反向 `findPath`：`t=.25↔.75` 的 top `168.595/165.745`、mid `115.210/114.399`、bot `165.745/168.595`；`alive=null` 與全活塔結果相同。這補足 180° mirror gate 未涵蓋的 directional path evidence；本輪不改 navigation／findPath。
+
+### P0-A Side-relative Formation / Movement closure（2026-09-19）
+
+依 systematic-debugging + TDD 先建立 failing contract：初版 `3 PASS / 4 FAIL`，確認 top／adc／sup lane 與 movement intent 不鏡像；加入 canonical lane transform 後以 live movement 加強測試，仍為 `6/1`，確認「同 loop 先算即移動」是 iteration-order amplifier。最小修正為 canonical lane／point transform、共用 canonical formation，以及 `twoPhaseTick` immutable movement intent。補入 v2 歷史相容性契約時先為 `7/1`，再以僅限 v3 的 `sideRelativeFormationMovement` 規則開關隔離；最終 `8/8 PASS`，v1/v2 語意不變。
+
+固定 Items OFF、`moba-sim.v6`、seeds 1–200：A baseline `24.5% / 1.7520 / P90 31.90 / max 40.85`；B P0-A `48.5% / 0.9335 / P90 33.58 / max 48.92`，unfinished 均為 0。winner／ratio 證明 causal root 已修正，但 tail gate 未閉合。C navigation measurement 顯示 same-lane t=.25↔.75 仍有 top `+4.308`、mid `+0.810`、bot `−4.308`；因此 `P0_A_CLOSED=YES`、`FAIRNESS_CLOSED=NO`，建立但不開始 P0-B Navigation Mirror Sprint。
+
+驗證：P0-A symmetry `8/8`、runtime29 官方 flat 模式 `35/35`（9 段委派、不計分母）、nav H2 `14/14`、mesh `97,760/0`、`regress` 15/15、`regress2` 8/8、Vite build 2,908 modules。委派段皆另行獨立執行並檢查 exit code；未碰 Item v1、baseline、seed、gate、Competitive、`mobaNavigation.js` 或 `findPath`；未 push、未 deploy。
