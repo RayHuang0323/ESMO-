@@ -22124,3 +22124,12 @@ COMPETITIVE_ENABLED = NO
 本輪不修改 `mobaNavigation.js` findPath、不 bump `moba-sim.v7`、不調 balance、
 不新增功能、不中途開始 v1.1。既有 P0 `MOBA Simulator Fairness` 仍是 Competitive
 disabled 的唯一原因；本輪不實作該 debt。
+
+### Production deployment verification
+
+- 程式 release commit `c05bfad` 已由既有 `.github/workflows/deploy.yml`
+  workflow `35312451020` 成功部署到 GitHub Pages。
+- Production `https://rayhuang0323.github.io/ESMO-/` smoke `7/7 PASS`：無
+  `itemsDev` query、Formal PvE 五種策略、early Loading lock、Battle
+  `items-on`／10 seats、console/page errors `0`。
+- 這項驗證不改產品程式、不修改 Fairness debt，也不開 Competitive。

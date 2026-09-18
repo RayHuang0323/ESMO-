@@ -2566,8 +2566,11 @@ Final Gate：M1 `69/69`、M2 `53/53`、M3 `66/66`、simulation version `51/51`�
 ## MOBA Item System v1 — Production Release（2026-09-18）
 
 Item v1 已完成安全整合與發布準備：Formal PvE 啟用，Competitive 維持 disabled。
-Release gate、build 與 local browser closure 已通過；GitHub Pages deploy 與 production
-smoke 由本次 `main` push 後的 workflow／正式站驗證補上。
+Release gate、build 與 local browser closure 已通過；GitHub Pages workflow
+`35312451020`（對應程式 release commit `c05bfad`）成功，正式站
+`https://rayhuang0323.github.io/ESMO-/` 的 Item v1 production smoke `7/7 PASS`。
+Smoke 同時確認無 `itemsDev` query、Formal PvE `items-on`、10 個席位與
+console/page errors `0`。
 
 ```text
 ITEM_V1_RELEASED = YES

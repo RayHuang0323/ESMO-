@@ -67,3 +67,8 @@ COMPETITIVE_ENABLED = NO
 
 本 addendum 不改寫原始 M0～M4d closure evidence；`moba-sim.v6`、income `1.9`
 candidate、findPath 邊界與既有 Fairness debt 均維持原裁決。
+
+Production verification：程式 release commit `c05bfad` 的 GitHub Pages workflow
+`35312451020` success；正式站 Item v1 smoke `7/7 PASS`。正式站未帶
+`itemsDev` query，Formal PvE 的策略選擇、Loading lock、Battle `items-on`／10 seats
+與 console/page errors `0` 均通過。
