@@ -2546,3 +2546,19 @@ CLOUD_BUNDLE_SIZE    =  19,830 B
 4. 匿名帳號升級成 Google 帳號的路徑
 
 ⚠ Ranked / Server Authority / 真玩家 Challenge backend 仍然不在這條線上。
+
+---
+
+## MOBA Item System v1 — Final Closure（2026-09-18）
+
+Item v1 已完成 M0～M4d 的 final closure，沿用 `moba-sim.v6`、income `1.9` candidate，沒有進入 v1.1，也沒有 production deploy。
+
+```text
+ITEM_V1_CLOSED = YES
+FORMAL_PVE_ENABLE_READY = YES
+COMPETITIVE_ENABLE_READY = NO
+```
+
+Final Gate：M1 `69/69`、M2 `53/53`、M3 `66/66`、simulation version `51/51`、`regress` 15/15、`regress2` 8/8、Tower／Siege relevant audit、Counter behavior、正式 Item Replay closure `24/24`、Vite build `2908 modules` 全部通過。M4 paired 200-seed evidence 的 OFF Blue baseline 為 `24.5%`，income 1.9 的 T3 timing 與 economy／inventory／determinism evidence 保留於 closure 文件。
+
+唯一競技阻擋是獨立 P0 `MOBA Simulator Fairness`：Side Bias 在 Item v1 前即存在；未採用 findPath fix 後 `24.5% → 28.5%` 的 paired 結果 McNemar `p≈0.43` 不顯著，`rK/bK=1.71` 且 P90／max 變差。findPath mirror invariant defect 另列 navigation debt；不再把 Side Bias 追蹤混入 Item v1 roadmap。詳見 `docs/design/MOBA_裝備系統_v1_Final_Closure.md`。

@@ -22067,3 +22067,33 @@ counter audit 30 組帳務／背包違規 0。
 
 paired 200 seeds（`MATCH_DURATION`）未跑 —— 可用記憶體低於 Owner 指定的 5 GB 門檻，依指示不硬跑。
 未 push、未 deploy、無 UI 行為改動（只加了兩句 reason 文案）。
+
+## 2026-09-18 MOBA Item System v1 — Final Closure
+
+本節為 M4d CLOSED 後的 Item v1 最終收尾；沿用 `9d17f47`、`moba-sim.v6` 與 income `1.9` candidate。Claude 遺留的 `mobaNavigation.js` findPath 實驗已先撤回，沒有把 navigation fix 或 `moba-sim.v7` 納入本輪。
+
+### 一、收尾 audit
+
+- 目標 worktree 為 `design/moba-items-v1-m0`；收尾前唯一程式 diff 是 `src/battle/moba/nav/mobaNavigation.js` `22+／4−`，另有同次 M4e.3 未追蹤 mirror verifier。
+- findPath diff 已恢復與 `9d17f47` 相同；未追蹤 navigation verifier 已移除；沒有 reset／clean／stash，也沒有碰主 repo `milestone-n-finance` 的 WIP。
+- `moba-sim.v6` 指紋 `795922935aaaed78` 通過；沒有 `moba-sim.v7` source bump。
+
+### 二、Final Gate
+
+`check_moba_items_m1` `69/69 PASS`、`check_moba_items_m2` `53/53 PASS`、`check_moba_items_m3` `66/66 PASS`、simulation version `51/51 PASS`；`regress` 15/15 完成、平均 25.0 分、撤退鎖死 0；`regress2` exit 0 且 `8/8 PASS`（20/20、最長 29.9 分、平均 24.2、中位 23.6）。
+
+M4d paired evidence 是 OFF／standard 各 200 seeds、income 1.9、worker failure 0；OFF Blue win `24.5%`、ON standard 的 T3 第一／二／三件約 `8.98／16.35／20.19` 分，帳務／背包／守恆／rejected 全為 0。M4b.6 的 Tower／Siege `regress2` evidence 保留；tower attack audit exit 0，`有敵人卻完全沒動作=0`、`有傷害但沒有 FX=0`。
+
+M4d counter behavior 維持 30 組離線對位／策略 evidence 與帳務／背包違規 0；v1 的破盾 unsupported、反暴擊收益不足等是明確邊界，不為提高購買率改數值。正式 Item browser closure `24/24 PASS`、exit 0：Tactic→Loading→Battle→Result→Replay 全流程，696 tick inventory fold、140 筆 purchase 逐欄、final snapshot／Replay fold／Result 一致，console/page exception 0。Build 為 Vite 2908 modules、exit 0。
+
+### 三、正式旗標與 engine debt
+
+```text
+ITEM_V1_CLOSED = YES
+FORMAL_PVE_ENABLE_READY = YES
+COMPETITIVE_ENABLE_READY = NO
+```
+
+Competitive NO 的唯一原因是獨立 P0 `MOBA Simulator Fairness`：Items OFF Blue baseline `24.5%`；未採用 findPath fix 後 `28.5%`，`n=200` McNemar `p≈0.43` 不顯著，`rK/bK=1.71`，且 P90／max 變差。Side Bias 在 Item v1 前即存在，lane／role distribution／`engageRange` interaction 會放大偏差；findPath mirror invariant defect 另列 navigation debt。Fairness 修正前，Competitive／Challenge／Ranked 不可把 side 結果當公平競技依據。本輪不再追 Side Bias。
+
+Item v1 沒有改 balance、沒有新增功能、沒有 v1.1、沒有 production deploy；正式站 `itemsV1` 維持 OFF，待 Owner 依 PVE／競技啟用邊界另行決策。
