@@ -22133,3 +22133,13 @@ disabled 的唯一原因；本輪不實作該 debt。
   `itemsDev` query、Formal PvE 五種策略、early Loading lock、Battle
   `items-on`／10 seats、console/page errors `0`。
 - 這項驗證不改產品程式、不修改 Fairness debt，也不開 Competitive。
+
+## P0 MOBA Simulator Fairness — systematic debug（2026-09-18）
+
+本輪依 `debugging-and-error-recovery` 執行 reproduce → localize → hypothesis test；完整證據見 `docs/design/MOBA_Simulator_Fairness_Systematic_Debug.md`。
+
+- Items OFF n=200 穩定重現 Blue `24.5%`、duration P90/max `31.90/40.85` 分；raw `rK/bK=1.752`（closure 記錄為 `1.71`）。
+- deterministic mirror harness 證實 `ROLE_LANE` 是 side-blind：tick 0 即破壞 `blue_top ↔ red_bot` 的 180° 配對；這是 confirmed contributor，不等於完整修復。
+- 靜態 navigation／塔位／營地鏡像 gates 全綠；LaneSwap 後仍在 t=19 出現 mid-only dynamic navigation timing divergence。
+- formation／movement live geometry 是放大器；LaneSwap 與 freeze snapshot 的平均值／ratio 雖改善，但 P90/max 仍退化，故未接受 partial fix。
+- 本輪沒有修改 `LogicEngine`、`gameData`、`mobaNavigation.js`、`findPath`、balance、seed、baseline、gate 或 `moba-sim.v6`；Fairness 仍 CLOSED = NO，Competitive 仍 disabled。
