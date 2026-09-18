@@ -22171,3 +22171,7 @@ disabled 的唯一原因；本輪不實作該 debt。
 ### P0 fairness candidate C15/C16（2026-09-18）
 
 Lane component isolation：C15 只把 red top 映射到 bot，n=40 為 Blue `28.2%`、`rK/bK=1.8588`、P90/max `32.62/60.00`、unfinished `1`；C16 只把 red adc/sup 映射到 top，為 Blue `37.5%`、`rK/bK=1.4634`、P90/max `32.43/42.37`、unfinished `0`。均未通過全指標，source 已撤回。
+
+### P0 fairness candidate C17/C18（2026-09-18）
+
+C17 完整 lane mirror 加同 role paired movement，n=40 為 Blue `19/40`、`rK/bK=1.0410`、P90 `30.64` 分、max `44.68` 分；C18 再加 formation tick-start snapshot 為 Blue `22/40`、`rK/bK=0.8225`、P90/max `33.46/42.62`。均因 ratio 或 max tail 否決，source 已撤回。

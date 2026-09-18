@@ -145,3 +145,14 @@ COMPETITIVE_ENABLE_READY = NO
 | C16 | red adc/sup bot → top | 37.5% | 1.4634 | 32.43 | 42.37 | 0 | reject |
 
 兩個 component 都不能同時滿足 winner、ratio、P90、max；C15 甚至產生 unfinished。這支持「lane mapping × role/formation interaction」而非單一路線 root，兩個 source 候選均已撤回，未升級到 n=200。
+
+## Candidate C17/C18 — lane mirror × movement order interaction（2026-09-18）
+
+在 H1 lane contributor 與 movement-order amplifier 已分別被定位後，測試兩者的最小組合：完整 red top↔bot mirror，並讓 movement loop 以同 role 的 blue/red 成對順序執行。
+
+| candidate | Blue | rK/bK | P90 | max | unfinished | verdict |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| C17 lane mirror + paired movement | 47.5% | 1.0410 | 30.64 | 44.68 | 0 | reject: max tail |
+| C18 C17 + formation tick-start view | 55.0% | 0.8225 | 33.46 | 42.62 | 0 | reject: ratio/tail |
+
+C17 是目前最接近公平面的組合，但 max 仍比 n=40 baseline `40.33` 惡化；C18 再次證明 snapshot 不是根因修正。兩個 source candidate 均撤回，依 tail gate 不升級到 n=200。
