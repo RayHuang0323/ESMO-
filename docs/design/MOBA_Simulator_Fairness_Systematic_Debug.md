@@ -118,3 +118,7 @@ COMPETITIVE_ENABLE_READY = NO
 針對「每名英雄依序移動時，後面的 formation／movement decision 讀到前面英雄已更新的位置」做單一候選驗證：movement／formation／tower-zone／join 讀取 tick 內快照，combat resolve 保留 live state。固定 `moba-sim.v6`、Items OFF、同一 mirrored roster 與 seeds 1–40：Blue `18/40 = 45.0%`、`rK/bK=1.0018`、mean `27.815` 分、P90 `31.785` 分、max `50.117` 分、unfinished `0`；對照 n=40 baseline Blue `30.0%`、`rK/bK=1.6183`、P90 `34.667` 分、max `40.333` 分。
 
 這是「平均／ratio 改善但 tail 退化」的明確反例：max 增加約 9.8 分，故不升級到 n=200、不跑 release gate、不接受為產品修正。候選 source patch 已完整撤回；本輪只保留證據文件，`LogicEngine`、`mobaNavigation.js`、`findPath`、baseline、seed、gate 與 `moba-sim.v6` 均未改動。
+
+## Candidate C11 — combat nearest-target tie-break（2026-09-18）
+
+假設是 `_combatStep` 的 nearest-target 在等距時沿用 `alive` 陣列順序，造成集火側偏；加入以 `player.id` 為次排序鍵的最小候選後，固定 OFF、seeds 1–40 得 Blue `12/40 = 30.0%`、`rK/bK=1.6385`、P90 `34.792` 分、max `40.333` 分、unfinished `0`，與 baseline `30.0% / 1.6183 / 34.667 / 40.333 / 0` 無實質改善。假設否決，source 已撤回。

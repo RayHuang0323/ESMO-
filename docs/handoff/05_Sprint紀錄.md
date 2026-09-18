@@ -22151,3 +22151,7 @@ disabled 的唯一原因；本輪不實作該 debt。
 ### P0 fairness candidate C10 tail rejection（2026-09-18）
 
 以固定 `moba-sim.v6`、Items OFF、seeds 1–40 驗證 movement／formation immutable view：Blue `18/40`、`rK/bK=1.0018`、P90 `31.785` 分、max `50.117` 分、unfinished `0`。雖 winner／ratio 改善，max 相對 baseline `40.333` 分惡化，故依 systematic-debugging 規則視為未解決；source patch 已撤回，未提交 engine code。
+
+### P0 fairness candidate C11（2026-09-18）
+
+只在 combat nearest-target 等距時加入 deterministic id tie-break；n=40 結果 Blue `12/40`、`rK/bK=1.6385`、P90 `34.792` 分、max `40.333` 分，未改善 Side Bias，source 已撤回。
