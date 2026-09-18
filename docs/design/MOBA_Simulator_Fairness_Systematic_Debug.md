@@ -122,3 +122,7 @@ COMPETITIVE_ENABLE_READY = NO
 ## Candidate C11 — combat nearest-target tie-break（2026-09-18）
 
 假設是 `_combatStep` 的 nearest-target 在等距時沿用 `alive` 陣列順序，造成集火側偏；加入以 `player.id` 為次排序鍵的最小候選後，固定 OFF、seeds 1–40 得 Blue `12/40 = 30.0%`、`rK/bK=1.6385`、P90 `34.792` 分、max `40.333` 分、unfinished `0`，與 baseline `30.0% / 1.6183 / 34.667 / 40.333 / 0` 無實質改善。假設否決，source 已撤回。
+
+## Candidate C12 — formation nearest-anchor tie-break（2026-09-18）
+
+假設是 `_archPosition` 在等距最近敵人時沿用 `alive` 陣列順序，讓 formation anchor 選擇受 blue-first player order 影響。只加入 `player.id` deterministic secondary key，固定 OFF、`moba-sim.v6`、seeds 1–40 得 Blue `12/40 = 30.0%`、`rK/bK=1.6385`、P90 `34.79` 分、max `40.33` 分、unfinished `0`；與同一 n=40 baseline 的 `30.0% / 1.6183 / 34.667 / 40.333 / 0` 無實質改善。假設否決，source 已撤回，未升級到 n=200。
