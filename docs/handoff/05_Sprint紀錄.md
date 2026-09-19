@@ -22233,6 +22233,57 @@ DEPLOY = NO
 
 P0-D 只建立 root-cause Sprint，不開始實作。下一輪先建立 failing invariant，逐一檢查 nexus-wave availability、tower-zone gating、objective/target priority、retreat/re-engage 與 base-entry minion ordering；禁止先調 balance、timeout、respawn、tower HP、movement speed 或放寬 gate。
 
+### P0-D Nexus / Wave Deadlock Sprint closure（2026-09-19）
+
+本輪 owner 以 systematic-debugging + TDD 處理 deterministic seed 608；不改 baseline、seed selection、fairness gate、Item v1、P0-A/B/C、`findPath`、simulation version 或 Competitive flag。
+
+#### Causal root and minimum fix
+
+- failing invariant：lane towers 清空後，`nexus_guard` stage 不得繼續使用 lane-stage 的 enemy-minion blocker；否則 wave 無法形成有效 base entry。
+- causal root：`baseAssault` 只判斷 `blocker.lane === "nexus"`，漏掉同樣屬於 base-entry 的 `nexus_guard`。
+- minimum fix：`baseAssault` 改為同時涵蓋 `nexus_guard` / `nexus`；只解除 base-entry wave-vs-wave movement blocker，保留 stopT 與所有既有數值。
+
+#### seed 608 evidence
+
+| | 修正前 | 修正後 |
+| --- | ---: | ---: |
+| duration / winner | `3600s / null` | `2568s / blue` |
+| base wave ticks | `blue 0 / red 0` | `blue 2 / red 0` |
+| core progression events | `0` | `2` |
+| core / structures | `7200/7200`, `9/11` down | Red nexus `-788.7`，自然結束 |
+
+修正前的 530 秒末段 structure stall 消失；沒有使用 cap 強制判勝，也沒有 buff minion、tower、respawn 或 damage。
+
+#### Final statistical gate
+
+固定 `moba-sim.v6`、Items OFF、`incomeK=1`、seed 1–1000：
+
+| 指標 | P0-D final |
+| --- | ---: |
+| Blue / Red win | `48.5% / 51.5%`（`485/999`、`514/999`） |
+| rK/bK | `0.962238` |
+| Median / P90 / P95 / Max | `26.03 / 33.01 / 37.32 / 51.48` 分 |
+| unfinished | `1/1000`（seed `715`） |
+| P95 tail | `50` finished healthy progression + `1` healthy close stalemate |
+| pathological tail | `0` |
+
+seed 715 不是新的 P0-D defect：60 分鐘時兩側均為 `11/11` structures、兩座門牙塔清空、core `7200/7200`、kills `79/74`，沒有優勢方、沒有可歸因的 objective-close failure；保留為 `HEALTHY_LONG_MATCH`。
+
+#### Verification and decision
+
+P0-D focused invariant PASS；P0-A `8/8`、P0-B `14/14`、P0-C PASS、runtime29 flat `35/35`、regress `15/15`、regress2 `8/8`、build `2908 modules` 全部通過。Competitive 保持 disabled，只提升 readiness status。
+
+```text
+P0_D_CLOSED = YES
+FAIRNESS_CLOSED = YES
+FORMAL_PVE_ENABLE_READY = YES
+COMPETITIVE_ENABLE_READY = YES
+COMPETITIVE_ENABLED = NO
+PUSH = NO
+DEPLOY = NO
+NEXT_SPRINT = NOT STARTED
+```
+
 ### P0-C Tail / Long Match Root Cause Sprint（2026-09-19）
 
 本輪 owner 以 systematic-debugging + TDD 處理 P0-C；不調參、不改 baseline、不換 seed、不放寬 gate、不碰 Item v1、不修改 `findPath`，也不 push/deploy。固定 runner 為 `moba-sim.v6`、Items OFF、incomeK=1、seeds 1–200。

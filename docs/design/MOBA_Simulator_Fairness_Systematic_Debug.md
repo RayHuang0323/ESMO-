@@ -347,3 +347,33 @@ COMPETITIVE_ENABLE_READY = NO
 4. base-entry minion ordering 是否仍存在未涵蓋的 blocker／wave starvation。
 
 P0-D 不可先調 damage、respawn、tower HP、movement speed、timeout、baseline、seed 或 fairness gate；不碰 Item v1、P0-A/B/C、`moba-sim.v6` 或 Competitive enable。若後續證明是健康翻盤，應撤回 pathology 標記；若確認是結構根因，才提出最小 TDD 修正。
+
+## P0-D closure：Nexus / Wave Deadlock（2026-09-19）
+
+### Root cause evidence
+
+seed 608 的 failing invariant 是：lane towers 全清後，wave 必須能從 `nexus_guard` base-entry stage 進入有效基地兵線並產生 core progression。原始 minion advance 只把 `blocker.lane === "nexus"` 視為 `baseAssault`；`nexus_guard` 雖已是基地入口，仍沿用 enemy-minion blocker，造成 wave 在最後 10–15 分鐘被反覆互卡／消耗。這解釋了雙方 core `7200/7200`、base wave `0/0` 與 530 秒 structure stall，且 seed 重跑 deterministic。
+
+### Minimal structural fix
+
+```js
+const baseAssault = blocker?.lane === "nexus_guard" || blocker?.lane === "nexus";
+```
+
+此修正只改 base-entry traversal contract：保留 `stopT`，不改 minion wave spawn、speed、damage、tower HP、respawn、combat、baseline、seed、Item v1 或 simulation version；沒有 artificial timeout / forced winner。
+
+### Evidence and final decision
+
+seed 608：`3600s unfinished / 0 core progress` → `2568s Blue win / 2 core progress events`，Blue base-wave ticks `2`，Red nexus `-788.7`。
+
+固定 n=1000、Items OFF、`moba-sim.v6`、seed 1–1000：Blue/Red `48.5%/51.5%`、`rK/bK=0.962238`、median/P90/P95/max `26.03/33.01/37.32/51.48`、unfinished `1`（seed 715）。P95 tail 51 場中 50 場正常結束並有 comeback/structure/core/base-wave progression；seed 715 是雙方 `11/11` structures、core `7200/7200`、kills `79/74` 的 HEALTHY close stalemate，不是優勢方 pathological root。故 `PATHOLOGICAL_LONG_MATCH=0`。
+
+P0-D focused invariant、P0-A `8/8`、P0-B `14/14`、P0-C、runtime29 flat `35/35`、regress `15/15`、regress2 `8/8`、build `2908 modules` 全部通過。
+
+```text
+P0_D_CLOSED = YES
+FAIRNESS_CLOSED = YES
+FORMAL_PVE_ENABLE_READY = YES
+COMPETITIVE_ENABLE_READY = YES
+COMPETITIVE_ENABLED = NO
+```

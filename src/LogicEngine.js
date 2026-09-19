@@ -3188,11 +3188,11 @@ export class LogicEngine {
             }
             stopT = clamp(blocker.t - dir * hi, 0, 1);
           }
-          // P0-C：兩側路上結構與門牙塔都已清空後，雙方 wave 進入 base assault。
-          // 此時把敵方小兵當成不可穿越 blocker 會讓對稱 wave 永遠鎖在中線，
-          // `_minionAtBase` 永遠為 false，主堡永遠沒有有效 objective progression。
-          // 保留 nexus stopT；只解除「敵兵互相卡住」這個 base-only deadlock。
-          const baseAssault = blocker?.lane === "nexus";
+          // P0-D：lane towers 清空後，nexus_guard 與 nexus 都是 base-entry。
+          // 若只在 blocker=nexus 時解除敵兵 blocker，攻方 wave 會在門牙塔階段
+          // 被另一側仍停在 nexus_guard 前的 wave 反覆消耗，雙方都到不了有效基地兵線。
+          // 保留 nexus/nexus_guard stopT；只解除 base-entry 的敵兵互卡。
+          const baseAssault = blocker?.lane === "nexus_guard" || blocker?.lane === "nexus";
           const next = arr.map((m) => {
             let next = clamp(m.t + dir * minionStep, 0, 1);
             let nearest = null;
