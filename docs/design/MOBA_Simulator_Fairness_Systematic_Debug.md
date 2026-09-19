@@ -298,3 +298,52 @@ COMPETITIVE_ENABLE_READY = NO
 ```
 
 `P0_C_CLOSED=YES` 只代表 pathological long-match root 已以最小結構修正關閉；`FAIRNESS_CLOSED=NO` 保持既有全球 gate，不因 healthy tail 的重新分類而放寬競技標準。Competitive／Challenge／Ranked 維持 disabled。
+
+## Final Statistical Closure（2026-09-19）
+
+### Fixed sample and gates
+
+本輪沒有修改 simulator。固定目前 P0-A+B+C 版本、`moba-sim.v6`、Items OFF、`incomeK=1`、seed 1–1000；baseline、seed selection、fairness gate、Item v1、P0-A/B/C 與 Competitive flag 均未變。
+
+| 指標 | n=1000 結果 |
+| --- | ---: |
+| Blue / Red win | `47.7% / 52.3%`（完成場 `477/999`、`522/999`） |
+| Wilson 95% CI（Blue） | `44.62%–50.80%` |
+| rK/bK | `0.959980` |
+| median / P90 / P95 / max | `26.30 / 33.62 / 36.77 / 60.00` 分 |
+| unfinished | `1/1000` |
+| violations / conservationFails | `0 / 0` |
+
+P0-A symmetry `8/8`、P0-B navigation mirror `14/14`、P0-C invariant、runtime29 flat `35/35`、regress `15/15`、regress2 `8/8`、Vite build `2908 modules` 均通過。Same-seed runner gate 以 seed 608 重跑兩次，simulation columns 逐欄一致，只有非模擬的 `wallMs` 不同。
+
+### Tail classification
+
+正確升序 nearest-rank P95 為 `36.77m`，tail 共 51 場。完整 P95 trace 分類：
+
+- `HEALTHY_LONG_MATCH = 50`：全部有 winner、`comeback=true`、structure/core progression 與 base-wave evidence。這些符合合理團戰翻盤、實力接近與 late-game tactical reversal 的產品原則，必須保留。
+- `PATHOLOGICAL_LONG_MATCH = 1`：seed `608`。60 分鐘 cap 仍無 winner；雙方 core `7200/7200`、final structures `9/11`、`coreProgressEvents=0`、`baseWaveAnyTicks=0`，末段 530 秒無 structure progression。trace 重跑逐項一致，因此是 deterministic structural case，不是單一 max 的健康逆轉。
+
+seed 608 同時有 23 次 objective kills、172 次 respawn、retreat/re-engage transition，但這些活動沒有轉成 core progression；證據足以建立下一個 root-cause Sprint，尚不足以直接指定修法。先前 seed 176 的 50.52 分鐘 healthy comeback 仍保留，不列為 defect。
+
+### Final decision
+
+Side balance 與 P0-A/P0-B mirror contract 已穩定，但 `unfinished=1` 與 seed 608 的可重現 structural pathology 使 final statistical closure 不通過：
+
+```text
+P0_A_CLOSED = YES
+P0_B_CLOSED = YES
+P0_C_CLOSED = YES
+FAIRNESS_CLOSED = NO
+COMPETITIVE_ENABLE_READY = NO
+```
+
+### P0-D Nexus-wave / pre-core progression Root-Cause Sprint（READY / NOT STARTED）
+
+只建立 Sprint，不直接修改 simulator。下一輪必須先建立 failing invariant，並一次只驗一個 hypothesis：
+
+1. nexus-wave 是否在雙方 outer/inner structures 狀態下正確生成並可到達 core zone；
+2. tower-zone／wave gating 是否讓有 objective/structure lead 的一方永久失去有效推進；
+3. objective priority、target selection、retreat/re-engage 是否在 base entry 形成無意義循環；
+4. base-entry minion ordering 是否仍存在未涵蓋的 blocker／wave starvation。
+
+P0-D 不可先調 damage、respawn、tower HP、movement speed、timeout、baseline、seed 或 fairness gate；不碰 Item v1、P0-A/B/C、`moba-sim.v6` 或 Competitive enable。若後續證明是健康翻盤，應撤回 pathology 標記；若確認是結構根因，才提出最小 TDD 修正。

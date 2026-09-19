@@ -22204,6 +22204,35 @@ PUSH = NO
 DEPLOY = NO
 ```
 
+### MOBA Simulator Fairness Final Statistical Closure（2026-09-19）
+
+依使用者指定在目前 P0-A+B+C 版本上做 final statistical closure；固定 `moba-sim.v6`、Items OFF、`incomeK=1`、seed 1–1000，沒有修改 simulator、baseline、seed selection、fairness gate、Item v1、P0-A/B/C、Competitive flag，也沒有 push/deploy。
+
+| 指標 | n=1000 |
+| --- | ---: |
+| Blue / Red win | `47.7% / 52.3%`（完成場 `477/999`、`522/999`） |
+| rK/bK | `0.959980` |
+| Median / P90 / P95 / Max | `26.30 / 33.62 / 36.77 / 60.00` 分 |
+| unfinished | `1/1000`（seed `608`） |
+| violations / conservationFails | `0 / 0` |
+
+P95 tail 共 51 場，完整 event trace 分類為 50 場 `HEALTHY_LONG_MATCH`、1 場 `PATHOLOGICAL_LONG_MATCH`。50 場健康長局均已結束，具有 comeback、structure/core progression 與 base-wave evidence；不因 max 或 P90 壓力移除健康逆轉。seed 608 則在 60 分鐘 cap 未結束，雙方 core `7200/7200`、structures `9/11`、`coreProgressEvents=0`、`baseWaveAnyTicks=0`，末段 530 秒無 structure progression；同 seed trace 重跑完全一致（只有 `wallMs` 不同）。
+
+P0-A `8/8`、P0-B `14/14`、P0-C invariant、runtime29 flat `35/35`、regress `15/15`、regress2 `8/8`、build `2908 modules` 均 PASS；side/mirror contract 穩定，但 unfinished 與 seed 608 的可重現 pre-core／nexus-wave progression pathology 使 global fairness gate 不能關閉。
+
+```text
+P0_A_CLOSED = YES
+P0_B_CLOSED = YES
+P0_C_CLOSED = YES
+FAIRNESS_CLOSED = NO
+COMPETITIVE_ENABLE_READY = NO
+P0_D_NEXUS_WAVE_ROOT_CAUSE = READY / NOT STARTED
+PUSH = NO
+DEPLOY = NO
+```
+
+P0-D 只建立 root-cause Sprint，不開始實作。下一輪先建立 failing invariant，逐一檢查 nexus-wave availability、tower-zone gating、objective/target priority、retreat/re-engage 與 base-entry minion ordering；禁止先調 balance、timeout、respawn、tower HP、movement speed 或放寬 gate。
+
 ### P0-C Tail / Long Match Root Cause Sprint（2026-09-19）
 
 本輪 owner 以 systematic-debugging + TDD 處理 P0-C；不調參、不改 baseline、不換 seed、不放寬 gate、不碰 Item v1、不修改 `findPath`，也不 push/deploy。固定 runner 為 `moba-sim.v6`、Items OFF、incomeK=1、seeds 1–200。
