@@ -22203,3 +22203,41 @@ COMPETITIVE_ENABLE_READY = NO
 PUSH = NO
 DEPLOY = NO
 ```
+
+### P0-C Tail / Long Match Root Cause Sprint（2026-09-19）
+
+本輪 owner 以 systematic-debugging + TDD 處理 P0-C；不調參、不改 baseline、不換 seed、不放寬 gate、不碰 Item v1、不修改 `findPath`，也不 push/deploy。固定 runner 為 `moba-sim.v6`、Items OFF、incomeK=1、seeds 1–200。
+
+#### Root-cause evidence
+
+- H12：targetless `LANE` 的 formation anchor 會抓到跨 lane 且超過 engage range 的最近敵人，讓 lane push intent 被 live formation geometry 改道。seed 129 在 structure advantage `4` 時的 cross-lane offenders 修正後為 `0`；同線接戰不變。
+- H13：當 blocker 已是 `nexus` 時，原 minion collision 把兩側 wave 永遠鎖在中線；H12 seed 80 在 `t=3600s` 雙方非 nexus structures 全倒、nexus `7200/7200`、`baseWave=0`、`coreProgress=0`。最小修正只解除 nexus-only enemy-minion blocker，保留 nexus stopT。
+- top-tail `176,80,11,6,85,55,156,169` 修正後皆 `comeback=true`，持續有 structure/core progression；gap 期間有 power、kill、structure lead 翻轉。固定 mirrored roster/tactic 沒有 side draft 差異，marksman 的 early/late signal 只作 scaling evidence，其餘未建模不過度解釋。
+- `HEALTHY_LONG_MATCH` 仍存在；不因 max 單值高於 baseline 就消除合理拉鋸。seed 80 的 pathological base deadlock 已被 H13 關閉，修正後 `2759s` 正常結束。
+
+#### A / B / C / D（固定 200 seeds）
+
+| 組別 | Blue | rK/bK | median | P90 | P95 | max | unfinished | kills mean | tower20 mean |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| A 原始 baseline | 24.5% | 1.7520 | 25.35 | 31.90 | 34.11 | 40.85 | 0 | 25.36 | 7.915 |
+| B P0-A | 48.5% | 0.9335 | 27.28 | 33.58 | 37.42 | 48.92 | 0 | 27.93 | 7.755 |
+| C P0-A + P0-B | 49.0% | 0.945512 | 26.90 | 35.19 | 37.57 | 47.67 | 0 | 30.885 | 7.135 |
+| D P0-A + P0-B + P0-C | 46.5% | 0.960015 | 25.90 | 30.81 | 35.88 | 50.52 | 0 | 26.715 | 7.825 |
+
+D 的 final tower average blue/red `7.085/6.775`、core destroyed blue/red `107/93`；A/B/C/D `violations=0`、`conservationFails=0`。D 的 P90/P95 已改善，max 由 healthy seed 176 形成，故不以壓低 max 為由破壞健康長局。
+
+#### Verification
+
+- `tools/check_moba_tail_p0c_invariant.mjs`：H12 cross-lane + H13 base-assault `PASS`。
+- P0-A `8/8`、P0-B `14/14`、runtime29 flat `35/35`、regress `15/15`、regress2 節奏 `8/8`、Vite build `2908 modules` 均通過。
+- same-seed runner simulation columns 逐欄一致；差異只在非模擬的 `wallMs`。
+
+```text
+P0_A_CLOSED = YES
+P0_B_CLOSED = YES
+P0_C_CLOSED = YES
+FAIRNESS_CLOSED = NO
+COMPETITIVE_ENABLE_READY = NO
+PUSH = NO
+DEPLOY = NO
+```

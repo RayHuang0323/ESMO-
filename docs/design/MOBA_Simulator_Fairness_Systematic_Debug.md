@@ -229,3 +229,72 @@ FAIRNESS_CLOSED = NO
 COMPETITIVE_ENABLE_READY = NO
 P0_C_TAIL_LONG_MATCH = READY / NOT STARTED
 ```
+
+## P0-C Tail / Long Match Root Cause closure（2026-09-19）
+
+本輪依 `debugging-and-error-recovery` 的 systematic-debugging + TDD 流程，固定 `moba-sim.v6`、Items OFF、同一批 seeds 1–200；沒有改 baseline、seed、balance、fairness gate、Item v1、`findPath` 或 version。觀測工具為 `tools/check_moba_tail_rootcause_p0c.mjs`，守門工具為 `tools/check_moba_tail_p0c_invariant.mjs`。
+
+### Hypothesis decision
+
+| 假設 | 證據 | 裁決 |
+| --- | --- | --- |
+| H1：優勢方失去有效 structure progression | top-tail 的長 gap 可由 `structureProgress`、tower lead、alive power 對照重現；不是單看 duration | 需要拆分 healthy / pathological，不能直接壓 tail |
+| H2：kill / chase 取代 objective | chase、pick、teamfight 與 objective kill 都存在；top-tail 仍有 tower/core progression | 不是單一 causal root |
+| H3：retreat / re-engage、formation oscillation 阻止 siege | trace 有大量 transition，但 power、lead、tower progress 會反覆翻轉 | 是行為訊號，不足以單獨修正 |
+| H4：respawn cycle 重複關閉 siege window | respawn 與 gap 同時存在，但 close match 會重新推塔或反殺 | 是 healthy comeback 的一部分，不以 timeout 消除 |
+| H5：tower-zone / nexus-wave gating 造成 pre-core deadlock | H12 seed 80 在 `t=3600` 已雙方 11 個非 nexus structure 全倒，但 nexus 仍為 `7200/7200`、沒有 base wave/core progress | **Confirmed pathological root** |
+| H6：長局是 draft / scaling / tactic comeback | top 8 tail 全部有 comeback、power/kill/structure lead 反轉與後續 objective progression；固定 roster/tactic 是 mirrored | **HEALTHY_LONG_MATCH 應保留** |
+| H7：targetless `LANE` 被跨 lane 遠距離敵人當 formation anchor | seed 129 在 structure advantage `4` 時可重現；H12 後 cross-lane offenders `0`，同線敵人仍保留自然接戰 | **Confirmed contributor；採最小 guard** |
+
+### Accepted minimal fixes
+
+1. `_archPositionCanonical()` 只在 `decisionAction=LANE`、沒有明確 target、且最近敵人跨 lane 且超過 engage range 時，拒絕跨線 formation anchor；沒有廣泛停用 formation，也沒有改 combat target selection。
+2. 小兵 advance 只在 `blocker.lane === "nexus"` 的 base assault 解開雙方 minion blocker；仍保留 nexus `stopT`，因此不改 damage、速度、塔血或 respawn。這使 wave 能到達主堡，修正「中線互卡 → 永遠沒有 objective progression」。
+
+H12 的 seed 129 invariant 與 H13 的 seed 80 base-assault invariant 均在 `tools/check_moba_tail_p0c_invariant.mjs` 通過。修正後 seed 80 於 `t=2759s` 正常結束，blue nexus `-2450.42`，不再到 `3600s` 未結束。
+
+### Top-tail classification
+
+固定 D 組的 top 8 tail（seed `176, 80, 11, 6, 85, 55, 156, 169`）全部 `comeback=true`，每場都有 `structureProgressEvents`、`coreProgressEvents` 與至少一側的 base-wave evidence；gap 期間的關鍵對照如下。power 為 gap 起點附近的 blue/red alive power，結構為 `blueDown/redDown`。
+
+| seed | D duration | winner | post-1200 gap | gap 起點 → 結束（structure；power） | classification |
+| ---: | ---: | --- | ---: | --- | --- |
+| 176 | 50.52m | red | 727.5s | 6/5、312/249 → 7/6、274/182 | HEALTHY_LONG_MATCH：戰力與擊殺 lead 反覆翻轉，後續繼續拆塔並完成 core |
+| 80 | 45.98m | red | 601.0s | 5/6、324/173 → 6/6、359/242 | HEALTHY_LONG_MATCH（H13 後）：comeback、objective progression；原 H12 狀態才是 pathological base deadlock |
+| 11 | 40.39m | red | 628.5s | 5/5、330/234 → 5/6、289/273 | HEALTHY_LONG_MATCH：combat / kill / structure lead 改變後仍繼續推進 |
+| 6 | 40.10m | blue | 415.5s | 4/4、312/280 → 4/5、351/309 | HEALTHY_LONG_MATCH：雙方接近、合理翻盤後 blue close |
+| 85 | 38.88m | red | 418.0s | 6/3、287/336 → 6/4、264/353 | HEALTHY_LONG_MATCH：red 有 combat/objective 優勢並持續推塔，非 deadlock |
+| 55 | 38.51m | blue | 580.5s | 5/5、306/235 → 5/5、348/201 | HEALTHY_LONG_MATCH：同結構、持續團戰與後期推進 |
+| 156 | 37.38m | red | 369.5s | 5/6、313/270 → 6/7、244/334 | HEALTHY_LONG_MATCH：kill lead 與戰力由 blue/red 互換 |
+| 169 | 37.38m | red | 673.0s | 6/4、278/277 → 6/4、333/245 | HEALTHY_LONG_MATCH：接近戰力造成拉鋸，後段仍有 structure/core progression |
+
+這些 fixed mirrored roster / mirrored tactic trace 沒有 draft side 差異；marksman 有既有 early/late authored signal，其餘角色多為 `unmodeled`，所以只記錄「可能的 scaling／戰術翻盤證據」，不把它誇大成已證明的 draft 根因。20–28 分鐘 controls 為約 `21.2–26.7m`，均正常結束並持續有 structure/core progression。`HEALTHY_LONG_MATCH` 因此仍然存在，沒有為了降低 max 而消除。
+
+### A / B / C / D fixed-seed comparison
+
+| 組別 | Blue win | rK/bK | median | P90 | P95 | max | unfinished | kills mean | towers20 mean |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| A 原始 baseline | 24.5% | 1.7520 | 25.35 | 31.90 | 34.11 | 40.85 | 0 | 25.36 | 7.915 |
+| B P0-A | 48.5% | 0.9335 | 27.28 | 33.58 | 37.42 | 48.92 | 0 | 27.93 | 7.755 |
+| C P0-A + P0-B | 49.0% | 0.945512 | 26.90 | 35.19 | 37.57 | 47.67 | 0 | 30.885 | 7.135 |
+| D P0-A + P0-B + P0-C | 46.5% | 0.960015 | 25.90 | 30.81 | 35.88 | 50.52 | 0 | 26.715 | 7.825 |
+
+D 相對 C 的 P90 `35.19 → 30.81`、P95 `37.57 → 35.88`，unfinished 維持 `0`；max `50.52` 並非新的未結束 deadlock，而是 seed 176 的 healthy close match。D 的 final tower averages 為 blue/red `7.085/6.775`，blue/red core destroyed `107/93`；A/B/C/D 均 `violations=0`、`conservationFails=0`。因此 P0-C 關閉的是 pathological B，不把 healthy tail 當 bug。
+
+### Verification and boundary
+
+- P0-C invariant：H12 cross-lane `PASS`；H13 base-assault `PASS`。
+- P0-A symmetry `8/8 PASS`；P0-B navigation mirror `14/14 PASS`。
+- runtime29 flat `35/35 PASS`；regress `15/15`；regress2 節奏門檻 `8/8`；Vite build `2908 modules PASS`。
+- same-seed：simulation columns 逐欄一致；runner 只有 `wallMs` 計時欄不同。
+- 沒有修改 `mobaNavigation.js`／`findPath`、Item v1、baseline、seed、balance、gate、`moba-sim.v6` 或 Competitive。
+
+```text
+P0_A_CLOSED = YES
+P0_B_CLOSED = YES
+P0_C_CLOSED = YES
+FAIRNESS_CLOSED = NO
+COMPETITIVE_ENABLE_READY = NO
+```
+
+`P0_C_CLOSED=YES` 只代表 pathological long-match root 已以最小結構修正關閉；`FAIRNESS_CLOSED=NO` 保持既有全球 gate，不因 healthy tail 的重新分類而放寬競技標準。Competitive／Challenge／Ranked 維持 disabled。
