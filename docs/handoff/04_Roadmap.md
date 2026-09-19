@@ -2584,6 +2584,20 @@ COMPETITIVE_ENABLED = NO
 FAIRNESS_SPRINT_READY = YES
 ```
 
+## MOBA Simulator Fairness Release Candidate (2026-09-19)
+
+P0-A through P0-D are closed and ready for safe main integration. This release keeps Formal PvE ready, keeps Competitive disabled, and does not start Competitive Enablement or another fairness sprint.
+
+The release candidate uses `moba-sim.v7` for the P0-A/P0-B/P0-C/P0-D semantic changes while retaining `moba-sim.v6` as a historical known version. All scoped MOBA, Item v1, deterministic, build, and local browser gates passed; push, Pages deployment, and production smoke remain pending.
+
+```text
+MOBA_FAIRNESS = RELEASE_CANDIDATE
+P0_A_TO_D = CLOSED
+COMPETITIVE_ENABLE_READY = YES
+COMPETITIVE_ENABLED = NO
+NEXT_SPRINT = NOT_STARTED
+```
+
 範圍只記錄既有 engine debt：side imbalance、`rK/bK`、P90／max tail、
 `findPath` mirror invariant。這不是 Item v1.1，也不在本輪修改任何 balance、navigation
 或 simulator version。
