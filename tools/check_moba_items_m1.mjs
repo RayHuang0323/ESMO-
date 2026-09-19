@@ -426,7 +426,8 @@ const COMPS = {
 // ── G13 隔離 ──────────────────────────────────────────────────────────────────
 //  M1 時代的「LogicEngine 相對 HEAD 無改動」已由 M2 接手：引擎改動後 itemsV1 OFF 的逐位元不變
 //  改由 tools/check_moba_items_m2.mjs G1（對 M1 基準 commit 逐場比對指紋）證明。
-//  這裡只保留仍然成立的隔離：誰可以 import items 模組、正式流程沒有啟用、模擬版本沒動。
+//  這裡只保留仍然成立的隔離：誰可以 import items 模組、正式流程沒有啟用、
+//  模擬版本契約仍為合法的 moba-sim.v*；版本 bump 由 simulationVersion gate 另行驗證。
 {
   const importers = [];
   const walk = (d) => {
@@ -465,7 +466,8 @@ const COMPS = {
   ck("G13", "正式流程只有 useLocalServer 在 itemsV1 開關保護下呼叫 configureItems（正式 PvE 預設 ON）", unguardedCallers.length === 0, unguardedCallers.join(","));
   const simVer = read("src/platform/contracts/simulationVersion.js");
   const semanticsList = simVer.slice(simVer.indexOf("export const SIMULATION_SEMANTICS_FILES"), simVer.indexOf("]);", simVer.indexOf("export const SIMULATION_SEMANTICS_FILES")));
-  ck("G13", "模擬版本是 moba-sim.v6（M4b.6 圍攻節奏的語意變化），items 模組未列入語意清單（正式輸入到不了它們）", /MOBA_SIMULATION_VERSION = "moba-sim\.v6"/.test(simVer) && !/moba\/items/.test(semanticsList));
+  const currentSimVersion = simVer.match(/MOBA_SIMULATION_VERSION = "([^"]+)"/)?.[1] ?? "";
+  ck("G13", `模擬版本契約合法（${currentSimVersion}），items 模組未列入語意清單（正式輸入到不了它們）`, /^moba-sim\.v\d+$/.test(currentSimVersion) && !/moba\/items/.test(semanticsList));
 }
 
 const byGate = {};

@@ -36,11 +36,11 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
  * ⚠ **什麼時候不用 bump**：純呈現層、UI、文案、log。
  * ⚠ 版本字串一旦發布就**不可回收再用**：舊 Challenge 存著它。
  */
-export const MOBA_SIMULATION_VERSION = "moba-sim.v6";
+export const MOBA_SIMULATION_VERSION = "moba-sim.v7";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", MOBA_SIMULATION_VERSION]);
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -278,6 +278,10 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //    節奏門檻 7/8 → **8/8**；regress 13/15 → 15/15。
   //  ⚠ 後果（已知且接受）：v1–v5 的歷史挑戰不再可重播，由 `canReplay` 明確拒絕。
   "moba-sim.v6": "795922935aaaed78",
+  //  2026-09-19（P0-A～P0-D fairness release）：side-relative formation /
+  //  navigation mirror / tail-deadlock fixes 改變同一輸入的模擬結果，
+  //  因此開 v7；v6 指紋保留供歷史 replay 版本判定。
+  "moba-sim.v7": "f3ff0bee0a052168",
 });
 
 export const isKnownSimulationVersion = (v) =>

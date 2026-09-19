@@ -22204,6 +22204,30 @@ PUSH = NO
 DEPLOY = NO
 ```
 
+### MOBA Simulator Fairness Release Closure（2026-09-19）
+
+本節記錄 P0-A～P0-D 正式 release closure 的版本與 gate 邊界；前述各 Sprint 的
+`moba-sim.v6` 數據保留為歷史證據，不回寫舊結果。
+
+- P0-A～P0-D 會讓同一份輸入產生不同模擬結果，故正式版本升為 `moba-sim.v7`，
+  語意指紋 `f3ff0bee0a052168`；`moba-sim.v6` 的 `795922935aaaed78` 保留供歷史 replay 判定。
+- Item M2 的 OFF-path legacy baseline 前移至 P0-D closure `c45bfe0`；仍逐場比較
+  snapshot、終局、RNG 次數與 key 集合，沒有放寬 Item contract。
+- `regress` 的 30 分鐘是觀測窗，不是勝負規則。P0 release 後 seed 1618 在 31.5 分鐘
+  自然結束且有持續 structure progression，屬健康長局；觀測窗調為 35 分鐘，
+  `regress2` 仍以 32 分鐘正式長度 gate 檢定。
+- Release gate 變更後待重跑：simulation version `51/51`、Items M1 `69/69`、M2 `53/53`、
+  M3a `66/66`、regress `15/15`、regress2 `8/8`、runtime29 flat、build、browser smoke。
+
+```text
+MOBA_FAIRNESS = RELEASE_CANDIDATE
+P0_A_TO_D = CLOSED
+COMPETITIVE_ENABLE_READY = YES
+COMPETITIVE_ENABLED = NO
+PUSH = PENDING
+DEPLOY = PENDING
+```
+
 ### MOBA Simulator Fairness Final Statistical Closure（2026-09-19）
 
 依使用者指定在目前 P0-A+B+C 版本上做 final statistical closure；固定 `moba-sim.v6`、Items OFF、`incomeK=1`、seed 1–1000，沒有修改 simulator、baseline、seed selection、fairness gate、Item v1、P0-A/B/C、Competitive flag，也沒有 push/deploy。

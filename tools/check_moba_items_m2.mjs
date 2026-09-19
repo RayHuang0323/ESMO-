@@ -32,9 +32,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
  *   模擬語意變更（`moba-sim.v5`：塔射程／塔傷／仇恨／AI 越塔），關閉裝備時的結果本來就
  *   和 M1 不同 ⇒ 舊基準永遠對不上，留著只會把這個閘門訓練成雜訊。
  *   改釘在 M4b.5 的 commit：從此 G1 抓的是「**本 commit 之後**新增的裝備層改動有沒有
- *   動到 OFF 路徑」。下一次刻意的引擎語意變更（bump 版本）時，同樣要把它往前移。
+ *   動到 OFF 路徑」。P0-A～P0-D 是下一次刻意的引擎語意變更（moba-sim.v7），
+ *   因此 release closure 將基準前移到 P0-D closure；後續 Item-only 改動仍會被抓到。
  */
-const BASE_COMMIT = "556a1a5";
+const BASE_COMMIT = "c45bfe0";
 const load = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
 
@@ -442,7 +443,8 @@ let lastOnSnapshot = null;
   ck("G8", "裝備 runtime 不用亂數／時間（決定性）", !/Math\.random|Date\.now|performance\.now|\brng\d?\s*\(/.test(runtime));
   let gateOk = true, gateOut = "";
   try { gateOut = execFileSync(process.execPath, ["tools/check_simulation_version_gate.mjs"], { cwd: ROOT, encoding: "utf8" }); } catch (err) { gateOk = false; gateOut = (err.stdout ?? "") + err.message; }
-  ck("G8", "模擬版本閘門綠（moba-sim.v6：M4b.6 圍攻節奏是語意變化；正式輸入仍不經過裝備層，G1 已證明關閉裝備時結果不變）", gateOk && /moba-sim\.v6"/.test(read("src/platform/contracts/simulationVersion.js").match(/MOBA_SIMULATION_VERSION = "[^"]+"/)?.[0] ?? ""), gateOut.split("\n").slice(-4).join(" "));
+  const currentSimVersion = read("src/platform/contracts/simulationVersion.js").match(/MOBA_SIMULATION_VERSION = "([^"]+)"/)?.[1] ?? "";
+  ck("G8", `模擬版本閘門綠（${currentSimVersion}；正式輸入仍不經過裝備層，G1 已證明關閉裝備時結果不變）`, gateOk && /^moba-sim\.v\d+$/.test(currentSimVersion), gateOut.split("\n").slice(-4).join(" "));
 }
 
 const byGate = {};

@@ -3,13 +3,15 @@
 import { NEXUS_HP, PITS, dist } from "../src/gameData.js";
 const file = process.argv[2] || "../src/LogicEngine.js";
 const { LogicEngine } = await import(file);
-const DT = 0.5, SEEDS = [1,2,3,7,42,99,123,777,2024,5555,314,271,1618,8080,4242];
+const DT = 0.5, CAP_S = 2100; // 35 分觀測窗；regress2 另以 32 分正式長度 gate 檢定
+const SEEDS = [1,2,3,7,42,99,123,777,2024,5555,314,271,1618,8080,4242];
 const rows = [];
 for (const seed of SEEDS) {
   const e = new LogicEngine(seed);
   let fb=null, ace=[], hotF=0, F=0, retreatLock=null, minNexus=NEXUS_HP;
   let dB=0,dR=0,bB=0,bR=0,pd=false,pb=false, lead=[];
-  for (let t=DT; t<=1800 && !e.over; t+=DT){
+  // 健康 comeback 可能略超過舊的 30 分觀測窗；觀測窗不是強制判勝負。
+  for (let t=DT; t<=CAP_S && !e.over; t+=DT){
     e.tick(DT); F++;
     minNexus=Math.min(minNexus, e.towers.blue_nexus.hp, e.towers.red_nexus.hp);
     if(fb===null&&(e.bK+e.rK)>0) fb=t;
