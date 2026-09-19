@@ -22187,3 +22187,19 @@ C17 完整 lane mirror 加同 role paired movement，n=40 為 Blue `19/40`、`rK
 固定 Items OFF、`moba-sim.v6`、seeds 1–200：A baseline `24.5% / 1.7520 / P90 31.90 / max 40.85`；B P0-A `48.5% / 0.9335 / P90 33.58 / max 48.92`，unfinished 均為 0。winner／ratio 證明 causal root 已修正，但 tail gate 未閉合。C navigation measurement 顯示 same-lane t=.25↔.75 仍有 top `+4.308`、mid `+0.810`、bot `−4.308`；因此 `P0_A_CLOSED=YES`、`FAIRNESS_CLOSED=NO`，建立但不開始 P0-B Navigation Mirror Sprint。
 
 驗證：P0-A symmetry `8/8`、runtime29 官方 flat 模式 `35/35`（9 段委派、不計分母）、nav H2 `14/14`、mesh `97,760/0`、`regress` 15/15、`regress2` 8/8、Vite build 2,908 modules。委派段皆另行獨立執行並檢查 exit code；未碰 Item v1、baseline、seed、gate、Competitive、`mobaNavigation.js` 或 `findPath`；未 push、未 deploy。
+
+### P0-B Navigation Mirror Sprint（2026-09-19）
+
+從 P0-A commit `d5311b1` 建立 `debug/p0b-navigation-mirror`。TDD 初始 navigation invariant 為 `8 PASS / 6 FAIL`；根因鎖定為 weighted A* `ε=1.7` 的方向性 early tie path，加上 greedy waypoint simplification 與 projected endpoint contract。採用 admissible A* `ε=1.0` 並保留完整 grid waypoint，未重寫 `findPath`、未調整 combat/balance。
+
+驗證：P0-B `14/14`、nav H2 `14/14`、mesh `97,760/0`、runtime29 flat `35/35`、regress `15/15`、regress2 `8/8`、build PASS。導航 delta `.25↔.75`：top `+4.308→+0.407`、mid `+0.810→0`、bot `−4.308→−0.407`。
+
+固定 Items OFF、n=200：A baseline `24.5% / 1.7520 / 31.90 / 40.85`；B P0-A `48.5% / 0.9335 / 33.58 / 48.92`；C P0-A+P0-B `49.0% / 0.945512 / 35.19 / 47.67`；unfinished 均為 0。P0-B 對稱性已閉合，但 P90 仍高於 B 與 baseline，故 `FAIRNESS_CLOSED=NO`，建立 P0-C Tail / Long Match Root Cause Sprint，未開始下一階段。
+
+```text
+P0_B_CLOSED = YES
+P0_C_TAIL_LONG_MATCH = READY / NOT STARTED
+COMPETITIVE_ENABLE_READY = NO
+PUSH = NO
+DEPLOY = NO
+```

@@ -194,3 +194,38 @@ FAIRNESS_CLOSED = NO
 COMPETITIVE_ENABLE_READY = NO
 P0_B_NAVIGATION_MIRROR = READY / NOT STARTED
 ```
+
+## P0-B — Navigation Mirror closure（2026-09-19）
+
+依 systematic-debugging + TDD 先建立 `tools/check_moba_navigation_mirror_p0b.mjs` failing contract：初版 `8 PASS / 6 FAIL`，穩定重現 top `+4.308`、mid `+0.810`、bot `−4.308` 的 same-lane forward/reverse path cost 差異。逐一隔離後確認：`ε=1.7` weighted A* 的 early goal/tie ordering 會讓無向 graph 產生方向性；greedy waypoint simplification 也會放大不同 traversal ordering；endpoint projection 若只回傳 projected goal，連續 path cost 會再引入方向差。
+
+最小採用修正：A* 改為 admissible `ε=1.0`、保留既有 180° canonical half mirror normalization、回溯保留完整 grid waypoint ordering（不使用方向性 greedy simplify），public API 仍不回傳 caller 起點。未採用的 pair-order/full-endpoint 候選曾破壞 C3 或 regress2，均未保留。
+
+導航證據：
+
+| lane / t pair | 修正前 delta | 修正後 delta |
+| --- | ---: | ---: |
+| top .25↔.75 | `+4.308` | `+0.407` |
+| mid .25↔.75 | `+0.810` | `0.000` |
+| bot .25↔.75 | `−4.308` | `−0.407` |
+| top .35↔.65 | `+1.449` | `−0.319` |
+| mid .35↔.65 | `+0.138` | `0.000` |
+| bot .35↔.65 | `−1.449` | `+0.319` |
+
+P0-B symmetry `14/14`、nav H2 `14/14`（C3 mirror path max diff `0.00`）、mesh `97,760/0`、regress `15/15`、regress2 `8/8`、runtime29 flat `35/35`、build PASS。固定 Items OFF、`moba-sim.v6`、seeds 1–200 的 A/B/C：
+
+| 組別 | Blue win | rK/bK | median | P90 | max | unfinished |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| A 原始 baseline | 24.5% | 1.7520 | 25.35 | 31.90 | 40.85 | 0 |
+| B P0-A | 48.5% | 0.9335 | 27.28 | 33.58 | 48.92 | 0 |
+| C P0-A + P0-B | 49.0% | 0.945512 | 26.90 | 35.19 | 47.67 | 0 |
+
+P0-B 確實修正了 navigation directional contributor，且 max 由 `48.92 → 47.67`；但 P90 由 `33.58 → 35.19`，仍明顯高於 baseline，故 navigation 不是剩餘 long-tail 的充分根因。C 組 runner wall time `184s → 304s`、`wall_ms_mean 5465.59 → 9053.36`，性能成本列為後續風險，不以調參掩蓋。
+
+```text
+P0_A_CLOSED = YES
+P0_B_CLOSED = YES
+FAIRNESS_CLOSED = NO
+COMPETITIVE_ENABLE_READY = NO
+P0_C_TAIL_LONG_MATCH = READY / NOT STARTED
+```

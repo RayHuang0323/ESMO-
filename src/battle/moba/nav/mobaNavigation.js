@@ -445,20 +445,17 @@ export function moveTowards(from, to, maxDist, radius = HERO_RADIUS, alive = nul
 const NODE_BUDGET = 30000;
 
 /**
- * 加權 A*（ε-weighted）：f = g + EPS × h。
+ * Exact A*：f = g + h。
  *
- * ⚠ 為什麼不用 EPS = 1（最佳解）：可走區有 34,481 格，跨半張地圖的搜尋在 EPS=1 下
- * 會展開上萬格（實測泉水→敵方門牙塔展開超過 9,000 格、28ms 仍找不到終點就撞上預算）。
- * 一撞預算就回 null ⇒ 呼叫端只能直線硬推，看起來就是「英雄卡在牆邊抖」。
- * EPS = 1.7 之下路徑最壞只比最短路長 70%（實測 20 條航段平均只有 1.053 倍直線距離，
- * 因為地圖走廊本來就窄、可繞的空間有限），但展開量降一個量級：
- * 單次搜尋從 25–56ms 降到約 1.3ms，模擬成本從 0.664ms/tick 降到 0.556ms/tick，
- * 而有效移動幾乎不變（0.9111 → 0.9086）。
+ * P0-B 證據顯示 ε=1.7 的 weighted A* 會在同一無向圖上因方向與 tie ordering
+ * 提早收斂到不同成本的合法路徑；ε=1.0 才能保證 graph path cost 對稱。
+ * 回溯保留完整格點 waypoint，刻意不套用方向性 greedy simplify；否則同一條
+ * forward/reverse route 會再次得到不同的 shortcut ordering。
  *
- * ⚠ 仍是**決定性**的：權重是常數，鄰居順序固定，且搜尋前已正規化到同一半邊
- *   ⇒ 鏡像輸入得到鏡像路徑。
+ * ⚠ Exact A* 比 ε=1.7 慢，但這是 correctness contract 的必要代價；
+ * NODE_BUDGET 仍保留，超出預算時沿用既有 null fallback。
  */
-const HEURISTIC_WEIGHT = 1.7;
+const HEURISTIC_WEIGHT = 1.0;
 
 /** 最小二元堆（避免每次 shift 造成 O(n²)）。 */
 class Heap {
@@ -486,6 +483,11 @@ class Heap {
  * 走不到或超出預算回 null。
  */
 export function findPath(from, to, radius = HERO_RADIUS, alive = null) {
+  const path = findPathOneDirection(from, to, radius, alive);
+  return path ? path.slice(1) : null;
+}
+
+function findPathOneDirection(from, to, radius, alive) {
   //  ⚠ A* 的鄰居展開順序與堆疊 tie-break 不是旋轉等變的：同一條路走藍方或紅方
   //  會得到長度略微不同的折線 ⇒ 直接變成藍紅不公平（實測 3 條測試路線有 2 條不對稱）。
   //  解法：把問題**正規化**到同一半邊再解，然後把結果鏡射回去。
@@ -493,9 +495,9 @@ export function findPath(from, to, radius = HERO_RADIUS, alive = null) {
   //  所以鏡射後的問題與原problem 完全等價，這樣做不會改變路徑品質，只是消除方向偏差。
   const { F } = nav();
   const cxx = F.B.centerX, cyy = F.B.centerY;
+  const mir = (p) => ({ x: 2 * cxx - p.x, y: 2 * cyy - p.y });
   const key = (from.x - cxx) + (from.y - cyy);
   if (key > 0 || (key === 0 && (to.x - cxx) + (to.y - cyy) > 0)) {
-    const mir = (p) => ({ x: 2 * cxx - p.x, y: 2 * cyy - p.y });
     const path = findPathCanonical(mir(from), mir(to), radius, mirrorAlive(alive));
     return path ? path.map(mir) : null;
   }
@@ -692,7 +694,7 @@ function findPathCanonical(from, to, radius, alive) {
   [tx, ty] = nudge(tx, ty);
 
   const sId = F.idx(sx, sy), tId = F.idx(tx, ty);
-  if (sId === tId) return [{ x: goal.x, y: goal.y }];
+  if (sId === tId) return [{ x: start.x, y: start.y }, { x: goal.x, y: goal.y }];
 
   const cellOk = (ix, iy) => {
     const id = F.idx(ix, iy);
@@ -735,7 +737,8 @@ function findPathCanonical(from, to, radius, alive) {
   }
   if (!found) return null;
 
-  //  回溯 → 折線；再做一次「看得到就直走」的簡化，避免走成鋸齒
+  //  回溯 → 完整格點折線。不要在這裡做 greedy simplify：
+  //  simplify 的掃描方向會讓同一無向路徑的 forward/reverse waypoint ordering 不同。
   const cells = [];
   for (let cur = tId; cur !== -1; cur = prev[cur]) cells.push(cur);   // prev 只在 stamp === gen 的格上寫過
   cells.reverse();
@@ -743,29 +746,7 @@ function findPathCanonical(from, to, radius, alive) {
     x: F.B.minX + (id % F.nx) * F.cellToSim,
     y: F.B.minY + (((id / F.nx) | 0)) * F.cellToSim,
   }));
-  return simplify(pts, radius, alive).slice(1);
-}
-
-/**
- * 視線可達就跳過中間點（減少折線點數，走起來自然）。
- *
- * ⚠ 回掃**限制在 SIMPLIFY_WINDOW 格以內**：原本每次都從路徑最末端往回試，
- * 一條 200 格的路徑最壞要做 2 萬次 `lineWalkable`（每次又取樣數十點）
- * ⇒ 長途尋路的成本大半花在這裡，而不是 A* 本身。
- * 視窗化之後折線點會多一點（走起來完全一樣，因為子步進本來就沿著折線走），
- * 但成本從 O(n²) 降成 O(n × 視窗)。
- */
-const SIMPLIFY_WINDOW = 24;
-function simplify(pts, radius, alive) {
-  if (pts.length <= 2) return pts;
-  const out = [pts[0]];
-  let i = 0;
-  while (i < pts.length - 1) {
-    let j = Math.min(pts.length - 1, i + SIMPLIFY_WINDOW);
-    for (; j > i + 1; j--) if (lineWalkable(pts[i], pts[j], radius, alive)) break;
-    out.push(pts[j]); i = j;
-  }
-  return out;
+  return [start, ...pts.slice(1), goal];
 }
 
 /** a→b 這條直線整段都站得下英雄嗎（等距取樣）。 */
