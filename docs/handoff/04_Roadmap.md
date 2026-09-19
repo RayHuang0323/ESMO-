@@ -2598,6 +2598,22 @@ COMPETITIVE_ENABLED = NO
 NEXT_SPRINT = NOT_STARTED
 ```
 
+## MOBA Simulator Fairness Production Release (2026-09-19)
+
+P0-A through P0-D are released on `main` at code release SHA `032b3d672a9e0af6073168068ea8a033c3b89cc4`. Pages workflow `35449079864` completed successfully. The production URL is `https://rayhuang0323.github.io/ESMO-/`.
+
+Production broad smoke passed `44/44`; the production Item v1 DOM smoke passed `15/15`, including no `itemsDev` query, five strategy cards, Loading lock, `.items-on` with 10 item seats, result, page errors `0`, and console errors `0`.
+
+```text
+MOBA_FAIRNESS = RELEASED
+P0_A_TO_D = CLOSED
+FORMAL_PVE_ENABLED = YES
+COMPETITIVE_ENABLE_READY = YES
+COMPETITIVE_ENABLED = NO
+PRODUCTION_SMOKE = PASS
+NEXT_SPRINT = NOT_STARTED
+```
+
 範圍只記錄既有 engine debt：side imbalance、`rK/bK`、P90／max tail、
 `findPath` mirror invariant。這不是 Item v1.1，也不在本輪修改任何 balance、navigation
 或 simulator version。
