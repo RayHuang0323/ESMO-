@@ -462,7 +462,9 @@ function runNode(script, shape, args = [], timeout = 1800000) {
     return { ok: shape.test(String(e.stdout ?? "")), code: e.status ?? -1, out: String(e.stdout ?? "") };
   }
 }
-if (process.env.SKIP_NESTED === "1") {
+if (process.env.ESMO_VERIFY_FLAT === "1") {
+  console.log('SKIP nested gates: delegated to tools/verify.mjs; excluded from assertion count.');
+} else if (process.env.SKIP_NESTED === "1") {
   console.log("⚠ SKIP_NESTED=1：跳過 runtime29 / flow09 / dash10 巢狀驗證（開發迭代模式，不可作為完成依據）");
 } else {
   const rt = runNode("tools/check_moba_runtime29.mjs", /44\/44 通過/);

@@ -198,7 +198,9 @@ function runNode(script, shape, env = {}, timeout = 2400000) {
     return { ok: shape.test(String(e.stdout ?? "")), code: e.status ?? -1, out: String(e.stdout ?? "") };
   }
 }
-if (process.env.SKIP_NESTED === "1") {
+if (process.env.ESMO_VERIFY_FLAT === "1") {
+  console.log('SKIP nested gates: delegated to tools/verify.mjs; excluded from assertion count.');
+} else if (process.env.SKIP_NESTED === "1") {
   console.log("⚠ SKIP_NESTED=1：跳過 13–17 巢狀驗證（開發迭代模式，不可作為完成依據）");
 } else {
   // 13) 29B1 節奏（引擎層 25 項；其巢狀部分 = runtime29，由 14) 完整跑，不重複）

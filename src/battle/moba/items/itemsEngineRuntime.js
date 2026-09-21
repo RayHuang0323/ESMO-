@@ -296,6 +296,24 @@ export class ItemsEngineRuntime {
     };
   }
 
+  /** Authored ability damage is already scaled by its gameplay rule; do not run the
+   *  attack/profile multiplier a second time. Reuse Item resist, aura and shield
+   *  channels so an ability hit participates in the same defensive contract. */
+  resolveAbilityHit(p, foe, amount, damageType) {
+    const a = this.ps.get(p.id), d = this.ps.get(foe.id);
+    const phys = damageType === 'physical' ? amount : 0;
+    const magic = damageType === 'magic' ? amount : 0;
+    const trueTaken = damageType === 'true' ? amount : 0;
+    const m = mitigate({ phys, magic, attackerCs: a.cs, defenderCs: d.cs, aura: d.aura });
+    this.counters.hits++;
+    if ((phys && m.effArmor > 0) || (magic && m.effMr > 0)) this.counters.mitigatedHits++;
+    return {
+      attackerId: p.id, phys, magic, trueDamage: trueTaken, physAttack: 0,
+      physTaken: m.physTaken, magicTaken: m.magicTaken, trueTaken,
+      physAttackTaken: 0, total: m.physTaken + m.magicTaken + trueTaken,
+    };
+  }
+
   /** 結算扣血：只擋法傷的護盾 → 一般護盾（與召喚師屏障共用）→ 血量。 */
   applyDamage(foe, hit, t) {
     const d = this.ps.get(foe.id);
@@ -306,6 +324,7 @@ export class ItemsEngineRuntime {
       this.counters.magicShieldAbsorbed += absorbed;
     }
     let rest = phys + magic;
+    if (hit.trueTaken) rest += hit.trueTaken;
     if (foe.shield > 0 && t < foe.shieldUntil) {
       const absorbed = Math.min(foe.shield, rest);
       foe.shield -= absorbed; rest -= absorbed;
@@ -336,7 +355,7 @@ export class ItemsEngineRuntime {
         }
       }
       for (const e of effectsOf(a.cs, "GRIEVOUS_WOUNDS")) {
-        const channel = e.params.trigger === "attack" ? hit.physAttack > 0 : e.params.trigger === "ability" ? hit.phys + hit.magic > hit.physAttack : false;
+        const channel = e.params.trigger === "attack" ? hit.physAttack > 0 : e.params.trigger === "ability" ? hit.phys + hit.magic + (hit.trueDamage ?? 0) > hit.physAttack : false;
         if (channel) { d.grievous = { cut: Math.max(e.params.cut, t < d.grievous.until ? d.grievous.cut : 0), until: t + e.params.duration }; this.counters.grievousApplied++; }
       }
       for (const e of effectsOf(d.cs, "GRIEVOUS_WOUNDS")) {
@@ -345,7 +364,7 @@ export class ItemsEngineRuntime {
         this.counters.grievousApplied++;
       }
       for (const e of effectsOf(a.cs, "SLOW_ON_HIT")) {
-        if (hit.phys + hit.magic <= hit.physAttack) continue;
+        if (hit.phys + hit.magic + (hit.trueDamage ?? 0) <= hit.physAttack) continue;
         d.slow = { k: Math.max(e.params.slow, t < d.slow.until ? d.slow.k : 0), until: t + e.params.duration };
         this.counters.slowsApplied++;
       }

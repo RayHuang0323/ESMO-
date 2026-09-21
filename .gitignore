@@ -1,5 +1,7 @@
 node_modules/
 dist/
+/tmp/hero-skills/
+/tmp/verify-logs/
 .vscode/
 
 # handoff 制度檔的編輯前備份（正式歷史以 git 為準；見 docs/handoff/_archive/README.md）

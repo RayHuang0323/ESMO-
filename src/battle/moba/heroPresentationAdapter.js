@@ -12,13 +12,12 @@
 //        不寫回原始 event、不碰 Replay 原始資料。
 //   ⇒ 即時 Battle / Timeline / Replay / HUD callout 全部吃同一份輸出。
 //
-//  ── ⚠ 引擎沒有 Q/W/E/R（Milestone L Audit 實測）──────────────────────────
-//    引擎 fx 的 `ability` 只有 `{role}:basic` / `{role}:power` / `tower:basic` /
-//    `neutral:*` / `boss:*` / `buff:*` / null 這幾種。所以本檔的映射只有兩條規則：
+//  ── Legacy 與真正 authored QWER 必須區分 ───────────────────────────────
+//    Legacy fx 的 `ability` 是 `{role}:basic` / `{role}:power` 等推導演出：
 //        basic  → 該英雄的 basicAttack 演出
 //        power  → 該英雄的 signatureSlot 演出
-//    輸出一律標上 `basis`（推導依據）與 `isActualSkillCast: false`，
-//    UI 因此**不可能**寫出「他放了 Q」這種引擎沒說過的話。
+//    這兩者的 isActualSkillCast 永遠 false；只有引擎明確送出 hero:QWER，
+//    且 roster heroId 與 skillId 相符，才標 true，不從 power 虛構施放。
 //    這個誠實邊界由 tools/check_hero_presentation_l.mjs §4 把關。
 // ============================================================================
 import {
@@ -98,10 +97,12 @@ export function describeFxPresentation(fx, roster = null) {
 
   const heroId = resolveHeroId(fx?.sourceId, roster);
   const p = getHeroCombatPresentation(heroId);
+  const actualSlot = group === 'hero' && /^[QWER]$/.test(variant) && heroId
+    && (!fx.skillId || fx.skillId === `${heroId}:${variant}`) ? variant : null;
   const power = variant === "power" || isUlt;
   //  ⚠ 只有兩條映射規則，因為引擎只給得出這兩種資訊。
-  const slot = power ? p.signatureSlot : null;
-  const spec = power ? getHeroSkillPresentation(heroId, p.signatureSlot) : p.basicAttack;
+  const slot = actualSlot ?? (power ? p.signatureSlot : null);
+  const spec = slot ? getHeroSkillPresentation(heroId, slot) : p.basicAttack;
   const archetype = spec.archetype;
   return Object.freeze({
     heroId: heroId ?? null,
@@ -113,14 +114,14 @@ export function describeFxPresentation(fx, roster = null) {
     positionRole: heroId ? getHeroCombatArchetype(heroId).formationLine : null,
     archetype,
     effect: spec.effect,
-    emphasis: power ? (spec.emphasis ?? "signature") : "normal",
+    emphasis: slot ? (spec.emphasis ?? "signature") : "normal",
     label: ARCHETYPE_LABEL[archetype] ?? ARCHETYPE_LABEL.line,
     //  basis 說清楚這個演出是從哪個引擎欄位推出來的 ⇒ 不可能被誤讀成真實施放
-    basis: power ? "engine:power" : "engine:basic",
-    isActualSkillCast: false,
-    isUltimate: power && (spec.emphasis === "ultimate" || archetype === "ultimate"),
+    basis: actualSlot ? "engine:heroSkill" : power ? "engine:power" : "engine:basic",
+    isActualSkillCast: !!actualSlot,
+    isUltimate: !!actualSlot && actualSlot === 'R' || power && (spec.emphasis === "ultimate" || archetype === "ultimate"),
     theme: heroId ? getHeroPresentationTheme(heroId) : null,
-    cameraEmphasis: power ? p.cameraEmphasis : "none",
+    cameraEmphasis: slot ? p.cameraEmphasis : "none",
     performanceTier: p.performanceTier,
     slot,
   });

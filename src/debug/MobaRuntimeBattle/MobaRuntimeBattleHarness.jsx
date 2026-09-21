@@ -35,10 +35,19 @@ export default function MobaRuntimeBattleHarness() {
   //    **同一場**跑一次、在不同 ts 連續取樣，而不是每張圖重開一場。
   useEffect(() => {
     if (!shotId) return undefined;
+    const seenAuthoredCasts = new Set();
+    const seenAuthoredSkills = new Set();
     const check = () => {
       const s = useGameStore.getState();
       const snap = s.snapshot;
       const ts = snap?.ts ?? 0;
+      const named = (snap?.fx ?? []).filter((f) => f.skillId);
+      const matched = named.filter((f) => {
+        if (!/^hero:[QWER]$/.test(f.ability ?? '')) return false;
+        const caster = snap?.players?.find((p) => p.id === f.sourceId);
+        return (caster?.heroSkills?.[f.ability.slice(-1)]?.cd ?? 0) > 0;
+      });
+      for (const f of matched) { seenAuthoredCasts.add(f.id); seenAuthoredSkills.add(f.skillId); }
       window.__BATTLE_TS = ts;
       window.__BATTLE_STATS = {
         ts,
@@ -49,6 +58,12 @@ export default function MobaRuntimeBattleHarness() {
         dead: (snap?.players ?? []).filter((p) => p.dead).length,
         towersDown: Object.values(snap?.towers ?? {}).filter((t) => t.hp <= 0).length,
         bK: snap?.bK ?? 0, rK: snap?.rK ?? 0,
+        namedSkillFx: named.length,
+        matchedSkillCooldown: matched.length > 0,
+        authoredCastSeen: seenAuthoredCasts.size,
+        authoredSkillIds: [...seenAuthoredSkills],
+        namedSkillIds: [...new Set(named.map((f) => f.skillId))],
+        b1Q: snap?.players?.find((p) => p.id === 'b1')?.heroSkills?.Q ?? null,
       };
       if (ts >= waitTs || snap?.over) {
         window.__BATTLE_SHOT_READY = shotId;

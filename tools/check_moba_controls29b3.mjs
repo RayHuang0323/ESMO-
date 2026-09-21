@@ -237,7 +237,9 @@ function runNode(script, shape, env = {}, timeout = 2400000) {
     return { ok: shape.test(String(e.stdout ?? "")), code: e.status ?? -1, out: String(e.stdout ?? "") };
   }
 }
-if (process.env.SKIP_NESTED === "1") {
+if (process.env.ESMO_VERIFY_FLAT === "1") {
+  console.log('SKIP nested gates: delegated to tools/verify.mjs; excluded from assertion count.');
+} else if (process.env.SKIP_NESTED === "1") {
   console.log("⚠ SKIP_NESTED=1：跳過 17–24 巢狀驗證（開發迭代模式，不可作為完成依據）");
 } else {
   const p2v = runNode("tools/check_moba_presentation29b2.mjs", /12\/12 通過/, { SKIP_NESTED: "1" });

@@ -15,6 +15,8 @@ import fs from "node:fs";
 import { CHAMPIONS_100, heroById } from "../src/data/heroDatabase.js";
 import { LogicEngine } from "../src/LogicEngine.js";
 import { adaptEffects } from "../src/battle/moba/map/mobaRuntimeMapAdapter.js";
+import { towerRangeWorld } from '../src/battle/moba/presentation/towerRangeGeometry.js';
+import { WORLD_SCALE } from '../src/battle/moba/map/coordinateMapping.js';
 import {
   getHeroCombatPresentation, getHeroSkillPresentation, getHeroPresentationTheme,
   getFallbackHeroPresentation, listPresentationHeroIds, hasAuthoredPresentation,
@@ -263,15 +265,17 @@ console.log("\n── §4 Adapter：不改原事件、保留身分、不虛構�
       && power.presentation.slot === getHeroCombatPresentation("ironclad").signatureSlot,
       power.presentation);
   }
-  ck("32) ⚠ 任何情況都不宣稱「實際施放了技能」（isActualSkillCast 恆為 false）",
+  ck("32) legacy 事件不宣稱技能施放；權威 hero:Q 才宣稱真施放",
     (() => {
       const abilities = ["top:basic", "top:power", "mid:power", "tower:basic", "neutral:defeated",
         "boss:dragon", "buff:redBuff", null, "garbage"];
-      return abilities.every((a) => describeFxPresentation({ ability: a, sourceId: "b1", type: "ult" }, roster).isActualSkillCast === false);
+      return abilities.every((a) => describeFxPresentation({ ability: a, sourceId: "b1", type: "ult" }, roster).isActualSkillCast === false)
+        && describeFxPresentation({ ability: 'hero:Q', skillId: 'ironclad:Q', sourceId: 'b1', type: 'line' }, roster).isActualSkillCast === true
+        && describeFxPresentation({ ability: 'hero:Q', skillId: 'other:Q', sourceId: 'b1', type: 'line' }, roster).isActualSkillCast === false;
     })());
-  ck("33) ⚠ Adapter 原始碼裡沒有任何「把 Q/W/E/R 當成引擎事實」的映射",
-    !/ability[\s\S]{0,80}["'`][QWER]["'`]/.test(ADAPTER_SRC)
-    && ADAPTER_SRC.includes("isActualSkillCast: false"));
+  ck("33) QWER 需明確 hero 事件及 roster／skillId 一致才可認證",
+    ADAPTER_SRC.includes("group === 'hero'")
+    && ADAPTER_SRC.includes('fx.skillId === `${heroId}:${variant}`'));
   ck("34) 非英雄來源（塔／野怪／首領／buff）有穩定演出且 heroId 為 null",
     ["tower:basic", "neutral:defeated", "boss:baron", "buff:blueBuff"].every((a) => {
       const p = describeFxPresentation({ ability: a, sourceId: "blue_t1" }, roster);
@@ -506,7 +510,9 @@ console.log("\n── §7 L Hotfix 1：職業 shape language / 三段式戰報 /
   ck("70)〔原始碼〕鎖定線來自引擎真實 tower fx，不是自己重算誰該被打",
     TOWER.includes('fx?.ability !== "tower:basic"') && TOWER.includes("towerRangeWorld"));
   ck("71) 塔射程圈的半徑就是規則裡的 towerAggroRange 換算（沒有偷偷放大）",
-    /\(rules\?\.towerAggroRange \?\? 5\.5\) \* S/.test(TOWER));
+    TOWER.includes('import { towerRangeWorld, structureRangeWorld }')
+    && [0, 5.5, 6, 13].every(r => towerRangeWorld({ towerAggroRange: r }) === r * WORLD_SCALE)
+    && towerRangeWorld({}) === 5.5 * WORLD_SCALE);
   //  ⚠ L Hotfix 2 **刻意**調整了塔與 Boss 的數值（見該輪報告的根因與多 seed 對照）。
   //     這條因此改成「釘住新基準」——不是為了讓舊數字通過而撤銷正確修復，
   //     而是讓未來的意外漂移仍然會被抓到。

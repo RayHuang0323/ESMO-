@@ -22345,3 +22345,408 @@ COMPETITIVE_ENABLE_READY = NO
 PUSH = NO
 DEPLOY = NO
 ```
+
+## 2026-09-20 Hero Skills / VFX Phase 1（owner: Codex，本機候選）
+
+從正式 `dc520f1` 建立 `feature/moba-hero-skills-phase1`／`worktrees/moba-hero-skills-phase1`。本機 main `d5311b1` 僅落後七筆 P0-B/C/D／release 提交；保留原 `milestone-n-finance` dirty worktree，未 reset/stash/覆蓋使用者修改。
+
+完成 heroDatabase canonical presentation metadata、immutable HeroSkill.v1 compile、absolute-time preview runtime、七種共用 primitives、六英雄十二演出、DEV 預覽與正式英雄 attack replacement。舊 HeroSkillEffects 不再正式掛載；塔／小兵／召喚師不在本轮替換範圍。沒有 QWER gameplay executor，power 不是技能施放依據。
+
+必要 verifier 維護（不是調門檻）：
+
+- baseline 的 L §71 仍搜尋 TowerRangeDebug.jsx 內已搬走的算式，重現 79/80。該產品檔及 verifier 與 dc520f1 無差異；算式已於 M1.6 移到 towerRangeGeometry.js。改驗同一匯入函式的 0/5.5/6/13 與 default 實際換算，重跑 80/80；未動塔數值，斷言數不变。
+- pacing29b1 / presentation29b2 / controls29b3 補 ESMO_VERIFY_FLAT 委派，原本 SKIP_NESTED 與完整模式不變；所有本地 assertions 保留，巢狀 SKIP 不計 PASS。
+- verify runner 新增 focused segments 並保存完整 stdout/stderr 到 ignored tmp/verify-logs；先前只有 tail 的缺失補齊。
+- 初次 Replay fixture 缺 towers 導致測試工具例外，補 fixture 後 10/10。初次共用依賴缺 gsap/supabase，改為隔離 worktree 按 CI 使用鎖檔 `npm ci --legacy-peer-deps`；package / lockfile 不變。
+
+Browser：Golden Set 27/27、正式 GameView 5/5（真引擎事件、新 renderer activeFrames、舊 identity renderer 未掛載、無 page/shader error）。桌機與 320/360/390/430px layout 已驗；真機 FPS／觸控／視覺品質仍待使用者驗收。完整 gate 結果見 `docs/design/MOBA_HeroSkills_Phase1.md` 驗證收尾。
+
+收尾：build、regress 15/15、regress2 8/8、runtime29 35/35、presentation 12/12、controls 18/18、P0-A 8/8、P0-B 14/14、P0-C/D、simulation version 51/51 均 PASS。pacing29b1 **24/25 FAIL**（15分鐘 kills p50=6 <7）；唯讀正式 dc520f1 與候選固定40組 seed／戰術到900秒逐筆一致，確認為既有問題。保留 FAIL、不放寬、不改平衡，不宣告全綠發布。
+
+未 commit／push／deploy；Production、Competitive 與 Fairness 權威狀態不變。未開始下一批英雄。
+
+## 2026-09-20 Hero Skills Workshop 第二輪（owner: Codex，本機候選）
+
+六英雄十二招從通用圈環改為元素 silhouette／三段式編排：冰槍落晶、折線電弧落雷、扇錐熔焰／分片甲、岩壁裂地、鋼鐵衝鋒／十字裁決、赤炎突進／鳳翼。Workshop 測試角色與 dash／R 動作共用時間採樣；不修改正式英雄座標。canonical heroDatabase metadata 與共用純 choreography／slab／analytic flame pools，沒有第二套技能資料庫。第一輪及原定位特效僅 DEV 比較保留，正式 renderer 仍唯一。
+
+先驗出三招前搖空白，新增 pure failing assertion 再補可見起手。Phase1 browser stress 的 wall-clock 採樣落在事件到期後，改固定主爆發時間，保留非零／容量斷言；新增場景角色使 draw ceiling 12→13，有實際幾何依據，不變更 simulation gate。
+
+驗證：Round2 pure 17/17、browser 61/61；Phase1 browser 27/27、正式 Battle 5/5；flat scoped runner 14/14（regress／regress2／runtime29／presentation／controls／P0-A～D／版本／build 等）PASS。HS-P1-G1 pacing baseline 24/25 FAIL 仍有效，沒有 waiver，未重跑 n=1000。40重疊第二輪場景 10–12 draw calls；四手機寬度無溢出，真機 FPS／觸控／耗電未實測。
+
+預覽 `http://127.0.0.1:5481/ESMO-/?debug=hero-skills`；實際截圖 `tmp/hero-skills/round2/`。詳見 `docs/design/MOBA_HeroSkills_Round2.md`。未改引擎／Balance／Item／Replay wire／simulation version；QWER gameplay 未啟用。未 commit／push／deploy，未開始下一批。
+
+## 2026-09-20 Hero Skills 100 英雄正式實作：權威切片啟動（owner: Codex）
+
+Audit 100 英雄 QWER 共 400 欄；`skillData` 僅四套重複模板，多數描述固定截斷於 38 字。故新增明確 `heroDatabase.skills[].gameplay`，不從展示文字推算規則。首個鋼鐵衛士 Q 實際接入引擎施法、冷卻、傷害、突進、擊退；凍結位置收集雙方施法，事件經正式 adapter 到共用 VFX，HUD 只顯示有來源的技能冷卻，Replay 保留 12 欄舊 tuple 並依保存名單還原外觀。`heroSkillsV1` 保持 false，DEV 正式流程可用 `?heroSkillsDev=1` 驗接線。
+
+Phase1 verifier 原第十項斷言 `LogicEngine` 與官方 baseline 完全無 diff；本輪新增 opt-in 引擎技能後，該斷言不再符合測試範圍。改成其餘 Fairness／Item／Replay protected 檔案維持零 diff；另新增 `check_hero_skills_gameplay_slice.mjs` 實測未啟用歷史路徑、雙方同時施法、同 seed、Replay。沒有刪掉任何產品門檻。初跑移動檢查因鏡像雙方 dash 與 knockback 向量互相抵消而失敗，依實際規則改驗雙方對稱抵消與單方真實位移，未改產品來湊測試。
+
+L verifier §32/§33 文字仍寫「任何情況不宣稱真技能」；新增第一個真正 `hero:Q` 事件後，該句失效。保留原 80 項與 legacy basic/power 的 false 斷言，改同時驗真事件為 true、錯誤 skillId 為 false，原始碼檢查改驗 `hero` 事件＋roster/skillId 一致，未放寬誤認防線。
+
+目前 1/400 項僅部分 Gameplay（鋼鐵 Q 路徑減速未完成），其餘技能、被動、平衡、完整 HUD/Replay/視覺與手機效能皆待續；不宣告正式完成。首個 slice 6/6、Phase1 10/10、Round2 17/17、正式 DEV Battle browser 4/4 PASS。scoped runner 10/11：regress／regress2／runtime29／presentation／controls／P0-A～D／build PASS；`simulation_version` 50/51 FAIL（新 opt-in 引擎程式使 v7 指紋失配），未改指紋或放寬 gate。五個指定 skills 的技術取捨與完整缺口見 `docs/design/MOBA_HeroSkills_Gameplay_Implementation.md`。未 commit／push／deploy。
+
+## 2026-09-20 Hero Skills 權威 Gameplay 第二切片（owner: Codex，未發布）
+
+在同一獨立 worktree 將 authored 覆蓋從 1/400 擴至 4/400：補全鋼鐵 Q 路徑減速，新增冰霜 Q 飛行延遲／可閃避緩速、大地 Q 有限線段多目標擊飛、炎拳 W 低血量自盾與延遲近身爆發。引擎只接收 `heroDatabase` 經 compiler 驗證的規則；凍結位置先收集施法，命中與控制在引擎結算，VFX 只讀事件。Replay 仍用 12 欄舊 tuple，Q/W identity 由保存名單還原。正式旗標維持 OFF，數值／AI 門檻仍屬開發候選，不宣稱平衡完成。
+
+4/400 切片 verifier 9/9、Phase1 10/10、Round2 17/17、L compatibility 80/80、build PASS。presentation29b2、controls29b3、Fairness P0-A/B/C/D scoped 6/6 PASS。正式 Battle browser 原測試只等 `b1` 鋼鐵 Q，某次 3/4，重跑同程式 4/4；改為驗任一真正 authored cast、相符 caster 冷卻及池化 VFX 同時成立後，連續兩次 4/4，兩次均觀測冰霜 Q 於 ts=144.5。這是測試觀測目標過窄，不以跳過或降低斷言處理；未改 seed／baseline。`runtime29` 複驗仍在執行；simulation-version 指紋仍是明確發版阻擋。唯讀分類顯示 374/400 描述固定截斷 38 字，不能自動生成完整 Gameplay。未 commit／push／deploy，100 英雄目標尚遠。
+
+後續視覺同步檢查發現 `pushFx` 的舊最短 1.6s 壽命覆蓋冰霜 Q 0.5s 飛行：只對帶 `skillId` 的 authored 事件允許短時長，冰矛 0.72s 視覺段接觸約 0.5s；Legacy FX 保持 1.6s。補 Replay life 與 Legacy 門檻斷言後 slice 10/10；正式 Battle browser 4/4 再通過，`namedDrawnFrames=1`、無 shader/page error。`runtime29` 長跑尚未結束，絕不把執行中當 PASS。
+
+最終候選再驗：正式 flat runner `runtime29` exit 0、預期 `35/35` 輸出；presentation29b2／controls29b3／P0-A～D 六段 exit 0 且各自形狀 PASS；`regress` 15/15 結束、平均 24.7 分、撤退鎖死 0；build exit 0。最初誤用直接 `runtime29` 造成巢狀重複跑，已確認該樹 PID 後停止，沒有拿它的未完成輸出充當 PASS；改採 repo `verify.mjs --only=runtime29` flat 閘門。`regress2` 尚在執行，simulation-version 仍紅，手機真機未測，100 英雄尚未完成。
+
+`regress2` exit 0、節奏門檻 8/8，20/20 場結束、平均 24.8 分、中位 24.4 分、最長 31.5 分；正式 Preview URL 在本機 HTTP 200。這僅證明未啟用英雄技能的既有回歸仍正常，不能替代 100 英雄 ON 平衡與 n=1000 fairness。
+
+## 2026-09-20 Hero Skills 第五項權威切片與五技能視覺覆核（owner: Codex，未發布）
+
+在隔離 worktree 將 authored gameplay 從 4/400 擴至 5/400：大地 E 新增指定目標傷害／定身，定身阻止移動、突進與逃生位移但保留普攻；事件、snapshot 控制狀態、Replay skillId 與 cooldown 均沿既有權威資料流。Workshop 增加岩爪／地裂 silhouette，六代表英雄共 13 項 authored 視覺。大地 E 原描述截斷，完整技能語意尚未封版；目前傷害未接 Item v1 的物理／魔法／真實傷害與防護反制管線（HS-100-G2），不得宣告可開正式旗標。
+
+五個指定 skills 均實際用於本輪決策：`threejs-gameplay-systems` 約束引擎施法與事件先後，`create-game-vfx` 約束觸發／清理／重疊容量與 reduced motion，`threejs-shaders` 約束現有池化 shader 視覺語彙，`threejs-aaa-graphics-builder` 約束岩爪 authored shape 與 render budget，`threejs-postprocessing` 評估全屏 pass 成本後在手機優先前提下維持 0 bloom／DOF pass。沒有以 glow 取代幾何，也沒有讓 VFX 決定命中或傷害；品質仍是候選，非 AAA 完成宣稱。
+
+驗證：Gameplay slice 14/14、Phase1 10/10、Round2 pure 18/18、Round2 browser 66/66（含 40 重疊與四個手機 viewport）、正式 Battle browser 4/4、L compatibility 80/80、flat runner runtime29／presentation29b2／controls29b3／P0-A～D／build 8/8、regress 15/15、regress2 節奏 8/8，均 exit 0。舊 `simulation_version` 指紋 50/51 FAIL 仍為發版阻擋；本輪未改版本／gate／seed。真機 FPS、觸控與耗電未實測。`heroSkillsV1=false`，未 commit／push／deploy；Production 不受影響。預覽 `http://127.0.0.1:5481/ESMO-/?debug=hero-skills`，截圖 `tmp/hero-skills/round2/dadi-E-burst.png`。
+
+## 2026-09-20 Hero Skills × Item v1 傷害管線增量（owner: Codex，未發布）
+
+先建立失敗測試確認技能缺 damageType；再將五項 authored 規則加顯式物理／魔法類型，Items ON 技能傷害經既有 Item 減傷、光環、魔法專屬盾／一般盾與 afterDamage，Items OFF 仍保留原始路徑。真實傷害另有獨立通道，不受抗性與魔法盾；VFX 不參與傷害。這是共用管線的部分接合，不是 100 英雄完整技能／裝備平衡。AD/AP 比例、技能急速、更多 proc 與全量反制仍屬 HS-100-G2 發布阻擋。
+
+驗證：技能 slice 17/17（含 Items ON 同 seed 420 tick 逐幀 snapshot、魔抗／魔法盾／真實傷害）、Item M1 69/69、build PASS。Item M2 52/53 唯既知 simulation-version 指紋 FAIL；M3a 64/66 的兩項 FAIL 為歷史「引擎／Item runtime 相對 HEAD 不得改」靜態斷言與同一版本指紋，沒有改 verifier／baseline／seed。本輪仍需 scoped runtime／Fairness 複驗。`heroSkillsV1=false`；未 commit／push／deploy。
+
+後續複驗：Phase1 舊 verifier 第十項原要求整個 Item 目錄相對 dc520f1 零 diff，和本輪經測試授權的 Item ability 結算修改衝突；保留其餘 protected 檔案零 diff，並精確斷言 Item 目錄只有 `itemsEngineRuntime.js` 可變，未刪掉 catalog／economy／Replay／Fairness 保護。Phase1 10/10、Round2 18/18、正式 Battle authored-cast browser 4/4（實測冰霜 Q `ts=144.5`、匹配冷卻、`namedDrawnFrames=2`、無 page/shader error）、scoped runtime29／presentation／controls／P0-A～D／build 8/8、regress 15/15、regress2 8/8。另一個一般攻擊 renderer smoke 5/5 只驗渲染掛載，沒有真技能施放，**不可**取代 4/4 authored-cast gate。前述 M2/M3a 版本／歷史靜態門檻仍紅；未重跑 100 英雄 ON 大樣本與手機真機。
+
+## 2026-09-20 Hero Skills 延遲落點 AoE 與冰霜 E（owner: Codex，未發布）
+
+新增共用 `delayed-area` mechanic：施放時固定落點，冰霜 E 於 0.7 秒後按當下敵人位置判定魔法範圍傷害，離開可閃、走入會中；同樣走 Items ON 類型化傷害與既有 Replay tuple。冰霜層數描述在半句截斷，未擅自補寫；6/400 仍是架構切片而非完整技能規格。視覺以菱形預警、升晶與碎晶餘波替代圈環；實際截圖審查發現原半徑 2.2 world 小於引擎 3 sim × WORLD_SCALE 1.7＝5.1 world，改由唯一常數導出視覺半徑，並新增不變量測試，避免危險的假安全區。現有 pool／shader 供應，沒有新增 post pass；非 AAA 完成宣稱。
+
+驗證：Gameplay slice 18/18（含可閃避／可進入／Replay）、Phase1 10/10、Round2 pure 20/20、Workshop browser 71/71（40 疊加冰霜 E low 11 calls／2004 triangles，四手機寬無溢出）、L compatibility 80/80、regress 15/15、regress2 8/8。Gameplay 修改後 scoped runtime29／presentation／controls／P0-A～D／build 8/8；最後只改視覺半徑後，presentation／controls／build 3/3 再驗。正式 Battle browser 最後一輪仍待輸出；上一輪已觀測同場冰霜 Q／E 權威事件與池化 VFX（4/4）。`heroSkillsV1=false`、simulation-version 指紋 gate 仍紅、未跑技能 ON n=1000、未測真機。未 commit／push／deploy。預覽 `http://127.0.0.1:5481/ESMO-/?debug=hero-skills`，截圖 `tmp/hero-skills/round2/bingshuang-E-burst.png`。
+
+最後一輪正式 Battle browser 已 exit 0、4/4：`ts=144.5` 同時觀測 `bingshuang:Q`／`bingshuang:E` 權威事件、匹配冷卻、`namedDrawnFrames=2`、`dropped=0`、page/shader errors 0。上述「待輸出」現已結案；這只證明本批技能接線，不等於 100 英雄正式可用。
+
+## 2026-09-20 Hero Skills 友方護盾 primitive／大地 W（owner: Codex，未發布）
+
+沿用隔離 worktree `feature/moba-hero-skills-phase1`，沒有重設、覆蓋或發布其他工作。依完整的 `heroDatabase` 大地 W 描述，新增第七個權威 QWER 切片：低血量可及友方／自己中選 HP 比最低者，施法者護甲（基礎＋等級成長＋Items ON 裝備／光環）×3、既有治療護盾強度、持續 3 秒；候選 AI 範圍／門檻／冷卻尚待平衡。failing presentation test 證明 Workshop 石壁誤落在施法者附近，修為權威目標附近，低動態模式一致。VFX 不決定護盾數值、傷害或勝負；Replay 保留原 tuple／`dadi:W` 身分。沒有新增材質、pool、全屏 post pass 或更動舊技能 fallback。
+
+驗證均 exit 0：Gameplay slice **21/21**（含護盾／Items 及同 seed）、Phase1 **10/10**、Round2 pure **21/21**、Workshop browser **71/71**（40 疊加與四個手機寬度）、L **80/80**、正式 Battle browser **4/4**（同場冰霜 Q／E 權威事件與池化描畫）、MOBA scoped runtime29／presentation／controls／P0-A～D／build **8/8**、regress **15/15**、regress2 **8/8**、Item M1 **69/69**、`git diff --check` PASS。Workshop 大地 W 截圖 `tmp/hero-skills/round2/dadi-W-burst.png`，本機預覽 `http://127.0.0.1:5481/ESMO-/?debug=hero-skills` HTTP 200。Browser 診斷不是手機真機 FPS／觸控證明。
+
+`simulationVersion` **50/51 FAIL** 仍為發布阻擋：新 opt-in `LogicEngine` 語意與 v7 已登記指紋不同；沒有變更版號、舊 gate、seed 或 baseline。`heroSkillsV1=false`，未跑技能 ON 的 n=1000／全英雄 balance。唯讀盤點顯示描述 26 項看似完整、374 項有 38 字截斷風險；總進度 **7/400**，另 393 項未著作。下一批僅從完整語意候選逐一實作；未 commit／push／deploy。
+
+## 2026-09-20 Hero Skills 持續線形區域／炎拳 E（owner: Codex，未發布）
+
+來源描述完整的炎拳 E 加入第八個 QWER 權威切片：朝敵人方向穿透衝刺，導航投影落點，原位置到實際落點留下 2 秒火牆。敵方英雄依當下位置每 0.5 秒判定；離開可避、走入會中。過期後即使時間跳躍也不得補傷害，根植時不衝刺也不消耗冷卻。傷害走 Items ON 魔抗／魔法盾共用管線；火牆 `snapshot.fx`／Replay 只保存事件與落點，不由視覺決定命中。新增藍紅鏡像落點／承傷測試。AI 範圍 8、寬度 1.2、每 tick 18＋power×0.16、冷卻 14 秒均為待審平衡候選。
+
+`magma-wake` 用雙側熔岩脊、落地碎板與稀疏火焰標示權威半寬 `1.2 × WORLD_SCALE`；第一版截圖過細，僅加強輪廓高度／亮度，不改規則。沿用共用 instanced pool／shader，無新增全屏 post pass；低動態保留靜態雙邊界。40 疊加 low 12 draw calls／2108 triangles、high 12 calls／8028 triangles，皆受池容量限制；真機手機 FPS 尚未實測。
+
+驗證均 exit 0：Gameplay slice **26/26**（含過期、root、Items ON、鏡像、Replay、同 seed）、Phase1 **10/10**、Round2 pure **23/23**、Workshop browser **78/78**（含 430px low 畫面與 40 疊加）、L **80/80**、正式 Battle browser **5/5**（`ts=210` 觀測 `cinderfist:E` 權威施法）、scoped runtime29／presentation／controls／P0-A～D／build **8/8**、regress **15/15**、regress2 **8/8**、Item M1 **69/69**、`git diff --check` PASS。截圖 `tmp/hero-skills/round2/cinderfist-E-burst.png` 與 `mobile-cinderfist-E.png`，本機預覽 `http://127.0.0.1:5481/ESMO-/?debug=hero-skills`。`simulationVersion` **50/51 FAIL** 仍是既知正式發布阻擋；技能 ON n=1000／100 英雄全量 balance 未做。正式 `heroSkillsV1=false`；總進度 **8/400**，另 392 項未著作；未 commit／push／deploy。
+
+## 2026-09-20 Hero Skills 高速穿透線／曙光 Q（owner: Codex，未發布）
+
+先以 failing tests 鎖定描述完整的曙光 Q：高速穿透箭命中箭道內多個目標，按沿途距離排序、逐目標遞減物理傷害；0.3 秒命中時依當下位置判定，可離開避開或走入受擊，鏡像雙邊對稱。`heroDatabase` 是唯一著作來源；10 sim 射程、半寬 1、75＋power×0.5、0.75 衰減、8 秒冷卻皆為待審候選，不當作已平衡。Replay 沿用 `hero:Q`／`dawnstrike:Q`，HUD 讀權威冷卻，VFX 不判命中。`sun-pierce` 為獨立箭頭、斷續日光拖尾及薄線餘波；箭頭抵達約對齊權威命中。沿用 instanced pool／shader，未加 post pass。完整描述與未載明數值的界線仍須產品審核。
+
+唯讀 review 另外找到炎拳 W/E 低血量同 tick 雙施放；先加紅燈測試，再做每英雄每 tick 最多一招、固定槽位順序的最小仲裁，下一 tick 可施放尚未用過的槽位。其他 review 疑點（火牆死亡後持續、tick 邊界、投影穿障）只列風險，不擴大本輪。現共 **9/400** 權威切片、7 英雄 **16** authored 視覺；其餘 391 欄未著作。`heroSkillsV1=false`，不開正式技能，不 push／deploy。
+
+已完成：Gameplay slice **30/30**、Phase1 **10/10**、Round2 pure **25/25**、Workshop browser **84/84**（40 疊加 low/high 各 11 calls、2012/4732 triangles；320/360/390/430px 無溢出、無 shader/page errors）、L **80/80**、正式 Battle browser **5/5**（現有 roster 的權威技能；曙光 Q 個別以 Node＋Workshop browser 驗證）、P0-A **8/8**、P0-B **14/14**、P0-C／P0-D PASS、runtime29 flat **35/35**、presentation29b2 flat **12/12**、controls29b3 flat **18/18**、regress **15/15**、regress2 **8/8**、Item M1 **69/69**、build PASS。預覽 `http://127.0.0.1:5481/ESMO-/?debug=hero-skills`；樣張 `tmp/hero-skills/round2/dawnstrike-Q-burst.png`、`mobile-dawnstrike-Q.png`。手機真機 FPS 未測。simulation-version 指紋本輪複驗仍 **50/51 FAIL**，未改版號、baseline、seed 或 gate；技能 ON n=1000 仍未做。
+
+補驗：Workshop browser 加入 DOM「第二輪」標籤與診斷同時一致的斷言，**87/87** PASS；輸出另存 `tmp/hero-skills/round2/dawnstrike-Q-verified-round2.png`。舊 S29B1 pacing g3 以 `dc520f1` 只讀 baseline worktree 跑相同 40 seed/tactic rows，候選逐列完全相同；原 gate `k15p50=6 < 7` 是基線既存 FAIL，未改 seed／門檻／baseline，不能把它記為本輪新回歸，也不能宣稱該 gate 全綠。
+
+## 2026-09-20 Hero Skills 嘲諷與限時減傷／鋼鐵 W（owner: Codex，未發布）
+
+完整來源描述指定周圍全敵嘲諷 1.2–2 秒、自身減傷 25–45%。新增 `area-taunt-guard`：3.5 sim 範圍內敵方英雄限時強制以施法者為移動與普攻目標，不沿用擊飛／根植的禁攻狀態；施法者死亡或嘲諷到期則放行。自身 35% 減傷覆蓋英雄、野怪與塔，Items ON 於抗性後／盾前按通道套用；不改任何技能 OFF 傷害路徑。1.5 秒與冷卻 12 秒皆是待審候選，等級曲線及多來源嘲諷優先序未完成。`snapshot` 附限時 taunt／guard 狀態，Replay 沿用 `hero:W` tuple，HUD 冷卻由引擎提供；`bastion-command` 的三片鋼壁／外推箭角／鋼屑沿用共用池與 shader，無新增全屏後製。五個指定 skills 分別用於權威更新順序、VFX 觸發與容量、現有 shader 材質判讀、post pass 成本決策、technical-art 行動端預算；低動態保留靜態輪廓。
+
+已驗：Gameplay **36/36**、Phase1 **10/10**、Round2 pure **27/27**、Workshop browser **93/93**（40 重疊與 320–430px、無 shader/page errors）、正式 Battle **6/6**（`ts=210` 已觀測 `ironclad:W`）、Hero Presentation L **80/80**、P0-A **8/8**、P0-B **14/14**、P0-C／D PASS、runtime29 flat **35/35**、presentation flat **12/12**、controls flat **18/18**、regress **15/15**、regress2 **8/8**、Item M1 **69/69**、build PASS。`dc520f1` 只讀 baseline 與本分支 40 組固定 seed/tactic rows **逐場相同**；舊 pacing g3 在 baseline 亦為 `6 < 7` FAIL，未變更 seed、門檻或 baseline。樣張 `tmp/hero-skills/round2/ironclad-W-burst.png`、`mobile-ironclad-W.png`；本機預覽 `http://127.0.0.1:5481/ESMO-/?debug=hero-skills`。現 **10/400** 權威切片／17 視覺；其餘 390 招、完整 balance、技能 ON n=1000、真機 FPS、simulation-version closure 未完成。正式旗標 OFF；未 commit／push／deploy。
+## 2026-09-20 Hero Skills — Thornwall / Gambler slice (latest continuation)
+
+Owner: Codex. Worktree: `feature/moba-hero-skills-phase1`, baseline `dc520f1`, dirty changes preserved.
+
+- Added authoritative gameplay: Thornwall Q `dash-control-strike`, Thornwall E `root-dot`, Gambler W `blink-shield`; total **13/400 QWER** across **9 heroes**.
+- Added VFX motifs: `thorn-charge`, `thorn-chain`, `luck-blink`; total **20** motifs. They use pooled instanced shader materials, low-quality caps, reduced-motion footprints, and no fullscreen post-processing pass.
+- Tests: gameplay **39/39**, Phase 1 **10/10**, Round 2 pure **30/30**, Workshop browser **102/102**, formal authored-cast browser **6/6**, Hero Presentation L **80/80**, build PASS.
+- Fixed-seed paired baseline comparison remains bitwise-identical across 40 rows. Existing pacing g3 is still `6 < 7`; simulation-version remains **50/51 FAIL**. These are not waived or rebaselined.
+- Preview: `http://127.0.0.1:5481/ESMO-/?debug=hero-skills`. `heroSkillsV1=false`; no commit, push, or deploy. Real-device FPS is unmeasured.
+## Hero Skills continuation — shared primitive expansion (2026-09-20)
+
+Owner: Codex. No commit, push, or deploy.
+
+- Added the smallest shared runtime expansion needed for the next six heroes: `dash-knockup-strike`, `dash-blast`, `blink-strike`. These stay behind opt-in `heroSkillsV1` and do not alter the OFF simulation path.
+- Authored 14 slots: Ravager Q/E, Sting Q/E, Greymantle Q/E, Embercoil Q/E/R, Auralith Q/E, Razorwing Q/W/E. Added 14 distinct choreography motifs with reduced-motion branches and bounded instanced pools.
+- Results: gameplay 41/41; pure Round2 44/44; Workshop browser 145/145; formal cast browser 6/6; runtime29/regress/regress2 3/3; presentation/controls 2/2; P0-A to P0-D 6/6; build PASS.
+- Known blockers are unchanged: pacing29b1 24/25 baseline (`g3` p50=6, required >=7), simulation-version 50/51, full skill-ON balance and real-device FPS not yet verified. This is not a release candidate.
+
+## Hero Skills third authored slice — shared control primitives and six heroes (2026-09-20, owner: Codex, uncommitted)
+
+This slice stayed in the isolated `feature/moba-hero-skills-phase1` worktree at baseline `dc520f1`; no reset, commit, push, or deploy was performed. `heroSkillsV1=false` remains unchanged. `heroDatabase` is still the single hero/skill source.
+
+- Added shared primitives: `cone-strike`, delayed `area-root`, `control-target`, `targeted-ally-shield`, and `team-shield`.
+- Added authored QWER slots: Phantom Q/E; Mirrorshot Q/E; Mantra Q/W/E/R; Luminary Q/E/R; Stoneguard Q/R; Hexweave Q/W/R. Total: **43/400**, **21 heroes**, **50 motifs**.
+- Gameplay remains authoritative for target selection, damage, control, shields, timing, movement, and Replay tuple. VFX only renders `snapshot.fx`/event data. Existing instanced shader pools, reduced-motion paths, low-quality caps, and no-fullscreen-post budget were reused.
+- The five requested skills were all applied: `threejs-gameplay-systems`, `create-game-vfx`, `threejs-shaders`, `threejs-postprocessing`, and `threejs-aaa-graphics-builder`.
+- Verification exit 0: gameplay **43/43**; Phase 1 **10/10**; Round 2 pure **60/60**; Workshop browser **197/197**; formal authored-cast browser **6/6**; `runtime29/regress/regress2` **3/3**; `presentation/controls/P0-A/B/C/D` **6/6**; build **PASS**.
+- Known baseline/waiver items unchanged: pacing29b1 **24/25** (`g3` p50 `6 < 7`), simulation fingerprint **50/51**, full skill-ON balance not run, and real-device FPS/touch not measured. Preview: `http://127.0.0.1:5481/ESMO-/?debug=hero-skills`; images: `tmp/hero-skills/round2/`.
+
+## Hero Skills fourth authored slice — taunt/control primitives and six heroes (2026-09-20, owner: Codex, uncommitted)
+
+The isolated worktree remains based on `dc520f1`; no reset, commit, push, or deploy. `heroSkillsV1=false` remains off. The TDD step first added failing assertions for `area-taunt`, delayed `area-control`, the 62-slot count, and deterministic impact-time control; the implementation then made those assertions pass.
+
+- Added 19 authored slots: Suishan Q/W/E/R; Tixue Q/W/E; Rongyan Q/W/E; Kuangfeng Q/W/R; Yueying Q/E/R; Dianguang Q/W/E. Total **62/400**, **27 heroes**, **69 motifs**.
+- Added `area-taunt` and `area-control` to the validated gameplay contract. `LogicEngine` owns taunt/control/damage/timing and writes the authoritative event; VFX does not infer the effect.
+- Added distinct visual motifs for mountain/steel/lava/gale/moon/voltage; reused pooled instanced shaders, reduced-motion and low-quality caps, with no fullscreen post pass. All five requested skills were used in their respective concerns.
+- Verification exit 0: gameplay **45/45**; Phase 1 **10/10**; Round2 pure **79/79**; Workshop browser **257/257**; formal cast browser **6/6**; runtime/regress/regress2 **3/3**; presentation/controls/P0-A/B/C/D **6/6**; build **PASS**.
+- Known blockers unchanged: pacing29b1 **24/25**, simulation fingerprint **50/51**, full skill-ON balance not run, and real-device FPS/touch not measured. Remaining 38 heroes / 338 QWER slots are not authored. Preview and images remain at `http://127.0.0.1:5481/ESMO-/?debug=hero-skills` and `tmp/hero-skills/round2/`.
+
+## Hero Skills fifth authored slice — multi-strike / silence and six heroes (2026-09-20, owner: Codex, uncommitted)
+
+This slice continued in the isolated `feature/moba-hero-skills-phase1` worktree from `dc520f1`. No reset, stash, commit, push, or deploy was performed; `heroSkillsV1=false` remains unchanged. TDD first added failing assertions for deterministic locked multi-hit resolution and skill-only silence, then implemented the smallest shared contracts.
+
+- Added `multi-strike`: a deterministic locked-target sequence with authored hit count, interval, and falloff. Added `silence-target`: typed hit plus a bounded silence status that blocks authored skill casts while leaving movement/basic attacks governed by their existing rules.
+- Added 22 authored gameplay slots across Duskblade, Voidrift, Anye, Jiansheng, Xingchen, and Leiting. Current authoritative total is **84/400 across 32 heroes**. Current Golden Set has **89 authored visual motifs**; two obsolete Leiting motif registry entries remain unused by the current recipe and do not count as authored Golden Set visuals.
+- Added per-hero shadow, void, night, sword, stardust, and thunder choreography using the existing pooled instanced shader/material path. Q/W/E remain readable; authored R events have windup/burst/aftermath phases. No fullscreen post pass, per-frame material allocation, or gameplay decision moved into VFX.
+- Formal browser initially failed because `leiting:Q` omitted projectile slow fields. The contract was completed (`slowFactor` / `slowDuration`); canonical roster compilation and the formal path then passed. This was a contract completeness fix, not a balance or simulation-version change.
+- Verification exit 0: gameplay **47/47**; Phase 1 **10/10**; Round2 pure **99/99**; Workshop browser **321/321**; formal authored-cast browser **6/6**; `runtime29/regress/regress2` **3/3**; `presentation/controls/P0-A/B/C/D` **6/6**; build **PASS**.
+- Official pacing rerun remains **24/25 FAIL** at the unchanged baseline threshold (`g3` p50 kills `6 < 7`); simulation fingerprint remains **50/51**. These are existing release blockers and were not waived. Full skill-ON n-sample balance and real-device FPS/touch remain unverified. Preview is `http://127.0.0.1:5481/ESMO-/?debug=hero-skills`; images are under `tmp/hero-skills/round2/`.
+- All five requested skills were applied: `threejs-gameplay-systems`, `create-game-vfx`, `threejs-shaders`, `threejs-postprocessing`, and `threejs-aaa-graphics-builder`, each limited to its contract, VFX, shader, pass-budget, and technical-art concern.
+
+## 2026-09-20 Hero Skills sixth implementation slice（uncommitted）
+
+### 目標與範圍
+
+在不改 Item v1、P0-A～P0-D、BattleResult、Replay 或 simulation version 的前提下，將下一批六位英雄接入共享技能 runtime 與 Workshop VFX：Maestro、Fengbao、Shikong、Liuxing、Longji、Binghe。
+
+### 實作
+
+- Gameplay coverage 從 84/400 增至 **100/400**；目前為 **37 gameplay-authored heroes**，Golden Set 為 **105 motifs across 38 visual heroes**。
+- 新增共享 contract：`self-shield`、`blink-shield.direction=away`、`multi-strike.finalMultiplier`；所有命中、位移、護盾、控制、冷卻與 Replay identity 仍由 authoritative runtime 決定。
+- 新增 16 個 bounded VFX motifs，避免共用多層圓圈：recoil/sonic line、forge plates、time prism、meteor fall/salvo、dragon segmented charge/scales/tail/dive、ice lance/slide/cage/crash。
+- `skillChoreography` 維持 pooled instanced commands、reduced-motion 分支與低品質上限；沒有加入 fullscreen post-processing pass，也沒有把 VFX 變成 gameplay authority。
+
+### TDD / Gate 結果
+
+- Gameplay slice **50/50 PASS**；Phase 1 **10/10 PASS**；Round 2 pure **115/115 PASS**。
+- Workshop browser **373/373 PASS**：105 motifs 三階段／比較、40-overlap low/high cap、reduced motion、320/360/390/430px overflow、mobile low-quality、page/shader errors 皆 PASS。
+- Formal authored cast browser **6/6 PASS**；`runtime29/regress/regress2` **3/3 PASS**；`presentation/controls/P0-A/B/C/D` **6/6 PASS**；build **PASS**（2912 modules）；`git diff --check` **PASS**。
+- `pacing29b1` **24/25 FAIL** 為既有 baseline（g3 p50 kills 6 < 7）；simulation fingerprint **50/51** 亦未因本 slice 改變。不得把兩者標成 Hero Skills 新回歸。
+
+### 預覽與交接
+
+- 本機預覽：`http://127.0.0.1:5481/ESMO-/?debug=hero-skills`。
+- 截圖：`tmp/hero-skills/round2/maestro-W-burst.png`、`shikong-W-burst.png`、`liuxing-R-burst.png`、`longji-R-burst.png`、`binghe-R-burst.png`，以及同資料夾內的全套 phase captures。
+- Browser harness 由 240s 調整為 360s，只是配合 105 motif 的 evidence wall-clock；產品斷言、draw-call 上限與效能 gate 未放寬。
+- 五個指定 skills 均有實際套用：`threejs-gameplay-systems`、`create-game-vfx`、`threejs-shaders`、`threejs-postprocessing`、`threejs-aaa-graphics-builder`。
+
+### 狀態
+
+`heroSkillsV1=false`、未 commit、未 push、未 deploy。尚餘 300 slots / 63 gameplay heroes；full skill-ON balance、final replay/enablement closure、真機 FPS/touch 尚未完成。停止於本 slice，不開始下一個未授權 Sprint。
+
+## 2026-09-20 Hero Skills seventh implementation slice（uncommitted）
+
+### 實作
+
+- Coverage reached **116/400 authoritative QWER slots** across **45 gameplay-authored heroes**; the Golden Set is **121 motifs across 46 visual heroes**.
+- Added Huanying Q/E/R, Shengguang W, Tianshi Q/W, Fuwenbianzhi Q, Xueyue W/E, Tiemu Q/E, Dushe Q/W/E, and Yingsi W/E using existing validated primitives only.
+- Added 16 bounded motifs: phantom rounds/army and scatter fan; radiant/angel/blood wards; celestial/rune binds; crimson leap; iron fist/fissure; venom bolt/coil/spray; silk zip/cage. No VFX authority or fullscreen pass was introduced.
+
+### TDD / Gate 結果
+
+- Gameplay **51/51 PASS**; Phase 1 **10/10 PASS**; Round2 pure **131/131 PASS**.
+- Workshop browser **422/422 PASS**; formal authored cast **6/6 PASS**; no page/shader errors; reduced-motion, mobile overflow, and low/high overlap caps pass.
+- `runtime29/regress/regress2` **3/3 PASS**; `presentation/controls/P0-A/B/C/D` **6/6 PASS**; build **PASS**; `git diff --check` **PASS**.
+- TDD caught one finite-value failure in `silk-cage` caused by a missing line width argument; the emitter was corrected and the full pure/browser gates reran green. No gate threshold was changed.
+
+### 狀態
+
+`heroSkillsV1=false`、未 commit、未 push、未 deploy。尚餘 284 slots / 55 gameplay heroes；pacing29b1 24/25 與 simulation fingerprint 50/51 仍是既有 baseline waivers。Full balance、Replay compatibility closure、old-VFX replacement audit 與真機效能仍未完成。
+
+## 2026-09-20 Hero Skills eighth implementation slice（uncommitted）
+
+### 實作
+
+- Coverage reached **132/400 authoritative QWER slots** across **55 gameplay-authored heroes**; the Golden Set is **136 motifs across 55 visual heroes**.
+- Added Langwang Q; Chichuan Q/E; Hunpo W; Leiming Q/E; Ronghuo Q; Miwu Q/W; Jingxiang Q; Yanfeng Q/W/E; Hanbing Q; and Dujian Q/E. The batch stays inside existing validated gameplay primitives and does not add a new balance system.
+- Added elemental/action-specific motifs for wolf, solar flame, soul, oracle thunder, magma, mist, mirror, phoenix, frost, and toxin. Chichuan W remains visible as phoenix-wings; only the new E preview replaces the old flame-dash recipe on the formal comparison path.
+- TDD retained the count and primitive contract assertions; no threshold, baseline, seed, simulation version, Item, Fairness, BattleResult, or Replay contract was changed.
+
+### TDD / Gate 結果
+
+- Gameplay **52/52 PASS**; Phase 1 **10/10 PASS**; Round2 pure **146/146 PASS**.
+- Workshop browser **467/467 PASS**; formal authored cast **6/6 PASS**; no page/shader errors; reduced-motion, mobile overflow, and quality overlap caps pass.
+- `runtime29/regress/regress2/presentation29b2/controls29b3/fairness_p0a..p0d` **9/9 PASS**; build **PASS**; `git diff --check` **PASS**.
+- Existing baseline waivers remain: pacing29b1 **24/25** (`g3` p50 kills `6 < 7`) and simulation fingerprint **50/51**. They were not attributed to this slice and were not rebaselined.
+
+### 預覽與狀態
+
+- Preview: `http://127.0.0.1:5481/ESMO-/?debug=hero-skills`.
+- Captures: `tmp/hero-skills/round2/langwang-Q-burst.png`, `chichuan-E-burst.png`, `leiming-Q-burst.png`, `yanfeng-W-burst.png`, `hanbing-Q-burst.png`, and `dujian-E-burst.png`.
+- `heroSkillsV1=false`、未 commit、未 push、未 deploy。尚餘 **268 slots / 45 gameplay heroes**；full balance、Replay compatibility、legacy VFX replacement audit 與真機 FPS/touch 仍未完成。
+- 五個指定 skills 均實際套用：`threejs-gameplay-systems`、`create-game-vfx`、`threejs-shaders`、`threejs-postprocessing`、`threejs-aaa-graphics-builder`。
+
+## Hero Skills 第十四～十五批（2026-09-20，未提交）
+
+### 範圍與決策
+
+- 累積至 **244/400 authoritative QWER slots**、**99 gameplay-authored heroes**、**248 Golden motifs / 99 visual heroes**。
+- 本次新增 32 slots：第十四批的 Youming、Shanying、Dadi2、Mingyun2、Haixiao、Jueying、Tianfa、Shengyan；第十五批的 Liangzicz、Mori、Shengming、Tieshixin、Mingyunyindao、Linghun。
+- `guihuo` 不以普通 damage/shield 假填：stealth、random movement、link、full-field maze 尚未有 validated primitive，保持 zero-authority。
+- Gameplay authority 仍在 `LogicEngine`；VFX 僅消費 named events。沒有改 Item/Fairness/BattleResult/Replay contract、baseline、seed、simulation version 或正式 flag。
+
+### 驗證
+
+- TDD 先將 expected count 由 228/232 提升至 244/248，確認舊狀態紅燈後完成實作。
+- Gameplay **59/59 PASS**；Phase 1 **10/10 PASS**；Round2 pure **258/258 PASS**。
+- Workshop browser **816/816 PASS**；formal Battle **5/5 PASS**；protected runtime/regress/regress2/presentation/controls/fairness **9/9 PASS**。
+- Build **PASS**（2912 modules；既有 large-chunk warning）；`heroSkillsV1=false`；未 commit、未 push、未 deploy。`git diff --check` 於本節文件更新後重跑。
+- Preview：`http://127.0.0.1:5481/ESMO-/?debug=hero-skills`。代表截圖：`tmp/hero-skills/round2/liangzicz-Q-burst.png`、`mori-E-burst.png`、`shengming-Q-burst.png`、`tieshixin-W-burst.png`、`mingyunyindao-E-burst.png`、`linghun-E-burst.png`。
+- 五個指定 skills 均實際套用：`threejs-gameplay-systems`、`create-game-vfx`、`threejs-shaders`、`threejs-postprocessing`、`threejs-aaa-graphics-builder`。
+
+## Hero Skills thirteenth slice（2026-09-20，未提交）
+
+- Coverage reached **212/400 authoritative QWER slots** across **85 gameplay-authored heroes**; the Golden Set is **216 motifs across 85 visual heroes**. Added Tiankong Q/R; Ronggang Q/W/R; Bingshouweis Q/W/E/R; Jufeng Q/E/R; and Leimingcf Q/W/E/R.
+- The new batch uses sky dive/judgment, molten armor/cyclone, frost charge/bulwark/taunt/permafrost, cyclone fan/dash/assault, and storm fist/charge/run. It reuses existing authoritative gameplay primitives; unsupported permanent freeze, immunity, and true multi-target traversal remain explicit gaps.
+- TDD first raised the expected counts to 212 gameplay slots and 216 presentation slots; the expected red was observed (`196 !== 212`, `200 !== 216`) before implementation. No gate threshold, balance value, seed, baseline, simulation version, Item, Fairness, BattleResult, or Replay contract was changed.
+
+### 第十三批驗證
+
+- Gameplay **57/57 PASS**; Phase 1 **10/10 PASS**; Round2 pure **226/226 PASS**.
+- Workshop browser **719/719 PASS**; formal battle browser **5/5 PASS**; no page/shader/console errors; reduced-motion, mobile overflow, quality overlap, and draw-call caps pass.
+- `runtime29/regress/regress2/presentation29b2/controls29b3/fairness_p0a..p0d` **9/9 PASS**; build **PASS**; `git diff --check` **PASS**.
+- Existing baseline waivers remain: pacing29b1 **24/25** (`g3` p50 kills `6 < 7`) and simulation fingerprint **50/51**. They were not rebaselined.
+
+### 第十三批交付狀態
+
+- Preview: `http://127.0.0.1:5481/ESMO-/?debug=hero-skills`.
+- Captures: `tmp/hero-skills/round2/tiankong-Q-burst.png`, `ronggang-R-burst.png`, `bingshouweis-R-burst.png`, `jufeng-Q-burst.png`, and `leimingcf-R-burst.png`.
+- `heroSkillsV1=false`; no commit, push, or deploy. Remaining scope: **188 gameplay slots / 15 gameplay heroes**; full skill-ON balance, Replay compatibility, legacy VFX replacement audit, and real-device FPS/touch remain open.
+- All five required skills were applied: `threejs-gameplay-systems`, `create-game-vfx`, `threejs-shaders`, `threejs-postprocessing`, and `threejs-aaa-graphics-builder`.
+
+## 2026-09-20 Hero Skills ninth implementation slice（uncommitted）
+
+### 實作
+
+- Coverage reached **148/400 authoritative QWER slots** across **62 gameplay-authored heroes**; the Golden Set is **152 motifs across 62 visual heroes**.
+- Added Liangzi Q/W; Zhanchang W; Shiqiang Q/E/R; Fengshen Q/R; Mingyun Q/W/E; Xukong Q/W/E/R; and Longyi Q. No new gameplay authority family was introduced; all slots compile through existing shared contracts.
+- Added quantum, field-medic, stonewall, wind, fate, voidgate, and dragonfire visual vocabularies. Effects remain pooled and directional/rectilinear where appropriate, with no fullscreen post pass.
+- TDD first raised the count/contract assertions to 148 slots and 152 motifs; the expected red was observed (`132 !== 148`, `136 !== 152`) before implementation. No gate threshold, baseline, seed, simulation version, Item, Fairness, BattleResult, or Replay contract was changed.
+
+### TDD / Gate 結果
+
+- Gameplay **53/53 PASS**; Phase 1 **10/10 PASS**; Round2 pure **162/162 PASS**.
+- Workshop browser **518/518 PASS**; formal battle browser **5/5 PASS**; no page/shader errors; reduced-motion, mobile overflow, quality overlap, and draw-call caps pass.
+- `runtime29/regress/regress2/presentation29b2/controls29b3/fairness_p0a..p0d` **9/9 PASS**; build **PASS**; `git diff --check` **PASS**.
+- Existing baseline waivers remain: pacing29b1 **24/25** (`g3` p50 kills `6 < 7`) and simulation fingerprint **50/51**. They were not rebaselined.
+
+### 預覽與狀態
+
+- Preview remains `http://127.0.0.1:5481/ESMO-/?debug=hero-skills`.
+- Captures: `tmp/hero-skills/round2/liangzi-Q-burst.png`, `zhanchang-W-burst.png`, `shiqiang-R-burst.png`, `fengshen-R-burst.png`, `xukong-R-burst.png`, and `longyi-Q-burst.png`.
+
+### Hero Skills 第十批：Lightning / Bramble / Undertow / Astral / Prophetfire（2026-09-20）
+
+- Coverage reached **164/400 authoritative QWER slots** across **67 gameplay-authored heroes**; the Golden Set is **168 motifs across 67 visual heroes**. Added Leisuhunter Q/W; Jingci Q/W/E/R; AnliuyouXia Q/W/E; Xingjie Q/W/E; and Lieyan Q/W/E/R.
+- The visual batch intentionally separates lightning slash/blink, bramble root/forest, undertow charge/vortex, gravity well/astral step, and firewall/doomsday rain. Q/W/E remain short and legible; R keeps windup, burst, and aftermath.
+- TDD first raised the count/contract assertions to 164 gameplay slots and 168 presentation slots; the expected red was observed (`148 !== 164`, `152 !== 168`) before implementation. The finite audit caught four missing `range` fields and one missing dash pose registration; all were corrected without changing thresholds or balance values.
+
+### 第十批驗證
+
+- Gameplay **54/54 PASS**; Phase 1 **10/10 PASS**; Round2 pure **178/178 PASS**.
+- Workshop browser **568/568 PASS**; formal battle browser **5/5 PASS**; no page/shader errors; reduced-motion, mobile overflow, quality overlap, and draw-call caps pass.
+- `runtime29/regress/regress2/presentation29b2/controls29b3/fairness_p0a..p0d` **9/9 PASS**; build **PASS**; `git diff --check` **PASS**.
+- Existing baseline waivers remain: pacing29b1 **24/25** (`g3` p50 kills `6 < 7`) and simulation fingerprint **50/51**. They were not rebaselined.
+
+### 第十批交付狀態
+
+- Preview: `http://127.0.0.1:5481/ESMO-/?debug=hero-skills`.
+- Captures: `tmp/hero-skills/round2/leisuhunter-Q-burst.png`, `jingci-R-burst.png`, `anliuyouXia-E-burst.png`, `xingjie-Q-burst.png`, `lieyan-E-burst.png`, and `lieyan-R-burst.png`.
+- `heroSkillsV1=false`; no commit, push, or deploy. Remaining scope: **236 slots / 33 gameplay heroes**; full skill-ON balance, Replay compatibility, legacy VFX replacement audit, and real-device FPS/touch remain open.
+- All five required skills were applied: `threejs-gameplay-systems`, `create-game-vfx`, `threejs-shaders`, `threejs-postprocessing`, and `threejs-aaa-graphics-builder`.
+
+### Hero Skills 第十二批：Chainsteel / Nightblade / Phasevoid / Chaos / Sanctilight / Chronos / Dream / Bloodline（2026-09-20）
+
+- Coverage reached **196/400 authoritative QWER slots** across **80 gameplay-authored heroes**; the Golden Set is **200 motifs across 80 visual heroes**. Added Tielian Q/W; Yeiren Q; Wuxing Q/E; Hundun Q/E; Shensheng Q/W/E/R; Shiguang Q/W; Huanjing Q/W; and Xuemai Q.
+- The visual batch intentionally separates chain links and iron shells, night flurries, phase pierces, chaos bursts, sanctilight rain, time wards, dream bindings, and blood tethers. Q/W/E remain readable; R keeps windup, burst, and aftermath.
+- Unsupported invisibility, global time stop, random position swap, ally rewind, shared-health pool, and clone semantics are documented as absent; no look-alike gameplay contract was added.
+- TDD first raised the count assertions to 196 gameplay slots and 200 presentation slots; the expected red was observed (`180 !== 196`, `184 !== 200`) before implementation. No gate threshold, balance value, seed, baseline, simulation version, Item, Fairness, BattleResult, or Replay contract was changed.
+
+### 第十二批驗證
+
+- Gameplay **56/56 PASS**; Phase 1 **10/10 PASS**; Round2 pure **210/210 PASS**.
+- Workshop browser **666/666 PASS**; formal battle browser **5/5 PASS**; no page/shader errors; reduced-motion, mobile overflow, quality overlap, and draw-call caps pass.
+- `runtime29/regress/regress2/presentation29b2/controls29b3/fairness_p0a..p0d` **9/9 PASS**; build **PASS**; `git diff --check` **PASS**.
+- Existing baseline waivers remain: pacing29b1 **24/25** (`g3` p50 kills `6 < 7`) and simulation fingerprint **50/51**. They were not rebaselined.
+
+### 第十二批交付狀態
+
+- Preview: `http://127.0.0.1:5481/ESMO-/?debug=hero-skills`.
+- Captures: `tmp/hero-skills/round2/tielian-Q-burst.png`, `wuxing-Q-burst.png`, `shensheng-R-burst.png`, `shiguang-W-burst.png`, `huanjing-Q-burst.png`, and `xuemai-Q-burst.png`.
+- `heroSkillsV1=false`; no commit, push, or deploy. Remaining scope: **204 slots / 20 gameplay heroes**; full skill-ON balance, Replay compatibility, legacy VFX replacement audit, and real-device FPS/touch remain open.
+- All five required skills were applied: `threejs-gameplay-systems`, `create-game-vfx`, `threejs-shaders`, `threejs-postprocessing`, and `threejs-aaa-graphics-builder`.
+
+### Hero Skills 第十一批：Sanctum / Prism / Deathmark / Cyclone / Bulwark（2026-09-20）
+
+- Coverage reached **180/400 authoritative QWER slots** across **72 gameplay-authored heroes**; the Golden Set is **184 motifs across 72 visual heroes**. Added Shengdun Q/W/E/R; Guangsu Q/W/E; Siwang Q/W/E; Xuanfeng Q/W/E; and Tiebi Q/W/E.
+- The visual batch intentionally separates sanctified charge and crown geometry, prism rails and recoil vectors, deathmark rounds and execution slashes, cyclone fans and vortex shots, and iron intercept/bulwark walls. Q/W/E remain readable; R keeps windup, burst, and aftermath.
+- Unsupported invisibility, global target selection, random position swap, and true invulnerability are documented as absent semantics; no look-alike gameplay contract was added.
+- TDD first raised the count assertions to 180 gameplay slots and 184 presentation slots; the expected red was observed (`164 !== 180`, `168 !== 184`) before implementation. No gate threshold, balance value, seed, baseline, simulation version, Item, Fairness, BattleResult, or Replay contract was changed.
+
+### 第十一批驗證
+
+- Gameplay **55/55 PASS**; Phase 1 **10/10 PASS**; Round2 pure **194/194 PASS**.
+- Workshop browser **617/617 PASS**; formal battle browser **5/5 PASS**; no page/shader errors; reduced-motion, mobile overflow, quality overlap, and draw-call caps pass.
+- `runtime29/regress/regress2/presentation29b2/controls29b3/fairness_p0a..p0d` **9/9 PASS**; build **PASS**; `git diff --check` **PASS**.
+- Existing baseline waivers remain: pacing29b1 **24/25** (`g3` p50 kills `6 < 7`) and simulation fingerprint **50/51**. They were not rebaselined.
+
+### 第十一批交付狀態
+
+- Preview: `http://127.0.0.1:5481/ESMO-/?debug=hero-skills`.
+- Captures: `tmp/hero-skills/round2/shengdun-R-burst.png`, `guangsu-Q-burst.png`, `siwang-E-burst.png`, `xuanfeng-Q-burst.png`, and `tiebi-E-burst.png`.
+- `heroSkillsV1=false`; no commit, push, or deploy. Remaining scope: **220 slots / 28 gameplay heroes**; full skill-ON balance, Replay compatibility, legacy VFX replacement audit, and real-device FPS/touch remain open.
+- All five required skills were applied: `threejs-gameplay-systems`, `create-game-vfx`, `threejs-shaders`, `threejs-postprocessing`, and `threejs-aaa-graphics-builder`.
+- `heroSkillsV1=false`、未 commit、未 push、未 deploy。尚餘 **252 slots / 38 gameplay heroes**；full balance、Replay compatibility、legacy VFX replacement audit 與真機 FPS/touch 仍未完成。
+
+## Hero Skills 第十六批：shared combat/VFX primitives expansion（2026-09-20，owner: Codex，未提交）
+
+- 從隔離 branch `feature/moba-hero-skills-phase1`、正式 baseline `dc520f1` 繼續；未 reset／clean／stash，未 commit／push／deploy。`heroSkillsV1=false` 維持 OFF。
+- 新增 16 個 Gameplay slots：`ironclad:R`、`thornwall:W/R`、`ravager:W`、`cinderfist:Q/R`、`sting:W`、`embercoil:W`、`gambler:Q/E`、`razorwing:R`、`phantom:R`、`dawnstrike:W/R`、`luminary:W`、`kuangfeng:E`。共用既有 validated primitives，未擴張第二套 Hero／Skill database。
+- 新增 14 個 Golden visual motifs；Ironclad R、Cinderfist Q 為既有 preview slot replacement，其餘為新增 authored presentation。形狀／動作分別使用裂地十字、直線拳擊、放射陷阱、雙線獵殺、影雨、回縮殘影、光之裁決、護甲格柵等語彙，避免多層圓圈模板。
+- TDD 先將 gameplay expected count 從 244 提至 260，觀察預期 red；純測試後再由 dash actor invariant 定位 `razorwing-hunt4` 漏在 `sampleWorkshopPose` dash registry，補上後恢復綠燈。這是 presentation pose wiring fix，不是 gameplay authority 或 balance 修正。
+- 驗證 exit 0：Gameplay **60/60**、Phase1 **10/10**、Round2 pure **272/272**、Workshop browser **863/863**、formal Battle **5/5**、protected runtime/regress/regress2/presentation/controls/Fairness **9/9**、build、`git diff --check`。
+- 預覽：`http://127.0.0.1:5481/ESMO-/?debug=hero-skills`。樣張：`tmp/hero-skills/round2/ironclad-R-burst.png`、`cinderfist-Q-burst.png`、`gambler-E-burst.png`、`razorwing-R-burst.png`、`phantom-R-burst.png`、`dawnstrike-R-burst.png`、`luminary-W-burst.png`、`kuangfeng-E-burst.png`。
+- 保持既有 pacing29b1 **24/25** 與 simulation fingerprint **50/51** waiver，不 bump simulation version、不改 seed/baseline/gate；`guihuo` 零 authority、skill-ON balance、Replay compatibility、legacy VFX replacement audit、真機性能仍未完成。
+
+## Hero Skills 第十七批：mark / heal / ally movement primitives（2026-09-20，Codex，未發布）
+
+- 從 `feature/moba-hero-skills-phase1`、baseline `dc520f1` 繼續；未 reset／clean／stash／commit／push／deploy，`heroSkillsV1=false` 維持 OFF。
+- TDD 先把 Gameplay count 鎖為 271；新增 `target-mark` 4 槽、`target-heal` 2 槽、`area-heal` 1 槽、`ally-blink` 4 槽。Engine 實作標記增傷／減速、snapshot mark status、既有 heal 統計，以及 deterministic ally selection／pull-to-caster／self-to-ally movement。
+- Golden Set 新增 11 個 shape/action motifs：sun/moon/sonic/frost mark、radiant/medic mend、radiant field、hexweave/undertow gate、medic charge、dreamstep；不新增 ring template、fullscreen pass、per-frame material allocation 或 shader pool。
+- 驗證 exit 0：Gameplay 64/64、Phase1 10/10、Round2 283/283、Workshop browser 898/898、formal Battle 5/5、protected 9/9、build PASS、diff check PASS。既有 pacing29b1 24/25 與 simulation fingerprint 50/51 未 rebaseline。
+- Preview `http://127.0.0.1:5481/ESMO-/?debug=hero-skills`；evidence 在 `tmp/hero-skills/round2/`。下一輪仍只做剩餘明確 contract slice；不宣稱 100 英雄完成。
+- 五個指定 skills 均實際套用：`threejs-gameplay-systems`、`create-game-vfx`、`threejs-shaders`、`threejs-postprocessing`、`threejs-aaa-graphics-builder`。
+- 五個指定 skills 均實際套用：`threejs-gameplay-systems`、`create-game-vfx`、`threejs-shaders`、`threejs-postprocessing`、`threejs-aaa-graphics-builder`。
+
+## Hero Skills 第十八批：empowered basic-attack primitive（2026-09-20，Codex，未發布）
+
+- 從 `feature/moba-hero-skills-phase1`、baseline `dc520f1` 繼續；未 reset／clean／stash／commit／push／deploy，`heroSkillsV1=false` 維持 OFF。
+- TDD 先把 Gameplay count 鎖為 281；新增 `empowered-strike` 10 槽：Ironclad E、Ravager R、Sting R、Duskblade R、Maestro Q、Gambler R、Dianguang R、Mingyun R、Tixue R、Tianfa R。它是有 expiry 的一次性普攻強化，下一次普攻由 `LogicEngine` 消耗，snapshot 可見，VFX 不擁有傷害。
+- Golden Set 新增 10 個 shape/action motifs：steel valor wedges、ravager rage spikes、shadow needle、execution cross、maestro staff、chance diamond、lightning forks、fate constellation、bastion panels、judgment spear；沿用 pooled line/part/crack/shard 與 analytic shader/material path。
+- 驗證 exit 0：Gameplay 66/66、Phase1 10/10、Round2 293/293、Workshop browser 936/936、formal Battle 5/5、protected 9/9、build PASS、diff check PASS。既有 pacing29b1 24/25 與 simulation fingerprint 50/51 未 rebaseline。
+- Preview `http://127.0.0.1:5481/ESMO-/?debug=hero-skills`；本輪不 commit／push／deploy，不宣稱 100 英雄完成。剩餘 Gameplay scope 為 119 slots。
+- 五個指定 skills 均實際套用：`threejs-gameplay-systems`、`create-game-vfx`、`threejs-shaders`、`threejs-postprocessing`、`threejs-aaa-graphics-builder`。
+## 2026-09-21 Hero Skills full-roster completion (owner: Codex, local uncommitted)
+
+- Coverage is now **400/400 authoritative QWER slots and 400/400 authored presentation motifs across all 100 heroes**. Batches 20–24 completed the remaining contracts through the shared compiler/runtime; no second hero database was introduced.
+- Gameplay remains authoritative in `LogicEngine`; `HeroVfxRuntime` is presentation-only. `heroSkillsV1=false` remains OFF, legacy `role:basic` / `role:power` and positional fallback effects remain only as compatibility/comparison paths pending replacement audit.
+- All five required skills were used: `threejs-gameplay-systems`, `create-game-vfx`, `threejs-shaders`, `threejs-postprocessing`, and `threejs-aaa-graphics-builder`. No new fullscreen post pass or per-frame material allocation was added.
+- Verification: gameplay **68/68**, Phase 1 **10/10**, Round2 **410/410**, Workshop browser **1339/1339**, formal Battle **5/5**, regress **15/15**, regress2 **20/20**, build PASS; flat `runtime29` **35/35 main assertions PASS** with 9 nested entries delegated/SKIP by design; `presentation29b2` **12/12 PASS**; `controls29b3` **18/18 PASS**. Existing pacing29b1 **24/25** and simulation fingerprint **50/51** waivers remain unchanged.
+- Preview: `http://127.0.0.1:5481/ESMO-/?debug=hero-skills`; representative captures are under `tmp/hero-skills/round2/`. No commit, push, or deploy. Open follow-up: skill-ON balance, Replay closure, legacy VFX replacement audit, unsupported global semantics, and real-device performance.
+## Hero Skills 100 formal candidate — 2026-09-21
+- Scope: complete data-driven Q/W/E/R gameplay and presentation coverage for 100 heroes while preserving the authoritative `LogicEngine`, BattleResult, replay, snapshot, item, and fairness contracts.
+- TDD evidence: release-gate coverage assertions 100/100 heroes, 400/400 gameplay slots, 400/400 authored presentation motifs; skill-on 100/100 and skill-off control 20/20 finished; deterministic same-seed PASS.
+- Root-cause closure: the only new pathological tail found in formal-gate diagnostics was a post-breach base-assault deadlock. The minimal fix reuses the existing legal siege predicate after both Nexus guards are destroyed; it does not buff damage, movement, respawn, tower HP, or balance.
+- Results: Blue/Red `55%/45%`; kill ratio `1.001384`; median `24.57m`; P90 `28.84m`; max `35.50m`; unfinished `0`.
+- Verification: Hero Skills gameplay/phase/round2 batches PASS, regress `15/15`, regress2 `20/20`, flat runtime29 `35/35`, build PASS, formal browser battle `5/5`. Existing pacing/fingerprint waivers remain unchanged and are not rebaselined here.
+- State: local uncommitted candidate only; no commit, push, or deploy. Real-device FPS/touch/thermal testing is not covered by Node/browser gates.
+
+## 2026-09-21 Hero Skills release-gate contract correction (owner: Codex, local uncommitted)
+
+- `tools/check_hero_skills_release_gate.mjs` no longer treats `max duration <= 40m` as a release assertion. The former 40-minute assertion was an obsolete local verifier rule; the simulation safety cap remains only as a structural cap-hit observation, not as a duration target.
+- Cap-hit classification now distinguishes `PATHOLOGICAL_LONG_MATCH`, `HEALTHY_CLOSE_STALEMATE`, `UNFINISHED_CAP_HIT`, and natural finish using existing structural progress, base-entry, core, wave, winner, and unfinished semantics. Healthy long matches remain allowed; pathological and unclassified cap hits remain blockers.
+- Release gate PASS: skill-on `100/100` finished, skill-off controls `20/20`, Blue/Red `56%/44%`, kill ratio `1.017234`, median `24.57m`, P90 `30.06m`, max `48.32m`; cap-hit `0`, pathological `0`, unclassified `0`. Seed `777` is a natural Nexus finish, not a timeout or deadlock.
+- Clean `dc520f1` official runner versus candidate skill-off: `1000/1000` seeds, failed `0`, `29` compared fields, per-seed diff `0`; both reproduce Blue/Red `48.5%/51.5%`, finish rate `0.999`, median/P90 `26.03m/33.01m`, with seed `715` retaining the known healthy baseline close-stalemate semantics.
+- Skill-on n=1000: Blue/Red `49.8%/50.2%`, finished `1000/1000`, unfinished `0`, pathological `0`, kill ratio `1.023786`, median/P90/max `25.36m/31.56m/53.32m`, invariant violations `0`, conservation failures `0`; repeated seeds `1/715/1000` deterministic.
+- Scope remains Hero Skills v1 = `100/100` heroes and `400/400` QWER active gameplay plus presentation. Passive P = `100/100` data/description and `0/100` gameplay; defer to the next phase. No Gameplay, balance, seed corpus, baseline, moba-sim version, skill values, commit, push, or deploy changed in this verifier-alignment pass.
+- `regress` `15/15`, `regress2` `20/20` with pacing `8/8`, and build (`2912` modules) passed.

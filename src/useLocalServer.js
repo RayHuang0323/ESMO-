@@ -18,6 +18,7 @@ import { buildPlayerStatSlots } from "./battle/moba/mobaRosterAdapter.js";
 import { toEngineHeroMods } from "./battle/moba/mobaHeroProfile.js";
 import { toEngineSpells } from "./battle/moba/mobaHeroLoadout.js";
 import { toEngineArchetypes, COMBAT_ARCHETYPE_CONTRACT_VERSION } from "./data/heroCombatArchetypes.js";
+import { toEngineHeroSkills } from "./battle/moba/skills/heroSkillGameplay.js";
 import { heroById } from "./data/heroDatabase.js";
 import { toEnginePlayerMods } from "./battle/moba/mobaPlayerStats.js";
 //  Item System M3a：裝備層開關（正式站預設 OFF；DEV 才讀 ?itemsDev=1，見 start() 內）
@@ -181,6 +182,15 @@ export function useLocalServer() {
     //   無 roster / 全中性 ⇒ toEngineHeroMods 回 null ⇒ 完全不呼叫 ⇒ 逐位元回到 G。
     const heroMods = opts.roster ? toEngineHeroMods(opts.roster, heroById) : null;
     if (heroMods) eng.configureHeroes(heroMods);
+
+    // Canonical roster -> authored mechanics. The formal flag is the single production
+    // switch; the DEV query remains useful for isolated browser diagnostics.
+    const heroSkillsOn = featureEnabled("heroSkillsV1") ||
+      (import.meta.env.DEV && new URLSearchParams(window.location.search).get("heroSkillsDev") === "1");
+    if (heroSkillsOn && opts.roster) {
+      const skills = toEngineHeroSkills(opts.roster);
+      if (skills) eng.configureHeroSkills(skills);
+    }
 
     // ── Milestone M1：戰鬥原型進引擎（近戰／遠程與職業站位的唯一計算點）──
     //   opts.roster = GameView 的生效名單（draft × 先發指派 × profileStore），

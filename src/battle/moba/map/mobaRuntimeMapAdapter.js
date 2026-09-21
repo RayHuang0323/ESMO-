@@ -594,6 +594,9 @@ export function adaptEffects(snapshot, effectTime = snapshot?.ts, opts = {}) {
       id: String(f.id ?? `${f.at ?? now}:${f.type ?? "orb"}`),
       type: f.type ?? "orb",
       ability: f.ability ?? null,
+      // Replay v1 preserves ability but not skillId; saved roster identity restores
+      // authored authority events without changing the persisted tuple contract.
+      skillId: f.skillId ?? (/^hero:[QWER]$/.test(f.ability ?? '') && heroId ? `${heroId}:${f.ability.slice(-1)}` : null),
       variant,
       feedback: f.feedback ?? (variant === "basic" ? "attack" : "skill"),
       sourceId: f.sourceId ?? null,

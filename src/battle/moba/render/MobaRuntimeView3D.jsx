@@ -17,13 +17,14 @@
 // ============================================================================
 import React, { useMemo, useRef, useState, useCallback, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import * as THREE from "three";
 import MobaRuntimeMap, { useRuntimeMapData } from "../map/MobaRuntimeMap.jsx";
 import MobaRuntimeHeroes from "./MobaRuntimeHeroes.jsx";
 import MobaRuntimeStructures from "./MobaRuntimeStructures.jsx";
 import MobaRuntimeMinions from "./MobaRuntimeMinions.jsx";
 import MobaRuntimeEffects from "./MobaRuntimeEffects.jsx";
-import HeroSkillEffects from "../presentation/HeroSkillEffects.jsx";
+import HeroVfxRuntime from "../skills/HeroVfxRuntime.jsx";
 import TowerRangeDebug from "../presentation/TowerRangeDebug.jsx";
 import MobaRuntimeNeutrals from "./RiggedMobaRuntimeNeutrals.jsx";
 import BattleCameraController from "../../ui/BattleCameraController.jsx";
@@ -435,9 +436,18 @@ export default function MobaRuntimeView3D({
       <MobaRuntimeMinions frameRef={frameRef} />
       <MobaRuntimeNeutrals objectives={frame.objectives} frameRef={frameRef} />
       <MobaRuntimeEffects frameRef={frameRef} />
-      {/*  Milestone L：英雄身分演出層。疊在既有特效之上，讀同一份 frame.effects，
-           只畫「這一下是誰、是哪一種演出分類」。池容量依畫質縮放（手機更小）。 */}
-      <HeroSkillEffects frameRef={frameRef} quality={quality} />
+      {/* Exclusive hero attack presentation; old role/identity overlays are no longer mounted. */}
+        <HeroVfxRuntime frameRef={frameRef} quality={quality} />
+        {/* Final Fusion post FX: one bounded composer, quality-scaled for mobile. */}
+        <EffectComposer multisampling={quality === "high" ? 4 : 0}>
+          <Bloom
+            mipmapBlur
+            luminanceThreshold={quality === "low" ? 0.82 : 0.72}
+            luminanceSmoothing={0.34}
+            intensity={quality === "low" ? 0.62 : quality === "medium" || quality === "mid" ? 0.82 : 0.96}
+          />
+          {quality !== "low" && <Vignette eskil={false} offset={0.24} darkness={0.16} />}
+        </EffectComposer>
       {/*  L Hotfix 1 §1：塔射程圈與鎖定線。**只在 debug 模式**（?diag=1 / ?shot=）掛，
            正式對戰玩家看不到。鎖定線來自引擎真實的 tower fx，不是自己重算。 */}
       {diagnosticsEnabled() && <TowerRangeDebug frameRef={frameRef} />}

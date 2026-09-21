@@ -1,5 +1,9 @@
 # 04 Roadmap
 
+## 2026-09-20 Hero Skills / VFX Phase 1（獨立候選）
+
+共用 Contract / compile / presentation runtime、七英雄十七演出及正式英雄 VFX replacement；目前只有 10/400 項 QWER 權威 Gameplay 切片，絕非 100 英雄完成。持續線形區域由炎拳 E、穿透遞減由曙光 Q、範圍嘲諷與減傷由鋼鐵 W 建立；後續仍須 audit heal/status、刺客方向性與其他 persistent zone，按 mechanic 分批，截斷描述不能自行補全。細節及限制見 [Phase 1](../design/MOBA_HeroSkills_Phase1.md)與[Gameplay 追蹤](../design/MOBA_HeroSkills_Gameplay_Implementation.md)。候選未發布。
+
 ## 🚀 Retention Economy Calibration v1 = RELEASED（2026-09-04）
 
 production main **`e572862d39b4bc1420dbc47afcd636b70e62392a`**，
@@ -2617,3 +2621,143 @@ NEXT_SPRINT = NOT_STARTED
 範圍只記錄既有 engine debt：side imbalance、`rK/bK`、P90／max tail、
 `findPath` mirror invariant。這不是 Item v1.1，也不在本輪修改任何 balance、navigation
 或 simulator version。
+## Latest Hero Skills slice — 2026-09-20
+
+- Progress is **13/400 authoritative QWER skills**, **9 heroes**, **20 visual motifs**.
+- Completed this slice: Thornwall Q `dash-control-strike`, Thornwall E `root-dot`, Gambler W `blink-shield`.
+- Continue in small, evidence-backed batches from complete source descriptions; do not infer truncated hero prose.
+- Keep `heroSkillsV1` OFF until all 100 heroes, balance, replay, protected regression, version, and mobile-performance gates are complete.
+## Latest Hero Skills roadmap checkpoint (2026-09-20)
+
+- Progress is **27/400 authoritative QWER**, **15 heroes**, **34 visual motifs**; next work continues by shared mechanic families, not 100 bespoke engines.
+- Current completed slice: `dash-knockup-strike`, `dash-blast`, `blink-strike` plus Ravager, Sting, Greymantle, Embercoil, Auralith, and Razorwing authored slots.
+- Validation is green for the scoped skill and protected MOBA gates; formal enablement is still blocked by the existing pacing29b1 baseline 24/25 and simulation-version 50/51, plus missing full skill-ON balance evidence.
+- Keep Competitive disabled, do not change Item v1/Fairness contracts, and do not bump the simulation version until the complete 100-hero closure is audited.
+## 2026-09-20 Hero Skills third implementation slice (current)
+
+- Scope: shared runtime expansion plus six more representative heroes; no Item/Fairness redesign and no formal enablement.
+- Progress: **43/400 QWER**, **21 heroes**, **50 visual motifs**. New primitives: `cone-strike`, `area-root`, `control-target`, `targeted-ally-shield`, `team-shield`.
+- Authored slots: Phantom Q/E; Mirrorshot Q/E; Mantra Q/W/E/R; Luminary Q/E/R; Stoneguard Q/R; Hexweave Q/W/R.
+- Verification: gameplay 43/43; Phase 1 10/10; Round 2 pure 60/60; Workshop browser 197/197; formal cast browser 6/6; runtime29/regress/regress2 3/3; presentation/controls/P0-A to P0-D 6/6; build PASS.
+- `heroSkillsV1=false`; no commit/push/deploy. Next development step is to continue from the remaining canonical descriptions, one contract slice at a time, with the five-skill visual/performance workflow. Do not claim the 100-hero set is complete.
+
+## 2026-09-20 Hero Skills fourth implementation slice (latest)
+
+- Progress: **62/400 QWER**, **27 heroes**, **69 visual motifs**.
+- New shared mechanics: `area-taunt` and delayed `area-control`, validated before engine entry. New authored set: Suishan, Tixue, Rongyan, Kuangfeng, Yueying, Dianguang.
+- Verification: gameplay 45/45; Phase 1 10/10; Round 2 pure 79/79; Workshop browser 257/257; formal cast browser 6/6; runtime29/regress/regress2 3/3; presentation/controls/P0-A to P0-D 6/6; build PASS.
+- Still opt-in only (`heroSkillsV1=false`), no commit/push/deploy. Continue in small contract slices; remaining 38 heroes and 338 QWER slots are not authored yet.
+
+## 2026-09-20 Hero Skills fifth implementation slice (latest)
+
+- Progress: **84/400 authored QWER slots**, **32 heroes**, **89 authored visual motifs**. Continue the 100-hero rollout by explicit mechanic families; do not infer missing stateful or terrain semantics from legacy prose.
+- New shared contracts: `multi-strike` and `silence-target`; existing `area-taunt` / delayed `area-control` remain reusable. New authored set: Duskblade, Voidrift, Anye, Jiansheng, Xingchen, and Leiting.
+- Verification: gameplay 47/47; Phase 1 10/10; Round2 pure 99/99; Workshop browser 321/321; formal cast browser 6/6; runtime/regress/regress2 3/3; presentation/controls/P0-A/B/C/D 6/6; build PASS.
+- Pacing29b1 remains the official baseline 24/25, simulation fingerprint remains 50/51, and full skill-ON balance / real-device performance remain open. Keep `heroSkillsV1` OFF, preserve Item/Fairness/Replay contracts, and do not bump the simulation version.
+
+## 2026-09-20 Hero Skills sixth implementation slice (latest)
+
+- Progress: **100/400 authored QWER slots**, **37 gameplay-authored heroes**, **105 visual motifs across 38 Golden visual heroes**. Remaining work is **300 slots / 63 gameplay heroes**; continue from canonical descriptions in small shared-contract batches.
+- New shared mechanics: `self-shield`, retreat-aware `blink-shield`, and bounded `multi-strike.finalMultiplier`. New authored set: Maestro, Fengbao, Shikong, Liuxing, Longji, and Binghe.
+- Verification: gameplay 50/50; Phase 1 10/10; Round2 pure 115/115; Workshop browser 373/373; formal cast browser 6/6; runtime/regress/regress2 3/3; presentation/controls/P0-A to P0-D 6/6; build PASS; diff check PASS.
+- `heroSkillsV1=false`; no commit/push/deploy. The 360s browser harness budget is evidence-execution scaling only; assertion and draw-call gates were unchanged. Pacing29b1 remains baseline 24/25 and simulation fingerprint 50/51. Do not bump the simulation version or enable the formal flag before all 100 heroes, balance, replay, and real-device performance closure.
+
+## 2026-09-20 Hero Skills seventh implementation slice (latest)
+
+- Progress: **116/400 authored QWER slots**, **45 gameplay-authored heroes**, **121 motifs across 46 Golden visual heroes**. Remaining work is **284 slots / 55 gameplay heroes**.
+- New authored set: Huanying, Shengguang, Tianshi, Fuwenbianzhi, Xueyue, Tiemu, Dushe, and Yingsi. The slice reuses validated projectile, multi-strike, cone, root, shield, dash-blast, blink-strike, and area-root contracts.
+- Scoped verification is green: gameplay 51/51; Phase 1 10/10; Round2 pure 131/131; Workshop browser 422/422; formal cast browser 6/6; runtime/regress/regress2 3/3; presentation/controls/P0-A to P0-D 6/6; build PASS; diff check PASS.
+- Keep `heroSkillsV1=false`, Item/Fairness/Replay contracts unchanged, simulation version unchanged, and no commit/push/deploy. Existing pacing29b1 24/25 and simulation fingerprint 50/51 remain baseline waivers.
+
+## 2026-09-20 Hero Skills 第十七批 roadmap checkpoint（未發布）
+
+- Progress: **271/400 authoritative QWER slots**, **99 gameplay-authored heroes**, **273 Golden motifs across 99 visual heroes**; remaining scope is **129 slots**, with `guihuo` still zero-authority.
+- Shared contracts added: `target-mark`, `target-heal`, `area-heal`, and `ally-blink` with explicit `pull-to-caster` / `self-to-ally` modes. The engine owns status, damage amplification, hp/heal accounting, movement, snapshot and Replay identity; presentation remains passive.
+- Verification: Gameplay 64/64; Phase 1 10/10; Round2 pure 283/283; Workshop browser 898/898; formal Battle 5/5; protected runtime/regress/regress2/presentation/controls/Fairness 9/9; build PASS; diff check PASS.
+- Keep Item/Fairness/Replay contracts, simulation version and `heroSkillsV1=false` unchanged. No commit/push/deploy. Existing pacing29b1 24/25 and simulation fingerprint 50/51 remain baseline waivers; full skill-ON balance, Replay compatibility closure, legacy VFX replacement audit and real-device performance remain open.
+
+## 2026-09-20 Hero Skills 第十八批 roadmap checkpoint（未發布）
+
+- Progress: **281/400 authoritative QWER slots**, **99 gameplay-authored heroes**, **283 Golden motifs across 99 visual heroes**; remaining gameplay scope is **119 slots**, with `guihuo` still zero-authority.
+- Shared `empowered-strike` now gives ten authored slots an expiring one-shot basic-attack empowerment. The engine consumes it in the authoritative combat path and exposes snapshot status; VFX remains passive and named-event driven.
+- The visual batch adds steel wedges, rage spikes, shadow needle, execution cross, sonic staff, fate diamond/constellation, lightning forks, bastion panels, and judgment spear. All remain on pooled line/part/crack/shard paths with the no-fullscreen post-processing budget.
+- Verification: Gameplay 66/66; Phase 1 10/10; Round2 pure 293/293; Workshop browser 936/936; formal Battle 5/5; protected runtime/regress/regress2/presentation/controls/Fairness 9/9; build PASS; diff check PASS.
+- Keep Item/Fairness/Replay contracts, simulation version and `heroSkillsV1=false` unchanged. No commit/push/deploy. Existing pacing29b1 24/25 and simulation fingerprint 50/51 remain baseline waivers; full skill-ON balance, Replay compatibility closure, legacy VFX replacement audit and real-device performance remain open.
+
+## 2026-09-20 Hero Skills 第十六批 roadmap checkpoint（未發布）
+
+- Coverage：**260/400 authoritative QWER slots**、**99 gameplay-authored heroes**、**262 Golden visual motifs / 99 visual heroes**；尚餘 **140 slots**。`guihuo` 仍保留為零 authority，直到 stealth／random movement／persistent link／maze 等語意有 deterministic contract。
+- 本批維持共用 Gameplay primitives、pooled VFX／shader path、reduced-motion 與 mobile draw/overlap caps；沒有新增 balance、simulation version、Item、Fairness、Replay 或 BattleResult contract。
+- Gate：Gameplay 60/60、Phase1 10/10、Round2 272/272、Workshop 863/863、formal Battle 5/5、protected 9/9、build 與 diff check 全綠。既有 pacing29b1 24/25、simulation fingerprint 50/51 waiver 不變。
+- 仍不可宣告 Hero Skills 全量完成或正式開啟：技能 ON balance、Replay compatibility closure、legacy VFX replacement audit、真機 FPS/touch/thermal 仍待完成。`heroSkillsV1=false`；未 commit／push／deploy。
+
+## 2026-09-20 Hero Skills fourteenth–fifteenth implementation slices (latest)
+
+- Progress: **244/400 authored QWER slots**, **99 gameplay-authored heroes**, **248 motifs across 99 Golden visual heroes**. Remaining scope is **156 slots**; `guihuo` remains intentionally un-authored until stealth/random-movement/link/maze contracts are designed and tested.
+- New authored set: Youming, Shanying, Dadi2, Mingyun2, Haixiao, Jueying, Tianfa, Shengyan, Liangzicz, Mori, Shengming, Tieshixin, Mingyunyindao, and Linghun. The batches use only existing validated gameplay primitives and add no balance or simulation-version change.
+- Scoped verification is green: gameplay 59/59; Phase 1 10/10; Round2 pure 258/258; Workshop browser 816/816; formal battle 5/5; protected runtime/regress/presentation/controls/P0 9/9; build PASS. `git diff --check` runs after this documentation update.
+- Keep `heroSkillsV1=false`, Item/Fairness/Replay contracts unchanged, simulation version unchanged, and no commit/push/deploy. Existing pacing29b1 24/25 and simulation fingerprint 50/51 remain baseline waivers. Next implementation remains the remaining explicit contract slices; do not enable the formal flag yet.
+
+## 2026-09-20 Hero Skills thirteenth implementation slice (latest)
+
+- Progress: **212/400 authored QWER slots**, **85 gameplay-authored heroes**, **216 motifs across 85 Golden visual heroes**. Remaining work is **188 slots / 15 gameplay heroes**.
+- New authored set: Tiankong, Ronggang, Bingshouweis, Jufeng, and Leimingcf. The slice reuses validated dash, control, delayed-area, shield, cone, area-control, taunt-guard, multi-strike, and dash-blast contracts.
+- New visual vocabulary: aerial dive/judgment, molten armor/cyclone, ice bulwark/permafrost, wind fan/assault, and storm fist/run. No fullscreen post pass, per-frame material allocation, or unbounded emitter was introduced.
+- Scoped verification is green: gameplay 57/57; Phase 1 10/10; Round2 pure 226/226; Workshop browser 719/719; formal battle 5/5; protected runtime/regress/presentation/controls/P0 9/9; build PASS; diff check PASS.
+- Keep `heroSkillsV1=false`, Item/Fairness/Replay contracts unchanged, simulation version unchanged, and no commit/push/deploy. Existing pacing29b1 24/25 and simulation fingerprint 50/51 remain baseline waivers.
+
+## 2026-09-20 Hero Skills twelfth implementation slice (latest)
+
+- Progress: **196/400 authored QWER slots**, **80 gameplay-authored heroes**, **200 motifs across 80 Golden visual heroes**. Remaining work is **204 slots / 20 gameplay heroes**.
+- New authored set: Tielian, Yeiren, Wuxing, Hundun, Shensheng, Shiguang, Huanjing, and Xuemai. The slice reuses validated root, shield, multi-strike, control, blink, delayed-area, projectile, ally-shield, and root-dot contracts.
+- New visual vocabulary: chainsteel, nightblade, phasevoid, chaos, sanctilight, chronos, dream, and bloodline. No fullscreen post pass, per-frame material allocation, or unbounded emitter was introduced.
+- Unsupported invisibility, global time stop, random swap, ally rewind, shared-health, and clone semantics remain explicit future contract work.
+- Scoped verification is green: gameplay 56/56; Phase 1 10/10; Round2 pure 210/210; Workshop browser 666/666; formal battle 5/5; protected runtime/regress/presentation/controls/P0 9/9; build PASS; diff check PASS.
+- Keep `heroSkillsV1=false`, Item/Fairness/Replay contracts unchanged, simulation version unchanged, and no commit/push/deploy. Existing pacing29b1 24/25 and simulation fingerprint 50/51 remain baseline waivers.
+
+## 2026-09-20 Hero Skills eleventh implementation slice (latest)
+
+- Progress: **180/400 authored QWER slots**, **72 gameplay-authored heroes**, **184 motifs across 72 Golden visual heroes**. Remaining work is **220 slots / 28 gameplay heroes**.
+- New authored set: Shengdun, Guangsu, Siwang, Xuanfeng, and Tiebi. The slice reuses validated dash, shield, taunt, team shield, multi-strike, blink, piercing, projectile, cone, delayed-area, ally-shield, and root contracts.
+- New visual vocabulary: sanctum geometry, prism rails, deathmark slashes, cyclone fans, and iron bulwarks. No fullscreen post pass, per-frame material allocation, or unbounded emitter was introduced.
+- Unsupported invisibility, random swap, global targeting, and true-invulnerability semantics remain explicit future contract work.
+- Scoped verification is green: gameplay 55/55; Phase 1 10/10; Round2 pure 194/194; Workshop browser 617/617; formal battle 5/5; protected runtime/regress/presentation/controls/P0 9/9; build PASS; diff check PASS.
+- Keep `heroSkillsV1=false`, Item/Fairness/Replay contracts unchanged, simulation version unchanged, and no commit/push/deploy. Existing pacing29b1 24/25 and simulation fingerprint 50/51 remain baseline waivers.
+
+## 2026-09-20 Hero Skills tenth implementation slice (latest)
+
+- Progress: **164/400 authored QWER slots**, **67 gameplay-authored heroes**, **168 motifs across 67 Golden visual heroes**. Remaining work is **236 slots / 33 gameplay heroes**.
+- New authored set: Leisuhunter, Jingci, AnliuyouXia, Xingjie, and Lieyan. The slice reuses projectile, blink, root-dot, area-root, self-shield, shield-burst, delayed-area, area-control, dash-wall, and existing dash contracts.
+- New visual vocabulary: lightning slash/blink, bramble root/forest, undertow charge/vortex, gravity well/astral step, and prophet-fire flare/firewall/doomsday rain. No fullscreen post pass or unbounded emitter was introduced.
+- Scoped verification is green: gameplay 54/54; Phase 1 10/10; Round2 pure 178/178; Workshop browser 568/568; formal battle 5/5; protected runtime/regress/presentation/controls/P0 9/9; build PASS; diff check PASS.
+- Keep `heroSkillsV1=false`, Item/Fairness/Replay contracts unchanged, simulation version unchanged, and no commit/push/deploy. Existing pacing29b1 24/25 and simulation fingerprint 50/51 remain baseline waivers.
+
+## 2026-09-20 Hero Skills eighth implementation slice (latest)
+
+- Progress: **132/400 authored QWER slots**, **55 gameplay-authored heroes**, **136 motifs across 55 Golden visual heroes**. Remaining work is **268 slots / 45 gameplay heroes**.
+- New authored set: Langwang, Chichuan, Hunpo, Leiming, Ronghuo, Miwu, Jingxiang, Yanfeng, Hanbing, and Dujian. The slice reuses validated dash, cone, projectile, delayed-area, multi-strike, shield, blink-strike, and piercing-line contracts.
+- Scoped verification is green: gameplay 52/52; Phase 1 10/10; Round2 pure 146/146; Workshop browser 467/467; formal cast 6/6; protected runtime/regress/presentation/controls/P0 9/9; build PASS; diff check PASS.
+- Keep `heroSkillsV1=false`, Item/Fairness/Replay contracts unchanged, simulation version unchanged, and no commit/push/deploy. Existing pacing29b1 24/25 and simulation fingerprint 50/51 remain baseline waivers.
+
+## 2026-09-20 Hero Skills ninth implementation slice (latest)
+
+- Progress: **148/400 authored QWER slots**, **62 gameplay-authored heroes**, **152 motifs across 62 Golden visual heroes**. Remaining work is **252 slots / 38 gameplay heroes**.
+- New authored set: Liangzi, Zhanchang, Shiqiang, Fengshen, Mingyun, Xukong, and Longyi. The slice reuses validated piercing, blink, ally shield, control, dash-knockup, area-control, delayed-area, team shield, shield-burst, and cone contracts.
+- Scoped verification is green: gameplay 53/53; Phase 1 10/10; Round2 pure 162/162; Workshop browser 518/518; formal battle 5/5; protected runtime/regress/presentation/controls/P0 9/9; build PASS; diff check PASS.
+- Keep `heroSkillsV1=false`, Item/Fairness/Replay contracts unchanged, simulation version unchanged, and no commit/push/deploy. Existing pacing29b1 24/25 and simulation fingerprint 50/51 remain baseline waivers.
+## 2026-09-21 Hero Skills full-roster checkpoint
+
+- The 100-hero Q/W/E/R authoring target is complete: **400/400 gameplay contracts and 400/400 authored visual motifs**. The branch remains a local candidate with `heroSkillsV1=false`; do not treat this as formal Production enablement.
+- The next work is not another hero batch. First run the separate skill-ON balance / Replay compatibility / legacy VFX replacement audit, then perform device performance validation before any formal flag decision.
+- All five requested Three.js skills were applied across gameplay ownership, pooled VFX, analytic shaders, bounded post-processing, and authored AAA-style technical art. No Item v1/Fairness/BattleResult/Replay authority contract was changed.
+## 2026-09-21 Hero Skills 100-hero formal candidate status
+- The local Hero Skills candidate covers all 100 heroes with 400 gameplay QWER slots and 400 authored presentation motifs. The formal flag is enabled only in this uncommitted feature worktree; Production `main` remains unchanged.
+- Release gate is green for 100 skill-on runs plus 20 skill-off controls: all finished, Blue/Red `55%/45%`, kill ratio `1.001384`, median `24.57m`, P90 `28.84m`, max `35.50m`, deterministic same-seed PASS.
+- The seed-777 base-assault regression is green after a minimal structural legal-core-assault correction. No Item v1, fairness baseline, simulation version, or combat balance change.
+- Remaining closure work is release review, replay/legacy VFX compatibility audit, and real-device performance validation. Do not treat this local candidate as Production until an explicit release/commit/push request is made.
+
+## 2026-09-21 Hero Skills closure verifier alignment
+
+- The local release gate now follows the current Fairness contract: the obsolete `max duration <= 40m` assertion was removed, with no replacement fixed duration threshold. Structural pathological, deadlock, unfinished, and cap-hit semantics remain enforced.
+- Clean `dc520f1` and candidate skill-off are apples-to-apples identical for `1000/1000` seeds; skill-on remains `49.8%/50.2%` with pathological `0`. No baseline or threshold rebaselining was performed.
+- Product scope is explicit: `100/100` heroes and `400/400` QWER active gameplay/presentation. Passive P is `100/100` data/description and `0/100` gameplay, deferred to the next phase.

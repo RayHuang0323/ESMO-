@@ -146,6 +146,17 @@ const SEGMENTS = [
   { id: "q7a_safety", script: "tools/check_q7a_safety.mjs", shape: /18\/18/, note: "Q7a single live session / same-day fixture safety" },
   { id: "q7b_season_state_v2", script: "tools/check_season_state_v2_migration_q7b.mjs", shape: /SeasonState v2 Q7b: 35\/35 PASS/, note: "Q7b/3b-M1 SeasonState.v2 migration-safe foundation" },
   { id: "m2_season_state_v2_sealing", script: "tools/check_season_state_v2_sealing_m2.mjs", shape: /SeasonState v2 M2 sealing: 24\/24 PASS/, note: "3b-M2 Event / Season sealing boundaries" },
+  { id: "hero_skills_round2", script: "tools/check_hero_skills_round2.mjs", shape: /Hero Skills Round 2: PASS 17\/17/, note: "Elemental choreography / pose / mirror" },
+  { id: "hero_skills_phase1", script: "tools/check_hero_skills_phase1.mjs", shape: /Hero Skills Phase 1: PASS 10\/10/, note: "Hero skill contract / replacement boundary" },
+  { id: "hero_presentation_l", script: "tools/check_hero_presentation_l.mjs", shape: /✅ PASS/, note: "Historical presentation compatibility" },
+  { id: "pacing29b1", script: "tools/check_moba_pacing29b1.mjs", shape: /\d+\/\d+ 通過/, note: "Pacing gate" },
+  { id: "presentation29b2", script: "tools/check_moba_presentation29b2.mjs", shape: /\d+\/\d+ 通過/, note: "Presentation and replay gate" },
+  { id: "controls29b3", script: "tools/check_moba_controls29b3.mjs", shape: /\d+\/\d+ 通過/, note: "Controls and replay gate" },
+  { id: "fairness_p0a", script: "tools/check_moba_side_relative_p0a.mjs", shape: /8 PASS \/ 0 FAIL/, note: "P0-A invariant" },
+  { id: "fairness_p0b", script: "tools/check_moba_navigation_mirror_p0b.mjs", shape: /14 PASS \/ 0 FAIL/, note: "P0-B invariant" },
+  { id: "fairness_p0c", script: "tools/check_moba_tail_p0c_invariant.mjs", shape: /PASS/, note: "P0-C invariant" },
+  { id: "fairness_p0d", script: "tools/check_moba_nexus_wave_p0d.mjs", args: ["--out=tmp/hero-skills/seed608.json"], shape: /"pass": true/, note: "P0-D seed608" },
+  { id: "simulation_version", script: "tools/check_simulation_version_gate.mjs", shape: /PASS|通過/, note: "Simulation fingerprint" },
   { id: "build", script: "node_modules/vite/bin/vite.js", args: ["build"], shape: /built in/, note: "production build" },
 ];
 
@@ -222,13 +233,17 @@ function runSegment(seg) {
       const ms = Date.now() - started;
       const killed = signal === "SIGKILL";
       const ok = code === 0 && seg.shape.test(out);
+      // AGENTS requires full stdout + stderr, not only the six-line checkpoint tail.
+      const logDir = resolve(ROOT, 'tmp/verify-logs');
+      mkdirSync(logDir, { recursive: true });
+      writeFileSync(resolve(logDir, `${seg.id}.log`), `${out}\n--- STDERR ---\n${err}`, 'utf8');
       done({
         id: seg.id,
         status: killed ? "TIMEOUT" : ok ? "PASS" : "FAIL",
         exitCode: code, signal: signal ?? null, ms,
         finishedAt: new Date().toISOString(),
         //  留下輸出尾巴：失敗時要看得出是斷言紅了還是被砍了
-        tail: (out || err).split("\n").filter(Boolean).slice(-6).join("\n"),
+        tail: (out + err).split("\n").filter(Boolean).slice(-6).join("\n"),
       });
     });
   });

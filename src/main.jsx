@@ -28,6 +28,9 @@ if (debugMode === "terrain-sandbox") {
   //    只是跳過首頁與賽前流程直接開局 ⇒ 截到的畫面就是正式對戰畫面，不是 Debug 地圖。
   const Battle = React.lazy(() => import("./debug/MobaRuntimeBattle/MobaRuntimeBattleHarness.jsx"));
   root.render(<React.Suspense fallback={null}><Battle /></React.Suspense>);
+} else if (import.meta.env.DEV && debugMode === "hero-skills") {
+  const Gallery = React.lazy(() => import("./debug/HeroSkills/HeroSkillsGallery.jsx"));
+  root.render(<React.Suspense fallback={null}><Gallery /></React.Suspense>);
 } else if (debugMode === "hero-presentation") {
   // Milestone L：八個演出模板的固定 fixture 畫廊（正式流程不受影響）。
   const Gallery = React.lazy(() => import("./debug/HeroPresentation/HeroPresentationGallery.jsx"));

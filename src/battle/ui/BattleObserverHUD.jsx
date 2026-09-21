@@ -97,8 +97,8 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
       </div>
       <div className="observer-abilities" aria-label="英雄技能說明">
         {['P', 'Q', 'W', 'E', 'R'].map((key, i) => <button key={key} className={`observer-ability ability-${i}`} aria-pressed={skill === key}
-          onClick={() => setSkill(skill === key ? null : key)} aria-label={`${key} ${hero[key] ?? '尚無技能資料'}`}>
-          <span className="observer-sigil">{['◈', '╱', '◇', '⌁', '✧'][i]}</span><b>{key}</b><small>說明</small>
+          onClick={() => setSkill(skill === key ? null : key)} aria-label={`${key} ${hero[key] ?? '尚無技能資料'}${p.heroSkills?.[key] ? p.heroSkills[key].ready ? ' 可用' : ` ${Math.ceil(p.heroSkills[key].cd)}秒冷卻` : ''}`}>
+          <span className="observer-sigil">{['◈', '╱', '◇', '⌁', '✧'][i]}</span><b>{key}</b><small>{p.heroSkills?.[key] ? p.heroSkills[key].ready ? '可用' : `${Math.ceil(p.heroSkills[key].cd)}s` : '說明'}</small>
         </button>)}
       </div>
       <div className="observer-spells" aria-label="召喚師技能冷卻">
@@ -118,7 +118,7 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
       {skill && <div className="observer-tooltip" role="status"><button onClick={() => setSkill(null)} aria-label="關閉技能說明">✕</button>
         {skill === 'items' ? '本場尚未提供裝備與魔力資訊。' : skill.startsWith('spell')
           ? (() => { const i = Number(skill.slice(-1)); const s = p.sp?.[i]; const m = SUMMONER_SPELLS[s?.id ?? (replay ? r.spells?.[i] : null)]; return replay && !s ? `${m?.zh ?? '技能'} · 此份重播未保存冷卻資訊。` : m ? `${m.zh} · ${m.desc ?? ''}` : '此席位未配置技能。'; })()
-          : `${skill} · ${hero[skill] ?? '尚無技能說明'}。個別英雄技能冷卻尚未提供。`}
+          : `${skill} · ${hero[skill] ?? '尚無技能說明'}。${p.heroSkills?.[skill] ? p.heroSkills[skill].ready ? '技能可用。' : `冷卻剩餘 ${Math.ceil(p.heroSkills[skill].cd)} 秒。` : '個別英雄技能冷卻尚未提供。'}`}
       </div>}
     </section>
     {mobile && itemsSheet && mine && <MobileItemsSheet hud={hudItems} focusId={p.id} roster={roster}

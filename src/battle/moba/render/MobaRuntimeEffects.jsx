@@ -11,6 +11,7 @@ import { WORLD_SCALE } from "../map/coordinateMapping.js";
 import { LAYER_Y } from "../map/mapVisualStyle.js";
 import { countMount, countUnmount } from "./runtimeDiagnostics.js";
 import { useReducedBattleMotion } from './useReducedBattleMotion.js';
+import { ownsHeroAttack } from '../skills/heroSkillContract.js';
 
 const S = WORLD_SCALE;
 const LINE_CAP = 64;
@@ -347,6 +348,8 @@ export default function MobaRuntimeEffects({ frameRef }) {
     const orderedEffects = effects.slice().sort((a, b) => drawPriority(b) - drawPriority(a));
 
     for (const fx of orderedEffects) {
+      // Exclusive ownership: hero attack visuals now use HeroVfxRuntime.
+      if (ownsHeroAttack(fx)) continue;
       const life = Math.max(0.02, fx.lifeRatio ?? 0);
       const phase = fx.phase ?? (life > 0.72 ? "cast" : (life > 0.22 ? "travel" : "impact"));
       const phaseProgress = Math.max(0, Math.min(1, fx.phaseProgress ?? 0));

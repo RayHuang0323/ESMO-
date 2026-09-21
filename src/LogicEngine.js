@@ -77,6 +77,8 @@ export class LogicEngine {
     this.spellMeta = null;
     this.itemsOn = false;          // Item System M2：未 configureItems ⇒ 全部裝備程式碼不生效
     this.items = null;
+    this.heroSkillsOn = false;     // Explicit opt-in; no roster/contract = historical sequence.
+    this.heroSkills = null;
     this.rules = rulesFor(opts.rules);   // S29：模擬規則集（v2 預設）
     const R = this.rules;
     this.t = 0; this.over = false; this.winner = null;
@@ -424,6 +426,764 @@ export class LogicEngine {
   /** 該英雄的定位 mods；未啟用 / 無資料 ⇒ null（＝走原始路徑）。 */
   _heroMod(p) { return this.heroesOn ? (this.hmod[p.id] ?? null) : null; }
 
+  /** Receives only validated, authored mechanics from heroSkillGameplay adapter. */
+  configureHeroSkills(config) {
+    if (!config?.players || !Object.keys(config.players).length) return;
+    this.heroSkills = config.players;
+    this.heroSkillsOn = true;
+    this.heroSkillPending = [];
+    for (const p of this.players) if (this.heroSkills[p.id]) p.heroSkillReadyAt = {};
+  }
+
+  _heroTaunter(p) {
+    if (!this.heroSkillsOn || this.t >= (p.heroSkillTauntUntil ?? 0)) return null;
+    const source = this.players.find((q) => q.id === p.heroSkillTauntSourceId);
+    return source && !source.dead && source.hp > 0 && source.side !== p.side ? source : null;
+  }
+  _heroTauntTarget(p, intended) {
+    return this._heroTaunter(p)?.pos ?? intended;
+  }
+  _heroGuardFactor(p) {
+    return this.heroSkillsOn && this.t < (p.heroSkillGuardUntil ?? 0)
+      ? 1 - p.heroSkillGuardReduction : 1;
+  }
+  _heroGuardHit(p, hit) {
+    const factor = this._heroGuardFactor(p);
+    return factor === 1 ? hit : { ...hit, physTaken: hit.physTaken * factor,
+      magicTaken: hit.magicTaken * factor, trueTaken: (hit.trueTaken ?? 0) * factor,
+      physAttackTaken: hit.physAttackTaken * factor, total: hit.total * factor };
+  }
+
+  _heroSkillDamageFactor(target) {
+    if (!this.heroSkillsOn || !target || this.t >= (target.heroSkillMarkUntil ?? 0)) return 1;
+    return 1 + Math.max(0, Math.min(1, target.heroSkillMarkAmp ?? 0));
+  }
+
+  _heroSkillHasteFactor(p) {
+    if (!this.heroSkillsOn || !p || this.t >= (p.heroSkillHasteUntil ?? 0)) return 1;
+    return Math.max(1, Math.min(1.6, p.heroSkillHasteFactor ?? 1));
+  }
+
+  _heroSkillPowerFactor(p) {
+    if (!this.heroSkillsOn || !p || this.t >= (p.heroSkillPowerUntil ?? 0)) return 1;
+    return Math.max(1, Math.min(1.6, p.heroSkillPowerFactor ?? 1));
+  }
+
+  _heroSkillCooldownFactor(p) {
+    if (!this.heroSkillsOn || !p || this.t >= (p.heroSkillCooldownUntil ?? 0)) return 1;
+    return Math.max(0.35, Math.min(1, p.heroSkillCooldownFactor ?? 1));
+  }
+
+  _heroSkillControlImmune(p) {
+    return this.heroSkillsOn && p && this.t < (p.heroSkillControlImmuneUntil ?? 0);
+  }
+
+  _heroSkillStealthed(p) {
+    return this.heroSkillsOn && p && this.t < (p.heroSkillStealthUntil ?? 0);
+  }
+
+  _applyHeroSkillControl(target, kind, duration) {
+    if (!target || this._heroSkillControlImmune(target)) return false;
+    target.heroSkillControlUntil = Math.max(target.heroSkillControlUntil ?? 0, this.t + duration);
+    target.heroSkillControlKind = kind;
+    return true;
+  }
+
+  _applyHeroSkillGuard(target, duration, reduction) {
+    if (!target) return;
+    target.heroSkillGuardReduction = Math.max(target.heroSkillGuardReduction ?? 0, reduction);
+    target.heroSkillGuardUntil = Math.max(target.heroSkillGuardUntil ?? 0, this.t + duration);
+  }
+
+  /** Collect from frozen post-combat positions, then apply each effect once. */
+  _heroSkillStep() {
+    if (!this.heroSkillsOn) return;
+    const casts = [];
+    const due = this.heroSkillPending.filter((entry) => entry.at <= this.t);
+    this.heroSkillPending = this.heroSkillPending.filter((entry) => entry.at > this.t);
+    const hits = [];
+    const knock = new Map();
+    const segmentDistance = (point, a, b) => {
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const t = Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / (dx * dx + dy * dy || 1)));
+      return dist(point, { x: a.x + dx * t, y: a.y + dy * t });
+    };
+    const hit = (source, target, damage, rule) => {
+      hits.push({ source, target, damage: damage * this._heroSkillPowerFactor(source)
+        * this._heroSkillDamageFactor(target), rule });
+      target.hitBy.set(source.id, this.t);
+      if (rule.mechanic === 'projectile') {
+        target.heroSkillSlowFactor = this.t < (target.heroSkillSlowUntil ?? 0)
+          ? Math.min(target.heroSkillSlowFactor, rule.slowFactor) : rule.slowFactor;
+        target.heroSkillSlowUntil = Math.max(target.heroSkillSlowUntil ?? 0, this.t + rule.slowDuration);
+      }
+    };
+    for (const entry of due) {
+      const { p, rule, target, foeId } = entry;
+      if (entry.kind === 'projectile') {
+        const foe = this.players.find((q) => q.id === foeId);
+        if (foe && !foe.dead && dist(foe.pos, target) <= rule.hitRadius) hit(p, foe, rule.damage + p.power * rule.powerRatio, rule);
+      } else if (entry.kind === 'split-projectile') {
+        const primary = this.players.find((q) => q.id === foeId);
+        if (primary && !primary.dead && dist(primary.pos, target) <= rule.hitRadius) {
+          hit(p, primary, rule.damage + p.power * rule.powerRatio, rule);
+          const satellites = this.players.filter((q) => !q.dead && q.side !== p.side && q !== primary
+            && dist(q.pos, primary.pos) <= rule.splitRadius)
+            .sort((a, b) => dist(a.pos, primary.pos) - dist(b.pos, primary.pos) || a.id.localeCompare(b.id))
+            .slice(0, rule.splitCount);
+          satellites.forEach((q, index) => hit(p, q,
+            (rule.damage + p.power * rule.powerRatio) * (0.72 - index * 0.08), rule));
+        }
+      } else if (entry.kind === 'piercing-line') {
+        const dx = entry.end.x - entry.from.x, dy = entry.end.y - entry.from.y;
+        const length = Math.hypot(dx, dy) || 1, ux = dx / length, uy = dy / length;
+        const occupants = this.players.filter((q) => !q.dead && q.side !== p.side).map((q) => {
+          const rx = q.pos.x - entry.from.x, ry = q.pos.y - entry.from.y;
+          return { q, along: rx * ux + ry * uy, lateral: Math.abs(rx * uy - ry * ux) };
+        }).filter(({ along, lateral }) => along >= 0 && along <= length && lateral <= rule.width)
+          .sort((a, b) => a.along - b.along || a.q.id.localeCompare(b.q.id));
+        occupants.forEach(({ q }, index) => hit(p, q,
+          (rule.damage + p.power * rule.powerRatio) * rule.falloff ** index, rule));
+      } else if (entry.kind === 'delayed-area') {
+        for (const foe of this.players) {
+          if (!foe.dead && foe.side !== p.side && dist(foe.pos, target) <= rule.radius) {
+            hit(p, foe, rule.damage + p.power * rule.powerRatio, rule);
+          }
+        }
+      } else if (entry.kind === 'area-dot') {
+        for (const foe of this.players) {
+          if (!foe.dead && foe.side !== p.side && dist(foe.pos, target) <= rule.radius) {
+            hit(p, foe, rule.damage + p.power * rule.powerRatio, rule);
+            if (rule.controlDuration > 0) this._applyHeroSkillControl(foe, 'knockup', rule.controlDuration);
+          }
+        }
+        if (entry.at + rule.tickInterval <= entry.until + 1e-9) {
+          this.heroSkillPending.push({ ...entry, at: entry.at + rule.tickInterval });
+        }
+      } else if (entry.kind === 'barrier-line') {
+        const end = entry.end;
+        for (const foe of this.players) {
+          if (!foe.dead && foe.side !== p.side && segmentDistance(foe.pos, entry.from, end) <= rule.wallWidth) {
+            hit(p, foe, rule.damage + p.power * rule.powerRatio, rule);
+            foe.heroSkillSlowFactor = this.t < (foe.heroSkillSlowUntil ?? 0)
+              ? Math.min(foe.heroSkillSlowFactor, rule.slowFactor) : rule.slowFactor;
+            foe.heroSkillSlowUntil = Math.max(foe.heroSkillSlowUntil ?? 0, this.t + rule.slowDuration);
+          }
+        }
+        if (entry.at + rule.tickInterval <= entry.until + 1e-9) {
+          this.heroSkillPending.push({ ...entry, at: entry.at + rule.tickInterval });
+        }
+        } else if (entry.kind === 'area-root') {
+          for (const foe of this.players) {
+            if (!foe.dead && foe.side !== p.side && dist(foe.pos, target) <= rule.radius) {
+              hit(p, foe, rule.damage + p.power * rule.powerRatio, rule);
+              if (!this._heroSkillControlImmune(foe)) {
+                foe.heroSkillRootUntil = Math.max(foe.heroSkillRootUntil ?? 0, this.t + rule.rootDuration);
+              }
+            }
+          }
+        } else if (entry.kind === 'area-control') {
+          for (const foe of this.players) {
+            if (!foe.dead && foe.side !== p.side && dist(foe.pos, target) <= rule.radius) {
+              hit(p, foe, rule.damage + p.power * rule.powerRatio, rule);
+              this._applyHeroSkillControl(foe, rule.control, rule.controlDuration);
+            }
+          }
+        } else if (entry.kind === 'area-silence') {
+          for (const foe of this.players) {
+            if (!foe.dead && foe.side !== p.side && dist(foe.pos, target) <= rule.radius) {
+              hit(p, foe, rule.damage + p.power * rule.powerRatio, rule);
+              if (!this._heroSkillControlImmune(foe)) {
+                foe.heroSkillSilenceUntil = Math.max(foe.heroSkillSilenceUntil ?? 0, this.t + rule.silenceDuration);
+                foe.heroSkillSilenceSourceId = p.id;
+              }
+            }
+          }
+        } else if (entry.kind === 'area-mark') {
+          for (const foe of this.players) {
+            if (!foe.dead && foe.side !== p.side && dist(foe.pos, target) <= rule.radius) {
+              foe.heroSkillMarkUntil = Math.max(foe.heroSkillMarkUntil ?? 0, this.t + rule.markDuration);
+              foe.heroSkillMarkSourceId = p.id;
+              foe.heroSkillMarkAmp = Math.max(foe.heroSkillMarkAmp ?? 0, rule.damageAmp);
+              foe.heroSkillSlowFactor = this.t < (foe.heroSkillSlowUntil ?? 0)
+                ? Math.min(foe.heroSkillSlowFactor, rule.slowFactor) : rule.slowFactor;
+              foe.heroSkillSlowUntil = Math.max(foe.heroSkillSlowUntil ?? 0, this.t + rule.markDuration);
+            }
+          }
+        } else if (entry.kind === 'multi-strike') {
+          const foe = this.players.find((q) => q.id === entry.foeId);
+          if (foe && !foe.dead && foe.hp > 0) {
+            const finalMultiplier = entry.hitIndex + 1 === rule.hitCount ? (rule.finalMultiplier ?? 1) : 1;
+            hit(p, foe, (rule.damage + p.power * rule.powerRatio)
+              * rule.falloff ** entry.hitIndex * finalMultiplier, rule);
+            if (entry.hitIndex + 1 < rule.hitCount) {
+              this.heroSkillPending.push({ ...entry, hitIndex: entry.hitIndex + 1,
+                at: entry.at + rule.interval });
+            }
+          }
+      } else if (entry.kind === 'root-dot') {
+        if (!entry.target.dead && entry.target.hp > 0 && this.t <= entry.until + 1e-9) {
+          hit(p, entry.target, rule.damage + p.power * rule.powerRatio, rule);
+          if (entry.at + rule.tickInterval <= entry.until + 1e-9) {
+            this.heroSkillPending.push({ ...entry, at: entry.at + rule.tickInterval });
+          }
+        }
+      } else if (entry.kind === 'dash-wall') {
+        if (this.t <= entry.until + 1e-9) {
+          for (const foe of this.players) {
+            if (!foe.dead && foe.side !== p.side
+              && segmentDistance(foe.pos, entry.from, entry.end) <= rule.wallWidth) {
+              hit(p, foe, rule.damage + p.power * rule.powerRatio, rule);
+            }
+          }
+          if (entry.at + rule.tickInterval <= entry.until + 1e-9) {
+            this.heroSkillPending.push({ ...entry, at: entry.at + rule.tickInterval });
+          }
+        }
+      } else if (entry.kind === 'shield-burst' && !p.dead) {
+        for (const foe of this.players) {
+          if (!foe.dead && foe.side !== p.side && dist(foe.pos, p.pos) <= rule.burstRadius) {
+            hit(p, foe, rule.damage + p.power * rule.powerRatio, rule);
+          }
+        }
+        this.pushFx({ type: 'ult', pos: { ...p.pos }, target: { ...p.pos }, sourceId: p.id,
+          ability: 'hero:W', skillId: rule.skillId, feedback: 'skill', life: 1.6 });
+      }
+    }
+    for (const p of this.players) {
+      if (p.dead || ((this.t < (p.heroSkillControlUntil ?? 0)
+        || this.t < (p.heroSkillSilenceUntil ?? 0)) && !Object.values(this.heroSkills[p.id] ?? {})
+          .some((rule) => rule.mechanic === 'cleanse-guard')) || this._heroTaunter(p)) continue;
+      for (const [slot, rule] of Object.entries(this.heroSkills[p.id] ?? {})) {
+        if (this.t < (p.heroSkillReadyAt[slot] ?? 0)) continue;
+        if (['dash-strike', 'dash-control-strike', 'dash-knockup-strike', 'dash-blast', 'dash-wall', 'blink-strike']
+          .includes(rule.mechanic) && this.t < (p.heroSkillRootUntil ?? 0)) continue;
+        if (rule.mechanic === 'team-shield') {
+          casts.push({ p, foe: p, rule, slot, from: { ...p.pos }, target: { ...p.pos },
+            ux: 0, uy: 0, nearest: 0 });
+          continue;
+        }
+        if (rule.mechanic === 'self-shield') {
+          casts.push({ p, foe: p, rule, slot, from: { ...p.pos }, target: { ...p.pos },
+            ux: 0, uy: 0, nearest: 0 });
+          continue;
+        }
+        if (rule.mechanic === 'empowered-strike') {
+          casts.push({ p, foe: p, rule, slot, from: { ...p.pos }, target: { ...p.pos },
+            ux: 0, uy: 0, nearest: 0 });
+          continue;
+        }
+        if (rule.mechanic === 'team-haste') {
+          casts.push({ p, foe: p, rule, slot, from: { ...p.pos }, target: { ...p.pos },
+            ux: 0, uy: 0, nearest: 0 });
+          continue;
+        }
+        if (rule.mechanic === 'team-buff' || rule.mechanic === 'team-guard' || rule.mechanic === 'self-guard') {
+          casts.push({ p, foe: p, rule, slot, from: { ...p.pos }, target: { ...p.pos },
+            ux: 0, uy: 0, nearest: 0 });
+          continue;
+        }
+        if (rule.mechanic === 'self-buff' || rule.mechanic === 'stealth') {
+          casts.push({ p, foe: p, rule, slot, from: { ...p.pos }, target: { ...p.pos },
+            ux: 0, uy: 0, nearest: 0 });
+          continue;
+        }
+        if (rule.mechanic === 'cleanse-guard') {
+          let ally = p;
+          if (rule.targetMode === 'ally') {
+            ally = this.players.filter((q) => !q.dead && q.side === p.side)
+              .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp || a.id.localeCompare(b.id))[0] ?? p;
+            if (dist(p.pos, ally.pos) > rule.range) ally = null;
+          }
+          if (ally) casts.push({ p, foe: ally, rule, slot, from: { ...p.pos }, target: { ...ally.pos },
+            ux: 0, uy: 0, nearest: dist(p.pos, ally.pos) });
+          continue;
+        }
+        if (rule.mechanic === 'revive-target') {
+          const ally = this.players.filter((q) => q.dead && q.side === p.side && q.deathAt != null
+            && this.t - q.deathAt <= rule.reviveWindow)
+            .sort((a, b) => b.deathAt - a.deathAt || a.id.localeCompare(b.id))[0];
+          if (ally) casts.push({ p, foe: ally, rule, slot, from: { ...p.pos }, target: { ...ally.pos },
+            ux: 0, uy: 0, nearest: dist(p.pos, ally.pos) });
+          continue;
+        }
+        if (rule.mechanic === 'targeted-ally-guard' || rule.mechanic === 'targeted-empower'
+          || rule.mechanic === 'targeted-cdr') {
+          const ally = this.players.filter((q) => !q.dead && q.side === p.side && q !== p
+            && dist(p.pos, q.pos) <= rule.range)
+            .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp || a.id.localeCompare(b.id))[0];
+          if (ally) casts.push({ p, foe: ally, rule, slot, from: { ...p.pos }, target: { ...ally.pos },
+            ux: 0, uy: 0, nearest: dist(p.pos, ally.pos) });
+          continue;
+        }
+        if (rule.mechanic === 'target-heal') {
+          let ally = null, lowest = 1, nearestAlly = Infinity;
+          for (const q of this.players) {
+            if (q.dead || q.side !== p.side) continue;
+            const d = dist(p.pos, q.pos), hpR = q.hp / q.maxHp;
+            if (d > rule.range || hpR >= 1) continue;
+            if (hpR < lowest || (hpR === lowest && (d < nearestAlly || (d === nearestAlly && q.id < (ally?.id ?? 'z'))))) {
+              ally = q; lowest = hpR; nearestAlly = d;
+            }
+          }
+          if (ally) casts.push({ p, foe: ally, rule, slot, from: { ...p.pos }, target: { ...ally.pos },
+            ux: 0, uy: 0, nearest: nearestAlly });
+          continue;
+        }
+        if (rule.mechanic === 'area-heal') {
+          const wounded = this.players.some((q) => !q.dead && q.side === p.side
+            && q.hp < q.maxHp && dist(p.pos, q.pos) <= rule.radius);
+          if (wounded) casts.push({ p, foe: p, rule, slot, from: { ...p.pos }, target: { ...p.pos },
+            ux: 0, uy: 0, nearest: 0 });
+          continue;
+        }
+        if (rule.mechanic === 'ally-blink') {
+          let ally = null, nearestAlly = rule.range;
+          for (const q of this.players) {
+            if (q.dead || q.side !== p.side || q === p) continue;
+            const d = dist(p.pos, q.pos);
+            if (d < nearestAlly || (d === nearestAlly && q.id < (ally?.id ?? 'z'))) {
+              ally = q; nearestAlly = d;
+            }
+          }
+          if (ally) {
+            const from = { ...p.pos }, target = { ...ally.pos };
+            const dx = target.x - from.x, dy = target.y - from.y;
+            const ux = dx / (nearestAlly || 1), uy = dy / (nearestAlly || 1);
+            casts.push({ p, foe: ally, rule, slot, from, target, ux, uy, nearest: nearestAlly });
+          }
+          continue;
+        }
+        if (rule.mechanic === 'targeted-ally-shield') {
+          let ally = null, lowest = Infinity, nearestAlly = Infinity;
+          for (const q of this.players) {
+            if (q.dead || q.side !== p.side) continue;
+            const d = dist(p.pos, q.pos), hpR = q.hp / q.maxHp;
+            if (d > rule.range || hpR > lowest || (hpR === lowest && d >= nearestAlly)) continue;
+            ally = q; lowest = hpR; nearestAlly = d;
+          }
+          if (ally) casts.push({ p, foe: ally, rule, slot, from: { ...p.pos }, target: { ...ally.pos },
+            ux: 0, uy: 0, nearest: nearestAlly });
+          continue;
+        }
+        if (rule.mechanic === 'targeted-ally-haste') {
+          let ally = null, lowest = Infinity, nearestAlly = Infinity;
+          for (const q of this.players) {
+            if (q.dead || q.side !== p.side || q === p) continue;
+            const d = dist(p.pos, q.pos), hpR = q.hp / q.maxHp;
+            if (d > rule.range || hpR > lowest || (hpR === lowest && (d > nearestAlly
+              || (d === nearestAlly && q.id > (ally?.id ?? 'z'))))) continue;
+            ally = q; lowest = hpR; nearestAlly = d;
+          }
+          if (ally) casts.push({ p, foe: ally, rule, slot, from: { ...p.pos }, target: { ...ally.pos },
+            ux: 0, uy: 0, nearest: nearestAlly });
+          continue;
+        }
+          if (rule.mechanic === 'ally-shield') {
+          let ally = null, lowest = rule.triggerHpRatio, nearestAlly = Infinity;
+          for (const q of this.players) {
+            if (q.dead || q.side !== p.side) continue;
+            const d = dist(p.pos, q.pos), hpR = q.hp / q.maxHp;
+            if (d > rule.range || hpR >= rule.triggerHpRatio) continue;
+            if (hpR < lowest || (hpR === lowest && (d < nearestAlly || (d === nearestAlly && q.id < (ally?.id ?? 'z'))))) {
+              ally = q; lowest = hpR; nearestAlly = d;
+            }
+          }
+          if (ally) {
+            const from = { ...p.pos }, target = { ...ally.pos };
+            casts.push({ p, foe: ally, rule, slot, from, target, nearest: nearestAlly });
+          }
+            continue;
+          }
+          if (rule.mechanic === 'area-taunt') {
+            let foe = null, nearest = rule.range;
+            for (const q of this.players) {
+              if (q.dead || q.side === p.side) continue;
+              const d = dist(p.pos, q.pos);
+              if (d < nearest || (d === nearest && q.id < (foe?.id ?? 'z'))) {
+                nearest = d; foe = q;
+              }
+            }
+            if (foe) casts.push({ p, foe, rule, slot, from: { ...p.pos }, target: { ...foe.pos },
+              ux: 0, uy: 0, nearest });
+            continue;
+          }
+          let foe = null, nearest = rule.range;
+        for (const q of this.players) {
+          if (q.dead || q.side === p.side || this._heroSkillStealthed(q)) continue;
+          const d = dist(p.pos, q.pos);
+          if (d < nearest || (d === nearest && q.id < (foe?.id ?? 'z'))) {
+            nearest = d; foe = q;
+          }
+        }
+        if (!foe || (rule.mechanic === 'shield-burst' && p.hp / p.maxHp > rule.triggerHpRatio)) continue;
+        const from = { ...p.pos }, target = { ...foe.pos };
+        const dx = target.x - from.x, dy = target.y - from.y;
+        const ux = dx / (nearest || 1), uy = dy / (nearest || 1);
+        casts.push({ p, foe, rule, slot, from, target, ux, uy, nearest });
+      }
+    }
+    const castThisTick = new Set();
+    for (const c of casts) {
+      const { p, foe, rule, slot, from, target, ux, uy, nearest } = c;
+      if (p.dead || castThisTick.has(p.id)) continue;
+      castThisTick.add(p.id);
+      p.heroSkillReadyAt[slot] = this.t + rule.cooldown * this._heroSkillCooldownFactor(p);
+      let fxTarget = target;
+      if (rule.mechanic === 'cleanse-guard') {
+        const protectedTarget = foe ?? p;
+        protectedTarget.heroSkillControlUntil = 0;
+        protectedTarget.heroSkillControlKind = null;
+        protectedTarget.heroSkillRootUntil = 0;
+        protectedTarget.heroSkillSilenceUntil = 0;
+        protectedTarget.heroSkillSlowUntil = 0;
+        protectedTarget.heroSkillControlImmuneUntil = this.t + rule.guardDuration;
+        this._applyHeroSkillGuard(protectedTarget, rule.guardDuration, rule.reduction);
+      } else if (rule.mechanic === 'self-guard') {
+        this._applyHeroSkillGuard(p, rule.guardDuration, rule.reduction);
+      } else if (rule.mechanic === 'team-buff') {
+        for (const ally of this.players) {
+          if (ally.dead || ally.side !== p.side || dist(ally.pos, p.pos) > rule.radius) continue;
+          ally.heroSkillPowerFactor = Math.max(ally.heroSkillPowerFactor ?? 1, rule.powerFactor);
+          ally.heroSkillPowerUntil = Math.max(ally.heroSkillPowerUntil ?? 0, this.t + rule.duration);
+          ally.heroSkillHasteFactor = Math.max(ally.heroSkillHasteFactor ?? 1, rule.speedFactor);
+          ally.heroSkillHasteUntil = Math.max(ally.heroSkillHasteUntil ?? 0, this.t + rule.duration);
+          ally.heroSkillPowerSourceId = p.id;
+        }
+      } else if (rule.mechanic === 'team-guard') {
+        for (const ally of this.players) {
+          if (!ally.dead && ally.side === p.side && dist(ally.pos, p.pos) <= rule.radius) {
+            this._applyHeroSkillGuard(ally, rule.guardDuration, rule.reduction);
+          }
+        }
+      } else if (rule.mechanic === 'targeted-ally-guard') {
+        this._applyHeroSkillGuard(foe, rule.guardDuration, rule.reduction);
+      } else if (rule.mechanic === 'targeted-empower') {
+        foe.heroSkillPowerFactor = Math.max(foe.heroSkillPowerFactor ?? 1, rule.powerFactor);
+        foe.heroSkillPowerUntil = Math.max(foe.heroSkillPowerUntil ?? 0, this.t + rule.duration);
+        foe.heroSkillPowerSourceId = p.id;
+      } else if (rule.mechanic === 'targeted-cdr') {
+        foe.heroSkillCooldownFactor = Math.min(foe.heroSkillCooldownFactor ?? 1, rule.cooldownFactor);
+        foe.heroSkillCooldownUntil = Math.max(foe.heroSkillCooldownUntil ?? 0, this.t + rule.duration);
+        foe.heroSkillCooldownSourceId = p.id;
+      } else if (rule.mechanic === 'self-buff') {
+        p.heroSkillPowerFactor = Math.max(p.heroSkillPowerFactor ?? 1, rule.powerFactor);
+        p.heroSkillPowerUntil = Math.max(p.heroSkillPowerUntil ?? 0, this.t + rule.duration);
+        p.heroSkillPowerSourceId = p.id;
+        p.heroSkillHasteFactor = Math.max(p.heroSkillHasteFactor ?? 1, rule.speedFactor);
+        p.heroSkillHasteUntil = Math.max(p.heroSkillHasteUntil ?? 0, this.t + rule.duration);
+        p.heroSkillHasteSourceId = p.id;
+      } else if (rule.mechanic === 'stealth') {
+        p.heroSkillStealthUntil = Math.max(p.heroSkillStealthUntil ?? 0, this.t + rule.duration);
+        p.heroSkillStealthSourceId = p.id;
+        p.heroSkillHasteFactor = Math.max(p.heroSkillHasteFactor ?? 1, rule.speedFactor);
+        p.heroSkillHasteUntil = Math.max(p.heroSkillHasteUntil ?? 0, this.t + rule.duration);
+        p.heroSkillHasteSourceId = p.id;
+      } else if (rule.mechanic === 'revive-target') {
+        foe.dead = false;
+        foe.respawn = 0;
+        foe.hp = Math.max(1, foe.maxHp * rule.reviveHpRatio);
+        foe.deathAt = null;
+        foe.state = '回線';
+        foe.fsm = 'RETURN';
+        foe.fsmUntil = 0;
+        foe.heroSkillReadyAt = {};
+        fxTarget = { ...foe.pos };
+      } else if (rule.mechanic === 'area-taunt-guard') {
+        p.heroSkillGuardReduction = rule.reduction;
+        p.heroSkillGuardUntil = Math.max(p.heroSkillGuardUntil ?? 0, this.t + rule.guardDuration);
+        for (const q of this.players) {
+          if (q.dead || q.side === p.side || dist(from, q.pos) > rule.range) continue;
+          q.heroSkillTauntSourceId = p.id;
+            q.heroSkillTauntUntil = Math.max(q.heroSkillTauntUntil ?? 0, this.t + rule.tauntDuration);
+          }
+        } else if (rule.mechanic === 'area-taunt') {
+          for (const q of this.players) {
+            if (q.dead || q.side === p.side || dist(from, q.pos) > rule.range) continue;
+            q.heroSkillTauntSourceId = p.id;
+            q.heroSkillTauntUntil = Math.max(q.heroSkillTauntUntil ?? 0, this.t + rule.tauntDuration);
+          }
+      } else if (rule.mechanic === 'ally-shield') {
+        const itemState = this.itemsOn ? this.items.stateOf(p.id) : null;
+        const armor = Math.max(0, rule.baseArmor + rule.armorGrowth * Math.max(0, (p.mlv ?? 1) - 1)
+          + (itemState?.cs.armor ?? 0) + (itemState?.aura.armor ?? 0));
+        const amount = armor * rule.armorMultiplier * (this.itemsOn ? this.items.hspK(p) : 1);
+        foe.shield = Math.max(amount, this.t < (foe.shieldUntil ?? 0) ? foe.shield : 0);
+        foe.shieldUntil = Math.max(this.t + rule.shieldDuration, foe.shieldUntil ?? 0);
+      } else if (rule.mechanic === 'dash-strike') {
+        const landing = { x: from.x + ux * Math.max(0, nearest - rule.dashStop),
+          y: from.y + uy * Math.max(0, nearest - rule.dashStop) };
+        if (dist(from, landing) > 0.01) this._navTeleport(p, landing);
+        const vector = knock.get(foe) ?? { x: 0, y: 0 };
+        vector.x += ux * rule.knockback; vector.y += uy * rule.knockback;
+        knock.set(foe, vector);
+        hit(p, foe, rule.damage + p.power * rule.powerRatio, rule);
+        for (const q of this.players) {
+          if (q !== foe && !q.dead && q.side !== p.side && segmentDistance(q.pos, from, target) <= rule.pathWidth) {
+            q.heroSkillSlowFactor = this.t < (q.heroSkillSlowUntil ?? 0)
+              ? Math.min(q.heroSkillSlowFactor, rule.pathSlowFactor) : rule.pathSlowFactor;
+            q.heroSkillSlowUntil = Math.max(q.heroSkillSlowUntil ?? 0, this.t + rule.pathSlowDuration);
+          }
+        }
+      } else if (rule.mechanic === 'dash-control-strike') {
+        const landing = { x: from.x + ux * Math.max(0, nearest - rule.dashStop),
+          y: from.y + uy * Math.max(0, nearest - rule.dashStop) };
+        if (dist(from, landing) > 0.01) this._navTeleport(p, landing);
+        if (rule.knockback > 0) {
+          const vector = knock.get(foe) ?? { x: 0, y: 0 };
+          vector.x += ux * rule.knockback; vector.y += uy * rule.knockback;
+          knock.set(foe, vector);
+        }
+        hit(p, foe, rule.damage + p.power * rule.powerRatio, rule);
+        this._applyHeroSkillControl(foe, rule.control, rule.controlDuration);
+        for (const q of this.players) {
+          if (q !== foe && !q.dead && q.side !== p.side && segmentDistance(q.pos, from, target) <= rule.pathWidth) {
+            q.heroSkillSlowFactor = this.t < (q.heroSkillSlowUntil ?? 0)
+              ? Math.min(q.heroSkillSlowFactor, rule.pathSlowFactor) : rule.pathSlowFactor;
+            q.heroSkillSlowUntil = Math.max(q.heroSkillSlowUntil ?? 0, this.t + rule.pathSlowDuration);
+          }
+        }
+      } else if (rule.mechanic === 'dash-knockup-strike') {
+        const landing = { x: from.x + ux * Math.max(0, nearest - rule.dashStop),
+          y: from.y + uy * Math.max(0, nearest - rule.dashStop) };
+        if (dist(from, landing) > 0.01) this._navTeleport(p, landing);
+        if (rule.knockback > 0) {
+          const vector = knock.get(foe) ?? { x: 0, y: 0 };
+          vector.x += ux * rule.knockback; vector.y += uy * rule.knockback;
+          knock.set(foe, vector);
+        }
+        hit(p, foe, rule.damage + p.power * rule.powerRatio, rule);
+        this._applyHeroSkillControl(foe, rule.control, rule.controlDuration);
+        for (const q of this.players) {
+          if (q !== foe && !q.dead && q.side !== p.side && segmentDistance(q.pos, from, target) <= rule.pathWidth) {
+            q.heroSkillSlowFactor = this.t < (q.heroSkillSlowUntil ?? 0)
+              ? Math.min(q.heroSkillSlowFactor, rule.pathSlowFactor) : rule.pathSlowFactor;
+            q.heroSkillSlowUntil = Math.max(q.heroSkillSlowUntil ?? 0, this.t + rule.pathSlowDuration);
+          }
+        }
+      } else if (rule.mechanic === 'dash-blast') {
+        const landing = { x: from.x + ux * Math.max(0, nearest - rule.dashStop),
+          y: from.y + uy * Math.max(0, nearest - rule.dashStop) };
+        if (dist(from, landing) > 0.01) this._navTeleport(p, landing);
+        fxTarget = { ...p.pos };
+        for (const q of this.players) {
+          if (!q.dead && q.side !== p.side && dist(q.pos, p.pos) <= rule.blastRadius) {
+            hit(p, q, rule.damage + p.power * rule.powerRatio, rule);
+          } else if (!q.dead && q.side !== p.side && segmentDistance(q.pos, from, target) <= rule.pathWidth) {
+            q.heroSkillSlowFactor = this.t < (q.heroSkillSlowUntil ?? 0)
+              ? Math.min(q.heroSkillSlowFactor, rule.pathSlowFactor) : rule.pathSlowFactor;
+            q.heroSkillSlowUntil = Math.max(q.heroSkillSlowUntil ?? 0, this.t + rule.pathSlowDuration);
+          }
+        }
+      } else if (rule.mechanic === 'blink-strike') {
+        const landing = { x: foe.pos.x - ux * rule.arrivalOffset, y: foe.pos.y - uy * rule.arrivalOffset };
+        this._navTeleport(p, landing);
+        fxTarget = { ...p.pos };
+        hit(p, foe, rule.damage + p.power * rule.powerRatio, rule);
+      } else if (rule.mechanic === 'cone-strike') {
+        const enemies = this.players.filter((q) => !q.dead && q.side !== p.side).map((q) => {
+          const vx = q.pos.x - from.x, vy = q.pos.y - from.y;
+          const d = Math.hypot(vx, vy) || 1;
+          return { q, d, angle: Math.acos(Math.max(-1, Math.min(1, (vx * ux + vy * uy) / d))) };
+        }).filter(({ d, angle }) => d <= rule.range && angle <= rule.halfAngle)
+          .sort((a, b) => a.d - b.d || a.q.id.localeCompare(b.q.id));
+        for (const { q } of enemies) hit(p, q, rule.damage + p.power * rule.powerRatio, rule);
+      } else if (rule.mechanic === 'dash-wall') {
+        const landing = { x: from.x + ux * rule.range, y: from.y + uy * rule.range };
+        this._navTeleport(p, landing);
+        fxTarget = { ...p.pos };
+        this.heroSkillPending.push({ kind: 'dash-wall', p, from, end: fxTarget, rule,
+          at: this.t + rule.tickInterval, until: this.t + rule.wallDuration });
+      } else if (rule.mechanic === 'barrier-line') {
+        fxTarget = { x: from.x + ux * rule.range, y: from.y + uy * rule.range };
+        this.heroSkillPending.push({ kind: 'barrier-line', p, from, end: fxTarget, rule,
+          at: this.t + rule.tickInterval, until: this.t + rule.wallDuration });
+      } else if (rule.mechanic === 'line') {
+        const end = { x: from.x + ux * rule.range, y: from.y + uy * rule.range };
+        for (const q of this.players) {
+          if (!q.dead && q.side !== p.side && segmentDistance(q.pos, from, end) <= rule.width) {
+            hit(p, q, rule.damage + p.power * rule.powerRatio, rule);
+            this._applyHeroSkillControl(q, rule.control, rule.controlDuration);
+          }
+        }
+      } else if (rule.mechanic === 'projectile') {
+        this.heroSkillPending.push({ kind: 'projectile', p, foeId: foe.id, target, rule, at: this.t + rule.travel });
+      } else if (rule.mechanic === 'split-projectile') {
+        this.heroSkillPending.push({ kind: 'split-projectile', p, foeId: foe.id, target, rule,
+          at: this.t + rule.travel });
+      } else if (rule.mechanic === 'piercing-line') {
+        fxTarget = { x: from.x + ux * rule.range, y: from.y + uy * rule.range };
+        this.heroSkillPending.push({ kind: 'piercing-line', p, from, end: fxTarget, rule,
+          at: this.t + rule.travel });
+      } else if (rule.mechanic === 'delayed-area') {
+        this.heroSkillPending.push({ kind: 'delayed-area', p, target, rule, at: this.t + rule.delay });
+      } else if (rule.mechanic === 'area-dot') {
+        this.heroSkillPending.push({ kind: 'area-dot', p, target, rule,
+          at: this.t + rule.delay, until: this.t + rule.delay + rule.dotDuration });
+        } else if (rule.mechanic === 'area-root') {
+          this.heroSkillPending.push({ kind: 'area-root', p, target, rule, at: this.t + rule.delay });
+      } else if (rule.mechanic === 'area-control') {
+          this.heroSkillPending.push({ kind: 'area-control', p, target, rule, at: this.t + rule.delay });
+        } else if (rule.mechanic === 'area-silence') {
+          this.heroSkillPending.push({ kind: 'area-silence', p, target, rule, at: this.t + rule.delay });
+        } else if (rule.mechanic === 'area-mark') {
+          this.heroSkillPending.push({ kind: 'area-mark', p, target, rule, at: this.t + rule.delay });
+        } else if (rule.mechanic === 'multi-strike') {
+          this.heroSkillPending.push({ kind: 'multi-strike', p, foeId: foe.id, target, rule,
+            hitIndex: 0, at: this.t });
+        } else if (rule.mechanic === 'silence-target') {
+          hit(p, foe, rule.damage + p.power * rule.powerRatio, rule);
+          foe.heroSkillSilenceUntil = Math.max(foe.heroSkillSilenceUntil ?? 0, this.t + rule.silenceDuration);
+          foe.heroSkillSilenceSourceId = p.id;
+      } else if (rule.mechanic === 'root-dot') {
+        if (!this._heroSkillControlImmune(foe)) {
+          foe.heroSkillRootUntil = Math.max(foe.heroSkillRootUntil ?? 0, this.t + rule.rootDuration);
+        }
+        this.heroSkillPending.push({ kind: 'root-dot', p, target: foe, rule,
+          at: this.t + rule.tickInterval, until: this.t + rule.dotDuration });
+      } else if (rule.mechanic === 'control-target') {
+        hit(p, foe, rule.damage + p.power * rule.powerRatio, rule);
+        this._applyHeroSkillControl(foe, rule.control, rule.controlDuration);
+      } else if (rule.mechanic === 'root-target') {
+        hit(p, foe, rule.damage + p.power * rule.powerRatio, rule);
+        if (!this._heroSkillControlImmune(foe)) {
+          foe.heroSkillRootUntil = Math.max(foe.heroSkillRootUntil ?? 0, this.t + rule.rootDuration);
+        }
+      } else if (rule.mechanic === 'pull-target') {
+        const distance = Math.min(rule.pullDistance, Math.max(0, nearest - 0.9));
+        this._navTeleport(foe, { x: from.x + ux * distance, y: from.y + uy * distance });
+        fxTarget = { ...foe.pos };
+        hit(p, foe, rule.damage + p.power * rule.powerRatio, rule);
+        this._applyHeroSkillControl(foe, 'stun', rule.controlDuration);
+      } else if (rule.mechanic === 'execute-strike') {
+        const execute = foe.hp / foe.maxHp <= rule.executeThreshold;
+        hit(p, foe, execute ? foe.hp + 1 : rule.damage + p.power * rule.powerRatio, rule);
+      } else if (rule.mechanic === 'shield-burst') {
+        p.shield = Math.max(p.shield ?? 0, p.maxHp * rule.shieldPctMaxHp);
+        p.shieldUntil = this.t + rule.shieldDuration;
+        this.heroSkillPending.push({ kind: 'shield-burst', p, rule, at: p.shieldUntil });
+      } else if (rule.mechanic === 'blink-shield') {
+        const direction = rule.direction === 'away' ? -1 : 1;
+        const landing = { x: from.x + ux * rule.blinkDistance * direction,
+          y: from.y + uy * rule.blinkDistance * direction };
+        this._navTeleport(p, landing);
+        fxTarget = { ...p.pos };
+        p.shield = Math.max(p.shield ?? 0, p.maxHp * rule.shieldPctMaxHp);
+        p.shieldUntil = this.t + rule.shieldDuration;
+      } else if (rule.mechanic === 'target-mark') {
+        foe.heroSkillMarkUntil = Math.max(foe.heroSkillMarkUntil ?? 0, this.t + rule.markDuration);
+        foe.heroSkillMarkSourceId = p.id;
+        foe.heroSkillMarkAmp = rule.damageAmp;
+        if (rule.slowFactor < 1) {
+          foe.heroSkillSlowFactor = this.t < (foe.heroSkillSlowUntil ?? 0)
+            ? Math.min(foe.heroSkillSlowFactor, rule.slowFactor) : rule.slowFactor;
+          foe.heroSkillSlowUntil = Math.max(foe.heroSkillSlowUntil ?? 0, this.t + rule.markDuration);
+        }
+      } else if (rule.mechanic === 'target-heal') {
+        const gain = Math.min(foe.maxHp, foe.hp + rule.healAmount + p.power * rule.healPowerRatio) - foe.hp;
+        if (gain > 0) { foe.hp += gain; foe.heal = (foe.heal ?? 0) + gain; }
+      } else if (rule.mechanic === 'area-heal') {
+        for (const ally of this.players) {
+          if (ally.dead || ally.side !== p.side || dist(ally.pos, p.pos) > rule.radius) continue;
+          const gain = Math.min(ally.maxHp, ally.hp + rule.healAmount + p.power * rule.healPowerRatio) - ally.hp;
+          if (gain > 0) { ally.hp += gain; ally.heal = (ally.heal ?? 0) + gain; }
+        }
+      } else if (rule.mechanic === 'ally-blink') {
+        const distance = Math.min(rule.blinkDistance, Math.max(0, nearest - 0.9));
+        if (rule.blinkMode === 'pull-to-caster') {
+          const landing = { x: from.x + ux * distance, y: from.y + uy * distance };
+          this._navTeleport(foe, landing);
+          fxTarget = { ...foe.pos };
+        } else {
+          const landing = { x: from.x + ux * distance, y: from.y + uy * distance };
+          this._navTeleport(p, landing);
+          fxTarget = { ...p.pos };
+        }
+      } else if (rule.mechanic === 'self-shield') {
+        p.shield = Math.max(p.shield ?? 0, p.maxHp * rule.shieldPctMaxHp);
+        p.shieldUntil = Math.max(p.shieldUntil ?? 0, this.t + rule.shieldDuration);
+      } else if (rule.mechanic === 'empowered-strike') {
+        p.heroSkillEmpowerDamage = rule.bonusDamage;
+        p.heroSkillEmpowerPowerRatio = rule.bonusPowerRatio;
+        p.heroSkillEmpowerUntil = this.t + rule.duration;
+        p.heroSkillEmpowerSkillId = rule.skillId;
+      } else if (rule.mechanic === 'team-haste') {
+        for (const ally of this.players) {
+          if (ally.dead || ally.side !== p.side || dist(ally.pos, p.pos) > rule.radius) continue;
+          ally.heroSkillHasteFactor = Math.max(ally.heroSkillHasteFactor ?? 1, rule.speedFactor);
+          ally.heroSkillHasteUntil = Math.max(ally.heroSkillHasteUntil ?? 0, this.t + rule.duration);
+          ally.heroSkillHasteSourceId = p.id;
+        }
+      } else if (rule.mechanic === 'targeted-ally-haste') {
+        foe.heroSkillHasteFactor = Math.max(foe.heroSkillHasteFactor ?? 1, rule.speedFactor);
+        foe.heroSkillHasteUntil = Math.max(foe.heroSkillHasteUntil ?? 0, this.t + rule.duration);
+        foe.heroSkillHasteSourceId = p.id;
+      } else if (rule.mechanic === 'targeted-ally-shield') {
+        foe.shield = Math.max(foe.shield ?? 0, foe.maxHp * rule.shieldPctMaxHp);
+        foe.shieldUntil = Math.max(foe.shieldUntil ?? 0, this.t + rule.shieldDuration);
+      } else if (rule.mechanic === 'team-shield') {
+        for (const ally of this.players) {
+          if (!ally.dead && ally.side === p.side && dist(ally.pos, p.pos) <= rule.radius) {
+            ally.shield = Math.max(ally.shield ?? 0, ally.maxHp * rule.shieldPctMaxHp);
+            ally.shieldUntil = Math.max(ally.shieldUntil ?? 0, this.t + rule.shieldDuration);
+          }
+        }
+      }
+        this.pushFx({ type: ['shield-burst', 'ally-shield', 'targeted-ally-shield', 'team-shield', 'self-shield', 'area-taunt-guard', 'area-taunt', 'area-control', 'area-silence', 'area-mark', 'blink-shield', 'silence-target', 'target-mark', 'target-heal', 'area-heal', 'ally-blink', 'empowered-strike', 'team-haste', 'targeted-ally-haste', 'barrier-line', 'area-dot', 'team-buff', 'cleanse-guard', 'self-guard', 'self-buff', 'stealth', 'split-projectile', 'revive-target', 'team-guard', 'targeted-ally-guard', 'targeted-empower', 'targeted-cdr', 'execute-strike', 'pull-target'].includes(rule.mechanic) ? 'ult' : 'line', pos: from, target: fxTarget, sourceId: p.id,
+        targetId: foe.id, ability: `hero:${slot}`, skillId: rule.skillId,
+        feedback: 'skill', life: rule.mechanic === 'projectile' ? rule.travel + 0.22
+          : rule.mechanic === 'piercing-line' ? rule.travel + 0.6
+          : rule.mechanic === 'area-taunt-guard' ? rule.guardDuration + 0.3
+          : rule.mechanic === 'ally-shield' ? rule.shieldDuration
+          : rule.mechanic === 'targeted-ally-shield' || rule.mechanic === 'team-shield' ? rule.shieldDuration
+          : rule.mechanic === 'root-dot' ? rule.dotDuration + 0.25
+          : rule.mechanic === 'area-root' ? rule.delay + 0.9
+          : rule.mechanic === 'area-control' || rule.mechanic === 'area-silence' || rule.mechanic === 'area-mark' ? rule.delay + 0.9
+          : rule.mechanic === 'area-taunt' ? rule.tauntDuration + 0.3
+          : rule.mechanic === 'multi-strike' ? rule.interval * rule.hitCount + 0.2
+          : rule.mechanic === 'silence-target' ? rule.silenceDuration + 0.25
+          : rule.mechanic === 'self-shield' ? rule.shieldDuration + 0.25
+          : rule.mechanic === 'blink-shield' ? rule.shieldDuration + 0.25
+          : rule.mechanic === 'target-mark' ? rule.markDuration + 0.25
+          : rule.mechanic === 'target-heal' || rule.mechanic === 'area-heal' ? 1.15
+          : rule.mechanic === 'ally-blink' ? 0.9
+          : rule.mechanic === 'empowered-strike' ? rule.duration + 0.25
+          : rule.mechanic === 'team-haste' || rule.mechanic === 'targeted-ally-haste' || rule.mechanic === 'team-buff'
+            || rule.mechanic === 'targeted-empower' || rule.mechanic === 'targeted-cdr'
+            || rule.mechanic === 'self-buff' || rule.mechanic === 'stealth' ? rule.duration + 0.25
+          : rule.mechanic === 'barrier-line' ? rule.wallDuration + 0.25
+          : rule.mechanic === 'area-dot' ? rule.delay + rule.dotDuration + 0.25
+          : rule.mechanic === 'split-projectile' ? rule.travel + 0.5
+          : rule.mechanic === 'cleanse-guard' || rule.mechanic === 'self-guard' || rule.mechanic === 'team-guard'
+            || rule.mechanic === 'targeted-ally-guard' ? rule.guardDuration + 0.25
+          : rule.mechanic === 'revive-target' ? 2.2
+          : rule.mechanic === 'execute-strike' || rule.mechanic === 'pull-target' ? 1.4
+          : rule.mechanic === 'dash-wall' ? rule.wallDuration + 0.25 : 1.6 });
+    }
+    // Apply all hits before death resolution; avoids a first-caster advantage.
+    const itemHits = [];
+    for (const { source, target, damage, rule } of hits) {
+      if (this.itemsOn) {
+        const resolved = this._heroGuardHit(target, this.items.resolveAbilityHit(source, target, damage, rule.damageType));
+        source.dmg += resolved.total;
+        this.items.applyDamage(target, resolved, this.t);
+        itemHits.push([source, target, damage, resolved]);
+      } else {
+        source.dmg += damage;
+        this._damageHero(target, damage);
+      }
+    }
+    if (itemHits.length) this.items.afterDamage(itemHits, this.players, this.t, (q) => this._igniteCut(q));
+    for (const [foe, vector] of knock) {
+      if (!foe.dead && foe.hp > 0) this._navTeleport(foe, {
+        x: foe.pos.x + vector.x, y: foe.pos.y + vector.y,
+      });
+    }
+    for (const { source, target } of hits) {
+      if (target.hp <= 0 && !target.dead) this._resolveKill(source, target);
+    }
+  }
+
   // ── Milestone M：戰鬥原型層（configureArchetypes）──────────────────────
   /**
    * 近戰／遠程、交戰距離、追擊距離與站位線位。
@@ -517,7 +1277,7 @@ export class LogicEngine {
         foe = held; fd = dist(p.pos, held.pos);
       }
     }
-    if (!foe) for (const q of alive) { if (q.side === p.side || q.dead) continue; pick(q); }
+    if (!foe) for (const q of alive) { if (q.side === p.side || q.dead || this._heroSkillStealthed(q)) continue; pick(q); }
     //  錨點太遠 ⇒ 還在行軍，維持原本的推線／游走目標
     if (!foe || fd > a.chaseDistance + 6) { if (R.stableFormation) { p._archFoe = null; p._hold = false; } return tgt; }
     //  P0-C：targetless LANE 不得被跨線的遠距離敵人當成 formation 錨點。
@@ -713,7 +1473,8 @@ export class LogicEngine {
    * 未啟用技能層 ⇒ `shield` 恆為 0 ⇒ 與基準逐位元相同（`foe.hp -= amt`）。
    */
   _damageHero(foe, amt) {
-    if ((this.spellsOn || this.itemsOn) && foe.shield > 0 && this.t < foe.shieldUntil) {
+    amt *= this._heroGuardFactor(foe);
+    if ((this.spellsOn || this.itemsOn || this.heroSkillsOn) && foe.shield > 0 && this.t < foe.shieldUntil) {
       const absorbed = Math.min(foe.shield, amt);
       foe.shield -= absorbed;
       amt -= absorbed;
@@ -1081,7 +1842,7 @@ export class LogicEngine {
     if (p.retreating || this.t < p.reengageAt || p.hp < p.maxHp * 0.4) return null;
     let best = null, bd = R.chaseTriggerDist;
     for (const q of alive) {
-      if (q.side === p.side || q.dead || !q.retreating) continue;
+      if (q.side === p.side || q.dead || this._heroSkillStealthed(q) || !q.retreating) continue;
       if (q.hp > q.maxHp * R.chaseHpMax) continue;
       const dd = dist(p.pos, q.pos);
       if (dd < bd) { bd = dd; best = q; }
@@ -1100,7 +1861,7 @@ export class LogicEngine {
     const awareness = R.decisionAwareness;
     const hpRatio = clamp(p.hp / p.maxHp, 0, 1);
     const enemyAwareness = alive
-      .filter((q) => q.side !== p.side && !q.dead && dist(q.pos, p.pos) <= awareness)
+      .filter((q) => q.side !== p.side && !q.dead && !this._heroSkillStealthed(q) && dist(q.pos, p.pos) <= awareness)
       .map((q) => ({ q, d: dist(q.pos, p.pos) }));
     //  Milestone H：英雄定位影響**目標選擇**——刺客更看殘血、坦克更看誰擋在前面。
     //    只改排序權重，不改可選目標集合、不改傷害。
@@ -1702,7 +2463,8 @@ export class LogicEngine {
       //    ⚠ 條件是「身邊沒有敵人」，不是「場上沒有敵人」——`nearFoe` 取的是最近的
       //    存活敵人，幾乎永遠存在，寫成 `!nearFoe` 會讓傳送一輩子放不出來。
       const disengaged = !nearFoe || nearFoe.d > R.teleportSafeDist;
-      if (this._spellReady(p, "teleport") && this.t >= R.teleportMinT && disengaged) {
+      if (this._spellReady(p, "teleport") && this.t >= R.teleportMinT && disengaged
+        && !(this.heroSkillsOn && this.t < (p.heroSkillRootUntil ?? 0))) {
         let target = null;
         for (const tw of Object.values(this.towers)) {
           if (tw.side !== p.side || tw.hp <= 0) continue;
@@ -2022,7 +2784,7 @@ export class LogicEngine {
     if (!R.summonerSpells) return;
     const casts = [];
     for (const p of alive) {
-      if (p.dead || this.t < p.sp.f.readyAt) continue;
+      if (p.dead || this.t < p.sp.f.readyAt || (this.heroSkillsOn && this.t < (p.heroSkillRootUntil ?? 0))) continue;
       if (p.fsm === "CHASE" && p.chaseId) {
         // 追擊收頭：目標殘血、卡在攻擊圈外 ⇒ 閃到身邊
         const foe = this.players.find((q) => q.id === p.chaseId);
@@ -2240,7 +3002,7 @@ export class LogicEngine {
             raw / this._dragonGuardK(bossTarget.side),
             Math.max(0, bossTarget.hp - 1));
           if (amount > 0) {
-            bossTarget.hp -= amount;
+            bossTarget.hp -= amount * this._heroGuardFactor(bossTarget);
             o.atkCd = interval; o.attackAt = this.t;
             this.pushFx({
               type: "neutral", pos: { ...o.pos }, target: { ...bossTarget.pos },
@@ -2348,7 +3110,7 @@ export class LogicEngine {
             campDmgBase / this._dragonGuardK(memberTarget.side),
             Math.max(0, memberTarget.hp - 1));
           if (amount <= 0) continue;
-          memberTarget.hp -= amount;
+          memberTarget.hp -= amount * this._heroGuardFactor(memberTarget);
           m.atkCd = R.campAttackInterval; m.attackAt = this.t;
           c.atkCd = Math.max(c.atkCd, R.campAttackInterval); c.attackAt = this.t;
           this.pushFx({
@@ -2432,12 +3194,15 @@ export class LogicEngine {
     let foe = null;
     //  P0-3 ④：集火品質。只有 playerStatsOn 時才收集候選（省掉基準路徑的配置）。
     const cands = this.playerStatsOn ? [] : null;
-    if (R.nearestTarget) {
+    const taunter = this._heroTaunter(p);
+    if (taunter) {
+      foe = dist(p.pos, taunter.pos) < this._engageRange(p) ? taunter : null;
+    } else if (R.nearestTarget) {
       //  Milestone M：交戰距離改由戰鬥原型決定（近戰 ≈4.0–4.3、遠程 ≈7.9–8.4）。
       //  未啟用原型層 ⇒ `_engageRange` 回傳 8 ⇒ 逐位元是舊行為。
       let bd = this._engageRange(p);
       for (const q of alive) {
-        if (q.side === p.side || q.dead) continue;
+        if (q.side === p.side || q.dead || this._heroSkillStealthed(q)) continue;
         const dd = dist(p.pos, q.pos);
         if (dd >= bd) continue;
         if (R.engagementFsm) {
@@ -2509,23 +3274,36 @@ export class LogicEngine {
     //  （接戰狀態、仇恨、特效仍照舊）——所以只用旗標跳過傷害段，不動 `foe`。
     //  ⚠ 誠實揭露：期望值上等同少量 DPS 損失。任何「無效攻擊」機制都必然如此；
     //    差別在於這是**離散事件**，沒有把能力乘進傷害式（S28 紅線）。
+    const heroControlled = this.heroSkillsOn && this.t < (p.heroSkillControlUntil ?? 0);
     let wasted = false;
-    if (foe) {
+    if (foe && !heroControlled) {
       p.atkTicks = (p.atkTicks ?? 0) + 1;
       if (this._qualRoll(p, "attackWaste")) { p.atkWasted = (p.atkWasted ?? 0) + 1; wasted = true; }
     }
-    if (foe && !wasted) {
+    if (foe && !wasted && !heroControlled) {
       // S29：dmgK 由規則集決定（v1 0.92 ⇒ TTK 20–30 秒、前 5 分鐘幾乎零擊殺）
       const hasRedBuff = R.neutralObjectives && this.t < (p.redBuffUntil ?? 0);
       const hasBlueBuff = R.neutralObjectives && this.t < (p.blueBuffUntil ?? 0);
       // 兩座固定 Buff camp 在地圖上分屬不同側；共同傷害收益必須等值，否則會把
       // presentation 類型變成陣營公平性。紅＝命中減速，藍＝移速＋技能循環。
-      const dmgAmt = p.power * dt * R.dmgK * lateFactor *
+      const empowered = this.heroSkillsOn && this.t < (p.heroSkillEmpowerUntil ?? 0);
+      const empowerSkillId = empowered ? p.heroSkillEmpowerSkillId : null;
+      const empowerBonus = empowered
+        ? (p.heroSkillEmpowerDamage ?? 0) + p.power * (p.heroSkillEmpowerPowerRatio ?? 0)
+        : 0;
+      const dmgAmt = (p.power * dt * R.dmgK + empowerBonus) * lateFactor *
         (hasRedBuff || hasBlueBuff ? R.combatBuffDamageK : 1) *
-        this._dragonPowerK(p.side) / this._dragonGuardK(foe.side);
+        this._dragonPowerK(p.side) / this._dragonGuardK(foe.side) * this._heroSkillPowerFactor(p)
+        * this._heroSkillDamageFactor(foe);
+      if (empowered) {
+        p.heroSkillEmpowerUntil = 0;
+        p.heroSkillEmpowerDamage = 0;
+        p.heroSkillEmpowerPowerRatio = 0;
+        p.heroSkillEmpowerSkillId = null;
+      }
       //  M2：裝備屬性把 D0（dmgAmt，一個係數都不改）拆成物理／魔法並做減傷（E1–E2）
-      const itemHit = this.itemsOn ? this.items.resolveHit(p, foe, dmgAmt, dt, lateFactor) : null;
-      p.dmg += itemHit ? itemHit.total : dmgAmt; foe.hitBy.set(p.id, this.t); // Sprint06：傷害/助攻追蹤（附加）
+      const itemHit = this.itemsOn ? this._heroGuardHit(foe, this.items.resolveHit(p, foe, dmgAmt, dt, lateFactor)) : null;
+      p.dmg += itemHit ? itemHit.total : dmgAmt * this._heroGuardFactor(foe); foe.hitBy.set(p.id, this.t); // Sprint06：傷害/助攻追蹤（附加）
       //  Milestone J：淨化後的短暫免疫期內不再被掛上減速（否則解了等於沒解）。
       const cleansed = this.spellsOn && this.t < (foe.cleanseUntil ?? 0);
       if (hasRedBuff && !cleansed) foe.redSlowUntil = Math.max(foe.redSlowUntil ?? 0, this.t + R.redBuffSlowT);
@@ -2547,8 +3325,8 @@ export class LogicEngine {
           type: power ? "ult" : "line",
           pos: { ...p.pos }, target: { ...foe.pos }, color: SIDE[p.side],
           sourceId: p.id, targetId: foe.id,
-          ability: `${p.role}:${power ? "power" : "basic"}`,
-          feedback: power ? "skill" : "attack",
+          ability: empowered ? empowerSkillId : `${p.role}:${power ? "power" : "basic"}`,
+          feedback: empowered || power ? "skill" : "attack",
         });
         p.atkCd = 0.5 * (hasBlueBuff ? R.blueBuffCooldownK : 1);
       }
@@ -2569,7 +3347,7 @@ export class LogicEngine {
         canSiege = this._siegeAllowedV3(p, tw, alive);
       } else canSiege = !alive.some((q) => q.side !== p.side && dist(q.pos, tw.pos) < 9);
     }
-    if (canSiege) {
+    if (canSiege && !heroControlled) {
       // S29B1（v3）：沒有己方兵線抵塔 ⇒ 拆塔效率大減（孤軍不融塔；修 6 分鐘推穿主堡）
       let soloK = 1;
       //  ── M1.5：基地建築的兵線硬閘門 ──────────────────────────────────────
@@ -3084,7 +3862,7 @@ export class LogicEngine {
     const minRetention = f.type === "tower" ? 3.4
       : (f.feedback === "skill" || f.type === "ult" ? 4.2
         : (f.feedback === "attack" || f.type === "line" ? 2.8 : 0.9));
-    const minVisualLife = f.type === "tower" ? 1.45
+    const minVisualLife = f.skillId ? 0.05 : f.type === "tower" ? 1.45
       : (f.feedback === "skill" || f.type === "ult" ? 1.6
         : (f.feedback === "attack" || f.type === "line" ? 1.1 : 0.9));
     const retention = Math.max(f.exp ?? minRetention, minRetention);
@@ -3505,7 +4283,7 @@ export class LogicEngine {
                 ? this._towerHeroShot(tw.lockShots ?? 0)
                 : R.towerAggroDmg * R.towerAttackInterval * lateFactor *
                   Math.min(R.towerLockRampMax ?? 1, 1 + (tw.lockShots ?? 0) * (R.towerLockRamp ?? 0));
-              best.hp -= R.towerSafetyV1 ? shot : Math.min(shot, Math.max(0, best.hp - 1));
+              best.hp -= (R.towerSafetyV1 ? shot : Math.min(shot, Math.max(0, best.hp - 1))) * this._heroGuardFactor(best);
               //  M1.7：被塔連續打了幾發。`_towerZoneV17` 用它當「該撤了」的硬訊號；
               //  離開塔區時歸零（見 _towerZoneV17）。塔傷本身一點都沒改。
               best.towerHits = (best.towerHits ?? 0) + 1;
@@ -3519,7 +4297,7 @@ export class LogicEngine {
               if (R.towerSafetyV1 && best.hp <= 0 && !best.dead) this._resolveKill(this._towerKillerFor(best), best);
             }
           } else {
-            best.hp -= Math.min(R.towerAggroDmg * dt * lateFactor, Math.max(0, best.hp - 1));
+            best.hp -= Math.min(R.towerAggroDmg * dt * lateFactor, Math.max(0, best.hp - 1)) * this._heroGuardFactor(best);
             if (this.rng() < dt * 1.2) this.pushFx({ type: "tower", pos: tw.pos, target: { x: best.pos.x, y: best.pos.y }, color: SIDE[tw.side] });
           }
         } else if (R.towerAttackInterval && tw.targetKind === "hero") {
@@ -3548,7 +4326,8 @@ export class LogicEngine {
     if (R.engagementFsm && R.summonerSpells) {
       const casts = [];
       for (const p of alive) {
-        if (this.t < p.sp.f.readyAt || !p.retreating || p.hp >= p.maxHp * R.flashEscapeHp) continue;
+        if (this.t < p.sp.f.readyAt || !p.retreating || p.hp >= p.maxHp * R.flashEscapeHp
+          || (this.heroSkillsOn && this.t < (p.heroSkillRootUntil ?? 0))) continue;
         let nd = R.flashEscapeFoeDist, nf = null;
         for (const q of alive) { if (q.side === p.side) continue; const dd = dist(p.pos, q.pos); if (dd < nd) { nd = dd; nf = q; } }
         if (nf) {
@@ -4235,6 +5014,7 @@ export class LogicEngine {
           }
         } else p.idleReason = null;
       }
+      tgt = this._heroTauntTarget(p, tgt);
       const d = dist(p.pos, tgt),
         spd = ((st === "團戰!" || st === "追擊" || st === "接戰" || st === "拉扯") ? R.fightSpeed : R.moveSpeed) *
           (R.engagementFsm && p.retreating ? R.retreatSpeedMult : 1) *
@@ -4243,7 +5023,11 @@ export class LogicEngine {
           //  Milestone J：幽魂的移速加成。未啟用技能層 ⇒ hasteUntil 恆為 0 ⇒ 係數恆為 1。
           (this.spellsOn && this.t < (p.hasteUntil ?? 0) ? R.ghostSpeedK : 1) *
           //  M2：裝備移速＋光環；裝備緩速與紅 Buff 緩速取較強者（E6）。未啟用 ⇒ 係數恆為 1。
-          (this.itemsOn ? this.items.moveK(p, this.t, R.neutralObjectives && this.t < (p.redSlowUntil ?? 0), R.redBuffSlowK) : 1) * dt;
+          (this.itemsOn ? this.items.moveK(p, this.t, R.neutralObjectives && this.t < (p.redSlowUntil ?? 0), R.redBuffSlowK) : 1) *
+          // Hero Skill V1：team/target haste is a bounded movement presentation of an authored buff.
+          (this._heroSkillHasteFactor(p)) *
+          (this.heroSkillsOn && this.t < (p.heroSkillSlowUntil ?? 0) ? p.heroSkillSlowFactor : 1) *
+          (this.heroSkillsOn && (this.t < (p.heroSkillControlUntil ?? 0) || this.t < (p.heroSkillRootUntil ?? 0)) ? 0 : 1) * dt;
       //  ── H.2：真正的碰撞與導航 ────────────────────────────────────────────
       //  舊版是「直線位移 + 對 28 個手寫圓做推開」，那和畫面上的牆體無關 ⇒ 會穿牆。
       //  現在：目標點先推回通道中心 → 子步進前進（沿牆切線滑動）→ 需要時尋路。
@@ -4330,6 +5114,7 @@ export class LogicEngine {
     if (R.engagementFsm) this._postCombatV3(alive, hot);
     //  Milestone J：其餘六個召喚師技能同樣在凍結位置上判定（先收集後套用）。
     this._summonerSpellsV2(alive, dt);
+    this._heroSkillStep();
 
     // S24：會戰/目標戰觀測（真實狀態計數；only when tacticOn）
     if (this.tacticOn) {
@@ -4445,10 +5230,55 @@ export class LogicEngine {
             ? [{ id: "ignite", remaining: Math.round((p.igniteUntil - this.t) * 10) / 10 }] : []),
           ...(this.spellsOn && this.t < (p.hasteUntil ?? 0)
             ? [{ id: "haste", remaining: Math.round((p.hasteUntil - this.t) * 10) / 10 }] : []),
-          ...((this.spellsOn || this.itemsOn) && p.shield > 0 && this.t < (p.shieldUntil ?? 0)
+          ...((this.spellsOn || this.itemsOn || this.heroSkillsOn) && p.shield > 0 && this.t < (p.shieldUntil ?? 0)
             ? [{ id: "shield", remaining: Math.round((p.shieldUntil - this.t) * 10) / 10,
               amount: Math.round(p.shield) }] : []),
+          ...(this.heroSkillsOn && this.t < (p.heroSkillSlowUntil ?? 0)
+            ? [{ id: "hero-slow", remaining: Math.round((p.heroSkillSlowUntil - this.t) * 10) / 10 }] : []),
+          ...(this.heroSkillsOn && this.t < (p.heroSkillMarkUntil ?? 0)
+            ? [{ id: "mark", sourceId: p.heroSkillMarkSourceId,
+              remaining: Math.round((p.heroSkillMarkUntil - this.t) * 10) / 10,
+              damageAmp: p.heroSkillMarkAmp }] : []),
+          ...(this.heroSkillsOn && this.t < (p.heroSkillEmpowerUntil ?? 0)
+            ? [{ id: "empowered-strike", skillId: p.heroSkillEmpowerSkillId,
+              remaining: Math.round((p.heroSkillEmpowerUntil - this.t) * 10) / 10 }] : []),
+          ...(this.heroSkillsOn && this.t < (p.heroSkillHasteUntil ?? 0)
+            ? [{ id: "hero-haste", sourceId: p.heroSkillHasteSourceId,
+              remaining: Math.round((p.heroSkillHasteUntil - this.t) * 10) / 10,
+              speedFactor: p.heroSkillHasteFactor }] : []),
+          ...(this.heroSkillsOn && this._heroSkillStealthed(p)
+            ? [{ id: "stealth", sourceId: p.heroSkillStealthSourceId,
+              remaining: Math.round((p.heroSkillStealthUntil - this.t) * 10) / 10 }] : []),
+          ...(this.heroSkillsOn && this.t < (p.heroSkillPowerUntil ?? 0)
+            ? [{ id: "hero-power", sourceId: p.heroSkillPowerSourceId,
+              remaining: Math.round((p.heroSkillPowerUntil - this.t) * 10) / 10,
+              powerFactor: p.heroSkillPowerFactor }] : []),
+          ...(this.heroSkillsOn && this.t < (p.heroSkillCooldownUntil ?? 0)
+            ? [{ id: "hero-cdr", sourceId: p.heroSkillCooldownSourceId,
+              remaining: Math.round((p.heroSkillCooldownUntil - this.t) * 10) / 10,
+              cooldownFactor: p.heroSkillCooldownFactor }] : []),
+          ...(this.heroSkillsOn && this.t < (p.heroSkillControlImmuneUntil ?? 0)
+            ? [{ id: "control-immune", remaining: Math.round((p.heroSkillControlImmuneUntil - this.t) * 10) / 10 }] : []),
+          ...(this.heroSkillsOn && this.t < (p.heroSkillControlUntil ?? 0)
+            ? [{ id: p.heroSkillControlKind, remaining: Math.round((p.heroSkillControlUntil - this.t) * 10) / 10 }] : []),
+          ...(this.heroSkillsOn && this.t < (p.heroSkillSilenceUntil ?? 0)
+            ? [{ id: "silence", sourceId: p.heroSkillSilenceSourceId,
+              remaining: Math.round((p.heroSkillSilenceUntil - this.t) * 10) / 10 }] : []),
+          ...(this.heroSkillsOn && this.t < (p.heroSkillRootUntil ?? 0)
+            ? [{ id: "root", remaining: Math.round((p.heroSkillRootUntil - this.t) * 10) / 10 }] : []),
+          ...(this.heroSkillsOn && this._heroTaunter(p)
+            ? [{ id: "taunt", sourceId: p.heroSkillTauntSourceId,
+              remaining: Math.round((p.heroSkillTauntUntil - this.t) * 10) / 10 }] : []),
+          ...(this.heroSkillsOn && this.t < (p.heroSkillGuardUntil ?? 0)
+            ? [{ id: "guard", remaining: Math.round((p.heroSkillGuardUntil - this.t) * 10) / 10,
+              reduction: p.heroSkillGuardReduction }] : []),
         ],
+      } : {}), ...(this.heroSkillsOn && this.heroSkills[p.id] ? {
+        heroSkills: Object.fromEntries(Object.entries(this.heroSkills[p.id]).map(([slot, rule]) => [slot, {
+          ready: this.t >= (p.heroSkillReadyAt[slot] ?? 0),
+          cd: Math.max(0, Math.round(((p.heroSkillReadyAt[slot] ?? 0) - this.t) * 10) / 10),
+          cdMax: rule.cooldown,
+        }])),
       } : {}) })),
       towers: Object.fromEntries(Object.entries(this.towers).map(([k, t]) => [k, { side: t.side, lane: t.lane, tier: t.tier, pos: t.pos, hp: clamp(t.hp / (t.maxHp ?? (t.lane === "nexus" ? NEXUS_HP : TOWER_HP)), 0, 1) }])),
       lanes: { top: this._snapLane("top"), mid: this._snapLane("mid"), bot: this._snapLane("bot") },
