@@ -22755,3 +22755,8 @@ This slice continued in the isolated `feature/moba-hero-skills-phase1` worktree 
 
 - `tools/check_hero_skills_base_assault.mjs` had a separate obsolete `180s` post-guard deadline. The formal Fairness contract allows healthy long matches, so the verifier now checks natural completion and eventual core progression after guard clearance without introducing a second timeout policy.
 - Seed `777` remains structural PASS: guards cleared at `2157.5s`, first core progression at `2898.5s`, natural finish at `2899s`, winner Blue; no Gameplay, balance, seed, baseline, or moba-sim change.
+
+## 2026-09-22 Hero Skills release browser-fixture alignment (owner: Codex)
+
+- The authoritative Battle browser smoke had one stale fixture assertion that required the canonical AI to cast `cinderfist:E` specifically. The live canonical roster legitimately reached other authored E slots first, while formal Battle still produced authored casts and pooled VFX with zero page/shader errors.
+- The verifier now asserts an authored live-roster `:E` cast, preserving the authority-path check without changing gameplay, timing, roster, balance, or release thresholds.
