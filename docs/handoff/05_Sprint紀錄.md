@@ -22760,3 +22760,8 @@ This slice continued in the isolated `feature/moba-hero-skills-phase1` worktree 
 
 - The authoritative Battle browser smoke had one stale fixture assertion that required the canonical AI to cast `cinderfist:E` specifically. The live canonical roster legitimately reached other authored E slots first, while formal Battle still produced authored casts and pooled VFX with zero page/shader errors.
 - The verifier now asserts an authored live-roster `:E` cast, preserving the authority-path check without changing gameplay, timing, roster, balance, or release thresholds.
+
+## 2026-09-22 Hero Skills simulation-version closure (owner: Codex)
+
+- The Hero Skills authority path changes `LogicEngine.js` semantics when the formal skill flag is ON, so the simulation contract is now `moba-sim.v8` with fingerprint `ba046ce4a129b1a9`; the historical v7 fingerprint remains retained.
+- This is a replay/version-contract declaration only. Clean v7 versus candidate skill-off remains `1000/1000` per-seed identical; no fairness baseline, seed corpus, balance value, or verifier threshold changed.

@@ -36,7 +36,7 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
  * ⚠ **什麼時候不用 bump**：純呈現層、UI、文案、log。
  * ⚠ 版本字串一旦發布就**不可回收再用**：舊 Challenge 存著它。
  */
-export const MOBA_SIMULATION_VERSION = "moba-sim.v7";
+export const MOBA_SIMULATION_VERSION = "moba-sim.v8";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
@@ -282,6 +282,11 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  navigation mirror / tail-deadlock fixes 改變同一輸入的模擬結果，
   //  因此開 v7；v6 指紋保留供歷史 replay 版本判定。
   "moba-sim.v7": "f3ff0bee0a052168",
+  //  2026-09-22（Hero Skills v1）：LogicEngine 新增 skill-gated QWER
+  //  authority path。skill-off 已以 clean v7 做 1000/1000 per-seed
+  //  comparison，未改變 baseline trajectory；正式 skill-on 語意已不同，
+  //  因此以新版本保留舊 v7 fingerprint，避免 replay 靜默重算。
+  "moba-sim.v8": "ba046ce4a129b1a9",
 });
 
 export const isKnownSimulationVersion = (v) =>
