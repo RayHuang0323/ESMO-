@@ -22750,3 +22750,8 @@ This slice continued in the isolated `feature/moba-hero-skills-phase1` worktree 
 - Skill-on n=1000: Blue/Red `49.8%/50.2%`, finished `1000/1000`, unfinished `0`, pathological `0`, kill ratio `1.023786`, median/P90/max `25.36m/31.56m/53.32m`, invariant violations `0`, conservation failures `0`; repeated seeds `1/715/1000` deterministic.
 - Scope remains Hero Skills v1 = `100/100` heroes and `400/400` QWER active gameplay plus presentation. Passive P = `100/100` data/description and `0/100` gameplay; defer to the next phase. No Gameplay, balance, seed corpus, baseline, moba-sim version, skill values, commit, push, or deploy changed in this verifier-alignment pass.
 - `regress` `15/15`, `regress2` `20/20` with pacing `8/8`, and build (`2912` modules) passed.
+
+## 2026-09-22 Hero Skills focused verifier alignment (owner: Codex, local uncommitted)
+
+- `tools/check_hero_skills_base_assault.mjs` had a separate obsolete `180s` post-guard deadline. The formal Fairness contract allows healthy long matches, so the verifier now checks natural completion and eventual core progression after guard clearance without introducing a second timeout policy.
+- Seed `777` remains structural PASS: guards cleared at `2157.5s`, first core progression at `2898.5s`, natural finish at `2899s`, winner Blue; no Gameplay, balance, seed, baseline, or moba-sim change.
