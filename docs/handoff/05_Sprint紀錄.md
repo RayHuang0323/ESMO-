@@ -22844,3 +22844,24 @@ DEPLOY = NO
 
 - 真手機觸控（gate 用 CDP 模擬 390×844）；iOS Safari 的 `env(safe-area-inset-bottom)` 實際值。
 - 技能放大倍率 2× 在團戰密集時是否太搶畫面（總覽鏡頭下目測可讀，未做主觀驗收）。
+
+## MOBA Battle UX Hotfix — Production Release（2026-09-22）
+
+- 程式 release：`main` = `9ecc628`（fast-forward：`cfa755b..9ecc628`，non-force）＝ `028e295`（hotfix）＋ `9ecc628`（smoke gate 可打正式站）。
+  未碰 `integrate/online-foundation`、LogicEngine、Hero Skills gameplay／simulator；`moba-sim.v8` 不變。
+- 整合頭驗證：`browser_check_moba_battle_ux_hotfix` **55/55**（新增手機 diag、2×／4×、Gold 更新）、Hero Skills release gate PASS、
+  phase1 10/10、round2 410/410、gameplay_slice 68/68、base_assault PASS、presentation_l 80/80、`browser_check_hero_skills_battle` 5/5、
+  Item M1 69/69、M2 53/53、M3 66/66、regress 15/15、regress2 8/8、simulationVersion 51/51、build 2915 modules（13.30s）。
+- GitHub Pages：workflow run `35709301980` **success**（09:14:59Z → 09:16:20Z）；正式站 HTTP 200，bundle `assets/index-Bh_5GTBh.js` 含本次新字串（確認供應新 build，不只看 run）。
+- **Production smoke**（`ESMO_EXTERNAL_URL=https://rayhuang0323.github.io/ESMO-/`，同一支 gate）：**55/55 PASS**
+  - 手機 390：具名技能被畫出（namedDrawnFrames 100/100）、施放標籤、「🛒 裝備」入口與一次性提示、觸控區 48px、不壓按鈕、
+    2×／4× 不壞、Gold 即時更新（50 → 122）、裝備面板／資訊卡／完整詳情、**頭像中心與上緣都不會退出戰鬥**、隊伍面板、無橫向 overflow。
+  - 桌面：5v5 HUD、裝備詳情面板（名稱／價格／屬性／下一件／金錢）、十人列 hover 資訊卡、完整詳情、技能 VFX 與標籤。
+  - 對戰：暫停並離開 → 返回比賽、快速完成 → 結果 → 重播；page／console／shader error 0。
+- 未經真機：實體手機觸控、iOS safe-area 實際值、團戰密集時 2× 放大的主觀可讀性。
+
+```text
+MOBA_BATTLE_UX_HOTFIX = RELEASED
+PRODUCTION_SMOKE = PASS (55/55)
+DEPLOY_RUN = 35709301980 success
+```
