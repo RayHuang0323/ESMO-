@@ -3,6 +3,8 @@
 //  tools/browser_check_moba_battle_ux_hotfix.mjs — MOBA Battle UX hotfix 煙霧測試
 //
 //  執行：node tools/browser/run-gate.mjs tools/browser_check_moba_battle_ux_hotfix.mjs --timeout 1500000
+//  正式站：ESMO_EXTERNAL_URL=https://rayhuang0323.github.io/ESMO-/ node tools/browser/run-gate.mjs …（同一支）
+//    ⚠ 瀏覽器端完全不 import /src/（打包後沒有那些路徑，TD-31）；N 段在 Node 端 import，驗的是本機原始碼。
 //
 //  全部走**正式流程**（首頁 → 賽前 → Ban/Pick → 戰術 → 載入 → 戰鬥），不走 debug harness：
 //    N  純函式：技能呈現下限、鏡頭放大倍率、裝備資訊卡 selector（Node 端直接 import）
@@ -21,12 +23,14 @@ import { adaptEffects, SKILL_MIN_VISUAL_LIFE } from "../src/battle/moba/map/moba
 import { skillReadabilityBoost, SKILL_READABILITY } from "../src/battle/moba/skills/skillReadability.js";
 import { itemInfo } from "../src/battle/moba/itemInfo.js";
 
-const OUT = process.env.ESMO_REVIEW_OUT ?? "tmp/battle-ux-hotfix";
+const TARGET_URL = process.env.ESMO_EXTERNAL_URL?.trim() || null;
+const OUT = process.env.ESMO_REVIEW_OUT ?? (TARGET_URL ? "tmp/battle-ux-hotfix-prod" : "tmp/battle-ux-hotfix");
 mkdirSync(OUT, { recursive: true });
 
 const VIS = "const vis=(e)=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0;}; const q=(s)=>[...document.querySelectorAll(s)].find(vis);";
 
-const result = await runGate({ name: "MOBA Battle UX hotfix", timeoutMs: 1400000,
+const result = await runGate({ name: TARGET_URL ? "MOBA Battle UX hotfix（正式站）" : "MOBA Battle UX hotfix", timeoutMs: 1400000,
+  externalUrl: TARGET_URL,
   async run({ chrome, url, ck, sleep }) {
     // ── N 純函式 ───────────────────────────────────────────────────────────
     const skillFx = { id: "fx1", skillId: "ravager:Q", ability: "hero:Q", at: 10, life: 0.4, pos: { x: 50, y: 50 }, target: { x: 55, y: 50 } };
@@ -144,8 +148,23 @@ const result = await runGate({ name: "MOBA Battle UX hotfix", timeoutMs: 1400000
     ck("D15 重播可開（時間軸＋畫面）", await wait("document.querySelector('[aria-label=\"比賽重播\"] input[aria-label=\"重播時間軸\"]')", 60000));
     const deskErrors = { page: [...chrome.pageErrors], console: chrome.consoleLines.filter((l) => /shader error|VALIDATE_STATUS|WebGL.*error|Uncaught|TypeError|ReferenceError/i.test(JSON.stringify(l))) };
 
-    // ── M 手機 390×844 ────────────────────────────────────────────────────
+    // ── MV 手機 390×844 diag：技能在手機上一樣真的畫到、標籤出現 ─────────────
     await chrome.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
+    await chrome.navigate(url); await resetSave();
+    ck("MV0 正式流程進入戰鬥（390px diag）", await toBattle("?diag=1", "MV"));
+    await chrome.evaluate(VIS + "const b=q('[data-testid=\"match-speed-4\"]'); if(b) b.click(); return 1;");
+    let mv = null, mvCallout = 0;
+    for (let i = 0; i < 120; i++) {
+      mv = await ev("const d=window.__HERO_VFX_DIAG?window.__HERO_VFX_DIAG():null; return JSON.stringify({d, c:document.querySelectorAll('[data-testid=skill-cast-callout]').length});");
+      mvCallout = Math.max(mvCallout, mv?.c ?? 0);
+      if (mv?.d?.namedDrawnFrames > 30 && mvCallout > 0) break;
+      await sleep(500);
+    }
+    ck("MV1 手機：具名技能被 VFX 畫出", mv?.d?.namedFrames > 0 && mv.d.namedDrawnFrames === mv.d.namedFrames, JSON.stringify(mv?.d));
+    ck("MV2 手機：施放標籤出現", mvCallout > 0, `max ${mvCallout}`);
+    await shot("mobile-skill-callout");
+
+    // ── M 手機 390×844 ────────────────────────────────────────────────────
     await chrome.navigate(url); await resetSave();
     ck("M0 正式流程進入戰鬥（390px）", await toBattle("", "M"));
     await sleep(2500);
@@ -190,6 +209,19 @@ const result = await runGate({ name: "MOBA Battle UX hotfix", timeoutMs: 1400000
     if (leave) { await realClickAt(leave.x, leave.y); await sleep(1500); }
     ck("M12 面板開著時，點「暫停並離開」的位置也不會退出戰鬥", await ev(VIS + "return JSON.stringify(!!(" + inBattle + ") && !q('[data-testid=\"resume-active-match\"]'));"));
     await ev(VIS + "const x=q('[data-hero-sheet] button[aria-label=\"關閉\"]'); if(x) x.click(); return JSON.stringify(1);");
+    //  2× / 4× 畫面不壞、Gold 會隨時間更新
+    const goldOf = () => ev("const c=document.querySelector('[data-items-chip]'); return JSON.stringify(c?Number(c.dataset.itemsGold):null);");
+    const g0 = await goldOf();
+    for (const r of [2, 4]) {
+      await click('[data-testid="match-speed-' + r + '"]');
+      await sleep(4000);
+      ck(`M16 ${r}× 播放：仍在戰鬥、底欄與裝備入口可見、無橫向 overflow`,
+        await ev(VIS + "return JSON.stringify(!!(" + inBattle + ") && !!q('[data-testid=\"observer-dock\"]') && !!q('[data-items-chip]') && document.documentElement.scrollWidth <= window.innerWidth + 1);"));
+      await shot(`mobile-speed-${r}x`);
+    }
+    let g1 = g0;
+    for (let i = 0; i < 30 && g1 === g0; i++) { await sleep(1000); g1 = await goldOf(); }
+    ck("M17 Gold 即時更新（數字會隨比賽變動）", Number.isFinite(g0) && Number.isFinite(g1) && g1 !== g0, `${g0} → ${g1}`);
     await click(".observer-team-toggle");
     ck("M13 隊伍面板可開（十名選手）", await wait("q('.observer-team-sheet') && document.querySelectorAll('.observer-team-sheet [data-testid=\"observer-hero\"]').length === 10", 5000));
     ck("M14 隊伍面板無橫向 overflow", await noOverflow());
