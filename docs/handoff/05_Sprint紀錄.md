@@ -22945,3 +22945,33 @@ Item M1 69/69／`browser_check_hero_skills_battle` 5/5／`browser_check_moba_bat
 MOBA_COMBAT_QUALITY_V1 = LOCAL_COMMIT_ONLY
 SIMULATION_VERSION = moba-sim.v9 (4d7cf571c8122219)
 ```
+
+## MOBA Combat Quality v1 — Production Release（2026-09-23）
+
+- `main` = **`a0c2800`**（fast-forward `13202ab..a0c2800`，non-force）＝ Combat Quality 三筆 commit
+  （`231c11f` 本體／`39da6cd` Items M2 基準前移／`a0c2800` n=1000 紀錄）。
+  未碰 `integrate/online-foundation`，未開始 Online Backend，Competitive 維持 disabled。
+- 整合頭（= 本次 main）重跑全部閘門，**全綠**：
+  Combat Quality v1 28/28、Hero Skills release／phase1 10/10／round2 410/410／gameplay_slice 68/68／base_assault、
+  Item M1 69/69・M2 53/53・M3 66/66、P0-A 8/8・P0-B 14/14・P0-C・P0-D、milestone_i_close 44/44、
+  simulationVersion 51/51、verify.mjs `runtime29／experience26／progress25／talent27／tactic24／regress／regress2` **7/7**、
+  `browser_check_hero_skills_battle` 5/5、`browser_check_moba_battle_ux_hotfix` 55/55、build ✓ 13.23s。
+- GitHub Pages：workflow run **`35787666455`** success（2026-09-22T21:36:36Z → 21:38:04Z）；正式站 HTTP 200。
+- **Production smoke**（`https://rayhuang0323.github.io/ESMO-/`）：
+  - `browser_check_moba_battle_ux_hotfix`（正式站模式）**55/55 PASS**——技能可見、手機裝備入口、
+    2×／4×、Battle → Result → Replay、page／console／shader error 0。
+  - Combat Quality 專用 smoke **17/17 PASS**：桌機與 390px 各在 1×／2×／4× 都畫出具名技能
+    （namedDrawnFrames 桌機 7／56／105、手機 35／98／182，`dropped` 全 0）；
+    4× 跑到分出勝負（19:24、倒塔 14）⇒ **沒有 wave／base deadlock**；全程場上都有小兵（48–78）。
+  - 小兵取樣 **5/5 PASS**：小兵打小兵 730、小兵打英雄 299、英雄打小兵 669、同時在場最多 82 隻；
+    特效類別含 `minionSlash` 444／`minionBolt` 74／`siege` 59（近戰／遠程／攻城在正式站都跑得出來）。
+- **正式站驗不到的部分**（TD-31：打包後沒有 `/src/`，注入不了模組）：小兵列位／重疊率／目標分配比例、
+  反擊判定、超級兵只在已破的路出現、補刀比例——這些由本地 `check_moba_combat_quality_v1` 28/28 守住。
+  超級兵需要破高地塔才會出現，本次正式站樣本沒跑到破路局面。
+
+```text
+MOBA_COMBAT_QUALITY = RELEASED
+MOBA_SIM_VERSION = v9
+DEPLOY_RUN = 35787666455 success
+PRODUCTION_SMOKE = PASS (55/55 + 17/17 + 5/5)
+```
