@@ -57,6 +57,11 @@ const SPELL_FX_COLOR = {
 };
 
 const NEUTRAL_ROAM = { roamSightAdj: 0, roamInfoAdj: 0, roamGateAdj: 0, roamFollowAdj: 0 };
+//  Combat Quality v1：這些狀態代表「推進意圖／回防」，英雄會全力清兵；其餘狀態只補刀。
+//  ⚠ 「推進」（對線時往前線建築壓）**不算**清線意圖：它是對線的常態，算進去等於恢復全力清兵，
+//    雙人路又會推垮單人路（實測上路第一座塔 38:2）。
+const FARM_CLEAR_STATES = new Set(["圍攻", "攻門牙塔", "圍攻主堡"]);
+
 export class LogicEngine {
   /**
    * @param {number} seed
@@ -3304,6 +3309,8 @@ export class LogicEngine {
       //  M2：裝備屬性把 D0（dmgAmt，一個係數都不改）拆成物理／魔法並做減傷（E1–E2）
       const itemHit = this.itemsOn ? this._heroGuardHit(foe, this.items.resolveHit(p, foe, dmgAmt, dt, lateFactor)) : null;
       p.dmg += itemHit ? itemHit.total : dmgAmt * this._heroGuardFactor(foe); foe.hitBy.set(p.id, this.t); // Sprint06：傷害/助攻追蹤（附加）
+      //  Combat Quality v1：記下「剛攻擊敵方英雄」⇒ 附近敵方小兵反擊（純資料，不改本次傷害）。
+      if (R.cqMinionV1) p.heroAggroAt = this.t;
       //  Milestone J：淨化後的短暫免疫期內不再被掛上減速（否則解了等於沒解）。
       const cleansed = this.spellsOn && this.t < (foe.cleanseUntil ?? 0);
       if (hasRedBuff && !cleansed) foe.redSlowUntil = Math.max(foe.redSlowUntil ?? 0, this.t + R.redBuffSlowT);
@@ -3337,6 +3344,8 @@ export class LogicEngine {
         if (foe.hp <= 0 && !foe.dead) this._resolveKill(p, foe);
       } else { this._damageHero(foe, dmgAmt); if (foe.hp <= 0 && !foe.dead) this._resolveKill(p, foe); }
     }
+    //  Combat Quality v1：沒有英雄目標、沒被控制 ⇒ 處理兵線（補刀優先）。
+    if (R.cqHeroFarmV1 && !foe && !heroControlled) this._heroFarmStep(p, alive, dt, lateFactor);
     let tw = this.frontStructure(p.side, effLane, p.pos);
     // 可攻塔判定：v1/v2 = 塔邊有任何敵人就完全打不了塔（Legacy 簡化）。
     // S29B1（v3）：塔邊**人數優勢**即可強攻——否則只要守方站一個人在主堡旁，
@@ -3735,6 +3744,284 @@ export class LogicEngine {
     }
     return null;
   }
+  // ── MOBA Combat Quality v1（moba-sim.v9）─────────────────────────────────
+  //  所有函式只在 `R.cqMinionV1` / `R.cqHeroFarmV1` 開啟時被呼叫；舊規則集走原本路徑、逐位元不變。
+
+  /**
+   * 小兵的世界位置：lane 中心線 ＋ 權威橫向列位 `latN`（+t 方向的左手為正）。
+   * ⚠ 列位以**各自的行進方向**鏡像（藍沿 +t、紅沿 −t）⇒ 雙方隊形鏡像對稱（fairness 需要）。
+   * 沒有列位（舊規則集／舊存檔）⇒ 中心線，與舊碼相同。
+   */
+  _minionPos(ln, m) {
+    const c = posOnLane(ln, m.t);
+    const lat = m.latN ?? 0;
+    if (!lat) return c;
+    const a = posOnLane(ln, Math.max(0, m.t - 0.002));
+    const b = posOnLane(ln, Math.min(1, m.t + 0.002));
+    const L = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+    return { x: c.x - ((b.y - a.y) / L) * lat, y: c.y + ((b.x - a.x) / L) * lat };
+  }
+
+  /**
+   * 兵營（inhibitor）接口：攻方這一路是否已破。
+   * 目前＝敵方該路高地塔（tier 0）已倒。地圖未來有獨立 inhibitor 實體時**只改這一支**。
+   */
+  _laneBreached(side, ln) {
+    const foe = side === "blue" ? "red" : "blue";
+    const tw = this.towers[`${foe}_${ln}_0`];
+    return !!tw && tw.hp <= 0;
+  }
+
+  /**
+   * 兵線強化的唯一出口（Wave v1）。回傳 { fightK, siegeK }。
+   *  · 巴龍：沿用既有 `baronMinionFightK` / `baronMinionK`（數值不變）。
+   *  · 未來大型目標：往 `this.waveBuffs[side]` 推 `{ until, lane?, fightK?, siegeK? }` 即可，
+   *    **不要**直接生成大兵——大型目標的語意是「暫時強化兵線／推進力」。
+   */
+  _waveModifiers(side, ln) {
+    const R = this.rules;
+    let fightK = 1, siegeK = 1;
+    if (R.engagementFsm && this.fsm3 && this.t < (this.fsm3[side].baronBuffUntil ?? 0)) {
+      fightK *= R.baronMinionFightK ?? 1;
+      siegeK *= R.baronMinionK ?? 1;
+    }
+    //  superMinionMode "stack"／"none"：破路 ⇒ 沿用 v8 的整波兵對兵傷害倍率。
+    if ((R.superMinionMode ?? "replace") !== "replace" && R.laneBreachFightK && this._laneBreached(side, ln)) fightK *= R.laneBreachFightK;
+    for (const b of this.waveBuffs?.[side] ?? []) {
+      if (this.t >= (b.until ?? -Infinity) || (b.lane && b.lane !== ln)) continue;
+      fightK *= b.fightK ?? 1;
+      siegeK *= b.siegeK ?? 1;
+    }
+    return { fightK, siegeK };
+  }
+
+  /** 建立一隻小兵（cqMinionV1）。種類的所有數值都來自 `R.minionKinds`。 */
+  _spawnMinion(side, ln, wave, slot, kind) {
+    const R = this.rules;
+    const K = R.minionKinds[kind];
+    const latTab = R.minionLateral ?? {};
+    const lat = kind === "melee"
+      ? (latTab.melee?.[slot % (latTab.melee?.length || 1)] ?? 0)
+      : (latTab[kind] ?? 0);
+    return {
+      id: (side === "blue" ? "b" : "r") + this._mid++,
+      t: side === "blue" ? 0.06 : 0.94,
+      hp: K.hp, maxHp: K.hp, atkCd: 0,
+      wave, slot, kind, side,
+      //  以行進方向鏡像：紅方的「左手」在 +t 座標系是右手。
+      latN: side === "blue" ? lat : -lat,
+      dmg: K.dmg, interval: K.interval, range: K.rangeWorld,
+      rangeP: K.rangeWorld / laneLength(ln), towerK: K.towerK,
+      super: kind === "super", targetId: null, targetKind: null,
+    };
+  }
+
+  /**
+   * 小兵交戰（cqMinionV1）。雙方先各自決定目標，再同時結算（沿用 S29 的同時結算原則）。
+   *  ① 反擊：剛攻擊我方英雄的敵方英雄（`heroAggroAt` 在 `minionRetaliateSec` 內）且在射程內 ⇒ 優先
+   *  ② 敵兵：沿用上一個目標（還活著且在射程內）；否則在射程內挑「2D 距離＋已鎖定數×分散權重」最小者
+   *  ③ 沒有敵兵可打 ⇒ 射程內最近的敵方英雄（傷害 × `minionHeroDamageK`）
+   * ⚠ 射程判定用**沿兵線的距離**（與移動停止點同一把尺）⇒ 停下來的地方一定打得到，不會新增卡死；
+   *   橫向列位只用在評分（優先同列、分散火力）與畫面。
+   */
+  _cqMinionCombat(ln, dt) {
+    const R = this.rules;
+    const lane = this.lanes[ln];
+    const L = laneLength(ln);
+    for (const m of lane.bm) m.atkCd = Math.max(0, (m.atkCd ?? 0) - dt);
+    for (const m of lane.rm) m.atkCd = Math.max(0, (m.atkCd ?? 0) - dt);
+    const heroes = this.players.filter((q) => !q.dead && !this._heroSkillStealthed(q));
+    const dmg = new Map();
+    const heroDmg = new Map();
+    for (const [side, atk, def] of [["blue", lane.bm, lane.rm], ["red", lane.rm, lane.bm]]) {
+      const { fightK } = this._waveModifiers(side, ln);
+      const load = new Map();
+      for (const a of atk) {
+        if (a.hp > 0 && a.targetKind === "minion" && a.targetId) load.set(a.targetId, (load.get(a.targetId) ?? 0) + 1);
+      }
+      for (const a of atk) {
+        if (a.hp <= 0 || a.atkCd > 0) continue;
+        const apos = this._minionPos(ln, a);
+        const reach = (a.range ?? 2) + 0.8;
+        //  ① 反擊
+        let hero = null, hd = Infinity;
+        for (const q of (R.minionTargetHeroes === false ? [] : heroes)) {
+          if (q.side === side) continue;
+          if (this.t - (q.heroAggroAt ?? -Infinity) > R.minionRetaliateSec) continue;
+          const d = dist(apos, q.pos);
+          if (d <= reach && d <= R.minionHeroAggroRangeWorld && d < hd) { hd = d; hero = q; }
+        }
+        let foe = null;
+        if (!hero) {
+          //  ② 敵兵（沿用 → 分散）
+          if (a.targetKind === "minion" && a.targetId) {
+            const f = def.find((b) => b.id === a.targetId);
+            if (f && f.hp > 0 && Math.abs(f.t - a.t) * L <= (a.range ?? 2) + 0.6) foe = f;
+          }
+          if (!foe) {
+            let best = Infinity;
+            for (const b of def) {
+              if (b.hp <= 0 || Math.abs(b.t - a.t) * L > (a.range ?? 2) + 0.6) continue;
+              const score = dist(apos, this._minionPos(ln, b)) + (load.get(b.id) ?? 0) * R.minionTargetLoadWorld;
+              if (score < best) { best = score; foe = b; }
+            }
+          }
+        }
+        if (foe) {
+          if (a.targetKind === "minion" && a.targetId && a.targetId !== foe.id) {
+            load.set(a.targetId, Math.max(0, (load.get(a.targetId) ?? 1) - 1));
+          }
+          if (a.targetId !== foe.id || a.targetKind !== "minion") load.set(foe.id, (load.get(foe.id) ?? 0) + 1);
+          a.targetId = foe.id; a.targetKind = "minion";
+          dmg.set(foe, (dmg.get(foe) ?? 0) + a.dmg * fightK);
+          a.atkCd = a.interval;
+          continue;
+        }
+        //  ③ 沒有敵兵 ⇒ 射程內最近的敵方英雄
+        if (!hero && R.minionTargetHeroes !== false) {
+          for (const q of heroes) {
+            if (q.side === side) continue;
+            const d = dist(apos, q.pos);
+            if (d <= reach && d < hd) { hd = d; hero = q; }
+          }
+        }
+        if (hero) {
+          if (a.targetKind === "minion" && a.targetId) load.set(a.targetId, Math.max(0, (load.get(a.targetId) ?? 1) - 1));
+          a.targetId = hero.id; a.targetKind = "hero";
+          heroDmg.set(hero, (heroDmg.get(hero) ?? 0) + a.dmg * fightK * R.minionHeroDamageK);
+          a.atkCd = a.interval;
+        } else { a.targetId = null; a.targetKind = null; }   // 射程內沒有任何目標 ⇒ 清掉（不留殘影鎖定，也不佔分散權重）
+      }
+    }
+    for (const [m, v] of dmg) m.hp -= v;
+    for (const [q, v] of heroDmg) {
+      if (q.dead) continue;
+      this._damageHero(q, v);
+      q.minionDmgTaken = (q.minionDmgTaken ?? 0) + v;
+      //  與塔擊殺同一套歸屬（8 秒內最後出手的敵方英雄）⇒ 維持 Σk == Σd。
+      if (q.hp <= 0 && !q.dead) this._resolveKill(this._towerKillerFor(q), q);
+    }
+  }
+
+  /**
+   * 英雄清兵（cqHeroFarmV1）。只在「這個 tick 沒有英雄目標、也沒被控制」時由 `_combatStep` 呼叫。
+   *  · 撤退／回城／脫戰／回線中不清兵；打野在野區（FARM）時不清兵線
+   *  · 輔助只在身邊沒有己方非輔助英雄時清兵（不搶隊友的兵）
+   *  · **補刀為主**：平常只打「補得到刀」的兵（剩餘血量 ≤ `heroLastHitWindowSec` 秒輸出）；
+   *    只有**圍攻意圖**（圍攻／攻門牙塔／圍攻主堡）或**回防清線**（敵兵在我方塔射程內、或狀態＝回防）
+   *    才全力清兵。
+   *    ⚠ 為什麼：P0-A 的陣營相對路線讓每條路都是「單人 vs 雙人」（紅方上路走世界下路）。
+   *      英雄若把兵線當一般 DPS 目標，雙人路一定推得動單人路；再疊上小龍／巴龍兩個目標不對稱
+   *      ⇒ 實測全關設定 n=200 藍勝 47% → 57.5%。補刀只收「本來就快死」的兵，對兵線淨推進影響極小，
+   *      兵線交換仍主要由小兵對小兵決定（對稱）。
+   *  · 目標：補得到刀的優先 → 其次低血量；沿用上一個目標
+   *  · 傷害與英雄對英雄同一條 DPS 式；不擲骰（不改 rng 序列）
+   * @returns {boolean} 這個 tick 是否打了小兵
+   */
+  /**
+   * 對線站位（cqHeroFarmV1）：這一路兵線的交戰點。
+   *  · 取「我方兵線前緣後 1.5 單位」與「離最靠近我方的敵兵交戰距離 × 0.85」中比較靠我方的一個
+   *    ⇒ 打得到兵、又永遠站在自己的兵線後面（不在敵兵前暴露）
+   *  · 都沒有 ⇒ null（呼叫端退回舊的時間站位）
+   * 回傳 lane progress。雙方同一條規則（以各自的前進方向鏡像）。
+   */
+  _laneWaveHoldT(p, ln, stance = 0) {
+    const lane = this.lanes[ln];
+    if (!lane) return null;
+    const L = laneLength(ln);
+    const dir = p.side === "blue" ? 1 : -1;
+    const foes = (p.side === "blue" ? lane.rm : lane.bm).filter((m) => m.hp > 0);
+    const own = (p.side === "blue" ? lane.bm : lane.rm).filter((m) => m.hp > 0);
+    //  ⚠ 永遠**站在自己的兵線後面**：取「我方前緣後 1.5」與「離敵方前緣交戰距離 × 0.85」中
+    //    比較靠我方的那個。站到自己兵前面 ⇒ 暴露在敵兵前（實測上路第一座塔 37:3 的主因）。
+    const behindOwn = own.length
+      ? (dir > 0 ? Math.max(...own.map((m) => m.t)) : Math.min(...own.map((m) => m.t))) - dir * (1.5 - stance * 1.2) / L
+      : null;
+    const atFoe = foes.length
+      ? (dir > 0 ? Math.min(...foes.map((m) => m.t)) : Math.max(...foes.map((m) => m.t)))
+        - dir * (this._engageRange(p) * (0.85 - stance * (stance > 0 ? 0.35 : 0.10))) / L
+      : null;
+    if (behindOwn == null && atFoe == null) return null;
+    const hold = behindOwn == null ? atFoe : atFoe == null ? behindOwn
+      : (dir > 0 ? Math.min(behindOwn, atFoe) : Math.max(behindOwn, atFoe));
+    return clamp(hold, 0.02, 0.98);
+  }
+
+  /** 這個位置是否在 `side` 方某座存活塔的射程內（回防清線判定）。 */
+  _minionUnderTower(side, pos) {
+    for (const tw of Object.values(this.towers)) {
+      if (tw.side !== side || tw.hp <= 0) continue;
+      if (dist(tw.pos, pos) <= this.towerRange(tw)) return true;
+    }
+    return false;
+  }
+
+  _heroFarmStep(p, alive, dt, lateFactor) {
+    const R = this.rules;
+    if (p.dead || (p.recallT ?? 0) > 0 || p.retreating) return false;
+    if (p.fsm === "DISENGAGE" || p.fsm === "RETURN") return false;
+    if (p.role === "jungle" && p.fsm === "FARM") return false;
+    if (p.role === "sup" && alive.some((q) => q.side === p.side && q !== p && !q.dead &&
+      q.role !== "sup" && dist(q.pos, p.pos) < R.supportFarmAllyRange)) return false;
+    const range = this._engageRange(p);
+    const dps = p.power * R.dmgK * lateFactor * this._dragonPowerK(p.side) * this._heroSkillPowerFactor(p);
+    //  補刀門檻：1.2 秒輸出，但**不超過** `heroLastHitMaxHp`。補刀是「最後一擊」，
+    //  門檻若跟著後期 DPS 無上限成長，「只補刀」會變成整波清線（實測後期守方英雄殺掉攻城兵線 2/3）。
+    const lastHit = Math.min(dps * R.heroLastHitWindowSec, R.heroLastHitMaxHp ?? Infinity);
+    const key = p.side === "blue" ? "rm" : "bm";
+    //  回防清線（狀態＝回防，或敵兵在我方塔射程內）只在 `heroTowerClearUntil` 之前：後期守方若能無限清掉
+    //  攻方兵線，主堡的兵線閘門永遠打不開（實測 seed 256：兩座門牙塔 16 分鐘前就倒，主堡到 34.8 分才掉血）。
+    //  v8 能收尾正是因為英雄不碰小兵。
+    const towerClear = this.t < (R.heroTowerClearUntil ?? Infinity);
+    const clearIntent = FARM_CLEAR_STATES.has(p.state) || (towerClear && p.state === "回防");
+    //  分期：對線期之後只在**自己的推進**（圍攻／攻門牙塔／圍攻主堡）時清兵，不補刀、不回防清線
+    //  ⇒ 中後期收尾與 v8 同一套機制（v8 已由 P0-A～P0-D 驗證封閉；在它上面盲調補刀門檻會出現卡死）。
+    const lanePhase = this.t < (R.laneWaveHoldUntil ?? Infinity);
+    if (!lanePhase && !FARM_CLEAR_STATES.has(p.state)) { p.farmTargetId = null; return false; }
+    //  兵線管理（對線期）：敵方兵線前緣已經進到**我方半場** ⇒ 全力清兵（守線）；
+    //  還在敵方半場（我方兵線在推進）⇒ 只補刀、不幫忙推。
+    //  ⚠ 這是負回饋：被推的一方全力清、推進的一方只補刀 ⇒ 兵線自然回到中線附近。
+    //    P0-A 讓每條路都是「單人 vs 雙人」，若雙方都無條件清兵，雙人路一定推爆單人路；
+    //    若雙方都只補刀，英雄大部分時間站在兵旁邊不動（實測有兵可打時只有 24% 在打）。
+    const dir = p.side === "blue" ? 1 : -1;
+    const freeClear = {};
+    if (lanePhase) for (const ln of ["top", "mid", "bot"]) {
+      const foes = this.lanes[ln][key].filter((m) => m.hp > 0);
+      if (!foes.length) continue;
+      const front = dir > 0 ? Math.min(...foes.map((m) => m.t)) : Math.max(...foes.map((m) => m.t));
+      freeClear[ln] = dir * (front - 0.5) <= (R.laneFreeClearMargin ?? 0);
+    }
+    let best = null, bestScore = Infinity, bestLn = null, bestPos = null;
+    for (const ln of ["top", "mid", "bot"]) {
+      for (const m of this.lanes[ln][key]) {
+        if (m.hp <= 0) continue;
+        const pos = this._minionPos(ln, m);
+        const d = dist(p.pos, pos);
+        if (d >= range) continue;
+        //  沒有清線意圖、兵線不在我方半場、也不是回防清線 ⇒ 只打補得到刀的兵
+        if (m.hp > lastHit && !clearIntent && !freeClear[ln] && !(towerClear && this._minionUnderTower(p.side, pos))) continue;
+        const score = (m.hp <= lastHit ? 0 : 10000) + m.hp - (p.farmTargetId === m.id ? 60 : 0) + d * 0.01;
+        if (score < bestScore) { bestScore = score; best = m; bestLn = ln; bestPos = pos; }
+      }
+    }
+    if (!best) { p.farmTargetId = null; return false; }
+    const amt = dps * dt;
+    if (amt >= best.hp) best.lastHitBy = p.id;
+    best.hp -= amt;
+    p.minionDmg = (p.minionDmg ?? 0) + amt;
+    p.farmTargetId = best.id;
+    if (p.atkCd <= 0) {
+      this.pushFx({
+        type: "line", pos: { ...p.pos }, target: { x: bestPos.x, y: bestPos.y }, color: SIDE[p.side],
+        sourceId: p.id, targetId: best.id, targetKind: "minion", lane: bestLn,
+        ability: `${p.role}:basic`, feedback: "attack",
+      });
+      const hasBlueBuff = R.neutralObjectives && this.t < (p.blueBuffUntil ?? 0);
+      p.atkCd = 0.5 * (hasBlueBuff ? R.blueBuffCooldownK : 1);
+    }
+    return true;
+  }
+
   _minionAtBase(attacker, tw, lane, m) {
     const pos = posOnLane(lane, m.t);
     return dist(pos, tw.pos) <= 13 ||
@@ -3908,6 +4195,29 @@ export class LogicEngine {
       const minionMaxHp = R.minionMaxHp ?? 130;
       const combatMeta = R.minionAttackInterval ? { atkCd: 0 } : {};
       for (const ln of ["top", "mid", "bot"]) {
+        //  Combat Quality v1：一波＝3 近戰＋1 遠程；每 siegeWaveEvery 波加 1 攻城兵；
+        //  該路已破（敵方高地塔倒）⇒ 加 1 超級兵（v3 預設 superMinionMode "stack"：疊加在 v8 的破路整波倍率上）。雙方同一條規則。
+        if (R.cqMinionV1) {
+          const siegeWave = R.siegeWaveEvery > 0 && wave % R.siegeWaveEvery === R.siegeWaveEvery - 1;
+          const superOn = (R.superMinionMode ?? "replace") !== "none";
+          const kindsFor = (side) => ["melee", "melee", "melee", "caster",
+            ...(siegeWave ? ["siege"] : []), ...(superOn && this._laneBreached(side, ln) ? ["super"] : [])];
+          const bk = kindsFor("blue"), rk = kindsFor("red");
+          for (let i = 0; i < Math.max(bk.length, rk.length); i++) {
+            if (i < bk.length && this.lanes[ln].bm.length < 16) this.lanes[ln].bm.push(this._spawnMinion("blue", ln, wave, i, bk[i]));
+            if (i < rk.length && this.lanes[ln].rm.length < 16) this.lanes[ln].rm.push(this._spawnMinion("red", ln, wave, i, rk[i]));
+            //  superMinionMode "stack"／"none"：破路那一側的整波另外套 v8 的生命倍率（兵對兵傷害倍率見 _waveModifiers）
+            if ((R.superMinionMode ?? "replace") !== "replace") {
+              for (const [side, arr, kinds] of [["blue", this.lanes[ln].bm, bk], ["red", this.lanes[ln].rm, rk]]) {
+                const m = arr[arr.length - 1];
+                if (i < kinds.length && m && m.wave === wave && m.slot === i && kinds[i] !== "super" && this._laneBreached(side, ln) && R.laneBreachHpK) {
+                  m.hp *= R.laneBreachHpK; m.maxHp *= R.laneBreachHpK;
+                }
+              }
+            }
+          }
+          continue;
+        }
         //  M1.5：該路高地塔（tier 0）已倒 ⇒ 攻方出強化兵（真實 MOBA 的超級兵）。
         //  只看建築狀態、雙方同規則；v1/v2 沒有 `laneBreachHpK` ⇒ 恆為 1 ⇒ 歷史基準不變。
         const breachHp = (side) => {
@@ -3983,11 +4293,18 @@ export class LogicEngine {
                   nearestGap = gap;
                 }
               }
-              if (nearest && nearestGap <= contact + minionStep * 2) {
-                const meet = (m.t + nearest.t) * 0.5;
-                next = side === "blue"
-                  ? Math.min(next, meet - contact * 0.25)
-                  : Math.max(next, meet + contact * 0.25);
+              //  Combat Quality v1：各兵種停在自己的射程（遠程／攻城自然站在近戰後面）；只慢不退。
+              const reachP = R.cqMinionV1 ? (m.rangeP ?? contact) : contact;
+              if (nearest && nearestGap <= reachP + minionStep * 2) {
+                if (R.cqMinionV1) {
+                  const hold = nearest.t - dir * reachP * 0.9;
+                  next = side === "blue" ? Math.max(m.t, Math.min(next, hold)) : Math.min(m.t, Math.max(next, hold));
+                } else {
+                  const meet = (m.t + nearest.t) * 0.5;
+                  next = side === "blue"
+                    ? Math.min(next, meet - contact * 0.25)
+                    : Math.max(next, meet + contact * 0.25);
+                }
               }
             }
             if (stopT != null) {
@@ -4011,15 +4328,24 @@ export class LogicEngine {
           //  ⚠ 雙方同一條規則、順序以 next 排序 + 陣列索引破平手 ⇒ 決定性不變。
           //  ⚠ v1/v2 沒有 `minionQueueGapWorld` ⇒ queueGap 恆為 0 ⇒ 歷史基準逐位元不變。
           if (queueGap > 0 && arr.length > 1) {
-            const order = arr.map((_, i) => i)
-              .sort((a, b) => (next[b] - next[a]) * dir || a - b);
-            for (let k = 1; k < order.length; k++) {
-              const cur = order[k], ahead = order[k - 1];
-              const limit = next[ahead] - dir * queueGap;
-              const lim = side === "blue"
-                ? Math.max(limit, arr[cur].t) : Math.min(limit, arr[cur].t);
-              next[cur] = side === "blue"
-                ? Math.min(next[cur], lim) : Math.max(next[cur], lim);
+            //  Combat Quality v1：只在**同一列**（相同橫向列位）內排隊 ⇒ 三列縱隊，不再是單一長隊。
+            //  舊規則集沒有列位 ⇒ 只有一組、同一個排序 ⇒ 與舊碼逐位元相同。
+            const files = new Map();
+            arr.forEach((m, i) => {
+              const f = R.cqMinionV1 ? Math.round((m.latN ?? 0) * 10) : 0;
+              if (!files.has(f)) files.set(f, []);
+              files.get(f).push(i);
+            });
+            for (const idx of files.values()) {
+              const order = idx.sort((a, b) => (next[b] - next[a]) * dir || a - b);
+              for (let k = 1; k < order.length; k++) {
+                const cur = order[k], ahead = order[k - 1];
+                const limit = next[ahead] - dir * queueGap;
+                const lim = side === "blue"
+                  ? Math.max(limit, arr[cur].t) : Math.min(limit, arr[cur].t);
+                next[cur] = side === "blue"
+                  ? Math.min(next[cur], lim) : Math.max(next[cur], lim);
+              }
             }
           }
           return next;
@@ -4033,7 +4359,9 @@ export class LogicEngine {
         this.lanes[ln].bm.forEach((m) => (m.t = Math.min(1, m.t + minionStep)));
         this.lanes[ln].rm.forEach((m) => (m.t = Math.max(0, m.t - minionStep)));
       }
-      if (R.symmetricMinionCombat) {
+      if (R.cqMinionV1) {
+        this._cqMinionCombat(ln, dt);
+      } else if (R.symmetricMinionCombat) {
         // S29 修正（公平性 bug）：舊碼只迭代**藍方**小兵——多隻藍兵會挑到同一隻紅兵、
         //   把傷害集中在牠身上（死得快），藍兵受到的傷害卻是分散的 ⇒ 紅兵系統性先死。
         //   舊版塔會被瞬間融化，掩蓋了這個偏差；一旦小兵存活與否開始決定推塔，
@@ -4114,9 +4442,11 @@ export class LogicEngine {
           //  路上的三座塔維持既有的 lane band 判定不動。
           const baseStruct = R.nexusWaveGate &&
             (tw.lane === "nexus_guard" || tw.lane === "nexus");
-          const n = Math.min(arr.filter((m) => baseStruct
+          const inBand = arr.filter((m) => baseStruct
             ? this._minionAtBase(side, tw, ln, m)
-            : Math.abs(m.t - tw.t) <= R.minionSiegeBand).length, R.minionSiegeCap);
+            : Math.abs(m.t - tw.t) <= R.minionSiegeBand);
+          //  Combat Quality v1：攻城兵／超級兵依 towerK 計入（上限仍是 minionSiegeCap）。
+          const n = Math.min(R.cqMinionV1 ? inBand.reduce((sum, m) => sum + (m.towerK ?? 1), 0) : inBand.length, R.minionSiegeCap);
           // S29B1（v3）：巴龍 buff——擊殺方限時兵線攻城強化（收尾機制）
           const bk = R.engagementFsm && this.fsm3 && this.t < (this.fsm3[side].baronBuffUntil ?? 0) ? R.baronMinionK : 1;
           const structureFactor = R.structureAccelT ? 1 + Math.max(0, this.t - R.structureAccelT) / R.structureAccelDiv : 1;
@@ -4184,6 +4514,12 @@ export class LogicEngine {
       });
       ["bm", "rm"].forEach((key) => {
         const deadMs = this.lanes[ln][key].filter((m) => m.hp <= 0);
+        if (deadMs.length && R.cqHeroFarmV1) {
+          for (const m of deadMs) {
+            const q = m.lastHitBy ? this.players.find((x) => x.id === m.lastHitBy) : null;
+            if (q) q.lastHits = (q.lastHits ?? 0) + 1;
+          }
+        }
         if (deadMs.length) {
           const foe = key === "bm" ? "red" : "blue";
           this._dmgGold(foe, deadMs.length * 20);
@@ -4945,10 +5281,30 @@ export class LogicEngine {
               ? (this.t * R.laneAdvanceWorldSpeed) / laneLength(effLane)
               : this.t / 600;
             let base = p.side === "blue" ? 0.30 + laneAdvance : 0.70 - laneAdvance;
-            if (K) base += (p.side === "blue" ? 1 : -1) * (K.laneOffset[effLane] || 0);
-            // S28：推線深度 += laneAdj（勇氣/手速/抗壓 → 壓得更深；走位/決策 → 站得更安全）
-            if (M) base += (p.side === "blue" ? 1 : -1) * M.laneAdj;
-            const adv = p.side === "blue" ? clamp(Math.min(base, ftw.t + 0.02), 0.3, 0.98) : clamp(Math.max(base, ftw.t - 0.02), 0.02, 0.7);
+            //  Combat Quality v1：對線站位跟著**兵線**走，不再只跟時間走。
+            //  v8 之前 base 是純時間函式 ⇒ 實測對線英雄 64% 的時間離最近敵兵 ≥ 30 單位、
+            //  敵兵在交戰距離內只有約 5% ⇒「英雄不打兵」的第二層原因。
+            //  下面的戰術（laneOffset）與能力（laneAdj）深淺偏移**照舊疊加**，角色／戰術差異保留。
+            //  只在**對線期**（`laneWaveHoldUntil` 之前）跟兵線；之後回到原本逐步前壓的站位，
+            //  中後期的集結、團戰與收尾節奏維持 v8（實測整場都跟兵線 ⇒ 擊殺 22.2 → 15.7、雙方超級兵在路中對消、收尾拖到 34.8 分）。
+            //  戰術（laneOffset）與能力（laneAdj）的推線深度偏移。
+            const depth = ((K ? K.laneOffset[effLane] || 0 : 0) + (M ? M.laneAdj : 0));
+            let waveT = null;
+            if (R.cqHeroFarmV1 && this.t < (R.laneWaveHoldUntil ?? Infinity)) {
+              //  Combat Quality v1：跟兵線時，深淺偏移改成**跟兵線的站位深淺**（stance），
+              //  不再直接加在 lane progress 上。
+              //  ⚠ 為什麼：跟兵線的站位本來就在敵兵攻擊距離的邊緣（0.85 × 攻擊距離），
+              //    再往後加 −0.065 的 lane progress（約 6.5 單位）就完全打不到兵 ⇒ 該方整場零收入。
+              //    實測 m8「後期決戰」（三路 defensive）vs std 跨 60 seeds 由 38 勝變成 0 勝。
+              //    改成 stance 之後，保守站在射程後緣、進攻站進敵兵堆前緣，兩者都還打得到兵。
+              const stance = clamp(depth / (R.laneStanceDepthRef ?? 0.06), -1, 1);
+              waveT = this._laneWaveHoldT(p, effLane, stance);
+              if (waveT != null) base = waveT;
+            }
+            if (waveT == null) base += (p.side === "blue" ? 1 : -1) * depth;
+            //  Combat Quality v1：跟兵線回防時可以退到自家塔前（舊下限 0.3／0.7 會讓英雄到不了被推近的兵線）。
+            const homeLim = R.cqHeroFarmV1 ? 0.08 : 0.3;
+            const adv = p.side === "blue" ? clamp(Math.min(base, ftw.t + 0.02), homeLim, 0.98) : clamp(Math.max(base, ftw.t - 0.02), 0.02, 1 - homeLim);
             tgt = posOnLane(effLane, adv); st = stOv ?? (p.role === "jungle" ? "游走" : "對線");
           }
           if (R.engagementFsm) p.fsm = stOv ? "ROAM" : "LANE";
@@ -5375,6 +5731,8 @@ export class LogicEngine {
       wave: m.wave ?? 0, slot: m.slot ?? 0, kind: m.kind ?? "melee",
       // M1.5：該路高地塔已倒 ⇒ 強化兵，給渲染層區分用（引擎不讀）。
       super: m.super === true,
+      //  Combat Quality v1：權威橫向列位（+t 方向左手為正）。舊規則集 ⇒ 0（呈現層沿用舊隊形）。
+      latN: m.latN ?? 0,
     });
     return { bm: this.lanes[ln].bm.map(mm), rm: this.lanes[ln].rm.map(mm) };
   }

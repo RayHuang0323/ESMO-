@@ -686,6 +686,57 @@ SIM_RULES.v3 = {
   teleportSafeDist: 18,   // 身邊 18 單位內沒有敵人才算「脫離戰鬥、可以傳送」
   // ── killContext ─────────────────────────────────────────────────────────
   killContext: true,
+
+  // ── MOBA Combat Quality v1（moba-sim.v9）────────────────────────────────
+  //  見 docs/design/MOBA_Combat_Quality_v1.md。三件事，全部雙方對稱、不擲骰：
+  //  ① 英雄會真的攻擊小兵（v8 之前英雄**從不**打兵，「補刀」只是死亡時的距離分帳）
+  //  ② 小兵有種類、射程、橫向列位、目標分配與英雄仇恨（v8 之前是 1 維縱隊、射程 10 單位、集火最前面）
+  //  ③ 攻城兵週期加入；高地塔倒 ⇒ 超級兵（取代 laneBreachHpK／laneBreachFightK 的整波倍率）
+  cqHeroFarmV1: true,
+  cqMinionV1: true,
+  //  小兵種類。rangeWorld 是世界單位（依各路長度換算成 progress）；towerK ＝ 攻城時算幾隻。
+  //  ⚠ 總量刻意貼近舊版：普通波 3 近戰＋1 遠程；破路波的超級兵補回舊版「整波 ×1.8 HP、×1.7 傷害」
+  //    的總量（舊 1728 HP／204 dps → 新 1800 HP／184 dps＋攻城 2.5 隻）。
+  minionKinds: {
+    melee: { hp: 240, dmg: 30, interval: 1.0, rangeWorld: 2.2, towerK: 1 },
+    caster: { hp: 180, dmg: 24, interval: 1.1, rangeWorld: 6.0, towerK: 1 },
+    siege: { hp: 520, dmg: 48, interval: 1.6, rangeWorld: 8.0, towerK: 2.2 },
+    super: { hp: 900, dmg: 70, interval: 1.0, rangeWorld: 2.4, towerK: 2.5 },
+  },
+  //  橫向列位（世界單位，正＝行進方向的左手）。三列縱隊：左近戰／右近戰／中列（近戰→遠程→攻城）。
+  //  ⚠ 攻城兵／超級兵走**中列**（與中列近戰、遠程同列排隊）：另開 ±0.6 的列會與中列相距 < 1 單位、
+  //    又不互相排隊 ⇒ 同一個 t 時重疊（實測 2.3%）。
+  minionLateral: { melee: [-1.3, 1.3, 0], caster: 0, siege: 0, super: 0 },
+  //  超級兵：該路已破（敵方高地塔倒）⇒ 每波多 1 隻超級兵，**疊加**在 v8 的破路整波倍率之上
+  //  （laneBreachHpK／laneBreachFightK 照舊）。
+  //  ⚠ 為什麼不是「取代」：取代倍率後，破路方整波的推進量反而下降，後期收不掉
+  //    （regress2 種子實測最長 36.3 分，超過 32 分門檻；疊加後 31.3 分）。
+  //  "none" 只留給對照量測用。
+  superMinionMode: "stack",
+  //  每 N 波加 1 隻攻城兵（第 N、2N…波）。
+  siegeWaveEvery: 3,
+  //  目標分配：每多一隻友軍鎖定同一目標，視同多遠這麼多世界單位（分散火力，不硬性一對一）。
+  minionTargetLoadWorld: 1.6,
+  //  小兵 → 英雄：只在「沒有敵兵可打」或「該英雄剛攻擊我方英雄」時；傷害打折。
+  minionHeroDamageK: 0.45,
+  minionHeroAggroRangeWorld: 7,
+  minionRetaliateSec: 2.5,
+  //  英雄 → 小兵：與英雄對英雄同一條 DPS 式（power × dmgK × lateFactor × 巨龍／技能倍率）。
+  //  補刀窗：目標剩餘血量 ≤ 這麼多秒的輸出 ⇒ 優先打它。
+  heroLastHitWindowSec: 1.2,
+  //  對線期長度（秒）。之前：對線站位跟兵線、補刀、回防清線。之後：站位回到 v8 的逐步前壓，
+  //  英雄只在自己推進建築（圍攻／攻門牙塔／圍攻主堡）時清兵 ⇒ 中後期收尾沿用 v8 已驗證的機制。
+  laneWaveHoldUntil: 840,
+  heroTowerClearUntil: 840,
+  //  兵線管理（對線期）：敵方兵線前緣在「中線 + 這個比例」以內（我方半場或中線中立區）⇒ 全力清兵；
+  //  更深（我方兵線明顯在推）⇒ 只補刀。中立區讓兩波兵在中線交戰時雙方英雄都在打兵。
+  laneFreeClearMargin: 0.05,
+  //  對線期站位深淺：戰術 laneOffset ＋ 能力 laneAdj 除以這個值 ⇒ stance（夾在 ±1）。
+  //  0.06 ≈ 戰術偏移的滿檔（lanePlan defensive/aggressive 疊上 aggression 後約 ±0.065）。
+  //  stance −1 ⇒ 站在射程後緣（0.95 × 攻擊距離，仍打得到兵）、+1 ⇒ 站進敵兵前緣（0.50 × 攻擊距離）。
+  laneStanceDepthRef: 0.06,
+  //  輔助只在身邊這麼近沒有己方非輔助英雄時才清兵（不搶隊友的兵）。
+  supportFarmAllyRange: 12,
 };
 
 /** 取規則集；未知/未指定 ⇒ v3（S29B1 預設）。 */

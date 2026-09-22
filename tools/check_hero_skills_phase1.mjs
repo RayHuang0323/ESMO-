@@ -5,6 +5,7 @@ import { CHAMPIONS_100 } from '../src/data/heroDatabase.js';
 import { goldenSkills, compileHeroSkill, createSkillPreviewEvent, sampleSkillEvent, ownsHeroAttack, adaptHeroAttack } from '../src/battle/moba/skills/heroSkillContract.js';
 import { adaptEffects } from '../src/battle/moba/map/mobaRuntimeMapAdapter.js';
 import { snapshotToFrame } from '../src/platform/contracts/mobaReplay.js';
+import { MOBA_SIMULATION_VERSION, SIMULATION_SEMANTICS_FINGERPRINTS } from '../src/platform/contracts/simulationVersion.js';
 let n = 0;
 const ck = (name, fn) => { fn(); console.log(`PASS ${++n} ${name}`); };
 const skills = goldenSkills();
@@ -67,10 +68,21 @@ ck('formal renderer replacement, comparison only legacy mount', () => {
 ck('fairness / Item catalog and economy / replay contracts unchanged from official baseline', () => {
   // Hero Skills now owns separately tested opt-in LogicEngine and typed ability
   // damage in itemsEngineRuntime. Every other protected Item module stays frozen.
-  const paths = ['src/battle/moba/matchProgression.js', 'src/battle/moba/mobaNavigation.js',
+  const paths = ['src/battle/moba/mobaNavigation.js',
     'src/battle/battleResult.js', 'src/platform/contracts/mobaReplay.js', 'src/battle/moba/replay'];
   const diff = execFileSync('git', ['diff', 'dc520f1', '--', ...paths], { encoding: 'utf8' });
   assert.equal(diff.trim(), '');
+  //  模擬規則（matchProgression）**可以**改，但只能伴隨一次公開的模擬版本 bump：
+  //  改了規則卻沿用舊版號 ⇒ 舊重播會被用新語意重算、對戰雙方也可能跑出不同結果。
+  //  （原本這裡把 matchProgression 一起凍結在 dc520f1；Combat Quality v1 依設計要改它，
+  //    所以改成檢查「有改 ⇒ 版號必須換掉且指紋有登記」，要擋的偷改語意仍然擋得住。）
+  const rulesDiff = execFileSync('git', ['diff', 'dc520f1', '--', 'src/battle/moba/matchProgression.js'], { encoding: 'utf8' });
+  if (rulesDiff.trim() !== '') {
+    const before = execFileSync('git', ['show', 'dc520f1:src/platform/contracts/simulationVersion.js'], { encoding: 'utf8' })
+      .match(/MOBA_SIMULATION_VERSION = "([^"]+)"/)[1];
+    assert.notEqual(MOBA_SIMULATION_VERSION, before);
+    assert(SIMULATION_SEMANTICS_FINGERPRINTS[MOBA_SIMULATION_VERSION]);
+  }
   const itemPaths = execFileSync('git', ['diff', '--name-only', 'dc520f1', '--', 'src/battle/moba/items'], { encoding: 'utf8' });
   assert.deepEqual(itemPaths.trim().split(/\r?\n/), ['src/battle/moba/items/itemsEngineRuntime.js']);
 });

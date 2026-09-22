@@ -36,11 +36,11 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
  * ⚠ **什麼時候不用 bump**：純呈現層、UI、文案、log。
  * ⚠ 版本字串一旦發布就**不可回收再用**：舊 Challenge 存著它。
  */
-export const MOBA_SIMULATION_VERSION = "moba-sim.v8";
+export const MOBA_SIMULATION_VERSION = "moba-sim.v9";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", MOBA_SIMULATION_VERSION]);
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -287,6 +287,15 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  comparison，未改變 baseline trajectory；正式 skill-on 語意已不同，
   //  因此以新版本保留舊 v7 fingerprint，避免 replay 靜默重算。
   "moba-sim.v8": "ba046ce4a129b1a9",
+  //  2026-09-22（MOBA Combat Quality v1）：**正式的 simulation semantics change**。
+  //  v3 規則集新增 `cqHeroFarmV1` / `cqMinionV1`（v1／v2 沒有這些鍵 ⇒ 歷史規則集逐位元不變）：
+  //    · 英雄真的會攻擊小兵（v8 之前從不打兵），對線站位改跟兵線走（原本只跟時間走）
+  //    · 小兵種類／射程／橫向列位／目標分配／英雄仇恨與反擊；每 3 波攻城兵；已破路出超級兵
+  //      （取代 laneBreachHpK／laneBreachFightK 的整波倍率）
+  //  ⚠ 實測語意變化：同 8 seeds 對線補刀 top/mid/adc 由「不存在」變成每場 35／33／53，
+  //    20 分鐘平均倒塔 9.5 → 12.3（fairness 與節奏量測見 docs/design/MOBA_Combat_Quality_v1.md）。
+  //  ⚠ 後果（已知且接受）：v1–v8 的歷史挑戰不再可重播，由 `canReplay` 明確拒絕。
+  "moba-sim.v9": "4d7cf571c8122219",
 });
 
 export const isKnownSimulationVersion = (v) =>

@@ -5,7 +5,7 @@ import { adaptHeroAttack, adaptNamedHeroSkill, sampleSkillEvent } from './heroSk
 import { emitChoreography } from './skillChoreography.js';
 import { useReducedBattleMotion } from '../render/useReducedBattleMotion.js';
 import { countMount, countUnmount, diagnosticsEnabled } from '../render/runtimeDiagnostics.js';
-import { skillReadabilityBoost, SKILL_READABILITY } from './skillReadability.js';
+import { skillScreenRadius, skillSlotOf, SKILL_READABILITY } from './skillReadability.js';
 
 // Art palette comes from heroDatabase. Post FX stays bounded in the formal
 // Canvas composer; this runtime owns pooled geometry/material instances only.
@@ -89,7 +89,8 @@ export default function HeroVfxRuntime({ frameRef, previewRef, quality = 'high',
     const { object, color, counts, fusion } = scratch;
     // Battle UX hotfix: named skills are authored for a close Workshop view; the formal
     // overview camera shrinks them to hairlines. Presentation-only radius/alpha boost.
-    const namedBoost = skillReadabilityBoost(state.camera);
+    // Combat Quality v1: named skills get a screen-space radius (min px per slot,
+    // capped by a screen fraction when zoomed in) instead of a flat zoom multiplier.
     let alphaGain = 1;
     counts.fill(0); scratch.dropped = 0;
     Object.keys(fusion).forEach(k => { fusion[k] = 0; });
@@ -156,6 +157,34 @@ export default function HeroVfxRuntime({ frameRef, previewRef, quality = 'high',
         }
       }
     }
+    // Combat Quality v1: readable phase layers on top of the authored choreography.
+    //   cast   (progress < 0.3): ground marker at the caster; R adds a gold outer ring
+    //   impact (progress > 0.65): expanding burst at the target; ring count differs per slot
+    //          Q 1 ring / W ring + bright core / E 2 staggered rings / R 3 rings with a gold rim
+    // Presentation only: reads the same event the choreography reads, emits into pool 0.
+    function layers(e, slot) {
+      if (reduced) return;
+      const t = e.progress, r = e.radius, o = e.origin, b = e.target ?? e.origin;
+      const gold = '#fbbf24';
+      if (t < 0.3) {
+        const k = t / 0.3, a = (1 - k) * 0.85;
+        const cr = r * (0.7 + 0.3 * k) * 2;
+        emit(0, o.x, o.y + 0.05, o.z, cr, cr, 1, a, e.color, k * 0.6);
+        if (slot === 'R') emit(0, o.x, o.y + 0.06, o.z, r * 2.7, r * 2.7, 1, a * 0.8, gold, -k * 0.4);
+      }
+      if (t > 0.65) {
+        const k = (t - 0.65) / 0.35, a = 1 - k;
+        const rings = slot === 'R' ? 3 : (slot === 'E' || slot === 'W') ? 2 : 1;
+        const grow = slot === 'R' ? 2.2 : 1.6;
+        for (let i = 0; i < rings; i++) {
+          const kk = Math.max(0, k - i * 0.18);
+          const rr = r * (0.5 + kk * grow) * 2;
+          const tint = slot === 'R' && i === rings - 1 ? gold : e.color;
+          emit(0, b.x, b.y + 0.07 + i * 0.01, b.z, rr, rr, 1, a * (1 - i * 0.2), tint, kk);
+        }
+        if (slot === 'W') emit(0, b.x, b.y + 0.06, b.z, r * 0.9, r * 0.9, 1, a * 0.7, '#ffffff', 0);
+      }
+    }
     const preview = previewRef?.current;
     if (preview) {
       for (const event of preview.events) {
@@ -167,8 +196,13 @@ export default function HeroVfxRuntime({ frameRef, previewRef, quality = 'high',
         const e = fx.skillId ? adaptNamedHeroSkill(fx, scratch.sample) : adaptHeroAttack(fx, scratch.sample);
         if (e) {
           const before = fx.skillId ? [...counts] : null;
-          if (fx.skillId) { e.radius *= namedBoost; alphaGain = namedBoost > 1 ? SKILL_READABILITY.alphaGain : 1; }
-          draw(e);
+          if (fx.skillId) {
+            const slot = skillSlotOf(fx.skillId);
+            e.radius = skillScreenRadius(e.radius, slot, state.camera, state.size?.height);
+            alphaGain = SKILL_READABILITY.alphaGain;
+            draw(e);
+            layers(e, slot);
+          } else draw(e);
           alphaGain = 1;
           if (fx.skillId) {
             scratch.namedFrames++;

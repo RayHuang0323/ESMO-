@@ -278,7 +278,7 @@ function RuntimeCameraInput({ ctrl }) {
  * 每幀把 store 的 prev→snapshot 內插結果餵給 Adapter。
  * ⚠ 內插只做位置；hp / alive / 等級一律用最新 snapshot 的值（不內插狀態）。
  */
-function RuntimeFrameFeeder({ frameRef, onShapeChange, lockHeroId, lockTarget, source, roster }) {
+function RuntimeFrameFeeder({ frameRef, onShapeChange, lockHeroId, lockTarget, source, roster, playbackRateRef }) {
   //  source 缺省 = 現場對戰的 useGameStore；Replay 傳入 replayPresentationSource，
   //  兩者都只需要 getState() → { prev, snapshot, subTRef } ⇒ **同一條 Adapter 路徑**，
   //  不會出現第二套座標轉換。
@@ -349,6 +349,8 @@ function RuntimeFrameFeeder({ frameRef, onShapeChange, lockHeroId, lockTarget, s
       effectTime: source
         ? blended.ts
         : extrapolateLiveEffectTime(prev?.ts, snap.ts, a),
+      //  Combat Quality v1：技能呈現壽命的真實時間下限要知道播放倍率（Replay 不傳 ⇒ 1×）。
+      playbackRate: playbackRateRef.current,
     });
     //  ⚠ 位置每幀都會變，但**掛載結構**（有哪些英雄／塔、誰死了、幾級）很少變。
     //    位置走 frameRef（不觸發 React），只有結構變了才 setState 重掛
@@ -395,8 +397,12 @@ export default function MobaRuntimeView3D({
   source = null,
   roster = null,
   compactLabels = false,
+  //  Combat Quality v1：播放倍率（1×/2×/4×）。只影響技能呈現的真實時間下限；Replay 不傳 ⇒ 1。
+  playbackRate = 1,
 }) {
   const { towerAnchors } = useRuntimeMapData();
+  const playbackRateRef = useRef(playbackRate);
+  playbackRateRef.current = playbackRate;
   //  frameRef = 每幀更新的最新資料（不觸發 React）；frame = 掛載用的結構快照
   const frameRef = useRef({ heroes: [], structures: [], objectives: [], warnings: [] });
   const [frame, setFrame] = useState(() => frameRef.current);
@@ -461,7 +467,7 @@ export default function MobaRuntimeView3D({
         compactLabels={compactLabels}
       />
 
-      <RuntimeFrameFeeder frameRef={frameRef} onShapeChange={onShapeChange} lockHeroId={lockHeroId} lockTarget={lockTarget} source={source} roster={roster} />
+      <RuntimeFrameFeeder frameRef={frameRef} onShapeChange={onShapeChange} lockHeroId={lockHeroId} lockTarget={lockTarget} source={source} roster={roster} playbackRateRef={playbackRateRef} />
       <BattleCameraController source={source} perspective={RUNTIME_CAMERA} />
       <RuntimeCameraInput ctrl={ctrl} />
       <RuntimeDiagnosticsBridge frameRef={frameRef} />

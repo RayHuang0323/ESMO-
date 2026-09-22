@@ -30,6 +30,7 @@ import { archetypeForRole, archetypeData, heroVisualFor, skillVisualFor } from "
 //  Milestone L：英雄戰鬥呈現。**純附加**——只在既有 effect 上多掛一個 `presentation`
 //  欄位，原本每一個欄位都不動 ⇒ 既有 renderer 行為逐像素不變。
 import { describeFxPresentation } from "../heroPresentationAdapter.js";
+import { skillMinVisualLife } from "../skills/skillReadability.js";
 
 /** 呈現用高度（世界單位）：英雄站在地面上，結構的血條掛在頭頂。 */
 export const RUNTIME_Y = Object.freeze({ hero: 0, structure: 0 });
@@ -404,7 +405,7 @@ function friendlyTowerRouteAt(lane, team, t, structures) {
   return null;
 }
 
-function minionPosition(lane, team, t, slot, aliveStructures, structures) {
+function minionPosition(lane, team, t, slot, aliveStructures, structures, latN = null) {
   const localRoute = friendlyTowerRouteAt(lane, team, t, structures);
   const center = localRoute?.center ?? posOnLane(lane, t);
   const placementRadius = localRoute
@@ -417,8 +418,11 @@ function minionPosition(lane, team, t, slot, aliveStructures, structures) {
   const tx = localRoute?.tangent.x ?? (b.x - a.x) / laneLength;
   const ty = localRoute?.tangent.y ?? (b.y - a.y) / laneLength;
   const nx = -ty, ny = tx;
-  const lateral = FORMATION_LATERAL[slot % FORMATION_LATERAL.length] ?? 0;
-  const trail = slot === 3 ? (team === "blue" ? -1.45 : 1.45) : 0;
+  //  Combat Quality v1（moba-sim.v9）：引擎有權威橫向列位 `latN` ⇒ 直接使用（縱深已由引擎的
+  //  兵種射程決定，不再加呈現用的 trail）。舊 snapshot（latN 為 0／沒有）⇒ 沿用舊的 slot 隊形。
+  const authoritative = Number.isFinite(latN) && latN !== 0;
+  const lateral = authoritative ? latN : (FORMATION_LATERAL[slot % FORMATION_LATERAL.length] ?? 0);
+  const trail = authoritative ? 0 : (slot === 3 ? (team === "blue" ? -1.45 : 1.45) : 0);
   // Milestone C：塔旁不能直接從隊形候選點跳回 lane center。那會讓 slot offset
   // 在相鄰 snapshot 間忽然消失，視覺上像穿塔 / 左右彈跳。依序收斂隊形幅度，
   // 仍不行才投影「最後候選點」，確保位移連續且沿原本側向。
@@ -451,13 +455,13 @@ export function adaptMinions(snapshot, opts = {}, structures = adaptStructures(s
     const q = prev.get(m.id);
     const t = q && !dying ? num(q.t) + (num(m.t) - num(q.t)) * alpha : num(m.t);
     const { sim, facing } = minionPosition(
-      m.lane, m.team, t, m.slot ?? 0, aliveStructures, structures,
+      m.lane, m.team, t, m.slot ?? 0, aliveStructures, structures, m.latN ?? null,
     );
     const previousHpRatio = ratio01(q?.hp ?? m.hp);
     const hpRatio = dying ? 0 : ratio01(m.hp);
     out.push({
       id: String(m.id), team: m.team, lane: m.lane,
-      kind: m.kind === "caster" ? "caster" : "melee",
+      kind: ["caster", "siege", "super"].includes(m.kind) ? m.kind : "melee",
       slot: num(m.slot, 0), wave: num(m.wave, 0),
       position: sim, world: simToWorld(sim, 0), facing,
       hpRatio,
@@ -566,7 +570,8 @@ export function adaptEffects(snapshot, effectTime = snapshot?.ts, opts = {}) {
     //  ⚠ 不改 snapshot、不改 LogicEngine（模擬語意／Replay 契約不動）；
     //  ⚠ 下限 ≤ 引擎為技能保留的 4.2 秒保留窗（`pushFx` 的 minRetention），資料一定還在。
     const rawLife = Math.max(0.05, num(f.life, f.type === "ult" ? 0.6 : 0.35));
-    const life = f.skillId ? Math.max(rawLife, SKILL_MIN_VISUAL_LIFE) : rawLife;
+    //  Combat Quality v1：下限依**真實觀看時間**換算（2×／4× 不再跟著縮短），上限 < 4.2 秒保留窗。
+    const life = f.skillId ? Math.max(rawLife, skillMinVisualLife(opts.playbackRate)) : rawLife;
     const age = Number.isFinite(f.at) ? now - f.at : life - num(f.exp, 0);
     if (age < 0 || age >= life) continue;
     const start = simToWorld(clampSim(f.pos), 0);

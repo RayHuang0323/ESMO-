@@ -20,7 +20,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { runGate, finishGate } from "./browser/harness.mjs";
 import { adaptEffects, SKILL_MIN_VISUAL_LIFE } from "../src/battle/moba/map/mobaRuntimeMapAdapter.js";
-import { skillReadabilityBoost, SKILL_READABILITY } from "../src/battle/moba/skills/skillReadability.js";
+import { skillScreenRadius, SKILL_READABILITY } from "../src/battle/moba/skills/skillReadability.js";
 import { itemInfo } from "../src/battle/moba/itemInfo.js";
 
 const TARGET_URL = process.env.ESMO_EXTERNAL_URL?.trim() || null;
@@ -40,11 +40,17 @@ const result = await runGate({ name: TARGET_URL ? "MOBA Battle UX hotfix（正�
     const plain = adaptEffects({ ts: 10.9, fx: [{ ...skillFx, skillId: undefined, ability: "attack" }] }, 10.9).length;
     ck("N2 一般攻擊特效時長不變（只放寬具名技能）", plain === 0);
     ck("N3 下限 ≤ 引擎技能保留窗 4.2 秒", SKILL_MIN_VISUAL_LIFE <= 4.2);
-    ck("N4 總覽鏡頭放大、拉近不放大、透視不放大",
-      skillReadabilityBoost({ isOrthographicCamera: true, zoom: 3.4 }) > 1.7
-      && skillReadabilityBoost({ isOrthographicCamera: true, zoom: 8 }) === 1
-      && skillReadabilityBoost({ isPerspectiveCamera: true, zoom: 1 }) === 1
-      && skillReadabilityBoost({ isOrthographicCamera: true, zoom: 1 }) === SKILL_READABILITY.maxBoost);
+    //  Combat Quality v1 起：可讀性改用**螢幕空間**尺寸（最小像素／畫面比例上限），
+    //  不再是「依 zoom 等比例放大」。總覽鏡頭仍要放大、拉近不縮小、透視不調整。
+    const ortho = (zoom) => ({ isOrthographicCamera: true, zoom, top: 40, bottom: -40 });
+    const rQ = skillScreenRadius(1.2, "Q", ortho(3.4), 746);
+    const rNear = skillScreenRadius(1.2, "Q", ortho(12), 746);
+    ck("N4 總覽鏡頭放大到最小像素、拉近不縮小、透視不調整",
+      rQ >= SKILL_READABILITY.minRadiusPx.Q * (80 / 3.4 / 746) - 1e-9
+      && rQ <= 746 * SKILL_READABILITY.maxScreenFrac * (80 / 3.4 / 746) + 1e-9
+      && rNear >= 1.2
+      && skillScreenRadius(1.2, "R", { isPerspectiveCamera: true, zoom: 1 }, 746) === 1.2,
+      `總覽 Q ${rQ.toFixed(2)}／拉近 ${rNear.toFixed(2)}`);
     const dawn = itemInfo("t3_dawnbow");
     ck("N5 裝備資訊卡 selector：名稱／階級／價格／非 0 屬性", dawn?.name === "破曉長弓" && dawn.tier === "T3" && dawn.price === 3100
       && dawn.stats.some(([k]) => k === "ad") && itemInfo("nope") === null);

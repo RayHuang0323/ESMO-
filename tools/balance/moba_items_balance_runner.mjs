@@ -60,7 +60,7 @@ export const COUNTER_ITEMS = Object.freeze(["t3_thornmail", "t3_calmveil", "t2_s
 //  跑一場
 // ─────────────────────────────────────────────────────────────────────────────
 let MODS = null;
-async function modules() {
+export async function modules() {
   if (MODS) return MODS;
   const [LE, heroes, profile, arche, loadout, tactic, adapter, catalog, economy, inventory, gameData] = await Promise.all([
     load("src/LogicEngine.js"), load("src/data/heroDatabase.js"), load("src/battle/moba/mobaHeroProfile.js"),
@@ -68,7 +68,9 @@ async function modules() {
     load("src/battle/moba/items/itemsEngineAdapter.js"), load("src/battle/moba/items/itemCatalog.js"), load("src/battle/moba/items/itemEconomy.js"),
     load("src/battle/moba/items/itemInventory.js"), load("src/gameData.js"),
   ]);
-  MODS = { LE, heroes, profile, arche, loadout, tactic, adapter, catalog, economy, inventory, gameData };
+  //  Combat Quality：`ESMO_BALANCE_SKILLS=on` ⇒ 與正式流程相同地開 Hero Skills（worker 繼承環境變數）。
+  const skills = process.env.ESMO_BALANCE_SKILLS === "on" ? await load("src/battle/moba/skills/heroSkillGameplay.js") : null;
+  MODS = { LE, heroes, profile, arche, loadout, tactic, adapter, catalog, economy, inventory, gameData, skills };
   return MODS;
 }
 
@@ -102,6 +104,8 @@ export function configure(seed, config, M, incomeK = 1) {
   const e = new M.LE.LogicEngine(seed);
   const heroMods = M.profile.toEngineHeroMods(roster, M.heroes.heroById);
   if (heroMods) e.configureHeroes(heroMods);
+  //  與 useLocalServer.start() 同序：configureHeroes 之後掛 Hero Skills。
+  if (M.skills) { const sk = M.skills.toEngineHeroSkills(roster); if (sk) e.configureHeroSkills(sk); }
   const blue = {}, red = {};
   for (const [pid, m] of Object.entries(M.arche.toEngineArchetypes(roster))) (pid[0] === "r" ? red : blue)[pid] = m;
   e.configureArchetypes({ blue, red, meta: null });

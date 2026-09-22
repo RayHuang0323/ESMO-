@@ -22865,3 +22865,82 @@ MOBA_BATTLE_UX_HOTFIX = RELEASED
 PRODUCTION_SMOKE = PASS (55/55)
 DEPLOY_RUN = 35709301980 success
 ```
+
+## MOBA Combat Quality v1（2026-09-23，分支 `feature/moba-combat-quality`，local commit）
+
+設計文件：`docs/design/MOBA_Combat_Quality_v1.md`。Competitive 維持 disabled，未 push、未部署，未動 Online Foundation。
+
+### 做了什麼
+
+- **A 技能可讀性（純呈現）**：最小螢幕半徑（Q 22／W 24／E 24／R 36 px）、上限畫面高度 16%、
+  最小真實壽命 `max(1.4, 0.85 × 播放倍率)` 遊戲秒、施放→投射→命中的層次。取代 hotfix 的「依 zoom 等比例放大」。
+- **B 英雄對線／打兵**：引擎新增英雄打小兵（v8 之前**沒有**這條路）；對線期站位跟兵線；
+  兵線管理負回饋（敵兵進我方半場 ⇒ 全力清；我方兵線推過中線 ⇒ 只補刀）。
+- **C 小兵交戰 v1**：近戰／遠程／攻城／超級四種兵；三列隊形（權威 `latN`）；目標分配含負載；
+  反擊剛打過我方英雄的敵方英雄；沒有敵兵才打建築。
+- **D 波次**：每 3 波 1 攻城兵；破路 ⇒ 每波多 1 超級兵（疊加在 v8 的破路倍率上）；
+  `_laneBreached` / `_waveModifiers` 是未來抑制器／目標強化的唯一接口。**沒有**做「擊殺巨龍 → 生大兵」，沒有改地圖。
+
+### 模擬版本
+
+`moba-sim.v8` → **`moba-sim.v9`**，指紋 `4d7cf571c8122219`；v8 及更早的重播一律拒絕（`canReplay` = false），不靜默重算。
+
+### 實測數字
+
+| 公平性 n=200 | v9 全關 | 基線 cfa755b 全關 | v9 道具＋技能 | 基線 道具＋技能 |
+|---|---|---|---|---|
+| 藍方勝率 | 49.5% | 47.0% | 49.0% | **59.5%** |
+| 紅/藍擊殺比 | 0.982 | 0.954 | 0.957 | 0.945 |
+| 中位／p95／最長（分） | 22.9／31.0／38.9 | 25.9／36.3／51.5 | 21.4／27.4／38.3 | 23.5／29.3／38.8 |
+| 平均擊殺 | 14.8 | 26.6 | 31.8 | 42.4 |
+| 未結束場次 | 0 | 0 | 0 | 0 |
+
+- 對線期「有敵兵、沒有英雄目標」時打兵比例 **80.6%**；連續無視兵線 p95 6 秒、最長 9 秒。
+- 每場補刀：ADC 28、中路 11、上路 7（P0-A 下上路是單人對雙人）、輔助 6、打野 1。
+
+### 過程中找到並修掉的兩個真問題
+
+1. **超級兵「取代」倍率會讓後期收不掉**：破路方整波推進量反而下降，regress2 最長 36.3 分（門檻 32）。
+   改成疊加後 27.0 分。
+2. **戰術 m8「後期決戰」在 v9 變成 0 勝 60 敗**（基線 38 勝 17 敗）：
+   三路 defensive 的推線偏移（lane progress −0.065 ≈ 6.5 單位）在 v8 只是站位、不影響收入；
+   v9 英雄靠站位補刀，一退就完全打不到兵（補刀 34 vs 對手 124）。
+   改成「跟兵線的站位深淺（stance）」：保守站在攻擊距離 0.95 倍、進攻站進 0.50 倍，兩者都還打得到兵。
+   修正後 m8 36/60、m3 33/60，補刀 105 vs 96。
+
+### 閘門
+
+build ✅（built in 16.48s）／Combat Quality v1 **28/28**／regress 15/15／regress2 **8/8**（平均 20.4、最長 27.0 分）／
+runtime29 ✅／experience26 ✅／progress25 ✅／talent27 ✅／tactic24 **29/29**／
+Hero Skills release ✅・phase1 10/10・round2 410/410・gameplay_slice 68/68・base_assault ✅／
+P0-A 8/8・P0-B 14/14・P0-C ✅・P0-D ✅／milestone_i_close 44/44／simulationVersion **51/51**／
+Item M1 69/69／`browser_check_hero_skills_battle` 5/5／`browser_check_moba_battle_ux_hotfix` **55/55**。
+
+**改了兩支既有 gate 的斷言**（都是它們釘住的舊契約被本次設計取代，改法保留原本要擋的東西）：
+
+- `check_hero_skills_phase1` §10：原本把 `matchProgression.js` 凍結在 `dc520f1`。
+  改成「可以改，但必須伴隨模擬版本 bump 且指紋有登記」——偷改模擬語意仍然擋得住。
+- `browser_check_moba_battle_ux_hotfix` N4：原本驗 hotfix 的「依 zoom 等比例放大、maxBoost」。
+  改成驗螢幕空間契約（最小像素／畫面比例上限／拉近不縮小／透視不調整）；
+  同時刪掉已無人使用的 `skillReadabilityBoost`。
+
+### 瀏覽器實測（桌機 1366×900 ＋ 390×844，各 1×／2×／4×）
+
+具名技能在六種組合下都有被畫出（`namedDrawnFrames` 368 → 3138，`dropped` 0），
+施放標籤（例「W · 電磁震座」）可見，page／console error 0。截圖在 `review/moba-combat-quality/`。
+
+### 已知風險 / 未做
+
+- **擊殺數比基線低約四成**（regress 12.6 vs 21.1）。查到主因：v8 對線期約 8.3 次擊殺中有 6.6 次是
+  「英雄照時間表壓到敵塔下、撤退時被塔＋對手打死」，v9 跟兵線站位後這類送頭大幅減少。
+  這是刻意的行為修正，但整體擊殺節奏變安靜，後續若要補回來，應該從「對線期換血機會」設計，
+  不要退回時間表站位。
+- regress 15 場中有 1 場 0 擊殺（14.9 分結束）、1 場曾同時 8 人撤退（該場照常結束）。
+- Items M2 §G1／M3 §G6 需要把基準 commit 前移到本次 commit 後重跑（引擎凍結類斷言，慣例見 M2 檔頭註解）。
+- 公平性 n=1000 final validation 尚未跑。
+- 未做：真機觸控、抑制器建築本體、目標強化兵線（只留接口）。
+
+```text
+MOBA_COMBAT_QUALITY_V1 = LOCAL_COMMIT_ONLY
+SIMULATION_VERSION = moba-sim.v9 (4d7cf571c8122219)
+```
