@@ -548,13 +548,25 @@ export function adaptStructureDamageEffects(structures = [], heroes = [], minion
   return out;
 }
 
+/**
+ * 具名技能在畫面上至少播放多久（遊戲秒）。純呈現參數，不進模擬。
+ * ⚠ 必須 ≤ `LogicEngine.pushFx` 給技能的保留窗 4.2 秒，否則事件會先從 snapshot 消失。
+ */
+export const SKILL_MIN_VISUAL_LIFE = 1.4;
+
 /** snapshot.fx → runtime-v2 固定池特效資料。未到事件時間或已過期的一律不畫。 */
 export function adaptEffects(snapshot, effectTime = snapshot?.ts, opts = {}) {
   const now = num(effectTime, num(snapshot?.ts, 0));
   const out = [];
   for (const f of snapshot?.fx ?? []) {
     if (!f?.pos || !Number.isFinite(f.pos.x) || !Number.isFinite(f.pos.y)) continue;
-    const life = Math.max(0.05, num(f.life, f.type === "ult" ? 0.6 : 0.35));
+    //  Battle UX hotfix：具名技能（Hero Skills v1）的**呈現**下限。
+    //  引擎給投射物類技能的 life 只有 `travel + 0.22`（約 0.4 遊戲秒），4× 下不到 0.1 秒，
+    //  VFX 其實有畫、但玩家看不出來。這裡只拉長**畫面上的播放時間**：
+    //  ⚠ 不改 snapshot、不改 LogicEngine（模擬語意／Replay 契約不動）；
+    //  ⚠ 下限 ≤ 引擎為技能保留的 4.2 秒保留窗（`pushFx` 的 minRetention），資料一定還在。
+    const rawLife = Math.max(0.05, num(f.life, f.type === "ult" ? 0.6 : 0.35));
+    const life = f.skillId ? Math.max(rawLife, SKILL_MIN_VISUAL_LIFE) : rawLife;
     const age = Number.isFinite(f.at) ? now - f.at : life - num(f.exp, 0);
     if (age < 0 || age >= life) continue;
     const start = simToWorld(clampSim(f.pos), 0);

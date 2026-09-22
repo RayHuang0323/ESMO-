@@ -23,6 +23,7 @@ import { ItemIcon } from "./ItemGlyphs.jsx";
 import { InventoryBar } from "./ItemSlot.jsx";
 import { NextItemCard } from "./NextItemCard.jsx";
 import { RecipeTree } from "./RecipeTree.jsx";
+import { itemInfo } from "../../moba/itemInfo.js";
 import { COACH_TEXT, GOLD, GOLD_TEXT, ITEM_FONT, NUM, SIDE_TINT, SURFACE, TEXT, TIER_LABEL, alpha, cornerCut } from "./itemsTheme.js";
 
 export const STAT_ROWS = Object.freeze([
@@ -37,6 +38,43 @@ export const STAT_ROWS = Object.freeze([
 ]);
 
 const LAYERS = Object.freeze([["path", "出裝路徑"], ["stats", "屬性與特效"], ["analysis", "戰術分析"]]);
+
+const STAT_META = Object.freeze(Object.fromEntries(STAT_ROWS.map(([k, label, , pct]) => [k, { label, pct }])));
+const shownStat = (k, v) => (STAT_META[k]?.pct ? `${Math.round(v * 100)}%` : String(v));
+
+/**
+ * 單件裝備資訊卡（Battle UX hotfix）：名稱、階級、價格、主要屬性、特效摘要。
+ * 資料只來自 `itemInfo()` selector（catalog 靜態值），桌面 hover／點選與手機點格子共用。
+ * `compact`：只列前 4 項屬性、特效只給標籤（給浮動提示用）。
+ */
+export function ItemInfoCard({ itemId, compact = false }) {
+  const info = itemInfo(itemId);
+  if (!info) return null;
+  const stats = compact ? info.stats.slice(0, 4) : info.stats;
+  return (
+    <div data-item-info={info.itemId} style={{ display: "grid", gap: 6, fontFamily: ITEM_FONT, color: TEXT.primary }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <strong style={{ fontSize: compact ? 13 : 14 }}>{info.name}</strong>
+        <Chip tint={info.tier === "T3" ? GOLD_TEXT : undefined}>{TIER_LABEL[info.tier]}</Chip>
+        <span style={{ marginLeft: "auto", color: GOLD_TEXT, fontSize: 12, ...NUM }}>{info.price.toLocaleString("en-US")}</span>
+      </div>
+      {stats.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+          {stats.map(([k, v]) => (
+            <span key={k} data-item-stat={k} style={{ fontSize: 11, color: TEXT.secondary, padding: "2px 7px", clipPath: cornerCut(4), background: SURFACE.raised, whiteSpace: "nowrap" }}>
+              {STAT_META[k]?.label ?? k} <b style={{ color: TEXT.primary, ...NUM }}>+{shownStat(k, v)}</b>
+            </span>
+          ))}
+        </div>
+      )}
+      {info.effects.map((e) => (
+        <div key={e.type} data-item-effect={e.type} style={{ fontSize: 11.5, color: COACH_TEXT }}>
+          ◆ {e.label}{!compact && e.hint ? <span style={{ color: TEXT.secondary }}>　{e.hint}</span> : null}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function SectionTitle({ children }) {
   return (
@@ -132,6 +170,9 @@ export function HeroItemDetail({
           <span style={{ color: TEXT.faint }}>點裝備看名稱</span>
         )}
       </div>
+
+      {/* Battle UX hotfix：點格子除了名稱，也看得到價格／主要屬性／特效。 */}
+      {picked?.itemId && <div style={{ marginTop: 6, padding: "8px 10px", clipPath: cornerCut(8), background: SURFACE.raised }}><ItemInfoCard itemId={picked.itemId} /></div>}
 
       <SectionTitle>下一件</SectionTitle>
       <NextItemCard nextItem={view.nextItem} hud={hud} buildComplete={view.buildComplete} />

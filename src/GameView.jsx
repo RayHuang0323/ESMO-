@@ -121,7 +121,7 @@ function Minimap({ mobile = false }) {
     onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); locate(e); }}
     onPointerMove={e => { if (e.buttons) locate(e); }}
     onKeyDown={e => { const d = { ArrowLeft: [-10, 0], ArrowRight: [10, 0], ArrowUp: [0, -10], ArrowDown: [0, 10] }[e.key]; if (d) { e.preventDefault(); const c = useCameraStore.getState(); c.userPanTo(c.pan.x + d[0], c.pan.y + d[1]); } }}
-    style={{ position: "absolute", bottom: mobile ? "calc(128px + env(safe-area-inset-bottom))" : 12, right: mobile ? 6 : 12, width: px2, height: px2, borderRadius: 3, border: "2px solid var(--battle-gold)", boxShadow: "0 4px 20px rgba(0,0,0,0.5)", cursor: "crosshair", touchAction: "none", zIndex: Z.minimap }} />;
+    style={{ position: "absolute", bottom: mobile ? "calc(136px + env(safe-area-inset-bottom))" : 12, right: mobile ? 6 : 12, width: px2, height: px2, borderRadius: 3, border: "2px solid var(--battle-gold)", boxShadow: "0 4px 20px rgba(0,0,0,0.5)", cursor: "crosshair", touchAction: "none", zIndex: Z.minimap }} />;
 }
 
 export default function GameView({ roster = ROSTER, onContinue = null, autoStart = false, draft = null, tactic = null, buildStrategy = null }) {
@@ -225,7 +225,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
         <button data-testid="director-toggle" aria-pressed={directorOn}
           onClick={() => useCameraStore.getState().toggleDirector()}
           title={directorOn ? "關閉自動導播並回到原本自由視角" : "啟用自動導播"}
-          style={{ position: "absolute", bottom: isMobile ? "calc(128px + env(safe-area-inset-bottom))" : 130, left: isMobile ? 8 : "50%", transform: isMobile ? undefined : "translateX(-50%)", minHeight: 36, zIndex: Z.controls, background: "rgba(8,14,24,0.9)", border: `1px solid ${directorOn ? "#93c5fd" : "rgba(255,255,255,.35)"}`, borderRadius: 3, padding: "6px 13px", color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.45)" }}>
+          style={{ position: "absolute", bottom: isMobile ? "calc(136px + env(safe-area-inset-bottom))" : 130, left: isMobile ? 8 : "50%", transform: isMobile ? undefined : "translateX(-50%)", minHeight: 36, zIndex: Z.controls, background: "rgba(8,14,24,0.9)", border: `1px solid ${directorOn ? "#93c5fd" : "rgba(255,255,255,.35)"}`, borderRadius: 3, padding: "6px 13px", color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.45)" }}>
           🎥 自動導播 {directorOn ? "ON" : "OFF"}
         </button>
       )}

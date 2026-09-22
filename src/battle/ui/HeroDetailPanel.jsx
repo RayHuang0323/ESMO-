@@ -53,7 +53,7 @@ export default function HeroDetailPanel({ heroId, heroName, playerName, side = "
   );
 
   return (
-    <div style={{ position: "absolute", inset: 0, zIndex: Z.sheet, display: "flex", alignItems: isMobile ? "stretch" : "center", justifyContent: "center", background: "rgba(4,8,16,0.7)", backdropFilter: "blur(4px)" }} onClick={onClose}>
+    <div style={{ position: "absolute", inset: 0, zIndex: Z.sheet, pointerEvents: "auto", display: "flex", alignItems: isMobile ? "stretch" : "center", justifyContent: "center", background: "rgba(4,8,16,0.7)", backdropFilter: "blur(4px)" }} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{
         width: isMobile ? "100%" : 340, maxWidth: "100%",
         maxHeight: isMobile ? "100%" : "84%",

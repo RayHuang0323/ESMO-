@@ -13,9 +13,13 @@ import { itemVisual } from "../../moba/items/itemsUiSelectors.js";
 import { GoldChip } from "./GoldChip.jsx";
 import { InventoryBar } from "./ItemSlot.jsx";
 import { SeatItemPips } from "./SeatItemsCompact.jsx";
-import { GOLD, GOLD_TEXT, ITEM_FONT, SIDE_TINT, SURFACE, TEXT, TIER_LABEL, alpha, cornerCut } from "./itemsTheme.js";
+import { ItemInfoCard } from "./HeroItemDetail.jsx";
+import { NextItemCard } from "./NextItemCard.jsx";
+import { GOLD, GOLD_TEXT, ITEM_FONT, SIDE_TINT, SURFACE, TEXT, alpha, cornerCut } from "./itemsTheme.js";
 
-export function MobileItemsSheet({ hud, focusId, roster = {}, onPick, onClose, onOpenDetail, bottom }) {
+//  Battle UX hotfix：`layout="desktop"` 讓桌面戰鬥底欄的裝備按鈕共用同一個面板
+//  （同一份 hud selector、同一個 6 格、同一顆「完整出裝詳情」），只是改成置中浮動、固定寬。
+export function MobileItemsSheet({ hud, focusId, roster = {}, onPick, onClose, onOpenDetail, bottom, layout = "mobile", nextItem = null, buildComplete = false, teamView = null, onToggleTeamView = null }) {
   const [picked, setPicked] = useState(null);
   const me = hud?.[focusId];
   if (!me) return null;
@@ -25,8 +29,9 @@ export function MobileItemsSheet({ hud, focusId, roster = {}, onPick, onClose, o
   const others = Object.keys(hud).filter((id) => id !== focusId);
 
   return (
-    <section data-mobile-items-sheet={focusId} aria-label={`${nameOf(focusId)}的裝備`} style={{
-      position: "absolute", left: 6, right: 6, bottom, maxHeight: "calc(100% - 220px)", overflowY: "auto",
+    <section data-mobile-items-sheet={focusId} data-items-sheet-layout={layout} aria-label={`${nameOf(focusId)}的裝備`} style={{
+      position: "absolute", bottom, maxHeight: "calc(100% - 220px)", overflowY: "auto",
+      ...(layout === "desktop" ? { left: "50%", width: 380, transform: "translateX(-50%)" } : { left: 6, right: 6 }),
       boxSizing: "border-box", padding: "10px 12px 12px", pointerEvents: "auto", fontFamily: ITEM_FONT, color: TEXT.primary,
       background: `linear-gradient(180deg, ${SURFACE.panelTop}, ${SURFACE.panel})`, clipPath: cornerCut(14),
       boxShadow: `inset 0 2px 0 ${SIDE_TINT[me.side]}`,
@@ -45,15 +50,27 @@ export function MobileItemsSheet({ hud, focusId, roster = {}, onPick, onClose, o
           onSelect={(i) => setPicked(i === picked ? null : i)} />
       </div>
       <div aria-live="polite" style={{ minHeight: 20, marginTop: 6, fontSize: 12.5, color: TEXT.secondary }}>
-        {pickedVisual ? <><strong style={{ color: TEXT.primary }}>{pickedVisual.name}</strong>　{TIER_LABEL[pickedVisual.tier]}</>
-          : pickedSlot ? "空格：之後回城會依出裝路徑補上" : "點裝備看名稱"}
+        {/* Battle UX hotfix：選中的裝備直接顯示資訊卡（名稱／階級／價格／屬性／特效），不再只有名稱 */}
+        {pickedVisual ? <ItemInfoCard itemId={pickedSlot.itemId} compact />
+          : pickedSlot ? "空格：之後回城會依出裝路徑補上" : "點裝備看名稱與屬性"}
       </div>
+
+      {(nextItem || buildComplete) && (
+        <div style={{ marginTop: 8 }}><NextItemCard nextItem={nextItem} hud={me} buildComplete={buildComplete} /></div>
+      )}
 
       {onOpenDetail && (
         <button type="button" data-touch data-open-hero-detail={focusId} onClick={() => onOpenDetail(focusId)} style={{
           marginTop: 8, width: "100%", minHeight: 44, border: 0, cursor: "pointer", fontFamily: ITEM_FONT, fontSize: 13.5, fontWeight: 800,
           color: GOLD_TEXT, background: alpha(GOLD, 0.12), boxShadow: `inset 0 0 0 1px ${alpha(GOLD, 0.4)}`, clipPath: cornerCut(8),
         }}>完整出裝詳情</button>
+      )}
+
+      {onToggleTeamView && (
+        <button type="button" data-touch data-toggle-team-items aria-pressed={!!teamView} onClick={onToggleTeamView} style={{
+          marginTop: 6, width: "100%", minHeight: 36, border: 0, cursor: "pointer", fontFamily: ITEM_FONT, fontSize: 12.5, fontWeight: 700,
+          color: TEXT.secondary, background: SURFACE.raised, clipPath: cornerCut(6),
+        }}>{teamView ? "收起十人裝備列" : "在十人列顯示全部裝備"}</button>
       )}
 
       <div style={{ marginTop: 8, display: "grid", gap: 4 }}>

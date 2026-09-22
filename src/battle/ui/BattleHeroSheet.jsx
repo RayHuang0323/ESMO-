@@ -96,8 +96,11 @@ export default function BattleHeroSheet({ heroId, heroName, playerName, playerId
   const hpColor = p?.dead ? "#f87171" : hpPct > 55 ? "#86efac" : hpPct > 25 ? "#fbbf24" : "#fca5a5";
   const stateText = p ? (STATE_TEXT[p.state] ?? p.state ?? "—") : "—";
 
+  //  Battle UX hotfix：本面板掛在 `.observer-ui`（`pointer-events:none`）底下，
+  //  遮罩必須明確 `pointerEvents: "auto"`。否則點頭像等**非按鈕**區域會穿透到下層
+  //  GameView 的「← 暫停並離開」（手機上剛好在同一個左上角）⇒ 直接退出戰鬥。
   return (
-    <div style={{ position: "absolute", inset: 0, zIndex: Z.sheet, display: "flex", alignItems: isMobile ? "stretch" : "center", justifyContent: "center", background: "rgba(4,8,16,0.7)", backdropFilter: "blur(4px)" }} onClick={onClose}>
+    <div style={{ position: "absolute", inset: 0, zIndex: Z.sheet, pointerEvents: "auto", display: "flex", alignItems: isMobile ? "stretch" : "center", justifyContent: "center", background: "rgba(4,8,16,0.7)", backdropFilter: "blur(4px)" }} onClick={onClose}>
       <div data-hero-sheet={playerId} onClick={(e) => e.stopPropagation()} style={{
         width: isMobile ? "100%" : (itemsView ? 380 : 340), maxWidth: "100%",
         maxHeight: isMobile ? "100%" : "84%",

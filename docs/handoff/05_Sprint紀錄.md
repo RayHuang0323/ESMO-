@@ -22765,3 +22765,82 @@ This slice continued in the isolated `feature/moba-hero-skills-phase1` worktree 
 
 - The Hero Skills authority path changes `LogicEngine.js` semantics when the formal skill flag is ON, so the simulation contract is now `moba-sim.v8` with fingerprint `ba046ce4a129b1a9`; the historical v7 fingerprint remains retained.
 - This is a replay/version-contract declaration only. Clean v7 versus candidate skill-off remains `1000/1000` per-seed identical; no fairness baseline, seed corpus, balance value, or verifier threshold changed.
+
+
+---
+
+## MOBA Battle UX Hotfix（2026-09-22）
+
+分支 `hotfix/moba-battle-ux`（worktree `.sprints/moba-battle-ux`），基線 `origin/main` = `cfa755b`（Hero Skills v1 RELEASED）。
+未碰 `integrate/online-foundation`、`LogicEngine`、Hero Skills 的 choreography 編排與規則；模擬版本 `moba-sim.v8` 不變。
+
+### 1. Hero Skills「部署了但看不到」
+
+**實測結論：程式有跑、也有畫，是玩家看不出來。**
+正式流程（首頁 → Ban/Pick → 戰術 → 戰鬥，非 debug harness）204 遊戲秒內具名技能施放 126 次（W 72／Q 26／R 18／E 10），
+`HeroVfxRuntime` 的 `namedDrawnFrames = namedFrames`（每一幀都有畫）。看不出來的三個原因：
+- **太短**：引擎給投射物類技能的 `life = travel + 0.22`（≈0.4 遊戲秒），4× 下不到 0.1 秒。
+- **太小**：預設總覽鏡頭（正交 zoom 3.4／手機 3.05）下英雄只有 ~20px，技能 shader 的細環只剩 1–2px。
+- **沒有「這是技能」的訊號**。
+- 附註：Codex 的 release smoke 斷言 `activeFrames > 5` 會把**普攻投射物**也算進去，而且走 debug harness，所以抓不到這件事。
+
+修正（全部在呈現層）：
+- `mobaRuntimeMapAdapter.adaptEffects`：具名技能呈現下限 `SKILL_MIN_VISUAL_LIFE = 1.4` 遊戲秒（≤ 引擎 4.2 秒保留窗；不改 snapshot／引擎；該檔不在模擬語意清單）。
+- `skills/skillReadability.js` ＋ `HeroVfxRuntime`：只對具名技能，依正交鏡頭 zoom 放大半徑（最多 2×、zoom ≥ 6 不放大、透視不放大）、不透明度 ×1.35。choreography 以 `e.radius` 為尺度，所以等比例放大，編排一行未改。
+- `render/SkillCastCallouts.jsx`：施放前段在施放者頭上顯示「Q · 技能名」（R 優先、最多 4 個、`pointer-events:none`、120ms 取樣）。
+
+### 2. 手機 Gold／裝備入口
+
+原本 chip 刻意做成「看不出是按鈕」（無背景／無框、14px）。改為金色膠囊「🛒 裝備 ●●●● 50 ›」，觸控區仍 48px；
+第一次進入戰鬥有 8 秒一次性提示「點這裡看目前出裝」（`localStorage` 便利狀態，讀寫失敗當沒看過）。
+膠囊有外框後會壓到召喚師技能鈕 ⇒ 裝備開啟時手機底欄 +12px（`min-height:124px`），自動導播鈕／小地圖 128→136、
+裝備面板／購買提示基準 130→138（gate 釘住：不壓按鈕、與上方間距 ≥ 2px）。
+
+### 3. 英雄詳情點頭像直接離開戰鬥（真 bug）
+
+**根因**：`BattleHeroSheet`（與 `HeroDetailPanel`）掛在 `.observer-ui` 底下，而 `.observer-ui` 是 `pointer-events:none`；
+面板的遮罩與卡片**沒有**收回 `pointer-events` ⇒ 除了按鈕以外整個面板對點擊是透明的。
+手機上面板全螢幕，詳情頁左上英雄頭像（y 106–150）與 GameView 的「← 暫停並離開」（y 76–112）重疊。
+**在乾淨 `cfa755b` 實測重現**：點頭像上緣 (38,109) 的 `elementFromPoint` 就是那顆按鈕，點下去 `battle:false, home:true`。
+（z-index 不是原因：面板開啟時 `.observer-ui` 已有 `sheet-open` 提升。）
+**修正**：兩個模態根節點加 `pointerEvents:"auto"`。
+
+### 4. 桌面裝備資訊
+
+- 新唯讀 selector `src/battle/moba/itemInfo.js`（catalog 靜態值 → 名稱／階級／價格／非 0 屬性／特效標籤）；UI 元件仍只讀 selector（Item M3 G3/G8 不變）。
+  ⚠ 不放進 `moba/items/`：該目錄被 Hero Skills phase1 gate 相對 dc520f1 凍結（第一版放那裡時 phase1 變紅，已改）。
+  因此 **Item M1 G13 的 importer 允許清單加入這一支**（有記錄的期望變更，理由寫在斷言旁）。Hero Skills 的 gate 未改。
+- `HeroItemDetail.ItemInfoCard`：名稱、階級、價格、屬性、特效摘要；完整詳情與手機面板點格子都顯示它（手機也受益）。
+- 桌面底欄裝備鈕改為「裝備詳情 ›」⇒ 開啟與手機**同一個** `MobileItemsSheet`（`layout="desktop"`，置中 380px）：6 格可點、資訊卡、下一件、金錢、完整詳情、其他英雄；「十人裝備列」改在面板內切換。
+- 十人列展開時 hover 裝備 ⇒ 浮動資訊卡（取代只有名稱、延遲 1 秒的原生 title）。
+
+### 驗證
+
+- **新 gate** `tools/browser_check_moba_battle_ux_hotfix.mjs`：**48/48 PASS**（正式流程；桌面 diag＋桌面 HUD＋390px）。
+  含：技能施放且被畫出、施放標籤、桌面裝備面板／資訊卡／hover／完整詳情、暫停並離開 → 返回比賽、快速完成 → 結果 → 重播、
+  手機入口字樣／提示／觸控區 ≥ 44／不壓按鈕、面板與資訊卡、**頭像中心與上緣都不會退出戰鬥**、隊伍面板、無橫向 overflow、page／console／shader error 0。
+- 其他 gates／build：見下方「Gates」。
+
+### Gates（最終程式碼）
+
+- `browser_check_moba_battle_ux_hotfix` **48/48 PASS**、`browser_check_hero_skills_battle` 5/5 PASS
+- `check_hero_skills_release_gate` PASS、`check_hero_skills_phase1` 10/10、`round2` 410/410、`gameplay_slice` 68/68、`base_assault` PASS、
+  `check_hero_presentation_l` 80/80、`check_moba_hero_visual_h4` PASS、`check_simulation_version_gate` 51/51（`moba-sim.v8` 不變）
+- Item v1：`check_moba_items_m1` 69/69、`m2` 53/53、`m3` 66/66
+- runner：`regress` 15/15、`regress2` 8/8（2/2 通過）
+- `check_battle_observer_ui` 8/8、`check_moba_milestone_c_fix`／`d_fix2` PASS
+- `npm run build`：2915 modules，built in 14.28s
+- **既有紅燈（乾淨 `cfa755b` 逐字相同，非本輪）**：`check_moba_milestone_b_fix`／`b1`／`c`（`/borderLeft/` 正則）、
+  `check_moba_milestone_b2`（普攻回饋視窗 2.2）、`check_moba_milestone_e` 47/49、
+  `check_hero_skills_pacing_baseline`（需要 `--baseline-root` 參數的量測工具，無參數即失敗）
+
+```text
+HOTFIX_COMPLETE = YES
+PUSH = NO
+DEPLOY = NO
+```
+
+### 未經真機實測（交給 Owner）
+
+- 真手機觸控（gate 用 CDP 模擬 390×844）；iOS Safari 的 `env(safe-area-inset-bottom)` 實際值。
+- 技能放大倍率 2× 在團戰密集時是否太搶畫面（總覽鏡頭下目測可讀，未做主觀驗收）。

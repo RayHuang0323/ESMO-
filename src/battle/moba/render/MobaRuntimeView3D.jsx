@@ -25,6 +25,7 @@ import MobaRuntimeStructures from "./MobaRuntimeStructures.jsx";
 import MobaRuntimeMinions from "./MobaRuntimeMinions.jsx";
 import MobaRuntimeEffects from "./MobaRuntimeEffects.jsx";
 import HeroVfxRuntime from "../skills/HeroVfxRuntime.jsx";
+import SkillCastCallouts from "./SkillCastCallouts.jsx";
 import TowerRangeDebug from "../presentation/TowerRangeDebug.jsx";
 import MobaRuntimeNeutrals from "./RiggedMobaRuntimeNeutrals.jsx";
 import BattleCameraController from "../../ui/BattleCameraController.jsx";
@@ -438,6 +439,8 @@ export default function MobaRuntimeView3D({
       <MobaRuntimeEffects frameRef={frameRef} />
       {/* Exclusive hero attack presentation; old role/identity overlays are no longer mounted. */}
         <HeroVfxRuntime frameRef={frameRef} quality={quality} />
+        {/* Battle UX hotfix: who just cast what, readable at the overview zoom. */}
+        <SkillCastCallouts frameRef={frameRef} />
         {/* Final Fusion post FX: one bounded composer, quality-scaled for mobile. */}
         <EffectComposer multisampling={quality === "high" ? 4 : 0}>
           <Bloom

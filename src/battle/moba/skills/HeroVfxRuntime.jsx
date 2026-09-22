@@ -5,6 +5,7 @@ import { adaptHeroAttack, adaptNamedHeroSkill, sampleSkillEvent } from './heroSk
 import { emitChoreography } from './skillChoreography.js';
 import { useReducedBattleMotion } from '../render/useReducedBattleMotion.js';
 import { countMount, countUnmount, diagnosticsEnabled } from '../render/runtimeDiagnostics.js';
+import { skillReadabilityBoost, SKILL_READABILITY } from './skillReadability.js';
 
 // Art palette comes from heroDatabase. Post FX stays bounded in the formal
 // Canvas composer; this runtime owns pooled geometry/material instances only.
@@ -84,8 +85,12 @@ export default function HeroVfxRuntime({ frameRef, previewRef, quality = 'high',
   }, [scratch]);
   // Declarative R3F resources own disposal; no per-frame geometries/materials.
   const attributes = useMemo(() => [0, 1, 2, 3, 4].map(() => new Float32Array(CAP * 4)), []);
-  useFrame(() => {
+  useFrame((state) => {
     const { object, color, counts, fusion } = scratch;
+    // Battle UX hotfix: named skills are authored for a close Workshop view; the formal
+    // overview camera shrinks them to hairlines. Presentation-only radius/alpha boost.
+    const namedBoost = skillReadabilityBoost(state.camera);
+    let alphaGain = 1;
     counts.fill(0); scratch.dropped = 0;
     Object.keys(fusion).forEach(k => { fusion[k] = 0; });
     const low = quality === 'low';
@@ -104,7 +109,7 @@ export default function HeroVfxRuntime({ frameRef, previewRef, quality = 'high',
       object.updateMatrix(); mesh.setMatrixAt(i, object.matrix);
       color.set(hex);
       const a = attributes[pool];
-      a[i * 4] = color.r; a[i * 4 + 1] = color.g; a[i * 4 + 2] = color.b; a[i * 4 + 3] = opacity;
+      a[i * 4] = color.r; a[i * 4 + 1] = color.g; a[i * 4 + 2] = color.b; a[i * 4 + 3] = Math.min(1, opacity * alphaGain);
     }
     function draw(e) {
       if (e.visual?.visualRevision === 2) { emitChoreography(e, emit, { low, reduced, stats: fusion }); return; }
@@ -162,7 +167,9 @@ export default function HeroVfxRuntime({ frameRef, previewRef, quality = 'high',
         const e = fx.skillId ? adaptNamedHeroSkill(fx, scratch.sample) : adaptHeroAttack(fx, scratch.sample);
         if (e) {
           const before = fx.skillId ? [...counts] : null;
+          if (fx.skillId) { e.radius *= namedBoost; alphaGain = namedBoost > 1 ? SKILL_READABILITY.alphaGain : 1; }
           draw(e);
+          alphaGain = 1;
           if (fx.skillId) {
             scratch.namedFrames++;
             if (counts.some((n, i) => n > before[i])) scratch.namedDrawnFrames++;

@@ -54,7 +54,8 @@ export const DIRECTOR_BOTTOM_MOBILE = 110;
  *   ＋ 底欄底距 6 ＋ 間隔 12。改底欄高度時要同步。
  * 手機記分板下方已經有暫停／倍率鈕與戰報，所以通知放在底欄上方，不放頂部。
  */
-export const ITEM_TOAST_MOBILE_BOTTOM = 130;
+//  Battle UX hotfix：手機底欄在裝備開啟時高 12px（裝備入口不壓技能鈕）⇒ 130 → 138。
+export const ITEM_TOAST_MOBILE_BOTTOM = 138;
 
 /**
  * z-index 統一表（29B2 起列為待辦，29B6 落地）。

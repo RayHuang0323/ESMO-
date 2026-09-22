@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGameStore } from '../../useGameStore.js';
 import { useCameraStore } from '../cameraStore.js';
 import { useBattleStore } from '../battleStore.js';
@@ -14,6 +14,8 @@ import { GoldChip } from './items/GoldChip.jsx';
 import { SeatItemPips, SeatItemsExpanded } from './items/SeatItemsCompact.jsx';
 import { MobileItemsSheet } from './items/MobileItemsSheet.jsx';
 import { BattlePurchaseToasts } from './items/BattlePurchaseToasts.jsx';
+import { ItemInfoCard } from './items/HeroItemDetail.jsx';
+import { selectPlayerItemsView } from '../moba/items/itemsViewModel.js';
 import { ITEM_TOAST_MOBILE_BOTTOM } from './battleLayout.js';
 import './battleObserver.css';
 
@@ -23,6 +25,12 @@ export const observerTokens = { '--battle-bg': GC.bg, '--battle-card': GC.card,
   '--battle-red': GC.redL, '--battle-green': GC.green, '--battle-muted': GC.gray };
 const pct = v => Math.round(Math.max(0, Math.min(1, v ?? 0)) * 100);
 const gold = v => Number.isFinite(v) ? `$${(v / 10000).toFixed(1)}萬` : '—';
+
+//  Battle UX hotfix：手機「點 Gold 看出裝」的一次性提示。只是每位觀看者自己的便利狀態，
+//  讀寫失敗（無痕、被封鎖）一律當成「沒看過」，不影響任何戰鬥資料。
+const ITEMS_HINT_KEY = 'esmo.ui.itemsChipHintSeen.v1';
+const readHintSeen = () => { try { return window.localStorage.getItem(ITEMS_HINT_KEY) === '1'; } catch { return false; } };
+const writeHintSeen = () => { try { window.localStorage.setItem(ITEMS_HINT_KEY, '1'); } catch { /* 便利狀態，寫不進去就下次再提示 */ } };
 
 export function ObserverPanel({ snapshot, roster = {}, replay = false, events = [] }) {
   const mobile = useIsMobile();
@@ -34,6 +42,14 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
   //  M3b：桌機十人列「裝備視圖」與手機裝備 sheet（純呈現狀態）
   const [itemsView, setItemsView] = useState(false);
   const [itemsSheet, setItemsSheet] = useState(false);
+  //  Battle UX hotfix：桌面十人列 hover 的裝備資訊卡、手機裝備入口的一次性提示
+  const [hoverItem, setHoverItem] = useState(null);
+  const [chipHint, setChipHint] = useState(() => !readHintSeen());
+  useEffect(() => {
+    if (!chipHint) return undefined;
+    const t = setTimeout(() => { setChipHint(false); writeHintSeen(); }, 8000);
+    return () => clearTimeout(t);
+  }, [chipHint]);
   const players = snapshot?.players ?? [];
   //  M3b：只有「現場對戰、且本場有裝備系統」才讀。重播或 itemsV1 OFF ⇒ null ⇒
   //  下面所有裝備 JSX 都不渲染，既有 HUD（含「裝備 · 未提供」佔位）逐字維持原樣。
@@ -44,6 +60,9 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
   const hero = heroById(r.heroId) ?? {};
   const mine = hudItems?.[p.id] ?? null;
   const showItemsView = !!hudItems && itemsView && !mobile;
+  const itemsPlayerView = itemsSheet && mine ? selectPlayerItemsView(snapshot, p.id) : null;
+  const onRailHover = (itemId, rect) => setHoverItem(itemId && rect ? { itemId, x: rect.right + 8, y: rect.top } : null);
+  const toggleItemsSheet = () => { setItemsSheet(v => !v); if (chipHint) { setChipHint(false); writeHintSeen(); } };
   const pick = id => { setSelected(id); setSkill(null); setTeamOpen(false); useCameraStore.getState().focusHero(id); };
   const portrait = (x, size) => <HeroPortrait heroId={roster?.[x.id]?.heroId} size={size} radius={3}
     alt={roster?.[x.id]?.hero ?? x.id} fallback={<span className="observer-fallback">{roster?.[x.id]?.hero?.slice(0, 1) ?? x.id}</span>} />;
@@ -62,7 +81,7 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
         </span>
         : showItemsView ? <span className="observer-seat-info items-view">
           <span className="observer-seat-head"><strong>{name}</strong><GoldChip amount={hi.unspent} size="xs" /></span>
-          <SeatItemsExpanded hud={hi} />
+          <SeatItemsExpanded hud={hi} onHover={onRailHover} />
         </span>
         : <span className="observer-seat-info">
           <span className="observer-seat-head"><strong>{name}</strong><SeatItemPips hud={hi} /></span>
@@ -87,8 +106,9 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
       <div className="observer-vitals">
         <div className="observer-mobile-name"><strong>{hero.zh ?? r.hero ?? p.id}</strong><span>{r.player ?? p.id} · Lv.{p.mlv ?? '—'}</span>
           {mine && <button className="observer-items-chip" data-touch data-items-chip={p.id} data-items-gold={mine.unspent}
-            onClick={() => setItemsSheet(v => !v)} aria-expanded={itemsSheet} aria-label={`${hero.zh ?? p.id}的裝備`}>
-            <span className="observer-items-chip-face"><SeatItemPips hud={mine} /><GoldChip amount={mine.unspent} size="xs" /></span>
+            onClick={toggleItemsSheet} aria-expanded={itemsSheet} aria-label={`${hero.zh ?? p.id}的裝備與金錢：點開看目前出裝`}>
+            <span className="observer-items-chip-face"><span className="observer-items-chip-label" aria-hidden="true">🛒 裝備</span><SeatItemPips hud={mine} /><GoldChip amount={mine.unspent} size="xs" /><span className="observer-items-chip-caret" aria-hidden="true">›</span></span>
+            {chipHint && mobile && !replay && <span className="observer-items-chip-hint" data-testid="items-chip-hint" role="note">點這裡看目前出裝</span>}
           </button>}
         </div>
         <div className="observer-health"><i style={{ width: `${p.dead ? 0 : pct(p.hp)}%` }} /><b>{p.dead ? Number.isFinite(p.respawn) ? `陣亡 · ${Math.ceil(p.respawn)}秒復活` : '陣亡 · 未保存復活時間' : `生命 ${pct(p.hp)}%`}</b></div>
@@ -110,8 +130,8 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
       </div>
       {mine
         ? <button className="observer-equipment items" data-items-dock={p.id} data-items-gold={mine.unspent}
-            onClick={() => setItemsView(v => !v)} aria-pressed={itemsView} aria-label={itemsView ? '收起十人裝備' : '展開十人裝備'}>
-            <SeatItemPips hud={mine} /><GoldChip amount={mine.unspent} size="xs" /><small>{itemsView ? '收起裝備' : '十人裝備'}</small>
+            onClick={toggleItemsSheet} aria-expanded={itemsSheet} aria-label={`${hero.zh ?? p.id}的裝備：看目前出裝、下一件與金錢`}>
+            <SeatItemPips hud={mine} /><GoldChip amount={mine.unspent} size="xs" /><small>{itemsSheet ? '收起裝備' : '裝備詳情 ›'}</small>
           </button>
         : <button className="observer-equipment" onClick={() => setSkill(skill === 'items' ? null : 'items')}><span>◇ ◇ ◇</span><small>裝備 · 未提供</small></button>}
       <button className="observer-team-toggle" onClick={() => setTeamOpen(v => !v)} aria-expanded={teamOpen}>隊伍</button>
@@ -121,9 +141,14 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
           : `${skill} · ${hero[skill] ?? '尚無技能說明'}。${p.heroSkills?.[skill] ? p.heroSkills[skill].ready ? '技能可用。' : `冷卻剩餘 ${Math.ceil(p.heroSkills[skill].cd)} 秒。` : '個別英雄技能冷卻尚未提供。'}`}
       </div>}
     </section>
-    {mobile && itemsSheet && mine && <MobileItemsSheet hud={hudItems} focusId={p.id} roster={roster}
-      onPick={pick} onClose={() => setItemsSheet(false)} bottom={ITEM_TOAST_MOBILE_BOTTOM}
+    {itemsSheet && mine && <MobileItemsSheet hud={hudItems} focusId={p.id} roster={roster}
+      onPick={pick} onClose={() => setItemsSheet(false)} bottom={mobile ? ITEM_TOAST_MOBILE_BOTTOM : 150}
+      layout={mobile ? 'mobile' : 'desktop'}
+      nextItem={itemsPlayerView?.nextItem ?? null} buildComplete={!!itemsPlayerView?.buildComplete}
+      teamView={mobile ? null : itemsView} onToggleTeamView={mobile ? null : () => setItemsView(v => !v)}
       onOpenDetail={() => { setItemsSheet(false); setSkill(null); setDetail('items'); }} />}
+    {!mobile && showItemsView && hoverItem && <div className="observer-item-tip" data-testid="item-hover-card"
+      style={{ left: hoverItem.x, top: hoverItem.y }}><ItemInfoCard itemId={hoverItem.itemId} compact /></div>}
     {hudItems && <BattlePurchaseToasts snapshot={snapshot} roster={roster} />}
     <div className="observer-killfeed" aria-live="polite">{events.filter(e => ['KILL','FIRST_BLOOD','MULTI_KILL','ACE'].includes(e.type) && snapshot.ts - e.t < 12).slice(-3).map(e => <div key={e.id} className={`observer-kill ${e.side}`}>
       {e.data?.killer && <HeroPortrait heroId={roster?.[e.data.killer]?.heroId} size={28} radius={2} alt="" />}

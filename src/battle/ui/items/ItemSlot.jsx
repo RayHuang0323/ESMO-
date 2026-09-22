@@ -36,6 +36,8 @@ export function ItemSlot({
   itemId = null, visual: given = null, size = "md", fluid = false,
   highlight = null, selected = false, owned = false, dim = false,
   onSelect = null, acquireKey = null, title,
+  //  Battle UX hotfix：桌面 hover 顯示資訊卡（不給就沒有任何行為差異）。
+  onHover = null,
 }) {
   const ref = useRef(null);
   useSlotAcquireMotion(ref, acquireKey);
@@ -89,14 +91,17 @@ export function ItemSlot({
       </button>
     );
   }
-  return <span role="img" aria-label={owned ? `${label}（已擁有）` : label} title={title ?? label} style={{ display: "block", minWidth: 0, ...outer }}>{face}</span>;
+  const hover = onHover && visual
+    ? { onMouseEnter: (e) => onHover(visual.itemId, e.currentTarget.getBoundingClientRect()), onMouseLeave: () => onHover(null, null) }
+    : {};
+  return <span role="img" aria-label={owned ? `${label}（已擁有）` : label} title={onHover ? undefined : (title ?? label)} data-item-slot={visual?.itemId ?? undefined} {...hover} style={{ display: "block", minWidth: 0, ...outer }}>{face}</span>;
 }
 
 /**
  * 6 格背包。slots 可以是 selectPlayerItemsView().slots 或 selectHudItems()[seat].slots（都有 index／itemId）。
  * fluid：格子隨容器縮放；一排 6 格時每格若 ≥ 44px（觸控下限）就一排，不夠寬自動改 3×2。
  */
-export function InventoryBar({ slots, size = "md", fluid = false, onSelect = null, selectedIndex = null, acquireKeys = null, ariaLabel = "身上裝備" }) {
+export function InventoryBar({ slots, size = "md", fluid = false, onSelect = null, selectedIndex = null, acquireKeys = null, ariaLabel = "身上裝備", onHover = null }) {
   const px = SLOT_SIZE[size];
   const gap = SLOT_GAP[size];
   //  純 CSS 階梯：W6 ≥ 44 ⇒ (44 − W6)×1000 ≤ 0 ⇒ 欄寬下限取 W6（6 欄）；否則取 W3（3 欄）。
@@ -114,7 +119,7 @@ export function InventoryBar({ slots, size = "md", fluid = false, onSelect = nul
           <ItemSlot itemId={s.itemId} size={size} fluid={fluid}
             selected={selectedIndex === s.index}
             onSelect={onSelect ? () => onSelect(s.index) : null}
-            acquireKey={acquireKeys?.[s.index] ?? null} />
+            acquireKey={acquireKeys?.[s.index] ?? null} onHover={onHover} />
         </div>
       ))}
     </div>

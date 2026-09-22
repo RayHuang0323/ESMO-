@@ -445,6 +445,10 @@ const COMPS = {
   //  M3e：Replay 擷取（replayBuffer 用 itemReplay 編碼）與播放（MobaReplayScreen 用 itemReplay 解碼／還原）。
   const allowedImporter = (f) => f === "src/LogicEngine.js" || f === "src/useLocalServer.js" || f === "src/battle/ui/BattleObserverHUD.jsx" || f === "src/battle/ui/BattleHeroSheet.jsx"
     || f === "src/screens/moba/TacticScreen.jsx" || f === "src/battle/moba/replay/replayBuffer.js" || f === "src/screens/moba/MobaReplayScreen.jsx"
+    //  ⚠ 2026-09-22（Battle UX hotfix）：`src/battle/moba/itemInfo.js` 是裝備資訊卡的**唯讀 selector**
+    //    （只 import itemCatalog＋EFFECT_LABELS，僅被 ui/items 使用）。它不放進 moba/items/，因為那個目錄
+    //    被 Hero Skills phase1 gate 相對 dc520f1 凍結；UI 元件本身仍不直接 import 目錄（M3 G3 不變）。
+    || f === "src/battle/moba/itemInfo.js"
     || f.startsWith("src/debug/") || f.startsWith("src/battle/ui/items/");
   ck("G13", "只有 LogicEngine（opt-in）、useLocalServer（開關保護）、DEV 工具與裝備 UI import items 模組", importers.every(allowedImporter) && importers.includes("src/LogicEngine.js"), importers.join(","));
   const callers = [];

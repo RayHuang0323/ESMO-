@@ -37,11 +37,11 @@ export function SeatItemPips({ hud, size = 6 }) {
   );
 }
 
-export function SeatItemsExpanded({ hud }) {
+export function SeatItemsExpanded({ hud, onHover = null }) {
   if (!hud) return null;
   return (
     <span data-seat-items-expanded={slotIds(hud)} style={{ display: "grid", gap: 3, minWidth: 0 }}>
-      <InventoryBar slots={hud.slots} size="xs" ariaLabel={summary(hud)} />
+      <InventoryBar slots={hud.slots} size="xs" ariaLabel={summary(hud)} onHover={onHover} />
     </span>
   );
 }

@@ -43,3 +43,16 @@
 .observer-ui.mobile .observer-items-chip{display:block;align-self:flex-start;min-height:44px;margin:0 0 -30px 8px;padding:0 0 30px;background:none!important;border:0!important;box-shadow:none!important}
 .observer-ui.mobile .observer-items-chip-face{display:inline-flex;align-items:center;gap:6px;height:14px}
 .observer-ui.items-on.mobile .observer-mobile-name>span{margin-left:auto}
+/* Battle UX hotfix：手機 Gold 入口要一眼看得出是「按鈕」——金色膠囊＋「🛒 裝備」＋ ›；觸控區（下延 30px）不變 */
+.observer-ui.mobile .observer-items-chip{position:relative}
+.observer-ui.mobile .observer-items-chip-face{height:18px;padding:0 5px 0 6px;gap:5px;border-radius:999px;border:1px solid rgba(251,191,36,.6);background:rgba(251,191,36,.14);box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.observer-ui.mobile .observer-items-chip-label{font-size:10px;font-weight:800;color:#fcd34d;white-space:nowrap;letter-spacing:.02em}
+.observer-ui.mobile .observer-items-chip-caret{font-size:13px;font-weight:900;line-height:1;color:#fcd34d}
+.observer-ui.mobile .observer-items-chip:active .observer-items-chip-face{background:rgba(251,191,36,.28)}
+@keyframes observer-items-hint-in{from{opacity:0;transform:translate(-50%,4px)}to{opacity:1;transform:translate(-50%,0)}}
+.observer-ui.mobile .observer-items-chip-hint{position:absolute;left:50%;bottom:calc(100% + 6px);transform:translateX(-50%);white-space:nowrap;font-size:11px;font-weight:800;color:#111827;background:#fcd34d;border-radius:6px;padding:3px 8px;box-shadow:0 2px 8px rgba(0,0,0,.45);pointer-events:none;animation:observer-items-hint-in .25s ease-out}
+.observer-ui.mobile .observer-items-chip-hint::after{content:'';position:absolute;left:50%;top:100%;margin-left:-5px;border:5px solid transparent;border-top-color:#fcd34d}
+/* Battle UX hotfix：桌面十人列 hover 裝備 ⇒ 資訊卡（名稱／階級／價格／屬性／特效），不擋滑鼠 */
+.observer-ui.items-on .observer-item-tip{position:fixed;z-index:30;width:250px;pointer-events:none;padding:9px 11px;background:rgba(10,16,28,.97);border:1px solid rgba(251,191,36,.45);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.55)}
+/* Battle UX hotfix：裝備入口有了外框後會壓到召喚師技能鈕下緣 ⇒ 手機底欄多 12px（下方資訊列貼底，整排技能鈕一起上移，不改其他列） */
+.observer-ui.items-on.mobile .observer-dock{min-height:124px}
