@@ -101,4 +101,6 @@ regress2 20 seeds 平均擊殺 22.2 → 約 13。
 
 `tools/check_moba_combat_quality_v1.mjs`（28 項）：A 可讀性純函式、H 英雄打兵、M 小兵交戰、W 波次、D 結束性／決定性、V 版本。
 
-公平性與其他 gate 的實測數字見 `docs/handoff/05_Sprint紀錄.md` 的 Combat Quality v1 一節。
+公平性 n=1000（兩組各 1000 場全部結束）：全關 藍 49.6%、道具＋技能 藍 47.6%。
+
+其餘實測數字見 `docs/handoff/05_Sprint紀錄.md` 的 Combat Quality v1 一節。
