@@ -34,8 +34,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
  *   改釘在 M4b.5 的 commit：從此 G1 抓的是「**本 commit 之後**新增的裝備層改動有沒有
  *   動到 OFF 路徑」。P0-A～P0-D 是下一次刻意的引擎語意變更（moba-sim.v7），
  *   因此 release closure 將基準前移到 P0-D closure；後續 Item-only 改動仍會被抓到。
+ *   2026-09-23 Combat Quality v1（`moba-sim.v9`：英雄打兵、小兵交戰、波次）同理 ⇒ 基準前移到
+ *   該次 commit。
  */
-const BASE_COMMIT = "c45bfe0";
+const BASE_COMMIT = "231c11f";
 const load = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
 
