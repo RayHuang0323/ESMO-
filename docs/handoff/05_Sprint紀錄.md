@@ -23050,3 +23050,80 @@ talent27／tactic24` **7/7**、`npm run build` ✓。
 MOBA_BATTLE_CONDITION_UX = LOCAL_COMMIT_ONLY
 SIMULATION_VERSION = moba-sim.v9（未變）
 ```
+
+
+## Fatigue Audit（Battle Condition UX 收尾，2026-09-24）
+
+只做體力系統 Audit，不加功能。n=200 模擬的 runner 放在 session scratchpad，沒有進 repo。
+
+### 結論
+
+- **MOBA：沒有複利型的 double penalty。** 疲勞經三個點進引擎：能力 slots（行為層，完整曲線）、
+  loadout 的 `powerMult`、`toughMult`（發揮層，×1/4）。這是刻意分層，不是同一個量乘兩次。
+  `basePower` 已含 loadout 倍率 ⇒ 本場升級不會累乘，也不會把疲勞洗掉。
+  實測兩層合起來（−24pp）約等於各自效果相加（−6pp ＋ −21pp），沒有互相放大。
+  ⚠ `executionFactor` 註解寫「最底只掉 3.5% 發揮」，但 power 與 tough **各乘** 0.965，
+  戰鬥效率實際約少 7%，而且發揮層才是主要影響來源（只記錄，不調參）。
+- **CS：有，而且是三重扣分（已修）。** 同一份體力在 CS 引擎裡被扣三次：
+  `fpsRoster` stats × `fatigueFactor`（本輪新增）＋ `EsportsFPS3D` `formMul` 的 `condMul(condition)`
+  （疲勞 0.92、低潮 0.82）＋ 路徑移速的 `sta`（`sta: p.energy`）。後兩條在 main 上就有，
+  以前體力低於 15 不能出賽，所以沒浮現。另外引擎把 `sta=0` 當 falsy ⇒ **0 體力反而比 20 體力好打**（曲線不單調）。
+- **修正（最小）**：`fpsRoster` 在疲勞膝點（70）以下，把兩個舊入口封頂在膝點
+  （`sta = 70`、`condition = conditionText(70)`），真實體力另放 `energy` 欄位給選手卡顯示；
+  `EsportsFPS3D` 只改一行顯示（`體力 {selP.energy??selP.sta}`）。
+  **體力 ≥70 時名單物件逐鍵不變**（連 `energy` 欄位都不加）。
+  實證：用新程式碼重跑 0／20／40／70／100 各 10 個 seed，比分 **50/50 逐場相同**
+  （<70 等於 fix3、≥70 等於修改前 HEAD）。
+- **沒採用的做法**：把兩個舊入口完全中性化（`sta 82`、不傳 condition）。
+  這會讓滿體力 vs 內建 CT 的勝率從 54.5% 掉到 34.0%（n=156）：舊的 ×1.05 加上移速加成本來就是
+  CS 基準難度的一部分，拿掉等於重調整體平衡，不屬於本輪範圍。
+
+### n=200 結果
+
+MOBA（`INITIAL_PLAYERS` 前 5 人、Lv1 loadout、引擎預設戰術、dt 0.5、上限 1800s）：
+
+| 條件 | 結果 |
+|---|---|
+| 雙方同體力 100／40／20／0 | 藍方勝率 55.0／51.5／52.5／48.0%（差距在抽樣誤差內，無 side bias；55% 是滿體力就有的引擎既有偏差） |
+| 疲勞方勝率（藍累、紅累各 200 場取平均），疲勞方體力 40／20／0 | 43／35／26% |
+| 0 體力只開行為層／只開發揮層 | 43.5／28.5% |
+
+CS（我方＝`INITIAL_PLAYERS` 前 5 人，對手＝正式環境的內建 CT；7 個有界戰術格輪替）：
+
+| 體力 | HEAD（三重扣分） | 修正後 |
+|---|---|---|
+| 100 | 54.5% | 54.5%（相同） |
+| 70 | 51.0% | 51.0%（相同） |
+| 40 | 19.5% | 33.5% |
+| 20 | 9.5% | 19.5% |
+| 0 | 13.5%（sta=0 falsy） | 14.0% |
+
+雙方同為 20 體力（修正後）：48.0%，無 side bias。
+
+### 未解決（需 Owner 決定，本輪**不調參**）
+
+- **CS 低體力仍然很重**：以 70 體力（51%）為基準，只剩 canonical 曲線時落差是 −17.5／−31.5／−37pp（40／20／0）。
+  根因是 CS 模擬對 stats 的敏感度遠高於 MOBA：reflex／accuracy 直接決定槍戰，回合勝又累積成地圖勝；
+  MOBA 有發揮層 1/4 折，CS 沒有。0 體力 14% 已接近「幾乎必輸」。要不要替 CS 加一層折減由 Owner 決定。
+- **`teamStrength.v1` 標籤過期（`6eda6a2` 帶進來的，非本次）**：`calcPower` 從「精神飽滿 ×1.06」改成
+  滿體力 1.0，`simulateFixture` 的實力差隨之縮小，但 `TEAM_STRENGTH_VERSION` 沒升版。
+  `simulatorVersion` 只是已存賽果上的稽核欄位，沒有人拿它重算 ⇒ 舊賽果不會變，但新賽果的標籤不準。建議升成 `teamStrength.v2`。
+- 體力 70–99 之間 CS 的 `sta` 仍會影響移速（main 上就有的行為，本次保留）。
+
+### 驗證（全部實跑）
+
+`check_battle_condition_ux` **40/40**（新增 C13、C14 守 CS 單一通道）、`npm run build` ✓（built in 15.14s）、
+`regress` 結束率 15/15、`regress2` 節奏門檻 8/8、verify.mjs `cs23` ✓、`check_cs_matchup_acceptance_r57` PASS、
+`check_simulation_version_gate` 51/51、`check_condition_o2` 31/31、`check_squad_o1` 40/40、
+`check_cs_roster_v1_r56` PASS、`check_growth_loop_p0` 25/25、`check_no_player_injury` 30/30、
+`check_match_entry_o3` 35/35、`check_matchmaking_o4` 48/48。
+`talent27` §30「不修改 FPS presentation」用 `git diff HEAD` 守 `EsportsFPS3D.jsx`；commit 前會因為那一行顯示改動而紅，commit 後重跑結果見下。
+
+未經瀏覽器實測：CS 選手卡「體力」欄在低體力時顯示真實體力（`energy`）。
+
+```text
+FATIGUE_AUDIT = LOCAL_COMMIT_ONLY
+MOBA double penalty = NO（兩層相加，非複利）
+CS double penalty = YES（三重）→ 已修，≥70 逐場不變
+SIMULATION_VERSION = moba-sim.v9（未變）
+```

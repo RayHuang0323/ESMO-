@@ -15,7 +15,7 @@
 // ============================================================================
 
 import { getPlayerDerivedStats } from "../../platform/talents/playerDerivedStats.js";
-import { applyFatigueToStats } from "../../platform/condition/playerCondition.js";
+import { applyFatigueToStats, conditionText, FATIGUE } from "../../platform/condition/playerCondition.js";
 import { CS_SEATS } from "../../platform/contracts/matchSquad.js";
 import { bestPositions, CS_ROLE_BY_MOBA_ROLE } from "../../data/playerModel.js";
 
@@ -95,11 +95,18 @@ export function toFpsRoster(players = [], csLineup = null) {
     const role = fpsRoleOf(p) || MOBA2FPS[p.role] || ["entry", "rifler", "awp", "lurker", "igl"][i] || "rifler";
     const roleView = fpsRolePresentation(p);
     const ovr = fpsOvr(short);
+    //  Fatigue audit：引擎另有兩個舊的體力入口——`formMul` 的 condMul(condition) 與
+    //  路徑移速的 `sta`。照傳真實值 ⇒ 疲勞膝點（70）以下同一份體力被扣三次
+    //  （n=200 vs 內建 CT：體力 20 勝率 9.5%；且 sta=0 被引擎當 falsy ⇒ 0 體力反而比 20 好打）。
+    //  ⇒ 兩個舊入口在膝點封頂：≥70 與先前逐位元相同，<70 只剩上面那條 canonical 曲線。
+    //  封頂時真實體力另放 `energy` 給畫面顯示（引擎不讀它；≥70 不加欄位 ⇒ 物件逐鍵不變）。
+    const tired = Number.isFinite(Number(p.energy)) && Number(p.energy) < FATIGUE.freshAbove;
     return {
       id: "t" + (i + 1), name: p.name, side: "t", role, fpsRole: FPS_ROLE_ZH[role],
       bestFpsRole: roleView.bestRole, taskFpsRole: roleView.taskRole,
-      moba: ovr, fps: ovr, sta: p.energy ?? 82, personality: p.personality || "steady",
-      morale: p.morale, condition: p.condition, stats: short, _gid: p.id,
+      moba: ovr, fps: ovr, sta: tired ? FATIGUE.freshAbove : (p.energy ?? 82), ...(tired ? { energy: Number(p.energy) } : {}),
+      personality: p.personality || "steady",
+      morale: p.morale, condition: tired ? conditionText(FATIGUE.freshAbove) : p.condition, stats: short, _gid: p.id,
     };
   });
 }

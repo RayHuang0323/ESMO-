@@ -3625,7 +3625,7 @@ function EsportsFPS3D({
                       </div>
                     </div>
                   ))}
-                  <div style={{color:C.gray2,fontSize:7,marginTop:1}}>FPS戰力 <b style={{color:"#e8ebf0"}}>{selP.fps}</b> · MOBA {selP.moba} · 體力 {selP.sta} · {selP.fpsRole}</div>
+                  <div style={{color:C.gray2,fontSize:7,marginTop:1}}>FPS戰力 <b style={{color:"#e8ebf0"}}>{selP.fps}</b> · MOBA {selP.moba} · 體力 {selP.energy??selP.sta} · {selP.fpsRole}</div>
                 </div>
               )}
               {cameraMode==="pov"&&<button data-testid="cs-exit-pov" onClick={event=>{event.stopPropagation();setCameraMode("tactical");setCameraPreset(null);}} style={{marginTop:6,width:"100%",padding:"5px 8px",borderRadius:6,border:`1px solid ${C.gold}66`,background:`${C.gold}16`,color:C.gold,fontSize:9,fontWeight:800,cursor:"pointer"}}>返回觀戰視角</button>}

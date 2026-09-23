@@ -134,6 +134,20 @@ ck("C8 MOBA：滿體力的 loadout 逐鍵不變",
 ck("C9 CS 與 MOBA 共用同一支 applyFatigueToStats（沒有第二套）",
   read("src/battle/fps/fpsRoster.js").includes("applyFatigueToStats")
     && read("src/battle/moba/mobaRosterAdapter.js").includes("applyFatigueToStats"));
+{
+  //  Fatigue audit：CS 引擎另有 condMul(condition) 與移速 sta 兩個舊入口。
+  //  膝點以下必須封頂（只剩 canonical 曲線）；≥70 必須與先前逐鍵相同。
+  const fps = await load("src/battle/fps/fpsRoster.js");
+  const csTeam = (e) => fps.toFpsRoster(LANES.map((r, i) => ({ ...mkP(`p${i}`, r, e), condition: cond.conditionText(e) })));
+  const low = [0, 1, 20, 40, 69].map((e) => csTeam(e)[0]);
+  const hi = csTeam(85)[0];
+  ck("C13 CS：體力 <70 時 condition／sta 封頂在膝點（疲勞只經 stats 一條）",
+    low.every((r) => r.sta === cond.FATIGUE.freshAbove && r.condition === cond.conditionText(cond.FATIGUE.freshAbove))
+      && low[0].energy === 0 && low[2].stats.rxn < hi.stats.rxn,
+    low.map((r) => `${r.energy}→sta ${r.sta}/${r.condition}`).join("、"));
+  ck("C14 CS：體力 ≥70 的名單與先前相同（sta＝真實體力、condition 原樣、無 energy 欄位）",
+    hi.sta === 85 && hi.condition === "精神飽滿" && !("energy" in hi));
+}
 ck("C10 顯示戰力也讀同一條曲線（不再用 condition 文字查表）",
   read("src/data/playerModel.js").includes("fatigueFactorOf(player)")
     && !/return Math\.round\(base \* MORALE_EFFECT[^\n]*CONDITION_EFFECT/.test(read("src/data/playerModel.js")));
