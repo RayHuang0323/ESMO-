@@ -20,6 +20,7 @@ import { TIERS } from "../../data/recruitPool.js";
 import { calculateLevelProgress } from "../../platform/progress/playerLevel.js";
 import { getStatLayers } from "../../platform/talents/playerDerivedStats.js";
 import { getPlayerTalentState } from "../../platform/contracts/playerTalentState.js";
+import { conditionSummary, isLowEnergy } from "../../platform/condition/playerCondition.js";
 import { growthLogOf } from "../../platform/progress/growthLog.js";
 import { GrowthEntryRow, LevelXpBar } from "../../ui/GrowthUI.jsx";
 import { CareerPanel, ContractPanel, StatusPanel } from "../../ui/PlayerProfileFoundation.jsx";
@@ -75,6 +76,8 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
   const [gameMode, setGameMode] = useState("MOBA");
   const [profileTab, setProfileTab] = useState("overview");
   const [dropOpen, setDropOpen] = useState(false);
+  const [restNote, setRestNote] = useState(null);
+  const assignTraining = useProfileStore((st) => st.assignTraining);
   const rootRef = useRef(null);
   const isMobile = useIsMobile();
 
@@ -88,6 +91,7 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
   const lp = calculateLevelProgress(p.xp ?? 0, 0);
   const morale = p.morale ?? 70;
   const energy = p.energy ?? 100;
+  const condition = conditionSummary(p);
   const age = agePresentationOf(p);
   const tier = TIERS.find((t) => potential >= t.min) ?? TIERS[TIERS.length - 1];
 
@@ -218,6 +222,26 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
                 <EsmoIcon name="signal" size={20} />
               </div>
               <span style={{ color: energyColor, fontSize: 13, fontWeight: 900 }}>{energy}%</span>
+              {/*  Battle Condition UX：狀態欄直接講清楚「這樣上場會打幾成」，
+                   體力偏低時就地給一顆休息鈕（走既有的 `assignTraining(id,"rest")`，
+                   不直接改 energy、不推進日期）。 */}
+              <span data-testid="player-fatigue-note" style={{ color: "#71717a", fontSize: 9 }}>
+                出賽能力 {condition.fatiguePercent}%
+              </span>
+              {isLowEnergy(p) && (
+                <button type="button" data-testid="player-quick-rest"
+                  disabled={!!p.training}
+                  onClick={() => { if (assignTraining?.(p.id, "rest")) setRestNote("已安排休息（1 天，推進日期後生效）"); }}
+                  style={{
+                    marginTop: 2, padding: "3px 8px", borderRadius: 999, fontSize: 9.5, fontWeight: 800,
+                    cursor: p.training ? "default" : "pointer", border: "1px solid rgba(52,211,153,.5)",
+                    background: p.training ? "rgba(255,255,255,.05)" : "rgba(52,211,153,.14)",
+                    color: p.training ? "#71717a" : "#34d399",
+                  }}>
+                  {p.training ? "已安排訓練" : "安排休息"}
+                </button>
+              )}
+              {restNote && <span data-testid="player-quick-rest-note" style={{ color: "#34d399", fontSize: 9 }}>{restNote}</span>}
             </div>
           </div>
         </PlayerListRow>

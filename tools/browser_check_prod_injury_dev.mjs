@@ -15,7 +15,7 @@
 //  Phase 1  正式／預設造訪（沒有任何參數）⇒ 驗 injury 已消失、DEV 工具看不到
 //  Phase 2  `?debug=1` ⇒ 驗 DEV 工具可用（推進 1／3 天、恢復至可出賽）
 //
-//  ⚠ 門檻不寫死：`CONDITION.unfitBelow` 由**本機同一個 commit** 的原始碼讀出來
+//  ⚠ 門檻不寫死：`CONDITION.lowEnergyBelow` 由**本機同一個 commit** 的原始碼讀出來
 //    再注入頁面判斷。部署的就是這份程式碼，所以這樣既不寫死也不作弊。
 // ============================================================================
 import { pathToFileURL, fileURLToPath } from "node:url";
@@ -29,7 +29,8 @@ const HEADLESS = !process.argv.includes("--headed");
 const KEY = "esmo.profile.v1";
 
 const cond = await import(pathToFileURL(resolve(ROOT, "src/platform/condition/playerCondition.js")).href);
-const UNFIT_BELOW = cond.CONDITION.unfitBelow;      // authoritative，不是寫死的字面量
+const UNFIT_BELOW = cond.CONDITION.lowEnergyBelow;  // authoritative，不是寫死的字面量
+//  ⚠ Battle Condition UX 起這是**提醒**門檻，不是出賽門檻（體力不再擋出賽）。
 
 let pass = 0, fail = 0;
 const ck = (n, ok, d = "") => { ok ? pass++ : fail++; console.log(`${ok ? "✅" : "❌"} ${n}${d ? "　" + d : ""}`); };

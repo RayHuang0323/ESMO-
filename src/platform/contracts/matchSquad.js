@@ -105,11 +105,15 @@ export function validateSquad({ mode = "moba", seats = {}, players = [], strictR
       });
       continue;
     }
-    //  O2：體力過低 ⇒ 阻擋（理由由 condition 層產生，這裡不重寫規則）
+    //  Battle Condition UX：體力**不再擋出賽**。低體力只是警告，出不出賽由玩家決定；
+    //  實際代價是能力倍率（`fatigueFactor`），在比賽輸入那層套用。
     const fit = matchFitness(me);
     if (!fit.ok) {
       errors.push({ code: fit.code, seat, playerId: pid, message: `${seatLabel(mode, seat)}：${fit.message}` });
       continue;
+    }
+    if (fit.note) {
+      warnings.push({ code: "low_energy", seat, playerId: pid, message: `${seatLabel(mode, seat)}：${fit.note}` });
     }
     filled++;
     //  位置符合度：預設只警告（讓玩家能刻意換位），strictRole 時升級為阻擋
@@ -197,9 +201,12 @@ export function autoFillSquad({ mode = "moba", seats = {}, players = [] } = {}) 
   const required = seatsOf(mode);
   const base = mode === "cs" ? normalizeCsLineup(seats, players) : normalizeLineup(seats, players);
   const used = new Set(Object.values(base).filter(Boolean));
+  //  Battle Condition UX：低體力不再被排除在候選池外（照樣可以被自動填入），
+  //  但**同一分層內優先挑體力高的**——輪換仍然是玩家想要的預設行為。
   const pool = (players ?? [])
     .filter((p) => p && typeof p.id === "string" && isEligible(p) && isMatchFit(p) && !used.has(p.id));
   const rank = (p) => (tierOf(p) === "active" ? 0 : 1);
+  const energyOf = (p) => Number.isFinite(Number(p?.energy)) ? Number(p.energy) : 100;
   const out = { ...base };
   for (const seat of required) {
     if (out[seat]) continue;
@@ -209,6 +216,7 @@ export function autoFillSquad({ mode = "moba", seats = {}, players = [] } = {}) 
       .filter((p) => !used.has(p.id))
       .sort((a, b) => rank(a) - rank(b)
         || (b.role === want ? 1 : 0) - (a.role === want ? 1 : 0)
+        || energyOf(b) - energyOf(a)
         || String(a.id).localeCompare(String(b.id)))[0];
     if (!pick) continue;
     out[seat] = pick.id;

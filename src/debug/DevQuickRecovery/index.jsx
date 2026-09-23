@@ -24,7 +24,8 @@
 //  ── 正式玩法沒有 soft-lock（本工具不是用來蓋住死局的）────────────────────
 //  即使全隊體力見底且沒錢：「休息調整」課程 `energyCost: 0`、1 天，UI 與 Store
 //  **都明確豁免體力檢查**（`c.id !== "rest"`），完成回 +30 體力，而門檻只有
-//  `CONDITION.unfitBelow`。被比賽日擋住時 `CompetitionScreen` 有正式的棄權按鈕。
+//  `CONDITION.lowEnergyBelow`。體力已**不再**擋出賽（Battle Condition UX），
+//  這支工具只是把體力補回提醒門檻以上，省去等好幾天。
 //  ⇒ 玩家永遠能免費脫困。這條由 `tools/check_dev_quick_recovery.mjs` **實跑**證明，
 //    不是靠這段註解宣稱。
 // ============================================================================
@@ -124,7 +125,7 @@ function DevQuickRecoveryPanel() {
 
       <div style={{ marginTop: 5, fontSize: 8.5, color: GC.gray, lineHeight: 1.6 }}>
         開發測試便利功能，不是正式遊戲設計。推進走既有的每日結算（賽程未收尾一樣會被擋）；
-        恢復目標由 condition 門檻推導（體力 &lt; {CONDITION.unfitBelow} 不可出賽），
+        恢復目標由 condition 門檻推導（體力 &lt; {CONDITION.lowEnergyBelow} 會被首頁提醒；體力不再擋出賽），
         不改任何恢復費率、訓練或年齡規則。
       </div>
     </div>

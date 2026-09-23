@@ -63,7 +63,7 @@ line("\n【現況基準（主幹實跑值）】");
 line(`  SEASON_DAYS ${regular.SEASON_DAYS} 天（${regular.SEASON_DAYS / DAYS_PER_WEEK} 週）｜玩家 ${PLAYER_FIXTURES} 場｜場間 `
   + `${schedule.dayForRound(2, PLAYER_FIXTURES, { from: 1, to: regular.SEASON_DAYS }) - schedule.dayForRound(1, PLAYER_FIXTURES, { from: 1, to: regular.SEASON_DAYS })} 天`);
 line(`  每場 XP 勝 ${rewards.BASE_XP_WIN} / 負 ${rewards.BASE_XP_LOSS}｜升級成長每級 ${levelGrowth.LEVEL_GROWTH.pointsPerLevel} 點`);
-line(`  體力：每場 −${cond.CONDITION.matchEnergyCost}、每日 +${cond.CONDITION.restPerDay}、不可出賽 <${cond.CONDITION.unfitBelow}`);
+line(`  體力：每場 −${cond.CONDITION.matchEnergyCost}、每日 +${cond.CONDITION.restPerDay}、提醒門檻 <${cond.CONDITION.unfitBelow}`);
 
 // ── 新秀的真實分佈（不要自己編一個假的起始值）────────────────────────────
 //  ⚠ 用多個 seed 取樣：超新星只佔約 4%，單一 40 人池經常抽不到，

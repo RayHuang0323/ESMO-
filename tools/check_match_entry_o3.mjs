@@ -42,7 +42,7 @@ const EXTRA = [
   mkPlayer("unl1", "上路", { rosterTier: "unlisted" }),
   //  舊存檔殘留的傷停資料。留在 fixture 裡是刻意的：它必須**不**影響任何驗證結果。
   mkPlayer("legacyhurt1", "打野", { injuryDays: 3, injured: true }),
-  mkPlayer("tired1", "下路", { energy: CONDITION.unfitBelow - 1 }),
+  mkPlayer("tired1", "下路", { energy: 5 }),
 ];
 const ALL = [...STARTERS, ...EXTRA];
 const mobaSeats = Object.fromEntries(ENGINE_SEATS.map((s, i) => [s, STARTERS[i].id]));
@@ -101,7 +101,8 @@ console.log("══ Milestone O3：出賽申請與驗證契約 ══\n");
     ["選手不存在", { ...mobaSeats, b2: "ghost" }, "unknown_player"],
     ["同一人重複佔席", { ...mobaSeats, b4: "s1" }, "duplicate_player"],
     ["未登錄名單", { ...mobaSeats, b1: "unl1" }, "ineligible"],
-    ["體力不足", { ...mobaSeats, b4: "tired1" }, "exhausted"],
+    //  Battle Condition UX：體力**不再**是阻擋理由（低體力只降能力），
+    //  所以這裡不再有 "體力不足" 這一列。
   ];
   for (const [label, seats, code] of cases) {
     const r = make("moba", seats);
@@ -174,11 +175,17 @@ console.log("══ Milestone O3：出賽申請與驗證契約 ══\n");
   //  伺服器以自己的名單重驗出賽資格（客戶端說可以不算數）。
   //  ⚠ 這裡用「排隊後體力掉下去」當情境——舊版用的是「排隊後受傷」，
   //    但受傷已被產品取消，拿它當情境等於驗一個不存在的規則。
-  const nowTired = ALL.map((p) => (p.id === "s2" ? { ...p, energy: CONDITION.unfitBelow - 1 } : p));
-  const hv = validateMatchEntryRequest(req, nowTired);
-  ck("6e) 伺服器以自己的資料重驗資格（客戶端送單時還健康也擋得下）",
-    !hv.ok && hv.errors.some((e) => e.code === "exhausted"),
-    hv.errors.find((e) => e.code === "exhausted")?.message);
+  //  ⚠ 情境換過兩次：受傷（產品取消）→ 體力過低（Battle Condition UX 取消阻擋）。
+  //    現在用「排隊後被移出登錄名單」——那仍然是伺服器該擋下的真實情形。
+  const nowTired = ALL.map((p) => (p.id === "s2" ? { ...p, energy: 0 } : p));
+  ck("6e) 排隊後體力掉到 0 **不再**讓申請失效（體力不擋出賽）",
+    validateMatchEntryRequest(req, nowTired).ok,
+    JSON.stringify(validateMatchEntryRequest(req, nowTired).errors ?? []));
+  const nowUnregistered = ALL.map((p) => (p.id === "s2" ? { ...p, status: "未登錄", rosterTier: "unlisted" } : p));
+  const hv = validateMatchEntryRequest(req, nowUnregistered);
+  ck("6e-b) 伺服器以自己的資料重驗資格（送單後被移出登錄名單 ⇒ 擋下）",
+    !hv.ok && hv.errors.some((e) => e.code === "ineligible"),
+    hv.errors.find((e) => e.code === "ineligible")?.message);
   //  反向：帶著舊傷停資料的名單**不得**被擋
   const legacyRoster = ALL.map((p) => (p.id === "s2" ? { ...p, injuryDays: 5, injured: true } : p));
   ck("6e2) 舊存檔的傷停資料不會讓已送出的申請失效",

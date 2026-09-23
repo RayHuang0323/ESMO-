@@ -85,18 +85,24 @@ for (const token of [
 // D-fix3 formal GameView feedback：0.42 的 additive 地環仍會壓過彈體；
 // 降到 0.14，並以 normal-blended 實心 projectile/core 承擔主要可讀性。
 assert.match(effectsCode, /ring: new THREE\.MeshBasicMaterial\(\{\s*[\s\S]*?opacity: 0\.14/);
+//  ⚠ Battle Condition UX：Buff 環 → 角色柔光＋光點；名牌保留實作但一般對戰預設關閉。
 for (const token of [
-  "hero-buff-ring", "buffRed", "buffBlue", "map: labelTexture",
+  "hero-aura", "hero-buff-motes", "map: labelTexture",
   "hero-name-level", "renderOrder={69}", "renderOrder={70}",
-  "compactLabel ? NAMEPLATE.compactWidth", "buffDragon", "buffBaron",
+  "compactLabel ? NAMEPLATE.compactWidth", "auraDragon", "auraBaron",
 ]) assert.ok(heroesCode.includes(token), `missing hero HUD guard: ${token}`);
 assert.ok(!heroesCode.includes("<Html"),
   "hero overhead text must stay out of the DOM layer");
+//  ⚠ Battle Condition UX：野怪腳下的**地面符文環**改成營地本體柔光
+//    （auraBlueBuff／auraRedBuff），文字標籤與怪物顏色照舊 ⇒ 藍／紅 Buff 仍分得出來。
 for (const token of [
-  "blueBuffRune", "redBuffRune", "BLUE BUFF · 藍", "RED BUFF · 紅",
+  "auraBlueBuff", "auraRedBuff", "BLUE BUFF · 藍", "RED BUFF · 紅",
   "MONSTER_COLOR.blue_crystal", "MONSTER_COLOR.red_ember",
   "new THREE.MeshBasicMaterial({ vertexColors: true",
 ]) assert.ok(neutralsCode.includes(token), `missing buff distinction guard: ${token}`);
+for (const token of ["blueBuffRune", "buff-ground-rune", "geo.leash"]) {
+  assert.ok(!neutralsCode.includes(token), `neutral ground ring must stay removed: ${token}`);
+}
 assert.ok(stripCode.includes("p.buffs.map"));
 
 // 5) v3 可解釋局部決策：同一套對稱規則必須能依情境產生不同結果，

@@ -15,6 +15,7 @@
 // ============================================================================
 
 import { getPlayerDerivedStats } from "../../platform/talents/playerDerivedStats.js";
+import { applyFatigueToStats } from "../../platform/condition/playerCondition.js";
 import { CS_SEATS } from "../../platform/contracts/matchSquad.js";
 import { bestPositions, CS_ROLE_BY_MOBA_ROLE } from "../../data/playerModel.js";
 
@@ -89,7 +90,8 @@ export function toFpsRoster(players = [], csLineup = null) {
     // S27：CS 引擎吃 **derived stats**（base + 天賦，clamp 1–99）。
     //   引擎 sim 的 persStat 直讀 stats[key] → 天賦真的影響 CS 對戰輸入。
     //   無天賦時 derived === base（逐鍵相等）→ baseline 與 S26 一致。
-    const short = toShortStats(getPlayerDerivedStats(p));
+    //  Battle Condition UX：CS 引擎的 stats 也套同一條疲勞倍率（曲線只有一份）。
+    const short = toShortStats(applyFatigueToStats(getPlayerDerivedStats(p), p));
     const role = fpsRoleOf(p) || MOBA2FPS[p.role] || ["entry", "rifler", "awp", "lurker", "igl"][i] || "rifler";
     const roleView = fpsRolePresentation(p);
     const ovr = fpsOvr(short);

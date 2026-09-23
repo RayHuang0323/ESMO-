@@ -16,7 +16,7 @@ const YEAR = clock.CAREER_YEAR.daysPerYear;
 function matchesPerDayByEnergy() {
   const C = cond.CONDITION;
   let energy = 100, n = 0, streak = 0;
-  while (energy >= C.matchEnergyCost + C.unfitBelow) {
+  while (energy >= C.matchEnergyCost + C.lowEnergyBelow) {
     energy -= C.matchEnergyCost + streak * C.streakEnergyStep;
     streak += 1; n += 1;
     if (n > 50) break;

@@ -14,7 +14,7 @@ import { useHeroProgressStore } from "./hero/heroProgressStore.js";
 import { useProfileStore } from "./platform/profileStore.js";
 import { toEngineTactic, STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION } from "./platform/contracts/MobaTacticConfig.js";
 import { beginReplayCapture } from "./battle/moba/replay/replayBuffer.js";
-import { buildPlayerStatSlots } from "./battle/moba/mobaRosterAdapter.js";
+import { buildPlayerStatSlots, applyFatigueToLoadout } from "./battle/moba/mobaRosterAdapter.js";
 import { toEngineHeroMods } from "./battle/moba/mobaHeroProfile.js";
 import { toEngineSpells } from "./battle/moba/mobaHeroLoadout.js";
 import { toEngineArchetypes, COMBAT_ARCHETYPE_CONTRACT_VERSION } from "./data/heroCombatArchetypes.js";
@@ -135,7 +135,12 @@ export function useLocalServer() {
     stop();
     setFastForwarding(false);
     const { pushFrame, subTRef } = useGameStore.getState();
-    const loadout = useHeroProgressStore.getState().getLoadout();   // Sprint08：下場沿用
+    //  Sprint08：下場沿用英雄熟練；Battle Condition UX：再套上**體力疲勞倍率**
+    //  （低體力 ⇒ power/tough 下降；體力 ≥ 70 ⇒ 逐鍵不變）。曲線只有 playerCondition 一份。
+    const { players: fatiguePlayers, lineup: fatigueLineup } = useProfileStore.getState();
+    const loadout = applyFatigueToLoadout(
+      useHeroProgressStore.getState().getLoadout(), fatiguePlayers ?? [], fatigueLineup,
+    );
     //  ── Milestone O7：權威 seed ─────────────────────────────────────────
     //  seed 一律優先取自 **MatchSession**（gateway 在配對時決定、經一次性令牌
     //  啟動後存進 `matchmaking.launch`）。同一個 session 恢復或重播 ⇒ 同一個

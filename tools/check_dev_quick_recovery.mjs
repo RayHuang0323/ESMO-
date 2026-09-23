@@ -9,7 +9,7 @@
 //  一個測試工具最容易出的兩種事故，這裡各釘一邊：
 //
 //    ① **漏到正式版**——玩家看得到、按得到，正式難度被悄悄拿掉。
-//    ② **把正式規則改鬆來遷就工具**——例如順手把 `unfitBelow` 調低、
+//    ② **把正式規則改鬆來遷就工具**——例如順手把 `lowEnergyBelow` 調低、
 //       把恢復費率調高、或另寫一套「開發用的推進日期」繞過賽季日曆。
 //
 //  另外還驗一件與工具無關、但**必須先成立**的事：
@@ -111,12 +111,14 @@ function targetIsThresholdDerived(mod) {
   for (const start of [0, 1, 7, 14, 14.5]) {
     const p = { id: "x", name: "X", energy: start };
     const got = mod.energyToMatchFit(p);
-    //  期望值 = 從現值起、以既有每日恢復量為步長、第一個讓 isMatchFit 成立的值
+    //  期望值 = 從現值起、以既有每日恢復量為步長、第一個脫離**提醒門檻**的值
+    //  ⚠ Battle Condition UX：體力已不再擋出賽 ⇒ 目標從「可出賽」改成
+    //    「脫離 `lowEnergyBelow` 提醒區」。它仍然由 condition 層推導，不是寫死的數字。
     let want = start;
-    while (!cond.isMatchFit({ ...p, energy: want })) want += cond.CONDITION.restPerDay;
+    while (cond.isLowEnergy({ ...p, energy: want })) want += cond.CONDITION.restPerDay;
     if (got !== want) return false;
-    //  且**剛好**跨過門檻——多跨一步就代表它在做「一鍵滿血」而不是「解除封鎖」
-    if (got - cond.CONDITION.restPerDay >= cond.CONDITION.unfitBelow) return false;
+    //  且**剛好**跨過門檻——多跨一步就代表它在做「一鍵滿血」而不是「補到不再被提醒」
+    if (got - cond.CONDITION.restPerDay >= cond.CONDITION.lowEnergyBelow) return false;
   }
   return true;
 }
@@ -124,16 +126,16 @@ function targetIsThresholdDerived(mod) {
 {
   ck("5) 恢復目標＝門檻推導（多組起始體力逐一比對，剛好跨過門檻不多跨）",
     targetIsThresholdDerived(logic),
-    `門檻 ${cond.CONDITION.unfitBelow}／步長 ${cond.CONDITION.restPerDay} ⇒ 0 體力目標 ${logic.energyToMatchFit({ energy: 0 })}`);
+    `門檻 ${cond.CONDITION.lowEnergyBelow}／步長 ${cond.CONDITION.restPerDay} ⇒ 0 體力目標 ${logic.energyToMatchFit({ energy: 0 })}`);
 
-  ck("6) 恢復後一定通過 authoritative 的 `isMatchFit()`",
-    [0, 3, 14].every((e) => cond.isMatchFit({ id: "y", energy: logic.energyToMatchFit({ id: "y", energy: e }) })));
+  ck("6) 恢復後一定脫離 authoritative 的提醒門檻 `isLowEnergy()`",
+    [0, 3, 14].every((e) => !cond.isLowEnergy({ id: "y", energy: logic.energyToMatchFit({ id: "y", energy: e }) })));
 
-  ck("7) 已經可出賽的人不動（這是解除封鎖，不是一鍵滿血）",
-    [15, 50, 100].every((e) => logic.energyToMatchFit({ id: "z", energy: e }) === e));
+  ck("7) 已經在門檻以上的人不動（這是補到不再被提醒，不是一鍵滿血）",
+    [40, 50, 100].every((e) => logic.energyToMatchFit({ id: "z", energy: e }) === e));
 
   ck("8) logic 向 condition 層要門檻與費率（沒有自己的體力常數）",
-    /CONDITION\.restPerDay/.test(read(P_LOGIC)) && /isMatchFit/.test(read(P_LOGIC))
+    /CONDITION\.restPerDay/.test(read(P_LOGIC)) && /isLowEnergy/.test(read(P_LOGIC))
       && /from "\.\.\/\.\.\/platform\/condition\/playerCondition\.js"/.test(read(P_LOGIC)));
 }
 
@@ -225,7 +227,7 @@ const playerModel = await import(pathToFileURL(resolve(ROOT, "src/data/playerMod
 {
   ck("16) condition 門檻與恢復費率逐值未動",
     cond.CONDITION.matchEnergyCost === 12 && cond.CONDITION.streakEnergyStep === 3
-      && cond.CONDITION.unfitBelow === 15 && cond.CONDITION.restPerDay === 8
+      && cond.CONDITION.lowEnergyBelow === 40 && cond.CONDITION.restPerDay === 8
       && cond.CONDITION.streakDecayDays === 1,
     JSON.stringify(cond.CONDITION));
 
@@ -254,8 +256,8 @@ console.log("\n§6 正式玩法沒有 soft-lock（實跑，不是靠註解宣稱
     players: flat,
     finance: { ...(store().finance ?? {}), funds: 0 },
   });
-  ck("20) 情境成立：全隊不可出賽且資金為 0",
-    flat.length > 0 && flat.every((p) => !cond.isMatchFit(p)) && Number(store().finance?.funds) === 0,
+  ck("20) 情境成立：全隊體力都在提醒門檻以下且資金為 0",
+    flat.length > 0 && flat.every((p) => cond.isLowEnergy(p)) && Number(store().finance?.funds) === 0,
     `${flat.length} 人 / funds ${store().finance?.funds}`);
 
   //  ① 免費脫困的入口存在：休息課不看體力（UI 與 Store 都豁免）
@@ -269,11 +271,13 @@ console.log("\n§6 正式玩法沒有 soft-lock（實跑，不是靠註解宣稱
   ck("22) 零資金仍可推進日期（推進不收費、不被資金擋）",
     after === before + 1, `第 ${before} 天 → 第 ${after} 天${res?.stoppedBy ? `（stoppedBy: ${res.stoppedBy.message}）` : ""}`);
 
-  //  ③ 一天之後，指派休息的人已經脫困（+30 一次到位）
+  //  ③ 一天之後，指派休息的人明顯回復（+30 一次到位；提醒門檻是 40 ⇒ 0 體力的人
+  //     休息一天後仍在提醒區，這是正常的——重點是「一天的休息換到的量遠大於自然恢復」）
   const rested = (store().players ?? []).find((p) => p.id === flat[0].id);
   const others = (store().players ?? []).filter((p) => p.id !== flat[0].id);
-  ck("23) 休息一天後該選手已可出賽；其餘人也靠每日自然恢復往上走",
-    cond.isMatchFit(rested) && others.every((p) => Number(p.energy) >= cond.CONDITION.restPerDay),
+  ck("23) 休息一天回復量遠大於自然恢復；其餘人也靠每日自然恢復往上走",
+    Number(rested?.energy) >= cond.CONDITION.restPerDay * 3
+      && others.every((p) => Number(p.energy) >= cond.CONDITION.restPerDay),
     `休息者 ${rested?.energy}／其餘 ${others.map((p) => p.energy).join(",")}`);
 
   //  ④ **完整脫困**：繼續免費推進日期，直到全隊都可出賽。
@@ -281,11 +285,11 @@ console.log("\n§6 正式玩法沒有 soft-lock（實跑，不是靠註解宣稱
   //  而是「那條路走得完，而且不必花錢」。上限只是防呆，不是行為的一部分。
   const fundsBefore = Number(store().finance?.funds) || 0;
   let days = 0;
-  while (days < 30 && (store().players ?? []).some((p) => !cond.isMatchFit(p))) {
+  while (days < 30 && (store().players ?? []).some((p) => cond.isLowEnergy(p))) {
     store().advanceDay(1);
     days++;
   }
-  const allFit = (store().players ?? []).every((p) => cond.isMatchFit(p));
+  const allFit = (store().players ?? []).every((p) => !cond.isLowEnergy(p));
   ck("24) 全隊只靠正常 recovery 就能完全脫困（免費、不需買人）",
     allFit && days < 30,
     `再推 ${days} 天 ⇒ 體力 ${(store().players ?? []).map((p) => Math.round(Number(p.energy))).join(",")}`);
@@ -335,5 +339,5 @@ try {
 // ── 結果 ───────────────────────────────────────────────────────────────────
 console.log(`\n${fail === 0 ? "✅" : "❌"} check_dev_quick_recovery：${pass}/${pass + fail} 通過`);
 console.log("   DEV Quick Recovery 是**開發測試便利功能，不是正式遊戲設計**；正式上線前必須關閉或移除。");
-console.log(`   正式規則未動：不可出賽門檻 體力 < ${cond.CONDITION.unfitBelow}｜每日恢復 +${cond.CONDITION.restPerDay}｜Training ${training.TRAINING_FORMULA_VERSION}`);
+console.log(`   正式規則未動：提醒門檻 體力 < ${cond.CONDITION.lowEnergyBelow}（體力不擋出賽）｜每日恢復 +${cond.CONDITION.restPerDay}｜Training ${training.TRAINING_FORMULA_VERSION}`);
 process.exit(fail === 0 ? 0 : 1);

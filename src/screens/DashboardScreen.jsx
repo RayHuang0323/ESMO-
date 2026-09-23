@@ -15,7 +15,8 @@ import { useIsHomeMobile } from "../ui/useViewport.js";
 import { useDashboardMotion, useIdentityTransition } from "./dashboard/useDashboardMotion.js";
 import { useMobileSheetMotion } from "./dashboard/useMobileSheetMotion.js";
 //  「有選手需要處理嗎」用既有的判定，不在首頁另訂體力門檻。
-import { isExhausted } from "../platform/condition/playerCondition.js";
+import { isLowEnergy } from "../platform/condition/playerCondition.js";
+import RestPlannerPanel from "./dashboard/RestPlannerPanel.jsx";
 //  V1：推進世界時間一律走具名入口＋白名單理由（見 platform/time/worldClock.js）。
 import { ADVANCE_REASONS } from "../platform/time/worldClock.js";
 //  V3：快轉級距讀自契約，畫面不自己寫死天數。
@@ -879,6 +880,9 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
   const rootRef = useRef(null);
   const profile = useProfileStore();
   const [modal, setModal] = useState(null);
+  //  Battle Condition UX：首頁的體力提醒要能就地處理（單選／多選／全選安排休息）。
+  const [restOpen, setRestOpen] = useState(false);
+  const assignTraining = useProfileStore((s) => s.assignTraining);
   const isHomeMobile = useIsHomeMobile();
   useDashboardMotion(rootRef, isHomeMobile);
 
@@ -980,11 +984,11 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
   //      資金警告   `cashForecast().level`
   //      未讀訊息   `inbox[].unread`
   //      發展點     `teamDevelopment.availablePoints`
-  //      選手問題   `isExhausted`（`platform/condition` 的既有判定）
+  //      選手問題   `isLowEnergy`（`platform/condition` 的既有判定）
   //                 ⚠ 選手傷病已被產品取消 ⇒ 這裡只剩體力訊號，不得再加回傷停條件。
   //  訓練中心／球探招募／選手名單**不再固定塞進來**——它們是「需要時才去」的
   //  管理功能，入口在管理工具與戰隊分頁。
-  const needsAttention = players.filter((p) => isExhausted(p));
+  const needsAttention = players.filter((p) => isLowEnergy(p));
 
   const todos = [];
   if (fc.level !== "ok") {
@@ -993,6 +997,19 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
       title: "處理資金提醒",
       detail: fc.level === "danger" ? `預測第 ${fc.bankruptWeek} 週資金見底` : "本週淨額為負，先看現金預測",
       badge: "!", onClick: () => sel("finance"),
+    });
+  }
+  //  ⚠ 體力**不再**擋出賽（Battle Condition UX）⇒ 文案不可以再寫「不能出賽」。
+  //    點下去直接開體力管理面板，不用再自己走到訓練中心一個一個指派。
+  //  ⚠ 順序刻意排在資金之後、其他待辦之前：手機首頁只渲染**前 4 個**待辦
+  //    （主要行動 1 ＋ 快捷 3），排在最後的話 390px 上根本看不到這則提醒
+  //    （瀏覽器實測抓到）。體力直接影響下一場比賽，優先序本來就該高於收件匣／發展點。
+  if (needsAttention.length > 0) {
+    todos.push({
+      id: "condition", icon: "alert", accent: GC.gold,
+      title: "安排選手休息",
+      detail: `${needsAttention.length} 人體力偏低，出賽能力會下降`,
+      badge: needsAttention.length, onClick: () => setRestOpen(true),
     });
   }
   //  V7B：有目標可以領才出現。⚠ 沒得領就完全不渲染——這一區的規則是
@@ -1017,14 +1034,6 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
       id: "development", icon: "award", accent: GC.green,
       title: "戰隊發展", detail: `${developmentPoints} 點可以投入團隊成長`,
       badge: developmentPoints, onClick: () => sel("development"),
-    });
-  }
-  if (needsAttention.length > 0) {
-    todos.push({
-      id: "condition", icon: "alert", accent: GC.gold,
-      title: "選手體力過低",
-      detail: `${needsAttention.length} 人體力低到不能出賽`,
-      badge: needsAttention.length, onClick: () => sel("roster"),
     });
   }
 
@@ -1100,6 +1109,14 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
       )}
 
       {modal && <Modal modal={modal} onClose={() => setModal(null)} />}
+      {restOpen && (
+        <RestPlannerPanel
+          players={needsAttention}
+          onAssignRest={(id) => assignTraining?.(id, "rest") === true}
+          onOpenTraining={() => { setRestOpen(false); sel("training"); }}
+          onClose={() => setRestOpen(false)}
+        />
+      )}
     </div>
   );
 }

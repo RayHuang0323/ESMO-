@@ -144,10 +144,18 @@ for (const token of ["<BattleCameraController", "perspective={RUNTIME_CAMERA}", 
 for (const token of ["activeEffects", "phaseProgress", "sourceId", "targetId"]) assert.ok(runtimeDiagnostics.includes(token));
 for (const token of ["runtime-diagnostic-summary", "effectRows", "120"]) assert.ok(deviceDiagnostics.includes(token));
 for (const token of ["addLine(tail, moving", "style === \"tower\"", "phase === \"cast\"", "phase === \"travel\"", "phase === \"impact\""]) assert.match(effects, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+//  ⚠ Battle Condition UX：英雄腳下的**隊伍環與 Buff 環已移除**（改成角色本體的
+//    接地陰影＋柔光＋Buff 光點），常駐名牌在一般對戰也預設關閉。
+//    這裡守的東西不變——「Buff 狀態看得出來、名牌不是 DOM、血條不被蓋住」——
+//    只是守在新的實作上。
 for (const token of [
   "makeHeroLabelTexture(hero.displayName, hero.level",
-  "hero-name-level", "hero-buff-ring", "buffRed", "buffBlue", "buffDragon", "buffBaron",
-]) assert.ok(heroes.includes(token));
+  "hero-name-level", "hero-contact-shadow", "hero-aura", "hero-buff-motes",
+  "makeAuraMaterial", "makeMoteMaterial",
+]) assert.ok(heroes.includes(token), `missing hero presentation guard: ${token}`);
+for (const token of ["hero-buff-ring", "geo.buffRing", "mats.ringBlue"]) {
+  assert.ok(!heroes.includes(token), `ground ring must stay removed: ${token}`);
+}
 assert.ok(!heroes.includes("<Html"),
   "hero overhead must not regress to DOM buff/name labels that cover the HP bar");
 for (const token of ["dynamic-boss", "objective.attackAt", "objective.hitAt"]) assert.ok(neutrals.includes(token));

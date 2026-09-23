@@ -7,8 +7,16 @@
 //
 //  本檔補上最小可用的代價與恢復：
 //    · 出賽扣體力，連續出賽累積疲勞（`matchStreak`）
-//    · 體力過低 ⇒ **不可出賽**（由 matchSquad 的閘門擋下）
+//    · 體力過低 ⇒ **戰力下降**（`fatigueFactor`），**不再禁止出賽**
 //    · 休息／訓練日與每日自然恢復會回體力
+//
+//  ── 為什麼取消「體力過低不可出賽」────────────────────────────────────────
+//  舊規則（energy < 15 ⇒ matchSquad 直接擋）在產品上是死路：比賽日碰上低體力，
+//  玩家只能棄權，而棄權從來不是他想做的選擇。產品方向改成「累了也能上，但是會打得差」：
+//    · 出賽資格與體力**完全脫鉤**（席位／登錄／重複仍然擋）
+//    · 體力改成一條**平滑**的能力倍率 `fatigueFactor`，沒有門檻斷崖
+//  這條倍率是**唯一**的體力→實力換算點：MOBA（能力 slots）、CS（引擎 stats）、
+//  顯示戰力（calcPower）全部讀它，不各自乘一套。
 //
 //  ── 受傷已被產品取消（不是還沒做，是決定不做）─────────────────────────────
 //  O2 曾有一套受傷機制：賽後決定性抽籤決定是否受傷、傷停天數每日 −1、
@@ -32,8 +40,13 @@ export const CONDITION = Object.freeze({
   matchEnergyCost: 12,
   /** 連續出賽每多一場，額外多扣的體力（第 N 場多扣 (N-1)×step）。 */
   streakEnergyStep: 3,
-  /** 體力低於此 ⇒ 不可出賽（對應 conditionFor 的「低潮」區）。 */
-  unfitBelow: 15,
+  /**
+   * 體力低於此 ⇒ 首頁／名單提醒「該休息了」。
+   * ⚠ 這是**提醒**門檻，不是出賽門檻——體力再低都可以出賽（見 `matchFitness`）。
+   *   取 40 是因為它正好是 `conditionText` 的「疲勞」起點，也是 `fatigueFactor`
+   *   開始明顯掉的位置，玩家看到提醒時衰減已經是真的。
+   */
+  lowEnergyBelow: 40,
   /** 每日自然恢復（沒有安排訓練時）。 */
   restPerDay: 8,
   /** 連續幾天沒出賽，連續出賽計數歸零。 */
@@ -48,23 +61,92 @@ const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 export const matchStreakOf = (p) => Math.max(0, num(p?.matchStreak));
-export const isExhausted = (p) => num(p?.energy ?? 100) < CONDITION.unfitBelow;
+/** 體力低到該安排休息（**提醒**用，不是出賽門檻）。 */
+export const isLowEnergy = (p) => num(p?.energy ?? 100) < CONDITION.lowEnergyBelow;
+
+/**
+ * 疲勞曲線（唯一事實來源）：體力 → 能力倍率。
+ *
+ * 三段折線，連續、單調、沒有門檻斷崖：
+ *   體力 ≥ 70        ⇒ 1.000（滿檔，不加成）
+ *   70 → 30          ⇒ 1.000 → 0.940（每 10 點體力 −1.5%）
+ *   30 → 0           ⇒ 0.940 → 0.860（每 10 點體力 −2.7%，累到最底 −14%）
+ *
+ * 實際倍率：100/70 → 1.000、60 → 0.985、50 → 0.970、40 → 0.955、30 → 0.940、
+ *          20 → 0.913、10 → 0.887、0 → 0.860。
+ *
+ * ⚠ 為什麼是 0.86 不是更低：這條倍率乘在**能力值**上（不是傷害），
+ *   能力 70 的選手在 0 體力等於 60.2 ⇒ 行為層（撤退門檻／推線深度／參團）
+ *   會明顯變差，但不會變成「上場即輸」。輪換仍然有價值，硬撐也仍是可行的選擇。
+ */
+export const FATIGUE = Object.freeze({
+  freshAbove: 70,
+  kneeEnergy: 30,
+  kneeFactor: 0.94,
+  floorFactor: 0.86,
+  /** 發揮層（power/tough）只吃這個比例的疲勞——理由見 `executionFactor`。 */
+  executionDamp: 0.25,
+});
+
+export function fatigueFactor(energy) {
+  const e = clamp(num(energy), 0, 100);
+  const { freshAbove, kneeEnergy, kneeFactor, floorFactor } = FATIGUE;
+  if (e >= freshAbove) return 1;
+  if (e >= kneeEnergy) {
+    const t = (e - kneeEnergy) / (freshAbove - kneeEnergy);
+    return kneeFactor + (1 - kneeFactor) * t;
+  }
+  return floorFactor + (kneeFactor - floorFactor) * (e / kneeEnergy);
+}
+
+/** 選手 → 疲勞倍率（缺 energy 視為 100 ⇒ 1.000）。 */
+export const fatigueFactorOf = (p) => fatigueFactor(p?.energy ?? 100);
+
+/**
+ * **發揮層**倍率（MOBA 的 power/tough）＝ 只吃 `executionDamp` 比例的疲勞。
+ *
+ * ⚠ 為什麼要打折：引擎的 `powerMult` 直接乘進傷害，而傷害在推塔／團戰裡會複利放大。
+ *   實測（60 seeds，雙方同 loadout）：把完整倍率乘上去時，體力 40（只掉 4.5% 能力）
+ *   就讓勝率從 60% 掉到 26.7%、體力 0 只剩 6.7% ⇒ 那是「低體力＝直接輸」，
+ *   不是產品要的「打得差一點」。取 1/4 讓最底只掉 3.5% 發揮，配合行為層的衰減，
+ *   合起來是明顯但可以硬撐的劣勢。
+ * 實際倍率：100/70 → 1.000、40 → 0.989、20 → 0.978、0 → 0.965。
+ */
+export const executionFactor = (energy) => 1 - (1 - fatigueFactor(energy)) * FATIGUE.executionDamp;
+export const executionFactorOf = (p) => executionFactor(p?.energy ?? 100);
+
+/**
+ * 能力表 × 疲勞倍率（比賽輸入的唯一套用點；MOBA 與 CS 都呼叫這支）。
+ * 不修改輸入；四捨五入後 clamp 1–99（與 derived stats 同一個值域）。
+ * 倍率為 1（體力 ≥ 70）時逐鍵相等 ⇒ 滿體力的比賽逐位元不變。
+ */
+export function applyFatigueToStats(stats, player) {
+  const k = fatigueFactorOf(player);
+  if (!stats || k === 1) return stats;
+  const out = {};
+  for (const [key, v] of Object.entries(stats)) {
+    out[key] = Number.isFinite(Number(v)) ? clamp(Math.round(Number(v) * k), 1, 99) : v;
+  }
+  return out;
+}
 
 /**
  * 這名選手現在能不能出賽。
  *
- * 目前唯一的體力面阻擋是 **exhausted**（體力 < `unfitBelow`）。
+ * **體力永遠不阻擋出賽**（產品決定）。唯一的 not-ok 是「選手不存在」。
+ * 低體力改用 `fatigue` / `note` 回報：呼叫端把它當**警告**顯示，不要當錯誤擋人。
  * 其他合法阻擋（未登錄／重複／席位）在 matchSquad 的名單層，不在這裡。
  * ⚠ 舊存檔的 `injuryDays` **不是**阻擋條件——受傷已被產品取消。
  *
- * @returns {{ok:boolean, code:string|null, message:string|null}} message 可直接顯示
+ * @returns {{ok:boolean, code:string|null, message:string|null, fatigue:number, note:string|null}}
  */
 export function matchFitness(player) {
-  if (!player) return { ok: false, code: "unknown_player", message: "選手不存在" };
-  if (isExhausted(player)) {
-    return { ok: false, code: "exhausted", message: `${player.name ?? player.id} 體力過低（${Math.round(num(player.energy))}），需要休息` };
-  }
-  return { ok: true, code: null, message: null };
+  if (!player) return { ok: false, code: "unknown_player", message: "選手不存在", fatigue: 1, note: null };
+  const fatigue = fatigueFactorOf(player);
+  const note = isLowEnergy(player)
+    ? `${player.name ?? player.id} 體力 ${Math.round(num(player.energy ?? 100))}，本場能力剩 ${Math.round(fatigue * 100)}%`
+    : null;
+  return { ok: true, code: null, message: null, fatigue, note };
 }
 export const isMatchFit = (p) => matchFitness(p).ok;
 
@@ -134,8 +216,13 @@ export function conditionSummary(player) {
     energy,
     condition: conditionText(energy),
     matchStreak: matchStreakOf(player),
+    //  體力不再擋出賽 ⇒ canPlay 只反映「選手存在」，低體力用 fatigue／note 表達。
     canPlay: fit.ok,
     reason: fit.message,
+    fatigue: fit.fatigue,
+    fatiguePercent: Math.round(fit.fatigue * 100),
+    lowEnergy: isLowEnergy(player),
+    note: fit.note,
     recentMatches: Array.isArray(player?.recentMatches) ? player.recentMatches.length : 0,
   };
 }

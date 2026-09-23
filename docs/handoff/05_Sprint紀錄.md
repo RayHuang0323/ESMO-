@@ -22975,3 +22975,78 @@ MOBA_SIM_VERSION = v9
 DEPLOY_RUN = 35787666455 success
 PRODUCTION_SMOKE = PASS (55/55 + 17/17 + 5/5)
 ```
+
+## MOBA Battle Condition UX v1（2026-09-23，分支 `feature/moba-battle-condition-ux`，local commit）
+
+設計文件：`docs/design/MOBA_Battle_Condition_UX_v1.md`。自 `origin/main` = `e7f7cb6` 開出。
+Competitive 維持 disabled；未 push、未部署；未動 Online Backend、未動 legacy `MobaView3D`。
+
+### 五件事
+
+1. **腳下圓圈**：英雄的隊伍環＋四個 Buff 環、野怪的地面符文環＋拉回環全部移除，改成角色本體的
+   接地陰影（中性色）＋柔光（隊色／Buff 色）＋Buff 光點；共用工廠 `render/auraSprite.js`。
+   陣亡標記、塔環／坑環、技能地面指示**保留**（後兩者不是角色腳下／有 gameplay 意義）。
+   ⚠ 地圖上的野怪營地地坪是地形美術（`MobaMapBlockout`），不在本輪範圍。
+2. **體力不再擋出賽**：`matchFitness` 只剩「選手不存在」一種 not-ok；名單閘門降成 `low_energy` 警告；
+   `autoFillSquad` 不再排除低體力選手（但同分層優先體力高的）。`CONDITION.unfitBelow`（15）
+   移除，改為提醒門檻 `lowEnergyBelow`（40）。
+3. **常駐英雄名牌**：一般對戰與重播預設關閉（`heroNameplates = false`），身分留在 HUD／Hero Detail／Scoreboard。
+4. **技能標籤**：R 10px／其餘 9px（原 11／10）、四個欄位各一種 ≤0.42s 的入場動畫、同時上限 3、
+   尊重 `prefers-reduced-motion`。
+5. **首頁體力提醒**：改成「安排選手休息」，點下去開體力管理面板（單選／多選／全選 → 一次安排），
+   Player Detail 也有單人快捷休息。只呼叫既有 `assignTraining(id,"rest")`，不碰 energy、不推進日期。
+   待辦順序移到資金之後（手機只渲染前 4 個，原本排最後在 390px 上看不到）。
+
+### 體力新規則與實際倍率
+
+唯一事實來源：`platform/condition/playerCondition.js` 的 `fatigueFactor(energy)`（三段折線，連續無斷崖）。
+
+| 體力 | 100 | 70 | 60 | 50 | 40 | 30 | 20 | 10 | 0 |
+|---|---|---|---|---|---|---|---|---|---|
+| 行為層（能力 slots／CS stats／顯示戰力） | 1.000 | 1.000 | 0.985 | 0.970 | 0.955 | 0.940 | 0.913 | 0.887 | 0.860 |
+| 發揮層（MOBA power/tough，吃 1/4） | 1.000 | 1.000 | 0.996 | 0.993 | 0.989 | 0.985 | 0.978 | 0.972 | 0.965 |
+
+實測（60 seeds，藍方全隊同體力 vs 滿體力對手）：體力 100 → 勝率 60.0%、40 → 60.0%、20 → 40.0%、0 → 31.7%。
+⚠ 發揮層若**全額**套用，體力 40 就會掉到 26.7%、體力 0 只剩 6.7% ⇒ 那是「低體力＝直接輸」，所以打 1/4。
+
+### 影響面
+
+- MOBA／CS 比賽結果：**低體力時會不同**（需求本身）；體力 ≥ 70 時所有套用點逐鍵不變。
+- **模擬版本不變**（`moba-sim.v9` / `4d7cf571c8122219`）：LogicEngine 與 `matchProgression` 完全沒動，
+  變的是輸入不是語意；`check_simulation_version_gate` 51/51。
+- **Replay 不受影響**（重播是播放 frames，不重算）。
+
+### 驗證（全部實跑）
+
+新增：`check_battle_condition_ux` **38/38**、`browser_check_battle_condition_ux` **28/28**
+（桌機 1366×900 ＋ 390×844；體力 0/5/10/12/20 全隊都能出賽、全選批次休息、`meta.days` 前後不變、
+MOBA 1×／2×／4× 都在跑、無常駐名牌、page/console/shader error 0）。
+
+既有：`check_condition_o2` 31/31、`check_squad_o1` 40/40、`check_match_entry_o3` 35/35、
+`check_matchmaking_o4` 48/48、`check_no_player_injury` 30/30、`check_dev_quick_recovery` 29/29、
+`check_club_progression_v1` 36/36、`check_moba_combat_quality_v1` 28/28、`check_moba_milestone_d`、
+`check_moba_milestone_d_fix2`、`check_moba_milestone_i_close` 44/44、`check_simulation_version_gate` 51/51、
+`check_hero_skills_release_gate`、verify.mjs 的 `regress／regress2／runtime29／experience26／progress25／
+talent27／tactic24` **7/7**、`npm run build` ✓。
+
+### 被改到斷言的既有 gate（都是舊產品規則被取代，改法保留原本要擋的東西）
+
+- `check_condition_o2` §4：「體力過低 ⇒ 擋下」→「體力 0 仍可出賽 + 疲勞曲線形狀（單調、連續、上下界）」。
+- `check_match_entry_o3` §3／§6e：拿掉「體力不足」阻擋列；伺服器重驗情境改用「送單後被移出登錄名單」。
+- `check_matchmaking_o4` §6／§6d：低體力**不再**是拒絕理由；拒絕情境改用「離隊」。
+- `check_no_player_injury` §6b／§9／mutation sentinel：低體力仍會被自動填入；sentinel 改注入到新的程式位置。
+- `check_dev_quick_recovery`：恢復目標從「可出賽」改成「脫離提醒門檻」；§16 常數逐值改成 `lowEnergyBelow 40`。
+- `check_moba_milestone_d`／`d_fix2`：Buff 環／地面符文環的存在斷言 → 改守新的柔光與光點，並加上
+  「地面環不得回來」的反向斷言。
+- `browser_check_home_ia`／`browser_check_no_injury_ui`／`browser_check_prod_injury_dev`：門檻改名與首頁文案。
+
+### 既有紅燈（**改動前就紅**，非本輪造成；已用 origin/main 乾淨 worktree 比對確認）
+
+- `browser_check_home_ia`：「商店佔位入口保留」桌機與手機各一條（`origin/main` 同樣紅）。
+- `check_moba_milestone_c_fix`、`check_moba_milestone_d_fix3`：`d_fix3` 掛在地圖對稱斷言（line 77），
+  與本輪無關。
+
+```text
+MOBA_BATTLE_CONDITION_UX = LOCAL_COMMIT_ONLY
+SIMULATION_VERSION = moba-sim.v9（未變）
+```

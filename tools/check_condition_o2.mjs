@@ -8,7 +8,7 @@
 //    ① **只有實際出賽的選手**拿到經驗與損耗；替補／未登錄一律零
 //    ② MOBA 與 CS 都依實際陣容的 playerId 回寫
 //    ③ 連續出賽有代價（體力遞減加速），休息／訓練可恢復
-//    ④ 體力過低 ⇒ 出賽閘門擋下並說明理由
+//    ④ 體力過低 ⇒ **不擋出賽**，改為疲勞倍率（Battle Condition UX）
 //    ⑤ 成長與損耗**完全決定性** ⇒ 伺服器可獨立重算，不必信任前端提交的數值
 //
 //  ── 已移除的舊斷言（產品決策，不是放寬標準）────────────────────────────
@@ -21,6 +21,7 @@
 // ============================================================================
 import {
   CONDITION, conditionText, applyMatchWear, applyDailyRecovery,
+  fatigueFactor, executionFactor, applyFatigueToStats, FATIGUE, isLowEnergy,
   matchFitness, isMatchFit, conditionSummary,
 } from "../src/platform/condition/playerCondition.js";
 import { applyProgressToState } from "../src/platform/progress/applyMatchProgress.js";
@@ -161,28 +162,43 @@ console.log("══ Milestone O2：出賽與養成回饋 ══\n");
   ck("3h) 舊存檔的傷停欄位原封不動（不再倒數）", legacy.injuryDays === 3, `injuryDays=${legacy.injuryDays}`);
 }
 
-// ── 4) 不可出賽時，閘門要擋下並說明理由 ────────────────────────────────
+// ── 4) 體力**不再**擋出賽，改成平滑的能力衰減 ──────────────────────────
+//  ⚠ 產品規則已改（Battle Condition UX）：體力 0 也能出賽，代價是 `fatigueFactor`。
+//    這一節守的是「不准有人把門檻擋回來」，以及那條曲線的形狀。
 {
-  const tired = mkPlayer("t1", "中路", { energy: CONDITION.unfitBelow - 1 });
+  const tired = mkPlayer("t1", "中路", { energy: 0 });
   //  「舊存檔帶著傷停資料」的對照組——它必須**不**影響任何判定。
   const legacyHurt = mkPlayer("t2", "中路", { injuryDays: 3, injured: true });
-  ck("4) 體力過低 → 不可出賽且有理由",
-    !isMatchFit(tired) && matchFitness(tired).code === "exhausted",
-    matchFitness(tired).message);
+  ck("4) 體力 0 仍可出賽，但回報疲勞倍率與提醒文字",
+    isMatchFit(tired) && matchFitness(tired).code === null
+      && matchFitness(tired).fatigue < 1 && typeof matchFitness(tired).note === "string",
+    JSON.stringify(matchFitness(tired)));
   ck("4b) 舊存檔的傷停資料**不再**造成不可出賽",
     isMatchFit(legacyHurt) && matchFitness(legacyHurt).code === null,
     JSON.stringify(matchFitness(legacyHurt)));
-  ck("4c) 體力剛好在門檻上仍可出賽（邊界不誤擋）",
-    isMatchFit(mkPlayer("t3", "中路", { energy: CONDITION.unfitBelow })));
+  ck("4c) 疲勞曲線：連續、單調不增、滿體力＝1、最低＝floorFactor",
+    fatigueFactor(100) === 1 && fatigueFactor(70) === 1
+      && Math.abs(fatigueFactor(0) - FATIGUE.floorFactor) < 1e-9
+      && [100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0].every((e, i, arr) =>
+        i === 0 || fatigueFactor(e) <= fatigueFactor(arr[i - 1]) + 1e-9),
+    [70, 40, 20, 0].map((e) => `${e}:${fatigueFactor(e).toFixed(3)}`).join(" "));
+  ck("4d) 發揮層（power/tough）只吃 1/4 的疲勞 ⇒ 比行為層溫和",
+    executionFactor(0) > fatigueFactor(0) && executionFactor(70) === 1,
+    `exec0 ${executionFactor(0).toFixed(3)} vs stat0 ${fatigueFactor(0).toFixed(3)}`);
+  ck("4e) 能力表套疲勞：滿體力逐鍵不變、低體力全面下降且留在 1–99",
+    JSON.stringify(applyFatigueToStats({ reflex: 70, apm: 55 }, { energy: 100 })) === JSON.stringify({ reflex: 70, apm: 55 })
+      && applyFatigueToStats({ reflex: 70 }, { energy: 0 }).reflex === Math.round(70 * fatigueFactor(0)),
+    JSON.stringify(applyFatigueToStats({ reflex: 70, apm: 55 }, { energy: 0 })));
   //  陣容閘門
   const roster = [...STARTERS.slice(1), legacyHurt];
   const seats = { ...LINEUP, b1: "t2" };
   const v = validateSquad({ mode: "moba", seats, players: [...roster, legacyHurt] });
   ck("4d) 陣容含舊傷停資料的選手 → 照樣可以出賽",
     v.ok && v.errors.length === 0, v.errors.map((e) => e.code).join(",") || "無錯誤");
-  //  體力過低的人仍然要被跳過；帶著舊傷停資料的人**必須**被選得到。
-  const filled = Object.values(autoFillSquad({ mode: "moba", seats: {}, players: [...STARTERS, legacyHurt, tired] }));
-  ck("4e) 自動填入仍會跳過體力過低的人", !filled.some((id) => id === "t1"), filled.join(","));
+  //  Battle Condition UX：體力低的人**不再**被自動填入跳過（體力不擋出賽）；
+  //  帶著舊傷停資料的人也**必須**被選得到。
+  const onlyTired = Object.values(autoFillSquad({ mode: "moba", seats: {}, players: [tired] }));
+  ck("4e) 自動填入不再跳過體力低的人（體力不擋出賽）", onlyTired.includes("t1"), onlyTired.join(","));
   ck("4f) 狀態摘要可直接給畫面用（且不含任何傷病欄位）",
     (() => {
       const c = conditionSummary(legacyHurt);
@@ -231,7 +247,7 @@ console.log("══ Milestone O2：出賽與養成回饋 ══\n");
 
 console.log("\n── 設定摘要 ──────────────────────────────────────────────────");
 console.log(`   單場體力 −${CONDITION.matchEnergyCost}（連續每多一場再 −${CONDITION.streakEnergyStep}）｜每日恢復 +${CONDITION.restPerDay}`);
-console.log(`   不可出賽門檻 體力 < ${CONDITION.unfitBelow}（唯一的體力面阻擋）`);
+console.log(`   提醒門檻 體力 < ${CONDITION.lowEnergyBelow}（體力**不**擋出賽；代價是 fatigueFactor：0 體力 ⇒ ${fatigueFactor(0).toFixed(3)}）`);
 console.log("   選手隨機受傷／傷停：**產品已取消**，舊存檔欄位只讀不用（見 check_no_player_injury）");
 
 console.log(`\n${pass}/${pass + fail} 通過`);

@@ -21,6 +21,7 @@
 // ============================================================================
 
 import { withDerivedStats, getPlayerDerivedStats } from "../../platform/talents/playerDerivedStats.js";
+import { applyFatigueToStats, fatigueFactorOf, executionFactorOf } from "../../platform/condition/playerCondition.js";
 import { seatPlayers } from "../../platform/contracts/matchLineup.js";
 //  Milestone I-close：召喚師技能跟著**對戰名單**走，不是各畫面自己算一份。
 //  （純函式模組，無 heroDatabase 依賴 ⇒ 不會把 396KB 的 data URI 拉進 Node verifier）
@@ -73,6 +74,43 @@ export const ENGINE_SLOT_IDS = {
  * @param {Object|null} lineup  profileStore.lineup（{seat: playerId}）；null ⇒ identity
  * @returns {Array<{id:string, playerId:string, stats:Object}>}
  */
+/**
+ * Hero Progress 的 loadout（席位 → {level, powerMult, toughMult}）套上**疲勞倍率**。
+ *
+ * 為什麼掛在這條通道：`powerMult` / `toughMult` 是引擎既有、而且**唯一**被認可的
+ * 「這名選手這場打多強」輸入（英雄熟練走的就是它）。體力屬於同一類（狀態 → 發揮），
+ * 掛這裡不需要在引擎開新的倍率，也不會變成第二套規則。
+ * ⚠ 能力 slots（行為層）吃完整的 `fatigueFactor`；這裡（發揮層）吃 `executionFactor`
+ *   ——同一條曲線打 1/4 折。理由見 playerCondition 的 `executionFactor`：
+ *   powerMult 直接乘進傷害且會複利，全額套用會變成「低體力＝直接輸」。
+ * ⚠ 只處理有 profileStore 選手的那一側（藍方）。紅方是 AI，沒有體力概念 ⇒ 不動。
+ * ⚠ 體力 ≥ 70 ⇒ 倍率 1 ⇒ 輸出與輸入逐鍵相等（滿體力的比賽逐位元不變）。
+ *
+ * @param {Object|null} loadout  heroProgressStore.getLoadout() 的輸出
+ * @param {Array} players        profileStore.players
+ * @param {Object|null} lineup   profileStore.lineup（{seat: playerId}）
+ */
+export function applyFatigueToLoadout(loadout, players, lineup = null) {
+  if (!loadout || typeof loadout !== "object") return loadout;
+  const slots = buildPlayerStatSlots(players, "blue", lineup);
+  if (!slots.length) return loadout;
+  const byId = new Map((players ?? []).filter((p) => p && typeof p.id === "string").map((p) => [p.id, p]));
+  const out = { ...loadout };
+  for (const slot of slots) {
+    const entry = out[slot.id];
+    const player = byId.get(slot.playerId);
+    if (!entry || !player) continue;
+    const k = executionFactorOf(player);
+    if (k === 1) continue;
+    out[slot.id] = {
+      ...entry,
+      powerMult: Number.isFinite(Number(entry.powerMult)) ? Number(entry.powerMult) * k : entry.powerMult,
+      toughMult: Number.isFinite(Number(entry.toughMult)) ? Number(entry.toughMult) * k : entry.toughMult,
+    };
+  }
+  return out;
+}
+
 export function buildPlayerStatSlots(players, side = "blue", lineup = null) {
   const order = ENGINE_SLOT_IDS[side] ?? [];
   if (!Array.isArray(players) || !order.length) return [];
@@ -91,7 +129,9 @@ export function buildPlayerStatSlots(players, side = "blue", lineup = null) {
     .map(({ seat, player }) => ({
       id: seat,                 // 引擎席位（configurePlayers 的 key）
       playerId: player.id,      // 真正上場的人（證據欄位；引擎不讀）
-      stats: getPlayerDerivedStats(player),
+      //  Battle Condition UX：能力 slots 套**疲勞倍率**（低體力 ⇒ 行為層真的變差）。
+      //  體力 ≥ 70 ⇒ 倍率 1 ⇒ 與先前逐鍵相等。曲線只有 playerCondition 一份。
+      stats: applyFatigueToStats(getPlayerDerivedStats(player), player),
     }));
 }
 
@@ -199,7 +239,6 @@ const PERS_BN = {
   creative:  { b:["adaptability","learning"],n:["focus","resilience"] },
 };
 const MORALE_EFFECT = (m) => m >= 85 ? 1.08 : m >= 65 ? 1.0 : m >= 45 ? 0.92 : 0.80;
-const CONDITION_EFFECT = { "精神飽滿":1.06, "正常":1.0, "疲勞":0.90, "低潮":0.78 };
 
 /** LogicEngine 建構子預設（錨基準）。⚠ 必須與 LogicEngine 一致。 */
 const ROLE_POWER = { top:30, jungle:34, mid:36, adc:42, sup:18 };
@@ -237,8 +276,9 @@ export function calcPlayerMobaPower(player) {
   }
   const base = total / wsum;
   const morale = (player && player.morale != null) ? player.morale : 70;
-  const cond = (player && player.condition) || "正常";
-  return Math.round(base * MORALE_EFFECT(morale) * (CONDITION_EFFECT[cond] != null ? CONDITION_EFFECT[cond] : 1));
+  //  Battle Condition UX：狀態倍率改讀共用的 `fatigueFactor`（體力連續曲線），
+  //  不再用 condition 文字查表 ⇒ 與 calcPower／比賽輸入同一條。
+  return Math.round(base * MORALE_EFFECT(morale) * fatigueFactorOf(player));
 }
 
 /**

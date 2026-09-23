@@ -8,6 +8,7 @@ import React, { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
+import { makeAuraMaterial } from "./auraSprite.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { WORLD_SCALE } from "../map/coordinateMapping.js";
 import { LAYER_Y } from "../map/mapVisualStyle.js";
@@ -126,9 +127,11 @@ export default function MobaRuntimeNeutrals({ objectives = [], frameRef = null }
   const assets = useMemo(buildNeutralAssets, []);
   const geo = useMemo(() => ({
     bar: new THREE.PlaneGeometry(1, 1),
-    leash: new THREE.RingGeometry(1.15 * S, 1.32 * S, 18),
-    blueBuffRune: new THREE.RingGeometry(2.8 * S, 3.35 * S, 4),
-    redBuffRune: new THREE.RingGeometry(2.8 * S, 3.35 * S, 3),
+    //  Battle Condition UX：野怪腳下的**地面符文環**與**拉回環**已移除
+    //  （它們是畫在地上的介面圖示）。改用營地本體的柔光：
+    //    · Buff 營地 → 該 Buff 顏色的柔光
+    //    · 正在返回營地（state === "return"）→ 琥珀色、呼吸更快的柔光
+    //  柔光用 geo.bar（1×1 平面）＋ auraSprite 的漸層貼圖，面向鏡頭。
   }), []);
   const mats = useMemo(() => ({
     body: new THREE.MeshStandardMaterial({
@@ -146,20 +149,9 @@ export default function MobaRuntimeNeutrals({ objectives = [], frameRef = null }
       color: 0x55e078, transparent: true, opacity: 1,
       depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
     }),
-    leash: new THREE.MeshBasicMaterial({
-      color: 0xfbbf24, transparent: true, opacity: 0.7, side: THREE.DoubleSide,
-      depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8,
-    }),
-    blueBuffRune: new THREE.MeshBasicMaterial({
-      color: MONSTER_COLOR.blue_crystal, transparent: true, opacity: 0.62,
-      side: THREE.DoubleSide, depthWrite: false, polygonOffset: true,
-      polygonOffsetFactor: -5, polygonOffsetUnits: -10, toneMapped: false,
-    }),
-    redBuffRune: new THREE.MeshBasicMaterial({
-      color: MONSTER_COLOR.red_ember, transparent: true, opacity: 0.62,
-      side: THREE.DoubleSide, depthWrite: false, polygonOffset: true,
-      polygonOffsetFactor: -5, polygonOffsetUnits: -10, toneMapped: false,
-    }),
+    auraBlueBuff: makeAuraMaterial(MONSTER_COLOR.blue_crystal, 0.4),
+    auraRedBuff: makeAuraMaterial(MONSTER_COLOR.red_ember, 0.4),
+    auraReturn: makeAuraMaterial(0xfbbf24, 0.5),
   }), []);
 
   useLayoutEffect(() => {
@@ -239,8 +231,20 @@ export default function MobaRuntimeNeutrals({ objectives = [], frameRef = null }
       node.root.visible = objective.alive || anyDying;
       if (!node.root.visible) continue;
       node.root.position.set(objective.world.x, GROUND_Y, objective.world.z);
-      node.leash.visible = objective.alive && objective.state === "return";
-      node.leash.rotation.z = now * 1.8;
+      //  營地柔光：Buff 營地平時是自己的 Buff 色；正在返回時換成琥珀色並呼吸更快。
+      if (node.aura) {
+        const returning = objective.alive && objective.state === "return";
+        const buffMat = node.buffKind === "blue" ? mats.auraBlueBuff
+          : node.buffKind === "red" ? mats.auraRedBuff : null;
+        node.aura.visible = objective.alive && (returning || !!buffMat);
+        if (node.aura.visible) {
+          node.aura.material = returning ? mats.auraReturn : buffMat;
+          node.aura.material.opacity = returning
+            ? 0.5 + Math.sin(now * 4.2) * 0.16
+            : 0.4 + Math.sin(now * 1.5) * 0.06;
+          node.aura.parent.rotation.y = -node.root.rotation.y;
+        }
+      }
 
       node.members.forEach((memberNode, index) => {
         if (!memberNode) return;
@@ -371,19 +375,21 @@ function BossUnit({ objective, asset, geo, mats, register }) {
 
 function CampUnit({ objective, asset, geo, mats, register }) {
   const root = useRef();
-  const leash = useRef();
+  const aura = useRef();
   const members = useRef([]);
+  //  ⚠ buffKind 必須在 hook **之前**算：下面有 `if (!asset) return null`，
+  //    若宣告在它後面，asset 缺席那一輪 effect 仍會執行、卻讀到未初始化的 const。
+  const buffKind = objective.presentationKey === "blueBuff" ? "blue"
+    : objective.presentationKey === "redBuff" ? "red" : null;
 
   useLayoutEffect(() => {
     register(objective.id, {
-      root: root.current, leash: leash.current, members: members.current,
+      root: root.current, aura: aura.current, buffKind, members: members.current,
     });
     return () => register(objective.id, null);
-  }, [objective.id, register]);
+  }, [objective.id, register, buffKind]);
 
   if (!asset) return null;
-  const buffKind = objective.presentationKey === "blueBuff" ? "blue"
-    : objective.presentationKey === "redBuff" ? "red" : null;
   const buffLabel = buffKind === "blue" ? "BLUE BUFF · 藍"
     : buffKind === "red" ? "RED BUFF · 紅" : null;
   const top = Math.max(...asset.members.map((member) => member.top), 4);
@@ -395,13 +401,14 @@ function CampUnit({ objective, asset, geo, mats, register }) {
           buff={objective.type === "buff"} geo={geo} mats={mats}
           register={(node) => { members.current[index] = node; }} />
       ))}
+      {/* 營地柔光（Buff 色／返回時琥珀色）；面向鏡頭，見 useFrame。 */}
+      <group position={[0, 1.4 * S, 0]}>
+        <mesh ref={aura} geometry={geo.bar} material={mats.auraReturn}
+          scale={[5.4 * S, 4.2 * S, 1]} visible={false} renderOrder={46}
+          frustumCulled={false} userData={{ part: "neutral-aura" }} />
+      </group>
       {buffKind && (
         <>
-          <mesh geometry={buffKind === "blue" ? geo.blueBuffRune : geo.redBuffRune}
-            material={buffKind === "blue" ? mats.blueBuffRune : mats.redBuffRune}
-            position={[0, 0.3, 0]} rotation={[-Math.PI / 2, 0, buffKind === "blue" ? Math.PI / 4 : 0]}
-            renderOrder={46} frustumCulled={false}
-            userData={{ part: "buff-ground-rune", buff: buffKind }} />
           <Html position={[0, top + 1.9 * S, 0]} center
             style={{ pointerEvents: "none" }}>
             <span style={{
@@ -415,9 +422,6 @@ function CampUnit({ objective, asset, geo, mats, register }) {
           </Html>
         </>
       )}
-      <mesh ref={leash} geometry={geo.leash} material={mats.leash}
-        position={[0, 0.24, 0]} rotation={[-Math.PI / 2, 0, 0]}
-        visible={false} renderOrder={48} frustumCulled={false} />
     </group>
   );
 }

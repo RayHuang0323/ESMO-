@@ -21,6 +21,7 @@
 import React, { useEffect, useMemo, useRef, useLayoutEffect, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { makeAuraMaterial, makeMoteMaterial } from "./auraSprite.js";
 import { WORLD_SCALE } from "../map/coordinateMapping.js";
 import { LAYER_Y } from "../map/mapVisualStyle.js";
 import { countMount, countUnmount } from "./runtimeDiagnostics.js";
@@ -77,7 +78,7 @@ const DEAD = Object.freeze({
  *   要正確處理需要「地形高度查詢」，那會動到地圖資料層 ⇒ 留給 H.2。
  */
 const GROUND_Y = Number.isFinite(LAYER_Y.lane_surface) ? LAYER_Y.lane_surface : 0;
-const RING_LIFT = 0.35;        // 選取環相對英雄根節點的高度（壓過 tower_pad 0.94）
+const RING_LIFT = 0.35;        // 地面元素（接地陰影／陣亡標記）相對英雄根節點的高度（壓過 tower_pad 0.94）
 
 /** 英雄本體尺寸（模擬單位 × WORLD_SCALE）。 */
 const HERO = {
@@ -112,8 +113,16 @@ export default function MobaRuntimeHeroes({
   const geo = useMemo(() => ({
     body: new THREE.CapsuleGeometry(HERO.radius, HERO.height, 4, 10),
     shoulder: new THREE.BoxGeometry(HERO.radius * 2.1, HERO.radius * 0.7, HERO.radius * 1.1),
-    ring: new THREE.RingGeometry(HERO.ringR * 0.82, HERO.ringR, 20),
-    buffRing: new THREE.RingGeometry(HERO.ringR * 1.12, HERO.ringR * 1.28, 28),
+    //  Battle Condition UX：腳下的**隊伍選取環**與四個 **Buff 環**已移除。
+    //  它們是「介面圖示畫在地上」，在 MOBA 總覽鏡頭下讓每個角色都像站在儀表板上。
+    //  取代品都掛在角色本體：
+    //    · contactShadow — 中性的接地陰影（不帶隊色，純粹讓角色不浮在地面上）
+    //    · aura          — 角色身上的柔光（隊色；有 Buff 時換成 Buff 色）
+    //    · mote          — 兩顆繞著角色轉的光點（只有帶 Buff 時出現）
+    //  ⚠ 技能範圍／鎖定／危險提示這類**有 gameplay 意義**的地面指示仍由
+    //    HeroVfxRuntime 負責（短暫出現、跟著技能走），不在這裡。
+    contactShadow: new THREE.CircleGeometry(HERO.ringR * 0.92, 18),
+    mote: new THREE.OctahedronGeometry(HERO.radius * 0.22, 0),
     //  陣亡標記：**四邊形**外框（選取環是 20 邊形＝圓）⇒ 兩者剪影一眼分得開，
     //  半徑也比選取環大一圈，全場視角才讀得到。
     deathMark: new THREE.RingGeometry(HERO.ringR * 1.12, HERO.ringR * 1.5, 4),
@@ -173,12 +182,23 @@ export default function MobaRuntimeHeroes({
       //  ⚠ 刻意**不**關 depthTest：關掉的話環會穿透牆與塔畫在最上層，那是遮蔽錯誤。
       markBlue: new THREE.MeshBasicMaterial({ color: TEAM_DEAD.blue, transparent: true, opacity: DEAD.markOpacity, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
       markRed: new THREE.MeshBasicMaterial({ color: TEAM_DEAD.red, transparent: true, opacity: DEAD.markOpacity, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
-      ringBlue: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.blue, transparent: true, opacity: 0.75, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
-      ringRed: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.red, transparent: true, opacity: 0.75, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
-      buffRed: new THREE.MeshBasicMaterial({ color: 0xff5a43, transparent: true, opacity: 0.56, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -10, toneMapped: false }),
-      buffBlue: new THREE.MeshBasicMaterial({ color: 0x48aaff, transparent: true, opacity: 0.56, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -10, toneMapped: false }),
-      buffDragon: new THREE.MeshBasicMaterial({ color: 0xc084fc, transparent: true, opacity: 0.36, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -10, toneMapped: false }),
-      buffBaron: new THREE.MeshBasicMaterial({ color: 0xf4b85a, transparent: true, opacity: 0.48, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -10, toneMapped: false }),
+      //  接地陰影：不帶隊色、不發光。它的工作只有「讓角色踩在地上」。
+      contactShadow: new THREE.MeshBasicMaterial({
+        color: 0x05080d, transparent: true, opacity: 0.32, side: THREE.DoubleSide,
+        depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8,
+      }),
+      //  角色柔光：一張徑向漸層貼圖（中心亮、邊緣透明）＋ Additive
+      //  ⇒ 看起來是角色身上的光，而不是地上的圖示。隊色／Buff 色共用同一張貼圖。
+      auraBlue: makeAuraMaterial(TEAM_COLOR.blue),
+      auraRed: makeAuraMaterial(TEAM_COLOR.red),
+      auraRedBuff: makeAuraMaterial(0xff5a43),
+      auraBlueBuff: makeAuraMaterial(0x48aaff),
+      auraDragon: makeAuraMaterial(0xc084fc),
+      auraBaron: makeAuraMaterial(0xf4b85a),
+      moteRedBuff: makeMoteMaterial(0xff7a5a),
+      moteBlueBuff: makeMoteMaterial(0x6dc0ff),
+      moteDragon: makeMoteMaterial(0xd8b4fe),
+      moteBaron: makeMoteMaterial(0xffd580),
       //  ⚠ side: DoubleSide 是保險——血條群組已經每幀反轉回世界朝向（見 useFrame），
       //    但只要有人日後改動 facing 的套用方式，單面材質會讓血條**整條消失**而不是畫錯。
       //
@@ -222,9 +242,8 @@ export default function MobaRuntimeHeroes({
       if (!node) continue;
       const {
         root, body, shoulder, accessory, signature, headFeature, classLanguage,
-        badge, crest, teamBand, redBuffRing, blueBuffRing,
-        dragonBuffRing, baronBuffRing,
-        bar, ring, deathMark, hitMarker, label, bodyAliveMaterial, secondaryAliveMaterial,
+        badge, crest, teamBand, contactShadow, aura, motes,
+        bar, deathMark, hitMarker, label, bodyAliveMaterial, secondaryAliveMaterial,
         proxyReady,
       } = node;
       const hitFx = effects.find((fx) => String(fx.targetId ?? "") === h.id && fx.phase === "impact");
@@ -303,30 +322,41 @@ export default function MobaRuntimeHeroes({
       if (badge) badge.visible = placeholderVisible;
       if (crest) crest.visible = placeholderVisible;
       if (teamBand) teamBand.visible = placeholderVisible;
-      ring.visible = h.alive;
-      const hasRedBuff = h.alive && (h.buffs ?? []).some((buff) => buff.id === "red");
-      const hasBlueBuff = h.alive && (h.buffs ?? []).some((buff) => buff.id === "blue");
-      if (redBuffRing) {
-        redBuffRing.visible = hasRedBuff;
-        redBuffRing.rotation.z = now * 0.72;
-        redBuffRing.scale.setScalar(1 + Math.sin(now * 3.1) * 0.035);
+      //  接地陰影：活著／倒地都在（屍體也該有影子），只是倒地時淡一點。
+      if (contactShadow) {
+        contactShadow.visible = true;
+        contactShadow.material.opacity = h.alive ? 0.32 : 0.18;
       }
-      if (blueBuffRing) {
-        blueBuffRing.visible = hasBlueBuff;
-        blueBuffRing.rotation.z = -now * 0.62;
-        blueBuffRing.scale.setScalar(0.9 + Math.sin(now * 2.7 + 1) * 0.03);
+      //  Buff 優先序：Baron > 巨龍 > 紅 Buff > 藍 Buff（同時吃到多個時只顯示最強的）
+      const buffIds = h.alive ? new Set((h.buffs ?? []).map((buff) => buff.id)) : new Set();
+      const topBuff = buffIds.has("baron") ? "baron"
+        : buffIds.has("dragon") ? "dragon"
+          : buffIds.has("red") ? "red"
+            : buffIds.has("blue") ? "blue" : null;
+      if (aura) {
+        aura.visible = h.alive;
+        aura.material = topBuff
+          ? { baron: mats.auraBaron, dragon: mats.auraDragon, red: mats.auraRedBuff, blue: mats.auraBlueBuff }[topBuff]
+          : (h.team === "blue" ? mats.auraBlue : mats.auraRed);
+        //  有 Buff ⇒ 亮一點、呼吸快一點；平時只是很淡的隊色光。
+        const base = topBuff ? 0.62 : 0.34;
+        const beat = topBuff ? Math.sin(now * 3.0) * 0.12 : Math.sin(now * 1.4) * 0.05;
+        aura.material.opacity = Math.max(0, base + beat + hit * 0.5);
+        aura.scale.set(HERO.ringR * 2.5, HERO.height * 1.7, 1);
+        aura.parent.rotation.y = -root.rotation.y;   // 面向鏡頭（與血條同一招）
       }
-      const hasDragonBuff = h.alive && (h.buffs ?? []).some((buff) => buff.id === "dragon");
-      const hasBaronBuff = h.alive && (h.buffs ?? []).some((buff) => buff.id === "baron");
-      if (dragonBuffRing) {
-        dragonBuffRing.visible = hasDragonBuff;
-        dragonBuffRing.rotation.z = now * 0.34;
-        dragonBuffRing.scale.setScalar(1.08 + Math.sin(now * 1.8) * 0.025);
-      }
-      if (baronBuffRing) {
-        baronBuffRing.visible = hasBaronBuff;
-        baronBuffRing.rotation.z = -now * 0.48;
-        baronBuffRing.scale.setScalar(1.18 + Math.sin(now * 2.2 + 0.8) * 0.03);
+      //  Buff 光點：只有帶 Buff 時出現，繞著角色轉。沒有 Buff ⇒ 整組隱藏。
+      if (motes) {
+        motes.visible = !!topBuff;
+        if (topBuff) {
+          const mat = { baron: mats.moteBaron, dragon: mats.moteDragon, red: mats.moteRedBuff, blue: mats.moteBlueBuff }[topBuff];
+          motes.rotation.y = now * 1.25;
+          for (let i = 0; i < motes.children.length; i++) {
+            const m = motes.children[i];
+            m.material = mat;
+            m.position.y = HERO.height * (0.52 + 0.3 * Math.sin(now * 2.2 + i * 2.1));
+          }
+        }
       }
       //  地面陣亡標記：只有死亡時出現，是「還認得出這裡有人陣亡」的主要線索
       if (deathMark) {
@@ -381,7 +411,9 @@ function HeroUnit({ hero, geo, mats, frameRef, showLabel, compactLabel, register
   const bodyRef = useRef();
   const shoulderRef = useRef();
   const barRef = useRef();
-  const ringRef = useRef();
+  const contactShadowRef = useRef();
+  const auraRef = useRef();
+  const motesRef = useRef();
   const deathMarkRef = useRef();
   const accessoryRef = useRef();
   const signatureRef = useRef();
@@ -390,10 +422,6 @@ function HeroUnit({ hero, geo, mats, frameRef, showLabel, compactLabel, register
   const badgeRef = useRef();
   const crestRef = useRef();
   const teamBandRef = useRef();
-  const redBuffRingRef = useRef();
-  const blueBuffRingRef = useRef();
-  const dragonBuffRingRef = useRef();
-  const baronBuffRingRef = useRef();
   const hitMarkerRef = useRef();
   const labelRef = useRef();
   const [proxyReady, setProxyReady] = useState(false);
@@ -435,11 +463,10 @@ function HeroUnit({ hero, geo, mats, frameRef, showLabel, compactLabel, register
       classLanguage: classLanguageRef.current,
       badge: badgeRef.current, crest: crestRef.current,
       teamBand: teamBandRef.current,
-      redBuffRing: redBuffRingRef.current,
-      blueBuffRing: blueBuffRingRef.current,
-      dragonBuffRing: dragonBuffRingRef.current,
-      baronBuffRing: baronBuffRingRef.current,
-      bar: barRef.current, ring: ringRef.current, deathMark: deathMarkRef.current,
+      contactShadow: contactShadowRef.current,
+      aura: auraRef.current,
+      motes: motesRef.current,
+      bar: barRef.current, deathMark: deathMarkRef.current,
       hitMarker: hitMarkerRef.current,
       label: labelRef.current,
       bodyAliveMaterial: bodyMaterial,
@@ -479,27 +506,27 @@ function HeroUnit({ hero, geo, mats, frameRef, showLabel, compactLabel, register
           onReady={setProxyReady}
         />
       )}
-      {/* 腳底選取環（抬到地形表面之上，否則整圈埋在路面／塔基底下看不見）*/}
-      <mesh ref={ringRef} geometry={geo.ring} material={team === "blue" ? mats.ringBlue : mats.ringRed}
+      {/* 接地陰影：中性色，唯一的地面元素（抬到地形表面之上，否則埋在路面下）*/}
+      <mesh ref={contactShadowRef} geometry={geo.contactShadow} material={mats.contactShadow}
         position={[0, RING_LIFT, 0]} rotation={[-Math.PI / 2, 0, 0]}
-        frustumCulled={false} userData={{ part: "hero-ring" }} />
-      {/* D-fix2：Buff 環只在持有效果時顯示，位於隊伍環外側且低透明，不遮英雄。 */}
-      <mesh ref={redBuffRingRef} geometry={geo.buffRing} material={mats.buffRed}
-        position={[0, RING_LIFT + 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}
-        visible={false} renderOrder={16} frustumCulled={false}
-        userData={{ part: "hero-buff-ring", buff: "red" }} />
-      <mesh ref={blueBuffRingRef} geometry={geo.buffRing} material={mats.buffBlue}
-        position={[0, RING_LIFT + 0.07, 0]} rotation={[-Math.PI / 2, 0, Math.PI / 4]}
-        visible={false} renderOrder={17} frustumCulled={false}
-        userData={{ part: "hero-buff-ring", buff: "blue" }} />
-      <mesh ref={dragonBuffRingRef} geometry={geo.buffRing} material={mats.buffDragon}
-        position={[0, RING_LIFT + 0.09, 0]} rotation={[-Math.PI / 2, 0, 0]}
-        visible={false} renderOrder={18} frustumCulled={false}
-        userData={{ part: "hero-buff-ring", buff: "dragon" }} />
-      <mesh ref={baronBuffRingRef} geometry={geo.buffRing} material={mats.buffBaron}
-        position={[0, RING_LIFT + 0.11, 0]} rotation={[-Math.PI / 2, 0, Math.PI / 4]}
-        visible={false} renderOrder={19} frustumCulled={false}
-        userData={{ part: "hero-buff-ring", buff: "baron" }} />
+        frustumCulled={false} userData={{ part: "hero-contact-shadow" }} />
+      {/* 角色柔光：面向鏡頭的漸層光暈（隊色；帶 Buff 時換 Buff 色）*/}
+      <group position={[0, HERO.height * 0.58, 0]}>
+        <mesh ref={auraRef} geometry={geo.bar} material={team === "blue" ? mats.auraBlue : mats.auraRed}
+          renderOrder={12} frustumCulled={false} userData={{ part: "hero-aura", team }} />
+      </group>
+      {/* Buff 光點：繞著角色轉，只有帶 Buff 時 visible（見 useFrame）*/}
+      <group ref={motesRef} visible={false} userData={{ part: "hero-buff-motes" }}>
+        {[0, 1, 2].map((i) => (
+          <mesh key={i} geometry={geo.mote} material={mats.moteBaron}
+            position={[
+              Math.cos((i / 3) * Math.PI * 2) * HERO.ringR * 0.78,
+              HERO.height * 0.6,
+              Math.sin((i / 3) * Math.PI * 2) * HERO.ringR * 0.78,
+            ]}
+            renderOrder={13} frustumCulled={false} />
+        ))}
+      </group>
       {/* 陣亡地面標記（四邊形外框；只有死亡時 visible，見 useFrame）*/}
       <mesh ref={deathMarkRef} geometry={geo.deathMark}
         material={team === "blue" ? mats.markBlue : mats.markRed}

@@ -104,8 +104,9 @@ try {
     const homeText = await bodyText(chrome);
     ck(`${vp.label}｜HOME 不再出現 injury warning`,
       !INJURY_WORDING.test(homeText), (homeText.match(INJURY_WORDING) ?? []).join("") || "(乾淨)");
-    ck(`${vp.label}｜HOME 仍會提示「選手體力過低」（疲勞沒有一併失效）`,
-      /選手體力過低/.test(homeText), homeText.slice(0, 80));
+    //  Battle Condition UX：體力不再擋出賽 ⇒ 首頁提醒改叫「安排選手休息」。
+    ck(`${vp.label}｜HOME 仍會提示體力（改為「安排選手休息」）`,
+      /安排選手休息/.test(homeText), homeText.slice(0, 80));
     ck(`${vp.label}｜HOME 無 body 橫向捲動`, !(await overflowed(chrome)));
 
     // ── ROSTER ─────────────────────────────────────────────────────────────

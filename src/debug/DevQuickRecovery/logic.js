@@ -11,7 +11,7 @@
 //  門檻與費率一律向 `platform/condition` 要。由 `tools/check_dev_quick_recovery.mjs`
 //  的 mutation sentinel 守住。
 // ============================================================================
-import { CONDITION, isMatchFit } from "../../platform/condition/playerCondition.js";
+import { CONDITION, isLowEnergy } from "../../platform/condition/playerCondition.js";
 import { featureEnabled } from "../../featureFlags.js";
 import { isDebugMode } from "../../ui/debugMode.js";
 
@@ -44,7 +44,7 @@ export function energyToMatchFit(player) {
   const start = Number.isFinite(Number(player?.energy)) ? Number(player.energy) : 0;
   let energy = start;
   for (let step = 0; step < 1000; step++) {
-    if (isMatchFit({ ...player, energy })) return energy;
+    if (!isLowEnergy({ ...player, energy })) return energy;
     if (!(CONDITION.restPerDay > 0)) break;   // 費率壞掉 ⇒ 不硬湊，照實回原值
     energy += CONDITION.restPerDay;
   }
@@ -52,4 +52,4 @@ export function energyToMatchFit(player) {
 }
 
 /** 名單摘要（面板抬頭與 verifier 共用同一份判定，畫面不自己數一套）。 */
-export const unfitPlayers = (players = []) => (players ?? []).filter((p) => !isMatchFit(p));
+export const unfitPlayers = (players = []) => (players ?? []).filter((p) => isLowEnergy(p));

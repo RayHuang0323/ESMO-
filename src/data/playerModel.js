@@ -16,6 +16,7 @@
 //    以 16 項能力為基礎，缺這層就只能造假資料 → Sprint21 先補這層。
 // ============================================================================
 import { calculateTrainingResult } from "./trainingCalculator.js";
+import { fatigueFactorOf } from "../platform/condition/playerCondition.js";
 
 /** 16 項能力：4 分類 × 4 項（Legacy STAT_DEF 逐字） */
 export const STAT_DEF = [
@@ -133,6 +134,11 @@ export const personalityById = (id) => PERSONALITY.find((p) => p.id === id) || n
 /** 士氣 / 狀態 → 戰力係數（Legacy 逐字） */
 export const MORALE_EFFECT = (m) => (m >= 85 ? 1.08 : m >= 65 ? 1.0 : m >= 45 ? 0.92 : 0.80);
 export const CONDITIONS = ["精神飽滿", "正常", "疲勞", "低潮"];
+/**
+ * @deprecated Battle Condition UX 起，狀態對實力的換算一律走
+ * `platform/condition/playerCondition.js` 的 `fatigueFactor(energy)`（連續曲線）。
+ * 這張表只留給 Legacy `EsportsGame.jsx` 的內聯計算，主幹不要再用。
+ */
 export const CONDITION_EFFECT = { "精神飽滿": 1.06, "正常": 1.0, "疲勞": 0.90, "低潮": 0.78 };
 /** 體力 → 狀態（Legacy advanceTrainingDay 結算規則） */
 export const conditionFor = (energy) =>
@@ -162,7 +168,9 @@ export function calcPower(player, mode = "moba") {
     wsum += weight;
   }
   const base = total / wsum;
-  return Math.round(base * MORALE_EFFECT(player?.morale ?? 70) * (CONDITION_EFFECT[player?.condition || "正常"] || 1));
+  //  Battle Condition UX：狀態倍率改讀 `fatigueFactor`（體力的連續函式），
+  //  不再用 condition 文字查表 ⇒ 顯示戰力與**實際比賽**用的是同一條曲線。
+  return Math.round(base * MORALE_EFFECT(player?.morale ?? 70) * fatigueFactorOf(player));
 }
 
 /** 位置適配：前 5 項能力加權 5/4/3/2/1（Legacy POSITION_PROFILE / posFit 逐字） */

@@ -172,14 +172,14 @@ console.log("══ Milestone O4：配對票券與等待狀態 ══\n");
   const q = queuedTicket();
   const entry = entryOf("moba", mobaSeats);
   const need = waitSecondsFor(q);
-  //  排隊中有人體力掉到門檻以下
-  //  ⚠ 舊版這裡用的是「排隊中有人受傷」。**選手隨機受傷／傷停已被產品取消**，
-  //    情境改用仍然成立的疲勞規則；另外補一條反向斷言，確保舊存檔的傷停資料
-  //    不會把人踢出隊列。守門見 `tools/check_no_player_injury.mjs`。
+  //  排隊中有人體力掉到很低
+  //  ⚠ 這個情境換過兩次：受傷（產品取消）→ 體力過低（Battle Condition UX 取消阻擋）。
+  //    現在低體力**不再**是拒絕理由，只會讓那場打得差一點；真正該擋的是名單資格
+  //    （未登錄／離隊），下面 6b／6c 仍然守著。
   const tired = PLAYERS.map((p) => (p.id === "s2" ? { ...p, energy: 3 } : p));
   const r1 = pollGateway({ ticket: q, entryRequest: entry, players: tired, now: T0 + need * 1000 });
-  ck("6) 排隊中有人體力過低 → 拒絕並附中文原因",
-    r1.decision === "rejected" && /體力/.test(r1.reason), r1.reason);
+  ck("6) 排隊中有人體力過低 → **不**拒絕（體力不擋出賽）",
+    r1.decision !== "rejected", `${r1.decision}${r1.reason ? " / " + r1.reason : ""}`);
   const legacyHurt = PLAYERS.map((p) => (p.id === "s2" ? { ...p, injuryDays: 3, injured: true } : p));
   const r1b = pollGateway({ ticket: queuedTicket(), entryRequest: entry, players: legacyHurt, now: T0 + need * 1000 });
   ck("6a) 排隊中的舊傷停資料**不會**造成拒絕",
@@ -193,8 +193,10 @@ console.log("══ Milestone O4：配對票券與等待狀態 ══\n");
   const gone = PLAYERS.filter((p) => p.id !== "s5");
   const r3 = pollGateway({ ticket: q, entryRequest: entry, players: gone, now: T0 + need * 1000 });
   ck("6c) 排隊中有人離隊 → 拒絕", r3.decision === "rejected", r3.reason);
+  //  ⚠ 情境從「體力過低」換成「離隊」：體力已不擋出賽，拿它當拒絕情境等於驗一個
+  //    不存在的規則（見上面第 6 條）。
   ck("6d) 拒絕發生在等待期間也一樣（不必等時間到）",
-    pollGateway({ ticket: q, entryRequest: entry, players: tired, now: T0 + 1000 }).decision === "rejected");
+    pollGateway({ ticket: q, entryRequest: entry, players: gone, now: T0 + 1000 }).decision === "rejected");
 }
 
 // ── 7) MOBA 與 CS 共用同一套流程 ───────────────────────────────────────

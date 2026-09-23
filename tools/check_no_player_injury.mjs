@@ -199,11 +199,21 @@ const oldSaveCanPlay = (mod) => mod.matchFitness({ id: "a", name: "A", age: 27, 
     Object.values(filledCs).filter(Boolean).length === 5,
     JSON.stringify(filledCs));
 
-  //  對照組：exhausted 仍然要被跳過（不能因為拆受傷就讓疲勞失去意義）
-  const tired = MOBA_ROLES.map((r, i) => mkPlayer(`t${i + 1}`, r, { energy: cond.CONDITION.unfitBelow - 1 }));
+  //  Battle Condition UX：低體力**不再**被 auto lineup 跳過（體力不擋出賽），
+  //  但同分層內要優先挑體力高的——疲勞的意義改由能力衰減承擔，不是不能上場。
+  const tired = MOBA_ROLES.map((r, i) => mkPlayer(`t${i + 1}`, r, { energy: 5 }));
   const tiredFill = squad.autoFillSquad({ mode: "moba", seats: {}, players: tired });
-  ck("6b) 對照：auto lineup 仍會跳過 exhausted 選手（疲勞沒有一併失效）",
-    Object.values(tiredFill).filter(Boolean).length === 0);
+  ck("6b) 低體力選手仍會被 auto lineup 填入（體力不擋出賽）",
+    Object.values(tiredFill).filter(Boolean).length === 5,
+    JSON.stringify(tiredFill));
+  const mixed = [
+    ...MOBA_ROLES.map((r, i) => mkPlayer(`lo${i + 1}`, r, { energy: 5 })),
+    ...MOBA_ROLES.map((r, i) => mkPlayer(`hi${i + 1}`, r, { energy: 95 })),
+  ];
+  const mixedFill = squad.autoFillSquad({ mode: "moba", seats: {}, players: mixed });
+  ck("6b2) 同分層／同定位時優先挑體力高的（輪換仍是預設行為）",
+    Object.values(mixedFill).every((id) => String(id).startsWith("hi")),
+    JSON.stringify(mixedFill));
 }
 
 // ── §3 每日推進：不再有傷停倒數 ────────────────────────────────────────────
@@ -231,9 +241,11 @@ function trainingIsAgeSensitive(mod) {
     cond.applyMatchWear(mkPlayer("e1", "中路", { energy: 90 }), "k").player.energy < 90
       && cond.conditionText(90) === "精神飽滿" && cond.conditionText(20) === "疲勞");
 
-  ck("9) exhausted 仍存在且仍擋出賽",
-    cond.isExhausted({ energy: cond.CONDITION.unfitBelow - 1 }) === true
-      && cond.matchFitness({ id: "x", name: "X", energy: cond.CONDITION.unfitBelow - 1 }).code === "exhausted");
+  //  Battle Condition UX：低體力改成「提醒 + 能力衰減」，不再擋出賽。
+  ck("9) 低體力仍被辨識（提醒門檻）但**不**擋出賽，改回報疲勞倍率",
+    cond.isLowEnergy({ energy: cond.CONDITION.lowEnergyBelow - 1 }) === true
+      && cond.matchFitness({ id: "x", name: "X", energy: 0 }).ok === true
+      && cond.matchFitness({ id: "x", name: "X", energy: 0 }).fatigue < 1);
 
   ck("10) 連續出賽仍累積且仍加重體力消耗（輪換仍有意義）",
     cond.applyMatchWear(mkPlayer("e2", "中路", { energy: 90, matchStreak: 0 }), "k").drained
@@ -344,8 +356,8 @@ console.log("\n§7 mutation sentinel（把規則改回去 ⇒ 上面對應的檢
 try {
   // A. 重新把 injuryDays > 0 當成不可出賽
   const A = await importMutated("src/platform/condition/playerCondition.js",
-    (s) => s.replace("  if (isExhausted(player)) {",
-      "  if (Number(player?.injuryDays) > 0) return { ok: false, code: \"injured\", message: \"傷停中\" };\n  if (isExhausted(player)) {"),
+    (s) => s.replace("  const fatigue = fatigueFactorOf(player);",
+      "  if (Number(player?.injuryDays) > 0) return { ok: false, code: \"injured\", message: \"傷停中\", fatigue: 1, note: null }; const fatigue = fatigueFactorOf(player);"),
     "A-eligibility");
   ck("S-A) 重新把 injuryDays > 0 當成不可出賽 ⇒ 檢查 4 變紅", oldSaveCanPlay(A) === false);
 
