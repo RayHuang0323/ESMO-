@@ -23127,3 +23127,41 @@ MOBA double penalty = NO（兩層相加，非複利）
 CS double penalty = YES（三重）→ 已修，≥70 逐場不變
 SIMULATION_VERSION = moba-sim.v9（未變）
 ```
+
+## CS Fatigue Calibration（2026-09-24，接 Fatigue Audit）
+
+Owner 指示：先不要加第二層 fatigue；CS 現有唯一的 fatigue effect 暫時改成原曲線的 1/4 強度，跑 n=200 做 calibration。
+
+### 改動
+
+- `playerCondition.applyFatigueToStats(stats, player, { damp })`：`k = 1 − (1 − fatigueFactor) × damp`，`damp` 預設 1
+  ⇒ MOBA 能力 slots 與顯示戰力完全不變。
+- `FATIGUE.csStatDamp = 0.25`，`fpsRoster` 傳入。**仍是同一條 canonical curve、同一個套用點**，不是第二層；
+  `sta`／`condition` 在 70 以下封頂（Fatigue Audit）不變。
+- 0 體力的 CS stats 倍率：全額 0.860 → 1/4 為 0.965（基礎 rxn 78 → 75；全額是 67）。
+
+### n=200（我方＝`INITIAL_PLAYERS` 前 5 人，對手＝內建 CT，7 個有界戰術格輪替；95% 信賴區間約 ±7pp）
+
+| 體力 | 全額曲線 | 1/2 | **1/4（採用中）** |
+|---|---|---|---|
+| 100 | 54.5% | 54.5% | **54.5%**（200/200 seed 逐場比分與先前相同） |
+| 70 | 51.0% | 51.0% | 51.0%（無疲勞；與 100 的差是 main 上就有的 `sta` 移速） |
+| 40 | 33.5% | 39.5% | **49.0%** |
+| 20 | 19.5% | 34.5% | **40.0%** |
+| 0 | 14.0% | 27.0% | **36.5%** |
+
+對照 MOBA（Fatigue Audit，疲勞方 vs 100，基準約 50%）：40／20／0 為 43／35／26%，相對基準下降 7／15／24pp。
+CS 相對 100 的下降：1/4 為 5.5／14.5／18pp，1/2 為 15／20／27.5pp。
+1/4 在 40、20 體力與 MOBA 幾乎同幅度，只有 0 體力比 MOBA 輕約 6pp；1/2 在 40 體力就比 MOBA 重一倍。
+
+### 判讀
+
+- 1/4：三個點都單調遞減；0 體力約 1/3 勝率 ⇒ 明顯但不致必輸。40 體力（-5.5pp）落在信賴區間邊緣，幾乎看不出來；
+  40 正好是首頁「該休息了」的提醒門檻，提醒出現時的代價還很小。
+- 1/2：0 體力 27%，與 MOBA 0 體力（26%）一致；但 40 體力就掉 15pp，比 MOBA 重。
+- 兩者都沒有為了湊特定勝率去調；1/4 取的是與 MOBA 發揮層相同的比例（`executionDamp` 0.25）。
+
+```text
+CS_FATIGUE_CALIBRATION = LOCAL_COMMIT_ONLY（csStatDamp 0.25，暫定，待 Owner 定案）
+SIMULATION_VERSION = moba-sim.v9（未變）
+```

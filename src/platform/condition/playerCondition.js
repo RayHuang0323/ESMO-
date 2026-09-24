@@ -86,6 +86,12 @@ export const FATIGUE = Object.freeze({
   floorFactor: 0.86,
   /** 發揮層（power/tough）只吃這個比例的疲勞——理由見 `executionFactor`。 */
   executionDamp: 0.25,
+  /**
+   * CS 引擎 stats 只吃這個比例的疲勞（**同一條曲線**，不是第二層）。
+   * ⚠ Calibration 中：CS 模擬對 stats 的敏感度遠高於 MOBA 行為層，全額套用時
+   *   0 體力 vs 內建 CT 只剩 14%（n=200，fatigue audit）。數值待 Owner 定案。
+   */
+  csStatDamp: 0.25,
 });
 
 export function fatigueFactor(energy) {
@@ -120,8 +126,9 @@ export const executionFactorOf = (p) => executionFactor(p?.energy ?? 100);
  * 不修改輸入；四捨五入後 clamp 1–99（與 derived stats 同一個值域）。
  * 倍率為 1（體力 ≥ 70）時逐鍵相等 ⇒ 滿體力的比賽逐位元不變。
  */
-export function applyFatigueToStats(stats, player) {
-  const k = fatigueFactorOf(player);
+export function applyFatigueToStats(stats, player, { damp = 1 } = {}) {
+  //  damp < 1 ⇒ 只套用曲線的一部分（1 − (1 − f) × damp）；體力 ≥ 70 時 f = 1 ⇒ k 仍恰為 1。
+  const k = 1 - (1 - fatigueFactorOf(player)) * damp;
   if (!stats || k === 1) return stats;
   const out = {};
   for (const [key, v] of Object.entries(stats)) {

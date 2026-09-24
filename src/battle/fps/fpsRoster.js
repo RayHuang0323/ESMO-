@@ -91,7 +91,8 @@ export function toFpsRoster(players = [], csLineup = null) {
     //   引擎 sim 的 persStat 直讀 stats[key] → 天賦真的影響 CS 對戰輸入。
     //   無天賦時 derived === base（逐鍵相等）→ baseline 與 S26 一致。
     //  Battle Condition UX：CS 引擎的 stats 也套同一條疲勞倍率（曲線只有一份）。
-    const short = toShortStats(applyFatigueToStats(getPlayerDerivedStats(p), p));
+    //  Fatigue calibration：CS 只吃曲線的 `csStatDamp`（同一條曲線打折，不是第二層）。
+    const short = toShortStats(applyFatigueToStats(getPlayerDerivedStats(p), p, { damp: FATIGUE.csStatDamp }));
     const role = fpsRoleOf(p) || MOBA2FPS[p.role] || ["entry", "rifler", "awp", "lurker", "igl"][i] || "rifler";
     const roleView = fpsRolePresentation(p);
     const ovr = fpsOvr(short);
