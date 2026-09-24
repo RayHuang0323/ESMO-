@@ -243,7 +243,12 @@ console.log("\n── §7 本輪不動數值 ──");
   const hits = [];
   for (const f of all) for (const n of NUMERIC) if (read(f).includes(n)) hits.push(`${f}:${n}`);
   ck("線上契約層沒有任何 CBR／Rating 數值", hits.length === 0, hits.join(",") || "clean");
-  ck("teamStrength 版本字串未變", read("src/platform/competition/teamStrength.js").includes('"teamStrength.v1"'));
+  //  2026-09-24：Owner 指示正式升為 v2（calcPower 狀態倍率改讀疲勞曲線），契約文件 §1.1 已同步。
+  //  這條仍然是 tripwire：版本再變就要再回來更新文件，而且 v1 必須留在已知清單（歷史賽果的稽核標籤）。
+  const ts = read("src/platform/competition/teamStrength.js");
+  ck("teamStrength 版本字串與契約文件一致（v2，且保留 v1）",
+    ts.includes('TEAM_STRENGTH_VERSION = "teamStrength.v2"') && /KNOWN_TEAM_STRENGTH_VERSIONS[^\n]*"teamStrength\.v1"/.test(ts)
+      && read("docs/design/Online_Competitive_Power_Contract_v1.md").includes("`teamStrength.v2`"));
 }
 
 // ── §8 定價 ≠ 模擬：免費戰力的實測 ──────────────────────────────────────

@@ -16,7 +16,8 @@
 //    · 出賽資格與體力**完全脫鉤**（席位／登錄／重複仍然擋）
 //    · 體力改成一條**平滑**的能力倍率 `fatigueFactor`，沒有門檻斷崖
 //  這條倍率是**唯一**的體力→實力換算點：MOBA（能力 slots）、CS（引擎 stats）、
-//  顯示戰力（calcPower）全部讀它，不各自乘一套。
+//  顯示戰力（calcPower）全部讀它，不各自乘一套。各消費端只能決定「吃曲線的幾成」
+//  （MOBA 發揮層 `executionDamp`、CS stats `csStatDamp`），不能換一條曲線。
 //
 //  ── 受傷已被產品取消（不是還沒做，是決定不做）─────────────────────────────
 //  O2 曾有一套受傷機制：賽後決定性抽籤決定是否受傷、傷停天數每日 −1、
@@ -87,9 +88,13 @@ export const FATIGUE = Object.freeze({
   /** 發揮層（power/tough）只吃這個比例的疲勞——理由見 `executionFactor`。 */
   executionDamp: 0.25,
   /**
-   * CS 引擎 stats 只吃這個比例的疲勞（**同一條曲線**，不是第二層）。
-   * ⚠ Calibration 中：CS 模擬對 stats 的敏感度遠高於 MOBA 行為層，全額套用時
-   *   0 體力 vs 內建 CT 只剩 14%（n=200，fatigue audit）。數值待 Owner 定案。
+   * CS 引擎 stats 只吃這個比例的疲勞（**同一條曲線、同一個套用點**，不是第二層）。
+   * 正式規則（2026-09-24 Owner 定案，基準 bbc8286）：
+   *   CS 模擬對 stats 的敏感度遠高於 MOBA 行為層——reflex／accuracy 直接決定槍戰，
+   *   回合勝再累積成地圖勝。全額套用時 0 體力 vs 內建 CT 只剩 14%（≈ 上場即輸）。
+   *   取 1/4（與 MOBA 發揮層 `executionDamp` 同比例），n=200 實測
+   *   體力 100／40／20／0 ⇒ 54.5／49.0／40.0／36.5%，與 MOBA 的衰減幅度相當。
+   * ⚠ 不要為了湊勝率改這個數；要改先重跑同一組 n=200 量測並經 Owner 決定。
    */
   csStatDamp: 0.25,
 });

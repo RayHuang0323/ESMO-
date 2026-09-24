@@ -38,7 +38,7 @@
 | `contracts/matchmaking.js` | 票券狀態機 | 排隊 / 配對 / 取消 |
 | `contracts/matchRoom.js`、`matchSession.js` | 房間、場次 | 進場生命週期 |
 | `matchmaking/mockGateway.js` | 本機決定性 stub | **不是後端**；等待時間／對手／種子由 ticketId 雜湊推導 |
-| `competition/teamStrength.js` | `teamStrength.v1` | 五人合成戰力。**目前只被 `simulateFixture.js`（AI 賽季模擬）使用** |
+| `competition/teamStrength.js` | `teamStrength.v2`（2026-09-24 起；v1 保留為歷史賽果的稽核標籤） | 五人合成戰力。**目前只被 `simulateFixture.js`（AI 賽季模擬）使用**。v2 只換了 `calcPower` 的狀態倍率（condition 文字查表 → 體力連續曲線 `fatigueFactor`），合成權重未變；本文其他段落提到的 `teamStrength.v1` 指的是當時的定價委派對象，委派關係不變 |
 
 ### 1.2 **不存在**（只是名字或註解）
 

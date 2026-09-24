@@ -23165,3 +23165,54 @@ CS 相對 100 的下降：1/4 為 5.5／14.5／18pp，1/2 為 15／20／27.5pp�
 CS_FATIGUE_CALIBRATION = LOCAL_COMMIT_ONLY（csStatDamp 0.25，暫定，待 Owner 定案）
 SIMULATION_VERSION = moba-sim.v9（未變）
 ```
+
+## Battle Condition UX 收尾：CS fatigue 定案＋teamStrength.v2（2026-09-24）
+
+基準 `bbc8286`。本輪**不再調 fatigue 數值**。
+
+### 完成
+
+- **`csStatDamp = 0.25` 轉為正式規則**（Owner 定案）：註解寫明理由（CS 模擬對 stats 敏感、全額時 0 體力 14%）、
+  n=200 數據（54.5／49.0／40.0／36.5%），以及「要改先重跑同一組量測並經 Owner 決定」。
+  `playerCondition` 檔頭補上規則：各消費端只能決定吃曲線的幾成（`executionDamp`、`csStatDamp`），不能換一條曲線。
+- **`teamStrength.v1` → `teamStrength.v2`**。Audit 結果：`6eda6a2` 把 `calcPower` 的狀態倍率從
+  condition 文字查表（精神飽滿 ×1.06／疲勞 0.90／低潮 0.78）改成體力曲線 `fatigueFactor`，語意已與 v1 不同。
+  - 7 支 AI 隊（體力 100、精神飽滿）實力全部下降約 5.6%（shadowwolf 98.32 → 92.80）；
+    thunderbear vs emeralddragon 勝率 66.25% → 65.30%。
+  - 單一選手在體力 0／20／40／100 時，v1 是 75／86／96／102，現在是 82／88／92／96。
+  - `COMBINE` 未變。新增 `KNOWN_TEAM_STRENGTH_VERSIONS = [v1, v2]`。
+  - **歷史相容**：已存賽果保留當初的 `simulatorVersion`（`…+teamStrength.v1`）。
+    `fixtureOutcome` 只要求版本欄位存在，不比對目前版本；也沒有任何程式拿舊版本重算 ⇒ 不改寫歷史。
+  - ⚠ 版本字串參與 `simulateFixture` 的亂數雜湊 ⇒ 升版後**新模擬**的亂數流跟著換（設計如此，同版本同 seed 仍逐值一致）。
+  - `check_online_power_contract_v1` 的版本 tripwire 依它自己的規則（「要連同契約文件一起更新，而不是默默拿掉」）
+    改守 v2＋保留 v1＋契約文件一致；`Online_Competitive_Power_Contract_v1.md` §1.1 同步。
+
+### Gates（全部實跑）
+
+`npm run build` ✓（15.58s）、`regress` 15/15、`regress2` 8/8、verify.mjs `cs23`／`talent27` ✓、
+`check_battle_condition_ux` 40/40、`check_simulation_version_gate` 51/51、`check_online_power_contract_v1` ✓、
+`check_competition_q2a／q35／q4／q5／q6` ✓、`check_cs_season_contract／lifecycle／series／major` 等 CS 賽季線 ✓，
+共 61 支中 51 支綠。
+
+紅燈比對（同一組在 `bbc8286` 與 `origin/main` `e7f7cb6` 乾淨 worktree 重跑）：
+
+| gate | 本分支 | bbc8286 | origin/main | 判定 |
+|---|---|---|---|---|
+| `check_competition_q3` §5s | 紅 | 紅 | 紅 | 既有 |
+| `check_cs_schema_v11` 40/41 | 紅 | 紅 | 紅 | 既有 |
+| `check_home_team_contract` | 紅 | 紅 | 紅 | 既有 |
+| `check_q7a_3a／3d／3f1／live_session_migration`、`check_season_state_v2_migration_q7b`（crash） | 紅 | 紅 | 紅 | 既有 |
+| `check_cs_roster_acceptance_r54` | **PASS**（不設逾時完整跑，1102s） | 15 分逾時（未跑完） | — | 綠；只是慢 |
+| **`check_competition_q2b` §2g** | **紅** | 紅 | **綠（92/92）** | **本分支（`6eda6a2`）帶進來** |
+
+**§2g 根因（沒有修，待 Owner 決定）**：斷言是「每一項能力 +12 都要讓 `AI_TEAMS[0]` 的實力值改變」。
+`focus` 五人是 93／95／93／97／90，+12 被 99 封頂後只加 2–9 點，`calcPower` 又會取整數。
+main 上有 ×1.06，微小變化剛好跨過取整邊界；拿掉加成後（滿體力 ×1.00）就被取整吃掉。
+focus 仍然有效：其他 6 隊 +12 全部會變，7 隊 −12 也全部會變。⇒ 測試資料貼近上限造成的假紅，不是能力被忽略。
+依「不改 verifier 做綠燈」，本輪不動；建議修法是 §2g 同時接受 ±12 任一方向改變，或改用有上升空間的隊伍。
+
+```text
+BATTLE_CONDITION_UX_CLOSE = LOCAL_COMMIT_ONLY
+TEAM_STRENGTH_VERSION = teamStrength.v2（v1 保留為歷史標籤）
+SIMULATION_VERSION = moba-sim.v9（未變）
+```

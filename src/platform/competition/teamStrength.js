@@ -22,8 +22,23 @@
 // ============================================================================
 import { calcPower, STAT_DEF } from "../../data/playerModel.js";
 
-/** 合成模型版本。改動下面的權重必須同步升版（會影響 simulatorVersion）。 */
-export const TEAM_STRENGTH_VERSION = "teamStrength.v1";
+/**
+ * 合成模型版本。改動下面的權重**或 `calcPower` 的倍率語意**都必須同步升版
+ *（會影響 simulatorVersion，也會換掉模擬的亂數流）。
+ *
+ * v2（2026-09-24，Battle Condition UX 收尾）：`calcPower` 的狀態倍率從 condition 文字查表
+ *   （精神飽滿 ×1.06／正常 1.00／疲勞 0.90／低潮 0.78）改為體力連續曲線 `fatigueFactor`
+ *   （≥70 為 1.000，0 為 0.860）。`COMBINE` 未變。實測：7 支 AI 隊（體力 100、精神飽滿）
+ *   實力全部下降約 5.6%；thunderbear vs emeralddragon 勝率 66.25% → 65.30%。
+ */
+export const TEAM_STRENGTH_VERSION = "teamStrength.v2";
+
+/**
+ * 出現過的版本。⚠ 舊版本**保留不刪**：已存的賽果帶著當初的 `simulatorVersion`
+ *（例如 `fixtureSim.v1+teamStrength.v1`），那是「當初用哪一版算的」的稽核憑據——
+ * 不重算、不改寫，也不因版本較舊而判為無效（`fixtureOutcome` 只要求欄位存在）。
+ */
+export const KNOWN_TEAM_STRENGTH_VERSIONS = Object.freeze(["teamStrength.v1", TEAM_STRENGTH_VERSION]);
 
 /**
  * 五人合成一隊的權重。
