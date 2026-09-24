@@ -149,12 +149,18 @@ console.log("══ Milestone Q2b：賽果 / 實力 / 模擬 / 積分榜 ══\
     const bumped = t.roster.map((p, i) => (i === 2 ? { ...p, stats: { ...p.stats, mapAware: Math.min(97, p.stats.mapAware + 10) } } : p));
     return teamStrength(bumped) !== s;
   })());
-  ck("2g) **16 項能力每一項都影響實力值**（沒有任何一項被忽略）", (() => {
-    return STAT_DEF.every(({ key }) => {
-      const bumped = t.roster.map((p) => ({ ...p, stats: { ...p.stats, [key]: Math.min(99, p.stats[key] + 12) } }));
-      return teamStrength(bumped) !== s;
-    });
-  })());
+  //  2g 測 ±12 兩個方向，任一方向改變即證明該項有參與計算。
+  //  ⚠ 只測 +12 會假紅：AI_TEAMS[0] 的高能力（例如 focus 93–97）+12 被 99 封頂後只剩 +2～+9，
+  //    再經 calcPower 取整數，變化可能被吃掉——那是封頂＋取整，不是能力被忽略。
+  //  ⚠ 反向自檢（2g′）：不存在的鍵兩個方向都不得改變實力值 ⇒ 這條不會退化成永遠為真。
+  const shift = (key, d) => teamStrength(t.roster.map((p) => ({
+    ...p, stats: { ...p.stats, [key]: Math.max(1, Math.min(99, (p.stats[key] ?? 50) + d)) },
+  })));
+  const moves = (key) => shift(key, +12) !== s || shift(key, -12) !== s;
+  const ignored = STAT_DEF.filter(({ key }) => !moves(key)).map(({ key }) => key);
+  ck("2g) **16 項能力每一項都影響實力值**（沒有任何一項被忽略；±12 任一方向改變）",
+    STAT_DEF.length === 16 && ignored.length === 0, ignored.length ? `未影響：${ignored.join(",")}` : "16/16");
+  ck("2g′) 反向自檢：不參與計算的鍵 ±12 都不改變實力值（2g 有檢定力）", !moves("__notAStat__"));
   ck("2h) 士氣與狀態也影響（沿用 calcPower 的既有語意）", (() => {
     const low = t.roster.map((p) => ({ ...p, morale: 40, condition: "低潮" }));
     return teamStrength(low) < s;

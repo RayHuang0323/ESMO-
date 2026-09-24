@@ -23216,3 +23216,41 @@ BATTLE_CONDITION_UX_CLOSE = LOCAL_COMMIT_ONLY
 TEAM_STRENGTH_VERSION = teamStrength.v2（v1 保留為歷史標籤）
 SIMULATION_VERSION = moba-sim.v9（未變）
 ```
+
+## Battle Condition UX 最後收尾：q2b §2g 測試設計＋CS 選手卡瀏覽器實測（2026-09-24）
+
+基準 `4514c30`。**production code 零改動**（`git diff -- src` 為空）。
+
+### `check_competition_q2b` §2g（修正假紅的測試設計）
+
+- **修改前**：每項能力 +12（封頂 99）後，`AI_TEAMS[0]` 的實力值必須改變。
+  `focus` 五人 93–97，+12 被封頂後只剩 +2～+9，再經 `calcPower` 取整就被吃掉 ⇒ 假紅（Owner 已確認）。
+- **修改後**：每項能力分別測 +12 與 −12（夾在 1–99），**至少一個方向**讓實力值改變，才算有參與計算；
+  16 項全部都要通過（`16/16`，失敗時列出沒影響的鍵）。
+- **新增 2g′ 反向自檢**：不參與計算的鍵（`__notAStat__`）±12 都**不得**改變實力值
+  ⇒ 證明 2g 仍有檢定力，沒有退化成永遠為真。
+- 結果：92/92 → **93/93**（多一條 2g′）。
+
+### CS 低體力選手卡（正式瀏覽器流程）
+
+新增 `tools/browser_check_cs_low_energy_card.mjs`：新局 → CS 陣容體力 0／12／35／55／88 → 首頁 CS → Practice →
+地圖 → 戰術 → Battle → 逐一點記分板 t1–t5 → 展開「素質」→ 讀選手卡「體力」。
+桌機 1366×900 ＋ 390×844 **16/16 PASS**：卡片顯示 0／12／35／55／88（例：`FPS戰力 72 · MOBA 72 · 體力 0 · 突破手`），
+低體力沒有任何一位顯示成封頂值 70；無水平溢出；page error 0。沒有改任何 UI。
+
+### Gates（全部實跑）
+
+`npm run build` ✓（14.81s）、`check_competition_q2b` 93/93、`check_online_power_contract_v1` 51/51、
+`check_battle_condition_ux` 40/40、`check_simulation_version_gate` 51/51、`check_competition_q2a` 112/112、
+`q35` 66/66、`q4` 68/68、`q5` 69/69、`q6` 57/57、`check_cs_season_contract` ✓、`check_cs_season_lifecycle` 54/54、
+`check_cs_series` 46/46、`check_cs_major` 74/74、`check_condition_o2` 31/31、`check_no_player_injury` ✓、
+`check_dev_quick_recovery` ✓、`check_match_entry_o3` 35/35、`check_matchmaking_o4` 48/48、`check_squad_o1` 40/40、
+`regress` 15/15、`regress2` 8/8、`browser_check_cs_low_energy_card` 16/16。
+
+既有紅燈（main 上同樣紅）依指示不處理：`check_competition_q3` §5s、`check_cs_schema_v11`、`check_home_team_contract`、
+`check_q7a_3a／3d／3f1／live_session_migration`、`check_season_state_v2_migration_q7b`。
+
+```text
+BATTLE_CONDITION_UX = LOCAL_COMMIT_ONLY（未 push、未 deploy）
+本分支新增的紅燈 = 0
+```
