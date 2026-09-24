@@ -23553,3 +23553,28 @@ SIMULATION_VERSION = moba-sim.v11（skill-on 語意變化；skill-off 與 v10 �
 後續議題（本輪只記錄、未修改）：
 1. Damage skills 目前不會命中兵線小兵 ⇒ 需要獨立的 Lane Ability Interaction Sprint 評估（清線節奏、公平性、版本號）。
 2. Smite 550 高於部分 camp 總血（小營 280、Buff 營 420）⇒ 需要獨立的 jungle pacing／balance audit。
+
+
+### 2026-09-25 RELEASED：feature/moba-combat-polish-r2 @ `da3f943`（含 spectacle-vision `b506824`）
+
+- fetch：`origin/main` = `b706c08`（未前進）⇒ **fast-forward** `b706c08..da3f943`，normal push（無 force）。
+- Deploy：GitHub Actions「Deploy Vite site to GitHub Pages」run `36057764260` **success**。
+- Release gates（`da3f943`）：build ✓；polish r2 node 31/31、browser 40/40；spectacle node 21/21、browser 43/43；simulationVersion 51/51；
+  combat quality 28/28；items m2 53/53；Hero Skills phase1 10/10、round2 410/410、gameplay slice 68/68、base assault ✓、release gate PASS；
+  milestone_i_close 44/44；Challenge slice2 79/79、slice4 60/60、slice8 122/122；battle_condition_ux ✓；hotfix cs 18/18；regress 15/15；regress2 8/8；
+  flow09 ✓；dash10 ✓；verify.mjs runtime29／experience26／tactic24 ✓。
+- `check_moba_runtime_flicker_h2`（mobile）25/31，紅燈集合與 `88efb86` **完全相同**的 6 項（次數隨執行浮動），未處理。
+- Production smoke（https://rayhuang0323.github.io/ESMO-/，桌機＋390，1×/2×/4×，Battle＋Replay 1×/2×/4×）：
+  - `browser_check_moba_combat_polish_r2` 36/37：技能家族（天降／砸地／彈道實戰出現）、懲戒／點燃施放特效、狀態 onset／護盾碎裂、
+    **陣亡後地面無任何標記**（倒地樣本 5／27、可見 0）、野怪血條扣到 0、離開→返回接續（進度提示有、1.3–1.4 秒）、Replay 倍率、page／console error 0。
+    唯一紅＝Workshop（`?debug=hero-skills` 是 DEV-only，正式 bundle 本來就沒有；落雷／爆開等家族已在 release gate 的本地 Workshop 驗過）。
+  - `browser_check_moba_spectacle_vision` 39/41（兩次）：Workshop 同上；桌機 C1「換鏡間隔 ≥ 1.4 秒」觀測 1300／1174ms。
+    以 MutationObserver 精確量測（新增 `tools/browser_measure_director_dwell.mjs`）真實最短間隔 **1524ms**（≥ 擊殺特寫 1.5 秒停留）
+    ⇒ C1 是 500ms 輪詢的量測誤差，不是產品問題。迷霧開關、四種鏡頭 zoom、野怪環 0、打野施法、Replay 迷霧／鏡頭皆綠。
+  - 恢復量測（headed，正式站，10 分鐘處）：點擊到時間前進 2.69 秒、最長阻塞 295ms、進度提示有。
+  - 對話：以 node gate 驗（T1–T8：冷卻、無連續重複、新情境觸發、決定性）；正式站 UI 未另做逐句檢查。
+- Competitive 維持 disabled；Online Backend、Lane Ability Interaction、Smite balance 皆未動。
+
+```text
+MOBA_COMBAT_POLISH_R2 = RELEASED（main da3f943；simulation moba-sim.v11）
+```

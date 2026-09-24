@@ -25,7 +25,7 @@ mkdirSync(OUT, { recursive: true });
 const VIS = "const vis=(e)=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0;}; const q=(s)=>[...document.querySelectorAll(s)].find(vis);";
 
 const result = await runGate({
-  name: "MOBA spectacle ＋ vision", timeoutMs: 2_300_000,
+  name: "MOBA spectacle ＋ vision", timeoutMs: 2_300_000, externalUrl: process.env.ESMO_EXTERNAL_URL?.trim() || null,
   async run({ chrome, url, ck, sleep }) {
     const ev = async (body) => { const r = String(await chrome.evaluate(body)); for (const t of [r, r.replace(/^"|"$/g, "")]) { try { return JSON.parse(t); } catch { /* 下一個 */ } } return r; };
     const wait = async (expr, ms, every = 400) => { const t = Date.now(); while (Date.now() - t < ms) { try { if (await ev(VIS + "return JSON.stringify(!!(" + expr + "));")) return true; } catch { /* 換頁中 */ } await sleep(every); } return false; };
