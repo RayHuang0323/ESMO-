@@ -341,7 +341,7 @@ export function installRuntimeDiagnostics({ gl, scene, camera, frameRef }) {
         ringVisible: !!ring?.visible,
         //  陣亡呈現的三個可查證訊號：地面標記亮起、本體橫躺、本體不透明度
         deathMarkVisible: !!deathMark?.visible,
-        //  polish-r2：陣亡標記的幾何形狀（CircleGeometry＝柔邊圓形印記；舊的四邊形是 RingGeometry 4 段）
+        //  Owner Review 2026-09-25：陣亡地面標記已移除 ⇒ 正常永遠是 false／null；欄位保留給既有截圖工具，並讓驗收能證明「沒有」。
         deathMarkShape: deathMark?.geometry?.type ?? null,
         bodyLyingDown: !!body && Math.abs(body.rotation.x) > 1,
         geometryType: geomType(body),

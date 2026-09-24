@@ -10,7 +10,7 @@
 //    V   技能家族層實戰中畫出（≥ 1 種；Workshop 另逐一驗 sky／lightning／slam／burst）
 //    SP  召喚師技能施放瞬間有特效（懲戒最穩定：每場打野一定會用）
 //    ST  狀態「上身瞬間」回饋真的出現（onset）
-//    D   陣亡地面標記是柔邊圓形（CircleGeometry），不再是四邊形
+//    D   英雄陣亡後地面沒有任何陣亡標記（場上確實有人陣亡時驗證）
 //    H   野怪死亡時血條先扣到 0 再消失（drain 幀數 > 0）
 //    RS  離開 → 首頁「返回進行中的比賽」→ 時間接續前進、沒有倒退
 //    R   Replay：1×／2×／4× 都在前進
@@ -32,7 +32,7 @@ const result = await runGate({
     const clickText = (t) => chrome.evaluate(VIS + "const el=[...document.querySelectorAll('button')].filter(vis).find(b=>(b.innerText||'').trim()===" + JSON.stringify(t) + "||(b.innerText||'').includes(" + JSON.stringify(t) + ")); if(el) el.click(); return JSON.stringify(!!el);");
     const clickExact = (t) => chrome.evaluate(VIS + "const el=[...document.querySelectorAll('button')].filter(vis).find(b=>(b.innerText||'').trim()===" + JSON.stringify(t) + "); if(el) el.click(); return JSON.stringify(!!el);");
     const shot = async (name) => { const s = await chrome.send("Page.captureScreenshot", { format: "png" }); writeFileSync(`${OUT}/${name}.png`, Buffer.from(s.data, "base64")); };
-    const diag = () => ev("const d=window.__ESMO_RUNTIME_DIAG?window.__ESMO_RUNTIME_DIAG():null; const v=window.__HERO_VFX_DIAG?window.__HERO_VFX_DIAG():null; const s=window.__HERO_STATUS_FX_DIAG?window.__HERO_STATUS_FX_DIAG():null; return JSON.stringify(d?{ts:d.ts,heroes:d.heroCount,vfx:v,status:s,drain:window.__NEUTRAL_HP_DRAIN||0,marks:(d.heroRenderDiagnostics||[]).map(h=>({v:h.deathMarkVisible,shape:h.deathMarkShape}))}:null);");
+    const diag = () => ev("const d=window.__ESMO_RUNTIME_DIAG?window.__ESMO_RUNTIME_DIAG():null; const v=window.__HERO_VFX_DIAG?window.__HERO_VFX_DIAG():null; const s=window.__HERO_STATUS_FX_DIAG?window.__HERO_STATUS_FX_DIAG():null; return JSON.stringify(d?{ts:d.ts,heroes:d.heroCount,vfx:v,status:s,drain:window.__NEUTRAL_HP_DRAIN||0,marks:(d.heroRenderDiagnostics||[]).map(h=>({v:h.deathMarkVisible,shape:h.deathMarkShape,down:h.bodyLyingDown}))}:null);");
     const clock = () => ev("const h=document.querySelector('[data-testid=\"battle-hud\"]'); const m=(h&&h.innerText||'').match(/(\\d+):(\\d\\d)/); return JSON.stringify(m?Number(m[1])*60+Number(m[2]):null);");
     const inBattle = "document.querySelector('[data-testid=\"battle-hud\"]') && document.querySelector('canvas')";
 
@@ -77,11 +77,11 @@ const result = await runGate({
         ck(`${L}｜P${rate} ${rate}× 對戰在跑（十名英雄、時間前進）`, a?.heroes === 10 && b?.ts > a?.ts, `${a?.ts?.toFixed?.(1)} → ${b?.ts?.toFixed?.(1)}`);
       }
       //  4× 取樣 90 秒（≈ 6 模擬分）：打野第一輪清野＝懲戒、野怪死亡、第一波交戰的狀態
-      let last = null, deadSeen = 0; const shapes = new Set();
+      let last = null, deadSeen = 0, markSeen = 0; const shapes = new Set();
       const t0 = Date.now();
       while (Date.now() - t0 < 90000) {
         const d = await diag();
-        if (d) { last = d; for (const m of d.marks ?? []) { if (m.shape) shapes.add(m.shape); if (m.v) deadSeen++; } }
+        if (d) { last = d; for (const m of d.marks ?? []) { if (m.shape) shapes.add(m.shape); if (m.v) markSeen++; if (m.down) deadSeen++; } }
         await sleep(700);
       }
       await shot(`${L}-battle-4x`);
@@ -90,7 +90,7 @@ const result = await runGate({
       ck(`${L}｜SP1 懲戒施放瞬間有特效（落雷打在野怪上）`, (last?.vfx?.spells?.smite ?? 0) > 0, JSON.stringify(last?.vfx?.spells));
       const onsets = Object.keys(last?.status?.seen ?? {}).filter((k) => k.startsWith("onset:"));
       ck(`${L}｜ST1 狀態上身瞬間有回饋（onset ≥ 1 種）`, onsets.length >= 1, JSON.stringify(last?.status?.seen));
-      ck(`${L}｜D1 陣亡地面標記是柔邊圓形（CircleGeometry），沒有四邊形 RingGeometry`, shapes.size > 0 && [...shapes].every((s) => s === "CircleGeometry"), `${[...shapes].join(",")}／看到陣亡標記 ${deadSeen} 次`);
+      ck(`${L}｜D1 英雄陣亡後地面沒有陣亡標記（取樣期間確實有人倒地）`, deadSeen > 0 && markSeen === 0 && shapes.size === 0, `倒地樣本 ${deadSeen}／標記可見 ${markSeen}／標記幾何 ${[...shapes].join(",") || "無"}`);
       ck(`${L}｜H1 野怪死亡時血條先扣到 0 再消失（drain 幀數 > 0）`, (last?.drain ?? 0) > 0, `drain frames ${last?.drain}`);
 
       //  RS：離開 → 返回進行中的比賽 → 時間接續

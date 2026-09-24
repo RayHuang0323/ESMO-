@@ -47,33 +47,14 @@ const TEAM_DARK = { blue: 0x1d3f6b, red: 0x6b2420 };
  *   · **降飽和**：隊色往灰色拉 60%，仍看得出藍／紅，但明顯褪色
  *   · **適度透明**：0.55（不是 0.28）——夠淡但不會消失
  *   · 血條、選取環、肩塊照樣隱藏
- *   · **地面陣亡標記**：柔邊圓形隊色印記（原本的四邊形外框看起來像殘留方塊，已換掉），
- *     比選取環大一圈 ⇒ 遠看仍讀得出「這裡有人陣亡」
+ *   · **沒有地面陣亡標記**（Owner Review 2026-09-25）：死亡後地面上不留任何常駐符號。
+ *     陣亡由倒地本體、擊殺事件、HUD／Timeline、復活倒數表達；不要再換成另一種地面符號。
  *   · 名牌不再全隱藏，改為半透明＋去飽和 ⇒ 全圖視角仍認得出是誰陣亡
  */
 const TEAM_DEAD = { blue: 0x718fb3, red: 0xaf726e };   // 隊色混 60% 灰
-//  陣亡印記貼圖（共用一張，懶建立）：白色 alpha 漸層，隊色由 material.color 乘上。
-//  中心 0.18 → 0.72 處一圈最亮 0.9 → 邊緣 0 ⇒ 看起來是「倒下處一圈暈開的光痕」，沒有硬邊。
-let _deathMarkTex = null;
-function deathMarkTexture() {
-  if (_deathMarkTex || typeof document === "undefined") return _deathMarkTex;
-  const c = document.createElement("canvas"); c.width = c.height = 128;
-  const g = c.getContext("2d");
-  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-  grad.addColorStop(0, "rgba(255,255,255,0.18)");
-  grad.addColorStop(0.55, "rgba(255,255,255,0.4)");
-  grad.addColorStop(0.72, "rgba(255,255,255,0.9)");
-  grad.addColorStop(0.86, "rgba(255,255,255,0.35)");
-  grad.addColorStop(1, "rgba(255,255,255,0)");
-  g.fillStyle = grad; g.fillRect(0, 0, 128, 128);
-  _deathMarkTex = new THREE.CanvasTexture(c);
-  _deathMarkTex.colorSpace = THREE.SRGBColorSpace;
-  return _deathMarkTex;
-}
 
 const DEAD = Object.freeze({
   bodyOpacity: 0.55,
-  markOpacity: 0.62,
   labelOpacity: 0.5,
 });
 
@@ -97,7 +78,7 @@ const DEAD = Object.freeze({
  *   要正確處理需要「地形高度查詢」，那會動到地圖資料層 ⇒ 留給 H.2。
  */
 const GROUND_Y = Number.isFinite(LAYER_Y.lane_surface) ? LAYER_Y.lane_surface : 0;
-const RING_LIFT = 0.35;        // 地面元素（接地陰影／陣亡標記）相對英雄根節點的高度（壓過 tower_pad 0.94）
+const RING_LIFT = 0.35;        // 地面元素（接地陰影）相對英雄根節點的高度（壓過 tower_pad 0.94）
 
 /** 英雄本體尺寸（模擬單位 × WORLD_SCALE）。 */
 const HERO = {
@@ -142,10 +123,6 @@ export default function MobaRuntimeHeroes({
     //    HeroVfxRuntime 負責（短暫出現、跟著技能走），不在這裡。
     contactShadow: new THREE.CircleGeometry(HERO.ringR * 0.92, 18),
     mote: new THREE.OctahedronGeometry(HERO.radius * 0.22, 0),
-    //  陣亡標記：原本是**四邊形**外框（4 段 RingGeometry，實際看起來是一個菱形／方框），
-    //  Owner Review 認為像殘留的除錯方塊。用途（「這裡有人陣亡」）保留，改成柔邊圓形地面印記：
-    //  中心淡、邊緣一圈隊色暈開（貼圖在 deathMarkTexture），比選取環大一圈、沒有硬邊。
-    deathMark: new THREE.CircleGeometry(HERO.ringR * 1.55, 40),
     bar: new THREE.PlaneGeometry(1, 1),
     shield: new THREE.CylinderGeometry(HERO.radius * 0.78, HERO.radius * 0.78, HERO.radius * 0.3, 8),
     blade: new THREE.BoxGeometry(HERO.radius * 0.22, HERO.height * 0.92, HERO.radius * 0.18),
@@ -192,7 +169,6 @@ export default function MobaRuntimeHeroes({
       //  陣亡本體：**去飽和的隊色** + 0.55 透明（0.28 太淡，全場視角等於消失）
       blueDead: mk(TEAM_DEAD.blue, { transparent: true, opacity: DEAD.bodyOpacity }),
       redDead: mk(TEAM_DEAD.red, { transparent: true, opacity: DEAD.bodyOpacity }),
-      //  陣亡地面標記（四邊形外框，不受光，遠近都讀得到）
       //  ── H.2-flicker：貼在地面上的環與標記一律加 polygonOffset ────────────────
       //  這些東西和地形**幾乎共面**（選取環只抬 0.35 世界單位、塔環 0.11、目標環 0.09）。
       //  只靠這點高度差要在深度緩衝裡分開，在 16-bit 的手機 context 上是不可能的
@@ -200,8 +176,6 @@ export default function MobaRuntimeHeroes({
       //  polygonOffset 的單位是**深度緩衝的最小可解析差**，不是世界單位
       //  ⇒ 不管 16-bit 還是 24-bit 都會被推到地形前面，這是貼花的標準解法。
       //  ⚠ 刻意**不**關 depthTest：關掉的話環會穿透牆與塔畫在最上層，那是遮蔽錯誤。
-      markBlue: new THREE.MeshBasicMaterial({ map: deathMarkTexture(), color: TEAM_DEAD.blue, transparent: true, opacity: DEAD.markOpacity, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
-      markRed: new THREE.MeshBasicMaterial({ map: deathMarkTexture(), color: TEAM_DEAD.red, transparent: true, opacity: DEAD.markOpacity, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
       //  接地陰影：不帶隊色、不發光。它的工作只有「讓角色踩在地上」。
       contactShadow: new THREE.MeshBasicMaterial({
         color: 0x05080d, transparent: true, opacity: 0.32, side: THREE.DoubleSide,
@@ -263,7 +237,7 @@ export default function MobaRuntimeHeroes({
       const {
         root, body, shoulder, accessory, signature, headFeature, classLanguage,
         badge, crest, teamBand, contactShadow, aura, motes,
-        bar, deathMark, hitMarker, label, bodyAliveMaterial, secondaryAliveMaterial,
+        bar, hitMarker, label, bodyAliveMaterial, secondaryAliveMaterial,
         proxyReady,
       } = node;
       const hitFx = effects.find((fx) => String(fx.targetId ?? "") === h.id && fx.phase === "impact");
@@ -393,11 +367,6 @@ export default function MobaRuntimeHeroes({
           }
         }
       }
-      //  地面陣亡標記：只有死亡時出現，是「還認得出這裡有人陣亡」的主要線索
-      if (deathMark) {
-        deathMark.visible = !h.alive;
-        deathMark.material = h.team === "blue" ? mats.markBlue : mats.markRed;
-      }
       bar.parent.visible = h.alive;
       //  【H.1-close 修正 ①】原本寫 `bar.scale.x = hpRatio`，把 JSX 裡設好的
       //  **世界寬度 HERO.barW 整個蓋掉** ⇒ 滿血血條只有 1 個世界單位寬（背板是 5.8），
@@ -449,7 +418,6 @@ function HeroUnit({ hero, geo, mats, frameRef, showLabel, compactLabel, register
   const contactShadowRef = useRef();
   const auraRef = useRef();
   const motesRef = useRef();
-  const deathMarkRef = useRef();
   const accessoryRef = useRef();
   const signatureRef = useRef();
   const headFeatureRef = useRef();
@@ -501,7 +469,7 @@ function HeroUnit({ hero, geo, mats, frameRef, showLabel, compactLabel, register
       contactShadow: contactShadowRef.current,
       aura: auraRef.current,
       motes: motesRef.current,
-      bar: barRef.current, deathMark: deathMarkRef.current,
+      bar: barRef.current,
       hitMarker: hitMarkerRef.current,
       label: labelRef.current,
       bodyAliveMaterial: bodyMaterial,
@@ -562,11 +530,6 @@ function HeroUnit({ hero, geo, mats, frameRef, showLabel, compactLabel, register
             renderOrder={13} frustumCulled={false} />
         ))}
       </group>
-      {/* 陣亡地面標記（柔邊圓形印記；只有死亡時 visible，見 useFrame）*/}
-      <mesh ref={deathMarkRef} geometry={geo.deathMark}
-        material={team === "blue" ? mats.markBlue : mats.markRed}
-        position={[0, RING_LIFT, 0]} rotation={[-Math.PI / 2, 0, 0]}
-        visible={false} frustumCulled={false} userData={{ part: "hero-death-mark" }} />
       {/* 本體（膠囊） */}
       <mesh ref={bodyRef} geometry={geo.body} material={bodyMaterial}
         scale={resolvedVisual.scale ?? archetype.bodyScale}

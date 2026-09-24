@@ -23536,3 +23536,20 @@ SIMULATION_VERSION = moba-sim.v10（skill-on 語意變化；skill-off 與 v9 逐
 MOBA_COMBAT_POLISH_R2 = LOCAL_COMMIT_ONLY（未 push、未 deploy）
 SIMULATION_VERSION = moba-sim.v11（skill-on 語意變化；skill-off 與 v10 逐位元相同）
 ```
+
+
+### 2026-09-25 Owner Review 修正：移除英雄陣亡地面標記（base `88efb86`）
+
+- Owner 原意是「陣亡地面標記本身沒有必要」，不是把方框換成圓圈 ⇒ `MobaRuntimeHeroes.jsx` 移除陣亡印記的幾何、材質、共用貼圖、mesh 與每幀切換；**不換成任何其他地面符號**。
+  Battle 與 Replay 共用同一個元件 ⇒ 兩邊一起移除。
+- 保留：擊殺事件、HUD／Timeline、倒地去飽和本體、半透明名牌、復活倒數、接地陰影（活著時也存在的中性陰影）、技能與狀態特效。simulation 未改。
+- 診斷 `deathMarkVisible`／`deathMarkShape` 欄位保留（既有截圖工具會讀），現在正常值是 false／null。
+- 驗證：`npm run build` ✓；`check_moba_combat_polish_r2` 31/31（D1 改守「沒有 deathMark／hero-death-mark」、D2 陣亡本體仍在）；
+  `browser_check_moba_combat_polish_r2` **40/40**（D1：桌機與 390 各取樣到 30 次倒地、陣亡標記可見 0、標記幾何 無）；
+  `browser_check_moba_spectacle_vision` **43/43**；spectacle 21/21、milestone_i_close 44/44、simulationVersion 51/51。
+- `check_moba_runtime_flicker_h2`（真 GPU，mobile）25/31：6 項紅燈**在 `88efb86`（移除前）乾淨 worktree 上完全相同**（英雄／血條逐幀消失、geometry 後半成長、texture 增長、
+  16-bit 深度 Δz、正交相機距離 700 的結構裁切判定）⇒ 既有紅燈，非本次回歸，本輪未處理。移除後 texture 數少 6（陣亡印記貼圖不再建立）。
+
+後續議題（本輪只記錄、未修改）：
+1. Damage skills 目前不會命中兵線小兵 ⇒ 需要獨立的 Lane Ability Interaction Sprint 評估（清線節奏、公平性、版本號）。
+2. Smite 550 高於部分 camp 總血（小營 280、Buff 營 420）⇒ 需要獨立的 jungle pacing／balance audit。

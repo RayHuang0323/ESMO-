@@ -6,7 +6,7 @@
 //  O  skill-off 不受影響：objIdleFixV1 開／關，skill-off 的 snapshot 串流逐位元相同
 //  V  模擬版本：moba-sim.v11 為目前版本、v10 保留（指紋不變）、跨版本拒絕重播
 //  C  分營最後一隻：根因事實（懲戒傷害 > 整營總血 ⇒ 會從高血量一擊斃命）＋呈現層有「死亡時扣到 0」
-//  D  陣亡標記改為柔邊圓形（沒有 4 段 RingGeometry）
+//  D  陣亡地面標記整個移除（Owner Review 2026-09-25：不換成任何其他地面符號）
 //  RS 恢復進行中比賽：分塊追趕（無同步 while 迴圈）、追趕期間不存檔、進度提示；分塊與一次跑完結果逐位元相同
 //  T  對話：決定性、有冷卻、不洗版、不連續重複同一句、新情境真的觸發、個性／位置句子池
 //  F  特效：burst 家族、召喚師技能施放特效（smite／ignite）、狀態上身／護盾破裂回饋、adapter 帶 spells
@@ -122,8 +122,9 @@ ck("W2 >90° 轉向（每 100 樣本）至少減半", wOn.bigTurnPer100 <= wOff.
 // ── D：陣亡標記 ───────────────────────────────────────────────────────────────
 {
   const H = read("src/battle/moba/render/MobaRuntimeHeroes.jsx");
-  ck("D1 陣亡標記改為柔邊圓形 CircleGeometry＋漸層貼圖，沒有 4 段 RingGeometry", /deathMark: new THREE\.CircleGeometry/.test(H) && !/deathMark: new THREE\.RingGeometry/.test(H) && /deathMarkTexture\(\)/.test(H));
-  ck("D2 診斷仍保留 hero-death-mark 部位（既有驗收讀值不斷）", /part: "hero-death-mark"/.test(H));
+  const code = H.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  ck("D1 英雄陣亡地面標記已移除（沒有 deathMark 幾何／材質／mesh、沒有 hero-death-mark 部位）", !/deathMark|markBlue|markRed|hero-death-mark/.test(code));
+  ck("D2 陣亡仍有本體表現（倒地＋去飽和材質 blueDead／redDead）", /blueDead/.test(code) && /redDead/.test(code));
 }
 
 // ── RS：恢復 ──────────────────────────────────────────────────────────────────
