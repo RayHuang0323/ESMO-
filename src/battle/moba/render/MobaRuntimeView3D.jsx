@@ -28,6 +28,9 @@ import HeroVfxRuntime from "../skills/HeroVfxRuntime.jsx";
 import SkillCastCallouts from "./SkillCastCallouts.jsx";
 import TowerRangeDebug from "../presentation/TowerRangeDebug.jsx";
 import MobaRuntimeNeutrals from "./RiggedMobaRuntimeNeutrals.jsx";
+import HeroStatusFx from "./HeroStatusFx.jsx";
+import FogOverlay from "./FogOverlay.jsx";
+import { applyFogToFrame } from "../presentation/fogOfWar.js";
 import BattleCameraController from "../../ui/BattleCameraController.jsx";
 import { useCameraStore } from "../../cameraStore.js";
 import { blendRuntimePosition } from "./runtimeMovementPolicy.js";
@@ -278,7 +281,7 @@ function RuntimeCameraInput({ ctrl }) {
  * 每幀把 store 的 prev→snapshot 內插結果餵給 Adapter。
  * ⚠ 內插只做位置；hp / alive / 等級一律用最新 snapshot 的值（不內插狀態）。
  */
-function RuntimeFrameFeeder({ frameRef, onShapeChange, lockHeroId, lockTarget, source, roster, playbackRateRef }) {
+function RuntimeFrameFeeder({ frameRef, onShapeChange, lockHeroId, lockTarget, source, roster, playbackRateRef, fogRef }) {
   //  source 缺省 = 現場對戰的 useGameStore；Replay 傳入 replayPresentationSource，
   //  兩者都只需要 getState() → { prev, snapshot, subTRef } ⇒ **同一條 Adapter 路徑**，
   //  不會出現第二套座標轉換。
@@ -355,6 +358,8 @@ function RuntimeFrameFeeder({ frameRef, onShapeChange, lockHeroId, lockTarget, s
     //  ⚠ 位置每幀都會變，但**掛載結構**（有哪些英雄／塔、誰死了、幾級）很少變。
     //    位置走 frameRef（不觸發 React），只有結構變了才 setState 重掛
     //    ⇒ 10 名英雄移動不會每幀重建整張地圖。
+    //  feature/moba-spectacle-vision：戰爭迷霧是**這一幀的衍生結果**（見 fogOfWar.js），不是另一份 state。
+    if (fogRef && fogRef.current !== "off") applyFogToFrame(frame, fogRef.current);
     frameRef.current = frame;
     const sig = `${frame.heroes.map((h) => {
       const timed = [...(h.buffs ?? []), ...(h.statusEffects ?? [])]
@@ -404,10 +409,17 @@ export default function MobaRuntimeView3D({
   //  卻一直擋住血條與技能特效。身分資訊改由 HUD 十人列、Hero Detail、Scoreboard 提供。
   //  觀戰／除錯（harness）要看名字時自己把它打開。
   heroNameplates = false,
+  //  feature/moba-spectacle-vision：戰爭迷霧的**視角方**（"off" ＝ 此畫面不支援迷霧，例如 debug harness）。
+  //  實際開關讀 cameraStore.fogOn（Battle／Replay 的「迷霧」按鈕）。只影響畫面，引擎與勝負完全不知道有迷霧。
+  fogSide = "off",
 }) {
+  const fogOn = useCameraStore((s) => s.fogOn);
+  const fog = fogSide !== "off" && fogOn ? fogSide : "off";
   const { towerAnchors } = useRuntimeMapData();
   const playbackRateRef = useRef(playbackRate);
   playbackRateRef.current = playbackRate;
+  const fogRef = useRef(fog);
+  fogRef.current = fog;
   //  frameRef = 每幀更新的最新資料（不觸發 React）；frame = 掛載用的結構快照
   const frameRef = useRef({ heroes: [], structures: [], objectives: [], warnings: [] });
   const [frame, setFrame] = useState(() => frameRef.current);
@@ -471,8 +483,11 @@ export default function MobaRuntimeView3D({
         showLabels={heroNameplates && quality !== "low"}
         compactLabels={compactLabels}
       />
+      <FogOverlay frameRef={frameRef} />
+      {/*  feature/moba-spectacle-vision：護盾／增益／減益／控制的角色附著效果（造型依類別不同）。 */}
+      <HeroStatusFx frameRef={frameRef} quality={quality} />
 
-      <RuntimeFrameFeeder frameRef={frameRef} onShapeChange={onShapeChange} lockHeroId={lockHeroId} lockTarget={lockTarget} source={source} roster={roster} playbackRateRef={playbackRateRef} />
+      <RuntimeFrameFeeder frameRef={frameRef} onShapeChange={onShapeChange} lockHeroId={lockHeroId} lockTarget={lockTarget} source={source} roster={roster} playbackRateRef={playbackRateRef} fogRef={fogRef} />
       <BattleCameraController source={source} perspective={RUNTIME_CAMERA} />
       <RuntimeCameraInput ctrl={ctrl} />
       <RuntimeDiagnosticsBridge frameRef={frameRef} />

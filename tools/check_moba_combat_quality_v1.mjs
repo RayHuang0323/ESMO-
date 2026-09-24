@@ -224,7 +224,8 @@ ck("D2 建築有進展（20 分鐘平均倒塔 ≥ 4）", agg.towersAt20 / SEEDS
 ck("D4 舊規則集（v1／v2）沒有新規則鍵 ⇒ 走舊路徑", !MP.SIM_RULES.v1.cqMinionV1 && !MP.SIM_RULES.v2.cqMinionV1 && !MP.SIM_RULES.v2.cqHeroFarmV1);
 
 console.log("\n── V 模擬版本 ──");
-ck("V1 模擬版本 bump 到 moba-sim.v9，舊版本保留", SV.MOBA_SIMULATION_VERSION === "moba-sim.v9" && SV.KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v8"));
+//  feature/moba-spectacle-vision（moba-sim.v10）起，v9 不再是目前版本；這條改守「v9 已登記、且仍保留 v8」。
+ck("V1 模擬版本曾 bump 到 moba-sim.v9，舊版本保留", SV.KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v9") && SV.KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v8"));
 ck("V2 v8 的歷史重播明確拒絕（不靜默用新語意重算）", SV.canReplay("moba-sim.v8").ok === false);
 
 if (!METRICS_ONLY) console.log(`\nMOBA Combat Quality v1：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);

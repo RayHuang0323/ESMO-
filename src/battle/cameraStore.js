@@ -25,6 +25,18 @@ import { create } from "zustand";
 import { WORLD_BOUNDS } from "../gameData.js";
 
 export const CAMERA_MODES = ["director", "free", "heroFocus", "objectiveFocus"];
+
+/**
+ * feature/moba-spectacle-vision：導播的**鏡頭選擇**（shot）。與 mode 正交：
+ *   auto      導播依情境換鏡（擊殺推近／團戰／交戰／物件／巡線），每個節拍至少停留一段時間
+ *   tactical  標準戰術視角（原本的導播取景）
+ *   close     近戰鏡頭：拉近並略壓低俯角
+ *   wide      全景：拉遠看全局
+ * 只影響取景，不影響模擬。
+ */
+export const CAMERA_SHOTS = ["auto", "tactical", "close", "wide"];
+export const CAMERA_SHOT_LABEL = Object.freeze({ auto: "導播", tactical: "標準", close: "近戰", wide: "全景" });
+export const CAMERA_BEAT_LABEL = Object.freeze({ punch: "擊殺特寫", fight: "團戰", skirmish: "交戰", objective: "物件", roam: "巡線" });
 export const HERO_FOCUS_MS = 4000;   // 點英雄聚焦時長（任務單：3–5 秒）
 
 /**
@@ -73,11 +85,18 @@ export const useCameraStore = create((set) => ({
   heroId: null,          // heroFocus 目標（引擎 id：b1–b5 / r1–r5）
   focusUntil: 0,         // heroFocus 到期（performance.now() 毫秒）
   savedFreeView: null,   // 自動導播開啟前的自由視角；關閉時精確恢復
+  shot: "auto",          // feature/moba-spectacle-vision：導播鏡頭選擇（見 CAMERA_SHOTS）
+  beat: "roam",          // auto 時目前的節拍（只在變化時寫入，給按鈕顯示與驗收讀）
+  fogOn: true,           // 戰爭迷霧顯示（觀戰畫面偏好；引擎不知道有迷霧）
 
   // ── S29B6：pan/zoom 單一狀態源 ──────────────────────────────────────────
   pan: { ...CENTER },    // 鏡頭看向的**邏輯世界座標**（clamp 於 WORLD_BOUNDS）
   zoom: 3.4,             // 正交 zoom（clamp 於 ZOOM_MIN..ZOOM_MAX）
 
+  setShot: (shot) => set((s) => (CAMERA_SHOTS.includes(shot) && s.shot !== shot ? { shot } : s)),
+  cycleShot: () => set((s) => ({ shot: CAMERA_SHOTS[(CAMERA_SHOTS.indexOf(s.shot) + 1) % CAMERA_SHOTS.length] })),
+  setBeat: (beat) => set((s) => (s.beat === beat ? s : { beat })),
+  toggleFog: () => set((s) => ({ fogOn: !s.fogOn })),
   setMode: (mode) => set((s) => (s.mode === mode ? s : { mode, ...(mode !== "heroFocus" ? { heroId: null } : {}) })),
   focusHero: (heroId, ms = HERO_FOCUS_MS) =>
     set({ mode: "heroFocus", heroId, focusUntil: performance.now() + ms }),

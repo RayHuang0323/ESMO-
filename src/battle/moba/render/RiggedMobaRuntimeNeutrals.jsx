@@ -88,7 +88,7 @@ function NeutralGroup({ objective, asset, frameRef, gltf, shadow }) {
 }
 
 function NeutralCreature({ objective, memberId, index, asset, gltf, frameRef, shadow }) {
-  const root = useRef(), visual = useRef(), hp = useRef(), hpRoot = useRef(), contact = useRef();
+  const root = useRef(), visual = useRef(), hp = useRef(), hpRoot = useRef();
   const reducedMotion = useReducedBattleMotion();
   const previous = useRef(null);
   const boss = objective.type === 'dragon' || objective.type === 'baron';
@@ -139,14 +139,11 @@ function NeutralCreature({ objective, memberId, index, asset, gltf, frameRef, sh
     previous.current = { ts, x: p.x, z: p.z };
     hpRoot.current.visible = !!entity.alive && (boss || entity.hpRatio < 1 || !!entity.targetId);
     hpRoot.current.quaternion.copy(camera.quaternion);
-    // A compact contact cue belongs to this real attack, not an invented area-of-effect.
-    // One preallocated ring per creature; hidden on death, seek-away or idle.
+    // feature/moba-spectacle-vision: the gold ground "contact ring" was removed. It lit up whenever the
+    // creature attacked or was hit, i.e. almost continuously while jungling, and read as a persistent
+    // ring under the camp. Attack/hit now read from the creature itself (weight shift + Hit blend below).
     const attacking = pose.clip === 'Attack' && entity.alive;
-    contact.current.visible = attacking || pose.hit !== null;
     const impact = attacking ? Math.sin(Math.PI * Math.min(1, pose.time / .45)) : 0;
-    const radius = Math.max(1.2, top * .22) * (reducedMotion ? 1 : 1 + impact * .18);
-    contact.current.scale.set(radius, radius, 1);
-    contact.current.material.opacity = reducedMotion ? .38 : pose.hit !== null ? .55 : .3 + impact * .25;
     // Cosmetic weight shift only. Root world position remains exactly the saved entity world.
     visual.current.position.y = reducedMotion || !attacking ? 0 : -impact * top * .025;
     const ratio = Math.max(0, Math.min(1, entity.hpRatio ?? 0));
@@ -163,10 +160,6 @@ function NeutralCreature({ objective, memberId, index, asset, gltf, frameRef, sh
     model.mixer.update(0);
   });
   return <group ref={root} visible={false} userData={{ objectiveId: objective.id, memberId, part: 'dynamic-neutral-member' }}>
-    <mesh ref={contact} visible={false} rotation={[-Math.PI / 2, 0, 0]} position={[0, .18, 0]}>
-      <ringGeometry args={[.86, 1, 20]} />
-      <meshBasicMaterial color="#e5b85c" transparent opacity={.4} depthWrite={false} side={THREE.DoubleSide} polygonOffset polygonOffsetFactor={-2} />
-    </mesh>
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, .1, 0]} scale={[top * 1.3, top * 1.1, 1]}>
       <planeGeometry args={[1, 1]} />
       <meshBasicMaterial map={shadow} transparent depthWrite={false} polygonOffset polygonOffsetFactor={-2} />

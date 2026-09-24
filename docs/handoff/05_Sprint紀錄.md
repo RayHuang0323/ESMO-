@@ -23376,3 +23376,77 @@ HOTFIX_CS_LOADING_REST_UX = LOCAL_COMMIT_ONLY（未 push、未 deploy）
 ```text
 HOTFIX_CS_LOADING_REST_UX = RELEASED（main 9757858 起）
 ```
+
+## MOBA Spectacle ＋ Vision（2026-09-24，branch `feature/moba-spectacle-vision`，基準 main `b706c08`）
+
+先 Audit 再改；只動正式 MOBA runtime（`MobaRuntimeView3D` 路徑），不碰 legacy。沒有第二套 battle／replay／visibility state，
+presentation 不回寫戰鬥結果，Competitive 維持 disabled，未做 Online Backend。
+
+### 1. 技能特效（create-game-vfx audit 後依效果選技術，不再全靠地面環＋Bloom）
+
+- Audit：具名技能由 `HeroVfxRuntime` 的 5 個 instanced pool 畫（地面環面／球殼／八面體碎片／長條／直立火焰面），
+  `skillChoreography` 有 407 個 motif；存在感原本幾乎都靠地面環＋既有 Bloom。Post-processing **不加**（Bloom 維持原上限）。
+- 新增依 motif 名稱的**家族層**（`spectacleFamilyOf`，純呈現）：
+  - 天降 sky（16 個 motif，如 meteor／star-rain／phantom-rain）：高空下墜核心＋直立火焰尾 → 落地光柱＋向上碎片（唯一保留一個淡的落點預告）
+  - 落雷 lightning（15）：鋸齒雷柱閃 2–3 下 → 命中火花
+  - 砸地 slam（30）：放射狀地裂條＋向上碎石＋低矮煙塵
+  - 彈道 trail（37）：更長更亮的拖尾
+  - 其餘 motif 保留原編排；具名技能飽和度略升（HSL ×1.15）。reduced motion 不加家族層。Workshop 預覽同步套用。
+
+### 2. 護盾／增益／減益／控制
+
+- Audit：snapshot 早有 18 種 `statusEffects`，但英雄身上沒有持續表現、HUD 只認得 4 種（其餘顯示英文 id）。
+- 共用對照表 `presentation/heroStatusMeta.js`（類別、中文、圖示、顏色、優先序）＋ `render/HeroStatusFx.jsx`（角色附著、5 個 instanced pool）：
+  護盾＝多面體護殼（fresnel）、減傷＝環繞護甲板、加速＝速度拖尾、強化＝上升火星、減速＝腳邊冰晶、點燃＝火焰、
+  定身＝腳下尖刺、暈眩／擊飛＝頭頂旋轉星星、沉默／嘲諷／標記／冷卻／免控／隱身＝頭頂圖示（atlas billboard）。
+- HUD：英雄列依優先序顯示 2 個狀態（圖示＋類別色），英雄面板全部狀態（類別邊條＋中文）。
+
+### 3. 野怪底下圈圈
+
+- Root cause：正式 runtime 用的是 `RiggedMobaRuntimeNeutrals`（上一輪只清了 legacy 的 `MobaRuntimeNeutrals`）。
+  ① `MobaRuntimeStructures` 在**每個營地／大型目標底下常駐**一圈存活狀態環（`objective-ring`，存活金色、陣亡灰色）；
+  ② rigged 野怪自帶金色 contact ring，攻擊或被打時亮起——打野時幾乎一直亮。
+- 處理：兩者移除（存活／重生由本體與名牌「重生 Ns」表達；攻擊／受擊由本體動畫表達）。塔底座的隊伍環不在範圍，保留。
+
+### 4. 戰爭迷霧（最小可行）
+
+- `presentation/fogOfWar.js`：**本幀衍生**（RuntimeFrameFeeder 對同一份 adapter frame 呼叫），不是另一份 state。
+  視野來源（模擬座標）：我方英雄 27、小兵 22、塔 30、主堡 34（比例對齊 LoL 英雄視野≈地圖寬 8%）。
+  迷霧中敵方英雄隱藏（`fogHidden`，不改掛載結構）、敵方小兵與迷霧中特效移除；建築／野怪維持可見。
+- `render/FogOverlay.jsx`：一張地面平面＋shader，視野圈內透明、邊緣柔和、圈外壓暗。
+- Battle 與 Replay 都是 blue 視角、預設開；`🌫 迷霧` 按鈕切換（關＝全圖）。狀態在既有 `cameraStore.fogOn`。
+
+### 5. 英雄打野怪／物件不施法（simulation change → moba-sim.v10）
+
+- Root cause：傷害技能的目標只找射程內的**敵方英雄**、命中也只算英雄 ⇒ 打野怪／龍／巴龍時永遠不施法（A/B 實測 **0 次**）。
+  另外普攻打物件是按秒連續扣血，呈現上每秒一條彈道、打龍只畫 2 人、推塔完全沒有攻擊特效。
+- 修正（v3 規則鍵 `objSkillV1`／`objSkillDmgK = 1`，且只在 hero skills 開啟時）：射程內沒有敵方英雄、但正在打中立目標
+  （營地沿用「打野位、≤ 3.5」；龍／巴龍 < 9）⇒ 對它施放有傷害、不位移的技能；傷害走既有 `applyMemberHits`／歸屬路徑。
+  塔仍只吃普攻。推塔每秒一條普攻特效、打龍／巴龍全員彈道。
+- A/B（20 組×5 seeds 鏡像、skills on、各 100 場）：對物件施法 0 → 111／場；打英雄施法 1215 → 1200；首營 118.7 → 98.7 秒；
+  龍 4.37 → 5.37／場；平均時長 21.6 → 21.3 分；倒塔 15.4 → 15.4。沒有為了湊數字調 `objSkillDmgK`。
+- 版本：`moba-sim.v10`（指紋 `27dc4e0161024c06`），v1–v9 保留並由 `canReplay` 拒絕跨版重播。
+  skill-off 的 snapshot 串流與 v9 逐位元相同（`check_moba_items_m2` G1 53/53）。
+  `check_moba_combat_quality_v1` V1 的版本 tripwire 改守「v9 已登記、v8 保留」（v10 起 v9 不再是目前版本）。
+
+### 6. 鏡頭
+
+- `cameraStore.shot`：導播／標準／近戰／全景（`🎬` 按鈕循環，Battle 與 Replay 共用 `BattleViewControls`）。
+- 導播節拍（auto）：擊殺特寫（zoom ×1.85、俯角壓低 9°）／團戰 ×1.45／交戰 ×1.22／物件 ×1.12／巡線 ×0.92。
+  防暈眩：節拍至少停留 3.2 **真實**秒（擊殺特寫 1.5 秒）、zoom 與俯角慢速插值、yaw 不動。
+
+### 驗證（全部實跑）
+
+- `npm run build` ✓；新增 `check_moba_spectacle_vision` **21/21**；`browser_check_moba_spectacle_vision` **43/43**
+  （桌機＋390、1×/2×/4×、Battle＋Replay、Workshop 天降／落雷／砸地、迷霧開關、四種鏡頭 zoom、野怪環普查 0、打野施法、page／console error 0）。
+- `check_simulation_version_gate` 51/51、Hero Skills phase1 10/10、round2 410/410、gameplay slice 68/68、base assault ✓、
+  **release gate PASS**（skill-on 100 場：藍 48%／紅 52%、未完賽 0、病態 0、中位 21.5 分）、`check_moba_combat_quality_v1` 28/28、
+  `check_moba_milestone_i_close` 44/44、D／D-fix2 ✓、`check_moba_items_m2` 53/53、Challenge slice2 79/79、slice4 60/60、
+  `check_battle_condition_ux` 40/40、`check_hotfix_cs_loading_rest_ux` 18/18、condition／squad ✓、regress 15/15、regress2 8/8。
+- verify.mjs：`runtime29`、`experience26`（重播）、`tactic24` ✓。
+- `check_hero_skills_pacing_baseline` 需要固定在 `dc520f1` 的唯讀基線 worktree（`--baseline-root`），是 Hero Skills 當時的量測工具，本輪未跑。
+
+```text
+MOBA_SPECTACLE_VISION = LOCAL_COMMIT_ONLY（未 push、未 deploy）
+SIMULATION_VERSION = moba-sim.v10（skill-on 語意變化；skill-off 與 v9 逐位元相同）
+```

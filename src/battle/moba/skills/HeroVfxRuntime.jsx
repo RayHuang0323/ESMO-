@@ -69,17 +69,41 @@ void main() {
   #include <colorspace_fragment>
 }`;
 
+// ── feature/moba-spectacle-vision：技能家族（依 motif 名稱）──────────────────────
+//  create-game-vfx audit：原本存在感幾乎都靠地面環＋Bloom。這裡依技能「怎麼打下來」補次要效果，
+//  而且**不加地面環**（只有 sky 家族保留一個淡的落點預告）：
+//    sky        從天而降（meteor／rain／skyfall…）：高空落下的核心＋直立火焰尾 → 落地光柱＋向上碎片
+//    lightning  落雷（thunder／lightning／storm／volt…）：鋸齒雷柱閃 2–3 下 → 命中火花
+//    slam       砸地（stomp／quake／crash／fist／eruption…）：放射狀地裂條＋向上碎石＋低矮煙塵
+//    trail      彈道（arrow／bolt／lance／shot／volley／pierce…）：更長、更亮的拖尾
+//  純呈現；讀同一份事件，不回寫任何戰鬥狀態。reduced motion ⇒ 不加這一層。
+const SPECTACLE_FAMILY = [
+  ['sky', /meteor|rain|skyfall|starfall|glacier-drop|sky-judgment|comet|doomsday|judgment-rain|star-rain/],
+  ['lightning', /thunder|lightning|storm|volt|shock|arc-bolt|railburst/],
+  ['slam', /stomp|quake|crash|impact|fist|fissure|break|eruption|slam|maul|roar|fault|punch|granite|rampart|fortress|earth/],
+  ['trail', /arrow|bolt|lance|shot|round|volley|pierce|spear|sting|beam|salvo|dart/],
+];
+const familyCache = new Map();
+export function spectacleFamilyOf(motif) {
+  if (!motif) return null;
+  if (!familyCache.has(motif)) familyCache.set(motif, SPECTACLE_FAMILY.find(([, re]) => re.test(motif))?.[0] ?? null);
+  return familyCache.get(motif);
+}
+const hash01 = (x, k) => { const v = Math.sin(x * 12.9898 + k * 78.233) * 43758.5453; return v - Math.floor(v); };
+
 export default function HeroVfxRuntime({ frameRef, previewRef, quality = 'high', reducedMotion = false, diagnosticsRef }) {
   const meshes = useRef([]);
   const systemReduced = useReducedBattleMotion();
   useEffect(() => { countMount('heroVfxRuntime'); return () => countUnmount('heroVfxRuntime'); }, []);
-  const scratch = useMemo(() => ({ object: new THREE.Object3D(), color: new THREE.Color(), sample: {},
+  const scratch = useMemo(() => ({ object: new THREE.Object3D(), color: new THREE.Color(), sample: {}, hsl: { h: 0, s: 0, l: 0 },
     counts: [0, 0, 0, 0, 0], dropped: 0, activeFrames: 0, namedFrames: 0, namedDrawnFrames: 0,
-    fusion: { core: 0, halo: 0, shield: 0, impact: 0, soft: 0 } }), []);
+    fusion: { core: 0, halo: 0, shield: 0, impact: 0, soft: 0 },
+    spectacleSeen: { sky: 0, lightning: 0, slam: 0, trail: 0 } }), []);
   useEffect(() => {
     if (!diagnosticsEnabled()) return;
     window.__HERO_VFX_DIAG = () => ({ counts: [...scratch.counts], activeFrames: scratch.activeFrames,
       namedFrames: scratch.namedFrames, namedDrawnFrames: scratch.namedDrawnFrames, dropped: scratch.dropped,
+      spectacle: { ...scratch.spectacleSeen },
       fusion: { ...scratch.fusion } });
     return () => { delete window.__HERO_VFX_DIAG; };
   }, [scratch]);
@@ -91,7 +115,8 @@ export default function HeroVfxRuntime({ frameRef, previewRef, quality = 'high',
     // overview camera shrinks them to hairlines. Presentation-only radius/alpha boost.
     // Combat Quality v1: named skills get a screen-space radius (min px per slot,
     // capped by a screen fraction when zoomed in) instead of a flat zoom multiplier.
-    let alphaGain = 1;
+    let alphaGain = 1, saturate = false;
+    const hsl = scratch.hsl;
     counts.fill(0); scratch.dropped = 0;
     Object.keys(fusion).forEach(k => { fusion[k] = 0; });
     const low = quality === 'low';
@@ -109,6 +134,7 @@ export default function HeroVfxRuntime({ frameRef, previewRef, quality = 'high',
       object.scale.set(Math.max(0.001, sx), Math.max(0.001, sy), Math.max(0.001, sz));
       object.updateMatrix(); mesh.setMatrixAt(i, object.matrix);
       color.set(hex);
+      if (saturate) { color.getHSL(hsl); color.setHSL(hsl.h, Math.min(1, hsl.s * 1.15 + 0.03), hsl.l); }
       const a = attributes[pool];
       a[i * 4] = color.r; a[i * 4 + 1] = color.g; a[i * 4 + 2] = color.b; a[i * 4 + 3] = Math.min(1, opacity * alphaGain);
     }
@@ -185,11 +211,98 @@ export default function HeroVfxRuntime({ frameRef, previewRef, quality = 'high',
         if (slot === 'W') emit(0, b.x, b.y + 0.06, b.z, r * 0.9, r * 0.9, 1, a * 0.7, '#ffffff', 0);
       }
     }
+    function spectacle(e, slot) {
+      if (reduced || !e.visual) return;
+      const fam = spectacleFamilyOf(e.visual.motif);
+      if (!fam) return;
+      scratch.spectacleSeen[fam]++;
+      const v = e.visual, t = e.progress, r = e.radius, o = e.origin, b = e.target ?? e.origin, c = v.accent ?? e.color;
+      const core = v.core ?? '#ffffff', shade = v.shade ?? c;
+      const wind = Number.isFinite(v.windup) ? v.windup : 0.16, burstEnd = Number.isFinite(v.burstEnd) ? v.burstEnd : 0.64;
+      const impact = Math.min(0.6, Math.max(0.3, wind + (burstEnd - wind) * 0.35));
+      const H = Math.max(9, r * (slot === 'R' ? 7 : 5.5));
+      const seed = Math.abs(o.x * 0.37 + o.z * 0.71 + (e.skillId?.length ?? 3)) % 97;
+      if (fam === 'sky') {
+        if (t < impact) {
+          const k = (t / impact) ** 1.7, y = b.y + H * (1 - k);
+          emit(4, b.x, y + r * 1.4, b.z, r * 0.55, r * 2.6, 1, 0.75, c, 0);                                   // 直立火焰尾
+          emit(2, b.x, y, b.z, r * 0.34, r * 0.8, r * 0.34, 0.95, core, t * 9);                                 // 下墜核心
+          emit(0, b.x, b.y + 0.06, b.z, r * (0.6 + k * 0.5), r * (0.6 + k * 0.5), 1, 0.22 + k * 0.25, c, 0);   // 唯一的落點預告
+        } else {
+          const k = (t - impact) / (1 - impact), fadeK = 1 - k;
+          emit(4, b.x, b.y + H * 0.34, b.z, r * (0.9 - k * 0.4), H * 0.7 * fadeK, 1, fadeK * 0.8, c, 0);      // 落地光柱
+          const n = low ? 5 : 9;
+          for (let j = 0; j < n; j++) {
+            const ang = j * 6.283 / n + hash01(seed, j), sp = r * (0.8 + hash01(seed, j + 9) * 0.9);
+            emit(2, b.x + Math.cos(ang) * sp * k * 1.4, b.y + Math.sin(k * Math.PI) * r * (1.2 + hash01(seed, j + 3)),
+              b.z + Math.sin(ang) * sp * k * 1.4, r * 0.12, r * 0.18, r * 0.12, fadeK, j % 2 ? c : core, ang + k * 6);
+          }
+        }
+      } else if (fam === 'lightning') {
+        const lo = impact - 0.06, hi = impact + 0.22;
+        if (t >= lo && t <= hi && Math.sin(t * 95) > -0.35) {
+          const segs = low ? 4 : 7, frameSeed = seed + Math.floor(t * 30);
+          let px = b.x, py = b.y + H, pz = b.z;
+          for (let j = 1; j <= segs; j++) {
+            const jit = j === segs ? 0 : r * 0.55;
+            const nx = b.x + (hash01(frameSeed, j) - 0.5) * jit * 2;
+            const nz = b.z + (hash01(frameSeed, j + 20) - 0.5) * jit * 2;
+            const ny = b.y + H * (1 - j / segs);
+            const dx = nx - px, dz = nz - pz, dy = py - ny, len = Math.hypot(dx, dy, dz);
+            emit(3, (px + nx) / 2, (py + ny) / 2, (pz + nz) / 2, r * 0.13, len, r * 0.13, 0.95, j % 2 ? core : c,
+              Math.atan2(dx, dz), -Math.atan2(Math.hypot(dx, dz), dy));
+            px = nx; py = ny; pz = nz;
+          }
+        }
+        if (t > impact && t < impact + 0.3) {
+          const k = (t - impact) / 0.3;
+          for (let j = 0; j < (low ? 4 : 8); j++) {
+            const ang = j * 0.785 + seed;
+            emit(2, b.x + Math.cos(ang) * r * k * 1.2, b.y + r * 0.4 + Math.sin(k * 3) * r * 0.5, b.z + Math.sin(ang) * r * k * 1.2,
+              r * 0.07, r * 0.2, r * 0.07, 1 - k, core, ang);
+          }
+        }
+      } else if (fam === 'slam') {
+        if (t > impact) {
+          const k = Math.min(1, (t - impact) / Math.max(0.05, 1 - impact)), fadeK = 1 - k;
+          const cracks = low ? 5 : 8;
+          for (let j = 0; j < cracks; j++) {
+            const ang = j * 6.283 / cracks + hash01(seed, j) * 0.5, len = r * (1.1 + hash01(seed, j + 5)) * Math.min(1, k * 3);
+            emit(3, b.x + Math.sin(ang) * len * 0.5, b.y + 0.05, b.z + Math.cos(ang) * len * 0.5, r * 0.09, 0.04, len, fadeK * 0.9, j % 2 ? c : core, ang);
+          }
+          for (let j = 0; j < (low ? 4 : 7); j++) {
+            const ang = j * 0.9 + seed, up = Math.sin(Math.min(1, k * 1.6) * Math.PI);
+            emit(2, b.x + Math.cos(ang) * r * (0.4 + k), b.y + up * r * (0.9 + hash01(seed, j)), b.z + Math.sin(ang) * r * (0.4 + k),
+              r * 0.13, r * 0.13, r * 0.13, fadeK, shade, ang * 3 + k * 5);
+          }
+          if (!low) for (let j = 0; j < 4; j++) {
+            const ang = j * 1.571 + seed;
+            emit(4, b.x + Math.cos(ang) * r * 0.9 * k, b.y + r * 0.3, b.z + Math.sin(ang) * r * 0.9 * k, r * 0.9, r * 0.6 * fadeK, 1, fadeK * 0.35, shade, ang);
+          }
+        }
+      } else if (fam === 'trail') {
+        if (t > 0.08 && t < impact + 0.12) {
+          const k = Math.min(1, (t - 0.08) / Math.max(0.05, impact - 0.08));
+          const hx = o.x + (b.x - o.x) * k, hz = o.z + (b.z - o.z) * k, tail = Math.min(k, 0.4);
+          const tx = o.x + (b.x - o.x) * (k - tail), tz = o.z + (b.z - o.z) * (k - tail);
+          const len = Math.hypot(hx - tx, hz - tz);
+          if (len > 0.05) {
+            const yaw = Math.atan2(hx - tx, hz - tz);
+            emit(3, (hx + tx) / 2, o.y + 0.75, (hz + tz) / 2, r * 0.16, r * 0.16, len, 0.6, c, yaw);
+            emit(3, (hx + tx) / 2, o.y + 0.75, (hz + tz) / 2, r * 0.06, r * 0.06, len * 0.9, 0.9, core, yaw);
+          }
+        }
+      }
+    }
     const preview = previewRef?.current;
     if (preview) {
       for (const event of preview.events) {
         const e = sampleSkillEvent(event, preview.time, scratch.sample);
-        if (e) draw(e);
+        if (e) {
+          draw(e);
+          //  Workshop 預覽也套用家族層（美術審查與驗收看得到天降／落雷／砸地）。
+          saturate = true; spectacle(e, skillSlotOf(event.skillId ?? e.skillId ?? '')); saturate = false;
+        }
       }
     } else {
       for (const fx of frameRef?.current?.effects ?? []) {
@@ -200,8 +313,11 @@ export default function HeroVfxRuntime({ frameRef, previewRef, quality = 'high',
             const slot = skillSlotOf(fx.skillId);
             e.radius = skillScreenRadius(e.radius, slot, state.camera, state.size?.height);
             alphaGain = SKILL_READABILITY.alphaGain;
+            saturate = true;
             draw(e);
             layers(e, slot);
+            spectacle(e, slot);
+            saturate = false;
           } else draw(e);
           alphaGain = 1;
           if (fx.skillId) {
@@ -217,7 +333,8 @@ export default function HeroVfxRuntime({ frameRef, previewRef, quality = 'high',
       mesh.geometry.attributes.tint.needsUpdate = true;
     });
     if (counts.some(n => n > 0)) scratch.activeFrames++;
-    if (diagnosticsRef) diagnosticsRef.current = { counts: [...counts], cap, shieldCap, flameCap, dropped: scratch.dropped };
+    if (diagnosticsRef) diagnosticsRef.current = { counts: [...counts], cap, shieldCap, flameCap, dropped: scratch.dropped,
+      spectacle: { ...scratch.spectacleSeen } };
   });
   return <group name="hero-vfx-v1">{[0, 1, 2, 3, 4].map(i => <instancedMesh key={i}
     ref={mesh => { meshes.current[i] = mesh; }} args={[null, null, CAP]} frustumCulled={false}>

@@ -442,6 +442,26 @@ export function installRuntimeDiagnostics({ gl, scene, camera, frameRef }) {
       deadHeroCount: heroes.filter((h) => h.alive === false).length,
       minionCount: (f.minions ?? []).length,
       activeEffectCount: (f.effects ?? []).length,
+      //  feature/moba-spectacle-vision：迷霧（本幀衍生結果）與「技能打中立目標」的特效數。
+      fog: f.fog ? { side: f.fog.side, sources: f.fog.sources.length, hiddenCount: f.fog.hiddenCount,
+        hiddenHeroes: (f.heroes ?? []).filter((h) => h.fogHidden).map((h) => h.id) } : null,
+      objectiveSkillFx: (() => {
+        const ids = new Set();
+        for (const o of f.objectives ?? []) { ids.add(String(o.id)); for (const m of o.members ?? []) ids.add(String(m.id)); }
+        return (f.effects ?? []).filter((e) => String(e.ability ?? "").startsWith("hero:") && ids.has(String(e.targetId ?? ""))).length;
+      })(),
+      //  地面環普查：野怪群組與營地底下不應再有環形幾何（objective-ring／contact ring 已移除）。
+      ringCensus: (() => {
+        let neutralRings = 0, objectiveRings = 0;
+        scene.traverse((o) => {
+          if (o.userData?.part === "objective-ring") objectiveRings++;
+          if (o.isMesh && o.geometry?.type === "RingGeometry") {
+            let p = o.parent; while (p && !String(p.name).startsWith("moba-runtime-neutrals")) p = p.parent;
+            if (p) neutralRings++;
+          }
+        });
+        return { neutralRings, objectiveRings };
+      })(),
       effectEventsSeen: seenEffectIds.size,
       // Milestone D：正式 GameView 驗收要能在單幀內鎖定塔彈／技能的
       // cast → travel → impact。僅在 ?diag=1 暴露唯讀摘要，不改 frame。

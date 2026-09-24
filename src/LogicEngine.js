@@ -62,6 +62,18 @@ const NEUTRAL_ROAM = { roamSightAdj: 0, roamInfoAdj: 0, roamGateAdj: 0, roamFoll
 //    雙人路又會推垮單人路（實測上路第一座塔 38:2）。
 const FARM_CLEAR_STATES = new Set(["圍攻", "攻門牙塔", "圍攻主堡"]);
 
+//  feature/moba-spectacle-vision（objSkillV1）：可對中立目標施放的技能機制。
+//  只收「有傷害、施法者不位移、不必須作用在英雄身上」的機制；位移／拉人／嘲諷／牆等不收。
+const OBJ_SKILL_MECHANICS = new Set([
+  "projectile", "split-projectile", "line", "piercing-line", "delayed-area", "area-dot",
+  "cone-strike", "multi-strike", "control-target", "root-target", "silence-target", "execute-strike",
+  "root-dot", "area-root", "area-control", "area-silence", "area-mark",
+]);
+const OBJ_SKILL_ULT = new Set([
+  "delayed-area", "area-dot", "area-root", "area-control", "area-silence", "area-mark",
+  "split-projectile", "silence-target", "execute-strike", "multi-strike",
+]);
+
 export class LogicEngine {
   /**
    * @param {number} seed
@@ -437,6 +449,7 @@ export class LogicEngine {
     this.heroSkills = config.players;
     this.heroSkillsOn = true;
     this.heroSkillPending = [];
+    this._objSkillHits = [];
     for (const p of this.players) if (this.heroSkills[p.id]) p.heroSkillReadyAt = {};
   }
 
@@ -501,6 +514,38 @@ export class LogicEngine {
   }
 
   /** Collect from frozen post-combat positions, then apply each effect once. */
+  /**
+   * feature/moba-spectacle-vision：英雄正在打的中立目標（野怪成員／龍／巴龍），作為技能的退路目標。
+   * 「正在打」沿用既有的傷害條件：營地 ⇒ 打野位、最近存活成員 ≤ 3.5；龍／巴龍 ⇒ 距離 < 9。
+   * 並且必須在該技能的施法距離內。塔不在此列（多數技能不打建築，塔只吃普攻）。
+   */
+  _objectiveSkillTarget(p, rule) {
+    const N = this.neutrals;
+    if (!N || !OBJ_SKILL_MECHANICS.has(rule.mechanic)) return null;
+    if (!(((rule.damage ?? 0) > 0) || ((rule.powerRatio ?? 0) > 0))) return null;
+    const range = Number(rule.range) || 0;
+    let best = null, bestD = Infinity, bestId = "";
+    const consider = (objectiveId, memberId, pos, d) => {
+      const id = memberId ?? objectiveId;
+      if (d < bestD || (d === bestD && id < bestId)) { best = { objectiveId, memberId, pos: { ...pos } }; bestD = d; bestId = id; }
+    };
+    for (const key of ["dragon", "baron"]) {
+      const o = N[key];
+      if (!o?.alive || o.hp <= 0) continue;
+      const d = dist(p.pos, o.pos);
+      if (d < 9 && d <= range) consider(o.id, null, o.pos, d);
+    }
+    if (p.role === "jungle") for (const c of N.camps ?? []) {
+      if (!c.alive || !c.members) continue;
+      for (const m of c.members) {
+        if (!m.alive || m.hp <= 0) continue;
+        const d = dist(p.pos, m.pos);
+        if (d <= 3.5 && d <= Math.max(range, 3.5)) consider(c.id, m.id, m.pos, d);
+      }
+    }
+    return best;
+  }
+
   _heroSkillStep() {
     if (!this.heroSkillsOn) return;
     const casts = [];
@@ -821,6 +866,15 @@ export class LogicEngine {
             nearest = d; foe = q;
           }
         }
+        if (!foe && this.rules.objSkillV1) {
+          //  feature/moba-spectacle-vision：射程內沒有敵方英雄、但正在打野怪／龍／巴龍 ⇒ 對它施放傷害技能。
+          const obj = this._objectiveSkillTarget(p, rule);
+          if (obj) {
+            const from = { ...p.pos }, target = { ...obj.pos };
+            casts.push({ p, foe: null, objective: obj, rule, slot, from, target, ux: 0, uy: 0, nearest: dist(from, target) });
+          }
+          continue;
+        }
         if (!foe || (rule.mechanic === 'shield-burst' && p.hp / p.maxHp > rule.triggerHpRatio)) continue;
         const from = { ...p.pos }, target = { ...foe.pos };
         const dx = target.x - from.x, dy = target.y - from.y;
@@ -834,6 +888,18 @@ export class LogicEngine {
       if (p.dead || castThisTick.has(p.id)) continue;
       castThisTick.add(p.id);
       p.heroSkillReadyAt[slot] = this.t + rule.cooldown * this._heroSkillCooldownFactor(p);
+      if (c.objective) {
+        //  打物件：不走英雄命中路徑（控制／位移對野怪無意義）。傷害排進佇列，於本 tick 的中立目標結算
+        //  （_updateNeutralsV3）用既有的 applyMemberHits／歸屬欄位扣血 ⇒ 擊殺、參與、重生都沿用原路徑。
+        const delay = Number(rule.travel ?? rule.delay ?? 0) || 0;
+        this._objSkillHits.push({ p, objectiveId: c.objective.objectiveId, memberId: c.objective.memberId,
+          amount: ((rule.damage ?? 0) + p.power * (rule.powerRatio ?? 0)) * (this.rules.objSkillDmgK ?? 1),
+          at: this.t + delay });
+        this.pushFx({ type: OBJ_SKILL_ULT.has(rule.mechanic) ? 'ult' : 'line', pos: from, target: { ...target },
+          sourceId: p.id, targetId: c.objective.memberId ?? c.objective.objectiveId, ability: `hero:${slot}`,
+          skillId: rule.skillId, feedback: 'skill', life: Math.max(1.2, delay + 0.9) });
+        continue;
+      }
       let fxTarget = target;
       if (rule.mechanic === 'cleanse-guard') {
         const protectedTarget = foe ?? p;
@@ -2968,6 +3034,24 @@ export class LogicEngine {
         this._spellEventV3(p, "smite", o.id, p.pos, victim.pos ?? o.pos);
       }
     };
+    //  feature/moba-spectacle-vision（objSkillV1）：本 tick 到期的「技能打中立目標」傷害。
+    //  用與普攻相同的結算路徑（成員 ⇒ applyMemberHits；龍／巴龍 ⇒ hp／dmgBy／participants）。
+    if (R.objSkillV1 && this.heroSkillsOn && this._objSkillHits?.length) {
+      const due = this._objSkillHits.filter((h) => h.at <= this.t + 1e-9);
+      this._objSkillHits = this._objSkillHits.filter((h) => h.at > this.t + 1e-9);
+      for (const h of due) {
+        const o = N.list.find((x) => x.id === h.objectiveId);
+        if (!o || !o.alive || h.p.dead || !(h.amount > 0)) continue;
+        if (o.members) {
+          const victim = o.members.find((m) => m.id === h.memberId && m.alive && m.hp > 0)
+            ?? o.members.find((m) => m.alive && m.hp > 0);
+          if (victim) { applyMemberHits(o, victim, [{ p: h.p, amount: h.amount }]); o.hitAt = this.t; syncCamp(o); }
+        } else {
+          const applied = Math.min(Math.max(0, o.hp), h.amount);
+          o.hp -= applied; o.dmgBy[h.p.side] += applied; o.participants.add(h.p.id); o.hitAt = this.t;
+        }
+      }
+    }
     for (const key of ["dragon", "baron"]) {
       const o = N[key];
       if (!o.alive) { if (this.t >= o.respawnAt) reset(o); }
@@ -2982,7 +3066,7 @@ export class LogicEngine {
           o.hp -= dmg; o.dmgBy[side] += dmg; o.hitAt = this.t;
           for (const p of members) o.participants.add(p.id);
           // S29B2：打龍/巴龍的可視化彈道（每秒最多 2 條；純呈現，零 rng）
-          if (fxTick) for (const p of members.slice(0, 2)) {
+          if (fxTick) for (const p of (R.objSkillV1 && this.heroSkillsOn ? members : members.slice(0, 2))) {
             this.pushFx({
               type: "line", pos: { x: p.pos.x, y: p.pos.y }, target: { ...o.pos }, color: SIDE[side],
               sourceId: p.id, targetId: o.id, ability: `${p.role}:basic`, feedback: "attack",
@@ -3410,6 +3494,12 @@ export class LogicEngine {
       const td = R.heroTowerDmg * soloK * baronK * dt * lateFactor * structureFactor;
       if (td <= 0) return;                 // M1.5 硬閘門：沒有兵線 ⇒ 不扣血、也不算推塔波次
       tw.hp -= td; p.twrDmg += td;
+      //  feature/moba-spectacle-vision：英雄推塔原本沒有任何攻擊特效（只有塔在開火）⇒ 每秒一條普攻（純呈現、零 rng）。
+      //  ⚠ 只在 hero skills 開啟時（skill-off 的 snapshot 串流必須與基準逐位元相同，見 moba-sim.v8 契約）。
+      if (R.objSkillV1 && this.heroSkillsOn && Math.floor(this.t) !== Math.floor(this.t - dt)) {
+        this.pushFx({ type: "line", pos: { ...p.pos }, target: { ...tw.pos }, color: SIDE[p.side],
+          sourceId: p.id, ability: `${p.role}:basic`, feedback: "attack" });
+      }
       // S24：推塔波次（同隊 10 秒節流一次的真實計數）
       if (K && this.t - S.pushTick > 10) { S.pushTick = this.t; this.exec[p.side].towerPushes++; }
     }

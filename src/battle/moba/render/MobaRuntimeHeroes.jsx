@@ -259,6 +259,8 @@ export default function MobaRuntimeHeroes({
         GROUND_Y + hit * 0.17 * S + cast * 0.2 * S,
         h.world.z - shake * 0.52 - hit * 0.12 * S,
       );
+      //  feature/moba-spectacle-vision：戰爭迷霧中的敵方英雄整隻隱藏（含血條）；掛載結構不變。
+      root.visible = !h.fogHidden;
       if (h.facing !== null && h.facing !== undefined) root.rotation.y = h.facing;
       // Milestone C：事件驅動的簡單前搖 / 揮擊 / 後座。只動既有低模零件，
       // 不新增動畫狀態機，Live 與 Replay 都直接讀同一份 effects。

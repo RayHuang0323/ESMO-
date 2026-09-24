@@ -48,6 +48,7 @@ import { loadQuality, presetFor } from "../../battle/quality.js";
 import { SUMMONER_SPELLS } from "../../battle/moba/mobaHeroLoadout.js";
 import { useIsMobile } from "../../ui/useViewport.js";
 import { useCameraStore } from "../../battle/cameraStore.js";
+import BattleViewControls from "../../battle/ui/BattleViewControls.jsx";
 import { replayDisplayText, replayPlayerName, replayEventText, replayStartTime } from '../../battle/moba/replay/replayDisplayText.js';
 //  Item System M3e：裝備紀錄的解碼與還原（純函式）＋呈現元件（只收 selector 輸出）
 import { decodeItemsReplay, selectReplayHeroItemsAt, selectReplayPurchaseMarkers, selectReplayStrategies } from "../../battle/moba/items/itemReplay.js";
@@ -334,7 +335,7 @@ export default function MobaReplayScreen({ replay, onClose }) {
             <div style={{ position: "absolute", inset: 0 }} data-replay-presentation={runtimeMap ? "runtime-v2" : "legacy"}>
               {runtimeMap
                 ? (mapReady
-                  ? <MobaRuntimeView3D quality={qualityId} source={source} roster={replayRoster} compactLabels={isMobile} />
+                  ? <MobaRuntimeView3D quality={qualityId} source={source} roster={replayRoster} compactLabels={isMobile} fogSide="blue" />
                   : <RiftEntryLoading rift={riftGate.rift} />)
                 : <MobaView3D battleFollow autoRotate={false} quality={quality} source={source} roster={replayRoster} />}
             </div>
@@ -435,6 +436,7 @@ export default function MobaReplayScreen({ replay, onClose }) {
             🎥 導播 {replayDirectorOn ? "ON" : "OFF"}
           </button>
         )}
+        {use3D && runtimeMap && <BattleViewControls compact={isMobile} buttonStyle={{ minHeight: 32, fontSize: 11 }} />}
         <span style={{ width: 8 }} />
         <button onClick={onClose} style={btn(false)}>返回 Result</button>
       </div>

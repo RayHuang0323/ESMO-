@@ -36,11 +36,11 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
  * ⚠ **什麼時候不用 bump**：純呈現層、UI、文案、log。
  * ⚠ 版本字串一旦發布就**不可回收再用**：舊 Challenge 存著它。
  */
-export const MOBA_SIMULATION_VERSION = "moba-sim.v9";
+export const MOBA_SIMULATION_VERSION = "moba-sim.v10";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", MOBA_SIMULATION_VERSION]);
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -296,6 +296,18 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //    20 分鐘平均倒塔 9.5 → 12.3（fairness 與節奏量測見 docs/design/MOBA_Combat_Quality_v1.md）。
   //  ⚠ 後果（已知且接受）：v1–v8 的歷史挑戰不再可重播，由 `canReplay` 明確拒絕。
   "moba-sim.v9": "4d7cf571c8122219",
+  //  2026-09-24（feature/moba-spectacle-vision）：**正式的 simulation semantics change**（skill-on）。
+  //  v3 規則集新增 `objSkillV1`／`objSkillDmgK`（v1／v2 沒有這些鍵 ⇒ 歷史規則集逐位元不變）：
+  //    · Root cause：傷害技能的目標只找射程內的敵方英雄 ⇒ 打野怪／龍／巴龍時**從不施法**（A/B 實測 0 次）。
+  //    · 現在：沒有敵方英雄在射程內、且英雄正在打中立目標 ⇒ 對它施放傷害技能；傷害走既有的
+  //      applyMemberHits／龍巴龍歸屬路徑（擊殺、參與、重生不變）。塔仍只吃普攻。
+  //    · 呈現：英雄推塔新增每秒一條普攻特效；打龍／巴龍的彈道由「最多 2 人」改為全員（零 rng）。
+  //  ⚠ 全部（技能打中立目標＋兩種攻擊特效）只在 hero skills 開啟時有作用 ⇒ skill-off 的 snapshot 串流與 v9 逐位元相同
+  //    （check_moba_items_m2 G1 驗證）；Challenge 不開 hero skills ⇒ 行為不變，但 LogicEngine 原始碼變了。
+  //  ⚠ 實測（20 組×5 seeds 鏡像，skills on，各 100 場）：對物件施法 0 → 111／場；首營清完 118.7 → 98.7 秒；
+  //    龍 4.37 → 5.37／場；平均時長 21.6 → 21.3 分；倒塔 15.4 → 15.4。
+  //  ⚠ 後果（已知且接受）：v1–v9 的歷史挑戰不再可重播，由 `canReplay` 明確拒絕。
+  "moba-sim.v10": "27dc4e0161024c06",
 });
 
 export const isKnownSimulationVersion = (v) =>

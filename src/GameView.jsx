@@ -24,6 +24,7 @@ import { draftRoster } from "./battle/moba/draftRoster.js";
 import { loadQuality, saveQuality, QUALITY_IDS, QUALITY_PRESETS } from "./battle/quality.js";
 import { useIsMobile } from "./ui/useViewport.js";
 import { useCameraStore } from "./battle/cameraStore.js";
+import BattleViewControls from "./battle/ui/BattleViewControls.jsx";
 import { observerTokens } from "./battle/ui/BattleObserverHUD.jsx";
 import { useHudMode, hudSafeTop } from './battle/ui/hudStore.js';
 import { isDebugMode } from "./ui/debugMode.js";
@@ -208,7 +209,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   return (
     <div className={`battle-stage ${isMobile ? 'mobile' : 'desktop'}`} style={{ ...observerTokens, position: "relative", width: "100%", height: "100%", background: "#0d1420", borderRadius: 6, overflow: "hidden", fontFamily: "system-ui,-apple-system,sans-serif" }}>
       {/* 3D：對局進行中相機由 cameraStore 管理（director/objectiveFocus/heroFocus/free）*/}
-      <MobaRuntimeView3D quality={qualityId} roster={liveRoster} compactLabels={isMobile} playbackRate={rate} />
+      <MobaRuntimeView3D quality={qualityId} roster={liveRoster} compactLabels={isMobile} playbackRate={rate} fogSide="blue" />
       {/* Battle Presentation Layer：HUD / Timeline / 浮動大字 / TAB 記分板 / 終局畫面 */}
       <BattlePresentationLayer roster={liveRoster} draft={draft} tactic={tactic} onContinue={onContinue}
         blueName={teamName} redName={oppName} />
@@ -228,6 +229,12 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
           style={{ position: "absolute", bottom: isMobile ? "calc(136px + env(safe-area-inset-bottom))" : 130, left: isMobile ? 8 : "50%", transform: isMobile ? undefined : "translateX(-50%)", minHeight: 36, zIndex: Z.controls, background: "rgba(8,14,24,0.9)", border: `1px solid ${directorOn ? "#93c5fd" : "rgba(255,255,255,.35)"}`, borderRadius: 3, padding: "6px 13px", color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.45)" }}>
           🎥 自動導播 {directorOn ? "ON" : "OFF"}
         </button>
+      )}
+      {/*  feature/moba-spectacle-vision：鏡頭選擇＋迷霧（放在導播鈕上方一列，手機靠左、桌機置中）。 */}
+      {playing && (
+        <BattleViewControls compact={isMobile}
+          style={{ position: "absolute", bottom: isMobile ? "calc(178px + env(safe-area-inset-bottom))" : 172, left: isMobile ? 8 : "50%",
+            transform: isMobile ? undefined : "translateX(-50%)", zIndex: Z.controls }} />
       )}
       {playing && (
         <button data-testid="leave-active-match" onClick={() => { pause(); onContinue?.(); }}

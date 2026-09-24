@@ -77,7 +77,6 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
     crown: new THREE.OctahedronGeometry(1.5 * S, 0),
     nexusCrown: new THREE.OctahedronGeometry(3.0 * S, 0),
     ring: new THREE.RingGeometry(2.2 * S, 2.9 * S, 18),
-    objRing: new THREE.RingGeometry(3.4 * S, 4.4 * S, 24),
     //  八角塔身（低面數，與地圖的 low-poly 語彙一致）
     shaft: new THREE.CylinderGeometry(TOWER.rTop, TOWER.rBottom, TOWER.shaftH, 8, 1),
     bar: new THREE.PlaneGeometry(1, 1),
@@ -97,7 +96,6 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
     //  ⇒ 一律用 polygonOffset 推到地形前面（理由見 MobaRuntimeHeroes 的同段註解）。
     ringBlue: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.blue, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
     ringRed: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.red, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
-    objAlive: new THREE.MeshBasicMaterial({ color: 0xd8b45a, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
     objDead: new THREE.MeshBasicMaterial({ color: 0x555a60, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
     barBg: new THREE.MeshBasicMaterial({
       color: 0x05080c, transparent: true, opacity: 0.96, depthTest: false,
@@ -195,11 +193,6 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
           n.destroy.rotation.y = t * 4.5;
         }
       }
-    }
-    for (const o of (live?.objectives ?? objectives)) {
-      const n = nodes.current.get(`obj_${o.id}`);
-      if (!n) continue;
-      n.ring.material = o.alive ? mats.objAlive : mats.objDead;
     }
   });
 
@@ -315,23 +308,9 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
         );
       })}
 
-      {/* 大型目標 / 營地：存活狀態環（造型仍由地圖的野怪剪影負責，見 MobaRuntimeMap 註解）*/}
-      {objectives.map((o) => (
-        <mesh
-          key={`obj_${o.id}`}
-          ref={(m) => {
-            if (!m) { nodes.current.delete(`obj_${o.id}`); return; }
-            nodes.current.set(`obj_${o.id}`, { ring: m });
-          }}
-          geometry={geo.objRing}
-          material={o.alive ? mats.objAlive : mats.objDead}
-          position={[o.world.x, RING_Y.objective, o.world.z]}
-          rotation={[-Math.PI / 2, 0, 0]}
-          scale={o.type === "dragon" || o.type === "baron" ? 1.6 : 1}
-          frustumCulled={false}
-          userData={{ part: "objective-ring", objectiveId: o.id }}
-        />
-      ))}
+      {/*  feature/moba-spectacle-vision：營地／大型目標底下原本有一圈**常駐**的存活狀態環
+           （objective-ring，存活金色、陣亡灰色）。存活與重生已由野怪本體與名牌「重生 Ns」表達，
+           這圈是地上多餘的 UI ⇒ 移除（不再渲染，也不再每幀換材質）。 */}
     </group>
   );
 }

@@ -14,6 +14,7 @@
 //  沒有的資料一律不顯示或標明「無資料」，不編造。
 // ============================================================================
 import React, { useState } from "react";
+import { statusMetaOf, sortedStatuses, STATUS_CATEGORY } from "../moba/presentation/heroStatusMeta.js";
 import { useGameStore } from "../../useGameStore.js";
 import { heroById } from "../../data/heroDatabase.js";
 import HeroPortrait from "../../ui/HeroPortrait.jsx";
@@ -162,14 +163,16 @@ export default function BattleHeroSheet({ heroId, heroName, playerName, playerId
               <span style={{ fontSize: 10, color: "#cbd5e1", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, padding: "2px 7px" }}>{stateText}</span>
               {p?.rc > 0 && <span style={{ fontSize: 10, color: "#67e8f9", border: "1px solid #67e8f955", borderRadius: 6, padding: "2px 7px" }}>回城引導 {Math.ceil(p.rc)}s</span>}
               {/* Milestone J：召喚師技能造成的狀態也要看得到（護盾還剩多少、被點燃幾秒） */}
-              {(p?.statusEffects ?? []).map((e) => {
-                const meta = {
-                  slow: { zh: "減速", c: "#fda4af" }, ignite: { zh: "點燃", c: "#fb923c" },
-                  haste: { zh: "加速", c: "#c4b5fd" }, shield: { zh: "護盾", c: "#93c5fd" },
-                }[e.id] ?? { zh: e.id, c: "#fda4af" };
+              {/*  feature/moba-spectacle-vision：狀態改讀共用對照表（heroStatusMeta）——護盾／增益／減益／控制
+                   各有類別色與圖示，不再把未知狀態顯示成英文 id。 */}
+              {sortedStatuses(p?.statusEffects ?? []).map((e) => {
+                const meta = statusMetaOf(e.id), cat = STATUS_CATEGORY[meta.cat];
                 return (
-                  <span key={e.id} style={{ fontSize: 10, color: meta.c, border: `1px solid ${meta.c}55`, borderRadius: 6, padding: "2px 7px" }}>
-                    {meta.zh}{e.amount != null ? ` ${e.amount}` : ""} {Math.ceil(e.remaining)}s
+                  <span key={e.id} data-testid="hero-status-chip" data-status={e.id} data-category={meta.cat}
+                    title={`${cat?.zh ?? ""}：${meta.zh}`}
+                    style={{ fontSize: 10, color: meta.color, border: `1px solid ${meta.color}66`, borderLeft: `3px solid ${cat?.color ?? meta.color}`,
+                      background: `${meta.color}14`, borderRadius: 6, padding: "2px 7px" }}>
+                    {meta.glyph} {meta.zh}{e.amount != null ? ` ${e.amount}` : ""} {Math.ceil(e.remaining)}s
                   </span>
                 );
               })}

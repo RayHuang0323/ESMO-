@@ -47,10 +47,10 @@ export function fitZoomFor(width, height, mobile) {
 }
 
 /** 把 cameraStore 的邏輯 pan + zoom 套到 three 正交相機（固定俯角、零旋轉）。 */
-function applyCamera(camera, panX, panY, zoom, perspective = null) {
+function applyCamera(camera, panX, panY, zoom, perspective = null, pitchOffset = 0) {
   const fx = wx(panX), fz = wz(panY);
   if (perspective) {
-    const pitch = (perspective.pitchDeg * Math.PI) / 180;
+    const pitch = ((perspective.pitchDeg + pitchOffset) * Math.PI) / 180;
     const yaw = (perspective.yawDeg * Math.PI) / 180;
     const distance = camera.isOrthographicCamera ? 700 : clamp(perspective.distDefault * (perspective.zoomDefault / zoom),
       perspective.distMin, perspective.distMax);
@@ -69,6 +69,32 @@ function applyCamera(camera, panX, panY, zoom, perspective = null) {
 
 const FOCUS_DEADBAND = WORLD_BOUNDS.width * 0.027; // 約 6 邏輯單位，由 world metadata 派生
 
+// ── feature/moba-spectacle-vision：導播節拍（auto shot）──────────────────────
+//  zoom 倍率是相對「視窗取景 base」；pitch 是相對既有俯角的偏移（度，負值＝壓低、更有臨場感）。
+//  ⚠ 防暈眩：節拍至少停留 BEAT_DWELL **真實**秒才可以換（擊殺特寫 PUNCH_DWELL）——用真實時間而不是模擬時間，
+//    否則 4× 播放時 3.2 模擬秒只剩 0.8 真實秒；zoom／pitch 都慢速插值；
+//    yaw 永遠不動（2.5D 戰術視角不旋轉）。
+export const BEAT_SHOT = Object.freeze({
+  punch: { zoom: 1.85, pitch: -9 }, fight: { zoom: 1.45, pitch: -5 }, skirmish: { zoom: 1.22, pitch: -2 },
+  objective: { zoom: 1.12, pitch: -3 }, roam: { zoom: 0.92, pitch: 0 },
+});
+const STATIC_SHOT = Object.freeze({ close: { zoom: 1.8, pitch: -9 }, wide: { zoom: 0.68, pitch: 3 } });
+const BEAT_DWELL = 3.2, PUNCH_DWELL = 1.5, PUNCH_WINDOW = 2.5;
+const KILL_EVENTS = new Set(["KILL", "FIRST_BLOOD", "MULTI_KILL", "ACE"]);
+
+/** 依目前資料決定節拍（純函式；events 依時間排序）。 */
+export function beatFor(snapTs, focus, events, onPit) {
+  for (let i = (events?.length ?? 0) - 1; i >= 0; i--) {
+    const ev = events[i];
+    if (snapTs - ev.t > PUNCH_WINDOW) break;
+    if (KILL_EVENTS.has(ev.type)) return "punch";
+  }
+  if (onPit && focus.intensity > 0.25) return "objective";
+  if (focus.intensity >= 0.55) return "fight";
+  if (focus.intensity >= 0.2) return "skirmish";
+  return "roam";
+}
+
 export default function BattleCameraController({
   follow = true,
   mobile = false,
@@ -80,6 +106,7 @@ export default function BattleCameraController({
   const camera = useThree((s) => s.camera);
   const size = useThree((s) => s.size);
   const lockRef = useRef(null);             // 目前鎖定的焦點（deadband 用）
+  const beatRef = useRef({ beat: "roam", since: -Infinity, pitch: 0 });   // auto 節拍＋目前俯角偏移
   const viewRef = useRef(null);             // 相機當下實際看到的位置（平滑用）
 
   useFrame(() => {
@@ -93,19 +120,21 @@ export default function BattleCameraController({
     // ── free：玩家手動 pan/zoom ⇒ 1:1 直接套用（不平滑，避免與手勢互相追尾）──
     if (cam.mode === "free") {
       V.x = cam.pan.x; V.y = cam.pan.y; V.zoom = cam.zoom;
-      applyCamera(camera, V.x, V.y, V.zoom, perspective);
+      applyCamera(camera, V.x, V.y, V.zoom, perspective, beatRef.current.pitch);
       return;
     }
 
     // 自動模式：先平滑，再把**螢幕上實際看到的**視野寫回 store。
     //   store.pan/zoom 因此永遠等於當下畫面 ⇒ 玩家一伸手指切進 free 時，
     //   free 直接接續同一個視野（不會跳回導播的目標點），且 free/自動共用同一份狀態。
-    const glide = (tx, tz, wantZoom, pl = posLerp) => {
+    const B = beatRef.current;
+    const glide = (tx, tz, wantZoom, pl = posLerp, wantPitch = 0) => {
       V.x = lerp(V.x, tx, pl);
       V.y = lerp(V.y, tz, pl);
       V.zoom = lerp(V.zoom, wantZoom, zoomLerp);
+      B.pitch = lerp(B.pitch, wantPitch, 0.03);
       cam.setAutoTarget({ x: V.x, y: V.y, zoom: V.zoom });
-      applyCamera(camera, V.x, V.y, V.zoom, perspective);
+      applyCamera(camera, V.x, V.y, V.zoom, perspective, B.pitch);
     };
 
     // ── 非跟隨（賽前待機）：世界中心 + 視窗取景（原 CameraRig 的職責）───────
@@ -147,8 +176,27 @@ export default function BattleCameraController({
     const want = onPit ? "objectiveFocus" : "director";
     if (cam.mode !== want) cam.setMode(want);   // setMode 內建同值免重繪
 
-    const fight = base * (isMobile ? 1.34 : 1.24);
-    glide(L.x, L.y, lerp(base, fight, L.intensity));
+    const shot = cam.shot ?? "auto";
+    if (shot === "tactical") {
+      const fight = base * (isMobile ? 1.34 : 1.24);
+      glide(L.x, L.y, lerp(base, fight, L.intensity));
+      return;
+    }
+    if (shot === "close" || shot === "wide") {
+      const s = STATIC_SHOT[shot];
+      glide(L.x, L.y, base * s.zoom, posLerp, s.pitch);
+      return;
+    }
+    //  auto：節拍＋停留時間（hysteresis）。擊殺特寫可以較快插入，其餘至少停 BEAT_DWELL 秒。
+    const want2 = beatFor(snap.ts ?? 0, L, cameraEvents, onPit);
+    const nowSec = performance.now() / 1000;
+    const held = nowSec - B.since;
+    if (want2 !== B.beat && (held >= BEAT_DWELL || (want2 === "punch" && held >= PUNCH_DWELL) || !Number.isFinite(B.since))) {
+      B.beat = want2; B.since = nowSec;
+      cam.setBeat(want2);
+    }
+    const s = BEAT_SHOT[B.beat] ?? BEAT_SHOT.roam;
+    glide(L.x, L.y, base * s.zoom, posLerp, s.pitch);
   });
 
   return null;

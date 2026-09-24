@@ -14,6 +14,7 @@
 //  契約：唯一資料源 useGameStore.snapshot；不重新統計。
 // ============================================================================
 import React, { useState, useRef } from "react";
+import { statusMetaOf, sortedStatuses } from "../moba/presentation/heroStatusMeta.js";
 import { useGameStore } from "../../useGameStore.js";
 import { ROSTER } from "../../data/roster.js";
 import { heroById } from "../../data/heroDatabase.js";
@@ -98,8 +99,10 @@ function StatusChips({ p, align }) {
     if (p.rc > 0) chips.push({ key: "rc", t: `回城 ${Math.ceil(p.rc)}s`, c: "#67e8f9" });
     const s = STATE_CHIP[p.state];
     if (s && !(p.rc > 0)) chips.push({ key: "state", t: s.t, c: s.c });
-    for (const e of p.statusEffects ?? []) {
-      if (e.id === "slow") chips.push({ key: "slow", t: `緩 ${Math.ceil(e.remaining)}s`, c: "#fda4af" });
+    //  feature/moba-spectacle-vision：依優先序顯示最重要的 2 個狀態（控制 > 標記 > 護盾…），圖示＋類別色。
+    for (const e of sortedStatuses(p.statusEffects ?? []).slice(0, 2)) {
+      const meta = statusMetaOf(e.id);
+      chips.push({ key: `st-${e.id}`, t: `${meta.glyph}${meta.zh} ${Math.ceil(e.remaining)}s`, c: meta.color });
     }
   }
   if (!chips.length) return null;

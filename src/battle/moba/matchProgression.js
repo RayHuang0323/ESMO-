@@ -694,6 +694,12 @@ SIM_RULES.v3 = {
   //  ③ 攻城兵週期加入；高地塔倒 ⇒ 超級兵（取代 laneBreachHpK／laneBreachFightK 的整波倍率）
   cqHeroFarmV1: true,
   cqMinionV1: true,
+  //  ── feature/moba-spectacle-vision（moba-sim.v10）──────────────────────────
+  //  英雄打野怪／龍／巴龍時也會施放傷害技能（v9 之前技能只找敵方英雄 ⇒ 打物件時永遠不施法）。
+  //  只在 hero skills 開啟時有作用；塔仍只吃普攻（多數技能不打建築）。英雄打塔／全員打龍改為每秒一條攻擊特效。
+  objSkillV1: true,
+  //  技能打中立目標的傷害倍率（1 = 與打英雄相同的技能傷害）。
+  objSkillDmgK: 1,
   //  小兵種類。rangeWorld 是世界單位（依各路長度換算成 progress）；towerK ＝ 攻城時算幾隻。
   //  ⚠ 總量刻意貼近舊版：普通波 3 近戰＋1 遠程；破路波的超級兵補回舊版「整波 ×1.8 HP、×1.7 傷害」
   //    的總量（舊 1728 HP／204 dps → 新 1800 HP／184 dps＋攻城 2.5 隻）。
