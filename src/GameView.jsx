@@ -125,13 +125,15 @@ function Minimap({ mobile = false }) {
     style={{ position: "absolute", bottom: mobile ? "calc(136px + env(safe-area-inset-bottom))" : 12, right: mobile ? 6 : 12, width: px2, height: px2, borderRadius: 3, border: "2px solid var(--battle-gold)", boxShadow: "0 4px 20px rgba(0,0,0,0.5)", cursor: "crosshair", touchAction: "none", zIndex: Z.minimap }} />;
 }
 
+const fmtClock = (sec) => { const t = Math.max(0, Math.floor(Number(sec) || 0)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; };
+
 export default function GameView({ roster = ROSTER, onContinue = null, autoStart = false, draft = null, tactic = null, buildStrategy = null }) {
   // Sprint19【C】：draft（Ban/Pick 結果）仍僅作 Presentation 傳遞。
   // Sprint24【D 升級】：tactic = MobaTacticConfig.v1 → start({tactic}) → engine.configureMatch
   //   （行為權重層；戰術現在「真的」進 LogicEngine，證據寫入 BattleResult.tacticExecution）。
   // Sprint29：playbackRate（1×/2×/4×）+ quality preset（low/medium/high）。
   //   ⚠ 兩者都**只影響呈現**：rate 只改 tick 的真實間隔（dt 恆定）、quality 只改怎麼畫。
-  const { playing, start, pause, fastForward, fastForwarding, rate, setRate, rates } = useLocalServer();
+  const { playing, start, pause, fastForward, fastForwarding, rate, setRate, rates, resumeProgress } = useLocalServer();
   //  ── Milestone O7：權威場次 ─────────────────────────────────────────────
   //  seed / sessionId 一律**從 Store 讀**（由 O6 的一次性令牌寫入），
   //  刻意**不接受 props 傳入** ⇒ 前端無法覆寫 seed、對手或場次資料。
@@ -209,13 +211,28 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   return (
     <div className={`battle-stage ${isMobile ? 'mobile' : 'desktop'}`} style={{ ...observerTokens, position: "relative", width: "100%", height: "100%", background: "#0d1420", borderRadius: 6, overflow: "hidden", fontFamily: "system-ui,-apple-system,sans-serif" }}>
       {/* 3D：對局進行中相機由 cameraStore 管理（director/objectiveFocus/heroFocus/free）*/}
-      <MobaRuntimeView3D quality={qualityId} roster={liveRoster} compactLabels={isMobile} playbackRate={rate} fogSide="blue" />
+      <MobaRuntimeView3D quality={qualityId} roster={liveRoster} compactLabels={isMobile} playbackRate={rate} fogSide="blue" renderPaused={!!resumeProgress} />
       {/* Battle Presentation Layer：HUD / Timeline / 浮動大字 / TAB 記分板 / 終局畫面 */}
       <BattlePresentationLayer roster={liveRoster} draft={draft} tactic={tactic} onContinue={onContinue}
         blueName={teamName} redName={oppName} />
 
       {/* Start / Stop / 鏡頭切換 */}
-      {!playing && !hud.over && (
+      {/* 返回進行中的比賽：引擎在背景分塊追上保存時間 ⇒ 顯示進度，而不是整個畫面凍住 */}
+      {resumeProgress && (
+        <div data-testid="resume-progress" role="status" aria-live="polite"
+          style={{ position: "absolute", inset: 0, zIndex: Z.controls, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(6,10,18,0.72)", padding: 16 }}>
+          <div style={{ width: "min(360px, 100%)", background: "rgba(10,16,28,0.94)", border: "1px solid rgba(147,197,253,0.45)", borderRadius: 12, padding: "16px 18px", color: "#fff", boxShadow: "0 10px 40px rgba(0,0,0,0.5)" }}>
+            <div style={{ fontSize: 15, fontWeight: 900, marginBottom: 4 }}>正在回到比賽…</div>
+            <div style={{ fontSize: 12, color: "#cbd5e1", marginBottom: 10 }}>
+              還原戰況 {fmtClock(resumeProgress.doneSec)} / {fmtClock(resumeProgress.totalSec)}
+            </div>
+            <div style={{ height: 8, borderRadius: 4, background: "rgba(255,255,255,0.12)", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${Math.round(100 * Math.min(1, resumeProgress.doneSec / Math.max(1, resumeProgress.totalSec)))}%`, background: "linear-gradient(90deg,#3b82f6,#a78bfa)", transition: "width 120ms linear" }} />
+            </div>
+          </div>
+        </div>
+      )}
+      {!playing && !resumeProgress && !hud.over && (
         <button onClick={begin} style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: Z.controls, background: "linear-gradient(135deg,#3b82f6,#1d4ed8)", border: "2px solid #93c5fd", borderRadius: 14, padding: "16px 40px", color: "#fff", fontSize: 20, fontWeight: 900, letterSpacing: "0.08em", cursor: "pointer", boxShadow: "0 8px 40px rgba(59,130,246,0.6)" }}>
           ▶ 開始遊戲 / START
         </button>

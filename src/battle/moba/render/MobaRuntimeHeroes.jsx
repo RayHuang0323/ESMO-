@@ -47,14 +47,33 @@ const TEAM_DARK = { blue: 0x1d3f6b, red: 0x6b2420 };
  *   · **降飽和**：隊色往灰色拉 60%，仍看得出藍／紅，但明顯褪色
  *   · **適度透明**：0.55（不是 0.28）——夠淡但不會消失
  *   · 血條、選取環、肩塊照樣隱藏
- *   · **地面陣亡標記**：一圈**四邊形**外框（選取環是 20 邊的圓，兩者剪影不同），
+ *   · **地面陣亡標記**：柔邊圓形隊色印記（原本的四邊形外框看起來像殘留方塊，已換掉），
  *     比選取環大一圈 ⇒ 遠看仍讀得出「這裡有人陣亡」
  *   · 名牌不再全隱藏，改為半透明＋去飽和 ⇒ 全圖視角仍認得出是誰陣亡
  */
 const TEAM_DEAD = { blue: 0x718fb3, red: 0xaf726e };   // 隊色混 60% 灰
+//  陣亡印記貼圖（共用一張，懶建立）：白色 alpha 漸層，隊色由 material.color 乘上。
+//  中心 0.18 → 0.72 處一圈最亮 0.9 → 邊緣 0 ⇒ 看起來是「倒下處一圈暈開的光痕」，沒有硬邊。
+let _deathMarkTex = null;
+function deathMarkTexture() {
+  if (_deathMarkTex || typeof document === "undefined") return _deathMarkTex;
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const g = c.getContext("2d");
+  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0, "rgba(255,255,255,0.18)");
+  grad.addColorStop(0.55, "rgba(255,255,255,0.4)");
+  grad.addColorStop(0.72, "rgba(255,255,255,0.9)");
+  grad.addColorStop(0.86, "rgba(255,255,255,0.35)");
+  grad.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = grad; g.fillRect(0, 0, 128, 128);
+  _deathMarkTex = new THREE.CanvasTexture(c);
+  _deathMarkTex.colorSpace = THREE.SRGBColorSpace;
+  return _deathMarkTex;
+}
+
 const DEAD = Object.freeze({
   bodyOpacity: 0.55,
-  markOpacity: 0.8,
+  markOpacity: 0.62,
   labelOpacity: 0.5,
 });
 
@@ -123,9 +142,10 @@ export default function MobaRuntimeHeroes({
     //    HeroVfxRuntime 負責（短暫出現、跟著技能走），不在這裡。
     contactShadow: new THREE.CircleGeometry(HERO.ringR * 0.92, 18),
     mote: new THREE.OctahedronGeometry(HERO.radius * 0.22, 0),
-    //  陣亡標記：**四邊形**外框（選取環是 20 邊形＝圓）⇒ 兩者剪影一眼分得開，
-    //  半徑也比選取環大一圈，全場視角才讀得到。
-    deathMark: new THREE.RingGeometry(HERO.ringR * 1.12, HERO.ringR * 1.5, 4),
+    //  陣亡標記：原本是**四邊形**外框（4 段 RingGeometry，實際看起來是一個菱形／方框），
+    //  Owner Review 認為像殘留的除錯方塊。用途（「這裡有人陣亡」）保留，改成柔邊圓形地面印記：
+    //  中心淡、邊緣一圈隊色暈開（貼圖在 deathMarkTexture），比選取環大一圈、沒有硬邊。
+    deathMark: new THREE.CircleGeometry(HERO.ringR * 1.55, 40),
     bar: new THREE.PlaneGeometry(1, 1),
     shield: new THREE.CylinderGeometry(HERO.radius * 0.78, HERO.radius * 0.78, HERO.radius * 0.3, 8),
     blade: new THREE.BoxGeometry(HERO.radius * 0.22, HERO.height * 0.92, HERO.radius * 0.18),
@@ -180,8 +200,8 @@ export default function MobaRuntimeHeroes({
       //  polygonOffset 的單位是**深度緩衝的最小可解析差**，不是世界單位
       //  ⇒ 不管 16-bit 還是 24-bit 都會被推到地形前面，這是貼花的標準解法。
       //  ⚠ 刻意**不**關 depthTest：關掉的話環會穿透牆與塔畫在最上層，那是遮蔽錯誤。
-      markBlue: new THREE.MeshBasicMaterial({ color: TEAM_DEAD.blue, transparent: true, opacity: DEAD.markOpacity, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
-      markRed: new THREE.MeshBasicMaterial({ color: TEAM_DEAD.red, transparent: true, opacity: DEAD.markOpacity, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
+      markBlue: new THREE.MeshBasicMaterial({ map: deathMarkTexture(), color: TEAM_DEAD.blue, transparent: true, opacity: DEAD.markOpacity, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
+      markRed: new THREE.MeshBasicMaterial({ map: deathMarkTexture(), color: TEAM_DEAD.red, transparent: true, opacity: DEAD.markOpacity, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
       //  接地陰影：不帶隊色、不發光。它的工作只有「讓角色踩在地上」。
       contactShadow: new THREE.MeshBasicMaterial({
         color: 0x05080d, transparent: true, opacity: 0.32, side: THREE.DoubleSide,
@@ -261,7 +281,20 @@ export default function MobaRuntimeHeroes({
       );
       //  feature/moba-spectacle-vision：戰爭迷霧中的敵方英雄整隻隱藏（含血條）；掛載結構不變。
       root.visible = !h.fogHidden;
-      if (h.facing !== null && h.facing !== undefined) root.rotation.y = h.facing;
+      //  feature/moba-combat-polish-r2：朝向。
+      //   · 移動中 ⇒ 面向移動方向（原本的 h.facing）
+      //   · 站定攻擊 ⇒ 面向自己這一擊的目標（打龍／巴龍／塔時不再背對目標）
+      //   · 轉身用角度插值（每幀最多補 35%），不再一幀 180° 瞬轉 ⇒ 消除抖動感
+      let wantYaw = h.facing;
+      if ((wantYaw === null || wantYaw === undefined) && actionFx?.targetWorld) {
+        const dx = actionFx.targetWorld.x - h.world.x, dz = actionFx.targetWorld.z - h.world.z;
+        if (dx * dx + dz * dz > 0.25) wantYaw = Math.atan2(dx, dz);
+      }
+      if (wantYaw !== null && wantYaw !== undefined) {
+        let diff = wantYaw - root.rotation.y;
+        diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+        root.rotation.y += Math.abs(diff) < 0.02 ? diff : diff * 0.35;
+      }
       // Milestone C：事件驅動的簡單前搖 / 揮擊 / 後座。只動既有低模零件，
       // 不新增動畫狀態機，Live 與 Replay 都直接讀同一份 effects。
       if (signature) {
@@ -529,10 +562,10 @@ function HeroUnit({ hero, geo, mats, frameRef, showLabel, compactLabel, register
             renderOrder={13} frustumCulled={false} />
         ))}
       </group>
-      {/* 陣亡地面標記（四邊形外框；只有死亡時 visible，見 useFrame）*/}
+      {/* 陣亡地面標記（柔邊圓形印記；只有死亡時 visible，見 useFrame）*/}
       <mesh ref={deathMarkRef} geometry={geo.deathMark}
         material={team === "blue" ? mats.markBlue : mats.markRed}
-        position={[0, RING_LIFT, 0]} rotation={[-Math.PI / 2, 0, Math.PI / 4]}
+        position={[0, RING_LIFT, 0]} rotation={[-Math.PI / 2, 0, 0]}
         visible={false} frustumCulled={false} userData={{ part: "hero-death-mark" }} />
       {/* 本體（膠囊） */}
       <mesh ref={bodyRef} geometry={geo.body} material={bodyMaterial}

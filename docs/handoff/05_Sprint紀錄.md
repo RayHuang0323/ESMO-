@@ -23450,3 +23450,89 @@ presentation 不回寫戰鬥結果，Competitive 維持 disabled，未做 Online
 MOBA_SPECTACLE_VISION = LOCAL_COMMIT_ONLY（未 push、未 deploy）
 SIMULATION_VERSION = moba-sim.v10（skill-on 語意變化；skill-off 與 v9 逐位元相同）
 ```
+
+
+---
+
+## 2026-09-24 feature/moba-combat-polish-r2（Owner Review 7 項＋恢復卡住，base `b506824`）
+
+> 不 Release、不 push、不 deploy；Online Backend 未動、Competitive 維持 disabled。只改正式 MOBA runtime（`MobaRuntimeView3D`）。
+
+### 1. 技能特效再強化（呈現層，`HeroVfxRuntime.jsx`）
+
+- 天降：高空裂口光 → 核心沿**斜線**從 1.6 倍高度砸下＋由亮到暗的長拖尾（box strip 串）＋落點陰影越近越深 → 命中白閃殼＋雙層光柱＋貼地塵浪（壓扁球殼）＋12 片碎片＋餘火。
+- 落雷：外層粗光＋白芯兩層、中段分岔、雲層閃光、命中白閃。砸地：多一圈貼地塵牆。彈道：彈頭亮核＋光暈、命中火花。
+- 新家族 **burst**（原地爆開：白芯→兩層球殼錯開擴張→放射火焰→火花）。家族覆蓋 92 → **127／407** motif（只補名稱明確的：smite／dive／雷霆／大地／cannon…）。
+- 飽和度 1.15 → 1.25。**沒有新增地面環**（`check_moba_spectacle_vision` V2「家族層只允許天降落點預告一個地面環」維持綠；本輪一度多加兩個環被它擋下，已改成壓扁球殼）。
+
+### 2. 小兵／小野怪與技能、狀態（audit，**未改語意**）
+
+- 技能傷害：英雄＋（v10 起）野怪個體／龍／巴龍；**小兵沒有任何技能命中路徑**（小兵只吃英雄普攻 `cqHeroFarmV1`）。
+- 減速／暈眩／標記／點燃等狀態：**只存在英雄身上**（小兵、野怪沒有狀態欄位）。紅 Buff 減速只在打英雄時套用。
+- 英雄自身增益（`_heroSkillPowerFactor`）會放大打小兵的傷害 ⇒ 有作用、英雄身上已有增益造型。
+- 判斷：讓技能打小兵是清線節奏／公平性的語意改動，不是最小修正 ⇒ 本輪不做，留給 Owner 決定。
+
+### 3. 懲戒／點燃／護盾／增益減益
+
+- 召喚師技能施放瞬間（新）：adapter 帶出 snapshot 既有的 `sp[].uses`（唯讀）；呈現層看到次數變多 ⇒ 懲戒＝天上金白落雷劈在最近的野怪個體／龍／巴龍＋施放者連線＋閃光＋金色火花；
+  點燃＝火線飛到被點燃的敵人＋目標身上一圈往上竄的火焰；治療／屏障／閃現／疾走／淨化／傳送＝施放者同色光殼。重播倒轉只重設、不補放。
+- 狀態（`HeroStatusFx.jsx`）：上身瞬間胸口擴散光＋頭頂圖示放大回彈；護盾在到期前消失 ⇒ **碎裂**（護殼炸開＋8 片碎片）；點燃火焰 3 → 5 簇＋餘燼；
+  所有頭頂圖示最後 1 秒閃爍。
+- ⚠ Replay 的精簡 frame 不含 `sp`（MobaReplay.v1 格式）⇒ 召喚師技能施放瞬間只在現場對戰看得到；本輪不改 replay 格式。
+
+### 4. 打大型物件時搖晃（simulation change → **moba-sim.v11**）
+
+- Root cause：M1.7 的「合法停留理由」沒有「打目標」⇒ 英雄一抵達坑邊就被判定發呆、改派去線上，下一 tick 又被物件決策拉回坑中心；
+  而且全隊走向**同一個**坑中心 ⇒ 避碰互推。結果是每 0.5 秒來回、朝向反轉 180°。
+- 修正（v3 規則鍵 `objIdleFixV1`，**只在 hero skills 開啟時**）：坑邊 < 9 且物件活著 ⇒「打目標」是合法停留；全隊依順序分散站在坑周圍（半徑 3.2，point mirror 對稱）。
+  呈現：站著攻擊時朝向目標、yaw 平滑。
+- 實測（3 seeds）：坑邊逐 tick 位移中位數 1.504 → **0**；>90° 轉向 25.1 → **7.5**／100 樣本。
+- 公平性 n=400／臂（兩批各 200，鏡像陣容，skill-on）：藍勝率 關 54.25% → 開 56.5%（第一批 52.5 → 57.0、第二批 56.0 → 56.0），差 2.25pp 不顯著；
+  未完賽 0、病態 1（同一 seed 兩臂都有）、中位 21.4–21.8 分。沒有為了數字調參。
+- skill-off：`objIdleFixV1` 開關的 snapshot 串流逐位元相同 ⇒ Challenge 行為不變；`check_moba_items_m2` G1 53/53（基準不用前移）。
+
+### 5. 死亡後地面方塊
+
+- 那是**刻意的**「這裡有人陣亡」地面標記（4 段 `RingGeometry` ＝ 菱形外框，不透明度 0.8），看起來像殘留的除錯方塊。
+- 用途保留，改成柔邊圓形隊色印記（`CircleGeometry` ＋ 共用漸層貼圖，0.62）。診斷 `hero-death-mark` 保留，新增 `deathMarkShape`。
+
+### 6. 分營最後一隻血條
+
+- Root cause：懲戒 550 **大於整營總血**（小營 280、Buff 營 420）⇒ 打野一出手就能把滿血的個體一擊秒掉；
+  血條只在「受傷或被鎖定」時顯示、死亡當幀就隱藏 ⇒ 玩家看到滿血直接死。實測「血條沒動過就死」6/6 全部來自同一 tick 的懲戒（不是血量同步錯誤）。
+- 修正（呈現層）：血條平滑下降；死亡後以**時間**保留 0.45 秒、前 0.3 秒線性扣到 0（低幀率也看得到）。懲戒另有落雷特效（第 3 點）。
+
+### 7. 對話（`tacticalComms.js`，仍是規則式、決定性、無亂數、無生成式 API）
+
+- 句子池＝個性句 → 位置句 → 通用句，依「該情境第幾次說」＋說話者輪替，**同一情境不連續重複**。
+- 新情境（全部由真實狀態觸發）：被抓（低血、≥2 敵、附近無隊友）、爭龍／巴龍（坑邊雙方各 ≥2）、支援、追擊、回防清線。
+- 「敵人消失」原本是狀態判斷（幾乎永遠成立，佔 37%、0:00 就在喊）⇒ 改成「剛才看得到、現在不見」且 90 秒後；稱呼改用對方位置（打野／射手…）。
+  推塔改為真的在圍攻才喊。中文句子不再夾空白；Dragon／Baron 不帶括號。
+- 實測 3 場：4.4 則／分、最多的一種 22%、連續重複 0、冷卻違規 0。
+
+### 8. 首頁「返回進行中的比賽」卡住
+
+- Root cause：恢復＝同 seed 從 0 秒**同步**重跑到保存時間（`useLocalServer` 一個 while 迴圈），整段佔住主執行緒、沒有任何進度提示。
+  本機（AMD 內顯桌機）10 分鐘處 1.49 秒凍結；20–30 分鐘的比賽在慢機器上會是數十秒完全無回應。另外 Rift 未就緒時先走 LoadingScreen。
+- 修正：分塊追趕（每塊 ≤ 60ms、塊間讓出）＋進度層（`resume-progress`「正在回到比賽… 還原戰況 m:ss / m:ss」）＋追趕期間暫停 3D 繪製；
+  tick 序列不變 ⇒ 結果逐位元相同（node 驗證）。追趕期間 `engineRef` 為 null ⇒ 中途離開不會把較早時間寫回存檔。
+  順手修一個相關缺口：換倍率後的節拍原本**不再定期保存進度**，現在與開局節拍相同。
+- 實測（headed、10 分鐘處）：同分頁 最長阻塞 1492 → **162ms**、點擊到時間前進 2.35 → 2.93 秒（有進度條）；重新整理後 4.38 秒、最長阻塞 123ms。
+  ⚠ 仍需重跑到保存時間（沒有存引擎完整狀態）⇒ 慢機器上總時間仍與比賽長度成正比，只是不再凍結。
+
+### 驗證（全部實跑）
+
+- `npm run build` ✓。新增 `check_moba_combat_polish_r2` **31/31**、`browser_check_moba_combat_polish_r2` **40/40**
+  （桌機＋390、1×/2×/4×、Battle＋Replay 1×/2×/4×、懲戒特效、狀態 onset、圓形陣亡印記、野怪血條扣到 0、離開→返回接續、Workshop 天降／落雷／砸地／爆開、page／console error 0）。
+- `browser_check_moba_spectacle_vision` 43/43（第一次 42/43：390 J1 `objectiveSkillFx` 取樣到 0，重跑 43/43，見 08 風險）。
+- 真 GPU 效能（headed，AMD Radeon 內顯，`browser_measure_moba_battle_perf`）：桌機 60／59.8／60 fps、390 60／60／59.9 fps（1× 導播／4× 導播／4× 近戰），
+  p95 16.8–17.1ms，與 b506824 相同。
+- `check_simulation_version_gate` 51/51、spectacle 21/21、combat quality 28/28、items m2 53/53、Hero Skills phase1 10/10、round2 410/410、gameplay slice 68/68、
+  base assault ✓、**release gate PASS**、milestone_i_close 44/44、Challenge slice2 79/79、slice4 60/60、battle_condition_ux ✓、hotfix cs-loading 18/18、
+  regress 15/15、regress2 8/8、flow09 ✓、dash10 ✓；verify.mjs `runtime29`、`experience26`、`tactic24` ✓。
+- Verifier 改動（皆為版本 tripwire，揭露）：`check_moba_spectacle_vision` R1 改守「v10 已登記且指紋不變、目前版本 ≥ v10、v9 拒絕重播」。
+
+```text
+MOBA_COMBAT_POLISH_R2 = LOCAL_COMMIT_ONLY（未 push、未 deploy）
+SIMULATION_VERSION = moba-sim.v11（skill-on 語意變化；skill-off 與 v10 逐位元相同）
+```

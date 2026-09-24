@@ -133,8 +133,9 @@ export default function HeroStatusFx({ frameRef, quality = "high" }) {
     for (const m of res.mats) m.dispose();
   }, [res]);
 
+  //  polish-r2：prev = 上一幀每位英雄的 { 狀態 id → 剩餘秒 }；onsets = 「剛上身／護盾被打破」的瞬間回饋（≤ 0.5 秒）。
   const scratch = useMemo(() => ({ o: new THREE.Object3D(), c: new THREE.Color(), counts: { bill: 0, bubble: 0, box: 0, cone: 0, octa: 0 },
-    seen: {} }), []);
+    seen: {}, prev: new Map(), onsets: [], lastTs: null }), []);
   //  驗收用（只在 ?diag=1）：累計看過哪些造型／類別，讓瀏覽器 gate 驗「狀態真的有不同表現」。
   useEffect(() => {
     if (!diagnosticsEnabled()) return undefined;
@@ -160,7 +161,64 @@ export default function HeroStatusFx({ frameRef, quality = "high" }) {
       t.array[i * 4] = c.r; t.array[i * 4 + 1] = c.g; t.array[i * 4 + 2] = c.b; t.array[i * 4 + 3] = alpha;
       if (opts.cell !== undefined) mesh.geometry.attributes.cell.array[i] = opts.cell;
     };
-    for (const h of frameRef?.current?.heroes ?? []) {
+    //  ── polish-r2：狀態「上身瞬間」與「護盾被打破」的回饋 ───────────────────────────
+    //  比對上一幀的狀態清單（純呈現）。重播往回拖（ts 倒退）⇒ 只重設記錄、不補放。
+    const heroes = frameRef?.current?.heroes ?? [];
+    const ts = frameRef?.current?.ts ?? null;
+    const rewound = ts !== null && scratch.lastTs !== null && ts < scratch.lastTs - 1e-6;
+    scratch.lastTs = ts;
+    const clockNow = clock.elapsedTime;
+    for (const h of heroes) {
+      const cur = new Map();
+      if (h.alive && !h.fogHidden) for (const e of h.statusEffects ?? []) cur.set(e.id, e.remaining ?? 0);
+      const before = scratch.prev.get(h.id);
+      if (before && !rewound && h.alive && h.world && !reduced) {
+        for (const [id] of cur) if (!before.has(id) && scratch.onsets.length < 24) scratch.onsets.push({ hid: h.id, id, t0: clockNow });
+        //  護盾在時間到之前就不見 ⇒ 被打破（剩餘 > 0.35 秒還在的護盾不會自然到期）
+        if (before.has("shield") && !cur.has("shield") && before.get("shield") > 0.35 && scratch.onsets.length < 24) {
+          scratch.onsets.push({ hid: h.id, id: "shield-break", t0: clockNow });
+        }
+      }
+      scratch.prev.set(h.id, cur);
+    }
+    const onsetAge = (hid, id) => {
+      for (const s of scratch.onsets) if (s.hid === hid && s.id === id) return clockNow - s.t0;
+      return Infinity;
+    };
+    const byId = new Map(heroes.map((h) => [h.id, h]));
+    scratch.onsets = scratch.onsets.filter((s) => clockNow - s.t0 < 0.55);
+    for (const s of scratch.onsets) {
+      const h = byId.get(s.hid);
+      if (!h?.world || !h.alive || h.fogHidden) continue;
+      if (!s.counted) { s.counted = true; scratch.seen[`onset:${s.id}`] = (scratch.seen[`onset:${s.id}`] ?? 0) + 1; }
+      const k = Math.min(1, (clockNow - s.t0) / 0.55), fadeK = 1 - k;
+      const x = h.world.x, z = h.world.z, y0 = GROUND_Y;
+      const meta = statusMetaOf(s.id === "shield-break" ? "shield" : s.id);
+      const col = meta.color;
+      if (s.id === "shield-break") {
+        //  碎裂：護殼往外炸開＋八片碎片
+        put("bubble", x, y0 + HERO_H * 0.55, z, HERO_R * (1.6 + k * 1.2), HERO_H * (0.75 + k * 0.5), HERO_R * (1.6 + k * 1.2), col, 0.9 * fadeK);
+        for (let j = 0; j < 8; j++) {
+          const ang = j * 0.785 + 0.3, d = HERO_R * (1.2 + k * 2.2);
+          put("octa", x + Math.cos(ang) * d, y0 + HERO_H * (0.55 + Math.sin(k * Math.PI) * 0.35), z + Math.sin(ang) * d,
+            0.18 * S, 0.34 * S, 0.18 * S, col, fadeK, { ry: ang + k * 6, rx: k * 4 });
+        }
+        continue;
+      }
+      //  通用：胸口一圈往外擴的亮光（隊色無關，用狀態色）
+      put("bill", x, y0 + HERO_H * 0.55, z, (1.2 + k * 2.6) * S, (1.2 + k * 2.6) * S, 1, col, 0.85 * fadeK, { billboard: true, cell: CELL.dot });
+      if (meta.fx === "bubble") {
+        put("bubble", x, y0 + HERO_H * 0.55, z, HERO_R * (2.3 - k * 0.75), HERO_H * (1.0 - k * 0.28), HERO_R * (2.3 - k * 0.75), "#ffffff", 0.7 * fadeK);
+      } else if (meta.fx === "flames") {
+        for (let j = 0; j < 6; j++) {
+          const ang = j * 1.047;
+          put("bill", x + Math.cos(ang) * HERO_R * (0.5 + k), y0 + HERO_H * (0.3 + k * 0.9), z + Math.sin(ang) * HERO_R * (0.5 + k),
+            0.9 * S, 1.5 * S * fadeK + 0.2 * S, 1, col, fadeK, { billboard: true, cell: CELL.flame });
+        }
+      }
+    }
+
+    for (const h of heroes) {
       if (!h.alive || h.fogHidden || !h.world || !(h.statusEffects?.length)) continue;
       const x = h.world.x, z = h.world.z, y0 = GROUND_Y;
       const list = sortedStatuses(h.statusEffects);
@@ -212,10 +270,16 @@ export default function HeroStatusFx({ frameRef, quality = "high" }) {
             }
             break;
           case "flames":
-            for (let k = 0; k < 3; k++) {
-              const ang = seed + k * 2.094, flick = reduced ? 1 : 0.85 + Math.sin(now * 13 + k) * 0.15;
-              put("bill", x + Math.cos(ang) * HERO_R * 0.5, y0 + HERO_H * (0.45 + k * 0.12), z + Math.sin(ang) * HERO_R * 0.5,
-                0.7 * S, 1.1 * S * flick, 1, col, 0.9 * a, { billboard: true, cell: CELL.flame });
+            //  polish-r2：點燃要整段時間都讀得出「正在燒」——火焰 3 → 5 簇、較大，外加往上飄的餘燼
+            for (let k = 0; k < 5; k++) {
+              const ang = seed + k * 1.2566, flick = reduced ? 1 : 0.8 + Math.sin(now * 13 + k * 1.7) * 0.2;
+              put("bill", x + Math.cos(ang) * HERO_R * 0.55, y0 + HERO_H * (0.35 + (k % 3) * 0.16), z + Math.sin(ang) * HERO_R * 0.55,
+                0.85 * S, 1.35 * S * flick, 1, col, 0.95 * a, { billboard: true, cell: CELL.flame });
+            }
+            if (!reduced) for (let k = 0; k < 4; k++) {
+              const life = (now * 1.3 + k / 4) % 1, ang = seed + k * 1.9;
+              put("bill", x + Math.cos(ang) * HERO_R * 0.6, y0 + HERO_H * (0.6 + life * 0.9), z + Math.sin(ang) * HERO_R * 0.6,
+                0.35 * S, 0.35 * S, 1, "#fde68a", (1 - life) * 0.9 * a, { billboard: true, cell: CELL.dot });
             }
             break;
           case "spikes":
@@ -238,8 +302,12 @@ export default function HeroStatusFx({ frameRef, quality = "high" }) {
         if (meta.icon && meta.fx !== "stars" && icons < 2) {
           const bob = reduced ? 0 : Math.sin(now * 2.4 + seed) * 0.12 * S;
           const spin = meta.icon === "mark" && !reduced ? 1 + Math.sin(now * 5) * 0.08 : 1;
+          //  polish-r2：上身瞬間圖示放大後回彈（0.35 秒）；最後 1 秒閃爍 ⇒ 看得出「快結束了」
+          const age = onsetAge(h.id, e.id);
+          const punch = age < 0.35 ? 1 + (1 - age / 0.35) * 0.7 : 1;
+          const blink = !reduced && (e.remaining ?? 9) < 1 ? 0.55 + 0.45 * Math.abs(Math.sin(now * 9)) : 1;
           put("bill", x + (icons - 0.5) * 1.3 * S * (list.length > 1 ? 1 : 0), y0 + ICON_Y + bob, z,
-            1.25 * S * spin, 1.25 * S * spin, 1, meta.color, a, { billboard: true, cell: CELL[meta.icon] });
+            1.25 * S * spin * punch, 1.25 * S * spin * punch, 1, meta.color, a * blink, { billboard: true, cell: CELL[meta.icon] });
           icons++;
         }
       }

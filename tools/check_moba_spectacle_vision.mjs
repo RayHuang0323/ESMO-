@@ -108,7 +108,9 @@ ck("C3 防暈眩：換鏡停留用真實時間、yaw 不動", /performance\.now\
 
 // ── R ──
 const SV = await load("src/platform/contracts/simulationVersion.js");
-ck("R1 moba-sim.v10 為目前版本、v9 保留、v9 的歷史重播明確拒絕", SV.MOBA_SIMULATION_VERSION === "moba-sim.v10"
+//  feature/moba-combat-polish-r2（moba-sim.v11）起 v10 不再是目前版本 ⇒ 改守「v10 已登記且指紋不變、目前版本 ≥ v10、v9 保留且拒絕重播」。
+ck("R1 moba-sim.v10 已登記（指紋 27dc4e0161024c06）、目前版本 ≥ v10、v9 保留、v9 的歷史重播明確拒絕", SV.KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v10")
+  && SV.SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v10"] === "27dc4e0161024c06" && Number(String(SV.MOBA_SIMULATION_VERSION).replace("moba-sim.v", "")) >= 10
   && SV.KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v9") && SV.canReplay("moba-sim.v9").ok === false);
 
 console.log(`\nMOBA spectacle ＋ vision：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);

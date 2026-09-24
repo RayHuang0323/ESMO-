@@ -32,7 +32,7 @@ export const MAX_COMMS = 400;
  * 觸發條件一律在 CommsEngine.update() 內以**真實狀態**判斷。
  */
 export const COMMS_RULES = {
-  ENEMY_MISSING:   { priority: 55, cooldown: 25 },
+  ENEMY_MISSING:   { priority: 55, cooldown: 40 },
   GANK_INCOMING:   { priority: 80, cooldown: 18 },
   COUNTER_GANK:    { priority: 78, cooldown: 25 },
   INVADE:          { priority: 70, cooldown: 40 },
@@ -46,46 +46,133 @@ export const COMMS_RULES = {
   DEFEND_BEHIND:   { priority: 68, cooldown: 30 },
   KILL_SUCCESS:    { priority: 65, cooldown: 8 },
   TRADE:           { priority: 62, cooldown: 20 },
+  //  feature/moba-combat-polish-r2：新增情境（一樣只由真實狀態觸發）
+  CAUGHT:          { priority: 88, cooldown: 25 },     // 我方英雄低血、身邊 ≥2 敵、附近沒有隊友
+  OBJECTIVE_CONTEST: { priority: 76, cooldown: 30 },   // 龍／巴龍活著、坑邊雙方各 ≥2 人
+  SUPPORT_MOVE:    { priority: 50, cooldown: 30 },     // 引擎 state === "支援"
+  CHASE:           { priority: 58, cooldown: 22 },     // 引擎 state === "追擊"（≥2 人）
+  WAVE_DEFEND:     { priority: 48, cooldown: 35 },     // 引擎 state === "回防"（兵線進塔、回去清）
 };
 
-/** 句子庫。{role} / {lane} / {n} 會被實際值替換。個性只挑語氣，不改事實。 */
+/**
+ * 句子庫。{lane} / {obj} 會被實際值替換。個性／位置只挑語氣，不改事實。
+ *   default      任何人都會講的
+ *   <個性>        aggressive / calm / steady / shotcaller / lonewolf / passionate / grinder / creative / defensive
+ *   role:<位置>   top / jungle / mid / adc / sup 特有的說法
+ * 挑選：個性句 → 位置句 → 通用句串成一池，依「這個情境第幾次說」＋說話者輪替，不會連續兩次同一句。
+ * 句子刻意短（語音頻道的長度），不寫長篇。
+ */
 const LINES = {
   ENEMY_MISSING: {
-    default: ["{lane} 不見了，注意視野", "對面 {lane} 消失，小心", "{lane} miss，各路注意"],
-    shotcaller: ["{lane} miss，全體退到安全位", "報一下，{lane} 不在線上"],
-    lonewolf: ["{lane} 不見，我自己小心"],
+    default: ["{lane}不見了，注意視野", "對面{lane}消失，小心", "{lane} miss，各路注意", "{lane}看不到了，別壓太前"],
+    shotcaller: ["{lane} miss，全體退到安全位", "報一下，{lane}不在線上", "{lane}消失，所有人往後站"],
+    lonewolf: ["{lane}不見，我自己小心"],
+    calm: ["{lane}不在，先別動"],
+    defensive: ["{lane}不見了，我先回塔下"],
+    "role:sup": ["我去插個眼，{lane}不見了", "{lane}沒視野，我去看"],
   },
   GANK_INCOMING: {
-    default: ["我去 {lane}，準備上", "{lane} 可以抓，跟我", "打野往 {lane}，配合一下"],
-    aggressive: ["{lane} 給我壓住，我馬上到！", "抓 {lane}，別讓他跑"],
-    calm: ["{lane} 有機會，我慢慢繞"],
+    default: ["我去{lane}，準備上", "{lane}可以抓，跟我", "打野往{lane}，配合一下", "{lane}等我三秒"],
+    aggressive: ["{lane}給我壓住，我馬上到！", "抓{lane}，別讓他跑"],
+    calm: ["{lane}有機會，我慢慢繞"],
+    creative: ["我從河道後面繞{lane}，他看不到"],
+    passionate: ["{lane}來了來了，一起上！"],
   },
-  COUNTER_GANK: { default: ["對面打野在我這，反蹲", "有人來抓我，過來包", "反蹲成立，上"] },
-  INVADE: { default: ["進他們野區，一起", "開局入侵，跟上", "壓野區，別落單"] },
-  OBJECTIVE_SOON: { default: ["{obj} 快出了，集合", "準備 {obj}，先清線", "{obj} 30 秒，站好位"] },
-  OBJECTIVE_TAKEN: { default: ["{obj} 拿下！", "{obj} 到手，撤", "{obj} 收掉，推一波"] },
-  TOWER_PUSH: { default: ["{lane} 塔可以推，來人", "一起壓 {lane} 塔", "{lane} 進塔，掩護我"] },
-  TOWER_DOWN: { default: ["{lane} 塔破！", "拆了 {lane}，轉線", "{lane} 塔倒，換路"] },
+  COUNTER_GANK: {
+    default: ["對面打野在我這，反蹲", "有人來抓我，過來包", "反蹲成立，上"],
+    "role:jungle": ["他打野在這，我在旁邊，放他進來"],
+    "role:sup": ["我在草裡，讓他進來"],
+    calm: ["對面打野來了，別慌，等他出手"],
+  },
+  INVADE: { default: ["進他們野區，一起", "開局入侵，跟上", "壓野區，別落單"], aggressive: ["吃他野怪，走！"], "role:jungle": ["跟我進去，拿他的 Buff"] },
+  OBJECTIVE_SOON: {
+    default: ["{obj}快出了，集合", "準備{obj}，先清線", "{obj} 30 秒，站好位"],
+    shotcaller: ["{obj} 30 秒，先推線再集合", "{obj}快了，大家先回城補一下"],
+    "role:sup": ["我先去{obj}附近插眼"],
+    "role:jungle": ["{obj}我來打，懲戒留著"],
+  },
+  OBJECTIVE_CONTEST: {
+    default: ["{obj}對面也在，搶！", "{obj}這邊要打起來了", "{obj}別讓他們拿"],
+    "role:jungle": ["懲戒準備好了，{obj}交給我", "{obj}我在算血，別搶我懲戒"],
+    "role:sup": ["我先把{obj}視野清掉"],
+    defensive: ["{obj}搶不到就放，別送"],
+    aggressive: ["{obj}直接開，打他們！"],
+  },
+  OBJECTIVE_TAKEN: { default: ["{obj}拿下！", "{obj}到手，撤", "{obj}收掉，推一波"], passionate: ["{obj}是我們的了！"], "role:jungle": ["懲戒到了，{obj}拿下"] },
+  TOWER_PUSH: {
+    default: ["{lane}塔可以推，來人", "一起壓{lane}塔", "{lane}進塔，掩護我"],
+    "role:adc": ["兵進塔了，我來點塔"],
+    "role:top": ["{lane}我來扛塔，你們打"],
+    grinder: ["{lane}塔慢慢磨，不急"],
+  },
+  TOWER_DOWN: { default: ["{lane}塔破！", "拆了{lane}，轉線", "{lane}塔倒，換路"], shotcaller: ["{lane}塔拿了，準備轉線"] },
   RETREAT: {
     default: ["血量不夠，先撤", "撤！打不過", "退回去，重整"],
     steady: ["先退，等下一波"],
     aggressive: ["可惡…先退一下"],
+    calm: ["不划算，退"],
+    "role:sup": ["我掩護，你們先走"],
   },
-  SPLIT_PUSH: { default: ["我帶 {lane} 線，你們牽制", "分推 {lane}，別讓他們回防", "我單帶，撐住"] },
-  TEAMFIGHT: { default: ["開了！全上", "團戰！集火", "打起來了，跟上"] },
-  DEFEND_BEHIND: { default: ["我們落後，先守塔", "別衝，守家等機會", "劣勢局，穩住兵線"] },
-  KILL_SUCCESS: { default: ["拿下一個！", "擊殺！", "解決了"] },
-  TRADE: { default: ["換掉了", "一換一，可以接受", "互相交換"] },
+  CAUGHT: {
+    default: ["被抓了！救我", "我被包了…", "他們好幾個在我這！", "我這邊撐不住了"],
+    calm: ["我被抓，別過來送"],
+    lonewolf: ["被抓了，我自己想辦法"],
+    passionate: ["快來！快來！"],
+    "role:adc": ["射手被抓了，誰來幫一下"],
+  },
+  SPLIT_PUSH: { default: ["我帶{lane}線，你們牽制", "分推{lane}，別讓他們回防", "我單帶，撐住"], lonewolf: ["{lane}交給我一個人"] },
+  TEAMFIGHT: {
+    default: ["開了！全上", "團戰！集火", "打起來了，跟上"],
+    shotcaller: ["集火後排！", "先打射手，其他人別管"],
+    "role:top": ["我先進，跟上！"],
+    "role:sup": ["我開了，接上！", "保護射手！"],
+    "role:adc": ["我在後面輸出，擋住他們"],
+    "role:mid": ["技能好了，我丟"],
+    calm: ["穩住，一個一個打"],
+  },
+  SUPPORT_MOVE: {
+    default: ["我過去幫忙", "撐住，我到了", "我往這邊支援"],
+    "role:sup": ["我來保你", "跟著我，我幫你看"],
+    "role:mid": ["中路推完了，我去邊路"],
+    "role:jungle": ["我往這邊靠"],
+  },
+  CHASE: {
+    default: ["追！他沒血了", "別放他走", "追到塔前就好"],
+    calm: ["追一下就好，別深入"],
+    aggressive: ["追到底！"],
+    defensive: ["別追太深，回來"],
+  },
+  WAVE_DEFEND: {
+    default: ["兵進塔了，我回去清", "我回家守一下線", "兵線我來處理"],
+    grinder: ["我回去吃兵"],
+    "role:mid": ["中線我來清"],
+  },
+  DEFEND_BEHIND: { default: ["我們落後，先守塔", "別衝，守家等機會", "劣勢局，穩住兵線"], passionate: ["還沒完，穩住就有機會"], calm: ["慢慢來，等他們犯錯"] },
+  KILL_SUCCESS: { default: ["拿下一個！", "擊殺！", "解決了", "漂亮"], aggressive: ["再來一個！"], calm: ["好，下一步"], "role:sup": ["幫到了！"] },
+  TRADE: { default: ["換掉了", "一換一，可以接受", "互相交換"], defensive: ["換得不虧"] },
 };
 
 const LANE_ZH = { top: "上路", mid: "中路", bot: "下路" };
-const OBJ_ZH = { dragon: "Dragon（巨龍）", baron: "Baron（巴龍）" };
+const OBJ_ZH = { dragon: "Dragon", baron: "Baron" };   // 可見命名統一 Dragon / Baron；語音句子不帶括號說明
+//  敵人消失時用「他的位置」稱呼（打野不在任何一路上），比「最近哪一路」自然
+const FOE_ROLE_ZH = { top: "上路", jungle: "打野", mid: "中路", adc: "射手", sup: "輔助" };
 
-/** 依個性挑句子變體；無對應變體 ⇒ default（決定性：用 idx 而非亂數）。 */
-function pickLine(ruleId, personality, idx) {
+/** 一個說話者可用的句子池：個性句 → 位置句 → 通用句（決定性，不擲骰）。 */
+export function linePool(ruleId, personality, role) {
   const bank = LINES[ruleId] ?? {};
-  const arr = (personality && bank[personality]) || bank.default || ["…"];
-  return arr[idx % arr.length];
+  const pool = [...((personality && bank[personality]) || []), ...((role && bank["role:" + role]) || []), ...(bank.default || [])];
+  return pool.length ? pool : ["…"];
+}
+const hashStr = (str) => { let h = 7; for (const ch of String(str ?? "")) h = (h * 31 + ch.charCodeAt(0)) % 9973; return h; };
+/** 輪替挑句：依「這個情境第幾次說」＋說話者，避開這個情境上一次講過的那句。 */
+function pickLine(ruleId, speaker, turn, lastTmpl) {
+  const pool = linePool(ruleId, speaker?.personality ?? null, speaker?.role ?? null);
+  const base = (turn * 7 + hashStr(speaker?.id)) % pool.length;
+  for (let k = 0; k < pool.length; k++) {
+    const line = pool[(base + k) % pool.length];
+    if (line !== lastTmpl || pool.length === 1) return line;
+  }
+  return pool[base];
 }
 
 const fill = (s, vars) => s.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
@@ -107,6 +194,8 @@ export class CommsEngine {
     this.lastAny = -Infinity;   // 全域冷卻
     this.messages = [];         // 已產出的訊息（Replay 直接存這份，不重新生成）
     this.seq = 0;
+    this.ruleTurns = {};        // { ruleId: 這個情境說過幾次 }（輪替用）
+    this.ruleLast = {};         // { ruleId: 上一次的句子模板 }（避免連續重複）
     this._prev = null;          // 上一幀 snapshot 的精簡狀態（用來偵測「變化」）
   }
 
@@ -118,8 +207,10 @@ export class CommsEngine {
   /** 產生一則訊息（唯一出口；一定帶 ruleId + 觸發事實 evidence）。 */
   _emit(id, t, speaker, vars, evidence) {
     const rule = COMMS_RULES[id];
-    const person = speaker?.personality ?? null;
-    const text = fill(pickLine(id, person, this.seq), vars);
+    const turn = this.ruleTurns[id] ?? 0;
+    const tmpl = pickLine(id, speaker, turn, this.ruleLast[id]);
+    this.ruleTurns[id] = turn + 1; this.ruleLast[id] = tmpl;
+    const text = fill(tmpl, vars);
     const msg = {
       id: `c${this.seq++}`,
       t: Math.round(t * 10) / 10,
@@ -222,12 +313,15 @@ export class CommsEngine {
     }
 
     // ── 6) 敵方消失（真實：敵方英雄不在我方視野半徑內）──────────────────────
+    //  polish-r2：原本是「≥2 名敵人不在視野內」的**狀態**判斷 ⇒ MOBA 裡幾乎永遠成立，佔全部播報 37%，
+    //  開局 0:00 就在喊。改成**變化**：上一幀看得到、這一幀消失的敵人；開局 90 秒後才報。
     const visible = (p) => mine.some((m) => !m.dead && dist(m.pos, p.pos) < 20);
-    const missing = foes.filter((p) => !p.dead && !visible(p));
-    if (missing.length >= 2) {
-      push("ENEMY_MISSING", this._who(mine.find((p) => p.role === "sup") ?? mine[0]),
-        { lane: LANE_ZH[nearestLane(missing[0])] ?? "敵方" },
-        { missingIds: missing.map((p) => p.id), t });
+    const seenNow = new Set(foes.filter((p) => !p.dead && visible(p)).map((p) => p.id));
+    const vanished = foes.filter((p) => !p.dead && prev?.seen?.has(p.id) && !seenNow.has(p.id));
+    if (vanished.length && t > 90) {
+      push("ENEMY_MISSING", this._who(mine.find((p) => p.role === "sup" && !p.dead) ?? mine.find((p) => !p.dead)),
+        { lane: FOE_ROLE_ZH[vanished[0].role] ?? LANE_ZH[nearestLane(vanished[0])] ?? "對面" },
+        { missingIds: vanished.map((p) => p.id), t });
     }
 
     // ── 7) 目標即將刷新（引擎 respawn 是真實倒數）──────────────────────────
@@ -243,8 +337,8 @@ export class CommsEngine {
     if (split) push("SPLIT_PUSH", this._who(split), { lane: LANE_ZH[split.role === "top" ? "top" : "bot"] ?? "邊路" }, { state: "帶線", id: split.id, t });
 
     // ── 9) 推塔（引擎 state === "圍攻" 或多人貼塔）──────────────────────────
-    const sieging = mine.filter((p) => (p.state === "圍攻" || p.state === "對線") && !p.dead);
-    if (sieging.length >= 3 && snap.ts > 300) {
+    const sieging = mine.filter((p) => p.state === "圍攻" && !p.dead);
+    if (sieging.length >= 2 && snap.ts > 300) {
       push("TOWER_PUSH", this._who(sieging[0]), { lane: LANE_ZH[nearestLane(sieging[0])] }, { count: sieging.length, t });
     }
 
@@ -255,10 +349,39 @@ export class CommsEngine {
       push("DEFEND_BEHIND", this._who(mine.find((p) => p.role === "sup") ?? mine[0]), {}, { goldGap: Math.round(foeGold - myGold), t });
     }
 
+    // ── 11) 被抓（真實：低血、身邊 10 內 ≥2 名敵人、12 內沒有隊友）──────────
+    for (const p of mine) {
+      if (p.dead || !(p.hp < 0.35)) continue;
+      const foesNear = foes.filter((q) => !q.dead && dist(q.pos, p.pos) < 10).length;
+      const matesNear = mine.some((q) => q !== p && !q.dead && dist(q.pos, p.pos) < 12);
+      if (foesNear >= 2 && !matesNear) { push("CAUGHT", this._who(p), {}, { id: p.id, hp: Math.round(p.hp * 100) / 100, foesNear, t }); break; }
+    }
+
+    // ── 12) 爭奪龍／巴龍（真實：目標活著、坑邊 18 內雙方各 ≥2 人）──────────
+    for (const k of ["dragon", "baron"]) {
+      const o = snap[k];
+      if (!o?.alive || !PITS[k]) continue;
+      const nearPit = (arr) => arr.filter((q) => !q.dead && dist(q.pos, PITS[k]) < 18).length;
+      const m = nearPit(mine), f = nearPit(foes);
+      if (m >= 2 && f >= 2) {
+        push("OBJECTIVE_CONTEST", this._who(mine.find((p) => p.role === "jungle" && !p.dead) ?? mine.find((p) => !p.dead)), { obj: OBJ_ZH[k] }, { obj: k, mine: m, foes: f, t });
+        break;
+      }
+    }
+
+    // ── 13) 支援／追擊／回防清線（引擎 state 是真實狀態）─────────────────────
+    const helper = mine.find((p) => p.state === "支援" && !p.dead);
+    if (helper) push("SUPPORT_MOVE", this._who(helper), {}, { state: "支援", id: helper.id, t });
+    const chasing = mine.filter((p) => p.state === "追擊" && !p.dead);
+    if (chasing.length >= 2) push("CHASE", this._who(chasing[0]), {}, { state: "追擊", ids: chasing.map((p) => p.id), t });
+    const defender = mine.find((p) => p.state === "回防" && !p.dead && snap.ts > 240);
+    if (defender) push("WAVE_DEFEND", this._who(defender), {}, { state: "回防", id: defender.id, t });
+
     // ── 記錄本幀狀態（供下幀比對「變化」）─────────────────────────────────
     this._prev = {
       feedIds: new Set(feed.map((f) => f.id)),
       jgState: jg?.state ?? null,
+      seen: seenNow,
     };
 
     if (!cands.length) return [];

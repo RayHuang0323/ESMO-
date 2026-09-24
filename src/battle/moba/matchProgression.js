@@ -700,6 +700,10 @@ SIM_RULES.v3 = {
   objSkillV1: true,
   //  技能打中立目標的傷害倍率（1 = 與打英雄相同的技能傷害）。
   objSkillDmgK: 1,
+  //  ── feature/moba-combat-polish-r2（moba-sim.v11）────────────────────────────
+  //  「打龍／巴龍」加入 M1.7 的合法停留清單＋坑邊分散站位（修正坑邊每 tick 來回、朝向反轉的搖晃）。
+  //  ⚠ 只在 hero skills 開啟時生效（引擎端另判 heroSkillsOn）⇒ skill-off／Challenge 逐位元不變。
+  objIdleFixV1: true,
   //  小兵種類。rangeWorld 是世界單位（依各路長度換算成 progress）；towerK ＝ 攻城時算幾隻。
   //  ⚠ 總量刻意貼近舊版：普通波 3 近戰＋1 遠程；破路波的超級兵補回舊版「整波 ×1.8 HP、×1.7 傷害」
   //    的總量（舊 1728 HP／204 dps → 新 1800 HP／184 dps＋攻城 2.5 隻）。

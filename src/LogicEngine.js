@@ -2116,11 +2116,35 @@ export class LogicEngine {
    * M1.7：這一次「站著不動」是否**合法**。回傳理由字串；`null` = 不合法，必須再任務。
    * 合法清單由產品定義：等兵線／埋伏／回城／防守／集合／短暫冷卻。
    */
+  /**
+   * feature/moba-combat-polish-r2（objIdleFixV1）：打龍／巴龍的站位點。
+   * 舊行為五個人都走向**同一個**坑中心 ⇒ 擠在一起被避碰推開、再走回中心 ⇒ 來回抖動，
+   * 而且英雄站進 boss 模型裡。改成依隊伍順序分布在坑周圍（半徑 3.2，仍在 < 9 的傷害距離內）。
+   * 決定性、不擲骰；投影到可走區，投影失敗就退回坑中心（與舊行為相同）。只在 hero skills 開啟時使用。
+   */
+  _objectiveStandSpot(p, key) {
+    const pit = PITS[key];
+    const mates = this.players.filter((q) => q.side === p.side);
+    const idx = Math.max(0, mates.indexOf(p));
+    const ang = (idx / Math.max(1, mates.length)) * Math.PI * 2 + (p.side === "blue" ? Math.PI * 0.75 : -Math.PI * 0.25);
+    const r = this.rules.objStandRadius ?? 3.2;
+    const spot = projectToWalkable(pit.x + Math.cos(ang) * r, pit.y + Math.sin(ang) * r, HERO_RADIUS, null);
+    return spot && Number.isFinite(spot.x) ? { x: spot.x, y: spot.y } : pit;
+  }
   _idleReasonV17(p, st, effLane, alive) {
     const R = this.rules;
     if (p.recallT > 0 || st === "回城" || st === "回城中") return "回城";
     if (dist(p.pos, FOUNTAIN[p.side]) < 12) return "泉水補給";
     if (st === "回防") return "防守";
+    //  feature/moba-combat-polish-r2（objIdleFixV1）：站在坑邊打龍／巴龍是**正在工作**，不是發呆。
+    //  舊清單沒有這一項 ⇒ 英雄一抵達坑中心就被改派去線上、下一 tick 又被決策拉回坑 ⇒
+    //  每 0.5 秒來回一次、朝向每次反轉 180°（畫面上的「打大型物件時搖晃」）。
+    //  條件與龍／巴龍的傷害判定一致（活著、< 9）。只在 hero skills 開啟時生效（同 v10 慣例）⇒ skill-off 串流逐位元不變。
+    if (R.objIdleFixV1 && this.heroSkillsOn && p.fsm === "OBJECTIVE" && this.neutrals) {
+      const key = this.fsm3?.[p.side]?.objKey;
+      const o = key ? this.neutrals[key] : null;
+      if (o?.alive && dist(p.pos, o.pos) < 9) return "打目標";
+    }
     //  短暫冷卻：剛被打完，站一下再動（不是計時器掩蓋——有上限且只在剛受傷後成立）
     const since = this.t - (p.lastDamagedAt ?? -Infinity);
     if (since < (R.idleCooldownSec ?? 3)) return "短暫冷卻";
@@ -5230,7 +5254,8 @@ export class LogicEngine {
       // S29B1（v3）：團隊目標窗（龍/巴龍）——窗開著才集結；打野/輔助必去、其他人吃 knob
       else if (R.engagementFsm && this.neutrals && !skipFight && this.fsm3[p.side].objGo &&
                this._objJoinV3(p, this.fsm3[p.side].objKey, K, M)) {
-        tgt = PITS[this.fsm3[p.side].objKey]; st = "團戰!"; p.fsm = "OBJECTIVE";
+        tgt = R.objIdleFixV1 && this.heroSkillsOn ? this._objectiveStandSpot(p, this.fsm3[p.side].objKey) : PITS[this.fsm3[p.side].objKey];
+        st = "團戰!"; p.fsm = "OBJECTIVE";
       }
       // ── Milestone F：主動權窗 · 攻城 ──────────────────────────────────
       //  剛打贏一波、附近沒有可打的龍／巴龍 ⇒ 把人數優勢換成塔，而不是各自走回線上。

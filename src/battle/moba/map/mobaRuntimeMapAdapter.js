@@ -140,6 +140,9 @@ export function adaptHeroes(snapshot, opts = {}) {
       statusEffects: Array.isArray(p.statusEffects) ? p.statusEffects.map((b) => ({
         id: String(b.id), remaining: Math.max(0, num(b.remaining, 0)),
       })) : [],
+      //  polish-r2：召喚師技能欄位（id＋累計施放次數）。呈現層用「次數變多」偵測施放瞬間
+      //  （懲戒落雷、點燃火焰）；只讀 snapshot 既有的 `sp`，引擎不變。Replay 的精簡 frame 沒有 sp ⇒ 空陣列。
+      spells: Array.isArray(p.sp) ? p.sp.map((s) => (s?.id ? { id: String(s.id), uses: num(s.uses, 0) } : null)) : [],
       clamped,
     };
   });

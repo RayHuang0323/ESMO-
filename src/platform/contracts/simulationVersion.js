@@ -36,11 +36,11 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
  * ⚠ **什麼時候不用 bump**：純呈現層、UI、文案、log。
  * ⚠ 版本字串一旦發布就**不可回收再用**：舊 Challenge 存著它。
  */
-export const MOBA_SIMULATION_VERSION = "moba-sim.v10";
+export const MOBA_SIMULATION_VERSION = "moba-sim.v11";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", MOBA_SIMULATION_VERSION]);
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -308,6 +308,12 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //    龍 4.37 → 5.37／場；平均時長 21.6 → 21.3 分；倒塔 15.4 → 15.4。
   //  ⚠ 後果（已知且接受）：v1–v9 的歷史挑戰不再可重播，由 `canReplay` 明確拒絕。
   "moba-sim.v10": "27dc4e0161024c06",
+  //  2026-09-24（feature/moba-combat-polish-r2）：**simulation semantics change**（skill-on）。
+  //  v3 規則集新增 `objIdleFixV1`：打龍／巴龍時「打目標」列入 M1.7 合法停留理由，且全隊改在坑周圍分散站位
+  //  （原本全員走向同一坑中心 ⇒ 避碰推開、被改派離開、下一 tick 又被拉回 ⇒ 每 0.5 秒來回、朝向反轉＝打大型物件時搖晃）。
+  //  ⚠ 只在 hero skills 開啟時生效 ⇒ skill-off 串流與 v10 逐位元相同（check_moba_items_m2 G1）；Challenge 行為不變。
+  //  ⚠ 後果（已知且接受）：v1–v10 的歷史挑戰不再可重播，由 `canReplay` 明確拒絕。
+  "moba-sim.v11": "617b9eebcc50b848",
 });
 
 export const isKnownSimulationVersion = (v) =>

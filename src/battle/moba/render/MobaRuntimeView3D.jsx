@@ -409,6 +409,8 @@ export default function MobaRuntimeView3D({
   //  卻一直擋住血條與技能特效。身分資訊改由 HUD 十人列、Hero Detail、Scoreboard 提供。
   //  觀戰／除錯（harness）要看名字時自己把它打開。
   heroNameplates = false,
+  //  polish-r2：返回進行中比賽的追趕期間，畫面被進度層蓋住且 frame 不會前進 ⇒ 暫停繪製，把主執行緒讓給追趕。
+  renderPaused = false,
   //  feature/moba-spectacle-vision：戰爭迷霧的**視角方**（"off" ＝ 此畫面不支援迷霧，例如 debug harness）。
   //  實際開關讀 cameraStore.fogOn（Battle／Replay 的「迷霧」按鈕）。只影響畫面，引擎與勝負完全不知道有迷霧。
   fogSide = "off",
@@ -437,6 +439,7 @@ export default function MobaRuntimeView3D({
     <>
     <Canvas
       orthographic
+      frameloop={renderPaused ? "never" : "always"}
       dpr={dpr}
       gl={{ antialias: quality !== "low", powerPreference: "high-performance" }}
       camera={{ position: [0, 550, 430], zoom: 3.4, near: 35, far: 1400 }}

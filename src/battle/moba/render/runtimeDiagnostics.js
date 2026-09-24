@@ -341,6 +341,8 @@ export function installRuntimeDiagnostics({ gl, scene, camera, frameRef }) {
         ringVisible: !!ring?.visible,
         //  陣亡呈現的三個可查證訊號：地面標記亮起、本體橫躺、本體不透明度
         deathMarkVisible: !!deathMark?.visible,
+        //  polish-r2：陣亡標記的幾何形狀（CircleGeometry＝柔邊圓形印記；舊的四邊形是 RingGeometry 4 段）
+        deathMarkShape: deathMark?.geometry?.type ?? null,
         bodyLyingDown: !!body && Math.abs(body.rotation.x) > 1,
         geometryType: geomType(body),
         materialType: body?.material?.type ?? null,

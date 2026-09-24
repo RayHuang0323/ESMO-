@@ -44,12 +44,15 @@ const DT_SIM = 0.5;              // 每個模擬步固定推進 0.5 模擬秒（
 export const PLAYBACK_RATES = [1, 2, 4];
 export const DEFAULT_RATE = 2;   // 22.5 模擬分 ⇒ 約 11 真實分；觀感移速 9 單位/真實秒
 export const tickMsFor = (rate) => (DT_SIM * 1000) / rate;
+//  恢復追趕每塊最多占用主執行緒的毫秒數（其餘時間讓瀏覽器畫進度條、回應輸入）。只影響追趕的切法，不影響結果。
+const CATCH_UP_BUDGET_MS = 60;
 
 export function useLocalServer() {
   const engineRef = useRef(null);
   const intervalRef = useRef(null);
   const rafRef = useRef(null);
   const ffRef = useRef(null);          // S29B3：fastForward 的分塊排程
+  const catchUpRef = useRef(null);     // 恢復進行中比賽：分塊追上保存時間的排程
   const lastTick = useRef(0);
   const rateRef = useRef(DEFAULT_RATE);
   const activeMatchRef = useRef(null);
@@ -57,6 +60,8 @@ export function useLocalServer() {
   const [playing, setPlaying] = useState(false);
   const [rate, setRateState] = useState(DEFAULT_RATE);
   const [fastForwarding, setFastForwarding] = useState(false);
+  //  恢復進度（null = 沒有在追趕）{ doneSec, totalSec }。只給畫面顯示，不進引擎、不進存檔。
+  const [resumeProgress, setResumeProgress] = useState(null);
 
   const persistActiveSnapshot = useCallback(({ status = "active", force = false } = {}) => {
     const eng = engineRef.current;
@@ -81,8 +86,9 @@ export function useLocalServer() {
 
   const stop = useCallback(() => {
     clearInterval(intervalRef.current); cancelAnimationFrame(rafRef.current);
-    clearTimeout(ffRef.current);
-    intervalRef.current = null; rafRef.current = null; ffRef.current = null; setPlaying(false);
+    clearTimeout(ffRef.current); clearTimeout(catchUpRef.current);
+    intervalRef.current = null; rafRef.current = null; ffRef.current = null; catchUpRef.current = null;
+    setPlaying(false); setResumeProgress(null);
   }, []);
 
   /**
@@ -125,11 +131,13 @@ export function useLocalServer() {
       intervalRef.current = setInterval(() => {
         eng.tick(DT_SIM);                       // ⚠ dt 恆為 DT_SIM
         useGameStore.getState().pushFrame(eng.snapshot());
+        //  與 start() 的節拍相同：換倍率後仍要定期保存進度，否則重新整理後會從換倍率那一刻重來
+        persistActiveSnapshot({ status: "active" });
         lastTick.current = performance.now();
         if (eng.over) stop();
       }, tickMsFor(r));
     }
-  }, [stop]);
+  }, [persistActiveSnapshot, stop]);
 
   const start = useCallback((opts = {}) => {
     stop();
@@ -271,34 +279,50 @@ export function useLocalServer() {
     if (opts.sessionId) {
       useProfileStore.getState().setActiveMatchContext({ phase: "battle", config: activeConfig });
     }
-    engineRef.current = eng;
     // R63：恢復不是重開新局。以同一 seed／同一正式設定 deterministic replay 到
     // 上次保存的模擬時間，再由同一顆 engine 繼續 tick。
+    // 恢復卡頓修正：原本整段在主執行緒一次跑完（20 分鐘的比賽 = 2400 tick，慢機器上數十秒完全無回應）。
+    // 改成分塊：每塊最多佔主執行緒 CATCH_UP_BUDGET_MS，塊與塊之間讓出給瀏覽器畫進度條。
+    // tick 序列（次數、dt、順序）與原本完全相同 ⇒ 決定性不變、結果逐位元相同。
+    // ⚠ 追趕期間 engineRef 保持 null：此時離開畫面的 persistActiveSnapshot 會是 no-op，
+    //   不會把「還沒追上」的較早時間寫回存檔、害下次恢復倒退。
     const resumeTimeSec = Math.max(0, Number(opts.resumeTimeSec) || 0);
-    let replayGuard = 0;
-    while (!eng.over && eng.t < resumeTimeSec && replayGuard < 12000) {
-      eng.tick(DT_SIM);
-      replayGuard += 1;
-    }
-    const boot = eng.snapshot(); pushFrame(boot); pushFrame(boot); // prev == snapshot
-    lastTick.current = performance.now();
-
-    intervalRef.current = setInterval(() => {
-      eng.tick(DT_SIM);                    // ⚠ dt 恆為 DT_SIM，與 playbackRate 無關
-      useGameStore.getState().pushFrame(eng.snapshot());
-      persistActiveSnapshot({ status: "active" });
+    const beginLive = () => {
+      catchUpRef.current = null;
+      setResumeProgress(null);
+      engineRef.current = eng;
+      const boot = eng.snapshot(); pushFrame(boot); pushFrame(boot); // prev == snapshot
       lastTick.current = performance.now();
-      if (eng.over) stop();
-    }, tickMsFor(rateRef.current));
+      intervalRef.current = setInterval(() => {
+        eng.tick(DT_SIM);                    // ⚠ dt 恆為 DT_SIM，與 playbackRate 無關
+        useGameStore.getState().pushFrame(eng.snapshot());
+        persistActiveSnapshot({ status: "active" });
+        lastTick.current = performance.now();
+        if (eng.over) stop();
+      }, tickMsFor(rateRef.current));
 
-    // presentationTime：只用來算子幀進度（0→1）供渲染內插。
-    //   渲染 FPS 高低 ⇒ 只影響內插取樣密度，**不影響英雄的世界移動速度**。
-    const loop = () => {
-      subTRef.current = Math.min(1, (performance.now() - lastTick.current) / tickMsFor(rateRef.current));
+      // presentationTime：只用來算子幀進度（0→1）供渲染內插。
+      //   渲染 FPS 高低 ⇒ 只影響內插取樣密度，**不影響英雄的世界移動速度**。
+      const loop = () => {
+        subTRef.current = Math.min(1, (performance.now() - lastTick.current) / tickMsFor(rateRef.current));
+        rafRef.current = requestAnimationFrame(loop);
+      };
       rafRef.current = requestAnimationFrame(loop);
+      setPlaying(true);
     };
-    rafRef.current = requestAnimationFrame(loop);
-    setPlaying(true);
+    engineRef.current = null;   // 上一場／上一次的引擎不得在追趕期間被存檔或快轉碰到
+    let replayGuard = 0;
+    const needsCatchUp = () => !eng.over && eng.t < resumeTimeSec && replayGuard < 12000;
+    if (!needsCatchUp()) { beginLive(); return; }
+    setResumeProgress({ doneSec: 0, totalSec: resumeTimeSec });
+    const catchUp = () => {
+      const until = performance.now() + CATCH_UP_BUDGET_MS;
+      while (needsCatchUp() && performance.now() < until) { eng.tick(DT_SIM); replayGuard += 1; }
+      if (!needsCatchUp()) { beginLive(); return; }
+      setResumeProgress({ doneSec: eng.t, totalSec: resumeTimeSec });
+      catchUpRef.current = setTimeout(catchUp, 0);
+    };
+    catchUpRef.current = setTimeout(catchUp, 0);
   }, [persistActiveSnapshot, stop]);
 
   const pause = useCallback(() => {
@@ -312,7 +336,7 @@ export function useLocalServer() {
     persistActiveSnapshot({ status: "paused", force: true });
     stop();
   }, [persistActiveSnapshot, stop]);
-  return { playing, start, stop, pause, fastForward, fastForwarding, engineRef, rate, setRate, rates: PLAYBACK_RATES };
+  return { playing, start, stop, pause, fastForward, fastForwarding, engineRef, rate, setRate, rates: PLAYBACK_RATES, resumeProgress };
 }
 
 // ── 多人版（示意）──────────────────────────────────────────────────────────
