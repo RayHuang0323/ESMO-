@@ -23254,3 +23254,19 @@ SIMULATION_VERSION = moba-sim.v9（未變）
 BATTLE_CONDITION_UX = LOCAL_COMMIT_ONLY（未 push、未 deploy）
 本分支新增的紅燈 = 0
 ```
+
+## Battle Condition UX — RELEASED（2026-09-24）
+
+- fetch：`origin/main` = `e7f7cb6`（與分支 merge-base 相同，未前進）⇒ 不需 rebase，fast-forward。
+- Release gate（整合 HEAD `6980a2b`）：build ✓、regress 15/15、regress2 8/8、cs23／talent27 ✓、
+  `check_battle_condition_ux` 40/40、`check_competition_q2b` 93/93、`check_online_power_contract_v1` 51/51、
+  `check_simulation_version_gate` 51/51，condition／squad／CS／賽季 gates 共 23 支綠；紅的 8 支與 `e7f7cb6` 基線完全相同（無新增 regression）。
+- push：`e7f7cb6..6980a2b` → `origin/main`（一般 fast-forward，未 force）。
+- Deploy：Actions run 35957571213（#254）build／deploy 皆 success。
+- 正式站 smoke `browser_check_prod_battle_condition_release` **39/39**（桌機＋390）：線上 bundle 含 `teamStrength.v2`；
+  Dashboard 批次休息寫進訓練槽、體力與日期不變；全隊體力 0／5／12／20／35 正式流程進 MOBA，十名英雄在跑、
+  ringVisible 0、無常駐名牌、技能標籤 ≤3 且為「R · 暗影突擊」格式；CS 選手卡顯示 0／5／12／20／35；page／console error 0。
+
+```text
+MOBA_BATTLE_CONDITION_UX = RELEASED（main 6980a2b 起）
+```
