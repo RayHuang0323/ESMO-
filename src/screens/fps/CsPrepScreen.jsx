@@ -17,7 +17,7 @@
 //  Architecture：資料全部來自 profileStore.players + playerModel（無第二套資料）。
 //  流程沿用既有 validateSquad / MatchEntryRequest / MatchmakingTicket / MatchRoom。
 // ============================================================================
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { CS_SEATS, CS_SEAT_LANE_ZH } from "../../platform/contracts/matchSquad.js";
 import MatchPrepFrame, { SquadSeatRow } from "../common/MatchPrepFrame.jsx";
@@ -26,6 +26,7 @@ import { fpsRolePresentation } from "../../battle/fps/fpsRoster.js";
 import PlayerFace from "../../ui/PlayerFace.jsx";
 import { GC } from "../../ui/theme.js";
 import { CS_MAPS } from "../../battle/fps/csPrepData.js";
+import { preloadFpsCharacterAssets } from "../../battle/fps/presentation/FpsCharacterRenderer.js";
 
 const ACC = "#fb923c"; // Legacy CS 主色
 const COND_C = { "精神飽滿": GC.green, "正常": "#d4d4d8", "疲勞": GC.gold, "低潮": GC.red };
@@ -97,6 +98,9 @@ function CsBenchSheet({ seat, players, lineup, onClose }) {
 //  這裡執行的就是那句話。本檔回歸單場 CS 賽前責任：陣容、戰力、歷史。
 
 export default function CsPrepScreen({ onNext, onBack }) {
+  //  hotfix/cs-loading-rest-ux：一進 CS 賽前就開始下載 rigged 角色（9.2 MB），
+  //  和選陣容／選圖／戰術並行；Loading 畫面再等它就緒才進 Battle。重複呼叫不會重複下載。
+  useEffect(() => { preloadFpsCharacterAssets(); }, []);
   const players = useProfileStore((s) => s.players) ?? [];
   const csHistory = useProfileStore((s) => s.csHistory) ?? [];
   const csLineup = useProfileStore((s) => s.csLineup);

@@ -20,7 +20,8 @@ import { TIERS } from "../../data/recruitPool.js";
 import { calculateLevelProgress } from "../../platform/progress/playerLevel.js";
 import { getStatLayers } from "../../platform/talents/playerDerivedStats.js";
 import { getPlayerTalentState } from "../../platform/contracts/playerTalentState.js";
-import { conditionSummary, isLowEnergy } from "../../platform/condition/playerCondition.js";
+import { conditionSummary, isLowEnergy, FATIGUE } from "../../platform/condition/playerCondition.js";
+import { restBookingOf } from "../../platform/condition/restBooking.js";
 import { growthLogOf } from "../../platform/progress/growthLog.js";
 import { GrowthEntryRow, LevelXpBar } from "../../ui/GrowthUI.jsx";
 import { CareerPanel, ContractPanel, StatusPanel } from "../../ui/PlayerProfileFoundation.jsx";
@@ -69,7 +70,7 @@ function StatRow({ label, value, isHigh, isEven }) {
   );
 }
 
-export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
+export default function PlayerDetailScreen({ playerId, onBack, onTalent, onOpenTraining = null }) {
   const players = useProfileStore((s) => s.players) ?? [];
   const team = useProfileStore((s) => s.team);
   const [mode, setMode] = useState("ability");     // "ability" | "potential"
@@ -228,20 +229,44 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent }) {
               <span data-testid="player-fatigue-note" style={{ color: "#71717a", fontSize: 9 }}>
                 出賽能力 {condition.fatiguePercent}%
               </span>
-              {isLowEnergy(p) && (
-                <button type="button" data-testid="player-quick-rest"
-                  disabled={!!p.training}
-                  onClick={() => { if (assignTraining?.(p.id, "rest")) setRestNote("已安排休息（1 天，推進日期後生效）"); }}
-                  style={{
-                    marginTop: 2, padding: "3px 8px", borderRadius: 999, fontSize: 9.5, fontWeight: 800,
-                    cursor: p.training ? "default" : "pointer", border: "1px solid rgba(52,211,153,.5)",
-                    background: p.training ? "rgba(255,255,255,.05)" : "rgba(52,211,153,.14)",
-                    color: p.training ? "#71717a" : "#34d399",
-                  }}>
-                  {p.training ? "已安排訓練" : "安排休息"}
-                </button>
-              )}
-              {restNote && <span data-testid="player-quick-rest-note" style={{ color: "#34d399", fontSize: 9 }}>{restNote}</span>}
+              {(() => {
+                //  hotfix/cs-loading-rest-ux：快捷休息。體力 < 70（疲勞開始影響能力）就出現，< 40 用強調樣式。
+                //  已有安排 ⇒ 講清楚是休息還是哪門訓練，並給「調整」⇒ 訓練中心（既有的取消課程）。
+                //  一律走 store 的 `assignTraining(id,"rest")`（`restBookingOf` 只讀狀態）。
+                const booking = restBookingOf(p);
+                if (booking.kind !== "free") {
+                  return (
+                    <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                      <span data-testid="player-rest-status" data-kind={booking.kind}
+                        style={{ color: booking.kind === "rest" ? "#34d399" : "#a78bfa", fontSize: 11, fontWeight: 800, textAlign: "center" }}>
+                        {booking.label}
+                      </span>
+                      {onOpenTraining && (
+                        <button type="button" data-testid="player-rest-adjust" onClick={onOpenTraining}
+                          style={{ padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                            background: "transparent", color: "#60a5fa", border: "1px solid rgba(96,165,250,.5)" }}>
+                          調整
+                        </button>
+                      )}
+                    </span>
+                  );
+                }
+                if (energy >= FATIGUE.freshAbove) return null;
+                const low = isLowEnergy(p);
+                return (
+                  <button type="button" data-testid="player-quick-rest" data-emphasis={low ? "low" : "normal"}
+                    onClick={() => { if (assignTraining?.(p.id, "rest")) setRestNote("已安排休息（1 天，推進日期後生效）"); }}
+                    style={{
+                      marginTop: 2, minHeight: 32, padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: 900,
+                      cursor: "pointer", border: "1px solid rgba(52,211,153,.6)",
+                      background: low ? "#34d399" : "rgba(52,211,153,.14)",
+                      color: low ? "#04140a" : "#34d399",
+                    }}>
+                    安排休息
+                  </button>
+                );
+              })()}
+              {restNote && <span data-testid="player-quick-rest-note" style={{ color: "#34d399", fontSize: 11 }}>{restNote}</span>}
             </div>
           </div>
         </PlayerListRow>

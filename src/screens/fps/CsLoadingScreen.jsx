@@ -11,6 +11,15 @@
 //  無 MOBA Hero 圖、無 heroDatabase（CS/MOBA 分離）。
 //  C6C：進場過場不把經過時間當成真實資源下載百分比；完整比賽進度由 Battle
 //  畫面的 MatchSession snapshot 摘要提供。
+//
+//  hotfix/cs-loading-rest-ux：**rigged 角色 readiness gate**。
+//  舊版是固定 2.6 秒的過場，不等任何資源；9.2 MB 的角色 GLB 要到 Battle 掛上才開始下載
+//  ⇒ 玩家先看到地圖、名字、血條，人物晚一整段下載時間才出現（4 Mbps 實測 72 秒）。
+//  現在：掛載就開始 preload（賽前畫面其實更早就開始了），最短過場時間到了之後，
+//  資產還沒好就停在這裡、誠實顯示「正在載入選手模型」，好了才進 Battle。
+//  ⚠ 上限 RIG_WAIT_CAP_MS：網路再慢也不會把玩家卡死在 Loading；超過就照舊進場
+//    （Battle 端既有的可見性契約與 60 秒保底不變）。載入失敗也直接放行。
+//  ⚠ 不改 simulation、camera、平衡，也不加任何假人 fallback。
 // ============================================================================
 import React, { useEffect, useRef, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
@@ -18,11 +27,15 @@ import { FPS_WEIGHTS, statZh } from "../../data/playerModel.js";
 import { fpsRolePresentation } from "../../battle/fps/fpsRoster.js";
 import PlayerFace from "../../ui/PlayerFace.jsx";
 import { csLoadMark } from "../../battle/fps/csLoadTiming.js";
+import { preloadFpsCharacterAssets, fpsCharacterAssetState } from "../../battle/fps/presentation/FpsCharacterRenderer.js";
 import { GC, FONT, MONO } from "../../ui/theme.js";
 
 const ACC = "#fb923c";
 const CT_C = "#38bdf8";
 const LINES = ["連線對戰伺服器…", "載入地圖資源…", "同步戰術部署…", "隊伍語音頻道就緒…", "進入凍結時間…"];
+const MIN_PRESENT_MS = 2600;
+const RIG_WAIT_CAP_MS = 45000;
+const RIG_WAIT_LINE = "正在載入選手模型…（第一次進場需要下載，之後會使用快取）";
 
 /** 該選手 FPS 權重下最突出的能力（真實 stats × Legacy FPS_WEIGHTS，純展示） */
 function keyStat(p) {
@@ -39,22 +52,35 @@ export default function CsLoadingScreen({ config, onDone }) {
   const team = useProfileStore((s) => s.team);
   const starters = players.filter((p) => p.status === "主力").slice(0, 5);
   const [phaseIndex, setPhaseIndex] = useState(0);
+  const [rigState, setRigState] = useState(() => fpsCharacterAssetState());
+  const [waitingRig, setWaitingRig] = useState(false);
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
 
   useEffect(() => {
     const t0 = Date.now();
-    csLoadMark("ui:cs-loading-mount");
+    csLoadMark("ui:cs-loading-mount", { rig: fpsCharacterAssetState() });
+    preloadFpsCharacterAssets();
     let completed = false;
     let finishTimer = null;
+    const finish = (reason) => {
+      if (completed) return;
+      completed = true;
+      clearInterval(iv);
+      csLoadMark("ui:cs-loading-rig-" + reason, { waitedMs: Date.now() - t0 });
+      finishTimer = setTimeout(() => { csLoadMark("ui:cs-loading-done"); onDoneRef.current?.(); }, 250);
+    };
     const iv = setInterval(() => {
-      const p = Math.min(100, Math.round(((Date.now() - t0) / 2600) * 100));
+      const elapsed = Date.now() - t0;
+      const p = Math.min(100, Math.round((elapsed / MIN_PRESENT_MS) * 100));
       setPhaseIndex(Math.min(LINES.length - 1, Math.floor(p / (100 / LINES.length))));
-      if (p >= 100 && !completed) {
-        completed = true;
-        clearInterval(iv);
-        finishTimer = setTimeout(() => { csLoadMark("ui:cs-loading-done"); onDoneRef.current?.(); }, 250);
-      }
+      const rig = fpsCharacterAssetState();
+      setRigState(rig);
+      if (p < 100) return;
+      if (rig === "ready") finish("ready");
+      else if (rig === "failed") finish("failed");
+      else if (elapsed >= RIG_WAIT_CAP_MS) finish("timeout");
+      else setWaitingRig(true);
     }, 60);
     return () => {
       clearInterval(iv);
@@ -62,7 +88,7 @@ export default function CsLoadingScreen({ config, onDone }) {
     };
   }, []);
 
-  const line = LINES[phaseIndex];
+  const line = waitingRig ? RIG_WAIT_LINE : LINES[phaseIndex];
 
   return (
     <div style={{ height: "100%", overflow: "auto", background: "#070a10", fontFamily: FONT, padding: "14px 12px 24px" }}>
@@ -104,7 +130,7 @@ export default function CsLoadingScreen({ config, onDone }) {
         </div>
 
         {/* C6C：不顯示不具 authority 的百分比；只提示目前正在準備哪個進場階段。 */}
-        <div data-testid="cs-loading-state" role="status" aria-live="polite" aria-busy="true" style={{ display: "flex", alignItems: "center", gap: 8, color: GC.gray, fontSize: 9, lineHeight: 1.4 }}>
+        <div data-testid="cs-loading-state" data-rig-state={rigState} data-waiting-rig={waitingRig ? "1" : "0"} role="status" aria-live="polite" aria-busy="true" style={{ display: "flex", alignItems: "center", gap: 8, color: GC.gray, fontSize: 9, lineHeight: 1.4 }}>
           <span aria-hidden="true" style={{ width: 7, height: 7, flexShrink: 0, borderRadius: "50%", background: ACC, boxShadow: `0 0 0 4px ${ACC}22`, animation: "csLoadingPulse 1.2s ease-in-out infinite" }} />
           <span style={{ color: "#e8ebf0", fontWeight: 800 }}>正在準備 Battle…</span>
           <span>{line}</span>

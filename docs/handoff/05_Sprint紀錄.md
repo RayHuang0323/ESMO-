@@ -23270,3 +23270,88 @@ BATTLE_CONDITION_UX = LOCAL_COMMIT_ONLY（未 push、未 deploy）
 ```text
 MOBA_BATTLE_CONDITION_UX = RELEASED（main 6980a2b 起）
 ```
+
+## Hotfix：CS 首次進場人物晚到＋體力管理不能勾＋選手頁快捷休息（2026-09-24，branch `hotfix/cs-loading-rest-ux`）
+
+基準 production main `07fb93e`。先 Audit 再改，不重構；不改 CS simulation、camera、平衡，不恢復 primitive 假人。
+
+### 1. CS 首次進場：地圖、名字、血條先出現，人物晚 10～20 秒
+
+**Root cause（不是 visibility bug）**：rigged 角色資產（`esmo-fps-character.glb` 6.5 MB ＋ `esmo-fps-animation-library.glb` 2.7 MB）
+要等 Battle 掛上、角色控制器建立之後才**開始**下載；在那之前還有約 17 秒的同步 CS 模擬。
+而 `CsLoadingScreen` 只是一個固定 2.6 秒的假計時，不等任何資源。
+⇒ Battle 第一個 frame 時 10 名 rigged 全都還在下載（`riggedPending 10`），空窗長度＝GLB 下載時間。
+模組層快取（`assetPromise`）讓同一頁面的第二次進場是即時的，所以只有「第一次」會看到。
+
+正式站實測（`browser_measure_cs_rigged_entry`，走正式 Home → CS → Battle）：
+
+| 情境 | first-frame pending | Battle 有畫面但人物未到 | 選完戰術 → 人物出現 |
+|---|---|---|---|
+| 快網路・冷快取 | 10 | 2.4 秒 | 23.1 秒 |
+| 限速 4 Mbps・冷快取 | 10 | **72.6 秒**（角色 GLB 下載 70 秒） | 92.6 秒 |
+| reload（HTTP 快取熱） | 10 | 1.2 秒 | 20.4 秒 |
+| 同頁「返回比賽」 | 0 | 0 | 0.7 秒 |
+
+**修正（preload ＋ readiness gate）**：
+- `FpsCharacterRenderer`：新增 `preloadFpsCharacterAssets()`（同一個 `assetPromise`，重複呼叫不會重複下載）與
+  `fpsCharacterAssetState()`（idle／loading／ready／failed，純字串）。資產、動畫、可見性契約、60 秒保底都沒動。
+- `CsPrepScreen` 掛載就開始 preload（和選陣容、選圖、戰術並行）；`CsMatchScreen` 第一次 render 也呼叫
+  （「返回比賽」會跳過 Loading，這樣也能在同步模擬前先起跑）。
+- `CsLoadingScreen`：保留原本最短 2.6 秒過場；之後資產還沒 ready 就停在 Loading，誠實顯示
+  「正在載入選手模型…（第一次進場需要下載，之後會使用快取）」，ready 或 failed 才放行；上限 45 秒，絕不卡死。
+
+修正後（本機 production build＋同樣限速）：
+
+| 情境 | first-frame pending | Battle 有畫面但人物未到 | 選完戰術 → 人物出現 |
+|---|---|---|---|
+| 快網路・冷快取 | **0** | **0** | 21.2 秒 |
+| 限速 4 Mbps・冷快取 | **0** | **0**（Loading 停到 15.4 秒） | **32.8 秒**（原 92.6） |
+| reload | 0 | 0 | 20.6 秒 |
+| 同頁返回 | 0 | 0 | 0.7 秒 |
+
+⚠ 量測工具另外記了 `battleVisibleWithoutRiggedMs` 0.7–1.7 秒：那是 DOM 記分板比第一個 3D frame 早 render 的差距，
+那時地圖也還沒畫，不是「有地圖名字卻沒人」；正確指標是 `firstFrameRiggedPending`。
+⚠ 模擬本身約 17 秒（main thread）是既有成本（CS Loading v2 已知），本輪不動。
+
+### 2. Dashboard 體力管理不能勾
+
+**Root cause**：面板用 `resting: !!p.training` 判斷「已安排」並整列鎖死。但 `training` 代表**任何**進行中的課程
+（休息或多天訓練），而訓練本身會扣體力 ⇒ 低體力的人常常正好在上課；另一種是剛排完休息、還沒推進日期。
+首頁提醒 `needsAttention` 又把這些人全算進去 ⇒ 提醒一直在、點進去整片「已安排」不能勾。資料本身沒有錯
+（store 的 `assignTraining` 本來就拒絕 double-book，課程結束會清成 null）；錯在 UI 的分類與提醒計數。
+「已安排」原本代表的是「身上有任何一門課」，不一定是休息。
+
+**修正**：新增共用純函式 `platform/condition/restBooking.js`（`restBookingOf` / `canBookRest`）：
+free＝可安排；rest＝「已安排休息（剩 N 天）」；training＝「訓練中：課名（剩 N 天）」。
+- 面板：可安排的人預設勾選、可單選／多選；全選只選可安排的人；已安排的人不能重複安排，但顯示具體狀態＋「調整」（⇒ 訓練中心，
+  那裡有既有的取消課程）；全都已安排時說明原因、全選與安排鈕停用。摘要列「可安排 N・已安排休息 N・訓練中 N」。
+- 首頁提醒只算可安排的人（另註明「另 N 人已有安排」）；沒有可安排的人就不再提醒。
+- 仍只走 `assignTraining(id, "rest")`；不改 energy、不推進日期。
+
+### 3. 選手頁快捷休息
+
+`PlayerDetailScreen` 狀態欄：體力 < 70（疲勞開始影響能力）就出現「安排休息」，< 40 用強調樣式（12px、32px 高）；
+已安排時顯示「已安排休息（剩 N 天）」或「訓練中：課名（剩 N 天）」＋「調整」（AppShell 接到訓練中心）。
+同一份 `restBookingOf`、同一個 `assignTraining(id,"rest")`，沒有第二套休息邏輯。
+
+### 驗證（全部實跑）
+
+- `npm run build` ✓（13.84s）
+- 新增 `check_hotfix_cs_loading_rest_ux` **18/18**；`browser_check_hotfix_cs_loading_rest_ux` **60/60**（桌機＋390：
+  Dashboard 狀態／單選／多選／全選／調整、提醒計數、Player Detail 快捷休息與訓練中狀態、CS 第一次進場 Loading 等 rig-ready 且
+  first-frame pending 0、體力與日期不變、page／console error 0）
+- CS：`check_cs_c2a` 13/13、`c2b` 14/14、`c2c` 9/9、`check_cs_renderer_visibility`（10-player）24/24、
+  `check_cs_rigged_reveal_fallback` 13/13、`check_cs_camera_recovery` 8/8、verify `cs23` ✓、
+  `browser_check_cs_rigged_reveal_timeout` 13/13（GLB 永遠卡住時 60 秒保底仍成立）
+- 體力／訓練／陣容：`check_battle_condition_ux` 40/40、`browser_check_battle_condition_ux` 28/28、`check_condition_o2` 31/31、
+  `check_dev_quick_recovery` ✓、`check_squad_o1` 40/40、`check_no_player_injury` ✓、`check_match_entry_o3` 35/35、
+  `check_matchmaking_o4` 48/48、`check_training_competition_integration` 13/13、`check_retention_v7b` ✓、
+  `check_save_bundle_b1b` ✓、`check_save_hardening_b1c` 76/76、`check_team_development_v1` ✓、`expansion_v1` 85/85、
+  `check_growth_loop_p0` 25/25、`check_cs_roster_v1_r56` ✓、verify `talent27` ✓、`regress` 15/15、`regress2` 8/8
+
+既有紅燈（`07fb93e` 乾淨基線上同樣紅，非本輪）：`check_growth_ui_p1` §8d（79/80）、
+`browser_check_cs_camera_recovery`（tactic selection timeout）。
+
+```text
+HOTFIX_CS_LOADING_REST_UX = LOCAL_COMMIT_ONLY（未 push、未 deploy）
+```

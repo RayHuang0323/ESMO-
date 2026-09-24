@@ -21,6 +21,7 @@ import { toCsMatchResult } from "../../platform/contracts/CsMatchResult.js";
 import { GC, FONT } from "../../ui/theme.js";
 import CsLongMatchProgress from "./CsLongMatchProgress.jsx";
 import { csLoadMark } from "../../battle/fps/csLoadTiming.js";
+import { preloadFpsCharacterAssets } from "../../battle/fps/presentation/FpsCharacterRenderer.js";
 
 export default function CsMatchScreen({ config, onFinish, onBack }) {
   const players = useProfileStore((s) => s.players) ?? [];
@@ -37,7 +38,13 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
     : session?.origin?.kind === "practice" ? "CS 快速練習" : "CS 一般對戰";
   //  CS Loading v2：量測用，只在第一次 render 記一個時間點。
   const loadMountMarked = useRef(false);
-  if (!loadMountMarked.current) { loadMountMarked.current = true; csLoadMark("ui:cs-match-first-render"); }
+  if (!loadMountMarked.current) {
+    loadMountMarked.current = true;
+    csLoadMark("ui:cs-match-first-render");
+    //  hotfix/cs-loading-rest-ux：「返回比賽」會跳過 CsLoadingScreen ⇒ 在同步模擬開跑前先起跑下載
+    //  （同一個 promise；已在賽前／Loading 開始過就什麼都不做）。
+    preloadFpsCharacterAssets();
+  }
   //  Milestone O1：以**出賽陣容**建立引擎名單（誰上場不再看陣列順序）
   const csLineup = useProfileStore((s) => s.csLineup);
   const roster = useMemo(() => toFpsRoster(players, csLineup), [players, csLineup]);

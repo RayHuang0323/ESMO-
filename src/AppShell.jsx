@@ -370,7 +370,7 @@ export default function AppShell() {
       {screen === "offSeason" && <OffSeasonScreen onBack={home} />}
       {screen === "objectives" && <ObjectivesScreen onBack={home} />}
       {screen === "recruit" && <RecruitScreen onBack={home} />}
-      {screen === "playerDetail" && <PlayerDetailScreen playerId={playerId} onBack={go("roster")} onTalent={(id) => { setPlayerId(id); setScreen("playerTalent"); }} />}
+      {screen === "playerDetail" && <PlayerDetailScreen playerId={playerId} onBack={go("roster")} onOpenTraining={go("training")} onTalent={(id) => { setPlayerId(id); setScreen("playerTalent"); }} />}
       {/* 舊版個人天賦路由保留供舊存檔與詳情流程使用；新的長期投資走戰隊發展。 */}
       {screen === "playerTalent" && <PlayerTalentScreen playerId={playerId} onBack={go("playerDetail")} />}
 

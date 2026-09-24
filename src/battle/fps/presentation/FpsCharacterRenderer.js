@@ -30,16 +30,44 @@ function loadGltf(loader, url, label) {
   }, reject));
 }
 
+//  hotfix/cs-loading-rest-ux：就緒狀態（純字串，不存物件參照）。
+//  idle → loading → ready | failed。Loading 畫面讀它決定何時放行進 Battle。
+let assetState = "idle";
+
 export function loadFpsCharacterAssets() {
   if (!assetPromise) {
     const loader = new GLTFLoader();
+    assetState = "loading";
     assetPromise = Promise.all([
       loadGltf(loader, FPS_CHARACTER_ASSET_MANIFEST.character, "character"),
       loadGltf(loader, FPS_CHARACTER_ASSET_MANIFEST.animationLibrary, "animation-library"),
-    ]).then(([character, animationLibrary]) => ({ character, animationLibrary }));
+    ]).then(([character, animationLibrary]) => {
+      assetState = "ready";
+      return { character, animationLibrary };
+    }, (error) => {
+      assetState = "failed";
+      throw error;
+    });
   }
   return assetPromise;
 }
+
+/**
+ * 提早開始下載＋解析 rigged 角色資產（同一個 promise，重複呼叫不會重複下載）。
+ *
+ * 為什麼：9.2 MB 的 GLB 原本要等 Battle 掛上、角色控制器建立之後才開始下載，
+ * 而在那之前還有十幾秒的 CS 模擬 ⇒ 地圖／名字／血條先畫出來，人物要再等一整段下載
+ * （正式站限速 4 Mbps 實測：Battle 畫面出現後 72 秒人物才到）。
+ * 在 CS 賽前就開始下載，和選圖、選戰術、模擬並行；Loading 畫面再等它就緒才放行。
+ * ⚠ 只影響「何時下載」，不改資產、動畫、可見性契約，也不加任何 fallback。
+ * @returns {Promise<"ready"|"failed">} 永不 reject
+ */
+export function preloadFpsCharacterAssets() {
+  return loadFpsCharacterAssets().then(() => "ready", () => "failed");
+}
+
+/** "idle" | "loading" | "ready" | "failed" */
+export const fpsCharacterAssetState = () => assetState;
 
 function cloneWithoutRootMotion(clip) {
   const copy = clip.clone();

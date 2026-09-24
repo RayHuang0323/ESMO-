@@ -17,6 +17,7 @@ import { useMobileSheetMotion } from "./dashboard/useMobileSheetMotion.js";
 //  「有選手需要處理嗎」用既有的判定，不在首頁另訂體力門檻。
 import { isLowEnergy } from "../platform/condition/playerCondition.js";
 import RestPlannerPanel from "./dashboard/RestPlannerPanel.jsx";
+import { canBookRest } from "../platform/condition/restBooking.js";
 //  V1：推進世界時間一律走具名入口＋白名單理由（見 platform/time/worldClock.js）。
 import { ADVANCE_REASONS } from "../platform/time/worldClock.js";
 //  V3：快轉級距讀自契約，畫面不自己寫死天數。
@@ -1004,12 +1005,17 @@ export default function DashboardScreen({ onMoba, onSeason, onNav, onResumeActiv
   //  ⚠ 順序刻意排在資金之後、其他待辦之前：手機首頁只渲染**前 4 個**待辦
   //    （主要行動 1 ＋ 快捷 3），排在最後的話 390px 上根本看不到這則提醒
   //    （瀏覽器實測抓到）。體力直接影響下一場比賽，優先序本來就該高於收件匣／發展點。
-  if (needsAttention.length > 0) {
+  //  ⚠ hotfix/cs-loading-rest-ux：只有「還能安排」的人才算待辦。已經排了休息或正在上課的人
+  //    不能再安排（store 會拒絕 double-book）——把他們算進來，提醒就會一直在、點進去卻什麼都不能做。
+  //    面板仍然列出全部低體力選手，已安排的人會寫清楚是休息還是哪一門訓練。
+  const restable = needsAttention.filter(canBookRest);
+  if (restable.length > 0) {
+    const booked = needsAttention.length - restable.length;
     todos.push({
       id: "condition", icon: "alert", accent: GC.gold,
       title: "安排選手休息",
-      detail: `${needsAttention.length} 人體力偏低，出賽能力會下降`,
-      badge: needsAttention.length, onClick: () => setRestOpen(true),
+      detail: `${restable.length} 人體力偏低，出賽能力會下降${booked > 0 ? `（另 ${booked} 人已有安排）` : ""}`,
+      badge: restable.length, onClick: () => setRestOpen(true),
     });
   }
   //  V7B：有目標可以領才出現。⚠ 沒得領就完全不渲染——這一區的規則是
