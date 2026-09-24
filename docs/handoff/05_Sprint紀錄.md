@@ -23355,3 +23355,24 @@ free＝可安排；rest＝「已安排休息（剩 N 天）」；training＝「�
 ```text
 HOTFIX_CS_LOADING_REST_UX = LOCAL_COMMIT_ONLY（未 push、未 deploy）
 ```
+
+## Hotfix cs-loading-rest-ux — RELEASED（2026-09-24）
+
+- fetch：`origin/main` = `07fb93e`（未前進）⇒ fast-forward，無衝突。
+- Release gate（`9757858`）：build ✓（18.18s）、`check_cs_renderer_visibility` 24/24、C2A 13/13、C2B 14/14、C2C 9/9、
+  rigged reveal fallback 13/13、`check_cs_camera_recovery` 8/8、`check_battle_condition_ux` 40/40、
+  `check_hotfix_cs_loading_rest_ux` 18/18、condition／squad／dev_quick_recovery／training 綠、cs23 ✓、regress 15/15、regress2 8/8；
+  `check_growth_ui_p1` 79/80 與 `07fb93e` 基線相同（既有紅燈，未處理）。
+- push：`07fb93e..9757858` → `origin/main`（一般 fast-forward，未 force）；Deploy：Actions #256 success。
+- 正式站 smoke：
+  - `browser_check_hotfix_cs_loading_rest_ux`（`ESMO_EXTERNAL_URL`）**60/60**（桌機＋390）：Dashboard 單選／多選／全選、
+    已訓練／已休息狀態與調整、提醒計數、Player Detail「安排休息」、體力與日期不變、CS Loading 等 rig-ready、first-frame pending 0、page／console error 0。
+  - `browser_measure_cs_rigged_entry`（正式站）：冷進場 first-frame pending **0**（桌機／390、快網路／限速 4 Mbps 皆同）；
+    限速時 Loading 停 12.1／11.4 秒後進場、選完戰術到人物 35.4／34.4 秒（修正前 92.6 秒、其中 72.6 秒是「有名字血條沒人」）；
+    同頁返回角色 0.7 秒就緒。
+- gate 本身的修正（非產品）：正式站首頁待辦區比模式卡晚 render ⇒ 讀待辦前先等它出現；存檔改在 app script 前注入
+  （避免上一頁 pagehide flush 蓋掉）；新增 `ESMO_EXTERNAL_URL` 支援。
+
+```text
+HOTFIX_CS_LOADING_REST_UX = RELEASED（main 9757858 起）
+```

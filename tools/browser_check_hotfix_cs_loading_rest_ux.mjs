@@ -3,6 +3,7 @@
 //  hotfix/cs-loading-rest-ux 瀏覽器驗收（dev server；桌機 1366×900 ＋ 390×844）
 //
 //  執行：node tools/browser/run-gate.mjs tools/browser_check_hotfix_cs_loading_rest_ux.mjs --timeout 1500000
+//  正式站：ESMO_EXTERNAL_URL=https://rayhuang0323.github.io/ESMO-/ node tools/browser/run-gate.mjs …（同一支；瀏覽器端不 import /src/）
 //
 //  ⚠ 只走 UI ＋ localStorage（存檔在 Node 端用正式 profileStore 產生）。
 //  ⚠ evaluate 字串不可含反引號。
@@ -60,7 +61,8 @@ const FREE = [P[0], P[1], P[4]];
 const VIS = "const vis=(e)=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0;}; const q=(s)=>[...document.querySelectorAll(s)].find(vis);";
 
 const result = await runGate({
-  name: "Hotfix CS loading ＋ rest UX", timeoutMs: 1_450_000,
+  name: process.env.ESMO_EXTERNAL_URL ? "Hotfix CS loading ＋ rest UX（正式站）" : "Hotfix CS loading ＋ rest UX", timeoutMs: 1_450_000,
+  externalUrl: process.env.ESMO_EXTERNAL_URL?.trim() || null,
   async run({ chrome, url, ck, sleep }) {
     const ev = async (body) => { const r = String(await chrome.evaluate(body)); try { return JSON.parse(r); } catch { try { return JSON.parse(r.replace(/^"|"$/g, "")); } catch { return r; } } };
     const wait = async (expr, ms = 15000) => { const t = Date.now(); while (Date.now() - t < ms) { try { if (await ev(VIS + "return JSON.stringify(!!(" + expr + "));")) return true; } catch { /* 換頁中 */ } await sleep(250); } return false; };
@@ -85,7 +87,9 @@ const result = await runGate({
     };
     const rows = () => ev("return JSON.stringify([...document.querySelectorAll('[data-testid=rest-player-row]')].map(r=>{const c=r.querySelector('[data-testid=rest-player-check]'); const s=r.querySelector('[data-testid=rest-player-status]'); return {id:r.dataset.player, booking:r.dataset.booking, checked:!!(c&&c.checked), disabled:!!(c&&c.disabled), status:s?s.textContent:null, adjust:!!r.querySelector('[data-testid=rest-player-adjust]')};}));");
     const checkRow = (id) => ev("const c=document.querySelector('[data-testid=rest-player-row][data-player=\"" + id + "\"] [data-testid=rest-player-check]'); if(!c||c.disabled) return JSON.stringify(false); c.click(); return JSON.stringify(true);");
-    const openPanel = async () => { await clickText("安排選手休息"); return wait("q('[data-testid=\"rest-planner\"]')", 8000); };
+    //  ⚠ 首頁待辦區比模式卡晚出現（正式站實測：home-mode-moba 已出現時待辦區還沒 render）⇒ 先等它
+    const TODO_EXPR = "[...document.querySelectorAll('button')].filter(vis).some(b=>(b.innerText||'').includes('安排選手休息'))";
+    const openPanel = async () => { await wait(TODO_EXPR, 15000); await clickText("安排選手休息"); return wait("q('[data-testid=\"rest-planner\"]')", 8000); };
     const todoText = () => ev(VIS + "const b=[...document.querySelectorAll('button')].filter(vis).find(x=>(x.innerText||'').includes('安排選手休息')); return JSON.stringify(b?b.innerText.replace(/\\s+/g,' '):null);");
 
     for (const vp of [
@@ -98,7 +102,9 @@ const result = await runGate({
       // ── D1：狀態、單選、多選 ─────────────────────────────────────────────
       ck(`${L}｜D0 首頁載入`, await inject());
       const s0 = await readSave();
+      await wait(TODO_EXPR, 15000);
       const todo = await todoText();
+      if (!todo) console.log("[diag D1] " + JSON.stringify({ url: await ev("return JSON.stringify(location.href);"), injected: await ev("return JSON.stringify(sessionStorage.getItem('esmoInjected'));"), nonce, save: (s0?.players ?? []).slice(0, 5).map((p) => [p.id, p.energy, p.training?.courseId ?? null]), body: String(await ev("return JSON.stringify((document.body.innerText||'').replace(/\s+/g,' ').slice(0,300));")) }));
       ck(`${L}｜D1 首頁提醒只算可安排的 3 人（另 2 人已有安排）`, !!todo && /3 人體力偏低/.test(todo) && /另 2 人已有安排/.test(todo), String(todo));
       ck(`${L}｜D2 打開體力管理面板`, await openPanel());
       let r = await rows();
@@ -149,6 +155,7 @@ const result = await runGate({
       await openPanel();
       await click('[data-testid="rest-assign"]'); await sleep(400);
       const s2 = await readSave();
+      if (!FREE.every((id) => bookingOf(s2, id) === "rest")) console.log("[diag D17] " + JSON.stringify({ url: await ev("return JSON.stringify(location.href);"), injected: await ev("return JSON.stringify(sessionStorage.getItem('esmoInjected'));"), nonce, save: (s2?.players ?? []).slice(0, 5).map((p) => [p.id, p.energy, p.training?.courseId ?? null]), result: await ev("return JSON.stringify((document.querySelector('[data-testid=rest-planner-result]')||{}).textContent||null);"), rows: await rows() }));
       ck(`${L}｜D17 預設全選 ⇒ 一次安排 3 人`, FREE.every((id) => bookingOf(s2, id) === "rest") && bookingOf(s2, P[2]) === "aim");
       await ev("const b=document.querySelector('[data-testid=rest-player-row][data-player=\"" + P[2] + "\"] [data-testid=rest-player-adjust]'); if(b) b.click(); return JSON.stringify(!!b);");
       ck(`${L}｜D18「調整」⇒ 訓練中心`, await wait("[...document.querySelectorAll('h1,h2,div,span')].some(e=>vis(e)&&(e.textContent||'').trim()==='訓練中心')", 8000));
