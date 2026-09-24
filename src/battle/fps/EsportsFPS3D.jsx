@@ -23,6 +23,10 @@ import { csLoadMark, csLoadSpan, csLoadTime, csSimCacheEvent } from "./csLoadTim
    （避免與主遊戲的 PERSONALITY / MAPS / C 等同名衝突），只對外暴露
    EsportsFPS3D 元件與 buildMatchResult。
    ═══════════════════════════════════════════════════════════════ */
+// hotfix/cs-resume-worker：讓 Web Worker 拿到**同一個** simulateFps（不另建第二套模擬）。
+//   runner 由主執行緒端的 fpsSimClient.js 註冊；Worker 端只讀 simulateFps。
+//   ⚠ 刻意不改下方 IIFE 的 return／export 兩行（多支 gate 以它們為字串 marker 做 transform）。
+const __FPS3D_SIM_PORT = { simulateFps: null, runner: null };
 const __FPS3D_MODULE = (function(){
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -1904,6 +1908,34 @@ function simulateFpsForMount(mapKey,tacticT,tacticCT,seed,roster,tacticalLayout)
   if(key){lastMountSimulation={key,sim,mapKey,seed};csSimCacheEvent("store",{mapKey,seed,frames:sim.frames.length});}
   return sim;
 }
+__FPS3D_SIM_PORT.simulateFps = simulateFps;
+// hotfix/cs-resume-worker：快取沒命中時，把 simulateFps 交給 Web Worker 算，並以 React Suspense 等待
+//   （拋出 promise）。主執行緒不再被整場模擬佔住；結果回來後寫進同一份 lastMountSimulation，
+//   重新 render 時走既有的 reuse 路徑 ⇒ 與同步版拿到的是同一個輸入的同一份輸出。
+//   沒有 runner（Worker 不支援／非 CS 正式畫面）⇒ 退回原本的同步計算，行為完全不變。
+const pendingMountSimulation=new Map();
+function simulateFpsForMountAsync(mapKey,tacticT,tacticCT,seed,roster,tacticalLayout){
+  let key=null;
+  try{key=JSON.stringify([mapKey,tacticT,tacticCT,seed,roster,tacticalLayout]);}catch(e){key=null;}
+  const runner=__FPS3D_SIM_PORT.runner;
+  if(!key||!runner||(lastMountSimulation&&lastMountSimulation.key===key))return simulateFpsForMount(mapKey,tacticT,tacticCT,seed,roster,tacticalLayout);
+  if(!pendingMountSimulation.has(key)){
+    csLoadMark("sim:worker-start",{mapKey,seed});
+    const args=[mapKey,tacticT,tacticCT,seed,roster,tacticalLayout];
+    const job=Promise.resolve()
+      .then(()=>runner(args))
+      .catch(()=>{csLoadMark("sim:worker-fallback",{mapKey,seed});return simulateFps(...args);})
+      .then((sim)=>{
+        if(lastMountSimulation)csSimCacheEvent("replace",{mapKey:lastMountSimulation.mapKey,seed:lastMountSimulation.seed});
+        lastMountSimulation={key,sim,mapKey,seed};
+        csSimCacheEvent("store",{mapKey,seed,frames:sim.frames.length});
+        csLoadMark("sim:worker-done",{mapKey,seed});
+      })
+      .finally(()=>pendingMountSimulation.delete(key));
+    pendingMountSimulation.set(key,job);
+  }
+  throw pendingMountSimulation.get(key);
+}
 function releaseMountSimulation(sim){if(lastMountSimulation&&lastMountSimulation.sim===sim){lastMountSimulation=null;csSimCacheEvent("release-complete",{});}}
 function buildMatchResult(sim,opts={}){
   const{tacticT,tacticCT,tName="德國海豹",ctName="Compulsary",date=null,seed=0,matchId=null}=opts;
@@ -3366,6 +3398,7 @@ function EsportsFPS3D({
   resumeFrameIndex=0,         // R63：由 ActiveMatch snapshot 恢復同一份正式 frames
   onProgress=null,             // R63：回報目前 frame，外層負責節流保存
   embedded=false,             // 嵌入主遊戲：隱藏內建選圖/選戰術面板
+  asyncSimulation=false,      // hotfix/cs-resume-worker：快取沒命中時改在 Worker 算（外層必須有 <Suspense>）
 }={}){
   // 名稱覆寫（嵌入時）
   if(teamNameProp)T_NAME=teamNameProp; if(oppNameProp)CT_NAME=oppNameProp;
@@ -3406,7 +3439,7 @@ function EsportsFPS3D({
   const [seed,setSeed]=useState(seedProp||42);
   useEffect(()=>{if(seedProp!=null&&seedProp!==seed)setSeed(seedProp);},[seedProp]);
   const tacticT=preMatchLayout.phases[CS_TACTICAL_PHASES.OPENING]?.tactic||baseTactic,tacticCT=lib.ct[Math.min(ctIdx,lib.ct.length-1)];
-  const sim=useMemo(()=>simulateFpsForMount(mapKey,tacticT,tacticCT,seed,effectiveRoster,tacticalLayoutProp),[mapKey,tIdx,ctIdx,seed,effectiveRoster,tacticalLayoutProp,tacticT,tacticCT]);
+  const sim=useMemo(()=>(asyncSimulation?simulateFpsForMountAsync:simulateFpsForMount)(mapKey,tacticT,tacticCT,seed,effectiveRoster,tacticalLayoutProp),[mapKey,tIdx,ctIdx,seed,effectiveRoster,tacticalLayoutProp,tacticT,tacticCT,asyncSimulation]);
   // 賽後結果（給主遊戲）；播放到最後一格時透過 onComplete 回傳一次
   const matchResult=useMemo(()=>csLoadTime("sim:buildMatchResult",()=>buildMatchResult(sim,{tacticT,tacticCT,tName:T_NAME,ctName:CT_NAME,seed})),[sim,seed]);
   const completedRef=useRef(null);
@@ -3754,4 +3787,5 @@ const EsportsFPS3D = __FPS3D_MODULE.EsportsFPS3D;
 const buildMatchResult = __FPS3D_MODULE.buildMatchResult;
 
 export { EsportsFPS3D, buildMatchResult };
+export { __FPS3D_SIM_PORT };
 export default EsportsFPS3D;

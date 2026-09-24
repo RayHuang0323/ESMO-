@@ -23578,3 +23578,48 @@ SIMULATION_VERSION = moba-sim.v11（skill-on 語意變化；skill-off 與 v10 �
 ```text
 MOBA_COMBAT_POLISH_R2 = RELEASED（main da3f943；simulation moba-sim.v11）
 ```
+
+
+---
+
+## 2026-09-25 hotfix/cs-resume-worker（base `8bf51df`，未 push、未 deploy）
+
+### Root cause
+- CS「返回同一場」的模擬快取（`lastMountSimulation`）只在記憶體裡。手機切背景、分頁被回收 ⇒ 回來等於重新整理 ⇒ 快取消失。
+- 返回時 phase = battle ⇒ 直接掛 `CsMatchScreen` → `EsportsFPS3D`，`useMemo` 在**主執行緒同步**跑整場 `simulateFps`，沒有任何進度。
+- 正式站實測（重新整理後返回）：桌機 12.8 秒整段凍結（最長 long task 12.5 秒）；CPU 降速 4× 51 秒凍結（390：43 秒）。
+
+### 修法
+- `EsportsFPS3D.jsx`：新增 `simulateFpsForMountAsync`（只在 `asyncSimulation` prop 開啟時使用）：命中快取 ⇒ 同原本；沒命中 ⇒ 交給 runner（Web Worker）並丟出 promise（React Suspense），
+  完成後寫進**同一份** `lastMountSimulation`，重新 render 時走既有 reuse。runner 失敗 ⇒ 退回主執行緒同步計算。沒有 runner ⇒ 原本的同步路徑。
+  `simulateFps` 原始碼一字未改；gate 用的 IIFE return／export 兩行 marker 未動（另開 `__FPS3D_SIM_PORT` 匯出）。
+- `fpsSim.worker.js`：只 import `EsportsFPS3D.jsx`，呼叫同一個 `simulateFps`（不 import client ⇒ 不會在 Worker 裡再建 Worker）。
+- `fpsSimClient.js`：主執行緒端 runner；`?diag=1` 時 Worker 算完再於主執行緒算一次比對雜湊（`window.__CS_SIM_WORKER_DIAG`），正式遊玩不多算。
+- `CsMatchScreen.jsx`：`<Suspense>` 包住 `EsportsFPS3D`，fallback＝「正在回到比賽…」＋已等待秒數＋依上次 Worker 實際耗時估的進度（≤ 95%，超時才緩慢逼近 99%）。
+  Legacy `EsportsGame` 入口未開 asyncSimulation（沒有 Suspense 邊界的地方維持同步）。
+- 未做 IndexedDB／sessionStorage 持久化（本輪不做第三方案）；FPS balance／RNG／simulation version 未動。
+
+### 等價
+- node：`check_cs_resume_worker` **17/17**（輸入／輸出 structured clone 後逐位元相同 ×3 場、`simulateFps` 原始碼與 8bf51df 相同、Suspense／快取命中／runner 失敗退回 皆與同步版逐位元相同）。
+- `check_cs_loading_v2_sim_equivalence --ref 8bf51df` 10/10、`check_cs_sim_cache_lifecycle` 10/10。
+- 瀏覽器（`?diag=1`、390）：同一場 Worker 雜湊 `f5fb58fc:114796582` ＝ 主執行緒雜湊（equal=true）。
+
+### 修前／修後（headed 真 GPU；返回後以存檔 activeMatch snapshot 驗同一場：總幀數相同、游標／回合／比分不倒退）
+| 情境 | 修前 點擊→戰鬥／最長凍結 | 修後 點擊→戰鬥／最長凍結 |
+|---|---|---|
+| 390 同分頁 正常 | 0.8 s／0.4 s | 0.8 s／0.4 s |
+| 390 同分頁 4× | 1.5 s／1.0 s | 1.5 s／1.0 s |
+| 390 重新整理後 正常 | 11.9 s／**11.6 s** | 14.3 s／**0.46 s**（全程進度） |
+| 390 重新整理後 4× | 43.5 s／**43.1 s** | 16.2 s／**1.2 s**（全程進度） |
+| 桌機 同分頁 正常／4× | 0.8／2.1 s | 0.8／1.5 s |
+| 桌機 重新整理後 正常 | 12.8 s／**12.5 s** | 14.2 s／**0.43 s** |
+| 桌機 重新整理後 4× | 51.1 s／**50.5 s** | 16.8 s／**1.1 s** |
+
+- ⚠ CDP 的 CPU 降速只作用在主執行緒，Worker 不受限 ⇒ 4× 的「總時間」修後偏樂觀；真手機上總等待仍約與模擬耗時相同，但畫面不凍結、有進度。
+- 正常 CPU 下總時間多約 1.5–2 秒（Worker 啟動＋約 115 MB 資料 structured clone 回主執行緒）。
+
+### Gates
+- build ✓；C2A 13/13、C2B 14/14、C2C 9/9、camera recovery 8/8、renderer visibility 24/24、hotfix cs-loading 18/18、
+  `browser_check_hotfix_cs_loading_rest_ux` 60/60、regress 15/15、regress2 8/8、flow09 ✓、dash10 ✓。
+- `browser_check_cs_c2c_vertical_slice`、`browser_check_cs_camera_recovery`（tactic selection timeout）、`browser_check_ui35_cs_lifecycle`（§2 map select timeout）：
+  **在 `8bf51df` 乾淨 worktree 上同樣失敗、同一個位置**（進戰鬥前的賽前導航）⇒ 既有紅燈，本輪未處理。

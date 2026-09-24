@@ -12,7 +12,8 @@
 //  相容：無 config（不經賽前流程）時退回 Sprint22 行為（seed 掛載隨機、地圖自選），
 //    此時結果仍走契約與入史（訓練賽）。
 // ============================================================================
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { installFpsSimWorker, lastFpsSimEstimateMs } from "../../battle/fps/fpsSimClient.js";
 import EsportsFPS3D from "../../battle/fps/EsportsFPS3D.jsx";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { toFpsRoster, CS_MAP_KEYS } from "../../battle/fps/fpsRoster.js";
@@ -22,6 +23,27 @@ import { GC, FONT } from "../../ui/theme.js";
 import CsLongMatchProgress from "./CsLongMatchProgress.jsx";
 import { csLoadMark } from "../../battle/fps/csLoadTiming.js";
 import { preloadFpsCharacterAssets } from "../../battle/fps/presentation/FpsCharacterRenderer.js";
+
+//  hotfix/cs-resume-worker：Worker 模擬期間的進度。百分比依「上一次 Worker 實際耗時」估算（最多 95%，
+//  超過估計後緩慢逼近 99%，不會假裝完成）；沒有紀錄時用 15 秒估。只讀時鐘，不碰模擬。
+function CsSimulationProgress({ resuming, mapName }) {
+  const [t0] = useState(() => performance.now());
+  const [now, setNow] = useState(t0);
+  useEffect(() => { const id = setInterval(() => setNow(performance.now()), 200); return () => clearInterval(id); }, []);
+  const est = lastFpsSimEstimateMs() ?? 15000;
+  const elapsed = now - t0;
+  const pct = elapsed <= est ? (elapsed / est) * 95 : 95 + 4 * (1 - Math.exp(-(elapsed - est) / est));
+  return (
+    <div data-testid="cs-resume-progress" role="status" aria-live="polite"
+      style={{ margin: "24px auto", maxWidth: 360, padding: "18px 20px", borderRadius: 12, background: "rgba(10,16,28,0.94)", border: "1px solid rgba(147,197,253,0.45)", color: "#fff", boxShadow: "0 10px 40px rgba(0,0,0,0.5)" }}>
+      <div style={{ fontSize: 15, fontWeight: 900, marginBottom: 4 }}>{resuming ? "正在回到比賽…" : "正在準備比賽…"}</div>
+      <div style={{ fontSize: 12, color: "#cbd5e1", marginBottom: 10 }}>還原 {mapName} 戰況 · 已等待 {Math.floor(elapsed / 1000)} 秒</div>
+      <div style={{ height: 8, borderRadius: 4, background: "rgba(255,255,255,0.12)", overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${Math.round(pct)}%`, background: "linear-gradient(90deg,#3b82f6,#a78bfa)", transition: "width 200ms linear" }} />
+      </div>
+    </div>
+  );
+}
 
 export default function CsMatchScreen({ config, onFinish, onBack }) {
   const players = useProfileStore((s) => s.players) ?? [];
@@ -45,6 +67,8 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
     //  （同一個 promise；已在賽前／Loading 開始過就什麼都不做）。
     preloadFpsCharacterAssets();
   }
+  //  hotfix/cs-resume-worker：註冊 Worker runner（不支援 Worker 的環境回 false ⇒ 維持原本的同步計算）
+  const [workerReady] = useState(() => installFpsSimWorker());
   //  Milestone O1：以**出賽陣容**建立引擎名單（誰上場不再看陣列順序）
   const csLineup = useProfileStore((s) => s.csLineup);
   const roster = useMemo(() => toFpsRoster(players, csLineup), [players, csLineup]);
@@ -114,8 +138,11 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
       {/* C6C outer progress：只讀 MatchSession snapshot，不進入 C5C engine HUD。 */}
       <CsLongMatchProgress session={session} snapshot={activeSnapshot} config={{ ...config, mapKey, mapName }} />
 
-      <EsportsFPS3D embedded roster={roster ?? undefined} mapKey={mapKey} seed={seed} tactic={config?.tacticId ?? undefined} tacticType={config?.tacticType ?? undefined} tacticalLayout={config?.tacticalLayout ?? undefined} teamName={team?.name} onComplete={setResult}
-        resumeFrameIndex={Number(activeSnapshot?.frameIndex) || 0} onProgress={handleProgress} />
+      {/* hotfix/cs-resume-worker：模擬在 Web Worker 算的期間，顯示回到比賽的進度（主執行緒不再凍結） */}
+      <Suspense fallback={<CsSimulationProgress resuming={Number(activeSnapshot?.frameIndex) > 0} mapName={mapName} />}>
+        <EsportsFPS3D embedded asyncSimulation={workerReady} roster={roster ?? undefined} mapKey={mapKey} seed={seed} tactic={config?.tacticId ?? undefined} tacticType={config?.tacticType ?? undefined} tacticalLayout={config?.tacticalLayout ?? undefined} teamName={team?.name} onComplete={setResult}
+          resumeFrameIndex={Number(activeSnapshot?.frameIndex) || 0} onProgress={handleProgress} />
+      </Suspense>
 
       {/* 終局：引擎真實 MatchResult → CS 契約 → 賽後戰報（入史在 CsResultScreen） */}
       {csResult && (
