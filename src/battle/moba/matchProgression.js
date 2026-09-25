@@ -704,6 +704,25 @@ SIM_RULES.v3 = {
   //  「打龍／巴龍」加入 M1.7 的合法停留清單＋坑邊分散站位（修正坑邊每 tick 來回、朝向反轉的搖晃）。
   //  ⚠ 只在 hero skills 開啟時生效（引擎端另判 heroSkillsOn）⇒ skill-off／Challenge 逐位元不變。
   objIdleFixV1: true,
+  //  ── feature/moba-lane-jungle-balance（moba-sim.v12）────────────────────────────
+  //  依 2026-09-25 Lane–Jungle–Tower pacing audit 的限制版方案（B2 方向）；兩者都只在 hero skills 開啟時生效
+  //  （引擎端另判 heroSkillsOn）⇒ skill-off／Challenge 逐位元不變。塔傷／攻速／射程／仇恨未動。
+  //  技能清兵：沒有英雄／中立目標時，純傷害技能可以打兵（單體只收得掉才打；範圍 ≥2 隻、×0.5、最多 3 隻；大招不用）。
+  laneSkillV1: true,
+  laneSkillAreaK: 0.5,
+  laneSkillAreaMax: 3,
+  //  懲戒 AI（context）：先判斷值不值得把懲戒交在營地上（龍／巴龍維持「能斬殺才放」）。數值 smiteDmg 550 不動。
+  //    目標 > 50% 絕不用；Buff 主怪、敵方打野在 10 內、自己血 < 45% ⇒ 用；其餘龍／巴龍在場或冷卻內會重生 ⇒ 保留。
+  //  （2400 場 A/B：門檻 35／50／60% 與 context 都讓「決策時 ≥ 90%」歸 0；context 懲戒用在龍／巴龍的比例最高、無 > 40 分病態局。）
+  smiteAiV1: true,
+  smiteAiMode: "context",
+  smiteContextMaxHpFrac: 0.5,
+  smiteContestRange: 10,
+  smiteLowHpFrac: 0.45,
+  smiteCampHpFrac: 0.35,          // 只在 smiteAiMode "threshold" 時使用（保留給 A/B 對照）
+  //  打野走向要打的那一隻（不是營地中心）：Buff 跟班離中心約 4.9 > 打野傷害距離 3.5，站中心永遠打不到，
+  //  舊版只能靠懲戒收 ⇒ 懲戒 AI 一收斂清野就崩（5 分鐘擊殺 11.8 → 7 隻）。修正後 16 隻（見 05 本節）。
+  jungleReachV1: true,
   //  小兵種類。rangeWorld 是世界單位（依各路長度換算成 progress）；towerK ＝ 攻城時算幾隻。
   //  ⚠ 總量刻意貼近舊版：普通波 3 近戰＋1 遠程；破路波的超級兵補回舊版「整波 ×1.8 HP、×1.7 傷害」
   //    的總量（舊 1728 HP／204 dps → 新 1800 HP／184 dps＋攻城 2.5 隻）。

@@ -85,10 +85,12 @@ ck("W2 >90° 轉向（每 100 樣本）至少減半", wOn.bigTurnPer100 <= wOff.
 // ── V：版本 ───────────────────────────────────────────────────────────────────
 {
   const SV = await load("src/platform/contracts/simulationVersion.js");
-  ck("V1 moba-sim.v11 為目前版本；v10 保留且指紋 27dc4e0161024c06 不變；v10 的歷史重播明確拒絕",
-    SV.MOBA_SIMULATION_VERSION === "moba-sim.v11" && SV.KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v10")
+  //  feature/moba-lane-jungle-balance（moba-sim.v12）起 v11 不再是目前版本 ⇒ 改守「v11 已登記且指紋不變、目前版本 ≥ v11、v10 保留且拒絕重播」。
+  ck("V1 moba-sim.v11 已登記（指紋 617b9eebcc50b848）、目前版本 ≥ v11；v10 保留且指紋 27dc4e0161024c06 不變；v10 的歷史重播明確拒絕",
+    SV.KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v11") && SV.SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v11"] === "617b9eebcc50b848"
+    && Number(String(SV.MOBA_SIMULATION_VERSION).replace("moba-sim.v", "")) >= 11 && SV.KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v10")
     && SV.SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v10"] === "27dc4e0161024c06" && SV.canReplay("moba-sim.v10").ok === false
-    && SV.canReplay("moba-sim.v11").ok === true);
+    && SV.canReplay(SV.MOBA_SIMULATION_VERSION).ok === true);
 }
 
 // ── C：分營最後一隻 ───────────────────────────────────────────────────────────
@@ -96,24 +98,59 @@ ck("W2 >90° 轉向（每 100 樣本）至少減半", wOn.bigTurnPer100 <= wOff.
   const R = rulesFor("v3");
   ck("C1 根因事實：懲戒傷害大於整營總血（小營 280／Buff 營 420 < 懲戒 550）⇒ 最後一隻可能從高血量一擊斃命",
     R.smiteDmg > R.campHp && R.smiteDmg > R.buffCampHp, `smite ${R.smiteDmg}／camp ${R.campHp}／buff ${R.buffCampHp}`);
-  //  實測：最後一隻在「前一 tick 還 > 90% 血（血條完全沒動過）」就死掉的事件，都和同一 tick 的懲戒吻合。
   //  （40% 左右一擊死的是 84 血的小 Buff 跟班吃到普攻／技能 ⇒ 血條本來就有在動，不是這個問題。）
-  let highDeaths = 0, bySmite = 0;
-  for (const seed of [1, 42]) {
-    const e = mkEngine(seed, { skills: true, fix: true });
-    for (let i = 0; i < 1800 && !e.over; i++) {
-      const before = new Map();
-      for (const c of e.neutrals.camps) for (const m of c.members ?? []) before.set(m.id, { hp: m.hp / m.maxHp, alive: m.alive });
-      const sl0 = e.spellLog.length; e.tick(0.5);
-      const smited = e.spellLog.slice(sl0).some((x) => x.spell === "smite");
-      for (const c of e.neutrals.camps) {
-        if (!c.members) continue;
-        const prevLiving = c.members.filter((m) => before.get(m.id)?.alive);
-        if (prevLiving.length === 1 && !c.members.some((m) => m.alive && m.hp > 0) && before.get(prevLiving[0].id).hp > 0.9) { highDeaths++; if (smited) bySmite++; }
+  //  feature/moba-lane-jungle-balance（smiteAiV1）起懲戒不再秒滿血小野怪 ⇒ 分開驗兩種規則：
+  //    smiteAiV1 關（v11 行為）⇒ 「血條沒動過就死」全部來自懲戒；smiteAiV1 開 ⇒ 這類事件歸 0。
+  const fullHpDeaths = (smiteAi) => {
+    let highDeaths = 0, bySmite = 0;
+    for (const seed of [1, 42]) {
+      const e = mkEngine(seed, { skills: true, fix: true });
+      e.rules = { ...e.rules, smiteAiV1: smiteAi };
+      for (let i = 0; i < 1800 && !e.over; i++) {
+        const before = new Map();
+        for (const c of e.neutrals.camps) for (const m of c.members ?? []) before.set(m.id, { hp: m.hp / m.maxHp, alive: m.alive });
+        const sl0 = e.spellLog.length; e.tick(0.5);
+        const smited = e.spellLog.slice(sl0).some((x) => x.spell === "smite");
+        for (const c of e.neutrals.camps) {
+          if (!c.members) continue;
+          const prevLiving = c.members.filter((m) => before.get(m.id)?.alive);
+          if (prevLiving.length === 1 && !c.members.some((m) => m.alive && m.hp > 0) && before.get(prevLiving[0].id).hp > 0.9) { highDeaths++; if (smited) bySmite++; }
+        }
       }
     }
-  }
-  ck("C2 最後一隻「血條沒動過就死」的事件全部來自懲戒（不是血量同步錯誤）", highDeaths > 0 && bySmite === highDeaths, `${bySmite}/${highDeaths}`);
+    return { highDeaths, bySmite };
+  };
+  //  ⚠ 開啟時不能再用「tick 開始時 > 90%」判斷：同一 tick 可能先吃普攻／技能掉到 ≤ 50% 才被懲戒（合規）。
+  //    改用決策當下的目標血量（唯讀 Proxy：trySmite 選好 victim 後一定讀 R.smiteAiV1；同 tick 多次讀取取「已死那隻」的最後一筆）。
+  const smiteDecisionsOver50 = () => {
+    let over50 = 0, total = 0;
+    for (const seed of [1, 42]) {
+      const e = mkEngine(seed, { skills: true, fix: true });
+      const reads = new Map(), rules = { ...e.rules, smiteAiV1: true };
+      e.rules = new Proxy(rules, { get(target, prop) {
+        if (prop === "smiteAiV1" && e.neutrals) for (const c of e.neutrals.camps) {
+          const v = c.members?.find((m) => m.alive && m.hp > 0);
+          if (v) { if (!reads.has(c.id)) reads.set(c.id, []); reads.get(c.id).push({ id: v.id, ratio: v.hp / v.maxHp }); }
+        }
+        return target[prop];
+      } });
+      for (let i = 0; i < 1800 && !e.over; i++) {
+        reads.clear();
+        const sl0 = e.spellLog.length; e.tick(0.5);
+        for (const x of e.spellLog.slice(sl0).filter((s) => s.spell === "smite")) {
+          const camp = e.neutrals.camps.find((c) => c.id === String(x.reason));
+          if (!camp) continue;
+          total++;
+          const d = [...(reads.get(camp.id) ?? [])].reverse().find((r) => !camp.members.find((m) => m.id === r.id)?.alive);
+          if (d && d.ratio > 0.5) over50++;
+        }
+      }
+    }
+    return { over50, total };
+  };
+  const off = fullHpDeaths(false), on = smiteDecisionsOver50();
+  ck("C2 最後一隻「血條沒動過就死」：懲戒 AI 關（v11）時全部來自懲戒；開時決策當下目標 > 50% 的營地懲戒 ＝ 0", off.highDeaths > 0 && off.bySmite === off.highDeaths && on.total > 0 && on.over50 === 0,
+    `關 ${off.bySmite}/${off.highDeaths}；開 營地懲戒 ${on.total} 次、決策時 > 50%：${on.over50}`);
   const N = read("src/battle/moba/render/RiggedMobaRuntimeNeutrals.jsx");
   ck("C3 呈現層：血條平滑下降，死亡時保留並扣到 0 才消失（不再瞬間隱藏）",
     /shownHp/.test(N) && /drainLeft = \.45/.test(N) && /draining \|\| \(!!entity\.alive/.test(N));

@@ -69,6 +69,10 @@ const OBJ_SKILL_MECHANICS = new Set([
   "cone-strike", "multi-strike", "control-target", "root-target", "silence-target", "execute-strike",
   "root-dot", "area-root", "area-control", "area-silence", "area-mark",
 ]);
+//  feature/moba-lane-jungle-balance（laneSkillV1）：技能清兵只允許「純傷害」類型。
+//  控制類（定身／暈／沉默／標記）不為了清兵浪費；位移類本來就不在 OBJ_SKILL_MECHANICS；大招（R）另外排除。
+const LANE_SKILL_SINGLE = new Set(["projectile", "multi-strike", "execute-strike"]);
+const LANE_SKILL_AREA = new Set(["split-projectile", "line", "piercing-line", "delayed-area", "area-dot", "cone-strike"]);
 const OBJ_SKILL_ULT = new Set([
   "delayed-area", "area-dot", "area-root", "area-control", "area-silence", "area-mark",
   "split-projectile", "silence-target", "execute-strike", "multi-strike",
@@ -450,6 +454,8 @@ export class LogicEngine {
     this.heroSkillsOn = true;
     this.heroSkillPending = [];
     this._objSkillHits = [];
+    this._laneSkillHits = [];                       // laneSkillV1：排隊中的清兵傷害
+    this.laneSkillStats = { casts: 0, kills: 0 };  // 量測用（不進 snapshot）
     for (const p of this.players) if (this.heroSkills[p.id]) p.heroSkillReadyAt = {};
   }
 
@@ -500,6 +506,75 @@ export class LogicEngine {
     return this.heroSkillsOn && p && this.t < (p.heroSkillStealthUntil ?? 0);
   }
 
+  /** laneSkillV1：到期的清兵傷害。死亡與經濟走既有兵線結算（hp ≤ 0 ⇒ 兵線更新時移除並發錢／經驗；lastHitBy 記補刀）。 */
+  _applyLaneSkillHits() {
+    const due = this._laneSkillHits.filter((h) => h.at <= this.t + 1e-9);
+    this._laneSkillHits = this._laneSkillHits.filter((h) => h.at > this.t + 1e-9);
+    for (const h of due) {
+      if (h.p.dead) continue;
+      const key = h.p.side === "blue" ? "rm" : "bm";
+      const list = this.lanes[h.ln][key].filter((m) => m.hp > 0);
+      const primary = list.find((m) => m.id === h.memberId);
+      if (!primary) continue;
+      const ppos = this._minionPos(h.ln, primary);
+      const victims = h.area
+        ? list.map((m) => ({ m, d: dist(this._minionPos(h.ln, m), ppos) })).filter((x) => x.d <= h.radius)
+          .sort((a, b) => a.d - b.d || String(a.m.id).localeCompare(String(b.m.id))).slice(0, h.max).map((x) => x.m)
+        : [primary];
+      for (const m of victims) {
+        if (h.amount >= m.hp) { m.lastHitBy = h.p.id; this.laneSkillStats.kills++; }
+        m.hp -= h.amount;
+        h.p.minionDmg = (h.p.minionDmg ?? 0) + h.amount;
+      }
+    }
+  }
+
+  /**
+   * smiteAiV1：這一下值不值得把懲戒交在野怪營地上（龍／巴龍不經過這裡，維持「能斬殺才放」）。
+   *   smiteAiMode "threshold"：目標個體血量 ≤ smiteCampHpFrac 才用。
+   *   smiteAiMode "context"：先看值不值得交——
+   *     · 目標個體 > smiteContextMaxHpFrac（0.5）⇒ 絕不用（不再是滿血清野鍵）
+   *     · Buff 主怪 ⇒ 用（確保 Buff）
+   *     · 敵方打野在營地 smiteContestRange 內 ⇒ 用（搶／保）
+   *     · 施放的打野自己血量 < smiteLowHpFrac ⇒ 用（省血）
+   *     · 其餘：龍或巴龍已在場、或會在懲戒冷卻內重生 ⇒ 保留給物件；否則用
+   *   決定性：只讀當下狀態，不擲骰。
+   */
+  _smiteWorthOnCamp(o, victim, casts) {
+    const R = this.rules;
+    const ratio = victim.hp / victim.maxHp;
+    if ((R.smiteAiMode ?? "threshold") !== "context") return ratio <= (R.smiteCampHpFrac ?? 0.35);
+    if (ratio > (R.smiteContextMaxHpFrac ?? 0.5)) return false;
+    if (o.type === "buff" && victim.index === 0) return true;
+    const sides = new Set(casts.map((p) => p.side));
+    const contested = this.players.some((q) => !q.dead && q.role === "jungle" && !sides.has(q.side)
+      && dist(q.pos, o.pos) <= (R.smiteContestRange ?? 10));
+    if (contested) return true;
+    if (casts.some((p) => p.hp / p.maxHp < (R.smiteLowHpFrac ?? 0.45))) return true;
+    const N = this.neutrals;
+    const objectiveSoon = ["dragon", "baron"].some((k) => {
+      const n = N?.[k];
+      return !!n && (n.alive || (Number.isFinite(n.respawnAt) && n.respawnAt - this.t < (R.smiteCd ?? 75)));
+    });
+    return !objectiveSoon;
+  }
+
+  /**
+   * feature/moba-lane-jungle-balance（jungleReachV1，skill-on only）：打野走向**要打的那一隻**，不是營地中心。
+   * 營地拆成個體後（Milestone C-fix）成員有座標偏移：Buff 營兩隻跟班離中心約 4.9，超過打野傷害距離 3.5
+   * ⇒ 站在中心永遠打不到，只能靠懲戒（射程 6.5）收掉；懲戒一收斂，清野就崩（實測 5 分鐘擊殺 10.2 → 4.0 隻）。
+   * 決定性：最近的存活成員，同距離以 id 排序。
+   */
+  _campStandTarget(p, camp) {
+    let best = null, bestD = Infinity;
+    for (const m of camp.members ?? []) {
+      if (!m.alive || m.hp <= 0) continue;
+      const d = dist(p.pos, m.pos);
+      if (d < bestD || (d === bestD && String(m.id) < String(best?.id))) { best = m; bestD = d; }
+    }
+    return best ? { x: best.pos.x, y: best.pos.y } : null;
+  }
+
   _applyHeroSkillControl(target, kind, duration) {
     if (!target || this._heroSkillControlImmune(target)) return false;
     target.heroSkillControlUntil = Math.max(target.heroSkillControlUntil ?? 0, this.t + duration);
@@ -520,6 +595,54 @@ export class LogicEngine {
    * 並且必須在該技能的施法距離內。塔不在此列（多數技能不打建築，塔只吃普攻）。
    */
   _objectiveSkillTarget(p, rule) {
+    const neutral = this._neutralSkillTarget(p, rule);
+    if (neutral || !this.rules.laneSkillV1 || !this.heroSkillsOn) return neutral;
+    return this._laneSkillTarget(p, rule);
+  }
+  /**
+   * feature/moba-lane-jungle-balance（laneSkillV1，skill-on only）：射程內沒有敵方英雄、也沒有中立目標時，
+   * 傷害技能可以清兵。規則（見 docs 05 本節）：
+   *   · 只允許 LANE_SKILL_SINGLE／LANE_SKILL_AREA；大招不用在兵上
+   *   · 對線期（< laneWaveHoldUntil）可用；之後只在自己推進（FARM_CLEAR_STATES）時用 ⇒ 沿用既有兵線限制
+   *   · 單體：只挑「這一下收得掉」的兵（不浪費技能）
+   *   · 範圍：目標兵周圍 ≥ 2 隻才放；對兵 laneSkillAreaK（0.5）傷害、最多 laneSkillAreaMax（3）隻
+   * 決定性：同距離以 id 排序，不擲骰。
+   */
+  _laneSkillTarget(p, rule) {
+    const R = this.rules;
+    const single = LANE_SKILL_SINGLE.has(rule.mechanic), area = LANE_SKILL_AREA.has(rule.mechanic);
+    if (!single && !area) return null;
+    if (String(rule.skillId ?? "").endsWith(":R")) return null;
+    if (!(((rule.damage ?? 0) > 0) || ((rule.powerRatio ?? 0) > 0))) return null;
+    if (!(this.t < (R.laneWaveHoldUntil ?? Infinity)) && !FARM_CLEAR_STATES.has(p.state)) return null;
+    const range = Number(rule.range) || 0;
+    const amount = ((rule.damage ?? 0) + p.power * (rule.powerRatio ?? 0)) * this._heroSkillPowerFactor(p);
+    const radius = Number(rule.radius ?? rule.splitRadius ?? rule.width ?? 0) || 2.5;
+    const key = p.side === "blue" ? "rm" : "bm";
+    let best = null, bestScore = Infinity;
+    for (const ln of ["top", "mid", "bot"]) {
+      const list = this.lanes[ln][key].filter((m) => m.hp > 0);
+      for (const m of list) {
+        const pos = this._minionPos(ln, m);
+        const d = dist(p.pos, pos);
+        if (d > range) continue;
+        let score;
+        if (single) {
+          if (m.hp > amount) continue;                                    // 收不掉 ⇒ 不浪費
+          score = d;
+        } else {
+          const around = list.filter((q) => dist(this._minionPos(ln, q), pos) <= radius).length;
+          if (around < 2) continue;                                       // 範圍技能至少 2 隻
+          score = -around * 100 + d;
+        }
+        if (score < bestScore || (score === bestScore && String(m.id) < String(best?.m.id))) { bestScore = score; best = { ln, m, pos }; }
+      }
+    }
+    if (!best) return null;
+    return { objectiveId: "lane:" + best.ln, memberId: best.m.id, pos: { ...best.pos },
+      lane: { ln: best.ln, area, radius, amount: amount * (area ? (R.laneSkillAreaK ?? 0.5) : 1), max: area ? (R.laneSkillAreaMax ?? 3) : 1 } };
+  }
+  _neutralSkillTarget(p, rule) {
     const N = this.neutrals;
     if (!N || !OBJ_SKILL_MECHANICS.has(rule.mechanic)) return null;
     if (!(((rule.damage ?? 0) > 0) || ((rule.powerRatio ?? 0) > 0))) return null;
@@ -548,6 +671,7 @@ export class LogicEngine {
 
   _heroSkillStep() {
     if (!this.heroSkillsOn) return;
+    if (this._laneSkillHits.length) this._applyLaneSkillHits();
     const casts = [];
     const due = this.heroSkillPending.filter((entry) => entry.at <= this.t);
     this.heroSkillPending = this.heroSkillPending.filter((entry) => entry.at > this.t);
@@ -888,6 +1012,17 @@ export class LogicEngine {
       if (p.dead || castThisTick.has(p.id)) continue;
       castThisTick.add(p.id);
       p.heroSkillReadyAt[slot] = this.t + rule.cooldown * this._heroSkillCooldownFactor(p);
+      if (c.objective?.lane) {
+        //  laneSkillV1：清兵。傷害排進 _laneSkillHits，於下一次 _heroSkillStep 開頭（到期時）結算。
+        const delay = Number(rule.travel ?? rule.delay ?? 0) || 0;
+        this._laneSkillHits.push({ p, ln: c.objective.lane.ln, memberId: c.objective.memberId, area: c.objective.lane.area,
+          radius: c.objective.lane.radius, max: c.objective.lane.max, amount: c.objective.lane.amount, at: this.t + delay });
+        this.laneSkillStats.casts++;
+        this.pushFx({ type: OBJ_SKILL_ULT.has(rule.mechanic) ? 'ult' : 'line', pos: from, target: { ...target },
+          sourceId: p.id, targetId: c.objective.memberId, targetKind: 'minion', ability: `hero:${slot}`,
+          skillId: rule.skillId, feedback: 'skill', life: Math.max(1.2, delay + 0.9) });
+        continue;
+      }
       if (c.objective) {
         //  打物件：不走英雄命中路徑（控制／位移對野怪無意義）。傷害排進佇列，於本 tick 的中立目標結算
         //  （_updateNeutralsV3）用既有的 applyMemberHits／歸屬欄位扣血 ⇒ 擊殺、參與、重生都沿用原路徑。
@@ -3040,6 +3175,10 @@ export class LogicEngine {
         .sort((a, b) => String(a.id).localeCompare(String(b.id)));
       if (!casts.length) return;
       const victim = o.members?.find((m) => m.alive && m.hp > 0) ?? o;
+      //  feature/moba-lane-jungle-balance（smiteAiV1，skill-on only）：懲戒 550 高於整營總血，舊判斷「營地總血 ≤ 550」
+      //  ⇒ 看到滿血小野怪就秒（每場約 24 次）。改成：野怪個體要先打到 smiteCampHpFrac 以下才用；
+      //  龍／巴龍維持原本「能斬殺才放」⇒ 搶大型物件的價值不變。
+      if (o.members && R.smiteAiV1 && this.heroSkillsOn && !this._smiteWorthOnCamp(o, victim, casts)) return;
       if (o.members) {
         applyMemberHits(o, victim, casts.map((p) => ({ p, amount: R.smiteDmg })));
         syncCamp(o);
@@ -5379,7 +5518,7 @@ export class LogicEngine {
           if (!K && this.t < T.gankUntil) { effLane = T.gankLane; stOv = "抓人"; p.fsm = "ROAM"; }
           if (stOv !== "抓人") {
             const camp = this._nextCampV3(p);
-            if (camp) { tgt = camp.pos; st = "打野"; p.fsm = "FARM"; }
+            if (camp) { tgt = (R.jungleReachV1 && this.heroSkillsOn && this._campStandTarget(p, camp)) || camp.pos; st = "打野"; p.fsm = "FARM"; }
           }
         }
         if (!tgt) {

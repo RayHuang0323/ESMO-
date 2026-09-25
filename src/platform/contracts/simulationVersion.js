@@ -36,11 +36,11 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
  * ⚠ **什麼時候不用 bump**：純呈現層、UI、文案、log。
  * ⚠ 版本字串一旦發布就**不可回收再用**：舊 Challenge 存著它。
  */
-export const MOBA_SIMULATION_VERSION = "moba-sim.v11";
+export const MOBA_SIMULATION_VERSION = "moba-sim.v12";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", MOBA_SIMULATION_VERSION]);
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -314,6 +314,13 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  ⚠ 只在 hero skills 開啟時生效 ⇒ skill-off 串流與 v10 逐位元相同（check_moba_items_m2 G1）；Challenge 行為不變。
   //  ⚠ 後果（已知且接受）：v1–v10 的歷史挑戰不再可重播，由 `canReplay` 明確拒絕。
   "moba-sim.v11": "617b9eebcc50b848",
+  //  2026-09-25（feature/moba-lane-jungle-balance）：**simulation semantics change**（skill-on）。
+  //  v3 規則集新增 `laneSkillV1`（純傷害技能在沒有英雄／中立目標時清兵：單體只收得掉才打、範圍 ≥2 隻 ×0.5 最多 3 隻、大招不用、
+  //  對線期後只在自己推進時用）、`smiteAiV1`（context：目標 > 50% 不用；Buff 主怪／敵方打野在旁／自己低血才用；龍巴龍在場或將重生則保留；龍／巴龍的斬殺規則不變）
+  //  與 `jungleReachV1`（打野走向要打的那一隻，修正 Buff 跟班永遠在傷害距離外）。塔規則未動。
+  //  ⚠ 只在 hero skills 開啟時生效 ⇒ skill-off 串流與 v11 逐位元相同；Challenge 行為不變。
+  //  ⚠ 後果（已知且接受）：v1–v11 的歷史挑戰不再可重播，由 `canReplay` 明確拒絕。
+  "moba-sim.v12": "16b5b32d90165817",
 });
 
 export const isKnownSimulationVersion = (v) =>

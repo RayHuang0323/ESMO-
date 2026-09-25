@@ -23633,4 +23633,72 @@ MOBA_COMBAT_POLISH_R2 = RELEASED（main da3f943；simulation moba-sim.v11）
 
 ```text
 CS_RESUME_HOTFIX = RELEASED（main cfca594）
+## 2026-09-25 feature/moba-lane-jungle-balance（base `8bf51df`，moba-sim.v12，未 push、未 deploy）
+
+依 Lane–Jungle–Tower pacing audit 的限制版方向。三個規則都只在 hero skills 開啟時生效（skill-off／Challenge 逐位元不變）；塔傷／攻速／射程／仇恨／塔血未動。
+
+### 1. 技能清兵（`laneSkillV1`）
+- 射程內沒有英雄、也沒有中立目標時，純傷害技能可以清兵：
+  單體（projectile／multi-strike／execute-strike）只打「這一下收得掉」的 1 隻；
+  範圍（split-projectile／line／piercing-line／delayed-area／area-dot／cone-strike）目標周圍 ≥ 2 隻才放、×0.5、最多 3 隻。
+- 大招、控制類（定身／暈／沉默／標記）、位移類不用在兵上；14 分鐘後只在自己推進時用（沿用既有兵線限制）。
+- 死亡／經濟走既有兵線結算（hp ≤ 0 ⇒ 移除、發錢／經驗；lastHitBy 記補刀）。
+
+### 2. Smite 指標 root cause（量測錯誤，不是 gameplay）
+- 舊指標：「這一 tick 有懲戒，且**任何營地任何一隻** tick 開始時 > 90% 的怪死掉」就算一次滿血秒怪 ⇒
+  ① 沒限定被懲戒的那隻（別處被普攻／技能打死的也算）② 用 tick 開始時血量，不是決策當下（同 tick 先吃普攻／技能掉到門檻下才被懲戒是合規的）。
+- 精確量測：唯讀 Proxy 在 trySmite 讀 `R.smiteAiV1` 的那一刻記下各營地第一隻活怪（＝懲戒目標）；同 tick 多次讀取取「已死那隻」的最後一筆。
+  Proxy 不改結果（逐位元比對）。所有 AI 候選「決策當下 ≥ 90%」都是 **0**；舊指標另外會讀出 1.3–5.4 次。
+- 另一個量測錯誤：「三營清完」原本用 camp.alive 判清空，但成員各自 90 秒重生 ⇒ 慢清時永遠不會清空 ⇒ 大量 null。改為「隊伍累計擊殺 9 隻」。
+
+### 3. 真正的 jungle 問題（`jungleReachV1`）
+- 打野走向營地**中心**；Buff 營兩隻跟班偏移約 4.9 > 打野傷害距離 3.5 ⇒ 站中心永遠打不到（實測 187 個樣本只有 3 次在距離內），舊版只能靠懲戒（6.5）收掉。
+  ⇒ 懲戒只要一收斂，清野就崩（5 分鐘擊殺野怪 11.8 → 6.9／隊）。
+- 修正：打野走向要打的那一隻（最近的活成員，同距離以 id 排序）。
+
+### 4. Smite AI（`smiteAiV1`，context 模式）— 2400 場比較
+- 目標個體 > 50% 絕不用；Buff 主怪／敵方打野在 10 內／自己血量 < 45% ⇒ 用；其餘若龍或巴龍在場、或會在懲戒冷卻內重生 ⇒ 保留；否則用。
+- 龍／巴龍維持「能斬殺才放」；smiteDmg 550／cd 75／range 6.5 未動。
+
+| 指標（各 400 場；無 reach 的兩組各 200） | v11 | 35% | 50% | 60% | context | 35% 無 reach | context 無 reach |
+|---|---|---|---|---|---|---|---|
+| 每場懲戒 | 27.3 | 20.6 | 21.4 | 22.1 | 19.6 | 20.3 | 21.9 |
+| 一般營／Buff 主／Buff 跟班 | 11／35／41% | 19／52／7% | 18／56／7% | 17／56／7% | 7／67／3% | 5／73／1% | 1／80／1% |
+| 龍／巴龍 | 8／5% | 14／9% | 12／8% | 11／8% | 15／9% | 12／9% | 10／8% |
+| 決策時 ≥ 90%（真正滿血秒怪） | 21.45 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 平均保留（秒） | 18.3 | 45.4 | 41.2 | 38.4 | 50.6 | 48.0 | 40.2 |
+| 累計 9 隻（分） | 3.52 | 1.60 | 1.49 | 1.47 | 1.49 | 7.03 | 6.58 |
+| 5 分鐘擊殺野怪／隊 | 11.8 | 15.9 | 16.0 | 16.4 | 16.0 | 6.9 | 7.2 |
+| 首殺／首次 gank（分） | 3.76／16.8 | 3.83／15.7 | 3.75／16.5 | 3.45／16.1 | 3.75／16.4 | 1.82／16.9 | 1.82／16.4 |
+| 第一條龍（分） | 4.49 | 4.43 | 4.46 | 4.51 | 4.45 | 4.60 | 4.63 |
+| > 40 分 | 1 | 2 | 0 | 4 | 0 | 0 | 2 |
+- 選 context：滿血懲戒 0、懲戒用在龍／巴龍比例最高（13% → 24%）、Buff 主怪 67%、平均保留 51 秒、無 > 40 分病態局。
+
+### 5. 最終 400 場 paired／mirror A/B（v11 vs 候選）
+| 指標 | v11 | 候選 |
+|---|---|---|
+| 技能擊殺小兵／場 | 0 | 26 |
+| 前 14 分英雄收兵占比 | 25.0% | 28.2% |
+| 首殺（分） | 3.76 | 3.75 |
+| 清野（沿用舊定義中位） | 3.00 | 1.54 |
+| 第一座塔（分） | 6.92 | 6.07 |
+| 外塔全清（分） | 15.82 | 15.51 |
+| 主堡首次受傷（分） | 21.43 | 20.98 |
+| 倒塔／場 | 14.6 | 14.4 |
+| 第一條龍／巴龍（分） | 4.49／9.18 | 4.45／9.18 |
+| 時長中位／p90（分） | 21.5／26.5 | 21.3／26.3 |
+| 藍勝率 | 56.5% | 57.8% |
+| 未完賽／> 40 分 | 0／1 | 0／0 |
+- 外塔 HP +10%：第一座塔只提早 0.85 分、之後節奏不變；前一輪 scratch 顯示 +10% 只拉回約 0.3 分 ⇒ **不需要**，未寫進規則。
+
+### Gates（全部實跑）
+- build ✓；`check_moba_lane_jungle_balance` **20/20**（新增）；`check_moba_combat_polish_r2` 31/31；simulationVersion 51/51；spectacle 21/21；combat quality 28/28；
+  items m2 53/53；Hero Skills phase1 10/10、round2 410/410、gameplay slice 68/68、base assault ✓、release gate PASS；milestone_i_close 44/44；
+  Challenge slice2 79/79、slice4 60/60、slice8 122/122；battle_condition_ux ✓；regress 15/15；regress2 8/8；flow09 ✓；dash10 ✓；
+  verify runtime29／experience26／tactic24 ✓；`browser_check_moba_combat_polish_r2` 40/40；`browser_check_moba_spectacle_vision` 43/43。
+- Verifier 改動（揭露）：`check_moba_combat_polish_r2` V1 改守「v11 已登記、目前 ≥ v11」；C2 開啟時改用決策當下目標血量（舊的 tick 開始血量會把合規懲戒誤算）。
+
+```text
+MOBA_LANE_JUNGLE_BALANCE = LOCAL_COMMIT_ONLY（未 push、未 deploy）
+SIMULATION_VERSION = moba-sim.v12（skill-on 語意變化；skill-off 與 v11 逐位元相同）
 ```
