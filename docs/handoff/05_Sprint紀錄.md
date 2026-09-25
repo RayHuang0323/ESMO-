@@ -23623,3 +23623,14 @@ MOBA_COMBAT_POLISH_R2 = RELEASED（main da3f943；simulation moba-sim.v11）
   `browser_check_hotfix_cs_loading_rest_ux` 60/60、regress 15/15、regress2 8/8、flow09 ✓、dash10 ✓。
 - `browser_check_cs_c2c_vertical_slice`、`browser_check_cs_camera_recovery`（tactic selection timeout）、`browser_check_ui35_cs_lifecycle`（§2 map select timeout）：
   **在 `8bf51df` 乾淨 worktree 上同樣失敗、同一個位置**（進戰鬥前的賽前導航）⇒ 既有紅燈，本輪未處理。
+
+
+### 2026-09-25 RELEASED：hotfix/cs-resume-worker @ `cfca594`
+
+- fetch：origin/main = `8bf51df` ⇒ fast-forward `8bf51df..cfca594`（normal push，無 force）。Deploy run `36106989236` success。
+- Release gates：build ✓、check_cs_resume_worker 17/17、C2A 13/13、C2B 14/14、C2C 9/9、camera 8/8、visibility 24/24、hotfix cs 18/18、sim cache 10/10、regress 15/15、regress2 8/8；既有 3 支 CS 瀏覽器紅燈與 8bf51df 相同（見上節）。
+- Production smoke（正式站，headed，桌機＋390，正常＋4× CPU）：四組皆 9/9。同分頁 0.76–1.60 s；重新整理後立即顯示進度、點擊→戰鬥 13.2–15.7 s、最長阻塞 0.45–1.14 s（修前 11.6–50.5 s 凍結）；總幀數／回合／比分一致、游標不倒退；page／console error 0。
+
+```text
+CS_RESUME_HOTFIX = RELEASED（main cfca594）
+```
