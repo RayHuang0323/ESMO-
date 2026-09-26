@@ -23702,3 +23702,18 @@ CS_RESUME_HOTFIX = RELEASED（main cfca594）
 MOBA_LANE_JUNGLE_BALANCE = LOCAL_COMMIT_ONLY（未 push、未 deploy）
 SIMULATION_VERSION = moba-sim.v12（skill-on 語意變化；skill-off 與 v11 逐位元相同）
 ```
+
+
+### 2026-09-27 RELEASED：feature/moba-lane-jungle-balance（main ，moba-sim.v12）
+
+- fetch：origin/main = （Release 1 之後）。原 candidate  從 8bf51df 開出 ⇒ rebase 到 a7afc5c（只有 05／08 兩份文件的檔尾追加衝突，兩邊保留；程式碼無衝突）⇒ ，fast-forward normal push，無 force。
+- Deploy：run  success；正式 bundle 含 moba-sim.v12、laneSkillV1、jungleReachV1、smiteContextMaxHpFrac。
+- Release gates（cefaccb）：build ✓；lane／jungle balance 20/20；CS resume worker 17/17、sim cache 10/10（合併後 CS 不受影響）；polish r2 31/31；simulationVersion 51/51；spectacle 21/21；combat quality 28/28；items m2 53/53；
+  Hero Skills phase1 10/10、round2 410/410、gameplay slice 68/68、base assault ✓、release gate PASS；milestone_i_close 44/44；Challenge slice2 79/79、slice4 60/60、slice8 122/122；battle_condition ✓；regress 15/15；regress2 8/8；flow09 ✓；dash10 ✓；
+  verify runtime29／experience26／tactic24 ✓（tactic24 第一次因休眠時間計入逾時而中止，醒來後重跑通過）；browser polish r2 40/40、spectacle 43/43。
+- Production smoke（正式站，桌機＋390）：polish r2 35/37、spectacle 40/41。紅燈＝Workshop（DEV-only 頁，正式站本來就沒有）×2，
+  以及桌機 D1「取樣 90 秒內沒有英雄倒地」（前置不成立；標記可見 0；同 bundle 390 取樣 16 次倒地、標記 0）。
+  Battle／Replay 1×/2×/4×、懲戒施放特效、狀態回饋、野怪血條扣到 0、返回比賽、page／console error 0 皆綠。
+  ⚠ 技能清兵／懲戒決策／打野走位的行為在正式 bundle 讀不到引擎內部，由同一 commit 的 node gate（20/20）驗證。
+
+\
