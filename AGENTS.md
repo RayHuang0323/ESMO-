@@ -178,6 +178,7 @@ runner 對每個子行程設 `ESMO_VERIFY_FLAT=1` ⇒ fan-out 腳本跳過巢狀
 
 ## 11. Codex Takeover Checklist（Codex 接手前必讀，依序）
 
+0. **最新正式基線與已知風險**：`docs/ai/跨模型交接流程.md` §0（目前 main `3b81afa`、moba-sim.v12、下一階段 Online Backend Foundation 接手 Audit）
 1. `AGENTS.md`（本檔）
 2. `docs/ai/CODEX使用規範.md`
 3. `docs/ai/跨模型交接流程.md`
