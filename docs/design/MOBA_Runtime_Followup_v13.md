@@ -46,10 +46,16 @@
 - `build-game-camera-controls`：焦點 scoring、hysteresis、手動／Replay 狀態保護；只調現有導播接點。
 - `webapp-testing`：本機 headless Chromium desktop／390px 基礎 smoke；無真機性能主張。
 
-## Integration release closure（2026-09-27；production deploy pending）
+## Integration release closure（2026-09-27；部署前紀錄）
 
 - Checkpoint `1d744eb`，基於 clean production `2aa4a99`。同一 Items ON runner／seed／roster 的 n=1000：clean v12 Blue/Red 55.1%／44.9%；v13 Blue/Red 54.3%／45.7%，kill ratio 1.116，median/P90/max 21.06／25.29／41.81 分，1000/1000 finished、pathological 0。
 - Per-seed winner：494 場已完成對局改變（251 Blue→Red、243 Red→Blue）；seed 670 為 clean baseline unfinished、candidate finished，非 winner flip。此差異是 v13 simulation semantics 的實際影響，必須隨 release 保留，不宣稱 per-seed 結果等價；aggregate 沒有新增單側偏差，但既有 Blue bias 仍未處理。
 - post-checkpoint integration：runtime followup PASS、Hero Skills release gate PASS、Items M2 53/53、simulation version 51/51、Replay display 22/22、regress 15/15、regress2 8/8、runtime29 35/35、P0-A 8/8、P0-B 14/14、P0-D PASS、skill-off baseline 10/10 seed diff 0、build PASS。
 - Pacing candidate 與 clean baseline 都是 23/25、相同兩條 kill-distribution／first-kill p50 failure，列為 `BASELINE_KNOWN_FAILURE`；不調整 gate。Broad desktop＋390px browser 40/40，D1 deaths 7／5、persistent marker 0；Battle／VFX／neutral HP／Result／Replay／return flow 通過，page／console／shader errors 0。
 - Production deploy／smoke 尚待執行。Blue bias、`check_moba_runtime_flicker_h2` 舊紅燈、真手機 FPS／觸控／視覺體感仍未解／未測，本輪沒有聲稱修復。
+
+## Production release close（2026-09-27）
+
+- Code checkpoint `1d744eb` fast-forward 推送；release integration main SHA `5044794`；GitHub Pages run #266 success，正式頁 HTTP 200，正式 entry bundle 含 `moba-sim.v13`。
+- Production external smoke：combat polish **36/37**、spectacle/vision **40/41**。所有 Battle、技能／狀態 VFX、neutral skill effect、HP drain、camera/fog、Result/Replay、page／console／shader checks 通過；唯一失敗為 DEV-only Workshop 技能預覽頁在 production 不提供，保留原 assertion，不修改 gate。
+- 實戰 diagnostics：兩種視窗皆有技能家族與狀態效果；`objectiveSkillFx max=1`；導播 roam/fight beat、近／中／遠鏡頭縮放順序、Replay fog/camera 控制通過。既有 Blue bias、flicker 與兩條 pacing baseline failure 未改。

@@ -23738,7 +23738,7 @@ CS_RESUME_HOTFIX = RELEASED（main cfca594 → a7afc5c）
 - Pacing candidate 與 clean `2aa4a99` 同為 23/25、同兩條失敗；Camera／Replay 舊 gate 兩邊同為 14/16、同兩條失敗（mapMeta fallback、mobile safe-area 靜態斷言），沒有為本輪改 gate。正式 browser 最後 39/40，桌機 D1 無英雄死亡樣本；390px 有 12 次死亡且無地面標記，Battle／Result／Replay、VFX、血條與 page／console／shader error 0 的其他項通過。
 - 仍是本機 candidate，未 commit／push／deploy；真手機 FPS／觸控／視覺體感未實測。
 
-### Integration release-gate close（2026-09-27；production deploy pending）
+### Integration release-gate close（2026-09-27；部署前紀錄）
 
 - Checkpoint：`1d744eb`，base／最新 fetch 的 `origin/main` 均為 `2aa4a99`，無需額外 merge commit；本節記錄的整合後驗證均在 checkpoint worktree 執行。未碰根工作區 Finance WIP。
 - 專項 `check_moba_runtime_followup` PASS；Hero Skills release gate PASS（100 heroes／400 QWER，100 skill-on＋20 skill-off control，100/100 skill-on 自然結束、pathological 0、deterministic）；Items M2 53/53；simulation version 51/51；Replay display 22/22。
@@ -23747,3 +23747,11 @@ CS_RESUME_HOTFIX = RELEASED（main cfca594 → a7afc5c）
 - 同 runner／seed／roster／Items ON 的 n=1000：clean Blue/Red 55.1%／44.9%，v13 54.3%／45.7%；v13 kill ratio 1.116、median/P90/max 21.06／25.29／41.81 分、1000 finished、pathological 0。494 場已完成對局 winner 改變：251 Blue→Red、243 Red→Blue；seed 670 另由 baseline unfinished 變 candidate finished。方向數接近且 aggregate Blue rate 未惡化；這是 v13 semantics 改變，非既有 Blue bias 修復。
 - Broad desktop＋390px browser gate 40/40 PASS；D1 桌機死亡樣本 7、390px 樣本 5，死亡標記皆 0；Battle、技能 VFX、neutral HP、Result／Replay、返回對局均通過，page／console／shader errors 0。Build PASS（僅有既有 >500KB bundle advisory）。
 - 既有 Blue side bias 與 `check_moba_runtime_flicker_h2` 紅燈都保留為 known issue，本輪沒有宣稱修復。當下仍待 main push、Pages deploy 與 production smoke；真手機 FPS／觸控／視覺體感未實測。
+
+### Production release close（2026-09-27；RELEASED）
+
+- `feature/moba-runtime-followup` checkpoint `1d744eb`；已對 `origin/main=2aa4a99` fast-forward push，整合 main SHA `5044794`。Deploy workflow `Deploy Vite site to GitHub Pages` run **#266** 成功，head SHA `5044794`；production `https://rayhuang0323.github.io/ESMO-/` 回 HTTP 200，正式 app bundle 含 `moba-sim.v13`。
+- Production external desktop＋390px `browser_check_moba_combat_polish_r2`：36/37；`browser_check_moba_spectacle_vision`：40/41。兩者唯一 fail 都是 DEV-only Workshop「技能預覽頁可開」，正式站按架構不提供；其餘正式 Battle／技能 VFX／狀態／中立技能事件、死亡標記、neutral HP drain、Return、Result／Replay、鏡頭／迷霧與 page／console／shader errors 均 PASS。
+- Production 實戰讀值：desktop／390px 都見具名技能、slam／trail 特效及狀態演出；`objectiveSkillFx max=1`；導播 roam/fight 節拍、close 5.57／5.32 > tactical 3.67／3.50 > wide 3.05／2.38；Replay 可切霧與鏡頭。HTTP 200；console／page／shader errors 0。
+- 舊式 `browser_check_prod_v7_release` 兩次在 URL ready wait timeout；直接 Chrome/CDP 同站導航正常，兩支 external runtime gate 也完整跑完。列為該舊 smoke harness 問題，非 production page failure；沒有為它改 verifier。
+- 正式 n=1000 與 494 per-seed winner flips、seed 670 unfinished→finished 已列於上節。既有 Blue bias、`check_moba_runtime_flicker_h2` 紅燈保持未解；pacing 23/25 同 clean baseline 兩條 `BASELINE_KNOWN_FAILURE`。不改 tower／Smite、Competitive、Online Backend、legacy。真手機效能／觸控未測。
