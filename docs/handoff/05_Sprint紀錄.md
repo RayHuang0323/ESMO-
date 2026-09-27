@@ -23737,3 +23737,13 @@ CS_RESUME_HOTFIX = RELEASED（main cfca594 → a7afc5c）
 - `ESMO_VERIFY_FLAT=1` 的 runtime29 為 35/35 PASS；前一次錯用 `SKIP_NESTED=1` 而啟動冗長巢狀工作，已停止，不能列為完成。presentation29b2 12/12、controls29b3 18/18 通過，直接 regress 15/15、regress2 8/8 與 build 通過。
 - Pacing candidate 與 clean `2aa4a99` 同為 23/25、同兩條失敗；Camera／Replay 舊 gate 兩邊同為 14/16、同兩條失敗（mapMeta fallback、mobile safe-area 靜態斷言），沒有為本輪改 gate。正式 browser 最後 39/40，桌機 D1 無英雄死亡樣本；390px 有 12 次死亡且無地面標記，Battle／Result／Replay、VFX、血條與 page／console／shader error 0 的其他項通過。
 - 仍是本機 candidate，未 commit／push／deploy；真手機 FPS／觸控／視覺體感未實測。
+
+### Integration release-gate close（2026-09-27；production deploy pending）
+
+- Checkpoint：`1d744eb`，base／最新 fetch 的 `origin/main` 均為 `2aa4a99`，無需額外 merge commit；本節記錄的整合後驗證均在 checkpoint worktree 執行。未碰根工作區 Finance WIP。
+- 專項 `check_moba_runtime_followup` PASS；Hero Skills release gate PASS（100 heroes／400 QWER，100 skill-on＋20 skill-off control，100/100 skill-on 自然結束、pathological 0、deterministic）；Items M2 53/53；simulation version 51/51；Replay display 22/22。
+- regress 15/15、regress2 8/8、runtime29 flat 35/35；side-relative P0-A 8/8、navigation mirror P0-B 14/14、P0-D nexus-wave invariant PASS；skill-off 對 clean `2aa4a99` 10 seeds 的逐 snapshot／winner／finished diff 0。
+- Pacing verifier candidate 與 clean `2aa4a99` 同為 23/25，且是完全相同的兩個既有 kill-distribution／first-kill p50 failure；登記 `BASELINE_KNOWN_FAILURE`，未更動 pacing verifier、baseline 或門檻。
+- 同 runner／seed／roster／Items ON 的 n=1000：clean Blue/Red 55.1%／44.9%，v13 54.3%／45.7%；v13 kill ratio 1.116、median/P90/max 21.06／25.29／41.81 分、1000 finished、pathological 0。494 場已完成對局 winner 改變：251 Blue→Red、243 Red→Blue；seed 670 另由 baseline unfinished 變 candidate finished。方向數接近且 aggregate Blue rate 未惡化；這是 v13 semantics 改變，非既有 Blue bias 修復。
+- Broad desktop＋390px browser gate 40/40 PASS；D1 桌機死亡樣本 7、390px 樣本 5，死亡標記皆 0；Battle、技能 VFX、neutral HP、Result／Replay、返回對局均通過，page／console／shader errors 0。Build PASS（僅有既有 >500KB bundle advisory）。
+- 既有 Blue side bias 與 `check_moba_runtime_flicker_h2` 紅燈都保留為 known issue，本輪沒有宣稱修復。當下仍待 main push、Pages deploy 與 production smoke；真手機 FPS／觸控／視覺體感未實測。

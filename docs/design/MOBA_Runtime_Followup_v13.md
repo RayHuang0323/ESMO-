@@ -45,3 +45,11 @@
 - `threejs-gameplay-systems`：正式引擎 authority、受體能力與可驗證 hit path；本輪沒有建立第二套 gameplay 資料。
 - `build-game-camera-controls`：焦點 scoring、hysteresis、手動／Replay 狀態保護；只調現有導播接點。
 - `webapp-testing`：本機 headless Chromium desktop／390px 基礎 smoke；無真機性能主張。
+
+## Integration release closure（2026-09-27；production deploy pending）
+
+- Checkpoint `1d744eb`，基於 clean production `2aa4a99`。同一 Items ON runner／seed／roster 的 n=1000：clean v12 Blue/Red 55.1%／44.9%；v13 Blue/Red 54.3%／45.7%，kill ratio 1.116，median/P90/max 21.06／25.29／41.81 分，1000/1000 finished、pathological 0。
+- Per-seed winner：494 場已完成對局改變（251 Blue→Red、243 Red→Blue）；seed 670 為 clean baseline unfinished、candidate finished，非 winner flip。此差異是 v13 simulation semantics 的實際影響，必須隨 release 保留，不宣稱 per-seed 結果等價；aggregate 沒有新增單側偏差，但既有 Blue bias 仍未處理。
+- post-checkpoint integration：runtime followup PASS、Hero Skills release gate PASS、Items M2 53/53、simulation version 51/51、Replay display 22/22、regress 15/15、regress2 8/8、runtime29 35/35、P0-A 8/8、P0-B 14/14、P0-D PASS、skill-off baseline 10/10 seed diff 0、build PASS。
+- Pacing candidate 與 clean baseline 都是 23/25、相同兩條 kill-distribution／first-kill p50 failure，列為 `BASELINE_KNOWN_FAILURE`；不調整 gate。Broad desktop＋390px browser 40/40，D1 deaths 7／5、persistent marker 0；Battle／VFX／neutral HP／Result／Replay／return flow 通過，page／console／shader errors 0。
+- Production deploy／smoke 尚待執行。Blue bias、`check_moba_runtime_flicker_h2` 舊紅燈、真手機 FPS／觸控／視覺體感仍未解／未測，本輪沒有聲稱修復。
