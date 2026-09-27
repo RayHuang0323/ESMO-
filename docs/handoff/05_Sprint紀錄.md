@@ -23721,3 +23721,19 @@ SIMULATION_VERSION = moba-sim.v12（skill-on 語意變化；skill-off 與 v11 �
 MOBA_LANE_JUNGLE_BALANCE = RELEASED（main cefaccb；moba-sim.v12）
 CS_RESUME_HOTFIX = RELEASED（main cfca594 → a7afc5c）
 ```
+
+## 2026-09-27 MOBA runtime follow-up v13（本機 candidate；未發布）
+
+- 接手先 fetch 並核對 `main/origin/main=2aa4a99`；在獨立 `.sprints/codex-moba-runtime-followup` 的 `feature/moba-runtime-followup` 實作。根工作區有別輪 Finance WIP，不動。交接 §0 所寫舊 SHA 與實際 git 不符，依 fetched origin/main 和使用者明示 baseline 定位。
+- Audit：導播舊 scoring 用大半徑群平均，會追空隙／已過期事件；藍 Buff 每 member 的引擎及 snapshot HP 原本獨立，renderer 的 `shownHp` 緩動使血條落後權威 HP；技能對兵只有受限清兵、對中立物件有既有傷害接點，但英雄目標路徑／AoE 波及及非英雄 CC 缺口存在；後期兵與營地無獨立自然時間成長。
+- 實作：修改正式 `battleFocus`／`BattleCameraController` 的配對評分、hold 和 stale release；neutral rig 存活條直接用 member HP；在 `LogicEngine` 與 `matchProgression` 增 `heroSkillsOn` gated 非英雄技能波及／受體控制／6–24 分自然成長；moba-sim 記 v13，保留 v1–v12 指紋及 Replay 契約。沒有第二套技能 mapping、沒有改 Tower／Smite、damage／balance 以外的舊規則、Online Backend、Competitive、legacy 或既有偏藍／flicker。
+- 受體契約：100 英雄 400 QWER；兵 75 招受限主動清兵，另 91 招英雄目標路徑／AoE 可波及，聯集 120；中立主動傷害候選 170 招（仍受射程／AI／優先目標限制）。兵／一般野怪可受合理 slow／root／stun／mark；boss 免疫硬控／slow，mark 受限；不對無施法者造假 silence，亦不給兵／野怪任意 buff／shield。新生兵 HP 最多 ×1.35、傷害 ×1.15；重生 camp／boss HP 最多 ×1.30、傷害 ×1.12。Baron 既有短期兵線 buff 分開保留。
+- 驗證：專項 PASS、baseline skill-off 10/10 逐幀 diff 0、Hero Skills release gate PASS、skill-on Items ON n=1000 1000/1000 自然結束（Blue/Red 54.3/45.7、kill ratio 1.116、median/P90/max 21.06/25.29/41.81m、庫存／守恆錯誤 0）、simulation version 51/51、lane/jungle 20/20、polish-r2 31/31、P0-A 8/8、P0-B 14/14、regress 15/15、regress2 8/8、build PASS。Pacing 在 candidate 與乾淨 `2aa4a99` 同為 **23/25**、同兩紅燈；舊交接所列 24/25 非當前 v12 baseline。
+- Verifier 調整原因：v13 boss 後期 HP 成長會延長坑邊停留，使舊 objIdleFix A/B 的「未修正組」樣本中位數從 baseline 0.452 掉到 0，並非站定修正失效。保留原 W1/W2 斷言、seed 和門檻，只在這個歷史 A/B 中隔離 `phaseScalingV1`；實際 v13 成長另由新專項測試覆蓋。另將 v12 lane gate 辨識英雄目標 AoE 的 `nonHeroSplash`，仍禁止 R 主動清兵；沒有刪減檢查。
+- 正式瀏覽器先前一次 40/40；導播最後一處 stale-lock 改動後一次 39/40，唯一 D1 為採樣期間 0 個英雄死亡（標記觀測仍 0），目前重跑。runtime29 flat 尚未完成。真手機 FPS／觸控／熱量未實測。未 commit／push／deploy。
+
+### Validation close（同日補記，不回寫舊 Sprint）
+
+- `ESMO_VERIFY_FLAT=1` 的 runtime29 為 35/35 PASS；前一次錯用 `SKIP_NESTED=1` 而啟動冗長巢狀工作，已停止，不能列為完成。presentation29b2 12/12、controls29b3 18/18 通過，直接 regress 15/15、regress2 8/8 與 build 通過。
+- Pacing candidate 與 clean `2aa4a99` 同為 23/25、同兩條失敗；Camera／Replay 舊 gate 兩邊同為 14/16、同兩條失敗（mapMeta fallback、mobile safe-area 靜態斷言），沒有為本輪改 gate。正式 browser 最後 39/40，桌機 D1 無英雄死亡樣本；390px 有 12 次死亡且無地面標記，Battle／Result／Replay、VFX、血條與 page／console／shader error 0 的其他項通過。
+- 仍是本機 candidate，未 commit／push／deploy；真手機 FPS／觸控／視覺體感未實測。

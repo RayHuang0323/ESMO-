@@ -44,6 +44,9 @@ function wobble(fix) {
   let samples = 0, still = 0, bigTurn = 0; const steps = [];
   for (const seed of [1, 42, 99]) {
     const e = mkEngine(seed, { skills: true, fix });
+    // Isolate the historical objIdleFix A/B from v13 late boss HP scaling.
+    // Scaling changes dwell samples near objectives, not the movement fix itself.
+    e.rules = { ...e.rules, phaseScalingV1: false };
     const prev = new Map(), prevF = new Map();
     for (let i = 0; i < 2600 && !e.over; i++) {
       e.tick(0.5);
@@ -238,7 +241,9 @@ ck("W2 >90° 轉向（每 100 樣本）至少減半", wOn.bigTurnPer100 <= wOff.
 // ── M：小兵／野怪 audit（引擎事實；本輪未改語意）──────────────────────────────
 {
   const E = read("src/LogicEngine.js");
-  ck("M1 技能對中立目標的傷害只走 _objSkillHits（野怪／龍／巴龍），小兵沒有技能命中路徑", /_objSkillHits\.push/.test(E) && !/heroSkill[A-Za-z]*\([^)]*lanes\[/.test(E));
+  ck("M1 中立目標傷害走 _objSkillHits；小兵走受限 _laneSkillHits（兩者均由技能命中結算）",
+    /_objSkillHits\.push/.test(E) && /_laneSkillHits\.push/.test(E)
+    && /_applyLaneSkillHits\(\)/.test(E) && /R\.objSkillV1 && this\.heroSkillsOn/.test(E));
   ck("M2 紅 Buff 減速只在打英雄時套用（redSlowUntil 只設定在英雄）", /redSlowUntil/.test(E));
 }
 

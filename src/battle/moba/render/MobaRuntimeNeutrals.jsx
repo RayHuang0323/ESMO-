@@ -205,7 +205,7 @@ export default function MobaRuntimeNeutrals({ objectives = [], frameRef = null }
         }
         node.barGroup.visible = objective.alive;
         node.barGroup.rotation.y = -node.root.rotation.y;
-        const hp = Math.max(0.001, Math.min(1, objective.hpRatio ?? 0));
+        const hp = Math.max(0, Math.min(1, objective.hpRatio ?? 0));
         node.bar.scale.x = node.barWidth * hp;
         node.bar.position.x = -(node.barWidth / 2) * (1 - hp);
         continue;
@@ -271,7 +271,7 @@ export default function MobaRuntimeNeutrals({ objectives = [], frameRef = null }
         if (memberNode.accent) memberNode.accent.material = hit > 0 ? mats.hit : mats.accent;
         memberNode.barGroup.visible = !!member.alive;
         memberNode.barGroup.rotation.y = -memberNode.root.rotation.y;
-        const hp = Math.max(0.001, Math.min(1, member.hpRatio ?? 0));
+        const hp = Math.max(0, Math.min(1, member.hpRatio ?? 0));
         memberNode.bar.scale.x = memberNode.barWidth * hp;
         memberNode.bar.position.x = -(memberNode.barWidth / 2) * (1 - hp);
       });

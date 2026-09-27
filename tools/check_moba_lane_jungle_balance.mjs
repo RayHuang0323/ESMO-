@@ -86,11 +86,11 @@ const R = rulesFor("v3");
     const seen = new Set();
     while (!g.over && g.t < 1500) {
       g.tick(0.5);
-      for (const fx of g.fx ?? []) { const k = `${fx.at}|${fx.sourceId}|${fx.skillId}|${fx.targetId}`; if (seen.has(k)) continue; seen.add(k); if (fx.targetKind === "minion" && String(fx.skillId ?? "").endsWith(":R")) ultOnMinion++; }
+      for (const fx of g.fx ?? []) { const k = `${fx.at}|${fx.sourceId}|${fx.skillId}|${fx.targetId}`; if (seen.has(k)) continue; seen.add(k); if (fx.targetKind === "minion" && String(fx.skillId ?? "").endsWith(":R") && fx.origin !== "nonHeroSplash") ultOnMinion++; }
     }
     casts += g.laneSkillStats.casts; kills += g.laneSkillStats.kills;
   }
-  ck("L10 實戰：技能會清兵（casts > 0、kills > 0），大招沒有用在兵上", casts > 0 && kills > 0 && ultOnMinion === 0, `casts ${casts}／kills ${kills}／ult→minion ${ultOnMinion}`);
+  ck("L10 實戰：技能會清兵；大招不主動對兵施放（英雄目標 AoE 命中兵不算主動清兵）", casts > 0 && kills > 0 && ultOnMinion === 0, `casts ${casts}／kills ${kills}／ult 主動→minion ${ultOnMinion}`);
 }
 
 // ── S：懲戒 ──
@@ -146,9 +146,13 @@ const R = rulesFor("v3");
 }
 
 // ── V ──
-ck("V1 moba-sim.v12 為目前版本；v11 保留（指紋 617b9eebcc50b848）且拒絕重播",
-  SV.MOBA_SIMULATION_VERSION === "moba-sim.v12" && SV.KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v11")
-  && SV.SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v11"] === "617b9eebcc50b848" && SV.canReplay("moba-sim.v11").ok === false);
+ck("V1 現行版本至少 v12；v11/v12 指紋保留且舊版拒絕重算",
+  Number(SV.MOBA_SIMULATION_VERSION.replace("moba-sim.v", "")) >= 12
+  && SV.KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v11")
+  && SV.KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v12")
+  && SV.SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v11"] === "617b9eebcc50b848"
+  && SV.SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v12"] === "16b5b32d90165817"
+  && SV.canReplay("moba-sim.v12").ok === false);
 ck("V2 塔規則未動（heroTowerDmg 104、towerAttackInterval 0.5、towerMinionDamage 60、towerAggroRange 6、towerHeroShot 25）",
   R.heroTowerDmg === 104 && R.towerAttackInterval === 0.5 && R.towerMinionDamage === 60 && R.towerAggroRange === 6 && R.towerHeroShot === 25);
 

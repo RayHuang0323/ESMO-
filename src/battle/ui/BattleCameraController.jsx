@@ -68,6 +68,8 @@ function applyCamera(camera, panX, panY, zoom, perspective = null, pitchOffset =
 }
 
 const FOCUS_DEADBAND = WORLD_BOUNDS.width * 0.027; // 約 6 邏輯單位，由 world metadata 派生
+const FOCUS_HOLD_SEC = 3.2;
+const FOCUS_SCORE_MARGIN = 2;
 
 // ── feature/moba-spectacle-vision：導播節拍（auto shot）──────────────────────
 //  zoom 倍率是相對「視窗取景 base」；pitch 是相對既有俯角的偏移（度，負值＝壓低、更有臨場感）。
@@ -105,7 +107,7 @@ export default function BattleCameraController({
 }) {
   const camera = useThree((s) => s.camera);
   const size = useThree((s) => s.size);
-  const lockRef = useRef(null);             // 目前鎖定的焦點（deadband 用）
+  const lockRef = useRef(null);             // 目前鎖定的焦點（目標停留與 deadband）
   const beatRef = useRef({ beat: "roam", since: -Infinity, pitch: 0 });   // auto 節拍＋目前俯角偏移
   const viewRef = useRef(null);             // 相機當下實際看到的位置（平滑用）
 
@@ -163,12 +165,30 @@ export default function BattleCameraController({
       ? (source.getCameraEvents?.() ?? snap.cameraEvents ?? [])
       : useBattleStore.getState().events;
     const f = computeSpectatorFocus(snap, cameraEvents);
-    // S29B2 防抖：焦點只在「真的移動了」才更新鎖定點
+    const nowSec = performance.now() / 1000;
     const lock = lockRef.current;
-    if (!lock || Math.hypot(f.x - lock.x, f.y - lock.y) > FOCUS_DEADBAND) {
-      lockRef.current = { x: f.x, y: f.y, intensity: f.intensity };
-    } else {
-      lockRef.current.intensity = f.intensity;   // 強度仍即時反映（zoom 用）
+    const sameTarget = lock?.key === f.key;
+    const focusHeld = nowSec - (lock?.since ?? -Infinity);
+    const urgent = f.kind === "event" && (f.score ?? 0) > (lock?.score ?? 0);
+    const lockedPair = lock?.kind === "fight" ? String(lock.key).split(":")
+      .map((id) => snap.players.find((p) => p.id === id && !p.dead)) : [];
+    const staleFight = lock?.kind === "fight" && (lockedPair.some((p) => !p)
+      || Math.hypot(lockedPair[0].pos.x - lockedPair[1].pos.x,
+        lockedPair[0].pos.y - lockedPair[1].pos.y) > 8);
+    const staleEvent = lock?.kind === "event" && f.kind !== "event"
+      && focusHeld >= PUNCH_DWELL && !snap.players.some((p) => !p.dead
+        && Math.hypot(p.pos.x - lock.x, p.pos.y - lock.y) < 8);
+    // A live melee can displace a lower-value shot after a short hold. Ordinary
+    // candidate changes need the full dwell, so a second proximity cluster
+    // cannot send the lens across the map every snapshot.
+    const canCut = !lock || sameTarget || staleFight || staleEvent || urgent && focusHeld >= PUNCH_DWELL
+      || focusHeld >= FOCUS_HOLD_SEC && ((f.score ?? 0) >= (lock.score ?? 0) - FOCUS_SCORE_MARGIN
+        || f.kind === "roam" || lock.kind === "event");
+    if (canCut) {
+      const since = sameTarget ? lock.since : nowSec;
+      if (!sameTarget || Math.hypot(f.x - lock.x, f.y - lock.y) > FOCUS_DEADBAND)
+        lockRef.current = { ...f, since };
+      else Object.assign(lockRef.current, { intensity: f.intensity, score: f.score });
     }
     const L = lockRef.current;
     // objectiveFocus = 導播的自動子模式：焦點鎖在坑上（龍/巴龍爭奪）
@@ -189,7 +209,6 @@ export default function BattleCameraController({
     }
     //  auto：節拍＋停留時間（hysteresis）。擊殺特寫可以較快插入，其餘至少停 BEAT_DWELL 秒。
     const want2 = beatFor(snap.ts ?? 0, L, cameraEvents, onPit);
-    const nowSec = performance.now() / 1000;
     const held = nowSec - B.since;
     if (want2 !== B.beat && (held >= BEAT_DWELL || (want2 === "punch" && held >= PUNCH_DWELL) || !Number.isFinite(B.since))) {
       B.beat = want2; B.since = nowSec;

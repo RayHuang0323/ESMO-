@@ -723,6 +723,16 @@ SIM_RULES.v3 = {
   //  打野走向要打的那一隻（不是營地中心）：Buff 跟班離中心約 4.9 > 打野傷害距離 3.5，站中心永遠打不到，
   //  舊版只能靠懲戒收 ⇒ 懲戒 AI 一收斂清野就崩（5 分鐘擊殺 11.8 → 7 隻）。修正後 16 隻（見 05 本節）。
   jungleReachV1: true,
+  nonHeroSkillV1: true,
+  // v13: only hero-skills production matches. Symmetric, capped growth; the existing
+  // 70s Baron wave buff remains a separate, temporary objective reward.
+  phaseScalingV1: true,
+  phaseScalingStart: 360,
+  phaseScalingFull: 1440,
+  minionPhaseHpMax: 1.35,
+  minionPhaseDmgMax: 1.15,
+  neutralPhaseHpMax: 1.3,
+  neutralPhaseDmgMax: 1.12,
   //  小兵種類。rangeWorld 是世界單位（依各路長度換算成 progress）；towerK ＝ 攻城時算幾隻。
   //  ⚠ 總量刻意貼近舊版：普通波 3 近戰＋1 遠程；破路波的超級兵補回舊版「整波 ×1.8 HP、×1.7 傷害」
   //    的總量（舊 1728 HP／204 dps → 新 1800 HP／184 dps＋攻城 2.5 隻）。

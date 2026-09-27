@@ -506,6 +506,40 @@ export class LogicEngine {
     return this.heroSkillsOn && p && this.t < (p.heroSkillStealthUntil ?? 0);
   }
 
+  // Non-hero capabilities are intentionally narrower than hero control. Bosses
+  // take skill damage but never lose movement/attacks to player hard CC.
+  _nonHeroSkillEffect(target, rule, kind, sourceId) {
+    if (!this.heroSkillsOn || !this.rules.nonHeroSkillV1 || !target || !rule) return null;
+    const boss = kind === "boss";
+    const mechanic = rule.mechanic;
+    let effect = null, duration = 0;
+    if (mechanic === "projectile" && !boss) {
+      effect = "slow"; duration = rule.slowDuration ?? rule.markDuration ?? 0;
+      target.heroSkillSlowFactor = Math.min(target.heroSkillSlowFactor ?? 1, rule.slowFactor ?? 0.7);
+    } else if (["root-target", "root-dot", "area-root"].includes(mechanic) && !boss) {
+      effect = "root"; duration = rule.rootDuration ?? rule.controlDuration ?? 0;
+    } else if (["control-target", "area-control", "area-dot", "line"].includes(mechanic) && !boss) {
+      effect = "stun"; duration = rule.controlDuration ?? 0;
+    } else if (mechanic === "area-mark") {
+      effect = "mark"; duration = (rule.markDuration ?? 0) * (boss ? 0.5 : 1);
+      target.heroSkillMarkAmp = Math.min(boss ? 0.1 : 0.2, rule.damageAmp ?? 0);
+      if (!boss && rule.slowFactor) {
+        target.heroSkillSlowFactor = Math.min(target.heroSkillSlowFactor ?? 1, rule.slowFactor);
+        target.heroSkillSlowUntil = Math.max(target.heroSkillSlowUntil ?? 0, this.t + duration);
+      }
+    }
+    if (!(duration > 0)) return null;
+    const untilKey = { slow: "heroSkillSlowUntil", root: "heroSkillRootUntil",
+      stun: "heroSkillStunUntil", mark: "heroSkillMarkUntil" }[effect];
+    target[untilKey] = Math.max(target[untilKey] ?? 0, this.t + duration);
+    target.heroSkillEffectSourceId = sourceId;
+    return effect;
+  }
+
+  _nonHeroSkillDamageAmp(target) {
+    return this.t < (target.heroSkillMarkUntil ?? 0) ? 1 + (target.heroSkillMarkAmp ?? 0) : 1;
+  }
+
   /** laneSkillV1：到期的清兵傷害。死亡與經濟走既有兵線結算（hp ≤ 0 ⇒ 兵線更新時移除並發錢／經驗；lastHitBy 記補刀）。 */
   _applyLaneSkillHits() {
     const due = this._laneSkillHits.filter((h) => h.at <= this.t + 1e-9);
@@ -522,9 +556,15 @@ export class LogicEngine {
           .sort((a, b) => a.d - b.d || String(a.m.id).localeCompare(String(b.m.id))).slice(0, h.max).map((x) => x.m)
         : [primary];
       for (const m of victims) {
-        if (h.amount >= m.hp) { m.lastHitBy = h.p.id; this.laneSkillStats.kills++; }
-        m.hp -= h.amount;
-        h.p.minionDmg = (h.p.minionDmg ?? 0) + h.amount;
+        const amount = h.amount * this._nonHeroSkillDamageAmp(m);
+        if (amount >= m.hp) { m.lastHitBy = h.p.id; this.laneSkillStats.kills++; }
+        m.hp -= amount;
+        h.p.minionDmg = (h.p.minionDmg ?? 0) + amount;
+        const effect = this._nonHeroSkillEffect(m, h.rule, "minion", h.p.id);
+        if (effect) this.pushFx({ type: "ult", pos: { ...this._minionPos(h.ln, m) },
+          sourceId: h.p.id, targetId: m.id, targetKind: "minion", ability: `hero:${h.slot}`,
+          skillId: h.rule.skillId, feedback: "skill", style: effect,
+          origin: h.splash ? "nonHeroSplash" : "objectiveCast" });
       }
     }
   }
@@ -669,6 +709,67 @@ export class LogicEngine {
     return best;
   }
 
+  // Hero-targeted area/path skills use the same authoritative impact geometry
+  // for heroes and non-heroes. Jobs reuse existing lane/camp damage paths.
+  _queueNonHeroAreaImpact(entry) {
+    const R = this.rules;
+    if (!this.heroSkillsOn || !R.nonHeroSkillV1 || entry.p.dead) return;
+    if (!["delayed-area", "area-dot", "area-root", "area-control", "area-silence", "area-mark",
+      "line", "piercing-line", "cone-strike", "split-projectile"].includes(entry.kind)) return;
+    const { p, rule } = entry;
+    const from = entry.from ?? p.pos;
+    const target = entry.target ?? entry.end;
+    const path = entry.kind === "line" || entry.kind === "piercing-line";
+    const cone = entry.kind === "cone-strike";
+    const radius = entry.kind === "split-projectile" ? rule.splitRadius : rule.radius;
+    const geometryDistance = (point) => {
+      if (path) {
+        const dx = target.x - from.x, dy = target.y - from.y;
+        const length = Math.hypot(dx, dy) || 1;
+        const along = ((point.x - from.x) * dx + (point.y - from.y) * dy) / length;
+        const lateral = Math.abs((point.x - from.x) * dy - (point.y - from.y) * dx) / length;
+        return along >= 0 && along <= length && lateral <= (rule.width ?? 0) ? along : Infinity;
+      }
+      if (cone) {
+        const dx = target.x - from.x, dy = target.y - from.y;
+        const rx = point.x - from.x, ry = point.y - from.y;
+        const length = Math.hypot(dx, dy) || 1, distance = Math.hypot(rx, ry);
+        const dot = (rx * dx + ry * dy) / (Math.max(distance, 1e-6) * length);
+        return distance <= rule.range && dot >= Math.cos(rule.halfAngle) ? distance : Infinity;
+      }
+      const d = dist(point, target);
+      return d <= (radius ?? 0) ? d : Infinity;
+    };
+    const amount = ((rule.damage ?? 0) + p.power * (rule.powerRatio ?? 0))
+      * this._heroSkillPowerFactor(p) * (R.laneSkillAreaK ?? 0.5)
+      * (entry.kind === "split-projectile" ? 0.72 : 1);
+    const key = p.side === "blue" ? "rm" : "bm";
+    const minions = ["top", "mid", "bot"].flatMap((ln) => this.lanes[ln][key]
+      .filter((m) => m.hp > 0 && Number.isFinite(geometryDistance(this._minionPos(ln, m))))
+      .map((m) => ({ ln, m, d: geometryDistance(this._minionPos(ln, m)) })));
+    minions.sort((a, b) => a.d - b.d || String(a.m.id).localeCompare(String(b.m.id)));
+    for (const { ln, m } of minions.slice(0, R.laneSkillAreaMax ?? 3)) {
+      this._laneSkillHits.push({ p, ln, memberId: m.id, area: false, amount,
+        rule, splash: true, slot: String(rule.skillId ?? "").split(":").at(-1), at: this.t });
+    }
+    const neutralAmount = ((rule.damage ?? 0) + p.power * (rule.powerRatio ?? 0))
+      * this._heroSkillPowerFactor(p) * (R.objSkillDmgK ?? 1)
+      * (entry.kind === "split-projectile" ? 0.72 : 1);
+    for (const o of this.neutrals?.list ?? []) {
+      if (!o.alive) continue;
+      if (o.members) {
+        for (const m of o.members) {
+          if (!m.alive || m.hp <= 0 || !Number.isFinite(geometryDistance(m.pos))) continue;
+          this._objSkillHits.push({ p, objectiveId: o.id, memberId: m.id,
+            amount: neutralAmount, rule, slot: String(rule.skillId ?? "").split(":").at(-1), at: this.t });
+        }
+      } else if (Number.isFinite(geometryDistance(o.pos))) {
+        this._objSkillHits.push({ p, objectiveId: o.id, memberId: null,
+          amount: neutralAmount, rule, slot: String(rule.skillId ?? "").split(":").at(-1), at: this.t });
+      }
+    }
+  }
+
   _heroSkillStep() {
     if (!this.heroSkillsOn) return;
     if (this._laneSkillHits.length) this._applyLaneSkillHits();
@@ -694,6 +795,7 @@ export class LogicEngine {
     };
     for (const entry of due) {
       const { p, rule, target, foeId } = entry;
+      this._queueNonHeroAreaImpact(entry);
       if (entry.kind === 'projectile') {
         const foe = this.players.find((q) => q.id === foeId);
         if (foe && !foe.dead && dist(foe.pos, target) <= rule.hitRadius) hit(p, foe, rule.damage + p.power * rule.powerRatio, rule);
@@ -1016,7 +1118,8 @@ export class LogicEngine {
         //  laneSkillV1：清兵。傷害排進 _laneSkillHits，於下一次 _heroSkillStep 開頭（到期時）結算。
         const delay = Number(rule.travel ?? rule.delay ?? 0) || 0;
         this._laneSkillHits.push({ p, ln: c.objective.lane.ln, memberId: c.objective.memberId, area: c.objective.lane.area,
-          radius: c.objective.lane.radius, max: c.objective.lane.max, amount: c.objective.lane.amount, at: this.t + delay });
+          radius: c.objective.lane.radius, max: c.objective.lane.max, amount: c.objective.lane.amount,
+          rule, slot, at: this.t + delay });
         this.laneSkillStats.casts++;
         this.pushFx({ type: OBJ_SKILL_ULT.has(rule.mechanic) ? 'ult' : 'line', pos: from, target: { ...target },
           sourceId: p.id, targetId: c.objective.memberId, targetKind: 'minion', ability: `hero:${slot}`,
@@ -1029,7 +1132,7 @@ export class LogicEngine {
         const delay = Number(rule.travel ?? rule.delay ?? 0) || 0;
         this._objSkillHits.push({ p, objectiveId: c.objective.objectiveId, memberId: c.objective.memberId,
           amount: ((rule.damage ?? 0) + p.power * (rule.powerRatio ?? 0)) * (this.rules.objSkillDmgK ?? 1),
-          at: this.t + delay });
+          rule, slot, at: this.t + delay });
         this.pushFx({ type: OBJ_SKILL_ULT.has(rule.mechanic) ? 'ult' : 'line', pos: from, target: { ...target },
           sourceId: p.id, targetId: c.objective.memberId ?? c.objective.objectiveId, ability: `hero:${slot}`,
           skillId: rule.skillId, feedback: 'skill', life: Math.max(1.2, delay + 0.9) });
@@ -1194,6 +1297,7 @@ export class LogicEngine {
         }).filter(({ d, angle }) => d <= rule.range && angle <= rule.halfAngle)
           .sort((a, b) => a.d - b.d || a.q.id.localeCompare(b.q.id));
         for (const { q } of enemies) hit(p, q, rule.damage + p.power * rule.powerRatio, rule);
+        this._queueNonHeroAreaImpact({ kind: "cone-strike", p, from, target, rule });
       } else if (rule.mechanic === 'dash-wall') {
         const landing = { x: from.x + ux * rule.range, y: from.y + uy * rule.range };
         this._navTeleport(p, landing);
@@ -1212,6 +1316,7 @@ export class LogicEngine {
             this._applyHeroSkillControl(q, rule.control, rule.controlDuration);
           }
         }
+        this._queueNonHeroAreaImpact({ kind: "line", p, from, end, rule });
       } else if (rule.mechanic === 'projectile') {
         this.heroSkillPending.push({ kind: 'projectile', p, foeId: foe.id, target, rule, at: this.t + rule.travel });
       } else if (rule.mechanic === 'split-projectile') {
@@ -3062,7 +3167,16 @@ export class LogicEngine {
     // S29B2：攻擊中立目標的可視化 fx（每整數秒最多一輪、零 rng ⇒ 不影響模擬與決定性）
     const fxTick = Math.floor(this.t) !== Math.floor(this.t - dt);
     const resetMember = (o, m) => {
+      if (this.heroSkillsOn && R.phaseScalingV1) {
+        m.baseMaxHp ??= m.maxHp;
+        m.maxHp = m.baseMaxHp * this._phaseScale(R.neutralPhaseHpMax);
+        o.maxHp = o.members.reduce((sum, member) => sum + member.maxHp, 0);
+      }
       m.alive = true; m.hp = m.maxHp; m.targetId = null; m.atkCd = 0;
+      if (this.heroSkillsOn && R.nonHeroSkillV1) {
+        m.heroSkillSlowUntil = 0; m.heroSkillRootUntil = 0; m.heroSkillStunUntil = 0;
+        m.heroSkillMarkUntil = 0; m.heroSkillSlowFactor = 1; m.heroSkillMarkAmp = 0;
+      }
       m.hitAt = -Infinity; m.attackAt = -Infinity;
       m.pos.x = m.homePos.x; m.pos.y = m.homePos.y;
       m.deathAt = null; m.spawnedOnce = true; m.killerTeam = null; m._settled = false;
@@ -3070,6 +3184,10 @@ export class LogicEngine {
       o.spawnedOnce = true;
     };
     const reset = (o) => {
+      if (this.heroSkillsOn && R.phaseScalingV1) {
+        o.baseMaxHp ??= o.maxHp;
+        o.maxHp = o.baseMaxHp * this._phaseScale(R.neutralPhaseHpMax);
+      }
       o.alive = true; o.hp = o.maxHp; o.killerTeam = null;
       o.deathAt = null; o.spawnedOnce = true;
       o.participants.clear(); o.dmgBy.blue = 0; o.dmgBy.red = 0;
@@ -3204,14 +3322,24 @@ export class LogicEngine {
       this._objSkillHits = this._objSkillHits.filter((h) => h.at > this.t + 1e-9);
       for (const h of due) {
         const o = N.list.find((x) => x.id === h.objectiveId);
-        if (!o || !o.alive || h.p.dead || !(h.amount > 0)) continue;
+        if (!o || !o.alive || h.p.dead || !(h.amount > 0 || h.rule?.mechanic === "area-mark")) continue;
         if (o.members) {
-          const victim = o.members.find((m) => m.id === h.memberId && m.alive && m.hp > 0)
-            ?? o.members.find((m) => m.alive && m.hp > 0);
-          if (victim) { applyMemberHits(o, victim, [{ p: h.p, amount: h.amount }]); o.hitAt = this.t; syncCamp(o); }
+          const victim = o.members.find((m) => m.id === h.memberId && m.alive && m.hp > 0);
+          if (victim) {
+            applyMemberHits(o, victim, [{ p: h.p, amount: h.amount * this._nonHeroSkillDamageAmp(victim) }]);
+            const effect = victim.alive && this._nonHeroSkillEffect(victim, h.rule, "camp", h.p.id);
+            if (effect) this.pushFx({ type: "ult", pos: { ...victim.pos }, sourceId: h.p.id,
+              targetId: victim.id, targetKind: "neutral", ability: `hero:${h.slot}`,
+              skillId: h.rule.skillId, feedback: "skill", style: effect });
+            o.hitAt = this.t; syncCamp(o);
+          }
         } else {
-          const applied = Math.min(Math.max(0, o.hp), h.amount);
+          const applied = Math.min(Math.max(0, o.hp), h.amount * this._nonHeroSkillDamageAmp(o));
           o.hp -= applied; o.dmgBy[h.p.side] += applied; o.participants.add(h.p.id); o.hitAt = this.t;
+          const effect = o.hp > 0 && this._nonHeroSkillEffect(o, h.rule, "boss", h.p.id);
+          if (effect) this.pushFx({ type: "ult", pos: { ...o.pos }, sourceId: h.p.id,
+            targetId: o.id, targetKind: "neutral", ability: `hero:${h.slot}`,
+            skillId: h.rule.skillId, feedback: "skill", style: effect });
         }
       }
     }
@@ -3249,7 +3377,8 @@ export class LogicEngine {
         o.targetId = bossTarget?.id ?? null;
         if (bossTarget && o.atkCd <= 0) {
           const interval = key === "baron" ? R.baronAttackInterval : R.dragonAttackInterval;
-          const raw = key === "baron" ? R.baronAttackDamage : R.dragonAttackDamage;
+          const raw = (key === "baron" ? R.baronAttackDamage : R.dragonAttackDamage)
+            * this._phaseScale(R.neutralPhaseDmgMax);
           const amount = Math.min(
             raw / this._dragonGuardK(bossTarget.side),
             Math.max(0, bossTarget.hp - 1));
@@ -3320,6 +3449,10 @@ export class LogicEngine {
           if (c.members) for (const m of c.members) {
             if (!m.alive) continue;
             m.hp = m.maxHp; m.targetId = null; m.atkCd = 0;
+            if (this.heroSkillsOn && R.nonHeroSkillV1) {
+              m.heroSkillSlowUntil = 0; m.heroSkillRootUntil = 0; m.heroSkillStunUntil = 0;
+              m.heroSkillMarkUntil = 0; m.heroSkillSlowFactor = 1; m.heroSkillMarkAmp = 0;
+            }
             m.hitAt = -Infinity; m.attackAt = -Infinity;
             m.participants.clear(); m.dmgBy.blue = 0; m.dmgBy.red = 0;
           }
@@ -3328,7 +3461,16 @@ export class LogicEngine {
       } else if (target) {
         const gap = dist(c.pos, target.pos);
         c.state = gap <= R.campAttackRange ? "attack" : "chase";
-        if (gap > R.campAttackRange) moveToward(c, target.pos, R.campMoveSpeed);
+        if (gap > R.campAttackRange) {
+          const controlled = this.heroSkillsOn && R.nonHeroSkillV1;
+          const living = c.members?.filter((m) => m.alive && m.hp > 0) ?? [];
+          // Camp members share a formation center; any rooted member anchors
+          // that formation, while each stunned member separately loses attacks.
+          const rooted = controlled && living.some((m) => this.t < Math.max(m.heroSkillRootUntil ?? 0, m.heroSkillStunUntil ?? 0));
+          const slow = controlled ? living.reduce((v, m) => this.t < (m.heroSkillSlowUntil ?? 0)
+            ? Math.min(v, m.heroSkillSlowFactor) : v, 1) : 1;
+          if (!rooted) moveToward(c, target.pos, R.campMoveSpeed * slow);
+        }
       } else {
         c.state = "idle"; c.targetId = null;
         // 小幅決定性巡遊；半徑遠小於營地 clearR，不會穿進牆或路線。
@@ -3354,12 +3496,13 @@ export class LogicEngine {
               String(a.id).localeCompare(String(b.id)))[0] ?? null;
             m.targetId = memberTarget?.id ?? null;
           }
-          if (!memberTarget || dist(m.pos, memberTarget.pos) > R.campAttackRange || m.atkCd > 0) continue;
+          if (!memberTarget || dist(m.pos, memberTarget.pos) > R.campAttackRange || m.atkCd > 0
+            || this.t < (m.heroSkillStunUntil ?? 0)) continue;
           //  L Hotfix 2：Buff 野怪比小野怪更痛（產品目標：前期不能完全無壓力）
           const campDmgBase = c.type === "buff"
             ? (R.buffCampAttackDamage ?? R.campAttackDamage) : R.campAttackDamage;
           const amount = Math.min(
-            campDmgBase / this._dragonGuardK(memberTarget.side),
+            campDmgBase * this._phaseScale(R.neutralPhaseDmgMax) / this._dragonGuardK(memberTarget.side),
             Math.max(0, memberTarget.hp - 1));
           if (amount <= 0) continue;
           memberTarget.hp -= amount * this._heroGuardFactor(memberTarget);
@@ -3767,6 +3910,12 @@ export class LogicEngine {
   _dragonGuardK(side) {
     return 1 + this._dragonStacksV3(side) * (this.rules.dragonGuardPerStack ?? 0);
   }
+  _phaseScale(max) {
+    const R = this.rules;
+    if (!this.heroSkillsOn || !R.phaseScalingV1) return 1;
+    const phase = clamp((this.t - R.phaseScalingStart) / (R.phaseScalingFull - R.phaseScalingStart), 0, 1);
+    return 1 + phase * (max - 1);
+  }
   _hasWaveAtStructure(attacker, tw) {
     if (!tw) return false;
     const key = attacker === "blue" ? "bm" : "rm";
@@ -4052,6 +4201,8 @@ export class LogicEngine {
   _spawnMinion(side, ln, wave, slot, kind) {
     const R = this.rules;
     const K = R.minionKinds[kind];
+    const hp = K.hp * this._phaseScale(R.minionPhaseHpMax);
+    const dmg = K.dmg * this._phaseScale(R.minionPhaseDmgMax);
     const latTab = R.minionLateral ?? {};
     const lat = kind === "melee"
       ? (latTab.melee?.[slot % (latTab.melee?.length || 1)] ?? 0)
@@ -4059,11 +4210,11 @@ export class LogicEngine {
     return {
       id: (side === "blue" ? "b" : "r") + this._mid++,
       t: side === "blue" ? 0.06 : 0.94,
-      hp: K.hp, maxHp: K.hp, atkCd: 0,
+      hp, maxHp: hp, atkCd: 0,
       wave, slot, kind, side,
       //  以行進方向鏡像：紅方的「左手」在 +t 座標系是右手。
       latN: side === "blue" ? lat : -lat,
-      dmg: K.dmg, interval: K.interval, range: K.rangeWorld,
+      dmg, interval: K.interval, range: K.rangeWorld,
       rangeP: K.rangeWorld / laneLength(ln), towerK: K.towerK,
       super: kind === "super", targetId: null, targetKind: null,
     };
@@ -4093,7 +4244,7 @@ export class LogicEngine {
         if (a.hp > 0 && a.targetKind === "minion" && a.targetId) load.set(a.targetId, (load.get(a.targetId) ?? 0) + 1);
       }
       for (const a of atk) {
-        if (a.hp <= 0 || a.atkCd > 0) continue;
+        if (a.hp <= 0 || a.atkCd > 0 || this.t < (a.heroSkillStunUntil ?? 0)) continue;
         const apos = this._minionPos(ln, a);
         const reach = (a.range ?? 2) + 0.8;
         //  ① 反擊
@@ -4535,7 +4686,10 @@ export class LogicEngine {
           // 保留 nexus/nexus_guard stopT；只解除 base-entry 的敵兵互卡。
           const baseAssault = blocker?.lane === "nexus_guard" || blocker?.lane === "nexus";
           const next = arr.map((m) => {
-            let next = clamp(m.t + dir * minionStep, 0, 1);
+            const controlled = this.heroSkillsOn && R.nonHeroSkillV1;
+            const rooted = controlled && this.t < Math.max(m.heroSkillRootUntil ?? 0, m.heroSkillStunUntil ?? 0);
+            const slow = controlled && this.t < (m.heroSkillSlowUntil ?? 0) ? m.heroSkillSlowFactor : 1;
+            let next = clamp(m.t + dir * (rooted ? 0 : minionStep * slow), 0, 1);
             let nearest = null;
             let nearestGap = Infinity;
             if (!baseAssault) {

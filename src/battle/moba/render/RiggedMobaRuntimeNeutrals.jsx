@@ -92,10 +92,9 @@ function NeutralCreature({ objective, memberId, index, asset, gltf, frameRef, sh
   const root = useRef(), visual = useRef(), hp = useRef(), hpRoot = useRef();
   const reducedMotion = useReducedBattleMotion();
   const previous = useRef(null);
-  // Displayed HP (presentation only): eases toward the snapshot ratio and, when the unit dies, keeps the bar
-  // up for a short drain to 0. Smite (550) exceeds a whole small camp (280), so a small member can die from
-  // full HP in one tick; without this the bar vanished at full and the death looked unexplained.
-  const shownHp = useRef({ ratio: 1, alive: false, drainLeft: 0, drainFrom: 0 });
+  // Each creature reads its own member ID from the current authoritative frame.
+  // A death leaves an empty bar briefly; while alive, its fill is the exact HP ratio.
+  const shownHp = useRef({ alive: false, drainLeft: 0 });
   const boss = objective.type === 'dragon' || objective.type === 'baron';
   const model = useMemo(() => {
     const scene = clone(gltf.scene);
@@ -143,14 +142,11 @@ function NeutralCreature({ objective, memberId, index, asset, gltf, frameRef, sh
     if (target?.world && entity.alive) visual.current.rotation.y = Math.atan2(target.world.x - p.x, target.world.z - p.z);
     previous.current = { ts, x: p.x, z: p.z };
     const shown = shownHp.current, target01 = entity.alive ? Math.max(0, Math.min(1, entity.hpRatio ?? 0)) : 0;
-    if (entity.alive && !shown.alive) { shown.ratio = target01; shown.drainLeft = 0; }        // (re)spawn: no drain
-    else if (!entity.alive && shown.alive) { shown.drainLeft = .45; shown.drainFrom = shown.ratio; }   // just died: drain to 0
+    if (entity.alive && !shown.alive) shown.drainLeft = 0;
+    else if (!entity.alive && shown.alive) shown.drainLeft = .45;
     shown.alive = !!entity.alive;
     const step = Math.min(.1, Math.max(0, delta || 0));
     if (shown.drainLeft > 0) shown.drainLeft = Math.max(0, shown.drainLeft - step);
-    //  死亡後以**時間**扣到 0（0.45 秒內：前 0.3 秒線性扣完、最後 0.15 秒停在空條）⇒ 低幀率也看得到，不會一幀就消失
-    if (!entity.alive) shown.ratio = shown.drainFrom * Math.max(0, Math.min(1, (shown.drainLeft - .15) / .3));
-    else shown.ratio = target01 >= shown.ratio ? target01 : Math.max(target01, shown.ratio - Math.max(2.4 * step, (shown.ratio - target01) * Math.min(1, step * 14)));
     const draining = !entity.alive && shown.drainLeft > 0;
     //  驗收用（只在 ?diag=1）：累計「死亡後血條扣到 0 的畫面幀數」，瀏覽器 gate 驗證死亡前看得到血條歸零。
     if (draining && diagnosticsEnabled()) window.__NEUTRAL_HP_DRAIN = (window.__NEUTRAL_HP_DRAIN || 0) + 1;
@@ -163,9 +159,8 @@ function NeutralCreature({ objective, memberId, index, asset, gltf, frameRef, sh
     const impact = attacking ? Math.sin(Math.PI * Math.min(1, pose.time / .45)) : 0;
     // Cosmetic weight shift only. Root world position remains exactly the saved entity world.
     visual.current.position.y = reducedMotion || !attacking ? 0 : -impact * top * .025;
-    const ratio = reducedMotion ? target01 : shown.ratio;
-    hp.current.scale.x = barWidth * ratio;
-    hp.current.position.x = -barWidth * (1 - ratio) / 2;
+    hp.current.scale.x = barWidth * target01;
+    hp.current.position.x = -barWidth * (1 - target01) / 2;
     if (!pose.visible) return;
     const hitWeight = pose.hit === null ? 0 : .38 * Math.sin(Math.PI * pose.hit / (10 / 24));
     for (const [name, action] of model.actions) {
