@@ -1,4 +1,5 @@
 import { heroById } from '../../../data/heroDatabase.js';
+import { applyBattleTalentToRule } from '../talents/heroBattleTalents.js';
 
 const SEATS = /^(b|r)[1-5]$/;
 
@@ -167,15 +168,16 @@ export function compileGameplaySkill(heroId, slot) {
 }
 
 /** Canonical roster -> engine parameters; no hero identity lookup inside LogicEngine. */
-export function toEngineHeroSkills(roster) {
+export function toEngineHeroSkills(roster, talentSelection = null) {
   const players = {};
   for (const [seat, entry] of Object.entries(roster ?? {})) {
     if (!SEATS.test(seat)) continue;
     const heroId = entry?.hero?.id ?? entry?.heroId ?? entry?.id;
     const skills = Object.fromEntries(['Q', 'W', 'E', 'R']
-      .map((slot) => [slot, compileGameplaySkill(heroId, slot)])
+      .map((slot) => [slot, applyBattleTalentToRule(compileGameplaySkill(heroId, slot), talentSelection?.players?.[seat], slot)])
       .filter(([, rule]) => rule));
     if (Object.keys(skills).length) players[seat] = Object.freeze(skills);
   }
-  return Object.keys(players).length ? Object.freeze({ players: Object.freeze(players) }) : null;
+  return Object.keys(players).length ? Object.freeze({ players: Object.freeze(players),
+    ...(talentSelection ? { talents: talentSelection.players } : {}) }) : null;
 }

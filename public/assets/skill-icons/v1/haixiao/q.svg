@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="海嘯術士 Q 海浪衝擊" data-skill-id="haixiao:Q">
+<title>海嘯術士 · Q 海浪衝擊</title>
+<defs><radialGradient id="ground"><stop stop-color="#1d5b6b"/><stop offset="1" stop-color="#07111e"/></radialGradient><linearGradient id="bright" x2="1" y2="1"><stop stop-color="#eaffff"/><stop offset=".52" stop-color="#55e0ee"/><stop offset="1" stop-color="#1d5b6b"/></linearGradient><linearGradient id="metal" x2="1" y2="1"><stop stop-color="#55e0ee"/><stop offset="1" stop-color="#1d5b6b"/></linearGradient><radialGradient id="accent"><stop stop-color="#eaffff" stop-opacity=".9"/><stop offset="1" stop-color="#55e0ee" stop-opacity=".25"/></radialGradient></defs>
+<rect x="3" y="3" width="122" height="122" rx="19" fill="url(#ground)" stroke="#55e0ee" stroke-width="3"/>
+<circle cx="64" cy="64" r="51" fill="url(#accent)" opacity=".27"/>
+<g opacity=".65"><path d="M8 40 Q22 26 37 40 M91 43 Q106 27 121 43 M8 91 Q23 76 39 91 M89 92 Q105 75 120 92" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g opacity=".78"><path d="M11 113 L40 84 M84 39 L112 11" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(-6 6) rotate(-5 64 64)"><path d="M20 83 Q35 55 63 60 Q87 51 108 78 M22 85 Q45 102 67 87 Q93 102 107 79" fill="none" stroke="url(#bright)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M60 33 L72 54 L64 65 L76 82 L61 101 L53 79 L58 64 L47 52 Z" fill="url(#metal)" stroke="url(#bright)" stroke-width="3.5" stroke-linejoin="round"/></g>
+<g><circle cx="42" cy="101" r="3" fill="#eaffff" opacity=".8"/><circle cx="42" cy="27" r="2" fill="#eaffff" opacity=".8"/><circle cx="107" cy="63" r="2" fill="#eaffff" opacity=".8"/></g><path d="M18 17 L35 17 M93 111 L110 111" stroke="#eaffff" stroke-width="2" opacity=".7"/>
+</svg>

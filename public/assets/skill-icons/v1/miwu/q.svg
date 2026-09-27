@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="迷霧行者 Q 迷霧短刺" data-skill-id="miwu:Q">
+<title>迷霧行者 · Q 迷霧短刺</title>
+<defs><radialGradient id="ground"><stop stop-color="#315465"/><stop offset="1" stop-color="#07111e"/></radialGradient><linearGradient id="bright" x2="1" y2="1"><stop stop-color="#f0ffff"/><stop offset=".52" stop-color="#9ad1df"/><stop offset="1" stop-color="#315465"/></linearGradient><linearGradient id="metal" x2="1" y2="1"><stop stop-color="#9ad1df"/><stop offset="1" stop-color="#315465"/></linearGradient><radialGradient id="accent"><stop stop-color="#f0ffff" stop-opacity=".9"/><stop offset="1" stop-color="#9ad1df" stop-opacity=".25"/></radialGradient></defs>
+<rect x="3" y="3" width="122" height="122" rx="19" fill="url(#ground)" stroke="#9ad1df" stroke-width="3"/>
+<circle cx="64" cy="64" r="51" fill="url(#accent)" opacity=".27"/>
+<g opacity=".65"><path d="M8 40 Q22 26 37 40 M91 43 Q106 27 121 43 M8 91 Q23 76 39 91 M89 92 Q105 75 120 92" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g opacity=".78"><path d="M11 113 L40 84 M84 39 L112 11" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(5 -5) rotate(6 64 64)"><path d="M27 87 L63 23 L60 56 L99 37 L68 103 L70 72 Z" fill="url(#metal)" stroke="url(#bright)" stroke-width="3.5" stroke-linejoin="round"/><path d="M19 43 L46 43 M18 58 L41 58" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g><circle cx="50" cy="105" r="2" fill="#f0ffff" opacity=".8"/><circle cx="35" cy="32" r="0" fill="#f0ffff" opacity=".8"/><circle cx="106" cy="54" r="1" fill="#f0ffff" opacity=".8"/></g><path d="M18 17 L35 17 M93 111 L110 111" stroke="#f0ffff" stroke-width="2" opacity=".7"/>
+</svg>

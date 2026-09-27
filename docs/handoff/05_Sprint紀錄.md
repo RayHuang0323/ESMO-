@@ -23755,3 +23755,15 @@ CS_RESUME_HOTFIX = RELEASED（main cfca594 → a7afc5c）
 - Production 實戰讀值：desktop／390px 都見具名技能、slam／trail 特效及狀態演出；`objectiveSkillFx max=1`；導播 roam/fight 節拍、close 5.57／5.32 > tactical 3.67／3.50 > wide 3.05／2.38；Replay 可切霧與鏡頭。HTTP 200；console／page／shader errors 0。
 - 舊式 `browser_check_prod_v7_release` 兩次在 URL ready wait timeout；直接 Chrome/CDP 同站導航正常，兩支 external runtime gate 也完整跑完。列為該舊 smoke harness 問題，非 production page failure；沒有為它改 verifier。
 - 正式 n=1000 與 494 per-seed winner flips、seed 670 unfinished→finished 已列於上節。既有 Blue bias、`check_moba_runtime_flicker_h2` 紅燈保持未解；pacing 23/25 同 clean baseline 兩條 `BASELINE_KNOWN_FAILURE`。不改 tower／Smite、Competitive、Online Backend、legacy。真手機效能／觸控未測。
+
+## 2026-09-27 MOBA 技能圖示與英雄戰鬥天賦 v1 候選（Owner Review）
+
+- 從 production `5c9b414` 建隔離 worktree `feature/moba-skill-icons-talents-v1`；根工作區 Finance WIP 未動。本輪只交候選，不 commit／push／deploy。
+- Audit：100 位英雄已有 P/QWER 資料及 QWER 正式規則；P 仍只有資料／描述。legacy `skillData` 不是 QWER 正式升級演算。現有 Player Talent／Training 是選手成長，與新 Hero Battle Talent 分離。圖示沿 `heroDatabase` 加 `iconKey`，不建第二套技能 DB。
+- 產生 500/500 SVG、missing 0；Battle HUD／英雄資訊／技能詳情用正式規則及 snapshot，桌面 hover／click、mobile tap。10 位 pilot／20 個可選天賦編譯進同一套 QWER 規則，戰術頁選擇、AI、snapshot、Replay 已接線；候選 `moba-sim.v14`。
+- 同條件 Items ON／Hero Skills ON n=1000：v13 baseline Blue/Red 54.3/45.7%，候選天賦 ON 54.2/45.8%；兩者 finished 1000/1000、pathological 0；175 winner flips（88 Blue→Red、87 Red→Blue）。baseline／candidate median 21.06／20.85 分，P90 同 25.29 分，max 41.81／46.83 分；最長 seed 492 正常結束，有持續擊殺與目標推進。既有 Blue bias 未納入修復。
+- 圖示 500/500、詳情 500/500、pilot contract／runtime、regress、regress2、side／mirror、Replay display、Hero Skills release gate、Items M2、build 及 desktop／390px browser smoke 已通過；runtime29 與 pacing 另以最後 Owner Review gate 結果為準。browser page／console error 0；真手機觸控／FPS 未實測。沒有更改 Tower、Smite、Competitive、Online Backend 或 legacy。
+- verifier 修正理由：既有 `check_talent27.mjs` §29 用 `/talent/i` 掃整個 `LogicEngine`，原意是禁止「選手成長天賦」直接耦合引擎；本輪合法的獨立 `heroBattleTalent` snapshot 欄位被誤判。只將斷言縮到 `platform/talents`、`talentPoints`、`derivedStats` 等原系統邊界，並加正反探針；不刪斷言、不放寬選手成長隔離。修正後 37/37 通過。
+- 資料風險：`heroDatabase.skills[].desc` 為設定文案，少數細節未由正式 QWER 規則支援；UI 清楚標出「英雄設定描述」，並註明實戰以編譯規則／快照為準。後續需逐招校正文案，不在本輪捏造 Gameplay 效果。
+- 最終 flat gate：runtime29 核心 35/35（9 段巢狀項目明確 SKIP，分別另驗）；`check_moba_tactic24` 29/29、`check_moba_stats28` 21/21、`check_talent27` 37/37、`check_moba_experience26` 29/29、`check_progress25` 33/33、`check_cs23` 28/28、presentation29b2 12/12、controls29b3 18/18、flow09、regress／regress2、Items M2 53/53、Hero Skills release gate、simulationVersion 54/54、build 均通過。pacing 在候選及乾淨 `5c9b414` **同為 23/25／exit 1**，同兩條失敗且統計逐項相同（5/10/15/20 分擊殺 p50=0/1/4/10、終局15、首殺 p10/p50/p90=276/589/854 秒），無新增紅燈；沒有修改 pacing gate。`check_moba_side_relative_p0a` 8/8、navigation mirror P0-B 14/14。
+- 最終 browser：desktop／390px 各 5 HUD icon、5 英雄面板 icon、6 次技能詳情、所選 pilot 天賦進正式 snapshot；手機 320／360／390／430px 均無水平溢出，page／console／shader errors 0。真機觸控／FPS 未測，仍待 Owner Review。預覽僅本機服務，沒有部署。

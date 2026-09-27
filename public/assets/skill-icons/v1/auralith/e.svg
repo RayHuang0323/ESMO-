@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="極光 E 寒霜領域" data-skill-id="auralith:E">
+<title>極光 · E 寒霜領域</title>
+<defs><radialGradient id="ground"><stop stop-color="#324d9b"/><stop offset="1" stop-color="#07111e"/></radialGradient><linearGradient id="bright" x2="1" y2="1"><stop stop-color="#fffdf2"/><stop offset=".52" stop-color="#8be9ff"/><stop offset="1" stop-color="#324d9b"/></linearGradient><linearGradient id="metal" x2="1" y2="1"><stop stop-color="#8be9ff"/><stop offset="1" stop-color="#324d9b"/></linearGradient><radialGradient id="accent"><stop stop-color="#fffdf2" stop-opacity=".9"/><stop offset="1" stop-color="#8be9ff" stop-opacity=".25"/></radialGradient></defs>
+<rect x="3" y="3" width="122" height="122" rx="19" fill="url(#ground)" stroke="#8be9ff" stroke-width="3"/>
+<circle cx="64" cy="64" r="51" fill="url(#accent)" opacity=".27"/>
+<g opacity=".65"><path d="M13 32 L39 25 L31 10 M97 110 L92 82 L116 89 M11 96 L35 91 L22 113" fill="none" stroke="url(#bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g opacity=".78"><path d="M11 97 L41 69 M86 38 L117 9 M18 113 L33 97" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(1 -1) rotate(-4 64 64)"><path d="M20 83 Q35 55 63 60 Q87 51 108 78 M22 85 Q45 102 67 87 Q93 102 107 79" fill="none" stroke="url(#bright)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M60 33 L72 54 L64 65 L76 82 L61 101 L53 79 L58 64 L47 52 Z" fill="url(#metal)" stroke="url(#bright)" stroke-width="3.5" stroke-linejoin="round"/></g>
+<g><circle cx="92" cy="96" r="2" fill="#fffdf2" opacity=".8"/><circle cx="22" cy="73" r="0" fill="#fffdf2" opacity=".8"/><circle cx="77" cy="23" r="1" fill="#fffdf2" opacity=".8"/></g><path d="M18 17 L35 17 M93 111 L110 111" stroke="#fffdf2" stroke-width="2" opacity=".7"/>
+</svg>

@@ -40,6 +40,7 @@ import {
 } from "./battle/moba/matchProgression.js";
 //  Item System v1 M2：裝備層（opt-in；未 configureItems ⇒ 完全不執行 ⇒ legacy 逐位元不變）
 import { ItemsEngineRuntime } from "./battle/moba/items/itemsEngineRuntime.js";
+import { OBJ_SKILL_MECHANICS, LANE_SKILL_SINGLE, LANE_SKILL_AREA } from './battle/moba/skills/heroSkillTargetCapabilities.js';
 
 const MAP_EDGE_PAD = 3;
 //  H.2 導航調參：近場預判距離與重算路徑的冷卻（tick）。
@@ -64,15 +65,8 @@ const FARM_CLEAR_STATES = new Set(["圍攻", "攻門牙塔", "圍攻主堡"]);
 
 //  feature/moba-spectacle-vision（objSkillV1）：可對中立目標施放的技能機制。
 //  只收「有傷害、施法者不位移、不必須作用在英雄身上」的機制；位移／拉人／嘲諷／牆等不收。
-const OBJ_SKILL_MECHANICS = new Set([
-  "projectile", "split-projectile", "line", "piercing-line", "delayed-area", "area-dot",
-  "cone-strike", "multi-strike", "control-target", "root-target", "silence-target", "execute-strike",
-  "root-dot", "area-root", "area-control", "area-silence", "area-mark",
-]);
 //  feature/moba-lane-jungle-balance（laneSkillV1）：技能清兵只允許「純傷害」類型。
 //  控制類（定身／暈／沉默／標記）不為了清兵浪費；位移類本來就不在 OBJ_SKILL_MECHANICS；大招（R）另外排除。
-const LANE_SKILL_SINGLE = new Set(["projectile", "multi-strike", "execute-strike"]);
-const LANE_SKILL_AREA = new Set(["split-projectile", "line", "piercing-line", "delayed-area", "area-dot", "cone-strike"]);
 const OBJ_SKILL_ULT = new Set([
   "delayed-area", "area-dot", "area-root", "area-control", "area-silence", "area-mark",
   "split-projectile", "silence-target", "execute-strike", "multi-strike",
@@ -452,6 +446,7 @@ export class LogicEngine {
     if (!config?.players || !Object.keys(config.players).length) return;
     this.heroSkills = config.players;
     this.heroSkillsOn = true;
+    this.heroBattleTalents = config.talents ?? null;
     this.heroSkillPending = [];
     this._objSkillHits = [];
     this._laneSkillHits = [];                       // laneSkillV1：排隊中的清兵傷害
@@ -6042,7 +6037,9 @@ export class LogicEngine {
           ready: this.t >= (p.heroSkillReadyAt[slot] ?? 0),
           cd: Math.max(0, Math.round(((p.heroSkillReadyAt[slot] ?? 0) - this.t) * 10) / 10),
           cdMax: rule.cooldown,
+          rule,
         }])),
+        ...(this.heroBattleTalents?.[p.id] ? { heroBattleTalent: { ...this.heroBattleTalents[p.id] } } : {}),
       } : {}) })),
       towers: Object.fromEntries(Object.entries(this.towers).map(([k, t]) => [k, { side: t.side, lane: t.lane, tier: t.tier, pos: t.pos, hp: clamp(t.hp / (t.maxHp ?? (t.lane === "nexus" ? NEXUS_HP : TOWER_HP)), 0, 1) }])),
       lanes: { top: this._snapLane("top"), mid: this._snapLane("mid"), bot: this._snapLane("bot") },

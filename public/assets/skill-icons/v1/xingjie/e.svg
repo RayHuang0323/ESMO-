@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="星界法師 E 星界傳送" data-skill-id="xingjie:E">
+<title>星界法師 · E 星界傳送</title>
+<defs><radialGradient id="ground"><stop stop-color="#3f3b83"/><stop offset="1" stop-color="#07111e"/></radialGradient><linearGradient id="bright" x2="1" y2="1"><stop stop-color="#f1efff"/><stop offset=".52" stop-color="#8d8cff"/><stop offset="1" stop-color="#3f3b83"/></linearGradient><linearGradient id="metal" x2="1" y2="1"><stop stop-color="#8d8cff"/><stop offset="1" stop-color="#3f3b83"/></linearGradient><radialGradient id="accent"><stop stop-color="#f1efff" stop-opacity=".9"/><stop offset="1" stop-color="#8d8cff" stop-opacity=".25"/></radialGradient></defs>
+<rect x="3" y="3" width="122" height="122" rx="19" fill="url(#ground)" stroke="#8d8cff" stroke-width="3"/>
+<circle cx="64" cy="64" r="51" fill="url(#accent)" opacity=".27"/>
+<g opacity=".65"><path d="M17 27 L33 19 L42 31 M87 30 L101 17 L116 29 M16 101 L31 111 L42 97 M86 98 L101 112 L117 101" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g opacity=".78"><path d="M11 97 L41 69 M86 38 L117 9 M18 113 L33 97" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(2 -2) rotate(-6 64 64)"><path d="M27 87 L63 23 L60 56 L99 37 L68 103 L70 72 Z" fill="url(#metal)" stroke="url(#bright)" stroke-width="3.5" stroke-linejoin="round"/><path d="M19 43 L46 43 M18 58 L41 58" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g><circle cx="104" cy="81" r="4" fill="#f1efff" opacity=".8"/><circle cx="30" cy="90" r="4" fill="#f1efff" opacity=".8"/><circle cx="57" cy="22" r="4" fill="#f1efff" opacity=".8"/></g><path d="M18 17 L35 17 M93 111 L110 111" stroke="#f1efff" stroke-width="2" opacity=".7"/>
+</svg>

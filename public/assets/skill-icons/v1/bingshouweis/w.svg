@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="冰霜守衛 W 冰盾壁壘" data-skill-id="bingshouweis:W">
+<title>冰霜守衛 · W 冰盾壁壘</title>
+<defs><radialGradient id="ground"><stop stop-color="#2d5684"/><stop offset="1" stop-color="#07111e"/></radialGradient><linearGradient id="bright" x2="1" y2="1"><stop stop-color="#f5ffff"/><stop offset=".52" stop-color="#81e5ff"/><stop offset="1" stop-color="#2d5684"/></linearGradient><linearGradient id="metal" x2="1" y2="1"><stop stop-color="#81e5ff"/><stop offset="1" stop-color="#2d5684"/></linearGradient><radialGradient id="accent"><stop stop-color="#f5ffff" stop-opacity=".9"/><stop offset="1" stop-color="#81e5ff" stop-opacity=".25"/></radialGradient></defs>
+<rect x="3" y="3" width="122" height="122" rx="19" fill="url(#ground)" stroke="#81e5ff" stroke-width="3"/>
+<circle cx="64" cy="64" r="51" fill="url(#accent)" opacity=".27"/>
+<g opacity=".65"><path d="M13 32 L39 28 L31 10 M97 110 L92 82 L116 89 M11 96 L35 91 L22 113" fill="none" stroke="url(#bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g opacity=".78"><path d="M17 67 Q28 37 41 36 M111 67 Q100 37 87 36" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(-4 4) rotate(2 64 64)"><path d="M64 23 L97 35 L94 73 Q89 96 64 107 Q39 96 34 73 L31 35 Z" fill="url(#metal)" stroke="url(#bright)" stroke-width="3.5" stroke-linejoin="round"/><path d="M64 38 L64 87 M47 52 L64 43 L81 52" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g><circle cx="31" cy="36" r="3" fill="#f5ffff" opacity=".8"/><circle cx="104" cy="49" r="4" fill="#f5ffff" opacity=".8"/><circle cx="58" cy="107" r="3" fill="#f5ffff" opacity=".8"/></g><path d="M18 17 L35 17 M93 111 L110 111" stroke="#f5ffff" stroke-width="2" opacity=".7"/>
+</svg>

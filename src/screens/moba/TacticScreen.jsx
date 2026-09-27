@@ -34,6 +34,7 @@ import { MOBA_TACTICS, toEngineTactic, STANDARD_OPP_TACTIC } from "../../platfor
 //  Expansion v1 N2/N3：只讀既有計數，不產生新事實（見 ui/DevelopmentInsights.jsx 檔頭）。
 import { TacticInsightPanel, MatchOverviewPanel } from "../../ui/DevelopmentInsights.jsx";
 import { useProfileStore } from "../../platform/profileStore.js";
+import HeroBattleTalentPicker from './HeroBattleTalentPicker.jsx';
 //  Meta Progression v1：戰術變體。
 //  ⚠ 本畫面**不判斷**解鎖／流派／資格——那些規則全住在 `mastery/` 底下，
 //    這裡只把 `variantsAvailableForTactic()` 已經算好的結果畫出來。
@@ -113,6 +114,10 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
   //  本場已存的選擇（重新整理、返回戰術頁時接回來）；沒有場次時才只靠本畫面的暫存。
   const savedStrategy = useProfileStore((s) => s.matchmaking?.session?.activeMatch?.config?.buildStrategy ?? null);
   const [pickedStrategy, setPickedStrategy] = useState(null);
+  const savedTalentSelections = useProfileStore((s) => s.matchmaking?.session?.activeMatch?.config?.talentSelections ?? null);
+  const [pickedTalentSelections, setPickedTalentSelections] = useState(null);
+  const talentSelections = pickedTalentSelections ?? savedTalentSelections ?? {};
+  const talentRoster = useMemo(() => roster ? draftRoster(roster, draft) : null, [roster, draft]);
   const buildStrategy = normalizeBuildStrategy(pickedStrategy ?? savedStrategy);
   const [focusSeat, setFocusSeat] = useState(null);
   //  與 LoadingScreen／GameView 同一個 adapter（draftRoster）⇒ 預覽的英雄＝實際上場的英雄。
@@ -124,7 +129,7 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
   const focusHero = prep ? heroById(prep.seats.find((s) => s.seat === prep.focusSeat)?.heroId) : null;
 
   return (
-    <Frame title="戰術" sub="TEAM STRATEGY · 8 套戰術 · 實際影響對戰" onBack={onBack} onNext={() => onNext && onNext(applied, prep ? buildStrategy : null)} nextLabel="開始載入 →">
+    <Frame title="戰術" sub="TEAM STRATEGY · 8 套戰術 · 實際影響對戰" onBack={onBack} onNext={() => onNext && onNext(applied, prep ? buildStrategy : null, talentSelections)} nextLabel="開始載入 →">
       <div style={{ width: "100%", maxWidth: 940, padding: "0 14px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
         {/* 戰術卡：auto-fill 響應式（手機 1 欄 / 平板 2-3 欄 / 桌機 4 欄），高度隨內容 */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(min(190px,100%),1fr))", gap: 8 }}>
@@ -281,6 +286,7 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
             </div>
           </section>
         )}
+        <HeroBattleTalentPicker roster={talentRoster} selected={talentSelections} onChange={setPickedTalentSelections} />
       </div>
     </Frame>
   );

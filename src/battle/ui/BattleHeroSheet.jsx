@@ -16,7 +16,7 @@
 import React, { useState } from "react";
 import { statusMetaOf, sortedStatuses, STATUS_CATEGORY } from "../moba/presentation/heroStatusMeta.js";
 import { useGameStore } from "../../useGameStore.js";
-import { heroById } from "../../data/heroDatabase.js";
+import { heroById, heroSkillIconUrl } from "../../data/heroDatabase.js";
 import HeroPortrait from "../../ui/HeroPortrait.jsx";
 import HeroDetailPanel from "./HeroDetailPanel.jsx";
 import { SUMMONER_SPELLS } from "../moba/mobaHeroLoadout.js";
@@ -27,6 +27,8 @@ import { Z } from "./battleLayout.js";
 import { selectPlayerItemsView } from "../moba/items/itemsViewModel.js";
 import { coachAnalysis, selectActiveEffects, selectHudItems } from "../moba/items/itemsUiSelectors.js";
 import { HeroItemDetail } from "./items/HeroItemDetail.jsx";
+import BattleSkillDetail from './BattleSkillDetail.jsx';
+import { battleTalentById } from '../moba/talents/heroBattleTalents.js';
 
 const MONO = "ui-monospace,Menlo,monospace";
 
@@ -76,6 +78,7 @@ export default function BattleHeroSheet({ heroId, heroName, playerName, playerId
   const [career, setCareer] = useState(false);
   //  M3c：有裝備系統時才有「戰鬥資訊｜裝備」分頁（純呈現狀態）
   const [tab, setTab] = useState(initialTab === "items" ? "items" : "battle");
+  const [selectedSkill, setSelectedSkill] = useState(null);
   const snapshot = useGameStore((s) => s.snapshot);
   const itemsView = selectPlayerItemsView(snapshot, playerId);
   const isMobile = useIsMobile();
@@ -226,18 +229,24 @@ export default function BattleHeroSheet({ heroId, heroName, playerName, playerId
 
           <SectionTitle>英雄技能</SectionTitle>
           {db.P || db.Q ? (
-            [["P", db.P], ["Q", db.Q], ["W", db.W], ["E", db.E], ["R", db.R]].map(([k, v]) => (
-              <div key={k} style={{ display: "flex", gap: 7, alignItems: "center", fontSize: 11, padding: "2px 0" }}>
-                <span style={{ width: 16, height: 16, borderRadius: 4, background: k === "R" ? "rgba(250,204,21,0.25)" : "rgba(255,255,255,0.1)", color: k === "R" ? "#fde047" : "#cbd5e1", fontWeight: 900, fontSize: 9, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{k}</span>
-                <span style={{ color: "#e5e7eb" }}>{v}</span>
-              </div>
-            ))
+            [["P", db.P], ["Q", db.Q], ["W", db.W], ["E", db.E], ["R", db.R]].map(([k, v]) => {
+              const live = p?.heroSkills?.[k];
+              const status = k === 'P' ? '僅資料' : !live ? '未提供' : live.ready ? '可用' : `${Math.ceil(live.cd)}秒`;
+              return <button key={k} type="button" data-skill-slot={k} onClick={() => setSelectedSkill(k)}
+                aria-label={`${k} ${v}，${status}，技能未分級；點開詳情`}
+                style={{ width: '100%', minHeight: 44, display: 'flex', gap: 8, alignItems: 'center', textAlign: 'left',
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.11)',
+                  borderRadius: 7, marginBottom: 4, color: '#e5e7eb', cursor: 'pointer', padding: '3px 8px' }}>
+                <img src={heroSkillIconUrl(heroId, k) ?? undefined} alt="" width="34" height="34" style={{ borderRadius: 5 }} />
+                <b style={{ fontSize: 10, color: GC.gold }}>{k}</b><span style={{ flex: 1, fontSize: 11 }}>{v}</span>
+                <small style={{ fontSize: 9, color: live?.ready ? GC.green : '#a1a1aa' }}>{status}<br />未分級</small>
+              </button>;
+            })
           ) : (
             <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>此英雄無技能資料</div>
           )}
-          <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
-            {itemsView ? "此處為英雄技能說明。本場尚未提供個別技能冷卻與魔力資訊（裝備請看「裝備」分頁）。" : "此處為英雄技能說明。本場尚未提供個別技能冷卻、裝備與魔力資訊。"}
-          </div>
+          <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>技能未分級；點圖示查看正式效果與作用對象。被動目前只有資料描述。</div>
+          {p?.heroBattleTalent?.id && <Row l="本場英雄天賦" v={battleTalentById(p.heroBattleTalent.id)?.name ?? '未提供'} c={GC.gold} />}
 
           {/* ── 目前戰鬥資訊 ────────────────────────────────────────── */}
           <SectionTitle>本場數據</SectionTitle>
@@ -262,6 +271,10 @@ export default function BattleHeroSheet({ heroId, heroName, playerName, playerId
           </>)}
         </div>
       </div>
+      {selectedSkill && <div onClick={(e) => e.stopPropagation()}><BattleSkillDetail heroId={heroId}
+        slot={selectedSkill} live={p?.heroSkills?.[selectedSkill]} mobile={isMobile}
+        selectedTalentId={p?.heroBattleTalent?.id}
+        onClose={() => setSelectedSkill(null)} /></div>}
     </div>
   );
 }

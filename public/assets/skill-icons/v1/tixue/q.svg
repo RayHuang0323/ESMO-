@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="鐵血騎士 Q 鐵騎衝刺" data-skill-id="tixue:Q">
+<title>鐵血騎士 · Q 鐵騎衝刺</title>
+<defs><radialGradient id="ground"><stop stop-color="#3f4b5d"/><stop offset="1" stop-color="#07111e"/></radialGradient><linearGradient id="bright" x2="1" y2="1"><stop stop-color="#fff5d5"/><stop offset=".52" stop-color="#d7e0e8"/><stop offset="1" stop-color="#3f4b5d"/></linearGradient><linearGradient id="metal" x2="1" y2="1"><stop stop-color="#d7e0e8"/><stop offset="1" stop-color="#3f4b5d"/></linearGradient><radialGradient id="accent"><stop stop-color="#fff5d5" stop-opacity=".9"/><stop offset="1" stop-color="#d7e0e8" stop-opacity=".25"/></radialGradient></defs>
+<rect x="3" y="3" width="122" height="122" rx="19" fill="url(#ground)" stroke="#d7e0e8" stroke-width="3"/>
+<circle cx="64" cy="64" r="51" fill="url(#accent)" opacity=".27"/>
+<g opacity=".65"><path d="M15 27 L33 17 L39 32 M89 16 L110 25 L103 43 M17 103 L36 113 L44 99 M89 112 L108 99 L101 87" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g opacity=".78"><path d="M11 113 L40 84 M84 39 L112 11" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(-4 4) rotate(5 64 64)"><path d="M27 87 L63 23 L60 56 L99 37 L68 103 L70 72 Z" fill="url(#metal)" stroke="url(#bright)" stroke-width="3.5" stroke-linejoin="round"/><path d="M19 43 L46 43 M18 58 L41 58" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g><circle cx="62" cy="107" r="2" fill="#fff5d5" opacity=".8"/><circle cx="28" cy="41" r="3" fill="#fff5d5" opacity=".8"/><circle cx="102" cy="43" r="4" fill="#fff5d5" opacity=".8"/></g><path d="M18 17 L35 17 M93 111 L110 111" stroke="#fff5d5" stroke-width="2" opacity=".7"/>
+</svg>

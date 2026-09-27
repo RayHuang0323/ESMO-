@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="大地行者 P 大地連接" data-skill-id="dadi2:P">
+<title>大地行者 · P 大地連接</title>
+<defs><radialGradient id="ground"><stop stop-color="#55402f"/><stop offset="1" stop-color="#07111e"/></radialGradient><linearGradient id="bright" x2="1" y2="1"><stop stop-color="#fff0c7"/><stop offset=".52" stop-color="#d0a36d"/><stop offset="1" stop-color="#55402f"/></linearGradient><linearGradient id="metal" x2="1" y2="1"><stop stop-color="#d0a36d"/><stop offset="1" stop-color="#55402f"/></linearGradient><radialGradient id="accent"><stop stop-color="#fff0c7" stop-opacity=".9"/><stop offset="1" stop-color="#d0a36d" stop-opacity=".25"/></radialGradient></defs>
+<rect x="3" y="3" width="122" height="122" rx="19" fill="url(#ground)" stroke="#d0a36d" stroke-width="3"/>
+<circle cx="64" cy="64" r="51" fill="url(#accent)" opacity=".27"/>
+<g opacity=".65"><path d="M7 93 L23 78 L37 87 L43 110 L12 109 Z M87 18 L111 18 L120 43 L99 49 Z" fill="url(#metal)" stroke="url(#bright)" stroke-width="3.5" stroke-linejoin="round"/></g>
+<g opacity=".78"><circle cx="64" cy="64" r="50" fill="none" stroke="url(#accent)" stroke-width="2" stroke-dasharray="12 7" opacity=".7"/></g>
+<g transform="translate(2 -2) rotate(2 64 64)"><path d="M64 19 L91 35 L103 64 L91 93 L64 109 L37 93 L25 64 L37 35 Z" fill="url(#metal)" stroke="url(#bright)" stroke-width="3.5" stroke-linejoin="round"/><path d="M43 65 L64 43 L85 65 L64 85 Z M64 19 L64 43 M64 85 L64 109" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g><circle cx="68" cy="21" r="1" fill="#fff0c7" opacity=".8"/><circle cx="99" cy="89" r="0" fill="#fff0c7" opacity=".8"/><circle cx="25" cy="83" r="1" fill="#fff0c7" opacity=".8"/></g><path d="M18 17 L35 17 M93 111 L110 111" stroke="#fff0c7" stroke-width="2" opacity=".7"/>
+</svg>

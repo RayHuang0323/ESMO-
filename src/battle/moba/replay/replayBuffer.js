@@ -80,6 +80,7 @@ export function captureReplayFrame(snap) {
         ...(r?.heroId ? { heroId: r.heroId, heroName: r.hero ?? null } : {}),
         ...(r?.lane ? { lane: r.lane } : {}),
         ...(Array.isArray(r?.spells) && r.spells.length ? { spells: [...r.spells] } : {}),
+        ...(r?.battleTalentId ? { battleTalentId: r.battleTalentId } : {}),
       };
     });
     cap.towersMeta = Object.fromEntries(Object.entries(snap.towers).map(([id, t]) => [id, {

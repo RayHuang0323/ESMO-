@@ -89,6 +89,8 @@ export const FEATURE_FLAGS = Object.freeze({
   itemsV1: true,
   /** Formal 100-hero QWER gameplay + presentation runtime. Release-gated and deterministic. */
   heroSkillsV1: true,
+  /** 10-hero Battle Talent pilot; only applied through the formal Hero Skills runtime. */
+  heroBattleTalentsV1: true,
 });
 
 /** 單一查詢出口（呼叫端不直接讀物件，日後要改成遠端旗標也只動這裡）。 */

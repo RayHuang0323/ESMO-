@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useGameStore } from '../../useGameStore.js';
 import { useCameraStore } from '../cameraStore.js';
 import { useBattleStore } from '../battleStore.js';
-import { heroById } from '../../data/heroDatabase.js';
+import { heroById, heroSkillIconUrl } from '../../data/heroDatabase.js';
 import HeroPortrait from '../../ui/HeroPortrait.jsx';
 import { GC } from '../../ui/theme.js';
 import { useIsMobile } from '../../ui/useViewport.js';
 import { SUMMONER_SPELLS } from '../moba/mobaHeroLoadout.js';
 import BattleHeroSheet from './BattleHeroSheet.jsx';
+import BattleSkillDetail from './BattleSkillDetail.jsx';
+import { battleTalentById } from '../moba/talents/heroBattleTalents.js';
 //  Item System M3b：裝備 HUD。只讀 selector（selectHudItems），元件都在 ./items/。
 import { selectHudItems } from '../moba/items/itemsUiSelectors.js';
 import { GoldChip } from './items/GoldChip.jsx';
@@ -39,6 +41,7 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
   const [teamOpen, setTeamOpen] = useState(false);
   const [detail, setDetail] = useState(false);
   const [skill, setSkill] = useState(null);
+  const [hoverSkill, setHoverSkill] = useState(null);
   //  M3b：桌機十人列「裝備視圖」與手機裝備 sheet（純呈現狀態）
   const [itemsView, setItemsView] = useState(false);
   const [itemsSheet, setItemsSheet] = useState(false);
@@ -58,12 +61,13 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
   if (!p) return null;
   const r = roster?.[p.id] ?? {};
   const hero = heroById(r.heroId) ?? {};
+  const battleTalent = battleTalentById(p.heroBattleTalent?.id ?? r.battleTalentId);
   const mine = hudItems?.[p.id] ?? null;
   const showItemsView = !!hudItems && itemsView && !mobile;
   const itemsPlayerView = itemsSheet && mine ? selectPlayerItemsView(snapshot, p.id) : null;
   const onRailHover = (itemId, rect) => setHoverItem(itemId && rect ? { itemId, x: rect.right + 8, y: rect.top } : null);
   const toggleItemsSheet = () => { setItemsSheet(v => !v); if (chipHint) { setChipHint(false); writeHintSeen(); } };
-  const pick = id => { setSelected(id); setSkill(null); setTeamOpen(false); useCameraStore.getState().focusHero(id); };
+  const pick = id => { setSelected(id); setSkill(null); setHoverSkill(null); setTeamOpen(false); useCameraStore.getState().focusHero(id); };
   const portrait = (x, size) => <HeroPortrait heroId={roster?.[x.id]?.heroId} size={size} radius={3}
     alt={roster?.[x.id]?.hero ?? x.id} fallback={<span className="observer-fallback">{roster?.[x.id]?.hero?.slice(0, 1) ?? x.id}</span>} />;
   const rail = side => <div className={`observer-rail ${side}`} aria-label={side === 'blue' ? '藍方英雄' : '紅方英雄'}>
@@ -113,13 +117,26 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
         </div>
         <div className="observer-health"><i style={{ width: `${p.dead ? 0 : pct(p.hp)}%` }} /><b>{p.dead ? Number.isFinite(p.respawn) ? `陣亡 · ${Math.ceil(p.respawn)}秒復活` : '陣亡 · 未保存復活時間' : `生命 ${pct(p.hp)}%`}</b></div>
         <div className="observer-xp" title={Number.isFinite(p.mxp) ? `經驗 ${p.mxp} / ${p.mxpNext || '滿等'}` : '此段未保存經驗'}><i style={{ width: `${Number.isFinite(p.mxp) ? p.mxpNext > 0 ? pct(p.mxp / p.mxpNext) : 100 : 0}%` }} /></div>
-        <div className="observer-stats"><span>{p.k ?? '—'} / {p.d ?? '—'} / {p.a ?? '—'}</span><span>{hudItems ? `總收入 ${gold(p.gold)}` : gold(p.gold)}</span><span>{p.rc > 0 ? `回城 ${Math.ceil(p.rc)}s` : p.state}</span></div>
+        <div className="observer-stats"><span>{p.k ?? '—'} / {p.d ?? '—'} / {p.a ?? '—'}</span><span>{hudItems ? `總收入 ${gold(p.gold)}` : gold(p.gold)}</span><span>{p.rc > 0 ? `回城 ${Math.ceil(p.rc)}s` : p.state}</span>
+          {battleTalent && <button type="button" className="observer-talent-chip" onClick={() => setSkill(skill === 'talent' ? null : 'talent')}
+            aria-label={`英雄戰鬥天賦 ${battleTalent.name}，點開詳情`}>天賦 · {battleTalent.name}</button>}
+        </div>
       </div>
       <div className="observer-abilities" aria-label="英雄技能說明">
-        {['P', 'Q', 'W', 'E', 'R'].map((key, i) => <button key={key} className={`observer-ability ability-${i}`} aria-pressed={skill === key}
-          onClick={() => setSkill(skill === key ? null : key)} aria-label={`${key} ${hero[key] ?? '尚無技能資料'}${p.heroSkills?.[key] ? p.heroSkills[key].ready ? ' 可用' : ` ${Math.ceil(p.heroSkills[key].cd)}秒冷卻` : ''}`}>
-          <span className="observer-sigil">{['◈', '╱', '◇', '⌁', '✧'][i]}</span><b>{key}</b><small>{p.heroSkills?.[key] ? p.heroSkills[key].ready ? '可用' : `${Math.ceil(p.heroSkills[key].cd)}s` : '說明'}</small>
-        </button>)}
+        {['P', 'Q', 'W', 'E', 'R'].map((key, i) => {
+          const live = p.heroSkills?.[key];
+          const status = key === 'P' ? 'passive' : !live ? 'unavailable' : live.ready ? 'ready' : 'cooldown';
+          return <button key={key} type="button" className={`observer-ability ability-${i} ${status}`}
+            data-skill-slot={key} data-skill-state={status} data-skill-level="unranked"
+            aria-pressed={skill === key} onMouseEnter={() => { if (!mobile) setHoverSkill(key); }}
+            onMouseLeave={() => { if (!mobile) setHoverSkill(null); }}
+            onClick={() => { setSkill(skill === key ? null : key); setHoverSkill(null); }}
+            aria-label={`${key} ${hero[key] ?? '尚無技能資料'}，${key === 'P' ? '被動尚未實裝' : !live ? '即時狀態未提供' : live.ready ? '可用' : `冷卻 ${Math.ceil(live.cd)} 秒`}，技能未分級`}>
+            <img src={heroSkillIconUrl(r.heroId, key) ?? undefined} alt="" loading="lazy" />
+            <b>{key}</b><small>{key === 'P' ? '資料' : live ? live.ready ? '可用' : `${Math.ceil(live.cd)}s` : '—'}</small>
+            <span className="observer-ability-level" title="技能尚未分級">—</span>
+          </button>;
+        })}
       </div>
       <div className="observer-spells" aria-label="召喚師技能冷卻">
         {[0, 1].map(i => { const s = p.sp?.[i]; const meta = SUMMONER_SPELLS[s?.id ?? (replay ? r.spells?.[i] : null)];
@@ -135,12 +152,16 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
           </button>
         : <button className="observer-equipment" onClick={() => setSkill(skill === 'items' ? null : 'items')}><span>◇ ◇ ◇</span><small>裝備 · 未提供</small></button>}
       <button className="observer-team-toggle" onClick={() => setTeamOpen(v => !v)} aria-expanded={teamOpen}>隊伍</button>
-      {skill && <div className="observer-tooltip" role="status"><button onClick={() => setSkill(null)} aria-label="關閉技能說明">✕</button>
-        {skill === 'items' ? '本場尚未提供裝備與魔力資訊。' : skill.startsWith('spell')
-          ? (() => { const i = Number(skill.slice(-1)); const s = p.sp?.[i]; const m = SUMMONER_SPELLS[s?.id ?? (replay ? r.spells?.[i] : null)]; return replay && !s ? `${m?.zh ?? '技能'} · 此份重播未保存冷卻資訊。` : m ? `${m.zh} · ${m.desc ?? ''}` : '此席位未配置技能。'; })()
-          : `${skill} · ${hero[skill] ?? '尚無技能說明'}。${p.heroSkills?.[skill] ? p.heroSkills[skill].ready ? '技能可用。' : `冷卻剩餘 ${Math.ceil(p.heroSkills[skill].cd)} 秒。` : '個別英雄技能冷卻尚未提供。'}`}
+      {skill && !['P', 'Q', 'W', 'E', 'R'].includes(skill) && <div className="observer-tooltip" role="status"><button onClick={() => setSkill(null)} aria-label="關閉技能說明">✕</button>
+        {skill === 'items' ? '本場尚未提供裝備與魔力資訊。' : skill === 'talent'
+          ? battleTalent ? `${battleTalent.name} · ${battleTalent.description}（本場英雄戰鬥天賦）` : '此英雄目前沒有戰鬥天賦。' : skill.startsWith('spell')
+          ? (() => { const i = Number(skill.slice(-1)); const s = p.sp?.[i]; const m = SUMMONER_SPELLS[s?.id ?? (replay ? r.spells?.[i] : null)]; return replay && !s ? `${m?.zh ?? '技能'} · 此份重播未保存冷卻資訊。` : m ? `${m.zh} · ${m.desc ?? ''}` : '此席位未配置技能。'; })() : ''}
       </div>}
     </section>
+    {['P', 'Q', 'W', 'E', 'R'].includes(skill ?? hoverSkill) && <BattleSkillDetail
+      heroId={r.heroId} slot={skill ?? hoverSkill} live={p.heroSkills?.[skill ?? hoverSkill]}
+      selectedTalentId={p.heroBattleTalent?.id ?? r.battleTalentId}
+      replay={replay} mobile={mobile} onClose={() => { setSkill(null); setHoverSkill(null); }} />}
     {itemsSheet && mine && <MobileItemsSheet hud={hudItems} focusId={p.id} roster={roster}
       onPick={pick} onClose={() => setItemsSheet(false)} bottom={mobile ? ITEM_TOAST_MOBILE_BOTTOM : 150}
       layout={mobile ? 'mobile' : 'desktop'}

@@ -36,11 +36,11 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
  * ⚠ **什麼時候不用 bump**：純呈現層、UI、文案、log。
  * ⚠ 版本字串一旦發布就**不可回收再用**：舊 Challenge 存著它。
  */
-export const MOBA_SIMULATION_VERSION = "moba-sim.v13";
+export const MOBA_SIMULATION_VERSION = "moba-sim.v14";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", MOBA_SIMULATION_VERSION]);
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -81,6 +81,9 @@ export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim
  *   不是改了**生成**。搞混這兩者會讓清單無限膨脹，閘門就變成雜訊。
  */
 export const SIMULATION_SEMANTICS_FILES = Object.freeze([
+  "src/battle/moba/skills/heroSkillGameplay.js",
+  "src/battle/moba/skills/heroSkillTargetCapabilities.js",
+  "src/battle/moba/talents/heroBattleTalents.js",
   //  引擎本體：數值、判定順序、tick 語意
   "src/LogicEngine.js",
   //  能力 → 行為 mods 的映射與 clamp
@@ -324,6 +327,9 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   // 2026-09-27: skill-on non-hero capability hits and symmetric phase scaling.
   // Existing Baron wave buff remains separate; skill-off and historical rules are unchanged.
   "moba-sim.v13": "366b671a16d2f12c",
+  // Hero Battle Talent v1 pilot changes skill-on rules for selected pilot heroes.
+  // The v13 fingerprint remains available for historical Replay compatibility.
+  "moba-sim.v14": "8725f1f1bfb4c1ed",
 });
 
 export const isKnownSimulationVersion = (v) =>

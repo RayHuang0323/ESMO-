@@ -142,6 +142,7 @@ function replayRosterOf(replay) {
       player: replayPlayerName(pm.id, replay.playersMeta),
       heroId: pm.heroId, hero: pm.heroName ?? pm.heroId,
       lane: pm.lane ?? null, spells: Array.isArray(pm.spells) ? pm.spells : [],
+      ...(pm.battleTalentId ? { battleTalentId: pm.battleTalentId } : {}),
     };
   }
   return Object.keys(out).length ? out : null;

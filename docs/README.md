@@ -38,6 +38,7 @@
   `design/MOBA地圖可讀性規範.md`、`design/MOBA中立目標與野區系統.md`
 - **MOBA 導播／測試控制**：`design/MOBA導播鏡頭與測試控制.md`
 - **MOBA 召喚師技能**：`design/MOBA召喚師技能系統.md`
+- **MOBA 英雄技能圖示／戰鬥天賦 v1 候選**：`design/MOBA_Hero_Skill_Icons_Battle_Talents_v1.md`（尚未發布）
 - **MOBA 戰術**：`design/MOBA戰術系統.md`、`design/MOBA戰術播報系統.md`
 - **Replay**：`design/MOBA重播系統.md`（＋ 對應 handoff 段落）
 - **Progress／Reward／Talent**：只在任務碰到對應系統時讀相關設計文件

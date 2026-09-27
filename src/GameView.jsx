@@ -127,7 +127,7 @@ function Minimap({ mobile = false }) {
 
 const fmtClock = (sec) => { const t = Math.max(0, Math.floor(Number(sec) || 0)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; };
 
-export default function GameView({ roster = ROSTER, onContinue = null, autoStart = false, draft = null, tactic = null, buildStrategy = null }) {
+export default function GameView({ roster = ROSTER, onContinue = null, autoStart = false, draft = null, tactic = null, buildStrategy = null, talentSelections = null }) {
   // Sprint19【C】：draft（Ban/Pick 結果）仍僅作 Presentation 傳遞。
   // Sprint24【D 升級】：tactic = MobaTacticConfig.v1 → start({tactic}) → engine.configureMatch
   //   （行為權重層；戰術現在「真的」進 LogicEngine，證據寫入 BattleResult.tacticExecution）。
@@ -155,6 +155,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
       tactic,
       //  Item System M3d：戰術頁選定的出裝策略（AppShell 從本場設定傳入；itemsV1 OFF 時為 null）
       buildStrategy,
+      talentSelections,
       roster: liveRosterRef.current,
       //  O7：權威啟動參數（沒有場次就是 undefined ⇒ 退回舊行為）
       seed: launch?.seed,

@@ -203,15 +203,21 @@ frozenDiff("28) 不修改 MatchProgressTransaction.v1", "src/platform/contracts/
 //      ⇒ 它偵測不到它宣稱要偵測的東西，只偵測得到「你還沒 commit」，
 //        並讓「commit 前跑全綠」在數學上不可能。
 //  【改為】commit 無關、且真的擋得住「天賦偷改引擎」的**雙向耦合**判準：
-//      · LogicEngine 不認得天賦（無 talent / derivedStats / talentPoints 字樣、不 import talents）
-//      · 天賦模組不 import LogicEngine
-//    天賦要影響對戰，只能經由 S28 的 mods 通道（10 個行為鍵，見 check_moba_stats28 §13）。
+//      · LogicEngine 不認得「選手成長天賦」（無 talentPoints / derivedStats，
+//        不 import platform/talents）
+//      · 選手成長天賦模組不 import LogicEngine
+//    選手成長天賦要影響對戰，只能經由 S28 的 mods 通道（10 個行為鍵）。
+//    HeroBattleTalent.v1 是不同的本場英雄戰鬥系統；其選擇 ID 可進 snapshot，
+//    不可再用 /talent/i 把兩種天賦混為一談。以下仍守住原本的選手成長邊界。
 const ENG_SRC_27 = src("src/LogicEngine.js");
 const TALENT_FILES = ["src/platform/talents/talentDefinitions.js",
   "src/platform/talents/playerDerivedStats.js", "src/platform/talents/purchasePlayerTalent.js"];
-ck("29) 天賦與引擎零耦合（LogicEngine 不認得天賦；天賦模組不 import 引擎）",
-  !/talent|derivedStats|talentPoints/i.test(ENG_SRC_27) &&
-  !/platform\/talents/.test(ENG_SRC_27) &&
+const PLAYER_TALENT_ENGINE_COUPLING = /platform\/talents|\b(?:playerTalent|talentPoints|derivedStats|playerDerivedStats)\b/i;
+ck("29) 選手成長天賦與引擎零耦合（不混同英雄戰鬥天賦）",
+  !PLAYER_TALENT_ENGINE_COUPLING.test(ENG_SRC_27) &&
+  PLAYER_TALENT_ENGINE_COUPLING.test("const talentPoints = 3") &&
+  PLAYER_TALENT_ENGINE_COUPLING.test("import './platform/talents/playerDerivedStats.js'") &&
+  !PLAYER_TALENT_ENGINE_COUPLING.test("heroBattleTalent") &&
   TALENT_FILES.every((f) => !/LogicEngine/.test(src(f))));
 
 frozenDiff("30) 不修改 FPS presentation", "src/battle/fps/EsportsFPS3D.jsx");

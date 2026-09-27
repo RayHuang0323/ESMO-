@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="烈焰先知 E 烈焰地牆" data-skill-id="lieyan:E">
+<title>烈焰先知 · E 烈焰地牆</title>
+<defs><radialGradient id="ground"><stop stop-color="#72271f"/><stop offset="1" stop-color="#07111e"/></radialGradient><linearGradient id="bright" x2="1" y2="1"><stop stop-color="#fff0ae"/><stop offset=".52" stop-color="#ff6240"/><stop offset="1" stop-color="#72271f"/></linearGradient><linearGradient id="metal" x2="1" y2="1"><stop stop-color="#ff6240"/><stop offset="1" stop-color="#72271f"/></linearGradient><radialGradient id="accent"><stop stop-color="#fff0ae" stop-opacity=".9"/><stop offset="1" stop-color="#ff6240" stop-opacity=".25"/></radialGradient></defs>
+<rect x="3" y="3" width="122" height="122" rx="19" fill="url(#ground)" stroke="#ff6240" stroke-width="3"/>
+<circle cx="64" cy="64" r="51" fill="url(#accent)" opacity=".27"/>
+<g opacity=".65"><path d="M15 88 Q12 71 24 55 Q21 75 33 69 L29 95 Z M99 98 Q91 80 104 66 Q105 85 115 81 L110 104 Z" fill="url(#metal)" stroke="url(#bright)" stroke-width="3.5" stroke-linejoin="round"/></g>
+<g opacity=".78"><path d="M11 97 L41 69 M86 38 L117 9 M18 113 L33 97" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(-2 2) rotate(-6 64 64)"><path d="M27 87 L63 23 L60 56 L99 37 L68 103 L70 72 Z" fill="url(#metal)" stroke="url(#bright)" stroke-width="3.5" stroke-linejoin="round"/><path d="M19 43 L46 43 M18 58 L41 58" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g><circle cx="84" cy="102" r="4" fill="#fff0ae" opacity=".8"/><circle cx="21" cy="63" r="3" fill="#fff0ae" opacity=".8"/><circle cx="86" cy="27" r="2" fill="#fff0ae" opacity=".8"/></g><path d="M18 17 L35 17 M93 111 L110 111" stroke="#fff0ae" stroke-width="2" opacity=".7"/>
+</svg>

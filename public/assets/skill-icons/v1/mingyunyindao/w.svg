@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="命運引導 W 命運催化" data-skill-id="mingyunyindao:W">
+<title>命運引導 · W 命運催化</title>
+<defs><radialGradient id="ground"><stop stop-color="#553b78"/><stop offset="1" stop-color="#07111e"/></radialGradient><linearGradient id="bright" x2="1" y2="1"><stop stop-color="#fff8dd"/><stop offset=".52" stop-color="#d7b7ff"/><stop offset="1" stop-color="#553b78"/></linearGradient><linearGradient id="metal" x2="1" y2="1"><stop stop-color="#d7b7ff"/><stop offset="1" stop-color="#553b78"/></linearGradient><radialGradient id="accent"><stop stop-color="#fff8dd" stop-opacity=".9"/><stop offset="1" stop-color="#d7b7ff" stop-opacity=".25"/></radialGradient></defs>
+<rect x="3" y="3" width="122" height="122" rx="19" fill="url(#ground)" stroke="#d7b7ff" stroke-width="3"/>
+<circle cx="64" cy="64" r="51" fill="url(#accent)" opacity=".27"/>
+<g opacity=".65"><path d="M17 27 L33 19 L42 31 M87 30 L101 17 L116 29 M16 101 L31 111 L42 97 M86 98 L101 112 L117 101" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g opacity=".78"><path d="M17 67 Q28 37 41 36 M111 67 Q100 37 87 36" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(1 -1) rotate(-6 64 64)"><path d="M64 19 L91 35 L103 64 L91 93 L64 109 L37 93 L25 64 L37 35 Z" fill="url(#metal)" stroke="url(#bright)" stroke-width="3.5" stroke-linejoin="round"/><path d="M43 65 L64 43 L85 65 L64 85 Z M64 19 L64 43 M64 85 L64 109" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g><circle cx="25" cy="46" r="2" fill="#fff8dd" opacity=".8"/><circle cx="99" cy="39" r="0" fill="#fff8dd" opacity=".8"/><circle cx="69" cy="107" r="1" fill="#fff8dd" opacity=".8"/></g><path d="M18 17 L35 17 M93 111 L110 111" stroke="#fff8dd" stroke-width="2" opacity=".7"/>
+</svg>

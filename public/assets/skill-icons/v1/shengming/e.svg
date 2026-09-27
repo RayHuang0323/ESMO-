@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="生命守護 E 生命汲取" data-skill-id="shengming:E">
+<title>生命守護 · E 生命汲取</title>
+<defs><radialGradient id="ground"><stop stop-color="#235d42"/><stop offset="1" stop-color="#07111e"/></radialGradient><linearGradient id="bright" x2="1" y2="1"><stop stop-color="#f1fff1"/><stop offset=".52" stop-color="#70e6a1"/><stop offset="1" stop-color="#235d42"/></linearGradient><linearGradient id="metal" x2="1" y2="1"><stop stop-color="#70e6a1"/><stop offset="1" stop-color="#235d42"/></linearGradient><radialGradient id="accent"><stop stop-color="#f1fff1" stop-opacity=".9"/><stop offset="1" stop-color="#70e6a1" stop-opacity=".25"/></radialGradient></defs>
+<rect x="3" y="3" width="122" height="122" rx="19" fill="url(#ground)" stroke="#70e6a1" stroke-width="3"/>
+<circle cx="64" cy="64" r="51" fill="url(#accent)" opacity=".27"/>
+<g opacity=".65"><path d="M8 100 Q19 60 38 38 M119 31 Q99 57 93 85 M14 76 Q29 80 31 60 M113 59 Q99 54 96 70" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g opacity=".78"><path d="M11 97 L41 69 M86 38 L117 9 M18 113 L33 97" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(6 -6) rotate(5 64 64)"><path d="M33 92 L52 38 Q77 31 103 35 L91 76 L61 102 Z" fill="url(#metal)" stroke="url(#bright)" stroke-width="3.5" stroke-linejoin="round"/><path d="M50 83 Q70 60 96 58 M34 102 L24 111" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g><circle cx="90" cy="30" r="4" fill="#f1fff1" opacity=".8"/><circle cx="81" cy="104" r="3" fill="#f1fff1" opacity=".8"/><circle cx="21" cy="60" r="4" fill="#f1fff1" opacity=".8"/></g><path d="M18 17 L35 17 M93 111 L110 111" stroke="#f1fff1" stroke-width="2" opacity=".7"/>
+</svg>

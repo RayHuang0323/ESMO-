@@ -1836,6 +1836,15 @@ for (const [key, [primitive, duration, radius, motif]] of Object.entries(batch24
     windup: slot === 'R' ? 0.32 : 0.16, burstEnd: slot === 'R' ? 0.62 : 0.65 });
 }
 
+// Skill art is generated from these same records; no parallel skill/icon database.
+for (const hero of CHAMPIONS_100) for (const slot of ['P', 'Q', 'W', 'E', 'R']) {
+  hero.skills[slot].iconKey = `${hero.id}/${slot.toLowerCase()}`;
+}
+export function heroSkillIconUrl(heroId, slot) {
+  const key = heroById(heroId)?.skills?.[slot]?.iconKey;
+  return key ? `${(import.meta.env?.BASE_URL ?? '/').replace(/\/?$/, '/')}assets/skill-icons/v1/${key}.svg` : null;
+}
+
 export const heroById = (id) => CHAMPIONS_100.find((c) => c.id === id) || null;
 export const heroesByLane = (lane) => CHAMPIONS_100.filter((c) => c.lane === lane);
 export const heroesByArch = (arch) => CHAMPIONS_100.filter((c) => c.arch === arch);

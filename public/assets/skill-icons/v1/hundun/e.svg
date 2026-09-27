@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="混沌術士 E 混沌吸收" data-skill-id="hundun:E">
+<title>混沌術士 · E 混沌吸收</title>
+<defs><radialGradient id="ground"><stop stop-color="#5a2d69"/><stop offset="1" stop-color="#07111e"/></radialGradient><linearGradient id="bright" x2="1" y2="1"><stop stop-color="#fff0cf"/><stop offset=".52" stop-color="#e28cff"/><stop offset="1" stop-color="#5a2d69"/></linearGradient><linearGradient id="metal" x2="1" y2="1"><stop stop-color="#e28cff"/><stop offset="1" stop-color="#5a2d69"/></linearGradient><radialGradient id="accent"><stop stop-color="#fff0cf" stop-opacity=".9"/><stop offset="1" stop-color="#e28cff" stop-opacity=".25"/></radialGradient></defs>
+<rect x="3" y="3" width="122" height="122" rx="19" fill="url(#ground)" stroke="#e28cff" stroke-width="3"/>
+<circle cx="64" cy="64" r="51" fill="url(#accent)" opacity=".27"/>
+<g opacity=".65"><path d="M17 27 L33 19 L42 31 M87 30 L101 17 L116 29 M16 101 L31 111 L42 97 M86 98 L101 112 L117 101" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g opacity=".78"><path d="M11 97 L41 69 M86 38 L117 9 M18 113 L33 97" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(5 -5) rotate(0 64 64)"><path d="M64 23 L97 35 L94 73 Q89 96 64 107 Q39 96 34 73 L31 35 Z" fill="url(#metal)" stroke="url(#bright)" stroke-width="3.5" stroke-linejoin="round"/><path d="M64 38 L64 87 M47 52 L64 43 L81 52" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g><circle cx="29" cy="89" r="2" fill="#fff0cf" opacity=".8"/><circle cx="60" cy="21" r="0" fill="#fff0cf" opacity=".8"/><circle cx="104" cy="81" r="1" fill="#fff0cf" opacity=".8"/></g><path d="M18 17 L35 17 M93 111 L110 111" stroke="#fff0cf" stroke-width="2" opacity=".7"/>
+</svg>

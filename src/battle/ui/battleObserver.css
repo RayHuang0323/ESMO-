@@ -56,3 +56,36 @@
 .observer-ui.items-on .observer-item-tip{position:fixed;z-index:30;width:250px;pointer-events:none;padding:9px 11px;background:rgba(10,16,28,.97);border:1px solid rgba(251,191,36,.45);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.55)}
 /* Battle UX hotfix：裝備入口有了外框後會壓到召喚師技能鈕下緣 ⇒ 手機底欄多 12px（下方資訊列貼底，整排技能鈕一起上移，不改其他列） */
 .observer-ui.items-on.mobile .observer-dock{min-height:124px}
+
+/* Hero Skills v1 info: icons are authored assets; all state remains snapshot-driven. */
+.observer-ability img{display:block;width:100%;height:100%;object-fit:cover;border-radius:2px}
+.observer-ability b,.observer-ability small,.observer-ability-level{z-index:1;text-shadow:0 1px 3px #000,0 0 3px #000}
+.observer-ability small{padding:0 2px;background:#08111dcc;color:#fff}
+.observer-ability-level{position:absolute;bottom:1px;left:3px;font:700 9px Consolas,monospace;color:#d1d5db}
+.observer-ability.passive img,.observer-ability.unavailable img{filter:grayscale(.65);opacity:.66}
+.observer-ability.cooldown img{filter:saturate(.45) brightness(.57)}
+.observer-ability.ready{border-color:var(--battle-green)!important}
+.observer-ability.ready small{color:var(--battle-green)}
+.observer-ability.cooldown{border-color:var(--battle-muted)!important}
+.observer-ui .observer-skill-detail{position:absolute;z-index:6;bottom:94px;left:50%;transform:translateX(-50%);width:min(510px,calc(100% - 24px));max-height:min(72vh,640px);display:flex;flex-direction:column;overflow:hidden;pointer-events:auto;background:var(--battle-bg);border:1px solid var(--battle-gold);border-radius:12px;box-shadow:0 14px 42px #000c;color:#f3f0e7}
+.observer-skill-detail-head{display:flex;align-items:center;gap:11px;padding:12px 14px;border-bottom:1px solid var(--battle-line);flex-shrink:0}
+.observer-skill-detail-head img{border:1px solid var(--battle-gold);border-radius:8px;flex-shrink:0}
+.observer-skill-detail-head span{display:grid;gap:2px;min-width:0;flex:1}
+.observer-skill-detail-head small{font-size:10px;color:var(--battle-gold)}
+.observer-skill-detail-head strong{font-size:17px;line-height:1.2}
+.observer-skill-detail-head em{font-size:11px;font-style:normal;color:var(--battle-muted)}
+.observer-ui .observer-skill-detail-head button{width:44px;height:44px;flex-shrink:0;font-size:18px}
+.observer-skill-detail-body{overflow-y:auto;overscroll-behavior:contain;padding:12px 15px 18px;font-size:12px;line-height:1.55}
+.observer-skill-detail-body p{margin:0 0 10px}
+.observer-skill-detail-body h4{font-size:11px;letter-spacing:.08em;color:var(--battle-gold);margin:14px 0 7px}
+.observer-skill-keyvals,.observer-skill-values,.observer-skill-targets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.observer-skill-keyvals span,.observer-skill-values span,.observer-skill-targets span{display:flex;justify-content:space-between;align-items:baseline;gap:6px;padding:5px 7px;background:var(--battle-card);border:1px solid var(--battle-line);border-radius:5px;min-width:0}
+.observer-skill-values small,.observer-skill-targets small{color:var(--battle-muted);font-size:10px}
+.observer-skill-targets span{align-items:flex-start;flex-direction:column}
+.observer-skill-footnote{color:var(--battle-muted);font-size:10px;margin-top:9px!important}
+.observer-skill-warning{color:var(--battle-gold);background:rgba(251,191,36,.1);border-left:2px solid var(--battle-gold);padding:7px 9px}
+.observer-ui.mobile .observer-skill-detail{bottom:calc(128px + env(safe-area-inset-bottom));left:6px;right:6px;transform:none;width:auto;max-height:min(65dvh,570px);border-radius:12px 12px 6px 6px}
+.observer-ui.mobile .observer-skill-detail-body{padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+.observer-ui .observer-talent-chip{max-width:120px;min-height:24px;padding:2px 5px;font-size:9px;color:var(--battle-gold);border-color:var(--battle-gold);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.observer-ui.mobile .observer-talent-chip{max-width:80px;font-size:8px}
+@media(max-width:360px){.observer-skill-values,.observer-skill-targets{grid-template-columns:1fr}}

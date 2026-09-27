@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="赤炎武神 Q 赤炎斬" data-skill-id="chichuan:Q">
+<title>赤炎武神 · Q 赤炎斬</title>
+<defs><radialGradient id="ground"><stop stop-color="#67261f"/><stop offset="1" stop-color="#07111e"/></radialGradient><linearGradient id="bright" x2="1" y2="1"><stop stop-color="#fff0b0"/><stop offset=".52" stop-color="#ff6b3d"/><stop offset="1" stop-color="#67261f"/></linearGradient><linearGradient id="metal" x2="1" y2="1"><stop stop-color="#ff6b3d"/><stop offset="1" stop-color="#67261f"/></linearGradient><radialGradient id="accent"><stop stop-color="#fff0b0" stop-opacity=".9"/><stop offset="1" stop-color="#ff6b3d" stop-opacity=".25"/></radialGradient></defs>
+<rect x="3" y="3" width="122" height="122" rx="19" fill="url(#ground)" stroke="#ff6b3d" stroke-width="3"/>
+<circle cx="64" cy="64" r="51" fill="url(#accent)" opacity=".27"/>
+<g opacity=".65"><path d="M15 88 Q12 71 24 55 Q21 75 33 69 L29 95 Z M99 98 Q91 80 104 66 Q105 85 115 81 L110 104 Z" fill="url(#metal)" stroke="url(#bright)" stroke-width="3.5" stroke-linejoin="round"/></g>
+<g opacity=".78"><path d="M11 113 L40 84 M84 39 L112 11" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(-2 2) rotate(-4 64 64)"><path d="M33 92 L52 38 Q77 31 103 35 L91 76 L61 102 Z" fill="url(#metal)" stroke="url(#bright)" stroke-width="3.5" stroke-linejoin="round"/><path d="M50 83 Q70 60 96 58 M34 102 L24 111" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g><circle cx="101" cy="86" r="3" fill="#fff0b0" opacity=".8"/><circle cx="27" cy="86" r="2" fill="#fff0b0" opacity=".8"/><circle cx="63" cy="21" r="3" fill="#fff0b0" opacity=".8"/></g><path d="M18 17 L35 17 M93 111 L110 111" stroke="#fff0b0" stroke-width="2" opacity=".7"/>
+</svg>

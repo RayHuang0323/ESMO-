@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="鐵石心腸 P 鐵石防護" data-skill-id="tieshixin:P">
+<title>鐵石心腸 · P 鐵石防護</title>
+<defs><radialGradient id="ground"><stop stop-color="#3f4d5b"/><stop offset="1" stop-color="#07111e"/></radialGradient><linearGradient id="bright" x2="1" y2="1"><stop stop-color="#fff1cf"/><stop offset=".52" stop-color="#b2c4d4"/><stop offset="1" stop-color="#3f4d5b"/></linearGradient><linearGradient id="metal" x2="1" y2="1"><stop stop-color="#b2c4d4"/><stop offset="1" stop-color="#3f4d5b"/></linearGradient><radialGradient id="accent"><stop stop-color="#fff1cf" stop-opacity=".9"/><stop offset="1" stop-color="#b2c4d4" stop-opacity=".25"/></radialGradient></defs>
+<rect x="3" y="3" width="122" height="122" rx="19" fill="url(#ground)" stroke="#b2c4d4" stroke-width="3"/>
+<circle cx="64" cy="64" r="51" fill="url(#accent)" opacity=".27"/>
+<g opacity=".65"><path d="M15 27 L33 17 L39 32 M89 16 L110 25 L103 43 M17 103 L36 113 L44 99 M89 112 L108 99 L101 87" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g opacity=".78"><circle cx="64" cy="64" r="50" fill="none" stroke="url(#accent)" stroke-width="2" stroke-dasharray="15 7" opacity=".7"/></g>
+<g transform="translate(6 -6) rotate(8 64 64)"><path d="M64 23 L97 35 L94 73 Q89 96 64 107 Q39 96 34 73 L31 35 Z" fill="url(#metal)" stroke="url(#bright)" stroke-width="3.5" stroke-linejoin="round"/><path d="M64 38 L64 87 M47 52 L64 43 L81 52" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g><circle cx="97" cy="91" r="2" fill="#fff1cf" opacity=".8"/><circle cx="24" cy="80" r="3" fill="#fff1cf" opacity=".8"/><circle cx="69" cy="21" r="2" fill="#fff1cf" opacity=".8"/></g><path d="M18 17 L35 17 M93 111 L110 111" stroke="#fff1cf" stroke-width="2" opacity=".7"/>
+</svg>

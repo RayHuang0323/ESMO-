@@ -19,6 +19,7 @@ import { toEngineHeroMods } from "./battle/moba/mobaHeroProfile.js";
 import { toEngineSpells } from "./battle/moba/mobaHeroLoadout.js";
 import { toEngineArchetypes, COMBAT_ARCHETYPE_CONTRACT_VERSION } from "./data/heroCombatArchetypes.js";
 import { toEngineHeroSkills } from "./battle/moba/skills/heroSkillGameplay.js";
+import { selectBattleTalents } from './battle/moba/talents/heroBattleTalents.js';
 import { heroById } from "./data/heroDatabase.js";
 import { toEnginePlayerMods } from "./battle/moba/mobaPlayerStats.js";
 //  Item System M3a：裝備層開關（正式站預設 OFF；DEV 才讀 ?itemsDev=1，見 start() 內）
@@ -160,6 +161,14 @@ export function useLocalServer() {
     const authoritative = Number.isFinite(opts.seed);
     const seed = authoritative ? ((opts.seed >>> 0) | 1) : ((Date.now() & 0xffff) | 1);
     const eng = new LogicEngine(seed, loadout);
+    const heroSkillsOn = featureEnabled("heroSkillsV1") ||
+      (import.meta.env.DEV && new URLSearchParams(window.location.search).get("heroSkillsDev") === "1");
+    const selectedTalents = heroSkillsOn && featureEnabled('heroBattleTalentsV1') && opts.roster
+      ? selectBattleTalents(opts.roster, opts.talentSelections) : null;
+    const talentSelection = selectedTalents && Object.keys(selectedTalents.players).length ? selectedTalents : null;
+    const replayRoster = talentSelection ? Object.fromEntries(Object.entries(opts.roster).map(([seat, row]) => [seat, {
+      ...row, ...(talentSelection.players[seat] ? { battleTalentId: talentSelection.players[seat].id } : {}),
+    }])) : opts.roster;
     // Sprint26：開始重播擷取（seed / 戰術只有這裡拿得到；frames 由 useBattleFeed 取樣）
     // Milestone I-close：連同**本場生效名單**一起交出去。舊 replay 只有 {id,side,role}，
     //   重播時完全不知道誰用哪隻英雄、帶什麼召喚師技能 ⇒ 同一場比賽「現場」與「重播」
@@ -169,8 +178,9 @@ export function useLocalServer() {
       //  O7：這一場是不是權威場次（由 MatchSession 指定 seed）
       sessionId: opts.sessionId ?? null,
       seedSource: authoritative ? "session" : "local",
-      config: opts.tactic?.tacticId ? { tacticId: opts.tactic.tacticId, tacticName: opts.tactic.name ?? null } : {},
-      roster: opts.roster ?? null,
+      config: { ...(opts.tactic?.tacticId ? { tacticId: opts.tactic.tacticId, tacticName: opts.tactic.name ?? null } : {}),
+        ...(talentSelection ? { battleTalentIds: Object.fromEntries(Object.entries(talentSelection.players).map(([seat, row]) => [seat, row.id])) } : {}) },
+      roster: replayRoster ?? null,
     });
 
     // ── Sprint28：選手能力進引擎（唯一計算點）────────────────────────────
@@ -198,10 +208,8 @@ export function useLocalServer() {
 
     // Canonical roster -> authored mechanics. The formal flag is the single production
     // switch; the DEV query remains useful for isolated browser diagnostics.
-    const heroSkillsOn = featureEnabled("heroSkillsV1") ||
-      (import.meta.env.DEV && new URLSearchParams(window.location.search).get("heroSkillsDev") === "1");
     if (heroSkillsOn && opts.roster) {
-      const skills = toEngineHeroSkills(opts.roster);
+      const skills = toEngineHeroSkills(opts.roster, talentSelection);
       if (skills) eng.configureHeroSkills(skills);
     }
 
@@ -268,6 +276,7 @@ export function useLocalServer() {
       phase: "battle",
       draft: opts.draft ?? null,
       tactic: opts.tactic ?? null,
+      ...(talentSelection && opts.talentSelections ? { talentSelections: opts.talentSelections } : {}),
       //  M3d：裝備系統真的開著才寫進本場設定（OFF 時存檔形狀與 M3d 之前相同）
       ...(buildStrategy ? { buildStrategy } : {}),
     };

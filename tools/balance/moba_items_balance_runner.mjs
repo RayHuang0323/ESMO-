@@ -70,7 +70,10 @@ export async function modules() {
   ]);
   //  Combat Quality：`ESMO_BALANCE_SKILLS=on` ⇒ 與正式流程相同地開 Hero Skills（worker 繼承環境變數）。
   const skills = process.env.ESMO_BALANCE_SKILLS === "on" ? await load("src/battle/moba/skills/heroSkillGameplay.js") : null;
-  MODS = { LE, heroes, profile, arche, loadout, tactic, adapter, catalog, economy, inventory, gameData, skills };
+  // Opt-in pilot measurement only; the existing fairness runner defaults are unchanged.
+  const talents = skills && process.env.ESMO_BALANCE_TALENTS === "on"
+    ? await load("src/battle/moba/talents/heroBattleTalents.js") : null;
+  MODS = { LE, heroes, profile, arche, loadout, tactic, adapter, catalog, economy, inventory, gameData, skills, talents };
   return MODS;
 }
 
@@ -105,7 +108,11 @@ export function configure(seed, config, M, incomeK = 1) {
   const heroMods = M.profile.toEngineHeroMods(roster, M.heroes.heroById);
   if (heroMods) e.configureHeroes(heroMods);
   //  與 useLocalServer.start() 同序：configureHeroes 之後掛 Hero Skills。
-  if (M.skills) { const sk = M.skills.toEngineHeroSkills(roster); if (sk) e.configureHeroSkills(sk); }
+  if (M.skills) {
+    const selected = M.talents?.selectBattleTalents(roster) ?? null;
+    const sk = M.skills.toEngineHeroSkills(roster, selected);
+    if (sk) e.configureHeroSkills(sk);
+  }
   const blue = {}, red = {};
   for (const [pid, m] of Object.entries(M.arche.toEngineArchetypes(roster))) (pid[0] === "r" ? red : blue)[pid] = m;
   e.configureArchetypes({ blue, red, meta: null });

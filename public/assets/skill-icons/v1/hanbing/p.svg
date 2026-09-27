@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="寒冰弓神 P 寒冰穿透" data-skill-id="hanbing:P">
+<title>寒冰弓神 · P 寒冰穿透</title>
+<defs><radialGradient id="ground"><stop stop-color="#2b5d86"/><stop offset="1" stop-color="#07111e"/></radialGradient><linearGradient id="bright" x2="1" y2="1"><stop stop-color="#f2ffff"/><stop offset=".52" stop-color="#8fe4ff"/><stop offset="1" stop-color="#2b5d86"/></linearGradient><linearGradient id="metal" x2="1" y2="1"><stop stop-color="#8fe4ff"/><stop offset="1" stop-color="#2b5d86"/></linearGradient><radialGradient id="accent"><stop stop-color="#f2ffff" stop-opacity=".9"/><stop offset="1" stop-color="#8fe4ff" stop-opacity=".25"/></radialGradient></defs>
+<rect x="3" y="3" width="122" height="122" rx="19" fill="url(#ground)" stroke="#8fe4ff" stroke-width="3"/>
+<circle cx="64" cy="64" r="51" fill="url(#accent)" opacity=".27"/>
+<g opacity=".65"><path d="M13 32 L39 26 L31 10 M97 110 L92 82 L116 89 M11 96 L35 91 L22 113" fill="none" stroke="url(#bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g opacity=".78"><circle cx="64" cy="64" r="50" fill="none" stroke="url(#accent)" stroke-width="2" stroke-dasharray="14 7" opacity=".7"/></g>
+<g transform="translate(6 -6) rotate(2 64 64)"><path d="M64 19 L87 43 L96 75 L64 108 L31 75 L40 43 Z" fill="url(#metal)" stroke="url(#bright)" stroke-width="3.5" stroke-linejoin="round"/><path d="M64 19 L64 108 M31 75 L87 43 M96 75 L40 43" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g><circle cx="100" cy="40" r="4" fill="#f2ffff" opacity=".8"/><circle cx="68" cy="107" r="3" fill="#f2ffff" opacity=".8"/><circle cx="25" cy="47" r="2" fill="#f2ffff" opacity=".8"/></g><path d="M18 17 L35 17 M93 111 L110 111" stroke="#f2ffff" stroke-width="2" opacity=".7"/>
+</svg>
