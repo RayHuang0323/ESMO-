@@ -377,8 +377,10 @@ ck("P3) 一般競技仍然 0 加天（成本仍在每日容量，不在每一場
 //    這一條守的**不是**「永遠只能有三種」——來源本來就是可擴充的契約。
 //    它守的是「呼叫端不得自創來源種類」，以及**定時賽事 / Ranked 仍未建立**。
 //    ⇒ 改成與契約自己的定義比對，並保留原本真正在擋的兩個名字。
+//  ⚠ 2026-09-22（Competitive Enablement v1）：新增 `ranked`（線上競技排位）。
+//    `event` / `online` 仍未建立（定時賽事不在本輪）。
 ck("P4) origin kind 就是契約定義的那幾種（event / online 仍未建立）",
-  Object.keys(origin.ORIGIN_KINDS).sort().join("/") === "challenge/fixture/practice/ticket"
+  Object.keys(origin.ORIGIN_KINDS).sort().join("/") === "challenge/fixture/practice/ranked/ticket"
   && !("online" in origin.ORIGIN_KINDS) && !("event" in origin.ORIGIN_KINDS),
   Object.keys(origin.ORIGIN_KINDS).join("/"));
 
@@ -388,10 +390,14 @@ ck("P4) origin kind 就是契約定義的那幾種（event / online 仍未建立
 //    Ranked 仍未建立。
 const growth = await imp("src/platform/progress/careerGrowth.js");
 ck("P5) 成長來源就是契約定義的那幾種；線上來源存在但不寫回生涯",
-  Object.keys(source.MATCH_SOURCE).sort().join("/") === "challenge/competitive/official/practice/unknown"
-  && !("online" in source.MATCH_SOURCE) && !("ranked" in source.MATCH_SOURCE)
+//  ⚠ 2026-09-22（Competitive Enablement v1）：`ranked` 存在了 ⇒ 同一條規則延伸到它：
+//    成長倍率 0、世界時間 0（它的配額掛伺服器日，不在世界時鐘）。
+  Object.keys(source.MATCH_SOURCE).sort().join("/") === "challenge/competitive/official/practice/ranked/unknown"
+  && !("online" in source.MATCH_SOURCE)
   && growth.PCGM_PARAMS.sourceBase[growth.GROWTH_SOURCES.challenge] === 0
-  && clock.WORLD_TIME_COST.challenge === 0,
+  && clock.WORLD_TIME_COST.challenge === 0
+  && growth.PCGM_PARAMS.sourceBase[growth.GROWTH_SOURCES.ranked] === 0
+  && clock.WORLD_TIME_COST.ranked === 0,
   Object.keys(source.MATCH_SOURCE).join("/"));
 
 ck("P6) 快轉不產生額外收益——規劃器不碰 finance / 粉絲",

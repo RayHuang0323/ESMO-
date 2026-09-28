@@ -97,6 +97,9 @@ export const WORLD_TIME_COST = Object.freeze({
   //  ⚠ 未來 Ranked 的每日配額要掛在**伺服器日**上，
   //    **不得**接到本檔的世界時鐘（同一條理由）。
   challenge: 0,
+  //  Competitive Enablement v1：競技排位同一條契約（I1）。它的配額掛在
+  //  **伺服器日**（`time/serverClock.js` ＋ `competitive/ratedQuota.js`），不在本檔。
+  ranked: 0,
 });
 
 /**

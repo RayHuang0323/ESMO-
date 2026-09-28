@@ -531,8 +531,11 @@ globalThis.localStorage = globalThis.localStorage ?? {
 // ════════════════════════════════════════════════════════════════════════════
 console.log("\n【§N 本輪邊界】");
 
-ck("N1) 沒有做 Ranked / 牌位 / 評分",
-  !/RANKED|rankedRating|mmr|牌位/i.test(codeOnly(read(P_SOURCE)) + (pgate ? codeOnly(read(P_GATE)) : "")));
+//  ⚠ 2026-09-22（Competitive Enablement v1）：`ranked` 這個**分類**正當地進了 matchSource
+//    （第六格來源）。這一條改守原本真正在擋的事：**評分／牌位不得長在分類層或練習閘道裡**
+//    （它們住在 `platform/competitive/`，而且預設沒有數值）。
+ck("N1) 沒有做 Ranked 評分 / 牌位（分類層與練習閘道不含評分邏輯）",
+  !/rankedRating|ladderRating|mmr|牌位|elo/i.test(codeOnly(read(P_SOURCE)) + (pgate ? codeOnly(read(P_GATE)) : "")));
 
 ck("N2) 沒有做 Career Clock / 年齡推進 / 退休",
   !/careerClock|advanceAge|retirement|退休/i.test(pgate ? codeOnly(read(P_GATE)) : ""));

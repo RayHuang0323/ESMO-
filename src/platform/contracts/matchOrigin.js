@@ -45,11 +45,15 @@ export const ORIGIN_KINDS = Object.freeze({
   fixture: "fixture",
   practice: "practice",
   challenge: "challenge",
+  //  Competitive Enablement v1：**線上競技排位**（ServerTime、LadderRating）。
+  //  ⚠ 與 `ticket`（一般對戰）是兩件事：一般對戰是生涯內排隊、有成長；
+  //    競技排位是線上、生涯寫回為 NONE。見 `platform/competitive/`。
+  ranked: "ranked",
 });
 
 /** 中文顯示名（畫面與錯誤訊息共用，避免兩套說法）。 */
 export function originKindLabel(kind) {
-  return ({ ticket: "排隊配對", fixture: "賽程排定", practice: "快速練習", challenge: "玩家挑戰" })[kind] ?? kind;
+  return ({ ticket: "排隊配對", fixture: "賽程排定", practice: "快速練習", challenge: "玩家挑戰", ranked: "競技排位" })[kind] ?? kind;
 }
 
 /** FNV-1a → 8 位十六進位（與 matchEntry / matchmaking 同一套決定性雜湊手法）。 */
@@ -185,6 +189,34 @@ export function originFromChallenge(challenge) {
       challengerSnapshotHash: challenge.challengerSnapshotHash ?? null,
       defenderSnapshotHash: challenge.defenderSnapshotHash ?? null,
       //  賽事專屬欄位在挑戰來源一律為 null
+      competitionId: null,
+      stageId: null,
+      fixtureId: null,
+    },
+  };
+}
+
+/**
+ * 競技排位的來源（Competitive Enablement v1）。
+ *
+ * ⚠ 與練習／票券／挑戰同一條規則：**不得帶任何賽事欄位** ⇒
+ *   它在結構上就進不了賽季名次、巡迴積分與冠軍的任何一本帳。
+ * ⚠ 這一支今天**沒有生產者**（沒有伺服器、`COMPETITIVE_ENABLED = false`）。
+ *   先立它是為了讓「ranked 走進生涯結算」這件事有一個可被拒收的明確身分，
+ *   而不是被歸成 `unknown`（那一格的成長倍率是 1.0）。
+ */
+export function originFromRanked({ matchId = null, mode = "moba" } = {}) {
+  if (!matchId) {
+    return { ok: false, origin: null, errors: [{ code: "ranked", message: "缺少 matchId，無法建立競技排位來源" }] };
+  }
+  return {
+    ok: true,
+    errors: [],
+    origin: {
+      schema: ORIGIN_VERSION,
+      kind: ORIGIN_KINDS.ranked,
+      originId: `ranked:${matchId}`,
+      mode,
       competitionId: null,
       stageId: null,
       fixtureId: null,

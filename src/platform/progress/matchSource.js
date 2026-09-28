@@ -35,8 +35,13 @@ import { ORIGIN_KINDS } from "../contracts/matchOrigin.js";
  *                 於是 `practice` 的倍率永遠動不了——調低它就等於默默懲罰資料遺失。
  * · `practice`    **快速練習**（V0D）。由**明確的 practice origin** 產生，
  *                 純測試場：不給成長、不給獎勵、不計戰績。
- * · `competitive` 競技比賽。**今天的「一般比賽」就是這一層**，
- *                 未來會長出評分／牌位／排行榜。
+ * · `competitive` **＝ 畫面上的「一般對戰」**（對 AI 的排隊賽，生涯內：有成長、有收益、吃每日容量）。
+ *                 ⚠ **命名撞車（Online Backend Foundation v1 註記）**：這個值叫 `competitive`，
+ *                 但它**不是**線上 Competitive／Ranked，也**不會**長出評分／牌位／排行榜——
+ *                 那些一律屬於獨立的 `ranked`（見下方），並由 `platform/competitive/competitiveMode.js`
+ *                 的 `COMPETITIVE_ENABLED`（＝線上排位開關，目前 false）控管。
+ *                 值 `"competitive"` **不得改名**：它已寫進玩家存檔與帳本（改名＝舊存檔讀錯來源）。
+ *                 新程式請用語意清楚的別名 `GENERAL_MATCH_SOURCE`／`isGeneralMatchSource`。
  * · `official`    正式季賽。既有的 Competition / Season（含 Major、年度總決賽）。
  * · `challenge`   **玩家挑戰**（Player Challenge Slice 1）。非同步 Unranked PvP，
  *                 對手是另一位玩家的**凍結快照**。
@@ -53,6 +58,11 @@ export const MATCH_SOURCE = Object.freeze({
   competitive: "competitive",
   official: "official",
   challenge: "challenge",
+  //  · `ranked`  **競技排位**（Competitive Enablement v1）。線上、ServerTime、LadderRating。
+  //    ⚠ 與 `competitive`（＝一般對戰，生涯內）是兩件事，不得用布林旗標代替（TD-36）。
+  //    規則：0 成長、0 XP、0 獎金粉絲、0 世界時間、不吃每日容量、不進賽季帳本；
+  //    而且**結算入口直接拒收**（比 challenge 更嚴：連 XP 都不給）。
+  ranked: "ranked",
 });
 
 /**
@@ -80,6 +90,9 @@ export function matchSourceFromOrigin(origin) {
   //    這裡把它歸到 `challenge`，而 `challenge` 的成長倍率是 0.0、
   //    獎勵公式會早退 ⇒ 拿不到任何東西。
   if (origin.kind === ORIGIN_KINDS.challenge) return MATCH_SOURCE.challenge;
+  //  Competitive Enablement v1：競技排位。⚠ 必須認得出來，不能掉進 `unknown`——
+  //    `unknown` 的成長倍率是 1.0，那會讓「漏接線」直接變成刷能力的管道。
+  if (origin.kind === ORIGIN_KINDS.ranked) return MATCH_SOURCE.ranked;
   return MATCH_SOURCE.unknown;
 }
 
@@ -107,6 +120,18 @@ export const isPracticeSource = (v) => normalizeMatchSource(v) === MATCH_SOURCE.
 export const isChallengeSource = (v) => normalizeMatchSource(v) === MATCH_SOURCE.challenge;
 
 /**
+ * 這場是不是**競技排位**（線上 Ranked）。
+ * ⚠ 與 `isChallengeSource` 分開兩支，理由同上（TD-36）。
+ */
+export const isRankedSource = (v) => normalizeMatchSource(v) === MATCH_SOURCE.ranked;
+/**
+ * 命名撞車的語意別名（Online Backend Foundation v1）：`MATCH_SOURCE.competitive` 的值不能改（已落盤），
+ * 但名字會誤導接手者以為它是線上 Competitive。新程式一律用這兩個名字表達「一般對戰」。
+ */
+export const GENERAL_MATCH_SOURCE = MATCH_SOURCE.competitive;
+export const isGeneralMatchSource = (v) => normalizeMatchSource(v) === MATCH_SOURCE.competitive;
+
+/**
  * 三個對戰層級的**玩家可見名稱與一句話說明**。V7A 立。
  *
  * ── 為什麼放在這裡 ────────────────────────────────────────────────────────
@@ -130,6 +155,8 @@ export const MATCH_TIER_LABELS = Object.freeze({
   //  ⚠ `note` 必須與實際行為一致：Challenge 真的一項生涯資料都不寫。
   //    這句話是玩家判斷「打這個會不會影響我的隊伍」的唯一依據。
   [MATCH_SOURCE.challenge]: Object.freeze({ name: "玩家挑戰", note: "不影響生涯：不給成長、不耗體力、不推進日期" }),
+  //  ⚠ 同上：競技排位真的一項生涯資料都不寫，也不進正式賽季任何帳本。
+  [MATCH_SOURCE.ranked]: Object.freeze({ name: "競技排位", note: "線上評分與戰績，不影響生涯與正式賽季" }),
 });
 
 /**

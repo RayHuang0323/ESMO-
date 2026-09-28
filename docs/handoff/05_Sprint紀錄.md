@@ -23816,3 +23816,11 @@ CS_RESUME_HOTFIX = RELEASED（main cfca594 → a7afc5c）
 - Release gates（同一份程式碼）：build ✓；g4 18/18；Player Challenge slice1–8 108／79／100／60／71／30／35／122；competition_q1 93；match_source_v0c 21；general_match_v7a 55；practice_match_v0d 70；retention_v7b 58；save_bundle_b1b 86；simulation_version_gate 55；regress 15/15；regress2 8/8。progress25 32/34、tactic24 28/29 只紅 BattleResult.v2 舊斷言（verifier debt）。
 - 正式站 smoke：`browser_check_prod_slice8` 43/43、`browser_check_prod_slice7` 29/29（含手動 Ban/Pick、結果、重播一致、生涯隔離、console clean）、`browser_check_prod_season_vnext` 30/30（MOBA 入口、生涯流程、無 page error）、臨時防守快照發布 smoke 5/5（五席位、moba-sim.v14、online-normalize.v1、狀態欄位不進 stats、console clean；腳本未入庫）。
 - 狀態：**G4 RELEASED**。
+
+## 2026-09-28 Online Backend Foundation v1（local，未 push／未 deploy）
+
+- 基準：`e6253d0`（含 G4 Hotfix `5d06c02`）／moba-sim.v14；分支 `feature/online-backend-foundation-v1`，rebase 後整理為單一 commit（原 WIP `8e03322`＋closeout `e2cc69b`，備份分支 `backup/online-foundation-v1-pre-squash`）。
+- 完成：ServerTime foundation、Ranked／Career 隔離、signedSnapshot 驗證邊界、mock ranked authority 移出 `src/`（只在 `tools/lib/localRankedAuthority.mjs`）、`MATCH_SOURCE.competitive` 命名別名 `GENERAL_MATCH_SOURCE`、`0002_ranked_authority.sql` 加固（**未執行**，REMOTE_E2E_NOT_RUN）、TD-57（`playerXpFor` 擋 challenge）＋ X16／X17 regression、CS 出賽單以 `CS_ENTRY_DEFERRED` 拒絕（TD-58）。`COMPETITIVE_ENABLED` 仍為 false。
+- 驗證（rebase 後）：build ✓；online_foundation_v1 89/89、competitive_enablement_v1 **130/130**（G4 隨 main 的 hotfix 轉綠，本分支未重做）、challenge_snapshot_fatigue_g4 18/18、competition_q1 93、practice_match_v0d 70、general_match_v7a 55、match_source_v0c 21、world_time_v1 46、time_block_v2 47、time_block_v3 69、retention_v7b 58、save_bundle_b1b 86、simulation_version_gate 55、player_challenge slice1–8 全綠、regress 15/15、regress2 8/8。
+- 延後：CS 線上快照（TD-58）；Ranked ticket 開放前須帶 Battle Talent ID（v14 新缺口）；progress25／tactic24 的 BattleResult.v2 舊斷言（verifier debt，main 既有）。
+- 未跑：verify.mjs 長 suite、瀏覽器 gate（本分支無 UI 變更）。

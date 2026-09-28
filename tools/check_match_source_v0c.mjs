@@ -230,8 +230,12 @@ console.log("\n§N 沒有為未來 Ranked 過度設計");
   const codeLines = ms
     ? read(P_SOURCE).split("\n").filter((l) => l.trim() && !l.trim().startsWith("//") && !l.trim().startsWith("*")).length
     : -1;
+  //  ⚠ 2026-09-22（Competitive Enablement v1）：門檻 40 → 50。新增的是**第六格分類**
+  //    （`ranked`：來源、origin 對應、`isRankedSource`、層級名稱，共 5 行實碼），
+  //    仍然是「只做分類」。評分／配額／戰績**不在這裡**，住在 `platform/competitive/`
+  //    （`check_competitive_enablement_v1` §B14 另外釘住 competitive 不回頭 import 結算）。
   ck("N3) `matchSource.js` 很小（只做分類，不夾帶其他責任）",
-    codeLines > 0 && codeLines < 40, codeLines < 0 ? "檔案不存在" : `${codeLines} 行實碼`);
+    codeLines > 0 && codeLines < 50, codeLines < 0 ? "檔案不存在" : `${codeLines} 行實碼`);
 }
 
 // ── §M mutation sentinel ───────────────────────────────────────────────────

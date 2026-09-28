@@ -24,7 +24,7 @@ import { deriveTime } from "../economy/timeline.js";
 import { applyMatchWear } from "../condition/playerCondition.js";
 import { applyLevelGrowth } from "./levelGrowth.js";
 import { GROWTH_SOURCES } from "./careerGrowth.js";
-import { normalizeMatchSource, isPracticeSource, MATCH_SOURCE, MATCH_TIER_LABELS } from "./matchSource.js";
+import { normalizeMatchSource, isPracticeSource, isRankedSource, MATCH_SOURCE, MATCH_TIER_LABELS } from "./matchSource.js";
 //  V2：競技時間區塊。只有一般競技佔容量，練習與正式季賽都不佔。
 import { competitiveBlockOf, careerYearOf } from "../time/worldClock.js";
 //  V7B：日／週／季目標的比賽側記錄。**掛在這裡是刻意的**——本檔是全專案
@@ -50,6 +50,22 @@ export function applyProgressToState(state, tx) {
   const v = validateMatchProgressTransaction(tx);
   if (!v.ok) {
     return { nextState: null, receipt: { ok: false, applied: false, alreadyApplied: false, errors: v.errors } };
+  }
+
+  // 1b) Competitive Enablement v1：**競技排位不是生涯比賽** ⇒ 本入口一律拒收。
+  //  ⚠ 這是 ranked 的**第一層**防護（設計）：競技排位的結果只進
+  //    `platform/competitive/competitiveRecord.js`，永遠不產生生涯交易單。
+  //    萬一有人接錯線把它送進來，這裡在**任何寫入之前**擋下——
+  //    連冪等帳都不記，不留半套狀態（成長／XP／體力／容量／粉絲／目標全部 0）。
+  //  ⚠ 放在冪等檢查之前：被拒的交易單不該佔用 transactionId。
+  if (isRankedSource(tx.metadata?.matchSource)) {
+    return {
+      nextState: null,
+      receipt: {
+        ok: false, applied: false, alreadyApplied: false,
+        errors: [{ code: "ranked_not_career", message: "競技排位不寫入生涯（成長、經濟、體力、容量、賽季皆不計）" }],
+      },
+    };
   }
 
   // 2) 檢查冪等

@@ -20,7 +20,7 @@
 import { updateEconomy } from "../data/matchRecorder.js";
 //  V0D：「快速練習不發任何獎勵」的規則放在**這裡**，不放在 adapter。
 //  本檔是唯一的獎勵公式所在地；兩支 adapter 各判一次就會漂移。
-import { isPracticeSource, isChallengeSource } from "./matchSource.js";
+import { isPracticeSource, isChallengeSource, isRankedSource } from "./matchSource.js";
 
 export const MOBA_REWARD_FORMULA_VERSION = "moba-reward.v1";   // = Legacy updateEconomy（逐字重用）
 export const CS_REWARD_FORMULA_VERSION = "cs-reward.v1";       // = Legacy updateEconomy（逐字重用）
@@ -57,6 +57,8 @@ export function teamRewardsFor({ win, marginF, streak, fansNow, fanSourceWeight 
   //    而那時候拆錯就會連練習也一起開了。
   //  ⚠ 這是**第二層**防護。第一層是「Challenge 結算不呼叫這條管線」。
   if (isChallengeSource(matchSource)) return { prizeWan: 0, money: 0, fans: 0 };
+  //  Competitive Enablement v1：競技排位 ⇒ 0 獎金 0 粉絲（第二層；第一層是結算入口拒收）。
+  if (isRankedSource(matchSource)) return { prizeWan: 0, money: 0, fans: 0 };
   const eco = updateEconomy(
     {
       record: { streak: fin(streak, 0) },
@@ -130,6 +132,12 @@ export function playerXpFor({ win, perf, isMvp, matchSource = null }) {
   //  這是「練習不給永久成長」最上游的一道；下游還有兩道
   //  （adapter 送空的 playerProgress、`sourceBase.practice = 0`）。
   if (isPracticeSource(matchSource)) return 0;
+  //  Competitive Enablement v1：競技排位不給 XP ⇒ 不升級、不發天賦點、不觸發能力成長。
+  if (isRankedSource(matchSource)) return 0;
+  //  TD-57（Online Backend Foundation v1 修正）：玩家挑戰是 Unranked PvP、**零永久成長**，
+  //  但原本只有收益（prize／money／fans）有 challenge 的 early return，XP 沒有 ⇒ 第二層防線缺口。
+  //  目前休眠（Challenge 結算不呼叫 applyMatchProgress），補上後就算日後誤接也不會給 XP。
+  if (isChallengeSource(matchSource)) return 0;
   const base = win ? BASE_XP_WIN : BASE_XP_LOSS;
   const p = clamp(fin(perf, 1), PERF_MIN, PERF_MAX);
   const xp = Math.round(base * p) + (isMvp ? MVP_BONUS_XP : 0);

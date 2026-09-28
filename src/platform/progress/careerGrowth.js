@@ -59,6 +59,8 @@ export const GROWTH_SOURCES = Object.freeze({
   competitive: "competitive",
   official: "official",
   challenge: "challenge",
+  //  Competitive Enablement v1：線上競技排位。見 `matchSource.js`。
+  ranked: "ranked",
 });
 
 /**
@@ -116,6 +118,11 @@ export const PCGM_PARAMS = Object.freeze({
     //      練習是「自己的測試場」，挑戰是「線上不得寫回生涯」。
     //      合併之後其中一個就再也調不動了（TD-36 的形狀）。
     [GROWTH_SOURCES.challenge]: 0.0,
+    //  · `ranked` **0.0** — 競技排位（Competitive Enablement v1）。Season vNext：
+    //    線上兩層的成長為 **0**；任何非零值都會讓「線上能力 = f(現實時間)」，
+    //    分級與預算擋不住，因為成長會讓人跨級。
+    //    ⚠ 這同樣是**第二層**：第一層是 `applyMatchProgress` 直接拒收 ranked 交易單。
+    [GROWTH_SOURCES.ranked]: 0.0,
   }),
 });
 

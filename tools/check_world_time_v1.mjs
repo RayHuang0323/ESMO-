@@ -344,8 +344,11 @@ console.log("\n【§N 本輪邊界】");
 ck("N1) 沒有做 Time Block（留給 V2，但契約表已預留擴充位）",
   !/TIME_BLOCK|timeBlock/.test(codeOnly(read(P_CLOCK))));
 
-ck("N2) 沒有做 Off-season / Ranked / 真人連線",
-  !/offSeason|offseason|ranked|multiplayer/i.test(codeOnly(read(P_CLOCK))));
+//  ⚠ 2026-09-22（Competitive Enablement v1）：世界時鐘**唯一**允許提到 ranked 的地方是
+//    `WORLD_TIME_COST.ranked: 0` 那一格宣告（I1：線上不推進生涯日）。
+//    其餘任何 ranked 邏輯出現在世界時鐘 ⇒ 兩個時鐘開始互相依賴 ⇒ 仍然要紅。
+ck("N2) 沒有做 Off-season / Ranked / 真人連線（ranked 只允許出現在 0 成本宣告）",
+  !/offSeason|offseason|ranked|multiplayer|serverClock/i.test(codeOnly(read(P_CLOCK)).replace(/\branked:\s*0,/, "")));
 
 ck("N3) 世界時間契約很小（不得長成第二個賽季系統）",
   (() => {

@@ -118,8 +118,10 @@ console.log("══ Milestone Q1：隊伍身分 / 賽季種子 / 比賽來源 �
   //    **這是刻意的期望變更**：從硬編兩種改成「與契約自己的定義一致」。
   //    Player Challenge Slice 1 依**同一條理由**新增第四種 `challenge`
   //    （非同步 Unranked PvP，工廠是 `originFromChallenge`，驗證與中文名齊備）。
+  //    Competitive Enablement v1 依**同一條理由**新增第五種 `ranked`
+  //    （線上競技排位，工廠是 `originFromRanked`，驗證與中文名齊備；不帶賽事欄位）。
   ck("3) 來源種類就是契約定義的那幾種，呼叫端不得自創",
-    Object.keys(ORIGIN_KINDS).sort().join() === "challenge,fixture,practice,ticket",
+    Object.keys(ORIGIN_KINDS).sort().join() === "challenge,fixture,practice,ranked,ticket",
     Object.keys(ORIGIN_KINDS).join(","));
   ck("3b) 每一種來源都有中文顯示名（畫面與錯誤訊息不出現內部字串）",
     originKindLabel("ticket") === "排隊配對" && originKindLabel("fixture") === "賽程排定"
