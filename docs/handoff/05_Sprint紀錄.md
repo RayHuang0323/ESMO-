@@ -23800,3 +23800,12 @@ CS_RESUME_HOTFIX = RELEASED（main cfca594 → a7afc5c）
 - Production deploy：Deploy Vite site to GitHub Pages #268／36401807251 success；production URL HTTP 200。live smoke 已看到 MOBA battle 持續播放、P/Q/W/E/R HUD、Q skill detail 與 Lv2 數值、Battle Talent 詳情及戰鬥 VFX event。BattleResult.v3／v2 Replay targeted verifier 通過；production quick-finish 的同步模擬在 automation 中未能讀取結果頁，未把該 automation 狀態誤報為 PASS。
 - Android real-device FPS／touch／thermal：DEFERRED_BY_OWNER；不是本次 release blocker，也不宣稱 PASS。
 - v14 = RELEASED YES。未修改 Finance WIP、Blue bias、flicker、Tower、Smite、Competitive、Online Backend、legacy path、Passive P gameplay。
+
+## 2026-09-28 G4 Hotfix：Challenge 快照疲勞外洩（local，未 push／未 deploy）
+
+- 基準：`876f657`／moba-sim.v14；分支 `hotfix/challenge-snapshot-fatigue`（從 origin/main 開，與 Online Foundation v1 無關）。
+- 根因：`snapshotAuthority.publishDefensiveSnapshot` 把帶當下 `energy` 的生涯選手直接送進 `buildPlayerStatSlots`，後者自 Battle Condition UX（`6eda6a2`）起套 `applyFatigueToStats` ⇒ 疲勞被烤進 Player Challenge 防守／出賽快照（energy 3：reflex 60 → 52）。白名單 `normalizeCombatStats` 在縮放之後，擋不住（違反 I13）。
+- 修正：取值**之前**把狀態欄位寫成唯一的 `ONLINE_NORMALIZATION`（condition／morale／energy），只作用於權威層的副本；`buildPlayerStatSlots`、疲勞曲線、Career 開局路徑、生涯選手物件皆不動。
+- 新 gate：`tools/check_challenge_snapshot_fatigue_g4.mjs`（18）；修正前 10/18，修正後 18/18。
+- 模擬版本：**不升**。`snapshotAuthority.js` 依 `simulationVersion.js` 的判準屬「生成」不屬「解讀」，既有凍結快照重播逐位元不變；`check_simulation_version_gate` 55/55。
+- 風險：修正後新發布的疲勞隊伍快照能力會回到原值（比修正前強）；舊快照是凍結值不受影響。挑戰方自己的出賽快照也走同一支，一併修正。

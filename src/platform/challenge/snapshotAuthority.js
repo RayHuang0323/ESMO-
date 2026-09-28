@@ -170,7 +170,14 @@ export function publishDefensiveSnapshot({
   //    客戶端指到不存在的人 ⇒ 這裡就查不到 ⇒ 下面的完整性檢查會擋下來。
   const players = Array.isArray(careerState.players) ? careerState.players : [];
   const lineup = request.seats ?? careerState.lineup ?? null;
-  const slots = buildPlayerStatSlots(players, "blue", lineup);
+  //  ⚠ G4（I13）：`buildPlayerStatSlots` 自 Battle Condition UX 起會套疲勞倍率（讀 `energy`）。
+  //    直接送生涯選手 ⇒ 當下體力被烤進快照能力（energy 3：reflex 60 → 52），
+  //    而下面的白名單正規化發生在縮放**之後**，擋不住。
+  //    ⇒ 取值**之前**先把狀態欄位寫成唯一的 `ONLINE_NORMALIZATION` 基準值。
+  //    只給本層用的副本；生涯選手物件與 Career 開局路徑的疲勞行為完全不動。
+  const { condition, morale, energy } = ONLINE_NORMALIZATION;
+  const onlinePlayers = players.map((p) => (p && typeof p === "object" ? { ...p, condition, morale, energy } : p));
+  const slots = buildPlayerStatSlots(onlinePlayers, "blue", lineup);
   if (slots.length !== SNAPSHOT_SEATS.length) {
     return {
       ok: false, snapshot: null, throttled: false,
