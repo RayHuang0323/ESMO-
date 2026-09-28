@@ -23824,3 +23824,10 @@ CS_RESUME_HOTFIX = RELEASED（main cfca594 → a7afc5c）
 - 驗證（rebase 後）：build ✓；online_foundation_v1 89/89、competitive_enablement_v1 **130/130**（G4 隨 main 的 hotfix 轉綠，本分支未重做）、challenge_snapshot_fatigue_g4 18/18、competition_q1 93、practice_match_v0d 70、general_match_v7a 55、match_source_v0c 21、world_time_v1 46、time_block_v2 47、time_block_v3 69、retention_v7b 58、save_bundle_b1b 86、simulation_version_gate 55、player_challenge slice1–8 全綠、regress 15/15、regress2 8/8。
 - 延後：CS 線上快照（TD-58）；Ranked ticket 開放前須帶 Battle Talent ID（v14 新缺口）；progress25／tactic24 的 BattleResult.v2 舊斷言（verifier debt，main 既有）。
 - 未跑：verify.mjs 長 suite、瀏覽器 gate（本分支無 UI 變更）。
+
+## 2026-09-28 Online Backend Foundation v1 Release
+
+- origin/main fetch 後為 `e6253d0` ⇒ fast-forward 推送 `53f1df2`（normal push，無 force）。Pages deploy：success（run 36443743935）。
+- Release 前 full verify：31/102 PASS；71 段 FAIL 與 main 同簽名（分 6 批於 main worktree 對照，避免 OOM）⇒ zero new regression。
+- 正式站 smoke：`browser_check_prod_v7_release` 44/44（首頁、三個玩法入口無新增、一般對戰打完含收益與容量、快速練習零永久影響、console）、`browser_check_prod_slice7` 29/29（Challenge 建立／結果／重播一致／生涯日期不變）、`browser_check_prod_slice8` 43/43、`browser_check_prod_season_vnext` 30/30。
+- 狀態：**Online Backend Foundation v1 RELEASED**；Competitive disabled、0002 未執行。
