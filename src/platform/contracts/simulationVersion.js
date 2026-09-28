@@ -82,6 +82,7 @@ export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim
  */
 export const SIMULATION_SEMANTICS_FILES = Object.freeze([
   "src/battle/moba/skills/heroSkillGameplay.js",
+  "src/battle/moba/skills/heroSkillLevels.js",
   "src/battle/moba/skills/heroSkillTargetCapabilities.js",
   "src/battle/moba/talents/heroBattleTalents.js",
   //  引擎本體：數值、判定順序、tick 語意
@@ -327,9 +328,9 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   // 2026-09-27: skill-on non-hero capability hits and symmetric phase scaling.
   // Existing Baron wave buff remains separate; skill-off and historical rules are unchanged.
   "moba-sim.v13": "366b671a16d2f12c",
-  // Hero Battle Talent v1 pilot changes skill-on rules for selected pilot heroes.
-  // The v13 fingerprint remains available for historical Replay compatibility.
-  "moba-sim.v14": "8725f1f1bfb4c1ed",
+  // Hero Battle Talent v1 and Skill Level v1 change skill-on rules.
+  // v14 remains an unpublished feature candidate; v13 stays for historical Replay.
+  "moba-sim.v14": "20eb0e6130e1a933",
 });
 
 export const isKnownSimulationVersion = (v) =>

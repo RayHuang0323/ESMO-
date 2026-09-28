@@ -2,6 +2,7 @@ import { heroById, heroSkillIconUrl } from '../../../data/heroDatabase.js';
 import { targetCapabilities } from './heroSkillTargetCapabilities.js';
 import { compileGameplaySkill } from './heroSkillGameplay.js';
 import { applyBattleTalentToRule, battleTalentById } from '../talents/heroBattleTalents.js';
+import { skillLevelChanges } from './heroSkillLevels.js';
 
 const FIELD_LABELS = Object.freeze({
   damage: '基礎傷害', powerRatio: '戰力係數', damageType: '傷害類型', finalMultiplier: '最終倍率',
@@ -48,6 +49,12 @@ export function buildHeroSkillDetail(heroId, slot, live = null, { replay = false
   const rule = live?.rule ?? (selectedTalentId
     ? applyBattleTalentToRule(baseRule, battleTalentById(selectedTalentId), slot) : baseRule);
   const gameplayAvailable = slot !== 'P' && !!rule;
+  const level = live?.level ? { supported: true, current: live.level.current,
+    cap: live.level.cap, next: live.level.next, nextAt: live.level.nextAt } :
+    { supported: false, current: null, cap: null, next: null, nextAt: null };
+  const nextLevel = live?.level?.nextRule ? skillLevelChanges(rule, live.level.nextRule)
+    .map((change) => ({ ...change, label: FIELD_LABELS[change.field] ?? change.field,
+      fromText: format(change.field, change.from), toText: format(change.field, change.to) })) : null;
   return {
     heroId, slot, name: skill.name, iconUrl: heroSkillIconUrl(heroId, slot),
     description: skill.desc ?? '', gameplayAvailable,
@@ -58,9 +65,8 @@ export function buildHeroSkillDetail(heroId, slot, live = null, { replay = false
     cooldownRemaining: gameplayAvailable && Number.isFinite(live?.cd) ? live.cd : null,
     ready: gameplayAvailable && typeof live?.ready === 'boolean' ? live.ready : null,
     targets: targetCapabilities(rule, slot),
-    // v13 QWER uses fixed authored rules. Generic legacy skillData arrays are not runtime levels.
-    level: { supported: false, current: null, next: null },
-    nextLevel: null,
+    level: gameplayAvailable ? level : { supported: false, current: null, cap: null, next: null, nextAt: null },
+    nextLevel: gameplayAvailable ? nextLevel : null,
     availability: slot === 'P' ? '被動尚未實裝；僅提供英雄設定資料' :
       replay && !live ? '此重播未保存個別技能冷卻' : !live ? '此段沒有技能即時狀態' :
         live.ready ? '可用' : `冷卻 ${Math.ceil(live.cd)} 秒`,

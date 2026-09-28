@@ -127,14 +127,14 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
           const live = p.heroSkills?.[key];
           const status = key === 'P' ? 'passive' : !live ? 'unavailable' : live.ready ? 'ready' : 'cooldown';
           return <button key={key} type="button" className={`observer-ability ability-${i} ${status}`}
-            data-skill-slot={key} data-skill-state={status} data-skill-level="unranked"
+            data-skill-slot={key} data-skill-state={status} data-skill-level={live?.level?.current ?? 'unranked'}
             aria-pressed={skill === key} onMouseEnter={() => { if (!mobile) setHoverSkill(key); }}
             onMouseLeave={() => { if (!mobile) setHoverSkill(null); }}
             onClick={() => { setSkill(skill === key ? null : key); setHoverSkill(null); }}
-            aria-label={`${key} ${hero[key] ?? '尚無技能資料'}，${key === 'P' ? '被動尚未實裝' : !live ? '即時狀態未提供' : live.ready ? '可用' : `冷卻 ${Math.ceil(live.cd)} 秒`}，技能未分級`}>
+            aria-label={`${key} ${hero[key] ?? '尚無技能資料'}，${key === 'P' ? '被動尚未實裝' : !live ? '即時狀態未提供' : live.ready ? '可用' : `冷卻 ${Math.ceil(live.cd)} 秒`}，${live?.level ? `技能 Lv${live.level.current}` : '技能等級未保存'}`}>
             <img src={heroSkillIconUrl(r.heroId, key) ?? undefined} alt="" loading="lazy" />
             <b>{key}</b><small>{key === 'P' ? '資料' : live ? live.ready ? '可用' : `${Math.ceil(live.cd)}s` : '—'}</small>
-            <span className="observer-ability-level" title="技能尚未分級">—</span>
+            <span className="observer-ability-level" title={live?.level ? `技能 Lv${live.level.current}/${live.level.cap}` : '技能等級未保存'}>{live?.level ? `Lv${live.level.current}` : '—'}</span>
           </button>;
         })}
       </div>

@@ -33,6 +33,7 @@
 // ============================================================================
 import { WORLD_BOUNDS, PITS, LANES, CAMPS } from "../../../gameData.js";
 import { decodePsRow } from "../../../platform/contracts/mobaReplay.js";
+import { applySkillLevelToRule, SKILL_LEVEL_CAPS } from '../skills/heroSkillLevels.js';
 
 const clamp01 = (v) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0);
 
@@ -184,6 +185,21 @@ export function createReplaySource(replay) {
         const timed = (id, value) => Number.isFinite(value) && value > 0 ? { id, remaining: value } : null;
         const dragon = Number.isFinite(buffRow[4]) && buffRow[4] > 0
           ? { id: "dragon", stacks: buffRow[4], remaining: null } : null;
+        const levelRows = f.sl?.[i];
+        const savedRules = replay?.config?.heroSkillBaseRules?.[pm.id];
+        const savedSkills = levelRows && savedRules ? Object.fromEntries(['Q', 'W', 'E', 'R']
+          .map((slot, slotIndex) => {
+            const row = levelRows[slotIndex];
+            const base = savedRules[slot];
+            if (!base || !Array.isArray(row) || row.length !== 4) return null;
+            const rank = row[0];
+            const rule = applySkillLevelToRule(base, rank);
+            return [slot, { ready: row[2] === 1, cd: row[1], cdMax: rule.cooldown, rule,
+              level: { current: rank, cap: SKILL_LEVEL_CAPS[slot],
+                next: rank < SKILL_LEVEL_CAPS[slot] ? rank + 1 : null,
+                nextAt: row[3] || null,
+                nextRule: rank < SKILL_LEVEL_CAPS[slot] ? applySkillLevelToRule(base, rank + 1) : null } }];
+          }).filter(Boolean)) : null;
         return {
           id: pm.id, side: pm.side, role: pm.role,
           pos: { x: row?.[0] ?? 0, y: row?.[1] ?? 0 },
@@ -194,6 +210,7 @@ export function createReplaySource(replay) {
           // 新 frame.p[8] 是本場等級；同時填 mlv/lv 讓正式 adapter、舊 consumer
           // 都讀同一份已保存 player state，不在 Replay 另算。
           mlv: row?.[8] ?? 1, lv: row?.[8] ?? 1,
+          ...(savedSkills ? { heroSkills: savedSkills } : {}),
           // Milestone E：已擷取 ⇒ 與現場同一組值；舊 Replay 缺 `ps` ⇒ 仍是 null
           //   （view 顯示「陣亡」而不是假的 0s 倒數、不顯示徽章），行為不變。
           respawn: ps ? ps.respawn : null,

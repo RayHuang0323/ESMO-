@@ -6,6 +6,7 @@
 import { create } from "zustand";
 import { resultKey } from "./seasonData.js";
 import { readSeasonPayload, seasonPayload, quarantine } from "./persistence/localSaveProvider.js";
+import { isBattleResult } from "./contracts/battleResultVersion.js";
 
 //  ── B1B：版本化 ＋ 向下相容（B1A 風險 R6）────────────────────────────────
 //  舊格式是**裸陣列** `BattleResult[]`；新格式是 `{ schema, history }`。
@@ -46,7 +47,7 @@ export const useSeasonStore = create((set, get) => ({
 
   /** 唯一入口：終局 BattleResult 入史（防重複） */
   recordResult(result) {
-    if (!result || result.schema !== "BattleResult.v2") return;
+    if (!isBattleResult(result)) return;
     const key = resultKey(result);
     if (get().history.some((r) => resultKey(r) === key)) return;
     const history = [...get().history, result].slice(-HISTORY_CAP);

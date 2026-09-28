@@ -2761,3 +2761,10 @@ NEXT_SPRINT = NOT_STARTED
 - The local release gate now follows the current Fairness contract: the obsolete `max duration <= 40m` assertion was removed, with no replacement fixed duration threshold. Structural pathological, deadlock, unfinished, and cap-hit semantics remain enforced.
 - Clean `dc520f1` and candidate skill-off are apples-to-apples identical for `1000/1000` seeds; skill-on remains `49.8%/50.2%` with pathological `0`. No baseline or threshold rebaselining was performed.
 - Product scope is explicit: `100/100` heroes and `400/400` QWER active gameplay/presentation. Passive P is `100/100` data/description and `0/100` gameplay, deferred to the next phase.
+
+## 2026-09-28 MOBA Skill Icons + Battle Talents + Skill Level v14（Owner approved）
+
+- Owner 已批准正式 Release。候選分支 `feature/moba-skill-icons-talents-v1`、checkpoint `b8cfad7`、整合基線 `origin/main=5c9b414`、candidate simulation `moba-sim.v14`。
+- Release scope：500/500 Skill Icons、100 heroes／200 Battle Talents、400/400 QWER Skill Levels、BattleResult.v3／v2 backward compatibility、Replay 接線。
+- Owner 視覺接受；A 類 23/23、exact duplicate 0、same-hero similarity 0。v13→v14 n=1000 `54.3/45.7` → `53.2/46.8`、0 failures；pacing 無新增 regression。
+- Android 真機 FPS／touch／thermal：`DEFERRED_BY_OWNER`，不列 PASS，也不阻擋本次 Release。

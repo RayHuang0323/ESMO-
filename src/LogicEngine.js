@@ -41,6 +41,10 @@ import {
 //  Item System v1 M2：裝備層（opt-in；未 configureItems ⇒ 完全不執行 ⇒ legacy 逐位元不變）
 import { ItemsEngineRuntime } from "./battle/moba/items/itemsEngineRuntime.js";
 import { OBJ_SKILL_MECHANICS, LANE_SKILL_SINGLE, LANE_SKILL_AREA } from './battle/moba/skills/heroSkillTargetCapabilities.js';
+import {
+  HERO_SKILL_LEVEL_CONTRACT, SKILL_LEVEL_CAPS, skillLevelsAtMatchLevel,
+  applySkillLevelToRule, nextSkillUnlock,
+} from './battle/moba/skills/heroSkillLevels.js';
 
 const MAP_EDGE_PAD = 3;
 //  H.2 導航調參：近場預判距離與重算路徑的冷卻（tick）。
@@ -444,14 +448,38 @@ export class LogicEngine {
   /** Receives only validated, authored mechanics from heroSkillGameplay adapter. */
   configureHeroSkills(config) {
     if (!config?.players || !Object.keys(config.players).length) return;
-    this.heroSkills = config.players;
+    this.heroSkillBaseRules = config.players;
+    this.heroSkills = Object.fromEntries(Object.entries(config.players).map(([seat, rules]) => [seat, { ...rules }]));
     this.heroSkillsOn = true;
     this.heroBattleTalents = config.talents ?? null;
+    this.heroSkillLevelSystem = config.skillLevels?.version === HERO_SKILL_LEVEL_CONTRACT;
+    this.heroSkillLevelPreferences = config.skillLevels?.preferences ?? {};
     this.heroSkillPending = [];
     this._objSkillHits = [];
     this._laneSkillHits = [];                       // laneSkillV1：排隊中的清兵傷害
     this.laneSkillStats = { casts: 0, kills: 0 };  // 量測用（不進 snapshot）
-    for (const p of this.players) if (this.heroSkills[p.id]) p.heroSkillReadyAt = {};
+    for (const p of this.players) if (this.heroSkills[p.id]) {
+      p.heroSkillReadyAt = {};
+      if (this.heroSkillLevelSystem) {
+        p.heroSkillLevels = skillLevelsAtMatchLevel(p.mlv, this.heroSkillBaseRules[p.id],
+          this.heroSkillLevelPreferences[p.id]);
+        p.heroSkillLevelHistory = [];
+      }
+    }
+  }
+
+  /** Existing match XP is the only upgrade clock; no extra RNG or XP path. */
+  _updateHeroSkillLevels(p) {
+    if (!this.heroSkillLevelSystem || !this.heroSkillBaseRules?.[p.id]) return;
+    const base = this.heroSkillBaseRules[p.id];
+    const ranks = skillLevelsAtMatchLevel(p.mlv, base, this.heroSkillLevelPreferences[p.id]);
+    for (const slot of ['Q', 'W', 'E', 'R']) {
+      const previous = p.heroSkillLevels[slot];
+      if (ranks[slot] === previous) continue;
+      p.heroSkillLevels[slot] = ranks[slot];
+      this.heroSkills[p.id][slot] = applySkillLevelToRule(base[slot], ranks[slot]);
+      p.heroSkillLevelHistory.push({ t: this.t, slot, level: ranks[slot], matchLevel: p.mlv });
+    }
   }
 
   _heroTaunter(p) {
@@ -1851,6 +1879,7 @@ export class LogicEngine {
       p.mlv = r.mlv;
       if (this.rules.maxXpLevelsPerTick) p.xpLevelTick = this.t;
       this._applyMatchLevel(p);
+      if (this.heroSkillsOn) this._updateHeroSkillLevels(p);
     }
   }
   /** 等級 → 本場 power / maxHp（以 Lv1 基準錨定；升級補上「新增的那段血」，不是全補）。 */
@@ -6038,7 +6067,16 @@ export class LogicEngine {
           cd: Math.max(0, Math.round(((p.heroSkillReadyAt[slot] ?? 0) - this.t) * 10) / 10),
           cdMax: rule.cooldown,
           rule,
+          ...(this.heroSkillLevelSystem ? { level: {
+            current: p.heroSkillLevels[slot], cap: SKILL_LEVEL_CAPS[slot],
+            next: p.heroSkillLevels[slot] < SKILL_LEVEL_CAPS[slot] ? p.heroSkillLevels[slot] + 1 : null,
+            nextAt: nextSkillUnlock(p.mlv, this.heroSkillBaseRules[p.id],
+              this.heroSkillLevelPreferences[p.id], slot),
+            nextRule: p.heroSkillLevels[slot] < SKILL_LEVEL_CAPS[slot]
+              ? applySkillLevelToRule(this.heroSkillBaseRules[p.id][slot], p.heroSkillLevels[slot] + 1) : null,
+          } } : {}),
         }])),
+        ...(this.heroSkillLevelSystem ? { heroSkillLevelHistory: p.heroSkillLevelHistory.map((event) => ({ ...event })) } : {}),
         ...(this.heroBattleTalents?.[p.id] ? { heroBattleTalent: { ...this.heroBattleTalents[p.id] } } : {}),
       } : {}) })),
       towers: Object.fromEntries(Object.entries(this.towers).map(([k, t]) => [k, { side: t.side, lane: t.lane, tier: t.tier, pos: t.pos, hp: clamp(t.hp / (t.maxHp ?? (t.lane === "nexus" ? NEXUS_HP : TOWER_HP)), 0, 1) }])),

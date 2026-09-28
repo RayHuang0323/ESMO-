@@ -72,7 +72,7 @@ export function classifyBattleTalentProfile(hero) {
   };
 }
 export const BATTLE_TALENT_PROFILES = Object.freeze(CHAMPIONS_100.map(classifyBattleTalentProfile));
-export const battleTalentOptions = (heroId) => PILOT[heroId] ?? [];
+export const battleTalentOptions = (heroId) => PILOT[heroId] ?? GENERATED[heroId] ?? [];
 export const battleTalentById = (id) => battleTalentOptions(String(id).split(':')[0]).find((row) => row.id === id) ?? null;
 
 function aiScore(talent, ownHeroes, enemyHeroes) {
@@ -110,7 +110,67 @@ const FIELDS = Object.freeze({
   damage: ['damage'], cooldown: ['cooldown'], range: ['range'], duration: ['duration', 'wallDuration', 'guardDuration'],
   area: ['radius', 'width', 'halfAngle'], shield: ['shieldPctMaxHp', 'armorMultiplier'],
   heal: ['healAmount'], timing: ['travel'], ultimate: ['damage', 'halfAngle', 'duration'],
+  control: ['controlDuration', 'rootDuration', 'silenceDuration', 'slowDuration', 'tauntDuration'],
+  mark: ['markDuration', 'damageAmp'], mitigation: ['reduction', 'guardDuration'],
+  haste: ['speedFactor', 'duration'],
 });
+
+// The remaining 90 heroes are authored from their canonical QWER mechanics, not
+// a second hero mapping. Each pair changes a different skill and gameplay axis.
+const ATTACK_FIELDS = Object.freeze([
+  ['radius', 'area'], ['width', 'area'], ['halfAngle', 'area'],
+  ['controlDuration', 'control'], ['rootDuration', 'control'],
+  ['damage', 'damage'], ['range', 'range'], ['cooldown', 'cooldown'],
+]);
+const COUNTER_FIELDS = Object.freeze([
+  ['shieldPctMaxHp', 'shield'], ['healAmount', 'heal'], ['reduction', 'mitigation'],
+  ['guardDuration', 'mitigation'], ['markDuration', 'mark'], ['damageAmp', 'mark'],
+  ['silenceDuration', 'control'], ['slowDuration', 'control'],
+  ['wallDuration', 'duration'], ['duration', 'duration'], ['speedFactor', 'haste'],
+  ['radius', 'area'], ['controlDuration', 'control'], ['rootDuration', 'control'],
+  ['travel', 'timing'], ['cooldown', 'cooldown'], ['range', 'range'],
+]);
+const FIELD_PHRASE = Object.freeze({
+  damage: '基礎傷害', range: '施放距離', cooldown: '冷卻時間', radius: '作用半徑',
+  width: '判定寬度', halfAngle: '扇形角度', controlDuration: '控制時間',
+  rootDuration: '定身時間', silenceDuration: '沉默時間', slowDuration: '減速時間',
+  shieldPctMaxHp: '護盾強度', healAmount: '治療量', reduction: '減傷幅度',
+  guardDuration: '守護時間', markDuration: '印記時間', damageAmp: '印記增傷',
+  wallDuration: '牆體維持時間', duration: '增益時間', speedFactor: '加速幅度',
+  travel: '命中時間',
+});
+function chooseTalentField(hero, slots, fields, forbidden = null) {
+  for (const slot of slots) {
+    if (slot === forbidden?.slot) continue;
+    const rule = hero.skills[slot]?.gameplay;
+    for (const [field, primitive] of fields) {
+      if (primitive === forbidden?.primitive || !Number.isFinite(rule?.[field]) || rule[field] <= 0) continue;
+      // Authoritative compiler must contain this field; do not talent a prose-only value.
+      if (!FIELDS[primitive]?.includes(field)) continue;
+      return { slot, field, primitive };
+    }
+  }
+  throw new Error(`No distinct battle talent field for ${hero.id}`);
+}
+function generatedTalent(hero, code, axis, choice, aiStyle) {
+  const skill = hero.skills[choice.slot];
+  const faster = choice.field === 'cooldown' || choice.field === 'travel';
+  const factor = faster ? 0.94 : 1.06;
+  const phrase = FIELD_PHRASE[choice.field];
+  return talent(hero.id, code, `${hero.zh}・${skill.name}${axis}`,
+    `${skill.name}的${phrase}${faster ? '小幅縮短' : '小幅提升'}；實戰數值以技能詳情為準。`,
+    aiStyle, choice.slot, choice.field, factor, choice.primitive);
+}
+const GENERATED = Object.freeze(Object.fromEntries(CHAMPIONS_100
+  .filter((hero) => !PILOT[hero.id])
+  .map((hero) => {
+    const attack = chooseTalentField(hero, ['Q', 'E', 'R', 'W'], ATTACK_FIELDS);
+    const counter = chooseTalentField(hero, ['W', 'R', 'E', 'Q'], COUNTER_FIELDS, attack);
+    return [hero.id, Object.freeze([
+      generatedTalent(hero, 'battle-form', '・攻勢', attack, 'frontline'),
+      generatedTalent(hero, 'counter-form', '・應變', counter, 'protect'),
+    ])];
+  })));
 
 /** Compiles a selected talent into the same authoritative QWER rule used by LogicEngine. */
 export function applyBattleTalentToRule(rule, selected, slot) {

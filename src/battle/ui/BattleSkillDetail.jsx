@@ -19,7 +19,7 @@ export default function BattleSkillDetail({ heroId, slot, live, selectedTalentId
       {!detail.gameplayAvailable && <p className="observer-skill-warning">被動目前只有資料／描述與圖示，不會在本場觸發。</p>}
       {detail.gameplayAvailable && <>
         <div className="observer-skill-keyvals">
-          <span>技能等級 <b>未分級</b></span><span>基礎冷卻 <b>{detail.baseCooldown} 秒</b></span>
+          <span>技能等級 <b>{detail.level.supported ? `Lv${detail.level.current}/${detail.level.cap}` : '未保存'}</b></span><span>當前冷卻 <b>{detail.baseCooldown} 秒</b></span>
           <span>目前狀態 <b>{detail.availability}</b></span><span>射程 <b>{detail.rule.range}</b></span>
         </div>
         <h4>實戰效果數值</h4>
@@ -34,7 +34,14 @@ export default function BattleSkillDetail({ heroId, slot, live, selectedTalentId
           </span>)}
         </div>
         <p className="observer-skill-footnote">命中仍需符合射程、目標與時機；傷害會受本場戰力、抗性及增減益影響。</p>
-        <p className="observer-skill-warning">下一級：目前沒有正式技能升級演算，因此不提供虛構的提升數值。</p>
+        {detail.level.supported ? detail.level.next
+          ? <section className="observer-skill-next" data-skill-next-level={detail.level.next}>
+              <h4>下一級 Lv{detail.level.next} · 本場英雄 Lv{detail.level.nextAt} 解鎖</h4>
+              <div className="observer-skill-values">{detail.nextLevel?.map((change) =>
+                <span key={change.field}><small>{change.label}</small><b>{change.fromText} → {change.toText}</b></span>)}</div>
+            </section>
+          : <p className="observer-skill-warning">此技能已達滿級。</p>
+          : <p className="observer-skill-warning">這段資料未保存正式技能等級；不推測下一級數值。</p>}
       </>}
     </div>
   </aside>;

@@ -6,6 +6,7 @@
 // ============================================================================
 import { playerRating, participation, mvpCandidate, towersDestroyedBy } from "./battleEvents.js";
 import { TEAMS, HERO_ASSIGN } from "../data/roster.js";
+import { BATTLE_RESULT_VERSION } from "../platform/contracts/battleResultVersion.js";
 
 const countBy = (events, type) => {
   const n = { blue: 0, red: 0 };
@@ -22,7 +23,7 @@ export function snapshotToBattleResult(snap, events = [], { heroAssign = HERO_AS
   if (!snap.over) throw new Error("snapshotToBattleResult: snapshot 尚未終局（over=false）");
   const mvp = mvpCandidate(snap);
   return {
-    schema: "BattleResult.v2",
+    schema: BATTLE_RESULT_VERSION,
     mode: "moba",
     teams: { blue: { ...teams.blue }, red: { ...teams.red } },
     winner: snap.winner,
@@ -43,6 +44,8 @@ export function snapshotToBattleResult(snap, events = [], { heroAssign = HERO_AS
       id: p.id, side: p.side, role: p.role,
       heroId: heroAssign[p.id] ?? null,          // MOBA：Player 操作 Hero
       lv: p.lv ?? 1,
+      ...(p.heroSkills ? { heroSkillLevels: Object.fromEntries(Object.entries(p.heroSkills)
+        .map(([slot, live]) => [slot, live.level?.current ?? null])) } : {}),
       k: p.k, d: p.d, a: p.a || 0, gold: p.gold || 0,
       dmg: p.dmg || 0, heal: p.heal || 0, twrDmg: p.twrDmg || 0,
       participation: participation(p, snap),      // 共用純函數（非 UI 重新統計）

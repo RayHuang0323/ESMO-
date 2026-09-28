@@ -9,11 +9,19 @@ import {
 assert.equal(CHAMPIONS_100.filter((hero) => classifyBattleTalentProfile(hero)?.arch).length, 100);
 assert.equal(BATTLE_TALENT_PILOT_HEROES.length, 10);
 assert.equal(new Set(BATTLE_TALENT_PILOT_HEROES).size, 10);
-for (const heroId of BATTLE_TALENT_PILOT_HEROES) {
+let covered = 0;
+const allIds = new Set();
+for (const hero of CHAMPIONS_100) {
+  const heroId = hero.id;
   const options = battleTalentOptions(heroId);
   assert.equal(options.length, 2, `${heroId} needs two real choices`);
   assert.notEqual(options[0].id, options[1].id);
+  assert.notEqual(options[0].effects[0].slot, options[1].effects[0].slot, `${heroId} choices must change different skills`);
+  assert.notEqual(options[0].effects[0].primitive, options[1].effects[0].primitive, `${heroId} choices must offer different gameplay axes`);
   for (const talent of options) {
+    assert(!allIds.has(talent.id), `duplicate talent ${talent.id}`);
+    allIds.add(talent.id);
+    assert(talent.name.includes(hero.zh) || BATTLE_TALENT_PILOT_HEROES.includes(heroId), `${heroId} needs hero identity in the name`);
     assert(talent.effects.length > 0);
     const effect = talent.effects[0];
     const baseline = compileGameplaySkill(heroId, effect.slot);
@@ -21,7 +29,10 @@ for (const heroId of BATTLE_TALENT_PILOT_HEROES) {
     assert.notEqual(modified[effect.field], baseline[effect.field], `${talent.id} must change gameplay`);
     assert.equal(compileGameplaySkill(heroId, effect.slot)[effect.field], baseline[effect.field], 'database must remain unchanged');
   }
+  covered++;
 }
+assert.equal(covered, 100);
+assert.equal(allIds.size, 200);
 const roster = Object.fromEntries(BATTLE_TALENT_PILOT_HEROES.map((heroId, i) => [
   `${i < 5 ? 'b' : 'r'}${i % 5 + 1}`, { heroId },
 ]));
@@ -37,4 +48,4 @@ const mirrored = selectBattleTalents(mirror);
 assert.equal(mirrored.players.b1.id, mirrored.players.r1.id, 'mirrored roster must select the same AI talent');
 assert.notEqual(selectBattleTalents(mirror, { b1: battleTalentOptions('sting')[0].id }).players.b1.id,
   battleTalentOptions('sting')[0].id, 'a different hero talent must be rejected');
-console.log('Battle Talent v1 contract: 100 profiles / 10 pilots / 20 choices / deterministic AI PASS');
+console.log('Battle Talent v1 contract: 100 profiles / 100 heroes / 200 choices / deterministic AI PASS');

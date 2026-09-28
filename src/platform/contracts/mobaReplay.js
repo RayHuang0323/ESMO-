@@ -26,6 +26,8 @@
 //    上限 MAX_FRAMES 到頂即停止擷取並標記 truncated（不無限成長）。
 // ============================================================================
 
+import { isBattleResultVersion } from "./battleResultVersion.js";
+
 export const MOBA_REPLAY_VERSION = "MobaReplay.v1";
 
 /**
@@ -103,6 +105,15 @@ export function snapshotToFrame(snap) {
       // 欄位位置與 contract 不變，只改回正式 snapshot 的 mlv。
       pl.k, pl.d, pl.a || 0, Math.round(pl.gold || 0), pl.mlv ?? pl.lv ?? 1,
     ]),
+    // HeroSkillLevel.v1: sampled authoritative rank/cooldown/unlock state.
+    // The base rule is saved once in replay.config; old replays omit this field.
+    ...(snap.players.some((pl) => pl.heroSkills && Object.values(pl.heroSkills).some((sk) => sk.level)) ? {
+      sl: snap.players.map((pl) => ['Q', 'W', 'E', 'R'].map((slot) => {
+        const live = pl.heroSkills?.[slot];
+        return live?.level ? [live.level.current, round2(live.cd), live.ready ? 1 : 0,
+          live.level.nextAt ?? 0] : [];
+      })),
+    } : {}),
     tw: Object.fromEntries(Object.entries(snap.towers).map(([id, t]) => [id, round3(t.hp)])),
     dr: snap.dragon?.alive ? 1 : 0,
     br: snap.baron?.alive ? 1 : 0,
@@ -224,7 +235,7 @@ export function createMobaReplay({
     events,                                   // battleStore.log 摘要：{ t, type, side, text }
     playersMeta,                              // [{ id, side, role }] — frame.p 的固定順序
     towersMeta,                               // { towerId: { side, lane, pos } } — 位置只存一次
-    resultSummary,                            // { winner, score:{blue,red}, duration, mvpId }
+    resultSummary,                            // { resultSchema, winner, score:{blue,red}, duration, mvpId }
     truncated,
   };
 }
@@ -246,6 +257,12 @@ export function validateMobaReplay(r) {
       prev = f.t;
       if (!Array.isArray(f.p) || f.p.some((row) => !Array.isArray(row) || row.some((v) => !Number.isFinite(v)))) {
         errors.push(`frame[${i}].p 含非有限數值`); break;
+      }
+      if (f.sl !== undefined && (!Array.isArray(f.sl) || f.sl.length !== f.p.length ||
+        f.sl.some((player) => !Array.isArray(player) || player.length !== 4 ||
+          player.some((skill) => !Array.isArray(skill) || (skill.length !== 0 &&
+            (skill.length !== 4 || skill.some((value) => !Number.isFinite(value)))))))) {
+        errors.push(`frame[${i}].sl 技能等級形狀錯誤`); break;
       }
       if (f.mn !== undefined && (!Array.isArray(f.mn) || f.mn.length !== 6 ||
         f.mn.some((group) => !Array.isArray(group) ||
@@ -271,6 +288,12 @@ export function validateMobaReplay(r) {
     }
   }
   if (!Array.isArray(r.events)) errors.push("events 必須為陣列");
+  if (r.resultSummary !== null && r.resultSummary !== undefined) {
+    if (typeof r.resultSummary !== "object" || Array.isArray(r.resultSummary)) errors.push("resultSummary 必須為物件");
+    else if (r.resultSummary.resultSchema !== undefined && !isBattleResultVersion(r.resultSummary.resultSchema)) {
+      errors.push("resultSummary.resultSchema 不是支援的 BattleResult version");
+    }
+  }
   if (!Array.isArray(r.playersMeta) || (r.frames?.length && r.playersMeta.length !== (r.frames[0].p?.length ?? 0)))
     errors.push("playersMeta 與 frame.p 長度不一致");
   if (!Number.isFinite(r.duration) || r.duration < 0) errors.push("duration 必須為非負數字");

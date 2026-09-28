@@ -23767,3 +23767,26 @@ CS_RESUME_HOTFIX = RELEASED（main cfca594 → a7afc5c）
 - 資料風險：`heroDatabase.skills[].desc` 為設定文案，少數細節未由正式 QWER 規則支援；UI 清楚標出「英雄設定描述」，並註明實戰以編譯規則／快照為準。後續需逐招校正文案，不在本輪捏造 Gameplay 效果。
 - 最終 flat gate：runtime29 核心 35/35（9 段巢狀項目明確 SKIP，分別另驗）；`check_moba_tactic24` 29/29、`check_moba_stats28` 21/21、`check_talent27` 37/37、`check_moba_experience26` 29/29、`check_progress25` 33/33、`check_cs23` 28/28、presentation29b2 12/12、controls29b3 18/18、flow09、regress／regress2、Items M2 53/53、Hero Skills release gate、simulationVersion 54/54、build 均通過。pacing 在候選及乾淨 `5c9b414` **同為 23/25／exit 1**，同兩條失敗且統計逐項相同（5/10/15/20 分擊殺 p50=0/1/4/10、終局15、首殺 p10/p50/p90=276/589/854 秒），無新增紅燈；沒有修改 pacing gate。`check_moba_side_relative_p0a` 8/8、navigation mirror P0-B 14/14。
 - 最終 browser：desktop／390px 各 5 HUD icon、5 英雄面板 icon、6 次技能詳情、所選 pilot 天賦進正式 snapshot；手機 320／360／390／430px 均無水平溢出，page／console／shader errors 0。真機觸控／FPS 未測，仍待 Owner Review。預覽僅本機服務，沒有部署。
+
+## 2026-09-28 Final Closure Audit 補記
+
+- flat runner 指定 13 項後，11 項通過、2 項未通過。通過：`tactic24` 29/29、`cs23` 28/28、`progress25` 33/33、`experience26` 29/29、`stats28` 21/21、`regress` 15/15、`regress2` 8/8、`runtime29` 35/35、`presentation29b2` 12/12、`controls29b3` 18/18、production build。未通過：`talent27` 36/37、`pacing29b1` 23/25。
+- `talent27` 唯一失敗是斷言 26「不修改 BattleResult.v2」。候選在 `snapshotToBattleResult` 增加 `heroSkillLevels`，但 schema 仍標為 `BattleResult.v2`；這是受保護契約的實際差異，本次稽核未自行改契約或放寬 verifier。Owner 需先決定保留相容擴充或升版／調整契約，再進入後續放行。
+- `pacing29b1` 在候選與乾淨 `5c9b414` 基線同為 23/25，且兩項相同：S29B1 擊殺分布門檻、首殺 p50 門檻；兩邊讀值都是 5/10/15/20 分擊殺 p50 = 0/1/4/10、終局 p50 = 15、首殺 p10/p50/p90 = 276/589/854 秒。確認為既有基線紅燈，未修改 pacing verifier。
+- Items M3 verifier 仍為 60/66，未修改斷言。6 個差異檢查依賴 M3 當時的原始碼／UI 形狀：要求 `LogicEngine` 與 `simulationVersion` 無後續技能等級改動、把 M3b CSS 後所有規則都視為裝備專用、要求舊版技能佔位文案、要求 `onNext` 舊參數數量，以及要求 `AppShell`／`GameView` 只有舊戰術設定欄位。這些輸出是跨 Sprint 形狀差異，不代表 M3 裝備 runtime 或 replay 斷言失敗；M3 G11 與 replay G13/G14 通過。沒有改 verifier 讓結果轉綠。
+- 瀏覽器 verifier 修正：Playwright `wait_for_function` 的 async predicate 會回傳立即為真的 Promise，因此改為同步讀取 `data-skill-level`；測試英雄改用同一 fixture 的 jungle `b2`，避免 lane `b1` 在測試時限內尚未升級。桌面 W 技能由 match level 1 的 Lv1 升至 level 3 的 Lv2，規則 cooldown 11→10.67 秒、silenceDuration 1.59→1.6854 秒；320/360/390/430px 無水平溢出，page／console／shader errors 0。這是驗收器校正，未改產品程式碼。
+- 500 個技能圖示中心 SVG 輪廓皆不同、重複群組 0、同英雄近似對 0；視覺近似稽核仍列出 1113 組跨英雄相似候選，需 Owner 做最後視覺判斷。手機觸控與 FPS 未經真機實測。
+- 判定：`READY_TO_OWNER_REVIEW = NO`（受保護的 `BattleResult.v2` 差異尚未裁決）；`READY_TO_RELEASE = NO`。本輪不 commit／push／deploy。
+## 2026-09-28 Final Closure blocker review
+
+- `BattleResult.v3`：`snapshotToBattleResult` 新結果版本改為 v3；v2 由 shared version helper 保持讀取相容。Replay `resultSummary.resultSchema`、serializer/deserializer 與 targeted verifier 已對齊。
+- Icon review：既有 1113 組跨英雄候選先以 grayscale edge pair 聚成 179 clusters；針對 13 組距離 4 與 4 組距離 6 的同模板風險，共調整 17 張 SVG。refinement 後為 999 組候選、196 clusters；其餘為可接受的共享 shield/dash/projectile/heal/stun 語言。
+- 驗證：`check_battle_result_v3_replay.mjs` PASS、`check_moba_skill_levels_v1.mjs` PASS、final 500 icon audit、build、`git diff --check` 均列入本輪 closure；沒有重跑 n=1000、沒有 push/deploy。
+
+## 2026-09-28 MOBA Skill Icons + Battle Talents + Skill Level v14 Release preparation
+
+- Owner Review 已接受並批准 Release。`feature/moba-skill-icons-talents-v1` 以 checkpoint `b8cfad7` 為基礎，整合目標 `origin/main=5c9b414`；candidate simulation 為 `moba-sim.v14`。
+- Release scope：500/500 Skill Icons、A 類 23/23、100 heroes／200 Battle Talents、400/400 QWER Skill Levels、BattleResult.v3／v2 backward compatibility、Replay 接線。
+- Owner 已接受視覺；exact duplicate 0、same-hero similarity 0。n=1000 沿用已完成的 v13 `54.3/45.7` → v14 `53.2/46.8`、0 failures；pacing 無新增 regression。
+- Android 真機 FPS／touch／thermal 明確標記 `DEFERRED_BY_OWNER`，不寫成 PASS，亦不阻擋本次 Release。
+- 正式 release gates、selective staging、main integration、Pages deploy 與 production smoke 於本節之後追加結果；不納入 `tmp/`、`review/` artifacts 或 Finance WIP。

@@ -1,10 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="毒蛇格鬥士 E 毒液噴濺" data-skill-id="dushe:E">
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="毒蛇格鬥士 E 毒液噴濺" data-skill-id="dushe:E" data-scene="sweep">
 <title>毒蛇格鬥士 · E 毒液噴濺</title>
 <defs><radialGradient id="ground"><stop stop-color="#2f5c32"/><stop offset="1" stop-color="#07111e"/></radialGradient><linearGradient id="bright" x2="1" y2="1"><stop stop-color="#f4ffd9"/><stop offset=".52" stop-color="#9ee46b"/><stop offset="1" stop-color="#2f5c32"/></linearGradient><linearGradient id="metal" x2="1" y2="1"><stop stop-color="#9ee46b"/><stop offset="1" stop-color="#2f5c32"/></linearGradient><radialGradient id="accent"><stop stop-color="#f4ffd9" stop-opacity=".9"/><stop offset="1" stop-color="#9ee46b" stop-opacity=".25"/></radialGradient></defs>
-<rect x="3" y="3" width="122" height="122" rx="19" fill="url(#ground)" stroke="#9ee46b" stroke-width="3"/>
-<circle cx="64" cy="64" r="51" fill="url(#accent)" opacity=".27"/>
-<g opacity=".65"><path d="M8 100 Q19 60 38 38 M119 31 Q99 57 93 85 M14 76 Q29 80 31 60 M113 59 Q99 54 96 70" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
-<g opacity=".78"><path d="M11 97 L41 69 M86 38 L117 9 M18 113 L33 97" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
-<g transform="translate(-3 3) rotate(0 64 64)"><path d="M33 92 L52 38 Q77 31 103 35 L91 76 L61 102 Z" fill="url(#metal)" stroke="url(#bright)" stroke-width="3.5" stroke-linejoin="round"/><path d="M50 83 Q70 60 96 58 M34 102 L24 111" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
-<g><circle cx="31" cy="37" r="1" fill="#f4ffd9" opacity=".8"/><circle cx="104" cy="48" r="1" fill="#f4ffd9" opacity=".8"/><circle cx="59" cy="107" r="1" fill="#f4ffd9" opacity=".8"/></g><path d="M18 17 L35 17 M93 111 L110 111" stroke="#f4ffd9" stroke-width="2" opacity=".7"/>
+<rect x="3" y="3" width="122" height="122" rx="15" fill="url(#ground)" stroke="#9ee46b" stroke-width="2.5"/>
+<path d="M18 104 Q29 15 99 23 L115 80 Q65 123 18 104 Z" fill="url(#accent)" opacity=".2"/>
+<g><path d="M20 82 Q64 108 110 77" fill="none" stroke="url(#bright)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="1"/><g transform="translate(40 32) scale(.5)" opacity=".95"><path d="M29 88 Q32 45 88 22 Q96 68 53 99 Q37 104 29 88 Z" fill="url(#metal)" stroke="url(#bright)" stroke-width="3" stroke-linejoin="round" opacity="1"/><path d="M32 94 Q60 69 87 28 M49 67 L31 56 M67 48 L76 70" fill="none" stroke="url(#bright)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="1"/></g></g>
 </svg>

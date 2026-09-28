@@ -110,6 +110,46 @@ with sync_playwright() as p:
                     assert '實戰效果以以下正式規則為準' in detail.inner_text()
                     page.screenshot(path=str(OUT / f'{label}-skill-detail.png'))
                 page.locator('.observer-skill-detail-head button').click()
+            upgrade_evidence = None
+            if not mobile:
+                # The jungle seat reaches rank unlocks sooner in this browser fixture.
+                page.locator('[data-seat="b2"]').click()
+                upgrade_slot = page.evaluate("""async () => {
+                  const { useGameStore } = await import('/ESMO-/src/useGameStore.js');
+                  const skills = useGameStore.getState().snapshot.players.find(p => p.id === 'b2').heroSkills;
+                  return ['Q','W','E'].sort((a,b) => skills[a].level.nextAt - skills[b].level.nextAt)[0];
+                }""")
+                selector = f'[data-testid="observer-dock"] [data-skill-slot="{upgrade_slot}"]'
+                page.locator(selector).click()
+                before = page.evaluate("""async slot => {
+                  const { useGameStore } = await import('/ESMO-/src/useGameStore.js');
+                  const p = useGameStore.getState().snapshot.players.find(p => p.id === 'b2');
+                  return {heroId: p.heroSkills[slot].rule.skillId.split(':')[0], matchLevel: p.mlv,
+                    skillLevel: p.heroSkills[slot].level.current, rule: p.heroSkills[slot].rule};
+                }""", upgrade_slot)
+                assert before['skillLevel'] == 1
+                page.screenshot(path=str(OUT / 'desktop-upgrade-before.png'))
+                page.locator('.observer-skill-detail-head button').click()
+                speed = page.locator('[data-testid="match-speed-4"]').first
+                assert speed.count() and speed.is_visible(), 'formal 4× battle speed control unavailable'
+                speed.click()
+                # Keep the predicate synchronous: Playwright's poller tests the returned value itself.
+                page.wait_for_function("""selector => {
+                  const button = document.querySelector(selector);
+                  return Number(button?.getAttribute('data-skill-level')) >= 2;
+                }""", arg=selector, timeout=240000, polling=1000)
+                page.locator(selector).click()
+                after = page.evaluate("""async slot => {
+                  const { useGameStore } = await import('/ESMO-/src/useGameStore.js');
+                  const p = useGameStore.getState().snapshot.players.find(p => p.id === 'b2');
+                  return {heroId: p.heroSkills[slot].rule.skillId.split(':')[0], matchLevel: p.mlv,
+                    skillLevel: p.heroSkills[slot].level.current, rule: p.heroSkills[slot].rule};
+                }""", upgrade_slot)
+                assert after['heroId'] == before['heroId'] and after['skillLevel'] >= 2
+                assert after['rule'] != before['rule'], 'level-up did not alter authoritative rule'
+                page.screenshot(path=str(OUT / 'desktop-upgrade-after.png'))
+                page.locator('.observer-skill-detail-head button').click()
+                upgrade_evidence = {'slot': upgrade_slot, 'before': before, 'after': after}
             page.locator('.observer-identity').click()
             assert page.locator('[data-skill-slot]').count() == 10, 'hero sheet must also show five skills'
             page.locator('[data-skill-slot="Q"]').last.click()
@@ -130,7 +170,7 @@ with sync_playwright() as p:
                              'mobileWidthsOverflow': mobile_widths,
                              'pageConsoleErrors': len(errors),
                              'shaderErrors': len([e for e in errors if any(t in e.lower() for t in ['shader', 'glsl', 'webgl'])]),
-                             'errors': errors}
+                             'errors': errors, 'upgradeEvidence': upgrade_evidence}
         except Exception as e:
             page.screenshot(path=str(OUT / f'{label}-failure.png'), full_page=True)
             report[label] = {'error': str(e), 'state': inspect(page), 'browserErrors': errors[:5]}

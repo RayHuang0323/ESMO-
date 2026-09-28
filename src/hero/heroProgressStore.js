@@ -19,6 +19,7 @@ import { create } from "zustand";
 import { applyMatchResult, buildLoadout, createInitialProgress } from "./heroProgress.js";
 import { HERO_ASSIGN, ALL_HERO_IDS } from "../data/roster.js";
 import { readHeroProgressPayload, heroProgressPayload, quarantine } from "../platform/persistence/localSaveProvider.js";
+import { isBattleResult } from "../platform/contracts/battleResultVersion.js";
 
 const KEY = "esmo.heroProgress.v2";   // Sprint09：heroId 對接 CHAMPIONS_100，鍵空間更換
 const canLS = typeof localStorage !== "undefined";
@@ -53,7 +54,7 @@ export const useHeroProgressStore = create((set, get) => ({
 
   /** Sprint09：只消費 BattleResult（唯一來源），不再自行從 snapshot 演算 */
   recordBattleResult(br) {
-    if (!br || br.schema !== "BattleResult.v2") return null;
+    if (!isBattleResult(br)) return null;
     const key = `${br.winner}|${br.duration}|${br.score.blue}:${br.score.red}`;
     if (get().lastRecordedKey === key) return null;
     const assign = Object.fromEntries(br.players.map((p) => [p.id, p.heroId]));  // 由 result 推導

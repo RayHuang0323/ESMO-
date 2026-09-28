@@ -106,7 +106,13 @@ export function useBattleFeed(draft = null, { roster = null, tacticId = null } =
           events: bs.log,
           // S29：把**本場實際產生的**播報原封存進 Replay（Replay 不重新生成對話）
           comms: useBattleStore.getState().comms,
-          resultSummary: { winner: result.winner, score: { ...result.score }, duration: result.duration, mvpId: result.mvpId },
+          resultSummary: {
+            resultSchema: result.schema,
+            winner: result.winner,
+            score: { ...result.score },
+            duration: result.duration,
+            mvpId: result.mvpId,
+          },
           tacticMeta: result.tactic ?? null,
         });
 

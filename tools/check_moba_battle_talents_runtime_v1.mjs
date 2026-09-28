@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { CHAMPIONS_100 } from '../src/data/heroDatabase.js';
 import { LogicEngine } from '../src/LogicEngine.js';
 import { toEngineHeroSkills } from '../src/battle/moba/skills/heroSkillGameplay.js';
 import { BATTLE_TALENT_PILOT_HEROES, battleTalentOptions, selectBattleTalents } from '../src/battle/moba/talents/heroBattleTalents.js';
@@ -14,7 +15,7 @@ assert.equal(Object.keys(config.talents).length, 10);
 assert.notDeepEqual(config.players.b1, toEngineHeroSkills(roster).players.b1);
 
 let verifiedEffects = 0;
-for (const heroId of BATTLE_TALENT_PILOT_HEROES) {
+for (const heroId of CHAMPIONS_100.map((hero) => hero.id)) {
   const single = { b1: { heroId } };
   const base = toEngineHeroSkills(single).players.b1;
   for (const option of battleTalentOptions(heroId)) {
@@ -28,7 +29,7 @@ for (const heroId of BATTLE_TALENT_PILOT_HEROES) {
     verifiedEffects++;
   }
 }
-assert.equal(verifiedEffects, 20);
+assert.equal(verifiedEffects, 200);
 
 function make(seed) {
   const engine = new LogicEngine(seed);
@@ -55,4 +56,4 @@ const replay = finalizeReplay({ matchId: 'battle-talent-pilot-test' });
 assert(replay);
 assert.equal(replay.playersMeta.find((row) => row.id === 'b1').battleTalentId, selections.players.b1.id);
 assert.equal(replay.config.battleTalentIds.b1, selections.players.b1.id);
-console.log('Battle Talent runtime: 20/20 effects / 10/10 seats / same-seed 120 ticks / snapshot / Replay PASS');
+console.log('Battle Talent runtime: 200/200 effects / 10/10 seats / same-seed 120 ticks / snapshot / Replay PASS');

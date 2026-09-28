@@ -3,6 +3,8 @@ import { CHAMPIONS_100 } from '../src/data/heroDatabase.js';
 import { buildHeroSkillDetail } from '../src/battle/moba/skills/heroSkillDetail.js';
 import { compileGameplaySkill } from '../src/battle/moba/skills/heroSkillGameplay.js';
 import { battleTalentOptions } from '../src/battle/moba/talents/heroBattleTalents.js';
+import { LogicEngine } from '../src/LogicEngine.js';
+import { toEngineHeroSkills } from '../src/battle/moba/skills/heroSkillGameplay.js';
 
 let n = 0;
 for (const hero of CHAMPIONS_100) for (const slot of ['P', 'Q', 'W', 'E', 'R']) {
@@ -31,4 +33,19 @@ const knockup = CHAMPIONS_100.flatMap((hero) => ['Q', 'W', 'E', 'R'].map((slot) 
   .find(([heroId, slot]) => buildHeroSkillDetail(heroId, slot)?.rule?.control === 'knockup');
 assert(knockup);
 assert.equal(buildHeroSkillDetail(...knockup).rows.find((row) => row.key === 'control')?.value, '擊飛');
+const engine = new LogicEngine(777);
+engine.configureHeroSkills(toEngineHeroSkills({ b1: { heroId: 'bingshuang' } }));
+const before = engine.snapshot().players.find((row) => row.id === 'b1');
+const first = buildHeroSkillDetail('bingshuang', 'Q', before.heroSkills.Q);
+assert.equal(first.level.current, 1);
+assert.equal(first.level.next, 2);
+assert(first.nextLevel.length > 0);
+assert.equal(first.level.nextAt, 7, 'Q follows the higher-priority control and area skills');
+engine.players.find((row) => row.id === 'b1').mlv = 15;
+engine._updateHeroSkillLevels(engine.players.find((row) => row.id === 'b1'));
+const after = engine.snapshot().players.find((row) => row.id === 'b1');
+const final = buildHeroSkillDetail('bingshuang', 'Q', after.heroSkills.Q);
+assert.equal(final.level.current, 3);
+assert.equal(final.nextLevel, null);
+assert.notDeepEqual(final.rule, first.rule);
 console.log(`Skill detail authority: ${n}/500 PASS`);

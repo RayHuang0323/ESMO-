@@ -70,6 +70,12 @@ export function captureReplayFrame(snap) {
   if (!due || snap.ts === cap.lastT) return;
   if (cap.frames.length >= MAX_FRAMES) { cap.truncated = true; return; }
   if (cap.frames.length === 0) {
+    if (snap.players.some((p) => p.heroSkills && Object.values(p.heroSkills).some((skill) => skill.level))) {
+      cap.config = { ...cap.config, heroSkillBaseRules: Object.fromEntries(snap.players
+        .filter((p) => p.heroSkills)
+        .map((p) => [p.id, Object.fromEntries(Object.entries(p.heroSkills)
+          .map(([slot, live]) => [slot, live.rule]))])) };
+    }
     //  Milestone I-close：playersMeta 追加 optional 欄位（版本仍是 MobaReplay.v1）。
     //    舊 replay 沒有這些欄 ⇒ 消費端讀到 undefined 就退回原本的顯示，照樣播放。
     cap.playersMeta = snap.players.map((p) => {

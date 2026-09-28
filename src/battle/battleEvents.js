@@ -35,8 +35,8 @@ export class BattleEventTracker {
     if (this.prev && snap.ts < this.prev.ts) this.reset();
     const prev = this.prev;
     const out = [];
-    const push = (type, side, text, pos = null, data = null) =>
-      out.push({ id: this._eid++, t: snap.ts, type, side, text, pos, data });
+    const push = (type, side, text, pos = null, data = null, at = snap.ts) =>
+      out.push({ id: this._eid++, t: at, type, side, text, pos, data });
 
     // ── 擊殺 / First Blood / 連殺（讀真實 feed，附上快照時間）────────────
     const CTX_ZH = { gank: "Gank", ambush: "埋伏", pick: "抓單", teamfight: "團戰", objective: "目標戰", towerDive: "越塔", chase: "追擊" };
@@ -62,6 +62,17 @@ export class BattleEventTracker {
     }
 
     if (prev) {
+      // The engine records exact rank-up ticks. Read that history; never infer a
+      // missing upgrade from UI level display or re-run XP in the presentation.
+      for (const player of snap.players) {
+        const previous = prev.players.find((row) => row.id === player.id);
+        const seen = previous?.heroSkillLevelHistory?.length ?? 0;
+        for (const entry of (player.heroSkillLevelHistory ?? []).slice(seen)) {
+          push('SKILL_LEVEL_UP', player.side, `${player.id.toUpperCase()} 的 ${entry.slot} 升至 Lv${entry.level}`,
+            player.pos, { playerId: player.id, slot: entry.slot, level: entry.level,
+              matchLevel: entry.matchLevel }, entry.t);
+        }
+      }
       // ── 塔被摧毀（hp 由 >0 跨到 <=0；破壞方 = 塔的對面）──────────────
       for (const [key, tw] of Object.entries(snap.towers)) {
         const before = prev.towers[key];

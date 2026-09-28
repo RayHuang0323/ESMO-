@@ -1,5 +1,6 @@
 import { heroById } from '../../../data/heroDatabase.js';
-import { applyBattleTalentToRule } from '../talents/heroBattleTalents.js';
+import { applyBattleTalentToRule, battleTalentById } from '../talents/heroBattleTalents.js';
+import { HERO_SKILL_LEVEL_CONTRACT } from './heroSkillLevels.js';
 
 const SEATS = /^(b|r)[1-5]$/;
 
@@ -179,5 +180,8 @@ export function toEngineHeroSkills(roster, talentSelection = null) {
     if (Object.keys(skills).length) players[seat] = Object.freeze(skills);
   }
   return Object.keys(players).length ? Object.freeze({ players: Object.freeze(players),
+    skillLevels: Object.freeze({ version: HERO_SKILL_LEVEL_CONTRACT,
+      preferences: Object.freeze(Object.fromEntries(Object.entries(talentSelection?.players ?? {})
+        .map(([seat, selected]) => [seat, battleTalentById(selected.id)?.effects?.[0]?.slot ?? null]))) }),
     ...(talentSelection ? { talents: talentSelection.players } : {}) }) : null;
 }

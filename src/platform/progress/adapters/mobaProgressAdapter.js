@@ -23,6 +23,7 @@ import { fanWeightForOrigin } from "../fanSourceWeight.js";
 //  V0C：成長用的來源分類。與 Fan 分桶不同，但讀同一份 MatchOrigin。
 import { matchSourceFromOrigin, isPracticeSource } from "../matchSource.js";
 import { tacticIntentOf } from "../../mastery/clubMasteryState.js";
+import { isBattleResult } from "../../contracts/battleResultVersion.js";
 
 /** 我方固定為藍隊（與 roster.js / draftRoster 一致）。 */
 const HOME = "blue";
@@ -51,7 +52,7 @@ export function mobaMatchId(br) {
  *   fansNow = 目前粉絲數（updateEconomy 需要）
  */
 export function mobaResultToTransaction(br, ctx = {}) {
-  if (!br || br.schema !== "BattleResult.v2") return null;
+  if (!isBattleResult(br)) return null;
 
   const roster = ctx.players ?? [];
   // ⚠ Milestone E：`BattleResult.players[].id` 是**引擎席位**（b1–b5），不是選手 id。
