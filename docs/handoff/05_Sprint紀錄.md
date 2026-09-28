@@ -23790,3 +23790,13 @@ CS_RESUME_HOTFIX = RELEASED（main cfca594 → a7afc5c）
 - Owner 已接受視覺；exact duplicate 0、same-hero similarity 0。n=1000 沿用已完成的 v13 `54.3/45.7` → v14 `53.2/46.8`、0 failures；pacing 無新增 regression。
 - Android 真機 FPS／touch／thermal 明確標記 `DEFERRED_BY_OWNER`，不寫成 PASS，亦不阻擋本次 Release。
 - 正式 release gates、selective staging、main integration、Pages deploy 與 production smoke 於本節之後追加結果；不納入 `tmp/`、`review/` artifacts 或 Finance WIP。
+
+## 2026-09-28 MOBA Skill Icons + Battle Talents + Skill Level v14 正式 Release
+
+- checkpoint: b8cfad7；release code commit: 6d93a97；branch: feature/moba-skill-icons-talents-v1；整合前 origin/main=5c9b414，無衝突並以 fast-forward 推至 main。
+- simulation: moba-sim.v14。500/500 skill icons、A 類 23/23、exact duplicate=0、same-hero similarity=0；100 heroes／200 Battle Talents；400/400 QWER Skill Levels；BattleResult.v3 與 v2 backward-compatible read；Replay／build／diff check 通過。
+- 已沿用既有 n=1000 結果：v13 54.3/45.7 → v14 53.2/46.8，0 failures；本輪未重跑 n=1000。pacing 23/25 與乾淨基線相同，無新增 regression。
+- release gates：regress、regress2、runtime29、Hero Skills、Items ON、side／mirror、icon／talent／skill-level／contract verifiers、build 均通過。browser report 的 desktop/mobile page console errors=0、shader errors=0；320／360／390／430px 均無水平溢出。
+- Production deploy：Deploy Vite site to GitHub Pages #268／36401807251 success；production URL HTTP 200。live smoke 已看到 MOBA battle 持續播放、P/Q/W/E/R HUD、Q skill detail 與 Lv2 數值、Battle Talent 詳情及戰鬥 VFX event。BattleResult.v3／v2 Replay targeted verifier 通過；production quick-finish 的同步模擬在 automation 中未能讀取結果頁，未把該 automation 狀態誤報為 PASS。
+- Android real-device FPS／touch／thermal：DEFERRED_BY_OWNER；不是本次 release blocker，也不宣稱 PASS。
+- v14 = RELEASED YES。未修改 Finance WIP、Blue bias、flicker、Tower、Smite、Competitive、Online Backend、legacy path、Passive P gameplay。
