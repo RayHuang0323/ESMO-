@@ -36,11 +36,18 @@ import {
   DIRECTOR_BOTTOM_MOBILE,
   SAFE_TOP,
   Z,
+  MINIMAP_PX,
+  MINIMAP_TAP_SLOP_PX,
+  MINIMAP_TAP_MAX_MS,
 } from "./battle/ui/battleLayout.js";
 
 // ── 小地圖（沿用；自有 rAF、讀 store、含戰爭迷霧）────────────────────────────
 function Minimap({ mobile = false }) {
   const ref = useRef(null);
+  //  Mobile & Presentation Polish：點擊回饋（最後一次觸控點擊的位置，畫 0.5 秒的圈）。
+  const tapRef = useRef(null);
+  //  進行中的觸控：{ id, x, y, t, moved }。只有放開時仍是「點一下」才移動鏡頭。
+  const touchRef = useRef(null);
   useEffect(() => {
     let raf, last = 0;
     const terrainImage = new Image();
@@ -102,6 +109,12 @@ function Minimap({ mobile = false }) {
           g.beginPath(); g.arc(P(p.pos.x), P(p.pos.y), 3.4, 0, 7); g.fill();
           g.strokeStyle = "rgba(0,0,0,0.7)"; g.lineWidth = 1; g.stroke();
         });
+        const tap = tapRef.current;
+        if (tap && now - tap.t < 500) {
+          const k = (now - tap.t) / 500;
+          g.strokeStyle = `rgba(253,224,71,${1 - k})`; g.lineWidth = 2;
+          g.beginPath(); g.arc(tap.nx * D, tap.ny * D, 6 + k * 14, 0, 7); g.stroke();
+        }
       }
       raf = requestAnimationFrame(draw);
     };
@@ -112,15 +125,50 @@ function Minimap({ mobile = false }) {
   //  H.1-close：原本抬 50px **不夠**——BattleHeroStrip 收合後（把手 + 一列對位列）
   //  約 80px 高、自身又從 bottom 8px 起算 ⇒ 小地圖下緣被十人面板蓋掉一截
   //  （Codex H.1 視覺驗收把它列為 blocking）。抬到 96px 讓兩者不再重疊。
-  const px2 = mobile ? 106 : 180;
-  const locate = e => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    useCameraStore.getState().userPanTo(WORLD_BOUNDS.minX + (e.clientX - rect.left) / rect.width * WORLD_BOUNDS.width,
-      WORLD_BOUNDS.minY + (e.clientY - rect.top) / rect.height * WORLD_BOUNDS.height);
+  //  Mobile & Presentation Polish：手機 106 → 92（約 −13%）。尺寸表在 battleLayout。
+  const px2 = mobile ? MINIMAP_PX.mobile : MINIMAP_PX.desktop;
+  const locate = (e, rect = e.currentTarget.getBoundingClientRect()) => {
+    const nx = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    const ny = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
+    tapRef.current = { nx, ny, t: performance.now() };
+    useCameraStore.getState().userPanTo(WORLD_BOUNDS.minX + nx * WORLD_BOUNDS.width, WORLD_BOUNDS.minY + ny * WORLD_BOUNDS.height);
   };
-  return <canvas ref={ref} width={240} height={240} data-testid="battle-minimap" aria-label="小地圖，點選位置移動鏡頭" role="button" tabIndex={0}
-    onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); locate(e); }}
-    onPointerMove={e => { if (e.buttons) locate(e); }}
+  //  ── 誤觸修正 ─────────────────────────────────────────────────────────────
+  //  舊版：pointerdown 當下就移動鏡頭、按住移動就一路跟著跳 ⇒ 手機上手指只是
+  //  擦過小地圖（例如拖曳戰場時剛好從小地圖起手）鏡頭就被帶走。
+  //  現在：**觸控／觸控筆**只在「點一下」成立時移動（放開時判定，位移 ≤ SLOP、時間 ≤ MAX）；
+  //  滑過、拖曳、長按都不動鏡頭。滑鼠維持原行為（桌機是精確指標，拖曳掃圖是既有功能）。
+  //  事件一律 stopPropagation：小地圖上的手勢不會再傳到任何外層監聽。
+  const isTouch = (e) => e.pointerType === "touch" || e.pointerType === "pen";
+  const onDown = (e) => {
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    if (isTouch(e)) { touchRef.current = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), moved: false }; return; }
+    locate(e);
+  };
+  const onMove = (e) => {
+    e.stopPropagation();
+    const tc = touchRef.current;
+    if (tc && tc.id === e.pointerId) {
+      if (Math.hypot(e.clientX - tc.x, e.clientY - tc.y) > MINIMAP_TAP_SLOP_PX) tc.moved = true;
+      return;
+    }
+    if (!isTouch(e) && e.buttons) locate(e);
+  };
+  const onUp = (e) => {
+    e.stopPropagation();
+    const tc = touchRef.current;
+    if (!tc || tc.id !== e.pointerId) return;
+    touchRef.current = null;
+    const quick = performance.now() - tc.t <= MINIMAP_TAP_MAX_MS;
+    if (!tc.moved && quick && Math.hypot(e.clientX - tc.x, e.clientY - tc.y) <= MINIMAP_TAP_SLOP_PX) locate(e);
+  };
+  const onCancel = (e) => { e.stopPropagation(); if (touchRef.current?.id === e.pointerId) touchRef.current = null; };
+  return <canvas ref={ref} width={240} height={240} data-testid="battle-minimap" data-minimap-mode={mobile ? "tap" : "press-drag"}
+    aria-label={mobile ? "小地圖，點一下位置移動鏡頭（滑過不會移動）" : "小地圖，點選或拖曳移動鏡頭"} role="button" tabIndex={0}
+    onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onCancel}
+    onTouchStart={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}
+    onContextMenu={(e) => e.preventDefault()}
     onKeyDown={e => { const d = { ArrowLeft: [-10, 0], ArrowRight: [10, 0], ArrowUp: [0, -10], ArrowDown: [0, 10] }[e.key]; if (d) { e.preventDefault(); const c = useCameraStore.getState(); c.userPanTo(c.pan.x + d[0], c.pan.y + d[1]); } }}
     style={{ position: "absolute", bottom: mobile ? "calc(136px + env(safe-area-inset-bottom))" : 12, right: mobile ? 6 : 12, width: px2, height: px2, borderRadius: 3, border: "2px solid var(--battle-gold)", boxShadow: "0 4px 20px rgba(0,0,0,0.5)", cursor: "crosshair", touchAction: "none", zIndex: Z.minimap }} />;
 }

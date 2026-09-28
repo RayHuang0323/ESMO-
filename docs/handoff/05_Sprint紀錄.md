@@ -23831,3 +23831,16 @@ CS_RESUME_HOTFIX = RELEASED（main cfca594 → a7afc5c）
 - Release 前 full verify：31/102 PASS；71 段 FAIL 與 main 同簽名（分 6 批於 main worktree 對照，避免 OOM）⇒ zero new regression。
 - 正式站 smoke：`browser_check_prod_v7_release` 44/44（首頁、三個玩法入口無新增、一般對戰打完含收益與容量、快速練習零永久影響、console）、`browser_check_prod_slice7` 29/29（Challenge 建立／結果／重播一致／生涯日期不變）、`browser_check_prod_slice8` 43/43、`browser_check_prod_season_vnext` 30/30。
 - 狀態：**Online Backend Foundation v1 RELEASED**；Competitive disabled、0002 未執行。
+
+## 2026-09-29 MOBA Mobile & Presentation Polish（local，未 push／未 deploy；等 Owner Review）
+
+- 分支 `feature/moba-mobile-hud-polish`，基準 `9dd0f0f`。**模擬版本 moba-sim.v14 → v15**（C 段兵線 AI，skill-on only）。
+- 1 手機 5v5 戰況列（`src/battle/ui/MobileTeamStrip.jsx`）：記分板下方常駐 10 格頭像（HP 條、陣亡灰階＋復活秒數）＋中央經濟差／拆塔／龍／巴龍；點頭像跟隨該英雄（底欄照舊單英雄詳情），點中央展開手機記分板（K/D/A、經濟、等級、HP、裝備）。只在手機現場對戰掛載；重播與桌機不變。資料全讀 snapshot 既有欄位；快照沒有 CS ⇒ 不顯示 CS。`hudSafeTop` 手機多讓出一列，擊殺提示改跟安全區。
+- 2 小地圖：觸控改成「點一下放開才移動鏡頭」（位移 ≤ 10px、≤ 450ms）；滑過／長按不動；手勢不外冒；滑鼠維持按下即移動＋拖曳。手機 106 → 92px（約 −13%）。反向驗證：換回舊版 GameView ⇒ T1 滑過／T3 長按都讓鏡頭跳走（gate 紅）。
+- 3 戰報降噪（`src/battle/skillLevelReport.js`）：主要戰報只留 R 升級、天賦技能滿級、全技能滿級（matchLevel 15，連跳只報一次）；普通升級不佔戰報，改在賽後「技能成長摘要」（讀 BattleResult.players[].heroSkillLevels）。事件層與 BattleResult.timeline 不變（仍 7 筆）。即時戰報與重播共用同一過濾。
+- 4 裝備圖示（`src/battle/ui/items/ItemArt.jsx`）：T3 44＋鞋 6＝50 件各有專屬輪廓（改版前同流派共用 8 個圖紋、鞋共用 1 個）；武器鋼材／法術奧術／防具青銅石材聖光／鞋皮革，深色外描邊；色票在 itemsTheme。組件與起始裝照舊。
+- A 技能 VFX（`src/battle/moba/skills/skillGroundArchetype.js`）：HeroVfxRuntime 的 Combat Quality v1 階段層原本對 400 招都畫地面圓環；現依 gameplay.mechanic＋presentation.primitive 分 11 種語彙：orbit 100、dash 76、fracture 75、chain 57、crescent 25、trail 18、cross 14、wall 13、fan 11、strip 9、ring 2。只用既有 5 個 instanced 池，每招每幀 ≤ 24 emit。
+- B 小兵：十二面體／錐／圓柱 → 低多邊形角色（近戰：腿＋陣營軀幹＋頭盔＋劍盾；法師：長袍＋尖帽＋法杖發光球；砲車：車身＋四輪＋砲管＋旗；超級兵：角盔＋巨錘）。每種兵×陣營一個合併幾何（143–244 三角形），仍 8 個 InstancedMesh。
+- C 兵線 AI（`laneWaveAnchorV15`）：audit 根因兩層——①原型站位層把對線站位點改寫成「相對對手英雄」②到點後只看敵方英雄，身邊只有兵就被 _nextTaskV17 派走。修正只作用於對線期、無交戰目標、非打野／輔助、skill-on。A/B 100 場（正式 skill＋talent）：10 分補刀 mid 7.4→15.5、adc 20.7→26.5、top 2.5→2.7（上路受移速≈兵線速度＋L 形長路限制，未動）；打野／輔助打兵佔比 0.06/0.05→0.04/0.03；技能清兵 69→87；首殺 184→240s、首塔 343→314s、首龍 291→283s；時長 20.3→18.7 分；藍勝 0.40→0.51。skill-off 串流逐位元不變（gate I5）。
+- 驗證：`check_moba_mobile_hud_polish` 60/60；`browser_check_moba_mobile_hud` 37/37（HUD／小地圖改動當下，320/360/390/430＋真觸控＋桌機）；items_m1 69/69；simulation_version 55/55；build ✓ 17.4s；candidate vs main 36 支相關 gate：失敗簽名全部與 main 相同（items_m3 G6／G8 為「相對 HEAD 不得改動」守門，commit 後轉綠；G3 色碼已修）。
+- **未完成／未驗證（機器記憶體不足，非產品錯誤）**：最終版本（加入 VFX／小兵／v15 之後）的瀏覽器 gate 與完整回歸在 12/43 被系統記憶體保護停止；WebGL context 建立失敗（`reading 'alpha'` of null），main 在同條件下同樣開不了戰鬥畫面。尚待重跑：browser_check_moba_mobile_hud、regress、regress2、hero skills／items_m2 等 skill-on gate、verify.mjs、headed 效能量測。

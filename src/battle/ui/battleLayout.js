@@ -58,6 +58,24 @@ export const DIRECTOR_BOTTOM_MOBILE = 110;
 export const ITEM_TOAST_MOBILE_BOTTOM = 138;
 
 /**
+ * Mobile & Presentation Polish：小地圖。
+ * · 手機尺寸 106 → 92（約 −13%），仍看得清英雄點與塔位。
+ * · 觸控只在「點一下」時移動鏡頭：按下到放開 ≤ TAP_MAX_MS，且位移 ≤ TAP_SLOP_PX。
+ *   滑過、拖曳、長按一律不動鏡頭（這正是誤觸的來源：舊版 pointerdown 當下就跳）。
+ *   滑鼠維持原本的「按下即移動、按住拖曳連續移動」，桌機行為不變。
+ */
+export const MINIMAP_PX = Object.freeze({ desktop: 180, mobile: 92 });
+export const MINIMAP_TAP_SLOP_PX = 10;
+export const MINIMAP_TAP_MAX_MS = 450;
+
+/**
+ * Mobile & Presentation Polish：手機 5v5 戰況列（位於記分板正下方）。
+ * 頂部浮層的安全區（hudSafeTop）在手機上會加上這一段高度。
+ */
+export const MOBILE_TEAM_STRIP_H = 46;
+export const MOBILE_TEAM_STRIP_GAP = 4;
+
+/**
  * z-index 統一表（29B2 起列為待辦，29B6 落地）。
  * 數值沿用各元件既有值 ⇒ 這次只是把它們收斂到一處，沒有改變既有疊放次序。
  */

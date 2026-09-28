@@ -29,6 +29,8 @@ import RewardReceiptPanel from "../../ui/RewardReceiptPanel.jsx";
 import { isDebugMode } from "../../ui/debugMode.js";
 import { getCurrentReplay } from "../moba/replay/replayBuffer.js";
 import MobaReplayScreen from "../../screens/moba/MobaReplayScreen.jsx";
+//  Mobile & Presentation Polish：普通技能升級不再佔主要戰報，改在這裡彙總（讀 BattleResult 的最終等級）。
+import { skillGrowthSummary } from "../skillLevelReport.js";
 
 const KEYFRAMES = `
 @keyframes esmoEndPop { 0%{transform:scale(0.55);opacity:0} 60%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
@@ -128,6 +130,7 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
   const mvpHeroName = heroById(mvpHeroId)?.zh ?? roster?.[mvp?.id]?.hero ?? (mvp ? ROLE_NAME[mvp.role] : "—");
   const highlights = result.timeline.filter((e) => ["FIRST_BLOOD", "ACE", "BARON_SLAIN", "MULTI_KILL", "VICTORY"].includes(e.type)).slice(-6);
   const stats = bestStats(result.players);
+  const skillGrowth = (skillGrowthSummary(result) ?? []).filter((g) => g.side === homeSide);
   const Panel = ({ title: tt, children, w }) => (
     <div style={{ background: "rgba(8,14,24,0.9)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "9px 12px", width: w }}>
       <div style={{ fontSize: 9.5, letterSpacing: "0.2em", color: "rgba(255,255,255,0.5)", fontWeight: 900, marginBottom: 5 }}>{tt}</div>
@@ -176,6 +179,28 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
                 </div>
               ))}
             </Panel>
+            {skillGrowth.length > 0 && (
+              <Panel title="技能成長摘要">
+                <div data-testid="skill-growth-summary">
+                  {skillGrowth.map((g) => (
+                    <div key={`sg-${g.id}`} data-skill-growth={g.id} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10.5, padding: "2px 0" }}>
+                      <HeroPortrait heroId={g.heroId ?? roster?.[g.id]?.heroId} size={16} radius={4} alt="" fallback={null} />
+                      <span style={{ flex: 1, minWidth: 0, color: "rgba(255,255,255,0.75)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{roster?.[g.id]?.player ?? g.id.toUpperCase()}</span>
+                      <span style={{ fontFamily: MONO, display: "flex", gap: 3, flexShrink: 0 }}>
+                        {["Q", "W", "E", "R"].map((slot) => (
+                          <span key={slot} title={g.maxed.includes(slot) ? `${slot} 已滿級` : `${slot} Lv${g.levels[slot] ?? "—"}`}
+                            style={{ color: g.maxed.includes(slot) ? "#fde047" : "rgba(255,255,255,0.6)", fontWeight: g.maxed.includes(slot) ? 900 : 700 }}>
+                            {slot}{g.levels[slot] ?? "—"}
+                          </span>
+                        ))}
+                      </span>
+                      <span style={{ fontFamily: MONO, fontSize: 9, color: "rgba(255,255,255,0.4)", flexShrink: 0, width: 26, textAlign: "right" }}>⏫{g.upgrades}</span>
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>金色＝已滿級 · ⏫ 本場升級次數（普通升級只在這裡彙總）</div>
+                </div>
+              </Panel>
+            )}
           </div>
 
           {/* 中欄：完整記分板 */}

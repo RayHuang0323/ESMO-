@@ -9,6 +9,9 @@
 
 import React, { useState } from "react";
 import { useBattleStore } from "../battleStore.js";
+import { useGameStore } from "../../useGameStore.js";
+//  Mobile & Presentation Polish：技能升級只把重要的幾筆放進主要戰報（純呈現過濾，事件本身不動）。
+import { filterMainReport, skillReportText } from "../skillLevelReport.js";
 import { fmtT } from "../../gameData.js";
 import { GC } from "../../ui/theme.js";
 import { useIsMobile } from "../../ui/useViewport.js";
@@ -20,7 +23,7 @@ import { FEED_LEFT, FEED_MAX_W, FEED_RIGHT_RESERVE, Z } from "./battleLayout.js"
 //  L Hotfix 2：安全區高度跟著記分板的 compact/expanded 走（唯一來源）。
 import { useHudMode, hudSafeTop } from "./hudStore.js";
 
-const ICON = { FIRST_BLOOD: "🩸", KILL: "⚔️", MULTI_KILL: "🔥", ACE: "💥", TOWER_DESTROYED: "🗼", DRAGON_SLAIN: "🐉", BARON_SLAIN: "👑", VICTORY: "🏆", SPELL_USED: "✨", OBJECTIVE_SPAWN: "🌀" };
+const ICON = { FIRST_BLOOD: "🩸", KILL: "⚔️", MULTI_KILL: "🔥", ACE: "💥", TOWER_DESTROYED: "🗼", DRAGON_SLAIN: "🐉", BARON_SLAIN: "👑", VICTORY: "🏆", SPELL_USED: "✨", OBJECTIVE_SPAWN: "🌀", SKILL_LEVEL_UP: "⏫" };
 const LANE = { top: "上", mid: "中", bot: "下", nexus: "堡", nexus_guard: "門牙" };
 const sideC = (s) => (s === "blue" ? GC.blueL : s === "red" ? GC.redL : "#cbd5e1");
 const MONO = "ui-monospace,Menlo,monospace";
@@ -84,6 +87,8 @@ function Row({ ev, roster }) {
     body = <span style={{ color: GC.gold, fontWeight: 900 }}>{["","","雙殺","三殺","四殺","五殺"][d.streak]}！<Name id={d.killer} side={ev.side} roster={roster} /></span>;
   } else if (ev.type === "SPELL_USED" && d) {
     body = <span><Name id={d.playerId} side={ev.side} roster={roster} /> 使用{SUMMONER_SPELLS[d.spell]?.zh ?? '召喚師技能'}</span>;
+  } else if (ev.type === "SKILL_LEVEL_UP" && d && ev.reportKind) {
+    body = <span data-skill-report={ev.reportKind} style={{ color: sideC(ev.side), fontWeight: 800 }}>{skillReportText(ev, roster?.[d.playerId]?.player ?? null)}</span>;
   } else if (ev.type === "TOWER_DESTROYED" && d) {
     body = (
       <span>
@@ -130,6 +135,8 @@ export default function BattleTimeline({ open = true, max = 11, roster = null })
   // S29：隊伍溝通（規則式播報）與系統事件/擊殺**分開存**，在此合併顯示但可區分：
   //   系統事件走 Row（原樣式）；COMMS 走 CommsRow（引號 + 說話者，明顯不同）。
   const comms = useBattleStore((s) => s.comms);
+  //  只取「英雄 → 已選戰鬥天賦」這一小段（字串，值不變就不重繪），給技能戰報判斷天賦組合用。
+  const talentKey = useGameStore((s) => (s.snapshot?.players ?? []).map((p) => `${p.id}:${p.heroBattleTalent?.id ?? ""}`).join(","));
   const isMobile = useIsMobile();
   //  L Hotfix 1 §3：三段式（hidden / compact / expanded），**預設 compact**。
   //  桌機與手機都一樣預設 compact ⇒ 戰報永遠不會一開場就吃掉半個畫面，
@@ -141,7 +148,8 @@ export default function BattleTimeline({ open = true, max = 11, roster = null })
     setMode(next); saveTimelineMode(next);
   };
   if (!open) return null;
-  const merged = [...events, ...comms].sort((a, b) => (a.t ?? 0) - (b.t ?? 0));
+  const talentSnap = { players: talentKey ? talentKey.split(",").map((row) => { const [id, t] = row.split(":"); return { id, heroBattleTalent: t ? { id: t } : null }; }) : [] };
+  const merged = [...filterMainReport(events, talentSnap), ...comms].sort((a, b) => (a.t ?? 0) - (b.t ?? 0));
   const rows = merged.reverse().slice(0, mode === "expanded" ? (isMobile ? 9 : max) : (isMobile ? 2 : 3));
   const latest = rows[0];
   //  規格高度：桌機 compact 72–96px、手機 compact 44–56px；

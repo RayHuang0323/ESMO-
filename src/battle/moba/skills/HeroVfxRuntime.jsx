@@ -7,6 +7,7 @@ import { useReducedBattleMotion } from '../render/useReducedBattleMotion.js';
 import { countMount, countUnmount, diagnosticsEnabled } from '../render/runtimeDiagnostics.js';
 import { skillScreenRadius, skillSlotOf, SKILL_READABILITY } from './skillReadability.js';
 import { WORLD_SCALE } from '../map/coordinateMapping.js';
+import { emitGroundArchetype, groundArchetypeOf } from './skillGroundArchetype.js';
 
 // Art palette comes from heroDatabase. Post FX stays bounded in the formal
 // Canvas composer; this runtime owns pooled geometry/material instances only.
@@ -207,26 +208,9 @@ export default function HeroVfxRuntime({ frameRef, previewRef, quality = 'high',
     // Presentation only: reads the same event the choreography reads, emits into pool 0.
     function layers(e, slot) {
       if (reduced) return;
-      const t = e.progress, r = e.radius, o = e.origin, b = e.target ?? e.origin;
-      const gold = '#fbbf24';
-      if (t < 0.3) {
-        const k = t / 0.3, a = (1 - k) * 0.85;
-        const cr = r * (0.7 + 0.3 * k) * 2;
-        emit(0, o.x, o.y + 0.05, o.z, cr, cr, 1, a, e.color, k * 0.6);
-        if (slot === 'R') emit(0, o.x, o.y + 0.06, o.z, r * 2.7, r * 2.7, 1, a * 0.8, gold, -k * 0.4);
-      }
-      if (t > 0.65) {
-        const k = (t - 0.65) / 0.35, a = 1 - k;
-        const rings = slot === 'R' ? 3 : (slot === 'E' || slot === 'W') ? 2 : 1;
-        const grow = slot === 'R' ? 2.2 : 1.6;
-        for (let i = 0; i < rings; i++) {
-          const kk = Math.max(0, k - i * 0.18);
-          const rr = r * (0.5 + kk * grow) * 2;
-          const tint = slot === 'R' && i === rings - 1 ? gold : e.color;
-          emit(0, b.x, b.y + 0.07 + i * 0.01, b.z, rr, rr, 1, a * (1 - i * 0.2), tint, kk);
-        }
-        if (slot === 'W') emit(0, b.x, b.y + 0.06, b.z, r * 0.9, r * 0.9, 1, a * 0.7, '#ffffff', 0);
-      }
+      //  Mobile & Presentation Polish：原本這裡對每一招都畫地面圓環（只換顏色）。
+      //  現在依技能正式資料換成 11 種地面語彙之一，只有範圍控制保留圓環（見 skillGroundArchetype.js）。
+      emitGroundArchetype(e, slot, groundArchetypeOf(e.skillId), emit);
     }
     function spectacle(e, slot) {
       if (reduced || !e.visual) return;

@@ -90,3 +90,17 @@ export const chamfer = (pct = 22) =>
 
 /** 卡片／面板：只切右上角（層級低於插槽的形狀語言）。 */
 export const cornerCut = (px = 14) => `polygon(0 0, calc(100% - ${px}px) 0, 100% ${px}px, 100% 100%, 0 100%)`;
+
+// ── Mobile & Presentation Polish：專屬裝備圖示（ItemArt）的材質與墨色 ──────────
+/** 材質：主體漸層（亮→中→暗）＋點綴色。 */
+export const ITEM_ART_MATERIALS = Object.freeze({
+  steel: { hi: "#f8fafc", mid: "#a8b4c4", lo: "#3f4b5c", accent: "#fbbf24", accentLo: "#92400e", glow: "#e0f2fe" },
+  arcane: { hi: "#fae8ff", mid: "#b18cff", lo: "#3b1470", accent: "#67e8f9", accentLo: "#0e7490", glow: "#f0abfc" },
+  bronze: { hi: "#fde7b0", mid: "#c9853a", lo: "#4a2508", accent: "#fb7185", accentLo: "#881337", glow: "#fed7aa" },
+  stone: { hi: "#e7e5e4", mid: "#8b8580", lo: "#2e2a27", accent: "#86efac", accentLo: "#166534", glow: "#bbf7d0" },
+  holy: { hi: "#fefce8", mid: "#f5c84c", lo: "#7a4a06", accent: "#bae6fd", accentLo: "#0369a1", glow: "#fef9c3" },
+  leather: { hi: "#ccfbf1", mid: "#2fb8a4", lo: "#0f3d38", accent: "#fcd34d", accentLo: "#92400e", glow: "#99f6e4" },
+});
+
+/** ItemArt 的外描邊／暗部／亮邊／高光色。 */
+export const ITEM_ART_INK = Object.freeze({ outline: "#06080d", shade: "rgba(8,11,18,.62)", rim: "rgba(255,255,255,.32)", white: "#ffffff" });

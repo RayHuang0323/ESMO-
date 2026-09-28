@@ -15,6 +15,8 @@
 import React, { useRef } from "react";
 import { itemVisual } from "../../moba/items/itemsUiSelectors.js";
 import { CheckIcon, ItemIcon } from "./ItemGlyphs.jsx";
+//  Mobile & Presentation Polish：T3＋鞋有專屬圖示；沒有的（組件／起始裝）照舊用圖紋。
+import { ItemArt, hasItemArt } from "./ItemArt.jsx";
 import {
   COMPONENT_TINT, FAMILY_TINT, GOLD, GOLD_LIGHT, SLOT_GAP, SLOT_SIZE, SURFACE, TEXT, TIER_RIM, alpha, chamfer,
 } from "./itemsTheme.js";
@@ -67,7 +69,9 @@ export function ItemSlot({
         display: "flex", alignItems: "center", justifyContent: "center",
         color: visual ? TEXT.primary : TEXT.faint,
       }}>
-        {visual && <ItemIcon glyph={visual.glyph} size="58%" />}
+        {visual && (hasItemArt(visual.itemId)
+          ? <ItemArt itemId={visual.itemId} size="76%" />
+          : <ItemIcon glyph={visual.glyph} size="58%" />)}
       </span>
       {!visual && <Outline inset={0} dashed width={1} color={TEXT.faint} />}
       {highlight === "next" && !selected && <Outline inset={-3} dashed width={1.6} color={GOLD} />}

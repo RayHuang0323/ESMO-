@@ -776,6 +776,10 @@ SIM_RULES.v3 = {
   laneStanceDepthRef: 0.06,
   //  輔助只在身邊這麼近沒有己方非輔助英雄時才清兵（不搶隊友的兵）。
   supportFarmAllyRange: 12,
+  //  moba-sim.v15（MOBA Mobile & Presentation Polish C 段）：對線期「沒有交戰目標」的對線英雄（非打野／輔助）
+  //  留在兵線交戰點，不被原型站位層改寫成「相對對手英雄的站位」；到點後身邊有敵兵＝在吃線，不被派走。
+  //  只在 hero skills 開啟時生效（LogicEngine 內判斷）⇒ skill-off 與 v14 逐位元相同。
+  laneWaveAnchorV15: true,
 };
 
 /** 取規則集；未知/未指定 ⇒ v3（S29B1 預設）。 */

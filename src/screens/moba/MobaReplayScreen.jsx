@@ -54,6 +54,9 @@ import { replayDisplayText, replayPlayerName, replayEventText, replayStartTime }
 import { decodeItemsReplay, selectReplayHeroItemsAt, selectReplayPurchaseMarkers, selectReplayStrategies } from "../../battle/moba/items/itemReplay.js";
 import { ReplayItemTrack } from "../../battle/ui/items/ReplayItemTrack.jsx";
 import { ReplayItemPanel, ReplayStrategyChips } from "../../battle/ui/items/ReplayItemPanel.jsx";
+//  Mobile & Presentation Polish：重播的「最近事件」與上一個／下一個事件跳轉，
+//  跟即時戰報用同一套技能升級分級（普通升級不佔事件列；存檔內容不動）。
+import { filterMainReport, skillReportText } from "../../battle/skillLevelReport.js";
 
 const SIDE_C = { blue: "#3b82f6", red: "#ef4444" };
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -247,7 +250,12 @@ export default function MobaReplayScreen({ replay, onClose }) {
     return () => cancelAnimationFrame(raf);
   }, [playing, mapReady, speed, duration, source]);
 
-  const events = replay?.events ?? [];
+  const events = useMemo(() => {
+    const meta = replay?.playersMeta ?? [];
+    const talents = { players: meta.map((pm) => ({ id: pm.id, heroBattleTalent: pm.battleTalentId ? { id: pm.battleTalentId } : null })) };
+    return filterMainReport(replay?.events ?? [], talents)
+      .map((e) => (e.reportKind ? { ...e, text: skillReportText(e, replayPlayerName(e.data?.playerId, meta)) } : e));
+  }, [replay]);
   const { a, b, f } = useMemo(() => frameAt(frames, t), [frames, t]);
   const recentEvents = useMemo(() => events.filter((e) => e.t <= t).slice(-3), [events, t]);
   // Milestone E【E3】：播報。finalizeReplay 早就把**本場實際產生的**訊息整份存進

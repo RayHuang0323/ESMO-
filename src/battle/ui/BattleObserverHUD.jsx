@@ -19,6 +19,9 @@ import { BattlePurchaseToasts } from './items/BattlePurchaseToasts.jsx';
 import { ItemInfoCard } from './items/HeroItemDetail.jsx';
 import { selectPlayerItemsView } from '../moba/items/itemsViewModel.js';
 import { ITEM_TOAST_MOBILE_BOTTOM } from './battleLayout.js';
+//  Mobile & Presentation Polish：手機常駐 5v5 戰況列＋可展開的手機記分板（桌機不掛載）。
+import { MobileTeamStrip, MobileScoreboardSheet } from './MobileTeamStrip.jsx';
+import { useHudMode, hudSafeTop } from './hudStore.js';
 import './battleObserver.css';
 
 // Only presentation tokens; all battle values remain owned by snapshot / saved replay.
@@ -45,6 +48,8 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
   //  M3b：桌機十人列「裝備視圖」與手機裝備 sheet（純呈現狀態）
   const [itemsView, setItemsView] = useState(false);
   const [itemsSheet, setItemsSheet] = useState(false);
+  const [boardOpen, setBoardOpen] = useState(false);
+  const hudMode = useHudMode();
   //  Battle UX hotfix：桌面十人列 hover 的裝備資訊卡、手機裝備入口的一次性提示
   const [hoverItem, setHoverItem] = useState(null);
   const [chipHint, setChipHint] = useState(() => !readHintSeen());
@@ -67,7 +72,8 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
   const itemsPlayerView = itemsSheet && mine ? selectPlayerItemsView(snapshot, p.id) : null;
   const onRailHover = (itemId, rect) => setHoverItem(itemId && rect ? { itemId, x: rect.right + 8, y: rect.top } : null);
   const toggleItemsSheet = () => { setItemsSheet(v => !v); if (chipHint) { setChipHint(false); writeHintSeen(); } };
-  const pick = id => { setSelected(id); setSkill(null); setHoverSkill(null); setTeamOpen(false); useCameraStore.getState().focusHero(id); };
+  const pick = id => { setSelected(id); setSkill(null); setHoverSkill(null); setTeamOpen(false); setBoardOpen(false); useCameraStore.getState().focusHero(id); };
+  const stripOn = mobile && !replay;
   const portrait = (x, size) => <HeroPortrait heroId={roster?.[x.id]?.heroId} size={size} radius={3}
     alt={roster?.[x.id]?.hero ?? x.id} fallback={<span className="observer-fallback">{roster?.[x.id]?.hero?.slice(0, 1) ?? x.id}</span>} />;
   const rail = side => <div className={`observer-rail ${side}`} aria-label={side === 'blue' ? '藍方英雄' : '紅方英雄'}>
@@ -96,8 +102,12 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
       </button>;
     })}
   </div>;
-  const rootClass = `observer-ui ${mobile ? 'mobile' : 'desktop'} ${replay ? 'replay' : ''} ${teamOpen || detail || (itemsSheet && mine) ? 'sheet-open' : ''} ${hudItems ? 'items-on' : ''} ${showItemsView ? 'items-view' : ''}`;
+  const rootClass = `observer-ui ${mobile ? 'mobile' : 'desktop'} ${replay ? 'replay' : ''} ${teamOpen || detail || (itemsSheet && mine) || (stripOn && boardOpen) ? 'sheet-open' : ''} ${hudItems ? 'items-on' : ''} ${showItemsView ? 'items-view' : ''}`;
   return <div className={rootClass} style={observerTokens} data-items-ts={hudItems ? snapshot.ts : undefined}>
+    {stripOn && <MobileTeamStrip snapshot={snapshot} roster={roster} activeId={p.id} onPick={pick}
+      boardOpen={boardOpen} onOpenBoard={() => { setBoardOpen(v => !v); setTeamOpen(false); setItemsSheet(false); }} />}
+    {stripOn && boardOpen && <MobileScoreboardSheet snapshot={snapshot} roster={roster} hudItems={hudItems} renderItems={hi => <SeatItemPips hud={hi} />} activeId={p.id}
+      onPick={pick} onClose={() => setBoardOpen(false)} />}
     {(!mobile || teamOpen) && <div className={teamOpen ? 'observer-team-sheet' : 'observer-teams'}>
       {teamOpen && <><header><strong>雙方隊伍</strong><button onClick={() => setTeamOpen(false)}>關閉 ✕</button></header><p>{hudItems ? '選擇英雄以跟隨視角。本場尚未提供魔力資訊。' : '選擇英雄以跟隨視角。本場尚未提供裝備與魔力資訊。'}</p></>}
       {rail('blue')}{rail('red')}
@@ -171,7 +181,9 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
     {!mobile && showItemsView && hoverItem && <div className="observer-item-tip" data-testid="item-hover-card"
       style={{ left: hoverItem.x, top: hoverItem.y }}><ItemInfoCard itemId={hoverItem.itemId} compact /></div>}
     {hudItems && <BattlePurchaseToasts snapshot={snapshot} roster={roster} />}
-    <div className="observer-killfeed" aria-live="polite">{events.filter(e => ['KILL','FIRST_BLOOD','MULTI_KILL','ACE'].includes(e.type) && snapshot.ts - e.t < 12).slice(-3).map(e => <div key={e.id} className={`observer-kill ${e.side}`}>
+    {/*  手機：擊殺提示放在右側控制鈕欄（倍率／快速完成／⚙，約 100px 高）下方，跟著安全區走，
+         不再寫死 top:180（5v5 戰況列加入後會壓到 ⚙）。 */}
+    <div className="observer-killfeed" aria-live="polite" style={mobile && !replay ? { top: hudSafeTop(hudMode, true) + 104 } : undefined}>{events.filter(e => ['KILL','FIRST_BLOOD','MULTI_KILL','ACE'].includes(e.type) && snapshot.ts - e.t < 12).slice(-3).map(e => <div key={e.id} className={`observer-kill ${e.side}`}>
       {e.data?.killer && <HeroPortrait heroId={roster?.[e.data.killer]?.heroId} size={28} radius={2} alt="" />}
       <span>{e.type === 'FIRST_BLOOD' ? '首殺' : e.type === 'ACE' ? '團滅' : e.type === 'MULTI_KILL' ? '連殺' : '擊殺'}<strong>{roster?.[e.data?.killer]?.player ?? e.text}</strong></span>
       {e.data?.victim && <HeroPortrait heroId={roster?.[e.data.victim]?.heroId} size={28} radius={2} alt={roster?.[e.data.victim]?.player ?? e.data.victim} />}

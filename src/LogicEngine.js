@@ -4375,6 +4375,15 @@ export class LogicEngine {
     return clamp(hold, 0.02, 0.98);
   }
 
+  /** laneWaveAnchorV15：p 的攻擊距離（r）內是否有敵方小兵（三路都看，只讀）。 */
+  _foeMinionWithin(p, r) {
+    const key = p.side === "blue" ? "rm" : "bm";
+    for (const ln of ["top", "mid", "bot"]) {
+      for (const m of this.lanes[ln][key]) if (m.hp > 0 && dist(p.pos, this._minionPos(ln, m)) <= r) return true;
+    }
+    return false;
+  }
+
   /** 這個位置是否在 `side` 方某座存活塔的射程內（回防清線判定）。 */
   _minionUnderTower(side, pos) {
     for (const tw of Object.values(this.towers)) {
@@ -5731,7 +5740,7 @@ export class LogicEngine {
               //    改成 stance 之後，保守站在射程後緣、進攻站進敵兵堆前緣，兩者都還打得到兵。
               const stance = clamp(depth / (R.laneStanceDepthRef ?? 0.06), -1, 1);
               waveT = this._laneWaveHoldT(p, effLane, stance);
-              if (waveT != null) base = waveT;
+              if (waveT != null) { base = waveT; p._waveAnchorT = this.t; }
             }
             if (waveT == null) base += (p.side === "blue" ? 1 : -1) * depth;
             //  Combat Quality v1：跟兵線回防時可以退到自家塔前（舊下限 0.3／0.7 會讓英雄到不了被推近的兵線）。
@@ -5747,7 +5756,17 @@ export class LogicEngine {
       //   S29B1（v3）：追擊視同交戰移速；撤退者有逃生移速加成（追擊者沒有）⇒
       //   「撤退＝死亡行軍」的結構性問題從機制面解掉，不是調傷害。
       //  Milestone M：職業站位（未啟用原型層 ⇒ 原樣回傳，逐位元不變）
-      tgt = this._archPosition(p, tgt, alive);
+      //  laneWaveAnchorV15（moba-sim.v15）：對線期「沒有交戰目標」的對線英雄留在兵線交戰點。
+      //  根因（Mobile & Presentation Polish C 段 audit）：同一路的對手英雄幾乎一直在 chaseDistance+6 內 ⇒
+      //  原型站位層把兵線站位點改寫成「相對敵方英雄的站位」⇒ 對線英雄前 10 分鐘只有 5–19% 的時間
+      //  站在敵兵攻擊距離內（中位數離敵兵 43 單位），補刀 top 3／mid 7。
+      //  只跳過**這一種**覆寫：一旦有交戰目標（被打、gank、團戰、撤退、戰術指令都會設 decisionTargetId
+      //  或改變 fsm），站位層照舊接手 ⇒ 不會變成「永遠先打小兵」。打野、輔助不套用（不搶線）。
+      //  ⚠ 與 v10–v13 同一個慣例：只在 hero skills 開啟時生效 ⇒ skill-off（含 Challenge）串流與 v14 逐位元相同。
+      const waveAnchor = R.laneWaveAnchorV15 && this.heroSkillsOn && p._waveAnchorT === this.t && p.fsm === "LANE"
+        && !p.decisionTargetId && !p.retreating && p.role !== "jungle" && p.role !== "sup";
+      if (waveAnchor) { if (R.stableFormation) { p._archFoe = null; p._hold = false; } }
+      else tgt = this._archPosition(p, tgt, alive);
       //  ── M1.7 ②：塔區退出。允許有計畫的越塔，禁止「站到殘血為止」──────────
       if (R.decisionV17 && !p.retreating) {
         //  這一路的前線建築＝我的推進目標；它若正好是把我罩住的那座塔，就是圍攻。
@@ -5794,7 +5813,10 @@ export class LogicEngine {
         const arrived = dist(p.pos, tgt) <= 0.9 || (gateStalled && dist(p.pos, tgt) <= this._engageRange(p) + 1);
         const hasFoe = alive.some((q) => q.side !== p.side && !q.dead &&
           dist(p.pos, q.pos) <= this._engageRange(p));
-        if (arrived && !hasFoe) {
+        //  laneWaveAnchorV15：到達兵線交戰點時，攻擊距離內有敵兵＝正在吃線，不是「閒置」⇒ 不派下一個任務。
+        //  （舊判定只看敵方英雄 ⇒ 英雄一到兵線、身邊沒有對手英雄就被 _nextTaskV17 派走。）
+        const hasWaveWork = waveAnchor && this._foeMinionWithin(p, this._engageRange(p) + 1);
+        if (arrived && !hasFoe && !hasWaveWork) {
           p.idleReason = this._idleReasonV17(p, st, effLane, alive);
           if (!p.idleReason) {
             const next = this._nextTaskV17(p, effLane, alive);

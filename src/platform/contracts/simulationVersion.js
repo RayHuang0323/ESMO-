@@ -36,11 +36,11 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
  * ⚠ **什麼時候不用 bump**：純呈現層、UI、文案、log。
  * ⚠ 版本字串一旦發布就**不可回收再用**：舊 Challenge 存著它。
  */
-export const MOBA_SIMULATION_VERSION = "moba-sim.v14";
+export const MOBA_SIMULATION_VERSION = "moba-sim.v15";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", MOBA_SIMULATION_VERSION]);
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -331,6 +331,13 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   // Hero Battle Talent v1 and Skill Level v1 change skill-on rules.
   // v14 remains an unpublished feature candidate; v13 stays for historical Replay.
   "moba-sim.v14": "20eb0e6130e1a933",
+  //  2026-09-29（feature/moba-mobile-hud-polish，C 段）：**simulation semantics change**（skill-on）。
+  //  v3 規則集新增 `laneWaveAnchorV15`：對線期沒有交戰目標的對線英雄（非打野／輔助）留在兵線交戰點，
+  //  不被原型站位層改寫成相對對手英雄的站位；到點後身邊有敵兵＝在吃線，不再被 _nextTaskV17 派走。
+  //  ⚠ 只在 hero skills 開啟時生效 ⇒ skill-off（含 Challenge）串流與 v14 逐位元相同。
+  //  ⚠ A/B（tools/balance/moba_lane_farm_ab.mjs，正式 skill＋talent 設定）見 05_Sprint紀錄 同日一節。
+  //  ⚠ 後果（已知且接受）：v1–v14 的歷史挑戰不再可重播，由 `canReplay` 明確拒絕；v14 仍為已知版本。
+  "moba-sim.v15": "5d4b4fd45fdbe457",
 });
 
 export const isKnownSimulationVersion = (v) =>

@@ -29,6 +29,30 @@ import { CoachNote } from "../../battle/ui/items/CoachNote.jsx";
 import { BuildStrategyCards } from "../../battle/ui/items/BuildStrategyCards.jsx";
 import { HeroItemDetail } from "../../battle/ui/items/HeroItemDetail.jsx";
 import { GOLD, ITEM_FONT, NUM, SIDE_TINT, SURFACE, TEXT, alpha, cornerCut } from "../../battle/ui/items/itemsTheme.js";
+import { ITEM_ART } from "../../battle/ui/items/ItemArt.jsx";
+import { ItemIcon } from "../../battle/ui/items/ItemGlyphs.jsx";
+
+//  Mobile & Presentation Polish：專屬圖示對照。每件：舊圖紋（改版前同流派共用）→ 新圖示 48px → HUD 小尺寸 20px。
+const ART_GROUPS = [
+  ["A 射手／暴擊", "A"], ["B 攻速／On-hit", "B"], ["C 刺客／穿透", "C"], ["D 戰士", "D"],
+  ["E 法術爆發", "E"], ["F 法術續戰", "F"], ["G 坦克", "G"], ["H 輔助", "H"], ["鞋", null],
+];
+function ArtCompare({ itemId }) {
+  const v = itemVisual(itemId);
+  return (
+    <div data-art-compare={itemId} style={{ display: "grid", justifyItems: "center", gap: 4, width: 92 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <span title="改版前圖紋" style={{ width: 28, height: 28, display: "grid", placeItems: "center", color: TEXT.faint, background: SURFACE.socket, clipPath: cornerCut(5) }}>
+          <ItemIcon glyph={v?.glyph} size={16} />
+        </span>
+        <span style={{ color: TEXT.faint, fontSize: 10 }}>→</span>
+        <ItemSlot itemId={itemId} size={48} />
+      </div>
+      <div style={{ display: "flex", gap: 4, alignItems: "center" }}><ItemSlot itemId={itemId} size={20} /><ItemSlot itemId={itemId} size={28} /></div>
+      <span style={{ fontSize: 10.5, color: TEXT.secondary, textAlign: "center", lineHeight: 1.2 }}>{v?.name}</span>
+    </div>
+  );
+}
 
 const SEATS = ["b1", "b2", "b3", "b4", "b5", "r1", "r2", "r3", "r4", "r5"];
 const COMP = { b: ["坦克", "刺客", "法師", "射手", "輔助"], r: ["戰士", "戰士", "法師", "射手", "坦克"] };
@@ -182,6 +206,15 @@ export default function ItemsUiGallery() {
           <Row>{examples.components.map((id) => <Swatch key={id} itemId={id} />)}</Row>
           <SubTitle>鞋子與起始裝</SubTitle>
           <Row>{[...examples.boots, ...examples.starters].map((id) => <Swatch key={id} itemId={id} />)}</Row>
+        </Section>
+
+        <Section id="item-art" wide title="專屬裝備圖示（T3 ＋ 鞋）" note="改版前同流派共用一個圖紋；現在每件都有自己的輪廓。武器＝鋼材斜向動勢、法術＝紫色奧術＋發光核心、防具＝青銅／石材／聖光正面構圖、鞋＝青綠皮革側影。">
+          {ART_GROUPS.map(([label, fam]) => (
+            <React.Fragment key={label}>
+              <SubTitle>{label}</SubTitle>
+              <Row>{Object.keys(ITEM_ART).filter((id) => (fam ? getItem(id)?.family === fam && getItem(id)?.tier === "T3" : getItem(id)?.tier === "BOOTS")).map((id) => <ArtCompare key={id} itemId={id} />)}</Row>
+            </React.Fragment>
+          ))}
         </Section>
 
         <Section id="slots" wide title="插槽與 6 格背包" note="上排是狀態目錄（同一件真實裝備畫成各種狀態）；下排是第 12 分鐘十名英雄的真實背包。">
