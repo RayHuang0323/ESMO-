@@ -23809,3 +23809,10 @@ CS_RESUME_HOTFIX = RELEASED（main cfca594 → a7afc5c）
 - 新 gate：`tools/check_challenge_snapshot_fatigue_g4.mjs`（18）；修正前 10/18，修正後 18/18。
 - 模擬版本：**不升**。`snapshotAuthority.js` 依 `simulationVersion.js` 的判準屬「生成」不屬「解讀」，既有凍結快照重播逐位元不變；`check_simulation_version_gate` 55/55。
 - 風險：修正後新發布的疲勞隊伍快照能力會回到原值（比修正前強）；舊快照是凍結值不受影響。挑戰方自己的出賽快照也走同一支，一併修正。
+
+## 2026-09-28 G4 Hotfix Release
+
+- origin/main fetch 後仍為 `876f657` ⇒ fast-forward 推送 `5d06c02`（normal push，無 force）。Pages deploy：success（run 36425166454）。
+- Release gates（同一份程式碼）：build ✓；g4 18/18；Player Challenge slice1–8 108／79／100／60／71／30／35／122；competition_q1 93；match_source_v0c 21；general_match_v7a 55；practice_match_v0d 70；retention_v7b 58；save_bundle_b1b 86；simulation_version_gate 55；regress 15/15；regress2 8/8。progress25 32/34、tactic24 28/29 只紅 BattleResult.v2 舊斷言（verifier debt）。
+- 正式站 smoke：`browser_check_prod_slice8` 43/43、`browser_check_prod_slice7` 29/29（含手動 Ban/Pick、結果、重播一致、生涯隔離、console clean）、`browser_check_prod_season_vnext` 30/30（MOBA 入口、生涯流程、無 page error）、臨時防守快照發布 smoke 5/5（五席位、moba-sim.v14、online-normalize.v1、狀態欄位不進 stats、console clean；腳本未入庫）。
+- 狀態：**G4 RELEASED**。
