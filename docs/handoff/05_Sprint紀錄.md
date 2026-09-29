@@ -23846,3 +23846,8 @@ CS_RESUME_HOTFIX = RELEASED（main cfca594 → a7afc5c）
 - **未完成／未驗證（機器記憶體不足，非產品錯誤）**：最終版本（加入 VFX／小兵／v15 之後）的瀏覽器 gate 與完整回歸在 12/43 被系統記憶體保護停止；WebGL context 建立失敗（`reading 'alpha'` of null），main 在同條件下同樣開不了戰鬥畫面。尚待重跑：browser_check_moba_mobile_hud、regress、regress2、hero skills／items_m2 等 skill-on gate、verify.mjs、headed 效能量測。
 - 補充（同日 06:12）：最終程式碼（＝03ce442）的 36 支相關 gate 在背景子迴圈中跑完：通過／失敗與 main 9dd0f0f **逐支相同**（main 綠／candidate 紅 = 0）；失敗簽名差異 5 支皆非回歸（final06／s4integration／ux07 僅路徑文字；recovery29b4 candidate 反而通過 flow09 子驗證；items_m3 當次 git diff 因記憶體失敗，commit 後單跑 G6／G8 已綠，剩 build OOM 與 main 既有 G8 樣式／G10／G12）。含 hero skills 的 check_moba_skill_levels_v1 400/400、spectacle_vision 21/21、rift_loading 41/41 通過。
 - 仍未跑（外層批次被系統記憶體保護停止，依規定未自行重啟）：regress、regress2、check_moba_items_m2（skill-off 逐位元）、最終版本 browser_check_moba_mobile_hud、verify.mjs、headed FPS。
+- 補充（同日 12:40，Owner 釋放記憶體後重跑）：**剩餘驗證全部完成**。
+  - Node：check_moba_mobile_hud_polish 60/60、simulation_version 55/55、replay_display_text ✓、skill_levels 400/400、items_m2 53/53（skill-off 逐位元）、regress 15/15（與改動前數字相同）、regress2 節奏 8/8。
+  - 瀏覽器（最終版本）：browser_check_moba_mobile_hud 37/37（320/360/390/430、真觸控、桌機）。
+  - 真 GPU FPS（headed，vite preview 正式 bundle，同機同工具）：candidate 桌機 60／59.5／60、390 視窗 60／60／59.7；main 桌機 60／60／59.7、390 視窗 60／60／59.9；p95 皆約 17ms，偶發單幀卡頓兩邊都有 ⇒ 無效能退化（390 為桌機 GPU 模擬視窗，非實機）。
+  - verify.mjs：31/102 通過、71 失敗，與 main 9dd0f0f **同一組 71 段、失敗簽名 71/71 相同**（p06b 首跑 CDP 逾時，單獨重跑 7/12 與 main 相同）⇒ **zero new regression**。
