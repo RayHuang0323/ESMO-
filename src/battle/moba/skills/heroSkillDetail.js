@@ -23,7 +23,7 @@ const FIELD_LABELS = Object.freeze({
   executeThreshold: '斬殺門檻', falloff: '遞減倍率', halfAngle: '扇形半角',
   bonusDamage: '強化普攻傷害', bonusPowerRatio: '強化普攻戰力係數',
   reviveWindow: '復活窗口', reviveHpRatio: '復活生命比例',
-  control: '控制類型', targetMode: '目標模式', blinkMode: '位移模式',
+  control: '控制類型', targetMode: '目標模式', blinkMode: '位移模式', cooldown: '冷卻時間',
   direction: '位移方向', armorGrowth: '護甲成長', baseArmor: '基礎護甲',
 });
 const EXCLUDED = new Set(['version', 'mechanic', 'skillId', 'cooldown']);
@@ -39,6 +39,19 @@ const format = (key, value) => {
   if (/Ratio|Factor|Multiplier|reduction|damageAmp|Threshold|falloff|slowFactor/.test(key)) return `${Number((value * 100).toFixed(1))}%`;
   return String(Number(value.toFixed(2)));
 };
+
+/**
+ * Passive P is NOT part of gameplay: toEngineHeroSkills / LogicEngine only compile Q/W/E/R,
+ * snapshots carry no heroSkills.P and Replay frames save none. Every surface that shows P
+ * (battle HUD tile, skill detail, hero sheet, replay HUD) reads its wording from here so
+ * none of them can drift into implying the passive is live.
+ */
+export const PASSIVE_STATUS = Object.freeze({
+  short: '未生效',
+  kind: '被動 · 未實裝',
+  aria: '被動未實裝，本場不生效，僅展示英雄設定資料',
+  availability: '未實裝 · 本場不生效',
+});
 
 /** Read-only UI model. Never computes damage from player stats or prose. */
 export function buildHeroSkillDetail(heroId, slot, live = null, { replay = false, selectedTalentId = null } = {}) {
@@ -67,7 +80,7 @@ export function buildHeroSkillDetail(heroId, slot, live = null, { replay = false
     targets: targetCapabilities(rule, slot),
     level: gameplayAvailable ? level : { supported: false, current: null, cap: null, next: null, nextAt: null },
     nextLevel: gameplayAvailable ? nextLevel : null,
-    availability: slot === 'P' ? '被動尚未實裝；僅提供英雄設定資料' :
+    availability: slot === 'P' ? PASSIVE_STATUS.availability :
       replay && !live ? '此重播未保存個別技能冷卻' : !live ? '此段沒有技能即時狀態' :
         live.ready ? '可用' : `冷卻 ${Math.ceil(live.cd)} 秒`,
   };

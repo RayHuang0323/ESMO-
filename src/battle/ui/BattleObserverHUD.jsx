@@ -9,6 +9,7 @@ import { useIsMobile } from '../../ui/useViewport.js';
 import { SUMMONER_SPELLS } from '../moba/mobaHeroLoadout.js';
 import BattleHeroSheet from './BattleHeroSheet.jsx';
 import BattleSkillDetail from './BattleSkillDetail.jsx';
+import { PASSIVE_STATUS } from '../moba/skills/heroSkillDetail.js';
 import { battleTalentById } from '../moba/talents/heroBattleTalents.js';
 //  Item System M3b：裝備 HUD。只讀 selector（selectHudItems），元件都在 ./items/。
 import { selectHudItems } from '../moba/items/itemsUiSelectors.js';
@@ -133,18 +134,23 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
         </div>
       </div>
       <div className="observer-abilities" aria-label="英雄技能說明">
+        {/*  Mobile UI P1：每格只放「一個」狀態文字，優先序 未生效(P) > 冷卻 > 可用；
+             技能等級改成右上角數字角標，不再和狀態文字搶同一條底線。
+             冷卻秒數放在圖示正中央（手機最容易一眼讀到），可用＝底部綠條「可用」。 */}
         {['P', 'Q', 'W', 'E', 'R'].map((key, i) => {
           const live = p.heroSkills?.[key];
           const status = key === 'P' ? 'passive' : !live ? 'unavailable' : live.ready ? 'ready' : 'cooldown';
+          const statusText = key === 'P' ? PASSIVE_STATUS.short : !live ? '—' : live.ready ? '可用' : null;
           return <button key={key} type="button" className={`observer-ability ability-${i} ${status}`}
             data-skill-slot={key} data-skill-state={status} data-skill-level={live?.level?.current ?? 'unranked'}
             aria-pressed={skill === key} onMouseEnter={() => { if (!mobile) setHoverSkill(key); }}
             onMouseLeave={() => { if (!mobile) setHoverSkill(null); }}
             onClick={() => { setSkill(skill === key ? null : key); setHoverSkill(null); }}
-            aria-label={`${key} ${hero[key] ?? '尚無技能資料'}，${key === 'P' ? '被動尚未實裝' : !live ? '即時狀態未提供' : live.ready ? '可用' : `冷卻 ${Math.ceil(live.cd)} 秒`}，${live?.level ? `技能 Lv${live.level.current}` : '技能等級未保存'}`}>
+            aria-label={`${key} ${hero[key] ?? '尚無技能資料'}，${key === 'P' ? PASSIVE_STATUS.aria : !live ? '即時狀態未提供' : live.ready ? '可用' : `冷卻 ${Math.ceil(live.cd)} 秒`}${key === 'P' ? '' : `，${live?.level ? `技能 Lv${live.level.current}` : '技能等級未保存'}`}`}>
             <img src={heroSkillIconUrl(r.heroId, key) ?? undefined} alt="" loading="lazy" />
-            <b>{key}</b><small>{key === 'P' ? '資料' : live ? live.ready ? '可用' : `${Math.ceil(live.cd)}s` : '—'}</small>
-            <span className="observer-ability-level" title={live?.level ? `技能 Lv${live.level.current}/${live.level.cap}` : '技能等級未保存'}>{live?.level ? `Lv${live.level.current}` : '—'}</span>
+            <b>{key}</b>
+            {live?.level && <span className="observer-ability-level" title={`技能 Lv${live.level.current}/${live.level.cap}`}>{live.level.current}</span>}
+            {status === 'cooldown' ? <em className="observer-ability-cd">{Math.ceil(live.cd)}</em> : <small>{statusText}</small>}
           </button>;
         })}
       </div>
@@ -161,7 +167,8 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
             <SeatItemPips hud={mine} /><GoldChip amount={mine.unspent} size="xs" /><small>{itemsSheet ? '收起裝備' : '裝備詳情 ›'}</small>
           </button>
         : <button className="observer-equipment" onClick={() => setSkill(skill === 'items' ? null : 'items')}><span>◇ ◇ ◇</span><small>裝備 · 未提供</small></button>}
-      <button className="observer-team-toggle" onClick={() => setTeamOpen(v => !v)} aria-expanded={teamOpen}>隊伍</button>
+      <button className="observer-team-toggle" onClick={() => setTeamOpen(v => !v)} aria-expanded={teamOpen} aria-label="雙方隊伍">
+        <span aria-hidden="true">👥</span><small>隊伍</small></button>
       {skill && !['P', 'Q', 'W', 'E', 'R'].includes(skill) && <div className="observer-tooltip" role="status"><button onClick={() => setSkill(null)} aria-label="關閉技能說明">✕</button>
         {skill === 'items' ? '本場尚未提供裝備與魔力資訊。' : skill === 'talent'
           ? battleTalent ? `${battleTalent.name} · ${battleTalent.description}（本場英雄戰鬥天賦）` : '此英雄目前沒有戰鬥天賦。' : skill.startsWith('spell')
@@ -171,7 +178,10 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
     {['P', 'Q', 'W', 'E', 'R'].includes(skill ?? hoverSkill) && <BattleSkillDetail
       heroId={r.heroId} slot={skill ?? hoverSkill} live={p.heroSkills?.[skill ?? hoverSkill]}
       selectedTalentId={p.heroBattleTalent?.id ?? r.battleTalentId}
-      replay={replay} mobile={mobile} onClose={() => { setSkill(null); setHoverSkill(null); }} />}
+      replay={replay} mobile={mobile} onClose={() => { setSkill(null); setHoverSkill(null); }}
+      //  Mobile UI P1：面板頂端不得高過右上控制欄（倍率／快速完成／⚙ ≈ 安全區 + 104px），
+      //  否則標題列與「✕」會被控制鈕蓋住；同時保住上半部戰場。內容超出就在面板內捲動。
+      style={mobile ? { maxHeight: `max(180px, calc(100% - ${hudSafeTop(hudMode, stripOn) + 104 + 128}px))` } : undefined} />}
     {itemsSheet && mine && <MobileItemsSheet hud={hudItems} focusId={p.id} roster={roster}
       onPick={pick} onClose={() => setItemsSheet(false)} bottom={mobile ? ITEM_TOAST_MOBILE_BOTTOM : 150}
       layout={mobile ? 'mobile' : 'desktop'}

@@ -89,3 +89,47 @@
 .observer-ui .observer-talent-chip{max-width:120px;min-height:24px;padding:2px 5px;font-size:9px;color:var(--battle-gold);border-color:var(--battle-gold);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .observer-ui.mobile .observer-talent-chip{max-width:80px;font-size:8px}
 @media(max-width:360px){.observer-skill-values,.observer-skill-targets{grid-template-columns:1fr}}
+
+/* ── Mobile UI P1（2026-09-29）────────────────────────────────────────────
+   1) 手機開啟全版面板（記分板／隊伍／裝備／英雄資訊 ⇒ .observer-ui.sheet-open）時，
+      右上控制欄（倍率／快速完成／⚙／畫質）、暫停離開、鏡頭列一起讓位：面板的「關閉 ✕」
+      是那一刻唯一的右上角按鈕。瀏覽器不支援 :has 時退回舊行為（面板本來就疊在上面）。 */
+.battle-stage.mobile:has(.observer-ui.sheet-open) [data-hud-ctl],
+.battle-stage.mobile:has(.observer-ui.sheet-open) [data-testid=battle-view-controls]{visibility:hidden;pointer-events:none}
+/* 舊「隊伍」面板原本被 5v5 戰況列（Z.hud 8）壓住標題列 */
+.observer-ui.mobile .observer-team-sheet{z-index:14}
+/* 2) 技能格：每格只一個狀態文字。鍵位左上、等級右上角標、狀態底條／冷卻置中，互不重疊 */
+.observer-ability b{top:1px;left:2px;font-size:8px;line-height:1}
+.observer-ui .observer-ability-level{top:1px;right:1px;bottom:auto;left:auto;min-width:12px;height:12px;padding:0 2px;border-radius:3px;display:grid;place-items:center;font:800 9px/1 Consolas,monospace;color:#111827;background:var(--battle-gold);text-shadow:none;box-shadow:0 0 0 1px #000a}
+.observer-ability small{left:0;right:0;bottom:0;padding:1px 0;text-align:center;font-size:8px;line-height:1.15;font-weight:700;white-space:nowrap;overflow:hidden}
+.observer-ability.ready small{background:rgba(6,78,59,.88);color:#a7f3d0}
+.observer-ability.passive small{background:rgba(69,26,3,.88);color:#fcd34d}
+.observer-ability.unavailable small{color:var(--battle-muted)}
+.observer-ability-cd{position:absolute;left:0;right:0;top:14px;bottom:1px;z-index:1;display:grid;place-items:center;font:800 14px/1 Consolas,monospace;font-style:normal;color:#fff;text-shadow:0 1px 3px #000,0 0 4px #000}
+.observer-ability.passive{border-style:dashed!important;border-color:rgba(251,191,36,.55)!important}
+/* 3) 手機底欄：技能／召喚師鈕隨寬度放大（320 維持最小、430 較好點），「隊伍」改圖示＋小字不再擠成直排 */
+.observer-ui.mobile .observer-ability{width:clamp(28px,8.4vw,37px);height:38px}
+.observer-ui.mobile .observer-spell{width:clamp(26px,7.6vw,33px);height:38px}
+.observer-ui.mobile .observer-team-toggle{display:grid;place-items:center;align-content:center;gap:1px;width:clamp(28px,8.4vw,38px);padding:0;line-height:1;min-height:38px}
+.observer-ui.mobile .observer-team-toggle span{font-size:13px}
+.observer-ui.mobile .observer-team-toggle small{font-size:9px;white-space:nowrap;color:#cbd5e1}
+@media(max-width:340px){.observer-ui.mobile .observer-dock{gap:3px;padding:8px 6px}.mobile .observer-abilities,.mobile .observer-spells{gap:2px}}
+.observer-ui.mobile .observer-spell b{font-size:8px}
+/* 4) 技能詳情：狀態膠囊、面板疊在戰況列之上；設定描述收進可展開區 */
+.observer-ui .observer-skill-detail{z-index:14}
+.observer-skill-status{justify-self:start;margin-top:2px;padding:1px 7px;border-radius:999px;border:1px solid var(--battle-line);font-size:11px;line-height:1.5}
+.observer-skill-status.ready{color:#a7f3d0!important;border-color:rgba(52,211,153,.55);background:rgba(6,78,59,.45)}
+.observer-skill-status.cooldown{color:#e5e7eb!important;background:rgba(255,255,255,.06)}
+.observer-skill-status.passive{color:#fcd34d!important;border-color:rgba(251,191,36,.55);background:rgba(69,26,3,.55)}
+.observer-skill-lore{margin-top:12px;border-top:1px solid var(--battle-line);padding-top:8px}
+.observer-skill-lore summary{cursor:pointer;min-height:32px;display:flex;align-items:center;font-size:11px;letter-spacing:.08em;color:var(--battle-gold)}
+.observer-skill-lore p{margin:6px 0 0}
+.observer-ui.mobile .observer-skill-detail-head{padding:9px 10px;gap:9px}
+.observer-ui.mobile .observer-skill-detail-head strong{font-size:15px}
+.observer-ui.mobile .observer-skill-detail-body{padding:10px 12px 14px}
+.observer-ui.mobile .observer-skill-detail-body h4{margin:11px 0 6px}
+/* 5) 手機底欄：裝備膠囊原本壓進技能格底部 5px（main 既有，browser_check_moba_battle_ux_hotfix M3b），
+      剛好蓋住新的「可用／未生效」狀態條 ⇒ 格高 40→38，資訊列間距收 5px，底欄總高不變。 */
+.observer-ui.mobile .observer-mobile-name{margin-bottom:3px}
+.observer-ui.mobile .observer-xp{margin-top:2px}
+.observer-ui.mobile .observer-stats{margin-top:2px}

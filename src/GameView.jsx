@@ -238,7 +238,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   const directorOn = camMode !== "free";
   // S29：畫質——首次依裝置自動判斷，玩家手動選擇後存 localStorage 並優先
   const [qualityId, setQualityId] = useState(() => loadQuality());
-  const pickQuality = (id) => { setQualityId(id); saveQuality(id); };
+  const pickQuality = (id) => { setQualityId(id); saveQuality(id); if (isMobile) setShowCtl(false); };
   const hud = useGameStore((s) => s.hud);
   // S29B2：手機控制鈕收納（⚙ 展開）；地圖不被常駐按鈕群遮擋
   const isMobile = useIsMobile();
@@ -289,7 +289,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
 
       {/* Milestone D：正式 GameView 的可開關自動導播。關閉會恢復啟用前的自由視角。 */}
       {playing && (
-        <button data-testid="director-toggle" aria-pressed={directorOn}
+        <button data-testid="director-toggle" data-hud-ctl aria-pressed={directorOn}
           onClick={() => useCameraStore.getState().toggleDirector()}
           title={directorOn ? "關閉自動導播並回到原本自由視角" : "啟用自動導播"}
           style={{ position: "absolute", bottom: isMobile ? "calc(136px + env(safe-area-inset-bottom))" : 130, left: isMobile ? 8 : "50%", transform: isMobile ? undefined : "translateX(-50%)", minHeight: 36, zIndex: Z.controls, background: "rgba(8,14,24,0.9)", border: `1px solid ${directorOn ? "#93c5fd" : "rgba(255,255,255,.35)"}`, borderRadius: 3, padding: "6px 13px", color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.45)" }}>
@@ -303,7 +303,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
             transform: isMobile ? undefined : "translateX(-50%)", zIndex: Z.controls }} />
       )}
       {playing && (
-        <button data-testid="leave-active-match" onClick={() => { pause(); onContinue?.(); }}
+        <button data-testid="leave-active-match" data-hud-ctl onClick={() => { pause(); onContinue?.(); }}
           title="暫停並離開；回到首頁後可返回進行中的比賽"
           style={{ position: "absolute", top: isMobile ? controlTop : 12, left: isMobile ? 8 : 12, minHeight: 36, zIndex: Z.overlay, background: "rgba(8,14,24,0.78)", border: "1px solid rgba(255,255,255,0.28)", borderRadius: 3, padding: "6px 10px", color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>
           ← 暫停並離開
@@ -313,7 +313,9 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
           舊碼每顆鈕各自寫死 top（92 / 128 / 160），而 BattleHUD 從 top 6 起高約
           120px ⇒ ⏩ 與 ⚙ 直接壓在塔點陣與**藍紅勝率條**上（Ray 手機實測回報）。
           現在整欄在 HUD 底緣之下，彼此用 gap 排列，不再有魔術數字互撞。 */}
-      <div style={{ position: "absolute", top: isMobile ? controlTop : 12, right: isMobile ? 8 : 12, zIndex: Z.overlay, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+      {/*  Mobile UI P1：data-hud-ctl ⇒ 手機開啟全版面板（記分板／隊伍／裝備／英雄資訊）時整欄讓位，
+          面板的「關閉 ✕」不再和 ⚙／倍率／快速完成疊在同一個角落（battleObserver.css :has 規則）。 */}
+      <div data-hud-ctl data-testid="hud-control-column" style={{ position: "absolute", top: isMobile ? controlTop : 12, right: isMobile ? 8 : 12, zIndex: Z.overlay, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
         {/* S29B4：Debug「快速完成比賽」——**不藏在 ⚙ 收納面板裡**（S29B4 根因：
             手機上它原本被 showCtl 收合，Pages 加 ?debug=1 也看不到）。測試模式
             **常駐可見**。fastForward：同一顆引擎安全推進到終局 → 走既有
@@ -334,7 +336,9 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
         )}
         {/* S29B2：控制鈕收納——手機收進 ⚙ 面板（不常駐佔畫面）；桌機維持常駐 */}
         {isMobile && (
-          <button onClick={() => setShowCtl((v) => !v)} style={{ background: showCtl ? "rgba(96,165,250,0.9)" : "rgba(8,14,24,0.75)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, padding: "5px 10px", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>⚙</button>
+          <button type="button" data-testid="quality-settings-toggle" onClick={() => setShowCtl((v) => !v)}
+            aria-expanded={showCtl} aria-label={showCtl ? "收起畫質設定" : "畫質設定"}
+            style={{ minWidth: 44, minHeight: 36, background: showCtl ? "rgba(96,165,250,0.9)" : "rgba(8,14,24,0.75)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, padding: "5px 10px", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>⚙</button>
         )}
         {(!isMobile || showCtl) && (
           <>
@@ -342,7 +346,8 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
             <div style={{ display: "flex", gap: 4 }}>
               {QUALITY_IDS.map((id) => (
                 <button key={id} onClick={() => pickQuality(id)} title={`畫質：${QUALITY_PRESETS[id].zh}（不影響模擬結果）`}
-                  style={{ background: qualityId === id ? "rgba(52,211,153,0.9)" : "rgba(8,14,24,0.7)", border: `1px solid ${qualityId === id ? "#34d399" : "rgba(255,255,255,0.25)"}`, borderRadius: 6, padding: "4px 8px", color: "#fff", fontSize: 10, fontWeight: 800, cursor: "pointer", textTransform: "uppercase" }}>
+                  aria-pressed={qualityId === id}
+                  style={{ minWidth: isMobile ? 40 : undefined, minHeight: isMobile ? 36 : undefined, background: qualityId === id ? "rgba(52,211,153,0.9)" : "rgba(8,14,24,0.7)", border: `1px solid ${qualityId === id ? "#34d399" : "rgba(255,255,255,0.25)"}`, borderRadius: 6, padding: "4px 8px", color: "#fff", fontSize: 10, fontWeight: 800, cursor: "pointer", textTransform: "uppercase" }}>
                   {id === "low" ? "低" : id === "medium" ? "中" : "高"}
                 </button>
               ))}

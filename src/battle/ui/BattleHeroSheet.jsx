@@ -28,6 +28,7 @@ import { selectPlayerItemsView } from "../moba/items/itemsViewModel.js";
 import { coachAnalysis, selectActiveEffects, selectHudItems } from "../moba/items/itemsUiSelectors.js";
 import { HeroItemDetail } from "./items/HeroItemDetail.jsx";
 import BattleSkillDetail from './BattleSkillDetail.jsx';
+import { PASSIVE_STATUS } from '../moba/skills/heroSkillDetail.js';
 import { battleTalentById } from '../moba/talents/heroBattleTalents.js';
 
 const MONO = "ui-monospace,Menlo,monospace";
@@ -231,21 +232,24 @@ export default function BattleHeroSheet({ heroId, heroName, playerName, playerId
           {db.P || db.Q ? (
             [["P", db.P], ["Q", db.Q], ["W", db.W], ["E", db.E], ["R", db.R]].map(([k, v]) => {
               const live = p?.heroSkills?.[k];
-              const status = k === 'P' ? '僅資料' : !live ? '未提供' : live.ready ? '可用' : `${Math.ceil(live.cd)}秒`;
+              //  Mobile UI P1：等級讀 snapshot 的 heroSkills[k].level（與 HUD 技能格同一來源），
+              //  不再一律寫「未分級」；被動 P 沿用 PASSIVE_STATUS（未實裝、本場不生效）。
+              const status = k === 'P' ? '未實裝' : !live ? '未提供' : live.ready ? '可用' : `${Math.ceil(live.cd)}秒`;
+              const levelText = k === 'P' ? '本場不生效' : live?.level ? `Lv${live.level.current}/${live.level.cap}` : '等級未保存';
               return <button key={k} type="button" data-skill-slot={k} onClick={() => setSelectedSkill(k)}
-                aria-label={`${k} ${v}，${status}，技能未分級；點開詳情`}
+                aria-label={`${k} ${v}，${k === 'P' ? PASSIVE_STATUS.aria : `${status}，${levelText}`}；點開詳情`}
                 style={{ width: '100%', minHeight: 44, display: 'flex', gap: 8, alignItems: 'center', textAlign: 'left',
                   background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.11)',
                   borderRadius: 7, marginBottom: 4, color: '#e5e7eb', cursor: 'pointer', padding: '3px 8px' }}>
                 <img src={heroSkillIconUrl(heroId, k) ?? undefined} alt="" width="34" height="34" style={{ borderRadius: 5 }} />
                 <b style={{ fontSize: 10, color: GC.gold }}>{k}</b><span style={{ flex: 1, fontSize: 11 }}>{v}</span>
-                <small style={{ fontSize: 9, color: live?.ready ? GC.green : '#a1a1aa' }}>{status}<br />未分級</small>
+                <small style={{ fontSize: 9, textAlign: 'right', color: k === 'P' ? '#fbbf24' : live?.ready ? GC.green : '#a1a1aa' }}>{status}<br />{levelText}</small>
               </button>;
             })
           ) : (
             <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>此英雄無技能資料</div>
           )}
-          <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>技能未分級；點圖示查看正式效果與作用對象。被動目前只有資料描述。</div>
+          <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>點技能查看正式效果、等級與作用對象。被動 P 尚未實裝，本場不生效，只展示英雄設定。</div>
           {p?.heroBattleTalent?.id && <Row l="本場英雄天賦" v={battleTalentById(p.heroBattleTalent.id)?.name ?? '未提供'} c={GC.gold} />}
 
           {/* ── 目前戰鬥資訊 ────────────────────────────────────────── */}
