@@ -23851,3 +23851,19 @@ CS_RESUME_HOTFIX = RELEASED（main cfca594 → a7afc5c）
   - 瀏覽器（最終版本）：browser_check_moba_mobile_hud 37/37（320/360/390/430、真觸控、桌機）。
   - 真 GPU FPS（headed，vite preview 正式 bundle，同機同工具）：candidate 桌機 60／59.5／60、390 視窗 60／60／59.7；main 桌機 60／60／59.7、390 視窗 60／60／59.9；p95 皆約 17ms，偶發單幀卡頓兩邊都有 ⇒ 無效能退化（390 為桌機 GPU 模擬視窗，非實機）。
   - verify.mjs：31/102 通過、71 失敗，與 main 9dd0f0f **同一組 71 段、失敗簽名 71/71 相同**（p06b 首跑 CDP 逾時，單獨重跑 7/12 與 main 相同）⇒ **zero new regression**。
+
+
+## 2026-09-29 MOBA Mobile & Presentation Polish 正式 Release（RELEASED）
+
+- 整合：fetch 後 origin/main 仍為 `9dd0f0f`（無新 commit），且為 `8ab648a` 的祖先 ⇒ **fast-forward**，一般 push（未 force）：`9dd0f0f..8ab648a`。程式碼 commit `03ce442`；release candidate `8ab648a`（branch `feature/moba-mobile-hud-polish`）。
+- Deploy：Deploy Vite site to GitHub Pages run `36542692772` **success**；線上 entry `index-CTAgj78n.js` 含 `moba-sim.v15` 與 `mobile-team-strip`。
+- 模擬版本 **moba-sim.v15**（Owner 已接受：兵線處理造成的溫和節奏變化；v1–v14 Challenge 依既有契約不跨版本重播）。`COMPETITIVE_ENABLED = false` 不變；Online Backend Foundation v1 未動；無 DB migration；未處理既有 71 段 verifier debt；未重跑 n=1000、未重做美術。
+- Production smoke（新增兩支，打線上網址，只走 DOM＋`?shot=` 診斷探針，TD-31）：
+  - `tools/browser_check_prod_moba_mobile_hud_release.mjs` **45/45 PASS**：320/360/390/430 戰況列 10 格、經濟差／拆塔、小地圖 92px、無橫向溢出；真觸控滑過／長按鏡頭不動、點一下移動；點頭像 heroFocus 跟隨；手機記分板 10 列可開關；桌機十人側欄、小地圖 180px、滑鼠拖曳；小兵 35–44 隻；VFX 15 秒內各 pool 最大值 `[12,4,70,80,6]`（圓環 pool 0 = 12，非圓環 pool 2/3 = 70/80）；page／console／shader error 0。
+  - `tools/browser_check_prod_moba_result_replay_release.mjs` **23/23 PASS**（390＋1366）：快速完成 → 結算（無溢出）→ 觀看重播（陣容 10 列、自動播放、暫停停住、繼續前進、可關閉）；page／console／shader error 0。
+  - 對線抽樣（1366，debug fsm 表＋actionState）：上／中／下 laner = LANE，打野 b2/r2 = FARM，輔助跟 ADC 同在下路；未見打野／輔助搶線。
+  - 小兵：正式站最大縮放（zoom 9.0）下為人形輪廓（頭／身／武器），不再是幾何色塊；近戰／法師細部輪廓以 candidate 本機近景（`review/moba-mobile-hud/minions/`）為準，正式站倍率不足以單獨判定。
+- 踩坑（非產品回歸）：第一、二次 smoke 在機器可用記憶體 2.4 GB 時失敗——`D3D11 … 0x8007000e`（E_OUTOFMEMORY）→ `reading 'alpha' of null`（後製 addPass）→ React root 清空。同條件下舊 main `9dd0f0f` 本機 preview 更早卡死 ⇒ 環境問題。Owner 關閉 Chrome（可用 6.5 GB）後全綠。
+- 另兩個 smoke 首跑紅燈是**斷言錯誤**已修正：VFX `counts` 是當幀值（每幀 `fill(0)`）需連續取樣；重播開啟即自動播放（`useState(true)`），按一次是暫停。
+- 既有風險（未處理，候選技術債）：WebGL context 遺失時整棵 React 樹被卸載成白畫面（無 error boundary），新舊版相同。Android 真機 FPS／觸控／熱量仍未實機驗收。
+- **v15 = RELEASED YES**。
