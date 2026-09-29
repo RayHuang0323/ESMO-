@@ -2,7 +2,9 @@
 // ============================================================================
 //  tools/browser_check_moba_combat_state_v1.mjs — Persistent Combat State v1（瀏覽器）
 //
-//  執行：node tools/browser_check_moba_combat_state_v1.mjs
+//  執行：node tools/browser_check_moba_combat_state_v1.mjs          （本地 dev server）
+//        node tools/browser_check_moba_combat_state_v1.mjs --prod   （正式站；ESMO_PROD_URL 可覆寫）
+//  正式站模式只用 DOM ＋ `?shot=` 診斷掛勾（TD-31），並先證明線上 bundle 含 CombatState.v1（P0）。
 //  本地 dev server、?debug=moba-runtime-battle&shot=（正式 GameView／引擎／HUD），1366 桌機＋390 手機：
 //    L1 現場：出現過領域，且每次取樣「CombatZones 這一幀讀到的權威領域數 ＝ 畫面可見領域 mesh 數」（逐幀必須相等）
 //       ⚠ 3D 畫面整體落後 frameRef 一幀（資料餵送器掛在所有渲染元件之後，英雄也一樣），所以不和最新 frameRef 比；
@@ -18,11 +20,13 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { runGate, finishGate } from "./browser/harness.mjs";
 
-const OUT = process.env.ESMO_REVIEW_OUT ?? "review/moba-combat-state-v1/gate";
+const PROD = process.env.ESMO_PROD_URL || (process.argv.includes("--prod") ? "https://rayhuang0323.github.io/ESMO-/" : null);
+const OUT = process.env.ESMO_REVIEW_OUT ?? (PROD ? "review/moba-combat-state-v1/prod-smoke" : "review/moba-combat-state-v1/gate");
 mkdirSync(OUT, { recursive: true });
 
 const result = await runGate({
-  name: "MOBA Persistent Combat State v1",
+  name: PROD ? "正式站 MOBA Persistent Combat State v1" : "MOBA Persistent Combat State v1",
+  ...(PROD ? { externalUrl: PROD } : {}),
   timeoutMs: 1500000,
   async run({ chrome, url, ck, sleep }) {
     const ev = async (body) => { const r = String(await chrome.evaluate(body)); for (const t of [r, r.replace(/^"|"$/g, "")]) { try { return JSON.parse(t); } catch { /* next */ } } return null; };
@@ -48,6 +52,11 @@ const result = await runGate({
       return { withZone, mismatch, lag, maxZ, kinds: [...kinds], statuses: [...statuses] };
     };
 
+    if (PROD) {
+      await chrome.navigate(url); await sleep(2000);
+      const bundle = await ev("const s=[...document.scripts].map(x=>x.src).find(x=>x.includes('/assets/index-')); return fetch(s).then(r=>r.text()).then(t=>JSON.stringify({src:s, v15:t.includes('moba-sim.v15'), cs:t.includes('CombatState.v1'), csr:t.includes('CombatStateReplay.v1'), zones:t.includes('moba-combat-zones')}));");
+      ck("P0 線上 bundle 含 moba-sim.v15、CombatState.v1、CombatStateReplay.v1、領域元件", bundle?.v15 && bundle?.cs && bundle?.csr && bundle?.zones, JSON.stringify(bundle));
+    }
     for (const [label, w, h, mob] of [["1366", 1366, 900, false], ["390", 390, 844, true]]) {
       await chrome.send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: mob ? 2 : 1, mobile: mob });
       await chrome.send("Emulation.setTouchEmulationEnabled", { enabled: mob, maxTouchPoints: mob ? 5 : 1 });
