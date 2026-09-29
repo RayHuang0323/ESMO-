@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../../useGameStore.js';
 import { useCameraStore } from '../cameraStore.js';
 import { useBattleStore } from '../battleStore.js';
@@ -10,6 +10,7 @@ import { SUMMONER_SPELLS } from '../moba/mobaHeroLoadout.js';
 import BattleHeroSheet from './BattleHeroSheet.jsx';
 import BattleSkillDetail from './BattleSkillDetail.jsx';
 import { PASSIVE_STATUS } from '../moba/skills/heroSkillDetail.js';
+import { sortedStatuses, statusMetaOf } from '../moba/presentation/heroStatusMeta.js';
 import { battleTalentById } from '../moba/talents/heroBattleTalents.js';
 //  Item System M3b：裝備 HUD。只讀 selector（selectHudItems），元件都在 ./items/。
 import { selectHudItems } from '../moba/items/itemsUiSelectors.js';
@@ -50,6 +51,9 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
   const [itemsView, setItemsView] = useState(false);
   const [itemsSheet, setItemsSheet] = useState(false);
   const [boardOpen, setBoardOpen] = useState(false);
+  //  升級回饋：十名英雄各自記錄 mlv；觀戰英雄 2.5 遊戲秒內升過級 ⇒ 頭像等級閃金光＋「升級」角標。
+  //  逐人記錄（不是只記觀戰者）：自動導播會頻繁換人，只記一人會讓升級幾乎永遠被重置掉。
+  const levelSeen = useRef(new Map());
   const hudMode = useHudMode();
   //  Battle UX hotfix：桌面十人列 hover 的裝備資訊卡、手機裝備入口的一次性提示
   const [hoverItem, setHoverItem] = useState(null);
@@ -75,6 +79,21 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
   const toggleItemsSheet = () => { setItemsSheet(v => !v); if (chipHint) { setChipHint(false); writeHintSeen(); } };
   const pick = id => { setSelected(id); setSkill(null); setHoverSkill(null); setTeamOpen(false); setBoardOpen(false); useCameraStore.getState().focusHero(id); };
   const stripOn = mobile && !replay;
+  for (const x of players) {
+    if (!Number.isFinite(x.mlv)) continue;
+    const seen = levelSeen.current.get(x.id);
+    //  沒記錄／等級變小（Replay 倒轉）⇒ 只記錄不播；變大 ⇒ 記下升級時刻。
+    if (!seen || x.mlv < seen.mlv) levelSeen.current.set(x.id, { mlv: x.mlv, at: -1 });
+    else if (x.mlv > seen.mlv) levelSeen.current.set(x.id, { mlv: x.mlv, at: snapshot?.ts ?? 0 });
+  }
+  const seenP = levelSeen.current.get(p.id);
+  const levelFlash = !!seenP && seenP.at >= 0 && (snapshot?.ts ?? 0) - seenP.at < 2.5;
+  //  血條刻度與護盾段：snapshot `mhp`（絕對最大血量）＋ statusEffects 的護盾 amount；沒有就不畫。
+  const mhp = Number.isFinite(p.mhp) && p.mhp > 0 ? p.mhp : null;
+  const shieldAmt = (p.statusEffects ?? []).find(e => e.id === 'shield')?.amount ?? 0;
+  const shieldPct = mhp && !p.dead ? Math.min(100, (shieldAmt / mhp) * 100) : 0;
+  const hpPctNum = p.dead ? 0 : Number(pct(p.hp));
+  const statuses = p.dead ? [] : sortedStatuses(p.statusEffects ?? []).slice(0, 4);
   const portrait = (x, size) => <HeroPortrait heroId={roster?.[x.id]?.heroId} size={size} radius={3}
     alt={roster?.[x.id]?.hero ?? x.id} fallback={<span className="observer-fallback">{roster?.[x.id]?.hero?.slice(0, 1) ?? x.id}</span>} />;
   const rail = side => <div className={`observer-rail ${side}`} aria-label={side === 'blue' ? '藍方英雄' : '紅方英雄'}>
@@ -114,8 +133,15 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
       {rail('blue')}{rail('red')}
     </div>}
     <section className="observer-dock" aria-label="觀戰英雄" data-testid="observer-dock">
+      {!!statuses.length && <div className="observer-status-row" data-testid="observer-status-row" aria-label="英雄狀態">
+        {statuses.map(e => { const m = statusMetaOf(e.id);
+          return <span key={e.id} data-status={e.id} data-category={m.cat} className={`observer-status ${m.cat}`} style={{ '--st': m.color }}
+            title={`${m.zh}${e.amount != null ? ` ${e.amount}` : ''}，剩 ${Math.ceil(e.remaining)} 秒`}>
+            <b aria-hidden="true">{m.glyph}</b><i>{m.zh}{e.amount != null ? ` ${e.amount}` : ''}</i><small>{Math.ceil(e.remaining)}s</small></span>; })}
+      </div>}
       <button className="observer-identity" onClick={() => setDetail(v => !v)} aria-label="查看英雄戰鬥資訊">
-        <span className="observer-avatar">{portrait(p, mobile ? 40 : 60)}<b>{p.mlv ?? '—'}</b></span>
+        <span className={`observer-avatar ${levelFlash ? 'level-up' : ''}`}>{portrait(p, mobile ? 40 : 60)}<b data-testid="observer-level">{p.mlv ?? '—'}</b>
+          {levelFlash && <em className="observer-level-up" data-testid="observer-level-up" role="status">升級</em>}</span>
         <span><small>觀戰英雄</small><strong>{hero.zh ?? r.hero ?? p.id}</strong><small>{r.player ?? p.id}</small></span>
       </button>
       <div className="observer-vitals">
@@ -126,7 +152,9 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
             {chipHint && mobile && !replay && <span className="observer-items-chip-hint" data-testid="items-chip-hint" role="note">點這裡看目前出裝</span>}
           </button>}
         </div>
-        <div className="observer-health"><i style={{ width: `${p.dead ? 0 : pct(p.hp)}%` }} /><b>{p.dead ? Number.isFinite(p.respawn) ? `陣亡 · ${Math.ceil(p.respawn)}秒復活` : '陣亡 · 未保存復活時間' : `生命 ${pct(p.hp)}%`}</b></div>
+        <div className={`observer-health ${mhp ? 'ticked' : ''}`} data-max-hp={mhp ?? undefined}
+          style={mhp ? { '--hp-tick': `${(250 / mhp) * 100}%`, '--hp-tick-big': `${(1000 / mhp) * 100}%` } : undefined}><i style={{ width: `${hpPctNum}%` }} />
+          {shieldPct > 0 && <s className="observer-shield" data-testid="observer-shield" style={{ left: `${Math.min(hpPctNum, 100 - shieldPct)}%`, width: `${shieldPct}%` }} />}<b>{p.dead ? Number.isFinite(p.respawn) ? `陣亡 · ${Math.ceil(p.respawn)}秒復活` : '陣亡 · 未保存復活時間' : `生命 ${pct(p.hp)}%`}</b></div>
         <div className="observer-xp" title={Number.isFinite(p.mxp) ? `經驗 ${p.mxp} / ${p.mxpNext || '滿等'}` : '此段未保存經驗'}><i style={{ width: `${Number.isFinite(p.mxp) ? p.mxpNext > 0 ? pct(p.mxp / p.mxpNext) : 100 : 0}%` }} /></div>
         <div className="observer-stats"><span>{p.k ?? '—'} / {p.d ?? '—'} / {p.a ?? '—'}</span><span>{hudItems ? `總收入 ${gold(p.gold)}` : gold(p.gold)}</span><span>{p.rc > 0 ? `回城 ${Math.ceil(p.rc)}s` : p.state}</span>
           {battleTalent && <button type="button" className="observer-talent-chip" onClick={() => setSkill(skill === 'talent' ? null : 'talent')}
@@ -138,15 +166,15 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
              技能等級改成右上角數字角標，不再和狀態文字搶同一條底線。
              冷卻秒數放在圖示正中央（手機最容易一眼讀到），可用＝底部綠條「可用」。 */}
         {['P', 'Q', 'W', 'E', 'R'].map((key, i) => {
-          const live = p.heroSkills?.[key];
-          const status = key === 'P' ? 'passive' : !live ? 'unavailable' : live.ready ? 'ready' : 'cooldown';
-          const statusText = key === 'P' ? PASSIVE_STATUS.short : !live ? '—' : live.ready ? '可用' : null;
+          const live = key === 'P' ? p.heroPassive : p.heroSkills?.[key];
+          const status = key === 'P' ? (live?.trigger ? 'passive live' : 'passive') : !live ? 'unavailable' : live.ready ? 'ready' : 'cooldown';
+          const statusText = key === 'P' ? (live?.trigger ? PASSIVE_STATUS.live : PASSIVE_STATUS.short) : !live ? '—' : live.ready ? '可用' : null;
           return <button key={key} type="button" className={`observer-ability ability-${i} ${status}`}
             data-skill-slot={key} data-skill-state={status} data-skill-level={live?.level?.current ?? 'unranked'}
             aria-pressed={skill === key} onMouseEnter={() => { if (!mobile) setHoverSkill(key); }}
             onMouseLeave={() => { if (!mobile) setHoverSkill(null); }}
             onClick={() => { setSkill(skill === key ? null : key); setHoverSkill(null); }}
-            aria-label={`${key} ${hero[key] ?? '尚無技能資料'}，${key === 'P' ? PASSIVE_STATUS.aria : !live ? '即時狀態未提供' : live.ready ? '可用' : `冷卻 ${Math.ceil(live.cd)} 秒`}${key === 'P' ? '' : `，${live?.level ? `技能 Lv${live.level.current}` : '技能等級未保存'}`}`}>
+            aria-label={`${key} ${hero[key] ?? '尚無技能資料'}，${key === 'P' ? (live?.trigger ? `被動試行中，已觸發 ${live.procs ?? 0} 次` : PASSIVE_STATUS.aria) : !live ? '即時狀態未提供' : live.ready ? '可用' : `冷卻 ${Math.ceil(live.cd)} 秒`}${key === 'P' ? '' : `，${live?.level ? `技能 Lv${live.level.current}` : '技能等級未保存'}`}`}>
             <img src={heroSkillIconUrl(r.heroId, key) ?? undefined} alt="" loading="lazy" />
             <b>{key}</b>
             {live?.level && <span className="observer-ability-level" title={`技能 Lv${live.level.current}/${live.level.cap}`}>{live.level.current}</span>}
@@ -176,7 +204,7 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
       </div>}
     </section>
     {['P', 'Q', 'W', 'E', 'R'].includes(skill ?? hoverSkill) && <BattleSkillDetail
-      heroId={r.heroId} slot={skill ?? hoverSkill} live={p.heroSkills?.[skill ?? hoverSkill]}
+      heroId={r.heroId} slot={skill ?? hoverSkill} live={(skill ?? hoverSkill) === 'P' ? p.heroPassive : p.heroSkills?.[skill ?? hoverSkill]}
       selectedTalentId={p.heroBattleTalent?.id ?? r.battleTalentId}
       replay={replay} mobile={mobile} onClose={() => { setSkill(null); setHoverSkill(null); }}
       //  Mobile UI P1：面板頂端不得高過右上控制欄（倍率／快速完成／⚙ ≈ 安全區 + 104px），

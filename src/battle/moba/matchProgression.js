@@ -780,6 +780,31 @@ SIM_RULES.v3 = {
   //  留在兵線交戰點，不被原型站位層改寫成「相對對手英雄的站位」；到點後身邊有敵兵＝在吃線，不被派走。
   //  只在 hero skills 開啟時生效（LogicEngine 內判斷）⇒ skill-off 與 v14 逐位元相同。
   laneWaveAnchorV15: true,
+  //  ── Objective Stakes v1（2026-09-29 候選，**預設關閉**）──────────────────────────
+  //  基準實測（40 場正式設定）：拿第一條巴龍的隊伍勝率 47.5%、14 分後大型目標→勝利轉換 54%
+  //  ⇒ 搶大型目標幾乎不改變勝負。候選只放大「既有」修正路徑，不新增傷害公式、不多耗 rng：
+  //   · 巨龍每層戰力 1.2% → objStakesDragonPowerPerStack；集滿 dragonMaxStacks（龍魂）再 ×objStakesSoulPowerK，
+  //     並給該隊兵線永久 fightK ×objStakesSoulFightK（走 _waveModifiers）。
+  //   · 巴龍 buff 期間英雄戰力 ×objStakesBaronPowerK（原本只強化小兵／攻城）。
+  //   · 落後方逆轉賞金：擊殺方團隊金錢落後 ≥ objStakesBountyGap ⇒ 追加 落後額 × ratio（上限 max）。
+  //   · 後期決策：objStakesLateT 秒後，目標窗的出擊機率 +objStakesLateJoin（同一次擲骰，rng 次數不變）。
+  //  只在 hero skills 開啟時生效 ⇒ skill-off（含 Challenge）逐位元不變。開啟＝模擬語意變更 ⇒ 需 moba-sim.v16。
+  objectiveStakesV1: false,
+  objStakesDragonPowerPerStack: 0.025,
+  objStakesSoulPowerK: 1.05, objStakesSoulFightK: 1.2,
+  objStakesBaronPowerK: 1.08,
+  objStakesBountyGap: 1500, objStakesBountyRatio: 0.2, objStakesBountyMax: 500,
+  objStakesLateT: 840, objStakesLateJoin: 0.2,
+  //  ── Nexus Siege Cap v1（2026-09-29 候選，**預設關閉**）──────────────────────────
+  //  基準實測：主堡第一次掉血到爆掉中位數 6 秒——後期 lateFactor × structureFactor 可達 ×40 以上，
+  //  7200 血在兩秒內蒸發，主堡的反擊根本來不及發生。候選只對 **主堡本身** 把這兩個加速係數的乘積
+  //  封頂在 nexusSiegeCapK（英雄與小兵攻城同一個上限）；外塔／門牙塔、主堡射擊一律不動。
+  nexusSiegeCapV1: false,
+  nexusSiegeCapK: 6,
+  //  ── Hero Passive P v1（2026-09-29 framework＋pilot，**預設關閉**）──────────────
+  //  規則在 battle/moba/skills/heroPassiveGameplay.js（受語意指紋保護）；引擎 _heroPassiveStep 每 tick
+  //  輪詢既有狀態判定觸發、只走既有護盾／減傷／加速路徑、不耗 rng。開啟＝模擬語意變更 ⇒ 需新版號。
+  heroPassivesV1: false,
 };
 
 /** 取規則集；未知/未指定 ⇒ v3（S29B1 預設）。 */

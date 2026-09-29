@@ -133,3 +133,32 @@
 .observer-ui.mobile .observer-mobile-name{margin-bottom:3px}
 .observer-ui.mobile .observer-xp{margin-top:2px}
 .observer-ui.mobile .observer-stats{margin-top:2px}
+
+/* ── Gameplay/Presentation audit（2026-09-29）────────────────────────────────
+   1) 血條刻度：細線每 250 HP、粗線每 1000 HP（同 3D 血條）；護盾＝接在血量後的白段。
+   2) 升級：頭像等級閃金光＋「升級」角標（2.5 遊戲秒，不擋操作）。
+   3) 狀態列：觀戰英雄的增益／減益／控制／護盾／隱身，含剩餘秒數（同 heroStatusMeta）。 */
+.observer-health.ticked::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:repeating-linear-gradient(90deg,transparent 0 calc(var(--hp-tick) - 1px),rgba(0,0,0,.55) calc(var(--hp-tick) - 1px) var(--hp-tick)),
+    repeating-linear-gradient(90deg,transparent 0 calc(var(--hp-tick-big) - 2px),rgba(0,0,0,.85) calc(var(--hp-tick-big) - 2px) var(--hp-tick-big))}
+.observer-health b{z-index:2}
+.observer-shield{position:absolute;top:0;bottom:0;background:rgba(241,245,249,.9);text-decoration:none;z-index:0}
+.observer-avatar{position:relative}
+.observer-avatar.level-up b{background:#facc15!important;color:#111827!important;box-shadow:0 0 0 2px #fde68a,0 0 12px #facc15;animation:observer-level-pop .9s ease-out 1}
+.observer-level-up{position:absolute;top:-8px;left:50%;transform:translateX(-50%);padding:0 5px;border-radius:999px;background:#facc15;color:#111827;font:800 9px/1.5 system-ui,sans-serif;font-style:normal;white-space:nowrap;pointer-events:none;animation:observer-level-rise 2.5s ease-out 1 forwards}
+@keyframes observer-level-pop{0%{transform:scale(1)}30%{transform:scale(1.45)}100%{transform:scale(1)}}
+@keyframes observer-level-rise{0%{opacity:0;transform:translate(-50%,4px)}12%{opacity:1;transform:translate(-50%,0)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-6px)}}
+@media (prefers-reduced-motion:reduce){.observer-avatar.level-up b,.observer-level-up{animation:none}}
+.observer-status-row{position:absolute;left:12px;bottom:calc(100% + 4px);z-index:3;display:flex;gap:3px;flex-wrap:nowrap;max-width:100%;overflow:hidden;pointer-events:none}
+.observer-status{display:inline-flex;align-items:center;gap:2px;padding:1px 5px 1px 3px;border-radius:4px;border:1px solid color-mix(in srgb,var(--st) 55%,transparent);border-left:3px solid var(--st);background:rgba(8,14,24,.82);color:var(--st);font:700 9px/1.4 system-ui,sans-serif;white-space:nowrap}
+.observer-status b{font-size:10px}
+.observer-status small{margin-left:2px;color:#e5e7eb;font:700 8px Consolas,monospace}
+.observer-status[data-status=stealth]{box-shadow:0 0 6px var(--st);animation:observer-stealth-pulse 1.4s ease-in-out infinite}
+@keyframes observer-stealth-pulse{50%{opacity:.55}}
+/* 手機：跨在底欄上緣、頭像右側；只顯示圖示＋秒數（完整文字在 title） */
+.observer-ui.mobile .observer-status-row{bottom:auto;top:-9px;left:58px;right:8px}
+.observer-ui.mobile .observer-status{font-size:8px;padding:0 4px 0 2px}
+.observer-ui.mobile .observer-status i{display:none}
+/* Hero Passive P v1：只有 snapshot 帶 heroPassive 的 pilot 英雄才是「試行中」（綠底），其餘仍是虛線「未生效」 */
+.observer-ability.passive.live{border-style:solid!important;border-color:rgba(52,211,153,.6)!important}
+.observer-ability.passive.live small{background:rgba(6,78,59,.88);color:#a7f3d0}

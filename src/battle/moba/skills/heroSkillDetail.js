@@ -45,13 +45,26 @@ const format = (key, value) => {
  * snapshots carry no heroSkills.P and Replay frames save none. Every surface that shows P
  * (battle HUD tile, skill detail, hero sheet, replay HUD) reads its wording from here so
  * none of them can drift into implying the passive is live.
+ * 2026-09-29 Hero Passive P v1: a pilot hero whose snapshot row carries `heroPassive`
+ * (rule flag heroPassivesV1 on) is the only case shown as live — see passiveLiveText.
  */
 export const PASSIVE_STATUS = Object.freeze({
   short: '未生效',
   kind: '被動 · 未實裝',
   aria: '被動未實裝，本場不生效，僅展示英雄設定資料',
   availability: '未實裝 · 本場不生效',
+  live: '試行中',
+  liveKind: '被動 · 已實裝（試行）',
 });
+
+const PASSIVE_TRIGGER_TEXT = Object.freeze({
+  'burst-damage': '受到大量單次傷害時', 'low-hp': '低血量時', periodic: '週期觸發',
+  'out-of-combat': '脫戰後', takedown: '擊殺／助攻時',
+});
+/** Hero Passive P v1：snapshot `heroPassive`（只有 pilot 英雄且規則開啟時存在）→ 顯示文字。 */
+export const passiveLiveText = (live) => live?.trigger
+  ? `已實裝（試行）· ${PASSIVE_TRIGGER_TEXT[live.trigger] ?? live.trigger} · 已觸發 ${live.procs ?? 0} 次${live.ready === false ? `（${Math.ceil(live.cd)} 秒後可再觸發）` : ''}`
+  : null;
 
 /** Read-only UI model. Never computes damage from player stats or prose. */
 export function buildHeroSkillDetail(heroId, slot, live = null, { replay = false, selectedTalentId = null } = {}) {
@@ -80,7 +93,8 @@ export function buildHeroSkillDetail(heroId, slot, live = null, { replay = false
     targets: targetCapabilities(rule, slot),
     level: gameplayAvailable ? level : { supported: false, current: null, cap: null, next: null, nextAt: null },
     nextLevel: gameplayAvailable ? nextLevel : null,
-    availability: slot === 'P' ? PASSIVE_STATUS.availability :
+    passiveLive: slot === 'P' && !!live?.trigger,
+    availability: slot === 'P' ? (passiveLiveText(live) ?? PASSIVE_STATUS.availability) :
       replay && !live ? '此重播未保存個別技能冷卻' : !live ? '此段沒有技能即時狀態' :
         live.ready ? '可用' : `冷卻 ${Math.ceil(live.cd)} 秒`,
   };

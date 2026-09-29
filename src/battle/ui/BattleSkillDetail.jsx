@@ -8,8 +8,8 @@ export default function BattleSkillDetail({ heroId, slot, live, selectedTalentId
   const detail = buildHeroSkillDetail(heroId, slot, live, { replay, selectedTalentId });
   if (!detail) return null;
   const passive = detail.slot === 'P';
-  const tone = passive ? 'passive' : !detail.gameplayAvailable ? 'unavailable' : detail.ready === true ? 'ready' : detail.ready === false ? 'cooldown' : 'unknown';
-  const kind = passive ? PASSIVE_STATUS.kind : detail.gameplayAvailable ? '主動技能' : '主動技能 · 無正式規則';
+  const tone = passive ? (detail.passiveLive ? 'ready' : 'passive') : !detail.gameplayAvailable ? 'unavailable' : detail.ready === true ? 'ready' : detail.ready === false ? 'cooldown' : 'unknown';
+  const kind = passive ? (detail.passiveLive ? PASSIVE_STATUS.liveKind : PASSIVE_STATUS.kind) : detail.gameplayAvailable ? '主動技能' : '主動技能 · 無正式規則';
   return <aside className={`observer-skill-detail ${mobile ? 'mobile' : 'desktop'}`} style={style}
     role="dialog" aria-label={`${detail.slot} ${detail.name}技能詳情`} data-skill-detail={`${heroId}:${slot}`}
     data-skill-gameplay={detail.gameplayAvailable ? 'live' : 'not-implemented'}>
@@ -21,7 +21,12 @@ export default function BattleSkillDetail({ heroId, slot, live, selectedTalentId
       <button type="button" onClick={onClose} aria-label="關閉技能詳情">✕</button>
     </header>
     <div className="observer-skill-detail-body">
-      {passive && <>
+      {passive && detail.passiveLive && <>
+        <p className="observer-skill-footnote" data-testid="passive-live">此被動已以試行規則接入正式對戰（Hero Passive P v1）：觸發與效果來自引擎同一份狀態，護盾／減傷／加速會出現在英雄狀態列。數值為近似，完整規則見設計文件。</p>
+        <h4>英雄設定描述</h4>
+        <p>{detail.description || '尚無英雄設定說明。'}</p>
+      </>}
+      {passive && !detail.passiveLive && <>
         <p className="observer-skill-warning" data-testid="passive-not-live">此被動尚未實裝到正式對戰，不會在本場觸發，也不影響戰鬥結果與重播。下面只是英雄設定描述。</p>
         <h4>英雄設定描述（未生效）</h4>
         <p>{detail.description || '尚無英雄設定說明。'}</p>

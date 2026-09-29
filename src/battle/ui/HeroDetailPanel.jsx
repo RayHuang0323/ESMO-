@@ -11,6 +11,8 @@ import { heroById } from "../../data/heroDatabase.js";
 import { GC } from "../../ui/theme.js";
 import { useIsMobile } from "../../ui/useViewport.js";
 import { Z } from "./battleLayout.js";
+import HeroSkillIcon from "./HeroSkillIcon.jsx";
+import { PASSIVE_STATUS } from "../moba/skills/heroSkillDetail.js";
 
 const MONO = "ui-monospace,Menlo,monospace";
 const pct = (v) => ((v - 1) * 100).toFixed(1) + "%";
@@ -117,9 +119,12 @@ export default function HeroDetailPanel({ heroId, heroName, playerName, side = "
           <>
             <div style={{ fontSize: 9.5, letterSpacing: "0.2em", color: "rgba(255,255,255,0.5)", fontWeight: 900, margin: "10px 0 3px" }}>技能（SKILL · CHAMPIONS_100）</div>
             {[["P", h.P], ["Q", h.Q], ["W", h.W], ["E", h.E], ["R", h.R]].map(([k, v]) => (
-              <div key={k} style={{ display: "flex", gap: 7, alignItems: "center", fontSize: 11, padding: "1.5px 0" }}>
-                <span style={{ width: 16, height: 16, borderRadius: 4, background: k === "R" ? "rgba(250,204,21,0.25)" : "rgba(255,255,255,0.1)", color: k === "R" ? "#fde047" : "#cbd5e1", fontWeight: 900, fontSize: 9, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{k}</span>
-                <span style={{ color: "#e5e7eb" }}>{v}</span>
+              //  技能圖示與 Battle HUD 同源（heroSkillIconUrl）；原本只有字母方塊，手機全版面板看不到圖示。
+              <div key={k} data-skill-slot={k} style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 11, padding: "2.5px 0" }}>
+                <HeroSkillIcon heroId={heroId} slot={k} size={isMobile ? 32 : 26} accent={k === "R" ? "#fde047" : "#cbd5e1"} />
+                <b style={{ fontSize: 9, color: k === "R" ? "#fde047" : GC.gold, width: 10 }}>{k}</b>
+                <span style={{ color: "#e5e7eb", flex: 1 }}>{v}</span>
+                {k === "P" && <small style={{ fontSize: 9, color: "#fbbf24" }}>{PASSIVE_STATUS.short}</small>}
               </div>
             ))}
             <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{h.title} · {h.arch} · {h.lane}</div>

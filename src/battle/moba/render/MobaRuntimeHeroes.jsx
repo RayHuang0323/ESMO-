@@ -142,6 +142,9 @@ export default function MobaRuntimeHeroes({
     horn: new THREE.ConeGeometry(HERO.radius * 0.25, HERO.radius * 0.82, 5),
     hood: new THREE.ConeGeometry(HERO.radius * 0.78, HERO.radius * 1.08, 7, 1, true),
     halo: new THREE.TorusGeometry(HERO.radius * 0.72, HERO.radius * 0.1, 5, 16),
+    //  Gameplay/Presentation audit：升級回饋（腳下金環＋上升光柱）。
+    levelRing: new THREE.RingGeometry(HERO.ringR * 0.72, HERO.ringR * 0.98, 28),
+    levelBeam: new THREE.CylinderGeometry(HERO.radius * 0.95, HERO.radius * 1.25, HERO.height * 2.4, 12, 1, true),
   }), []);
 
   const mats = useMemo(() => {
@@ -168,6 +171,9 @@ export default function MobaRuntimeHeroes({
       accentByHero, bodyByHero, secondaryByHero,
       //  陣亡本體：**去飽和的隊色** + 0.55 透明（0.28 太淡，全場視角等於消失）
       blueDead: mk(TEAM_DEAD.blue, { transparent: true, opacity: DEAD.bodyOpacity }),
+      //  隱身（snapshot statusEffects `stealth`）：隊色半透明＋自發光閃動，一眼看得出「還在、但隱形」。
+      blueStealth: mk(TEAM_COLOR.blue, { transparent: true, opacity: 0.3, depthWrite: false, emissive: TEAM_COLOR.blue, emissiveIntensity: 0.7 }),
+      redStealth: mk(TEAM_COLOR.red, { transparent: true, opacity: 0.3, depthWrite: false, emissive: TEAM_COLOR.red, emissiveIntensity: 0.7 }),
       redDead: mk(TEAM_DEAD.red, { transparent: true, opacity: DEAD.bodyOpacity }),
       //  ── H.2-flicker：貼在地面上的環與標記一律加 polygonOffset ────────────────
       //  這些東西和地形**幾乎共面**（選取環只抬 0.35 世界單位、塔環 0.11、目標環 0.09）。
@@ -204,6 +210,8 @@ export default function MobaRuntimeHeroes({
       barBg: new THREE.MeshBasicMaterial({ color: 0x0b1118, transparent: true, opacity: 0.82, depthTest: false, depthWrite: false, side: THREE.DoubleSide }),
       barBlue: new THREE.MeshBasicMaterial({ color: 0x59d97a, transparent: true, opacity: 1, depthTest: false, depthWrite: false, side: THREE.DoubleSide }),
       barRed: new THREE.MeshBasicMaterial({ color: 0xe2604f, transparent: true, opacity: 1, depthTest: false, depthWrite: false, side: THREE.DoubleSide }),
+      //  護盾段：接在目前血量後面的白色段（量＝snapshot 護盾 amount ÷ 絕對最大血量）。
+      barShield: new THREE.MeshBasicMaterial({ color: 0xf1f5f9, transparent: true, opacity: 0.92, depthTest: false, depthWrite: false, side: THREE.DoubleSide }),
       markerBlue: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.blue, transparent: true, opacity: 0.96, depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }),
       markerRed: new THREE.MeshBasicMaterial({ color: TEAM_COLOR.red, transparent: true, opacity: 0.96, depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }),
       // D-fix3：實心命中標記不受場景光源／Bloom 洗淡，和血條下降同幀出現。
@@ -386,6 +394,9 @@ export default function MobaRuntimeHeroes({
         label.material.color.setHex(h.alive ? 0xffffff : 0x9aa3ad);
         label.parent.rotation.y = -root.rotation.y;
       }
+      applyHpBarExtras(node, h);
+      applyLevelUpFx(node, h, now);
+      applyStealth(node, h, now, mats);
     }
   });
 
@@ -410,6 +421,94 @@ export default function MobaRuntimeHeroes({
   );
 }
 
+//  ── Gameplay/Presentation audit（2026-09-29）：血條刻度／護盾段／升級／隱身 ─────────────
+//  全部只讀 adapter 的英雄資料（snapshot 同一份），不寫任何戰鬥狀態。
+//  刻度：細線每 250 HP、粗線每 1000 HP（坦克 ~1900 HP ⇒ 7 細 1 粗；射手 ~970 ⇒ 3 細），
+//  血條寬度不變，靠刻度密度讀出「這條血有多厚」。沒有絕對血量（Replay 精簡 frame）⇒ 不畫刻度。
+const HP_TICK = Object.freeze({ small: 250, big: 1000 });
+const LEVEL_UP_SEC = 1.15;
+
+function makeTickTexture(lineFrac, alpha) {
+  const c = document.createElement("canvas");
+  c.width = 64; c.height = 4;
+  const g = c.getContext("2d");
+  g.fillStyle = `rgba(6,10,16,${alpha})`;
+  g.fillRect(0, 0, Math.max(2, Math.round(64 * lineFrac)), 4);
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.LinearFilter;
+  tex.generateMipmaps = false;
+  return tex;
+}
+
+function applyHpBarExtras(node, h) {
+  const { ticksSmall, ticksBig, shieldSeg } = node;
+  const st = node.root.userData;   // 狀態掛在 root（穩定），node 物件會隨 register 重建
+  const maxAbs = h.maxHpAbs;
+  const showTicks = !!(h.alive && maxAbs > 0);
+  if (ticksSmall && ticksBig) {
+    ticksSmall.visible = showTicks && maxAbs > HP_TICK.small;
+    ticksBig.visible = showTicks && maxAbs > HP_TICK.big;
+    if (showTicks && st.tickMax !== maxAbs) {
+      st.tickMax = maxAbs;
+      ticksSmall.material.map.repeat.x = maxAbs / HP_TICK.small;
+      ticksBig.material.map.repeat.x = maxAbs / HP_TICK.big;
+    }
+  }
+  if (shieldSeg) {
+    const sh = h.alive && maxAbs ? (h.statusEffects ?? []).find((e) => e.id === "shield" && e.amount > 0) : null;
+    const frac = sh ? Math.min(1, sh.amount / maxAbs) : 0;
+    shieldSeg.visible = frac > 0.004;
+    if (shieldSeg.visible) {
+      //  護盾接在目前血量後面；滿血時從右端往回疊（不超出血條）
+      const start = Math.min(h.hpRatio, 1 - frac);
+      shieldSeg.scale.x = HERO.barW * frac;
+      shieldSeg.position.x = -HERO.barW / 2 + HERO.barW * (start + frac / 2);
+    }
+  }
+}
+
+function applyLevelUpFx(node, h, now) {
+  const { levelRing, levelBeam } = node;
+  if (!levelRing || !levelBeam) return;
+  const st = node.root.userData;
+  //  升級偵測：同一英雄 level 變大（live `mlv`／Replay `lv` 同源）。首幀只記錄、不播。
+  if (st.prevLevel != null && h.level > st.prevLevel && h.alive) st.levelAt = now;
+  st.prevLevel = h.level;
+  const k = st.levelAt != null ? (now - st.levelAt) / LEVEL_UP_SEC : 1;
+  const on = k >= 0 && k < 1;
+  levelRing.visible = on;
+  levelBeam.visible = on;
+  if (!on) return;
+  const ease = 1 - (1 - k) * (1 - k);
+  levelRing.scale.setScalar(0.7 + ease * 1.5);
+  levelRing.material.opacity = 0.95 * (1 - k);
+  levelBeam.scale.set(1, 0.4 + ease * 0.8, 1);
+  levelBeam.material.opacity = 0.42 * (1 - k) * (k < 0.15 ? k / 0.15 : 1);
+}
+
+const STEALTH_PARTS = ["body", "shoulder", "accessory", "signature", "headFeature", "classLanguage", "badge", "crest", "teamBand"];
+function applyStealth(node, h, now, mats) {
+  const stealthed = !!(h.alive && (h.statusEffects ?? []).some((e) => e.id === "stealth"));
+  const st = node.root.userData;
+  if (!stealthed && !st.stealthed) return;
+  st.stealthed = stealthed;
+  const mat = h.team === "blue" ? mats.blueStealth : mats.redStealth;
+  if (stealthed) mat.opacity = 0.24 + 0.1 * Math.sin(now * 5.2);
+  for (const key of STEALTH_PARTS) {
+    node[key]?.traverse?.((m) => {
+      if (!m.isMesh) return;
+      if (stealthed) {
+        if (m.material !== mat) { m.userData.preStealthMat = m.material; m.material = mat; }
+      } else if (m.userData.preStealthMat) {
+        m.material = m.userData.preStealthMat;
+        delete m.userData.preStealthMat;
+      }
+    });
+  }
+}
+
 function HeroUnit({ hero, geo, mats, frameRef, showLabel, compactLabel, register }) {
   const rootRef = useRef();
   const bodyRef = useRef();
@@ -427,6 +526,21 @@ function HeroUnit({ hero, geo, mats, frameRef, showLabel, compactLabel, register
   const teamBandRef = useRef();
   const hitMarkerRef = useRef();
   const labelRef = useRef();
+  const ticksSmallRef = useRef();
+  const ticksBigRef = useRef();
+  const shieldSegRef = useRef();
+  const levelRingRef = useRef();
+  const levelBeamRef = useRef();
+  //  每名英雄自己的刻度貼圖（repeat 依本人絕對最大血量）與升級特效材質（各自淡出）。
+  const extraMats = useMemo(() => ({
+    ticksSmall: new THREE.MeshBasicMaterial({ map: makeTickTexture(0.06, 0.62), transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide }),
+    ticksBig: new THREE.MeshBasicMaterial({ map: makeTickTexture(0.14, 0.92), transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide }),
+    levelRing: new THREE.MeshBasicMaterial({ color: 0xfde68a, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
+    levelBeam: new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false }),
+  }), []);
+  useLayoutEffect(() => () => {
+    Object.values(extraMats).forEach((m) => { m.map?.dispose(); m.dispose(); });
+  }, [extraMats]);
   const [proxyReady, setProxyReady] = useState(false);
   const useChichuanProxy = hero.heroId === "chichuan" && heroProxyEnabled();
   const useDadiProxy = hero.heroId === "dadi";
@@ -470,6 +584,11 @@ function HeroUnit({ hero, geo, mats, frameRef, showLabel, compactLabel, register
       aura: auraRef.current,
       motes: motesRef.current,
       bar: barRef.current,
+      ticksSmall: ticksSmallRef.current,
+      ticksBig: ticksBigRef.current,
+      shieldSeg: shieldSegRef.current,
+      levelRing: levelRingRef.current,
+      levelBeam: levelBeamRef.current,
       hitMarker: hitMarkerRef.current,
       label: labelRef.current,
       bodyAliveMaterial: bodyMaterial,
@@ -578,7 +697,23 @@ function HeroUnit({ hero, geo, mats, frameRef, showLabel, compactLabel, register
           position={[-HERO.barW * 0.66, 0, 0.03]} rotation={[0, 0, Math.PI / 4]}
           renderOrder={72} frustumCulled={false}
           userData={{ part: "hero-team-side-marker", team }} />
+        <mesh ref={shieldSegRef} geometry={geo.bar} material={mats.barShield}
+          scale={[0.001, HERO.barH, 1]} position={[0, 0, 0.015]} renderOrder={71.4} visible={false}
+          frustumCulled={false} userData={{ part: "hero-hpbar-shield" }} />
+        <mesh ref={ticksSmallRef} geometry={geo.bar} material={extraMats.ticksSmall}
+          scale={[HERO.barW, HERO.barH, 1]} position={[0, 0, 0.02]} renderOrder={71.6} visible={false}
+          frustumCulled={false} userData={{ part: "hero-hpbar-ticks" }} />
+        <mesh ref={ticksBigRef} geometry={geo.bar} material={extraMats.ticksBig}
+          scale={[HERO.barW, HERO.barH * 1.25, 1]} position={[0, 0, 0.025]} renderOrder={71.7} visible={false}
+          frustumCulled={false} userData={{ part: "hero-hpbar-ticks-1000" }} />
       </group>
+      {/* 升級回饋：腳下金環外擴＋短暫光柱（1.15 秒，不遮戰場） */}
+      <mesh ref={levelRingRef} geometry={geo.levelRing} material={extraMats.levelRing}
+        position={[0, RING_LIFT + 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]} visible={false}
+        renderOrder={14} frustumCulled={false} userData={{ part: "hero-level-up-ring" }} />
+      <mesh ref={levelBeamRef} geometry={geo.levelBeam} material={extraMats.levelBeam}
+        position={[0, HERO.height * 1.1, 0]} visible={false}
+        renderOrder={15} frustumCulled={false} userData={{ part: "hero-level-up-beam" }} />
       {showLabel && (
         <group position={[0, NAMEPLATE.y, 0]}>
           <mesh ref={labelRef} geometry={geo.bar} material={labelMaterial}

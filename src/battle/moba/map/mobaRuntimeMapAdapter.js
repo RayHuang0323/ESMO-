@@ -122,6 +122,9 @@ export function adaptHeroes(snapshot, opts = {}) {
       hp: hpRatio,
       maxHp: 1,
       hpRatio,
+      //  Gameplay/Presentation audit：絕對最大血量（snapshot `mhp`，heroSkillsOn 才有）。
+      //  只給血條刻度／護盾段用；沒有（Replay 精簡 frame、舊 snapshot）⇒ null ⇒ 不畫刻度，不猜。
+      maxHpAbs: Number.isFinite(p.mhp) && p.mhp > 0 ? p.mhp : null,
       alive: !p.dead,
       //  ⚠ 現場 snapshot 用 `mlv`，Replay frame 攤開後用 `lv`（replayBuffer 的既有欄位名，
       //    H.1-close 不改 schema）⇒ 兩個都收，否則重播時所有英雄都顯示 Lv1。
@@ -139,6 +142,7 @@ export function adaptHeroes(snapshot, opts = {}) {
       })) : [],
       statusEffects: Array.isArray(p.statusEffects) ? p.statusEffects.map((b) => ({
         id: String(b.id), remaining: Math.max(0, num(b.remaining, 0)),
+        ...(Number.isFinite(b.amount) ? { amount: Math.max(0, b.amount) } : {}),
       })) : [],
       //  polish-r2：召喚師技能欄位（id＋累計施放次數）。呈現層用「次數變多」偵測施放瞬間
       //  （懲戒落雷、點燃火焰）；只讀 snapshot 既有的 `sp`，引擎不變。Replay 的精簡 frame 沒有 sp ⇒ 空陣列。

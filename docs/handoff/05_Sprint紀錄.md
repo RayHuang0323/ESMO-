@@ -23867,3 +23867,40 @@ CS_RESUME_HOTFIX = RELEASED（main cfca594 → a7afc5c）
 - 另兩個 smoke 首跑紅燈是**斷言錯誤**已修正：VFX `counts` 是當幀值（每幀 `fill(0)`）需連續取樣；重播開啟即自動播放（`useState(true)`），按一次是暫停。
 - 既有風險（未處理，候選技術債）：WebGL context 遺失時整棵 React 樹被卸載成白畫面（無 error boundary），新舊版相同。Android 真機 FPS／觸控／熱量仍未實機驗收。
 - **v15 = RELEASED YES**。
+
+
+## 2026-09-29 MOBA Gameplay／Presentation／UI Audit（local，未 push／未 deploy；等 Owner Review）
+
+分支 `feature/moba-gameplay-presentation-audit`（worktree `.sprints/moba-mobile-ui-p1`），基於 `f285f5f`
+（= main `d9d9d88` ＋ 已接受的 Mobile UI P1 hotfix checkpoint，分支 `fix/moba-mobile-ui-p1`，未 push）。
+完整稽核報告：`docs/design/MOBA_Gameplay_Presentation_Audit_2026-09-29.md`；被動框架：`docs/design/Passive_P_Framework_v1.md`。
+
+### 本輪實作（正式對局結果不變）
+- 技能 VFX 對齊：`pushFx` 具名技能保留窗 ≥ life＋0.3（原固定 4.2 秒，74 條 >4.2 秒的技能被提早收掉）；超過 60 筆先丟短命特效。
+- 隱身：本體換隊色半透明閃動材質；底欄狀態列顯示「◌ 隱身 Ns」。
+- 血條：snapshot 新增 `mhp`（只在 hero skills 開啟時）；3D／底欄血條細刻度每 250 HP、粗刻度每 1000 HP、護盾白段。
+- 升級回饋：3D 腳下金環＋光柱（1.15 秒）；底欄頭像等級閃金光＋「升級」角標（十人各自記錄，自動導播換人不會重置）。
+- 底欄狀態列：觀戰英雄的增益／減益／控制／護盾（含量）／隱身與剩餘秒數（同 heroStatusMeta）。
+- Mobile Hero Info icon：根因是「英雄生涯」`HeroDetailPanel` 與圖鑑 `HeroCodexDetail` 從未接圖示（非 tunnel／路徑）；新增共用 `HeroSkillIcon`（同 `heroSkillIconUrl`）。
+
+### 候選（規則旗標，預設關閉；開啟＝語意變更 ⇒ 需 moba-sim.v16，Owner 決定）
+- `objectiveStakesV1`：龍層 2.5%／龍魂（戰力 ×1.05＋兵線 fightK ×1.2）／巴龍英雄戰力 ×1.08／逆轉賞金／14 分後目標出擊 +0.2。
+  A/B 80 場：後期目標→勝利轉換 54.1% → 67.0%；時長 18.58/17.05 → 18.24/16.60 分；擊殺 21.5 → 21.5。
+- `nexusSiegeCapV1`（K=6）：主堡被拆中位秒數 7 → 30；時長 18.58 → 18.88 分；擊殺 21.5 → 22.4。K=10：18 秒。
+- `heroPassivesV1`：Passive P framework＋4 pilot（tiemu／tixue／luminary／sting）。pilot 名單 60 場：時長 18.75 → 18.52、擊殺 21.4 → 19.9。
+
+### 驗證
+- 不變性：正式設定 40 場逐場（勝方／時長／擊殺／KDA＋金錢＋等級串流）、12 場整份 snapshot 串流（去 fx／mhp）、legacy 指紋 6 場，皆與 `f285f5f` 逐位元相同；三旗標全開同 seed 兩次 0 差異。
+- 語意指紋：v15 同版號重新登記（非語意變更，理由寫在 simulationVersion.js）。
+- 途中抓到並修正一個回歸：Nexus cap 改寫乘法順序讓 skill-off 塔血浮點位元改變（`check_moba_items_m2` G1 紅）⇒ 旗標關閉時改回原算式，legacy 指紋 6/6 相同。
+- 最終 gate（最終程式碼）：build ✅；regress 15/15；regress2 節奏 8/8；items_m2 53/53；simulationVersion 56/56；
+  skill_detail 500/500；mobile_hud_polish 60/60；lane_jungle 20/20；combat_quality 28/28；spectacle_vision 21/21；
+  skill_levels 400/400；talents runtime 200/200；base_assault PASS；hero_skills_release_gate PASS；
+  瀏覽器 `browser_check_moba_gameplay_presentation` 9/9（新增，390＋1366）、`browser_check_moba_mobile_hud` 37/37。
+  未跑 `tools/verify.mjs` 全套（90–120 分）。
+
+### 未做／風險
+- DoT／領域在 snapshot 沒有獨立條目；Replay frame 不存 shield／guard／stealth／mhp（重播沒有刻度與這些狀態）。
+- 3D 升級光環、血條刻度、隱身材質**未經真機**實測（瀏覽器 gate 只驗 DOM 與截圖）；隱身需要有隱身英雄的對局才看得到。
+- 英雄前中後期曲線不存在；戰術 `earlyGame/midGame/lateGame` 等欄位只驗證不使用；紅方固定標準戰術（規劃見報告 §6）。
+- Blue bias（80 場藍方 53 勝）為既有問題，本輪依指示未處理。

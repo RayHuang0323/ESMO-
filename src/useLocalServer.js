@@ -19,6 +19,7 @@ import { toEngineHeroMods } from "./battle/moba/mobaHeroProfile.js";
 import { toEngineSpells } from "./battle/moba/mobaHeroLoadout.js";
 import { toEngineArchetypes, COMBAT_ARCHETYPE_CONTRACT_VERSION } from "./data/heroCombatArchetypes.js";
 import { toEngineHeroSkills } from "./battle/moba/skills/heroSkillGameplay.js";
+import { toEngineHeroPassives } from "./battle/moba/skills/heroPassiveGameplay.js";
 import { selectBattleTalents } from './battle/moba/talents/heroBattleTalents.js';
 import { heroById } from "./data/heroDatabase.js";
 import { toEnginePlayerMods } from "./battle/moba/mobaPlayerStats.js";
@@ -211,6 +212,9 @@ export function useLocalServer() {
     if (heroSkillsOn && opts.roster) {
       const skills = toEngineHeroSkills(opts.roster, talentSelection);
       if (skills) eng.configureHeroSkills(skills);
+      //  Hero Passive P v1：規則集 heroPassivesV1 關閉時引擎直接拒絕（零影響）。
+      const passives = skills ? toEngineHeroPassives(opts.roster) : null;
+      if (passives) eng.configureHeroPassives(passives);
     }
 
     // ── Milestone M1：戰鬥原型進引擎（近戰／遠程與職業站位的唯一計算點）──

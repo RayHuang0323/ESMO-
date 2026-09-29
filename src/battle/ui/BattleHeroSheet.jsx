@@ -231,19 +231,20 @@ export default function BattleHeroSheet({ heroId, heroName, playerName, playerId
           <SectionTitle>英雄技能</SectionTitle>
           {db.P || db.Q ? (
             [["P", db.P], ["Q", db.Q], ["W", db.W], ["E", db.E], ["R", db.R]].map(([k, v]) => {
-              const live = p?.heroSkills?.[k];
+              const live = k === 'P' ? p?.heroPassive : p?.heroSkills?.[k];
+              const passiveLive = k === 'P' && !!live?.trigger;
               //  Mobile UI P1：等級讀 snapshot 的 heroSkills[k].level（與 HUD 技能格同一來源），
               //  不再一律寫「未分級」；被動 P 沿用 PASSIVE_STATUS（未實裝、本場不生效）。
-              const status = k === 'P' ? '未實裝' : !live ? '未提供' : live.ready ? '可用' : `${Math.ceil(live.cd)}秒`;
-              const levelText = k === 'P' ? '本場不生效' : live?.level ? `Lv${live.level.current}/${live.level.cap}` : '等級未保存';
+              const status = k === 'P' ? (passiveLive ? '試行中' : '未實裝') : !live ? '未提供' : live.ready ? '可用' : `${Math.ceil(live.cd)}秒`;
+              const levelText = k === 'P' ? (passiveLive ? `觸發 ${live.procs ?? 0} 次` : '本場不生效') : live?.level ? `Lv${live.level.current}/${live.level.cap}` : '等級未保存';
               return <button key={k} type="button" data-skill-slot={k} onClick={() => setSelectedSkill(k)}
-                aria-label={`${k} ${v}，${k === 'P' ? PASSIVE_STATUS.aria : `${status}，${levelText}`}；點開詳情`}
+                aria-label={`${k} ${v}，${k === 'P' ? (passiveLive ? `被動試行中，已觸發 ${live.procs ?? 0} 次` : PASSIVE_STATUS.aria) : `${status}，${levelText}`}；點開詳情`}
                 style={{ width: '100%', minHeight: 44, display: 'flex', gap: 8, alignItems: 'center', textAlign: 'left',
                   background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.11)',
                   borderRadius: 7, marginBottom: 4, color: '#e5e7eb', cursor: 'pointer', padding: '3px 8px' }}>
                 <img src={heroSkillIconUrl(heroId, k) ?? undefined} alt="" width="34" height="34" style={{ borderRadius: 5 }} />
                 <b style={{ fontSize: 10, color: GC.gold }}>{k}</b><span style={{ flex: 1, fontSize: 11 }}>{v}</span>
-                <small style={{ fontSize: 9, textAlign: 'right', color: k === 'P' ? '#fbbf24' : live?.ready ? GC.green : '#a1a1aa' }}>{status}<br />{levelText}</small>
+                <small style={{ fontSize: 9, textAlign: 'right', color: k === 'P' ? (passiveLive ? GC.green : '#fbbf24') : live?.ready ? GC.green : '#a1a1aa' }}>{status}<br />{levelText}</small>
               </button>;
             })
           ) : (
@@ -276,7 +277,7 @@ export default function BattleHeroSheet({ heroId, heroName, playerName, playerId
         </div>
       </div>
       {selectedSkill && <div onClick={(e) => e.stopPropagation()}><BattleSkillDetail heroId={heroId}
-        slot={selectedSkill} live={p?.heroSkills?.[selectedSkill]} mobile={isMobile}
+        slot={selectedSkill} live={selectedSkill === 'P' ? p?.heroPassive : p?.heroSkills?.[selectedSkill]} mobile={isMobile}
         selectedTalentId={p?.heroBattleTalent?.id}
         onClose={() => setSelectedSkill(null)} /></div>}
     </div>

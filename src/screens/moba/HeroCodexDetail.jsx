@@ -24,6 +24,7 @@
 // ============================================================================
 import React, { useState } from "react";
 import { heroById } from "../../data/heroDatabase.js";
+import HeroSkillIcon from "../../battle/ui/HeroSkillIcon.jsx";
 import {
   getHeroMatchups, MATCHUP_SECTIONS, MATCHUP_SECTION_LABEL,
   MATCHUP_SOURCE_LABEL, MATCHUP_CONFIDENCE_LABEL,
@@ -142,7 +143,10 @@ export default function HeroCodexDetail({
           return (
             <div key={key} style={{ background: GC.card2, borderRadius: 12, padding: "12px 13px", marginBottom: 8 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 5 }}>
-                <div style={{ width: 30, height: 30, borderRadius: 8, background: key === "P" ? "rgba(255,255,255,0.08)" : laneColor + "22", border: `1px solid ${laneColor}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: key === "P" ? GC.gray : laneColor, flexShrink: 0 }}>{key === "P" ? "被動" : key}</div>
+                {/* 技能圖示與 Battle HUD 同源（heroSkillIconUrl）；讀不到圖時退回字母方塊 */}
+                <HeroSkillIcon heroId={h.id} slot={key} size={isMobile ? 36 : 32} accent={key === "P" ? GC.gray : laneColor}
+                  style={{ border: `1px solid ${laneColor}44` }} />
+                <b style={{ fontSize: 10, fontWeight: 900, color: key === "P" ? GC.gray : laneColor }}>{key === "P" ? "被動" : key}</b>
                 <span style={{ color: "white", fontSize: 14, fontWeight: 800 }}>{sk.name}</span>
                 <span style={{ fontSize: 9, fontWeight: 800, color: kind.c, background: kind.c + "22", borderRadius: 5, padding: "2px 6px" }}>{kind.label}</span>
               </div>

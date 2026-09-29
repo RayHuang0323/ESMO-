@@ -468,6 +468,79 @@ export class LogicEngine {
     }
   }
 
+  /**
+   * Hero Passive P v1：`toEngineHeroPassives(roster)` 的輸出。需要 hero skills 已開、且規則集
+   * `heroPassivesV1` 開啟；否則什麼都不做（snapshot／rng 逐位元不變）。
+   */
+  configureHeroPassives(config) {
+    if (!this.heroSkillsOn || !this.rules.heroPassivesV1 || !config?.players) return false;
+    const seats = Object.keys(config.players).filter((id) => this.players.some((p) => p.id === id));
+    if (!seats.length) return false;
+    this.heroPassivesOn = true;
+    this.heroPassives = Object.fromEntries(seats.map((id) => [id, config.players[id]]));
+    for (const p of this.players) if (this.heroPassives[p.id]) {
+      p.passive = { nextAt: 0, lastHp: null, lastHitAt: 0, takedowns: 0, procs: 0, lastProcAt: null };
+    }
+    return true;
+  }
+
+  /** 每 tick 一次、固定玩家順序；觸發由既有狀態推導（血量差／K+A／計時），效果走既有路徑。 */
+  _heroPassiveStep() {
+    if (!this.heroPassivesOn) return;
+    for (const p of this.players) {
+      const rule = this.heroPassives[p.id];
+      const st = p.passive;
+      if (!rule || !st) continue;
+      if (p.dead) { st.lastHp = null; continue; }
+      if (st.lastHp === null) { st.lastHp = p.hp; st.lastHitAt = this.t; st.takedowns = p.k + p.a; continue; }
+      const taken = Math.max(0, st.lastHp - p.hp);
+      if (taken > 0) { st.lastHitAt = this.t; st.latched = false; }
+      const takedowns = p.k + p.a;
+      const gainedTakedown = takedowns > st.takedowns;
+      st.takedowns = takedowns;
+      const tr = rule.trigger;
+      const fired = this.t >= st.nextAt && (
+        tr.kind === 'burst-damage' ? taken >= tr.pctMaxHp * p.maxHp
+          : tr.kind === 'low-hp' ? p.hp / p.maxHp < tr.below
+            : tr.kind === 'periodic' ? true
+              : tr.kind === 'out-of-combat' ? !st.latched && this.t - st.lastHitAt >= tr.secs
+                : tr.kind === 'takedown' ? gainedTakedown : false);
+      if (fired) {
+        const scale = 1 + (rule.levelScale ?? 0) * Math.max(0, (p.mlv ?? 1) - 1);
+        for (const fx of rule.effects) this._applyPassiveEffect(p, fx, scale);
+        st.nextAt = this.t + rule.icd;
+        if (tr.kind === 'out-of-combat') st.latched = true;   // 一次脫戰只觸發一次，受擊後才重新上膛
+        st.procs += 1;
+        st.lastProcAt = this.t;
+      }
+      st.lastHp = p.hp;
+    }
+  }
+
+  _applyPassiveEffect(p, fx, scale) {
+    const shieldOn = (q, pct, duration) => {
+      const amount = q.maxHp * pct * scale;
+      q.shield = Math.max(amount, this.t < (q.shieldUntil ?? 0) ? (q.shield ?? 0) : 0);
+      q.shieldUntil = Math.max(q.shieldUntil ?? 0, this.t + duration);
+    };
+    if (fx.kind === 'shield') shieldOn(p, fx.pctMaxHp, fx.duration);
+    else if (fx.kind === 'team-shield') {
+      for (const ally of this.players) {
+        if (!ally.dead && ally.side === p.side && dist(ally.pos, p.pos) <= fx.radius) shieldOn(ally, fx.pctMaxHp, fx.duration);
+      }
+    } else if (fx.kind === 'guard') {
+      this._applyHeroSkillGuard(p, fx.duration, fx.reduction);
+      if (fx.healPctMaxHp) {
+        const heal = Math.min(p.maxHp - p.hp, p.maxHp * fx.healPctMaxHp * scale);
+        if (heal > 0) { p.hp += heal; p.heal += heal; }
+      }
+    } else if (fx.kind === 'haste') {
+      p.heroSkillHasteFactor = Math.max(this.t < (p.heroSkillHasteUntil ?? 0) ? (p.heroSkillHasteFactor ?? 1) : 1, fx.factor);
+      p.heroSkillHasteUntil = Math.max(p.heroSkillHasteUntil ?? 0, this.t + fx.duration);
+      p.heroSkillHasteSourceId = p.id;
+    }
+  }
+
   /** Existing match XP is the only upgrade clock; no extra RNG or XP path. */
   _updateHeroSkillLevels(p) {
     if (!this.heroSkillLevelSystem || !this.heroSkillBaseRules?.[p.id]) return;
@@ -3426,6 +3499,15 @@ export class LogicEngine {
           o.killerTeam = kt;
           if (kt) {
             this._dmgGold(kt, key === "baron" ? 400 : 200);
+            //  Objective Stakes v1：落後方逆轉賞金（團隊金錢差，決定性、不耗 rng）。
+            if (this._objStakesOn()) {
+              const gap = (kt === "blue" ? this.rGold - this.bGold : this.bGold - this.rGold);
+              if (gap >= R.objStakesBountyGap) {
+                const bounty = Math.round(Math.min(R.objStakesBountyMax, gap * R.objStakesBountyRatio));
+                this._dmgGold(kt, bounty);
+                o.lastBounty = bounty;
+              }
+            }
             if (this.itemsOn) this.items.earnObjective(kt, key, this.players);
             if (R.matchXp) this._awardObjectiveXp(kt, key);
             // 巴龍 buff：擊殺方限時兵線強化（收尾機制；不是傷害/勝率係數，是攻城節奏）
@@ -3821,7 +3903,10 @@ export class LogicEngine {
       const structureFactor = R.structureAccelT ? 1 + Math.max(0, this.t - R.structureAccelT) / R.structureAccelDiv : 1;
       const baronK = this.fsm3 && this.t < (this.fsm3[p.side].baronBuffUntil ?? 0)
         ? (R.baronHeroSiegeK ?? 1) : 1;
-      const td = R.heroTowerDmg * soloK * baronK * dt * lateFactor * structureFactor;
+      //  ⚠ 旗標關閉時必須保留原本的乘法順序（浮點結果逐位元相同，check_moba_items_m2 G1）。
+      const td = this._nexusSiegeCapped(tw)
+        ? R.heroTowerDmg * soloK * baronK * dt * Math.min(lateFactor * structureFactor, R.nexusSiegeCapK)
+        : R.heroTowerDmg * soloK * baronK * dt * lateFactor * structureFactor;
       if (td <= 0) return;                 // M1.5 硬閘門：沒有兵線 ⇒ 不扣血、也不算推塔波次
       tw.hp -= td; p.twrDmg += td;
       //  feature/moba-spectacle-vision：英雄推塔原本沒有任何攻擊特效（只有塔在開火）⇒ 每秒一條普攻（純呈現、零 rng）。
@@ -3929,7 +4014,18 @@ export class LogicEngine {
     return this.fsm3 ? Math.max(0, this.fsm3[side]?.dragonStacks ?? 0) : 0;
   }
   _dragonPowerK(side) {
-    return 1 + this._dragonStacksV3(side) * (this.rules.dragonPowerPerStack ?? 0);
+    const R = this.rules;
+    if (!this._objStakesOn()) return 1 + this._dragonStacksV3(side) * (R.dragonPowerPerStack ?? 0);
+    //  Objective Stakes v1：同一個修正點（英雄對英雄／野怪／巨龍傷害都經過這裡），只換係數。
+    const stacks = this._dragonStacksV3(side);
+    const soul = stacks >= R.dragonMaxStacks ? R.objStakesSoulPowerK : 1;
+    const baron = this.t < (this.fsm3?.[side]?.baronBuffUntil ?? 0) ? R.objStakesBaronPowerK : 1;
+    return (1 + stacks * R.objStakesDragonPowerPerStack) * soul * baron;
+  }
+  _objStakesOn() { return !!(this.rules.objectiveStakesV1 && this.heroSkillsOn && this.fsm3); }
+  /** Nexus Siege Cap v1：只對主堡本身生效（其餘建築、以及旗標關閉時，呼叫端走原本的算式）。 */
+  _nexusSiegeCapped(tw) {
+    return !!(this.rules.nexusSiegeCapV1 && this.heroSkillsOn && tw?.lane === "nexus");
   }
   _dragonGuardK(side) {
     return 1 + this._dragonStacksV3(side) * (this.rules.dragonGuardPerStack ?? 0);
@@ -4218,6 +4314,8 @@ export class LogicEngine {
       fightK *= b.fightK ?? 1;
       siegeK *= b.siegeK ?? 1;
     }
+    //  Objective Stakes v1：龍魂（集滿層數）＝ 該隊兵線永久更強（兵線壓力，不是英雄數值）。
+    if (this._objStakesOn() && this._dragonStacksV3(side) >= R.dragonMaxStacks) fightK *= R.objStakesSoulFightK;
     return { fightK, siegeK };
   }
 
@@ -4589,13 +4687,20 @@ export class LogicEngine {
     const minVisualLife = f.skillId ? 0.05 : f.type === "tower" ? 1.45
       : (f.feedback === "skill" || f.type === "ult" ? 1.6
         : (f.feedback === "attack" || f.type === "line" ? 1.1 : 0.9));
-    const retention = Math.max(f.exp ?? minRetention, minRetention);
     const visualLife = Math.max(f.life ?? minVisualLife, minVisualLife);
+    //  Gameplay/VFX 對齊（2026-09-29）：具名技能的 life 來自規則持續時間（護盾／領域／DoT／
+    //  增益可達 5–10 秒），保留窗必須蓋過它，否則事件在 4.2 秒就從 snapshot 消失、畫面提早收掉。
+    //  純呈現：`fx` 從不被模擬讀取（只 push／過期／輸出），不影響對局結果與 rng。
+    const retention = Math.max(f.exp ?? minRetention, minRetention, f.skillId ? visualLife + 0.3 : 0);
     this.fx.push({
       ...f, id: f.id ?? `fx${this._fxSeq++}`, at: f.at ?? this.t,
       exp: retention, life: visualLife,
     });
-    if (this.fx.length > 60) this.fx.shift();
+    if (this.fx.length > 60) {
+      //  超出上限時先丟「短命」的一般特效；持續型技能（life ≥ 2 秒）留到最後才丟。
+      const i = this.fx.findIndex((x) => !(x.skillId && x.life >= 2));
+      this.fx.splice(i >= 0 ? i : 0, 1);
+    }
   }
 
   tick(dt) {
@@ -4890,7 +4995,12 @@ export class LogicEngine {
           // S29B1（v3）：巴龍 buff——擊殺方限時兵線攻城強化（收尾機制）
           const bk = R.engagementFsm && this.fsm3 && this.t < (this.fsm3[side].baronBuffUntil ?? 0) ? R.baronMinionK : 1;
           const structureFactor = R.structureAccelT ? 1 + Math.max(0, this.t - R.structureAccelT) / R.structureAccelDiv : 1;
-          if (n > 0) { tw.hp -= R.minionTowerDmg * n * bk * dt * lateFactor * structureFactor; this._dmgGold(side, 0); }
+          if (n > 0) {
+            tw.hp -= this._nexusSiegeCapped(tw)
+              ? R.minionTowerDmg * n * bk * dt * Math.min(lateFactor * structureFactor, R.nexusSiegeCapK)
+              : R.minionTowerDmg * n * bk * dt * lateFactor * structureFactor;
+            this._dmgGold(side, 0);
+          }
         }
       });
       ["blue", "red"].forEach((side) => {
@@ -5209,7 +5319,10 @@ export class LogicEngine {
           if (this.t >= T.objEvalT) {
             T.objEvalT = this.t + 12;
             const K = this.tacticOn ? this.tk[side] : null;
-            const chance = K ? (key === "baron" ? K.baronJoin : K.dragonJoin) : 0.6;
+            const chance0 = K ? (key === "baron" ? K.baronJoin : K.dragonJoin) : 0.6;
+            //  Objective Stakes v1：後期大型目標值得冒險 ⇒ 出擊機率提高（仍是同一次擲骰）。
+            const chance = this._objStakesOn() && this.t >= R.objStakesLateT
+              ? Math.min(0.95, chance0 + R.objStakesLateJoin) : chance0;
             const roll = K ? this.rng2() : this.rng();
             // 窗長由 knob 決定：高目標投入的戰術蹲得久、低投入的淺嘗即走
             //  ⇒ dragonJoin/baronJoin → 行為的單調性放在機制本身（tactic24 C4c）
@@ -5925,6 +6038,7 @@ export class LogicEngine {
     //  Milestone J：其餘六個召喚師技能同樣在凍結位置上判定（先收集後套用）。
     this._summonerSpellsV2(alive, dt);
     this._heroSkillStep();
+    this._heroPassiveStep();
 
     // S24：會戰/目標戰觀測（真實狀態計數；only when tacticOn）
     if (this.tacticOn) {
@@ -6018,12 +6132,14 @@ export class LogicEngine {
       ts: this.t,
       // S29：mlv/mxp = **本場**英雄等級（1–18，終局丟棄）；lv = 英雄熟練等級（跨場，
       //   來自 Hero Progress loadout）。兩者並存且不同名 ⇒ 消費端不可能混用。
+      //  mhp＝絕對最大血量（只給呈現：血條刻度／坦克感）。hp 仍是 0–1 比例；只在 heroSkillsOn 時輸出，
+      //   bare／legacy 串流逐位元不變。
       players: this.players.map((p) => ({ id: p.id, side: p.side, role: p.role, pos: { ...p.pos }, hp: clamp(p.hp / p.maxHp, 0, 1), dead: p.dead, respawn: p.respawn, state: p.state, ...(R.explainableCombatDecisions ? {
         decision: {
           action: p.decisionAction, targetId: p.decisionTargetId,
           score: p.decisionScore, reasons: [...p.decisionReasons],
         },
-      } : {}), k: p.k, d: p.d, a: p.a, gold: Math.round(p.gold), dmg: Math.round(p.dmg), heal: Math.round(p.heal), twrDmg: Math.round(p.twrDmg), lv: p.lv, mlv: p.mlv, mxp: Math.round(p.mxp), mxpNext: xpNextOf(p), ...(R.summonerSpells ? { sp: spOf(p) } : {}), ...(R.recallChannel ? { rc: p.recallT > 0 ? Math.round(p.recallT * 10) / 10 : 0 } : {}), ...(R.neutralObjectives ? {
+      } : {}), k: p.k, d: p.d, a: p.a, gold: Math.round(p.gold), dmg: Math.round(p.dmg), heal: Math.round(p.heal), twrDmg: Math.round(p.twrDmg), lv: p.lv, mlv: p.mlv, mxp: Math.round(p.mxp), mxpNext: xpNextOf(p), ...(this.heroSkillsOn ? { mhp: Math.round(p.maxHp) } : {}), ...(R.summonerSpells ? { sp: spOf(p) } : {}), ...(R.recallChannel ? { rc: p.recallT > 0 ? Math.round(p.recallT * 10) / 10 : 0 } : {}), ...(R.neutralObjectives ? {
         buffs: [
           ...(this.t < (p.redBuffUntil ?? 0) ? [{ id: "red", remaining: Math.round((p.redBuffUntil - this.t) * 10) / 10 }] : []),
           ...(this.t < (p.blueBuffUntil ?? 0) ? [{ id: "blue", remaining: Math.round((p.blueBuffUntil - this.t) * 10) / 10 }] : []),
@@ -6100,6 +6216,12 @@ export class LogicEngine {
         }])),
         ...(this.heroSkillLevelSystem ? { heroSkillLevelHistory: p.heroSkillLevelHistory.map((event) => ({ ...event })) } : {}),
         ...(this.heroBattleTalents?.[p.id] ? { heroBattleTalent: { ...this.heroBattleTalents[p.id] } } : {}),
+        //  Hero Passive P v1：只有開啟且此英雄有 pilot 規則時才出現（其餘英雄 P 仍是「未實裝」）。
+        ...(this.heroPassivesOn && p.passive ? { heroPassive: {
+          trigger: this.heroPassives[p.id].trigger.kind, icd: this.heroPassives[p.id].icd,
+          ready: this.t >= p.passive.nextAt, cd: Math.max(0, Math.round((p.passive.nextAt - this.t) * 10) / 10),
+          procs: p.passive.procs, lastProcAt: p.passive.lastProcAt,
+        } } : {}),
       } : {}) })),
       towers: Object.fromEntries(Object.entries(this.towers).map(([k, t]) => [k, { side: t.side, lane: t.lane, tier: t.tier, pos: t.pos, hp: clamp(t.hp / (t.maxHp ?? (t.lane === "nexus" ? NEXUS_HP : TOWER_HP)), 0, 1) }])),
       lanes: { top: this._snapLane("top"), mid: this._snapLane("mid"), bot: this._snapLane("bot") },

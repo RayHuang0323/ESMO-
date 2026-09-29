@@ -82,6 +82,8 @@ export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim
  */
 export const SIMULATION_SEMANTICS_FILES = Object.freeze([
   "src/battle/moba/skills/heroSkillGameplay.js",
+  //  2026-09-29：Hero Passive P v1 規則（heroPassivesV1 預設關閉）
+  "src/battle/moba/skills/heroPassiveGameplay.js",
   "src/battle/moba/skills/heroSkillLevels.js",
   "src/battle/moba/skills/heroSkillTargetCapabilities.js",
   "src/battle/moba/talents/heroBattleTalents.js",
@@ -337,7 +339,12 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  ⚠ 只在 hero skills 開啟時生效 ⇒ skill-off（含 Challenge）串流與 v14 逐位元相同。
   //  ⚠ A/B（tools/balance/moba_lane_farm_ab.mjs，正式 skill＋talent 設定）見 05_Sprint紀錄 同日一節。
   //  ⚠ 後果（已知且接受）：v1–v14 的歷史挑戰不再可重播，由 `canReplay` 明確拒絕；v14 仍為已知版本。
-  "moba-sim.v15": "5d4b4fd45fdbe457",
+  //  2026-09-29（feature/moba-gameplay-presentation-audit）：**不是**語意變更，同版號重新登記。
+  //  ① pushFx 技能特效保留窗 ≥ life（fx 從不被模擬讀取）② snapshot 加 `mhp`（只呈現用）
+  //  ③ objectiveStakesV1／nexusSiegeCapV1／heroPassivesV1 三個候選規則**預設關閉**。
+  //  證據：正式設定 40 場逐場結果、12 場整份 snapshot 串流（去掉 fx／mhp）、legacy 指紋 6 場皆與 f285f5f 逐位元相同。
+  //  任何一個候選旗標開啟＝語意變更 ⇒ 必須開 moba-sim.v16。
+  "moba-sim.v15": "fd4c7787061ea81c",
 });
 
 export const isKnownSimulationVersion = (v) =>
