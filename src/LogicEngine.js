@@ -51,6 +51,9 @@ const MAP_EDGE_PAD = 3;
 //  ⚠ 冷卻不能太長：20 tick（10 模擬秒）時英雄會抱著過期路徑繼續磨牆；8 tick 實測
 //  把「泉水→中線」的行軍時間從 193s 拉回接近舊引擎的 146s，而 A* 只要 1.3ms。
 const NAV_LOOKAHEAD = 25;
+//  CombatState.v1：持續狀態生命期契約版本與結束紀錄保留筆數（見 _combatStateStep）。
+export const COMBAT_STATE_VERSION = "CombatState.v1";
+const CS_LOG_MAX = 160;
 const NAV_REPATH_CD = 8;
 const clampMapX = (x) => clamp(x, WORLD_BOUNDS.minX + MAP_EDGE_PAD, WORLD_BOUNDS.maxX - MAP_EDGE_PAD);
 const clampMapY = (y) => clamp(y, WORLD_BOUNDS.minY + MAP_EDGE_PAD, WORLD_BOUNDS.maxY - MAP_EDGE_PAD);
@@ -455,6 +458,7 @@ export class LogicEngine {
     this.heroSkillLevelSystem = config.skillLevels?.version === HERO_SKILL_LEVEL_CONTRACT;
     this.heroSkillLevelPreferences = config.skillLevels?.preferences ?? {};
     this.heroSkillPending = [];
+    this._zoneSeq = 0;                              // CombatState.v1：領域／DoT 的穩定 id（只給生命期追蹤）
     this._objSkillHits = [];
     this._laneSkillHits = [];                       // laneSkillV1：排隊中的清兵傷害
     this.laneSkillStats = { casts: 0, kills: 0 };  // 量測用（不進 snapshot）
@@ -539,6 +543,133 @@ export class LogicEngine {
       p.heroSkillHasteUntil = Math.max(p.heroSkillHasteUntil ?? 0, this.t + fx.duration);
       p.heroSkillHasteSourceId = p.id;
     }
+  }
+
+  /**
+   * CombatState.v1：英雄持續狀態的**唯一**讀取點（snapshot.statusEffects 與生命期追蹤共用）。
+   * 每一格都直接讀 gameplay 自己的欄位（*Until／因子／來源），這裡不存任何新狀態。
+   * raw=true ⇒ 每格多帶精確的 `until`（模擬秒），給 _combatStateStep；snapshot 用 raw=false，
+   * 輸出形狀與鍵順序與舊碼逐位元相同（dot 為新增的最後一格，只有 hero skills 開啟時才可能出現）。
+   */
+  _statusEffectsOf(p, raw = false) {
+    const out = [];
+    const se = (id, until, pre = null, post = null) => {
+      const e = { id, ...(pre ?? {}), remaining: Math.round((until - this.t) * 10) / 10, ...(post ?? {}) };
+      if (raw) e.until = until;
+      out.push(e);
+    };
+    if (this.t < (p.redSlowUntil ?? 0)) se("slow", p.redSlowUntil);
+    //  Milestone J：召喚師技能造成的狀態。未啟用 ⇒ 全為初值 ⇒ 陣列與舊碼相同。
+    if (this.spellsOn && this.t < (p.igniteUntil ?? 0)) se("ignite", p.igniteUntil);
+    if (this.spellsOn && this.t < (p.hasteUntil ?? 0)) se("haste", p.hasteUntil);
+    if ((this.spellsOn || this.itemsOn || this.heroSkillsOn) && p.shield > 0 && this.t < (p.shieldUntil ?? 0)) {
+      se("shield", p.shieldUntil, null, { amount: Math.round(p.shield) });
+    }
+    if (this.heroSkillsOn && this.t < (p.heroSkillSlowUntil ?? 0)) se("hero-slow", p.heroSkillSlowUntil);
+    if (this.heroSkillsOn && this.t < (p.heroSkillMarkUntil ?? 0)) {
+      se("mark", p.heroSkillMarkUntil, { sourceId: p.heroSkillMarkSourceId }, { damageAmp: p.heroSkillMarkAmp });
+    }
+    if (this.heroSkillsOn && this.t < (p.heroSkillEmpowerUntil ?? 0)) {
+      se("empowered-strike", p.heroSkillEmpowerUntil, { skillId: p.heroSkillEmpowerSkillId });
+    }
+    if (this.heroSkillsOn && this.t < (p.heroSkillHasteUntil ?? 0)) {
+      se("hero-haste", p.heroSkillHasteUntil, { sourceId: p.heroSkillHasteSourceId }, { speedFactor: p.heroSkillHasteFactor });
+    }
+    if (this.heroSkillsOn && this._heroSkillStealthed(p)) {
+      se("stealth", p.heroSkillStealthUntil, { sourceId: p.heroSkillStealthSourceId });
+    }
+    if (this.heroSkillsOn && this.t < (p.heroSkillPowerUntil ?? 0)) {
+      se("hero-power", p.heroSkillPowerUntil, { sourceId: p.heroSkillPowerSourceId }, { powerFactor: p.heroSkillPowerFactor });
+    }
+    if (this.heroSkillsOn && this.t < (p.heroSkillCooldownUntil ?? 0)) {
+      se("hero-cdr", p.heroSkillCooldownUntil, { sourceId: p.heroSkillCooldownSourceId }, { cooldownFactor: p.heroSkillCooldownFactor });
+    }
+    if (this.heroSkillsOn && this.t < (p.heroSkillControlImmuneUntil ?? 0)) se("control-immune", p.heroSkillControlImmuneUntil);
+    if (this.heroSkillsOn && this.t < (p.heroSkillControlUntil ?? 0)) se(p.heroSkillControlKind, p.heroSkillControlUntil);
+    if (this.heroSkillsOn && this.t < (p.heroSkillSilenceUntil ?? 0)) {
+      se("silence", p.heroSkillSilenceUntil, { sourceId: p.heroSkillSilenceSourceId });
+    }
+    if (this.heroSkillsOn && this.t < (p.heroSkillRootUntil ?? 0)) se("root", p.heroSkillRootUntil);
+    if (this.heroSkillsOn && this._heroTaunter(p)) se("taunt", p.heroSkillTauntUntil, { sourceId: p.heroSkillTauntSourceId });
+    if (this.heroSkillsOn && this.t < (p.heroSkillGuardUntil ?? 0)) {
+      se("guard", p.heroSkillGuardUntil, null, { reduction: p.heroSkillGuardReduction });
+    }
+    //  CombatState.v1：受害者身上的持續傷害（root-dot 的排程本身就是權威來源；同一目標取最晚到期）。
+    if (this.heroSkillsOn && this.heroSkillPending?.length) {
+      let dot = null;
+      for (const entry of this.heroSkillPending) {
+        if (entry.kind === 'root-dot' && entry.target === p && this.t < entry.until + 1e-9
+          && (!dot || entry.until > dot.until)) dot = entry;
+      }
+      if (dot) se("dot", dot.until, { sourceId: dot.p.id, skillId: dot.rule.skillId ?? null });
+    }
+    return out;
+  }
+
+  /**
+   * CombatState.v1：每 tick 末端，由 _statusEffectsOf（英雄狀態）與 heroSkillPending（領域／牆）
+   * 推導持續狀態的生命期。**不回寫任何 gameplay 欄位、不耗 rng**；gameplay 從不讀 this._cs。
+   *   · 開始：第一個觀察到的 tick（領域用施放時刻 castAt，精確）
+   *   · 到期：權威欄位的 until（刷新／延長 ⇒ until 變大，同一筆紀錄）
+   *   · 結束：從權威來源消失的那個 tick；reason = expired／death／broken（護盾被打破）／removed
+   *   · 結束紀錄有序號、保留最近 CS_LOG_MAX 筆 ⇒ snapshot 取樣頻率再低，Replay 也收得齊。
+   */
+  _combatStateStep() {
+    if (!this.heroSkillsOn) return;
+    const cs = this._cs ?? (this._cs = { seq: 0, active: new Map(), log: [] });
+    const now = new Map();
+    const r2 = (v) => Math.round(v * 100) / 100;
+    for (const p of this.players) {
+      if (p.dead) continue;
+      for (const e of this._statusEffectsOf(p, true)) {
+        now.set(`${e.id}:${p.id}`, {
+          kind: e.id, targetId: p.id, side: p.side, sourceId: e.sourceId ?? null, skillId: e.skillId ?? null,
+          until: e.until, value: e.amount ?? e.reduction ?? e.damageAmp ?? e.speedFactor ?? e.powerFactor ?? e.cooldownFactor ?? null,
+        });
+      }
+    }
+    for (const entry of this.heroSkillPending ?? []) {
+      if (!entry.zoneId || entry.kind === 'root-dot' || !(this.t < entry.until + 1e-9)) continue;
+      const circle = entry.kind === 'area-dot';
+      now.set(`zone:${entry.zoneId}`, {
+        kind: circle ? 'zone-dot' : entry.kind === 'dash-wall' ? 'zone-dashwall' : 'zone-wall',
+        targetId: null, side: entry.p.side, sourceId: entry.p.id, skillId: entry.rule.skillId ?? null,
+        until: entry.until, value: null, startedAt: entry.castAt, activeFrom: circle ? entry.castAt + (entry.rule.delay ?? 0) : entry.castAt,
+        shape: circle
+          ? { c: [r2(entry.target.x), r2(entry.target.y)], r: entry.rule.radius }
+          : { a: [r2(entry.from.x), r2(entry.from.y)], b: [r2(entry.end.x), r2(entry.end.y)], w: entry.rule.wallWidth },
+      });
+    }
+    for (const [key, rec] of cs.active) {
+      const cur = now.get(key);
+      if (cur) continue;                         // 仍在權威來源裡（含刷新、延長、重設）⇒ 同一筆
+      const target = rec.targetId ? this.players.find((q) => q.id === rec.targetId) : null;
+      const reason = this.t >= rec.until - 1e-6 ? 'expired' : target?.dead ? 'death'
+        : rec.kind === 'shield' ? 'broken' : 'removed';
+      cs.log.push({ ...rec, endedAt: this.t, reason, seq: ++cs.seq });
+      cs.active.delete(key);
+    }
+    if (cs.log.length > CS_LOG_MAX) cs.log.splice(0, cs.log.length - CS_LOG_MAX);
+    for (const [key, cur] of now) {
+      const rec = cs.active.get(key);
+      if (rec) { rec.until = cur.until; rec.value = cur.value; if (cur.sourceId) rec.sourceId = cur.sourceId; continue; }
+      cs.active.set(key, { id: `${key}@${r2(cur.startedAt ?? this.t)}`, ...cur, startedAt: cur.startedAt ?? this.t });
+    }
+  }
+
+  /** snapshot.combatStates（CombatState.v1）：進行中＋最近結束（依序號）。只在 hero skills 開啟時輸出。 */
+  _snapCombatStates() {
+    const r2 = (v) => (Number.isFinite(v) ? Math.round(v * 100) / 100 : v);
+    const row = (rec) => ({
+      id: rec.id, kind: rec.kind, targetId: rec.targetId, side: rec.side, sourceId: rec.sourceId,
+      skillId: rec.skillId, startedAt: r2(rec.startedAt), until: r2(rec.until),
+      ...(rec.activeFrom !== undefined ? { activeFrom: r2(rec.activeFrom) } : {}),
+      ...(rec.value !== null && rec.value !== undefined ? { value: r2(rec.value) } : {}),
+      ...(rec.shape ? { shape: rec.shape } : {}),
+      ...(rec.endedAt !== undefined ? { endedAt: r2(rec.endedAt), reason: rec.reason, seq: rec.seq } : {}),
+    });
+    const cs = this._cs ?? { seq: 0, active: new Map(), log: [] };
+    return { version: COMBAT_STATE_VERSION, t: this.t, seq: cs.seq, active: [...cs.active.values()].map(row), ended: cs.log.map(row) };
   }
 
   /** Existing match XP is the only upgrade clock; no extra RNG or XP path. */
@@ -1399,11 +1530,11 @@ export class LogicEngine {
         this._navTeleport(p, landing);
         fxTarget = { ...p.pos };
         this.heroSkillPending.push({ kind: 'dash-wall', p, from, end: fxTarget, rule,
-          at: this.t + rule.tickInterval, until: this.t + rule.wallDuration });
+          at: this.t + rule.tickInterval, until: this.t + rule.wallDuration, zoneId: ++this._zoneSeq, castAt: this.t });
       } else if (rule.mechanic === 'barrier-line') {
         fxTarget = { x: from.x + ux * rule.range, y: from.y + uy * rule.range };
         this.heroSkillPending.push({ kind: 'barrier-line', p, from, end: fxTarget, rule,
-          at: this.t + rule.tickInterval, until: this.t + rule.wallDuration });
+          at: this.t + rule.tickInterval, until: this.t + rule.wallDuration, zoneId: ++this._zoneSeq, castAt: this.t });
       } else if (rule.mechanic === 'line') {
         const end = { x: from.x + ux * rule.range, y: from.y + uy * rule.range };
         for (const q of this.players) {
@@ -1426,7 +1557,7 @@ export class LogicEngine {
         this.heroSkillPending.push({ kind: 'delayed-area', p, target, rule, at: this.t + rule.delay });
       } else if (rule.mechanic === 'area-dot') {
         this.heroSkillPending.push({ kind: 'area-dot', p, target, rule,
-          at: this.t + rule.delay, until: this.t + rule.delay + rule.dotDuration });
+          at: this.t + rule.delay, until: this.t + rule.delay + rule.dotDuration, zoneId: ++this._zoneSeq, castAt: this.t });
         } else if (rule.mechanic === 'area-root') {
           this.heroSkillPending.push({ kind: 'area-root', p, target, rule, at: this.t + rule.delay });
       } else if (rule.mechanic === 'area-control') {
@@ -1447,7 +1578,7 @@ export class LogicEngine {
           foe.heroSkillRootUntil = Math.max(foe.heroSkillRootUntil ?? 0, this.t + rule.rootDuration);
         }
         this.heroSkillPending.push({ kind: 'root-dot', p, target: foe, rule,
-          at: this.t + rule.tickInterval, until: this.t + rule.dotDuration });
+          at: this.t + rule.tickInterval, until: this.t + rule.dotDuration, zoneId: ++this._zoneSeq, castAt: this.t });
       } else if (rule.mechanic === 'control-target') {
         hit(p, foe, rule.damage + p.power * rule.powerRatio, rule);
         this._applyHeroSkillControl(foe, rule.control, rule.controlDuration);
@@ -6039,6 +6170,7 @@ export class LogicEngine {
     this._summonerSpellsV2(alive, dt);
     this._heroSkillStep();
     this._heroPassiveStep();
+    this._combatStateStep();
 
     // S24：會戰/目標戰觀測（真實狀態計數；only when tacticOn）
     if (this.tacticOn) {
@@ -6148,57 +6280,7 @@ export class LogicEngine {
             id: "dragon", stacks: this._dragonStacksV3(p.side), remaining: null,
           }] : []),
         ],
-        statusEffects: [
-          ...(this.t < (p.redSlowUntil ?? 0)
-            ? [{ id: "slow", remaining: Math.round((p.redSlowUntil - this.t) * 10) / 10 }] : []),
-          //  Milestone J：召喚師技能造成的狀態。未啟用 ⇒ 全為初值 ⇒ 陣列與舊碼相同。
-          ...(this.spellsOn && this.t < (p.igniteUntil ?? 0)
-            ? [{ id: "ignite", remaining: Math.round((p.igniteUntil - this.t) * 10) / 10 }] : []),
-          ...(this.spellsOn && this.t < (p.hasteUntil ?? 0)
-            ? [{ id: "haste", remaining: Math.round((p.hasteUntil - this.t) * 10) / 10 }] : []),
-          ...((this.spellsOn || this.itemsOn || this.heroSkillsOn) && p.shield > 0 && this.t < (p.shieldUntil ?? 0)
-            ? [{ id: "shield", remaining: Math.round((p.shieldUntil - this.t) * 10) / 10,
-              amount: Math.round(p.shield) }] : []),
-          ...(this.heroSkillsOn && this.t < (p.heroSkillSlowUntil ?? 0)
-            ? [{ id: "hero-slow", remaining: Math.round((p.heroSkillSlowUntil - this.t) * 10) / 10 }] : []),
-          ...(this.heroSkillsOn && this.t < (p.heroSkillMarkUntil ?? 0)
-            ? [{ id: "mark", sourceId: p.heroSkillMarkSourceId,
-              remaining: Math.round((p.heroSkillMarkUntil - this.t) * 10) / 10,
-              damageAmp: p.heroSkillMarkAmp }] : []),
-          ...(this.heroSkillsOn && this.t < (p.heroSkillEmpowerUntil ?? 0)
-            ? [{ id: "empowered-strike", skillId: p.heroSkillEmpowerSkillId,
-              remaining: Math.round((p.heroSkillEmpowerUntil - this.t) * 10) / 10 }] : []),
-          ...(this.heroSkillsOn && this.t < (p.heroSkillHasteUntil ?? 0)
-            ? [{ id: "hero-haste", sourceId: p.heroSkillHasteSourceId,
-              remaining: Math.round((p.heroSkillHasteUntil - this.t) * 10) / 10,
-              speedFactor: p.heroSkillHasteFactor }] : []),
-          ...(this.heroSkillsOn && this._heroSkillStealthed(p)
-            ? [{ id: "stealth", sourceId: p.heroSkillStealthSourceId,
-              remaining: Math.round((p.heroSkillStealthUntil - this.t) * 10) / 10 }] : []),
-          ...(this.heroSkillsOn && this.t < (p.heroSkillPowerUntil ?? 0)
-            ? [{ id: "hero-power", sourceId: p.heroSkillPowerSourceId,
-              remaining: Math.round((p.heroSkillPowerUntil - this.t) * 10) / 10,
-              powerFactor: p.heroSkillPowerFactor }] : []),
-          ...(this.heroSkillsOn && this.t < (p.heroSkillCooldownUntil ?? 0)
-            ? [{ id: "hero-cdr", sourceId: p.heroSkillCooldownSourceId,
-              remaining: Math.round((p.heroSkillCooldownUntil - this.t) * 10) / 10,
-              cooldownFactor: p.heroSkillCooldownFactor }] : []),
-          ...(this.heroSkillsOn && this.t < (p.heroSkillControlImmuneUntil ?? 0)
-            ? [{ id: "control-immune", remaining: Math.round((p.heroSkillControlImmuneUntil - this.t) * 10) / 10 }] : []),
-          ...(this.heroSkillsOn && this.t < (p.heroSkillControlUntil ?? 0)
-            ? [{ id: p.heroSkillControlKind, remaining: Math.round((p.heroSkillControlUntil - this.t) * 10) / 10 }] : []),
-          ...(this.heroSkillsOn && this.t < (p.heroSkillSilenceUntil ?? 0)
-            ? [{ id: "silence", sourceId: p.heroSkillSilenceSourceId,
-              remaining: Math.round((p.heroSkillSilenceUntil - this.t) * 10) / 10 }] : []),
-          ...(this.heroSkillsOn && this.t < (p.heroSkillRootUntil ?? 0)
-            ? [{ id: "root", remaining: Math.round((p.heroSkillRootUntil - this.t) * 10) / 10 }] : []),
-          ...(this.heroSkillsOn && this._heroTaunter(p)
-            ? [{ id: "taunt", sourceId: p.heroSkillTauntSourceId,
-              remaining: Math.round((p.heroSkillTauntUntil - this.t) * 10) / 10 }] : []),
-          ...(this.heroSkillsOn && this.t < (p.heroSkillGuardUntil ?? 0)
-            ? [{ id: "guard", remaining: Math.round((p.heroSkillGuardUntil - this.t) * 10) / 10,
-              reduction: p.heroSkillGuardReduction }] : []),
-        ],
+        statusEffects: this._statusEffectsOf(p),
       } : {}), ...(this.heroSkillsOn && this.heroSkills[p.id] ? {
         heroSkills: Object.fromEntries(Object.entries(this.heroSkills[p.id]).map(([slot, rule]) => [slot, {
           ready: this.t >= (p.heroSkillReadyAt[slot] ?? 0),
@@ -6229,6 +6311,7 @@ export class LogicEngine {
       ...(this.debugOn ? { debug: this._snapDebug() } : {}),
       dragon: { ...this.dragon }, baron: { ...this.baron },
       fx: this.fx.map((f) => ({ ...f })), feed: this.feed.slice(),
+      ...(this.heroSkillsOn ? { combatStates: this._snapCombatStates() } : {}),
       bK: this.bK, rK: this.rK, bGold: this.bGold, rGold: this.rGold, winProb, over: this.over, winner: this.winner,
       // S24：戰術中繼資料與執行統計（只在啟用戰術時出現 → 舊快照形狀不變）
       ...(this.tacticOn ? {

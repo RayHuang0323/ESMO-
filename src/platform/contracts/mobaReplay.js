@@ -29,6 +29,9 @@
 import { isBattleResultVersion } from "./battleResultVersion.js";
 
 export const MOBA_REPLAY_VERSION = "MobaReplay.v1";
+/** CombatState.v1 的持續狀態區間表（optional additive，見 battle/moba/replay/combatStateReplay.js）。 */
+export const COMBAT_STATE_REPLAY_VERSION = "CombatStateReplay.v1";
+export const CS_REASONS = Object.freeze(["expired", "death", "broken", "removed"]);
 
 /**
  * 取樣間隔（模擬秒）。2.5s + 位置線性插值 → 播放平順且容量可控。
@@ -304,6 +307,11 @@ export function validateMobaReplay(r) {
     const itemError = itemsReplayShapeError(r);
     if (itemError) errors.push(itemError);
   }
+  // CombatState.v1：持續狀態區間表（optional additive）。舊 Replay 沒有 ⇒ 不檢查、照常播放。
+  if (r.combatStates !== undefined) {
+    const csError = combatStatesReplayShapeError(r.combatStates, Array.isArray(r.playersMeta) ? r.playersMeta.length : 0);
+    if (csError) errors.push(csError);
+  }
   // 可序列化（不含函式 / 循環參照 / React・Three 物件）
   try { JSON.stringify(r); } catch { errors.push("replay 無法 JSON 序列化"); }
   return { ok: errors.length === 0, errors };
@@ -336,6 +344,29 @@ function itemsReplayShapeError(r) {
     if (!Number.isInteger(row[2]) || row[2] < 0 || row[2] >= n || !Number.isInteger(row[3]) || row[3] < 0 || row[3] > 2
       || !Number.isInteger(row[4]) || row[4] < 0 || row[4] >= k) return `purchases[${i}] 席位／動作／物品索引超出範圍`;
     prevSeq = row[0]; prevT = row[1];
+  }
+  return null;
+}
+
+/** CombatStateReplay.v1 形狀檢查（回傳第一個錯誤或 null）。 */
+function combatStatesReplayShapeError(cs, playerCount) {
+  if (cs.version !== COMBAT_STATE_REPLAY_VERSION) return "combatStates.version 錯誤";
+  if (!Array.isArray(cs.kinds) || cs.kinds.some((k) => typeof k !== "string")) return "combatStates.kinds 必須為字串陣列";
+  if (!Array.isArray(cs.skills) || cs.skills.some((k) => typeof k !== "string")) return "combatStates.skills 必須為字串陣列";
+  if (!Array.isArray(cs.rows)) return "combatStates.rows 必須為陣列";
+  for (let i = 0; i < cs.rows.length; i++) {
+    const r = cs.rows[i];
+    const keyframesBad = (k) => k !== null && (!Array.isArray(k) || k.some((f) => !Array.isArray(f) || f.length !== 2 || !f.every(Number.isFinite)));
+    const bad = !Array.isArray(r) || r.length < 11 || r.length > 13
+      || !Number.isInteger(r[0]) || r[0] < 0 || r[0] >= cs.kinds.length
+      || [r[1], r[2]].some((v) => !Number.isInteger(v) || v < -1 || v >= playerCount)
+      || !Number.isInteger(r[3]) || r[3] < -1 || r[3] >= cs.skills.length
+      || ![r[4], r[5], r[6]].every(Number.isFinite) || r[5] < r[4] - 1e-6 || (r[6] !== -1 && r[6] < r[4] - 1e-6)
+      || !Number.isInteger(r[7]) || r[7] < -1 || r[7] >= CS_REASONS.length
+      || (r[8] !== null && !Number.isFinite(r[8])) || (r[9] !== null && !Number.isFinite(r[9]))
+      || (r[10] !== null && (!Array.isArray(r[10]) || ![3, 5].includes(r[10].length) || !r[10].every(Number.isFinite)))
+      || (r.length >= 12 && keyframesBad(r[11])) || (r.length === 13 && (r[12] === null || keyframesBad(r[12])));
+    if (bad) return `combatStates.rows[${i}] 形狀錯誤`;
   }
   return null;
 }

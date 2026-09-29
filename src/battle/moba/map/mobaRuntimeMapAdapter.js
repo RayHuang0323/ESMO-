@@ -20,7 +20,7 @@
 //  ⚠ 純資料、無 THREE/React。
 // ============================================================================
 import {
-  simToWorld, inBoundsSim, clampSim, baseSim, pitSim, LANE_IDS,
+  simToWorld, inBoundsSim, clampSim, baseSim, pitSim, LANE_IDS, scaleLen,
 } from "./coordinateMapping.js";
 import { TOWER_HP, NEXUS_HP, ROLE_NAME, posOnLane, WORLD_BOUNDS } from "../../../gameData.js";
 import {
@@ -652,6 +652,28 @@ export function adaptEffects(snapshot, effectTime = snapshot?.ts, opts = {}) {
 }
 
 /**
+ * CombatState.v1：持續領域／牆 → 3D 地面資料。只讀 snapshot.combatStates.active（現場＝引擎；
+ * Replay＝區間表還原，同形狀）；到期或提前結束的領域本來就不在 active 裡，這裡不自己計時。
+ */
+export function adaptCombatZones(snapshot) {
+  const ts = num(snapshot?.ts, 0);
+  const out = [];
+  for (const z of snapshot?.combatStates?.active ?? []) {
+    if (!String(z?.kind ?? "").startsWith("zone-") || !z.shape) continue;
+    const until = num(z.until, ts);
+    const base = { kind: z.kind, side: z.side ?? null, sourceId: z.sourceId ?? null, skillId: z.skillId ?? null,
+      remaining: Math.max(0, until - ts), armed: ts >= num(z.activeFrom, num(z.startedAt, ts)) - 1e-6 };
+    if (Array.isArray(z.shape.c)) {
+      out.push({ ...base, shape: "circle", world: simToWorld({ x: z.shape.c[0], y: z.shape.c[1] }, 0), radius: scaleLen(num(z.shape.r, 1)) });
+    } else if (Array.isArray(z.shape.a) && Array.isArray(z.shape.b)) {
+      out.push({ ...base, shape: "line", a: simToWorld({ x: z.shape.a[0], y: z.shape.a[1] }, 0),
+        b: simToWorld({ x: z.shape.b[0], y: z.shape.b[1] }, 0), width: scaleLen(num(z.shape.w, 0.5)) });
+    }
+  }
+  return out;
+}
+
+/**
  * 一次把整份 snapshot 轉成 Renderer 需要的資料。
  * @returns {{ ts, over, winner, heroes, structures, objectives, teams, warnings }}
  */
@@ -687,6 +709,7 @@ export function adaptRuntimeMapFrame(snapshot, opts = {}) {
     objectives,
     minions,
     effects,
+    zones: adaptCombatZones(snapshot),
     teams: { blue, red },
     lanes: LANE_IDS,
     warnings,

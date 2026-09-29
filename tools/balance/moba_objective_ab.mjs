@@ -25,8 +25,10 @@ try { ({ toEngineHeroPassives } = await imp('src/battle/moba/skills/heroPassiveG
 const PILOT = process.argv.includes('--pilot');
 //  --full：每 10 秒把整份 snapshot（去掉只給呈現用的 fx 與 mhp）併入雜湊 ⇒ 逐位元比對候選與基準。
 const FULL = process.argv.includes('--full');
-const stripPresentation = (snap) => JSON.stringify({ ...snap, fx: undefined,
-  players: snap.players.map(({ mhp, ...rest }) => rest) });
+//  CombatState.v1 起也去掉 combatStates 與 statusEffects 的 dot（純呈現推導，不影響模擬）。
+const stripPresentation = (snap) => JSON.stringify({ ...snap, fx: undefined, combatStates: undefined,
+  players: snap.players.map(({ mhp, ...rest }) => ({ ...rest,
+    ...(rest.statusEffects ? { statusEffects: rest.statusEffects.filter((e) => e.id !== 'dot') } : {}) })) });
 
 const LANE_ZH = ['上路', '打野', '中路', '下路', '輔助'];
 const byLane = LANE_ZH.map((l) => CHAMPIONS_100.filter((h) => h.lane === l));

@@ -23923,3 +23923,39 @@ CS_RESUME_HOTFIX = RELEASED（main cfca594 → a7afc5c）
 - 正式站 smoke：browser_check_moba_gameplay_presentation --prod 11/11；browser_check_prod_moba_mobile_hud_release 45/45；browser_check_prod_moba_result_replay_release 25/25。
 - 踩坑（測試前置，非產品回歸）：重播 smoke 390 首兩次 21/23——第一次開重播要下載 Rift GLB（13.4 MB，正式站冷快取實測 13.8 秒），載入畫面期間時間軸本來就是 0，smoke 在開啟 3 秒內就取樣。證明：本機同時 build 舊 main d9d9d88 與新版，同一支 smoke 皆 23/23。修正：新增 R4b「等載入畫面消失（上限 70 秒）」再驗播放，斷言不放寬。
 - 既有 UX 風險（新登記）：手機第一次開重播約 14 秒地圖載入等待（13.4 MB GLB），未處理。
+
+
+## 2026-09-30 MOBA Persistent Combat State v1（local，未 push／未 deploy；等 Owner Review）
+
+分支 `feature/moba-persistent-combat-state-v1`（基準 main `75f44c8`）。**moba-sim.v15 不變**（語意指紋同版號重新登記）。
+設計與契約：`docs/design/MOBA_Persistent_Combat_State_v1.md`。
+
+### 實作
+- 引擎：`_statusEffectsOf(p)` 成為英雄持續狀態唯一讀取點（snapshot.statusEffects 輸出逐位元相同）；新增受害者 `dot`。
+  `_combatStateStep()` 每 tick 由同一份權威欄位＋領域排程推導生命期（開始／到期／結束原因 expired・death・broken・removed／遞增 seq），
+  不回寫 gameplay、不耗 rng。領域排程加 `zoneId`／`castAt`。`snapshot.combatStates`（CombatState.v1，只在 hero skills 開啟）。
+- Replay：`battle/moba/replay/combatStateReplay.js`——每個 snapshot 收進行中＋依 seq 收結束紀錄，終局編成
+  `replay.combatStates`（CombatStateReplay.v1，optional additive，含 value／until 關鍵影格）；`seek(t)` 還原與現場同形狀的
+  statusEffects 與 combatStates。形狀檢查在 `mobaReplay.validateMobaReplay`。
+- UI／VFX：`render/CombatZones.jsx`（地面領域／牆，只讀 frame.zones）；`heroStatusMeta` 新增 `dot`；重播底欄狀態列改讀區間表。
+
+### 驗證
+- 模擬不變：正式設定 40 場逐場結果、12 場整份 snapshot 串流（去新增欄位）、legacy 指紋 6 場，皆與 `75f44c8` 相同。
+- `check_moba_combat_state_v1` 15/15（契約、同源、決定性、領域／DoT、Replay 逐時刻還原 2199/2199、護盾量 179/179、正式支援矩陣）。
+- `check_moba_combat_state_matrix`（受控單技能）：273 個宣告持續欄位的技能中 **271/273（99.3%）** 完整支援。
+- `browser_check_moba_combat_state_v1` 13/13（1366＋390：現場／重播「讀到的權威領域＝可見 mesh」逐幀相等、重播狀態列）。
+- build ✓；regress 15/15；regress2 8/8；items_m2 53/53；simulation_version 56/56；hero_skills_release_gate PASS；
+  skill_levels 400/400；talents 200/200；base_assault PASS；skill_detail 500/500；mobile_hud_polish 60/60；combat_quality 28/28；
+  spectacle_vision 21/21；lane_jungle 20/20；verify 6 段（experience26／runtime29／pacing29b1／presentation29b2／controls29b3／
+  milestone_b4）重跑後全套 102 段與 main 狀態相同、新紅燈 0。
+
+### 發現
+- **TD-CS1（wiring bug，未修）**：`split-projectile`（liuxing:Q、miwu:E）規則宣告 `slowDuration` 且技能詳情會顯示，
+  但引擎命中處理只對 `projectile` 套減速。修正會改模擬 ⇒ 需 moba-sim.v16，等 Owner 決定。
+- 實戰中投射物／延遲範圍控制常被閃避（AI 在施放後同一 tick 移開），屬 gameplay 行為，非狀態遺失。
+- 3D 畫面整體落後 frameRef 一幀（RuntimeFrameFeeder 掛在所有渲染元件之後），英雄與領域一致；既有架構，未改。
+
+### 未做
+- 英雄狀態的 `startedAt` 為觀察時刻（≤0.5 秒）；暈眩／定身／減傷等未帶 sourceId；無 channel 類 mechanic。
+- 快速完成的 Replay：刷新時刻與護盾量解析度 1 秒（狀態種類與開始／結束仍精確）。
+- 未經真機實測：CombatZones 地面領域的視覺、手機效能。

@@ -34,6 +34,7 @@
 import { WORLD_BOUNDS, PITS, LANES, CAMPS } from "../../../gameData.js";
 import { decodePsRow } from "../../../platform/contracts/mobaReplay.js";
 import { applySkillLevelToRule, SKILL_LEVEL_CAPS } from '../skills/heroSkillLevels.js';
+import { createCombatStateIndex } from "./combatStateReplay.js";
 
 const clamp01 = (v) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0);
 
@@ -121,6 +122,8 @@ export function frameAt(frames, t) {
 }
 
 export function createReplaySource(replay) {
+  //  CombatState.v1：持續狀態區間表（有才用；舊 Replay 沒有 ⇒ 維持 bf 的減速一格）
+  const csIndex = createCombatStateIndex(replay?.combatStates, (replay?.playersMeta ?? []).map((p) => p.id));
   const frames = replay?.frames ?? [];
   const playersMeta = replay?.playersMeta ?? [];
   const towersMeta = replay?.towersMeta ?? {};
@@ -254,7 +257,15 @@ export function createReplaySource(replay) {
     };
   };
 
-  const first = toSnapshot(frames[0]);
+  /** 播放時刻 t 的持續狀態（與現場 snapshot 同形狀）：覆蓋 statusEffects、加上 combatStates.active。 */
+  const withCombatStates = (snap, t) => {
+    if (!snap || !csIndex) return snap;
+    const { byPlayer, active } = csIndex.at(t);
+    //  不看 frame 的 dead 位元（那是最近一格、最多差 2.5 秒）：引擎在死亡當下就結束狀態（reason=death），區間表本身就是權威。
+    return { ...snap, players: snap.players.map((p, i) => ({ ...p, statusEffects: byPlayer[i] })),
+      combatStates: { version: "CombatState.v1", replay: true, active } };
+  };
+  const first = withCombatStates(toSnapshot(frames[0]), frames[0]?.t ?? 0);
   let state = { prev: first, snapshot: first, subTRef };
 
   return {
@@ -265,7 +276,7 @@ export function createReplaySource(replay) {
     seek(t) {
       const { a, b, f } = frameAt(frames, t);
       if (!a) return;
-      state = { prev: toSnapshot(a), snapshot: toSnapshot(b) ?? toSnapshot(a), subTRef };
+      state = { prev: withCombatStates(toSnapshot(a), t), snapshot: withCombatStates(toSnapshot(b) ?? toSnapshot(a), t), subTRef };
       subTRef.current = f;
     },
     hasFrames: frames.length > 0,

@@ -430,9 +430,21 @@ export function installRuntimeDiagnostics({ gl, scene, camera, frameRef }) {
     const objectives = f.objectives ?? [];
     //  Rift 載入：這個畫面**實際畫出來**的地圖（loading | rift | blockout）與逐幀計數。
     const map = mapFrameTally();
+    //  CombatState.v1：權威領域數（frame.zones）與畫面上實際可見的領域 mesh 數，gate 用來驗兩者一致。
+    //  ⚠ 資料餵送器（RuntimeFrameFeeder）掛在所有渲染元件之後 ⇒ 整個 3D 畫面統一落後 frameRef 一幀（英雄、特效、領域都一樣）。
+    //    所以「畫出來的」要和元件自己這一幀讀到的數量（consumed）比，不和最新 frameRef 比。
+    let zoneMeshes = 0, zoneGroups = 0, zoneMeshesAll = 0, consumed = null;
+    scene?.traverse?.((o) => {
+      if (o.name === "moba-combat-zones") { zoneGroups++; consumed = o.userData?.consumed ?? null; }
+      const part = String(o.userData?.part ?? "");
+      if (!part.startsWith("combat-zone-") || part === "combat-zone-edge") return;
+      zoneMeshesAll++;
+      if (o.visible) zoneMeshes++;
+    });
     return {
       ts: f.ts ?? null,
       over: !!f.over,
+      combatZones: { authority: (f.zones ?? []).length, consumed, visibleMeshes: zoneMeshes, groups: zoneGroups, meshes: zoneMeshesAll, kinds: (f.zones ?? []).map((z) => z.kind) },
       warnings: f.warnings ?? [],
       mapMode: map.mapMode,
       mapFallbackReason: map.mapFallbackReason,

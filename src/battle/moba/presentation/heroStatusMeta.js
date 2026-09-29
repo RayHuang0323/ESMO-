@@ -40,6 +40,8 @@ export const STATUS_META = Object.freeze({
   "hero-slow": M("debuff", "減速", "#67e8f9", "frost", null, "❄", 34),
   mark: M("debuff", "標記", "#f43f5e", "icon", "mark", "◎", 48),
   ignite: M("debuff", "點燃", "#f97316", "flames", null, "✹", 36),
+  //  CombatState.v1：技能造成的持續傷害（root-dot 等；來源與到期都來自引擎排程）
+  dot: M("debuff", "持續傷害", "#fb923c", "flames", null, "✺", 37),
   root: M("control", "定身", "#84cc16", "spikes", "root", "⌇", 70),
   stun: M("control", "暈眩", "#facc15", "stars", "stun", "✶", 90),
   knockup: M("control", "擊飛", "#fbbf24", "stars", "stun", "⇡", 92),

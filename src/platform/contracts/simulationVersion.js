@@ -344,7 +344,11 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  ③ objectiveStakesV1／nexusSiegeCapV1／heroPassivesV1 三個候選規則**預設關閉**。
   //  證據：正式設定 40 場逐場結果、12 場整份 snapshot 串流（去掉 fx／mhp）、legacy 指紋 6 場皆與 f285f5f 逐位元相同。
   //  任何一個候選旗標開啟＝語意變更 ⇒ 必須開 moba-sim.v16。
-  "moba-sim.v15": "fd4c7787061ea81c",
+  //  2026-09-30（feature/moba-persistent-combat-state-v1）：**不是**語意變更，同版號重新登記。
+  //  CombatState.v1：statusEffects 抽成 _statusEffectsOf（輸出逐位元相同）、每 tick 推導持續狀態生命期（不回寫 gameplay、
+  //  不耗 rng）、領域排程加 zoneId／castAt、snapshot 加 combatStates 與受害者 dot。證據：正式設定 12 場整份 snapshot
+  //  串流（去掉新增的呈現欄位）與 legacy 指紋 6 場皆與 75f44c8 逐位元相同。
+  "moba-sim.v15": "eb940085e9536b94",
 });
 
 export const isKnownSimulationVersion = (v) =>

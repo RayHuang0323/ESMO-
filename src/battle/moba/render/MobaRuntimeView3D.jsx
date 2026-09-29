@@ -29,6 +29,7 @@ import SkillCastCallouts from "./SkillCastCallouts.jsx";
 import TowerRangeDebug from "../presentation/TowerRangeDebug.jsx";
 import MobaRuntimeNeutrals from "./RiggedMobaRuntimeNeutrals.jsx";
 import HeroStatusFx from "./HeroStatusFx.jsx";
+import CombatZones from "./CombatZones.jsx";
 import FogOverlay from "./FogOverlay.jsx";
 import { applyFogToFrame } from "../presentation/fogOfWar.js";
 import BattleCameraController from "../../ui/BattleCameraController.jsx";
@@ -463,6 +464,8 @@ export default function MobaRuntimeView3D({
       <MobaRuntimeMinions frameRef={frameRef} />
       <MobaRuntimeNeutrals objectives={frame.objectives} frameRef={frameRef} />
       <MobaRuntimeEffects frameRef={frameRef} />
+      {/* CombatState.v1：持續領域／牆（只讀引擎權威狀態；Replay 由區間表還原） */}
+      <CombatZones frameRef={frameRef} />
       {/* Exclusive hero attack presentation; old role/identity overlays are no longer mounted. */}
         <HeroVfxRuntime frameRef={frameRef} quality={quality} />
         {/* Battle UX hotfix: who just cast what, readable at the overview zoom. */}
