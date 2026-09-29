@@ -23913,3 +23913,13 @@ CS_RESUME_HOTFIX = RELEASED（main cfca594 → a7afc5c）
 - verify.mjs 全套：31/102 通過、71 失敗，與 main d9d9d88 **逐段狀態 102/102 相同、失敗簽名 71/71 相同 ⇒ 新紅燈 0**。
 - 其餘：build ✓；regress 15/15；regress2 8/8；items_m2 53/53；simulation_version 56/56；release_gate PASS；browser_check_moba_gameplay_presentation 10/10（新增正式站模式 --prod）；browser_check_moba_mobile_hud 37/37。
 - 下一階段 P0（Owner 指定，未實作）：見 08_目前待辦與風險.md 同日一節。
+
+
+## 2026-09-29 MOBA Gameplay／Presentation Release（RELEASED）
+
+- 整合：origin/main 仍為 d9d9d88 ⇒ fast-forward，一般 push（未 force）：d9d9d88..8138d86（f285f5f Mobile UI P1、20e6984 程式、8138d86 紀錄）。
+- Deploy：Deploy Vite site to GitHub Pages run 36585558564 success；線上 entry index-_QdGA2vW.js 含 moba-sim.v15、狀態列、血條刻度、技能圖元件、Mobile UI P1 標記。
+- 候選旗標 objectiveStakesV1／nexusSiegeCapV1／heroPassivesV1 在 main 但維持關閉；moba-sim.v15 不變。
+- 正式站 smoke：browser_check_moba_gameplay_presentation --prod 11/11；browser_check_prod_moba_mobile_hud_release 45/45；browser_check_prod_moba_result_replay_release 25/25。
+- 踩坑（測試前置，非產品回歸）：重播 smoke 390 首兩次 21/23——第一次開重播要下載 Rift GLB（13.4 MB，正式站冷快取實測 13.8 秒），載入畫面期間時間軸本來就是 0，smoke 在開啟 3 秒內就取樣。證明：本機同時 build 舊 main d9d9d88 與新版，同一支 smoke 皆 23/23。修正：新增 R4b「等載入畫面消失（上限 70 秒）」再驗播放，斷言不放寬。
+- 既有 UX 風險（新登記）：手機第一次開重播約 14 秒地圖載入等待（13.4 MB GLB），未處理。

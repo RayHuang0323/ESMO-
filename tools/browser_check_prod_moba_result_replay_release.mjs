@@ -58,6 +58,11 @@ const result = await runGate({
       const opened = await wait("document.querySelector('[data-testid=\"replay-play-toggle\"]')", 30000);
       const lineupRows = await ev("const t=document.querySelector('[data-testid=\"replay-lineup-toggle\"]'); if(t&&t.getAttribute('aria-pressed')!=='true') t.click(); return new Promise(r=>setTimeout(()=>r(JSON.stringify(document.querySelectorAll('[data-testid=\"replay-lineup-row\"]').length)),600));");
       ck(`R4[${label}] 重播畫面開啟、陣容 10 列`, opened && lineupRows === 10, `opened=${opened} rows=${lineupRows}`);
+      //  ⚠ 前置條件（2026-09-29 補）：第一次開重播要先下載 Rift 地圖（13.4 MB，正式站冷快取實測 ~14 秒），
+      //    載入畫面（RiftEntryGate）期間時間軸本來就停在 0。先等載入畫面消失（上限 70 秒 ＝ gate 60 秒硬逾時＋餘裕），
+      //    再驗播放；斷言本身不放寬。只有第一輪（390）會遇到冷快取，1366 第二輪已有快取。
+      const mapReady = await wait("!document.querySelector('[data-testid=\"rift-entry-loading\"]')", 70000);
+      ck(`R4b[${label}] 重播戰場地圖載入完成（載入畫面消失）`, mapReady);
       //  ⚠ 重播開啟即自動播放（MobaReplayScreen `useState(true)`）⇒ 先驗時間軸在走，再驗暫停／繼續。
       const rp = () => ev("const s=document.querySelector('input[aria-label=\"重播時間軸\"]'); return JSON.stringify({t:s?Number(s.value):null, btn:document.querySelector('[data-testid=\"replay-play-toggle\"]')?.innerText||''});");
       const p0 = await rp(); await sleep(3000); const p1 = await rp();
