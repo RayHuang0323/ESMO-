@@ -23904,3 +23904,12 @@ CS_RESUME_HOTFIX = RELEASED（main cfca594 → a7afc5c）
 - 3D 升級光環、血條刻度、隱身材質**未經真機**實測（瀏覽器 gate 只驗 DOM 與截圖）；隱身需要有隱身英雄的對局才看得到。
 - 英雄前中後期曲線不存在；戰術 `earlyGame/midGame/lateGame` 等欄位只驗證不使用；紅方固定標準戰術（規劃見報告 §6）。
 - Blue bias（80 場藍方 53 勝）為既有問題，本輪依指示未處理。
+
+
+## 2026-09-29 MOBA Gameplay／Presentation Release（推送前紀錄）
+
+- 範圍（不改模擬結果）：Mobile UI P1 hotfix（f285f5f）、技能 VFX 時長對齊、隱身呈現、血條刻度／護盾段、升級回饋、底欄狀態 HUD、英雄生涯／圖鑑技能圖示。
+- objectiveStakesV1／nexusSiegeCapV1／heroPassivesV1 程式碼隨版進 main，但**預設關閉、未啟用**（Owner 指示；主堡 cap 6/8/10 後續比較）。moba-sim.v15 不變。
+- verify.mjs 全套：31/102 通過、71 失敗，與 main d9d9d88 **逐段狀態 102/102 相同、失敗簽名 71/71 相同 ⇒ 新紅燈 0**。
+- 其餘：build ✓；regress 15/15；regress2 8/8；items_m2 53/53；simulation_version 56/56；release_gate PASS；browser_check_moba_gameplay_presentation 10/10（新增正式站模式 --prod）；browser_check_moba_mobile_hud 37/37。
+- 下一階段 P0（Owner 指定，未實作）：見 08_目前待辦與風險.md 同日一節。

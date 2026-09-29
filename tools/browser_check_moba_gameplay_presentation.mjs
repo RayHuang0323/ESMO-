@@ -2,8 +2,12 @@
 // ============================================================================
 //  tools/browser_check_moba_gameplay_presentation.mjs — Gameplay/Presentation Audit（瀏覽器）
 //
-//  執行：node tools/browser_check_moba_gameplay_presentation.mjs
+//  執行：node tools/browser_check_moba_gameplay_presentation.mjs            （本地 dev server）
+//        node tools/browser_check_moba_gameplay_presentation.mjs --prod     （正式站；ESMO_PROD_URL 可覆寫）
+//  正式站模式只用 DOM ＋ `?debug=moba-runtime-battle&shot=`（打包後讀不到 /src/，TD-31），
+//  並先證明線上 bundle 真的是這一版（P0）。
 //  走 ?debug=moba-runtime-battle（正式 GameView／引擎／HUD），本地 dev server，390 手機 ＋ 1366 桌機。
+//    P  （正式站）線上 bundle 含本輪標記；技能格 P＝「未生效」、QWER 有等級角標（Mobile UI P1）
 //    H  底欄血條有刻度（data-max-hp ＝ snapshot mhp，> 0），生命文字仍在
 //    L  等待期間觀戰英雄升級 ⇒ 出現「升級」角標（同一正式 snapshot mlv）
 //    S  等待期間出現英雄狀態列（statusEffects：護盾／增益／控制…，含秒數）
@@ -15,11 +19,13 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { runGate, finishGate } from "./browser/harness.mjs";
 
-const OUT = process.env.ESMO_REVIEW_OUT ?? "review/moba-gameplay-audit/gate";
+const PROD = process.env.ESMO_PROD_URL || (process.argv.includes("--prod") ? "https://rayhuang0323.github.io/ESMO-/" : null);
+const OUT = process.env.ESMO_REVIEW_OUT ?? (PROD ? "review/moba-gameplay-audit/prod-smoke" : "review/moba-gameplay-audit/gate");
 mkdirSync(OUT, { recursive: true });
 
 const result = await runGate({
-  name: "MOBA Gameplay／Presentation Audit",
+  name: PROD ? "正式站 MOBA Gameplay／Presentation Release" : "MOBA Gameplay／Presentation Audit",
+  ...(PROD ? { externalUrl: PROD } : {}),
   timeoutMs: 1200000,
   async run({ chrome, url, ck, sleep }) {
     const ev = async (body) => { const r = String(await chrome.evaluate(body)); for (const t of [r, r.replace(/^"|"$/g, "")]) { try { return JSON.parse(t); } catch { /* next */ } } return null; };
@@ -35,12 +41,23 @@ const result = await runGate({
     const clickText = (text) => ev("const el=[...document.querySelectorAll('button')].find(b=>(b.innerText||'').includes(" + JSON.stringify(text) + ")); if(!el) return JSON.stringify(false); el.click(); return JSON.stringify(true);");
     const icons = (sel) => ev("const imgs=[...document.querySelectorAll(" + JSON.stringify(sel) + ")]; return JSON.stringify({n:imgs.length, loaded:imgs.filter(i=>i.complete&&i.naturalWidth>0).length, fallback:document.querySelectorAll('[data-skill-icon-fallback]').length});");
 
+    if (PROD) {
+      await chrome.navigate(url); await sleep(2000);
+      const bundle = await ev("const s=[...document.scripts].map(x=>x.src).find(x=>/assets\\/index-/.test(x)); return fetch(s).then(r=>r.text()).then(t=>JSON.stringify({src:s, v15:t.includes('moba-sim.v15'), status:t.includes('observer-status-row'), ticks:t.includes('hero-hpbar-ticks'), icon:t.includes('data-skill-icon'), hud:t.includes('quality-settings-toggle')}));");
+      ck("P0 線上 bundle 是本輪版本（v15＋狀態列＋血條刻度＋技能圖元件＋Mobile UI P1）", bundle?.v15 && bundle?.status && bundle?.ticks && bundle?.icon && bundle?.hud, JSON.stringify(bundle));
+    }
     await mobile(390, 844);
     await chrome.navigate(`${url}?debug=moba-runtime-battle&shot=hud&waitTs=150&quality=low`);
     let ready = false;
     for (let i = 0; i < 300 && !ready; i++) { await sleep(1500); ready = String(await chrome.evaluate("return JSON.stringify(window.__BATTLE_SHOT_READY || null);")).includes("hud"); }
     ck("戰鬥開始並推進到 ts ≥ 150", ready);
     if (!ready) return;
+
+    // ── P Mobile UI P1 技能格（每格一個狀態；P＝未生效；QWER 等級角標）─────
+    const P = await ev("const t=[...document.querySelectorAll('.observer-ability')].map(b=>({k:b.getAttribute('data-skill-slot'),st:b.getAttribute('data-skill-state'),lv:!!b.querySelector('.observer-ability-level'),txt:(b.querySelector('small')||{}).textContent||''})); return JSON.stringify(t);");
+    const pTile = P?.find((t) => t.k === "P");
+    ck("P1 技能格 P＝「未生效」（被動未開）、QWER 都有等級角標", pTile?.st === "passive" && pTile?.txt === "未生效"
+      && ["Q", "W", "E", "R"].every((k) => P.find((t) => t.k === k)?.lv), JSON.stringify(P));
 
     // ── H 血條刻度 ────────────────────────────────────────────────────────
     const H = await ev("const h=document.querySelector('.observer-health'); return JSON.stringify(h?{cls:h.className,max:h.getAttribute('data-max-hp'),txt:(h.innerText||'').trim()}:null);");
