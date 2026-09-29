@@ -2795,3 +2795,12 @@ NEXT_SPRINT = NOT_STARTED
 4. **Tactical Identity**：英雄前／中／後期曲線與賽前戰術真正接入正式 simulation（TeamTacticProfile → 既有決策點；紅方 AI 戰術來源；Live 與 Challenge 同一 builder）。
 
 **主堡**：cap=6 **不啟用**；後續比較 cap 6／8／10（同一 A/B 工具，`nexusSiegeCapK`）再決定。
+
+
+## 2026-09-30 更新：MOBA 正式 P0 進度
+
+1. ~~Persistent Combat State / Replay~~ — **v1 RELEASED**（main `35fa134`）；剩 TD-CS1（split-projectile 減速）併入下一個 simulation release。
+2. Objective Stakes v1 — 待辦：正式 n=1000 A/B → Owner 決定（啟用＝v16）。
+3. Passive P Runtime — 待辦：可重用 trigger primitives → 100 heroes。
+4. Tactical Identity — 待辦：英雄曲線＋賽前戰術接入正式 simulation。
+- 下一個 simulation release（v16）候選內容：TD-CS1 修正；是否同時開 Objective Stakes／Nexus cap（6／8／10 比較）由 Owner 決定。

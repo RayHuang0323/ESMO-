@@ -23959,3 +23959,22 @@ CS_RESUME_HOTFIX = RELEASED（main cfca594 → a7afc5c）
 - 英雄狀態的 `startedAt` 為觀察時刻（≤0.5 秒）；暈眩／定身／減傷等未帶 sourceId；無 channel 類 mechanic。
 - 快速完成的 Replay：刷新時刻與護盾量解析度 1 秒（狀態種類與開始／結束仍精確）。
 - 未經真機實測：CombatZones 地面領域的視覺、手機效能。
+
+
+## 2026-09-30 MOBA Persistent Combat State v1 正式 Release（RELEASED）
+
+- Owner Review 通過（決策：本輪 Release；TD-CS1 不修、留待下一個 simulation release；objectiveStakesV1／nexusSiegeCapV1／heroPassivesV1 維持 OFF）。
+- Release 前整理：
+  - `cbd3a30`（未推送）拆掉兩個純換行檔：`browser_check_moba_gameplay_presentation.mjs` 恢復 75f44c8 原樣；
+    `moba_objective_ab.mjs` 保留本輪必要的 4 行、維持原 CRLF。重新提交為 feature commit `86a70a0`。
+  - `afa121f`：`docs/ai/跨模型交接流程.md` §0 改為實際基線（main 75f44c8、moba-sim.v15、候選旗標、下一階段 P0）；AGENTS.md §11 不再寫死舊 SHA。
+  - `35fa134`：CombatState 瀏覽器 gate 加正式站模式（--prod）。
+- 整合：fetch 後 origin/main 仍為 `75f44c8` ⇒ fast-forward，一般 push（未 force）：`75f44c8..35fa134`。無 gameplay 語意衝突 ⇒ 未重跑 n=1000。
+- Deploy：GitHub Pages run `36606426923` success；線上 entry `index-EL80O2JI.js`（含 moba-sim.v15、CombatState.v1、CombatStateReplay.v1、領域元件）。
+- 最終 HEAD gate：build ✓；check_moba_combat_state_v1 15/15；simulation_version 56/56；hero_skills_release_gate PASS；skill_levels 400/400；
+  talents 200/200；items_m2 53/53；regress 15/15；regress2 8/8；verify experience26／presentation29b2／controls29b3／runtime29 重跑後全套 102 段與 main 相同、新紅燈 0；
+  browser_check_moba_combat_state_v1（本地）13/13。
+- 正式站 smoke：browser_check_moba_combat_state_v1 --prod **14/14**；browser_check_moba_gameplay_presentation --prod **11/11**；
+  browser_check_prod_moba_result_replay_release **25/25**。
+- 如實記錄：持續技能支援 **271/273（99.3%）**；fallback 兩個＝liuxing:Q、miwu:E（TD-CS1）。**moba-sim 仍為 v15**。
+- **CombatState.v1 = RELEASED YES**。
