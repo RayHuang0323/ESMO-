@@ -454,6 +454,8 @@ export function installRuntimeDiagnostics({ gl, scene, camera, frameRef }) {
       over: !!f.over,
       minionRings, teamBuffs: f.teamBuffs ?? null,
       objectiveLayout: f.objectiveLayout ?? null, pitMarkers,
+      //  v16 正式站 smoke：每位英雄這一幀的持續狀態 id（例：TD-CS1 的 hero-slow）；正式站無法 import /src（TD-31）
+      heroStatus: Object.fromEntries((f.heroes ?? []).map((h) => [h.id, (h.statusEffects ?? []).map((s) => s.id)])),
       bosses: Object.fromEntries(objectives.filter((o) => o.id === "dragon" || o.id === "baron").map((o) => [o.id, o.world ? { x: o.world.x, z: o.world.z } : null])),
       combatZones: { authority: (f.zones ?? []).length, consumed, visibleMeshes: zoneMeshes, groups: zoneGroups, meshes: zoneMeshesAll, kinds: (f.zones ?? []).map((z) => z.kind) },
       warnings: f.warnings ?? [],

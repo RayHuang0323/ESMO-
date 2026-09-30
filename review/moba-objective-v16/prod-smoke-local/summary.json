@@ -1,0 +1,17 @@
+{
+  "prod": false,
+  "seen": {
+    "SWAPPED": true,
+    "STANDARD": true
+  },
+  "loads": 2,
+  "director": {
+    "focus": 1,
+    "bad": 0,
+    "ex": []
+  },
+  "slow": {
+    "ts": 78,
+    "id": "r3"
+  }
+}

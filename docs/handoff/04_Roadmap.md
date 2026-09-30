@@ -2812,3 +2812,9 @@ NEXT_SPRINT = NOT_STARTED
 - Owner 待決：① 是否接受藍方 +2.4pp（不顯著、與地圖不對稱同源）② 是否先處理 Blue side bias／地圖對稱再發布 v16。
 - 後續 P0（未開始）：Passive P Runtime（trigger primitives → 100 英雄）、Tactical Identity、主堡 cap 6／8／10 比較。
 - 物件相關設計債：AI 後期物件優先（人數／血量／時間）待藍方偏差處理後再評估。
+
+## 2026-09-30 更新：moba-sim.v16 正式 Release
+
+- 範圍：TD-CS1 ＋ 對稱 Objective Pit（gameplay／美術）＋ objectiveLayoutVariant；Objective Stakes v1／Nexus cap／heroPassivesV1 維持 OFF。
+- 下一個獨立 Sprint：**Jungle Topology v1**（gate：`tools/audit_jungle_topology.mjs`；需同時給遠端隊伍接近路線，不能只收窄入口）。
+- 仍未開始：Passive P Runtime、Tactical Identity、主堡 cap 比較；Objective Stakes 若要重開需 v17 與依 layout 拆解的 A/B。
