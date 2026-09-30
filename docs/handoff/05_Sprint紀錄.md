@@ -24090,3 +24090,16 @@ candidate `feature/moba-objective-stakes-v16` @ `36251d0`（origin/main＝`35663
 - Blue／Red 結構偏差已消除（NEW_STRUCTURAL_SIDE_BIAS＝NO）；但 Objective Stakes 仍把「本場抽到巨龍側」的單場優勢由約 3pp 放大到約 8pp——需 Owner 判斷。
 - **ART_COLLISION_ALIGNMENT_BLOCKER**：Rift GLB 坑壁與新碰撞 0/96 逐段一致（巨龍坑碰撞內縮約 1.5、巴龍坑外擴約 1.5）且坑光暈烘焙紫／金身分色 ⇒ **READY_TO_RELEASE＝NO**。最小修正：只重建兩坑網格＋中性坑色，見設計文件 §4。
 - Challenge 未設定 layout（永遠 STANDARD）；舊版 MobaView3D 退路仍畫 STANDARD；坑位先到率殘差 88 vs 77（拿下率在雜訊內）列觀察。
+
+## 2026-09-30 v16 Objective Pit 美術修正（ART_COLLISION_ALIGNMENT_BLOCKER；local，未 push／未 deploy，等 Owner Review）
+
+- 無 Blender MCP ⇒ 改用本機 Blender 5.2 headless，`build_rift.py` 補上 headless／路徑覆寫，成為可重現管線。
+- 基準證明：現有 source＋build_rift.py 重建＝正式 GLB（316,374 頂點逐一相同、albedo SHA1 相同）。
+- `art/moba-rift/freeze_legacy_trees.py`：舊的樹配置（依 index＋共用亂數）凍結成資料（explicit.v1，421 棵）⇒ 改牆不再牽動全圖樹與草叢。
+- `tools/export_esmo_rift_source.mjs --scope=pits`：只換坑壁 96 段＋13 段連帶野區牆＋6 個坑底圖層；光暈中性（`pit_neutral`）、壁高統一 11.5。
+- 結果：GLB 13,425,188 → 13,370,736 bytes（`RIFT_GLB_BYTES` 同步）、167,612 → 166,622 面；坑心 28 外頂點逐一相同；albedo 只改坑心 18.2 內；
+  兩坑岩壁 100% 鏡射；`check_objective_pit_art_alignment` 0/4 → **4/4**。
+- `check_esmo_rift_v1` 導航牆一致檢查改為比對碰撞腳印（source 另帶 tree／中性 h 視覺欄位）：nav-only 0、art-only 28（main 既有，西南／東北野區，本次不動）⇒ 仍 13/14。
+- 驗證：build ✓、simulation_version 59/59（未動模擬語意）、坑位對稱 7/7、layout 契約 11/11、rift_loading 41/41、rift_mesh PASS、
+  瀏覽器 objective_layout 9/9（SWAPPED 重播上方坑只剩紫色標記，舊金環已消失）、browser rift_loading 17/17。
+- 未做：`public/assets/moba/rift-v1/rift-preview.png`（文件用 Blender 預覽，程式未引用）仍是舊圖；真機 Android 未驗。

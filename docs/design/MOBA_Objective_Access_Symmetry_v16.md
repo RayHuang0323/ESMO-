@@ -97,6 +97,19 @@
 5. 驗收：`check_objective_pit_art_alignment` 4/4、`check_esmo_rift_v1`（其既有的 jungle_struct 不同步是另一筆 main 技術債）、
    `browser_check_objective_layout_v16` 與 STANDARD／SWAPPED 各一張 Owner 截圖（坑上只剩一種物件色）。
 
+### 4.1 資產修正結果（2026-09-30，等 Owner Review）
+
+- **管線**：`freeze_legacy_trees.py` 一次性把舊的樹配置凍結成資料（`treeModel: explicit.v1`，421 棵、草叢前跳過 421 次亂數）；
+  `build_rift.py` 支援 headless 與輸出路徑覆寫、樹高讀資料；`export_esmo_rift_source.mjs --scope=pits` 只更新兩坑範圍。
+  遷移後重建＝原正式 GLB（316,374 頂點逐一相同、albedo SHA1 相同）⇒ 管線可重現。
+- **只改兩坑**：坑壁 96 段＋坑底縮放後重新裁切的 13 段野區牆＋6 個坑底圖層；其餘 815 段牆與所有地面層原封不動。
+  坑心 28 單位外 GLB 頂點逐一相同；albedo／小地圖只有坑心 18.2 單位內 21,687 像素改變。
+- **中性、互為鏡射**：光暈 `pit_neutral`、壁高統一 11.5；巴龍坑岩壁頂點 100% 與巨龍坑鏡射重合（修正前 0%）；樹以鏡像對稱雜湊決定。
+- **驗收**：`check_objective_pit_art_alignment` **4/4**（0/4 → 4/4）；`check_esmo_rift_v1` 的導航牆一致檢查改為比對碰撞腳印欄位，
+  結果 nav-only 0（**沒有隱形牆**）、art-only 28（西南／東北野區各 14 段，距坑 74–87，main 既有，不在本次範圍）；
+  腳印穿插檢查 0 組新增；Rift loading 41/41、瀏覽器 layout 9/9、Rift loading 瀏覽器 17/17；build 通過。
+- 預覽：`review/preview/rift-pits-{before,after}-*.png`（Owner Review 用）。
+
 ## 5. 尚未處理（刻意）
 
 - Challenge（`challengeRunner`）未設定 layout ⇒ 永遠 STANDARD。

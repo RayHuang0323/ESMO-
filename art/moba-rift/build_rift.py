@@ -1,28 +1,41 @@
-"""Run with Blender MCP. Original ESMO meshes/textures; no downloaded assets.
+"""Run with Blender MCP, or headless (reproducible pipeline):
+  blender --background --python art/moba-rift/build_rift.py
+Optional env overrides (default = the live repo paths below):
+  ESMO_RIFT_SOURCE=<source.json>  ESMO_RIFT_OUT=<dir for manifest.json>
+  ESMO_RIFT_ASSET_OUT=<dir for esmo-rift.glb + rift-albedo.png>  ESMO_RIFT_BLEND=<.blend path>
+Original ESMO meshes/textures; no downloaded assets.
 Coordinates: Blender X east, Y north, Z up; glTF exports X east, Y up, Z south.
 The scene is separate from the artist's active character scene.
 """
-import bpy, json, math, random
+import bpy, json, math, os, random
 import numpy as np
 from pathlib import Path
 from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / 'public' / 'assets' / 'moba' / 'rift-v1'
+OUT = Path(os.environ.get('ESMO_RIFT_OUT') or ROOT / 'public' / 'assets' / 'moba' / 'rift-v1')
 OUT.mkdir(parents=True, exist_ok=True)
 # Files the runtime loads go through the Vite asset pipeline (content-hashed URLs);
 # manifest.json and the preview render stay in public/. After a rebuild, update
 # RIFT_GLB_BYTES in src/battle/moba/map/riftMapGate.js (check_moba_rift_loading guards it).
-ASSET_OUT = ROOT / 'src' / 'assets' / 'moba' / 'rift-v1'
+ASSET_OUT = Path(os.environ.get('ESMO_RIFT_ASSET_OUT') or ROOT / 'src' / 'assets' / 'moba' / 'rift-v1')
 ASSET_OUT.mkdir(parents=True, exist_ok=True)
-DATA = json.loads((Path(__file__).parent / 'source.json').read_text(encoding='utf-8'))
+BLEND_OUT = Path(os.environ.get('ESMO_RIFT_BLEND') or Path(__file__).parent / 'esmo-rift.blend')
+DATA = json.loads(Path(os.environ.get('ESMO_RIFT_SOURCE') or Path(__file__).parent / 'source.json').read_text(encoding='utf-8'))
 SPAN = DATA['WORLD_BOUNDS']['width']
 HALF = SPAN / 2
 RNG = random.Random(93017)
 prior = bpy.data.scenes.get('ESMO_Rift_330_v1')
-if prior: bpy.data.scenes.remove(prior)
-scene = bpy.data.scenes.new('ESMO_Rift_330_v1')
-bpy.context.window.scene = scene
+if prior and bpy.context.window: bpy.data.scenes.remove(prior)
+if bpy.context.window:
+    scene = bpy.data.scenes.new('ESMO_Rift_330_v1')
+    bpy.context.window.scene = scene
+else:
+    #  Headless (--background): no window to switch scenes on ⇒ build into the active scene, emptied first,
+    #  so the glTF exporter's use_active_scene picks exactly these objects.
+    scene = bpy.context.scene
+    for o in list(scene.objects): bpy.data.objects.remove(o, do_unlink=True)
+    scene.name = 'ESMO_Rift_330_v1'
 scene['mapVersion'] = 'esmo-rift-330-corridor-v3'
 scene['worldExtentRatio'] = 1.5
 scene['coreDistanceRatio'] = 1.0
@@ -162,13 +175,22 @@ for poly in mesh.polygons:
         p=mesh.vertices[mesh.loops[li].vertex_index].co
         uv.data[li].uv=((p.x+HALF)/SPAN,(p.y+HALF)/SPAN)
 
+#  Tree layout. 'explicit.v1' (freeze_legacy_trees.py, 2026-09-30): each wall carries its own tree height
+#  as data, so editing some walls (e.g. the v16 symmetric pits) never shifts trees or reeds elsewhere.
+#  Legacy sources (no treeModel) keep the original index/RNG rule, byte for byte.
+EXPLICIT_TREES = DATA.get('treeModel') == 'explicit.v1'
 for i,w in enumerate(DATA['walls']):
     h=w.get('h',6)/DATA['WORLD_SCALE']
     stone(w['x'],w['y'],w['len'],w['thick'],h,w.get('angle',0))
     # Forest only atop blocking footprints; no decorative trees in walkable gaps.
-    if (i%3==0 or w.get('kind')=='outer_ridge') and min(w['len'],w['thick'])>1.4 and 'base' not in w.get('kind',''):
-        # Trunk stays inside the wall; elevated canopy can overhang its cliff.
+    # Trunk stays inside the wall; elevated canopy can overhang its cliff.
+    if EXPLICIT_TREES:
+        if w.get('tree'): tree(w['x'],w['y'],h*.82,min(w['len'],w['thick'])*1.1,w['tree'])
+    elif (i%3==0 or w.get('kind')=='outer_ridge') and min(w['len'],w['thick'])>1.4 and 'base' not in w.get('kind',''):
         tree(w['x'],w['y'],h*.82,min(w['len'],w['thick'])*1.1,RNG.uniform(7,12))
+if EXPLICIT_TREES:
+    #  Keep the reed stream identical to the legacy build: skip the draws the old wall pass consumed.
+    for _ in range(int(DATA.get('reedRngSkip',0))): RNG.random()
 
 # Dense low reeds mark only real, traversable vision bushes, never fake camps.
 for b in DATA['BUSHES']:
@@ -228,7 +250,7 @@ bpy.ops.object.select_all(action='DESELECT')
 for obj in scene.objects:
     if obj.type=='MESH': obj.select_set(True)
 bpy.ops.export_scene.gltf(filepath=str(ASSET_OUT/'esmo-rift.glb'),export_format='GLB',use_selection=True,use_active_scene=True,export_cameras=False,export_lights=False)
-bpy.data.libraries.write(str(Path(__file__).parent/'esmo-rift.blend'),{scene},fake_user=True)
+bpy.data.libraries.write(str(BLEND_OUT),{scene},fake_user=True)
 stats={'mapVersion':scene['mapVersion'],'span':SPAN,'meshes':sum(o.type=='MESH' for o in scene.objects),'triangles':sum(sum(len(p.vertices)-2 for p in o.data.polygons) for o in scene.objects if o.type=='MESH'),'glbBytes':(ASSET_OUT/'esmo-rift.glb').stat().st_size,'source':'Original ESMO Blender meshes and baked procedural texture'}
 (OUT/'manifest.json').write_text(json.dumps(stats,indent=2),encoding='utf-8')
 print(json.dumps(stats))

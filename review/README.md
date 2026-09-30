@@ -41,3 +41,21 @@
 1. 作者看過 `review/preview/*.png` 確認外觀。
 2. 確認後才把選定的 `.glb` 複製/搬進正式資產目錄，並接上遊戲程式。
 3. 未確認前：**不匯入、不改遊戲程式**。
+
+## Rift 大型物件坑修正（2026-09-30，v16 Objective Pit art fix，等 Owner Review）
+
+這不是新資產，而是**修改已整合的正式 Rift 地圖**，所以候選 GLB 已放在正式路徑（本機 commit、未 push／未 deploy），
+舊版保留在 git 歷史，Owner 不同意時可直接還原。
+
+| 項目 | 修正前 | 修正後 |
+|---|---|---|
+| 正式 GLB | `src/assets/moba/rift-v1/esmo-rift.glb` 13,425,188 bytes／167,612 面 | 13,370,736 bytes／166,622 面 |
+| 巨龍坑（Dragon Pit） | 半徑 16.95、牆厚 4.54、紫色光暈、壁高 9.5 | 半徑 15.47、牆厚 5.07、**中性**光暈、壁高 11.5 |
+| 巴龍坑（Baron Pit） | 半徑 13.94、牆厚 5.62、金色光暈、壁高 13.5 | 與巨龍坑**完全鏡射**（岩壁頂點 100% 重合） |
+| 小地圖貼圖 | `rift-albedo.png` | 只有兩坑 18 單位內 21,687 像素改變 |
+
+預覽（同一套相機）：`preview/rift-pits-before-{dragon,baron}-pit.png`、`preview/rift-pits-after-{dragon,baron}-pit.png`、
+`preview/rift-pits-after-overview.png`。巨龍／巴龍身分改由遊戲內的坑位標記（ObjectivePitMarkers）表示。
+
+重建方式（可重現）：`node tools/export_esmo_rift_source.mjs --scope=pits` →
+`blender --background --factory-startup --python art/moba-rift/build_rift.py`（說明見 `art/moba-rift/build_rift.py` 檔頭）。

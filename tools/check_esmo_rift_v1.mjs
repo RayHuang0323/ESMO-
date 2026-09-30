@@ -53,7 +53,17 @@ check('static terrain excludes cameras/lights and battle entities',()=>{
 });
 check('runtime asset budget <= 128 meshes / 16MiB',()=>{assert(doc.meshes.length<=128);assert(bytes.length<=16*1024*1024);});
 const source=JSON.parse(fs.readFileSync('art/moba-rift/source.json','utf8'));
-check('Blender source exactly follows runtime nav walls',()=>assert.deepEqual(source.walls,T.wallItems));
+//  2026-09-30（v16 Objective Pit art fix）：比對「碰撞腳印」欄位（kind／位置／長／厚／角度）的多重集合，而不是整個物件深度相等。
+//  source 的牆段另帶純視覺欄位（explicit.v1 的 tree 樹高、中性坑壁高 h），順序也只影響合批 ⇒ 深度相等永遠不會成立，
+//  會把「真的沒對齊」和「欄位格式不同」混成同一個紅燈。雙向都要空：美術多出的牆＝畫面上有、碰撞沒有；反之＝隱形牆。
+check('Blender source exactly follows runtime nav walls',()=>{
+ const k=(w)=>[w.kind,w.x.toFixed(4),w.y.toFixed(4),w.len.toFixed(4),w.thick.toFixed(4),(((w.angle??0)%Math.PI)+Math.PI)%Math.PI].map(String).join('|');
+ const bag=(arr)=>arr.reduce((m,w)=>m.set(k(w),(m.get(k(w))??0)+1),new Map());
+ const a=bag(source.walls),b=bag(T.wallItems);
+ const onlyArt=[...a].flatMap(([key,n])=>Array(Math.max(0,n-(b.get(key)??0))).fill(key)),onlyNav=[...b].flatMap(([key,n])=>Array(Math.max(0,n-(a.get(key)??0))).fill(key));
+ const kinds=(xs)=>JSON.stringify(xs.reduce((m,x)=>(m[x.split('|')[0]]=(m[x.split('|')[0]]??0)+1,m),{}));
+ assert.ok(onlyArt.length===0&&onlyNav.length===0,`art-only ${onlyArt.length} ${kinds(onlyArt)} / nav-only ${onlyNav.length} ${kinds(onlyNav)}`);
+});
 check('world mapping roundtrip uses current bounds',()=>{
  const x=CAMPS[0].x;assert.equal((x-WORLD_BOUNDS.centerX)*WORLD_SCALE/WORLD_SCALE+WORLD_BOUNDS.centerX,x);
 });

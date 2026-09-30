@@ -64,6 +64,9 @@ export const PALETTE = Object.freeze({
   pit_floor: 0x262232,      // 坑底（兩坑共用，靠形狀分辨；G.2 提亮一階讓野怪剪影讀得出來）
   pit_dragon: 0x5b4480,     // Dragon 紫（僅用於光環/中央造型，刻意壓低彩度）
   pit_baron: 0x866423,      // Baron 琥珀（同上）
+  //  v16 Objective Layout：正式 Rift 美術資產的兩坑一律用中性色（每場可能 SWAPPED，身分交給 runtime 坑位標記）。
+  //  上面兩個身分色只給會跟著 layout 切換的程序化退路地形（blockout）使用。
+  pit_neutral: 0x4f4a45,    // 中性坑光暈（暖灰石，明度與紫／琥珀相近、不帶身分）
 
   // ── 基地 / 高地 ──────────────────────────────────────────────────
   // 平台刻意低飽和（偏石材而非隊色）：隊色留給主堡晶體與塔冠，
@@ -173,6 +176,7 @@ export const HEIGHT = Object.freeze({
   river_stone: 2.8,       // 河岸石
   pit_wall_dragon: 9.5,   // Dragon 坑壁（較矮、開口大）
   pit_wall_baron: 13.5,   // Baron 坑壁（較高、較封閉）
+  pit_wall_neutral: 11.5, // v16：正式 Rift 美術資產兩坑共用的中性壁高（兩坑互為鏡射，高度不帶身分）
   //  G.14：城牆整體降一階 ⇒ 讀成「短段連續的低牆」而不是一圈參差的高石塊。
   //  三階順序不變（門墩 > 外牆 > 內牆），俯視仍讀得出「城牆＋城門」的層級。
   base_rim: 8.6,          // 高地外牆（G.1 7.5→11.5 太高，G.14 收回到 8.6）
