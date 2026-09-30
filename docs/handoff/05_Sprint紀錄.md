@@ -24103,3 +24103,15 @@ candidate `feature/moba-objective-stakes-v16` @ `36251d0`（origin/main＝`35663
 - 驗證：build ✓、simulation_version 59/59（未動模擬語意）、坑位對稱 7/7、layout 契約 11/11、rift_loading 41/41、rift_mesh PASS、
   瀏覽器 objective_layout 9/9（SWAPPED 重播上方坑只剩紫色標記，舊金環已消失）、browser rift_loading 17/17。
 - 未做：`public/assets/moba/rift-v1/rift-preview.png`（文件用 Blender 預覽，程式未引用）仍是舊圖；真機 Android 未驗。
+
+## 2026-09-30 Jungle Topology Audit ＋ v16 Objective Surroundings 實驗（未改善，不併入 v16）
+
+- Audit（`tools/audit_jungle_topology.mjs`，正式碰撞場量測）：野區內部過開（主要路線最窄處 19–33 寬、最大空地直徑 48–58）、全圖 6 營地／12 草叢；
+  坑朝「路面＋外圍」寬 95 開口、坑 30 內 0 草叢；三路環外可走 68,793 格（環內 20,028），實跑深處使用 0%。Owner 決定完整 Jungle Topology v1 留到下一個 Sprint。
+- Priority 1 實驗（分支 `experiment/v16-objective-surroundings` @ `2bd78f3`，**不併入**）：兩坑坑肩牆（入口 12.3／10.7／12.3、r34 最寬開口 95 → 19）＋每坑 2 入口草叢，180° 鏡射。
+- 結果（n=200，與 v16 layout 同 seed／layout 配對）：巨龍側單場優勢 **+8.9 → +12.7pp**（配對淨 +7 翻向巨龍側，z 0.76）；
+  鏡像 gate 近側先到 88% → 75%，但拿下 78% → 80%（窄入口讓先到者更好守）。verify 8/8、節奏與病態局無惡化。
+  ⇒ 依 Owner 規則：不跑 n=1000、不在 v16 再加地形；實驗分支的美術未對齊，不可合併。
+- 主線保留 `tools/audit_jungle_topology.mjs` 為正式 topology gate：`--gate`（導航場對稱、草叢鏡射，主線 2/2）；
+  `--gate=pit-entrances`（Priority 1 目標值，主線 2/8，留給 Topology v1）。
+- 啟示：只收窄入口會讓「先到的一方」更佔優；Topology v1 若要處理巨龍側優勢，需要同時給遠端隊伍可用的接近路線（而非單純收窄）。

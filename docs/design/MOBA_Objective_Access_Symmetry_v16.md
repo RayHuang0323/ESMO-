@@ -115,3 +115,9 @@
 - Challenge（`challengeRunner`）未設定 layout ⇒ 永遠 STANDARD。
 - 舊版 `MobaView3D`（無 mapMeta 的舊 replay 退路）仍畫 STANDARD——這些 replay 依契約本來就是 STANDARD。
 - Nexus cap、Passive、Competitive、Online Backend、其他 Blue bias：未碰。
+
+## 6. Objective Surroundings 實驗（Jungle Topology Audit Priority 1）— 未改善，不併入
+
+- 分支 `experiment/v16-objective-surroundings` @ `2bd78f3`；說明與資料：該分支的 `review/moba-objective-access/experiment-surroundings/`。
+- 坑肩牆＋每坑 2 入口草叢（180° 鏡射）：巨龍側單場優勢 +8.9 → **+12.7pp**（n=200 配對）；鏡像 gate 近側先到 88% → 75%、拿下 78% → 80%。
+- 結論：收窄入口讓先到的近側隊伍更容易守坑。v16 維持目前地形；完整 Jungle Topology v1 另開 Sprint，以 `tools/audit_jungle_topology.mjs` 為 gate。
