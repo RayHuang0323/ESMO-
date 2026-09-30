@@ -24059,3 +24059,34 @@ candidate `feature/moba-objective-stakes-v16` @ `36251d0`（origin/main＝`35663
 - v16 Objective Stakes 候選**不發布**；不接受藍方 +2.4pp，也不再調龍／巴龍獎勵數值。
 - 下一步：獨立分支做 **MOBA Objective Access Symmetry Audit**（藍方第一條龍 79%／紅方第一條巴龍 76% 的根因）。
 - `feature/moba-objective-stakes-v16` 保持在 `36251d0` 不動；本節與 closure 證據 commit 在 `evidence/moba-objective-v16-closure`。
+
+## 2026-09-30 MOBA Objective Access Symmetry ＋ Objective Layout（moba-sim.v16 候選；local，未 push／未 deploy／未 merge）
+
+分支 `feature/moba-objective-layout-v16`（worktree `.sprints/moba-objective-access`），基準 main `356630b`；疊上 `feature/moba-objective-stakes-v16`（`36251d0`，保留不動）與 closure 證據 `0019987`。
+設計與完整數字：`docs/design/MOBA_Objective_Access_Symmetry_v16.md`；證據：`review/moba-objective-access/`。
+
+### 根因
+180° 旋轉地圖＋己方視角路線（P0-A，不可回退）⇒ 巨龍坑緊鄰藍方雙人路、巴龍坑緊鄰紅方雙人路；兩個鏡像坑放不同物件。
+路徑／牆／坑口逐項鏡像（A 無可修）、AI 決策對稱（B 改不了 11 秒距離差）⇒ 只能從 C（物件配置）處理。另發現兩坑 gameplay 腳印不同、導航聯集造成隱形牆。
+
+### 做了什麼
+- `fc82068` 坑位 gameplay 幾何統一（R15.5／0.74／5.7，巴龍坑＝巨龍坑鏡射）；`check_objective_pit_symmetry` 1/7 → 7/7。
+- `0c7851a` Objective Layout Variant 契約（STANDARD／SWAPPED，每場開局由 seed 雜湊推導一次、整場固定；唯一推導點 useLocalServer）＋全鏈接線；`check_objective_layout_contract` 11/11。
+- `3b327f9` 疊上 v16 Objective Stakes＋TD-CS1（獎勵數值未改）；v16 指紋重新登記、指紋清單補 mapTerrainShapes／mobaMapLayout／objectiveLayout。
+- `5e6fd17` 瀏覽器 layout gate（9/9）、診斷介面、items_m2 G1 基準前移到 `fc82068`、龍魂 gate 預設 seed 3。
+- 新增 `tools/check_objective_pit_art_alignment.mjs`（ART_COLLISION_ALIGNMENT_BLOCKER 驗收 gate，目前 0/4 BLOCKED）。
+
+### 驗證
+- Node：layout 契約 11/11、坑位對稱 7/7、版本 59/59、objective_stakes_v16 16/16、combat_state 16/16、matrix、hero_skills_release PASS、skill_levels 400/400、talents、base_assault、skill_detail 500/500、mobile_hud_polish 60/60、combat_quality 28/28、spectacle 21/21、lane_jungle 20/20。
+- items_m2 **52/53**：G1 串流與 `fc82068` 逐位元相同；「每場都有擊殺」健全性檢查紅（bare seed 99 在新幾何下 0–0 推塔結束），不放寬。
+- 幾何：nav_h2 14/14、p0b 14/14、p0a 8/8、rift_mesh PASS、check_moba_map 與基準同一組既有紅（0 新增；該 gate 依賴的 `tools/lib/baseSymmetryRaster.mjs` 從未進版控）。
+- verify：regress、regress2、runtime29、fairness_p0a〜d、simulation_version 8/8。
+- 瀏覽器（依序）：objective_layout 9/9、objective_v16 12/12、龍魂＋巴龍 11/11、combat_state 13/13；錯誤 0。
+- 鏡像 gate：STANDARD 只開巨龍 78/22、SWAPPED 24/76；依 seed 推導第一條巨龍 53/47。
+- n=1000：藍 49.6%（v15 53.1、舊 v16 55.5）；第一條巨龍 49.5/50.5、第一條巴龍 52.2/47.8；龍魂率 39.9%（v15 39.7）；時長中位 17.07、P90 23.8、最長 41.3、> 45 分 0。
+  依 layout 拆解：純藍方地利 −0.1 ± 1.6pp；**巨龍側單場優勢 8.1 ± 1.6pp**；關閉 Stakes 的診斷為 3.3 ± 1.6pp ⇒ **Stakes 淨貢獻 +4.8 ± 2.2pp**。
+
+### 結論與風險
+- Blue／Red 結構偏差已消除（NEW_STRUCTURAL_SIDE_BIAS＝NO）；但 Objective Stakes 仍把「本場抽到巨龍側」的單場優勢由約 3pp 放大到約 8pp——需 Owner 判斷。
+- **ART_COLLISION_ALIGNMENT_BLOCKER**：Rift GLB 坑壁與新碰撞 0/96 逐段一致（巨龍坑碰撞內縮約 1.5、巴龍坑外擴約 1.5）且坑光暈烘焙紫／金身分色 ⇒ **READY_TO_RELEASE＝NO**。最小修正：只重建兩坑網格＋中性坑色，見設計文件 §4。
+- Challenge 未設定 layout（永遠 STANDARD）；舊版 MobaView3D 退路仍畫 STANDARD；坑位先到率殘差 88 vs 77（拿下率在雜訊內）列觀察。
