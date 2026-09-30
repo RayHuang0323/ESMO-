@@ -12,7 +12,7 @@ import { GC } from "../../ui/theme.js";
 import { useIsMobile } from "../../ui/useViewport.js";
 import { Z } from "./battleLayout.js";
 import HeroSkillIcon from "./HeroSkillIcon.jsx";
-import { PASSIVE_STATUS } from "../moba/skills/heroSkillDetail.js";
+import { PASSIVE_STATUS, passiveTierOf } from "../moba/skills/heroSkillDetail.js";
 
 const MONO = "ui-monospace,Menlo,monospace";
 const pct = (v) => ((v - 1) * 100).toFixed(1) + "%";
@@ -124,7 +124,7 @@ export default function HeroDetailPanel({ heroId, heroName, playerName, side = "
                 <HeroSkillIcon heroId={heroId} slot={k} size={isMobile ? 32 : 26} accent={k === "R" ? "#fde047" : "#cbd5e1"} />
                 <b style={{ fontSize: 9, color: k === "R" ? "#fde047" : GC.gold, width: 10 }}>{k}</b>
                 <span style={{ color: "#e5e7eb", flex: 1 }}>{v}</span>
-                {k === "P" && <small style={{ fontSize: 9, color: "#fbbf24" }}>{PASSIVE_STATUS.short}</small>}
+                {k === "P" && <small style={{ fontSize: 9, color: "#fbbf24" }}>{passiveTierOf(heroId) === "info" ? PASSIVE_STATUS.info : passiveTierOf(heroId) ? "已實裝" : PASSIVE_STATUS.short}</small>}
               </div>
             ))}
             <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{h.title} · {h.arch} · {h.lane}</div>

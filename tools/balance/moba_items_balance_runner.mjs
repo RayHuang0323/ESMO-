@@ -80,7 +80,10 @@ export async function modules() {
     ? await load("src/battle/moba/talents/heroBattleTalents.js") : null;
   //  v16 Objective Layout：與正式流程相同地由 seed 推導一次（v15 等舊樹沒有這個契約 ⇒ null ⇒ 維持 STANDARD）
   const objectiveLayout = await load("src/platform/contracts/objectiveLayout.js").catch(() => null);
-  MODS = { LE, heroes, profile, arche, loadout, tactic, adapter, catalog, economy, inventory, gameData, skills, talents, objectiveLayout };
+  //  Hero Passive：與 useLocalServer.start 相同地在 Hero Skills 之後掛上；規則集 heroPassivesV1 關閉時引擎自己拒絕（零影響）。
+  const passives = skills ? await load("src/battle/moba/skills/heroPassiveGameplay.js").catch(() => null) : null;
+  const curves = skills ? await load("src/battle/moba/heroPowerCurve.js").catch(() => null) : null;
+  MODS = { LE, heroes, profile, arche, loadout, tactic, adapter, catalog, economy, inventory, gameData, skills, talents, objectiveLayout, passives, curves };
   return MODS;
 }
 
@@ -109,8 +112,9 @@ export function mirroredRoster(seed, M) {
   return roster;
 }
 
-export function configure(seed, config, M, incomeK = 1) {
-  const roster = mirroredRoster(seed, M);
+//  rosterOverride：gate 指定陣容（例如保證 100 名英雄都上場）；不傳 ⇒ 與原本相同由 seed 挑鏡像陣容。
+export function configure(seed, config, M, incomeK = 1, rosterOverride = null) {
+  const roster = rosterOverride ?? mirroredRoster(seed, M);
   const e = new M.LE.LogicEngine(seed);
   if (RULE_OVERRIDES) e.rules = { ...e.rules, ...RULE_OVERRIDES };
   //  v16 Objective Layout：與 useLocalServer.start 同序（建構後、任何 configure 之前）。
@@ -126,12 +130,18 @@ export function configure(seed, config, M, incomeK = 1) {
     const selected = M.talents?.selectBattleTalents(roster) ?? null;
     const sk = M.skills.toEngineHeroSkills(roster, selected);
     if (sk) e.configureHeroSkills(sk);
+    const pv = sk && M.passives ? M.passives.toEngineHeroPassives(roster) : null;
+    if (pv && typeof e.configureHeroPassives === "function") e.configureHeroPassives(pv);
+    const pc = sk && M.curves ? M.curves.toEngineHeroPowerCurve(roster) : null;
+    if (pc && typeof e.configureHeroPowerCurve === "function") e.configureHeroPowerCurve(pc);
   }
   const blue = {}, red = {};
   for (const [pid, m] of Object.entries(M.arche.toEngineArchetypes(roster))) (pid[0] === "r" ? red : blue)[pid] = m;
   e.configureArchetypes({ blue, red, meta: null });
   e.configureSpells(M.loadout.toEngineSpells(roster));
-  e.configureMatch({ blue: M.tactic.toEngineTactic(M.tactic.STANDARD_OPP_TACTIC), red: M.tactic.toEngineTactic(M.tactic.STANDARD_OPP_TACTIC), meta: null });
+  //  Tactical Identity：與 useLocalServer 相同地傳入（std 對 std ⇒ 全中性，結果逐位元不變）。
+  const ident = M.tactic.toEngineTacticIdentity ? { blue: M.tactic.toEngineTacticIdentity(M.tactic.STANDARD_OPP_TACTIC), red: M.tactic.toEngineTacticIdentity(M.tactic.STANDARD_OPP_TACTIC) } : null;
+  e.configureMatch({ blue: M.tactic.toEngineTactic(M.tactic.STANDARD_OPP_TACTIC), red: M.tactic.toEngineTactic(M.tactic.STANDARD_OPP_TACTIC), meta: null, identity: ident });
   let strategySide = null;
   if (config !== "off") {
     const strategies = {};

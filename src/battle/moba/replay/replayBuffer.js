@@ -81,6 +81,14 @@ export function captureReplayFrame(snap) {
         .map((p) => [p.id, Object.fromEntries(Object.entries(p.heroSkills)
           .map(([slot, live]) => [slot, live.rule]))])) };
     }
+    //  Hero Power Curve v1：曲線是英雄的靜態資料 ⇒ 只記「本場有開」，重播由 heroId＋frame 等級還原同一個倍率。
+    if (snap.players.some((p) => p.powerCurve)) cap.config = { ...cap.config, heroPowerCurveOn: true };
+    //  Hero Passive Runtime v2：規則 meta 存一次（frame.pp 只存即時數值）。
+    if (snap.players.some((p) => p.heroPassive)) {
+      cap.config = { ...cap.config, heroPassiveMeta: Object.fromEntries(snap.players
+        .filter((p) => p.heroPassive)
+        .map((p) => [p.id, { trigger: p.heroPassive.trigger, icd: p.heroPassive.icd, tier: p.heroPassive.tier ?? null }])) };
+    }
     //  Milestone I-close：playersMeta 追加 optional 欄位（版本仍是 MobaReplay.v1）。
     //    舊 replay 沒有這些欄 ⇒ 消費端讀到 undefined 就退回原本的顯示，照樣播放。
     cap.playersMeta = snap.players.map((p) => {

@@ -12,7 +12,7 @@ import { LogicEngine } from "./LogicEngine.js";
 import { useGameStore } from "./useGameStore.js";
 import { useHeroProgressStore } from "./hero/heroProgressStore.js";
 import { useProfileStore } from "./platform/profileStore.js";
-import { toEngineTactic, STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION } from "./platform/contracts/MobaTacticConfig.js";
+import { toEngineTactic, toEngineTacticIdentity, STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION } from "./platform/contracts/MobaTacticConfig.js";
 import { beginReplayCapture } from "./battle/moba/replay/replayBuffer.js";
 import { buildPlayerStatSlots, applyFatigueToLoadout } from "./battle/moba/mobaRosterAdapter.js";
 import { toEngineHeroMods } from "./battle/moba/mobaHeroProfile.js";
@@ -20,6 +20,7 @@ import { toEngineSpells } from "./battle/moba/mobaHeroLoadout.js";
 import { toEngineArchetypes, COMBAT_ARCHETYPE_CONTRACT_VERSION } from "./data/heroCombatArchetypes.js";
 import { toEngineHeroSkills } from "./battle/moba/skills/heroSkillGameplay.js";
 import { toEngineHeroPassives } from "./battle/moba/skills/heroPassiveGameplay.js";
+import { toEngineHeroPowerCurve } from "./battle/moba/heroPowerCurve.js";
 import { selectBattleTalents } from './battle/moba/talents/heroBattleTalents.js';
 import { heroById } from "./data/heroDatabase.js";
 import { toEnginePlayerMods } from "./battle/moba/mobaPlayerStats.js";
@@ -221,6 +222,9 @@ export function useLocalServer() {
       //  Hero Passive P v1：規則集 heroPassivesV1 關閉時引擎直接拒絕（零影響）。
       const passives = skills ? toEngineHeroPassives(opts.roster) : null;
       if (passives) eng.configureHeroPassives(passives);
+      //  Hero Power Curve v1：規則集 heroPowerCurveV1 關閉時引擎直接拒絕（零影響）。
+      const curves = skills ? toEngineHeroPowerCurve(opts.roster) : null;
+      if (curves) eng.configureHeroPowerCurve(curves);
     }
 
     // ── Milestone M1：戰鬥原型進引擎（近戰／遠程與職業站位的唯一計算點）──
@@ -264,6 +268,8 @@ export function useLocalServer() {
       eng.configureMatch({
         blue: toEngineTactic(opts.tactic),
         red: toEngineTactic(STANDARD_OPP_TACTIC),
+        //  Tactical Identity v1：同一份契約、同一個 builder（規則集 tacticIdentityV1 關閉時引擎忽略）。
+        identity: { blue: toEngineTacticIdentity(opts.tactic), red: toEngineTacticIdentity(STANDARD_OPP_TACTIC) },
         meta: { tacticId: opts.tactic.tacticId, tacticName: opts.tactic.name, version: MOBA_TACTIC_VERSION, opponentTacticId: STANDARD_OPP_TACTIC.tacticId },
       });
     }

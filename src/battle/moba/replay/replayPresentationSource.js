@@ -35,6 +35,7 @@ import { WORLD_BOUNDS, LANES, CAMPS } from "../../../gameData.js";
 import { objectiveLayoutOf, objectivePitOf } from "../../../platform/contracts/objectiveLayout.js";
 import { decodePsRow } from "../../../platform/contracts/mobaReplay.js";
 import { applySkillLevelToRule, SKILL_LEVEL_CAPS } from '../skills/heroSkillLevels.js';
+import { powerCurveOf, curveMultipliers, curveKAt, phaseIndexOf, peakPhaseOf } from '../heroPowerCurve.js';
 import { createCombatStateIndex, objectiveLogAt, teamBuffsFromCombatStates } from "./combatStateReplay.js";
 
 const clamp01 = (v) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0);
@@ -179,6 +180,19 @@ export function createReplaySource(replay) {
       const alive = o ? o.alive : bit === 1;
       return { alive, hp: o ? o.hp * 100 : (alive ? 100 : 0), respawn: 0, contested: false };
     };
+    const curveOf = (heroId, mlv) => {
+      const entry = replay?.config?.heroPowerCurveOn ? powerCurveOf(heroId) : null;
+      if (!entry) return null;
+      return { peak: peakPhaseOf(entry.curve), phase: phaseIndexOf(mlv),
+        k: Math.round(curveKAt(curveMultipliers(entry.curve).power, mlv) * 1000) / 1000 };
+    };
+    const passiveOf = (frame, i, id) => {
+      const meta = replay?.config?.heroPassiveMeta?.[id];
+      const row = frame.pp?.[i];
+      if (!meta || !Array.isArray(row) || row.length < 4) return null;
+      return { trigger: meta.trigger, icd: meta.icd, tier: meta.tier, procs: row[0], stacks: row[1], armed: row[2],
+        cd: row[3], ready: !(row[3] > 0), boosted: row[4] ?? 0, lastProcAt: null };
+    };
     return {
       ts: f.t ?? 0,
       //  v16 Objective Layout：replay 的權威欄位 ⇒ 重播的小地圖／導播／戰報／坑位標記讀 snapshot 就正確（舊 replay ⇒ STANDARD）
@@ -217,6 +231,9 @@ export function createReplaySource(replay) {
           // 都讀同一份已保存 player state，不在 Replay 另算。
           mlv: row?.[8] ?? 1, lv: row?.[8] ?? 1,
           ...(savedSkills ? { heroSkills: savedSkills } : {}),
+          //  Hero Passive Runtime v2：已保存 ⇒ 與現場同一組值；舊 replay 沒有 pp ⇒ 不出現（UI 顯示未保存）。
+          ...(passiveOf(f, i, pm.id) ? { heroPassive: passiveOf(f, i, pm.id) } : {}),
+          ...(curveOf(pm.heroId, row?.[8] ?? 1) ? { powerCurve: curveOf(pm.heroId, row?.[8] ?? 1) } : {}),
           // Milestone E：已擷取 ⇒ 與現場同一組值；舊 Replay 缺 `ps` ⇒ 仍是 null
           //   （view 顯示「陣亡」而不是假的 0s 倒數、不顯示徽章），行為不變。
           respawn: ps ? ps.respawn : null,

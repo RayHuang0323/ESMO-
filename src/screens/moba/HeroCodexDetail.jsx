@@ -34,6 +34,7 @@ import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
 import { useIsMobile } from "../../ui/useViewport.js";
 import { GC, FONT, MONO } from "../../ui/theme.js";
 import HeroPortrait from "../../ui/HeroPortrait.jsx";
+import HeroPowerCurveStrip from "../../battle/ui/HeroPowerCurveStrip.jsx";
 
 const BASE_TABS = [["overview", "概覽"], ["stats", "數據"], ["skills", "技能"], ["tactics", "戰術"]];
 const MATCHUP_TAB = ["matchups", "對位"];
@@ -168,6 +169,8 @@ export default function HeroCodexDetail({
     const tempo = TEMPO[h.arch] || TEMPO["戰士"];
     return (
       <>
+        <div style={{ fontSize: 11, color: GC.gray, marginBottom: 8 }}>強勢期曲線（對戰實際生效）</div>
+        <div style={{ marginBottom: 12 }}><HeroPowerCurveStrip heroId={h.id} showReasons /></div>
         <div style={{ fontSize: 11, color: GC.gray, marginBottom: 8 }}>對戰節奏定位</div>
         {[["前期", GC.blue], ["中期", GC.gold], ["後期", GC.red]].map(([ph, c], i) => (
           <div key={ph} style={{ display: "flex", alignItems: "stretch", gap: 10, marginBottom: 8 }}>

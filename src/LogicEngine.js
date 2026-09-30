@@ -20,7 +20,7 @@ import {
   clamp, dist, posOnLane, laneLength, WALLS, PITS, BASE, FOUNTAIN, TOWER_T,
   ROLES, ROLE_LANE, worldLaneForSide, sideRelativeLane,
   toSideRelativePoint, fromSideRelativePoint,
-  TOWER_HP, NEXUS_HP, SIDE, BUSHES, CAMPS, WORLD_BOUNDS, INVASION_POINT,
+  TOWER_HP, NEXUS_HP, SIDE, BUSHES, CAMPS, WORLD_BOUNDS, INVASION_POINT, RIVER,
 } from "./gameData.js";
 //  H.2：英雄碰撞與尋路的**唯一真實來源**。
 //  ⚠ 這裡刻意**不再** import gameData.WALLS：那是 28 個手寫圓，和畫面上的真實牆體
@@ -45,6 +45,7 @@ import {
   HERO_SKILL_LEVEL_CONTRACT, SKILL_LEVEL_CAPS, skillLevelsAtMatchLevel,
   applySkillLevelToRule, nextSkillUnlock,
 } from './battle/moba/skills/heroSkillLevels.js';
+import { curveKAt, phaseIndexOf } from './battle/moba/heroPowerCurve.js';
 import { OBJECTIVE_LAYOUT, normalizeObjectiveLayout, objectivePitsFor } from './platform/contracts/objectiveLayout.js';
 
 const MAP_EDGE_PAD = 3;
@@ -345,11 +346,15 @@ export class LogicEngine {
    * @param {object} blue/red  行為權重 knobs（toEngineTactic 輸出形狀）
    * @param {object} meta      { tacticId, tacticName, version, opponentTacticId } → snapshot / BattleResult
    */
-  configureMatch({ blue = null, red = null, meta = null } = {}) {
+  configureMatch({ blue = null, red = null, meta = null, identity = null } = {}) {
     if (!blue && !red) return;
     this.tacticOn = true;
     this.tacticMeta = meta;
     this.tk = { blue: blue ?? this._neutralKnobs(), red: red ?? this._neutralKnobs() };
+    //  Tactical Identity v1（moba-sim.v17）：同一份戰術契約的決策投影（toEngineTacticIdentity）。
+    //  規則集 tacticIdentityV1 關閉或沒有傳 ⇒ null ⇒ 下面每個讀取點都走原式（逐位元不變）。
+    this.tid = identity && this.rules.tacticIdentityV1 ? { blue: identity.blue ?? null, red: identity.red ?? null } : null;
+    if (this.tid) this.tidObs = { blue: { protectCarry: 0, siegePreferred: 0 }, red: { protectCarry: 0, siegePreferred: 0 } };
     let y = (this.seed ^ 0x9e3779b9) | 0;
     this.rng2 = () => ((y = (y * 1103515245 + 12345) & 0x7fffffff) >>> 0) / 0x7fffffff;
     const E = () => ({ invadeAttempts: 0, invadeKills: 0, topGanks: 0, midGanks: 0, botGanks: 0, gankKills: 0,
@@ -396,10 +401,16 @@ export class LogicEngine {
    */
   _joinChance(K, hot, M = null) {
     const pit = hot === this._pitOf("dragon") ? "dragonJoin" : hot === this._pitOf("baron") ? "baronJoin" : null;
-    const base = K ? (pit ? K[pit] : K.joinFight) : 0.6;
+    let base = K ? (pit ? K[pit] : K.joinFight) : 0.6;
+    //  Tactical Identity：分階段參團偏移（前／中／後期）。未接線 ⇒ 不進這個分支。
+    const I = this.tid && K ? (K === this.tk.blue ? this.tid.blue : K === this.tk.red ? this.tid.red : null) : null;
+    if (I) base = clamp(base + I.phaseJoin[this._tidPhase()], 0.05, 0.98);
     if (!M) return base;
     return clamp(base + (pit ? M.objAdj : M.joinAdj), 0.05, 0.98);
   }
+  _tidOf(side) { return this.tid?.[side] ?? null; }
+  /** 戰術階段：前期 < 8 分、中期 8–16 分、後期 ≥ 16 分（實測對局中位數約 17–20 分）。 */
+  _tidPhase() { return this.t < 480 ? 0 : this.t < 960 ? 1 : 2; }
 
   // ── S28 選手能力層（configurePlayers）───────────────────────────────────
   /**
@@ -479,8 +490,27 @@ export class LogicEngine {
   }
 
   /**
-   * Hero Passive P v1：`toEngineHeroPassives(roster)` 的輸出。需要 hero skills 已開、且規則集
+   * Hero Power Curve v1：`toEngineHeroPowerCurve(roster)` 的輸出（每席位三段倍率）。需要 hero skills 已開、
+   * 且規則集 `heroPowerCurveV1` 開啟；否則什麼都不做。唯一掛點是 _applyMatchLevel（power 與最大生命）。
+   */
+  configureHeroPowerCurve(config) {
+    if (!this.heroSkillsOn || !this.rules.heroPowerCurveV1 || !config?.players) return false;
+    const seats = Object.keys(config.players).filter((id) => this.players.some((p) => p.id === id));
+    if (!seats.length) return false;
+    this.powerCurveOn = true;
+    this.powerCurve = Object.fromEntries(seats.map((id) => [id, config.players[id]]));
+    for (const p of this.players) if (this.powerCurve[p.id]) this._applyMatchLevel(p);
+    return true;
+  }
+  _powerCurveK(p, kind) {
+    const c = this.powerCurve?.[p.id];
+    return c ? curveKAt(c[kind], p.mlv) : 1;
+  }
+
+  /**
+   * Hero Passive P Runtime v2：`toEngineHeroPassives(roster)` 的輸出。需要 hero skills 已開、且規則集
    * `heroPassivesV1` 開啟；否則什麼都不做（snapshot／rng 逐位元不變）。
+   * 規則語彙見 heroPassiveGameplay.js 檔頭；引擎這裡**只認語彙、不認 heroId**。
    */
   configureHeroPassives(config) {
     if (!this.heroSkillsOn || !this.rules.heroPassivesV1 || !config?.players) return false;
@@ -488,66 +518,367 @@ export class LogicEngine {
     if (!seats.length) return false;
     this.heroPassivesOn = true;
     this.heroPassives = Object.fromEntries(seats.map((id) => [id, config.players[id]]));
+    this._passiveEvents = [];
+    this._passiveDots = [];
+    this._passiveLastHp = new Map();
+    this.passiveStats = {};   // 效果種類 → 套用次數（純觀測，gate 用；不進 snapshot）
     for (const p of this.players) if (this.heroPassives[p.id]) {
-      p.passive = { nextAt: 0, lastHp: null, lastHitAt: 0, takedowns: 0, procs: 0, lastProcAt: null };
+      p.passive = { nextAt: 0, lastHp: null, lastHitAt: 0, lastActAt: -Infinity, takedowns: 0, kills: 0,
+        procs: 0, lastProcAt: null, accum: 0, count: 0, stacks: 0, stacksUntil: 0, armed: 0,
+        lastPos: null, movingSince: null, stillSince: null, latched: false, stillLatched: false,
+        movingLatched: false, moving: false, zone: null, chainTarget: null, chain: 0, lastTarget: null, wasDead: false, boosted: 0 };
     }
     return true;
   }
 
-  /** 每 tick 一次、固定玩家順序；觸發由既有狀態推導（血量差／K+A／計時），效果走既有路徑。 */
-  _heroPassiveStep() {
+  /** 事件掛點（普攻節拍／技能命中／施放）。未開啟或此席位沒有被動 ⇒ 什麼都不做。 */
+  _passiveEvent(kind, owner, target = null, extra = null) {
+    if (!this.heroPassivesOn || !owner || !this.heroPassives[owner.id]) return;
+    this._passiveEvents.push({ kind, owner, target, ...(extra ?? {}) });
+  }
+
+  /** 普攻節拍與技能傷害的單位：一次普攻節拍（0.5 秒）的基礎傷害。 */
+  _passiveBeat(p) {
+    return p.power * this.rules.dmgK * 0.5 * (this._lateFactorNow ?? 1);
+  }
+
+  _passiveZoneOf(p) {
+    if (BUSHES.some((b) => dist(p.pos, b) < b.r + 1.5)) return 'bush';
+    const pts = RIVER.points;
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const u = Math.max(0, Math.min(1, ((p.pos.x - a.x) * dx + (p.pos.y - a.y) * dy) / (dx * dx + dy * dy || 1)));
+      if (dist(p.pos, { x: a.x + dx * u, y: a.y + dy * u }) <= RIVER.width / 2) return 'river';
+    }
+    return null;
+  }
+
+  /** 最近一個打到自己、仍存活的敵方英雄（同時間 ⇒ 席位順序）。 */
+  _passiveAttackerOf(p) {
+    let best = null, bestT = -Infinity;
+    for (const q of this.players) {
+      if (q.side === p.side || q.dead) continue;
+      const at = p.hitBy.get(q.id);
+      if (at !== undefined && at > bestT && this.t - at <= 3 && dist(q.pos, p.pos) <= 15) { best = q; bestT = at; }
+    }
+    return best;
+  }
+
+  /** 常駐修正的條件 ⇒ 次數（0＝不成立；perStack／selfMissingPer 回倍數）。 */
+  _passiveWhen(p, st, w, foe) {
+    if (!w) return 1;
+    if (w.perStack) return st.stacks;
+    if (w.selfMissingPer) return Math.min(w.selfMissingPer.cap, Math.floor((1 - p.hp / p.maxHp) / w.selfMissingPer.per + 1e-9));
+    if (w.targetHpBelow !== undefined) return foe && !foe.dead && foe.hp / foe.maxHp < w.targetHpBelow ? 1 : 0;
+    if (w.targetHpAboveSelf !== undefined) return foe && !foe.dead && foe.hp > p.hp * w.targetHpAboveSelf ? 1 : 0;
+    if (w.selfHpAbove !== undefined) return p.hp / p.maxHp > w.selfHpAbove ? 1 : 0;
+    if (w.targetBurning) return foe && (this._passiveDots.some((d) => d.target === foe) || this.t < (foe.igniteUntil ?? 0)) ? 1 : 0;
+    if (w.targetSlowed) return foe && (this.t < (foe.heroSkillSlowUntil ?? 0) || this.t < (foe.heroSkillControlUntil ?? 0)) ? 1 : 0;
+    if (w.moving) return st.moving ? 1 : 0;
+    if (w.zone) return st.zone === w.zone ? 1 : 0;
+    if (w.chain) return foe && foe.id === st.chainTarget ? Math.min(w.chain.max, st.chain) : 0;
+    return 0;
+  }
+
+  _passiveModSum(p, kind, foe) {
+    if (!this.heroPassivesOn) return 0;
+    const rule = this.heroPassives[p.id];
+    const st = p.passive;
+    if (!rule?.mods?.length || !st) return 0;
+    let sum = 0;
+    for (const m of rule.mods) {
+      if (m.kind !== kind) continue;
+      const n = this._passiveWhen(p, st, m.when, foe);
+      if (n) sum += (m.when?.chain ? m.when.chain.per : m.mult) * n;
+    }
+    if (sum !== 0) st.boosted += 1;   // 常駐修正實際改變了一次傷害／移速（UI／gate 用的觀測值）
+    return sum;
+  }
+
+  /** 輸出傷害倍率（普攻與技能命中共用）。未開啟 ⇒ 恆為 1（乘上去逐位元不變）。 */
+  _heroPassiveDamageK(p, foe) {
+    if (!this.heroPassivesOn) return 1;
+    return Math.min(1.35, 1 + Math.max(0, this._passiveModSum(p, 'dmg', foe)));
+  }
+  /** 承受傷害倍率（併入 _heroGuardFactor ⇒ 普攻、技能、裝備路徑一次涵蓋）。 */
+  _heroPassiveTakenK(p) {
+    if (!this.heroPassivesOn) return 1;
+    return Math.max(0.75, 1 + Math.min(0, this._passiveModSum(p, 'taken', null)));
+  }
+  _heroPassiveSpeedK(p) {
+    if (!this.heroPassivesOn || !p.passive) return 1;
+    const foe = p.passive.lastTarget ? this.players.find((q) => q.id === p.passive.lastTarget) ?? null : null;
+    return Math.min(1.3, 1 + Math.max(0, this._passiveModSum(p, 'speed', foe && dist(foe.pos, p.pos) <= 15 ? foe : null)));
+  }
+
+  /**
+   * 每 tick 一次、固定玩家順序：① 持續傷害 ② 觀測狀態（受傷／移動／區域／擊殺）③ 事件（含上膛釋放）
+   * ④ 輪詢觸發。效果只走既有欄位（護盾／減傷／加速／減速／控制／標記／冷卻）或 _damageHero。
+   */
+  _heroPassiveStep(dt) {
     if (!this.heroPassivesOn) return;
-    for (const p of this.players) {
-      const rule = this.heroPassives[p.id];
-      const st = p.passive;
-      if (!rule || !st) continue;
-      if (p.dead) { st.lastHp = null; continue; }
-      if (st.lastHp === null) { st.lastHp = p.hp; st.lastHitAt = this.t; st.takedowns = p.k + p.a; continue; }
-      const taken = Math.max(0, st.lastHp - p.hp);
-      if (taken > 0) { st.lastHitAt = this.t; st.latched = false; }
-      const takedowns = p.k + p.a;
-      const gainedTakedown = takedowns > st.takedowns;
-      st.takedowns = takedowns;
-      const tr = rule.trigger;
-      const fired = this.t >= st.nextAt && (
-        tr.kind === 'burst-damage' ? taken >= tr.pctMaxHp * p.maxHp
-          : tr.kind === 'low-hp' ? p.hp / p.maxHp < tr.below
-            : tr.kind === 'periodic' ? true
-              : tr.kind === 'out-of-combat' ? !st.latched && this.t - st.lastHitAt >= tr.secs
-                : tr.kind === 'takedown' ? gainedTakedown : false);
-      if (fired) {
-        const scale = 1 + (rule.levelScale ?? 0) * Math.max(0, (p.mlv ?? 1) - 1);
-        for (const fx of rule.effects) this._applyPassiveEffect(p, fx, scale);
-        st.nextAt = this.t + rule.icd;
-        if (tr.kind === 'out-of-combat') st.latched = true;   // 一次脫戰只觸發一次，受擊後才重新上膛
-        st.procs += 1;
-        st.lastProcAt = this.t;
+    //  ① 燃燒／中毒：獨立傷害源，與點燃同一種寫法。
+    if (this._passiveDots.length) {
+      const keep = [];
+      for (const d of this._passiveDots) {
+        if (d.target.dead || this.t >= d.until) continue;
+        const amt = d.dps * dt;
+        this._damageHero(d.target, amt);
+        d.src.dmg += amt; d.target.hitBy.set(d.src.id, this.t);
+        if (d.target.hp <= 0 && !d.target.dead) { this._resolveKill(d.src, d.target); continue; }
+        keep.push(d);
       }
+      this._passiveDots = keep;
+    }
+    //  ② 觀測狀態：所有英雄都記受傷量（ally-burst 需要看沒有被動的隊友）。
+    const taken = new Map();
+    for (const p of this.players) {
+      const last = this._passiveLastHp.get(p.id);
+      taken.set(p.id, p.dead || last === undefined ? 0 : Math.max(0, last - p.hp));
+      this._passiveLastHp.set(p.id, p.dead ? undefined : p.hp);
+    }
+    for (const p of this.players) {
+      const st = p.passive;
+      const rule = this.heroPassives[p.id];
+      if (!st || !rule) continue;
+      if (p.dead) {
+        if (!st.wasDead) {
+          st.wasDead = true;
+          const stackFx = rule.effects.find((fx) => fx.kind === 'stack');
+          if (st.stacksUntil) { st.stacks = 0; st.stacksUntil = 0; }
+          else if (stackFx?.onDeath !== undefined) st.stacks = Math.floor(st.stacks * stackFx.onDeath);
+          st.armed = 0; st.accum = 0; st.chain = 0; st.chainTarget = null;
+        }
+        st.lastHp = null; st.lastPos = null;
+        continue;
+      }
+      st.wasDead = false;
+      if (st.stacksUntil && this.t >= st.stacksUntil) { st.stacks = 0; st.stacksUntil = 0; }
+      const moved = st.lastPos ? dist(st.lastPos, p.pos) > 0.05 : false;
+      st.moving = moved;
+      if (moved) { st.stillSince = null; st.stillLatched = false; st.movingSince ??= this.t; }
+      else { st.movingSince = null; st.movingLatched = false; st.stillSince ??= this.t; }
+      st.lastPos = { x: p.pos.x, y: p.pos.y };
+      st.zone = this._passiveZoneOf(p);
+      st.taken = st.lastHp === null ? 0 : taken.get(p.id);
+      if (st.lastHp === null) { st.lastHitAt = this.t; st.takedowns = p.k + p.a; st.kills = p.k; }
+      if (st.taken > 0) { st.lastHitAt = this.t; st.latched = false; st.accum += st.taken; }
+      st.gainedTakedown = p.k + p.a > st.takedowns; st.takedowns = p.k + p.a;
+      st.gainedKill = p.k > st.kills; st.kills = p.k;
       st.lastHp = p.hp;
+    }
+    //  ③ 事件：依引擎產生順序；先上膛釋放、再計數觸發。
+    const events = this._passiveEvents;
+    this._passiveEvents = [];
+    for (const ev of events) {
+      const p = ev.owner, st = p.passive, rule = this.heroPassives[p.id];
+      if (!st || p.dead) continue;
+      if (ev.kind === 'attack-beat' || ev.kind === 'skill-hit' || ev.kind === 'skill-cast' || ev.kind === 'ally-cast') st.lastActAt = this.t;
+      if (ev.kind === 'attack-beat' && ev.target) {
+        if (st.chainTarget === ev.target.id) st.chain += 1; else { st.chainTarget = ev.target.id; st.chain = 1; }
+        st.lastTarget = ev.target.id;
+      }
+      const target = ev.target && !ev.target.dead ? ev.target : null;
+      const rel = rule.release;
+      if (st.armed > 0 && rel && target && (rel.on === ev.kind
+        || (rel.on === 'attack-or-skill' && (ev.kind === 'attack-beat' || ev.kind === 'skill-hit')))) {
+        st.armed -= 1;
+        this._passiveFire(p, rule, st, rel.effects, { target }, false);
+      }
+      const tr = rule.trigger;
+      if (!tr || tr.kind !== ev.kind) continue;
+      if (tr.slot && ev.slot !== tr.slot) continue;
+      if (tr.cond?.targetShielded && !(target && target.shield > 0 && this.t < (target.shieldUntil ?? 0))) continue;
+      this._passiveTry(p, rule, st, { target });
+    }
+    //  ④ 輪詢觸發。
+    for (const p of this.players) {
+      const st = p.passive, rule = this.heroPassives[p.id];
+      if (!st || !rule?.trigger || p.dead) continue;
+      const tr = rule.trigger;
+      const idle = this.t - Math.max(st.lastHitAt, st.lastActAt);
+      let ctx = null;
+      switch (tr.kind) {
+        case 'burst-damage': if (st.taken >= tr.pctMaxHp * p.maxHp) ctx = { taken: st.taken }; break;
+        case 'damage-accum': if (st.accum >= tr.pctMaxHp * p.maxHp) { st.accum = 0; ctx = {}; } break;
+        case 'damaged': if (st.taken > 0) ctx = { taken: st.taken }; break;
+        case 'low-hp': if (p.hp / p.maxHp < tr.below) ctx = {}; break;
+        case 'periodic': if (!tr.inCombat || idle < 3) ctx = {}; break;
+        case 'out-of-combat': if (!st.latched && idle >= tr.secs) ctx = { latch: 'latched' }; break;
+        case 'stationary':
+          if (!st.stillLatched && st.stillSince !== null && this.t - st.stillSince >= tr.secs) ctx = { latch: 'stillLatched' };
+          break;
+        case 'moving':
+          if (st.movingSince !== null && (tr.secs === 0 || (!st.movingLatched && this.t - st.movingSince >= tr.secs))) {
+            ctx = tr.secs === 0 ? {} : { latch: 'movingLatched' };
+          }
+          break;
+        case 'in-zone': if (st.zone === tr.zone) ctx = {}; break;
+        case 'takedown': if (st.gainedTakedown) ctx = {}; break;
+        case 'kill': if (st.gainedKill) ctx = {}; break;
+        case 'ally-low-hp': case 'ally-burst': {
+          const ally = this.players.find((q) => q !== p && !q.dead && q.side === p.side && dist(q.pos, p.pos) <= tr.radius
+            && (tr.kind === 'ally-low-hp' ? q.hp / q.maxHp < tr.below : taken.get(q.id) >= tr.pctMaxHp * q.maxHp));
+          if (ally) ctx = { target: ally };
+          break;
+        }
+        default: break;
+      }
+      if (ctx && this._passiveTry(p, rule, st, ctx) && ctx.latch) st[ctx.latch] = true;
     }
   }
 
-  _applyPassiveEffect(p, fx, scale) {
-    const shieldOn = (q, pct, duration) => {
+  /** 冷卻＋every 計數，成立就套用 rule.effects。 */
+  _passiveTry(p, rule, st, ctx) {
+    if (this.t < st.nextAt) return false;
+    const every = rule.trigger.every ?? 1;
+    if (every > 1) {
+      st.count += 1;
+      if (st.count < every) return false;
+      st.count = 0;
+    }
+    this._passiveFire(p, rule, st, rule.effects, ctx, true);
+    return true;
+  }
+
+  _passiveFire(p, rule, st, effects, ctx, setIcd) {
+    const scale = 1 + (rule.levelScale ?? 0) * Math.max(0, (p.mlv ?? 1) - 1);
+    for (const fx of effects) this._applyPassiveEffect(p, fx, scale, ctx, st);
+    if (setIcd) st.nextAt = this.t + rule.icd;
+    st.procs += 1;
+    st.lastProcAt = this.t;
+  }
+
+  _passiveStrike(p, q, amt, trueDmg) {
+    if (!q || q.dead || q.hp <= 0) return;
+    if (trueDmg) q.hp -= amt;
+    else { amt *= this._heroSkillDamageFactor(q); this._damageHero(q, amt); }
+    p.dmg += amt; q.hitBy.set(p.id, this.t);
+    if (q.hp <= 0 && !q.dead) this._resolveKill(p, q);
+  }
+
+  _applyPassiveEffect(p, fx, scale, ctx = {}, st = p.passive) {
+    const alive = (q) => q && !q.dead && q.hp > 0;
+    this.passiveStats[fx.kind] = (this.passiveStats[fx.kind] ?? 0) + 1;
+    const to = fx.to ?? 'self';
+    const primary = to === 'self' ? p : to === 'target' ? ctx.target
+      : to === 'attacker' ? (ctx.attacker ?? this._passiveAttackerOf(p))
+        : to === 'lowest-ally' ? this.players.filter((q) => q !== p && alive(q) && q.side === p.side && dist(q.pos, p.pos) <= fx.radius)
+          .reduce((best, q) => (!best || q.hp / q.maxHp < best.hp / best.maxHp ? q : best), null)
+          : null;
+    const shieldOn = (q, pct, duration, layers = 1) => {
       const amount = q.maxHp * pct * scale;
-      q.shield = Math.max(amount, this.t < (q.shieldUntil ?? 0) ? (q.shield ?? 0) : 0);
+      const cur = this.t < (q.shieldUntil ?? 0) ? (q.shield ?? 0) : 0;
+      q.shield = layers > 1 ? Math.min(amount * layers, cur + amount) : Math.max(amount, cur);
       q.shieldUntil = Math.max(q.shieldUntil ?? 0, this.t + duration);
     };
-    if (fx.kind === 'shield') shieldOn(p, fx.pctMaxHp, fx.duration);
-    else if (fx.kind === 'team-shield') {
-      for (const ally of this.players) {
-        if (!ally.dead && ally.side === p.side && dist(ally.pos, p.pos) <= fx.radius) shieldOn(ally, fx.pctMaxHp, fx.duration);
+    const enemiesNear = (center, radius, exclude) => this.players
+      .filter((q) => alive(q) && q.side !== p.side && q !== exclude && dist(q.pos, center) <= radius)
+      .sort((a, b) => dist(a.pos, center) - dist(b.pos, center));
+    switch (fx.kind) {
+      case 'shield': if (alive(primary)) shieldOn(primary, fx.pctMaxHp, fx.duration, fx.layers); break;
+      case 'team-shield': case 'team-guard':
+        for (const ally of this.players) {
+          if (!alive(ally) || ally.side !== p.side || dist(ally.pos, p.pos) > fx.radius) continue;
+          if (fx.kind === 'team-shield') shieldOn(ally, fx.pctMaxHp, fx.duration);
+          else this._applyHeroSkillGuard(ally, fx.duration, fx.reduction);
+        }
+        break;
+      case 'guard':
+        if (!alive(primary)) break;
+        this._applyHeroSkillGuard(primary, fx.duration, fx.reduction);
+        if (fx.healPctMaxHp) {
+          const heal = Math.min(primary.maxHp - primary.hp, primary.maxHp * fx.healPctMaxHp * scale);
+          if (heal > 0) { primary.hp += heal; p.heal += heal; }
+        }
+        break;
+      case 'heal': {
+        if (!alive(primary)) break;
+        const heal = Math.min(primary.maxHp - primary.hp, primary.maxHp * fx.pctMaxHp * scale);
+        if (heal > 0) { primary.hp += heal; p.heal += heal; }
+        break;
       }
-    } else if (fx.kind === 'guard') {
-      this._applyHeroSkillGuard(p, fx.duration, fx.reduction);
-      if (fx.healPctMaxHp) {
-        const heal = Math.min(p.maxHp - p.hp, p.maxHp * fx.healPctMaxHp * scale);
-        if (heal > 0) { p.hp += heal; p.heal += heal; }
+      case 'haste':
+        if (!alive(primary)) break;
+        primary.heroSkillHasteFactor = Math.max(this.t < (primary.heroSkillHasteUntil ?? 0) ? (primary.heroSkillHasteFactor ?? 1) : 1, fx.factor);
+        primary.heroSkillHasteUntil = Math.max(primary.heroSkillHasteUntil ?? 0, this.t + fx.duration);
+        primary.heroSkillHasteSourceId = p.id;
+        break;
+      case 'power':
+        if (!alive(primary)) break;
+        primary.heroSkillPowerFactor = Math.max(this.t < (primary.heroSkillPowerUntil ?? 0) ? (primary.heroSkillPowerFactor ?? 1) : 1, fx.factor);
+        primary.heroSkillPowerUntil = Math.max(primary.heroSkillPowerUntil ?? 0, this.t + fx.duration);
+        break;
+      case 'stealth':
+        if (!alive(primary)) break;
+        primary.heroSkillStealthUntil = Math.max(primary.heroSkillStealthUntil ?? 0, this.t + fx.duration);
+        break;
+      case 'cdr':
+        if (!alive(primary) || !primary.heroSkillReadyAt) break;
+        for (const slot of ['Q', 'W', 'E', 'R']) {
+          const at = primary.heroSkillReadyAt[slot];
+          if (at !== undefined && at > this.t) primary.heroSkillReadyAt[slot] = Math.max(this.t, at - fx.secs);
+        }
+        break;
+      case 'strike': {
+        const beat = this._passiveBeat(p);
+        if (to === 'self-area') {
+          for (const q of enemiesNear(p.pos, fx.radius, null).slice(0, fx.max ?? 99)) this._passiveStrike(p, q, beat * fx.beats, fx.true);
+          break;
+        }
+        if (!alive(primary)) break;
+        const victims = fx.excludeTarget ? [] : [primary];
+        if (fx.radius) victims.push(...enemiesNear(primary.pos, fx.radius, primary).slice(0, (fx.max ?? 1) - victims.length));
+        if (fx.chain) victims.push(...enemiesNear(primary.pos, 10, primary).filter((q) => !victims.includes(q)).slice(0, fx.chain));
+        for (const q of victims) {
+          const amt = beat * fx.beats * (q === primary ? 1 : 0.6) + (fx.missingPct ? (q.maxHp - q.hp) * fx.missingPct : 0);
+          this._passiveStrike(p, q, amt, fx.true);
+        }
+        break;
       }
-    } else if (fx.kind === 'haste') {
-      p.heroSkillHasteFactor = Math.max(this.t < (p.heroSkillHasteUntil ?? 0) ? (p.heroSkillHasteFactor ?? 1) : 1, fx.factor);
-      p.heroSkillHasteUntil = Math.max(p.heroSkillHasteUntil ?? 0, this.t + fx.duration);
-      p.heroSkillHasteSourceId = p.id;
+      case 'burn': {
+        if (!alive(primary)) break;
+        const dps = this._passiveBeat(p) * fx.beatsPerSec;
+        const mine = this._passiveDots.filter((d) => d.src === p && d.target === primary);
+        if (mine.length < (fx.stacks ?? 1)) this._passiveDots.push({ src: p, target: primary, dps, until: this.t + fx.duration });
+        else { const oldest = mine.reduce((a, b) => (b.until < a.until ? b : a)); oldest.until = this.t + fx.duration; oldest.dps = dps; }
+        break;
+      }
+      case 'slow': {
+        const targets = to === 'self-area' ? enemiesNear(p.pos, fx.radius, null) : alive(primary) ? [primary] : [];
+        for (const q of targets) {
+          const active = this.t < (q.heroSkillSlowUntil ?? 0);
+          q.heroSkillSlowFactor = !active ? fx.factor
+            : fx.floor ? Math.max(fx.floor, q.heroSkillSlowFactor * fx.factor) : Math.min(q.heroSkillSlowFactor, fx.factor);
+          q.heroSkillSlowUntil = Math.max(q.heroSkillSlowUntil ?? 0, this.t + fx.duration);
+        }
+        break;
+      }
+      case 'stun': if (alive(primary)) this._applyHeroSkillControl(primary, 'stun', fx.duration); break;
+      case 'mark':
+        if (!alive(primary)) break;
+        primary.heroSkillMarkAmp = Math.max(this.t < (primary.heroSkillMarkUntil ?? 0) ? (primary.heroSkillMarkAmp ?? 0) : 0, Math.min(0.2, fx.amp));
+        primary.heroSkillMarkUntil = Math.max(primary.heroSkillMarkUntil ?? 0, this.t + fx.duration);
+        primary.heroSkillMarkSourceId = p.id;
+        break;
+      case 'reflect': {
+        const attacker = this._passiveAttackerOf(p);
+        if (attacker && ctx.taken) this._passiveStrike(p, attacker, ctx.taken * fx.pct, false);
+        break;
+      }
+      case 'stack':
+        st.stacks = Math.min(fx.max, st.stacks + fx.add);
+        if (fx.duration) st.stacksUntil = this.t + fx.duration;
+        break;
+      case 'arm': st.armed = Math.min(fx.charges ?? 1, st.armed + 1); break;
+      case 'transfer': {
+        if (!alive(primary)) break;
+        const give = Math.min(p.hp * fx.pctCurrentHp, primary.maxHp - primary.hp);
+        if (give > 0 && p.hp - give > 1) { p.hp -= give; primary.hp += give; p.heal += give; }
+        break;
+      }
+      default: break;
     }
   }
 
@@ -719,8 +1050,10 @@ export class LogicEngine {
     return this._heroTaunter(p)?.pos ?? intended;
   }
   _heroGuardFactor(p) {
-    return this.heroSkillsOn && this.t < (p.heroSkillGuardUntil ?? 0)
+    const guard = this.heroSkillsOn && this.t < (p.heroSkillGuardUntil ?? 0)
       ? 1 - p.heroSkillGuardReduction : 1;
+    //  Passive Runtime v2：常駐承傷修正併在這裡 ⇒ 普攻／技能／裝備三條路徑一次涵蓋。未開啟 ⇒ 不乘。
+    return this.heroPassivesOn ? guard * this._heroPassiveTakenK(p) : guard;
   }
   _heroGuardHit(p, hit) {
     const factor = this._heroGuardFactor(p);
@@ -735,6 +1068,11 @@ export class LogicEngine {
   }
 
   _heroSkillHasteFactor(p) {
+    //  Passive Runtime v2：常駐移速修正（草叢／河道／疊層）。未開啟 ⇒ 走原式。
+    if (this.heroPassivesOn && p) return this._heroSkillHasteBase(p) * this._heroPassiveSpeedK(p);
+    return this._heroSkillHasteBase(p);
+  }
+  _heroSkillHasteBase(p) {
     if (!this.heroSkillsOn || !p || this.t >= (p.heroSkillHasteUntil ?? 0)) return 1;
     return Math.max(1, Math.min(1.6, p.heroSkillHasteFactor ?? 1));
   }
@@ -1036,8 +1374,13 @@ export class LogicEngine {
     };
     const hit = (source, target, damage, rule) => {
       hits.push({ source, target, damage: damage * this._heroSkillPowerFactor(source)
-        * this._heroSkillDamageFactor(target), rule });
+        * this._heroSkillDamageFactor(target) * (this.heroPassivesOn ? this._heroPassiveDamageK(source, target) : 1), rule });
       target.hitBy.set(source.id, this.t);
+      if (this.heroPassivesOn) {
+        const slot = String(rule.skillId ?? '').split(':')[1] ?? null;
+        this._passiveEvent('skill-hit', source, target, { slot });
+        this._passiveEvent('hit-by-skill', target, source);
+      }
       //  TD-CS1（moba-sim.v16，splitProjectileSlowV16）：split-projectile 的規則同樣宣告 slowFactor／slowDuration，
       //  舊碼只認 projectile ⇒ 宣告的減速從未套用。主目標與濺射目標同一條規則，都會被減速。
       if (rule.mechanic === 'projectile' || (rule.mechanic === 'split-projectile' && this.rules.splitProjectileSlowV16)) {
@@ -1367,6 +1710,10 @@ export class LogicEngine {
       if (p.dead || castThisTick.has(p.id)) continue;
       castThisTick.add(p.id);
       p.heroSkillReadyAt[slot] = this.t + rule.cooldown * this._heroSkillCooldownFactor(p);
+      if (this.heroPassivesOn) {
+        this._passiveEvent('skill-cast', p, null, { slot });
+        if (foe && foe !== p && foe.side === p.side && !c.objective) this._passiveEvent('ally-cast', p, foe, { slot });
+      }
       if (c.objective?.lane) {
         //  laneSkillV1：清兵。傷害排進 _laneSkillHits，於下一次 _heroSkillStep 開頭（到期時）結算。
         const delay = Number(rule.travel ?? rule.delay ?? 0) || 0;
@@ -2114,8 +2461,9 @@ export class LogicEngine {
   }
   /** 等級 → 本場 power / maxHp（以 Lv1 基準錨定；升級補上「新增的那段血」，不是全補）。 */
   _applyMatchLevel(p) {
-    p.power = p.basePower * powerMultFor(p.mlv);
-    let newMax = p.baseMaxHp * hpMultFor(p.mlv);
+    //  Hero Power Curve v1：同一個掛點乘上此英雄的階段倍率（未開啟 ⇒ 原式，逐位元不變）。
+    p.power = this.powerCurveOn ? p.basePower * powerMultFor(p.mlv) * this._powerCurveK(p, 'power') : p.basePower * powerMultFor(p.mlv);
+    let newMax = this.powerCurveOn ? p.baseMaxHp * hpMultFor(p.mlv) * this._powerCurveK(p, 'hp') : p.baseMaxHp * hpMultFor(p.mlv);
     if (this.itemsOn) newMax += this.items.hpBonus(p.id);   // M2：裝備生命（E5）
     const gain = newMax - p.maxHp;
     p.maxHp = newMax;
@@ -2250,7 +2598,8 @@ export class LogicEngine {
     //  commitAdj 高 ⇒ 門檻更嚴：明顯不利的團戰不投入。
     //  中性（0）⇒ 基準門檻（略低於 0 ⇒ 只擋掉「明顯打不贏」的情況）。
     const adj = M?.commitAdj ?? 0;
-    const need = clamp((R.commitAdv ?? -0.12) + (R.commitAdvGain ?? 0.35) * adj, -0.6, 0.6);
+    const I = this._tidOf(p.side);   // Tactical Identity：riskTolerance ⇒ 投入門檻平移
+    const need = clamp((R.commitAdv ?? -0.12) + (R.commitAdvGain ?? 0.35) * adj + (I ? I.commitShift : 0), -0.6, 0.6);
 
     if (adv >= need) return { act: "commit", ratio: adv };
     //  邊際 ⇒ 等隊友（hold，在 standoff 待命）；明顯劣勢 ⇒ 不投入（decline）
@@ -2425,6 +2774,7 @@ export class LogicEngine {
     const R = this.rules;
     const awareness = R.decisionAwareness;
     const hpRatio = clamp(p.hp / p.maxHp, 0, 1);
+    const I = this._tidOf(p.side);   // Tactical Identity（null ⇒ 原式）
     const enemyAwareness = alive
       .filter((q) => q.side !== p.side && !q.dead && !this._heroSkillStealthed(q) && dist(q.pos, p.pos) <= awareness)
       .map((q) => ({ q, d: dist(q.pos, p.pos) }));
@@ -2470,9 +2820,12 @@ export class LogicEngine {
     const protective = p.role === "sup" || (H?.protectAdj ?? 0) >= 0.12;
     const lowAlly = protective
       ? allies
-        .filter((q) => q !== p && q.hp / q.maxHp < 0.55 &&
+        .filter((q) => q !== p && q.hp / q.maxHp < (I ? I.protectHp : 0.55) &&
           enemyAwareness.some(({ q: foe }) => dist(foe.pos, q.pos) < awareness))
-        .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp || a.id.localeCompare(b.id))[0] ?? null
+        //  Tactical Identity：carryPriority 指定的那一路隊友優先被保護（等效少 15% 血）。
+        .sort((a, b) => (I?.protectRole
+          ? (a.hp / a.maxHp - (a.role === I.protectRole ? 0.15 : 0)) - (b.hp / b.maxHp - (b.role === I.protectRole ? 0.15 : 0))
+          : a.hp / a.maxHp - b.hp / b.maxHp) || a.id.localeCompare(b.id))[0] ?? null
       : null;
     const skillReady = p.atkCd <= 0.08;
     //  Milestone H：接戰意願＝席位基準 ＋ 英雄定位偏移（坦克戰士更願意開、
@@ -2495,12 +2848,16 @@ export class LogicEngine {
     if (this.t < R.decisionEarlyT && target) score -= 0.14;
     if (this._teamBehindV3(p.side)) score -= 0.10;
     if (inTowerRisk && (!hasWave || towerDefenders >= alliesN)) score -= R.decisionTowerRisk;
+    //  Tactical Identity：aggression 與分階段計畫 ⇒ 接戰分數偏移（只平移分數，不改傷害）。
+    if (I) score += I.engageBias + I.phaseEngage[this._tidPhase()];
 
     //  Milestone H：撤退門檻吃英雄定位（刺客／射手更早脫離、坦克撐得久一點）。
     //    ⚠ 只平移門檻，不改移速、不改傷害、不改復活時間。
     const retreatShift = H?.retreatAdj ?? 0;
-    const emergencyRetreat = hpRatio < 0.28 + retreatShift ||
-      (hpRatio < 0.44 + retreatShift && foesN > alliesN);
+    //  Tactical Identity：riskTolerance 平移保底撤退門檻（原本高風險戰術的 retreatAt 會被 0.28 吃掉）。
+    const riskShift = I ? I.retreatFloorShift : 0;
+    const emergencyRetreat = hpRatio < 0.28 + retreatShift + riskShift ||
+      (hpRatio < 0.44 + retreatShift + riskShift && foesN > alliesN);
     // 無守軍時沿用既有 0.30× 單人拆塔效率，讓比賽仍能收尾；真正危險的
     // 「無兵線闖入有人守的塔」或殘血進塔才撤，不把所有推線都改成來回走。
     const towerFallback = inTowerRisk &&
@@ -2528,6 +2885,7 @@ export class LogicEngine {
     } else if (lowAlly) {
       action = "SUPPORT";
       decisionTarget = lowAlly;
+      if (I?.protectRole && lowAlly.role === I.protectRole) this.tidObs[p.side].protectCarry++;
     } else if (target && targetHp <= 0.40 && score >= 0.30 &&
                targetDist <= R.decisionContact &&
                // Milestone F：不追進敵塔射程。追殘血本身合理，但「追到塔下被塔
@@ -3274,8 +3632,12 @@ export class LogicEngine {
       return o?.alive && dist(pos, o.pos) <= R.initiativeObjRange;
     };
     let kind = null, targetId = null;
+    //  Tactical Identity：towerPriority 高（siegeBias ≥ 0.2）且附近就有敵塔 ⇒ 先推塔、不轉去打巨龍。
+    const Is = this._tidOf(side);
+    const siegeFirst = !!Is && Is.siegeBias >= 0.2 && Object.values(this.towers)
+      .some((tw) => tw.side === foeSide && tw.hp > 0 && dist(pos, tw.pos) <= R.initiativeObjRange);
     if (objReach("baron") && winnersAlive.length >= 3) kind = "baron";
-    else if (objReach("dragon")) kind = "dragon";
+    else if (objReach("dragon") && !siegeFirst) kind = "dragon";
     else {
       // 沒有可打的中立目標 ⇒ 推最近的敵方建築（＝把人數優勢換成塔）
       let best = null, bd = Infinity;
@@ -3284,7 +3646,7 @@ export class LogicEngine {
         const dd = dist(pos, tw.pos);
         if (dd < bd) { bd = dd; best = id; }
       }
-      if (best) { kind = "siege"; targetId = best; }
+      if (best) { kind = "siege"; targetId = best; if (siegeFirst && objReach("dragon")) this.tidObs[side].siegePreferred++; }
     }
     if (!kind) return null;
     T.initUntil = this.t + R.initiativeWindow;
@@ -3319,9 +3681,11 @@ export class LogicEngine {
     // 但「誰去換收益」可以是稍遠的隊友——抓單之後由隊伍接手，才是真的把優勢
     // 用出去。實測只認 25 單位內的健康隊友時，一場只開得起 6 次窗（22 次擊殺），
     // 轉化率量不動；放寬響應半徑是讓機制真的接上的關鍵。
+    //  Tactical Identity：towerPriority ⇒ 響應主動權窗的血量門檻平移（推塔型較敢帶傷推進）。
+    const Ii = this._tidOf(killer.side);
     const responders = this.players.filter((q) =>
       q.side === killer.side && !q.dead && near(q, R.initiativeRespondRange) &&
-      q.hp / q.maxHp >= R.initiativeHpMin);
+      q.hp / q.maxHp >= R.initiativeHpMin - (Ii ? Ii.siegeBias * 0.3 : 0));
     if (responders.length < R.initiativeMinAlive) return;
     this._openInitiativeV3(killer.side, victim.pos, responders);
     this.fsm3[victim.side].defendUntil = this.t + R.initiativeWindow * 0.8;
@@ -3987,7 +4351,7 @@ export class LogicEngine {
       const dmgAmt = (p.power * dt * R.dmgK + empowerBonus) * lateFactor *
         (hasRedBuff || hasBlueBuff ? R.combatBuffDamageK : 1) *
         this._dragonPowerK(p.side) / this._dragonGuardK(foe.side) * this._heroSkillPowerFactor(p)
-        * this._heroSkillDamageFactor(foe);
+        * this._heroSkillDamageFactor(foe) * (this.heroPassivesOn ? this._heroPassiveDamageK(p, foe) : 1);
       if (empowered) {
         p.heroSkillEmpowerUntil = 0;
         p.heroSkillEmpowerDamage = 0;
@@ -4024,6 +4388,7 @@ export class LogicEngine {
           feedback: empowered || power ? "skill" : "attack",
         });
         p.atkCd = 0.5 * (hasBlueBuff ? R.blueBuffCooldownK : 1);
+        this._passiveEvent('attack-beat', p, foe);
       }
       if (R.simultaneousCombat) pendingHits.push(itemHit ? [p, foe, dmgAmt, itemHit] : [p, foe, dmgAmt]);
       else if (itemHit) {
@@ -5768,7 +6133,9 @@ export class LogicEngine {
           S.gankLane = r < w.top ? "top" : r < w.top + w.mid ? "mid" : "bot";
           // S28：Gank 節奏吃打野能力——視野/手速/決策 → 週期變短（更常抓）、停留窗變長
           S.gankUntil = this.t + 9 * (M ? M.gankWindowScale : 1);
-          S.gankNext = this.t + K.gankInterval * (M ? M.gankIntervalScale : 1) + this.rng2() * 12;
+          //  Tactical Identity：lanePlan.jungle＝farm ⇒ 抓人週期 ×1.35（原本 ×0.4 全路權重正規化後等於沒改）。
+          const Ig = this._tidOf(p.side);
+          S.gankNext = this.t + K.gankInterval * (M ? M.gankIntervalScale : 1) * (Ig ? Ig.gankIntervalK : 1) + this.rng2() * 12;
           this.exec[p.side][S.gankLane + "Ganks"]++;
         }
         if (this.t < S.gankUntil) { effLane = S.gankLane; stOv = "抓人"; }
@@ -5780,7 +6147,9 @@ export class LogicEngine {
         //     decline 只影響「要不要出發」，不影響隨機序列 ⇒ 差異可歸因於決策本身。
         if (this.t >= S.roamNext) {
           S.roamNext = this.t + 40 + this.rng2() * 15;
-          const go = this.rng2() < (M ? clamp(K.roamRate + M.roamAdj, 0, 1) : K.roamRate);
+          //  Tactical Identity：lanePlan.support＝roam／protect ⇒ 遊走率 ×1.5／×0.5（原本完全沒讀）。
+          const Ir = this._tidOf(p.side);
+          const go = this.rng2() < (M ? clamp(K.roamRate + M.roamAdj, 0, 1) : K.roamRate) * (Ir ? Ir.roamK : 1);
           if (go) {
             //  Combat Decision C：命中出發傾向之後，再決定「去哪裡／要不要去」。
             //  未注入能力層（M 為 null）⇒ 走原本的「無條件中路 8 秒」，逐位元不變。
@@ -6263,7 +6632,7 @@ export class LogicEngine {
     //  Milestone J：其餘六個召喚師技能同樣在凍結位置上判定（先收集後套用）。
     this._summonerSpellsV2(alive, dt);
     this._heroSkillStep();
-    this._heroPassiveStep();
+    this._heroPassiveStep(dt);
 
     // S24：會戰/目標戰觀測（真實狀態計數；only when tacticOn）
     if (this.tacticOn) {
@@ -6398,11 +6767,18 @@ export class LogicEngine {
         }])),
         ...(this.heroSkillLevelSystem ? { heroSkillLevelHistory: p.heroSkillLevelHistory.map((event) => ({ ...event })) } : {}),
         ...(this.heroBattleTalents?.[p.id] ? { heroBattleTalent: { ...this.heroBattleTalents[p.id] } } : {}),
-        //  Hero Passive P v1：只有開啟且此英雄有 pilot 規則時才出現（其餘英雄 P 仍是「未實裝」）。
+        //  Hero Power Curve v1：強勢期（peak）、目前階段（phase 0/1/2）與目前戰力倍率 k。
+        ...(this.powerCurveOn && this.powerCurve[p.id] ? { powerCurve: {
+          peak: this.powerCurve[p.id].peak, phase: phaseIndexOf(p.mlv),
+          k: Math.round(this._powerCurveK(p, 'power') * 1000) / 1000,
+        } } : {}),
+        //  Hero Passive P Runtime v2：開啟且此英雄有戰鬥被動時才出現（資訊類被動不進引擎 ⇒ 不出現）。
+        //  trigger＝null 表示只有常駐修正（always）；stacks／armed 是即時層數與上膛次數。
         ...(this.heroPassivesOn && p.passive ? { heroPassive: {
-          trigger: this.heroPassives[p.id].trigger.kind, icd: this.heroPassives[p.id].icd,
+          trigger: this.heroPassives[p.id].trigger?.kind ?? 'always', icd: this.heroPassives[p.id].icd,
           ready: this.t >= p.passive.nextAt, cd: Math.max(0, Math.round((p.passive.nextAt - this.t) * 10) / 10),
           procs: p.passive.procs, lastProcAt: p.passive.lastProcAt,
+          tier: this.heroPassives[p.id].tier, stacks: p.passive.stacks, armed: p.passive.armed, boosted: p.passive.boosted,
         } } : {}),
       } : {}) })),
       towers: Object.fromEntries(Object.entries(this.towers).map(([k, t]) => [k, { side: t.side, lane: t.lane, tier: t.tier, pos: t.pos, hp: clamp(t.hp / (t.maxHp ?? (t.lane === "nexus" ? NEXUS_HP : TOWER_HP)), 0, 1) }])),

@@ -10,10 +10,13 @@
 //
 //  誠實邊界（引擎沒有的系統 → 欄位保留但「未映射」，不造假統計）：
 //    · objectives.heraldPriority —— 引擎無預示者。
-//    · economy.carryPriority / jungleResourceShare —— 引擎無金流分配機制
+//    · economy.jungleResourceShare —— 引擎無金流分配機制
 //      （擊殺金全歸擊殺者＋團隊金，供適性與未來擴充）。
 //    · vision.* —— 引擎無視野系統（戰爭迷霧是呈現層）。
 //    未映射欄位只用於適性計算與展示，engine knobs 不含它們。
+//  moba-sim.v17 Tactical Identity v1 起**已映射**（toEngineTacticIdentity，見檔尾）：
+//    macro.aggression／riskTolerance／earlyGame／midGame／lateGame、lanePlan.jungle＝farm、
+//    lanePlan.support、economy.carryPriority、objectives.towerPriority（主動權窗）。
 // ============================================================================
 
 export const MOBA_TACTIC_VERSION = "MobaTacticConfig.v1";
@@ -238,4 +241,46 @@ export function toEngineTactic(t) {
     invadeWithMid: m.tempo === "fast" && o.invadePriority >= 0.3,          // 中路是否跟進入侵
     roamRate: t.economy.supportRoamRate,                                   // 輔助遊走率
   };
+}
+
+// ── Tactical Identity v1（moba-sim.v17）────────────────────────────────────────────
+//  toEngineTactic 的 13 個 knob 形狀不動（tactic24 白名單守著它）；這裡是**同一份契約**的第二個
+//  投影，把原本「只有 UI、引擎沒讀」或「對應到無效果」的欄位接進既有 AI 決策點：
+//    macro.aggression   → 接戰分數偏移（_combatDecisionV3）
+//    macro.riskTolerance→ 緊急撤退門檻平移＋團戰投入門檻（原本被 0.28 的保底門檻吃掉）
+//    macro.early/mid/lateGame → 分階段的接戰分數與參團率偏移（原本完全沒有階段邏輯）
+//    lanePlan.jungle    → farm 真的少抓人（原本 ×0.4 全路權重，正規化後等於沒改）
+//    lanePlan.support   → roam／protect 改變遊走率與護人門檻（原本完全沒讀）
+//    economy.carryPriority → 護人時優先保哪一路的隊友
+//    objectives.towerPriority → 主動權窗：推塔 vs 打龍的選擇與響應血量門檻
+//  全部是門檻／機率／偏好的平移，**沒有任何傷害或勝率係數**；中性戰術（std）⇒ 全部 0／1
+//  ⇒ 與未接線逐位元相同。藍紅雙方、Live 與 Challenge 一律用這一個 builder。
+const PHASE_ENGAGE = { aggressive: 0.08, standard: 0, defensive: -0.08, scaling: -0.05 };
+const PHASE_ENGAGE_LATE = { aggressive: 0.08, standard: 0, defensive: -0.08, scaling: 0.08 };
+export const TACTIC_IDENTITY_VERSION = "TacticIdentity.v1";
+
+export function toEngineTacticIdentity(t) {
+  const m = t.macro, o = t.objectives;
+  const phaseEngage = [PHASE_ENGAGE[m.earlyGame] ?? 0, PHASE_ENGAGE[m.midGame] ?? 0, PHASE_ENGAGE_LATE[m.lateGame] ?? 0];
+  return {
+    version: TACTIC_IDENTITY_VERSION,
+    tacticId: t.tacticId,
+    engageBias: clamp01((m.aggression - 0.5) * 0.24, -0.12, 0.12),         // 接戰分數偏移
+    phaseEngage,                                                            // 前／中／後期接戰分數偏移
+    phaseJoin: phaseEngage.map((v) => v * 0.5),                             // 前／中／後期參團率偏移
+    retreatFloorShift: clamp01(-(m.riskTolerance - 0.5) * 0.1, -0.05, 0.05), // 緊急撤退門檻平移
+    commitShift: clamp01(-(m.riskTolerance - 0.5) * 0.2, -0.1, 0.1),        // 團戰投入門檻平移（高風險 ⇒ 較願意投入）
+    gankIntervalK: t.lanePlan.jungle === "farm" ? 1.35 : 1,                 // farm ⇒ 抓人週期拉長
+    roamK: t.lanePlan.support === "roam" ? 1.5 : t.lanePlan.support === "protect" ? 0.5 : 1,
+    protectHp: t.lanePlan.support === "protect" ? 0.7 : 0.55,               // 護人觸發血量（原 0.55）
+    protectRole: t.economy.carryPriority === "balanced" ? null : t.economy.carryPriority,
+    siegeBias: clamp01((o.towerPriority - 0.5), -0.3, 0.4),                 // 主動權窗：推塔傾向
+  };
+}
+
+/** 是否完全中性（std）：中性 ⇒ 呼叫端可以不傳（引擎也會得到逐位元相同的結果）。 */
+export function isNeutralTacticIdentity(I) {
+  return !I || (I.engageBias === 0 && I.phaseEngage.every((v) => v === 0) && I.retreatFloorShift === 0
+    && I.commitShift === 0 && I.gankIntervalK === 1 && I.roamK === 1 && I.protectHp === 0.55
+    && I.protectRole === null && I.siegeBias === 0);
 }

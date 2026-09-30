@@ -9,7 +9,7 @@ import { useIsMobile } from '../../ui/useViewport.js';
 import { SUMMONER_SPELLS } from '../moba/mobaHeroLoadout.js';
 import BattleHeroSheet from './BattleHeroSheet.jsx';
 import BattleSkillDetail from './BattleSkillDetail.jsx';
-import { PASSIVE_STATUS } from '../moba/skills/heroSkillDetail.js';
+import { PASSIVE_STATUS, passiveTierOf } from '../moba/skills/heroSkillDetail.js';
 import { sortedStatuses, statusMetaOf } from '../moba/presentation/heroStatusMeta.js';
 import ObjectivePanel from './ObjectivePanel.jsx';
 import { battleTalentById } from '../moba/talents/heroBattleTalents.js';
@@ -171,13 +171,14 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
         {['P', 'Q', 'W', 'E', 'R'].map((key, i) => {
           const live = key === 'P' ? p.heroPassive : p.heroSkills?.[key];
           const status = key === 'P' ? (live?.trigger ? 'passive live' : 'passive') : !live ? 'unavailable' : live.ready ? 'ready' : 'cooldown';
-          const statusText = key === 'P' ? (live?.trigger ? PASSIVE_STATUS.live : PASSIVE_STATUS.short) : !live ? '—' : live.ready ? '可用' : null;
+          const passiveInfo = key === 'P' && !live?.trigger && passiveTierOf(r.heroId) === 'info';
+          const statusText = key === 'P' ? (live?.trigger ? PASSIVE_STATUS.live : passiveInfo ? PASSIVE_STATUS.info : PASSIVE_STATUS.short) : !live ? '—' : live.ready ? '可用' : null;
           return <button key={key} type="button" className={`observer-ability ability-${i} ${status}`}
             data-skill-slot={key} data-skill-state={status} data-skill-level={live?.level?.current ?? 'unranked'}
             aria-pressed={skill === key} onMouseEnter={() => { if (!mobile) setHoverSkill(key); }}
             onMouseLeave={() => { if (!mobile) setHoverSkill(null); }}
             onClick={() => { setSkill(skill === key ? null : key); setHoverSkill(null); }}
-            aria-label={`${key} ${hero[key] ?? '尚無技能資料'}，${key === 'P' ? (live?.trigger ? `被動試行中，已觸發 ${live.procs ?? 0} 次` : PASSIVE_STATUS.aria) : !live ? '即時狀態未提供' : live.ready ? '可用' : `冷卻 ${Math.ceil(live.cd)} 秒`}${key === 'P' ? '' : `，${live?.level ? `技能 Lv${live.level.current}` : '技能等級未保存'}`}`}>
+            aria-label={`${key} ${hero[key] ?? '尚無技能資料'}，${key === 'P' ? (live?.trigger ? `被動生效中，${live.trigger === 'always' ? `已加成 ${live.boosted ?? 0} 次` : `已觸發 ${live.procs ?? 0} 次`}` : passiveInfo ? PASSIVE_STATUS.infoAria : PASSIVE_STATUS.aria) : !live ? '即時狀態未提供' : live.ready ? '可用' : `冷卻 ${Math.ceil(live.cd)} 秒`}${key === 'P' ? '' : `，${live?.level ? `技能 Lv${live.level.current}` : '技能等級未保存'}`}`}>
             <img src={heroSkillIconUrl(r.heroId, key) ?? undefined} alt="" loading="lazy" />
             <b>{key}</b>
             {live?.level && <span className="observer-ability-level" title={`技能 Lv${live.level.current}/${live.level.cap}`}>{live.level.current}</span>}

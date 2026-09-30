@@ -814,10 +814,14 @@ SIM_RULES.v3 = {
   //  封頂在 nexusSiegeCapK（英雄與小兵攻城同一個上限）；外塔／門牙塔、主堡射擊一律不動。
   nexusSiegeCapV1: false,
   nexusSiegeCapK: 6,
-  //  ── Hero Passive P v1（2026-09-29 framework＋pilot，**預設關閉**）──────────────
-  //  規則在 battle/moba/skills/heroPassiveGameplay.js（受語意指紋保護）；引擎 _heroPassiveStep 每 tick
-  //  輪詢既有狀態判定觸發、只走既有護盾／減傷／加速路徑、不耗 rng。開啟＝模擬語意變更 ⇒ 需新版號。
-  heroPassivesV1: false,
+  //  ── Hero Passive P（2026-09-29 v1 framework＋pilot；moba-sim.v17 起 **Runtime v2 開啟**）──────────
+  //  規則在 battle/moba/skills/heroPassiveGameplay.js（受語意指紋保護，100 名英雄：full／approx／info）；
+  //  引擎 _heroPassiveStep 每 tick 處理輪詢＋事件觸發、不耗 rng、固定玩家順序。只在 hero skills 開啟時生效。
+  heroPassivesV1: true,
+  //  ── Hero Power Curve v1（moba-sim.v17 候選）：每名英雄前／中／後期倍率（heroPowerCurve.js），唯一掛點 _applyMatchLevel。
+  heroPowerCurveV1: false,
+  //  ── Tactical Identity v1（moba-sim.v17 候選）：戰術契約的決策投影（toEngineTacticIdentity）接進既有 AI 決策點。
+  tacticIdentityV1: false,
   //  ── TD-CS1（moba-sim.v16 起開啟）：split-projectile 命中套用規則宣告的減速（liuxing:Q、miwu:E）──
   splitProjectileSlowV16: true,
 };

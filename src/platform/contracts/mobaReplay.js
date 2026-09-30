@@ -117,6 +117,13 @@ export function snapshotToFrame(snap) {
           live.level.nextAt ?? 0] : [];
       })),
     } : {}),
+    // Hero Passive Runtime v2（moba-sim.v17）：被動即時狀態 [觸發次數, 疊層, 上膛, 冷卻, 常駐修正生效次數]。
+    // 規則 meta（trigger／icd／tier）只在 replay.config 存一次；舊 replay 沒有此欄 ⇒ 播放端維持「未保存」。
+    ...(snap.players.some((pl) => pl.heroPassive) ? {
+      pp: snap.players.map((pl) => pl.heroPassive
+        ? [pl.heroPassive.procs, pl.heroPassive.stacks ?? 0, pl.heroPassive.armed ?? 0, round2(pl.heroPassive.cd), pl.heroPassive.boosted ?? 0]
+        : []),
+    } : {}),
     tw: Object.fromEntries(Object.entries(snap.towers).map(([id, t]) => [id, round3(t.hp)])),
     dr: snap.dragon?.alive ? 1 : 0,
     br: snap.baron?.alive ? 1 : 0,

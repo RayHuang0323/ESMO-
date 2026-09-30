@@ -29,7 +29,7 @@
 // ============================================================================
 import { LogicEngine } from "../../LogicEngine.js";
 import { toEnginePlayerMods } from "../../battle/moba/mobaPlayerStats.js";
-import { toEngineTactic, mobaTacticById, MOBA_TACTIC_VERSION } from "../contracts/MobaTacticConfig.js";
+import { toEngineTactic, toEngineTacticIdentity, mobaTacticById, MOBA_TACTIC_VERSION } from "../contracts/MobaTacticConfig.js";
 import { SNAPSHOT_SEATS, SNAPSHOT_INPUTS, snapshotCovers } from "../contracts/squadSnapshot.js";
 import { assertSeedFrozen, challengeReplayability } from "../contracts/challengeInstance.js";
 import { MOBA_SIMULATION_VERSION } from "../contracts/simulationVersion.js";
@@ -153,6 +153,8 @@ export function runChallenge({
     eng.configureMatch({
       blue: toEngineTactic(bt),
       red: toEngineTactic(rt),
+      //  Tactical Identity v1：與 useLocalServer 同一個 builder（Live 與 Challenge 不分叉）。
+      identity: { blue: toEngineTacticIdentity(bt), red: toEngineTacticIdentity(rt) },
       meta: {
         tacticId: bt.tacticId, tacticName: bt.name,
         version: MOBA_TACTIC_VERSION, opponentTacticId: rt.tacticId,

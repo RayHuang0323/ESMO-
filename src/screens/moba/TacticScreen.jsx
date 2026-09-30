@@ -30,7 +30,7 @@ import { BuildStrategyCards } from "../../battle/ui/items/BuildStrategyCards.jsx
 import HeroPortrait from "../../ui/HeroPortrait.jsx";
 import { useIsMobile } from "../../ui/useViewport.js";
 import { Frame } from "./LineupScreen.jsx";
-import { MOBA_TACTICS, toEngineTactic, STANDARD_OPP_TACTIC } from "../../platform/contracts/MobaTacticConfig.js";
+import { MOBA_TACTICS, toEngineTactic, toEngineTacticIdentity, STANDARD_OPP_TACTIC } from "../../platform/contracts/MobaTacticConfig.js";
 //  Expansion v1 N2/N3：只讀既有計數，不產生新事實（見 ui/DevelopmentInsights.jsx 檔頭）。
 import { TacticInsightPanel, MatchOverviewPanel } from "../../ui/DevelopmentInsights.jsx";
 import { useProfileStore } from "../../platform/profileStore.js";
@@ -65,6 +65,17 @@ function engineEffects(t) {
   if (gw.length) out.push(`Gank 偏重${gw.map(([l]) => ({ top: "上", mid: "中", bot: "下" }[l])).join("/")}路`);
   if (k.invadeChance >= 0.3) out.push(`開局入侵（${Math.round(k.invadeChance * 100)}%${k.invadeWithMid ? "，中路跟進" : ""}）`);
   if (k.roamRate >= 0.45) out.push("輔助頻繁遊走");
+  //  Tactical Identity v1：同一份契約的決策投影（與引擎 configureMatch.identity 同源）。
+  const I = toEngineTacticIdentity(t);
+  if (I.engageBias >= 0.03) out.push("接戰意願 ↑"); else if (I.engageBias <= -0.03) out.push("接戰意願 ↓");
+  const PH = ["前期", "中期", "後期"];
+  const ph = I.phaseEngage.map((v, i) => (v > 0 ? `${PH[i]}↑` : v < 0 ? `${PH[i]}↓` : null)).filter(Boolean);
+  if (ph.length) out.push(`分階段主動性 ${ph.join(" ")}`);
+  if (I.retreatFloorShift <= -0.02) out.push("殘血仍願意多拚一下"); else if (I.retreatFloorShift >= 0.02) out.push("殘血更早脫離");
+  if (I.gankIntervalK > 1) out.push("打野以刷野發育為主（抓人變少）");
+  if (I.roamK > 1) out.push("輔助主動遊走"); else if (I.roamK < 1) out.push("輔助留在後排保護");
+  if (I.protectRole) out.push(`優先保護${{ top: "上路", mid: "中路", adc: "下路" }[I.protectRole]}`);
+  if (I.siegeBias >= 0.2) out.push("打贏後優先推塔"); else if (I.siegeBias <= -0.1) out.push("打贏後不急著推塔");
   return out;
 }
 

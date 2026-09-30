@@ -28,7 +28,8 @@ import { selectPlayerItemsView } from "../moba/items/itemsViewModel.js";
 import { coachAnalysis, selectActiveEffects, selectHudItems } from "../moba/items/itemsUiSelectors.js";
 import { HeroItemDetail } from "./items/HeroItemDetail.jsx";
 import BattleSkillDetail from './BattleSkillDetail.jsx';
-import { PASSIVE_STATUS } from '../moba/skills/heroSkillDetail.js';
+import HeroPowerCurveStrip from './HeroPowerCurveStrip.jsx';
+import { PASSIVE_STATUS, passiveTierOf } from '../moba/skills/heroSkillDetail.js';
 import { battleTalentById } from '../moba/talents/heroBattleTalents.js';
 
 const MONO = "ui-monospace,Menlo,monospace";
@@ -235,10 +236,11 @@ export default function BattleHeroSheet({ heroId, heroName, playerName, playerId
               const passiveLive = k === 'P' && !!live?.trigger;
               //  Mobile UI P1：等級讀 snapshot 的 heroSkills[k].level（與 HUD 技能格同一來源），
               //  不再一律寫「未分級」；被動 P 沿用 PASSIVE_STATUS（未實裝、本場不生效）。
-              const status = k === 'P' ? (passiveLive ? '試行中' : '未實裝') : !live ? '未提供' : live.ready ? '可用' : `${Math.ceil(live.cd)}秒`;
-              const levelText = k === 'P' ? (passiveLive ? `觸發 ${live.procs ?? 0} 次` : '本場不生效') : live?.level ? `Lv${live.level.current}/${live.level.cap}` : '等級未保存';
+              const passiveInfo = k === 'P' && !passiveLive && passiveTierOf(heroId) === 'info';
+              const status = k === 'P' ? (passiveLive ? PASSIVE_STATUS.live : passiveInfo ? PASSIVE_STATUS.info : PASSIVE_STATUS.short) : !live ? '未提供' : live.ready ? '可用' : `${Math.ceil(live.cd)}秒`;
+              const levelText = k === 'P' ? (passiveLive ? (live.trigger === 'always' ? `加成 ${live.boosted ?? 0} 次` : `觸發 ${live.procs ?? 0} 次`) : passiveInfo ? '不影響戰鬥' : '本場不生效') : live?.level ? `Lv${live.level.current}/${live.level.cap}` : '等級未保存';
               return <button key={k} type="button" data-skill-slot={k} onClick={() => setSelectedSkill(k)}
-                aria-label={`${k} ${v}，${k === 'P' ? (passiveLive ? `被動試行中，已觸發 ${live.procs ?? 0} 次` : PASSIVE_STATUS.aria) : `${status}，${levelText}`}；點開詳情`}
+                aria-label={`${k} ${v}，${k === 'P' ? (passiveLive ? `被動生效中，${live.trigger === 'always' ? `已加成 ${live.boosted ?? 0} 次` : `已觸發 ${live.procs ?? 0} 次`}` : passiveInfo ? PASSIVE_STATUS.infoAria : PASSIVE_STATUS.aria) : `${status}，${levelText}`}；點開詳情`}
                 style={{ width: '100%', minHeight: 44, display: 'flex', gap: 8, alignItems: 'center', textAlign: 'left',
                   background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.11)',
                   borderRadius: 7, marginBottom: 4, color: '#e5e7eb', cursor: 'pointer', padding: '3px 8px' }}>
@@ -250,8 +252,11 @@ export default function BattleHeroSheet({ heroId, heroName, playerName, playerId
           ) : (
             <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>此英雄無技能資料</div>
           )}
-          <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>點技能查看正式效果、等級與作用對象。被動 P 尚未實裝，本場不生效，只展示英雄設定。</div>
+          <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>點技能查看正式效果、等級與作用對象。被動 P 的觸發次數、疊層與蓄力來自引擎即時狀態；資訊類被動不影響戰鬥。</div>
           {p?.heroBattleTalent?.id && <Row l="本場英雄天賦" v={battleTalentById(p.heroBattleTalent.id)?.name ?? '未提供'} c={GC.gold} />}
+
+          <SectionTitle>強勢期曲線</SectionTitle>
+          <HeroPowerCurveStrip heroId={heroId} live={p?.powerCurve ?? null} compact={isMobile} />
 
           {/* ── 目前戰鬥資訊 ────────────────────────────────────────── */}
           <SectionTitle>本場數據</SectionTitle>
