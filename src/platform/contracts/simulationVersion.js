@@ -84,6 +84,9 @@ export const SIMULATION_SEMANTICS_FILES = Object.freeze([
   "src/battle/moba/skills/heroSkillGameplay.js",
   //  2026-09-29：Hero Passive P v1 規則（heroPassivesV1 預設關閉）
   "src/battle/moba/skills/heroPassiveGameplay.js",
+  //  2026-10-01（moba-sim.v17）：Hero Power Curve v1——曲線契約與字面表（推導規則 heroPowerCurveDerive.js 只給產生器／gate，不在執行期）
+  "src/battle/moba/heroPowerCurve.js",
+  "src/battle/moba/heroPowerCurveTable.js",
   "src/battle/moba/skills/heroSkillLevels.js",
   "src/battle/moba/skills/heroSkillTargetCapabilities.js",
   "src/battle/moba/talents/heroBattleTalents.js",
@@ -370,6 +373,12 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //     · 指紋檔案清單補上 mapTerrainShapes／mobaMapLayout／objectiveLayout（導航幾何的洞）。
   //  ⚠ n=1000 A/B 見 docs/design/MOBA_Objective_Access_Symmetry_v16.md §7；v15 保留為已知版本，歷史 v15 挑戰由 canReplay 明確拒絕。
   "moba-sim.v16": "dad316e9344e94c8",
+  //  2026-10-01 moba-sim.v17（feature/hero-identity-combat-depth-v1）：**simulation semantics change**（skill-on；Tactical Identity 也影響 Challenge）。
+  //  ① Hero Passive Runtime v2：heroPassivesV1＝on，100 名英雄（full 72／approx 24／info 4）走同一套觸發／效果語彙。
+  //  ② Hero Power Curve v1：heroPowerCurveV1＝on，前／中／後期倍率（三段平均＝1），唯一掛點 _applyMatchLevel。
+  //  ③ Tactical Identity v1：tacticIdentityV1＝on，戰術契約的決策投影；std 對 std 與未接線逐位元相同。
+  //  Objective Stakes／Nexus cap 仍 OFF；坑位／layout 不變。n=1000 A/B 見 docs/design/Hero_Identity_Combat_Depth_v1.md。
+  "moba-sim.v17": "49ca18d32e3a3473",
 });
 
 export const isKnownSimulationVersion = (v) =>

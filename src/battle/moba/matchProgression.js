@@ -821,7 +821,7 @@ SIM_RULES.v3 = {
   //  ── Hero Power Curve v1（moba-sim.v17 候選）：每名英雄前／中／後期倍率（heroPowerCurve.js），唯一掛點 _applyMatchLevel。
   heroPowerCurveV1: true,
   //  ── Tactical Identity v1（moba-sim.v17 候選）：戰術契約的決策投影（toEngineTacticIdentity）接進既有 AI 決策點。
-  tacticIdentityV1: false,
+  tacticIdentityV1: true,
   //  ── TD-CS1（moba-sim.v16 起開啟）：split-projectile 命中套用規則宣告的減速（liuxing:Q、miwu:E）──
   splitProjectileSlowV16: true,
 };

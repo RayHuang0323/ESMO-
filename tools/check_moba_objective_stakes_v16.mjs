@@ -63,10 +63,12 @@ const makeEngine = (seed, { skills = true, stakes = true } = {}) => {
 
 // ── V ────────────────────────────────────────────────────────────────────────
 const R = rulesFor("v3");
-ck("V1 目前版本 moba-sim.v16，v15 仍是已知版本（歷史挑戰明確拒絕、不覆蓋）", MOBA_SIMULATION_VERSION === "moba-sim.v16"
-  && KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v15"), MOBA_SIMULATION_VERSION);
-ck("V2 v3 正式規則：objectiveStakesV1＝OFF（Owner 2026-09-30）、splitProjectileSlowV16＝on；nexusSiegeCapV1、heroPassivesV1＝off",
-  R.objectiveStakesV1 === false && R.splitProjectileSlowV16 === true && R.nexusSiegeCapV1 === false && R.heroPassivesV1 === false);
+//  2026-10-01 moba-sim.v17（Hero Identity v1）：版本事實隨升版更新；v16 與 v15 都必須仍是已知版本（歷史憑據不刪）。
+ck("V1 目前版本 moba-sim.v17，v16／v15 仍是已知版本（歷史挑戰明確拒絕、不覆蓋）", MOBA_SIMULATION_VERSION === "moba-sim.v17"
+  && KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v16") && KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v15"), MOBA_SIMULATION_VERSION);
+//  heroPassivesV1 在 v17 由 Owner 指派的 Hero Identity v1 開啟；Stakes／Nexus cap 的 OFF 斷言原樣保留。
+ck("V2 v3 正式規則：objectiveStakesV1＝OFF（Owner 2026-09-30）、splitProjectileSlowV16＝on；nexusSiegeCapV1＝off；heroPassivesV1＝on（v17）",
+  R.objectiveStakesV1 === false && R.splitProjectileSlowV16 === true && R.nexusSiegeCapV1 === false && R.heroPassivesV1 === true);
 ck("V3 正式數值：龍層 1.8%、龍魂 ×1.03／兵線 ×1.15、巴龍 ×1.10、賞金門檻 1500／20%／上限 500、龍魂攻防 +0.2／+0.1",
   R.objStakesDragonPowerPerStack === 0.018 && R.objStakesSoulPowerK === 1.03 && R.objStakesSoulFightK === 1.15
   && R.objStakesBaronPowerK === 1.1 && R.objStakesBountyGap === 1500 && R.objStakesBountyRatio === 0.2 && R.objStakesBountyMax === 500
