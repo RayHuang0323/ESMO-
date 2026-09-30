@@ -435,7 +435,13 @@ export function installRuntimeDiagnostics({ gl, scene, camera, frameRef }) {
     //    所以「畫出來的」要和元件自己這一幀讀到的數量（consumed）比，不和最新 frameRef 比。
     let zoneMeshes = 0, zoneGroups = 0, zoneMeshesAll = 0, consumed = null;
     const minionRings = { baron: 0, soul: 0 };   // v16：物件強化兵線的光環實例數
+    //  v16 Objective Layout：坑位標記**實際畫在哪裡**（scene graph 世界座標，不是資料層）
+    const pitMarkers = { layout: null, dragon: null, baron: null };
     scene?.traverse?.((o) => {
+      if (o.name === "objective-pit-markers") pitMarkers.layout = o.userData?.objectiveLayout ?? null;
+      if (o.name === "objective-pit-marker-dragon" || o.name === "objective-pit-marker-baron") {
+        pitMarkers[o.name.endsWith("dragon") ? "dragon" : "baron"] = { x: o.position.x, z: o.position.z, visible: o.visible };
+      }
       if (o.name === "moba-combat-zones") { zoneGroups++; consumed = o.userData?.consumed ?? null; }
       if (o.name === "moba-minion-objective-ring") { minionRings.baron = o.userData?.baron ?? 0; minionRings.soul = o.userData?.soul ?? 0; }
       const part = String(o.userData?.part ?? "");
@@ -447,6 +453,8 @@ export function installRuntimeDiagnostics({ gl, scene, camera, frameRef }) {
       ts: f.ts ?? null,
       over: !!f.over,
       minionRings, teamBuffs: f.teamBuffs ?? null,
+      objectiveLayout: f.objectiveLayout ?? null, pitMarkers,
+      bosses: Object.fromEntries(objectives.filter((o) => o.id === "dragon" || o.id === "baron").map((o) => [o.id, o.world ? { x: o.world.x, z: o.world.z } : null])),
       combatZones: { authority: (f.zones ?? []).length, consumed, visibleMeshes: zoneMeshes, groups: zoneGroups, meshes: zoneMeshesAll, kinds: (f.zones ?? []).map((z) => z.kind) },
       warnings: f.warnings ?? [],
       mapMode: map.mapMode,

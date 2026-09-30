@@ -36,8 +36,12 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
  *   因此 release closure 將基準前移到 P0-D closure；後續 Item-only 改動仍會被抓到。
  *   2026-09-23 Combat Quality v1（`moba-sim.v9`：英雄打兵、小兵交戰、波次）同理 ⇒ 基準前移到
  *   該次 commit。
+ *   2026-09-30 moba-sim.v16 Objective Access Symmetry：巨龍／巴龍坑 gameplay 腳印統一是刻意的
+ *   語意變更，改變**所有模式**（含 skill-off）的碰撞 ⇒ 基準前移到該次幾何 commit `fc82068`
+ *   （不是 HEAD）：之後疊上的 v16 Objective Stakes（skill-on）與 Objective Layout 契約（未設定＝STANDARD）
+ *   都必須讓 OFF 路徑與它逐位元相同——G1 因此順帶守住「v16 對 skill-off 中性」。
  */
-const BASE_COMMIT = "231c11f";
+const BASE_COMMIT = "fc82068";
 const load = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
 
