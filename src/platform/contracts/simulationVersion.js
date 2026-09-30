@@ -357,20 +357,19 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  不耗 rng）、領域排程加 zoneId／castAt、snapshot 加 combatStates 與受害者 dot。證據：正式設定 12 場整份 snapshot
   //  串流（去掉新增的呈現欄位）與 legacy 指紋 6 場皆與 75f44c8 逐位元相同。
   "moba-sim.v15": "eb940085e9536b94",
-  //  2026-09-30（feature/moba-objective-stakes-v16）：**simulation semantics change**（skill-on）。
-  //  ① Objective Stakes v1 開啟：龍層每層戰力 1.8%、龍魂（4 層）戰力 ×1.03＋兵線 fightK ×1.15、巴龍 70 秒英雄戰力 ×1.10（n=1000 後試過 1.15，藍方偏移擴大，已還原）、
-  //     落後 ≥1500 團隊金錢拿物件得逆轉賞金（落後額 20%，上限 500）、AI 龍魂攻防（出擊機率 +0.2／+0.1，同一次擲骰）。
-  //  ② TD-CS1：split-projectile 命中套用規則宣告的減速（liuxing:Q、miwu:E）。
-  //  ⚠ ①② 只在 hero skills 開啟時生效。
-  //  ③（2026-09-30 Objective Access Symmetry，同一個尚未發布的 v16 候選）：
+  //  2026-09-30 moba-sim.v16 **正式範圍**（Owner 決策）：**simulation semantics change**。
+  //  ① Objective Stakes v1：**OFF**（objectiveStakesV1＝false）。程式碼保留為候選；它讓「本場抽到巨龍側」的單場優勢
+  //     約 3pp → 8pp，不接受。重新開啟需新版本、新指紋與 A/B。
+  //  ② TD-CS1：split-projectile 命中套用規則宣告的減速（liuxing:Q、miwu:E）（hero skills 開啟時生效）。
+  //  ③ Objective Access Symmetry：
   //     · 巨龍坑／巴龍坑 gameplay 腳印統一（R15.5／坑口 0.74／壁厚 5.7，巴龍坑＝巨龍坑的 180° 鏡射）
   //       ⇒ 碰撞與導航改變，**所有模式**都受影響（含 skill-off 與 Challenge）——
   //       原本「skill-off 與 v15 逐位元相同」的性質**不再成立**。
   //     · Objective Layout Variant（STANDARD／SWAPPED，每場開局由 seed 推導一次、整場固定）；
   //       未設定＝STANDARD（Challenge 目前不設定 ⇒ STANDARD）。
   //     · 指紋檔案清單補上 mapTerrainShapes／mobaMapLayout／objectiveLayout（導航幾何的洞）。
-  //  ⚠ n=1000 A/B 見 docs/design/MOBA_Objective_Stakes_v1.md；v15 保留為已知版本，歷史 v15 挑戰由 canReplay 明確拒絕。
-  "moba-sim.v16": "5e126a24f49467db",
+  //  ⚠ n=1000 A/B 見 docs/design/MOBA_Objective_Access_Symmetry_v16.md §7；v15 保留為已知版本，歷史 v15 挑戰由 canReplay 明確拒絕。
+  "moba-sim.v16": "dad316e9344e94c8",
 });
 
 export const isKnownSimulationVersion = (v) =>

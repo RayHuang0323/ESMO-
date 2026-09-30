@@ -24115,3 +24115,18 @@ candidate `feature/moba-objective-stakes-v16` @ `36251d0`（origin/main＝`35663
 - 主線保留 `tools/audit_jungle_topology.mjs` 為正式 topology gate：`--gate`（導航場對稱、草叢鏡射，主線 2/2）；
   `--gate=pit-entrances`（Priority 1 目標值，主線 2/8，留給 Topology v1）。
 - 啟示：只收窄入口會讓「先到的一方」更佔優；Topology v1 若要處理巨龍側優勢，需要同時給遠端隊伍可用的接近路線（而非單純收窄）。
+
+## 2026-09-30 moba-sim.v16 Release Candidate 定案（Objective Stakes OFF；local，未 push／未 deploy）
+
+- Owner 決策：Objective Pit 美術修正通過（ART_COLLISION_ALIGNMENT_BLOCKER＝RESOLVED）；不接受 Objective Stakes v1 的巨龍側單場 +8pp。
+- **v16 正式範圍**：TD-CS1 ＋ 對稱 Objective Pit（gameplay＋Rift 美術）＋ objectiveLayoutVariant（STANDARD／SWAPPED，全鏈）。
+  `objectiveStakesV1`／`nexusSiegeCapV1`／`heroPassivesV1` 皆 OFF；坑肩牆／草叢實驗（`experiment/v16-objective-surroundings`）不併入。
+- 關閉 Stakes 後物件擊殺紀錄不再標記龍魂（否則 UI 提示沒有效果的「取得龍魂」）；5 場模擬串流逐位元不變。指紋 `dad316e9344e94c8`。
+- `check_moba_objective_stakes_v16` 改為：V2 斷言正式規則 OFF；機制檢查在測試引擎明確開啟；新增 O2（OFF＝v15 物件規則）⇒ 17/17。
+- n=1000（v15 vs v16 最終）：藍／紅 53.1／46.9 → **50.6／49.4**；第一條巨龍 79.3／20.7 → 49.5／50.5、巴龍 23.5／76.5 → 53.5／46.5；
+  巨龍側單場優勢 **+4.1pp**（Stakes 開啟時 +8.1；配對淨 40 場翻向遠端，z −2.00）、純藍方地利 +0.8pp；時長中位 17.1、P90 24.0、最長 33.3；未結束／> 45 分 0／0。
+  剩下的 +4.1pp 與「Stakes 關＋TD-CS1 關」診斷（+3.3pp）同量級 ⇒ 地圖既有，留給 Jungle Topology v1。
+- Gates：Node 22 支（20 綠；items_m2 52/53 與 esmo_rift 13/14 為已知、已說明）、topology --gate 2/2、verify 8/8、build ✓；
+  瀏覽器 6 支：layout 9/9、rift_loading 17/17、combat_state 13/13、gameplay_presentation 10/10、mobile_hud 37/37、objective_v16 11/11（O3 龍魂不適用）。
+  （瀏覽器 gate 中途遇電腦休眠，被中斷的 combat_state 與之後三支全部重跑，只採用重跑結果。）
+- 不處理：28 段 visual-only 牆（獨立地圖技術債）、完整 Jungle Topology v1（下一個 Sprint）、真機 Android 未驗。

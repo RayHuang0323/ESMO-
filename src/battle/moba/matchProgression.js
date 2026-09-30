@@ -789,7 +789,10 @@ SIM_RULES.v3 = {
   //   · 落後方逆轉賞金：擊殺方領完基本獎勵後團隊金錢仍落後 ≥ objStakesBountyGap ⇒ 追加 落後額 × ratio（上限 max）。
   //   · AI 龍魂攻防：敵方已達或差一層龍魂（我方未龍魂）⇒ 出擊機率 +objAiSoulDefense；自己差一層 ⇒ +objAiSoulSecure（同一次擲骰）。
   //  只在 hero skills 開啟時生效 ⇒ skill-off（含 Challenge）逐位元不變。開啟＝模擬語意變更 ⇒ 需 moba-sim.v16。
-  objectiveStakesV1: true,
+  //  2026-09-30 Owner 決策：**OFF**。n=1000 依 Objective Layout 拆解後，Stakes 讓「本場抽到巨龍側」的隊伍
+  //  單場優勢由約 3pp 放大到約 8pp（淨 +4.8 ± 2.2pp），不接受。程式碼保留為候選；v16 正式範圍＝TD-CS1＋
+  //  對稱坑位幾何＋Objective Layout。重新開啟＝模擬語意變更 ⇒ 需新版本、新指紋與 A/B。
+  objectiveStakesV1: false,
   //  2026-09-30 正式化（v16 候選，200 場 screening 單因素隔離）：原候選鏡像陣容藍方勝率 48% → 57.5%，
   //  主因是 AI「14 分後出擊 +0.2」（只開 AI ⇒ 56.5%；只開巴龍 51%；只開逆轉賞金 49%）——巨龍在藍方下路
   //  雙人附近（v15 就是 200 場巨龍 632:233、巴龍 146:310），AI 普遍更積極搶物件就會放大這個地利。

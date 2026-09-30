@@ -2,7 +2,8 @@
 
 分支：`feature/moba-objective-layout-v16`（worktree `.sprints/moba-objective-access`），基準 main `356630b`（moba-sim.v15）。
 上游：`feature/moba-objective-stakes-v16` @ `36251d0`（保留不動）＋ closure 證據 `evidence/moba-objective-v16-closure` @ `0019987`。
-狀態：**local，未 push、未 deploy、未 merge main。READY_TO_RELEASE＝NO（ART_COLLISION_ALIGNMENT_BLOCKER）。**
+狀態：**local，未 push、未 deploy、未 merge main。** 2026-09-30 Owner：美術阻擋 RESOLVED、Objective Stakes OFF；
+v16 最終範圍與 A/B closure 見 §7（先讀 §7，§1–§6 是過程紀錄）。
 
 ## 1. 根因（Objective Access Audit）
 
@@ -115,6 +116,30 @@
 - Challenge（`challengeRunner`）未設定 layout ⇒ 永遠 STANDARD。
 - 舊版 `MobaView3D`（無 mapMeta 的舊 replay 退路）仍畫 STANDARD——這些 replay 依契約本來就是 STANDARD。
 - Nexus cap、Passive、Competitive、Online Backend、其他 Blue bias：未碰。
+
+## 7. v16 最終範圍與 A/B closure（Owner 決策 2026-09-30）
+
+**範圍**：TD-CS1（split-projectile 減速）＋ 對稱 Objective Pit（gameplay 與 Rift 美術，ART_COLLISION_ALIGNMENT_BLOCKER＝RESOLVED）
+＋ objectiveLayoutVariant（Match config → Engine → snapshot → UI／小地圖 → 導播 → Replay）。
+**關閉**：`objectiveStakesV1`（程式碼保留為候選）、`nexusSiegeCapV1`、`heroPassivesV1`。坑肩牆／草叢實驗不併入。
+關閉 Stakes 時，物件擊殺紀錄不再標記「龍魂」（否則 UI 會提示一個沒有效果的龍魂）；模擬串流 5 場逐位元不變。
+
+**n=1000**（seed 1–1000、鏡像名單、Items ON；v15＝乾淨 `356630b`；v16 layout STANDARD 479／SWAPPED 521）：
+
+| 指標 | v15 | Stakes 開啟候選 | **v16 最終** |
+|---|---|---|---|
+| 藍／紅 | 53.1／46.9 | 49.6／50.4 | **50.6／49.4** |
+| 巨龍側單場優勢 | 無法拆解（全 STANDARD） | +8.1pp | **+4.1pp** |
+| 純藍方地利 | 無法拆解 | −0.1pp | **+0.8pp** |
+| 第一條巨龍 藍／紅 | 79.3／20.7 | 49.5／50.5 | **49.5／50.5** |
+| 第一條巴龍 藍／紅 | 23.5／76.5 | 52.2／47.8 | **53.5／46.5** |
+| 物件轉換／後期轉換 | 56.1／58.6 | — | 56.6／57.9 |
+| 時長中位／P90／最長（分） | 17.1／24.0／31.0 | 17.1／23.8／41.3 | **17.1／24.0／33.3** |
+| 未結束／> 45 分 | 0／0 | 0／0 | **0／0** |
+
+配對：對 Stakes 候選淨 40 場翻向遠端隊伍（z −2.00）；對 v15 淨 −25（z −1.12，雜訊內）。
+剩下的 +4.1pp 巨龍側優勢與「Stakes 關＋TD-CS1 關」診斷（+3.3pp）相同量級 ⇒ 地圖近側先到的既有差異，不是 v16 新增；留給 Jungle Topology v1。
+證據：`review/moba-objective-access/v16-final/`。
 
 ## 6. Objective Surroundings 實驗（Jungle Topology Audit Priority 1）— 未改善，不併入
 

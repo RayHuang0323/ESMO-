@@ -44,9 +44,12 @@ const rosterFor = (m) => {
   for (const [seat, row] of Object.entries(buildLoadout(roster, heroById))) roster[seat].spells = row.spells;
   return roster;
 };
-const makeEngine = (seed, { skills = true } = {}) => {
+//  2026-09-30 Owner 決策：v16 正式規則 objectiveStakesV1＝**OFF**（Dragon-side 單場 +8pp 不接受）。
+//  機制檢查仍在測試引擎上**明確開啟**來驗證（保留的候選程式碼仍有人守）；正式預設的 OFF 行為另由 V2／O2 驗。
+const makeEngine = (seed, { skills = true, stakes = true } = {}) => {
   const roster = rosterFor(seed);
   const e = new LogicEngine(seed, null);
+  if (stakes) e.rules = { ...e.rules, objectiveStakesV1: true };
   const hm = toEngineHeroMods(roster, heroById); if (hm) e.configureHeroes(hm);
   if (skills) e.configureHeroSkills(toEngineHeroSkills(roster, null));
   const am = toEngineArchetypes(roster);
@@ -62,8 +65,8 @@ const makeEngine = (seed, { skills = true } = {}) => {
 const R = rulesFor("v3");
 ck("V1 目前版本 moba-sim.v16，v15 仍是已知版本（歷史挑戰明確拒絕、不覆蓋）", MOBA_SIMULATION_VERSION === "moba-sim.v16"
   && KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v15"), MOBA_SIMULATION_VERSION);
-ck("V2 v3 規則：objectiveStakesV1＝on、splitProjectileSlowV16＝on；nexusSiegeCapV1、heroPassivesV1＝off",
-  R.objectiveStakesV1 === true && R.splitProjectileSlowV16 === true && R.nexusSiegeCapV1 === false && R.heroPassivesV1 === false);
+ck("V2 v3 正式規則：objectiveStakesV1＝OFF（Owner 2026-09-30）、splitProjectileSlowV16＝on；nexusSiegeCapV1、heroPassivesV1＝off",
+  R.objectiveStakesV1 === false && R.splitProjectileSlowV16 === true && R.nexusSiegeCapV1 === false && R.heroPassivesV1 === false);
 ck("V3 正式數值：龍層 1.8%、龍魂 ×1.03／兵線 ×1.15、巴龍 ×1.10、賞金門檻 1500／20%／上限 500、龍魂攻防 +0.2／+0.1",
   R.objStakesDragonPowerPerStack === 0.018 && R.objStakesSoulPowerK === 1.03 && R.objStakesSoulFightK === 1.15
   && R.objStakesBaronPowerK === 1.1 && R.objStakesBountyGap === 1500 && R.objStakesBountyRatio === 0.2 && R.objStakesBountyMax === 500
@@ -150,6 +153,17 @@ const killDragon = (gap) => {
   const snap = e.snapshot();
   ck("O1 skill-off：物件規則不生效（4 層＝v15 的 1＋4×1.2%、無 soul 欄位、無 combatStates／objectiveLog）",
     near(k, 1 + 4 * R.dragonPowerPerStack, 1e-12) && snap.teamBuffs.blue.soul === undefined && !snap.combatStates && !snap.objectiveLog, String(k));
+}
+{
+  //  正式預設（hero skills 開、objectiveStakesV1 OFF）：物件規則就是 v15 的——沒有龍魂、巴龍不加英雄戰力、沒有逆轉賞金、AI 無龍魂攻防
+  const { e } = makeEngine(19, { stakes: false });
+  for (let i = 0; i < 10; i++) e.tick(0.5);
+  e.fsm3.blue.dragonStacks = 4; e.fsm3.blue.baronBuffUntil = e.t + 50;
+  const k = e._dragonPowerK("blue"), snap = e.snapshot();
+  const g = (() => { const x = e.neutrals.dragon; return x; })();
+  ck("O2 正式預設（skills on、Stakes OFF）：4 層＋巴龍＝v15 的 1＋4×1.2%（無龍魂 ×、無巴龍英雄 ×）、teamBuffs 無 soul、AI 物件加項＝0",
+    e._objStakesOn() === false && near(k, 1 + 4 * R.dragonPowerPerStack, 1e-12) && snap.teamBuffs.blue.soul === undefined && !!g,
+    String(k));
 }
 
 // ── D＋R：整場（逐 tick 擷取 Replay）──────────────────────────────────────────

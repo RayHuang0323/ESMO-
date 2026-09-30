@@ -1,0 +1,23 @@
+指標                      v16 layout（基準）         ＋坑肩牆與草叢
+n                                 1000            1000
+layouts                        479/521         479/521
+blue                              49.6            50.6
+dragonSideWin                     58.1            54.1
+dragonSideEdge_pp                  8.1             4.1
+pureBlue_pp                       -0.1             0.8
+firstDragonNear                   78.6            78.6
+firstDragonBlueRed           49.5/50.5       49.5/50.5
+firstBaronNear                    76.3              75
+firstBaronBlueRed            52.2/47.8       53.5/46.5
+soulRate                          39.9            38.9
+soulWin                           71.7            61.4
+objConv                           58.6            56.6
+lateConv                          60.3            57.9
+firstBaronWin                       54            56.1
+comebackWin                       24.3               0
+durMed                            17.1            17.1
+durP90                            23.8              24
+durMax                            41.3            33.3
+unfinished                           0               0
+over45                               0               0
+配對翻轉：→藍 205 →紅 195（z 0.50）；→巨龍側 180 →遠端 220（淨 -40，z -2.00）

@@ -12,6 +12,8 @@
 //    3. 開重播 → seek 到龍魂之後 ⇒ 檢查物件面板 soul＝1、小兵紫環實例數 > 0 → 桌機／手機截圖
 //  ⚠ 只給 Owner Review 截圖與一致性確認；seed 預設 3（v16 坑位幾何統一後 Node 實測：藍方 805.5 秒龍魂、
 //    591–661 秒巴龍）。原本的 seed 1 在新幾何下 902 秒結束、沒有龍魂 ⇒ 前置條件不成立。
+//  ⚠ 2026-09-30：v16 正式規則 objectiveStakesV1＝OFF ⇒ 龍魂不存在，S4／S5 必然不成立。本工具只適用於
+//    Objective Stakes 開啟的候選實驗，**不列入 v16 Release gate**（巴龍金環由 browser_check_moba_objective_v16 O2 覆蓋）。
 //  ⚠ chrome.evaluate 的字串裡不能有反引號。
 // ============================================================================
 import { mkdirSync, writeFileSync } from "node:fs";

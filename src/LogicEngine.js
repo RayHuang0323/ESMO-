@@ -3704,7 +3704,8 @@ export class LogicEngine {
             //  Objective Stakes：大型物件擊殺的正式事件紀錄（UI 提示／Replay／量測共用；只記錄，不影響模擬、不耗 rng）。
             const stacks = this._dragonStacksV3(kt);
             this.objectiveLog.push({ seq: ++this._objLogSeq, t: this.t, key, side: kt, bounty: bountyPaid,
-              dragonStacks: stacks, soul: key === "dragon" && stacks >= R.dragonMaxStacks && !this._soulLogged?.[kt],
+              //  龍魂只在 Objective Stakes 開啟時存在（v16 正式規則 OFF）⇒ 關閉時不得標記，否則 UI 會提示一個沒有效果的「取得龍魂」
+              dragonStacks: stacks, soul: this._objStakesOn() && key === "dragon" && stacks >= R.dragonMaxStacks && !this._soulLogged?.[kt],
               ...(key === "baron" && this.fsm3 ? { baronUntil: this.fsm3[kt].baronBuffUntil } : {}) });
             if (key === "dragon" && stacks >= R.dragonMaxStacks) (this._soulLogged ??= {})[kt] = true;
             if (this.objectiveLog.length > 40) this.objectiveLog.shift();
