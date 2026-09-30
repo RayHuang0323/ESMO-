@@ -780,21 +780,31 @@ SIM_RULES.v3 = {
   //  留在兵線交戰點，不被原型站位層改寫成「相對對手英雄的站位」；到點後身邊有敵兵＝在吃線，不被派走。
   //  只在 hero skills 開啟時生效（LogicEngine 內判斷）⇒ skill-off 與 v14 逐位元相同。
   laneWaveAnchorV15: true,
-  //  ── Objective Stakes v1（2026-09-29 候選，**預設關閉**）──────────────────────────
+  //  ── Objective Stakes v1（2026-09-29 候選；**moba-sim.v16 起開啟**）─────────────────
   //  基準實測（40 場正式設定）：拿第一條巴龍的隊伍勝率 47.5%、14 分後大型目標→勝利轉換 54%
   //  ⇒ 搶大型目標幾乎不改變勝負。候選只放大「既有」修正路徑，不新增傷害公式、不多耗 rng：
   //   · 巨龍每層戰力 1.2% → objStakesDragonPowerPerStack；集滿 dragonMaxStacks（龍魂）再 ×objStakesSoulPowerK，
   //     並給該隊兵線永久 fightK ×objStakesSoulFightK（走 _waveModifiers）。
   //   · 巴龍 buff 期間英雄戰力 ×objStakesBaronPowerK（原本只強化小兵／攻城）。
-  //   · 落後方逆轉賞金：擊殺方團隊金錢落後 ≥ objStakesBountyGap ⇒ 追加 落後額 × ratio（上限 max）。
-  //   · 後期決策：objStakesLateT 秒後，目標窗的出擊機率 +objStakesLateJoin（同一次擲骰，rng 次數不變）。
+  //   · 落後方逆轉賞金：擊殺方領完基本獎勵後團隊金錢仍落後 ≥ objStakesBountyGap ⇒ 追加 落後額 × ratio（上限 max）。
+  //   · AI 龍魂攻防：敵方已達或差一層龍魂（我方未龍魂）⇒ 出擊機率 +objAiSoulDefense；自己差一層 ⇒ +objAiSoulSecure（同一次擲骰）。
   //  只在 hero skills 開啟時生效 ⇒ skill-off（含 Challenge）逐位元不變。開啟＝模擬語意變更 ⇒ 需 moba-sim.v16。
-  objectiveStakesV1: false,
-  objStakesDragonPowerPerStack: 0.025,
-  objStakesSoulPowerK: 1.05, objStakesSoulFightK: 1.2,
-  objStakesBaronPowerK: 1.08,
+  objectiveStakesV1: true,
+  //  2026-09-30 正式化（v16 候選，200 場 screening 單因素隔離）：原候選鏡像陣容藍方勝率 48% → 57.5%，
+  //  主因是 AI「14 分後出擊 +0.2」（只開 AI ⇒ 56.5%；只開巴龍 51%；只開逆轉賞金 49%）——巨龍在藍方下路
+  //  雙人附近（v15 就是 200 場巨龍 632:233、巴龍 146:310），AI 普遍更積極搶物件就會放大這個地利。
+  //  正式值：龍層 2.5% → 1.8%、龍魂 ×1.05／兵線 ×1.2 → ×1.03／×1.15、巴龍英雄戰力 ×1.08 → ×1.10；
+  //  AI 只保留龍魂攻防（數值＋龍魂攻防 ⇒ 藍方 51.5%，與基準差在雜訊內）。
+  objStakesDragonPowerPerStack: 0.018,
+  objStakesSoulPowerK: 1.03, objStakesSoulFightK: 1.15,
+  //  n=1000 後做過唯一一輪保守調整並已還原（2026-09-30）：1.10 → 1.15 的假設是「加強多由紅方拿的巴龍可平衡龍魂」，
+  //  實測相反——藍方 55.5% → 57.9%（v15 53.1%）。依「最多一輪、不無止境調參」取公平性較好的 1.10。
+  objStakesBaronPowerK: 1.10,
   objStakesBountyGap: 1500, objStakesBountyRatio: 0.2, objStakesBountyMax: 500,
-  objStakesLateT: 840, objStakesLateJoin: 0.2,
+  //  AI 物件判斷：只保留龍魂攻防（出擊機率的加項，同一次擲骰、rng 次數不變）。其他情境項目實測會放大
+  //  既有藍方地利，已移除（見 LogicEngine._objectiveUrgency 與 docs/design/MOBA_Objective_Stakes_v1.md）。
+  objAiSoulDefense: 0.2,     // 敵方已達或差一層龍魂、我方尚未龍魂 ⇒ 更積極爭奪巨龍
+  objAiSoulSecure: 0.1,      // 自己差一層龍魂
   //  ── Nexus Siege Cap v1（2026-09-29 候選，**預設關閉**）──────────────────────────
   //  基準實測：主堡第一次掉血到爆掉中位數 6 秒——後期 lateFactor × structureFactor 可達 ×40 以上，
   //  7200 血在兩秒內蒸發，主堡的反擊根本來不及發生。候選只對 **主堡本身** 把這兩個加速係數的乘積
@@ -805,6 +815,8 @@ SIM_RULES.v3 = {
   //  規則在 battle/moba/skills/heroPassiveGameplay.js（受語意指紋保護）；引擎 _heroPassiveStep 每 tick
   //  輪詢既有狀態判定觸發、只走既有護盾／減傷／加速路徑、不耗 rng。開啟＝模擬語意變更 ⇒ 需新版號。
   heroPassivesV1: false,
+  //  ── TD-CS1（moba-sim.v16 起開啟）：split-projectile 命中套用規則宣告的減速（liuxing:Q、miwu:E）──
+  splitProjectileSlowV16: true,
 };
 
 /** 取規則集；未知/未指定 ⇒ v3（S29B1 預設）。 */

@@ -54,6 +54,8 @@ const NAV_LOOKAHEAD = 25;
 //  CombatState.v1：持續狀態生命期契約版本與結束紀錄保留筆數（見 _combatStateStep）。
 export const COMBAT_STATE_VERSION = "CombatState.v1";
 const CS_LOG_MAX = 160;
+//  本場永久狀態（龍層、龍魂）的哨兵到期值：遠大於模擬上限，保持 JSON 可序列化、Replay 區間可排序。
+export const CS_PERMANENT = 99999;
 const NAV_REPATH_CD = 8;
 const clampMapX = (x) => clamp(x, WORLD_BOUNDS.minX + MAP_EDGE_PAD, WORLD_BOUNDS.maxX - MAP_EDGE_PAD);
 const clampMapY = (y) => clamp(y, WORLD_BOUNDS.minY + MAP_EDGE_PAD, WORLD_BOUNDS.maxY - MAP_EDGE_PAD);
@@ -106,6 +108,7 @@ export class LogicEngine {
     this.t = 0; this.over = false; this.winner = null;
     this.bK = 0; this.rK = 0; this.bGold = 500; this.rGold = 500;
     this.mid = 0; this.fx = []; this.waveTimer = R.waveFirst; this.feed = [];
+    this.objectiveLog = []; this._objLogSeq = 0;   // 大型物件擊殺事件（只記錄；見中立目標擊殺區塊）
     this.waveNo = 0;             // H.3：兵線波次序號（只供 snapshot / Replay / 呈現）
     this._fxSeq = 0;             // H.3：技能事件序號（Replay 跨取樣窗去重）
 
@@ -640,6 +643,24 @@ export class LogicEngine {
           : { a: [r2(entry.from.x), r2(entry.from.y)], b: [r2(entry.end.x), r2(entry.end.y)], w: entry.rule.wallWidth },
       });
     }
+    //  Objective Stakes（v16）：團隊物件狀態。龍層／龍魂為本場永久（until＝CS_PERMANENT 哨兵值），
+    //  巴龍的到期就是 gameplay 權威欄位 baronBuffUntil。value：龍層數／龍魂戰力倍率／巴龍英雄戰力倍率。
+    if (this.fsm3) {
+      const R = this.rules;
+      for (const side of ["blue", "red"]) {
+        const team = { targetId: null, side, sourceId: null, skillId: null };
+        const stacks = this._dragonStacksV3(side);
+        if (stacks > 0) now.set(`team-dragon:${side}`, { ...team, kind: 'team-dragon', until: CS_PERMANENT, value: stacks });
+        if (this._objStakesOn() && stacks >= R.dragonMaxStacks) {
+          now.set(`team-soul:${side}`, { ...team, kind: 'team-soul', until: CS_PERMANENT, value: R.objStakesSoulPowerK });
+        }
+        const baronUntil = this.fsm3[side].baronBuffUntil ?? 0;
+        if (this.t < baronUntil) {
+          now.set(`team-baron:${side}`, { ...team, kind: 'team-baron', until: baronUntil,
+            value: this._objStakesOn() ? R.objStakesBaronPowerK : 1 });
+        }
+      }
+    }
     for (const [key, rec] of cs.active) {
       const cur = now.get(key);
       if (cur) continue;                         // 仍在權威來源裡（含刷新、延長、重設）⇒ 同一筆
@@ -1014,7 +1035,9 @@ export class LogicEngine {
       hits.push({ source, target, damage: damage * this._heroSkillPowerFactor(source)
         * this._heroSkillDamageFactor(target), rule });
       target.hitBy.set(source.id, this.t);
-      if (rule.mechanic === 'projectile') {
+      //  TD-CS1（moba-sim.v16，splitProjectileSlowV16）：split-projectile 的規則同樣宣告 slowFactor／slowDuration，
+      //  舊碼只認 projectile ⇒ 宣告的減速從未套用。主目標與濺射目標同一條規則，都會被減速。
+      if (rule.mechanic === 'projectile' || (rule.mechanic === 'split-projectile' && this.rules.splitProjectileSlowV16)) {
         target.heroSkillSlowFactor = this.t < (target.heroSkillSlowUntil ?? 0)
           ? Math.min(target.heroSkillSlowFactor, rule.slowFactor) : rule.slowFactor;
         target.heroSkillSlowUntil = Math.max(target.heroSkillSlowUntil ?? 0, this.t + rule.slowDuration);
@@ -3628,6 +3651,7 @@ export class LogicEngine {
           const kt = o.dmgBy.blue > o.dmgBy.red ? "blue" : o.dmgBy.red > o.dmgBy.blue ? "red"
             : b.length > r.length ? "blue" : r.length > b.length ? "red" : null;
           o.killerTeam = kt;
+          let bountyPaid = 0;
           if (kt) {
             this._dmgGold(kt, key === "baron" ? 400 : 200);
             //  Objective Stakes v1：落後方逆轉賞金（團隊金錢差，決定性、不耗 rng）。
@@ -3637,6 +3661,7 @@ export class LogicEngine {
                 const bounty = Math.round(Math.min(R.objStakesBountyMax, gap * R.objStakesBountyRatio));
                 this._dmgGold(kt, bounty);
                 o.lastBounty = bounty;
+                bountyPaid = bounty;
               }
             }
             if (this.itemsOn) this.items.earnObjective(kt, key, this.players);
@@ -3648,6 +3673,13 @@ export class LogicEngine {
               this.fsm3[kt].dragonStacks = Math.min(
                 R.dragonMaxStacks, (this.fsm3[kt].dragonStacks ?? 0) + 1);
             }
+            //  Objective Stakes：大型物件擊殺的正式事件紀錄（UI 提示／Replay／量測共用；只記錄，不影響模擬、不耗 rng）。
+            const stacks = this._dragonStacksV3(kt);
+            this.objectiveLog.push({ seq: ++this._objLogSeq, t: this.t, key, side: kt, bounty: bountyPaid,
+              dragonStacks: stacks, soul: key === "dragon" && stacks >= R.dragonMaxStacks && !this._soulLogged?.[kt],
+              ...(key === "baron" && this.fsm3 ? { baronUntil: this.fsm3[kt].baronBuffUntil } : {}) });
+            if (key === "dragon" && stacks >= R.dragonMaxStacks) (this._soulLogged ??= {})[kt] = true;
+            if (this.objectiveLog.length > 40) this.objectiveLog.shift();
           }
           this.pushFx({ type: "ult", pos: { ...o.pos }, color: key === "dragon" ? 0xb794f6 : 0xfbbf24, exp: 0.8 });
         }
@@ -4154,6 +4186,38 @@ export class LogicEngine {
     return (1 + stacks * R.objStakesDragonPowerPerStack) * soul * baron;
   }
   _objStakesOn() { return !!(this.rules.objectiveStakesV1 && this.heroSkillsOn && this.fsm3); }
+  /** 團隊物件狀態的呈現欄位：龍魂、上限、巴龍總時長、物件帶來的兵線強化（不含自然時間成長）。 */
+  _objectiveTeamView(side) {
+    const R = this.rules;
+    const soul = this._dragonStacksV3(side) >= R.dragonMaxStacks;
+    const baron = this.t < (this.fsm3?.[side]?.baronBuffUntil ?? 0);
+    return {
+      soul, maxStacks: R.dragonMaxStacks, baronDuration: R.baronBuffT,
+      minion: {
+        fightK: Math.round((soul ? R.objStakesSoulFightK : 1) * (baron ? (R.baronMinionFightK ?? 1) : 1) * 1000) / 1000,
+        siegeK: Math.round((baron ? (R.baronMinionK ?? 1) : 1) * 1000) / 1000,
+        sources: [...(soul ? ["soul"] : []), ...(baron ? ["baron"] : [])],
+      },
+    };
+  }
+  /**
+   * Objective Stakes v1：AI 對大型物件的出擊意願修正（加在戰術 knob 的基礎機率上；純讀狀態、決定性、不耗 rng）。
+   * 只保留「龍魂攻防」這一條戰略判斷：敵方已達或差一層就龍魂、且我方尚未龍魂 ⇒ 更積極爭奪巨龍
+   * （對方龍魂後巨龍仍能讓我方累積層數）；自己差一層 ⇒ 更想拿。
+   * ⚠ 2026-09-30 screening 實測：「後期普遍更積極」「人數／血量優勢」「坑邊控制權」「經濟領先打巴龍」「守家」
+   *   任何一項讓 AI 普遍更常出擊，都會放大既有地圖／分路不對稱（巨龍靠藍方下路雙人）⇒ 鏡像陣容藍方勝率 55–62%。
+   *   這些項目已移除，量測紀錄見 docs/design/MOBA_Objective_Stakes_v1.md；與藍方偏差／地圖對稱一起處理。
+   */
+  _objectiveUrgency(side, key) {
+    const R = this.rules;
+    if (key !== "dragon") return 0;
+    const foe = side === "blue" ? "red" : "blue";
+    const mine = this._dragonStacksV3(side), theirs = this._dragonStacksV3(foe);
+    let u = 0;
+    if (theirs >= R.dragonMaxStacks - 1 && mine < R.dragonMaxStacks) u += R.objAiSoulDefense;
+    if (mine === R.dragonMaxStacks - 1) u += R.objAiSoulSecure;
+    return u;
+  }
   /** Nexus Siege Cap v1：只對主堡本身生效（其餘建築、以及旗標關閉時，呼叫端走原本的算式）。 */
   _nexusSiegeCapped(tw) {
     return !!(this.rules.nexusSiegeCapV1 && this.heroSkillsOn && tw?.lane === "nexus");
@@ -5452,8 +5516,9 @@ export class LogicEngine {
             const K = this.tacticOn ? this.tk[side] : null;
             const chance0 = K ? (key === "baron" ? K.baronJoin : K.dragonJoin) : 0.6;
             //  Objective Stakes v1：後期大型目標值得冒險 ⇒ 出擊機率提高（仍是同一次擲骰）。
-            const chance = this._objStakesOn() && this.t >= R.objStakesLateT
-              ? Math.min(0.95, chance0 + R.objStakesLateJoin) : chance0;
+            //  Objective Stakes v1：情境判斷（人數／血量／龍魂攻防／經濟／後期／基地壓力），仍是同一次擲骰。
+            const chance = this._objStakesOn()
+              ? Math.max(0.05, Math.min(0.95, chance0 + this._objectiveUrgency(side, key))) : chance0;
             const roll = K ? this.rng2() : this.rng();
             // 窗長由 knob 決定：高目標投入的戰術蹲得久、低投入的淺嘗即走
             //  ⇒ dragonJoin/baronJoin → 行為的單調性放在機制本身（tactic24 C4c）
@@ -6170,7 +6235,6 @@ export class LogicEngine {
     this._summonerSpellsV2(alive, dt);
     this._heroSkillStep();
     this._heroPassiveStep();
-    this._combatStateStep();
 
     // S24：會戰/目標戰觀測（真實狀態計數；only when tacticOn）
     if (this.tacticOn) {
@@ -6233,6 +6297,10 @@ export class LogicEngine {
         if (p.hp < _hpAtTickStart[i] - 1e-9) p.lastDamagedAt = this.t;
       }
     }
+
+    //  CombatState.v1：生命期追蹤放在 tick 的最末端（v16 起），同一 tick 內稍晚才發生的狀態
+    //  （中立物件擊殺 ⇒ 巴龍／龍層、戰鬥結算 ⇒ 控制）在同一個 tick 就被記錄，不再晚一個 tick。只讀，不影響模擬。
+    this._combatStateStep();
 
     if (this.towers.blue_nexus.hp <= 0) { this.over = true; this.winner = "red"; }
     if (this.towers.red_nexus.hp <= 0) { this.over = true; this.winner = "blue"; }
@@ -6311,7 +6379,7 @@ export class LogicEngine {
       ...(this.debugOn ? { debug: this._snapDebug() } : {}),
       dragon: { ...this.dragon }, baron: { ...this.baron },
       fx: this.fx.map((f) => ({ ...f })), feed: this.feed.slice(),
-      ...(this.heroSkillsOn ? { combatStates: this._snapCombatStates() } : {}),
+      ...(this.heroSkillsOn ? { combatStates: this._snapCombatStates(), objectiveLog: this.objectiveLog.slice(-10).map((e) => ({ ...e })) } : {}),
       bK: this.bK, rK: this.rK, bGold: this.bGold, rGold: this.rGold, winProb, over: this.over, winner: this.winner,
       // S24：戰術中繼資料與執行統計（只在啟用戰術時出現 → 舊快照形狀不變）
       ...(this.tacticOn ? {
@@ -6355,6 +6423,8 @@ export class LogicEngine {
           baronRemaining: this.fsm3
             ? Math.max(0, Math.round(((this.fsm3[side].baronBuffUntil ?? 0) - this.t) * 10) / 10)
             : 0,
+          //  Objective Stakes v1（呈現用；只在規則開啟時輸出，v15 snapshot 形狀不變）
+          ...(this._objStakesOn() ? this._objectiveTeamView(side) : {}),
         }])),
         objectives: this.neutrals.list.map((o) => ({
           id: o.id, type: o.type, side: o.side, presentationKey: o.presentationKey, pos: { ...o.pos },

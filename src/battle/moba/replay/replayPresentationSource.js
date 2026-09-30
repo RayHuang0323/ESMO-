@@ -34,7 +34,7 @@
 import { WORLD_BOUNDS, PITS, LANES, CAMPS } from "../../../gameData.js";
 import { decodePsRow } from "../../../platform/contracts/mobaReplay.js";
 import { applySkillLevelToRule, SKILL_LEVEL_CAPS } from '../skills/heroSkillLevels.js';
-import { createCombatStateIndex } from "./combatStateReplay.js";
+import { createCombatStateIndex, objectiveLogAt, teamBuffsFromCombatStates } from "./combatStateReplay.js";
 
 const clamp01 = (v) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0);
 
@@ -258,12 +258,19 @@ export function createReplaySource(replay) {
   };
 
   /** 播放時刻 t 的持續狀態（與現場 snapshot 同形狀）：覆蓋 statusEffects、加上 combatStates.active。 */
+  const hasTeamStates = (replay?.combatStates?.kinds ?? []).some((k) => String(k).startsWith("team-"));
   const withCombatStates = (snap, t) => {
     if (!snap || !csIndex) return snap;
     const { byPlayer, active } = csIndex.at(t);
     //  不看 frame 的 dead 位元（那是最近一格、最多差 2.5 秒）：引擎在死亡當下就結束狀態（reason=death），區間表本身就是權威。
+    //  v16：團隊物件狀態（龍層／龍魂／巴龍剩餘）與物件事件也從權威紀錄還原，不用 2.5 秒一格的 tb 近似。
+    const teamBuffs = teamBuffsFromCombatStates(active, t, snap.teamBuffs);
+    const objectiveLog = objectiveLogAt(replay?.objectiveEvents, t);
     return { ...snap, players: snap.players.map((p, i) => ({ ...p, statusEffects: byPlayer[i] })),
-      combatStates: { version: "CombatState.v1", replay: true, active } };
+      combatStates: { version: "CombatState.v1", replay: true, active },
+      //  這場 Replay 有團隊狀態紀錄 ⇒ 一律用區間表（包含「此刻 0 層」），不退回 2.5 秒一格、可能是下一格的 tb。
+      ...(teamBuffs && hasTeamStates ? { teamBuffs } : {}),
+      ...(objectiveLog ? { objectiveLog } : {}) };
   };
   const first = withCombatStates(toSnapshot(frames[0]), frames[0]?.t ?? 0);
   let state = { prev: first, snapshot: first, subTRef };

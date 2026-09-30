@@ -710,6 +710,8 @@ export function adaptRuntimeMapFrame(snapshot, opts = {}) {
     minions,
     effects,
     zones: adaptCombatZones(snapshot),
+    //  v16：團隊物件增益（龍層／龍魂／巴龍剩餘）——強化小兵光環、物件面板都讀這一份（Replay 由權威紀錄還原）。
+    teamBuffs: snapshot?.teamBuffs ?? null,
     teams: { blue, red },
     lanes: LANE_IDS,
     warnings,

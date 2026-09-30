@@ -2804,3 +2804,11 @@ NEXT_SPRINT = NOT_STARTED
 3. Passive P Runtime — 待辦：可重用 trigger primitives → 100 heroes。
 4. Tactical Identity — 待辦：英雄曲線＋賽前戰術接入正式 simulation。
 - 下一個 simulation release（v16）候選內容：TD-CS1 修正；是否同時開 Objective Stakes／Nexus cap（6／8／10 比較）由 Owner 決定。
+
+
+## 2026-09-30 更新：moba-sim.v16 Release Candidate
+
+- ~~TD-CS1~~ 與 **Objective Stakes v1** 已做成 v16 候選（分支 `feature/moba-objective-stakes-v16`，未 push／未 deploy），等 Owner Review。
+- Owner 待決：① 是否接受藍方 +2.4pp（不顯著、與地圖不對稱同源）② 是否先處理 Blue side bias／地圖對稱再發布 v16。
+- 後續 P0（未開始）：Passive P Runtime（trigger primitives → 100 英雄）、Tactical Identity、主堡 cap 6／8／10 比較。
+- 物件相關設計債：AI 後期物件優先（人數／血量／時間）待藍方偏差處理後再評估。

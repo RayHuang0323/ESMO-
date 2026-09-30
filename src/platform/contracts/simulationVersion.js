@@ -36,11 +36,11 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
  * ⚠ **什麼時候不用 bump**：純呈現層、UI、文案、log。
  * ⚠ 版本字串一旦發布就**不可回收再用**：舊 Challenge 存著它。
  */
-export const MOBA_SIMULATION_VERSION = "moba-sim.v15";
+export const MOBA_SIMULATION_VERSION = "moba-sim.v16";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", MOBA_SIMULATION_VERSION]);
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", "moba-sim.v15", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -349,6 +349,13 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  不耗 rng）、領域排程加 zoneId／castAt、snapshot 加 combatStates 與受害者 dot。證據：正式設定 12 場整份 snapshot
   //  串流（去掉新增的呈現欄位）與 legacy 指紋 6 場皆與 75f44c8 逐位元相同。
   "moba-sim.v15": "eb940085e9536b94",
+  //  2026-09-30（feature/moba-objective-stakes-v16）：**simulation semantics change**（skill-on）。
+  //  ① Objective Stakes v1 開啟：龍層每層戰力 1.8%、龍魂（4 層）戰力 ×1.03＋兵線 fightK ×1.15、巴龍 70 秒英雄戰力 ×1.10（n=1000 後試過 1.15，藍方偏移擴大，已還原）、
+  //     落後 ≥1500 團隊金錢拿物件得逆轉賞金（落後額 20%，上限 500）、AI 龍魂攻防（出擊機率 +0.2／+0.1，同一次擲骰）。
+  //  ② TD-CS1：split-projectile 命中套用規則宣告的減速（liuxing:Q、miwu:E）。
+  //  ⚠ 只在 hero skills 開啟時生效 ⇒ skill-off（含 Challenge）串流與 v15 逐位元相同。
+  //  ⚠ n=1000 A/B 見 docs/design/MOBA_Objective_Stakes_v1.md；v15 保留為已知版本，歷史 v15 挑戰由 canReplay 明確拒絕。
+  "moba-sim.v16": "ee54d3bd66f2a442",
 });
 
 export const isKnownSimulationVersion = (v) =>

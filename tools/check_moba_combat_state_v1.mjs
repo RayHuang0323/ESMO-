@@ -182,9 +182,10 @@ const durTotal = timed.reduce((a, [, r]) => a + r.withState, 0), durOk = timed.r
 ck(`M2 實戰中有狀態的施放，持續時間與規則吻合 ≥ 90%（${durOk}/${durTotal}）`, durOk / Math.max(1, durTotal) >= 0.9);
 
 // ── X 正式支援矩陣（受控單技能情境，精確歸因；tools/check_moba_combat_state_matrix.mjs）──────────
-//  唯一允許的非 OK：TD-CS1 split-projectile 宣告 slowDuration 但引擎命中處理只對 projectile 套減速
-//  （wiring bug，修正會改模擬結果 ⇒ 等 Owner 決定 v16，不在此放寬）。
-const KNOWN_NOT_OK = new Set(["liuxing:Q", "miwu:E"]);
+//  moba-sim.v16 起 TD-CS1 已修（split-projectile 命中套用宣告的減速）⇒ 不允許任何非 OK；
+//  並另外釘住 liuxing:Q、miwu:E 必須產生 hero-slow 且時長與規則相同（防止回退）。
+const KNOWN_NOT_OK = new Set();
+const TD_CS1_SKILLS = ["liuxing:Q", "miwu:E"];
 {
   const { execFileSync } = await import("node:child_process");
   const { readFileSync, mkdtempSync } = await import("node:fs");
@@ -194,8 +195,12 @@ const KNOWN_NOT_OK = new Set(["liuxing:Q", "miwu:E"]);
   const mx = JSON.parse(readFileSync(out, "utf8"));
   const notOk = mx.rows.filter((r) => r.fields.length && r.fields.some((f) => f.verdict !== "OK")).map((r) => r.skillId);
   console.log(`   正式支援矩陣：${mx.skillOk}/${mx.timed}（${(mx.skillOk / mx.timed * 100).toFixed(1)}%）欄位 ${JSON.stringify(mx.tally)}`);
-  ck(`X1 正式支援矩陣：非 OK 只剩已登記的 wiring bug（TD-CS1：${[...KNOWN_NOT_OK].join("、")}）`,
-    notOk.every((id) => KNOWN_NOT_OK.has(id)) && notOk.length === KNOWN_NOT_OK.size, notOk.join(","));
+  ck(`X1 正式支援矩陣：所有宣告持續欄位的技能都完整支援（${mx.skillOk}/${mx.timed}）`,
+    notOk.length === 0 && mx.skillOk === mx.timed, notOk.join(","));
+  const td = TD_CS1_SKILLS.map((id) => mx.rows.find((r) => r.skillId === id));
+  ck(`X2 TD-CS1：${TD_CS1_SKILLS.join("、")} 命中後產生 hero-slow，時長＝規則 slowDuration`,
+    td.every((r) => r && r.fields.length && r.fields.every((f) => f.field === "slowDuration" && f.verdict === "OK" && f.observed?.includes("hero-slow"))),
+    JSON.stringify(td.map((r) => r?.fields)));
 }
 
 // ── R Replay ───────────────────────────────────────────────────────────────

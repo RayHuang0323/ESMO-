@@ -22,7 +22,7 @@ import {
 } from "../../../platform/contracts/mobaReplay.js";
 import { WORLD_BOUNDS, LANES, RIVER } from "../../../gameData.js";
 import { encodeItemsReplay, itemsBaselineFromSnapshot } from "../items/itemReplay.js";
-import { createCombatStateCapture, ingestCombatStates, encodeCombatStatesReplay } from "./combatStateReplay.js";
+import { createCombatStateCapture, ingestCombatStates, encodeCombatStatesReplay, ingestObjectiveEvents, encodeObjectiveEvents } from "./combatStateReplay.js";
 
 let cap = null;        // 進行中的擷取 { seed, config, startedAt, frames, playersMeta, towersMeta, lastT, truncated }
 let current = null;    // 最近一場完成的 MobaReplay.v1（session 記憶體，最多 1 場）
@@ -70,6 +70,7 @@ export function captureReplayFrame(snap) {
   }
   //  CombatState.v1：持續狀態不靠 frame 取樣——每個 snapshot 收進行中＋依 seq 收結束紀錄。
   if (snap.combatStates) ingestCombatStates(cap.combatStates, snap.combatStates);
+  if (snap.objectiveLog) ingestObjectiveEvents(cap.combatStates, snap.objectiveLog);   // v16：大型物件事件（依 seq）
   const due = snap.ts - cap.lastT >= FRAME_INTERVAL_S || snap.over;
   if (!due || snap.ts === cap.lastT) return;
   if (cap.frames.length >= MAX_FRAMES) { cap.truncated = true; return; }
@@ -158,6 +159,8 @@ export function finalizeReplay({ matchId, events = [], comms = [], resultSummary
   //  CombatState.v1（optional additive；hero skills 關閉的對局沒有 snapshot.combatStates ⇒ 不加欄位）
   const combatStates = encodeCombatStatesReplay(cap.combatStates, cap.playersMeta.map((p) => p.id));
   if (combatStates) replay.combatStates = combatStates;
+  const objectiveEvents = encodeObjectiveEvents(cap.combatStates);
+  if (objectiveEvents) replay.objectiveEvents = objectiveEvents;
   current = replay;   // 只留最近一場（session 記憶體上限）
   cap = null;
   return replay;

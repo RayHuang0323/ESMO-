@@ -11,6 +11,7 @@ import BattleHeroSheet from './BattleHeroSheet.jsx';
 import BattleSkillDetail from './BattleSkillDetail.jsx';
 import { PASSIVE_STATUS } from '../moba/skills/heroSkillDetail.js';
 import { sortedStatuses, statusMetaOf } from '../moba/presentation/heroStatusMeta.js';
+import ObjectivePanel from './ObjectivePanel.jsx';
 import { battleTalentById } from '../moba/talents/heroBattleTalents.js';
 //  Item System M3b：裝備 HUD。只讀 selector（selectHudItems），元件都在 ./items/。
 import { selectHudItems } from '../moba/items/itemsUiSelectors.js';
@@ -124,6 +125,8 @@ export function ObserverPanel({ snapshot, roster = {}, replay = false, events = 
   </div>;
   const rootClass = `observer-ui ${mobile ? 'mobile' : 'desktop'} ${replay ? 'replay' : ''} ${teamOpen || detail || (itemsSheet && mine) || (stripOn && boardOpen) ? 'sheet-open' : ''} ${hudItems ? 'items-on' : ''} ${showItemsView ? 'items-view' : ''}`;
   return <div className={rootClass} style={observerTokens} data-items-ts={hudItems ? snapshot.ts : undefined}>
+    {/* v16 Objective Stakes：大型物件面板（龍層／龍魂／巴龍／刷新倒數／擊殺提示）；現場與重播同一份 snapshot */}
+    <ObjectivePanel snapshot={snapshot} />
     {stripOn && <MobileTeamStrip snapshot={snapshot} roster={roster} activeId={p.id} onPick={pick}
       boardOpen={boardOpen} onOpenBoard={() => { setBoardOpen(v => !v); setTeamOpen(false); setItemsSheet(false); }} />}
     {stripOn && boardOpen && <MobileScoreboardSheet snapshot={snapshot} roster={roster} hudItems={hudItems} renderItems={hi => <SeatItemPips hud={hi} />} activeId={p.id}

@@ -16,6 +16,9 @@
 //    第 12 欄（optional）：value 關鍵影格 [[t, value]…]——護盾吸收傷害會逐步變小，只在數值改變時記一格
 //    第 13 欄（optional）：until 關鍵影格 [[t, until]…]——狀態被刷新／延長時記一格（剩餘秒數才對得上現場）
 //    （關鍵影格解析度＝擷取頻率：現場每 tick、快速完成每 2 tick；開始與最終結束時刻由引擎給，永遠精確）
+//  sides（optional，v16 起）：每列一個字元 b／r／-（隊伍）。團隊物件狀態與領域的顏色靠它；舊 Replay 沒有 ⇒ 不分隊。
+//
+//  replay.objectiveEvents（optional，v16 起）：大型物件擊殺事件 [[seq, t, key(0 龍/1 巴龍), side(0 藍/1 紅), bounty, stacks, soul(0/1)]…]
 //    shape：領域形狀 [cx,cy,r]（圓）或 [ax,ay,bx,by,w]（牆／線）；null＝非領域
 // ============================================================================
 import { COMBAT_STATE_REPLAY_VERSION, CS_REASONS } from "../../../platform/contracts/mobaReplay.js";
@@ -66,7 +69,10 @@ export function encodeCombatStatesReplay(capture, playerIds = []) {
         Number.isFinite(r.activeFrom) ? r2(r.activeFrom) : null, shape,
         ...(r.uk && r.uk.length > 1 ? [r.vk && r.vk.length > 1 ? r.vk : null, r.uk] : r.vk && r.vk.length > 1 ? [r.vk] : [])];
     });
-  return { version: COMBAT_STATE_REPLAY_VERSION, kinds, skills, rows };
+  const sides = [...capture.rows.values()]
+    .sort((a, b) => a.startedAt - b.startedAt || String(a.id).localeCompare(String(b.id)))
+    .map((r) => (r.side === "blue" ? "b" : r.side === "red" ? "r" : "-")).join("");
+  return { version: COMBAT_STATE_REPLAY_VERSION, kinds, skills, rows, ...(/[br]/.test(sides) ? { sides } : {}) };
 }
 
 /**
@@ -76,7 +82,8 @@ export function encodeCombatStatesReplay(capture, playerIds = []) {
  */
 export function createCombatStateIndex(cs, playerIds = []) {
   if (!cs || !Array.isArray(cs.rows)) return null;
-  const rows = cs.rows.map((r) => ({
+  const sideOf = (i) => (cs.sides?.[i] === "b" ? "blue" : cs.sides?.[i] === "r" ? "red" : null);
+  const rows = cs.rows.map((r, i) => ({ side: sideOf(i),
     kind: cs.kinds[r[0]], target: r[1], source: r[2], skillId: r[3] >= 0 ? cs.skills[r[3]] : null,
     startedAt: r[4], until: r[5], end: r[6] >= 0 ? Math.min(r[6], r[5]) : r[5],
     reason: r[7] >= 0 ? CS_REASONS[r[7]] : null, value: r[8], activeFrom: r[9], shape: r[10], vk: r[11] ?? null, uk: r[12] ?? null,
@@ -97,7 +104,7 @@ export function createCombatStateIndex(cs, playerIds = []) {
         if (r.vk) for (const [kt, kv] of r.vk) { if (kt <= t + 1e-6) value = kv; else break; }
         const targetId = r.target >= 0 ? playerIds[r.target] : null;
         const sourceId = r.source >= 0 ? playerIds[r.source] : null;
-        active.push({ kind: r.kind, targetId, sourceId, skillId: r.skillId, startedAt: r.startedAt, until,
+        active.push({ kind: r.kind, targetId, sourceId, skillId: r.skillId, side: r.side, startedAt: r.startedAt, until,
           remaining, ...(value !== null ? { value } : {}), ...(r.activeFrom !== null ? { activeFrom: r.activeFrom } : {}),
           ...(r.shape ? { shape: shapeOf(r.shape) } : {}) });
         if (r.target >= 0) {
@@ -108,4 +115,55 @@ export function createCombatStateIndex(cs, playerIds = []) {
       return { byPlayer, active };
     },
   };
+}
+
+// ── 大型物件事件（v16）──────────────────────────────────────────────────────
+/** 每個 snapshot 呼叫：依 seq 收 snapshot.objectiveLog（引擎只保留最近幾筆）。 */
+export function ingestObjectiveEvents(capture, log) {
+  if (!capture || !Array.isArray(log)) return;
+  capture.objective ??= new Map();
+  for (const e of log) if (Number.isInteger(e?.seq) && !capture.objective.has(e.seq)) capture.objective.set(e.seq, e);
+}
+
+/** 終局：編碼成 replay.objectiveEvents（沒有事件 ⇒ null）。 */
+export function encodeObjectiveEvents(capture) {
+  const list = [...(capture?.objective?.values() ?? [])].sort((a, b) => a.seq - b.seq);
+  if (!list.length) return null;
+  return list.map((e) => [e.seq, Math.round(e.t * 100) / 100, e.key === "baron" ? 1 : 0, e.side === "red" ? 1 : 0,
+    Math.round(e.bounty ?? 0), e.dragonStacks ?? 0, e.soul ? 1 : 0]);
+}
+
+/** 播放端：時間 t 之前（含）的最近 10 筆事件，形狀與現場 snapshot.objectiveLog 相同。 */
+export function objectiveLogAt(events, t) {
+  if (!Array.isArray(events)) return null;
+  const out = [];
+  for (const row of events) {
+    if (row[1] > t + 1e-6) break;
+    out.push({ seq: row[0], t: row[1], key: row[2] === 1 ? "baron" : "dragon", side: row[3] === 1 ? "red" : "blue",
+      bounty: row[4], dragonStacks: row[5], soul: row[6] === 1 });
+  }
+  return out.slice(-10);
+}
+
+/**
+ * 播放端：由團隊 CombatState（team-dragon／team-soul／team-baron）還原 teamBuffs 的物件欄位。
+ * 沒有團隊狀態（舊 Replay）⇒ 回 null，呼叫端保留 frame.tb 的舊值。
+ */
+export function teamBuffsFromCombatStates(active, t, base = {}) {
+  const team = (active ?? []).filter((r) => String(r.kind).startsWith("team-") && r.side);
+  if (!team.length && !(active ?? []).length) return null;
+  const out = {};
+  for (const side of ["blue", "red"]) {
+    const dragon = team.find((r) => r.kind === "team-dragon" && r.side === side);
+    const soul = team.find((r) => r.kind === "team-soul" && r.side === side);
+    const baron = team.find((r) => r.kind === "team-baron" && r.side === side);
+    const b = base?.[side] ?? {};
+    out[side] = { ...b,
+      dragonStacks: dragon ? Math.round(dragon.value ?? 0) : 0,
+      baronRemaining: baron ? Math.max(0, Math.round((baron.until - t) * 10) / 10) : 0,
+      soul: !!soul,
+      ...(baron ? { baronDuration: Math.round((baron.until - baron.startedAt) * 10) / 10 } : {}),
+    };
+  }
+  return out;
 }
