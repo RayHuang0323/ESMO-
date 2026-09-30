@@ -1,0 +1,244 @@
+{
+  "engineRules": {
+    "moveSpeed": 5.6,
+    "dragonSpawn": 240,
+    "baronSpawn": 480,
+    "sideRelativeFormationMovement": true
+  },
+  "seeds": 100,
+  "geometry": [
+    {
+      "side": "blue",
+      "from": "fountain",
+      "toDragon": 182.6,
+      "toBaron": 186.2,
+      "tDragonS": 32.6,
+      "tBaronS": 33.2
+    },
+    {
+      "side": "blue",
+      "from": "jungleBuff",
+      "toDragon": 104.5,
+      "toBaron": 127.4,
+      "tDragonS": 18.7,
+      "tBaronS": 22.7
+    },
+    {
+      "side": "blue",
+      "from": "top@top",
+      "toDragon": 159.8,
+      "toBaron": 20,
+      "tDragonS": 28.5,
+      "tBaronS": 3.6
+    },
+    {
+      "side": "blue",
+      "from": "mid@mid",
+      "toDragon": 71.8,
+      "toBaron": 70.7,
+      "tDragonS": 12.8,
+      "tBaronS": 12.6
+    },
+    {
+      "side": "blue",
+      "from": "adc@bot",
+      "toDragon": 20.7,
+      "toBaron": 158.1,
+      "tDragonS": 3.7,
+      "tBaronS": 28.2
+    },
+    {
+      "side": "blue",
+      "from": "sup@bot",
+      "toDragon": 20.7,
+      "toBaron": 158.1,
+      "tDragonS": 3.7,
+      "tBaronS": 28.2
+    },
+    {
+      "side": "red",
+      "from": "fountain",
+      "toDragon": 186.2,
+      "toBaron": 182.6,
+      "tDragonS": 33.2,
+      "tBaronS": 32.6
+    },
+    {
+      "side": "red",
+      "from": "jungleBuff",
+      "toDragon": 127.4,
+      "toBaron": 104.5,
+      "tDragonS": 22.7,
+      "tBaronS": 18.7
+    },
+    {
+      "side": "red",
+      "from": "top@bot",
+      "toDragon": 20,
+      "toBaron": 159.8,
+      "tDragonS": 3.6,
+      "tBaronS": 28.5
+    },
+    {
+      "side": "red",
+      "from": "mid@mid",
+      "toDragon": 70.7,
+      "toBaron": 71.8,
+      "tDragonS": 12.6,
+      "tBaronS": 12.8
+    },
+    {
+      "side": "red",
+      "from": "adc@top",
+      "toDragon": 158.1,
+      "toBaron": 20.7,
+      "tDragonS": 28.2,
+      "tBaronS": 3.7
+    },
+    {
+      "side": "red",
+      "from": "sup@top",
+      "toDragon": 158.1,
+      "toBaron": 20.7,
+      "tDragonS": 28.2,
+      "tBaronS": 3.7
+    }
+  ],
+  "scenarios": {
+    "fullMatch": {
+      "n": 100,
+      "bluePct": 42,
+      "firstDragon": {
+        "blue": 79,
+        "red": 21
+      },
+      "firstBaron": {
+        "blue": 25,
+        "red": 75
+      },
+      "dragonShare": {
+        "blue": 70,
+        "red": 30
+      },
+      "baronShare": {
+        "blue": 31.6,
+        "red": 68.4
+      },
+      "nearSideSecurePct": 69.4,
+      "blueNearPitSecuredByBlue": 70,
+      "redNearPitSecuredByRed": 68.4,
+      "matchesAllDragonsOneSidePct": 100
+    },
+    "dragonOnly": {
+      "dragon": {
+        "n": 100,
+        "killed": 100,
+        "securePct": {
+          "blue": 79,
+          "red": 21
+        },
+        "arriveFirstPct": {
+          "blue": 88,
+          "red": 10,
+          "tie": 2
+        },
+        "hitFirstPct": {
+          "blue": 88,
+          "red": 12
+        },
+        "side": {
+          "blue": {
+            "arrivedPct": 100,
+            "windowOpenedPct": 100,
+            "hitPct": 98,
+            "arriveMeanS": 11.1,
+            "arrive3MeanS": 28.5,
+            "windowMeanS": 6.9,
+            "firstHitMeanS": 11.3,
+            "supportAtHitMean": 1.4,
+            "foesAtHitMean": 0.1,
+            "firstArriverRoles": {
+              "sup": 42,
+              "mid": 2,
+              "adc": 53,
+              "jungle": 3
+            }
+          },
+          "red": {
+            "arrivedPct": 68,
+            "windowOpenedPct": 96,
+            "hitPct": 53,
+            "arriveMeanS": 22.8,
+            "arrive3MeanS": 48.1,
+            "windowMeanS": 6.4,
+            "firstHitMeanS": 25.9,
+            "supportAtHitMean": 1.3,
+            "foesAtHitMean": 1.1,
+            "firstArriverRoles": {
+              "jungle": 15,
+              "top": 30,
+              "sup": 14,
+              "mid": 7,
+              "adc": 2
+            }
+          }
+        }
+      }
+    },
+    "baronOnly": {
+      "baron": {
+        "n": 100,
+        "killed": 100,
+        "securePct": {
+          "red": 73,
+          "blue": 27
+        },
+        "arriveFirstPct": {
+          "red": 83,
+          "blue": 15,
+          "tie": 2
+        },
+        "hitFirstPct": {
+          "red": 84,
+          "blue": 16
+        },
+        "side": {
+          "blue": {
+            "arrivedPct": 97,
+            "windowOpenedPct": 99,
+            "hitPct": 95,
+            "arriveMeanS": 22.8,
+            "arrive3MeanS": 57.8,
+            "windowMeanS": 6,
+            "firstHitMeanS": 31.1,
+            "supportAtHitMean": 1.4,
+            "foesAtHitMean": 1,
+            "firstArriverRoles": {
+              "sup": 16,
+              "top": 42,
+              "jungle": 27,
+              "mid": 10,
+              "adc": 2
+            }
+          },
+          "red": {
+            "arrivedPct": 100,
+            "windowOpenedPct": 100,
+            "hitPct": 100,
+            "arriveMeanS": 10.7,
+            "arrive3MeanS": 47.9,
+            "windowMeanS": 7.8,
+            "firstHitMeanS": 11.9,
+            "supportAtHitMean": 1.4,
+            "foesAtHitMean": 0.3,
+            "firstArriverRoles": {
+              "adc": 46,
+              "sup": 47,
+              "jungle": 7
+            }
+          }
+        }
+      }
+    }
+  }
+}
