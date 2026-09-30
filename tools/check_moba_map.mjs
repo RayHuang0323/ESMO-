@@ -185,10 +185,13 @@ ok(yOf("river_water_ford") > yOf("lane_mid_edge") && yOf("river_water_ford") < y
 const pitWalls = T.wallItems.filter((w) => w.kind === "pit_wall");
 ok(pitWalls.length >= 40, `坑壁段數應 ≥40（實得 ${pitWalls.length}）`);
 const P = T.meta.pits;
-ok(P.dragon.R > P.baron.R, "Dragon 坑應比 Baron 寬");
-ok(P.dragon.gapHalf > P.baron.gapHalf, "Dragon 開口應比 Baron 大");
-ok(P.baron.thick > P.dragon.thick, "Baron 坑壁應比 Dragon 厚");
-ok(P.baron.h > P.dragon.h, "Baron 坑壁應比 Dragon 高");
+//  moba-sim.v16 Objective Pit Gameplay Symmetry（Owner 2026-09-30）：兩坑的 gameplay 腳印（半徑／坑口／壁厚）
+//  必須相同——原本「Dragon 較寬、開口較大、Baron 較厚」的 G.7 斷言，正是這次刻意移除的結構不對稱。
+//  視覺差異（壁高）保留。完整的逐段／逐格對稱另由 tools/check_objective_pit_symmetry.mjs 驗證。
+ok(P.dragon.R === P.baron.R, "Dragon／Baron 坑半徑應相同（gameplay 對稱）");
+ok(P.dragon.gapHalf === P.baron.gapHalf, "Dragon／Baron 坑口半角應相同（gameplay 對稱）");
+ok(P.dragon.thick === P.baron.thick, "Dragon／Baron 坑壁厚應相同（gameplay 對稱）");
+ok(P.baron.h > P.dragon.h, "Baron 坑壁應比 Dragon 高（視覺差異，保留）");
 ok(P.dragon.y > WORLD_BOUNDS.centerY && P.baron.y < WORLD_BOUNDS.centerY, "Dragon 應在下半區、Baron 在上半區");
 for (const k of ["dragon", "baron"]) {
   const near = T.entrances.filter((g) => g.key.startsWith(`ent_${k}`));

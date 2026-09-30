@@ -291,9 +291,17 @@ function buildDesignTerrainShapes(L) {
   //  （先於樹叢/空地建立，因為它們也要避開這些區域）
   //  G.7：坑口半角放大（dragon 0.74→0.82、baron 0.50→0.66）＋ baron 壁厚 7.4→6.2，
   //  讓坑口 / 河口淨寬 ≥7（英雄可正常進出，史詩野怪爭奪不會卡在細縫）。
+  //  Objective Pit Gameplay Symmetry（2026-09-30，moba-sim.v16）：
+  //  兩坑的 **gameplay 腳印**（半徑／坑口半角／壁厚＝碰撞、可走區、坑口寬、導航）統一成同一份，
+  //  而且巴龍坑的腳印是巨龍坑的**精確 180° 鏡射**（不再各自有 seed）。
+  //  原本巨龍 R17／0.82／5.2、巴龍 R14／0.66／6.2；導航場的 mirrorSymmetric 取「聯集」
+  //  ⇒ 兩坑都疊了一圈對方的隱形牆。統一後兩坑碰撞相同、也不再有隱形牆。
+  //  取兩者中間值：兩坑的外觀位移都最小；坑口淨寬仍遠大於 G.7 的下限 7。
+  //  **視覺**仍可不同：壁高（h）、坑色、光暈顏色、史詩野怪模型。
+  const PIT_FOOTPRINT = { R: 15.5, gapHalf: 0.74, thick: 5.7 };
   const pitSpec = {
-    dragon: { R: 17, gapHalf: 0.82, h: HEIGHT.pit_wall_dragon, thick: 5.2, color: "pit_dragon" },
-    baron: { R: 14, gapHalf: 0.66, h: HEIGHT.pit_wall_baron, thick: 6.2, color: "pit_baron" },
+    dragon: { ...PIT_FOOTPRINT, h: HEIGHT.pit_wall_dragon, color: "pit_dragon" },
+    baron: { ...PIT_FOOTPRINT, h: HEIGHT.pit_wall_baron, color: "pit_baron" },
   };
   const pits = {};
   ["dragon", "baron"].forEach((kind, i) => {
@@ -301,15 +309,26 @@ function buildDesignTerrainShapes(L) {
     // 入口朝河：取該坑口水域路徑的切線方向，坑口開在上下游兩側
     const mouthPath = river.meta.mouths[kind].path;
     const nr = nearestOnPath(mouthPath, p);
-    const entA = nr.tangent, entB = nr.tangent + Math.PI;
-    pits[kind] = {
-      ...S, x: p.x, y: p.y, entA, entB,
-      gaps: [{ angle: entA, half: S.gapHalf }, { angle: entB, half: S.gapHalf }],
-      floorPoly: blobRing(p.x, p.y, S.R * 0.98, { n: 30, amp: 0.1, seed: 40 + i }),
-      glowPoly: blobRing(p.x, p.y, S.R * 0.66, { n: 26, amp: 0.12, seed: 44 + i }),
-      corePoly: blobRing(p.x, p.y, S.R * 0.56, { n: 22, amp: 0.14, seed: 48 + i }),
-      mouthPoly: river.meta.mouths[kind].bands.shoal,
-    };
+    if (kind === "dragon") {
+      const entA = nr.tangent, entB = nr.tangent + Math.PI;
+      pits[kind] = {
+        ...S, x: p.x, y: p.y, entA, entB,
+        gaps: [{ angle: entA, half: S.gapHalf }, { angle: entB, half: S.gapHalf }],
+        floorPoly: blobRing(p.x, p.y, S.R * 0.98, { n: 30, amp: 0.1, seed: 40 }),
+        glowPoly: blobRing(p.x, p.y, S.R * 0.66, { n: 26, amp: 0.12, seed: 44 }),
+        corePoly: blobRing(p.x, p.y, S.R * 0.56, { n: 22, amp: 0.14, seed: 48 }),
+        mouthPoly: river.meta.mouths[kind].bands.shoal,
+      };
+    } else {
+      //  巴龍坑＝巨龍坑的 180° 鏡射（坑心、坑口角度、坑底形狀）；只保留自己的視覺規格與河口水域。
+      const D = pits.dragon, mp = (q) => ({ x: 2 * cx - q.x, y: 2 * cy - q.y });
+      pits[kind] = {
+        ...S, x: 2 * cx - D.x, y: 2 * cy - D.y, entA: D.entA + Math.PI, entB: D.entB + Math.PI,
+        gaps: D.gaps.map((g) => ({ angle: g.angle + Math.PI, half: g.half })),
+        floorPoly: D.floorPoly.map(mp), glowPoly: D.glowPoly.map(mp), corePoly: D.corePoly.map(mp),
+        mouthPoly: river.meta.mouths[kind].bands.shoal,
+      };
+    }
     // 坑口門柱擺在**坑口水域的中心線上**（而不是沿切線硬推 R+2 個單位）：
     // 水域在坑口最寬、越過坑心後收束，沿切線外推會掉到水域之外，門柱就會站在旱地上。
     //  取「路徑上距坑心最接近 R 的內部取樣點」，並排除頭尾兩點
@@ -328,7 +347,7 @@ function buildDesignTerrainShapes(L) {
       const q = pickNear(lo, hi);
       entrances.push({
         key: `ent_${kind}_${gi}`, kind: "pit", x: q.x, y: q.y,
-        angle: gi === 0 ? entA : entB,
+        angle: gi === 0 ? pits[kind].entA : pits[kind].entB,
       });
     });
   });
@@ -652,21 +671,28 @@ function buildDesignTerrainShapes(L) {
   });
 
   // ══ 19. 量體：坑壁（馬蹄形厚壁，斷口＝朝河入口）════════════════════════════
-  ["dragon", "baron"].forEach((kind, i) => {
-    const P = pits[kind];
-    const runs = ringRuns(P.x, P.y, P.R, P.gaps, { n: 52, amp: 0.08, seed: 70 + i * 6 });
+  //  v16 Objective Pit Gameplay Symmetry：只為巨龍坑產生牆段，巴龍坑的牆段＝整批 180° 鏡射
+  //  （位置鏡射、角度 +π、長／厚一字不動 ⇒ 碰撞腳印精確對稱）；只把壁高換成巴龍的視覺高度。
+  {
+    const P = pits.dragon, w0 = walls.length;
+    const runs = ringRuns(P.x, P.y, P.R, P.gaps, { n: 52, amp: 0.08, seed: 70 });
     runs.forEach((run, ri) => {
       walls.push(...naturalWallRun(run, {
-        seed: 70 + i * 6 + ri, step: 2.0, amp: 0.55,
+        seed: 70 + ri, step: 2.0, amp: 0.55,
         height: P.h, heightVar: 3.0, thick: P.thick, thickVar: 0.36, kind: "pit_wall",
       }));
     });
     // 坑口：岩壁往開口收窄變矮（取代 G.2 的門柱）。
     //  G.7：span 0.22→0.10 ⇒ 收口不再把坑口 / 河口窄到英雄過不去（河口下限 7.0）。
     walls.push(...entranceTaper(P.x, P.y, P.R, P.gaps, {
-      baseH: P.h, thick: P.thick, seed: 600 + i * 9, span: 0.10,
+      baseH: P.h, thick: P.thick, seed: 600, span: 0.10,
     }));
-  });
+    const hK = pits.baron.h / pits.dragon.h, wEnd = walls.length;
+    for (let i = w0; i < wEnd; i++) {
+      const w = mirrorWallItem(walls[i]);
+      walls.push({ ...w, h: w.h * hK });
+    }
+  }
 
   // ══ 20.（G.15）基地城牆已在 §3 由 blueprint 發射（base_rim / base_gate /
   //     base_keep / fountain_rim）。稜堡（bastion）整組移除：它是「非出口方向的
