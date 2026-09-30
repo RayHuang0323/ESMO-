@@ -2820,3 +2820,6 @@ NEXT_SPRINT = NOT_STARTED
 - 仍未開始：Passive P Runtime、Tactical Identity、主堡 cap 比較；Objective Stakes 若要重開需 v17 與依 layout 拆解的 A/B。
 
 - 2026-10-01：moba-sim.v16 **RELEASED**（main `ab58107`，Pages run `36740009260` success，正式站 smoke 108/108）。下一個 Sprint：Jungle Topology v1（未開始）。
+
+- 2026-10-01：**moba-sim.v17 Hero Identity & Combat Depth v1 → Owner Review**（未發布）：被動 P 100/100 有規則（完整 72／近似 24／資訊類 4）、Power Curve 100/100、Tactical Identity 7 類欄位接線；n=1000 藍 49.5%、巨龍側 +5.4pp。
+- 建議順序：v17 review → **Jungle Topology v1（獨立 Sprint）** → **Objective Stakes v2 ＋ Nexus／Base Defense**（同 Sprint、分開 A/B）＋ **MOBA UI/UX Polish v2**（純呈現層，可並行）。規劃細節見 `docs/design/Hero_Identity_Combat_Depth_v1.md` §7。

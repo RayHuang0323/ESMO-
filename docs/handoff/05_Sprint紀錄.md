@@ -24148,3 +24148,29 @@ candidate `feature/moba-objective-stakes-v16` @ `36251d0`（origin/main＝`35663
   （鏡頭平滑移動，取樣時正朝 SWAPPED 的巨龍坑移動中），改為「鏡頭離本場巨龍比離另一坑近」後重跑 13/13（距離 8／6）。
 - Android 真機：**DEFERRED_BY_OWNER**（未測，不寫 PASS）。
 - **moba-sim.v16 = RELEASED YES**。
+
+## 2026-10-01 Hero Identity & Combat Depth v1（moba-sim.v17）— READY_TO_REVIEW（未 push／未部署）
+
+分支 `feature/hero-identity-combat-depth-v1`（基於 main `f9de4c9`）。commit：`6ab8dc5`（被動）、`0251d85`（曲線）、`f108125`（戰術身分＋v17 指紋），文件另一個 commit。
+設計與 A/B：`docs/design/Hero_Identity_Combat_Depth_v1.md`。
+
+### 完成
+- 被動 P Runtime v2：100/100 有規則（完整 72／近似 24／資訊類 4），語彙式、引擎無 heroId 分支；snapshot／Replay（frame.pp）／UI 接線。
+- Power Curve v1：100/100、22 種曲線、倍率 0.92–1.08、三段平均＝1；唯一掛點 `_applyMatchLevel`；UI 強勢期長條（英雄面板＋圖鑑）。
+- Tactical Identity v1：`toEngineTacticIdentity` 接進 `_combatDecisionV3`／`_commitGateV1`／`_joinChance`／gank／roam／主動權窗；Live 與 Challenge 同一個 builder；std 對 std 逐位元不變。
+- v17 指紋 `49ca18d32e3a3473`（heroPowerCurve.js／heroPowerCurveTable.js 加入指紋清單）。
+
+### 驗證（實跑）
+- 新 gate：passive 23/23、power curve 17/17、tactical identity 19/19；simulation_version 61/61；objective_stakes_v16 17/17（V1／V2 版本事實改為 v17，Stakes／Nexus OFF 斷言不變）。
+- build ✓；verify：regress、regress2、runtime29、experience26、talent27、presentation29b2、fairness_p0a–d、simulation_version、build 全 PASS。
+- verify 其餘 71 段 FAIL：67 段在 base f9de4c9 上結束碼與最後一行**完全相同**；另 4 段長段（tactic24、stats28、quality_p03、pacing29b1）個別比對同為既有紅燈。無本次回歸。
+- Challenge slice1–8 全綠；hero_skills_release_gate、combat_state_v1、skill_levels、battle_talents、objective_layout_contract、pit_symmetry PASS；items_m2 52/53、esmo_rift 13/14、club_mastery 264/265 為既有紅燈。
+- n=1000（seed 1–1000，對 v16 RC）：藍 49.5%、巨龍側 +5.4pp（v16 +4.1，z 0.59）、純藍 −0.3pp、時長中位 16.7／P90 24.3／最長 38.5 分、未結束 0、> 45 分 0。
+
+### 未完成／未驗證
+- **瀏覽器 gate 未實測**：`browser_check_moba_combat_state_v1`／`mobile_hud`／`gameplay_presentation`／`objective_v16` 批次因機器記憶體不足被系統中止，0 支完成。被動 UI 文案、強勢期長條（桌機＋390）、TacticScreen 效果摘要都還沒在瀏覽器看過。
+- Android 真機未測。
+
+### 已知風險
+- 巨龍側 +1.3pp（雜訊內）；被動讓團戰更有決定性 ⇒ Jungle Topology v1 仍是第一優先。
+- 技術債 TD-HI1～HI6（見 08）。
