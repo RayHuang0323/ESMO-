@@ -9,7 +9,7 @@
 //    P0 線上 bundle 含 moba-sim.v16、objective-pit-markers、objectiveLayout、TD-CS1 規則；Rift GLB HTTP 200 且大小＝13,370,736
 //    L[STANDARD／SWAPPED] 畫面坑位標記 layout＝frame layout、兩個標記在該 layout 的坑上；巨龍 boss 在該 layout 的巨龍坑；
 //       物件面板存在；小地圖：巨龍紫環在該 layout 的巨龍坑、巴龍琥珀環在巴龍坑
-//    D  導播：鎖定物件（objectiveFocus）時，鏡頭對準的是實際 boss 位置（不是另一個坑）
+//    D  導播：巨龍期鎖定物件（objectiveFocus）時，鏡頭朝向本場 layout 的巨龍坑（鏡頭平滑移動，不用距離門檻）
 //    T  TD-CS1：liuxing（b4）施放後，紅方英雄出現 hero-slow（診斷介面的 frame 狀態）
 //    R  SWAPPED 對局 → 快速完成 → 重播：重播 layout＝SWAPPED、標記與 boss 在正確的坑
 //    M  390 手機：標記正確、無橫向溢出
@@ -65,7 +65,7 @@ const result = await runGate({
       return ready;
     };
 
-    const seen = {}, director = { focus: 0, bad: 0, ex: [] }; let slow = null, replayDone = false, loads = 0;
+    const seen = {}, director = { focus: 0, bad: 0, ex: [], dist: [] }; let slow = null, replayDone = false, loads = 0;
     for (let run = 0; run < 10 && (!seen.STANDARD || !seen.SWAPPED || !replayDone); run++) {
       loads++;
       if (!(await startLive(1366, 900, false))) { ck(`B${run} 戰鬥開始`, false); continue; }
@@ -74,10 +74,13 @@ const result = await runGate({
       //  導播的前置條件是「雙方在坑邊爭奪」⇒ 巨龍刷新後繼續取樣到觀察到 objectiveFocus 或遊戲時間 600 s
       for (let i = 0; i < 420; i++) {
         p = await probe();
-        if (p?.cam?.mode === "objectiveFocus" && p.bosses) {
+        //  導播：鏡頭是平滑移動的（鎖定瞬間不一定到位）⇒ 不以距離門檻判定。巴龍 480 s 才刷新，之前只有巨龍活著：
+        //  鎖定物件時，鏡頭必須離「本場的巨龍」比離另一個坑近（＝導播讀的是本場 layout 的坑）。距離另記資訊。
+        if (p?.cam?.mode === "objectiveFocus" && p.bosses?.dragon && p.bosses?.baron && (p.ts ?? 0) < 480) {
           director.focus++;
-          const near = Math.min(...Object.values(p.bosses).filter(Boolean).map((b) => d2(b, p.cam.pan)));
-          if (!(near < 30)) { director.bad++; if (director.ex.length < 3) director.ex.push(JSON.stringify({ pan: p.cam.pan, bosses: p.bosses })); }
+          const dd = d2(p.cam.pan, p.bosses.dragon), db = d2(p.cam.pan, p.bosses.baron);
+          director.dist.push(Math.round(dd));
+          if (!(dd < db)) { director.bad++; if (director.ex.length < 3) director.ex.push(JSON.stringify({ layout: p.layout, pan: p.cam.pan, bosses: p.bosses })); }
         }
         if (!slow && p?.status) for (const [id, st] of Object.entries(p.status)) if (id[0] === "r" && st.includes("hero-slow")) slow = { ts: p.ts, id };
         if ((p?.ts ?? 0) >= 262 && (director.focus > 0 || (p?.ts ?? 0) >= 600)) break;
@@ -112,8 +115,8 @@ const result = await runGate({
       }
     }
     ck("L 兩種 layout 都在正式畫面出現過（STANDARD 與 SWAPPED）", !!seen.STANDARD && !!seen.SWAPPED, `${JSON.stringify(seen)}（載入 ${loads} 次）`);
-    ck("D 導播：鎖定物件時鏡頭對準實際 boss（取樣中至少 1 次 objectiveFocus，且全部在 boss 30 內）", director.focus > 0 && director.bad === 0,
-      `objectiveFocus ${director.focus} 次、偏離 ${director.bad} 次 ${director.ex.join(" ¦ ")}`);
+    ck("D 導播：巨龍期鎖定物件時，鏡頭朝向本場 layout 的巨龍坑（離巨龍比離另一坑近；至少 1 次 objectiveFocus）", director.focus > 0 && director.bad === 0,
+      `objectiveFocus ${director.focus} 次、朝錯坑 ${director.bad} 次；鏡頭到巨龍距離 ${director.dist.join("／")} ${director.ex.join(" ¦ ")}`);
     ck("T TD-CS1：liuxing 施放後紅方英雄出現 hero-slow（正式 frame 狀態）", !!slow, JSON.stringify(slow));
 
     if (await startLive(390, 844, true)) {

@@ -2818,3 +2818,5 @@ NEXT_SPRINT = NOT_STARTED
 - 範圍：TD-CS1 ＋ 對稱 Objective Pit（gameplay／美術）＋ objectiveLayoutVariant；Objective Stakes v1／Nexus cap／heroPassivesV1 維持 OFF。
 - 下一個獨立 Sprint：**Jungle Topology v1**（gate：`tools/audit_jungle_topology.mjs`；需同時給遠端隊伍接近路線，不能只收窄入口）。
 - 仍未開始：Passive P Runtime、Tactical Identity、主堡 cap 比較；Objective Stakes 若要重開需 v17 與依 layout 拆解的 A/B。
+
+- 2026-10-01：moba-sim.v16 **RELEASED**（main `ab58107`，Pages run `36740009260` success，正式站 smoke 108/108）。下一個 Sprint：Jungle Topology v1（未開始）。

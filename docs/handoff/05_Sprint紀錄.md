@@ -24130,3 +24130,21 @@ candidate `feature/moba-objective-stakes-v16` @ `36251d0`（origin/main＝`35663
   瀏覽器 6 支：layout 9/9、rift_loading 17/17、combat_state 13/13、gameplay_presentation 10/10、mobile_hud 37/37、objective_v16 11/11（O3 龍魂不適用）。
   （瀏覽器 gate 中途遇電腦休眠，被中斷的 combat_state 與之後三支全部重跑，只採用重跑結果。）
 - 不處理：28 段 visual-only 牆（獨立地圖技術債）、完整 Jungle Topology v1（下一個 Sprint）、真機 Android 未驗。
+
+## 2026-10-01 moba-sim.v16 正式 Release（RELEASED）
+
+- Owner Review 通過。範圍：TD-CS1 ＋ 對稱 Objective Pit（gameplay／Rift 美術）＋ objectiveLayoutVariant（STANDARD／SWAPPED：Match config → Engine → snapshot → UI／小地圖 → 導播 → Replay）。
+  維持 OFF：objectiveStakesV1、nexusSiegeCapV1、heroPassivesV1。
+- 整合：fetch 後 origin/main 仍為 `356630b` ⇒ fast-forward，一般 push（未 force）：`356630b..ab58107`（release commit `ab58107`）。
+- Release gates（`ab58107` 同一棵樹）：build ✓；simulation_version 59/59；layout 契約 11/11；坑位對稱 7/7；美術對齊 4/4；Stakes 17/17；
+  hero_skills_release_gate PASS；combat_state 16/16；skill_levels 400/400；topology --gate 2/2；regress／regress2 PASS。
+  已知且接受的紅燈（Owner 指定、未順手修）：items_m2 52/53（bare seed 99 0 殺推塔）、esmo_rift 13/14（28 段 visual-only 牆）。
+- Deploy：GitHub Pages run `36740009260` success（build ✓、deploy ✓）；線上 entry `index-Cyusy_o3.js`（含 moba-sim.v16、坑位標記、objectiveLayout、TD-CS1）；Rift GLB 13,370,736 bytes HTTP 200。
+- 正式站 smoke：`browser_check_prod_objective_layout_v16 --prod` **13/13**（STANDARD／SWAPPED 各在正式畫面出現；坑位標記／boss／物件面板／小地圖正確；
+  SWAPPED 重播；導播朝本場巨龍坑；TD-CS1 hero-slow；390；page／console／shader error 0；HTTP 200）；
+  `browser_check_moba_combat_state_v1 --prod` **14/14**；`browser_check_moba_gameplay_presentation --prod` **11/11**；
+  `browser_check_prod_moba_result_replay_release` **25/25**；`browser_check_prod_moba_mobile_hud_release` **45/45**。
+- 如實記錄：第一輪正式站 smoke 因我的執行腳本漏了 .mjs，5 支都未執行，不採用；v16 gate 首跑 12/13 的導播項是我設的「鏡頭 30 以內」門檻不合理
+  （鏡頭平滑移動，取樣時正朝 SWAPPED 的巨龍坑移動中），改為「鏡頭離本場巨龍比離另一坑近」後重跑 13/13（距離 8／6）。
+- Android 真機：**DEFERRED_BY_OWNER**（未測，不寫 PASS）。
+- **moba-sim.v16 = RELEASED YES**。
