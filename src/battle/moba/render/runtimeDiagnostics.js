@@ -434,8 +434,10 @@ export function installRuntimeDiagnostics({ gl, scene, camera, frameRef }) {
     //  ⚠ 資料餵送器（RuntimeFrameFeeder）掛在所有渲染元件之後 ⇒ 整個 3D 畫面統一落後 frameRef 一幀（英雄、特效、領域都一樣）。
     //    所以「畫出來的」要和元件自己這一幀讀到的數量（consumed）比，不和最新 frameRef 比。
     let zoneMeshes = 0, zoneGroups = 0, zoneMeshesAll = 0, consumed = null;
+    const minionRings = { baron: 0, soul: 0 };   // v16：物件強化兵線的光環實例數
     scene?.traverse?.((o) => {
       if (o.name === "moba-combat-zones") { zoneGroups++; consumed = o.userData?.consumed ?? null; }
+      if (o.name === "moba-minion-objective-ring") { minionRings.baron = o.userData?.baron ?? 0; minionRings.soul = o.userData?.soul ?? 0; }
       const part = String(o.userData?.part ?? "");
       if (!part.startsWith("combat-zone-") || part === "combat-zone-edge") return;
       zoneMeshesAll++;
@@ -444,6 +446,7 @@ export function installRuntimeDiagnostics({ gl, scene, camera, frameRef }) {
     return {
       ts: f.ts ?? null,
       over: !!f.over,
+      minionRings, teamBuffs: f.teamBuffs ?? null,
       combatZones: { authority: (f.zones ?? []).length, consumed, visibleMeshes: zoneMeshes, groups: zoneGroups, meshes: zoneMeshesAll, kinds: (f.zones ?? []).map((z) => z.kind) },
       warnings: f.warnings ?? [],
       mapMode: map.mapMode,

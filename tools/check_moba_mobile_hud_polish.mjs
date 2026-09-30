@@ -198,7 +198,10 @@ console.log("\n── H 小兵外觀（純呈現）──");
   ck("H2 每個幾何 ≤ 400 三角形（手機成本）", rows.every((r) => r.tris <= 400), String(Math.max(...rows.map((r) => r.tris))));
   ck("H3 腳底在地面（minY≈0）、身高 1.1–1.7 單位（看得出是角色）", rows.every((r) => Math.abs(r.minY) < 0.02 && r.h >= 1.1 && r.h <= 1.7));
   const sc = code(src);
-  ck("H4 仍是 8 個兵種 InstancedMesh ＋ 2 個血條（draw call 不增加）", (sc.match(/\{unit\("/g) ?? []).length === 8 && (sc.match(/<instancedMesh ref=/g) ?? []).length === 2);
+  //  2026-09-30（moba-sim.v16）：Objective Stakes 的強化兵線光環是刻意新增的 1 個 InstancedMesh（包在 objectiveRing(...) 裡），
+  //  巴龍／龍魂共用、逐實例上色 ⇒ 兵種 8 ＋ 血條 2 ＋ 物件光環 1（原本 H4 要求「不增加」，此處如實改為 +1 並寫在 05）。
+  ck("H4 仍是 8 個兵種 InstancedMesh ＋ 2 個血條，外加 v16 物件光環 1 個（draw call 只 +1）", (sc.match(/\{unit\("/g) ?? []).length === 8
+    && (sc.match(/<instancedMesh ref=/g) ?? []).length === 3 && (sc.match(/objectiveRing\(<instancedMesh/g) ?? []).length === 1);
   ck("H5 不讀／不改模擬：只用 frameRef 的 minions（kind／team／world／facing／生命週期）", !/from\s+["'][^"']*(LogicEngine|matchProgression)/.test(src));
   ck("H6 藍紅陣營色分開烘進幾何（非同一色）", /blue: \{ main: 0x3b82f6/.test(src) && /red: \{ main: 0xdc2626/.test(src));
 }
@@ -248,8 +251,10 @@ console.log("\n── F 純呈現邊界 ──");
   const bad = files.filter((f) => /from\s+["'][^"']*(LogicEngine|profileStore|applyMatchProgress|rewardFormulas|useLocalServer|matchProgression)[^"']*["']/.test(read(f)));
   ck("F1 新模組不 import 引擎／Store／progression", bad.length === 0, bad.join(","));
   const sv = read("src/platform/contracts/simulationVersion.js");
-  ck("F2 模擬版本升為 moba-sim.v15（C 段兵線 AI），v14 仍在已知版本清單",
-    /MOBA_SIMULATION_VERSION = "moba-sim\.v15"/.test(sv) && /"moba-sim\.v14", MOBA_SIMULATION_VERSION/.test(sv));
+  //  2026-09-30：v16 起目前版本不再是 v15；改驗「v15 已登記、v14／v15 仍在已知版本、目前版本 ≥ v15」（同 spectacle_vision 的慣例）。
+  const curV = Number((sv.match(/MOBA_SIMULATION_VERSION = "moba-sim\.v(\d+)"/) ?? [])[1]);
+  ck("F2 moba-sim.v15（C 段兵線 AI）已登記指紋、v14／v15 仍在已知版本清單、目前版本 ≥ v15",
+    curV >= 15 && /"moba-sim\.v15": "[0-9a-f]{16}"/.test(sv) && /"moba-sim\.v14"/.test(sv) && (curV === 15 || /"moba-sim\.v15"/.test(sv.slice(sv.indexOf("KNOWN_SIMULATION_VERSIONS")))), `v${curV}`);
   const strip = read("src/battle/ui/MobileTeamStrip.jsx");
   ck("F3 MobileTeamStrip 不 import 裝備模組（items_m1 G13 隔離；裝備小點由呼叫端傳入）", !/from\s+["'][^"']*items\//.test(strip));
 }

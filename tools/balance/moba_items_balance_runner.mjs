@@ -26,7 +26,12 @@ import path from "node:path";
 import { fork } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+//  Objective Stakes v16 A/B：`ESMO_BALANCE_ROOT` ⇒ 從另一棵原始碼樹載入引擎（例如乾淨的 v15 基準），
+//  runner 本身（名單、設定、量測）不變 ⇒ 兩邊同一個 runner。未設定 ⇒ 與舊行為相同。
+const ROOT = process.env.ESMO_BALANCE_ROOT ? path.resolve(process.env.ESMO_BALANCE_ROOT)
+  : path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+//  `ESMO_BALANCE_RULES`（JSON）⇒ 只覆寫這一場引擎實例的規則（screening 用；不改 SIM_RULES 本身）。
+const RULE_OVERRIDES = process.env.ESMO_BALANCE_RULES ? JSON.parse(process.env.ESMO_BALANCE_RULES) : null;
 const load = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
 const arg = (name, fallback) => {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -73,7 +78,9 @@ export async function modules() {
   // Opt-in pilot measurement only; the existing fairness runner defaults are unchanged.
   const talents = skills && process.env.ESMO_BALANCE_TALENTS === "on"
     ? await load("src/battle/moba/talents/heroBattleTalents.js") : null;
-  MODS = { LE, heroes, profile, arche, loadout, tactic, adapter, catalog, economy, inventory, gameData, skills, talents };
+  //  v16 Objective Layout：與正式流程相同地由 seed 推導一次（v15 等舊樹沒有這個契約 ⇒ null ⇒ 維持 STANDARD）
+  const objectiveLayout = await load("src/platform/contracts/objectiveLayout.js").catch(() => null);
+  MODS = { LE, heroes, profile, arche, loadout, tactic, adapter, catalog, economy, inventory, gameData, skills, talents, objectiveLayout };
   return MODS;
 }
 
@@ -105,6 +112,13 @@ export function mirroredRoster(seed, M) {
 export function configure(seed, config, M, incomeK = 1) {
   const roster = mirroredRoster(seed, M);
   const e = new M.LE.LogicEngine(seed);
+  if (RULE_OVERRIDES) e.rules = { ...e.rules, ...RULE_OVERRIDES };
+  //  v16 Objective Layout：與 useLocalServer.start 同序（建構後、任何 configure 之前）。
+  //  `ESMO_BALANCE_LAYOUT=STANDARD|SWAPPED` 只供診斷強制指定；預設由 seed 推導（與正式流程相同的契約函式）。
+  if (M.objectiveLayout && typeof e.configureObjectiveLayout === "function") {
+    const forced = process.env.ESMO_BALANCE_LAYOUT;
+    e.configureObjectiveLayout(forced === "STANDARD" || forced === "SWAPPED" ? forced : M.objectiveLayout.objectiveLayoutForSeed(seed));
+  }
   const heroMods = M.profile.toEngineHeroMods(roster, M.heroes.heroById);
   if (heroMods) e.configureHeroes(heroMods);
   //  與 useLocalServer.start() 同序：configureHeroes 之後掛 Hero Skills。
@@ -176,6 +190,10 @@ export async function runMatch(config, seed, incomeK = 1) {
   const laneTowersClearedT = { blue: null, red: null };
   let guardDamageAfterClear = { blue: 0, red: 0 };
   const sampleSet = new Set(SAMPLE_S);
+  //  Objective Stakes v16 A/B 量測（只讀引擎狀態；v15 樹也能量）。
+  const OBJ = { kills: [], soul: { blue: null, red: null }, nexusHitT: { blue: null, red: null }, goldGapAtKill: [] };
+  const objSeen = { dragon: null, baron: null };
+  const nexusMax = { blue: e.towers.blue_nexus?.hp, red: e.towers.red_nexus?.hp };
 
   const sampleItems = (label) => {
     for (const p of players) {
@@ -223,6 +241,20 @@ export async function runMatch(config, seed, incomeK = 1) {
           return false;
         });
       }
+    }
+    for (const key of ["dragon", "baron"]) {
+      const o = e.neutrals?.[key];
+      if (o && !o.alive && Number.isFinite(o.deathAt) && o.deathAt !== objSeen[key]) {
+        objSeen[key] = o.deathAt;
+        const log = (e.objectiveLog ?? []).find((x) => x.key === key && Math.abs(x.t - o.deathAt) < 1e-6);
+        OBJ.kills.push([Math.round(o.deathAt), key, o.killerTeam ?? null, log?.bounty ?? 0,
+          Math.round((e.bGold ?? 0) - (e.rGold ?? 0))]);
+      }
+    }
+    for (const side of ["blue", "red"]) {
+      if (OBJ.soul[side] === null && (e.fsm3?.[side]?.dragonStacks ?? 0) >= (e.rules.dragonMaxStacks ?? 4)) OBJ.soul[side] = Math.round(t);
+      const nx = e.towers[`${side}_nexus`];
+      if (OBJ.nexusHitT[side] === null && nx && nx.hp < nexusMax[side]) OBJ.nexusHitT[side] = Math.round(t);
     }
     if (prevDragon && !e.dragon.alive) dragons++;
     if (prevBaron && !e.baron.alive) barons++;
@@ -301,6 +333,8 @@ export async function runMatch(config, seed, incomeK = 1) {
     guardDamageAfterClear: { blue: Math.round(guardDamageAfterClear.blue), red: Math.round(guardDamageAfterClear.red) },
     rejected: itemsOn ? e.items.counters.rejected : 0, violations, conservationFails,
     purchaseCount, counterBought, counterPlanned, samples, players: players_out,
+    objective: OBJ,
+    objectiveLayout: e._layoutConfigured ? e.objectiveLayout : null,
     wallMs: Math.round(performance.now() - started),
   };
 }
@@ -526,6 +560,12 @@ export function summarize(rows) {
 
 function writeOutputs(outDir, rows, meta) {
   const summary = summarize(rows);
+  //  Objective Stakes v16 A/B：每場一行的精簡紀錄（summarize_objective_ab.mjs 讀它）
+  fs.writeFileSync(path.join(outDir, "objective.jsonl"), rows.map((r) => JSON.stringify({
+    config: r.config, seed: r.seed, over: r.over, duration: Math.round(r.duration), winner: r.winner,
+    bK: r.bK, rK: r.rK, towers: r.towers, objective: r.objective ?? null,
+    ...(r.objectiveLayout ? { layout: r.objectiveLayout } : {}),
+  })).join("\n") + "\n", "utf8");
   fs.writeFileSync(path.join(outDir, "summary.json"), JSON.stringify({ runner: RUNNER_VERSION, meta, capS: CAP_S, dt: DT, summary }, null, 2), "utf8");
   const mh = ["config", "seed", "strategySide", "over", "duration_min", "winner", "strategyWon", "kills", "kills10", "kills15", "kills20", "bK", "rK", "towers_blue_down", "towers_red_down", "towers20",
     "blue_lane_cleared_min", "red_lane_cleared_min", "stall_min", "guards_down_end", "blue_nexus_hp_end", "red_nexus_hp_end", "dragons", "barons", "lastTowerFall_min", "team_t3_20", "rejected", "violations", "conservationFails", "wallMs"];

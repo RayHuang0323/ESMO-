@@ -23978,3 +23978,84 @@ CS_RESUME_HOTFIX = RELEASED（main cfca594 → a7afc5c）
   browser_check_prod_moba_result_replay_release **25/25**。
 - 如實記錄：持續技能支援 **271/273（99.3%）**；fallback 兩個＝liuxing:Q、miwu:E（TD-CS1）。**moba-sim 仍為 v15**。
 - **CombatState.v1 = RELEASED YES**。
+
+
+## 2026-09-30 MOBA Objective Stakes v1 ＋ TD-CS1（moba-sim.v16 Release Candidate；local，未 push／未 deploy／未 merge）
+
+分支 `feature/moba-objective-stakes-v16`（worktree `.sprints/moba-objective-v16`），基準 main `356630b`（moba-sim.v15、CombatState.v1 RELEASED）。
+設計與驗證：`docs/design/MOBA_Objective_Stakes_v1.md`；Owner Review 包：`review/moba-objective-v16/`（owner 截圖、ab 原始資料）。
+
+### 做了什麼
+- **TD-CS1**：根因＝`_heroSkillStep` 的 `hit()` 把減速寫死成 `projectile`；`split-projectile` 宣告的減速從未套用。
+  修正＝條件納入 `split-projectile`（`splitProjectileSlowV16`）。受控支援矩陣 271/273 → **273/273**。
+- **Objective Stakes v1 正式規則**：龍層 1.8%／層；龍魂（4 層）戰力 ×1.03＋兵線 fightK ×1.15；巴龍 70 秒英雄戰力 ×1.10（＋既有兵線攻城）；
+  逆轉賞金（領完基本獎勵後仍落後 ≥1500 ⇒ 落後額 20%，上限 500）；AI 只做龍魂攻防（+0.2／+0.1，同一次擲骰）。
+- **CombatState／Replay**：`team-dragon`／`team-soul`／`team-baron` 團隊狀態；生命期追蹤移到 tick 最末端；`snapshot.objectiveLog`；
+  Replay 新增 `combatStates.sides` 與 `objectiveEvents`（optional additive），重播 seek 還原 teamBuffs 與物件事件。
+- **UI**：`ObjectivePanel`（龍層圓點／龍魂／巴龍剩餘環／刷新倒數／擊殺提示含逆轉賞金），桌機＋手機；強化小兵光環（金＝巴龍、紫＝龍魂，單一 InstancedMesh）。
+- **moba-sim.v16**：v3 規則開啟 `objectiveStakesV1`、`splitProjectileSlowV16`；v15 保留為已知版本與歷史指紋；skill-off 串流與 v15 相同。
+- **量測工具**：正式 runner 加 `ESMO_BALANCE_ROOT`／`ESMO_BALANCE_RULES` 與 `objective.jsonl`；`tools/balance/summarize_objective_ab.mjs`。
+- **除錯頁**：`?heroes=b4:liuxing,r4:miwu` 只替換指定席位英雄（截圖／驗證用，正式流程不經過）。
+
+### Screening 發現（各 200 場）
+- 原候選鏡像藍方 48% → 57.5%；單因素隔離＝AI「後期普遍更積極搶物件」（56.5%）。巨龍在藍方下路雙人附近（v15 巨龍 632:233、巴龍 146:310），
+  任何普遍提高出擊意願的 AI 項目（後期、人數、血量、坑邊控制權、經濟、守家）都會放大這個既有不對稱 ⇒ 已移除，只保留龍魂攻防。
+
+### n=1000（seed 1–1000、鏡像、Items ON、同 runner；v15 從乾淨 356630b 載入）
+- 藍／紅 53.1／46.9 → **55.5／44.5**（+2.4pp，約 1.1σ，不顯著但方向一致）；擊殺比 1.088 → 1.084；時長中位／P90 17.07／24.0 → 17.05／23.8。
+- 後期物件轉換 58.6% → **62.1%**；龍魂方勝率 58.4% → **69.3%**；龍層領先方 56.6% → 61.9%；第一巴龍方 56.2% → 54.2%。
+- 逆轉賞金 35.6% 局發生、拿到賞金方勝 30.9%（不會落後必翻盤）。未結束 0；> 45 分長局 1 場（seed 133，52 分，雙方 11 塔全倒的對峙，正常結束）。
+- 唯一一輪保守調整：巴龍 1.10 → 1.15 ⇒ 藍方 57.9%（更差）⇒ 依規則停止並還原 1.10。
+
+### 驗證
+- Node gate：build ✓；objective_stakes_v16 16/16；combat_state_v1 16/16（含 TD-CS1 X2）；combat_state_matrix 273/273；simulation_version 56/56；hero_skills_release_gate PASS；skill_levels 400/400；talents 200/200；items_m2 53/53；base_assault PASS；skill_detail 500/500；mobile_hud_polish 60/60（H4／F2 因本輪刻意改動更新斷言：光環 +1 draw call、v16 版號）；combat_quality 28/28；spectacle_vision 21/21；lane_jungle 20/20；regress 15/15；regress2 8/8。
+- 瀏覽器：browser_check_moba_objective_v16 10/10（前一次）；最後一次加 console／shader 斷言重跑時 O2（巴龍當下小兵金環數）=0 失敗、其餘通過，前兩次同項通過，疑為取樣時機競態，**待確認**；combat_state_v1 13/13；gameplay_presentation 10/10；mobile_hud 37/37；龍魂截圖 7/7。
+- verify.mjs 全套：31/102，與 main 逐段狀態 102/102 相同、失敗簽名相同 ⇒ 新紅燈 0。
+
+### 風險與未做
+- 公平性：藍方 +2.4pp 未達顯著，但與地圖不對稱同源；上線前需 Owner 判斷是否接受，或先處理 Blue side bias。
+- 長尾：1/1000 場 52 分對峙（v15 最長 31 分）。
+- AI 後期物件優先（人數／血量／時間等）只保留龍魂攻防，其餘是設計債（與藍方偏差一起處理）。
+- 視覺（面板、光環）未經真機實測；龍魂截圖來自頁面內以正式引擎跑 seed 1 的正式 Replay（除錯頁 seed 不可覆寫，O6）。
+- 仍關閉／未開始：nexusSiegeCapV1（cap 6／8／10 未比較）、heroPassivesV1（Passive P 未擴充）、Tactical Identity。
+
+## 2026-09-30 v16 Closure：Browser Closure ＋ Objective Stakes 側邊偏差 screening（local，未 commit／未 push／未 deploy）
+
+candidate `feature/moba-objective-stakes-v16` @ `36251d0`（origin/main＝`356630b`，`git ls-remote` 確認，為 HEAD 祖先）。重開機後、一次只跑一支 gate、不平行。
+
+### Browser Closure（2 支依序，合計 23/23）
+- `browser_capture_moba_objective_soul` **11/11**（86 s）：新增 **決定性巴龍小兵光環** B0–B2——同一份正式 replay（seed 1，巴龍 573.5–643.5 s，紅方）
+  seek 到中段 609 s：巴龍徽章「35s」、金環實例桌機 6／390 手機 9、無橫向溢出；另加 E2 console／shader error 0。
+- `browser_check_moba_objective_v16` **12/12**（12.8 min）：O1 面板與 snapshot 397 次取樣 0 不一致；O2 改為「巴龍生效期間任一次金環 > 0」
+  （舊版只取巴龍出現那一幀，3D 層落後資料一幀 ⇒ 前次假紅的成因）；O3 龍魂；O4 擊殺提示；T1／R3 TD-CS1 減速（現場＋Replay seek）；
+  R1／R2 Replay 物件紀錄與 seek；M1 390 手機；E1／E2 page／console／shader error 0。
+- Owner Review 截圖 13/13（`review/moba-objective-v16/owner/`，新增 03-baron-minions-replay-desktop、11-baron-minions-replay-mobile）。
+
+### 側邊偏差 screening（seed 1–200，依序單組，workers=3；v15／A 取既有 n=1000 的切片，A 重跑 seed 1–20 逐位元 20/20 相同）
+新工具 `tools/balance/screen_objective_side_bias.mjs`（分邊控制率／條件勝率／配對翻轉）。
+- A 現行 v16：藍 51.5（對 v15 +3.5pp）；B 龍層 1.5%＋龍魂英雄 ×1.00：56.5；C 龍魂兵線 ×1.06：52.0（只翻 11 場＝幾乎無作用）；
+  診斷 X（關 AI 龍魂攻防）：51.5（對 A 0pp）⇒ AI 攻防不是放大器。
+- ⚠ 解析力：規則小改就翻轉 40%+ 勝方，200 場配對差標準誤約 ±5pp；A 對 v15 在切片內 z≈0.7。**200 場分不出 2–3pp 級偏差**，只能看機制方向。
+- n=1000 唯讀分解（v15→v16 翻轉依 v16 對局特徵）：淨藍方勝場全在「藍方龍層領先（+47）／藍方龍魂（+46）」，巴龍、逆轉賞金近中性。
+
+### n=1000（seed 1–1000；B 的 1–200 沿用 screening、補跑 201–1000）— 唯一一輪保守調整＝B，**否決**
+| | v15 | v16 現行（A） | 候選 B |
+|---|---|---|---|
+| 藍／紅 | 53.1／46.9 | 55.5／44.5 | **57.2／42.8** |
+| 配對 v15→（淨翻轉，z） | — | +24，1.13 | **+41，1.99** |
+| 龍魂方勝率（藍／紅） | 57.9／64.7 | 68.0／82.1 | 66.8／68.4 |
+| 第一巴龍勝率（藍／紅） | 69.8／52.0 | 70.5／49.1 | 75.3／48.7 |
+| 後期物件轉換 | 58.6 | 62.1 | 60.0 |
+| 時長中位／P90 | 17.07／24.0 | 17.05／23.8 | 17.07／23.9 |
+| 病態（未結束或 > 45 分） | 0 | 1（seed 133） | 2（seed 692、698） |
+- 結論：**降龍／龍魂戰力（B）與提高巴龍（前次 1.15）兩個方向都讓藍方更高** ⇒ 偏差不是 Objective 數值的單調函數，
+  根源是物件控制權本身（藍方第一條龍 79%，巨龍坑在藍方下路）。在「不修地圖、不修既有 Blue bias」的邊界內，Objective Stakes 調參解不掉。
+- 程式碼參數未改（仍為 36251d0 的 v16 值）；B 只存在於 runner 覆寫。
+- **NEW_STRUCTURAL_SIDE_BIAS＝仍為 YES**（v16 +2.4pp，z 1.13，未達顯著但條件勝率結構一致）；**READY_TO_RELEASE＝NO，待 Owner 決定**：
+  接受 +2.4pp 上線並把藍方地利列為下一個 sprint，或 v16 先擱置、等地圖側處理。
+- 資料：`review/moba-objective-v16/ab/`：`side_bias_screening_n200.json`、`side_bias_n1000_candB.json`、`screen2_{B,C,X}_objective.jsonl`、`n1000_v16_candB_objective.jsonl`。
+
+### Owner 決策（2026-09-30）
+- v16 Objective Stakes 候選**不發布**；不接受藍方 +2.4pp，也不再調龍／巴龍獎勵數值。
+- 下一步：獨立分支做 **MOBA Objective Access Symmetry Audit**（藍方第一條龍 79%／紅方第一條巴龍 76% 的根因）。
+- `feature/moba-objective-stakes-v16` 保持在 `36251d0` 不動；本節與 closure 證據 commit 在 `evidence/moba-objective-v16-closure`。

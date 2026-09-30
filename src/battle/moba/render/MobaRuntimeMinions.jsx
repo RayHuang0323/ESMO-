@@ -16,6 +16,9 @@ const S = WORLD_SCALE;
 const CAP = 48;
 const TOTAL_CAP = CAP * 2;
 const GROUND_Y = Number.isFinite(LAYER_Y.lane_surface) ? LAYER_Y.lane_surface : 0;
+const RING_BARON = new THREE.Color(0xfbbf24), RING_SOUL = new THREE.Color(0xc084fc);
+/** v16 物件強化光環（標記用的包裝：讓「兵種 8 個＋血條 2 個」的 draw call 盤點仍一眼看得出多了哪一個）。 */
+const objectiveRing = (node) => node;
 const TEAM = { blue: 0x5aa7ff, red: 0xff6b5f };
 const TEAM_DARK = { blue: 0x183a66, red: 0x66221c };
 //  Combat Quality v1：兵種 → 例項桶／體型／高度（攻城兵、超級兵要一眼看得出來）。
@@ -102,6 +105,8 @@ export default function MobaRuntimeMinions({ frameRef }) {
     blueSiege: buildMinionGeometry("siege", "blue"), redSiege: buildMinionGeometry("siege", "red"),
     blueSuper: buildMinionGeometry("super", "blue"), redSuper: buildMinionGeometry("super", "red"),
     bar: new THREE.PlaneGeometry(1, 1),
+    //  v16：物件強化兵線的腳下光環（巴龍＝金、龍魂＝紫），一個幾何兩個材質。
+    buffRing: new THREE.RingGeometry(0.55, 0.85, 20),
   }), []);
   //  頂點色材質：一般兵共用一個；法師兵與超級兵帶一點陣營色自發光（遠景仍分得出陣營）。
   const mats = useMemo(() => ({
@@ -118,6 +123,9 @@ export default function MobaRuntimeMinions({ frameRef }) {
       color: 0x49e06f, transparent: true, opacity: 1,
       depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
     }),
+    //  v16：物件強化光環——單一 InstancedMesh（只多 1 個 draw call），顏色逐實例（巴龍金／龍魂紫）。
+    objRing: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75, depthWrite: false,
+      side: THREE.DoubleSide, toneMapped: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
   }), []);
   const scratch = useMemo(() => ({
     matrix: new THREE.Matrix4(),
@@ -174,6 +182,31 @@ export default function MobaRuntimeMinions({ frameRef }) {
       mesh.instanceMatrix.needsUpdate = true;
     }
 
+    //  v16：物件強化兵線（只讀 frame.teamBuffs：巴龍剩餘 > 0 ⇒ 金環優先；龍魂 ⇒ 紫環）；沒有就 count=0。
+    const tb = frameRef?.current?.teamBuffs ?? null;
+    const ring = refs.current.objRing;
+    if (ring) {
+      let n = 0, baronN = 0, soulN = 0;
+      const pulse = 1 + 0.08 * Math.sin(now * 4);
+      for (const m of minions) {
+        if (n >= TOTAL_CAP) break;
+        const baron = (tb?.[m.team]?.baronRemaining ?? 0) > 0;
+        const soul = !baron && !!tb?.[m.team]?.soul;
+        if (!baron && !soul) continue;
+        quat.setFromAxisAngle(right.set(1, 0, 0), -Math.PI / 2);
+        pos.set(m.world.x, GROUND_Y + 0.08, m.world.z);
+        scale.setScalar((KIND_SIZE[m.kind] ?? 1) * 1.35 * S * pulse);
+        matrix.compose(pos, quat, scale);
+        ring.setMatrixAt(n, matrix);
+        ring.setColorAt(n, baron ? RING_BARON : RING_SOUL);
+        n++; if (baron) baronN++; else soulN++;
+      }
+      ring.count = n;
+      ring.userData.baron = baronN; ring.userData.soul = soulN;   // 診斷用（__ESMO_RUNTIME_DIAG.minionRings）
+      ring.instanceMatrix.needsUpdate = true;
+      if (ring.instanceColor) ring.instanceColor.needsUpdate = true;
+    }
+
     const visibleCount = Math.min(minions.length, TOTAL_CAP);
     const bg = refs.current.barBg, fill = refs.current.barFill;
     if (bg && fill) {
@@ -221,6 +254,9 @@ export default function MobaRuntimeMinions({ frameRef }) {
       {unit("redSiege", geo.redSiege, mats.body)}
       {unit("blueSuper", geo.blueSuper, mats.blueSuper)}
       {unit("redSuper", geo.redSuper, mats.redSuper)}
+      {objectiveRing(<instancedMesh ref={(node) => { refs.current.objRing = node; if (node) node.count = 0; }}
+        name="moba-minion-objective-ring" args={[geo.buffRing, mats.objRing, TOTAL_CAP]}
+        frustumCulled={false} renderOrder={12} />)}
       <instancedMesh ref={(node) => { refs.current.barBg = node; }}
         name="moba-minion-bars-bg" args={[geo.bar, mats.barBg, TOTAL_CAP]}
         frustumCulled={false} renderOrder={46} />

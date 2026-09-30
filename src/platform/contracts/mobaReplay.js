@@ -312,6 +312,14 @@ export function validateMobaReplay(r) {
     const csError = combatStatesReplayShapeError(r.combatStates, Array.isArray(r.playersMeta) ? r.playersMeta.length : 0);
     if (csError) errors.push(csError);
   }
+  // v16：大型物件事件（optional additive）。[[seq, t, key 0/1, side 0/1, bounty, stacks, soul 0/1]…]，seq／t 遞增。
+  if (r.objectiveEvents !== undefined) {
+    const ev = r.objectiveEvents;
+    const bad = !Array.isArray(ev) || ev.some((row, i) => !Array.isArray(row) || row.length !== 7 || !row.every(Number.isFinite)
+      || ![0, 1].includes(row[2]) || ![0, 1].includes(row[3]) || ![0, 1].includes(row[6]) || row[4] < 0
+      || (i > 0 && (row[0] <= ev[i - 1][0] || row[1] < ev[i - 1][1])));
+    if (bad) errors.push("objectiveEvents 形狀錯誤或 seq／t 未遞增");
+  }
   // 可序列化（不含函式 / 循環參照 / React・Three 物件）
   try { JSON.stringify(r); } catch { errors.push("replay 無法 JSON 序列化"); }
   return { ok: errors.length === 0, errors };
@@ -367,6 +375,9 @@ function combatStatesReplayShapeError(cs, playerCount) {
       || (r[10] !== null && (!Array.isArray(r[10]) || ![3, 5].includes(r[10].length) || !r[10].every(Number.isFinite)))
       || (r.length >= 12 && keyframesBad(r[11])) || (r.length === 13 && (r[12] === null || keyframesBad(r[12])));
     if (bad) return `combatStates.rows[${i}] 形狀錯誤`;
+  }
+  if (cs.sides !== undefined && (typeof cs.sides !== "string" || cs.sides.length !== cs.rows.length || /[^br-]/.test(cs.sides))) {
+    return "combatStates.sides 必須是與 rows 等長、只含 b／r／- 的字串";
   }
   return null;
 }

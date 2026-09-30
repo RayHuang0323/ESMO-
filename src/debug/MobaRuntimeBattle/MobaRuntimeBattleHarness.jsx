@@ -16,10 +16,28 @@
 //                                            戰鬥推進到 waitTs 後設 window.__BATTLE_SHOT_READY
 //    waitTs          = 模擬秒數（預設 420）   等到 snapshot.ts ≥ 這個值才算就緒
 //    quality         = low | medium | high
+//    heroes          = b4:liuxing,r4:miwu      （v16）只替換指定席位的英雄，其餘沿用預設 ROSTER；
+//                                            給截圖／驗證需要特定技能（例如 TD-CS1）的情境用，正式流程不經過這裡。
 // ============================================================================
 import React, { useEffect, useState } from "react";
 import GameView from "../../GameView.jsx";
 import { useGameStore } from "../../useGameStore.js";
+import { ROSTER } from "../../data/roster.js";
+import { heroById } from "../../data/heroDatabase.js";
+
+/** ?heroes=b4:liuxing,r4:miwu ⇒ 以預設 ROSTER 為底，只換指定席位（未知英雄／席位忽略）。 */
+function rosterOverride(spec) {
+  if (!spec) return null;
+  const out = Object.fromEntries(Object.entries(ROSTER).map(([seat, r]) => [seat, { ...r }]));
+  let changed = 0;
+  for (const part of spec.split(",")) {
+    const [seat, heroId] = part.split(":");
+    if (!out[seat] || !heroById(heroId)) continue;
+    out[seat] = { ...out[seat], heroId, hero: heroById(heroId).zh };
+    changed++;
+  }
+  return changed ? out : null;
+}
 
 const params = () => new URLSearchParams(window.location.search);
 
@@ -82,7 +100,7 @@ export default function MobaRuntimeBattleHarness() {
           只改版面，不動 GameView 內部一行。 */}
       <style>{`[data-runtime-battle] > div > div { height: 100vh !important; max-height: none !important; border-radius: 0 !important; }`}</style>
       <div style={{ position: "absolute", inset: 0 }}>
-        <GameView autoStart />
+        <GameView autoStart {...(rosterOverride(q.get("heroes")) ? { roster: rosterOverride(q.get("heroes")) } : {})} />
       </div>
       {shotId && !ready && (
         <div style={{ position: "absolute", right: 10, bottom: 10, zIndex: 999,

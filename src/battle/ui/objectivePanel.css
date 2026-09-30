@@ -1,0 +1,29 @@
+/* ── Objective Stakes v1：大型物件面板（ObjectivePanel.jsx）────────────────────────
+   藍＝#60a5fa、紅＝#f87171、龍＝紫 #c084fc、巴龍＝金 #fbbf24；顏色一律搭配文字（龍魂／巴龍／秒數）。 */
+.objective-panel{position:absolute;left:50%;transform:translateX(-50%);z-index:9;display:flex;align-items:center;gap:8px;
+  padding:3px 8px;border-radius:999px;background:rgba(7,10,16,.82);border:1px solid rgba(255,255,255,.12);
+  pointer-events:auto;font:800 10px/1 system-ui,sans-serif;color:#e5e7eb;white-space:nowrap}
+.objective-panel.desktop{top:96px;height:26px}
+/* 手機：戰報 timeline 下緣（約 240px）之下，不壓戰報最後一行 */
+.objective-panel.mobile{top:calc(env(safe-area-inset-top) + 247px);height:22px;gap:5px;padding:2px 6px;font-size:9px}
+.objective-team{display:flex;align-items:center;gap:4px}
+.objective-team.red{flex-direction:row-reverse}
+.objective-pips{display:inline-flex;gap:2px}
+.objective-pips i{width:7px;height:7px;border-radius:2px;background:rgba(255,255,255,.12);border:1px solid rgba(192,132,252,.35)}
+.objective-pips i.on{background:#c084fc;box-shadow:0 0 5px #c084fc99}
+.objective-team.blue .objective-pips i.on{border-color:#60a5fa}
+.objective-team.red .objective-pips i.on{border-color:#f87171}
+.objective-badge{display:inline-flex;align-items:center;gap:2px;padding:1px 5px;border-radius:5px;font-weight:900}
+.objective-badge small{font:800 9px Consolas,monospace}
+.objective-badge.soul{color:#1a1027;background:linear-gradient(90deg,#c084fc,#f0abfc);box-shadow:0 0 8px #c084fc88}
+.objective-badge.baron{color:#1f1300;background:conic-gradient(#fbbf24 var(--left,360deg),rgba(251,191,36,.35) 0)}
+.objective-spawns{display:inline-flex;gap:6px;padding:0 4px;border-left:1px solid rgba(255,255,255,.1);border-right:1px solid rgba(255,255,255,.1)}
+.objective-spawn{display:inline-flex;align-items:center;gap:2px;color:#71717a;font-family:Consolas,monospace}
+.objective-spawn.alive{color:#fde047}
+.objective-toast{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);padding:4px 10px;border-radius:6px;
+  background:rgba(7,10,16,.92);border:1px solid rgba(255,255,255,.18);font-size:11px;animation:objective-toast-in .35s ease-out}
+.objective-toast.blue{border-color:#60a5fa;color:#bfdbfe}
+.objective-toast.red{border-color:#f87171;color:#fecaca}
+.objective-toast em{margin-left:6px;font-style:normal;color:#fbbf24}
+@keyframes objective-toast-in{from{opacity:0;transform:translate(-50%,-4px)}to{opacity:1;transform:translate(-50%,0)}}
+@media (prefers-reduced-motion:reduce){.objective-toast{animation:none}}
