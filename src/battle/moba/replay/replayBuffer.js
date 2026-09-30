@@ -28,9 +28,9 @@ let cap = null;        // 進行中的擷取 { seed, config, startedAt, frames, 
 let current = null;    // 最近一場完成的 MobaReplay.v1（session 記憶體，最多 1 場）
 
 /** 開始擷取新一場（覆蓋上一場的進行中擷取；已完成的 current 保留到下一次 finalize）。 */
-export function beginReplayCapture({ seed = null, config = {}, roster = null } = {}) {
+export function beginReplayCapture({ seed = null, config = {}, roster = null, objectiveLayout = null } = {}) {
   cap = {
-    seed, config, roster, startedAt: Date.now(), frames: [], playersMeta: [], towersMeta: {}, objectivesMeta: [],
+    seed, config, roster, objectiveLayout, startedAt: Date.now(), frames: [], playersMeta: [], towersMeta: {}, objectivesMeta: [],
     pendingFx: new Map(), seenFx: new Set(),
     items: null,
     combatStates: createCombatStateCapture(),   // CombatState.v1：持續狀態區間（每個 snapshot 都收）
@@ -141,6 +141,8 @@ export function finalizeReplay({ matchId, events = [], comms = [], resultSummary
   });
   replay.objectivesMeta = cap.objectivesMeta ?? [];   // S29B1：位置只存一次（同座標來源）
   replay.mapMeta = cap.mapMeta;                       // S29B5：新世界邊界/路線/河道；舊 replay 可無此欄
+  //  v16 Objective Layout（optional additive）：本場巨龍／巴龍在哪個坑。舊 replay 無此欄 ⇒ 依契約＝STANDARD。
+  if (cap.objectiveLayout) replay.objectiveLayout = cap.objectiveLayout;
   // S29：播報＝**本場實際產生的原始訊息**，原封存入 Replay。
   //   Replay 播放時只讀這份，**不重新生成對話**（S29 §八紅線）。
   replay.comms = comms.map((c) => ({

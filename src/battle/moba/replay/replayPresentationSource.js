@@ -31,7 +31,8 @@
 //    · 舊 replay（無 `mapMeta` / 無 `objectivesMeta`）由呼叫端判斷是否可用 3D，
 //      不可用時退回 2D SVG（見 `canUse3DPresentation`）。
 // ============================================================================
-import { WORLD_BOUNDS, PITS, LANES, CAMPS } from "../../../gameData.js";
+import { WORLD_BOUNDS, LANES, CAMPS } from "../../../gameData.js";
+import { objectiveLayoutOf, objectivePitOf } from "../../../platform/contracts/objectiveLayout.js";
 import { decodePsRow } from "../../../platform/contracts/mobaReplay.js";
 import { applySkillLevelToRule, SKILL_LEVEL_CAPS } from '../skills/heroSkillLevels.js';
 import { createCombatStateIndex } from "./combatStateReplay.js";
@@ -134,8 +135,8 @@ export function createReplaySource(replay) {
   //   （沿用目前 gameData 的坑位座標；此路徑只在 canUse3DPresentation 為 true，
   //     也就是世界尺度相符時才會被用到）。營地無來源 ⇒ 不編造。
   const fallbackObjMeta = objectivesMeta.length ? null : [
-    { id: "dragon", type: "dragon", side: null, presentationKey: "dragon", pos: { ...PITS.dragon } },
-    { id: "baron", type: "baron", side: null, presentationKey: "baron", pos: { ...PITS.baron } },
+    { id: "dragon", type: "dragon", side: null, presentationKey: "dragon", pos: { ...objectivePitOf(replay, "dragon") } },
+    { id: "baron", type: "baron", side: null, presentationKey: "baron", pos: { ...objectivePitOf(replay, "baron") } },
   ];
   const objMeta = objectivesMeta.length ? objectivesMeta : fallbackObjMeta;
 
@@ -180,6 +181,8 @@ export function createReplaySource(replay) {
     };
     return {
       ts: f.t ?? 0,
+      //  v16 Objective Layout：replay 的權威欄位 ⇒ 重播的小地圖／導播／戰報／坑位標記讀 snapshot 就正確（舊 replay ⇒ STANDARD）
+      objectiveLayout: objectiveLayoutOf(replay),
       players: playersMeta.map((pm, i) => {
         const row = f.p?.[i];
         const buffRow = f.bf?.[i] ?? [];

@@ -9,7 +9,8 @@
 //           DRAGON_SLAIN | BARON_SLAIN | VICTORY
 // ============================================================================
 
-import { dist, PITS, ROLE_NAME } from "../gameData.js";
+import { dist, ROLE_NAME } from "../gameData.js";
+import { objectivePitOf } from "../platform/contracts/objectiveLayout.js";
 import { SUMMONER_SPELLS } from "./moba/mobaHeroLoadout.js";
 
 const MULTI_WINDOW = 10;       // 同一人連殺判定窗（模擬秒）
@@ -88,7 +89,7 @@ export class BattleEventTracker {
       const objOf = (id) => (snap.objectives ?? []).find((o) => o.id === id) ?? null;
       for (const [key, name] of [["dragon", "Dragon"], ["baron", "Baron"]]) {
         if (prev[key].alive && !snap[key].alive && snap[key].respawn > 0) {
-          const pit = PITS[key];
+          const pit = objectivePitOf(snap, key);   // v16：本場配置的坑位
           let side = objOf(key)?.killerTeam ?? null;
           if (!side && !objOf(key)) {
             const near = (s) => prev.players.filter((p) => p.side === s && !p.dead && dist(p.pos, pit) < 9).length;
@@ -100,7 +101,7 @@ export class BattleEventTracker {
         }
         // S29B1：目標出生事件（出生 → 集結 → 擊殺 → 重生的完整生命週期可回放）
         if (!prev[key].alive && snap[key].alive) {
-          push("OBJECTIVE_SPAWN", null, `${name} 已刷新`, PITS[key], { objective: key });
+          push("OBJECTIVE_SPAWN", null, `${name} 已刷新`, objectivePitOf(snap, key), { objective: key });
         }
       }
       // ── S29B1：召喚師技能事件（引擎 spellLog 尾端；原封轉為 Timeline 事件）──

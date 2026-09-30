@@ -39,9 +39,10 @@ const RUNTIME_SHOW_LOW = Object.freeze({ ...RUNTIME_SHOW, decor: false, bush: fa
  * 地形資料只建一次（buildTerrainShapes 是純函式、成本不低）。
  * 同時輸出塔的**呈現座標**給 MobaRuntimeStructures 用 id 對應。
  */
-export function useRuntimeMapData() {
+export function useRuntimeMapData(objectiveLayout = null) {
   return useMemo(() => {
-    const L = buildMobaLayout();
+    //  v16 Objective Layout：坑色／壁高跟著本場配置的物件走（碰撞不受影響，見 mobaMapLayout）
+    const L = buildMobaLayout({ objectiveLayout });
     const T = buildTerrainShapes(L);
     const towerAnchors = new Map();
     for (const t of T.towers) towerAnchors.set(t.id, { x: t.x, y: t.y });
@@ -51,20 +52,22 @@ export function useRuntimeMapData() {
       if (n.side) towerAnchors.set(`${n.side}_nexus`, { x: n.x, y: n.y });
     }
     return { L, T, towerAnchors };
-  }, []);
+  }, [objectiveLayout]);
 }
 
 /**
  * @param quality "high" | "mid" | "low"（沿用 battle/quality 的等級語彙）
  */
-function MobaRuntimeMap({ quality = "high" }) {
+function MobaRuntimeMap({ quality = "high", objectiveLayout = null }) {
   //  ⚠ 等級 id 是 low | medium | high（battle/quality.js）；"mid" 是舊寫法，兩個都收。
   const ring = quality === "low" ? "mobile-low"
     : (quality === "mid" || quality === "medium") ? "mobile" : "desktop";
   const show = quality === "low" ? RUNTIME_SHOW_LOW : RUNTIME_SHOW;
+  //  v16：正式 Rift 美術資產的坑色是烘焙的（左上金＝巴龍、右下紫＝巨龍）；本場配置由
+  //  ObjectivePitMarkers 疊在坑上標示。程序化退路地形（blockout）直接依配置對調坑色。
   return (
     <EsmoRiftEnvironment quality={quality} fallback={
-      <MobaMapBlockout show={show} ring={ring} castTowerShadow={quality === "high"} />
+      <MobaMapBlockout show={show} ring={ring} castTowerShadow={quality === "high"} objectiveLayout={objectiveLayout} />
     } />
   );
 }

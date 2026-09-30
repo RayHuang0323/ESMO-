@@ -20,6 +20,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import * as THREE from "three";
 import MobaRuntimeMap, { useRuntimeMapData } from "../map/MobaRuntimeMap.jsx";
+import ObjectivePitMarkers from "./ObjectivePitMarkers.jsx";
 import MobaRuntimeHeroes from "./MobaRuntimeHeroes.jsx";
 import MobaRuntimeStructures from "./MobaRuntimeStructures.jsx";
 import MobaRuntimeMinions from "./MobaRuntimeMinions.jsx";
@@ -368,7 +369,7 @@ function RuntimeFrameFeeder({ frameRef, onShapeChange, lockHeroId, lockTarget, s
       return `${h.id}${h.alive ? 1 : 0}${h.level}[${timed}]`;
     }).join("|")}#`
       + `${frame.structures.map((t) => `${t.id}${t.alive ? 1 : 0}`).join("|")}#`
-      + `${frame.objectives.map((o) => `${o.id}${o.alive ? 1 : 0}`).join("|")}`;
+      + `${frame.objectives.map((o) => `${o.id}${o.alive ? 1 : 0}`).join("|")}#${frame.objectiveLayout ?? ""}`;
     if (sig !== sigRef.current) { sigRef.current = sig; onShapeChange(frame); }
     if (lockHeroId && lockTarget) {
       const h = frame.heroes.find((x) => x.id === lockHeroId);
@@ -454,7 +455,9 @@ export default function MobaRuntimeView3D({
       <directionalLight position={[-180, 330, 220]} intensity={2.2} color={0xfff0cc} />
       <directionalLight position={[210, 180, -160]} intensity={0.5} color={0x9fc4e8} />
 
-      <MobaRuntimeMap quality={quality} />
+      <MobaRuntimeMap quality={quality} objectiveLayout={frame.objectiveLayout ?? null} />
+      {/* v16 Objective Layout：本場巨龍／巴龍坑位標記（美術坑色是烘焙的，SWAPPED 時靠它標示） */}
+      <ObjectivePitMarkers objectiveLayout={frame.objectiveLayout ?? null} />
       <MobaRuntimeStructures
         structures={frame.structures}
         objectives={frame.objectives}

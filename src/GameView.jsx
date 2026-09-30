@@ -18,7 +18,8 @@ import { useGameStore } from "./useGameStore.js";
 import { useLocalServer } from "./useLocalServer.js";
 import { useProfileStore } from "./platform/profileStore.js";
 import { selectOpponentName, selectTeamName } from "./platform/matchTeamNames.js";
-import { LANES, PITS, FOUNTAIN, RIVER, WORLD_BOUNDS, mapNormX, presentationForObjective } from "./gameData.js";
+import { LANES, FOUNTAIN, RIVER, WORLD_BOUNDS, mapNormX, presentationForObjective } from "./gameData.js";
+import { objectivePitOf } from "./platform/contracts/objectiveLayout.js";
 import { ROSTER } from "./data/roster.js";
 import { draftRoster } from "./battle/moba/draftRoster.js";
 import { loadQuality, saveQuality, QUALITY_IDS, QUALITY_PRESETS } from "./battle/quality.js";
@@ -76,7 +77,8 @@ function Minimap({ mobile = false }) {
         for (const ln of ["top", "mid", "bot"]) { g.beginPath(); LANES[ln].forEach((p, i) => (i ? g.lineTo(P(p.x), P(p.y)) : g.moveTo(P(p.x), P(p.y)))); g.stroke(); }
         Object.values(snap.towers).forEach((t) => { if (t.hp <= 0) return; g.fillStyle = t.side === "blue" ? "#3b82f6" : "#ef4444"; const s = t.lane === "nexus" ? 6 : 3.4; g.fillRect(P(t.pos.x) - s / 2, P(t.pos.y) - s / 2, s, s); });
         // S29B3：坑位環（恆顯示，與主場景 pit 色環一致）+ 存活時實心點
-        [["dragon", PITS.dragon], ["baron", PITS.baron]].forEach(([k, pit]) => {
+        //  v16 Objective Layout：坑位讀本場 snapshot 的配置
+        [["dragon", objectivePitOf(snap, "dragon")], ["baron", objectivePitOf(snap, "baron")]].forEach(([k, pit]) => {
           const meta = presentationForObjective({ id: k, type: k });
           const c = `#${meta.color.toString(16).padStart(6, "0")}`;
           g.strokeStyle = c; g.lineWidth = 1;
@@ -188,6 +190,8 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   //  沒有場次時（debug harness）launch 為 null，引擎退回本機 seed。
   const launch = useProfileStore((st) => st.matchmaking?.launch ?? null);
   const activeTimeSec = useProfileStore((st) => Number(st.matchmaking?.session?.activeMatch?.simulation?.timeSec) || 0);
+  //  v16 Objective Layout：恢復進行中的場次時沿用存檔裡的配置（整場不換）；新場次為 null ⇒ start() 由 seed 推導一次
+  const activeObjectiveLayout = useProfileStore((st) => st.matchmaking?.session?.activeMatch?.config?.objectiveLayout ?? null);
   //  Q3.5-fix：對戰畫面的隊名。對手名來自本場的正式指派單（賽事＝賽程對手，
   //  排隊＝配對到的對手），**不是** data/roster.js 的 AI 預設「赤焰軍團」。
   //  訂閱的是字串原始值 ⇒ 名字一到就重繪（理由見 matchTeamNames.js 檔頭）。
@@ -212,6 +216,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
       opponentId: launch?.opponentId ?? null,
       draft,
       resumeTimeSec: activeTimeSec,
+      objectiveLayout: activeTimeSec > 0 ? activeObjectiveLayout : null,
     });
   };
   // Sprint09：賽前準備銜接 — autoStart 掛載即開局（預設 false = 現行為不變）

@@ -10,9 +10,13 @@ import {
   RIVER, WORLD_BOUNDS,
 } from "../../../gameData.js";
 import { JUNGLE_QUADRANTS } from "./mapZones.js";
+import { objectivePitsFor } from "../../../platform/contracts/objectiveLayout.js";
 
 /** 建立完整地圖結構（供 render 與 verifier）。所有 x/y 為模擬邏輯座標。 */
-export function buildMobaLayout() {
+//  v16 Objective Layout：`objectiveLayout` 只影響 `pits`（哪個物件在哪個坑）⇒ 地形的坑色／壁高／光暈
+//  跟著物件走。預設 STANDARD（導航、驗證器、既有呼叫端都不傳 ⇒ 完全不變）。
+//  ⚠ 碰撞不受影響：兩坑的 gameplay 腳印相同（mapTerrainShapes 的 PIT_FOOTPRINT），導航固定用預設版。
+export function buildMobaLayout({ objectiveLayout = null } = {}) {
   // 防禦塔：3 路 × 2 方 × 3 座（高地/內/外）＝18，＋2 主堡（Nexus，位於 BASE）＝20，
   // 與 src/LogicEngine.js 的建構方式一致（TOWER_T 沿 lane 的 t → posOnLane）。
   //
@@ -53,7 +57,7 @@ export function buildMobaLayout() {
       bot: LANES.bot.map((p) => ({ ...p })),
     },
     towers,
-    pits: { dragon: { ...PITS.dragon }, baron: { ...PITS.baron } },
+    pits: (() => { const P = objectivePitsFor(objectiveLayout); return { dragon: { ...P.dragon }, baron: { ...P.baron } }; })(),
     camps: CAMPS.map((c) => ({ id: c.id, side: c.side, type: c.type, x: c.x, y: c.y })),
     walls: WALLS.map((w) => ({ ...w })),
     bushes: BUSHES.map((b) => ({ ...b })),

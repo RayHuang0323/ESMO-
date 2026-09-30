@@ -23,6 +23,7 @@ import {
   simToWorld, inBoundsSim, clampSim, baseSim, pitSim, LANE_IDS, scaleLen,
 } from "./coordinateMapping.js";
 import { TOWER_HP, NEXUS_HP, ROLE_NAME, posOnLane, WORLD_BOUNDS } from "../../../gameData.js";
+import { objectiveLayoutOf, objectivePitOf } from "../../../platform/contracts/objectiveLayout.js";
 import {
   findPath, isWalkable, projectToWalkable, structureList,
 } from "../nav/mobaNavigation.js";
@@ -257,7 +258,7 @@ export function adaptObjectives(snapshot) {
   for (const key of ["dragon", "baron"]) {
     const src = snapshot?.[key];
     if (!src || seen.has(key)) continue;
-    const pit = pitSim(key);
+    const pit = objectivePitOf(snapshot, key);   // v16：本場配置的坑位
     out.push({
       id: key,
       type: key,
@@ -704,6 +705,8 @@ export function adaptRuntimeMapFrame(snapshot, opts = {}) {
     ts: num(snapshot?.ts, 0),
     over: !!snapshot?.over,
     winner: snapshot?.winner ?? null,
+    //  v16 Objective Layout（缺值 ⇒ STANDARD）：地形坑色、坑位標記讀這一份
+    objectiveLayout: objectiveLayoutOf(snapshot),
     heroes,
     structures,
     objectives,

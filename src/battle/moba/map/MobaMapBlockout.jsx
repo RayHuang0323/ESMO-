@@ -261,8 +261,9 @@ function buildTowerBody(t, yBase) {
   return { body: mergeGeometries(geos, false), crownY };
 }
 
-export default function MobaMapBlockout({ show = {}, ring = "desktop", castTowerShadow = false }) {
-  const L = useMemo(() => buildMobaLayout(), []);
+export default function MobaMapBlockout({ show = {}, ring = "desktop", castTowerShadow = false, objectiveLayout = null }) {
+  //  v16 Objective Layout：坑色／壁高／地標文字跟著本場配置的物件走（碰撞不受影響）
+  const L = useMemo(() => buildMobaLayout({ objectiveLayout }), [objectiveLayout]);
   const T = useMemo(() => buildTerrainShapes(L), [L]);
   const LM = useMemo(() => buildLandmarks(L, T.camps), [L, T]);
 

@@ -14,7 +14,8 @@
 //  ⚠ 個性/定位只決定「誰講、講哪一句變體」，**不會**憑空生出事件。
 // ============================================================================
 
-import { dist, PITS, ROLE_NAME } from "../../gameData.js";
+import { dist, ROLE_NAME } from "../../gameData.js";
+import { objectivePitOf } from "../../platform/contracts/objectiveLayout.js";
 
 export const COMMS_VERSION = "TacticalComms.v1";
 
@@ -360,8 +361,9 @@ export class CommsEngine {
     // ── 12) 爭奪龍／巴龍（真實：目標活著、坑邊 18 內雙方各 ≥2 人）──────────
     for (const k of ["dragon", "baron"]) {
       const o = snap[k];
-      if (!o?.alive || !PITS[k]) continue;
-      const nearPit = (arr) => arr.filter((q) => !q.dead && dist(q.pos, PITS[k]) < 18).length;
+      const pit = objectivePitOf(snap, k);   // v16：本場配置的坑位
+      if (!o?.alive || !pit) continue;
+      const nearPit = (arr) => arr.filter((q) => !q.dead && dist(q.pos, pit) < 18).length;
       const m = nearPit(mine), f = nearPit(foes);
       if (m >= 2 && f >= 2) {
         push("OBJECTIVE_CONTEST", this._who(mine.find((p) => p.role === "jungle" && !p.dead) ?? mine.find((p) => !p.dead)), { obj: OBJ_ZH[k] }, { obj: k, mine: m, foes: f, t });

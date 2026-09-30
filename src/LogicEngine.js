@@ -45,6 +45,7 @@ import {
   HERO_SKILL_LEVEL_CONTRACT, SKILL_LEVEL_CAPS, skillLevelsAtMatchLevel,
   applySkillLevelToRule, nextSkillUnlock,
 } from './battle/moba/skills/heroSkillLevels.js';
+import { OBJECTIVE_LAYOUT, normalizeObjectiveLayout, objectivePitsFor } from './platform/contracts/objectiveLayout.js';
 
 const MAP_EDGE_PAD = 3;
 //  H.2 導航調參：近場預判距離與重算路徑的冷卻（tick）。
@@ -91,6 +92,8 @@ export class LogicEngine {
   constructor(seed = 1, loadout = null, opts = {}) {
     let x = seed | 0; this.rng = () => ((x = (x * 1664525 + 1013904223) & 0xffffffff) >>> 0) / 0xffffffff;
     this.seed = seed | 0;          // S24：保留 seed 供戰術層 rng2 派生
+    //  v16 Objective Layout：預設 STANDARD；_objPits=null ⇒ _pitOf 回傳原本的 PITS（逐位元不變）
+    this.objectiveLayout = OBJECTIVE_LAYOUT.STANDARD; this._objPits = null; this._layoutConfigured = false;
     this.tacticOn = false;         // S24：未 configureMatch ⇒ 全部戰術程式碼不生效
     this.playerStatsOn = false;    // S28：未 configurePlayers ⇒ 全部能力程式碼不生效
     this.heroesOn = false;         // H：未 configureHeroes ⇒ 全部英雄定位程式碼不生效
@@ -389,7 +392,7 @@ export class LogicEngine {
    *   範圍，S24 baseline 都逐位元不變。
    */
   _joinChance(K, hot, M = null) {
-    const pit = hot === PITS.dragon ? "dragonJoin" : hot === PITS.baron ? "baronJoin" : null;
+    const pit = hot === this._pitOf("dragon") ? "dragonJoin" : hot === this._pitOf("baron") ? "baronJoin" : null;
     const base = K ? (pit ? K[pit] : K.joinFight) : 0.6;
     if (!M) return base;
     return clamp(base + (pit ? M.objAdj : M.joinAdj), 0.05, 0.98);
@@ -2338,7 +2341,7 @@ export class LogicEngine {
       p.objEvalT = this.t + R.joinEvalPeriod;
       //  Milestone H：英雄定位的目標集結傾向（同樣只在有偏移時才夾，保持中性）。
       const hObj = this._heroMod(p)?.objAdj ?? 0;
-      const base = this._joinChance(K, PITS[key], M);
+      const base = this._joinChance(K, this._pitOf(key), M);
       const c = hObj ? clamp(base + hObj, 0.02, 0.98) : base;
       p.objGo = (K ? this.rng2() : this.rng()) < c;
     }
@@ -2590,8 +2593,33 @@ export class LogicEngine {
    * 而且英雄站進 boss 模型裡。改成依隊伍順序分布在坑周圍（半徑 3.2，仍在 < 9 的傷害距離內）。
    * 決定性、不擲骰；投影到可走區，投影失敗就退回坑中心（與舊行為相同）。只在 hero skills 開啟時使用。
    */
+  /**
+   * Objective Layout Variant（moba-sim.v16；契約見 platform/contracts/objectiveLayout.js）。
+   * 由 Match config 在**開局、第一個 tick 之前**呼叫一次；開場後呼叫一律無效（整場不換坑）。
+   * STANDARD（預設，含從未呼叫）⇒ `_pitOf` 回傳原本的 PITS 物件參照 ⇒ 與舊版逐位元相同。
+   * @returns {boolean} 是否生效
+   */
+  configureObjectiveLayout(layout) {
+    if (this.t > 0) return false;
+    this._layoutConfigured = true;
+    this.objectiveLayout = normalizeObjectiveLayout(layout);
+    this._objPits = this.objectiveLayout === OBJECTIVE_LAYOUT.STANDARD ? null : objectivePitsFor(this.objectiveLayout);
+    if (this.neutrals) {
+      for (const key of ["dragon", "baron"]) {
+        const o = this.neutrals[key], p = this._pitOf(key);
+        o.homePos.x = p.x; o.homePos.y = p.y; o.pos.x = p.x; o.pos.y = p.y;
+      }
+    }
+    return true;
+  }
+
+  /** 大型物件在本場的坑位（AI、站位、戰況判斷一律經這裡；不得直接讀 PITS[key]）。 */
+  _pitOf(key) {
+    return this._objPits ? this._objPits[key] : PITS[key];
+  }
+
   _objectiveStandSpot(p, key) {
-    const pit = PITS[key];
+    const pit = this._pitOf(key);
     const mates = this.players.filter((q) => q.side === p.side);
     const idx = Math.max(0, mates.indexOf(p));
     const ang = (idx / Math.max(1, mates.length)) * Math.PI * 2 + (p.side === "blue" ? Math.PI * 0.75 : -Math.PI * 0.25);
@@ -3119,7 +3147,7 @@ export class LogicEngine {
     const alive = this.players.filter((q) => !q.dead);
     const killersNear = alive.filter((q) => q.side === p.side && dist(q.pos, foe.pos) < 12).length;
     const victimsNear = alive.filter((q) => q.side === foe.side && q !== foe && dist(q.pos, foe.pos) < 12).length;
-    const nearPit = (key) => this.neutrals?.[key]?.alive && dist(foe.pos, PITS[key]) < 12;
+    const nearPit = (key) => this.neutrals?.[key]?.alive && dist(foe.pos, this._pitOf(key)) < 12;
     const ownTower = Object.values(this.towers).some((tw) => tw.side === foe.side && tw.hp > 0 && dist(foe.pos, tw.pos) < 9);
     const gankWin = (this.tacticOn && p.role === "jungle" && this.t < (this._tac[p.side]?.gankUntil ?? 0)) ||
       (this.fsm3 && p.role === "jungle" && this.t < this.fsm3[p.side].gankUntil);
@@ -5824,7 +5852,7 @@ export class LogicEngine {
       // S29B1（v3）：團隊目標窗（龍/巴龍）——窗開著才集結；打野/輔助必去、其他人吃 knob
       else if (R.engagementFsm && this.neutrals && !skipFight && this.fsm3[p.side].objGo &&
                this._objJoinV3(p, this.fsm3[p.side].objKey, K, M)) {
-        tgt = R.objIdleFixV1 && this.heroSkillsOn ? this._objectiveStandSpot(p, this.fsm3[p.side].objKey) : PITS[this.fsm3[p.side].objKey];
+        tgt = R.objIdleFixV1 && this.heroSkillsOn ? this._objectiveStandSpot(p, this.fsm3[p.side].objKey) : this._pitOf(this.fsm3[p.side].objKey);
         st = "團戰!"; p.fsm = "OBJECTIVE";
       }
       // ── Milestone F：主動權窗 · 攻城 ──────────────────────────────────
@@ -6100,8 +6128,8 @@ export class LogicEngine {
       //   紅方（無能力資料）同樣計數 ⇒ 天然對照組：藍方隨天賦變、紅方不變。
       if (this.playerStatsOn) {
         if (st === "團戰!" && p.state !== "團戰!") this.pexec[p.id].fights++;
-        if (this.dragon.alive && dist(p.pos, PITS.dragon) < 9) this.pexec[p.id].objTicks++;
-        if (this.baron.alive && dist(p.pos, PITS.baron) < 9) this.pexec[p.id].objTicks++;
+        if (this.dragon.alive && dist(p.pos, this._pitOf("dragon")) < 9) this.pexec[p.id].objTicks++;
+        if (this.baron.alive && dist(p.pos, this._pitOf("baron")) < 9) this.pexec[p.id].objTicks++;
       }
       p.state = st;
       //  M1.7：可觀測診斷。`state` 是既有的中文顯示字串（不動它），
@@ -6181,7 +6209,7 @@ export class LogicEngine {
         else if (fighters < 2) S3.inFight = false;
         for (const [obj, key] of [[this.dragon, "dragon"], [this.baron, "baron"]]) {
           if (obj.alive) {
-            if (!S3[key + "Seen"] && this.players.some((q) => q.side === side && !q.dead && dist(q.pos, PITS[key]) < 9)) {
+            if (!S3[key + "Seen"] && this.players.some((q) => q.side === side && !q.dead && dist(q.pos, this._pitOf(key)) < 9)) {
               S3[key + "Seen"] = true; this.exec[side][key + "Contests"]++;
             }
           } else S3[key + "Seen"] = false;
@@ -6262,6 +6290,9 @@ export class LogicEngine {
     };
     return {
       ts: this.t,
+      //  v16 Objective Layout：開局經 configureObjectiveLayout 設定過才輸出（正式流程一定有）；
+      //  bare／legacy 串流逐位元不變，缺欄位依契約＝STANDARD。
+      ...(this._layoutConfigured ? { objectiveLayout: this.objectiveLayout } : {}),
       // S29：mlv/mxp = **本場**英雄等級（1–18，終局丟棄）；lv = 英雄熟練等級（跨場，
       //   來自 Hero Progress loadout）。兩者並存且不同名 ⇒ 消費端不可能混用。
       //  mhp＝絕對最大血量（只給呈現：血條刻度／坦克感）。hp 仍是 0–1 比例；只在 heroSkillsOn 時輸出，

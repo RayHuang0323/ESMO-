@@ -25,6 +25,7 @@ import { heroById } from "./data/heroDatabase.js";
 import { toEnginePlayerMods } from "./battle/moba/mobaPlayerStats.js";
 //  Item System M3a：裝備層開關（正式站預設 OFF；DEV 才讀 ?itemsDev=1，見 start() 內）
 import { featureEnabled } from "./featureFlags.js";
+import { resolveObjectiveLayout } from "./platform/contracts/objectiveLayout.js";
 import { itemsDevRequested } from "./ui/itemsDevFlag.js";
 import { matchItemsConfig, normalizeBuildStrategy } from "./battle/moba/items/buildStrategyPrep.js";
 
@@ -162,6 +163,10 @@ export function useLocalServer() {
     const authoritative = Number.isFinite(opts.seed);
     const seed = authoritative ? ((opts.seed >>> 0) | 1) : ((Date.now() & 0xffff) | 1);
     const eng = new LogicEngine(seed, loadout);
+    //  v16 Objective Layout：**唯一推導點**。恢復進行中的場次時沿用存檔裡的值（opts.objectiveLayout），
+    //  否則由本場 seed 決定一次；之後寫進引擎、Replay 與進行中場次設定，下游一律讀欄位、不再各自推導。
+    const objectiveLayout = resolveObjectiveLayout({ explicit: opts.objectiveLayout ?? null, seed });
+    eng.configureObjectiveLayout(objectiveLayout);
     const heroSkillsOn = featureEnabled("heroSkillsV1") ||
       (import.meta.env.DEV && new URLSearchParams(window.location.search).get("heroSkillsDev") === "1");
     const selectedTalents = heroSkillsOn && featureEnabled('heroBattleTalentsV1') && opts.roster
@@ -179,6 +184,7 @@ export function useLocalServer() {
       //  O7：這一場是不是權威場次（由 MatchSession 指定 seed）
       sessionId: opts.sessionId ?? null,
       seedSource: authoritative ? "session" : "local",
+      objectiveLayout,
       config: { ...(opts.tactic?.tacticId ? { tacticId: opts.tactic.tacticId, tacticName: opts.tactic.name ?? null } : {}),
         ...(talentSelection ? { battleTalentIds: Object.fromEntries(Object.entries(talentSelection.players).map(([seat, row]) => [seat, row.id])) } : {}) },
       roster: replayRoster ?? null,
@@ -283,6 +289,8 @@ export function useLocalServer() {
       ...(talentSelection && opts.talentSelections ? { talentSelections: opts.talentSelections } : {}),
       //  M3d：裝備系統真的開著才寫進本場設定（OFF 時存檔形狀與 M3d 之前相同）
       ...(buildStrategy ? { buildStrategy } : {}),
+      //  v16：本場 Objective Layout（恢復時由 GameView 帶回 opts.objectiveLayout，整場不換）
+      objectiveLayout,
     };
     activeMatchRef.current = {
       sessionId: opts.sessionId ?? null,

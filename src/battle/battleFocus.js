@@ -5,7 +5,8 @@
 //  回傳 { x, y, intensity }：x/y 為 0..100 邏輯座標；intensity 0..1 供 zoom 用。
 // ============================================================================
 
-import { dist, PITS } from "../gameData.js";
+import { dist } from "../gameData.js";
+import { objectivePitOf } from "../platform/contracts/objectiveLayout.js";
 
 const FIGHT_R = 8;
 const MELEE_R = 3.5;
@@ -44,7 +45,8 @@ export function computeFocus(snap) {
 
   // Only a live objective contest is a camera target. A pit with merely one
   // visitor on each side is not automatically more important than a fight.
-  for (const [key, pit] of [["baron", PITS.baron], ["dragon", PITS.dragon]]) {
+  //  v16 Objective Layout：坑位讀本場 snapshot 的配置（SWAPPED 時巨龍在上方坑）
+  for (const [key, pit] of [["baron", objectivePitOf(snap, "baron")], ["dragon", objectivePitOf(snap, "dragon")]]) {
     if (!snap[key]?.alive) continue;
     const near = alive.filter((p) => dist(p.pos, pit) < 9);
     if (near.length >= 2 && near.some((p) => p.side !== near[0].side))
@@ -54,7 +56,8 @@ export function computeFocus(snap) {
   // Idle: anchor on one real hero, never an average point in empty terrain.
   const blue = alive.filter((p) => p.side === "blue");
   if (blue.length) {
-    const hero = blue.slice().sort((a, b) => dist(a.pos, PITS.dragon) - dist(b.pos, PITS.dragon)
+    const dragonPit = objectivePitOf(snap, "dragon");
+    const hero = blue.slice().sort((a, b) => dist(a.pos, dragonPit) - dist(b.pos, dragonPit)
       || String(a.id).localeCompare(String(b.id)))[0];
     return { x: hero.pos.x, y: hero.pos.y, intensity: 0, score: 0, key: hero.id, kind: "roam" };
   }
