@@ -56,7 +56,8 @@ const result = await runGate({
       + "RB.beginReplayCapture({seed:" + SEED + ",config:{},roster}); let soulT=null;"
       + "for(let i=0;i<7200&&!e.over;i++){e.tick(0.5); RB.captureReplayFrame(e.snapshot()); if(soulT===null&&(e.fsm3.blue.dragonStacks>=4||e.fsm3.red.dragonStacks>=4)) soulT=e.t;}"
       + "const r=RB.finalizeReplay({matchId,events:[]});"
-      + "return JSON.stringify({matchId,soulT,frames:r?r.frames.length:0,end:e.t,objEvents:(r&&r.objectiveEvents||[]).length});});");
+      + "const cs=r.combatStates; const bi=cs.rows.findIndex(x=>cs.kinds[x[0]]==='team-baron'); const baron=bi>=0?{start:cs.rows[bi][4],until:cs.rows[bi][5],side:cs.sides?cs.sides[bi]:null}:null;"
+      + "return JSON.stringify({matchId,soulT,baron,frames:r?r.frames.length:0,end:e.t,objEvents:(r&&r.objectiveEvents||[]).length});});");
     ck(`S2 頁面內以正式引擎跑 seed ${SEED} 並產生正式 replay（有龍魂）`, !!gen && gen.frames > 0 && gen.soulT !== null, JSON.stringify(gen));
     if (!gen?.soulT) return;
     await ev("[...document.querySelectorAll('button')].find(b=>/觀看重播/.test(b.innerText||'')).click(); return JSON.stringify(1);");
@@ -83,8 +84,27 @@ const result = await runGate({
     await shot("10-dragon-soul-replay-mobile");
     const pm = await probe();
     ck("S5 手機寬度同一時刻龍魂徽章仍正確", !!(pm?.blue?.soul || pm?.red?.soul), JSON.stringify(pm));
+    //  決定性巴龍情境：同一份 replay（seed 固定 ⇒ 巴龍時刻固定）seek 到巴龍生效中段
+    await chrome.send("Emulation.setDeviceMetricsOverride", { width: 1366, height: 900, deviceScaleFactor: 1, mobile: false });
+    await sleep(1200);
+    ck("B0 replay 內有巴龍紀錄（決定性 seed）", !!gen.baron, JSON.stringify(gen.baron));
+    if (gen.baron) {
+      const bt = Math.round((gen.baron.start + gen.baron.until) / 2);
+      await seekTo(bt);
+      const pb = await ev("const side=" + JSON.stringify(gen.baron.side === "r" ? "red" : "blue") + "; const el=document.querySelector('[data-testid=objective-baron-'+side+']'); const d=window.__ESMO_RUNTIME_DIAG?window.__ESMO_RUNTIME_DIAG():null; return JSON.stringify({badge:el?(el.innerText||''):null,rings:d?d.minionRings:null});");
+      await shot("03-baron-minions-replay-desktop");
+      ck("B1 巴龍生效中段：物件面板巴龍倒數徽章存在、小兵金環實際 render（實例數 > 0）", !!pb?.badge && /\d+s/.test(pb.badge) && (pb?.rings?.baron ?? 0) > 0, JSON.stringify({ at: bt, ...pb }));
+      await chrome.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
+      await sleep(1200); await seekTo(bt + 1);
+      const pm = await ev("const d=window.__ESMO_RUNTIME_DIAG?window.__ESMO_RUNTIME_DIAG():null; return JSON.stringify({panel:!!document.querySelector('[data-testid=objective-panel]'),rings:d?d.minionRings:null,over:document.documentElement.scrollWidth-innerWidth});");
+      await shot("11-baron-minions-replay-mobile");
+      ck("B2 390 手機同一時刻：物件面板存在、金環 render、無橫向溢出", pm?.panel && (pm?.rings?.baron ?? 0) > 0 && pm.over <= 0, JSON.stringify(pm));
+    }
     const errs = chrome.pageErrors ?? [];
     ck("E1 page error 0", errs.length === 0, errs.slice(0, 3).join(" ¦ "));
+    const consoleErrs = (chrome.consoleLines ?? []).filter((l) => l.startsWith("[error]"));
+    const shaderErrs = (chrome.consoleLines ?? []).filter((l) => /shader|WebGL.*error|THREE\.WebGLProgram/i.test(l));
+    ck("E2 console error 0、shader error 0", consoleErrs.length === 0 && shaderErrs.length === 0, [...consoleErrs, ...shaderErrs].slice(0, 3).join(" ¦ "));
   },
 });
 finishGate(result);

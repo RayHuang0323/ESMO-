@@ -67,7 +67,7 @@ const result = await runGate({
     //  現場段真實時間上限 12 分鐘；需要的畫面都拿到（龍魂是加分項）就提早結束，其餘交給快速完成。
     const liveDeadline = Date.now() + 22 * 60 * 1000;
     for (let i = 0; i < 4000 && Date.now() < liveDeadline; i++) {
-      if (seen.dragon && seen.baron && seen.toast && seen.slow && (seen.soul || i > 1500)) break;
+      if (seen.dragon && seen.baron && ringOk && seen.toast && seen.slow && (seen.soul || i > 1500)) break;
       const p = await probe();
       if (!p) { await sleep(300); continue; }
       if (p.over) break;
@@ -79,11 +79,9 @@ const result = await runGate({
             && Math.abs(ui.baron - Math.ceil(tb.baronRemaining ?? 0)) <= 1;
           if (!same) { mismatch++; if (ex.length < 3) ex.push(JSON.stringify({ side, tb, ui })); }
           if (!seen.dragon && (tb.dragonStacks ?? 0) >= 1) { seen.dragon = p.ts; await shot("01-dragon-stack-desktop"); }
-          if (!seen.baron && (tb.baronRemaining ?? 0) > 5) {
-            seen.baron = p.ts; ringOk = (p.rings?.baron ?? 0) > 0;
-            await shot("02-baron-buff-desktop");
-            await sleep(400); await shot("03-baron-minions-desktop");
-          }
+          if (!seen.baron && (tb.baronRemaining ?? 0) > 5) { seen.baron = p.ts; await shot("02-baron-buff-desktop"); }
+          //  3D 層落後資料一幀 ⇒ 不只看巴龍出現那一次取樣：整個巴龍期間只要有一次「巴龍生效且金環 > 0」就成立
+          if (seen.baron && !ringOk && (tb.baronRemaining ?? 0) > 1 && (p.rings?.baron ?? 0) > 0) { ringOk = true; await shot("03-baron-minions-desktop"); }
           if (!seen.soul && tb.soul) { seen.soul = p.ts; await shot("04-dragon-soul-desktop"); }
         }
         if (!seen.toast && p.ui.toast) { seen.toast = p.ui.toast; await shot("05-objective-toast-desktop"); }
@@ -97,7 +95,7 @@ const result = await runGate({
     }
     ck("O1 物件面板與 snapshot.teamBuffs 逐次一致（前置：本場拿到龍層）", !!seen.dragon && samples > 0 && mismatch <= Math.ceil(samples * 0.02),
       `samples=${samples} mismatch=${mismatch} ${ex.join(" ¦ ")}`);
-    ck("O2 巴龍徽章出現，且持有巴龍時小兵金環實例數 > 0（前置：本場有巴龍）", !!seen.baron && ringOk === true, `baronAt=${seen.baron} ring=${ringOk}`);
+    ck("O2 巴龍徽章出現，且巴龍生效期間小兵金環確實 render（實例數 > 0）", !!seen.baron && ringOk === true, `baronAt=${seen.baron} ring=${ringOk}`);
     if (seen.soul) ck("O3 龍魂徽章與 snapshot soul 一致", true, `soulAt=${seen.soul}`);
     else console.log("   ⓘ O3 本場沒有隊伍達成龍魂（隨機 seed）；龍魂的 UI／Replay 一致性另由 Node 驗證器 R2 覆蓋，這裡不當通過。");
     ck("O4 大型物件擊殺提示出現", !!seen.toast, String(seen.toast));

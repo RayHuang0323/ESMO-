@@ -1,0 +1,105 @@
+{
+  "v15": {
+    "blue": {
+      "winPct": 53.1,
+      "firstDragonPct": 79.3,
+      "dragonsTotal": 3172,
+      "dragonMedianT": 602,
+      "soulRatePct": 36.3,
+      "soulWinPct": 57.9,
+      "soulMedianT": 938,
+      "firstBaronPct": 23.5,
+      "firstBaronWinPct": 69.8,
+      "baronsTotal": 788,
+      "baronMedianT": 872,
+      "lateObjTaken": 1180,
+      "lateObjWinPct": 59.7,
+      "bountyEvents": 0,
+      "bountyWinPct": null,
+      "objKillWinPct": 57.1
+    },
+    "red": {
+      "winPct": 46.9,
+      "firstDragonPct": 20.7,
+      "dragonsTotal": 1134,
+      "dragonMedianT": 829,
+      "soulRatePct": 3.4,
+      "soulWinPct": 64.7,
+      "soulMedianT": 1230,
+      "firstBaronPct": 76.5,
+      "firstBaronWinPct": 52,
+      "baronsTotal": 1509,
+      "baronMedianT": 654,
+      "lateObjTaken": 1101,
+      "lateObjWinPct": 57.3,
+      "bountyEvents": 0,
+      "bountyWinPct": null,
+      "objKillWinPct": 54.7
+    }
+  },
+  "v16": {
+    "blue": {
+      "winPct": 55.5,
+      "firstDragonPct": 79,
+      "dragonsTotal": 3141,
+      "dragonMedianT": 596,
+      "soulRatePct": 35,
+      "soulWinPct": 68,
+      "soulMedianT": 925,
+      "firstBaronPct": 23.7,
+      "firstBaronWinPct": 70.5,
+      "baronsTotal": 817,
+      "baronMedianT": 870,
+      "lateObjTaken": 1170,
+      "lateObjWinPct": 65.9,
+      "bountyEvents": 246,
+      "bountyWinPct": 33.7,
+      "objKillWinPct": 61.5
+    },
+    "red": {
+      "winPct": 44.5,
+      "firstDragonPct": 21,
+      "dragonsTotal": 1175,
+      "dragonMedianT": 822,
+      "soulRatePct": 3.9,
+      "soulWinPct": 82.1,
+      "soulMedianT": 1231,
+      "firstBaronPct": 76.3,
+      "firstBaronWinPct": 49.1,
+      "baronsTotal": 1450,
+      "baronMedianT": 629,
+      "lateObjTaken": 1062,
+      "lateObjWinPct": 57.9,
+      "bountyEvents": 249,
+      "bountyWinPct": 30.5,
+      "objKillWinPct": 53.9
+    }
+  },
+  "winnerFlips": {
+    "toBlue": 239,
+    "toRed": 215
+  },
+  "tdcs1": {
+    "seedsWithTdcs1Heroes": 73,
+    "withHeroes": {
+      "v15": {
+        "n": 73,
+        "bluePct": 47.9
+      },
+      "v16": {
+        "n": 73,
+        "bluePct": 53.4
+      }
+    },
+    "withoutHeroes": {
+      "v15": {
+        "n": 927,
+        "bluePct": 53.5
+      },
+      "v16": {
+        "n": 927,
+        "bluePct": 55.7
+      }
+    }
+  }
+}
