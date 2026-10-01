@@ -185,6 +185,24 @@ export const STANDARD_OPP_TACTIC = T({
   fit: { roles: [], stats: [] }, evidence: [],
 });
 
+/**
+ * TD-HI5：對手戰術來源——**隊伍自己的設定**，不是虛構 AI。
+ * AI 聯賽隊伍有 `style`（platform/competition/aiTeams.js 的 TEAM_STYLES，原本「供日後戰術對位使用」）；
+ * 這裡把它對應到既有 8 套戰術之一，紅方因此與藍方走**同一份契約、同一個 builder**。
+ * 沒有隊伍設定的對手（排隊 mock、快速練習）⇒ 回 STANDARD_OPP_TACTIC（誠實的中性預設）。
+ */
+export const TEAM_STYLE_TACTIC = Object.freeze({
+  aggressive: "m7",   // 前期壓制
+  defensive: "m8",    // 後期決戰
+  balanced: "std",    // 標準運營
+  objective: "m4",    // 龍堆運營
+  skirmish: "m3",     // 強開團
+});
+export function mobaTacticForTeamStyle(style) {
+  const id = TEAM_STYLE_TACTIC[style] ?? null;
+  return (id && id !== "std" ? mobaTacticById(id) : null) ?? STANDARD_OPP_TACTIC;
+}
+
 /** 契約驗證：欄位齊全 + 範圍合法。 */
 export function validateMobaTacticConfig(t) {
   const errors = [];

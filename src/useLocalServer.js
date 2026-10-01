@@ -12,7 +12,8 @@ import { LogicEngine } from "./LogicEngine.js";
 import { useGameStore } from "./useGameStore.js";
 import { useHeroProgressStore } from "./hero/heroProgressStore.js";
 import { useProfileStore } from "./platform/profileStore.js";
-import { toEngineTactic, toEngineTacticIdentity, STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION } from "./platform/contracts/MobaTacticConfig.js";
+import { toEngineTactic, toEngineTacticIdentity, STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION, mobaTacticForTeamStyle } from "./platform/contracts/MobaTacticConfig.js";
+import { aiTeamById } from "./platform/competition/aiTeams.js";
 import { beginReplayCapture } from "./battle/moba/replay/replayBuffer.js";
 import { buildPlayerStatSlots, applyFatigueToLoadout } from "./battle/moba/mobaRosterAdapter.js";
 import { toEngineHeroMods } from "./battle/moba/mobaHeroProfile.js";
@@ -262,15 +263,19 @@ export function useLocalServer() {
     if (spellMods) eng.configureSpells(spellMods);
 
     // Sprint24：戰術進引擎（TacticScreen 的 MobaTacticConfig → 行為權重 knobs）。
-    //   對手戰術目前固定 STANDARD_OPP_TACTIC（無對手戰術來源，不虛構 AI）。
+    //   TD-HI5（v17）：紅方戰術來自**對手隊伍自己的設定**——AI 聯賽隊伍的 style（aiTeams.js）
+    //   經 mobaTacticForTeamStyle 對應到 8 套戰術之一；查不到隊伍設定（排隊 mock、快速練習）
+    //   ⇒ STANDARD_OPP_TACTIC。雙方都經同一個 toEngineTactic／toEngineTacticIdentity。
     //   無 opts.tactic ⇒ 不呼叫 configureMatch，引擎行為與舊版位元一致。
     if (opts.tactic?.tacticId) {
+      const oppTeam = opts.opponentId ? aiTeamById(opts.opponentId) : null;
+      const redTactic = oppTeam ? mobaTacticForTeamStyle(oppTeam.style) : STANDARD_OPP_TACTIC;
       eng.configureMatch({
         blue: toEngineTactic(opts.tactic),
-        red: toEngineTactic(STANDARD_OPP_TACTIC),
+        red: toEngineTactic(redTactic),
         //  Tactical Identity v1：同一份契約、同一個 builder（規則集 tacticIdentityV1 關閉時引擎忽略）。
-        identity: { blue: toEngineTacticIdentity(opts.tactic), red: toEngineTacticIdentity(STANDARD_OPP_TACTIC) },
-        meta: { tacticId: opts.tactic.tacticId, tacticName: opts.tactic.name, version: MOBA_TACTIC_VERSION, opponentTacticId: STANDARD_OPP_TACTIC.tacticId },
+        identity: { blue: toEngineTacticIdentity(opts.tactic), red: toEngineTacticIdentity(redTactic) },
+        meta: { tacticId: opts.tactic.tacticId, tacticName: opts.tactic.name, version: MOBA_TACTIC_VERSION, opponentTacticId: redTactic.tacticId },
       });
     }
 

@@ -134,6 +134,19 @@ const pair = (tacticId, opts = {}) => {
   const chr = fs.readFileSync(path.join(ROOT, 'src/platform/challenge/challengeRunner.js'), 'utf8');
   ck('E1 Live（useLocalServer）與 Challenge（challengeRunner）都以 toEngineTacticIdentity 傳 identity',
     /identity:\s*\{\s*blue:\s*toEngineTacticIdentity\(/.test(uls) && /identity:\s*\{\s*blue:\s*toEngineTacticIdentity\(/.test(chr));
+  //  TD-HI5：紅方戰術來自對手隊伍自己的設定（AI 聯賽隊伍 style），查不到 ⇒ std。
+  const { TEAM_STYLES, AI_TEAMS } = await imp('src/platform/competition/aiTeams.js');
+  const styleIds = TEAM_STYLES.map((st) => TC.mobaTacticForTeamStyle(st).tacticId);
+  ck('E3 每一種隊伍 style 都對應到既有戰術（含 balanced＝std）；未知 style ⇒ std',
+    TEAM_STYLES.every((st) => TC.TEAM_STYLE_TACTIC[st]) && TC.mobaTacticForTeamStyle('unknown').tacticId === 'std'
+      && styleIds.every((id) => id === 'std' || TC.mobaTacticById(id)),
+    TEAM_STYLES.map((st, i) => `${st}→${styleIds[i]}`).join('、'));
+  ck('E4 7 支 AI 聯賽隊伍都有 style ⇒ 都取得自己的戰術', AI_TEAMS.every((t) => TEAM_STYLES.includes(t.style)),
+    AI_TEAMS.map((t) => `${t.name}:${TC.mobaTacticForTeamStyle(t.style).tacticId}`).join('、'));
+  ck('E5 一般對戰紅方：useLocalServer 由 opponentId → aiTeamById → style 取戰術，雙方同一個 builder；查不到 ⇒ STANDARD',
+    /aiTeamById\(opts\.opponentId\)/.test(uls) && /mobaTacticForTeamStyle\(oppTeam\.style\)\s*:\s*STANDARD_OPP_TACTIC/.test(uls)
+      && /red:\s*toEngineTactic\(redTactic\)/.test(uls) && /red:\s*toEngineTacticIdentity\(redTactic\)/.test(uls)
+      && /opponentTacticId:\s*redTactic\.tacticId/.test(uls));
   const le = fs.readFileSync(path.join(ROOT, 'src/LogicEngine.js'), 'utf8');
   ck('E2 引擎不認得任何戰術 id（沒有第二套 AI／沒有依 tacticId 分支）', !/tacticId\s*===\s*['"]m\d/.test(le));
 }
