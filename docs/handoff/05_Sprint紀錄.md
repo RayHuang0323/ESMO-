@@ -24217,3 +24217,11 @@ candidate `feature/moba-objective-stakes-v16` @ `36251d0`（origin/main＝`35663
 - `check_moba_camera_replay29b6` 30 分鐘背景上限內未跑完（它內部串跑 pacing29b1 等舊 gate），結果未取得。
 - 未實測：「Boss 血條 ↔ 擊殺通知」同框（兩次交戰取樣時剛好沒有擊殺通知；不重疊由寬度保證）；Android 真機。
 - 證據：`review/moba-objective-hud-polish/gate/`（含 `icons_sheet.png`）。
+
+## 2026-10-01 moba-sim.v17 RELEASED（Hero Identity & Combat Depth v1 ＋ Mobile Objective HUD polish）
+- main `11916a7`（fast-forward，無 force）；Pages run `36828989140` success。
+- 內容：Passive P Runtime（100/100 有規則：完整 72／近似 24／資訊類 4）、Hero Power Curve、Tactical Identity v1（含 TD-HI5 AI 聯賽隊伍戰術）、手機物件列移到記分板下方、巨龍／巴龍 SVG、Boss 血條重疊修正。
+- 維持：Objective Stakes OFF、Nexus cap OFF、Jungle Topology 未開始、Android 真機 DEFERRED_BY_OWNER。
+- 正式站 smoke：browser_check_prod_hero_identity_v17 15/15、browser_check_prod_objective_layout_v16 13/13（含 Replay SWAPPED）、browser_check_moba_gameplay_presentation --prod 11/11；page／console／shader error 0。
+- 已知非 blocker：mock／快速練習對手仍 STANDARD；24 位被動為近似；戰報 timeline／Result 仍有 🐉／👑 emoji；camera_replay29b6 舊 pacing chain timeout；TacticScreen 正式站只驗 bundle 契約＋文案（TD-31），元件本身在本地以正式元件驗過。
+- 下一個 Sprint 尚未開始（建議 Jungle Topology v1）。

@@ -2823,3 +2823,11 @@ NEXT_SPRINT = NOT_STARTED
 
 - 2026-10-01：**moba-sim.v17 Hero Identity & Combat Depth v1 → Owner Review**（未發布）：被動 P 100/100 有規則（完整 72／近似 24／資訊類 4）、Power Curve 100/100、Tactical Identity 7 類欄位接線；n=1000 藍 49.5%、巨龍側 +5.4pp。
 - 建議順序：v17 review → **Jungle Topology v1（獨立 Sprint）** → **Objective Stakes v2 ＋ Nexus／Base Defense**（同 Sprint、分開 A/B）＋ **MOBA UI/UX Polish v2**（純呈現層，可並行）。規劃細節見 `docs/design/Hero_Identity_Combat_Depth_v1.md` §7。
+
+## 2026-10-01 moba-sim.v17 RELEASED（Hero Identity & Combat Depth v1 ＋ Mobile Objective HUD polish）
+- main `11916a7`（fast-forward，無 force）；Pages run `36828989140` success。
+- 內容：Passive P Runtime（100/100 有規則：完整 72／近似 24／資訊類 4）、Hero Power Curve、Tactical Identity v1（含 TD-HI5 AI 聯賽隊伍戰術）、手機物件列移到記分板下方、巨龍／巴龍 SVG、Boss 血條重疊修正。
+- 維持：Objective Stakes OFF、Nexus cap OFF、Jungle Topology 未開始、Android 真機 DEFERRED_BY_OWNER。
+- 正式站 smoke：browser_check_prod_hero_identity_v17 15/15、browser_check_prod_objective_layout_v16 13/13（含 Replay SWAPPED）、browser_check_moba_gameplay_presentation --prod 11/11；page／console／shader error 0。
+- 已知非 blocker：mock／快速練習對手仍 STANDARD；24 位被動為近似；戰報 timeline／Result 仍有 🐉／👑 emoji；camera_replay29b6 舊 pacing chain timeout；TacticScreen 正式站只驗 bundle 契約＋文案（TD-31），元件本身在本地以正式元件驗過。
+- 下一個 Sprint 尚未開始（建議 Jungle Topology v1）。
