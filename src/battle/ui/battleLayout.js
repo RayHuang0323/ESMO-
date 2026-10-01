@@ -76,6 +76,15 @@ export const MOBILE_TEAM_STRIP_H = 46;
 export const MOBILE_TEAM_STRIP_GAP = 4;
 
 /**
+ * Mobile Objective HUD polish（v17 Release 前）：巨龍／巴龍資訊列緊貼記分板底緣的一條薄列。
+ * 手機：記分板 → 物件列 → 5v5 戰況列 → 控制鈕／戰報（hudSafeTop 自動往下讓出這一段）。
+ * 桌機：記分板下方置中；桌機安全區不變（物件列置中、戰報在左、callout 在右），
+ *       只有同樣置中的 Boss 血條改放在物件列下方。
+ */
+export const OBJECTIVE_BAR_H = Object.freeze({ desktop: 22, mobile: 18 });
+export const OBJECTIVE_BAR_GAP = Object.freeze({ desktop: 4, mobile: 3 });
+
+/**
  * z-index 統一表（29B2 起列為待辦，29B6 落地）。
  * 數值沿用各元件既有值 ⇒ 這次只是把它們收斂到一處，沒有改變既有疊放次序。
  */

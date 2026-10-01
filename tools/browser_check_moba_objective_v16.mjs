@@ -15,7 +15,7 @@
 //    R2 seek 到持有巴龍／龍層的時刻 ⇒ 重播物件面板與 replay 紀錄一致
 //    R3 seek 到 TD-CS1 減速的時刻、點選被減速英雄 ⇒ 底欄狀態列有「減速」
 //  手機 390：
-//    M1 物件面板在畫面內、無橫向溢出、不壓 5v5 戰況列
+//    M1 （v17 polish）物件列在記分板正下方、5v5 戰況列之上；畫面內、無橫向溢出、不壓控制鈕／小地圖／底欄
 //  E page error 0；console error 0；shader error 0
 //  截圖輸出：review/moba-objective-v16/owner/（Owner Review 用）
 //  ⚠ 前置條件都先由受測系統自己的輸出證明（snapshot／replay／DOM），沒發生就明說，不當 PASS。
@@ -150,14 +150,19 @@ const result = await runGate({
         if (p?.tb && ((p.tb.blue.dragonStacks ?? 0) + (p.tb.red.dragonStacks ?? 0) >= 2 || (p.tb.blue.baronRemaining ?? 0) + (p.tb.red.baronRemaining ?? 0) > 5)) {
           lay = await ev("const R=(s)=>{const e=document.querySelector(s); if(!e) return null; const r=e.getBoundingClientRect(); return {l:r.left,r:r.right,t:r.top,b:r.bottom};};"
             + "const tl=[...document.querySelectorAll('div')].filter(d=>(d.innerText||'').startsWith('戰報')).map(d=>d.getBoundingClientRect()).filter(r=>r.height>20&&r.height<400).sort((a,b)=>b.bottom-a.bottom)[0];"
-            + "return JSON.stringify({panel:R('[data-testid=objective-panel]'),strip:R('[data-testid=mobile-team-strip]'),timelineB:tl?tl.bottom:null,vw:innerWidth,over:document.documentElement.scrollWidth-innerWidth});");
+            + "return JSON.stringify({panel:R('[data-testid=objective-panel]'),hud:R('[data-testid=battle-hud]'),strip:R('[data-testid=mobile-team-strip]'),leave:R('[data-testid=leave-active-match]'),mm:R('[data-testid=battle-minimap]'),dock:R('[data-testid=observer-dock]'),timelineB:tl?tl.bottom:null,vw:innerWidth,over:document.documentElement.scrollWidth-innerWidth});");
           await shot("09-objective-panel-mobile");
           break;
         }
         await sleep(300);
       }
-      ck("M1 手機：物件面板在畫面內、無橫向溢出、不壓 5v5 戰況列與戰報", !!lay?.panel && lay.panel.l >= 0 && lay.panel.r <= lay.vw && lay.over <= 0
-        && (!lay.strip || lay.panel.t >= lay.strip.b - 0.5) && (lay.timelineB === null || lay.panel.t >= lay.timelineB - 0.5), JSON.stringify(lay));
+      //  v17 Mobile Objective HUD polish（Owner 2026-10-01）：物件列從戰場中央（戰報下方）移到**記分板正下方**的薄列，
+      //  5v5 戰況列接在它下面 ⇒ 版面規格改為「記分板 ≤ 物件列 ≤ 戰況列」，並新增不壓控制鈕／小地圖／底欄。
+      const below = (a, b) => !a || !b || a.t >= b.b - 0.5;
+      ck("M1 手機：物件列在記分板正下方、5v5 戰況列之上；畫面內、無橫向溢出；不壓控制鈕／小地圖／底欄",
+        !!lay?.panel && lay.panel.l >= 0 && lay.panel.r <= lay.vw && lay.over <= 0
+          && below(lay.panel, lay.hud) && below(lay.strip, lay.panel) && below(lay.leave, lay.panel)
+          && (!lay.mm || lay.panel.b <= lay.mm.t) && (!lay.dock || lay.panel.b <= lay.dock.t), JSON.stringify(lay));
     } else ck("M0 手機戰鬥開始", false);
 
     const errs = chrome.pageErrors ?? [];

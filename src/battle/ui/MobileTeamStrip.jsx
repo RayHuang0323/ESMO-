@@ -18,6 +18,7 @@ import React from "react";
 import HeroPortrait from "../../ui/HeroPortrait.jsx";
 import { useHudMode, mobileTeamStripTop } from "./hudStore.js";
 import { MOBILE_TEAM_STRIP_H, Z } from "./battleLayout.js";
+import { DragonIcon, BaronIcon } from "./ObjectiveIcons.jsx";
 
 const MONO = "ui-monospace,Menlo,monospace";
 const BLUE = "#60a5fa", RED = "#f87171", GOLD = "#fbbf24";
@@ -113,10 +114,10 @@ export function MobileTeamStrip({ snapshot, roster = {}, activeId = null, onPick
         <span data-testid="team-strip-objectives" data-towers={`${s.towers.blue}:${s.towers.red}`} data-dragons={`${s.dragons.blue}:${s.dragons.red}`}
           style={{ display: "flex", gap: 4, color: "#cbd5e1", fontSize: 8.5 }}>
           <span title="拆塔">🗼{s.towers.blue}:{s.towers.red}</span>
-          <span title="巨龍層數">🐉{s.dragons.blue}:{s.dragons.red}</span>
+          <span title="巨龍層數" style={{ display: "inline-flex", alignItems: "center", gap: 1 }}><DragonIcon size={10} title="巨龍層數" style={{ color: "#c084fc" }} />{s.dragons.blue}:{s.dragons.red}</span>
         </span>
         {(s.baron.blue > 0 || s.baron.red > 0)
-          ? <span style={{ color: "#f4c16f", fontSize: 8 }}>👑{s.baron.blue > 0 ? "藍" : "紅"} {Math.ceil(Math.max(s.baron.blue, s.baron.red))}s</span>
+          ? <span style={{ color: "#f4c16f", fontSize: 8, display: "inline-flex", alignItems: "center", gap: 1 }}><BaronIcon size={10} title="巴龍增益" />{s.baron.blue > 0 ? "藍" : "紅"} {Math.ceil(Math.max(s.baron.blue, s.baron.red))}s</span>
           : <span style={{ color: "rgba(255,255,255,.45)", fontSize: 8 }}>記分板 {boardOpen ? "▴" : "▾"}</span>}
       </button>
       <div style={{ display: "flex", gap: 2, flex: 1, minWidth: 0, justifyContent: "flex-end" }}>
@@ -169,7 +170,7 @@ export function MobileScoreboardSheet({ snapshot, roster = {}, hudItems = null, 
       <section data-testid={`mobile-board-${side}`} style={{ display: "grid", gap: 4 }}>
         <header style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", font: `800 11px ${MONO}`, color: side === "blue" ? BLUE : RED, padding: "0 2px" }}>
           <span>{side === "blue" ? blueLabel : redLabel} · 存活 {s.alive[side]}/5</span>
-          <span style={{ color: "#cbd5e1" }}>擊殺 {kills} · {gold == null ? "—" : wan(gold)} · 🗼{s.towers[side]} · 🐉{s.dragons[side]}</span>
+          <span style={{ color: "#cbd5e1" }}>擊殺 {kills} · {gold == null ? "—" : wan(gold)} · 🗼{s.towers[side]} · <DragonIcon size={11} title="巨龍層數" style={{ color: "#c084fc", verticalAlign: "-1px" }} />{s.dragons[side]}</span>
         </header>
         {list.map((p) => <BoardRow key={p.id} p={p} roster={roster} hudItems={hudItems} renderItems={renderItems} active={activeId === p.id} onPick={onPick} />)}
       </section>

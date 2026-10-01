@@ -11,7 +11,7 @@
 //  ⚠ 純呈現：不碰引擎、不碰 snapshot、不影響模擬。
 // ============================================================================
 import { useSyncExternalStore } from "react";
-import { HUD_TOP, MOBILE_TEAM_STRIP_GAP, MOBILE_TEAM_STRIP_H } from "./battleLayout.js";
+import { HUD_TOP, MOBILE_TEAM_STRIP_GAP, MOBILE_TEAM_STRIP_H, OBJECTIVE_BAR_H, OBJECTIVE_BAR_GAP } from "./battleLayout.js";
 
 export const HUD_MODES = Object.freeze(["compact", "expanded"]);
 export const HUD_MODE_ZH = Object.freeze({ compact: "精簡", expanded: "完整" });
@@ -24,8 +24,11 @@ export const HUD_HEIGHT = Object.freeze({
 });
 export const hudHeight = (mode, mobile) =>
   (HUD_HEIGHT[mode] ?? HUD_HEIGHT.compact)[mobile ? "mobile" : "desktop"];
-/** 手機 5v5 戰況列的頂距（緊貼記分板底緣）。 */
-export const mobileTeamStripTop = (mode) => HUD_TOP + hudHeight(mode, true) + MOBILE_TEAM_STRIP_GAP;
+/** 巨龍／巴龍資訊列：緊貼記分板底緣（手機與桌機各一組尺寸）。 */
+export const objectiveBarTop = (mode, mobile) => HUD_TOP + hudHeight(mode, mobile) + OBJECTIVE_BAR_GAP[mobile ? "mobile" : "desktop"];
+export const objectiveBarBottom = (mode, mobile) => objectiveBarTop(mode, mobile) + OBJECTIVE_BAR_H[mobile ? "mobile" : "desktop"];
+/** 手機 5v5 戰況列的頂距（接在物件列下方；物件列緊貼記分板底緣）。 */
+export const mobileTeamStripTop = (mode) => objectiveBarBottom(mode, true) + MOBILE_TEAM_STRIP_GAP;
 /**
  * 頂部浮層（戰報／callout／控制鈕）的安全起點 = 記分板底緣 + 6。
  * Mobile & Presentation Polish：手機多一列常駐的 5v5 戰況列 ⇒ 安全區再往下讓出那一列。

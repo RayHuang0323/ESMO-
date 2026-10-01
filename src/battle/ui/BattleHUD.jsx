@@ -19,7 +19,7 @@ import { useBattleStore } from "../battleStore.js";
 import { fmtT } from "../../gameData.js";
 import { HUD_TOP, HUD_H, PANEL_MAX_W, Z } from "./battleLayout.js";
 //  L Hotfix 2 §4：記分板顯示層級（compact / expanded）＋ 安全區高度的唯一來源。
-import { useHudMode, toggleHudMode, hudHeight, hudSafeTop, HUD_MODE_ZH } from "./hudStore.js";
+import { useHudMode, toggleHudMode, hudHeight, hudSafeTop, objectiveBarBottom, HUD_MODE_ZH } from "./hudStore.js";
 import { useIsMobile } from "../../ui/useViewport.js";
 
 const BLUE = "#60a5fa", RED = "#fb923c", MONO = "'Courier New',monospace";
@@ -57,7 +57,8 @@ function TeamObjectiveBuffs({ state, side }) {
 
 function BossStatusBar({ objectives = [] }) {
   const mobile = useIsMobile();
-  const safeTop = hudSafeTop(useHudMode(), mobile);
+  const mode = useHudMode();
+  const safeTop = hudSafeTop(mode, mobile);
   const active = objectives
     .filter((o) => (o.type === "dragon" || o.type === "baron") && o.alive && o.hp < 1)
     .sort((a, b) => (a.type === "baron" ? -1 : 1) - (b.type === "baron" ? -1 : 1))[0];
@@ -67,8 +68,10 @@ function BossStatusBar({ objectives = [] }) {
   const hp = Math.max(0, Math.min(1, active.hp ?? 0));
   return (
     <div data-testid="boss-hud" style={{
-      position: "absolute", top: safeTop + (mobile ? 124 : 8), left: "50%", transform: "translateX(-50%)",
-      width: "min(72vw, 330px)", zIndex: Z.hud, pointerEvents: "none",
+      //  v17 Objective HUD polish：桌機 Boss 血條放在物件資訊列下方（兩者同為置中，原本 92px 會和物件列重疊）。
+      //  手機：靠左、寬度讓出右側擊殺通知（.mobile .observer-killfeed：right 12、max-width 170）⇒ 兩者不再重疊。
+      position: "absolute", top: mobile ? safeTop + 124 : objectiveBarBottom(mode, false) + 6,
+      ...(mobile ? { left: 10, width: "min(230px, calc(100vw - 196px))" } : { left: "50%", transform: "translateX(-50%)", width: "min(72vw, 330px)" }), zIndex: Z.hud, pointerEvents: "none",
       borderRadius: 7, padding: "4px 7px", background: "rgba(7,10,16,.86)",
       border: `1px solid ${color}88`, boxShadow: `0 2px 12px ${color}22`,
     }}>

@@ -1,15 +1,17 @@
-/* ── Objective Stakes v1：大型物件面板（ObjectivePanel.jsx）────────────────────────
-   藍＝#60a5fa、紅＝#f87171、龍＝紫 #c084fc、巴龍＝金 #fbbf24；顏色一律搭配文字（龍魂／巴龍／秒數）。 */
+/* ── Objective Stakes v1：大型物件資訊列（ObjectivePanel.jsx）────────────────────────
+   藍＝#60a5fa、紅＝#f87171、龍＝紫 #c084fc、巴龍＝金 #fbbf24；顏色一律搭配圖示輪廓與文字（可搶／交戰／秒數）。
+   v17 Mobile Objective HUD polish：位置與高度由 hudStore.objectiveBarTop ／ battleLayout.OBJECTIVE_BAR_H 給（inline），
+   這裡只管外觀。手機是緊貼記分板的薄列，5v5 戰況列接在下方。 */
 .objective-panel{position:absolute;left:50%;transform:translateX(-50%);z-index:9;display:flex;align-items:center;gap:8px;
-  padding:3px 8px;border-radius:999px;background:rgba(7,10,16,.82);border:1px solid rgba(255,255,255,.12);
+  box-sizing:border-box;padding:2px 8px;border-radius:999px;background:rgba(7,10,16,.84);border:1px solid rgba(255,255,255,.12);
   pointer-events:auto;font:800 10px/1 system-ui,sans-serif;color:#e5e7eb;white-space:nowrap}
-.objective-panel.desktop{top:96px;height:26px}
-/* 手機：戰報 timeline 下緣（約 240px）之下，不壓戰報最後一行 */
-.objective-panel.mobile{top:calc(env(safe-area-inset-top) + 247px);height:22px;gap:5px;padding:2px 6px;font-size:9px}
+.objective-panel.mobile{gap:5px;padding:1px 7px;font-size:9px;border-radius:7px;max-width:calc(96% - 2px);
+  background:linear-gradient(180deg,rgba(13,11,18,.9),rgba(13,11,18,.8));box-shadow:0 2px 8px rgba(0,0,0,.35)}
 .objective-team{display:flex;align-items:center;gap:4px}
 .objective-team.red{flex-direction:row-reverse}
 .objective-pips{display:inline-flex;gap:2px}
 .objective-pips i{width:7px;height:7px;border-radius:2px;background:rgba(255,255,255,.12);border:1px solid rgba(192,132,252,.35)}
+.objective-panel.mobile .objective-pips i{width:6px;height:6px}
 .objective-pips i.on{background:#c084fc;box-shadow:0 0 5px #c084fc99}
 .objective-team.blue .objective-pips i.on{border-color:#60a5fa}
 .objective-team.red .objective-pips i.on{border-color:#f87171}
@@ -17,13 +19,28 @@
 .objective-badge small{font:800 9px Consolas,monospace}
 .objective-badge.soul{color:#1a1027;background:linear-gradient(90deg,#c084fc,#f0abfc);box-shadow:0 0 8px #c084fc88}
 .objective-badge.baron{color:#1f1300;background:conic-gradient(#fbbf24 var(--left,360deg),rgba(251,191,36,.35) 0)}
-.objective-spawns{display:inline-flex;gap:6px;padding:0 4px;border-left:1px solid rgba(255,255,255,.1);border-right:1px solid rgba(255,255,255,.1)}
-.objective-spawn{display:inline-flex;align-items:center;gap:2px;color:#71717a;font-family:Consolas,monospace}
+.objective-panel.mobile .objective-badge{padding:0 4px}
+.objective-spawns{display:inline-flex;gap:7px;padding:0 5px;border-left:1px solid rgba(255,255,255,.1);border-right:1px solid rgba(255,255,255,.1)}
+.objective-spawn{display:inline-flex;align-items:center;gap:2px;color:#8b8b95;font-family:Consolas,monospace}
+.objective-spawn svg{flex:none;display:block}
+.objective-spawn.dragon svg{color:#a78bfa}
+.objective-spawn.baron svg{color:#d6a64a}
+.objective-spawn.pre svg,.objective-spawn.respawn svg{opacity:.6}
 .objective-spawn.alive{color:#fde047}
+.objective-spawn.alive.dragon svg{color:#c084fc;filter:drop-shadow(0 0 3px #c084fcaa)}
+.objective-spawn.alive.baron svg{color:#fbbf24;filter:drop-shadow(0 0 3px #fbbf24aa)}
+.objective-spawn.fight{color:#fca5a5}
+.objective-spawn.fight svg{animation:objective-fight 0.9s ease-in-out infinite}
+.objective-spawn.fight.dragon svg{color:#c084fc}
+.objective-spawn.fight.baron svg{color:#fbbf24}
+@keyframes objective-fight{0%,100%{filter:drop-shadow(0 0 0 transparent)}50%{filter:drop-shadow(0 0 4px #f87171)}}
 .objective-toast{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);padding:4px 10px;border-radius:6px;
   background:rgba(7,10,16,.92);border:1px solid rgba(255,255,255,.18);font-size:11px;animation:objective-toast-in .35s ease-out}
+/* 手機：提示暫時取代兩側龍層（中央倒數保留；不另外浮出一層蓋戰況列／控制鈕） */
+.objective-panel.mobile .objective-toast{position:static;transform:none;padding:0 6px;font-size:9px;line-height:14px;border-radius:4px;animation:objective-toast-in-inline .35s ease-out}
 .objective-toast.blue{border-color:#60a5fa;color:#bfdbfe}
 .objective-toast.red{border-color:#f87171;color:#fecaca}
 .objective-toast em{margin-left:6px;font-style:normal;color:#fbbf24}
 @keyframes objective-toast-in{from{opacity:0;transform:translate(-50%,-4px)}to{opacity:1;transform:translate(-50%,0)}}
-@media (prefers-reduced-motion:reduce){.objective-toast{animation:none}}
+@keyframes objective-toast-in-inline{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.objective-toast,.objective-spawn.fight svg{animation:none}}
