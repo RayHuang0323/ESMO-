@@ -24197,3 +24197,23 @@ candidate `feature/moba-objective-stakes-v16` @ `36251d0`（origin/main＝`35663
 - 其他 gate 執行時會覆寫既有證據截圖（含 v16 Owner 截圖）⇒ 已還原，不提交；本輪證據在 `review/hero-identity-v17/gate/`。
 - TacticScreen 新增 `data-tactic-card`／`data-testid="moba-tactic-effects"` 驗收錨點（不影響畫面）。
 - 仍未測：Android 真機（DEFERRED_BY_OWNER）。
+
+## 2026-10-01 Mobile Objective HUD polish（v17 Release 前；只改 UI／SVG）— Final Owner Review（未 push／未部署）
+
+### 改了什麼
+- 物件資訊列：手機從戰場中央（戰報下方 247px）移到**記分板正下方**的 18px 薄列，5v5 戰況列接在下方；桌機 22px、記分板下 4px。
+  位置唯一來源：`battleLayout.OBJECTIVE_BAR_*` ＋ `hudStore.objectiveBarTop／objectiveBarBottom`；手機 `hudSafeTop` 自動讓出這一段，桌機安全區不變。
+- 四種狀態：pre（出生前倒數）／alive（可搶，發光）／fight（交戰，脈動）／respawn（重生倒數）；`data-state` 與 snapshot 同源。
+- 手機擊殺提示改為暫時取代兩側龍層（4 秒），**中央倒數永遠保留**（gate 抓到第一版會在擊殺瞬間蓋掉重生倒數，已修）。
+- 巨龍／巴龍改為 ESMO 自繪 SVG（`ObjectiveIcons.jsx`）：巨龍＝雙角＋長吻＋蝠翼側面龍頭；巴龍＝雙捲角＋三眼＋鋸齒巨口＋觸手的虛空巨獸；單色也能靠輪廓分辨。物件列與 5v5 戰況列不再用 🐉／👑。
+- Boss 血條：桌機改到物件列下方（原本 92px 與物件列重疊）；手機靠左、讓出右側擊殺通知（原本會壓到擊殺卡）。
+- 不改 v17 simulation、不改物件數值。戰報 timeline／賽後畫面的 emoji 圖示未改（不在本次範圍）。
+
+### 驗證（依序、單支）
+- build ✓；`check_moba_mobile_hud_polish` 60/60。
+- 瀏覽器：**新增** `browser_check_moba_objective_hud_polish` 20/20（巨龍／巴龍四種狀態實際出現且無重疊、320／360／390／430＋1366、桌機交戰中 Boss 血條在物件列下方、SVG 無 emoji、圖示對照圖、錯誤 0）；
+  Mobile HUD 37/37；Hero Identity 35/35；Gameplay Presentation 10/10；Objective v16 11/11（M1 版面規格改為「記分板 ≤ 物件列 ≤ 戰況列」並新增不壓控制鈕／小地圖／底欄）。
+- Objective v16 曾 10/11（R3 重播 seek 減速取樣）一次，同一份程式重跑 11/11；另一次因休眠 CDP 斷線（HARNESS_FAIL）作廢。
+- `check_moba_camera_replay29b6` 30 分鐘背景上限內未跑完（它內部串跑 pacing29b1 等舊 gate），結果未取得。
+- 未實測：「Boss 血條 ↔ 擊殺通知」同框（兩次交戰取樣時剛好沒有擊殺通知；不重疊由寬度保證）；Android 真機。
+- 證據：`review/moba-objective-hud-polish/gate/`（含 `icons_sheet.png`）。
