@@ -148,7 +148,7 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
             const isSel = sel === t.tacticId;
             const fg = fitGrade(fitScore(t, starters));
             return (
-              <button key={t.tacticId} onClick={() => { setSel(t.tacticId); setVariantSel(null); }} style={{ textAlign: "left", minWidth: 0, background: isSel ? GC.card2 : GC.card, border: `1px solid ${isSel ? GC.blueL : GC.line}`, borderRadius: 10, padding: "9px 11px", color: "#fff", cursor: "pointer" }}>
+              <button key={t.tacticId} data-tactic-card={t.tacticId} onClick={() => { setSel(t.tacticId); setVariantSel(null); }} style={{ textAlign: "left", minWidth: 0, background: isSel ? GC.card2 : GC.card, border: `1px solid ${isSel ? GC.blueL : GC.line}`, borderRadius: 10, padding: "9px 11px", color: "#fff", cursor: "pointer" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
                   <span style={{ fontSize: 13, fontWeight: 900, minWidth: 0 }}>{t.emoji} {t.name}</span>
                   <span style={{ flexShrink: 0, fontSize: 8.5, fontWeight: 800, color: riskC(t.risk), border: `1px solid ${riskC(t.risk)}55`, borderRadius: 4, padding: "0 4px" }}>{t.risk}風險</span>
@@ -248,7 +248,7 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
           <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 10 }}>
             <div style={{ flex: "1 1 220px", minWidth: 0 }}>
               <div style={{ fontSize: 9, letterSpacing: "0.15em", color: GC.gray, fontWeight: 900, marginBottom: 4 }}>引擎效果（行為權重，非加傷）</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+              <div data-testid="moba-tactic-effects" style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                 {effects.map((e, i) => (
                   <span key={i} style={{ fontSize: 9.5, color: "#c4b5fd", background: "rgba(124,58,237,0.14)", border: "1px solid rgba(167,139,250,0.3)", borderRadius: 6, padding: "2px 8px" }}>{e}</span>
                 ))}

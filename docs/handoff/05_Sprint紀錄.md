@@ -24174,3 +24174,26 @@ candidate `feature/moba-objective-stakes-v16` @ `36251d0`（origin/main＝`35663
 ### 已知風險
 - 巨龍側 +1.3pp（雜訊內）；被動讓團戰更有決定性 ⇒ Jungle Topology v1 仍是第一優先。
 - 技術債 TD-HI1～HI6（見 08）。
+
+## 2026-10-01 Hero Identity v1 Release 前補件（Owner 指示：TD-HI5 ＋ 瀏覽器驗證）— READY_TO_REVIEW（未 push／未部署）
+
+### TD-HI5：一般對戰紅方戰術來源（最小修改，已完成）
+- AI 聯賽隊伍本來就有 `style`（aiTeams.js，註解「供日後戰術對位使用」）。新增 `MobaTacticConfig.TEAM_STYLE_TACTIC`／`mobaTacticForTeamStyle`：
+  aggressive→m7、defensive→m8、balanced→std、objective→m4、skirmish→m3。
+- `useLocalServer`：`opponentId → aiTeamById → style → 戰術`，紅藍雙方經同一個 `toEngineTactic`／`toEngineTacticIdentity`；`meta.opponentTacticId` 為實際戰術。
+- 查不到隊伍設定的對手（排隊 mock「赤焰軍團」等、快速練習）⇒ 仍是 STANDARD（誠實中性預設）。不需重構；殘留：mock／練習對手沒有隊伍設定。
+- gate：`check_tactical_identity_v17` 22/22（新增 E3–E5）；build ✓。
+
+### 瀏覽器驗證（依序、單支執行；每支開跑前可用記憶體 10.6–10.7 GB）
+| Gate | 結果 |
+|---|---|
+| browser_check_moba_combat_state_v1 | 13/13 PASS |
+| browser_check_moba_gameplay_presentation | 10/10 PASS（P1 版本事實改為 v17：P 格＝生效中／資訊類；QWER 等級角標斷言不變） |
+| browser_check_moba_mobile_hud | 37/37 PASS |
+| browser_check_moba_objective_v16 | 11/11 PASS |
+| **browser_check_hero_identity_v17**（新增） | **35/35 PASS**：完整／近似／資訊類顯示、觸發次數與疊層（即時）、強勢期曲線（與 snapshot 同源）、TacticScreen 戰術效果（m8／m5／m3）、桌機 1366＋390、page／console／shader error 0 |
+
+- 新 gate 第一次重跑時 S3（maestro 150 秒內觸發）紅一次：debug 入口每局 seed 不同、單點取樣太脆弱；改為觀察窗內輪詢（判準不變：必須觸發過），之後連續兩輪 35/35。
+- 其他 gate 執行時會覆寫既有證據截圖（含 v16 Owner 截圖）⇒ 已還原，不提交；本輪證據在 `review/hero-identity-v17/gate/`。
+- TacticScreen 新增 `data-tactic-card`／`data-testid="moba-tactic-effects"` 驗收錨點（不影響畫面）。
+- 仍未測：Android 真機（DEFERRED_BY_OWNER）。

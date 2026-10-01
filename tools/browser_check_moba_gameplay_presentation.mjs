@@ -7,7 +7,7 @@
 //  正式站模式只用 DOM ＋ `?debug=moba-runtime-battle&shot=`（打包後讀不到 /src/，TD-31），
 //  並先證明線上 bundle 真的是這一版（P0）。
 //  走 ?debug=moba-runtime-battle（正式 GameView／引擎／HUD），本地 dev server，390 手機 ＋ 1366 桌機。
-//    P  （正式站）線上 bundle 含本輪標記；技能格 P＝「未生效」、QWER 有等級角標（Mobile UI P1）
+//    P  （正式站）線上 bundle 含本輪標記；技能格 P＝「生效中」或「資訊類」（v17）、QWER 有等級角標（Mobile UI P1）
 //    H  底欄血條有刻度（data-max-hp ＝ snapshot mhp，> 0），生命文字仍在
 //    L  等待期間觀戰英雄升級 ⇒ 出現「升級」角標（同一正式 snapshot mlv）
 //    S  等待期間出現英雄狀態列（statusEffects：護盾／增益／控制…，含秒數）
@@ -56,7 +56,8 @@ const result = await runGate({
     // ── P Mobile UI P1 技能格（每格一個狀態；P＝未生效；QWER 等級角標）─────
     const P = await ev("const t=[...document.querySelectorAll('.observer-ability')].map(b=>({k:b.getAttribute('data-skill-slot'),st:b.getAttribute('data-skill-state'),lv:!!b.querySelector('.observer-ability-level'),txt:(b.querySelector('small')||{}).textContent||''})); return JSON.stringify(t);");
     const pTile = P?.find((t) => t.k === "P");
-    ck("P1 技能格 P＝「未生效」（被動未開）、QWER 都有等級角標", pTile?.st === "passive" && pTile?.txt === "未生效"
+    //  moba-sim.v17（Hero Identity v1）：被動已開啟 ⇒ P 格是「生效中」（戰鬥被動）或「資訊類」（不進引擎）；v16 時代的「未生效」不再成立。
+    ck("P1 技能格 P＝「生效中」或「資訊類」（v17 被動已開）、QWER 都有等級角標", ((pTile?.st === "passive live" && pTile?.txt === "生效中") || (pTile?.st === "passive" && pTile?.txt === "資訊類"))
       && ["Q", "W", "E", "R"].every((k) => P.find((t) => t.k === k)?.lv), JSON.stringify(P));
 
     // ── H 血條刻度 ────────────────────────────────────────────────────────
