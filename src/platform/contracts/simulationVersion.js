@@ -378,7 +378,9 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  ② Hero Power Curve v1：heroPowerCurveV1＝on，前／中／後期倍率（三段平均＝1），唯一掛點 _applyMatchLevel。
   //  ③ Tactical Identity v1：tacticIdentityV1＝on，戰術契約的決策投影；std 對 std 與未接線逐位元相同。
   //  Objective Stakes／Nexus cap 仍 OFF；坑位／layout 不變。n=1000 A/B 見 docs/design/Hero_Identity_Combat_Depth_v1.md。
-  "moba-sim.v17": "49ca18d32e3a3473",
+  //  2026-10-01（Release 前）：TD-HI5 在 MobaTacticConfig.js 新增 TEAM_STYLE_TACTIC／mobaTacticForTeamStyle（只決定紅方選哪套戰術，
+  //  同一份戰術輸入的引擎結果不變）⇒ v17 未發布，同版號重新登記。
+  "moba-sim.v17": "6bcd77c7ff63ee5e",
 });
 
 export const isKnownSimulationVersion = (v) =>
