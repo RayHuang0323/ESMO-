@@ -149,7 +149,8 @@ for (const token of ["addLine(tail, moving", "style === \"tower\"", "phase === \
 //    這裡守的東西不變——「Buff 狀態看得出來、名牌不是 DOM、血條不被蓋住」——
 //    只是守在新的實作上。
 for (const token of [
-  "makeHeroLabelTexture(hero.displayName, hero.level",
+  //  2026-10-05 Combat Feedback Polish：名牌內容改為英雄短名（仍是同一張 WebGL Plane）
+  "makeHeroLabelTexture(shortHeroName(hero), hero.level",
   "hero-name-level", "hero-contact-shadow", "hero-aura", "hero-buff-motes",
   "makeAuraMaterial", "makeMoteMaterial",
 ]) assert.ok(heroes.includes(token), `missing hero presentation guard: ${token}`);

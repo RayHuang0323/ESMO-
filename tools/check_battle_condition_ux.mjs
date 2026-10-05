@@ -60,9 +60,13 @@ ck("R7 技能／鎖定這類 gameplay 指示仍在（沒有被一起拿掉）",
 
 // ── N 名牌 ────────────────────────────────────────────────────────────────
 console.log("\n── N 常駐名牌 ──");
-ck("N1 一般對戰預設不顯示英雄名牌（heroNameplates 預設 false）",
-  /heroNameplates = false/.test(view3d) && /showLabels=\{heroNameplates/.test(view3d));
-ck("N2 GameView／Replay 都沒有打開名牌",
+//  ⚠ 2026-10-05 MOBA Combat Feedback Polish（Owner 指定 Hero Overhead UI）：規格改為**預設開**，
+//    但名牌換成小型「等級徽章＋英雄短名」（不再是遮血條的選手全名長字）。原本關閉的理由
+//    （長字擋住血條與特效）由新版尺寸處理，守門改成守新規格：預設開、手機不關、內容是英雄短名。
+ck("N1 名牌預設開（Owner 2026-10-05），內容是等級徽章＋英雄短名、不是選手名",
+  /heroNameplates = true/.test(view3d) && /showLabels=\{heroNameplates\}/.test(view3d)
+    && /makeHeroLabelTexture\(shortHeroName\(hero\)/.test(heroes));
+ck("N2 GameView／Replay 都沒有另外覆寫名牌開關（同一個預設）",
   !/heroNameplates/.test(read("src/GameView.jsx"))
     && !/heroNameplates/.test(read("src/screens/moba/MobaReplayScreen.jsx")));
 ck("N3 名牌實作仍保留（觀戰／除錯可開，不是砍掉功能）",

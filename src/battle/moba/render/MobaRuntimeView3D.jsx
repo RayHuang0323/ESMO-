@@ -30,6 +30,8 @@ import SkillCastCallouts from "./SkillCastCallouts.jsx";
 import TowerRangeDebug from "../presentation/TowerRangeDebug.jsx";
 import MobaRuntimeNeutrals from "./RiggedMobaRuntimeNeutrals.jsx";
 import HeroStatusFx from "./HeroStatusFx.jsx";
+import CombatFeedbackRuntime from "./CombatFeedbackRuntime.jsx";
+import RecallChannelFx from "./RecallChannelFx.jsx";
 import CombatZones from "./CombatZones.jsx";
 import FogOverlay from "./FogOverlay.jsx";
 import { applyFogToFrame } from "../presentation/fogOfWar.js";
@@ -407,10 +409,10 @@ export default function MobaRuntimeView3D({
   //  Combat Quality v1：播放倍率（1×/2×/4×）。只影響技能呈現的真實時間下限；Replay 不傳 ⇒ 1。
   playbackRate = 1,
   //  Battle Condition UX：英雄頭上的**常駐名牌**（名稱＋等級）。
-  //  一般對戰預設 **關**——總覽鏡頭下那行字只有 10 個模糊的小字，讀不出資訊，
-  //  卻一直擋住血條與技能特效。身分資訊改由 HUD 十人列、Hero Detail、Scoreboard 提供。
-  //  觀戰／除錯（harness）要看名字時自己把它打開。
-  heroNameplates = false,
+  //  ⚠ Combat Feedback Polish（2026-10-05，Owner 指定）起**預設開**：名牌改成小型的
+  //    「等級徽章＋英雄短名」（不再是選手全名那條長字），手機也顯示（compactLabels）。
+  //    舊版關掉的理由是長字遮血條；新版寬度 ≤ 血條 84%、只佔血條上方一行。
+  heroNameplates = true,
   //  polish-r2：返回進行中比賽的追趕期間，畫面被進度層蓋住且 frame 不會前進 ⇒ 暫停繪製，把主執行緒讓給追趕。
   renderPaused = false,
   //  feature/moba-spectacle-vision：戰爭迷霧的**視角方**（"off" ＝ 此畫面不支援迷霧，例如 debug harness）。
@@ -489,12 +491,16 @@ export default function MobaRuntimeView3D({
       <MobaRuntimeHeroes
         heroes={frame.heroes}
         frameRef={frameRef}
-        showLabels={heroNameplates && quality !== "low"}
+        showLabels={heroNameplates}
         compactLabels={compactLabels}
       />
       <FogOverlay frameRef={frameRef} />
       {/*  feature/moba-spectacle-vision：護盾／增益／減益／控制的角色附著效果（造型依類別不同）。 */}
       <HeroStatusFx frameRef={frameRef} quality={quality} />
+      {/*  Combat Feedback Polish：回城引導（rc／recallEvents）與浮動數字／+Gold（snapshot 相鄰差）。
+           兩者都只讀引擎既有輸出；Replay（source 非 null）frame 缺欄位 ⇒ 不掛、不造假。 */}
+      <RecallChannelFx frameRef={frameRef} source={source} />
+      <CombatFeedbackRuntime frameRef={frameRef} source={source} />
 
       <RuntimeFrameFeeder frameRef={frameRef} onShapeChange={onShapeChange} lockHeroId={lockHeroId} lockTarget={lockTarget} source={source} roster={roster} playbackRateRef={playbackRateRef} fogRef={fogRef} />
       <BattleCameraController source={source} perspective={RUNTIME_CAMERA} />

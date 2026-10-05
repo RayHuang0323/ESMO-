@@ -29,6 +29,8 @@ import { archetypeData, HERO_VISUALS } from "../presentation/heroArchetypes.js";
 import ChichuanHeroProxy from "./ChichuanHeroProxy.jsx";
 import DadiHeroProxy from "./DadiHeroProxy.jsx";
 import { heroProxyEnabled, heroProxyVariant } from "../../../featureFlags.js";
+import { heroById } from "../../../data/heroDatabase.js";
+import { pixelsPerWorld, isCompactViewport, overheadScaleOf, nameplateScaleOf } from "./overheadScale.js";
 
 const S = WORLD_SCALE;
 const TEAM_COLOR = { blue: 0x4d95f0, red: 0xf0574d };
@@ -234,7 +236,10 @@ export default function MobaRuntimeHeroes({
   }, []);
 
   //  每幀把 Adapter 的最新位置寫進 ref（不經過 React state ⇒ 不重繪）
-  useFrame(({ clock }) => {
+  useFrame(({ clock, camera, size }) => {
+    //  Combat Feedback Polish：頭頂血條＋名牌依鏡頭維持可讀的畫面尺寸（總覽鏡頭放大、拉近回到世界尺寸）
+    const ppw = pixelsPerWorld(camera, size), compactView = isCompactViewport(size);
+    const overheadK = overheadScaleOf(HERO.barW, ppw, compactView);
     //  ⚠ 每幀讀 frameRef（最新位置），props.heroes 只負責決定「掛了哪些英雄」
     const live = frameRef?.current?.heroes ?? heroes;
     const effects = frameRef?.current?.effects ?? [];
@@ -386,6 +391,7 @@ export default function MobaRuntimeHeroes({
       //  ⇒ 英雄背對鏡頭時血條轉成背面，MeshBasicMaterial 預設只畫正面 ⇒ **整條消失**。
       //  相機 yaw 固定為 0，所以把血條群組反轉回世界朝向就等於永遠面對鏡頭。
       bar.parent.rotation.y = -root.rotation.y;
+      bar.parent.scale.setScalar(overheadK);
       // D-fix3：名稱／等級已改為 WebGL Plane。它與血條在同一透明佇列，
       // renderOrder 明確低於血條，所以即使多人重疊也不會由 DOM 蓋住血量。
       // 陣亡仍保留低透明名牌，方便全場視角辨認倒地英雄。
@@ -393,6 +399,12 @@ export default function MobaRuntimeHeroes({
         label.material.opacity = h.alive ? 0.96 : DEAD.labelOpacity;
         label.material.color.setHex(h.alive ? 0xffffff : 0x9aa3ad);
         label.parent.rotation.y = -root.rotation.y;
+        //  名牌跟著血條一起放大，並保持在血條正上方（間距同倍率放大，不疊到血條）
+        //  名牌有自己的畫面像素下限（字要讀得出來）；位置＝放大後血條上緣＋放大後名牌半高
+        const plateH = label.scale.y;
+        const plateK = nameplateScaleOf(plateH, ppw, compactView, overheadK);
+        label.parent.scale.setScalar(plateK);
+        label.parent.position.y = HERO.barY + HERO.barH * 0.75 * overheadK + plateH * 0.62 * plateK;
       }
       applyHpBarExtras(node, h);
       applyLevelUpFx(node, h, now);
@@ -552,8 +564,8 @@ function HeroUnit({ hero, geo, mats, frameRef, showLabel, compactLabel, register
     ?? (hero.team === "blue" ? mats.blueDark : mats.redDark);
   const team = hero.team === "blue" ? "blue" : "red";
   const labelTexture = useMemo(
-    () => makeHeroLabelTexture(hero.displayName, hero.level, team, compactLabel),
-    [hero.displayName, hero.level, team, compactLabel],
+    () => makeHeroLabelTexture(shortHeroName(hero), hero.level, team, compactLabel),
+    [hero.championId, hero.displayName, hero.level, team, compactLabel],
   );
   const labelMaterial = useMemo(() => new THREE.MeshBasicMaterial({
     map: labelTexture,
@@ -736,34 +748,50 @@ function HeroUnit({ hero, geo, mats, frameRef, showLabel, compactLabel, register
  * 名稱／等級改成同一張 WebGL Plane 貼圖：
  * - 名牌與血條共享 Three.js 透明佇列，血條 renderOrder 70–72 永遠最後畫。
  * - Plane 使用世界尺寸，遠景會與英雄一起自然縮小，不再像 DOM Html 固定浮在 HUD 上。
- * - 手機只保留較短名稱與 Lx，寬度縮到血條的 64%。
+ * - Combat Feedback Polish：版面改成 MOBA 慣例——左側隊伍色**等級徽章**（數字）＋**英雄短名**，
+ *   不再放選手全名；隊伍識別靠徽章色＋血條色＋血條側標，沒有「藍方／紅方」文字。
+ * - 貼圖長寬比與 Plane 一致（舊版 320×48 貼到 4.2:1 的面上，字被橫向壓扁）。
  */
-function makeHeroLabelTexture(displayName, level, team, compact) {
+const LABEL_TEX_H = 64;
+/** 英雄短名：英雄資料庫的中文名（唯一的英雄名來源），最多 4 字；沒有英雄身分才退回 displayName。 */
+export function shortHeroName(hero) {
+  const zh = heroById(hero?.championId)?.zh ?? null;
+  const raw = String(zh ?? hero?.displayName ?? "Hero");
+  const isCjk = /[㐀-鿿]/.test(raw);
+  const max = isCjk ? 4 : 8;
+  return raw.length > max ? `${raw.slice(0, max - 1)}…` : raw;
+}
+function makeHeroLabelTexture(shortName, level, team, compact) {
+  const aspect = compact ? NAMEPLATE.compactWidth / NAMEPLATE.compactHeight : NAMEPLATE.width / NAMEPLATE.height;
   const canvas = document.createElement("canvas");
-  canvas.width = compact ? 256 : 320;
-  canvas.height = 48;
+  canvas.height = LABEL_TEX_H;
+  canvas.width = Math.round(LABEL_TEX_H * aspect);
   const ctx = canvas.getContext("2d");
-  const accent = team === "blue" ? "#58a6ff" : "#ff6b5e";
-  const rawName = String(displayName ?? "Hero");
-  const name = compact && rawName.length > 6 ? `${rawName.slice(0, 5)}…` : rawName;
-  const levelText = `L${Math.max(1, Number(level) || 1)}`;
+  const accent = team === "blue" ? "#3b82f6" : "#ef4444";
+  const W = canvas.width, H = canvas.height, r = H / 2 - 4;
+  const lv = String(Math.max(1, Number(level) || 1));
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "rgba(4, 9, 16, 0.72)";
-  ctx.fillRect(3, 3, canvas.width - 6, 42);
-  ctx.fillStyle = accent;
-  ctx.fillRect(3, 3, 6, 42);
-  ctx.font = `${compact ? 700 : 750} ${compact ? 26 : 30}px ui-monospace, monospace`;
-  ctx.textBaseline = "middle";
+  ctx.clearRect(0, 0, W, H);
+  //  名稱底：半透明深色膠囊（從徽章中心延伸到右端）
+  ctx.fillStyle = "rgba(4, 9, 16, 0.66)";
+  ctx.beginPath();
+  ctx.moveTo(H / 2, 8); ctx.lineTo(W - 10, 8); ctx.quadraticCurveTo(W - 2, 8, W - 2, H / 2);
+  ctx.quadraticCurveTo(W - 2, H - 8, W - 10, H - 8); ctx.lineTo(H / 2, H - 8); ctx.closePath(); ctx.fill();
+  //  等級徽章
+  ctx.beginPath(); ctx.arc(H / 2, H / 2, r, 0, Math.PI * 2);
+  ctx.fillStyle = accent; ctx.fill();
+  ctx.lineWidth = 4; ctx.strokeStyle = "rgba(255,255,255,0.92)"; ctx.stroke();
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `900 ${lv.length > 1 ? 30 : 34}px ui-sans-serif, system-ui, sans-serif`;
+  ctx.fillText(lv, H / 2, H / 2 + 2);
+  //  英雄短名
+  ctx.textAlign = "left";
+  ctx.font = `800 ${compact ? 32 : 34}px ui-sans-serif, system-ui, sans-serif`;
+  ctx.shadowColor = "rgba(0,0,0,.9)"; ctx.shadowBlur = 4;
   ctx.fillStyle = "#f8fafc";
-  ctx.shadowColor = "rgba(0,0,0,.9)";
-  ctx.shadowBlur = 3;
-  ctx.fillText(name, 18, 24, canvas.width - (compact ? 64 : 80));
+  ctx.fillText(shortName, H + 6, H / 2 + 2, W - H - 16);
   ctx.shadowBlur = 0;
-  ctx.font = `800 ${compact ? 22 : 26}px ui-monospace, monospace`;
-  ctx.textAlign = "right";
-  ctx.fillStyle = accent;
-  ctx.fillText(levelText, canvas.width - 13, 24);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
