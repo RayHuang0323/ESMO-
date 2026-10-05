@@ -29,6 +29,15 @@ export const RESULT_SOURCES = Object.freeze({
 });
 const TRUSTED = Object.freeze(Object.values(RESULT_SOURCES));
 
+//  Online Foundation v2A：`server` 只能經伺服器簽章的 `AdjudicatedMatchResult.v1`
+//  （platform/online/matchAdjudication.js）抵達，**客戶端組不出、也標不上**。
+//  之前這一格只是個字串：任何人把 resultSource 改成 "server" 就會被當成可信。
+//  生涯路徑（Career／Challenge／一般對戰）一律是 `engine`，行為不變。
+const SERVER_ONLY = Object.freeze({
+  code: "server_requires_adjudication",
+  message: "伺服器裁決的結果必須是伺服器簽章的 AdjudicatedMatchResult（客戶端不得自行標示為 server）",
+});
+
 function hash8(input) {
   const s = typeof input === "string" ? input : JSON.stringify(input);
   let h = 0x811c9dc5;
@@ -58,6 +67,7 @@ export function createMatchResult({ session, outcome, source = RESULT_SOURCES.en
   const errors = [];
   if (!session || session.schema !== SESSION_VERSION) errors.push({ code: "session", message: "比賽場次無效" });
   if (!TRUSTED.includes(source)) errors.push({ code: "source", message: `結果來源不可信：${source}` });
+  else if (source === RESULT_SOURCES.server) errors.push({ ...SERVER_ONLY });
   if (!outcome || typeof outcome !== "object") errors.push({ code: "outcome", message: "缺少比賽結果" });
   else {
     if (outcome.winner !== "us" && outcome.winner !== "opponent") errors.push({ code: "winner", message: `勝負必須為 us/opponent，收到 ${outcome.winner}` });
@@ -114,6 +124,8 @@ export function validateMatchResult(result, { session = null, known = null } = {
   }
   if (!TRUSTED.includes(result.resultSource)) {
     errors.push({ code: "source", message: `結果來源不可信：${result.resultSource}（客戶端不得自行指定勝負）` });
+  } else if (result.resultSource === RESULT_SOURCES.server) {
+    errors.push({ ...SERVER_ONLY });
   }
   //  resultId 必須可由內容重算 ⇒ 竄改勝負或比分會立刻被抓
   const expect = resultContentHash({

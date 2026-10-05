@@ -86,6 +86,16 @@ export function attachSignature(env, valueB64) {
 export async function verifySignedSnapshot(env, { trustedKeys = null, verify = null } = {}) {
   const shape = validateEnvelopeShape(env);
   if (!shape.ok) return { ok: false, errors: shape.errors };
+  return verifyEnvelopeSignature(env, { trustedKeys, verify });
+}
+
+/**
+ * **唯一**的驗章路徑（Online Foundation v2A 抽出）：快照、票券（OnlineMatchTicket.v1）、
+ * 裁決結果（AdjudicatedMatchResult.v1）全部走這裡——同一份信任金鑰表、同一種正規化位元組、
+ * 只准 Ed25519。形狀檢查由各契約自己做，本函式只管簽章。
+ */
+export async function verifyEnvelopeSignature(env, { trustedKeys = null, verify = null } = {}) {
+  if (!env?.signature || !SIGNATURE_ALGS.includes(env.signature.alg)) return { ok: false, errors: [{ code: "alg", message: `不允許的簽章演算法：${env?.signature?.alg}` }] };
   if (typeof verify !== "function") return { ok: false, errors: [{ code: "verifier", message: "沒有驗章函式" }] };
   const key = trustedKeys?.[env.signature.keyId];
   if (!key) return { ok: false, errors: [{ code: "untrusted_key", message: `不信任的金鑰：${env.signature.keyId}` }] };

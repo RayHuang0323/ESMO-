@@ -35,6 +35,8 @@ export const RANKED_GATEWAY_METHODS = Object.freeze([
 export const FORBIDDEN_CLIENT_METHODS = Object.freeze([
   "setRecord", "putRecord", "writeRecord", "applyResult", "submitResult", "reportResult",
   "setQuota", "writeQuota", "resetQuota", "consumeQuota", "settleRatedMatch", "setLadderRating",
+  //  Online Foundation v2A：伺服器權威面（`SERVER_AUTHORITY_INTERFACE.serverOnly`）
+  "issueMatchTicket", "signSquadSnapshot", "adjudicateMatch",
 ]);
 
 export function validateRankedGateway(gw) {
