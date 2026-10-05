@@ -416,6 +416,9 @@ export class ItemsEngineRuntime {
           earned: Math.floor(totalEarnedMilli(s.ledger) / MILLI),
           spent: Math.floor(s.ledger.spentMilli / MILLI),
           unspent: Math.floor(s.ledger.unspentMilli / MILLI),
+          //  Combat Feedback Polish：帳本各來源累計收入（整數 milli-gold，原值輸出，唯讀）。
+          //  +Gold 浮字讀它算「非被動收入」的差 ⇒ 與正式帳本逐 milli 對齊。不參與任何計算。
+          earnedMilliBySource: { ...s.ledger.earnedMilli },
         },
         inventory: s.inventory.slots.slice(),
         plan: s.plan ? { ...s.plan, buildPath: s.plan.buildPath.slice() } : null,

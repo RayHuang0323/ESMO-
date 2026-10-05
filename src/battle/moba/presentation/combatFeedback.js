@@ -11,15 +11,14 @@
 //
 //  ── 刻意不做的（資料缺口，見 docs/design/MOBA_Combat_Feedback_Polish.md）────────
 //    · 小兵：snapshot 只有 hp 比例、沒有絕對最大血量 ⇒ 不顯示數字（不猜）。
-//    · 金錢來源：snapshot 只有累計收入、沒有逐筆來源 ⇒ 只顯示 +Gold，不標「擊殺／小兵」。
-//      被動收入（每秒 2.8）以 INCOME_V1.passivePerSec 扣門檻，不單獨跳字。
+//    · 金錢：讀 items 帳本的**來源累計**（canonical ledger，唯讀輸出）；被動來源（passive／tithe）
+//      由帳本自己分類，UI 只排除這兩個來源名，不重算任何收入。沒有帳本 ⇒ 不顯示。
 //    · Replay：frame 沒有 mhp／護盾量 ⇒ 只在現場對戰推導。
 //
 //  純函式：不 import React / three / store，不讀時鐘。
 // ============================================================================
 import { TOWER_HP, NEXUS_HP } from "../../../gameData.js";
 import { rulesFor } from "../matchProgression.js";
-import { INCOME_V1 } from "../items/itemEconomy.js";
 
 export const COMBAT_FEEDBACK_VERSION = "CombatFeedback.v1";
 
@@ -35,8 +34,6 @@ export const FEEDBACK_POLICY = Object.freeze({
   /** 單筆 ≥ 目標最大血量這個比例 ⇒ 強調（字大、顏色亮）。 */
   majorRatio: 0.12,
   majorAbs: 300,
-  /** 金錢：扣掉被動收入後殘差 ≥ 這個值才算「有一筆獎勵」。 */
-  goldResidualMin: 4,
   /** 同時存在的浮字上限（超過丟最舊的小字）。 */
   maxActive: 28,
 });
@@ -49,6 +46,16 @@ export function structureMaxHp(lane, rules = rulesFor()) {
 }
 
 const fin = (v) => typeof v === "number" && Number.isFinite(v);
+/** 不算「獎勵」的帳本來源：每秒被動收入、守護徽章的被動分成。其餘（擊殺／助攻／小兵／野怪／塔／物件）都是獎勵。 */
+export const PASSIVE_GOLD_SOURCES = Object.freeze(["passive", "tithe"]);
+/** 某英雄在這一格的帳本非被動累計（milli-gold）；沒有帳本 ⇒ null。 */
+export function nonPassiveMilliOf(snap, id) {
+  const by = snap?.items?.players?.[id]?.gold?.earnedMilliBySource;
+  if (!by || typeof by !== "object") return null;
+  let sum = 0;
+  for (const [k, v] of Object.entries(by)) if (!PASSIVE_GOLD_SOURCES.includes(k) && fin(v)) sum += v;
+  return sum;
+}
 const shieldOf = (p) => (Array.isArray(p?.statusEffects)
   ? p.statusEffects.find((e) => e?.id === "shield" && fin(e.amount)) ?? null : null);
 
@@ -70,12 +77,11 @@ export function deriveFeedbackEvents(prev, snap, { rules = rulesFor() } = {}) {
     if (!q) continue;
     const id = String(p.id);
     const team = p.side ?? null;
-    //  金錢：累計收入的差（死亡中也會有助攻收入）
-    if (fin(p.gold) && fin(q.gold) && p.gold > q.gold) {
-      const passive = snap.ts > INCOME_V1.passiveStartSec ? INCOME_V1.passivePerSec * dt : 0;
-      if (p.gold - q.gold - passive >= FEEDBACK_POLICY.goldResidualMin) {
-        push({ kind: "gold", targetKind: "hero", targetId: id, amount: Math.round(p.gold - q.gold), maxHp: null, team });
-      }
+    //  金錢：**只讀正式帳本**（items snapshot `gold.earnedMilliBySource`）的非被動來源累計差，逐 milli 精確。
+    //  ⚠ 沒有帳本（裝備系統關閉）⇒ 不顯示 +Gold（資料缺口）。UI 不自行扣被動收入、不重算來源。
+    const npNow = nonPassiveMilliOf(snap, p.id), npPrev = nonPassiveMilliOf(prev, p.id);
+    if (npNow !== null && npPrev !== null && npNow > npPrev) {
+      push({ kind: "gold", targetKind: "hero", targetId: id, amount: (npNow - npPrev) / 1000, amountMilli: npNow - npPrev, maxHp: null, team, source: "ledger" });
     }
     //  最後一擊：上一格活著、這一格死了 ⇒ 剩下的血＋護盾就是這一擊打掉的
     if (p.dead && !q.dead && fin(q.mhp) && q.mhp > 0) {
@@ -140,6 +146,14 @@ export const isMajor = (e) => e.kind === "damage"
 export function createFeedbackAggregator(policy = FEEDBACK_POLICY) {
   const open = new Map();   // key → { kind, targetKind, targetId, amount, maxHp, team, since }
   const windowOf = (kind) => (kind === "gold" ? policy.goldMergeSec : policy.mergeWindowSec);
+  //  帳本金錢：以 milli 累加，顯示取整後**零頭留到下一筆**（不四捨五入、不丟）⇒ 顯示總額 ＝ 帳本總額（差 < 1）
+  const goldCarry = new Map();   // targetId → 尚未顯示的 milli
+  const emitGold = (cur) => {
+    const total = (goldCarry.get(cur.targetId) ?? 0) + cur.amountMilli;
+    const shown = Math.floor(total / 1000);
+    goldCarry.set(cur.targetId, total - shown * 1000);
+    return shown >= 1 ? { kind: "gold", targetKind: cur.targetKind, targetId: cur.targetId, amount: shown, maxHp: null, team: cur.team, major: false, source: "ledger" } : null;
+  };
   return {
     /** 餵入一格的原始事件；回傳這一格**應該顯示**的數字。 */
     push(events, ts) {
@@ -147,12 +161,13 @@ export function createFeedbackAggregator(policy = FEEDBACK_POLICY) {
       for (const e of events) {
         const key = `${e.kind}|${e.targetId}`;
         const cur = open.get(key);
-        if (cur) { cur.amount += e.amount; cur.maxHp = e.maxHp ?? cur.maxHp; }
+        if (cur) { cur.amount += e.amount; if (fin(e.amountMilli)) cur.amountMilli = (cur.amountMilli ?? 0) + e.amountMilli; cur.maxHp = e.maxHp ?? cur.maxHp; }
         else open.set(key, { ...e, since: ts });
       }
       for (const [key, cur] of open) {
         if (ts - cur.since < windowOf(cur.kind)) continue;
         open.delete(key);
+        if (cur.kind === "gold" && fin(cur.amountMilli)) { const g = emitGold(cur); if (g) ready.push(g); continue; }
         const amount = Math.round(cur.amount);
         if (amount >= MIN[cur.kind]) ready.push({ kind: cur.kind, targetKind: cur.targetKind, targetId: cur.targetId, amount, maxHp: cur.maxHp, team: cur.team, major: isMajor({ ...cur, amount }) });
       }
@@ -163,6 +178,7 @@ export function createFeedbackAggregator(policy = FEEDBACK_POLICY) {
       const ready = [];
       for (const [key, cur] of open) {
         open.delete(key);
+        if (cur.kind === "gold" && fin(cur.amountMilli)) { const g = emitGold(cur); if (g) ready.push(g); continue; }
         const amount = Math.round(cur.amount);
         if (amount >= MIN[cur.kind]) ready.push({ kind: cur.kind, targetKind: cur.targetKind, targetId: cur.targetId, amount, maxHp: cur.maxHp, team: cur.team, major: isMajor({ ...cur, amount }) });
       }

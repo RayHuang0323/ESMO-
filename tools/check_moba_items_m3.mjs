@@ -221,10 +221,17 @@ const REQUIRED_UI = ["itemsTheme.js", "ItemGlyphs.jsx", "ItemSlot.jsx", "GoldChi
 // ── G6 M2 未動 ─────────────────────────────────────────────────────────────────
 {
   const git = (args) => execFileSync("git", args, { cwd: ROOT, encoding: "utf8" });
-  const RULE_FILES = ["itemCatalog", "itemRecipes", "itemInventory", "itemEconomy", "combatStatsV1", "itemEffects", "itemEffectKeys", "buildPolicy", "itemsEngineRuntime", "itemsEngineAdapter", "itemsViewModel", "offlinePurchaseSim"]
-    .map((f) => `src/battle/moba/items/${f}.js`);
-  const diff = git(["diff", "--name-only", "HEAD", "--", "src/LogicEngine.js", "src/battle/moba/matchProgression.js", "src/platform/contracts", ":(exclude)src/platform/contracts/mobaReplay.js", ...RULE_FILES]).trim();
-  ck("G6", "LogicEngine、規則集、contracts（M3e 起 mobaReplay.js 的 optional 裝備欄位驗證改由 G14 檢查）、M1／M2 裝備模組相對 HEAD 無改動", diff === "", diff);
+  //  2026-10-06（Owner 核准）：M1／M2 裝備規則檔改為**釘在固定基準**逐字比對（tools/lib/itemsFreeze.mjs），
+  //  唯一允許的差異是 itemsEngineRuntime snapshot 的唯讀輸出 `gold.earnedMilliBySource`。
+  //  舊版只比 HEAD ⇒ commit 之後看不見改動；新版 commit 後照樣守得住。
+  const { checkItemsFreeze, ITEMS_FREEZE_BASE, ITEMS_RULE_FILES } = await import("./lib/itemsFreeze.mjs");
+  const diff = git(["diff", "--name-only", "HEAD", "--", "src/LogicEngine.js", "src/battle/moba/matchProgression.js", "src/platform/contracts", ":(exclude)src/platform/contracts/mobaReplay.js"]).trim();
+  ck("G6", "LogicEngine、規則集、contracts（M3e 起 mobaReplay.js 的 optional 裝備欄位驗證改由 G14 檢查）相對 HEAD 無改動", diff === "", diff);
+  const freeze = checkItemsFreeze({
+    readCurrent: (f) => fs.readFileSync(path.join(ROOT, f), "utf8"),
+    readBase: (f) => git(["show", `${ITEMS_FREEZE_BASE}:${f}`]),
+  });
+  ck("G6", `M1／M2 裝備模組（${ITEMS_RULE_FILES.length} 檔）與凍結基準 ${ITEMS_FREEZE_BASE.slice(0, 7)} 逐字相同；唯一例外＝唯讀 gold.earnedMilliBySource`, freeze.ok, freeze.violations.join(" ¦ "));
   let gateOk = true, gateOut = "";
   try { gateOut = execFileSync(process.execPath, ["tools/check_simulation_version_gate.mjs"], { cwd: ROOT, encoding: "utf8" }); } catch (err) { gateOk = false; gateOut = String(err.stdout ?? err.message); }
   ck("G6", "模擬版本閘門綠（目前正式 simulation version）", gateOk, gateOut.split("\n").slice(-3).join(" "));

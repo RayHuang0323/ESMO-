@@ -29,7 +29,6 @@ const { toEngineHeroSkills } = await import("../src/battle/moba/skills/heroSkill
 const { selectBattleTalents } = await import("../src/battle/moba/talents/heroBattleTalents.js");
 const { matchItemsConfig } = await import("../src/battle/moba/items/buildStrategyPrep.js");
 const { rulesFor } = await import("../src/battle/moba/matchProgression.js");
-const { INCOME_V1 } = await import("../src/battle/moba/items/itemEconomy.js");
 const CF = await import("../src/battle/moba/presentation/combatFeedback.js");
 
 const R = rulesFor();
@@ -124,7 +123,11 @@ function runMatch(seed, heroIds) {
     }
     prev = snap; prevHp = nowHp; prevTw = prevTower(); out.ticks++;
   }
-  out.shown.push(...agg.flush());
+  //  終局：把還在合併窗裡的一併結算（含金錢）——漏記這段曾讓 G1 少算最後一筆
+  for (const e of agg.flush()) {
+    out.shown.push({ ...e, ts: Infinity });
+    if (e.kind === "gold") out.goldShown[e.targetId] = (out.goldShown[e.targetId] ?? 0) + e.amount;
+  }
   out.engine = eng;
   return out;
 }
@@ -183,20 +186,96 @@ console.log("\n── G +Gold ──");
     const rows = m.engine.players.map((p) => {
       const led = m.engine.items.ps.get(p.id).ledger.earnedMilli;
       const nonPassive = Object.entries(led).filter(([k]) => k !== "passive" && k !== "tithe").reduce((s, [, v]) => s + v, 0) / 1000;
-      return { id: p.id, nonPassive, shown: m.goldShown[p.id] ?? 0, total: Object.values(led).reduce((s, v) => s + v, 0) / 1000 };
+      const npMilli = Object.entries(led).filter(([k]) => !CF.PASSIVE_GOLD_SOURCES.includes(k)).reduce((s, [, v]) => s + v, 0);
+      return { id: p.id, nonPassive, expect: Math.floor(npMilli / 1000), shown: m.goldShown[p.id] ?? 0, total: Object.values(led).reduce((s, v) => s + v, 0) / 1000 };
     });
+    //  ⚠ 2026-10-06：由「比例 0.9–1.15」收緊成**逐英雄精確相等**。舊算法因同格被動收入多算 ~3.8%。
+    const off = rows.filter((r) => r.shown !== r.expect);
     const ratio = rows.reduce((s, r) => s + r.shown, 0) / rows.reduce((s, r) => s + r.nonPassive, 0);
-    ck(`G1 場次 ${name}：顯示的 +Gold 總和 ≈ 帳本非被動收入（擊殺／助攻／小兵／野怪／塔／物件），比例 0.9–1.15`, ratio >= 0.9 && ratio <= 1.15, ratio.toFixed(3));
+    ck(`G1 場次 ${name}：每位英雄顯示的 +Gold 總和 ＝ ⌊帳本非被動收入⌋（逐英雄精確相等）`, off.length === 0,
+      off.length ? JSON.stringify(off) : `總和 ${rows.reduce((s, r) => s + r.shown, 0)}／帳本 ${rows.reduce((s, r) => s + r.nonPassive, 0).toFixed(3)}（比例 ${ratio.toFixed(5)}）`);
     ck(`G2 場次 ${name}：每位英雄顯示金額不超過其總收入`, rows.every((r) => r.shown <= r.total + 1), JSON.stringify(rows.filter((r) => r.shown > r.total + 1)));
   }
-  //  被動收入單獨不跳字
+  //  帳本路徑（正式）：只看非被動來源；被動／守護徽章分成再多也不跳；零頭留到下一筆
+  const ledSnap = (ts, by) => ({ ts, players: [{ id: "b1", side: "blue", hp: 1, gold: 0, dead: false }], towers: {}, objectives: [], items: { players: { b1: { gold: { earnedMilliBySource: by } } } } });
+  const l1 = CF.deriveFeedbackEvents(ledSnap(100, { passive: 50000, minion: 6667 }), ledSnap(100.5, { passive: 51400, tithe: 900, minion: 6667 }));
+  const l2 = CF.deriveFeedbackEvents(ledSnap(100, { passive: 50000, kill: 0 }), ledSnap(100.5, { passive: 51400, kill: 300000 }));
+  ck("G5 帳本路徑：只有被動／tithe 增加 ⇒ 不跳；擊殺 300 ⇒ 恰好 300（同格被動不混進來）", l1.length === 0 && l2.length === 1 && l2[0].amount === 300 && l2[0].source === "ledger");
+  const ag = CF.createFeedbackAggregator();
+  const step = (ts, m) => ag.push([{ kind: "gold", targetKind: "hero", targetId: "b1", amount: m / 1000, amountMilli: m, maxHp: null, team: "blue", source: "ledger" }], ts);
+  let tot = 0;
+  for (let i = 0; i < 30; i++) for (const e of step(i * 1.5, 6667)) tot += e.amount;   // 三人分一隻小兵 20 ⇒ 每人 6.667
+  for (const e of ag.flush()) tot += e.amount;
+  ck("G6 零頭不丟：30 筆 6.667 金 ⇒ 顯示總和 ＝ ⌊200.01⌋ ＝ 200", tot === 200, `${tot}`);
+  //  沒有帳本（裝備系統關閉）⇒ 不顯示 +Gold：UI 不自行扣被動收入、不從累計收入猜（Owner 2026-10-06）
   const base = (g, ts) => ({ ts, players: [{ id: "b1", side: "blue", hp: 1, gold: g, dead: false }], towers: {}, objectives: [] });
-  const passiveOnly = CF.deriveFeedbackEvents(base(1000, 100), base(1000 + INCOME_V1.passivePerSec * 0.5, 100.5));
-  const killGold = CF.deriveFeedbackEvents(base(1000, 100), base(1301, 100.5));
-  ck("G3 只有被動收入（2.8／秒）⇒ 不跳 +Gold；擊殺 300 ⇒ 跳 +301（顯示實際差，不寫死）", passiveOnly.length === 0 && killGold.length === 1 && killGold[0].amount === 301);
+  const noLedger = CF.deriveFeedbackEvents(base(1000, 100), base(1301, 100.5));
+  ck("G3 沒有帳本 ⇒ 不出 +Gold（不從累計收入推算）", noLedger.filter((e) => e.kind === "gold").length === 0);
   const fb = code(read("src/battle/moba/render/CombatFeedbackRuntime.jsx"));
-  ck("G4 UI 沒有寫死任何獎勵數字（不 import INCOME_V1、沒有 300／250／200／400 字面量）",
-    !/INCOME_V1/.test(fb) && !/\b(300|250|400)\b/.test(fb.replace(/0x[0-9a-f]+/gi, "")));
+  const cfSrc = code(read("src/battle/moba/presentation/combatFeedback.js"));
+  ck("G4 UI 沒有寫死任何獎勵數字，也不自行計算被動收入（不 import INCOME_V1、不讀 passivePerSec）",
+    !/INCOME_V1|passivePerSec/.test(fb + cfSrc) && !/\b(300|250|400)\b/.test(fb.replace(/0x[0-9a-f]+/gi, "")));
+  const allGold = both.flatMap((m) => m.shown.filter((e) => e.kind === "gold"));
+  ck("G7 每一個顯示的 +Gold 都來自帳本（source: ledger）", allGold.length > 0 && allGold.every((e) => e.source === "ledger"), `${allGold.length} 筆`);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+console.log("\n── L 帳本唯讀例外（Owner 2026-10-06：凍結模組的單一唯讀 contract exception）──");
+{
+  const { checkItemsFreeze, ITEMS_FREEZE_BASE, READONLY_EXCEPTION } = await import("./lib/itemsFreeze.mjs");
+  const cwd = new URL("..", import.meta.url);
+  const readBase = (p) => execFileSync("git", ["show", `${ITEMS_FREEZE_BASE}:${p}`], { cwd, encoding: "utf8" });
+  const cur = (p) => read(p);
+  const live = checkItemsFreeze({ readCurrent: cur, readBase });
+  ck("L1 目前程式碼：M1／M2 裝備模組與凍結基準逐字相同，唯一差異是唯讀例外", live.ok && live.exceptionPresent, live.violations.join(" ¦ "));
+  //  突變：證明 freeze 不是形式檢查——改任何 item 規則都會紅
+  const E = READONLY_EXCEPTION;
+  const mutate = (file, fn) => (p) => (p === file ? fn(cur(p)) : cur(p));
+  const bumpDigit = (t) => t.replace(/(\d)(?=\D)/, (d) => String((Number(d) + 1) % 10));
+  const cases = {
+    "改小兵收入 20→21（itemEconomy）": mutate("src/battle/moba/items/itemEconomy.js", (t) => t.replace("minion: 20,", "minion: 21,")),
+    "改被動收入計算（itemsEngineRuntime）": mutate(E.file, (t) => t.replace("Math.round(INCOME_V1.passivePerSec * dt * MILLI)", "Math.round(INCOME_V1.passivePerSec * dt * MILLI * 1.01)")),
+    "例外欄位改成計算值": mutate(E.file, (t) => t.replace("earnedMilliBySource: { ...s.ledger.earnedMilli },", "earnedMilliBySource: { ...s.ledger.earnedMilli, bonus: 1 },")),
+    "例外搬到別的物件": mutate(E.file, (t) => t.replace(E.anchor + E.block, E.anchor).replace("        inventory: s.inventory.slots.slice(),\n", E.block + "        inventory: s.inventory.slots.slice(),\n")),
+    "例外出現兩次": mutate(E.file, (t) => t.replace(E.anchor + E.block, E.anchor + E.block + E.block)),
+    "改購買規則（buildPolicy 一個數字）": mutate("src/battle/moba/items/buildPolicy.js", bumpDigit),
+    "改屬性（combatStatsV1 一個數字）": mutate("src/battle/moba/items/combatStatsV1.js", bumpDigit),
+    "改被動效果（itemEffects 一個數字）": mutate("src/battle/moba/items/itemEffects.js", bumpDigit),
+  };
+  const missed = [];
+  for (const [name, readCurrent] of Object.entries(cases)) if (checkItemsFreeze({ readCurrent, readBase }).ok) missed.push(name);
+  ck(`L2 突變 ${Object.keys(cases).length} 種（收入／被動／購買／屬性／效果、例外改成計算、搬位置、重複）全部讓 freeze 紅`, missed.length === 0, missed.join(", "));
+  const removed = checkItemsFreeze({ readCurrent: mutate(E.file, (t) => t.replace(E.anchor + E.block, E.anchor)), readBase });
+  ck("L3 拿掉例外 ＝ 回到基準（仍綠、exceptionPresent=false）⇒ 例外是唯一差異", removed.ok && !removed.exceptionPresent);
+
+  //  Replay／BattleResult 語意不受這個欄位影響：同一串 snapshot，有欄位 vs 拿掉欄位，輸出逐字相同
+  const RB = await import("../src/battle/moba/replay/replayBuffer.js");
+  const BR = await import("../src/battle/moba/snapshotToBattleResult.js");
+  const eng = makeEngine(31337, heroSetA);
+  const snaps = [];
+  for (let i = 0; i < 900 && !eng.over; i++) { eng.tick(DT); if (i % 2 === 0 || eng.over) snaps.push(eng.snapshot()); }
+  const strip = (sn) => { const c = JSON.parse(JSON.stringify(sn)); for (const p of Object.values(c.items?.players ?? {})) delete p.gold?.earnedMilliBySource; return c; };
+  const hasField = snaps.some((sn) => Object.values(sn.items?.players ?? {}).some((p) => p.gold?.earnedMilliBySource));
+  const capture = (list) => {
+    RB.beginReplayCapture({ seed: 31337, config: {}, roster: null });
+    for (const sn of list) RB.captureReplayFrame(sn);
+    const r = RB.finalizeReplay({ matchId: "cf-ledger-test" });
+    //  只排除擷取當下的牆鐘時刻（startedAt／finishedAt）；L4a 證明這就是「同輸入跑兩次」唯一會變的欄位
+    return JSON.stringify(r, (key, v) => (key === "startedAt" || key === "finishedAt" ? undefined : v));
+  };
+  const rA = capture(snaps), rA2 = capture(snaps), rB = capture(snaps.map(strip));
+  ck("L4a 比較方法自檢：同一串 snapshot 擷取兩次，排除牆鐘時刻後逐字相同", rA === rA2);
+  ck("L4 Replay：有／無 earnedMilliBySource 的同一串 snapshot ⇒ 擷取結果逐字相同", hasField && rA === rB && rA.length > 1000, `${rA.length} bytes`);
+  const last = snaps[snaps.length - 1];
+  //  BattleResult 的 id 是 moba_<時刻>_<亂數>（每次產生都不同）⇒ 只排除頂層 id；L5a 自檢同上
+  const brOf = (sn) => { const r = BR.snapshotToBattleResult(sn, { matchId: "m" }); const { id: _id, ...rest } = r; return JSON.stringify(rest); };
+  const b1 = brOf(last), b1b = brOf(last), b2 = brOf(strip(last));
+  ck("L5a 比較方法自檢：同一份 snapshot 轉兩次，排除 id 後逐字相同", b1 === b1b);
+  ck("L5 BattleResult：有／無這個欄位 ⇒ 結果逐字相同", b1 === b2 && b1.length > 100, `${b1.length} bytes`);
+  const eng2 = makeEngine(31337, heroSetA);
+  let same = true, k = 0;
+  for (let i = 0; i < 900 && !eng2.over; i++) { eng2.tick(DT); if (i % 2 === 0 || eng2.over) { if (JSON.stringify(strip(eng2.snapshot())) !== JSON.stringify(strip(snaps[k++]))) { same = false; break; } } }
+  ck("L6 同 seed 重跑：snapshot 串流逐字相同（決定性；這個欄位不回頭影響模擬）", same && k > 100, `${k} 格`);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
