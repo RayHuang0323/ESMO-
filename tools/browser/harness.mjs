@@ -57,6 +57,7 @@ import { mkdtempSync, rmSync, existsSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createWorkspaceBrowserProfile } from "./workspaceProfile.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const VITE_CLI = resolve(ROOT, "node_modules/vite/bin/vite.js");
@@ -287,14 +288,14 @@ async function startOwnedDevServer({ port, base = "/ESMO-/", timeoutMs = DEFAULT
  * WebSocket 開啟也有明確逾時。
  */
 async function launchOwnedChrome({ url, port, headless = true,
-  targetTimeoutMs = DEFAULT_TIMEOUTS.chromeTargetMs, wsOpenMs = DEFAULT_TIMEOUTS.wsOpenMs } = {}) {
+  targetTimeoutMs = DEFAULT_TIMEOUTS.chromeTargetMs, wsOpenMs = DEFAULT_TIMEOUTS.wsOpenMs, workspaceOnly = false } = {}) {
   const exe = CHROME_CANDIDATES.find((p) => existsSync(p));
   if (!exe) throw new HarnessError(`找不到 Chrome：${CHROME_CANDIDATES.join(" / ")}`);
   const cdpPort = port ?? await allocatePort();
   if (!(await isPortFree(cdpPort))) {
     throw new HarnessError(`Chrome CDP port ${cdpPort} 已經有人在聽（allocatePort 給的號碼被搶走了）`);
   }
-  const userDataDir = mkdtempSync(join(tmpdir(), "esmo-cdp-"));
+  const userDataDir = workspaceOnly ? createWorkspaceBrowserProfile(ROOT) : mkdtempSync(join(tmpdir(), "esmo-cdp-"));
   const args = [
     `--remote-debugging-port=${cdpPort}`,
     "--remote-debugging-address=127.0.0.1",
@@ -486,7 +487,7 @@ export async function runGate({
   //    起本地 dev server。傳了就跳過 startOwnedDevServer，其餘（Chrome 擁有權、
   //    總時限、PASS / PRODUCT_FAIL / HARNESS_FAIL 分類、保證收尾）完全相同。
   //    正式站是打包後的 bundle，沒有 `/src/...` ⇒ gate 內只能點 UI 與讀 localStorage。
-  externalUrl = null,
+  externalUrl = null, workspaceOnly = false,
 } = {}) {
   const startedAt = Date.now();
   let phase = "startup";
@@ -505,7 +506,7 @@ export async function runGate({
       server = await startOwnedDevServer({ port, base, timeoutMs: DEFAULT_TIMEOUTS.devServerStartMs });
     }
     const targetUrl = externalUrl ?? server.url;
-    chrome = await launchOwnedChrome({ url: targetUrl, port: cdpPort, headless });
+    chrome = await launchOwnedChrome({ url: targetUrl, port: cdpPort, headless, workspaceOnly });
 
     phase = "test";
     await Promise.race([

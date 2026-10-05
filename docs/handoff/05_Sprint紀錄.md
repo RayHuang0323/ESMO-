@@ -24225,3 +24225,423 @@ candidate `feature/moba-objective-stakes-v16` @ `36251d0`（origin/main＝`35663
 - 正式站 smoke：browser_check_prod_hero_identity_v17 15/15、browser_check_prod_objective_layout_v16 13/13（含 Replay SWAPPED）、browser_check_moba_gameplay_presentation --prod 11/11；page／console／shader error 0。
 - 已知非 blocker：mock／快速練習對手仍 STANDARD；24 位被動為近似；戰報 timeline／Result 仍有 🐉／👑 emoji；camera_replay29b6 舊 pacing chain timeout；TacticScreen 正式站只驗 bundle 契約＋文案（TD-31），元件本身在本地以正式元件驗過。
 - 下一個 Sprint 尚未開始（建議 Jungle Topology v1）。
+
+## 2026-10-02 CS/FPS Major Upgrade 啟動與 Phase A 工作檢查點
+
+- 正式基準 `1cf6472961528eeb3acfeb2558deadb4b425372d`；隔離分支 `feature/cs-fps-major-upgrade`。Owner 指定場景最高優先，Phase A–E，最後 Owner Review，禁止 push／deploy。
+- §0 還是 v16 快照，最新 RELEASED 與正式 HEAD 已 v17；已向 Owner 回報，使用最新 main，MOBA 不改。
+- Baseline：headed Chrome／AMD GPU／10 rigged／三圖／1366、390；記錄 FPS、frame time、calls、triangles、texture estimate、heap、載入 span、截圖。DEV 入口不是正式玩家流程驗收，手機模擬不是真機。
+- 合批中間版 A2：桌機 canvas 430×507 → 1120×630，calls 1150–1387 → 842–854；FPS 36.5–42.7 → 55.6–60.1。因像素尺寸／手機品質層不同，尚非嚴格 production A/B。
+- 截圖未達場景完成標準，所以沒有宣告 Phase A 完成或開始 Phase B。接續原創 collider／nodes／site／spawn 配置與 legacy 空間相容驗證。
+- 新增兩支 verifier 與 runner 登記（`cs_major_scene_v1` 48/48、`cs_major_simulation_v1` 21/21 預期形狀），不刪／不放寬舊 gate。版本加入 CS 模擬 cache／Worker／snapshot；舊版本逐格對照正式 baseline。
+- 曾失敗：依賴不完整導致 `lucide-react` entry 找不到（HARNESS_FAIL）；Extrude non-indexed 合批失敗（產品問題，已正規化並以場景檢查守住）。舊配置階段 MR12 36/36 與 build 通過；新配置仍在重新驗證。
+- 詳細證據、範圍與風險：`docs/design/CS_FPS_Major_Upgrade.md`。目前未 READY_TO_REVIEW、未 commit／push／deploy、未 Android 真機驗收。
+
+## 2026-10-02 CS/FPS Major Upgrade A10–A11 休眠檢查點（工作中）
+
+- 原創三圖、同源高低差、室內梁架、立面／地標／材質、低成本天空與海岸已實作；Phase A仍待獨立視覺審核，B–E未開始，不代表完整交付。
+- A10實際GPU：桌機50.2／58.6／60.1 FPS，390px59.5／60.1／60.1；十名rigged，錯誤0，兩組9/9、exit0。完整24張截圖附精確canvas rect，自製像素fallback全部MEASURED，非官方inspector或AAA證明。
+- 桌機mirage長幀先優化骨骼掛件矩陣同步，未帶著明顯退步開始B；A11 54.7FPS、p95 16.8ms，3/3、exit0。角色形體等價87/87與build再通過；未放寬斷言。
+- 使用者要求階段／整體及小任務進度條與剩餘時間，已存 `AGENTS.md`。下班休眠接續資訊已保存，未commit／push／deploy，尚非READY_TO_REVIEW。
+
+## 2026-10-02 CS/FPS Major Upgrade A12–A13 檢查點（工作中）
+
+- A10／A12獨立視覺審查平均0.9／1.5，未通過，未假稱完成。A13深化室內屋頂與院落地標、補港機基座並修正開局／交戰取景，48/48場景與build通過，未放寬預算。
+- 工具缺陷：單點手機slider可能落在原thumb內而沒有seek；舊 `baseline-combat`兩尺寸及A12手機實際是開局情境，撤回交戰比較資格。改真實拖曳＋方向鍵，新增authoritative交戰前提及整隊取景斷言；不刪舊verifier。
+- A13真交戰雙尺寸各15/15、24 PNG與兩份12/12 MEASURED像素JSON；正式SHA桌機真交戰15/15，390重測中。水務長幀850ms（正式baseline1083ms）仍待profile，不只報平均FPS。
+- 整體 `▣□□□□`，A複核中、B–E未實作；未commit／push／deploy，手機真機與production正式玩家流程未驗，未READY_TO_REVIEW。
+
+## 2026-10-03 CS/FPS Major Upgrade A14 檢查點（仍在 Phase A）
+
+- 正式 SHA 真交戰 baseline 重新完成：桌機 15/15，390px `baseline-a14-verified-combat/390` 15/15，均 exit 0。先前未真正 seek 的舊 combat 值不恢復比較資格。
+- CPU profile 找到首次 C4 掉落造成的同步 shader 編譯尖峰。major 不再使用 C4 PointLight，模型／emissive／狀態照常；legacy 燈與模擬未改。診斷重測 `getProgramInfoLog` 自耗時 789ms → 0ms，最大 frame 約 817ms → 33.4ms。
+- A14 增加水務塔／開口拱廊、冷鏈整體吊運架、錯層爐膽與工序背景。`cs_major_scene_v1` 48/48、`cs_major_simulation_v1` 21/21、build，本次 runner 3/3、exit 0；不是全專案 verifier 全綠。
+- 實際 GPU 桌機／390px 各 18/18、exit 0，三圖 p95 均 16.8ms、59.6–60.2 FPS。兩尺寸 24 PNG，自製像素 fallback 各 12/12 MEASURED、0 ERROR。
+- 獨立 reviewer 僅看完整 PNG／scorecard／像素 JSON，平均 1.3/3，三圖 World 各 1/3；仍有方形薄牆沙盤、孤立盒屋、單色平地與手機 HUD 遮擋。未通過，不開始 B。
+- 下一步是場景結構修正，不放寬 35000 triangles／90 batches，也不改碰撞、比分、Competition 或 MOBA。使用者休眠後要求繼續；整體暫估 9–13 小時以上，不含中斷，並非承諾。未 commit／push／deploy／READY_TO_REVIEW。
+
+## 2026-10-03 A15–A16 場景結構修正（驗證中）
+
+- 新連續地坪取代 major 白色底板，保留相同40／24格與 authoritative 高度，場外廠房接到既有周界外側。追加不同功能的冷卻塔、爐體、輸送料斗、裝卸廠房與高壓機廠房；平面碰撞與導航座標不變。
+- A15 首次場景47/48：貨港35498 triangles 超35000。減少重複百葉幾何後48/48、build，runner2/2 exit0，未調高門檻。鑄造場 targeted 實跑6/6 exit0，59.7FPS、p95 16.8ms、貼圖估計26.28MB；不是完整雙尺寸驗收。
+- A16 增加兩項實質檢查／每圖每品質層：連續地坪逐頂點高度／格數，以及地標淡出範圍精確對照實際幾何。scene verifier48→60，runner輸出形狀同步60/60；保留既有48項，不刪／不放寬斷言或預算。新增檢查尚待本輪執行結果。
+
+## 2026-10-03 A16 完整驗證與 A17 結構資產接續
+
+- 上節待執行的scene60/60與build已通過；legacy模擬21/21、角色87/87、MR12完成36/36均exit0。不是全專案verifier全綠。
+- A16雙尺寸各18/18，完整24PNG與兩組像素12/12 MEASURED、0 ERROR。獨立審查平均1.5/3，三圖World各1/3，仍未通過；不開始B。
+- A17引入官方Kenney CC0建築／工業模組，離線compact geometry及palette頂點色，不增加來源貼圖。三圖各一處舊盒屋改為同源薄牆／雙入口／屋頂的可通行廠房；鑄造東門旁相鄰機房退讓，避免假門洞。legacy地圖與結果契約不動。
+- 首輪scene58/60：水務37114、鑄造35622 triangles超35000。降低遠景地形與植栽細分、次要拱窗LOD後60/60；桌機34930／33658／34574，mobile28278／28410／27998，batches56／59／71。不調高預算、不移除人物。
+- verifier再追加實質來源及路線檢查：scene60→66（每地圖／品質一項CC0真實資產），simulation21→24（每圖一項雙入口可通行／室內路線）。保留全部舊斷言，runner輸出形狀同步；scene66本輪runner已PASS，完整本輪結果尚待。
+- 本輪記錄的進度／時間估計只供接續，不代表完成：整體 `▣A □B □C □D □E`，整體暫估10–16小時以上，不含休眠／中斷；尚未commit／push／deploy／READY_TO_REVIEW。
+
+## 2026-10-03 A17 技術／GPU 完整檢查點（品質複核中）
+
+- 新雙入口檢查首次simulation23/24：貨港維修工位西入口被舊貨箱擋住。唯讀重現確認入口blocked=true；major貨箱由(29,66)移到(29,71)，入口／中心／出口皆blocked=false。完整重驗scene66/66、simulation24/24、build，runner3/3、exit0；舊比賽逐格／結果雜湊仍相同。屋頂雙面改用DoubleSide避免反向重複面造成法線抵消，scene66與build再重驗2/2。
+- `phase-a17/{1366,390}`各18/18、exit0：桌機58.8／59.9／59.6FPS，p95 16.8／16.8／16.7ms，calls649／651／670；390px60.0／60.1／59.9FPS，p95均16.8ms，calls648／649／669。十名rigged、零有效PointLight／SpotLight、錯誤0；不是手機真機。
+- 完整24PNG、兩組像素各12/12 MEASURED、0ERROR，另保留水務targeted4PNG與像素4/4。獨立reviewer取得全部28張、scorecard／anchors及三份像素JSON，尚待結果。場外模型材質與主場景有落差，不能只因有授權模型就宣稱場景完成。
+- 工具事故：Node `-e` 的argv缺少script位置，首個phase被略過，第一次水務候選誤寫`baseline/1366`，覆蓋該舊目錄的水務／metrics／gate。新六檔已移至`phase-a17-waterworks/1366`，歷史舊水務無法恢復，不偽造。本目錄撤回比較資格；有效`baseline-a13-verified-combat/1366`及`baseline-a14-verified-combat/390`未受影響。
+- 工具增加必填phase、baseline必填正式SHA、非空證據目錄禁止覆蓋、phase安全名稱；之後完整設定argv。這是量測工具防護，不改產品或放寬斷言。技術完整stdout／stderr另保存`review/cs-major-upgrade/evidence/phase-a17-tech`，raw log不commit。
+
+### CS/FPS Major Upgrade A18：立面深度與場外材質（2026-10-03，未完成）
+
+- A17獨立複核整體1.4/3；水務World2，貨港／鑄造World1，Phase A仍不放行。下一輪針對後兩圖的盒體、平窗與灰色外圍資產。
+- 閉合廠房新增0.48m厚牆、真窗洞／內縮玻璃；碰撞與可行走區未改。場外資產按面拆成共享atlas牆／屋頂及原設備色兩批，新增外側服務道路與裝卸坪。POV眼高改用同源地形高度加1.56m。
+- scene初驗65/66因鑄造35112三角形；裁除不能進入建物的內側背板後，含場外道路最終scene66/66，桌機34930／33458／34378triangles，仍低於35000；camera recovery8/8、build皆exit0。未放寬或刪除斷言，GPU截圖與效能比較尚在執行。
+- 使用者再次確認本goal直接持續執行，不再詢問一般確認；已保存專案協作偏好，未建立重複goal，未push／deploy。
+
+### A18 完整證據與 A19（2026-10-03，A仍未通過）
+
+- A18兩尺寸各18/18，桌機FPS59.87／60.08／60.02、390px60.15／60.11／60.01，p95皆16.8ms。calls桌機650／653／672、390px649／651／670；texture約26.28MB。24PNG、像素兩份12/12 MEASURED、0ERROR，沒有真機聲明。
+- 獨立reviewer完整看24PNG／anchors／像素JSON，平均1.2/3、World1、Lighting1；近景雖改善，全景空地／重複屋體與POV遮擋仍阻擋A。保留低分與缺口，不因FPS提高視覺分數。
+- A19把major POV42°改72°（縮放50–92°），legacy保留原值；追焦目標補地形高度。場外8×8格數不變，格點改集中近場石脊，保護廠房地基；鑄造補光改中性。scene66與build再2/2 exit0。
+- browser量測新增每圖POV真實選取／FOV／眼高斷言，新增來源／資產SHA-256指紋；保留舊斷言，未減少檢查。A19 GPU正在執行。
+
+### A19b：補上地表朝向回歸檢查（2026-10-03）
+
+- A19雙尺寸GPU各21/21，但owner從完整畫面發現場外地面消失：格點Z列與PlaneGeometry index繞序相反，導致背面剔除。該輪為視覺失敗，保留原圖，不作完成或效能改善證據。
+- 新增六項所有地表法線正Y檢查，修正前66/72 exit1，原始stdout存`phase-a19/ground-normal-failure.log`。修正Z列後72/72，runner shape同步66→72，舊斷言全保留，未以DoubleSide掩蓋問題。
+- scene與build runner2/2 exit0，camera recovery8/8 exit0；新完整GPU量測另存`phase-a19b`，未覆蓋任何baseline或先前候選。
+
+### A20：地表素材與品質層（2026-10-03，進行中）
+
+- A19b雙尺寸GPU各21/21，地面已可見，桌機59.44／58.00／60.03FPS、390px60.12／60.11／60.10FPS，p95全16.8ms。來源指紋兩尺寸相同，24PNG像素皆MEASURED、0ERROR。外圍材質仍像工業鋪面，故繼續修正。
+- 使用內建imagegen生成原創自然地表四格atlas，保存於`public/assets/fps/major-v1/terrain-albedo-atlas-v1.png`；完整來源、hash、prompt見同目錄`TERRAIN_ATLAS.md`。原圖1254²，GPU依desktop/mobile降至1024²／512²，避免窄視窗仍上傳完整大圖。
+- 場內／場外材質分開、場外道路共用自然atlas；新增一批但幾何數不變，地形法線檢查涵蓋兩個地表。scene72/72、build exit0，A20實際GPU量測中。未放行A、未push／deploy。
+
+### A20b 完整實測與 A21 室內路線（2026-10-03）
+
+- A20b以連續UV梯度修正atlas遠景白網格，未增加取樣／燈光。雙尺寸各21/21 exit0，24PNG像素全MEASURED／0ERROR，28檔來源指紋一致。
+- 桌機三圖FPS58.82／59.90／60.02，390px60.12／60.10／60.11，p95均16.8ms；calls651／654／673及650／652／671。texture31.61／27.61MB，符合新增5.33／1.33MB的品質分層成本。詳細heap／cold-ready與限制見設計文件；未經手機真機實測。
+- A21將貨港通關轉運廊與鑄造西側鑄件廊由封閉方塊改為真實雙入口空間；薄牆、4.8m門洞、路徑共用資料。次要窗採低三角形結構，新增中脊採光／單坡屋面；不是新增裝飾箱體。
+- scene72/72 exit0；桌機貨港33354／鑄造33908三角形，72／84批次，原35000／90預算未放寬。完整模擬／實際GPU尚待完成，不宣稱A通過。
+
+### A21b：第一人稱不再沿用俯瞰透牆（2026-10-03）
+
+- A21 simulation24/24、scene72與build皆exit0。桌機GPU21/21但水務51.6FPS／p95 33.4ms，貨港／鑄造約60FPS／16.8ms；水務保留效能警訊，待重測，不宣稱無回歸。
+- 由實際POV截圖定位全場遮擋淡出被錯套第一人稱：新增四項直接執行產品函式的camera檢查，先重現10/12失敗，再修正至12/12。新增兩項實體牆／屋頂恢復，另兩項證明俯瞰／legacy保留。原8項未刪除或放寬。
+- major第一人稱立即還原牆／屋頂／結構；舊場景與俯瞰規則不變。browser每圖新增實際fadedWalls／fadedRoofs檢查，後續證據使用新phase-a21b目錄，不覆蓋先前截圖。
+
+### A21b 雙尺寸完成與 Worker 診斷（2026-10-03）
+
+- 雙尺寸GPU各24/24 exit0，24PNG像素全MEASURED／0ERROR；desktop60.14／59.91／59.91FPS、390px60.12／60.14／60.10FPS，p95均16.8–16.9ms。水務先前掉幀未重現，保留原紀錄不覆蓋。完整24張已送獨立複核。
+- calls桌機651／663／683、手機層650／662／681；texture31.61／27.61MB。cold-ready桌機13.4／20.7／23.1秒、390px14.1／20.8／23.3秒，詳細資料／共同來源hash見設計文件；仍未真機實測。
+- 拆解顯示地圖建立128–160ms，慢處主要模擬；A20b／A21b全部出現worker-fallback。依除錯skill先保留證據並加入截短reason欄位定位，不先假設來源，不新增其他功能；獨立診斷phase不冒充完整驗證。
+
+### A21b 複核未通過與 production Worker 驗證（2026-10-03）
+
+- 獨立reviewer完整24PNG，平均1.3/3、World1；Art／Materials／Lighting各2，其餘人物／障礙／互動／UI各1、VFX證據0、Performance2。仍有重複矩形建築、稀疏場外及手機卡片遮場，不宣稱A完成。
+- DEV單圖兩次重現worker-fallback，第二次定位`@react-refresh:603:1`讀取window。診斷只增加截短reason及檔案行號，不改結果、fallback或Vite設定。
+- 新production Worker browser gate使用實際建置檔、三圖major＋水務legacy，逐一對canonical完整SHA、完成狀態與主執行緒心跳；build已exit0，gate執行中。舊worker verifier的structuredClone測試不能取代真實Worker初始化驗證。
+
+### Production Worker：修正測試環境後12/12（2026-10-03）
+
+- 首版跨Node／Chrome完整SHA比較8/12失敗；第一個差異證實是位置／角度浮點最後位元。測試環境不一致不能當作Worker改變模擬的證據，因此改為同瀏覽器內執行同一production bundle的canonical handler作對照，仍要求完整SHA精確相等，沒有數值取整或放寬容差。原失敗記錄保留，產品模擬不改。
+- 第二次診斷傳回大量完整差異資料遇CDP WebSocket HARNESS_FAIL；後續只回傳hash與數字，不再經CDP傳整份frames。
+- 正確對照12/12 exit0：三圖major＋水務legacy皆完成、Worker與瀏覽器主執行緒SHA一致；Worker等待心跳最大26.6–46.7ms。bundle檔名／SHA及gate見`worker-production/gate-1791036337143.json`。
+- 此結果證明本機正式bundle的Worker可用；DEV React Refresh初始化失敗仍在，不修改全域Vite／部署設定。正式玩家流程及手機真機尚未驗收；A視覺仍未放行。
+
+### A22：場外區域差異（2026-10-03，進行中）
+
+- 依A21b完整複核改善世界層次：每圖減少一座重複巨大背景倉庫，其他兩種授權建築按地圖重新安排；水務加入濾池／刮泥橋與綠帶，貨港加入開放裝卸棚與原創工作船，鑄造加入儲氣設備與輸送管廊。
+- 全部位於不可行走場外，競技碰撞／導航不變；共用材質與合批，不加即時燈、反射pass或貼圖。東側海面高度不套入丘陵，避免船／港機浮起。
+- scene72/72與build再2/2 exit0，diff --check通過，35000／90預算未放寬。新phase-a22 GPU／雙尺寸截圖正在執行，未宣稱A通過。
+
+### A22：雙尺寸量測完成（2026-10-03）
+
+- 桌機／390px各24/24 exit0、24PNG像素全MEASURED／0ERROR，兩尺寸來源指紋一致。桌機三圖FPS59.27／59.52／60.10、390px59.93／60.10／60.13，p95全16.8ms。
+- calls桌機652／664／682、390px651／663／681；triangles56154／53538／55660與48974／49992／50986，texture31.61／27.61MB。完整heap／cold-ready與環境限制已記入設計文件，未宣稱真機或production載入已驗。
+- 三圖場外輪廓已不同，但owner檢視仍見內場相似封閉屋體與390px自動導播大片海面留白。A未通過；接續改善實際相機構圖、Bombsite與交戰空間，不以技術PASS替代品質。
+
+### A23／A24：交戰取景與水務據點通路（2026-10-03）
+
+- A23以真實透視包含角色腳頭與4m近場，替代82m固定最小距離；三圖桌機／390px各24/24，p95皆16.8ms，PNG位於`evidence/phase-a23`。非真機、不構成premium通過。
+- A24補上已安裝炸彈錨點與一致targetY；camera framing從10項增加至12項，runner輸出形狀同步調整，未刪舊斷言或放寬門檻。framing12/12及camera recovery12/12 exit0。
+- 水務A北側封閉建築改為16×7m調壓廊，雙4.8m門洞與採光屋面；原(76,17)箱體移至(71,22)，避開門口。共用room資料驅動畫面／碰撞，legacy不變。
+- scene72/72 exit0；水務環境幾何桌機33916／mobile26946、67批次，低於既定35000／90上限。三圖simulation執行中，新GPU／截圖待驗；尚未READY_TO_REVIEW。
+
+- 後續三圖simulation24/24 exit0：所有authored室內雙入口可達、同seed決定性、10人無幾何穿牆，legacy逐格／結果與正式baseline相同。A23雙尺寸像素補驗各12張MEASURED／0ERROR。A24桌機GPU正在執行，已完成水務60.1FPS／643calls與貨港59.9FPS／665calls，p95均16.8ms；完整三圖及窄版仍待驗。
+
+### A24完成量測／A25貨港用途立面（2026-10-03）
+
+- A24雙尺寸各24/24 exit0，三圖桌機60.09／59.90／58.70FPS，390px58.42／59.57／60.07FPS；p95為16.8–16.9ms，兩尺寸source hash相同。詳細metrics保留，不宣稱真機或premium。
+- A25僅改貨港呈現：冷鏈庫改白色隔熱外皮、平頂與三組冷凝機；裝卸倉長立面用大型封閉捲門、護角及結構柱取代規律小窗。沿用既有兩批次材質，沒有增加燈、貼圖、可通行假門或碰撞。
+- scene72/72與build exit0；貨港幾何桌機32634／mobile29010、73批次，仍在35000／90預算內。`phase-a25`貨港桌機GPU正在量測；窄版與視覺複核待完成。
+
+- A25後續桌機／390px各8/8 exit0，貨港59.9／60.1FPS、p95均16.8ms、calls665／660、triangles54112／50498。兩尺寸各4PNG與pixel metrics完整、0ERROR。owner檢視active及全景，冷鏈區辨識度改善，重複屋頂／空曠地表仍明顯；A未通過。無push／deploy。
+
+### A26：道路與據點地表分區（2026-10-03，進行中）
+
+- major三圖道路改用已載入的地形atlas：水務碎石、貨港／鑄造瀝青，與據點混凝土鋪面區分。各點鋪面有不同材質色調，排水格柵與標線共批次；無新增貼圖、燈、透明材質或碰撞。
+- 發現標線與鋪面同為0.045m偏移，改為0.058–0.07m分層；其餘高度仍取同一elevation。這是呈現層修正，不增加可站立高度。
+- 舊scene fixture未傳入streets，補上三圖雙品質各一項道路材質／atlas格／法線檢查，共78/78；原72項保留，runner輸出形狀同步，未放寬預算。scene＋build runner2/2 exit0，diff --check通過。
+- 桌機`phase-a26`GPU／三圖截圖執行中，窄版待驗；A仍未放行，B–E未完成。
+
+- 第一輪桌機24/24技術PASS，但水務／貨港57.0／56.1FPS、p95均33.3ms，相對前版形成效能警訊；鑄造59.7FPS／16.8ms。依效能硬限制及debugging skill停止新增功能，保留原metrics，確認無殘留esmo-cdp／Vite，再以相同程式、seed與情境隔離重測兩圖。不能因gate PASS忽略p95；截圖另見道路尖角拼接，待效能釐清後修正。
+
+- `phase-a26-recheck`兩圖16/16 exit0，均約60FPS／p9516.8ms；沒有產品改動，未重現持續退步，但首輪波動根因仍未確定，不刪失敗數據。接著A26b在導航折點加同批次12面圓角補片，修正道路尖角；fixture明確驗證22頂點（兩段道路＋一個圓角），原78項皆通過，build再通過。三圖A26b桌機GPU正在執行，390px待驗。
+
+- A26b桌機三圖24/24 exit0：58.3／60.0／60.1FPS、p95全16.8ms、calls643／665／682、triangles53032／54580／56106。已檢視貨港active，轉角缺口改善；390px測試已啟動，尚未完成。不把原A26的33.3ms觀察刪除或當作已定位原因。
+
+### A26b驗證完成／A27結構金屬可讀性（2026-10-03）
+
+- A26b窄版三圖24/24 exit0：57.5／59.6／60.1FPS、p95全16.8ms、calls652／660／678、triangles47648／50966／49476。雙尺寸24PNG像素全MEASURED／0ERROR。手機仍未經真機實測。
+- A27針對結構金屬貼圖與深色塗裝重複相乘造成的暗青外觀，僅在major結構atlas金屬格使用明暗映射及低比例原色；頂點色決定塗裝，地形atlas／legacy不改。不新增紋理、Mesh、燈光、即時反射或post pass。
+- 新增六項shader角色與cache隔離斷言，scene從78增至84，原項目保留、runner同步；scene84/84與build runner2/2 exit0，diff --check通過。實際三圖GPU及畫面仍待驗。
+
+- A27雙尺寸各24/24 exit0，桌機FPS59.51／59.28／60.01、窄版60.14／60.10／60.12，p9516.8–16.9ms。calls桌機643／665／682、窄版652／660／678；材質色階改動未增加幾何、貼圖或燈光。
+- 完整24PNG與兩份pixel metrics已生成（各12/12 MEASURED、0ERROR），owner檢視貨港active與水務POV確認色階改變；依skill送出無建置背景／無舊分數的唯讀Fresh-Eyes Review，完整三圖四狀態雙尺寸皆在審核範圍。尚待回覆，不宣稱A通過。
+
+### A27複核退回／A28厚框立面（2026-10-03）
+
+- A27獨立複核平均1.5/3、World1；近景仍是箱形建物與平面窗，場景不放行。依Game Director分工要求，由場景worker限定修改環境模組；owner負責整合與GPU驗證。
+- A28替換封閉建物立面為0.28m厚框凹龕與封底，按水務／貨港／鑄造用途選屋型，保留原碰撞、導航與真正可通行房間。無新增貼圖／燈光。首次水務36,736三角形超標，降低拱弧細分後回到33,376；未放寬原35k／90批次門檻。scene84/84與build均exit0。
+- 桌機實測24/24 exit0：水務59.0／貨港60.2／鑄造59.7FPS，p95均16.8ms；calls643／665／682，triangles52380／51400／55498。12PNG像素全MEASURED、0ERROR。owner檢視水務／鑄造POV：輪廓不同但大面積平坦封板、材質尺度與箱形街廓仍明顯，不能宣稱場景品質達標。390px測試執行中，尚待完成。
+
+### A28完成量測／A29窗格驗證（2026-10-04）
+
+- A28窄版24/24 exit0，58.45／56.69／58.20FPS，p95全16.8ms；24PNG與兩份pixel metrics完整，來源hash一致。比A27窄版FPS低，但p95未增加，保留原讀值、不作真機或永久無回歸宣稱。
+- A29水務窗格與接觸暗邊首次完整box超原35k門檻（37,216、scene83/84），薄橫框及窄暗邊改為合批平面後33,216／68批次，scene84/84、build、diff --check均exit0。沒有修改測試斷言。
+- 水務雙尺寸各8/8 exit0：桌機58.4FPS／calls643／triangles52236；390px60.1FPS／calls652／triangles48266；p95均16.8ms、瀏覽器零錯誤、10名rigged、零Point／Spot光。8PNG像素各4/4 MEASURED、0ERROR。只代表水務本輪實測，不能稱三圖A29皆測。
+- owner檢視水務POV：窗格分割可見，但仍非成熟頂級競技FPS場景；Phase A不放行。所有量測子行程均已exit0，沒有待輪詢的browser session。B–E未完成，未commit／push／deploy。
+
+### A30前置效能差異診斷（2026-10-04）
+
+- 新增唯讀`report_cs_major_performance.mjs`，由已保存metrics計算正式baseline／前輪差異，驗證baseline SHA、兩尺寸candidate來源hash與地圖覆蓋；缺少量測值直接報錯，不填0。輸出固定DESCRIPTIVE_ONLY，列出canvas／品質層差異，不能偽稱受控A/B。self-test8/8 exit0，A28／A29既有證據解析成功。
+- 工具發現A28貨港390較A27 FPS下降5.67%；p95持平但p99由17.1升至66.6ms、max83.4ms，因此停止A30新增畫質。worker確認A30尚未改檔，保留A29 source；A29只有水務窗格改动，不影響貨港分支。沒有殘留本任務Chrome／Vite程序，啟動`phase-a29-harbor-recheck/390`隔離重測，尚待結果。不得刪除A28原資料或宣稱已修復。
+
+- 隔離重測8/8 exit0，FPS60.143、p95／p99／max皆16.8ms；calls660、triangles47874、texture27.622MB與A28相同。未重現尖峰，根因仍未知；原A28保留。DEV冷啟動31.9秒與前輪19.98秒條件不同，仍不得稱纯map載入改善。已恢復A30限定建模工作，下一輪持續比對p99，不把一次恢復正常當永久修復。
+
+### A30九棟設施組合與近景高度（2026-10-04）
+
+- 新增`fpsMajorPlantAssemblies.js`並接入環境模組，替換九棟generic上部：水務曲面泵機／壓力筒／管匯，貨港吊修桁架／控制室／吊具，鑄造捕集罩／煙道／旋風集塵筒。移除被替換的舊屋頂／parapet／雨水管，所有零件共用既有atlas與合批；不新增燈光或透明材質。
+- owner將水務(62,44)、貨港(61,78)、鑄造(44,47)的major共用牆資料hgt降至4.5，足跡／通路不變，讓設備不只在俯瞰可見。初版4.2因W.vy乘0.92，實體只有3.864m，低於水務最大平台眼高3.96m；新增檢查先重現94/96，再改4.5（4.14m）至96/96。不改legacy資料。
+- scene保留原84項，新增三圖雙LOD設施足跡及基座眼高共12項；`verify.mjs`輸出形狀同步96/96，未刪除或放寬斷言。桌機／手機幾何水務33972／28270、貨港30150／26694、鑄造32224／27172，批次71／77／87，仍低於35k／90。
+- camera recovery12/12通過；初版hgt4.2的三圖simulation24/24通過，但不拿它替代最終4.5版本。最終scene／simulation／build runner已啟動，scene已PASS，其餘尚待完成；GPU與新版截圖未取得，不宣稱A完成。
+
+- 最終4.5版本runner三項全PASS exit0（scene96、simulation24、build），累計只6/106，不能稱全專案完成。A30雙尺寸各24/24 exit0、24PNG及兩份pixel metrics各12/12 MEASURED／0ERROR，來源hash均`040af174939dbfbaee2ce97b775ff89613c873ab5d2ff6ee1a1aba4bd4f28d52`。
+- 桌機FPS57.77／59.00／59.90、p95全16.8ms、p9933.4／33.3／16.8ms、calls646／668／684、triangles52992／51818／55370；390px59.61／60.10／60.10FPS、p95全16.8ms、p9917.0／16.8／16.8ms、calls655／663／680、triangles48866／48370／48384。貼圖仍桌機31.61／窄版27.61MB。桌機貨港p99較A28增加，已啟動單圖隔離重測，不忽略警訊。
+- owner檢視水務POV確認泵機設備已進入近景，但沒有宣稱整體成熟。24張三圖四視角雙尺寸截圖／像素／metrics已交新獨立唯讀reviewer，尚待完整評分。手機仍未經真機測試。
+
+- A30獨立複核已完成24張：Art2／Hero1／Obstacles1／Interactables0（證據不足）／World1／Materials2／Lighting2／VFX1／UI2／Performance2，平均1.4/3；World逐圖視角分布平均1.58，不取代類別1分。水務active／overview／POV達2，detail仍1；貨港active／overview2、detail／POV1；鑄造active2，其餘1。主要缺口為觀戰近景懸空窗板／不完整殼、貨港與鑄造重複平面立面、鑄造場外裸地。A仍未通過。
+- 桌機貨港隔離重測8/8 exit0、59.36FPS／p9516.8／p9917.2ms，但max100ms，不能說完全沒有卡頓。再以`phase-a30-harbor-profile/1366`取CPU profile，8/8 exit0；profiling有額外負擔，55.7FPS不可直接與未profiling當受控A/B。
+- profile自耗時可見updateWorldMatrix約769ms、multiplyMatrices364ms、expandByObject342ms（整段採樣）；呼叫鏈集中`measurePresentationBounds → FpsCharacterRenderer.update`及可見性診斷。這是待優化的CPU熱點，尚未證明為100ms尖峰的唯一根因。所有GPU／runner已終止；下一步先處理bounds重複走訪及觀戰构件一致性，不新增畫質。
+
+### A31 bounds 採樣與近景遮擋修正（2026-10-04）
+
+- 新增`fpsBoundsSampler.js`：角色組裝完成後保留幾何清單，每次只更新一次完整世界矩陣，再依Three r160 object／geometry boundingBox計算同一保守結果；包含隱藏子物件，沒有改掉原bounds語意。major optimized角色使用採樣器；legacy保留原路徑。死亡action已停住且世界Y未變時，省略重複接地走訪，回合重設會清除狀態。
+- 新增8項與原生Box3等價驗證，涵蓋巢狀與移動矩陣、隱藏Mesh、SkinnedMesh、InstancedMesh、空樹、同Mesh更換geometry及矩陣走訪次數，8/8 exit0。真實CC0骨架與合批verifier87/87、C2C9/9、build均通過。
+- C2C第6項曾因舊`root.worldToLocal(start/end)`字串斷言失效而8/9；A13已有`bonePositionInRoot`封裝及inverse cache，實際87項幾何與anchors等價仍通過。本輪改為直接執行產品helper，在有旋轉／非均勻scale的真實Three root驗證cached與uncached換算；保留檢查數與目的，沒有刪斷言求綠燈。
+- 近景原本仍以遠方全場選手及24m延伸焦點觸發背景建築淡出，導致detail的窗板／屋殼不連續。major追焦改為選取角色與真實鏡頭目標，全景／legacy保留原全場判定。新增3個產品函式行為檢查，先14/15重現，再15/15通過；原12項保留。A31桌機GPU已啟動，窄版與profile重測待完成，不宣稱效能或場景已過門檻。
+
+- A31雙尺寸GPU均24/24 exit0、24PNG與像素各12/12 MEASURED／0ERROR，來源hash均`ff1f56a120c0a07a667d6f690766db6fe40cbbabf74ee031539984c47f3a580a`。桌機三圖59.79／60.18／59.72FPS，p9516.8／16.7／16.8ms，calls646／668／684；390px59.25／60.11／60.10FPS、p95全16.8ms，calls655／663／680。貼圖仍31.61／27.61MB；10名rigged、瀏覽器零錯誤。窄版水務p99升33.3ms（A30為17.0ms）保留警訊，不宣稱無尖峰。
+- A31貨港profile 8/8 exit0、52.0FPS；與A30 profile均約10.6秒，沿相同函式祖先聚合，`measurePresentationBounds`內採樣耗時327.800→45.511ms，可見角色採樣工作減少；整體FPS55.7→52.0，不能稱整體效能改善或唯一卡頓原因已解決。DEV `buildFpsVisibilitySnapshot`子樹1390.653→1591.791ms，下一步移除重複矩陣走訪，不關閉診斷。
+- 依使用者要求展示4張A31真實遊戲PNG與隔離worktree路徑；圖像不是概念圖。水務detail完整外殼恢復，但鑄造場外裸地與貨港室內功能背景仍待補。A未完成，B–E未完成，未push／deploy。
+
+### A32 連續廠區、貨港室內及診斷採樣（2026-10-04）
+
+- 限定環境worker只改`fpsMajorMapEnvironment.js`：鑄造西側相連供料棚／料斗／輸送廊與南側氣槽管匯／服務棚；貨港兩個真房間補門框／捲門箱、三道I形梁與牆帶維修設備。足跡／通路資料不改，門淨寬仍4.8m、門楣底3.6m、設備位於既有0.8m牆帶，不加地面阻擋。
+- scene96/96 exit0；桌機／手機幾何水務33972／28270、貨港30894／27318、鑄造32762／27692，批次71／77／88，未放寬35k／90預算。貨港批次不增，鑄造啟用既有districtPanels增加1批；沒有新貼圖或即時燈。
+- owner新增已更新矩陣的bounds helper；major DEV診斷每名角色只更新整棵世界矩陣一次，重用同一bounds於transform／frustum；保留每幀全部診斷及動態掛件走訪。legacy原路徑保留，不靠降低診斷頻率掩蓋問題。
+- bounds原8項保留、新增6項至14/14；新增直接執行產品visibility helper的8項原生／major完整snapshot等價測試，涵蓋10人、動畫／隱藏／透明／fallback／死亡／身分缺失／掛件變更／NaN與矩陣走訪，8/8 exit0。camera15/15、build通過；新版三圖雙尺寸GPU與profile尚待完成。
+
+- 為保護新增bounds與DEV診斷採樣，在既有`verify.mjs`只新增上述兩支區段，檢查exit code及14/14、8/8輸出形狀；不改其他測試或放寬斷言。新增兩支短檢查不影響正式result／replay／模擬。
+
+- A32雙尺寸三圖均24/24 exit0，來源hash均`45c266d8a8ecde96243c93e5f2e0b4bf1e8084db7b7590098a18457ef0deb2f6`，24PNG像素各12/12 MEASURED／0ERROR。桌機FPS60.01／60.01／59.42、p95全16.8ms、calls646／668／685、triangles52992／52560／55908；390px57.92／60.10／60.10FPS、p95全16.8ms、calls655／663／681、triangles48866／48994／48904。texture仍31.61／27.61MB；heap桌機235／306／452MB、窄版230／464／485MB；DEV cold-ready桌機17.5／19.7／21.9秒、窄版16.4／19.9／23.4秒，仍不是純map載入或手機真機。
+- A32 profile貨港8/8 exit0、60.107FPS／p99 16.8ms；約10.6秒採樣中visibility子樹由A31 1591.791降1110.052ms，bounds子樹81.682ms，不能以不同採樣抖動宣稱每次成本完全相同。完整snapshot等價測試保持8/8，未關閉／降頻診斷。原A30／A31 profile全部保留。
+- A32桌機鑄造p9933.3ms與窄版水務max116.6ms保留警訊；隔離同hash重測鑄造8/8、59.70FPS／p9916.8ms（max33.5），水務390px8/8、60.13FPS／p99／p9516.8ms、max16.9，均exit0。尖峰未重現，根因尚未確認，不宣稱永久消除卡頓。
+- 新增每圖雙LOD真入口射線檢查至scene102項。首次100/102是測試把蹲眼高度固定0.9、射到門外已升高的平台地面；改為同一authoritative地形高度＋眼高、只檢查門牆±1.2m範圍，保留全部門與雙向射線，102/102 exit0。隨後擴大採樣到門邊內0.1m及角色半徑，沒有排除道路／地面命中來求綠燈。runner新增兩區段累計8/108，未執行100項，不稱全專案測試完成。
+- A32獨立reviewer逐張24PNG與兩尺寸metrics／pixel、正式scene anchors複核：Art2／Hero1／Obstacles1.5／Interactables0.5／World1.5／Materials2／Lighting2／VFX0（本組無事件證據）／UI1.5／Performance2，平均1.4/3；盒體與大平面主導、窄版卡片擋路徑為automatic failures。貨港overview World2，其餘主要1.5，鑄造detail／POV1。A不放行，後續人物／HUD缺口另屬B／D，不混為場景已完成。
+
+### A33 中央製程通廊與房間合批（2026-10-04）
+
+- 針對鑄造兩個核心盒體，owner將原(44,47)10×9及(53,61)9×9實心建物改成`extraction-gallery`與`pouring-hall`真房間，分別南北／東西雙入口4.8m；共用`majorRoomWalls`生成渲染／碰撞片段，外框保留，不新增獨立碰撞真相。legacy資料、正式Competition／Result／Replay契約不改，需重新跑三圖simulation24與正式baseline逐格比較。
+- worker限定環境模組：製程通廊厚承重門框、高採光、梁軌／集氣罩、無門側0.8m牆帶設備；吊件下緣至少3.9m。原上部設備移至`Process_{room.id}_upper-landmark`，仍檢查原footprint與高於牆頂，不藉改成房間刪設施guard。修正既有維修房機械伸入側門，其深度止於z64.35，不侵入65.1–69.9門洞。
+- 房間牆依architecture id合批，所有原wall仍逐一保留fade rect；門框／牆掛設備共用房間fade引用。地坪同材質合一、門與控制設備合一。owner在major先聚合共享材質的最小fade再一次套用，legacy原寫入順序保留；新增2項產品函式行為測試，camera原15保留至17/17 exit0。
+- A33初版scene98/102：兩項設施owner匹配改為封閉建物＋製程room共3個，保留足跡／下緣／封閉基座眼高目的；真正產品失敗是澆鑄東門命中浮起道路。定位原長路段只有四角採地形高度，將整段平地連到遠處平台而抬成斜橋。只對跨平台路段以沿長≤2m、橫向4格採同一高度函式，平地仍2tri與原同批次，不改地形／模擬高度。
+- 原道路檢查22個vertex計數因必要細格失效，改為>22且每vertex高度與authoritative函式誤差<1e-5，保留材質／atlas格／朝上法線與接縫檢查，屬增強高度斷言，不是放寬原幾何預算。最終scene102、bounds14、visibility8、camera17均通過；CPU桌機34138／31084／33720、手機28436／27508／28770tri，57／62／77batch，仍<35k／90。diff --check exit0。
+- 新房間雙入口Node導航前置檢查可達／有室內點／不blocked，但不拿此代替完整決定性或GPU。三圖simulation／build runner進行中，A33新版完整24PNG／效能／品質尚待；A未完成，B–E未完成，未commit／push／deploy。整體ETA暫無可靠範圍，小階段餘30–60分鐘只為估算。
+- A33完整runner後續已結束：simulation24/24、build皆exit0，runner 2/2（約230秒＋22秒）；舊版正式baseline逐格與result守門通過。已開始`phase-a33/1366`真實交戰GPU量測，待桌機完成後再執行390px，兩組不可同時搶GPU。
+
+### A33 完整畫面複核與 A34 導航效能修正（2026-10-04）
+
+- A33兩尺寸三圖各24/24 exit0、24PNG像素各12/12 MEASURED／0ERROR，來源hash為`290f8e04ca417079acb5dcaa0b4b2590c6419366b206945d593e48593cb5f9f6`（31檔）。桌機FPS59.03／59.97／58.40、p95全16.8ms、calls634／653／678；390px全約60.1FPS、calls641／648／671。桌機水務p9933.3ms／max50、鑄造max116.7ms保留；水務隔離CPU profile 8/8仍p9933.3ms、58.74FPS，不能因平均FPS高就忽略警訊。
+- A33獨立review完整24PNG及正式anchors：World1.5、平均1.40/3仍退回。鑄造detail／POV改善至1.5，但主要建築仍是重複棚屋／大窗面，園區與場外接合不足；390卡片遮路徑亦保留。下一輪必須處理玩家眼高的主要承重造型與立面，而非加外圍小物。
+- A33鑄造DEV cold-ready桌機42.37秒／390px39.58秒，環境建構本身僅87／82ms；fallback模擬由A32約18／19秒升到38／36秒。Node profiler定位route建構37.6／42秒。新增房間使障礙與角點增加，窄門未對齊原3m格點；但不以改門寬、clearance、A*順序或回合結果求加速。
+- A34新增`fpsMajorNavigationCache.js`：每場major專用有界精確路段快取，2048筆／16384路點上限，LRU淘汰；使用完整JS數值端點及有向key、保留正負零、不量化、不共用反向結果、出入路線均複製。限定同walls引用／半徑，walls在該場期間不變；legacy不啟用。既有整路memo及原路徑搜尋謂詞／順序不改，快取資料不寫入frame／result／replay。
+- 同一Node標準ROSTER／seed505001採樣41.8365→11.2647秒（約-73%），完整sim、frames、result hash均相同，2169frames、11:13及全部導航／移動稽核保持；此ROSTER不同於browser示範2636frames，不拿Node時間當FPS或browser載入證明。原始profile與source快照存`cpu-a33-inferno-before`、`cpu-a34-inferno-cache`，不可將快照當產品檔案提交。
+- 新快取守門：14項容量／精度／隔離單元、三圖節點／雙入口／多段路線與重複命中6項、三圖完整sim／result等價3項，共23/23；quick前置20/20。新增runner區段只增加安全網，原斷言未刪；完整cache、正式baseline simulation24、build runner3/3 exit0（約49／158／22秒），累計9/109，其他100項未執行，不稱全專案驗證完成。
+- A34兩尺寸三圖各24/24 exit0；來源hash均`f5e429501e72db219c92ba7efceb0a30153ca891077bdf19f247f9f11b22d3d0`（32檔），像素各12/12 MEASURED／0ERROR。桌機FPS60.01／59.52／59.94，p95為16.8／16.7／16.8ms、p99為16.9／16.8／16.8ms；390px60.11／60.09／60.13FPS，p95為16.9／16.8／16.8ms、p99為17.1／16.8／16.8ms。draw calls及triangles與A33相同：桌機634／653／678與53816／52628／56982，窄版641／648／671與49038／49062／50086；texture31.61／27.61MB（貨港各多0.01MB）。沒有降低DPR／陰影或關閉診斷換速度。
+- A34實際cold-ready桌機13.76／7.52／12.96秒、390px11.12／7.37／12.62秒；fallback模擬分別1.88／3.14／8.81與1.97／3.17／8.62秒，鑄造仍2636frames。heap桌機201／425／486MB、窄版203／431／484MB，單次讀值不證明無洩漏或GPU用量。桌機貨港單次max116.7ms仍保留並隔離重測中；其他桌機max33.4／33.5、窄版17.6／17.1／17.0。無新增PointLight／SpotLight、10人、console/page error0；真手機與POV效能尚未實測。
+- 額度守門已由僅有不明狀態改善為官方唯讀查詢：任務專用CLI helper只呼叫`initialize`／`account/rateLimits/read`，不開始對話、呼叫模型、購買／重置積分或輸出憑證。2026-10-04 03:23臺灣時間官方回傳codex每週used53%／剩47%；另`base_model_inference`桶不相加。每次續跑／phase／大型工序前檢查，可靠0%時停止新工作並pause goal；不承諾與平台計費瞬間完全同步或絕對零扣款。
+- A仍未完成，B–E未完成。下一輪主要建築造型pass已唯讀規劃，尚未解凍實作；未commit／push／deploy，未READY_TO_REVIEW。
+
+### A34 長幀複核收尾與 A35 建築造型開工（2026-10-04）
+
+- A34貨港`phase-a34-harbor-recheck/1366`終端exit0，完整8/8 PASS，來源hash與A34相同。FPS60.117、p95 16.8／p99 17.1／max17.4ms，calls653／tri52628、texture31.622MB、heap267.06MB、10人／10rigged、console/page error0。原樣本max116.7ms未重現但保留，不以單次複核保證永久無卡頓。cold-ready15.04秒包含DEV fallback，環境建構135.5ms，仍非純map載入。
+- 官方唯讀週額度守門2026-10-04 03:34臺灣時間回傳codex used54%／剩46%；另一limitId獨立處理。沿用可靠0% pause既有goal、停新工作／子代理的條件，不承諾查詢間隔為絕對計費硬上限。
+- A35限定worker只改環境模組：鑄造耐火牆裙／完整鋼骨爐廊、貨港裝卸門架與封閉採光帶、水務三棟厚砌體泵站。要改主視野的中尺度構造，不堆外圍小物；保留足跡／高度／4.8m雙門／fade、共享atlas與35k／90原預算，不加即時燈。scene102／camera17／build與雙尺寸真實GPU／完整24PNG仍待完成，不先宣稱品質過關或A完成。
+
+### A35 三圖主要構造落地與驗證前置（2026-10-04）
+
+- worker只改`fpsMajorMapEnvironment.js`，鑄造兩製程房的棕門楣改承重梁＋退縮封板、耐火牆裙與深灰柱跨；門上板與牆共同fade。貨港兩房住宅大窗替換高位工業採光，深灰鋼架取代白門面；水務三設備站厚墩／高採光／窄槽／封閉檢修面，回收大藍窗與原細窗格。保留房間入口、足跡、高度與同源碰撞，legacy不變。
+- 初版貨港移除全部白門框與住宅窗後，真CC0來源數不足既有5來源守門；沒有修改verifier，改讓通關廊真門架及維修庫兩面高位帶窗實際使用既有CC0厚構件並統一頂點塗裝。沒有dummy asset或只載入不使用的來源。
+- 最終短scene exit0／完整102/102：desktop33724／31732／34728tri，mobile28162／28156／29778tri；batch57／62／77不增，原35k／90上限未改。鑄造柱跨由初版約3m重配4.5–5m回收多餘柱，仍僅272tri餘額。原footprint、門全寬站／蹲射線、局部fade、atlas、來源與dispose檢查均保留。
+- owner camera17/17 exit0、production build exit0（20.82秒；既有大型chunk提示保留）。環境模組已凍結，開始`phase-a35/1366`真實交戰GPU，完成後再390px，不與simulation／build並行搶資源。新增場景主要造型仍需完整24PNG獨立審核；未完成A或其他phase、未commit／push／deploy。
+- 2026-10-04 03:49臺灣時間官方codex週額度剩41%，可靠0%停新工作並pause，其他桶不混算。進度`▣ A　□ B　□ C　□ D　□ E`；本小階段剩20–40分鐘只是估算，整體仍無可靠工時範圍。
+
+### A35 完整GPU、正式Worker及獨立視覺複核（2026-10-04）
+
+- 雙尺寸三圖各24/24 exit0，來源hash均`45152f73d8901e368332eea6c7d11edf379142184838b39d989b1b5787f2c652`（32檔）。桌機FPS60.03／60.10／60.11、p95／p99全16.8ms、calls634／653／677、tri53402／53276／57990；390px60.11／60.06／60.11FPS、p95全16.8、p99為17.0／16.8／16.8、calls641／648／671、tri48764／49710／51094。texture仍桌機31.61／窄版27.61MB（貨港多0.01），10人／10rigged、零Point／Spot、console/page error0。
+- 相對A34，三圖tri桌機-414／+648／+1008、窄版-274／+648／+1008；draw calls無增加，未降低DPR／陰影或診斷。描述性比較未觸發FPS／p95／p99／calls警訊，仍不是嚴格同鏡頭熱狀態A/B。桌機max33.3／17.2／16.9ms，窄版17.4／17.1／17.1；所有原長幀保留。
+- JS heap桌機229／313／550MB、窄版210／427／483MB；桌機鑄造比A34快照增加約63.5MB，不等於新增幾何成本或已證明洩漏，生命週期仍待E。cold-ready桌機14.53／7.48／13.88秒、窄版12.59／7.50／13.00秒，仍包含DEV fallback／rig／音效，不是純地圖載入；兩尺寸像素各12/12 MEASURED、0ERROR。
+- production build後正式Worker測試12/12 exit0：三圖major與mirage legacy完整SHA均等於同瀏覽器canonical，主執行緒25ms心跳最大間隔26.5–28.1ms；worker時間約2.93／1.79／9.87／2.74秒。Node與Chrome最後位元差異仍保留，不偽稱跨JS引擎hash相同。證據`worker-production/gate-1791058554291.json`；不能把DEV fallback錯誤當作production Worker失敗。
+- 新獨立reviewer僅看完整24PNG、三anchor與metrics，未讀source／歷史評分：Art1.5／Hero1.5／Obstacles1.5／Interactables1／World1.5／Materials2／Lighting1.5／VFX1（靜態證據限制）／UI1.5／Performance1.5，平均1.45/3。三圖overview World1、鑄造POV1，其他主要1.5；主要盒體／空廊／孤島接合及390卡片遮路徑仍未解除。分數差異不當成受控品質提升，A仍不放行，B–E未完成。
+
+### A36 真工位與中央泵廊資料（2026-10-04，進行中）
+
+- 沿用Gameplay Systems完整workflow／level-design／physics-selection參考；保留現役決定性custom靜態proxy，不加入新物理引擎。玩家承諾仍是選戰術／站位經營競技回合；本切片讓設備的工序識別、可躲藏掩體與中央通路同源，形成室內短交火與戶外長角之選擇，不更動買槍／獎勵／Result／Replay／MOBA。
+- 將水務(62,44)12×20 hgt4.5實心主泵樓改`central-pump-hall`，南北4.8m雙門、同footprint與上部泵組。共用room.fixtures定義四個有正常厚度工位：中央泵廊、維修庫、集塵廊、澆鑄工位；`c5a2SolidObstacles`由同資料追加room-fixture真實體，供移動／導航／LOS／呈現，legacy rooms沒有此資料，原路徑保留。
+- 新15/15守門直接執行產品blocked／lineBlocked、同源bounds、4.8m中央物理直廊與扣PLAYER_R後2.1m角色中心帶、雙門導航，exit0；完整simulation24/24 exit0，三圖同seed決定性／無穿牆、legacy逐格及結果均與正式baseline相同。major新布局結果可變，不寫死勝負；cache23新版完整等價驗證中。
+- worker只寫env／既有plant helper，先真正工位與低水務屋高，再三圖closed服務閘門／外路接合；不生成可通行假門，工位不因屋頂或房間fade透明。原102scene斷言保留並新增12項實際工位bbox／站蹲射線至114，原35k／90不放寬；短scene／build／新版GPU／完整視覺仍待。
+- 2026-10-04 04:53臺灣時間官方codex週額度剩33%，0% pause條件持續；未READY_TO_REVIEW，未commit／push／deploy。本小階段估25–55分鐘，整體暫無可靠餘時。
+
+### A36 導航等價驗證完成與實體材質守門（2026-10-04）
+
+- 新布局完整cache23/23 exit0，三圖快取／無快取路徑、逐格模擬與結果一致；15項工位及24項simulation亦均exit0。沒有以快取重用舊布局或放寬決定性。
+- scene新增工位項同時查實際material opacity=1、非transparent、depthWrite，且不與房間／上部fade共用材質；保留114項數量及全部舊102斷言。scene短驗仍由geometry worker進行，未啟動新版build／GPU。
+- 2026-10-04 05:21臺灣時間官方codex週額度剩30%；另一bucket獨立，不相加。進度`▣ A　□ B　□ C　□ D　□ E`，本小階段估25–55分鐘，整體餘時尚待場景驗收後重估；未完成／未READY_TO_REVIEW。
+
+### A36 幾何落地、完整GPU與水務長幀診斷（2026-10-04）
+
+- geometry worker初次108/114中四台機架腿間可被蹲姿長軸看穿，修實際底座為0.56h封閉維修櫃而非放寬射線。遠景鑄造氣槽箍環LOD回收144／96tri；owner加material opacity／transparent／depthWrite與fade材質守門後重跑114/114 exit0，desktop33470／31766／34846tri、mobile28240／28238／30016，batch57／60／73；鑄造硬餘額154tri。camera17/17、production build20.63秒均exit0，原chunk提示保留。
+- `phase-a36/1366`與`390`各24/24 exit0，來源hash同`0afd565629355fbb1d213a2fe8dd80c850e13737e41466dfc7dbb4540fb36441`。desktop FPS56.85／60.10／60.10、p95全16.8、p99 33.3／16.8／16.8、max116.7／17.1／17.1ms，calls635／651／673，tri53192／53318／58124；390 FPS59.73／60.09／60.10、p95全16.8、p99 17.1／16.9／16.9、max83.4／17.5／17.2，calls641／646／667、tri48794／49800／51348。10人／10rigged，Point／Spot0、console/page0，兩尺寸像素各12/12 MEASURED／ERROR0。
+- texture仍desktop31.61／窄版27.61MB（貨港多0.01）；JS heap245／323／552與240／445／482MB是快照，非GPU／洩漏結論。cold-ready13.77／7.45／10.16秒與14.56／7.71／9.68秒包含DEV fallback／資產，非純map載入。與A35描述性比較水務desktop FPS下降5.3%、p99增加觸發警訊；非同frame／鏡頭受控A/B，全部原數據保留。
+- 水務同source隔離`phase-a36-water-recheck/1366`8/8 exit0，FPS59.45／p95及p99 16.8／max116.7ms，calls635／tri53126；平均回升但長幀重現，不能結案。DEV CPU profile另8/8 exit0，約10.71秒中publish visibility subtree1.17秒、build snapshot1.09秒、syncAnchors0.48秒；不能據此推論production或已證明100ms尖峰原因。
+- 已完整載入debug-profiler與debug-profile-checklists／performance-profile參考。為正確build mode，量測工具新增可選production隔離建置，只在scene初始化掛唯讀handle與按需原產品snapshot getter，DEV關閉；不改產品source／正式dist／Router／輸入／FPS斷言。production取證仍待完成；新fresh-eyes只看完整24PNG＋重測4PNG、正式scorecard三anchor與量測，不給歷史評分或source。
+- 2026-10-04 16:56臺灣時間官方codex週額度剩27%，可靠0%停新工序／子代理並pause既有goal。進度`▣ A　□ B　□ C　□ D　□ E`，此診斷／視覺小階段估20–40分鐘，整體尚無可靠餘時；未完成、未READY_TO_REVIEW，未commit／push／deploy。
+
+### A36 正式shader尖峰原因、一次性預熱與盲審未放行（2026-10-04）
+
+- 正式production（DEV關閉）四次取證各8/8 exit0，長幀仍可重現。stage trace將134ms幀定位到render129.58ms而非dynamic3.56ms；shader trace於101ms幀量到getProgramInfoLog84.24ms，當幀才編譯含FLIP_SIDED的Standard／fog／map／shadow背面variant。GC最長約3.11ms，未證明GC造成100ms卡頓。trace開銷不當作產品FPS基準。
+- 沿用本機Three r160 compileAsync／compile，在major場景準備期以相同geometry、texture、onBeforeCompile／cache key及target scene lights預熱透明雙面屋頂。clone只保留program owner至離場，不加入可見scene；取消、pending釋放、失敗與共用asset不dispose均有8項測試。新增獨立verifier及registry，沒有放寬既有114／17項；runner本次1/1通過，未跑的101個區段誠實保留。
+- `phase-a36-shader-warmup-production-trace/1366`8/8 exit0，hash17f16c21f9c0a7fef0e3415903acc6824111e3a7a2254cf1e0886f90e31adced（33檔）；59.88FPS、p95／p99 16.8／max33.4ms、calls635／tri53108，三份材質ready。預熱span約2.10秒，cold-ready9.01秒含Worker／資產，非純地圖時間；本次新背面shader在量測前產生，量測內info-log等待降至約0.91ms，但仍需無trace同情境與兩尺寸驗證。
+- 獨立review只看全部28PNG、三anchor與量測，World1.5／平均1.55；水務detail兩尺寸與重測均0，角色被厚梁遮住；工位集中、室外稀疏、窄版HUD遮路徑及鑄造POV空廊仍成立。不能拿8/8功能PASS取代視覺品質。已完整載入camera-controls與scene-debugging參考，下一步用實際camera→選手ray與已編譯shader定位，不直接採用先前門楣猜測。
+- 2026-10-04 17:29臺灣官方codex週額度剩20%，0%pause；`▣ A　□ B　□ C　□ D　□ E`，小階段估20–35分鐘，整體尚無可靠餘時。未commit／push／deploy，未READY_TO_REVIEW。
+
+### A37 真正透明shader切換與近景遮擋修正（2026-10-04）
+
+- 屋頂預熱不含trace正式重測8/8 exit0，59.60FPS／p95 16.8／p99 20.6／max33.4ms；另一opacity-before取證8/8為59.38FPS／p99 33.3／max33.4ms，原水務100ms以上尖峰本次未重現，不代表永久零卡頓。
+- 新唯讀GL probe直接證明`Building_7_solid`／closed-panels opacity≈0.16、transparent=true，但material.version=0且實際fragment shader仍`#define OPAQUE`；camera→選手ray亦命中該建築。先前「房間門楣」只是假設，未據此改幾何。Three r160只有version變化才重算此program，OPAQUE令alpha=1，所以數值fade與截圖不一致。
+- `fadeOccluders`新增major-only透明狀態切換dirty：改變true／false時才needsUpdate，穩定淡出不逐幀dirty；POV立即還原不透明與depthWrite，legacy不改version行為。原17項保留、新增4項用真正Three material驗證，21/21 exit0；新增registry欄位以21/21形狀守門，本次shader／camera兩區段2/2 exit0，全清單仍有101未執行，不冒充全部通過。git diff --check exit0。
+- 正式桌機`phase-a37-opacity-fix-production/1366`三圖27/27 exit0（原24項全保留，另加每圖實際透明shader非OPAQUE），新hash2a6e50fea3f8efae771aeb5de2fd4362173d4590918780b275502abbece846ee。水務detail完整角色恢復，沒有刪除厚梁／碰撞或把全地圖透明化。FPS59.06／60.01／60.10、p95全16.8、p99 33.4／16.8／16.8、max50.1／33.4／17.0ms；calls635／651／673、tri53108／53318／58124。三圖warmup ready3／2／4份，cold-ready9.46／8.79／8.60秒仍含Worker／資產。390px、像素／獨立審核進行中，A未放行。
+- 本次參考紀錄保存在`review/cs-major-upgrade/evidence/a37-reference-ledger.md`；無新asset／貼圖／燈光。2026-10-04 17:40臺灣官方codex週額度剩19%；可靠0%pause，進度`▣ A　□ B　□ C　□ D　□ E`，本小階段估10–20分鐘，整體尚無可靠餘時；未commit／push／deploy，未READY_TO_REVIEW。
+
+### Phase A 最低場景門檻通過與B唯讀稽核（2026-10-04）
+
+- A37正式雙尺寸各27/27、全部24PNG像素MEASURED／ERROR0，scene114／fixture15／warmup8／camera21四登錄區段4/4 exit0。正式dist build23.74秒exit0；新Worker CQI4-CNW於三圖major與mirage legacy的completed／完整canonical SHA／主執行緒持續回應共12/12 exit0，frame1663／1371／2141／913；證據`worker-production/gate-1791107568881.json`。未把Node／Chrome數值差異拿來放寬同環境SHA gate。
+- 獨立review僅給24PNG、scorecard與三anchor／實測，全部24圖World2；Art2、Hero2、Obstacles2、Interactables1、World2、Materials2、Lighting2、VFX1、UI2、Performance2，平均1.8，沒有3分、非premium。390px detail／POV選手卡遮路徑為automatic failure，正式列入D；動畫／音效／觸控／safe area／真手機並非stills已證明。最終品質仍需B–E收尾，不能把最低場景門檻稱頂級品質完成。
+- B從唯讀角色／武器／音效／feedback pipeline稽核開始，依Director明確major phase delegation使用原Phase B audit worker；owner統一寫入。主agent完整讀VFX技能、gameplay-workflows、game-feel及checklist；只用呈現層事件與限額／pooling，不使用hitstop改競技時間、RNG或frame。A37來源凍結期間沒有新增幾何／貼圖／動態燈，也未修改MOBA／Router／Result／Replay契約。
+- 階段`■ A　▣ B　□ C　□ D　□ E`；官方codex每週剩17%（2026-10-04 17:55臺灣），可靠0%pause既有goal且停子代理，不轉其他積分。B稽核小階段估15–30分鐘，整體餘時待實際B–D稽核後更新，不復用撤回估算；未commit／push／deploy，未READY_TO_REVIEW。
+
+### Phase B1 真手骨持槍與槍口接線（2026-10-04，GPU待驗）
+
+- 限定worker只寫人物兩模組與新verifier，完成後停止；owner接線Gunplay及文件／registry。major Renderer明確啟用`handWeaponMount: optimized`；五槍族握把對準真GLB `hand_r`，非繪製Object3D sockets提供世界position／direction，無新增Mesh／triangles／material。getter只更新socket祖先鏈，正式`update → setFacingDegrees → resolver`不讀上一幀yaw。
+- 真GLB／原動畫40 fixtures共63/63 exit0，含65 bones、5200 triangles／8 materials原預算、五槍族、CT／T、desktop／mobile、legacy隔離與dispose。舊87項仍保留合批與原姿態等價fixture，不刪／放寬；新63項另測產品明確開啟的手骨組態及真clips。C2C9／C2B14同樣exit0。
+- Gunplay major短flash beam使用真槍口方向，長tracer仍連至權威`event.to`；不改位置／命中／RNG／frame或契約。null／未ready／槍族不符／非finite回退至既有平面槍向及同源高度，legacy保留原數值。重用Vector3，既有244個池及無新增燈維持。新接線18/18 exit0，三registry區段3/3 exit0，累計14/114（100尚未跑），不是全套通過。
+- 正式build19.90秒exit0，Worker檔為`fpsSim.worker-8JYwGg5_.js`；新增唯讀socket驗收只在獨立production量測工具，原27項保留。正在三圖雙尺寸GPU與24PNG驗證，不以Node或build代表畫面／FPS已過。
+- 仍缺跑動射擊上／下身協調、可靠蹲姿／換彈frame資料、死亡地形／seek修正、POV五族形體、腳步事件去重及音訊節點回收；B1不是整個B。`■ A　▣ B　□ C　□ D　□ E`，B1估再10–20分鐘，B–E暫估1–3個完整工作天，視效能修正及C／D稽核調整、不含休眠／額度暫停。2026-10-04 18:35臺灣官方codex週剩14%，0%pause；未commit／push／deploy、未READY_TO_REVIEW。
+
+### B1雙尺寸驗證完成，B2動畫生命週期（2026-10-04）
+
+- B1三圖兩尺寸production各33/33 exit0，新增每圖手骨／真socket及實際FX使用檢查，原27項全保留；24PNG像素各12 MEASURED／0 ERROR。來源hash3264db73ce1fc8e1ba002cb7cbba6c3b1ec0d4baf3be508e3e34004fb56a180a。桌機三圖60.103／60.101／60.099FPS，p95 16.8／16.8／16.7、p99全16.8、max17.0／17.3／17.0ms，calls635／651／674、tri53192／53318／58124；390px60.056／60.100／60.102，p95／p99全16.8、max16.8／17.2／16.9，calls641／646／667、tri48794／49800／51348。
+- 與A37相同production／種子／DPR／shadow／canvas情境，calls差0／0／+1及−2／0／0，Mesh／geometry／materials／texture完全相同，沒有明顯frame-time回退；單次GC／事件與draw可見差異不能聲稱因果FPS提升。桌機貼圖31.611／31.622／31.611MB、heap179.4／277.8／385.2MB，窄版27.611／27.622／27.611MB、heap174.3／289.7／403.3MB；單次heap快照不是洩漏結論。cold-ready8.16／7.06／9.72及8.28／7.33／9.68秒含Worker及資產；真正手機仍未實測，cards遮戰場仍留D。
+- B2 major只修呈現生命週期：暫停mixer／timer不推進，不把真移動pose切回idle；每個update只sync一次衣物，死亡bounds校正到authoritative parent高度，回合／同回合rewind／明確seekNonce還原model偏移及事件latch。直接進入已死後續frame缺精確死亡時間，誠實採原Death01終態、不虛構死亡事件。legacy保持原暫停dt、world-zero與先校正再sync順序。
+- 新真GLB lifecycle首跑17/19：發現手動設clip終點＋dt0不會自動paused，已顯式鎖終態；另一新legacy assertion錯把校正後衣物sync的最終bounds當量測時點，改以真高低parent原流程對照及contact0，未修改舊verifier或legacy實作。重跑19/19 exit0，原B1／bounds各區段仍過；新registry形狀19/19，五區段5/5，累計15/115／100尚未跑。新增共用真GLB fixture helper只供tools，不改素材bytes；正式build19.63秒exit0，Worker DvdOSvfv。
+- B2三圖雙尺寸production／暫停／屍體真bounds與新圖實跑中，不先宣稱完成或READY_TO_REVIEW。小切片估10–25分鐘，整體仍暫估1–3工作天、不含休眠／額度暫停；2026-10-04 19:17臺灣官方codex週剩13%，0%pause，不轉API／積分，未commit／push／deploy。
+
+### B2生命週期雙尺寸、單pass與長幀診斷（2026-10-04，效能尚未結案）
+
+- B2首輪桌機39/39技術通過但貨港max116.4ms、鑄造56.70FPS／max133.4ms，停止新視覺功能。鑄造同source隔離重測13/13、60.13FPS／max16.9ms，完整三圖trace39/39、約59.80–60.08FPS；該trace量測窗dynamic p95約2.70–3.10ms、render約10.11–10.60ms，GC最長1.37–2.76ms，未證明GC造成原長幀。首輪及所有重測均保留，不以短重測宣稱永久無卡頓。
+- 真Three r160透明DoubleSide地面薄片原每幀切前／背side及version，現在僅此Contact-shading_single-batch採forceSinglePass，保留DoubleSide／MultiplyBlending／opacity0.38。原scene114項全保留，每圖／每品質加6項至120/120；character87、socket63、Gunplay18、lifecycle19仍通過，五registry區段5/5，累計15/115（100未跑）。C2A13／C2B14／C2C9重跑exit0，未改MOBA或legacy。
+- `phase-b2-contact-singlepass-production/{1366,390}`各42/42 exit0、24PNG像素各12 MEASURED／0 ERROR；來源cafd2abada76516a4509548ed7dc8ab35ada91bfc40c3566c3e67786339ca032一致。桌機FPS59.502／60.100／60.100、p95全16.8、p99 16.9／16.8／16.8、max100.1／17.1／17.3ms，calls634／650／673、tri52816／52974／57660；390px60.100／60.069／60.102，p95約16.8、p99全16.8、max16.9／17.1／16.9，calls640／645／666、tri48418／49456／50884。與B1各圖少1次draw；contact實際version0、shader非OPAQUE，貼圖及可見geometry／Mesh／material數不變。
+- 桌機貼圖31.611／31.622／31.611MB、heap170.90／278.16／354.99MB，390px27.611／27.622／27.611MB、heap176.17／279.51／386.85MB；heap快照非洩漏證明。cold-ready8.220／7.098／10.054及8.056／7.176／9.727秒包含Worker與資產，非純map時間。DPR1／1.5、shadow2048／1024不降；10/10 rigged、Point／Spot0、page／console0。owner實看水務detail、鑄造POV、貨港窄版detail：人物備持、POV模型及手機卡遮路徑仍有缺口，不算整個B或premium完成。
+- 正式build20.03秒exit0，Worker D3HBHztn三圖major與水務legacy對同Chrome canonical完整SHA／completed／主執行緒回應12/12 exit0；證據worker-production/gate-1791115313620.json。此為延伸特效預熱前的正式建置；新預熱後仍需正式build與Worker守門，不冒充已驗新版。
+- 水務延長60秒trace約58.331FPS／p99 16.8／max166.5ms，18次>25ms；一次render91.09ms中getProgramInfoLog79.59ms，新增program特徵為透明、無map／vertexColor的Standard，與原投擲物池吻合（依source特徵推定）。其他100ms級RAF間隔尚未歸因，不歸咎GC。該回合結束後已全員存活，屍體檢查無前提，原13/14 PRODUCT_FAIL完整保留；新增duration參數時漏掉此情境限制，現明確限制animationLifecycle沿用原10秒情境，長量測另跑，不放寬原屍體assertion。
+- 原roof warmup保持API、major-only，新增effectGroups只預熱真透明Standard Mesh，不碰Basic／Sprite／不透明材質；共用geometry／shader、原visible／material不改，program owner至離場才dispose。原8項保留，加4項特效去重／原資產／取消釋放至12/12，registry僅同步新增檢查數。60秒GPU／排程診斷取證中，未結案效能或新增畫質。2026-10-04 20:13臺灣官方週剩9%，0%pause；小切片估15–30分鐘、整體B–E暫估1–3工作天，不含休眠／額度暫停；未READY_TO_REVIEW／commit／push／deploy。
+
+### B2切片結案與B3音效實作（2026-10-04）
+
+- 特效預熱後來源2602e2478863e3314f036c757be22a7bc1794238701414f5415fe7e77de03cfa，正式build21.53秒exit0、Worker CBZDfTYO三圖major＋legacy canonical／completed／回應12/12，證據worker-production/gate-1791117108866.json；六registry區段6/6，當時累計15/115（100未跑）。
+- phase-b2-utility-warmup-production雙尺寸各45/45、24PNG像素各12 MEASURED／0 ERROR。桌機FPS60.127／60.100／60.100、p95全16.8ms、p99 16.8／16.8／16.9、calls634／650／673、tri52816／52974／57660；390px58.607／60.100／59.253、p95／p99全16.8、max149.9／17.2／150ms、calls642／645／666、tri49506／49456／50884。桌機tex31.611／31.622／31.611MB、heap182.58／293.24／411.73MB，390pxtex27.611／27.622／27.611MB、heap170.43／310.17／397.10MB；10/10 rigged、Point／Spot0、page／console0。首輪尖峰保留，技術PASS不是效能豁免。
+- 無trace60秒桌機水務B1／B2：59.876／60.002FPS、p95／p99全16.8、max83.4／33.3ms、LongTask 1／0。窄版水務／鑄造B1：59.951／60.001FPS、max83.3／33.4ms；B2：60.025／60.018FPS、max17.3／17.2ms，無LongTask或>25ms interval。證據phase-b1-reference-mirage-60s-production、phase-b2-utility-warmup-mirage-60s-production、phase-b1-reference-mobile-60s-production、phase-b2-reference-mobile-60s-production。B1既有bundle SHA08107322ce53fb8d447efc3dfccc7b5a0bdff04c97fb54b9fc455fee8f720172；B2窄版bundle SHA6cf526bfd6c628a87692b1a3af32b70f931e0534c5003d269c6e9ae6c7c3aeb1，沿首次build來源關聯，非正式main基線。
+- 60秒廣排程trace超出32MB buffer、dataLossOccurred，原HARNESS_FAIL／exit1保留，無不完整trace效能結論；先前13/14屍體前提缺失亦保留。同品質長樣本未見持續回退，允許繼續B3；不能稱所有尖峰已永久消失或歸咎OneDrive／GC。
+- B3新增原生Gain／StereoPanner有界pool與播放gate，沿用真CC0錄音；pool22／位置腳步及播放25項各exit0，兩registry區段2/2，累計17/117（100未跑）。產品接線／真實音訊／GPU待驗；不改MOBA、Router、Competition、Result／Replay或frame。官方週剩6%（21:47臺灣），0%pause既有goal，未READY_TO_REVIEW／commit／push／deploy。
+
+### B3原生音效pool與播放生命週期結案（2026-10-04）
+
+- 來源c7f9b6a5c94174311813599ee252adf6347e62b2be4df77c21b4bff278b3f07d，35個FPS source／資產檔；新增pool與播放helper，不改既有CC0錄音、simulation、Result／Replay契約。桌機64／mobile品質32個lazy Gain＋Panner graph；每次建立一次性source、自然onended斷線／回收，queued與playing同時可取消，僅高priority搶占，容量及4096去重記憶有界。major使用真聲源及鏡頭right向量，觀戰聽音位置為焦點、POV為眼睛；不是HRTF／房間聲學。
+- major adapter腳步以相鄰權威frame的實際位移產生唯一事件，不再整場同player ID只響一次；idle／dead／buy／round edge不發腳步。正向simulation／seekNonce gate避免暫停、同幀、倒帶、明確seek與進場重播歷史聲音。seek／換比賽清除事件集與排程；dispose禁止晚到preload回寫。legacy原錄音／音訊／腳步分支保留，沒有合成槍聲fallback。
+- pool22、Playback25、動畫19、character87、sockets63、Gunplay18、warmup12、scene120八registry區段8/8 exit0；累計17/117，100未跑。正式build21.13秒exit0、Worker BPymlr74三圖major＋水務legacy canonical完整SHA／completed／回應12/12，證據worker-production/gate-1791124214950.json。
+- phase-b3-audio-native-ready-production兩尺寸各69/69、24PNG像素各12 MEASURED／0 ERROR。工具只在隔離browser觀察原生AudioContext，用原生滑鼠／鍵盤操作按鈕與slider；不呼叫產品音效API或改frames。Analyzer監聽在效能窗後，真CC0槍聲與utility有PCM。桌機三圖實際重用22／18／22個graph、BufferSource累計235／188／255；窄版22／18／23個，沒有drop／error。PCM maxAbs約0.716–0.796、樣本aboveUnityShare0；這不是OS喇叭聽感、全match峰值、真手機或React unmount證明。
+- 桌機FPS59.431／60.101／60.100、p95全16.8、p99 33.3／16.8／16.8、max33.4／16.9／17.8ms；calls634／650／673、tri52816／52974／57660、tex31.611／31.622／31.611MB、heap184.25／282.37／384.01MB、cold-ready7.981／7.425／10.394秒。390px60.084／60.102／60.100、p95／p99全16.8、max17.1／17.2／17.8、calls640／645／666、tri49022／49456／50884、tex27.611／27.622／27.611MB、heap178.71／285.51／408.02MB、cold-ready7.217／7.120／10.265秒。品質仍DPR1／1.5、shadow2048／1024、10/10 rigged、Point／Spot0、page／console0；390px是同AMD桌機GPU，不是真手機。heap為快照、tex為估算，不是總記憶體或零洩漏。
+- 桌機水務短樣本p99變高，先停新功能、追加60秒同來源開聲與靜音對照。phase-b3-audio-mirage-60s-production 21/21：59.728FPS、p95／p99 16.8、max49.8ms、17個>25ms間隔、無LongTask；phase-b3-muted-mirage-60s-reference-production 11/11：59.846FPS、p95／p99 16.8、max33.4ms、11個>25ms間隔、無LongTask。兩者calls628、tri55088、tex31.611MB，heap186.79／171.83MB；靜音確實ui off／context suspended／graph0。靜音重用既有B3 build，bundle SHAa34bbbbc1d1d939dddbc1aa9fff5252d42d163f2f7bfb4a45b450f9ce478e02f；沒有持續明顯回退，原49.8ms及先前尖峰保留，不稱永久零卡頓。B2是靜音樣本，不能把B3開聲短樣本當完全同條件對照。
+- 首輪水務22/23 PRODUCT_FAIL／exit1保留：工具固定等250ms，但原生resume實際530ms；之後真PCM與pool／清場皆過。改為最多5秒等context running＋真按鈕on，原no-historical assertion不放寬，新兩尺寸69/69。舊C5A.1 16/17誤報只有audioRef清理literal；effect已改captured instance防止舊effect誤釋放新Context，因此保留清理斷言、擴充完整ownership接線辨識，重跑17/17 exit0，未刪測試。C5C29/29 exit0，但runtime18項用歷史fixture，不冒充新GPU；C5A.2 final因缺artifacts/cs-c5a2/final-combat-probe/runtime-evidence.json而ENOENT／exit1，未偽造／移植成新版證據，該完整clock／combat驗證仍未驗。
+- Owner查看新版鑄造active與窄版水務POV，畫面可見且與本輪無視覺資產變更一致；卡片遮戰場、備持／跑射與POV槍型仍有缺口，B整體未完成。官方週剩4%（22:30臺灣），0%pause既有goal；C–E未完成，未READY_TO_REVIEW／commit／push／deploy。
+
+### B4備持／跑射分層動畫切片結案（2026-10-04）
+
+- 稽核真GLB為43clip／65bone，只有通用手槍持槍／射擊clip，沒有步槍／SMG／sniper／shotgun專屬動作。新增fpsWeaponPoseLayers，spine_01子樹53bone與腿部track嚴格互斥，不以兩個全身weight=1冒充分層；上半身Pistol_Idle_Loop／Aim_Neutral／Shoot，下半身Idle／Walk／Sprint保留實際位移導出的步態。只用既有shooting edge，沒有新增假蹲下、換彈或命中事件。
+- major以WeakMap共用root-motion移除後的clipMap與masked clip／不可變tracks，每角色仍有獨立Mixer／Action／timer。短淡出完成即stop舊action，暫停凍結兩層及淡出，seek／reset首次立即weight=1呈現真目標姿態；受擊及死亡停雙層，保留原全身Hit_Chest／Death01與B2地形接地。legacy不建立雙層或共享clipMap，舊路徑不變；不改frame／Result／Replay／Competition／Router／MOBA。
+- 新真GLB測試26/26／exit0，五族跑射下半身相位與骨姿等價、手骨槍口有效、mask互斥完備、跨角色clip共享/action不共享、pause／seek／hit／death／reset／dispose／零新增mesh及來源bytes不變。初次20/26失敗為測試在射擊幀用了相同前後位置（真含義為停下），改為既有真位移前幀，未刪或放寬斷言；既有八registry均exit0，累計18/118，100區段尚未跑。C5A.1槍感17/17仍過。
+- 正式build20.86秒exit0，Worker fpsSim.worker-CcLuXqZd.js；production Worker12/12 exit0，三圖major與mirage legacy全部完整輸出與同Chrome canonical SHA一致。證據review/cs-major-upgrade/evidence/worker-production/gate-1791126825294.json。兩尺寸GPU序列執行，不與其他GPU／build／模擬重活重疊，所有產品測試共用source d69464c80f67e14b750224a622786eb3cda3b7c4f5e109662b05fb46b491ec4a（36檔）。
+- review/cs-major-upgrade/evidence/phase-b4-pose-layers-production/{1366,390}各78/78／exit0；新增真產品雙層診斷，10名角色live雙層／hit／death互斥、暫停兩層真action時間和淡出不變。B2舊probe的full-action time對雙層alive為0，不能拿該欄證明B4相位；本輪新增pose.lowerTime／upperTime是真masked action，凍結另行驗證。各12PNG全部像素MEASURED、ERROR0（advisory非premium），Owner已查看1366水務detail與390鑄造detail。
+- M／D／I桌機FPS59.647／60.102／60.101，p95全16.8，p99 16.9／16.8／16.8，max33.4／17.0／17.2ms；calls634／650／673、tri52750／52974／57660。390px FPS59.951／60.056／60.110，p95／p99全16.8，max33.4／17.1／17.0ms；calls639／645／666、tri48892／49456／50884。10/10真rig、0新增Point／Spot、0console/page error；mobile是AMD桌機模擬viewport，不是真手機。
+- 與B3同seed／1×／品質／canvas／開聲10秒比較：desktop calls仍634／650／673，窄版640→639／645／666；geometry596／598／611、materials938／940／953、meshes1318／1321／1334不增，texture估算桌機31.61–31.62MB／窄版27.61–27.62MB不變。JS heap快照desktop184／282／384→154／246／318MB，390px179／286／408→150／244／383MB，較低不等於已證明cache因果或零洩漏。冷就緒桌機8874／6947／11132ms、窄版8726／6961／10163ms含Worker／assets，非純map載入。水務33.4ms尖峰保留，沒有明顯持續FPS／p99 regression，非永久零卡頓。
+- 六個native PCM樣本maxAbs均<1、aboveUnityShare0，pool原生節點／暫停／靜音／seek仍過，非OS聽感或音訊高倍速全場保證。本切片是通用持槍／跑射，不冒稱每族專屬、雙手IK、可靠蹲換彈或完整B。剩POV、環境音、可靠資料、C–E及D窄版卡片遮擋；官方週1%（23:16臺灣），0%pause，未READY_TO_REVIEW／commit／push／deploy。
+
+### B5 第一人稱顯示修正與可復原停點（2026-10-05，尚未結案）
+
+- 使用者要求當機後可接續，新增 `review/cs-major-upgrade/RESUME_CHECKPOINT.md`，記錄 worktree、正式 baseline、失敗／通過證據、下一步及 quota 停工條件。不是備份保證，也不把中斷測試視為通過。官方週額度重置後最新已驗剩 98%，用原 goal 繼續，不使用其他積分。
+- 新 `fpsPovWeapon.js` 共用角色真五族 weapon geometry／material，camera 私有手臂與 flash，真 grip／muzzle socket；按角色 ID 取既有模型，不假設 chase 含 rigged。播放時鐘處理首次進入、pause／seek／倒帶／回合／換人，不補歷史射擊；清理不釋放角色借用素材。舊 camera recoil 尚走原牆鐘，不能聲稱整個 POV pause 動作都已重構。
+- 首輪 Node25、GPU87 通過，但 owner 查看 `phase-b5-pov-production/1366/mirage-pov.png` 發現槍與手未顯示。根因 camera 未加入 scene，只有 camera.add(group)；major-only 加 scene.add(camera)，legacy 保留。新增原生 scene ancestry／visible gate；保留舊失敗證據，不以技術通過冒稱畫面完成。
+- 修正後 Node25/25、正式 build20.63s、Worker C5-HcYc1 12/12，證據 `worker-production/gate-1791130133015.json`。GPU `phase-b5-pov-render-fix/{1366,390}` 各87/87、各12PNG；來源 `401bf403d6a065e2edf7c2d30bc034b9bb3827975aa9c4e9e5e6e643d256a9ad`（37檔）。owner 查看兩尺寸 Mirage POV，槍與手可見，但方塊化造型仍須美術精修；GPU 原生樣本僅手槍，不冒稱已驗五族長槍觀感。
+- 桌機 M／D／I FPS59.091／60.101／60.000，p95全16.8、p99 33.3／16.8／16.8、max33.4／17.0／33.4ms；calls634／650／673、tri52750／52974／57660。390 FPS58.207／57.606／60.102，p95全16.8、p99 17.1／33.3／16.8、max166.7／150.0／17.1ms；calls640／645／666、tri49022／49456／50884。長尖峰沒有對應 browser longtask，原因未確認，**不得跳過 regression 調查**。同品質 B4 archived／B5 60秒對照接續中，B6 增加幾何先暫緩。
+- 桌機 texture估算31.61–31.62MB、390 27.61–27.62MB不變；私有 POV 加3材質／5Mesh，總材質941／943／956、Mesh1323／1326／1339，戰術view不顯示槍故不能以其 draw 數宣稱 POV 零成本。另新增3秒「暫停POV raster-only」記錄，非活躍交戰／真手機證明；窄版卡片仍遮住部分槍與戰場，待D。
+- B6唯讀 audit 確認人物問題是隱藏真 skin 後 primitive 輪廓不連續。後續需 major-only 連續蒙皮服裝取代 proxy，保留65骨、socket、動畫／legacy與共享幾何所有權；來源body12566tri，必須另計真可見總成本，不沿用舊owned counter掩蓋。B尚未完成，C–E未完成；整體估2–4工作天，未READY_TO_REVIEW／commit／push／deploy。
+
+### B6 服裝、臉部與接縫修正（2026-10-05，進行中）
+
+- Owner追加：人物需有帥氣、原創且具兩隊特色的服裝，臉部輪廓、裝備與攜帶道具清楚可辨。已寫入設計驗收；連續蒙皮底層不是最終人物美術。
+- B5同品質390開聲60秒A/B各7/7、exit0；B4／B5 FPS60.007／60.021、p99皆16.8ms、max33.3／17.3ms，聲音pool無drop／error。未重現持續回退，但保留原短尖峰，不宣稱永久零卡頓。
+- B6共用衍生geometry替換26個proxy，來源65骨、skin weights及geometry不改；私有骨紋理清理具冪等與跨角色生命週期檢查。真眼眉重新顯示、共用body骨架且不發光，手套靴子使用深色材質；major-only，不改legacy或保護契約。
+- `phase-b6-human-native/1366` 33/33技術通過，10名角色、calls470／tri185050、FPS58.6／p95 16.8ms。然而owner查看兩隊真近鏡頭六視角發現褲腿裂縫與鋸齒領口，**美術驗收失敗**；不得以33/33覆蓋畫面問題。來源996個UV重複頂點原本獨立平滑／膨脹，最大bind位置分離0.0992m。
+- 衍生變形改為接縫共用鄰域、同步位置與平均膨脹方向，固定衣服／皮膚區界；不重寫來源index／UV／joint／weights，不新增Mesh或燈。新增接縫與有限法線斷言，verifier由15增為16、registry exact shape同步；原因是原index完整檢查不能捕捉幾何撕裂，**未刪或放寬既有斷言**。Node16/16、exit0；仍待遊戲圖像與GPU重驗。
+- 官方quota最新剩94%；0%立即停工。B6未結案，正式build／Worker、三圖雙尺寸與真手機仍待；全任務未READY_TO_REVIEW／commit／push／deploy。
+
+- 接縫修正版 `phase-b6-seam-safe/1366` 20/20、exit0（本輪probe只啟用部分gate，不與舊33項分母混比）；source6d34b4efaabb595430e3ad3846b76d3192adb6cadb8e76fcb6746127ba593033／38檔。probe build19.66秒，不等同正式dist／Worker驗收。owner查看T前面與CT背面：褲腿大裂縫消除，但領口鋸齒、裝備與臉部觀感尚不合格。
+
+- 接續B6：新增真Head旋轉差值跟隨與open Lathe折領，僅major啟用並沿用kit材質／固定配件合批。新增旋轉還原斷言（16→17，registry同步），原因是頸部方向不足以證明轉頭裝備對齊；未刪或放寬舊斷言。Node17及B4原26皆exit0。`phase-b6-collar-head`20/20仍露頭頂，失敗圖保留；依source真Head／眼睛bounds，改bind +Y-up frame與local+.48 fit，`phase-b6-head-bind-fit`20/20、owner CT前背圖確認大片裸露消除，約58.0FPS／p95 16.8，短樣本尖峰仍待。
+- 領口材質區界不再直接依neck最大權重判膚色，而以Head bind下3.5cm的服裝領線；折領拓寬下緣。major護具改切角、有腋下缺口與收腰的胸背板，取代整圈桶狀背心，既有肩帶／背包位置對新skin向外校正。Node17通過，`phase-b6-authored-carrier`原生圖像與效能驗收接續中，不能宣稱B完成。
+
+- `phase-b6-authored-carrier/1366`20/20、exit0，約59.0FPS／p95 16.8、calls484／tri187396；Owner看图胸背板／背包較可辨，但領口與下襬仍鋸齒，不能結案。局部新增 `fpsTailoredSeams.js`：按Head／pelvis bind基準切領與腰線，只在衍生geometry新增151頂點／296tri，總12862tri；原7281頂點及skin influences保留，新邊界UV／skin weights插值正規化，來源asset不改，不抽取或重寫引擎。
+- 首次Node14/17的三項失敗是舊斷言要求相同vertex/index數；本輪局部分割本就必須新增拓樸，因此改為**來源prefix逐值保留、逐原三角面積守恆、新頂點權重合法與歸一、實際成本計入**，新增已知三角插值及不跨領腰線斷言。Node19/19、exit0，registry exact19與native實際tri12862／原12566＋新增296同步；沒有刪或放寬安全標準。原生重拍 `phase-b6-clean-seams`接續中，尚未證明新美術／GPU／手機完成。
+
+- `phase-b6-clean-seams/{1366,390}`各20/20、exit0，Owner看T側／CT背圖：領口與下襬鋸齒已消除；桌機約59.2FPS、calls484／tri190272，窄版59.9、calls490／tri185958。保留真手機未測。接續停止21個已被替換proxy的逐幀更新，32→11 updater，不停骨架或可見裝備；新增CPU生命週期斷言，服裝20/20。runner本次5/5，含原gunplay／animation lifecycle／pose／POV；累計20/120非全案120段完成。
+- `phase-b6-proxy-cpu-long/390`開聲60秒7/7、exit0，source5d1cd7a08dc501bdbc2c205f169aeb480d97e944414666732355d5f768270a3c（39檔）。與B5同DPR1.5／shadow1024／canvas555×655：FPS60.021→59.954（約-0.11%），p95／p99皆16.8，max17.3→50.3ms，>25ms幀0→3；calls635→486、tri49852→187392、geometry634→427、textures19→31、material941同，texture估算27.611MB同、heap162.129→150.596MB。單次樣本無明顯持續平均FPS回退，但尖峰仍保留、三圖與真手機待驗。
+- 人物近拍前背大小差異是spectator縮近後仍朝前方2.5–3m取焦。新增major-only純camera framing helper：手動縮近focus漸回actor、最小半徑2.7；預設及legacy4.5／原前移保持。Node framing12→16新增四項近拍／legacy／桌機窄版透視斷言，runner該區段PASS；此為新增保障、不刪舊斷言。原生portrait使用20次真wheel、半徑gate收緊≤3，`phase-b6-close-framing`接續中。
+- 同品質desktop1366／Mirage／開聲60秒：`phase-b6-seam-perf-b5`與`phase-b6-seam-perf-current`各7/7、exit0；B5／B6 FPS59.755／59.571（約-0.31%）、p95／p99均16.8ms、max150／133.3ms，>25ms幀9／21，browser longTasks皆空。callsP95 628→469、triP95 55088→187428；geometry634→418、texture19→31（包含骨紋理）、materials941不變，texture位元組估算均31.611MB、JS heap148.563→147.459MB。冷就緒8654→8359ms包含Worker／assets，不是純地圖時間。單次樣本未見明顯持續平均FPS回退，但尖峰數增加與窄版成本未解，不能宣布效能整體過關。
+
+### B6 桌機效能退步排查：蒙皮／硬質材質狀態隔離（2026-10-05）
+
+- `phase-b6-close-framing/1366`20/20、近拍已展示 T 正面、CT 正面與背面，仍為製作中。source300f79a1d8bd861ab3d577dafa51112c82f35cd14ddba5d0183d0522ad2baeae；60秒版本 `phase-b6-close-framing-long`7/7，但FPS57.395／p99 33.3ms、>25ms幀65，效能不能接受。相同環境 archived B5 `phase-b6-close-regression-b5`7/7、exit0約59.8FPS，保留退步證據並先優化。
+- `phase-b6-close-profile`7/7、exit0輸出 CPU profile；Profiler 開啟時約50.2FPS，不當作正式效能比較。樣本主要熱點含 Three WebGLPrograms.getParameters／renderer.getProgram／Skeleton.update。讀取本地 Three r160 的 renderer 實作確認：同一 material 在 SkinnedMesh 與普通 Mesh 交替使用時，skinning flag 改變會重新選 program 參數。
+- major 衍生服裝改用四個專用材質實例，維持原色／roughness／metalness／side／geometry／陰影／DPR，避免和硬質裝備切換蒙皮狀態；離場由服裝自身一次釋放，不改來源或 legacy。
+- 原測試要求服裝材質與硬質材質物件相同，與本次 renderer 狀態隔離目的衝突；改為要求不同實例但表面屬性一致，並補四材質各一次釋放斷言。原20項仍完整，runner1/1 exit0；未刪 verifier，也未放寬視覺或骨架條件。
+- 原生60秒 production 重測 `phase-b6-skin-material-isolation`啟動中，必須待結果與實際截圖，尚不能宣稱優化成功。一次啟動因缺少必需 details=true 被 harness 主動拒絕，未量測；已補旗標重跑，不掩蓋 exit1。
+
+### Owner 要求保存並停止（2026-10-05）
+
+- 材質隔離長樣本 `phase-b6-material-perf-long/1366`7/7、exit0，FPS59.9246、p95／p99 16.8、max33.4ms，source e93fa851bfc7b969dc790dd952c4e86ee337225892219322e656660739597500（39檔）。前次長樣本57.3948／p99 33.3／max183.2仍保留，不抹除效能退步證據；跨圖／窄版新版還沒驗完。
+- 後續近拍三圖測試已因Owner停止要求中止，只終止以本worktree私有profile啟動的本輪Chrome；HARNESS_FAIL exit1、cleanup已確認，部分16項通過不等於整輪通過。瀏覽器profile的workspaceOnly選項是為Owner新增範圍限制，保留原預設；不改產品／門檻／輸出判定。
+- 停止前正式build19.84秒exit0、6相關runner區段exit0、git diff --check過；累計20/120非全案通過。RESUME_CHECKPOINT頂部已記錄狀態、未驗項、同worktree續接順序，生成證據與logs不入commit、磁碟保留。建立目前安全原始碼／設計／測試checkpoint後停止，沒有push／deploy，不是READY_TO_REVIEW。

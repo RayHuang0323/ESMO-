@@ -18,6 +18,8 @@
 //     · 我方適性（mapFit）用真實 16 項能力計算，純展示。
 // ============================================================================
 
+import { FPS_MAJOR_MAP_ART } from "./fpsMapIdentity.js";
+
 /** Legacy TACTICS_LIB.fps 逐字（f1–f8） */
 export const CS_TEAM_TACTICS = [
   { id: "f1", name: "預設配置", emoji: "📋", risk: "低", desc: "標準分兵控圖蒐集資訊", boost: ["tacticalIQ", "comms"], focus: "指揮", detail: "標準站位控制中路與兩點資訊，依情報靈活轉點" },
@@ -42,22 +44,22 @@ export const TACTIC_TYPE_ZH = { default: "標準", rush: "強攻", execute: "執
  */
 export const CS_MAPS = [
   {
-    key: "dust2", name: "Dust II", type: "對稱標準圖", style: "長槍線對決 · 狙擊強勢", diff: "低",
+    key: "dust2", name: FPS_MAJOR_MAP_ART.dust2.name, type: "貨運競技場", style: "碼頭長廊 · 海關短道", diff: "中",
     favors: ["accuracy", "clutch"],
-    oppRisk: "中", oppNote: "對手狙擊手 Oniheavy 擅長長距離架槍（A 長 / 中門）",
-    desc: "經典雙爆點沙漠圖：A 長道與中門是狙擊戰場，B 點靠隧道快攻。",
+    oppRisk: "中", oppNote: "對手狙擊手 Oniheavy 可封鎖碼頭長廊；海關短道提供另一條進點路線。",
+    desc: "冷鏈裝卸與維修庫分據兩側；控制海關通道可縮短轉點與回防。",
   },
   {
-    key: "mirage", name: "Mirage", type: "攻守平衡圖", style: "中路控制 · 道具執行", diff: "中",
+    key: "mirage", name: FPS_MAJOR_MAP_ART.mirage.name, type: "水務競技場", style: "雙側回廊 · 中庭控制", diff: "中",
     favors: ["tacticalIQ", "synergy"],
-    oppRisk: "中", oppNote: "對手指揮 orgaNick 中路資訊掌控力強（窗口 / 連接）",
-    desc: "以中路為軸的執行圖：煙牆與夾擊路線多，考驗團隊道具協同。",
+    oppRisk: "中", oppNote: "對手指揮 orgaNick 的中庭資訊可影響調壓站與濾水庭院的防守調度。",
+    desc: "兩個庭院由檢修中庭相連；東西回廊提供夾擊與外側繞行選擇。",
   },
   {
-    key: "inferno", name: "Inferno", type: "巷戰圖", style: "近身巷戰 · 道具消耗", diff: "高",
+    key: "inferno", name: FPS_MAJOR_MAP_ART.inferno.name, type: "鑄造競技場", style: "機控室內 · 管廊交火", diff: "高",
     favors: ["reflex", "courage"],
-    oppRisk: "高", oppNote: "對手突破手 b3autiFul 前壓兇悍（香蕉道 / 公寓遭遇戰多）",
-    desc: "狹窄巷道與香蕉道拉鋸：火焰彈消耗戰頻繁，遭遇戰反應定生死。",
+    oppRisk: "高", oppNote: "對手突破手 b3autiFul 可在管廊與輸送中道前壓；外側貨道提供繞行選擇。",
+    desc: "冷卻站與壓機庭院相距較遠；機控室提供室內回防路線。",
   },
 ];
 

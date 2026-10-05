@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import * as THREE from "three";
 import { C2C_HERO_ART_MANIFEST, isC2cHeroRequested } from "../src/battle/fps/presentation/fpsC2cHero.js";
 import { FPS_CHARACTER_ASSET_MANIFEST } from "../src/battle/fps/presentation/fpsCharacterAssets.js";
 
@@ -75,7 +76,16 @@ const checks = [
   ["Scale and locomotion presentation contract", () => {
     expect(rendererSource.includes("measureSkinnedBindBounds"), "character scale must use sampled skinned bounds");
     expect(rendererSource.includes("targetHeight"), "world-relative target character height missing");
-    expect(c2cSource.includes("root.worldToLocal(start)") && c2cSource.includes("root.worldToLocal(end)"), "clothing endpoints are not normalized into the animated model root");
+    const helperStart=c2cSource.indexOf('function bonePositionInRoot('),helperEnd=c2cSource.indexOf('\n}',helperStart)+2;
+    expect(helperStart>=0&&helperEnd>helperStart,'bone coordinate helper missing');
+    const inverses=new WeakMap(),positionInRoot=new Function('ACTIVE_ANCHOR_INVERSES',`return (${c2cSource.slice(helperStart,helperEnd)});`)(inverses);
+    const root=new THREE.Group(),bone=new THREE.Bone();root.add(bone);
+    root.position.set(4,7,-3);root.rotation.set(.2,.8,-.1);root.scale.set(1.2,.8,1.4);bone.position.set(.4,1.3,-.5);root.updateWorldMatrix(true,true);
+    const expected=root.worldToLocal(bone.getWorldPosition(new THREE.Vector3()));
+    expect(positionInRoot(root,bone,new THREE.Vector3()).distanceTo(expected)<1e-8,'uncached clothing coordinate normalization differs');
+    inverses.set(root,new THREE.Matrix4().copy(root.matrixWorld).invert());
+    expect(positionInRoot(root,bone,new THREE.Vector3()).distanceTo(expected)<1e-8,'cached clothing coordinate normalization differs');
+    expect(c2cSource.includes('bonePositionInRoot(root, startBone, start)')&&c2cSource.includes('bonePositionInRoot(root, endBone, end)'),'both clothing endpoints must use the verified normalization');
     expect(c2cSource.includes("setFromUnitVectors(SEGMENT_UP"), "clothing does not follow animated bone direction");
     expect(c2cSource.includes("updaters.forEach((update) => update())"), "dynamic clothing sync is not called from the renderer update contract");
     expect(FPS_CHARACTER_ASSET_MANIFEST.orientationOffset === Math.PI / 2, "base body front axis is not mapped from native +Z to renderer +X");

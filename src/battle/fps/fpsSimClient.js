@@ -40,7 +40,8 @@ function ensureWorker() {
     job.resolve(sim);
   };
   worker.onerror = (event) => {
-    for (const job of waiting.values()) job.reject(new Error(event?.message ?? "fps sim worker error"));
+    const location=event?.filename?` (${event.filename}:${event.lineno||0}:${event.colno||0})`:"";
+    for (const job of waiting.values()) job.reject(new Error((event?.message ?? "fps sim worker error")+location));
     waiting.clear();
     worker?.terminate?.(); worker = null;
   };

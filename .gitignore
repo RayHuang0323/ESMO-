@@ -48,3 +48,9 @@ review/moba-combat/_backup_*
 .env.development
 .env.production
 !.env.example
+
+# CS Major：本機取證與瀏覽器暫存不提交；保留磁碟供續接與 Owner 查閱。
+review/browser-profiles/
+review/cs-major-upgrade/profile-builds/
+review/cs-major-upgrade/evidence/
+review/cs-major-upgrade/**/*.log

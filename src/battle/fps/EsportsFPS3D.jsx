@@ -10,11 +10,23 @@ import { checkFpsRendererIdentity } from "./fpsIdentity.js";
 import { FPS_ROLE_ZH } from "./fpsRoster.js";
 import { checkFpsRuntimeVisibility, evaluateFpsCameraRecovery, isFpsBodyScreenReadable, resolveFpsPresentationVisibility, summarizeFpsTeamVisibility } from "./fpsVisibilityDiagnostics.js";
 import { createFpsCharacterRenderer } from "./presentation/FpsCharacterRenderer.js";
+import { setFpsBoundsFromUpdatedObject } from "./presentation/fpsBoundsSampler.js";
 import { getRiggedCharacterLimit } from "./presentation/fpsCharacterAssets.js";
-import { createC3MirageEnvironment } from "./presentation/fpsMapEnvironment.js";
+import { createMajorMapEnvironment } from "./presentation/fpsMajorMapEnvironment.js";
+import { createFpsMajorRoofShaderWarmup } from "./presentation/fpsMajorShaderWarmup.js";
+import { fpsMajorElevation } from "./fpsMajorTerrain.js";
+import { FPS_MAJOR_MAP_ART } from "./fpsMapIdentity.js";
+import { useIsMobile } from "../../ui/useViewport.js";
+import { FPS_LEGACY_MAPS } from "./fpsLegacyMapData.js";
+import { FPS_MAJOR_AUTHORED_ROOMS, majorRoomWalls } from "./fpsMajorArchitecture.js";
+import { createFpsMajorSegmentCache } from "./fpsMajorNavigationCache.js";
+import { fitFpsCombatCamera, fpsChaseMinimumRadius, fpsChaseForwardOffset } from "./fpsCameraFraming.js";
 import { createGunplayPresentation } from "./presentation/fpsGunplayPresentation.js";
 import { createUtilityPresentation } from "./presentation/fpsUtilityPresentation.js";
 import { createFpsMatchPresentation } from "./presentation/fpsMatchPresentation.js";
+import { createFpsAudioVoicePool } from "./presentation/fpsAudioVoicePool.js";
+import { createFpsAudioPlaybackGate, resolveFpsAudioSpatial } from "./presentation/fpsAudioPlayback.js";
+import { createMajorFpsPovWeapon } from "./presentation/fpsPovWeapon.js";
 import { csLoadMark, csLoadSpan, csLoadTime, csSimCacheEvent } from "./csLoadTiming.js";
 
 // EsportsFPS3D 已內聯於本檔（見下方 __FPS3D_MODULE），以符合單一檔案 artifact 限制
@@ -140,7 +152,7 @@ function segHitsRect(ax,az,bx,bz,r){
     if(x>=r.x0&&x<=r.x1&&z>=r.z0&&z<=r.z1)return true;}return false;
 }
 // ─── 程序生成對戰音效（Web Audio；掛載時 preload，手勢時 resume）─────────────
-function makeAudio(){
+function makeAudio({pooled=false,mobile=false,getListener=()=>null}={}){
   const AC=typeof window!=="undefined"&&(window.AudioContext||window.webkitAudioContext);if(!AC)return null;
   const ctx=new AC();const master=ctx.createGain();master.gain.value=0.48;master.connect(ctx.destination);
   // Gunfire uses only one direct recorded CC0 sample per authoritative shot.
@@ -170,16 +182,19 @@ function makeAudio(){
     "bomb-defused":{sample:"utility-click.wav",source:"Spring Spring / OpenGameArt",gain:0.42,duration:0.9},
     "bomb-tick":{sample:"utility-tick.wav",source:"Spring Spring / OpenGameArt",gain:0.3,duration:0.35},
   });
-  const timers=new Set();let activeVoices=0,droppedVoices=0;const firedEventIds=new Set(),cueEventIds=new Set();
+  const timers=new Set();let activeVoices=0,droppedVoices=0,disposed=false,voicePool=null;const firedEventIds=new Set(),cueEventIds=new Set();
   const audioBuffers=new Map(),presentationBuffers=new Map(),loadErrors={},presentationLoadErrors={};
   const audioBase=`${import.meta.env?.BASE_URL||"/"}audio/cs/c5a2/`;
-  const audioDiag={version:3,assetSource:"CC0 real firearm recordings",assetLicense:"CC0-1.0",assetBase:audioBase,gunfireSourcePolicy:"one-recorded-buffer-per-shot",presentationAssetSource:"CC0 recorded utility samples from OpenGameArt",presentationAssetLicense:"CC0-1.0",presentationSourcePolicy:"one-recorded-buffer-per-cue with stereo spatialisation",presentationProfiles:C5A2_UTILITY_AUDIO_PROFILES,synthesizedToneStarts:0,
+  const audioDiag={version:pooled?4:3,assetSource:"CC0 real firearm recordings",assetLicense:"CC0-1.0",assetBase:audioBase,gunfireSourcePolicy:"one-recorded-buffer-per-shot",presentationAssetSource:"CC0 recorded utility samples from OpenGameArt",presentationAssetLicense:"CC0-1.0",presentationSourcePolicy:"one-recorded-buffer-per-cue with stereo spatialisation",presentationProfiles:C5A2_UTILITY_AUDIO_PROFILES,synthesizedToneStarts:0,
     profiles:Object.fromEntries(Object.entries(C5A1_AUDIO_PROFILES).map(([key,p])=>[key,{label:p.label,sample:p.sample,source:"recorded-prepared-direct",sourceRecording:p.sourceRecording,layers:["prepared-direct"],offset:p.offset,duration:p.duration}])),
     loadedProfiles:0,loadingProfiles:5,loadErrors:{},events:[],playbackEvents:[],recordedSourceStarts:0,recordedSourceStartsByFamily:{},playedFamilies:[],activeVoices:0,droppedVoices:0,missedAssets:0,dispatchCalls:0,duplicateDispatches:0,shotCalls:0,throttledShots:0,
     contextState:ctx.state,contextStateBeforeResume:null,resumeCalls:0,destination:ctx.destination?.constructor?.name||"AudioDestinationNode",masterGain:master.gain.value,loadedPresentationProfiles:0,loadingPresentationProfiles:Object.keys(C5A2_UTILITY_AUDIO_PROFILES).length,presentationLoadErrors:{},recordedPresentationSourceStarts:0,missedPresentationAssets:0};
   audioDiag.presentationCueCalls=0;audioDiag.presentationCueStarts=0;audioDiag.duplicateCueDispatches=0;audioDiag.cueTypes={};
   audioDiag.preloadStarts=0;audioDiag.preloadStartedAt=null;audioDiag.preloadReadyAt=null;audioDiag.unmuteRequestedAt=null;audioDiag.resumeResolvedAt=null;audioDiag.firstSourceStartAt=null;
-  const publish=()=>{audioDiag.activeVoices=activeVoices;audioDiag.droppedVoices=droppedVoices;audioDiag.contextState=ctx.state;audioDiag.destination=ctx.destination?.constructor?.name||"AudioDestinationNode";audioDiag.masterGain=master.gain.value;if(typeof window!=="undefined")window.__ESMO_FPS_AUDIO_DIAGNOSTICS__=audioDiag;};
+  const publish=()=>{if(pooled&&disposed)return;audioDiag.activeVoices=activeVoices;audioDiag.droppedVoices=droppedVoices;audioDiag.contextState=ctx.state;audioDiag.destination=ctx.destination?.constructor?.name||"AudioDestinationNode";audioDiag.masterGain=master.gain.value;if(voicePool)audioDiag.voicePool=voicePool.diagnostics();if(typeof window!=="undefined")window.__ESMO_FPS_AUDIO_DIAGNOSTICS__=audioDiag;};
+  if(pooled)voicePool=createFpsAudioVoicePool({context:ctx,destination:master,limit:mobile?32:64,onChange:data=>{activeVoices=data.active;droppedVoices=data.dropped;publish();}});
+  const spatial=(position,distance)=>pooled?resolveFpsAudioSpatial(position,getListener(),distance):{distance,pan:0};
+  const remember=(set,id)=>{set.add(id);if(pooled&&set.size>4096)set.delete(set.values().next().value);};
   const schedule=(fn,delay)=>{const timer=setTimeout(()=>{timers.delete(timer);fn();},delay);timers.add(timer);return timer;};
   const voice=(duration,create)=>{if(activeVoices>=96){droppedVoices+=1;publish();return false;}activeVoices+=1;publish();create();schedule(()=>{activeVoices=Math.max(0,activeVoices-1);publish();},Math.ceil(duration*1000)+35);return true;};
   const now=()=>ctx.currentTime;
@@ -187,7 +202,7 @@ function makeAudio(){
   let preloadPromise=null;
   const preload=()=>{if(preloadPromise)return preloadPromise;
     audioDiag.preloadStarts+=1;audioDiag.preloadStartedAt=Date.now();publish();
-    const load=async({key,profile,target,utility=false})=>{try{const endFetch=csLoadSpan("audio:fetch");const res=await fetch(`${audioBase}${profile.sample}`,{cache:"force-cache"});if(!res.ok)throw new Error(`HTTP ${res.status}`);const bytes=await res.arrayBuffer();endFetch({sample:profile.sample,bytes:bytes.byteLength});const endDecode=csLoadSpan("audio:decode");const buffer=await ctx.decodeAudioData(bytes.slice(0));endDecode({sample:profile.sample,bytes:bytes.byteLength});target.set(utility?profile.sample:key,buffer);if(utility)audioDiag.loadedPresentationProfiles=target.size;else audioDiag.loadedProfiles=target.size;publish();return true;}
+    const load=async({key,profile,target,utility=false})=>{try{const endFetch=csLoadSpan("audio:fetch");const res=await fetch(`${audioBase}${profile.sample}`,{cache:"force-cache"});if(!res.ok)throw new Error(`HTTP ${res.status}`);const bytes=await res.arrayBuffer();endFetch({sample:profile.sample,bytes:bytes.byteLength});if(pooled&&disposed)return false;const endDecode=csLoadSpan("audio:decode");const buffer=await ctx.decodeAudioData(bytes.slice(0));endDecode({sample:profile.sample,bytes:bytes.byteLength});if(pooled&&disposed)return false;target.set(utility?profile.sample:key,buffer);if(utility)audioDiag.loadedPresentationProfiles=target.size;else audioDiag.loadedProfiles=target.size;publish();return true;}
       catch(error){if(utility){presentationLoadErrors[key]=String(error?.message||error);audioDiag.presentationLoadErrors={...presentationLoadErrors};}else{loadErrors[key]=String(error?.message||error);audioDiag.loadErrors={...loadErrors};}publish();return false;}};
     const gunLoads=Object.entries(C5A1_AUDIO_PROFILES).map(([key,profile])=>load({key,profile,target:audioBuffers}));
     const utilitySamples=[...new Map(Object.entries(C5A2_UTILITY_AUDIO_PROFILES).map(([key,profile])=>[profile.sample,{key,profile}])).values()];
@@ -195,36 +210,42 @@ function makeAudio(){
     const endAudioAll=csLoadSpan("audio:preload-all");preloadPromise=Promise.all([...gunLoads,...utilityLoads]).then(results=>{endAudioAll({assets:results.length});audioDiag.preloadReadyAt=Date.now();publish();return results;});return preloadPromise;};
   function noise(dur,freq,q,gain,type,attenuation=1){voice(dur,()=>{const s=ctx.createBufferSource();s.buffer=nb;const f=ctx.createBiquadFilter();f.type=type||"lowpass";f.frequency.value=freq;f.Q.value=q||1;const g=ctx.createGain();const t=now();g.gain.setValueAtTime(gain*attenuation,t);g.gain.exponentialRampToValueAtTime(0.0008,t+dur);s.connect(f);f.connect(g);g.connect(master);s.start(t);s.stop(t+dur);});}
   function normalizeFamily(family){const key=String(family||"").toLowerCase();return C5A1_AUDIO_PROFILES[key]?key:key==="狙擊"?"sniper":key==="衝鋒"?"smg":key==="手槍"?"pistol":"rifle";}
-  function recordedOneShot(key,buffer,{delay,offset,duration,pitch,attenuation,gain}){
+  function recordedOneShot(key,buffer,{delay,offset,duration,pitch,attenuation,gain,pan=0}){
+    if(voicePool){const played=voicePool.playBuffer({buffer,delay,offset,duration,pitch,gain:gain*attenuation,pan,priority:3});if(!played)return false;
+      if(audioDiag.firstSourceStartAt==null)audioDiag.firstSourceStartAt=Date.now();audioDiag.recordedSourceStarts+=1;audioDiag.recordedSourceStartsByFamily[key]=(audioDiag.recordedSourceStartsByFamily[key]||0)+1;if(!audioDiag.playedFamilies.includes(key))audioDiag.playedFamilies.push(key);
+      audioDiag.playbackEvents.push({family:key,sample:C5A1_AUDIO_PROFILES[key]?.sample||null,layer:"prepared-direct",sourceNode:played.source.constructor?.name||"AudioBufferSourceNode",spatialNode:"StereoPannerNode",bufferDuration:Number(buffer.duration.toFixed(4)),offset:Number(offset.toFixed(4)),duration:Number(played.bufferDuration.toFixed(4)),playableDuration:Number(played.playableDuration.toFixed(4)),playbackRate:Number(pitch.toFixed(4)),attenuation:Number(attenuation.toFixed(3)),pan:Number(pan.toFixed(3)),contextState:ctx.state,atContextTime:Number(played.atContextTime.toFixed(4))});if(audioDiag.playbackEvents.length>48)audioDiag.playbackEvents.shift();publish();return true;}
     const playable=Math.min(duration,Math.max(0.001,buffer.duration-offset));if(playable<=0)return;
     voice(delay+playable,()=>{if(audioDiag.firstSourceStartAt==null)audioDiag.firstSourceStartAt=Date.now();const s=ctx.createBufferSource();s.buffer=buffer;s.playbackRate.value=pitch;const g=ctx.createGain();const t=now()+delay;g.gain.setValueAtTime(Math.max(0.0001,gain*attenuation),t);s.connect(g);g.connect(master);s.start(t,offset,playable);s.stop(t+playable);
       audioDiag.recordedSourceStarts+=1;audioDiag.recordedSourceStartsByFamily[key]=(audioDiag.recordedSourceStartsByFamily[key]||0)+1;if(!audioDiag.playedFamilies.includes(key))audioDiag.playedFamilies.push(key);audioDiag.playbackEvents.push({family:key,sample:C5A1_AUDIO_PROFILES[key]?.sample||null,layer:"prepared-direct",sourceNode:s.constructor?.name||"AudioBufferSourceNode",bufferDuration:Number(buffer.duration.toFixed(4)),offset:Number(offset.toFixed(4)),duration:Number(playable.toFixed(4)),playbackRate:Number(pitch.toFixed(4)),attenuation:Number(attenuation.toFixed(3)),contextState:ctx.state,destination:ctx.destination?.constructor?.name||"AudioDestinationNode",masterGain:master.gain.value,atContextTime:Number(t.toFixed(4))});if(audioDiag.playbackEvents.length>48)audioDiag.playbackEvents.shift();publish();});
   }
-  function recordedCue(type,buffer,{distance,eventId,delay=0,gain=0.4,duration=0.8}){
+  function recordedCue(type,buffer,{distance,eventId,delay=0,gain=0.4,duration=0.8,position=null}){
+    if(voicePool){const location=spatial(position,distance),attenuation=distanceGain(location.distance),pitch=1+((hsh(eventId||type)%11)-5)*0.006;const played=voicePool.playBuffer({buffer,delay,duration,pitch,gain:gain*attenuation,pan:location.pan,fadeOut:true,priority:type==="footstep"?0:type==="bomb-exploded"?3:2});if(!played)return false;
+      audioDiag.recordedPresentationSourceStarts+=1;audioDiag.playbackEvents.push({type,sample:C5A2_UTILITY_AUDIO_PROFILES[type]?.sample||null,layer:"recorded-single",sourceNode:played.source.constructor?.name||"AudioBufferSourceNode",spatialNode:"StereoPannerNode",playbackRate:Number(pitch.toFixed(4)),attenuation:Number(attenuation.toFixed(3)),pan:Number(location.pan.toFixed(3)),position:position?{x:position.x,y:position.y}:null,contextState:ctx.state,atContextTime:Number(played.atContextTime.toFixed(4))});if(audioDiag.playbackEvents.length>48)audioDiag.playbackEvents.shift();publish();return true;}
     const playable=Math.min(duration,Math.max(0.001,buffer.duration));if(playable<=0)return;
     const attenuation=distanceGain(distance),pitch=1+((hsh(eventId||type)%11)-5)*0.006,lateral=((hsh(`${eventId||type}:pan`)%101)/50)-1;
     voice(delay+playable,()=>{const s=ctx.createBufferSource();s.buffer=buffer;s.playbackRate.value=pitch;const g=ctx.createGain();const p=ctx.createStereoPanner();const t=now()+delay;g.gain.setValueAtTime(Math.max(0.0001,gain*attenuation),t);g.gain.exponentialRampToValueAtTime(0.0008,t+playable);p.pan.value=clamp(lateral*0.5,-0.5,0.5);s.connect(g);g.connect(p);p.connect(master);s.start(t,0,playable);s.stop(t+playable);
       audioDiag.recordedPresentationSourceStarts+=1;audioDiag.playbackEvents.push({type,sample:C5A2_UTILITY_AUDIO_PROFILES[type]?.sample||null,layer:"recorded-single",sourceNode:s.constructor?.name||"AudioBufferSourceNode",spatialNode:p.constructor?.name||"StereoPannerNode",playbackRate:Number(pitch.toFixed(4)),attenuation:Number(attenuation.toFixed(3)),pan:Number(p.pan.value.toFixed(3)),contextState:ctx.state,atContextTime:Number(t.toFixed(4))});if(audioDiag.playbackEvents.length>48)audioDiag.playbackEvents.shift();publish();});
   }
-  function shot(family,kill=false,distance=20,eventId="",scheduleDelaySec=0,shotAtMs=null){audioDiag.dispatchCalls+=1;if(eventId&&firedEventIds.has(eventId)){audioDiag.duplicateDispatches+=1;publish();return;}if(eventId)firedEventIds.add(eventId);audioDiag.shotCalls+=1;const key=normalizeFamily(family),p=C5A1_AUDIO_PROFILES[key],buffer=audioBuffers.get(key);
+  function shot(family,kill=false,distance=20,eventId="",scheduleDelaySec=0,shotAtMs=null,position=null){if(pooled&&(disposed||ctx.state!=="running"))return;audioDiag.dispatchCalls+=1;if(eventId&&firedEventIds.has(eventId)){audioDiag.duplicateDispatches+=1;publish();return;}if(eventId)remember(firedEventIds,eventId);audioDiag.shotCalls+=1;const key=normalizeFamily(family),p=C5A1_AUDIO_PROFILES[key],buffer=audioBuffers.get(key);
     if(!buffer){audioDiag.missedAssets+=1;publish();return;}
-    const attenuation=distanceGain(distance),pitch=1+((hsh(eventId||key)%9)-4)*0.004,baseDelay=Math.max(0,Number(scheduleDelaySec)||0);
-    recordedOneShot(key,buffer,{delay:baseDelay,offset:p.offset,duration:p.duration,pitch,attenuation,gain:p.gain});
+    const location=spatial(position,distance),attenuation=distanceGain(location.distance),pitch=1+((hsh(eventId||key)%9)-4)*0.004,baseDelay=Math.max(0,Number(scheduleDelaySec)||0);
+    recordedOneShot(key,buffer,{delay:baseDelay,offset:p.offset,duration:p.duration,pitch,attenuation,gain:p.gain,pan:location.pan});
     audioDiag.events.push({eventId,family:key,source:"recorded-prepared-direct",sourceRecording:p.sourceRecording,sample:p.sample,layers:["prepared-direct"],shotAtMs:Number.isFinite(Number(shotAtMs))?Number(shotAtMs):null,scheduledDelaySec:Number(baseDelay.toFixed(4)),distance:Number(Number(distance).toFixed(2)),attenuation:Number(attenuation.toFixed(3)),kill:Boolean(kill)});if(audioDiag.events.length>96)audioDiag.events.shift();publish();
   }
-  function tone(freq,dur,gain,attenuation=1){voice(dur,()=>{const o=ctx.createOscillator();o.type="triangle";o.frequency.value=freq;const g=ctx.createGain();const t=now();g.gain.setValueAtTime(Math.max(0.0001,gain*attenuation),t);g.gain.exponentialRampToValueAtTime(0.0008,t+dur);o.connect(g);g.connect(master);o.start(t);o.stop(t+dur);audioDiag.synthesizedToneStarts+=1;publish();});}
-  function presentationCue(type,{eventId="",distance=20}={}){audioDiag.presentationCueCalls+=1;if(eventId&&cueEventIds.has(eventId)){audioDiag.duplicateCueDispatches+=1;publish();return;}if(eventId)cueEventIds.add(eventId);audioDiag.presentationCueStarts+=1;audioDiag.cueTypes[type]=(audioDiag.cueTypes[type]||0)+1;const a=distanceGain(distance),profile=C5A2_UTILITY_AUDIO_PROFILES[type],buffer=profile&&presentationBuffers.get(profile.sample);
-    if(profile){if(buffer)recordedCue(type,buffer,{distance,eventId,gain:profile.gain,duration:profile.duration});else{audioDiag.missedPresentationAssets+=1;publish();}}
+  function tone(freq,dur,gain,attenuation=1){if(voicePool){if(voicePool.playTone({frequency:freq,duration:dur,gain:gain*attenuation,priority:1}))audioDiag.synthesizedToneStarts+=1;publish();return;}voice(dur,()=>{const o=ctx.createOscillator();o.type="triangle";o.frequency.value=freq;const g=ctx.createGain();const t=now();g.gain.setValueAtTime(Math.max(0.0001,gain*attenuation),t);g.gain.exponentialRampToValueAtTime(0.0008,t+dur);o.connect(g);g.connect(master);o.start(t);o.stop(t+dur);audioDiag.synthesizedToneStarts+=1;publish();});}
+  function presentationCue(type,{eventId="",distance=20,position=null}={}){if(pooled&&(disposed||ctx.state!=="running"))return;audioDiag.presentationCueCalls+=1;if(eventId&&cueEventIds.has(eventId)){audioDiag.duplicateCueDispatches+=1;publish();return;}if(eventId)remember(cueEventIds,eventId);audioDiag.presentationCueStarts+=1;audioDiag.cueTypes[type]=(audioDiag.cueTypes[type]||0)+1;const a=distanceGain(distance),profile=C5A2_UTILITY_AUDIO_PROFILES[type],buffer=profile&&presentationBuffers.get(profile.sample);
+    if(profile){if(buffer)recordedCue(type,buffer,{distance,eventId,gain:profile.gain,duration:profile.duration,position});else{audioDiag.missedPresentationAssets+=1;publish();}}
     else if(type==="round-start"){tone(420,0.16,0.1,a);tone(620,0.22,0.08,a);}
     else if(type==="round-end"||type==="clutch"||type==="multikill"){tone(type==="clutch"?760:type==="multikill"?680:520,0.14,0.1,a);tone(type==="round-end"?320:980,0.18,0.07,a);}
     else if(type==="kill"){tone(180,0.045,0.035,a);}
     publish();}
   const api={ctx,async resume(){audioDiag.resumeCalls+=1;audioDiag.resumeRequestedAt=Date.now();audioDiag.contextStateBeforeResume=ctx.state;if(ctx.state!=="running")await ctx.resume();audioDiag.resumeResolvedAt=Date.now();publish();return ctx.state;},markUnmuteRequest(){audioDiag.unmuteRequestedAt=Date.now();publish();},preload,ready:preload(),assetProfiles:C5A1_AUDIO_PROFILES,setVol(v){master.gain.value=v;publish();},shot,shoot(sniper){shot(sniper?"sniper":"rifle");},cue:presentationCue,
     // 一個 authoritative muzzle event = 一個聲音事件；連發差異由實際 frame 事件頻率表現。
-    burst(family,kill,distance,eventId,scheduleDelaySec,shotAtMs){shot(family,kill,distance,eventId,scheduleDelaySec,shotAtMs);},
-    resetGunfireEvents(){firedEventIds.clear();},
+    burst(family,kill,distance,eventId,scheduleDelaySec,shotAtMs,position){shot(family,kill,distance,eventId,scheduleDelaySec,shotAtMs,position);},
+    stopAll(){voicePool?.stopAll();},
+    resetGunfireEvents(){firedEventIds.clear();if(voicePool){voicePool.stopAll();cueEventIds.clear();}},
     boom(){presentationCue("bomb-exploded",{distance:10});},
-    dispose(){timers.forEach((timer)=>clearTimeout(timer));timers.clear();try{ctx.close();}catch{};if(typeof window!=="undefined"){delete window.__ESMO_FPS_AUDIO_DIAGNOSTICS__;if(import.meta.env?.DEV)delete window.__ESMO_FPS_AUDIO_API__; }},
+    dispose(){disposed=true;voicePool?.dispose();timers.forEach((timer)=>clearTimeout(timer));timers.clear();if(pooled){audioBuffers.clear();presentationBuffers.clear();master.disconnect();}try{ctx.close();}catch{};if(typeof window!=="undefined"&&window.__ESMO_FPS_AUDIO_DIAGNOSTICS__===audioDiag){delete window.__ESMO_FPS_AUDIO_DIAGNOSTICS__;if(import.meta.env?.DEV)delete window.__ESMO_FPS_AUDIO_API__; }},
   };
   if(typeof window!=="undefined"&&import.meta.env?.DEV)window.__ESMO_FPS_AUDIO_API__=api;
   preload();publish();return api;
@@ -442,13 +463,18 @@ function navigableSegment(start,goal,walls,R){
   }
   const path=[];for(let at=1;at>=0;at=prev[at]){path.push(vertices[at]);if(at===0)break;}path.reverse();return path;
 }
-function buildNavigableRoute(points,walls,R,memo){
+function buildNavigableRoute(points,walls,R,memo,segmentCache=null){
   // Route intents may be authored on a site marker or beside newly-solid
   // cover. Normalize waypoints to walkable space before path search; this
   // moves only the route target, never the authoritative player position.
   const base=(points||[]).filter(Boolean).map(p=>plannerSafePoint({x:Number(p.x),y:Number(p.y)},walls,R));if(base.length<2)return base;
   const key=base.map(p=>`${p.x.toFixed(2)},${p.y.toFixed(2)}`).join("|");if(memo?.has(key))return memo.get(key).map(p=>({...p}));
-  const route=[base[0]];for(let i=1;i<base.length;i++){const segment=navigableSegment(route[route.length-1],base[i],walls,R);route.push(...segment.slice(1));}
+  const route=[base[0]];for(let i=1;i<base.length;i++){
+    const start=route[route.length-1],goal=base[i];
+    let segment=segmentCache?.getSegment(start,goal,walls,R);
+    if(!segment){segment=navigableSegment(start,goal,walls,R);segmentCache?.setSegment(start,goal,segment,walls,R);}
+    route.push(...segment.slice(1));
+  }
   memo?.set(key,route.map(p=>({...p})));return route;
 }
 // 沿 a→方向(dir) 到第一道牆的距離（地圖單位）；找不到回傳 max
@@ -479,70 +505,61 @@ function canEngage(observer,target,walls,smokes,prog){
 
 // ─── 地圖資料（walls = 碰撞 + 3D 建築）───────────────────────────────────
 const MAPS={
-  dust2:{name:"Dust II",floor:"#2a2218",accent:"#caa46a",accent2:"#9c7d4a",
+  mirage:{name:FPS_MAJOR_MAP_ART.mirage.name,floor:"#89918b",accent:"#d5c6ab",accent2:"#688d8b",
     walls:[
-      {x:74,y:5,w:12,h:7,hgt:8,win:1},{x:90,y:9,w:8,h:17,hgt:9,win:1},{x:72,y:23,w:9,h:9,hgt:7,roof:"pitch"},{x:60,y:8,w:9,h:9,hgt:7,win:1},
-      {x:68,y:36,w:10,h:13,hgt:8,win:1},{x:86,y:38,w:9,h:15,hgt:7,win:1},
-      {x:46,y:30,w:9,h:13,hgt:8,win:1},{x:30,y:38,w:9,h:12,hgt:7,roof:"pitch"},{x:54,y:54,w:9,h:12,hgt:7,win:1},
-      {x:3,y:48,w:10,h:15,hgt:8,win:1},{x:24,y:60,w:8,h:12,hgt:7},{x:5,y:74,w:12,h:11,hgt:6,roof:"pitch"},{x:28,y:78,w:9,h:9,hgt:7,win:1},{x:30,y:44,w:7,h:9,hgt:6},
-      {x:42,y:84,w:13,h:9,hgt:7,win:1},{x:14,y:90,w:9,h:8,hgt:6},
-      {x:88,y:62,w:8,h:12,hgt:7,win:1},{x:2,y:30,w:8,h:12,hgt:7},{x:44,y:70,w:8,h:8,hgt:6},{x:76,y:70,w:8,h:9,hgt:6,roof:"pitch"},
-      {x:2,y:2,w:14,h:14,hgt:8,win:1},{x:34,y:6,w:13,h:11,hgt:8,win:1},{x:20,y:20,w:11,h:13,hgt:7,roof:"pitch"},{x:56,y:84,w:12,h:8,hgt:7,win:1},
-      {x:2,y:88,w:10,h:8,hgt:6},{x:90,y:78,w:8,h:14,hgt:7,win:1},{x:58,y:20,w:9,h:9,hgt:7},
+      {x:2,y:2,w:5,h:93,hgt:5},{x:93,y:2,w:5,h:93,hgt:5},
+      {x:7,y:2,w:35,h:5,hgt:6},{x:58,y:2,w:35,h:5,hgt:6},{x:7,y:95,w:86,h:3,hgt:4},
+      {x:7,y:42,w:8,h:25,hgt:8},{x:26,y:45,w:14,h:18,hgt:4.5,win:1,art:"water-tower"},
+      {x:84,y:42,w:9,h:24,hgt:7},
+      {x:22,y:78,w:14,h:12,hgt:7,win:1},{x:64,y:78,w:14,h:12,hgt:7,win:1},
+      {x:14,y:10,w:10,h:8,hgt:8},...FPS_MAJOR_AUTHORED_ROOMS.mirage.flatMap(majorRoomWalls),
+      {x:12,y:30,w:10,h:8,hgt:5},{x:32,y:32,w:10,h:8,hgt:5},
+      {x:86,y:17,w:7,h:20,hgt:8},{x:65,y:28,w:8,h:10,hgt:7},
     ],
-    crates:[{x:84,y:20},{x:88,y:16},{x:50,y:48},{x:16,y:60},{x:20,y:62},{x:66,y:64},{x:80,y:14},{x:86,y:24},{x:18,y:54},{x:62,y:66},{x:46,y:64},{x:70,y:34}],
-    props:[{t:"barrel",x:46,y:50},{t:"barrel",x:82,y:36},{t:"barrel",x:18,y:58},{t:"sandbag",x:60,y:45,a:0},{t:"sandbag",x:72,y:30,a:1},{t:"crate",x:82,y:46},{t:"crate",x:34,y:46},{t:"car",x:88,y:24,a:0.4},{t:"sandbag",x:84,y:24,a:0},{t:"barrel",x:14,y:56},{t:"crate",x:60,y:62},{t:"sandbag",x:48,y:50,a:1},{t:"barrel",x:68,y:62},{t:"plat",x:94,y:30}],
-    doors:[{x:50,y:50,w:5,h:2,dir:"h",label:"中門"},{x:26,y:54,w:2,h:5,dir:"v",label:"B 門"},{x:66,y:60,w:5,h:2,dir:"h",label:"長道門"}],
-    sites:{a:{x:84,y:17},b:{x:16,y:58}},spawns:{ct:{x:80,y:56},t:{x:28,y:92}},
-    nodes:{tSpawn:{x:28,y:92},longEntry:{x:46,y:82},long:{x:66,y:68},longCorner:{x:82,y:44},aRamp:{x:84,y:33},aSite:{x:84,y:17},pit:{x:94,y:30},shortA:{x:68,y:32},catwalk:{x:60,y:42},mid:{x:42,y:64},midDoors:{x:50,y:50},xbox:{x:42,y:48},lower:{x:22,y:82},bTunnel:{x:14,y:66},bDoors:{x:26,y:54},bSite:{x:16,y:58},ctSpawn:{x:80,y:58},ctMid:{x:66,y:56}},
-    callouts:[{x:28,y:96,l:"T 出生"},{x:80,y:62,l:"CT 出生"},{x:88,y:13,l:"A 點"},{x:14,y:52,l:"B 點"},{x:64,y:72,l:"長道"},{x:42,y:70,l:"中路"},{x:14,y:72,l:"隧道"},{x:94,y:36,l:"坑"},{x:60,y:38,l:"貓道"},{x:50,y:46,l:"中門"},{x:84,y:29,l:"A 坡"},{x:26,y:50,l:"B 門"}]},
-  mirage:{name:"Mirage",floor:"#5b5449",floorVignette:0.24,accent:"#b9a47e",accent2:"#87775d",
+    crates:[{x:71,y:22},{x:83,y:28},{x:18,y:24},{x:27,y:20},{x:46,y:44},{x:55,y:62},{x:80,y:69},{x:18,y:69}],
+    props:[{t:"barrel",x:60,y:39},{t:"barrel",x:43,y:66},{t:"sandbag",x:80,y:34,a:0},{t:"sandbag",x:24,y:39,a:0},{t:"crate",x:58,y:24}],
+    rooms:[{x:40,y:45,w:22,h:18,height:7,label:"水務檢修廊",roof:"vault"},...FPS_MAJOR_AUTHORED_ROOMS.mirage],
+    doors:[{x:46,y:40,w:8,h:2,dir:"h",label:"調壓門"},{x:17,y:40,w:7,h:2,dir:"h",label:"檢修門"},{x:76,y:40,w:7,h:2,dir:"h",label:"東側門"}],
+    sites:{a:{x:78,y:24},b:{x:26,y:26}},spawns:{ct:{x:50,y:10},t:{x:50,y:90}},
+    nodes:{tSpawn:{x:50,y:90},palace:{x:82,y:76},ramp:{x:78,y:60},topMid:{x:50,y:36},aRamp:{x:78,y:39},aSite:{x:78,y:24},mid:{x:50,y:55},window:{x:58,y:34},apps:{x:20,y:60},connector:{x:25,y:43},bSite:{x:26,y:26},ctSpawn:{x:50,y:10}},
+    callouts:[{x:50,y:92,l:"進攻集結"},{x:50,y:10,l:"勤務入口"},{x:78,y:24,l:"A 調壓站"},{x:26,y:26,l:"B 濾水庭院"},{x:50,y:55,l:"檢修中庭"},{x:20,y:60,l:"西側廊道"},{x:78,y:60,l:"東側回廊"},{x:82,y:76,l:"泵房外側"}]},
+  dust2:{name:FPS_MAJOR_MAP_ART.dust2.name,floor:"#758389",accent:"#b2c3bf",accent2:"#436f79",
     walls:[
-      {x:60,y:8,w:16,h:11,hgt:9,win:1},{x:80,y:12,w:10,h:12,hgt:8,win:1},{x:54,y:22,w:8,h:14,hgt:7,roof:"pitch"},
-      {x:40,y:30,w:9,h:10,hgt:6,win:1},{x:46,y:46,w:10,h:8,hgt:5},{x:30,y:42,w:8,h:12,hgt:6,roof:"pitch"},
-      {x:8,y:58,w:12,h:11,hgt:7,win:1},{x:24,y:64,w:9,h:9,hgt:6},{x:10,y:78,w:13,h:8,hgt:6,roof:"pitch"},
-      {x:64,y:42,w:10,h:10,hgt:6,win:1},{x:78,y:50,w:8,h:12,hgt:7,win:1},
-      {x:6,y:14,w:12,h:10,hgt:7,win:1},{x:88,y:30,w:8,h:16,hgt:8,win:1},{x:84,y:64,w:10,h:14,hgt:7,win:1},{x:40,y:78,w:12,h:9,hgt:7,win:1},{x:66,y:24,w:8,h:9,hgt:7,roof:"pitch"},{x:18,y:30,w:8,h:10,hgt:6},
-      {x:2,y:2,w:14,h:9,hgt:8,win:1},{x:24,y:6,w:14,h:10,hgt:8,roof:"pitch"},{x:2,y:42,w:8,h:12,hgt:7},{x:60,y:62,w:12,h:10,hgt:7,win:1},{x:88,y:84,w:10,h:8,hgt:6},{x:34,y:64,w:8,h:8,hgt:6},
+      {x:2,y:2,w:5,h:93,hgt:5},{x:93,y:2,w:5,h:93,hgt:5},{x:7,y:2,w:86,h:5,hgt:6},{x:7,y:95,w:86,h:3,hgt:4},
+      {x:7,y:15,w:14,h:23,hgt:6.5,win:1,art:"loading-hall"},{x:30,y:10,w:12,h:25,hgt:10.5,win:1,art:"loading-hall"},
+      {x:63,y:8,w:20,h:9,hgt:11,win:1,art:"cold-store"},{x:54,y:23,w:5,h:11,hgt:6},{x:69,y:32,w:7,h:10,hgt:7},
+      {x:82,y:18,w:11,h:20,hgt:8},{x:7,y:45,w:10,h:20,hgt:7},{x:32,y:42,w:8,h:6,hgt:5},
+      ...FPS_MAJOR_AUTHORED_ROOMS.dust2.flatMap(majorRoomWalls),
+      {x:64,y:58,w:9,h:9,hgt:6},{x:61,y:78,w:10,h:12,hgt:4.5},
+      {x:29,y:80,w:9,h:10,hgt:7},{x:7,y:76,w:4,h:14,hgt:6},{x:78,y:78,w:10,h:12,hgt:8},
     ],
-    crates:[{x:82,y:18},{x:86,y:22},{x:16,y:60},{x:20,y:62},{x:46,y:50},{x:60,y:34},{x:78,y:16},{x:14,y:80},{x:18,y:84},{x:50,y:66},{x:62,y:48},{x:42,y:34}],
-    props:[{t:"barrel",x:44,y:52},{t:"barrel",x:78,y:46},{t:"sandbag",x:58,y:48,a:0},{t:"crate",x:50,y:68},{t:"crate",x:26,y:60},{t:"barrel",x:14,y:62},{t:"sandbag",x:80,y:18,a:1},{t:"crate",x:84,y:20},{t:"barrel",x:48,y:54},{t:"sandbag",x:16,y:80,a:0},{t:"crate",x:56,y:50},{t:"plat",x:82,y:16},{t:"barrel",x:24,y:70}],
-    doors:[{x:46,y:46,w:5,h:2,dir:"h",label:"中路"},{x:24,y:64,w:2,h:5,dir:"v",label:"連接"},{x:60,y:34,w:5,h:2,dir:"h",label:"坡道"}],
-    sites:{a:{x:82,y:16},b:{x:16,y:82}},spawns:{ct:{x:72,y:52},t:{x:32,y:90}},
-    nodes:{tSpawn:{x:32,y:90},palace:{x:50,y:70},ramp:{x:62,y:46},topMid:{x:54,y:34},aRamp:{x:72,y:24},aSite:{x:82,y:16},mid:{x:44,y:56},window:{x:58,y:50},apps:{x:24,y:72},connector:{x:20,y:64},bSite:{x:16,y:82},ctSpawn:{x:72,y:52}},
-    callouts:[{x:32,y:94,l:"T 出生"},{x:72,y:58,l:"CT"},{x:84,y:12,l:"A 點"},{x:12,y:86,l:"B 點"},{x:50,y:74,l:"跳台"},{x:44,y:60,l:"中路"},{x:24,y:76,l:"公寓"},{x:62,y:42,l:"坡道"},{x:58,y:46,l:"窗口"}]},
-  inferno:{name:"Inferno",floor:"#2d1d12",accent:"#c08a52",accent2:"#94663c",
+    crates:[{x:73,y:20},{x:80,y:30},{x:24,y:50},{x:29,y:71},{x:45,y:55},{x:83,y:65},{x:47,y:77},{x:14,y:70}],
+    props:[{t:"barrel",x:62,y:46},{t:"barrel",x:43,y:39},{t:"sandbag",x:64,y:35,a:0},{t:"car",x:85,y:73,a:0},{t:"crate",x:21,y:43}],
+    rooms:[{x:42,y:61,w:10,h:7,height:7,label:"海關檢查廊",roof:"sawtooth"},...FPS_MAJOR_AUTHORED_ROOMS.dust2],
+    doors:[{x:44,y:46,w:7,h:2,dir:"h",label:"海關門"},{x:22,y:40,w:7,h:2,dir:"h",label:"貨運門"},{x:77,y:44,w:2,h:7,dir:"v",label:"冷鏈側門"}],
+    sites:{a:{x:76,y:25},b:{x:26,y:58}},spawns:{ct:{x:52,y:15},t:{x:22,y:89}},
+    nodes:{tSpawn:{x:22,y:89},longEntry:{x:48,y:85},long:{x:78,y:75},longCorner:{x:84,y:53},aRamp:{x:78,y:39},aSite:{x:76,y:25},pit:{x:87,y:44},shortA:{x:64,y:28},catwalk:{x:54,y:41},mid:{x:48,y:62},midDoors:{x:46,y:48},xbox:{x:43,y:48},lower:{x:16,y:78},bTunnel:{x:20,y:68},bDoors:{x:36,y:54},bSite:{x:26,y:58},ctSpawn:{x:52,y:15},ctMid:{x:50,y:30}},
+    callouts:[{x:22,y:92,l:"貨運入口"},{x:52,y:15,l:"海關入口"},{x:76,y:25,l:"A 冷鏈裝卸"},{x:26,y:58,l:"B 維修庫"},{x:48,y:62,l:"海關通道"},{x:78,y:75,l:"碼頭長廊"},{x:20,y:68,l:"西側貨道"},{x:64,y:28,l:"短程維修道"}]},
+  inferno:{name:FPS_MAJOR_MAP_ART.inferno.name,floor:"#85756b",accent:"#c3a68c",accent2:"#895541",
     walls:[
-      {x:34,y:2,w:30,h:8,hgt:9,win:1,roof:"pitch"},
-      {x:18,y:12,w:12,h:34,hgt:8,win:1},
-      {x:60,y:8,w:10,h:11,hgt:8,win:1},
-      {x:46,y:30,w:10,h:14,hgt:7,win:1},
-      {x:60,y:46,w:6,h:12,hgt:7,win:1},
-      {x:34,y:48,w:8,h:12,hgt:7,roof:"pitch"},
-      {x:82,y:24,w:12,h:12,hgt:9,win:1},{x:94,y:36,w:6,h:38,hgt:8,win:1},
-      {x:70,y:40,w:12,h:1.8,hgt:8,win:1},{x:70,y:41.8,w:1.8,h:8.2,hgt:8,win:1},{x:80.2,y:41.8,w:1.8,h:8.2,hgt:8,win:1},{x:70,y:48.2,w:3,h:1.8,hgt:8},{x:79,y:48.2,w:3,h:1.8,hgt:8},
-      {x:78,y:70,w:10,h:8,hgt:7,win:1},
-      {x:2,y:56,w:10,h:10,hgt:7},{x:2,y:72,w:12,h:16,hgt:7,win:1},
-      {x:28,y:74,w:10,h:8,hgt:7,roof:"pitch"},
-      {x:44,y:74,w:8,h:8,hgt:7,win:1},{x:56,y:72,w:10,h:8,hgt:7,win:1},{x:62,y:84,w:12,h:8,hgt:6},{x:40,y:82,w:8,h:6,hgt:6},
-      {x:2,y:14,w:10,h:18,hgt:7,win:1},{x:70,y:2,w:14,h:9,hgt:8,win:1,roof:"pitch"},{x:30,y:12,w:6,h:9,hgt:6},
-      {x:84,y:80,w:10,h:10,hgt:7,win:1},{x:78,y:22,w:6,h:6,hgt:6},{x:2,y:34,w:8,h:16,hgt:7,win:1},{x:14,y:88,w:14,h:8,hgt:6},
+      {x:2,y:2,w:5,h:93,hgt:5},{x:95,y:2,w:3,h:93,hgt:5},{x:7,y:2,w:88,h:5,hgt:6},{x:7,y:95,w:88,h:3,hgt:4},
+      {x:15,y:10,w:9,h:18,hgt:4.2,win:1,art:"cooling"},{x:34,y:10,w:10,h:18,hgt:4.2,win:1,art:"cooling"},
+      {x:54,y:10,w:15,h:17,hgt:4.5,win:1,art:"furnace"},{x:72,y:8,w:12,h:7,hgt:7},
+      ...FPS_MAJOR_AUTHORED_ROOMS.inferno.flatMap(majorRoomWalls),
+      {x:66,y:28,w:3,h:25,hgt:7},
+      {x:74,y:28,w:1.8,h:22,hgt:7},{x:88.2,y:28,w:1.8,h:22,hgt:7},
+      {x:74,y:26,w:16,h:1.8,hgt:7},{x:74,y:49,w:5,h:1.8,hgt:7},{x:85,y:49,w:5,h:1.8,hgt:7},
+      {x:7,y:67,w:11,h:10,hgt:7},{x:22,y:71,w:8,h:7,hgt:6},
+      {x:48,y:82,w:13,h:9,hgt:10.5,art:"press-hall"},
+      {x:65,y:72,w:7,h:17,hgt:8},{x:83,y:80,w:8,h:10,hgt:6},
     ],
-    crates:[{x:34,y:28},{x:38,y:30},{x:42,y:29},{x:72,y:61},{x:76,y:60},{x:46,y:24},{x:54,y:24},{x:62,y:58},{x:82,y:64},{x:86,y:66},{x:30,y:80}],
-    props:[{t:"car",x:44,y:38,a:0.3},{t:"car",x:74,y:76,a:0},{t:"barrel",x:46,y:41},{t:"barrel",x:40,y:50},{t:"sandbag",x:50,y:46,a:0},{t:"sandbag",x:26,y:54,a:1},{t:"plat",x:90,y:68},{t:"barrel",x:78,y:58},{t:"crate",x:54,y:46},{t:"sandbag",x:38,y:44,a:0},{t:"barrel",x:70,y:60},{t:"sandbag",x:66,y:47,a:1},{t:"barrel",x:50,y:24},{t:"barrel",x:24,y:53},{t:"plat",x:74,y:64},{t:"barrel",x:90,y:71},{t:"crate",x:60,y:74}],
-    doors:[{x:38,y:42,w:5,h:2,dir:"h",label:"香蕉"},{x:68,y:46,w:2,h:5,dir:"v",label:"拱門"},{x:50,y:62,w:5,h:2,dir:"h",label:"中路"}],
-    sites:{a:{x:74,y:64},b:{x:50,y:20}},spawns:{ct:{x:90,y:42},t:{x:10,y:70}},
-    nodes:{tSpawn:{x:10,y:70},tRamp:{x:26,y:56},banana:{x:38,y:42},car:{x:44,y:34},bSite:{x:50,y:20},bTop:{x:66,y:23},apps:{x:22,y:82},boiler:{x:50,y:70},mid:{x:50,y:62},sewer:{x:38,y:64},secondMid:{x:58,y:53},aConn:{x:70,y:58},aRamp:{x:78,y:54},aSite:{x:74,y:64},arch:{x:68,y:46},library:{x:74,y:53},libIn:{x:76,y:45},pit:{x:90,y:66},ctSpawn:{x:90,y:42}},
-    callouts:[
-      {x:50,y:4,l:"花園"},{x:60,y:6,l:"教堂/工地"},{x:44,y:8,l:"棺材"},{x:24,y:18,l:"柱子"},{x:50,y:17,l:"B 點·噴泉"},
-      {x:40,y:30,l:"箱區"},{x:64,y:15,l:"台下"},{x:66,y:23,l:"連接"},{x:78,y:28,l:"警家水井"},{x:72,y:31,l:"雙架位"},
-      {x:86,y:31,l:"警家走廊"},{x:80,y:38,l:"警家暗道"},{x:91,y:44,l:"警家出生點"},{x:76,y:44,l:"書房"},{x:68,y:47,l:"連接拱門"},
-      {x:44,y:38,l:"車位/木桶"},{x:34,y:44,l:"香蕉道"},{x:50,y:47,l:"沙袋"},{x:40,y:53,l:"凹槽"},{x:66,y:52,l:"A 連接"},
-      {x:80,y:60,l:"摩托車位"},{x:84,y:74,l:"墓地"},{x:62,y:57,l:"死點"},{x:73,y:60,l:"中箱/爆頭位"},{x:74,y:67,l:"A 點·安包位置"},
-      {x:88,y:70,l:"陽台"},{x:91,y:66,l:"大坑"},{x:91,y:74,l:"小坑"},{x:14,y:53,l:"台上/狙位"},{x:26,y:54,l:"匪斜坡"},
-      {x:44,y:57,l:"長椅"},{x:38,y:62,l:"下水道"},{x:50,y:61,l:"中路"},{x:58,y:59,l:"中遠"},{x:10,y:73,l:"匪家出生點"},
-      {x:28,y:69,l:"廚房"},{x:7,y:83,l:"匪二樓"},{x:32,y:80,l:"側道"},{x:7,y:77,l:"收音機"},{x:48,y:72,l:"鍋爐房"},
-      {x:61,y:74,l:"VIP/馬棚"},{x:68,y:66,l:"A 小道"},{x:68,y:87,l:"A二樓/走廊"},{x:44,y:82,l:"自門房間"},{x:50,y:90,l:"後巷"}]},
+    rooms:[{x:74,y:28,w:16,h:22,height:6.8,label:"機控室"},...FPS_MAJOR_AUTHORED_ROOMS.inferno],
+    crates:[{x:28,y:16},{x:30,y:30},{x:85,y:72},{x:75,y:80},{x:46,y:60},{x:76,y:33},{x:86,y:44},{x:35,y:81}],
+    props:[{t:"barrel",x:24,y:35},{t:"barrel",x:60,y:44},{t:"sandbag",x:74,y:57,a:0},{t:"crate",x:46,y:76},{t:"car",x:83,y:88,a:0}],
+    doors:[{x:23,y:31,w:8,h:2,dir:"h",label:"冷卻門"},{x:79,y:50,w:6,h:2,dir:"h",label:"機控入口"},{x:45,y:57,w:7,h:2,dir:"h",label:"輸送門"}],
+    sites:{a:{x:80,y:74},b:{x:30,y:23}},spawns:{ct:{x:85,y:18},t:{x:12,y:86}},
+    nodes:{tSpawn:{x:12,y:86},tRamp:{x:26,y:56},banana:{x:26,y:43},car:{x:32,y:36},bSite:{x:30,y:23},bTop:{x:50,y:25},apps:{x:32,y:86},boiler:{x:52,y:76},mid:{x:48,y:65},sewer:{x:26,y:64},secondMid:{x:60,y:54},aConn:{x:72,y:63},aRamp:{x:82,y:62},aSite:{x:80,y:74},arch:{x:64,y:40},library:{x:80,y:42},libIn:{x:80,y:34},pit:{x:88,y:77},ctSpawn:{x:85,y:18}},
+    callouts:[{x:12,y:89,l:"進攻貨梯"},{x:85,y:18,l:"防守勤務場"},{x:80,y:74,l:"A 壓機庭院"},{x:30,y:23,l:"B 冷卻站"},{x:26,y:43,l:"西側管廊"},{x:48,y:65,l:"輸送中道"},{x:80,y:42,l:"機控室"},{x:32,y:86,l:"外側貨道"}]},
 };
 // 選手 16 項素質（與 MOBA 共用的同一套；分四類）— 直接沿用遊戲的素質欄位
 const STAT_GROUPS=[
@@ -1128,13 +1145,18 @@ function c5a2SolidObstacles(map){
     else if(prop.t==="plat")return;
     else obstacles.push(centeredSolidObstacle(prop.x,prop.y,2.7,2.7,"crate",angle));
   });
+  // major 房間的工位是真 cover：同一 bounds 服務導航、角色 separation、
+  // LOS 與呈現；legacy rooms 沒有 fixtures，保留原輸出與搜尋順序。
+  for(const room of map.rooms||[])for(const fixture of room.fixtures||[]){
+    obstacles.push({...fixture,roomId:room.id,kind:"room-fixture",deco:true});
+  }
   return obstacles;
 }
 
-function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=null){
+function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=null,sceneVersion="major.v1"){
   const RS=(roster||ROSTER).map(c=>({...c})); // 可注入即時名單（複製後套用每回合 currentSide，不回寫輸入）
   const originalTacticCT=tacticCT;
-  const map=MAPS[mapKey];const rand=mkRng(seed);
+  const map=(sceneVersion==="legacy"?FPS_LEGACY_MAPS:MAPS)[mapKey];const rand=mkRng(seed);
   const preMatchLayout=normalizeCsTacticalLayout(tacticalLayoutInput,TACTICS_DB[mapKey]?.t||[],tacticT);
   const preMatchTacticForPhase=phase=>preMatchLayout.phases[phase]?.tactic||tacticT;
   // Keep one deterministic stream for the whole authoritative match. C5A.1
@@ -1153,7 +1175,8 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
   const SPAWN_ANCHOR_EPSILON=4.5;
   const callouts=map.callouts||[];
   const routeMemo=new Map();
-  const navigableRoute=points=>buildNavigableRoute(points,walls,PLAYER_R,routeMemo);
+  const segmentCache=sceneVersion==="legacy"?null:createFpsMajorSegmentCache(walls,PLAYER_R);
+  const navigableRoute=points=>buildNavigableRoute(points,walls,PLAYER_R,routeMemo,segmentCache);
   const nearCO=pos=>{let best=null,bd=1e9;for(const c of callouts){const d=Math.hypot(c.x-pos.x,c.y-pos.y);if(d<bd){bd=d;best=c;}}return best?best.l:(pos.x<35?"左路":pos.x>65?"右路":"中路");};
   const frames=[],highlights=[],roundHist=[];
   // C5A.1：只記錄 authoritative simulation 已觀察到的反應鏈，不參與勝負、
@@ -1559,6 +1582,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
       // 所有移動分支完成後再做一次 pairwise separation，避免路線／待機／撤退
       // 各自合法卻在同一 tick 把兩名角色推到同一個位置。
       separateFpsPlayers(ps,walls,movementAudit);
+      if(sceneVersion!=="legacy")ps.forEach(p=>{p.elevation=fpsMajorElevation(mapKey,p.pos);});
       ps.forEach(p=>{
         const locomotion=c5a2LocomotionFor(p);p.velocityUnitsPerSec=locomotion.velocityUnitsPerSec;p.velocity=locomotion.velocity;p.locomotion=locomotion.locomotion;
         if(!p.dead&&movementAudit.locomotionSamples[p.locomotion]!=null)movementAudit.locomotionSamples[p.locomotion]+=1;
@@ -1871,7 +1895,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
   }));
   navigationAudit.unresolvedStuckEpisodes=navigationAudit.stuckEpisodes.filter(episode=>episode.status!=="resolved").length;
   buyAudit.purchaseRatios=Object.fromEntries(weaponFamilies.map(family=>[family,buyAudit.totalPurchases?Number((buyAudit.purchaseCounts[family]/buyAudit.totalPurchases).toFixed(4)):0]));
-  return{frames,highlights,roundHist,ctScore,tScore,mapKey,players,mvp,rounds:_R,reactionTelemetry,reactionSummary,
+  return{frames,highlights,roundHist,ctScore,tScore,mapKey,sceneVersion,players,mvp,rounds:_R,reactionTelemetry,reactionSummary,
        shotCadenceTelemetry,cadenceSummary,weaponAuthority:weaponAuthoritySummary,weaponMetrics,movementAudit,navigationAudit,combatAudit,tacticalAudit,buyAudit,bombAudit,
     completed:ruleState.completed,winner:ruleState.winner,phase:ruleState.phase,regulationRounds:ruleState.regulationRounds,
     overtimeGroups:ruleState.otGroup,sideChanges:ruleState.sideChanges,economyEvents,halftime:ruleState.sideChanges.find(x=>x.reason==="halftime")??null,
@@ -1882,6 +1906,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
 // T = 我方（德國海豹）視角。fanGain/prizeGain/xpGain 由主遊戲填入。
 function stableResultId(sim, seed, tacticT, tacticCT) {
   const input = JSON.stringify([
+    ...(sim.sceneVersion&&sim.sceneVersion!=="legacy"?[sim.sceneVersion]:[]),
     seed, sim.mapKey, tacticT?.id ?? tacticT?.name ?? null, tacticCT?.id ?? tacticCT?.name ?? null,
     sim.completed, sim.winner, sim.ctScore, sim.tScore, sim.roundHist,
     sim.players.map((p) => [p.id, p.teamId ?? csRosterTeamId(p), p.side, p.k, p.d, p.dmg, p.rating]),
@@ -1898,13 +1923,13 @@ function stableResultId(sim, seed, tacticT, tacticCT) {
 // ⚠ 只留**一份**、只存模擬資料（不含任何 three／DOM 物件）：換一組輸入先放掉舊的，
 //   比賽播完交出結果時放掉（completeOnce）。
 let lastMountSimulation=null;
-function simulateFpsForMount(mapKey,tacticT,tacticCT,seed,roster,tacticalLayout){
+function simulateFpsForMount(mapKey,tacticT,tacticCT,seed,roster,tacticalLayout,sceneVersion="major.v1"){
   let key=null;
-  try{key=JSON.stringify([mapKey,tacticT,tacticCT,seed,roster,tacticalLayout]);}catch(e){key=null;}
+  try{key=JSON.stringify([mapKey,tacticT,tacticCT,seed,roster,tacticalLayout,sceneVersion]);}catch(e){key=null;}
   if(key&&lastMountSimulation&&lastMountSimulation.key===key){csLoadMark("sim:reuse",{mapKey,seed});csSimCacheEvent("reuse",{mapKey,seed});return lastMountSimulation.sim;}
   if(lastMountSimulation)csSimCacheEvent("replace",{mapKey:lastMountSimulation.mapKey,seed:lastMountSimulation.seed});
   lastMountSimulation=null;
-  const sim=csLoadTime("sim:simulateFps",()=>simulateFps(mapKey,tacticT,tacticCT,seed,roster,tacticalLayout),{mapKey,seed});
+  const sim=csLoadTime("sim:simulateFps",()=>simulateFps(mapKey,tacticT,tacticCT,seed,roster,tacticalLayout,sceneVersion),{mapKey,seed});
   if(key){lastMountSimulation={key,sim,mapKey,seed};csSimCacheEvent("store",{mapKey,seed,frames:sim.frames.length});}
   return sim;
 }
@@ -1914,17 +1939,17 @@ __FPS3D_SIM_PORT.simulateFps = simulateFps;
 //   重新 render 時走既有的 reuse 路徑 ⇒ 與同步版拿到的是同一個輸入的同一份輸出。
 //   沒有 runner（Worker 不支援／非 CS 正式畫面）⇒ 退回原本的同步計算，行為完全不變。
 const pendingMountSimulation=new Map();
-function simulateFpsForMountAsync(mapKey,tacticT,tacticCT,seed,roster,tacticalLayout){
+function simulateFpsForMountAsync(mapKey,tacticT,tacticCT,seed,roster,tacticalLayout,sceneVersion="major.v1"){
   let key=null;
-  try{key=JSON.stringify([mapKey,tacticT,tacticCT,seed,roster,tacticalLayout]);}catch(e){key=null;}
+  try{key=JSON.stringify([mapKey,tacticT,tacticCT,seed,roster,tacticalLayout,sceneVersion]);}catch(e){key=null;}
   const runner=__FPS3D_SIM_PORT.runner;
-  if(!key||!runner||(lastMountSimulation&&lastMountSimulation.key===key))return simulateFpsForMount(mapKey,tacticT,tacticCT,seed,roster,tacticalLayout);
+  if(!key||!runner||(lastMountSimulation&&lastMountSimulation.key===key))return simulateFpsForMount(mapKey,tacticT,tacticCT,seed,roster,tacticalLayout,sceneVersion);
   if(!pendingMountSimulation.has(key)){
     csLoadMark("sim:worker-start",{mapKey,seed});
-    const args=[mapKey,tacticT,tacticCT,seed,roster,tacticalLayout];
+    const args=[mapKey,tacticT,tacticCT,seed,roster,tacticalLayout,sceneVersion];
     const job=Promise.resolve()
       .then(()=>runner(args))
-      .catch(()=>{csLoadMark("sim:worker-fallback",{mapKey,seed});return simulateFps(...args);})
+      .catch(error=>{csLoadMark("sim:worker-fallback",{mapKey,seed,reason:String(error?.message||error).slice(0,240)});return simulateFps(...args);})
       .then((sim)=>{
         if(lastMountSimulation)csSimCacheEvent("replace",{mapKey:lastMountSimulation.mapKey,seed:lastMountSimulation.seed});
         lastMountSimulation={key,sim,mapKey,seed};
@@ -2034,6 +2059,7 @@ function createFpsPovWeapon(camera){
 
 function updateFpsPovWeapon(st,frame,ch,pov,dt){
   const weapon=st.povWeapon;if(!weapon)return;
+  if(weapon.major){const live=st.liveRef.current,actor=pov&&ch?.alive?st.players.find(player=>player.id===ch.id):null;weapon.update({frame,chase:ch,pov,live,family:c5a1WeaponFamily(ch?.gun),dt,weaponGroups:actor?.rigged?.c2c?.weaponGroups,frameAgeSec:Math.max(0,Number(st.subT)||0)*(Number(live.playbackFrameSec)||C5A2_PLAYBACK_FRAME_SEC)});st.povWeaponDiagnostics=weapon.diagnostics;return;}
   weapon.group.visible=Boolean(pov&&ch?.alive);
   if(!weapon.group.visible){weapon.flash.visible=false;weapon.diagnostics={visible:false,gun:weapon.gun||null,family:weapon.family||null,weaponParts:12,fireCount:weapon.fireCount,authority:"frame.muzzles + player.shooting"};st.povWeaponDiagnostics=weapon.diagnostics;return;}
   const family=c5a1WeaponFamily(ch.gun),profile={pistol:{scale:0.86,x:0.02,y:0.04,z:0.02,color:0xb9c2cf},smg:{scale:0.96,x:0,y:0,z:0,color:0x9ca8b6},rifle:{scale:1.04,x:-0.01,y:0,z:0,color:0x7f8b98},sniper:{scale:1.18,x:-0.03,y:0.01,z:0.01,color:0x9dc4d4},shotgun:{scale:1.08,x:-0.01,y:-0.01,z:0,color:0xb68e72}}[family]||{scale:1,x:0,y:0,z:0,color:0x9ca8b6};
@@ -2055,7 +2081,8 @@ function updateFpsPovWeapon(st,frame,ch,pov,dt){
 /* ═══════════════════════════════════════════════════════════════════════
    FpsScene3D — Three.js 渲染層
    ═══════════════════════════════════════════════════════════════════════ */
-function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCameraPresetRef}){
+function FpsScene3D({mapKey,sceneVersion="major.v1",roster=[],liveRef,onSelectPlayer,onRecenterRef,onCameraPresetRef}){
+  const mobile=useIsMobile();
   const mountRef=useRef(null);
   const stateRef=useRef(null); // 保存 three 物件，跨 effect 共用
 
@@ -2070,7 +2097,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
     const mount=mountRef.current;if(!mount)return;
     const endRendererInit=csLoadSpan("scene:renderer-init");
     const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:"high-performance"});
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,mobile?1.5:2));
     renderer.outputEncoding=THREE.sRGBEncoding;
     renderer.toneMapping=THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure=1.08;
@@ -2085,16 +2112,19 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
     scene.fog=new THREE.Fog(0x070b12,150,360);
 
     const camera=new THREE.PerspectiveCamera(42,1,0.1,600);
+    // Camera-attached POV meshes are rendered only when this subtree belongs
+    // to the scene. Keep legacy traversal unchanged; major owns this camera.
+    if(sceneVersion!=="legacy")scene.add(camera);
     // 球座標運鏡（phi 自天頂、theta 方位）
     const cam={theta:-Math.PI*0.62,phi:Math.PI*0.30,radius:88,tgt:new THREE.Vector3(0,3,0),
-               dTheta:-Math.PI*0.62,dPhi:Math.PI*0.30,dRadius:88,dTgt:new THREE.Vector3(0,3,0),autoFollow:true,overview:true,viewPreset:null,manualRadius:null,presetTransition:null,povFov:42,povPosition:new THREE.Vector3(),povLookAt:new THREE.Vector3()};
+               dTheta:-Math.PI*0.62,dPhi:Math.PI*0.30,dRadius:88,dTgt:new THREE.Vector3(0,3,0),autoFollow:true,overview:true,viewPreset:null,manualRadius:null,presetTransition:null,povFov:sceneVersion==="legacy"?42:72,povPosition:new THREE.Vector3(),povLookAt:new THREE.Vector3()};
 
     // ── 光照 ──
     const ambient=new THREE.AmbientLight(0x718394,0.68);scene.add(ambient);
     const hemi=new THREE.HemisphereLight(0xc6d9e4,0x4c463d,0.88);scene.add(hemi);
     const sun=new THREE.DirectionalLight(0xfff4dc,1.72);
     sun.position.set(46,80,30);sun.castShadow=true;
-    sun.shadow.mapSize.set(2048,2048);
+    sun.shadow.mapSize.set(mobile?1024:2048,mobile?1024:2048);
     const sc=sun.shadow.camera;sc.left=-70;sc.right=70;sc.top=70;sc.bottom=-70;sc.near=10;sc.far=220;sun.shadow.bias=-0.0004;sun.shadow.normalBias=0.5;
     scene.add(sun);
     const rim=new THREE.DirectionalLight(0x6390b0,0.5);rim.position.set(-40,30,-50);scene.add(rim);
@@ -2133,7 +2163,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
     own("groups",()=>{for(const g of [worldGroup,routeGroup,playerGroup,fxGroup]){g.parent?.remove?.(g);g.clear?.();}});
     stateRef.current.own=own;
 
-    stateRef.current.povWeapon=createFpsPovWeapon(camera);
+    stateRef.current.povWeapon=sceneVersion==="legacy"?createFpsPovWeapon(camera):createMajorFpsPovWeapon(camera);
     stateRef.current.setCameraPreset=(name)=>setFpsCameraPreset(stateRef.current,name);
 
     // ── 互動：拖曳旋轉 / 滾輪縮放 / 觸控 ──
@@ -2152,13 +2182,13 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
       else{cam.dTheta=drag.th-(p.clientX-drag.x)*0.0055;cam.dPhi=clamp(drag.ph-(p.clientY-drag.y)*0.0055,0.1,1.5);}};
     const onUp=()=>{drag=null;pinch=null;el.style.cursor="grab";};
     const onWheel=e=>{e.preventDefault();cancelPresetTransition();const chasing=!!(stateRef.current._chase&&stateRef.current._chase.alive);const pov=chasing&&liveRef.current?.cameraMode==="pov";cam.autoFollow=false;cam.viewPreset=null;
-      if(pov){cam.povFov=clamp((cam.povFov||42)+(e.deltaY>0?3:-3),36,72);camera.fov=cam.povFov;camera.updateProjectionMatrix();return;}
-      const min=chasing?4.5:18,max=chasing?55:200;cam.manualRadius=clamp((cam.manualRadius??cam.dRadius)*(e.deltaY>0?1.1:0.9),min,max);cam.dRadius=cam.manualRadius;};
+      if(pov){const legacy=stateRef.current.sceneVersion==="legacy";cam.povFov=clamp((cam.povFov||(legacy?42:72))+(e.deltaY>0?3:-3),legacy?36:50,legacy?72:92);camera.fov=cam.povFov;camera.updateProjectionMatrix();return;}
+      const min=chasing?fpsChaseMinimumRadius(stateRef.current.sceneVersion):18,max=chasing?55:200;cam.manualRadius=clamp((cam.manualRadius??cam.dRadius)*(e.deltaY>0?1.1:0.9),min,max);cam.dRadius=cam.manualRadius;};
     const onTouchStart=e=>{cancelPresetTransition();cam.autoFollow=false;cam.viewPreset=null;if(e.touches.length===2){drag=null;const[a,b]=e.touches;pinch={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),r:cam.dRadius,cx:(a.clientX+b.clientX)/2,cy:(a.clientY+b.clientY)/2,tx:cam.dTgt.x,tz:cam.dTgt.z,th:cam.dTheta};}else onDown(e);};
     const onTouchMove=e=>{e.preventDefault();
       if(e.touches.length===2&&pinch){const[a,b]=e.touches;const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);const pov=stateRef.current._chase?.alive&&liveRef.current?.cameraMode==="pov";
-        if(pov){cam.povFov=clamp((cam.povFov||42)*pinch.d/Math.max(1,d),36,72);camera.fov=cam.povFov;camera.updateProjectionMatrix();return;}
-        const min=stateRef.current._chase?.alive?4.5:18;cam.dRadius=clamp(pinch.r*pinch.d/Math.max(1,d),min,200);cam.manualRadius=cam.dRadius;
+        if(pov){const legacy=stateRef.current.sceneVersion==="legacy";cam.povFov=clamp((cam.povFov||(legacy?42:72))*pinch.d/Math.max(1,d),legacy?36:50,legacy?72:92);camera.fov=cam.povFov;camera.updateProjectionMatrix();return;}
+        const min=stateRef.current._chase?.alive?fpsChaseMinimumRadius(stateRef.current.sceneVersion):18;cam.dRadius=clamp(pinch.r*pinch.d/Math.max(1,d),min,200);cam.manualRadius=cam.dRadius;
         const cx=(a.clientX+b.clientX)/2,cy=(a.clientY+b.clientY)/2;panBy(cx-pinch.cx,cy-pinch.cy,cam.dRadius*0.0018,pinch.th,pinch.tx,pinch.tz);}
       else onMove(e);};
     //  ⚠ 監聽一律具名並登記，卸載時逐一移除。
@@ -2203,7 +2233,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
       el.removeEventListener("touchcancel",onUp);
     });
 
-    if(onRecenterRef)onRecenterRef.current=()=>{cancelPresetTransition();cam.autoFollow=true;cam.overview=true;cam.viewPreset=null;cam._ovBase=null;cam.manualRadius=null;cam._directorHotspot=null;cam._directorTarget=null;cam._directorTelemetry=null;cam.chaseYaw=0;cam.chasePitch=0;cam.povFov=42;camera.fov=42;camera.updateProjectionMatrix();};
+    if(onRecenterRef)onRecenterRef.current=()=>{cancelPresetTransition();cam.autoFollow=true;cam.overview=true;cam.viewPreset=null;cam._ovBase=null;cam.manualRadius=null;cam._directorHotspot=null;cam._directorTarget=null;cam._directorTelemetry=null;cam.chaseYaw=0;cam.chasePitch=0;cam.povFov=stateRef.current.sceneVersion==="legacy"?42:72;camera.fov=42;camera.updateProjectionMatrix();};
     if(onCameraPresetRef)onCameraPresetRef.current=(name)=>setFpsCameraPreset(stateRef.current,name);
 
     // ── 尺寸自適應 ──
@@ -2241,6 +2271,14 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
       const sub=live.playing?clamp(st.subT,0,1):0;
       if(frame){updateDynamic(st,frame,nf,pf,sub,live,W,dt,fIdx);}
       updateCamera(st,frame,sub,dt,W,live.cameraMode);
+      if(st.sceneVersion!=="legacy"){
+        // 觀戰聽音位置在鏡頭焦點；POV 在眼睛，不以高空相機距離壓低整場音量。
+        const right=st.audioRight||(st.audioRight=new THREE.Vector3());right.set(1,0,0).applyQuaternion(st.camera.quaternion);
+        const listener=live.audioListener||(live.audioListener={x:0,y:0,rightX:1,rightY:0});
+        const focus=live.cameraMode==="pov"&&st._chase?.alive?st.camera.position:st.cam.tgt;
+        listener.x=focus.x+50;listener.y=focus.z+50;listener.rightX=right.x;listener.rightY=right.z;
+      }
+      if(frame)layoutFpsWorldLabels(st,frame,live);
       updateFpsPovWeapon(st,frame,st._chase,Boolean(live.cameraMode==="pov"),dt);
       if(frame&&import.meta.env?.DEV){publishFpsVisibilityDiagnostics(st,frame,fIdx);}
       //  量測用：進場後只看到「第一個戰鬥 frame」與「rigged 角色全部就位後的第一個 frame」，
@@ -2299,7 +2337,9 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
       st?.c5aGunplayFx?.dispose?.();
       st?.utilityFx?.dispose?.();
       st?.players?.forEach((player)=>player.rigged?.dispose?.());
-      st?.povWeapon?.group?.traverse((object)=>{object.geometry?.dispose?.();const materials=Array.isArray(object.material)?object.material:[object.material];materials.filter(Boolean).forEach(material=>material.dispose?.());});
+      st?.roofShaderWarmup?.dispose?.();
+      if(st?.povWeapon?.major)st.povWeapon.dispose();
+      else st?.povWeapon?.group?.traverse((object)=>{object.geometry?.dispose?.();const materials=Array.isArray(object.material)?object.material:[object.material];materials.filter(Boolean).forEach(material=>material.dispose?.());});
       st?.camera?.remove?.(st?.povWeapon?.group);
       ro.disconnect();
       //  ⚠ 地圖環境（857 行的幾何與材質）以前完全沒有被收 —— 實測離場後
@@ -2345,7 +2385,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
     st.cam.autoFollow=true;st.cam.overview=true;st.cam.viewPreset=null;st.cam._ovBase=null;st.cameraRecoveryCount=0;
     st.c5a1HitDriftMax=0;st.c5a1HitDriftSamples=0;st.c5a1AuthoritativeDriftMax=0;st.objectiveSiteCount=0;
     const {scene,worldGroup,playerGroup,fxGroup,routeGroup,tex,sphereGeo}=st;
-    const map=MAPS[mapKey];
+    const map=(sceneVersion==="legacy"?FPS_LEGACY_MAPS:MAPS)[mapKey];
     const isMirage=mapKey==="mirage";
     const isDust=mapKey==="dust2";
     // Dust II / Inferno use darker floor palettes, so give them a restrained
@@ -2358,6 +2398,18 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
     st.ambient.color.set(isMirage?0x8093a0:isDust?0xa6b1b5:0xb78f72);st.ambient.intensity=isMirage?0.78:isDust?0.78:0.82;
     st.hemi.color.set(isMirage?0xd3e5e7:isDust?0xd7e0e0:0xe2bd99);st.hemi.groundColor.set(isMirage?0x5a554b:isDust?0x655443:0x55311f);st.hemi.intensity=isMirage?1.02:isDust?0.9:0.92;
     st.sun.intensity=isMirage?1.82:isDust?1.86:1.8;st.rim.intensity=isMirage?0.58:isDust?0.52:0.5;
+    if(sceneVersion!=="legacy"){
+      st.ambient.intensity=1.04;st.hemi.intensity=1.15;
+      st.hemi.groundColor.set(isMirage?0x89938a:isDust?0x899399:0x98887a);
+      st.sun.intensity=1.62;
+      if(!isMirage&&!isDust){
+        // 鑄造材質本身提供暖色；天空補光保持中性，避免整片灰地也染褐色。
+        st.ambient.color.set(0xb8cbd4);st.ambient.intensity=.82;
+        st.hemi.color.set(0xd1e5ed);st.hemi.groundColor.set(0x89938b);st.hemi.intensity=1.1;
+        st.sun.intensity=1.95;st.renderer.toneMappingExposure=1.28;
+        scene.fog.color.set(0x7b8586);
+      }
+    }
     // Renderer-side ray tests must use the same solid obstacle source as the
     // authoritative simulator. Keep tall buildings for camera fading, while
     // retaining low cover for tracer / line-of-sight blocking.
@@ -2379,92 +2431,44 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
     st.utilityFx?.dispose?.();
     st.utilityFx=null;
     st.players.forEach((player)=>player.rigged?.dispose?.());
+    st.roofShaderWarmup?.dispose?.();st.roofShaderWarmup=null;
+    st.c3Environment?.dispose?.();
     clear(worldGroup);clear(playerGroup);clear(fxGroup);clear(routeGroup);
     st.raycastTargets=[];
     //  ⚠ 換地圖會重建環境 ⇒ 先收掉上一份，否則每換一次就多留一整張地圖。
     st.c3Environment?.dispose?.();
-    st.c3Environment=csLoadTime("scene:map-environment",()=>createC3MirageEnvironment({group:worldGroup,mapKey,W}),{mapKey});
+    st.sceneVersion=sceneVersion;st.mapKey=mapKey;
+    const streetMemo=new Map();
+    const streetSegments=sceneVersion==="legacy"?null:createFpsMajorSegmentCache(solidObstacles,PLAYER_R);
+    const streets=[map.sites.a,map.sites.b,map.nodes.mid,map.spawns.ct].filter(Boolean).map(p=>buildNavigableRoute([map.spawns.t,p],solidObstacles,PLAYER_R,streetMemo,streetSegments));
+    st.c3Environment=csLoadTime("scene:map-environment",()=>createMajorMapEnvironment({group:worldGroup,mapKey,map,obstacles:solidObstacles,W,mobile,streets,terrain:sceneVersion!=="legacy"}),{mapKey});
 
     // 地板
     if(st.floorTex)st.floorTex.dispose?.();
-    st.floorTex=csLoadTime("scene:floor-texture",()=>makeFloorTexture(map));
-    const floor=new THREE.Mesh(new THREE.PlaneGeometry(150,150),new THREE.MeshStandardMaterial({map:st.floorTex,roughness:0.97,metalness:0.0}));
-    floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;floor.position.y=0;worldGroup.add(floor);
+    st.floorTex=null;
+    // major 地表與周邊由同一場景工廠／atlas持有，不再疊一張白色方形底板。
+    if(sceneVersion==="legacy"){
+      st.floorTex=csLoadTime("scene:floor-texture",()=>makeFloorTexture({...map,floor:mapKey==="mirage"?"#89918b":mapKey==="dust2"?"#758389":"#85756b",floorVignette:0.12}));
+      const floorGeo=new THREE.PlaneGeometry(100,100,mobile?24:40,mobile?24:40);floorGeo.rotateX(-Math.PI/2);
+      const floor=new THREE.Mesh(floorGeo,new THREE.MeshStandardMaterial({map:st.floorTex,roughness:.97,metalness:0}));floor.receiveShadow=true;worldGroup.add(floor);
+    }
     // 地板外框光帶
 
-    // 立面貼圖（程序產生窗戶/門，依面尺寸快取）
+    // 建物與掩體由同源 collider 的 Major kit 負責；不另造裝飾牆。
     const endStaticWorld=csLoadSpan("scene:static-world");
-    const ptIn=(x,y)=>map.walls.some(o=>x>o.x&&x<o.x+o.w&&y>o.y&&y<o.y+o.h);
-    const facadeCache={};
-    const getFacade=(cols,rows,door,variant)=>{
-      const key=cols+"_"+rows+"_"+door+"_"+variant;if(facadeCache[key])return facadeCache[key];
-      const cw=80,ch=88,W2=cols*cw,H2=rows*ch+ch,cv=document.createElement("canvas");cv.width=W2;cv.height=H2;const x=cv.getContext("2d");
-      const base=isMirage?(variant===0?"#c4b18d":variant===1?"#aa9879":"#d2c19d"):(variant===0?"#b8945c":variant===1?"#a9854c":"#c3a065");x.fillStyle=base;x.fillRect(0,0,W2,H2);
-      x.fillStyle="rgba(0,0,0,0.05)";for(let yy=0;yy<H2;yy+=22)x.fillRect(0,yy,W2,2);
-      for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const wx=c*cw+cw*0.24,wy=r*ch+ch*0.2,ww=cw*0.52,wh=ch*0.54;
-        x.fillStyle=isMirage?"#77684f":"#5a4322";x.fillRect(wx-5,wy-5,ww+10,wh+10);
-        const lit=((r*7+c*3+variant*5)%5===0);x.fillStyle=lit?"#ffe0a0":isMirage?"#3d5960":"#28323e";x.fillRect(wx,wy,ww,wh);
-        x.strokeStyle=isMirage?"#4d432f":"#37290f";x.lineWidth=3;x.beginPath();x.moveTo(wx+ww/2,wy);x.lineTo(wx+ww/2,wy+wh);x.moveTo(wx,wy+wh/2);x.lineTo(wx+ww,wy+wh/2);x.stroke();
-        if(lit){x.fillStyle="rgba(255,214,130,0.22)";x.fillRect(wx-3,wy-3,ww+6,wh+6);}}
-      const by=rows*ch;x.fillStyle="rgba(0,0,0,0.14)";x.fillRect(0,by,W2,3);
-      if(door){const dw=cw*0.66,dh=ch*0.84,dx=W2/2-dw/2,dy=by+ch-dh;x.fillStyle="#48341a";x.fillRect(dx-6,dy-6,dw+12,dh+8);x.fillStyle="#231a0c";x.fillRect(dx,dy,dw,dh);x.fillStyle="#160f07";x.fillRect(dx+5,dy+5,dw-10,dh-5);x.fillStyle="#c9a24a";x.fillRect(dx+dw*0.7,dy+dh*0.5,5,8);}
-      const tex=new THREE.CanvasTexture(cv);tex.encoding=THREE.sRGBEncoding;tex.anisotropy=4;facadeCache[key]=tex;return tex;
-    };
-    // 建築（盒體 + 立面 + 屋頂/女兒牆 + 邊緣）
-    const baseCol=new THREE.Color(map.accent);
-    const roofCol=new THREE.Color(map.accent).offsetHSL(0,0.06,-0.2);
-    st.fadeWalls=[];
-    map.walls.forEach((w,i)=>{
-      const h=W.vy(w.hgt);const cx=W.vx(w.x+w.w/2),cz=W.vz(w.y+w.h/2);
-      const col=baseCol.clone().offsetHSL(0,0,(i%5-2)*0.016);
-      const geo=new THREE.BoxGeometry(w.w,h,w.h);
-      const mat=new THREE.MeshStandardMaterial({color:col,roughness:0.93,metalness:0.02,flatShading:true});
-      const mesh=new THREE.Mesh(geo,mat);mesh.position.set(cx,h/2,cz);mesh.castShadow=true;mesh.receiveShadow=true;worldGroup.add(mesh);
-      const edges=new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:0x0a0d14,transparent:true,opacity:0.5}));
-      edges.position.copy(mesh.position);worldGroup.add(edges);
-      const wMats=[{m:mat,base:1},{m:edges.material,base:0.5}];
-      if(w.win){
-        const faces=[{cxw:w.x+w.w/2,cyw:w.y,nx:0,nz:-1,len:w.w,rot:Math.PI},{cxw:w.x+w.w/2,cyw:w.y+w.h,nx:0,nz:1,len:w.w,rot:0},{cxw:w.x,cyw:w.y+w.h/2,nx:-1,nz:0,len:w.h,rot:-Math.PI/2},{cxw:w.x+w.w,cyw:w.y+w.h/2,nx:1,nz:0,len:w.h,rot:Math.PI/2}];
-        let doorPlaced=false;
-        faces.forEach(f=>{if(f.len<5)return;if(ptIn(f.cxw+f.nx*0.8,f.cyw+f.nz*0.8))return;
-          const cols=clamp(Math.round(f.len/4),1,5),rows=clamp(Math.round(w.hgt/3),1,3);
-          const wantDoor=!doorPlaced&&f.len>=6;if(wantDoor)doorPlaced=true;
-          const tex=getFacade(cols,rows,wantDoor?1:0,i%3);
-          const fmat=new THREE.MeshStandardMaterial({map:tex,roughness:0.9,metalness:0.0,side:THREE.DoubleSide});
-          const plane=new THREE.Mesh(new THREE.PlaneGeometry(f.len*0.98,h*0.99),fmat);
-          plane.position.set(W.vx(f.cxw)+f.nx*0.07,h/2,W.vz(f.cyw)+f.nz*0.07);plane.rotation.y=f.rot;worldGroup.add(plane);wMats.push({m:fmat,base:1});});
-      }
-      if(w.roof==="pitch"){
-        const peak=Math.min(w.w,w.h)*0.45;const rm=new THREE.MeshStandardMaterial({color:roofCol,roughness:0.82,flatShading:true});
-        const roof=new THREE.Mesh(new THREE.ConeGeometry(0.5,1,4),rm);roof.scale.set(w.w*1.32,peak,w.h*1.32);roof.rotation.y=Math.PI/4;roof.position.set(cx,h+peak/2,cz);roof.castShadow=true;worldGroup.add(roof);wMats.push({m:rm,base:1});
-      }else{
-        const topMat=new THREE.MeshStandardMaterial({color:col.clone().offsetHSL(0,0,-0.05),roughness:0.92});
-        const top=new THREE.Mesh(new THREE.PlaneGeometry(w.w*0.9,w.h*0.9),topMat);
-        top.rotation.x=-Math.PI/2;top.position.set(cx,h+0.05,cz);worldGroup.add(top);wMats.push({m:topMat,base:1});
-        const ph=0.55,pm=new THREE.MeshStandardMaterial({color:col.clone().offsetHSL(0,0,0.05),roughness:0.9,flatShading:true});
-        [[w.w,0.5,0,w.h/2-0.25],[w.w,0.5,0,-(w.h/2-0.25)],[0.5,w.h,w.w/2-0.25,0],[0.5,w.h,-(w.w/2-0.25),0]].forEach(([pw,pd,ox,oz])=>{const b=new THREE.Mesh(new THREE.BoxGeometry(pw,ph,pd),pm);b.position.set(cx+ox,h+ph/2,cz+oz);b.castShadow=true;worldGroup.add(b);});wMats.push({m:pm,base:1});
-      }
-      st.fadeWalls.push({rect:{x0:W.vx(w.x),z0:W.vz(w.y),x1:W.vx(w.x+w.w),z1:W.vz(w.y+w.h)},mats:wMats,cur:1});
-    });
-    // 道具：木箱 / 油桶 / 沙包 / 車 / 平台
-    const addCrate=(X,Z)=>{const s=2.7,h=W.vy(1.5);const m=new THREE.Mesh(new THREE.BoxGeometry(s,h,s),new THREE.MeshStandardMaterial({color:0x6b4f2c,roughness:0.95,flatShading:true}));m.position.set(X,h/2,Z);m.castShadow=true;m.receiveShadow=true;worldGroup.add(m);const e=new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry),new THREE.LineBasicMaterial({color:0x2a1d0e,transparent:true,opacity:0.6}));e.position.copy(m.position);worldGroup.add(e);};
-    (map.crates||[]).forEach(c=>addCrate(W.vx(c.x),W.vz(c.y)));
-    (map.props||[]).forEach(p=>{const X=W.vx(p.x),Z=W.vz(p.y);
-      if(p.t==="barrel"){const m=new THREE.Mesh(new THREE.CylinderGeometry(1.1,1.1,2.6,12),new THREE.MeshStandardMaterial({color:0x7a3b2a,roughness:0.7,metalness:0.25,flatShading:true}));m.position.set(X,1.3,Z);m.castShadow=true;worldGroup.add(m);const r=new THREE.Mesh(new THREE.TorusGeometry(1.13,0.09,6,12),new THREE.MeshStandardMaterial({color:0x33170f}));r.rotation.x=Math.PI/2;r.position.set(X,1.7,Z);worldGroup.add(r);}
-      else if(p.t==="sandbag"){const a=p.a||0;const m=new THREE.Mesh(new THREE.BoxGeometry(3.4,1.3,1.7),new THREE.MeshStandardMaterial({color:0x6f6444,roughness:1,flatShading:true}));m.position.set(X,0.65,Z);m.rotation.y=a;m.castShadow=true;worldGroup.add(m);const m2=new THREE.Mesh(new THREE.BoxGeometry(3.0,1.2,1.5),new THREE.MeshStandardMaterial({color:0x7c704e,roughness:1,flatShading:true}));m2.position.set(X,1.75,Z);m2.rotation.y=a+0.25;m2.castShadow=true;worldGroup.add(m2);}
-      else if(p.t==="car"){const a=p.a||0;const body=new THREE.Mesh(new THREE.BoxGeometry(6,1.7,2.9),new THREE.MeshStandardMaterial({color:0x365a4a,roughness:0.45,metalness:0.35,flatShading:true}));body.position.set(X,1.05,Z);body.rotation.y=a;body.castShadow=true;worldGroup.add(body);const cab=new THREE.Mesh(new THREE.BoxGeometry(3,1.3,2.5),new THREE.MeshStandardMaterial({color:0x294a3c,roughness:0.4,metalness:0.3,flatShading:true}));cab.position.set(X,2.4,Z);cab.rotation.y=a;cab.castShadow=true;worldGroup.add(cab);const e=new THREE.LineSegments(new THREE.EdgesGeometry(body.geometry),new THREE.LineBasicMaterial({color:0x14241c}));e.position.copy(body.position);e.rotation.copy(body.rotation);worldGroup.add(e);}
-      else if(p.t==="plat"){const m=new THREE.Mesh(new THREE.BoxGeometry(7,1.3,7),new THREE.MeshStandardMaterial({color:baseCol.clone().offsetHSL(0,0,-0.07),roughness:0.9,flatShading:true}));m.position.set(X,0.65,Z);m.castShadow=true;m.receiveShadow=true;worldGroup.add(m);const e=new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry),new THREE.LineBasicMaterial({color:0x0a0d14,transparent:true,opacity:0.5}));e.position.copy(m.position);worldGroup.add(e);}
-      else addCrate(X,Z);
-    });
+    st.fadeWalls=st.c3Environment.fadeWalls;
     // 炸彈點 A/B 標記（地面紅環 + 大字）
     ["a","b"].forEach(k=>{const s=map.sites[k];if(!s)return;
-      const zone=new THREE.Mesh(new THREE.RingGeometry(5.2,7.2,40),new THREE.MeshBasicMaterial({color:0xef4444,transparent:true,opacity:0.32,side:THREE.DoubleSide}));
-      zone.rotation.x=-Math.PI/2;zone.position.set(W.vx(s.x),0.05,W.vz(s.y));worldGroup.add(zone);
-      const fill=new THREE.Mesh(new THREE.CircleGeometry(5.2,40),new THREE.MeshBasicMaterial({color:0xef4444,transparent:true,opacity:0.08,side:THREE.DoubleSide}));
-      fill.rotation.x=-Math.PI/2;fill.position.set(W.vx(s.x),0.04,W.vz(s.y));worldGroup.add(fill);
-      const letTex=makeBigLetter(k.toUpperCase(),"rgba(248,113,113,0.55)");letTex.__keep=false;
+      const major=sceneVersion!=="legacy";
+      const zone=new THREE.Mesh(new THREE.RingGeometry(5.2,major?5.48:7.2,40),new THREE.MeshBasicMaterial({color:major?0xdcb96a:0xef4444,transparent:true,opacity:major?.42:.32,side:THREE.DoubleSide}));
+      const elevation=sceneVersion==="legacy"?0:fpsMajorElevation(mapKey,s);
+      const conformMarker=geometry=>{geometry.rotateX(-Math.PI/2);const pos=geometry.attributes.position;for(let i=0;i<pos.count;i++)pos.setY(i,(sceneVersion==="legacy"?0:fpsMajorElevation(mapKey,{x:s.x+pos.getX(i),y:s.y+pos.getZ(i)}))+.06);geometry.computeVertexNormals();};
+      conformMarker(zone.geometry);zone.position.set(W.vx(s.x),0,W.vz(s.y));worldGroup.add(zone);
+      const fill=new THREE.Mesh(new THREE.CircleGeometry(5.2,40),new THREE.MeshBasicMaterial({color:major?0xdcb96a:0xef4444,transparent:true,opacity:major?.025:.08,side:THREE.DoubleSide}));
+      conformMarker(fill.geometry);fill.position.set(W.vx(s.x),0,W.vz(s.y));worldGroup.add(fill);
+      const letTex=makeBigLetter(k.toUpperCase(),major?"rgba(238,219,166,0.8)":"rgba(248,113,113,0.55)");letTex.__keep=false;
       const let3=new THREE.Mesh(new THREE.PlaneGeometry(6,6),new THREE.MeshBasicMaterial({map:letTex,transparent:true}));
-      let3.rotation.x=-Math.PI/2;let3.position.set(W.vx(s.x),0.06,W.vz(s.y));let3.userData.fpsMarkerType="objective-site";worldGroup.add(let3);
+      let3.rotation.x=-Math.PI/2;let3.position.set(W.vx(s.x),elevation+0.06,W.vz(s.y));let3.userData.fpsMarkerType="objective-site";worldGroup.add(let3);
       zone.userData.fpsMarkerType="objective-site";fill.userData.fpsMarkerType="objective-site";
       st.objectiveSiteCount=(st.objectiveSiteCount||0)+1;
     });
@@ -2529,7 +2533,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
       const aimMat=new THREE.MeshBasicMaterial({color:p.side==="ct"?0x7dd3fc:0xfdba74,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false});aimMat.__keep=true;
       const aimLine=new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.02,9,6),aimMat);aimLine.rotation.z=Math.PI/2;aimLine.position.set(1.1+4.5,0.95,0.04);aimLine.visible=false;body.add(aimLine);
       g.add(body);
-      const rigged=createFpsCharacterRenderer({parent:g,player:p,enabled:playerIndex<riggedLimit});
+      const rigged=createFpsCharacterRenderer({parent:g,player:p,enabled:playerIndex<riggedLimit,optimized:sceneVersion!=="legacy",mobile});
       // 選中柱
       const beamMat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.0,blending:THREE.AdditiveBlending,depthWrite:false});beamMat.__keep=true;
       const selBeam=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.14,7,8),beamMat);selBeam.position.y=3.5;g.add(selBeam);
@@ -2553,6 +2557,9 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
       return {id:p.id,side:p.side,role:p.role,col,g,body,bodyParts,torso,torsoMat,head,gun,bombBag,ring,ringMat,disc,selBeam,beamMat,hpGroup,hpFill,nameSpr,dead,deadMat,aimLine,aimMat,rigged};
     });
     st.raycastTargets=st.players.map(p=>p.g);
+    const weaponSocketPlayers=new Map(st.players.map(p=>[p.id,p]));
+    st.resolveWeaponMuzzle=sceneVersion!=="legacy"?(id,family,target)=>weaponSocketPlayers.get(id)?.rigged?.getMuzzleWorldPosition?.(target,family)||null:null;
+    st.resolveWeaponMuzzleDirection=sceneVersion!=="legacy"?(id,family,target)=>weaponSocketPlayers.get(id)?.rigged?.getMuzzleWorldDirection?.(target,family)||null:null;
     endPlayers({players:st.players.length});
     const endFxPools=csLoadSpan("scene:fx-pools");
 
@@ -2564,7 +2571,7 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
       drop:mkPool(12,()=>new THREE.Mesh(new THREE.BoxGeometry(0.7,0.16,0.16),new THREE.MeshStandardMaterial({color:0xc9a24a,emissive:0x3a2c10,emissiveIntensity:0.6,roughness:0.5}))),
       spark:mkPool(24,()=>new THREE.Sprite(new THREE.SpriteMaterial({map:tex.glow,color:0xfff1c0,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}))),
     };
-    st.c5aGunplayFx=createGunplayPresentation({group:fxGroup,scene,tex,beamGeometry:st.beamGeo,mapKey});
+    st.c5aGunplayFx=createGunplayPresentation({group:fxGroup,scene,tex,beamGeometry:st.beamGeo,mapKey,sceneVersion});
     st.utilityFx=createUtilityPresentation({group:fxGroup,textures:tex,sphereGeometry:sphereGeo});
     // 槍口閃光點光（共用，循環）
     st.flashLights=[0,1,2].map(()=>{const l=new THREE.PointLight(0xffe6a0,0,14,2);l.visible=false;scene.add(l);return l;});
@@ -2582,7 +2589,11 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
     const c4Label=makeLabelSprite("C4","rgba(255,244,190,0.98)",30,"rgba(45,20,18,0.9)");
     const bombLabel=new THREE.Sprite(new THREE.SpriteMaterial({map:c4Label.tex,transparent:true,depthTest:false}));bombLabel.scale.set(0.95,0.43,1);bombLabel.position.y=1.15;bomb.add(bombLabel);
     const bombGrp=new THREE.Group();bomb.position.y=0.05;bombGrp.add(bomb);bombGrp.visible=false;fxGroup.add(bombGrp);
-    const bombLight=new THREE.PointLight(0xff3030,0,18,2);bombGrp.add(bombLight);
+    // Major 的炸彈用 emissive／信標讀狀態，不在首次掉包時新增動態燈。
+    // CPU profile：首次 PointLight 改變整場 Standard shader 的燈數，
+    // getProgramInfoLog 等待約790ms；legacy 保留原呈現以供正式版本對照。
+    const bombLight=sceneVersion==="legacy"?new THREE.PointLight(0xff3030,0,18,2):null;
+    if(bombLight)bombGrp.add(bombLight);
     st.bomb={grp:bombGrp,mat:bombMat,light:bombLight,box:bombCase,label:bombLabel};
 
     endFxPools();
@@ -2590,10 +2601,16 @@ function FpsScene3D({mapKey,roster=[],liveRef,onSelectPlayer,onRecenterRef,onCam
     //  量測用：只記「第一個戰鬥 frame」與「rigged 角色全部就位」兩個時間點，記完即停。
     st.loadWatch={firstFrame:false,riggedReady:false,primitiveLeakFrames:0,pendingFrames:0};
     st.riggedRevealDeadline=(typeof performance!=="undefined"?performance.now():0)+RIGGED_REVEAL_TIMEOUT_MS;
+    if(sceneVersion!=="legacy"){
+      const endWarmup=csLoadSpan("scene:roof-shader-warmup");
+      const warmup=createFpsMajorRoofShaderWarmup({renderer:st.renderer,scene,camera:st.camera,environment:st.c3Environment,effectGroups:[fxGroup]});
+      st.roofShaderWarmup=warmup;
+      void warmup.ready.then(result=>{endWarmup(result);if(result.status==='failed'&&import.meta.env?.DEV)console.warn('[FPS] 屋頂shader預熱失敗',result.error);});
+    }
     endMapBuild({mapKey});
   // roster reference is useMemo-stable in the wrapper and changes on identity change.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[mapKey,roster]);
+  },[mapKey,sceneVersion,roster]);
 
   return <div ref={mountRef} style={{position:"absolute",inset:0,touchAction:"none"}}/>;
 }
@@ -2650,11 +2667,11 @@ function bodyPartSnapshot(nodes){
     materialVisible:renderables.reduce((sum,snapshot)=>sum+snapshot.materialVisible,0),
   };
 }
-function nodeTransformSnapshot(node){
+function nodeTransformSnapshot(node,updatedBounds=null){
   if(!node)return {exists:false,visible:false,matrixFinite:false,position:null,rotation:null,scale:null,bounds:null};
-  node.updateWorldMatrix?.(true,true);
+  if(!updatedBounds)node.updateWorldMatrix?.(true,true);
   const matrix=node.matrixWorld?.elements||[];
-  const bounds=new THREE.Box3().setFromObject(node);
+  const bounds=updatedBounds||new THREE.Box3().setFromObject(node);
   const finiteBounds=!bounds.isEmpty()&&allFinite([bounds.min.x,bounds.min.y,bounds.min.z,bounds.max.x,bounds.max.y,bounds.max.z]);
   return {
     exists:true,visible:node.visible!==false,matrixFinite:allFinite(matrix),
@@ -2665,14 +2682,15 @@ function nodeTransformSnapshot(node){
     boundsFinite:finiteBounds,
   };
 }
-function projectBodyScreenFootprint(node,camera,canvas){
-  const bounds=new THREE.Box3();let renderables=0;
+function projectBodyScreenFootprint(node,camera,canvas,worldMatricesCurrent=false){
+  const bounds=new THREE.Box3(),objectBounds=new THREE.Box3(),part=new THREE.Box3();let renderables=0;
   node?.traverse?.((object)=>{
     if(!object.isMesh&&!object.isLine&&!object.isSprite)return;
     if(object.visible===false||!nodeVisibleThroughParents(object))return;
     const materials=Array.isArray(object.material)?object.material:[object.material];
     if(!materials.some((material)=>material&&Number(material.opacity??1)>0))return;
-    const objectBounds=new THREE.Box3().setFromObject(object);
+    if(worldMatricesCurrent)setFpsBoundsFromUpdatedObject(object,objectBounds,part);
+    else objectBounds.setFromObject(object);
     if(objectBounds.isEmpty())return;
     bounds.union(objectBounds);renderables+=1;
   });
@@ -2693,6 +2711,7 @@ function projectBodyScreenFootprint(node,camera,canvas){
 }
 function diagRound(value){return Number.isFinite(Number(value))?Number(Number(value).toFixed(3)):null;}
 function buildFpsVisibilitySnapshot(st,frame,frameIndex){
+  const optimizedBounds=st.sceneVersion!=="legacy";
   const frameById=new Map((frame?.players||[]).map((player)=>[player.id,player]));
   const sceneVisible=st.scene?.visible!==false,playerGroupVisible=st.playerGroup?.visible!==false;
   st.camera.updateMatrixWorld();
@@ -2700,14 +2719,14 @@ function buildFpsVisibilitySnapshot(st,frame,frameIndex){
   const frustum=new THREE.Frustum().setFromProjectionMatrix(cameraMatrix);
   const players=st.players.map((P)=>{
     const authoritative=frameById.get(P.id)||null,riggedActive=P.rigged?.mode==="rigged",activeRoot=riggedActive?P.rigged?.root:P.body;
-    P.g.updateWorldMatrix(true,true);activeRoot?.updateWorldMatrix?.(true,true);
-    const worldPosition=new THREE.Vector3();P.g.getWorldPosition(worldPosition);
-    const primitiveBody=materialSnapshot(P.body),activeBody=materialSnapshot(activeRoot),sceneBodyPresent=activeBody.renderable>0,sceneBodyVisibleFlag=Boolean(activeRoot&&activeRoot.visible!==false),bodyVisible=Boolean(activeRoot&&activeRoot.visible!==false&&nodeVisibleThroughParents(activeRoot)&&activeBody.visibleRenderable>0&&activeBody.materialVisible>0),primitiveBodyVisible=Boolean(P.body&&P.body.visible!==false&&nodeVisibleThroughParents(P.body)&&primitiveBody.visibleRenderable>0&&primitiveBody.materialVisible>0),bodyParts={torso:bodyPartSnapshot(P.bodyParts?.torso),head:bodyPartSnapshot(P.bodyParts?.head),limbs:bodyPartSnapshot(P.bodyParts?.limbs),weapon:bodyPartSnapshot(P.bodyParts?.weapon)},screenBodyFootprint=projectBodyScreenFootprint(activeRoot,st.camera,st.renderer?.domElement),bounds=activeRoot?new THREE.Box3().setFromObject(activeRoot):new THREE.Box3();
+    P.g.updateWorldMatrix(true,true);if(!optimizedBounds)activeRoot?.updateWorldMatrix?.(true,true);
+    const worldPosition=new THREE.Vector3();if(optimizedBounds)worldPosition.setFromMatrixPosition(P.g.matrixWorld);else P.g.getWorldPosition(worldPosition);
+    const primitiveBody=materialSnapshot(P.body),activeBody=materialSnapshot(activeRoot),sceneBodyPresent=activeBody.renderable>0,sceneBodyVisibleFlag=Boolean(activeRoot&&activeRoot.visible!==false),bodyVisible=Boolean(activeRoot&&activeRoot.visible!==false&&nodeVisibleThroughParents(activeRoot)&&activeBody.visibleRenderable>0&&activeBody.materialVisible>0),primitiveBodyVisible=Boolean(P.body&&P.body.visible!==false&&nodeVisibleThroughParents(P.body)&&primitiveBody.visibleRenderable>0&&primitiveBody.materialVisible>0),bodyParts={torso:bodyPartSnapshot(P.bodyParts?.torso),head:bodyPartSnapshot(P.bodyParts?.head),limbs:bodyPartSnapshot(P.bodyParts?.limbs),weapon:bodyPartSnapshot(P.bodyParts?.weapon)},screenBodyFootprint=projectBodyScreenFootprint(activeRoot,st.camera,st.renderer?.domElement,optimizedBounds),bounds=activeRoot?(optimizedBounds?setFpsBoundsFromUpdatedObject(activeRoot):new THREE.Box3().setFromObject(activeRoot)):new THREE.Box3();
     const sphere=bounds.isEmpty()?null:bounds.getBoundingSphere(new THREE.Sphere()),inCameraFrustum=Boolean(sphere&&frustum.intersectsSphere(sphere));
     const projected=worldPosition.clone().project(st.camera);
     const inCameraViewport=allFinite([projected.x,projected.y,projected.z])&&projected.x>=-1&&projected.x<=1&&projected.y>=-1&&projected.y<=1&&projected.z>=-1&&projected.z<=1;
     const occludedByWall=Boolean(st.wallRects?.some((rect)=>segHitsRect(st.camera.position.x,st.camera.position.z,worldPosition.x,worldPosition.z,rect)));
-    const bodyTransform=nodeTransformSnapshot(activeRoot),primitiveTransform=nodeTransformSnapshot(P.body),matrixFinite=allFinite(P.g.matrixWorld.elements),transform={
+    const bodyTransform=nodeTransformSnapshot(activeRoot,optimizedBounds?bounds:null),primitiveTransform=nodeTransformSnapshot(P.body,optimizedBounds?setFpsBoundsFromUpdatedObject(P.body):null),matrixFinite=allFinite(P.g.matrixWorld.elements),transform={
       position:{x:P.g.position.x,y:P.g.position.y,z:P.g.position.z},rotation:{x:P.g.rotation.x,y:P.g.rotation.y,z:P.g.rotation.z},
       scale:{x:P.g.scale.x,y:P.g.scale.y,z:P.g.scale.z},
     };
@@ -2776,9 +2795,10 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null){
     const np=nmap[P.id];const sameRound=nf&&frame&&nf.rnd===frame.rnd;
     let x=p.pos.x,y=p.pos.y,va=p.va;
     if(np&&sameRound&&!p.dead&&!np.dead){x=lerp(p.pos.x,np.pos.x,sub);y=lerp(p.pos.y,np.pos.y,sub);va=lerpAngle(p.va,np.va,sub);}
-    P.g.position.set(W.vx(x),0,W.vz(y));
+    const elevation=np&&sameRound?lerp(p.elevation||0,np.elevation||0,sub):(p.elevation||0);
+    P.g.position.set(W.vx(x),elevation,W.vz(y));
     st.c5a1AuthoritativeDriftMax=Math.max(st.c5a1AuthoritativeDriftMax,Math.hypot(P.g.position.x-W.vx(x),P.g.position.z-W.vz(y)));
-    P.rigged?.update?.({player:p,previousPlayer:pp,nextPlayer:np,frameRound:frame.rnd,previousFrameRound:pf?.rnd,frameIndex,dt,playbackActive:Boolean(live.playing)});
+    P.rigged?.update?.({player:p,previousPlayer:pp,nextPlayer:np,frameRound:frame.rnd,previousFrameRound:pf?.rnd,frameIndex,dt,playbackActive:Boolean(live.playing),seekNonce:live.seekNonce});
     if(P.rigged){st.c5a1HitDriftMax=Math.max(st.c5a1HitDriftMax,P.rigged.maxHitPositionDrift||0);st.c5a1HitDriftSamples=st.players.reduce((sum,player)=>sum+(player.rigged?.hitPositionDriftSamples||0),0);}
     const riggedActive=P.rigged?.mode==="rigged";
     const riggedMode=P.rigged?.mode||"fallback";
@@ -2850,7 +2870,7 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null){
       if(P._prevHp==null)P._prevHp=p.hp;
       if(p.hp<P._prevHp-0.5)P._dmg=1;P._prevHp=p.hp;
       const dmg=P._dmg||0;
-      const fallbackOverlayScale=riggedActive?1:0.5;
+      const fallbackOverlayScale=riggedActive?0.45:0.35;
       P.hpGroup.scale.setScalar(clamp(dCam/26,1.0,4.2)*(1+0.4*dmg)*fallbackOverlayScale); // 近看也夠大、遠看放大
       if(P.nameSpr.userData.base){const ns=clamp(dCam/46,0.5,3.2)*fallbackOverlayScale,b=P.nameSpr.userData.base;P.nameSpr.scale.set(b.x*ns,b.y*ns,1);} // 名牌不再近看爆大
       P.hpFill.scale.x=Math.max(0.02,hpR);P.hpFill.position.x=-(1.3*(1-hpR))/2;
@@ -2911,7 +2931,7 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null){
    for(let k=lit;k<st.flashLights.length;k++)st.flashLights[k].visible=false;}
 
   if(st.c5aGunplayFx){
-    st.c5aFxEvidence=st.c5aGunplayFx.update({frame,previousFrame:pf,time,W,frameIndex,sub});
+    st.c5aFxEvidence=st.c5aGunplayFx.update({frame,previousFrame:pf,time,W,frameIndex,sub,resolveMuzzle:st.resolveWeaponMuzzle,resolveMuzzleDirection:st.resolveWeaponMuzzleDirection});
   }
 
   if(st.utilityFx){
@@ -2924,11 +2944,11 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null){
 
   // 炸彈信標
   if(st.bomb){const B=st.bomb;
-    if(frame.planted&&frame.c4pos){B.grp.visible=true;B.grp.position.set(W.vx(frame.c4pos.x),0,W.vz(frame.c4pos.y));
+    if(frame.planted&&frame.c4pos){B.grp.visible=true;B.grp.position.set(W.vx(frame.c4pos.x),st.sceneVersion==="legacy"?0:fpsMajorElevation(st.mapKey,frame.c4pos),W.vz(frame.c4pos.y));
       const blink=0.5+0.5*Math.abs(Math.sin(time*(frame.c4t&&frame.c4t<5?12:5)));
-      B.mat.emissiveIntensity=0.6+blink*1.4;B.label.material.opacity=0.82+blink*0.18;B.light.intensity=blink*4;
-    }else if(frame.droppedBomb){B.grp.visible=true;B.grp.position.set(W.vx(frame.droppedBomb.pos.x),0,W.vz(frame.droppedBomb.pos.y));
-      B.mat.emissiveIntensity=0.5+0.4*Math.abs(Math.sin(time*4));B.label.material.opacity=0.94;B.light.intensity=1.2;
+      B.mat.emissiveIntensity=0.6+blink*1.4;B.label.material.opacity=0.82+blink*0.18;if(B.light)B.light.intensity=blink*4;
+    }else if(frame.droppedBomb){B.grp.visible=true;B.grp.position.set(W.vx(frame.droppedBomb.pos.x),st.sceneVersion==="legacy"?0:fpsMajorElevation(st.mapKey,frame.droppedBomb.pos),W.vz(frame.droppedBomb.pos.y));
+      B.mat.emissiveIntensity=0.5+0.4*Math.abs(Math.sin(time*4));B.label.material.opacity=0.94;if(B.light)B.light.intensity=1.2;
     }else B.grp.visible=false;
   }
 
@@ -2937,7 +2957,7 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null){
   if(selId){const a=frame.players.find(p=>p.id===selId);const b=nf?.players.find(p=>p.id===selId);
     if(a){const px=b?lerp(a.pos.x,b.pos.x,sub):a.pos.x,py=b?lerp(a.pos.y,b.pos.y,sub):a.pos.y;
       let ne=null,nd=1e9;for(const e of frame.players){if(e.dead||e.side===a.side)continue;const d=Math.hypot(e.pos.x-px,e.pos.y-py);if(d<nd){nd=d;ne=e;}}
-      st._chase={id:a.id,x:px,y:py,va:a.va,gun:a.gun,alive:!a.dead,side:a.side,state:a.state,shooting:a.shooting>0,shootingValue:a.shooting||0,shootingFamily:c5a1WeaponFamily(a.gun),enemy:ne&&nd<55?{x:ne.pos.x,y:ne.pos.y,d:nd}:null};}else st._chase=null;}
+      st._chase={id:a.id,x:px,y:py,elevation:st.sceneVersion==="legacy"?0:fpsMajorElevation(st.mapKey,{x:px,y:py}),va:a.va,gun:a.gun,alive:!a.dead,side:a.side,state:a.state,shooting:a.shooting>0,shootingValue:a.shooting||0,shootingFamily:c5a1WeaponFamily(a.gun),enemy:ne&&nd<55?{x:ne.pos.x,y:ne.pos.y,d:nd}:null};}else st._chase=null;}
   else st._chase=null;
 
   // 路線疊加（顯示全部路線 或 僅高亮選中選手）
@@ -2974,6 +2994,28 @@ function inspectAliveCameraViewport(st,frame,W){
 function allAliveOutsideCameraViewport(st,frame,W){
   return inspectAliveCameraViewport(st,frame,W).shouldRecover;
 }
+function layoutFpsWorldLabels(st,frame,live){
+  if(st.sceneVersion==="legacy"||live.showLabels===false)return;
+  const canvas=st.renderer.domElement,w=canvas.clientWidth,h=canvas.clientHeight;
+  const point=st._labelProjection||(st._labelProjection=new THREE.Vector3()),rects=[];
+  const shooting=new Set((frame.muzzles||[]).map(e=>e.attackerId));
+  const actors=st.players.filter(P=>P.g.visible&&P.nameSpr.visible).map(P=>{
+    const p=frame.players.find(a=>a.id===P.id);
+    return{P,priority:(live.selected===P.id?100:0)+(shooting.has(P.id)?20:0)+(p?.hasBomb?10:0)};
+  }).sort((a,b)=>b.priority-a.priority||a.P.id.localeCompare(b.P.id));
+  st.camera.updateMatrixWorld();
+  for(const {P} of actors){
+    point.copy(P.g.position);point.y+=P.nameSpr.position.y;point.project(st.camera);
+    const x=(point.x+1)*w*.5,y=(1-point.y)*h*.5;
+    const distance=Math.max(1,st.camera.position.distanceTo(P.g.position));
+    const labelWidth=Math.max(28,P.nameSpr.scale.x*h/(2*distance*Math.tan(st.camera.fov*Math.PI/360)));
+    const rect={left:x-labelWidth*.5,right:x+labelWidth*.5,top:y-8,bottom:y+8};
+    const clipped=point.z<-1||point.z>1||rect.left<6||rect.right>w-6||rect.top<6||rect.bottom>h-6;
+    const overlaps=rects.some(r=>rect.left<r.right+3&&rect.right>r.left-3&&rect.top<r.bottom+3&&rect.bottom>r.top-3);
+    P.nameSpr.visible=!clipped&&!overlaps;
+    if(P.nameSpr.visible)rects.push(rect);
+  }
+}
 function snapOverviewToAlive(st,frame,W){
   const alive=(frame?.players||[]).filter((player)=>!player.dead);if(!alive.length)return;
   const cx=alive.reduce((sum,player)=>sum+player.pos.x,0)/alive.length,cy=alive.reduce((sum,player)=>sum+player.pos.y,0)/alive.length;
@@ -2992,7 +3034,7 @@ function updateCamera(st,frame,sub,dt,W,cameraMode="tactical"){
   // 取消選取（按 ✕ 或點空白）時，凍結在目前的對戰視角，不跳回大視角
   if(st._wasChasing&&!chasing&&!cam.overview){cam.autoFollow=false;cam.dTheta=cam.theta;cam.dPhi=cam.phi;cam.dRadius=cam.radius;cam.dTgt.copy(cam.tgt);}
   if(!st._wasChasing&&chasing){cam.chaseYaw=0;cam.chasePitch=0;cam.manualRadius=null;} // 新選取 → 回到過肩預設
-  if(st._chaseId!==ch?.id&&chasing){cam.chaseYaw=0;cam.chasePitch=0;cam.manualRadius=null;cam.povFov=42;cam.povPosition.set(0,0,0);cam.povLookAt.set(0,0,0);}
+  if(st._chaseId!==ch?.id&&chasing){cam.chaseYaw=0;cam.chasePitch=0;cam.manualRadius=null;cam.povFov=st.sceneVersion==="legacy"?42:72;cam.povPosition.set(0,0,0);cam.povLookAt.set(0,0,0);}
   st._chaseId=ch?.id||null;
   st._wasChasing=chasing;
   if(chasing){
@@ -3006,19 +3048,41 @@ function updateCamera(st,frame,sub,dt,W,cameraMode="tactical"){
     // readable operator-sized shot with enough shoulder/world context; the
     // explicit POV control below is the only path to eye-level camera.
     cam.dRadius=cam.manualRadius??(close?14:18);
-    const fwd=close?2.5:3.0;
-    cam.dTgt.set(W.vx(ch.x+Math.cos(va)*fwd),1.08,W.vz(ch.y+Math.sin(va)*fwd));
+    const fwd=fpsChaseForwardOffset({sceneVersion:st.sceneVersion,manualRadius:cam.manualRadius,close});
+    cam.dTgt.set(W.vx(ch.x+Math.cos(va)*fwd),(ch.elevation||0)+1.08,W.vz(ch.y+Math.sin(va)*fwd));
   }else if(cam.autoFollow&&frame){
     const alive=frame.players.filter(p=>!p.dead);
     const director=st.matchPresentationDirector;
     const hotspotCandidate=resolveFpsCombatHotspot(frame,director);
+    if(st.sceneVersion!=="legacy"&&hotspotCandidate?.kind==="objective-carrier"&&alive.length){
+      // 開局沒有交戰時展示兩隊部署，不追持包者而把另一隊整隊丟到畫外。
+      hotspotCandidate.x=alive.reduce((s,p)=>s+p.pos.x,0)/alive.length;
+      hotspotCandidate.y=alive.reduce((s,p)=>s+p.pos.y,0)/alive.length;
+      hotspotCandidate.kind="deployment-centroid";hotspotCandidate.key="deployment-centroid";
+    }
     const hotspot=updateFpsCombatHotspot(cam,hotspotCandidate,dt,Number(frame.ts??frame.roundSec??0));
-    if((cam.viewPreset&&FPS_CAMERA_PRESETS[cam.viewPreset])||hotspot){
+    if(cam.viewPreset==="overview"){
+      // 玩家指定的全場總覽固定在地圖；自動導播／其他 preset 才追交戰熱點。
+      const preset=FPS_CAMERA_PRESETS.overview;
+      cam.dTgt.set(0,2.8,0);cam.dRadius=Math.max(185,185/Math.max(.5,st.camera.aspect));cam.dPhi=preset.phi;cam.dTheta=preset.theta;
+      cam._directorTelemetry={kind:"map-overview",source:"player-camera-preset"};
+    }else if((cam.viewPreset&&FPS_CAMERA_PRESETS[cam.viewPreset])||hotspot){
       const preset=cam.viewPreset?FPS_CAMERA_PRESETS[cam.viewPreset]:null;
+      let fittedCombat=null;
       if(preset){
         // Preset is a composition style. Never replace its target with a map
         // center; the target below remains owned by combat/objective evidence.
         cam.dRadius=preset.radius;cam.dPhi=preset.phi;cam.dTheta=preset.theta;
+      }else if(st.sceneVersion!=="legacy"&&hotspot&&alive.length){
+        // 自動導播框住真實熱點附近角色；不以全員跨度配熱點中心造成半幅空白。
+        const focused=alive.filter(p=>Math.hypot(p.pos.x-hotspot.x,p.pos.y-hotspot.y)<=30);
+        const hasBothSides=focused.some(p=>p.side==='t')&&focused.some(p=>p.side==='ct');
+        const actors=hasBothSides?focused:alive;
+        if(cam._ovBase==null)cam._ovBase=cam.dTheta;cam.dTheta=cam._ovBase;
+        const bombAnchor=frame.planted&&finiteFpsPoint(frame.c4pos)?{x:W.vx(frame.c4pos.x),z:W.vz(frame.c4pos.y),elevation:fpsMajorElevation(st.mapKey,frame.c4pos)}:null;
+        const objectiveView=String(hotspot.kind||"").includes("objective")||String(hotspot.kind||"").includes("bomb")||String(director?.kind||"").includes("bomb")||director?.kind==="defuse-start";
+        fittedCombat=fitFpsCombatCamera({points:actors.map(p=>({x:W.vx(p.pos.x),z:W.vz(p.pos.y),elevation:p.elevation||0})),focus:{x:W.vx(hotspot.x),z:W.vz(hotspot.y)},objective:bombAnchor,targetY:objectiveView?3.8:3,aspect:st.camera.aspect,theta:cam.dTheta,phi:.86});
+        cam.dRadius=lerp(cam.dRadius,fittedCombat.radius,.08);cam.dPhi=lerp(cam.dPhi,.86,.06);
       }else if(cam.overview&&alive.length){
         let maxd=0;const cx=alive.reduce((sum,player)=>sum+player.pos.x,0)/alive.length,cy=alive.reduce((sum,player)=>sum+player.pos.y,0)/alive.length;
         alive.forEach(player=>{maxd=Math.max(maxd,Math.hypot(W.vx(player.pos.x)-W.vx(cx),W.vz(player.pos.y)-W.vz(cy)));});
@@ -3027,7 +3091,7 @@ function updateCamera(st,frame,sub,dt,W,cameraMode="tactical"){
       }
       if(hotspot){
         const objective=String(hotspot.kind||"").includes("objective")||String(hotspot.kind||"").includes("bomb")||String(director?.kind||"").includes("bomb")||director?.kind==="defuse-start";
-        cam._directorTarget=new THREE.Vector3(W.vx(hotspot.x),objective?3.8:3.0,W.vz(hotspot.y));cam.dTgt.copy(cam._directorTarget);
+        cam._directorTarget=new THREE.Vector3(fittedCombat?.target.x??W.vx(hotspot.x),fittedCombat?.target.y??(objective?3.8:3.0),fittedCombat?.target.z??W.vz(hotspot.y));cam.dTgt.copy(cam._directorTarget);
         cam._directorTelemetry={key:hotspot.key,kind:hotspot.kind,source:hotspot.source,score:hotspot.score,position:{x:hotspot.x,y:hotspot.y},objective};
       }
     }else if(!cam.viewPreset&&director?.position&&Number(director.expiresAt)>Number(frame.ts??0)){
@@ -3084,12 +3148,12 @@ function updateCamera(st,frame,sub,dt,W,cameraMode="tactical"){
     // The eye is a stable head anchor, slightly forward of the body center.
     // The old 0.12 offset put the camera inside the fallback/rigger envelope
     // during interpolation and made the selected operator enter the view.
-    const eyeOffset=0.38,eyeHeight=1.56+Math.sin(pitch)*0.04;
+    const eyeOffset=0.38,eyeHeight=(ch.elevation||0)+1.56+Math.sin(pitch)*0.04;
     const eye=new THREE.Vector3(W.vx(ch.x+Math.cos(va)*eyeOffset),eyeHeight,W.vz(ch.y+Math.sin(va)*eyeOffset));
     const look=new THREE.Vector3(W.vx(ch.x+Math.cos(va)*12),eyeHeight+Math.sin(pitch)*4.5,W.vz(ch.y+Math.sin(va)*12));
     const k=1-Math.pow(0.0015,Math.max(0,dt));
     if(cam.povPosition.lengthSq()===0){cam.povPosition.copy(eye);cam.povLookAt.copy(look);}else{cam.povPosition.lerp(eye,k);cam.povLookAt.lerp(look,k);}
-    st.camera.fov=cam.povFov||42;st.camera.updateProjectionMatrix();st.camera.position.copy(cam.povPosition);st.camera.lookAt(cam.povLookAt);
+    st.camera.fov=cam.povFov||(st.sceneVersion==="legacy"?42:72);st.camera.updateProjectionMatrix();st.camera.position.copy(cam.povPosition);st.camera.lookAt(cam.povLookAt);
   }else{
     st.camera.fov=42;st.camera.updateProjectionMatrix();
     const k=1-Math.pow(0.0015,dt);
@@ -3124,7 +3188,7 @@ function updateCamera(st,frame,sub,dt,W,cameraMode="tactical"){
     st.camera.position.y+=Math.cos(seed*0.013)*kick*0.72;
     st.camera.position.z+=Math.sin(seed*0.011+1.2)*kick*0.82;
   }
-  fadeOccluders(st,frame,W);
+  fadeOccluders(st,frame,W,pov);
   // An explicit camera preset owns its composition. Do not let the generic
   // all-alive recovery clear that preset when a deliberate hotspot framing
   // temporarily leaves a distant player outside the viewport.
@@ -3140,37 +3204,80 @@ function updateCamera(st,frame,sub,dt,W,cameraMode="tactical"){
       st.cameraRecoveryCount=(st.cameraRecoveryCount||0)+1;
       if(now!=null)st.lastCameraRecoveryAt=now;
       snapOverviewToAlive(st,frame,W);
-      fadeOccluders(st,frame,W);
+      fadeOccluders(st,frame,W,pov);
     }
   }
 }
 // 建物擋住視線時自動半透明，方便縱觀對戰全局
-function fadeOccluders(st,frame,W){
+function fadeOccluders(st,frame,W,pov=false){
   if(!st.fadeWalls||!st.fadeWalls.length||!frame)return;
+  // r160 的 OPAQUE define 依 material version 更新；只改 opacity／transparent
+  // 會留下強制 alpha=1 的舊 program。僅在 major 狀態切換時更新，不逐幀編譯。
+  const setTransparency=(material,next)=>{if(st.sceneVersion!=="legacy"&&material.transparent!==next)material.needsUpdate=true;material.transparent=next;};
+  // 第一人稱必須看見真實掩體；俯瞰用的全場選手遮擋淡出不能沿用。
+  // 立即恢復上一個觀戰鏡頭留下的透明度，避免切換時短暫看穿牆壁。
+  if(pov&&st.sceneVersion!=="legacy"){
+    for(const wall of [...st.fadeWalls,...(st.c3Environment?.fadeDetails||[])]){
+      wall.cur=1;
+      for(const {m,base} of wall.mats){m.opacity=base;setTransparency(m,base<1);m.depthWrite=base>=1;m.depthTest=true;}
+    }
+    for(const roof of st.c3Environment?.fadeRoofs||[]){roof.cur=1;roof.material.opacity=1;setTransparency(roof.material,false);roof.material.depthWrite=true;}
+    st.c3Environment?.group?.traverse(object=>{if(object.userData?.c3Environment&&object.userData.c3Occluder==="structure")object.visible=true;});
+    return;
+  }
   const cam=st.camera.position,tgt=st.cam.tgt;const ch=st._chase;const chasing=ch&&ch.alive;
   const preset=st.cam.viewPreset;
   const elevated=preset==="high"||preset==="overview"||preset==="tactical";
-  const foci=[[tgt.x,tgt.z]];
-  if(chasing){foci.push([W.vx(ch.x),W.vz(ch.y)]);
-    const dx=tgt.x-cam.x,dz=tgt.z-cam.z,l=Math.hypot(dx,dz)||1;foci.push([tgt.x+dx/l*24,tgt.z+dz/l*24]);} // 前方下槍線焦點
+  const foci=[[tgt.x,tgt.z,tgt.y]];
+  if(chasing){
+    foci.push([W.vx(ch.x),W.vz(ch.y),(ch.elevation||0)+1.2]);
+    if(st.sceneVersion==="legacy"){
+      const dx=tgt.x-cam.x,dz=tgt.z-cam.z,l=Math.hypot(dx,dz)||1;foci.push([tgt.x+dx/l*24,tgt.z+dz/l*24]);
+    }
+  }
   const alive=frame.players.filter(p=>!p.dead);
-  for(const p of alive){const wx=W.vx(p.pos.x),wz=W.vz(p.pos.y);foci.push([wx,wz]);} // 任何擋住選手的建物都淡出，避免人物消失只剩血條
+  // 近景只揭露選取選手與鏡頭目標；遠方選手不應使背景廠房消失。
+  // 全景導播及legacy保留全場焦點，以保持原有選手可讀性。
+  if(!chasing||st.sceneVersion==="legacy")for(const p of alive){const wx=W.vx(p.pos.x),wz=W.vz(p.pos.y);foci.push([wx,wz,(p.elevation||0)+1.2]);}
   const margin=chasing?5:0;
-  for(const fw of st.fadeWalls){
+  // major房間牆片共用合批材質；先收集所有引用的最小fade，再只套用一次。
+  // 避免未遮擋的最後一片牆把整個房間重新變成不透明；legacy原寫入順序不變。
+  const sharedFades=st.sceneVersion!=="legacy"?new Map():null;
+  for(const fw of [...st.fadeWalls,...(st.c3Environment?.fadeDetails||[])]){
     const r=fw.rect;let occ=false;
     // 相機緊貼或位於建物範圍內 → 直接淡出（進屋/貼牆時不擋畫面）
-    if(cam.x>r.x0-margin&&cam.x<r.x1+margin&&cam.z>r.z0-margin&&cam.z<r.z1+margin)occ=true;
-    if(!occ)for(const f of foci){if(segHitsRect(cam.x,cam.z,f[0],f[1],r)){occ=true;break;}}
+    if(cam.x>r.x0-margin&&cam.x<r.x1+margin&&cam.z>r.z0-margin&&cam.z<r.z1+margin&&cam.y>=(fw.minHeight??0)&&cam.y<=(fw.height??Infinity))occ=true;
+    if(!occ)for(const f of foci){
+      if(!segHitsRect(cam.x,cam.z,f[0],f[1],r))continue;
+      // 3D slab：高空鏡頭的視線若從屋頂上方經過，不把整張圖淡成玻璃。
+      let entry=0,exit=1,intersects=true;
+      for(const [start,end,min,max] of [[cam.x,f[0],r.x0,r.x1],[cam.z,f[1],r.z0,r.z1]]){
+        const delta=end-start;if(Math.abs(delta)<1e-6){if(start<min||start>max)intersects=false;continue;}
+        const a=(min-start)/delta,b=(max-start)/delta;entry=Math.max(entry,Math.min(a,b));exit=Math.min(exit,Math.max(a,b));
+      }
+      const focusHeight=f[2]??1.2,entryY=cam.y+(focusHeight-cam.y)*entry,exitY=cam.y+(focusHeight-cam.y)*exit;
+      if(intersects&&entry<=exit&&Math.min(entryY,exitY)<=(fw.height??Infinity)&&Math.max(entryY,exitY)>=(fw.minHeight??0)){occ=true;break;}
+    }
     // 高位 preset 讓建築保留輪廓，但把玩家與交戰線放到可讀層；
     // 一般導播／追焦仍沿用原本的遮擋契約。
-    const target=elevated?(occ?(preset==="high"?0.1:0.16):(preset==="high"?0.28:0.48)):(occ?0.14:1.0);
+    const target=occ?(elevated?.16:.14):1;
     fw.cur+=(target-fw.cur)*0.18;
     const fade=fw.cur,tr=fade<0.985;
-    for(const mm of fw.mats){mm.m.opacity=mm.base*fade;mm.m.transparent=tr||mm.base<1;mm.m.depthWrite=!tr;mm.m.depthTest=!tr;}
+    for(const mm of fw.mats){
+      if(sharedFades){
+        const previous=sharedFades.get(mm.m);
+        sharedFades.set(mm.m,{opacity:Math.min(previous?.opacity??Infinity,mm.base*fade),fade:Math.min(previous?.fade??1,fade),base:Math.min(previous?.base??Infinity,mm.base)});
+      }else{mm.m.opacity=mm.base*fade;setTransparency(mm.m,tr||mm.base<1);mm.m.depthWrite=!tr;mm.m.depthTest=true;}
+    }
   }
+  if(sharedFades)for(const [material,state] of sharedFades){const transparent=state.fade<.985;material.opacity=state.opacity;setTransparency(material,transparent||state.base<1);material.depthWrite=!transparent;material.depthTest=true;}
   // C3 façade 是裝飾層，不是碰撞牆。高位上帝視角隱藏會遮住全場的薄 façade
   // 結構，保留地面、標誌、掩體與燈具；離開高位後立即恢復。
   const env=st.c3Environment?.group;
+  for(const roof of st.c3Environment?.fadeRoofs||[]){
+    const occupied=alive.some(p=>{const x=W.vx(p.pos.x),z=W.vz(p.pos.y);return x>roof.rect.x0&&x<roof.rect.x1&&z>roof.rect.z0&&z<roof.rect.z1;});
+    roof.cur+=((occupied?(roof.occupiedOpacity??.16):1)-roof.cur)*.18;roof.material.opacity=roof.cur;setTransparency(roof.material,roof.cur<.985);roof.material.depthWrite=roof.cur>=.985;
+  }
   if(env){
     const hideStructure=preset==="high";
     env.traverse((object)=>{
@@ -3391,6 +3498,7 @@ function EsportsFPS3D({
   tacticalLayout:tacticalLayoutProp, // 賽前四階段布局：opening/mid-round/late-round/post-plant
   ctTactic:ctTacticProp,      // 對手 CT 戰術 id（可選；未給則 AI 預設）
   mapKey:mapKeyProp,          // 指定地圖
+  sceneVersion="major.v1",    // 舊進行中比賽保留 legacy 空間；新比賽使用原創配置
   seed:seedProp,              // 指定亂數種子
   teamName:teamNameProp,      // 我方隊名
   oppName:oppNameProp,        // 對手隊名
@@ -3400,6 +3508,7 @@ function EsportsFPS3D({
   embedded=false,             // 嵌入主遊戲：隱藏內建選圖/選戰術面板
   asyncSimulation=false,      // hotfix/cs-resume-worker：快取沒命中時改在 Worker 算（外層必須有 <Suspense>）
 }={}){
+  const mobile=useIsMobile();
   // 名稱覆寫（嵌入時）
   if(teamNameProp)T_NAME=teamNameProp; if(oppNameProp)CT_NAME=oppNameProp;
   const loadMountMarked=useRef(false);
@@ -3439,7 +3548,7 @@ function EsportsFPS3D({
   const [seed,setSeed]=useState(seedProp||42);
   useEffect(()=>{if(seedProp!=null&&seedProp!==seed)setSeed(seedProp);},[seedProp]);
   const tacticT=preMatchLayout.phases[CS_TACTICAL_PHASES.OPENING]?.tactic||baseTactic,tacticCT=lib.ct[Math.min(ctIdx,lib.ct.length-1)];
-  const sim=useMemo(()=>(asyncSimulation?simulateFpsForMountAsync:simulateFpsForMount)(mapKey,tacticT,tacticCT,seed,effectiveRoster,tacticalLayoutProp),[mapKey,tIdx,ctIdx,seed,effectiveRoster,tacticalLayoutProp,tacticT,tacticCT,asyncSimulation]);
+  const sim=useMemo(()=>(asyncSimulation?simulateFpsForMountAsync:simulateFpsForMount)(mapKey,tacticT,tacticCT,seed,effectiveRoster,tacticalLayoutProp,sceneVersion),[mapKey,sceneVersion,tIdx,ctIdx,seed,effectiveRoster,tacticalLayoutProp,tacticT,tacticCT,asyncSimulation]);
   // 賽後結果（給主遊戲）；播放到最後一格時透過 onComplete 回傳一次
   const matchResult=useMemo(()=>csLoadTime("sim:buildMatchResult",()=>buildMatchResult(sim,{tacticT,tacticCT,tName:T_NAME,ctName:CT_NAME,seed})),[sim,seed]);
   const completedRef=useRef(null);
@@ -3460,13 +3569,16 @@ function EsportsFPS3D({
   const [soundOn,setSoundOn]=useState(false);
   const [showStats,setShowStats]=useState(false);
   const presentationRef=useRef(null);
-  if(!presentationRef.current)presentationRef.current=createFpsMatchPresentation();
+  const presentationMajorRef=useRef(null);
+  if(!presentationRef.current||presentationMajorRef.current!==(sceneVersion!=="legacy")){presentationRef.current=createFpsMatchPresentation({major:sceneVersion!=="legacy"});presentationMajorRef.current=sceneVersion!=="legacy";}
   const [presentationRevision,setPresentationRevision]=useState(0);
   const audioRef=useRef(null);
+  const audioGateRef=useRef(null);
+  if(!audioGateRef.current)audioGateRef.current=createFpsAudioPlaybackGate();
   // Start the small CC0 asset preload at mount. The gesture still owns
   // AudioContext.resume(), but enabling sound no longer starts the network
   // and decode critical path.
-  useEffect(()=>{audioRef.current=makeAudio();return()=>{audioRef.current?.dispose?.();audioRef.current=null;}},[]);
+  useEffect(()=>{const audio=makeAudio({pooled:sceneVersion!=="legacy",mobile,getListener:()=>liveRef.current.audioListener});audioRef.current=audio;if(sceneVersion!=="legacy")setSoundOn(false);return()=>{audio?.dispose?.();if(audioRef.current===audio)audioRef.current=null;}},[sceneVersion,sceneVersion==="legacy"?false:mobile]);
   const fidc=useRef(0);
   const seekNonce=useRef(0);
   const recenter=useRef(null);
@@ -3487,7 +3599,16 @@ function EsportsFPS3D({
     setFIdx(next);
   };
   const publishedFidx=liveRef.current?.sim===sim&&Number.isFinite(liveRef.current?.fIdx)?liveRef.current.fIdx:fIdx;
-  liveRef.current={...liveRef.current,sim,fIdx:publishedFidx,playing,speed,playbackFrameSec:C5A2_PLAYBACK_FRAME_SEC,selected,cameraMode,cameraPreset,showLabels,showRoutes:FPS_DEBUG_ENABLED&&showRoutes,seekNonce:seekNonce.current,seekFrame:value=>{const next=clamp(Number(value)||0,0,total-1);publishFpsFrame(next,"diagnostic-seek");seekNonce.current++;},
+  const beginFpsSeek=(next,reason)=>{
+    seekNonce.current++;liveRef.current.seekNonce=seekNonce.current;
+    if(sceneVersion!=="legacy"){
+      audioRef.current?.resetGunfireEvents?.();audioGateRef.current.seek({simulation:sim,frameIndex:next,seekNonce:seekNonce.current});
+      const presentation=presentationRef.current;presentation.reset({resumeFrameIndex:next});presentation.update({frame:sim.frames[next],previousFrame:sim.frames[Math.max(0,next-1)],frameIndex:next});presentation.drainAudio();
+      setPresentationRevision(value=>value+1);
+    }
+    publishFpsFrame(next,reason);
+  };
+  liveRef.current={...liveRef.current,sim,fIdx:publishedFidx,playing,speed,playbackFrameSec:C5A2_PLAYBACK_FRAME_SEC,selected,cameraMode,cameraPreset,showLabels,showRoutes:FPS_DEBUG_ENABLED&&showRoutes,seekNonce:seekNonce.current,seekFrame:value=>{const next=clamp(Math.floor(Number(value)||0),0,total-1);beginFpsSeek(next,"diagnostic-seek");},
     advance:()=>{const from=liveRef.current.fIdx;if(from>=total-1){liveRef.current.playing=false;setPlaying(false);return from;}const next=from+1;publishFpsFrame(next,"playback");return next;}};
 
   // 切換比賽/地圖 → 重置
@@ -3497,7 +3618,8 @@ function EsportsFPS3D({
   // tear down the close-up chase roughly once per save interval. Initialize
   // only when the authoritative simulation changes; the initial prop value is
   // still used to resume the newly entered simulation.
-  useEffect(()=>{const startFrame=clamp(Number(resumeFrameIndex) || 0, 0, Math.max(0, sim.frames.length - 1));audioRef.current?.resetGunfireEvents?.();presentationRef.current?.reset?.({resumeFrameIndex:startFrame});publishFpsFrame(clamp(Number(resumeFrameIndex) || 0,0,Math.max(0,sim.frames.length-1)),"reset");setSelected(null);setCameraMode("tactical");setCameraPreset(null);setCasts([]);setComms([]);setPresentationRevision(value=>value+1);seekNonce.current++;setQuickFinishing(false);setQuickCompleted(false);setPlaying(true);},[sim]);
+  useEffect(()=>{const startFrame=clamp(Number(resumeFrameIndex) || 0, 0, Math.max(0, sim.frames.length - 1));audioRef.current?.resetGunfireEvents?.();audioGateRef.current.reset();presentationRef.current?.reset?.({resumeFrameIndex:startFrame});publishFpsFrame(clamp(Number(resumeFrameIndex) || 0,0,Math.max(0,sim.frames.length-1)),"reset");setSelected(null);setCameraMode("tactical");setCameraPreset(null);setCasts([]);setComms([]);setPresentationRevision(value=>value+1);seekNonce.current++;setQuickFinishing(false);setQuickCompleted(false);setPlaying(true);},[sim]);
+  useEffect(()=>{if(sceneVersion!=="legacy"){if(!playing||!soundOn)audioRef.current?.stopAll?.();audioGateRef.current.seek({simulation:sim,frameIndex:liveRef.current.fIdx,seekNonce:seekNonce.current});}},[playing,soundOn,sim,sceneVersion]);
 
   // R63：只保存可重建的 frame 游標與該 frame 的真實比分／時間，不複製 simulator。
   useEffect(()=>{
@@ -3506,7 +3628,7 @@ function EsportsFPS3D({
       frameIndex:fIdx,
       totalFrames:total,
       simulationTimeSec:Number(frame.ts)||0,
-      snapshot:{frameIndex:fIdx,totalFrames:total,simulationTimeSec:Number(frame.ts)||0,rnd:frame.rnd,ctScore:frame.ctScore,tScore:frame.tScore},
+      snapshot:{sceneVersion,frameIndex:fIdx,totalFrames:total,simulationTimeSec:Number(frame.ts)||0,rnd:frame.rnd,ctScore:frame.ctScore,tScore:frame.tScore},
     });
   },[fIdx,frame,total,onProgress]);
 
@@ -3525,19 +3647,20 @@ function EsportsFPS3D({
     frame.comms?.forEach(c=>{const id=++fidc.current;setComms(cs=>[...cs.slice(-4),{id,...c}]);setTimeout(()=>setComms(cs=>cs.filter(x=>x.id!==id)),4200);});
     // ── 音效 ──
     const A=audioRef.current;
-    if(soundOn&&A){
+    const dispatchAudio=sceneVersion==="legacy"?soundOn:audioGateRef.current.update({simulation:sim,frameIndex:fIdx,seekNonce:seekNonce.current,playing,soundOn});
+    if(dispatchAudio&&A){
       const frameStartMs=(Number(frame.roundSec)||0)*1000,frameEndMs=frameStartMs+C5A2_SIM_STEP_MS,playbackRate=Math.max(0.1,Number(speed)||1);
       (frame.muzzles||[]).filter(mz=>Number(mz.shotAtMs)>=frameStartMs&&Number(mz.shotAtMs)<frameEndMs).forEach(mz=>{
         const delaySec=Math.max(0,(Number(mz.shotAtMs)-frameStartMs)/1000/playbackRate);
-        A.burst(mz.weaponFamily||mz.cls,mz.kill,mz.distance,mz.eventId||mz.id,delaySec,mz.shotAtMs);
+        A.burst(mz.weaponFamily||mz.cls,mz.kill,mz.distance,mz.eventId||mz.id,delaySec,mz.shotAtMs,mz.pos);
       });
     }
     const presentationAudio=presentation?.drainAudio?.()||[];
-    if(soundOn&&A){presentationAudio.forEach(cue=>A.cue?.(cue.type,{eventId:cue.eventId,distance:cue.distance}));if(frame.droppedBomb&&!previousFrame?.droppedBomb)A.cue?.("bomb-dropped",{eventId:`bomb-dropped-${frame.rnd}-${fIdx}`,distance:12});}
+    if(dispatchAudio&&A){presentationAudio.forEach(cue=>A.cue?.(cue.type,{eventId:cue.eventId,distance:cue.distance,position:cue.position}));if(frame.droppedBomb&&!previousFrame?.droppedBomb)A.cue?.("bomb-dropped",{eventId:`bomb-dropped-${frame.rnd}-${fIdx}`,distance:12,position:frame.c4pos});}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[fIdx]);
 
-  const seek=useCallback(v=>{publishFpsFrame(clamp(v,0,total-1),"seek");seekNonce.current++;},[total,publishFpsFrame]);
+  const seek=useCallback(v=>{beginFpsSeek(clamp(Math.floor(Number(v)||0),0,total-1),"seek");},[total,beginFpsSeek]);
   const selP=selected?frame?.players.find(p=>p.id===selected):null;
   const povShotActive=Boolean(cameraMode==="pov"&&selP&&!selP.dead&&frame?.muzzles?.some(muzzle=>muzzle.attackerId===selP.id));
   const matchOver=Boolean(sim.completed)&&fIdx>=total-1;
@@ -3561,7 +3684,7 @@ function EsportsFPS3D({
 
   return(
     <div style={{minHeight:"100vh",background:`radial-gradient(120% 80% at 50% 0%, #0c1018 0%, ${C.bg} 60%)`,fontFamily:"system-ui,-apple-system,sans-serif",color:"#e8ebf0",padding:"10px 10px 18px",userSelect:"none",overflowX:"hidden"}}>
-      <div style={{maxWidth:430,margin:"0 auto"}}>
+      <div style={{maxWidth:mobile?430:1120,margin:"0 auto"}}>
 
         {/* 頂部比分列 */}
         <div style={{position:"sticky",top:0,zIndex:40,background:"rgba(7,10,16,0.92)",backdropFilter:"blur(10px)",borderRadius:12,border:`1px solid ${C.line}`,padding:"8px 10px",marginBottom:8}}>
@@ -3569,10 +3692,10 @@ function EsportsFPS3D({
         </div>
 
         {/* 3D 戰術畫面 */}
-        <div style={{position:"relative",width:"100%",paddingBottom:"118%",overflow:"visible",background:"#05070c"}}>
+        <div style={{position:"relative",width:"100%",paddingBottom:mobile?"118%":"56.25%",overflow:"visible",background:"#05070c"}}>
           <div data-esmo-fps-stable-canvas-region="1" style={{position:"absolute",inset:0,zIndex:0,contain:"layout paint",isolation:"isolate",overflow:"visible"}}>
             <div data-esmo-fps-canvas-layer="1" style={{position:"absolute",inset:0,zIndex:0}}>
-              <FpsScene3D mapKey={mapKey} roster={effectiveRoster} liveRef={liveRef} onSelectPlayer={selectPlayer} onRecenterRef={recenter} onCameraPresetRef={cameraPresetRef}/>
+              <FpsScene3D mapKey={mapKey} sceneVersion={sceneVersion} roster={effectiveRoster} liveRef={liveRef} onSelectPlayer={selectPlayer} onRecenterRef={recenter} onCameraPresetRef={cameraPresetRef}/>
             </div>
             <div data-esmo-fps-frame-decoration="1" aria-hidden="true" style={{position:"absolute",inset:0,zIndex:10,pointerEvents:"none",borderRadius:14,border:`1px solid ${C.line}`,boxShadow:"0 10px 50px rgba(0,0,0,0.7)"}} />
           </div>
@@ -3621,7 +3744,7 @@ function EsportsFPS3D({
           )}
 
           {/* 音效開關（畫面內小按鈕） */}
-          <button data-testid="cs-audio-toggle" data-cs-audio-state={soundOn?"on":"off"} onClick={()=>{const A=audioRef.current||(audioRef.current=makeAudio());const enabling=!soundOn;if(!A)return;if(!enabling){setSoundOn(false);return;}A.markUnmuteRequest?.();A.resume().then(state=>{if(state==="running"){setSoundOn(true);void A.ready?.catch?.(error=>{if(import.meta.env?.DEV)console.warn("[FPS audio] preload failed",error);});}else setSoundOn(false);}).catch(error=>{setSoundOn(false);if(import.meta.env?.DEV)console.warn("[FPS audio] resume failed",error);});}} title={soundOn?"關閉音效":"開啟音效"} aria-label={soundOn?"關閉音效":"開啟音效"} style={{position:"absolute",top:8,right:8,zIndex:25,width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center",background:soundOn?"rgba(56,189,248,0.22)":"rgba(13,17,25,0.85)",border:`1px solid ${soundOn?C.ct+"88":C.line}`,borderRadius:"50%",cursor:"pointer",fontSize:15,backdropFilter:"blur(6px)"}}>{soundOn?"🔊":"🔇"}</button>
+          <button data-testid="cs-audio-toggle" data-cs-audio-state={soundOn?"on":"off"} onClick={()=>{const A=audioRef.current||(audioRef.current=makeAudio({pooled:sceneVersion!=="legacy",mobile,getListener:()=>liveRef.current.audioListener}));const enabling=!soundOn;if(!A)return;if(!enabling){if(sceneVersion!=="legacy")A.stopAll?.();setSoundOn(false);return;}A.markUnmuteRequest?.();A.resume().then(state=>{if(state==="running"){setSoundOn(true);void A.ready?.catch?.(error=>{if(import.meta.env?.DEV)console.warn("[FPS audio] preload failed",error);});}else setSoundOn(false);}).catch(error=>{setSoundOn(false);if(import.meta.env?.DEV)console.warn("[FPS audio] resume failed",error);});}} title={soundOn?"關閉音效":"開啟音效"} aria-label={soundOn?"關閉音效":"開啟音效"} style={{position:"absolute",top:8,right:8,zIndex:25,width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center",background:soundOn?"rgba(56,189,248,0.22)":"rgba(13,17,25,0.85)",border:`1px solid ${soundOn?C.ct+"88":C.line}`,borderRadius:"50%",cursor:"pointer",fontSize:15,backdropFilter:"blur(6px)"}}>{soundOn?"🔊":"🔇"}</button>
 
           {/* 重新置中 */}
           <button data-testid="cs-camera-auto-director" onClick={()=>{selectPlayer(null);setCameraPreset(null);recenter.current&&recenter.current();}} style={{position:"absolute",bottom:8,right:8,zIndex:25,display:"flex",alignItems:"center",gap:4,background:"rgba(13,17,25,0.85)",border:`1px solid ${C.line}`,borderRadius:20,padding:"6px 12px",cursor:"pointer",color:"#cfd4dc",fontSize:10,fontWeight:700,backdropFilter:"blur(6px)"}}>

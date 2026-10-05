@@ -1,5 +1,7 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { createFpsTailoredClothing, TAILORED_PROXY } from "./fpsTailoredClothing.js";
 
 export const C2C_HERO_ART_MANIFEST = Object.freeze({
   id: "esmo-c2c-vector-9-hero",
@@ -24,6 +26,51 @@ export const C2C_HERO_ART_MANIFEST = Object.freeze({
 });
 
 const OWNED = "esmoC2cOwned";
+
+// 原創槍械的原生軸為 +X；位置是模型中的握把中心與槍管前端，非命中資料。
+const WEAPON_SOCKET_OFFSETS = Object.freeze({
+  pistol: { grip: [-0.06, -0.18, 0], muzzle: [0.47, 0.07, 0] },
+  smg: { grip: [0.1, -0.12, 0], muzzle: [0.91, 0, 0] },
+  rifle: { grip: [0.12, -0.1, 0], muzzle: [1.39, 0, 0] },
+  sniper: { grip: [0.12, -0.1, 0], muzzle: [2.01, 0, 0] },
+  shotgun: { grip: [0.16, -0.1, 0], muzzle: [1.37, 0.09, 0] },
+});
+
+// 只合批同一剛性 mount 的固定配件；骨骼驅動的袖／褲／手套仍獨立更新。
+// 關鍵裝備及持槍定位保留真實 mesh，既有近鏡頭與方向驗證不改成假節點。
+const RIGID_PART_ANCHORS = /^(C2C_PlateCarrier|C2C_MagazinePouch_0|C2C_RadioUnit|C2C_HelmetShell|C2C_HeadsetL|C2C_CT_LowerFaceMask|C2C_CT_ServiceMark|C2C_T_FaceWrap|C2C_T_DiagonalSling|PistolSlide|RifleReceiver|RifleMuzzle)$/;
+const PROFILE_PART_ANCHORS = /C2C_(CT_(AssaultRailL|SupportEarBridge|MarksmanMonocular|LowHelmetBrim|UtilityCamera)|T_(BalaclavaBrow|HeavyHeadWrap|FieldCapBrim|HoodPeak|BandanaBand))$/;
+
+function batchRigidParts(parent, { mobile = false, continuousClothing = false } = {}) {
+  const buckets = new Map();
+  for (const mesh of parent.children.slice()) {
+    if (continuousClothing && TAILORED_PROXY.test(mesh.name)) continue;
+    if (!mesh.isMesh || !mesh.userData?.[OWNED] || RIGID_PART_ANCHORS.test(mesh.name) || PROFILE_PART_ANCHORS.test(mesh.name)) continue;
+    const list = buckets.get(mesh.material) || [];
+    list.push(mesh); buckets.set(mesh.material, list);
+  }
+  let removed = 0;
+  for (const [material, meshes] of buckets) {
+    if (meshes.length < 2) continue;
+    const sources = meshes.map(mesh => {
+      mesh.updateMatrix();
+      const geometry = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
+      geometry.applyMatrix4(mesh.matrix);
+      return geometry;
+    });
+    const geometry = mergeGeometries(sources, false);
+    sources.forEach(g => g.dispose());
+    if (!geometry) throw new Error(`ESMO 人物固定配件合批失敗：${parent.name}`);
+    mark(geometry); geometry.computeBoundingBox(); geometry.computeBoundingSphere();
+    const batch = mark(new THREE.Mesh(geometry, material));
+    batch.name = `${parent.name}_RigidBatch_${buckets.size}_${removed}`;
+    batch.renderOrder = 1; batch.castShadow = !mobile; batch.receiveShadow = true;
+    batch.userData.parts = meshes.map(mesh => ({ name: mesh.name, matrix: mesh.matrix.toArray() }));
+    meshes.forEach(mesh => { parent.remove(mesh); mesh.geometry.dispose(); });
+    parent.add(batch); removed += meshes.length - 1;
+  }
+  return removed;
+}
 // Visual-only kit recipes.  They deliberately map existing roster identity / role
 // data to presentation variants; they do not create a gameplay class or state.
 const C2C_VARIATION_PROFILES = Object.freeze([
@@ -131,7 +178,7 @@ function resolveWeaponFamily(gun) {
   return WEAPON_FAMILY_BY_GUN[normalized] || "rifle";
 }
 
-function styleBaseCharacter(root, side = "t") {
+function styleBaseCharacter(root, side = "t", continuousClothing = false) {
   // C2A deliberately uses a neutral validation character whose sculpted
   // superhero anatomy remains visible after recolouring.  That mesh is still
   // the authoritative skeleton/mixer source, but it must not be the visible
@@ -141,6 +188,7 @@ function styleBaseCharacter(root, side = "t") {
   // remains untouched, while the clothing proxy built below owns rendering.
   const suitTone = side === "ct" ? 0x536e79 : 0x735b48;
   const faceTone = side === "ct" ? 0xc18d73 : 0xb9826a;
+  const body = continuousClothing ? root.getObjectByName("SuperHero_Male") : null;
   root.traverse((object) => {
     const materials = Array.isArray(object.material) ? object.material : [object.material];
     const objectName = object.name || "";
@@ -170,11 +218,19 @@ function styleBaseCharacter(root, side = "t") {
         // The source validation mesh has highly saturated eye textures.  C2C
         // presents a visor/face shield instead; hiding those tiny source eye
         // meshes prevents a zombie-like glowing-eye read beneath the helmet.
-        object.visible = false;
+        object.visible = continuousClothing;
+        if (continuousClothing && object.isSkinnedMesh) {
+          // These CC0 facial meshes have the identical per-actor bone order
+          // and bind inverses. Share the body skeleton, not extra GPU palettes.
+          if (!body || !object.skeleton.bones.every((bone, i) => bone === body.skeleton.bones[i]) || !object.skeleton.boneInverses.every((inverse, i) => inverse.equals(body.skeleton.boneInverses[i]))) throw new Error("臉部與人體蒙皮骨架不相容");
+          object.bind(body.skeleton, object.bindMatrix);
+          object.castShadow = false; object.receiveShadow = true;
+          object.userData.esmoC2cBaseHidden = false;
+        }
         material.map = null;
-        material.color?.setHex(0x1d2b31);
-        material.roughness = 0.42;
-        material.metalness = 0.12;
+        material.color?.setHex(continuousClothing && /brow/i.test(objectName) ? 0x30271f : 0x1d2b31);
+        material.roughness = continuousClothing ? 0.9 : 0.42;
+        material.metalness = continuousClothing ? 0 : 0.12;
         material.emissive?.setHex(0x000000);
         material.emissiveIntensity = 0;
         material.needsUpdate = true;
@@ -315,6 +371,14 @@ function createShotgun(parent, materials) {
 }
 
 const SEGMENT_UP = new THREE.Vector3(0, 1, 0);
+const ACTIVE_ANCHOR_INVERSES = new WeakMap();
+
+function bonePositionInRoot(root, bone, target) {
+  const inverse = ACTIVE_ANCHOR_INVERSES.get(root);
+  if (inverse) return target.setFromMatrixPosition(bone.matrixWorld).applyMatrix4(inverse);
+  bone.getWorldPosition(target);
+  return root.worldToLocal(target);
+}
 
 function addTaperedShell(parent, name, { top = 0.4, bottom = 0.34, height = 1, depth = 0.56, y = 0 } = {}, material) {
   const geometry = mark(new THREE.CylinderGeometry(top, bottom, height, 10, 1, false));
@@ -328,7 +392,25 @@ function addTaperedShell(parent, name, { top = 0.4, bottom = 0.34, height = 1, d
   return mesh;
 }
 
-function addDynamicMount(root, updaters, name, startNames, endNames, { positionAtEnd = false, scale = 1, fixedScale = null } = {}) {
+function addTailoredCarrier(parent, recipe, material) {
+  // Original paired chest/back plates: shoulder cut-outs and a narrowed waist,
+  // instead of wrapping the entire torso in a barrel. Both reuse the kit role.
+  const outline = [[-.29,-.29],[-.37,-.10],[-.34,.18],[-.21,.32],[.21,.32],[.34,.18],[.37,-.10],[.29,-.29]];
+  const shape = new THREE.Shape(outline.map(([x,y]) => new THREE.Vector2(x,y)));
+  const geometry = mark(new THREE.ExtrudeGeometry(shape,{depth:.035,bevelEnabled:true,bevelSegments:1,steps:1,bevelSize:.018,bevelThickness:.012}));
+  geometry.scale(recipe.top / .45, recipe.height / .68, 1);
+  const front = mark(new THREE.Mesh(geometry, material));
+  front.name = "C2C_PlateCarrier"; front.position.set(0,recipe.y,.30);
+  front.castShadow = true; front.receiveShadow = true;
+  parent.add(front);
+  const back = mark(new THREE.Mesh(mark(geometry.clone()),material));
+  back.name = "C2C_TailoredBackPlate"; back.rotation.y = Math.PI;
+  back.position.set(0,recipe.y,-.37); back.castShadow = true; back.receiveShadow = true;
+  parent.add(back);
+  return front;
+}
+
+function addDynamicMount(root, updaters, name, startNames, endNames, { positionAtEnd = false, scale = 1, fixedScale = null, followEndRotation = false } = {}) {
   const startBone = findBone(root, startNames);
   const endBone = findBone(root, endNames);
   if (!startBone || !endBone) return null;
@@ -338,16 +420,30 @@ function addDynamicMount(root, updaters, name, startNames, endNames, { positionA
   const start = new THREE.Vector3();
   const end = new THREE.Vector3();
   const direction = new THREE.Vector3();
+  const rootRotation = new THREE.Quaternion(), endRotation = new THREE.Quaternion();
+  const bindRotation = new THREE.Quaternion(), authoredRotation = new THREE.Quaternion();
+  if (followEndRotation) {
+    root.getWorldQuaternion(rootRotation).invert();
+    endBone.getWorldQuaternion(endRotation);
+    bindRotation.multiplyQuaternions(rootRotation, endRotation).invert();
+    // Authored headgear is built in the model's +Y-up bind frame. The neck to
+    // Head segment already tilts 17 degrees in this rig's bind pose: using it
+    // as the authored frame pushes the crown forward and exposes the scalp.
+    authoredRotation.identity();
+  }
   const update = () => {
-    startBone.getWorldPosition(start);
-    endBone.getWorldPosition(end);
-    root.worldToLocal(start);
-    root.worldToLocal(end);
+    bonePositionInRoot(root, startBone, start);
+    bonePositionInRoot(root, endBone, end);
     direction.subVectors(end, start);
     const length = Math.max(0.001, direction.length());
     if (positionAtEnd) group.position.copy(end);
     else group.position.copy(start).lerp(end, 0.5);
     group.quaternion.setFromUnitVectors(SEGMENT_UP, direction.normalize());
+    if (followEndRotation) {
+      root.getWorldQuaternion(rootRotation).invert();
+      endBone.getWorldQuaternion(endRotation);
+      group.quaternion.multiplyQuaternions(rootRotation, endRotation).multiply(bindRotation).multiply(authoredRotation);
+    }
     group.scale.setScalar(Number.isFinite(fixedScale) ? fixedScale : length * scale);
   };
   updaters.push(update);
@@ -382,10 +478,8 @@ function addDynamicSegment(root, updaters, name, startNames, endNames, material,
   const from = new THREE.Vector3();
   const to = new THREE.Vector3();
   const update = () => {
-    startBone.getWorldPosition(start);
-    endBone.getWorldPosition(end);
-    root.worldToLocal(start);
-    root.worldToLocal(end);
+    bonePositionInRoot(root, startBone, start);
+    bonePositionInRoot(root, endBone, end);
     axis.subVectors(end, start);
     const baseLength = Math.max(0.001, axis.length());
     from.copy(start).addScaledVector(axis, tStart);
@@ -396,6 +490,7 @@ function addDynamicSegment(root, updaters, name, startNames, endNames, material,
     mesh.quaternion.setFromUnitVectors(SEGMENT_UP, axis.normalize());
     mesh.scale.set(baseLength * width, length * lengthScale, baseLength * depth);
   };
+  update.mesh = mesh;
   updaters.push(update);
   update();
   return mesh;
@@ -423,12 +518,9 @@ function addDynamicJoint(root, updaters, name, boneNames, referenceStartNames, r
   const end = new THREE.Vector3();
   const direction = new THREE.Vector3();
   const update = () => {
-    bone.getWorldPosition(point);
-    referenceStart.getWorldPosition(start);
-    referenceEnd.getWorldPosition(end);
-    root.worldToLocal(point);
-    root.worldToLocal(start);
-    root.worldToLocal(end);
+    bonePositionInRoot(root, bone, point);
+    bonePositionInRoot(root, referenceStart, start);
+    bonePositionInRoot(root, referenceEnd, end);
     direction.subVectors(end, start);
     const length = Math.max(0.001, direction.length());
     if (Number.isFinite(at)) point.copy(start).lerp(end, at);
@@ -438,6 +530,7 @@ function addDynamicJoint(root, updaters, name, boneNames, referenceStartNames, r
     mesh.quaternion.setFromUnitVectors(SEGMENT_UP, direction.normalize());
     mesh.scale.set(length * width, length * height, length * depth);
   };
+  update.mesh = mesh;
   updaters.push(update);
   update();
   return mesh;
@@ -510,7 +603,7 @@ function addHeadPresentation(head, materials, side, profile) {
   addCylinder(head, "C2C_CommsBoom", 0.03, 0.03, 0.54, [-0.43, -0.14, 0.5], materials.metal, [0.3, 0, -0.62], 6);
 }
 
-function addTorsoEquipment(torso, materials, profile, side) {
+function addTorsoEquipment(torso, materials, profile, side, continuousClothing = false) {
   const vestRecipe = side === "ct"
     ? {
         assault: { top: 0.45, bottom: 0.37, height: 0.68, depth: 0.62, y: 0.04 },
@@ -526,8 +619,8 @@ function addTorsoEquipment(torso, materials, profile, side) {
         lurker: { top: 0.38, bottom: 0.33, height: 0.4, depth: 0.58, y: 0.03 },
         utility: { top: 0.42, bottom: 0.35, height: 0.5, depth: 0.65, y: -0.02 },
       }[profile.id];
-  const vest = addTaperedShell(torso, "C2C_PlateCarrier", vestRecipe, materials.armor);
-  vest.position.z = side === "ct" ? 0.025 : 0.04;
+  const vest = continuousClothing ? addTailoredCarrier(torso, vestRecipe, materials.armor) : addTaperedShell(torso, "C2C_PlateCarrier", vestRecipe, materials.armor);
+  if (!continuousClothing) vest.position.z = side === "ct" ? 0.025 : 0.04;
 
   const pouchXs = side === "ct"
     ? [-0.19, 0, 0.19].slice(0, profile.pouches)
@@ -596,9 +689,15 @@ function addTorsoEquipment(torso, materials, profile, side) {
       [-0.17, 0.02, 0.21].forEach((x, index) => addBox(torso, `C2C_T_UtilityPouch_${index}`, [0.14, 0.2, 0.1], [x, -0.13 - index * 0.025, 0.36], materials.polymer, [0, 0, index * -0.08]));
     }
   }
+  if (continuousClothing) {
+    for (const part of torso.children) {
+      if (/C2C_(CT_(VestStrap|UniformStrap|PoliceBadge|CommandTab|MolleStrip)|T_(DiagonalSling|ClothWrap|RifleSlingPad))/.test(part.name)) part.position.z += .085;
+      if (/C2C_(LightPack|LongPack|PackShoulderStrap)/.test(part.name)) part.position.z -= .12;
+    }
+  }
 }
 
-function buildKit(root, player) {
+function buildKit(root, player, { optimized = true, mobile = false, handWeaponMount = false, continuousClothing = false } = {}) {
   const side = player?.side === "ct" ? "ct" : "t";
   const profile = resolveVariation(player);
   const legacyAccent = root.getObjectByName("ESMO_FPS_TeamAccent");
@@ -610,6 +709,10 @@ function buildKit(root, player) {
   const teamPalette = side === "ct"
     ? { armor: 0x344750, polymer: 0x60747c, fabric: 0x244852, pants: 0x1d343c, helmet: 0x465f6a, skin: 0xb98567 }
     : { armor: 0x302e2b, polymer: 0x92785d, fabric: 0x76543c, pants: 0x38342f, helmet: 0x5b4433, skin: 0xaf7b5e };
+  // Separate cloth from flesh in the major skin; preserve legacy palette.
+  if (continuousClothing && side === "t") {
+    teamPalette.fabric = 0x65725c; teamPalette.pants = 0x283135;
+  }
   const materials = {
     armor: makeMaterial({ color: teamPalette.armor, roughness: 0.82, metalness: 0.04 }),
     polymer: makeMaterial({ color: teamPalette.polymer, roughness: 0.72, metalness: 0.04 }),
@@ -621,8 +724,8 @@ function buildKit(root, player) {
     accent: makeAccentMaterial(side),
   };
   const updaters = [];
-  const torso = addDynamicMount(root, updaters, "ESMO_C2C_TorsoClothingMount", ["pelvis", "spine_01"], ["neck_01", "spine_03"]);
-  const head = addDynamicMount(root, updaters, "ESMO_C2C_HeadClothingMount", ["neck_01", "spine_03"], ["Head"], { positionAtEnd: true, scale: 0.74 });
+  const torso = addDynamicMount(root, updaters, "ESMO_C2C_TorsoClothingMount", ["pelvis", "spine_01"], continuousClothing ? ["neck_01"] : ["neck_01", "spine_03"]);
+  const head = addDynamicMount(root, updaters, "ESMO_C2C_HeadClothingMount", continuousClothing ? ["neck_01"] : ["neck_01", "spine_03"], ["Head"], { positionAtEnd: true, scale: 0.74, fixedScale: continuousClothing ? .15 : null, followEndRotation: continuousClothing });
   if (!torso || !head) throw new Error("C2C clothing skeleton anchors unavailable");
 
   addTaperedShell(torso, "C2C_CombatTopShell", side === "ct"
@@ -639,8 +742,22 @@ function buildKit(root, player) {
     tEnd: 0.72,
     lengthScale: 1.08,
   });
-  addTorsoEquipment(torso, materials, profile, side);
+  addTorsoEquipment(torso, materials, profile, side, continuousClothing);
   addHeadPresentation(head, materials, side, profile);
+  // Source Head is a skull-base pivot, not the centre of the old sphere proxy.
+  if (continuousClothing) {
+    // True source Head bounds: y=1.577..1.810, eyes=1.684..1.714,
+    // pivot y=1.600. This fits crown and brow, rather than the old sphere proxy.
+    head.children.forEach(part => { part.position.y += .48; });
+    // Folded, open neckline: an authored continuous ring, not a solid cylinder
+    // blocking the chin. It follows the same head pose and batches with cloth.
+    const profile = [[.90,-.76],[.94,-.63],[.69,-.25],[.59,-.22],[.56,-.30],[.73,-.63],[.90,-.76]];
+    const collar = mark(new THREE.Mesh(mark(new THREE.LatheGeometry(profile.map(([x,y]) => new THREE.Vector2(x,y)),12)), materials.pants));
+    collar.name = "C2C_TailoredFoldedCollar";
+    collar.position.z = -.26; collar.scale.z = .7;
+    collar.castShadow = !mobile; collar.receiveShadow = true;
+    head.add(collar);
+  }
 
   const limbs = [
     { sideName: "L", index: 0, upper: ["upperarm_l"], lower: ["lowerarm_l"], hand: ["hand_l"], thigh: ["thigh_l"], calf: ["calf_l"], foot: ["foot_l"], ball: ["ball_l", "toe_l"] },
@@ -779,15 +896,57 @@ function buildKit(root, player) {
   shotgun.rotation.z = -0.02;
   shotgun.scale.setScalar(0.66);
   const weaponGroups = { pistol, smg, rifle, sniper, shotgun };
+  const weaponSockets = {};
+  // Legacy 姿態及純合批 fixture 不變；產品 major 由 Renderer 明確啟用。
+  const weaponHand = optimized && handWeaponMount ? findBone(root, ["hand_r"]) : null;
+  if (optimized && handWeaponMount && !weaponHand) throw new Error("ESMO 持槍缺少 hand_r 真實骨骼");
+  if (weaponHand) {
+    const gripInHand = new THREE.Vector3(0, 0.055, 0.015);
+    const gripOffset = new THREE.Vector3();
+    for (const [family, weapon] of Object.entries(weaponGroups)) {
+      const offsets = WEAPON_SOCKET_OFFSETS[family];
+      // CC0 hand_r 的 +Y 往掌心／指根，+X 對應槍械的下方。
+      weapon.rotation.set(0, 0, Math.PI / 2);
+      gripOffset.fromArray(offsets.grip).multiply(weapon.scale).applyQuaternion(weapon.quaternion);
+      weapon.position.copy(gripInHand).sub(gripOffset);
+      const grip = new THREE.Object3D(), muzzle = new THREE.Object3D();
+      grip.name = `ESMO_${family}_GripSocket`; grip.position.fromArray(offsets.grip);
+      muzzle.name = `ESMO_${family}_MuzzleSocket`; muzzle.position.fromArray(offsets.muzzle);
+      weapon.add(grip, muzzle);
+      weaponSockets[family] = { grip, muzzle };
+    }
+    const handInRoot = new THREE.Matrix4();
+    const handScale = new THREE.Vector3();
+    updaters.push(() => {
+      handInRoot.multiplyMatrices(ACTIVE_ANCHOR_INVERSES.get(root), weaponHand.matrixWorld);
+      handInRoot.decompose(weaponMount.position, weaponMount.quaternion, handScale);
+      // 槍械沿用原比例，不繼承動畫骨骼的非均勻縮放。
+      weaponMount.scale.setScalar(1);
+    });
+  }
+  const mergedParts = optimized ? [torso, head, ...Object.values(weaponGroups)].reduce((n, mount) => n + batchRigidParts(mount, { mobile, continuousClothing }), 0) : 0;
+  const tailored = continuousClothing ? createFpsTailoredClothing({ root, materials, mobile }) : null;
+  const removedClothingUpdaters = continuousClothing ? updaters.filter(update => update.mesh?.userData.esmoTailoredReplaced).length : 0;
+  if (removedClothingUpdaters) {
+    for (let i=updaters.length-1;i>=0;i--) if(updaters[i].mesh?.userData.esmoTailoredReplaced)updaters.splice(i,1);
+  }
+  if (optimized && mobile) root.traverse(object => { if (object.isMesh && object.userData?.[OWNED]) object.castShadow = false; });
   const initialWeaponFamily = resolveWeaponFamily(player?.gun);
   const setVisibleWeapon = (family) => Object.entries(weaponGroups).forEach(([key, group]) => { group.visible = key === family; });
+  const anchorInverse = new THREE.Matrix4();
 
   const state = {
     root,
+    tailored,
     mounts: [torso, head, weaponMount],
     clothingUpdaters: updaters,
+    removedClothingUpdaters,
     materials,
     weaponGroups,
+    weaponSockets,
+    weaponPose: weaponHand ? "hand_r" : "torso",
+    mergedParts,
+    quality: mobile ? "mobile" : "desktop",
     side,
     variationId: profile.id,
     variationLabel: profile.label,
@@ -818,9 +977,35 @@ function buildKit(root, player) {
     syncAnchors() {
       if (state.disposed) return;
       root.updateWorldMatrix?.(true, true);
-      updaters.forEach((update) => update());
+      // 每個骨架每次只更新一次矩陣；不在每個袖口／關節重走父節點鏈。
+      anchorInverse.copy(root.matrixWorld).invert();
+      ACTIVE_ANCHOR_INVERSES.set(root, anchorInverse);
+      try { updaters.forEach((update) => update()); }
+      finally { ACTIVE_ANCHOR_INVERSES.delete(root); }
+      // 上方已更新骨架；只重算被重新定位的槍械子樹，resolver 不再走父鏈。
+      if (weaponHand) weaponMount.updateWorldMatrix(false, true);
+    },
+    getMuzzleWorldPosition(target, expectedFamily = state.weaponFamily) {
+      if (state.disposed || !weaponHand || !target?.isVector3 || expectedFamily !== state.weaponFamily) return null;
+      const socket = weaponSockets[expectedFamily]?.muzzle;
+      if (!socket) return null;
+      // 產品在 syncAnchors 後才套 authoritative yaw；僅補 socket 祖先鏈，
+      // 不重走模型／骨架子樹，也不讓特效使用上一幀朝向。
+      socket.updateWorldMatrix(true, false);
+      target.setFromMatrixPosition(socket.matrixWorld);
+      return Number.isFinite(target.x) && Number.isFinite(target.y) && Number.isFinite(target.z) ? target : null;
+    },
+    getMuzzleWorldDirection(target, expectedFamily = state.weaponFamily) {
+      if (state.disposed || !weaponHand || !target?.isVector3 || expectedFamily !== state.weaponFamily) return null;
+      const socket = weaponSockets[expectedFamily]?.muzzle;
+      if (!socket) return null;
+      socket.updateWorldMatrix(true, false);
+      target.set(1, 0, 0).transformDirection(socket.matrixWorld);
+      return Number.isFinite(target.x) && Number.isFinite(target.y) && Number.isFinite(target.z) ? target : null;
     },
     dispose() {
+      if (state.disposed) return;
+      tailored?.dispose();
       state.disposed = true;
     },
   };
@@ -837,6 +1022,9 @@ function buildKit(root, player) {
     triangles += Math.floor((index ? index.count : position?.count || 0) / 3);
   });
   state.triangleCount = triangles;
+  let visibleTriangles = 0;
+  root.traverseVisible(object => { if (object.isMesh && object.geometry) visibleTriangles += (object.geometry.index?.count || object.geometry.attributes.position?.count || 0) / 3; });
+  state.visibleTriangles = visibleTriangles;
   return state;
 }
 
@@ -849,8 +1037,8 @@ export function isC2cHeroRequested(player) {
   return request === player?.id;
 }
 
-export function createC2cHeroPresentation({ root, player } = {}) {
+export function createC2cHeroPresentation({ root, player, optimized = true, mobile = false, handWeaponMount = false, continuousClothing = false } = {}) {
   if (!root) return null;
-  styleBaseCharacter(root, player?.side === "ct" ? "ct" : "t");
-  return buildKit(root, player);
+  styleBaseCharacter(root, player?.side === "ct" ? "ct" : "t", continuousClothing);
+  return buildKit(root, player, { optimized, mobile, handWeaponMount, continuousClothing });
 }

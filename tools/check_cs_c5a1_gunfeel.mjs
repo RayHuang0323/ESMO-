@@ -49,9 +49,13 @@ assert("five distinct recorded audio profiles exist", [
 assert("audio uses direct prepared recordings, attenuation and voice cap", [
   "sample:", "recordedOneShot", "prepared-direct", "preload", "distanceGain", "activeVoices", "droppedVoices",
 ].every((token) => has(fps, token)));
-assert("audio diagnostics and cleanup are wired", [
-  "__ESMO_FPS_AUDIO_DIAGNOSTICS__", "audioRef.current?.dispose", "dispose",
-].every((token) => has(fps, token)));
+// B3 effect清理自己的captured instance，避免舊effect釋放新AudioContext；
+// 保留原清理寫法支援，新增必須完整成立的ownership接線，不刪清理斷言。
+const audioCleanupWired = has(fps, "audioRef.current?.dispose") || [
+  "const audio=makeAudio(", "audioRef.current=audio", "return()=>{audio?.dispose?.();",
+  "if(audioRef.current===audio)audioRef.current=null;",
+].every((token) => has(fps, token));
+assert("audio diagnostics and cleanup are wired", has(fps, "__ESMO_FPS_AUDIO_DIAGNOSTICS__") && audioCleanupWired);
 assert("formal gunfire does not overlay procedural impact noise", has(fps, "A.burst") && !/A\.burst\([^\n]+\);A\.impact\(\)/.test(fps));
 assert("formal Battle gunfire has no procedural kill or enable-time tone overlay", !["A.kill(", "A.roundStart()"].some((token) => has(fps, token)));
 

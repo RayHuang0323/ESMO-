@@ -1,0 +1,42 @@
+import assert from "node:assert/strict";
+import { createFpsAudioPlaybackGate, resolveFpsAudioEmitter, resolveFpsAudioSpatial } from "../src/battle/fps/presentation/fpsAudioPlayback.js";
+import { createFpsMatchPresentation } from "../src/battle/fps/presentation/fpsMatchPresentation.js";
+
+// 純呈現 fixtures，只驗 frame 不變、來源位置與播放邊界；不代表真機聽感。
+let passed = 0;
+const test = (name, run) => { run(); passed++; console.log(`PASS ${name}`); };
+const freeze = value => { if (value && typeof value === "object") { Object.values(value).forEach(freeze); Object.freeze(value); } return value; };
+const sim = {}, otherSim = {};
+const input = (frameIndex, extra = {}) => ({ simulation: sim, frameIndex, seekNonce: 0, playing: true, soundOn: true, ...extra });
+const readyGate = () => { const gate = createFpsAudioPlaybackGate(); assert.equal(gate.update(input(4)), false); return gate; };
+const frame = (x = 1, extra = {}) => freeze({ rnd: 1, fi: 1, ts: .5, roundSec: .5, buyP: false, tScore: 0, ctScore: 0, events: [], throwables: [], players: [{ id: "t1", name: "選手", side: "t", state: "HOLD", dead: false, pos: { x, y: 2 }, prevPos: { x: x - 1, y: 2 } }], ...extra });
+const adapter = (major = true) => { const value = createFpsMatchPresentation({ major }); value.update({ frame: frame(), frameIndex: 0 }); value.drainAudio(); return value; };
+const steps = value => value.drainAudio().filter(cue => cue.type === "footstep");
+
+test("首次與同幀不補歷史聲音", () => { const g = readyGate(); assert.equal(g.update(input(4)), false); });
+test("同模擬正向播放可派送", () => assert.equal(readyGate().update(input(5)), true));
+test("暫停不派送", () => assert.equal(readyGate().update(input(5, { playing: false })), false));
+test("靜音不派送", () => assert.equal(readyGate().update(input(5, { soundOn: false })), false));
+test("倒帶不派送", () => assert.equal(readyGate().update(input(3)), false));
+test("seek nonce 改變不派送", () => assert.equal(readyGate().update(input(50, { seekNonce: 1 })), false));
+test("明確 seek 清理當幀、下一幀可播放", () => { const g = readyGate(); g.seek(input(50, { seekNonce: 1 })); assert.equal(g.update(input(50, { seekNonce: 1 })), false); assert.equal(g.update(input(51, { seekNonce: 1 })), true); });
+test("更換模擬與 reset 不補聲音", () => { const g = readyGate(); assert.equal(g.update(input(5, { simulation: otherSim })), false); g.reset(); assert.equal(g.update(input(6)), false); });
+test("無效游標不派送或污染下一幀", () => { const g = readyGate(); assert.equal(g.update(input(NaN)), false); assert.equal(g.update(input(5)), false); assert.equal(g.update(input(-1)), false); assert.equal(g.update(input(0, { simulation: null })), false); });
+test("聲源使用事件實際位置而非 hash", () => { assert.deepEqual(resolveFpsAudioEmitter({ pos: { x: 2, y: 3 } }, frame()), { x: 2, y: 3 }); assert.deepEqual(resolveFpsAudioEmitter({ x: 4, y: 5 }, frame()), { x: 4, y: 5 }); });
+test("聲源可回退到權威選手座標", () => { assert.deepEqual(resolveFpsAudioEmitter({ attackerId: "t1" }, frame()), { x: 1, y: 2 }); assert.equal(resolveFpsAudioEmitter({ playerId: "unknown" }, frame()), null); });
+test("無效聲源不輸出非有限值", () => { assert.equal(resolveFpsAudioEmitter({ pos: { x: NaN, y: 2 } }, frame()), null); assert.deepEqual(resolveFpsAudioSpatial(null, null, NaN), { distance: 20, pan: 0 }); });
+test("鏡頭左右方向正確", () => { const l = { x: 0, y: 0, rightX: 1, rightY: 0 }; assert.deepEqual(resolveFpsAudioSpatial({ x: 10, y: 0 }, l), { distance: 10, pan: .85 }); assert.equal(resolveFpsAudioSpatial({ x: -10, y: 0 }, l).pan, -.85); });
+test("旋轉鏡頭、同位置與溢位回退", () => { assert.equal(resolveFpsAudioSpatial({ x: 10, y: 0 }, { x: 0, y: 0, rightX: -1, rightY: 0 }).pan, -.85); assert.deepEqual(resolveFpsAudioSpatial({ x: 1, y: 2 }, { x: 1, y: 2, rightX: 0, rightY: 0 }), { distance: 0, pan: 0 }); assert.deepEqual(resolveFpsAudioSpatial({ x: 1e308, y: 0 }, { x: -1e308, y: 0 }), { distance: 20, pan: 0 }); });
+test("major 首幀不補投擲與腳步", () => { const a = createFpsMatchPresentation({ major: true }); a.update({ frame: frame(2, { throwables: [{ id: "u", type: "he", x: 2, y: 3 }] }), frameIndex: 8 }); assert.equal(a.drainAudio().length, 0); });
+test("major 非 ROTATE／EXECUTE 的真移動也有腳步", () => { const a = adapter(); a.update({ frame: frame(2), previousFrame: frame(), frameIndex: 1 }); const s = steps(a); assert.equal(s.length, 1); assert.deepEqual(s[0].position, { x: 2, y: 2 }); });
+test("連續腳步有不同 event ID", () => { const a = adapter(); a.update({ frame: frame(2), previousFrame: frame(), frameIndex: 1 }); const first = steps(a)[0]; a.update({ frame: frame(3), previousFrame: frame(2), frameIndex: 2 }); assert.notEqual(steps(a)[0].eventId, first.eventId); });
+test("靜止與小移動不產生腳步", () => { const a = adapter(); a.update({ frame: frame(1.2), previousFrame: frame(), frameIndex: 1 }); assert.equal(steps(a).length, 0); });
+test("死亡／買槍／換回合不產生腳步", () => { for (const f of [frame(2, { players: [{ id: "t1", dead: true, pos: { x: 2, y: 2 } }] }), frame(2, { buyP: true }), frame(2, { rnd: 2 })]) { const a = adapter(); a.update({ frame: f, previousFrame: frame(), frameIndex: 1 }); assert.equal(steps(a).length, 0); } });
+test("無效選手座標不產生腳步", () => { const a = adapter(); a.update({ frame: frame(2, { players: [{ id: "t1", dead: false, pos: { x: NaN, y: 2 } }] }), previousFrame: frame(), frameIndex: 1 }); assert.equal(steps(a).length, 0); });
+test("major 同幀／倒帶不補 utility", () => { const a = adapter(); const f = frame(2, { throwables: [{ id: "u", type: "he", x: 3, y: 4 }] }); a.update({ frame: f, previousFrame: frame(), frameIndex: 1 }); a.drainAudio(); a.update({ frame: f, previousFrame: frame(), frameIndex: 1 }); assert.equal(a.drainAudio().length, 0); a.update({ frame: f, previousFrame: frame(), frameIndex: 0 }); assert.equal(a.drainAudio().length, 0); });
+test("utility 使用真正 x／y 聲源", () => { const a = adapter(); a.update({ frame: frame(1, { throwables: [{ id: "u", type: "he", x: 3, y: 4 }] }), previousFrame: frame(), frameIndex: 1 }); assert.deepEqual(a.drainAudio().find(c => c.type === "utility-throw").position, { x: 3, y: 4 }); });
+test("bomb tick 使用 C4 權威位置", () => { const a = adapter(); const prev = frame(1, { planted: true, c4t: 10, c4pos: { x: 4, y: 5 } }); a.update({ frame: frame(1, { planted: true, c4t: 9, c4pos: { x: 4, y: 5 } }), previousFrame: prev, frameIndex: 1 }); assert.deepEqual(a.drainAudio().find(c => c.type === "bomb-tick").position, { x: 4, y: 5 }); });
+test("legacy 原偶數幀／狀態／ID 語意保留", () => { const a = adapter(false); const f = frame(2, { players: [{ ...frame(2).players[0], state: "ROTATE" }] }); a.update({ frame: f, previousFrame: frame(), frameIndex: 1 }); assert.equal(steps(a).length, 0); a.update({ frame: f, previousFrame: frame(), frameIndex: 2 }); assert.equal(steps(a)[0].id, "footstep-t1"); });
+test("輸入 frames／事件／位置完全不變", () => { const prev = frame(), f = frame(2, { throwables: [{ id: "u", type: "he", x: 3, y: 4 }] }); const before = JSON.stringify([prev, f]); const a = adapter(); a.update({ frame: f, previousFrame: prev, frameIndex: 1 }); a.getView(); a.drainAudio(); const l = freeze({ x: 0, y: 0, rightX: 1, rightY: 0 }); resolveFpsAudioSpatial(resolveFpsAudioEmitter(f.throwables[0], f), l); assert.equal(JSON.stringify([prev, f]), before); });
+assert.equal(passed, 25);
+console.log(`CS Major Audio Playback B3: ${passed}/${passed} PASS`);

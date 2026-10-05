@@ -51,6 +51,8 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
   const launch = useProfileStore((s) => s.matchmaking?.launch ?? null);
   const session = useProfileStore((s) => s.matchmaking?.session ?? null);
   const activeSnapshot = useProfileStore((s) => s.matchmaking?.session?.activeMatch?.simulation?.snapshot ?? null);
+  // 判定一次，避免第一次保存 snapshot 之後把新比賽切回 legacy。
+  const [sceneVersion] = useState(() => config?.sceneVersion ?? activeSnapshot?.sceneVersion ?? (activeSnapshot ? "legacy" : "major.v1"));
   // seed / 地圖：賽前流程有給就用（決定性重播鍵）；否則沿 Sprint22 掛載時決定一次
   const [seed] = useState(() => launch?.seed ?? config?.seed ?? ((Date.now() & 0xffff) | 1));
   const mapKey = config?.mapKey ?? CS_MAP_KEYS[seed % CS_MAP_KEYS.length];
@@ -99,11 +101,11 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
       snapshot: p.snapshot,
       simulationTimeSec: p.simulationTimeSec,
       phase: "battle",
-      config: { csConfig: { ...config, seed } },
+      config: { csConfig: { ...config, seed, sceneVersion } },
       status: paused ? "paused" : "active",
       now,
     });
-  }, [config, seed]);
+  }, [config, seed, sceneVersion]);
   const handleProgress = useCallback((progress) => saveProgress(progress), [saveProgress]);
   const handleBack = useCallback(() => {
     saveProgress(progressRef.current, { paused: true, force: true });
@@ -140,7 +142,7 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
 
       {/* hotfix/cs-resume-worker：模擬在 Web Worker 算的期間，顯示回到比賽的進度（主執行緒不再凍結） */}
       <Suspense fallback={<CsSimulationProgress resuming={Number(activeSnapshot?.frameIndex) > 0} mapName={mapName} />}>
-        <EsportsFPS3D embedded asyncSimulation={workerReady} roster={roster ?? undefined} mapKey={mapKey} seed={seed} tactic={config?.tacticId ?? undefined} tacticType={config?.tacticType ?? undefined} tacticalLayout={config?.tacticalLayout ?? undefined} teamName={team?.name} onComplete={setResult}
+        <EsportsFPS3D embedded asyncSimulation={workerReady} roster={roster ?? undefined} mapKey={mapKey} sceneVersion={sceneVersion} seed={seed} tactic={config?.tacticId ?? undefined} tacticType={config?.tacticType ?? undefined} tacticalLayout={config?.tacticalLayout ?? undefined} teamName={team?.name} onComplete={setResult}
           resumeFrameIndex={Number(activeSnapshot?.frameIndex) || 0} onProgress={handleProgress} />
       </Suspense>
 
