@@ -1,4 +1,4 @@
-# MOBA Combat Feedback Polish
+# MOBA Combat Feedback Polish　✅ RELEASED（2026-10-06，main `e69811e`）
 
 > 日期：2026-10-05～06　基準：`origin/main` = `a9bdfda`　分支：`feature/moba-combat-feedback-polish`
 > 性質：**純呈現層**。`LogicEngine.js`、規則、items runtime、Replay 契約一行未改 ⇒ **不升 sim version**（`check_simulation_version_gate` 61/61，與 main 相同）。
@@ -70,3 +70,24 @@ Codex 的 `feature/cs-fps-major-upgrade` 正在改 `docs/handoff/00／05／06／
 - 突變 8 種（收入／被動計算／購買／屬性／效果、例外改成計算值、搬到別處、重複）全部讓 freeze 紅（gate L2）；實檔突變 `itemEconomy` 小兵收入 20→21 ⇒ items M3 G6 紅（已還原）。
 
 ⚠ **順帶發現（技術債，本輪不處理）**：上述實檔突變時 simulation version gate 仍綠——items 經濟檔不在 `SIMULATION_SEMANTICS_FILES`，改收入不會被要求升 sim version。
+
+## 9. Release 紀錄（RELEASED）
+
+- 基準：`origin/main` = `a9bdfda` ⇒ fast-forward 到 **`e69811e`**（normal push，無 force）。
+- Pages deploy：Actions「Deploy Vite site to GitHub Pages」`completed:success`。
+- Release 前 gate（`e69811e`）：build ✓；`check_moba_combat_feedback` 50/50；items M1 69/69、M2 52/53（G1 既有）、M3 62/67（G6 3/3；G8／G10／G12 既有）；simulation version 61/61；regress 15/15；regress2 8/8；本地 browser smoke（1366＋390）18/18、page／console／shader 0。
+- 正式站 smoke：
+  - `tools/browser_check_prod_moba_combat_feedback.mjs` **16/16**：1366／390 傷害（英雄／中立／塔）、補血、護盾、+Gold、重要傷害都有畫；回城逐幀與 snapshot 一致（680／3,689 幀，0 不符）；page／console／shader 0。
+  - `tools/browser_check_prod_moba_result_replay_release.mjs` **25/25**：Battle → Result → Replay（390＋1366）無退步。
+  - ⚠ 正式站讀不到 `/src/`（TD-31）⇒「+Gold ＝ 帳本」在正式站無法直接量；由本地 `check_moba_combat_feedback` G1（逐英雄精確相等，同一份程式碼）證明。
+- moba-sim 版本：**不變**（純呈現＋唯讀輸出，`check_simulation_version_gate` 61/61）。
+- CS／FPS、Online、DB：完全未碰。
+
+## 10. 新技術債
+
+- **TD-SF1｜simulation fingerprint 未涵蓋 items 經濟**（🟡，Owner 2026-10-06 登記，本輪不處理）
+  `SIMULATION_SEMANTICS_FILES` 不含 `src/battle/moba/items/*`。實測把 `itemEconomy` 小兵收入 20→21，
+  `check_simulation_version_gate` 仍綠 ⇒ 改 items 收入／屬性不會被要求判斷要不要升 sim version。
+  目前由 items M3 G6（釘在 `a9bdfda` 的凍結比對）間接守住 M1／M2 規則檔，但那是 freeze，不是 sim 語意判斷。
+- ⚠ 共享 handoff（`docs/handoff/00／05／06／08`）Codex CS 線仍在修改；`docs/09` 另一條分支（`milestone-n-finance`）有整檔改動。
+  為避免衝突，本輪紀錄與 TD-SF1 只寫在本文件；待 Codex CS 線合併後再追加到 05／08。
