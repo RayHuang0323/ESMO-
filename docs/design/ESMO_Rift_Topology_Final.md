@@ -68,6 +68,11 @@ n=1000 公平性（STANDARD／SWAPPED 分開）：巨龍側單場優勢 v17 +5.4
 3. P0-C：單一 seed fixture 改為 41 seeds × 每 30 秒檢查點的決定性掃描（關掉修正的突變引擎會紅）。
 4. 坑周平台 `pitBulge` 24.5（v16 坑外緣 18.35 ＋ 6.15 步道）。
 
+## 5.1 Release 前補驗（Owner 決策後）
+
+- regress2 7/8 由 Owner 接受為已知 long-tail（200-seed 分布與 v17 同一水準）；Topology 視為 freeze candidate。
+- 乾淨環境 Desktop FPS A/B（6 輪交錯、production build、真實 GPU）：桌機 58.0 → 57.2 FPS、p95 16.9 → 17.0 ms；手機 390×844 59.6 → 59.2 ⇒ 無效能回歸。Browser smoke 6/6 載入 Rift GLB、console error 0。
+
 ## 6. 下一輪 Tactical AI 需要處理
 
 見 docs/handoff/08_目前待辦與風險.md 同名節。

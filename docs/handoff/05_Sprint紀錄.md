@@ -24250,3 +24250,15 @@ candidate `feature/moba-objective-stakes-v16` @ `36251d0`（origin/main＝`35663
 - FPS（同機 AMD 內顯、真實 GPU）：同一支 h2close gate 整場 1920×1200 v17 36.7 → v18 37.3 FPS；fps_probe 手機 390×844 v17 59.8 → v18 58.4（皆貼 60Hz，p95 16.8ms）；console error 0。Rift 資產 mesh 97 → 86、三角形 166,622 → 154,881（GLB 13.37 → 14.50 MB）。⚠ 桌機 fps_probe 的乾淨 A/B 沒有完成：v18 唯一一輪與 release gate 同時跑（47.5，受 CPU 干擾），之後 4 輪 Chrome 開不起來——系統認可記憶體升到 42.7／44.8 GB（與 9/30 同一種 GPU 驅動外洩），需 Ray 重開機後補量。
 
 **未完成／風險**：見 08 同名節（首殺偏晚、pit-entrances 目標未全達、既有紅燈清單、真機 Android 未測）。
+
+### 2026-10-06 moba-sim.v18 Release 前補驗（Owner 決策後）— READY FOR RELEASE（local，未 push／deploy）
+
+- **Owner 決策**：① regress2 7/8 接受為已知 long-tail（seed 777 32.5 分；不為此改地圖、門檻或 Battle Balance；基地開門後過度爭奪龍／巴龍列入下一輪 Tactical AI）。② Map Topology 不再修改，視為 topology freeze candidate。
+- **Production build**（乾淨重建）：v17 main `30e898c` 24.4s、v18 `40e39f4` 24.0s，皆 PASS。
+- **Desktop FPS A/B（乾淨環境）**：真實 GPU（AMD 內顯，ANGLE D3D11）、`vite preview` 正式 bundle、6 輪交錯（v17→v18→v18→v17→v17→v18）、每輪 20 秒；全程認可記憶體穩定 37.2 GB（無外洩）。
+  - 桌機 1440×900：v17 58.0 FPS（57.9–58.0）→ v18 57.2（57.0–57.4），−0.8 FPS（−1.4%）；幀時間 p95 16.9 → 17.0 ms、p99 33.3 → 33.4 ms。
+  - 手機 390×844（同機模擬，非真機）：59.6 → 59.2 FPS；p95 17.0 → 17.0 ms。
+  - 判定：**無效能回歸**（兩邊皆貼 60Hz，p95／p99 差 0.1 ms，在一個 vsync 格內）；v18 穩定低約 0.8 FPS 照實記錄。
+- **Browser smoke**：6 輪全部進入正式戰鬥並載入 Rift GLB（`gate=rift`，非 fallback）、console error 0；畫面含中性坑＋物件標記、HUD 完整。另見前節 h2close（v17／v18 同為 13/15，紅兩項既有）。
+- 仍未測：真機 Android FPS／觸控／熱節流（DEFERRED_BY_OWNER 延續）。
+- 發布時另需（不在本輪）：正式站 smoke gate（`browser_check_prod_*`）的 bundle 版本字串仍斷言 v16／v17，部署 v18 時需同步。
