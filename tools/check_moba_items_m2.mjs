@@ -40,8 +40,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
  *   語意變更，改變**所有模式**（含 skill-off）的碰撞 ⇒ 基準前移到該次幾何 commit `fc82068`
  *   （不是 HEAD）：之後疊上的 v16 Objective Stakes（skill-on）與 Objective Layout 契約（未設定＝STANDARD）
  *   都必須讓 OFF 路徑與它逐位元相同——G1 因此順帶守住「v16 對 skill-off 中性」。
+ *   2026-10-06 moba-sim.v18 Map Topology Final：野區／外環量體、河道、營地、草叢與 findPath 起點格心
+ *   都是刻意的幾何語意變更（所有模式含 skill-off）⇒ 基準前移到該次幾何 commit `23782c0`。
  */
-const BASE_COMMIT = "fc82068";
+const BASE_COMMIT = "23782c0";
 const load = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
 

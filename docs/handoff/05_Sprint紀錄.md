@@ -24225,3 +24225,28 @@ candidate `feature/moba-objective-stakes-v16` @ `36251d0`（origin/main＝`35663
 - 正式站 smoke：browser_check_prod_hero_identity_v17 15/15、browser_check_prod_objective_layout_v16 13/13（含 Replay SWAPPED）、browser_check_moba_gameplay_presentation --prod 11/11；page／console／shader error 0。
 - 已知非 blocker：mock／快速練習對手仍 STANDARD；24 位被動為近似；戰報 timeline／Result 仍有 🐉／👑 emoji；camera_replay29b6 舊 pacing chain timeout；TacticScreen 正式站只驗 bundle 契約＋文案（TD-31），元件本身在本地以正式元件驗過。
 - 下一個 Sprint 尚未開始（建議 Jungle Topology v1）。
+
+## 2026-10-06 moba-sim.v18 Map Topology Final（owner: Claude，local commit，未 push／deploy）
+
+分支 `feature/moba-map-topology-v18`（從 origin/main `30e898c`＝moba-sim.v17 已發布）。原型 `619211e`（建在舊 main `cfa755b`、自稱 v9）只當參考，**未 rebase／merge**，逐檔 forward-port。設計與 LoL 比較：`docs/design/ESMO_Rift_Topology_Final.md`；前後對照：`review/moba-map/topology-final/blender-v18/`（v17 main vs v18 同機位 Blender 渲染）、`navigation/`（v17_main／v18 導航真值圖與量測）。
+
+**完成**
+- Final Topology 原樣保留（三路、野區骨架、河道主方向、坑位結構不再改）；坑位腳印改用 v16 正式規格（R 15.5／thick 5.7、巴龍＝巨龍鏡射、GLB 中性坑），`pitBulge` 23.5 → 24.5（Owner 批准）。
+- `moba-sim.v18`：v1～v17 指紋全保留、KNOWN 補上 v17；指紋清單補 `mapJungleTopology.js`、`mapPassability.js`。
+- 全量匯出 → Blender 5.2 headless 重建：GLB 14,504,340 bytes（v17 13,370,736，+8.5%）、86 meshes、154,881 三角形；source 與導航牆／量體逐項相同。
+- Gate 決策三項（見 08 同名節）：`check_esmo_rift_v1`（核心不縮＋外環封閉＋核心路徑可達＋6 突變）、pacing29b1 §2 對照組（v1／v2 必紅、v3 必過）、P0-C 多 seed 決定性掃描（突變引擎被抓到 11 個違規）。
+- `check_moba_items_m2` G1 基準依先例前移到 v18 幾何 commit `23782c0`；`check_moba_objective_stakes_v16` V1 版本事實改 v18；`check_moba_nav_chrome_h2close` 補上與 browser harness 相同的「視窗被遮住不暫停」旗標。
+
+**驗證（v18 vs 乾淨 v17 main `30e898c` 同機重跑）**
+- 地圖：esmo_rift_v1 23/0（v17 上外環封閉一項紅：13,714 取樣點）、map_topology_final 22/22、rift_mesh_navigation PASS、rift_loading 41/41、nav_h2 14/14、P0-B 14/14、camp_routes PASS、camp_placement 43/43、map_decor 518/0、objective_pit_symmetry 7/7（藍→龍＝紅→巴龍 162.72）、pit_art_alignment 4/4、objective_layout_contract 11/11、objective_stakes_v16 17/17、audit_jungle_topology `--gate` 2/2（v17 2/2）、`--gate=pit-entrances` 3/8（v17 2/8）。
+- verify 區段（v18）：regress 15/15、runtime29 flat PASS、P0-A／B／C／D PASS、map_topology_final PASS、simulation_version 63/63；**regress2 7/8**（最長 32.5 分 > 32；seed 777）。v17 main：regress2 8/8。
+- regress2 長尾（同設定、技能關、各 200 seeds）：平均 20.7 → 20.5、P95 28.4 → 27.4、>30 分 8 → 4 場、>32 分 **2 → 3 場**（v17 最長 34.3、v18 36.3）⇒ 長尾與 v17 同一水準，20 seeds 的 regress2 只是剛好抽到；未改門檻、未為單一 seed 調參（見 08）。
+- pacing29b1（flat）：v18 22/25、v17 21/25；§2 新判準兩邊綠；§25 順序位移 30pp → **3pp**（由紅轉綠）；§1／§3／§15 兩邊同紅（既有）。v3 15 分擊殺 p50 3 → 4、終局 14 → 16、時長 22.5 → 21.0；首殺 p50 658 → 765s（見 08）。
+- 公平性 n=1000（skills＋talents on、Items standard、鏡像名單、seed 1–1000；v17 重跑與 v17 文件數字逐項相同）：藍 49.5 → 51.7%；STANDARD 藍 55.1 → 55.5、SWAPPED 藍 44.3 → 48.2；**巨龍側單場優勢 +5.4 → +3.7pp**、純藍方地利 −0.3 → +1.9pp（±1.6，約 1.2σ）；配對翻轉 245：223（z 1.02）；時長中位／P90／最長 16.7／24.3／38.5 → 17.0／23.5／31.8；未結束、>45 分皆 0。
+- Hero Skills：release gate v17 PASS（藍 58%、中位 21.8、P90 26.3）→ v18 PASS（100/100、藍 46%、中位 20.8、P90 26.0）、gameplay slice 68/68、base-assault PASS、round2 410/410；phase1 與 v17 同紅（既有）。
+- v17 Hero Identity：passive runtime 23/23、power curve 17/17、tactical identity 22/22；Battle Talents runtime／contract PASS；BattleResult v3 PASS。
+- Combat：combat_polish_r2 31/31、combat_quality_v1 28/28、combat_state_v1 16/16、combat_state_matrix PASS、lane_jungle_balance 20/20、mobile_hud_polish 60/60、spectacle_vision 21/21、items_m1 69/69、items_m2 53/53、items_m3 62/67（v17 同 62/67）；combat_feedback 48/50（X3／X4 為 Sprint 範圍守衛，預期紅）。
+- Build PASS（32.5s）。真實 Chrome（production build、真實 GPU、整場 733 筆）：v18 13/15（不穿牆：引擎與畫面座標、不穿坑壁／塔、不卡死、不抖動、10 人出基地、10/10 走到三路中段、10 人進野區）；v17 同支 gate 同為 13/15，紅的同兩項「GameView 標記」「閃爍」（v17 4,244 次／v18 2,339 次）⇒ 既有、與地圖無關。
+- FPS（同機 AMD 內顯、真實 GPU）：同一支 h2close gate 整場 1920×1200 v17 36.7 → v18 37.3 FPS；fps_probe 手機 390×844 v17 59.8 → v18 58.4（皆貼 60Hz，p95 16.8ms）；console error 0。Rift 資產 mesh 97 → 86、三角形 166,622 → 154,881（GLB 13.37 → 14.50 MB）。⚠ 桌機 fps_probe 的乾淨 A/B 沒有完成：v18 唯一一輪與 release gate 同時跑（47.5，受 CPU 干擾），之後 4 輪 Chrome 開不起來——系統認可記憶體升到 42.7／44.8 GB（與 9/30 同一種 GPU 驅動外洩），需 Ray 重開機後補量。
+
+**未完成／風險**：見 08 同名節（首殺偏晚、pit-entrances 目標未全達、既有紅燈清單、真機 Android 未測）。

@@ -161,6 +161,10 @@ const browser = spawn(chrome, [
   `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
   "--no-first-run", "--no-default-browser-check", "--disable-extensions",
   "--hide-scrollbars", "--force-device-scale-factor=1",
+  //  2026-10-06：與 tools/browser/harness.mjs 同一組。沒有它們時，gate 視窗被其他視窗蓋住，Chrome 就把頁面判成
+  //  hidden、停掉 rAF ⇒ 遊戲時間不前進，取樣全變成「卡死」、「走不到三路」（v18 驗收實際踩到）。
+  "--disable-background-timer-throttling", "--disable-renderer-backgrounding",
+  "--disable-backgrounding-occluded-windows",
   `--window-size=${DESK.w},${DESK.h}`, "--window-position=0,0",
   "--autoplay-policy=no-user-gesture-required", "about:blank",
 ], { stdio: "ignore" });
