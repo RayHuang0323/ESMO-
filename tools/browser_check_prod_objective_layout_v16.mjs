@@ -22,11 +22,17 @@ import { runGate, finishGate } from "./browser/harness.mjs";
 const PROD = process.env.ESMO_PROD_URL || (process.argv.includes("--prod") ? "https://rayhuang0323.github.io/ESMO-/" : null);
 const OUT = process.env.ESMO_REVIEW_OUT ?? (PROD ? "review/moba-objective-v16/prod-smoke" : "review/moba-objective-v16/prod-smoke-local");
 mkdirSync(OUT, { recursive: true });
-//  坑的世界座標（coordinateMapping.simToWorld；Node 端由 src 算好寫死，正式站不能 import）
-const PIT = { bot: { x: 85, z: 81.3043 }, top: { x: -85, z: -81.3043 } };
-const MINI = { bot: { x: 156.36, y: 154.78 }, top: { x: 83.64, y: 85.22 } };
+//  坑的世界座標（coordinateMapping.simToWorld）與小地圖座標（240 px 底圖）。正式站頁面不能 import，但本 gate 跑在 Node：
+//  2026-10-06 moba-sim.v18 Map Topology Final 起改由 gameData.PITS（地圖唯一真相，STANDARD：巨龍＝下方坑）推導，
+//  不再寫死 v16 座標（v16 寫死值 85／81.3043、156.36／154.78 由同一換算式得出，逐位相同）。容差與判準不變。
+import { PITS as GD_PITS, WORLD_BOUNDS, WORLD_SCALE } from "../src/gameData.js";
+const toWorld = (p) => ({ x: (p.x - WORLD_BOUNDS.centerX) * WORLD_SCALE, z: (p.y - WORLD_BOUNDS.centerY) * WORLD_SCALE });
+const toMini = (p) => ({ x: (p.x * 240) / WORLD_BOUNDS.width, y: (p.y * 240) / WORLD_BOUNDS.height });
+const PIT = { bot: toWorld(GD_PITS.dragon), top: toWorld(GD_PITS.baron) };
+const MINI = { bot: toMini(GD_PITS.dragon), top: toMini(GD_PITS.baron) };
 const LAYOUT_PITS = { STANDARD: { dragon: "bot", baron: "top" }, SWAPPED: { dragon: "top", baron: "bot" } };
-const GLB_BYTES = 13370736;
+//  2026-10-06 moba-sim.v18 Map Topology Final：Rift GLB 重建（riftMapGate.RIFT_GLB_BYTES）。
+const GLB_BYTES = 14504340;
 
 const result = await runGate({
   name: PROD ? "正式站 moba-sim.v16 Objective Layout／坑位／TD-CS1" : "（本地）moba-sim.v16 正式站 smoke 自驗",
@@ -41,8 +47,8 @@ const result = await runGate({
     const home = await ev("return fetch(location.href,{cache:'no-store'}).then(r=>JSON.stringify(r.status));");
     ck("H 首頁 HTTP 200", home === 200, String(home));
     if (PROD) {
-      const b = await ev("const s=[...document.scripts].map(x=>x.src).find(x=>x.includes('/assets/index-')); return fetch(s).then(r=>r.text()).then(t=>{const g=(t.match(/esmo-rift-[A-Za-z0-9_-]+\\.glb/)||[])[0]; return (g?fetch(new URL('assets/'+g, location.href)).then(r=>r.arrayBuffer().then(a=>({st:r.status,n:a.byteLength}))):Promise.resolve(null)).then(glb=>JSON.stringify({src:s, v16:t.includes('moba-sim.v17'), v15only:!t.includes('moba-sim.v16'), markers:t.includes('objective-pit-markers'), layout:t.includes('SWAPPED')&&t.includes('objectiveLayout'), tdcs1:t.includes('splitProjectileSlowV16'), glb:g, glbStatus:glb&&glb.st, glbBytes:glb&&glb.n}));});");
-      ck("P0 線上 bundle 含目前 moba-sim 版本（v17 起；TD-HI1）、坑位標記、objectiveLayout、TD-CS1；Rift GLB HTTP 200 且為新版（13,370,736 bytes）",
+      const b = await ev("const s=[...document.scripts].map(x=>x.src).find(x=>x.includes('/assets/index-')); return fetch(s).then(r=>r.text()).then(t=>{const g=(t.match(/esmo-rift-[A-Za-z0-9_-]+\\.glb/)||[])[0]; return (g?fetch(new URL('assets/'+g, location.href)).then(r=>r.arrayBuffer().then(a=>({st:r.status,n:a.byteLength}))):Promise.resolve(null)).then(glb=>JSON.stringify({src:s, v16:t.includes('moba-sim.v18'), v15only:!t.includes('moba-sim.v16'), markers:t.includes('objective-pit-markers'), layout:t.includes('SWAPPED')&&t.includes('objectiveLayout'), tdcs1:t.includes('splitProjectileSlowV16'), glb:g, glbStatus:glb&&glb.st, glbBytes:glb&&glb.n}));});");
+      ck("P0 線上 bundle 含目前 moba-sim 版本（v18）、坑位標記、objectiveLayout、TD-CS1；Rift GLB HTTP 200 且為新版（14,504,340 bytes）",
         b?.v16 && b?.markers && b?.layout && b?.tdcs1 && b?.glbStatus === 200 && b?.glbBytes === GLB_BYTES, JSON.stringify(b));
     }
 

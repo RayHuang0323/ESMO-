@@ -1,5 +1,7 @@
 # ESMO Rift — MOBA Map Topology Final（2026-10-06）
 
+> **狀態：RELEASED（moba-sim.v18，2026-10-06，main `c243264`，Pages run `37457695924`）＋ Map Topology FROZEN（Owner）。** 已知 long-tail：regress2 7/8（seed 777）。Android 真機 DEFERRED_BY_OWNER。
+
 本文件是 MOBA 地圖「最後一次大型重構」的設計與驗收紀錄。之後原則上不再大改骨架（三路、基地、河道主方向已由 Owner 確認接受）。
 
 - 分支：`feature/moba-map-topology-v18`（基於 origin/main `30e898c`，moba-sim.v17 已發布）。原型分支 `feature/moba-map-topology-final`（`619211e`，建在舊 main `cfa755b`）只當參考，未 rebase／merge，逐檔 forward-port。

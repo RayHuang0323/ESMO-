@@ -43,8 +43,8 @@ const result = await runGate({
 
     if (PROD) {
       await chrome.navigate(url); await sleep(2000);
-      const bundle = await ev("const s=[...document.scripts].map(x=>x.src).find(x=>/assets\\/index-/.test(x)); return fetch(s).then(r=>r.text()).then(t=>JSON.stringify({src:s, v15:t.includes('moba-sim.v15'), status:t.includes('observer-status-row'), ticks:t.includes('hero-hpbar-ticks'), icon:t.includes('data-skill-icon'), hud:t.includes('quality-settings-toggle')}));");
-      ck("P0 線上 bundle 是本輪版本（v15＋狀態列＋血條刻度＋技能圖元件＋Mobile UI P1）", bundle?.v15 && bundle?.status && bundle?.ticks && bundle?.icon && bundle?.hud, JSON.stringify(bundle));
+      const bundle = await ev("const s=[...document.scripts].map(x=>x.src).find(x=>/assets\\/index-/.test(x)); return fetch(s).then(r=>r.text()).then(t=>JSON.stringify({src:s, v15:t.includes('moba-sim.v18'), status:t.includes('observer-status-row'), ticks:t.includes('hero-hpbar-ticks'), icon:t.includes('data-skill-icon'), hud:t.includes('quality-settings-toggle')}));");
+      ck("P0 線上 bundle 是目前版本（moba-sim.v18＋狀態列＋血條刻度＋技能圖元件＋Mobile UI P1）", bundle?.v15 && bundle?.status && bundle?.ticks && bundle?.icon && bundle?.hud, JSON.stringify(bundle));
     }
     await mobile(390, 844);
     await chrome.navigate(`${url}?debug=moba-runtime-battle&shot=hud&waitTs=150&quality=low`);

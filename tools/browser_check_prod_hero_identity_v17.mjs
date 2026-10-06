@@ -59,9 +59,9 @@ const result = await runGate({
     await sleep(2500);
     const b = await ev("const s=[...document.scripts].map(x=>x.src).find(x=>x.includes('/assets/index-')); if(!s) return JSON.stringify({src:null});"
       + "return fetch(s).then(r=>r.text()).then(async t=>{ const lazy=[...new Set((t.match(/assets\\/[A-Za-z0-9_-]+\\.js/g)||[]))]; let all=t; for(const f of lazy){ try{ all+=await (await fetch(new URL(f, s.replace(/assets\\/.*$/,''))).text()); }catch(e){} }"
-      + "return JSON.stringify({src:s,v17:all.includes('moba-sim.v17'),passive:all.includes('hero-passive.v2'),curve:all.includes('hero-power-curve.v1'),tid:all.includes('TacticIdentity.v1'),style:all.includes('mobaTacticForTeamStyle')||all.includes('aggressive:\"m7\"')||all.includes('aggressive:\\'m7\\''),"
+      + "return JSON.stringify({src:s,v17:all.includes('moba-sim.v18'),passive:all.includes('hero-passive.v2'),curve:all.includes('hero-power-curve.v1'),tid:all.includes('TacticIdentity.v1'),style:all.includes('mobaTacticForTeamStyle')||all.includes('aggressive:\"m7\"')||all.includes('aggressive:\\'m7\\''),"
       + "tidText:all.includes('打野以刷野發育為主'),icon:all.includes('data-objective-icon'),lazy:lazy.length}); });");
-    ck("P0 線上 bundle 是 v17：moba-sim.v17、hero-passive.v2、hero-power-curve.v1、TacticIdentity.v1（含效果文案）、objective SVG",
+    ck("P0 線上 bundle 是目前版本：moba-sim.v18（v17 起的 Hero Identity 標記）、hero-passive.v2、hero-power-curve.v1、TacticIdentity.v1（含效果文案）、objective SVG",
       b?.v17 && b.passive && b.curve && b.tid && b.tidText && b.icon, JSON.stringify(b));
 
     // ── H／O 390 手機 ──────────────────────────────────────────────────
